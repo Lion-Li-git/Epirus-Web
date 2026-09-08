@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Epirus 拍手游戏 — 2人对战</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 2 人对战版 · 规则裁定见 docs/RULES-2P.md</span>
+  </header>
+
+  <nav class="tabs">
+    <button id="tab-battle" class="on">⚔ 对局</button>
+    <button id="tab-train">🧪 训练场（自对战）</button>
+  </nav>
+
+  <!-- ============ 对局 ============ -->
+  <section id="page-battle" class="panel battle">
+    <div class="side" id="side-0"></div>
+    <div class="mid">
+      <div class="toolbar">
+        <label>模式
+          <select id="sel-mode">
+            <option value="standard" selected>标准（2人·全技能）</option>
+          </select>
+        </label>
+        <label>难度
+          <select id="sel-diff">
+            <option value="easy">简单</option>
+            <option value="medium" selected>中等</option>
+            <option value="hard">困难（最新高水平AI）</option>
+          </select>
+        </label>
+        <button class="ctl primary" id="btn-newgame">新对局</button>
+        <button class="ctl" id="btn-undo">悔一步（重开本回合）</button>
+        <button class="ctl" id="btn-exportlog">导出对局记录</button>
+      </div>
+      <div class="hint" id="battle-hint">点击下方一个技能出招（与电脑同时行动）。首次使用需确认能量珠的：蓄能 / 电磁炮 / 激光眼 会弹窗选择。</div>
+      <div class="skillgrid" id="skillgrid"></div>
+    </div>
+    <div class="side" id="side-1"></div>
+    <div class="logbox" id="logbox"></div>
+  </section>
+
+  <!-- ============ 训练场 ============ -->
+  <section id="page-train" class="panel train hidden">
+    <div class="row">
+      <fieldset><legend>对抗自对战训练（Node 并行服务）</legend>
+        <label>每代个体数（14 建议）<input type="number" id="tr-pop" value="14" min="6" max="40"></label>
+        <label>本次代数 <input type="number" id="tr-remote-gens" value="100" style="width:70px"></label>
+        <label>种子数 <input type="number" id="tr-seeds" value="3" min="1" max="8" style="width:60px"></label>
+        <label>轮数 <input type="number" id="tr-rounds" value="5" min="1" max="20" style="width:60px"></label>
+        <label style="cursor:pointer"><input type="checkbox" id="tr-fresh"> 从头训练（清空旧冠军、随机重开种群，破“冠军蝉联”）</label>
+        <label class="ctl" style="color:var(--accent)">⚡ 已改用 Node 多核并行训练，更稳更快：
+          <code style="font-size:12px">双击 tools/start-train-server.cmd</code> 一键启动服务。本页「开始训练」自动连接；训练完可再点一次继续训练。
+        </label>
+      </fieldset>
+      <button class="ctl primary" id="btn-train">开始训练(Node服务)</button>
+      <button class="ctl" id="btn-stop" disabled>停止(断开)</button>
+      <button class="ctl" id="btn-eval">评测冠军(40局/基线)</button>
+      <button class="ctl" id="btn-export">导出冠军 JSON</button>
+      <label class="ctl" style="cursor:pointer">导入
+        <input type="file" id="file-import" accept="application/json,.json" style="display:none">
+      </label>
+      <button class="ctl" id="btn-reset" style="color:var(--red)">清空冠军</button>
+      <button class="ctl" id="btn-train-csv">导出训练CSV</button>
+      <button class="ctl" id="btn-remote" style="color:var(--red)">重置训练服务</button>
+      <label class="ctl">端口 <input type="number" id="tr-port" value="8787" style="width:70px"></label>
+      <span class="ctl" id="tr-remote" style="color:var(--accent)">未连接</span>
+    </div>
+    <div class="progress"><div id="tr-progress"></div></div>
+    <div class="statline">
+      <span>状态：<b id="tr-state">未开始</b></span>
+      <div id="tr-seeds-status" style="margin-top:6px;color:var(--dim);font-size:12px;line-height:1.7"></div>
+    </div>
+    <div class="statline">
+      <span>当前冠军：<b id="tr-has">检测中…</b></span>
+    </div>
+    <div id="chartWrap"><canvas id="chart"></canvas></div>
+    <div id="tr-evalbox"></div>
+    <p class="hint">训练 = 候选策略与「当前冠军 + 脚本基准」对战打分 → 精英保留+变异/交叉 → 由真实胜率选最强写盘。
+    需先双击 <code>tools/start-train-server.cmd</code> 启动 Node 服务；「开始训练」会自动探测并连接，训练完再点一次可继续训练。
+    训练结束自动保存冠军到本机；「困难·冠军策略」难度即使用它。冠军可导出 JSON 分享。</p>
+  </section>
+
+  <footer>
+    Epirus（Efficient power in real universe space）· 规则开源 CC BY-NC-SA · 本程序仅供学习娱乐。<br>
+    技术栈：纯 HTML/CSS/JS，零依赖，双击 index.html 即玩。训练与对局都在浏览器本地完成。
+  </footer>
+</div>
+
+<div id="modal-root" class="modal hidden"><div class="card" id="modal-card"></div></div>
+<div id="overlay-root" class="overlay hidden"><div class="card" id="overlay-card"></div></div>
+
+<!-- 引擎（加载顺序即依赖顺序） -->
+<script src="js/core/rules.js?v=boot0"></script>
+<script src="js/core/state.js?v=boot0"></script>
+<script src="js/core/resolve.js?v=boot0"></script>
+<script src="js/core/play.js?v=boot0"></script>
+<script src="js/train/bots.js?v=boot0"></script>
+<script src="js/train/policy.js?v=boot0"></script>
+<script src="js/train/evo.js?v=boot0"></script>
+<script src="js/train/trainer.js?v=boot0"></script>
+<script src="js/bundled-champion.js?v=mtstz6fv"></script>
+<script src="js/ui/ui.js?v=boot0"></script>
+</body>
+</html>
