@@ -20,15 +20,17 @@
   }
   /* N 人：对手解析（2 人=另一个；N 人=血量最低的存活对手） */
   function oppPidOf(state, pid) {
-    let best = null;
+    let best = [], minHp = Infinity;
     for (let i = 0; i < state.p.length; i++) {
       if (i === pid) continue;
       const p = state.p[i];
       if (p.hp <= 0) continue;
-      if (best == null || p.hp < state.p[best].hp) best = i;
+      if (p.hp < minHp - 1e-9) { minHp = p.hp; best = [i]; }
+      else if (Math.abs(p.hp - minHp) < 1e-9) best.push(i);
     }
-    if (best == null) { for (let i = 0; i < state.p.length; i++) { if (i !== pid) { best = i; break; } } }
-    return best;
+    if (!best.length) { for (let i = 0; i < state.p.length; i++) { if (i !== pid) { best = [i]; break; } } }
+    if (best.length === 1) return best[0];
+    return best[Math.floor(rnd(state) * best.length)];   // 并列随机，避免 pid 偏差（N 人）
   }
   function oppOf(state, pid) {
     const i = oppPidOf(state, pid);

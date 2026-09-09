@@ -10,7 +10,9 @@
   const S = global.EpirusState;
   const SK = R.SK;
 
-  const ACT_KEYS = R.AVAILABLE_2P.map(function (s) { return s.key; });
+  // 动作集 = 全部技能（含多人专用 双枪/镜面）；2 人局它们不在 legal 里，不会被选中。
+  // 参数维度由 FEAT_N 决定（与 A 无关），故不影响旧冠军包。
+  const ACT_KEYS = R.skills.map(function (s) { return s.key; });
   const A = ACT_KEYS.length;
   const HID = 24;
   const CAT3 = { energy: 0, attack: 1, defense: 2, special: 3 };
@@ -20,50 +22,82 @@
   function idxOf(key) { return key ? R.skills.findIndex(function (s) { return s.key === key; }) / R.skills.length : 0; }
   function cdCount(p) { return Object.keys(p.cooldown).filter(function (k) { return p.cooldown[k] > 0; }).length; }
 
+  /* ---- N 人：对手聚合（N=2 时退化为唯一对手，保证 2 人冠军特征不变） ----
+   * minHp = 最脆对手血量；maxEp = 最大能量；threat = 能量最高的对手（用它的 lastSkill 类特征）；
+   * any(f) = 任一对手满足（威胁信号）；sum(f) = 对手求和。 */
+  function oppAgg(state, pid) {
+    const opps = [];
+    for (let i = 0; i < state.p.length; i++) {
+      if (i !== pid && state.p[i].hp > 0) opps.push(state.p[i]);
+    }
+    if (!opps.length) {
+      for (let i = 0; i < state.p.length; i++) { if (i !== pid) { opps.push(state.p[i]); break; } }
+    }
+    let minHp = Infinity, maxEp = -1, threat = opps[0];
+    for (const o of opps) {
+      if (o.hp < minHp) minHp = o.hp;
+      if (o.ep > maxEp) { maxEp = o.ep; threat = o; }
+    }
+    if (minHp === Infinity) minHp = 0;
+    if (maxEp < 0) maxEp = 0;
+    return {
+      n: opps.length,
+      minHp: minHp,
+      maxEp: maxEp,
+      threat: threat,
+      any: function (f) { let m = 0; for (const o of opps) { const v = f(o); if (v > m) m = v; } return m; },
+      sum: function (f) { let t = 0; for (const o of opps) t += f(o); return t; }
+    };
+  }
+
   /* ---- 状态特征（pid 视角，全部公开信息） ---- */
   function features(state, pid) {
-    const me = state.p[pid], op = state.p[1 - pid];
+    const me = state.p[pid];
+    const agg = oppAgg(state, pid);
+    const op = agg.threat;                 // 威胁最大的对手（N=2 时 = 唯一对手）
+    const anyOp = agg.any;
     const hp = state.mode.hp;
     const curseOnMe = me.stickers.length;
-    const curseByMe = op.stickers.filter(function (st) { return st.owner === pid; }).length;
+    const curseByMe = agg.sum(function (o) {
+      return o.stickers.filter(function (st) { return st.owner === pid; }).length;
+    });
     return [
-      me.hp / hp, op.hp / hp,
-      Math.min(me.ep, 12) / 12, Math.min(op.ep, 12) / 12,
-      Math.min(me.elec, 1), Math.min(me.boom, 1), Math.min(op.elec, 1), Math.min(op.boom, 1),
+      me.hp / hp, agg.minHp / hp,
+      Math.min(me.ep, 12) / 12, Math.min(agg.maxEp, 12) / 12,
+      Math.min(me.elec, 1), Math.min(me.boom, 1), anyOp(function (o) { return Math.min(o.elec, 1); }), anyOp(function (o) { return Math.min(o.boom, 1); }),
       idxOf(me.lastSkill), catOf(me.lastSkill), priOf(me.lastSkill),
       idxOf(op.lastSkill), catOf(op.lastSkill), priOf(op.lastSkill),
-      // 「上一招无效」显式编码：lastSkill=null 时 idxOf/catOf/priOf 全部塌成 0，与"上一招是ジ"同码
-      // （删掉贷款后，对手空放 → 招式作废 → endTurn 置 null，值网络会掉进未训练区）。这里单独给两位。
+      // 「上一招无效」显式编码
       me.lastSkill ? 0 : 1, op.lastSkill ? 0 : 1,
-      me.ringStreak / 3, op.ringStreak / 3,
-      (me.cannonCount % 3) / 3, (op.cannonCount % 3) / 3,
-      Math.min(cdCount(me), 6) / 6, Math.min(cdCount(op), 6) / 6,
-      me.mineArmed ? 1 : 0, op.mineArmed ? 1 : 0,
-      me.tauntActive ? 1 : 0, op.tauntActive ? 1 : 0,
-      me.tauntPending ? 1 : 0, op.tauntPending ? 1 : 0,
+      me.ringStreak / 3, anyOp(function (o) { return o.ringStreak; }) / 3,
+      (me.cannonCount % 3) / 3, anyOp(function (o) { return o.cannonCount % 3; }) / 3,
+      Math.min(cdCount(me), 6) / 6, Math.min(anyOp(cdCount), 6) / 6,
+      me.mineArmed ? 1 : 0, anyOp(function (o) { return o.mineArmed ? 1 : 0; }),
+      me.tauntActive ? 1 : 0, anyOp(function (o) { return o.tauntActive ? 1 : 0; }),
+      me.tauntPending ? 1 : 0, anyOp(function (o) { return o.tauntPending ? 1 : 0; }),
       Math.min(curseOnMe, 4) / 4, Math.min(curseByMe, 4) / 4,
-      me.guardNext ? 1 : 0, op.guardNext ? 1 : 0,
-      me.baguaExtra ? 1 : 0, op.baguaExtra ? 1 : 0,
+      me.guardNext ? 1 : 0, anyOp(function (o) { return o.guardNext ? 1 : 0; }),
+      me.baguaExtra ? 1 : 0, anyOp(function (o) { return o.baguaExtra ? 1 : 0; }),
       me.fireWeakNext ? 1 : 0, me.fireWeakNow ? 1 : 0,
-      op.fireWeakNext ? 1 : 0, op.fireWeakNow ? 1 : 0,
-      me.chainLink ? 1 : 0, op.chainLink ? 1 : 0,
-      me.nightmare ? 1 : 0, op.nightmare ? 1 : 0,
-      me.vampire ? 1 : 0, op.vampire ? 1 : 0,
-      me.vampHeal > 0 ? 1 : 0, op.vampHeal > 0 ? 1 : 0,
-      me.reviveNext ? 1 : 0, op.reviveNext ? 1 : 0,
-      me.infiniteEnergy ? 1 : 0, op.infiniteEnergy ? 1 : 0,
-      Math.min(me.rodGuard, 3) / 3, Math.min(op.rodGuard, 3) / 3,
+      anyOp(function (o) { return o.fireWeakNext ? 1 : 0; }), anyOp(function (o) { return o.fireWeakNow ? 1 : 0; }),
+      (me.chains && me.chains.length) ? 1 : 0, anyOp(function (o) { return (o.chains && o.chains.length) ? 1 : 0; }),
+      me.nightmare ? 1 : 0, anyOp(function (o) { return o.nightmare ? 1 : 0; }),
+      me.vampire ? 1 : 0, anyOp(function (o) { return o.vampire ? 1 : 0; }),
+      me.vampHeal > 0 ? 1 : 0, anyOp(function (o) { return o.vampHeal > 0 ? 1 : 0; }),
+      me.reviveNext ? 1 : 0, anyOp(function (o) { return o.reviveNext ? 1 : 0; }),
+      me.infiniteEnergy ? 1 : 0, anyOp(function (o) { return o.infiniteEnergy ? 1 : 0; }),
+      Math.min(me.rodGuard, 3) / 3, Math.min(anyOp(function (o) { return o.rodGuard; }), 3) / 3,
       state.round / R.MAX_ROUNDS,
-      Math.max(-1, Math.min(1, (me.ep - op.ep) / 12)),
-      // ---- 前摇威胁（对手蓄势/条件，帮助学会"该防"而不是一味进攻/龟缩）----
-      (op.elec > 0 && op.ep >= 2) ? 1 : 0,   // 电磁炮前摇：对手有电珠且 ≥2 ジ
-      op.ep >= 5 ? 1 : 0,                    // 大雷前摇：对手 ≥5 ジ
-      ((op.boom > 0 && op.ep >= 1) || (op.lastSkill === SK.LASER_EYE && op.ep >= 2)) ? 1 : 0, // 激光眼前摇
-      (op.ep >= 3 && op.ringStreak === 0) ? 1 : 0, // 聚能环前摇（可起手）
-      op.ep >= 2 ? 1 : 0,                    // 穿透攻击前摇（坦克/狙击/激光剑）
-      op.lastSkill === SK.CHARGE ? 1 : 0,    // 对手刚蓄能（下回合珠类技能威胁）
-      me.hp <= 1 ? 1 : 0,                    // 自己濒死（防摄魂/爆头风险）
-      op.hp <= 1 ? 1 : 0                     // 对手濒死（摄魂指法可用）
+      Math.max(-1, Math.min(1, (me.ep - agg.maxEp) / 12)),
+      // ---- 前摇威胁（任一对手）----
+      anyOp(function (o) { return (o.elec > 0 && o.ep >= 2) ? 1 : 0; }),   // 电磁炮前摇
+      agg.maxEp >= 5 ? 1 : 0,                                              // 大雷前摇
+      anyOp(function (o) { return ((o.boom > 0 && o.ep >= 1) || (o.lastSkill === SK.LASER_EYE && o.ep >= 2)) ? 1 : 0; }),
+      anyOp(function (o) { return (o.ep >= 3 && o.ringStreak === 0) ? 1 : 0; }),
+      agg.maxEp >= 2 ? 1 : 0,                                              // 穿透攻击前摇
+      anyOp(function (o) { return o.lastSkill === SK.CHARGE ? 1 : 0; }),
+      me.hp <= 1 ? 1 : 0,
+      agg.minHp <= 1 ? 1 : 0
     ];
   }
   const FEAT_S = features(S.createState('standard', { next: Math.random }), 0).length;
@@ -191,7 +225,7 @@
 
   global.EpirusPolicy = {
     ACT_KEYS, FEAT_N, FEAT_S, FEAT_A, HID, PACK_VERSION,
-    features, actionFeatures, value, forward, choose,
+    features, actionFeatures, value, forward, choose, oppAgg,
     paramCount, makePolicy, mutatePolicy, crossover, pack, unpack, checkPack
   };
 })(typeof window !== 'undefined' ? window : globalThis);

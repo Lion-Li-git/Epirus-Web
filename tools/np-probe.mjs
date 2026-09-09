@@ -80,6 +80,20 @@ async function main() {
   const multiSkills = await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button'));return b.filter(function(x){return !x.disabled;}).length;})()`);
   check('3 人：可用技能按钮 > 0', multiSkills > 0, '可用=' + multiSkills);
 
+  // 多人困难档：切到困难（用 3P 冠军）跑 3 回合，无 JS 异常
+  await evalJS(`(function(){var s=document.getElementById('sel-diff');s.value='hard';s.dispatchEvent(new Event('change'));return 1;})()`);
+  const champLoaded = await evalJS(`(function(){return typeof window.EPIRUS_CHAMPION_3P !== 'undefined' ? 1 : 0;})()`);
+  check('3 人：3P 冠军包已加载', champLoaded === 1);
+  for (let r = 0; r < 3; r++) {
+    await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button')).filter(function(x){return !x.disabled;});if(b.length)b[0].click();return 1;})()`);
+    await sleep(120);
+    const mo2 = await evalJS(`document.getElementById('modal-root').classList.contains('hidden') === false`);
+    if (mo2) { await evalJS(`document.querySelectorAll('#modal-root button')[0].click()`); await sleep(150); }
+    await sleep(500);
+  }
+  const hardRounds = await evalJS(`document.querySelectorAll('#logbox .rnd').length`);
+  check('3 人：困难档（3P 冠军）对局推进', hardRounds >= 3, 'rnd 行=' + hardRounds);
+
   // 镜面反射：满足 3 ジ 后点击 → 应出现“复制对象 / 输出对象”两级弹窗
   let mirrorOk = false, mirrorDetail = '';
   await evalJS(`(function(){window.EpirusUI.B.state.p[0].ep = 5; window.EpirusUI.refresh(); return 1;})()`);

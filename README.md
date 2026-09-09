@@ -3,7 +3,7 @@
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）
 重新实现的一整套 **2 人可玩、可自对战训练** 程序。
 
-> **当前版本：v1.2.0** · 2 人对战（v1.0.0 功能冻结）+ **多人 3~5 人（技能已补齐）**，见 `docs/RULES-NP.md`。
+> **当前版本：v1.3.0** · 2 人对战（v1.0.0 功能冻结）+ **多人 3~5 人（技能齐全 + 3 人冠军已训练）**，见 `docs/RULES-NP.md`。
 > 版本历史见 [`CHANGELOG.md`](CHANGELOG.md)。
 
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩，不需要装任何东西、不需要联网。
@@ -72,7 +72,9 @@ Epirus-Web/
 ├─ tools/
 │   ├─ start-train-server.cmd  双击启动训练服务
 │   ├─ train-fast.mjs          命令行快速训练
-│   ├─ train-best.mjs          多种子择优训练（推荐）
+│   ├─ train-best.mjs          2 人多种子择优训练（推荐）
+│   ├─ train-3p.mjs            多人（3~5 人）自对战训练 → bundled-champion-3p.js
+│   ├─ eval-3p.mjs             多人冠军评测（1st/top2 + 出招分布）
 │   ├─ smoke.mjs               CDP 真浏览器冒烟测试（2 人）
 │   ├─ spec-run.mjs            Node 桩跑 2 人引擎自测（36/36）
 │   ├─ np-test.mjs             N 人引擎自测（12/12）
@@ -98,7 +100,8 @@ Epirus-Web/
 
 ```bash
 node tools/spec-run.mjs    # 2 人引擎：36/36
-node tools/np-test.mjs     # 多人引擎：18/18（目标 / 小雷逐边 / 双枪 / 镜面反射 / 聚光炮 / 反复横跳 / 合二为一 / 胜负 / 360 局 fuzz）
+node tools/np-test.mjs     # 多人引擎：19/19（目标 / 小雷逐边 / 双枪 / 镜面反射 / 聚光炮 / 反复横跳 / 合二为一 / 胜负 / 3P 冠军包 / 360 局 fuzz）
+node tools/eval-3p.mjs     # 3 人冠军评测：28 对手对 × 座位轮换 → 1st/top2 + 出招分布
 node tools/smoke.mjs       # 2 人页面冒烟（CDP 真 Chrome）
 node tools/np-probe.mjs    # 多人页面探测（3 人 + 5 人，CDP 真 Chrome）
 ```
@@ -133,7 +136,10 @@ node tools/train-best.mjs 4 600        # 4 个候选择优（推荐，约 8~10 �
 - 裁定见 `docs/RULES-NP.md`（N1..N13）：显式目标 / 同优先级两两相抵 / 小雷逐边 /
   大雷不连带 / 防御矩阵逐对 / 铁索图不递归 / 最后存活者胜。
 - 已实现：N 人引擎 + 目标 UI + **全部多人专用技能**（双枪射手 + 镜面反射 + 隐藏技能 聚光炮 / 反复横跳 / 合二为一）+ 淘汰后自动观战。
-- 未做：**6 人以上**（引擎支持任意 N，未测性能/平衡）、**N 人自对战训练**（多人局用脚本 AI，冠军权重仍是 2 人口径）。
+- **3 人自对战训练已落地**：`tools/train-3p.mjs`（多对手聚合特征 + 名次适应度 1.0/0.3/0 + 座位轮换 + 名人堂验证），
+  产物 `js/bundled-champion-3p.js`；多人困难档加载它（缺失时回退脚本自适应）。
+  实测 3 人 **1st 51.3% / top2 74.3%**（超过最强脚本 aggro 49.6%）。
+- 未做：**6 人以上**（引擎支持任意 N，未测性能/平衡）、**4/5 人专项训练**（当前 3P 冠军直接复用）。
 
 ## 免责声明
 

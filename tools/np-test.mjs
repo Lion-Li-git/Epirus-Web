@@ -4,7 +4,8 @@ import vm from 'node:vm';
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
 sb.window = sb; sb.globalThis = sb;
-for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js']) {
+for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
+  'js/train/policy.js', 'js/bundled-champion-3p.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, X = sb.window.EpirusResolve, Play = sb.window.EpirusPlay;
@@ -221,6 +222,17 @@ t('N18 光&火复合伤害：藤甲火弱 +1、吸血鬼光弱 +1 可叠加', fu
   st.p[2].fireWeakNow = true; st.p[2].vampire = true;
   X.rawDamage(st, 2, 1, '聚光炮', 'focusCannon', { type: R.DMG.FIRELIGHT });
   eq(st.p[2].hp, 0, '1 + 藤甲 1 + 光弱 1 = 3 伤');
+});
+
+t('N19 多人冠军包：可加载且维度兼容', function () {
+  const P = sb.window.EpirusPolicy;
+  const pack = sb.window.EPIRUS_CHAMPION_3P;
+  ok(!!pack, '存在 EPIRUS_CHAMPION_3P');
+  const chk = P.checkPack(pack);
+  ok(chk.ok, 'checkPack: ' + JSON.stringify(chk));
+  const params = P.unpack(pack);
+  ok(!!params && params.length === P.paramCount(), 'unpack 长度=' + (params ? params.length : 'null'));
+  ok(pack.f === P.FEAT_S && pack.h === P.HID, 'f/h 一致');
 });
 
 t('fuzz：3/4/5 人随机对局无异常，且必然收敛', function () {

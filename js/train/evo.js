@@ -181,6 +181,129 @@
     return { score: (n ? score / n : 0) + div, div: div, distinct: Object.keys(skillUse).length, entropy: ent, attackGames: attackGames, attackChoices: attackChoices, totalChoices: totalChoices, attackRate: attackRate, attackShare: attackShare };
   }
   /* 串行评估整代（浏览器 / 自测用）。行为与旧版逐成员完全一致。 */
+  /* ================= N 人（N19）================= */
+  /* 目标启发（N 人）：优先血量最低的存活对手 */
+  function pickTargetN(state, pid, key) {
+    const def = R.byKey[key];
+    if (!def || def.target === 'self') return null;
+    const opps = S.opponentsOf(state, pid);
+    if (!opps.length) return null;
+    let cand = [], minHp = Infinity;
+    for (const o of opps) {
+      const h = state.p[o].hp;
+      if (h < minHp - 1e-9) { minHp = h; cand = [o]; }
+      else if (Math.abs(h - minHp) < 1e-9) cand.push(o);
+    }
+    if (cand.length === 1) return cand[0];
+    return cand[Math.floor(state.rng.next() * cand.length)];   // 并列随机，去 pid 偏差
+  }
+  function pickTarget2N(state, pid, key, t1) {
+    if (key !== R.SK.DUAL_GUN && key !== R.SK.MIRROR) return null;
+    const opps = S.opponentsOf(state, pid).filter(function (o) { return o !== t1; });
+    return opps.length ? opps[0] : null;
+  }
+
+  /* N 人版策略 chooser（带目标选择） */
+  function policyChooserN(params, temp) {
+    return function (state, pid, legal) {
+      const aff = legal.filter(function (l) { return l.affordable; });
+      const base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
+      const key = P.choose(state, pid, base, params, { temp: temp });
+      return { key: key, target: pickTargetN(state, pid, key), target2: pickTarget2N(state, pid, key, pickTargetN(state, pid, key)) };
+    };
+  }
+
+  /* 脚本 chooser 包一层（补目标），供 N 人局使用 */
+  function wrapBotN(sel) {
+    return function (state, pid, legal) {
+      const k = sel(state, pid, legal);
+      const key = (typeof k === 'string') ? k : (k && k.key);
+      const t1 = pickTargetN(state, pid, key);
+      return { key: key, target: t1, target2: pickTarget2N(state, pid, key, t1) };
+    };
+  }
+
+  /* N 人一局：chooser[pid] 逐座位 */
+  function oneGameN(choosers, seed, n) {
+    const st = S.createState('multi', { next: mulberry32(seed) }, n);
+    Play.autoGameN(st, choosers);
+    const dmg = [];
+    for (let i = 0; i < n; i++) dmg.push(0);
+    for (const e of st.events) if (e.type === 'damage' && e.to != null) dmg[e.to] += e.amt;
+    return { winner: st.winner, rounds: st.round, dmg: dmg, state: st };
+  }
+
+  /* 名次（1 = 第一）：按（存活/血量）降序 */
+  function rankOf(st, seat) {
+    const order = [];
+    for (let i = 0; i < st.p.length; i++) order.push({ i: i, hp: Math.max(0, st.p[i].hp) });
+    order.sort(function (a, b) { return b.hp - a.hp; });
+    for (let k = 0; k < order.length; k++) if (order[k].i === seat) return k + 1;
+    return order.length;
+  }
+
+  /* N 人适应度（N19）：名次基础分（1/0.6/0.2）+ 轻量 shaped 项 */
+  function scoreMemberN(params, opps, games, n, gen, idx) {
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0;
+    for (let g = 0; g < games; g++) {
+      const seat = g % n;                                   // 座位轮换
+      const seed = seedOfGen(gen, idx, 'n') + g * 7919;
+      const choosers = [];
+      let oi = g % opps.length;
+      for (let pid = 0; pid < n; pid++) {
+        if (pid === seat) choosers.push(policyChooserN(params, 0.35));
+        else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
+      }
+      const r = oneGameN(choosers, seed, n);
+      const rank = rankOf(r.state, seat);
+      const base = rank === 1 ? 1.0 : rank === 2 ? 0.3 : 0.0;   // N19 修正：3 人局里第二名也算输，降低苟活奖励
+      const others = r.dmg.reduce(function (a, b) { return a + b; }, 0) - r.dmg[seat];
+      const diff = r.dmg[seat] - others / Math.max(1, n - 1);
+      const proact = 0.06 * Math.max(-1, Math.min(1, diff / 6));
+      const deal = 0.03 * Math.min(1, r.dmg[seat] / 4);
+      const slow = 0.03 * Math.min(1, r.rounds / R.MAX_ROUNDS);
+      fit += Math.max(-0.3, Math.min(1.3, base + proact + deal - slow));
+      if (rank === 1) first++;
+      else if (rank === 2) second++;
+      dealt += r.dmg[seat];
+      rounds += r.rounds;
+      played++;
+    }
+    return {
+      fit: played ? fit / played : 0,
+      first: first, second: second, games: played,
+      firstRate: played ? first / played : 0,
+      top2Rate: played ? (first + second) / played : 0,
+      avgDealt: played ? dealt / played : 0,
+      avgRounds: played ? rounds / played : 0
+    };
+  }
+
+  /* 多人实战评测：冠军在每个座位都打一遍，报 1st/2nd/3rd 率 */
+  function evalN(params, oppPairs, gamesPerPair, n, seedBase) {
+    let first = 0, second = 0, third = 0, total = 0;
+    for (const pair of oppPairs) {
+      for (let g = 0; g < gamesPerPair; g++) {
+        const seat = g % n;
+        const choosers = [];
+        let oi = 0;
+        for (let pid = 0; pid < n; pid++) {
+          if (pid === seat) choosers.push(policyChooserN(params, 0.15));
+          else { choosers.push(wrapBotN(pair[oi % pair.length])); oi++; }
+        }
+        const r = oneGameN(choosers, seedBase + g * 977 + total, n);
+        const rank = rankOf(r.state, seat);
+        if (rank === 1) first++; else if (rank === 2) second++; else third++;
+        total++;
+      }
+    }
+    return {
+      first: first, second: second, third: third, games: total,
+      firstRate: total ? first / total : 0,
+      top2Rate: total ? (first + second) / total : 0
+    };
+  }
+
   function evaluatePopulation(t, championSnap) {
     const opps = buildOpps(championSnap, 0.05);
     for (let i = 0; i < t.pop.length; i++) {
@@ -308,6 +431,7 @@
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate,
+    scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);
