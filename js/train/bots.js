@@ -295,6 +295,24 @@
   }
   pickWhiff.whiffOk = true;
 
+  // 节奏型对手工厂：按给定技能序列循环；**买不起就按ジ攒**（关键：缺这一步就永远攒不出 2 ジ 的招，
+  // 会退化成"只会免费反弹"的弱鸡——实测这种弱化版冠军 100% 能赢，反而掩盖了真实洞）。
+  function makeRhythm(seq) {
+    return function (state, pid, legal) {
+      const byKey = {}; legal.forEach(function (l) { byKey[l.key] = l; });
+      const want = seq[Math.floor((state.round || 1) % seq.length)];
+      if (byKey[want] && byKey[want].affordable) return want;
+      if (byKey[SK.JI] && byKey[SK.JI].affordable) return SK.JI;
+      return legal.length ? legal[0].key : SK.JI;
+    };
+  }
+  // 反弹与攻击交替（三拍）：反弹 → 枪 → 坦克
+  const pickReflectMix = makeRhythm([SK.REFLECT, SK.GUN, SK.TANK]);
+  // 反弹 → 反弹 → 坦克（用户实测能把冠军 100% 打穿）
+  const pickReflectTank = makeRhythm([SK.REFLECT, SK.REFLECT, SK.TANK]);
+  // 防御 → 反弹 → 枪（用户实测 17 回合打赢困难档）
+  const pickDefReflectGun = makeRhythm([SK.GUARD, SK.REFLECT, SK.GUN]);
+
   // 原型制御墙：能出原型就出，否则按ジ。原型挡一切技能伤害，只有地雷/转移能绕——专门逼 AI 学会用这两招。
   function pickProtoWall(state, pid, legal) {
     const byKey = {}; legal.forEach(function (l) { byKey[l.key] = l; });
@@ -319,7 +337,8 @@
 
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickMix,
-    pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff, DIFFICULTY, resetBotMem,
+    pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
+    pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, resetBotMem,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'

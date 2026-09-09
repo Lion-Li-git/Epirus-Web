@@ -439,6 +439,38 @@
     }
   });
 
+  t("R9' 蓄能珠只供下一回合：回合末未使用即清空", function () {
+    const st = game(); setEp(st, 5, 5);
+    // R1 蓄能电珠 → 持有 1 枚
+    play(st, SK.CHARGE, SK.JI, { bead: 'elec' }, null);
+    eq(st.p[0].elec, 1, 'R1 蓄能后持有 1 电珠');
+    // R2 不使用 → 回合末清空
+    setEp(st, 5, 5);
+    play(st, SK.JI, SK.JI);
+    eq(st.p[0].elec, 0, 'R2 末未使用 → 电珠清空');
+    // R3 再蓄能 → R4 电磁炮可用（证明「下一回合」确实可用）
+    setEp(st, 5, 5);
+    play(st, SK.CHARGE, SK.JI, { bead: 'elec' }, null);
+    eq(st.p[0].elec, 1, 'R3 再蓄能');
+    setEp(st, 5, 5);
+    play(st, SK.RAILGUN, SK.JI);
+    eq(st.actions[0].outcome, 'ok', 'R4 电磁炮成功发动');
+    eq(st.p[0].elec, 0, 'R4 电磁炮消耗电珠');
+  });
+
+  t('R45 铁索连环：天火与爆头也共享伤害（文档口径）', function () {
+    const st = game(); setEp(st, 5, 5);
+    st.p[0].chainLink = st.p[1].chainLink = true;
+    st.p[0].hp = 3; st.p[1].hp = 3;
+    X.rawDamage(st, 1, 1, '天火', 'firestorm', { type: R.DMG.FIRE });
+    eq(st.p[1].hp, 2, '天火命中目标');
+    eq(st.p[0].hp, 2, '铁索把天火共享给另一方');
+    st.p[0].hp = 3; st.p[1].hp = 3;
+    X.rawDamage(st, 1, 1, '爆头', 'headshot', {});
+    eq(st.p[1].hp, 2, '爆头命中目标');
+    eq(st.p[0].hp, 2, '铁索把爆头共享给另一方');
+  });
+
   /* ============ 输出 ============ */
   const pass = results.filter(r => r.ok).length;
   const html = '<div class="sum">通过 ' + pass + ' / ' + results.length + '</div><ol>' +

@@ -35,7 +35,8 @@
     mix: Bots.pickMix, wall: Bots.pickWall,
     reflectspam: Bots.pickReflectSpam, guardspam: Bots.pickGuardSpam, baguaspam: Bots.pickBaguaSpam, combocounter: Bots.pickComboCounter,
     tankline: Bots.pickTankLine, heavyfire: Bots.pickHeavyFire, guardgun: Bots.pickGuardGun,
-    protowall: Bots.pickProtoWall, whiff: Bots.pickWhiff
+    protowall: Bots.pickProtoWall, whiff: Bots.pickWhiff,
+    reflectmix: Bots.pickReflectMix, reflecttank: Bots.pickReflectTank, defreflectgun: Bots.pickDefReflectGun
   };
   // 硬门槛：任何一条基准 <50% 的候选一律不许当冠军（否则"对某类打法更脆"会被 avg 平均掉）。
   // 起初只挡人类式三条，实测仍放过"永久防御 50% / 永久反弹 27%"这类洞，故扩到全部基准。
@@ -106,6 +107,9 @@
       { name: 'guardgun', w: 1.8, sel: BOT_PICKS.guardgun },    // 人类式：防御+枪三拍
       { name: 'protowall', w: 1.6, sel: BOT_PICKS.protowall },  // 原型制御墙：只有地雷/转移能绕
       { name: 'whiff', w: 1.2, sel: BOT_PICKS.whiff },          // 空放型：训练 lastSkill=null 状态
+      { name: 'reflectmix', w: 1.8, sel: BOT_PICKS.reflectmix }, // 反弹与攻击交替：克「枪/狙击吃反弹」
+      { name: 'reflecttank', w: 1.8, sel: BOT_PICKS.reflecttank },   // 反弹→反弹→坦克（实测打穿旧冠军）
+      { name: 'defreflectgun', w: 1.8, sel: BOT_PICKS.defreflectgun }, // 防御→反弹→枪（实测打穿旧冠军）
       { name: 'reflectspam', w: 1.6, sel: BOT_PICKS.reflectspam }, // 永久反弹：修"一键反弹打死冠军"
       { name: 'mix', w: 1.3, sel: BOT_PICKS.mix },
       { name: 'aggro', w: 1.2, sel: BOT_PICKS.aggro },

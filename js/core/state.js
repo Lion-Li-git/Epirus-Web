@@ -9,7 +9,8 @@
     return {
       id, name, hp, ep: 0,
       lastSkill: null,
-      elec: 0, boom: 0,             // 能量珠 R9
+      elec: 0, boom: 0,             // 能量珠 R9'（只供下一回合，回合末未用即清空）
+      beadNew: null,                // 本回合蓄能新得的珠类型（endTurn 据此决定谁过期）
       ringStreak: 0,                // 聚能环连击 R10
       cannonCount: 0,               // 过载炮次数 R42
       guardStreak: 0,               // 防御连击（快速模式上限 2）R52

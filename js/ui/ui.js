@@ -316,6 +316,7 @@
       case 'heal': return { cls: 'ev heal', html: '💚 ' + nm(e.pid) + ' 回复 ' + e.amt + ' 血' + (e.reason ? '（' + esc(e.reason) + '）' : '') };
       case 'ep': return { cls: 'ev', html: '🔋 ' + nm(e.pid) + ' ジ ' + (e.delta > 0 ? '+' : '') + e.delta };
       case 'bead': return { cls: 'ev', html: (e.delta > 0 ? '✨ ' + nm(e.pid) + ' 获得' : '✖ ' + nm(e.pid) + ' 消耗') + (e.kind === 'elec' ? ' 1 电珠' : ' 1 爆珠') };
+      case 'beadExpire': return { cls: 'dim', html: '⏳ ' + nm(e.pid) + ' 的' + (e.kind === 'elec' ? '电珠' : '爆珠') + '过期（蓄能珠只供下一回合）' };
       case 'mineArm': return { cls: 'ev', html: '💣 ' + nm(e.pid) + ' 埋下地雷' };
       case 'guardSet': return { cls: 'ev dim', html: '🛡 ' + nm(e.pid) + ' 摆出【' + skillName(e.key) + '】架势' };
       case 'blocked': return { cls: 'ev dim', html: '🛡 ' + nm(e.to) + ' 的【' + (e.by || '架势') + '】挡下伤害' + (e.judge ? '（判定成功）' : '') };

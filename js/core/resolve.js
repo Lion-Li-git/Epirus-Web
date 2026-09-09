@@ -301,7 +301,8 @@
         case SK.JI: me.ep += 1; ev(state, { type: 'ep', pid: i, delta: 1 }); break;
         case SK.CHARGE: {
           const kind = (a.opt && a.opt.bead) || 'elec';
-          me[kind] += 1; ev(state, { type: 'bead', pid: i, kind, delta: 1 }); break;
+          me[kind] = 1; me.beadNew = kind;   // R9'：同回合重复蓄能只刷新不叠加
+          ev(state, { type: 'bead', pid: i, kind, delta: 1 }); break;
         }
         case SK.RING: {
           const g = me.ringStreak >= 3 ? 3 : me.ringStreak; // attempt 时已 +1
@@ -367,7 +368,7 @@
           for (const st of you.stickers.slice()) {
             if (st.owner === i && st.age <= 3) {
               n++;
-              if (!protoBlock) rawDamage(state, t, 1, '天火', 'firestorm', { chain: false, type: R.DMG.FIRE });
+              if (!protoBlock) rawDamage(state, t, 1, '天火', 'firestorm', { type: R.DMG.FIRE });   // R45：铁索共享火焰（文档口径）
               else ev(state, { type: 'blocked', to: t, by: '原型制御', amt: 1, via: 'firestorm' });
             }
           }
@@ -422,7 +423,7 @@
         // 爆头：目标技能对狙击手无影响才可判定
         const affect = ta && (R.ATK_EFFECT.indexOf(ta.key) >= 0 || ta.key === SK.TRANSFER);
         if (!affect && judge3(state)) {
-          rawDamage(state, t, 1, '爆头', 'headshot', { chain: false });
+          rawDamage(state, t, 1, '爆头', 'headshot', {});   // R45：铁索共享爆头（文档口径）
           ev(state, { type: 'headshot', pid: i, to: t });
         }
       }
@@ -453,6 +454,17 @@
       if (a && a.outcome === 'ok' && a.key === SK.GUARD) p.guardStreak = (p.guardStreak || 0) + 1;
       else p.guardStreak = 0;
       p.lastSkill = (a && a.outcome === 'ok') ? a.key : null;
+    }
+    // 蓄能珠时效 R9'：只供下一回合——回合结束时，非"本回合新蓄"的珠一律清空
+    for (let i = 0; i < 2; i++) {
+      const p = state.p[i];
+      const keep = p.beadNew || null;
+      const beforeE = p.elec, beforeB = p.boom;
+      p.elec = keep === 'elec' ? 1 : 0;
+      p.boom = keep === 'boom' ? 1 : 0;
+      p.beadNew = null;
+      if (beforeE !== p.elec) ev(state, { type: 'beadExpire', pid: i, kind: 'elec', n: beforeE - p.elec });
+      if (beforeB !== p.boom) ev(state, { type: 'beadExpire', pid: i, kind: 'boom', n: beforeB - p.boom });
     }
     // 挑衅合规检查（本回合义务；净化不能免除已生效义务 R54）
     for (let i = 0; i < 2; i++) {
