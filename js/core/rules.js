@@ -18,7 +18,7 @@
   };
 
   const CAT = { ENERGY: 'energy', ATTACK: 'attack', DEFENSE: 'defense', SPECIAL: 'special' };
-  const DMG = { NORMAL: 'normal', LIGHT: 'light', FIRE: 'fire', ELECTRIC: 'electric' };
+  const DMG = { NORMAL: 'normal', LIGHT: 'light', FIRE: 'fire', ELECTRIC: 'electric', FIRELIGHT: 'firelight' };  // N18 光&火复合
 
   // cost 描述：number = 固定ジ；函数在 state 上下文求值（聚能环/过载炮/激光眼）
   function mk(key, name, cat, cost, pri, target, opts) {
@@ -74,7 +74,7 @@
     mk(SK.PURIFY, '净化', CAT.SPECIAL, 3, 1, 'self', { desc: '清除自身持续负面状态并移除身上符咒，每枚回复 1 血（n-1规则）', gesture: '双手正立相扣' }),
     // ---- 多人专用（2人局置灰）----
     mk(SK.DUAL_GUN, '双枪射手', CAT.ATTACK, 3, 3, 'enemy', { desc: '（多人）对两个角色同时使用“枪”' }),
-    mk(SK.MIRROR, '镜面反射', CAT.SPECIAL, 3, 3, 'enemy', { desc: '（多人）复制作用者 1 的技能对作用者 2 使用' })
+    mk(SK.MIRROR, '镜面反射', CAT.SPECIAL, 3, 3, 'enemy', { desc: '（多人）复制目标 1 本回合的伤害技能，对目标 2 施加；复制双枪只算一枪' })
   ];
 
   const byKey = {};
@@ -98,8 +98,8 @@
 
   // 连续使用计数族（聚能环）；激光眼连续由 lastSkill 判断
 
-  // N9：3-5 人启用全部技能，但「镜面反射」本版未实现（N11）故排除
-  const AVAILABLE_MULTI = skills.filter(function (s) { return s.key !== SK.MIRROR; });
+  // N9/N14：3-5 人启用全部技能（含多人专用 双枪射手 / 镜面反射）
+  const AVAILABLE_MULTI = skills;
 
   const MODES = {
     standard: { name: '标准模式', hp: 3, skills: AVAILABLE_2P, rule: '' },

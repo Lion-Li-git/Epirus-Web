@@ -101,7 +101,8 @@
     if (p.hp <= 0) return false;
     let hit = amt;
     // 藤甲火弱：一切火焰伤害+1（坦克/天火/地雷等，R22）
-    if (opts.type === R.DMG.FIRE && p.fireWeakNow) hit += 1;
+    if ((opts.type === R.DMG.FIRE || opts.type === R.DMG.FIRELIGHT) && p.fireWeakNow) hit += 1;  // N18 藤甲
+    if ((opts.type === R.DMG.LIGHT || opts.type === R.DMG.FIRELIGHT) && p.vampire) hit += 1;      // R47/N18 吸血鬼
     p.hp -= hit;
     ev(state, { type: 'damage', to, amt: hit, reason, via: via || reason });
     if (opts.chain !== false && p.chains && p.chains.length && !opts.fromChain) {
@@ -195,9 +196,9 @@
     }
 
     // ---- 落点 ----
-    let amt = dmg.amt;
-    if (target.vampire && dmg.type === R.DMG.LIGHT) amt += 1;         // R47
-    rawDamage(state, to, amt, ctx.reason || via || '', via, { fromChain: dmg.fromChain, type: dmg.type });
+    // R47/N18：吸血鬼光伤 +1 与藤甲火伤 +1 统一在 rawDamage 处理
+    const amt = dmg.amt;
+    rawDamage(state, to, dmg.amt, ctx.reason || via || '', via, { fromChain: dmg.fromChain, type: dmg.type });
     // 地雷联动（直接攻击动作伤害落地才触发；反弹/转移/天火等不触发）
     if (!dmg.noMine && !dmg.fromChain && !dmg.reflected && dmg.source != null && dmg.source !== to) {
       if (via !== SK.SNIPE && MINE_TRIGGER.indexOf(via) >= 0 && target.mineArmed) {
@@ -234,6 +235,100 @@
           setVoid(state, ia, '被高优先级攻击阻止');
         }
       }
+    }
+  }
+
+  /* ---------- N14 镜面反射 / N15 反复横跳 / N16 聚光炮 ---------- */
+  /* 可被复制的“伤害效果”：架势/自增益/能量类/状态类返回 null */
+  function copyEffect(key) {
+    const def = R.byKey[key];
+    if (!def) return null;
+    if (key === SK.DUAL_GUN) return { amt: 1, type: R.DMG.NORMAL, pierce: {}, via: SK.GUN };  // 原文：只算一枪
+    if (key === SK.LASER_EYE) return { amt: 1, type: R.DMG.LIGHT, pierce: {}, via: SK.LASER_EYE };
+    if (key === SK.CANNON) return { amt: 1, type: R.DMG.NORMAL, pierce: {}, via: SK.CANNON };
+    if (def.dmg && def.dmg.amt) return { amt: def.dmg.amt, type: def.dmg.type, pierce: def.pierce || {}, via: key };
+    return null;
+  }
+
+  /* 有向图是否存在环（反复横跳触发判定） */
+  function hasCycle(edges) {
+    const adj = {};
+    for (const e of edges) (adj[e[0]] = adj[e[0]] || []).push(e[1]);
+    const color = {};
+    let found = false;
+    function dfs(u) {
+      color[u] = 1;
+      const nxt = adj[u] || [];
+      for (const v of nxt) {
+        if (color[v] === 1) { found = true; return; }
+        if (!color[v]) { dfs(v); if (found) return; }
+      }
+      color[u] = 2;
+    }
+    for (const k in adj) { if (!color[k]) { dfs(+k); if (found) break; } }
+    return found;
+  }
+
+  function mirrorPass(state) {
+    const mirrors = [];
+    for (let i = 0; i < playerCount(state); i++) {
+      const a = actionOf(state, i);
+      if (a && a.key === SK.MIRROR) mirrors.push(i);
+    }
+    if (!mirrors.length) return;
+    const info = {};
+    for (const m of mirrors) {
+      const a = actionOf(state, m);
+      const opps = aliveOpps(state, m);
+      let t1 = a.target, t2 = a.target2;
+      if (t1 == null || t1 === m || !state.p[t1] || state.p[t1].hp <= 0) t1 = opps.length ? opps[0] : null;
+      if (t2 == null || t2 === m || t2 === t1 || !state.p[t2] || state.p[t2].hp <= 0) {
+        t2 = null;
+        for (const o of opps) { if (o !== t1) { t2 = o; break; } }
+      }
+      info[m] = { t1, t2 };
+      if (t1 == null || t2 == null) setVoid(state, m, '镜面反射无目标');
+    }
+    // ---- N16 聚光炮 ----
+    const usedEdge = {};
+    for (let x = 0; x < mirrors.length; x++) {
+      for (let y = x + 1; y < mirrors.length; y++) {
+        const A = mirrors[x], B = mirrors[y];
+        const iA = info[A], iB = info[B];
+        if (!iA || !iB || iA.t1 == null || iB.t1 == null || iA.t2 == null) continue;
+        if (iA.t1 === B && iB.t1 === A && iA.t2 === iB.t2) {
+          ev(state, { type: 'hidden', name: '聚光炮', pid: A, to: iA.t2 });
+          rawDamage(state, iA.t2, 1, '聚光炮', 'focusCannon', { type: R.DMG.FIRELIGHT });
+          usedEdge[A] = true; usedEdge[B] = true;
+        }
+      }
+    }
+    // ---- N15 反复横跳 ----
+    const edges = [];
+    const freeUsers = [];
+    for (const m of mirrors) {
+      if (usedEdge[m]) continue;
+      const it = info[m];
+      if (it && it.t1 != null && it.t2 != null) { edges.push([it.t1, it.t2]); freeUsers.push(m); }
+    }
+    if (edges.length >= 2 && hasCycle(edges)) {
+      ev(state, { type: 'hidden', name: '反复横跳', pids: freeUsers.slice() });
+      for (const u of freeUsers) rawDamage(state, u, 1, '反复横跳', 'hop', { type: R.DMG.FIRELIGHT });
+    }
+    // ---- N14 复制伤害 ----
+    for (const m of mirrors) {
+      const a = actionOf(state, m);
+      if (!a) continue;
+      const it = info[m];
+      if (!it || it.t1 == null || it.t2 == null) continue;
+      const ta = actionOf(state, it.t1);
+      if (!ta) { ev(state, { type: 'mirrorNoEffect', pid: m, from: it.t1 }); continue; }
+      const eff = copyEffect(ta.key);
+      if (!eff) { ev(state, { type: 'mirrorNoEffect', pid: m, from: it.t1, key: ta.key }); continue; }
+      ev(state, { type: 'mirror', pid: m, from: it.t1, to: it.t2, key: ta.key });
+      deliverDamage(state, {
+        amt: eff.amt, type: eff.type, source: m, via: eff.via, pierce: eff.pierce || {}
+      }, it.t2, { reason: '镜面反射·' + R.byKey[ta.key].name });
     }
   }
 
@@ -285,6 +380,19 @@
       } else {
         setVoid(state, t, SK.MINI_T);
         ev(state, { type: 'voidedBy', pid: t, by: SK.MINI_T });
+      }
+    }
+    // N17 合二为一：>=2 人同时对同一目标用小雷 → 目标额外 1 点电伤
+    const miniByTarget = {};
+    for (const c of mini) {
+      if (!actionOf(state, c)) continue;
+      const t = targetOf(state, c);
+      if (t != null) (miniByTarget[t] = miniByTarget[t] || []).push(c);
+    }
+    for (const tk in miniByTarget) {
+      if (miniByTarget[tk].length >= 2) {
+        ev(state, { type: 'hidden', name: '合二为一', pids: miniByTarget[tk].slice(), to: +tk });
+        rawDamage(state, +tk, 1, '合二为一', 'unite', { type: R.DMG.ELECTRIC });
       }
     }
 
@@ -438,6 +546,9 @@
         default: break;
       }
     }
+
+    // ====== ④b 镜面反射 / 反复横跳 / 聚光炮（N14/N15/N16）======
+    mirrorPass(state);
 
     // 互勾 → 铁索连环（在抵消检查中被豁免，双方均已结算）
     for (let i = 0; i < playerCount(state); i++) {

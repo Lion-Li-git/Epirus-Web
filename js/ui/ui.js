@@ -118,11 +118,11 @@
       btn.className = 'skillbtn c-' + s.cat;
       const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = s.name;
       const ct = document.createElement('span'); ct.className = 'ct';
-      ct.textContent = multiOnly ? '未实现' : (cd > 0 ? ('禁用剩' + cd + '回合') : costLabel(s));
+      ct.textContent = multiOnly ? '多人模式' : (cd > 0 ? ('禁用剩' + cd + '回合') : costLabel(s));
       btn.appendChild(nm); btn.appendChild(ct);
       btn.title = '【' + CAT_NM[s.cat] + ' · 优先级' + (s.pri || 3) + '】手势：' + (s.gesture || '—') + '\n' + s.desc;
       btn.disabled = multiOnly || !modeOk || cd > 0 || st.over || unaffordable;
-      if (multiOnly) btn.title += '\n（多人专用，本版未实现，见 docs/RULES-NP.md N11）';
+      if (multiOnly) btn.title += '\n（多人专用（2 人局不开放），见 docs/RULES-NP.md N14）';
       else if (!modeOk) btn.title += '\n（本模式不可用）';
       else if (unaffordable) btn.title += '\n（ジ/珠子不足或条件不满足，本回合无法发动）';
       btn.onclick = function () { pickSkill(s.key); };
@@ -252,7 +252,7 @@
     else key = Bots.pickBalanced(state, pid, legal);
     const t1 = pickTargetFor(state, pid, key);
     let t2 = null;
-    if (key === R.SK.DUAL_GUN) {
+    if (key === R.SK.DUAL_GUN || key === R.SK.MIRROR) {
       const rest = S.opponentsOf(state, pid).filter(function (o) { return o !== t1; });
       t2 = rest.length ? rest[0] : null;
     }
@@ -288,8 +288,9 @@
   /* 双枪射手：第二个目标 */
   function pickSecondTarget(key, bead, t1) {
     const opps = S.opponentsOf(B.state, 0).filter(function (o) { return o !== t1; });
+    const title = key === R.SK.MIRROR ? '选择输出对象（目标 2/2）' : '选择目标 2/2';
     if (!opps.length) return doPickMulti(key, bead, t1, null);
-    openModal('<h3>选择目标 2/2：' + R.byKey[key].name + '</h3>', opps.map(function (o) {
+    openModal('<h3>' + title + '：' + R.byKey[key].name + '</h3>', opps.map(function (o) {
       return {
         label: '👉 ' + B.state.p[o].name + '（HP ' + B.state.p[o].hp + '）',
         fn: function () { closeModal(); doPickMulti(key, bead, t1, o); }
@@ -303,8 +304,9 @@
     if (target === undefined) {
       const opps = S.opponentsOf(B.state, 0);
       if (def && def.target !== 'self' && opps.length > 1) {
-        const need2 = key === R.SK.DUAL_GUN;
-        openModal('<h3>选择目标' + (need2 ? ' 1/2' : '') + '：' + def.name + '</h3>', opps.map(function (o) {
+        const need2 = key === R.SK.DUAL_GUN || key === R.SK.MIRROR;
+        const title = key === R.SK.MIRROR ? '选择复制对象（目标 1/2）' : '选择目标' + (need2 ? ' 1/2' : '');
+        openModal('<h3>' + title + '：' + def.name + '</h3>', opps.map(function (o) {
           return {
             label: '👉 ' + B.state.p[o].name + '（HP ' + B.state.p[o].hp + '）',
             fn: function () {
@@ -364,6 +366,9 @@
       hint('第 ' + (B.state.round + 1) + ' 回合准备 —— 请出招（出招前可“悔一步”）。');
     }, 160 + Math.random() * 120);
   }
+
+  /* 测试钩子（tools/np-probe.mjs 用）：只暴露对象引用，不改变游戏逻辑 */
+  if (typeof window !== 'undefined') window.EpirusUI = { B: B, newGame: newGame, refresh: function () { buildSkillGrid(); renderSide(0); renderSide(1); } };
 
   function chooseAI(state, legal) {
     const d = B.diff;
@@ -492,7 +497,9 @@
         : { cls: 'ev blue', html: '☂ ' + nm(e.pids[0]) + ' 架起避雷针（3 回合内免雷一次）' };
       case 'rodBlock': return { cls: 'ev gold', html: '☂ ' + nm(e.pid) + ' 的避雷针挡下雷击' };
       case 'ban': return { cls: 'ev dmg', html: '🌩 ' + nm(e.pid) + ' 被雷劈中：多数技能禁用 3 回合（防御/反弹/金刚盾/ジ 除外）' };
-      case 'hidden': return { cls: 'ev pur', html: '🌑 触发隐藏技能【' + e.name + '】（' + nm(e.pid) + '）' };
+      case 'hidden': return { cls: 'ev pur', html: '🌑 触发隐藏技能【' + e.name + '】' + (e.pid != null ? '（' + nm(e.pid) + '）' : '') + (e.to != null ? ' → ' + nm(e.to) : '') };
+      case 'mirror': return { cls: 'ev pur', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】→ ' + nm(e.to) };
+      case 'mirrorNoEffect': return { cls: 'ev dim', html: '🪞 ' + nm(e.pid) + ' 镜面反射：' + nm(e.from) + ' 本回合' + (e.key ? '的【' + skillName(e.key) + '】' : '无行动') + '无可复制' };
       case 'revive': return { cls: 'ev gold', html: '👻 ' + nm(e.pid) + ' 回魂复活！本回合无限能量' };
       case 'vampire': return { cls: 'ev pur', html: '🧛 ' + nm(e.pid) + ' 觉醒【吸血鬼公爵】：摄魂自愈 2、受光伤 +1' };
       case 'purify': return { cls: 'ev heal', html: '🧼 ' + nm(e.pid) + ' 净化：清除 ' + e.curses + ' 枚符咒与负面状态' };

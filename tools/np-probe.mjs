@@ -80,6 +80,31 @@ async function main() {
   const multiSkills = await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button'));return b.filter(function(x){return !x.disabled;}).length;})()`);
   check('3 人：可用技能按钮 > 0', multiSkills > 0, '可用=' + multiSkills);
 
+  // 镜面反射：满足 3 ジ 后点击 → 应出现“复制对象 / 输出对象”两级弹窗
+  let mirrorOk = false, mirrorDetail = '';
+  await evalJS(`(function(){window.EpirusUI.B.state.p[0].ep = 5; window.EpirusUI.refresh(); return 1;})()`);
+  await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button')).find(function(x){return x.textContent.indexOf('镜面')>=0 && !x.disabled;});return b?1:0;})()`);
+  await sleep(250);
+  const mirrorEnabled = await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button')).find(function(x){return x.textContent.indexOf('镜面')>=0 && !x.disabled;});return b?1:0;})()`);
+  if (mirrorEnabled) {
+    await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button')).find(function(x){return x.textContent.indexOf('镜面')>=0 && !x.disabled;});b.click();return 1;})()`);
+    await sleep(250);
+    const h1 = await evalJS(`document.querySelector('#modal-card h3') ? document.querySelector('#modal-card h3').textContent : ''`);
+    mirrorDetail = 'h1=' + h1;
+    if (h1.indexOf('复制对象') >= 0) {
+      await evalJS(`document.querySelectorAll('#modal-root button')[0].click()`);
+      await sleep(250);
+      const h2 = await evalJS(`document.querySelector('#modal-card h3') ? document.querySelector('#modal-card h3').textContent : ''`);
+      mirrorDetail += ' h2=' + h2;
+      if (h2.indexOf('输出对象') >= 0) {
+        mirrorOk = true;
+        await evalJS(`document.querySelectorAll('#modal-root button')[0].click()`);
+        await sleep(700);
+      }
+    }
+  }
+  check('3 人：镜面反射两级目标弹窗', mirrorOk, mirrorDetail);
+
   // 打 8 回合
   let targetPicked = 0, picks = 0;
   for (let r = 0; r < 8; r++) {

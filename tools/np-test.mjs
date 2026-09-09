@@ -48,12 +48,13 @@ t('N1 人数：createState 默认 2 人；multi 模式可 3/4/5 人', function (
   }
 });
 
-t('N2 多人模式含双枪（镜面本版未实现，N11）', function () {
+t('N2 多人模式含全部多人专用技能（双枪 + 镜面）', function () {
   const st = S.createState('multi', { next: mulberry32(1) }, 3);
   ok(S.canUseSkillInMode(st, R.SK.DUAL_GUN), '双枪可用');
-  ok(!S.canUseSkillInMode(st, R.SK.MIRROR), '镜面未实现→不可用');
+  ok(S.canUseSkillInMode(st, R.SK.MIRROR), '镜面可用');
   const st2 = S.createState('standard', { next: mulberry32(1) }, 2);
   ok(!S.canUseSkillInMode(st2, R.SK.DUAL_GUN), '标准模式双枪不可用');
+  ok(!S.canUseSkillInMode(st2, R.SK.MIRROR), '标准模式镜面不可用');
 });
 
 t('目标：attemptAction 记录 action.target，resolveTarget 兜底第一个存活对手', function () {
@@ -143,6 +144,83 @@ t('N3 双枪射手：对两个目标各 1 点', function () {
   eq(st.p[1].hp, 2, '目标1 受伤');
   eq(st.p[2].hp, 2, '目标2 受伤');
   eq(st.p[0].hp, 3, '自身不受伤');
+});
+
+t('N14 镜面反射：复制目标的伤害技能打输出对象', function () {
+  const st = S.createState('multi', { next: mulberry32(31) }, 3);
+  for (const p of st.p) p.ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });   // 复制 P1 → 打 P2
+  S.attemptAction(st, 1, R.SK.GUN, { target: 0 });                 // P1 用枪打 P0
+  S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[2].hp, 2, 'P2 被复制来的枪打中');
+  eq(st.p[0].hp, 2, 'P1 的枪打中 P0');
+  eq(st.p[1].hp, 3, 'P1 未受伤');
+  ok(st.events.some(function (e) { return e.type === 'mirror'; }), 'mirror 事件');
+});
+
+t('N14b 镜面反射：复制双枪只算一枪；镜面本身不可复制', function () {
+  const st = S.createState('multi', { next: mulberry32(32) }, 4);
+  for (const p of st.p) p.ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+  S.attemptAction(st, 1, R.SK.DUAL_GUN, { target: 0, target2: 3 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  S.attemptAction(st, 3, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[2].hp, 2, '复制双枪只算 1 伤');
+  eq(st.p[0].hp, 2, '双枪打 P0');
+  eq(st.p[3].hp, 2, '双枪打 P3');
+});
+
+t('N15 反复横跳：镜面边成环 → 所有使用者受 1 点光&火', function () {
+  const st = S.createState('multi', { next: mulberry32(33) }, 3);
+  for (const p of st.p) p.ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });   // 1->2
+  S.attemptAction(st, 1, R.SK.MIRROR, { target: 2, target2: 0 });   // 2->0
+  S.attemptAction(st, 2, R.SK.MIRROR, { target: 0, target2: 1 });   // 0->1
+  X.resolveActions(st);
+  eq(st.p[0].hp, 2, 'P0 受 1 点光&火');
+  eq(st.p[1].hp, 2, 'P1 受 1 点光&火');
+  eq(st.p[2].hp, 2, 'P2 受 1 点光&火');
+  ok(st.events.some(function (e) { return e.type === 'hidden' && e.name === '反复横跳'; }), '反复横跳事件');
+});
+
+t('N16 聚光炮：互镜且输出同一人 → 该人受 1 点光&火', function () {
+  const st = S.createState('multi', { next: mulberry32(34) }, 3);
+  for (const p of st.p) p.ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+  S.attemptAction(st, 1, R.SK.MIRROR, { target: 0, target2: 2 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[2].hp, 2, 'P2 受 1 点光&火');
+  eq(st.p[0].hp, 3, 'P0 不受伤');
+  eq(st.p[1].hp, 3, 'P1 不受伤');
+  ok(st.events.some(function (e) { return e.type === 'hidden' && e.name === '聚光炮'; }), '聚光炮事件');
+});
+
+t('N17 合二为一：两人同时小雷打同一人 → 额外 1 电伤', function () {
+  const st = S.createState('multi', { next: mulberry32(35) }, 3);
+  for (const p of st.p) p.ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MINI_T, { target: 2 });
+  S.attemptAction(st, 1, R.SK.MINI_T, { target: 2 });
+  S.attemptAction(st, 2, R.SK.GUN, { target: 0 });
+  X.resolveActions(st);
+  ok(st.actions[2].voided, 'P2 行动被小雷作废');
+  eq(st.p[2].hp, 2, 'P2 额外受 1 电伤');
+  ok(st.events.some(function (e) { return e.type === 'hidden' && e.name === '合二为一'; }), '合二为一事件');
+});
+
+t('N18 光&火复合伤害：藤甲火弱 +1、吸血鬼光弱 +1 可叠加', function () {
+  const st = S.createState('multi', { next: mulberry32(36) }, 3);
+  for (const p of st.p) p.ep = 5;
+  st.p[2].fireWeakNow = true; st.p[2].vampire = true;
+  X.rawDamage(st, 2, 1, '聚光炮', 'focusCannon', { type: R.DMG.FIRELIGHT });
+  eq(st.p[2].hp, 0, '1 + 藤甲 1 + 光弱 1 = 3 伤');
 });
 
 t('fuzz：3/4/5 人随机对局无异常，且必然收敛', function () {
