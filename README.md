@@ -3,6 +3,9 @@
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）
 重新实现的一整套 **2 人可玩、可自对战训练** 程序。
 
+> **当前版本：v1.0.0（2 人对战完整版，功能冻结）** · 多人（3~5 人）框架开发中，见 `docs/RULES-NP.md`。
+> 版本历史见 [`CHANGELOG.md`](CHANGELOG.md)。
+
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩，不需要装任何东西、不需要联网。
 - **训练部分可选**：另起一个 Node 服务（只用内置模块 `http` / `worker_threads` / `vm`），用于练出"冠军 AI"。
 
