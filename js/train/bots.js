@@ -18,6 +18,23 @@
     const a = legal.find(l => l.affordable);
     return a ? a.key : SK.JI;
   }
+  /* N 人：对手解析（2 人=另一个；N 人=血量最低的存活对手） */
+  function oppPidOf(state, pid) {
+    let best = null;
+    for (let i = 0; i < state.p.length; i++) {
+      if (i === pid) continue;
+      const p = state.p[i];
+      if (p.hp <= 0) continue;
+      if (best == null || p.hp < state.p[best].hp) best = i;
+    }
+    if (best == null) { for (let i = 0; i < state.p.length; i++) { if (i !== pid) { best = i; break; } } }
+    return best;
+  }
+  function oppOf(state, pid) {
+    const i = oppPidOf(state, pid);
+    return (i == null) ? state.p[0] : state.p[i];
+  }
+
   function stanceOf(you) {
     const s = you.lastSkill;
     if (s === SK.GUARD || s === SK.SHIFT) return 'guard';          // 防御架势 → 需穿防御
@@ -32,7 +49,7 @@
   function resetBotMem() { __mem = { lastDefRound: -1000, oppMightDefend: false }; }
   function noteOpp(state, pid) {
     if (state.round === 1) resetBotMem();
-    const you = state.p[1 - pid];
+    const you = oppOf(state, pid);
     if (stanceOf(you) !== 'none') __mem.lastDefRound = state.round - 1;
     __mem.oppMightDefend = (state.round - __mem.lastDefRound) <= 2;  // 最近2回合内防过 → 可能再防
   }
@@ -85,7 +102,7 @@
   }
 
   function pickAggro(state, pid, legal) {
-    const me = state.p[pid], you = state.p[1 - pid];
+    const me = state.p[pid], you = oppOf(state, pid);
     const byKey = {}; legal.forEach(l => byKey[l.key] = l);
     const aff = k => byKey[k] && byKey[k].affordable;
     if (me.hp <= 1 && aff(SK.DRAIN)) return SK.DRAIN;
@@ -98,7 +115,7 @@
   }
 
   function pickDefend(state, pid, legal) {
-    const me = state.p[pid], you = state.p[1 - pid];
+    const me = state.p[pid], you = oppOf(state, pid);
     const byKey = {}; legal.forEach(l => byKey[l.key] = l);
     const aff = k => byKey[k] && byKey[k].affordable;
     if (me.hp <= 1.5 && aff(SK.GUARD)) return SK.GUARD;
@@ -112,7 +129,7 @@
   }
 
   function pickBalanced(state, pid, legal) {
-    const me = state.p[pid], you = state.p[1 - pid];
+    const me = state.p[pid], you = oppOf(state, pid);
     noteOpp(state, pid);
     const byKey = {}; legal.forEach(l => byKey[l.key] = l);
     const aff = k => byKey[k] && byKey[k].affordable;
@@ -131,7 +148,7 @@
   }
 
   function pickAntiDef(state, pid, legal) {
-    const me = state.p[pid], you = state.p[1 - pid];
+    const me = state.p[pid], you = oppOf(state, pid);
     const byKey = {}; legal.forEach(l => byKey[l.key] = l);
     const aff = k => byKey[k] && byKey[k].affordable;
     if (me.tauntActive) {
@@ -168,7 +185,7 @@
   }
 
   function pickAdaptive(state, pid, legal) {
-    const me = state.p[pid], you = state.p[1 - pid];
+    const me = state.p[pid], you = oppOf(state, pid);
     noteOpp(state, pid);
     const byKey = {}; legal.forEach(l => byKey[l.key] = l);
     const aff = k => byKey[k] && byKey[k].affordable;
@@ -238,7 +255,7 @@
   /* 连招反制脚本：读对手最近出招 → 预测下一招 → 选克制技。
    * 逼 AI 学会"别被看穿"（不靠运行时连招防护）；模拟"正常游戏里明显连招会被对手针对"。 */
   function pickComboCounter(state, pid, legal) {
-    const opp = 1 - pid;
+    const opp = oppPidOf(state, pid);
     const recent = [];
     for (let i = state.events.length - 1; i >= 0 && recent.length < 5; i--) {
       const e = state.events[i];

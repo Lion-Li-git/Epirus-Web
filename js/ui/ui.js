@@ -8,7 +8,7 @@
   const $ = function (id) { return document.getElementById(id); };
   const NAME = ['你', '电脑'];
   const CAT_NM = { energy: '能量', attack: '攻击', defense: '防御', special: '特殊' };
-  const MODE_NM = { standard: '标准', fast: '快速', lucky: '欧皇' };
+  const MODE_NM = { standard: '标准', fast: '快速', lucky: '欧皇', multi: '多人' };
 
   /* ---------- 小工具 ---------- */
   function skillName(key) { return R.byKey[key] ? R.byKey[key].name : key; }
@@ -17,21 +17,24 @@
 
   /* ---------- 对局状态 ---------- */
   const B = {
-    state: null, modeKey: 'standard', diff: 'medium',
+    state: null, modeKey: 'standard', diff: 'medium', players: 2, multi: false,
     roundStarted: false, locked: false, snap: null, aiKey: null,
     evCursor: 0, transcript: [], aiHistory: [],
     roundStartSnapshot: null, warnedChampNoTrain: false, undoUsed: false
   };
 
   function newGame() {
-    B.state = S.createState(B.modeKey);
+    const n = B.players || 2;
+    B.multi = n > 2;
+    if (B.multi) B.modeKey = 'multi';
+    B.state = S.createState(B.modeKey, null, n);
     B.roundStarted = false; B.locked = false; B.aiKey = null;
     B.evCursor = 0; B.transcript = []; B.aiHistory = [];
     B.roundStartSnapshot = null; B.warnedChampNoTrain = false; B.undoUsed = false;
     closeOverlay();
     buildSkillGrid();
     renderSide(0); renderSide(1);
-    logClear('新对局：' + MODE_NM[B.modeKey] + '模式 · 难度=' + diffName(B.diff) + ' · 双方初始 ' + B.state.mode.hp + ' 血');
+    logClear('新对局：' + (B.multi ? n + ' 人多人模式' : MODE_NM[B.modeKey] + '模式') + ' · 难度=' + diffName(B.diff) + ' · 每人初始 ' + B.state.mode.hp + ' 血');
     hint('请选择技能出招 —— 双方同时出手，按优先级结算。');
   }
 
@@ -40,9 +43,8 @@
   }
 
   /* ---------- 侧栏渲染 ---------- */
-  function renderSide(pid) {
+  function panelHtml(pid) {
     const st = B.state, p = st.p[pid];
-    const el = $('side-' + pid);
     const full = Math.min(Math.floor(p.hp), 8);
     let hearts = '';
     for (let i = 0; i < full; i++) hearts += '♥';
@@ -54,9 +56,10 @@
     }).join('');
 
     const badges = [];
+    if (p.hp <= 0) badges.push(['已淘汰', 'red']);
     if (p.mineArmed) badges.push(['地雷', 'warn']);
     if (p.rodGuard > 0) badges.push(['避雷针守卫', 'blue']);
-    if (p.chainLink) badges.push(['铁索连环', 'pur']);
+    if (p.chains && p.chains.length) badges.push(['铁索连环×' + p.chains.length, 'pur']);
     if (p.nightmare) badges.push(['梦魇-0.5/回合', 'warn']);
     if (p.vampire) badges.push(['吸血鬼公爵', 'pur']);
     if (p.baguaExtra) badges.push(['无极变速·本回合', 'blue']);
@@ -67,11 +70,23 @@
     const cd = Object.keys(p.cooldown).filter(function (k) { return p.cooldown[k] > 0; });
     if (cd.length) badges.push(['禁用中:' + cd.map(skillName).join('/') + '×' + cd.length, 'warn']);
 
-    el.innerHTML =
-      '<h3>' + (pid === 0 ? '🧑 你' : '🤖 电脑') + '</h3>' +
+    return '<h3>' + (pid === 0 ? '🧑 ' : '🤖 ') + esc(p.name) + '</h3>' +
       '<div class="statbar"><span class="stat">HP <b>' + p.hp + '</b></span>' + chips + '</div>' +
       '<div class="hearts">' + (hearts || '') + '</div>' +
-      '<div class="badges">' + (badges.map(function (b) { return '<span class="badge ' + b[1] + '">' + b[0] + '</span>'; }).join('') || '<span class="dim" style="font-size:11px">无状态</span>') + '</div>';
+      '<div class="badges">' + (badges.map(function (bd) { return '<span class="badge ' + bd[1] + '">' + bd[0] + '</span>'; }).join('') || '<span class="dim" style="font-size:11px">无状态</span>') + '</div>';
+  }
+
+  function renderSide(pid) {
+    if (B.multi) {
+      if (pid === 0) { $('side-0').innerHTML = panelHtml(0); return; }
+      let h = '';
+      for (let i = 1; i < B.state.p.length; i++) {
+        h += '<div class="mpanel' + (B.state.p[i].hp <= 0 ? ' dead' : '') + '">' + panelHtml(i) + '</div>';
+      }
+      $('side-1').innerHTML = h;
+      return;
+    }
+    $('side-' + pid).innerHTML = panelHtml(pid);
   }
 
   /* ---------- 技能面板 ---------- */
@@ -96,18 +111,18 @@
     for (const s of R.skills) {
       const modeOk = S.canUseSkillInMode(st, s.key);
       const cd = (st.p[0].cooldown[s.key] || 0);
-      const multiOnly = R.MULTI_ONLY.indexOf(s.key) >= 0;
+      const multiOnly = R.MULTI_ONLY.indexOf(s.key) >= 0 && !S.canUseSkillInMode(st, s.key);
       const la = legalMap[s.key];
       const unaffordable = !multiOnly && modeOk && cd <= 0 && !st.over && (!la || !la.affordable);
       const btn = document.createElement('button');
       btn.className = 'skillbtn c-' + s.cat;
       const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = s.name;
       const ct = document.createElement('span'); ct.className = 'ct';
-      ct.textContent = multiOnly ? '3人模式' : (cd > 0 ? ('禁用剩' + cd + '回合') : costLabel(s));
+      ct.textContent = multiOnly ? '未实现' : (cd > 0 ? ('禁用剩' + cd + '回合') : costLabel(s));
       btn.appendChild(nm); btn.appendChild(ct);
       btn.title = '【' + CAT_NM[s.cat] + ' · 优先级' + (s.pri || 3) + '】手势：' + (s.gesture || '—') + '\n' + s.desc;
       btn.disabled = multiOnly || !modeOk || cd > 0 || st.over || unaffordable;
-      if (multiOnly) btn.title += '\n（多人专用，2 人对局不可用，留待 3 人模式）';
+      if (multiOnly) btn.title += '\n（多人专用，本版未实现，见 docs/RULES-NP.md N11）';
       else if (!modeOk) btn.title += '\n（本模式不可用）';
       else if (unaffordable) btn.title += '\n（ジ/珠子不足或条件不满足，本回合无法发动）';
       btn.onclick = function () { pickSkill(s.key); };
@@ -161,7 +176,8 @@
     doPick(key, null);
   }
 
-  function doPick(key, bead) {
+  function doPick(key, bead, target) {
+    if (B.multi) return doPickMulti(key, bead, target);
     if (B.locked) return;
     B.locked = true;
     // 悔一步基准：回合开始前（startTurn 前）快照，撤销可回退到本回合开始
@@ -211,6 +227,140 @@
       B.locked = false;
       B.roundStarted = false;
       if (B.state.over) { finish(); return; }
+      hint('第 ' + (B.state.round + 1) + ' 回合准备 —— 请出招（出招前可“悔一步”）。');
+    }, 160 + Math.random() * 120);
+  }
+
+  /* ---------- 多人（3-5）对局 ---------- */
+  /* 目标启发：优先打血量最低的对手 */
+  function pickTargetFor(state, pid, key) {
+    const def = R.byKey[key];
+    if (!def || def.target === 'self') return null;
+    const opps = S.opponentsOf(state, pid);
+    if (!opps.length) return null;
+    if (opps.length === 1) return opps[0];
+    let best = opps[0];
+    for (const o of opps) if (state.p[o].hp < state.p[best].hp) best = o;
+    return best;
+  }
+
+  /* 多人 AI：脚本策略（冠军权重是 2 人口径，暂不用于 N 人）+ 目标启发 */
+  function chooseAIMulti(state, pid, legal) {
+    let key;
+    if (B.diff === 'easy') key = Bots.DIFFICULTY.easy.pick(state, pid, legal);
+    else if (B.diff === 'hard') key = Bots.pickAdaptive(state, pid, legal);
+    else key = Bots.pickBalanced(state, pid, legal);
+    const t1 = pickTargetFor(state, pid, key);
+    let t2 = null;
+    if (key === R.SK.DUAL_GUN) {
+      const rest = S.opponentsOf(state, pid).filter(function (o) { return o !== t1; });
+      t2 = rest.length ? rest[0] : null;
+    }
+    return { key: key, target: t1, target2: t2 };
+  }
+
+  /* 人类玩家被淘汰后：AI 自行打完剩余回合（观战） */
+  function autoRunRest() {
+    let guard = 0;
+    while (!B.state.over && B.state.p[0].hp <= 0 && guard++ < 200) {
+      const idx0 = B.state.events.length;
+      X.startTurn(B.state);
+      if (B.state.over) break;
+      const preState = S.cloneState(B.state);
+      const N = B.state.p.length;
+      const picks = [];
+      for (let pid = 1; pid < N; pid++) picks.push(chooseAIMulti(preState, pid, Play.legalActions(preState, pid)));
+      for (let pid = 1; pid < N; pid++) {
+        const b = B.state.p[pid];
+        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: b.elec > b.boom ? 'boom' : 'elec', target: picks[pid - 1].target });
+      }
+      X.resolveActions(B.state);
+      X.endTurn(B.state);
+      addLog('div', 'rnd', '第 ' + B.state.round + ' 回合（观战）');
+      logEvents(B.state.events.slice(idx0));
+    }
+    B.evCursor = B.state.events.length;
+    B.locked = false;
+    B.roundStarted = false;
+    if (B.state.over) finish();
+  }
+
+  /* 双枪射手：第二个目标 */
+  function pickSecondTarget(key, bead, t1) {
+    const opps = S.opponentsOf(B.state, 0).filter(function (o) { return o !== t1; });
+    if (!opps.length) return doPickMulti(key, bead, t1, null);
+    openModal('<h3>选择目标 2/2：' + R.byKey[key].name + '</h3>', opps.map(function (o) {
+      return {
+        label: '👉 ' + B.state.p[o].name + '（HP ' + B.state.p[o].hp + '）',
+        fn: function () { closeModal(); doPickMulti(key, bead, t1, o); }
+      };
+    }));
+  }
+
+  function doPickMulti(key, bead, target, target2) {
+    if (B.locked || B.state.over) return;
+    const def = R.byKey[key];
+    if (target === undefined) {
+      const opps = S.opponentsOf(B.state, 0);
+      if (def && def.target !== 'self' && opps.length > 1) {
+        const need2 = key === R.SK.DUAL_GUN;
+        openModal('<h3>选择目标' + (need2 ? ' 1/2' : '') + '：' + def.name + '</h3>', opps.map(function (o) {
+          return {
+            label: '👉 ' + B.state.p[o].name + '（HP ' + B.state.p[o].hp + '）',
+            fn: function () {
+              closeModal();
+              if (need2) return pickSecondTarget(key, bead, o);
+              doPickMulti(key, bead, o, null);
+            }
+          };
+        }));
+        return;
+      }
+      target = opps.length ? opps[0] : null;
+    }
+    B.locked = true;
+    if (!B.roundStarted) B.roundStartSnapshot = S.cloneState(B.state);
+    ensureRound();
+    if (B.state.over) { B.locked = false; return; }
+    const idx0 = B.state.events.length;
+    const preState = S.cloneState(B.state);
+    const N = B.state.p.length;
+    const picks = [];
+    for (let pid = 1; pid < N; pid++) picks.push(chooseAIMulti(preState, pid, Play.legalActions(preState, pid)));
+    S.attemptAction(B.state, 0, key, { bead: bead, target: target, target2: target2 });
+    hint('你选择了【' + skillName(key) + (target != null ? ' → ' + B.state.p[target].name : '') + '】，对手思考中…');
+    setTimeout(function () {
+      for (let pid = 1; pid < N; pid++) {
+        const b = B.state.p[pid];
+        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: b.elec > b.boom ? 'boom' : 'elec', target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
+      }
+      X.resolveActions(B.state);
+      X.endTurn(B.state);
+      const events = B.state.events.slice(idx0);
+      const mark = function (a) {
+        if (!a || a.outcome === 'ok') return '';
+        return a.outcome === 'insufficient' ? '（ジ不足·未发动）' : a.outcome === 'banned' ? '（禁用无效）' : '（无效）';
+      };
+      const parts = [];
+      for (let pid = 0; pid < N; pid++) {
+        const a = B.state.actions[pid];
+        const tg = (a && a.target != null && a.target !== pid) ? '→' + B.state.p[a.target].name : '';
+        parts.push(B.state.p[pid].name + '=【' + skillName(a ? a.key : R.SK.JI) + tg + '】' + mark(a));
+      }
+      addLog('div', 'rnd', '第 ' + B.state.round + ' 回合：' + parts.join('  '));
+      logEvents(events);
+      const lines = events.map(function (e) {
+        const t = evText(e);
+        return t ? t.html.replace(/<[^>]+>/g, '') : null;
+      }).filter(Boolean);
+      B.transcript.push({ round: B.state.round, human: parts[0], ai: parts.slice(1).join(' '), lines: lines });
+      persistBattle();
+      B.evCursor = B.state.events.length;
+      buildSkillGrid(); renderSide(0); renderSide(1);
+      B.locked = false;
+      B.roundStarted = false;
+      if (B.state.over) { finish(); return; }
+      if (B.state.p[0].hp <= 0) { hint('你已被淘汰，自动观战至结束…'); autoRunRest(); return; }
       hint('第 ' + (B.state.round + 1) + ' 回合准备 —— 请出招（出招前可“悔一步”）。');
     }, 160 + Math.random() * 120);
   }
@@ -268,9 +418,10 @@
     const w = B.state.winner;
     let title, cls = 'gold';
     if (w === 0) { title = '🎉 你赢了！'; }
-    else if (w === 1) { title = '💀 电脑获胜'; cls = 'red'; }
-    else { title = '🤝 平局（回合上限 60 且 HP 相同）'; }
-    const lines = ['共进行 ' + B.state.round + ' 回合', '你 HP ' + B.state.p[0].hp + ' / 电脑 HP ' + B.state.p[1].hp];
+    else if (w === 'draw') { title = '🤝 平局'; }
+    else { title = '💀 ' + (B.state.p[w] ? B.state.p[w].name : '电脑') + ' 获胜'; cls = 'red'; }
+    const lines = ['共进行 ' + B.state.round + ' 回合'];
+    for (const pp of B.state.p) lines.push(pp.name + ' HP ' + pp.hp);
     openOverlay('<h2 style="color:var(--' + (w === 0 ? 'green' : w === 1 ? 'red' : 'gold') + ')">' + title + '</h2>' +
       '<p>' + lines.join(' · ') + '</p>', [{ label: '再来一局', fn: newGame }]);
   }
@@ -284,7 +435,7 @@
       for (const l of r.lines) txt += '   - ' + l + '\n';
     }
     const w = B.state.winner;
-    txt += '\n结果：' + (w === 0 ? '你赢了' : w === 1 ? '电脑获胜' : '平局') + '（共 ' + B.state.round + ' 回合）\n';
+    txt += '\n结果：' + (w === 0 ? '你赢了' : w === 'draw' ? '平局' : (B.state.p[w] ? B.state.p[w].name + ' 获胜' : '平局')) + '（共 ' + B.state.round + ' 回合）\n';
     return txt;
   }
   // 每回合自动保存到 localStorage（对局结束也不清空，便于复查/调试）
@@ -702,6 +853,12 @@
     $('tab-battle').onclick = function () { showTab('battle'); };
     $('tab-train').onclick = function () { showTab('train'); };
     $('sel-mode').onchange = function () { B.modeKey = $('sel-mode').value; newGame(); };
+    $('sel-players').onchange = function () {
+      B.players = parseInt($('sel-players').value, 10) || 2;
+      if (B.players > 2) { B.modeKey = 'multi'; $('sel-mode').value = 'multi'; $('sel-mode').disabled = true; }
+      else { $('sel-mode').disabled = false; B.modeKey = $('sel-mode').value === 'multi' ? 'standard' : $('sel-mode').value; $('sel-mode').value = B.modeKey; }
+      newGame();
+    };
     $('sel-diff').onchange = function () { B.diff = $('sel-diff').value; hint('难度已切换：' + diffName(B.diff) + '（对局中即时生效）'); };
     $('btn-newgame').onclick = newGame;
     $('btn-undo').onclick = undo;

@@ -98,8 +98,12 @@
 
   // 连续使用计数族（聚能环）；激光眼连续由 lastSkill 判断
 
+  // N9：3-5 人启用全部技能，但「镜面反射」本版未实现（N11）故排除
+  const AVAILABLE_MULTI = skills.filter(function (s) { return s.key !== SK.MIRROR; });
+
   const MODES = {
     standard: { name: '标准模式', hp: 3, skills: AVAILABLE_2P, rule: '' },
+    multi: { name: '多人模式(3-5人)', hp: 3, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5 },
     fast: { name: '快速模式', hp: 1, skills: [SK.JI, SK.GUN, SK.GUARD], rule: '防御不能连续使用 3 次', guardLimit: 2 },
     lucky: { name: '欧皇模式', hp: 3, skills: [SK.JI, SK.JINSHIELD, SK.BAGUA, SK.GUN], rule: '' }
   };
@@ -108,7 +112,7 @@
   const MAX_ROUNDS = 60; // R1 防死锁
 
   global.EpirusRules = {
-    SK, CAT, DMG, skills, byKey, MULTI_ONLY, AVAILABLE_2P,
+    SK, CAT, DMG, skills, byKey, MULTI_ONLY, AVAILABLE_2P, AVAILABLE_MULTI,
     ATK_EFFECT, TAUNT_SATISFY, LIGHTNING, GUARD_FAMILY, MINI_T_IMMUNE,
     REFLECTABLE, MODES, MODE_DEFAULT, MAX_ROUNDS
   };

@@ -9,7 +9,9 @@
   function legalActions(state, pid) {
     const p = state.p[pid];
     const out = [];
-    for (const s of R.AVAILABLE_2P) {
+    for (const e of state.mode.skills) {
+      const s = (typeof e === 'string') ? R.byKey[e] : e;
+      if (!s) continue;
       if (!S.canUseSkillInMode(state, s.key)) continue;
       if ((p.cooldown[s.key] || 0) > 0) continue;                 // 禁用中（AI 不会硬闯）
       if (state.modeKey === 'fast' && s.key === R.SK.GUARD && p.guardStreak >= 2) continue;
@@ -22,8 +24,48 @@
     return out;
   }
 
-  /* 自动对局：chooser[pid](state, pid, legal) → key。onTurn 可选回调。 */
+  /* chooser 返回值规范化：'GUN' 或 {key, target} */
+  function normPick(res) {
+    if (typeof res === 'string') return { key: res, target: null, target2: null };
+    if (res && res.key) return {
+      key: res.key,
+      target: (res.target != null ? res.target : null),
+      target2: (res.target2 != null ? res.target2 : null)
+    };
+    return { key: null, target: null, target2: null };
+  }
+
+  /* N 人自动对局：choosers[pid](state, pid, legal, events) → key | {key,target} */
+  function autoGameN(state, choosers, onTurn) {
+    const N = state.p.length;
+    let guardN = 0;
+    while (!state.over) {
+      X.startTurn(state);
+      if (state.over) break;
+      const beadOf = function (p) { return p.elec > p.boom ? 'boom' : 'elec'; };   // 相等时取电珠，与页面同口径
+      const picks = [];
+      for (let pid = 0; pid < N; pid++) {
+        const ch = choosers[pid];
+        const legal = legalActions(state, pid);
+        const raw = normPick(ch ? ch(state, pid, legal, state.events) : null);
+        const l = legal.find(function (x) { return x.key === raw.key; });
+        const k = (ch && ch.whiffOk) ? raw.key : ((l && l.affordable) ? raw.key : R.SK.JI);
+        picks.push({ key: k, target: raw.target, target2: raw.target2 });
+      }
+      for (let pid = 0; pid < N; pid++) {
+        S.attemptAction(state, pid, picks[pid].key, { bead: beadOf(state.p[pid]), target: picks[pid].target, target2: picks[pid].target2 });
+      }
+      X.resolveActions(state);
+      X.endTurn(state);
+      if (onTurn) onTurn(state);
+      if (++guardN > 5000) throw new Error('autoGame loop guard');
+    }
+    return state.winner;
+  }
+
+  /* 2 人兼容入口：autoGame(state, c0, c1, onTurn) 或 autoGame(state, [c0..cN], onTurn) */
   function autoGame(state, chooser0, chooser1, onTurn) {
+    if (Array.isArray(chooser0)) return autoGameN(state, chooser0, chooser1);
     let guardN = 0;
     while (!state.over) {
       X.startTurn(state);
@@ -52,5 +94,5 @@
     return state.winner;
   }
 
-  global.EpirusPlay = { autoGame, legalActions };
+  global.EpirusPlay = { autoGame, autoGameN, legalActions, normPick };
 })(typeof window !== 'undefined' ? window : globalThis);

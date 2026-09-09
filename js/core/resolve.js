@@ -23,6 +23,29 @@
     }
   }
 
+  /* ---------- N 人通用：人数/目标 ---------- */
+  function playerCount(state) { return state.p.length; }
+  function aliveOpps(state, pid) {
+    const out = [];
+    for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) out.push(i);
+    return out;
+  }
+  /* 该玩家本回合行动的目标（self 类技能=null） */
+  function targetOf(state, pid) {
+    const a = state.actions[pid];
+    if (!a) return null;
+    const t = a.target;
+    if (t != null && t !== pid && state.p[t]) return t;
+    return null;
+  }
+  /* 对手目标：优先行动目标，否则第一个存活对手（self 类技能用于"贴在对手身上"的效果） */
+  function oppOf(state, pid) {
+    const t = targetOf(state, pid);
+    if (t != null) return t;
+    const o = aliveOpps(state, pid);
+    return o.length ? o[0] : null;
+  }
+
   /* ---------- 判定 ---------- */
   function judge(state) { return state.rng.next() < 0.5; }
   function judge3(state) { return judge(state) && judge(state) && judge(state); } // p=1/8 爆头
@@ -31,7 +54,7 @@
   function startTurn(state) {
     state.round += 1;
     if (checkOver(state)) return;
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i];
       if (p.nightmare && p.hp > 0) {          // R50
         p.hp -= 0.5;
@@ -81,11 +104,13 @@
     if (opts.type === R.DMG.FIRE && p.fireWeakNow) hit += 1;
     p.hp -= hit;
     ev(state, { type: 'damage', to, amt: hit, reason, via: via || reason });
-    if (opts.chain !== false && p.chainLink && !opts.fromChain) {
-      const other = 1 - to, op = state.p[other];
-      if (op.hp > 0) {
-        op.hp -= hit;
-        ev(state, { type: 'damage', to: other, amt: hit, reason: '铁索连环', via: 'chain', fromChain: true });
+    if (opts.chain !== false && p.chains && p.chains.length && !opts.fromChain) {
+      for (const other of p.chains) {          // N8：铁索图不递归
+        const op = state.p[other];
+        if (op && op.hp > 0) {
+          op.hp -= hit;
+          ev(state, { type: 'damage', to: other, amt: hit, reason: '铁索连环', via: 'chain', fromChain: true });
+        }
       }
     }
     return true;
@@ -184,23 +209,31 @@
 
   /* 攻击相抵/阻止（优先级原则 R3）：同优先级攻击抵消，高优先级攻击阻止低优先级攻击 */
   function clashPass(state) {
-    const acts = [actionOf(state, 0), actionOf(state, 1)];
-    const keys = [acts[0] && acts[0].key, acts[1] && acts[1].key];
-    const atkIdx = [0, 1].filter(function (i) { return keys[i] && R.ATK_EFFECT.indexOf(keys[i]) >= 0; });
+    const atkIdx = [];
+    for (let i = 0; i < playerCount(state); i++) {
+      const a = actionOf(state, i);
+      if (a && R.ATK_EFFECT.indexOf(a.key) >= 0) atkIdx.push(i);
+    }
     if (atkIdx.length < 2) return;
-    const a = acts[atkIdx[0]], b = acts[atkIdx[1]];
-    const bothDrain = a.key === SK.DRAIN && b.key === SK.DRAIN; // 互勾触发铁索，不抵消
-    if (bothDrain) return;
-    const pa = R.byKey[a.key].pri || 3, pb = R.byKey[b.key].pri || 3;
-    if (pa === pb) {
-      ev(state, { type: 'cancel', pids: atkIdx });
-      setVoid(state, atkIdx[0], '相抵'); setVoid(state, atkIdx[1], '相抵');
-    } else if (pa > pb) {
-      ev(state, { type: 'clash', winner: atkIdx[pa > pb ? 0 : 1], loser: atkIdx[pa > pb ? 1 : 0] });
-      setVoid(state, atkIdx[pa > pb ? 1 : 0], '被高优先级攻击阻止');
-    } else {
-      ev(state, { type: 'clash', winner: atkIdx[1], loser: atkIdx[0] });
-      setVoid(state, atkIdx[0], '被高优先级攻击阻止');
+    // N 人：两两结算（同优先级相抵、高优先级阻止低优先级）
+    for (let x = 0; x < atkIdx.length; x++) {
+      for (let y = x + 1; y < atkIdx.length; y++) {
+        const ia = atkIdx[x], ib = atkIdx[y];
+        const a = actionOf(state, ia), b = actionOf(state, ib);
+        if (!a || !b) continue;
+        if (a.key === SK.DRAIN && b.key === SK.DRAIN) continue; // 互勾触发铁索，不抵消
+        const pa = R.byKey[a.key].pri || 3, pb = R.byKey[b.key].pri || 3;
+        if (pa === pb) {
+          ev(state, { type: 'cancel', pids: [ia, ib] });
+          setVoid(state, ia, '相抵'); setVoid(state, ib, '相抵');
+        } else if (pa > pb) {
+          ev(state, { type: 'clash', winner: ia, loser: ib });
+          setVoid(state, ib, '被高优先级攻击阻止');
+        } else {
+          ev(state, { type: 'clash', winner: ib, loser: ia });
+          setVoid(state, ia, '被高优先级攻击阻止');
+        }
+      }
     }
   }
 
@@ -211,10 +244,10 @@
     roundTaunts.length = 0;
     // ====== ① 避雷针 R31 ======
     const rodUsers = [];
-    for (let i = 0; i < 2; i++) { const a = actionOf(state, i); if (a && a.key === SK.ROD) rodUsers.push(i); }
+    for (let i = 0; i < playerCount(state); i++) { const a = actionOf(state, i); if (a && a.key === SK.ROD) rodUsers.push(i); }
     if (rodUsers.length) {
       const lightning = [];
-      for (let i = 0; i < 2; i++) { const a = actionOf(state, i); if (a && R.LIGHTNING.indexOf(a.key) >= 0) lightning.push(i); }
+      for (let i = 0; i < playerCount(state); i++) { const a = actionOf(state, i); if (a && R.LIGHTNING.indexOf(a.key) >= 0) lightning.push(i); }
       if (lightning.length) {
         ev(state, { type: 'rod', pids: rodUsers, mode: 'A', voided: lightning });
         for (const l of lightning) {
@@ -231,33 +264,39 @@
 
     // ====== ② 小雷 pri5 R27 ======
     const mini = [];
-    for (let i = 0; i < 2; i++) { const a = actionOf(state, i); if (a && a.key === SK.MINI_T) mini.push(i); }
-    if (mini.length === 2) {
-      ev(state, { type: 'thunderRing' });
-      setVoid(state, mini[0], '互雷成环'); setVoid(state, mini[1], '互雷成环');
-    } else if (mini.length === 1) {
-      const c = mini[0], t = 1 - c;
+    for (let i = 0; i < playerCount(state); i++) { const a = actionOf(state, i); if (a && a.key === SK.MINI_T) mini.push(i); }
+    for (const c of mini) {
+      if (!actionOf(state, c)) continue;                 // 已被更早规则作废
+      const t = targetOf(state, c);
+      if (t == null) continue;
+      const ta = actionOf(state, t);
+      // 互雷成环（N3：逐边判定）
+      if (ta && ta.key === SK.MINI_T && targetOf(state, t) === c) {
+        if (c < t) ev(state, { type: 'thunderRing' });
+        setVoid(state, c, '互雷成环'); setVoid(state, t, '互雷成环');
+        continue;
+      }
       if (state.p[t].rodGuard > 0) {
         state.p[t].rodGuard = 0; // 一次免雷后守卫结束 R31
         setVoid(state, c, '避雷针');
         ev(state, { type: 'rodBlock', pid: t, by: SK.MINI_T });
+      } else if (ta && R.MINI_T_IMMUNE.indexOf(ta.key) >= 0) {
+        ev(state, { type: 'voidImmune', pid: t, by: SK.MINI_T, key: ta.key });
       } else {
-        const ta = actionOf(state, t);
-        if (ta && R.MINI_T_IMMUNE.indexOf(ta.key) >= 0) {
-          ev(state, { type: 'voidImmune', pid: t, by: SK.MINI_T, key: ta.key });
-        } else {
-          setVoid(state, t, SK.MINI_T);
-          ev(state, { type: 'voidedBy', pid: t, by: SK.MINI_T });
-        }
+        setVoid(state, t, SK.MINI_T);
+        ev(state, { type: 'voidedBy', pid: t, by: SK.MINI_T });
       }
     }
 
     // ====== ③ 大雷 pri4 R28/R29 ======
     const bigs = [];
-    for (let i = 0; i < 2; i++) { const a = actionOf(state, i); if (a && a.key === SK.BIG_T) bigs.push(i); }
-    const bothBig = bigs.length === 2;
+    for (let i = 0; i < playerCount(state); i++) { const a = actionOf(state, i); if (a && a.key === SK.BIG_T) bigs.push(i); }
     for (const c of bigs) {
-      const t = 1 - c;
+      if (!actionOf(state, c)) continue;
+      const t = targetOf(state, c);
+      if (t == null) continue;
+      const tb0 = actionOf(state, t);
+      const bothBig = !!(tb0 && tb0.key === SK.BIG_T && targetOf(state, t) === c); // 互轰
       if (state.p[t].rodGuard > 0) {
         state.p[t].rodGuard = 0;
         setVoid(state, c, '避雷针');
@@ -292,10 +331,11 @@
     clashPass(state);
 
     // ====== ④ 默认优先级 3 ======
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       const a = actionOf(state, i);
       if (!a || (R.byKey[a.key].pri || 3) !== 3) continue;
-      const t = 1 - i;
+      const t = oppOf(state, i);
+      if (t == null) continue;
       const me = state.p[i], you = state.p[t];
       switch (a.key) {
         case SK.JI: me.ep += 1; ev(state, { type: 'ep', pid: i, delta: 1 }); break;
@@ -316,6 +356,14 @@
             me.hp += heal; me.vampHeal += heal;
             if (!me.vampire && me.vampHeal >= 3) { me.vampire = true; ev(state, { type: 'vampire', pid: i }); }
             ev(state, { type: 'heal', pid: i, amt: heal, reason: '摄魂' });
+          }
+          break;
+        }
+        case SK.DUAL_GUN: {                    // N3 双枪射手：对两个目标各 1 点（按枪口径，可被反弹/地雷）
+          const t2 = (a.target2 != null && state.p[a.target2] && state.p[a.target2].hp > 0) ? a.target2 : null;
+          deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.GUN }, t, { reason: '双枪射手' });
+          if (t2 != null && t2 !== t) {
+            deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.GUN }, t2, { reason: '双枪射手' });
           }
           break;
         }
@@ -392,25 +440,33 @@
     }
 
     // 互勾 → 铁索连环（在抵消检查中被豁免，双方均已结算）
-    const d0 = actionOf(state, 0), d1 = actionOf(state, 1);
-    if (d0 && d1 && d0.key === SK.DRAIN && d1.key === SK.DRAIN) {
-      state.p[0].chainLink = true; state.p[1].chainLink = true;
-      ev(state, { type: 'hidden', name: '铁索连环' });
+    for (let i = 0; i < playerCount(state); i++) {
+      const a = actionOf(state, i);
+      if (!a || a.key !== SK.DRAIN) continue;
+      const t = targetOf(state, i);
+      if (t == null) continue;
+      const tb = actionOf(state, t);
+      if (tb && tb.key === SK.DRAIN && targetOf(state, t) === i) {
+        state.p[i].chains = [t]; state.p[t].chains = [i];
+        if (i < t) ev(state, { type: 'hidden', name: '铁索连环' });
+      }
     }
 
     // ====== ⑤ 枪 pri2（相抵已由 clashPass 处理）======
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       const a = actionOf(state, i);
       if (a && a.key === SK.GUN) {
-        deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.GUN }, 1 - i, { reason: '枪' });
+        const tg = targetOf(state, i);
+        if (tg != null) deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.GUN }, tg, { reason: '枪' });
       }
     }
 
     // ====== ⑥ 狙击 pri1（干扰则无效，否则爆头判定）======
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       const a = actionOf(state, i);
       if (!a || a.key !== SK.SNIPE) continue;
-      const t = 1 - i;
+      const t = targetOf(state, i);
+      if (t == null) continue;
       const ta = actionOf(state, t);
       if (ta && (R.ATK_EFFECT.indexOf(ta.key) >= 0 || ta.key === SK.TRANSFER)) {
         setVoid(state, i, '狙击被干扰'); // README 特殊1 R13
@@ -430,7 +486,7 @@
     }
 
     // ====== ⑥b 净化 pri1（清除自身状态与符咒）======
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       const a = actionOf(state, i);
       if (!a || a.key !== SK.PURIFY) continue;
       const me = state.p[i];
@@ -447,7 +503,7 @@
   function endTurn(state) {
     const acts = state.actions;
     // 连击计数
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i];
       const a = acts[i];
       if (!(a && a.outcome === 'ok' && a.key === SK.RING)) p.ringStreak = 0;
@@ -456,7 +512,7 @@
       p.lastSkill = (a && a.outcome === 'ok') ? a.key : null;
     }
     // 蓄能珠时效 R9'：只供下一回合——回合结束时，非"本回合新蓄"的珠一律清空
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i];
       const keep = p.beadNew || null;
       const beforeE = p.elec, beforeB = p.boom;
@@ -467,7 +523,7 @@
       if (beforeB !== p.boom) ev(state, { type: 'beadExpire', pid: i, kind: 'boom', n: beforeB - p.boom });
     }
     // 挑衅合规检查（本回合义务；净化不能免除已生效义务 R54）
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i];
       if (p.tauntActive) {
         const a = acts[i];
@@ -478,11 +534,11 @@
       }
     }
     // 新挑衅 → 下回合义务
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       if (state.p[i].tauntPending) { state.p[i].tauntActive = true; state.p[i].tauntPending = false; }
     }
     // 符咒 age++；停留 >3 回合后自动消失（R37 引爆窗口到期，buff 不再显示在状态栏）
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i];
       const before = p.stickers.length;
       for (const st of p.stickers) st.age += 1;
@@ -497,21 +553,21 @@
       if (t.hp <= 0 && !t.infiniteEnergy) { t.reviveNext = false; c.nightmare = true; ev(state, { type: 'hidden', name: '梦魇', pid: tc.caster }); }
     }
     // 铁索解除（一方确认死亡且无回魂）R46
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i];
       if (p.hp <= 0 && !p.reviveNext && !p.infiniteEnergy) {
-        state.p[0].chainLink = false; state.p[1].chainLink = false;
+        for (const q of state.p) q.chains = (q.chains || []).filter(function (x) { return x !== i; });
       }
     }
     // 禁用/避雷针守卫递减
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i];
       for (const k of Object.keys(p.cooldown)) if (p.cooldown[k] > 0) p.cooldown[k] -= 1;
       if (p.rodGuard > 0) p.rodGuard -= 1;
       p.fireWeakNow = false; p.baguaExtra = false;
     }
     // 回魂复活回合：回合结束立即死亡 R48
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < playerCount(state); i++) {
       if (state.p[i].infiniteEnergy) { state.p[i].infiniteEnergy = false; state.p[i].hp = 0; ev(state, { type: 'death', pid: i, reason: '回魂回合结束' }); }
     }
     checkOver(state);
@@ -520,16 +576,23 @@
   /* 胜负判定 R1 */
   function checkOver(state) {
     if (state.over) return true;
-    const dead = [0, 1].map(function (i) {
+    const N = playerCount(state);
+    const alive = [];
+    for (let i = 0; i < N; i++) {
       const p = state.p[i];
-      return p.hp <= 0 && !p.reviveNext && !p.infiniteEnergy;
-    });
-    if (dead[0] && dead[1]) { state.over = true; state.winner = 'draw'; return true; }
-    if (dead[0]) { state.over = true; state.winner = 1; return true; }
-    if (dead[1]) { state.over = true; state.winner = 0; return true; }
+      if (!(p.hp <= 0 && !p.reviveNext && !p.infiniteEnergy)) alive.push(i);
+    }
+    if (alive.length === 0) { state.over = true; state.winner = 'draw'; return true; }   // N10 全灭
+    if (alive.length === 1) { state.over = true; state.winner = alive[0]; return true; } // N10 最后存活
     if (state.round >= R.MAX_ROUNDS) {
       state.over = true;
-      state.winner = state.p[0].hp === state.p[1].hp ? 'draw' : (state.p[0].hp > state.p[1].hp ? 0 : 1);
+      let best = -Infinity, bestPid = null, tie = false;                                 // N10 回合上限：血最多者胜
+      for (const i of alive) {
+        const h = state.p[i].hp;
+        if (h > best) { best = h; bestPid = i; tie = false; }
+        else if (h === best) tie = true;
+      }
+      state.winner = tie ? 'draw' : bestPid;
       return true;
     }
     return false;

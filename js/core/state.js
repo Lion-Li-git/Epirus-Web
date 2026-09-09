@@ -20,25 +20,60 @@
       guardNext: false, baguaExtra: false,  // 无极变速第二回合 R21
       fireWeakNext: false, fireWeakNow: false, // 藤甲 R22
       tauntPending: false, tauntActive: false, // 挑衅 R41/R54
+      tauntFrom: null, tauntTo: null,          // N人：挑衅指向（2人时等价于布尔）
       nightmare: false,             // R50
-      chainLink: false,             // R45
+      chains: [],                   // R45 铁索：我连着的对手 pid 列表（2人=1个）
       vampire: false, vampHeal: 0,  // R47
       reviveNext: false, infiniteEnergy: false, // 回魂 R48
       stickers: []                  // 贴在自己身上的符咒 [{owner,age}] R34/R44
     };
   }
 
-  function createState(modeKey, rng) {
+  /* 玩家名：2人沿用「你/电脑」（页面既有口径），N人用「玩家1..N」。 */
+  function defaultNames(n) {
+    if (n === 2) return ['你', '电脑'];
+    const a = [];
+    for (let i = 0; i < n; i++) a.push('玩家' + (i + 1));
+    return a;
+  }
+
+  /* createState(modeKey, rng, n) — n 省略/非法时=2（完全保留 1.0 行为）。
+   * N人：p/actions 长度=n；技能目标写在 action.target（resolve 层据此结算）。 */
+  function createState(modeKey, rng, n) {
     const mode = R.MODES[modeKey] || R.MODES[R.MODE_DEFAULT];
+    const N = (typeof n === 'number' && n >= 2) ? Math.floor(n) : 2;
+    const names = defaultNames(N);
+    const p = [];
+    for (let i = 0; i < N; i++) p.push(freshPlayer(i, names[i], mode.hp));
+    const actions = [];
+    for (let i = 0; i < N; i++) actions.push(null);
     return {
-      modeKey, mode,
+      modeKey, mode, n: N,
       round: 0,
       rng: rng || { next: function () { return Math.random(); } },
-      p: [freshPlayer(0, '你', mode.hp), freshPlayer(1, '电脑', mode.hp)],
-      actions: [null, null],
+      p, actions,
       events: [],
       over: false, winner: null
     };
+  }
+
+  /* 存活对手列表（N人通用；2人=1个）。 */
+  function opponentsOf(state, pid) {
+    const out = [];
+    for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) out.push(i);
+    return out;
+  }
+
+  /* 技能默认目标：2人=另一个；N人=指定 target（非法则取第一个存活对手）。 */
+  function resolveTarget(state, pid, key, opt) {
+    const def = R.byKey[key];
+    if (!def || def.target === 'self') return pid;
+    const opp = opponentsOf(state, pid);
+    if (!opp.length) return null;
+    if (state.p.length === 2) return opp[0];
+    const t = opt && opt.target;
+    if (typeof t === 'number' && t !== pid && state.p[t] && state.p[t].hp > 0) return t;
+    return opp[0];
   }
 
   function canUseSkillInMode(state, key) {
@@ -89,9 +124,11 @@
     const events = [];
     const ev2 = function (e) { events.push(e); if (state.events) state.events.push(e); if (emit) emit(e); };
     const def = R.byKey[key];
+    const tg = def ? resolveTarget(state, pid, key, opt) : null;
+    const tg2 = (opt && opt.target2 != null && opt.target2 !== pid && state.p[opt.target2]) ? opt.target2 : null;
 
     function fail(outcome, reason) {
-      state.actions[pid] = { key, voided: true, outcome };
+      state.actions[pid] = { key, voided: true, outcome, target: tg, target2: tg2 };
       ev2({ type: 'action', pid, key, outcome, reason });
       return { skill: key, outcome, reason };
     }
@@ -109,7 +146,7 @@
       return fail('invalid', '防御已连续2次');
     }
     if (p.infiniteEnergy) {
-      state.actions[pid] = { key, voided: false, outcome: 'ok', opt: opt || null };
+      state.actions[pid] = { key, voided: false, outcome: 'ok', opt: opt || null, target: tg, target2: tg2 };
       ev2({ type: 'action', pid, key, outcome: 'ok', free: true });
       return { skill: key, outcome: 'ok' };
     }
@@ -132,7 +169,7 @@
     if (key === R.SK.CANNON) p.cannonCount++;            // R43 出招即计次
     if (key === R.SK.RING) p.ringStreak++;               // 连击计数（resolve 里 +1/+2/+3）
     state.actions[pid] = {
-      key, voided: false, outcome: 'ok', opt: opt || null,
+      key, voided: false, outcome: 'ok', opt: opt || null, target: tg, target2: tg2,
       phase: cost.cannonPhase || null
     };
     ev2({ type: 'action', pid, key, outcome: 'ok' });
@@ -143,6 +180,7 @@
   function cloneState(s) { const c = JSON.parse(JSON.stringify(s)); c.rng = s.rng; return c; }
 
   global.EpirusState = {
-    createState, freshPlayer, attemptAction, computeCost, canUseSkillInMode, cloneState
+    createState, freshPlayer, attemptAction, computeCost, canUseSkillInMode, cloneState,
+    opponentsOf, resolveTarget, defaultNames
   };
 })(typeof window !== 'undefined' ? window : globalThis);

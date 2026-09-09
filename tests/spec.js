@@ -212,7 +212,7 @@
   t('R45 互勾=铁索连环：双1血互勾后均存活且连环', function () {
     const st = game(); setEp(st, 5, 5); st.p[0].hp = st.p[1].hp = 1;
     play(st, SK.DRAIN, SK.DRAIN);
-    ok(st.p[0].chainLink && st.p[1].chainLink, '连环成立');
+    ok(st.p[0].chains.indexOf(1) >= 0 && st.p[1].chains.indexOf(0) >= 0, '连环成立');
     ok(st.p[0].hp > 0 && st.p[1].hp > 0, '均存活');
     ok(st.events.some(e => e.type === 'hidden' && e.name === '铁索连环'));
   });
@@ -460,7 +460,7 @@
 
   t('R45 铁索连环：天火与爆头也共享伤害（文档口径）', function () {
     const st = game(); setEp(st, 5, 5);
-    st.p[0].chainLink = st.p[1].chainLink = true;
+    st.p[0].chains = [1]; st.p[1].chains = [0];
     st.p[0].hp = 3; st.p[1].hp = 3;
     X.rawDamage(st, 1, 1, '天火', 'firestorm', { type: R.DMG.FIRE });
     eq(st.p[1].hp, 2, '天火命中目标');
