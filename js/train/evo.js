@@ -278,17 +278,19 @@
    * 经济锁死的病根：AI 永远停在 ep≤1 的 ジ→枪 循环，2 ジ 以上技能永久不可负担。
    * 旧 fitness 的 proact/deal 奖励"立刻打伤害"，而攒钱必须先连出ジ（0 伤害）→
    * 旧口径实际上在惩罚攒钱，故加 save/conv 两项把梯度补上。 */
-  function makeEconChooser(inner) {
-    const rec = { maxEp: 0, heavy: 0, hold: 0 };
+  function makeEconChooser(inner, agg) {
+    const rec = { maxEp: 0, heavy: 0, hold: 0, heavy4: 0 };
     const fn = function (state, pid, legal) {
       const p = state.p[pid];
       if (p && p.ep > rec.maxEp) rec.maxEp = p.ep;
       const a = inner(state, pid, legal);
       // 真实费用必须走 computeCost（R.byKey[key].cost 是数字，不是对象）
       if (a) {
+        if (agg) agg.use[a.key] = (agg.use[a.key] || 0) + 1;
         const c = S.computeCost(state, pid, a.key);
         if (c && c.ok) {
           if (c.ep >= 2) rec.heavy++;
+          if (c.ep >= 4) rec.heavy4++;
           // 攒钱动作：手里有 ep 却选择不花钱。
           // 这是每一步都可得的稠密信号——否则 ep=1 时 99.8% 选枪，
           // "攒到 ep>=2" 这个事件几乎采样不到，奖励再大也拿不到梯度。
@@ -301,10 +303,13 @@
     return fn;
   }
 
+  const DIV_BETA = 0.60;   // 技能覆盖熵权重（可调）
+
   /* N 人适应度（N19）：名次基础分（1/0.6/0.2）+ 轻量 shaped 项 */
   function scoreMemberN(params, opps, games, n, gen, idx) {
     let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0;
-    let maxEpSum = 0, heavySum = 0, holdSum = 0, econGames = 0;
+    let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0;
+    const agg = { use: {} };   // 该个体的动作直方图（跨局汇总）
     for (let g = 0; g < games; g++) {
       const seat = g % n;                                   // 座位轮换
       const seed = seedOfGen(gen, idx, 'n') + g * 7919;
@@ -312,7 +317,7 @@
       let oi = g % opps.length;
       let econ = null;
       for (let pid = 0; pid < n; pid++) {
-        if (pid === seat) { econ = makeEconChooser(policyChooserN(params, 0.35, 0.15)); choosers.push(econ); }
+        if (pid === seat) { econ = makeEconChooser(policyChooserN(params, 0.35, 0.15), agg); choosers.push(econ); }
         else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
       }
       const r = oneGameN(choosers, seed, n);
@@ -326,11 +331,13 @@
       const slow = 0.03 * Math.min(1, r.rounds / R.MAX_ROUNDS);
       // 攒得住：本局达到过的最高 ep（0/1/2/3 → 0/0.33/0.67/1）
       const save = 0.02 * Math.min(1, (econ ? econ.rec.maxEp : 0) / 2);
-      // 攒钱动作（稠密、可立刻探索到）：ep>=1 时不花钱
-      const hold = 0.03 * Math.min(1, (econ ? econ.rec.hold : 0) / 4);
+      deepSum += econ ? econ.rec.heavy4 : 0;
+
       // 花得出：把攒的 ep 换成贵技能（2 次封顶）——只有 save 没有 conv 就是 farmer，故两项并重
-      const conv = 0.15 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2);
-      fit += Math.max(-0.3, Math.min(1.5, base + proact + deal + save + hold + conv - slow));
+      // 经济分档：贵的技能更值钱（不再指向某个特定循环）
+      const conv = 0.08 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2)
+                 + 0.08 * Math.min(1, (econ ? econ.rec.heavy4 : 0) / 1);
+      fit += Math.max(-0.3, Math.min(1.6, base + proact + deal + save + conv - slow));
       if (econ) { maxEpSum += econ.rec.maxEp; heavySum += econ.rec.heavy; holdSum += econ.rec.hold; econGames++; }
       if (rank === 1) first++;
       else if (rank === 2) second++;
@@ -338,8 +345,24 @@
       rounds += r.rounds;
       played++;
     }
+    /* 技能覆盖熵：目标函数里唯一不指向某个循环的广度信号。
+     * 策略是"动作价值 softmax + 低温"的贪心取值，而目标里只有胜负时必然塔到一招；
+     * 实测给到无限经济也只从激光剑换成狙击枪（有效技能数 1.88→2.06）。
+     * 归一化用 ln(28) 作为上限：6 种均匀 → H/ln28 ≈ 0.54。 */
+    let H = 0, uTot = 0;
+    for (const k in agg.use) uTot += agg.use[k];
+    if (uTot > 0) {
+      for (const k in agg.use) { const pr = agg.use[k] / uTot; H -= pr * Math.log(pr); }
+    }
+    const divNorm = uTot > 0 ? H / Math.log(Math.max(2, (R.skills || []).length)) : 0;
+    const divBonus = DIV_BETA * divNorm;
+    const fitAvg = played ? fit / played : 0;
     return {
-      fit: played ? fit / played : 0,
+      fit: fitAvg + divBonus,
+      fitNoDiv: fitAvg,
+      divNorm: divNorm,
+      divBonus: divBonus,
+      distinct: Object.keys(agg.use).length,
       first: first, second: second, games: played,
       firstRate: played ? first / played : 0,
       top2Rate: played ? (first + second) / played : 0,
@@ -347,7 +370,8 @@
       avgRounds: played ? rounds / played : 0,
       avgMaxEp: econGames ? maxEpSum / econGames : 0,
       avgHeavy: econGames ? heavySum / econGames : 0,
-      avgHold: econGames ? holdSum / econGames : 0
+      avgHold: econGames ? holdSum / econGames : 0,
+      avgDeep: econGames ? deepSum / econGames : 0
     };
   }
 
