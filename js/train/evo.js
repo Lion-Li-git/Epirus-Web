@@ -228,12 +228,19 @@
     return opps.length ? opps[0] : null;
   }
 
-  /* N 人版策略 chooser（带目标选择） */
-  function policyChooserN(params, temp) {
+  /* N 人版策略 chooser（带目标选择）。
+   * eps = ε-探索：以概率 eps 在可负担技能里均匀抽一个。
+   * 为什么必须有：策略在 ep≥1 时 99.8% 选枪，"不花钱攒钱"这个动作
+   * 几乎不可能被 softmax 采样到 → 奖励再大也没有梯度（经验：
+   * save/conv/hold 三项都加了，max ep 仍然死守 1）。
+   * 训练用 eps>0；评测/UI 不传 eps → 行为不变。 */
+  function policyChooserN(params, temp, eps) {
     return function (state, pid, legal) {
       const aff = legal.filter(function (l) { return l.affordable; });
       const base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
-      const key = P.choose(state, pid, base, params, { temp: temp });
+      const key = (eps && state.rng.next() < eps)
+        ? base[Math.floor(state.rng.next() * base.length)].key
+        : P.choose(state, pid, base, params, { temp: temp });
       return { key: key, target: pickTargetN(state, pid, key), target2: pickTarget2N(state, pid, key, pickTargetN(state, pid, key)) };
     };
   }
@@ -267,16 +274,45 @@
     return order.length;
   }
 
+  /* 经济统计：本局"达到过的最高 ep"与"贵技能（ep ≥ 2）出手次数"。
+   * 经济锁死的病根：AI 永远停在 ep≤1 的 ジ→枪 循环，2 ジ 以上技能永久不可负担。
+   * 旧 fitness 的 proact/deal 奖励"立刻打伤害"，而攒钱必须先连出ジ（0 伤害）→
+   * 旧口径实际上在惩罚攒钱，故加 save/conv 两项把梯度补上。 */
+  function makeEconChooser(inner) {
+    const rec = { maxEp: 0, heavy: 0, hold: 0 };
+    const fn = function (state, pid, legal) {
+      const p = state.p[pid];
+      if (p && p.ep > rec.maxEp) rec.maxEp = p.ep;
+      const a = inner(state, pid, legal);
+      // 真实费用必须走 computeCost（R.byKey[key].cost 是数字，不是对象）
+      if (a) {
+        const c = S.computeCost(state, pid, a.key);
+        if (c && c.ok) {
+          if (c.ep >= 2) rec.heavy++;
+          // 攒钱动作：手里有 ep 却选择不花钱。
+          // 这是每一步都可得的稠密信号——否则 ep=1 时 99.8% 选枪，
+          // "攒到 ep>=2" 这个事件几乎采样不到，奖励再大也拿不到梯度。
+          if (c.ep === 0 && p && p.ep >= 1) rec.hold++;
+        }
+      }
+      return a;
+    };
+    fn.rec = rec;
+    return fn;
+  }
+
   /* N 人适应度（N19）：名次基础分（1/0.6/0.2）+ 轻量 shaped 项 */
   function scoreMemberN(params, opps, games, n, gen, idx) {
     let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0;
+    let maxEpSum = 0, heavySum = 0, holdSum = 0, econGames = 0;
     for (let g = 0; g < games; g++) {
       const seat = g % n;                                   // 座位轮换
       const seed = seedOfGen(gen, idx, 'n') + g * 7919;
       const choosers = [];
       let oi = g % opps.length;
+      let econ = null;
       for (let pid = 0; pid < n; pid++) {
-        if (pid === seat) choosers.push(policyChooserN(params, 0.35));
+        if (pid === seat) { econ = makeEconChooser(policyChooserN(params, 0.35, 0.15)); choosers.push(econ); }
         else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
       }
       const r = oneGameN(choosers, seed, n);
@@ -284,10 +320,18 @@
       const base = rank === 1 ? 1.0 : rank === 2 ? 0.3 : 0.0;   // N19 修正：3 人局里第二名也算输，降低苟活奖励
       const others = r.dmg.reduce(function (a, b) { return a + b; }, 0) - r.dmg[seat];
       const diff = r.dmg[seat] - others / Math.max(1, n - 1);
-      const proact = 0.06 * Math.max(-1, Math.min(1, diff / 6));
-      const deal = 0.03 * Math.min(1, r.dmg[seat] / 4);
+      // "立刻出手"的权重下调（原来在惩罚攒钱）；腾出的权重给经济两项
+      const proact = 0.02 * Math.max(-1, Math.min(1, diff / 6));
+      const deal = 0.01 * Math.min(1, r.dmg[seat] / 4);
       const slow = 0.03 * Math.min(1, r.rounds / R.MAX_ROUNDS);
-      fit += Math.max(-0.3, Math.min(1.3, base + proact + deal - slow));
+      // 攒得住：本局达到过的最高 ep（0/1/2/3 → 0/0.33/0.67/1）
+      const save = 0.02 * Math.min(1, (econ ? econ.rec.maxEp : 0) / 2);
+      // 攒钱动作（稠密、可立刻探索到）：ep>=1 时不花钱
+      const hold = 0.03 * Math.min(1, (econ ? econ.rec.hold : 0) / 4);
+      // 花得出：把攒的 ep 换成贵技能（2 次封顶）——只有 save 没有 conv 就是 farmer，故两项并重
+      const conv = 0.15 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2);
+      fit += Math.max(-0.3, Math.min(1.5, base + proact + deal + save + hold + conv - slow));
+      if (econ) { maxEpSum += econ.rec.maxEp; heavySum += econ.rec.heavy; holdSum += econ.rec.hold; econGames++; }
       if (rank === 1) first++;
       else if (rank === 2) second++;
       dealt += r.dmg[seat];
@@ -300,7 +344,10 @@
       firstRate: played ? first / played : 0,
       top2Rate: played ? (first + second) / played : 0,
       avgDealt: played ? dealt / played : 0,
-      avgRounds: played ? rounds / played : 0
+      avgRounds: played ? rounds / played : 0,
+      avgMaxEp: econGames ? maxEpSum / econGames : 0,
+      avgHeavy: econGames ? heavySum / econGames : 0,
+      avgHold: econGames ? holdSum / econGames : 0
     };
   }
 
