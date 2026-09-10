@@ -65,6 +65,17 @@
 
   /* ---------- 回合启动副作用 ---------- */
   function startTurn(state) {
+    /* 每回合自动回 ep（多人可选规则，默认 0 不生效）。
+     * 动机：原来 `case SK.JI: me.ep += 1` 是**唯一** ep 收入，导致ジ 占比恒为
+     * c/(c+1)（每出手一次花 c 个ジ，就得先出 c 次ジ）。给一部分对局加上自动回能
+     * 后，ジ 占比下降，腾出的回合才可能分给其他技能；同时让聚能环的 3 点启动
+     * 成本变得可负担。 */
+    if (state.epRegen) {
+      for (let r = 0; r < playerCount(state); r++) {
+        const pl = state.p[r];
+        if (pl.hp > 0) { pl.ep += state.epRegen; ev(state, { type: 'ep', pid: r, delta: state.epRegen, reason: '每回合回能' }); }
+      }
+    }
     state.round += 1;
     for (let i = 0; i < state.p.length; i++) state.actions[i] = null;   // N12：每回合重置行动槽
     if (checkOver(state)) return;

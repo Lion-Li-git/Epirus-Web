@@ -40,7 +40,8 @@
 
   /* createState(modeKey, rng, n) — n 省略/非法时=2（完全保留 1.0 行为）。
    * N人：p/actions 长度=n；技能目标写在 action.target（resolve 层据此结算）。 */
-  function createState(modeKey, rng, n) {
+  function createState(modeKey, rng, n, opts) {
+    const epRegen = (opts && opts.regen) ? Math.max(0, Math.floor(opts.regen)) : 0;
     const mode = R.MODES[modeKey] || R.MODES[R.MODE_DEFAULT];
     const N = (typeof n === 'number' && n >= 2) ? Math.floor(n) : 2;
     const names = defaultNames(N);
@@ -51,6 +52,7 @@
     return {
       modeKey, mode, n: N,
       round: 0,
+      epRegen: epRegen,          // 每回合自动回 ep（0 = 关闭，保持 2 人 v1.0 口径）
       rng: rng || { next: function () { return Math.random(); } },
       p, actions,
       events: [],

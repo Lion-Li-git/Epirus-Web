@@ -256,8 +256,8 @@
   }
 
   /* N 人一局：chooser[pid] 逐座位 */
-  function oneGameN(choosers, seed, n) {
-    const st = S.createState('multi', { next: mulberry32(seed) }, n);
+  function oneGameN(choosers, seed, n, opts) {
+    const st = S.createState('multi', { next: mulberry32(seed) }, n, opts);
     Play.autoGameN(st, choosers);
     const dmg = [];
     for (let i = 0; i < n; i++) dmg.push(0);
@@ -303,12 +303,14 @@
     return fn;
   }
 
-  const DIV_BETA = 0.60;   // 技能覆盖熵权重（可调）
+  const DIV_BETA = 0.60;   // 技能覆盖熵权重
+  const STOCK_BONUS = 0.05;  // 0~4 ep 区间的攒钱奖励上限
+  const HOARD_PEN = 0.12;    // 11+ ep 的囤积惩罚上限
 
   /* N 人适应度（N19）：名次基础分（1/0.6/0.2）+ 轻量 shaped 项 */
   function scoreMemberN(params, opps, games, n, gen, idx) {
     let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0;
-    let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0;
+    let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0;
     const agg = { use: {} };   // 该个体的动作直方图（跨局汇总）
     for (let g = 0; g < games; g++) {
       const seat = g % n;                                   // 座位轮换
@@ -320,7 +322,13 @@
         if (pid === seat) { econ = makeEconChooser(policyChooserN(params, 0.35, 0.15), agg); choosers.push(econ); }
         else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
       }
-      const r = oneGameN(choosers, seed, n);
+      // 每回合回 ep 的对局权重（可选设施，默认 0 = 与线上规则一致）。
+      // 实测结论：regen=1 不能解锁聚能环（+1/回合只够每回合放一个 1 ジ技能，
+      // 锁死在另一个不动点）；regen=2 确实能让 AI 学会聚能环（连用到 16），
+      // 但环是严格支配策略（免费 +3/回合永续）→ 学会后反而更窄。
+      // 故默认关闭，等规则/平衡决策后再开。
+      const TRAIN_REGEN = 0;   // 默认与线上规则一致；调成 2 可复现聚能环/囤积实验
+      const r = oneGameN(choosers, seed, n, { regen: TRAIN_REGEN });
       const rank = rankOf(r.state, seat);
       const base = rank === 1 ? 1.0 : rank === 2 ? 0.3 : 0.0;   // N19 修正：3 人局里第二名也算输，降低苟活奖励
       const others = r.dmg.reduce(function (a, b) { return a + b; }, 0) - r.dmg[seat];
@@ -330,15 +338,32 @@
       const deal = 0.01 * Math.min(1, r.dmg[seat] / 4);
       const slow = 0.03 * Math.min(1, r.rounds / R.MAX_ROUNDS);
       // 攒得住：本局达到过的最高 ep（0/1/2/3 → 0/0.33/0.67/1）
-      const save = 0.02 * Math.min(1, (econ ? econ.rec.maxEp : 0) / 2);
+      /* 分段 shaping（用户设计）：
+       *   0~4 ep  → 攒钱奖励（鼓励手上有货，才能放 2~5 ジ 技能）
+       *   5~10 ep → 不奖不罚（中间区交给它自己权衡）
+       *   11+ ep  → 囤积惩罚（资源积着不转化成胜势 = 浪费）
+       * 旧的 engine（按“获得的 ep 量”发钱）已撤：聚能环 +3/回合 vs ジ +1 →
+       * 等于给刷环发三倍工资，" 永动刷环" 是奖励被 hack 的产物。
+       * 标准经济下 ep 最高只有 1~2 → stock 项很小，不影响已有冠军口径。 */
+      const mEp = econ ? econ.rec.maxEp : 0;
+      let stock;
+      if (mEp <= 4) stock = STOCK_BONUS * (mEp / 4);
+      else if (mEp <= 10) stock = STOCK_BONUS;
+      else stock = STOCK_BONUS - HOARD_PEN * Math.min(1, (mEp - 10) / 10);
       deepSum += econ ? econ.rec.heavy4 : 0;
 
       // 花得出：把攒的 ep 换成贵技能（2 次封顶）——只有 save 没有 conv 就是 farmer，故两项并重
       // 经济分档：贵的技能更值钱（不再指向某个特定循环）
       const conv = 0.08 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2)
                  + 0.08 * Math.min(1, (econ ? econ.rec.heavy4 : 0) / 1);
-      fit += Math.max(-0.3, Math.min(1.6, base + proact + deal + save + conv - slow));
+      fit += Math.max(-0.3, Math.min(1.7, base + proact + deal + stock + conv - slow));
       if (econ) { maxEpSum += econ.rec.maxEp; heavySum += econ.rec.heavy; holdSum += econ.rec.hold; econGames++; }
+      // 经济引擎质量：本局获得的 ep 总量。聚能环第 3 次起每回合 +3（ジ 只 +1），
+      // 直接在这个量上体现 → 不用为“环”单独写奖励，避免又指向特定循环。
+      for (let ei = 0; ei < r.state.events.length; ei++) {
+        const e = r.state.events[ei];
+        if (e.type === 'ep' && e.pid === seat && e.delta > 0) epGain += e.delta;
+      }
       if (rank === 1) first++;
       else if (rank === 2) second++;
       dealt += r.dmg[seat];

@@ -3,22 +3,44 @@
  * 用法：node tools/remote-probe.mjs [端口=8787] [本次代数=6] [chrome路径]
  * 前置：先运行 node server/train-server.mjs [端口]（或双击 tools/start-train-server.cmd）。
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const PORT = Number(process.argv[2] || 8787);
-const GENS = parseInt(process.argv[3] || '6', 10);
-const CHROME = process.argv[4] || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+/* 位置参数：剔除 --flag（如 --max-ms=N），否则会被当成端口/chrome 路径 */
+const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
+
+const PORT = Number(ARGV[0] || 8787);
+const GENS = parseInt(ARGV[1] || '6', 10);
+const CHROME = ARGV[2] || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const URL = 'file:///D:/code/Epirus-Web/index.html';
-const CDP_PORT = Number(process.argv[5] || 9349);
+const CDP_PORT = Number(ARGV[3] || 9349);
 
 const udd = mkdtempSync(join(tmpdir(), 'epirus-remote-'));
 const proc = spawn(CHROME, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
   '--remote-debugging-port=' + CDP_PORT, '--user-data-dir=' + udd, 'about:blank'
 ], { stdio: 'ignore' });
+/* --- 自限时 + 收尸（不再用 shell timeout 包 node：那样 node 被杀时
+ * finally 不会执行 → 探针自己起的 headless Chrome 变成孤儿。
+ * 现在由脚本自己计时，到点先杀 Chrome 进程树再退出。用 --max-ms=N 调。 --- */
+const MAX_MS = Number((process.argv.find(function (a) { return /^--max-ms=/.test(a); }) || '').split('=')[1]) || 240000;
+let __closed = false;
+function __killTree() {
+  if (__closed) return; __closed = true;
+  try {
+    if (process.platform === 'win32' && proc && proc.pid) spawnSync('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
+    else if (proc) proc.kill('SIGKILL');
+  } catch (e) { }
+  // 一并删掉自己的临时 profile 目录（否则 %TEMP% 会积成堆）
+  try { rmSync(udd, { recursive: true, force: true }); } catch (e) { }
+}
+const __watchdog = setTimeout(function () {
+  console.error('[guard] 超时 ' + MAX_MS + 'ms，自杀并收尸 Chrome');
+  __killTree(); process.exit(3);
+}, MAX_MS);
+
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function waitJson(url, tries = 60) {
@@ -79,5 +101,5 @@ async function main() {
   return ok ? 0 : 1;
 }
 
-main().then(code => { proc.kill(); process.exitCode = code; })
-  .catch(e => { console.error('PROBE ERROR:', e); proc.kill(); process.exitCode = 2; });
+main().then(function (code) { clearTimeout(__watchdog); __killTree(); process.exitCode = code; })
+  .catch(function (e) { clearTimeout(__watchdog); console.error('PROBE ERROR:', e && e.stack || e); __killTree(); process.exitCode = 2; });

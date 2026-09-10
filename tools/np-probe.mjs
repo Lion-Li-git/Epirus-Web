@@ -1,13 +1,16 @@
 /* Epirus 多人（3 人）页面探测：真实 Chrome 驱动 UI，验证人数选择/目标弹窗/回合推进/无 JS 异常。
  * 用法：node tools/np-probe.mjs [chrome路径] [端口]
  */
-import { spawn } from 'node:child_process';
-import { writeFileSync, mkdtempSync, mkdirSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { writeFileSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const CHROME = process.argv[2] || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const PORT = Number(process.argv[3] || 9351);
+/* 位置参数：剔除 --flag（如 --max-ms=N），否则会被当成端口/chrome 路径 */
+const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
+
+const CHROME = ARGV[0] || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const PORT = Number(ARGV[1] || 9351);
 const URL = 'file:///D:/code/Epirus-Web/index.html';
 
 const udd = mkdtempSync(join(tmpdir(), 'epirus-np-'));
@@ -15,6 +18,25 @@ const proc = spawn(CHROME, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
   '--remote-debugging-port=' + PORT, '--user-data-dir=' + udd, 'about:blank'
 ], { stdio: 'ignore' });
+/* --- 自限时 + 收尸（不再用 shell timeout 包 node：那样 node 被杀时
+ * finally 不会执行 → 探针自己起的 headless Chrome 变成孤儿。
+ * 现在由脚本自己计时，到点先杀 Chrome 进程树再退出。用 --max-ms=N 调。 --- */
+const MAX_MS = Number((process.argv.find(function (a) { return /^--max-ms=/.test(a); }) || '').split('=')[1]) || 240000;
+let __closed = false;
+function __killTree() {
+  if (__closed) return; __closed = true;
+  try {
+    if (process.platform === 'win32' && proc && proc.pid) spawnSync('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
+    else if (proc) proc.kill('SIGKILL');
+  } catch (e) { }
+  // 一并删掉自己的临时 profile 目录（否则 %TEMP% 会积成堆）
+  try { rmSync(udd, { recursive: true, force: true }); } catch (e) { }
+}
+const __watchdog = setTimeout(function () {
+  console.error('[guard] 超时 ' + MAX_MS + 'ms，自杀并收尸 Chrome');
+  __killTree(); process.exit(3);
+}, MAX_MS);
+
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function waitJson(url, tries = 60) {
