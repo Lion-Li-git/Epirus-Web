@@ -61,6 +61,7 @@ function evScore(ev) {
 }
 
 let best = null, bestTime = 0;
+const cands = [];   // 多目标择优：先收集，再在胜率容差带内取最发散
 // 候选 0：现有磁盘冠军（不训练，仅评估）——保证新一轮择优绝不会回归到比现有更弱的冠军
 try {
   const curSrc = readFileSync(dest, 'utf8');
@@ -70,7 +71,7 @@ try {
   if (curP) {
     const curEv = evalChamp(curP);
     console.log(`候选 0 (现有冠军): 不训练 | avg wr=${(curEv.avg * 100).toFixed(0)}% | wall=${(curEv.per.wall * 100).toFixed(0)}% defend=${(curEv.per.defend * 100).toFixed(0)}%`);
-    best = { pack: P.pack(curP), ev: curEv, score: null, secs: 0, sc: evScore(curEv) };
+    cands.push({ tag: '现有冠军', pack: P.pack(curP), ev: curEv, score: null, secs: 0, sc: evScore(curEv), div: T.champEntropy(curP, 0.15, 60, 31337) });
   }
 } catch (e) { /* 无现有冠军则跳过 */ }
 for (let k = 0; k < N; k++) {
@@ -82,12 +83,25 @@ for (let k = 0; k < N; k++) {
   T.pickChampionByWinRate(t, 16, (t.gen + 1) * 9973);
   const ev = evalChamp(t.champion);
   console.log(`候选 ${k + 1}: ${GENS}代 ${secs}s | score=${t.bestChampScore.toFixed(3)} | avg wr=${(ev.avg * 100).toFixed(0)}% | wall=${(ev.per.wall * 100).toFixed(0)}% defend=${(ev.per.defend * 100).toFixed(0)}% | sel=${evScore(ev).toFixed(3)}`);
-  if (!best || evScore(ev) > best.sc + 0.004) { best = { pack: P.pack(t.champion), ev: ev, score: t.bestChampScore, secs: secs, sc: evScore(ev) }; }
+  { const e = T.champEntropy(t.champion, 0.15, 60, 31337);
+    cands.push({ tag: '候选' + (k + 1), pack: P.pack(t.champion), ev: ev, score: t.bestChampScore, secs: secs, sc: evScore(ev), div: e });
+    console.log(`    └ 有效技能数=${Math.exp(e.divNorm * Math.log(28)).toFixed(2)} (${e.distinct} 种, divNorm=${e.divNorm.toFixed(3)})`); }
   bestTime += Number(secs);
 }
+// ===== 多目标择优：胜率容差带内取覆盖熵最高者 =====
+// 只用 argmax(胜率) 必然挑中最强也最窄的个体（实测 2.52 vs 3.25 有效技能）。
+// 这里改成：先把「胜率分 ≥ 最高分 - WR_TOL」的候选圈成 band，再在 band 里取 divNorm 最大者。
+const WR_TOL = 0.03;
+const topSc = Math.max.apply(null, cands.map(function (c) { return c.sc; }));
+const band = cands.filter(function (c) { return c.sc >= topSc - WR_TOL; });
+band.sort(function (a, b) { return b.div.divNorm - a.div.divNorm; });
+best = band[0];
+console.log('[多目标择优] 候选=' + cands.length + '  容差带=' + band.length + '（胜率分 ≥ ' + (topSc - WR_TOL).toFixed(3) + '）');
+for (const c of cands) console.log('   ' + c.tag.padEnd(8) + ' sc=' + c.sc.toFixed(3) + '  avg=' + (c.ev.avg * 100).toFixed(0) + '%  divNorm=' + c.div.divNorm.toFixed(3) + '  种类=' + c.div.distinct + (c === best ? '   ← 选中' : ''));
+console.log('   实际胜率损失 = ' + ((topSc - best.sc) * 100).toFixed(1) + 'pt');
 const packStr = JSON.stringify(best.pack);
 if (existsSync(dest)) copyFileSync(dest, dest + '.bak');   // 覆写前留一份 .bak
-const meta = { source: 'tools/train-best.mjs', seeds: N, gens: GENS, ts: new Date().toISOString(), champWr: best.ev.avg };
+const meta = { source: 'tools/train-best.mjs', seeds: N, gens: GENS, ts: new Date().toISOString(), champWr: best.ev.avg, divNorm: best.div.divNorm, distinct: best.div.distinct, wrTol: WR_TOL };
 writeFileSync(dest,
   '/* Epirus 内置冠军：由 tools/train-best.mjs 生成（' + N + ' 候选择优，' + GENS + ' 代，总 ' + bestTime.toFixed(0) + 's）。不要手改。 */\n' +
   'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(meta) + ';\n' +

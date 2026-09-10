@@ -523,9 +523,35 @@
 
   /* 收尾择优：从 [当前冠军 + 最近一代强候选] 中，按 vs 全部脚本基准的真实平均胜率挑选最强的作冠军。
    * 解决"shaped fitness 把打伤害但不赢的激进型捧成冠军"的过拟合。 */
+  /* 覆盖熵：候选冠军动作分布的多样性 H/ln(#技能)。
+   * 为什么必须有：择优若只做 argmax(胜率)，必然挑中最强也最窄的个体。
+   * 实测同一份 fitness 下，按胜率择优得有效技能 2.52、按适应度分选得 3.25。 */
+  function champEntropy(params, temp, games, seedBase, n) {
+    const N = (typeof n === 'number' && n > 2) ? n : 2;
+    const use = {}; let dec = 0;
+    const inner = (N > 2) ? policyChooserN(params, temp) : policyChooser(params, temp);
+    const sel = function (state, pid, legal) {
+      const raw = inner(state, pid, legal);
+      const k = (typeof raw === 'string') ? raw : raw.key;
+      if (pid === 0) { use[k] = (use[k] || 0) + 1; dec++; }
+      return raw;
+    };
+    for (let g = 0; g < games; g++) {
+      if (N > 2) { const ch = []; for (let i = 0; i < N; i++) ch.push(sel); oneGameN(ch, seedBase + g * 977, N); }
+      else oneGame(sel, sel, seedBase + g * 977);
+    }
+    let H = 0;
+    for (const k in use) { const pr = use[k] / dec; H -= pr * Math.log(pr); }
+    return { divNorm: dec ? H / Math.log(Math.max(2, (R.skills || []).length)) : 0, distinct: Object.keys(use).length };
+  }
+
+  /* 多目标择优：在「胜率分不低于最高分 - WR_TOL」的候选里，取覆盖熵最高者。
+   * 这样胜率损失有界（容差内），但不再被 argmax 逼向窄解。 */
+  const WR_TOL = 0.03;
+
   function pickChampionByWinRate(t, games, seedBase) {
     const cands = [t.champion].concat(t.lastTop || []);
-    let best = null, bestScore = -1, bestWr = -1, bestMin = -1, bestDetail = null;
+    const pool = [];
     const seen = new Set();
     for (const params of cands) {
       if (!params || seen.has(params)) continue;
@@ -545,14 +571,25 @@
       for (const d of detail) if (GATE_ALL || GATE_NAMES.indexOf(d.name) >= 0) { gateOk = gateOk && d.wr > 0.5; if (d.wr < gateMin) gateMin = d.wr; }
       // min 主导：过了门槛按 0.5·平均 + 0.5·最差基准；没过门槛则压到所有合格候选之下
       const score = gateOk ? (0.5 * wr + 0.5 * (n ? minWr : 0)) : (gateMin * 0.4 - 1);
-      if (score > bestScore) { bestScore = score; bestWr = wr; bestMin = minWr; best = params; bestDetail = detail; }
+      pool.push({ params: params, score: score, wr: wr, minWr: minWr, detail: detail });
     }
+    // 多目标：先按胜率分选出容差带，再在其中取覆盖熵最高者
+    let best = null, bestScore = -1, bestWr = -1, bestMin = -1, bestDetail = null;
+    let topScore = -1e9;
+    for (const c of pool) if (c.score > topScore) topScore = c.score;
+    const band = pool.filter(function (c) { return c.score >= topScore - WR_TOL; });
+    let bestDiv = -1, bestDivNorm = 0, bestDistinct = 0;
+    for (const c of band) {
+      const e = champEntropy(c.params, 0.15, 60, seedBase + 7777);
+      if (e.divNorm > bestDiv) { bestDiv = e.divNorm; best = c.params; bestScore = c.score; bestWr = c.wr; bestMin = c.minWr; bestDetail = c.detail; bestDivNorm = e.divNorm; bestDistinct = e.distinct; }
+    }
+    if (best) { t.divNorm = bestDivNorm; t.distinct = bestDistinct; t.bandSize = band.length; }
     if (best) { t.champion = best.slice(); t.bestChamp = best.slice(); t.bestChampScore = bestScore; }
     return { champion: best, wr: bestWr, minWr: bestMin, score: bestScore, detail: bestDetail };
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy,
     scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);
