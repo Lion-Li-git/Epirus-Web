@@ -359,5 +359,36 @@ t('autoGame 2 人入口仍可用（数组/位置参数两种）', function () {
   ok(st2.over, '数组入口收敛');
 });
 
+t('N2 同优先级同时结算：三方互放大雷 → 人人挨打（低 pid 不再免伤）', function () {
+  const st = S.createState('multi', { next: mulberry32(42) }, 3);
+  for (let i = 0; i < 3; i++) { st.p[i].ep = 5; st.p[i].elec = 1; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.BIG_T, { target: 1 });
+  S.attemptAction(st, 1, R.SK.BIG_T, { target: 2 });
+  S.attemptAction(st, 2, R.SK.BIG_T, { target: 0 });
+  X.resolveActions(st);
+  const hp = st.p.map(function (p) { return p.hp; });
+  ok(hp[0] < 3 && hp[1] < 3 && hp[2] < 3,
+    '三人应各受伤害（快照结算），实际 HP=' + hp.join('/'));
+});
+
+t('N2 座位偏置：3x 同一策略各座位 1st 率接近均等', function () {
+  const B = sb.window.EpirusBots, T = sb.window.EpirusTrainer;
+  const sel = T.wrapBotN(B.pickBreakDef);
+  const GAMES = 80, first = [0, 0, 0];
+  let drawn = 0;
+  for (let g = 0; g < GAMES; g++) {
+    const r = T.oneGameN([sel, sel, sel], 31337 + g * 977, 3);
+    if (typeof r.winner !== 'number') drawn++; else first[r.winner]++;
+  }
+  const decided = GAMES - drawn;
+  ok(decided >= 30, '有效样本不足 decided=' + decided);
+  const pct = first.map(function (c) { return c / decided * 100; });
+  const spread = Math.max.apply(null, pct) - Math.min.apply(null, pct);
+  ok(spread <= 32,
+    '座位偏置过大 ' + pct.map(function (v) { return v.toFixed(1); }).join('/') + '% 极差=' + spread.toFixed(1) + 'pt（修复前为 73.5pt）');
+});
+
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

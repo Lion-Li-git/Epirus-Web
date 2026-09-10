@@ -30,6 +30,19 @@
     for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) out.push(i);
     return out;
   }
+  /* N2 修正（座位偏置）：同优先级内若一律按座位号升序结算，先结算者会把后者作废，
+   * 低 pid 在“同归于尽”局面里系统性占便宜（实测 3x 同一策略可达 73.5/14.5/0.0）。
+   * 故按回合轮换结算起点，把系统性优势摊平到各座位。
+   * 2 人局保持恒等顺序（成对相抵本质对称，且 v1.0 已冻结）。 */
+  function turnOrder(state) {
+    const n = playerCount(state);
+    const out = [];
+    if (n <= 2) { for (let i = 0; i < n; i++) out.push(i); return out; }
+    const start = ((state.round || 1) - 1) % n;
+    for (let k = 0; k < n; k++) out.push((start + k) % n);
+    return out;
+  }
+
   /* 该玩家本回合行动的目标（self 类技能=null） */
   function targetOf(state, pid) {
     const a = state.actions[pid];
@@ -220,35 +233,39 @@
 
   /* 攻击相抵/阻止（优先级原则 R3）：同优先级攻击抵消，高优先级攻击阻止低优先级攻击 */
   function clashPass(state) {
+    /* N2 修正：快照结算，避免“先判定的对子把后判定的行动作废”带来的顺序依赖 */
+    const snapK = [], snapT = [];
+    for (const i of turnOrder(state)) { const a = actionOf(state, i); snapK[i] = a ? a.key : null; snapT[i] = a ? targetOf(state, i) : null; }
     const atkIdx = [];
-    for (let i = 0; i < playerCount(state); i++) {
-      const a = actionOf(state, i);
-      if (a && R.ATK_EFFECT.indexOf(a.key) >= 0) atkIdx.push(i);
+    for (const i of turnOrder(state)) {
+      if (snapK[i] && R.ATK_EFFECT.indexOf(snapK[i]) >= 0) atkIdx.push(i);
     }
     if (atkIdx.length < 2) return;
+    const pending = [];
     // N 人：两两结算（同优先级相抵、高优先级阻止低优先级）
     for (let x = 0; x < atkIdx.length; x++) {
       for (let y = x + 1; y < atkIdx.length; y++) {
         const ia = atkIdx[x], ib = atkIdx[y];
-        const a = actionOf(state, ia), b = actionOf(state, ib);
+        const a = snapK[ia], b = snapK[ib];
         if (!a || !b) continue;
-        if (a.key === SK.DRAIN && b.key === SK.DRAIN) continue; // 互勾触发铁索，不抵消
+        if (a === SK.DRAIN && b === SK.DRAIN) continue; // 互勾触发铁索，不抵消
         // N4：**只有互为目标**的攻击才会交锋（2 人时天然成立）。
         // 两家同时打第三人 ≠ 互为目标，不应相抵/阻止。
-        if (targetOf(state, ia) !== ib || targetOf(state, ib) !== ia) continue;
-        const pa = R.byKey[a.key].pri || 3, pb = R.byKey[b.key].pri || 3;
+        if (snapT[ia] !== ib || snapT[ib] !== ia) continue;
+        const pa = R.byKey[a].pri || 3, pb = R.byKey[b].pri || 3;
         if (pa === pb) {
           ev(state, { type: 'cancel', pids: [ia, ib], round: state.round });
-          setVoid(state, ia, '相抵'); setVoid(state, ib, '相抵');
+          pending.push([ia, '相抵'], [ib, '相抵']);
         } else if (pa > pb) {
           ev(state, { type: 'clash', winner: ia, loser: ib });
-          setVoid(state, ib, '被高优先级攻击阻止');
+          pending.push([ib, '被高优先级攻击阻止']);
         } else {
           ev(state, { type: 'clash', winner: ib, loser: ia });
-          setVoid(state, ia, '被高优先级攻击阻止');
+          pending.push([ia, '被高优先级攻击阻止']);
         }
       }
     }
+    for (const pd of pending) if (actionOf(state, pd[0])) setVoid(state, pd[0], pd[1]);
   }
 
   /* ---------- N14 镜面反射 / N15 反复横跳 / N16 聚光炮 ---------- */
@@ -352,10 +369,10 @@
     roundTaunts.length = 0;
     // ====== ① 避雷针 R31 ======
     const rodUsers = [];
-    for (let i = 0; i < playerCount(state); i++) { const a = actionOf(state, i); if (a && a.key === SK.ROD) rodUsers.push(i); }
+    for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && a.key === SK.ROD) rodUsers.push(i); }
     if (rodUsers.length) {
       const lightning = [];
-      for (let i = 0; i < playerCount(state); i++) { const a = actionOf(state, i); if (a && R.LIGHTNING.indexOf(a.key) >= 0) lightning.push(i); }
+      for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && R.LIGHTNING.indexOf(a.key) >= 0) lightning.push(i); }
       if (lightning.length) {
         ev(state, { type: 'rod', pids: rodUsers, mode: 'A', voided: lightning });
         for (const l of lightning) {
@@ -372,7 +389,7 @@
 
     // ====== ② 小雷 pri5 R27 ======
     const mini = [];
-    for (let i = 0; i < playerCount(state); i++) { const a = actionOf(state, i); if (a && a.key === SK.MINI_T) mini.push(i); }
+    for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && a.key === SK.MINI_T) mini.push(i); }
     for (const c of mini) {
       if (!actionOf(state, c)) continue;                 // 已被更早规则作废
       const t = targetOf(state, c);
@@ -411,20 +428,24 @@
 
     // ====== ③ 大雷 pri4 R28/R29 ======
     const bigs = [];
-    for (let i = 0; i < playerCount(state); i++) { const a = actionOf(state, i); if (a && a.key === SK.BIG_T) bigs.push(i); }
+    for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && a.key === SK.BIG_T) bigs.push(i); }
+    /* N2 修正（同优先级同时结算）：层入口对全场行动拍快照，层内一律按快照判断。
+     * 否则先结算的大雷会把后者作废 → 低 pid 在三方同时放大雷时系统性免伤
+     * （实测 P0→P1/P1→P2/P2→P0 结果 HP 3/1/1）。落地仍按实际结算。 */
+    const snapK = [], snapT = [];
+    for (const i of turnOrder(state)) { const a = actionOf(state, i); snapK[i] = a ? a.key : null; snapT[i] = a ? targetOf(state, i) : null; }
     for (const c of bigs) {
-      if (!actionOf(state, c)) continue;
-      const t = targetOf(state, c);
+      if (!snapK[c]) continue;
+      const t = snapT[c];
       if (t == null) continue;
-      const tb0 = actionOf(state, t);
-      const bothBig = !!(tb0 && tb0.key === SK.BIG_T && targetOf(state, t) === c); // 互轰
+      const bothBig = !!(snapK[t] === SK.BIG_T && snapT[t] === c); // 互轰
       if (state.p[t].rodGuard > 0) {
         state.p[t].rodGuard = 0;
         setVoid(state, c, '避雷针');
         ev(state, { type: 'rodBlock', pid: t, by: SK.BIG_T });
         continue;
       }
-      const ta = actionOf(state, t);
+      const ta = snapK[t] ? { key: snapK[t] } : null;
       // 效果2：非防御类技能一律无效化；双大雷互轰时各自保留
       if (!bothBig && ta && R.GUARD_FAMILY.indexOf(ta.key) < 0) {
         setVoid(state, t, SK.BIG_T);
@@ -438,15 +459,15 @@
       // N6 连带伤害（原文效果3）：与目标 T 产生交互的第三方 各受 1 点电伤；
       //   其中「对 T 使用技能」者额外被无效化（对 T 的那个技能）；施法者自身不参与。
       //   2 人时第三方不存在 → 行为不变（回归安全）。
-      const tTgt = targetOf(state, t);
-      for (let q = 0; q < playerCount(state); q++) {
+      const tTgt = snapT[t];
+      for (const q of turnOrder(state)) {
         if (q === c || q === t || state.p[q].hp <= 0) continue;
-        const qa = actionOf(state, q);
-        const qTargetsT = !!qa && targetOf(state, q) === t;
+        const qa = snapK[q] ? { key: snapK[q] } : null;
+        const qTargetsT = snapK[q] != null && snapT[q] === t;
         const tTargetsQ = !!ta && tTgt === q;
         if (!qTargetsT && !tTargetsQ) continue;
         // 连带口径：同样 2 点电伤 + 行动作废 + 该技能禁用 3 回合（与直击同口径）
-        const qUsed = qa ? qa.key : null;
+        const qUsed = snapK[q];
         setVoid(state, q, '真正的落雷连带');
         ev(state, { type: 'bigTChain', from: c, to: q, kind: qTargetsT ? 'attack' : 'targeted' });
         const qres = deliverDamage(state, {
@@ -470,7 +491,7 @@
     clashPass(state);
 
     // ====== ④ 默认优先级 3 ======
-    for (let i = 0; i < playerCount(state); i++) {
+    for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
       if (!a || (R.byKey[a.key].pri || 3) !== 3) continue;
       const t = oppOf(state, i);
@@ -582,7 +603,7 @@
     mirrorPass(state);
 
     // 互勾 → 铁索连环（在抵消检查中被豁免，双方均已结算）
-    for (let i = 0; i < playerCount(state); i++) {
+    for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
       if (!a || a.key !== SK.DRAIN) continue;
       const t = targetOf(state, i);
@@ -595,7 +616,7 @@
     }
 
     // ====== ⑤ 枪 pri2（相抵已由 clashPass 处理）======
-    for (let i = 0; i < playerCount(state); i++) {
+    for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
       if (a && a.key === SK.GUN) {
         const tg = targetOf(state, i);
@@ -604,7 +625,7 @@
     }
 
     // ====== ⑥ 狙击 pri1（干扰则无效，否则爆头判定）======
-    for (let i = 0; i < playerCount(state); i++) {
+    for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
       if (!a || a.key !== SK.SNIPE) continue;
       const t = targetOf(state, i);
@@ -628,7 +649,7 @@
     }
 
     // ====== ⑥b 净化 pri1（清除自身状态与符咒）======
-    for (let i = 0; i < playerCount(state); i++) {
+    for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
       if (!a || a.key !== SK.PURIFY) continue;
       const me = state.p[i];
