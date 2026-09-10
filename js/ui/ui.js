@@ -269,10 +269,13 @@
       const preState = S.cloneState(B.state);
       const N = B.state.p.length;
       const picks = [];
-      for (let pid = 1; pid < N; pid++) picks.push(chooseAIMulti(preState, pid, Play.legalActions(preState, pid)));
       for (let pid = 1; pid < N; pid++) {
+        picks.push(preState.p[pid].hp > 0 ? chooseAIMulti(preState, pid, Play.legalActions(preState, pid)) : null);
+      }
+      for (let pid = 1; pid < N; pid++) {
+        if (!picks[pid - 1]) continue;
         const b = B.state.p[pid];
-        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: b.elec > b.boom ? 'boom' : 'elec', target: picks[pid - 1].target });
+        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: b.elec > b.boom ? 'boom' : 'elec', target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
       }
       X.resolveActions(B.state);
       X.endTurn(B.state);
@@ -328,11 +331,14 @@
     const preState = S.cloneState(B.state);
     const N = B.state.p.length;
     const picks = [];
-    for (let pid = 1; pid < N; pid++) picks.push(chooseAIMulti(preState, pid, Play.legalActions(preState, pid)));
+    for (let pid = 1; pid < N; pid++) {
+      picks.push(preState.p[pid].hp > 0 ? chooseAIMulti(preState, pid, Play.legalActions(preState, pid)) : null);
+    }
     S.attemptAction(B.state, 0, key, { bead: bead, target: target, target2: target2 });
     hint('你选择了【' + skillName(key) + (target != null ? ' → ' + B.state.p[target].name : '') + '】，对手思考中…');
     setTimeout(function () {
       for (let pid = 1; pid < N; pid++) {
+        if (!picks[pid - 1]) continue;
         const b = B.state.p[pid];
         S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: b.elec > b.boom ? 'boom' : 'elec', target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
       }
@@ -498,6 +504,7 @@
       case 'rodBlock': return { cls: 'ev gold', html: '☂ ' + nm(e.pid) + ' 的避雷针挡下雷击' };
       case 'ban': return { cls: 'ev dmg', html: '🌩 ' + nm(e.pid) + ' 被雷劈中：多数技能禁用 3 回合（防御/反弹/金刚盾/ジ 除外）' };
       case 'hidden': return { cls: 'ev pur', html: '🌑 触发隐藏技能【' + e.name + '】' + (e.pid != null ? '（' + nm(e.pid) + '）' : '') + (e.to != null ? ' → ' + nm(e.to) : '') };
+      case 'bigTChain': return { cls: 'ev dmg', html: '⚡ ' + nm(e.from) + ' 的大雷连带：' + nm(e.to) + ' 受 1 点电伤' + (e.kind === 'attack' ? '（其攻击被无效）' : '（被目标攻击）') };
       case 'mirror': return { cls: 'ev pur', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】→ ' + nm(e.to) };
       case 'mirrorNoEffect': return { cls: 'ev dim', html: '🪞 ' + nm(e.pid) + ' 镜面反射：' + nm(e.from) + ' 本回合' + (e.key ? '的【' + skillName(e.key) + '】' : '无行动') + '无可复制' };
       case 'revive': return { cls: 'ev gold', html: '👻 ' + nm(e.pid) + ' 回魂复活！本回合无限能量' };

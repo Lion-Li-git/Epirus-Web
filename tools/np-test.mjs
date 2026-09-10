@@ -235,6 +235,87 @@ t('N19 多人冠军包：可加载且维度兼容', function () {
   ok(pack.f === P.FEAT_S && pack.h === P.HID, 'f/h 一致');
 });
 
+t('N4 相抵必须“互为目标”：两家同打第三人 → 各中一枪', function () {
+  const st = S.createState('multi', { next: mulberry32(41) }, 3);
+  st.p[0].ep = st.p[1].ep = st.p[2].ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 1, R.SK.GUN, { target: 0 });
+  S.attemptAction(st, 2, R.SK.GUN, { target: 0 });
+  S.attemptAction(st, 0, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[0].hp, 1, 'P0 中两枪');
+  ok(!st.actions[1].voided && !st.actions[2].voided, '两枪都没被相抵');
+});
+
+t('N4b 互为目标仍相抵（2 人回归）', function () {
+  const st = S.createState('standard', { next: mulberry32(42) }, 2);
+  st.p[0].ep = st.p[1].ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.GUN, { target: 1 });
+  S.attemptAction(st, 1, R.SK.GUN, { target: 0 });
+  X.resolveActions(st);
+  ok(st.actions[0].voided && st.actions[1].voided, '互枪相抵');
+  eq(st.p[0].hp, 3, '无人受伤');
+});
+
+t('N4c 高优先级打第三人，不作废别人对同一目标的攻击', function () {
+  const st = S.createState('multi', { next: mulberry32(43) }, 3);
+  st.p[0].ep = st.p[1].ep = st.p[2].ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.SWORD, { target: 2 });
+  S.attemptAction(st, 1, R.SK.GUN, { target: 2 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  ok(!st.actions[1].voided, 'P1 的枪不被 P0 的剑作废');
+  eq(st.p[2].hp, 1, 'P2 各中 1 点');
+});
+
+t('N12 已淘汰玩家不能行动', function () {
+  const st = S.createState('multi', { next: mulberry32(44) }, 3);
+  st.p[1].hp = 0; st.p[1].ep = 5;
+  const r = S.attemptAction(st, 1, R.SK.GUN, { target: 0 });
+  eq(r.outcome, 'invalid', '被拒绝');
+  ok(st.actions[1].voided, '行动作废');
+});
+
+t('N12b 每回合重置行动槽：死人不会沿用上回合行动', function () {
+  const st = S.createState('multi', { next: mulberry32(45) }, 3);
+  st.p[0].ep = st.p[1].ep = st.p[2].ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 1, R.SK.GUN, { target: 0 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  S.attemptAction(st, 0, R.SK.JI, {});
+  X.resolveActions(st); X.endTurn(st);
+  st.p[1].hp = 0;
+  X.startTurn(st);
+  ok(st.actions[1] === null, '行动槽已清空');
+});
+
+t('N6 大雷连带：攻击被雷劈中者 → 攻击者受 1 电伤且攻击作废', function () {
+  const st = S.createState('multi', { next: mulberry32(46) }, 3);
+  st.p[0].ep = st.p[1].ep = st.p[2].ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.BIG_T, { target: 1 });
+  S.attemptAction(st, 2, R.SK.GUN, { target: 1 });
+  S.attemptAction(st, 1, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[1].hp, 1, 'P1 中 2 电');
+  eq(st.p[2].hp, 2, 'P2 受 1 点连带伤');
+  ok(st.actions[2].voided, 'P2 的攻击被连带无效化');
+});
+
+t('N6b 大雷连带：被雷劈者攻击第三人 → 第三人受连带', function () {
+  const st = S.createState('multi', { next: mulberry32(47) }, 3);
+  st.p[0].ep = st.p[1].ep = st.p[2].ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.BIG_T, { target: 1 });
+  S.attemptAction(st, 1, R.SK.GUN, { target: 2 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[2].hp, 2, 'P2 受 1 点连带电伤');
+  ok(!st.actions[2].voided, 'P2 自己的行动没被作废');
+});
+
 t('fuzz：3/4/5 人随机对局无异常，且必然收敛', function () {
   for (const n of [3, 4, 5]) {
     for (let g = 0; g < 120; g++) {

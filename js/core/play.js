@@ -45,6 +45,7 @@
       const beadOf = function (p) { return p.elec > p.boom ? 'boom' : 'elec'; };   // 相等时取电珠，与页面同口径
       const picks = [];
       for (let pid = 0; pid < N; pid++) {
+        if (state.p[pid].hp <= 0) { picks.push(null); continue; }   // N12：死者不行动
         const ch = choosers[pid];
         const legal = legalActions(state, pid);
         const raw = normPick(ch ? ch(state, pid, legal, state.events) : null);
@@ -53,6 +54,7 @@
         picks.push({ key: k, target: raw.target, target2: raw.target2 });
       }
       for (let pid = 0; pid < N; pid++) {
+        if (!picks[pid]) continue;
         S.attemptAction(state, pid, picks[pid].key, { bead: beadOf(state.p[pid]), target: picks[pid].target, target2: picks[pid].target2 });
       }
       X.resolveActions(state);

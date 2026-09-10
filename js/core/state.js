@@ -25,7 +25,8 @@
       chains: [],                   // R45 铁索：我连着的对手 pid 列表（2人=1个）
       vampire: false, vampHeal: 0,  // R47
       reviveNext: false, infiniteEnergy: false, // 回魂 R48
-      stickers: []                  // 贴在自己身上的符咒 [{owner,age}] R34/R44
+      stickers: [],                 // 贴在自己身上的符咒 [{owner,age}] R34/R44
+      deadLogged: false             // N12 死亡事件只报一次
     };
   }
 
@@ -126,6 +127,9 @@
     const def = R.byKey[key];
     const tg = def ? resolveTarget(state, pid, key, opt) : null;
     const tg2 = (opt && opt.target2 != null && opt.target2 !== pid && state.p[opt.target2]) ? opt.target2 : null;
+
+    // N12：已淘汰玩家不能行动（防止死人出招 / 回能量）
+    if (p.hp <= 0) return fail('invalid', '已淘汰（无法行动）');
 
     function fail(outcome, reason) {
       state.actions[pid] = { key, voided: true, outcome, target: tg, target2: tg2 };

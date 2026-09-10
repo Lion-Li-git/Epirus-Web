@@ -53,6 +53,7 @@
   /* ---------- 回合启动副作用 ---------- */
   function startTurn(state) {
     state.round += 1;
+    for (let i = 0; i < state.p.length; i++) state.actions[i] = null;   // N12：每回合重置行动槽
     if (checkOver(state)) return;
     for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i];
@@ -223,6 +224,9 @@
         const a = actionOf(state, ia), b = actionOf(state, ib);
         if (!a || !b) continue;
         if (a.key === SK.DRAIN && b.key === SK.DRAIN) continue; // 互勾触发铁索，不抵消
+        // N4：**只有互为目标**的攻击才会交锋（2 人时天然成立）。
+        // 两家同时打第三人 ≠ 互为目标，不应相抵/阻止。
+        if (targetOf(state, ia) !== ib || targetOf(state, ib) !== ia) continue;
         const pa = R.byKey[a.key].pri || 3, pb = R.byKey[b.key].pri || 3;
         if (pa === pb) {
           ev(state, { type: 'cancel', pids: [ia, ib] });
@@ -422,6 +426,22 @@
       const res = deliverDamage(state, {
         amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { reflect: true }
       }, t, { reason: '真正的落雷' });
+      // N6 连带伤害（原文效果3）：与目标 T 产生交互的第三方 各受 1 点电伤；
+      //   其中「对 T 使用技能」者额外被无效化（对 T 的那个技能）；施法者自身不参与。
+      //   2 人时第三方不存在 → 行为不变（回归安全）。
+      const tTgt = targetOf(state, t);
+      for (let q = 0; q < playerCount(state); q++) {
+        if (q === c || q === t || state.p[q].hp <= 0) continue;
+        const qa = actionOf(state, q);
+        const qTargetsT = !!qa && targetOf(state, q) === t;
+        const tTargetsQ = !!ta && tTgt === q;
+        if (!qTargetsT && !tTargetsQ) continue;
+        if (qTargetsT) setVoid(state, q, '真正的落雷连带');
+        ev(state, { type: 'bigTChain', from: c, to: q, kind: qTargetsT ? 'attack' : 'targeted' });
+        deliverDamage(state, {
+          amt: 1, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { reflect: true }
+        }, q, { reason: '真正的落雷·连带' });
+      }
       // R23'：只要大雷成功结算（命中 或 目标用原型制御抵挡），3 回合禁用即生效
       const banApplies = res.result === 'land' || guardKind === 'proto' || guardKind === 'hologram';
       if (banApplies) {
@@ -680,6 +700,13 @@
     // 回魂复活回合：回合结束立即死亡 R48
     for (let i = 0; i < playerCount(state); i++) {
       if (state.p[i].infiniteEnergy) { state.p[i].infiniteEnergy = false; state.p[i].hp = 0; ev(state, { type: 'death', pid: i, reason: '回魂回合结束' }); }
+    }
+    // N12：死亡事件（只报一次；复活后重置）
+    for (let i = 0; i < playerCount(state); i++) {
+      const p = state.p[i];
+      const dead = p.hp <= 0 && !p.reviveNext && !p.infiniteEnergy;
+      if (dead && !p.deadLogged) { p.deadLogged = true; ev(state, { type: 'death', pid: i, reason: 'HP 归零' }); }
+      else if (!dead) p.deadLogged = false;
     }
     checkOver(state);
   }

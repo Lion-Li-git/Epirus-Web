@@ -119,6 +119,9 @@ async function main() {
   }
   check('3 人：镜面反射两级目标弹窗', mirrorOk, mirrorDetail);
 
+  // 重开一局（前面的困难档/镜面测试可能已把人打死，避免后续点击无效）
+  await evalJS(`(function(){document.getElementById('btn-newgame').click();return 1;})()`);
+  await sleep(500);
   // 打 8 回合
   let targetPicked = 0, picks = 0;
   for (let r = 0; r < 8; r++) {
