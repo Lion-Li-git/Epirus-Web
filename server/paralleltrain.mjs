@@ -68,3 +68,47 @@ export function makeAsyncStep(T, opts) {
   };
   return stepAsync;
 }
+
+/* ---- 多人（N）版：把每代的个体评估切到 worker 池里跑 scoreMemberN ---- */
+export function makeParallelEvalN(T, opts) {
+  opts = opts || {};
+  const num = Math.max(1, Math.min(opts.workers || (cpus().length - 1), 16));
+  let pool = [];
+  try {
+    for (let i = 0; i < num; i++) pool.push(new Worker(new URL('./train-worker.mjs', import.meta.url)));
+  } catch (e) {
+    console.error('[parallel] N 人 worker 池启动失败，回退串行：', e && e.message);
+    pool = [];
+  }
+  let reqId = 0;
+  function runOne(worker, msg) {
+    return new Promise(function (resolve) {
+      const id = ++reqId;
+      const h = function (m) {
+        if (m && m.type === 'evalNResult' && m.id === id) { worker.off('message', h); resolve(m.results); }
+      };
+      worker.on('message', h);
+      worker.postMessage(Object.assign({}, msg, { id: id }));
+    });
+  }
+  /* 返回与 pop 同长的结果数组；池不可用时返回 null（调用方自行回退串行） */
+  async function evalPopN(pop, gen, games, n, oppNames) {
+    if (!pool.length || pop.length <= 1) return null;
+    const members = pop.map(function (params, idx) { return { idx: idx, params: params }; });
+    const chunk = Math.ceil(members.length / pool.length);
+    const jobs = [];
+    for (let w = 0; w < pool.length; w++) {
+      const sl = members.slice(w * chunk, (w + 1) * chunk);
+      if (sl.length) jobs.push(runOne(pool[w], { type: 'evalN', members: sl, gen: gen, games: games, n: n, oppNames: oppNames }));
+    }
+    const res = (await Promise.all(jobs)).flat();
+    const out = new Array(pop.length).fill(null);
+    for (const r of res) out[r.idx] = r;
+    return out;
+  }
+  return {
+    evalPopN: evalPopN,
+    workers: pool.length,
+    close: function () { for (const w of pool) { try { w.terminate(); } catch (e) { /* ignore */ } } pool = []; }
+  };
+}

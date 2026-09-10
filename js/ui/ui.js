@@ -235,6 +235,7 @@
   /* ---------- 多人（3-5）对局 ---------- */
   /* 3P 冠军包（多人自对战训练产物）：不兼容/缺失返回 null */
   let multiChampCache;
+  function resetMultiChampCache() { multiChampCache = undefined; }
   function loadMultiChamp() {
     if (multiChampCache !== undefined) return multiChampCache;
     let pack = null;
@@ -671,10 +672,15 @@
       clearTimeout(tid); return { ok: r.ok };
     }).catch(function () { clearTimeout(tid); return { ok: false }; });
   }
+  let remoteN = 2;
   function connectRemoteTrain() {
     const gens = Math.max(1, Number($('tr-remote-gens').value || 500));
     remoteGens = gens;
-    const pop = Math.max(6, parseInt($('tr-pop').value, 10) || 14);
+    const nPlayers = Math.max(2, Math.min(5, parseInt($('tr-n') && $('tr-n').value, 10) || 2));
+    remoteN = nPlayers;
+    // 多人：每代评估更重（一局有 N 个人），默认种群/局数自动拉高
+    const pop = Math.max(6, parseInt($('tr-pop').value, 10) || (nPlayers > 2 ? 32 : 14));
+    const gpoIn = Math.max(2, parseInt($('tr-gpo') && $('tr-gpo').value, 10) || (nPlayers > 2 ? 20 : 5));
     const seedsN = Math.max(1, Math.min(8, parseInt($('tr-seeds').value, 10) || 3));
     const roundsN = Math.max(1, Math.min(20, parseInt($('tr-rounds').value, 10) || 1));
     const fresh = $('tr-fresh') && $('tr-fresh').checked;
@@ -685,13 +691,13 @@
     remoteHistory = []; remoteDoneSeeds = {};
     $('tr-remote').textContent = '正在探测服务…';
     // 先探测服务是否已启动：未启动则提示双击 launcher 并自动重试（页面上"一键"体验）
-    fetchProbe(base).then(function (res) { if (res.ok) openRemote(base, gens, pop, fresh, seedsN, roundsN); else waitForServer(base, gens, pop, fresh, seedsN, roundsN); });
+    fetchProbe(base).then(function (res) { if (res.ok) openRemote(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers); else waitForServer(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers); });
   }
-  function waitForServer(base, gens, pop, fresh, seedsN, roundsN) {
+  function waitForServer(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers) {
     $('tr-remote').textContent = '服务未启动。请双击 tools/start-train-server.cmd 启动（或 node server/train-server.mjs）——检测到后自动连接…';
     if (remoteRetry) clearInterval(remoteRetry);
     remoteRetry = setInterval(function () {
-      fetchProbe(base).then(function (res) { if (res.ok) { clearInterval(remoteRetry); remoteRetry = null; openRemote(base, gens, pop, fresh, seedsN, roundsN); } });
+      fetchProbe(base).then(function (res) { if (res.ok) { clearInterval(remoteRetry); remoteRetry = null; openRemote(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers); } });
     }, 2000);
   }
   function renderSeedStatus() {
@@ -732,16 +738,19 @@
     }
     el.innerHTML = out.join('');
   }
-  function openRemote(base, gens, pop, fresh, seedsN, roundsN) {
+  function openRemote(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers) {
     if (remoteES) { remoteES.close(); remoteES = null; }
     remoteActive = true;
     $('tr-remote').textContent = '连接中…';
-    const es = new EventSource(base + '/train?gens=' + gens + '&pop=' + pop + '&gpo=5' + (fresh ? '&fresh=1' : '') + '&seeds=' + seedsN + '&rounds=' + roundsN);
+    const es = new EventSource(base + '/train?gens=' + gens + '&pop=' + pop + '&gpo=' + gpoIn + (fresh ? '&fresh=1' : '') + '&seeds=' + seedsN + '&rounds=' + roundsN + '&n=' + (nPlayers || 2));
     remoteES = es;
     es.onopen = function () { $('tr-remote').textContent = '已连接，服务端训练中（可切去对战）'; };
     es.onmessage = function (ev) {
       let d = {}; try { d = JSON.parse(ev.data); } catch (e) { return; }
-      if (d.type === 'start') {
+      if (d.type === 'start' && d.n > 2) {
+        remoteStart = 0;
+        $('tr-remote').textContent = '多人训练（' + d.n + ' 人）已启动：' + d.gens + ' 代 · 每代 ' + d.pop + ' 个体 · 每人 ' + d.gpo + ' 局 · ' + (d.workers != null ? d.workers + ' 个 worker' : '串行') + (d.fresh ? ' · 从头训练' : ' · 热启动');
+      } else if (d.type === 'start') {
         remoteStart = d.fresh ? 0 : (d.from || 0);
         const n = d.seeds || seedsN, rd = d.rounds || roundsN;
         $('tr-remote').textContent = d.fresh
@@ -753,6 +762,13 @@
         $('tr-state').textContent = '第 ' + (d.round + 1) + '/' + d.rounds + ' 轮开始（' + d.seeds + ' 种子 × ' + d.gens + ' 代）' + par;
       } else if (d.type === 'lineage') {
         $('tr-state').textContent = '第 ' + (d.round + 1) + ' 轮种子谱系：' + d.parents.map(function (p, i) { return '种子' + i + '←' + p.label; }).join('  ');
+      } else if (d.type === 'gen' && d.n > 2) {
+        const r = d.rec;
+        remoteHistory.push({ round: 0, seed: 0, parentSeed: -1, gen: r.gen, best: r.best, sigma: r.sigma, baseline: null });
+        $('tr-state').textContent = '多人（' + d.n + '人）训练中… 第 ' + r.gen + ' 代 · 1st ' + (r.firstRate * 100).toFixed(0) + '% / top2 ' + (r.top2Rate * 100).toFixed(0) + '%';
+        $('tr-progress').style.width = Math.min(100, (r.gen + 1) / gens * 100) + '%';
+        renderSeedStatus();
+        drawChart();
       } else if (d.type === 'gen') {
         const r = d.rec;
         const sd = d.seed != null ? d.seed : 0;
@@ -772,6 +788,18 @@
       } else if (d.type === 'roundDone') {
         const bestSeedTxt = d.bestSeed != null && d.bestSeed >= 0 ? (' 最优=种子' + d.bestSeed) : ' 保留现有冠军';
         $('tr-state').textContent = '第 ' + (d.round + 1) + '/' + d.rounds + ' 轮完成：冠军真实胜率 ' + (d.champWr != null ? (d.champWr * 100).toFixed(0) + '%' : '--') + bestSeedTxt;
+      } else if (d.type === 'done' && d.n > 2) {
+        $('tr-progress').style.width = '100%';
+        $('tr-state').textContent = '多人（' + d.n + '人）训练完成：1st ' + (d.firstRate * 100).toFixed(1) + '% / top2 ' + (d.top2Rate * 100).toFixed(1) + '%（' + d.secs + 's）';
+        $('tr-remote').textContent = '多人冠军已写入 js/bundled-champion-3p.js；对局困难档即时生效；再点一次可继续训练';
+        remoteActive = false;
+        es.close(); remoteES = null;
+        if (d.champ) {
+          window.EPIRUS_CHAMPION_3P = d.champ;
+          try { localStorage.removeItem('epirus.champion3p'); } catch (e) { /* ignore */ }
+          resetMultiChampCache();
+          renderChampState();
+        }
       } else if (d.type === 'done') {
         $('tr-progress').style.width = '100%';
         const bestSeedTxt = d.bestSeed != null && d.bestSeed >= 0 ? (' 最优=种子' + d.bestSeed) : ' 保留现有冠军';

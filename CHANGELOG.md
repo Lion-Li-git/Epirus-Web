@@ -1,3 +1,12 @@
+## v1.3.4 — 网页训练场支持多人训练（3/4/5 人）
+
+- 训练场新增「人数」下拉（2 人 / 3 人 / 4 人 / 5 人）。选 2 人走原 1v1 训练，选 3~5 人走多人名次制训练。
+- `server/train-worker.mjs` 新增 `{type:'evalN'}` 分支，worker 内解析对手函数名后调 `T.scoreMemberN`。
+- `server/paralleltrain.mjs` 新增 `makeParallelEvalN(T, opts)` → `{ evalPopN(pop, gen, games, n, oppNames), workers, close() }`，**种群按 worker 数均分并发**，池不可用时回退串行。
+- `server/train-server.mjs`：`/train?…&n=`（n>2 走 `runTrainN`）、`/champion?n=`、`/reset` 一并清多人状态；`BUNDLE_MP = 'js/bundled-champion-3p.js'`（2/3/4/5 人共用同一网络，特征与人数无关）；`writeBundleMP` 写 `window.EPIRUS_CHAMPION_3P*` 并刷新 index.html 全部 `?v=`。
+- `js/ui/ui.js`：远程训练读 `#tr-n`，多人时 pop 默认 32 / gpo 默认 20；SSE 新增 `start/gen/done` 的 `n>2` 分支（图表显示 best 单曲线 + 1st/top2 实时值），done 时写入 3P 冠军并清 localStorage，困难档立即生效。
+- 修复：对手函数名映射原先用字符串拼接生成，`antidef` → `pickAntidef` 大小写错误，导致终局验证抛 `sel is not a function`。改为显式 `BOT_FN_N` 表。
+- 实测（16 worker）：3 人 8 代 × pop8 × gpo6 含终局验证 7.5 秒完成，SSE 事件流正常，冠军正确写盘。
 # 更新日志
 
 ## v1.3.3 — 多人困难档真的用上 3P 冠军了 + 本局复盘

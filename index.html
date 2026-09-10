@@ -10,7 +10,7 @@
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.3.3 （2 人 + 3~5 人）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.3.4 （2 人 + 3~5 人）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
   </header>
 
   <nav class="tabs">
@@ -60,6 +60,14 @@
   <section id="page-train" class="panel train hidden">
     <div class="row">
       <fieldset><legend>对抗自对战训练（Node 并行服务）</legend>
+        <label>训练人数
+          <select id="tr-n">
+            <option value="2" selected>2 人（2 人冠军）</option>
+            <option value="3">3 人（多人冠军）</option>
+            <option value="4">4 人</option>
+            <option value="5">5 人</option>
+          </select>
+        </label>
         <label>每代个体数（14 建议）<input type="number" id="tr-pop" value="14" min="6" max="40"></label>
         <label>本次代数 <input type="number" id="tr-remote-gens" value="100" style="width:70px"></label>
         <label>种子数 <input type="number" id="tr-seeds" value="3" min="1" max="8" style="width:60px"></label>
@@ -107,16 +115,16 @@
 <div id="overlay-root" class="overlay hidden"><div class="card" id="overlay-card"></div></div>
 
 <!-- 引擎（加载顺序即依赖顺序） -->
-<script src="js/core/rules.js?v=mttm9rct"></script>
-<script src="js/core/state.js?v=mttm9rct"></script>
-<script src="js/core/resolve.js?v=mttm9rct"></script>
-<script src="js/core/play.js?v=mttm9rct"></script>
-<script src="js/train/bots.js?v=mttm9rct"></script>
-<script src="js/train/policy.js?v=mttm9rct"></script>
-<script src="js/train/evo.js?v=mttm9rct"></script>
-<script src="js/train/trainer.js?v=mttm9rct"></script>
-<script src="js/bundled-champion.js?v=mtv2q6yg"></script>
-    <script src="js/bundled-champion-3p.js?v=mtv3p001"></script>
-<script src="js/ui/ui.js?v=mttm9rct"></script>
+<script src="js/core/rules.js?v=mtv3xod7"></script>
+<script src="js/core/state.js?v=mtv3xod7"></script>
+<script src="js/core/resolve.js?v=mtv3xod7"></script>
+<script src="js/core/play.js?v=mtv3xod7"></script>
+<script src="js/train/bots.js?v=mtv3xod7"></script>
+<script src="js/train/policy.js?v=mtv3xod7"></script>
+<script src="js/train/evo.js?v=mtv3xod7"></script>
+<script src="js/train/trainer.js?v=mtv3xod7"></script>
+<script src="js/bundled-champion.js?v=mtv3xod7"></script>
+    <script src="js/bundled-champion-3p.js?v=mtv3xod7"></script>
+<script src="js/ui/ui.js?v=mtv3xod7"></script>
 </body>
 </html>

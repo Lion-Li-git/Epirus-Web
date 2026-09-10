@@ -18,6 +18,15 @@ for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/
   vm.runInNewContext(readFileSync(join(root, f), 'utf8'), sb, { filename: f });
 }
 const T = sb.EpirusTrainer;
+const B = sb.EpirusBots;
+/* 多人训练的对手池（名字→函数，worker 内自己解析，因为函数无法跨线程传） */
+const OPP_POOL = [
+  { name: 'random', sel: B.pickRandom }, { name: 'balanced', sel: B.pickBalanced },
+  { name: 'aggro', sel: B.pickAggro }, { name: 'defend', sel: B.pickDefend },
+  { name: 'wall', sel: B.pickWall }, { name: 'antidef', sel: B.pickAntiDef },
+  { name: 'breakdef', sel: B.pickBreakDef }, { name: 'mix', sel: B.pickMix },
+  { name: 'farmer', sel: B.pickFarmer }
+];
 
 parentPort.on('message', (msg) => {
   if (msg && msg.type === 'eval') {
@@ -28,5 +37,15 @@ parentPort.on('message', (msg) => {
         totalChoices: r.totalChoices, attackRate: r.attackRate, attackShare: r.attackShare };
     });
     parentPort.postMessage({ type: 'evalResult', id: msg.id, results: results });
+  }
+  if (msg && msg.type === 'evalN') {
+    const opps = (msg.oppNames && msg.oppNames.length)
+      ? OPP_POOL.filter(function (o) { return msg.oppNames.indexOf(o.name) >= 0; })
+      : OPP_POOL;
+    const results = msg.members.map(function (m) {
+      const r = T.scoreMemberN(m.params, opps, msg.games, msg.n, msg.gen, m.idx);
+      return { idx: m.idx, score: r.fit, firstRate: r.firstRate, top2Rate: r.top2Rate, avgDealt: r.avgDealt };
+    });
+    parentPort.postMessage({ type: 'evalNResult', id: msg.id, results: results });
   }
 });

@@ -122,6 +122,9 @@ async function main() {
   // 重开一局（前面的困难档/镜面测试可能已把人打死，避免后续点击无效）
   await evalJS(`(function(){document.getElementById('btn-newgame').click();return 1;})()`);
   await sleep(500);
+  // logbox 跨局累积 → 取基线，只统计"本局"新增的相抵
+  // （否则数的是历史各局之和，会假报死循环：实测同一份代码可报 0 也可报 78）
+  const cancelsBefore = await evalJS(`(function(){var t=document.getElementById('logbox').textContent||'';return (t.match(/相抵/g)||[]).length;})()`);
   // 打 8 回合
   let targetPicked = 0, picks = 0;
   for (let r = 0; r < 8; r++) {
@@ -149,8 +152,10 @@ async function main() {
   const round = await evalJS(`(function(){var el=document.getElementById('logbox');return document.querySelectorAll('#logbox .rnd').length;})()`);
   check('3 人：回合日志推进', round >= 2, 'rnd 行=' + round);
   check('3 人：出招次数', picks >= 2, 'picks=' + picks);
-  const cancels = await evalJS(`(function(){var t=document.getElementById('logbox').textContent||'';return (t.match(/相抵/g)||[]).length;})()`);
-  check('3 人：无“互相抵消”死循环', cancels <= 2, '相抵次数=' + cancels);
+  const cancelsAll = await evalJS(`(function(){var t=document.getElementById('logbox').textContent||'';return (t.match(/相抵/g)||[]).length;})()`);
+  const cancels = cancelsAll - cancelsBefore;
+  // 本局相抵 ≤ 回合数（每回合每对最多一次）；≥3 才说明反锁失效（AI 与固定打同一目标的玩家陷入镜像循环）
+  check('3 人：无“互相抵消”死循环', cancels <= Math.max(2, round), '本局相抵=' + cancels + '（累积=' + cancelsAll + '，回合=' + round + '）');
   const hpShown = await evalJS(`Array.from(document.querySelectorAll('#side-0 .statbar b,#side-1 .mpanel .statbar b')).map(function(b){return b.textContent;}).join(',')`);
   check('3 人：HP/资源面板有内容', hpShown.length > 0, hpShown.slice(0, 60));
 

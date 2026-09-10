@@ -10,7 +10,7 @@ import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
-import { makeAsyncStep } from './paralleltrain.mjs';
+import { makeAsyncStep, makeParallelEvalN } from './paralleltrain.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -194,6 +194,106 @@ async function runTrain(gens, opts, cfg) {
   running = false;
 }
 
+/* ==================== 多人（N ≥ 3）训练 ==================== */
+const OPP_NAMES = ['random', 'balanced', 'aggro', 'defend', 'wall', 'antidef', 'breakdef', 'mix', 'farmer'];
+/* 名字→函数必须显式写（'autodef' 这类拼接会导致 pickAntidef 大小写错误） */
+const BOT_FN_N = {
+  random: 'pickRandom', balanced: 'pickBalanced', aggro: 'pickAggro', defend: 'pickDefend',
+  wall: 'pickWall', antidef: 'pickAntiDef', breakdef: 'pickBreakDef', mix: 'pickMix', farmer: 'pickFarmer'
+};
+const BUNDLE_MP = 'js/bundled-champion-3p.js';   // 多人冠军（2/3/4/5 人局共用同一网络，特征与人数无关）
+let lastChampionPackN = null;
+let runningN = false;
+
+function loadSeedN() {
+  try {
+    const src = readFileSync(join(root, BUNDLE_MP), 'utf8');
+    const m = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
+    if (m) return P.unpack(JSON.parse(m[1]));
+  } catch (e) { /* 无热启动 */ }
+  return null;
+}
+
+function writeBundleMP(pack, meta) {
+  writeFileSync(join(root, BUNDLE_MP),
+    '/* Epirus \u591a\u4eba\u51a0\u519b\uff08\u7531 server/train-server.mjs \u751f\u6210\uff09\u3002\u53ea\u8bfb\u6570\u636e\uff0c\u4e0d\u8981\u624b\u6539\u3002 */\n' +
+    'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
+    'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(pack) + ';\n');
+  bumpChampionVersion();   // 刷 index.html 的 ?v= 缓\u5b58\u6233
+}
+
+async function runTrainN(gens, cfg) {
+  cfg = cfg || {};
+  const n = Math.max(3, Math.min(cfg.n || 3, 5));
+  const popSize = Math.max(8, cfg.pop || 32);
+  const games = Math.max(4, cfg.games || 20);
+  const t0 = Date.now();
+  const cap = 1800000;
+  const poolN = makeParallelEvalN(T);
+  const seedP = cfg.fresh ? null : loadSeedN();
+  let pop = [];
+  for (let i = 0; i < popSize; i++) {
+    if (seedP && i === 0) pop.push(seedP);
+    else if (seedP && i < Math.floor(popSize / 3)) pop.push(P.mutatePolicy(seedP, 0.10));
+    else pop.push(P.makePolicy(0.25));
+  }
+  let sigma = 0.18;
+  const hall = [];
+  for (const c of clients) sse(c, { type: 'start', n: n, gens, pop: popSize, gpo: games, from: 0, workers: poolN.workers, fresh: !!cfg.fresh });
+  for (let gen = 0; gen < gens; gen++) {
+    let res = await poolN.evalPopN(pop, gen, games, n, OPP_NAMES);
+    if (!res) {
+      const B = sb.EpirusBots;
+      const opps = OPP_NAMES.map(function (nm) { return { name: nm, sel: B[BOT_FN_N[nm]] }; });
+      res = pop.map(function (params, idx) {
+        const r = T.scoreMemberN(params, opps, games, n, gen, idx);
+        return { idx: idx, score: r.fit, firstRate: r.firstRate, top2Rate: r.top2Rate };
+      });
+    }
+    const scored = pop.map(function (params, i) { return { params: params, r: res[i] || { score: -1, firstRate: 0, top2Rate: 0 } }; });
+    scored.sort(function (a, b) { return b.r.score - a.r.score; });
+    hall.push({ params: scored[0].params, fit: scored[0].r.score });
+    hall.push({ params: scored[1] ? scored[1].params : scored[0].params, fit: scored[1] ? scored[1].r.score : -1 });
+    hall.sort(function (a, b) { return b.fit - a.fit; });
+    if (hall.length > 6) hall.length = 6;
+    const mean = scored.reduce(function (a, x) { return a + x.r.score; }, 0) / scored.length;
+    for (const c of clients) sse(c, { type: 'gen', n: n, rec: {
+      gen: gen, best: scored[0].r.score, mean: mean,
+      firstRate: scored[0].r.firstRate, top2Rate: scored[0].r.top2Rate, sigma: sigma
+    } });
+    if (Date.now() - t0 > cap) { for (const c of clients) sse(c, { type: 'error', msg: '\u8bad\u7ec3\u8d85\u65f6\u4e0a\u9650\uff0830 \u5206\u949f\uff09' }); runningN = false; poolN.close(); return; }
+    const elite = scored.slice(0, 3).map(function (x) { return x.params; });
+    const next = elite.slice();
+    while (next.length < popSize) {
+      const a = elite[Math.floor(Math.random() * elite.length)];
+      const b = scored[Math.floor(Math.random() * Math.min(6, scored.length))].params;
+      let child = Math.random() < 0.5 ? P.crossover(a, b) : a.slice();
+      child = P.mutatePolicy(child, sigma);
+      next.push(child);
+    }
+    if (gen % 30 === 29) next[popSize - 1] = P.makePolicy(0.25);
+    pop = next;
+    sigma = Math.max(0.06, sigma * 0.995);
+  }
+  // 终局：名人堂用全部对手对验证，取 1st 最高
+  const B = sb.EpirusBots;
+  const POOL = OPP_NAMES.map(function (nm) { return B[BOT_FN_N[nm]]; });
+  const PAIRS = [];
+  for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) PAIRS.push([POOL[a], POOL[b]]);
+  let finalParams = hall[0] ? hall[0].params : pop[0], ev = null;
+  for (const h of hall) {
+    const v = T.evalN(h.params, PAIRS, 20, n, 987654);
+    for (const c of clients) sse(c, { type: 'seedEval', n: n, trainFit: h.fit, firstRate: v.firstRate, top2Rate: v.top2Rate });
+    if (!ev || (v.firstRate + 0.5 * v.top2Rate) > (ev.firstRate + 0.5 * ev.top2Rate)) { finalParams = h.params; ev = v; }
+  }
+  const pack = P.pack(finalParams);
+  lastChampionPackN = pack;
+  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0 });
+  for (const c of clients) sse(c, { type: 'done', n: n, gens, firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0, secs: ((Date.now() - t0) / 1000).toFixed(1), champ: pack });
+  runningN = false;
+  poolN.close();
+}
+
 const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', '*');
@@ -210,12 +310,29 @@ const server = http.createServer((req, res) => {
     const seedsN = Math.max(1, Math.min(Number(url.searchParams.get('seeds') || 3), 8));
     const roundsN = Math.max(1, Math.min(Number(url.searchParams.get('rounds') || 1), 20));
     const fresh = url.searchParams.get('fresh') === '1';
+    const nPlayers = Math.max(2, Math.min(Number(url.searchParams.get('n') || 2), 5));
+    if (nPlayers > 2) {
+      sse(res, { type: 'start', gens, pop, gpo, n: nPlayers, from: 0, fresh });
+      if (!runningN) {
+        runningN = true;
+        runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh })
+          .catch(function (e) { for (const c of clients) sse(c, { type: 'error', msg: String(e && e.message || e) }); runningN = false; });
+      }
+      return;
+    }
     sse(res, { type: 'start', gens, pop, gpo, seeds: seedsN, rounds: roundsN, from: 0, fresh });
     if (!running) { running = true; runTrain(gens, { popSize: pop, gamesPerOpp: gpo }, { seeds: seedsN, rounds: roundsN, fresh }); }
     return;
   }
   if (url.pathname === '/champion') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    const nQ = Math.max(2, Math.min(Number(url.searchParams.get('n') || 2), 5));
+    if (nQ > 2) {
+      const pack = lastChampionPackN || loadSeedN();
+      const meta = (function () { try { const src = readFileSync(join(root, BUNDLE_MP), 'utf8'); const m = src.match(/EPIRUS_CHAMPION_3P_META = (\{[\s\S]*?\});/); return m ? JSON.parse(m[1]) : null; } catch (e) { return null; } })();
+      res.end(JSON.stringify({ has: !!pack, n: nQ, gen: meta ? meta.gens : null, champion: pack, meta: meta }));
+      return;
+    }
     const gen = seeds.length ? Math.max(...seeds.map(x => x.t.gen)) : 0;
     const bestScore = seeds.length ? Math.max(...seeds.map(x => x.t.bestChampScore)) : 0;
     res.end(JSON.stringify({ has: !!lastChampionPack, gen, best: bestScore, seeds: seeds.length, champion: lastChampionPack }));
@@ -223,6 +340,7 @@ const server = http.createServer((req, res) => {
   }
   if (url.pathname === '/reset') {
     seeds = []; running = false; lastChampionPack = null;
+    runningN = false; lastChampionPackN = null;
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
     res.end(JSON.stringify({ ok: true }));
     return;
