@@ -82,8 +82,8 @@ async function main() {
 
   // 多人困难档：切到困难（用 3P 冠军）跑 3 回合，无 JS 异常
   await evalJS(`(function(){var s=document.getElementById('sel-diff');s.value='hard';s.dispatchEvent(new Event('change'));return 1;})()`);
-  const champLoaded = await evalJS(`(function(){return typeof window.EPIRUS_CHAMPION_3P !== 'undefined' ? 1 : 0;})()`);
-  check('3 人：3P 冠军包已加载', champLoaded === 1);
+  const aiInfoRaw = await evalJS(`(function(){ try { return JSON.stringify(window.EpirusUI.aiInfo()); } catch (e) { return 'ERR:' + e.message; } })()`);
+  check('3 人：困难档实际使用 3P 冠军', /"champ":true/.test(String(aiInfoRaw)), String(aiInfoRaw));
   for (let r = 0; r < 3; r++) {
     await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button')).filter(function(x){return !x.disabled;});if(b.length)b[0].click();return 1;})()`);
     await sleep(120);
@@ -149,11 +149,19 @@ async function main() {
   const round = await evalJS(`(function(){var el=document.getElementById('logbox');return document.querySelectorAll('#logbox .rnd').length;})()`);
   check('3 人：回合日志推进', round >= 2, 'rnd 行=' + round);
   check('3 人：出招次数', picks >= 2, 'picks=' + picks);
+  const cancels = await evalJS(`(function(){var t=document.getElementById('logbox').textContent||'';return (t.match(/相抵/g)||[]).length;})()`);
+  check('3 人：无“互相抵消”死循环', cancels <= 2, '相抵次数=' + cancels);
   const hpShown = await evalJS(`Array.from(document.querySelectorAll('#side-0 .statbar b,#side-1 .mpanel .statbar b')).map(function(b){return b.textContent;}).join(',')`);
   check('3 人：HP/资源面板有内容', hpShown.length > 0, hpShown.slice(0, 60));
 
   // 目标选择弹窗是否触发过（枪=对敌技能，3 人应有 2 个目标）
   check('3 人：目标选择弹窗出现', targetPicked > 0, 'picked=' + targetPicked);
+  // 结束面板应有“查看本局复盘”按钮（不清空对局）
+  const recapBtn = await evalJS(`(function(){
+    try { window.EpirusUI.showRecap(); var t=(document.getElementById('overlay-root').textContent||''); return t.indexOf('复盘')>=0 ? 1 : 0; }
+    catch(e){ return 'ERR:'+e.message; } })()`);
+  check('3 人：本局复盘面板可打开', recapBtn === 1, String(recapBtn));
+  await evalJS(`(function(){document.getElementById('overlay-root').classList.add('hidden');return 1;})()`);
 
   mkdirSync('docs/artifacts', { recursive: true });
   await shot('docs/artifacts/np-3p-battle.png');

@@ -34,7 +34,8 @@
     closeOverlay();
     buildSkillGrid();
     renderSide(0); renderSide(1);
-    logClear('新对局：' + (B.multi ? n + ' 人多人模式' : MODE_NM[B.modeKey] + '模式') + ' · 难度=' + diffName(B.diff) + ' · 每人初始 ' + B.state.mode.hp + ' 血');
+    logClear('新对局：' + (B.multi ? n + ' 人多人模式' : MODE_NM[B.modeKey] + '模式') + ' · 难度=' + diffName(B.diff) +
+      ' · 对手AI=' + aiInfo().source + ' · 每人初始 ' + B.state.mode.hp + ' 血');
     hint('请选择技能出招 —— 双方同时出手，按优先级结算。');
   }
 
@@ -232,23 +233,54 @@
   }
 
   /* ---------- 多人（3-5）对局 ---------- */
-  /* 目标启发：优先打血量最低的对手 */
+  /* 3P 冠军包（多人自对战训练产物）：不兼容/缺失返回 null */
+  let multiChampCache;
+  function loadMultiChamp() {
+    if (multiChampCache !== undefined) return multiChampCache;
+    let pack = null;
+    try {
+      const raw = localStorage.getItem('epirus.champion3p');
+      if (raw) pack = JSON.parse(raw);
+    } catch (e) { /* ignore */ }
+    multiChampCache = P.unpack(pack);                      // 旧版/损坏包 → null
+    if (!multiChampCache && typeof window.EPIRUS_CHAMPION_3P !== 'undefined') {
+      multiChampCache = P.unpack(window.EPIRUS_CHAMPION_3P);   // 回退内置包
+    }
+    return multiChampCache;
+  }
+  /* 当前多人对局实际用的是哪个 AI（供 UI 显示与探针断言） */
+  function aiInfo() {
+    if (!B.multi) return { source: B.diff === 'hard' ? '2人冠军' : '脚本', champ: B.diff === 'hard' };
+    if (B.diff === 'hard') {
+      return loadMultiChamp()
+        ? { source: '3P 冠军', champ: true }
+        : { source: '脚本·自适应（冠军包缺失/不兼容）', champ: false };
+    }
+    return { source: B.diff === 'easy' ? '脚本·简单' : '脚本·中等', champ: false };
+  }
+
+  /* 目标启发：用训练器的 v2 口径（反锁 + 必杀优先 + 打领先者），避免互相抵消死循环 */
   function pickTargetFor(state, pid, key) {
+    const T = window.EpirusTrainer;
+    if (T && T.pickTargetN) return T.pickTargetN(state, pid, key);
     const def = R.byKey[key];
     if (!def || def.target === 'self') return null;
     const opps = S.opponentsOf(state, pid);
     if (!opps.length) return null;
-    if (opps.length === 1) return opps[0];
-    let best = opps[0];
-    for (const o of opps) if (state.p[o].hp < state.p[best].hp) best = o;
-    return best;
+    return opps[0];
   }
 
-  /* 多人 AI：脚本策略（冠军权重是 2 人口径，暂不用于 N 人）+ 目标启发 */
+  /* 多人 AI：困难 = 3P 冠军（缺失则回退脚本自适应） */
   function chooseAIMulti(state, pid, legal) {
     let key;
-    if (B.diff === 'easy') key = Bots.DIFFICULTY.easy.pick(state, pid, legal);
-    else if (B.diff === 'hard') key = Bots.pickAdaptive(state, pid, legal);
+    if (B.diff === 'hard') {
+      const c = loadMultiChamp();
+      if (c) {
+        const base = legal.filter(function (l) { return l.affordable; });
+        const legalForAI = base.length ? base : [{ key: R.SK.JI, affordable: true }];
+        key = P.choose(state, pid, legalForAI, c, { temp: 0.15 });
+      } else key = Bots.pickAdaptive(state, pid, legal);
+    } else if (B.diff === 'easy') key = Bots.DIFFICULTY.easy.pick(state, pid, legal);
     else key = Bots.pickBalanced(state, pid, legal);
     const t1 = pickTargetFor(state, pid, key);
     let t2 = null;
@@ -374,7 +406,7 @@
   }
 
   /* 测试钩子（tools/np-probe.mjs 用）：只暴露对象引用，不改变游戏逻辑 */
-  if (typeof window !== 'undefined') window.EpirusUI = { B: B, newGame: newGame, refresh: function () { buildSkillGrid(); renderSide(0); renderSide(1); } };
+  if (typeof window !== 'undefined') window.EpirusUI = { B: B, newGame: newGame, aiInfo: aiInfo, showRecap: showRecap, refresh: function () { buildSkillGrid(); renderSide(0); renderSide(1); } };
 
   function chooseAI(state, legal) {
     const d = B.diff;
@@ -433,8 +465,32 @@
     else { title = '💀 ' + (B.state.p[w] ? B.state.p[w].name : '电脑') + ' 获胜'; cls = 'red'; }
     const lines = ['共进行 ' + B.state.round + ' 回合'];
     for (const pp of B.state.p) lines.push(pp.name + ' HP ' + pp.hp);
-    openOverlay('<h2 style="color:var(--' + (w === 0 ? 'green' : w === 1 ? 'red' : 'gold') + ')">' + title + '</h2>' +
-      '<p>' + lines.join(' · ') + '</p>', [{ label: '再来一局', fn: newGame }]);
+    openOverlay('<h2 style="color:var(--' + (w === 0 ? 'green' : w === 'red' ? 'red' : 'gold') + ')">' + title + '</h2>' +
+      '<p>' + lines.join(' · ') + '</p>',
+      [{ label: '📜 查看本局复盘', fn: showRecap }, { label: '再来一局', fn: newGame }]);
+  }
+
+  /* 本局复盘：不清空对局，展示逐回合记录（方便看完再决定） */
+  function showRecap() {
+    const rows = [];
+    for (const r of B.transcript) {
+      rows.push('<div class="rnd">第 ' + r.round + ' 回合：' + esc(r.line || ('你=【' + r.human + '】 电脑=【' + r.ai + '】')) + '</div>');
+      for (const l of r.lines) rows.push('<div class="ev">' + esc(l) + '</div>');
+    }
+    openOverlay('<h2>📜 本局复盘（共 ' + B.state.round + ' 回合）</h2>' +
+      '<div style="max-height:54vh;overflow:auto;text-align:left;font-size:12px;line-height:1.5;background:#141a2e;border-radius:8px;padding:8px 10px">' +
+      (rows.join('') || '<div>暂无记录</div>') + '</div>',
+      [{ label: '导出记录', fn: exportLog }, { label: '关闭', fn: closeOverlay }, { label: '再来一局', fn: newGame }]);
+  }
+  /* 上局记录：从 localStorage 读（即使已点过“再来一局”也还在） */
+  function showLastBattle() {
+    let txt = '';
+    try { txt = localStorage.getItem('epirus.lastBattle') || ''; } catch (e) { txt = ''; }
+    if (!txt) { hint('暂无上局记录'); return; }
+    openOverlay('<h2>📄 上局记录</h2>' +
+      '<div style="max-height:54vh;overflow:auto;text-align:left;font-size:12px;line-height:1.5;white-space:pre-wrap;background:#141a2e;border-radius:8px;padding:8px 10px">' +
+      esc(txt) + '</div>',
+      [{ label: '关闭', fn: closeOverlay }]);
   }
 
   /* 导出当前对局记录（纯文本，用于复查；同时存 localStorage） */
@@ -867,6 +923,7 @@
     $('tab-battle').onclick = function () { showTab('battle'); };
     $('tab-train').onclick = function () { showTab('train'); };
     $('sel-mode').onchange = function () { B.modeKey = $('sel-mode').value; newGame(); };
+    $('btn-lastlog').onclick = showLastBattle;
     $('sel-players').onchange = function () {
       B.players = parseInt($('sel-players').value, 10) || 2;
       if (B.players > 2) { B.modeKey = 'multi'; $('sel-mode').value = 'multi'; $('sel-mode').disabled = true; }
