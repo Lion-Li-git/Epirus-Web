@@ -285,6 +285,16 @@
     return affOrJi(legal);
   }
 
+  /* 农民型：只攒资源、不主动进攻 —— 逼 AI 学会惩罚消极攒ジ的对手 */
+  function pickFarmer(state, pid, legal) {
+    const byKey = {}; legal.forEach(function (l) { byKey[l.key] = l; });
+    const aff = function (k) { return byKey[k] && byKey[k].affordable; };
+    if (aff(SK.CHARGE) && rnd(state) < 0.35) return SK.CHARGE;
+    if (aff(SK.RING) && state.p[pid].ringStreak > 0) return SK.RING;
+    if (aff(SK.JI)) return SK.JI;
+    return affOrJi(legal);
+  }
+
   function pickMix(state, pid, legal) {
     const table = [pickBalanced, pickAggro, pickAntiDef, pickBreakDef, pickDefend, pickRandom];
     return table[Math.floor(rnd(state) * table.length)](state, pid, legal);
@@ -355,7 +365,7 @@
   };
 
   global.EpirusBots = {
-    pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickMix,
+    pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, resetBotMem,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',

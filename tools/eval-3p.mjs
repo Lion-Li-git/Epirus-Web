@@ -30,7 +30,8 @@ console.log('冠军 meta: ' + JSON.stringify(meta));
 const BOTS = [
   ['random', Bots.pickRandom], ['aggro', Bots.pickAggro], ['defend', Bots.pickDefend],
   ['balanced', Bots.pickBalanced], ['antidef', Bots.pickAntiDef], ['breakdef', Bots.pickBreakDef],
-  ['wall', Bots.pickWall], ['mix', Bots.pickMix]
+  ['wall', Bots.pickWall], ['mix', Bots.pickMix],
+  ['farmer', Bots.pickFarmer]
 ];
 
 const counts = {};
@@ -67,7 +68,7 @@ for (let a = 0; a < BOTS.length; a++) {
   }
 }
 const secs = ((Date.now() - t0) / 1000).toFixed(1);
-console.log('\n=== ' + N + ' 人全组合评测（28 对 × ' + GAMES + ' 局 = ' + total + ' 局，座位轮换，temp0.15）===');
+console.log('\n=== ' + N + ' 人全组合评测（' + (BOTS.length*(BOTS.length-1)/2) + ' 对 × ' + GAMES + ' 局 = ' + total + ' 局，座位轮换，temp0.15）===');
 console.log('1st = ' + (first / total * 100).toFixed(1) + '%   top2 = ' + ((first + second) / total * 100).toFixed(1) +
   '%   (1st/2nd/3rd = ' + first + '/' + second + '/' + third + ')');
 console.log('随机基线：1st 33.3% / top2 66.7%');

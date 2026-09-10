@@ -183,19 +183,44 @@
   /* 串行评估整代（浏览器 / 自测用）。行为与旧版逐成员完全一致。 */
   /* ================= N 人（N19）================= */
   /* 目标启发（N 人）：优先血量最低的存活对手 */
+  /* 上回合与我互为目标、结果双方被相抵的对手（用于反锁） */
+  function lastCancelOther(state, pid) {
+    for (let i = state.events.length - 1; i >= 0; i--) {
+      const e = state.events[i];
+      if (e.type === 'cancel' && e.round === state.round - 1 && e.pids && e.pids.indexOf(pid) >= 0) {
+        return e.pids[0] === pid ? e.pids[1] : e.pids[0];
+      }
+    }
+    return null;
+  }
+
+  /* N 人目标选择 v2：
+   *   1) 反锁：上回合与某对手互为目标而相抵 → 本回合不再打他（否则就是无意义的互相消耗死循环）
+   *   2) 能一击必杀 → 打能杀的（取血最低）
+   *   3) 否则 → 打血量最高的（领先者），避免放任任一家坐大
+   *   并列时随机（去 pid 偏差）。 */
   function pickTargetN(state, pid, key) {
     const def = R.byKey[key];
     if (!def || def.target === 'self') return null;
     const opps = S.opponentsOf(state, pid);
     if (!opps.length) return null;
-    let cand = [], minHp = Infinity;
-    for (const o of opps) {
-      const h = state.p[o].hp;
-      if (h < minHp - 1e-9) { minHp = h; cand = [o]; }
-      else if (Math.abs(h - minHp) < 1e-9) cand.push(o);
+    let pool = opps;
+    const locked = lastCancelOther(state, pid);
+    if (locked != null) {
+      const alt = opps.filter(function (o) { return o !== locked; });
+      if (alt.length) pool = alt;
     }
-    if (cand.length === 1) return cand[0];
-    return cand[Math.floor(state.rng.next() * cand.length)];   // 并列随机，去 pid 偏差
+    const dmg = (def.dmg && def.dmg.amt) ? def.dmg.amt : 0;
+    const killable = dmg > 0 ? pool.filter(function (o) { return state.p[o].hp <= dmg; }) : [];
+    let best = [], bestHp = killable.length ? Infinity : -Infinity;
+    for (const o of (killable.length ? killable : pool)) {
+      const h = state.p[o].hp;
+      if (killable.length ? (h < bestHp - 1e-9) : (h > bestHp + 1e-9)) { bestHp = h; best = [o]; }
+      else if (Math.abs(h - bestHp) < 1e-9) best.push(o);
+    }
+    if (!best.length) best = pool.slice();
+    if (best.length === 1) return best[0];
+    return best[Math.floor(state.rng.next() * best.length)];
   }
   function pickTarget2N(state, pid, key, t1) {
     if (key !== R.SK.DUAL_GUN && key !== R.SK.MIRROR) return null;

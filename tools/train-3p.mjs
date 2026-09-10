@@ -32,7 +32,8 @@ const OPPS = [
   { name: 'wall', sel: Bots.pickWall },
   { name: 'antidef', sel: Bots.pickAntiDef },
   { name: 'breakdef', sel: Bots.pickBreakDef },
-  { name: 'mix', sel: Bots.pickMix }
+  { name: 'mix', sel: Bots.pickMix },
+  { name: 'farmer', sel: Bots.pickFarmer }
 ];
 
 const t0 = Date.now();
@@ -93,7 +94,7 @@ for (let gen = 0; gen < GENS; gen++) {
 }
 
 const POOL = [Bots.pickRandom, Bots.pickAggro, Bots.pickDefend, Bots.pickBalanced,
-              Bots.pickAntiDef, Bots.pickBreakDef, Bots.pickWall, Bots.pickMix];
+              Bots.pickAntiDef, Bots.pickBreakDef, Bots.pickWall, Bots.pickMix, Bots.pickFarmer];
 const ALL_PAIRS = [];
 for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) ALL_PAIRS.push([POOL[a], POOL[b]]);
 

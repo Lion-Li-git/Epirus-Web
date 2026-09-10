@@ -15,6 +15,8 @@
   const ACT_KEYS = R.skills.map(function (s) { return s.key; });
   const A = ACT_KEYS.length;
   const HID = 24;
+  const OPP_SLOTS = 4;   // v5：最多 5 人局的对手槽位数
+  const HIST_K = 3;      // v5：最近 K 步技能历史
   const CAT3 = { energy: 0, attack: 1, defense: 2, special: 3 };
 
   function catOf(key) { return key ? (CAT3[R.byKey[key].cat] + 1) / 4 : 0; }
@@ -50,6 +52,47 @@
     };
   }
 
+  /* ---- v5：对手槽位（存活 → 血量升序 → pid，稳定排序：槽 0 = 最可能被杀的）---- */
+  function oppSlots(state, pid) {
+    const a = [];
+    for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) a.push(i);
+    a.sort(function (x, y) { const d = state.p[x].hp - state.p[y].hp; return d !== 0 ? d : x - y; });
+    return a;
+  }
+
+  /* ---- v5：行动历史（从 events 反查，带决策级缓存）---- */
+  const HIST_SCAN = 240;
+  let histCache = { state: null, round: -1, evLen: -1, map: null };
+  function skillHistory(state, pid, k) {
+    const out = [];
+    const from = Math.max(0, state.events.length - HIST_SCAN);
+    for (let i = state.events.length - 1; i >= from && out.length < k; i--) {
+      const e = state.events[i];
+      if (e.type === 'action' && e.pid === pid && e.outcome === 'ok') out.push(e.key);
+    }
+    while (out.length < k) out.push(null);
+    return out;   // out[0] = 最近一步
+  }
+  /* 连续同招：开头连续相同的比例 0..1 */
+  function streakOf(h) {
+    if (!h || !h.length || !h[0]) return 0;
+    let n = 1;
+    for (let i = 1; i < h.length; i++) { if (h[i] === h[0]) n++; else break; }
+    return n / h.length;
+  }
+  function historiesFor(state, pid) {
+    if (histCache.state !== state || histCache.round !== state.round || histCache.evLen !== state.events.length) {
+      histCache = { state: state, round: state.round, evLen: state.events.length, map: {} };
+    }
+    if (!histCache.map[pid]) {
+      const slots = oppSlots(state, pid);
+      const opp = [];
+      for (let i = 0; i < OPP_SLOTS; i++) opp.push(slots[i] != null ? skillHistory(state, slots[i], HIST_K) : []);
+      histCache.map[pid] = { me: skillHistory(state, pid, HIST_K), opp: opp };
+    }
+    return histCache.map[pid];
+  }
+
   /* ---- 状态特征（pid 视角，全部公开信息） ---- */
   function features(state, pid) {
     const me = state.p[pid];
@@ -61,7 +104,7 @@
     const curseByMe = agg.sum(function (o) {
       return o.stickers.filter(function (st) { return st.owner === pid; }).length;
     });
-    return [
+    const base = [
       me.hp / hp, agg.minHp / hp,
       Math.min(me.ep, 12) / 12, Math.min(agg.maxEp, 12) / 12,
       Math.min(me.elec, 1), Math.min(me.boom, 1), anyOp(function (o) { return Math.min(o.elec, 1); }), anyOp(function (o) { return Math.min(o.boom, 1); }),
@@ -99,6 +142,31 @@
       me.hp <= 1 ? 1 : 0,
       agg.minHp <= 1 ? 1 : 0
     ];
+    // ---- v5 ①：每个对手一个槽位（10 维/槽 × 4）----
+    const slotPids = oppSlots(state, pid);
+    for (let si = 0; si < OPP_SLOTS; si++) {
+      const opid = slotPids[si];
+      const op = (opid != null) ? state.p[opid] : null;
+      if (!op) { for (let z = 0; z < 10; z++) base.push(0); continue; }
+      base.push(
+        1,                                  // 存活
+        op.hp / hp,                         // 各自血量（不再只有 min）
+        Math.min(op.ep, 12) / 12,           // 各自ジ
+        Math.min(op.elec, 1), Math.min(op.boom, 1),   // 各自珠
+        idxOf(op.lastSkill), catOf(op.lastSkill), op.lastSkill ? 0 : 1,
+        op.ep >= 2 ? 1 : 0, op.ep >= 5 ? 1 : 0         // 穿透 / 大雷 前摇
+      );
+    }
+    // ---- v5 ②：最近 K 步技能历史（自己 + 各槽位）+ 连续同招 ----
+    const hist = historiesFor(state, pid);
+    for (let t = 0; t < HIST_K; t++) base.push(idxOf(hist.me[t]));
+    base.push(streakOf(hist.me));
+    for (let si = 0; si < OPP_SLOTS; si++) {
+      const h = hist.opp[si] || [];
+      for (let t = 0; t < HIST_K; t++) base.push(idxOf(h[t] || null));
+      base.push(streakOf(h));
+    }
+    return base;
   }
   const FEAT_S = features(S.createState('standard', { next: Math.random }), 0).length;
 
@@ -200,7 +268,7 @@
     return fwd.argmaxKey;
   }
 
-  const PACK_VERSION = 4;   // v3：状态特征 +4 前摇威胁 → FEAT_S 变化，旧冠军(v2/f52)不兼容
+  const PACK_VERSION = 5;   // v5：加对手槽位 + 技能历史 → FEAT_S 变化，旧冠军(v4/f62)不兼容   // v3：状态特征 +4 前摇威胁 → FEAT_S 变化，旧冠军(v2/f52)不兼容
 
   /* 冠军包版本/维度校验：防止旧架构(33维特征→1177参数)被静默错位加载到新网络(52维→1633参数)。
    * 返回 {ok:true} 或 {ok:false, reason, got, want}。reason 取值：
@@ -225,7 +293,7 @@
 
   global.EpirusPolicy = {
     ACT_KEYS, FEAT_N, FEAT_S, FEAT_A, HID, PACK_VERSION,
-    features, actionFeatures, value, forward, choose, oppAgg,
+    features, actionFeatures, value, forward, choose, oppAgg, oppSlots, skillHistory, OPP_SLOTS, HIST_K,
     paramCount, makePolicy, mutatePolicy, crossover, pack, unpack, checkPack
   };
 })(typeof window !== 'undefined' ? window : globalThis);

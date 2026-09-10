@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
 sb.window = sb; sb.globalThis = sb;
 for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/policy.js', 'js/bundled-champion-3p.js']) {
+  'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js', 'js/bundled-champion-3p.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, X = sb.window.EpirusResolve, Play = sb.window.EpirusPlay;
@@ -300,8 +300,9 @@ t('N6 大雷连带：攻击被雷劈中者 → 攻击者受 1 电伤且攻击作
   S.attemptAction(st, 1, R.SK.JI, {});
   X.resolveActions(st);
   eq(st.p[1].hp, 1, 'P1 中 2 电');
-  eq(st.p[2].hp, 2, 'P2 受 1 点连带伤');
+  eq(st.p[2].hp, 1, 'P2 受 2 点连带伤');
   ok(st.actions[2].voided, 'P2 的攻击被连带无效化');
+  eq(st.p[2].cooldown[R.SK.GUN], 4, '连带者的技能（枪）被禁用 3 回合');
 });
 
 t('N6b 大雷连带：被雷劈者攻击第三人 → 第三人受连带', function () {
@@ -312,8 +313,26 @@ t('N6b 大雷连带：被雷劈者攻击第三人 → 第三人受连带', funct
   S.attemptAction(st, 1, R.SK.GUN, { target: 2 });
   S.attemptAction(st, 2, R.SK.JI, {});
   X.resolveActions(st);
-  eq(st.p[2].hp, 2, 'P2 受 1 点连带电伤');
-  ok(!st.actions[2].voided, 'P2 自己的行动没被作废');
+  eq(st.p[2].hp, 1, 'P2 受 2 点连带电伤');
+  ok(st.actions[2].voided, 'P2 的行动同样被作废');
+});
+
+t('目标反锁：上回合与某对手互为目标而相抵 → 本回合不再打他', function () {
+  const T = sb.window.EpirusTrainer;
+  const st = S.createState('multi', { next: mulberry32(51) }, 3);
+  st.round = 5; st.p[1].hp = 2; st.p[2].hp = 2;
+  st.events.push({ type: 'cancel', pids: [0, 2], round: 4 });
+  ok(T.pickTargetN(st, 0, R.SK.GUN) !== 2, '不再打 P2（反锁）');
+});
+
+t('目标选择：能一击必杀先杀；否则打血量最高的领先者', function () {
+  const T = sb.window.EpirusTrainer;
+  const a = S.createState('multi', { next: mulberry32(52) }, 3);
+  a.round = 5; a.p[1].hp = 1; a.p[2].hp = 3;
+  eq(T.pickTargetN(a, 0, R.SK.GUN), 1, '能杀 P1 就杀');
+  const b = S.createState('multi', { next: mulberry32(53) }, 3);
+  b.round = 5; b.p[1].hp = 2; b.p[2].hp = 3;
+  eq(T.pickTargetN(b, 0, R.SK.GUN), 2, '打领先者 P2');
 });
 
 t('fuzz：3/4/5 人随机对局无异常，且必然收敛', function () {

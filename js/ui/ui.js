@@ -361,7 +361,7 @@
         const t = evText(e);
         return t ? t.html.replace(/<[^>]+>/g, '') : null;
       }).filter(Boolean);
-      B.transcript.push({ round: B.state.round, human: parts[0], ai: parts.slice(1).join(' '), lines: lines });
+      B.transcript.push({ round: B.state.round, line: parts.join('  '), human: parts[0], ai: parts.slice(1).join(' '), lines: lines });
       persistBattle();
       B.evCursor = B.state.events.length;
       buildSkillGrid(); renderSide(0); renderSide(1);
@@ -400,7 +400,7 @@
     const lb = $('logbox'); lb.innerHTML = '';
     addLog('div', 'rnd', '（悔一步）回到上一回合开始前');
     for (const r of B.transcript) {
-      addLog('div', 'rnd', '第 ' + r.round + ' 回合：你=【' + r.human + '】 电脑=【' + r.ai + '】');
+      addLog('div', 'rnd', '第 ' + r.round + ' 回合：' + (r.line ? r.line : '你=【' + r.human + '】 电脑=【' + r.ai + '】'));
       for (const l of r.lines) addLog('div', 'ev', l);
     }
   }
@@ -442,7 +442,7 @@
   function buildBattleText() {
     let txt = 'Epirus 拍手游戏 对局记录\n模式=' + MODE_NM[B.modeKey] + '  难度=' + diffName(B.diff) + '\n\n';
     for (const r of B.transcript) {
-      txt += '第 ' + r.round + ' 回合：你=【' + r.human + '】 电脑=【' + r.ai + '】\n';
+      txt += '第 ' + r.round + ' 回合：' + (r.line ? r.line : '你=【' + r.human + '】 电脑=【' + r.ai + '】') + '\n';
       for (const l of r.lines) txt += '   - ' + l + '\n';
     }
     const w = B.state.winner;
@@ -466,7 +466,7 @@
   }
 
   /* ---------- 事件文案 ---------- */
-  function nm(pid) { return pid === 0 || pid === 1 ? NAME[pid] : pid; }
+  function nm(pid) { return (B.state && B.state.p[pid]) ? B.state.p[pid].name : (NAME[pid] || pid); }
   function evText(e) {
     const dim = { cls: 'ev dim' }, g = { cls: 'ev gold' }, p = { cls: 'ev pur' }, d = { cls: 'ev dmg' }, h = { cls: 'ev heal' };
     switch (e.type) {

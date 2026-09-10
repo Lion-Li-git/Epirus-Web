@@ -118,6 +118,15 @@
     return true;
   }
 
+  /* 大雷禁用（直击与连带共用）：只禁“当前使用的那个技能”（R29） */
+  const BIG_T_EXEMPT = [SK.GUARD, SK.REFLECT, SK.JINSHIELD, SK.JI];
+  function bigTBan(state, pid, usedKey) {
+    if (usedKey && R.MULTI_ONLY.indexOf(usedKey) < 0 && BIG_T_EXEMPT.indexOf(usedKey) < 0) {
+      state.p[pid].cooldown[usedKey] = Math.max(state.p[pid].cooldown[usedKey] || 0, 4);
+    }
+    ev(state, { type: 'ban', pid: pid, by: SK.BIG_T, turns: 3, skill: usedKey });
+  }
+
   /* 可触发地雷的伤害来源；狙击豁免 R38 */
   const MINE_TRIGGER = [SK.GUN, SK.SWORD, SK.TANK, SK.DRAIN, SK.RAILGUN, SK.BIG_T, SK.LASER_EYE, SK.CANNON];
 
@@ -229,7 +238,7 @@
         if (targetOf(state, ia) !== ib || targetOf(state, ib) !== ia) continue;
         const pa = R.byKey[a.key].pri || 3, pb = R.byKey[b.key].pri || 3;
         if (pa === pb) {
-          ev(state, { type: 'cancel', pids: [ia, ib] });
+          ev(state, { type: 'cancel', pids: [ia, ib], round: state.round });
           setVoid(state, ia, '相抵'); setVoid(state, ib, '相抵');
         } else if (pa > pb) {
           ev(state, { type: 'clash', winner: ia, loser: ib });
@@ -436,22 +445,24 @@
         const qTargetsT = !!qa && targetOf(state, q) === t;
         const tTargetsQ = !!ta && tTgt === q;
         if (!qTargetsT && !tTargetsQ) continue;
-        if (qTargetsT) setVoid(state, q, '真正的落雷连带');
+        // 连带口径：同样 2 点电伤 + 行动作废 + 该技能禁用 3 回合（与直击同口径）
+        const qUsed = qa ? qa.key : null;
+        setVoid(state, q, '真正的落雷连带');
         ev(state, { type: 'bigTChain', from: c, to: q, kind: qTargetsT ? 'attack' : 'targeted' });
-        deliverDamage(state, {
-          amt: 1, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { reflect: true }
+        const qres = deliverDamage(state, {
+          amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { reflect: true }
         }, q, { reason: '真正的落雷·连带' });
+        if (qres.result === 'land' || qres.result === 'blocked') {
+          const qGuard = (guardOf(state, q) || {}).kind;
+          if (qres.result === 'land' || qGuard === 'proto') bigTBan(state, q, qUsed);
+        }
       }
       // R23'：只要大雷成功结算（命中 或 目标用原型制御抵挡），3 回合禁用即生效
       const banApplies = res.result === 'land' || guardKind === 'proto' || guardKind === 'hologram';
       if (banApplies) {
         // R29 修正：只禁用"目标本回合正在使用的那个技能"（不是全部技能）
         const used = ta ? ta.key : null;
-        const exempt = [SK.GUARD, SK.REFLECT, SK.JINSHIELD, SK.JI];
-        if (used && R.MULTI_ONLY.indexOf(used) < 0 && exempt.indexOf(used) < 0) {
-          state.p[t].cooldown[used] = Math.max(state.p[t].cooldown[used] || 0, 4);
-        }
-        ev(state, { type: 'ban', pid: t, by: SK.BIG_T, turns: 3, skill: used });
+        bigTBan(state, t, used);
       }
     }
 
