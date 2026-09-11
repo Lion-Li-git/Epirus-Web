@@ -66,7 +66,7 @@ function writeBundle(pack, meta) {
 }
 
 /* 与页面“困难·冠军”一致的出招（temp0.15，只挑可负担），对 8 基准实测平均真实胜率。 */
-const BOT_NAMES = ['random', 'aggro', 'defend', 'balanced', 'breakdef', 'wall', 'reflectspam', 'guardspam', 'baguaspam', 'combocounter', 'mix', 'tankline', 'heavyfire', 'guardgun', 'protowall', 'whiff', 'reflectmix', 'reflecttank', 'defreflectgun'];
+const BOT_NAMES = ['random', 'aggro', 'defend', 'balanced', 'breakdef', 'wall', 'reflectspam', 'guardspam', 'baguaspam', 'combocounter', 'mix', 'heavyfire', 'guardgun', 'protowall', 'whiff', 'reflectmix', 'reflecttank', 'defreflectgun'];
 const BOT_FN = { random: 'pickRandom', aggro: 'pickAggro', defend: 'pickDefend', balanced: 'pickBalanced', breakdef: 'pickBreakDef', wall: 'pickWall', reflectspam: 'pickReflectSpam', guardspam: 'pickGuardSpam', baguaspam: 'pickBaguaSpam', combocounter: 'pickComboCounter', mix: 'pickMix', tankline: 'pickTankLine', heavyfire: 'pickHeavyFire', guardgun: 'pickGuardGun', protowall: 'pickProtoWall', whiff: 'pickWhiff', reflectmix: 'pickReflectMix', reflecttank: 'pickReflectTank', defreflectgun: 'pickDefReflectGun' };
 function champRealWr(params, temp, games, seedBase) {
   const sel = function (state, pid, legal) {
@@ -113,6 +113,11 @@ function maybeEarlyStop(it, gens) {
  * 每轮结束都按真实胜率择优并与现有冠军比（绝不回退）。 */
 async function runTrain(gens, opts, cfg) {
   if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
+  /* C 方案：脚本教师模仿。注意 worker 是**独立进程**，主线程 setImitUntil 传不进去，
+   * 故走环境变量——worker 在懒创建时读它（池在首次 evalPopN 才建，此时 env 已写好）。 */
+  const imitGens = Math.floor((gens || 0) * 0.35);
+  process.env.EPIRUS_IMIT_GENS = String(imitGens);
+  if (T.setImitUntil) T.setImitUntil(imitGens);
   cfg = cfg || {};
   const seedN = Math.max(1, cfg.seeds || 3);
   const rounds = Math.max(1, cfg.rounds || 1);

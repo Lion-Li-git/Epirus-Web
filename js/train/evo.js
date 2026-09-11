@@ -360,7 +360,7 @@
    * 经济锁死的病根：AI 永远停在 ep≤1 的 ジ→枪 循环，2 ジ 以上技能永久不可负担。
    * 旧 fitness 的 proact/deal 奖励"立刻打伤害"，而攒钱必须先连出ジ（0 伤害）→
    * 旧口径实际上在惩罚攒钱，故加 save/conv 两项把梯度补上。 */
-  function makeEconChooser(inner, agg) {
+  function makeEconChooser(inner, agg, teacherFn, imitB) {
     const rec = { maxEp: 0, heavy: 0, hold: 0, heavy4: 0 };
     const fn = function (state, pid, legal) {
       const p = state.p[pid];
@@ -372,6 +372,11 @@
           agg.use[a.key] = (agg.use[a.key] || 0) + 1;
           if (!agg.aff) agg.aff = {};
           for (let ai = 0; ai < legal.length; ai++) if (legal[ai].affordable) agg.aff[legal[ai].key] = 1;
+        }
+        // C 方案：与脚本教师比对（只在退火期内计数）
+        if (teacherFn && imitB > 0 && agg) {
+          const tk = teacherAction(teacherFn, state, pid, legal);
+          if (tk != null) { agg._mt = (agg._mt || 0) + 1; if (a.key === tk) agg._mm = (agg._mm || 0) + 1; }
         }
         const c = S.computeCost(state, pid, a.key);
         if (c && c.ok) {
@@ -397,12 +402,14 @@
   function scoreMemberN(params, opps, games, n, gen, idx) {
     let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0;
+    let imitSum = 0, imitGames = 0;
     const agg = { use: {}, aff: {} };   // 该个体的动作直方图（跨局汇总）
     for (let g = 0; g < games; g++) {
       const seat = g % n;                                   // 座位轮换
       const seed = seedOfGen(gen, idx, 'n') + g * 7919;
       const choosers = [];
       let oi = g % opps.length;
+      const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
       let econ = null;
       for (let pid = 0; pid < n; pid++) {
         if (pid === seat) {
@@ -410,7 +417,7 @@
           const hr = mulberry32(seed + 991)();
           const h = hr < 0.30 ? (1 + Math.floor(mulberry32(seed + 992)() * 4)) : 0;
           const baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : policyChooserN(params, 0.35, 0.15);
-          econ = makeEconChooser(baseSel, agg); choosers.push(econ);
+          econ = makeEconChooser(baseSel, agg, imitB > 0 ? BOT_PICKS['heavyfire'] : null, imitB); choosers.push(econ);
         }
         else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
       }
@@ -437,6 +444,9 @@
        * 旧的 engine（按“获得的 ep 量”发钱）已撤：聚能环 +3/回合 vs ジ +1 →
        * 等于给刷环发三倍工资，" 永动刷环" 是奖励被 hack 的产物。
        * 标准经济下 ep 最高只有 1~2 → stock 项很小，不影响已有冠军口径。 */
+      // C：模仿率（与脚本教师 heavyfire 的一致程度）
+      const imit = (imitB > 0 && agg._mt) ? (agg._mm || 0) / agg._mt : 0;
+      if (imitB > 0) { imitSum += imit; imitGames++; }
       const mEp = econ ? econ.rec.maxEp : 0;
       let stock;
       if (mEp <= 4) stock = STOCK_BONUS * (mEp / 4);
@@ -448,7 +458,7 @@
       // 经济分档：贵的技能更值钱（不再指向某个特定循环）
       const conv = 0.08 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2)
                  + 0.08 * Math.min(1, (econ ? econ.rec.heavy4 : 0) / 1);
-      fit += Math.max(-0.3, Math.min(1.7, base + proact + deal + stock + conv - slow));
+      fit += Math.max(-0.3, Math.min(1.8, base + proact + deal + stock + conv - slow + imitB * imit));
       if (econ) { maxEpSum += econ.rec.maxEp; heavySum += econ.rec.heavy; holdSum += econ.rec.hold; econGames++; }
       // 经济引擎质量：本局获得的 ep 总量。聚能环第 3 次起每回合 +3（ジ 只 +1），
       // 直接在这个量上体现 → 不用为“环”单独写奖励，避免又指向特定循环。
@@ -490,7 +500,8 @@
       avgMaxEp: econGames ? maxEpSum / econGames : 0,
       avgHeavy: econGames ? heavySum / econGames : 0,
       avgHold: econGames ? holdSum / econGames : 0,
-      avgDeep: econGames ? deepSum / econGames : 0
+      avgDeep: econGames ? deepSum / econGames : 0,
+      avgImit: imitGames ? imitSum / imitGames : 0
     };
   }
 
@@ -649,6 +660,26 @@
    * 我上一版"前 30% 补贴 + 后 50% 退火"的退火窗口有 150 代 ≫ 衰减尺度 20 代 → 必然失败。
    * 正确做法不是靠时间安排躲漂移，而是**给这条分支一条永久的评价通道**。
    * 这里用最便宜的形式：每代评估里固定留 REGEN_SLICE 比例的局带补贴，永不退火。 */
+  /* ===== C 方案：脚本教师模仿（千问/用户方向）=====
+   * 动机：全随机初始化 + 纯胜负奖励时，网络探索不到"连续攒钱"这类**长轨迹**行为。
+   * 做法：训练早期让个体额外模仿一个**有逻辑的脚本教师**（默认 heavyfire = 贵技能专精，
+   *   正是"会攒钱"的脚本化身），模仿率给一个**退火到 0** 的奖励；后期完全交给真实胜负。
+   * 与"改规则"无关，纯训练侧；也不会固化——退火后教师影响消失，个体必须靠真实胜负站住。 */
+  let IMIT_BETA = 0.12;              // 初始模仿奖励权重
+  let IMIT_UNTIL = 0;                // 退火代数（由 setImitUntil 设置；0=关闭）
+  function setImitUntil(n) { IMIT_UNTIL = Math.max(0, Math.floor(n) || 0); }
+  function imitBetaForGen(gen) {
+    if (!IMIT_UNTIL || gen >= IMIT_UNTIL) return 0;
+    return IMIT_BETA * (1 - gen / IMIT_UNTIL);      // 线性退火
+  }
+  /* 脚本教师的一句话决策（供模仿比对用） */
+  function teacherAction(botFn, state, pid, legal) {
+    try {
+      const r = botFn(state, pid, legal);
+      return (typeof r === 'string') ? r : (r && r.key) || null;
+    } catch (e) { return null; }
+  }
+
   const REGEN_SLICE = 0.08;   // 每 12 局留 1 局（约 8%）带补贴
   function regenForGen(gen) { return 0; }   // 兼容旧入口；回放切片按局索引走
   function setRegenTotal(n) { /* 保留兼容：回放切片不再依赖总代数 */ }
@@ -735,7 +766,7 @@
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, costOfKey,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, costOfKey, setImitUntil, imitBetaForGen,
     scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);
