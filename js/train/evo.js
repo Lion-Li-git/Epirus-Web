@@ -703,10 +703,15 @@
     };
   }
 
-  /* 容差带：可用 EPIRUS_WR_TOL 覆盖（单变量对照用）。
-   * 0.01 = 为修 3P 头对头而收紧；0.03 = div555 当年的值（容差宽 → 选出更发散的候选）。 */
-  const WR_TOL = (typeof process !== 'undefined' && process.env && process.env.EPIRUS_WR_TOL)
-    ? Number(process.env.EPIRUS_WR_TOL) : 0.03;   // v1.3.34：3 种子对照后回到 0.03（见 CHANGELOG）
+  /* Tolerance band (multi-objective selection). 0.01 = tightened for the 3P head-to-head
+   * issue; 0.03 = the div555-era value (wider band -> more diverse pick).
+   * Qianwen's review: this used to be read from process.env.EPIRUS_WR_TOL INSIDE the sandbox.
+   * That is wrong on two counts: (a) the CLI sandboxes have no `process`, so they ALWAYS got
+   * the default 0.03; (b) the server sandbox may or may not expose `process`, so the SAME
+   * constant could differ between the two paths. It is now an explicit parameter set by the
+   * caller (server / CLI), never a hidden env read inside the engine. */
+  let WR_TOL = 0.03;
+  function setWrTol(v) { const n = Number(v); if (isFinite(n) && n >= 0) WR_TOL = n; }
 
   function pickChampionByWinRate(t, games, seedBase) {
     const cands = [t.champion].concat(t.lastTop || []);
@@ -769,7 +774,7 @@
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, costOfKey, setImitUntil, imitBetaForGen,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol,
     scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

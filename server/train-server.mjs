@@ -263,6 +263,9 @@ function writeBundleMP(pack, meta) {
 
 async function runTrainN(gens, cfg) {
   const SEED0 = Number(cfg.seed0 || 0);
+  /* WR_TOL is a CALLER input, not a hidden env read inside the engine
+   * (Qianwen: CLI sandboxes have no `process`, so they always got the default). */
+  if (T.setWrTol) T.setWrTol(Number(process.env.EPIRUS_WR_TOL || 0.03));
   let __seedIdxN = 0;   // 每个种子递增，用于 setRng 配对
   if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
   cfg = cfg || {};

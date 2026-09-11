@@ -1,3 +1,41 @@
+## v1.3.52 — WR_TOL 改显式参数 + repro-check 补 D/E 断言（千问建议）
+
+### 1. `WR_TOL` 不再依赖 env（千问指出两条路可能取到不同值）
+原实现把 `process.env.EPIRUS_WR_TOL` **读在沙箱内部**，两个问题：
+- **CLI 沙箱没有 `process`** ⇒ 走 CLI 永远拿默认 0.03（哪怕你设了环境变量）；
+- **server 沙箱可能暴露 `process`** ⇒ 同一常量在两条路径上可能不同。
+
+改法：`evo.js` 里改为 `let WR_TOL = 0.03` + `setWrTol(v)` 显式导出，
+**调用方**（server 入口）负责读一次 env 并传入。引擎内不再读 env。
+
+### 2. repro-check 补 **D / E** 断言（把这一轮的坑变成自动判据）
+千问的总结：**"不可复现"要先分诊成两种**——
+(1) **随机源未播种** vs (2) **输入状态未固定**（如热启动读自己的产物）。
+**(2) 对"同 seed 两遍一致"是不可见的**：它把"输入变了"误报成"有随机源"。
+我们为找一个**不存在**的随机源排除掉了 4 个假设，还差点怀疑掉 `__seedSandbox` 机制本身。
+
+新增：
+- **D 冷启动可复现**：跑两遍，**两遍之间删掉产物**，要求 sha 相同；
+- **E 热启动必须被报告**：跑两遍不删，若 sha 不同则必须在 meta 里看到 `hotstartFrom`，
+  否则判失败 —— **专防"不可复现"被误当成 bug 再查一轮随机源**。
+
+**实测**（`node tools/repro-check.mjs 40 3 42 8842`）：
+```
+✔ A 同 seed 同 worker 数：两次权重一致
+✔ B 同 seed 跨 worker 数(2 vs 8)：权重一致
+✔ C 不同 seed：权重应不同
+  PASS D cold start: two runs with the artifact deleted agree
+  PASS E hot start is reported in meta
+REPRO-CHECK OK
+```
+
+### 未做
+- **F 覆盖 server 非 `fresh` 路径**（现在只测了 `fresh=1`）；
+- E 目前因**热启动默认关闭**而走的是"两遍一致、无需报告"分支；
+  严格测 E 的报告路径需要跑 `EPIRUS_HOTSTART=1` 一次（**未做**）。
+
+回归：spec 37/37、np-test 42/42；线下冠军仍为 div555。
+
 ## v1.3.49 — train-3p 不可复现：排除三个假设（**仍未找到根因**）
 
 ### 已用实验排除的假设（都有实测证据，不是推测）

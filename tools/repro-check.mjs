@@ -13,7 +13,7 @@
  *    这一点曾让我们误判"训练不可复现"（见 CHANGELOG v1.3.36）。
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 const GENS = Number(process.argv[2] || 60);
@@ -110,6 +110,46 @@ async function main() {
     killServer(PORT);
     try { writeFileSync(CHAMP, backup, 'utf8'); } catch (e) { }
   }
+  /* ===== D/E (Qianwen's review): "irreproducible" must be triaged into two kinds =====
+   *   (1) an unseeded RANDOM SOURCE, vs
+   *   (2) an UNPINNED INPUT STATE (e.g. hot start reading the tool's own previous artifact).
+   * (2) is invisible to the "same seed twice" check: it misreports "the input changed" as
+   * "there is a random source". We spent a long time disproving a random source that did not
+   * exist because of exactly this. One command separates them: DELETE the artifact between
+   * runs -- if the two runs then agree, it was (2). */
+  console.log('\n[D] cold start reproducible (artifact deleted between runs)');
+  const ckD = (nm, okk) => { console.log((okk ? '  PASS ' : '  FAIL ') + nm); if (!okk) fail++; };
+  const cliOut = 'docs/artifacts/train-3p-out.js';
+  const cliScript = 'tools/train-3p.mjs';
+  if (!existsSync(cliScript)) { console.log('  (skip: no ' + cliScript + ')'); }
+  else {
+    const runCli = () => spawnSync('pwsh', ['-NoProfile', '-Command',
+      "Start-Process -FilePath node -ArgumentList '" + cliScript + "','20','3','4','6' -WorkingDirectory '" +
+      process.cwd() + "' -WindowStyle Hidden -Wait"],
+      { stdio: 'ignore', env: Object.assign({}, process.env, { EPIRUS_SEED: '11' }) });
+    const artHash = () => {
+      if (!existsSync(cliOut)) return null;
+      const m = readFileSync(cliOut, 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
+      return m ? createHash('sha1').update(JSON.stringify(JSON.parse(m[1]).a)).digest('hex').slice(0, 16) : null;
+    };
+    const metaOf = () => {
+      if (!existsSync(cliOut)) return null;
+      const m = readFileSync(cliOut, 'utf8').match(/window\.EPIRUS_CHAMPION_3P_META\s*=\s*(\{[\s\S]*?\})\s*;/);
+      return m ? JSON.parse(m[1]) : null;
+    };
+    try { rmSync(cliOut, { force: true }); } catch (e) { }
+    runCli(); const d1 = artHash();
+    try { rmSync(cliOut, { force: true }); } catch (e) { }
+    runCli(); const d2 = artHash();
+    ckD('D cold start: two runs with the artifact deleted agree', !!(d1 && d1 === d2));
+    runCli(); const e1 = artHash(); const m1 = metaOf();
+    runCli(); const e2 = artHash(); const m2 = metaOf();
+    if (!e1 || !e2) ckD('E hot start is reported in meta', false);
+    else if (e1 === e2) { console.log('  (hot start gave the same result - nothing to report)'); ckD('E hot start is reported in meta', true); }
+    else ckD('E hot start differs AND is reported via meta.hotstartFrom', !!(m1 && m2 && (m1.hotstartFrom || m2.hotstartFrom)));
+    try { rmSync(cliOut, { force: true }); } catch (e) { }
+  }
+
   console.log('\nREPRO-CHECK ' + (fail ? 'FAILED' : 'OK') + '  (gens=' + GENS + ' n=' + N + ' seed=' + SEED + ')');
   process.exit(fail ? 1 : 0);
 }
