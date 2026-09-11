@@ -255,9 +255,9 @@
     if (B.diff === 'hard') {
       return loadMultiChamp()
         ? { source: '3P 冠军', champ: true }
-        : { source: '脚本·自适应（冠军包缺失/不兼容）', champ: false };
+        : { source: '脚本·多人强档（冠军包缺失/不兼容，已回退）', champ: false, fallback: true };
     }
-    return { source: B.diff === 'easy' ? '脚本·简单' : '脚本·中等', champ: false };
+    return { source: B.diff === 'easy' ? '脚本·简单(多人)' : '脚本·中等(多人)', champ: false };
   }
 
   /* 目标启发：用训练器的 v2 口径（反锁 + 必杀优先 + 打领先者），避免互相抵消死循环 */
@@ -273,23 +273,34 @@
 
   /* 多人 AI：困难 = 3P 冠军（缺失则回退脚本自适应） */
   function chooseAIMulti(state, pid, legal) {
-    let key;
+    /* 三档都允许脚本返回 {key,target} —— 多人局的"打谁"本身就是决策的一部分
+     * （老脚本 oppPidOf 只会打残血、无视领先者）。 */
+    function finish(res) {
+      const key = (typeof res === 'string') ? res : (res && res.key);
+      const t1 = (res && typeof res === 'object' && res.target != null) ? res.target : pickTargetFor(state, pid, key);
+      let t2 = null;
+      if (key === R.SK.DUAL_GUN || key === R.SK.MIRROR) {
+        const rest = S.opponentsOf(state, pid).filter(function (o) { return o !== t1; });
+        t2 = rest.length ? rest[0] : null;
+      }
+      return { key: key, target: t1, target2: t2 };
+    }
+    const DN = Bots.DIFFICULTY_N;
     if (B.diff === 'hard') {
       const c = loadMultiChamp();
       if (c) {
+        B.aiFallback = false;
         const base = legal.filter(function (l) { return l.affordable; });
         const legalForAI = base.length ? base : [{ key: R.SK.JI, affordable: true }];
-        key = P.choose(state, pid, legalForAI, c, { temp: 0.15 });
-      } else key = Bots.pickAdaptive(state, pid, legal);
-    } else if (B.diff === 'easy') key = Bots.DIFFICULTY.easy.pick(state, pid, legal);
-    else key = Bots.pickBalanced(state, pid, legal);
-    const t1 = pickTargetFor(state, pid, key);
-    let t2 = null;
-    if (key === R.SK.DUAL_GUN || key === R.SK.MIRROR) {
-      const rest = S.opponentsOf(state, pid).filter(function (o) { return o !== t1; });
-      t2 = rest.length ? rest[0] : null;
+        return finish(P.choose(state, pid, legalForAI, c, { temp: 0.15 }));
+      }
+      // 冠军包缺失/不兼容 → 回退到多人强脚本，并**显式标记**（不再静默降级到 2 人脚本）
+      B.aiFallback = true;
+      return finish(DN.hard.pick(state, pid, legal));
     }
-    return { key: key, target: t1, target2: t2 };
+    B.aiFallback = false;
+    const tier = (B.diff === 'easy') ? DN.easy : DN.medium;
+    return finish(tier.pick(state, pid, legal));
   }
 
   /* 人类玩家被淘汰后：AI 自行打完剩余回合（观战） */

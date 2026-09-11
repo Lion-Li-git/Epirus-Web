@@ -358,6 +358,99 @@
     return SK.JI;
   }
 
+  /* ===== A 方案：多人专用难度档（N 意识版）=====
+   * 现有脚本全是 2 人时代写的：oppPidOf 只会打"血量最低"的对手、无视领先者，
+   * 也不认识"有人正在攒钱（ep≥3）"这个 3 人局的核心威胁。
+   * 这三档统一改成：**先决定"打谁"（N 意识），再决定"用什么"**，并允许返回 {key,target}。 */
+  function mpOpps(state, pid) {
+    const out = [];
+    for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) out.push(i);
+    return out;
+  }
+  function mpLeader(state, pid) {          // 血量最高的领先者（最该压的人）
+    const o = mpOpps(state, pid); if (!o.length) return null;
+    let best = o[0];
+    for (const i of o) if (state.p[i].hp > state.p[best].hp + 1e-9) best = i;
+    return best;
+  }
+  function mpSaver(state, pid) {           // 正在攒钱的对手（ep>=3，快要放大招）
+    const o = mpOpps(state, pid); if (!o.length) return null;
+    let best = null, mx = 2.999;
+    for (const i of o) if (state.p[i].ep > mx) { mx = state.p[i].ep; best = i; }
+    return best;
+  }
+  function mpKillable(state, pid, amt) {   // 能一击打死（hp<=amt）的目标
+    for (const i of mpOpps(state, pid)) if (state.p[i].hp <= amt + 1e-9) return i;
+    return null;
+  }
+  function mpStanceOf(state, t) { return (t == null) ? 'none' : stanceOf({ lastSkill: state.p[t].lastSkill }); }
+  function mpBk(legal) { const o = {}; legal.forEach(function (l) { o[l.key] = l; }); return o; }
+  function mpAff(bk, k) { return !!(bk[k] && bk[k].affordable); }
+
+  /* 简单·多人：随机 + 少量基础进攻，**故意不架势、不穿透**（留破绽，新手能赢） */
+  function pickMultiEasy(state, pid, legal) {
+    const bk = mpBk(legal);
+    if (rnd(state) < 0.35) return pickRandom(state, pid, legal);
+    if (mpAff(bk, SK.GUN) && rnd(state) < 0.5) return { key: SK.GUN, target: mpLeader(state, pid) };
+    return { key: SK.JI, target: null };
+  }
+
+  /* 中等·多人：能杀就杀 → 压制攒钱者 → 对领先者架势做穿透反应 → 否则攒/开枪 */
+  function pickMultiMed(state, pid, legal) {
+    const bk = mpBk(legal), me = state.p[pid];
+    const k1 = mpKillable(state, pid, 1);
+    if (k1 != null && mpAff(bk, SK.GUN)) return { key: SK.GUN, target: k1 };
+    const saver = mpSaver(state, pid);
+    if (saver != null && mpAff(bk, SK.GUN)) return { key: SK.GUN, target: saver };   // 压攒钱的人
+    const t = mpLeader(state, pid);
+    const st = mpStanceOf(state, t);
+    if (st !== 'none') {
+      if (mpAff(bk, SK.SNIPE)) return { key: SK.SNIPE, target: t };   // 穿反弹
+      if (mpAff(bk, SK.TANK)) return { key: SK.TANK, target: t };     // 穿防御
+      return { key: SK.JI, target: null };                            // 攒到 2 再说
+    }
+    if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };
+    if (mpAff(bk, SK.GUN)) return { key: SK.GUN, target: t };
+    return { key: SK.JI, target: null };
+  }
+
+  /* 困难·脚本兜底：冠军不可用时的替代品。带经济（攒到 3 开环）与穿透决策。 */
+  function pickMultiStrong(state, pid, legal) {
+    const bk = mpBk(legal), me = state.p[pid], opps = mpOpps(state, pid);
+    let k2 = mpKillable(state, pid, 2);
+    if (k2 != null && mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: k2 };
+    if (k2 != null && mpAff(bk, SK.TANK)) return { key: SK.TANK, target: k2 };
+    const k1 = mpKillable(state, pid, 1);
+    if (k1 != null && mpAff(bk, SK.GUN)) return { key: SK.GUN, target: k1 };
+    const saver = mpSaver(state, pid);
+    if (saver != null) {
+      if (mpAff(bk, SK.TANK)) return { key: SK.TANK, target: saver };
+      if (mpAff(bk, SK.GUN)) return { key: SK.GUN, target: saver };
+    }
+    let pressure = 0;
+    for (const i of opps) if (state.p[i].ep >= 2) pressure++;
+    if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };
+    if (pressure >= 2 && mpAff(bk, SK.REFLECT)) return { key: SK.REFLECT, target: null };
+    const t = mpLeader(state, pid);
+    const st = mpStanceOf(state, t);
+    if (st === 'guard' && mpAff(bk, SK.TANK)) return { key: SK.TANK, target: t };
+    if (st === 'reflect' && mpAff(bk, SK.SWORD)) return { key: SK.SWORD, target: t };
+    if (st === 'reflect' && mpAff(bk, SK.SNIPE)) return { key: SK.SNIPE, target: t };
+    if (st !== 'none') return { key: SK.JI, target: null };
+    // 经济：ep>=3 且环未启动 → 开环（复利引擎；这是 2 人脚本从没做过的事）
+    if (me.ringStreak === 0 && me.ep >= 3 && mpAff(bk, SK.RING)) return { key: SK.RING, target: null };
+    if (me.ep >= 2 && mpAff(bk, SK.TANK)) return { key: SK.TANK, target: t };
+    if (mpAff(bk, SK.GUN)) return { key: SK.GUN, target: t };
+    return { key: SK.JI, target: null };
+  }
+
+  /* 多人专用难度档（ui.js chooseAIMulti 用） */
+  const DIFFICULTY_N = {
+    easy:   { name: '简单',   pick: pickMultiEasy },
+    medium: { name: '中等',   pick: pickMultiMed },
+    hard:   { name: '困难·脚本兜底', pick: pickMultiStrong }
+  };
+
   const DIFFICULTY = {
     easy: { name: '简单', pick: function (st, pid, lg) { return rnd(st) < 0.6 ? pickRandom(st, pid, lg) : pickBalanced(st, pid, lg); } },
     medium: { name: '中等', pick: pickBalanced },
@@ -367,7 +460,8 @@
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
-    pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, resetBotMem,
+    pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, resetBotMem,
+    pickMultiEasy, pickMultiMed, pickMultiStrong,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'
