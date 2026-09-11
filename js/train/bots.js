@@ -440,19 +440,41 @@
    * 这个脚本的作用就是当那张**会惩罚不攒钱的考卷**：
    *   能一击必杀 → 大雷；够得着大雷 → 大雷；血少 → 先守（不白给）；否则**只出 ジ 攒钱**。
    * ⚠️ 按前几轮教训，必须实测它**真的**会攒到 3~5（不能只看设计意图）。 */
+  /* ===== 地雷触发：**历史频率**，不是预测 =====
+   * 背景（实测教训）：初版一买得起就放地雷(3 ジ) → 一买得起就花掉，最高 ep 只到 3；
+   * 改成读 `lastSkill === PROTO` 后，120 次检查 **0 次命中**（拿"上一回合出的招"当"这一回合的意图"，
+   * 逻辑错位）→ 地雷变成死代码。
+   * 正解（用户建议 (a)）：脚本可以便宜地记**参考数据**——统计领先者最近 3 回合里出架势的次数，
+   * ≥2 次才放地雷。这是**可观测的历史频率**，不假装能预知本回合意图，也不增加训练压力。
+   * ⚠️ 仿 `__mem` 的既有模式：模块级、round===1 重置。 */
+  let __dsMem = { seenRound: -1, recent: [] };
+  function resetDeepSaverMem() { __dsMem = { seenRound: -1, recent: [] }; }
+  const DS_STANCE = [SK.GUARD, SK.SHIFT, SK.REFLECT, SK.PROTO, SK.JINSHIELD, SK.ARMOR, SK.BAGUA];
+  function dsStanceSeen(state, tl) {
+    const rd = state.round || 1;
+    if (rd === 1 || rd < __dsMem.seenRound) resetDeepSaverMem();
+    if (tl == null) return 0;
+    if (__dsMem.seenRound !== rd) {                    // 每回合只采样一次
+      __dsMem.seenRound = rd;
+      const sk = state.p[tl].lastSkill;                // 上一回合该对手出的招（endTurn 时写入）
+      __dsMem.recent.push(DS_STANCE.indexOf(sk) >= 0 ? 1 : 0);
+      if (__dsMem.recent.length > 3) __dsMem.recent.shift();
+    }
+    let c = 0;
+    for (const v of __dsMem.recent) c += v;
+    return c;
+  }
+
   function pickDeepSaver(state, pid, legal) {
     const bk = mpBk(legal), me = state.p[pid];
     const k2 = mpKillable(state, pid, 2);
     if (k2 != null && mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: k2 };
     if (mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: mpLeader(state, pid) };
-    /* ⚠️ 实测教训：原先这里无条件放地雷（3 ジ）→ 一买得起就花掉，**最高 ep 只到 3**，
-     * 大雷(5 ジ) 那一支永远不触发，ep>=3 占比仅 15.9%（对比 breakdef 43.4%）。
-     * 现在只在"对手正在用原型制御"时才放地雷（它唯一的独占价值），否则继续攒到大雷。 */
     const tl = mpLeader(state, pid);
-    if (mpAff(bk, SK.MINE) && tl != null && state.p[tl].lastSkill === SK.PROTO)
-      return { key: SK.MINE, target: tl };
+    if (mpAff(bk, SK.MINE) && tl != null && dsStanceSeen(state, tl) >= 2)
+      return { key: SK.MINE, target: tl };             // 对手最近常在摆架势 → 地雷（唯一绕原型制御）
     if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };
-    return { key: SK.JI, target: null };                                             // 攒钱
+    return { key: SK.JI, target: null };               // 攒钱
   }
 
   /* 多人专用难度档（ui.js chooseAIMulti 用） */
