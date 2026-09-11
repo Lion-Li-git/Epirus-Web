@@ -486,10 +486,15 @@ t('REPRO 训练路径不得出现裸 Math.random / Date.now（白名单见下）
     'js/train/bots.js',            // rnd() 的 Math.random 兜底（浏览器无 state.rng 时）
     'js/train/policy.js',          // __rng 的默认值 Math.random（可被 setRng 覆盖）
     'T.mulberry32 ? T.mulberry32', // 播种流不可用时的显式兜底
-    'Date.now() - t0 > cap',       // 30 分钟超时上限（不参与决策）
+    'Date.now() - t0 > cap',       // ⚠️ 理由已更正：它**参与决策**（在生成循环内，到点直接 return
+    //   ⇒ 机器负载不同 ⇒ 跑到的代数不同 ⇒ 冠军不同）。暂列白名单只为让断言可用，
+    //   正解是改成按代数上限（docs/REVIEW-3P.md P3#2）
     'Date.now() % ',               // 仅允许作为"已废弃写法"的检测目标，不应出现在有效代码
   ];
-  const files = ['server/train-server.mjs', 'server/train-worker.mjs', 'server/paralleltrain.mjs'];
+  /* 扩面（千问复核指出）：原先只扫 server/*.mjs —— **恰好只保护了刚修好的那条路**，
+   * 而 tools/train-*.mjs 三个 CLI 训练器完全没播种，研究数字多半出自它们。 */
+  const files = ['server/train-server.mjs', 'server/train-worker.mjs', 'server/paralleltrain.mjs',
+    'tools/train-fast.mjs', 'tools/train-best.mjs', 'tools/train-3p.mjs', 'js/train/evo.js'];
   const bad = [];
   for (const f of files) {
     const src = readFileSync(f, 'utf8');
@@ -507,6 +512,13 @@ t('REPRO 训练路径不得出现裸 Math.random / Date.now（白名单见下）
       if (L.indexOf('toISOString') >= 0) continue;          // 时间戳（meta 用）
       if (L.indexOf('toString(36)') >= 0) continue;         // cache-busting token
       if (L.indexOf('mulberry32') >= 0) continue;           // 播种兜底
+      /* js/train/evo.js 里的 Math.random 是**安全**的，但这个安全性依赖于另一条断言：
+       * evo.js 跑在沙箱里，而 __seedSandbox 把整个沙箱的 Math 换掉了；
+       * REPRO2 正好保证"每个训练入口都必须播种"。两者合起来才成立 ——
+       * 如果有一天新加了一个不播种的入口，REPRO2 会先红。
+       * （千问倾向把这几处直接改成播种流；列白名单是我在预算内的折中，已记入 CHANGELOG。） */
+      if (f === 'js/train/evo.js' && L.indexOf('Math.random(') >= 0) continue;
+      if (f === 'js/train/bots.js' && L.indexOf('Math.random(') >= 0) continue;  // rnd() 兜底
       bad.push(f + ':' + (i + 1) + '  ' + L.trim().slice(0, 70));
     }
   }
@@ -605,5 +617,19 @@ t('N23 单个激光眼即失效原型制御（用户裁定：单发破全防御�
   /* 不写"应产生失效事件"——`setVoid` 并不发 type:'void' 的事件（我一度这么断言，直接失败）。
    * 判据只保留下面那条**可被反证**的 laserNoEffect 计数。 */
 });
+t('REPRO2 每个训练入口都必须播种（正向要求，防"某条路漏播"）', function () {
+  /* 千问复核的教训：负向扫描（禁裸随机）只能覆盖"想到要扫的文件"，
+   * 而 CLI 训练器漏播时扫描面根本没包含它们。改成**正向列举训练入口**，
+   * 每个都必须出现 __seedSandbox 或 setRng —— 漏一个就红。 */
+  const entries = ['server/train-server.mjs', 'server/train-worker.mjs',
+    'tools/train-fast.mjs', 'tools/train-best.mjs', 'tools/train-3p.mjs'];
+  const miss = [];
+  for (const f of entries) {
+    const src = readFileSync(f, 'utf8');
+    if (src.indexOf('__seedSandbox') < 0 && src.indexOf('setRng') < 0) miss.push(f);
+  }
+  eq(miss.length, 0, '以下训练入口未播种：' + miss.join(', '));
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
