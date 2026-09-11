@@ -1,3 +1,32 @@
+## v1.3.49 — train-3p 不可复现：排除三个假设（**仍未找到根因**）
+
+### 已用实验排除的假设（都有实测证据，不是推测）
+| # | 假设 | 实验 | 结论 |
+|---|---|---|---|
+| 1 | **worker 池引入顺序依赖** | `train-3p.mjs:98` 是**同步** `T.scoreMemberN(...)`，不用 worker | ✗ 排除 |
+| 2 | **`vm.runInNewContext` 不认加载后对 `sb.Math` 的替换** | 先建上下文再 `__seedSandbox`，两次重播种取 `[Math.random(), Math.random()]` → **完全一致**，且与宿主 Math 不同 | ✗ 排除（替换**生效**） |
+| 3 | **`T.mulberry32` / `P.setRng` 取不到 ⇒ 那句 `if` 恒 false、`setRng` 静默不执行** | 沙箱实测 `typeof T.mulberry32 === 'function'`、`typeof P.setRng === 'function'` ⇒ 条件为 `true` | ✗ 排除 |
+
+另确认：`seedOfGen(gen, idx, tag)` 是**纯哈希**（`h=17; h=h*31+charCode` 循环），按构造确定性；
+`scoreMemberN` 的每局种子 = `seedOfGen(gen, idx, 'n') + g*7919`。
+
+### 未完成的定位（我预算耗尽）
+我试图二分"差异在评估层还是 train-3p 外层循环"，但诊断脚本崩在
+**我自己没核实的前置条件**上（`T.buildOpps(null, 0.05)` 的签名/所需参数）——
+**又是本会话第 12 次"没验证依赖的前置条件"**。
+
+**下一步最省力的做法**（留给下一轮）：
+1. 先读 `buildOpps` 的签名与前置条件，再写二分脚本；
+2. 或在 `train-3p` 里把**第 1 代之后**的 `pop` 前 4 个参数打印出来，
+   两次同 seed 跑对比 —— 若第 1 代就不同，则问题在初始化（`makePolicy`/`buildOpps`），
+   若第 1 代相同而后面分叉，则问题在繁殖循环。
+
+### 结论（不变）
+**CLI 训练的复现性只解决了一半。在 `train-3p` 通过验证之前，任何走 CLI 的对照数字仍不可信。**
+（生产路径 `server/train-server.mjs` 已由 `repro-check.mjs` 验证可复现，那条路是可用的。）
+
+回归：spec 37/37、np-test 42/42。
+
 ## v1.3.48 — 任务2 完成：训练工具不再覆写线下冠军；任务1（train-3p 可复现）**未解决**
 
 ### 任务 2 ✅ 输出保护（起因是一次真实事故）
