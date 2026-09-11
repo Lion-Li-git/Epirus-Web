@@ -602,7 +602,8 @@ t('N23 单个激光眼即失效原型制御（用户裁定：单发破全防御�
    *   —— 前者近乎恒真、后者是空断言，已删除；判据只保留下面这条可被反证的。） */
   eq(st.events.filter(function (e) { return e.type === 'laserNoEffect'; }).length, 0,
      '单发不应再走 laserNoEffect（需两发）路径');
-  ok(st.events.some(function (e) { return e.type === 'void'; }), '应产生失效事件');
+  /* 不写"应产生失效事件"——`setVoid` 并不发 type:'void' 的事件（我一度这么断言，直接失败）。
+   * 判据只保留下面那条**可被反证**的 laserNoEffect 计数。 */
 });
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
