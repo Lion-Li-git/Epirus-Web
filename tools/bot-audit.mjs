@@ -10,13 +10,14 @@ const sb={console,Math,JSON,Object,Array,Number,String,Error,Infinity,isNaN,pars
 sb.globalThis=sb;
 for(const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/core/play.js','js/train/bots.js','js/train/policy.js','js/train/evo.js'])vm.runInNewContext(readFileSync(f,'utf8'),sb,{filename:f});
 const W=sb.window,R=W.EpirusRules,B=W.EpirusBots,T=W.EpirusTrainer;
-const FN={random:'pickRandom',balanced:'pickBalanced',aggro:'pickAggro',defend:'pickDefend',wall:'pickWall',antidef:'pickAntiDef',breakdef:'pickBreakDef',mix:'pickMix',reflectspam:'pickReflectSpam',guardspam:'pickGuardSpam',baguaspam:'pickBaguaSpam',combocounter:'pickComboCounter',farmer:'pickFarmer',tankline:'pickTankLine',heavyfire:'pickHeavyFire',guardgun:'pickGuardGun',protowall:'pickProtoWall',whiff:'pickWhiff',reflectmix:'pickReflectMix',reflecttank:'pickReflectTank',defreflectgun:'pickDefReflectGun'};
+const FN={deepsaver:'pickDeepSaver',random:'pickRandom',balanced:'pickBalanced',aggro:'pickAggro',defend:'pickDefend',wall:'pickWall',antidef:'pickAntiDef',breakdef:'pickBreakDef',mix:'pickMix',reflectspam:'pickReflectSpam',guardspam:'pickGuardSpam',baguaspam:'pickBaguaSpam',combocounter:'pickComboCounter',farmer:'pickFarmer',tankline:'pickTankLine',heavyfire:'pickHeavyFire',guardgun:'pickGuardGun',protowall:'pickProtoWall',whiff:'pickWhiff',reflectmix:'pickReflectMix',reflecttank:'pickReflectTank',defreflectgun:'pickDefReflectGun'};
 const rows=[];
 for(const nm of Object.keys(FN)){
-  const use={}; let dec=0, first=0, total=0, rd=0;
+  const use={}; let dec=0, first=0, total=0, rd=0, maxEp=0, hi=0;
   const probe=(state,pid,legal)=>{
     const k=B[FN[nm]](state,pid,legal);
-    if(pid===0){ const kk=(typeof k==='string')?k:k.key; use[kk]=(use[kk]||0)+1; dec++; }
+    if(pid===0){ const kk=(typeof k==='string')?k:k.key; use[kk]=(use[kk]||0)+1; dec++;
+      const e=state.p[0].ep; if(e>maxEp)maxEp=e; if(e>=3)hi++; }
     return k;
   };
   for(let g=0;g<GAMES;g++){
@@ -28,10 +29,10 @@ for(const nm of Object.keys(FN)){
   }
   let H=0; for(const k in use){const p=use[k]/dec;H-=p*Math.log(p);}
   const ks=Object.keys(use).sort((a,b)=>use[b]-use[a]);
-  rows.push({nm, first:first/total, avgR:rd/total, eff:Math.exp(H), top:ks.slice(0,3).map(k=>(R.byKey[k]?R.byKey[k].name:k)+' '+(use[k]/dec*100).toFixed(0)+'%').join(' / ')});
+  rows.push({nm, first:first/total, avgR:rd/total, eff:Math.exp(H), maxEp:maxEp, hi:dec?hi/dec:0, top:ks.slice(0,3).map(k=>(R.byKey[k]?R.byKey[k].name:k)+' '+(use[k]/dec*100).toFixed(0)+'%').join(' / ')});
 }
 rows.sort((a,b)=>b.first-a.first);
-console.log('对手'.padEnd(16)+'1st'.padEnd(8)+'均回合'.padEnd(9)+'有效技能数'.padEnd(11)+'主线出招');
+console.log('对手'.padEnd(16)+'1st'.padEnd(8)+'均回合'.padEnd(9)+'最高ep'.padEnd(9)+'ep>=3占比'.padEnd(12)+'有效技能数'.padEnd(11)+'主线出招');
 for(const r of rows){
-  console.log(r.nm.padEnd(16)+(r.first*100).toFixed(0).padStart(3)+'%    '+r.avgR.toFixed(1).padStart(5)+'    '+r.eff.toFixed(2).padStart(6)+'      '+r.top);
+  console.log(r.nm.padEnd(16)+(r.first*100).toFixed(0).padStart(3)+'%    '+r.avgR.toFixed(1).padStart(5)+'    '+String(r.maxEp).padStart(5)+'    '+((r.hi||0)*100).toFixed(1).padStart(6)+'%     '+r.eff.toFixed(2).padStart(6)+'      '+r.top);
 }

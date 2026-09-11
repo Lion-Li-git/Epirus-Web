@@ -434,6 +434,27 @@
     return { key: SK.JI, target: null };
   }
 
+  /* ===== P1：深经济对手（攒钱流）=====
+   * 千问指出：现有对手池里**没有任何一个会跨过 2 ジ 档**（heavyfire 名字像，实测 ジ70/坦克30），
+   * 所以"不攒钱"永远不会受到惩罚——这是"考卷问题"，不是策略问题。
+   * 这个脚本的作用就是当那张**会惩罚不攒钱的考卷**：
+   *   能一击必杀 → 大雷；够得着大雷 → 大雷；血少 → 先守（不白给）；否则**只出 ジ 攒钱**。
+   * ⚠️ 按前几轮教训，必须实测它**真的**会攒到 3~5（不能只看设计意图）。 */
+  function pickDeepSaver(state, pid, legal) {
+    const bk = mpBk(legal), me = state.p[pid];
+    const k2 = mpKillable(state, pid, 2);
+    if (k2 != null && mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: k2 };
+    if (mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: mpLeader(state, pid) };
+    /* ⚠️ 实测教训：原先这里无条件放地雷（3 ジ）→ 一买得起就花掉，**最高 ep 只到 3**，
+     * 大雷(5 ジ) 那一支永远不触发，ep>=3 占比仅 15.9%（对比 breakdef 43.4%）。
+     * 现在只在"对手正在用原型制御"时才放地雷（它唯一的独占价值），否则继续攒到大雷。 */
+    const tl = mpLeader(state, pid);
+    if (mpAff(bk, SK.MINE) && tl != null && state.p[tl].lastSkill === SK.PROTO)
+      return { key: SK.MINE, target: tl };
+    if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };
+    return { key: SK.JI, target: null };                                             // 攒钱
+  }
+
   /* 多人专用难度档（ui.js chooseAIMulti 用） */
   const DIFFICULTY_N = {
     easy:   { name: '简单',   pick: pickMultiEasy },
@@ -472,7 +493,7 @@
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
-    pickMultiEasy, pickMultiMed, pickMultiStrong,
+    pickMultiEasy, pickMultiMed, pickMultiStrong, pickDeepSaver,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'
