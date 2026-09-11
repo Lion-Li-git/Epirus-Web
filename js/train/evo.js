@@ -703,7 +703,10 @@
     };
   }
 
-  const WR_TOL = 0.01;   // 容差带（收紧：3P 实测 0.03 会放行头对头明显更弱的候选）
+  /* 容差带：可用 EPIRUS_WR_TOL 覆盖（单变量对照用）。
+   * 0.01 = 为修 3P 头对头而收紧；0.03 = div555 当年的值（容差宽 → 选出更发散的候选）。 */
+  const WR_TOL = (typeof process !== 'undefined' && process.env && process.env.EPIRUS_WR_TOL)
+    ? Number(process.env.EPIRUS_WR_TOL) : 0.01;
 
   function pickChampionByWinRate(t, games, seedBase) {
     const cands = [t.champion].concat(t.lastTop || []);
