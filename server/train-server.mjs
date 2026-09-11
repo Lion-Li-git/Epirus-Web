@@ -115,7 +115,9 @@ async function runTrain(gens, opts, cfg) {
   if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
   /* C 方案：脚本教师模仿。注意 worker 是**独立进程**，主线程 setImitUntil 传不进去，
    * 故走环境变量——worker 在懒创建时读它（池在首次 evalPopN 才建，此时 env 已写好）。 */
-  const imitGens = Math.floor((gens || 0) * 0.35);
+  // C 方案实测未奏效（只做动作级模仿，学不到跨回合轨迹）→ **默认关闭**。
+  // 需要复验时设 EPIRUS_IMIT_FRAC=0.35 即可打开。
+  const imitGens = Math.floor((gens || 0) * Number(process.env.EPIRUS_IMIT_FRAC || '0'));
   process.env.EPIRUS_IMIT_GENS = String(imitGens);
   if (T.setImitUntil) T.setImitUntil(imitGens);
   cfg = cfg || {};
