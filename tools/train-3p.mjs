@@ -36,13 +36,19 @@ function __seedSandbox(sbox, seed) {
 
 const __SEED = Number(process.env.EPIRUS_SEED || 1);
 __seedSandbox(sb, __SEED);
-if (sb.EpirusPolicy.setRng && sb.EpirusTrainer.mulberry32) sb.EpirusPolicy.setRng(sb.EpirusTrainer.mulberry32(__SEED * 7919 + 13));
 for (const f of [
   'js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
   'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js'
 ]) vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 
 const P = sb.window.EpirusPolicy;
+// setRng must run AFTER the engine is loaded.
+// I first put it before the vm.runInNewContext loop -> crashed with
+// Cannot read properties of undefined (reading 'setRng'),
+// which silently turned my "same sha twice" check into a VACUOUS one
+// (it was re-reading an unchanged file).
+if (P.setRng && sb.window.EpirusTrainer.mulberry32) P.setRng(sb.window.EpirusTrainer.mulberry32(__SEED * 7919 + 13));
+
 const Bots = sb.window.EpirusBots;
 const T = sb.window.EpirusTrainer;
 
