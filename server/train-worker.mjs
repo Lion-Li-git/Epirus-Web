@@ -62,6 +62,13 @@ parentPort.on('message', (msg) => {
       ? OPP_POOL.filter(function (o) { return msg.oppNames.indexOf(o.name) >= 0; })
       : OPP_POOL;
     const results = msg.members.map(function (m) {
+      /* 千问指出的两个跨机问题一次修掉：
+       *  a) 所有 worker 共用同一个 EPIRUS_SEED0，个体的随机流偏移随 worker 数变化（8 核 != 18 核）；
+       *  b) 同种子导致各 worker 是相关样本，会系统性低估个体间差异、放大假信号。
+       * 修法：按 (seed0, gen, 个体下标) 播种 —— 与哪个 worker 跑它无关、与 worker 数无关，
+       * 且每个个体拿到独立随机流（比按 workerIndex 播种更彻底）。 */
+      const S0 = Number(process.env.EPIRUS_SEED0 || 0);
+      if (S0) __seedSandbox(sb, S0 * 100003 + (msg.gen + 1) * 1009 + (m.idx + 1));
       const r = T.scoreMemberN(m.params, opps, msg.games, msg.n, msg.gen, m.idx);
       return { idx: m.idx, score: r.fit, firstRate: r.firstRate, top2Rate: r.top2Rate, avgDealt: r.avgDealt };
     });

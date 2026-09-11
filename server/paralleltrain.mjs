@@ -14,7 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /* 构造一个异步 step(t)：优先并行评估，worker 池可用则用它，否则回退串行 T.step(t)。 */
 export function makeAsyncStep(T, opts) {
   opts = opts || {};
-  const num = Math.max(1, Math.min(opts.workers || (cpus().length - 1), 16));
+  const num = Math.max(1, Math.min(opts.workers || Number(process.env.EPIRUS_WORKERS || 0) || (cpus().length - 1), 16));
   let pool = [];
   try {
     for (let i = 0; i < num; i++) {
@@ -72,7 +72,7 @@ export function makeAsyncStep(T, opts) {
 /* ---- 多人（N）版：把每代的个体评估切到 worker 池里跑 scoreMemberN ---- */
 export function makeParallelEvalN(T, opts) {
   opts = opts || {};
-  const num = Math.max(1, Math.min(opts.workers || (cpus().length - 1), 16));
+  const num = Math.max(1, Math.min(opts.workers || Number(process.env.EPIRUS_WORKERS || 0) || (cpus().length - 1), 16));
   let pool = [];
   try {
     for (let i = 0; i < num; i++) pool.push(new Worker(new URL('./train-worker.mjs', import.meta.url)));
