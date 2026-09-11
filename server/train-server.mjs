@@ -294,26 +294,34 @@ async function runTrainN(gens, cfg) {
   const PAIRS = [];
   for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) PAIRS.push([POOL[a], POOL[b]]);
   let finalParams = hall[0] ? hall[0].params : pop[0], ev = null;
+  const PROBE_MIN = 0.5;   // 探针门槛（声明必须在 hall 循环之前，否则 TDZ）
   const candsN = [];
   for (const h of hall) {
     const v = T.evalN(h.params, PAIRS, 20, n, 987654);
     for (const c of clients) sse(c, { type: 'seedEval', n: n, trainFit: h.fit, firstRate: v.firstRate, top2Rate: v.top2Rate });
     /* Q3：按类别取最差。类别①=脚本对手对（名次分），类别②=深经济探针（只打分贵技能用没用对）。
      * 探针**必须进选择**——只作诊断就会复现"切片再多也没用"的老问题。 */
+    /* 修正 2（v1.3.18）：**探针是门槛，不是分数**。
+     * 上一版 `sc = min(pairSc, probeSc)` 跨量纲（pairSc∈[0,1.5] vs probeSc∈[0,1]），
+     * min 几乎永远取到探针 → "对手对打得如何"完全不影响排序 → 冠军为探针分牺牲实战。
+     * 现在：probe >= PROBE_MIN 才进入排序；排序仍按 pairSc。探针分不足者仅在无人达标时兜底。 */
     const pairSc = v.firstRate + 0.5 * v.top2Rate;
     const pr = T.evalEconProbe(h.params, 6, n, 4242);
-    const scMin = Math.min(pairSc, pr.score);
-    candsN.push({ params: h.params, v: v, sc: scMin, pairSc: pairSc, probe: pr, div: T.champEntropy(h.params, 0.15, 60, 31337, n) });
+    const probeOk = pr.score >= PROBE_MIN;
+    candsN.push({ params: h.params, v: v, sc: pairSc, pairSc: pairSc, probe: pr, probeOk: probeOk, div: T.champEntropy(h.params, 0.15, 60, 31337, n) });
   }
   // ===== 多目标择优：名次分容差带内取覆盖熵最高者（与 2 人路径同口径）=====
   if (candsN.length) {
-    const topN = Math.max.apply(null, candsN.map(function (c) { return c.sc; }));
-    const bandN = candsN.filter(function (c) { return c.sc >= topN - 0.03; });
+    const passed = candsN.filter(function (c) { return c.probeOk; });
+    const pool = passed.length ? passed : candsN;      // 无人达标 → 退化为全体（并打印告警）
+    if (!passed.length) console.log('[multiObj] ⚠ 探针门槛无人达标，退化为全体候选');
+    const topN = Math.max.apply(null, pool.map(function (c) { return c.sc; }));
+    const bandN = pool.filter(function (c) { return c.sc >= topN - 0.03; });
     bandN.sort(function (a, b) { return b.div.divNorm - a.div.divNorm; });
     const pk = bandN[0];
     finalParams = pk.params; ev = pk.v;
     for (const c of clients) sse(c, { type: 'multiObj', n: n, top: topN, band: bandN.length, pickedWr: pk.v.firstRate, divNorm: pk.div.divNorm, distinct: pk.div.distinct, minSc: pk.sc, pairSc: pk.pairSc, probeSc: pk.probe.score });
-    console.log('[multiObj] n=' + n + ' 候选=' + candsN.length + ' 容差带=' + bandN.length +
+    console.log('[multiObj] n=' + n + ' 候选=' + candsN.length + ' 过探针门槛=' + passed.length + ' 容差带=' + bandN.length +
       ' 选中 min=' + pk.sc.toFixed(3) + '(对局=' + pk.pairSc.toFixed(3) + ' 探针=' + pk.probe.score.toFixed(3) + ')' +
       ' divNorm=' + pk.div.divNorm.toFixed(3) + ' 种类=' + pk.div.distinct +
       ' 1st=' + (pk.v.firstRate * 100).toFixed(1) + '%  探针: 贵技能出手/局=' + pk.probe.castPerGame.toFixed(2) + ' 落地/局=' + pk.probe.landPerGame.toFixed(2));

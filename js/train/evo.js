@@ -306,7 +306,10 @@
     }
     const castRate = gamesRun ? casts / gamesRun : 0;
     const landRate = gamesRun ? landed / gamesRun : 0;
-    const score = 0.6 * Math.min(1, landRate / 2) + 0.4 * Math.min(1, castRate / 3);
+    /* 修正 1（v1.3.18）：**只奖励"落地"**。上一版 `0.4*casts/3` 奖励的是"出手"本身，
+     * 于是它靠狂放高费技能刷分——即使全被挡下（实测 castPerGame≥3 但 landPerGame=0），
+     * 与历史上 deal/proact"奖励打伤害却打不赢"是同类过拟合。出手不再给分。 */
+    const score = Math.min(1, landRate / 2);
     return { score: score, casts: casts, landed: landed, games: gamesRun, castPerGame: castRate, landPerGame: landRate };
   }
 
