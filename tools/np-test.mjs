@@ -390,5 +390,55 @@ t('N2 座位偏置：3x 同一策略各座位 1st 率接近均等', function () 
 });
 
 
+/* ===== N20 地雷 AoE（用户裁定 2026-09-11）=====
+ * 旧实现是 2 人口径"只让攻击者受 1 火伤"；而 2 人局里「全场其他角色」与「攻击者」**恰好同一人**
+ * ⇒ 两种读法在 2 人下无法区分，multi 加入时未回头核对。以下用例必须 N≥3 才测得出。 */
+t('N20a 地雷直接触发：4 人 a/b/c 装雷、d 打 a → 除 a 外各 1；b/c 间接触发合并一波打 a/d', function () {
+  const st = S.createState('multi', { next: mulberry32(7) }, 4);
+  for (let i2 = 0; i2 < 4; i2++) { st.p[i2].hp = 5; st.p[i2].ep = 9; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MINE, {});
+  S.attemptAction(st, 1, R.SK.MINE, {});
+  S.attemptAction(st, 2, R.SK.MINE, {});
+  S.attemptAction(st, 3, R.SK.GUN, { target: 0 });
+  X.resolveActions(st);
+  eq(st.p[0].mineArmed, false, 'a 的雷被直接触发后消耗');
+  eq(st.p[1].mineArmed, false, 'b 的雷被间接触发后消耗');
+  eq(st.p[2].mineArmed, false, 'c 的雷被间接触发后消耗');
+  eq(st.p[0].hp, 3, 'a：d 的枪 1 + 间接触发波 1');
+  eq(st.p[1].hp, 4, 'b：只挨 a 的直接波 1');
+  eq(st.p[2].hp, 4, 'c：只挨 a 的直接波 1');
+  eq(st.p[3].hp, 3, 'd：a 的直接波 1 + 间接触发波 1');
+});
+
+t('N20b [待查] 直接触发无上限：d 双枪打 a,b → a/b 各一波 + c 间接触发合并一波 = 共 3 波', function () {
+  const st = S.createState('multi', { next: mulberry32(11) }, 4);
+  for (let i2 = 0; i2 < 4; i2++) { st.p[i2].hp = 5; st.p[i2].ep = 9; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MINE, {});
+  S.attemptAction(st, 1, R.SK.MINE, {});
+  S.attemptAction(st, 2, R.SK.MINE, {});
+  S.attemptAction(st, 3, R.SK.DUAL_GUN, { target: 0, target2: 1 });
+  X.resolveActions(st);
+  eq(st.p[0].hp, 2, 'a：双枪 1 + b 直接波 1 + c 间接触发波 1');
+  eq(st.p[1].hp, 2, 'b：双枪 1 + a 直接波 1 + c 间接触发波 1');
+  eq(st.p[2].hp, 3, 'c：a 直接波 1 + b 直接波 1（间接触发者豁免自己那波）');
+  eq(st.p[3].hp, 2, 'd：a 直接波 1 + b 直接波 1 + c 间接触发波 1');
+});
+
+t('N20c 地雷伤害无来源：事件 source=null → 不被铁索共享', function () {
+  const st = S.createState('multi', { next: mulberry32(13) }, 4);
+  for (let i2 = 0; i2 < 4; i2++) { st.p[i2].hp = 5; st.p[i2].ep = 9; }
+  st.p[0].chains = [1]; st.p[1].chains = [0];
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MINE, {});
+  S.attemptAction(st, 3, R.SK.GUN, { target: 0 });
+  X.resolveActions(st);
+  const md = st.events.filter(function (e) { return e.type === 'damage' && e.via === 'mine'; });
+  ok(md.length > 0, '应有地雷伤害事件');
+  ok(md.every(function (e) { return e.source == null; }), '地雷伤害事件 source 必须为 null');
+  eq(st.p[1].hp, 3, 'b：铁索共享 d 的枪 1 + a 的直接波 1；雷伤不共享故不再掉');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

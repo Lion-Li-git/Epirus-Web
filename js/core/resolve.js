@@ -155,21 +155,66 @@
   const MINE_TRIGGER = [SK.GUN, SK.SWORD, SK.TANK, SK.DRAIN, SK.RAILGUN, SK.BIG_T, SK.LASER_EYE, SK.CANNON];
 
   /* 地雷连锁（至多2次）R38/R39 —— 反击绕过一切架势 */
-  function mineChain(state, attacker, victim, depth) {
-    const atkP = state.p[attacker];
-    const vicP = state.p[victim];
-    ev(state, { type: 'mine', from: victim, to: attacker, depth });
-    if (atkP.hp > 0) {
-      let mAmt = 1;
-      if (atkP.fireWeakNow) mAmt += 1;   // 藤甲火弱：地雷火伤+1（R22）
-      atkP.hp -= mAmt;
-      ev(state, { type: 'damage', to: attacker, amt: mAmt, reason: '地雷反击', via: 'mine' });
+  /* ===== N20 地雷 AoE（用户裁定 2026-09-11）=====
+   * 旧实现是 2 人时代口径（只让"攻击者"受 1 火伤），而 2 人局里「全场其他角色」
+   * 与「攻击者」**恰好同一人** ⇒ 两种读法在 2 人下无法区分，multi 加入时未回头核对。
+   * 正确口径：
+   *   直接触发（X 被非狙击攻击）→ 除 X 外**所有存活角色**各受 1 火伤，**无次数上限**；
+   *   间接触发（挨了地雷伤害且自己装着雷）→ 所有间接触发者**合并成一波**，
+   *     打**除这些间接触发者之外**的所有存活角色；间接触发只发生一次。
+   *   火弱逐目标计算（藤甲挂在被攻击者身上）；地雷伤害**无来源**（source=null）
+   *     ⇒ 不被铁索共享 / 不被转移 / 不被大雷传导，但事件里带 mineFrom 以便归因。
+   * 用例核对（a,b,c 装雷，4 人）：
+   *   d 打 a → a 直接: b,c,d 各 1；b,c 间接合并: a,d 各 1
+   *   d 双枪打 a,b → a 直接: b,c,d；b 直接: a,c,d；c 间接合并: a,b,d
+   */
+  function mineHit(state, to, mineFrom) {
+    const p = state.p[to];
+    if (p.hp <= 0) return;
+    let amt = 1;
+    if (p.fireWeakNow) amt += 1;                       // 火弱：只加到挂了 debuff 的那个人
+    rawDamage(state, to, amt, '地雷', 'mine', { source: null, mineFrom: mineFrom });
+  }
+  /* N20 mine resolution (called after the damage phase in resolveActions).
+   * DIRECT-FIRST: a mine triggered by being attacked counts as direct, even if it also
+   * took another mine wave in the same round. Otherwise, when d dual-guns a and b,
+   * a's wave would consume b's mine as "indirect" and b's direct trigger would never fire
+   * (measured: b lost 2 HP instead of 3).
+   * Phase 1: every direct trigger fires its own wave (all alive except owner), no cap.
+   * Phase 2: mines that took a wave and are NOT in the direct set merge into ONE wave
+   *          hitting everyone except those indirect triggerers. */
+  function mineResolveAll(state) {
+    const N = playerCount(state);
+    const direct = [];
+    for (let i = 0; i < N; i++) {
+      if (!state.p[i]._minePending) continue;
+      state.p[i]._minePending = false;
+      if (state.p[i].hp > 0 && state.p[i].mineArmed) direct.push(i);
     }
-    vicP.mineArmed = false;
-    if (depth < 2 && atkP.mineArmed && atkP.hp > 0) {
-      atkP.mineArmed = false;
-      mineChain(state, victim, attacker, depth + 1);
+    if (!direct.length) return;
+    const indirect = [];
+    for (const v of direct) {
+      state.p[v].mineArmed = false;
+      ev(state, { type: 'mine', from: v, kind: 'direct' });
+      for (let i = 0; i < N; i++) {
+        if (i === v || state.p[i].hp <= 0) continue;
+        mineHit(state, i, v);
+        if (state.p[i].hp > 0 && state.p[i].mineArmed && direct.indexOf(i) < 0 && indirect.indexOf(i) < 0)
+          indirect.push(i);
+      }
     }
+    if (!indirect.length) return;
+    for (const i of indirect) state.p[i].mineArmed = false;
+    ev(state, { type: 'mine', from: indirect.slice(), kind: 'indirect' });
+    for (let i = 0; i < N; i++) {
+      if (indirect.indexOf(i) >= 0 || state.p[i].hp <= 0) continue;
+      mineHit(state, i, indirect[0]);
+    }
+  }
+
+  function mineTrigger(state, victim) {   // kept for direct unit-test calls
+    state.p[victim]._minePending = true;
+    mineResolveAll(state);
   }
 
   /* 完整伤害结算：转移 → 架势矩阵 → 落点（火弱点/吸血鬼光伤/地雷）R15 */
@@ -236,7 +281,7 @@
     // 地雷联动（直接攻击动作伤害落地才触发；反弹/转移/天火等不触发）
     if (!dmg.noMine && !dmg.fromChain && !dmg.reflected && dmg.source != null && dmg.source !== to) {
       if (via !== SK.SNIPE && MINE_TRIGGER.indexOf(via) >= 0 && target.mineArmed) {
-        mineChain(state, dmg.source, to, 1);
+        state.p[to]._minePending = true;   // N20: defer; resolved after all damage, direct-first
       }
     }
     return { result: 'land', amt };
@@ -695,6 +740,8 @@
       if (n >= 1) { me.hp += n - 1; ev(state, { type: 'heal', pid: i, amt: n - 1, reason: '净化' }); }
       ev(state, { type: 'purify', pid: i, curses: n });
     }
+  
+    mineResolveAll(state);   // N20：所有伤害结算完，统一按「直接优先」结地雷
   }
 
   /* ---------- 回合结束 ---------- */

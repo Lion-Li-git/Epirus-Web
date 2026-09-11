@@ -10,7 +10,7 @@ const sb={console,Math,JSON,Object,Array,Number,String,Error,Infinity,isNaN,pars
 sb.globalThis=sb;
 for(const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/core/play.js','js/train/bots.js','js/train/policy.js','js/train/evo.js'])vm.runInNewContext(readFileSync(f,'utf8'),sb,{filename:f});
 const W=sb.window,R=W.EpirusRules,B=W.EpirusBots,T=W.EpirusTrainer;
-const FN={deepsaver:'pickDeepSaver',random:'pickRandom',balanced:'pickBalanced',aggro:'pickAggro',defend:'pickDefend',wall:'pickWall',antidef:'pickAntiDef',breakdef:'pickBreakDef',mix:'pickMix',reflectspam:'pickReflectSpam',guardspam:'pickGuardSpam',baguaspam:'pickBaguaSpam',combocounter:'pickComboCounter',farmer:'pickFarmer',tankline:'pickTankLine',heavyfire:'pickHeavyFire',guardgun:'pickGuardGun',protowall:'pickProtoWall',whiff:'pickWhiff',reflectmix:'pickReflectMix',reflecttank:'pickReflectTank',defreflectgun:'pickDefReflectGun'};
+const FN={protomine:'pickProtoMine',prototransfer:'pickProtoTransfer',random:'pickRandom',balanced:'pickBalanced',aggro:'pickAggro',defend:'pickDefend',wall:'pickWall',antidef:'pickAntiDef',breakdef:'pickBreakDef',mix:'pickMix',reflectspam:'pickReflectSpam',guardspam:'pickGuardSpam',baguaspam:'pickBaguaSpam',combocounter:'pickComboCounter',farmer:'pickFarmer',tankline:'pickTankLine',heavyfire:'pickHeavyFire',guardgun:'pickGuardGun',protowall:'pickProtoWall',whiff:'pickWhiff',reflectmix:'pickReflectMix',reflecttank:'pickReflectTank',defreflectgun:'pickDefReflectGun'};
 const rows=[];
 for(const nm of Object.keys(FN)){
   const use={}; let dec=0, first=0, total=0, rd=0, maxEp=0, hi=0;

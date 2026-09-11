@@ -440,58 +440,54 @@
    * 这个脚本的作用就是当那张**会惩罚不攒钱的考卷**：
    *   能一击必杀 → 大雷；够得着大雷 → 大雷；血少 → 先守（不白给）；否则**只出 ジ 攒钱**。
    * ⚠️ 按前几轮教训，必须实测它**真的**会攒到 3~5（不能只看设计意图）。 */
-  /* ===== 地雷触发：**近 5 回合的架势频率 + 对手当前 ジ 数** =====
-   * 背景（实测教训）：
-   *  - 初版"买得起就放地雷(3 ジ)" → 一买得起就花掉，最高 ep 只到 3；
-   *  - 改成读 `lastSkill === PROTO` → 120 次检查 **0 次命中**（拿上一回合的招当这一回合的意图，逻辑错位）；
-   *  - 改成"最近 3 回合 ≥2 次架势" → **不符合实际**：原型制御要 1 ジ，不是免费技能，
-   *    连续摆架势本身就很罕见，阈值过高等于没触发。
-   * 现在（用户方案）：窗口放宽到 **5 回合**，并把**对手当前 ジ 数**纳入判据——
-   * 架势普遍要 ジ，对手没ジ就摆不出来，"有ジ + 近期摆过"才是该上地雷的时机。
-   * 这是**可观测的历史频率 + 当前资源**，不假装预知本回合意图，也不增加训练压力。
-   * ⚠️ 仿 `__mem` 的既有模式：模块级、round===1 重置。 */
-  const DS_WIN = 5;        // 观察窗口（回合）
-  const DS_STANCE_NEED = 2; // 窗口内至少摆过几次架势
-  let __dsMem = { seenRound: -1, recent: [] };
-  function resetDeepSaverMem() { __dsMem = { seenRound: -1, recent: [] }; }
+  /* ===== 破原型制御脚本（分工修正）=====
+   * 用户指出：**大雷已经有 `breakdef` 单独负责**，不该让这个脚本也出大雷。
+   * 而这个脚本的职责是**测试"绕过原型制御"这条路**——按规则
+   *   `原型制御 阻挡除 地雷、转移伤害 外的技能伤害`
+   * 只有这两个能穿，且**都是"挨打才生效"的反射机制**，不是主动攻击：
+   *   - 转移伤害(2 ジ, 目标敌人)：本回合所受可转移伤害转给目标
+   *   - 地雷(3 ジ, 目标自己)    ：被非狙击攻击时，攻击者受 1 火伤
+   * 用户要求**二选一**（不要两个都塞进去）。这里做成工厂，用数据挑赢家。
+   * 判据沿用已验证的「近 5 回合架势频率」；同时保留枪线，保证它会还手。 */
+  /* 跨回合观察：近 5 回合里"领先者"摆架势的次数。
+   * 为什么不做成"预测本回合意图"：引擎在决策时刻不提供对手意图（所有人同时声明），
+   * 上一版读 `lastSkill === PROTO` 做了 120 次检查、**0 次命中**（拿上一回合的招当这一回合的意图）。
+   * 这里只记**可观测的历史频率**，不假装预知。⚠️ 仿 __mem 既有模式：模块级、round===1 重置。 */
+  const DS_WIN = 5;
+  const DS_STANCE_NEED = 2;
   const DS_STANCE = [SK.GUARD, SK.SHIFT, SK.REFLECT, SK.PROTO, SK.JINSHIELD, SK.ARMOR, SK.BAGUA];
+  let __pbMem = { seenRound: -1, recent: [] };
+  function resetProtoMem() { __pbMem = { seenRound: -1, recent: [] }; }
   function dsStanceSeen(state, tl) {
     const rd = state.round || 1;
-    if (rd === 1 || rd < __dsMem.seenRound) resetDeepSaverMem();
+    if (rd === 1 || rd < __pbMem.seenRound) resetProtoMem();
     if (tl == null) return 0;
-    if (__dsMem.seenRound !== rd) {                    // 每回合只采样一次
-      __dsMem.seenRound = rd;
-      const sk = state.p[tl].lastSkill;                // 上一回合该对手出的招（endTurn 时写入）
-      __dsMem.recent.push(DS_STANCE.indexOf(sk) >= 0 ? 1 : 0);
-      if (__dsMem.recent.length > DS_WIN) __dsMem.recent.shift();
+    if (__pbMem.seenRound !== rd) {
+      __pbMem.seenRound = rd;
+      const sk = state.p[tl].lastSkill;
+      __pbMem.recent.push(DS_STANCE.indexOf(sk) >= 0 ? 1 : 0);
+      if (__pbMem.recent.length > DS_WIN) __pbMem.recent.shift();
     }
     let c = 0;
-    for (const v of __dsMem.recent) c += v;
+    for (const v of __pbMem.recent) c += v;
     return c;
   }
 
-  function pickDeepSaver(state, pid, legal) {
-    const bk = mpBk(legal), me = state.p[pid];
-    const k2 = mpKillable(state, pid, 2);
-    if (k2 != null && mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: k2 };
-    if (mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: mpLeader(state, pid) };
-    const tl = mpLeader(state, pid);
-    if (mpAff(bk, SK.MINE) && tl != null) {
-      const seen = dsStanceSeen(state, tl);            // 近 5 回合摆架势次数
-      const foeEp = state.p[tl].ep;                    // 对手当前 ジ
-      /* ⚠️ 实测到的设计冲突（未解决，需策略决策）：
-       * 只用 `foeEp >= 1` 当门槛会**恰好排除掉最爱摆架势的对手**——guardspam/protowall
-       * 把ジ 全花在架势上，ep 常为 0 → 地雷对该类对手 **0.0%**（见 CHANGELOG v1.3.29 实测表）。
-       * 我试过补一条 `最近2回合刚摆过` 的放宽：地雷回到 12.6/23.7/14.8%，
-       * **但大雷同时从 11.2/15.3/6.9% 掉到 3.6/0/3.6%** —— 地雷 3 ジ vs 大雷 5 ジ，
-       * 花了 3 就再也到不了 5，两者在本脚本里是**互斥**的。
-       * 按 P1 的目的（深经济对手）**选择保住大雷**，地雷只作稀有补充。
-       * 若哪天要让地雷当主武器，需要另写一个"地雷流"脚本，而不是在这一个里兼顾。 */
-      if (seen >= DS_STANCE_NEED && foeEp >= 1) return { key: SK.MINE, target: tl };
-    }
-    if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };
-    return { key: SK.JI, target: null };               // 攒钱
-  }
+  const mkProtoBreaker = function (tool) {
+    return function (state, pid, legal) {
+      const bk = mpBk(legal);
+      const tl = mpLeader(state, pid);
+      const seen = dsStanceSeen(state, tl);
+      if (seen >= DS_STANCE_NEED) {
+        if (tool === SK.TRANSFER && mpAff(bk, SK.TRANSFER)) return { key: SK.TRANSFER, target: tl };
+        if (tool === SK.MINE && mpAff(bk, SK.MINE)) return { key: SK.MINE, target: null };
+      }
+      if (mpAff(bk, SK.GUN)) return { key: SK.GUN, target: tl };
+      return { key: SK.JI, target: null };
+    };
+  };
+  const pickProtoMine = mkProtoBreaker(SK.MINE);
+  const pickProtoTransfer = mkProtoBreaker(SK.TRANSFER);
 
   /* 多人专用难度档（ui.js chooseAIMulti 用） */
   const DIFFICULTY_N = {
@@ -531,7 +527,7 @@
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
-    pickMultiEasy, pickMultiMed, pickMultiStrong, pickDeepSaver,
+    pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'
