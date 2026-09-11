@@ -62,7 +62,7 @@
     mk(SK.BIG_T, '真正的落雷', CAT.SPECIAL, 5, 4, 'enemy', { desc: '2 点电伤害；目标非防御类技能无效；3 回合禁用（防御/反弹/金刚盾/ジ 豁免）', gesture: '双手由上而下', dmg: { amt: 2, type: DMG.ELECTRIC } }),
     mk(SK.ROD, '避雷针', CAT.SPECIAL, 4, 3, 'self', { desc: '当回合雷系技能全部无效，雷系使用者受 1 电伤并回馈ジ；否则 3 回合内免雷', gesture: '双手食指相握' }),
     mk(SK.LASER_EYE, '激光眼', CAT.SPECIAL, null, 3, 'enemy', {
-      desc: '无效化目标防御类(除原型制御)/转移伤害；否则 1 点光伤害。首次 1ジ+1爆珠，连续使用 2ジ', gesture: '双指相对',
+      desc: '无效化目标任意防御类(含原型制御/全息)/转移伤害；否则 1 点光伤害。首次 1ジ+1爆珠，连续使用 2ジ', gesture: '双指相对',
       energyNeeds: { boom: 1 }
     }),
     mk(SK.TRANSFER, '转移伤害', CAT.SPECIAL, 2, 1, 'enemy', { desc: '本回合所受可转移伤害转给目标（坦克不可转移）', gesture: '双手相扣' }),

@@ -589,5 +589,20 @@ t('N22c 【覆盖传导链中的防御】链上成员用藤甲：本人免伤、
    * 我曾在此写错断言，直接把 R23' 撞成 spec 36/37。 */
   ok((st.p[2].cooldown[R.SK.ARMOR] || 0) > 0, '防御族仍会被禁用 3 回合（与 R23 注释同口径）');
 });
+t('N23 单个激光眼即失效原型制御（用户裁定：单发破全防御族）', function () {
+  const st = S.createState('multi', { next: mulberry32(53) }, 3);
+  for (let i2 = 0; i2 < 3; i2++) { st.p[i2].hp = 8; st.p[i2].ep = 9; st.p[i2].boom = 2; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.LASER_EYE, { target: 1 });   // 单个激光眼 -> 目标在出原型制御
+  S.attemptAction(st, 1, R.SK.PROTO, {});
+  S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  /* 关键判据：不再出现 laserNoEffect（那是"需两发才破原型制御/全息"的旧路径）。
+   * （本用例第一版还写了 `some(e => e.type==='laserNoEffect' ? false : true)` 和 `ok(true,'')`
+   *   —— 前者近乎恒真、后者是空断言，已删除；判据只保留下面这条可被反证的。） */
+  eq(st.events.filter(function (e) { return e.type === 'laserNoEffect'; }).length, 0,
+     '单发不应再走 laserNoEffect（需两发）路径');
+  ok(st.events.some(function (e) { return e.type === 'void'; }), '应产生失效事件');
+});
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

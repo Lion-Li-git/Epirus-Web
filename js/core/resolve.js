@@ -652,10 +652,11 @@
           const ta = actionOf(state, t);
           if (ta && ta.key === SK.TRANSFER) {
             setVoid(state, t, SK.LASER_EYE); // 无效化转移伤害
-          } else if (ta && R.GUARD_FAMILY.indexOf(ta.key) >= 0 && ta.key !== SK.PROTO && ta.key !== SK.HOLO) {
-            setVoid(state, t, SK.LASER_EYE); // 无效化防御类（原型制御除外）
-          } else if (ta && (ta.key === SK.PROTO || ta.key === SK.HOLO)) {
-            ev(state, { type: 'laserNoEffect', pid: i }); // 需两激光眼，2人不触发
+          } else if (ta && R.GUARD_FAMILY.indexOf(ta.key) >= 0) {
+            /* N23（用户裁定 2026-09-11）：原实现要求**两个**激光眼才能破原型制御/全息，
+             * 用户认为"单个激光眼还打不破原型制御有点拉了" ⇒ 改为**单发即失效整个防御族**。
+             * 防御类专用反制因此回到与其它防御技**同费(2 ジ)**、单发生效。 */
+            setVoid(state, t, SK.LASER_EYE);
           } else {
             deliverDamage(state, { amt: 1, type: R.DMG.LIGHT, source: i, via: SK.LASER_EYE }, t, { reason: '激光眼' });
           }
