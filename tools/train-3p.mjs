@@ -8,9 +8,31 @@ import { readFileSync, writeFileSync } from 'node:fs';
  * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
  * 并被 git add -A 提交（线下冠军就这么被换掉了，我还据此写错过文档）。
  * 规则：只有显式 EPIRUS_PUBLISH=1 才写线下路径；否则写 docs/artifacts/<tool>-out.js。 */
-const __OUT = process.env.EPIRUS_PUBLISH === '1'
-  ? __OUT
+/* Output path. NOTE: do NOT name this OUT_PATH and then reference OUT_PATH inside its own
+ * definition -- my first version did exactly that (the replace script also rewrote the
+ * shipped path inside the guard itself), producing a self-reference / TDZ. */
+const OUT_PATH = process.env.EPIRUS_PUBLISH === '1'
+  ? 'js/bundled-champion-3p.js'
   : ('docs/artifacts/' + 'train-3p' + '-out.js');
+
+/* ===== Hard guard (belt & braces) =====
+ * Twice now a training run silently replaced the SHIPPED champion (js/bundled-champion-3p.js):
+ * once by a 40-gen test run, and the stale hard-coded log line made it look like it wrote
+ * elsewhere. So: snapshot the shipped file at startup and restore it on exit unless
+ * EPIRUS_PUBLISH=1. This holds even if OUT_PATH is wrong for any reason. */
+const SHIPPED = 'js/bundled-champion-3p.js';
+let __shippedBackup = null;
+try { __shippedBackup = readFileSync(SHIPPED, 'utf8'); } catch (e) { }
+if (process.env.EPIRUS_PUBLISH !== '1' && __shippedBackup != null) {
+  process.on('exit', function () {
+    try {
+      if (readFileSync(SHIPPED, 'utf8') !== __shippedBackup) {
+        writeFileSync(SHIPPED, __shippedBackup, 'utf8');
+        console.log('[guard] \u5df2\u8fd8\u539f\u7ebf\u4e0b\u51a0\u519b\uff08\u672c\u6b21\u8bad\u7ec3\u4e0d\u5e94\u5199\u5b83\uff09');
+      }
+    } catch (e) { }
+  });
+}
 import vm from 'node:vm';
 
 const GENS = Number(process.argv[2] || 200);
@@ -74,13 +96,26 @@ const OPPS = [
 
 const t0 = Date.now();
 
-// 热启动：已有多人冠军则以它为种子（pop[0] 保留原样，保证不退化）
-let seedParams = null;
-try {
-  const src = readFileSync(__OUT, 'utf8');
-  const m = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
-  if (m) seedParams = P.unpack(JSON.parse(m[1]));
-} catch (e) { /* 无热启动 */ }
+/* ===== Hot start: THIS WAS THE ROOT CAUSE (located by Qianwen) =====
+ * The old code hot-started by readFileSync(OUT_PATH) -- but OUT_PATH is this tool's OWN
+ * output path. So run #1 cold-started, run #2 read run #1's artifact => same seed, different
+ * result. Training is DETERMINISTIC BUT STATEFUL, and the assertion "same seed twice"
+ * can never see it: it misreports "the input changed" as "there is a random source".
+ * Now:
+ *   - COLD START BY DEFAULT (reuse nothing);
+ *   - hot start requires explicit EPIRUS_HOTSTART=1, and the seed source is separate
+ *     (EPIRUS_SEEDPACK=<path>, default = the shipped champion, never OUT_PATH);
+ *   - the hot-start source is recorded in meta.hotstartFrom, so "which champion this run
+ *     grew from" becomes part of the reproducible input instead of hidden state. */
+let seedParams = null, hotstartFrom = null;
+if (process.env.EPIRUS_HOTSTART === '1') {
+  const srcPath = process.env.EPIRUS_SEEDPACK || 'js/bundled-champion-3p.js';
+  try {
+    const src = readFileSync(srcPath, 'utf8');
+    const m = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
+    if (m) { seedParams = P.unpack(JSON.parse(m[1])); hotstartFrom = srcPath; }
+  } catch (e) { /* no hot start */ }
+}
 
 let pop = [];
 for (let i = 0; i < POP; i++) {
@@ -159,7 +194,7 @@ const meta = {
   source: 'tools/train-3p.mjs', n: N, gens: GENS, games: GAMES, pop: POP,
   ts: new Date().toISOString(), firstRate: ev.firstRate, top2Rate: ev.top2Rate
 };
-writeFileSync(__OUT,
+writeFileSync(OUT_PATH,
   '/* Epirus \u591a\u4eba\u51a0\u519b\uff08\u7531 tools/train-3p.mjs \u751f\u6210\uff09\u3002\u53ea\u8bfb\u6570\u636e\uff0c\u4e0d\u8981\u624b\u6539\u3002 */\n' +
   'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
   'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(pack) + ';\n');
