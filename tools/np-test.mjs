@@ -440,5 +440,42 @@ t('N20c 地雷伤害无来源：事件 source=null → 不被铁索共享', func
   eq(st.p[1].hp, 3, 'b：铁索共享 d 的枪 1 + a 的直接波 1；雷伤不共享故不再掉');
 });
 
+t('N20d 火弱逐目标：地雷 AoE 只对挂了藤甲 debuff 的那一个 +1', function () {
+  const st = S.createState('multi', { next: mulberry32(17) }, 4);
+  for (let i2 = 0; i2 < 4; i2++) { st.p[i2].hp = 5; st.p[i2].ep = 9; }
+  X.startTurn(st);
+  st.p[1].fireWeakNow = true;            // 只给 b 挂火弱（模拟此前被藤甲贴过）
+  S.attemptAction(st, 0, R.SK.MINE, {});
+  S.attemptAction(st, 1, R.SK.MINE, {});
+  S.attemptAction(st, 2, R.SK.MINE, {});
+  S.attemptAction(st, 3, R.SK.GUN, { target: 0 });
+  X.resolveActions(st);
+  const md = st.events.filter(function (e) { return e.type === 'damage' && e.via === 'mine'; });
+  const toB = md.filter(function (e) { return e.to === 1; });
+  ok(toB.length > 0, 'b 应吃到地雷伤害');
+  eq(toB[0].amt, 2, 'b 挂了火弱 → 这一发 2 点');
+  ok(md.filter(function (e) { return e.to !== 1; }).every(function (e) { return e.amt === 1; }),
+    '其他没挂火弱的人只吃 1 点');
+  eq(st.p[0].hp, 3, 'a：d 的枪 1 + 间接触发波 1');
+  eq(st.p[1].hp, 3, 'b：直接波 2（含火弱 +1），间接触发者豁免自己那波');
+  eq(st.p[2].hp, 4, 'c：直接波 1');
+  eq(st.p[3].hp, 3, 'd：直接波 1 + 间接触发波 1');
+});
+
+t('N20e 狙击枪豁免只针对那一次攻击：狙击打持雷者不触发，雷仍装着', function () {
+  const st = S.createState('multi', { next: mulberry32(19) }, 4);
+  for (let i2 = 0; i2 < 4; i2++) { st.p[i2].hp = 5; st.p[i2].ep = 9; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MINE, {});
+  S.attemptAction(st, 3, R.SK.SNIPE, { target: 0 });
+  X.resolveActions(st);
+  ok(st.p[0].hp < 5, 'a 应挨到狙击伤害（点数随爆头判定变化，本用例只锁豁免不变量）');
+  eq(st.p[0].mineArmed, true, '狙击枪攻击不触发地雷 → 雷仍然装着');
+  eq(st.events.filter(function (e) { return e.type === 'damage' && e.via === 'mine'; }).length, 0,
+    '不应产生任何地雷伤害事件');
+  eq(st.p[1].hp, 5, 'b 未被波及');
+  eq(st.p[3].hp, 5, 'd 未被波及');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
