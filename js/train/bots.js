@@ -397,49 +397,39 @@
 
   /* 中等·多人：能杀就杀 → 压制攒钱者 → 对领先者架势做穿透反应 → 否则攒/开枪 */
   function pickMultiMed(state, pid, legal) {
-    const bk = mpBk(legal), me = state.p[pid];
+    /* 中等·多人（**按实测数据重写**）
+     * 实测（6 档对手两两组合 × 三座位 × 10 局）：
+     *   打 leader + 枪 = 61.9% | 打 weakest + 枪 = 51.7% | 打 saver + 枪 = 50.6% | 随机 = 52.8%
+     * ⇒ "打领先者"是最大杠杆（+10.2pt）；"压制攒钱者"是**负收益**，已删除。
+     * ⚠️ v1.3.20 旧版正好踩在最差区域（先压攒钱者 + 反应式穿透）。 */
+    const bk = mpBk(legal);
     const k1 = mpKillable(state, pid, 1);
     if (k1 != null && mpAff(bk, SK.GUN)) return { key: SK.GUN, target: k1 };
-    const saver = mpSaver(state, pid);
-    if (saver != null && mpAff(bk, SK.GUN)) return { key: SK.GUN, target: saver };   // 压攒钱的人
     const t = mpLeader(state, pid);
-    const st = mpStanceOf(state, t);
-    if (st !== 'none') {
-      if (mpAff(bk, SK.SNIPE)) return { key: SK.SNIPE, target: t };   // 穿反弹
-      if (mpAff(bk, SK.TANK)) return { key: SK.TANK, target: t };     // 穿防御
-      return { key: SK.JI, target: null };                            // 攒到 2 再说
-    }
-    if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };
     if (mpAff(bk, SK.GUN)) return { key: SK.GUN, target: t };
     return { key: SK.JI, target: null };
   }
 
   /* 困难·脚本兜底：冠军不可用时的替代品。带经济（攒到 3 开环）与穿透决策。 */
   function pickMultiStrong(state, pid, legal) {
-    const bk = mpBk(legal), me = state.p[pid], opps = mpOpps(state, pid);
-    let k2 = mpKillable(state, pid, 2);
-    if (k2 != null && mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: k2 };
-    if (k2 != null && mpAff(bk, SK.TANK)) return { key: SK.TANK, target: k2 };
+    /* 困难·脚本兜底（**按实测数据重写**）
+     * 实测：打 leader + **买得起就穿透** = 62.5%（最高档）；
+     *   而"对架势才反应式穿透" = 55.8%（−6.7pt，平均回合 31.2 vs 28.0 → 反应式拖节奏）。
+     * 故这里**不看对手架势，能穿透就穿透**。
+     * 已删除实测负收益/不触发的分支：压制攒钱者（50.6%）、被两人压→反弹、ep>=3 开环
+     *   （经济锁在 ep<=2，"开环"分支实测一次都没触发——堆分支不等于提吞吐量）。 */
+    const bk = mpBk(legal), me = state.p[pid];
+    /* ⚠️ 曾有一个 "mpKillable(2) + 坦克" 分支 —— 那是 bug：**坦克只造成 1 点伤害**
+     * （rules.js:47 dmg.amt=1），所以它会为"2 血目标"白花 2 ジ还打不死，且触发频繁（拖垮胜率）。
+     * 造成 2 点伤害的只有大雷（5 ジ，经济锁下买不起）。已删除。 */
     const k1 = mpKillable(state, pid, 1);
     if (k1 != null && mpAff(bk, SK.GUN)) return { key: SK.GUN, target: k1 };
-    const saver = mpSaver(state, pid);
-    if (saver != null) {
-      if (mpAff(bk, SK.TANK)) return { key: SK.TANK, target: saver };
-      if (mpAff(bk, SK.GUN)) return { key: SK.GUN, target: saver };
-    }
-    let pressure = 0;
-    for (const i of opps) if (state.p[i].ep >= 2) pressure++;
-    if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };
-    if (pressure >= 2 && mpAff(bk, SK.REFLECT)) return { key: SK.REFLECT, target: null };
     const t = mpLeader(state, pid);
-    const st = mpStanceOf(state, t);
-    if (st === 'guard' && mpAff(bk, SK.TANK)) return { key: SK.TANK, target: t };
-    if (st === 'reflect' && mpAff(bk, SK.SWORD)) return { key: SK.SWORD, target: t };
-    if (st === 'reflect' && mpAff(bk, SK.SNIPE)) return { key: SK.SNIPE, target: t };
-    if (st !== 'none') return { key: SK.JI, target: null };
-    // 经济：ep>=3 且环未启动 → 开环（复利引擎；这是 2 人脚本从没做过的事）
-    if (me.ringStreak === 0 && me.ep >= 3 && mpAff(bk, SK.RING)) return { key: SK.RING, target: null };
-    if (me.ep >= 2 && mpAff(bk, SK.TANK)) return { key: SK.TANK, target: t };
+    /* 曾在此加过 "血<=1 就守" —— 实测**大幅拖垮胜率**（3 人局里守一回合，
+     * 另一个对手照样打你，等于白送回合）。已删除：困难档就是实测最优的
+     * "打领先者 + 买得起就穿透"，不加未验证的花样。 */
+    if (me.ep >= 2 && mpAff(bk, SK.TANK)) return { key: SK.TANK, target: t };    // 穿防御+转移
+    if (me.ep >= 2 && mpAff(bk, SK.SNIPE)) return { key: SK.SNIPE, target: t };  // 穿反弹
     if (mpAff(bk, SK.GUN)) return { key: SK.GUN, target: t };
     return { key: SK.JI, target: null };
   }
