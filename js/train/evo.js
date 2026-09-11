@@ -547,7 +547,7 @@
 
   /* 多目标择优：在「胜率分不低于最高分 - WR_TOL」的候选里，取覆盖熵最高者。
    * 这样胜率损失有界（容差内），但不再被 argmax 逼向窄解。 */
-  const WR_TOL = 0.03;
+  const WR_TOL = 0.01;   // 容差带（收紧：3P 实测 0.03 会放行头对头明显更弱的候选）
 
   function pickChampionByWinRate(t, games, seedBase) {
     const cands = [t.champion].concat(t.lastTop || []);

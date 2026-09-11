@@ -153,6 +153,7 @@ async function runTrain(gens, opts, cfg) {
     }
     // 本轮收尾：每种子 pickChampionByWinRate（broad 真实胜率把关）+ 实测，选最强
     let best = null, bestWr = -1, bestSeed = -1, bestScore = null;
+    const cands2 = [];   // 多目标择优：先收集，再在胜率容差带内取最发散
     const seedBase = (r + 1) * 7919 + (Date.now() % 1000);
     for (let i = 0; i < list.length; i++) {
       const it = list[i];
@@ -160,7 +161,17 @@ async function runTrain(gens, opts, cfg) {
       const wr = champRealWr(it.t.champion, 0.15, 100, seedBase + i * 331);   // 100局/基线，降低噪声
       it.wr = wr;
       for (const c of clients) sse(c, { type: 'seedEval', round: r, seed: it.seed, wr, gen: it.t.gen, reason: it.stopReason || '完成' });
-      if (!best || wr > bestWr) { bestWr = wr; best = it.t; bestSeed = it.seed; bestScore = it.t.bestChampScore; }
+      cands2.push({ it: it, wr: wr, seed: it.seed, score: it.t.bestChampScore, div: T.champEntropy(it.t.champion, 0.15, 60, seedBase + i * 555) });
+    }
+    // ===== 多目标择优：胜率容差带内取覆盖熵最高者 =====
+    // 只用 argmax(胜率) 必然挑中最强也最窄的个体（实测 2.52 vs 3.82 有效技能）。
+    if (cands2.length) {
+      const top2 = Math.max.apply(null, cands2.map(function (c) { return c.wr; }));
+      const band2 = cands2.filter(function (c) { return c.wr >= top2 - 0.03; });
+      band2.sort(function (a, b) { return b.div.divNorm - a.div.divNorm; });
+      const pk = band2[0];
+      bestWr = pk.wr; best = pk.it.t; bestSeed = pk.seed; bestScore = pk.score;
+      for (const c of clients) sse(c, { type: 'multiObj', n: 2, round: r, top: top2, band: band2.length, picked: pk.seed, wr: pk.wr, divNorm: pk.div.divNorm, distinct: pk.div.distinct });
     }
     const cur = loadSeed(); let curWr = -1;
     if (cur) {
@@ -281,10 +292,21 @@ async function runTrainN(gens, cfg) {
   const PAIRS = [];
   for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) PAIRS.push([POOL[a], POOL[b]]);
   let finalParams = hall[0] ? hall[0].params : pop[0], ev = null;
+  const candsN = [];
   for (const h of hall) {
     const v = T.evalN(h.params, PAIRS, 20, n, 987654);
     for (const c of clients) sse(c, { type: 'seedEval', n: n, trainFit: h.fit, firstRate: v.firstRate, top2Rate: v.top2Rate });
-    if (!ev || (v.firstRate + 0.5 * v.top2Rate) > (ev.firstRate + 0.5 * ev.top2Rate)) { finalParams = h.params; ev = v; }
+    candsN.push({ params: h.params, v: v, sc: v.firstRate + 0.5 * v.top2Rate, div: T.champEntropy(h.params, 0.15, 60, 31337, n) });
+  }
+  // ===== 多目标择优：名次分容差带内取覆盖熵最高者（与 2 人路径同口径）=====
+  if (candsN.length) {
+    const topN = Math.max.apply(null, candsN.map(function (c) { return c.sc; }));
+    const bandN = candsN.filter(function (c) { return c.sc >= topN - 0.03; });
+    bandN.sort(function (a, b) { return b.div.divNorm - a.div.divNorm; });
+    const pk = bandN[0];
+    finalParams = pk.params; ev = pk.v;
+    for (const c of clients) sse(c, { type: 'multiObj', n: n, top: topN, band: bandN.length, pickedWr: pk.v.firstRate, divNorm: pk.div.divNorm, distinct: pk.div.distinct });
+    console.log('[multiObj] n=' + n + ' 候选=' + candsN.length + ' 容差带=' + bandN.length + ' 选中 divNorm=' + pk.div.divNorm.toFixed(3) + ' 种类=' + pk.div.distinct + ' 1st=' + (pk.v.firstRate * 100).toFixed(1) + '%');
   }
   const pack = P.pack(finalParams);
   lastChampionPackN = pack;
