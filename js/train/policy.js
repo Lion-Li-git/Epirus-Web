@@ -241,10 +241,15 @@
   const FEAT_N = FEAT_S + FEAT_A;
 
   /* ---- 参数（Flat64）与遗传算子 ---- */
+  /* 可播种 RNG（**工具链修复**）：原先 randn 直接用 Math.random()，
+   * 而训练里 `it.seed` 只影响**评估**种子 ⇒ 初始化/变异完全不可复现，A/B 两轮无法配对。
+   * 默认仍是 Math.random（浏览器与游戏路径一字不变）；训练侧可 setRng(mulberry32(...))。 */
+  let __rng = Math.random;
+  function setRng(f) { __rng = (typeof f === 'function') ? f : Math.random; }
   function randn() {
     let u = 0, v = 0;
-    while (u === 0) u = Math.random();
-    while (v === 0) v = Math.random();
+    while (u === 0) u = __rng();
+    while (v === 0) v = __rng();
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   }
   function paramCount() { return HID * FEAT_N + HID + HID + 1; } // W1(H*N)+b1(H)+W2(H)+b2(1)
@@ -254,7 +259,7 @@
     return p;
   }
   function mutatePolicy(p, sigma) { const q = p.slice(); for (let i = 0; i < q.length; i++) q[i] += randn() * sigma; return q; }
-  function crossover(a, b) { const c = new Float64Array(a.length); for (let i = 0; i < c.length; i++) c[i] = Math.random() < 0.5 ? a[i] : b[i]; return c; }
+  function crossover(a, b) { const c = new Float64Array(a.length); for (let i = 0; i < c.length; i++) c[i] = __rng() < 0.5 ? a[i] : b[i]; return c; }
 
   /* ---- (s,a) 值网络：value(state,pid,key,params) ---- */
   function value(state, pid, key, params, sh) {
@@ -351,7 +356,7 @@
 
   global.EpirusPolicy = {
     ACT_KEYS, FEAT_N, FEAT_S, FEAT_A, HID, PACK_VERSION,
-    features, featuresV6, actionFeatures, value, forward, choose, shapeOf, oppAgg, oppSlots, skillHistory, OPP_SLOTS, HIST_K,
+    features, featuresV6, actionFeatures, value, forward, choose, shapeOf, setRng, oppAgg, oppSlots, skillHistory, OPP_SLOTS, HIST_K,
     paramCount, makePolicy, mutatePolicy, crossover, pack, unpack, checkPack
   };
 })(typeof window !== 'undefined' ? window : globalThis);

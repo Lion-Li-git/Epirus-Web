@@ -14,6 +14,25 @@ const root = join(__dirname, '..');
 const sb = { console, Math, JSON, Object, Array, Number, String, Error,
   localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} } };
 sb.globalThis = sb;
+__seedSandbox(sb, Number(process.env.EPIRUS_SEED0 || 0));   // worker 与主线程同种子
+
+/* 工具链修复：把沙箱内的 Math.random 整体替换为可播种 RNG。
+ * 原先 evo.js(4 处)/bots.js(1 处)/policy.js 的 randn 都在用 Math.random，
+ * 只播种 policy 的 randn 不够 —— 同 seed 两次运行结果仍然不同（已实测）。
+ * 覆盖整个沙箱的 Math 可一次盖住所有随机源；不设 seed 时保持原样。 */
+function __seedSandbox(sbox, seed) {
+  if (!seed) return;
+  const M = Object.create(Math);
+  let s = (seed >>> 0) || 1;
+  M.random = function () {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  sbox.Math = M;
+}
+
 for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/core/play.js','js/train/bots.js','js/train/policy.js','js/train/evo.js']) {
   vm.runInNewContext(readFileSync(join(root, f), 'utf8'), sb, { filename: f });
 }

@@ -19,6 +19,24 @@ const PORT = Number(process.argv[2] || 8787);
 const sb = { console, Math, JSON, Object, Array, Number, String, Error,
   localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} } };
 sb.globalThis = sb;
+
+/* 工具链修复：把沙箱内的 Math.random 整体替换为可播种 RNG。
+ * 原先 evo.js(4 处)/bots.js(1 处)/policy.js 的 randn 都在用 Math.random，
+ * 只播种 policy 的 randn 不够 —— 同 seed 两次运行结果仍然不同（已实测）。
+ * 覆盖整个沙箱的 Math 可一次盖住所有随机源；不设 seed 时保持原样。 */
+function __seedSandbox(sbox, seed) {
+  if (!seed) return;
+  const M = Object.create(Math);
+  let s = (seed >>> 0) || 1;
+  M.random = function () {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  sbox.Math = M;
+}
+
 for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/core/play.js','js/train/bots.js','js/train/policy.js','js/train/evo.js','js/train/trainer.js']) {
   vm.runInNewContext(readFileSync(join(root, f), 'utf8'), sb, { filename: f });
 }
@@ -162,7 +180,9 @@ async function runTrain(gens, opts, cfg) {
     // 本轮收尾：每种子 pickChampionByWinRate（broad 真实胜率把关）+ 实测，选最强
     let best = null, bestWr = -1, bestSeed = -1, bestScore = null;
     const cands2 = [];   // 多目标择优：先收集，再在胜率容差带内取最发散
-    const seedBase = (r + 1) * 7919 + (Date.now() % 1000);
+    /* 千问定位：原为 (r+1)*7919 + (Date.now()%1000) —— 决定"选哪个冠军"的评测种子
+     * 每次运行都不同 ⇒ 即使 ① 修好，2P 也永远不可复现。改为纯 seed0 派生。 */
+    const seedBase = (Number((cfg && cfg.seed0) || 0) || 1) * 100003 + (r + 1) * 7919;
     for (let i = 0; i < list.length; i++) {
       const it = list[i];
       T.pickChampionByWinRate(it.t, 24, seedBase + i * 9973);
@@ -242,6 +262,8 @@ function writeBundleMP(pack, meta) {
 }
 
 async function runTrainN(gens, cfg) {
+  const SEED0 = Number(cfg.seed0 || 0);
+  let __seedIdxN = 0;   // 每个种子递增，用于 setRng 配对
   if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
   cfg = cfg || {};
   const n = Math.max(3, Math.min(cfg.n || 3, 5));
@@ -249,8 +271,14 @@ async function runTrainN(gens, cfg) {
   const games = Math.max(4, cfg.games || 20);
   const t0 = Date.now();
   const cap = 1800000;
+  process.env.EPIRUS_SEED0 = String((SEED0 || 1) * 7919 + 13);   // worker 在下一行创建，必须在此之前设好
   const poolN = makeParallelEvalN(T);
   const seedP = cfg.fresh ? null : loadSeedN();
+  /* 工具链修复：播种。原先 policy.js 的 randn/crossover 直接用 Math.random，
+   * 训练完全不可复现 ⇒ A/B 两轮无法配对。带上 ?seed=N 后同一 N 两次运行结果一致。 */
+  if (P.setRng && T.mulberry32) P.setRng(T.mulberry32((SEED0 || 1) * 7919 + 13));
+  __seedSandbox(sb, (SEED0 || 1) * 7919 + 13);          // 覆盖 evo/bots 里的 Math.random
+  // （EPIRUS_SEED0 必须在 makeParallelEvalN **之前**设好——worker 是那时创建的）
   let pop = [];
   for (let i = 0; i < popSize; i++) {
     if (seedP && i === 0) pop.push(seedP);
@@ -284,10 +312,13 @@ async function runTrainN(gens, cfg) {
     if (Date.now() - t0 > cap) { for (const c of clients) sse(c, { type: 'error', msg: '\u8bad\u7ec3\u8d85\u65f6\u4e0a\u9650\uff0830 \u5206\u949f\uff09' }); runningN = false; poolN.close(); return; }
     const elite = scored.slice(0, 3).map(function (x) { return x.params; });
     const next = elite.slice();
+    /* 千问定位：这三处在 **Node 作用域**，而 __seedSandbox 只替换 vm 沙箱内的 Math
+     * ⇒ 它们从未被播种（沙箱里修好的那 5 处反而都生效了）。改用显式传入的播种流。 */
+    const breedRng = T.mulberry32 ? T.mulberry32((SEED0 || 1) * 100003 + gen) : Math.random;
     while (next.length < popSize) {
-      const a = elite[Math.floor(Math.random() * elite.length)];
-      const b = scored[Math.floor(Math.random() * Math.min(6, scored.length))].params;
-      let child = Math.random() < 0.5 ? P.crossover(a, b) : a.slice();
+      const a = elite[Math.floor(breedRng() * elite.length)];
+      const b = scored[Math.floor(breedRng() * Math.min(6, scored.length))].params;
+      let child = breedRng() < 0.5 ? P.crossover(a, b) : a.slice();
       child = P.mutatePolicy(child, sigma);
       next.push(child);
     }
@@ -357,18 +388,22 @@ const server = http.createServer((req, res) => {
     const seedsN = Math.max(1, Math.min(Number(url.searchParams.get('seeds') || 3), 8));
     const roundsN = Math.max(1, Math.min(Number(url.searchParams.get('rounds') || 1), 20));
     const fresh = url.searchParams.get('fresh') === '1';
+    /* 工具链修复：?seed=N 让训练可复现/可配对。
+     * 原先 policy.js 的 randn/crossover 直接用 Math.random，训练完全不可复现；
+     * 现在按 P.setRng(mulberry32(seed0 + 种子序号)) 播种。 */
+    const seed0 = Number(url.searchParams.get('seed') || 0) || 0;
     const nPlayers = Math.max(2, Math.min(Number(url.searchParams.get('n') || 2), 5));
     if (nPlayers > 2) {
       sse(res, { type: 'start', gens, pop, gpo, n: nPlayers, from: 0, fresh });
       if (!runningN) {
         runningN = true;
-        runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh })
+        runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh, seed0: seed0 })
           .catch(function (e) { for (const c of clients) sse(c, { type: 'error', msg: String(e && e.message || e) }); runningN = false; });
       }
       return;
     }
     sse(res, { type: 'start', gens, pop, gpo, seeds: seedsN, rounds: roundsN, from: 0, fresh });
-    if (!running) { running = true; runTrain(gens, { popSize: pop, gamesPerOpp: gpo }, { seeds: seedsN, rounds: roundsN, fresh }); }
+    if (!running) { running = true; runTrain(gens, { popSize: pop, gamesPerOpp: gpo }, { seeds: seedsN, rounds: roundsN, fresh, seed0: seed0 }); }
     return;
   }
   if (url.pathname === '/champion') {

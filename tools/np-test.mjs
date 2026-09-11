@@ -477,5 +477,41 @@ t('N20e 狙击枪豁免只针对那一次攻击：狙击打持雷者不触发，
   eq(st.p[3].hp, 5, 'd 未被波及');
 });
 
+/* 千问建议的硬规矩：训练路径禁止裸 Math.random / Date.now —— 随机只能来自
+ * state.rng 或 P.setRng 注入的流。这次不可复现的根因就是 server 里两处 Node 作用域的裸调用
+ * （__seedSandbox 只管 vm 沙箱，管不到 Node 全局）。加自动检查防止再犯。
+ * 白名单：明确的兜底分支 / 超时与时间戳（不参与决策）。 */
+t('REPRO 训练路径不得出现裸 Math.random / Date.now（白名单见下）', function () {
+  const WL = [
+    'js/train/bots.js',            // rnd() 的 Math.random 兜底（浏览器无 state.rng 时）
+    'js/train/policy.js',          // __rng 的默认值 Math.random（可被 setRng 覆盖）
+    'T.mulberry32 ? T.mulberry32', // 播种流不可用时的显式兜底
+    'Date.now() - t0 > cap',       // 30 分钟超时上限（不参与决策）
+    'Date.now() % ',               // 仅允许作为"已废弃写法"的检测目标，不应出现在有效代码
+  ];
+  const files = ['server/train-server.mjs', 'server/train-worker.mjs', 'server/paralleltrain.mjs'];
+  const bad = [];
+  for (const f of files) {
+    const src = readFileSync(f, 'utf8');
+    const lines = src.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const L = lines[i];
+      const t0 = L.trim();
+      if (t0.startsWith('*') || t0.startsWith('//') || t0.startsWith('/*')) continue;   // 注释不算
+      const hasRand = L.indexOf('Math.random(') >= 0;
+      const hasClock = L.indexOf('Date.now(') >= 0;
+      if (!hasRand && !hasClock) continue;
+      if (WL.some(function (w) { return L.indexOf(w) >= 0 || f.indexOf(w) >= 0 && w.indexOf('/') >= 0; })) continue;
+      if (L.indexOf('const t0 = Date.now()') >= 0) continue;   // 纯计时（不参与决策）
+      if (L.indexOf('Date.now() - t0') >= 0) continue;      // 超时
+      if (L.indexOf('toISOString') >= 0) continue;          // 时间戳（meta 用）
+      if (L.indexOf('toString(36)') >= 0) continue;         // cache-busting token
+      if (L.indexOf('mulberry32') >= 0) continue;           // 播种兜底
+      bad.push(f + ':' + (i + 1) + '  ' + L.trim().slice(0, 70));
+    }
+  }
+  eq(bad.length, 0, '训练路径出现裸随机/时间源：\n    ' + bad.join('\n    '));
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
