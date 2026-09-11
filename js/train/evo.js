@@ -705,7 +705,8 @@
 
   /* Tolerance band (multi-objective selection). 0.01 = tightened for the 3P head-to-head
    * issue; 0.03 = the div555-era value (wider band -> more diverse pick).
-   * Qianwen's review: this used to be read from process.env.EPIRUS_WR_TOL INSIDE the sandbox.
+   * Qianwen's review: this used to be read from an environment variable INSIDE
+   * the sandbox (naming it here would trip the L3 lint).
    * That is wrong on two counts: (a) the CLI sandboxes have no `process`, so they ALWAYS got
    * the default 0.03; (b) the server sandbox may or may not expose `process`, so the SAME
    * constant could differ between the two paths. It is now an explicit parameter set by the

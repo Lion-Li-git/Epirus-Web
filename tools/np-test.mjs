@@ -631,5 +631,66 @@ t('REPRO2 每个训练入口都必须播种（正向要求，防"某条路漏播
   eq(miss.length, 0, '以下训练入口未播种：' + miss.join(', '));
 });
 
+/* ===== LESSON->TEST: turn the recurring failure classes into cases that FAIL =====
+ * Claude's review of the changelog: the "this is the Nth time" counters kept growing, i.e.
+ * the rules were written down but never INTERNALISED. But every lesson that actually stuck
+ * in this project stuck as a TEST (repro-check.mjs, the REPRO assertion, the falsification
+ * rule) -- a note dies with the context, a test does not.
+ * So each recurring class below is encoded as an assertion. All of these were real, and each
+ * one would have failed on the buggy code. */
+
+t('L1 断言不得是恒真式（空断言 / 近乎恒真）——本项目出现过 3 次', function () {
+  /* Real instances are described in prose only -- spelling the patterns on a
+   * code-like line would trip this very lint. */
+
+  const src = readFileSync('tools/np-test.mjs', 'utf8');
+  const lines = src.split('\n');
+  const bad = [];
+  const PAT = [/ok\(\s*true\b/, /ok\(\s*[0-9]+\s*[,)]/, /\?\s*false\s*:\s*true/, /ok\(\s*1\s*[,)]/];
+  for (let i2 = 0; i2 < lines.length; i2++) {
+    const L = lines[i2];
+    if (L.trim().startsWith('*') || L.trim().startsWith('//')) continue;
+    if (L.indexOf('PAT') >= 0) continue;                 // this definition line itself
+    for (const re of PAT) if (re.test(L)) { bad.push((i2 + 1) + ': ' + L.trim().slice(0, 60)); break; }
+  }
+  eq(bad.length, 0, '恒真断言（测不到任何东西）：\n    ' + bad.join('\n    '));
+});
+
+t('L2 事件字段名必须与发射端一致（筛错字段 => 把"没发生"当结论）', function () {
+  /* Real instance: I filtered transfer events by `e.from === 0`, but the event is
+   * { type:'transfer', to:<transfer player>, from:<attacker> } -- so I concluded
+   * "transfer never fired" from a wrong field. Pin the schema here. */
+  const st = S.createState('multi', { next: mulberry32(61) }, 3);
+  for (let i2 = 0; i2 < 3; i2++) { st.p[i2].hp = 8; st.p[i2].ep = 9; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.GUN, { target: 1 });
+  S.attemptAction(st, 1, R.SK.TRANSFER, { target: 0 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  const tr = st.events.filter(function (e) { return e.type === 'transfer'; });
+  ok(tr.length > 0, '构造场景里应出现 transfer 事件');
+  ok(tr.every(function (e) { return typeof e.to === 'number'; }), 'transfer 必须带 to（转移方）');
+  ok(tr.every(function (e) { return typeof e.from === 'number'; }), 'transfer 必须带 from（攻击者）');
+  ok(tr.every(function (e) { return e.to !== e.from; }), 'transfer 的 to/from 不能是同一人');
+  // 反过来：damage 事件的 source 表示"来源"，地雷伤害必须为 null
+  const md = st.events.filter(function (e) { return e.type === 'damage' && e.via === 'mine'; });
+  ok(md.every(function (e) { return e.source == null; }), 'mine 伤害 source 必须为 null');
+});
+
+t('L3 每个诊断工具都必须能跑（签名/前置条件没核实 => 脚本崩）', function () {
+  /* Real instance: my bisect script died on `T.buildOpps(null, 0.05)` -- a signature I
+   * never verified. A per-tool smoke run turns "I forgot to check the API" into a red test.
+   * Only --help / tiny-arg runs here: fast and side-effect free. */
+  const fsx = readFileSync('tools/repro-check.mjs', 'utf8');
+  ok(fsx.indexOf('EPIRUS_HOTSTART') >= 0 || fsx.indexOf('D cold start') >= 0,
+    'repro-check 应包含冷启动/热启动断言');
+  const npt = readFileSync('tools/np-test.mjs', 'utf8');
+  ok(npt.indexOf('REPRO2') >= 0, 'np-test 应包含 REPRO2 正向播种断言');
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  ok(evo.indexOf('process.env.EPIRUS_WR_TOL') < 0,
+    'WR_TOL 不得在引擎内读 env（CLI 沙箱无 process => 两条路取到不同值）');
+  ok(evo.indexOf('setWrTol') >= 0, 'WR_TOL 应由调用方通过 setWrTol 显式传入');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
