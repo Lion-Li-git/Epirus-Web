@@ -66,7 +66,7 @@ Epirus-Web/
 │   └─ play.js                对局驱动（自动对局 / 合法出招 / 空放兜底）
 ├─ js/train/
 │   ├─ bots.js                脚本基准 AI（含人类式打法 / 永久架势 / 连招反制 / 原型墙 / 空放型）
-│   ├─ policy.js              轻量 MLP 策略 + 状态特征（62 维，含双方对称参考）
+│   ├─ policy.js              轻量 MLP 策略 + 状态特征（FEAT_S=123 / v6，含双方对称参考）
 │   ├─ evo.js                 对抗进化训练器（scoreMember / finishStep / 硬门槛择优）
 │   └─ trainer.js             冠军存取（localStorage / 导入导出）+ 训练 CSV
 ├─ js/ui/ui.js              界面与交互
@@ -82,7 +82,7 @@ Epirus-Web/
 │   ├─ train-3p.mjs            多人（3~5 人）自对战训练 → bundled-champion-3p.js
 │   ├─ eval-3p.mjs             多人冠军评测（1st/top2 + 出招分布）
 │   ├─ smoke.mjs               CDP 真浏览器冒烟测试（2 人）
-│   ├─ spec-run.mjs            Node 桩跑 2 人引擎自测（36/36）
+│   ├─ spec-run.mjs            Node 桩跑 2 人引擎自测（37/37）
 │   ├─ np-test.mjs             N 人引擎自测（12/12）
 │   ├─ np-probe.mjs            CDP 真浏览器多人（3/5 人）探测
 │   └─ diag.mjs / remote-probe.mjs  诊断脚本
@@ -105,7 +105,7 @@ Epirus-Web/
 命令行（无需浏览器）：
 
 ```bash
-node tools/spec-run.mjs    # 2 人引擎：36/36
+node tools/spec-run.mjs    # 2 人引擎：37/37
 node tools/np-test.mjs     # 多人引擎：41/41（目标/相抵互为目标/大雷连带/死者不行动/双枪/镜面/聚光炮/反复横跳/合二为一/胜负/3P 冠军包/fuzz + 座位均等/地雷 AoE N20a~e/大雷禁用小雷 N21/大雷传导 N22a~c/激光眼单发 N23/训练路径无裸随机 REPRO）
 node tools/eval-3p.mjs     # 3 人冠军评测：28 对手对 × 座位轮换 → 1st/top2 + 出招分布
 node tools/smoke.mjs       # 2 人页面冒烟（CDP 真 Chrome）
