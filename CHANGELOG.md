@@ -1,3 +1,42 @@
+## v1.3.48 — 任务2 完成：训练工具不再覆写线下冠军；任务1（train-3p 可复现）**未解决**
+
+### 任务 2 ✅ 输出保护（起因是一次真实事故）
+一次 60 代/40 代的**测试跑把 `js/bundled-champion*.js` 覆写成测试冠军**，
+并被 `git add -A` 提交 ⇒ **线下冠军就这么被换掉了**，而我据此在 REVIEW 文档里写错过
+（"3P 冠军 = div555" 与实际文件 `source=server, gens=200` 不符）。
+
+**规则**：`tools/train-{3p,fast,best}.mjs` 默认写 `docs/artifacts/<tool>-out.js`；
+**只有显式 `EPIRUS_PUBLISH=1` 才写线下路径**。
+
+**验证**：不加 `EPIRUS_PUBLISH` 跑一次 `train-3p 20 代` ——
+线下冠军 sha 前/后均为 `decaf647cf46`（**未被覆写** ✔），产物落在 `docs/artifacts/train-3p-out.js`。
+
+### 任务 1 ❌ `train-3p` 仍不可复现（已排除三个假设，未找到根因）
+```
+EPIRUS_SEED=11 跑两次 40 代：
+  a0049a2f67920ff7  /  9e83020dac732cdf     ← 仍不一致
+```
+**已排除**：
+1. ✗ **worker 池** —— `train-3p.mjs:98` 是**同步** `T.scoreMemberN(...)`，根本不用 worker；
+2. ✗ **`seedOfGen(gen, idx, 'n')`** —— `scoreMemberN` 的每局种子由它派生，按构造是确定性的；
+3. ✗ **`__seedSandbox` 的调用时机** —— 我假设"vm 上下文不反映加载前的属性替换"，
+   把播种移到引擎加载**之后**重测，**仍然不一致** ⇒ 假设被否定。
+
+**未排除的嫌疑**（我预算耗尽，未验证）：
+- `vm.runInNewContext(readFileSync(f), sb)` 建出的上下文是否真的共享 `sb.Math` 的**后续替换**
+  （server 侧可复现，但 server 的繁殖已改用显式 `breedRng`，所以它可能根本没走 `Math.random`）；
+- `T.mulberry32` 是否被 `train-3p` 正确取到（若 `P.setRng` 静默失败，`policy.js` 会退回宿主 `Math.random`）；
+- `buildOpps` / `pickTargetN` 内是否还有别的随机源。
+
+**⇒ 结论：CLI 训练的复现性只解决了一半。播种加上了、断言扩面了，但 `train-3p` 本身未通过验证。**
+**在它可复现之前，任何走 CLI 的对照数字仍不可信**（这正是千问那条复核的核心）。
+
+### 第四次同类失误
+Python 补丁里的中文引号再次导致**补丁未写入**（前三次见 v1.3.41/43/46）。
+已改为**补丁里的 JS 文本一律只用 ASCII 引号**。
+
+回归：spec 37/37、np-test 42/42。
+
 ## v1.3.45 — N23 激光眼单发即破整个防御族（用户裁定）
 
 ### 用户裁定

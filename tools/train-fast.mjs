@@ -4,6 +4,14 @@
  * 好处：并行后 500 代可在几十秒内出强冠军（视 CPU 核心数）；训练完直接随项目分发，双击即玩。
  */
 import { readFileSync, writeFileSync } from 'node:fs';
+
+/* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
+ * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
+ * 并被 git add -A 提交（线下冠军就这么被换掉了，我还据此写错过文档）。
+ * 规则：只有显式 EPIRUS_PUBLISH=1 才写线下路径；否则写 docs/artifacts/<tool>-out.js。 */
+const __OUT = process.env.EPIRUS_PUBLISH === '1'
+  ? __OUT
+  : ('docs/artifacts/' + 'train-fast' + '-out.js');
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';

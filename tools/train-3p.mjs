@@ -3,6 +3,14 @@
  * 产出：js/bundled-champion-3p.js（window.EPIRUS_CHAMPION_3P）
  */
 import { readFileSync, writeFileSync } from 'node:fs';
+
+/* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
+ * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
+ * 并被 git add -A 提交（线下冠军就这么被换掉了，我还据此写错过文档）。
+ * 规则：只有显式 EPIRUS_PUBLISH=1 才写线下路径；否则写 docs/artifacts/<tool>-out.js。 */
+const __OUT = process.env.EPIRUS_PUBLISH === '1'
+  ? __OUT
+  : ('docs/artifacts/' + 'train-3p' + '-out.js');
 import vm from 'node:vm';
 
 const GENS = Number(process.argv[2] || 200);
@@ -35,7 +43,6 @@ function __seedSandbox(sbox, seed) {
 
 
 const __SEED = Number(process.env.EPIRUS_SEED || 1);
-__seedSandbox(sb, __SEED);
 for (const f of [
   'js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
   'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js'
@@ -47,6 +54,7 @@ const P = sb.window.EpirusPolicy;
 // Cannot read properties of undefined (reading 'setRng'),
 // which silently turned my "same sha twice" check into a VACUOUS one
 // (it was re-reading an unchanged file).
+__seedSandbox(sb, __SEED);   // 必须在引擎加载之后（vm 上下文可能不反映加载前的属性替换）
 if (P.setRng && sb.window.EpirusTrainer.mulberry32) P.setRng(sb.window.EpirusTrainer.mulberry32(__SEED * 7919 + 13));
 
 const Bots = sb.window.EpirusBots;
@@ -69,7 +77,7 @@ const t0 = Date.now();
 // 热启动：已有多人冠军则以它为种子（pop[0] 保留原样，保证不退化）
 let seedParams = null;
 try {
-  const src = readFileSync('js/bundled-champion-3p.js', 'utf8');
+  const src = readFileSync(__OUT, 'utf8');
   const m = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
   if (m) seedParams = P.unpack(JSON.parse(m[1]));
 } catch (e) { /* 无热启动 */ }
@@ -151,7 +159,7 @@ const meta = {
   source: 'tools/train-3p.mjs', n: N, gens: GENS, games: GAMES, pop: POP,
   ts: new Date().toISOString(), firstRate: ev.firstRate, top2Rate: ev.top2Rate
 };
-writeFileSync('js/bundled-champion-3p.js',
+writeFileSync(__OUT,
   '/* Epirus \u591a\u4eba\u51a0\u519b\uff08\u7531 tools/train-3p.mjs \u751f\u6210\uff09\u3002\u53ea\u8bfb\u6570\u636e\uff0c\u4e0d\u8981\u624b\u6539\u3002 */\n' +
   'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
   'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(pack) + ';\n');
