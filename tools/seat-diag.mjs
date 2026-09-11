@@ -75,5 +75,5 @@ console.log('=== 3) 3P 冠军经济分布（决策时 ep）与技能使用 ===')
   const top = Object.keys(useCnt).sort(function (a, b) { return useCnt[b] - useCnt[a]; });
   console.log('技能使用 top12:');
   for (const k of top.slice(0, 12)) console.log('   ' + (R.byKey[k] ? R.byKey[k].name : k).padEnd(8) + (useCnt[k] / decisions * 100).toFixed(1) + '%');
-  console.log('未使用技能数 = ' + (R.ACT_KEYS ? 0 : 0) + Object.keys(useCnt).length + ' 种被用过');
+  console.log('未使用技能数 = ' + Object.keys(useCnt).length + ' 种被用过');
 })();

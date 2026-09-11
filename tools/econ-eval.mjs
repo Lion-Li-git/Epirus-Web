@@ -32,14 +32,15 @@ function packFrom(file) {
 
 const sbA = loadSandbox([FILE_A]);
 const WA = sbA.window, RA = WA.EpirusRules, SA = WA.EpirusState, TA = WA.EpirusTrainer, PA = WA.EpirusPolicy;
-const A = PA.unpack(packFrom(FILE_A));
+// P0：工具侧放宽（allowLegacy=true），游戏侧仍严格拒绝 → 五次失败实验的 v5 存档重新可读
+const A = PA.unpack(packFrom(FILE_A), true);
 if (!A) throw new Error('冠军 A 解包失败（版本/维度不符）');
 
 let B = null, WB = null;
 if (FILE_B) {
   const sbB = loadSandbox([FILE_B]);
   WB = sbB.window;
-  B = WB.EpirusPolicy.unpack(packFrom(FILE_B));
+  B = WB.EpirusPolicy.unpack(packFrom(FILE_B), true);
   if (!B) throw new Error('冠军 B 解包失败');
 }
 

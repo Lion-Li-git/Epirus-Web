@@ -94,7 +94,7 @@
   }
 
   /* ---- 状态特征（pid 视角，全部公开信息） ---- */
-  function features(state, pid) {
+  function featuresV6(state, pid) {
     const me = state.p[pid];
     const agg = oppAgg(state, pid);
     const op = agg.threat;                 // 威胁最大的对手（N=2 时 = 唯一对手）
@@ -172,7 +172,49 @@
     }
     return base;
   }
-  const FEAT_S = features(S.createState('standard', { next: Math.random }), 0).length;
+  /* ===== P0：旧版存档兼容 =====
+   * 问题：FEAT_S/PACK_VERSION 是模块全局，一个进程只能有一种网络形状 →
+   * 升 v6 后 7 个 v5 实验存档全变砖，A/B 工具链（econ-eval ③）直接失效，
+   * 五次失败结论无法复现对照。
+   * 解法（千问方案）：形状从 **params.length 反推**——
+   *   paramCount = HID*FEAT_N + HID + HID + 1  ⇒  FEAT_N = (len - 2*HID - 1)/HID
+   *   v5: (3313-49)/24 = 136  ⇒ FEAT_S = 136 - FEAT_A = 122
+   *   v6: (3337-49)/24 = 137  ⇒ FEAT_S = 123
+   * 于是同一进程可同时评测两种形状；**游戏侧 checkPack 仍严格拒绝**（只放宽工具侧 unpack）。 */
+  function shapeOf(params) {
+    const n = params.length;
+    if (n === HID * FEAT_N + HID + HID + 1) return { featS: FEAT_S, featA: FEAT_A, featN: FEAT_N, legacy: false };
+    const featN = (n - HID - HID - 1) / HID;
+    if (featN > 0 && Number.isInteger(featN) && featN > FEAT_A)
+      return { featS: featN - FEAT_A, featA: FEAT_A, featN: featN, legacy: true };
+    return null;
+  }
+
+  /* v5 特征向量 = v6 去掉"自己跨得过环启动线"那一维。
+   * 下标用**运行时探测**而非硬编码：把 me.ringStreak 从 0 改到 3，
+   * 唯一"由 1 变 0"的那一维就是它。 */
+  let RING_SELF_IDX = -2;
+  function ringSelfIdx() {
+    if (RING_SELF_IDX !== -2) return RING_SELF_IDX;
+    RING_SELF_IDX = -1;
+    const mk = function (rs) {
+      const st = S.createState('standard', { next: function () { return 0.5; } }, 2);
+      st.p[0].ep = 3; st.p[0].ringStreak = rs;
+      return featuresV6(st, 0);
+    };
+    const a = mk(0), b = mk(3);
+    for (let i = 0; i < a.length; i++) if (a[i] - b[i] > 0.5) { RING_SELF_IDX = i; break; }
+    return RING_SELF_IDX;
+  }
+  function features(state, pid, featS) {
+    const x = featuresV6(state, pid);
+    if (featS == null || featS >= x.length) return x;
+    const i = ringSelfIdx();
+    if (i < 0) return x.slice(0, featS);
+    const y = x.slice(); y.splice(i, 1); return y;
+  }
+
+  const FEAT_S = featuresV6(S.createState('standard', { next: Math.random }), 0).length;
 
   /* ---- 动作特征（该招在“当前局面”下的属性/代价/克制关系） ---- */
   function actionFeatures(state, pid, key) {
@@ -215,18 +257,19 @@
   function crossover(a, b) { const c = new Float64Array(a.length); for (let i = 0; i < c.length; i++) c[i] = Math.random() < 0.5 ? a[i] : b[i]; return c; }
 
   /* ---- (s,a) 值网络：value(state,pid,key,params) ---- */
-  function value(state, pid, key, params) {
-    const x = features(state, pid);
+  function value(state, pid, key, params, sh) {
+    const S_ = sh ? sh.featS : FEAT_S;
+    const N = sh ? sh.featN : FEAT_N;
+    const x = features(state, pid, S_);
     const af = actionFeatures(state, pid, key);
-    const N = FEAT_N;
     const W1 = 0, B1 = HID * N, W2 = B1 + HID, B2 = W2 + HID;
     let v = params[B2];
     const h = new Float64Array(HID);
     for (let j = 0; j < HID; j++) {
       let s = 0;
       const base = W1 + j * N;
-      for (let i = 0; i < FEAT_S; i++) s += params[base + i] * x[i];
-      for (let i = 0; i < FEAT_A; i++) s += params[base + FEAT_S + i] * af[i];
+      for (let i = 0; i < S_; i++) s += params[base + i] * x[i];
+      for (let i = 0; i < FEAT_A; i++) s += params[base + S_ + i] * af[i];
       s += params[B1 + j];
       h[j] = s > 0 ? s : 0; // ReLU
       v += params[W2 + j] * h[j];
@@ -237,6 +280,7 @@
   /* 对合法动作集合打分 → softmax → 返回 {probs(按 ACT_KEYS 索引), argmaxKey} */
   function forward(state, pid, legal, params, opts) {
     opts = opts || {};
+    const sh = shapeOf(params);   // P0：形状自适应（v5/v6 存档共存）
     const mask = new Array(A).fill(false);
     for (const l of legal) { const i = ACT_KEYS.indexOf(l.key); if (i >= 0) mask[i] = true; }
     const logits = new Float64Array(A);
@@ -244,7 +288,7 @@
     for (const l of legal) {
       const i = ACT_KEYS.indexOf(l.key);
       if (i < 0) continue;
-      const v = value(state, pid, l.key, params);
+      const v = value(state, pid, l.key, params, sh);
       logits[i] = v;
       if (v > maxL) maxL = v;
     }
@@ -288,8 +332,18 @@
     return { ok: true };
   }
   function pack(p) { return { v: PACK_VERSION, a: Array.from(p), f: FEAT_S, h: HID }; }
-  function unpack(o) {
-    if (!checkPack(o).ok) return null;   // 一律拒绝不兼容包（旧冠军/错维度/缺版本）
+  /* allowLegacy=true 仅工具/评测用：按包内长度反推形状重建，**游戏侧绝不使用**。
+   * 这样五次失败实验的存档重新可读，A/B 证据链不再是一次性的。 */
+  function unpack(o, allowLegacy) {
+    if (allowLegacy) {
+      if (!o || !Array.isArray(o.a)) return null;
+      const featN = (o.a.length - HID - HID - 1) / HID;
+      if (!(featN > 0 && Number.isInteger(featN))) return null;
+      const q = new Float64Array(o.a.length);
+      for (let i = 0; i < q.length; i++) q[i] = o.a[i];
+      return q;
+    }
+    if (!checkPack(o).ok) return null;   // 游戏侧一律拒绝不兼容包（旧冠军/错维度/缺版本）
     const p = new Float64Array(paramCount());
     for (let i = 0; i < p.length; i++) p[i] = o.a[i];
     return p;
@@ -297,7 +351,7 @@
 
   global.EpirusPolicy = {
     ACT_KEYS, FEAT_N, FEAT_S, FEAT_A, HID, PACK_VERSION,
-    features, actionFeatures, value, forward, choose, oppAgg, oppSlots, skillHistory, OPP_SLOTS, HIST_K,
+    features, featuresV6, actionFeatures, value, forward, choose, shapeOf, oppAgg, oppSlots, skillHistory, OPP_SLOTS, HIST_K,
     paramCount, makePolicy, mutatePolicy, crossover, pack, unpack, checkPack
   };
 })(typeof window !== 'undefined' ? window : globalThis);
