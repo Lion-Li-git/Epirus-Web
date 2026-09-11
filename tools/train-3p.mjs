@@ -198,4 +198,4 @@ writeFileSync(OUT_PATH,
   '/* Epirus \u591a\u4eba\u51a0\u519b\uff08\u7531 tools/train-3p.mjs \u751f\u6210\uff09\u3002\u53ea\u8bfb\u6570\u636e\uff0c\u4e0d\u8981\u624b\u6539\u3002 */\n' +
   'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
   'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(pack) + ';\n');
-console.log('\n\u5df2\u5199\u5165 js/bundled-champion-3p.js');
+console.log('\n\u5df2\u5199\u5165 ' + OUT_PATH + '  (coldStart=' + (!seedParams) + ', seed=' + __SEED + ')');
