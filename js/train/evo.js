@@ -319,7 +319,13 @@
       let oi = g % opps.length;
       let econ = null;
       for (let pid = 0; pid < n; pid++) {
-        if (pid === seat) { econ = makeEconChooser(policyChooserN(params, 0.35, 0.15), agg); choosers.push(econ); }
+        if (pid === seat) {
+          // 承诺级 ε：30% 的局抽一个储蓄视界 h∈1..4，本局 ep<1+h 时只准出 ジ
+          const hr = mulberry32(seed + 991)();
+          const h = hr < 0.30 ? (1 + Math.floor(mulberry32(seed + 992)() * 4)) : 0;
+          const baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : policyChooserN(params, 0.35, 0.15);
+          econ = makeEconChooser(baseSel, agg); choosers.push(econ);
+        }
         else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
       }
       // 每回合回 ep 的对局权重（可选设施，默认 0 = 与线上规则一致）。
@@ -327,8 +333,8 @@
       // 锁死在另一个不动点）；regen=2 确实能让 AI 学会聚能环（连用到 16），
       // 但环是严格支配策略（免费 +3/回合永续）→ 学会后反而更窄。
       // 故默认关闭，等规则/平衡决策后再开。
-      const TRAIN_REGEN = 0;   // 默认与线上规则一致；调成 2 可复现聚能环/囤积实验
-      const r = oneGameN(choosers, seed, n, { regen: TRAIN_REGEN });
+      const regen = regenForGen(gen);   // 课程式补贴：前 30% 富经济、30~50% 退火、之后线上口径
+      const r = oneGameN(choosers, seed, n, { regen: regen });
       const rank = rankOf(r.state, seat);
       const base = rank === 1 ? 1.0 : rank === 2 ? 0.3 : 0.0;   // N19 修正：3 人局里第二名也算输，降低苟活奖励
       const others = r.dmg.reduce(function (a, b) { return a + b; }, 0) - r.dmg[seat];
@@ -547,6 +553,34 @@
 
   /* 多目标择优：在「胜率分不低于最高分 - WR_TOL」的候选里，取覆盖熵最高者。
    * 这样胜率损失有界（容差内），但不再被 argmax 逼向窄解。 */
+  /* ===== 课程式经济补贴（千问方案，纯训练侧，不动 shipped 规则）=====
+   * 洞见：2P 能攒钱而 3P 不能，不是规则更严，而是 3P 没人替它把"攒到 3"这条路走通过一次。
+   * 用法：训练前段开富经济让它**看见** ep=3/5 与聚能环/大雷的回报，再退火到线上口径。 */
+  let REGEN_TOTAL = 0;
+  function setRegenTotal(n) { REGEN_TOTAL = Math.max(0, Math.floor(n) || 0); }
+  function regenForGen(gen) {
+    if (!REGEN_TOTAL) return 0;
+    const f = gen / REGEN_TOTAL;
+    if (f < 0.30) return 2;
+    if (f < 0.50) return 1;
+    return 0;
+  }
+
+  /* ===== 承诺级 ε（千问方案）=====
+   * 动作级 ε 靠多次独立抽样撞运气才能走完 3~5 回合的连续攒钱轨迹；
+   * 承诺级 ε 每局抽一个"储蓄视界 h"，规定 ep < 1+h 时只准出 ジ —— 轨迹被**真正走到**。 */
+  function makeCommitChooser(params, temp, h) {
+    const inner = policyChooserN(params, temp, 0);
+    return function (state, pid, legal) {
+      if (h > 0 && state.p[pid] && state.p[pid].ep < 1 + h) {
+        for (let i = 0; i < legal.length; i++) {
+          if (legal[i].key === R.SK.JI && legal[i].affordable) return { key: R.SK.JI, target: null, target2: null };
+        }
+      }
+      return inner(state, pid, legal);
+    };
+  }
+
   const WR_TOL = 0.01;   // 容差带（收紧：3P 实测 0.03 会放行头对头明显更弱的候选）
 
   function pickChampionByWinRate(t, games, seedBase) {
@@ -610,7 +644,7 @@
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser,
     scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

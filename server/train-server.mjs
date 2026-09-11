@@ -112,6 +112,7 @@ function maybeEarlyStop(it, gens) {
 /* 多种子 × 多轮训练：每轮 = seeds 个独立种子跑 gens 代（轮间重新择优/重开种子，避免长跑 sigma 坍缩与冠军蝉联）。
  * 每轮结束都按真实胜率择优并与现有冠军比（绝不回退）。 */
 async function runTrain(gens, opts, cfg) {
+  if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
   cfg = cfg || {};
   const seedN = Math.max(1, cfg.seeds || 3);
   const rounds = Math.max(1, cfg.rounds || 1);
@@ -234,6 +235,7 @@ function writeBundleMP(pack, meta) {
 }
 
 async function runTrainN(gens, cfg) {
+  if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
   cfg = cfg || {};
   const n = Math.max(3, Math.min(cfg.n || 3, 5));
   const popSize = Math.max(8, cfg.pop || 32);

@@ -284,7 +284,12 @@
   function copyEffect(key) {
     const def = R.byKey[key];
     if (!def) return null;
-    if (key === SK.DUAL_GUN) return { amt: 1, type: R.DMG.NORMAL, pierce: {}, via: SK.GUN };  // 原文：只算一枪
+    // 双枪走数据表（以前硬编码 amt:1，使 rules.js 的 dmg 字段失效 →
+    // 调它的平衡会静默无效）。via 仍按枪口径（可被反弹/地雷）。
+    if (key === SK.DUAL_GUN) return {
+      amt: (def.dmg && def.dmg.amt) || 1, type: (def.dmg && def.dmg.type) || R.DMG.NORMAL,
+      pierce: def.pierce || {}, via: SK.DUAL_GUN
+    };
     if (key === SK.LASER_EYE) return { amt: 1, type: R.DMG.LIGHT, pierce: {}, via: SK.LASER_EYE };
     if (key === SK.CANNON) return { amt: 1, type: R.DMG.NORMAL, pierce: { defense: true, reflect: true }, via: SK.CANNON };
     if (def.dmg && def.dmg.amt) return { amt: def.dmg.amt, type: def.dmg.type, pierce: def.pierce || {}, via: key };
@@ -546,9 +551,11 @@
           }
           break;
         }
-        case SK.DUAL_GUN: {                    // N3 双枪射手：对两个目标各 1 点（按枪口径，可被反弹/地雷）
+        case SK.DUAL_GUN: {                    // N3 双枪射手：对两个目标各一枪（走数据表，可被反弹/地雷）
           const t2 = (a.target2 != null && state.p[a.target2] && state.p[a.target2].hp > 0) ? a.target2 : null;
-          deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.GUN }, t, { reason: '双枪射手' });
+          const dgDef = R.byKey[SK.DUAL_GUN];
+          const dgDmg = { amt: (dgDef.dmg && dgDef.dmg.amt) || 1, type: (dgDef.dmg && dgDef.dmg.type) || R.DMG.NORMAL, source: i, via: SK.DUAL_GUN, pierce: dgDef.pierce || {} };
+          deliverDamage(state, Object.assign({}, dgDmg), t, { reason: '双枪射手' });
           if (t2 != null && t2 !== t) {
             deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.GUN }, t2, { reason: '双枪射手' });
           }
