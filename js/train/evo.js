@@ -266,12 +266,29 @@
   }
 
   /* 名次（1 = 第一）：按（存活/血量）降序 */
+  /* Q2(i) 完整名次（千问方案，纯训练/评测侧，不动 checkOver）：
+   * 原来并列最高 HP 就判"平局"，但实测镜像平局里 89~93.5% 的三家 HP 向量本身可分
+   * → 等于白扔一半训练样本。这里改成完整排序打破平局：
+   *   存活优先 → HP 降序 → 累计承伤升序。
+   * ⚠️ 只在**原来判平的地方**分出 1/2/3 名，胜/平/负的分值一律不变——
+   *    历史上 deal/proact"奖励打伤害"养出过"打伤害不赢"的过拟合，次级键绝不能拿来加分。 */
   function rankOf(st, seat) {
+    const n = st.p.length;
+    const taken = [];
+    for (let i = 0; i < n; i++) taken.push(0);
+    for (const e of st.events) if (e.type === 'damage' && e.to != null) taken[e.to] += (e.amt || 0);
     const order = [];
-    for (let i = 0; i < st.p.length; i++) order.push({ i: i, hp: Math.max(0, st.p[i].hp) });
-    order.sort(function (a, b) { return b.hp - a.hp; });
+    for (let i = 0; i < n; i++) {
+      const hp = Math.max(0, st.p[i].hp);
+      order.push({ i: i, alive: hp > 0 ? 1 : 0, hp: hp, taken: taken[i] });
+    }
+    order.sort(function (a, b) {
+      if (a.alive !== b.alive) return b.alive - a.alive;
+      if (Math.abs(b.hp - a.hp) > 1e-9) return b.hp - a.hp;
+      return a.taken - b.taken;
+    });
     for (let k = 0; k < order.length; k++) if (order[k].i === seat) return k + 1;
-    return order.length;
+    return n;
   }
 
   /* 经济统计：本局"达到过的最高 ep"与"贵技能（ep ≥ 2）出手次数"。
@@ -286,7 +303,11 @@
       const a = inner(state, pid, legal);
       // 真实费用必须走 computeCost（R.byKey[key].cost 是数字，不是对象）
       if (a) {
-        if (agg) agg.use[a.key] = (agg.use[a.key] || 0) + 1;
+        if (agg) {
+          agg.use[a.key] = (agg.use[a.key] || 0) + 1;
+          if (!agg.aff) agg.aff = {};
+          for (let ai = 0; ai < legal.length; ai++) if (legal[ai].affordable) agg.aff[legal[ai].key] = 1;
+        }
         const c = S.computeCost(state, pid, a.key);
         if (c && c.ok) {
           if (c.ep >= 2) rec.heavy++;
@@ -311,7 +332,7 @@
   function scoreMemberN(params, opps, games, n, gen, idx) {
     let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0;
-    const agg = { use: {} };   // 该个体的动作直方图（跨局汇总）
+    const agg = { use: {}, aff: {} };   // 该个体的动作直方图（跨局汇总）
     for (let g = 0; g < games; g++) {
       const seat = g % n;                                   // 座位轮换
       const seed = seedOfGen(gen, idx, 'n') + g * 7919;
@@ -333,7 +354,7 @@
       // 锁死在另一个不动点）；regen=2 确实能让 AI 学会聚能环（连用到 16），
       // 但环是严格支配策略（免费 +3/回合永续）→ 学会后反而更窄。
       // 故默认关闭，等规则/平衡决策后再开。
-      const regen = regenForGen(gen);   // 课程式补贴：前 30% 富经济、30~50% 退火、之后线上口径
+      const regen = regenForGame(g, games);   // Q1(d) 永久回放切片：每代固定 ~8% 的局带补贴，永不退火
       const r = oneGameN(choosers, seed, n, { regen: regen });
       const rank = rankOf(r.state, seat);
       const base = rank === 1 ? 1.0 : rank === 2 ? 0.3 : 0.0;   // N19 修正：3 人局里第二名也算输，降低苟活奖励
@@ -385,8 +406,10 @@
     if (uTot > 0) {
       for (const k in agg.use) { const pr = agg.use[k] / uTot; H -= pr * Math.log(pr); }
     }
-    const divNorm = uTot > 0 ? H / Math.log(Math.max(2, (R.skills || []).length)) : 0;
-    const divBonus = DIV_BETA * divNorm;
+    // 归一化只按"当时可负担的动作数"（千问：拿 28 归一化是在量一个恒为 0 的量）
+    const affN = Math.max(2, Object.keys(agg.aff || {}).length || (R.skills || []).length);
+    const divNorm = uTot > 0 ? H / Math.log(affN) : 0;
+    const divBonus = 0;   // Q3：覆盖熵移出目标函数，只作诊断（它和"见过那个状态"是两回事）
     const fitAvg = played ? fit / played : 0;
     return {
       fit: fitAvg + divBonus,
@@ -556,14 +579,17 @@
   /* ===== 课程式经济补贴（千问方案，纯训练侧，不动 shipped 规则）=====
    * 洞见：2P 能攒钱而 3P 不能，不是规则更严，而是 3P 没人替它把"攒到 3"这条路走通过一次。
    * 用法：训练前段开富经济让它**看见** ep=3/5 与聚能环/大雷的回报，再退火到线上口径。 */
-  let REGEN_TOTAL = 0;
-  function setRegenTotal(n) { REGEN_TOTAL = Math.max(0, Math.floor(n) || 0); }
-  function regenForGen(gen) {
-    if (!REGEN_TOTAL) return 0;
-    const f = gen / REGEN_TOTAL;
-    if (f < 0.30) return 2;
-    if (f < 0.50) return 1;
-    return 0;
+  /* Q1(d) 永久回放切片（千问方案）——比"课程退火"更根本：
+   * 实测：只加变异不加选择时，深经济能力在 **15~20 代**内掉 26~40pt（σ=0.06 的噪声自由游走就抹掉了）。
+   * 我上一版"前 30% 补贴 + 后 50% 退火"的退火窗口有 150 代 ≫ 衰减尺度 20 代 → 必然失败。
+   * 正确做法不是靠时间安排躲漂移，而是**给这条分支一条永久的评价通道**。
+   * 这里用最便宜的形式：每代评估里固定留 REGEN_SLICE 比例的局带补贴，永不退火。 */
+  const REGEN_SLICE = 0.08;   // 每 12 局留 1 局（约 8%）带补贴
+  function regenForGen(gen) { return 0; }   // 兼容旧入口；回放切片按局索引走
+  function setRegenTotal(n) { /* 保留兼容：回放切片不再依赖总代数 */ }
+  function regenForGame(g, games) {
+    const step = Math.max(2, Math.round(1 / REGEN_SLICE));
+    return (g % step === 0) ? 2 : 0;
   }
 
   /* ===== 承诺级 ε（千问方案）=====
