@@ -26,6 +26,7 @@
   function newGame() {
     const n = B.players || 2;
     B.multi = n > 2;
+    if (typeof syncDiffOptions === 'function') syncDiffOptions();
     if (B.multi) B.modeKey = 'multi';
     B.state = S.createState(B.modeKey, null, n);
     B.roundStarted = false; B.locked = false; B.aiKey = null;
@@ -40,6 +41,9 @@
   }
 
   function diffName(d) {
+    if (d === 'champ') return '冠军（最强）';
+    const st = styleOf(d);
+    if (st) return st.name;
     return d === 'easy' ? '简单' : d === 'medium' ? '中等' : '困难（最新高水平AI）';
   }
 
@@ -250,14 +254,35 @@
     return multiChampCache;
   }
   /* 当前多人对局实际用的是哪个 AI（供 UI 显示与探针断言） */
+  function styleOf(id) {
+    const list = (Bots.STYLES || []);
+    for (let i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
+  /* 模式切换时重建难度下拉：
+   * 多人 = 5 个具名风格 + 冠军；2 人 = 原来的 简单/中等/困难（v1.0 口径不变）。 */
+  function syncDiffOptions() {
+    const sel = $('sel-diff'); if (!sel) return;
+    const want = B.multi
+      ? (Bots.STYLES || []).map(function (x) { return { v: x.id, t: x.name }; }).concat([{ v: 'champ', t: '冠军（最强）' }])
+      : [{ v: 'easy', t: '简单' }, { v: 'medium', t: '中等' }, { v: 'hard', t: '困难（最新高水平AI）' }];
+    const valid = want.some(function (o) { return o.v === B.diff; });
+    sel.innerHTML = want.map(function (o) { return '<option value="' + o.v + '">' + o.t + '</option>'; }).join('');
+    if (!valid) B.diff = B.multi ? 'st:combocounter' : (B.diff === 'champ' ? 'hard' : 'medium');
+    if (B.diff === 'champ') B.diff = 'champ';
+    sel.value = B.diff;
+    if (!sel.value) { sel.value = want[0].v; B.diff = want[0].v; }
+  }
+
   function aiInfo() {
     if (!B.multi) return { source: B.diff === 'hard' ? '2人冠军' : '脚本', champ: B.diff === 'hard' };
-    if (B.diff === 'hard') {
+    if (B.diff === 'champ') {
       return loadMultiChamp()
         ? { source: '3P 冠军', champ: true }
         : { source: '脚本·多人强档（冠军包缺失/不兼容，已回退）', champ: false, fallback: true };
     }
-    return { source: B.diff === 'easy' ? '脚本·简单(多人)' : '脚本·中等(多人)', champ: false };
+    const st = styleOf(B.diff);
+    return { source: '风格·' + (st ? st.name : B.diff), champ: false };
   }
 
   /* 目标启发：用训练器的 v2 口径（反锁 + 必杀优先 + 打领先者），避免互相抵消死循环 */
@@ -273,8 +298,6 @@
 
   /* 多人 AI：困难 = 3P 冠军（缺失则回退脚本自适应） */
   function chooseAIMulti(state, pid, legal) {
-    /* 三档都允许脚本返回 {key,target} —— 多人局的"打谁"本身就是决策的一部分
-     * （老脚本 oppPidOf 只会打残血、无视领先者）。 */
     function finish(res) {
       const key = (typeof res === 'string') ? res : (res && res.key);
       const t1 = (res && typeof res === 'object' && res.target != null) ? res.target : pickTargetFor(state, pid, key);
@@ -285,8 +308,7 @@
       }
       return { key: key, target: t1, target2: t2 };
     }
-    const DN = Bots.DIFFICULTY_N;
-    if (B.diff === 'hard') {
+    if (B.diff === 'champ') {
       const c = loadMultiChamp();
       if (c) {
         B.aiFallback = false;
@@ -294,13 +316,12 @@
         const legalForAI = base.length ? base : [{ key: R.SK.JI, affordable: true }];
         return finish(P.choose(state, pid, legalForAI, c, { temp: 0.15 }));
       }
-      // 冠军包缺失/不兼容 → 回退到多人强脚本，并**显式标记**（不再静默降级到 2 人脚本）
-      B.aiFallback = true;
+      B.aiFallback = true;                                  // 冠军缺失 → 显式回退，不静默
       return finish(DN.hard.pick(state, pid, legal));
     }
     B.aiFallback = false;
-    const tier = (B.diff === 'easy') ? DN.easy : DN.medium;
-    return finish(tier.pick(state, pid, legal));
+    const st = styleOf(B.diff);
+    return finish((st ? st.pick : Bots.pickBalanced)(state, pid, legal));
   }
 
   /* 人类玩家被淘汰后：AI 自行打完剩余回合（观战） */
@@ -967,6 +988,7 @@
       B.players = parseInt($('sel-players').value, 10) || 2;
       if (B.players > 2) { B.modeKey = 'multi'; $('sel-mode').value = 'multi'; $('sel-mode').disabled = true; }
       else { $('sel-mode').disabled = false; B.modeKey = $('sel-mode').value === 'multi' ? 'standard' : $('sel-mode').value; $('sel-mode').value = B.modeKey; }
+      syncDiffOptions();
       newGame();
     };
     $('sel-diff').onchange = function () { B.diff = $('sel-diff').value; hint('难度已切换：' + diffName(B.diff) + '（对局中即时生效）'); };

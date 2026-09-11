@@ -441,6 +441,27 @@
     hard:   { name: '困难·脚本兜底', pick: pickMultiStrong }
   };
 
+  /* ===== 玩家可选对手风格（乙方案：风格即档位）=====
+   * 从 23 个训练对手里按**实测审计**（`tools/bot-audit.mjs`）选出 5 个"有可玩性"的：
+   *   剔除依据：有效技能数 = 1.00 的是"只会一招"的退化对手
+   *   （reflectspam / guardspam / baguaspam），random 是另一个极端（熵 6.74，纯噪声，没人格）；
+   *   wall / protowall / reflecttank / farmer / whiff 全部 1st = 0%（自己赢不了，只会拖局）；
+   *   balanced(49.9 回合) / defend(40.8 回合) 拖太久不适合玩家；
+   *   tankline 与 heavyfire 数据完全重复（38%/15.0/1.84/ジ70+坦克30）→ 合并即无需两个。
+   * 目标选择不在这里做：ui.js 统一走 `pickTargetN`（= 击杀优先 → 打领先者），
+   * 而实测「打领先者」比「打残血」高 10.2pt，是多人局最大的单一杠杆。 */
+  const STYLES = [
+    /* **按实测强度升序排列**（3 人 60 局，对手轮换）——风格即档位，玩家从上到下就是由易到难。
+     * 数值来自 tools/bot-audit.mjs 的同口径复测，已写进 note 供玩家判断。 */
+    { id: 'st:reflectmix',   name: '节奏型',   pick: pickReflectMix,   note: '固定节奏：反弹→枪→坦克，可被识破（最易，约 17%）' },
+    { id: 'st:breakdef',     name: '憋大招',   pick: pickBreakDef,     note: '86% ジ 攒钱，等真正的落雷一发定胜负（约 28%）' },
+    { id: 'st:mix',          name: '全能型',   pick: pickMix,          note: '什么都用一点，出招最杂（有效技能数 4.38，约 30%）' },
+    { id: 'st:aggro',        name: '激进快攻', pick: pickAggro,        note: '一有机会就开枪，逼你打快棋（约 55%，均 27 回合）' },
+    { id: 'st:combocounter', name: '读招反制', pick: pickComboCounter, note: '读你最近 5 次出招来反制，最难缠（约 55%，均 15 回合）' }
+  ];
+
+
+
   const DIFFICULTY = {
     easy: { name: '简单', pick: function (st, pid, lg) { return rnd(st) < 0.6 ? pickRandom(st, pid, lg) : pickBalanced(st, pid, lg); } },
     medium: { name: '中等', pick: pickBalanced },
@@ -450,7 +471,7 @@
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
-    pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, resetBotMem,
+    pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
