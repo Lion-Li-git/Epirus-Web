@@ -513,5 +513,30 @@ t('REPRO 训练路径不得出现裸 Math.random / Date.now（白名单见下）
   eq(bad.length, 0, '训练路径出现裸随机/时间源：\n    ' + bad.join('\n    '));
 });
 
+t('N21 大雷不失效/不禁用小雷（非空版）：小雷打第三方时大雷正常结算，此时才看得出豁免', function () {
+  /* 空用例的教训：若被大雷打的人**自己**用了小雷，小雷(pri5)会先作废大雷本身，
+   * 大雷压根不结算 -> 禁用与否都是 0，用例恒过。
+   * 必须让小雷**打第三方**，大雷才不会被作废、才会真的走到"要不要禁用目标技能"这一步。 */
+  const st = S.createState('multi', { next: mulberry32(23) }, 3);
+  for (let i2 = 0; i2 < 3; i2++) { st.p[i2].hp = 8; st.p[i2].ep = 9; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.BIG_T, { target: 1 });      // 大雷 pri4 -> P1
+  S.attemptAction(st, 1, R.SK.MINI_T, { target: 2 });     // 小雷 pri5 -> **P2**（不干扰 P0 的大雷）
+  S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  ok(st.events.some(function (e) { return e.type === 'ban'; }), '大雷应已结算并发出 ban 事件（否则用例又是空的）');
+  eq(st.p[1].cooldown[R.SK.MINI_T] || 0, 0, '小雷不应被大雷禁用');
+
+  // 对照组：目标用普通技能（激光剑）时**应当**被禁用
+  const st2 = S.createState('multi', { next: mulberry32(29) }, 3);
+  for (let i2 = 0; i2 < 3; i2++) { st2.p[i2].hp = 8; st2.p[i2].ep = 9; }
+  X.startTurn(st2);
+  S.attemptAction(st2, 0, R.SK.BIG_T, { target: 1 });
+  S.attemptAction(st2, 1, R.SK.SWORD, { target: 0 });
+  S.attemptAction(st2, 2, R.SK.JI, {});
+  X.resolveActions(st2);
+  ok((st2.p[1].cooldown[R.SK.SWORD] || 0) > 0, '非防御类技能(激光剑)应被大雷禁用');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

@@ -153,7 +153,9 @@
   }
 
   /* 大雷禁用（直击与连带共用）：只禁“当前使用的那个技能”（R29） */
-  const BIG_T_EXEMPT = [SK.GUARD, SK.REFLECT, SK.JINSHIELD, SK.JI];
+  /* BIG_T ban exemptions. MINI_T (lesser lightning, pri5) MUST be here: it resolves
+   * BEFORE bigT (pri4), so banning it afterwards would be a retroactive error (user ruling). */
+  const BIG_T_EXEMPT = [SK.GUARD, SK.REFLECT, SK.JINSHIELD, SK.JI, SK.MINI_T];
   function bigTBan(state, pid, usedKey) {
     if (usedKey && R.MULTI_ONLY.indexOf(usedKey) < 0 && BIG_T_EXEMPT.indexOf(usedKey) < 0) {
       state.p[pid].cooldown[usedKey] = Math.max(state.p[pid].cooldown[usedKey] || 0, 4);
@@ -519,7 +521,8 @@
       }
       const ta = snapK[t] ? { key: snapK[t] } : null;
       // 效果2：非防御类技能一律无效化；双大雷互轰时各自保留
-      if (!bothBig && ta && R.GUARD_FAMILY.indexOf(ta.key) < 0) {
+      // void non-defense-family skills; MINI_T also exempt (pri5 already resolved)
+      if (!bothBig && ta && R.GUARD_FAMILY.indexOf(ta.key) < 0 && ta.key !== SK.MINI_T) {
         setVoid(state, t, SK.BIG_T);
       }
       // 记录目标当面架势（用于 R23'：原型制御挡电但不免疫禁用）
