@@ -155,10 +155,12 @@
   /* 大雷禁用（直击与连带共用）：只禁“当前使用的那个技能”（R29） */
   /* BIG_T ban exemptions. MINI_T (lesser lightning, pri5) MUST be here: it resolves
    * BEFORE bigT (pri4), so banning it afterwards would be a retroactive error (user ruling). */
-  /* N22：大雷失效/禁用的对象是**非防御类**技能 ⇒ 豁免应覆盖**整个防御族**
-   * （原先只列 GUARD/REFLECT/JINSHIELD，漏了藤甲/八卦阵/原型制御/无极变速/全息等）；
-   * 另加 JI（ジ：本回合失效不给 ep，但不进 3 回合禁用）与 MINI_T（小雷 pri5 已先结算）。 */
-  const BIG_T_EXEMPT = R.GUARD_FAMILY.concat([SK.JI, SK.MINI_T]);
+  /* 禁用豁免表。**注意与 R23' 的关系**：用户裁定"防御族可以**防住**大雷"指的是
+   * **格挡那 2 点伤害**，并**不**表示豁免 3 回合禁用——R23' 明确"2 电被挡但禁用目标用的
+   * 原型制御仍生效"。故此处**不扩到整个防御族**（我一度扩了，直接把 R23' 打破 → spec 36/37）。
+   * 只保留：防御/反弹/金刚盾（原表）+ ジ（本回合失效不给 ep，但不进禁用）
+   * + 小雷 MINI_T（pri5 已先结算，追溯禁用是错的）。 */
+  const BIG_T_EXEMPT = [SK.GUARD, SK.REFLECT, SK.JINSHIELD, SK.JI, SK.MINI_T];
   function bigTBan(state, pid, usedKey) {
     if (usedKey && R.MULTI_ONLY.indexOf(usedKey) < 0 && BIG_T_EXEMPT.indexOf(usedKey) < 0) {
       state.p[pid].cooldown[usedKey] = Math.max(state.p[pid].cooldown[usedKey] || 0, 4);
