@@ -489,6 +489,24 @@
   const pickProtoMine = mkProtoBreaker(SK.MINE);
   const pickProtoTransfer = mkProtoBreaker(SK.TRANSFER);
 
+  /* ===== 集火脚本（转移伤害诊断用）=====
+   * 目的：制造 **单回合承伤 N>=2** 这个条件——转移伤害赚 ⟺ N>=2（见 CHANGELOG v1.3.40），
+   * 而当前 meta 里 N>=2 的唯一常见来源就是"被集火"。
+   * ⚠️ 目标设置（用户特别提醒）：
+   *   - 必须**显式返回 {key,target}**，不能只返回技能名（否则回落到 pickTargetN，集火就散了）；
+   *   - 目标必须是**存活**且**不是自己**的对手；
+   *   - 选"**血量最低**"是为了让**多个集火脚本各自算都能得到同一个目标**（确定性共识），
+   *     而不是各自随机挑——否则两个脚本会分开打，N 永远到不了 2。 */
+  function pickFocusFire(state, pid, legal) {
+    const bk = mpBk(legal);
+    const o = mpOpps(state, pid);
+    if (!o.length) return { key: SK.JI, target: null };
+    let t = o[0];
+    for (const i of o) if (state.p[i].hp < state.p[t].hp - 1e-9) t = i;   // 同一个共识目标
+    if (mpAff(bk, SK.GUN)) return { key: SK.GUN, target: t };
+    return { key: SK.JI, target: null };                                  // 攒到能开枪再打
+  }
+
   /* 多人专用难度档（ui.js chooseAIMulti 用） */
   const DIFFICULTY_N = {
     easy:   { name: '简单',   pick: pickMultiEasy },
@@ -527,7 +545,7 @@
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
-    pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer,
+    pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'
