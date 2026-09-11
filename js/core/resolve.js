@@ -92,7 +92,11 @@
         ev(state, { type: 'revive', pid: i });
       }
       p.baguaExtra = !!p.guardNext; p.guardNext = false; // R21
-      p.fireWeakNow = !!p.fireWeakNext; p.fireWeakNext = false; // R22
+      /* 火弱持续性（**训练侧实验开关**，默认关 → shipped 规则一字不改）：
+       * 现状：Next 在 startTurn 被消费成 Now 并清空，Now 在 endTurn 清空 ⇒ 只活一个回合。
+       * 打开 EPIRUS_FIREWEAK_PERSIST=1：Next **不清除**（每回合重新武装），
+       * 直到被火焰伤害真正兑现时才清除（见 rawDamage 里的消费点）。 */
+      p.fireWeakNow = !!p.fireWeakNext; if (!FIREWEAK_PERSIST) p.fireWeakNext = false; // R22
     }
     checkOver(state);
   }
@@ -120,13 +124,19 @@
   }
 
   /* 直扣血（绕过架势：贷款/禁用/过载血债/净化/天火等）；铁索共享 R45 */
+  /* 训练侧实验开关（浏览器里 process 不存在 → 恒为 false，shipped 行为不变） */
+  const FIREWEAK_PERSIST = (typeof process !== 'undefined' && process.env && process.env.EPIRUS_FIREWEAK_PERSIST === '1');
+
   function rawDamage(state, to, amt, reason, via, opts) {
     opts = opts || {};
     const p = state.p[to];
     if (p.hp <= 0) return false;
     let hit = amt;
     // 藤甲火弱：一切火焰伤害+1（坦克/天火/地雷等，R22）
-    if ((opts.type === R.DMG.FIRE || opts.type === R.DMG.FIRELIGHT) && p.fireWeakNow) hit += 1;  // N18 藤甲
+    if ((opts.type === R.DMG.FIRE || opts.type === R.DMG.FIRELIGHT) && p.fireWeakNow) {
+      hit += 1;  // N18 藤甲
+      if (FIREWEAK_PERSIST) { p.fireWeakNext = false; p.fireWeakNow = false; }   // 兑现即消费
+    }
     if ((opts.type === R.DMG.LIGHT || opts.type === R.DMG.FIRELIGHT) && p.vampire) hit += 1;      // R47/N18 吸血鬼
     p.hp -= hit;
     ev(state, { type: 'damage', to, amt: hit, reason, via: via || reason, source: (opts.source != null ? opts.source : null) });
