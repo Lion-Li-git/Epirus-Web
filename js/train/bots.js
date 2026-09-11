@@ -440,13 +440,18 @@
    * 这个脚本的作用就是当那张**会惩罚不攒钱的考卷**：
    *   能一击必杀 → 大雷；够得着大雷 → 大雷；血少 → 先守（不白给）；否则**只出 ジ 攒钱**。
    * ⚠️ 按前几轮教训，必须实测它**真的**会攒到 3~5（不能只看设计意图）。 */
-  /* ===== 地雷触发：**历史频率**，不是预测 =====
-   * 背景（实测教训）：初版一买得起就放地雷(3 ジ) → 一买得起就花掉，最高 ep 只到 3；
-   * 改成读 `lastSkill === PROTO` 后，120 次检查 **0 次命中**（拿"上一回合出的招"当"这一回合的意图"，
-   * 逻辑错位）→ 地雷变成死代码。
-   * 正解（用户建议 (a)）：脚本可以便宜地记**参考数据**——统计领先者最近 3 回合里出架势的次数，
-   * ≥2 次才放地雷。这是**可观测的历史频率**，不假装能预知本回合意图，也不增加训练压力。
+  /* ===== 地雷触发：**近 5 回合的架势频率 + 对手当前 ジ 数** =====
+   * 背景（实测教训）：
+   *  - 初版"买得起就放地雷(3 ジ)" → 一买得起就花掉，最高 ep 只到 3；
+   *  - 改成读 `lastSkill === PROTO` → 120 次检查 **0 次命中**（拿上一回合的招当这一回合的意图，逻辑错位）；
+   *  - 改成"最近 3 回合 ≥2 次架势" → **不符合实际**：原型制御要 1 ジ，不是免费技能，
+   *    连续摆架势本身就很罕见，阈值过高等于没触发。
+   * 现在（用户方案）：窗口放宽到 **5 回合**，并把**对手当前 ジ 数**纳入判据——
+   * 架势普遍要 ジ，对手没ジ就摆不出来，"有ジ + 近期摆过"才是该上地雷的时机。
+   * 这是**可观测的历史频率 + 当前资源**，不假装预知本回合意图，也不增加训练压力。
    * ⚠️ 仿 `__mem` 的既有模式：模块级、round===1 重置。 */
+  const DS_WIN = 5;        // 观察窗口（回合）
+  const DS_STANCE_NEED = 2; // 窗口内至少摆过几次架势
   let __dsMem = { seenRound: -1, recent: [] };
   function resetDeepSaverMem() { __dsMem = { seenRound: -1, recent: [] }; }
   const DS_STANCE = [SK.GUARD, SK.SHIFT, SK.REFLECT, SK.PROTO, SK.JINSHIELD, SK.ARMOR, SK.BAGUA];
@@ -458,7 +463,7 @@
       __dsMem.seenRound = rd;
       const sk = state.p[tl].lastSkill;                // 上一回合该对手出的招（endTurn 时写入）
       __dsMem.recent.push(DS_STANCE.indexOf(sk) >= 0 ? 1 : 0);
-      if (__dsMem.recent.length > 3) __dsMem.recent.shift();
+      if (__dsMem.recent.length > DS_WIN) __dsMem.recent.shift();
     }
     let c = 0;
     for (const v of __dsMem.recent) c += v;
@@ -471,8 +476,19 @@
     if (k2 != null && mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: k2 };
     if (mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: mpLeader(state, pid) };
     const tl = mpLeader(state, pid);
-    if (mpAff(bk, SK.MINE) && tl != null && dsStanceSeen(state, tl) >= 2)
-      return { key: SK.MINE, target: tl };             // 对手最近常在摆架势 → 地雷（唯一绕原型制御）
+    if (mpAff(bk, SK.MINE) && tl != null) {
+      const seen = dsStanceSeen(state, tl);            // 近 5 回合摆架势次数
+      const foeEp = state.p[tl].ep;                    // 对手当前 ジ
+      /* ⚠️ 实测到的设计冲突（未解决，需策略决策）：
+       * 只用 `foeEp >= 1` 当门槛会**恰好排除掉最爱摆架势的对手**——guardspam/protowall
+       * 把ジ 全花在架势上，ep 常为 0 → 地雷对该类对手 **0.0%**（见 CHANGELOG v1.3.29 实测表）。
+       * 我试过补一条 `最近2回合刚摆过` 的放宽：地雷回到 12.6/23.7/14.8%，
+       * **但大雷同时从 11.2/15.3/6.9% 掉到 3.6/0/3.6%** —— 地雷 3 ジ vs 大雷 5 ジ，
+       * 花了 3 就再也到不了 5，两者在本脚本里是**互斥**的。
+       * 按 P1 的目的（深经济对手）**选择保住大雷**，地雷只作稀有补充。
+       * 若哪天要让地雷当主武器，需要另写一个"地雷流"脚本，而不是在这一个里兼顾。 */
+      if (seen >= DS_STANCE_NEED && foeEp >= 1) return { key: SK.MINE, target: tl };
+    }
     if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };
     return { key: SK.JI, target: null };               // 攒钱
   }
