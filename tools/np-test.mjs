@@ -538,5 +538,53 @@ t('N21 大雷不失效/不禁用小雷（非空版）：小雷打第三方时大
   ok((st2.p[1].cooldown[R.SK.SWORD] || 0) > 0, '非防御类技能(激光剑)应被大雷禁用');
 });
 
+t('N22 大雷效果传导（用户 a,b,c,d 例子）：b/c/d 各受 2 点；c 的ジ失效不给 ep；b 的转移与 d 的枪禁用 3 回合', function () {
+  const st = S.createState('multi', { next: mulberry32(41) }, 4);
+  for (let i2 = 0; i2 < 4; i2++) { st.p[i2].hp = 8; st.p[i2].ep = 9; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.BIG_T, { target: 1 });         // a 大雷 -> b
+  S.attemptAction(st, 1, R.SK.TRANSFER, { target: 2 });      // b 转移伤害 -> c
+  S.attemptAction(st, 2, R.SK.JI, {});                       // c 只出ジ
+  S.attemptAction(st, 3, R.SK.GUN, { target: 1 });           // d 枪 -> b
+  X.resolveActions(st);
+  eq(st.p[0].hp, 8, 'a（施法者）不受影响');
+  eq(st.p[1].hp, 6, 'b（大雷目标）受 2 点');
+  eq(st.p[2].hp, 6, 'c（b 的转移对象）受 2 点');
+  eq(st.p[3].hp, 6, 'd（攻击 b 的人）受 2 点');
+  eq(st.p[2].ep, 9, 'c 的ジ被失效 -> 不 +ep');
+  ok((st.p[1].cooldown[R.SK.TRANSFER] || 0) > 0, 'b 的转移伤害应被禁用 3 回合');
+  ok((st.p[3].cooldown[R.SK.GUN] || 0) > 0, 'd 的枪应被禁用 3 回合');
+  eq(st.p[2].cooldown[R.SK.JI] || 0, 0, 'ジ 不进 3 回合禁用');
+});
+
+t('N22b 防御族可格挡大雷；藤甲（有作用目标）本人免伤、伤害落到其目标', function () {
+  // 直接命中：b 用反弹 -> 应挡住那 2 点（且不触发反弹反击）
+  const st = S.createState('multi', { next: mulberry32(43) }, 3);
+  for (let i2 = 0; i2 < 3; i2++) { st.p[i2].hp = 8; st.p[i2].ep = 9; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.BIG_T, { target: 1 });
+  S.attemptAction(st, 1, R.SK.REFLECT, {});
+  S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[1].hp, 8, '反弹应格挡大雷（反弹可格挡）');
+  eq(st.p[0].hp, 8, '大雷不被反弹反击（反弹不触发）');
+  ok((st.p[1].cooldown[R.SK.REFLECT] || 0) === 0, '防御族不进 3 回合禁用');
+});
+t('N22c 【覆盖传导链中的防御】链上成员用藤甲：本人免伤、2 点落到其作用目标', function () {
+  /* 为什么需要这条：N22 的链条里没有防御者，N22b 测的是**直接目标**的防御（走另一分支），
+   * 两者都测不到"传导链成员用防御"这段新代码（反证已证：关掉豁免它们仍通过）。 */
+  const st = S.createState('multi', { next: mulberry32(47) }, 4);
+  for (let i2 = 0; i2 < 4; i2++) { st.p[i2].hp = 8; st.p[i2].ep = 9; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.BIG_T, { target: 1 });        // a 大雷 -> b
+  S.attemptAction(st, 1, R.SK.TRANSFER, { target: 2 });     // b 转移 -> c   => c 进链
+  S.attemptAction(st, 2, R.SK.ARMOR, { target: 3 });        // c 藤甲 -> d  （防御族 + 有作用目标）
+  S.attemptAction(st, 3, R.SK.JI, {});                      // d 只出ジ（不是链成员，只作为藤甲目标）
+  X.resolveActions(st);
+  eq(st.p[1].hp, 6, 'b（大雷目标）受 2 点');
+  eq(st.p[2].hp, 8, 'c（链上成员，用防御）本人免伤');
+  eq(st.p[3].hp, 6, 'd 作为藤甲的作用目标，吃到那 2 点传导伤害');
+  ok((st.p[2].cooldown[R.SK.ARMOR] || 0) === 0, '防御族不进 3 回合禁用');
+});
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

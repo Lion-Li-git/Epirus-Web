@@ -155,7 +155,10 @@
   /* 大雷禁用（直击与连带共用）：只禁“当前使用的那个技能”（R29） */
   /* BIG_T ban exemptions. MINI_T (lesser lightning, pri5) MUST be here: it resolves
    * BEFORE bigT (pri4), so banning it afterwards would be a retroactive error (user ruling). */
-  const BIG_T_EXEMPT = [SK.GUARD, SK.REFLECT, SK.JINSHIELD, SK.JI, SK.MINI_T];
+  /* N22：大雷失效/禁用的对象是**非防御类**技能 ⇒ 豁免应覆盖**整个防御族**
+   * （原先只列 GUARD/REFLECT/JINSHIELD，漏了藤甲/八卦阵/原型制御/无极变速/全息等）；
+   * 另加 JI（ジ：本回合失效不给 ep，但不进 3 回合禁用）与 MINI_T（小雷 pri5 已先结算）。 */
+  const BIG_T_EXEMPT = R.GUARD_FAMILY.concat([SK.JI, SK.MINI_T]);
   function bigTBan(state, pid, usedKey) {
     if (usedKey && R.MULTI_ONLY.indexOf(usedKey) < 0 && BIG_T_EXEMPT.indexOf(usedKey) < 0) {
       state.p[pid].cooldown[usedKey] = Math.max(state.p[pid].cooldown[usedKey] || 0, 4);
@@ -527,9 +530,11 @@
       }
       // 记录目标当面架势（用于 R23'：原型制御挡电但不免疫禁用）
       const guardKind = (guardOf(state, t) || {}).kind;
-      // 2电伤害（反弹/藤甲架势对雷无效——pierce.reflect；防御/金刚盾/原型制御可挡）
+      /* N22（用户裁定）：**所有防御类都能格挡大雷**；而大雷属"反弹可格挡但不触发反弹"——
+       * 实现方式：去掉 pierce.reflect（那是"反弹整个失效"），靠 BIG_T 不在 REFLECTABLE 里
+       * 使反弹只格挡、不反击。pierce.transfer 表示大雷伤害不可被转移。 */
       const res = deliverDamage(state, {
-        amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { reflect: true }
+        amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { transfer: true }
       }, t, { reason: '真正的落雷' });
       // N6 连带伤害（原文效果3）：与目标 T 产生交互的第三方 各受 1 点电伤；
       //   其中「对 T 使用技能」者额外被无效化（对 T 的那个技能）；施法者自身不参与。
@@ -541,13 +546,22 @@
         const qTargetsT = snapK[q] != null && snapT[q] === t;
         const tTargetsQ = !!ta && tTgt === q;
         if (!qTargetsT && !tTargetsQ) continue;
-        // 连带口径：同样 2 点电伤 + 行动作废 + 该技能禁用 3 回合（与直击同口径）
+        /* N22：防御族不失效（它们能格挡大雷）；小雷 pri5 已先结算也不失效。 */
         const qUsed = snapK[q];
-        setVoid(state, q, '真正的落雷连带');
+        const qIsDef = !!(qa && R.GUARD_FAMILY.indexOf(qa.key) >= 0);
+        if (!qIsDef && qa && qa.key !== SK.MINI_T) setVoid(state, q, '真正的落雷连带');
         ev(state, { type: 'bigTChain', from: c, to: q, kind: qTargetsT ? 'attack' : 'targeted' });
+        /* N22：防御者本人不吃伤害；但其防御技能**有作用目标**时（金刚盾/藤甲），
+         * 传导伤害落到那个作用目标身上。无目标的自守防御则完全挡住。 */
+        let qHit = q;
+        if (qIsDef) {
+          const qTgt = snapT[q];
+          if (qTgt == null || qTgt === q || state.p[qTgt].hp <= 0) continue;
+          qHit = qTgt;
+        }
         const qres = deliverDamage(state, {
-          amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { reflect: true }
-        }, q, { reason: '真正的落雷·连带' });
+          amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { transfer: true }
+        }, qHit, { reason: '真正的落雷·连带' });
         if (qres.result === 'land' || qres.result === 'blocked') {
           const qGuard = (guardOf(state, q) || {}).kind;
           if (qres.result === 'land' || qGuard === 'proto') bigTBan(state, q, qUsed);
