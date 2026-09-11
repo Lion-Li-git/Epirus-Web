@@ -1,3 +1,39 @@
+## v1.3.31 — 修 v1.3.19 引入的双枪 `via` 回归（N20b 关闭）+ N20 全绿
+
+### 根因：我在 v1.3.19 做「双枪走数据表」时**误改了 `via`**
+```js
+if (key === SK.DUAL_GUN) return { amt: ..., pierce: ..., via: SK.DUAL_GUN };  // ← 错
+```
+`MINE_TRIGGER = [GUN, SWORD, TANK, DRAIN, RAILGUN, BIG_T, LASER_EYE, CANNON]` **不含 `dualGun`**，
+而 `REFLECTABLE` 同样按枪口径查表。所以 `via: SK.DUAL_GUN` 导致：
+- **双枪第一枪不触发地雷**（第二枪仍是旧的 `via: SK.GUN`，所以只有第二枪触发）；
+- **第一枪也不被反弹**（同一张表）。
+注释里我当时明明写着"via 仍按枪口径保留可被反弹/地雷语义"，**实现却改了**——是自查不彻底。
+
+**症状**（N20b 事件流）：
+```
+damage to=0 via=dualGun source=3    ← a 中枪，但 via 不在 MINE_TRIGGER
+damage to=1 via=gun     source=3
+mine from=1 kind=direct              ← 只有 b 的雷直接触发
+mine from=[0,2] kind=indirect        ← a 反被算作"间接"
+```
+
+### 修法
+`via` 一律用 `SK.GUN`（两枪都按枪口径），**数据表只供 `amt`/`type`/`pierce` 数值**。
+这正是 v1.3.19 的原始意图，只是当时实现写错了。
+
+### 结果
+```
+N20a 地雷直接触发（4 人，间接触发合并一波）      ✔
+N20b 直接触发无上限（双枪打 a,b → 共 3 波）      ✔
+N20c 地雷伤害无来源 source=null 不被铁索共享     ✔
+```
+回归：spec **37/37**、np-test **33/33**。
+
+### 顺带结论
+**`MINE_TRIGGER` / `REFLECTABLE` 这类"按 `via` 查表"的机制，与"把技能改成走数据表"是两件事。**
+以后改数据表只动数值字段，**`via` 是语义键，不能顺手改**。这条已写进代码注释。
+
 ## v1.3.30 — N20 地雷 AoE 重写（用户裁定）+ 3 条 N≥3 spec 用例
 
 ### 规则偏差（用户指出，确认）

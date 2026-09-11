@@ -411,7 +411,7 @@ t('N20a 地雷直接触发：4 人 a/b/c 装雷、d 打 a → 除 a 外各 1；b
   eq(st.p[3].hp, 3, 'd：a 的直接波 1 + 间接触发波 1');
 });
 
-t('N20b [待查] 直接触发无上限：d 双枪打 a,b → a/b 各一波 + c 间接触发合并一波 = 共 3 波', function () {
+t('N20b 直接触发无上限：d 双枪打 a,b → a/b 各一波 + c 间接触发合并一波 = 共 3 波', function () {
   const st = S.createState('multi', { next: mulberry32(11) }, 4);
   for (let i2 = 0; i2 < 4; i2++) { st.p[i2].hp = 5; st.p[i2].ep = 9; }
   X.startTurn(st);

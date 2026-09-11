@@ -333,7 +333,8 @@
     // 调它的平衡会静默无效）。via 仍按枪口径（可被反弹/地雷）。
     if (key === SK.DUAL_GUN) return {
       amt: (def.dmg && def.dmg.amt) || 1, type: (def.dmg && def.dmg.type) || R.DMG.NORMAL,
-      pierce: def.pierce || {}, via: SK.DUAL_GUN
+      pierce: def.pierce || {}, via: SK.GUN   // ⚠️ via 必须是 SK.GUN：MINE_TRIGGER/REFLECTABLE 都按枪口径查表，
+      //    v1.3.19 误写成 SK.DUAL_GUN -> 双枪第一枪不触发地雷、也不被反弹（真 bug，N20b 抓出来）
     };
     if (key === SK.LASER_EYE) return { amt: 1, type: R.DMG.LIGHT, pierce: {}, via: SK.LASER_EYE };
     if (key === SK.CANNON) return { amt: 1, type: R.DMG.NORMAL, pierce: { defense: true, reflect: true }, via: SK.CANNON };
@@ -599,7 +600,7 @@
         case SK.DUAL_GUN: {                    // N3 双枪射手：对两个目标各一枪（走数据表，可被反弹/地雷）
           const t2 = (a.target2 != null && state.p[a.target2] && state.p[a.target2].hp > 0) ? a.target2 : null;
           const dgDef = R.byKey[SK.DUAL_GUN];
-          const dgDmg = { amt: (dgDef.dmg && dgDef.dmg.amt) || 1, type: (dgDef.dmg && dgDef.dmg.type) || R.DMG.NORMAL, source: i, via: SK.DUAL_GUN, pierce: dgDef.pierce || {} };
+          const dgDmg = { amt: (dgDef.dmg && dgDef.dmg.amt) || 1, type: (dgDef.dmg && dgDef.dmg.type) || R.DMG.NORMAL, source: i, via: SK.GUN, pierce: dgDef.pierce || {} };
           deliverDamage(state, Object.assign({}, dgDmg), t, { reason: '双枪射手' });
           if (t2 != null && t2 !== t) {
             deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.GUN }, t2, { reason: '双枪射手' });
