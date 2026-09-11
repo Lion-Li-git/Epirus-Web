@@ -129,13 +129,13 @@
     if ((opts.type === R.DMG.FIRE || opts.type === R.DMG.FIRELIGHT) && p.fireWeakNow) hit += 1;  // N18 藤甲
     if ((opts.type === R.DMG.LIGHT || opts.type === R.DMG.FIRELIGHT) && p.vampire) hit += 1;      // R47/N18 吸血鬼
     p.hp -= hit;
-    ev(state, { type: 'damage', to, amt: hit, reason, via: via || reason });
+    ev(state, { type: 'damage', to, amt: hit, reason, via: via || reason, source: (opts.source != null ? opts.source : null) });
     if (opts.chain !== false && p.chains && p.chains.length && !opts.fromChain) {
       for (const other of p.chains) {          // N8：铁索图不递归
         const op = state.p[other];
         if (op && op.hp > 0) {
           op.hp -= hit;
-          ev(state, { type: 'damage', to: other, amt: hit, reason: '铁索连环', via: 'chain', fromChain: true });
+          ev(state, { type: 'damage', to: other, amt: hit, reason: '铁索连环', via: 'chain', fromChain: true, source: (opts.source != null ? opts.source : null) });
         }
       }
     }
@@ -232,7 +232,7 @@
     // ---- 落点 ----
     // R47/N18：吸血鬼光伤 +1 与藤甲火伤 +1 统一在 rawDamage 处理
     const amt = dmg.amt;
-    rawDamage(state, to, dmg.amt, ctx.reason || via || '', via, { fromChain: dmg.fromChain, type: dmg.type });
+    rawDamage(state, to, dmg.amt, ctx.reason || via || '', via, { fromChain: dmg.fromChain, type: dmg.type, source: (dmg.source != null ? dmg.source : null) });
     // 地雷联动（直接攻击动作伤害落地才触发；反弹/转移/天火等不触发）
     if (!dmg.noMine && !dmg.fromChain && !dmg.reflected && dmg.source != null && dmg.source !== to) {
       if (via !== SK.SNIPE && MINE_TRIGGER.indexOf(via) >= 0 && target.mineArmed) {

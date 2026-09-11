@@ -113,6 +113,10 @@
       // 「上一招无效」显式编码
       me.lastSkill ? 0 : 1, op.lastSkill ? 0 : 1,
       me.ringStreak / 3, anyOp(function (o) { return o.ringStreak; }) / 3,
+      /* (a) 千问方案：**自己**是否正好跨得过聚能环启动线（费用 3）。
+       * 价值不是"告诉它能攒"，而是让"跨过 3"成为可被 value 区分的**离散事件**——
+       * 否则 ep 是连续输入，网络只能学出单调的"钱越多越好"，学不到"3 是质变点"。 */
+      (me.ep >= 3 && me.ringStreak === 0) ? 1 : 0,
       (me.cannonCount % 3) / 3, anyOp(function (o) { return o.cannonCount % 3; }) / 3,
       Math.min(cdCount(me), 6) / 6, Math.min(anyOp(cdCount), 6) / 6,
       me.mineArmed ? 1 : 0, anyOp(function (o) { return o.mineArmed ? 1 : 0; }),
@@ -268,7 +272,7 @@
     return fwd.argmaxKey;
   }
 
-  const PACK_VERSION = 5;   // v5：加对手槽位 + 技能历史 → FEAT_S 变化，旧冠军(v4/f62)不兼容   // v3：状态特征 +4 前摇威胁 → FEAT_S 变化，旧冠军(v2/f52)不兼容
+  const PACK_VERSION = 6;   // v6：加"自己跨得过环启动线"离散特征（千问 (a)）→ FEAT_S 变化，旧 v5 冠军不兼容
 
   /* 冠军包版本/维度校验：防止旧架构(33维特征→1177参数)被静默错位加载到新网络(52维→1633参数)。
    * 返回 {ok:true} 或 {ok:false, reason, got, want}。reason 取值：

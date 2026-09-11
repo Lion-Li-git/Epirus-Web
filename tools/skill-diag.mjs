@@ -21,15 +21,15 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
 vm.runInNewContext(readFileSync(FILE, 'utf8'), sb, { filename: FILE });
-const W = sb.window, R = W.EpirusRules, T = W.EpirusTrainer, P = W.EpirusPolicy;
+const W = sb.window, R = W.EpirusRules, T = W.EpirusTrainer, P = W.EpirusPolicy, S = W.EpirusState;
 const champ = P.unpack(W.EPIRUS_CHAMPION_3P);
 if (!champ) throw new Error('冠军解包失败');
 
 /* 技能费用表（用真实 computeCost 在“资源充足”状态下探一次） */
 function costOf(key) {
-  const st = sb.EpirusState.createState('multi', { next: T.mulberry32(1) }, N);
+  const st = S.createState('multi', { next: T.mulberry32(1) }, N);
   for (let i = 0; i < N; i++) { st.p[i].ep = 99; st.p[i].elec = 3; st.p[i].boom = 3; }
-  const c = sb.EpirusState.computeCost(st, 0, key);
+  const c = S.computeCost(st, 0, key);
   return c && c.ok ? c.ep : null;
 }
 
