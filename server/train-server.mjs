@@ -298,7 +298,12 @@ async function runTrainN(gens, cfg) {
   for (const h of hall) {
     const v = T.evalN(h.params, PAIRS, 20, n, 987654);
     for (const c of clients) sse(c, { type: 'seedEval', n: n, trainFit: h.fit, firstRate: v.firstRate, top2Rate: v.top2Rate });
-    candsN.push({ params: h.params, v: v, sc: v.firstRate + 0.5 * v.top2Rate, div: T.champEntropy(h.params, 0.15, 60, 31337, n) });
+    /* Q3：按类别取最差。类别①=脚本对手对（名次分），类别②=深经济探针（只打分贵技能用没用对）。
+     * 探针**必须进选择**——只作诊断就会复现"切片再多也没用"的老问题。 */
+    const pairSc = v.firstRate + 0.5 * v.top2Rate;
+    const pr = T.evalEconProbe(h.params, 6, n, 4242);
+    const scMin = Math.min(pairSc, pr.score);
+    candsN.push({ params: h.params, v: v, sc: scMin, pairSc: pairSc, probe: pr, div: T.champEntropy(h.params, 0.15, 60, 31337, n) });
   }
   // ===== 多目标择优：名次分容差带内取覆盖熵最高者（与 2 人路径同口径）=====
   if (candsN.length) {
@@ -307,8 +312,11 @@ async function runTrainN(gens, cfg) {
     bandN.sort(function (a, b) { return b.div.divNorm - a.div.divNorm; });
     const pk = bandN[0];
     finalParams = pk.params; ev = pk.v;
-    for (const c of clients) sse(c, { type: 'multiObj', n: n, top: topN, band: bandN.length, pickedWr: pk.v.firstRate, divNorm: pk.div.divNorm, distinct: pk.div.distinct });
-    console.log('[multiObj] n=' + n + ' 候选=' + candsN.length + ' 容差带=' + bandN.length + ' 选中 divNorm=' + pk.div.divNorm.toFixed(3) + ' 种类=' + pk.div.distinct + ' 1st=' + (pk.v.firstRate * 100).toFixed(1) + '%');
+    for (const c of clients) sse(c, { type: 'multiObj', n: n, top: topN, band: bandN.length, pickedWr: pk.v.firstRate, divNorm: pk.div.divNorm, distinct: pk.div.distinct, minSc: pk.sc, pairSc: pk.pairSc, probeSc: pk.probe.score });
+    console.log('[multiObj] n=' + n + ' 候选=' + candsN.length + ' 容差带=' + bandN.length +
+      ' 选中 min=' + pk.sc.toFixed(3) + '(对局=' + pk.pairSc.toFixed(3) + ' 探针=' + pk.probe.score.toFixed(3) + ')' +
+      ' divNorm=' + pk.div.divNorm.toFixed(3) + ' 种类=' + pk.div.distinct +
+      ' 1st=' + (pk.v.firstRate * 100).toFixed(1) + '%  探针: 贵技能出手/局=' + pk.probe.castPerGame.toFixed(2) + ' 落地/局=' + pk.probe.landPerGame.toFixed(2));
   }
   const pack = P.pack(finalParams);
   lastChampionPackN = pack;

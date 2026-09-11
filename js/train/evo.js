@@ -256,6 +256,68 @@
   }
 
   /* N 人一局：chooser[pid] 逐座位 */
+  /* ===== Q3 深经济探针（千问方案）=====
+   * 为什么需要：冠军一直在**原生经济**下被选出（终局 evalN 跑无补贴局）
+   * → 深经济能力在选择那一刻完全不可见。只靠回放切片让它"被看到"不够，
+   * 必须让它**进选择**。
+   * 口径（本人定义，已写入文档）：把冠军喂到 ep=5 并补珠，**只打分"是否用出贵技能"，不打分胜负**：
+   *   0.6 * min(1, 落地的高费技能数 / 2) + 0.4 * min(1, 出手的高费技能数 / 3)
+   * 其中"高费" = 费用 >= 3 ジ。 */
+  function evalEconProbe(params, games, n, seedBase) {
+    const N = (typeof n === 'number' && n > 2) ? n : 3;
+    let casts = 0, landed = 0, gamesRun = 0;
+    for (let g = 0; g < games; g++) {
+      const seat = g % N;
+      const inner = policyChooserN(params, 0.15, 0);
+      const ch = [];
+      const mk = function (pid) {
+        return function (state, id, legal) {
+          if (id === seat) {                       // 只给冠军补资源（不改规则，仅评测用）
+            const pl = state.p[seat];
+            pl.ep = Math.max(pl.ep, 5);
+            pl.elec = Math.max(pl.elec, 1);
+            pl.boom = Math.max(pl.boom, 1);
+          }
+          return inner(state, id, legal);
+        };
+      };
+      for (let pid = 0; pid < N; pid++) ch.push(mk(pid));
+      // 记录出手：包一层在 seat 的 chooser 上
+      const rec = { keys: [] };
+      const seatSel = ch[seat];
+      ch[seat] = function (state, id, legal) {
+        const a = seatSel(state, id, legal);
+        const k = (typeof a === 'string') ? a : a.key;
+        const c = S.computeCost(state, id, k);
+        rec.keys.push((c && c.ok && c.ep >= 3) ? k : null);
+        return a;
+      };
+      const r = oneGameN(ch, seedBase + g * 977, N);
+      for (let i = 0; i < rec.keys.length; i++) if (rec.keys[i]) casts++;
+      const heavyKeys = {};
+      for (const k of rec.keys) if (k) heavyKeys[k] = 1;
+      for (const e of r.state.events) {
+        if (e.type !== 'damage' || e.via == null) continue;
+        if (!heavyKeys[e.via]) continue;
+        const c2 = costOfKey(e.via, N);
+        if (c2 != null && c2 >= 3) landed++;
+      }
+      gamesRun++;
+    }
+    const castRate = gamesRun ? casts / gamesRun : 0;
+    const landRate = gamesRun ? landed / gamesRun : 0;
+    const score = 0.6 * Math.min(1, landRate / 2) + 0.4 * Math.min(1, castRate / 3);
+    return { score: score, casts: casts, landed: landed, games: gamesRun, castPerGame: castRate, landPerGame: landRate };
+  }
+
+  /* 某技能的真实费用（评测用） */
+  function costOfKey(key, n) {
+    const st = S.createState('multi', { next: mulberry32(7) }, (n > 2 ? n : 3));
+    for (let i = 0; i < st.p.length; i++) { st.p[i].ep = 99; st.p[i].elec = 3; st.p[i].boom = 3; }
+    const c = S.computeCost(st, 0, key);
+    return (c && c.ok) ? c.ep : null;
+  }
+
   function oneGameN(choosers, seed, n, opts) {
     const st = S.createState('multi', { next: mulberry32(seed) }, n, opts);
     Play.autoGameN(st, choosers);
@@ -670,7 +732,7 @@
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, costOfKey,
     scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);
