@@ -286,7 +286,7 @@
     if (!def) return null;
     if (key === SK.DUAL_GUN) return { amt: 1, type: R.DMG.NORMAL, pierce: {}, via: SK.GUN };  // 原文：只算一枪
     if (key === SK.LASER_EYE) return { amt: 1, type: R.DMG.LIGHT, pierce: {}, via: SK.LASER_EYE };
-    if (key === SK.CANNON) return { amt: 1, type: R.DMG.NORMAL, pierce: {}, via: SK.CANNON };
+    if (key === SK.CANNON) return { amt: 1, type: R.DMG.NORMAL, pierce: { defense: true, reflect: true }, via: SK.CANNON };
     if (def.dmg && def.dmg.amt) return { amt: def.dmg.amt, type: def.dmg.type, pierce: def.pierce || {}, via: key };
     return null;
   }
@@ -498,6 +498,22 @@
       }
     }
 
+    // ====== N20 过载炮反制（必须在 clashPass 之前）======
+    /* 过载炮 pri=3 高于 枪 pri=2，若先走 clashPass，炮会把枪作废，
+     * 反制就永远轮不到。用户设计：**任何攻击类技能都能抵消过载炮**，
+     * 所以反制必须提到相抵之前。 */
+    for (const i of turnOrder(state)) {
+      const a = actionOf(state, i);
+      if (!a || a.key !== SK.CANNON) continue;
+      const t = targetOf(state, i);
+      if (t == null) continue;
+      const tb = actionOf(state, t);
+      if (tb && R.ATK_EFFECT.indexOf(tb.key) >= 0) {
+        setVoid(state, i, '过载炮被攻击抵消');
+        ev(state, { type: 'cannonCountered', pid: i, by: t, key: tb.key });
+      }
+    }
+
     // ====== 攻击相抵/阻止（跨层统一）======
     clashPass(state);
 
@@ -565,7 +581,8 @@
         }
         case SK.CANNON: {
           const phase = a.phase || 1;
-          deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.CANNON }, t, { reason: '过载炮(第' + phase + '次)' });
+          // 反制已在 clashPass 之前处理；到这里说明对手没回击 → 打穿防御/反弹落 1 伤
+          deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.CANNON, pierce: { defense: true, reflect: true } }, t, { reason: '过载炮(第' + phase + '次)' });
           if (phase >= 3) { const lost = you.ep; you.ep = 0; ev(state, { type: 'ep', pid: t, delta: -lost, reason: '过载炮' }); }
           break;
         }

@@ -70,7 +70,7 @@
     mk(SK.FIRESTORM, '天火', CAT.SPECIAL, 2, 3, 'enemy', { desc: '引爆自己贴出且停留≤3回合的符咒，每枚 1 火伤（可被原型制御挡）；符咒仍存', gesture: '一手竖直敲击掌心' }),
     mk(SK.MINE, '地雷', CAT.SPECIAL, 3, 0, 'self', { desc: '被非狙击攻击时，攻击者受 1 火伤；可互触发但至多 2 次', gesture: '握拳+左手托底' }),
     mk(SK.TAUNT, '挑衅', CAT.SPECIAL, 2, 3, 'enemy', { desc: '目标下回合必须使用攻击类技能，否则 -1 血', gesture: '手背朝下回勾' }),
-    mk(SK.CANNON, '过载炮', CAT.SPECIAL, null, 3, 'enemy', { desc: '按使用次数循环：1 次 1伤；2 次 1伤+失ジ；3 次 1伤+失ジ+自损 1 血', gesture: '握拳手背朝下' }),
+    mk(SK.CANNON, '过载炮', CAT.SPECIAL, null, 3, 'enemy', { desc: '按使用次数循环：1 次 1伤；2 次 1伤+失ジ；3 次 1伤+失ジ+自损 1 血。**新规：可打穿防御与反弹，但会被任何攻击类技能抵消**', gesture: '握拳手背朝下' }),
     mk(SK.PURIFY, '净化', CAT.SPECIAL, 3, 1, 'self', { desc: '清除自身持续负面状态并移除身上符咒，每枚回复 1 血（n-1规则）', gesture: '双手正立相扣' }),
     // ---- 多人专用（2人局置灰）----
     mk(SK.DUAL_GUN, '双枪射手', CAT.ATTACK, 3, 3, 'enemy', { desc: '（多人）对两个角色同时使用“枪”', dmg: { amt: 1, type: DMG.NORMAL } }),

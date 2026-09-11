@@ -41,16 +41,26 @@ const PAIRS = [];
 for (let i = 0; i < BOTFN.length; i++) for (let j = i + 1; j < BOTFN.length; j++) PAIRS.push([BOTFN[i], BOTFN[j]]);
 
 /* 冠军 chooser，可附带「每回合补 ep」与「强制某技能」 */
-function makeSel(forceKey, rich) {
+function makeSel(forceKey, rich, seat) {
+  // 修正：冠军在 runCondition 里是**轮换座位**的，之前硬编码 pid===0 → seat!=0 时
+  // 冠军的决策被套在对手身上、自己却由脚本驱动，测量完全错位（基线只有 10% 的主因）。
   const inner = N > 2 ? T.policyChooserN(champ, TEMP) : null;
-  const sel2 = inner || null;
   const fn = function (state, pid, legal) {
-    if (rich) for (let i = 0; i < state.p.length; i++) state.p[i].ep = Math.max(state.p[i].ep, RICH);
-    if (pid !== 0) {
+    if (rich && pid === seat) {
+      // 只给冠军补资源（之前给所有人补 → 脚本对手远超分布变强，把基线压到 10%）
+      const pl = state.p[seat];
+      pl.ep = Math.max(pl.ep, RICH);
+      const d = forceKey ? R.byKey[forceKey] : null;      // 珠类技能要同时补珠，否则强制也没用
+      if (d && d.energyNeeds) {
+        if (d.energyNeeds.elec) pl.elec = Math.max(pl.elec, 1);
+        if (d.energyNeeds.boom) pl.boom = Math.max(pl.boom, 1);
+      }
+    }
+    if (pid !== seat) {
       if (inner) return inner(state, pid, legal);
-      const aff = legal.filter(function (l) { return l.affordable; });
-      const base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
-      return P.choose(state, pid, base, champ, { temp: TEMP });
+      const aff2 = legal.filter(function (l) { return l.affordable; });
+      const base2 = aff2.length ? aff2 : [{ key: R.SK.JI, affordable: true }];
+      return P.choose(state, pid, base2, champ, { temp: TEMP });
     }
     const aff = legal.filter(function (l) { return l.affordable; });
     let base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
@@ -81,7 +91,7 @@ function runCondition(forceKey, rich, seedBase) {
       const choosers = [];
       let oi = 0;
       for (let pid = 0; pid < N; pid++) {
-        if (pid === seat) choosers.push(makeSel(forceKey, rich));
+        if (pid === seat) choosers.push(makeSel(forceKey, rich, seat));
         else { choosers.push(T.wrapBotN(B[pair[oi % pair.length]])); oi++; }
       }
       const r = T.oneGameN(choosers, seedBase + g * 977 + total, N);
@@ -136,7 +146,10 @@ for (const k of SKILLS) {
 /* ② 分类：坑 / 主力 / 没学会的强招 / 死技能 */
 for (const r of rows) {
   const hi = r.use >= 0.04, pos = r.delta > 0.005, neg = r.delta < -0.005;
-  r.verdict = hi && neg ? '坑（在自残）' : hi && pos ? '主力（强且常用）' : hi ? '中性常用'
+  /* 基础动作（费用 0）除外：强制 mono-spam 任何单一动作必然不如混合策略，
+   * 那不是“坑”而是评测口径的必然结果。只有费用>0 的技能才适合读“常用却亏”。 */
+  if (r.cost === 0) { r.verdict = hi ? '基础动作（mono-spam 必然变差）' : '边缘'; continue; }
+  r.verdict = hi && neg ? '坑（常用却亏）' : hi && pos ? '主力（强且常用）' : hi ? '中性常用'
     : !hi && pos ? '没学会的强招' : !hi && neg ? '死技能（弱且不用）' : '边缘';
 }
 
@@ -145,7 +158,7 @@ const esc = function (s) { return String(s).replace(/[&<>]/g, function (c) { ret
 const maxAbsDelta = Math.max(0.01, ...rows.map(function (r) { return Math.abs(r.delta); }));
 const maxUse = Math.max(0.01, ...rows.map(function (r) { return r.use; }));
 const bar = function (v, mx, color) { const w = Math.abs(v) / mx * 100; return '<div class="barwrap"><div class="bar ' + color + '" style="width:' + w.toFixed(1) + '%"></div></div>'; };
-const VCOLOR = { '坑（在自残）': '#e5484d', '主力（强且常用）': '#30a46c', '中性常用': '#8b8d98', '没学会的强招': '#f5a623', '死技能（弱且不用）': '#6b4fbb', '边缘': '#555' };
+const VCOLOR = { '坑（常用却亏）': '#e5484d', '主力（强且常用）': '#30a46c', '中性常用': '#8b8d98', '没学会的强招': '#f5a623', '死技能（弱且不用）': '#6b4fbb', '基础动作（mono-spam 必然变差）': '#3a4252', '边缘': '#555' };
 
 let html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>Epirus AI 训练分析报告</title>';
 html += '<style>body{background:#0d0f14;color:#dfe2ea;font:14px/1.6 system-ui,"Microsoft YaHei",sans-serif;margin:0;padding:24px}';
@@ -183,13 +196,13 @@ for (const r of rows) {
   html += '<td><span class="tag" style="background:' + VCOLOR[r.verdict] + '">' + r.verdict + '</span></td></tr>';
 }
 html += '</table>';
-html += '<div class="legend"><b>怎么读：</b>左柱 = AI 实际多久用一次（原生经济）；右柱 = 强制用它时的胜率变化（富经济，绿色涨 / 红色跌）。';
+html += '<div class="legend"><b>口径说明：</b>Δ 是“强制只用这一招”对“自由发挥”的差，所以**基础动作（如 ジ）强制 spam 必然大幅为负，那不是坑**。真正有意义的是排序：Δ 越接近 0 或为正，说明这一招单独就能顶上整套混合策略。<br><br><b>怎么读：</b>左柱 = AI 实际多久用一次（原生经济）；右柱 = 强制用它时的胜率变化（富经济，绿色涨 / 红色跌）。';
 html += '<br><b>红色「坑」</b>= 常用但用了反而亏 → AI 在自残，应该修训练或规则；<b>橙色「没学会的强招」</b>= 明明更强却几乎不用 → 探索/经济没铺到；';
 html += '<b>绿色「主力」</b>= 又强又常用，健康；<b>紫色「死技能」</b>= 又弱又不用，设计上没被激活。</div>';
 html += '</body></html>';
 writeFileSync(OUT, html, 'utf8');
 console.log('\n已写出 ' + OUT + '（' + html.length + ' 字节）');
-const pits = rows.filter(function (r) { return r.verdict === '坑（在自残）'; });
+const pits = rows.filter(function (r) { return r.verdict === '坑（常用却亏）'; });
 const unseen = rows.filter(function (r) { return r.verdict === '没学会的强招'; });
 console.log('坑（常用却亏损）: ' + (pits.map(function (r) { return r.name + ' ' + (r.delta * 100).toFixed(1) + 'pt'; }).join(', ') || '无'));
 console.log('没学会的强招  : ' + (unseen.map(function (r) { return r.name + ' +' + (r.delta * 100).toFixed(1) + 'pt'; }).join(', ') || '无'));

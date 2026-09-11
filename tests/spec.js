@@ -471,6 +471,27 @@
     eq(st.p[0].hp, 2, '铁索把爆头共享给另一方');
   });
 
+  t('过载炮新规：打穿防御与反弹，但被任何攻击类技能抵消', function () {
+    // ① 打穿防御
+    let st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
+    play(st, R.SK.CANNON, R.SK.GUARD);
+    eq(st.p[1].hp, 2, '过载炮应穿过防御造成 1 伤');
+    // ② 打穿反弹（且不被反弹回打）
+    st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
+    play(st, R.SK.CANNON, R.SK.REFLECT);
+    eq(st.p[1].hp, 2, '过载炮应穿过反弹造成 1 伤');
+    eq(st.p[0].hp, 3, '反弹不应回打施法者');
+    // ③ 被任意攻击类技能抵消：对手回击 → 炮哑火
+    st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
+    play(st, R.SK.CANNON, R.SK.GUN);
+    eq(st.p[1].hp, 3, '对手回击时过载炮应被抵消，目标不掉血');
+    ok(st.p[0].hp <= 2, '回击的枪应命中施法者');
+    // ④ 大雷（附加效果）不属于 ATK_EFFECT，不能抵消过载炮的“回击”条件
+    st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
+    ok(R.ATK_EFFECT.indexOf(R.SK.BIG_T) < 0, '大雷不在 ATK_EFFECT 里');
+    ok(R.ATK_EFFECT.indexOf(R.SK.CANNON) >= 0, '过载炮自身属于 ATK_EFFECT');
+  });
+
   /* ============ 输出 ============ */
   const pass = results.filter(r => r.ok).length;
   const html = '<div class="sum">通过 ' + pass + ' / ' + results.length + '</div><ol>' +
@@ -479,5 +500,6 @@
         ? '<li class="pass">✔ ' + r.name + '</li>'
         : '<li class="fail">✘ ' + r.name + '<details><div><pre>' + (r.err || '') + '</pre></div></details></li>';
     }).join('') + '</ol>';
+
   document.getElementById('out').innerHTML = html;
 })();
