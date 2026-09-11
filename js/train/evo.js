@@ -579,10 +579,31 @@
     for (const c of pool) if (c.score > topScore) topScore = c.score;
     const band = pool.filter(function (c) { return c.score >= topScore - WR_TOL; });
     let bestDiv = -1, bestDivNorm = 0, bestDistinct = 0;
-    for (const c of band) {
+    /* 头对头验收（2/3 人实测都需要的保险）：
+     * 1st+0.5*top2 这类名次指标**不能完整代表头对头强度**——3 人侧实测容差带内的
+     * 最发散候选虽然指标够格，却被 2 倍数量的强候选打成 17:62。
+     * 故：带内候选必须与「最高分候选」对拼 >= H2H_MIN 才允许被选中，否则顺延到下一个。 */
+    const H2H_MIN = 0.5;
+    const topCand = pool.reduce(function (a, b) { return b.score > a.score ? b : a; });
+    const topSel = policyChooser(topCand.params, 0.15);
+    const ranked = band.slice().sort(function (a, b) {
+      return champEntropy(b.params, 0.15, 60, seedBase + 7777).divNorm - champEntropy(a.params, 0.15, 60, seedBase + 7777).divNorm;
+    });
+    let h2hNote = null;
+    for (const c of ranked) {
       const e = champEntropy(c.params, 0.15, 60, seedBase + 7777);
-      if (e.divNorm > bestDiv) { bestDiv = e.divNorm; best = c.params; bestScore = c.score; bestWr = c.wr; bestMin = c.minWr; bestDetail = c.detail; bestDivNorm = e.divNorm; bestDistinct = e.distinct; }
+      let ok = true, h2h = null;
+      if (c !== topCand && c.params !== topCand.params) {
+        const r = correctedWinRate(topSel, policyChooser(c.params, 0.15), 60, seedBase + 4242);
+        h2h = r.wr;
+        ok = r.wr >= H2H_MIN;
+      }
+      if (!ok) { h2hNote = (h2hNote || '') + ' [跳过 divNorm=' + e.divNorm.toFixed(3) + ' 把头对头仅 ' + (h2h * 100).toFixed(0) + '%]'; continue; }
+      best = c.params; bestScore = c.score; bestWr = c.wr; bestMin = c.minWr; bestDetail = c.detail;
+      bestDivNorm = e.divNorm; bestDistinct = e.distinct; bestDiv = e.divNorm; break;
     }
+    if (!best) { best = topCand.params; bestScore = topCand.score; bestWr = topCand.wr; bestMin = topCand.minWr; bestDetail = topCand.detail; bestDivNorm = 0; bestDistinct = 0; }
+    if (h2hNote) console.log('[多目标] 头对头验收拦截:' + h2hNote);
     if (best) { t.divNorm = bestDivNorm; t.distinct = bestDistinct; t.bandSize = band.length; }
     if (best) { t.champion = best.slice(); t.bestChamp = best.slice(); t.bestChampScore = bestScore; }
     return { champion: best, wr: bestWr, minWr: bestMin, score: bestScore, detail: bestDetail };
