@@ -52,40 +52,6 @@
 
   /* 困难难度出招：冠军（贪心）；未训练则回退 balanced 并提示 —— championChooser 已废弃（旧版未过滤“可负担”会贷款），使用 ui.js 的正确出招。 */
 
-  /* 异步分帧训练：每帧最多跑 budgetMs 毫秒，避免卡死 UI。
-   * onProgress(rec) 每代回调；resolve 在达到 gens 或中途停止时给出 summary。 */
-  function startTraining(opts, onProgress) {
-    opts = opts || {};
-    const gens = opts.gens || 120;
-    const mode = opts.mode || 'standard';
-    const t = Trainer.makeTrainer({
-      popSize: opts.popSize || 14,
-      gamesPerOpp: opts.gamesPerOpp || 5,
-      playoffGames: opts.playoffGames || 30,
-      mode: mode,
-      champion: opts.champion || store.load() || P.makePolicy(0.2)
-    });
-    // 持续训练：已有冠军则围绕它热启动种群（而非每次全部随机）
-    if (store.load() || opts.champion) Trainer.seedChampion(t, t.champion);
-    let stopped = false;
-    const stopFlag = { stop: function () { stopped = true; } };
-
-    function frame(resolve) {
-      const t0 = Date.now();
-      let done = false;
-      while (!stopped && t.gen < gens && Date.now() - t0 < (opts.budgetMs || 60)) {
-        const rec = Trainer.step(t);
-        if (onProgress) onProgress(rec, t);
-      }
-      if (stopped || t.gen >= gens) {
-        done = true;
-        store.save(t.champion);
-      }
-      if (done) resolve({ trainer: t, stopped: stopped, gens: t.gen });
-      else setTimeout(function () { frame(resolve); }, 0);
-    }
-    return { promise: new Promise(frame), trainer: t, stop: stopFlag };
-  }
 
   /* 同步快速评测：冠军 vs 全部脚本基准 */
   function quickEval(games, seedBase) {
@@ -168,5 +134,8 @@
     } catch (e) { /* ignore */ }
   }
 
-  global.EpirusChampion = { store, startTraining, quickEval, trainingCSV, saveTrainLogCSV };
+  /* v1.4.13：删掉死代码 `startTraining`（v1.3.56 查实零调用方；本轮再查全仓仍只有"定义 + 导出"）。
+   * 它曾经误导过一次归因：把"训练在跑"算到浏览器内的它头上，而实际跑的是 server。
+   * 保留 quickEval / trainingCSV / saveTrainLogCSV —— 这三个有调用方。 */
+  global.EpirusChampion = { store, quickEval, trainingCSV, saveTrainLogCSV };
 })(typeof window !== 'undefined' ? window : globalThis);
