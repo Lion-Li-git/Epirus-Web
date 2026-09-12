@@ -49,7 +49,10 @@ const ALL = [
   ['random', Bots.pickRandom], ['aggro', Bots.pickAggro], ['defend', Bots.pickDefend],
   ['balanced', Bots.pickBalanced], ['antidef', Bots.pickAntiDef], ['breakdef', Bots.pickBreakDef],
   ['wall', Bots.pickWall], ['mix', Bots.pickMix], ['farmer', Bots.pickFarmer],
-  ['tankline', Bots.pickTankLine], ['heavyfire', Bots.pickHeavyFire], ['deepsaver', Bots.pickDeepSaver]
+  ['tankline', Bots.pickTankLine], ['heavyfire', Bots.pickHeavyFire], ['deepsaver', Bots.pickDeepSaver],
+  /* v1.3.60：集火脚本。转移伤害的价值 ∝ 本回合承伤 N，而 pickFocusFire 的注释写明
+   * "当前 meta 里 N>=2 的唯一常见来源就是被集火" ⇒ 它是转移伤害的**前置条件提供者**。 */
+  ['focusfire', Bots.pickFocusFire]
 ];
 /* "深经济对手"的定义：会攒钱**并且**会把攒的钱换成重击。farmer 只攒不还手，不算。 */
 const DEEP = { deepsaver: 1, heavyfire: 1 };
@@ -65,6 +68,83 @@ const combos = [];
   if (cur.length === 4) { combos.push(cur.slice()); return; }
   for (let i = start; i < poolNames.length; i++) { cur.push(poolNames[i]); rec(i + 1, cur); cur.pop(); }
 })(0, []);
+
+/* ===== --field=<preset>：把对手场换成**能提供前置条件**的场（用户 2026-09-12 提出的问题）=====
+ * 动机：转移伤害 / 藤甲 这类卡的价值是**条件性**的 ——
+ *   转移伤害 的价值 ∝ 本回合承伤 N ⇒ 需要"被集火"或"被高伤单体打"；
+ *   藤甲 的价值 = 目标下回合受**火焰**伤害 +1 ⇒ 需要同局有铺雷/天火来源。
+ * 在中性考卷上它们的 Δ 会把"前置条件不存在"误读成"这张卡没用"。
+ * 预设场用**允许重复**的 4 槽（默认考卷是 4 个互不相同的脚本，重复不了）。 */
+/* 定向集火**主体座位**的攻击者（实验器材，不是可训练策略，故不进 bots.js）。
+ * 为什么不能用现成的 pickFocusFire：它打"血量最低"的对手，4 个集火脚本会互相打成那个最低的
+ * ⇒ 集火根本没集到主体身上。实测（v1.3.60）：focusfire 场主体场均承伤 1.50，
+ * 反而**低于**中性场的 2.53，转移事件 0、火焰事件 0 —— 前置条件没造出来。 */
+function makeFocusMe(seat) {
+  return function (state, pid, legal) {
+    if (seat === pid || !state.p[seat] || state.p[seat].hp <= 0) return Bots.pickRandom(state, pid, legal);
+    const by = {};
+    for (const l of legal) by[l.key] = l;
+    /* 优先高伤单体（把单回合 N 抬到 2），否则枪（1 伤）。
+     * 用户要测的正是"集火**或高伤害**"——两种来源都覆盖。 */
+    for (const k of [R.SK.BIG_T, R.SK.RAILGUN, R.SK.TANK, R.SK.SNIPE, R.SK.DUAL_GUN, R.SK.GUN]) {
+      if (by[k] && by[k].affordable) return { key: k, target: seat };
+    }
+    return { key: R.SK.JI, target: null };
+  };
+}
+/* ===== --smart=<卡>:<条件> —— **正确用法**口径（用户 2026-09-12 问题的核心）=====
+ * 为什么必须有它：`--inject` 是贪心的（能买就放）。对 转移伤害 这类**反应型**卡，
+ * 贪心 = 每回合都放 = 全程不攻击 ⇒ 无论前置条件多充分都必然输。
+ * 实测 regen=1 时贪心注入产出 370 次转移事件，1st 仍只有 3.9%（基线 19.4%）——
+ * 那个数只证明"贪心误用很糟"，**不能**回答"这卡对不对"。
+ * 条件写法：`2` = 上一回合我实际承伤 >= 2；`hp1` = 我 hp <= 1（濒死才转）。 */
+const SMART = FLAG.smart || '';
+const SM = SMART ? SMART.split(':') : null;
+const SM_ST = { cand: 0, hit: 0, lastTakenSum: 0, fired: 0 };
+function buildSmartSel() {   // 工厂函数（hoisted）：PAY_KEY 在**调用时**才解析，
+  const k = PAY_KEY[SM[0]];  // 否则就是 TDZ —— 本会话第三次踩（ARGV / injectSel / 这里）
+  if (!k) { console.error('--smart 未知卡: ' + SM[0] + '（可选: ' + Object.keys(PAY_KEY).join(' ') + '）'); process.exit(1); }
+  const cond = SM[1] || '2';
+  const hpMode = /^hp(\d+)$/.exec(cond);
+  const thr = hpMode ? Number(hpMode[1]) : Number(cond);
+  return function () {
+    const inner = T.policyChooserN(params, 0.15);
+    let seenRound = -1, evIdx = 0, curTaken = 0, lastTaken = 0;
+    return function (state, pid, legal) {
+      while (evIdx < state.events.length) {
+        const e = state.events[evIdx++];
+        if (e.type === 'damage' && e.to === pid) curTaken += e.amt;
+      }
+      if (state.round !== seenRound) { lastTaken = curTaken; curTaken = 0; seenRound = state.round; }
+      SM_ST.cand++;
+      const by = {};
+      for (const l of legal) by[l.key] = l;
+      const want = hpMode ? (state.p[pid].hp <= thr) : (lastTaken >= thr);
+      if (want && by[k] && by[k].affordable) {
+        SM_ST.hit++; SM_ST.lastTakenSum += lastTaken;
+        return { key: k, target: T.pickTargetN(state, pid, k), target2: null };
+      }
+      return inner(state, pid, legal);
+    };
+  };
+}
+const REGEN = Number(FLAG.regen || 0);   // 每回合回 ep（0 = 与线上规则一致）
+const FIELD = FLAG.field || '';
+const FIELDS = {
+  focusfire: ['focusfire', 'focusfire', 'focusfire', 'focusfire'],
+  focusme:   ['focusme', 'focusme', 'focusme', 'focusme'],   // 4 个定向打主体的攻击者（太狠：实测冠军 5th 95%，秒杀）
+  /* N=4 会把主体第 1~2 回合就打死，什么也测不到；转移伤害的盈亏平衡点是 **N≥2**
+   * （承伤 N 时省 N + 转出 N = 摆幅 2N，每ジ收益 N；枪是每ジ 1 ⇒ N≥1 就该赚，
+   *  实测 avg 每次只转 1 点，真实条件是"同回合有 ≥2 点可转"）⇒ 用 2 个攻击者 + 2 个中性。 */
+  focusme2:  ['focusme', 'focusme', 'random', 'defend'],
+  tank:      ['tankline', 'tankline', 'tankline', 'tankline'],
+  mine:      ['aggro', 'defend', 'antidef', 'wall']    // 这四个脚本都有铺雷分支（bots.js:114/125/146/214）
+};
+if (FIELD) {
+  if (!FIELDS[FIELD]) { console.error('--field 未知: ' + FIELD + '（可选: ' + Object.keys(FIELDS).join(' ') + '）'); process.exit(1); }
+  combos.length = 0;
+  combos.push(FIELDS[FIELD]);
+}
 
 /* 脚本 chooser 包一层：与 evo.wrapBotN 同规则，但**保留脚本自己选的目标**
  * （v1.3.55 修好了 wrapBotN；这里独立实现，避免评测反过来依赖被测代码） */
@@ -88,6 +168,9 @@ function runSubject(makeSel, label) {
   let maxEp = 0, epGe3 = 0, decisions = 0;
   let deepGames = 0, deepFirst = 0, shallowGames = 0, shallowFirst = 0;
   let total = 0;
+  /* v1.3.60 前置条件自检：没有这三个数，"条件性卡的 Δ" 无法解释 ——
+   * 中性场上 转移伤害 的 Δ=−30.8pt 完全可能只是"前置条件不存在"。 */
+  let takenSum = 0, transferEv = 0, fireEv = 0, takenGames = 0;
   for (const combo of combos) {
     const hasDeep = combo.some(function (nm) { return !!DEEP[nm]; });
     for (let g = 0; g < GAMES; g++) {
@@ -114,14 +197,26 @@ function runSubject(makeSel, label) {
             if (c && c.ok && c.ep >= 3) cost3Picks.n++;
             return a;
           });
-        } else { choosers.push(asChooser(FN[field[oi % field.length]])); oi++; }
+        } else {
+          const nm = field[oi % field.length];
+          choosers.push(asChooser(nm === 'focusme' ? makeFocusMe(seat) : FN[nm]));
+          oi++;
+        }
       }
-      const r = T.oneGameN(choosers, SEED + g * 977 + total, N);
+      /* --regen=N：每回合给所有人 +N ep（对应 evo.regenForGame 的补贴切片）。
+       * 用途：检验"某张卡难用"到底是**卡本身**的问题，还是**攒不起钱**（经济锁）的问题。 */
+      const r = T.oneGameN(choosers, SEED + g * 977 + total, N, REGEN ? { regen: REGEN } : undefined);
       const rank = T.rankOf(r.state, seat, SEED + g * 977 + total);   // v1.3.57: 名次平局用本局种子洗牌（pid 中性）
       ranks[rank - 1]++;
       seatGames[seat]++; if (rank === 1) seatFirst[seat]++;
       if (hasDeep) { deepGames++; if (rank === 1) deepFirst++; }
       else { shallowGames++; if (rank === 1) shallowFirst++; }
+      for (const e of r.state.events) {
+        if (e.type === 'damage' && e.to === seat) takenSum += e.amt;
+        if (e.type === 'damage' && (e.via === R.SK.MINE || e.via === R.SK.FIRESTORM)) fireEv++;
+        if (e.type === 'transfer') transferEv++;
+      }
+      takenGames++;
       total++;
     }
   }
@@ -131,6 +226,7 @@ function runSubject(makeSel, label) {
     maxEp: maxEp, epGe3: epGe3, cost3: cost3Picks.n, epBands: epBands,
     seatFirst: seatFirst, seatGames: seatGames,
     deepGames: deepGames, deepFirst: deepFirst, shallowGames: shallowGames, shallowFirst: shallowFirst,
+    takenPerGame: takenGames ? takenSum / takenGames : 0, transferEv: transferEv, fireEv: fireEv,
     firstRate: total ? ranks[0] / total : 0,
     top2Rate: total ? (ranks[0] + ranks[1]) / total : 0,
     top3Rate: total ? (ranks[0] + ranks[1] + ranks[2]) / total : 0,
@@ -143,6 +239,8 @@ console.log('=== ' + N + ' 人局评测 ===');
 console.log('主体: ' + FILE);
 console.log('meta: ' + (metaM ? metaM[1] : '{}'));
 console.log('对手池(' + poolNames.length + '): ' + poolNames.join(' '));
+if (FIELD) console.log('!! 前置条件场 --field=' + FIELD + ' : ' + FIELDS[FIELD].join(' ') + '（允许重复）');
+if (REGEN) console.log('!! 经济补贴 regen=' + REGEN + ' ep/回合（全体，非线上规则）');
 console.log('对手场 = 4 个互不相同的脚本，全部 ' + combos.length + ' 组合 × ' + GAMES + ' 局 = ' +
   (combos.length * GAMES) + ' 局；含深经济对手的组合 ' + hasDeepInExam + '/' + combos.length);
 console.log('随机基线（5 人局）: 1st 20.0% / top2 40.0% / top3 60.0%');
@@ -178,7 +276,9 @@ const SUBJECT = FLAG.subject || '';
 const PAYLOAD = FLAG.payload || '';
 if (SUBJECT && !FN[SUBJECT]) { console.error('--subject 未知脚本: ' + SUBJECT + '（可选: ' + ALL.map(function (x) { return x[0]; }).join(' ') + '）'); process.exit(1); }
 const PAY_KEY = { bigT: R.SK.BIG_T, tank: R.SK.TANK, railgun: R.SK.RAILGUN, snipe: R.SK.SNIPE, dualGun: R.SK.DUAL_GUN, laserEye: R.SK.LASER_EYE, mirror: R.SK.MIRROR,
-  armor: R.SK.ARMOR, mine: R.SK.MINE, transfer: R.SK.TRANSFER };   // v1.3.59：用户点名的藤甲/地雷/转移三张多人卡
+  armor: R.SK.ARMOR, mine: R.SK.MINE, transfer: R.SK.TRANSFER,     // v1.3.59：用户点名的藤甲/地雷/转移三张多人卡
+  reflect: R.SK.REFLECT, guard: R.SK.GUARD, ring: R.SK.RING,        // v1.3.60：费用 0 的防御族对照（反弹 vs 藤甲）
+  curse: R.SK.CURSE, firestorm: R.SK.FIRESTORM };                   // v1.3.60：**贴贴(符咒) × 天火(引爆)** 组合对
 /* ===== 边际注入（v1.3.59，用户要的"边际价值"口径）=====
  * 为什么需要：`--payload` 的 saver 架构是"一直出ジ，攒够就打 payload"。
  * 对**纯辅助/防御**卡（藤甲/转移/地雷）这等于**全程不攻击** ⇒ 测出来的是
@@ -204,7 +304,67 @@ const injectSel = !INJECT ? null : (function () {   // 惰性：无 --inject 时
     };
   };
 })();
-const subjectSel = (INJECT && !PAYLOAD)
+/* ===== --combo=<name>：**组合技主体**（用户 2026-09-12：这类卡需要专门的脚本）=====
+ * 为什么 mono-spam 原理上测不到它：贴贴×天火的价值来自一条**轨迹** ——
+ *   「先贴 N 枚符咒，再每回合引爆 N 点火伤」（天火"符咒仍存"，可重复引爆到 age>3）。
+ * 单动作口径只能表达"一直贴"或"一直引爆"，两者都接近什么都不做
+ * ⇒ 旧报告把两张卡都判成"辅助/防御（Δ 结构性为负）"，那不是结论，是口径的表达能力上限。
+ * 本主体：已有我的符咒 → 天火引爆；否则 → 贴贴给血最少的对手；其余回合照打冠军策略。 */
+const COMBO = FLAG.combo || '';
+const COMBO_ST = { curse: 0, detonate: 0, save: 0, dec: 0 };
+const STACK = Number((COMBO.split(':')[1]) || 3);   // 先叠几张符咒再进引爆循环
+function buildComboSel() {
+  return function () {
+    const inner = T.policyChooserN(params, 0.15);
+    return function (state, pid, legal) {
+      COMBO_ST.dec++;
+      const by = {};
+      for (const l of legal) by[l.key] = l;
+      const mine = [];
+      for (const o of S.opponentsOf(state, pid)) {
+        let n = 0;
+        const st = state.p[o].stickers || [];
+        for (const x of st) if (x.owner === pid && x.age <= 3) n++;
+        if (n > 0) mine.push({ o: o, n: n });
+      }
+      mine.sort(function (a, b) { return (state.p[a.o].hp - state.p[b.o].hp) || (b.n - a.n); });
+      const FS = by[R.SK.FIRESTORM], CU = by[R.SK.CURSE];
+      const JI = by[R.SK.JI];
+      /* ⚠️ 第一版在这里错了：见 CU 能买就贴 ⇒ 永远停在 1 ジ，攒不到天火的 2 ジ。
+       * 实测 23031 次决策里贴符咒 10907 次、天火只引爆 **8** 次（1st 0.1%）。
+       * 组合技**必须先承诺攒钱**（ep 的唯一来源是 ジ 的 +1，`resolve.js:501`），
+       * 与 evo.js 的 makeCommitChooser"承诺级 ε"是同一件事。 */
+      /* 叠层数：1 张符咒 = 天火每 3 回合 1 点火伤（0.33 伤/回合，实测 1st 5.5%）；
+       * 必须先叠到 N 张再进引爆循环，N 张 = 每次引爆 N 点火伤。
+       * 这是"轨迹"，单动作口径永远表达不了 —— 也正是用户说需要专门脚本的原因。 */
+      const stk = mine.length ? mine[0].n : 0;
+      if (stk >= STACK) {
+        if (FS && FS.affordable) { COMBO_ST.detonate++; return { key: R.SK.FIRESTORM, target: mine[0].o, target2: null }; }
+        COMBO_ST.save++;
+        if (JI && JI.affordable) return { key: R.SK.JI, target: null, target2: null };
+        return inner(state, pid, legal);
+      }
+      if (CU && CU.affordable) {
+        const opp = S.opponentsOf(state, pid).slice().sort(function (a, b) { return state.p[a].hp - state.p[b].hp; });
+        COMBO_ST.curse++;
+        return { key: R.SK.CURSE, target: opp[0], target2: null };
+      }
+      COMBO_ST.save++;
+      if (JI && JI.affordable) return { key: R.SK.JI, target: null, target2: null };
+      return inner(state, pid, legal);
+    };
+  };
+}
+const comboLabel = '组合技·贴贴×天火';
+const comboOk = COMBO === '' || COMBO === 'curseStorm' || /^curseStorm:\d+$/.test(COMBO);
+if (COMBO && !comboOk) { console.error('--combo 未知: ' + COMBO + '（可选: curseStorm）'); process.exit(1); }
+const comboSubjectSel = (!COMBO || !comboOk) ? null : buildComboSel();
+const smartSel = !SM ? null : buildSmartSel();     // 必须在 PAY_KEY 声明之后
+const subjectSel = (COMBO && !PAYLOAD && !INJECT && !SMART)
+  ? comboSubjectSel
+  : (SMART && !PAYLOAD && !INJECT)
+  ? smartSel
+  : (INJECT && !PAYLOAD)
   ? injectSel
   : PAYLOAD
   ? (function () {
@@ -215,7 +375,10 @@ const subjectSel = (INJECT && !PAYLOAD)
   : (SUBJECT
     ? function () { return asChooser(FN[SUBJECT]); }
     : function () { return T.policyChooserN(params, 0.15); });
-const subjectLabel = PAYLOAD ? ('消融·只换弹头 ' + PAYLOAD) : INJECT ? ('边际注入·能用就用 ' + INJECT) : (SUBJECT ? ('脚本 ' + SUBJECT) : '冠军');
+const subjectLabel = PAYLOAD ? ('消融·只换弹头 ' + PAYLOAD)
+  : (COMBO && !INJECT && !SMART) ? (comboLabel + ' 叠' + STACK)
+  : (SMART && !INJECT) ? ('正确用法 ' + SMART)
+  : INJECT ? ('边际注入·能用就用 ' + INJECT) : (SUBJECT ? ('脚本 ' + SUBJECT) : '冠军');
 const champ = runSubject(subjectSel, subjectLabel);
 const ctrl = runSubject(function () { return asChooser(Bots.pickRandom); }, '对照 pickRandom');
 
@@ -225,11 +388,21 @@ for (const s of [champ, ctrl]) {
     '  4th=' + s.pct(s.ranks[3], s.total) + '  5th=' + s.pct(s.ranks[4], s.total) +
     '   | top2=' + s.pct(s.ranks[0] + s.ranks[1], s.total) + ' top3=' + s.pct(s.ranks[0] + s.ranks[1] + s.ranks[2], s.total));
   console.log('    各座位 1st 率: ' + s.seatGames.map(function (g, i) { return 'P' + i + '=' + s.pct(s.seatFirst[i], g); }).join(' '));
+  console.log('    前置条件: 主体场均承伤=' + s.takenPerGame.toFixed(2) + '  转移事件=' + s.transferEv + '  火焰伤害事件=' + s.fireEv);
   console.log('    拆分: 含深经济对手 ' + s.pct(s.deepFirst, s.deepGames) + '（' + s.deepGames + ' 局）  vs  不含 ' +
     s.pct(s.shallowFirst, s.shallowGames) + '（' + s.shallowGames + ' 局）  Δ=' +
     ((s.deepGames && s.shallowGames) ? ((s.deepFirst / s.deepGames - s.shallowFirst / s.shallowGames) * 100).toFixed(1) + 'pt' : '-'));
 }
 
+if (COMBO && !PAYLOAD && !INJECT && !SMART) {
+  console.log('[组合技自检] 叠层=' + STACK + ' 决策 ' + COMBO_ST.dec + ' 次：贴符咒 ' + COMBO_ST.curse + ' 次、攒钱(ジ) ' + COMBO_ST.save + ' 次、天火引爆 ' + COMBO_ST.detonate + ' 次' +
+    (COMBO_ST.detonate === 0 ? '   !!! 从未引爆 => 组合从未走通，Δ 不可读' : '   OK 组合跑通了'));
+}
+if (SMART && !PAYLOAD && !INJECT) {
+  console.log('[正确用法自检] 决策 ' + SM_ST.cand + ' 次，条件成立且可负担 ' + SM_ST.hit + ' 次 = ' +
+    (SM_ST.cand ? (SM_ST.hit / SM_ST.cand * 100).toFixed(1) : '0') + '%' +
+    (SM_ST.hit === 0 ? '   !!! 0 次 => 条件从未成立，Δ 不可读' : '   OK 实验有效'));
+}
 if (INJECT && !PAYLOAD) {
   const r = INJ.dec ? INJ.n / INJ.dec : 0;
   console.log('[注入自检] 决策 ' + INJ.dec + ' 次，其中可用并注入 ' + INJ.n + ' 次 = ' + (r * 100).toFixed(1) + '%' +

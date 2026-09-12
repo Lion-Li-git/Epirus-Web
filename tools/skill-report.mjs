@@ -152,7 +152,7 @@ function costOf(key) {
   return (c && c.ok) ? c.ep : null;
 }
 
-console.log('[报告] 人数=' + N + '  冠军=' + file + '  对手对=' + PAIRS.length + '  每条件 ' + GAMES + ' 局/对');
+console.log('[报告] 人数=' + N + '  冠军=' + file + '  对手场=' + PAIRS.length + ' 组(每组 4 个互不相同的脚本)  每条件 ' + GAMES + ' 局/组');
 const u = usage();
 console.log('  使用率采样：决策=' + u.dec + '  最高ep=' + u.maxEp + '  平均ep=' + u.avgEp.toFixed(2));
 
@@ -217,7 +217,7 @@ html += '.bar{height:100%;border-radius:3px}.pos{background:#30a46c}.neg{backgro
 html += '.tag{padding:2px 8px;border-radius:10px;font-size:11px;color:#0d0f14;font-weight:700}';
 html += '.legend{font-size:12px;color:#7c8494;margin-top:10px}code{background:#1b202b;padding:1px 5px;border-radius:3px}</style></head><body>';
 html += '<h1>Epirus AI 训练分析报告</h1>';
-html += '<div class="meta">人数 ' + N + ' 人 · 冠军 <code>' + esc(file) + '</code> · 对手对 ' + PAIRS.length + ' × ' + GAMES + ' 局 · 富裕经济 = 每回合补到 ' + RICH + ' ep · 游戏 ' + u.dec + ' 个决策采样</div>';
+html += '<div class="meta">人数 ' + N + ' 人 · 冠军 <code>' + esc(file) + '</code> · 对手场 ' + PAIRS.length + ' 组(4 个互不相同脚本) × ' + GAMES + ' 局 · 富裕经济 = 每回合补到 ' + RICH + ' ep · 游戏 ' + u.dec + ' 个决策采样</div>';
 
 html += '<div class="cards">';
 html += '<div class="card"><b>' + (Math.exp(-rows.reduce(function (a, r) { return a + (r.use > 0 ? r.use * Math.log(r.use) : 0); }, 0))).toFixed(2) + '</b><span>有效技能数 exp(H)</span></div>';
@@ -242,7 +242,10 @@ for (const r of rows) {
 html += '</table>';
 html += '<div class="legend"><b>口径说明：</b>Δ 是“强制只用这一招”对“自由发挥”的差，所以**基础动作（如 ジ）强制 spam 必然大幅为负，那不是坑**。真正有意义的是排序：Δ 越接近 0 或为正，说明这一招单独就能顶上整套混合策略。<br><br><b>怎么读：</b>左柱 = AI 实际多久用一次（原生经济）；右柱 = 强制用它时的胜率变化（富经济，绿色涨 / 红色跌）。';
 html += '<br><b>红色「坑」</b>= 常用但用了反而亏 → AI 在自残，应该修训练或规则；<b>橙色「没学会的强招」</b>= 明明更强却几乎不用 → 探索/经济没铺到；';
-html += '<b>绿色「主力」</b>= 又强又常用，健康；<b>紫色「死技能」</b>= 又弱又不用，设计上没被激活。</div>';
+html += '<b>绿色「主力」</b>= 又强又常用，健康；<b>紫色「死技能」</b>= 又弱又不用，设计上没被激活。';
+html += '<br><b>灰色「实验未生效」</b>= 这一招**进不了 legal**（条件门/珠子类），强制根本打不出去 ⇒ Δ 不能读，'
+     + '不是「死技能」；<b>深灰「辅助/防御（Δ 结构性为负）」</b>= 无伤害类技能，mono-spam 必然不如混合策略，'
+     + 'Δ 天然为负、不代表它没用（若它 Δ 为正会改判「没学会的强招」）。<b>务必先看「强制命中率」再看 Δ。</b></div>';
 html += '</body></html>';
 writeFileSync(OUT, html, 'utf8');
 console.log('\n已写出 ' + OUT + '（' + html.length + ' 字节）');
