@@ -6,6 +6,7 @@
  *   - /reset         重置服务端训练器（新种子/清空服务端进度）。
  */
 import http from 'node:http';
+import { OPP_FN } from './opp-pool.mjs';   // v1.4.9：对手池单一来源（与 worker 共享）
 import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -261,12 +262,9 @@ const OPP_NAMES = (process.env.EPIRUS_OPP_N
  *   冠军对 4×反弹墙 1st = 0.0%（每局被自己的枪弹回 3.00 次 = 恰好 3 血上限 ⇒ 必死），
  *   而对 4×防御/八卦/原型 墙都是 100.0% ⇒ **只有反弹是真洞**。
  * 所以默认池只放 reflectspam 一个（低权重），其余三个只留名字供实验用（?opps=）。 */
-const BOT_FN_N = {
-  random: 'pickRandom', balanced: 'pickBalanced', aggro: 'pickAggro', defend: 'pickDefend',
-  wall: 'pickWall', antidef: 'pickAntiDef', breakdef: 'pickBreakDef', mix: 'pickMix', farmer: 'pickFarmer',
-  tankline: 'pickTankLine', heavyfire: 'pickHeavyFire', deepsaver: 'pickDeepSaver',
-  reflectspam: 'pickReflectSpam', guardspam: 'pickGuardSpam', baguaspam: 'pickBaguaSpam', protowall: 'pickProtoWall'
-};
+/* v1.4.9：对手池从 server/opp-pool.mjs 派生（原先与 worker 的 OPP_POOL 各写一遍 ⇒ 会静默漂移：
+ * v1.3.59 只补了 worker、v1.4.8 只补了 server，两次都让 A/B 退化成同一个实验）。 */
+const BOT_FN_N = OPP_FN;
 const BUNDLE_MP = 'js/bundled-champion-3p.js';   // 多人冠军（2/3/4/5 人局共用同一网络，特征与人数无关）
 let lastChampionPackN = null;
 let runningN = false;

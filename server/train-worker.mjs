@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import { OPP_SPECS } from './opp-pool.mjs';   // v1.4.9：池子单一来源（原先 server/worker 各写一遍会静默漂移）
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -38,18 +39,10 @@ for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/
 }
 const T = sb.EpirusTrainer;
 const B = sb.EpirusBots;
-/* 多人训练的对手池（名字→函数，worker 内自己解析，因为函数无法跨线程传） */
-const OPP_POOL = [
-  { name: 'random', sel: B.pickRandom }, { name: 'balanced', sel: B.pickBalanced },
-  { name: 'aggro', sel: B.pickAggro }, { name: 'defend', sel: B.pickDefend },
-  { name: 'wall', sel: B.pickWall }, { name: 'antidef', sel: B.pickAntiDef },
-  { name: 'breakdef', sel: B.pickBreakDef }, { name: 'mix', sel: B.pickMix },
-  { name: 'farmer', sel: B.pickFarmer },
-  /* v1.3.59：把"坦克流/重火力/深经济"加进训练池（原先池里既无坦克流也无深经济对手，
-   * 冠军对此的实测弱点是含深经济对手 34.1% vs 不含 64.5%，Δ=−30.4pt）。 */
-  { name: 'tankline', sel: B.pickTankLine }, { name: 'heavyfire', sel: B.pickHeavyFire },
-  { name: 'deepsaver', sel: B.pickDeepSaver }
-];
+/* 多人训练的对手池：**从 server/opp-pool.mjs 派生**（名字→函数，worker 内自己解析，
+ * 因为函数无法跨线程传）。v1.4.9 之前这里与 server 的 BOT_FN_N 是两份独立清单，
+ * 漏加一个名字会让 worker 的 filter 静默取子集（v1.4.8 就这么把"13 对手"跑成了 12 个）。 */
+const OPP_POOL = OPP_SPECS.map(function (o) { return { name: o.name, sel: B[o.fn] }; });
 
 parentPort.on('message', (msg) => {
   if (msg && msg.type === 'eval') {

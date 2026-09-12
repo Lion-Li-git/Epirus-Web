@@ -917,5 +917,17 @@ t('D6 终局收缩：到 suddenDeath 后每回合末全员 -1（反弹挡不住�
   eq(mk(105, 1).p[0].hp, 0, '1 血时被收缩扣死');
 });
 
+t('D7 对手池必须单一来源（server/worker 不得各写一份名单）', function () {
+  /* v1.4.9：这类"两处各写一遍"的漂移已经静默坑过两次 ——
+   * v1.3.59 只补了 worker、v1.4.8 只补了 server（后者让"13 对手"的臂实际只跑 12 个，
+   * 告警又只写进隐藏 server 的 stderr ⇒ 我直到发现"两个不同臂的考卷逐位相同"才察觉）。 */
+  const w = readFileSync('server/train-worker.mjs', 'utf8');
+  const sv = readFileSync('server/train-server.mjs', 'utf8');
+  ok(w.indexOf("from './opp-pool.mjs'") >= 0, 'worker 必须从 opp-pool.mjs 导入池子');
+  ok(sv.indexOf("from './opp-pool.mjs'") >= 0, 'server 必须从 opp-pool.mjs 导入池子');
+  ok(!/const OPP_POOL = \[\s*[\r\n]*\s*\{ name:/.test(w), 'worker 不得自己再写一份字面量池子');
+  ok(!/const BOT_FN_N = \{/.test(sv), 'server 不得自己再写一份字面量名单');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
