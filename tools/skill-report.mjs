@@ -218,14 +218,15 @@ const INSTR = {
   gun: '--inject=gun', sword: '--inject=sword', tank: '--inject=tank', snipe: '--inject=snipe',
   dualGun: '--inject=dualGun', mirror: '--inject=mirror', purify: '--inject=purify',
   cannon: '--inject=cannon', taunt: '--inject=taunt', rod: '--inject=rod',
-  /* v1.4.11：小雷是**反制卡**，本场（无聚能环/电磁炮/大雷使用者）测不到它的反制价值 ——
-   * 实测：4×聚能环场上"优先出小雷"把主体从 2.5% 抬到 **22.5%（+20pt）**；
-   * 同一动作在无环场上是 **−25.7pt**（31.1%→5.4%）。故此处标注口径，避免被读成"陷阱卡"。 */
-  miniT: '反制卡：--field=ringwall（本场无环 ⇒ 反制价值测不到；有环场实测 +20pt）',
-  bigT: '--inject=bigT'
+  miniT: '--inject=miniT', bigT: '--inject=bigT'
 };
 /* v1.4.10：阈值从 2% 降到 1% —— `雷击之枪` 在同口径下用量只有 1.6%，恰是**陷阱卡**
  * （消融 Δ_lost=−2.2pt：拿掉反而变好）；阈值 2% 会把它挡在消融之外，而它正是最该被标出来的那类。 */
+/* 反制卡的价值是**场依赖**的：实测"优先出小雷"在 4×聚能环场上 +20pt（2.5%→22.5%），
+ * 而在没有环/电磁炮/大雷的场上是 −25.7pt（31.1%→5.4%）⇒ 本场读数不能当它的全部价值。 */
+const NOTE = {
+  miniT: '反制卡：本场无聚能环/电磁炮/大雷使用者 ⇒ 反制价值测不到（--field=ringwall 实测 +20pt）'
+};
 const USE_BAN = 0.01;
 
 for (const r of rows) {
@@ -236,6 +237,10 @@ for (const r of rows) {
   const isUtil = !(d.dmg && d.dmg.amt > 0);       // 无伤害 = 辅助/防御/架势
   /* 该用哪个口径（放在 continues 之前，保证每行都有） */
   r.tool = (r.use >= USE_BAN) ? ('--ban=' + r.key) : (INSTR[r.key] || '—');
+  /* v1.4.11：**反制卡**必须额外标注 —— 它们的价值取决于场上有没有目标。
+   * 注意这里用**追加**而不是替换：雷击之枪用量 1.6% ≥ 阈值，会被"已在用 ⇒ --ban"规则覆盖，
+   * 我第一版把标注写进 INSTR 就被它吃掉了（生成出来的 HTML 里根本找不到）。 */
+  if (NOTE[r.key]) r.tool += '　⚠ ' + NOTE[r.key];
   r.inUse = r.use >= USE_BAN;
   /* v1.3.59：**三件事分开**，否则"死技能"这一栏会把测量失败也算进去：
    *  1) 强制没命中（技能压根进不了 legal 或被抽不到）⇒ 这个 Δ 不能读，只能报"实验未生效"；
@@ -263,9 +268,12 @@ for (const r of inUsePre) {
   r.banLost = baseNative.firstRate - ban.firstRate;
   console.log('    ' + r.name + '：原生 ' + (baseNative.firstRate * 100).toFixed(1) + '% → 拿掉 ' +
     (ban.firstRate * 100).toFixed(1) + '%  Δ_lost=' + (r.banLost >= 0 ? '+' : '') + (r.banLost * 100).toFixed(1) + 'pt');
-  r.verdict = r.banLost > 0.005 ? ('承重（拿掉掉 ' + (r.banLost * 100).toFixed(0) + 'pt）')
-    : r.banLost < -0.005 ? ('陷阱（拿掉反而 +' + (-r.banLost * 100).toFixed(0) + 'pt）')
-    : '中性（拿掉无差）';
+  /* 反制卡（有 NOTE）的价值是**场依赖**的 ⇒ 判定标签也标（本场），避免把"本场没目标可打"
+   * 读成"这张卡是陷阱"（实测小雷：本场 −2.6pt / 环场 +20pt）。 */
+  const cond = NOTE[r.key] ? '（本场）' : '';
+  r.verdict = r.banLost > 0.005 ? ('承重' + cond + '（拿掉掉 ' + (r.banLost * 100).toFixed(0) + 'pt）')
+    : r.banLost < -0.005 ? ('陷阱' + cond + '（拿掉反而 +' + (-r.banLost * 100).toFixed(0) + 'pt）')
+    : ('中性' + cond + '（拿掉无差）');
 }
 
 const maxAbsDelta = Math.max(0.01, ...rows.map(function (r) { return Math.abs(r.delta); }));
