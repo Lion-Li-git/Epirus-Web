@@ -42,7 +42,10 @@ const B = sb.EpirusBots;
 /* 多人训练的对手池：**从 server/opp-pool.mjs 派生**（名字→函数，worker 内自己解析，
  * 因为函数无法跨线程传）。v1.4.9 之前这里与 server 的 BOT_FN_N 是两份独立清单，
  * 漏加一个名字会让 worker 的 filter 静默取子集（v1.4.8 就这么把"13 对手"跑成了 12 个）。 */
-const OPP_POOL = OPP_SPECS.map(function (o) { return { name: o.name, sel: B[o.fn] }; });
+const OPP_POOL = OPP_SPECS.map(function (o) {
+  if (typeof B[o.fn] !== 'function') throw new Error('opp-pool: ' + o.name + ' → Bots.' + o.fn + ' 不存在');
+  return { name: o.name, sel: B[o.fn] };
+});
 
 parentPort.on('message', (msg) => {
   if (msg && msg.type === 'eval') {

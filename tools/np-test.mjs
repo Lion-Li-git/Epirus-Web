@@ -946,5 +946,19 @@ t('D8 版本号三方一致（CHANGELOG 最新条目 = README = index.html）', 
   eq(ix[1], newest, 'index.html 版本号必须等于 CHANGELOG 最新条目');
 });
 
+t('D9 对手池单一来源里的每个 fn 都必须存在于 EpirusBots', function () {
+  /* v1.4.14：第三次"加名字漏一处"（v1.3.59 漏 server、v1.4.8 漏 worker、v1.4.14 漏 opp-pool 本身）。
+   * 这次的症状最隐蔽：服务端拿到未定义名字 → B[undefined] = undefined → 训练跑到中途才炸成
+   * "sel is not a function"。这条用例把"名字 → 函数"这一步钉在测试期。 */
+  const src = readFileSync('server/opp-pool.mjs', 'utf8');
+  const items = [...src.matchAll(/\{ name: '([A-Za-z0-9_]+)', fn: '([A-Za-z0-9_]+)' \}/g)];
+  ok(items.length >= 12, 'opp-pool.mjs 条目数异常: ' + items.length);
+  for (const it of items) {
+    ok(typeof Bots[it[2]] === 'function', 'opp-pool 的 ' + it[1] + ' → Bots.' + it[2] + ' 不存在');
+  }
+  ok(items.some(function (it) { return it[1] === 'reflectspam'; }), 'reflectspam 必须在池子里（v1.4.8）');
+  ok(items.some(function (it) { return it[1] === 'ringspam'; }), 'ringspam 必须在池子里（v1.4.14）');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

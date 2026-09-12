@@ -33,7 +33,11 @@ export const OPP_SPECS = [
   { name: 'reflectspam', fn: 'pickReflectSpam' },
   { name: 'guardspam', fn: 'pickGuardSpam' },
   { name: 'baguaspam', fn: 'pickBaguaSpam' },
-  { name: 'protowall', fn: 'pickProtoWall' }
+  { name: 'protowall', fn: 'pickProtoWall' },
+  /* v1.4.14：聚能环经济流（用户指出小雷的反制目标是它）。**这是第三次"加名字漏一处"**：
+   * v1.3.59 只补 worker、v1.4.8 只补 server、v1.4.14 只补了 eval-5p 而漏了这里 ⇒
+   * 服务端拿到未定义的名字、`B[undefined]` 变成 undefined，训练跑到一半才报 `sel is not a function`。 */
+  { name: 'ringspam', fn: 'pickRingSpam' }
 ];
 
 /* 训练池的默认集合（名字数组）。默认**不含**四个 specialist —— 它们只在显式实验里按需加入

@@ -1,3 +1,30 @@
+## v1.4.14 — 第三次『加名字漏一处』：对手池补 `ringspam` + 未知名字**开跑前中止**
+
+### 1. 症状
+环实验（v1.4.11 设计的『把环经济流放进训练池』）跑到中途 SSE 报
+`{"type":"error","msg":"sel is not a function"}`。
+
+### 2. 根因
+`ringspam` 只加进了 `tools/eval-5p.mjs` 的池与 `js/train/bots.js` 的导出，
+**没加进 `server/opp-pool.mjs`**（v1.4.9 刚抽出来的单一来源）
+⇒ 服务端 `BOT_FN_N['ringspam']` 未定义 ⇒ `B[undefined]` = undefined ⇒ 调用 `sel(...)` 时炸。
+**这是『加名字漏一处』第三次**：v1.3.59 漏 server、v1.4.8 漏 worker、v1.4.14 漏 opp-pool 本身。
+
+### 3. 修法（都朝『让失败变响』）
+- `opp-pool.mjs` 补 `{ name: 'ringspam', fn: 'pickRingSpam' }`（16 → 17 个名字）。
+- `train-server.mjs`：未知对手名**立刻中止**并把错误送进 SSE。原先只 `console.log`
+  ⇒ 落在隐藏 server 进程的 stderr 里，用 curl 抓 SSE 完全看不到 —— 这正是 v1.4.8 静默降级成
+  『12 对手』而我没察觉的原因。
+- `train-worker.mjs`：启动时校验 `OPP_SPECS` 里每个 `fn` 都存在，typo 立刻炸在启动处。
+- 新增 **np-test D9**：`opp-pool.mjs` 每个条目都必须能在 `EpirusBots` 上找到，
+  且 `reflectspam` / `ringspam` 必须在池里（第三次踩的正是『名字没进池』）。
+
+### 4. 顺带的 harness 改进
+我自己的 runner 轮询原先只等 `"type":"done"` ⇒ 遇到 error 会空转到 15 分钟超时。
+新模板同时检测 `"type":"error"` 并打印出来（这次就是靠 SSE 里的 error 才定位到根因）。
+
+回归：spec 37/37、np-test 58/58。
+
 ## v1.4.13 — 三件卫生事项（用户批准）
 
 ### 1. 删死代码 `startTraining`（`js/train/trainer.js`：172 → 141 行）

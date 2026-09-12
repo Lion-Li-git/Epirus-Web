@@ -303,8 +303,15 @@ async function runTrainN(gens, cfg) {
   const oppNames = cfg.opps
     ? String(cfg.opps).split(',').map(function (x) { return x.trim(); }).filter(Boolean)
     : OPP_NAMES;
-  for (const nm of oppNames) {
-    if (!BOT_FN_N[nm]) { console.log('[multiObj] 未知对手名: ' + nm + '（可选: ' + Object.keys(BOT_FN_N).join(' ') + '）'); }
+  /* v1.4.14：**未知对手名立刻中止**，并把错误送进 SSE（原先只 console.log ⇒ 在隐藏 server 的
+   * stderr 里，用 curl 抓 SSE 完全看不到）。静默降级的两个真实后果都踩过：
+   *   · worker 静默取子集 ⇒ "13 对手"的臂实际只跑 12 个，A/B 退化成同一个实验（v1.4.8）；
+   *   · 名字完全不在池里 ⇒ `B[undefined]` 直到训练中途才炸成 `sel is not a function`（v1.4.14）。 */
+  const unknownOpps = oppNames.filter(function (nm) { return !BOT_FN_N[nm]; });
+  if (unknownOpps.length) {
+    for (const c of clients) sse(c, { type: 'error', msg: '未知对手名: ' + unknownOpps.join(',') + '（可选: ' + Object.keys(BOT_FN_N).join(' ') + '）' });
+    runningN = false;
+    return;
   }
   const t0 = Date.now();
   /* v1.4.7：原为写死的 30 分钟墙上时钟上限（第十轮复核 §6-4：同 seed 同 gens 在慢机器上可能
