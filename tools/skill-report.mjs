@@ -95,7 +95,7 @@ function runCondition(forceKey, rich, seedBase) {
         else { choosers.push(T.wrapBotN(B[pair[oi % pair.length]])); oi++; }
       }
       const r = T.oneGameN(choosers, seedBase + g * 977 + total, N);
-      if (T.rankOf(r.state, seat) === 1) first++;
+      if (T.rankOf(r.state, seat, seedBase + g * 977 + total) === 1) first++;   // v1.3.57: 名次平局需本局种子
       total++;
     }
   }

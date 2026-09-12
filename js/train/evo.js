@@ -380,7 +380,7 @@
         }
       }
       const r = oneGameN(ch, seedBase + g * 977, N, { regen: REGEN });
-      const rank = rankOf(r.state, seat);
+      const rank = rankOf(r.state, seat, seedBase + g * 977);
       if (rank === 1) first++;
       if (rank <= 2) top2++;
       played++;
@@ -421,20 +421,63 @@
    *   存活优先 → HP 降序 → 累计承伤升序。
    * ⚠️ 只在**原来判平的地方**分出 1/2/3 名，胜/平/负的分值一律不变——
    *    历史上 deal/proact"奖励打伤害"养出过"打伤害不赢"的过拟合，次级键绝不能拿来加分。 */
-  function rankOf(st, seat) {
+  /* 名次（v1.3.57 修座位效应与平局问题）
+   *
+   * 旧实现：`alive → hp 降 → taken 升`，**没有 pid** ⇒ 完全并列时落到 Array.prototype.sort
+   * 的稳定性 = 插入顺序 = **pid 升序**。实测（tools/rank-diag.mjs, 800 局 5 人对称场）：
+   *   89.9% 的玩家处在并列组里，各座位 1st 率 P0=61.9% … P4=7.5%（极差 54.4pt）；
+   *   把末位平局换成种子随机后 → 18.0/21.5/20.8/19.6/20.1%（极差 3.5pt）。
+   * ⇒ 那个梯度**完全是名次规则的产物**，不是引擎的。
+   *
+   * 修法两条：
+   *   1) 加第 4 键 **dealt（累计造成伤害）降序**——`damage` 事件现已带 `source`
+   *      （地雷伤害 source=null，按规则不归属任何人）。它比"挨打少"更接近"打得好"，
+   *      且与 pid 无关（实测可拆开 13% 对称场 / 55% 真实场的并列组）。
+   *   2) 仍完全并列者 → **用本局 rng 洗牌后再稳定排序**：给定对局种子是确定性的，
+   *      但在座位上**无偏**。这样名次仍是严格排列（所有调用方与历史指标口径不变），
+   *      而"低 pid 白拿并列第一"这个 artifact 消失。
+   * ⚠️ 不要退回"并列按 pid 升序"：那等于给座位 0 送分。 */
+  function rankOf(st, seat, seed) {
     const n = st.p.length;
-    const taken = [];
-    for (let i = 0; i < n; i++) taken.push(0);
-    for (const e of st.events) if (e.type === 'damage' && e.to != null) taken[e.to] += (e.amt || 0);
+    const taken = [], dealt = [];
+    for (let i = 0; i < n; i++) { taken.push(0); dealt.push(0); }
+    for (const e of st.events) {
+      if (e.type !== 'damage') continue;
+      if (e.to != null) taken[e.to] += (e.amt || 0);
+      if (e.source != null) dealt[e.source] += (e.amt || 0);
+    }
     const order = [];
     for (let i = 0; i < n; i++) {
       const hp = Math.max(0, st.p[i].hp);
-      order.push({ i: i, alive: hp > 0 ? 1 : 0, hp: hp, taken: taken[i] });
+      order.push({ i: i, alive: hp > 0 ? 1 : 0, hp: hp, taken: taken[i], dealt: dealt[i] });
+    }
+    /* 洗牌种子：**由调用方传入"本局种子"**（每个调用方手里都有）。
+     * 三个都不能用：
+     *   ✗ 消耗 st.rng —— 不幂等，同一局问多个座位会得到互相矛盾的名次；
+     *   ✗ 用 (round, events.length) 派生 —— 对称场里大量对局取值相同 ⇒ 少数几个排列被
+     *     反复使用，pid 偏置重新出现（实测极差 18.7pt，而每局种子只有 3.5pt）；
+     *   ✗ 退回"并列按 pid 升序" —— 等于给座位 0 送分（实测极差 54.4pt）。
+     * 未传 seed 时退化为"事件流哈希"（只取与 pid 无关的量），保证有熵、且仍确定。 */
+    let sd;
+    if (typeof seed === 'number' && isFinite(seed)) sd = (seed >>> 0) || 1;
+    else {
+      let h = (0x9e3779b9 ^ Math.imul(n, 2654435761) ^ Math.imul(st.round || 0, 40503)) >>> 0;
+      for (let k = 0; k < st.events.length; k++) {
+        const e = st.events[k];
+        h = (Math.imul(h ^ ((e.type || '').length + 1), 16777619) ^ Math.imul(((e.amt || 0) + 1), 2246822519)) >>> 0;
+      }
+      sd = h || 1;
+    }
+    const prnd = mulberry32(sd);
+    for (let k = order.length - 1; k > 0; k--) {
+      const j = Math.floor(prnd() * (k + 1));
+      const t = order[k]; order[k] = order[j]; order[j] = t;
     }
     order.sort(function (a, b) {
       if (a.alive !== b.alive) return b.alive - a.alive;
       if (Math.abs(b.hp - a.hp) > 1e-9) return b.hp - a.hp;
-      return a.taken - b.taken;
+      if (a.taken !== b.taken) return a.taken - b.taken;
+      return b.dealt - a.dealt;
     });
     for (let k = 0; k < order.length; k++) if (order[k].i === seat) return k + 1;
     return n;
@@ -523,7 +566,7 @@
        * 两条通道互不干扰，故 fit 的口径不被污染。 */
       const regen = commitGame ? 2 : regenForGame(g, games);
       const r = oneGameN(choosers, seed, n, { regen: regen });
-      const rank = rankOf(r.state, seat);
+      const rank = rankOf(r.state, seat, seed);
       const base = rank === 1 ? 1.0 : rank === 2 ? 0.3 : 0.0;   // N19 修正：3 人局里第二名也算输，降低苟活奖励
       const others = r.dmg.reduce(function (a, b) { return a + b; }, 0) - r.dmg[seat];
       const diff = r.dmg[seat] - others / Math.max(1, n - 1);
@@ -629,7 +672,7 @@
           else { choosers.push(wrapBotN(pair[oi % pair.length])); oi++; }
         }
         const r = oneGameN(choosers, seedBase + g * 977 + total, n);
-        const rank = rankOf(r.state, seat);
+        const rank = rankOf(r.state, seat, seedBase + g * 977 + total);
         if (rank === 1) first++; else if (rank === 2) second++; else third++;
         total++;
       }

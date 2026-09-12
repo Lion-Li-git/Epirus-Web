@@ -101,7 +101,7 @@ function vsBots(params, pairs, games) {
         else { choosers.push(TA.wrapBotN(BOT[pair[oi % pair.length]])); oi++; }
       }
       const r = TA.oneGameN(choosers, 70001 + g * 977 + total, N);
-      const rk = TA.rankOf(r.state, seat);
+      const rk = TA.rankOf(r.state, seat, 70001 + g * 977 + total);   // v1.3.57: 名次平局需本局种子
       if (rk <= 3) first[rk - 1]++;
       total++;
     }

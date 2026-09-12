@@ -362,6 +362,19 @@
    * 现有脚本全是 2 人时代写的：oppPidOf 只会打"血量最低"的对手、无视领先者，
    * 也不认识"有人正在攒钱（ep≥3）"这个 3 人局的核心威胁。
    * 这三档统一改成：**先决定"打谁"（N 意识），再决定"用什么"**，并允许返回 {key,target}。 */
+  /* 并列时用本局 rng 随机选一个 —— **不要**按 pid 升序取第一个。
+   * v1.3.57 实测：下面这些 helper 原先一律取最低 pid，使脚本系统性地集火低 pid 玩家：
+   *   5 人真实考卷场各座位均承伤 P0=2.683 / P1=2.494 / P2=2.446 / P3=2.440 / P4=2.203，
+   *   终局 hp 0.45 / 0.60 / 0.64 / 0.64 / 0.85 ⇒ "高 pid 名次更好"成了一个
+   *   **与策略无关的座位效应**（对称场里承伤是平的，所以它纯粹来自脚本的取目标方式）。
+   * 注意：这会改变 pickMultiEasy/Med/Strong（游戏内多人难度档）与 proto* 脚本的取目标，
+   * 但只是"并列时不再偏向低 pid"，方向上是消除偏置。 */
+  function mpPickOne(state, arr) {
+    if (!arr || !arr.length) return null;
+    if (arr.length === 1) return arr[0];
+    const r = (state && state.rng && typeof state.rng.next === 'function') ? state.rng.next() : 0;
+    return arr[Math.floor(r * arr.length)];
+  }
   function mpOpps(state, pid) {
     const out = [];
     for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) out.push(i);
@@ -369,19 +382,27 @@
   }
   function mpLeader(state, pid) {          // 血量最高的领先者（最该压的人）
     const o = mpOpps(state, pid); if (!o.length) return null;
-    let best = o[0];
-    for (const i of o) if (state.p[i].hp > state.p[best].hp + 1e-9) best = i;
-    return best;
+    let mx = -Infinity; const cand = [];
+    for (const i of o) {
+      const h = state.p[i].hp;
+      if (h > mx + 1e-9) { mx = h; cand.length = 0; cand.push(i); }
+      else if (Math.abs(h - mx) < 1e-9) cand.push(i);
+    }
+    return mpPickOne(state, cand);
   }
   function mpSaver(state, pid) {           // 正在攒钱的对手（ep>=3，快要放大招）
     const o = mpOpps(state, pid); if (!o.length) return null;
-    let best = null, mx = 2.999;
-    for (const i of o) if (state.p[i].ep > mx) { mx = state.p[i].ep; best = i; }
-    return best;
+    let mx = 2.999; const cand = [];
+    for (const i of o) {
+      const e = state.p[i].ep;
+      if (e > mx + 1e-9) { mx = e; cand.length = 0; cand.push(i); }
+      else if (Math.abs(e - mx) < 1e-9) cand.push(i);
+    }
+    return mpPickOne(state, cand);
   }
   function mpKillable(state, pid, amt) {   // 能一击打死（hp<=amt）的目标
-    for (const i of mpOpps(state, pid)) if (state.p[i].hp <= amt + 1e-9) return i;
-    return null;
+    const cand = mpOpps(state, pid).filter(function (i) { return state.p[i].hp <= amt + 1e-9; });
+    return mpPickOne(state, cand);
   }
   function mpStanceOf(state, t) { return (t == null) ? 'none' : stanceOf({ lastSkill: state.p[t].lastSkill }); }
   function mpBk(legal) { const o = {}; legal.forEach(function (l) { o[l.key] = l; }); return o; }

@@ -117,7 +117,7 @@ function runSubject(makeSel, label) {
         } else { choosers.push(asChooser(FN[field[oi % field.length]])); oi++; }
       }
       const r = T.oneGameN(choosers, SEED + g * 977 + total, N);
-      const rank = T.rankOf(r.state, seat);
+      const rank = T.rankOf(r.state, seat, SEED + g * 977 + total);   // v1.3.57: 名次平局用本局种子洗牌（pid 中性）
       ranks[rank - 1]++;
       seatGames[seat]++; if (rank === 1) seatFirst[seat]++;
       if (hasDeep) { deepGames++; if (rank === 1) deepFirst++; }

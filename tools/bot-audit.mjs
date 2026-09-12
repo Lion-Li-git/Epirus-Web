@@ -24,7 +24,7 @@ for(const nm of Object.keys(FN)){
     const seat=g%N; const ch=[]; let oi=0;
     for(let pid=0;pid<N;pid++){ if(pid===seat) ch.push(probe); else { ch.push(T.wrapBotN(B[pid===((seat+1)%N)?'pickRandom':'pickBalanced'])); oi++; } }
     const r=T.oneGameN(ch,880001+g*977+total,N);
-    if(T.rankOf(r.state,seat)===1) first++;
+    if(T.rankOf(r.state,seat,880001+g*977+total)===1) first++;   // v1.3.57: 名次平局需本局种子
     rd+=r.rounds; total++;
   }
   let H=0; for(const k in use){const p=use[k]/dec;H-=p*Math.log(p);}

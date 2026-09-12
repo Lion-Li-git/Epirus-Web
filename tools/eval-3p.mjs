@@ -6,6 +6,7 @@ import vm from 'node:vm';
 
 const GAMES = Number(process.argv[2] || 20);
 const N = Number(process.argv[3] || 3);
+const FILE = process.argv[4] || 'js/bundled-champion-3p.js';   // v1.3.57: 支持指定冠军文件以便 A/B
 
 const sb = {
   console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN,
@@ -14,7 +15,7 @@ const sb = {
 sb.window = sb; sb.globalThis = sb;
 for (const f of [
   'js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js', 'js/bundled-champion-3p.js'
+  'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js', FILE
 ]) vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 
 const P = sb.window.EpirusPolicy;
@@ -26,6 +27,7 @@ const params = P.unpack(sb.window.EPIRUS_CHAMPION_3P);
 if (!params) { console.log('冠军包不兼容：' + JSON.stringify(P.checkPack(sb.window.EPIRUS_CHAMPION_3P))); process.exit(1); }
 const meta = sb.window.EPIRUS_CHAMPION_3P_META || {};
 console.log('冠军 meta: ' + JSON.stringify(meta));
+console.log('文件: ' + FILE);
 
 const BOTS = [
   ['random', Bots.pickRandom], ['aggro', Bots.pickAggro], ['defend', Bots.pickDefend],
@@ -59,7 +61,7 @@ for (let a = 0; a < BOTS.length; a++) {
         else { choosers.push(T.wrapBotN(pair[oi % pair.length])); oi++; }
       }
       const r = T.oneGameN(choosers, 77000 + a * 131 + b * 17 + g * 977, N);
-      const rank = T.rankOf(r.state, seat);
+      const rank = T.rankOf(r.state, seat, 77000 + a * 131 + b * 17 + g * 977);   // v1.3.57: 同上
       if (rank === 1) first++; else if (rank === 2) second++; else third++;
       if (rank === 1) seatFirst[seat]++;
       seatGames[seat]++;

@@ -738,6 +738,33 @@ t('L3 每个诊断工具都必须能跑（签名/前置条件没核实 => 脚本
     'server 的冠军 meta 必须记录 seed');
 });
 
+t('L7 rankOf 不得有座位偏置（并列时不许按 pid 升序）', function () {
+  /* 真实缺陷（v1.3.57）：`rankOf` 的比较器是 alive→hp→taken，**没有 pid**，完全并列时
+   * 落到 Array.prototype.sort 的稳定性 = 插入顺序 = pid 升序。对称场 800 局实测
+   * 各座位 1st 率 P0=61.9% … P4=7.5%（极差 54.4pt），换成种子洗牌后 16.0…23.5%（7.5pt）。
+   * 本用例构造"五人完全并列"的终局，断言 rank1 在座位间大致均匀。
+   * 旧实现在这里会是 [400,0,0,0,0]（座位 0 拿满），所以它会红。 */
+  const TR = 400;
+  const firsts = [0, 0, 0, 0, 0];
+  for (let s = 0; s < TR; s++) {
+    const st = S.createState('multi', { next: mulberry32(7000 + s) }, 5);
+    for (let i = 0; i < 5; i++) st.p[i].hp = 3;          // 全员同血、无伤害事件 ⇒ 完全并列
+    for (let pid = 0; pid < 5; pid++) if (T.rankOf(st, pid, 12345 + s) === 1) firsts[pid]++;
+  }
+  const spread = Math.max.apply(null, firsts) - Math.min.apply(null, firsts);
+  ok(spread <= 80,
+    '并列时 rank1 的座位分布过于偏斜（疑似按 pid 升序）: ' + firsts.join('/') + ' 极差=' + spread + '（' + TR + ' 次里每座位期望 ' + (TR / 5) + '）');
+
+  // 幂等 + 严格排列（同一局可能被问多个座位）
+  const st2 = S.createState('multi', { next: mulberry32(1) }, 5);
+  for (let i = 0; i < 5; i++) st2.p[i].hp = 3;
+  const a = [], b = [];
+  for (let pid = 0; pid < 5; pid++) { a.push(T.rankOf(st2, pid, 999)); b.push(T.rankOf(st2, pid, 999)); }
+  ok(a.join(',') === b.join(','), 'rankOf 必须幂等：同局同 seed 问两次结果要一致（不要消耗 st.rng）');
+  const uniq = {}; for (const r of a) uniq[r] = 1;
+  eq(Object.keys(uniq).length, 5, 'rankOf 必须返回 1..N 的严格排列（调用方按整数比较名次）');
+});
+
 t('L6 考卷完整性：深经济对手必须在池子里 + wrapBotN 必须保留脚本自己选的目标', function () {
   /* 两个都在 v1.3.55 被发现，且都是"没人发现的静默退化"：
    * (a) pickDeepSaver（"会攒 + 会还手"）在 v1.3.27 加入、v1.3.30 被**静默删除**，
