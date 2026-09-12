@@ -8,6 +8,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { OPP_SPECS } from './opp-pool.mjs';   // v1.4.9：池子单一来源（原先 server/worker 各写一遍会静默漂移）
+/* v1.5.2：`champ:<路径>` 冠军对手。函数无法跨线程传 ⇒ 各 worker 自己构造，但解析规则是同一份。 */
+import { makeOppSelResolver } from './opp-champs.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -46,6 +48,11 @@ const OPP_POOL = OPP_SPECS.map(function (o) {
   if (typeof B[o.fn] !== 'function') throw new Error('opp-pool: ' + o.name + ' → Bots.' + o.fn + ' 不存在');
   return { name: o.name, sel: B[o.fn] };
 });
+/* v1.5.2：对手名走**与 server 同一个解析器**（脚本名 + `champ:<路径>` 冠军对手）。
+ * 函数无法跨线程传 ⇒ worker 必须自己构造，但**规则只有一份**（opp-champs.mjs）——
+ * "两处各写一遍"正是这个项目栽过三次的地方。 */
+const FN_MAP = (function () { const m = {}; for (const o of OPP_SPECS) m[o.name] = o.fn; return m; })();
+const resolveOpp = makeOppSelResolver(sb, root, FN_MAP, B);
 
 parentPort.on('message', (msg) => {
   if (msg && msg.type === 'eval') {
@@ -58,16 +65,24 @@ parentPort.on('message', (msg) => {
     parentPort.postMessage({ type: 'evalResult', id: msg.id, results: results });
   }
   if (msg && msg.type === 'evalN') {
-    const opps = (msg.oppNames && msg.oppNames.length)
-      ? OPP_POOL.filter(function (o) { return msg.oppNames.indexOf(o.name) >= 0; })
-      : OPP_POOL;
+    /* v1.5.2：按 msg.oppNames 的**原顺序**构造（轮换 `oi = (gen*3+g) % opps.length` 依赖顺序 ——
+     * 顺序变了就是另一场实验），并支持 `champ:<路径>` 冠军对手。 */
+    const wantNames = (msg.oppNames && msg.oppNames.length) ? msg.oppNames : OPP_POOL.map(function (o) { return o.name; });
+    const opps = [];
+    const missing = [];
+    for (const nm of wantNames) {
+      try {
+        const sel = resolveOpp(nm);
+        if (sel) opps.push({ name: nm, sel: sel }); else missing.push(nm);
+      } catch (e) {
+        parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: '对手解析失败 ' + nm + ' — ' + e.message });
+        return;
+      }
+    }
     /* v1.3.59：这里是**静默 filter 子集** —— 漏加一个名字会让"12 对手"的臂实际只跑 9 个，
      * A/B 退化成同一个实验（本类静默失败已坑过一次）。改成响亮告警。 */
-    if (msg.oppNames && msg.oppNames.length && opps.length !== msg.oppNames.length) {
-      const missing = msg.oppNames.filter(function (nm) {
-        return !OPP_POOL.some(function (o) { return o.name === nm; });
-      });
-      console.error('[worker] 对手池缺名字: ' + missing.join(',') + ' —— 本臂实际只有 ' + opps.length + '/' + msg.oppNames.length + ' 个对手');
+    if (missing.length) {
+      console.error('[worker] 对手池缺名字: ' + missing.join(',') + ' —— 本臂实际只有 ' + opps.length + '/' + wantNames.length + ' 个对手');
     }
     /* v1.5.0：worker 是**独立沙箱** ⇒ 服务端的 setTrainMode 不会传过来，必须按消息里的 mode 设。
      * 漏这一行的症状极隐蔽：进化照旧 3 血、只有服务端终局评估是 5 血，best 曲线看起来完全正常。 */

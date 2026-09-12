@@ -82,10 +82,15 @@ export function makeParallelEvalN(T, opts) {
   }
   let reqId = 0;
   function runOne(worker, msg) {
-    return new Promise(function (resolve) {
+    return new Promise(function (resolve, reject) {
       const id = ++reqId;
       const h = function (m) {
-        if (m && m.type === 'evalNResult' && m.id === id) { worker.off('message', h); resolve(m.results); }
+        if (!m || m.type !== 'evalNResult' || m.id !== id) return;
+        worker.off('message', h);
+        /* v1.5.2：worker 侧的硬错误（例：冠军对手包解析失败）必须**穿透到调用方**。
+         * 否则这个 Promise 永不 resolve ⇒ 一直挂到 30 分钟墙上时钟才报"训练超时"，
+         * 真正的原因被埋掉（本项目已因"错误不响亮"栽过多次）。 */
+        if (m.error) reject(new Error(m.error)); else resolve(m.results);
       };
       worker.on('message', h);
       worker.postMessage(Object.assign({}, msg, { id: id }));

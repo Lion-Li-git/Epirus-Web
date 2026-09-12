@@ -1,6 +1,9 @@
 /* Epirus N 人（3-5）引擎测试：随机对局 fuzz + 关键裁定点（docs/RULES-NP.md） */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+/* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
+ * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
+import { isChampOpp, loadChampParams } from '../server/opp-champs.mjs';
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
 sb.window = sb; sb.globalThis = sb;
@@ -1017,6 +1020,32 @@ t('D11 训练模式必须随消息下发到 worker（并行路径不是同一个
   ok(wk.indexOf('modeUsed') >= 0, 'worker 必须回报 modeUsed 回执');
   const sv = readFileSync('server/train-server.mjs', 'utf8');
   ok(sv.indexOf('modeUsed') >= 0, 'server 必须校验 worker 的 modeUsed 回执并响亮中止');
+});
+
+t('D12 冠军对手（champ:）机制必须两端都通 + 能真的解出 params', function () {
+  /* v1.5.2：训练池要能放「风格化冠军」当靶子（脚本对手打不出成体系的策略）。
+   * 这类"两处各写一遍"的机制只要漏一端就静默取子集（v1.4.8 踩过），所以两端都要点名；
+   * 而且**功能上**必须真能解包 —— 这里用仓库里在库的 js/bundled-champion-3p.js 验证。 */
+  ok(isChampOpp('champ:docs/artifacts/champion-5p-armB12f.bak'), 'champ: 前缀必须被识别');
+  ok(!isChampOpp('heavyfire'), '普通脚本名不得被当成冠军对手');
+  const params = loadChampParams(Pol, 'js/bundled-champion-3p.js');
+  ok(params && params.length > 0, 'loadChampParams 必须能从在库冠军包解出 params（实测 length=' + (params && params.length) + '）');
+  /* 反向：拿一个不是冠军包的文件去解，必须**响亮抛错**，不能静默返回半个东西 */
+  let threw = false;
+  try { loadChampParams(Pol, 'js/core/rules.js'); } catch (e) { threw = true; }
+  ok(threw, '非冠军包文件必须抛错（否则会把 undefined 当对手，训练中途才炸）');
+  const pt = readFileSync('server/train-server.mjs', 'utf8');
+  ok(pt.indexOf('isChampOpp') >= 0, 'server 的对手名校验必须认识 champ:（否则开跑前就被当未知名字中止）');
+  ok(pt.indexOf('makeOppSelResolver') >= 0, 'server 必须走**统一解析器** makeOppSelResolver');
+  /* ★ 这条是本轮真正的教训（v1.5.2 我踩了第三次）：加对手名时**又漏了一处** ——
+   * 终局评估那段自己写了一遍 `B[BOT_FN_N[nm]]`，对 champ: 名字给出 undefined，
+   * 于是训练跑到名人堂评估才炸成 `sel is not a function`（前几代轮换只覆盖脚本下标，看不见）。
+   * 所以要求 train-server 里**不再存在裸的 B[BOT_FN_N[...] 映射** —— 名字→函数只能有一个入口。 */
+  ok(pt.indexOf('B[BOT_FN_N[') < 0, "train-server 不得再有裸的 B[BOT_FN_N[nm]] 映射（'加名字漏一处'就是这个形状）");
+  const wk = readFileSync('server/train-worker.mjs', 'utf8');
+  ok(wk.indexOf('makeOppSelResolver') >= 0, 'worker 必须用**同一个**解析器（函数无法跨线程传，但规则只有一份）');
+  ok(wk.indexOf('resolveOpp') >= 0, 'worker 必须按 msg.oppNames 的**原顺序**逐个解析（顺序变了就是另一场实验）');
+  ok(readFileSync('server/opp-champs.mjs', 'utf8').indexOf('policyChooserN') >= 0, '冠军对手必须走 policyChooserN（与页面同一条推理路径）');
 });
 
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));

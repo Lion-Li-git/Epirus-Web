@@ -84,8 +84,16 @@ const STDOUTLOG = join(ART, 'ring2-stdout' + TAG + '.log');
 /* ===== 实验输入 ===== */
 const POOL_A = 'random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver';
 const POOL_B = POOL_A + ',ringspam';
-/* v1.5.0：池子可选 —— 'A' = 12 对手（与 ms2-p12 控制臂同池），默认 'B' = 13（含 ringspam）。 */
-const POOL = (String(process.env.RING2_POOL || 'B').toUpperCase() === 'A') ? POOL_A : POOL_B;
+/* v1.5.0：池子可选 —— 'A' = 12 对手（与 ms2-p12 控制臂同池），默认 'B' = 13（含 ringspam）。
+ * v1.5.2：也可以直接传**自定义名单**（含 `champ:<路径>` 冠军对手），例：
+ *   RING2_POOL='random,defend,champ:docs/artifacts/champion-5p-hA9.bak' */
+const POOL = (function () {
+  const v = String(process.env.RING2_POOL || 'B');
+  const u = v.toUpperCase();
+  if (u === 'A') return POOL_A;
+  if (u === 'B') return POOL_B;
+  return v;   // 当名单用
+})();
 const SEEDS = (process.env.RING2_SEEDS || '32,33,34,35,36').split(',').map(function (s) { return Number(s.trim()); }).filter(Boolean);
 const ALL_SEEDS = Array.from(new Set([31].concat(SEEDS)));   // 31 常备（ring2 上一轮已有；长程实验要新训）
 const GENS = Number(process.env.RING2_GENS || 250), NP = 5, POP = 16, GPO = 8;

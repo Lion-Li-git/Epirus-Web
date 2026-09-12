@@ -5,6 +5,9 @@
 > 新增自跑器 `tools/ring2-run.mjs`（取代会卡死 DSH 的手搓轮询循环）；回归复跑仍 37/37 + 58/58。
 > **第二个接续会话（v1.5.0）**：**长程（5 血）冠军终于训出来了** —— 训练模式接线 + worker 回执自检
 > （np-test 到 **60/60**，新增 D10/D11）；结论见 `docs/REVIEW-5P.md` §7 与 §3.8。
+> **第三个接续会话（v1.5.1 / v1.5.2）**：技能报告补上模式口径并结案 P0-d（§7.5）；训练池支持
+> **风格化冠军当对手**（`champ:<路径>`）+ 新增**风格考卷**工具；但"加陪练练通吃"**实验是否定的**
+> —— **对手池是弱杠杆**（§3.9，np-test 到 **61/61**，新增 D12）。
 > 读这份就能接手；每个结论都带可复跑的命令。**§5「踩过的坑」请先读**，能省几小时。
 
 ---
@@ -165,6 +168,19 @@
   （≈64 秒/冠军，5 血口径 ≈150 秒）；多版本对比
   `node tools/skill-report-cmp.mjs <各 sr-*.json> --out=docs/skill-report-cmp.html`。
 
+### 3.9 「把风格化冠军放进池子」也没用：**对手池是弱杠杆**（v1.5.2）
+用户提议把几个风格极鲜明的冠军（激光剑流 / 狙击枪+环流 / 坦克流 / 枪+墙流）放进训练场当陪练，
+看能不能练出"对不同风格都有反制能力"的冠军。能力做了（`champ:<路径>` 对手 + 风格考卷），实验结果是**否**：
+- **标准考卷**（1400 局/臂, n=6）：37.48% → 33.08%（**Δ=−4.40pt, t=−1.42，不显著**），
+  但**单跑极差 3.8 → 22.4pt（6×）** —— 4 个 seed 几乎不动、2 个崩了（−18.3 / −8.0）；
+- **风格考卷**（每场 30 局, n=4）：风格场平均 **−4.5pt（t=−4.21，4/4 seed 为负）**；
+  **留出场**（环经济冠军 long-31/33，没进过池）也没涨（−2.5 / −23.3pt）；
+  唯一名义正值是混合场 +10.8pt（t=1.49）—— 8 个场里 1 个，**多重比较下不可信**；
+- **设计缺陷（必须写明）**：16 个对手但每代只打 8 局 ⇒ 每对手练习量 −25%，
+  **分不开**"被强敌带坏"与"练脚本的量变少"。要分离就得把每对手预算拉齐（`gpo≈11-12`）并同时重训控制臂。
+⇒ 这是**第二次"改池子"落空**（第一次是 §6.4 的 ring2：+1 个脚本对手）。**该改的是训练信号**
+（适应度 / 课程 / 每对手预算）。`mix-*` 不进线上；线上冠军仍是 v1.3.58。详见 `docs/REVIEW-5P.md` §8。
+
 ---
 
 ## 4. 未解 / 待办
@@ -235,6 +251,17 @@
     §3.7 的"训练逐位可复现"要补限定：**同 seed / 同池 / 同起点 / 同 worker 数**。
     ⇒ 想"少用几个 worker 省机器"就等于**悄悄换了一个冠军**；跑 A/B 必须两臂同 worker 数。
     （顺带：产物 meta 里本来就记着 `workers`，所以这一项是可查的 —— 但现在它才被当成"输入"看。）
+17. **给训练池加"对手名"时又漏了一处（同型事故第三次）**（v1.5.2）：我给对手池加
+    `champ:<仓库相对路径>` 冠军对手，只改了「开跑前校验」和「串行回退」两处，
+    漏了**终局名人堂评估**那段 —— 它自己又写了一遍"名字→函数"映射。
+    前几代看不出问题（轮换 `oi=(gen*3+g)%opps.length` 在 16 个对手时只覆盖脚本下标），
+    一直跑到 250 代结束、进名人堂评估才炸成 `sel is not a function`。
+    前两次：v1.3.59（只补 worker）、v1.4.8（只补 server）、v1.4.14（漏 opp-pool）。
+    ⇒ **规矩**：训练侧"名字→函数"**只允许一个入口**（现在 `server/opp-champs.mjs` 的
+    `makeOppSelResolver`），并且**开跑前把每个名字真解一次**（解包/缺文件失败前移成中止）。
+    np-test **D12** 用"train-server 里不得再有裸的 `B[BOT_FN_N[...]` 映射"这条断言盯着它。
+    附带一条：worker 里的硬错误必须 **reject 穿透**（`paralleltrain.runOne` 已修）——
+    否则那个 Promise 永不 resolve，只会挂到 30 分钟墙上时钟报"训练超时"，真因被埋掉。
 
 ---
 
@@ -277,7 +304,27 @@ node tools/eval-5p.mjs 40 5 77000 $F --mode=long --field=ringwall       # 环场
 node tools/ab-analyze.mjs "$(cygpath -w /tmp/ring2-run.log)" p12 r17
 ```
 
-### 6.5 单点诊断（都很便宜）
+### 6.5 风格对练实验 + 风格考卷（v1.5.2）
+```bash
+# 训练：12 个脚本对手 + 4 个风格化冠军（`champ:<仓库相对路径>`；池子顺序即轮换顺序）
+A='random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver'
+B="$A,champ:docs/artifacts/champion-5p-v1.3.58.bak,champ:docs/artifacts/champion-5p-hA9.bak,\
+champ:docs/artifacts/champion-5p-armB12f.bak,champ:docs/artifacts/champion-5p-armA9.bak"
+RING2_POOL="$B" RING2_ARM=mix RING2_SEEDS=31,32,33,34,35,36 RING2_STAGE=train RING2_TAG=mix \
+  node tools/ring2-run.mjs
+# 风格考卷（受试者也可以是脚本名，用来量地板）；默认模式跟随受试冠军 meta.mode
+node tools/style-exam.mjs docs/artifacts/mix-31.bak 30 \
+  --styles="$B 的 champ 部分 ,champ:docs/artifacts/long-31.bak,champ:docs/artifacts/long-33.bak" \
+  --mixstyles="$B 的 champ 部分" --json=docs/artifacts/se-mix-31.json
+# 配对汇总（按场分组，格式对齐 ab-analyze）
+node tools/style-exam-cmp.mjs docs/artifacts ms2-p12 mix
+```
+⚠ 风格考卷的前四场用的冠军**如果也在训练池里**，那读的是"打练过的对手"；要读"学会 vs 记住"，
+必须留出**没进过池**的对手当留出场（上例是环经济冠军 long-31/33）。
+⚠ 这个实验的单 seed 训练 ≈100 秒，但**终局名人堂**要对每个候选跑 `C(16,2)=120` 组对手对 × 20 局
+（最多 6 个候选）⇒ 明显比 12 对手池贵；`EPIRUS_WALL_MS` 是总闸。
+
+### 6.6 单点诊断（都很便宜）
 ```bash
 node tools/eval-5p.mjs 40 5 77000 docs/artifacts/champion-5p-v1.3.58.bak --field=reflectwall   # 反弹墙
 node tools/eval-5p.mjs 40 5 77000 docs/artifacts/champion-5p-v1.3.58.bak --field=ringwall --mode=long --inject=miniT  # 小雷反制环
@@ -293,3 +340,6 @@ node tools/eval-5p.mjs 40 5 77000 docs/artifacts/champion-5p-v1.3.58.bak --ban=g
 - **`.gitignore` 的 `*.bak` 是本地存档**（冠军包不入库，`git ls-files` 里 0 个 .bak）
 - **浏览器可复现性那条线已停止**；训练研究走 `server/train-server.mjs`（= 浏览器点"开始训练"的同一机制）
 - 用户要的流程：**长任务先报【预估】、跑中报【进度】；别把等待写进 tool call**
+- **版本号粒度（用户裁定，v1.5.2 时确立）**：**最后一位（patch）用于日常改动**；
+  **中间位只在"显著突破"时才动**（例：v1.4.0 的长程模式）。
+  ⇒ 一次改动就跳中间位是错的（本会话曾把一次池子实验写成 v1.6.0，被要求改回 v1.5.2）。

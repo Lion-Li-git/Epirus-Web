@@ -7,6 +7,8 @@
  */
 import http from 'node:http';
 import { OPP_FN } from './opp-pool.mjs';   // v1.4.9：对手池单一来源（与 worker 共享）
+/* v1.5.2：对手池支持「风格化冠军」当靶子（`champ:<仓库相对路径>`）—— 机制单一来源见该模块。 */
+import { isChampOpp, champOppMissing, makeChampOppResolver, makeOppSelResolver } from './opp-champs.mjs';
 import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -311,9 +313,19 @@ async function runTrainN(gens, cfg) {
    * stderr 里，用 curl 抓 SSE 完全看不到）。静默降级的两个真实后果都踩过：
    *   · worker 静默取子集 ⇒ "13 对手"的臂实际只跑 12 个，A/B 退化成同一个实验（v1.4.8）；
    *   · 名字完全不在池里 ⇒ `B[undefined]` 直到训练中途才炸成 `sel is not a function`（v1.4.14）。 */
-  const unknownOpps = oppNames.filter(function (nm) { return !BOT_FN_N[nm]; });
+  /* v1.5.2：对手名统一走**一个解析器**（脚本名 + `champ:<路径>` 冠军对手）。
+   * 为什么必须唯一入口：这个项目已经因为"名字→函数"映射**写两处/漏一处**栽过三次
+   * （v1.3.59 只补 worker、v1.4.8 只补 server、v1.4.14 漏 opp-pool）；而我加 champ: 对手时
+   * 又漏了**终局评估那条路**（它自己又写了一遍同样的"名字→函数"映射）⇒ 训练跑到名人堂评估才炸成
+   * `sel is not a function`。这里同时把"解析失败"前移成**开跑前中止**（逐个名字都真的解一次）。 */
+  const resolveOpp = makeOppSelResolver(sb, root, BOT_FN_N, sb.EpirusBots);
+  const unknownOpps = [];
+  for (const nm of oppNames) {
+    try { if (!resolveOpp(nm)) unknownOpps.push(nm); }
+    catch (e) { unknownOpps.push(nm + '（' + e.message + '）'); }
+  }
   if (unknownOpps.length) {
-    for (const c of clients) sse(c, { type: 'error', msg: '未知对手名: ' + unknownOpps.join(',') + '（可选: ' + Object.keys(BOT_FN_N).join(' ') + '）' });
+    for (const c of clients) sse(c, { type: 'error', msg: '未知/缺失对手: ' + unknownOpps.join(',') + '（脚本名可选: ' + Object.keys(BOT_FN_N).join(' ') + '；冠军对手写成 champ:<仓库相对路径>，例 champ:docs/artifacts/champion-5p-armB12f.bak）' });
     runningN = false;
     return;
   }
@@ -350,8 +362,7 @@ async function runTrainN(gens, cfg) {
   for (let gen = 0; gen < gens; gen++) {
     let res = await poolN.evalPopN(pop, gen, games, n, oppNames, hGenes);
     if (!res) {
-      const B = sb.EpirusBots;
-      const opps = oppNames.map(function (nm) { return { name: nm, sel: B[BOT_FN_N[nm]] }; });
+      const opps = oppNames.map(function (nm) { return { name: nm, sel: resolveOpp(nm) }; });
       res = pop.map(function (params, idx) {
         const r = T.scoreMemberN(params, opps, games, n, gen, idx, hGenes[idx]);
         return { idx: idx, score: r.fit, firstRate: r.firstRate, top2Rate: r.top2Rate,
@@ -419,9 +430,9 @@ async function runTrainN(gens, cfg) {
     pop = next; hGenes = nextH;
     sigma = Math.max(0.06, sigma * 0.995);
   }
-  // 终局：名人堂用全部对手对验证，取 1st 最高
-  const B = sb.EpirusBots;
-  const POOL = oppNames.map(function (nm) { return B[BOT_FN_N[nm]]; });
+  /* 终局：名人堂用全部对手对验证，取 1st 最高
+   * v1.5.2：这里**必须**走同一个解析器 —— 之前就是这一处漏了 champ: 处理（训练跑到这里才炸）。 */
+  const POOL = oppNames.map(function (nm) { return resolveOpp(nm); });
   const PAIRS = [];
   for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) PAIRS.push([POOL[a], POOL[b]]);
   let finalParams = hall[0] ? hall[0].params : pop[0], ev = null;
