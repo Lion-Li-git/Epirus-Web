@@ -9,6 +9,7 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, X = sb.window.EpirusResolve, Play = sb.window.EpirusPlay;
+const T = sb.window.EpirusTrainer, Bots = sb.window.EpirusBots;
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -723,6 +724,38 @@ t('L3 每个诊断工具都必须能跑（签名/前置条件没核实 => 脚本
   ok(evo.indexOf('process.env.EPIRUS_WR_TOL') < 0,
     'WR_TOL 不得在引擎内读 env（CLI 沙箱无 process => 两条路取到不同值）');
   ok(evo.indexOf('setWrTol') >= 0, 'WR_TOL 应由调用方通过 setWrTol 显式传入');
+});
+
+t('L6 考卷完整性：深经济对手必须在池子里 + wrapBotN 必须保留脚本自己选的目标', function () {
+  /* 两个都在 v1.3.55 被发现，且都是"没人发现的静默退化"：
+   * (a) pickDeepSaver（"会攒 + 会还手"）在 v1.3.27 加入、v1.3.30 被**静默删除**，
+   *     CHANGELOG 只字未提，24 个版本没人发现，而 REVIEW §1-D 把它记成"对手池去重（卫生）"。
+   *     后果：现有池里 pickFarmer 只攒不还手、pickHeavyFire 会还不攒（ep<=2 贵技能分支永不触发）
+   *     => "不攒钱"在考卷里**没有任何惩罚来源**。这正是 P3.5 说的"考卷未改"。
+   * (b) wrapBotN 无条件用 pickTargetN 重算目标，把返回 {key,target} 的脚本（protomine /
+   *     prototransfer / focusfire / deepsaver）的目标整个丢掉 => "会还手"的脚本被剥掉瞄准。 */
+  ok(typeof Bots.pickDeepSaver === 'function', 'pickDeepSaver 必须在 EpirusBots 里（别再被静默删掉）');
+
+  // (b) 显式目标必须被保留
+  const st1 = S.createState('multi', { next: mulberry32(93) }, 3);
+  st1.p[0].ep = 9;
+  X.startTurn(st1);
+  const legal1 = Play.legalActions(st1, 0);
+  const wrapped = T.wrapBotN(function () { return { key: R.SK.GUN, target: 2 }; });
+  const got = wrapped(st1, 0, legal1);
+  eq(got.key, R.SK.GUN, 'wrapBotN 应保留脚本选的技能');
+  eq(got.target, 2, 'wrapBotN 必须保留脚本显式返回的 target（否则被剥掉瞄准）');
+
+  // (c) 行为反证：ep=5 时它必须真的把大雷打出去（"会攒 + 会还手"）
+  const st2 = S.createState('multi', { next: mulberry32(94) }, 3);
+  for (let i2 = 0; i2 < 3; i2++) { st2.p[i2].ep = 0; }
+  st2.p[0].ep = 5;
+  X.startTurn(st2);
+  const legal2 = Play.legalActions(st2, 0);
+  const bigAff = legal2.filter(function (l) { return l.key === R.SK.BIG_T && l.affordable; });
+  ok(bigAff.length === 1, 'ep=5 时真正的落雷(5 ジ)必须可负担（前置条件，先验证再断言）');
+  const act = T.wrapBotN(Bots.pickDeepSaver)(st2, 0, legal2);
+  eq(act.key, R.SK.BIG_T, 'pickDeepSaver 攒够 5 ジ 后必须打出大雷（否则它就不惩罚"不攒钱"了）');
 });
 
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {

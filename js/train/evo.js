@@ -250,8 +250,16 @@
     return function (state, pid, legal) {
       const k = sel(state, pid, legal);
       const key = (typeof k === 'string') ? k : (k && k.key);
-      const t1 = pickTargetN(state, pid, key);
-      return { key: key, target: t1, target2: pickTarget2N(state, pid, key, t1) };
+      if (key == null) return { key: R.SK.JI, target: null, target2: null };
+      /* ⚠️ v1.3.55：脚本**自己选的目标必须保留**。
+       * 此前这里无条件用 pickTargetN 重算，把返回 `{key,target}` 的脚本
+       * （pickProtoMine / pickProtoTransfer / pickFocusFire / pickDeepSaver）的目标
+       * 整个丢掉 —— 也就是"会还手"的脚本在 N 人局里被剥掉了瞄准。
+       * 对现有训练口径零影响：OPP_NAMES 那 9 个脚本都只返回技能名。 */
+      const obj = (typeof k === 'object' && k) ? k : null;
+      const t1 = (obj && obj.target != null) ? obj.target : pickTargetN(state, pid, key);
+      const t2 = (obj && obj.target2 != null) ? obj.target2 : pickTarget2N(state, pid, key, t1);
+      return { key: key, target: t1, target2: t2 };
     };
   }
 
@@ -879,6 +887,6 @@
 
   global.EpirusTrainer = {
     makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol,
-    scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, rankOf
+    scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

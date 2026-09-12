@@ -507,6 +507,31 @@
     return { key: SK.JI, target: null };                                  // 攒到能开枪再打
   }
 
+  /* ===== 深经济对手 pickDeepSaver（"会攒 + 会还手"）=====
+   * ⚠️ 它曾在 v1.3.27 加入、在 v1.3.30（N20 地雷 AoE 重写）被**静默删除**——
+   * 那个 commit 的 CHANGELOG 只字未提，之后 24 个版本没人发现，而 REVIEW-3P §1-D
+   * 还把对手池变动记成"去重（项目卫生）"，恰好掩盖了它。v1.3.55 恢复。
+   *
+   * 它补的位置是**现有对手池里唯一空缺的**：`pickFarmer` 只攒不还手（逼不出惩罚），
+   * `pickHeavyFire` 会还手但**不攒**（ep<=2，贵技能分支永不触发，所以它和 tankline 曾被测为等价）。
+   * 本脚本先攒到 5 ジ 再放大雷，正是"不攒钱就该受罚"这条压力在考卷里的唯一来源。
+   *
+   * 设计教训（CHANGELOG v1.3.27 实测，已内化进本实现）：
+   * 早先版本一买得起就放地雷(3 ジ) ⇒ **最高 ep 只到 3**，大雷那一支永不触发。
+   * 3 ジ 与 5 ジ 在本脚本里互斥（花了 3 就再也到不了 5），故选**保住大雷**，
+   * 地雷只留作"对手正在用原型制御"时的独占补充（该分支实测命中 0 次，属无害死代码）。 */
+  function pickDeepSaver(state, pid, legal) {
+    const bk = mpBk(legal), me = state.p[pid];
+    const k2 = mpKillable(state, pid, 2);                    // 大雷 2 点：能一击必杀就杀
+    if (k2 != null && mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: k2 };
+    if (mpAff(bk, SK.BIG_T)) return { key: SK.BIG_T, target: mpLeader(state, pid) };
+    const tl = mpLeader(state, pid);
+    if (mpAff(bk, SK.MINE) && tl != null && state.p[tl].lastSkill === SK.PROTO)
+      return { key: SK.MINE, target: tl };
+    if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };
+    return { key: SK.JI, target: null };                     // 攒钱
+  }
+
   /* 多人专用难度档（ui.js chooseAIMulti 用） */
   const DIFFICULTY_N = {
     easy:   { name: '简单',   pick: pickMultiEasy },
@@ -545,7 +570,7 @@
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
-    pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire,
+    pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'
