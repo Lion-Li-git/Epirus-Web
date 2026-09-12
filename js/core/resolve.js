@@ -133,7 +133,11 @@
   function holoShieldFrom(state, pid) {
     for (let i = 0; i < state.actions.length; i++) {
       if (i === pid) continue;                      // 自己给自己套不算（规则：目标是"被作用者"= 别人）
-      const a = state.actions[i];
+      /* ⚠ 必须走 `actionOf`（它会跳过 `voided`），**不能直读 `state.actions[i]`**：
+       * 小雷（pri5）在屏障（pri3）之前结算，打中**施放者**就把这次施法无效化 ⇒ 屏障不该出现
+       * （原始规则：「雷击之枪需要对使用者作用才能使其无效」）。
+       * 用 actionOf 还让这条判定**与结算顺序无关** —— 以后万一调 pri 也不会漏掉"被无效化"。 */
+      const a = actionOf(state, i);
       if (a && a.key === SK.HOLO && a.target === pid) return i;
     }
     return null;

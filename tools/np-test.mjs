@@ -1123,6 +1123,32 @@ t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放
   st = mk3();
   S.attemptAction(st, 0, R.SK.HOLO, { target: 0 });
   ok(st.actions[0].target !== 0 && st.actions[0].target != null, '套不到自己（实测 target=' + st.actions[0].target + '）');
+  /* ⑤ 小雷（pri5）在屏障（pri3）之前结算：打**施放者** ⇒ 这次施法被无效化，屏障不该出现。
+   * ⚠️ 这是 v1.5.4 的第二个坑：盾若从 `state.actions` 直读（不看 `voided`）就会漏掉无效化，
+   * 症状是"小雷明明打了施放者，被套盾的人还是被护住"。（原始规则：雷击之枪需要对**使用者**作用才能使其无效） */
+  function mk4() {
+    const s4 = S.createState('multi', { next: mulberry32(7) }, 4);
+    for (const q of s4.p) q.ep = 5;
+    X.startTurn(s4);
+    return s4;
+  }
+  st = mk4();
+  S.attemptAction(st, 0, R.SK.HOLO, { target: 1 });
+  S.attemptAction(st, 1, R.SK.JI, {});
+  S.attemptAction(st, 2, R.SK.GUN, { target: 1 });
+  S.attemptAction(st, 3, R.SK.MINI_T, { target: 0 });
+  X.resolveActions(st);
+  eq(st.p[1].hp, 2, '小雷打施放者 ⇒ 屏障被无效化（被套盾者照样挨枪）');
+  eq(st.events.filter(function (e) { return e.type === 'holoSet'; }).length, 0, '被无效化的屏障不该留下 holoSet 事件');
+  /* ⑥ 反过来：小雷打**被套盾者** ⇒ 盾仍在（要打施放者才能拆盾），只是那个人自己的技能被无效化 */
+  st = mk4();
+  S.attemptAction(st, 0, R.SK.HOLO, { target: 1 });
+  S.attemptAction(st, 1, R.SK.GUN, { target: 2 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  S.attemptAction(st, 3, R.SK.MINI_T, { target: 1 });
+  X.resolveActions(st);
+  eq(st.p[1].hp, 3, '小雷打被套盾者 ⇒ 盾仍在');
+  eq(st.p[2].hp, 3, '被套盾者自己的技能被无效化（枪没打出去）');
 });
 
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
