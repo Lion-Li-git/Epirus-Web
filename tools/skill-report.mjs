@@ -12,9 +12,21 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const N = parseInt(process.argv[2] || '3', 10);
-const GAMES = parseInt(process.argv[3] || '6', 10);
-const OUT = process.argv[4] || 'docs/skill-report.html';
+/* 位置参数：剔除 --flag（否则会被当成人数/局数/输出路径） */
+const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
+const FLAG = {};
+for (const a of process.argv.slice(2)) {
+  const m = /^--([a-z0-9-]+)=?(.*)$/i.exec(a);
+  if (m) FLAG[m[1]] = m[2] === '' ? '1' : m[2];
+}
+const N = parseInt(ARGV[0] || '3', 10);
+const GAMES = parseInt(ARGV[1] || '6', 10);
+const OUT = ARGV[2] || 'docs/skill-report.html';
+/* v1.4.4：--champ=<文件> 指定被测冠军（原先写死线下路径 ⇒ 没法规格对比多个版本）；
+ * --json=<文件> 导出逐技能结果，供 tools/skill-report-cmp.mjs 做多版本对比。
+ * ⚠️ 训练实验进行中时 js/bundled-champion-3p.js 是**中途产物**，对比务必显式传 --champ。 */
+const CHAMP_FILE = FLAG.champ || '';
+const JSON_OUT = FLAG.json || '';
 const RICH = 10;         // v1.3.59：原为 6，导致 大雷(5)/避雷针(4) 因余额不足强制不中（命中率 11%/50%）
 const TEMP = 0.15;
 
@@ -28,9 +40,11 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
   'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
-const file = N > 2 ? 'js/bundled-champion-3p.js' : 'js/bundled-champion.js';
+const file = CHAMP_FILE || (N > 2 ? 'js/bundled-champion-3p.js' : 'js/bundled-champion.js');
 const gname = N > 2 ? 'EPIRUS_CHAMPION_3P' : 'EPIRUS_CHAMPION';
-vm.runInNewContext(readFileSync(file, 'utf8'), sb, { filename: file });
+const src = readFileSync(file, 'utf8');
+const metaM = src.match(/window\.EPIRUS_CHAMPION_3P_META\s*=\s*(\{[\s\S]*?\})\s*;/);
+vm.runInNewContext(src, sb, { filename: file });
 const W = sb.window, R = W.EpirusRules, S = W.EpirusState, T = W.EpirusTrainer, P = W.EpirusPolicy, B = W.EpirusBots;
 const champ = P.unpack(W[gname]);
 if (!champ) throw new Error('冠军解包失败：' + file);
@@ -248,6 +262,14 @@ html += '<br><b>灰色「实验未生效」</b>= 这一招**进不了 legal**（
      + 'Δ 天然为负、不代表它没用（若它 Δ 为正会改判「没学会的强招」）。<b>务必先看「强制命中率」再看 Δ。</b></div>';
 html += '</body></html>';
 writeFileSync(OUT, html, 'utf8');
+if (JSON_OUT) {
+  writeFileSync(JSON_OUT, JSON.stringify({
+    champ: file, label: file.replace(/^.*[\/]/, '').replace(/\.(bak|js)$/, ''),
+    n: N, games: GAMES, rich: RICH, baseNative: baseNative.firstRate, baseRich: baseRich.firstRate,
+    meta: metaM ? metaM[1] : '', rows: rows
+  }), 'utf8');
+  console.log('已写出 JSON ' + JSON_OUT);
+}
 console.log('\n已写出 ' + OUT + '（' + html.length + ' 字节）');
 const pits = rows.filter(function (r) { return r.verdict === '坑（常用却亏）'; });
 const unseen = rows.filter(function (r) { return r.verdict === '没学会的强招'; });
