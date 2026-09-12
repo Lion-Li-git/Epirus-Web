@@ -929,5 +929,22 @@ t('D7 对手池必须单一来源（server/worker 不得各写一份名单）', 
   ok(!/const BOT_FN_N = \{/.test(sv), 'server 不得自己再写一份字面量名单');
 });
 
+t('D8 版本号三方一致（CHANGELOG 最新条目 = README = index.html）', function () {
+  /* v1.4.13：本轮发现 README 停在 v1.4.6、index.html 停在 v1.4.1（HEAD 已是 v1.4.13），
+   * 而 CHANGELOG 还缺 v1.4.10/v1.4.12 两条 —— 根因是我用 sed 假设"上一版的字符串"，
+   * 而 sed 不匹配时不报错 ⇒ 连续多次静默 no-op（index.html 还被 A/B 任务的备份还原打乱过）。
+   * 反证：把 README 改回任意旧版本号，这条立即红。 */
+  const cl = readFileSync('CHANGELOG.md', 'utf8');
+  const m = cl.match(/^## v([0-9]+\.[0-9]+\.[0-9]+)/m);
+  ok(m, 'CHANGELOG 里找不到 ## vX.Y.Z 条目');
+  const newest = m[1];
+  const rd = readFileSync('README.md', 'utf8').match(/当前版本：v([0-9]+\.[0-9]+\.[0-9]+)/);
+  ok(rd, 'README 里找不到"当前版本：vX.Y.Z"');
+  eq(rd[1], newest, 'README 版本号必须等于 CHANGELOG 最新条目');
+  const ix = readFileSync('index.html', 'utf8').match(/程序 v([0-9]+\.[0-9]+\.[0-9]+)/);
+  ok(ix, 'index.html 里找不到"程序 vX.Y.Z"');
+  eq(ix[1], newest, 'index.html 版本号必须等于 CHANGELOG 最新条目');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
