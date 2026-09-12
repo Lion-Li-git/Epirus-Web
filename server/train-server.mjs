@@ -288,17 +288,26 @@ async function runTrainN(gens, cfg) {
     else if (seedP && i < Math.floor(popSize / 3)) pop.push(P.mutatePolicy(seedP, 0.10));
     else pop.push(P.makePolicy(0.25));
   }
+  /* (c) h 基因：与 pop 平行的承诺视界。2/3 个体跑纯原生（fit 干净），1/3 分到 h∈1..4，
+   * 让"深承诺下能打的权重"从一开始就有座位；此后靠分巢精英存活、靠突变漂移。 */
+  let hGenes = pop.map(function (_, i) {
+    if (i === 0) return 0;                       // 种子个体保持原生口径
+    if (i % 3 !== 0) return 0;
+    return 1 + (Math.floor(i / 3) % 4);
+  });
   let sigma = 0.18;
   const hall = [];
   for (const c of clients) sse(c, { type: 'start', n: n, gens, pop: popSize, gpo: games, from: 0, workers: poolN.workers, fresh: !!cfg.fresh });
   for (let gen = 0; gen < gens; gen++) {
-    let res = await poolN.evalPopN(pop, gen, games, n, OPP_NAMES);
+    let res = await poolN.evalPopN(pop, gen, games, n, OPP_NAMES, hGenes);
     if (!res) {
       const B = sb.EpirusBots;
       const opps = OPP_NAMES.map(function (nm) { return { name: nm, sel: B[BOT_FN_N[nm]] }; });
       res = pop.map(function (params, idx) {
-        const r = T.scoreMemberN(params, opps, games, n, gen, idx);
-        return { idx: idx, score: r.fit, firstRate: r.firstRate, top2Rate: r.top2Rate };
+        const r = T.scoreMemberN(params, opps, games, n, gen, idx, hGenes[idx]);
+        return { idx: idx, score: r.fit, firstRate: r.firstRate, top2Rate: r.top2Rate,
+                 hGene: hGenes[idx], commitGames: r.commitGames, commitFirstRate: r.commitFirstRate,
+                 commitTop2Rate: r.commitTop2Rate, commitMaxEp: r.commitMaxEp };
       });
     }
     const scored = pop.map(function (params, i) { return { params: params, r: res[i] || { score: -1, firstRate: 0, top2Rate: 0 } }; });
@@ -310,11 +319,31 @@ async function runTrainN(gens, cfg) {
     const mean = scored.reduce(function (a, x) { return a + x.r.score; }, 0) / scored.length;
     for (const c of clients) sse(c, { type: 'gen', n: n, rec: {
       gen: gen, best: scored[0].r.score, mean: mean,
-      firstRate: scored[0].r.firstRate, top2Rate: scored[0].r.top2Rate, sigma: sigma
+      firstRate: scored[0].r.firstRate, top2Rate: scored[0].r.top2Rate, sigma: sigma,
+      /* (c) h 基因可观测：分布 + 该代承诺局最好成绩。没有这两项，
+       * "基因有没有真的参与选择"就只能靠猜——本项目已经栽过好几次。 */
+      hDist: hGenes.join(','),
+      commitBest: (function () { let b = 0; for (let i = 0; i < scored.length; i++) { const r = scored[i].r; if (r && r.commitGames && r.commitFirstRate > b) b = r.commitFirstRate; } return b; })()
     } });
     if (Date.now() - t0 > cap) { for (const c of clients) sse(c, { type: 'error', msg: '\u8bad\u7ec3\u8d85\u65f6\u4e0a\u9650\uff0830 \u5206\u949f\uff09' }); runningN = false; poolN.close(); return; }
     const elite = scored.slice(0, 3).map(function (x) { return x.params; });
+    /* (c) 分巢精英：每个 h 值额外保留它自己**承诺局夺 1 率**最高的那个个体。
+     * 这是 h 真正参与选择的唯一机制——否则承诺局只记在诊断里，深承诺的权重
+     * 会被原生 fit 直接淘汰（= 之前"切片再多也没用"的同一个坑）。 */
+    const byH = {};
+    for (let i = 0; i < scored.length; i++) {
+      const r = scored[i].r;
+      if (!r || !r.commitGames) continue;
+      const k = r.hGene || 0;
+      if (!k) continue;
+      if (!byH[k] || r.commitFirstRate > byH[k].r.commitFirstRate) byH[k] = scored[i];
+    }
+    for (const k in byH) if (elite.indexOf(byH[k].params) < 0) elite.push(byH[k].params);
+    const hOf = new Map();
+    for (let i = 0; i < pop.length; i++) hOf.set(pop[i], hGenes[i]);
+    const hPick = function (p) { const v = hOf.get(p); return (typeof v === 'number') ? v : 0; };
     const next = elite.slice();
+    const nextH = elite.map(hPick);
     /* 千问定位：这三处在 **Node 作用域**，而 __seedSandbox 只替换 vm 沙箱内的 Math
      * ⇒ 它们从未被播种（沙箱里修好的那 5 处反而都生效了）。改用显式传入的播种流。 */
     const breedRng = T.mulberry32 ? T.mulberry32((SEED0 || 1) * 100003 + gen) : Math.random;
@@ -323,10 +352,12 @@ async function runTrainN(gens, cfg) {
       const b = scored[Math.floor(breedRng() * Math.min(6, scored.length))].params;
       let child = breedRng() < 0.5 ? P.crossover(a, b) : a.slice();
       child = P.mutatePolicy(child, sigma);
-      next.push(child);
+      let ch = hPick(a);                                   // 基因随父代继承
+      if (breedRng() < 0.15) ch = Math.max(0, Math.min(4, ch + (breedRng() < 0.5 ? -1 : 1)));
+      next.push(child); nextH.push(ch);
     }
-    if (gen % 30 === 29) next[popSize - 1] = P.makePolicy(0.25);
-    pop = next;
+    if (gen % 30 === 29) { next[popSize - 1] = P.makePolicy(0.25); nextH[popSize - 1] = 0; }
+    pop = next; hGenes = nextH;
     sigma = Math.max(0.06, sigma * 0.995);
   }
   // 终局：名人堂用全部对手对验证，取 1st 最高
@@ -335,7 +366,19 @@ async function runTrainN(gens, cfg) {
   const PAIRS = [];
   for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) PAIRS.push([POOL[a], POOL[b]]);
   let finalParams = hall[0] ? hall[0].params : pop[0], ev = null;
-  const PROBE_MIN = 0.5;   // 探针门槛（声明必须在 hall 循环之前，否则 TDZ）
+  /* (c) 门槛常量（必须在 hall 循环之前声明，否则 TDZ——v1.3.17 就栽在这）。
+   * ⚠ v1.3.54 实测修正：**默认门槛 = 0（关闭）**。
+   *   tools/subsidy-diag.mjs 用配对设计测出：三人局里冠军即使被白给 ep=6（并正确重算
+   *   affordable）或被 regen=2 永久补贴，**一次 cost>=3 的技能都不出**（深技能 0.00/局），
+   *   而脚本鲸鱼正对照能打出 3.0/局 ⇒ 0 是策略的选择，不是测量死角。
+   *   有钱确实能赢（+20pt），但靠的是**更频繁地出便宜技能**——贵技能在 3 人局没有边际价值。
+   *   于是"补贴局夺 1 率"反映的是**补贴强度**，不是候选的深经济能力：
+   *   拿它当门槛只会往选择里注入噪声，选不出任何东西。故默认关闭，只保留测量。
+   *   5 人局（千问实测 大雷−坦克 = +26.7pt）才有货架，届时用 EPIRUS_SUBSIDY_MIN 重新标定。 */
+  const SUBSIDY_H = Number(process.env.EPIRUS_SUBSIDY_H || 3);
+  const SUBSIDY_START_EP = Number(process.env.EPIRUS_SUBSIDY_EP || 4);
+  const SUBSIDY_MIN = Number(process.env.EPIRUS_SUBSIDY_MIN || 0);
+  if (SUBSIDY_MIN > 0) console.log('[multiObj] 补贴门槛已启用: 补贴局夺1率 >= ' + SUBSIDY_MIN + ' (h=' + SUBSIDY_H + ' startEp=' + SUBSIDY_START_EP + ')');
   const candsN = [];
   for (const h of hall) {
     const v = T.evalN(h.params, PAIRS, 20, n, 987654);
@@ -347,8 +390,11 @@ async function runTrainN(gens, cfg) {
      * min 几乎永远取到探针 → "对手对打得如何"完全不影响排序 → 冠军为探针分牺牲实战。
      * 现在：probe >= PROBE_MIN 才进入排序；排序仍按 pairSc。探针分不足者仅在无人达标时兜底。 */
     const pairSc = v.firstRate + 0.5 * v.top2Rate;
-    const pr = T.evalEconProbe(h.params, 6, n, 4242);
-    const probeOk = pr.score >= PROBE_MIN;
+    /* (c) 判据绑胜负：由"贵技能落地计数"换成**补贴局夺 1 率**。
+     * 旧探针被否决两次：先奖励"出手"被"狂挥空"刷分，后来双枪真能落地了，
+     * 任何按落地计分的判据又会选出"乱挥双枪"的冠军（实测净负 −27pt）。 */
+    const pr = T.evalSubsidyProbe(h.params, 12, n, 4242, { h: SUBSIDY_H, startEp: SUBSIDY_START_EP, regen: 0 });
+    const probeOk = pr.firstRate >= SUBSIDY_MIN;
     candsN.push({ params: h.params, v: v, sc: pairSc, pairSc: pairSc, probe: pr, probeOk: probeOk, div: T.champEntropy(h.params, 0.15, 60, 31337, n) });
   }
   // ===== 多目标择优：名次分容差带内取覆盖熵最高者（与 2 人路径同口径）=====
@@ -361,11 +407,11 @@ async function runTrainN(gens, cfg) {
     bandN.sort(function (a, b) { return b.div.divNorm - a.div.divNorm; });
     const pk = bandN[0];
     finalParams = pk.params; ev = pk.v;
-    for (const c of clients) sse(c, { type: 'multiObj', n: n, top: topN, band: bandN.length, pickedWr: pk.v.firstRate, divNorm: pk.div.divNorm, distinct: pk.div.distinct, minSc: pk.sc, pairSc: pk.pairSc, probeSc: pk.probe.score });
-    console.log('[multiObj] n=' + n + ' 候选=' + candsN.length + ' 过探针门槛=' + passed.length + ' 容差带=' + bandN.length +
-      ' 选中 min=' + pk.sc.toFixed(3) + '(对局=' + pk.pairSc.toFixed(3) + ' 探针=' + pk.probe.score.toFixed(3) + ')' +
+    for (const c of clients) sse(c, { type: 'multiObj', n: n, top: topN, band: bandN.length, pickedWr: pk.v.firstRate, divNorm: pk.div.divNorm, distinct: pk.div.distinct, minSc: pk.sc, pairSc: pk.pairSc, probeSc: pk.probe.firstRate, subsidyMin: SUBSIDY_MIN });
+    console.log('[multiObj] n=' + n + ' 候选=' + candsN.length + ' 过补贴门槛=' + passed.length + '(门槛 ' + SUBSIDY_MIN + ')' + ' 容差带=' + bandN.length +
+      ' 选中 min=' + pk.sc.toFixed(3) + '(对局=' + pk.pairSc.toFixed(3) + ' 补贴局夺1=' + pk.probe.firstRate.toFixed(3) + ')' +
       ' divNorm=' + pk.div.divNorm.toFixed(3) + ' 种类=' + pk.div.distinct +
-      ' 1st=' + (pk.v.firstRate * 100).toFixed(1) + '%  探针: 贵技能出手/局=' + pk.probe.castPerGame.toFixed(2) + ' 落地/局=' + pk.probe.landPerGame.toFixed(2));
+      ' 1st=' + (pk.v.firstRate * 100).toFixed(1) + '%  补贴局: 前二=' + (pk.probe.top2Rate * 100).toFixed(1) + '% 深技能/局=' + pk.probe.deepCastPerGame.toFixed(2) + ' 种类=' + pk.probe.deepKinds);
   }
   const pack = P.pack(finalParams);
   lastChampionPackN = pack;

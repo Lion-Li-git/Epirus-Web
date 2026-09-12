@@ -69,8 +69,13 @@ parentPort.on('message', (msg) => {
        * 且每个个体拿到独立随机流（比按 workerIndex 播种更彻底）。 */
       const S0 = Number(process.env.EPIRUS_SEED0 || 0);
       if (S0) __seedSandbox(sb, S0 * 100003 + (msg.gen + 1) * 1009 + (m.idx + 1));
-      const r = T.scoreMemberN(m.params, opps, msg.games, msg.n, msg.gen, m.idx);
-      return { idx: m.idx, score: r.fit, firstRate: r.firstRate, top2Rate: r.top2Rate, avgDealt: r.avgDealt };
+      const r = T.scoreMemberN(m.params, opps, msg.games, msg.n, msg.gen, m.idx, m.h);
+      return {
+        idx: m.idx, score: r.fit, firstRate: r.firstRate, top2Rate: r.top2Rate, avgDealt: r.avgDealt,
+        // (c) 承诺局记账：分巢精英与终局门槛都要靠它，丢了这一项 h 基因就白加了
+        hGene: m.h || 0, commitGames: r.commitGames, commitFirstRate: r.commitFirstRate,
+        commitTop2Rate: r.commitTop2Rate, commitMaxEp: r.commitMaxEp
+      };
     });
     parentPort.postMessage({ type: 'evalNResult', id: msg.id, results: results });
   }

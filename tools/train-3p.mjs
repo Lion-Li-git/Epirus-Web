@@ -124,6 +124,13 @@ for (let i = 0; i < POP; i++) {
   else pop.push(P.makePolicy(0.25));
 }
 if (seedParams) console.log('[train-3p] 热启动：以现有冠军为种子');
+/* (c) h 基因：与 pop 平行的承诺视界（与 server/train-server.mjs 同口径）。
+ * 2/3 个体跑纯原生（fit 干净），1/3 分到 h∈1..4，此后靠分巢精英存活 + 突变漂移。 */
+let hGenes = pop.map(function (_, i) {
+  if (i === 0) return 0;
+  if (i % 3 !== 0) return 0;
+  return 1 + (Math.floor(i / 3) % 4);
+});
 let sigma = 0.18;
 let bestParams = pop[0], bestFit = -1e9;
 const hall = [];                       // 名人堂：训练分靠前的个体（终局用全对手验证重选）
@@ -138,7 +145,7 @@ console.log('[train-3p] 人数=' + N + ' 代=' + GENS + ' 种群=' + POP + ' 每
 
 for (let gen = 0; gen < GENS; gen++) {
   const scored = pop.map(function (params, i) {
-    return { params: params, r: T.scoreMemberN(params, OPPS, GAMES, N, gen, i) };
+    return { params: params, r: T.scoreMemberN(params, OPPS, GAMES, N, gen, i, hGenes[i]) };
   });
   scored.sort(function (a, b) { return b.r.fit - a.r.fit; });
   if (scored[0].r.fit > bestFit) { bestFit = scored[0].r.fit; bestParams = scored[0].params; }
@@ -152,7 +159,21 @@ for (let gen = 0; gen < GENS; gen++) {
   }
   const breedRng = T.mulberry32 ? T.mulberry32(__SEED * 100003 + gen) : Math.random;
   const elite = scored.slice(0, 3).map(function (x) { return x.params; });
+  /* (c) 分巢精英：每个 h 值保留它自己承诺局夺 1 率最高的个体（h 参与选择的唯一机制）。 */
+  const byH = {};
+  for (let i = 0; i < scored.length; i++) {
+    const r2 = scored[i].r;
+    if (!r2 || !r2.commitGames) continue;
+    const k = r2.hGene || 0;
+    if (!k) continue;
+    if (!byH[k] || r2.commitFirstRate > byH[k].r.commitFirstRate) byH[k] = scored[i];
+  }
+  for (const k in byH) if (elite.indexOf(byH[k].params) < 0) elite.push(byH[k].params);
+  const hOf = new Map();
+  for (let i = 0; i < pop.length; i++) hOf.set(pop[i], hGenes[i]);
+  const hPick = function (p) { const v = hOf.get(p); return (typeof v === 'number') ? v : 0; };
   const next = elite.slice();
+  const nextH = elite.map(hPick);
   while (next.length < POP) {
     /* 与 server 同一类 bug（千问复核指出"Node 作用域漏播"）：
      * 这三行在 **Node 全局**，__seedSandbox 只换沙箱内的 Math，够不到这里
@@ -161,10 +182,12 @@ for (let gen = 0; gen < GENS; gen++) {
     const b = scored[Math.floor(breedRng() * Math.min(6, scored.length))].params;
     let child = breedRng() < 0.5 ? P.crossover(a, b) : a.slice();
     child = P.mutatePolicy(child, sigma);
-    next.push(child);
+    let ch = hPick(a);                                     // 基因随父代继承
+    if (breedRng() < 0.15) ch = Math.max(0, Math.min(4, ch + (breedRng() < 0.5 ? -1 : 1)));
+    next.push(child); nextH.push(ch);
   }
-  if (gen % 30 === 29) next[POP - 1] = P.makePolicy(0.25);   // 定期注入随机个体
-  pop = next;
+  if (gen % 30 === 29) { next[POP - 1] = P.makePolicy(0.25); nextH[POP - 1] = 0; }
+  pop = next; hGenes = nextH;
   sigma = Math.max(0.06, sigma * 0.995);
 }
 

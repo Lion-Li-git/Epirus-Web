@@ -91,10 +91,14 @@ export function makeParallelEvalN(T, opts) {
       worker.postMessage(Object.assign({}, msg, { id: id }));
     });
   }
-  /* 返回与 pop 同长的结果数组；池不可用时返回 null（调用方自行回退串行） */
-  async function evalPopN(pop, gen, games, n, oppNames) {
+  /* 返回与 pop 同长的结果数组；池不可用时返回 null（调用方自行回退串行）
+   * hGenes：(c) 承诺视界基因，与 pop 平行。必须随个体进 worker —— 它决定
+   * 这个人每 3 局里那 1 局承诺局的 h，漏传就等于"基因从未到达适应度函数"。 */
+  async function evalPopN(pop, gen, games, n, oppNames, hGenes) {
     if (!pool.length || pop.length <= 1) return null;
-    const members = pop.map(function (params, idx) { return { idx: idx, params: params }; });
+    const members = pop.map(function (params, idx) {
+      return { idx: idx, params: params, h: (hGenes && hGenes[idx]) || 0 };
+    });
     const chunk = Math.ceil(members.length / pool.length);
     const jobs = [];
     for (let w = 0; w < pool.length; w++) {

@@ -313,6 +313,82 @@
     return { score: score, casts: casts, landed: landed, games: gamesRun, castPerGame: castRate, landPerGame: landRate };
   }
 
+  /* ===== (c) 补贴局探针：门槛绑**胜负**，不绑"贵技能落地次数" =====
+   * 千问的警告：双枪已真正读取 def.dmg，于是 >=3 ジ 层里出现了可落地的伤害技能——
+   * 但强制出双枪是**净负**（实测 -27pt）。任何"奖励贵技能落地"的探针都会选出
+   * "乱挥双枪"的冠军。故判据改为**补贴局里的夺 1 率**。
+   * 与 evalEconProbe 的三点不同：
+   *   1) 打分对象是名次（夺1率/前二率），不是出手或落地次数；
+   *   2) 冠军被强制在承诺视界 h 下行动 → 深经济分支不再依赖"恰好被抽到"；
+   *   3) 补贴是**开局一次性给资源**（startEp），不是每次决策补满 → 必须把资源
+   *      **转换**成胜利才算数，"有钱"本身不给分。
+   * 对手口径与 evalEconProbe 一致：同权重自对弈（确定性、无脚本表依赖）。 */
+  function evalSubsidyProbe(params, games, n, seedBase, opts) {
+    const N = (typeof n === 'number' && n > 2) ? n : 3;
+    const O = opts || {};
+    const H = (typeof O.h === 'number' && O.h > 0) ? (O.h | 0) : 3;
+    const START_EP = (typeof O.startEp === 'number' && O.startEp > 0) ? O.startEp : 4;
+    const REGEN = (typeof O.regen === 'number') ? O.regen : 0;
+    let first = 0, top2 = 0, played = 0, deepCast = 0;
+    const keys = {};
+    for (let g = 0; g < games; g++) {
+      const seat = g % N;
+      const inner = policyChooserN(params, 0.15, 0);
+      const seatSel = makeCommitChooser(params, 0.15, H);
+      let granted = false;
+      const ch = [];
+      for (let pid = 0; pid < N; pid++) {
+        if (pid === seat) {
+          ch.push(function (state, id, legal) {
+            if (!granted) {                     // 开局一次性补贴（不改规则，仅评测用）
+              granted = true;
+              const pl = state.p[seat];
+              pl.ep = Math.max(pl.ep, START_EP);
+              pl.elec = Math.max(pl.elec, 1);
+              pl.boom = Math.max(pl.boom, 1);
+              /* ⚠ 这一步不能省：play.js:50-53 在**调用 chooser 之前**就算好了
+               * legal[i].affordable，并在 chooser 返回后用**那个**值把买不起的选择
+               * 强制改回 ジ。所以只改 pl.ep 时，贵技能在本回合进不了采样集。
+               * 实测口径见 tools/grant-mech-diag.mjs（affordable 序列 = 前 3 次 false、
+               * 之后 true：**只对每局第 1 回合无效**，因为改的是真实 state，会留到下一回合）。
+               * 也就是说 evalEconProbe 的历史结论**只有首回合是盲的，其余仍然有效**——
+               * 不要把它当成"纯测量假象"（我一度这么以为，实测否定了）。
+               * 这里重算 affordable 是为了消掉那一个回合的盲区，让"白给资源"当回合就成立。 */
+              if (legal) {
+                for (let i = 0; i < legal.length; i++) {
+                  const cc = S.computeCost(state, id, legal[i].key);
+                  legal[i].affordable = !!(cc && cc.ok && cc.ep <= pl.ep);
+                }
+              }
+            }
+            const a = seatSel(state, id, legal);
+            const k = (typeof a === 'string') ? a : a.key;
+            const c = S.computeCost(state, id, k);
+            if (c && c.ok && c.ep >= 3) { deepCast++; keys[k] = 1; }
+            return a;
+          });
+        } else {
+          ch.push(function (state, id, legal) { return inner(state, id, legal); });
+        }
+      }
+      const r = oneGameN(ch, seedBase + g * 977, N, { regen: REGEN });
+      const rank = rankOf(r.state, seat);
+      if (rank === 1) first++;
+      if (rank <= 2) top2++;
+      played++;
+    }
+    const firstRate = played ? first / played : 0;
+    const top2Rate = played ? top2 / played : 0;
+    return {
+      score: firstRate,                     // 门槛用的就是它：补贴局夺 1 率
+      firstRate: firstRate,
+      top2Rate: top2Rate,
+      games: played,
+      deepCastPerGame: played ? deepCast / played : 0,
+      deepKinds: Object.keys(keys).length
+    };
+  }
+
   /* 某技能的真实费用（评测用） */
   function costOfKey(key, n) {
     const st = S.createState('multi', { next: mulberry32(7) }, (n > 2 ? n : 3));
@@ -399,10 +475,18 @@
   const HOARD_PEN = 0.12;    // 11+ ep 的囤积惩罚上限
 
   /* N 人适应度（N19）：名次基础分（1/0.6/0.2）+ 轻量 shaped 项 */
-  function scoreMemberN(params, opps, games, n, gen, idx) {
+  function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
     let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0;
     let imitSum = 0, imitGames = 0;
+    /* (c) 承诺级储蓄视界 h 是**个体基因**。
+     * 此前它是每局随机抽的噪声（30% 的局抽 h∈1..4）：个体不携带它 ⇒ 选择压力
+     * 作用不到它 ⇒ "走通连续攒钱长轨迹"的能力没有任何机制被保留下来。
+     * 现在：h=k 的个体每 3 局有 1 局跑承诺口径（ep < 1+k 只准出 ジ）+ 补贴经济。
+     * 这些**承诺局一分都不进 fit**——fit 必须仍代表线上原生强度，否则又要把冠军
+     * 推向"只在补贴下成立"的策略（历史上 min(pairSc, probeSc) 跨量纲就是这么塌的）。 */
+    const hGene = (typeof hGeneIn === 'number' && hGeneIn > 0) ? (hGeneIn | 0) : 0;
+    let fitGames = 0, commitFirst = 0, commitTop2 = 0, commitGames = 0, commitMaxEp = 0;
     const agg = { use: {}, aff: {} };   // 该个体的动作直方图（跨局汇总）
     for (let g = 0; g < games; g++) {
       const seat = g % n;                                   // 座位轮换
@@ -410,12 +494,12 @@
       const choosers = [];
       let oi = g % opps.length;
       const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
+      const commitGame = hGene > 0 && (g % 3 === 0);   // (c) 承诺局：每 3 局 1 局，h 来自基因
       let econ = null;
       for (let pid = 0; pid < n; pid++) {
         if (pid === seat) {
-          // 承诺级 ε：30% 的局抽一个储蓄视界 h∈1..4，本局 ep<1+h 时只准出 ジ
-          const hr = mulberry32(seed + 991)();
-          const h = hr < 0.30 ? (1 + Math.floor(mulberry32(seed + 992)() * 4)) : 0;
+          // (c) 承诺级 ε：h 取自**个体基因**，不再是每局随机抽的噪声
+          const h = commitGame ? hGene : 0;
           const baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : policyChooserN(params, 0.35, 0.15);
           econ = makeEconChooser(baseSel, agg, imitB > 0 ? BOT_PICKS['heavyfire'] : null, imitB); choosers.push(econ);
         }
@@ -426,7 +510,10 @@
       // 锁死在另一个不动点）；regen=2 确实能让 AI 学会聚能环（连用到 16），
       // 但环是严格支配策略（免费 +3/回合永续）→ 学会后反而更窄。
       // 故默认关闭，等规则/平衡决策后再开。
-      const regen = regenForGame(g, games);   // Q1(d) 永久回放切片：每代固定 ~8% 的局带补贴，永不退火
+      /* 承诺局的"主场"是补贴经济：原生经济下 ep 根本涨不起来，"连攒 3 回合"只是一条
+       * 更慢的输法，学不到任何东西。原生局仍走 Q1(d) 的永久回放切片（每 12 局 1 局带补贴），
+       * 两条通道互不干扰，故 fit 的口径不被污染。 */
+      const regen = commitGame ? 2 : regenForGame(g, games);
       const r = oneGameN(choosers, seed, n, { regen: regen });
       const rank = rankOf(r.state, seat);
       const base = rank === 1 ? 1.0 : rank === 2 ? 0.3 : 0.0;   // N19 修正：3 人局里第二名也算输，降低苟活奖励
@@ -458,19 +545,28 @@
       // 经济分档：贵的技能更值钱（不再指向某个特定循环）
       const conv = 0.08 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2)
                  + 0.08 * Math.min(1, (econ ? econ.rec.heavy4 : 0) / 1);
-      fit += Math.max(-0.3, Math.min(1.8, base + proact + deal + stock + conv - slow + imitB * imit));
-      if (econ) { maxEpSum += econ.rec.maxEp; heavySum += econ.rec.heavy; holdSum += econ.rec.hold; econGames++; }
-      // 经济引擎质量：本局获得的 ep 总量。聚能环第 3 次起每回合 +3（ジ 只 +1），
-      // 直接在这个量上体现 → 不用为“环”单独写奖励，避免又指向特定循环。
-      for (let ei = 0; ei < r.state.events.length; ei++) {
-        const e = r.state.events[ei];
-        if (e.type === 'ep' && e.pid === seat && e.delta > 0) epGain += e.delta;
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + stock + conv - slow + imitB * imit));
+      if (commitGame) {
+        /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
+        if (rank === 1) commitFirst++;
+        if (rank <= 2) commitTop2++;
+        commitGames++;
+        if (mEp > commitMaxEp) commitMaxEp = mEp;
+      } else {
+        fit += gFit; fitGames++;
+        if (econ) { maxEpSum += econ.rec.maxEp; heavySum += econ.rec.heavy; holdSum += econ.rec.hold; econGames++; }
+        // 经济引擎质量：本局获得的 ep 总量。聚能环第 3 次起每回合 +3（ジ 只 +1），
+        // 直接在这个量上体现 → 不用为“环”单独写奖励，避免又指向特定循环。
+        for (let ei = 0; ei < r.state.events.length; ei++) {
+          const e = r.state.events[ei];
+          if (e.type === 'ep' && e.pid === seat && e.delta > 0) epGain += e.delta;
+        }
+        if (rank === 1) first++;
+        else if (rank === 2) second++;
+        dealt += r.dmg[seat];
+        rounds += r.rounds;
+        played++;
       }
-      if (rank === 1) first++;
-      else if (rank === 2) second++;
-      dealt += r.dmg[seat];
-      rounds += r.rounds;
-      played++;
     }
     /* 技能覆盖熵：目标函数里唯一不指向某个循环的广度信号。
      * 策略是"动作价值 softmax + 低温"的贪心取值，而目标里只有胜负时必然塔到一招；
@@ -485,7 +581,7 @@
     const affN = Math.max(2, Object.keys(agg.aff || {}).length || (R.skills || []).length);
     const divNorm = uTot > 0 ? H / Math.log(affN) : 0;
     const divBonus = 0;   // Q3：覆盖熵移出目标函数，只作诊断（它和"见过那个状态"是两回事）
-    const fitAvg = played ? fit / played : 0;
+    const fitAvg = fitGames ? fit / fitGames : 0;
     return {
       fit: fitAvg + divBonus,
       fitNoDiv: fitAvg,
@@ -501,7 +597,14 @@
       avgHeavy: econGames ? heavySum / econGames : 0,
       avgHold: econGames ? holdSum / econGames : 0,
       avgDeep: econGames ? deepSum / econGames : 0,
-      avgImit: imitGames ? imitSum / imitGames : 0
+      avgImit: imitGames ? imitSum / imitGames : 0,
+      /* (c) 承诺局记账 */
+      hGene: hGene,
+      fitGames: fitGames,
+      commitGames: commitGames,
+      commitFirstRate: commitGames ? commitFirst / commitGames : 0,
+      commitTop2Rate: commitGames ? commitTop2 / commitGames : 0,
+      commitMaxEp: commitMaxEp
     };
   }
 
@@ -775,7 +878,7 @@
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol,
     scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

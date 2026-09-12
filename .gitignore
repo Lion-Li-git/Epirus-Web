@@ -3,3 +3,8 @@ node_modules/
 *.bak
 .DS_Store
 Thumbs.db
+
+# 训练工具的非发布输出（EPIRUS_PUBLISH 未设时的落点）。
+# v1.3.54：这些是**测试残留**——不忽略的话 `git add -A` 会把它们提交进仓库，
+# 与 v1.3.48 那次"测试跑覆写线下冠军"是同一类事故。
+docs/artifacts/*-out.js

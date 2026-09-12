@@ -677,6 +677,39 @@ t('L2 事件字段名必须与发射端一致（筛错字段 => 把"没发生"�
   ok(md.every(function (e) { return e.source == null; }), 'mine 伤害 source 必须为 null');
 });
 
+t('L4 补贴口径：chooser 内补 ep 只对当回合无效、次回合起生效（turn-start 通道才干净）', function () {
+  /* 为什么钉这条：为诊断"深经济锁死"我写了补贴探针，看到贵技能 0 次就写下"这是测量假象"。
+   * 实测（tools/grant-mech-diag.mjs）否定了它：play.js:50-53 先算 affordable 再问 chooser、
+   * 事后又用旧值把买不起的选择强制改回 ジ，所以**每局第 1 回合**是盲的；但改的是真实 state，
+   * 从第 2 回合起 affordable 就变 true 了。两种解读对历史结论的含义完全相反
+   * （"纯假象" => 那个结论要推翻；"只有首回合盲" => 结论仍成立），所以必须由用例钉住。 */
+  const RINGk = R.SK.RING, BIGk = R.SK.BIG_T;
+
+  // (1) chooser 内补 ep：当回合 affordable 仍为 false，次回合起才 true
+  const st1 = S.createState('multi', { next: mulberry32(91) }, 3);
+  for (let i2 = 0; i2 < 3; i2++) { st1.p[i2].ep = 2; st1.p[i2].elec = 0; st1.p[i2].boom = 0; }
+  const seenAff = [];
+  const ch1 = function (state, pid, legal) {
+    state.p[pid].ep = Math.max(state.p[pid].ep, 99);
+    const l = legal.find(function (x) { return x.key === RINGk; });
+    seenAff.push(l ? l.affordable : null);
+    return { key: BIGk, target: 1, target2: null };
+  };
+  Play.autoGameN(st1, [ch1, ch1, ch1]);
+  eq(seenAff[0], false, '首回合：legal 在 chooser 之前算好，补 ep 不能让 RING 变可负担');
+  ok(seenAff.indexOf(true) >= 0, '次回合起：补的 ep 留在真实 state 上，RING 必须变可负担');
+  ok(st1.events.some(function (e) { return e.via === BIGk || e.via === RINGk; }),
+    '既然次回合起可负担，就该真的出现贵/环技能出手（否则连"留存"都不成立）');
+
+  // (2) turn-start 通道（引擎 opts.regen）在 chooser 之前就把 ep 发好 —— 这是干净口径
+  const st2 = S.createState('multi', { next: mulberry32(92) }, 3, { regen: 6 });
+  st2.p[0].ep = 0;
+  X.startTurn(st2);
+  const l2 = Play.legalActions(st2, 0).find(function (x) { return x.key === BIGk; });
+  ok(!!l2, 'multi 模式应含 bigT（真正的落雷）');
+  ok(l2.affordable === true, 'opts.regen 在 startTurn 发 ep，早于 legalActions => bigT 当回合必须可负担');
+});
+
 t('L3 每个诊断工具都必须能跑（签名/前置条件没核实 => 脚本崩）', function () {
   /* Real instance: my bisect script died on `T.buildOpps(null, 0.05)` -- a signature I
    * never verified. A per-tool smoke run turns "I forgot to check the API" into a red test.
@@ -690,6 +723,32 @@ t('L3 每个诊断工具都必须能跑（签名/前置条件没核实 => 脚本
   ok(evo.indexOf('process.env.EPIRUS_WR_TOL') < 0,
     'WR_TOL 不得在引擎内读 env（CLI 沙箱无 process => 两条路取到不同值）');
   ok(evo.indexOf('setWrTol') >= 0, 'WR_TOL 应由调用方通过 setWrTol 显式传入');
+});
+
+t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {
+  /* 真实事故（v1.3.48）：一次测试跑把 js/bundled-champion*.js 覆写成测试冠军并被提交。
+   * v1.3.54 又发现两个同类缺口，都只在"跑完看 git status"时才显形：
+   *  (1) server 的 writeBundleMP 会顺带把 index.html 的 ?v= 缓存戳改成新值；
+   *      repro-check 备份还原了冠军包，却没还原 index.html => 每次测试都留 diff。
+   *  (2) 训练工具的非发布输出 docs/artifacts/*-out.js 没被 .gitignore 覆盖。
+   * 所以这条断言查的是"残留通道"，不是某个具体文件。 */
+  const gi = readFileSync('.gitignore', 'utf8');
+  ok(gi.indexOf('-out.js') >= 0, '.gitignore 必须忽略训练工具的非发布输出（docs/artifacts/*-out.js）');
+
+  // 反向：真的会写那个落点的工具，必须同时有 EPIRUS_PUBLISH 门槛（否则它会写线下路径）
+  for (const f of ['tools/train-3p.mjs', 'tools/train-fast.mjs', 'tools/train-best.mjs']) {
+    const src = readFileSync(f, 'utf8');
+    if (src.indexOf('-out.js') >= 0) {
+      ok(src.indexOf('EPIRUS_PUBLISH') >= 0, f + ' 用了 -out.js 落点，就必须有 EPIRUS_PUBLISH 门槛');
+    }
+  }
+
+  // index.html 的缓存戳副作用必须被测试工具还原
+  const rc = readFileSync('tools/repro-check.mjs', 'utf8');
+  ok(rc.indexOf('htmlBackup') >= 0,
+    'repro-check 必须备份/还原 index.html（writeBundleMP -> bumpChampionVersion 会改它）');
+  ok(rc.indexOf('bumpChampionVersion') >= 0 || rc.indexOf('index.html') >= 0,
+    'repro-check 的注释里应能看出它还原的是 index.html');
 });
 
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));

@@ -81,6 +81,13 @@ async function trainOnce(seed) {
 async function main() {
   if (!existsSync(CHAMP)) { console.error('找不到 ' + CHAMP); process.exit(2); }
   const backup = readFileSync(CHAMP, 'utf8');
+  /* ⚠ index.html 也必须备份还原（v1.3.54 发现）：
+   * writeBundleMP 除了写冠军包，还会调 bumpChampionVersion() 把 index.html 里所有
+   * script 的 ?v= 缓存戳换成 Date.now().toString(36)。冠军包被这里还原了，
+   * 缓存戳却漏在外面 —— 于是**每次跑测试都会给一个 shipped 文件留 diff**，
+   * 而 `git add -A` 会把测试残留一起提交（v1.3.48 那次事故就是这么发生的）。 */
+  const HTML = 'index.html';
+  const htmlBackup = existsSync(HTML) ? readFileSync(HTML, 'utf8') : null;
   const results = [];
   let fail = 0;
   try {
@@ -109,6 +116,7 @@ async function main() {
   } finally {
     killServer(PORT);
     try { writeFileSync(CHAMP, backup, 'utf8'); } catch (e) { }
+    if (htmlBackup != null) { try { writeFileSync(HTML, htmlBackup, 'utf8'); } catch (e) { } }
   }
   /* ===== D/E (Qianwen's review): "irreproducible" must be triaged into two kinds =====
    *   (1) an unseeded RANDOM SOURCE, vs
