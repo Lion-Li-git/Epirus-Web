@@ -190,12 +190,39 @@ for (const k of SKILLS) {
 }
 
 /* ② 分类：坑 / 主力 / 没学会的强招 / 死技能 */
+/* ===== v1.4.6：技能族 → "该用哪个口径" 映射（v1.4.5 补齐四个口径后的覆盖表）=====
+ * 目的：报告不再把"这个口径表达不了"读成"这个技能弱"。
+ * 判据优先级：**冠军已经在用 ⇒ 消融（--ban）最准**（"强制 spam 它"对已在用的技能没有意义）；
+ * 否则按技能族给专用口径：珠类门 / 序列连招 / 反应条件 / 辅助防御。 */
+const INSTR = {
+  railgun:   '--grant=elec --inject=railgun',
+  laserEye:  '--grant=boom --inject=laserEye',
+  charge:    '--plan=chargeRailgun',
+  ring:      '--plan=…（已用时 --ban=ring 更准）',
+  curse:     '--combo=curseStorm:3',
+  firestorm: '--combo=curseStorm:3',
+  transfer:  '--smart=transfer:2',
+  drain:     '--smart=drain:hp1 或 --mode=long --drainHp=N',
+  mine:      '--field=minespam（需被触发）',
+  guard:     '--field=focusme2', reflect: '--field=focusme2', armor: '--field=focusme2',
+  bagua:     '--field=focusme2', jinshield: '--field=focusme2', shift: '--field=focusme2',
+  proto:     '--field=tank', holo: '--field=tank',
+  gun: '--inject=gun', sword: '--inject=sword', tank: '--inject=tank', snipe: '--inject=snipe',
+  dualGun: '--inject=dualGun', mirror: '--inject=mirror', purify: '--inject=purify',
+  cannon: '--inject=cannon', taunt: '--inject=taunt', rod: '--inject=rod',
+  miniT: '--inject=miniT', bigT: '--inject=bigT'
+};
+const USE_BAN = 0.02;   // 冠军使用率 ≥2% ⇒ 它真的在用 ⇒ 消融（--ban）比强制 spam 准
+
 for (const r of rows) {
   const hi = r.use >= 0.04, pos = r.delta > 0.005, neg = r.delta < -0.005;
   /* 基础动作（费用 0）除外：强制 mono-spam 任何单一动作必然不如混合策略，
    * 那不是“坑”而是评测口径的必然结果。只有费用>0 的技能才适合读“常用却亏”。 */
   const d = R.byKey[r.key] || {};
   const isUtil = !(d.dmg && d.dmg.amt > 0);       // 无伤害 = 辅助/防御/架势
+  /* 该用哪个口径（放在 continues 之前，保证每行都有） */
+  r.tool = (r.use >= USE_BAN) ? ('--ban=' + r.key) : (INSTR[r.key] || '—');
+  r.inUse = r.use >= USE_BAN;
   /* v1.3.59：**三件事分开**，否则"死技能"这一栏会把测量失败也算进去：
    *  1) 强制没命中（技能压根进不了 legal 或被抽不到）⇒ 这个 Δ 不能读，只能报"实验未生效"；
    *  2) 辅助/防御类：mono-spam 一个不造成伤害的技能必然不如混合策略 ⇒ Δ 结构性为负；
@@ -229,7 +256,8 @@ html += 'th{background:#171b24;color:#9aa0b0;font-weight:600;font-size:12px}';
 html += '.barwrap{background:#1b202b;border-radius:3px;height:14px;width:150px;display:inline-block;vertical-align:middle;overflow:hidden}';
 html += '.bar{height:100%;border-radius:3px}.pos{background:#30a46c}.neg{background:#e5484d}';
 html += '.tag{padding:2px 8px;border-radius:10px;font-size:11px;color:#0d0f14;font-weight:700}';
-html += '.legend{font-size:12px;color:#7c8494;margin-top:10px}code{background:#1b202b;padding:1px 5px;border-radius:3px}</style></head><body>';
+html += '.legend{font-size:12px;color:#7c8494;margin-top:10px}code{background:#1b202b;padding:1px 5px;border-radius:3px;font-size:11px}';
+html += '.cov{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}.cov table{margin-top:6px}.cov b{color:#9aa0b0;font-size:12px}.cov code{color:#7dd3fc}</style></head><body>';
 html += '<h1>Epirus AI 训练分析报告</h1>';
 html += '<div class="meta">人数 ' + N + ' 人 · 冠军 <code>' + esc(file) + '</code> · 对手场 ' + PAIRS.length + ' 组(4 个互不相同脚本) × ' + GAMES + ' 局 · 富裕经济 = 每回合补到 ' + RICH + ' ep · 游戏 ' + u.dec + ' 个决策采样</div>';
 
@@ -239,10 +267,24 @@ html += '<div class="card"><b>' + rows.filter(function (r) { return r.use > 0.00
 html += '<div class="card"><b>' + u.maxEp + '</b><span>最高 ep（经济深度）</span></div>';
 html += '<div class="card"><b>' + (baseNative.firstRate * 100).toFixed(0) + '%</b><span>原生经济 1st</span></div>';
 html += '<div class="card"><b>' + (baseRich.firstRate * 100).toFixed(0) + '%</b><span>富经济 1st（上限参考）</span></div>';
+html += '<div class="card"><b>' + rows.filter(function (r) { return r.forceHit >= 0.05; }).length + ' / ' + rows.length + '</b><span>Δ 本口径可量</span></div>';
+html += '<div class="card"><b>' + rows.filter(function (r) { return r.use >= USE_BAN; }).length + '</b><span>冠军已在用（该用 --ban 消融）</span></div>';
 html += '</div>';
 
+/* ===== 覆盖表：把"测不了的"和"已在用的"分别列出并给出该用的命令 ===== */
+const lack = rows.filter(function (r) { return r.forceHit < 0.05; });
+const inUse = rows.filter(function (r) { return r.use >= USE_BAN; }).sort(function (a, b) { return b.use - a.use; });
+html += '<h2>覆盖表：口径不足 / 冠军已在用 → 该用什么命令</h2>';
+html += '<div class="cov"><div><b>① 本口径量不到（' + lack.length + ' 个）</b> —— Δ 不可读，不是"弱"：<table><tr><th>技能</th><th>费用</th><th>强制命中</th><th>该用命令</th></tr>';
+for (const r of lack) html += '<tr><td>' + esc(r.name) + '</td><td>' + (r.cost == null ? '?' : r.cost) + '</td><td>' + (r.forceHit * 100).toFixed(0) + '%</td><td><code>' + esc(r.tool) + '</code></td></tr>';
+if (!lack.length) html += '<tr><td colspan="4">（无 —— 所有技能在本口径下都量到了）</td></tr>';
+html += '</table></div><div><b>② 冠军已经在用（' + inUse.length + ' 个）</b> —— 对它们"强制 spam"没有意义，应测<b>消融（拿掉）</b>：<table><tr><th>技能</th><th>实际使用率</th><th>该用命令</th></tr>';
+for (const r of inUse) html += '<tr><td>' + esc(r.name) + '</td><td>' + (r.use * 100).toFixed(1) + '%</td><td><code>' + esc(r.tool) + '</code></td></tr>';
+if (!inUse.length) html += '<tr><td colspan="3">（无 —— 冠军几乎不用任何 ≥2% 的技能）</td></tr>';
+html += '</table></div></div>';
+
 html += '<h2>每技能：实际使用率 × 实际强度（富裕经济下强制使用的收益差）</h2>';
-html += '<table><tr><th>技能</th><th>费用</th><th>实际使用率</th><th></th><th>强制命中率</th><th>强制使用的 1st</th><th>强度 Δ vs 自由发挥</th><th></th><th>判定</th></tr>';
+html += '<table><tr><th>技能</th><th>费用</th><th>实际使用率</th><th></th><th>强制命中率</th><th>强制使用的 1st</th><th>强度 Δ vs 自由发挥</th><th></th><th>判定</th><th>该用口径</th></tr>';
 rows.sort(function (a, b) { return b.use - a.use; });
 for (const r of rows) {
   html += '<tr><td>' + esc(r.name) + '</td><td>' + (r.cost == null ? '?' : r.cost) + '</td>';
@@ -251,12 +293,16 @@ for (const r of rows) {
   html += '<td>' + (r.richWr * 100).toFixed(0) + '%</td>';
   html += '<td>' + (r.delta >= 0 ? '+' : '') + (r.delta * 100).toFixed(1) + 'pt</td>';
   html += '<td>' + bar(r.delta, maxAbsDelta, r.delta >= 0 ? 'pos' : 'neg') + '</td>';
-  html += '<td><span class="tag" style="background:' + VCOLOR[r.verdict] + '">' + r.verdict + '</span></td></tr>';
+  html += '<td><span class="tag" style="background:' + VCOLOR[r.verdict] + '">' + r.verdict + '</span></td>';
+  html += '<td><code' + (r.inUse ? ' style="color:#f5a623"' : '') + '>' + esc(r.tool) + '</code></td></tr>';
 }
 html += '</table>';
 html += '<div class="legend"><b>口径说明：</b>Δ 是“强制只用这一招”对“自由发挥”的差，所以**基础动作（如 ジ）强制 spam 必然大幅为负，那不是坑**。真正有意义的是排序：Δ 越接近 0 或为正，说明这一招单独就能顶上整套混合策略。<br><br><b>怎么读：</b>左柱 = AI 实际多久用一次（原生经济）；右柱 = 强制用它时的胜率变化（富经济，绿色涨 / 红色跌）。';
 html += '<br><b>红色「坑」</b>= 常用但用了反而亏 → AI 在自残，应该修训练或规则；<b>橙色「没学会的强招」</b>= 明明更强却几乎不用 → 探索/经济没铺到；';
 html += '<b>绿色「主力」</b>= 又强又常用，健康；<b>紫色「死技能」</b>= 又弱又不用，设计上没被激活。';
+html += '<br><b>最后一列「该用口径」</b>：本口径量不到的技能，用这一列的命令重测'
+     + '（v1.4.5 补齐了四类口径：<code>--grant</code> 开珠 / <code>--plan</code>·<code>--combo</code> 连招 / '
+     + '<code>--smart</code> 条件注入 / <code>--ban</code> 消融）。橙色 = 冠军已在用 ⇒ 应测"拿掉它"，而不是"强制 spam"。';
 html += '<br><b>灰色「实验未生效」</b>= 这一招**进不了 legal**（条件门/珠子类），强制根本打不出去 ⇒ Δ 不能读，'
      + '不是「死技能」；<b>深灰「辅助/防御（Δ 结构性为负）」</b>= 无伤害类技能，mono-spam 必然不如混合策略，'
      + 'Δ 天然为负、不代表它没用（若它 Δ 为正会改判「没学会的强招」）。<b>务必先看「强制命中率」再看 Δ。</b></div>';
