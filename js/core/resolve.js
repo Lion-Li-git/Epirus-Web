@@ -111,7 +111,8 @@
         case SK.ARMOR: return { kind: 'armor' };
         case SK.JINSHIELD: return { kind: 'jinshield' };
         case SK.BAGUA: case SK.SHIFT: return { kind: 'bagua' };
-        case SK.PROTO: case SK.HOLO: return { kind: 'proto' }; // 全息屏障=原型制御 R18
+        case SK.PROTO: return { kind: 'proto' };
+        /* v1.5.4：`SK.HOLO` **不再是施放者自己的架势** —— 它是给别人套的盾（见函数末尾的 holoShieldFrom）。 */
         default: break;
       }
     }
@@ -119,6 +120,21 @@
     if (state.p[pid].baguaExtra) {
       const ownGuard = a && R.GUARD_FAMILY.indexOf(a.key) >= 0;
       if (!ownGuard) return { kind: 'bagua', extra: true };
+    }
+    /* v1.5.4（原始规则修正）：全息屏障是**对别人**用的盾 —— 谁本回合把盾套在我身上，我就有"原型制御"式架势。
+     * 这样"格挡 / ≥3 伤害转移给作用者 / 小雷豁免 / 大雷禁用（R23'）"等**所有既有 `kind==='proto'` 的判定
+     * 都自动复用**，不必去改别处（改判定是这类修正最容易漏一半的地方）。 */
+    const holoFrom = holoShieldFrom(state, pid);
+    if (holoFrom != null) return { kind: 'proto', viaHolo: true, from: holoFrom };
+    return null;
+  }
+
+  /* 本回合是否有人用「全息屏障」把盾套在 `pid` 身上 —— 返回施放者 pid，没有则 null */
+  function holoShieldFrom(state, pid) {
+    for (let i = 0; i < state.actions.length; i++) {
+      if (i === pid) continue;                      // 自己给自己套不算（规则：目标是"被作用者"= 别人）
+      const a = state.actions[i];
+      if (a && a.key === SK.HOLO && a.target === pid) return i;
     }
     return null;
   }
@@ -706,9 +722,14 @@
         }
         case SK.SHIFT: me.guardNext = true; /* fallthrough 记录架势 */
         case SK.GUARD: case SK.REFLECT: case SK.BAGUA:
-        case SK.JINSHIELD: case SK.ARMOR: case SK.PROTO: case SK.HOLO:
+        case SK.JINSHIELD: case SK.ARMOR: case SK.PROTO:
           if (a.key === SK.ARMOR) you.fireWeakNext = true; // R22 藤甲贴在对手身上，使对手下回合火伤+1
           ev(state, { type: 'guardSet', pid: i, key: a.key });
+          break;
+        case SK.HOLO:
+          /* v1.5.4：屏障是套在**目标**身上的（不是施放者自己的架势）⇒ 记一条独立事件，
+           * 免得日志/页面把它读成"施放者摆了个架势"（那正是修正前的语义）。 */
+          ev(state, { type: 'holoSet', pid: i, target: t });
           break;
         default: break;
       }

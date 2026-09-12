@@ -1084,5 +1084,46 @@ t('D13 风格切片（复合适应度）必须真的打进 fit —— 且是**�
   ok(readFileSync('server/paralleltrain.mjs', 'utf8').indexOf('styleOppNames') >= 0, 'paralleltrain 必须把切片随消息下发');
 });
 
+t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放者自己', function () {
+  /* v1.5.4 规则修正：原始规则集（`D:\code\Epirus\README.md`「全息屏障」）写明
+   *   「作用效果：给**被作用者**施加一个“原型制御”」+ 手势「双臂伸出挡住**被作用者**胸前」
+   * ⇒ 它是**一张对别人用的盾**。此前 `target:'self'`（R18）把它做成了原型制御的重复品
+   * （用户裁定：写两个一模一样的技能没有意义）。
+   * 反证：把 rules.js 的 target 改回 'self'、或删掉 resolve.js 里的 holoShieldFrom，本用例立刻红。 */
+  ok(R.byKey[R.SK.HOLO].target !== 'self', '全息屏障的目标必须是别人（实测 target=' + R.byKey[R.SK.HOLO].target + '）');
+  function mk3() {
+    const st = S.createState('multi', { next: mulberry32(7) }, 3);
+    st.p[0].ep = st.p[1].ep = st.p[2].ep = 5;
+    X.startTurn(st);
+    return st;
+  }
+  /* ① 盾套在 P1 身上 ⇒ P1 被打不掉血（盾真的生效） */
+  let st = mk3();
+  S.attemptAction(st, 0, R.SK.HOLO, { target: 1 });
+  S.attemptAction(st, 1, R.SK.JI, {});
+  S.attemptAction(st, 2, R.SK.GUN, { target: 1 });
+  X.resolveActions(st);
+  eq(st.p[1].hp, 3, '被套盾者应被挡住（枪 1 伤）');
+  /* ② 盾在 P1 身上，不是施放者身上 ⇒ 打**施放者 P0** 必须照常掉血（旧实现会把他护住） */
+  st = mk3();
+  S.attemptAction(st, 0, R.SK.HOLO, { target: 1 });
+  S.attemptAction(st, 1, R.SK.JI, {});
+  S.attemptAction(st, 2, R.SK.GUN, { target: 0 });
+  X.resolveActions(st);
+  eq(st.p[0].hp, 2, '施放者不该被自己的屏障护住（这正是修正前的老行为）');
+  eq(st.p[1].hp, 3, '被套盾者本回合没挨打');
+  /* ③ 回归：原型制御仍是自保 */
+  st = mk3();
+  S.attemptAction(st, 0, R.SK.PROTO, {});
+  S.attemptAction(st, 1, R.SK.JI, {});
+  S.attemptAction(st, 2, R.SK.GUN, { target: 0 });
+  X.resolveActions(st);
+  eq(st.p[0].hp, 3, '原型制御仍是自保（回归）');
+  /* ④ 试图把盾套给自己 ⇒ 兜底到别人（规则里目标是"被作用者"） */
+  st = mk3();
+  S.attemptAction(st, 0, R.SK.HOLO, { target: 0 });
+  ok(st.actions[0].target !== 0 && st.actions[0].target != null, '套不到自己（实测 target=' + st.actions[0].target + '）');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

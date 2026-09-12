@@ -573,6 +573,7 @@
       case 'beadExpire': return { cls: 'dim', html: '⏳ ' + nm(e.pid) + ' 的' + (e.kind === 'elec' ? '电珠' : '爆珠') + '过期（蓄能珠只供下一回合）' };
       case 'mineArm': return { cls: 'ev', html: '💣 ' + nm(e.pid) + ' 埋下地雷' };
       case 'guardSet': return { cls: 'ev dim', html: '🛡 ' + nm(e.pid) + ' 摆出【' + skillName(e.key) + '】架势' };
+      case 'holoSet': return { cls: 'ev dim', html: '🛡 ' + nm(e.pid) + ' 用【全息屏障】护住 ' + nm(e.target) + '（本回合视为原型制御架势）' };
       case 'blocked': return { cls: 'ev dim', html: '🛡 ' + nm(e.to) + ' 的【' + (e.by || '架势') + '】挡下伤害' + (e.judge ? '（判定成功）' : '') };
       case 'reflect': {
         const guardName = e.by === 'armor' ? '藤甲' : '反弹';

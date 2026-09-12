@@ -58,7 +58,11 @@
     mk(SK.JINSHIELD, '金刚盾', CAT.DEFENSE, 1, 3, 'self', { desc: '同防御；判定胜则攻击者受 1 点伤害', gesture: '双手握拳交叉于胸前' }),
     mk(SK.ARMOR, '藤甲', CAT.DEFENSE, 1, 3, 'enemy', { desc: '同反弹；贴在对手身上，使其下回合受火焰伤害+1', gesture: '手指交叉掌心向外' }),
     mk(SK.PROTO, '原型制御', CAT.DEFENSE, 1, 3, 'self', { desc: '阻挡除地雷、转移伤害外的技能伤害', gesture: '双手握拳竖立于胸前' }),
-    mk(SK.HOLO, '全息屏障', CAT.DEFENSE, 1, 3, 'self', { desc: '给自己施加一回合“原型制御”', gesture: '双臂伸出挡住胸前' }),
+    /* v1.5.4 规则修正（回到原始规则集 `D:\code\Epirus\README.md` 的「全息屏障」条目）：
+     * 原文 = 「作用效果：给**被作用者**施加一个"原型制御"」+ 手势「双臂伸出挡住**被作用者**胸前」
+     * ⇒ 它是**一张对别人用的盾**，不是自保卡。此前 `target: 'self'`（R18）把两张卡做成了同效果
+     * （写两个一样的技能没有意义）。目标 = 任一**其他**玩家（`opponentsOf`，不可能是自己）。 */
+    mk(SK.HOLO, '全息屏障', CAT.DEFENSE, 1, 3, 'other', { desc: '给目标施加一回合“原型制御”', gesture: '双臂伸出挡住被作用者胸前' }),
     // ---- 特殊类 ----
     mk(SK.DRAIN, '摄魂指法', CAT.SPECIAL, 3, 3, 'enemy', { desc: '1 点伤害；命中则自愈 1 血；仅限 HP≤1；可与攻击抵消', gesture: '食指回勾握拳', dmg: { amt: 1, type: DMG.NORMAL } }),
     mk(SK.RAILGUN, '电磁炮', CAT.SPECIAL, 2, 3, 'enemy', { desc: '2 点电伤害，攻破反弹与防御；需 1 电珠', gesture: '拇指按食指弹出', dmg: { amt: 2, type: DMG.ELECTRIC }, pierce: { defense: true, reflect: true }, energyNeeds: { elec: 1 } }),
