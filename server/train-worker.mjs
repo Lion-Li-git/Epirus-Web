@@ -69,6 +69,9 @@ parentPort.on('message', (msg) => {
       });
       console.error('[worker] 对手池缺名字: ' + missing.join(',') + ' —— 本臂实际只有 ' + opps.length + '/' + msg.oppNames.length + ' 个对手');
     }
+    /* v1.5.0：worker 是**独立沙箱** ⇒ 服务端的 setTrainMode 不会传过来，必须按消息里的 mode 设。
+     * 漏这一行的症状极隐蔽：进化照旧 3 血、只有服务端终局评估是 5 血，best 曲线看起来完全正常。 */
+    if (T.setTrainMode) T.setTrainMode(msg.mode || 'multi');
     const results = msg.members.map(function (m) {
       /* 千问指出的两个跨机问题一次修掉：
        *  a) 所有 worker 共用同一个 EPIRUS_SEED0，个体的随机流偏移随 worker 数变化（8 核 != 18 核）；
@@ -82,6 +85,7 @@ parentPort.on('message', (msg) => {
         idx: m.idx, score: r.fit, firstRate: r.firstRate, top2Rate: r.top2Rate, avgDealt: r.avgDealt,
         // (c) 承诺局记账：分巢精英与终局门槛都要靠它，丢了这一项 h 基因就白加了
         hGene: m.h || 0, commitGames: r.commitGames, commitFirstRate: r.commitFirstRate,
+        modeUsed: (T.trainMode ? T.trainMode() : null),   // 自检回执：服务端据此确认模式真的生效
         commitTop2Rate: r.commitTop2Rate, commitMaxEp: r.commitMaxEp
       };
     });

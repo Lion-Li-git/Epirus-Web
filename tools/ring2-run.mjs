@@ -17,6 +17,9 @@
  *   # 高精度复核：环场每臂 400 局（40 局时单跑极差 82.5pt，读不出效应）
  *   RING2_STAGE=eval RING2_RGAMES=400 RING2_TAG=r400 node tools/ring2-run.mjs
  *   RING2_ONLY=ring   # 只跑环场（跳标准考卷）
+ *   # 长程（5 血）实验：12 对手池 + 5 血训练，考卷2 = 5 血标准考卷
+ *   RING2_MODE=long RING2_POOL=A RING2_ARM=long RING2_SEEDS=31,32,33,34,35,36 \
+ *     RING2_EXAM2FLAGS='--mode=long' RING2_TAG=long node tools/ring2-run.mjs
  *
  * 产物（*.log 与 *.bak 都已被 .gitignore 忽略）:
  *   docs/artifacts/ring2-<seed>.bak       冠军包
@@ -47,6 +50,16 @@ const EGAMES = Number(process.env.RING2_EGAMES || 40);
 const RGAMES = Number(process.env.RING2_RGAMES || EGAMES);
 const ONLY = process.env.RING2_ONLY || '';            // '' | standard | ring
 const TAG = process.env.RING2_TAG ? '-' + process.env.RING2_TAG : '';
+/* v1.5.0：本工具从「ring2 专用」扩成**通用 seed-sweep**（换池子/换模式/换考卷都是环境变量）。
+ *   RING2_MODE       训练模式（'long' = 5 血长程）；不设 ⇒ URL 里不带 mode ⇒ 旧行为逐位不变
+ *   RING2_POOL       训练池（'A' = 12 对手，与 ms2-p12 控制臂同池；默认 'B' = 13 含 ringspam）
+ *   RING2_ARM        实验臂产物前缀（默认 ring2 ⇒ ring2-<seed>.bak）
+ *   RING2_CTRL       控制臂前缀（默认 ms2-p12）
+ *   RING2_EXAM2FLAGS 第二考卷参数（默认环场；长程实验传 --mode=long = 5 血标准考卷） */
+const TRAIN_MODE = process.env.RING2_MODE || '';
+const ARM = process.env.RING2_ARM || 'ring2';
+const CTRL = process.env.RING2_CTRL || 'ms2-p12';
+const EXAM2 = (process.env.RING2_EXAM2FLAGS || '--mode=long --field=ringwall').split(' ').filter(Boolean);
 
 /* ===== 路径 ===== */
 const execFileP = promisify(execFile);
@@ -60,14 +73,22 @@ const STATUS = join(ART, 'ring2-status' + TAG + '.log');
 const EVALLOG = join(ART, 'ring2-eval' + TAG + '.log');
 const RUNLOG = join(ART, 'ring2-run' + TAG + '.log');
 const ANALOG = join(ART, 'ring2-analyze' + TAG + '.log');
-const SERVERLOG = join(ART, 'ring2-server.log' + TAG);
+/* ⚠ 命名规矩：TAG 必须加在**扩展名之前**（`<名字><TAG>.log`）。
+ * 我踩过一次：状态/服务端日志原本写成 `ring2-status.log-<tag>` ⇒ `.gitignore` 的 `*.log`
+ * 匹配不到 ⇒ `git add -A` 会把它们带进仓库。np-test L5 现在守着这条。 */
+const SERVERLOG = join(ART, 'ring2-server' + TAG + '.log');
+/* 每个臂每个考卷的**完整 stdout**（含出手种类/分布、ep 分带、cost>=3 出手占比、
+ * 前置条件读数）——只解析 1st/top2 会把"技能使用分布变了吗"这类问题丢掉。 */
+const STDOUTLOG = join(ART, 'ring2-stdout' + TAG + '.log');
 
 /* ===== 实验输入 ===== */
 const POOL_A = 'random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver';
 const POOL_B = POOL_A + ',ringspam';
+/* v1.5.0：池子可选 —— 'A' = 12 对手（与 ms2-p12 控制臂同池），默认 'B' = 13（含 ringspam）。 */
+const POOL = (String(process.env.RING2_POOL || 'B').toUpperCase() === 'A') ? POOL_A : POOL_B;
 const SEEDS = (process.env.RING2_SEEDS || '32,33,34,35,36').split(',').map(function (s) { return Number(s.trim()); }).filter(Boolean);
-const ALL_SEEDS = [31].concat(SEEDS);                 // 31 的产物上一轮已有
-const GENS = 250, NP = 5, POP = 16, GPO = 8;
+const ALL_SEEDS = Array.from(new Set([31].concat(SEEDS)));   // 31 常备（ring2 上一轮已有；长程实验要新训）
+const GENS = Number(process.env.RING2_GENS || 250), NP = 5, POP = 16, GPO = 8;
 const EN = 5, ESEED = 77000;
 const LBL_C = 'p12', LBL_E = 'r17';                   // ab-analyze 的两个臂名
 const SEED_TIMEOUT_MS = Number(process.env.RING2_SEED_TIMEOUT_MS || 900000);
@@ -112,12 +133,12 @@ async function waitServer(port, ms) {
 
 /* 一个 seed：热启动 → 抓 SSE 到 done/error → 落产物 */
 async function trainSeed(seed, port) {
-  const out = join(ART, 'ring2-' + seed + '.bak');
-  const sseLog = join(ART, 'ring2-' + seed + '.sse.log');
+  const out = join(ART, ARM + '-' + seed + '.bak');
+  const sseLog = join(ART, ARM + '-' + seed + '.sse.log');
   copyFileSync(BASE, BUNDLE_MP);
   const startMeta = readMeta(BUNDLE_MP);
   const url = 'http://127.0.0.1:' + port + '/train?gens=' + GENS + '&n=' + NP + '&pop=' + POP +
-    '&gpo=' + GPO + '&seed=' + seed + '&opps=' + POOL_B;
+    '&gpo=' + GPO + '&seed=' + seed + '&opps=' + POOL + (TRAIN_MODE ? '&mode=' + TRAIN_MODE : '');
   /* 起点 = champion-5p-v1.3.58.bak 的**权重**（其 weightsId 见产物 meta 的 hotstartFrom：
      产出的 .bak 里 hotstartFrom 应恒为 e379c62ccd2648fa，这就是热启动谱系的校验点）。 */
   say('seed ' + seed + ' 开跑（起点 = v1.3.58 权重, meta seed=' + (startMeta && startMeta.seed) + '）: ' + url);
@@ -190,34 +211,36 @@ async function evalAll() {
   elog += '# 控制臂 p12 = ms2-p12-<seed>.bak（12 对手）；实验臂 r17 = ring2-<seed>.bak（12 + ringspam）\n';
   for (const seed of ALL_SEEDS) {
     const arms = [
-      { pool: LBL_C, file: join(ART, 'ms2-p12-' + seed + '.bak') },
-      { pool: LBL_E, file: join(ART, 'ring2-' + seed + '.bak') }
+      { pool: LBL_C, file: join(ART, CTRL + '-' + seed + '.bak') },
+      { pool: LBL_E, file: join(ART, ARM + '-' + seed + '.bak') }
     ];
     for (const arm of arms) {
       if (!existsSync(arm.file)) { say('缺文件，跳过: ' + arm.file); continue; }
       const meta = readMeta(arm.file) || {};
-      let std = { first: 0, top2: 0 };
+      let std = { first: 0, top2: 0, out: '' };
       if (ONLY !== 'ring') {
         std = await evalArm(arm.file, [], EGAMES);
         say('eval ' + arm.pool + ' seed ' + seed + ' 标准考卷: 1st=' + std.first + '%  top2=' + std.top2 + '%');
+        appendFileSync(STDOUTLOG, '\n===== ' + arm.pool + ' seed ' + seed + ' 考卷1(3血标准) ' + arm.file + ' =====\n' + std.out);
       }
-      let ring = { first: 0 };
+      let ring = { first: 0, out: '' };
       if (ONLY !== 'standard') {
-        ring = await evalArm(arm.file, ['--mode=long', '--field=ringwall'], RGAMES);
-        say('eval ' + arm.pool + ' seed ' + seed + ' 环场(5血,' + RGAMES + '局): 1st=' + ring.first + '%');
+        ring = await evalArm(arm.file, EXAM2, RGAMES);
+        say('eval ' + arm.pool + ' seed ' + seed + ' 考卷2(' + EXAM2.join(' ') + ', ' + RGAMES + '局): 1st=' + ring.first + '%');
+        appendFileSync(STDOUTLOG, '\n===== ' + arm.pool + ' seed ' + seed + ' 考卷2(' + EXAM2.join(' ') + ') ' + arm.file + ' =====\n' + ring.out);
       }
       rows.push({ seed: seed, pool: arm.pool, self: Number(meta.firstRate || 0), stdFirst: std.first, stdTop2: std.top2, ringFirst: ring.first });
-      elog += arm.pool + ' seed ' + seed + '  标准 1st=' + std.first + '% top2=' + std.top2 +
-        '%  | 环场(' + RGAMES + '局) 1st=' + ring.first + '%  | 训练自评=' + Number(meta.firstRate || 0).toFixed(4) +
-        '  (opps=' + ((meta.opps || '').split(',').length) + ' 个)\n';
+      elog += arm.pool + ' seed ' + seed + '  考卷1 1st=' + std.first + '% top2=' + std.top2 +
+        '%  | 考卷2(' + EXAM2.join(' ') + ') 1st=' + ring.first + '%  | 训练自评=' + Number(meta.firstRate || 0).toFixed(4) +
+        '  (opps=' + ((meta.opps || '').split(',').length) + ' 个, mode=' + (meta.mode || 'multi(未记录)') + ')\n';
       writeFileSync(EVALLOG, elog, 'utf8');
     }
   }
-  let out = '# ring2-run｜池A(12) = ' + POOL_A + '\n';
-  out += '# 池B(13) = 池A + ringspam\n';
-  out += '# 标准考卷 = eval-5p.mjs ' + EGAMES + ' ' + EN + ' ' + ESEED + ' <文件>   （35 组合 × ' + EGAMES + ' 局 = ' + (35 * EGAMES) + ' 局）\n';
-  out += '# 环场     = 同上 + --mode=long --field=ringwall                    （1 组合 × ' + RGAMES + ' 局 = ' + RGAMES + ' 局）\n';
-  out += '# 行格式（ab-analyze.mjs 解析）：seed 臂 训练自评 标准1st=..% … top2=..% 环场1st=..%\n';
+  let out = '# seed-sweep｜池 = ' + POOL + '\n';
+  out += '# 训练模式 = ' + (TRAIN_MODE || 'multi(默认/未传)') + '   臂：' + LBL_C + ' = ' + CTRL + '-<seed>.bak，' + LBL_E + ' = ' + ARM + '-<seed>.bak\n';
+  out += '# 考卷1 = eval-5p.mjs ' + EGAMES + ' ' + EN + ' ' + ESEED + ' <文件>   （35 组合 × ' + EGAMES + ' 局 = ' + (35 * EGAMES) + ' 局）\n';
+  out += '# 考卷2 = 同上 + ' + EXAM2.join(' ') + '   （' + RGAMES + ' 局）\n';
+  out += '# 行格式（ab-analyze.mjs 解析）：seed 臂 训练自评 考卷1-1st=..% … top2=..% 考卷2-1st=..%\n';
   for (const r of rows) out += fmtLine(r) + '\n';
   writeFileSync(RUNLOG, out, 'utf8');
   say('已写 ' + RUNLOG + '（' + rows.length + ' 行）');
@@ -244,8 +267,8 @@ async function main() {
       child.stderr.on('data', function (d) { try { appendFileSync(SERVERLOG, d); } catch (e) { /* */ } });
       if (!await waitServer(port, 30000)) throw new Error('训练服务 30s 内没起来（见 ' + SERVERLOG + '）');
       say('训练服务就绪');
-      for (const s of SEEDS) {
-        const existing = join(ART, 'ring2-' + s + '.bak');
+      for (const s of ALL_SEEDS) {
+        const existing = join(ART, ARM + '-' + s + '.bak');
         if (existsSync(existing) && process.env.RING2_FORCE !== '1') { say('seed ' + s + ' 已有产物，跳过（RING2_FORCE=1 强制重跑）'); continue; }
         await trainSeed(s, port);
       }

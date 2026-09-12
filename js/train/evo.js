@@ -10,6 +10,18 @@
   const P = global.EpirusPolicy;
   const Bots = global.EpirusBots;
 
+  /* ===== 训练模式（v1.5.0）=====
+   * `oneGameN` 从 v1.4.0 起就支持 `opts.mode`，但**训练路径没有一处传它**（19 个调用点里
+   * 唯一传过的是评测工具 eval-5p.mjs）⇒ 历次训练（hA9 / hB12 / wall2 / ms2 / ring2…）
+   * 全部按 'multi'（3 血）建局，"5 血冠军"从来没被训过；产物 meta 里连模式字段都没有，
+   * 因为那个值是永远不变的默认值。
+   * 这里由**调用方**显式设置 —— 沿用 setWrTol 的模式：引擎内不读 process.env
+   * （np-test L3 守护这条），默认 'multi' ⇒ 既有路径逐位不变。
+   * 反证（np-test D10）：把下面任意一处 mode 传参删掉，D10 立刻红。 */
+  let TRAIN_MODE = 'multi';
+  function setTrainMode(m) { if (m && R.MODES && R.MODES[m]) TRAIN_MODE = m; return TRAIN_MODE; }
+  function trainMode() { return TRAIN_MODE; }
+
   function mulberry32(seed) {
     let a = seed >>> 0;
     return function () {
@@ -300,7 +312,7 @@
         rec.keys.push((c && c.ok && c.ep >= 3) ? k : null);
         return a;
       };
-      const r = oneGameN(ch, seedBase + g * 977, N);
+      const r = oneGameN(ch, seedBase + g * 977, N, { mode: TRAIN_MODE });
       for (let i = 0; i < rec.keys.length; i++) if (rec.keys[i]) casts++;
       const heavyKeys = {};
       for (const k of rec.keys) if (k) heavyKeys[k] = 1;
@@ -379,7 +391,7 @@
           ch.push(function (state, id, legal) { return inner(state, id, legal); });
         }
       }
-      const r = oneGameN(ch, seedBase + g * 977, N, { regen: REGEN });
+      const r = oneGameN(ch, seedBase + g * 977, N, { regen: REGEN, mode: TRAIN_MODE });
       const rank = rankOf(r.state, seat, seedBase + g * 977);
       if (rank === 1) first++;
       if (rank <= 2) top2++;
@@ -573,7 +585,7 @@
        * 更慢的输法，学不到任何东西。原生局仍走 Q1(d) 的永久回放切片（每 12 局 1 局带补贴），
        * 两条通道互不干扰，故 fit 的口径不被污染。 */
       const regen = commitGame ? 2 : regenForGame(g, games);
-      const r = oneGameN(choosers, seed, n, { regen: regen });
+      const r = oneGameN(choosers, seed, n, { regen: regen, mode: TRAIN_MODE });
       const rank = rankOf(r.state, seat, seed);
       const base = rank === 1 ? 1.0 : rank === 2 ? 0.3 : 0.0;   // N19 修正：3 人局里第二名也算输，降低苟活奖励
       const others = r.dmg.reduce(function (a, b) { return a + b; }, 0) - r.dmg[seat];
@@ -679,7 +691,7 @@
           if (pid === seat) choosers.push(policyChooserN(params, 0.15));
           else { choosers.push(wrapBotN(pair[oi % pair.length])); oi++; }
         }
-        const r = oneGameN(choosers, seedBase + g * 977 + total, n);
+        const r = oneGameN(choosers, seedBase + g * 977 + total, n, { mode: TRAIN_MODE });
         const rank = rankOf(r.state, seat, seedBase + g * 977 + total);
         if (rank === 1) first++; else if (rank === 2) second++; else third++;
         total++;
@@ -804,7 +816,7 @@
       return raw;
     };
     for (let g = 0; g < games; g++) {
-      if (N > 2) { const ch = []; for (let i = 0; i < N; i++) ch.push(sel); oneGameN(ch, seedBase + g * 977, N); }
+      if (N > 2) { const ch = []; for (let i = 0; i < N; i++) ch.push(sel); oneGameN(ch, seedBase + g * 977, N, { mode: TRAIN_MODE }); }
       else oneGame(sel, sel, seedBase + g * 977);
     }
     let H = 0;
@@ -937,7 +949,7 @@
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol, setTrainMode, trainMode,
     scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

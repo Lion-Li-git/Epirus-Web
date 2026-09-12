@@ -9,7 +9,7 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, X = sb.window.EpirusResolve, Play = sb.window.EpirusPlay;
-const T = sb.window.EpirusTrainer, Bots = sb.window.EpirusBots;
+const T = sb.window.EpirusTrainer, Bots = sb.window.EpirusBots, Pol = sb.window.EpirusPolicy;
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -821,6 +821,13 @@ t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）',
     'repro-check 必须备份/还原 index.html（writeBundleMP -> bumpChampionVersion 会改它）');
   ok(rc.indexOf('bumpChampionVersion') >= 0 || rc.indexOf('index.html') >= 0,
     'repro-check 的注释里应能看出它还原的是 index.html');
+
+  /* v1.5.0：本轮新踩的同类残留 —— 产物名把 TAG 拼在**扩展名之后**
+   * （`ring2-status.log-<tag>`、`ring2-server.log-<tag>`）⇒ `.gitignore` 的 `*.log` 匹配不到
+   * ⇒ `git add -A` 会把它们带进仓库。凡按 TAG 拼名字的产物，扩展名必须在最后。 */
+  const rr = readFileSync('tools/ring2-run.mjs', 'utf8');
+  ok(!/'ring2-[a-z]+\.log' \+ TAG/.test(rr),
+    "ring2-run 的日志名必须是 <名字><TAG>.log，不能是 <名字>.log<TAG>（否则 *.log 忽略不到）");
 });
 
 /* ===== v1.4.0：长程模式（5 血）+ 按模式配摄魂门槛 =====
@@ -958,6 +965,58 @@ t('D9 对手池单一来源里的每个 fn 都必须存在于 EpirusBots', funct
   }
   ok(items.some(function (it) { return it[1] === 'reflectspam'; }), 'reflectspam 必须在池子里（v1.4.8）');
   ok(items.some(function (it) { return it[1] === 'ringspam'; }), 'ringspam 必须在池子里（v1.4.14）');
+});
+
+t('D10 训练模式必须真的透传到建局（setTrainMode(long) ⇒ 5 血）', function () {
+  /* v1.5.0：`oneGameN` 从 v1.4.0 起就支持 `opts.mode`，但**训练路径没有一处传它** ——
+   * 19 个 oneGameN 调用点里唯一传过的还是评测工具（eval-5p.mjs）。于是历次训练
+   * （hA9 / hB12 / wall2 / ms2 / ring2…）全部按 'multi'（3 血）建局，
+   * "5 血冠军"从来没被训过，产物 meta 里连模式字段都没有。
+   * 这条用例不看返回值，直接盯**真正建出来的局用的模式**（state.mode.hp）——
+   * 反证：把 evo.js 里 scoreMemberN / evalN / champEntropy 任意一处 mode 传参删掉，本条立刻红。 */
+  const seen = [];
+  const origGame = Play.autoGameN;
+  Play.autoGameN = function (st) { seen.push(st.mode && st.mode.hp); return origGame.apply(Play, arguments); };
+  try {
+    const p = Pol.makePolicy(0.25);
+    const opps = [{ name: 'random', sel: Bots.pickRandom }];
+    T.setTrainMode('multi');
+    seen.length = 0;
+    T.scoreMemberN(p, opps, 2, 3, 1, 0, 0);
+    ok(seen.length > 0, 'scoreMemberN 必须真的建局（否则本条是空转断言）');
+    ok(seen.every(function (hp) { return hp === 3; }), '默认必须是 3 血(multi)，实测 hp=' + seen.join(','));
+    T.setTrainMode('long');
+    seen.length = 0;
+    T.scoreMemberN(p, opps, 2, 3, 1, 0, 0);
+    ok(seen.length > 0, 'setTrainMode(long) 后 scoreMemberN 仍必须建局');
+    ok(seen.every(function (hp) { return hp === 5; }), 'setTrainMode(long) 后训练建局必须 5 血，实测 hp=' + seen.join(','));
+    seen.length = 0;
+    T.evalN(p, [[Bots.pickRandom, Bots.pickDefend]], 2, 3, 999);
+    ok(seen.length > 0 && seen.every(function (hp) { return hp === 5; }), 'setTrainMode(long) 后 evalN 也必须建 5 血局，实测 hp=' + seen.join(','));
+    seen.length = 0;
+    T.champEntropy(p, 0.15, 2, 4242, 3);
+    ok(seen.length > 0 && seen.every(function (hp) { return hp === 5; }), 'setTrainMode(long) 后 champEntropy 也必须建 5 血局，实测 hp=' + seen.join(','));
+    ok(T.trainMode() === 'long', 'setTrainMode 之后 trainMode() 必须回读 long');
+    T.setTrainMode('nonexistent');
+    ok(T.trainMode() === 'long', '未知模式名不得悄悄改掉当前模式');
+  } finally {
+    Play.autoGameN = origGame;
+    T.setTrainMode('multi');
+  }
+});
+
+t('D11 训练模式必须随消息下发到 worker（并行路径不是同一个沙箱）', function () {
+  /* v1.5.0 实测事故（我自己踩的）：`T.setTrainMode` 只改**本线程**的模块状态，而训练打分跑在
+   * worker 线程里、各自是独立沙箱 ⇒ 只在服务端设 = 进化照旧 3 血、只有服务端终局评估 5 血。
+   * 症状是"整条 best 曲线与 multi 轮逐位相同"—— 不看这一点会以为实验跑通了。
+   * D10 抓不到它（D10 测的是**进程内**的 scoreMemberN）。故补这条贯通性检查。 */
+  const pt = readFileSync('server/paralleltrain.mjs', 'utf8');
+  ok(/type: 'evalN'[\s\S]{0,300}?mode:/.test(pt), "paralleltrain 的 evalN 消息必须带 mode（否则 worker 收不到）");
+  const wk = readFileSync('server/train-worker.mjs', 'utf8');
+  ok(wk.indexOf('setTrainMode(msg.mode') >= 0, 'worker 必须按消息里的 mode 调 setTrainMode');
+  ok(wk.indexOf('modeUsed') >= 0, 'worker 必须回报 modeUsed 回执');
+  const sv = readFileSync('server/train-server.mjs', 'utf8');
+  ok(sv.indexOf('modeUsed') >= 0, 'server 必须校验 worker 的 modeUsed 回执并响亮中止');
 });
 
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));

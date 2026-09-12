@@ -1,4 +1,57 @@
-## v1.4.15 — 长程模式在页面上**不可达**（v1.4.0 的 UI 交付只落了一半）
+## v1.5.0 — 长程（5 血）冠军终于能训练了（接线 + 两道守门 + 一个新坑）
+
+### 1. 症状：`?mode=long` 早就支持，但**训练路径没有一处用它**
+`oneGameN(choosers, seed, n, opts)` 从 v1.4.0 起就支持 `opts.mode`（默认 `'multi'` = 3 血），
+但全仓 **19 个调用点**里唯一传过 `opts` 的是评测工具 `tools/eval-5p.mjs:305`（所以 `--mode=long`
+在评测里一直好使）。训练侧那 5 处（`scoreMemberN` / `evalN` / `champEntropy` / `evalEconProbe` /
+`evalSubsidyProbe`）只传 `{regen: …}` ⇒ **历次训练（hA9 / hB12 / wall2 / ms2 / ring2…）全是 3 血**，
+产物 meta 里连模式字段都没有（因为那个值永远等于默认值）。
+（HANDOFF §4 原写"30 个调用点"是**笔误**，实测 19 个，已更正。）
+
+### 2. 接线（沿用 `setWrTol` 的"调用方显式传入"模式）
+- `js/train/evo.js`：新增模块级 `TRAIN_MODE` + `setTrainMode(m)` / `trainMode()`，上述 5 处建局
+  全部带上 `mode`；默认 `'multi'` ⇒ 既有路径**逐位不变**。
+- `server/train-server.mjs`：`?mode=` 可覆盖（未知模式**开跑前中止并进 SSE**），
+  并把模式写进产物 meta（以后档案自带口径）。
+- `server/paralleltrain.mjs` + `server/train-worker.mjs`：模式**必须随消息下发到 worker** —— 见下条。
+
+### 3. 踩坑：`setTrainMode` 只改**本线程**，而打分跑在 worker 线程里
+第一版我只在服务端调了 `setTrainMode`，结果 SSE 的 `best` 曲线与 multi 轮**逐位相同**
+（gen 0/50/100/150/200 全一致，连 gen-50 的 0.6959666666666667 都一样）。根因：worker 各自是
+独立沙箱，`TRAIN_MODE` 仍是 `'multi'` ⇒ **进化照旧 3 血，只有服务端那次终局评估用了 5 血**。
+这种"半程生效"最隐蔽（日志看起来完全正常，只有对比 best 曲线才露馅）。
+修法三层：① `paralleltrain` 把 `mode` 放进 `evalN` 消息；② worker 收到后 `setTrainMode(msg.mode)`，
+并在每条结果里回执 `modeUsed`；③ 服务端校验回执，不符**立即中止并进 SSE**（不放口径混杂的产物出去）。
+**反证**：同 seed 同预算，long 与 multi 的 gen-0 best 分别是 **0.5153 / 0.4986**、gen-50 是
+**0.6015 / 0.6960** —— 从第 0 代起就分叉。
+
+### 4. 守门用例（都会失败）
+- **np-test D10**：`setTrainMode('long')` 后 `scoreMemberN` / `evalN` / `champEntropy` 建出来的局
+  必须 `state.mode.hp === 5`（默认必须是 3）。反证：抹掉任意一处 mode 传参 ⇒ 立刻红
+  （报 `实测 hp=3,3`）。
+- **np-test D11**：模式必须随 `evalN` 消息下发到 worker、worker 必须回执、server 必须校验。
+  （D10 抓不到这条 —— D10 测的是进程内的 `scoreMemberN`，正是本轮漏掉的那半边。）
+
+### 5. 顺带发现：`workers` 是**会改变结果的行为输入**（差点让实验白跑）
+同一协议、同 seed/池/起点，`EPIRUS_WORKERS=12` 与默认 16 训出的 seed 31 **权重不同**
+（sha1 `A4A1A894…` vs `92AF513B…`，训练自评 0.3416 vs 0.3863）；而默认 16 下重跑与既有
+`docs/artifacts/ms2-p12-31.bak` **逐位相同**（sha1 `92AF513B…`）。
+⇒ §3.7 的"训练逐位可复现"要限定为**同 worker 数**；跑 A/B 必须两臂同 worker 数 ——
+"少用几个 worker 省机器"等于**悄悄换了一个冠军**。已记入 HANDOFF §5.2-16。
+
+### 6. 实验：长程冠军 vs 3 血冠军（同池/同 seed/同起点/同 worker 数，唯一差别是模式）
+n=6 配对（`docs/artifacts/ring2-run-long.log`，`ab-analyze p12 r17`）：
+- **3 血标准考卷 1st：37.48% → 34.15%，Δ=−3.33pt**（sd 4.42, t=−1.85，**1正/5负**）——即**代价**；
+- **5 血标准考卷 1st：30.72% → 37.82%，Δ=+7.10pt**（sd 13.98, t=1.24，4正/2负）——即**目标收益**，
+  但 n=6 下**不显著**；单跑极差 29.8pt。
+- **技能使用分布**：出手种类**没变多**（16.7 → 15.3），但"用钱的深度"大幅上升 ——
+  ep≥3 决策占比 **19.5% → 47.8%**、cost≥3 出手 **1.9% → 8.1%**、10+ 富余带 **5.8% → 22.2%**
+  （前两项逐 seed **5正/1负**）。且这套深经济风格**延续到 3 血**（3 血考卷上 ep≥3 16.2% → 44.6%）
+  ⇒ 这是 3 血掉分的机制。
+⇒ **结论**：不要把线上默认冠军换成长程冠军（风险/收益不对称）；但"长程模式挂长程冠军"站得住。
+**别按 5 血考卷挑 6 个里最好的那个**（挑噪声上尾）。详见 `docs/REVIEW-5P.md` §7。
+
+
 
 ### 1. 症状
 `tools/smoke.mjs`（CDP 驱动真实 Chrome 跑真实 UI）报 **14 PASS / 4 FAIL**，四个 FAIL 全在同一条线上：

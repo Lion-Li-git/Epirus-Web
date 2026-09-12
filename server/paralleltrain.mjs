@@ -103,7 +103,11 @@ export function makeParallelEvalN(T, opts) {
     const jobs = [];
     for (let w = 0; w < pool.length; w++) {
       const sl = members.slice(w * chunk, (w + 1) * chunk);
-      if (sl.length) jobs.push(runOne(pool[w], { type: 'evalN', members: sl, gen: gen, games: games, n: n, oppNames: oppNames }));
+      /* v1.5.0：训练模式必须**随消息下发到 worker**。`T.setTrainMode` 只改本线程的模块状态，
+       * 而 worker 是独立沙箱（各自的 TRAIN_MODE 默认 'multi'）⇒ 只设服务端会让"5 血实验"的
+       * 进化部分照旧按 3 血跑，只有服务端那次终局评估用 5 血。
+       * 实测症状（我踩过）：整条 best 曲线与 multi 轮**逐位相同**。 */
+      if (sl.length) jobs.push(runOne(pool[w], { type: 'evalN', members: sl, gen: gen, games: games, n: n, oppNames: oppNames, mode: (T.trainMode ? T.trainMode() : 'multi') }));
     }
     const res = (await Promise.all(jobs)).flat();
     const out = new Array(pop.length).fill(null);

@@ -294,6 +294,10 @@ async function runTrainN(gens, cfg) {
   let __seedIdxN = 0;   // 每个种子递增，用于 setRng 配对
   if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
   cfg = cfg || {};
+  /* v1.5.0：训练模式由**调用方**显式传入（'multi'=3 血 / 'long'=5 血），默认 'multi'
+   * ⇒ 不传就是旧行为、逐位不变。沿用 WR_TOL 的模式：引擎内不读 env。 */
+  const mode = R.MODES[cfg.mode] ? cfg.mode : 'multi';
+  if (T.setTrainMode) T.setTrainMode(mode);
   const n = Math.max(3, Math.min(cfg.n || 3, 5));
   const popSize = Math.max(8, cfg.pop || 32);
   const games = Math.max(4, cfg.games || 20);
@@ -342,7 +346,7 @@ async function runTrainN(gens, cfg) {
   });
   let sigma = 0.18;
   const hall = [];
-  for (const c of clients) sse(c, { type: 'start', n: n, gens, pop: popSize, gpo: games, from: 0, workers: poolN.workers, fresh: !!cfg.fresh });
+  for (const c of clients) sse(c, { type: 'start', n: n, gens, pop: popSize, gpo: games, from: 0, workers: poolN.workers, fresh: !!cfg.fresh, mode: mode });
   for (let gen = 0; gen < gens; gen++) {
     let res = await poolN.evalPopN(pop, gen, games, n, oppNames, hGenes);
     if (!res) {
@@ -354,6 +358,16 @@ async function runTrainN(gens, cfg) {
                  hGene: hGenes[idx], commitGames: r.commitGames, commitFirstRate: r.commitFirstRate,
                  commitTop2Rate: r.commitTop2Rate, commitMaxEp: r.commitMaxEp };
       });
+    }
+    /* v1.5.0 自检：worker 必须回执它**实际**用的模式。漏传 mode 时 worker 会用 'multi'，
+     * 而服务端终局评估仍走 5 血 —— 这种"半程生效"最难发现（best 曲线看起来完全正常）。
+     * 一有回执不符就中止并进 SSE，绝不让一份口径混杂的产物流出去。 */
+    if (mode !== 'multi') {
+      const bad = (res || []).filter(function (r) { return r && r.modeUsed && r.modeUsed !== mode; });
+      if (bad.length) {
+        for (const c of clients) sse(c, { type: 'error', msg: 'worker 没收到训练模式 ' + mode + '（回执=' + bad[0].modeUsed + '）—— 已中止，这份产物不能用' });
+        runningN = false; poolN.close(); return;
+      }
     }
     const scored = pop.map(function (params, i) { return { params: params, r: res[i] || { score: -1, firstRate: 0, top2Rate: 0 } }; });
     scored.sort(function (a, b) { return b.r.score - a.r.score; });
@@ -460,7 +474,7 @@ async function runTrainN(gens, cfg) {
   }
   const pack = P.pack(finalParams);
   lastChampionPackN = pack;
-  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
+  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
     /* v1.3.56：把**可复现输入**记进产物。此前 meta 只有 source/n/gens/games/pop/ts/胜率，
      * 于是从产物上既看不出是不是热启动、也看不出输入是哪一版冠军 —— 而浏览器的默认配置
      * 恰好就是热启动（index.html 的"从头训练"复选框默认不勾，ui.js 也就不发 fresh=1）。
@@ -492,11 +506,18 @@ const server = http.createServer((req, res) => {
      * 现在按 P.setRng(mulberry32(seed0 + 种子序号)) 播种。 */
     const seed0 = Number(url.searchParams.get('seed') || 0) || 0;
     const nPlayers = Math.max(2, Math.min(Number(url.searchParams.get('n') || 2), 5));
+    /* v1.5.0：训练模式可按请求覆盖（`?mode=long` = 5 血长程）。未知模式**立刻中止并进 SSE**，
+     * 与"未知对手名"同一规矩 —— 静默降级会让"5 血实验"悄悄变回 3 血，而日志看起来完全正常。 */
+    const modeQ = String(url.searchParams.get('mode') || '');
+    if (modeQ && !R.MODES[modeQ]) {
+      sse(res, { type: 'error', msg: '未知模式: ' + modeQ + '（可选: ' + Object.keys(R.MODES).join(' ') + '）' });
+      return;
+    }
     if (nPlayers > 2) {
-      sse(res, { type: 'start', gens, pop, gpo, n: nPlayers, from: 0, fresh });
+      sse(res, { type: 'start', gens, pop, gpo, n: nPlayers, from: 0, fresh, mode: modeQ || 'multi' });
       if (!runningN) {
         runningN = true;
-        runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh, seed0: seed0, opps: url.searchParams.get('opps') })
+        runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh, seed0: seed0, opps: url.searchParams.get('opps'), mode: modeQ })
           .catch(function (e) { for (const c of clients) sse(c, { type: 'error', msg: String(e && e.message || e) }); runningN = false; });
       }
       return;
