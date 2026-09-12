@@ -255,10 +255,17 @@ const OPP_NAMES = (process.env.EPIRUS_OPP_N
   ? String(process.env.EPIRUS_OPP_N).split(',').map(function (x) { return x.trim(); }).filter(Boolean)
   : ['random', 'balanced', 'aggro', 'defend', 'wall', 'antidef', 'breakdef', 'mix', 'farmer']);
 /* 名字→函数必须显式写（'autodef' 这类拼接会导致 pickAntidef 大小写错误） */
+/* v1.4.8：补回四个"单一防御 specialist"名字（v1.3.22 一次性剔除了它们，见 CHANGELOG v1.3.22）——
+ * 那次审计的判据是"它是不是一个像样的**对手/人格**"（能赢吗/打法多样吗），
+ * 但对**训练池**该问的是"它能不能暴露冠军的洞"。第十轮复核 + 我方复验：
+ *   冠军对 4×反弹墙 1st = 0.0%（每局被自己的枪弹回 3.00 次 = 恰好 3 血上限 ⇒ 必死），
+ *   而对 4×防御/八卦/原型 墙都是 100.0% ⇒ **只有反弹是真洞**。
+ * 所以默认池只放 reflectspam 一个（低权重），其余三个只留名字供实验用（?opps=）。 */
 const BOT_FN_N = {
   random: 'pickRandom', balanced: 'pickBalanced', aggro: 'pickAggro', defend: 'pickDefend',
   wall: 'pickWall', antidef: 'pickAntiDef', breakdef: 'pickBreakDef', mix: 'pickMix', farmer: 'pickFarmer',
-  tankline: 'pickTankLine', heavyfire: 'pickHeavyFire', deepsaver: 'pickDeepSaver'
+  tankline: 'pickTankLine', heavyfire: 'pickHeavyFire', deepsaver: 'pickDeepSaver',
+  reflectspam: 'pickReflectSpam', guardspam: 'pickGuardSpam', baguaspam: 'pickBaguaSpam', protowall: 'pickProtoWall'
 };
 const BUNDLE_MP = 'js/bundled-champion-3p.js';   // 多人冠军（2/3/4/5 人局共用同一网络，特征与人数无关）
 let lastChampionPackN = null;

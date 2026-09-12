@@ -843,8 +843,9 @@ t('D2 long mode hp=5 / drainHpMax=3', function () {
   st.p[0].hp = 4; ok(!S.computeCost(st, 0, R.SK.DRAIN).ok, 'long HP=4 must be banned (gate is 3)');
 });
 
-t('D3 round cap follows the mode (long=100; 60 truncates 5hp games)', function () {
-  eq(R.MODES.long.maxRounds, 100, 'long.maxRounds');
+t('D3 round cap follows the mode (long safety net=140 + sudden death at 100)', function () {
+  eq(R.MODES.long.maxRounds, 140, 'long.maxRounds（安全网，不是硬截断）');
+  eq(R.MODES.long.suddenDeath, 100, 'long.suddenDeath（收缩起点）');
   eq(R.MAX_ROUNDS, 60, 'default cap unchanged');
   const mk = function (mode, round) {
     const st = S.createState(mode, { next: mulberry32(74) }, 3);
@@ -855,7 +856,11 @@ t('D3 round cap follows the mode (long=100; 60 truncates 5hp games)', function (
   };
   ok(!mk('long', 60).over, 'long round 60 must not end (60 is only multi cap)');
   ok(!mk('long', 99).over, 'long round 99 must not end');
-  eq(mk('long', 100).winner, 0, 'long round 100 ends, highest hp wins');
+  /* v1.4.8：100 回合不再是终局（那是收缩起点），终局只看安全网 140。
+   * 这条断言就是"硬截断已被移除"的守门人。 */
+  ok(!mk('long', 100).over, 'long round 100 must NOT end any more (sudden death onset, not a cap)');
+  ok(!mk('long', 139).over, 'long round 139 must not end');
+  eq(mk('long', 140).winner, 0, 'long round 140 (safety net) ends, highest hp wins');
   eq(mk('multi', 60).winner, 0, 'multi round 60 ends (unchanged)');
 });
 
@@ -888,6 +893,28 @@ t('D5 dualGun second shot must come from the same data row', function () {
     eq(3 - st.p[1].hp, 2, '第一发伤害应跟数据表(2)');
     eq(3 - st.p[2].hp, 2, '第二发伤害也必须跟数据表(2)，不能写死 1');
   } finally { dg.dmg.amt = bakAmt; }
+});
+
+t('D6 终局收缩：到 suddenDeath 后每回合末全员 -1（反弹挡不住、不触发地雷）', function () {
+  /* v1.4.8：用户方案（100 回合后每轮全员扣 1 血）替代硬截断。
+   * 反证：把 resolve.js 里收缩那段的 bypassGuards 去掉，下面"反弹挡不住"必红；
+   *       去掉 noMine 则地雷断言必红。 */
+  const mk = function (round, hp) {
+    const st = S.createState('long', { next: mulberry32(91) }, 3);
+    st.round = round;
+    for (const p of st.p) { p.hp = hp; p.mineArmed = true; }
+    for (let i = 0; i < 3; i++) st.actions[i] = { key: R.SK.REFLECT, target: null };  // 全员挂反弹
+    X.endTurn(st);
+    return st;
+  };
+  eq(mk(99, 3).p[0].hp, 3, '未到 suddenDeath 不能扣血');
+  const on = mk(100, 3);
+  eq(on.p[0].hp, 2, '到 suddenDeath 当回合就扣 1（且反弹挡不住）');
+  eq(on.p[1].hp, 2, '全员扣血');
+  eq(on.p[2].hp, 2, '全员扣血');
+  ok(!on.events.some(function (e) { return e.type === 'mine'; }), '收缩不能触发地雷');
+  ok(!on.events.some(function (e) { return e.type === 'reflect'; }), '收缩不能被反弹（bypassGuards）');
+  eq(mk(105, 1).p[0].hp, 0, '1 血时被收缩扣死');
 });
 
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));

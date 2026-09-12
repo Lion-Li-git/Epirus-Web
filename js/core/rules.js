@@ -117,7 +117,12 @@
      * 实测（v1.4.0，1400 局/臂）：3 血平均 **43.3 回合**、5 血只到 **49.8 回合**（+15% 而非 +67%），
      * 且 5 血时主体场均承伤只有 **4.28 < 5** ⇒ 全局 MAX_ROUNDS=60 把 5 血局**截断了**
      * （不是被打死，是到上限按"血最多者胜"结束）。故长程模式配 maxRounds:100。 */
-    long: { name: '长程模式(5血·3-5人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 3, maxRounds: 100 },
+    /* v1.4.8 终局收缩（用户 2026-09-12 方案）：硬截断改成"到点后每轮全员 −1 血"。
+     * 动机（第十轮复核 §5.1 实测）：100 回合上限在防守型考卷上仍有 90% 的局是哨声判掉的，
+     * 而且 5 血比 3 血更容易拖到点（E 卷 36.9%→49.2%）⇒ 有一半样本测的是"到时谁血多"，
+     * 不是"谁把谁打死"。suddenDeath=100 起每回合末全员 −1（不可格挡、不触发地雷），
+     * maxRounds=140 只作安全网（正常情况在 ~105 回合就清完）。 */
+    long: { name: '长程模式(5血·3-5人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 3, suddenDeath: 100, maxRounds: 140 },
     fast: { name: '快速模式', hp: 1, skills: [SK.JI, SK.GUN, SK.GUARD], rule: '防御不能连续使用 3 次', guardLimit: 2 },
     lucky: { name: '欧皇模式', hp: 3, skills: [SK.JI, SK.JINSHIELD, SK.BAGUA, SK.GUN], rule: '' }
   };

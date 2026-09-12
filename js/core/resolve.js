@@ -802,6 +802,19 @@
       if (beforeE !== p.elec) ev(state, { type: 'beadExpire', pid: i, kind: 'elec', n: beforeE - p.elec });
       if (beforeB !== p.boom) ev(state, { type: 'beadExpire', pid: i, kind: 'boom', n: beforeB - p.boom });
     }
+    /* N25 终局收缩（突然死亡）：到 `suddenDeath` 回合后，每回合末**全员** −1 血。
+     * · bypassGuards ⇒ 不被 防御/反弹/原型/金刚盾/全息 挡（这是"场地收缩"，不是攻击）；
+     * · noMine ⇒ 不触发地雷；source=null ⇒ 不计入任何人的"造成伤害"（但计入各自承伤）。
+     * 这样终局由"谁活到最后"决定，而不是"哨声时谁血多"（第十轮复核 §5.1）。 */
+    const sdOn = (state.mode && state.mode.suddenDeath) || 0;
+    if (sdOn > 0 && state.round >= sdOn) {
+      for (let i = 0; i < playerCount(state); i++) {
+        const p = state.p[i];
+        if (p.hp <= 0) continue;
+        if (state.round === sdOn && i === 0) ev(state, { type: 'hidden', name: '终局收缩' });
+        deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: null, bypassGuards: true, noMine: true }, i, { reason: '终局收缩' });
+      }
+    }
     // 挑衅合规检查（本回合义务；净化不能免除已生效义务 R54）
     for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i];
