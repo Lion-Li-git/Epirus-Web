@@ -518,6 +518,42 @@
    *   - 目标必须是**存活**且**不是自己**的对手；
    *   - 选"**血量最低**"是为了让**多个集火脚本各自算都能得到同一个目标**（确定性共识），
    *     而不是各自随机挑——否则两个脚本会分开打，N 永远到不了 2。 */
+  /* ===== v1.4.1：两个"前置条件提供者"脚本（用户 2026-09-12 指出这类卡需要专门的脚本）=====
+   * 背景：v1.3.60 起已有 `--field=` 前置条件场，但池子里**没有铺雷者**也没有"贴符咒的人"，
+   * 于是藤甲的火弱那一半、贴贴×天火这条组合线在**任何考卷上都测不到**。 */
+
+  /* 地雷专精：攒到 3 ジ就铺雷，否则 ジ（濒死时补防御）。
+   * 为什么它是关键器材：地雷既是**火焰伤害来源**（藤甲的"下回合火伤+1"才有对象，
+   * 见 resolve.js:192 火弱只加到挂了 debuff 的那个人），又是**触发型 AoE**
+   * ——5 血下已实测解冻（3 血 Δ−1.3pt → 5 血 Δ+4.0pt）。 */
+  function pickMineSpam(state, pid, legal) {
+    const bk = mpBk(legal), me = state.p[pid];
+    if (mpAff(bk, SK.MINE)) return { key: SK.MINE, target: null };
+    if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };
+    return { key: SK.JI, target: null };
+  }
+
+  /* 贴贴×天火组合：先贴符咒，再**承诺攒钱**到 2 引爆。
+   * ⚠️ 设计教训（v1.3.60 实测）：第一版"能贴就贴"永远停在 1 ジ ⇒ 天火只引爆 8 次、1st 0.1%；
+   * 改成一贴一存后引爆 2749 次。ep 的唯一来源是 ジ 的 +1（resolve.js:501），
+   * 所以任何"先铺场再兑现"的组合都必须显式放弃当期支出（与 evo.js 的 makeCommitChooser 同理）。
+   * 注：符咒 `age <= 3` 会失效，而铺符速率上限是 1 张/2 回合 ⇒ 同目标实际最多只有 1 张活符咒。 */
+  function pickCurseStorm(state, pid, legal) {
+    const bk = mpBk(legal), o = mpOpps(state, pid);
+    if (!o.length) return { key: SK.JI, target: null };
+    let t = o[0];
+    for (const i of o) if (state.p[i].hp < state.p[t].hp - 1e-9) t = i;
+    let mine = 0;
+    const st = state.p[t].stickers || [];
+    for (const x of st) if (x.owner === pid && x.age <= 3) mine++;
+    if (mine > 0) {
+      if (mpAff(bk, SK.FIRESTORM)) return { key: SK.FIRESTORM, target: t };
+      return { key: SK.JI, target: null };            // 承诺攒钱，别顺手再贴
+    }
+    if (mpAff(bk, SK.CURSE)) return { key: SK.CURSE, target: t };
+    return { key: SK.JI, target: null };
+  }
+
   function pickFocusFire(state, pid, legal) {
     const bk = mpBk(legal);
     const o = mpOpps(state, pid);
@@ -592,6 +628,7 @@
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
+    pickMineSpam, pickCurseStorm,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'

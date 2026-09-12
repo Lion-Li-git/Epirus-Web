@@ -859,5 +859,17 @@ t('D3 round cap follows the mode (long=100; 60 truncates 5hp games)', function (
   eq(mk('multi', 60).winner, 0, 'multi round 60 ends (unchanged)');
 });
 
+t('D4 opponent rotation must not depend on individual index (pairing)', function () {
+  const src = readFileSync('js/train/evo.js', 'utf8');
+  const all = [];
+  const re = /let oi = ([^;]+);/g;
+  let m;
+  while ((m = re.exec(src))) all.push(m[1]);
+  ok(all.length >= 1, 'no opponent rotation expression found');
+  for (const e of all) ok(e.indexOf('idx') < 0, 'rotation must not use idx (breaks same-gen pairing): ' + e);
+  ok(all.some(function (e) { return e.indexOf('gen') >= 0; }),
+    'rotation should advance with gen so a large pool still gets covered: ' + all.join(' | '));
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

@@ -52,7 +52,10 @@ const ALL = [
   ['tankline', Bots.pickTankLine], ['heavyfire', Bots.pickHeavyFire], ['deepsaver', Bots.pickDeepSaver],
   /* v1.3.60：集火脚本。转移伤害的价值 ∝ 本回合承伤 N，而 pickFocusFire 的注释写明
    * "当前 meta 里 N>=2 的唯一常见来源就是被集火" ⇒ 它是转移伤害的**前置条件提供者**。 */
-  ['focusfire', Bots.pickFocusFire]
+  ['focusfire', Bots.pickFocusFire],
+  /* v1.4.1：前置条件提供者（铺雷者 / 贴符咒+天火者），池里原先没有 ⇒ 藤甲的火弱、
+   * 贴贴×天火这两条线在任何考卷上都测不到。 */
+  ['minespam', Bots.pickMineSpam], ['cursestorm', Bots.pickCurseStorm]
 ];
 /* "深经济对手"的定义：会攒钱**并且**会把攒的钱换成重击。farmer 只攒不还手，不算。 */
 const DEEP = { deepsaver: 1, heavyfire: 1 };
@@ -143,7 +146,9 @@ const FIELDS = {
    *  实测 avg 每次只转 1 点，真实条件是"同回合有 ≥2 点可转"）⇒ 用 2 个攻击者 + 2 个中性。 */
   focusme2:  ['focusme', 'focusme', 'random', 'defend'],
   tank:      ['tankline', 'tankline', 'tankline', 'tankline'],
-  mine:      ['aggro', 'defend', 'antidef', 'wall']    // 这四个脚本都有铺雷分支（bots.js:114/125/146/214）
+  mine:      ['aggro', 'defend', 'antidef', 'wall'],    // 这四个脚本都有铺雷分支（bots.js:114/125/146/214）
+  minespam:  ['minespam', 'minespam', 'minespam', 'minespam'],   // v1.4.1：饱和火焰源（专精铺雷者 ×4）
+  cursestorm:['cursestorm', 'cursestorm', 'cursestorm', 'cursestorm']
 };
 if (FIELD) {
   if (!FIELDS[FIELD]) { console.error('--field 未知: ' + FIELD + '（可选: ' + Object.keys(FIELDS).join(' ') + '）'); process.exit(1); }
