@@ -59,6 +59,7 @@ const ALL = [
   /* v1.4.7：单一防御 specialists。第十轮复核指出：它们作为"玩家对手"确实无聊（v1.3.22 按熵=1.00 剔除，
    * 那是 UI 判断），但作为**训练/评测的 exploit cursor** 正是缺的那类 —— 它们暴露的是
    * "冠军会不会反制一堵 0 ジ 的墙"。且它们**原本不在 server 的 BOT_FN_N 里**。 */
+  ['ringspam', Bots.pickRingSpam],                                  // v1.4.11：开环经济流（小雷的反制目标）
   ['reflectspam', Bots.pickReflectSpam], ['guardspam', Bots.pickGuardSpam],
   ['baguaspam', Bots.pickBaguaSpam], ['protowall', Bots.pickProtoWall]
 ];
@@ -221,7 +222,12 @@ const FIELDS = {
   reflectwall:['reflectspam', 'reflectspam', 'reflectspam', 'reflectspam'],
   guardwall:  ['guardspam', 'guardspam', 'guardspam', 'guardspam'],
   baguawall:  ['baguaspam', 'baguaspam', 'baguaspam', 'baguaspam'],
-  protowall:  ['protowall', 'protowall', 'protowall', 'protowall']
+  protowall:  ['protowall', 'protowall', 'protowall', 'protowall'],
+  /* v1.4.11：4 个开环经济流 —— 用来测"小雷反制聚能环"这条线的价值（用户指出：小雷不是陷阱卡，
+   * 最典型的用法就是打掉别人的环）。 */
+  ringwall:   ['ringspam', 'ringspam', 'ringspam', 'ringspam'],
+  /* 半墙：2 个开环 + 2 个普通进攻，避免纯经济场退化 */
+  ringmix:    ['ringspam', 'ringspam', 'aggro', 'random']
 };
 if (FIELD) {
   if (!FIELDS[FIELD]) { console.error('--field 未知: ' + FIELD + '（可选: ' + Object.keys(FIELDS).join(' ') + '）'); process.exit(1); }
@@ -374,12 +380,11 @@ const t0 = Date.now();
 const SUBJECT = FLAG.subject || '';
 const PAYLOAD = FLAG.payload || '';
 if (SUBJECT && !FN[SUBJECT]) { console.error('--subject 未知脚本: ' + SUBJECT + '（可选: ' + ALL.map(function (x) { return x[0]; }).join(' ') + '）'); process.exit(1); }
-const PAY_KEY = { bigT: R.SK.BIG_T, tank: R.SK.TANK, railgun: R.SK.RAILGUN, snipe: R.SK.SNIPE, dualGun: R.SK.DUAL_GUN, laserEye: R.SK.LASER_EYE, mirror: R.SK.MIRROR,
-  armor: R.SK.ARMOR, mine: R.SK.MINE, transfer: R.SK.TRANSFER,     // v1.3.59：用户点名的藤甲/地雷/转移三张多人卡
-  drain: R.SK.DRAIN,                                                 // v1.4.0：摄魂指法（自我门控：只在 HP≤门槛 时可选 ⇒ 贪心注入正好是正确用法）
-  gun: R.SK.GUN, sword: R.SK.SWORD,                                 // v1.4.7：report 的 INSTR 已推荐 --inject=sword/gun，表里缺会直接 exit(1)
-  reflect: R.SK.REFLECT, guard: R.SK.GUARD, ring: R.SK.RING,        // v1.3.60：费用 0 的防御族对照（反弹 vs 藤甲）
-  curse: R.SK.CURSE, firestorm: R.SK.FIRESTORM };                   // v1.3.60：**贴贴(符咒) × 天火(引爆)** 组合对
+/* v1.4.11：**从技能表自动生成**，不再手写映射 —— 手写版漏了 miniT/charge/cannon/…
+ * 于是 report 的 INSTR 推荐 `--inject=miniT` 时脚本直接 exit(1)，而我在 grep 里只看到"没有输出"，
+ * 差点当成"这一臂没信号"。这是"白名单与技能表两份维护"的又一例，故改成从 R.skills 派生。 */
+const PAY_KEY = {};
+for (const sk of R.skills) PAY_KEY[sk.key] = sk.key;                   // v1.3.60：**贴贴(符咒) × 天火(引爆)** 组合对
 /* ===== 边际注入（v1.3.59，用户要的"边际价值"口径）=====
  * 为什么需要：`--payload` 的 saver 架构是"一直出ジ，攒够就打 payload"。
  * 对**纯辅助/防御**卡（藤甲/转移/地雷）这等于**全程不攻击** ⇒ 测出来的是

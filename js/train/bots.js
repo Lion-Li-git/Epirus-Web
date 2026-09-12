@@ -278,6 +278,9 @@
       if (predict === SK.SNIPE && aff(SK.PROTO)) return SK.PROTO;        // 狙击 → 原型制御
       if ((predict === SK.GUARD || predict === SK.REFLECT || predict === SK.BAGUA) && aff(SK.TANK)) return SK.TANK; // 防御架势 → 坦克
       if ((predict === SK.BIG_T || predict === SK.RAILGUN) && aff(SK.GUARD)) return SK.GUARD; // 电系 → 防御
+      /* v1.4.11：对手在靠聚能环攒钱 ⇒ 用小雷 void 掉它（outcome≠ok ⇒ ringStreak 归零，
+       * resolve.js:789）。这条分支此前缺失，所以"反制环经济"在池子里从未被演练过。 */
+      if (predict === SK.RING && aff(SK.MINI_T)) return SK.MINI_T;
       if (predict === SK.DRAIN && aff(SK.GUARD)) return SK.GUARD;
     }
     if (aff(SK.GUN)) return SK.GUN;
@@ -554,6 +557,38 @@
     return { key: SK.JI, target: null };
   }
 
+  /* ===== v1.4.11 聚能环经济流（用户 2026-09-12 指出的关键前置条件）=====
+   * 聚能环是全游戏**唯一的"钱生钱"线**：首次 3 ジ → +1（净 −2），连续第 2 次 0 ジ → +2，
+   * 第 3 次起 0 ジ → **+3 ジ/回合**（resolve.js:614-616）。
+   * 它唯一的反制是**小雷（雷击之枪）**：void 掉对手的环 ⇒ 该次 outcome 不是 ok ⇒
+   * resolve.js:789 把 `ringStreak` 归零，3 ジ的投入与复利线一起报废。
+   * 原先池子里**没有任何脚本在开环**（只有个别脚本在自己 streak>0 时顺手续），
+   * 所以"小雷反制环"这条线从未被演练、也从未在考卷上被测量。 */
+  function pickRingSpam(state, pid, legal) {
+    const byKey = {}; legal.forEach(l => byKey[l.key] = l);
+    const aff = k => byKey[k] && byKey[k].affordable;
+    const me = state.p[pid];
+    /* 第一版只"开环+续环"⇒ 从不防守也从不兑现，开环还没回本就被打死（考卷上冠军 100%）。
+     * 真实的经济流必须**攒到能兑现一次大件**（第十轮复核的"环→bank8 出大雷"轨迹），
+     * 代价是每次兑现都会断链（非 RING 的动作把 streak 清零）。 */
+    const BANK = 5;                                  // 攒到能放"真正的落雷"就兑现
+    if (me.ringStreak > 0) {
+      if (me.ep >= BANK) {                           // 兑现：最贵的输出优先（这一手会断链）
+        if (aff(SK.BIG_T)) return SK.BIG_T;
+        if (aff(SK.RAILGUN)) return SK.RAILGUN;
+        if (aff(SK.TANK)) return SK.TANK;
+        if (aff(SK.SWORD)) return SK.SWORD;
+        if (aff(SK.SNIPE)) return SK.SNIPE;
+      }
+      if (me.hp <= 1 && aff(SK.GUARD)) return SK.GUARD;   // 濒死先保命（也会断链，但活着才有复利）
+      if (aff(SK.RING)) return SK.RING;              // 续环：0 成本 +1/+2/+3 ジ
+      return affOrJi(legal);
+    }
+    if (aff(SK.RING) && me.ep >= 3) return SK.RING;  // 攒够 3 ジ开环（净 −2 换复利）
+    if (me.hp <= 1 && aff(SK.GUARD)) return SK.GUARD;
+    return affOrJi(legal);
+  }
+
   function pickFocusFire(state, pid, legal) {
     const bk = mpBk(legal);
     const o = mpOpps(state, pid);
@@ -628,7 +663,7 @@
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
-    pickMineSpam, pickCurseStorm,
+    pickMineSpam, pickCurseStorm, pickRingSpam,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'

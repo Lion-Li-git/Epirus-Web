@@ -62,7 +62,7 @@ const PAIRS = [];
 })(0, []);
 
 /* 冠军 chooser，可附带「每回合补 ep」与「强制某技能」 */
-function makeSel(forceKey, rich, seat, acc) {
+function makeSel(forceKey, rich, seat, acc, banKey) {
   // 修正：冠军在 runCondition 里是**轮换座位**的，之前硬编码 pid===0 → seat!=0 时
   // 冠军的决策被套在对手身上、自己却由脚本驱动，测量完全错位（基线只有 10% 的主因）。
   const inner = N > 2 ? T.policyChooserN(champ, TEMP) : null;
@@ -85,6 +85,14 @@ function makeSel(forceKey, rich, seat, acc) {
     }
     const aff = legal.filter(function (l) { return l.affordable; });
     let base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
+    /* v1.4.10 消融：把这一招从**主体**的候选里拿掉（脚本对手不受影响）。
+     * 这是"冠军已经在用的技能"唯一能测的口径 —— mono-spam Δ 对它们会给出相反结论：
+     * 实测 枪 mono Δ=−15.5pt（读作"坑/别用"）而消融 Δ_lost=+3.8pt（读作"该留着"）；
+     * 雷击之枪 mono Δ=−44pt（读作"没用"）而消融 Δ_lost=−2.2pt（读作"该拿掉"，陷阱卡）。 */
+    if (banKey) {
+      const keep = base.filter(function (l) { return l.key !== banKey; });
+      base = keep.length ? keep : [{ key: R.SK.JI, affordable: true }];
+    }
     if (forceKey) {
       /* v1.3.59：记录"强制到底有没有生效"。play.js 会把 cost.ok===false（条件不满足）
        * 的技能从 legal 里剔掉，而这里只在 **legal 里已有的可负担项** 中筛 ⇒ 条件门技能
@@ -109,7 +117,7 @@ function makeSel(forceKey, rich, seat, acc) {
   return fn;
 }
 
-function runCondition(forceKey, rich, seedBase, acc) {
+function runCondition(forceKey, rich, seedBase, acc, banKey) {
   let first = 0, total = 0;
   for (const pair of PAIRS) {
     for (let g = 0; g < GAMES; g++) {
@@ -117,7 +125,7 @@ function runCondition(forceKey, rich, seedBase, acc) {
       const choosers = [];
       let oi = 0;
       for (let pid = 0; pid < N; pid++) {
-        if (pid === seat) choosers.push(makeSel(forceKey, rich, seat, acc));
+        if (pid === seat) choosers.push(makeSel(forceKey, rich, seat, acc, banKey));
         else { choosers.push(T.wrapBotN(B[pair[oi % pair.length]])); oi++; }
       }
       const r = T.oneGameN(choosers, seedBase + g * 977 + total, N);
@@ -210,9 +218,15 @@ const INSTR = {
   gun: '--inject=gun', sword: '--inject=sword', tank: '--inject=tank', snipe: '--inject=snipe',
   dualGun: '--inject=dualGun', mirror: '--inject=mirror', purify: '--inject=purify',
   cannon: '--inject=cannon', taunt: '--inject=taunt', rod: '--inject=rod',
-  miniT: '--inject=miniT', bigT: '--inject=bigT'
+  /* v1.4.11：小雷是**反制卡**，本场（无聚能环/电磁炮/大雷使用者）测不到它的反制价值 ——
+   * 实测：4×聚能环场上"优先出小雷"把主体从 2.5% 抬到 **22.5%（+20pt）**；
+   * 同一动作在无环场上是 **−25.7pt**（31.1%→5.4%）。故此处标注口径，避免被读成"陷阱卡"。 */
+  miniT: '反制卡：--field=ringwall（本场无环 ⇒ 反制价值测不到；有环场实测 +20pt）',
+  bigT: '--inject=bigT'
 };
-const USE_BAN = 0.02;   // 冠军使用率 ≥2% ⇒ 它真的在用 ⇒ 消融（--ban）比强制 spam 准
+/* v1.4.10：阈值从 2% 降到 1% —— `雷击之枪` 在同口径下用量只有 1.6%，恰是**陷阱卡**
+ * （消融 Δ_lost=−2.2pt：拿掉反而变好）；阈值 2% 会把它挡在消融之外，而它正是最该被标出来的那类。 */
+const USE_BAN = 0.01;
 
 for (const r of rows) {
   const hi = r.use >= 0.04, pos = r.delta > 0.005, neg = r.delta < -0.005;
@@ -239,6 +253,21 @@ for (const r of rows) {
 
 /* ---- HTML ---- */
 const esc = function (s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); };
+/* ===== v1.4.10 消融臂：对"冠军已经在用"的技能再跑一次"拿掉它"的原生经济考卷（同 seed）=====
+ * Δ_lost = 原生基线 − 拿掉后 ⇒ **正数 = 承重**（拿掉会掉），**负数 = 陷阱**（拿掉反而变好）。 */
+console.log('  消融臂（拿掉冠军已在用的技能）…');
+const inUsePre = rows.filter(function (r) { return r.use >= USE_BAN; });
+for (const r of inUsePre) {
+  const ban = runCondition(null, false, 555001, null, r.key);
+  r.banArm = ban.firstRate;
+  r.banLost = baseNative.firstRate - ban.firstRate;
+  console.log('    ' + r.name + '：原生 ' + (baseNative.firstRate * 100).toFixed(1) + '% → 拿掉 ' +
+    (ban.firstRate * 100).toFixed(1) + '%  Δ_lost=' + (r.banLost >= 0 ? '+' : '') + (r.banLost * 100).toFixed(1) + 'pt');
+  r.verdict = r.banLost > 0.005 ? ('承重（拿掉掉 ' + (r.banLost * 100).toFixed(0) + 'pt）')
+    : r.banLost < -0.005 ? ('陷阱（拿掉反而 +' + (-r.banLost * 100).toFixed(0) + 'pt）')
+    : '中性（拿掉无差）';
+}
+
 const maxAbsDelta = Math.max(0.01, ...rows.map(function (r) { return Math.abs(r.delta); }));
 const maxUse = Math.max(0.01, ...rows.map(function (r) { return r.use; }));
 const bar = function (v, mx, color) { const w = Math.abs(v) / mx * 100; return '<div class="barwrap"><div class="bar ' + color + '" style="width:' + w.toFixed(1) + '%"></div></div>'; };
@@ -278,13 +307,16 @@ html += '<h2>覆盖表：口径不足 / 冠军已在用 → 该用什么命令</
 html += '<div class="cov"><div><b>① 本口径量不到（' + lack.length + ' 个）</b> —— Δ 不可读，不是"弱"：<table><tr><th>技能</th><th>费用</th><th>强制命中</th><th>该用命令</th></tr>';
 for (const r of lack) html += '<tr><td>' + esc(r.name) + '</td><td>' + (r.cost == null ? '?' : r.cost) + '</td><td>' + (r.forceHit * 100).toFixed(0) + '%</td><td><code>' + esc(r.tool) + '</code></td></tr>';
 if (!lack.length) html += '<tr><td colspan="4">（无 —— 所有技能在本口径下都量到了）</td></tr>';
-html += '</table></div><div><b>② 冠军已经在用（' + inUse.length + ' 个）</b> —— 对它们"强制 spam"没有意义，应测<b>消融（拿掉）</b>：<table><tr><th>技能</th><th>实际使用率</th><th>该用命令</th></tr>';
-for (const r of inUse) html += '<tr><td>' + esc(r.name) + '</td><td>' + (r.use * 100).toFixed(1) + '%</td><td><code>' + esc(r.tool) + '</code></td></tr>';
+html += '</table></div><div><b>② 冠军已经在用（' + inUse.length + ' 个）</b> —— 对它们"强制 spam"没有意义，应测<b>消融（拿掉）</b>：<table><tr><th>技能</th><th>实际使用率</th><th>消融 Δ_lost（已测）</th><th>该用命令</th></tr>';
+for (const r of inUse) {
+  const bl = (r.banLost == null) ? '—' : ((r.banLost >= 0 ? '+' : '') + (r.banLost * 100).toFixed(1) + 'pt');
+  html += '<tr><td>' + esc(r.name) + '</td><td>' + (r.use * 100).toFixed(1) + '%</td><td>' + bl + '</td><td><code>' + esc(r.tool) + '</code></td></tr>';
+}
 if (!inUse.length) html += '<tr><td colspan="3">（无 —— 冠军几乎不用任何 ≥2% 的技能）</td></tr>';
 html += '</table></div></div>';
 
 html += '<h2>每技能：实际使用率 × 实际强度（富裕经济下强制使用的收益差）</h2>';
-html += '<table><tr><th>技能</th><th>费用</th><th>实际使用率</th><th></th><th>强制命中率</th><th>强制使用的 1st</th><th>强度 Δ vs 自由发挥</th><th></th><th>判定</th><th>该用口径</th></tr>';
+html += '<table><tr><th>技能</th><th>费用</th><th>实际使用率</th><th></th><th>强制命中率</th><th>强制使用的 1st</th><th>强度 Δ vs 自由发挥</th><th></th><th>消融 Δ_lost</th><th>判定</th><th>该用口径</th></tr>';
 rows.sort(function (a, b) { return b.use - a.use; });
 for (const r of rows) {
   html += '<tr><td>' + esc(r.name) + '</td><td>' + (r.cost == null ? '?' : r.cost) + '</td>';
@@ -293,13 +325,20 @@ for (const r of rows) {
   html += '<td>' + (r.richWr * 100).toFixed(0) + '%</td>';
   html += '<td>' + (r.delta >= 0 ? '+' : '') + (r.delta * 100).toFixed(1) + 'pt</td>';
   html += '<td>' + bar(r.delta, maxAbsDelta, r.delta >= 0 ? 'pos' : 'neg') + '</td>';
-  html += '<td><span class="tag" style="background:' + VCOLOR[r.verdict] + '">' + r.verdict + '</span></td>';
+  let vc = VCOLOR[r.verdict];
+  if (!vc) vc = r.verdict.indexOf('承重') === 0 ? '#30a46c' : r.verdict.indexOf('陷阱') === 0 ? '#e5484d' : r.verdict.indexOf('中性') === 0 ? '#8b8d98' : '#555';
+  html += '<td><span class="tag" style="background:' + vc + '">' + r.verdict + '</span></td>';
+  html += '<td>' + (r.banLost == null ? '—' : ((r.banLost >= 0 ? '+' : '') + (r.banLost * 100).toFixed(1) + 'pt')) + '</td>';
   html += '<td><code' + (r.inUse ? ' style="color:#f5a623"' : '') + '>' + esc(r.tool) + '</code></td></tr>';
 }
 html += '</table>';
 html += '<div class="legend"><b>口径说明：</b>Δ 是“强制只用这一招”对“自由发挥”的差，所以**基础动作（如 ジ）强制 spam 必然大幅为负，那不是坑**。真正有意义的是排序：Δ 越接近 0 或为正，说明这一招单独就能顶上整套混合策略。<br><br><b>怎么读：</b>左柱 = AI 实际多久用一次（原生经济）；右柱 = 强制用它时的胜率变化（富经济，绿色涨 / 红色跌）。';
 html += '<br><b>红色「坑」</b>= 常用但用了反而亏 → AI 在自残，应该修训练或规则；<b>橙色「没学会的强招」</b>= 明明更强却几乎不用 → 探索/经济没铺到；';
 html += '<b>绿色「主力」</b>= 又强又常用，健康；<b>紫色「死技能」</b>= 又弱又不用，设计上没被激活。';
+html += '<br><b>「消融 Δ_lost」</b>：对<b>冠军已经在用</b>的技能另跑一次"拿掉它"的原生经济考卷（同 seed），'
+     + 'Δ_lost = 原生基线 − 拿掉后 ⇒ <b>正数 = 承重</b>、<b>负数 = 陷阱</b>（拿掉反而变好）。'
+     + '它与 mono-spam 的 Δ 是两个量：实测 <code>枪</code> mono −15.5pt（像坑）但 Δ_lost <b>+3.8pt</b>（该留着）、'
+     + '<code>雷击之枪</code> mono −44pt（像没用）但 Δ_lost <b>−2.2pt</b>（陷阱卡）⇒ <b>已在用的技能要看 Δ_lost</b>。';
 html += '<br><b>最后一列「该用口径」</b>：本口径量不到的技能，用这一列的命令重测'
      + '（v1.4.5 补齐了四类口径：<code>--grant</code> 开珠 / <code>--plan</code>·<code>--combo</code> 连招 / '
      + '<code>--smart</code> 条件注入 / <code>--ban</code> 消融）。橙色 = 冠军已在用 ⇒ 应测"拿掉它"，而不是"强制 spam"。';
@@ -312,6 +351,7 @@ if (JSON_OUT) {
   writeFileSync(JSON_OUT, JSON.stringify({
     champ: file, label: file.replace(/^.*[^0-9A-Za-z_.-]/, '').replace(/[.][A-Za-z]+$/, ''),
     n: N, games: GAMES, rich: RICH, baseNative: baseNative.firstRate, baseRich: baseRich.firstRate,
+    banArms: rows.filter(function (r) { return r.banLost != null; }).map(function (r) { return { name: r.name, use: r.use, banArm: r.banArm, banLost: r.banLost }; }),
     meta: metaM ? metaM[1] : '', rows: rows
   }), 'utf8');
   console.log('已写出 JSON ' + JSON_OUT);
