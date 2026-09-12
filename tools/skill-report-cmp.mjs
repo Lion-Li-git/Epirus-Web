@@ -23,6 +23,12 @@ const files = ARGV.filter(function (f) { return existsSync(f); });
 const missing = ARGV.filter(function (f) { return !existsSync(f); });
 if (!files.length) { console.error('没有可读的 JSON：' + ARGV.join(' ')); process.exit(1); }
 const data = files.map(function (f) { return JSON.parse(readFileSync(f, 'utf8')); });
+/* v1.4.6：表头用 basename，**不要相信 JSON 里的 label** —— Windows 路径用反斜杠，
+ * 若 label 推导的正则写成 [\/] 之外的形态就会整条路径进表头（实测踩到：列宽翻倍、表头换行）。 */
+for (const d of data) {
+  const src = String(d.champ || d.label || '?');
+  d.label = src.replace(/^.*[^0-9A-Za-z_.-]/, '').replace(/[.][A-Za-z]+$/, '') || src;
+}
 if (missing.length) console.log('[提醒] 跳过缺失文件: ' + missing.join(' '));
 
 const VCOLOR = {

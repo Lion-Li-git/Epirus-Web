@@ -310,7 +310,7 @@ html += '</body></html>';
 writeFileSync(OUT, html, 'utf8');
 if (JSON_OUT) {
   writeFileSync(JSON_OUT, JSON.stringify({
-    champ: file, label: file.replace(/^.*[\/]/, '').replace(/\.(bak|js)$/, ''),
+    champ: file, label: file.replace(/^.*[^0-9A-Za-z_.-]/, '').replace(/[.][A-Za-z]+$/, ''),
     n: N, games: GAMES, rich: RICH, baseNative: baseNative.firstRate, baseRich: baseRich.firstRate,
     meta: metaM ? metaM[1] : '', rows: rows
   }), 'utf8');
