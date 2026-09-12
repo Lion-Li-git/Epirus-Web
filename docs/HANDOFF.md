@@ -1,6 +1,8 @@
 # 交接：Epirus-Web 多人（5P）/ 长程模式 / 测量口径
 
-> 会话日期 2026-09-12 · HEAD = `f525346`（v1.4.14）· 回归 **spec 37/37、np-test 58/58**
+> 会话日期 2026-09-12 · 原稿 HEAD = `f525346`（v1.4.14）· 回归 **spec 37/37、np-test 58/58**
+> **接续会话补记（HEAD `7e27152`）**：§1 ring2 实验已结案（n=6，判定「不加」，见 `docs/REVIEW-5P.md` §6）；
+> 新增自跑器 `tools/ring2-run.mjs`（取代会卡死 DSH 的手搓轮询循环）；回归复跑仍 37/37 + 58/58。
 > 读这份就能接手；每个结论都带可复跑的命令。**§5「踩过的坑」请先读**，能省几小时。
 
 ---
@@ -9,6 +11,9 @@
 
 - **线上多人冠军 = v1.3.58**（5P 考卷 1st **38.4%**、top2 55.9%、3P 47.5%、座位极差 5.0pt）。
   **本轮没有换冠军**（多 seed 验证下没有一个新臂能稳定超过它）。
+- **ring2 环实验已结案（n=6 配对）**：把 `ringspam` 放进训练池**不能**让冠军学会反制环
+  ⇒ **不加进默认池**（逐 seed 表 + 400 局复核 + 机制诊断见 `docs/REVIEW-5P.md` §6）。
+  顺带纠正 §3.3 那条 2.5% —— 它是 40 局读数，400 局复核为 **11.0%**。
 - 新增 **长程模式（5 血 · 3-5 人）** + **终局收缩**（100 回合后每轮全员 −1 血，替代硬截断）。
 - **skill-report 从 1 个口径扩到 5 个**（inject / grant / plan·combo / smart / ban / pure / field），
   并新增「**该用口径**」列、**覆盖表**、**消融 `Δ_lost`**（主口径）与**一键 `.cmd` 入口**。
@@ -16,16 +21,19 @@
 
 ---
 
-## 1. 下个会话第一件事：把 ring2 实验跑完
+## 1. ✅ ring2 实验已跑完（n=6 配对）：判定「**不**把环经济流放进默认池」
 
-**ring2 只跑了 1/4**（DSH 卡死把作业带走了）：
-- 已产出：`docs/artifacts/ring2-31.bak`（seed 31，池含 `ringspam`，自评 **0.3602**）
-- 未跑：seed 32 / 33 / 34（**实验臂**）+ **8 次评估一次都没跑**
-- **控制臂已存在且已验证逐位可复现**：`docs/artifacts/ms2-p12-{31,32,33,34}.bak` ⇒ 只需跑实验臂
+**完整结论见 `docs/REVIEW-5P.md` §6**（逐 seed 表 / 配对统计 / 400 局高精度复核 / 单点诊断 / 方法论三条）。
 
-**目的**：验证"把**聚能环经济流**放进训练池"能否让冠军学会反制环（用户指出小雷正是打环的）。
-**验收**：`--mode=long --field=ringwall` 的 1st 提升，且标准考卷不劣化（多 seed 配对，n≥4）。
-**命令见 §6.3**，耗时 ≈ 7 分钟。
+- 实验臂 = 12 对手 + `ringspam`：`docs/artifacts/ring2-{31..36}.bak` 全部产出
+  （31 上一轮，32–36 本轮；每个 ≈50 秒）。
+- 控制臂 `docs/artifacts/ms2-p12-{31..36}.bak` 未动（本轮只对它做评估）。
+- **判定：不加。** 目标指标（`--mode=long --field=ringwall` 的 1st）**无提升**：
+  40 局 Δ=−10.42pt（t=−0.85）、400 局 Δ=−16.25pt（t=−1.33），点估计均为负；
+  标准考卷**弱负** Δ=−1.77pt（t=−1.53，4/6 seed 为负 1 零）⇒ 验收条件「不劣化」没满足。
+- **默认池一行代码都没动**（用户裁定：只要判定与证据，改动等他点头）。
+- 一键复跑：`node tools/ring2-run.mjs`（≈6 分钟；把等待关在自己进程内 ⇒ 不会像上次那样卡死 DSH）。
+- 想真教冠军打环，该动的是**训练信号**（环场进适应度/课程），不是往池里掺一个名字。
 
 ---
 
@@ -97,6 +105,9 @@
 ### 3.3 聚能环是**长程模式的胜利路线**
 4×`ringspam` 在 **5 血**下把现役冠军打到 **1st 2.5%（5th 85%、场均承伤 5.90、终局血量 0.07）**；
 **3 血**下反而退化（环还没回本就被打死，冠军 100%）。⇒ 5 血确实解冻了一类轨迹策略。
+> ⚠ **2.5% 是 40 局读数，已被 400 局复核纠正为 11.0%**（5th 76.3%）；同一冠军在 400 局
+> `--inject=miniT` 下升到 25.8%。定性结论（5 血解冻轨迹策略 / 3 血退化）不变。
+> 详见 `docs/REVIEW-5P.md` §6.3 —— 这是「把噪声当结论」的第 6 次同类事故。
 
 ### 3.4 反弹墙：**加进池子没有显著影响**（n=6 配对）
 | 指标 | 12 对手 | 12+墙 | 配对 Δ | t |
@@ -126,7 +137,8 @@
 
 ## 4. 未解 / 待办
 
-1. **ring2 跑完**（§1）→ 决定要不要把环经济流放进默认池。
+1. ~~**ring2 跑完**（§1）→ 决定要不要把环经济流放进默认池。~~
+   ✅ **已结案（n=6）**：判定**不加**，默认池未改 ⇒ 见 `docs/REVIEW-5P.md` §6。
 2. **`--smart=armor:<条件>`**：藤甲"火弱那一半"仍未测（饱和铺雷场里 `armor` 与 `reflect` 给出**逐位相同**结果
    ⇒ 该场防御族惰性）。
 3. **训练考卷没跟着换 5 血**：`oneGameN(…, opts)` 支持 `opts.mode`，但**30 个调用点无一传 mode**
@@ -172,6 +184,12 @@
 14. **口径会决定结论**（本轮最贵的教训）：`枪` 的 mono-spam Δ = **−15.5pt**（读作"坑"）而消融 `Δ_lost` = **+0.5~3.8pt**
     （读作"该留着"）；`雷击之枪` mono −44pt（读作"没用"）而消融 −2.6pt + 环场 **+20pt**。
     **已在用的技能看消融；反制卡看场**。
+15. **没有门禁会自己变绿**（v1.4.15 的教训，比上面几条更贵）：`tools/smoke.mjs` 从 **v1.4.0 起就是红的**，
+    4 个断言全在「长程（5 血）模式必须能在页面选到」这条线上 —— 而 v1.4.0 的交付清单里
+    **只落了 `ui.js` 的消费者，没落 `index.html` 的 `<option>`**（"两处各写一半"，
+    与 §5.2-13 的"两处各写一遍"是同一类）。它躺了 5 个版本，期间长程模式被当成 §3.5/§3.6 结论的前提。
+    ⇒ **交付清单里"文件 A + 文件 B"这种条目，做完必须由一条会失败的用例去点名**（这次是 smoke，
+    下次该给它一个 `npm`-式一键入口并写进 §6.1 回归）。已修：见 CHANGELOG v1.4.15。
 
 ---
 
@@ -181,7 +199,9 @@
 ```bash
 node tools/spec-run.mjs      # 37/37
 node tools/np-test.mjs       # 58/58（含 D1..D9）
+node tools/smoke.mjs         # SMOKE OK（CDP 驱动真实 Chrome 跑真实 UI + 截图；v1.4.15 起纳入回归）
 ```
+> ⚠ `smoke.mjs` 自 v1.4.0 起红了 5 个版本没人跑（§5.2-15）⇒ 它现在是**回归的一部分**，别只跑前两条。
 
 ### 6.2 技能表（用户自己也能跑）
 ```bat
@@ -190,27 +210,17 @@ tools\skill-report.cmd docs\artifacts\champion-5p-hA9.bak 6
 tools\skill-report-compare.cmd                           :: 多版本对比页
 ```
 
-### 6.3 ring2 实验（下个会话第一件事，≈7 分钟）
+### 6.3 ring2 实验（✅ 已跑完；一键复跑 ≈6 分钟）
 ```bash
-# 控制臂已有：docs/artifacts/ms2-p12-{31,32,33,34}.bak（同池同 seed，已验证逐位可复现）
-# 只跑实验臂（池 = 12 对手 + ringspam），然后按 §6.4 评估
-PORT=8906
-A="random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver"
-B="$A,ringspam"
-cp docs/artifacts/champion-5p-v1.3.58.bak js/bundled-champion-3p.js
-pwsh -NoProfile -Command "Start-Process -FilePath node -ArgumentList 'server/train-server.mjs','$PORT' -WorkingDirectory 'D:\code\Epirus-Web' -WindowStyle Hidden"
-sleep 4
-for S in 32 33 34; do            # 31 已产出为 docs/artifacts/ring2-31.bak
-  cp docs/artifacts/champion-5p-v1.3.58.bak js/bundled-champion-3p.js
-  LOG=/tmp/ring2-$S.log
-  curl -sN --max-time 900 "http://127.0.0.1:$PORT/train?gens=250&n=5&pop=16&gpo=8&seed=$S&opps=$B" > "$LOG" 2>&1 &
-  # 轮询：一次看一眼（不要写长等待！）—— 等 "type":"done" 或 "type":"error"
-  # 人为做法：隔一会儿 `grep -a '"type":' $LOG | tail -1` 看进度，done 后再 cp
-  cp js/bundled-champion-3p.js docs/artifacts/ring2-$S.bak
-done
-pwsh -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { \$_.CommandLine -like '*train-server*$PORT*' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force }"
-cp docs/artifacts/champion-5p-v1.3.58.bak js/bundled-champion-3p.js
+node tools/ring2-run.mjs                                    # 训练 32..36 + 评估 12 臂 + 写汇总日志
+RING2_STAGE=eval RING2_RGAMES=400 RING2_TAG=r400 node tools/ring2-run.mjs   # 环场高精度复核
+node tools/ab-analyze.mjs docs/artifacts/ring2-run.log p12 r17              # 配对统计
 ```
+`tools/ring2-run.mjs` 取代了原先手搓的 bash 循环（那段正是 §5.1-1 卡死 DSH 的元凶）：
+它把「等待」关在**它自己的进程内**（起 server → 逐个 seed 抓 SSE → 落产物 → 关 server → 评估），
+跑中只写日志（`docs/artifacts/ring2-status.log`，逐块追加）⇒ 会话侧 `tail` 一眼即可；
+端口自动挑空闲的（绕开 §5.1-9「按命令行模式杀进程会杀掉自己」），并在结束时**还原**
+`js/bundled-champion-3p.js` 与 `index.html` —— 训练每轮都会改写这两个文件（`bumpChampionVersion()` 刷 `?v=`）。
 
 ### 6.4 评估（每臂两个考卷）
 ```bash

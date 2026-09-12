@@ -1,3 +1,34 @@
+## v1.4.15 — 长程模式在页面上**不可达**（v1.4.0 的 UI 交付只落了一半）
+
+### 1. 症状
+`tools/smoke.mjs`（CDP 驱动真实 Chrome 跑真实 UI）报 **14 PASS / 4 FAIL**，四个 FAIL 全在同一条线上：
+`#sel-mode` 里没有 `option[value="long"]` ⇒ **玩家无法从 UI 选到长程（5 血）模式**。
+引擎侧一切正常（`np-test` D2/D3 通过、`tools/eval-5p.mjs --mode=long` 可用）⇒ 缺的只有页面入口。
+
+### 2. 根因：写了消费者，没写生产者
+v1.4.0 的交付清单（HANDOFF §2.1）写着「`js/ui/ui.js` + `index.html`：模式下拉加「长程（3-5人·5血）」」，
+但**只有 `ui.js` 落地了**：
+- `js/ui/ui.js:14` `MULTI_MODES = ['multi', 'long']`、`:11` `MODE_NM.long = '长程(5血)'` —— 都按 long 存在来写；
+- `js/ui/ui.js:986-997` `syncModeOptions()` 只**切换已有 option 的 `disabled`**，从不创建 option；
+- `git log -S 'value="long"' -- index.html` **为空** ⇒ 这个 option 从未进过 `index.html`。
+于是 `syncModeOptions()` 里的 `if (multi && MULTI_MODES.indexOf(B.modeKey) < 0) B.modeKey = 'multi'`
+永远把多人局按回 3 血 —— 这条兜底逻辑反而把缺失掩盖得体面。
+
+### 3. 修法（一行 + 版本号三方同步）
+- `index.html:30` 补 `<option value="long">长程（3-5人·5血）</option>`（紧挨 `multi`）。
+- CHANGELOG / README / index.html 版本号同步到 **v1.4.15**（np-test **D8** 守护三方一致）。
+
+### 4. 验证
+- `node tools/smoke.mjs` ⇒ **SMOKE OK（18 PASS / 0 FAIL，JS errors = none）**，
+  三张截图逐张目视复核：对局页 / 训练页 / **长程 5 血页（日志出现「五 血」+ HP 5）**。
+- 回归：`spec 37/37`、`np-test 58/58`。
+
+### 5. 教训：**没有门禁会自己变绿**
+这个缺陷在仓库里躺了 **5 个版本**（v1.4.0 → v1.4.14）。期间「长程模式」被写进 HANDOFF §2.1 的交付清单、
+被当作 §3.5（终局收缩）/§3.6（摄魂门槛）结论的前提，`smoke.mjs` 也从 v1.4.0 起一直红着 ——
+**但没有任何测试或流程去跑它**，于是没人知道。已记入 HANDOFF §5.2-15。
+（同类前科：v1.4.14 的「加名字漏一处」，那是"两处各写一遍"，这次是"两处各写一半"。）
+
 ## v1.4.14 — 第三次『加名字漏一处』：对手池补 `ringspam` + 未知名字**开跑前中止**
 
 ### 1. 症状
