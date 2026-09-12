@@ -632,7 +632,11 @@
           const dgDmg = { amt: (dgDef.dmg && dgDef.dmg.amt) || 1, type: (dgDef.dmg && dgDef.dmg.type) || R.DMG.NORMAL, source: i, via: SK.GUN, pierce: dgDef.pierce || {} };
           deliverDamage(state, Object.assign({}, dgDmg), t, { reason: '双枪射手' });
           if (t2 != null && t2 !== t) {
-            deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.GUN }, t2, { reason: '双枪射手' });
+            /* v1.4.7 修正：第二发原写死 amt:1 / NORMAL / 不带 pierce，与上面"走数据表"的注释矛盾 ——
+             * 改 byKey.dualGun.dmg.amt 只会影响第一发（第十轮复核 §6-2 用内存改表验证：
+             * 事件从 1:1/2:1 变成 1:2/2:1）。调平衡"半静默无效"正是 v1.3.19 那一类。
+             * 双枪 = "对两个角色同时使用枪" ⇒ 两发必须完全同源，故直接复用 dgDmg。 */
+            deliverDamage(state, Object.assign({}, dgDmg), t2, { reason: '双枪射手' });
           }
           break;
         }

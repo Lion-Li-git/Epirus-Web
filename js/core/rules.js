@@ -37,7 +37,11 @@
   const skills = [
     // ---- 能量类 ----
     mk(SK.JI, 'ジ', CAT.ENERGY, 0, 3, 'self', { desc: '获得 1 个ジ', gesture: '双手握拳分开' }),
-    mk(SK.CHARGE, '蓄能', CAT.ENERGY, 1, 3, 'self', { desc: '获得 1 枚能量珠（电/爆自选），可累加', gesture: '双手握拳相并' }),
+    /* v1.4.7 修正 desc：原文写"可累加"与 R9' 实现矛盾（resolve.js:790-796 是
+     * `keep = p.beadNew || null` ⇒ 同类珠上限 1、只保留到下一回合、回合末清空），
+     * 而 ui.js:131 把这个 desc 原样放进技能按钮的悬停提示 ⇒ 是**玩家可见的错误规则**。
+     * 第十轮复核 §6-1 报的这条，读码与事件流双向确认。 */
+    mk(SK.CHARGE, '蓄能', CAT.ENERGY, 1, 3, 'self', { desc: '获得 1 枚能量珠（电/爆自选）；只保留到下一回合，同类珠最多 1 枚', gesture: '双手握拳相并' }),
     mk(SK.RING, '聚能环', CAT.ENERGY, null, 3, 'self', {
       desc: '首次 +1ジ(花费3)，连续第2次 +2ジ，第3次起 +3ジ', gesture: '双手握拳上下相叠', continuous: true
     }),

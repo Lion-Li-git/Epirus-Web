@@ -871,5 +871,24 @@ t('D4 opponent rotation must not depend on individual index (pairing)', function
     'rotation should advance with gen so a large pool still gets covered: ' + all.join(' | '));
 });
 
+t('D5 dualGun second shot must come from the same data row', function () {
+  /* v1.4.7：第二发原先写死 amt:1/NORMAL/无 pierce，与注释"走数据表"矛盾 ——
+   * 改 byKey.dualGun.dmg.amt 只会影响第一发（第十轮复核 §6-2 用内存改表验证）。
+   * 这条用例就是那个内存改表的固化版：改表后两发都必须跟着变。 */
+  const dg = R.byKey[R.SK.DUAL_GUN];
+  const bakAmt = dg.dmg.amt;
+  try {
+    dg.dmg.amt = 2;
+    const st = S.createState('multi', { next: mulberry32(81) }, 3);
+    st.p[0].ep = 3; st.p[1].hp = 3; st.p[2].hp = 3;
+    X.startTurn(st);
+    const r = S.attemptAction(st, 0, R.SK.DUAL_GUN, { target: 1, target2: 2 });
+    ok(r && r.outcome === 'ok', '双枪应能出手: ' + JSON.stringify(r));
+    X.resolveActions(st);
+    eq(3 - st.p[1].hp, 2, '第一发伤害应跟数据表(2)');
+    eq(3 - st.p[2].hp, 2, '第二发伤害也必须跟数据表(2)，不能写死 1');
+  } finally { dg.dmg.amt = bakAmt; }
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

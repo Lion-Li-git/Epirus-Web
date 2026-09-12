@@ -152,7 +152,10 @@ async function runTrain(gens, opts, cfg) {
   const rounds = Math.max(1, cfg.rounds || 1);
   const fresh = !!cfg.fresh;
   const t0 = Date.now();
-  const cap = 1800000; // 30 分钟上限
+  /* v1.4.7：原为写死的 30 分钟墙上时钟上限（第十轮复核 §6-4：同 seed 同 gens 在慢机器上可能
+     * 一整份产物都不产出，破坏"同参数可复现"）。改成可关/可调：EPIRUS_WALL_MS=0 关闭（纯按代数收敛），
+     * 默认仍是 30 分钟以保持既有行为。 */
+  const cap = Number(process.env.EPIRUS_WALL_MS == null ? 1800000 : process.env.EPIRUS_WALL_MS); // 30 分钟上限
   let last = null;
   let nextParents = null;   // 下一轮各种子的父代（谱系）：[{label, params}]
   /* v1.3.56：记录"本轮开局所用的现有冠军"权重标识。非 fresh 时种群是围绕它长出来的，
@@ -299,7 +302,10 @@ async function runTrainN(gens, cfg) {
     if (!BOT_FN_N[nm]) { console.log('[multiObj] 未知对手名: ' + nm + '（可选: ' + Object.keys(BOT_FN_N).join(' ') + '）'); }
   }
   const t0 = Date.now();
-  const cap = 1800000;
+  /* v1.4.7：原为写死的 30 分钟墙上时钟上限（第十轮复核 §6-4：同 seed 同 gens 在慢机器上可能
+     * 一整份产物都不产出，破坏"同参数可复现"）。改成可关/可调：EPIRUS_WALL_MS=0 关闭（纯按代数收敛），
+     * 默认仍是 30 分钟以保持既有行为。 */
+  const cap = Number(process.env.EPIRUS_WALL_MS == null ? 1800000 : process.env.EPIRUS_WALL_MS);
   process.env.EPIRUS_SEED0 = String((SEED0 || 1) * 7919 + 13);   // worker 在下一行创建，必须在此之前设好
   const poolN = makeParallelEvalN(T);
   const seedP = cfg.fresh ? null : loadSeedN();

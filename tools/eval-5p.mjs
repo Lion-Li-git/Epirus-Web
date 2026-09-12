@@ -55,7 +55,12 @@ const ALL = [
   ['focusfire', Bots.pickFocusFire],
   /* v1.4.1：前置条件提供者（铺雷者 / 贴符咒+天火者），池里原先没有 ⇒ 藤甲的火弱、
    * 贴贴×天火这两条线在任何考卷上都测不到。 */
-  ['minespam', Bots.pickMineSpam], ['cursestorm', Bots.pickCurseStorm]
+  ['minespam', Bots.pickMineSpam], ['cursestorm', Bots.pickCurseStorm],
+  /* v1.4.7：单一防御 specialists。第十轮复核指出：它们作为"玩家对手"确实无聊（v1.3.22 按熵=1.00 剔除，
+   * 那是 UI 判断），但作为**训练/评测的 exploit cursor** 正是缺的那类 —— 它们暴露的是
+   * "冠军会不会反制一堵 0 ジ 的墙"。且它们**原本不在 server 的 BOT_FN_N 里**。 */
+  ['reflectspam', Bots.pickReflectSpam], ['guardspam', Bots.pickGuardSpam],
+  ['baguaspam', Bots.pickBaguaSpam], ['protowall', Bots.pickProtoWall]
 ];
 /* "深经济对手"的定义：会攒钱**并且**会把攒的钱换成重击。farmer 只攒不还手，不算。 */
 const DEEP = { deepsaver: 1, heavyfire: 1 };
@@ -173,6 +178,27 @@ function makeGrantHook(seat) {
   };
 }
 
+/* ===== --pure=<技能>：**纯招主体**（"只出这一招 + ジ"）=====
+ * 为什么 `--inject` 不够：它是"优先用它，买不起就回落到冠军策略"，而冠军策略里有枪
+ * ⇒ 在反弹墙上照样被弹死。实测（v1.4.7，1400 局）`--inject=sword/snipe/railgun` 全是
+ * **场均承伤 3.00 = 3 血上限、被弹回 3.00 次/局、终局血量 0.00**，与冠军本体逐位相同 ——
+ * 也就是说那三个臂测的根本不是"激光剑能不能破墙"，而是"冠军策略里那 3 次枪"。
+ * `--pure` 把 legal 限制到 {该技能, ジ}，才真正回答"单一卡片策略能不能破这堵墙"。 */
+const PURE = FLAG.pure || '';
+const PURE_ST = { dec: 0, hit: 0 };
+function buildPureSel() {
+  const k = PAY_KEY[PURE] || PURE;
+  return function () {
+    const inner = T.policyChooserN(params, 0.15);
+    return function (state, pid, legal) {
+      PURE_ST.dec++;
+      const keep = legal.filter(function (l) { return l.key === k || l.key === R.SK.JI; });
+      if (keep.some(function (l) { return l.key === k && l.affordable; })) PURE_ST.hit++;
+      return inner(state, pid, keep.length ? keep : legal);
+    };
+  };
+}
+
 const REGEN = Number(FLAG.regen || 0);   // 每回合回 ep（0 = 与线上规则一致）
 /* v1.4.0：--mode=<key>（multi=3血 / long=5血 / …）；--drainHp=N 覆盖摄魂指法的启用血量门槛。 */
 const MODE = FLAG.mode || '';
@@ -190,7 +216,12 @@ const FIELDS = {
   tank:      ['tankline', 'tankline', 'tankline', 'tankline'],
   mine:      ['aggro', 'defend', 'antidef', 'wall'],    // 这四个脚本都有铺雷分支（bots.js:114/125/146/214）
   minespam:  ['minespam', 'minespam', 'minespam', 'minespam'],   // v1.4.1：饱和火焰源（专精铺雷者 ×4）
-  cursestorm:['cursestorm', 'cursestorm', 'cursestorm', 'cursestorm']
+  cursestorm:['cursestorm', 'cursestorm', 'cursestorm', 'cursestorm'],
+  /* v1.4.7：四种"单一防御墙"（4 个座位同一种，允许重复）——复验第十轮复核的头号发现 */
+  reflectwall:['reflectspam', 'reflectspam', 'reflectspam', 'reflectspam'],
+  guardwall:  ['guardspam', 'guardspam', 'guardspam', 'guardspam'],
+  baguawall:  ['baguaspam', 'baguaspam', 'baguaspam', 'baguaspam'],
+  protowall:  ['protowall', 'protowall', 'protowall', 'protowall']
 };
 if (FIELD) {
   if (!FIELDS[FIELD]) { console.error('--field 未知: ' + FIELD + '（可选: ' + Object.keys(FIELDS).join(' ') + '）'); process.exit(1); }
@@ -223,6 +254,9 @@ function runSubject(makeSel, label) {
   /* v1.3.60 前置条件自检：没有这三个数，"条件性卡的 Δ" 无法解释 ——
    * 中性场上 转移伤害 的 Δ=−30.8pt 完全可能只是"前置条件不存在"。 */
   let takenSum = 0, transferEv = 0, fireEv = 0, takenGames = 0, roundSum = 0;
+  /* v1.4.7 机制读数（第十轮复核 §3.2/3.3 用的量）：自己的攻击被弹回几次、平局率、终局血量。
+   * `reflect` 事件的语义是 {to: 格挡持有者(墙), from: 攻击者(主体)} ⇒ 数 from===seat 就是"我被打回"。 */
+  let reflectSelf = 0, drawGames = 0, hpEndSum = 0;
   for (const combo of combos) {
     const hasDeep = combo.some(function (nm) { return !!DEEP[nm]; });
     for (let g = 0; g < GAMES; g++) {
@@ -272,7 +306,10 @@ function runSubject(makeSel, label) {
         if (e.type === 'damage' && e.to === seat) takenSum += e.amt;
         if (e.type === 'damage' && (e.via === R.SK.MINE || e.via === R.SK.FIRESTORM)) fireEv++;
         if (e.type === 'transfer') transferEv++;
+        if (e.type === 'reflect' && e.from === seat) reflectSelf++;
       }
+      if (r.winner === 'draw') drawGames++;
+      hpEndSum += Math.max(0, r.state.p[seat].hp);
       takenGames++; roundSum += r.rounds;
       total++;
     }
@@ -284,6 +321,9 @@ function runSubject(makeSel, label) {
     seatFirst: seatFirst, seatGames: seatGames,
     deepGames: deepGames, deepFirst: deepFirst, shallowGames: shallowGames, shallowFirst: shallowFirst,
     takenPerGame: takenGames ? takenSum / takenGames : 0, transferEv: transferEv, fireEv: fireEv,
+    reflectSelfPerGame: takenGames ? reflectSelf / takenGames : 0,
+    drawRate: takenGames ? drawGames / takenGames : 0,
+    hpEnd: takenGames ? hpEndSum / takenGames : 0,
     avgRounds: takenGames ? roundSum / takenGames : 0,
     firstRate: total ? ranks[0] / total : 0,
     top2Rate: total ? (ranks[0] + ranks[1]) / total : 0,
@@ -337,6 +377,7 @@ if (SUBJECT && !FN[SUBJECT]) { console.error('--subject 未知脚本: ' + SUBJEC
 const PAY_KEY = { bigT: R.SK.BIG_T, tank: R.SK.TANK, railgun: R.SK.RAILGUN, snipe: R.SK.SNIPE, dualGun: R.SK.DUAL_GUN, laserEye: R.SK.LASER_EYE, mirror: R.SK.MIRROR,
   armor: R.SK.ARMOR, mine: R.SK.MINE, transfer: R.SK.TRANSFER,     // v1.3.59：用户点名的藤甲/地雷/转移三张多人卡
   drain: R.SK.DRAIN,                                                 // v1.4.0：摄魂指法（自我门控：只在 HP≤门槛 时可选 ⇒ 贪心注入正好是正确用法）
+  gun: R.SK.GUN, sword: R.SK.SWORD,                                 // v1.4.7：report 的 INSTR 已推荐 --inject=sword/gun，表里缺会直接 exit(1)
   reflect: R.SK.REFLECT, guard: R.SK.GUARD, ring: R.SK.RING,        // v1.3.60：费用 0 的防御族对照（反弹 vs 藤甲）
   curse: R.SK.CURSE, firestorm: R.SK.FIRESTORM };                   // v1.3.60：**贴贴(符咒) × 天火(引爆)** 组合对
 /* ===== 边际注入（v1.3.59，用户要的"边际价值"口径）=====
@@ -465,9 +506,12 @@ const comboLabel = '组合技·贴贴×天火';
 const comboOk = COMBO === '' || COMBO === 'curseStorm' || /^curseStorm:\d+$/.test(COMBO);
 if (COMBO && !comboOk) { console.error('--combo 未知: ' + COMBO + '（可选: curseStorm）'); process.exit(1); }
 const comboSubjectSel = (!COMBO || !comboOk) ? null : buildComboSel();
+const pureSel = !PURE ? null : buildPureSel();     // 必须在 PAY_KEY 声明之后
 const banSel = !BAN ? null : buildBanSel();        // 必须在 PAY_KEY 声明之后
 const smartSel = !SM ? null : buildSmartSel();     // 必须在 PAY_KEY 声明之后
-const subjectSel = (planSubjectSel && !PAYLOAD && !INJECT && !SMART && !COMBO)
+const subjectSel = (PURE && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !planSubjectSel)
+  ? pureSel
+  : (planSubjectSel && !PAYLOAD && !INJECT && !SMART && !COMBO)
   ? planSubjectSel
   : (BAN && !PAYLOAD && !INJECT && !SMART && !COMBO)
   ? banSel
@@ -487,6 +531,7 @@ const subjectSel = (planSubjectSel && !PAYLOAD && !INJECT && !SMART && !COMBO)
     ? function () { return asChooser(FN[SUBJECT]); }
     : function () { return T.policyChooserN(params, 0.15); });
 const subjectLabel = PAYLOAD ? ('消融·只换弹头 ' + PAYLOAD)
+  : (PURE && !INJECT && !SMART && !COMBO && !BAN && !planSubjectSel) ? ('纯招·只出 ' + PURE + ' + ジ')
   : (planSubjectSel && !INJECT && !SMART && !COMBO) ? ('连招·蓄能→电磁炮')
   : (BAN && !INJECT && !SMART && !COMBO) ? ('消融·拿掉 ' + BAN)
   : (COMBO && !INJECT && !SMART) ? (comboLabel + ' 叠' + STACK)
@@ -502,11 +547,17 @@ for (const s of [champ, ctrl]) {
     '   | top2=' + s.pct(s.ranks[0] + s.ranks[1], s.total) + ' top3=' + s.pct(s.ranks[0] + s.ranks[1] + s.ranks[2], s.total));
   console.log('    各座位 1st 率: ' + s.seatGames.map(function (g, i) { return 'P' + i + '=' + s.pct(s.seatFirst[i], g); }).join(' '));
   console.log('    前置条件: 主体场均承伤=' + s.takenPerGame.toFixed(2) + '  平均回合=' + s.avgRounds.toFixed(1) + '  转移事件=' + s.transferEv + '  火焰伤害事件=' + s.fireEv);
+  console.log('    机制: 自己的攻击被弹回=' + s.reflectSelfPerGame.toFixed(2) + ' 次/局  平局率=' + (s.drawRate * 100).toFixed(0) + '%  终局血量=' + s.hpEnd.toFixed(2));
   console.log('    拆分: 含深经济对手 ' + s.pct(s.deepFirst, s.deepGames) + '（' + s.deepGames + ' 局）  vs  不含 ' +
     s.pct(s.shallowFirst, s.shallowGames) + '（' + s.shallowGames + ' 局）  Δ=' +
     ((s.deepGames && s.shallowGames) ? ((s.deepFirst / s.deepGames - s.shallowFirst / s.shallowGames) * 100).toFixed(1) + 'pt' : '-'));
 }
 
+if (PURE && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !planSubjectSel) {
+  console.log('[纯招自检] 决策 ' + PURE_ST.dec + ' 次，其中 ' + PURE + ' 可负担 ' + PURE_ST.hit + ' 次 = ' +
+    (PURE_ST.dec ? (PURE_ST.hit / PURE_ST.dec * 100).toFixed(1) : '0') + '%' +
+    (PURE_ST.hit === 0 ? '   !!! 从未可负担 ⇒ 纯招没跑起来，Δ 不可读' : '   OK 纯招有效'));
+}
 if (planSubjectSel && !PAYLOAD && !INJECT && !SMART && !COMBO) {
   console.log('[连招自检] 决策 ' + PLAN_ST.dec + ' 次：攒钱(ジ) ' + PLAN_ST.save + ' 次、蓄能 ' + PLAN_ST.charge + ' 次、电磁炮 ' + PLAN_ST.rail + ' 次' +
     (PLAN_ST.rail === 0 ? '   !!! 从未打出电磁炮 ⇒ 连招没走通，Δ 不可读' : '   OK 连招跑通了'));
