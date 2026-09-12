@@ -1,3 +1,73 @@
+## v1.3.56 — 查实「浏览器训练不可复现」的真因（**并纠正我自己在 P3.3 写错的归因**）+ 补推送
+
+### 0. 先修一次交付疏漏：v1.3.54/55 **提交了但没推**
+用户指出"GitHub 上看不到 v1.3.55"。查证：`origin/main` 停在 `4c8746e`(v1.3.53)，本地 `main`
+**领先 2 个提交**（`0c18e2d` v1.3.54、`f0017f7` v1.3.55）——我提交后从未 `git push`。
+已推送 `main` 与 tag `v1.3.45 / v1.3.54 / v1.3.55`。
+（另注：origin 侧 tag 有缺口——`v1.3.11/12/13/14/39/40/45` 此前不在远端；v1.3.46–v1.3.53 本地也没有 tag。）
+
+### 1. 结论先行：**「不可复现」的根因就是"输入变了"**（用户记忆正确，实测证实）
+`js/train/trainer.js` 与 `js/ui/ui.js` **自 v1.3.23 起就没被改过** —— v1.3.46–55 的全部播种/
+复现性修复都只落在 CLI 与 server 上，浏览器这条路从未被碰过。查清了三件事：
+
+**(a) 浏览器按钮根本不走浏览器训练器。** `#btn-train` → `ui.js:777`
+`new EventSource(base + '/train?gens=…')` → **Node 服务**。
+`trainer.js:57 startTraining` 是**死代码**（全仓 grep 只有定义与导出，**零调用方**）。
+
+**(b) 所以 P3.3 的归因是错的。** 我此前写"`trainer.js` 的 `budgetMs` 分帧预算 ⇒ 浏览器里
+点『开始训练』本质上不可复现"——**两处都站不住**：那段代码没被使用；而且 `budgetMs` 只决定
+**何时让出帧**（`while (… Date.now()-t0 < budgetMs)`），不改变算出来的东西。
+真正的机制是**默认热启动**：
+
+```
+index.html:75   <input type="checkbox" id="tr-fresh">   ← 默认不勾
+ui.js:718       const fresh = $('tr-fresh') && $('tr-fresh').checked;   → false
+                → URL 不带 fresh=1
+server:         const fresh = url.searchParams.get('fresh') === '1';    → false
+                const seedP = cfg.fresh ? null : loadSeedN();          → 读 js/bundled-champion-3p.js
+                1/3 种群由它变异而来（seedChampion）
+```
+那个冠军文件**每训练一次就变** ⇒ **下一次运行的输入不同**。与 v1.3.50 在 CLI 定位到的
+"热启动读自己产物"是**同一根因**，只是这里的"产物"换成了 `js/bundled-champion-3p.js`。
+
+**(c) 实测证明：给定 (seed, 输入冠军)，浏览器默认配置是可复现的。**
+同一份输入冠军、同 `?seed=5`、**不传 `fresh=1`**、两次之间**还原输入冠军**：
+
+| | 结果 |
+|---|---|
+| 20 代 SSE 记录（`gen` 事件逐字节） | **完全一致** |
+| 整个 SSE 流唯一差异 | `done` 的 `secs`（墙上时钟 9.5s / 12.1s） |
+| 产物 meta | `seed:5, fresh:false, hotstartFrom:"037b2f71597ed6bc", workers:16` |
+
+且 `hotstartFrom` **精确等于输入冠军的权重 sha** ⇒ 记录是有意义的、可核对的。
+
+### 2. 修法：把"可复现输入"记进产物（与 v1.3.50 给 CLI 定的规矩对齐）
+此前 server 的 meta 只有 `source/n/gens/games/pop/ts/胜率` ⇒ **从产物上既看不出是不是热启动、
+也看不出输入是哪一版冠军**，于是热启动训练**无法被别人复现**。新增：
+- `weightsId(params)`：只哈希**权重数组**（沿用 v1.3.36 的教训——整文件 sha 会被 META 的 `ts` 污染）；
+- 2P 与 N **两条路径**的 meta 都记 `seed` / `hotstartFrom`（N 另记 `fresh` 与 `workers`）。
+
+**钉成用例**（`np-test` 的 L3）：server 必须存在 `weightsId`、meta 必须记 `hotstartFrom`（两条路径）
+与 `seed` —— 否则这条规矩会像 P3.1 一样再次丢失。
+
+### 3. 顺带查实的第二（潜在）成因：浏览器训练器**完全没有播种**
+`setRng` 的调用方只有 `tools/train-3p.mjs` / `train-best.mjs` / `train-fast.mjs` /
+`server/train-server.mjs` —— `trainer.js`/`ui.js` **从不调用**，所以 `policy.js` 的 `__rng`
+保持默认 `Math.random`；`evo.js:665-667,712`（繁殖选父/交叉/随机个体注入）也是裸 `Math.random`。
+**今天不影响结果**（那条路是死代码），但谁把它复活谁就会踩到。
+
+### 4. 仍缺（未做，如实列出）
+1. **UI 不发 `seed`**（`openRemote` 的 URL 里没有 `&seed=`）⇒ 浏览器所有运行都用 `seed0=0`。
+   好处是种子恒定、只差输入；代价是**没法做配对设计**。修它要改 `js/ui/ui.js`（页面产物，
+   需要浏览器端视觉复核），未做。
+2. **`repro-check` 仍不覆盖 server 的"非 fresh"路径**（它 A/B/C 全用 `fresh=1`）——
+   而"非 fresh"正是**浏览器默认配置**。v1.3.52 已把它列作未做的 **F**，本轮仍未做
+   （我已用手工两次运行 + SSE 逐行 diff 代替，见 §1(c)）。
+3. P3.1 的"worker 数写进 meta"本轮**已在 N 路径做了**（`workers: poolN.workers`）。
+
+**回归**：spec 37/37、np-test **48/48**（L3 扩容）；手工验证见 §1(c)。
+工作区两次实验后已还原（冠军与 `index.html` 均未被留下改动）。
+
 ## v1.3.55 — 搭好 5 人局评测（P3.5「改考卷」），而**它否掉了「等 5 人局」这个方向**
 
 > 用户要求："搭一下五人局的评测吧。" 评测搭好了，而且它给出的第一个答案就是

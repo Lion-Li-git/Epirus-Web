@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import { createHash } from 'node:crypto';
 import { makeAsyncStep, makeParallelEvalN } from './paralleltrain.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -58,6 +59,14 @@ function loadSeed() {
     if (!m) return null;
     return P.unpack(JSON.parse(m[1]));
   } catch (e) { return null; }
+}
+
+/* 冠军包的**可复现输入标识**：只哈希权重数组。
+ * （v1.3.36 的教训：整文件 sha 会被 META 里的 ts 污染，把"权重相同"误判成"不同"。）
+ * 用途：把"这一轮是从哪一版冠军长出来的"记进产物 —— 否则热启动训练无法复现。 */
+function weightsId(params) {
+  try { return createHash('sha1').update(JSON.stringify(Array.from(params))).digest('hex').slice(0, 16); }
+  catch (e) { return null; }
 }
 
 function sse(res, data) {
@@ -146,6 +155,9 @@ async function runTrain(gens, opts, cfg) {
   const cap = 1800000; // 30 分钟上限
   let last = null;
   let nextParents = null;   // 下一轮各种子的父代（谱系）：[{label, params}]
+  /* v1.3.56：记录"本轮开局所用的现有冠军"权重标识。非 fresh 时种群是围绕它长出来的，
+   * 不记下来，这个产物就**无法被别人复现**（而浏览器默认就是不勾"从头训练"）。 */
+  let hotstartFrom = null;
   for (let r = 0; r < rounds; r++) {
     const list = [];
     for (let s = 0; s < seedN; s++) {
@@ -156,7 +168,7 @@ async function runTrain(gens, opts, cfg) {
       if (r === 0) {
         parentSeed = -1;   // 第 0 轮无父种子
         if (fresh) parentLabel = '随机';
-        else { seedPack = loadSeed(); parentLabel = seedPack ? '现有冠军' : '随机'; }
+        else { seedPack = loadSeed(); parentLabel = seedPack ? '现有冠军' : '随机'; if (seedPack) hotstartFrom = weightsId(seedPack); }
       } else if (nextParents && nextParents[s]) {
         seedPack = nextParents[s].params; parentLabel = nextParents[s].label; parentSeed = nextParents[s].seedId;
       }
@@ -224,7 +236,7 @@ async function runTrain(gens, opts, cfg) {
     for (const c of clients) sse(c, { type: 'lineage', round: r + 1, parents: nextParents.map(function (p) { return { label: p.label, seedId: p.seedId }; }) });
     const finalPack = P.pack(best ? best.champion : cur);
     lastChampionPack = finalPack;
-    writeBundle(finalPack, { source: 'server/train-server.mjs', seeds: seedN, gens, round: r + 1, rounds, ts: new Date().toISOString(), keptExisting: bestSeed < 0, fresh: fresh, champWr: bestWr });
+    writeBundle(finalPack, { source: 'server/train-server.mjs', seeds: seedN, gens, round: r + 1, rounds, ts: new Date().toISOString(), keptExisting: bestSeed < 0, fresh: fresh, champWr: bestWr, seed: Number((cfg && cfg.seed0) || 0), hotstartFrom: hotstartFrom });
     last = { best: bestScore, champWr: bestWr, bestSeed, keptExisting: bestSeed < 0 };
     for (const c of clients) sse(c, { type: 'roundDone', round: r, rounds, champWr: bestWr, bestSeed, keptExisting: bestSeed < 0 });
   }
@@ -277,6 +289,7 @@ async function runTrainN(gens, cfg) {
   process.env.EPIRUS_SEED0 = String((SEED0 || 1) * 7919 + 13);   // worker 在下一行创建，必须在此之前设好
   const poolN = makeParallelEvalN(T);
   const seedP = cfg.fresh ? null : loadSeedN();
+  const hotstartFromN = seedP ? weightsId(seedP) : null;
   /* 工具链修复：播种。原先 policy.js 的 randn/crossover 直接用 Math.random，
    * 训练完全不可复现 ⇒ A/B 两轮无法配对。带上 ?seed=N 后同一 N 两次运行结果一致。 */
   if (P.setRng && T.mulberry32) P.setRng(T.mulberry32((SEED0 || 1) * 7919 + 13));
@@ -415,7 +428,12 @@ async function runTrainN(gens, cfg) {
   }
   const pack = P.pack(finalParams);
   lastChampionPackN = pack;
-  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0 });
+  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
+    /* v1.3.56：把**可复现输入**记进产物。此前 meta 只有 source/n/gens/games/pop/ts/胜率，
+     * 于是从产物上既看不出是不是热启动、也看不出输入是哪一版冠军 —— 而浏览器的默认配置
+     * 恰好就是热启动（index.html 的"从头训练"复选框默认不勾，ui.js 也就不发 fresh=1）。
+     * 与 v1.3.50 给 CLI 定的规矩对齐：让"从哪个冠军长出来的"成为可复现输入。 */
+    seed: SEED0, fresh: !!cfg.fresh, hotstartFrom: hotstartFromN, workers: poolN.workers });
   for (const c of clients) sse(c, { type: 'done', n: n, gens, firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0, secs: ((Date.now() - t0) / 1000).toFixed(1), champ: pack });
   runningN = false;
   poolN.close();

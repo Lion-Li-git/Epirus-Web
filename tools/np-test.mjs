@@ -724,6 +724,18 @@ t('L3 每个诊断工具都必须能跑（签名/前置条件没核实 => 脚本
   ok(evo.indexOf('process.env.EPIRUS_WR_TOL') < 0,
     'WR_TOL 不得在引擎内读 env（CLI 沙箱无 process => 两条路取到不同值）');
   ok(evo.indexOf('setWrTol') >= 0, 'WR_TOL 应由调用方通过 setWrTol 显式传入');
+
+  /* v1.3.56：「浏览器训练不可复现」的根因不是随机源，是**输入没被记录**：
+   * 浏览器按钮走 Node 服务，而 index.html 的"从头训练"默认不勾 ⇒ 默认热启动，
+   * 种群围绕 js/bundled-champion*.js 长出来。那个文件会随每次训练变化 ⇒ 输入变了。
+   * 修法与 v1.3.50 给 CLI 定的规矩一致：把输入标识记进产物。 */
+  const srv = readFileSync('server/train-server.mjs', 'utf8');
+  ok(srv.indexOf('weightsId') >= 0,
+    'server 必须能把"输入冠军"算成标识（weightsId）——否则热启动产物无法复现');
+  ok((srv.match(/hotstartFrom/g) || []).length >= 3,
+    'server 的冠军 meta 必须记录 hotstartFrom（2P 与 N 两条路径都要）');
+  ok(/seed:\s*(SEED0|Number\(\(cfg && cfg\.seed0\))/.test(srv),
+    'server 的冠军 meta 必须记录 seed');
 });
 
 t('L6 考卷完整性：深经济对手必须在池子里 + wrapBotN 必须保留脚本自己选的目标', function () {
