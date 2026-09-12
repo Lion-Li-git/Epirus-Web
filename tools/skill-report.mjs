@@ -49,6 +49,13 @@ const W = sb.window, R = W.EpirusRules, S = W.EpirusState, T = W.EpirusTrainer, 
 const champ = P.unpack(W[gname]);
 if (!champ) throw new Error('冠军解包失败：' + file);
 
+/* v1.5.0：模式缺省**跟随冠军产物自己的 meta.mode**（长程冠军 ⇒ 自动按 5 血测），可用 --mode= 覆盖。
+ * 为什么必须做：此前本报告只按 multi(3 血) 建局，对 5 血冠军给出的其实是"3 血下的读数"，
+ * 而报告里没有一处标明口径 ⇒ 极易误读（该项目已经因为"口径不明"栽过多次）。 */
+const META_JSON = (function () { try { return metaM ? JSON.parse(metaM[1]) : null; } catch (e) { return null; } })();
+const MODE = FLAG.mode || (META_JSON && META_JSON.mode) || 'multi';
+if (!R.MODES[MODE]) { console.error('--mode 未知: ' + MODE + '（可选: ' + Object.keys(R.MODES).join(' ') + '）'); process.exit(1); }
+
 const SKILLS = (R.skills || []).map(function (d) { return d.key; });
 const BOTFN = ['pickRandom', 'pickBalanced', 'pickAggro', 'pickDefend', 'pickWall', 'pickAntiDef', 'pickBreakDef', 'pickMix', 'pickFarmer'];
 /* v1.3.59：对手场改成 **4 个互不相同的脚本**。
@@ -128,7 +135,7 @@ function runCondition(forceKey, rich, seedBase, acc, banKey) {
         if (pid === seat) choosers.push(makeSel(forceKey, rich, seat, acc, banKey));
         else { choosers.push(T.wrapBotN(B[pair[oi % pair.length]])); oi++; }
       }
-      const r = T.oneGameN(choosers, seedBase + g * 977 + total, N);
+      const r = T.oneGameN(choosers, seedBase + g * 977 + total, N, { mode: MODE });
       if (T.rankOf(r.state, seat, seedBase + g * 977 + total) === 1) first++;   // v1.3.57: 名次平局需本局种子
       total++;
     }
@@ -160,7 +167,7 @@ function usage() {
         if (pid === seat) choosers.push(probe);
         else { choosers.push(T.wrapBotN(B[pair[oi % pair.length]])); oi++; }
       }
-      T.oneGameN(choosers, 40001 + g * 977 + total, N);
+      T.oneGameN(choosers, 40001 + g * 977 + total, N, { mode: MODE });
       total++;
     }
   }
@@ -174,7 +181,7 @@ function costOf(key) {
   return (c && c.ok) ? c.ep : null;
 }
 
-console.log('[报告] 人数=' + N + '  冠军=' + file + '  对手场=' + PAIRS.length + ' 组(每组 4 个互不相同的脚本)  每条件 ' + GAMES + ' 局/组');
+console.log('[报告] 人数=' + N + '  冠军=' + file + '  模式=' + MODE + '(' + (R.MODES[MODE].name || '') + ')' + '  对手场=' + PAIRS.length + ' 组(每组 4 个互不相同的脚本)  每条件 ' + GAMES + ' 局/组');
 const u = usage();
 console.log('  使用率采样：决策=' + u.dec + '  最高ep=' + u.maxEp + '  平均ep=' + u.avgEp.toFixed(2));
 
@@ -296,7 +303,7 @@ html += '.tag{padding:2px 8px;border-radius:10px;font-size:11px;color:#0d0f14;fo
 html += '.legend{font-size:12px;color:#7c8494;margin-top:10px}code{background:#1b202b;padding:1px 5px;border-radius:3px;font-size:11px}';
 html += '.cov{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}.cov table{margin-top:6px}.cov b{color:#9aa0b0;font-size:12px}.cov code{color:#7dd3fc}</style></head><body>';
 html += '<h1>Epirus AI 训练分析报告</h1>';
-html += '<div class="meta">人数 ' + N + ' 人 · 冠军 <code>' + esc(file) + '</code> · 对手场 ' + PAIRS.length + ' 组(4 个互不相同脚本) × ' + GAMES + ' 局 · 富裕经济 = 每回合补到 ' + RICH + ' ep · 游戏 ' + u.dec + ' 个决策采样</div>';
+html += '<div class="meta">人数 ' + N + ' 人 · 模式 <b>' + esc(MODE) + '</b> · 冠军 <code>' + esc(file) + '</code> · 对手场 ' + PAIRS.length + ' 组(4 个互不相同脚本) × ' + GAMES + ' 局 · 富裕经济 = 每回合补到 ' + RICH + ' ep · 游戏 ' + u.dec + ' 个决策采样</div>';
 
 html += '<div class="cards">';
 html += '<div class="card"><b>' + (Math.exp(-rows.reduce(function (a, r) { return a + (r.use > 0 ? r.use * Math.log(r.use) : 0); }, 0))).toFixed(2) + '</b><span>有效技能数 exp(H)</span></div>';
@@ -358,7 +365,7 @@ writeFileSync(OUT, html, 'utf8');
 if (JSON_OUT) {
   writeFileSync(JSON_OUT, JSON.stringify({
     champ: file, label: file.replace(/^.*[^0-9A-Za-z_.-]/, '').replace(/[.][A-Za-z]+$/, ''),
-    n: N, games: GAMES, rich: RICH, baseNative: baseNative.firstRate, baseRich: baseRich.firstRate,
+    n: N, games: GAMES, rich: RICH, mode: MODE, baseNative: baseNative.firstRate, baseRich: baseRich.firstRate,
     banArms: rows.filter(function (r) { return r.banLost != null; }).map(function (r) { return { name: r.name, use: r.use, banArm: r.banArm, banLost: r.banLost }; }),
     meta: metaM ? metaM[1] : '', rows: rows
   }), 'utf8');

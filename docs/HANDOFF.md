@@ -149,8 +149,21 @@
   **别按 5 血考卷挑 6 个里最好的那个**（挑噪声上尾）。
 - 复跑：`RING2_MODE=long RING2_POOL=A RING2_ARM=long RING2_SEEDS=31..36 RING2_EXAM2FLAGS='--mode=long' RING2_TAG=long node tools/ring2-run.mjs`
   然后 `node tools/ab-analyze.mjs docs/artifacts/ring2-run-long.log p12 r17`（p12=3血臂, r17=长程臂）。
-- 已知缺口：`tools/skill-report.mjs` **只按 3 血建局** ⇒ 它对长程冠军的读数其实是 3 血读数；
-  长程的技能分布要用 `eval-5p --mode=long`（本轮存于 `docs/artifacts/ring2-stdout-long.log`）。
+- **技能报告看到的（v1.5.1 起模式感知：缺省跟随冠军自己的 `meta.mode`，`--mode=` 可覆盖）**：
+  每个冠军都是**单一流派**但流派完全不同 —— 现役 v1.3.58=激光剑流、hA9=狙击枪+环流、
+  armB12f=坦克流、armA9=枪+墙流（它的枪用量 36.8%、Δ=−28，典型"坑"）；
+  而 `原型制御 / 全息屏障 / 真正的落雷 / 摄魂指法` 在**几乎每个**冠军上都是"零使用但正 Δ"。
+- **★ 5 血训练自己把「聚能环」学出来了 —— P0-d 悬案结案**：long-33 的环用量 **38.2%**、
+  消融 Δ_lost=**+19.3pt**（拿掉环 1st 从 57.9% → 38.6%）。无选择偏差的 12 臂数据：5 血训练 **3/6** 用环、
+  3 血训练 **1/6**，且**两个重度用环的长程冠军正好是 5 血考卷最强的两个**（57.7% / 38.5%，
+  其余 4 个平均 32.7% ⇒ +15.4pt）。
+  ⇒ 「聚能环复利线没被教会」**不是**补贴不够、也不是池里缺环，而是**3 血赛程太短、环回不了本**。
+- 已知缺口：`docs/skill-report-cmp.html` 里 v1.3.58/hA9/hB12/armA9/armB12f 五份是**3 血口径**
+  （它们 meta 里没有 mode 字段），只有 `ms2-p12-31@5血 / long-31@5血 / long-33@5血` 三份是 5 血口径 ——
+  **别跨口径比绝对值**。
+- 复跑：`node tools/skill-report.mjs 5 6 docs/skill-report.html --champ=<冠军文件> [--mode=long]`
+  （≈64 秒/冠军，5 血口径 ≈150 秒）；多版本对比
+  `node tools/skill-report-cmp.mjs <各 sr-*.json> --out=docs/skill-report-cmp.html`。
 
 ---
 
