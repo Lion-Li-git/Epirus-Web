@@ -15,7 +15,7 @@ import vm from 'node:vm';
 const N = parseInt(process.argv[2] || '3', 10);
 const GAMES = parseInt(process.argv[3] || '6', 10);
 const OUT = process.argv[4] || 'docs/skill-report.html';
-const RICH = 6;          // 富裕经济：每回合补到 6 ep（大雷 5 也够）
+const RICH = 10;         // v1.3.59：原为 6，导致 大雷(5)/避雷针(4) 因余额不足强制不中（命中率 11%/50%）
 const TEMP = 0.15;
 
 const sb = {
@@ -37,11 +37,18 @@ if (!champ) throw new Error('冠军解包失败：' + file);
 
 const SKILLS = (R.skills || []).map(function (d) { return d.key; });
 const BOTFN = ['pickRandom', 'pickBalanced', 'pickAggro', 'pickDefend', 'pickWall', 'pickAntiDef', 'pickBreakDef', 'pickMix', 'pickFarmer'];
+/* v1.3.59：对手场改成 **4 个互不相同的脚本**。
+ * 旧版用 2 脚本"对手对"循环填充 ⇒ N=5 时 4 个对手座位只有 2 种脚本（各重复一次），
+ * 与 tools/eval-5p.mjs 修掉的是同一类缺陷；读数也对不上 eval-5p
+ * （雷击之枪 20.9% vs 2.2%、激光剑 8.1% vs 26.0%）。 */
 const PAIRS = [];
-for (let i = 0; i < BOTFN.length; i++) for (let j = i + 1; j < BOTFN.length; j++) PAIRS.push([BOTFN[i], BOTFN[j]]);
+(function combos(start, cur) {
+  if (cur.length === 4) { PAIRS.push(cur.slice()); return; }
+  for (let i = start; i < BOTFN.length; i++) { cur.push(BOTFN[i]); combos(i + 1, cur); cur.pop(); }
+})(0, []);
 
 /* 冠军 chooser，可附带「每回合补 ep」与「强制某技能」 */
-function makeSel(forceKey, rich, seat) {
+function makeSel(forceKey, rich, seat, acc) {
   // 修正：冠军在 runCondition 里是**轮换座位**的，之前硬编码 pid===0 → seat!=0 时
   // 冠军的决策被套在对手身上、自己却由脚本驱动，测量完全错位（基线只有 10% 的主因）。
   const inner = N > 2 ? T.policyChooserN(champ, TEMP) : null;
@@ -65,10 +72,15 @@ function makeSel(forceKey, rich, seat) {
     const aff = legal.filter(function (l) { return l.affordable; });
     let base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
     if (forceKey) {
+      /* v1.3.59：记录"强制到底有没有生效"。play.js 会把 cost.ok===false（条件不满足）
+       * 的技能从 legal 里剔掉，而这里只在 **legal 里已有的可负担项** 中筛 ⇒ 条件门技能
+       * 永远强制不到，Δ 恒≈0，旧版据此把它判成"死技能"。没有这一列就无法分辨。 */
+      if (acc) acc.tries++;
       const can = base.filter(function (l) { return l.key === forceKey; });
       if (can.length) base = can;
     }
     const k = P.choose(state, pid, base, champ, { temp: TEMP });
+    if (forceKey && acc && k === forceKey) acc.hit++;
     if (inner) {
       const t1 = T.pickTargetN(state, pid, k);
       let t2 = null;
@@ -83,7 +95,7 @@ function makeSel(forceKey, rich, seat) {
   return fn;
 }
 
-function runCondition(forceKey, rich, seedBase) {
+function runCondition(forceKey, rich, seedBase, acc) {
   let first = 0, total = 0;
   for (const pair of PAIRS) {
     for (let g = 0; g < GAMES; g++) {
@@ -91,7 +103,7 @@ function runCondition(forceKey, rich, seedBase) {
       const choosers = [];
       let oi = 0;
       for (let pid = 0; pid < N; pid++) {
-        if (pid === seat) choosers.push(makeSel(forceKey, rich, seat));
+        if (pid === seat) choosers.push(makeSel(forceKey, rich, seat, acc));
         else { choosers.push(T.wrapBotN(B[pair[oi % pair.length]])); oi++; }
       }
       const r = T.oneGameN(choosers, seedBase + g * 977 + total, N);
@@ -108,10 +120,28 @@ function usage() {
   const inner = T.policyChooserN(champ, TEMP);
   const probe = function (state, pid, legal) {
     const a = inner(state, pid, legal);
-    if (pid === 0) { use[a.key] = (use[a.key] || 0) + 1; dec++; maxEp = Math.max(maxEp, state.p[0].ep); epSum += state.p[0].ep; }
+    use[a.key] = (use[a.key] || 0) + 1; dec++;          // v1.3.59：统计全部座位（原只记 pid 0）
+    if (state.p[pid].ep > maxEp) maxEp = state.p[pid].ep; epSum += state.p[pid].ep;
     return a;
   };
-  for (let g = 0; g < 120; g++) T.oneGameN([probe, probe, probe].slice(0, N), 40001 + g * 131, N);
+  /* v1.3.59 两处修正：
+   *  1) 原为硬编码 3 个探针 + .slice(0,N) ⇒ N=5 时后两个座位拿到 undefined chooser，
+   *     autoGameN 走 normPick(null) → 一律按ジ ⇒ 环境里有两个"僵尸座位"；
+   *  2) 使用率必须与强度实验在**同一个环境**里测，否则两列不可比：原为全座位冠军自对弈
+   *     （turtle 局占比高），改成与 runCondition 相同的"1 冠军座位 + 4 脚本"，座位轮换。 */
+  let total = 0;
+  for (const pair of PAIRS) {
+    for (let g = 0; g < GAMES; g++) {
+      const seat = g % N;
+      const choosers = []; let oi = 0;
+      for (let pid = 0; pid < N; pid++) {
+        if (pid === seat) choosers.push(probe);
+        else { choosers.push(T.wrapBotN(B[pair[oi % pair.length]])); oi++; }
+      }
+      T.oneGameN(choosers, 40001 + g * 977 + total, N);
+      total++;
+    }
+  }
   return { use: use, dec: dec, maxEp: maxEp, avgEp: epSum / dec };
 }
 
@@ -134,13 +164,15 @@ console.log('    原生 基线 1st=' + (baseNative.firstRate * 100).toFixed(1) +
 
 const rows = [];
 for (const k of SKILLS) {
-  const rich = runCondition(k, true, 555001);
+  const acc = { tries: 0, hit: 0 };
+  const rich = runCondition(k, true, 555001, acc);
   const delta = rich.firstRate - baseRich.firstRate;
   const nm = R.byKey[k] ? R.byKey[k].name : k;
   const cnt = u.use[k] || 0;
   const rate = u.dec ? cnt / u.dec : 0;
-  rows.push({ key: k, name: nm, cost: costOf(k), use: rate, richWr: rich.firstRate, delta: delta });
-  console.log('    ' + nm.padEnd(8) + ' 费用=' + String(costOf(k)).padStart(2) + '  使用=' + (rate * 100).toFixed(1).padStart(5) + '%  富经济1st=' + (rich.firstRate * 100).toFixed(1).padStart(5) + '%  Δ=' + (delta * 100 >= 0 ? '+' : '') + (delta * 100).toFixed(1) + 'pt');
+  rows.push({ key: k, name: nm, cost: costOf(k), use: rate, richWr: rich.firstRate, delta: delta,
+    forceHit: acc.tries ? acc.hit / acc.tries : 0, tries: acc.tries });
+  console.log('    ' + nm.padEnd(8) + ' 费用=' + String(costOf(k)).padStart(2) + '  使用=' + (rate * 100).toFixed(1).padStart(5) + '%  富经济1st=' + (rich.firstRate * 100).toFixed(1).padStart(5) + '%  Δ=' + (delta * 100 >= 0 ? '+' : '') + (delta * 100).toFixed(1) + 'pt  强制命中=' + ((acc.tries ? acc.hit / acc.tries : 0) * 100).toFixed(0) + '%');
 }
 
 /* ② 分类：坑 / 主力 / 没学会的强招 / 死技能 */
@@ -148,7 +180,18 @@ for (const r of rows) {
   const hi = r.use >= 0.04, pos = r.delta > 0.005, neg = r.delta < -0.005;
   /* 基础动作（费用 0）除外：强制 mono-spam 任何单一动作必然不如混合策略，
    * 那不是“坑”而是评测口径的必然结果。只有费用>0 的技能才适合读“常用却亏”。 */
+  const d = R.byKey[r.key] || {};
+  const isUtil = !(d.dmg && d.dmg.amt > 0);       // 无伤害 = 辅助/防御/架势
+  /* v1.3.59：**三件事分开**，否则"死技能"这一栏会把测量失败也算进去：
+   *  1) 强制没命中（技能压根进不了 legal 或被抽不到）⇒ 这个 Δ 不能读，只能报"实验未生效"；
+   *  2) 辅助/防御类：mono-spam 一个不造成伤害的技能必然不如混合策略 ⇒ Δ 结构性为负；
+   *  3) 只有"能造成伤害 且 实验确实跑到了"的技能，才适合读 常用/亏损。 */
+  if (r.forceHit < 0.05) { r.verdict = '实验未生效（Δ 不可读）'; continue; }
   if (r.cost === 0) { r.verdict = hi ? '基础动作（mono-spam 必然变差）' : '边缘'; continue; }
+  /* 只在 Δ 为负时才归因"结构性"：辅助类的 mono-spam 通常必然更差，但若它 Δ 为正，
+   * 那是真发现（v1.3.59 实测：全息屏障 +17.1pt、原型制御 +15.9pt 都是辅助类却更强），
+   * 不能被这条吞掉。 */
+  if (isUtil && neg) { r.verdict = '辅助/防御（Δ 结构性为负）'; continue; }
   r.verdict = hi && neg ? '坑（常用却亏）' : hi && pos ? '主力（强且常用）' : hi ? '中性常用'
     : !hi && pos ? '没学会的强招' : !hi && neg ? '死技能（弱且不用）' : '边缘';
 }
@@ -158,7 +201,7 @@ const esc = function (s) { return String(s).replace(/[&<>]/g, function (c) { ret
 const maxAbsDelta = Math.max(0.01, ...rows.map(function (r) { return Math.abs(r.delta); }));
 const maxUse = Math.max(0.01, ...rows.map(function (r) { return r.use; }));
 const bar = function (v, mx, color) { const w = Math.abs(v) / mx * 100; return '<div class="barwrap"><div class="bar ' + color + '" style="width:' + w.toFixed(1) + '%"></div></div>'; };
-const VCOLOR = { '坑（常用却亏）': '#e5484d', '主力（强且常用）': '#30a46c', '中性常用': '#8b8d98', '没学会的强招': '#f5a623', '死技能（弱且不用）': '#6b4fbb', '基础动作（mono-spam 必然变差）': '#3a4252', '边缘': '#555' };
+const VCOLOR = { '实验未生效（Δ 不可读）': '#6b7280', '辅助/防御（Δ 结构性为负）': '#3a4252', '坑（常用却亏）': '#e5484d', '主力（强且常用）': '#30a46c', '中性常用': '#8b8d98', '没学会的强招': '#f5a623', '死技能（弱且不用）': '#6b4fbb', '基础动作（mono-spam 必然变差）': '#3a4252', '边缘': '#555' };
 
 let html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>Epirus AI 训练分析报告</title>';
 html += '<style>body{background:#0d0f14;color:#dfe2ea;font:14px/1.6 system-ui,"Microsoft YaHei",sans-serif;margin:0;padding:24px}';
@@ -185,11 +228,12 @@ html += '<div class="card"><b>' + (baseRich.firstRate * 100).toFixed(0) + '%</b>
 html += '</div>';
 
 html += '<h2>每技能：实际使用率 × 实际强度（富裕经济下强制使用的收益差）</h2>';
-html += '<table><tr><th>技能</th><th>费用</th><th>实际使用率</th><th></th><th>强制使用的 1st</th><th>强度 Δ vs 自由发挥</th><th></th><th>判定</th></tr>';
+html += '<table><tr><th>技能</th><th>费用</th><th>实际使用率</th><th></th><th>强制命中率</th><th>强制使用的 1st</th><th>强度 Δ vs 自由发挥</th><th></th><th>判定</th></tr>';
 rows.sort(function (a, b) { return b.use - a.use; });
 for (const r of rows) {
   html += '<tr><td>' + esc(r.name) + '</td><td>' + (r.cost == null ? '?' : r.cost) + '</td>';
   html += '<td>' + (r.use * 100).toFixed(1) + '%</td><td>' + bar(r.use, maxUse, 'pos') + '</td>';
+  html += '<td>' + (r.forceHit * 100).toFixed(0) + '%</td>';
   html += '<td>' + (r.richWr * 100).toFixed(0) + '%</td>';
   html += '<td>' + (r.delta >= 0 ? '+' : '') + (r.delta * 100).toFixed(1) + 'pt</td>';
   html += '<td>' + bar(r.delta, maxAbsDelta, r.delta >= 0 ? 'pos' : 'neg') + '</td>';

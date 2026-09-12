@@ -543,7 +543,11 @@
       const seat = g % n;                                   // 座位轮换
       const seed = seedOfGen(gen, idx, 'n') + g * 7919;
       const choosers = [];
-      let oi = g % opps.length;
+      /* v1.3.59：原来只 `g % opps.length`，而 g 只到 games-1 ⇒ 每个个体见到的对手是
+       * 一段长度 games+? 的**连续窗口**；池子一旦大于该窗口，尾部对手**永远轮不到**
+       * （12 个对手 + games=8 时，索引 11 从不出现，"加对手"的实验会静默失效）。
+       * 改成随个体下标滑动：16 个个体 × 8 局即可覆盖全部对手。 */
+      let oi = (g * 5 + idx) % opps.length;
       const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
       const commitGame = hGene > 0 && (g % 3 === 0);   // (c) 承诺局：每 3 局 1 局，h 来自基因
       let econ = null;

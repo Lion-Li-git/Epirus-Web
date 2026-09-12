@@ -155,11 +155,16 @@ console.log('');
  * 必须让两边的**攒钱-花钱结构完全相同**，只把 payload 换掉：
  *   一直出ジ，直到 payload 买得起 → 打出 payload → 回到出ジ（循环）。
  * payload 的费用差异（大雷 5 vs 坦克 2 vs 狙击 2 …）正是被测量的东西。 */
+const PAY_CASTS = { n: 0 };   // 消融自检：payload 到底被打出去了几次
 function makeSaver(payloadKey) {
   return function (state, pid, legal) {
     const by = {};
     for (const l of legal) by[l.key] = l;
     if (by[payloadKey] && by[payloadKey].affordable) {
+      /* v1.3.59：必须先证明实验真的跑到了。`转移伤害`/`藤甲`/`地雷` 有**条件门**，
+       * 条件不满足时 play.js 不会把它放进 legal ⇒ saver 会一直出ジ，
+       * Δ 静默变成"恒出ジ vs 自由发挥"的差值 —— 读起来像结论，其实什么都没测。 */
+      PAY_CASTS.n++;
       return { key: payloadKey, target: T.pickTargetN(state, pid, payloadKey) };
     }
     return { key: R.SK.JI, target: null };
@@ -172,8 +177,36 @@ const t0 = Date.now();
 const SUBJECT = FLAG.subject || '';
 const PAYLOAD = FLAG.payload || '';
 if (SUBJECT && !FN[SUBJECT]) { console.error('--subject 未知脚本: ' + SUBJECT + '（可选: ' + ALL.map(function (x) { return x[0]; }).join(' ') + '）'); process.exit(1); }
-const PAY_KEY = { bigT: R.SK.BIG_T, tank: R.SK.TANK, railgun: R.SK.RAILGUN, snipe: R.SK.SNIPE, dualGun: R.SK.DUAL_GUN, laserEye: R.SK.LASER_EYE, mirror: R.SK.MIRROR };
-const subjectSel = PAYLOAD
+const PAY_KEY = { bigT: R.SK.BIG_T, tank: R.SK.TANK, railgun: R.SK.RAILGUN, snipe: R.SK.SNIPE, dualGun: R.SK.DUAL_GUN, laserEye: R.SK.LASER_EYE, mirror: R.SK.MIRROR,
+  armor: R.SK.ARMOR, mine: R.SK.MINE, transfer: R.SK.TRANSFER };   // v1.3.59：用户点名的藤甲/地雷/转移三张多人卡
+/* ===== 边际注入（v1.3.59，用户要的"边际价值"口径）=====
+ * 为什么需要：`--payload` 的 saver 架构是"一直出ジ，攒够就打 payload"。
+ * 对**纯辅助/防御**卡（藤甲/转移/地雷）这等于**全程不攻击** ⇒ 测出来的是
+ * "只防守不还手会输"这个平凡事实，而不是这张卡的边际价值（实测 transfer 1st=2.6% 远低于随机 12.3%）。
+ * 注入口径：主体仍打冠军策略，只在**这张卡可负担且合法**时优先用它 ⇒ Δ 就是这张卡
+ * "能用就用"相对于冠军自身策略的净收益。同样带自检计数。 */
+const INJECT = FLAG.inject || '';
+const INJ = { n: 0, dec: 0 };
+const injectSel = !INJECT ? null : (function () {   // 惰性：无 --inject 时绝不能求值（否则 PAY_KEY[''] 未定义 -> exit(1)，把基线臂一起干掉）
+  const k = PAY_KEY[INJECT];
+  if (!k) { console.error('--inject 未知: ' + INJECT + '（可选: ' + Object.keys(PAY_KEY).join(' ') + '）'); process.exit(1); }
+  return function () {
+    const inner = T.policyChooserN(params, 0.15);
+    return function (state, pid, legal) {
+      INJ.dec++;
+      const by = {};
+      for (const l of legal) by[l.key] = l;
+      if (by[k] && by[k].affordable) {
+        INJ.n++;
+        return { key: k, target: T.pickTargetN(state, pid, k), target2: null };
+      }
+      return inner(state, pid, legal);
+    };
+  };
+})();
+const subjectSel = (INJECT && !PAYLOAD)
+  ? injectSel
+  : PAYLOAD
   ? (function () {
     const k = PAY_KEY[PAYLOAD];
     if (!k) { console.error('--payload 未知: ' + PAYLOAD + '（可选: ' + Object.keys(PAY_KEY).join(' ') + '）'); process.exit(1); }
@@ -182,7 +215,7 @@ const subjectSel = PAYLOAD
   : (SUBJECT
     ? function () { return asChooser(FN[SUBJECT]); }
     : function () { return T.policyChooserN(params, 0.15); });
-const subjectLabel = PAYLOAD ? ('消融·只换弹头 ' + PAYLOAD) : (SUBJECT ? ('脚本 ' + SUBJECT) : '冠军');
+const subjectLabel = PAYLOAD ? ('消融·只换弹头 ' + PAYLOAD) : INJECT ? ('边际注入·能用就用 ' + INJECT) : (SUBJECT ? ('脚本 ' + SUBJECT) : '冠军');
 const champ = runSubject(subjectSel, subjectLabel);
 const ctrl = runSubject(function () { return asChooser(Bots.pickRandom); }, '对照 pickRandom');
 
@@ -195,6 +228,18 @@ for (const s of [champ, ctrl]) {
   console.log('    拆分: 含深经济对手 ' + s.pct(s.deepFirst, s.deepGames) + '（' + s.deepGames + ' 局）  vs  不含 ' +
     s.pct(s.shallowFirst, s.shallowGames) + '（' + s.shallowGames + ' 局）  Δ=' +
     ((s.deepGames && s.shallowGames) ? ((s.deepFirst / s.deepGames - s.shallowFirst / s.shallowGames) * 100).toFixed(1) + 'pt' : '-'));
+}
+
+if (INJECT && !PAYLOAD) {
+  const r = INJ.dec ? INJ.n / INJ.dec : 0;
+  console.log('[注入自检] 决策 ' + INJ.dec + ' 次，其中可用并注入 ' + INJ.n + ' 次 = ' + (r * 100).toFixed(1) + '%' +
+    (INJ.n === 0 ? '   !!! 0 次 => 该卡进不了 legal（条件门），Δ 不可读' : '   OK 实验有效'));
+}
+if (PAYLOAD) {
+  const perGame = PAY_CASTS.n / Math.max(1, champ.total);
+  console.log('[消融自检] payload 实际打出 ' + PAY_CASTS.n + ' 次 = 每局 ' + perGame.toFixed(2) + ' 次' +
+    (PAY_CASTS.n === 0 ? '   !!! 0 次 => 该 payload 进不了 legal（条件门），Δ 不可读'
+      : (perGame < 0.05 ? '   !!! 打出过少，Δ 主要由"恒出ジ"决定' : '   OK 实验有效')));
 }
 
 console.log('');

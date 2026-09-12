@@ -246,11 +246,16 @@ async function runTrain(gens, opts, cfg) {
 }
 
 /* ==================== 多人（N ≥ 3）训练 ==================== */
-const OPP_NAMES = ['random', 'balanced', 'aggro', 'defend', 'wall', 'antidef', 'breakdef', 'mix', 'farmer'];
+/* v1.3.59：默认池保持 9 个；用 EPIRUS_OPP_N 可覆盖，专门给"加对手"的配对 A/B 用
+ * （改默认值会让 A/B 的两个臂共用一个常量，无法配对）。 */
+const OPP_NAMES = (process.env.EPIRUS_OPP_N
+  ? String(process.env.EPIRUS_OPP_N).split(',').map(function (x) { return x.trim(); }).filter(Boolean)
+  : ['random', 'balanced', 'aggro', 'defend', 'wall', 'antidef', 'breakdef', 'mix', 'farmer']);
 /* 名字→函数必须显式写（'autodef' 这类拼接会导致 pickAntidef 大小写错误） */
 const BOT_FN_N = {
   random: 'pickRandom', balanced: 'pickBalanced', aggro: 'pickAggro', defend: 'pickDefend',
-  wall: 'pickWall', antidef: 'pickAntiDef', breakdef: 'pickBreakDef', mix: 'pickMix', farmer: 'pickFarmer'
+  wall: 'pickWall', antidef: 'pickAntiDef', breakdef: 'pickBreakDef', mix: 'pickMix', farmer: 'pickFarmer',
+  tankline: 'pickTankLine', heavyfire: 'pickHeavyFire', deepsaver: 'pickDeepSaver'
 };
 const BUNDLE_MP = 'js/bundled-champion-3p.js';   // 多人冠军（2/3/4/5 人局共用同一网络，特征与人数无关）
 let lastChampionPackN = null;
@@ -284,6 +289,15 @@ async function runTrainN(gens, cfg) {
   const n = Math.max(3, Math.min(cfg.n || 3, 5));
   const popSize = Math.max(8, cfg.pop || 32);
   const games = Math.max(4, cfg.games || 20);
+  /* v1.3.59：对手池可按请求覆盖（`?opps=a,b,c`），默认仍是 OPP_NAMES。
+   * 为什么不直接改默认值：A/B 的两个臂必须共用同一份代码、只差一个**输入**，
+   * 否则"加对手"的实验与代码变更混在一起，无法配对。 */
+  const oppNames = cfg.opps
+    ? String(cfg.opps).split(',').map(function (x) { return x.trim(); }).filter(Boolean)
+    : OPP_NAMES;
+  for (const nm of oppNames) {
+    if (!BOT_FN_N[nm]) { console.log('[multiObj] 未知对手名: ' + nm + '（可选: ' + Object.keys(BOT_FN_N).join(' ') + '）'); }
+  }
   const t0 = Date.now();
   const cap = 1800000;
   process.env.EPIRUS_SEED0 = String((SEED0 || 1) * 7919 + 13);   // worker 在下一行创建，必须在此之前设好
@@ -312,10 +326,10 @@ async function runTrainN(gens, cfg) {
   const hall = [];
   for (const c of clients) sse(c, { type: 'start', n: n, gens, pop: popSize, gpo: games, from: 0, workers: poolN.workers, fresh: !!cfg.fresh });
   for (let gen = 0; gen < gens; gen++) {
-    let res = await poolN.evalPopN(pop, gen, games, n, OPP_NAMES, hGenes);
+    let res = await poolN.evalPopN(pop, gen, games, n, oppNames, hGenes);
     if (!res) {
       const B = sb.EpirusBots;
-      const opps = OPP_NAMES.map(function (nm) { return { name: nm, sel: B[BOT_FN_N[nm]] }; });
+      const opps = oppNames.map(function (nm) { return { name: nm, sel: B[BOT_FN_N[nm]] }; });
       res = pop.map(function (params, idx) {
         const r = T.scoreMemberN(params, opps, games, n, gen, idx, hGenes[idx]);
         return { idx: idx, score: r.fit, firstRate: r.firstRate, top2Rate: r.top2Rate,
@@ -375,7 +389,7 @@ async function runTrainN(gens, cfg) {
   }
   // 终局：名人堂用全部对手对验证，取 1st 最高
   const B = sb.EpirusBots;
-  const POOL = OPP_NAMES.map(function (nm) { return B[BOT_FN_N[nm]]; });
+  const POOL = oppNames.map(function (nm) { return B[BOT_FN_N[nm]]; });
   const PAIRS = [];
   for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) PAIRS.push([POOL[a], POOL[b]]);
   let finalParams = hall[0] ? hall[0].params : pop[0], ev = null;
@@ -428,7 +442,7 @@ async function runTrainN(gens, cfg) {
   }
   const pack = P.pack(finalParams);
   lastChampionPackN = pack;
-  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
+  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
     /* v1.3.56：把**可复现输入**记进产物。此前 meta 只有 source/n/gens/games/pop/ts/胜率，
      * 于是从产物上既看不出是不是热启动、也看不出输入是哪一版冠军 —— 而浏览器的默认配置
      * 恰好就是热启动（index.html 的"从头训练"复选框默认不勾，ui.js 也就不发 fresh=1）。
@@ -464,7 +478,7 @@ const server = http.createServer((req, res) => {
       sse(res, { type: 'start', gens, pop, gpo, n: nPlayers, from: 0, fresh });
       if (!runningN) {
         runningN = true;
-        runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh, seed0: seed0 })
+        runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh, seed0: seed0, opps: url.searchParams.get('opps') })
           .catch(function (e) { for (const c of clients) sse(c, { type: 'error', msg: String(e && e.message || e) }); runningN = false; });
       }
       return;

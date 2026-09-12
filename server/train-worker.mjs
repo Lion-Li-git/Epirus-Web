@@ -44,7 +44,11 @@ const OPP_POOL = [
   { name: 'aggro', sel: B.pickAggro }, { name: 'defend', sel: B.pickDefend },
   { name: 'wall', sel: B.pickWall }, { name: 'antidef', sel: B.pickAntiDef },
   { name: 'breakdef', sel: B.pickBreakDef }, { name: 'mix', sel: B.pickMix },
-  { name: 'farmer', sel: B.pickFarmer }
+  { name: 'farmer', sel: B.pickFarmer },
+  /* v1.3.59：把"坦克流/重火力/深经济"加进训练池（原先池里既无坦克流也无深经济对手，
+   * 冠军对此的实测弱点是含深经济对手 34.1% vs 不含 64.5%，Δ=−30.4pt）。 */
+  { name: 'tankline', sel: B.pickTankLine }, { name: 'heavyfire', sel: B.pickHeavyFire },
+  { name: 'deepsaver', sel: B.pickDeepSaver }
 ];
 
 parentPort.on('message', (msg) => {
@@ -61,6 +65,14 @@ parentPort.on('message', (msg) => {
     const opps = (msg.oppNames && msg.oppNames.length)
       ? OPP_POOL.filter(function (o) { return msg.oppNames.indexOf(o.name) >= 0; })
       : OPP_POOL;
+    /* v1.3.59：这里是**静默 filter 子集** —— 漏加一个名字会让"12 对手"的臂实际只跑 9 个，
+     * A/B 退化成同一个实验（本类静默失败已坑过一次）。改成响亮告警。 */
+    if (msg.oppNames && msg.oppNames.length && opps.length !== msg.oppNames.length) {
+      const missing = msg.oppNames.filter(function (nm) {
+        return !OPP_POOL.some(function (o) { return o.name === nm; });
+      });
+      console.error('[worker] 对手池缺名字: ' + missing.join(',') + ' —— 本臂实际只有 ' + opps.length + '/' + msg.oppNames.length + ' 个对手');
+    }
     const results = msg.members.map(function (m) {
       /* 千问指出的两个跨机问题一次修掉：
        *  a) 所有 worker 共用同一个 EPIRUS_SEED0，个体的随机流偏移随 worker 数变化（8 核 != 18 核）；
