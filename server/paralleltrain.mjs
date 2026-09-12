@@ -99,7 +99,7 @@ export function makeParallelEvalN(T, opts) {
   /* 返回与 pop 同长的结果数组；池不可用时返回 null（调用方自行回退串行）
    * hGenes：(c) 承诺视界基因，与 pop 平行。必须随个体进 worker —— 它决定
    * 这个人每 3 局里那 1 局承诺局的 h，漏传就等于"基因从未到达适应度函数"。 */
-  async function evalPopN(pop, gen, games, n, oppNames, hGenes) {
+  async function evalPopN(pop, gen, games, n, oppNames, hGenes, styleOppNames, styleW, styleGames) {
     if (!pool.length || pop.length <= 1) return null;
     const members = pop.map(function (params, idx) {
       return { idx: idx, params: params, h: (hGenes && hGenes[idx]) || 0 };
@@ -111,8 +111,10 @@ export function makeParallelEvalN(T, opts) {
       /* v1.5.0：训练模式必须**随消息下发到 worker**。`T.setTrainMode` 只改本线程的模块状态，
        * 而 worker 是独立沙箱（各自的 TRAIN_MODE 默认 'multi'）⇒ 只设服务端会让"5 血实验"的
        * 进化部分照旧按 3 血跑，只有服务端那次终局评估用 5 血。
-       * 实测症状（我踩过）：整条 best 曲线与 multi 轮**逐位相同**。 */
-      if (sl.length) jobs.push(runOne(pool[w], { type: 'evalN', members: sl, gen: gen, games: games, n: n, oppNames: oppNames, mode: (T.trainMode ? T.trainMode() : 'multi') }));
+       * 实测症状（我踩过）：整条 best 曲线与 multi 轮**逐位相同**。
+       * v1.5.2 同理：**风格切片的名单/权重/局数也必须随消息下发**，否则只有服务端那份生效。 */
+      if (sl.length) jobs.push(runOne(pool[w], { type: 'evalN', members: sl, gen: gen, games: games, n: n, oppNames: oppNames, mode: (T.trainMode ? T.trainMode() : 'multi'),
+        styleOppNames: styleOppNames || null, styleW: styleW, styleGames: styleGames }));
     }
     const res = (await Promise.all(jobs)).flat();
     const out = new Array(pop.length).fill(null);

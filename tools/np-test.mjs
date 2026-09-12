@@ -1048,5 +1048,41 @@ t('D12 冠军对手（champ:）机制必须两端都通 + 能真的解出 params
   ok(readFileSync('server/opp-champs.mjs', 'utf8').indexOf('policyChooserN') >= 0, '冠军对手必须走 policyChooserN（与页面同一条推理路径）');
 });
 
+t('D13 风格切片（复合适应度）必须真的打进 fit —— 且是**追加**不是替换', function () {
+  /* v1.5.2：两次"改对手池"落空（ring2 加 1 个脚本、mix 加 4 个真实风格冠军）之后，改走
+   * "在池子预算之外附加 k 局风格局、按权重并进 fit"。这条用例盯四件事：
+   *   ① 关闭时不产生风格局；② 打开时真的打 k 局；③ fit 里那部分恰好是 w*styleRate（自洽）；
+   *   ④ **池子那一半 fit 逐位不变**（追加而非替换 —— 这正是"不摊薄"的保证）。 */
+  ok(typeof T.setStyleSlice === 'function', 'T.setStyleSlice 必须存在');
+  const p = Pol.makePolicy(0.25);
+  const opps = [{ name: 'random', sel: Bots.pickRandom }];
+  const styleOpps = [{ name: 'defend', sel: Bots.pickDefend }];
+  T.setStyleSlice(null, 0, 0);
+  Pol.setRng(T.mulberry32(777001));           // 两次调用从**同一随机流起点**出发（否则比不了）
+  const a = T.scoreMemberN(p, opps, 2, 3, 1, 0, 0);
+  ok(a.styleGames === 0, '切片关闭时不得产生风格局，实测 styleGames=' + a.styleGames);
+  T.setStyleSlice(styleOpps, 0.5, 2);
+  Pol.setRng(T.mulberry32(777001));
+  const b = T.scoreMemberN(p, opps, 2, 3, 1, 0, 0);
+  ok(b.styleGames === 2, '切片打开后必须真的打 2 局，实测 ' + b.styleGames);
+  ok(b.styleRate >= 0 && b.styleRate <= 1, 'styleRate 必须是比率，实测 ' + b.styleRate);
+  ok(Math.abs((b.fit - b.fitNoDiv) - 0.5 * b.styleRate) < 1e-9,
+    'fit 比 fitNoDiv 多出的部分必须恰好是 w*styleRate（实测多出 ' + (b.fit - b.fitNoDiv).toFixed(6) + '，期望 ' + (0.5 * b.styleRate).toFixed(6) + '）');
+  ok(Math.abs(b.fitNoDiv - a.fitNoDiv) < 1e-9,
+    '切片必须是**追加**：池子那部分 fit 不得被改变（无切片 ' + a.fitNoDiv + ' vs 有切片 ' + b.fitNoDiv + '）');
+  T.setStyleSlice(null, 0, 0);
+  const c = T.scoreMemberN(p, opps, 2, 3, 1, 0, 0);
+  ok(c.styleGames === 0 && Math.abs(c.fit - c.fitNoDiv) < 1e-9, '关掉切片后必须完全回到无切片状态');
+  /* 两端接线（结构性）：这类"两处各写一遍"的机制漏一端就静默半开（v1.5.0 的 mode 事故同型） */
+  const pt = readFileSync('server/train-server.mjs', 'utf8');
+  ok(pt.indexOf('setStyleSlice') >= 0, 'server 必须调 setStyleSlice');
+  ok(pt.indexOf('styleNames, slice.w') >= 0, 'server 必须把风格名单/权重/局数传给 poolN.evalPopN');
+  ok(pt.indexOf('回执 styleGames') >= 0, 'server 必须校验 worker 的 styleGames 回执');
+  const wk = readFileSync('server/train-worker.mjs', 'utf8');
+  ok(wk.indexOf('setStyleSlice') >= 0, 'worker 必须在**自己沙箱**里设切片（服务端那份改不到 worker）');
+  ok(wk.indexOf('styleGames') >= 0, 'worker 必须回执 styleGames');
+  ok(readFileSync('server/paralleltrain.mjs', 'utf8').indexOf('styleOppNames') >= 0, 'paralleltrain 必须把切片随消息下发');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

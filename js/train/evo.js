@@ -22,6 +22,26 @@
   function setTrainMode(m) { if (m && R.MODES && R.MODES[m]) TRAIN_MODE = m; return TRAIN_MODE; }
   function trainMode() { return TRAIN_MODE; }
 
+  /* ===== 风格表现切片：复合适应度（v1.5.2）=====
+   * 动机：两次"改对手池"的干预都落空（ring2 加 1 个脚本对手、mix 加 4 个真实风格冠军），
+   * 而且后者还**摊薄**了每个对手的练习量。所以这里**不改池子**：在每个个体身上**追加** k 局
+   * 对风格冠军的局（在池子预算之外 ⇒ 不摊薄），把 1st 率作为**有界加分**并进 fit。
+   * 为什么不是替换 fit：这些局走**原生规则**（regen=0、无补贴），量的是真实强度 ⇒
+   * 是诚实的复合目标，不会把人推向"只在特殊口径下成立"的策略（§5.2 的教训）。
+   * 由**调用方**显式设置（与 setWrTol/setTrainMode 同一模式），默认关闭 ⇒ 既有路径逐位不变。
+   * 反证（np-test D13）：把 scoreMemberN 里的 styleGames 记账删掉，D13 立刻红。 */
+  let STYLE_OPPS = null, STYLE_W = 0, STYLE_GAMES = 0;
+  function setStyleSlice(opps, w, games) {
+    STYLE_OPPS = (opps && opps.length) ? opps : null;
+    STYLE_W = (typeof w === 'number' && w > 0) ? w : 0;
+    STYLE_GAMES = (typeof games === 'number' && games > 0) ? (games | 0) : 0;
+    if (!STYLE_OPPS) { STYLE_W = 0; STYLE_GAMES = 0; }   // 没有对手就整体关闭（避免"权重在、对手没了"的半开状态）
+    return styleSlice();
+  }
+  function styleSlice() {
+    return { w: STYLE_W, games: STYLE_GAMES, n: STYLE_OPPS ? STYLE_OPPS.length : 0 };
+  }
+
   function mulberry32(seed) {
     let a = seed >>> 0;
     return function () {
@@ -652,10 +672,30 @@
     const affN = Math.max(2, Object.keys(agg.aff || {}).length || (R.skills || []).length);
     const divNorm = uTot > 0 ? H / Math.log(affN) : 0;
     const divBonus = 0;   // Q3：覆盖熵移出目标函数，只作诊断（它和"见过那个状态"是两回事）
+    /* ===== 风格表现切片（v1.5.2，见模块头部 setStyleSlice 的说明）=====
+     * 追加在池子预算之外 ⇒ 不摊薄原有练习量；原生规则（regen=0）⇒ 量的是真实强度。 */
+    let styleGames = 0, styleFirst = 0;
+    if (STYLE_OPPS && STYLE_OPPS.length && STYLE_GAMES > 0 && STYLE_W > 0) {
+      for (let g = 0; g < STYLE_GAMES; g++) {
+        const seat = g % n;
+        const choosers = [];
+        let oi = (gen * 3 + g) % STYLE_OPPS.length;
+        for (let pid = 0; pid < n; pid++) {
+          if (pid === seat) choosers.push(policyChooserN(params, 0.15));
+          else { choosers.push(wrapBotN(STYLE_OPPS[oi % STYLE_OPPS.length].sel)); oi++; }
+        }
+        const sd = seedOfGen(gen, idx, 'style') + g * 7919;
+        const r = oneGameN(choosers, sd, n, { regen: 0, mode: TRAIN_MODE });
+        styleGames++;
+        if (rankOf(r.state, seat, sd) === 1) styleFirst++;
+      }
+    }
+    const styleRate = styleGames ? styleFirst / styleGames : 0;
     const fitAvg = fitGames ? fit / fitGames : 0;
     return {
-      fit: fitAvg + divBonus,
+      fit: fitAvg + divBonus + STYLE_W * styleRate,
       fitNoDiv: fitAvg,
+      styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
       divBonus: divBonus,
       distinct: Object.keys(agg.use).length,
@@ -949,7 +989,7 @@
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol, setTrainMode, trainMode,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice,
     scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

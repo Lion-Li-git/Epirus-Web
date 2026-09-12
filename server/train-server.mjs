@@ -319,8 +319,12 @@ async function runTrainN(gens, cfg) {
    * 又漏了**终局评估那条路**（它自己又写了一遍同样的"名字→函数"映射）⇒ 训练跑到名人堂评估才炸成
    * `sel is not a function`。这里同时把"解析失败"前移成**开跑前中止**（逐个名字都真的解一次）。 */
   const resolveOpp = makeOppSelResolver(sb, root, BOT_FN_N, sb.EpirusBots);
+  /* v1.5.2：风格切片（复合适应度）的三个旋钮 —— 名单同样走统一解析器，缺文件照样开跑前中止。 */
+  const styleNames = cfg.styleopps ? String(cfg.styleopps).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : [];
+  const styleW = Number(cfg.styleW || process.env.EPIRUS_STYLE_W || 0.5);
+  const styleGamesN = Number(cfg.styleGames || process.env.EPIRUS_STYLE_GAMES || 2);
   const unknownOpps = [];
-  for (const nm of oppNames) {
+  for (const nm of oppNames.concat(styleNames)) {
     try { if (!resolveOpp(nm)) unknownOpps.push(nm); }
     catch (e) { unknownOpps.push(nm + '（' + e.message + '）'); }
   }
@@ -329,6 +333,11 @@ async function runTrainN(gens, cfg) {
     runningN = false;
     return;
   }
+  /* v1.5.2：装好风格切片（复合适应度）。worker 是独立沙箱 ⇒ 名单/权重/局数还要随消息再下发一次
+   * （见 paralleltrain / train-worker）；这里这一份是给**串行回退路径**和终局评估用的。 */
+  const styleOpps = styleNames.map(function (nm) { return { name: nm, sel: resolveOpp(nm) }; });
+  const slice = T.setStyleSlice ? T.setStyleSlice(styleNames.length ? styleOpps : null, styleW, styleGamesN) : { games: 0, w: 0, n: 0 };
+  if (styleNames.length) console.log('[style] 风格切片: ' + slice.n + ' 对手 × ' + slice.games + ' 局/个体/代  权重=' + slice.w);
   const t0 = Date.now();
   /* v1.4.7：原为写死的 30 分钟墙上时钟上限（第十轮复核 §6-4：同 seed 同 gens 在慢机器上可能
      * 一整份产物都不产出，破坏"同参数可复现"）。改成可关/可调：EPIRUS_WALL_MS=0 关闭（纯按代数收敛），
@@ -360,7 +369,7 @@ async function runTrainN(gens, cfg) {
   const hall = [];
   for (const c of clients) sse(c, { type: 'start', n: n, gens, pop: popSize, gpo: games, from: 0, workers: poolN.workers, fresh: !!cfg.fresh, mode: mode });
   for (let gen = 0; gen < gens; gen++) {
-    let res = await poolN.evalPopN(pop, gen, games, n, oppNames, hGenes);
+    let res = await poolN.evalPopN(pop, gen, games, n, oppNames, hGenes, styleNames, slice.w, slice.games);
     if (!res) {
       const opps = oppNames.map(function (nm) { return { name: nm, sel: resolveOpp(nm) }; });
       res = pop.map(function (params, idx) {
@@ -377,6 +386,15 @@ async function runTrainN(gens, cfg) {
       const bad = (res || []).filter(function (r) { return r && r.modeUsed && r.modeUsed !== mode; });
       if (bad.length) {
         for (const c of clients) sse(c, { type: 'error', msg: 'worker 没收到训练模式 ' + mode + '（回执=' + bad[0].modeUsed + '）—— 已中止，这份产物不能用' });
+        runningN = false; poolN.close(); return;
+      }
+    }
+    /* v1.5.2 自检：风格切片也要有回执。少了这一项，切片可能只在服务端那份生效、worker 照旧不算风格局
+     * ⇒"复合适应度"名存实亡，而日志看起来完全正常（与 v1.5.0 的 mode 半开事故同型）。 */
+    if (slice.games > 0) {
+      const badS = (res || []).filter(function (r) { return r && !r.styleGames; });
+      if (badS.length) {
+        for (const c of clients) sse(c, { type: 'error', msg: 'worker 没跑风格切片（回执 styleGames=' + (badS[0] ? badS[0].styleGames : 'n/a') + '，期望 ' + slice.games + '）—— 已中止' });
         runningN = false; poolN.close(); return;
       }
     }
@@ -485,7 +503,7 @@ async function runTrainN(gens, cfg) {
   }
   const pack = P.pack(finalParams);
   lastChampionPackN = pack;
-  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
+  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
     /* v1.3.56：把**可复现输入**记进产物。此前 meta 只有 source/n/gens/games/pop/ts/胜率，
      * 于是从产物上既看不出是不是热启动、也看不出输入是哪一版冠军 —— 而浏览器的默认配置
      * 恰好就是热启动（index.html 的"从头训练"复选框默认不勾，ui.js 也就不发 fresh=1）。
@@ -528,7 +546,8 @@ const server = http.createServer((req, res) => {
       sse(res, { type: 'start', gens, pop, gpo, n: nPlayers, from: 0, fresh, mode: modeQ || 'multi' });
       if (!runningN) {
         runningN = true;
-        runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh, seed0: seed0, opps: url.searchParams.get('opps'), mode: modeQ })
+        runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh, seed0: seed0, opps: url.searchParams.get('opps'), mode: modeQ,
+          styleopps: url.searchParams.get('styleopps'), styleW: url.searchParams.get('stylew'), styleGames: url.searchParams.get('stylegames') })
           .catch(function (e) { for (const c of clients) sse(c, { type: 'error', msg: String(e && e.message || e) }); runningN = false; });
       }
       return;

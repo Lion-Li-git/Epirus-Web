@@ -87,6 +87,22 @@ parentPort.on('message', (msg) => {
     /* v1.5.0：worker 是**独立沙箱** ⇒ 服务端的 setTrainMode 不会传过来，必须按消息里的 mode 设。
      * 漏这一行的症状极隐蔽：进化照旧 3 血、只有服务端终局评估是 5 血，best 曲线看起来完全正常。 */
     if (T.setTrainMode) T.setTrainMode(msg.mode || 'multi');
+    /* v1.5.2：风格切片也必须在**本 worker 的沙箱里**设一遍（同 mode 的道理：服务端那份改不到这里）。
+     * 并把回执带回去，让服务端能自检"切片真的生效了"而不是静默半开。 */
+    let sliceOk = null;
+    if (T.setStyleSlice) {
+      const sNames = (msg.styleOppNames && msg.styleOppNames.length) ? msg.styleOppNames : [];
+      const sOpps = [];
+      for (const nm of sNames) {
+        try { const sel = resolveOpp(nm); if (sel) sOpps.push({ name: nm, sel: sel }); }
+        catch (e) { parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: '风格切片对手解析失败 ' + nm + ' — ' + e.message }); return; }
+      }
+      sliceOk = T.setStyleSlice(sOpps.length ? sOpps : null, msg.styleW, msg.styleGames);
+      if (sNames.length && (!sliceOk || sliceOk.games <= 0)) {
+        parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: '风格切片没在 worker 生效（w=' + msg.styleW + ' games=' + msg.styleGames + ' n=' + sOpps.length + '）' });
+        return;
+      }
+    }
     const results = msg.members.map(function (m) {
       /* 千问指出的两个跨机问题一次修掉：
        *  a) 所有 worker 共用同一个 EPIRUS_SEED0，个体的随机流偏移随 worker 数变化（8 核 != 18 核）；
@@ -101,6 +117,7 @@ parentPort.on('message', (msg) => {
         // (c) 承诺局记账：分巢精英与终局门槛都要靠它，丢了这一项 h 基因就白加了
         hGene: m.h || 0, commitGames: r.commitGames, commitFirstRate: r.commitFirstRate,
         modeUsed: (T.trainMode ? T.trainMode() : null),   // 自检回执：服务端据此确认模式真的生效
+        styleGames: r.styleGames || 0, styleRate: r.styleRate || 0,   // v1.5.2：风格切片回执（服务端据此自检）
         commitTop2Rate: r.commitTop2Rate, commitMaxEp: r.commitMaxEp
       };
     });

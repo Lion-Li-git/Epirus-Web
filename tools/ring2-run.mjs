@@ -60,6 +60,10 @@ const TRAIN_MODE = process.env.RING2_MODE || '';
 const ARM = process.env.RING2_ARM || 'ring2';
 const CTRL = process.env.RING2_CTRL || 'ms2-p12';
 const EXAM2 = (process.env.RING2_EXAM2FLAGS || '--mode=long --field=ringwall').split(' ').filter(Boolean);
+/* v1.5.2：风格切片（复合适应度）—— 在池子预算之外追加 k 局对风格冠军的局，1st 率按权重并进 fit。 */
+const STYLE_OPPS = process.env.RING2_STYLEOPPS || '';
+const STYLE_W = process.env.RING2_STYLEW || '';
+const STYLE_G = process.env.RING2_STYLEGAMES || '';
 
 /* ===== 路径 ===== */
 const execFileP = promisify(execFile);
@@ -146,7 +150,9 @@ async function trainSeed(seed, port) {
   copyFileSync(BASE, BUNDLE_MP);
   const startMeta = readMeta(BUNDLE_MP);
   const url = 'http://127.0.0.1:' + port + '/train?gens=' + GENS + '&n=' + NP + '&pop=' + POP +
-    '&gpo=' + GPO + '&seed=' + seed + '&opps=' + POOL + (TRAIN_MODE ? '&mode=' + TRAIN_MODE : '');
+    '&gpo=' + GPO + '&seed=' + seed + '&opps=' + POOL + (TRAIN_MODE ? '&mode=' + TRAIN_MODE : '') +
+    (STYLE_OPPS ? '&styleopps=' + STYLE_OPPS : '') + (STYLE_W ? '&stylew=' + STYLE_W : '') +
+    (STYLE_G ? '&stylegames=' + STYLE_G : '');
   /* 起点 = champion-5p-v1.3.58.bak 的**权重**（其 weightsId 见产物 meta 的 hotstartFrom：
      产出的 .bak 里 hotstartFrom 应恒为 e379c62ccd2648fa，这就是热启动谱系的校验点）。 */
   say('seed ' + seed + ' 开跑（起点 = v1.3.58 权重, meta seed=' + (startMeta && startMeta.seed) + '）: ' + url);
