@@ -131,6 +131,48 @@ function buildSmartSel() {   // 工厂函数（hoisted）：PAY_KEY 在**调用�
     };
   };
 }
+/* ===== --ban=<技能>：**消融（拿掉）** —— report 一直缺的镜像口径 =====
+ * `--inject` 测的是"强制用它"，只有**冠军根本不用**的技能才需要它；
+ * 而"冠军已经在用的技能"（hA9 的聚能环 5.5%、hB12 的大雷 1.8%、armB12f 的坦克 27%）
+ * 唯一能测的办法是**把它从冠军手里拿掉**，看损失多少。对连招尤其重要：
+ * 拿掉 聚能环 测的是它在自己策略里的作用，这跟"强制 spam 聚能环"完全不是一回事。
+ * 实现：只过滤 chooser 拿到的 legal —— 冠军的 softmax 在剩余可负担动作上重算。 */
+const BAN = FLAG.ban || '';
+const BAN_ST = { dec: 0, legal: 0 };
+function buildBanSel() {
+  const k = PAY_KEY[BAN] || BAN;
+  return function () {
+    const inner = T.policyChooserN(params, 0.15);
+    return function (state, pid, legal) {
+      BAN_ST.dec++;
+      if (legal.some(function (l) { return l.key === k && l.affordable; })) BAN_ST.legal++;
+      const f = legal.filter(function (l) { return l.key !== k; });
+      return inner(state, pid, f.length ? f : legal);
+    };
+  };
+}
+
+/* ===== --grant=<epN|elec|boom 用 + 连>：在 legalActions **之前**给主体开资源 =====
+ * 专治"珠类技能测不了"：珠子按 R9' 回合末清空，补珠必须发生在 legal 之前。
+ * ⚠️ 这是补贴，必须与**同样的 --grant 基线**对比（同一补贴下比"用它 vs 不用它"）。 */
+const GRANT = FLAG.grant || '';
+const GRANT_ST = { rounds: 0 };
+function makeGrantHook(seat) {
+  if (!GRANT) return undefined;
+  const parts = GRANT.split('+');
+  let epN = 0;
+  for (const p of parts) { const m = /^ep(\d+)$/.exec(p); if (m) epN = Number(m[1]); }
+  const elec = parts.indexOf('elec') >= 0, boom = parts.indexOf('boom') >= 0;
+  return function (state) {
+    const p = state.p[seat];
+    if (!p || p.hp <= 0) return;
+    GRANT_ST.rounds++;
+    if (epN) p.ep = Math.max(p.ep, epN);
+    if (elec) p.elec = Math.max(p.elec, 1);
+    if (boom) p.boom = Math.max(p.boom, 1);
+  };
+}
+
 const REGEN = Number(FLAG.regen || 0);   // 每回合回 ep（0 = 与线上规则一致）
 /* v1.4.0：--mode=<key>（multi=3血 / long=5血 / …）；--drainHp=N 覆盖摄魂指法的启用血量门槛。 */
 const MODE = FLAG.mode || '';
@@ -218,6 +260,8 @@ function runSubject(makeSel, label) {
       const GOPT = {};
       if (REGEN) GOPT.regen = REGEN;
       if (MODE) GOPT.mode = MODE;
+      const grantHook = makeGrantHook(seat);      // 钩子要捕获本局座位，故在循环内构造
+      if (grantHook) GOPT.onRoundStart = grantHook;
       const r = T.oneGameN(choosers, SEED + g * 977 + total, N, Object.keys(GOPT).length ? GOPT : undefined);
       const rank = T.rankOf(r.state, seat, SEED + g * 977 + total);   // v1.3.57: 名次平局用本局种子洗牌（pid 中性）
       ranks[rank - 1]++;
@@ -371,12 +415,63 @@ function buildComboSel() {
     };
   };
 }
+/* ===== --plan=<name>：**连招主体**（序列口径，mono-spam 原理上表达不了）=====
+ * 用户 2026-09-12 指出：蓄能/聚能环/贴贴这类连招"总不能测单技能结果"。
+ * 实测动机：给冠军每回合白送 1 枚电珠，它就从 38.4% 涨到 **51.2%**（+12.8pt）——
+ * 而珠子按 R9' 回合末清空，所以 蓄能(1 ジ) → 下回合 电磁炮(2 ジ) 是一条**必须连着的两回合轨迹**。
+ * 本主体：有电珠且买得起 → 电磁炮；没电珠且买得起蓄能 → 蓄能；否则照打冠军策略。
+ * 注意：蓄能的珠型由 play.js 的 beadOf() 决定（elec==boom 时取电珠）⇒ 不需要额外指定。 */
+const PLAN = FLAG.plan || '';
+const PLAN_ST = { charge: 0, rail: 0, save: 0, dec: 0 };
+function buildChargeRailgunSel() {
+  return function () {
+    const inner = T.policyChooserN(params, 0.15);
+    return function (state, pid, legal) {
+      PLAN_ST.dec++;
+      const by = {};
+      for (const l of legal) by[l.key] = l;
+      const me = state.p[pid];
+      const opp = S.opponentsOf(state, pid).slice().sort(function (a, b) {
+        return state.p[a].hp - state.p[b].hp || a - b;
+      });
+      const t = opp.length ? opp[0] : null;
+      if (by[R.SK.RAILGUN] && by[R.SK.RAILGUN].affordable && me.elec >= 1 && t != null) {
+        PLAN_ST.rail++;
+        return { key: R.SK.RAILGUN, target: t, target2: null };
+      }
+      /* 蓄能只在 **ep>=3** 时用 —— 这是 R9'+resolve.js:501 逼出来的硬条件：
+       *   · 蓄能不给 ep 收入（唯一来源是 ジ 的 +1）；
+       *   · 珠子时效 R9'（resolve.js:790-796）只有"本回合新蓄"才保留 ⇒ 持珠那回合若打 ジ 攒钱，
+       *     珠子会在回合末被清空。
+       * 所以要一次到位：ep>=3 蓄能（ep→2，珠=电）→ 下回合 ep=2（无收入）+珠 → 电磁炮。
+       * 第一版我在 ep=1 就蓄能 ⇒ 永远差 1 点，28401 次决策只打出 1 次电磁炮（1st 0.8%）。 */
+      if (me.elec < 1 && me.ep >= 3 && by[R.SK.CHARGE] && by[R.SK.CHARGE].affordable) {
+        PLAN_ST.charge++;
+        return { key: R.SK.CHARGE, target: null, target2: null };
+      }
+      if (me.elec < 1 && me.ep < 3 && by[R.SK.JI] && by[R.SK.JI].affordable) {
+        PLAN_ST.save++;                      // 先攒到 3 再蓄能（这段是连招的**轨迹成本**）
+        return { key: R.SK.JI, target: null, target2: null };
+      }
+      return inner(state, pid, legal);
+    };
+  };
+}
+const planOk = PLAN === '' || PLAN === 'chargeRailgun';
+if (PLAN && !planOk) { console.error('--plan 未知: ' + PLAN + '（可选: chargeRailgun）'); process.exit(1); }
+const planSubjectSel = (PLAN === 'chargeRailgun') ? buildChargeRailgunSel() : null;
+
 const comboLabel = '组合技·贴贴×天火';
 const comboOk = COMBO === '' || COMBO === 'curseStorm' || /^curseStorm:\d+$/.test(COMBO);
 if (COMBO && !comboOk) { console.error('--combo 未知: ' + COMBO + '（可选: curseStorm）'); process.exit(1); }
 const comboSubjectSel = (!COMBO || !comboOk) ? null : buildComboSel();
+const banSel = !BAN ? null : buildBanSel();        // 必须在 PAY_KEY 声明之后
 const smartSel = !SM ? null : buildSmartSel();     // 必须在 PAY_KEY 声明之后
-const subjectSel = (COMBO && !PAYLOAD && !INJECT && !SMART)
+const subjectSel = (planSubjectSel && !PAYLOAD && !INJECT && !SMART && !COMBO)
+  ? planSubjectSel
+  : (BAN && !PAYLOAD && !INJECT && !SMART && !COMBO)
+  ? banSel
+  : (COMBO && !PAYLOAD && !INJECT && !SMART)
   ? comboSubjectSel
   : (SMART && !PAYLOAD && !INJECT)
   ? smartSel
@@ -392,6 +487,8 @@ const subjectSel = (COMBO && !PAYLOAD && !INJECT && !SMART)
     ? function () { return asChooser(FN[SUBJECT]); }
     : function () { return T.policyChooserN(params, 0.15); });
 const subjectLabel = PAYLOAD ? ('消融·只换弹头 ' + PAYLOAD)
+  : (planSubjectSel && !INJECT && !SMART && !COMBO) ? ('连招·蓄能→电磁炮')
+  : (BAN && !INJECT && !SMART && !COMBO) ? ('消融·拿掉 ' + BAN)
   : (COMBO && !INJECT && !SMART) ? (comboLabel + ' 叠' + STACK)
   : (SMART && !INJECT) ? ('正确用法 ' + SMART)
   : INJECT ? ('边际注入·能用就用 ' + INJECT) : (SUBJECT ? ('脚本 ' + SUBJECT) : '冠军');
@@ -410,6 +507,18 @@ for (const s of [champ, ctrl]) {
     ((s.deepGames && s.shallowGames) ? ((s.deepFirst / s.deepGames - s.shallowFirst / s.shallowGames) * 100).toFixed(1) + 'pt' : '-'));
 }
 
+if (planSubjectSel && !PAYLOAD && !INJECT && !SMART && !COMBO) {
+  console.log('[连招自检] 决策 ' + PLAN_ST.dec + ' 次：攒钱(ジ) ' + PLAN_ST.save + ' 次、蓄能 ' + PLAN_ST.charge + ' 次、电磁炮 ' + PLAN_ST.rail + ' 次' +
+    (PLAN_ST.rail === 0 ? '   !!! 从未打出电磁炮 ⇒ 连招没走通，Δ 不可读' : '   OK 连招跑通了'));
+}
+if (BAN && !PAYLOAD && !INJECT && !SMART && !COMBO) {
+  console.log('[消融自检] 决策 ' + BAN_ST.dec + ' 次，其中被拿掉的技能在可负担集里 ' + BAN_ST.legal + ' 次 = ' +
+    (BAN_ST.dec ? (BAN_ST.legal / BAN_ST.dec * 100).toFixed(1) : '0') + '%' +
+    (BAN_ST.legal === 0 ? '   !!! 该技能从不进 legal ⇒ 消融是空操作，Δ 不可读' : '   OK 消融有效'));
+}
+if (GRANT) {
+  console.log('[补贴自检] --grant=' + GRANT + ' 已生效 ' + GRANT_ST.rounds + ' 个主体回合（主体回合数应≈局数×回合数）');
+}
 if (COMBO && !PAYLOAD && !INJECT && !SMART) {
   console.log('[组合技自检] 叠层=' + STACK + ' 决策 ' + COMBO_ST.dec + ' 次：贴符咒 ' + COMBO_ST.curse + ' 次、攒钱(ジ) ' + COMBO_ST.save + ' 次、天火引爆 ' + COMBO_ST.detonate + ' 次' +
     (COMBO_ST.detonate === 0 ? '   !!! 从未引爆 => 组合从未走通，Δ 不可读' : '   OK 组合跑通了'));

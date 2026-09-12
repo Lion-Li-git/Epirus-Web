@@ -36,12 +36,17 @@
   }
 
   /* N 人自动对局：choosers[pid](state, pid, legal, events) → key | {key,target} */
-  function autoGameN(state, choosers, onTurn) {
+  function autoGameN(state, choosers, onTurn, onRoundStart) {
     const N = state.p.length;
     let guardN = 0;
     while (!state.over) {
       X.startTurn(state);
       if (state.over) break;
+      /* v1.4.5：回合开始钩子 —— 必须在 legalActions **之前**。
+       * 珠类技能的门（电磁炮需电珠 / 激光眼需爆珠）在 computeCost 里判，而 legal 是下面
+       * 第 50 行算出来的 ⇒ 任何"在 chooser 里补珠"的做法都太晚（实测强制命中 0%）。
+       * 要公平测量这类技能，只能在 legal 之前开珠。默认 undefined，对线上/训练零影响。 */
+      if (onRoundStart) onRoundStart(state);
       const beadOf = function (p) { return p.elec > p.boom ? 'boom' : 'elec'; };   // 相等时取电珠，与页面同口径
       const picks = [];
       for (let pid = 0; pid < N; pid++) {
