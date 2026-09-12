@@ -823,5 +823,41 @@ t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）',
     'repro-check 的注释里应能看出它还原的是 index.html');
 });
 
+/* ===== v1.4.0：长程模式（5 血）+ 按模式配摄魂门槛 =====
+ * 反证：把 state.js 的 DRAIN 门槛写回写死的 `p.hp > 1` 时 D2 必红；
+ *       把 resolve.js 的终局判定写回 `R.MAX_ROUNDS` 时 D3 必红。 */
+t('D1 drain gate in multi stays HP<=1 (R25 unchanged)', function () {
+  eq(R.MODES.multi.drainHpMax, 1, 'multi.drainHpMax');
+  const st = S.createState('multi', { next: mulberry32(71) }, 5);
+  st.p[0].hp = 1; ok(S.computeCost(st, 0, R.SK.DRAIN).ok, 'multi HP=1 usable');
+  st.p[0].hp = 2; ok(!S.computeCost(st, 0, R.SK.DRAIN).ok, 'multi HP=2 must be banned');
+});
+
+t('D2 long mode hp=5 / drainHpMax=3', function () {
+  const m = R.MODES.long;
+  ok(!!m, 'MODES.long must exist');
+  eq(m.hp, 5, 'long.hp'); eq(m.drainHpMax, 3, 'long.drainHpMax');
+  eq(S.createState('long', { next: mulberry32(72) }, 5).p[0].hp, 5, 'long initial hp');
+  const st = S.createState('long', { next: mulberry32(73) }, 5);
+  st.p[0].hp = 3; ok(S.computeCost(st, 0, R.SK.DRAIN).ok, 'long HP=3 usable');
+  st.p[0].hp = 4; ok(!S.computeCost(st, 0, R.SK.DRAIN).ok, 'long HP=4 must be banned (gate is 3)');
+});
+
+t('D3 round cap follows the mode (long=100; 60 truncates 5hp games)', function () {
+  eq(R.MODES.long.maxRounds, 100, 'long.maxRounds');
+  eq(R.MAX_ROUNDS, 60, 'default cap unchanged');
+  const mk = function (mode, round) {
+    const st = S.createState(mode, { next: mulberry32(74) }, 3);
+    st.round = round;
+    st.p[0].hp = 3; st.p[1].hp = 2; st.p[2].hp = 1;
+    X.checkOver(st);
+    return st;
+  };
+  ok(!mk('long', 60).over, 'long round 60 must not end (60 is only multi cap)');
+  ok(!mk('long', 99).over, 'long round 99 must not end');
+  eq(mk('long', 100).winner, 0, 'long round 100 ends, highest hp wins');
+  eq(mk('multi', 60).winner, 0, 'multi round 60 ends (unchanged)');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

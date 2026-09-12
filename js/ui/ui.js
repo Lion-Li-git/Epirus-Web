@@ -8,7 +8,10 @@
   const $ = function (id) { return document.getElementById(id); };
   const NAME = ['你', '电脑'];
   const CAT_NM = { energy: '能量', attack: '攻击', defense: '防御', special: '特殊' };
-  const MODE_NM = { standard: '标准', fast: '快速', lucky: '欧皇', multi: '多人' };
+  const MODE_NM = { standard: '标准', fast: '快速', lucky: '欧皇', multi: '多人', long: '长程(5血)' };
+  /* v1.4.0：多人族模式（3-5 人可用）。加长程模式时必须同时登记在这里，
+   * 否则 newGame / 人数切换会把用户选的模式悄悄改回 multi。 */
+  const MULTI_MODES = ['multi', 'long'];
 
   /* ---------- 小工具 ---------- */
   function skillName(key) { return R.byKey[key] ? R.byKey[key].name : key; }
@@ -27,7 +30,7 @@
     const n = B.players || 2;
     B.multi = n > 2;
     if (typeof syncDiffOptions === 'function') syncDiffOptions();
-    if (B.multi) B.modeKey = 'multi';
+    syncModeOptions();   // v1.4.0：按人数校验模式（原来无条件改回 'multi'，会吃掉用户选的长程模式）
     B.state = S.createState(B.modeKey, null, n);
     B.roundStarted = false; B.locked = false; B.aiKey = null;
     B.evCursor = 0; B.transcript = []; B.aiHistory = [];
@@ -35,7 +38,7 @@
     closeOverlay();
     buildSkillGrid();
     renderSide(0); renderSide(1);
-    logClear('新对局：' + (B.multi ? n + ' 人多人模式' : MODE_NM[B.modeKey] + '模式') + ' · 难度=' + diffName(B.diff) +
+    logClear('新对局：' + (B.multi ? n + ' 人 · ' + (MODE_NM[B.modeKey] || '多人') : MODE_NM[B.modeKey] + '模式') + ' · 难度=' + diffName(B.diff) +
       ' · 对手AI=' + aiInfo().source + ' · 每人初始 ' + B.state.mode.hp + ' 血');
     hint('请选择技能出招 —— 双方同时出手，按优先级结算。');
   }
@@ -978,16 +981,32 @@
     ]);
   }
 
+  /* v1.4.0：人数 ↔ 可用模式的一致性。
+   * 2 人：只能用 standard；3-5 人：只能用 multi(3血) / long(5血)。
+   * 用 option.disabled 而不是整体禁掉下拉 —— 否则 3 人局永远只能 3 血。 */
+  function syncModeOptions() {
+    const sel = $('sel-mode');
+    if (!sel) return;
+    const multi = (B.players || 2) > 2;
+    for (let i = 0; i < sel.options.length; i++) {
+      const isMulti = MULTI_MODES.indexOf(sel.options[i].value) >= 0;
+      sel.options[i].disabled = multi ? !isMulti : isMulti;
+    }
+    if (multi && MULTI_MODES.indexOf(B.modeKey) < 0) B.modeKey = 'multi';
+    if (!multi && MULTI_MODES.indexOf(B.modeKey) >= 0) B.modeKey = 'standard';
+    sel.value = B.modeKey;
+  }
+
   /* ---------- 事件绑定 ---------- */
   function bind() {
     $('tab-battle').onclick = function () { showTab('battle'); };
     $('tab-train').onclick = function () { showTab('train'); };
     $('sel-mode').onchange = function () { B.modeKey = $('sel-mode').value; newGame(); };
+    syncModeOptions();   // 首屏同步一次
     $('btn-lastlog').onclick = showLastBattle;
     $('sel-players').onchange = function () {
       B.players = parseInt($('sel-players').value, 10) || 2;
-      if (B.players > 2) { B.modeKey = 'multi'; $('sel-mode').value = 'multi'; $('sel-mode').disabled = true; }
-      else { $('sel-mode').disabled = false; B.modeKey = $('sel-mode').value === 'multi' ? 'standard' : $('sel-mode').value; $('sel-mode').value = B.modeKey; }
+      syncModeOptions();   // v1.4.0：3-5 人时把"标准"置灰、放开 multi/long 的选择
       syncDiffOptions();
       newGame();
     };

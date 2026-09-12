@@ -84,7 +84,7 @@ async function main() {
     const r = await send('Page.captureScreenshot', { format: 'png' });
     writeFileSync(file, Buffer.from(r.result.data, 'base64'));
   };
-  cdp = { send, evalJS, shot };
+  cdp = { send, evalJS, shot, ws };   // ws 要暴露出来：否则它挂住事件循环，脚本在 SUMMARY 之后不退出
 
   await send('Page.enable'); await send('Runtime.enable'); await send('Log.enable');
   await send('Page.navigate', { url: URL });
@@ -124,6 +124,22 @@ async function main() {
   await shot(join(tmpdir(), 'screenshot-train.png'));
   console.log('screenshot-train saved');
 
+  // --- v1.4.0: long mode (5 hp) must be selectable and startable in the real UI ---
+  await evalJS(`document.getElementById('tab-battle').click()`);
+  await sleep(250);
+  check('mode select has long', await evalJS(`[...document.querySelectorAll('#sel-mode option')].some(o=>o.value==='long')`));
+  await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='3'; s.dispatchEvent(new Event('change'));})()`);
+  await sleep(500);
+  check('standard disabled at 3 players', await evalJS(`(()=>{const o=[...document.querySelectorAll('#sel-mode option')].find(x=>x.value==='standard'); return !!o && o.disabled;})()`));
+  check('long enabled at 3 players', await evalJS(`(()=>{const o=[...document.querySelectorAll('#sel-mode option')].find(x=>x.value==='long'); return !!o && !o.disabled;})()`));
+  check('mode select itself not disabled (else only 3hp)', await evalJS(`!document.getElementById('sel-mode').disabled`));
+  await evalJS(`(()=>{const s=document.getElementById('sel-mode'); s.value='long'; s.dispatchEvent(new Event('change'));})()`);
+  await sleep(700);
+  check('long game log says 5 hp', await evalJS(`document.getElementById('logbox').textContent.includes('\u4e94 \u8840') || document.getElementById('logbox').textContent.includes('5 \u8840')`));
+  check('long game shows HP 5', await evalJS(`[...document.querySelectorAll('.statbar .stat')].some(s=>s.textContent.includes('HP')&&s.textContent.includes('5'))`));
+  await shot(join(tmpdir(), 'screenshot-long.png'));
+  console.log('screenshot-long saved');
+
   console.log('\nJS errors:', errors.length ? errors : '(none)');
   console.log('SUMMARY:', checks.every(c => c[1]) && errors.length === 0 ? 'SMOKE OK' : 'SMOKE FAILED');
   process.exitCode = checks.every(c => c[1]) && errors.length === 0 ? 0 : 1;
@@ -131,6 +147,10 @@ async function main() {
 
 main().catch(e => { console.error('SMOKE ERROR:', e); process.exitCode = 2; })
   .finally(async () => {
+    /* 成功路径也必须清掉看门狗并关掉 CDP 连接 —— 否则事件循环不空、脚本不退出，
+     * 看门狗到点强制 process.exit(3)，于是"SMOKE OK"却返回失败码（会让交付门禁误判）。 */
+    clearTimeout(__watchdog);
+    try { if (cdp && cdp.ws) cdp.ws.close(); } catch (e) { /* ignore */ }
     try { proc.kill(); } catch (e) { /* ignore */ }
     await Promise.race([
       new Promise(res => proc.once('exit', res)),

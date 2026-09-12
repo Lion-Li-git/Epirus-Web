@@ -129,6 +129,11 @@ function buildSmartSel() {   // 工厂函数（hoisted）：PAY_KEY 在**调用�
   };
 }
 const REGEN = Number(FLAG.regen || 0);   // 每回合回 ep（0 = 与线上规则一致）
+/* v1.4.0：--mode=<key>（multi=3血 / long=5血 / …）；--drainHp=N 覆盖摄魂指法的启用血量门槛。 */
+const MODE = FLAG.mode || '';
+const DRAINHP = Number(FLAG.drainHp || 0);
+if (MODE && !R.MODES[MODE]) { console.error('--mode 未知: ' + MODE + '（可选: ' + Object.keys(R.MODES).join(' ') + '）'); process.exit(1); }
+if (DRAINHP > 0) { R.MODES[MODE || 'multi'].drainHpMax = DRAINHP; }
 const FIELD = FLAG.field || '';
 const FIELDS = {
   focusfire: ['focusfire', 'focusfire', 'focusfire', 'focusfire'],
@@ -170,7 +175,7 @@ function runSubject(makeSel, label) {
   let total = 0;
   /* v1.3.60 前置条件自检：没有这三个数，"条件性卡的 Δ" 无法解释 ——
    * 中性场上 转移伤害 的 Δ=−30.8pt 完全可能只是"前置条件不存在"。 */
-  let takenSum = 0, transferEv = 0, fireEv = 0, takenGames = 0;
+  let takenSum = 0, transferEv = 0, fireEv = 0, takenGames = 0, roundSum = 0;
   for (const combo of combos) {
     const hasDeep = combo.some(function (nm) { return !!DEEP[nm]; });
     for (let g = 0; g < GAMES; g++) {
@@ -205,7 +210,10 @@ function runSubject(makeSel, label) {
       }
       /* --regen=N：每回合给所有人 +N ep（对应 evo.regenForGame 的补贴切片）。
        * 用途：检验"某张卡难用"到底是**卡本身**的问题，还是**攒不起钱**（经济锁）的问题。 */
-      const r = T.oneGameN(choosers, SEED + g * 977 + total, N, REGEN ? { regen: REGEN } : undefined);
+      const GOPT = {};
+      if (REGEN) GOPT.regen = REGEN;
+      if (MODE) GOPT.mode = MODE;
+      const r = T.oneGameN(choosers, SEED + g * 977 + total, N, Object.keys(GOPT).length ? GOPT : undefined);
       const rank = T.rankOf(r.state, seat, SEED + g * 977 + total);   // v1.3.57: 名次平局用本局种子洗牌（pid 中性）
       ranks[rank - 1]++;
       seatGames[seat]++; if (rank === 1) seatFirst[seat]++;
@@ -216,7 +224,7 @@ function runSubject(makeSel, label) {
         if (e.type === 'damage' && (e.via === R.SK.MINE || e.via === R.SK.FIRESTORM)) fireEv++;
         if (e.type === 'transfer') transferEv++;
       }
-      takenGames++;
+      takenGames++; roundSum += r.rounds;
       total++;
     }
   }
@@ -227,6 +235,7 @@ function runSubject(makeSel, label) {
     seatFirst: seatFirst, seatGames: seatGames,
     deepGames: deepGames, deepFirst: deepFirst, shallowGames: shallowGames, shallowFirst: shallowFirst,
     takenPerGame: takenGames ? takenSum / takenGames : 0, transferEv: transferEv, fireEv: fireEv,
+    avgRounds: takenGames ? roundSum / takenGames : 0,
     firstRate: total ? ranks[0] / total : 0,
     top2Rate: total ? (ranks[0] + ranks[1]) / total : 0,
     top3Rate: total ? (ranks[0] + ranks[1] + ranks[2]) / total : 0,
@@ -241,6 +250,7 @@ console.log('meta: ' + (metaM ? metaM[1] : '{}'));
 console.log('对手池(' + poolNames.length + '): ' + poolNames.join(' '));
 if (FIELD) console.log('!! 前置条件场 --field=' + FIELD + ' : ' + FIELDS[FIELD].join(' ') + '（允许重复）');
 if (REGEN) console.log('!! 经济补贴 regen=' + REGEN + ' ep/回合（全体，非线上规则）');
+if (MODE) console.log('!! 模式 --mode=' + MODE + ' : ' + R.MODES[MODE].name + '  hp=' + R.MODES[MODE].hp + '  摄魂门槛 HP<=' + ((R.MODES[MODE].drainHpMax) || 1));
 console.log('对手场 = 4 个互不相同的脚本，全部 ' + combos.length + ' 组合 × ' + GAMES + ' 局 = ' +
   (combos.length * GAMES) + ' 局；含深经济对手的组合 ' + hasDeepInExam + '/' + combos.length);
 console.log('随机基线（5 人局）: 1st 20.0% / top2 40.0% / top3 60.0%');
@@ -277,6 +287,7 @@ const PAYLOAD = FLAG.payload || '';
 if (SUBJECT && !FN[SUBJECT]) { console.error('--subject 未知脚本: ' + SUBJECT + '（可选: ' + ALL.map(function (x) { return x[0]; }).join(' ') + '）'); process.exit(1); }
 const PAY_KEY = { bigT: R.SK.BIG_T, tank: R.SK.TANK, railgun: R.SK.RAILGUN, snipe: R.SK.SNIPE, dualGun: R.SK.DUAL_GUN, laserEye: R.SK.LASER_EYE, mirror: R.SK.MIRROR,
   armor: R.SK.ARMOR, mine: R.SK.MINE, transfer: R.SK.TRANSFER,     // v1.3.59：用户点名的藤甲/地雷/转移三张多人卡
+  drain: R.SK.DRAIN,                                                 // v1.4.0：摄魂指法（自我门控：只在 HP≤门槛 时可选 ⇒ 贪心注入正好是正确用法）
   reflect: R.SK.REFLECT, guard: R.SK.GUARD, ring: R.SK.RING,        // v1.3.60：费用 0 的防御族对照（反弹 vs 藤甲）
   curse: R.SK.CURSE, firestorm: R.SK.FIRESTORM };                   // v1.3.60：**贴贴(符咒) × 天火(引爆)** 组合对
 /* ===== 边际注入（v1.3.59，用户要的"边际价值"口径）=====
@@ -388,7 +399,7 @@ for (const s of [champ, ctrl]) {
     '  4th=' + s.pct(s.ranks[3], s.total) + '  5th=' + s.pct(s.ranks[4], s.total) +
     '   | top2=' + s.pct(s.ranks[0] + s.ranks[1], s.total) + ' top3=' + s.pct(s.ranks[0] + s.ranks[1] + s.ranks[2], s.total));
   console.log('    各座位 1st 率: ' + s.seatGames.map(function (g, i) { return 'P' + i + '=' + s.pct(s.seatFirst[i], g); }).join(' '));
-  console.log('    前置条件: 主体场均承伤=' + s.takenPerGame.toFixed(2) + '  转移事件=' + s.transferEv + '  火焰伤害事件=' + s.fireEv);
+  console.log('    前置条件: 主体场均承伤=' + s.takenPerGame.toFixed(2) + '  平均回合=' + s.avgRounds.toFixed(1) + '  转移事件=' + s.transferEv + '  火焰伤害事件=' + s.fireEv);
   console.log('    拆分: 含深经济对手 ' + s.pct(s.deepFirst, s.deepGames) + '（' + s.deepGames + ' 局）  vs  不含 ' +
     s.pct(s.shallowFirst, s.shallowGames) + '（' + s.shallowGames + ' 局）  Δ=' +
     ((s.deepGames && s.shallowGames) ? ((s.deepFirst / s.deepGames - s.shallowFirst / s.shallowGames) * 100).toFixed(1) + 'pt' : '-'));

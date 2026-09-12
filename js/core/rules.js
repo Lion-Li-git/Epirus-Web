@@ -103,7 +103,17 @@
 
   const MODES = {
     standard: { name: '标准模式', hp: 3, skills: AVAILABLE_2P, rule: '' },
-    multi: { name: '多人模式(3-5人)', hp: 3, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5 },
+    multi: { name: '多人模式(3-5人)', hp: 3, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 1 },
+    /* v1.4.0 长程模式（5 血）—— 用户 2026-09-12 提出：线下靠多人混乱达成平衡，
+     * 程序里 3 血让最优线"太明显"。算术上确实如此：v1.3.60 实测 ep 收入只有 +1/回合
+     * （resolve.js:501 只有 ジ 给），所以任何 ≥2 ジ 的卡都要 2+ 回合攒钱，而任何多回合轨迹
+     * 都在跟 ~3 回合的存活期望赛跑 —— 转移伤害的前置条件命中率只有 0.2%、贴贴叠不到 2 张、
+     * 地雷攒 3 ジ 的时间 > 存活时间。5 血把存活期望翻倍，正好用来检验"轨迹类策略是否解冻"。
+     * drainHpMax：摄魂指法原为写死的 HP≤1（R25）；5 血下那扇窗太窄，提到 3。
+     * 实测（v1.4.0，1400 局/臂）：3 血平均 **43.3 回合**、5 血只到 **49.8 回合**（+15% 而非 +67%），
+     * 且 5 血时主体场均承伤只有 **4.28 < 5** ⇒ 全局 MAX_ROUNDS=60 把 5 血局**截断了**
+     * （不是被打死，是到上限按"血最多者胜"结束）。故长程模式配 maxRounds:100。 */
+    long: { name: '长程模式(5血·3-5人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 3, maxRounds: 100 },
     fast: { name: '快速模式', hp: 1, skills: [SK.JI, SK.GUN, SK.GUARD], rule: '防御不能连续使用 3 次', guardLimit: 2 },
     lucky: { name: '欧皇模式', hp: 3, skills: [SK.JI, SK.JINSHIELD, SK.BAGUA, SK.GUN], rule: '' }
   };

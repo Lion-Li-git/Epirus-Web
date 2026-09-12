@@ -115,7 +115,10 @@
       if (p.elec < 1) return { ok: false, reason: '电磁炮需 1 枚电珠' };
       return { ok: true, ep: 2, hp: 0, beads: { elec: 1 } };
     }
-    if (key === R.SK.DRAIN && p.hp > 1) return { ok: false, reason: '摄魂指法仅限 HP≤1' }; // R25
+    if (key === R.SK.DRAIN) {   // R25 + v1.4.0：门槛按模式可配（默认仍是 HP≤1）
+      const dmax = (state.mode && state.mode.drainHpMax) || 1;
+      if (p.hp > dmax) return { ok: false, reason: '摄魂指法仅限 HP≤' + dmax };
+    }
     return { ok: true, ep: def.cost, hp: 0, beads: null };
   }
 

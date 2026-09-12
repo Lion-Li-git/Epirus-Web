@@ -134,7 +134,9 @@
       me.reviveNext ? 1 : 0, anyOp(function (o) { return o.reviveNext ? 1 : 0; }),
       me.infiniteEnergy ? 1 : 0, anyOp(function (o) { return o.infiniteEnergy ? 1 : 0; }),
       Math.min(me.rodGuard, 3) / 3, Math.min(anyOp(function (o) { return o.rodGuard; }), 3) / 3,
-      state.round / R.MAX_ROUNDS,
+      /* v1.4.0：分母跟本局实际上限走 —— 5 血模式下 round/60 会超出 [0,1] 的训练分布。
+       * multi 模式没有 maxRounds ⇒ 仍是 /60，已有冠军包的读数逐位不变。 */
+      state.round / ((state.mode && state.mode.maxRounds) || R.MAX_ROUNDS),
       Math.max(-1, Math.min(1, (me.ep - agg.maxEp) / 12)),
       // ---- 前摇威胁（任一对手）----
       anyOp(function (o) { return (o.elec > 0 && o.ep >= 2) ? 1 : 0; }),   // 电磁炮前摇

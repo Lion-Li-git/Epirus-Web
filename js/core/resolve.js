@@ -867,7 +867,7 @@
     }
     if (alive.length === 0) { state.over = true; state.winner = 'draw'; return true; }   // N10 全灭
     if (alive.length === 1) { state.over = true; state.winner = alive[0]; return true; } // N10 最后存活
-    if (state.round >= R.MAX_ROUNDS) {
+    if (state.round >= ((state.mode && state.mode.maxRounds) || R.MAX_ROUNDS)) {   // v1.4.0：按模式配回合上限
       state.over = true;
       let best = -Infinity, bestPid = null, tie = false;                                 // N10 回合上限：血最多者胜
       for (const i of alive) {

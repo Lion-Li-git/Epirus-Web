@@ -406,7 +406,8 @@
   }
 
   function oneGameN(choosers, seed, n, opts) {
-    const st = S.createState('multi', { next: mulberry32(seed) }, n, opts);
+    /* v1.4.0：模式可传（默认 'multi'）—— 5 血长程模式的评测要在这里换考卷 */
+    const st = S.createState((opts && opts.mode) || 'multi', { next: mulberry32(seed) }, n, opts);
     Play.autoGameN(st, choosers);
     const dmg = [];
     for (let i = 0; i < n; i++) dmg.push(0);
