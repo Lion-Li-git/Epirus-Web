@@ -1256,6 +1256,55 @@ t('D19 终局收缩是**全局规则**：第 100 回合起每回合末全员 −
   eq(R.SUDDEN_DEATH_DMG, 1, '全局默认每回合扣 1 血');
 });
 
+t('D20 狙击"被干扰"只认"狙击手本人被攻击"（多人局；v1.5.13 修用户报的 bug）', function () {
+  /* 用户对局记录（results/epirus-battle-22回合.txt）第 16 回合：玩家5 用枪打**玩家3**，
+   * 却把玩家1 打玩家5 的狙击枪判成"狙击被干扰"。
+   * 原始 README 特殊 2：「若被作用者或其余玩家对**该玩家**（狙击手）使用其它带攻击效果技能则狙击无效」；
+   * 特殊 3 的爆头条件：「若**被作用者**使用的技能对**攻击者**没有影响」⇒ 两者都要求"指向狙击手"。
+   * 旧实现只看"目标这回合用了什么技能"、不看打谁 ⇒ 2 人局恰好等价（所以 spec R13/57 一直绿），多人局才错。 */
+  const disturbed = function (st) { return st.events.some(function (e) { return e.type === 'voided' && e.by === '狙击被干扰'; }); };
+  const mk = function (seed) {
+    const st = S.createState('multi', { next: T.mulberry32(seed || 11) }, 3);
+    st.p[0].ep = st.p[1].ep = st.p[2].ep = 9;
+    return st;
+  };
+  /* ① 目标打**第三方** ⇒ 狙击必须命中（旧实现在这里会误判） */
+  let st = mk();
+  S.attemptAction(st, 0, R.SK.SNIPE, { target: 1 });
+  S.attemptAction(st, 1, R.SK.GUN, { target: 2 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  ok(!disturbed(st), '目标打第三方时不得判"狙击被干扰"');
+  ok(st.p[1].hp < 3, '目标打第三方时狙击必须命中（实测目标 hp=' + st.p[1].hp + '）');
+  /* ② 第三个人打**狙击手** ⇒ 无效（"其余玩家对该玩家使用"这一支） */
+  st = mk();
+  S.attemptAction(st, 0, R.SK.SNIPE, { target: 1 });
+  S.attemptAction(st, 1, R.SK.JI, {});
+  S.attemptAction(st, 2, R.SK.GUN, { target: 0 });
+  X.resolveActions(st);
+  ok(disturbed(st), '狙击手被别人打 ⇒ 必须判"狙击被干扰"');
+  eq(st.p[1].hp, 3, '被干扰时目标不掉血');
+  /* ③ 目标自己打狙击手 ⇒ 无效（2 人局的老口径，多人局同样成立）
+   *    注意：多人局这条通常走**优先级规则**（枪 pri2 > 狙击 pri1 ⇒ "被高优先级攻击阻止"），
+   *    所以断言"狙击被废 + 目标不掉血"，不锁具体 by（v1.5.13 实测两者的 by 不同）。 */
+  st = mk();
+  S.attemptAction(st, 0, R.SK.SNIPE, { target: 1 });
+  S.attemptAction(st, 1, R.SK.GUN, { target: 0 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  ok(st.events.some(function (e) { return e.type === 'voided' && e.pid === 0; }),
+    '目标自己打狙击手 ⇒ 狙击必须被废（by=' + JSON.stringify(st.events.filter(function (e) { return e.type === 'voided'; }).map(function (e) { return e.by; })) + '）');
+  eq(st.p[1].hp, 3, '被干扰时目标不掉血');
+  /* ④ 2 人局口径不许变（spec R13/57 的等价场景） */
+  st = S.createState('standard', { next: T.mulberry32(3) }, 2);
+  st.p[0].ep = st.p[1].ep = 9;
+  S.attemptAction(st, 0, R.SK.SNIPE, { target: 1 });
+  S.attemptAction(st, 1, R.SK.GUN, { target: 0 });
+  X.resolveActions(st);
+  ok(st.events.some(function (e) { return e.type === 'voided' && e.pid === 0; }), '2 人局：被枪反打 ⇒ 狙击必须被废（不许回退）');
+  eq(st.p[1].hp, 3, '2 人局被干扰时目标不掉血');
+});
+
 t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放者自己', function () {
   /* v1.5.4 规则修正：原始规则集（`D:\code\Epirus\README.md`「全息屏障」）写明
    *   「作用效果：给**被作用者**施加一个“原型制御”」+ 手势「双臂伸出挡住**被作用者**胸前」

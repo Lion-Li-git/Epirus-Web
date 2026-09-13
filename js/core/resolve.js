@@ -765,22 +765,39 @@
     }
 
     // ====== ⑥ 狙击 pri1（干扰则无效，否则爆头判定）======
+    /* v1.5.13 修 bug（用户对局记录第 16 回合发现）：**"狙击被干扰"的判定口径错了**。
+     * 旧实现只看"**目标**这回合用了什么技能"：
+     *     const ta = actionOf(state, t);
+     *     if (ta && (ATK_EFFECT.indexOf(ta.key)>=0 || ta.key===SK.TRANSFER)) 无效;
+     * 它**不看那技能打谁** ⇒ 多人局里目标用枪打第三个人，也会把狙击手的枪废掉。
+     * 原始 README 特殊 2 的原话是「若被作用者或其余玩家对**该玩家**使用其它带攻击效果技能则狙击无效」
+     * （"该玩家" = 狙击手本人），特殊 3 的爆头条件同样写"被作用者的技能对**攻击者**没有影响"。
+     * 2 人局看不出差别：只有两个人 ⇒ 目标的枪必然指向狙击手，旧实现恰好等价（所以 spec R13/57 一直绿）。
+     * 现在改成与规则一致：**只有当狙击手本人被别人的攻击类技能指向时才无效**。 */
+    const aimedAt = function (st, who) {           // 谁这一回合用攻击类技能指向了 who？
+      for (const j of turnOrder(st)) {
+        if (j === who) continue;
+        const ja = actionOf(st, j);
+        if (!ja) continue;
+        if (ja.key !== SK.TRANSFER && R.ATK_EFFECT.indexOf(ja.key) < 0) continue;
+        if (targetOf(st, j) === who) return j;
+      }
+      return null;
+    };
     for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
       if (!a || a.key !== SK.SNIPE) continue;
       const t = targetOf(state, i);
       if (t == null) continue;
-      const ta = actionOf(state, t);
-      if (ta && (R.ATK_EFFECT.indexOf(ta.key) >= 0 || ta.key === SK.TRANSFER)) {
-        setVoid(state, i, '狙击被干扰'); // README 特殊1 R13
-        continue;
-      }
+      if (aimedAt(state, i) != null) { setVoid(state, i, '狙击被干扰'); continue; }
       const res = deliverDamage(state, {
         amt: 1, type: R.DMG.NORMAL, source: i, via: SK.SNIPE, pierce: R.byKey[SK.SNIPE].pierce
       }, t, { reason: '狙击枪' });
       if (res.result === 'land') {
-        // 爆头：目标技能对狙击手无影响才可判定
-        const affect = ta && (R.ATK_EFFECT.indexOf(ta.key) >= 0 || ta.key === SK.TRANSFER);
+        /* 爆头：**被击方**的技能对狙击手没有影响才可判定（原始特殊 3）—— 注意这里只看被击方本人，
+         * 与上面的"被干扰"（任何人都能干扰）是两个不同口径。 */
+        const ta = actionOf(state, t);
+        const affect = !!ta && (ta.key === SK.TRANSFER || R.ATK_EFFECT.indexOf(ta.key) >= 0) && targetOf(state, t) === i;
         if (!affect && judge3(state)) {
           rawDamage(state, t, 1, '爆头', 'headshot', {});   // R45：铁索共享爆头（文档口径）
           ev(state, { type: 'headshot', pid: i, to: t });
