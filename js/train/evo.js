@@ -711,8 +711,27 @@
   }
 
   /* N 人适应度（N19）：名次基础分（1/0.6/0.2）+ 轻量 shaped 项 */
+  /* 从一局的事件流里数"我打断开环者"的次数（**纯函数**，便于守门单测）：
+   *   ① 对手在开环的判据 = 他有一次 `ep` 事件 `delta ≥ 2`（环第 2 次起 +2/+3；ジ 只 +1）；
+   *   ② 记一次打断 = 同一局里**我**（source===seat）对他造成了伤害，
+   *      或我这一局用了小雷（miniT）而他被作废（`voided`）。
+   * 只报事实、不判断"该不该打" —— 那是网络要学的。 */
+  function countRingBreaks(events, seat) {
+    let breaks = 0;
+    let ringers = {};
+    let iUsedMiniT = false;
+    const pending = [];
+    for (const e of events) {
+      if (e.type === 'action' && e.pid === seat && e.outcome === 'ok' && e.key === R.SK.MINI_T) iUsedMiniT = true;
+      if (e.type === 'ep' && e.pid !== seat && e.delta >= 2) ringers[e.pid] = true;
+      if (e.type === 'damage' && e.source === seat && ringers[e.to]) { breaks++; ringers[e.to] = false; }
+      if (e.type === 'voided' && ringers[e.pid]) pending.push(e.pid);
+    }
+    if (iUsedMiniT) { breaks += pending.length; }
+    return breaks;
+  }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let imitSum = 0, imitGames = 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
@@ -791,7 +810,9 @@
       // 经济分档：贵的技能更值钱（不再指向某个特定循环）
       const conv = 0.08 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2)
                  + 0.08 * Math.min(1, (econ ? econ.rec.heavy4 : 0) / 1);
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit));
+      /* 打断开环者：窄条件（真的有人开环）+ 可归因（是我打中的）⇒ 小额加分，两次封顶。 */
+      const ringBonus = RING_W * Math.min(1, ringBreaks / 2);
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -812,6 +833,8 @@
         dealt += r.dmg[seat];
         rounds += r.rounds;
         played++;
+        /* v1.5.23：打断开环者（只用事件重建，不动引擎）——见 ringReward 的说明。 */
+        if (RING_W > 0) ringBreaks += countRingBreaks(r.state.events, seat);
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1148,6 +1171,18 @@
    * `agg.use`** ⇒ 已有的覆盖熵项（divNorm，权重 DIV_W）自然把"自对局里只剩两三张卡"的个体压低。
    * **胜负名次一项都不折**（镜像局的第 1 名是轮盘，没有信息），也不动伤害/回合口径。
    * 反证（np-test D36）：MIRROR_GAMES=0 与 =2 的 divNorm 必须不同，而 first/games **必须逐位相同**。 */
+  /* ===== v1.5.23（用户裁定）：**教它惩罚开环的人** =====
+   * 起因：用户实测"对手连开 9 回合聚能环把ジ刷到 +3/回合，四个冠军座位零反应"；
+   * 而项目两次把 `ringspam` 放进池子的实验都判定"池子是弱杠杆"（第三次同型结论见 CHANGELOG v1.5.20）⇒
+   * 真正缺的是**信用分配**：把"对手在开环时我打断了他"变成一条**窄条件、可归因**的奖励。
+   * 怎么在不改引擎的前提下侦测"对手在开环"：环每回合多发 **+2/+3 ジ**（R10）⇒ 一次 `ep` 事件
+   * 的 `delta ≥ 2` 且不是我 ⇒ 这个对手正在开环。同一回合里**我**打中他、或用小雷作废了他的招 ⇒ 记一次打断。
+   * 权重刻意取小（默认 0.04，两次打断满额）⇒ 不改变主目标（胜负），只做方向性引导。
+   * 反证（np-test D39）：把 ringBreaks 记账删掉 / 权重设 0 ⇒ D39 立刻红。 */
+  let RING_W = 0.04;
+  function setRingReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) RING_W = v; return RING_W; }
+  function ringReward() { return { w: RING_W }; }
+
   let MIRROR_GAMES = 2;
   function setMirrorGames(k) {
     const v = Number(k);
@@ -1286,6 +1321,7 @@
     makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
+    setRingReward, ringReward, countRingBreaks,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

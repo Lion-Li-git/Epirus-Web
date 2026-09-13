@@ -1964,6 +1964,40 @@ t('D38 结算事件行的**显示顺序**（防御→中立→攻击→镜像；
   ok(fn.indexOf('list.map(') >= 0, 'orderEventsForDisplay 必须先 map 出副本（不许就地排序）');
   ok(!/list\.sort\(/.test(fn), 'orderEventsForDisplay 不许对入参 list 直接 sort（会打乱引擎事件数组）');
   ok(fn.indexOf('a.i - b.i') >= 0, '同档必须用原始下标做**稳定**排序（否则无关事件被打乱）');
+  ok(ui.indexOf("if (e.type === 'death') return [2, 1];") >= 0,
+    '**死亡结算必须排在伤害之后**（用户实测：第一版把 death 当中立 ⇒ 先死再掉血，很搞笑）');
+});
+
+t('D39 训练信号：打断开环者的奖励必须"窄条件 + 可归因"（纯函数行为断言）', function () {
+  /* 用户实测："对手连开 9 回合环把ジ刷到 +3，四个冠军座位零反应"。
+   * 项目已三次证明"往池子里加环流对手"是弱杠杆 ⇒ 真正缺的是**信用分配**：
+   * 把"对手开环时我打断了他"做成窄条件、可归因的小额奖励。这条用合成的**事件流**做行为断言。 */
+  const SK = R.SK;
+  ok(T.ringReward().w > 0, 'RING_W 默认必须 > 0（默认开）');
+  /* ① 对手1 开环（ep delta=3）+ 我打中他 ⇒ 记 1；② 对手2 开环 + 我用了小雷且他被作废 ⇒ 记 1 */
+  const evs = [
+    { type: 'ep', pid: 1, delta: 3 },
+    { type: 'damage', to: 1, source: 0, amt: 1 },
+    { type: 'ep', pid: 2, delta: 2 },
+    { type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T },
+    { type: 'voided', pid: 2 },
+  ];
+  eq(T.countRingBreaks(evs, 0), 2, '开环者被我打中 / 被我用小雷作废 ⇒ 各记一次打断');
+  eq(T.countRingBreaks(evs, 1), 0, '可归因：不是我打断的，一次都不许记给我');
+  /* ③ 窄条件：没人开环 ⇒ 不记（否则变成"随便打人就有奖"） */
+  eq(T.countRingBreaks([{ type: 'damage', to: 1, source: 0, amt: 1 }], 0), 0, '没人开环时不得记分');
+  /* ④ 普通ジ（delta=1）不算开环 */
+  eq(T.countRingBreaks([{ type: 'ep', pid: 1, delta: 1 }, { type: 'damage', to: 1, source: 0, amt: 1 }], 0), 0,
+    'delta=1 是普通ジ，不算开环');
+  /* ⑤ 同一个开环者被打中多次只记一次（避免刷分） */
+  eq(T.countRingBreaks([
+    { type: 'ep', pid: 1, delta: 3 },
+    { type: 'damage', to: 1, source: 0, amt: 1 },
+    { type: 'damage', to: 1, source: 0, amt: 1 },
+  ], 0), 1, '同一个开环者一局内只记一次打断');
+  /* ⑥ 能关掉（对照臂要用） */
+  eq(T.setRingReward(0), 0, 'setRingReward(0) 必须能关掉');
+  T.setRingReward(0.04);
 });
 
 t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {

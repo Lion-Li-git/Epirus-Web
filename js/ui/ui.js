@@ -198,6 +198,9 @@
   const EV_SUB_VOIDER = { cancel: 1, clash: 1, thunderRing: 1 };
   function evDisplayRank(e) {
     if (!e) return [1, 0];
+    /* v1.5.23（用户实测 22 回合）：**死亡结算必须排在造成它的伤害之后**。
+     * 第一版把 `death` 当"中立"⇒ 它跑到了伤害前面（"先死再掉血"，很搞笑）。 */
+    if (e.type === 'death') return [2, 1];
     if (EV_TIER_MIRROR[e.type] || (e.type === 'guardSet' && e.copied)) return [3, 0];
     if (EV_SUB_VOIDER[e.type]) return [1, 1];
     if (EV_TIER_DEF[e.type]) return [0, 0];
