@@ -1066,13 +1066,14 @@ t('D13 风格切片（复合适应度）必须真的打进 fit —— 且是**�
   const b = T.scoreMemberN(p, opps, 2, 3, 1, 0, 0);
   ok(b.styleGames === 2, '切片打开后必须真的打 2 局，实测 ' + b.styleGames);
   ok(b.styleRate >= 0 && b.styleRate <= 1, 'styleRate 必须是比率，实测 ' + b.styleRate);
-  ok(Math.abs((b.fit - b.fitNoDiv) - 0.5 * b.styleRate) < 1e-9,
-    'fit 比 fitNoDiv 多出的部分必须恰好是 w*styleRate（实测多出 ' + (b.fit - b.fitNoDiv).toFixed(6) + '，期望 ' + (0.5 * b.styleRate).toFixed(6) + '）');
+  /* v1.5.6：fit 的组成多了熵奖励 ⇒ 这里的"多出来的部分"要把它算进去（D15 管熵项本身） */
+  ok(Math.abs((b.fit - b.fitNoDiv) - (b.divBonus + 0.5 * b.styleRate)) < 1e-9,
+    'fit 比 fitNoDiv 多出的部分必须恰好是 熵奖励 + w*styleRate（实测多出 ' + (b.fit - b.fitNoDiv).toFixed(6) + '，期望 ' + (b.divBonus + 0.5 * b.styleRate).toFixed(6) + '）');
   ok(Math.abs(b.fitNoDiv - a.fitNoDiv) < 1e-9,
     '切片必须是**追加**：池子那部分 fit 不得被改变（无切片 ' + a.fitNoDiv + ' vs 有切片 ' + b.fitNoDiv + '）');
   T.setStyleSlice(null, 0, 0);
   const c = T.scoreMemberN(p, opps, 2, 3, 1, 0, 0);
-  ok(c.styleGames === 0 && Math.abs(c.fit - c.fitNoDiv) < 1e-9, '关掉切片后必须完全回到无切片状态');
+  ok(c.styleGames === 0 && Math.abs((c.fit - c.fitNoDiv) - c.divBonus) < 1e-9, '关掉切片后必须完全回到无切片状态（只剩熵奖励项）');
   /* 两端接线（结构性）：这类"两处各写一遍"的机制漏一端就静默半开（v1.5.0 的 mode 事故同型） */
   const pt = readFileSync('server/train-server.mjs', 'utf8');
   ok(pt.indexOf('setStyleSlice') >= 0, 'server 必须调 setStyleSlice');
@@ -1082,6 +1083,38 @@ t('D13 风格切片（复合适应度）必须真的打进 fit —— 且是**�
   ok(wk.indexOf('setStyleSlice') >= 0, 'worker 必须在**自己沙箱**里设切片（服务端那份改不到 worker）');
   ok(wk.indexOf('styleGames') >= 0, 'worker 必须回执 styleGames');
   ok(readFileSync('server/paralleltrain.mjs', 'utf8').indexOf('styleOppNames') >= 0, 'paralleltrain 必须把切片随消息下发');
+});
+
+t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励已恢复', function () {
+  /* v1.5.6（用户裁定）：用户回忆的"ep 奖励/惩罚"就是 stock 项，但门槛原先**写死 4/10**、与人数和模式无关
+   * ⇒ 5 血里 11 ep 就被当囤积。锚点：3 人局 → 奖励到 **3 ep**、惩罚 **>10 ep**；
+   * 5 人 · 5 血 → 奖励到 **5 ep**、惩罚 **>20 ep**。这里直接点纯函数的语义，不靠跑训练看数字。 */
+  const B = T.economyStock;
+  ok(typeof B === 'function', 'T.economyStock 必须存在（纯函数，便于钉门槛）');
+  const t3 = T.economyTargets(3, 'multi'), t5 = T.economyTargets(5, 'long'), t4 = T.economyTargets(4, 'multi');
+  eq(t3.target, 3, '3 人局奖励点 = 3'); eq(t3.cap, 10, '3 人局惩罚点 = 10');
+  eq(t5.target, 5, '5 人 5 血奖励点 = 5'); eq(t5.cap, 20, '5 人 5 血惩罚点 = 20');
+  eq(t4.target, 4, '4 人局落在中间（奖励点 4）');
+  const b3 = B(3, 3, 'multi'), b10 = B(10, 3, 'multi'), b11 = B(11, 3, 'multi');
+  ok(b3 > 0, '3 人局：到 3 ep 应有攒钱奖励（实测 ' + b3.toFixed(4) + '）');
+  ok(Math.abs(b10 - b3) < 1e-9, '3..10 ep 不奖不罚（实测 ' + b10.toFixed(4) + '）');
+  ok(b11 < b10, '超过 10 ep 开始惩罚（实测 ' + b11.toFixed(4) + ' < ' + b10.toFixed(4) + '）');
+  const l5 = B(5, 5, 'long'), l20 = B(20, 5, 'long'), l21 = B(21, 5, 'long');
+  ok(l5 > 0 && Math.abs(l20 - l5) < 1e-9, '5 人 5 血：到 5 ep 满额、到 20 ep 仍不罚');
+  ok(l21 < l20, '超过 20 ep 才开始惩罚（实测 ' + l21.toFixed(4) + ' < ' + l20.toFixed(4) + '）');
+  ok(B(15, 5, 'long') > B(15, 3, 'multi'), '同一个 15 ep：长程 5 人必须比 3 人 3 血宽松（人数/模式真的进了门槛）');
+  /* 熵奖励：从 0 恢复，且权重必须小（"奖惩不用给太多"） */
+  const er = T.economyReward();
+  ok(er.divW > 0 && er.divW <= 0.2, '熵奖励权重要小而正（实测 divW=' + er.divW + '）');
+  const p = Pol.makePolicy(0.25);
+  Pol.setRng(T.mulberry32(4242));
+  const r = T.scoreMemberN(p, [{ name: 'random', sel: Bots.pickRandom }], 2, 3, 1, 0, 0);
+  ok(Math.abs(r.fit - (r.fitNoDiv + r.divBonus + r.styleWeight * r.styleRate)) < 1e-9,
+    'fit 必须 = 池子分 + 熵奖励 + 风格切片（实测 fit=' + r.fit.toFixed(5) + '）');
+  ok(Math.abs(r.divBonus - r.divW * r.divNorm) < 1e-9,
+    'divBonus 必须 = divW × divNorm（实测 ' + r.divBonus.toFixed(5) + ' vs ' + (r.divW * r.divNorm).toFixed(5) + '）');
+  ok(r.avgStock != null, '必须回报 avgStock（攒钱分）便于诊断');
+  T.setEconomyReward({ reset: true });   // 复位，别污染后面的用例
 });
 
 t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放者自己', function () {

@@ -555,13 +555,52 @@
   }
 
   const DIV_BETA = 0.60;   // 技能覆盖熵权重
-  const STOCK_BONUS = 0.05;  // 0~4 ep 区间的攒钱奖励上限
-  const HOARD_PEN = 0.12;    // 11+ ep 的囤积惩罚上限
+  const STOCK_BONUS = 0.05;  // 攒钱奖励上限（到 target 点满额）
+  const HOARD_PEN = 0.12;    // 囤积惩罚上限（到 2×cap 满额）
+
+  /* ===== 经济 shaping 的门槛：按 (人数, 模式) 定（v1.5.6，用户裁定）=====
+   * 用户回忆的"ep 奖励/惩罚"就是这个 stock 项；此前门槛**写死 4/10**、与人数和模式无关，于是
+   * 5 血里 11 ep 就被当囤积。用户给的锚点：
+   *   · 3 人局       → 奖励到 **3 ep**、惩罚 **>10 ep**
+   *   · 5 人 · 5 血   → 奖励到 **5 ep**、惩罚 **>20 ep**
+   * 取：奖励点 T = 3（≤3 人）/ 4（4 人）/ 5（5 人）；惩罚点 C = 10（3 血）/ 20（长程 5 血）。
+   * 其余组合落在两端之间且单调 ⇒ 不再出现"5 血里 11 ep 就被罚"的错配。 */
+  function economyTargets(n, mode) {
+    return { target: (n <= 3 ? 3 : (n >= 5 ? 5 : 4)), cap: (mode === 'long' ? 20 : 10) };
+  }
+  let ECO_T = null, ECO_C = null;     // 显式覆盖（默认 null ⇒ 走 (n, mode) 推导）
+  let DIV_W = 0.06;
+  /* 单局"攒钱/囤积"分：0→T 线性升到满额 ⇒ T..C 不奖不罚 ⇒ 超过 C 按超出比例罚（2C 满额）。
+   * 提成纯函数是为了能**直接单测门槛语义**（np-test D15），不必靠跑一遍训练去看数字。 */
+  function economyStock(mEp, n, mode) {
+    const d = economyTargets(n, mode);
+    const T = Math.max(1, ECO_T != null ? ECO_T : d.target);
+    const C = Math.max(T, ECO_C != null ? ECO_C : d.cap);
+    if (mEp <= T) return STOCK_BONUS * (mEp / T);
+    if (mEp <= C) return STOCK_BONUS;
+    return STOCK_BONUS - HOARD_PEN * Math.min(1, (mEp - C) / C);
+  }
+  /* 技能覆盖熵奖励（v1.5.6：**用户要求恢复**；Q3 曾把它移出目标函数）。
+   * Q3 的理由仍成立（熵与"见过那个状态"是两回事、光加熵会推向乱打），所以权重**给得很小**（DIV_W），
+   * 只当"别把自己塔成一招"的弱先验 —— 与"奖惩不用给太多"的要求一致。 */
+  function setEconomyReward(o) {
+    o = o || {};
+    if (o.target != null) ECO_T = Math.max(1, Number(o.target));
+    if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
+    if (o.divW != null) DIV_W = Math.max(0, Number(o.divW));
+    if (o.reset) { ECO_T = null; ECO_C = null; }
+    return economyReward();
+  }
+  function economyReward() {
+    return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W,
+      stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
+      at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
+  }
 
   /* N 人适应度（N19）：名次基础分（1/0.6/0.2）+ 轻量 shaped 项 */
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
     let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0;
-    let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0;
+    let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let imitSum = 0, imitGames = 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
      * 此前它是每局随机抽的噪声（30% 的局抽 h∈1..4）：个体不携带它 ⇒ 选择压力
@@ -626,10 +665,8 @@
       const imit = (imitB > 0 && agg._mt) ? (agg._mm || 0) / agg._mt : 0;
       if (imitB > 0) { imitSum += imit; imitGames++; }
       const mEp = econ ? econ.rec.maxEp : 0;
-      let stock;
-      if (mEp <= 4) stock = STOCK_BONUS * (mEp / 4);
-      else if (mEp <= 10) stock = STOCK_BONUS;
-      else stock = STOCK_BONUS - HOARD_PEN * Math.min(1, (mEp - 10) / 10);
+      const stock = economyStock(mEp, n, TRAIN_MODE);   // 门槛按 (人数, 模式)：3 人→3/10、5 人 5 血→5/20
+      stockSum += stock;
       deepSum += econ ? econ.rec.heavy4 : 0;
 
       // 花得出：把攒的 ep 换成贵技能（2 次封顶）——只有 save 没有 conv 就是 farmer，故两项并重
@@ -671,7 +708,10 @@
     // 归一化只按"当时可负担的动作数"（千问：拿 28 归一化是在量一个恒为 0 的量）
     const affN = Math.max(2, Object.keys(agg.aff || {}).length || (R.skills || []).length);
     const divNorm = uTot > 0 ? H / Math.log(affN) : 0;
-    const divBonus = 0;   // Q3：覆盖熵移出目标函数，只作诊断（它和"见过那个状态"是两回事）
+    /* v1.5.6：按用户裁定**恢复**技能熵奖励（Q3 曾把它移出目标函数）。
+     * 权重给得小（DIV_W=0.06，满额 +0.06），与 stock（+0.05 / −0.12）同量级 ⇒ 两项加起来仍远小于
+     * 胜负项（base 1.0/0.3），符合"奖惩也不用给太多"。 */
+    const divBonus = DIV_W * divNorm;
     /* ===== 风格表现切片（v1.5.2，见模块头部 setStyleSlice 的说明）=====
      * 追加在池子预算之外 ⇒ 不摊薄原有练习量；原生规则（regen=0）⇒ 量的是真实强度。 */
     let styleGames = 0, styleFirst = 0;
@@ -698,6 +738,8 @@
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
       divBonus: divBonus,
+      divW: DIV_W,
+      avgStock: econGames ? stockSum / econGames : 0,
       distinct: Object.keys(agg.use).length,
       first: first, second: second, games: played,
       firstRate: played ? first / played : 0,
@@ -990,6 +1032,7 @@
 
   global.EpirusTrainer = {
     makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice,
-    scoreMemberN, oneGameN, evalN, policyChooserN, wrapBotN, pickTargetN, pickTarget2N, rankOf
+  setEconomyReward, economyReward, economyTargets, economyStock,
+    scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);
