@@ -26,12 +26,34 @@
     roundStartSnapshot: null, warnedChampNoTrain: false, undoUsed: false
   };
 
+  /* v1.5.11（用户裁定"按你的意思做"）：终局收缩参数（起扣回合 / 每回合扣血）从页面控制区读，
+   * 0 = 关闭；空/非法值回落到规则默认。经 createState 的 opts 传入（内部浅拷贝，不污染 MODES）。 */
+  const SD_KEY = 'epirus.sudden';
+  function sdOpts() {
+    const on = $('inp-sd'), dm = $('inp-sd-dmg');
+    if (!on || !dm) return null;
+    const a = parseInt(on.value, 10), b = parseInt(dm.value, 10);
+    if (!isFinite(a) || a < 0) return null;
+    return { suddenDeath: a, suddenDeathDmg: (isFinite(b) && b > 0 ? b : 1) };
+  }
+  function loadSd() {
+    try {
+      const j = JSON.parse(localStorage.getItem(SD_KEY) || 'null');
+      if (j && typeof j.suddenDeath === 'number' && $('inp-sd')) {
+        $('inp-sd').value = j.suddenDeath;
+        if ($('inp-sd-dmg')) $('inp-sd-dmg').value = j.suddenDeathDmg || 1;
+      }
+    } catch (e) { /* ignore */ }
+  }
+  function saveSd() {
+    try { localStorage.setItem(SD_KEY, JSON.stringify(sdOpts() || {})); } catch (e) { /* ignore */ }
+  }
   function newGame() {
     const n = B.players || 2;
     B.multi = n > 2;
     if (typeof syncDiffOptions === 'function') syncDiffOptions();
     syncModeOptions();   // v1.4.0：按人数校验模式（原来无条件改回 'multi'，会吃掉用户选的长程模式）
-    B.state = S.createState(B.modeKey, null, n);
+    B.state = S.createState(B.modeKey, null, n, sdOpts());
     B.roundStarted = false; B.locked = false; B.aiKey = null;
     B.evCursor = 0; B.transcript = []; B.aiHistory = [];
     B.roundStartSnapshot = null; B.warnedChampNoTrain = false; B.undoUsed = false;
@@ -1033,6 +1055,10 @@
     $('btn-newgame').onclick = newGame;
     /* v1.5.10（用户要求）：清掉本机冠军、改回内置冠军 */
     if ($('btn-champ-reset')) $('btn-champ-reset').onclick = useBuiltinChampion;
+    /* v1.5.11：终局收缩参数入口（读回本机上次的值 + 改动即存） */
+    loadSd();
+    if ($('inp-sd')) $('inp-sd').addEventListener('change', saveSd);
+    if ($('inp-sd-dmg')) $('inp-sd-dmg').addEventListener('change', saveSd);
     $('btn-undo').onclick = undo;
     $('btn-exportlog').onclick = exportLog;
     $('btn-train').onclick = connectRemoteTrain;

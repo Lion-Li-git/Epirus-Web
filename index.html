@@ -10,7 +10,7 @@
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.5.10 （2 人 + 3~5 人）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.5.11 （2 人 + 3~5 人）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
   </header>
 
   <nav class="tabs">
@@ -47,6 +47,10 @@
         </label>
         <button class="ctl primary" id="btn-newgame">新对局</button>
         <button class="ctl" id="btn-champ-reset" title="清除本机自训/导入的冠军，改回内置冠军（页面原本优先用本机保存的那个）">用内置冠军</button>
+        <label title="终局收缩：从第 N 回合起，每回合末全员扣血（不可格挡、不计战功）。0 = 关闭。standard/multi 上限是 60 ⇒ 实际只在长程模式触发。">终局收缩
+          <input type="number" id="inp-sd" min="0" max="500" step="10" value="100" style="width:58px">
+          <input type="number" id="inp-sd-dmg" min="1" max="5" step="1" value="1" style="width:42px">血/回合
+        </label>
         <button class="ctl" id="btn-undo">悔一步（重开本回合）</button>
         <button class="ctl" id="btn-exportlog">导出对局记录</button>
         <button class="ctl" id="btn-lastlog">上局记录</button>
@@ -117,16 +121,16 @@
 <div id="overlay-root" class="overlay hidden"><div class="card" id="overlay-card"></div></div>
 
 <!-- 引擎（加载顺序即依赖顺序） -->
-<script src="js/core/rules.js?v=mtzcghyu"></script>
-<script src="js/core/state.js?v=mtzcghyu"></script>
-<script src="js/core/resolve.js?v=mtzcghyu"></script>
-<script src="js/core/play.js?v=mtzcghyu"></script>
-<script src="js/train/bots.js?v=mtzcghyu"></script>
-<script src="js/train/policy.js?v=mtzcghyu"></script>
-<script src="js/train/evo.js?v=mtzcghyu"></script>
-<script src="js/train/trainer.js?v=mtzcghyu"></script>
-<script src="js/bundled-champion.js?v=mtzcghyu"></script>
-    <script src="js/bundled-champion-3p.js?v=mtzcghyu"></script>
-<script src="js/ui/ui.js?v=mtzcghyu"></script>
+<script src="js/core/rules.js?v=mtzcmis7"></script>
+<script src="js/core/state.js?v=mtzcmis7"></script>
+<script src="js/core/resolve.js?v=mtzcmis7"></script>
+<script src="js/core/play.js?v=mtzcmis7"></script>
+<script src="js/train/bots.js?v=mtzcmis7"></script>
+<script src="js/train/policy.js?v=mtzcmis7"></script>
+<script src="js/train/evo.js?v=mtzcmis7"></script>
+<script src="js/train/trainer.js?v=mtzcmis7"></script>
+<script src="js/bundled-champion.js?v=mtzcmis7"></script>
+    <script src="js/bundled-champion-3p.js?v=mtzcmis7"></script>
+<script src="js/ui/ui.js?v=mtzcmis7"></script>
 </body>
 </html>

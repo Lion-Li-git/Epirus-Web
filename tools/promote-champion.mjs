@@ -108,3 +108,16 @@ console.log('   rulesFingerprint = ' + fp + '（bundle 里记的 = ' + fingerpri
 console.log('   examScoreAtBuild = ' + meta.examScoreAtBuild + '（' + EXG + ' 局）  缓存戳 ' + before + ' → ' + (html.match(/\?v=[0-9a-z]+/gi) || [])[0]);
 console.log('   ⚠️ 别忘了：node tools/np-test.mjs（D16 指纹 + D14）+ node tools/battle-test.mjs（真浏览器对战）');
 console.log('   ⚠️ 且注意：localStorage 里已有冠军的用户**不会**被这次换包影响（REVIEW §11.1）。');
+
+/* 4) 自动跑一遍 skill report（用户 2026-09-13：「以后每次冠军有大变化的时候都可以做一下」）
+ * 它回答的是"每个技能的实际强度 vs 使用率"（高使用+负强度=坑 / 零使用+正强度=没学会的强招），
+ * 与 champ-audit 的"打架活跃度"互补 —— 换冠军时正是最该看它的时候。用 --no-skill-report 可跳过。 */
+if (!process.argv.includes('--no-skill-report')) {
+  const nP = Number(meta.n || 5);
+  const outHtml = 'docs/skill-report.html';
+  console.log('\n== 自动跑技能报告（' + nP + ' 人，每条件 6 局）→ ' + outHtml + ' ==');
+  const sk = spawnSync(process.execPath, ['tools/skill-report.mjs', String(nP), '6', outHtml], { cwd: ROOT, encoding: 'utf8' });
+  const lines = ((sk.stdout || '') + (sk.stderr || '')).trim().split(/\r?\n/);
+  lines.slice(-8).forEach(function (l) { console.log('   ' + l); });
+  console.log('   （完整报告：' + outHtml + '，可直接双击打开）');
+}

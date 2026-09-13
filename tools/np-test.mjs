@@ -1192,8 +1192,13 @@ t('D18 哨声惩罚：熬到回合上限的胜利必须打折（反摆烂）', f
   T.setFightReward({ dealW: 0.05 });
   eq(T.fightReward().dealW, 0.05, '出手权重可调（实测 ' + T.fightReward().dealW + '）');
   T.setFightReward({ reset: true });                      // 复位
-  eq(T.fightReward().whistlePen, 0, 'reset 后回到旧行为（0）');
+  eq(T.fightReward().override, null, 'reset 后回到"自动"（override=null）');
   eq(T.fightReward().dealW, 0.01, 'reset 后出手权重回到 0.01');
+  /* v1.5.11：**长程训练默认开**（0.5），其余默认关（0）—— 这是用户"按你的意思做"那条 */
+  T.setTrainMode('multi'); eq(T.fightReward().whistlePen, 0, 'multi 默认不罚（既有口径不变）');
+  T.setTrainMode('long'); eq(T.fightReward().whistlePen, 0.5, 'long 默认罚 0.5（长程默认开）');
+  T.setFightReward({ whistlePen: 0 }); eq(T.fightReward().whistlePen, 0, '显式覆盖优先于自动默认');
+  T.setFightReward({ reset: true }); T.setTrainMode('multi');
 });
 
 t('D19 终局收缩是**全局规则**：第 100 回合起每回合末全员 −1 血（不可格挡、不计来源）', function () {
@@ -1238,6 +1243,16 @@ t('D19 终局收缩是**全局规则**：第 100 回合起每回合末全员 −
   const hpD = st5.p[0].hp;
   X.endTurn(st5);
   eq(st5.p[0].hp, hpD, '模式把 suddenDeath 写成 0 时必须真的关掉（可覆盖）');
+  /* ⑥ v1.5.11：**起扣回合与每回合扣血量都可调**（页面入口经 createState 的 opts 传入）
+   *    —— 且必须是浅拷贝，不能污染全局共享的 MODES 对象（否则会串到之后所有对局） */
+  const st6 = S.createState('multi', { next: T.mulberry32(7) }, 3, { suddenDeath: 5, suddenDeathDmg: 2 });
+  st6.round = 5;
+  const hpE = st6.p[0].hp;
+  X.endTurn(st6);
+  eq(st6.p[0].hp, hpE - 2, 'suddenDeathDmg=2 时每回合必须扣 2 血（实测 ' + st6.p[0].hp + ' vs ' + hpE + '）');
+  eq(st6.mode.suddenDeath, 5, 'createState 的 opts 必须能覆盖起扣回合');
+  eq(R.MODES.multi.suddenDeath, undefined, 'opts 覆盖不得污染全局 MODES（必须是浅拷贝）');
+  eq(R.SUDDEN_DEATH_DMG, 1, '全局默认每回合扣 1 血');
 });
 
 t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放者自己', function () {

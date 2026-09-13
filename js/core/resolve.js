@@ -834,12 +834,14 @@
     /* v1.5.10（用户裁定）：阈值走**全局规则** `R.SUDDEN_DEATH`，模式可用自己的 `suddenDeath` 覆盖
      * （写 0 = 该模式关掉）。此前只有 long 模式带这个字段 ⇒ standard/multi 完全没有终局收缩。 */
     const sdOn = (state.mode && state.mode.suddenDeath != null) ? state.mode.suddenDeath : (R.SUDDEN_DEATH || 0);
+    /* v1.5.11：每回合扣多少血也可调（模式 `suddenDeathDmg` → 全局 `SUDDEN_DEATH_DMG`） */
+    const sdDmg = (state.mode && state.mode.suddenDeathDmg != null) ? state.mode.suddenDeathDmg : (R.SUDDEN_DEATH_DMG || 1);
     if (sdOn > 0 && state.round >= sdOn) {
       for (let i = 0; i < playerCount(state); i++) {
         const p = state.p[i];
         if (p.hp <= 0) continue;
         if (state.round === sdOn && i === 0) ev(state, { type: 'hidden', name: '终局收缩' });
-        deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: null, bypassGuards: true, noMine: true }, i, { reason: '终局收缩' });
+        deliverDamage(state, { amt: sdDmg, type: R.DMG.NORMAL, source: null, bypassGuards: true, noMine: true }, i, { reason: '终局收缩' });
       }
     }
     // 挑衅合规检查（本回合义务；净化不能免除已生效义务 R54）

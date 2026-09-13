@@ -391,6 +391,13 @@ node tools/rules-fingerprint.mjs                # 当前规则指纹（bundle �
 **换冠军的四步**：① `champ-audit` 看 A（考卷）/B（伤害/局、cost≥3 重击）/C（盾/局、零伤害率、平局率）/D（反弹墙）；
 ② `promote-champion`（会先跑一遍考卷+自对局并把警告打出来，写完做**回读自检** —— 第一版写错槽位就是靠它+np-test 发现的）；
 ③ `np-test`（D16 指纹 + N19 冠军包）+ `smoke`；④ `battle-test`（真浏览器，人类座必须**真的进攻**，见 11.6）。
+⑤ **技能报告**：`promote-champion` 已**自动跑** `tools/skill-report.mjs`（人数取包的 `n`，每条件 6 局）并打印摘要
+（坑 / 没学会的强招）；要单独跑：`node tools/skill-report.mjs 5 6 docs/skill-report.html`。
+用户 2026-09-13：「以后每次冠军有大变化的时候都可以做一下」⇒ 已固化进 ②。
+
+**规则参数（v1.5.11 起可调）**：终局收缩 = 全局 `R.SUDDEN_DEATH`（默认 100）/ `R.SUDDEN_DEATH_DMG`（默认 1），
+模式可用 `suddenDeath` / `suddenDeathDmg` 覆盖，**页面控制区也有入口**（`#inp-sd` / `#inp-sd-dmg`，值存 `epirus.sudden`）；
+传入方式是 `S.createState(key, rng, n, { suddenDeath, suddenDeathDmg })`（内部浅拷贝，别直接改 `R.MODES`）。
 
 **训练锁**：`tools/ring2-run.mjs` 跑训练时写 `docs/artifacts/.training.lock`（每个 seed 会把 bundle
 临时覆盖成热启动基线 v1.3.58）⇒ **训练期间不要跑 np-test D16 / champ-audit / battle-test**（会读到临时值）。

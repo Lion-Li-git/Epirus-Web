@@ -144,10 +144,14 @@
    * 但作为规则它现在是统一的（将来任何模式把上限调过 100 都会自动接上）。
    * 模式仍可用自己的 `suddenDeath` 覆盖（写 0 = 该模式关掉）。 */
   const SUDDEN_DEATH = 100;
+  /* v1.5.11（用户裁定"按你的意思做"）：**每回合扣多少血**也做成可调（原写死 1）。
+   * 模式可用 `suddenDeathDmg` 覆盖；页面在对局控制区有入口（`#inp-sd` / `#inp-sd-dmg`），
+   * 经 `S.createState(..., { suddenDeath, suddenDeathDmg })` 传入（内部浅拷贝，不污染共享的 MODES 对象）。 */
+  const SUDDEN_DEATH_DMG = 1;
 
   global.EpirusRules = {
     SK, CAT, DMG, skills, byKey, MULTI_ONLY, AVAILABLE_2P, AVAILABLE_MULTI,
     ATK_EFFECT, TAUNT_SATISFY, LIGHTNING, GUARD_FAMILY, MINI_T_IMMUNE,
-    REFLECTABLE, MODES, MODE_DEFAULT, MAX_ROUNDS, SUDDEN_DEATH
+    REFLECTABLE, MODES, MODE_DEFAULT, MAX_ROUNDS, SUDDEN_DEATH, SUDDEN_DEATH_DMG
   };
 })(typeof window !== 'undefined' ? window : globalThis);

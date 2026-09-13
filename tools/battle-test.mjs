@@ -162,6 +162,13 @@ async function main() {
   check('模式可设为多人/long', modeSet === 'multi' || modeSet === 'long', 'mode=' + modeSet);
   check('难度可设为 champ（线上冠军当对手）', diffSet === 'champ', 'diff=' + diffSet);
   check('冠军包已加载（页面侧 EPIRUS_CHAMPION_3P 存在）', await evalJS('typeof window.EPIRUS_CHAMPION_3P !== "undefined"'));
+  /* v1.5.11：终局收缩参数入口（起扣回合 / 每回合扣血）—— 存在、可改、会持久化 */
+  const sd = await evalJS(`(()=>{const a=document.getElementById('inp-sd'), b=document.getElementById('inp-sd-dmg'); return {a:!!a, b:!!b, v:a?a.value:null, d:b?b.value:null};})()`);
+  check('终局收缩参数入口存在', sd.a && sd.b, '起扣=' + sd.v + ' 每回合=' + sd.d + ' 血');
+  await evalJS(`(()=>{const a=document.getElementById('inp-sd'); a.value='120'; a.dispatchEvent(new Event('change'));})()`);
+  const sdSaved = await evalJS(`(()=>{try{return (JSON.parse(localStorage.getItem('epirus.sudden')||'{}')||{}).suddenDeath;}catch(e){return 'ERR';}})()`);
+  check('改参数会持久化到 localStorage', sdSaved === 120, '存的值=' + sdSaved);
+  await evalJS(`(()=>{const a=document.getElementById('inp-sd'); a.value='100'; a.dispatchEvent(new Event('change'));})()`);
   await shot(join(OUT, 'battle-01-start.png'));
 
   /* ── P0 主动出招（**不再摆烂**）──

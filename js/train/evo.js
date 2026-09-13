@@ -605,20 +605,29 @@
    * ⇒ 光看考卷会把"摆烂"当成强度（千问体检 §5-4 早就点过："能量出'赢'还是'熬'"）。
    * 这里给"熬出来的胜利"打折：终局时**还有 ≥2 人活着**（没人被淘汰）⇒ 判为哨声局。
    * 反证（np-test D18）：把 rankCredit 里的哨声判断删掉，D18 立刻红。 */
-  let WHISTLE_PEN = 0;      // 0=旧行为；0.5=熬出来的胜利只算一半
+  let WHISTLE_PEN = null;   // null = **自动**（长程默认 0.5、其余 0）；数字 = 显式覆盖
   let DEAL_W = 0.01;        // 出手奖励权重（原值写死 0.01）
+  /* v1.5.11（用户裁定"那就按照你的意思做吧"）：**长程训练默认开哨声惩罚**。
+   * 理由：长程局回合上限高（140），而规则层的终局收缩要到第 100 回合才起效 ⇒ 在那之前"熬"仍然划算；
+   * 实测（REVIEW §11.7）0.5 能把这类摆烂改掉（回合 55→14~39、cost≥3 重击 0→5~9）。
+   * 其余模式默认 0 ⇒ 既有口径逐位不变（D18 钉住这两条）。 */
+  function whistlePenNow() {
+    if (WHISTLE_PEN != null) return WHISTLE_PEN;
+    return (TRAIN_MODE === 'long') ? 0.5 : 0;
+  }
   function rankCredit(rank, aliveEnd) {
     const base = rank === 1 ? 1.0 : (rank === 2 ? 0.3 : 0.0);
-    return (WHISTLE_PEN > 0 && aliveEnd >= 2) ? base * (1 - WHISTLE_PEN) : base;
+    const pen = whistlePenNow();
+    return (pen > 0 && aliveEnd >= 2) ? base * (1 - pen) : base;
   }
   function setFightReward(o) {
     o = o || {};
     if (o.whistlePen != null) WHISTLE_PEN = Math.max(0, Math.min(1, Number(o.whistlePen)));
     if (o.dealW != null) DEAL_W = Math.max(0, Number(o.dealW));
-    if (o.reset) { WHISTLE_PEN = 0; DEAL_W = 0.01; }
+    if (o.reset) { WHISTLE_PEN = null; DEAL_W = 0.01; }
     return fightReward();
   }
-  function fightReward() { return { whistlePen: WHISTLE_PEN, dealW: DEAL_W }; }
+  function fightReward() { return { whistlePen: whistlePenNow(), override: WHISTLE_PEN, dealW: DEAL_W }; }
 
   /* ===== 技能覆盖熵（v1.5.8：**只统计非ジ动作**，用户裁定）=====
    * 为什么要排除ジ：熵是按**动作分布**算的，而"攒钱/等待"就是反复出ジ ⇒ 攒钱会把熵压到极低

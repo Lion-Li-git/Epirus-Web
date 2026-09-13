@@ -42,7 +42,15 @@
    * N人：p/actions 长度=n；技能目标写在 action.target（resolve 层据此结算）。 */
   function createState(modeKey, rng, n, opts) {
     const epRegen = (opts && opts.regen) ? Math.max(0, Math.floor(opts.regen)) : 0;
-    const mode = R.MODES[modeKey] || R.MODES[R.MODE_DEFAULT];
+    const baseMode = R.MODES[modeKey] || R.MODES[R.MODE_DEFAULT];
+    /* v1.5.11：允许调用方（页面控制区 / 实验工具）覆盖终局收缩参数。
+     * ⚠️ 必须**浅拷贝** —— `R.MODES[key]` 是全局共享对象，直接改会污染之后所有对局。 */
+    const mode = (opts && (opts.suddenDeath != null || opts.suddenDeathDmg != null))
+      ? Object.assign({}, baseMode, {
+        suddenDeath: (opts.suddenDeath != null ? opts.suddenDeath : baseMode.suddenDeath),
+        suddenDeathDmg: (opts.suddenDeathDmg != null ? opts.suddenDeathDmg : baseMode.suddenDeathDmg)
+      })
+      : baseMode;
     const N = (typeof n === 'number' && n >= 2) ? Math.floor(n) : 2;
     const names = defaultNames(N);
     const p = [];
