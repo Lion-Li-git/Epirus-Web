@@ -106,6 +106,12 @@
   const GUARD_FAMILY = [SK.GUARD, SK.REFLECT, SK.BAGUA, SK.SHIFT, SK.JINSHIELD, SK.ARMOR, SK.PROTO, SK.HOLO];
   // 小雷豁免：仅防御/反弹/原型制御
   const MINI_T_IMMUNE = [SK.GUARD, SK.REFLECT, SK.PROTO];
+  /* N14 镜面反射（v1.5.16 用户裁定）：**没有"无可复制"** —— 所有技能都能复制。
+   * 非伤害类技能的效果落在**使用者自己身上**（相当于自己也摆了那个架势 / 也蓄了能 / 也架了雷）；
+   * 这张表 = 有"自效果"可复制的技能，其余非伤害技能复制后只有"空指"（指向保留、本身无效果）。
+   * 结算实现见 `resolve.js` 的 `applyMirrorSelf`；`np-test D23` 用它做**穷举守门**：
+   * 技能表里任何一个 key 都必须"要么可复制伤害（copyEffect 非空）、要么在这张表里"。 */
+  const MIRROR_SELF = [SK.JI, SK.CHARGE, SK.RING, SK.MINE, SK.ROD, SK.PURIFY].concat(GUARD_FAMILY);
   // 反弹可反射的攻击（README 仅 枪/坦克）
   const REFLECTABLE = [SK.GUN, SK.TANK];
 
@@ -151,7 +157,7 @@
 
   global.EpirusRules = {
     SK, CAT, DMG, skills, byKey, MULTI_ONLY, AVAILABLE_2P, AVAILABLE_MULTI,
-    ATK_EFFECT, TAUNT_SATISFY, LIGHTNING, GUARD_FAMILY, MINI_T_IMMUNE,
+    ATK_EFFECT, TAUNT_SATISFY, LIGHTNING, GUARD_FAMILY, MINI_T_IMMUNE, MIRROR_SELF,
     REFLECTABLE, MODES, MODE_DEFAULT, MAX_ROUNDS, SUDDEN_DEATH, SUDDEN_DEATH_DMG
   };
 })(typeof window !== 'undefined' ? window : globalThis);

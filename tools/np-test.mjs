@@ -1426,5 +1426,124 @@ t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放
   eq(st.p[2].hp, 3, '被套盾者自己的技能被无效化（枪没打出去）');
 });
 
+t('D23 镜面反射：没有"无可复制" —— 非伤害类复制到自己身上 + 对 t2 空指（v1.5.16 用户裁定）', function () {
+  /* 用户裁定原文：「没有"无可复制"这回事 —— 所有技能都能复制」：架势/自增益/能量类复制到**使用者自己**
+   * 身上（相当于自己也摆了那个架势 / 也蓄了能），同时对 t2 形成一个**"空指"**（指向保留、本身无效果，
+   * 但**要参与连带/传导判定**）。t1 本回合行动被作废时才是"无可复制"。
+   * 反证：① 删掉 applyMirrorSelf 的 default 分支 ② 把 guardOf 改回只读 a.key
+   *       ③ 把大雷快照的 snapT2 去掉 —— 三者任一，本用例立刻红。 */
+  function mk4() {
+    const s = S.createState('multi', { next: mulberry32(11) }, 4);
+    for (const q of s.p) q.ep = 6;
+    X.startTurn(s);
+    return s;
+  }
+  const cnt = function (st, type) {
+    return st.events.filter(function (e) { return e.type === type; }).length;
+  };
+
+  /* ① 复制【反弹】⇒ 自己真的获得反弹架势（空指 → t2），且不再发"无可复制" */
+  let st = mk4();
+  S.attemptAction(st, 1, R.SK.REFLECT, {});
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+  S.attemptAction(st, 2, R.SK.GUN, { target: 0 });
+  S.attemptAction(st, 3, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(cnt(st, 'mirrorNoEffect'), 0, '不该出现"无可复制"（t1 有行动）');
+  eq(cnt(st, 'mirrorCopySelf'), 1, '应有一条"复制到自己身上"');
+  const g0 = X.guardOf(st, 0);
+  ok(g0 && g0.kind === 'reflect', '复制到的反弹必须是**真架势**（实测 ' + JSON.stringify(g0) + '）');
+  eq(st.p[0].hp, 3, '复制来的反弹挡住 P2 的枪');
+  eq(st.p[2].hp, 2, '反弹把枪弹回 P2（R20：枪可被反弹）');
+
+  /* ② 用户的例子（N14 原话）：a 复制 b 的【反弹】并指向 c ⇒ d 用大雷打 a
+   *    ⇒ c 吃连带；a、b 因为有反弹都不受影响。 */
+  st = mk4();
+  S.attemptAction(st, 1, R.SK.REFLECT, {});                       // b
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 }); // a：复制 b，空指 → c
+  S.attemptAction(st, 2, R.SK.JI, {});                            // c
+  S.attemptAction(st, 3, R.SK.BIG_T, { target: 0 });              // d：大雷打 a
+  X.resolveActions(st);
+  eq(st.p[0].hp, 3, 'a 有复制来的反弹 ⇒ 不受大雷影响（复制来的架势在声明时就生效）');
+  eq(st.p[1].hp, 3, 'b 有自己的反弹 ⇒ 不受连带影响（N22：无对外目标的防御完全挡住）');
+  eq(st.p[2].hp, 1, 'c 是空指对象 ⇒ 必须吃 2 点大雷连带（空指仍算"指向"）');
+  ok(st.events.some(function (e) { return e.type === 'bigTChain' && e.to === 2; }), '必须有指向 c 的连带事件');
+  ok(st.actions[0] && !st.actions[0].voided, 'a 的镜面反射不该被大雷无效化（复制到防御族 ⇒ 算防御）');
+
+  /* ③ 自增益/能量类也复制到自己身上：复制【ジ】⇒ 自己 +1 ep（镜面反射 3 ⇒ 6-3+1=4） */
+  st = mk4();
+  S.attemptAction(st, 1, R.SK.JI, {});
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  S.attemptAction(st, 3, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[0].ep, 4, '复制【ジ】应给使用者自己 +1 ep');
+
+  /* ④ 复制【蓄能】的珠类型取**使用者自己**的选择，不读 t1 的（t1 蓄哪种珠是隐藏信息，见 D22） */
+  st = mk4();
+  S.attemptAction(st, 1, R.SK.CHARGE, { bead: 'elec' });
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2, bead: 'boom' });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  S.attemptAction(st, 3, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[0].boom, 1, '复制蓄能应得使用者自己选的爆珠');
+  eq(st.p[0].elec, 0, '不得因为 t1 蓄了电珠就白拿电珠（那等于泄漏隐藏信息）');
+
+  /* ⑤ 唯一的合法"无可复制"：t1 本回合行动已被作废 */
+  st = mk4();
+  S.attemptAction(st, 1, R.SK.GUN, { target: 3 });        // t1 用枪
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+  S.attemptAction(st, 2, R.SK.GUN, { target: 0 });        // 用它验证"确实没拿到任何架势"
+  S.attemptAction(st, 3, R.SK.MINI_T, { target: 1 });     // 小雷作废 t1 的枪
+  X.resolveActions(st);
+  eq(cnt(st, 'mirrorNoEffect'), 1, 't1 被作废 ⇒ 唯一合法的"无可复制"');
+  eq(cnt(st, 'mirrorCopySelf'), 0, 't1 被作废时不该复制任何东西');
+  eq(st.p[0].hp, 2, '没拿到架势 ⇒ 枪照常命中');
+
+  /* ⑥ 穷举守门：技能表里**每一个**技能都必须被显式归类（新增技能必须决定它怎么被复制，
+   *    否则会出现"复制了等于没复制"这种静默漏洞 —— 本项目的第四次同类事故就是这个形状）。 */
+  const DMG_COPY = [R.SK.GUN, R.SK.SWORD, R.SK.TANK, R.SK.SNIPE, R.SK.DRAIN, R.SK.RAILGUN,
+    R.SK.BIG_T, R.SK.CANNON, R.SK.LASER_EYE, R.SK.DUAL_GUN];
+  const AIR_ONLY = [R.SK.MINI_T, R.SK.TRANSFER, R.SK.CURSE, R.SK.FIRESTORM, R.SK.TAUNT, R.SK.MIRROR];
+  const cls = {};
+  for (const k of DMG_COPY) { ok(!cls[k], '分类重复：' + k); cls[k] = 'dmg'; }
+  for (const k of R.MIRROR_SELF) { ok(!cls[k], '分类重复：' + k); cls[k] = 'self'; }
+  for (const k of AIR_ONLY) { ok(!cls[k], '分类重复：' + k); cls[k] = 'air'; }
+  const all = R.skills.map(function (s) { return s.key; });
+  const unclassified = all.filter(function (k) { return !cls[k]; });
+  eq(unclassified.length, 0, '有技能没归类（新增技能必须决定怎么复制）：' + JSON.stringify(unclassified));
+  eq(Object.keys(cls).length, all.length, '分类表必须与技能表一一对应（技能数 ' + all.length + '）');
+
+  /* ⑦ "归类了但没实现"也要红：把每个自效果技能真的复制一遍，看架势/资源是否到位 */
+  const EXPECT = {};
+  EXPECT[R.SK.GUARD] = 'guard'; EXPECT[R.SK.REFLECT] = 'reflect'; EXPECT[R.SK.BAGUA] = 'bagua';
+  EXPECT[R.SK.SHIFT] = 'bagua'; EXPECT[R.SK.JINSHIELD] = 'jinshield'; EXPECT[R.SK.ARMOR] = 'armor';
+  EXPECT[R.SK.PROTO] = 'proto'; EXPECT[R.SK.HOLO] = 'proto';   // 复制全息屏障 = 原型制御式自保（v1.5.7 两者等价）
+  for (const k of R.MIRROR_SELF) {
+    const s2 = S.createState('multi', { next: mulberry32(3) }, 3);
+    for (const q of s2.p) q.ep = 9;
+    X.startTurn(s2);
+    ok(S.canUseSkillInMode(s2, k), '多人模式应可用：' + k);
+    S.attemptAction(s2, 1, k, {});
+    eq(s2.actions[1].outcome, 'ok', 't1 用 ' + k + ' 应成功（' + s2.actions[1].reason + '）');
+    S.attemptAction(s2, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(s2, 2, R.SK.JI, {});
+    X.resolveActions(s2);
+    ok(s2.events.some(function (e) { return e.type === 'mirrorCopySelf' && e.key === k; }),
+      '复制【' + k + '】必须走"复制到自己身上"分支');
+    if (EXPECT[k]) {
+      const gg = X.guardOf(s2, 0);
+      ok(gg && gg.kind === EXPECT[k], '复制【' + k + '】后架势应为 ' + EXPECT[k] + '（实测 ' + JSON.stringify(gg) + '）');
+    }
+    if (k === R.SK.MINE) ok(s2.p[0].mineArmed, '复制地雷应让自己也架上雷');
+    if (k === R.SK.ROD) ok(s2.p[0].rodGuard > 0, '复制避雷针应得到免雷窗口（R31 情形B）');
+  }
+
+  /* ⑧ 页面必须真的会渲染这条新事件：事件渲染是纯映射、**没有默认分支** ⇒ 漏了就是静默不显示。 */
+  const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
+  ok(/case 'mirrorCopySelf'/.test(uiSrc), 'ui.js 必须渲染 mirrorCopySelf 事件');
+  ok(/case 'mirrorNoEffect'/.test(uiSrc), 'ui.js 必须仍渲染 mirrorNoEffect（t1 被作废那条）');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

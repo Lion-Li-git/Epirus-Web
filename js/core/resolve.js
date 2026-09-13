@@ -102,18 +102,71 @@
   }
 
   /* 当前生效防御架势 */
+  /* 技能 key → 架势种类（**唯一真源**）：`guardOf` 的分支与 N14「复制来的架势」共用一份，
+   * 免得两处各写一个 switch（"改一处漏一处"在本项目已栽过四次）。 */
+  function guardKindOfKey(key) {
+    switch (key) {
+      case SK.GUARD: return 'guard';
+      case SK.REFLECT: return 'reflect';
+      case SK.ARMOR: return 'armor';
+      case SK.JINSHIELD: return 'jinshield';
+      case SK.BAGUA: case SK.SHIFT: return 'bagua';
+      case SK.PROTO: return 'proto';
+      /* v1.5.4：`SK.HOLO` **不是施放者自己的架势** —— 它是给别人套的盾（见 holoShieldFrom）。
+       * 它只作为"被复制的内容"出现在这里：见 copiedGuardKind。 */
+      default: return null;
+    }
+  }
+  /* N14：复制来的架势（多一个全息屏障 = 原型制御的特例，v1.5.7 已确认两者防御效果完全相同） */
+  function copiedGuardKind(key) {
+    if (key === SK.HOLO) return 'proto';
+    return guardKindOfKey(key);
+  }
+
+  /* N14 镜面反射的两个被作用者（t1=复制对象 / t2=输出对象），带兜底钳制。
+   * **单点真源**：结算（mirrorPass）、架势判定（guardOf）、无效化判定（effectiveKeyOf）、
+   * 大雷连带的参与判定都走这里 —— 否则"t1 阵亡/目标非法后改指向"这类兜底很容易只改一处。 */
+  function mirrorRefs(state, m) {
+    const a = actionOf(state, m);
+    if (!a || a.key !== SK.MIRROR) return null;
+    const opps = aliveOpps(state, m);
+    let t1 = a.target, t2 = a.target2;
+    if (t1 == null || t1 === m || !state.p[t1] || state.p[t1].hp <= 0) t1 = opps.length ? opps[0] : null;
+    if (t2 == null || t2 === m || t2 === t1 || !state.p[t2] || state.p[t2].hp <= 0) {
+      t2 = null;
+      for (const o of opps) { if (o !== t1) { t2 = o; break; } }
+    }
+    return { t1, t2 };
+  }
+
+  /* N14：镜面反射"复制到使用者自己身上"的那个技能 key = t1 本回合的技能。
+   * t1 没有行动 / 已被作废 → null（这是**唯一**合法的"无可复制"）。 */
+  function mirrorSelfKey(state, m) {
+    const refs = mirrorRefs(state, m);
+    if (!refs || refs.t1 == null) return null;
+    const ta = actionOf(state, refs.t1);
+    return ta ? ta.key : null;
+  }
+
+  /* 有效技能 key：普通角色 = 自己的行动；镜面反射使用者 = 它复制到的那个技能。
+   * 用户裁定（v1.5.16）：复制来的架势**在声明时就生效** —— 否则同回合用大雷打 a 时，
+   * a 复制到的反弹来不及救自己，而用户例子里明确要求 a、b 都因反弹不受影响。 */
+  function effectiveKeyOf(state, pid) {
+    const a = actionOf(state, pid);
+    if (!a) return null;
+    if (a.key !== SK.MIRROR) return a.key;
+    return mirrorSelfKey(state, pid);
+  }
+
   function guardOf(state, pid) {
     const a = actionOf(state, pid);
     if (a) {
-      switch (a.key) {
-        case SK.GUARD: return { kind: 'guard' };
-        case SK.REFLECT: return { kind: 'reflect' };
-        case SK.ARMOR: return { kind: 'armor' };
-        case SK.JINSHIELD: return { kind: 'jinshield' };
-        case SK.BAGUA: case SK.SHIFT: return { kind: 'bagua' };
-        case SK.PROTO: return { kind: 'proto' };
-        /* v1.5.4：`SK.HOLO` **不再是施放者自己的架势** —— 它是给别人套的盾（见函数末尾的 holoShieldFrom）。 */
-        default: break;
+      if (a.key === SK.MIRROR) {
+        const gk = copiedGuardKind(mirrorSelfKey(state, pid));
+        if (gk) return { kind: gk, copied: true };
+      } else {
+        const gk = guardKindOfKey(a.key);
+        if (gk) return { kind: gk };
       }
     }
     // 无极变速第二回合：本回合自己若没有"防御类"行动，则无极变速的八卦阵仍应生效（R21/R7）
@@ -362,7 +415,8 @@
   }
 
   /* ---------- N14 镜面反射 / N15 反复横跳 / N16 聚光炮 ---------- */
-  /* 可被复制的“伤害效果”：架势/自增益/能量类/状态类返回 null */
+  /* 镜面反射可复制的"伤害效果"：返回 null = **非伤害类** ⇒ 效果落在使用者自己身上 + 对 t2 空指
+   * （v1.5.16 用户裁定：没有"无可复制"这件事，见 applyMirrorSelf 与 docs/RULES-NP.md N14）。 */
   function copyEffect(key) {
     const def = R.byKey[key];
     if (!def) return null;
@@ -407,16 +461,9 @@
     if (!mirrors.length) return;
     const info = {};
     for (const m of mirrors) {
-      const a = actionOf(state, m);
-      const opps = aliveOpps(state, m);
-      let t1 = a.target, t2 = a.target2;
-      if (t1 == null || t1 === m || !state.p[t1] || state.p[t1].hp <= 0) t1 = opps.length ? opps[0] : null;
-      if (t2 == null || t2 === m || t2 === t1 || !state.p[t2] || state.p[t2].hp <= 0) {
-        t2 = null;
-        for (const o of opps) { if (o !== t1) { t2 = o; break; } }
-      }
-      info[m] = { t1, t2 };
-      if (t1 == null || t2 == null) setVoid(state, m, '镜面反射无目标');
+      const rf = mirrorRefs(state, m);              // 单点真源（含 t1/t2 兜底钳制）
+      info[m] = rf || { t1: null, t2: null };
+      if (!rf || rf.t1 == null || rf.t2 == null) setVoid(state, m, '镜面反射无目标');
     }
     // ---- N16 聚光炮 ----
     const usedEdge = {};
@@ -444,7 +491,7 @@
       ev(state, { type: 'hidden', name: '反复横跳', pids: freeUsers.slice() });
       for (const u of freeUsers) rawDamage(state, u, 1, '反复横跳', 'hop', { type: R.DMG.FIRELIGHT });
     }
-    // ---- N14 复制伤害 ----
+    // ---- N14 复制 ----
     for (const m of mirrors) {
       const a = actionOf(state, m);
       if (!a) continue;
@@ -453,11 +500,69 @@
       const ta = actionOf(state, it.t1);
       if (!ta) { ev(state, { type: 'mirrorNoEffect', pid: m, from: it.t1 }); continue; }
       const eff = copyEffect(ta.key);
-      if (!eff) { ev(state, { type: 'mirrorNoEffect', pid: m, from: it.t1, key: ta.key }); continue; }
-      ev(state, { type: 'mirror', pid: m, from: it.t1, to: it.t2, key: ta.key });
-      deliverDamage(state, {
-        amt: eff.amt, type: eff.type, source: m, via: eff.via, pierce: eff.pierce || {}
-      }, it.t2, { reason: '镜面反射·' + R.byKey[ta.key].name });
+      if (eff) {
+        ev(state, { type: 'mirror', pid: m, from: it.t1, to: it.t2, key: ta.key });
+        deliverDamage(state, {
+          amt: eff.amt, type: eff.type, source: m, via: eff.via, pierce: eff.pierce || {}
+        }, it.t2, { reason: '镜面反射·' + R.byKey[ta.key].name });
+      } else {
+        /* v1.5.16（用户裁定）：**没有"无可复制"** —— 所有技能都能复制。非伤害类技能的效果
+         * 落在**使用者自己身上**（"相当于自己也摆了那个架势 / 也蓄了能 / 也架了雷"），
+         * 同时对 t2 只留一个**空指**：指向保留、本身不产生效果，但它**参与大雷连带判定**
+         * （已在 ③ 的快照里用 snapT2 接上）。 */
+        ev(state, { type: 'mirrorCopySelf', pid: m, from: it.t1, to: it.t2, key: ta.key });
+        applyMirrorSelf(state, m, ta);
+      }
+    }
+  }
+
+  /* N14：把复制到的"非伤害类"技能的自效果施加到镜面反射使用者自己身上。
+   * ⚠ 这张 switch 必须与 `resolveActions` ④ 的自效果保持同步 —— 技能表里新增一个"有自效果"的
+   *   技能时，要么它可复制伤害（`copyEffect` 非空），要么在这里补一行。`np-test D23` 用
+   *   `R.MIRROR_SELF` 对全部技能做**穷举守门**（漏一个就红，不留静默的"复制了等于没复制"）。 */
+  function applyMirrorSelf(state, m, ta) {
+    const me = state.p[m];
+    switch (ta.key) {
+      case SK.JI: me.ep += 1; ev(state, { type: 'ep', pid: m, delta: 1 }); break;
+      case SK.CHARGE: {
+        /* 珠类型取**使用者自己**的选择（镜面反射那张卡的 opt.bead），**不读 t1 的 opt**：
+         * t1 蓄的哪种珠是隐藏信息（v1.5.15 刚修掉的信息泄漏）⇒ 读它等于给复制者开天眼。 */
+        const ma = actionOf(state, m);
+        const kind = (ma && ma.opt && ma.opt.bead) || 'elec';
+        me[kind] = 1; me.beadNew = kind;
+        ev(state, { type: 'bead', pid: m, kind, delta: 1 });
+        break;
+      }
+      case SK.RING: {
+        me.ringStreak += 1;                                   // 与 attemptAction 同口径：出招即计次
+        const g = me.ringStreak >= 3 ? 3 : me.ringStreak;      // R10：第1次+1 / 第2次+2 / 第3次起+3
+        me.ep += g; ev(state, { type: 'ep', pid: m, delta: g });
+        break;
+      }
+      case SK.MINE: me.mineArmed = true; ev(state, { type: 'mineArm', pid: m }); break;
+      /* 避雷针：只得到"架势"（3 回合免雷窗口，同 R31 情形B）。本回合已经在飞的雷不追溯
+       * —— ① 避雷针那一段早于镜面反射结算，追溯会凭空改写已结算的结果。 */
+      case SK.ROD: me.rodGuard = 4; ev(state, { type: 'rod', pids: [m], mode: 'B' }); break;
+      case SK.PURIFY: {
+        const n = me.stickers.length;
+        me.stickers = []; me.nightmare = false; me.tauntPending = false;
+        if (n >= 1) { me.hp += n - 1; ev(state, { type: 'heal', pid: m, amt: n - 1, reason: '净化' }); }
+        ev(state, { type: 'purify', pid: m, curses: n });
+        break;
+      }
+      default: {
+        /* 防御族（含复制全息屏障 = 原型制御式自保架势）。
+         * 架势**不在这里才生效**：`guardOf` 通过 effectiveKeyOf() 直接读"复制内容"，
+         * 所以它在声明的那一刻就已生效（这正是用户例子里 a 能靠复制来的反弹挡住同回合大雷的原因）。
+         * 这里的 ev 只用于日志/页面；`guardNext` 那行是 R21 无极变速的第二回合八卦阵。
+         * 藤甲的"贴在对手身上使其火弱"属对外效果 ⇒ 按 N14 不复制（空指不产生效果）。 */
+        const gk = copiedGuardKind(ta.key);
+        if (gk) {
+          if (ta.key === SK.SHIFT) me.guardNext = true;
+          ev(state, { type: 'guardSet', pid: m, key: ta.key, copied: true });
+        }
+        break;
+      }
     }
   }
 
@@ -504,8 +609,9 @@
         state.p[t].rodGuard = 0; // 一次免雷后守卫结束 R31
         setVoid(state, c, '避雷针');
         ev(state, { type: 'rodBlock', pid: t, by: SK.MINI_T });
-      } else if (ta && R.MINI_T_IMMUNE.indexOf(ta.key) >= 0) {
-        ev(state, { type: 'voidImmune', pid: t, by: SK.MINI_T, key: ta.key });
+      } else if (R.MINI_T_IMMUNE.indexOf(effectiveKeyOf(state, t)) >= 0) {
+        /* N14 v1.5.16：复制来的防御族也算"防御" —— 否则小雷会把镜面反射连同它复制到的盾一起废掉 */
+        ev(state, { type: 'voidImmune', pid: t, by: SK.MINI_T, key: effectiveKeyOf(state, t) });
       } else {
         setVoid(state, t, SK.MINI_T);
         ev(state, { type: 'voidedBy', pid: t, by: SK.MINI_T });
@@ -531,8 +637,20 @@
     /* N2 修正（同优先级同时结算）：层入口对全场行动拍快照，层内一律按快照判断。
      * 否则先结算的大雷会把后者作废 → 低 pid 在三方同时放大雷时系统性免伤
      * （实测 P0→P1/P1→P2/P2→P0 结果 HP 3/1/1）。落地仍按实际结算。 */
-    const snapK = [], snapT = [];
-    for (const i of turnOrder(state)) { const a = actionOf(state, i); snapK[i] = a ? a.key : null; snapT[i] = a ? targetOf(state, i) : null; }
+    /* v1.5.16：连带的"产生交互"判定要认**两个**被作用者（镜面反射的 t1/t2、双枪的 target2）。
+     * N14 用户例子：a 复制 b 的反弹并指向 c ⇒ d 用大雷打 a 时，c 吃连带，a/b 因有反弹不受影响。 */
+    const snapK = [], snapT = [], snapT2 = [];
+    for (const i of turnOrder(state)) {
+      const a = actionOf(state, i);
+      snapK[i] = a ? a.key : null;
+      if (a && a.key === SK.MIRROR) {
+        const rf = mirrorRefs(state, i);
+        snapT[i] = rf ? rf.t1 : null; snapT2[i] = rf ? rf.t2 : null;
+      } else {
+        snapT[i] = a ? targetOf(state, i) : null;
+        snapT2[i] = (a && a.target2 != null) ? a.target2 : null;
+      }
+    }
     for (const c of bigs) {
       if (!snapK[c]) continue;
       const t = snapT[c];
@@ -545,9 +663,10 @@
         continue;
       }
       const ta = snapK[t] ? { key: snapK[t] } : null;
-      // 效果2：非防御类技能一律无效化；双大雷互轰时各自保留
-      // void non-defense-family skills; MINI_T also exempt (pri5 already resolved)
-      if (!bothBig && ta && R.GUARD_FAMILY.indexOf(ta.key) < 0 && ta.key !== SK.MINI_T) {
+      /* 效果2：非防御类技能一律无效化；双大雷互轰时各自保留。
+       * N14 v1.5.16：判定用**有效技能**（镜面反射复制到防御族 ⇒ 算防御，不被废掉）。 */
+      const tEff = effectiveKeyOf(state, t);
+      if (!bothBig && tEff && R.GUARD_FAMILY.indexOf(tEff) < 0 && tEff !== SK.MINI_T) {
         setVoid(state, t, SK.BIG_T);
       }
       // 记录目标当面架势（用于 R23'：原型制御挡电但不免疫禁用）
@@ -561,24 +680,31 @@
       // N6 连带伤害（原文效果3）：与目标 T 产生交互的第三方 各受 1 点电伤；
       //   其中「对 T 使用技能」者额外被无效化（对 T 的那个技能）；施法者自身不参与。
       //   2 人时第三方不存在 → 行为不变（回归安全）。
-      const tTgt = snapT[t];
+      const tTgt = snapT[t], tTgt2 = snapT2[t];
       for (const q of turnOrder(state)) {
         if (q === c || q === t || state.p[q].hp <= 0) continue;
         const qa = snapK[q] ? { key: snapK[q] } : null;
-        const qTargetsT = snapK[q] != null && snapT[q] === t;
-        const tTargetsQ = !!ta && tTgt === q;
+        /* v1.5.16：**两个**被作用者都算"与目标产生交互"（镜面反射 t1/t2、双枪 target2）。
+         * N14 的"空指"也由这里生效：复制非指向技能时，t2 仍被算作交互对象。 */
+        const qTargetsT = snapK[q] != null && (snapT[q] === t || snapT2[q] === t);
+        const tTargetsQ = !!ta && (tTgt === q || tTgt2 === q);
         if (!qTargetsT && !tTargetsQ) continue;
-        /* N22：防御族不失效（它们能格挡大雷）；小雷 pri5 已先结算也不失效。 */
+        /* N22：防御族不失效（它们能格挡大雷）；小雷 pri5 已先结算也不失效。
+         * N14 v1.5.16：豁免判定用有效技能（复制到防御族同样豁免）。 */
         const qUsed = snapK[q];
-        const qIsDef = !!(qa && R.GUARD_FAMILY.indexOf(qa.key) >= 0);
-        if (!qIsDef && qa && qa.key !== SK.MINI_T) setVoid(state, q, '真正的落雷连带');
+        const qEff = effectiveKeyOf(state, q);
+        const qIsDef = !!(qEff && R.GUARD_FAMILY.indexOf(qEff) >= 0);
+        if (!qIsDef && qEff && qEff !== SK.MINI_T) setVoid(state, q, '真正的落雷连带');
         ev(state, { type: 'bigTChain', from: c, to: q, kind: qTargetsT ? 'attack' : 'targeted' });
         /* N22：防御者本人不吃伤害；但其防御技能**有作用目标**时（金刚盾/藤甲），
          * 传导伤害落到那个作用目标身上。无目标的自守防御则完全挡住。 */
         let qHit = q;
         if (qIsDef) {
+          /* N22：只有"自己的行动就是防御族、且那张防御**有作用目标**"（金刚盾/藤甲）才把传导转给目标。
+           * N14 v1.5.16：复制来的架势**没有对外目标**（空指不产生效果）⇒ 完全挡住，谁都不吃。 */
+          const qOwnDef = !!(qa && R.GUARD_FAMILY.indexOf(qa.key) >= 0);
           const qTgt = snapT[q];
-          if (qTgt == null || qTgt === q || state.p[qTgt].hp <= 0) continue;
+          if (!qOwnDef || qTgt == null || qTgt === q || state.p[qTgt].hp <= 0) continue;
           qHit = qTgt;
         }
         const qres = deliverDamage(state, {

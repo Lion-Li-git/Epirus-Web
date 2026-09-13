@@ -657,7 +657,9 @@
       case 'hidden': return { cls: 'ev pur', html: '🌑 触发隐藏技能【' + e.name + '】' + (e.pid != null ? '（' + nm(e.pid) + '）' : '') + (e.to != null ? ' → ' + nm(e.to) : '') };
       case 'bigTChain': return { cls: 'ev dmg', html: '⚡ ' + nm(e.from) + ' 的大雷连带：' + nm(e.to) + ' 受 1 点电伤' + (e.kind === 'attack' ? '（其攻击被无效）' : '（被目标攻击）') };
       case 'mirror': return { cls: 'ev pur', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】→ ' + nm(e.to) };
-      case 'mirrorNoEffect': return { cls: 'ev dim', html: '🪞 ' + nm(e.pid) + ' 镜面反射：' + nm(e.from) + ' 本回合' + (e.key ? '的【' + skillName(e.key) + '】' : '无行动') + '无可复制' };
+      case 'mirrorNoEffect': return { cls: 'ev dim', html: '🪞 ' + nm(e.pid) + ' 镜面反射：' + nm(e.from) + ' 本回合的行动不存在或已被作废，无可复制' };
+      /* N14 v1.5.16：非伤害类技能 = 效果落在自己身上 + 对 t2 空指（指向保留、本身无效果） */
+      case 'mirrorCopySelf': return { cls: 'ev', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】用在自己身上（空指 → ' + nm(e.to) + '）' };
       case 'revive': return { cls: 'ev gold', html: '👻 ' + nm(e.pid) + ' 回魂复活！本回合无限能量' };
       case 'vampire': return { cls: 'ev pur', html: '🧛 ' + nm(e.pid) + ' 觉醒【吸血鬼公爵】：摄魂自愈 2、受光伤 +1' };
       case 'purify': return { cls: 'ev heal', html: '🧼 ' + nm(e.pid) + ' 净化：清除 ' + e.curses + ' 枚符咒与负面状态' };
