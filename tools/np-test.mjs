@@ -1691,12 +1691,17 @@ t('D26 网络形状必须被钉住（FEAT_S/FEAT_A/paramCount）+ v5 裁剪规�
    * np-test 全文没有 shapeOf，也没有任何断言钉住 FEAT_S=123 / paramCount=3337。
    * 后果：静默改维度不会被任何用例发现，而那正是"升 v6 时 7 个 v5 存档当场变砖"的成因。
    * 这条把常量、反推、以及**v5 裁剪规则**一起钉住：维度一变立刻红，逼你同步 PACK_VERSION 与裁剪规则。 */
-  eq(Pol.FEAT_S, 123, 'FEAT_S 变了 ⇒ 旧冠军包不兼容，必须同时升 PACK_VERSION 并写清裁剪规则');
-  eq(Pol.FEAT_A, 14, 'FEAT_A 变了 ⇒ 动作特征布局变了');
-  eq(Pol.FEAT_N, 137, 'FEAT_N 必须 = FEAT_S + FEAT_A');
+  /* v7（v1.5.19）：候选体系 + 关系块 T(15) + 效果快照块 B(70) + 动作侧 +8。
+   * 常量一变就必须同步：PACK_VERSION、VER_SHAPES 形状表、裁剪规则、两个 bundle 的重训与重记。 */
+  eq(Pol.FEAT_S, 213, 'FEAT_S 变了 ⇒ 旧冠军包不兼容，必须同时升 PACK_VERSION 并写清裁剪规则');
+  eq(Pol.FEAT_A, 22, 'FEAT_A 变了 ⇒ 动作特征布局变了（v7：+2 珠类型 +6 目标相对）');
+  eq(Pol.FEAT_N, 235, 'FEAT_N 必须 = FEAT_S + FEAT_A');
   eq(Pol.HID, 24, 'HID 变了 ⇒ 参数量与所有训练曲线不可比');
-  eq(Pol.PACK_VERSION, 6, 'PACK_VERSION 变了 ⇒ 游戏侧 checkPack 会拒绝所有旧包（要有意为之）');
-  eq(Pol.paramCount(), 3337, 'paramCount = HID*FEAT_N + HID + HID + 1');
+  eq(Pol.PACK_VERSION, 7, 'PACK_VERSION 变了 ⇒ 游戏侧 checkPack 会拒绝所有旧包（要有意为之）');
+  eq(Pol.paramCount(), 5689, 'paramCount = HID*FEAT_N + HID + HID + 1');
+  eq(Pol.FEAT_S_V6, 123, 'v6 前缀长度错了 ⇒ 旧包会按错位置裁剪（静默错位）');
+  eq(Pol.EFFECTS.length, 14, 'B 块效果表的条数变了 ⇒ 同时改"每玩家槽位数"与文档');
+  eq(Pol.PLAYER_SLOTS, 5, '自己 + 4 个对手槽');
   /* ACT_KEYS 是"动作键表"（= R.skills 的 key），**不是** FEAT_A 那个 14 维动作特征。
    * 这里钉住卡数：新增一张卡会同时改变 ACT_KEYS / `MIRROR_SELF` 归类 / 特征布局，
    * 必须是有意为之（算法见 `PARAMS-PLAN.md` §3）。 */
@@ -1704,32 +1709,201 @@ t('D26 网络形状必须被钉住（FEAT_S/FEAT_A/paramCount）+ v5 裁剪规�
 
   const cur = new Float64Array(Pol.paramCount());
   const nw = Pol.shapeOf(cur);
-  ok(nw && nw.featS === Pol.FEAT_S && nw.legacy === false, 'shapeOf 对新形状必须给出 featS=' + Pol.FEAT_S + ' 且非 legacy');
-  const oldLen = Pol.HID * (122 + Pol.FEAT_A) + Pol.HID + Pol.HID + 1;
+  ok(nw && nw.featS === Pol.FEAT_S && nw.featA === Pol.FEAT_A && nw.legacy === false,
+    'shapeOf 对新形状必须给出 featS=' + Pol.FEAT_S + '/featA=' + Pol.FEAT_A + ' 且非 legacy');
+  /* v7 起 FEAT_A 也会变 ⇒ 形状**必须按表查**：(len-49)/24 只能反推出 featN，
+   * 无法决定"状态段/动作段"的切分点（切错 = 静默错位，正是这套机制存在的理由）。 */
+  const v6Len = Pol.HID * (123 + 14) + Pol.HID + Pol.HID + 1;
+  eq(v6Len, 3337, 'v6 参数量应当 = 3337');
+  const v6s = Pol.shapeOf(new Float64Array(v6Len));
+  ok(v6s && v6s.featS === 123 && v6s.featA === 14 && v6s.legacy === true,
+    'shapeOf 必须认出 v6（featS=123 / featA=14）并标 legacy —— 只靠整除反推会把它切成 115+22');
+  const oldLen = Pol.HID * (122 + 14) + Pol.HID + Pol.HID + 1;
   eq(oldLen, 3313, 'v5 参数量应当 = 3313');
   const od = Pol.shapeOf(new Float64Array(oldLen));
-  ok(od && od.featS === 122 && od.legacy === true, 'shapeOf 必须从长度反推出 v5 的 featS=122 并标 legacy（否则按新行距读旧权重 = 静默错位）');
+  ok(od && od.featS === 122 && od.featA === 14 && od.legacy === true, 'shapeOf 必须认出 v5（featS=122/featA=14）');
   eq(Pol.unpack({ v: 5, a: new Array(oldLen).fill(0), f: 122, h: Pol.HID }), null,
     '游戏侧 unpack 必须**拒绝** v5 包（严格校验是刻意的）');
+  eq(Pol.unpack({ v: 6, a: new Array(v6Len).fill(0), f: 123, h: Pol.HID }), null,
+    '游戏侧 unpack 必须**拒绝** v6 包（v7 上线后线上包必须重训重发）');
   const lg = Pol.unpack({ v: 5, a: new Array(oldLen).fill(0), f: 122, h: Pol.HID }, true);
   ok(lg && lg.length === oldLen, '工具侧 unpack(o,true) 必须仍能读 v5 包（否则 A/B 证据链一次性）');
+  const lg6 = Pol.unpack({ v: 6, a: new Array(v6Len).fill(0), f: 123, h: Pol.HID }, true);
+  ok(lg6 && lg6.length === v6Len, '工具侧必须仍能读 v6 包（用于与历史冠军做配对对照）');
 
   /* v5 裁剪规则必须精确等于"v6 去掉'自己跨得过环启动线'那一维"（运行时探测，不硬编码下标）。
    * 裁错维度不会有任何报错 —— 只会让旧包静默错位，所以这条必须是逐位比较。 */
   const mk = function (rs) {
     const s2 = S.createState('standard', { next: function () { return 0.5; } }, 2);
     s2.p[0].ep = 3; s2.p[0].ringStreak = rs;
-    return Pol.featuresV6(s2, 0);
+    return Pol.featuresV7(s2, 0);
   };
   const a0 = mk(0), b0 = mk(3);
   let idx = -1;
   for (let i = 0; i < a0.length; i++) if (a0[i] - b0[i] > 0.5) { idx = i; break; }
   ok(idx >= 0, '应当能探测到"自己跨得过环启动线"那一维（特征加了新维度就得同步改裁剪规则）');
+  ok(idx < 123, 'v7 新维度必须全部追加在 123 之后（插在中间会让 v6 前缀错位）');
   const st5 = S.createState('standard', { next: function () { return 0.5; } }, 2);
+  const f6 = Pol.features(st5, 0, 123);
+  eq(f6.length, 123, 'features(state,pid,123) 必须裁成 v6 长度');
+  eq(f6.join(','), Pol.featuresV7(st5, 0).slice(0, 123).join(','),
+    'v6 裁剪必须逐位等于新向量的**前 123 维**（裁错 = 旧包静默错位）');
   const f5 = Pol.features(st5, 0, 122);
   eq(f5.length, 122, 'features(state,pid,122) 必须裁成 v5 长度');
-  const expect = Pol.featuresV6(st5, 0).filter(function (_, i) { return i !== idx; });
+  const expect = Pol.featuresV7(st5, 0).slice(0, 123).filter(function (_, i) { return i !== idx; });
   eq(f5.join(','), expect.join(','), 'v5 裁剪必须逐位等于"v6 去掉那一维"（裁错维度 = 旧包静默错位）');
+
+  /* ===== D33（同一条用例里）：v7 两块新状态特征的语义 ===== */
+  /* T 关系块：上一手"指向谁"必须可读 —— `state.actions` 每回合清空，所以引擎把它落在
+   * `p.lastTarget` 上（js/core/state.js）。这里同时钉住"引擎真的写了"和"特征真的读了"。 */
+  const st3 = S.createState('multi', { next: function () { return 0.5; } }, 3);
+  X.startTurn(st3);
+  S.attemptAction(st3, 1, R.SK.GUN, { target: 2 });      // 玩家1 拿枪指**玩家2（不是我）**
+  S.attemptAction(st3, 0, R.SK.JI, {});
+  S.attemptAction(st3, 2, R.SK.JI, {});
+  eq(st3.p[1].lastTarget, 2, '引擎必须把"这一手指向谁"留在 p.lastTarget 上（决策时刻 state.actions 已清空）');
+  X.resolveActions(st3); X.endTurn(st3);
+  X.startTurn(st3);
+  const fv = Pol.featuresV7(st3, 0);
+  const tBase = Pol.FEAT_S - Pol.EFFECTS.length * Pol.PLAYER_SLOTS - 4 * Pol.PLAYER_SLOTS;
+  eq(tBase, 123, 'T/B 两块必须正好从第 124 维（下标 123）开始');
+  eq(fv[tBase + 1 * 4 + 2], 1, 'T 块：玩家1 的"上一手指向别人"必须是 1（三人局"他们互相打"的核心信号）');
+  eq(fv[tBase + 1 * 4 + 1], 0, 'T 块：玩家1 上回合指的不是我 ⇒"指向我"必须是 0');
+  eq(fv[tBase + 0 * 4 + 0], 1, 'T 块：我上回合按ジ ⇒ 引擎解析出来的目标就是自己（"指向自己"=1）');
+  /* B 效果快照块：值的符号 = 自己施加(+) / 他人施加(−)（镜面复制来的架势就是"他人给的"） */
+  const bBase = Pol.FEAT_S - Pol.EFFECTS.length * Pol.PLAYER_SLOTS;
+  const CG = Pol.EFFECTS.findIndex(function (e) { return e[0] === 'copiedGuard'; });
+  const GP = Pol.EFFECTS.findIndex(function (e) { return e[0] === 'guardPrev'; });
+  ok(CG >= 0 && GP >= 0, 'B 块必须同时有 copiedGuard 与 guardPrev 两条');
+  st3.p[0].guardNext = true;                              // 自己摆的架势
+  st3.p[1].copiedGuard = R.SK.REFLECT;                    // 镜面反射复制来的（他人技能）
+  const fv2 = Pol.featuresV7(st3, 0);
+  eq(fv2[bBase + 0 * Pol.EFFECTS.length + GP], 1, 'B 块：自己摆的架势应当是 +1');
+  eq(fv2[bBase + 1 * Pol.EFFECTS.length + CG], -1, 'B 块：镜面复制来的架势应当是 −1（他人施加）');
+  eq(fv2[tBase + 1 * 4 + 3], R.skills.findIndex(function (s) { return s.key === R.SK.REFLECT; }) / R.skills.length,
+    'T 块最后一维必须是"他复制到了哪张卡"（② 的可见性）');
+});
+
+t('D33 v7 候选体系：候选枚举 / 珠类型与目标真的进输入 / 掩码不改形状 / 旧包走旧口径', function () {
+  /* v7 的结构性改动：网络不再只对"技能 key"打分，而是对 **候选 = (技能, 目标, 珠类型)** 打分。
+   * 这条钉住四件事 —— 任何一件坏了，"打谁/蓄哪种珠"都会静默退化成固定启发式（而分数照常出）。 */
+  const st = S.createState('multi', { next: function () { return 0.5; } }, 3);
+  st.p[0].ep = 6;
+  const legal = Play.legalActions(st, 0);
+  const cands = Pol.candidatesFor(st, 0, legal, {});
+  const gun = cands.filter(function (c) { return c.key === R.SK.GUN; });
+  eq(gun.length, 2, '3 人局里 枪 必须展开成 2 个候选（每个对手一个）');
+  ok(gun[0].target !== gun[1].target, '两个候选的目标必须不同');
+  const ch = cands.filter(function (c) { return c.key === R.SK.CHARGE; });
+  eq(ch.length, 2, '蓄能 必须展开成 2 个候选');
+  eq(ch.map(function (c) { return c.bead; }).sort().join(','), 'boom,elec', '两个候选的珠类型必须是 elec/boom');
+  const ae = Pol.actionFeatures(st, 0, R.SK.CHARGE, { key: R.SK.CHARGE, target: null, bead: 'elec' });
+  const ab = Pol.actionFeatures(st, 0, R.SK.CHARGE, { key: R.SK.CHARGE, target: null, bead: 'boom' });
+  eq(ae.length, Pol.FEAT_A, '动作特征长度必须是 FEAT_A');
+  let diff = 0;
+  for (let i = 0; i < ae.length; i++) if (ae[i] !== ab[i]) diff++;
+  eq(diff, 2, '两个珠类型候选必须**恰好差 2 维**（电/爆两个指示位）—— 否则同分、等于随机');
+  const ag = Pol.actionFeatures(st, 0, R.SK.GUN, gun[0]);
+  const ag0 = Pol.actionFeatures(st, 0, R.SK.GUN, { key: R.SK.GUN, target: null, bead: null });
+  let diff2 = 0;
+  for (let i = 0; i < ag.length; i++) if (ag[i] !== ag0[i]) diff2++;
+  ok(diff2 > 0, '带目标的候选必须在动作特征上与不带目标的不同（目标血量/ジ/收割窗口…）');
+  /* 动作侧新维度的**布局**：14=蓄电珠、15=蓄爆珠、16..21=目标相对 6 维。写死下标是为了
+   * 让"顺序被改动"也能被这条用例抓住（追加维度的顺序一旦变，旧包裁剪规则就要跟着改）。 */
+  eq(ag[16], st.p[gun[0].target].hp / st.mode.hp, '第 17 维（下标 16）必须是目标血量占比');
+  /* 掩码：只改取值、不改形状（"去掉某几块再训一版"不能动版本与包格式）。
+   * 语义：`setFeatMask('target')` = **只开 target 块**，其余（bead/effects/rel）恒 0。 */
+  Pol.setFeatMask('target');
+  eq(Pol.paramCount(), 5689, '掩码不得改变参数量');
+  eq(Pol.featMask().bead, false, 'setFeatMask 的语义是"列出的块开、其余关"');
+  const ae2 = Pol.actionFeatures(st, 0, R.SK.CHARGE, { key: R.SK.CHARGE, target: null, bead: 'elec' });
+  const ab2 = Pol.actionFeatures(st, 0, R.SK.CHARGE, { key: R.SK.CHARGE, target: null, bead: 'boom' });
+  eq(ae2.join(','), ab2.join(','), '掩掉 bead 后两个候选的动作特征必须逐位相同（这正是"缩臂"臂的定义）');
+  const fx = Pol.featuresV7(st, 0);
+  eq(fx.length, Pol.FEAT_S, '掩码不得改变状态向量长度');
+  let tailZero = true;
+  for (let i = 123; i < fx.length; i++) if (fx[i] !== 0) tailZero = false;
+  ok(tailZero, '掩掉 effects/rel 后 T/B 两块必须恒为 0');
+  Pol.setFeatMask(null);
+  eq(Pol.featMask().effects && Pol.featMask().rel, true, 'setFeatMask(null) 必须全开');
+  eq(Pol.featuresV7(st, 0).length, Pol.FEAT_S, '复位掩码后长度不变');
+  /* 旧包必须走旧口径（否则历史基线不可比）：legacy 形状的 chooser 不得产生 bead 选择，
+   * 且目标必须**恰好等于** pickTargetN 的结果（而不是候选枚举里的那个）。 */
+  const v6params = new Float64Array(3337);
+  for (let i = 0; i < v6params.length; i++) v6params[i] = ((i * 37) % 101) / 101 - 0.5;   // 非零权重，避免 softmax 全等
+  const pick6 = T.policyChooserN(v6params, 0.15, 0)(st, 0, legal);
+  eq(pick6.bead, null, '旧包（v6 形状）必须走旧口径：不产生 bead 选择');
+  ok(pick6.key != null, '旧包仍必须给出 key');
+  eq(pick6.target, T.pickTargetN(st, 0, pick6.key), '旧包的目标必须逐位等于 pickTargetN（旧口径），不能走候选');
+});
+
+t('D34 旧包"逐位等价嵌入"：embedLegacy 的输出必须与按旧布局手算的参考逐位相同', function () {
+  /* 为什么需要：训练是**热启动**的（从 champion-5p-v1.3.58.bak 这类 v6 包长出来），
+   * 而 train-server 用的是严格 unpack（v7 会拒收 v6 包）⇒ 不嵌入就只能从随机重开，
+   * "同起点 A/B"与 meta 的 hotstartFrom 谱系一起报废。
+   * 这条用一个**独立手算的参考实现**（按 v6 布局的小 MLP）对着比 —— 布局错一位就红。 */
+  const n6 = 3337, HID = Pol.HID;
+  const w6 = new Float64Array(n6);
+  for (let i = 0; i < n6; i++) w6[i] = ((i * 2654435761) % 997) / 997 - 0.5;
+  const w7 = Pol.embedLegacy(w6);
+  eq(w7.length, Pol.paramCount(), '嵌入后必须是新形状（paramCount）');
+  const st = S.createState('multi', { next: function () { return 0.5; } }, 3);
+  st.p[0].ep = 8; st.p[0].guardNext = true; st.p[1].copiedGuard = R.SK.REFLECT;
+  const x6 = Pol.features(st, 0, 123);
+  let worst = 0, n = 0;
+  for (const k of ['gun', 'sword', 'charge', 'bagua', 'reflect', 'ji', 'bigT']) {
+    const af = Pol.actionFeatures(st, 0, k, null).slice(0, 14);
+    let ref = w6[n6 - 1];                                  // b2
+    for (let j = 0; j < HID; j++) {
+      let s = w6[HID * 137 + j];                           // b1
+      const base = j * 137;
+      for (let i = 0; i < 123; i++) s += w6[base + i] * x6[i];
+      for (let i = 0; i < 14; i++) s += w6[base + 123 + i] * af[i];
+      if (s > 0) ref += w6[HID * 137 + HID + j] * s;       // ReLU + W2
+    }
+    worst = Math.max(worst, Math.abs(Pol.value(st, 0, k, w7, Pol.shapeOf(w7)) - ref));
+    n++;
+  }
+  /* 参考实现是**另一个加法顺序**（先加 b1 再加特征）⇒ 浮点求和不可结合，允许 1e-12 级别的差。
+   * 与"旧代码本身"的逐位比较在开发时做过（偏差恰好 0，因为两条路径的加法顺序一致）。 */
+  ok(worst < 1e-12, '嵌入后的输出必须等于按 v6 布局手算的参考（' + n + ' 个技能，实测最大偏差 ' + worst + '）');
+  ok(Pol.loadAny({ v: 6, a: Array.from(w6), f: 123, h: HID }).legacy === true, 'loadAny 必须把 v6 包标成 legacy 并嵌入');
+  ok(Pol.loadAny({ v: 7, a: Array.from(w7), f: Pol.FEAT_S, fa: Pol.FEAT_A, h: HID }).legacy === false,
+    'loadAny 读当前版本包必须走严格路径（不得嵌入）');
+});
+
+t('D35 训练侧"自对局健康门槛"必须存在、默认开、且与体检共用同一实现', function () {
+  /* 起因（v1.5.19）：v7 加完特征后，分最高的几个候选在**自对局**里只剩 1~2 张卡、打到 50~60 回合
+   * （实测 G=1.00~1.66，而 eco-34 是 4.24）—— 单一 1st 率能被"熬"骗（REVIEW §11）。
+   * 修法是把体检的 G/平局/回合做成**换冠军的硬门槛**，且**与 champ-audit 共用一份实现**。 */
+  ok(typeof T.mirrorHealth === 'function', 'T.mirrorHealth 必须导出（体检 G 列与训练门槛的单一真源）');
+  const hg = T.healthGate();
+  ok(hg.on === true, '健康门槛默认必须开（关掉就等于把"熬"解放回冠军位）');
+  eq(hg.minG, 3, 'G 门槛必须与 champ-audit 的判读口径一致（<3 = 打法坍缩到两三张卡）');
+  eq(hg.maxDraw, 0.2, '平局率门槛 20%');
+  eq(hg.maxRounds, 40, '自对局回合门槛 40');
+  ok(hg.promoteGames >= 4, 'promoteGames（提升冠军前的自对局局数）必须存在且够小样本可用');
+  /* ⚠️ 门槛必须加在**决定产物的那一行**上：产物冠军由 finishStep 的 `t.champion = t.bestChamp` 决定，
+   * 第一版只加在收尾的 pickChampionByWinRate 上 ⇒ 12 个 seed 的产物与没加时**逐个相同**（空操作）。 */
+  const evo0 = readFileSync('js/train/evo.js', 'utf8');
+  ok(/if \(better && HEALTH\.on\) \{/.test(evo0), '提升冠军前（finishStep 的 better 分支）必须有健康门槛');
+  ok(/if \(better && !healthReject\) \{/.test(evo0), '体检不过时必须**不提升**（保留上一个合格冠军）');
+  /* 单一真源：体检侧不许再自己算一遍 exp(熵)（两处各写一遍必出事，METHODOLOGY 第 13 条） */
+  const al = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(al.indexOf('mirrorHealth(') >= 0, 'tools/audit-lib.mjs 的 selfPlay 必须调用 T.mirrorHealth（单一真源）');
+  ok(al.indexOf('Math.exp(H)') < 0, 'audit-lib 不许再自己算一遍 exp(熵)（否则门槛与体检会漂移）');
+  /* 阈值逻辑本身（纯函数，逐条可判） */
+  eq(T.healthFails({ effSkills: 4.2, drawRate: 0, rounds: 30 }).length, 0, '健康候选不得报失败');
+  eq(T.healthFails({ effSkills: 1.5, drawRate: 0, rounds: 55 }).length, 2, 'G<3 与回合>40 必须各报一条');
+  eq(T.healthFails({ effSkills: 3.1, drawRate: 0.5, rounds: 20 }).length, 1, '平局率 50% 必须报一条');
+  /* 门槛必须真的参与择优：容差带过滤条件里必须有 healthOk */
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  ok(/band = pool\.filter\(function \(c\) \{ return c\.healthOk && c\.score >= topScore - WR_TOL; \}\)/.test(evo),
+    '容差带必须只收健康候选（否则"高分但退化"仍会被选中）');
+  /* 实测一次（2 局，便宜）：镜像局体检必须给出有限数值并回显局数 */
+  const mh = T.mirrorHealth(new Float64Array(Pol.paramCount()), 2, 5, 'multi');
+  ok(mh && mh.games === 2 && isFinite(mh.effSkills) && isFinite(mh.rounds) && isFinite(mh.drawRate),
+    'mirrorHealth 必须返回有限数值并回显 games');
 });
 
 t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {

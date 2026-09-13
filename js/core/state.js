@@ -9,6 +9,7 @@
     return {
       id, name, hp, ep: 0,
       lastSkill: null,
+      lastTarget: null, lastTarget2: null,   // v1.5.19：上一手指向谁（公共信息；供特征 T 块与 UI）
       elec: 0, boom: 0,             // 能量珠 R9'（只供下一回合，回合末未用即清空）
       beadNew: null,                // 本回合蓄能新得的珠类型（endTurn 据此决定谁过期）
       ringStreak: 0,                // 聚能环连击 R10
@@ -140,6 +141,12 @@
     const def = R.byKey[key];
     const tg = def ? resolveTarget(state, pid, key, opt) : null;
     const tg2 = (opt && opt.target2 != null && opt.target2 !== pid && state.p[opt.target2]) ? opt.target2 : null;
+    /* v1.5.19：把"这一手指向谁"留在**玩家对象上**（`state.actions` 每回合会被清空 ⇒ 决策时刻
+     * 完全看不到上一回合谁打过谁，见 docs/PARAMS-PLAN.md §0 与 v7 的关系特征 T 块）。
+     * 这是**公共信息**（真人局里手势指向谁大家都看得见），存进去不产生信息泄漏。
+     * `lastSkill` 同理已经在玩家对象上；两者配对才是"(actor, skill, target)"三元组。 */
+    p.lastTarget = tg;
+    p.lastTarget2 = tg2;
 
     // N12：已淘汰玩家不能行动（防止死人出招 / 回能量）
     if (p.hp <= 0) return fail('invalid', '已淘汰（无法行动）');

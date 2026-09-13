@@ -113,7 +113,7 @@ if (process.env.EPIRUS_HOTSTART === '1') {
   try {
     const src = readFileSync(srcPath, 'utf8');
     const m = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
-    if (m) { seedParams = P.unpack(JSON.parse(m[1])); hotstartFrom = srcPath; }
+    if (m) { const raw = P.unpack(JSON.parse(m[1]), true); seedParams = raw ? P.embedLegacy(raw) : null; hotstartFrom = srcPath; }   // v7：旧形状逐位等价嵌入
   } catch (e) { /* no hot start */ }
 }
 

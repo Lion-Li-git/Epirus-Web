@@ -43,7 +43,9 @@ export function loadChamp(W, file, root) {
   const src = readFileSync(join(root || ROOT, file), 'utf8');
   const m = /EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src);
   if (!m) return null;
-  return W.EpirusPolicy.unpack(JSON.parse(m[1]));
+  /* v7：测量工具必须能读历史形状（v5/v6）——**保持原生形状**读取，不要嵌入：
+   * 嵌入会把形状变成 v7，chooser 就切到候选口径，历史基线分复现不了。 */
+  return W.EpirusPolicy.unpack(JSON.parse(m[1]), true);
 }
 
 /* A. 外部考卷（沿用 canonical eval-5p，默认 20 局） */
@@ -58,45 +60,11 @@ export function exam(file, extra, EXG, root) {
 
 /* B/C/G. 自对局：5 座同一冠军 */
 export function selfPlay(W, params, mode, GAMES) {
-  const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
-  const G = GAMES || 20;
-  const N = 5;
-  let dmg = 0, heavyDmg = 0, holo = 0, draws = 0, rounds = 0, zero = 0, attacks = 0;
-  const keyCount = {};
-  for (let g = 0; g < G; g++) {
-    const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(9000 + g) }, N);
-    const ch = []; for (let i = 0; i < N; i++) ch.push(T.policyChooserN(params, 0.15));
-    Play.autoGameN(st, ch);
-    let gd = 0;
-    for (const e of st.events) {
-      if (e.type === 'holoSet') holo++;
-      if (e.type === 'damage') {
-        dmg += e.amt; gd += e.amt;
-        /* cost≥3 的落地伤害：从事件里认 via（技能）成本 */
-        const def = e.via ? R.byKey[e.via] : null;
-        if (def && def.cost != null && def.cost >= 3) heavyDmg += e.amt;
-      }
-      if (e.type === 'action' || e.type === 'cast') attacks++;
-      /* G：只统计**非ジ**的成功出手（ジ 占比 ~60% 是算术必然，算进去会把覆盖度量成常数）。 */
-      if (e.type === 'action' && e.outcome === 'ok' && e.key && e.key !== R.SK.JI) {
-        keyCount[e.key] = (keyCount[e.key] || 0) + 1;
-      }
-    }
-    rounds += st.round;
-    if (gd === 0) zero++;
-    if (st.p.every(function (p) { return p.hp > 0; })) draws++;
-  }
-  /* 有效技能数 = exp(熵)；只用非ジ出手的分布。样本不足时给 0（而不是 NaN）。 */
-  const ks = Object.keys(keyCount);
-  const tot = ks.reduce(function (a, k) { return a + keyCount[k]; }, 0);
-  let H = 0;
-  for (const k of ks) { const p = keyCount[k] / tot; H -= p * Math.log(p); }
-  const effSkills = tot ? Math.exp(H) : 0;
-  return {
-    dmgPerGame: dmg / G, heavyPerGame: heavyDmg / G, holoPerGame: holo / G,
-    zeroRate: zero / G, drawRate: draws / G, rounds: rounds / G,
-    effSkills: effSkills, distinctKeys: ks.length
-  };
+  /* v7（v1.5.19）：改为**调用训练侧的单一真源**（`js/train/evo.js` 的 `mirrorHealth`）。
+   * 为什么必须共用：训练侧现在用同一套指标做**换冠军的健康门槛**（G/平局/回合），
+   * 两边各写一遍就会出现"门槛过了、体检不过"的常态（docs/METHODOLOGY.md 第 13 条）。
+   * 返回字段与旧实现逐字一致（dmgPerGame/heavyPerGame/holoPerGame/zeroRate/drawRate/rounds/effSkills/distinctKeys）。 */
+  return W.EpirusTrainer.mirrorHealth(params, GAMES || 20, 5, mode === 'long' ? 'long' : 'multi');
 }
 
 /* E/F：**对手活跃度**对冠军行为的影响（v1.5.14 加，起因是用户实测"集体防御"）。

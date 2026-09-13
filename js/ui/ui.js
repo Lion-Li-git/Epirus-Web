@@ -233,15 +233,15 @@
     // 同时行动：AI 基于“行动前状态”决策，看不到玩家本回合动作/效果
     const preState = S.cloneState(B.state);
     const preLegal = Play.legalActions(preState, 1);
-    const aiKey = chooseAI(preState, preLegal);
+    const aiPick0 = Play.normPick(chooseAI(preState, preLegal));   // v7：冠军可能返回 {key,target,bead}
     // 玩家出招
     S.attemptAction(B.state, 0, key, bead ? { bead: bead } : null);
     const humanPick = key;
     hint('你选择了【' + skillName(key) + '】，电脑思考中…');
     setTimeout(function () {
       // 电脑出招（用先决策好的 aiKey）
-      S.attemptAction(B.state, 1, aiKey, { bead: B.state.p[1].elec > B.state.p[1].boom ? 'boom' : 'elec' });
-      const aiPick = aiKey;
+      S.attemptAction(B.state, 1, aiPick0.key, { bead: aiPick0.bead || (B.state.p[1].elec > B.state.p[1].boom ? 'boom' : 'elec'), target: aiPick0.target, target2: aiPick0.target2 });
+      const aiPick = aiPick0.key;
       // 结算
       X.resolveActions(B.state);
       X.endTurn(B.state);
@@ -364,7 +364,7 @@
         const rest = S.opponentsOf(state, pid).filter(function (o) { return o !== t1; });
         t2 = rest.length ? rest[0] : null;
       }
-      return { key: key, target: t1, target2: t2 };
+      return { key: key, target: t1, target2: t2, bead: (res && typeof res === 'object' && (res.bead === 'elec' || res.bead === 'boom')) ? res.bead : null };
     }
     if (B.diff === 'champ') {
       const c = loadMultiChamp();
@@ -372,7 +372,8 @@
         B.aiFallback = false;
         const base = legal.filter(function (l) { return l.affordable; });
         const legalForAI = base.length ? base : [{ key: R.SK.JI, affordable: true }];
-        return finish(P.choose(state, pid, legalForAI, c, { temp: 0.15 }));
+        /* v7：候选感知入口（技能, 目标, 珠类型）—— 旧包在 pickChampion 内部自动回退旧口径 */
+        return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15));
       }
       B.aiFallback = true;                                  // 冠军缺失 → 显式回退，不静默
       return finish(DN.hard.pick(state, pid, legal));
@@ -398,7 +399,7 @@
       for (let pid = 1; pid < N; pid++) {
         if (!picks[pid - 1]) continue;
         const b = B.state.p[pid];
-        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: b.elec > b.boom ? 'boom' : 'elec', target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
+        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: picks[pid - 1].bead || (b.elec > b.boom ? 'boom' : 'elec'), target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
       }
       X.resolveActions(B.state);
       X.endTurn(B.state);
@@ -463,7 +464,7 @@
       for (let pid = 1; pid < N; pid++) {
         if (!picks[pid - 1]) continue;
         const b = B.state.p[pid];
-        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: b.elec > b.boom ? 'boom' : 'elec', target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
+        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: picks[pid - 1].bead || (b.elec > b.boom ? 'boom' : 'elec'), target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
       }
       X.resolveActions(B.state);
       X.endTurn(B.state);
@@ -510,7 +511,7 @@
         const legalForAI = base.length ? base : [{ key: R.SK.JI, affordable: true }];
         // 播放口径：与训练口径一致（temp0.15，纯策略）。
         // 不再用运行时"连招防护"——改为训练时加入"连招反制"对手，让 AI 自己学会别被看穿。
-        return P.choose(state, 1, legalForAI, c, { temp: 0.15 });
+        return Trainer.pickChampion(state, 1, legalForAI, c, 0.15);
       }
       return Bots.pickAdaptive(state, 1, legal);
     }

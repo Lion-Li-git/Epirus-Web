@@ -86,7 +86,7 @@ if (OPP_FN[SUBJECT]) {
   const meta = subjectMeta(src, file);
   const mm = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
   if (!mm) throw new Error('不是多人冠军包: ' + file);
-  subjParams = P.unpack(JSON.parse(mm[1]));
+  subjParams = P.unpack(JSON.parse(mm[1]), true);   // v7：允许历史形状
   if (!subjParams) throw new Error('冠军包不兼容: ' + file);
   if (!FLAG.mode && meta && meta.mode) subjMode = meta.mode;
   subjLabel = rel + (meta && meta.firstRate != null ? '（自评=' + (meta.firstRate * 100).toFixed(1) + '%）' : '');

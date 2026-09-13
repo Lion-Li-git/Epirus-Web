@@ -32,7 +32,8 @@ export function loadChampParams(P, file) {
   const src = readFileSync(file, 'utf8');
   const m = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
   if (!m) throw new Error('不是多人冠军包（缺 EPIRUS_CHAMPION_3P）: ' + file);
-  const params = P.unpack(JSON.parse(m[1]));
+  /* v7：训练池里的 `champ:<路径>` 允许历史形状（保持原生形状 ⇒ 走旧口径） */
+  const params = P.unpack(JSON.parse(m[1]), true);
   if (!params) throw new Error('冠军包不兼容: ' + file);
   return params;
 }

@@ -22,7 +22,7 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
 }
 vm.runInNewContext(readFileSync(FILE, 'utf8'), sb, { filename: FILE });
 const W = sb.window, R = W.EpirusRules, T = W.EpirusTrainer, P = W.EpirusPolicy, S = W.EpirusState;
-const champ = P.unpack(W.EPIRUS_CHAMPION_3P);
+const champ = P.unpack(W.EPIRUS_CHAMPION_3P, true);
 if (!champ) throw new Error('冠军解包失败');
 
 /* 技能费用表（用真实 computeCost 在“资源充足”状态下探一次） */

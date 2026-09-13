@@ -76,7 +76,7 @@ console.log('文件头注释：' + (src.split('\n')[0] || '').trim().slice(0, 12
 const champSel = function (state, pid, legal) {
   const aff = legal.filter((l) => l.affordable);
   const base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
-  return P.choose(state, pid, base, params, { temp: 0.15 });
+  return T.pickChampion(state, pid, base, params, 0.15);   // v7：候选感知
 };
 const per = {};
 let tot = 0;

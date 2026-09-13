@@ -1117,6 +1117,10 @@
 
   global.EpirusResolve = {
     startTurn, resolveActions, endTurn, checkOver,
-    rawDamage, deliverDamage, guardOf, judge, judge3, actionOf, setVoid
+    rawDamage, deliverDamage, guardOf, judge, judge3, actionOf, setVoid,
+    /* v1.5.19：把"技能→架势种类"的两个真源也导出 —— 特征侧（js/train/policy.js）要看
+     * "自己身上是什么架势 / 对手镜面反射复制到了什么"。**不许在 policy.js 里重写一遍 switch**：
+     * 本项目"两处各写一遍"已栽过四次（见 docs/METHODOLOGY.md 第 13 条）。 */
+    guardKindOfKey, copiedGuardKind, mirrorRefs, mirrorSelfKey
   };
 })(typeof window !== 'undefined' ? window : globalThis);

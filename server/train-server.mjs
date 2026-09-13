@@ -55,6 +55,8 @@ let seeds = [];            // 多种子池：[{t, seed, done, stopReason, peakWr
 let running = false;
 let lastChampionPack = null;   // 最近一次择优成功的冠军包（供 /champion 拉取）
 
+let seedLegacyFrom = null;   // v7：热启动包若是**旧形状嵌入**而来，记下它的包版本（谱系用）
+
 /* 从 js/bundled-champion.js 读回已保存冠军，用于服务重启后热启动持续训练。
  * 注意：bundle 现在含 meta（EPIRUS_CHAMPION_META）在前，不能再用 indexOf('=')（会拿到 meta 的等号导致 JSON.parse 失败）。 */
 function loadSeed() {
@@ -62,7 +64,11 @@ function loadSeed() {
     const src = readFileSync(join(root, 'js', 'bundled-champion.js'), 'utf8');
     const m = src.match(/window\.EPIRUS_CHAMPION\s*=\s*(\{[\s\S]*?\})\s*;/);
     if (!m) return null;
-    return P.unpack(JSON.parse(m[1]));
+    /* v7：先严格读（当前形状），失败再按**逐位等价嵌入**读历史形状 —— 否则换特征版本就只能从随机重开，
+     * "同起点 A/B"与 hotstartFrom 谱系一起报废（见 policy.js embedLegacy）。 */
+    const r = P.loadAny(JSON.parse(m[1]));
+    if (r && r.legacy) seedLegacyFrom = r.from;
+    return r ? r.params : null;   // loadAny：v7 走严格、旧形状走逐位等价嵌入
   } catch (e) { return null; }
 }
 
@@ -104,7 +110,7 @@ function champRealWr(params, temp, games, seedBase) {
   const sel = function (state, pid, legal) {
     const aff = legal.filter(l => l.affordable);
     const base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
-    return P.choose(state, pid, base, params, { temp: temp });
+    return T.pickChampion(state, pid, base, params, temp);   // v7：候选感知
   };
   let tot = 0, n = 0;
   for (let i = 0; i < BOT_NAMES.length; i++) {
@@ -253,7 +259,7 @@ async function runTrain(gens, opts, cfg) {
     for (const c of clients) sse(c, { type: 'lineage', round: r + 1, parents: nextParents.map(function (p) { return { label: p.label, seedId: p.seedId }; }) });
     const finalPack = P.pack(best ? best.champion : cur);
     lastChampionPack = finalPack;
-    writeBundle(finalPack, { source: 'server/train-server.mjs', seeds: seedN, gens, round: r + 1, rounds, ts: new Date().toISOString(), keptExisting: bestSeed < 0, fresh: fresh, champWr: bestWr, seed: Number((cfg && cfg.seed0) || 0), hotstartFrom: hotstartFrom });
+    writeBundle(finalPack, { source: 'server/train-server.mjs', seeds: seedN, gens, round: r + 1, rounds, ts: new Date().toISOString(), keptExisting: bestSeed < 0, fresh: fresh, champWr: bestWr, seed: Number((cfg && cfg.seed0) || 0), hotstartFrom: hotstartFrom, seedEmbeddedFrom: seedLegacyFrom });
     last = { best: bestScore, champWr: bestWr, bestSeed, keptExisting: bestSeed < 0 };
     for (const c of clients) sse(c, { type: 'roundDone', round: r, rounds, champWr: bestWr, bestSeed, keptExisting: bestSeed < 0 });
   }
@@ -286,7 +292,7 @@ function loadSeedN() {
   try {
     const src = readFileSync(join(root, BUNDLE_MP), 'utf8');
     const m = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
-    if (m) return P.unpack(JSON.parse(m[1]));
+    if (m) { const r = P.loadAny(JSON.parse(m[1])); if (r && r.legacy) seedLegacyFrom = r.from; return r ? r.params : null; }
   } catch (e) { /* 无热启动 */ }
   return null;
 }
@@ -544,7 +550,34 @@ async function runTrainN(gens, cfg) {
       ' 1st=' + (pk.v.firstRate * 100).toFixed(1) + '%  补贴局: 前二=' + (pk.probe.top2Rate * 100).toFixed(1) + '% 深技能/局=' + pk.probe.deepCastPerGame.toFixed(2) + ' 种类=' + pk.probe.deepKinds);
   }
   const pack = P.pack(finalParams);
-  lastChampionPackN = pack;
+  /* ===== v1.5.19：**产物健康门槛（最后一道，无法绕过）** =====
+   * 为什么必须放在落盘处：产物的冠军由内部多处提升路径共同决定（finishStep 的 bestChamp、
+   * pickChampionByWinRate、上面的多目标择优），**任何一处漏改都会让门槛变成空操作** ——
+   * 实测把门槛只加在前两处时，12 个 seed 的权重与未加时**逐字节相同**（METHODOLOGY 新增第 26 条）。
+   * 口径 = 自对局体检（与 champ-audit 的 G/回合/平局**同一实现** T.mirrorHealth）。
+   * 不过门槛 ⇒ **不写盘**（保留上一版产物），并在 SSE 里显式报告 ⇒ 不会再有"退化包静默上线"。 */
+  let healthReject = null, healthInfo = null;
+  const HGD = T.healthGate ? T.healthGate() : { on: false };
+  if (HGD.on && finalParams) {
+    const mh = T.mirrorHealth(finalParams, HGD.games, HGD.n, mode);
+    healthInfo = { effSkills: mh.effSkills, distinctKeys: mh.distinctKeys, rounds: mh.rounds, drawRate: mh.drawRate, dmgPerGame: mh.dmgPerGame };
+    const hf = T.healthFails(mh);
+    if (hf.length) {
+      healthReject = hf;
+      console.log('[health] ⚠ 产物未过自对局体检 ⇒ 不写盘（保留上一版）：' + hf.join('；') +
+        '（G=' + mh.effSkills.toFixed(2) + ' 种类=' + mh.distinctKeys + ' 回合=' + mh.rounds.toFixed(1) + '）');
+      for (const c of clients) sse(c, { type: 'healthReject', fails: hf, info: healthInfo });
+    }
+  }
+  if (!healthReject) lastChampionPackN = pack;
+  if (healthReject) {
+    /* 保留上一版 bundle：本次**不产出物**。⚠️ 但必须把 `done` 事件照常发出去 ——
+     * 第一版在这里直接 return，把 done 一起跳过了，runner 只能干等到 15 分钟超时后报
+     * "没有 done 事件"（真因被埋掉）。 */
+    for (const c of clients) sse(c, { type: 'done', n: n, gens, firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0, secs: ((Date.now() - t0) / 1000).toFixed(1), champ: null, health: healthInfo, healthReject: healthReject, wrote: false });
+    runningN = false; poolN.close();
+    return;
+  }
   writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), fightOverride: (fightSet ? JSON.stringify(fightEnv) : ''),
     /* v1.5.11：把**实际生效**的奖励参数也记下来（哨声惩罚现在长程默认开、不靠 env ⇒ 只记 env 会漏） */
     fightEffective: (T.fightReward ? JSON.stringify(T.fightReward()) : ''),
@@ -554,8 +587,8 @@ async function runTrainN(gens, cfg) {
      * 于是从产物上既看不出是不是热启动、也看不出输入是哪一版冠军 —— 而浏览器的默认配置
      * 恰好就是热启动（index.html 的"从头训练"复选框默认不勾，ui.js 也就不发 fresh=1）。
      * 与 v1.3.50 给 CLI 定的规矩对齐：让"从哪个冠军长出来的"成为可复现输入。 */
-    seed: SEED0, fresh: !!cfg.fresh, hotstartFrom: hotstartFromN, workers: poolN.workers });
-  for (const c of clients) sse(c, { type: 'done', n: n, gens, firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0, secs: ((Date.now() - t0) / 1000).toFixed(1), champ: pack });
+    seed: SEED0, fresh: !!cfg.fresh, hotstartFrom: hotstartFromN, seedEmbeddedFrom: seedLegacyFrom, workers: poolN.workers });
+  for (const c of clients) sse(c, { type: 'done', n: n, gens, firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0, secs: ((Date.now() - t0) / 1000).toFixed(1), champ: pack, health: healthInfo, healthReject: healthReject });
   runningN = false;
   poolN.close();
 }

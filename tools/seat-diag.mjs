@@ -14,7 +14,7 @@ for (const x of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
 }
 const W = sb.window;
 const S = W.EpirusState, R = W.EpirusRules, P = W.EpirusPolicy, B = W.EpirusBots, T = W.EpirusTrainer, Play = W.EpirusPlay;
-const champ = P.unpack(W.EPIRUS_CHAMPION_3P);
+const champ = P.unpack(W.EPIRUS_CHAMPION_3P, true);
 const GAMES = parseInt(process.argv[2] || '200', 10);
 const N = 3;
 

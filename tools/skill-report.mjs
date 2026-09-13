@@ -46,7 +46,7 @@ const src = readFileSync(file, 'utf8');
 const metaM = src.match(/window\.EPIRUS_CHAMPION_3P_META\s*=\s*(\{[\s\S]*?\})\s*;/);
 vm.runInNewContext(src, sb, { filename: file });
 const W = sb.window, R = W.EpirusRules, S = W.EpirusState, T = W.EpirusTrainer, P = W.EpirusPolicy, B = W.EpirusBots;
-const champ = P.unpack(W[gname]);
+const champ = P.unpack(W[gname], true);   // v7：允许历史形状（保持原生形状，旧包走旧口径）
 if (!champ) throw new Error('冠军解包失败：' + file);
 
 /* v1.5.0：模式缺省**跟随冠军产物自己的 meta.mode**（长程冠军 ⇒ 自动按 5 血测），可用 --mode= 覆盖。
@@ -88,7 +88,7 @@ function makeSel(forceKey, rich, seat, acc, banKey) {
       if (inner) return inner(state, pid, legal);
       const aff2 = legal.filter(function (l) { return l.affordable; });
       const base2 = aff2.length ? aff2 : [{ key: R.SK.JI, affordable: true }];
-      return P.choose(state, pid, base2, champ, { temp: TEMP });
+      return T.pickChampion(state, pid, base2, champ, TEMP);   // v7：候选感知（对手座位）
     }
     const aff = legal.filter(function (l) { return l.affordable; });
     let base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
@@ -108,18 +108,19 @@ function makeSel(forceKey, rich, seat, acc, banKey) {
       const can = base.filter(function (l) { return l.key === forceKey; });
       if (can.length) base = can;
     }
-    const k = P.choose(state, pid, base, champ, { temp: TEMP });
+    const pickC = T.pickChampion(state, pid, base, champ, TEMP);   // v7：候选感知
+    const k = pickC.key;
     if (forceKey && acc && k === forceKey) acc.hit++;
     if (inner) {
-      const t1 = T.pickTargetN(state, pid, k);
+      const t1 = (pickC.target != null) ? pickC.target : T.pickTargetN(state, pid, k);
       let t2 = null;
       if (k === R.SK.DUAL_GUN || k === R.SK.MIRROR) {
         const rest = S.opponentsOf(state, pid).filter(function (o) { return o !== t1; });
         t2 = rest.length ? rest[0] : null;
       }
-      return { key: k, target: t1, target2: t2 };
+      return { key: k, target: t1, target2: t2, bead: pickC.bead || null };
     }
-    return k;
+    return pickC;
   };
   return fn;
 }

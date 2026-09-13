@@ -23,15 +23,18 @@
     return out;
   }
 
-  /* chooser 返回值规范化：'GUN' 或 {key, target} */
+  /* chooser 返回值规范化：'GUN' 或 {key, target, target2, bead} */
   function normPick(res) {
-    if (typeof res === 'string') return { key: res, target: null, target2: null };
+    if (typeof res === 'string') return { key: res, target: null, target2: null, bead: null };
     if (res && res.key) return {
       key: res.key,
       target: (res.target != null ? res.target : null),
-      target2: (res.target2 != null ? res.target2 : null)
+      target2: (res.target2 != null ? res.target2 : null),
+      /* v7：`bead` = 蓄能要蓄哪种珠（'elec'|'boom'）。由策略候选给出（见 policy.js 的 candidatesFor）；
+       * 脚本/UI 不传 ⇒ 走下面的启发式兜底，行为与旧版一字不变。 */
+      bead: (res.bead === 'elec' || res.bead === 'boom') ? res.bead : null
     };
-    return { key: null, target: null, target2: null };
+    return { key: null, target: null, target2: null, bead: null };
   }
 
   /* N 人自动对局：choosers[pid](state, pid, legal, events) → key | {key,target} */
@@ -55,11 +58,15 @@
         const raw = normPick(ch ? ch(state, pid, legal, state.events) : null);
         const l = legal.find(function (x) { return x.key === raw.key; });
         const k = (ch && ch.whiffOk) ? raw.key : ((l && l.affordable) ? raw.key : R.SK.JI);
-        picks.push({ key: k, target: raw.target, target2: raw.target2 });
+        picks.push({ key: k, target: raw.target, target2: raw.target2, bead: raw.bead });
       }
       for (let pid = 0; pid < N; pid++) {
         if (!picks[pid]) continue;
-        S.attemptAction(state, pid, picks[pid].key, { bead: beadOf(state.p[pid]), target: picks[pid].target, target2: picks[pid].target2 });
+        /* v7：候选给了 bead 就用它（"为放电而蓄电珠"要能学会）；没给才走启发式兜底。 */
+        S.attemptAction(state, pid, picks[pid].key, {
+          bead: picks[pid].bead || beadOf(state.p[pid]),
+          target: picks[pid].target, target2: picks[pid].target2
+        });
       }
       X.resolveActions(state);
       X.endTurn(state);
@@ -87,10 +94,17 @@
       };
       const beadOf = function (p) { return p.elec > p.boom ? 'boom' : 'elec'; };   // 相等时取电珠，与页面同口径
       const l0 = legalActions(state, 0), l1 = legalActions(state, 1);
-      const k0 = sanitize(chooser0(state, 0, l0, state.events), l0, chooser0);
-      const k1 = sanitize(chooser1(state, 1, l1, state.events), l1, chooser1);
+      /* v7：2P 也接受 chooser 返回对象（{key,bead}）—— 否则 2P 永远学不会"为放电而蓄电珠"。
+       * 返回字符串时行为与旧版一字不变（bead 走启发式、target 为 null）。 */
+      const r0 = normPick(chooser0(state, 0, l0, state.events));
+      const r1 = normPick(chooser1(state, 1, l1, state.events));
+      const k0 = sanitize(r0.key, l0, chooser0);
+      const k1 = sanitize(r1.key, l1, chooser1);
       for (let pid = 0; pid < 2; pid++) {
-        S.attemptAction(state, pid, pid === 0 ? k0 : k1, { bead: beadOf(state.p[pid]) });
+        const raw = pid === 0 ? r0 : r1;
+        S.attemptAction(state, pid, pid === 0 ? k0 : k1, {
+          bead: raw.bead || beadOf(state.p[pid]), target: raw.target, target2: raw.target2
+        });
       }
       X.resolveActions(state);
       X.endTurn(state);

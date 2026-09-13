@@ -61,7 +61,7 @@
     const champ = function (state, pid, legal) {
       const aff = legal.filter(l => l.affordable);
       const base = aff.length ? aff : [{ key: global.EpirusRules.SK.JI, affordable: true }];
-      return P.choose(state, pid, base, c, { temp: 0.05 });
+      return Trainer.pickChampion(state, pid, base, c, 0.05);   // v7：候选感知（旧包内部自动回退）
     };
     const res = [];
     const names = ['random', 'aggro', 'defend', 'balanced', 'breakdef', 'wall', 'reflectspam', 'guardspam', 'baguaspam', 'combocounter', 'mix', 'heavyfire', 'guardgun', 'protowall', 'whiff', 'reflectmix', 'reflecttank', 'defreflectgun'];

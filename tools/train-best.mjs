@@ -60,7 +60,7 @@ function champSel(c) {
   return function (state, pid, legal) {
     const aff = legal.filter(l => l.affordable);
     const base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
-    return P.choose(state, pid, base, c, { temp: 0.15 });
+    return T.pickChampion(state, pid, base, c, 0.15);   // v7：候选感知（旧包内部自动回退）
   };
 }
 function evalChamp(c) {
@@ -94,7 +94,8 @@ try {
   const curSrc = readFileSync(dest, 'utf8');
   const curM = curSrc.match(/window\.EPIRUS_CHAMPION\s*=\s*(\{[\s\S]*?\})\s*;/);
   const curObj = curM ? JSON.parse(curM[1]) : null;
-  const curP = curObj ? P.unpack(curObj) : null;
+  const curRaw = curObj ? P.unpack(curObj, true) : null;
+  const curP = curRaw ? P.embedLegacy(curRaw) : null;   // v7：旧形状逐位等价嵌入（热启动）
   if (curP) {
     const curEv = evalChamp(curP);
     console.log(`候选 0 (现有冠军): 不训练 | avg wr=${(curEv.avg * 100).toFixed(0)}% | wall=${(curEv.per.wall * 100).toFixed(0)}% defend=${(curEv.per.defend * 100).toFixed(0)}%`);

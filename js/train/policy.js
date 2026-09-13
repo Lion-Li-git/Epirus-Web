@@ -1,13 +1,27 @@
-/* Epirus — 策略网络 v2：**状态-动作值网络**（零依赖）。
+/* Epirus — 策略网络 v7：**状态-动作值网络**（零依赖）。
  * 旧版是“每个动作一个 logit、共享同一状态向量”，学不到“按局面选招”。
- * 新版：s = 状态特征(33)，a = 该动作特征(约14)；
- * 对每个合法动作拼 [s,a] → 小 MLP → 一个标量“该招在当前局面的价值”，softmax 选招。
- * 训练仍用变异进化锦标赛（见 js/train/evo.js）。所有对外 API 保持不变。
+ * 现在：s = 状态特征，a = **候选**特征；对每个**候选**拼 [s,a] → 小 MLP → 标量，softmax 选候选。
+ *
+ * v7（v1.5.19，"一次性加全"）三件事，互相配套（见 docs/PARAMS-PLAN.md 与 HANDOFF §3）：
+ *  ① **候选 = (技能, 目标, 珠类型)**，不再只是技能 key —— 于是"打谁"和"蓄哪种珠"进了网络
+ *     （此前目标是 evo.js 的固定启发式、珠类型是 play.js 写死的 `elec>boom?'boom':'elec'`）。
+ *  ② **动作特征 +8**：珠类型 2 + 目标相对 6 ⇒ 同一技能的不同候选才可区分（否则输入逐位相同 ⇒ 永远同分）。
+ *  ③ **状态特征 +75**：
+ *     · T 关系块（15）：每个玩家的"上一手指向自己/我/别人" —— 让 (actor, skill, target) 三元组可见；
+ *     · B 效果快照块（60）：每个玩家 × **12 个"能产生持续效果的技能"各一维**，值=强度/剩余、
+ *       符号表示**自己施加(+)/他人施加(−)**（镜面反射复制来的架势、全息套的盾自动落在这里）。
+ *     ⇒ "谁身上挂着什么 buff、谁给的"由**一张通用表**生成，不是每加一个 buff 手写一维；
+ *       **含义**（反弹架势意味着枪会被弹回）仍然交给网络学。见 docs/METHODOLOGY.md 第 23 条。
+ *  · 所有新维度**一律追加在末尾** ⇒ 旧包（v5/v6）用 `shapeOf` 反推形状后按前缀裁剪仍可评测；
+ *    游戏侧 `checkPack` 依旧严格（线上包必须重训重发）。
+ *  · **实验掩码** `setFeatMask('bead,target,effects,rel')`：形状不变（同一 PACK_VERSION/paramCount），
+ *    所以"去掉某几块再加训一版"不必再动版本与包格式。
  */
 (function (global) {
   'use strict';
   const R = global.EpirusRules;
   const S = global.EpirusState;
+  const X = global.EpirusResolve;      // v7：架势/"技能→效果"的唯一真源在 resolve 侧
   const SK = R.SK;
 
   // 动作集 = 全部技能（含多人专用 双枪/镜面）；2 人局它们不在 legal 里，不会被选中。
@@ -18,6 +32,53 @@
   const OPP_SLOTS = 4;   // v5：最多 5 人局的对手槽位数
   const HIST_K = 3;      // v5：最近 K 步技能历史
   const CAT3 = { energy: 0, attack: 1, defense: 2, special: 3 };
+  const PLAYER_SLOTS = OPP_SLOTS + 1;   // v7：自己 + 4 个对手位（T/B 两块按这个数铺开）
+  const FEAT_S_V6 = 123;                // v6 的状态维数（历史常量）：v5/v6 包裁剪时的**前缀长度**
+
+  /* ===== v7 · B 块「持续效果快照」的**唯一真源**（14 条）=====
+   * 每条 = 一个"能产生持续效果"的东西 + 「怎么从玩家对象读出强度」+「是否他人施加」。
+   * **加一个新 buff = 这里加一行**（引擎侧字段本来就存在于 `js/core/state.js` 的 freshPlayer）。
+   * 值域约定：0 = 没有；**正 = 自己施加 / 负 = 他人施加** —— 符号本身是信息
+   * （"我自己摆的反弹" 与 "镜面反射复制来的反弹" 在真人局里是两回事）。
+   * ⚠️ 这里**只报事实**（挂了什么、还剩多少、谁给的），**不判断好坏** —— 含义是网络要学的东西。
+   * ⚠️ 与 `js/ui/ui.js` 的状态徽章清单是同一批事实；UI 侧将来应改为消费此表（避免"两处各写一遍"）。 */
+  const EFFECTS = [
+    ['guardCarry',  false, function (p) { return p.baguaExtra ? 1 : 0; }],                              // 无极变速/架势延续 R21
+    ['guardPrev',   false, function (p) { return p.guardNext ? 1 : 0; }],                               // 上回合摆过防御架势
+    ['copiedGuard', true,  function (p) { return p.copiedGuard ? 1 : 0; }],                             // N14 复制来的架势（他人技能）
+    ['rodGuard',    false, function (p) { return Math.min(p.rodGuard || 0, 3) / 3; }],                  // R31 避雷针免雷窗口（剩余）
+    ['fireWeak',    false, function (p) { return (p.fireWeakNow || p.fireWeakNext) ? 1 : 0; }],         // R22 藤甲火弱
+    ['mine',        false, function (p) { return p.mineArmed ? 1 : 0; }],                               // R38 地雷已布
+    ['tauntActive', false, function (p) { return p.tauntActive ? 1 : 0; }],                             // R41/R54 被挑衅
+    ['tauntPend',   false, function (p) { return p.tauntPending ? 1 : 0; }],                            // 已宣告、待结算
+    ['nightmare',   false, function (p) { return p.nightmare ? 1 : 0; }],                               // R50 梦魇
+    ['vampire',     false, function (p) { return p.vampire ? 1 : 0; }],                                 // R47 吸血鬼公爵
+    ['revive',      false, function (p) { return p.reviveNext ? 1 : 0; }],                              // R48 回魂
+    ['infinite',    false, function (p) { return p.infiniteEnergy ? 1 : 0; }],                          // 回魂·无限能量
+    ['stickers',    true,  function (p) { return Math.min(p.stickers ? p.stickers.length : 0, 4) / 4; }], // R34/R44 符咒（他人贴的）
+    ['chains',      true,  function (p) { return Math.min(p.chains ? p.chains.length : 0, 3) / 3; }]     // R45 铁索（他人连的）
+  ];
+
+  /* ===== v7 · 实验掩码（**只改特征取值，不改形状**）=====
+   * `setFeatMask('bead,target')` = 只开这两块、其余恒 0（等价于"没有这些特征"），
+   * 但 `PACK_VERSION` / `paramCount` / 包格式**一字不变** ⇒ 对照臂不必再升版本、不必重发包格式。
+   * 传 null/undefined/'all' = 全开（默认）。 */
+  let MASK = { bead: true, target: true, effects: true, rel: true };
+  const MASK_KEYS = ['bead', 'target', 'effects', 'rel'];
+  function setFeatMask(spec) {
+    if (spec == null || String(spec).trim() === '' || String(spec).trim() === 'all') {
+      MASK = { bead: true, target: true, effects: true, rel: true };
+      return Object.assign({}, MASK);
+    }
+    const want = {};
+    String(spec).split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+      .forEach(function (s) { if (MASK_KEYS.indexOf(s) >= 0) want[s] = true; });
+    const next = {};
+    MASK_KEYS.forEach(function (k) { next[k] = !!want[k]; });
+    MASK = next;
+    return Object.assign({}, MASK);
+  }
+  function featMask() { return Object.assign({}, MASK); }
 
   function catOf(key) { return key ? (CAT3[R.byKey[key].cat] + 1) / 4 : 0; }
   function priOf(key) { return key ? (R.byKey[key].pri || 3) / 5 : 0; }
@@ -94,7 +155,7 @@
   }
 
   /* ---- 状态特征（pid 视角，全部公开信息） ---- */
-  function featuresV6(state, pid) {
+  function featuresV7(state, pid) {
     const me = state.p[pid];
     const agg = oppAgg(state, pid);
     const op = agg.threat;                 // 威胁最大的对手（N=2 时 = 唯一对手）
@@ -177,6 +238,30 @@
       for (let t = 0; t < HIST_K; t++) base.push(idxOf(h[t] || null));
       base.push(streakOf(h));
     }
+    /* ===== v7 新增：**一律追加在末尾**（旧包按前缀裁剪；插在中间会让 v6 前缀错位）=====
+     * slotOf(i)：i=0 是自己，1..OPP_SLOTS 是 v5 那套"血量升序"的对手槽。空位填 0 ⇒ 长度恒定。 */
+    const slotOf = function (i) { return i === 0 ? pid : slotPids[i - 1]; };
+    // ---- T 关系块：上一手"谁对谁"——(actor, skill, target) 三元组里缺的 target 侧 ----
+    for (let i = 0; i < PLAYER_SLOTS; i++) {
+      const q = (slotOf(i) != null) ? state.p[slotOf(i)] : null;
+      if (!q || !MASK.rel) { base.push(0, 0, 0, 0); continue; }
+      const lt = (q.lastTarget != null) ? q.lastTarget : null;
+      base.push(
+        (lt === q.id) ? 1 : 0,                                // 指向自己 ⇒"自己给自己上架势/buff"
+        (lt === pid) ? 1 : 0,                                 // 指向我
+        (lt != null && lt !== q.id && lt !== pid) ? 1 : 0,    // 指向别人（多人局"他们互相在打"）
+        idxOf(q.copiedGuard)                                  // ② 他这一手镜面反射复制到了哪张卡（0=没有）
+      );
+    }
+    // ---- B 块：持续效果快照（值 = 强度/剩余；**符号 = 自施(+) / 他施(−)**）----
+    for (let i = 0; i < PLAYER_SLOTS; i++) {
+      const q = (slotOf(i) != null) ? state.p[slotOf(i)] : null;
+      for (let e = 0; e < EFFECTS.length; e++) {
+        if (!q || !MASK.effects) { base.push(0); continue; }
+        const mag = EFFECTS[e][2](q);
+        base.push(mag === 0 ? 0 : (EFFECTS[e][1] ? -mag : mag));
+      }
+    }
     return base;
   }
   /* ===== P0：旧版存档兼容 =====
@@ -185,15 +270,25 @@
    * 五次失败结论无法复现对照。
    * 解法（千问方案）：形状从 **params.length 反推**——
    *   paramCount = HID*FEAT_N + HID + HID + 1  ⇒  FEAT_N = (len - 2*HID - 1)/HID
-   *   v5: (3313-49)/24 = 136  ⇒ FEAT_S = 136 - FEAT_A = 122
-   *   v6: (3337-49)/24 = 137  ⇒ FEAT_S = 123
-   * 于是同一进程可同时评测两种形状；**游戏侧 checkPack 仍严格拒绝**（只放宽工具侧 unpack）。 */
+   * v7 起**必须按表查**：v7 连 FEAT_A 也变了，只反推出 featN **无法决定"状态段/动作段"的切分点**
+   * （切错 = 静默错位 —— 正是这套机制存在的理由）。表里列出每个历史版本的 (featS, featA)。
+   * 于是同一进程可同时评测多代形状；**游戏侧 checkPack 仍严格拒绝**（只放宽工具侧 unpack）。 */
+  const VER_SHAPES = [
+    { v: 6, featS: FEAT_S_V6, featA: 14 },
+    { v: 5, featS: FEAT_S_V6 - 1, featA: 14 }
+  ];
+  function paramsOf(featS, featA) { return HID * (featS + featA) + HID + HID + 1; }
   function shapeOf(params) {
     const n = params.length;
-    if (n === HID * FEAT_N + HID + HID + 1) return { featS: FEAT_S, featA: FEAT_A, featN: FEAT_N, legacy: false };
+    if (n === paramCount()) return { v: PACK_VERSION, featS: FEAT_S, featA: FEAT_A, featN: FEAT_N, legacy: false };
+    for (let i = 0; i < VER_SHAPES.length; i++) {
+      const s = VER_SHAPES[i];
+      if (n === paramsOf(s.featS, s.featA))
+        return { v: s.v, featS: s.featS, featA: s.featA, featN: s.featS + s.featA, legacy: true };
+    }
     const featN = (n - HID - HID - 1) / HID;
     if (featN > 0 && Number.isInteger(featN) && featN > FEAT_A)
-      return { featS: featN - FEAT_A, featA: FEAT_A, featN: featN, legacy: true };
+      return { v: 0, featS: featN - FEAT_A, featA: FEAT_A, featN: featN, legacy: true };
     return null;
   }
 
@@ -207,29 +302,48 @@
     const mk = function (rs) {
       const st = S.createState('standard', { next: function () { return 0.5; } }, 2);
       st.p[0].ep = 3; st.p[0].ringStreak = rs;
-      return featuresV6(st, 0);
+      return featuresV7(st, 0);
     };
     const a = mk(0), b = mk(3);
     for (let i = 0; i < a.length; i++) if (a[i] - b[i] > 0.5) { RING_SELF_IDX = i; break; }
     return RING_SELF_IDX;
   }
+  /* v7 的新维度全部追加在 123 之后 ⇒ 前缀 123 就是当年的 v6 向量（逐位相同）。 */
   function features(state, pid, featS) {
-    const x = featuresV6(state, pid);
+    const x = featuresV7(state, pid);
     if (featS == null || featS >= x.length) return x;
-    const i = ringSelfIdx();
-    if (i < 0) return x.slice(0, featS);
-    const y = x.slice(); y.splice(i, 1); return y;
+    if (featS === FEAT_S_V6) return x.slice(0, FEAT_S_V6);          // v6 包：砍掉全部 v7 新维度
+    if (featS === FEAT_S_V6 - 1) {                                   // v5 包：再砍掉"跨得过环启动线"那一维
+      const i = ringSelfIdx();
+      const y = x.slice(0, FEAT_S_V6);
+      if (i >= 0 && i < y.length) y.splice(i, 1);
+      return y;
+    }
+    return x.slice(0, featS);
+  }
+  /* 一次决策里 `features()` 会被每个候选各调一次（旧代码就是这样）⇒ 加**决策级缓存**：
+   * 候选数从 v6 的 ~10 涨到 v7 的 ~40-80，不缓存的话状态向量会被重算几十遍（v7 的 B 块还不便宜）。 */
+  let MASK_STAMP = 0;
+  let FV_CACHE = { state: null, round: -1, evLen: -1, key: '', stamp: -1, vec: null };
+  function stateVec(state, pid, featS) {
+    const k = pid + ':' + featS;
+    if (FV_CACHE.state === state && FV_CACHE.round === state.round && FV_CACHE.evLen === state.events.length
+      && FV_CACHE.key === k && FV_CACHE.stamp === MASK_STAMP) return FV_CACHE.vec;
+    const v = features(state, pid, featS);
+    FV_CACHE = { state: state, round: state.round, evLen: state.events.length, key: k, stamp: MASK_STAMP, vec: v };
+    return v;
   }
 
-  const FEAT_S = featuresV6(S.createState('standard', { next: Math.random }), 0).length;
+  const FEAT_S = featuresV7(S.createState('standard', { next: Math.random }), 0).length;
 
-  /* ---- 动作特征（该招在“当前局面”下的属性/代价/克制关系） ---- */
-  function actionFeatures(state, pid, key) {
+  /* ---- 动作特征（**候选**视角）：该候选在"当前局面"下的属性/代价/克制/目标关系 ----
+   * `cand` = {key, target, target2, bead}（v7）。只传 key 时两个新块恒 0 ⇒ 旧口径（2P/工具）逐位不变。 */
+  function actionFeatures(state, pid, key, cand) {
     const p = state.p[pid];
     const def = R.byKey[key];
     const cost = S.computeCost(state, pid, key);
     const c = cost.ok && typeof cost.ep === 'number' ? cost.ep : (def.cost || 0);
-    return [
+    const base = [
       p.infiniteEnergy ? 0 : Math.max(-1, Math.min(1, (p.ep - c) / 12)),  // 可负担余量
       cost.ok ? 1 : 0,                 // 当前是否可正常施展
       Math.min(c, 6) / 6,              // 相对费用
@@ -243,8 +357,28 @@
       def.target === 'self' ? 1 : 0,
       def.continuous ? 1 : 0
     ];
+    /* ===== v7：**候选特有**维度（同样追加在末尾）===== */
+    const bead = (cand && cand.bead) ? cand.bead : null;
+    if (MASK.bead) base.push(bead === 'elec' ? 1 : 0, bead === 'boom' ? 1 : 0);
+    else base.push(0, 0);
+    const tid = (cand && cand.target != null && state.p[cand.target]) ? cand.target : null;
+    if (!tid || !MASK.target) { for (let z = 0; z < 6; z++) base.push(0); return base; }
+    const t = state.p[tid], hpm = state.mode.hp;
+    let minHp = Infinity;
+    for (let i = 0; i < state.p.length; i++) {
+      if (i !== pid && state.p[i].hp > 0 && state.p[i].hp < minHp) minHp = state.p[i].hp;
+    }
+    base.push(
+      t.hp / hpm,                                   // 目标血量
+      Math.min(t.ep, 12) / 12,                      // 目标ジ
+      (t.hp <= 1) ? 1 : 0,                          // 收割窗口（0.5 血也算）
+      (t.ep >= 2) ? 1 : 0,                          // 目标有前摇 ⇒ 该压他
+      (X && X.guardOf(state, tid)) ? 1 : 0,         // 目标身上有架势 ⇒ 打他会被挡/被弹
+      (t.hp <= minHp + 1e-9) ? 1 : 0                // 目标是最脆的那个（集中火力）
+    );
+    return base;
   }
-  const FEAT_A = actionFeatures(S.createState('standard', { next: Math.random }), 0, SK.GUN).length;
+  const FEAT_A = actionFeatures(S.createState('standard', { next: Math.random }), 0, SK.GUN, null).length;
   const FEAT_N = FEAT_S + FEAT_A;
 
   /* ---- 参数（Flat64）与遗传算子 ---- */
@@ -268,12 +402,15 @@
   function mutatePolicy(p, sigma) { const q = p.slice(); for (let i = 0; i < q.length; i++) q[i] += randn() * sigma; return q; }
   function crossover(a, b) { const c = new Float64Array(a.length); for (let i = 0; i < c.length; i++) c[i] = __rng() < 0.5 ? a[i] : b[i]; return c; }
 
-  /* ---- (s,a) 值网络：value(state,pid,key,params) ---- */
-  function value(state, pid, key, params, sh) {
+  /* ---- (s,a) 值网络：value(state,pid,key,params[,sh][,cand]) ----
+   * v7：`sh.featA` 决定动作段宽度（v5/v6 = 14、v7 = 22）；`cand` 提供目标/珠类型。
+   * 不传 `cand` 时新维度恒 0 ⇒ 旧口径（2P 路径 / 老工具）读数逐位不变。 */
+  function value(state, pid, key, params, sh, cand) {
     const S_ = sh ? sh.featS : FEAT_S;
     const N = sh ? sh.featN : FEAT_N;
-    const x = features(state, pid, S_);
-    const af = actionFeatures(state, pid, key);
+    const A_ = sh ? sh.featA : FEAT_A;
+    const x = stateVec(state, pid, S_);
+    const af = actionFeatures(state, pid, key, cand);
     const W1 = 0, B1 = HID * N, W2 = B1 + HID, B2 = W2 + HID;
     let v = params[B2];
     const h = new Float64Array(HID);
@@ -281,10 +418,47 @@
       let s = 0;
       const base = W1 + j * N;
       for (let i = 0; i < S_; i++) s += params[base + i] * x[i];
-      for (let i = 0; i < FEAT_A; i++) s += params[base + S_ + i] * af[i];
+      for (let i = 0; i < A_; i++) s += params[base + S_ + i] * (i < af.length ? af[i] : 0);
       s += params[B1 + j];
       h[j] = s > 0 ? s : 0; // ReLU
       v += params[W2 + j] * h[j];
+    }
+    return v;
+  }
+
+  /* ===== v7 性能：候选打分要"状态段预计算" =====
+   * 候选数从 v6 的 ~10（技能）涨到 v7 的 ~56（技能×目标 + 蓄能×2）⇒ 每个候选都重算
+   * `W1·[x | a]` 会让训练慢近 10×。状态段 `W1·x` 与候选无关 ⇒ 每个决策只算一次，
+   * 每个候选只补动作段那 `A_` 项。**加法顺序保持"先状态、后动作、最后 b1"**，
+   * 与 `value()` 逐位一致（否则同一策略在训练/评测两条路径上会有 1e-16 级差异，A/B 不可复现）。 */
+  let PRE_CACHE = { state: null, round: -1, evLen: -1, pid: -1, stamp: -1, sh: null, params: null, h0: null };
+  function statePre(state, pid, params, sh) {
+    const N = sh ? sh.featN : FEAT_N, S_ = sh ? sh.featS : FEAT_S;
+    const c = PRE_CACHE;
+    if (c.state === state && c.round === state.round && c.evLen === state.events.length
+      && c.pid === pid && c.stamp === MASK_STAMP && c.sh === sh && c.params === params) return c.h0;
+    const x = stateVec(state, pid, S_);
+    const h0 = new Float64Array(HID);
+    for (let j = 0; j < HID; j++) {
+      let s = 0;
+      const base = j * N;
+      for (let i = 0; i < S_; i++) s += params[base + i] * x[i];
+      h0[j] = s;
+    }
+    PRE_CACHE = { state: state, round: state.round, evLen: state.events.length, pid: pid, stamp: MASK_STAMP, sh: sh, params: params, h0: h0 };
+    return h0;
+  }
+  function valueFromPre(state, pid, key, params, sh, cand, h0) {
+    const N = sh ? sh.featN : FEAT_N, S_ = sh ? sh.featS : FEAT_S, A_ = sh ? sh.featA : FEAT_A;
+    const af = actionFeatures(state, pid, key, cand);
+    const B1 = HID * N, W2 = B1 + HID;
+    let v = params[params.length - 1];
+    for (let j = 0; j < HID; j++) {
+      let s = h0[j];
+      const base = j * N + S_;
+      for (let i = 0; i < A_; i++) s += params[base + i] * (i < af.length ? af[i] : 0);
+      s += params[B1 + j];
+      if (s > 0) v += params[W2 + j] * s;
     }
     return v;
   }
@@ -328,7 +502,75 @@
     return fwd.argmaxKey;
   }
 
-  const PACK_VERSION = 6;   // v6：加"自己跨得过环启动线"离散特征（千问 (a)）→ FEAT_S 变化，旧 v5 冠军不兼容
+  /* ===== v7：候选（技能, 目标, 珠类型）=====
+   * 为什么需要：`forward()/choose()` 只返回**技能 key** ⇒ "同一技能打谁"和"蓄能选哪种珠"
+   * 在网络眼里完全一样（旧代码：目标由 evo.js 的固定启发式定、珠类型由 play.js 的 `elec>boom` 猜）。
+   * 枚举规则：
+   *   · `def.target === 'enemy'` ⇒ **每个存活对手一个候选**（可选 lockTarget 排除被锁目标）；
+   *   · 「蓄能」⇒ 电珠/爆珠**两个候选**（珠类型是本人选择、不是公开信息 ⇒ 只有自己的候选带 bead）；
+   *   · 其余（self / 无目标）⇒ 单候选；
+   *   · 第二目标（双枪/镜面 t2）仍走 evo.js 的启发式 —— 枚举 t2 会让候选数再 ×(N-1)，先不做。 */
+  function candidatesFor(state, pid, legal, opts) {
+    opts = opts || {};
+    const out = [];
+    const beadOn = opts.bead !== false;
+    for (let i = 0; i < legal.length; i++) {
+      const l = legal[i];
+      const def = R.byKey[l.key];
+      if (!def) continue;
+      if (def.target === 'enemy') {
+        let pool = S.opponentsOf(state, pid);
+        if (opts.lockTarget != null) {
+          const alt = pool.filter(function (o) { return o !== opts.lockTarget; });
+          if (alt.length) pool = alt;
+        }
+        if (!pool.length) out.push({ key: l.key, target: null, target2: null, bead: null });
+        for (let j = 0; j < pool.length; j++) out.push({ key: l.key, target: pool[j], target2: null, bead: null });
+      } else if (beadOn && l.key === SK.CHARGE) {
+        out.push({ key: l.key, target: null, target2: null, bead: 'elec' });
+        out.push({ key: l.key, target: null, target2: null, bead: 'boom' });
+      } else {
+        out.push({ key: l.key, target: null, target2: null, bead: null });
+      }
+    }
+    return out;
+  }
+
+  /* 候选打分 → softmax → 返回 {probs, argmax, cand} */
+  function forwardCands(state, pid, cands, params, opts) {
+    opts = opts || {};
+    const sh = shapeOf(params);
+    const h0 = statePre(state, pid, params, sh);      // 状态段只算一次（v7 候选多了 5 倍）
+    const n = cands.length;
+    const logits = new Float64Array(n);
+    let maxL = -1e9;
+    for (let i = 0; i < n; i++) {
+      const v = valueFromPre(state, pid, cands[i].key, params, sh, cands[i], h0);
+      logits[i] = v;
+      if (v > maxL) maxL = v;
+    }
+    const probs = new Float64Array(n);
+    let sum = 0;
+    for (let i = 0; i < n; i++) { probs[i] = Math.exp((logits[i] - maxL) / (opts.temp || 0.6)); sum += probs[i]; }
+    for (let i = 0; i < n; i++) probs[i] = sum > 0 ? probs[i] / sum : 0;
+    let arg = 0, best = -1;
+    for (let i = 0; i < n; i++) if (probs[i] > best) { best = probs[i]; arg = i; }
+    return { probs: probs, argmax: arg, cand: cands[arg] || null };
+  }
+  /* 选**候选**（训练/评测/UI 都用这条）：返回 {key,target,target2,bead} */
+  function chooseCandidates(state, pid, cands, params, opts) {
+    opts = opts || {};
+    if (!cands || !cands.length) return { key: SK.JI, target: null, target2: null, bead: null };
+    const f = forwardCands(state, pid, cands, params, { temp: opts.temp == null ? 0.5 : opts.temp });
+    if (opts.greedy) return f.cand;
+    const r = state.rng.next();
+    let acc = 0;
+    for (let i = 0; i < cands.length; i++) { acc += f.probs[i]; if (r < acc) return cands[i]; }
+    return f.cand;
+  }
+
+  const PACK_VERSION = 7;   // v7：候选(技能,目标,珠类型) + 关系块 T(15) + 效果快照块 B(70) + 动作侧 +8
+                            //     ⇒ FEAT_S 123→213 / FEAT_A 14→22 / paramCount 3337→5689，旧包一律不兼容
 
   /* 冠军包版本/维度校验：防止旧架构(33维特征→1177参数)被静默错位加载到新网络(52维→1633参数)。
    * 返回 {ok:true} 或 {ok:false, reason, got, want}。reason 取值：
@@ -340,10 +582,12 @@
     const n = paramCount();
     if (o.a.length !== n) return { ok: false, reason: 'length', got: o.a.length, want: n };
     if (typeof o.f === 'number' && o.f !== FEAT_S) return { ok: false, reason: 'feature', got: o.f, want: FEAT_S };
+    /* v7：动作段宽度也进包（旧包没有这个键 ⇒ 视为 14，见 VER_SHAPES） */
+    if (typeof o.fa === 'number' && o.fa !== FEAT_A) return { ok: false, reason: 'action-feature', got: o.fa, want: FEAT_A };
     if (typeof o.h === 'number' && o.h !== HID) return { ok: false, reason: 'hidden', got: o.h, want: HID };
     return { ok: true };
   }
-  function pack(p) { return { v: PACK_VERSION, a: Array.from(p), f: FEAT_S, h: HID }; }
+  function pack(p) { return { v: PACK_VERSION, a: Array.from(p), f: FEAT_S, fa: FEAT_A, h: HID }; }
   /* allowLegacy=true 仅工具/评测用：按包内长度反推形状重建，**游戏侧绝不使用**。
    * 这样五次失败实验的存档重新可读，A/B 证据链不再是一次性的。 */
   function unpack(o, allowLegacy) {
@@ -361,9 +605,50 @@
     return p;
   }
 
+  /* ===== v7：把旧形状的权重**逐位等价**地嵌进新形状 =====
+   * 为什么需要：训练是**热启动**的（从 `champion-5p-v1.3.58.bak` 这类旧包长出来），
+   * 而 `train-server` 用的是**严格** `unpack`（v7 会拒收 v6 包）⇒ 不嵌入就只能从随机重开，
+   * 热启动谱系（产物 meta 的 `hotstartFrom`）与"A/B 同起点"的实验口径一起报废。
+   * 原理：新维度**全部追加在末尾** ⇒ 旧包的第 j 行
+   *   [旧状态段 featS | 旧动作段 featA]  可以原样放进  [新状态段 FEAT_S | 新动作段 FEAT_A] 的**前段**，
+   *   新增列置 0。于是新网络的输出与旧网络**逐位相同**（新维度乘 0），只是形状变大了。
+   * 反证（np-test D34）：把动作段的偏移写成 sh.featS 而不是 FEAT_S，D34 立刻红。 */
+  function embedLegacy(params) {
+    const sh = shapeOf(params);
+    if (!sh) return null;
+    if (!sh.legacy) return params.slice();
+    const q = new Float64Array(paramCount());
+    for (let j = 0; j < HID; j++) {
+      const o = j * sh.featN, n = j * FEAT_N;
+      for (let i = 0; i < sh.featS; i++) q[n + i] = params[o + i];
+      for (let i = 0; i < sh.featA; i++) q[n + FEAT_S + i] = params[o + sh.featS + i];
+    }
+    const oB1 = HID * sh.featN, nB1 = HID * FEAT_N;
+    for (let i = 0; i < HID; i++) q[nB1 + i] = params[oB1 + i];                 // b1
+    for (let i = 0; i < HID; i++) q[nB1 + HID + i] = params[oB1 + HID + i];     // W2
+    q[q.length - 1] = params[params.length - 1];                                // b2
+    return q;
+  }
+
+  /* 工具/训练入口统一用这个读包：先严格（当前版本），失败再按长度嵌入（历史版本）。
+   * 返回 { params, legacy, from } 或 null。 */
+  function loadAny(o) {
+    const strict = unpack(o, false);
+    if (strict) return { params: strict, legacy: false, from: o && o.v };
+    const raw = unpack(o, true);
+    if (!raw) return null;
+    const emb = embedLegacy(raw);
+    if (!emb) return null;
+    return { params: emb, legacy: true, from: o && o.v };
+  }
+
+
   global.EpirusPolicy = {
-    ACT_KEYS, FEAT_N, FEAT_S, FEAT_A, HID, PACK_VERSION,
-    features, featuresV6, actionFeatures, value, forward, choose, shapeOf, setRng, oppAgg, oppSlots, skillHistory, OPP_SLOTS, HIST_K,
+    ACT_KEYS, FEAT_N, FEAT_S, FEAT_A, HID, PACK_VERSION, FEAT_S_V6,
+    features, featuresV7, actionFeatures, value, forward, choose, shapeOf, setRng, oppAgg, oppSlots, skillHistory, OPP_SLOTS, HIST_K,
+    /* v7 新增对外面：候选体系 + 实验掩码 + 形状表 + 旧包等价嵌入（守门/训练/工具用） */
+    candidatesFor, forwardCands, chooseCandidates, setFeatMask, featMask,
+    EFFECTS, PLAYER_SLOTS, VER_SHAPES, paramsOf, embedLegacy, loadAny,
     paramCount, makePolicy, mutatePolicy, crossover, pack, unpack, checkPack
   };
 })(typeof window !== 'undefined' ? window : globalThis);

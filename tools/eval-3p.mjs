@@ -23,7 +23,7 @@ const R = sb.window.EpirusRules;
 const Bots = sb.window.EpirusBots;
 const T = sb.window.EpirusTrainer;
 
-const params = P.unpack(sb.window.EPIRUS_CHAMPION_3P);
+const params = P.unpack(sb.window.EPIRUS_CHAMPION_3P, true);
 if (!params) { console.log('冠军包不兼容：' + JSON.stringify(P.checkPack(sb.window.EPIRUS_CHAMPION_3P))); process.exit(1); }
 const meta = sb.window.EPIRUS_CHAMPION_3P_META || {};
 console.log('冠军 meta: ' + JSON.stringify(meta));

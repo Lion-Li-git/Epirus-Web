@@ -9,6 +9,16 @@
   const Play = global.EpirusPlay;
   const P = global.EpirusPolicy;
   const Bots = global.EpirusBots;
+  /* v7：这个包是"旧形状"吗（v5/v6 的动作段只有 14 维 ⇒ 候选新增维度会被忽略）。
+   * 旧包一律走**旧口径**（键 + pickTargetN 目标），否则历史基线（eco-34 的 41.4%）不可比。 */
+  function LEGACY(params) {
+    /* v1.5.19：`params` 可能为 null —— 健康门槛拒绝首次提升时 `t.champion` 会短暂为 null，
+     * 而 champVsBaseline 会拿它去建 chooser ⇒ 旧写法直接 TypeError（实测 train-best 崩在这里）。
+     * 防御性判空：null 一律按"旧口径"处理（宁可用错口径，也不要整条训练线崩掉）。 */
+    if (!params) return true;
+    const sh = P.shapeOf(params);
+    return !sh || sh.legacy === true;
+  }
 
   /* ===== 训练模式（v1.5.0）=====
    * `oneGameN` 从 v1.4.0 起就支持 `opts.mode`，但**训练路径没有一处传它**（19 个调用点里
@@ -57,7 +67,12 @@
       // 只在"可负担"技能里选：AI 绝不主动贷款自爆
       const aff = legal.filter(function (l) { return l.affordable; });
       const base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
-      return P.choose(state, pid, base, params, { temp: temp });
+      /* v7：**旧包走旧口径、新包走候选**。
+       * 旧包（v5/v6）的动作段只有 14 维 ⇒ 候选新增的 8 维会被完全忽略，但"目标怎么选"会变；
+       * 为了让历史基线（如 eco-34 的 41.4%）保持逐位可比，旧包必须继续用 pickTargetN 那套启发式。 */
+      if (LEGACY(params)) return P.choose(state, pid, base, params, { temp: temp });
+      const cands = P.candidatesFor(state, pid, base, { lockTarget: lastCancelOther(state, pid) });
+      return P.chooseCandidates(state, pid, cands, params, { temp: temp });
     };
   }
   const BOT_PICKS = {
@@ -260,21 +275,38 @@
     return opps.length ? opps[0] : null;
   }
 
-  /* N 人版策略 chooser（带目标选择）。
-   * eps = ε-探索：以概率 eps 在可负担技能里均匀抽一个。
+  /* N 人版策略 chooser（v7：**候选**= (技能, 目标, 珠类型)，目标由网络自己选，不再走 pickTargetN）。
+   * eps = ε-探索：以概率 eps 在**候选**里均匀抽一个（v6 是"在可负担技能里抽"）。
    * 为什么必须有：策略在 ep≥1 时 99.8% 选枪，"不花钱攒钱"这个动作
    * 几乎不可能被 softmax 采样到 → 奖励再大也没有梯度（经验：
    * save/conv/hold 三项都加了，max ep 仍然死守 1）。
-   * 训练用 eps>0；评测/UI 不传 eps → 行为不变。 */
+   * 训练用 eps>0；评测/UI 不传 eps → 行为不变。
+   * `lockTarget`：上回合与本玩家"相抵"的对手不进候选（沿用 v6 pickTargetN 的反锁策略，
+   * 避免无意义的互相消耗死循环）。第二目标 t2 仍由 pickTarget2N 兜底 —— 枚举 t2 会让候选数再 ×(N−1)。 */
   function policyChooserN(params, temp, eps) {
+    const legacy = LEGACY(params);
     return function (state, pid, legal) {
       const aff = legal.filter(function (l) { return l.affordable; });
       const base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
-      const key = (eps && state.rng.next() < eps)
-        ? base[Math.floor(state.rng.next() * base.length)].key
-        : P.choose(state, pid, base, params, { temp: temp });
-      return { key: key, target: pickTargetN(state, pid, key), target2: pickTarget2N(state, pid, key, pickTargetN(state, pid, key)) };
+      if (legacy) {
+        /* 旧包（v5/v6）：**完全按旧口径**（键 + ε + pickTargetN 目标）—— 否则历史基线不可比。 */
+        const key = (eps && state.rng.next() < eps)
+          ? base[Math.floor(state.rng.next() * base.length)].key
+          : P.choose(state, pid, base, params, { temp: temp });
+        const t1 = pickTargetN(state, pid, key);
+        return { key: key, target: t1, target2: pickTarget2N(state, pid, key, t1), bead: null };
+      }
+      const cands = P.candidatesFor(state, pid, base, { lockTarget: lastCancelOther(state, pid) });
+      const pick = (eps && state.rng.next() < eps && cands.length)
+        ? cands[Math.floor(state.rng.next() * cands.length)]
+        : P.chooseCandidates(state, pid, cands, params, { temp: temp });
+      return { key: pick.key, target: pick.target, target2: pickTarget2N(state, pid, pick.key, pick.target), bead: pick.bead };
     };
+  }
+  /* v7：页面/工具的统一入口（候选感知 + 旧包自动回退）。
+   * 返回 {key,target,target2,bead} —— 调用方**整个交给引擎**（play.js 的 normPick 认这个形状）。 */
+  function pickChampion(state, pid, legal, params, temp, eps) {
+    return policyChooserN(params, temp, eps)(state, pid, legal);
   }
 
   /* 脚本 chooser 包一层（补目标），供 N 人局使用 */
@@ -906,7 +938,11 @@
 
   /* 冠军 vs 固定脚本基线（报告/图表用） */
   function champVsBaseline(t, games, seedBase) {
-    const champ = policyChooser(t.champion, 0.05);
+    /* v1.5.19：冠军位可能为空（健康门槛拒掉第一次提升）⇒ 依次退到 bestChamp / 种群首个体；
+     * 三个都没有才返回 null（旧写法直接把 null 喂给 policyChooser ⇒ TypeError）。 */
+    const cp = t.champion || t.bestChamp || (t.pop && t.pop[0] && t.pop[0].params);
+    if (!cp) return null;
+    const champ = policyChooser(cp, 0.05);
     let total = 0, n = 0;
     for (const nm of Object.keys(BOT_PICKS)) {
       const r = correctedWinRate(champ, BOT_PICKS[nm], games, seedBase + n * 131);
@@ -923,10 +959,31 @@
     const cand = sorted[0];
     // 跨代保留全局最佳（并带进攻率门槛），避免最后一代抽样随机决定冠军性格。
     const better = !t.bestChamp || cand.score > t.bestChampScore + 0.001;
-    if (better) {
+    /* v7（v1.5.19）：**提升冠军前先过自对局体检**。
+     * 为什么必须在这里而不是只放在收尾择优：产物的冠军是**这条**语句决定的（t.champion = t.bestChamp），
+     * `pickChampionByWinRate` 只管跨 seed 收尾 —— 第一版只加了后者，12 个 seed 的数字与没加时**逐个相同**，
+     * 等于门槛是空操作（教训：门槛要加在"决定产物的那一行"上，见 docs/METHODOLOGY.md 第 21 条）。
+     * 成本：只在真的出现"更高分候选"时才跑 promoteGames 局（默认 8），不是每代都跑。 */
+    let healthReject = null;
+    if (better && HEALTH.on) {
+      const mh = mirrorHealth(cand.params, HEALTH.promoteGames, HEALTH.n, TRAIN_MODE);
+      const hf = healthFails(mh);
+      if (hf.length) healthReject = hf;
+    }
+    if (better && !healthReject) {
       t.bestChamp = cand.params;
       t.bestChampScore = cand.score;
       t.bestChampAttack = cand.attackShare || cand.attackRate;
+    }
+    if (healthReject) t.healthRejects = (t.healthRejects || 0) + 1;
+    /* 兜底：门槛把第一次提升也拒了 ⇒ 冠军位仍是空的。用**热启动种子**顶上（而不是被拒的候选），
+     * 否则 champVsBaseline 会拿到 null 崩掉整条训练线。只在"确实没有冠军"时做一次。 */
+    if (!t.bestChamp) {
+      /* 依次退：热启动种子 → 当前种群最高分个体。没有这层兜底，`t.champion` 会一直是 null，
+       * 调用方（champVsBaseline / evalChamp / 落盘）全线崩（实测 train-best 崩在 t.champion.slice）。
+       * 兜底进来的冠军会被打上 `healthFallback` 标记 ⇒ 产物侧的门槛（train-server 落盘处）仍会拦它。 */
+      const fb = t.seedParams || ((t.pop && t.pop.length) ? t.pop.slice().sort(function (a, b) { return b.score - a.score; })[0].params : null);
+      if (fb) { t.bestChamp = fb; t.bestChampScore = -1e9; t.healthFallback = true; }
     }
     const champPrev = t.champion;
     const champChanged = t.bestChamp !== champPrev;
@@ -935,7 +992,7 @@
     t.bestParams = t.bestChamp;
     // 记录最近一代强候选 params，供收尾按真实胜率择优（避免 shaped fitness 过拟合到"打伤害不赢"的激进型）
     t.lastTop = sorted.slice(0, 3).map(function (m) { return m.params; });
-    const rec = { gen: t.gen, best: bestScore, champChanged: champChanged, champAge: t.championAge, sigma: t.sigma };
+    const rec = { gen: t.gen, best: bestScore, champChanged: champChanged, champAge: t.championAge, sigma: t.sigma, healthRejects: t.healthRejects || 0 };
     if (t.gen % t.baselineEvery === 0) rec.baseline = champVsBaseline(t, 6, t.gen * 99991);
     t.history.push(rec);
     t.gen++;
@@ -961,6 +1018,7 @@
   /* 从已有冠军热启动种群（持续训练：围绕冠军变异，而不是全部随机重开） */
   function seedChampion(t, params) {
     if (!params) return;
+    t.seedParams = params.slice();   // v1.5.19：兜底用（健康门槛可能拒掉第一次提升 ⇒ champion 会短暂为空）
     const mk = function (p, sigma) {
       return { params: p, score: 0, attackGames: 0, attackRate: 0, attackChoices: 0, totalChoices: 0, attackShare: 0 };
     };
@@ -1061,6 +1119,76 @@
   let WR_TOL = 0.03;
   function setWrTol(v) { const n = Number(v); if (isFinite(n) && n >= 0) WR_TOL = n; }
 
+  /* ===== v7（v1.5.19）：**自对局健康**（单一真源）=====
+   * 为什么需要：单一 1st 率能被"熬"骗（REVIEW §11：long-33 靠 20/20 局零伤害平局拿到 45.3%）。
+   * v7 加完特征后这件事变严重了 —— 实测 12 个 seed 里分最高的几个（48.4% / 45.3%）在**自对局**里
+   * 只剩 1~2 张卡、打到 54~60 回合（G=1.00~1.66），而 `champ-audit` 的 G 列正是这么量出来的。
+   * ⇒ 把"自对局行为形状"做成**换冠军的硬门槛**，并且**与 tools/audit-lib.mjs 的 G 列共用这一份实现**
+   * （两处各写一遍必出事：docs/METHODOLOGY.md 第 13 条）。
+   * 指标：effSkills = exp(非ジ出手分布的熵)（"有效技能数"）、drawRate（全员存活率）、rounds。
+   * 反证（np-test D35）：把门槛关掉（setHealthGate({on:false})）或用不可能阈值，D35 必须红。 */
+  let HEALTH = { on: true, games: 20, promoteGames: 8, n: 5, minG: 3, maxDraw: 0.2, maxRounds: 40 };
+  function setHealthGate(o) {
+    o = o || {};
+    if (o.on != null) HEALTH.on = !!o.on;
+    if (o.games != null && o.games > 0) HEALTH.games = o.games | 0;
+    if (o.promoteGames != null && o.promoteGames > 0) HEALTH.promoteGames = o.promoteGames | 0;
+    if (o.n != null && o.n >= 2) HEALTH.n = o.n | 0;
+    if (o.minG != null) HEALTH.minG = Number(o.minG);
+    if (o.maxDraw != null) HEALTH.maxDraw = Number(o.maxDraw);
+    if (o.maxRounds != null) HEALTH.maxRounds = Number(o.maxRounds);
+    return healthGate();
+  }
+  function healthGate() { return { on: HEALTH.on, games: HEALTH.games, promoteGames: HEALTH.promoteGames, n: HEALTH.n, minG: HEALTH.minG, maxDraw: HEALTH.maxDraw, maxRounds: HEALTH.maxRounds }; }
+
+  /* 自对局体检：5 座都是**同一个策略**（与 champ-audit 的 A/B/C/D 列同一口径）。 */
+  function mirrorHealth(params, games, n, mode) {
+    const G = (games && games > 0) ? (games | 0) : 20;
+    const N = (n && n >= 2) ? (n | 0) : 5;
+    const mk = (mode === 'long') ? 'long' : 'multi';
+    let dmg = 0, heavyDmg = 0, holo = 0, draws = 0, rounds = 0, zero = 0;
+    const keyCount = {};
+    for (let g = 0; g < G; g++) {
+      const st = S.createState(mk, { next: mulberry32(9000 + g) }, N);
+      const ch = [];
+      for (let i = 0; i < N; i++) ch.push(policyChooserN(params, 0.15));
+      Play.autoGameN(st, ch);
+      let gd = 0;
+      for (const e of st.events) {
+        if (e.type === 'holoSet') holo++;
+        if (e.type === 'damage') {
+          dmg += e.amt; gd += e.amt;
+          const def = e.via ? R.byKey[e.via] : null;
+          if (def && def.cost != null && def.cost >= 3) heavyDmg += e.amt;
+        }
+        /* G：只统计**非ジ**的成功出手（ジ 占比 ~60% 是算术必然，算进去会把覆盖度量成常数）。 */
+        if (e.type === 'action' && e.outcome === 'ok' && e.key && e.key !== R.SK.JI) {
+          keyCount[e.key] = (keyCount[e.key] || 0) + 1;
+        }
+      }
+      rounds += st.round;
+      if (gd === 0) zero++;
+      if (st.p.every(function (p) { return p.hp > 0; })) draws++;
+    }
+    const ks = Object.keys(keyCount);
+    const tot = ks.reduce(function (a, k) { return a + keyCount[k]; }, 0);
+    let H = 0;
+    for (const k of ks) { const pr = keyCount[k] / tot; H -= pr * Math.log(pr); }
+    return {
+      games: G, dmgPerGame: dmg / G, heavyPerGame: heavyDmg / G, holoPerGame: holo / G,
+      zeroRate: zero / G, drawRate: draws / G, rounds: rounds / G,
+      effSkills: tot ? Math.exp(H) : 0, distinctKeys: ks.length, nonJi: tot
+    };
+  }
+  function healthFails(mh) {
+    if (!mh) return [];
+    const f = [];
+    if (mh.effSkills < HEALTH.minG) f.push('G 有效技能数 ' + mh.effSkills.toFixed(2) + ' < ' + HEALTH.minG);
+    if (mh.drawRate > HEALTH.maxDraw) f.push('平局率 ' + (mh.drawRate * 100).toFixed(0) + '% > ' + (HEALTH.maxDraw * 100) + '%');
+    if (mh.rounds > HEALTH.maxRounds) f.push('自对局回合 ' + mh.rounds.toFixed(1) + ' > ' + HEALTH.maxRounds);
+    return f;
+  }
+
   function pickChampionByWinRate(t, games, seedBase) {
     const cands = [t.champion].concat(t.lastTop || []);
     const pool = [];
@@ -1082,14 +1210,20 @@
       let gateOk = true, gateMin = 1;
       for (const d of detail) if (GATE_ALL || GATE_NAMES.indexOf(d.name) >= 0) { gateOk = gateOk && d.wr > 0.5; if (d.wr < gateMin) gateMin = d.wr; }
       // min 主导：过了门槛按 0.5·平均 + 0.5·最差基准；没过门槛则压到所有合格候选之下
-      const score = gateOk ? (0.5 * wr + 0.5 * (n ? minWr : 0)) : (gateMin * 0.4 - 1);
-      pool.push({ params: params, score: score, wr: wr, minWr: minWr, detail: detail });
+      const base = gateOk ? (0.5 * wr + 0.5 * (n ? minWr : 0)) : (gateMin * 0.4 - 1);
+      /* v7：**自对局健康门槛**（见 mirrorHealth 的说明）。不过门槛的候选被压到所有健康候选之下，
+       * 且不许进容差带 ⇒ 训练器不能再靠"熬"拿分。 */
+      const mh = HEALTH.on ? mirrorHealth(params, HEALTH.games, HEALTH.n, TRAIN_MODE) : null;
+      const hFails = healthFails(mh);
+      const healthOk = hFails.length === 0;
+      const score = healthOk ? base : base - 1;
+      pool.push({ params: params, score: score, wr: wr, minWr: minWr, detail: detail, health: mh, healthOk: healthOk, healthFails: hFails });
     }
     // 多目标：先按胜率分选出容差带，再在其中取覆盖熵最高者
     let best = null, bestScore = -1, bestWr = -1, bestMin = -1, bestDetail = null;
     let topScore = -1e9;
     for (const c of pool) if (c.score > topScore) topScore = c.score;
-    const band = pool.filter(function (c) { return c.score >= topScore - WR_TOL; });
+    const band = pool.filter(function (c) { return c.healthOk && c.score >= topScore - WR_TOL; });
     let bestDiv = -1, bestDivNorm = 0, bestDistinct = 0;
     /* 头对头验收（2/3 人实测都需要的保险）：
      * 1st+0.5*top2 这类名次指标**不能完整代表头对头强度**——3 人侧实测容差带内的
@@ -1124,6 +1258,7 @@
   global.EpirusTrainer = {
     makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat,
-    scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, wrapBotN, pickTargetN, pickTarget2N, rankOf
+    mirrorHealth, setHealthGate, healthGate, healthFails,
+    scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

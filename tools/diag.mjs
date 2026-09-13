@@ -46,7 +46,7 @@ const champ = trainer.champion;
 function champPick(state, pid, legal) {
   const base = legal.filter(l => l.affordable);
   const baseL = base.length ? base : [{ key: R.SK.JI, affordable: true }];
-  return P.choose(state, pid, baseL, champ, { temp: 0.6 });
+  return T.pickChampion(state, pid, baseL, champ, 0.6);   // v7：候选感知
 }
 
 // 完全复刻 ui.js 的困难难度出招：冠军采样 + 45%进攻倾向 + 连招防护
@@ -54,7 +54,9 @@ function makeHard(history) {
   return function (state, pid, legal) {
     const base = legal.filter(l => l.affordable);
     const baseL = base.length ? base : [{ key: R.SK.JI, affordable: true }];
-    const greedy = P.choose(state, pid, baseL, champ, { temp: 0.6 });
+    /* 注意：这条诊断路径是**键口径**（下面按 key 做连招/进攻倾向判断）⇒ 只取 .key，
+     * 珠类型与目标丢失；要看 v7 冠军真实行为请用 champ-audit / eval-5p。 */
+    const greedy = T.pickChampion(state, pid, baseL, champ, 0.6).key;
     const aff = baseL.filter(l => R.ATK_EFFECT.indexOf(l.key) >= 0);
     let chosen = greedy;
     if (R.ATK_EFFECT.indexOf(chosen) < 0 && aff.length && Math.random() < 0.45) {

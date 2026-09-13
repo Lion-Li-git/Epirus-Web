@@ -1,4 +1,4 @@
-# ⚡ 当前状态与待办（v1.5.18）
+# ⚡ 当前状态与待办（v1.5.19）
 
 > **变化流水看 `CHANGELOG.md`**（每版一条）· **会复发的坑看 `docs/METHODOLOGY.md`** ·
 > 历史复查结论看 `docs/REVIEW-5P.md` / `REVIEW-3P.md`；老仓库规则集在 `D:\code\Epirus`。
