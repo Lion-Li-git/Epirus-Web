@@ -2009,6 +2009,31 @@ t('D39 训练信号：打断开环者的奖励必须"窄条件 + 可归因"（�
   T.setRingRamp(rw.g0, rw.g1);
 });
 
+t('D40 训练信号：惩罚被动（只奖"打中了且这一回合没挨打"的回合）', function () {
+  /* 起因：v7anneal-34 在**被动场**里 E=100%（对手只出ジ，它也只会堆架势）⇒ 被体检判成"集体防御"。
+   * 这条用合成事件流验：回合重建（每回合每玩家最多一条 action）+ 只奖"我没挨打"的回合。 */
+  ok(T.pressReward().w > 0, 'PRESS_W 默认必须 > 0（默认开）');
+  const A0 = { type: 'action', pid: 0 }, A1 = { type: 'action', pid: 1 };
+  /* ① 第 0 回合：我打中对手、自己没挨打 ⇒ 记 1 个主动回合 */
+  eq(T.countPressRounds([A0, A1, { type: 'damage', to: 1, source: 0, amt: 1 }], 0), 1,
+    '打中了且没挨打 ⇒ 记一个主动回合');
+  /* ② 同一个回合我也挨了打 ⇒ 不算（不是"对手没威胁") */
+  eq(T.countPressRounds([A0, A1, { type: 'damage', to: 1, source: 0, amt: 1 }, { type: 'damage', to: 0, source: 1, amt: 1 }], 0), 0,
+    '这一回合我也挨了打 ⇒ 不算主动回合');
+  /* ③ 没造成任何伤害 ⇒ 不算（防"乱打也给奖"） */
+  eq(T.countPressRounds([A0, A1], 0), 0, '没有伤害 ⇒ 不算');
+  /* ④ 归因：伤害不是我造成的 ⇒ 不算 */
+  eq(T.countPressRounds([A0, A1, { type: 'damage', to: 1, source: 1, amt: 1 }], 0), 0, '不是我打的不算');
+  /* ⑤ 两回合：一回合主动、一回合挨打 ⇒ 只记 1（回合重建必须正确） */
+  eq(T.countPressRounds([
+    A0, A1, { type: 'damage', to: 1, source: 0, amt: 1 },
+    A0, A1, { type: 'damage', to: 1, source: 0, amt: 1 }, { type: 'damage', to: 0, source: 1, amt: 1 },
+  ], 0), 1, '两回合里只有一回合是"我打他没挨打"');
+  /* ⑥ 可关闭（对照臂） */
+  eq(T.setPressReward(0), 0, 'setPressReward(0) 必须能关掉');
+  T.setPressReward(0.03);
+});
+
 t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {
   /* 第三方复核 §7-4(1)：champ-audit 的 E/F 两列"只打印、不参与任何判定"，
    * `promote-champion.mjs:77-81` 也只有三条 console.warn、末尾还写着"决定权在你"

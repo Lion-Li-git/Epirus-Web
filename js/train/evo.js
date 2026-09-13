@@ -731,7 +731,7 @@
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let imitSum = 0, imitGames = 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
@@ -812,7 +812,9 @@
                  + 0.08 * Math.min(1, (econ ? econ.rec.heavy4 : 0) / 1);
       /* 打断开环者：窄条件（真的有人开环）+ 可归因（是我打中的）⇒ 小额加分，两次封顶。 */
       const ringBonus = ringWeightAt(gen) * Math.min(1, ringBreaks / 2);
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus));
+      /* v1.5.25：惩罚被动 —— 只奖"打中了且这一回合没挨打"的回合（三次封顶）。 */
+      const pressBonus = PRESS_W * Math.min(1, pressRounds / 3);
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -835,6 +837,7 @@
         played++;
         /* v1.5.23/24：打断开环者（只用事件重建，不动引擎）；权重按**退火曲线**（前期 0）。 */
         if (ringWeightAt(gen) > 0) ringBreaks += countRingBreaks(r.state.events, seat);
+        if (PRESS_W > 0) pressRounds += countPressRounds(r.state.events, seat);
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1179,6 +1182,38 @@
    * 的 `delta ≥ 2` 且不是我 ⇒ 这个对手正在开环。同一回合里**我**打中他、或用小雷作废了他的招 ⇒ 记一次打断。
    * 权重刻意取小（默认 0.04，两次打断满额）⇒ 不改变主目标（胜负），只做方向性引导。
    * 反证（np-test D39）：把 ringBreaks 记账删掉 / 权重设 0 ⇒ D39 立刻红。 */
+  /* ===== v1.5.25（用户选 ①）：**惩罚被动**的窄奖励 =====
+   * 起因：v7anneal-34 在"被动场"里 E=100%（对手只出ジ时，它也只会堆架势）⇒ 体检被判"集体防御"。
+   * 判据（纯事件层，不动引擎）：把一局按回合分组（**每回合每玩家最多一条 `action` 事件**，
+   * 于是"又看到某个 pid 的 action"就是新回合），记"我这个回合打中了、且这一回合一点没挨打"的回合数。
+   * 奖励 `PRESS_W × min(1, 主动回合数/3)`（默认 0.03）——只奖"对手没威胁时我还在推进"，不奖乱打。 */
+  let PRESS_W = 0.03;
+  function setPressReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) PRESS_W = v; return PRESS_W; }
+  function pressReward() { return { w: PRESS_W }; }
+
+  /* 重建回合分组并数"主动回合"（纯函数，便于守门单测）。
+   * 分组依据：一局里每回合每个玩家最多一条 action 事件 ⇒ 见到已出现过的 pid 的 action 即新回合。 */
+  function countPressRounds(events, seat) {
+    const rounds = [];
+    let seen = {}, cur = -1;
+    for (const e of events) {
+      if (e.type === 'action') {
+        if (seen[e.pid] !== undefined) { seen = {}; cur++; }
+        else if (cur < 0) cur = 0;
+        seen[e.pid] = true;
+      }
+      if (e.type === 'damage') {
+        if (cur < 0) continue;
+        if (!rounds[cur]) rounds[cur] = { my: 0, taken: 0 };
+        if (e.source === seat) rounds[cur].my += e.amt || 0;
+        if (e.to === seat) rounds[cur].taken += e.amt || 0;
+      }
+    }
+    let n = 0;
+    for (const r of rounds) if (r && r.my > 0 && r.taken === 0) n++;
+    return n;
+  }
+
   let RING_W = 0.04;
   /* v1.5.24（用户选方案 A）：**退火** —— 前期权重 0（先把标准分练出来），中段线性升，后期满额。
    * 为什么：v1.5.23 的常开奖励练出了"会打环但标准分掉 14pt"的偏科生（环墙 68.5% / 标准 30.5%）；
@@ -1340,6 +1375,7 @@
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
+    setPressReward, pressReward, countPressRounds,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);
