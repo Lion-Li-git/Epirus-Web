@@ -116,15 +116,48 @@ async function main() {
   const lsAfter = await evalJS(`(()=>{try{return localStorage.getItem('epirus.champion3p')?'有':'无'}catch(e){return 'ERR'}})()`);
   check('已清掉 localStorage 里的旧冠军包（否则测的不是上线包）', lsAfter === '无', '清前=' + lsBefore + ' 清后=' + lsAfter);
 
-  /* ── 起局：5 人 + 难度=冠军 ── */
-  await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='${PLAYERS}'; s.dispatchEvent(new Event('change'));})()`);
-  await sleep(400);
-  const modeSet = await evalJS(`(()=>{const s=document.getElementById('sel-mode'); if(!s) return 'no-sel'; const o=[...s.options].find(x=>x.value==='multi'||x.value==='long'); if(!o) return 'no-opt'; s.value=o.value; s.dispatchEvent(new Event('change')); return o.value;})()`);
-  await sleep(500);
-  const diffSet = await evalJS(`(()=>{const s=document.getElementById('sel-diff'); s.value='champ'; s.dispatchEvent(new Event('change')); return s.value;})()`);
-  await sleep(300);
-  await evalJS(`document.getElementById('btn-newgame').click()`);
-  await sleep(900);
+  /* ── 起局：5 人 + 难度=冠军（抽成函数，因为"用内置冠军"那段要起两次局）── */
+  const setupBattle = async function () {
+    await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='${PLAYERS}'; s.dispatchEvent(new Event('change'));})()`);
+    await sleep(400);
+    const ms = await evalJS(`(()=>{const s=document.getElementById('sel-mode'); if(!s) return 'no-sel'; const o=[...s.options].find(x=>x.value==='multi'||x.value==='long'); if(!o) return 'no-opt'; s.value=o.value; s.dispatchEvent(new Event('change')); return o.value;})()`);
+    await sleep(500);
+    const ds = await evalJS(`(()=>{const s=document.getElementById('sel-diff'); s.value='champ'; s.dispatchEvent(new Event('change')); return s.value;})()`);
+    await sleep(300);
+    await evalJS(`document.getElementById('btn-newgame').click()`);
+    await sleep(900);
+    return { mode: ms, diff: ds };
+  };
+  const aiSource = async function () {
+    const t = await logText();
+    const m = /对手AI=([^·]*)/.exec(t);
+    return m ? m[1].trim() : '';
+  };
+
+  /* ── 「用内置冠军」按钮的端到端验证（v1.5.10）──
+   * 页面原本优先用 localStorage 里的冠军 ⇒ 换内置包对"曾自训/导入过"的用户无效（REVIEW §11.1）。
+   * 这里模拟这种用户：① 把内置包原样塞进 localStorage；② 重载 ⇒ 日志「对手AI=」应显示"本机自训/导入"；
+   * ③ 点「用内置冠军」⇒ localStorage 被清空、提示改回内置；④ 重开一局 ⇒ 显示"内置"。 */
+  await evalJS(`(()=>{try{localStorage.setItem('epirus.champion3p', JSON.stringify(window.EPIRUS_CHAMPION_3P));}catch(e){}})()`);
+  await send('Page.navigate', { url: URL });
+  await sleep(1600);
+  const planted = await evalJS(`(()=>{try{return !!localStorage.getItem('epirus.champion3p');}catch(e){return false;}})()`);
+  check('能写入本机冠军（模拟老用户）', planted);
+  await setupBattle();
+  const srcLocal = await aiSource();
+  check('页面确实优先用本机冠军（对手AI 标注"本机自训/导入"）', srcLocal.indexOf('本机') >= 0, '对手AI=' + srcLocal);
+  const resetRes = await evalJS(`(()=>{const b=document.getElementById('btn-champ-reset'); if(!b) return 'no-btn'; b.click(); let ls=null; try{ls=localStorage.getItem('epirus.champion3p');}catch(e){ls='ERR';} return JSON.stringify({ls: ls, hint: document.getElementById('battle-hint').textContent});})()`);
+  const rr = JSON.parse(resetRes === 'no-btn' ? '{"ls":"no-btn","hint":""}' : resetRes);
+  check('「用内置冠军」按钮存在且可点', resetRes !== 'no-btn');
+  check('点完按钮后 localStorage 里的本机冠军被清掉', rr.ls === null, 'localStorage=' + rr.ls);
+  check('提示告知已改回内置冠军', /内置/.test(rr.hint || ''), '提示=' + rr.hint);
+  await setupBattle();
+  const srcBuiltin = await aiSource();
+  check('重开后用的是内置冠军', srcBuiltin.indexOf('内置') >= 0, '对手AI=' + srcBuiltin);
+
+  /* ── 正式对局：5 人 + 难度=冠军 ── */
+  const setup = await setupBattle();
+  const modeSet = setup.mode, diffSet = setup.diff;
 
   check('模式可设为多人/long', modeSet === 'multi' || modeSet === 'long', 'mode=' + modeSet);
   check('难度可设为 champ（线上冠军当对手）', diffSet === 'champ', 'diff=' + diffSet);

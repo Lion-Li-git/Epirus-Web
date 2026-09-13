@@ -6,8 +6,14 @@
 
 **用户裁定**：「硬截断的问题可以改成 100 回合之后每轮全员扣一点血。」
 
-**实现**：`MODES.long = { …, suddenDeath: 100, maxRounds: 140 }`；`resolve.js` 的 `endTurn` 末尾，
-当 `state.round >= suddenDeath` 时对**每个存活玩家**施加 1 点伤害，带
+**v1.5.10 补充裁定**：「可以把 100 回合之后扣血的机制直接做到**正常对战规则**里面，反正一般也打不了那么久。」
+⇒ 它从"long 模式专属字段"升级为**全局规则**：`rules.js` 新增 `SUDDEN_DEATH = 100`（导出给页面/测试），
+`long` 模式不再自带该字段；`resolve.js` 的判定变为
+`mode.suddenDeath != null ? mode.suddenDeath : R.SUDDEN_DEATH`（模式仍可覆盖，写 0 = 该模式关掉）。
+效果范围：`standard`/`multi` 的回合上限都是 60 ⇒ 实际只在 `long`（上限 140）触发，
+但**作为规则它现在是统一的**（将来任何模式把上限调过 100 都会自动接上）。守门 `np-test D19`。
+
+**实现**：`resolve.js` 的 `endTurn` 末尾，当 `state.round >= 生效阈值` 时对**每个存活玩家**施加 1 点伤害，带
 `bypassGuards: true`（场地收缩不是攻击 ⇒ 防御/反弹/原型/金刚盾/全息都不挡）
 与 `noMine: true`（不触发地雷），`source: null`（不计入任何人的"造成伤害"，但计入各自承伤，
 所以 `rankOf` 的承伤升序键仍能区分名次）。`maxRounds: 140` 只作安全网。

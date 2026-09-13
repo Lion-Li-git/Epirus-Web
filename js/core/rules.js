@@ -129,19 +129,25 @@
     /* v1.4.8 终局收缩（用户 2026-09-12 方案）：硬截断改成"到点后每轮全员 −1 血"。
      * 动机（第十轮复核 §5.1 实测）：100 回合上限在防守型考卷上仍有 90% 的局是哨声判掉的，
      * 而且 5 血比 3 血更容易拖到点（E 卷 36.9%→49.2%）⇒ 有一半样本测的是"到时谁血多"，
-     * 不是"谁把谁打死"。suddenDeath=100 起每回合末全员 −1（不可格挡、不触发地雷），
-     * maxRounds=140 只作安全网（正常情况在 ~105 回合就清完）。 */
-    long: { name: '长程模式(5血·3-5人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 3, suddenDeath: 100, maxRounds: 140 },
+     * 不是"谁把谁打死"。v1.5.10（用户裁定）起它**不再是长程模式专属**，而是**全局规则**
+     * （见下面的 SUDDEN_DEATH）；maxRounds=140 只作安全网（正常情况在 ~105 回合就清完）。 */
+    long: { name: '长程模式(5血·3-5人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 3, maxRounds: 140 },
     fast: { name: '快速模式', hp: 1, skills: [SK.JI, SK.GUN, SK.GUARD], rule: '防御不能连续使用 3 次', guardLimit: 2 },
     lucky: { name: '欧皇模式', hp: 3, skills: [SK.JI, SK.JINSHIELD, SK.BAGUA, SK.GUN], rule: '' }
   };
 
   const MODE_DEFAULT = 'standard';
   const MAX_ROUNDS = 60; // R1 防死锁
+  /* v1.5.10（用户裁定）：**终局收缩（100 回合后每回合末全员 −1 血）是全局规则**，不再是 long 专属。
+   * 用户原话："可以把 100 回合之后扣血的机制直接做到正常对战规则里面，反正一般也打不了那么久"。
+   * 效果范围：standard(60)/multi(60) 的上限都在 100 以下 ⇒ **实际上只在 long(上限 140) 生效**，
+   * 但作为规则它现在是统一的（将来任何模式把上限调过 100 都会自动接上）。
+   * 模式仍可用自己的 `suddenDeath` 覆盖（写 0 = 该模式关掉）。 */
+  const SUDDEN_DEATH = 100;
 
   global.EpirusRules = {
     SK, CAT, DMG, skills, byKey, MULTI_ONLY, AVAILABLE_2P, AVAILABLE_MULTI,
     ATK_EFFECT, TAUNT_SATISFY, LIGHTNING, GUARD_FAMILY, MINI_T_IMMUNE,
-    REFLECTABLE, MODES, MODE_DEFAULT, MAX_ROUNDS
+    REFLECTABLE, MODES, MODE_DEFAULT, MAX_ROUNDS, SUDDEN_DEATH
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -857,7 +857,10 @@ t('D2 long mode hp=5 / drainHpMax=3', function () {
 
 t('D3 round cap follows the mode (long safety net=140 + sudden death at 100)', function () {
   eq(R.MODES.long.maxRounds, 140, 'long.maxRounds（安全网，不是硬截断）');
-  eq(R.MODES.long.suddenDeath, 100, 'long.suddenDeath（收缩起点）');
+  /* v1.5.10：收缩起点改为**全局规则** `R.SUDDEN_DEATH`（用户裁定），模式字段只用于覆盖 ⇒
+   * 这里断言"该模式实际生效的阈值"，而不是"模式自带字段"（后者现在可以是 undefined）。 */
+  eq(R.MODES.long.suddenDeath != null ? R.MODES.long.suddenDeath : R.SUDDEN_DEATH, 100, 'long 实际生效的收缩起点');
+  eq(R.MODES.multi.suddenDeath != null ? R.MODES.multi.suddenDeath : R.SUDDEN_DEATH, 100, 'multi 也必须接上全局收缩规则（上限 60 ⇒ 实际不触发）');
   eq(R.MAX_ROUNDS, 60, 'default cap unchanged');
   const mk = function (mode, round) {
     const st = S.createState(mode, { next: mulberry32(74) }, 3);
@@ -1191,6 +1194,50 @@ t('D18 哨声惩罚：熬到回合上限的胜利必须打折（反摆烂）', f
   T.setFightReward({ reset: true });                      // 复位
   eq(T.fightReward().whistlePen, 0, 'reset 后回到旧行为（0）');
   eq(T.fightReward().dealW, 0.01, 'reset 后出手权重回到 0.01');
+});
+
+t('D19 终局收缩是**全局规则**：第 100 回合起每回合末全员 −1 血（不可格挡、不计来源）', function () {
+  /* v1.5.10（用户裁定）："把 100 回合之后扣血的机制直接做到正常对战规则里面，反正一般也打不了那么久"。
+   * 它原本只挂在 long 模式的 `suddenDeath` 字段上 ⇒ standard/multi 完全没有这条规则。
+   * 现在阈值是全局 `R.SUDDEN_DEATH`（模式仍可用自己的字段覆盖，写 0 = 关）。 */
+  eq(R.SUDDEN_DEATH, 100, '全局阈值必须是 100');
+  const mk = function (round) {
+    const st = S.createState('multi', { next: T.mulberry32(7) }, 3);
+    st.round = round;
+    return st;
+  };
+  /* ① 第 99 回合：不触发 */
+  let st = mk(99);
+  const hpA = st.p.map(function (p) { return p.hp; });
+  X.endTurn(st);
+  eq(st.p[0].hp, hpA[0], '第 99 回合不该触发终局收缩');
+  eq(st.p[1].hp, hpA[1], '第 99 回合不该触发终局收缩（所有人）');
+  /* ② 第 100 回合：全员 −1 */
+  st = mk(100);
+  const hpB = st.p.map(function (p) { return p.hp; });
+  X.endTurn(st);
+  const hpN = st.p.map(function (p) { return p.hp; });
+  ok(hpN.every(function (h, i) { return h === hpB[i] - 1; }), '第 100 回合必须全员 −1（实测 ' + hpN.join('/') + '，原 ' + hpB.join('/') + '）');
+  /* ③ 有防御架势也照掉（这是"场地收缩"，不是攻击） */
+  st = mk(100);
+  S.attemptAction(st, 0, R.SK.GUARD, {});
+  const hpC = st.p[0].hp;
+  X.resolveActions(st);
+  X.endTurn(st);
+  eq(st.p[0].hp, hpC - 1, '有防御架势也必须掉 1 血（不可格挡）');
+  /* ④ 事件可追溯：reason=终局收缩，且不记任何人战功 */
+  const evs = st.events.filter(function (e) { return e.type === 'damage' && e.reason === '终局收缩'; });
+  ok(evs.length >= 1, '必须有 reason=终局收缩 的伤害事件（实测 ' + evs.length + ' 条）');
+  ok(evs.every(function (e) { return e.source === undefined || e.source === null; }),
+    '终局收缩的伤害不得有来源（否则会记成某个人的战功）');
+  /* ⑤ 模式仍可覆盖（写 0 = 关掉） */
+  const st5 = S.createState('multi', { next: T.mulberry32(7) }, 3);
+  st5.round = 100;
+  const realMode = st5.mode;
+  st5.mode = { hp: realMode.hp, minPlayers: 3, maxPlayers: 5, suddenDeath: 0, maxRounds: realMode.maxRounds };
+  const hpD = st5.p[0].hp;
+  X.endTurn(st5);
+  eq(st5.p[0].hp, hpD, '模式把 suddenDeath 写成 0 时必须真的关掉（可覆盖）');
 });
 
 t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放者自己', function () {

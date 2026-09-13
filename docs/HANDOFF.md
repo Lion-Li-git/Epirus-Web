@@ -48,7 +48,7 @@
 ### 2.1 引擎 / 规则
 | 文件 | 改动 |
 |---|---|
-| `js/core/rules.js` | `MODES.long = { hp:5, 3-5人, drainHpMax:3, suddenDeath:100, maxRounds:140 }`；`蓄能` desc 与 R9' 对齐（原写"可累加"是错的，且 `ui.js:131` 直接展示给玩家）|
+| `js/core/rules.js` | `SUDDEN_DEATH = 100`（v1.5.10 起是**全局规则**：第 100 回合后每回合末全员 −1 血；`long` 只有 `maxRounds:140` 安全网，模式可用自己的 `suddenDeath` 覆盖，写 0 = 关）；`MODES.long = { hp:5, 3-5人, drainHpMax:3, maxRounds:140 }`；`蓄能` desc 与 R9' 对齐（原写"可累加"是错的，且 `ui.js:131` 直接展示给玩家）|
 | `js/core/resolve.js` | `endTurn` 末尾**终局收缩**（`bypassGuards`+`noMine`+`source:null`）；**双枪第二发复用 `dgDmg`**（原写死 `amt:1`，改数据表只影响第一发）|
 | `js/core/state.js` | 摄魂门槛改读 `state.mode.drainHpMax`（缺省 1 ⇒ multi/standard 口径不变）|
 | `js/core/play.js` | `autoGameN` 新增第 4 参 `onRoundStart`（在 `legalActions` **之前**，珠类门测量用）|

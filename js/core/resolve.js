@@ -831,7 +831,9 @@
      * · bypassGuards ⇒ 不被 防御/反弹/原型/金刚盾/全息 挡（这是"场地收缩"，不是攻击）；
      * · noMine ⇒ 不触发地雷；source=null ⇒ 不计入任何人的"造成伤害"（但计入各自承伤）。
      * 这样终局由"谁活到最后"决定，而不是"哨声时谁血多"（第十轮复核 §5.1）。 */
-    const sdOn = (state.mode && state.mode.suddenDeath) || 0;
+    /* v1.5.10（用户裁定）：阈值走**全局规则** `R.SUDDEN_DEATH`，模式可用自己的 `suddenDeath` 覆盖
+     * （写 0 = 该模式关掉）。此前只有 long 模式带这个字段 ⇒ standard/multi 完全没有终局收缩。 */
+    const sdOn = (state.mode && state.mode.suddenDeath != null) ? state.mode.suddenDeath : (R.SUDDEN_DEATH || 0);
     if (sdOn > 0 && state.round >= sdOn) {
       for (let i = 0; i < playerCount(state); i++) {
         const p = state.p[i];

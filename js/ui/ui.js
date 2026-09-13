@@ -241,8 +241,8 @@
 
   /* ---------- 多人（3-5）对局 ---------- */
   /* 3P 冠军包（多人自对战训练产物）：不兼容/缺失返回 null */
-  let multiChampCache;
-  function resetMultiChampCache() { multiChampCache = undefined; }
+  let multiChampCache, multiChampFrom;   // v1.5.10：multiChampFrom ∈ 'local'（本机自训/导入）| 'builtin'（内置包）
+  function resetMultiChampCache() { multiChampCache = undefined; multiChampFrom = undefined; }
   function loadMultiChamp() {
     if (multiChampCache !== undefined) return multiChampCache;
     let pack = null;
@@ -251,10 +251,28 @@
       if (raw) pack = JSON.parse(raw);
     } catch (e) { /* ignore */ }
     multiChampCache = P.unpack(pack);                      // 旧版/损坏包 → null
+    multiChampFrom = multiChampCache ? 'local' : null;
     if (!multiChampCache && typeof window.EPIRUS_CHAMPION_3P !== 'undefined') {
       multiChampCache = P.unpack(window.EPIRUS_CHAMPION_3P);   // 回退内置包
+      multiChampFrom = multiChampCache ? 'builtin' : null;
     }
     return multiChampCache;
+  }
+  /* v1.5.10（用户要求）：把本机自训/导入的冠军清掉、改回**内置冠军**。
+   * 为什么需要：页面优先读 `localStorage['epirus.champion3p']` ⇒ 换 bundle 对老用户无效
+   * （REVIEW §11.1 实测踩过：换包后浏览器对战测试其实还在打旧冠军）。 */
+  function useBuiltinChampion() {
+    let had = false;
+    try { had = !!localStorage.getItem('epirus.champion3p'); localStorage.removeItem('epirus.champion3p'); } catch (e) { /* ignore */ }
+    resetMultiChampCache();
+    const loaded = loadMultiChamp();
+    /* ⚠️ 顺序要紧：`newGame()` 会把提示刷成"请选择技能出招"⇒ 提示必须放在它后面
+     * （v1.5.10 第一版写反了，被 tools/battle-test.mjs 的 "提示告知已改回内置冠军" 抓到）。 */
+    if (B.multi && B.diff === 'champ') newGame();   // 重开一局，让新 AI 立刻生效
+    hint(had
+      ? ('已清除本机冠军，改回内置冠军（' + (loaded ? '已加载' : '⚠ 内置包缺失/不兼容') + '）')
+      : '本机没有自训/导入的冠军，本来就在用内置冠军');
+    return { had: had, loaded: !!loaded, from: multiChampFrom || null };
   }
   /* 当前多人对局实际用的是哪个 AI（供 UI 显示与探针断言） */
   function styleOf(id) {
@@ -281,7 +299,7 @@
     if (!B.multi) return { source: B.diff === 'hard' ? '2人冠军' : '脚本', champ: B.diff === 'hard' };
     if (B.diff === 'champ') {
       return loadMultiChamp()
-        ? { source: '3P 冠军', champ: true }
+        ? { source: '3P 冠军（' + (multiChampFrom === 'local' ? '本机自训/导入' : '内置') + '）', champ: true, from: multiChampFrom }
         : { source: '脚本·多人强档（冠军包缺失/不兼容，已回退）', champ: false, fallback: true };
     }
     const st = styleOf(B.diff);
@@ -1013,6 +1031,8 @@
     };
     $('sel-diff').onchange = function () { B.diff = $('sel-diff').value; hint('难度已切换：' + diffName(B.diff) + '（对局中即时生效）'); };
     $('btn-newgame').onclick = newGame;
+    /* v1.5.10（用户要求）：清掉本机冠军、改回内置冠军 */
+    if ($('btn-champ-reset')) $('btn-champ-reset').onclick = useBuiltinChampion;
     $('btn-undo').onclick = undo;
     $('btn-exportlog').onclick = exportLog;
     $('btn-train').onclick = connectRemoteTrain;
