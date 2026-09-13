@@ -1,3 +1,67 @@
+# ⚡ 当前状态与待办（2026-09-13，给"压缩上下文之后的自己"看）
+
+## 0. 一句话状态
+**规则层正在修 bug，训练暂停**（用户裁定："我认为你可能需要先修好规则再训练"）。
+上线冠军仍是 **`eco-34`**（未换）；版本号 **v1.5.13**；最近提交 **`818f21a`**（已推送，与 origin 同步）。
+
+## 1. 待办队列（按顺序做；每做完一项跑：spec + np-test + smoke + battle-test）
+### ① 镜面反射的"空指"语义（规则依据已入库：`docs/RULES-NP.md` N14）
+- **现状是错的**：`js/core/resolve.js` 的 `mirrorPass`（约 400~470 行）里 `copyEffect(key)` 返回 null 时
+  发 `mirrorNoEffect`「无可复制」。
+- **规则（用户 2026-09-13 澄清原文）**：**没有"无可复制"这回事 —— 所有技能都能复制**。
+  架势 / 自增益 / 能量类（ジ / 蓄能 / 聚能环 / 避雷针 / 地雷 / 净化 / 无极变速 / 防御家族）
+  **复制到使用者自己身上**（相当于自己也摆了那个架势 / 也蓄了能），
+  同时对 t2 形成一个**"空指"**（指向保留、本身不产生效果）。
+- **空指仍然算"指向"**，要参与连带/传导判定。用户例子：a 用镜面反射复制 b 的【反弹】并指向 c ⇒
+  这个指向本身无作用；**但若 d 用【真正的落雷】打 a，则 c 会受到大雷传导的影响**，
+  而 **a 和 b 因为有反弹所以不受影响**。
+- 只有 t1 本回合行动已被作废（`voided`）时才无可复制。
+- 涉及文件：`js/core/resolve.js`（`mirrorPass` / `copyEffect`）、`js/ui/ui.js`（`mirror*` 事件渲染）、
+  守门加进 `tools/np-test.mjs`。
+
+### ② 策略要能"选蓄哪种珠"（否则冠军永远学不会"为放电而蓄电珠"）
+- 引擎**已支持**：`js/core/state.js` 的 `attemptAction(state, pid, key, {bead:'elec'|'boom'})`。
+- 但只有**页面人类路径**在传；**AI 路径是结算时猜的**：`js/ui/ui.js` 约 238 行与约 396 行
+  `bead: b.elec > b.boom ? 'boom' : 'elec'`。
+- 策略输出（`js/core/play.js` 的 `normPick` / chooser 返回值）**没有 bead 这一项** ⇒ 这是"蓄能白费"的根因。
+- 要做的：给策略加一个**珠类型输出位**（`js/train/policy.js` 的输出 + `normPick` + 训练路径），
+  把 AI 路径改成用它；加用例。
+
+### ③ 先手激励（可选，规则修完再谈）
+`EPIRUS_FIGHT_DEAL` / `EPIRUS_FIGHT_FIRST`（**默认关**）。v1.5.14 实测：**能治"集体防御"但考卷掉 14pt**
+（`docs/REVIEW-5P.md` §13）。原计划的"半剂量臂"（`hfd`，deal 0.02 + first 0.04）被用户叫停；
+规则定稿后要重跑（12 对手池 + 6 seed ≈ 10 分钟）：
+`$env:EPIRUS_FIGHT_DEAL='0.02'; $env:EPIRUS_FIGHT_FIRST='0.04'` + `node tools/ring2-run.mjs`。
+
+### ④ 训练重启的前置铁律
+**任何规则/特征改动都会改规则指纹** ⇒ 必须 `node tools/rules-fingerprint.mjs` 看新值，
+再用 `node tools/promote-champion.mjs docs/artifacts/eco-34.bak --exam-games=40` 重测重记
+（否则 `np-test D16` 红）。指纹范围现已包含 `js/core/{rules,resolve,state,play}.js` + `js/train/policy.js`。
+
+## 2. 本会话已做完并已推送的（**别重做**）
+- **v1.5.13** 修**狙击枪"被干扰"**判定（多人局 bug，用户对局记录发现）：新增 `aimedAt(state, who)`
+  —— 只有"狙击手本人被别人用攻击类技能指着"才无效；2P 口径未变（`spec R13/57` 仍绿）；守门 **D20**。
+- **v1.5.15** 修**蓄能珠类型信息泄漏**三处：① AI 特征（`js/train/policy.js`，槽位数量不变=123）
+  ② 页面侧栏（对手只显示"珠 ?"）③ 日志（"完成蓄能（珠的类型只有他知道）"；消耗保留=公开）；
+  技能格子显示顺序改为 **防御类 → 攻击类 → 能量 → 特殊**（只重排显示，不动 `R.skills` 顺序）；
+  守门 **D22**。
+- **v1.5.14** 先手激励实测 + `tools/champ-audit.mjs` 新增 **E/F 列**（E=被动场架势率、F=活跃场进攻率）
+  —— "集体防御"就是这两列量出来的（`eco-34`：E 95% / F 24%）。
+- **v1.5.12** 回滚"长程默认开哨声惩罚"（干净配对证明是**空操作**：两臂产出逐字节相同）。
+- 文档：`docs/REVIEW-5P.md` §11（摆烂/互套盾）、§12（集体防御机制）、§13（先手激励实测）；
+  用户对局记录 `results/epirus-battle-{22,34,57}回合.txt` 已入库。
+
+## 3. 已知但**不是**规则 bug 的（属训练暴露面，别去改规则）
+小雷不打断聚能环 / 原型制御不防电磁炮 / 蓄能白费 —— 特征里已有「电磁炮前摇」「有人刚蓄能」
+「ringStreak」「禁用倒计时」，且 `js/core/play.js` 的 `legalActions` 里持珠时**电磁炮确实可负担** ✓。
+
+## 4. 关键基线数字
+- 上线冠军 `eco-34`：多人 3 血考卷 **41.4%（40 局）**、自对局 13.6 伤害/局、0% 平局、28.5 回合、全息屏障 0。
+- 回归：`spec 37/37`、`np-test 71/71`、`smoke SMOKE OK`、`battle-test BATTLE OK`。
+- 规则指纹：`a69358d6`。训练锁：`docs/artifacts/.training.lock`（训练期间别跑 D16/champ-audit/battle-test）。
+
+---
+
 # 交接：Epirus-Web 多人（5P）/ 长程模式 / 测量口径
 
 > 会话日期 2026-09-12 · 原稿 HEAD = `f525346`（v1.4.14）· 回归 **spec 37/37、np-test 58/58**
