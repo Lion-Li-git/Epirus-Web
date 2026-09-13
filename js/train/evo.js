@@ -723,7 +723,8 @@
      * 推向"只在补贴下成立"的策略（历史上 min(pairSc, probeSc) 跨量纲就是这么塌的）。 */
     const hGene = (typeof hGeneIn === 'number' && hGeneIn > 0) ? (hGeneIn | 0) : 0;
     let fitGames = 0, commitFirst = 0, commitTop2 = 0, commitGames = 0, commitMaxEp = 0;
-    const agg = { use: {}, aff: {} };   // 该个体的动作直方图（跨局汇总）
+    const agg = { use: {}, aff: {} };   // 该个体的动作直方图（跨局汇总：脚本对手局 + **自对局**）
+    let mirrorRan = 0;                  // v1.5.19：本个体实际跑了多少局自对局（可观测）
     for (let g = 0; g < games; g++) {
       const seat = g % n;                                   // 座位轮换
       const seed = seedOfGen(gen, idx, 'n') + g * 7919;
@@ -813,6 +814,17 @@
         played++;
       }
     }
+    /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
+     * 每局都是"n 座同一策略"⇒ 动作直方图并进 agg（只并直方图；first/played/dealt 一概不动）。 */
+    if (MIRROR_GAMES > 0) {
+      for (let g = 0; g < MIRROR_GAMES; g++) {
+        const seed = seedOfGen(gen, idx, 'mir') + g * 6151;
+        const chs = [];
+        for (let pid = 0; pid < n; pid++) chs.push(makeEconChooser(policyChooserN(params, 0.35, 0.15), agg, null, 0));
+        oneGameN(chs, seed, n, { regen: 0, mode: TRAIN_MODE });
+        mirrorRan++;
+      }
+    }
     /* 技能覆盖熵：目标函数里唯一不指向某个循环的广度信号。
      * 策略是"动作价值 softmax + 低温"的贪心取值，而目标里只有胜负时必然塔到一招；
      * 实测给到无限经济也只从激光剑换成狙击枪（有效技能数 1.88→2.06）。
@@ -859,6 +871,7 @@
       divNorm: divNorm,
       divBonus: divBonus,
       divW: DIV_W,
+      mirrorGames: mirrorRan,
       avgStock: econGames ? stockSum / econGames : 0,
       distinct: Object.keys(agg.use).length,
       distinctNonJi: cov.distinct, nonJiShare: uTot ? cov.nonJi / uTot : 0,
@@ -1128,6 +1141,20 @@
    * 指标：effSkills = exp(非ジ出手分布的熵)（"有效技能数"）、drawRate（全员存活率）、rounds。
    * 反证（np-test D35）：把门槛关掉（setHealthGate({on:false})）或用不可能阈值，D35 必须红。 */
   let HEALTH = { on: true, games: 20, promoteGames: 8, n: 5, minG: 3, maxDraw: 0.2, maxRounds: 40 };
+  /* ===== v1.5.19（方向 A）：把**自对局**折进适应度 =====
+   * 为什么需要：健康门槛只"筛"不"教" —— 实测只筛时 6/7 个 seed 被拦回"健康但弱"的角落（考卷 15.8%），
+   * 因为训练器优化的始终是"对脚本的 1st 率"，而退化（G≈1、50~60 回合）在**自对局**里才显形。
+   * 做法：每个个体额外打 MIRROR_GAMES 局"n 座同一策略"，把这几局的**非ジ动作直方图并进同一个
+   * `agg.use`** ⇒ 已有的覆盖熵项（divNorm，权重 DIV_W）自然把"自对局里只剩两三张卡"的个体压低。
+   * **胜负名次一项都不折**（镜像局的第 1 名是轮盘，没有信息），也不动伤害/回合口径。
+   * 反证（np-test D36）：MIRROR_GAMES=0 与 =2 的 divNorm 必须不同，而 first/games **必须逐位相同**。 */
+  let MIRROR_GAMES = 2;
+  function setMirrorGames(k) {
+    const v = Number(k);
+    if (isFinite(v) && v >= 0) MIRROR_GAMES = v | 0;
+    return MIRROR_GAMES;
+  }
+  function mirrorGames() { return MIRROR_GAMES; }
   function setHealthGate(o) {
     o = o || {};
     if (o.on != null) HEALTH.on = !!o.on;
@@ -1258,7 +1285,7 @@
   global.EpirusTrainer = {
     makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat,
-    mirrorHealth, setHealthGate, healthGate, healthFails,
+    mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

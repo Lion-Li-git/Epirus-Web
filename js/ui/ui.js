@@ -143,15 +143,11 @@
     const legalMap = {};
     if (!st.over) { for (const l of Play.legalActions(st, 0)) legalMap[l.key] = l; }
     grid.innerHTML = '';
-    /* v1.5.15（用户要求）：技能格子的**显示顺序**改成"防御类 → 攻击类 → 能量 → 特殊"。
-     * 原来直接按 `R.skills` 的规则声明顺序排 ⇒ 枪/剑/坦克/狙击排在 防御/反弹/八卦阵 **前面**，
-     * 而实战里玩家先看的是"我这回合摆什么架势"。⚠️ **只重排显示**：`R.skills` 的顺序还牵着
-     * AI 的合法集构造（`Play.legalActions` 按 mode.skills 遍历）与训练口径，绝不能动。
-     * 同组内保持规则顺序（用原始下标做稳定排序）。 */
-    const SD_GRP = { defense: 0, attack: 1, energy: 2, special: 3 };
-    const sdIdx = function (s) { const g = SD_GRP[s.cat]; return g == null ? 9 : g; };
-    const sdOrder = R.skills.map(function (s, i) { return { s: s, i: i }; })
-      .sort(function (a, b) { return (sdIdx(a.s) - sdIdx(b.s)) || (a.i - b.i); });
+    /* v1.5.19（用户实测反馈）：技能格子**回到规则声明顺序**（能量 → 攻击 → 防御 → 特殊）。
+     * v1.5.15 曾按"防御类优先"重排（理由：玩家先看摆什么架势），但实测违反直觉 ——
+     * 能量类（ジ/蓄能/聚能环）被排到防御类**下面**，而它们是每回合最先看的资源行。
+     * 现在直接用 `R.skills` 顺序 ⇒ 与规则文档一致，也与 AI 的合法集遍历顺序一致。 */
+    const sdOrder = R.skills.map(function (s, i) { return { s: s, i: i }; });
     for (const sdItem of sdOrder) {
       const s = sdItem.s;
       const modeOk = S.canUseSkillInMode(st, s.key);
@@ -657,7 +653,7 @@
       case 'rodBlock': return { cls: 'ev gold', html: '☂ ' + nm(e.pid) + ' 的避雷针挡下雷击' };
       case 'ban': return { cls: 'ev dmg', html: '🌩 ' + nm(e.pid) + ' 被雷劈中：多数技能禁用 3 回合（防御/反弹/金刚盾/ジ 除外）' };
       case 'hidden': return { cls: 'ev pur', html: '🌑 触发隐藏技能【' + e.name + '】' + (e.pid != null ? '（' + nm(e.pid) + '）' : '') + (e.to != null ? ' → ' + nm(e.to) : '') };
-      case 'bigTChain': return { cls: 'ev dmg', html: '⚡ ' + nm(e.from) + ' 的大雷连带：' + nm(e.to) + ' 受 1 点电伤' + (e.kind === 'attack' ? '（其攻击被无效）' : '（被目标攻击）') };
+      case 'bigTChain': return { cls: 'ev dmg', html: '⚡ ' + nm(e.from) + ' 的大雷连带：' + nm(e.to) + ' 受 2 点电伤' + (e.kind === 'attack' ? '（其攻击被无效）' : '（被目标攻击）') };
       case 'mirror': return { cls: 'ev pur', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】→ ' + nm(e.to) };
       case 'mirrorNoEffect': return { cls: 'ev dim', html: '🪞 ' + nm(e.pid) + ' 镜面反射：' + nm(e.from) + ' 本回合的行动不存在或已被作废，无可复制' };
       /* N14 v1.5.16：非伤害类技能 = 效果落在自己身上 + 对 t2 空指（指向保留、本身无效果） */

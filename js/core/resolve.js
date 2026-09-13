@@ -718,7 +718,7 @@
       const res = deliverDamage(state, {
         amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { transfer: true }
       }, t, { reason: '真正的落雷' });
-      // N6 连带伤害（原文效果3）：与目标 T 产生交互的第三方 各受 1 点电伤；
+      // N6 连带伤害（**用户裁定 N22：各受 2 点**）：与目标 T 产生交互的第三方各受 2 点电伤；
       //   其中「对 T 使用技能」者额外被无效化（对 T 的那个技能）；施法者自身不参与。
       //   2 人时第三方不存在 → 行为不变（回归安全）。
       const tTgt = snapT[t];

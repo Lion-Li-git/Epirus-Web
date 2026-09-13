@@ -1906,6 +1906,26 @@ t('D35 训练侧"自对局健康门槛"必须存在、默认开、且与体检�
     'mirrorHealth 必须返回有限数值并回显 games');
 });
 
+t('D36 方向 A：自对局必须折进适应度（只折动作分布，不折胜负）', function () {
+  /* 只"筛"（健康门槛）不"教" 的实测后果：6/7 个 seed 被拦回"健康但弱"的角落（考卷 15.8%）。
+   * 这条钉住"教"的那一半：每个个体额外打 MIRROR_GAMES 局 n 座同策略，只把**非ジ动作直方图**
+   * 并进 agg.use（抬升已有的覆盖熵项），**胜负名次一项都不折**。 */
+  const P0 = Pol.makePolicy(0.25);
+  const opps = [{ sel: Bots.pickRandom }, { sel: Bots.pickAggro }, { sel: Bots.pickDefend }];
+  eq(T.setMirrorGames(0), 0, 'setMirrorGames(0) 必须能关掉（对照臂要用）');
+  const r0 = T.scoreMemberN(P0, opps, 2, 5, 4242, 0, 0);
+  eq(T.mirrorGames(), 0, 'mirrorGames() 必须回显当前配置');
+  eq(T.setMirrorGames(2), 2, 'setMirrorGames(2) 必须开启');
+  const r2 = T.scoreMemberN(P0, opps, 2, 5, 4242, 0, 0);
+  eq(r0.mirrorGames, 0, '关闭时不得跑自对局');
+  eq(r2.mirrorGames, 2, '开启后必须真的跑了 2 局自对局');
+  eq(r0.games, r2.games, '自对局**不得**改变胜负统计的对局数（镜像局的第 1 名是轮盘，无信息）');
+  eq(r0.first, r2.first, '自对局**不得**改变 1st 计数');
+  eq(r0.played === undefined ? r0.games : r0.played, r2.played === undefined ? r2.games : r2.played, '场次口径不得被自对局污染');
+  ok(Math.abs(r0.divNorm - r2.divNorm) > 1e-9,
+    '自对局必须改变覆盖熵 divNorm（否则"折进适应度"是空操作）：' + r0.divNorm.toFixed(4) + ' vs ' + r2.divNorm.toFixed(4));
+});
+
 t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {
   /* 第三方复核 §7-4(1)：champ-audit 的 E/F 两列"只打印、不参与任何判定"，
    * `promote-champion.mjs:77-81` 也只有三条 console.warn、末尾还写着"决定权在你"
