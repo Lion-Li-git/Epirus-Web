@@ -2067,6 +2067,9 @@ t('D41 E 新口径：只有"**没有大雷威胁时还一直摆架势**"才算�
   const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
   ok(pc.indexOf('fPass.noThreatStanceRate > 0.6') >= 0, 'promote-champion 的 E 门槛必须用新口径（noThreatStanceRate）');
   ok(pc.indexOf('fPass.stance > 0.85') < 0, '旧口径（stance > 0.85）必须已从门槛里移除');
+  /* v1.5.27：F 门槛按实测重标定（所有冠军 22%~35% ⇒ 35% 把所有人挡住；25% 才区分得开） */
+  ok(pc.indexOf('fAct.atk < 0.25') >= 0, 'F 门槛必须已重标定为 25%（用户裁定）');
+  ok(pc.indexOf('fAct.atk < 0.35') < 0, '旧的 F 门槛（35%）必须已移除');
 });
 
 t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {

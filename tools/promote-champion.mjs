@@ -107,7 +107,11 @@ if (sp.holoPerGame > 2) fails.push('全息屏障 ' + sp.holoPerGame.toFixed(1) +
  * 门槛 60%：实测病态样本 v7anneal-34 = 100%（挡），健康样本 1%~46%（放行）。 */
 if (fPass.noThreatStanceRate > 0.6) fails.push('E 无威胁时摆架势 ' + (fPass.noThreatStanceRate * 100).toFixed(0) +
   '% > 60%（对手ジ还没到 5、没有大雷威胁时，它也一直摆架势）');
-if (fAct.atk < 0.35) fails.push('F 活跃场进攻率 ' + (fAct.atk * 100).toFixed(0) + '% < 35%（正常对局里也不进攻）');
+/* v1.5.27（用户裁定）：F 门槛 35% → **25%**。
+ * 数据：实测所有冠军的 F 都在 22%~35%（v7f-35 34%、v7anneal-34 35%、v7press-36 32%、eco-34 22%）
+ * ⇒ 35% 属于"阈值定在噪声带里"，连**现役冠军自己都过不了**（当年是 --force 推上去的）。
+ * 25% 仍然挡住"正常对局里也不进攻"的形状（eco-34 22% 会被挡），但放过均衡型。 */
+if (fAct.atk < 0.25) fails.push('F 活跃场进攻率 ' + (fAct.atk * 100).toFixed(0) + '% < 25%（正常对局里也不进攻）');
 if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) + ' < 3（打法坍缩到两三张卡）');
 if (fails.length) {
   console.error('⛔ 体检未过（' + fails.length + ' 项阻断条件）：');
