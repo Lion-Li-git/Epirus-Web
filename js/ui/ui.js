@@ -143,14 +143,11 @@
     const legalMap = {};
     if (!st.over) { for (const l of Play.legalActions(st, 0)) legalMap[l.key] = l; }
     grid.innerHTML = '';
-    /* v1.5.15 / v1.5.21（用户澄清）：**对局过程中底部这个技能格**要"防御优先"——
-     * 实战里玩家先看的是"我这回合摆什么架势"。⚠️ 只重排**这个格子**；`R.skills` 的顺序牵着
-     * AI 合法集构造（`Play.legalActions` 按 mode.skills 遍历）与训练口径，绝不能动。
-     * 同组内保持规则顺序（用原始下标做稳定排序）。 */
-    const SD_GRP = { defense: 0, attack: 1, energy: 2, special: 3 };
-    const sdIdx = function (s) { const g = SD_GRP[s.cat]; return g == null ? 9 : g; };
-    const sdOrder = R.skills.map(function (s, i) { return { s: s, i: i }; })
-      .sort(function (a, b) { return (sdIdx(a.s) - sdIdx(b.s)) || (a.i - b.i); });
+    /* v1.5.22（用户第三次澄清）：**技能格按钮**用 `R.skills` 的规则声明顺序
+     * （能量(ジ/蓄能/聚能环) → 攻击 → 防御 → 特殊）—— 用户的原话是"能量类跑到防御类下面了，不符合直觉"。
+     * ⚠️ 此前两轮我都把"防御优先"错用在这里：**"防御优先"说的是回合日志里的显示顺序**（见 roundLineParts
+     * 与 evText 的显示排序），与这个格子无关。顺带：`R.skills` 的顺序始终是 AI 合法集与训练口径的真源，绝不能动。 */
+    const sdOrder = R.skills.map(function (s, i) { return { s: s, i: i }; });
     for (const sdItem of sdOrder) {
       const s = sdItem.s;
       const modeOk = S.canUseSkillInMode(st, s.key);
@@ -188,8 +185,32 @@
     lb.appendChild(el);
     lb.scrollTop = lb.scrollHeight;
   }
+  /* ===== v1.5.22（用户裁定）：结算事件行的**显示顺序**（纯显示层，引擎结算顺序一行不动）=====
+   * 三条规则：① **防御类先于攻击类**；② **被无效的先于使其无效的**；③ **原技能先于镜面反射复制出来的**。
+   * 实现：给每条事件算一个显示档 (tier, sub)，然后**稳定排序**（同档保持引擎顺序，绝不打乱无关事件）：
+   *   tier 0 防御类 · 1 中立 · 2 攻击类 · 3 **镜像复制**（复制出来的一律最后 ⇒ 原技能必然在它前面）
+   *   sub  0 普通/**被无效** · 1 **使其无效**（cancel/clash/thunderRing）⇒ "被无效先、使其无效后"
+   * ⚠️ 只排**渲染用的副本**（`.map` 出新数组），`state.events` 本身绝不排序 —— 引擎怎么结算就怎么结算。
+   * 反证（np-test D38）：把 logEvents 改回直接遍历 list、或去掉 tier/sub ⇒ D38 立刻红。 */
+  const EV_TIER_DEF = { guardSet: 1, holoSet: 1, blocked: 1, reflect: 1, voidImmune: 1, curseBlock: 1, rodBlock: 1, rod: 1 };
+  const EV_TIER_ATK = { damage: 1, headshot: 1, bigTChain: 1, ban: 1, hidden: 1 };
+  const EV_TIER_MIRROR = { mirror: 1, mirrorCopySelf: 1, mirrorNoEffect: 1 };
+  const EV_SUB_VOIDER = { cancel: 1, clash: 1, thunderRing: 1 };
+  function evDisplayRank(e) {
+    if (!e) return [1, 0];
+    if (EV_TIER_MIRROR[e.type] || (e.type === 'guardSet' && e.copied)) return [3, 0];
+    if (EV_SUB_VOIDER[e.type]) return [1, 1];
+    if (EV_TIER_DEF[e.type]) return [0, 0];
+    if (EV_TIER_ATK[e.type]) return [2, 0];
+    return [1, 0];
+  }
+  function orderEventsForDisplay(list) {
+    return list.map(function (e, i) { return { e: e, i: i, k: evDisplayRank(e) }; })
+      .sort(function (a, b) { return (a.k[0] - b.k[0]) || (a.k[1] - b.k[1]) || (a.i - b.i); })
+      .map(function (o) { return o.e; });
+  }
   function logEvents(list, rootCls) {
-    for (const e of list) {
+    for (const e of orderEventsForDisplay(list)) {
       const t = evText(e);
       if (t) addLog('div', t.cls || 'ev', t.html);
     }

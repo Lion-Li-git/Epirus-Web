@@ -1940,8 +1940,30 @@ t('D37 页面回合列表/导出：死人不许出ジ、观战回合必须显示
   ok(spec.indexOf('roundLineParts()') >= 0, '观战回合必须走 roundLineParts()（显示技能行）');
   ok(spec.indexOf('pushTranscript(') >= 0, '观战回合必须 pushTranscript()（否则导出只到玩家死前）');
   ok(spec.indexOf('persistBattle()') >= 0, '观战回合必须 persistBattle()（上局记录也要完整）');
-  ok(ui.indexOf('const SD_GRP = { defense: 0, attack: 1, energy: 2, special: 3 }') >= 0,
-    '底部对局技能格必须保持"防御优先"（用户 v1.5.15 的原意，v1.5.21 澄清）');
+  /* ⚠️ 用户第三次澄清（v1.5.22）：**技能格按钮**用规则顺序（能量在最上）；
+   * "防御优先"指的是**回合日志的显示顺序**，与格子无关 —— 前两轮把它错用在格子上，各错一次。 */
+  ok(ui.indexOf('const SD_GRP =') < 0, '技能格按钮**不得**再做"防御优先"重排（用户已明确：格子用规则顺序）');
+  ok(/const sdOrder = R\.skills\.map\(function \(s, i\) \{ return \{ s: s, i: i \}; \}\);/.test(ui),
+    '技能格按钮必须用 R.skills 的规则声明顺序（能量 → 攻击 → 防御 → 特殊）');
+});
+
+t('D38 结算事件行的**显示顺序**（防御→中立→攻击→镜像；被无效先于使其无效）+ 不得改动引擎事件数组', function () {
+  /* 用户第三次澄清（v1.5.22）："防御优先"说的是**回合日志里结算事件行的显示顺序**，且明确"与后端实现无关"。
+   * 三条规则：① 防御类先于攻击类 ② 被无效的先于使其无效的 ③ 原技能先于镜面反射复制出来的。
+   * 这条钉住：实现存在 + 只排渲染副本（不许给 state.events 排序）+ 同档稳定。 */
+  const ui = readFileSync('js/ui/ui.js', 'utf8');
+  ok(/function evDisplayRank\(e\)/.test(ui), '必须有 evDisplayRank()：事件 → 显示档 (tier, sub)');
+  ok(/function orderEventsForDisplay\(list\)/.test(ui), '必须有 orderEventsForDisplay()：稳定排序');
+  ok(ui.indexOf('for (const e of orderEventsForDisplay(list))') >= 0,
+    'logEvents 必须渲染**排序后的副本**（否则显示顺序规则等于没做）');
+  ok(ui.indexOf('EV_TIER_DEF') >= 0 && ui.indexOf('EV_TIER_ATK') >= 0 && ui.indexOf('EV_TIER_MIRROR') >= 0,
+    '三个档位表必须存在：防御 / 攻击 / 镜像复制');
+  ok(ui.indexOf('EV_SUB_VOIDER') >= 0, '必须有"使其无效"子档（cancel/clash/thunderRing）');
+  const at = ui.indexOf('function orderEventsForDisplay(list)');
+  const fn = ui.slice(at, at + 400);
+  ok(fn.indexOf('list.map(') >= 0, 'orderEventsForDisplay 必须先 map 出副本（不许就地排序）');
+  ok(!/list\.sort\(/.test(fn), 'orderEventsForDisplay 不许对入参 list 直接 sort（会打乱引擎事件数组）');
+  ok(fn.indexOf('a.i - b.i') >= 0, '同档必须用原始下标做**稳定**排序（否则无关事件被打乱）');
 });
 
 t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {
