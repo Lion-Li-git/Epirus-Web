@@ -1926,6 +1926,24 @@ t('D36 方向 A：自对局必须折进适应度（只折动作分布，不折�
     '自对局必须改变覆盖熵 divNorm（否则"折进适应度"是空操作）：' + r0.divNorm.toFixed(4) + ' vs ' + r2.divNorm.toFixed(4));
 });
 
+t('D37 页面回合列表/导出：死人不许出ジ、观战回合必须显示技能并落 transcript', function () {
+  /* 用户实测报的三个 bug（v1.5.21 修）：① 死掉的玩家仍在回合列表里出【ジ】；
+   * ② 人类死后自动观战那段从不追加 transcript ⇒ "导出对局记录"只到玩家死前；
+   * ③ 同处只写"第 N 回合（观战）"，不显示任何人用了什么技能。
+   * 修法是把"拼回合行 / 追加 transcript"抽成**单一真源**（roundLineParts / pushTranscript），
+   * 正常回合与观战回合共用。这条用源码级断言钉住"不许再退回各写一份"。 */
+  const ui = readFileSync('js/ui/ui.js', 'utf8');
+  ok(/function roundLineParts\(\)/.test(ui), '必须有 roundLineParts()：回合行的单一真源');
+  ok(/function pushTranscript\(/.test(ui), '必须有 pushTranscript()：transcript 的单一真源');
+  ok(ui.indexOf("p.name + '=【已淘汰】'") >= 0, '死且本回合没出手的玩家必须显示【已淘汰】（不许再出ジ）');
+  const spec = ui.slice(ui.indexOf('function autoRunRest()'), ui.indexOf('function autoRunRest()') + 1600);
+  ok(spec.indexOf('roundLineParts()') >= 0, '观战回合必须走 roundLineParts()（显示技能行）');
+  ok(spec.indexOf('pushTranscript(') >= 0, '观战回合必须 pushTranscript()（否则导出只到玩家死前）');
+  ok(spec.indexOf('persistBattle()') >= 0, '观战回合必须 persistBattle()（上局记录也要完整）');
+  ok(ui.indexOf('const SD_GRP = { defense: 0, attack: 1, energy: 2, special: 3 }') >= 0,
+    '底部对局技能格必须保持"防御优先"（用户 v1.5.15 的原意，v1.5.21 澄清）');
+});
+
 t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {
   /* 第三方复核 §7-4(1)：champ-audit 的 E/F 两列"只打印、不参与任何判定"，
    * `promote-champion.mjs:77-81` 也只有三条 console.warn、末尾还写着"决定权在你"

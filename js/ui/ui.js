@@ -143,11 +143,14 @@
     const legalMap = {};
     if (!st.over) { for (const l of Play.legalActions(st, 0)) legalMap[l.key] = l; }
     grid.innerHTML = '';
-    /* v1.5.19（用户实测反馈）：技能格子**回到规则声明顺序**（能量 → 攻击 → 防御 → 特殊）。
-     * v1.5.15 曾按"防御类优先"重排（理由：玩家先看摆什么架势），但实测违反直觉 ——
-     * 能量类（ジ/蓄能/聚能环）被排到防御类**下面**，而它们是每回合最先看的资源行。
-     * 现在直接用 `R.skills` 顺序 ⇒ 与规则文档一致，也与 AI 的合法集遍历顺序一致。 */
-    const sdOrder = R.skills.map(function (s, i) { return { s: s, i: i }; });
+    /* v1.5.15 / v1.5.21（用户澄清）：**对局过程中底部这个技能格**要"防御优先"——
+     * 实战里玩家先看的是"我这回合摆什么架势"。⚠️ 只重排**这个格子**；`R.skills` 的顺序牵着
+     * AI 合法集构造（`Play.legalActions` 按 mode.skills 遍历）与训练口径，绝不能动。
+     * 同组内保持规则顺序（用原始下标做稳定排序）。 */
+    const SD_GRP = { defense: 0, attack: 1, energy: 2, special: 3 };
+    const sdIdx = function (s) { const g = SD_GRP[s.cat]; return g == null ? 9 : g; };
+    const sdOrder = R.skills.map(function (s, i) { return { s: s, i: i }; })
+      .sort(function (a, b) { return (sdIdx(a.s) - sdIdx(b.s)) || (a.i - b.i); });
     for (const sdItem of sdOrder) {
       const s = sdItem.s;
       const modeOk = S.canUseSkillInMode(st, s.key);
@@ -379,6 +382,38 @@
     return finish((st ? st.pick : Bots.pickBalanced)(state, pid, legal));
   }
 
+  /* ===== v1.5.21：回合行与 transcript 的**单一真源** =====
+   * 用户实测报的三个 bug 都在这两个函数上：
+   *  ① 死掉的玩家仍在回合列表里出【ジ】（本回合没出手 + 已死 ⇒ 应显示【已淘汰】）；
+   *  ② 人类死后自动观战那段（autoRunRest）**从不追加 transcript** ⇒ "导出对局记录"只到玩家死前；
+   *  ③ 同处只写了"第 N 回合（观战）"，不显示任何人用了什么技能。
+   * 解法：把"拼回合行"和"追加 transcript"抽到这里，正常回合与观战回合共用 ⇒ 不可能只改一处。 */
+  function roundLineParts() {
+    const N = B.state.p.length;
+    const parts = [];
+    for (let pid = 0; pid < N; pid++) {
+      const p = B.state.p[pid];
+      const a = B.state.actions[pid];
+      /* 本回合没出手 + 已死 ⇒ 已淘汰。⚠️ 本回合刚死但出过手的人仍要显示他用了什么。 */
+      if (!(a && a.key) && p.hp <= 0) { parts.push(p.name + '=【已淘汰】'); continue; }
+      const tg = (a && a.target != null && a.target !== pid) ? '→' + B.state.p[a.target].name : '';
+      const mk = (!a || a.outcome === 'ok') ? ''
+        : (a.outcome === 'insufficient' ? '（ジ不足·未发动）' : a.outcome === 'banned' ? '（禁用无效）' : '（无效）');
+      parts.push(p.name + '=【' + skillName(a ? a.key : R.SK.JI) + tg + '】' + mk);
+    }
+    return parts;
+  }
+  function pushTranscript(parts, events) {
+    const lines = events.map(function (e) {
+      const t = evText(e);
+      return t ? t.html.replace(/<[^>]+>/g, '') : null;
+    }).filter(Boolean);
+    B.transcript.push({
+      round: B.state.round, line: parts.join('  '),
+      human: parts[0], ai: parts.slice(1).join(' '), lines: lines
+    });
+  }
+
   /* 人类玩家被淘汰后：AI 自行打完剩余回合（观战） */
   function autoRunRest() {
     let guard = 0;
@@ -399,8 +434,12 @@
       }
       X.resolveActions(B.state);
       X.endTurn(B.state);
-      addLog('div', 'rnd', '第 ' + B.state.round + ' 回合（观战）');
+      /* v1.5.21：观战回合也走同一套回合行 + 追加 transcript（此前只写"（观战）"且不落 transcript） */
+      const parts = roundLineParts();
+      addLog('div', 'rnd', '第 ' + B.state.round + ' 回合（观战）：' + parts.join('  '));
       logEvents(B.state.events.slice(idx0));
+      pushTranscript(parts, B.state.events.slice(idx0));
+      persistBattle();
     }
     B.evCursor = B.state.events.length;
     B.locked = false;
@@ -465,23 +504,10 @@
       X.resolveActions(B.state);
       X.endTurn(B.state);
       const events = B.state.events.slice(idx0);
-      const mark = function (a) {
-        if (!a || a.outcome === 'ok') return '';
-        return a.outcome === 'insufficient' ? '（ジ不足·未发动）' : a.outcome === 'banned' ? '（禁用无效）' : '（无效）';
-      };
-      const parts = [];
-      for (let pid = 0; pid < N; pid++) {
-        const a = B.state.actions[pid];
-        const tg = (a && a.target != null && a.target !== pid) ? '→' + B.state.p[a.target].name : '';
-        parts.push(B.state.p[pid].name + '=【' + skillName(a ? a.key : R.SK.JI) + tg + '】' + mark(a));
-      }
+      const parts = roundLineParts();
       addLog('div', 'rnd', '第 ' + B.state.round + ' 回合：' + parts.join('  '));
       logEvents(events);
-      const lines = events.map(function (e) {
-        const t = evText(e);
-        return t ? t.html.replace(/<[^>]+>/g, '') : null;
-      }).filter(Boolean);
-      B.transcript.push({ round: B.state.round, line: parts.join('  '), human: parts[0], ai: parts.slice(1).join(' '), lines: lines });
+      pushTranscript(parts, events);
       persistBattle();
       B.evCursor = B.state.events.length;
       buildSkillGrid(); renderSide(0); renderSide(1);
