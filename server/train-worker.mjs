@@ -127,6 +127,9 @@ parentPort.on('message', (msg) => {
         // (c) 承诺局记账：分巢精英与终局门槛都要靠它，丢了这一项 h 基因就白加了
         hGene: m.h || 0, commitGames: r.commitGames, commitFirstRate: r.commitFirstRate,
         modeUsed: (T.trainMode ? T.trainMode() : null),   // 自检回执：服务端据此确认模式真的生效
+        /* v1.5.11 自检回执：哨声惩罚现在是**按模式自动**开的（长程 0.5）⇒ worker 若不知道模式，
+         * 它那份就静默是 0（"半开"事故同型：日志完全正常、产物却少了一半适应度）。 */
+        fightPen: (T.fightReward ? T.fightReward().whistlePen : null),
         styleGames: r.styleGames || 0, styleRate: r.styleRate || 0,   // v1.5.2：风格切片回执（服务端据此自检）
         commitTop2Rate: r.commitTop2Rate, commitMaxEp: r.commitMaxEp
       };

@@ -1192,12 +1192,13 @@ t('D18 哨声惩罚：熬到回合上限的胜利必须打折（反摆烂）', f
   T.setFightReward({ dealW: 0.05 });
   eq(T.fightReward().dealW, 0.05, '出手权重可调（实测 ' + T.fightReward().dealW + '）');
   T.setFightReward({ reset: true });                      // 复位
-  eq(T.fightReward().override, null, 'reset 后回到"自动"（override=null）');
+  eq(T.fightReward().whistlePen, 0, 'reset 后回到 0（默认关）');
   eq(T.fightReward().dealW, 0.01, 'reset 后出手权重回到 0.01');
-  /* v1.5.11：**长程训练默认开**（0.5），其余默认关（0）—— 这是用户"按你的意思做"那条 */
-  T.setTrainMode('multi'); eq(T.fightReward().whistlePen, 0, 'multi 默认不罚（既有口径不变）');
-  T.setTrainMode('long'); eq(T.fightReward().whistlePen, 0.5, 'long 默认罚 0.5（长程默认开）');
-  T.setFightReward({ whistlePen: 0 }); eq(T.fightReward().whistlePen, 0, '显式覆盖优先于自动默认');
+  /* v1.5.12：**取消**"长程自动 0.5"。实测（lngC vs lngD，6 seed）产出逐字节相同 ⇒ 长程里是空操作
+   * （长程局几乎总以淘汰结束 ⇒ 哨兵局≈0%）。惩罚只在多人 3 血有意义，用 env 显式开。 */
+  T.setTrainMode('multi'); eq(T.fightReward().whistlePen, 0, 'multi 默认关');
+  T.setTrainMode('long'); eq(T.fightReward().whistlePen, 0, 'long 默认也关（v1.5.12 回滚了自动 0.5）');
+  T.setFightReward({ whistlePen: 0.5 }); eq(T.fightReward().whistlePen, 0.5, '仍可显式开（env / setFightReward）');
   T.setFightReward({ reset: true }); T.setTrainMode('multi');
 });
 

@@ -346,6 +346,10 @@ async function runTrainN(gens, cfg) {
   const fightEnv = { whistlePen: process.env.EPIRUS_FIGHT_WHISTLE, dealW: process.env.EPIRUS_FIGHT_DEAL };
   const fightSet = (fightEnv.whistlePen != null || fightEnv.dealW != null) && T.setFightReward ? T.setFightReward(fightEnv) : null;
   if (fightSet) console.log('[fight] 反摆烂覆盖: ' + JSON.stringify(fightSet));
+  /* v1.5.11：把**实际生效**的奖励参数打出来（哨声惩罚现在长程默认 0.5、不靠 env ⇒ 只记 env 会漏；
+   * 有这一行 + worker 的 fightPen 回执，就能确认"两端都真的开了"而不是静默半开）。 */
+  if (T.fightReward) console.log('[fight] 生效值: ' + JSON.stringify(T.fightReward()) + '  (mode=' + mode + ')');
+  if (T.economyReward) console.log('[eco] 生效值: ' + JSON.stringify(T.economyReward()));
   if (styleNames.length) console.log('[style] 风格切片: ' + slice.n + ' 对手 × ' + slice.games + ' 局/个体/代  权重=' + slice.w);
   const t0 = Date.now();
   /* v1.4.7：原为写死的 30 分钟墙上时钟上限（第十轮复核 §6-4：同 seed 同 gens 在慢机器上可能
@@ -395,6 +399,14 @@ async function runTrainN(gens, cfg) {
       const bad = (res || []).filter(function (r) { return r && r.modeUsed && r.modeUsed !== mode; });
       if (bad.length) {
         for (const c of clients) sse(c, { type: 'error', msg: 'worker 没收到训练模式 ' + mode + '（回执=' + bad[0].modeUsed + '）—— 已中止，这份产物不能用' });
+        runningN = false; poolN.close(); return;
+      }
+      /* v1.5.11 自检：哨声惩罚是"按模式自动"的（长程 0.5、其余 0）⇒ 必须核对 worker 那份的实际值，
+       * 否则它会静默半开（服务端 0.5、worker 0），产物少一半适应度且日志完全正常（与 mode 半开同型）。 */
+      const wantPen = (T.fightReward ? T.fightReward().whistlePen : null);
+      const badPen = (res || []).filter(function (r) { return r && r.fightPen != null && wantPen != null && r.fightPen !== wantPen; });
+      if (badPen.length) {
+        for (const c of clients) sse(c, { type: 'error', msg: 'worker 的哨声惩罚与服务端不一致（worker=' + badPen[0].fightPen + ' 服务端=' + wantPen + '）—— 已中止，这份产物不能用' });
         runningN = false; poolN.close(); return;
       }
     }
