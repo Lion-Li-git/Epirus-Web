@@ -4,6 +4,8 @@ import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
 import { isChampOpp, loadChampParams } from '../server/opp-champs.mjs';
+/* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
+import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
 sb.window = sb; sb.globalThis = sb;
@@ -1117,6 +1119,20 @@ t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励
   T.setEconomyReward({ reset: true });   // 复位，别污染后面的用例
 });
 
+t('D16 线上冠军的规则指纹必须等于当前规则指纹（否则成绩已过期）', function () {
+  /* v1.5.7（千问体检 §5-2 建议 / HANDOFF §4-9 规矩）：v1.5.4 只改了 rules.js 里一个 `target` 字段，
+   * 5P 线上冠军的考卷成绩就从 38.0% 掉到 15.0%，而当时**没有任何机制**能自动发现"产物与引擎错配"。
+   * 这条把两者绑成机械检查：规则源码一改 ⇒ 指纹变 ⇒ 本用例立刻红 ⇒ 必须重测线上冠军、
+   * 把新成绩与新指纹一起记回 bundle 的 meta。它**故意敏感**（连注释改动都会触发），
+   * 因为重记的成本是"一次考卷 + 一行 meta"，而漏掉的成本是交付质量静默下降。 */
+  const cur = rulesFingerprint();
+  const bundle = readFileSync('js/bundled-champion-3p.js', 'utf8');
+  const fp = fingerprintOfBundle(bundle);
+  ok(!!fp, '线上 bundle 的 meta 必须记 rulesFingerprint（当前规则指纹 = ' + cur + '）');
+  eq(fp, cur, 'bundle 记的规则指纹必须等于当前规则指纹（不等 ⇒ 考卷成绩已过期，重测后把新指纹/成绩记回 meta）');
+  ok(/"examScoreAtBuild"\s*:\s*[0-9.]+/.test(bundle), 'bundle 的 meta 必须记 examScoreAtBuild（构建时的考卷成绩）');
+});
+
 t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放者自己', function () {
   /* v1.5.4 规则修正：原始规则集（`D:\code\Epirus\README.md`「全息屏障」）写明
    *   「作用效果：给**被作用者**施加一个“原型制御”」+ 手势「双臂伸出挡住**被作用者**胸前」
@@ -1156,6 +1172,13 @@ t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放
   st = mk3();
   S.attemptAction(st, 0, R.SK.HOLO, { target: 0 });
   ok(st.actions[0].target !== 0 && st.actions[0].target != null, '套不到自己（实测 target=' + st.actions[0].target + '）');
+  /* ④b v1.5.7（用户裁定）：全息屏障是**多人专用卡** ⇒ 2P 模式不再提供它
+   *     （2P 里唯一能套的就是对手 ⇒ 纯陷阱；而自保已有原型制御、效果相同 ⇒ 灰掉零损失） */
+  const k2p = R.MODES.standard.skills.map(function (x) { return (typeof x === 'string' ? x : x.key); });
+  ok(k2p.indexOf(R.SK.HOLO) < 0, '2P 技能表不得含全息屏障（实测 ' + k2p.length + ' 个技能）');
+  ok(k2p.indexOf(R.SK.PROTO) >= 0, '2P 必须保留原型制御（自保的正规手段）');
+  const kMulti = R.MODES.multi.skills.map(function (x) { return (typeof x === 'string' ? x : x.key); });
+  ok(kMulti.indexOf(R.SK.HOLO) >= 0, '多人模式必须保留全息屏障');
   /* ⑤ 小雷（pri5）在屏障（pri3）之前结算：打**施放者** ⇒ 这次施法被无效化，屏障不该出现。
    * ⚠️ 这是 v1.5.4 的第二个坑：盾若从 `state.actions` 直读（不看 `voided`）就会漏掉无效化，
    * 症状是"小雷明明打了施放者，被套盾的人还是被护住"。（原始规则：雷击之枪需要对**使用者**作用才能使其无效） */

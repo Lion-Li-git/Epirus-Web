@@ -89,7 +89,12 @@
   skills.forEach(function (s) { byKey[s.key] = s; });
 
   // 分类表（2 人局可用清单 / 攻击判定集 / 挑衅满足集 / 雷系集 / 防御类集）
-  const MULTI_ONLY = [SK.DUAL_GUN, SK.MIRROR];
+  /* v1.5.7（用户裁定）：`全息屏障` 也归入**多人专用** ⇒ 2P 模式不再提供它。
+   * 理由：v1.5.4 依原始规则把它改成"给**被作用者**（别人）施加原型制御"，而 2P 里唯一的"别人"就是对手
+   * ⇒ 出这张卡 = 给对手套盾，是一张**纯陷阱卡**（连 AI 都从不选：400 局 0 次）。
+   * 而 2P 的自保**本来就有原型制御**、效果完全相同（用户原话："自保有原型制御可以实现完全相同的效果"）
+   * ⇒ 灰掉它零损失。（另一个选项"让 2P 继承新语义、留着这张死卡"被用户否掉。） */
+  const MULTI_ONLY = [SK.DUAL_GUN, SK.MIRROR, SK.HOLO];
   const AVAILABLE_2P = skills.filter(function (s) { return MULTI_ONLY.indexOf(s.key) < 0; });
 
   // “带攻击效果”技能（狙击易受影响 / 可抵消攻击同层相抵也用它判定）

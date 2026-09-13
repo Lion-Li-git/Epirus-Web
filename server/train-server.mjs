@@ -337,6 +337,11 @@ async function runTrainN(gens, cfg) {
    * （见 paralleltrain / train-worker）；这里这一份是给**串行回退路径**和终局评估用的。 */
   const styleOpps = styleNames.map(function (nm) { return { name: nm, sel: resolveOpp(nm) }; });
   const slice = T.setStyleSlice ? T.setStyleSlice(styleNames.length ? styleOpps : null, styleW, styleGamesN) : { games: 0, w: 0, n: 0 };
+  /* v1.5.7：经济奖励覆盖（env 传；worker 继承同一份 env ⇒ 两端一致）。用途：跑"旧门槛"对照臂
+   * （`EPIRUS_ECO_TARGET=4 EPIRUS_ECO_CAP=10 EPIRUS_ECO_DIVW=0`），这样奖励的 A/B 不必回退代码版本。 */
+  const ecoEnv = { target: process.env.EPIRUS_ECO_TARGET, cap: process.env.EPIRUS_ECO_CAP, divW: process.env.EPIRUS_ECO_DIVW };
+  const ecoSet = (ecoEnv.target != null || ecoEnv.cap != null || ecoEnv.divW != null) && T.setEconomyReward ? T.setEconomyReward(ecoEnv) : null;
+  if (ecoSet) console.log('[eco] 经济奖励覆盖: ' + JSON.stringify(ecoSet));
   if (styleNames.length) console.log('[style] 风格切片: ' + slice.n + ' 对手 × ' + slice.games + ' 局/个体/代  权重=' + slice.w);
   const t0 = Date.now();
   /* v1.4.7：原为写死的 30 分钟墙上时钟上限（第十轮复核 §6-4：同 seed 同 gens 在慢机器上可能
@@ -503,7 +508,7 @@ async function runTrainN(gens, cfg) {
   }
   const pack = P.pack(finalParams);
   lastChampionPackN = pack;
-  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
+  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
     /* v1.3.56：把**可复现输入**记进产物。此前 meta 只有 source/n/gens/games/pop/ts/胜率，
      * 于是从产物上既看不出是不是热启动、也看不出输入是哪一版冠军 —— 而浏览器的默认配置
      * 恰好就是热启动（index.html 的"从头训练"复选框默认不勾，ui.js 也就不发 fresh=1）。

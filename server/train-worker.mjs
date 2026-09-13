@@ -48,6 +48,12 @@ const OPP_POOL = OPP_SPECS.map(function (o) {
   if (typeof B[o.fn] !== 'function') throw new Error('opp-pool: ' + o.name + ' → Bots.' + o.fn + ' 不存在');
   return { name: o.name, sel: B[o.fn] };
 });
+/* v1.5.7：经济奖励（ep 门槛 / 熵权重）的覆盖也必须进 **worker 沙箱**（同 mode、同风格切片的道理）。
+ * 用 env 传而不是随消息下发：它**一次设好就够**、不需要每代同步，而 worker 由父进程继承 env
+ * ⇒ 两端天然一致、不会半开。（"引擎内不读 env"那条规矩不破：读 env 的是 Node 侧的 worker。） */
+if (T.setEconomyReward && (process.env.EPIRUS_ECO_TARGET != null || process.env.EPIRUS_ECO_CAP != null || process.env.EPIRUS_ECO_DIVW != null)) {
+  T.setEconomyReward({ target: process.env.EPIRUS_ECO_TARGET, cap: process.env.EPIRUS_ECO_CAP, divW: process.env.EPIRUS_ECO_DIVW });
+}
 /* v1.5.2：对手名走**与 server 同一个解析器**（脚本名 + `champ:<路径>` 冠军对手）。
  * 函数无法跨线程传 ⇒ worker 必须自己构造，但**规则只有一份**（opp-champs.mjs）——
  * "两处各写一遍"正是这个项目栽过三次的地方。 */
