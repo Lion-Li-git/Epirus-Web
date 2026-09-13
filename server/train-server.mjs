@@ -343,7 +343,7 @@ async function runTrainN(gens, cfg) {
   const ecoSet = (ecoEnv.target != null || ecoEnv.cap != null || ecoEnv.divW != null) && T.setEconomyReward ? T.setEconomyReward(ecoEnv) : null;
   if (ecoSet) console.log('[eco] 经济奖励覆盖: ' + JSON.stringify(ecoSet));
   /* v1.5.8：反摆烂覆盖（哨声惩罚 / 出手权重）—— 同 env 机制，worker 继承同一份。 */
-  const fightEnv = { whistlePen: process.env.EPIRUS_FIGHT_WHISTLE, dealW: process.env.EPIRUS_FIGHT_DEAL };
+  const fightEnv = { whistlePen: process.env.EPIRUS_FIGHT_WHISTLE, dealW: process.env.EPIRUS_FIGHT_DEAL, firstW: process.env.EPIRUS_FIGHT_FIRST };
   const fightSet = (fightEnv.whistlePen != null || fightEnv.dealW != null) && T.setFightReward ? T.setFightReward(fightEnv) : null;
   if (fightSet) console.log('[fight] 反摆烂覆盖: ' + JSON.stringify(fightSet));
   /* v1.5.11：把**实际生效**的奖励参数打出来（哨声惩罚现在长程默认 0.5、不靠 env ⇒ 只记 env 会漏；

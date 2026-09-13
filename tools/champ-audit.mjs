@@ -30,6 +30,7 @@ const flag = function (n, d) {
 };
 const GAMES = Number(flag('games', 20));
 const EXG = Number(flag('exam-games', 20));
+const SP_MODE = flag('mode', 'multi');   // 自对局那几列用哪个模式（multi 默认；看"集体防御"要用 long）
 const CORE = ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js', 'js/train/policy.js', 'js/train/bots.js', 'js/train/evo.js'];
 
 function sandbox() {
@@ -88,8 +89,41 @@ function selfPlay(W, params, mode) {
   };
 }
 
-const list = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
-const files = list.length ? list : (function () {
+/* E/F：**对手活跃度**对冠军行为的影响（v1.5.14 加，起因是用户实测"集体防御"）。
+ * 0 号座用"被动（只ジ）"或"活跃（每回合进攻）"的固定策略，其余 4 座都是被测冠军 ⇒ 量 AI 座的架势/进攻占比。
+ * 为什么必须单独看：这与"5 座全冠军"的自对局是两种场面 —— 用户那局就是被被动对手推到架势率 75% 的
+ * （REVIEW §12：人类 68% ジ ⇒ AI 架势 75%；人类每回合进攻 ⇒ AI 架势 12%、28 回合结束）。 */
+function fieldRate(W, params, kind, mode) {
+  const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
+  const STANCE = [R.SK.GUARD, R.SK.REFLECT, R.SK.BAGUA, R.SK.JINGU, R.SK.PROTO];
+  const ATK = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.DRAIN];
+  let stance = 0, atk = 0, tot = 0, rds = 0;
+  for (let g = 0; g < 10; g++) {
+    const st = S.createState(mode, { next: mulberry32(5100 + g) }, 5);
+    const r = mulberry32(6100 + g);
+    const human = (kind === 'active')
+      ? function (state, pid, legal) {
+        const a = legal.filter(function (x) { return x.affordable && ATK.indexOf(x.key) >= 0; });
+        if (a.length) { const o = S.opponentsOf(state, pid); return { key: a[0].key, target: o[Math.floor(r() * o.length)] }; }
+        return { key: R.SK.JI };
+      }
+      : function () { return { key: R.SK.JI }; };
+    const ch = [human];
+    for (let i = 1; i < 5; i++) ch.push(T.policyChooserN(params, 0.15));
+    Play.autoGameN(st, ch);
+    for (const e of st.events) {
+      if (e.type === 'action' && e.pid > 0 && e.outcome === 'ok') {
+        tot++;
+        if (STANCE.indexOf(e.key) >= 0) stance++;
+        else if (ATK.indexOf(e.key) >= 0) atk++;
+      }
+    }
+    rds += st.round;
+  }
+  return { stance: tot ? stance / tot : 0, atk: tot ? atk / tot : 0, rounds: rds / 10 };
+}
+
+const list = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });const files = list.length ? list : (function () {
   const out = ['js/bundled-champion-3p.js'];
   const dir = join(ROOT, 'docs/artifacts');
   if (existsSync(dir)) {
@@ -105,13 +139,15 @@ const W = sandbox();
  * ⇒ 此时量 `js/bundled-champion-3p.js` 会得到旧冠军的特征（本轮踩过）。给该行打标记。 */
 const trainingLive = existsSync(join(ROOT, 'docs/artifacts/.training.lock'));
 console.log('冠军体检（自对局 ' + GAMES + ' 局 · 考卷 ' + EXG + ' 局）' + (trainingLive ? '  ⚠️ 训练进行中：bundle 行不可信，请看对应 .bak' : '') + '\n');
-console.log('文件'.padEnd(42) + 'A 考卷1st  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙');
+console.log('文件'.padEnd(42) + 'A 考卷1st  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E被动场架势 F活跃场进攻 F回合');
 for (const f of files) {
   const params = loadChamp(W, f);
   if (!params) { console.log(f.padEnd(42) + '  (读不出冠军包)'); continue; }
   const e1 = exam(f, []);
   const e2 = params ? exam(f, ['--mode=long', '--field=reflectwall']) : { first: null };
-  const sp = selfPlay(W, params, 'multi');
+  const sp = selfPlay(W, params, SP_MODE);
+  const fPass = fieldRate(W, params, 'passive', SP_MODE);
+  const fAct = fieldRate(W, params, 'active', SP_MODE);
   const nm = f.replace('docs/artifacts/', '').replace('js/', '').slice(0, 41);
   console.log(nm.padEnd(42) +
     String(e1.first == null ? '?' : e1.first).padStart(8) + '%' +
@@ -121,7 +157,11 @@ for (const f of files) {
     (sp.zeroRate * 100).toFixed(0).padStart(9) + '%' +
     (sp.drawRate * 100).toFixed(0).padStart(7) + '%' +
     sp.rounds.toFixed(1).padStart(7) +
-    String(e2.first == null ? '?' : e2.first).padStart(14) + '%');
+    String(e2.first == null ? '?' : e2.first).padStart(14) + '%' +
+    (fPass.stance * 100).toFixed(0).padStart(10) + '%' +
+    (fAct.atk * 100).toFixed(0).padStart(11) + '%' +
+    fAct.rounds.toFixed(1).padStart(7));
 }
 console.log('\n判读：**A 高但 B 伤害≈0** = 靠"熬到哨声"赢的，不是强度（long-33 就是这个形状）；');
-console.log('      C 盾/局 高 ⇒ 互套盾风险（v1.5.4 之后把盾套给对手）；零伤害率/平局率高 = 摆烂');
+console.log('      C 盾/局 高 ⇒ 互套盾风险（v1.5.4 之后把盾套给对手）；零伤害率/平局率高 = 摆烂；');
+console.log('      **E 被动场架势率高 + F 活跃场进攻率低** ⇒ 学出了"互戒均衡"（REVIEW §12：三张架势牌费用为 0）。');

@@ -1305,6 +1305,29 @@ t('D20 狙击"被干扰"只认"狙击手本人被攻击"（多人局；v1.5.13 �
   eq(st.p[1].hp, 3, '2 人局被干扰时目标不掉血');
 });
 
+t('D21 先手激励（v1.5.14 选项 A）：默认关，且"首伤方"的判定只看带 source 的伤害', function () {
+  /* 动机（REVIEW §12）：多人局三张架势牌费用为 0 ⇒ 互戒均衡；`deal` 只有 0.01、`proact` 是相对
+   * 全场均值的（全场 0 伤害时恒 0）⇒ 对称局面下没有梯度先出手。**首伤奖励是区分名次的项**
+   * （每局只有一个席位拿到），这是它可能有效的关键；而统一加在所有人身上的项（如哨声惩罚）无效。 */
+  eq(T.fightReward().firstW, 0, '默认必须关（不猜默认值，先用对照臂证明）');
+  eq(T.fightReward().dealW, 0.01, 'deal 默认仍是 0.01');
+  T.setFightReward({ firstW: 0.08, dealW: 0.05 });
+  eq(T.fightReward().firstW, 0.08, '可显式打开先手奖励');
+  eq(T.fightReward().dealW, 0.05, '可显式抬高出手权重');
+  const F = T.firstBloodSeat;
+  ok(typeof F === 'function', 'T.firstBloodSeat 必须存在（纯函数，便于钉语义）');
+  eq(F([]), null, '没有事件 ⇒ 无先手');
+  eq(F([{ type: 'ep', pid: 1, delta: 1 }]), null, '只有攒钱事件 ⇒ 无先手');
+  /* 关键：终局收缩是 source:null 的场地伤害，不能算任何人的先手 */
+  eq(F([{ type: 'damage', to: 3, amt: 1, reason: '终局收缩', source: null }]), null, '终局收缩不算先手');
+  /* 有人真的打中了 ⇒ 那才是先手；后续伤害不改变"第一" */
+  eq(F([{ type: 'damage', to: 2, amt: 1, reason: '枪', source: 4 },
+        { type: 'damage', to: 1, amt: 2, reason: '激光剑', source: 0 }]), 4, '第一个造成伤害的席位才算先手');
+  T.setFightReward({ reset: true });
+  eq(T.fightReward().firstW, 0, 'reset 回到关');
+  eq(T.fightReward().dealW, 0.01, 'reset 回到 0.01');
+});
+
 t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放者自己', function () {
   /* v1.5.4 规则修正：原始规则集（`D:\code\Epirus\README.md`「全息屏障」）写明
    *   「作用效果：给**被作用者**施加一个“原型制御”」+ 手势「双臂伸出挡住**被作用者**胸前」

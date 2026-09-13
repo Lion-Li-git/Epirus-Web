@@ -607,6 +607,16 @@
    * 反证（np-test D18）：把 rankCredit 里的哨声判断删掉，D18 立刻红。 */
   let WHISTLE_PEN = 0;      // 0 = 关（默认）；数字 = 显式覆盖（v1.5.12 起不再有"长程自动 0.5"）
   let DEAL_W = 0.01;        // 出手奖励权重（原值写死 0.01）
+  /* v1.5.14（用户裁定 **选项 A**：训练侧加"先手/首次伤害"激励）：**默认关**，靠
+   * `EPIRUS_FIGHT_DEAL` / `EPIRUS_FIGHT_FIRST` 打开 —— 沿用 v1.5.12 的教训：不猜默认值，
+   * 先用对照臂证明它有效，再由用户决定是否改成默认。
+   * 动机（REVIEW §12）：多人局里 `防御/反弹/八卦阵` **费用都是 0** ⇒ 摆架势是免费的免伤，
+   * 而进攻要花 1~2 ep 还把自己变成靶子 ⇒ 学出"互戒均衡"（人类不出手时 AI 架势率 75~96%）。
+   * 适应度现有两项都不足以破局：`deal` 只有 0.01；`proact` 是**相对全场均值**的，
+   * 全场 0 伤害时它恒等于 0 ⇒ 对称局面下没有梯度去当先出手的人。
+   * 关键区别：**首伤奖励是"区分名次"的项**（每局只有一个席位拿到），而统一加在所有人身上的项
+   * （如哨声惩罚）在对称局面里不改变排序 ⇒ 这是它可能有效的原因。 */
+  let FIRST_W = 0;          // 0 = 关；>0 = 本局第一个造成伤害的席位拿这么多
   /* v1.5.12 回滚 v1.5.11 的"长程默认 0.5"——**实测证明它在长程是空操作**。
    * 证据（`lngC` = 长程·自动 0.5 vs `lngD` = 长程·显式 0，其余全同，6 seed；见 REVIEW §11.8）：
    * 两份产物**逐字节相同**，而 meta 分别正确记着 `whistlePen:0.5/override:null` 与 `0/override:0`
@@ -624,10 +634,21 @@
     o = o || {};
     if (o.whistlePen != null) WHISTLE_PEN = Math.max(0, Math.min(1, Number(o.whistlePen)));
     if (o.dealW != null) DEAL_W = Math.max(0, Number(o.dealW));
-    if (o.reset) { WHISTLE_PEN = 0; DEAL_W = 0.01; }
+    if (o.firstW != null) FIRST_W = Math.max(0, Number(o.firstW));
+    if (o.reset) { WHISTLE_PEN = 0; DEAL_W = 0.01; FIRST_W = 0; }
     return fightReward();
   }
-  function fightReward() { return { whistlePen: whistlePenNow(), override: WHISTLE_PEN, dealW: DEAL_W }; }
+  function fightReward() { return { whistlePen: whistlePenNow(), override: WHISTLE_PEN, dealW: DEAL_W, firstW: FIRST_W }; }
+  /* v1.5.14：本局**第一个造成伤害**的席位（= 先手方）。只看带 source 的 damage 事件 ——
+   * 终局收缩的伤害是 source:null（场地效果），不算任何人的先手。抽成纯函数是为了能钉语义（np-test D21）。 */
+  function firstBloodSeat(evs) {
+    if (!evs) return null;
+    for (let i = 0; i < evs.length; i++) {
+      const e = evs[i];
+      if (e.type === 'damage' && e.source != null) return e.source;
+    }
+    return null;
+  }
 
   /* ===== 技能覆盖熵（v1.5.8：**只统计非ジ动作**，用户裁定）=====
    * 为什么要排除ジ：熵是按**动作分布**算的，而"攒钱/等待"就是反复出ジ ⇒ 攒钱会把熵压到极低
@@ -714,6 +735,8 @@
       // "立刻出手"的权重下调（原来在惩罚攒钱）；腾出的权重给经济两项
       const proact = 0.02 * Math.max(-1, Math.min(1, diff / 6));
       const deal = DEAL_W * Math.min(1, r.dmg[seat] / 4);
+      /* v1.5.14：**先手激励** —— 本局第一个造成伤害的席位拿 FIRST_W（默认 0 = 关）。 */
+      const firstBonus = (FIRST_W > 0 && firstBloodSeat(r.state.events) === seat) ? FIRST_W : 0;
       const slow = 0.03 * Math.min(1, r.rounds / R.MAX_ROUNDS);
       // 攒得住：本局达到过的最高 ep（0/1/2/3 → 0/0.33/0.67/1）
       /* 分段 shaping（用户设计）：
@@ -735,7 +758,7 @@
       // 经济分档：贵的技能更值钱（不再指向某个特定循环）
       const conv = 0.08 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2)
                  + 0.08 * Math.min(1, (econ ? econ.rec.heavy4 : 0) / 1);
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + stock + conv - slow + imitB * imit));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -1100,7 +1123,7 @@
 
   global.EpirusTrainer = {
     makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice,
-  setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit,
+  setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);
