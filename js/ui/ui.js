@@ -80,10 +80,14 @@
     for (let i = 0; i < full; i++) hearts += '♥';
     if (p.hp - Math.floor(p.hp) >= 0.45 && full < 8) hearts += '♡';
     if (p.hp > 8) hearts += ' ×' + p.hp;
-    const chips = ['ジ', '电', '爆'].map(function (k, i) {
+    /* v1.5.15 修**信息泄漏**（用户报）：`蓄能` 选电珠还是爆珠**只有本人知道**，别人只知道"有人蓄能了"
+     * ⇒ 对手面板不再显示珠的**类型**，只显示"持珠（类型未知）"。本人（pid 0）照旧显示 电/爆。 */
+    const chipMine = (pid === 0);
+    const chips = ['ジ', '电', '爆'].map(function (k) {
+      if (!chipMine && k !== 'ジ') return '';
       const v = k === 'ジ' ? p.ep : (k === '电' ? p.elec : p.boom);
       return '<span class="stat">' + k + ' <b>' + v + '</b></span>';
-    }).join('');
+    }).join('') + ((!chipMine && (p.elec || p.boom)) ? '<span class="stat">珠 <b>?</b></span>' : '');
 
     const badges = [];
     if (p.hp <= 0) badges.push(['已淘汰', 'red']);
@@ -138,7 +142,17 @@
     const legalMap = {};
     if (!st.over) { for (const l of Play.legalActions(st, 0)) legalMap[l.key] = l; }
     grid.innerHTML = '';
-    for (const s of R.skills) {
+    /* v1.5.15（用户要求）：技能格子的**显示顺序**改成"防御类 → 攻击类 → 能量 → 特殊"。
+     * 原来直接按 `R.skills` 的规则声明顺序排 ⇒ 枪/剑/坦克/狙击排在 防御/反弹/八卦阵 **前面**，
+     * 而实战里玩家先看的是"我这回合摆什么架势"。⚠️ **只重排显示**：`R.skills` 的顺序还牵着
+     * AI 的合法集构造（`Play.legalActions` 按 mode.skills 遍历）与训练口径，绝不能动。
+     * 同组内保持规则顺序（用原始下标做稳定排序）。 */
+    const SD_GRP = { defense: 0, attack: 1, energy: 2, special: 3 };
+    const sdIdx = function (s) { const g = SD_GRP[s.cat]; return g == null ? 9 : g; };
+    const sdOrder = R.skills.map(function (s, i) { return { s: s, i: i }; })
+      .sort(function (a, b) { return (sdIdx(a.s) - sdIdx(b.s)) || (a.i - b.i); });
+    for (const sdItem of sdOrder) {
+      const s = sdItem.s;
       const modeOk = S.canUseSkillInMode(st, s.key);
       const cd = (st.p[0].cooldown[s.key] || 0);
       const multiOnly = R.MULTI_ONLY.indexOf(s.key) >= 0 && !S.canUseSkillInMode(st, s.key);
@@ -609,8 +623,12 @@
       }
       case 'heal': return { cls: 'ev heal', html: '💚 ' + nm(e.pid) + ' 回复 ' + e.amt + ' 血' + (e.reason ? '（' + esc(e.reason) + '）' : '') };
       case 'ep': return { cls: 'ev', html: '🔋 ' + nm(e.pid) + ' ジ ' + (e.delta > 0 ? '+' : '') + e.delta };
-      case 'bead': return { cls: 'ev', html: (e.delta > 0 ? '✨ ' + nm(e.pid) + ' 获得' : '✖ ' + nm(e.pid) + ' 消耗') + (e.kind === 'elec' ? ' 1 电珠' : ' 1 爆珠') };
-      case 'beadExpire': return { cls: 'dim', html: '⏳ ' + nm(e.pid) + ' 的' + (e.kind === 'elec' ? '电珠' : '爆珠') + '过期（蓄能珠只供下一回合）' };
+      /* v1.5.15 修**信息泄漏**（用户报）：**获得**珠时不能暴露类型（蓄能选哪种只有本人知道）；
+       * **消耗**时保留 —— 那时技能本身就暴露了（放电⇒电珠、激光眼⇒爆珠），属公开信息。 */
+      case 'bead': return { cls: 'ev', html: (e.delta > 0
+        ? '✨ ' + nm(e.pid) + ' 完成蓄能' + (e.pid === 0 ? '（' + (e.kind === 'elec' ? '电珠' : '爆珠') + '）' : '（珠的类型只有他知道）')
+        : '✖ ' + nm(e.pid) + ' 消耗 1 ' + (e.kind === 'elec' ? '电珠' : '爆珠')) };
+      case 'beadExpire': return { cls: 'dim', html: '⏳ ' + nm(e.pid) + ' 的' + (e.pid === 0 ? (e.kind === 'elec' ? '电珠' : '爆珠') : '蓄能珠') + '过期（蓄能珠只供下一回合）' };
       case 'mineArm': return { cls: 'ev', html: '💣 ' + nm(e.pid) + ' 埋下地雷' };
       case 'guardSet': return { cls: 'ev dim', html: '🛡 ' + nm(e.pid) + ' 摆出【' + skillName(e.key) + '】架势' };
       case 'holoSet': return { cls: 'ev dim', html: '🛡 ' + nm(e.pid) + ' 用【全息屏障】护住 ' + nm(e.target) + '（本回合视为原型制御架势）' };

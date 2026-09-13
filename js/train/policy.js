@@ -107,7 +107,12 @@
     const base = [
       me.hp / hp, agg.minHp / hp,
       Math.min(me.ep, 12) / 12, Math.min(agg.maxEp, 12) / 12,
-      Math.min(me.elec, 1), Math.min(me.boom, 1), anyOp(function (o) { return Math.min(o.elec, 1); }), anyOp(function (o) { return Math.min(o.boom, 1); }),
+      Math.min(me.elec, 1), Math.min(me.boom, 1),
+      /* v1.5.15 修**信息泄漏**（用户报的 bug）：`蓄能` 选电珠还是爆珠**只有本人知道**，
+       * 别人只知道"有人蓄能了" ⇒ 对手的珠**类型**绝不能进特征（原来这里是
+       * `anyOp(o.elec) / anyOp(o.boom)`，等于把类型直接告诉 AI）。两个槽位保留、语义换成**公开信息**：
+       * ①"有对手持珠（类型未知）" ②"有对手刚蓄能"。槽位数不变 ⇒ 老权重仍可加载（但行为会变，必须重测）。 */
+      anyOp(function (o) { return (o.elec || o.boom) ? 1 : 0; }), anyOp(function (o) { return o.lastSkill === SK.CHARGE ? 1 : 0; }),
       idxOf(me.lastSkill), catOf(me.lastSkill), priOf(me.lastSkill),
       idxOf(op.lastSkill), catOf(op.lastSkill), priOf(op.lastSkill),
       // 「上一招无效」显式编码
@@ -158,7 +163,7 @@
         1,                                  // 存活
         op.hp / hp,                         // 各自血量（不再只有 min）
         Math.min(op.ep, 12) / 12,           // 各自ジ
-        Math.min(op.elec, 1), Math.min(op.boom, 1),   // 各自珠
+        (op.elec || op.boom) ? 1 : 0, (op.lastSkill === SK.CHARGE) ? 1 : 0,   // v1.5.15：持珠（类型未知）/ 刚蓄能 —— 不再泄漏类型
         idxOf(op.lastSkill), catOf(op.lastSkill), op.lastSkill ? 0 : 1,
         op.ep >= 2 ? 1 : 0, op.ep >= 5 ? 1 : 0         // 穿透 / 大雷 前摇
       );

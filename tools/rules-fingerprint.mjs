@@ -25,7 +25,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-export const FINGERPRINT_FILES = ['js/core/rules.js', 'js/core/resolve.js', 'js/core/state.js', 'js/core/play.js'];
+/* v1.5.15：把 `js/train/policy.js` 也纳入 —— 它是**特征定义**，改一行就会静默改变冠军的实际行为
+ * （这次修"蓄能的珠类型泄漏"就是如此：特征长度没变、包还能加载，但冠军的输入变了）。
+ * 只覆盖规则四件套的话，这种改动**不会**触发 D16 的"成绩已过期"警报。 */
+export const FINGERPRINT_FILES = ['js/core/rules.js', 'js/core/resolve.js', 'js/core/state.js', 'js/core/play.js', 'js/train/policy.js'];
 
 export function rulesFingerprint(rootDir) {
   const h = createHash('sha1');

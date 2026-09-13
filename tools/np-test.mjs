@@ -1328,6 +1328,30 @@ t('D21 先手激励（v1.5.14 选项 A）：默认关，且"首伤方"的判定�
   eq(T.fightReward().dealW, 0.01, 'reset 回到 0.01');
 });
 
+t('D22 蓄能的珠类型不得泄漏给对手（v1.5.15 修用户报的信息泄漏）', function () {
+  /* 规则：`蓄能` 选电珠还是爆珠**只有本人知道**，其他角色只知道"有人蓄能了"。
+   * 旧实现把类型直接喂给了 AI（特征里 `.elec/.boom` 的对手项，以及逐对手的 elec/boom 两项）。
+   * 判据：构造两个**只差"2 号位的珠类型"**的状态 ⇒ **0 号位看到的特征向量必须逐位相同**。 */
+  const mk = function (elec, boom) {
+    const st = S.createState('multi', { next: T.mulberry32(9) }, 3);
+    st.p[1].elec = elec; st.p[1].boom = boom;
+    return st;
+  };
+  const diffIdx = function (a, b) {
+    const out = [];
+    for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) out.push(i);
+    return out;
+  };
+  const fA = Pol.features(mk(1, 0), 0), fB = Pol.features(mk(0, 1), 0), fC = Pol.features(mk(0, 0), 0);
+  eq(fA.length, fB.length, '特征长度必须一致');
+  eq(diffIdx(fA, fB).length, 0, '对手持电珠 vs 持爆珠 ⇒ 特征必须**完全相同**（泄漏下标=' + JSON.stringify(diffIdx(fA, fB)) + '）');
+  /* 但两条**公开**信息必须保留（否则是把公开信息也一起砍了） */
+  ok(diffIdx(fA, fC).length > 0, '必须仍能感知"有对手持珠（类型未知）"');
+  const st3 = S.createState('multi', { next: T.mulberry32(9) }, 3);
+  st3.p[1].lastSkill = R.SK.CHARGE;
+  ok(diffIdx(Pol.features(st3, 0), fC).length > 0, '必须仍能感知"有对手刚蓄能"');
+});
+
 t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放者自己', function () {
   /* v1.5.4 规则修正：原始规则集（`D:\code\Epirus\README.md`「全息屏障」）写明
    *   「作用效果：给**被作用者**施加一个“原型制御”」+ 手势「双臂伸出挡住**被作用者**胸前」
