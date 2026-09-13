@@ -54,6 +54,10 @@ const OPP_POOL = OPP_SPECS.map(function (o) {
 if (T.setEconomyReward && (process.env.EPIRUS_ECO_TARGET != null || process.env.EPIRUS_ECO_CAP != null || process.env.EPIRUS_ECO_DIVW != null)) {
   T.setEconomyReward({ target: process.env.EPIRUS_ECO_TARGET, cap: process.env.EPIRUS_ECO_CAP, divW: process.env.EPIRUS_ECO_DIVW });
 }
+/* v1.5.8：反摆烂覆盖（哨声惩罚 / 出手权重）—— 同 env 机制，两端一致 */
+if (T.setFightReward && (process.env.EPIRUS_FIGHT_WHISTLE != null || process.env.EPIRUS_FIGHT_DEAL != null)) {
+  T.setFightReward({ whistlePen: process.env.EPIRUS_FIGHT_WHISTLE, dealW: process.env.EPIRUS_FIGHT_DEAL });
+}
 /* v1.5.2：对手名走**与 server 同一个解析器**（脚本名 + `champ:<路径>` 冠军对手）。
  * 函数无法跨线程传 ⇒ worker 必须自己构造，但**规则只有一份**（opp-champs.mjs）——
  * "两处各写一遍"正是这个项目栽过三次的地方。 */

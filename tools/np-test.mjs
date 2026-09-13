@@ -1,5 +1,5 @@
 /* Epirus N 人（3-5）引擎测试：随机对局 fuzz + 关键裁定点（docs/RULES-NP.md） */
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -1126,11 +1126,71 @@ t('D16 线上冠军的规则指纹必须等于当前规则指纹（否则成绩�
    * 把新成绩与新指纹一起记回 bundle 的 meta。它**故意敏感**（连注释改动都会触发），
    * 因为重记的成本是"一次考卷 + 一行 meta"，而漏掉的成本是交付质量静默下降。 */
   const cur = rulesFingerprint();
+  /* v1.5.8：训练在跑时 bundle 会被临时覆盖成热启动基线（见 tools/ring2-run.mjs 的训练锁）
+   * ⇒ 此时校验必然误报。跳过并说明，跑完训练必须重跑本用例。 */
+  if (existsSync('docs/artifacts/.training.lock')) {
+    /* 训练在跑：bundle 被临时覆盖成热启动基线（自跑器 `copyFileSync(BASE, BUNDLE)`）。
+     * ⚠️ 这里**不能**写 `ok(true, …)` —— 那正是 L1 要抓的恒真断言（第一版就这么写的，被 L1 抓到）。
+     * 改成一条真断言：此刻的 bundle 必须**逐字节等于**那份基线文件；不等 ⇒ 不是"训练中"这种
+     * 可解释的临时态，而是真坏了。 */
+    const curBytes = readFileSync('js/bundled-champion-3p.js');
+    const baseBytes = readFileSync('docs/artifacts/champion-5p-v1.3.58.bak');
+    ok(curBytes.equals(baseBytes), '训练进行中：bundle 必须逐字节等于热启动基线（否则不是可解释的临时态）—— 跑完训练请重跑本用例');
+    return;
+  }
   const bundle = readFileSync('js/bundled-champion-3p.js', 'utf8');
   const fp = fingerprintOfBundle(bundle);
   ok(!!fp, '线上 bundle 的 meta 必须记 rulesFingerprint（当前规则指纹 = ' + cur + '）');
   eq(fp, cur, 'bundle 记的规则指纹必须等于当前规则指纹（不等 ⇒ 考卷成绩已过期，重测后把新指纹/成绩记回 meta）');
   ok(/"examScoreAtBuild"\s*:\s*[0-9.]+/.test(bundle), 'bundle 的 meta 必须记 examScoreAtBuild（构建时的考卷成绩）');
+});
+
+t('D17 技能熵必须**只统计非ジ动作**（否则熵奖励会惩罚攒钱）', function () {
+  /* v1.5.8（用户裁定）：熵是按**动作分布**算的，而"攒钱/等待"就是反复出ジ ⇒ 攒钱会把熵压到极低
+   * ⇒ 熵奖励其实在**惩罚攒钱**，与 ep 攒钱奖励互相打架（v1.5.7 实测：熵权重 0→0.06 后
+   * 最高 ep 44.8→12.8、ep≥3 决策 34.3%→5.8%）。修法：熵只统计非ジ动作。 */
+  const E = T.coverageEntropy;
+  ok(typeof E === 'function', 'T.coverageEntropy 必须存在（纯函数，便于钉语义）');
+  const JI = R.SK.JI, GUN = R.SK.GUN, SWORD = R.SK.SWORD;
+  /* ① 纯ジ（只等不做事）⇒ 广度 0 */
+  eq(E({ [JI]: 100 }, null, 10).divNorm, 0, '只出ジ ⇒ 熵必须为 0');
+  /* ② 90 次ジ + 10 次枪：非ジ只有一种 ⇒ 广度仍是 0（"攒钱+一招"不是广度） */
+  eq(E({ [JI]: 900, [GUN]: 100 }, null, 10).divNorm, 0, '攒钱+单一招式 ⇒ 熵必须为 0');
+  /* ③ 关键性质：**多出ジ不该改变熵**（旧口径下出ジ越多熵越低 ⇒ 等于惩罚攒钱） */
+  const a = E({ [GUN]: 50, [SWORD]: 50 }, null, 10).divNorm;
+  const b = E({ [JI]: 10000, [GUN]: 50, [SWORD]: 50 }, null, 10).divNorm;
+  ok(a > 0, '两种非ジ招式均用 ⇒ 熵应 > 0（实测 ' + a.toFixed(4) + '）');
+  ok(Math.abs(a - b) < 1e-9, '掺进任意多ジ都不得改变熵（实测 ' + a.toFixed(4) + ' vs ' + b.toFixed(4) + '）');
+  /* ④ 单调性：多一种非ジ招式 ⇒ 熵上升 */
+  ok(E({ [GUN]: 50, [SWORD]: 50, [R.SK.TANK]: 54 }, null, 10).divNorm > a, '多一种非ジ招式 ⇒ 熵应上升');
+  /* ⑤ 归一化分母也排除ジ：可负担集合里只有ジ+1 招 ⇒ 熵按 ln2 归一（否则永远到不了 1） */
+  const c = E({ [GUN]: 50, [SWORD]: 50 }, { [JI]: 1, [GUN]: 1, [SWORD]: 1 }, null);
+  ok(Math.abs(c.divNorm - 1) < 1e-9, '两种可负担的非ジ均匀 ⇒ 归一化后应为 1（实测 ' + c.divNorm.toFixed(4) + '）');
+  /* ⑥ fit 里那条也要跟着变：报告里 distinctNonJi 存在 */
+  const p = Pol.makePolicy(0.25);
+  Pol.setRng(T.mulberry32(31));
+  const r = T.scoreMemberN(p, [{ name: 'random', sel: Bots.pickRandom }], 2, 3, 1, 0, 0);
+  ok(r.distinctNonJi != null && r.nonJiShare != null, 'scoreMemberN 必须回报 distinctNonJi / nonJiShare');
+  ok(r.distinctNonJi <= r.distinct, '非ジ种类数不得多于总种类数（实测 ' + r.distinctNonJi + ' vs ' + r.distinct + '）');
+});
+
+t('D18 哨声惩罚：熬到回合上限的胜利必须打折（反摆烂）', function () {
+  /* v1.5.8：多人局允许"熬到上限比血量"，而考卷看不出"熬"与"打" ⇒ 必须让"熬出来的胜利"不那么值钱。
+   * 实测动因（tools/champ-audit.mjs，5 座同一冠军自对局）：long-33 考卷 45.3%、自对局 20/20 局零伤害。 */
+  const C = T.rankCredit;
+  ok(typeof C === 'function', 'T.rankCredit 必须存在（纯函数，便于钉语义）');
+  T.setFightReward({ whistlePen: 0 });                    // 旧行为
+  eq(C(1, 1), 1.0, 'whistlePen=0 时头名仍是 1.0（KO 胜）');
+  eq(C(1, 3), 1.0, 'whistlePen=0 时哨声局不打折（保持既有路径逐位不变）');
+  T.setFightReward({ whistlePen: 0.5 });
+  eq(C(1, 1), 1.0, '打出 KO 的胜利必须全额（实测 ' + C(1, 1) + '）');
+  ok(Math.abs(C(1, 3) - 0.5) < 1e-9, '还有 3 人活着 ⇒ 哨声局头名只算 0.5（实测 ' + C(1, 3) + '）');
+  ok(C(2, 3) < C(2, 1), '哨声局的第二名同样要低于 KO 局的第二名');
+  T.setFightReward({ dealW: 0.05 });
+  eq(T.fightReward().dealW, 0.05, '出手权重可调（实测 ' + T.fightReward().dealW + '）');
+  T.setFightReward({ reset: true });                      // 复位
+  eq(T.fightReward().whistlePen, 0, 'reset 后回到旧行为（0）');
+  eq(T.fightReward().dealW, 0.01, 'reset 后出手权重回到 0.01');
 });
 
 t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放者自己', function () {

@@ -597,6 +597,57 @@
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
 
+  /* ===== 反摆烂：哨声惩罚 + 出手权重（v1.5.8）=====
+   * 为什么必须加：多人局的胜利条件允许"**熬到回合上限比血量**"，而考卷（1st 率）**看不出**
+   * "熬"与"打"的区别。实测（`tools/champ-audit.mjs`，5 座全是同一个冠军的自对局）：
+   *   long-33（v1.5.7 我曾换上线）→ 考卷 **45.3%**，但自对局 **20/20 局零伤害、60 回合全平局**；
+   *   long-34                        → 考卷 32.9%，自对局 **19.7 伤害/局**（全是 cost≥3 重击）、28.7 回合。
+   * ⇒ 光看考卷会把"摆烂"当成强度（千问体检 §5-4 早就点过："能量出'赢'还是'熬'"）。
+   * 这里给"熬出来的胜利"打折：终局时**还有 ≥2 人活着**（没人被淘汰）⇒ 判为哨声局。
+   * 反证（np-test D18）：把 rankCredit 里的哨声判断删掉，D18 立刻红。 */
+  let WHISTLE_PEN = 0;      // 0=旧行为；0.5=熬出来的胜利只算一半
+  let DEAL_W = 0.01;        // 出手奖励权重（原值写死 0.01）
+  function rankCredit(rank, aliveEnd) {
+    const base = rank === 1 ? 1.0 : (rank === 2 ? 0.3 : 0.0);
+    return (WHISTLE_PEN > 0 && aliveEnd >= 2) ? base * (1 - WHISTLE_PEN) : base;
+  }
+  function setFightReward(o) {
+    o = o || {};
+    if (o.whistlePen != null) WHISTLE_PEN = Math.max(0, Math.min(1, Number(o.whistlePen)));
+    if (o.dealW != null) DEAL_W = Math.max(0, Number(o.dealW));
+    if (o.reset) { WHISTLE_PEN = 0; DEAL_W = 0.01; }
+    return fightReward();
+  }
+  function fightReward() { return { whistlePen: WHISTLE_PEN, dealW: DEAL_W }; }
+
+  /* ===== 技能覆盖熵（v1.5.8：**只统计非ジ动作**，用户裁定）=====
+   * 为什么要排除ジ：熵是按**动作分布**算的，而"攒钱/等待"就是反复出ジ ⇒ 攒钱会把熵压到极低
+   * ⇒ 熵奖励其实在**惩罚攒钱**，与 ep 攒钱奖励（stock 项）互相打架。
+   * 实测（v1.5.7 的奖励 A/B，同一引擎、只差奖励设置）把熵奖励从 0 提到 0.06：
+   *   **最高 ep 44.8→12.8、ep≥3 决策占比 34.3%→5.8%**（出手种类 13.7→14.8 确实变广）。
+   * ジ 是"这一回合不做事"的基线动作，把它算进"广度"是在量错东西。
+   * 归一化分母也要**排除ジ**（否则分母里那个ジ会让熵永远到不了 1）。
+   * 反证（np-test D17）：把 `k === R.SK.JI` 的排除去掉，D17 立刻红。 */
+  function coverageEntropy(use, affKeys, capDiv) {
+    let tot = 0, ji = 0, distinct = 0;
+    for (const k in use) {
+      if (k === R.SK.JI) { ji += use[k]; continue; }
+      if (use[k] > 0) distinct++;
+      tot += use[k];
+    }
+    if (tot <= 0) return { divNorm: 0, H: 0, nonJi: 0, ji: ji, distinct: 0 };
+    let H = 0;
+    for (const k in use) {
+      if (k === R.SK.JI) continue;
+      const pr = use[k] / tot;
+      H -= pr * Math.log(pr);
+    }
+    let div;
+    if (capDiv != null) div = Math.max(2, capDiv);
+    else { let aff = 0; for (const k in (affKeys || {})) if (k !== R.SK.JI) aff++; div = Math.max(2, aff); }
+    return { divNorm: H / Math.log(div), H: H, nonJi: tot, ji: ji, distinct: distinct };
+  }
+
   /* N 人适应度（N19）：名次基础分（1/0.6/0.2）+ 轻量 shaped 项 */
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
     let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0;
@@ -646,12 +697,14 @@
       const regen = commitGame ? 2 : regenForGame(g, games);
       const r = oneGameN(choosers, seed, n, { regen: regen, mode: TRAIN_MODE });
       const rank = rankOf(r.state, seat, seed);
-      const base = rank === 1 ? 1.0 : rank === 2 ? 0.3 : 0.0;   // N19 修正：3 人局里第二名也算输，降低苟活奖励
+      /* v1.5.8：终局还活着的人数 ⇒ 判断"这局是打出来的还是熬出来的"（≥2 人活着 = 哨声局） */
+      const aliveEnd = r.state.p.filter(function (q) { return q.hp > 0; }).length;
+      const base = rankCredit(rank, aliveEnd);   // N19：3 人局里第二名也算输；v1.5.8 起哨声局打折
       const others = r.dmg.reduce(function (a, b) { return a + b; }, 0) - r.dmg[seat];
       const diff = r.dmg[seat] - others / Math.max(1, n - 1);
       // "立刻出手"的权重下调（原来在惩罚攒钱）；腾出的权重给经济两项
       const proact = 0.02 * Math.max(-1, Math.min(1, diff / 6));
-      const deal = 0.01 * Math.min(1, r.dmg[seat] / 4);
+      const deal = DEAL_W * Math.min(1, r.dmg[seat] / 4);
       const slow = 0.03 * Math.min(1, r.rounds / R.MAX_ROUNDS);
       // 攒得住：本局达到过的最高 ep（0/1/2/3 → 0/0.33/0.67/1）
       /* 分段 shaping（用户设计）：
@@ -707,7 +760,10 @@
     }
     // 归一化只按"当时可负担的动作数"（千问：拿 28 归一化是在量一个恒为 0 的量）
     const affN = Math.max(2, Object.keys(agg.aff || {}).length || (R.skills || []).length);
-    const divNorm = uTot > 0 ? H / Math.log(affN) : 0;
+    /* v1.5.8：改走 coverageEntropy —— **只统计非ジ动作**（用户裁定），否则攒钱会把熵压到极低、
+     * 反过来惩罚攒钱。旧的 H/uTot/affN 三行保留只为下方日志口径连续（H 已不参与 fit）。 */
+    const cov = coverageEntropy(agg.use, agg.aff);
+    const divNorm = cov.divNorm;
     /* v1.5.6：按用户裁定**恢复**技能熵奖励（Q3 曾把它移出目标函数）。
      * 权重给得小（DIV_W=0.06，满额 +0.06），与 stock（+0.05 / −0.12）同量级 ⇒ 两项加起来仍远小于
      * 胜负项（base 1.0/0.3），符合"奖惩也不用给太多"。 */
@@ -741,6 +797,7 @@
       divW: DIV_W,
       avgStock: econGames ? stockSum / econGames : 0,
       distinct: Object.keys(agg.use).length,
+      distinctNonJi: cov.distinct, nonJiShare: uTot ? cov.nonJi / uTot : 0,
       first: first, second: second, games: played,
       firstRate: played ? first / played : 0,
       top2Rate: played ? (first + second) / played : 0,
@@ -903,7 +960,9 @@
     }
     let H = 0;
     for (const k in use) { const pr = use[k] / dec; H -= pr * Math.log(pr); }
-    return { divNorm: dec ? H / Math.log(Math.max(2, (R.skills || []).length)) : 0, distinct: Object.keys(use).length };
+    /* v1.5.8：与 fit 里那条同源 —— **只统计非ジ动作**（否则"多出ジ"会被当成"打法更广"） */
+    const cov = coverageEntropy(use, null, Math.max(2, (R.skills || []).length - 1));
+    return { divNorm: dec ? cov.divNorm : 0, distinct: cov.distinct };
   }
 
   /* 多目标择优：在「胜率分不低于最高分 - WR_TOL」的候选里，取覆盖熵最高者。
@@ -1032,7 +1091,7 @@
 
   global.EpirusTrainer = {
     makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice,
-  setEconomyReward, economyReward, economyTargets, economyStock,
+  setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

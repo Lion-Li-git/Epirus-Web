@@ -34,7 +34,7 @@
  */
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFileSync, writeFileSync, copyFileSync, existsSync, appendFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync, existsSync, appendFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import net from 'node:net';
@@ -73,6 +73,7 @@ const ART = join(root, 'docs', 'artifacts');
 const BUNDLE_MP = join(root, 'js', 'bundled-champion-3p.js');
 const INDEX = join(root, 'index.html');
 const BASE = join(ART, 'champion-5p-v1.3.58.bak');   // 热启动起点（与 ms2/ring2-31 同一权重）
+const LOCK = join(ART, '.training.lock');            // v1.5.8：训练锁（见 main() 里的说明）
 const STATUS = join(ART, 'ring2-status' + TAG + '.log');
 const EVALLOG = join(ART, 'ring2-eval' + TAG + '.log');
 const RUNLOG = join(ART, 'ring2-run' + TAG + '.log');
@@ -271,6 +272,11 @@ async function evalAll() {
 async function main() {
   const bakBundle = existsSync(BUNDLE_MP) ? readFileSync(BUNDLE_MP) : null;
   const bakIndex = existsSync(INDEX) ? readFileSync(INDEX) : null;
+  /* v1.5.8：训练锁。为什么需要：本脚本每个 seed 前会把 bundle 覆盖成热启动基线（v1.3.58），
+   * 跑完再还原 ⇒ **训练期间读 bundle 的工具会读到临时值**。本轮我因此踩了两次：
+   * ① np-test D16（规则指纹）误报红；② `tools/champ-audit.mjs` 的 bundle 行显示成旧冠军的特征。
+   * 现在两者都会先看这把锁：存在 ⇒ D16 跳过校验并明确说明、体检表给 bundle 行打"训练中"标记。 */
+  try { writeFileSync(LOCK, JSON.stringify({ pid: process.pid, tag: process.env.RING2_TAG || '', at: new Date().toISOString() })); } catch (e) { /* */ }
   let child = null;
   try {
     if (STAGE !== 'eval') {
@@ -294,6 +300,7 @@ async function main() {
     say('全部完成');
   } finally {
     if (child) { try { child.kill(); } catch (e) { /* */ } }
+    try { rmSync(LOCK, { force: true }); } catch (e) { /* */ }
     if (bakBundle) writeFileSync(BUNDLE_MP, bakBundle);
     if (bakIndex) writeFileSync(INDEX, bakIndex);
     say('已还原 js/bundled-champion-3p.js 与 index.html（训练会刷 ?v= 缓存戳）');

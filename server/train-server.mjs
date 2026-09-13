@@ -342,6 +342,10 @@ async function runTrainN(gens, cfg) {
   const ecoEnv = { target: process.env.EPIRUS_ECO_TARGET, cap: process.env.EPIRUS_ECO_CAP, divW: process.env.EPIRUS_ECO_DIVW };
   const ecoSet = (ecoEnv.target != null || ecoEnv.cap != null || ecoEnv.divW != null) && T.setEconomyReward ? T.setEconomyReward(ecoEnv) : null;
   if (ecoSet) console.log('[eco] 经济奖励覆盖: ' + JSON.stringify(ecoSet));
+  /* v1.5.8：反摆烂覆盖（哨声惩罚 / 出手权重）—— 同 env 机制，worker 继承同一份。 */
+  const fightEnv = { whistlePen: process.env.EPIRUS_FIGHT_WHISTLE, dealW: process.env.EPIRUS_FIGHT_DEAL };
+  const fightSet = (fightEnv.whistlePen != null || fightEnv.dealW != null) && T.setFightReward ? T.setFightReward(fightEnv) : null;
+  if (fightSet) console.log('[fight] 反摆烂覆盖: ' + JSON.stringify(fightSet));
   if (styleNames.length) console.log('[style] 风格切片: ' + slice.n + ' 对手 × ' + slice.games + ' 局/个体/代  权重=' + slice.w);
   const t0 = Date.now();
   /* v1.4.7：原为写死的 30 分钟墙上时钟上限（第十轮复核 §6-4：同 seed 同 gens 在慢机器上可能
@@ -508,7 +512,7 @@ async function runTrainN(gens, cfg) {
   }
   const pack = P.pack(finalParams);
   lastChampionPackN = pack;
-  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
+  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), fightOverride: (fightSet ? JSON.stringify(fightEnv) : ''), ts: new Date().toISOString(), firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
     /* v1.3.56：把**可复现输入**记进产物。此前 meta 只有 source/n/gens/games/pop/ts/胜率，
      * 于是从产物上既看不出是不是热启动、也看不出输入是哪一版冠军 —— 而浏览器的默认配置
      * 恰好就是热启动（index.html 的"从头训练"复选框默认不勾，ui.js 也就不发 fresh=1）。

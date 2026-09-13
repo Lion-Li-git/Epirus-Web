@@ -374,6 +374,30 @@ node tools/eval-5p.mjs 40 5 77000 docs/artifacts/champion-5p-v1.3.58.bak --ban=g
 
 ---
 
+### 6.7 冠军体检 / 浏览器对战测试 / 换冠军（v1.5.8 新增，**换冠军必须走这条**）
+
+```bash
+node tools/champ-audit.mjs                      # 体检全部在库冠军（考卷 + 打架活跃度 + 病理 + 反弹墙）
+node tools/champ-audit.mjs --games=10 docs/artifacts/eco-34.bak     # 单个
+node tools/battle-test.mjs                      # 真 Chrome 对战测试（多人 5 人 + 难度=冠军）
+node tools/promote-champion.mjs docs/artifacts/eco-34.bak --note="..."  # 提升为上线冠军（自带体检+自检+刷缓存戳）
+node tools/rules-fingerprint.mjs                # 当前规则指纹（bundle 里记的必须等于它，见 np-test D16）
+```
+
+**为什么必须过体检**（REVIEW §11）：**单一 1st 率会被"熬"骗**。v1.5.7 我按 45.3% 把 `long-33` 换上线，
+它在 5 座全是自己的自对局里 **20/20 局零伤害、60 回合平局**（只刷环与ジ、从不出手），
+那个分是"熬到上限比血量"赢来的。`champ-audit` 的 B/C 两列就是为看这个而加。
+
+**换冠军的四步**：① `champ-audit` 看 A（考卷）/B（伤害/局、cost≥3 重击）/C（盾/局、零伤害率、平局率）/D（反弹墙）；
+② `promote-champion`（会先跑一遍考卷+自对局并把警告打出来，写完做**回读自检** —— 第一版写错槽位就是靠它+np-test 发现的）；
+③ `np-test`（D16 指纹 + N19 冠军包）+ `smoke`；④ `battle-test`（真浏览器，人类座必须**真的进攻**，见 11.6）。
+
+**训练锁**：`tools/ring2-run.mjs` 跑训练时写 `docs/artifacts/.training.lock`（每个 seed 会把 bundle
+临时覆盖成热启动基线 v1.3.58）⇒ **训练期间不要跑 np-test D16 / champ-audit / battle-test**（会读到临时值）。
+D16 与 champ-audit 已识别这把锁；`promote-champion` 见锁直接拒绝。
+
+---
+
 ## 7. 用户裁定 / 硬约束（别改）
 
 - **游戏部分必须"双击 index.html 即玩"**（`file://`、零依赖）
