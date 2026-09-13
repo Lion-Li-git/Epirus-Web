@@ -1998,6 +1998,15 @@ t('D39 训练信号：打断开环者的奖励必须"窄条件 + 可归因"（�
   /* ⑥ 能关掉（对照臂要用） */
   eq(T.setRingReward(0), 0, 'setRingReward(0) 必须能关掉');
   T.setRingReward(0.04);
+  /* ⑦ v1.5.24（方案 A）：**退火** —— 前期 0（先把标准分练出来）、后期满额、中段线性过渡 */
+  const rw = T.ringReward();
+  eq(T.ringWeightAt(0), 0, '退火：第 0 代权重必须为 0');
+  eq(T.ringWeightAt(rw.g0), 0, '退火：g0 之前（含）权重必须为 0');
+  eq(T.ringWeightAt(rw.g1), rw.w, '退火：g1 之后必须达到满额');
+  ok(T.ringWeightAt((rw.g0 + rw.g1) / 2) > 0 && T.ringWeightAt((rw.g0 + rw.g1) / 2) < rw.w,
+    '退火：中段必须是 (0, 满额) 之间的线性值');
+  eq(T.setRingRamp(10, 20).g1, 20, 'setRingRamp 必须可调（实验用）');
+  T.setRingRamp(rw.g0, rw.g1);
 });
 
 t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {

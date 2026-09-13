@@ -811,7 +811,7 @@
       const conv = 0.08 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2)
                  + 0.08 * Math.min(1, (econ ? econ.rec.heavy4 : 0) / 1);
       /* 打断开环者：窄条件（真的有人开环）+ 可归因（是我打中的）⇒ 小额加分，两次封顶。 */
-      const ringBonus = RING_W * Math.min(1, ringBreaks / 2);
+      const ringBonus = ringWeightAt(gen) * Math.min(1, ringBreaks / 2);
       const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
@@ -833,8 +833,8 @@
         dealt += r.dmg[seat];
         rounds += r.rounds;
         played++;
-        /* v1.5.23：打断开环者（只用事件重建，不动引擎）——见 ringReward 的说明。 */
-        if (RING_W > 0) ringBreaks += countRingBreaks(r.state.events, seat);
+        /* v1.5.23/24：打断开环者（只用事件重建，不动引擎）；权重按**退火曲线**（前期 0）。 */
+        if (ringWeightAt(gen) > 0) ringBreaks += countRingBreaks(r.state.events, seat);
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1180,8 +1180,26 @@
    * 权重刻意取小（默认 0.04，两次打断满额）⇒ 不改变主目标（胜负），只做方向性引导。
    * 反证（np-test D39）：把 ringBreaks 记账删掉 / 权重设 0 ⇒ D39 立刻红。 */
   let RING_W = 0.04;
+  /* v1.5.24（用户选方案 A）：**退火** —— 前期权重 0（先把标准分练出来），中段线性升，后期满额。
+   * 为什么：v1.5.23 的常开奖励练出了"会打环但标准分掉 14pt"的偏科生（环墙 68.5% / 标准 30.5%）；
+   * 退火让种群先在主目标上站住，再叠加"惩罚开环者"的方向性压力。 */
+  let RING_G0 = 100, RING_G1 = 200;
   function setRingReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) RING_W = v; return RING_W; }
-  function ringReward() { return { w: RING_W }; }
+  function setRingRamp(g0, g1) {
+    const a = Number(g0), b = Number(g1);
+    if (isFinite(a) && a >= 0) RING_G0 = a | 0;
+    if (isFinite(b) && b > RING_G0) RING_G1 = b | 0;
+    return { g0: RING_G0, g1: RING_G1 };
+  }
+  /* 第 gen 代实际生效的环奖励权重（退火曲线）。纯函数，便于守门单测。 */
+  function ringWeightAt(gen) {
+    if (RING_W <= 0) return 0;
+    const g = (typeof gen === 'number' && gen > 0) ? gen : 0;
+    if (g <= RING_G0) return 0;
+    if (g >= RING_G1) return RING_W;
+    return RING_W * (g - RING_G0) / Math.max(1, RING_G1 - RING_G0);
+  }
+  function ringReward() { return { w: RING_W, g0: RING_G0, g1: RING_G1, at0: ringWeightAt(0), atEnd: ringWeightAt(1e9) }; }
 
   let MIRROR_GAMES = 2;
   function setMirrorGames(k) {
@@ -1321,7 +1339,7 @@
     makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
-    setRingReward, ringReward, countRingBreaks,
+    setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);
