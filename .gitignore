@@ -8,3 +8,8 @@ Thumbs.db
 # v1.3.54：这些是**测试残留**——不忽略的话 `git add -A` 会把它们提交进仓库，
 # 与 v1.3.48 那次"测试跑覆写线下冠军"是同一类事故。
 docs/artifacts/*-out.js
+
+# v1.5.18：对战测试（tools/battle-test.mjs）的截图落点。原先默认写进 `results/`，
+# 而那里的 battle-0{1,2,3,4}.png 是**被 git 跟踪**的 ⇒ 一次只读复核照抄验收单命令
+# 就会弄脏工作区（第三方复核 §5-9 实测踩到）。历史截图仍在 results/，不再被覆盖。
+docs/artifacts/battle-out/

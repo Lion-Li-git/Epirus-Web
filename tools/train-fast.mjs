@@ -4,21 +4,27 @@
  * 好处：并行后 500 代可在几十秒内出强冠军（视 CPU 核心数）；训练完直接随项目分发，双击即玩。
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-
-/* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
- * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
- * 并被 git add -A 提交（线下冠军就这么被换掉了，我还据此写错过文档）。
- * 规则：只有显式 EPIRUS_PUBLISH=1 才写线下路径；否则写 docs/artifacts/<tool>-out.js。 */
-const __OUT = process.env.EPIRUS_PUBLISH === '1'
-  ? __OUT
-  : ('docs/artifacts/' + 'train-fast' + '-out.js');
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { makeAsyncStep } from '../server/paralleltrain.mjs';
+import { rulesFingerprint } from './rules-fingerprint.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
+
+/* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
+ * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
+ * 并被 git add -A 提交（线下冠军就这么被换掉了，我还据此写错过文档）。
+ * 规则：只有显式 EPIRUS_PUBLISH=1 才写线下路径；否则写 docs/artifacts/train-fast-out.js。
+ *
+ * ⚠️ v1.5.18 修：原写法 `const __OUT = <cond> ? __OUT : '<路径>'` 是**自引用**（TDZ）⇒
+ * 本脚本一加载就 `ReferenceError: Cannot access '__OUT' before initialization`（工具等于坏的；
+ * 文件头注释里"由 tools/train-fast.mjs 生成"的 2P 包是更早版本留下的）；而且末尾的写入
+ * **根本没用它**、写的是硬编码线下路径 ⇒ 保护双层失效。两处一起修。 */
+const OUT = process.env.EPIRUS_PUBLISH === '1'
+  ? join(root, 'js', 'bundled-champion.js')
+  : join(root, 'docs', 'artifacts', 'train-fast-out.js');
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error,
   localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} } };
@@ -61,9 +67,14 @@ let last;
 for (let g = 0; g < gens; g++) last = await stepAsync(t);
 const secs = ((Date.now() - t0) / 1000).toFixed(1);
 const pack = JSON.stringify(P.pack(t.champion));
-writeFileSync(join(root, 'js', 'bundled-champion.js'),
+/* v1.5.18：写盘时一并记 meta（含**规则指纹**）。2P 包此前完全没有 meta ⇒ `np-test D16`
+ * （"成绩已过期"守门）只罩住多人包，2P 侧换过 11 次 rules/resolve 都没人发现。 */
+const meta = { source: 'tools/train-fast.mjs', gens: gens, ts: new Date().toISOString(),
+  seed: __SEED, workers: stepAsync.workers, rulesFingerprint: rulesFingerprint() };
+writeFileSync(OUT,
   '/* Epirus 内置冠军：由 tools/train-fast.mjs 生成（' + gens + ' 代，' + secs + 's）。不要手改。 */\n' +
+  'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(meta) + ';\n' +
   'window.EPIRUS_CHAMPION = ' + pack + ';\n', 'utf8');
 console.log(`训练完成 ${gens} 代，用时 ${secs}s；冠军 score=${t.bestChampScore.toFixed(3)}，attackShare=${(t.bestChampAttack||0).toFixed(2)}`);
-console.log('已写入 js/bundled-champion.js（' + pack.length + ' 字节）');
+console.log('已写入 ' + OUT + '（' + pack.length + ' 字节；其中 2P 线下路径只在 EPIRUS_PUBLISH=1 时才会被写）');
 stepAsync.close();   // 关停 worker 池，让进程正常结束（否则 worker 会让进程挂住）

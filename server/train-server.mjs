@@ -15,6 +15,8 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import { makeAsyncStep, makeParallelEvalN } from './paralleltrain.mjs';
+/* v1.5.18：反摆烂奖励 env 的**单一来源**（审计 §5-3：两端各写一遍导致 firstW 静默半开）。 */
+import { readFightEnv, hasFightOverride, FIGHT_REWARD_KEYS } from './fight-env.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -159,6 +161,15 @@ async function runTrain(gens, opts, cfg) {
      * 一整份产物都不产出，破坏"同参数可复现"）。改成可关/可调：EPIRUS_WALL_MS=0 关闭（纯按代数收敛），
      * 默认仍是 30 分钟以保持既有行为。 */
   const cap = Number(process.env.EPIRUS_WALL_MS == null ? 1800000 : process.env.EPIRUS_WALL_MS); // 30 分钟上限
+  /* v1.5.18 修（第三方复核 §5-2，实测）：**2P 这条路径此前整段没有播种** ——
+   * `T.makeTrainer` → `P.makePolicy` 与 `evo.breed()`（用裸 `Math.random`）全走宿主随机，
+   * 于是 `seed` / `fresh` / `hotstartFrom` 都记进了 meta，产物却永远不可复现。
+   * （`js/bundled-champion.js` 那个 2P 包正是这条路的产物；它的 meta 也因此是空的。）
+   * 现在与 N 人路径（见下方 `runTrainN`）用**同一套**播种：policy 的 randn + 沙箱 Math。
+   * ⚠️ 只对"用新代码重训"生效；既有产物不追溯修复（要重测得跑 `promote-champion2p`）。 */
+  const SEED0P = (Number((cfg && cfg.seed0) || 0) || 1) * 7919 + 13;
+  if (P.setRng && T.mulberry32) P.setRng(T.mulberry32(SEED0P));
+  __seedSandbox(sb, SEED0P);
   let last = null;
   let nextParents = null;   // 下一轮各种子的父代（谱系）：[{label, params}]
   /* v1.3.56：记录"本轮开局所用的现有冠军"权重标识。非 fresh 时种群是围绕它长出来的，
@@ -342,12 +353,17 @@ async function runTrainN(gens, cfg) {
   const ecoEnv = { target: process.env.EPIRUS_ECO_TARGET, cap: process.env.EPIRUS_ECO_CAP, divW: process.env.EPIRUS_ECO_DIVW };
   const ecoSet = (ecoEnv.target != null || ecoEnv.cap != null || ecoEnv.divW != null) && T.setEconomyReward ? T.setEconomyReward(ecoEnv) : null;
   if (ecoSet) console.log('[eco] 经济奖励覆盖: ' + JSON.stringify(ecoSet));
-  /* v1.5.8：反摆烂覆盖（哨声惩罚 / 出手权重）—— 同 env 机制，worker 继承同一份。 */
-  const fightEnv = { whistlePen: process.env.EPIRUS_FIGHT_WHISTLE, dealW: process.env.EPIRUS_FIGHT_DEAL, firstW: process.env.EPIRUS_FIGHT_FIRST };
-  const fightSet = (fightEnv.whistlePen != null || fightEnv.dealW != null) && T.setFightReward ? T.setFightReward(fightEnv) : null;
+  /* v1.5.8：反摆烂覆盖（哨声惩罚 / 出手权重 / 先手激励）—— 同 env 机制，worker 继承同一份。
+   * ⚠️ v1.5.18 修（第三方复核 §5-3）：触发条件**漏判 firstW** ⇒ 只设 `EPIRUS_FIGHT_FIRST` 时
+   * worker 开、主线程不开（**静默半开**）。历史两轮 fstA/fstB 因为同时设了 dealW 才侥幸没暴露。
+   * 现在"哪些 env / 要不要覆写"统一走 `server/fight-env.mjs`（与 worker 同一份实现）。 */
+  const fightEnv = readFightEnv(process.env);
+  const fightSet = hasFightOverride(fightEnv) && T.setFightReward ? T.setFightReward(fightEnv) : null;
   if (fightSet) console.log('[fight] 反摆烂覆盖: ' + JSON.stringify(fightSet));
-  /* v1.5.11：把**实际生效**的奖励参数打出来（哨声惩罚现在长程默认 0.5、不靠 env ⇒ 只记 env 会漏；
-   * 有这一行 + worker 的 fightPen 回执，就能确认"两端都真的开了"而不是静默半开）。 */
+  /* v1.5.11：把**实际生效**的奖励参数打出来。
+   * ⚠️ v1.5.18 更正：本注释曾写"哨声惩罚现在长程默认 0.5、不靠 env" —— 那是 v1.5.11 的旧口径，
+   * v1.5.12 已**回滚**（长程自动 0.5 是空操作，两条臂逐字节相同）⇒ 现在只反映 env 覆盖 + 代码默认值。
+   * 有这一行 + worker 的 `fight` 回执，就能确认"两端都真的开了"而不是静默半开。 */
   if (T.fightReward) console.log('[fight] 生效值: ' + JSON.stringify(T.fightReward()) + '  (mode=' + mode + ')');
   if (T.economyReward) console.log('[eco] 生效值: ' + JSON.stringify(T.economyReward()));
   if (styleNames.length) console.log('[style] 风格切片: ' + slice.n + ' 对手 × ' + slice.games + ' 局/个体/代  权重=' + slice.w);
@@ -401,12 +417,17 @@ async function runTrainN(gens, cfg) {
         for (const c of clients) sse(c, { type: 'error', msg: 'worker 没收到训练模式 ' + mode + '（回执=' + bad[0].modeUsed + '）—— 已中止，这份产物不能用' });
         runningN = false; poolN.close(); return;
       }
-      /* v1.5.11 自检：哨声惩罚是"按模式自动"的（长程 0.5、其余 0）⇒ 必须核对 worker 那份的实际值，
-       * 否则它会静默半开（服务端 0.5、worker 0），产物少一半适应度且日志完全正常（与 mode 半开同型）。 */
-      const wantPen = (T.fightReward ? T.fightReward().whistlePen : null);
-      const badPen = (res || []).filter(function (r) { return r && r.fightPen != null && wantPen != null && r.fightPen !== wantPen; });
-      if (badPen.length) {
-        for (const c of clients) sse(c, { type: 'error', msg: 'worker 的哨声惩罚与服务端不一致（worker=' + badPen[0].fightPen + ' 服务端=' + wantPen + '）—— 已中止，这份产物不能用' });
+      /* v1.5.11 自检：奖励覆盖必须与服务端一致，否则它会静默半开（服务端开、worker 关），
+       * 产物少一份适应度且日志完全正常（与 mode 半开同型）。
+       * v1.5.18（第三方复核 §5-3）：从"只核 whistlePen"扩到**三项**（whistlePen / dealW / firstW）——
+       * 只设 `EPIRUS_FIGHT_FIRST` 的那条路此前根本不进上面的触发条件，这条回执也就永远查不到它。 */
+      const wantFight = (T.fightReward ? T.fightReward() : null);
+      const badFight = (res || []).filter(function (r) {
+        if (!r || !r.fight || !wantFight) return false;
+        return FIGHT_REWARD_KEYS.some(function (k) { return r.fight[k] != null && wantFight[k] != null && r.fight[k] !== wantFight[k]; });
+      });
+      if (badFight.length) {
+        for (const c of clients) sse(c, { type: 'error', msg: 'worker 的奖励覆盖与服务端不一致（worker=' + JSON.stringify(badFight[0].fight) + ' 服务端=' + JSON.stringify(wantFight) + '）—— 已中止，这份产物不能用' });
         runningN = false; poolN.close(); return;
       }
     }

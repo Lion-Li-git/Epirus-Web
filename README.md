@@ -3,7 +3,15 @@
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）
 重新实现的一整套 **2 人可玩、可自对战训练** 程序。
 
-> **当前版本：v1.5.17** · 2 人对战（v1.0.0 功能冻结）+ **多人 3~5 人（技能齐全 + 3 人冠军 · AI 状态特征 v6，FEAT_S=123）**，见 `docs/RULES-NP.md`。
+> **当前版本：v1.5.18** · 2 人对战（v1.0.0 功能冻结）+ **多人 3~5 人（技能齐全 + 3 人冠军 · AI 状态特征 v6，FEAT_S=123）**，见 `docs/RULES-NP.md`。
+> v1.5.18：**处置第三方独立复核**（`docs/AUDIT-RESPONSE-v1.5.17.md`）—— **A 批工程/门槛**：修 `firstW`
+> 静默半开、给 2P 冠军包补 meta/指纹（此前"三无"）、把 2P 训练路径与 `tools/diag.mjs` 补上播种、
+> 把 `REPRO2` 从"字符串存在性"改成"调用点反查 + 实测同 seed 幂等"、补 `shapeOf`/维度守门、
+> 体检指标抽成单一来源并新增 **G 有效技能数**、把 6 项体检指标变成 `promote-champion` 的**阻断条件**；
+> **B 批规则定稿**：删掉**快速/欧皇模式**（含 `guardLimit`/`guardStreak` 两个死字段）、
+> **铁索连环改成一次性**（按原文「下一次」）、补 8 条"只有指纹在响"的规则数据行为断言
+> （含修掉一条**恒真**的"三判定全胜=爆头"用例）。回归 `spec 36/36`、`np-test 80/80`、
+> `smoke SMOKE OK`、`battle-test BATTLE OK`；规则指纹 `8cd4d731` → **`b2ea7f0b`**。
 > v1.5.17：**镜面反射的"生效时机"改回优先级口径**（用户二次 + 三次裁定）—— 大雷(pri4) / 小雷(pri5) 先于
 > 镜面反射(pri3) 结算，而大雷会**无效化**非防御类技能（镜面反射不算防御族）⇒ **复制根本不会发生**
 > （"反弹并没有被复制成功"）；而**同优先级时防御类先出现** ⇒ 复制来的防御架势挡得住同优先级的
@@ -111,8 +119,8 @@ Epirus-Web/
 │   ├─ train-3p.mjs            多人（3~5 人）自对战训练 → bundled-champion-3p.js
 │   ├─ eval-3p.mjs             多人冠军评测（1st/top2 + 出招分布）
 │   ├─ smoke.mjs               CDP 真浏览器冒烟测试（2 人）
-│   ├─ spec-run.mjs            Node 桩跑 2 人引擎自测（37/37）
-│   ├─ np-test.mjs             N 人引擎自测（12/12）
+│   ├─ spec-run.mjs            Node 桩跑 2 人引擎自测（36/36）
+│   ├─ np-test.mjs             N 人引擎自测（80/80：D1–D31 + N/L 族守门）
 │   ├─ np-probe.mjs            CDP 真浏览器多人（3/5 人）探测
 │   └─ diag.mjs / remote-probe.mjs  诊断脚本
 ├─ docs/RULES-2P.md         ★ 2 人规则裁定版（R1..R55 + 子证 R23'/R34'/R19'）
@@ -129,13 +137,13 @@ Epirus-Web/
 
 ## 自测
 
-浏览器打开 `tests/spec.html`：**36 条规则场景用例 + 500 场随机对局无异常**，全部 ✔ 即引擎与文档一致。
+浏览器打开 `tests/spec.html`：**35 条规则场景用例 + 500 场随机对局无异常**（`node tools/spec-run.mjs` 报 36/36），全部 ✔ 即引擎与文档一致。
 
 命令行（无需浏览器）：
 
 ```bash
-node tools/spec-run.mjs    # 2 人引擎：37/37
-node tools/np-test.mjs     # 多人引擎：41/41（目标/相抵互为目标/大雷连带/死者不行动/双枪/镜面/聚光炮/反复横跳/合二为一/胜负/3P 冠军包/fuzz + 座位均等/地雷 AoE N20a~e/大雷禁用小雷 N21/大雷传导 N22a~c/激光眼单发 N23/训练路径无裸随机 REPRO）
+node tools/spec-run.mjs    # 2 人引擎：36/36（v1.5.18 删掉快速模式的 R52 后 37 → 36）
+node tools/np-test.mjs     # 多人引擎：80/80（N 人口径 + 座位均等 + 地雷 AoE N20a~e + 大雷禁用/传导 N21/N22 + 激光眼 N23 + REPRO/REPRO2 + L 族 + D1–D31：模式入口一致性、维度/shapeOf、指纹（两个包）、播种实测、体检门槛、判定与爆头口径…）
 node tools/eval-3p.mjs     # 3 人冠军评测：28 对手对 × 座位轮换 → 1st/top2 + 出招分布
 node tools/smoke.mjs       # 2 人页面冒烟（CDP 真 Chrome）
 node tools/np-probe.mjs    # 多人页面探测（3 人 + 5 人，CDP 真 Chrome）

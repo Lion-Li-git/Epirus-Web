@@ -210,8 +210,16 @@
     p.hp -= hit;
     ev(state, { type: 'damage', to, amt: hit, reason, via: via || reason, source: (opts.source != null ? opts.source : null) });
     if (opts.chain !== false && p.chains && p.chains.length && !opts.fromChain) {
-      for (const other of p.chains) {          // N8：铁索图不递归
+      /* v1.5.18（用户裁定；第三方复核 §3-1 指出实现与原文不符）：
+       * 原文是「**下一次**当其中一个角色受到伤害时，另一个也受到相同伤害」⇒ **一次性**：
+       * 共享过一次之后连边**立刻解除**（此前实现成"持续状态、只有死亡才解除"，
+       * 那等于把一次性触发做成了持久光环）。要再连，双方得重新互勾一次【摄魂指法】。
+       * 先断边再结算：这样本次共享不会因为连边还在而被下一跳重复触发（N8 不递归的另一层保障）。 */
+      const once = p.chains.slice();
+      p.chains = [];
+      for (const other of once) {
         const op = state.p[other];
+        if (op && op.chains) op.chains = op.chains.filter(function (x) { return x !== to; });
         if (op && op.hp > 0) {
           op.hp -= hit;
           ev(state, { type: 'damage', to: other, amt: hit, reason: '铁索连环', via: 'chain', fromChain: true, source: (opts.source != null ? opts.source : null) });
@@ -471,6 +479,24 @@
     }
   }
 
+  /* N14 **v1.5.18（用户裁定采纳第三方复核 §6 的 R2；实现结论是"无需改代码"）** ——
+   * 原提议：把"复制到避雷针"那一支从 ④b **提前到 ② 之前**，好让复制的避雷针能挡本回合在飞的雷。
+   *
+   * **实测结论：这个改动是空操作**，因为 ① 层的语义是"**当回合有任何雷系技能 ⇒ 它们全部无效**"
+   * （见上面 `resolveActions` 的 ① 段，`R.LIGHTNING` 全场扫描 + `setVoid`）——
+   * 而"镜面反射能复制到避雷针"的**前提**就是 t1 本回合确实用了避雷针 ⇒ ① **必然**已经把那回合
+   * 所有雷系技能废掉了 ⇒ 复制来的窗口在本回合没有东西可挡。
+   * 也就是说：用户要的**结果**（"a 不该吃到那个大雷"）本来就成立，只是机制来自 t1 的真避雷针，
+   * 而不是复制体自己的窗口。
+   *
+   * 因此**不留这段提前落位**：它是可证明的死代码，而"有实现、有测试、无入口"正是审计 §3-2 点名的
+   * 最危险形态；本项目 §14.7 的教训也是"为了让某个例子成立去改结算语义是危险动作"。
+   * 改成把事实**钉成守门**（`np-test D31`）：① 的全局无效化必须仍然覆盖"复制避雷针"这一局；
+   * 若将来有人把 ① 收窄成"只无效化指向避雷针使用者的雷"，D31 会立刻红、逼他重新回答这个问题。
+   *
+   * 顺带修掉的**真实**偏差：免雷窗口（R31 情形B）原先挡不住【电磁炮】—— 见 ④ 的 `case SK.RAILGUN`
+   * 与 `np-test D31` 场景二。 */
+
   function mirrorPass(state) {
     const mirrors = [];
     for (let i = 0; i < playerCount(state); i++) {
@@ -559,8 +585,10 @@
         break;
       }
       case SK.MINE: me.mineArmed = true; ev(state, { type: 'mineArm', pid: m }); break;
-      /* 避雷针：只得到"架势"（3 回合免雷窗口，同 R31 情形B）。本回合已经在飞的雷不追溯
-       * —— ① 避雷针那一段早于镜面反射结算，追溯会凭空改写已结算的结果。 */
+      /* 避雷针：得到免雷窗口（同 R31 情形B，一次性：免掉一次雷后窗口结束）。
+       * ⚠️ v1.5.18：**不需要**把它提前到 ② 之前 —— 复制成立的**前提**是 t1 本回合真的用了避雷针，
+       * 而 ① 层"当回合有雷系 ⇒ 全部无效"已经把本回合的雷清空了 ⇒ 复制来的窗口本回合无物可挡。
+       * 论证与守门见 `mirrorPass` 上方的长注释与 `np-test D31`。 */
       case SK.ROD: me.rodGuard = 4; ev(state, { type: 'rod', pids: [m], mode: 'B' }); break;
       case SK.PURIFY: {
         const n = me.stickers.length;
@@ -804,6 +832,16 @@
           break;
         }
         case SK.RAILGUN: {
+          /* v1.5.18 修（第三方复核 R2 顺带查出的真实偏差）：电磁炮在 `R.LIGHTNING` 里
+           * （避雷针回馈 / 大雷传导口径都读那个集合），但它的投递**从来不查 `rodGuard`**
+           * ⇒ 避雷针的"三回合免雷窗口"对电磁炮无效（只有"当回合情形 A 的全场无效"能挡它）。
+           * 与 ② 小雷 / ③ 大雷 同口径：有窗口 ⇒ 消耗掉、无效化攻击者、打不中。 */
+          if (state.p[t] && state.p[t].rodGuard > 0) {
+            state.p[t].rodGuard = 0;
+            setVoid(state, i, '避雷针');
+            ev(state, { type: 'rodBlock', pid: t, by: SK.RAILGUN });
+            break;
+          }
           deliverDamage(state, { amt: 2, type: R.DMG.ELECTRIC, source: i, via: SK.RAILGUN, pierce: R.byKey[SK.RAILGUN].pierce }, t, { reason: '电磁炮' });
           break;
         }
@@ -964,8 +1002,6 @@
       const p = state.p[i];
       const a = acts[i];
       if (!(a && a.outcome === 'ok' && a.key === SK.RING)) p.ringStreak = 0;
-      if (a && a.outcome === 'ok' && a.key === SK.GUARD) p.guardStreak = (p.guardStreak || 0) + 1;
-      else p.guardStreak = 0;
       p.lastSkill = (a && a.outcome === 'ok') ? a.key : null;
     }
     // 蓄能珠时效 R9'：只供下一回合——回合结束时，非"本回合新蓄"的珠一律清空

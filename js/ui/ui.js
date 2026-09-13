@@ -8,7 +8,8 @@
   const $ = function (id) { return document.getElementById(id); };
   const NAME = ['你', '电脑'];
   const CAT_NM = { energy: '能量', attack: '攻击', defense: '防御', special: '特殊' };
-  const MODE_NM = { standard: '标准', fast: '快速', lucky: '欧皇', multi: '多人', long: '长程(5血)' };
+  /* v1.5.18：删掉 `fast` / `lucky` 两个标签 —— 它们对应的模式已从 `MODES` 里删除（用户裁定）。 */
+  const MODE_NM = { standard: '标准', multi: '多人', long: '长程(5血)' };
   /* v1.4.0：多人族模式（3-5 人可用）。加长程模式时必须同时登记在这里，
    * 否则 newGame / 人数切换会把用户选的模式悄悄改回 multi。 */
   const MULTI_MODES = ['multi', 'long'];

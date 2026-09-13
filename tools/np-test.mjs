@@ -1,5 +1,5 @@
 /* Epirus N 人（3-5）引擎测试：随机对局 fuzz + 关键裁定点（docs/RULES-NP.md） */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -124,7 +124,9 @@ t('N10c 回合上限：血量最高者胜；并列平局', function () {
   eq(st2.winner, 'draw', '并列最高平局');
 });
 
-t('N8 铁索：边共享伤害且不递归（A-B-C 链，只共享直接边）', function () {
+t('N8 铁索：边共享伤害、不递归，且**一次性**（v1.5.18 用户裁定按原文修正）', function () {
+  /* 原文：「**下一次**当其中一个角色受到伤害时，另一个也受到相同伤害」⇒ 共享过一次连边即解除。
+   * 本用例第一版（v1.5.18 之前）直接假定连边**持久**、拿同一个局连续打两次 —— 那正是实现与原文不符的地方。 */
   const st = S.createState('multi', { next: mulberry32(17) }, 3);
   st.p[0].chains = [1]; st.p[1].chains = [0, 2]; st.p[2].chains = [1];
   st.p[0].hp = st.p[1].hp = st.p[2].hp = 3;
@@ -132,12 +134,23 @@ t('N8 铁索：边共享伤害且不递归（A-B-C 链，只共享直接边）',
   eq(st.p[0].hp, 2, 'A 自身');
   eq(st.p[1].hp, 2, 'B 通过 A 的边共享');
   eq(st.p[2].hp, 3, 'C 不共享（铁索图不递归 N8）');
-  // 直接打 B：A 与 C 都共享
-  st.p[0].hp = st.p[1].hp = st.p[2].hp = 3;
-  X.rawDamage(st, 1, 1, '测试', 'test', {});
-  eq(st.p[1].hp, 2, 'B 自身');
-  eq(st.p[0].hp, 2, 'A 共享');
-  eq(st.p[2].hp, 2, 'C 共享');
+  /* v1.5.18：共享过一次 ⇒ A-B 这条边**两侧一起**解除（单向解除 = 半截铁索，也要查）。
+   * 反证：删掉 `p.chains = []` 与那个 filter ⇒ 下面三条立刻红。 */
+  eq((st.p[0].chains || []).length, 0, 'A 侧的边已解除');
+  eq((st.p[1].chains || []).indexOf(0), -1, 'B 侧到 A 的边也已解除（对称解除）');
+  const hpB = st.p[1].hp;
+  X.rawDamage(st, 0, 1, '测试', 'test', {});
+  eq(st.p[1].hp, hpB, '一次性：同一条边不再共享第二次');
+  // 另一局：打 B（它同时连着 A 与 C）⇒ 两条边都共享，且两条边都断
+  const st2 = S.createState('multi', { next: mulberry32(19) }, 3);
+  st2.p[0].chains = [1]; st2.p[1].chains = [0, 2]; st2.p[2].chains = [1];
+  X.rawDamage(st2, 1, 1, '测试', 'test', {});
+  eq(st2.p[1].hp, 2, 'B 自身');
+  eq(st2.p[0].hp, 2, 'A 共享（B 的边之一）');
+  eq(st2.p[2].hp, 2, 'C 共享（B 的边之二）');
+  eq((st2.p[1].chains || []).length, 0, 'B 侧两条边都断');
+  eq((st2.p[0].chains || []).length, 0, 'A 的边断');
+  eq((st2.p[2].chains || []).length, 0, 'C 的边断');
 });
 
 t('N3 双枪射手：对两个目标各 1 点', function () {
@@ -623,18 +636,45 @@ t('N23 单个激光眼即失效原型制御（用户裁定：单发破全防御�
   /* 不写"应产生失效事件"——`setVoid` 并不发 type:'void' 的事件（我一度这么断言，直接失败）。
    * 判据只保留下面那条**可被反证**的 laserNoEffect 计数。 */
 });
-t('REPRO2 每个训练入口都必须播种（正向要求，防"某条路漏播"）', function () {
-  /* 千问复核的教训：负向扫描（禁裸随机）只能覆盖"想到要扫的文件"，
-   * 而 CLI 训练器漏播时扫描面根本没包含它们。改成**正向列举训练入口**，
-   * 每个都必须出现 __seedSandbox 或 setRng —— 漏一个就红。 */
-  const entries = ['server/train-server.mjs', 'server/train-worker.mjs',
-    'tools/train-fast.mjs', 'tools/train-best.mjs', 'tools/train-3p.mjs'];
-  const miss = [];
-  for (const f of entries) {
-    const src = readFileSync(f, 'utf8');
-    if (src.indexOf('__seedSandbox') < 0 && src.indexOf('setRng') < 0) miss.push(f);
+t('REPRO2 每个训练入口都必须**真的**播种（按 makeTrainer 调用点反查 + 按函数体切分）', function () {
+  /* 第三方复核 §5-2 的两条实测，把上一版的问题说清了：
+   * ① 上一版是**字符串存在性检查**（对硬编码的 5 个文件 grep 'seedSandbox|setRng'）——
+   *    而 2P 的 `runTrain`（server/train-server.mjs）整段没有任何播种却**照样通过**：
+   *    因为同一个文件里的 `runTrainN` 有 ⇒ 守门守的是"文件"，不是"入口"。
+   *    那条未播种的路产出的正是 `js/bundled-champion.js`（2P 线上包，meta 至今是空的）。
+   * ② `tools/diag.mjs` 是第 6 个入口，既不在 REPRO 的扫描表、也不在 REPRO2 的名单里。
+   * 现在三层：(a) 名单**反查**（不再硬编码，新增入口自动纳入）；
+   *          (b) server 的两个入口**按函数体**各自要求播种；
+   *          (c) 可复现性由 D25 用"同 seed 两遍逐字节相同"**实测**（静态检查只是兜底）。 */
+  const dirs = [['server', /\.mjs$/], ['tools', /\.mjs$/], ['js/train', /\.js$/]];
+  const entries = [];
+  for (const pair of dirs) {
+    for (const f of readdirSync(pair[0])) {
+      if (!pair[1].test(f)) continue;
+      const p = pair[0] + '/' + f;
+      /* 只认**调用点**（`.makeTrainer(`），不认 `js/train/evo.js` 里的 `function makeTrainer(` 定义
+       * —— 定义文件是引擎，不是"入口"；把它算进来只会让这条永远红。 */
+      if (readFileSync(p, 'utf8').indexOf('.makeTrainer(') >= 0) entries.push(p);
+    }
   }
+  ok(entries.length >= 4, '按 makeTrainer 调用点反查只找到 ' + entries.length + ' 个入口（应当 ≥4）—— 反查逻辑坏了？');
+  const miss = entries.filter(function (f) {
+    const s2 = readFileSync(f, 'utf8');
+    return s2.indexOf('__seedSandbox') < 0 && s2.indexOf('setRng') < 0;
+  });
   eq(miss.length, 0, '以下训练入口未播种：' + miss.join(', '));
+
+  /* (b) 文件级存在性不够：server 的两个训练入口必须**各自**在函数体内播种
+   *（"文件里别处有"正是 v1.5.17 那个洞的形态）。 */
+  const srvSrc = readFileSync('server/train-server.mjs', 'utf8');
+  for (const fn of ['runTrain', 'runTrainN']) {
+    const i0 = srvSrc.indexOf('async function ' + fn + '(');
+    ok(i0 >= 0, 'server 里找不到训练入口 ' + fn);
+    const i1 = srvSrc.indexOf('\nasync function ', i0 + 1);
+    const body = srvSrc.slice(i0, i1 < 0 ? srvSrc.length : i1);
+    ok(body.indexOf('__seedSandbox') >= 0 && body.indexOf('setRng') >= 0,
+      fn + ' 的函数体内必须**自己**播种（__seedSandbox + setRng）—— 文件里别处有播种不算数');
+  }
 });
 
 /* ===== LESSON->TEST: turn the recurring failure classes into cases that FAIL =====
@@ -1122,7 +1162,7 @@ t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励
   T.setEconomyReward({ reset: true });   // 复位，别污染后面的用例
 });
 
-t('D16 线上冠军的规则指纹必须等于当前规则指纹（否则成绩已过期）', function () {
+t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规则指纹（否则成绩已过期）', function () {
   /* v1.5.7（千问体检 §5-2 建议 / HANDOFF §4-9 规矩）：v1.5.4 只改了 rules.js 里一个 `target` 字段，
    * 5P 线上冠军的考卷成绩就从 38.0% 掉到 15.0%，而当时**没有任何机制**能自动发现"产物与引擎错配"。
    * 这条把两者绑成机械检查：规则源码一改 ⇒ 指纹变 ⇒ 本用例立刻红 ⇒ 必须重测线上冠军、
@@ -1146,6 +1186,17 @@ t('D16 线上冠军的规则指纹必须等于当前规则指纹（否则成绩�
   ok(!!fp, '线上 bundle 的 meta 必须记 rulesFingerprint（当前规则指纹 = ' + cur + '）');
   eq(fp, cur, 'bundle 记的规则指纹必须等于当前规则指纹（不等 ⇒ 考卷成绩已过期，重测后把新指纹/成绩记回 meta）');
   ok(/"examScoreAtBuild"\s*:\s*[0-9.]+/.test(bundle), 'bundle 的 meta 必须记 examScoreAtBuild（构建时的考卷成绩）');
+
+  /* v1.5.18（第三方复核 §5-1）：**2P 包也必须被罩住**。此前 `js/bundled-champion.js` 一个 meta
+   * 字段都没有 ⇒ 它落在本用例视野之外：最后一次重训是 v1.3.47，此后 11 次提交动过 core，
+   * 其中 v1.5.7 还把【全息屏障】移出 2P 卡表 —— 而没有任何机械检查能发现"这个包是在旧规则下训的"。
+   * 反证：删掉 promote-champion2p 写的那行 meta ⇒ 本用例立即红。 */
+  const bundle2 = readFileSync('js/bundled-champion.js', 'utf8');
+  const fp2 = fingerprintOfBundle(bundle2);
+  ok(!!fp2, '2P bundle（js/bundled-champion.js）的 meta 必须记 rulesFingerprint（v1.5.18 起；用 tools/promote-champion2p.mjs 补记）');
+  eq(fp2, cur, '2P bundle 记的规则指纹必须等于当前规则指纹');
+  ok(/"examScoreAtBuild"\s*:\s*[0-9.]+/.test(bundle2), '2P bundle 的 meta 必须记 examScoreAtBuild（19 基准 × 40 局的平均胜率）');
+  ok(/window\.EPIRUS_CHAMPION\s*=/.test(bundle2), '2P bundle 的冠军槽必须还在（补 meta 不得写坏权重槽）');
 });
 
 t('D17 技能熵必须**只统计非ジ动作**（否则熵奖励会惩罚攒钱）', function () {
@@ -1569,6 +1620,321 @@ t('D23 镜面反射：没有"无可复制" + 优先级裁定（大雷 pri4 先�
   const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
   ok(/case 'mirrorCopySelf'/.test(uiSrc), 'ui.js 必须渲染 mirrorCopySelf 事件');
   ok(/case 'mirrorNoEffect'/.test(uiSrc), 'ui.js 必须仍渲染 mirrorNoEffect（t1 被作废那条）');
+});
+
+t('D24 反摆烂奖励 env 只能有**一个**读取点（server/fight-env.mjs）—— 两端各写一遍会静默半开', function () {
+  /* 第三方复核 §5-3（实测）：`train-server.mjs` 的触发条件写的是 `whistlePen || dealW`，
+   * 而 `train-worker.mjs` 三个 env 都判 ⇒ **只设 `EPIRUS_FIGHT_FIRST` 时主线程不开、worker 开**：
+   * 产物静默少一份适应度，日志完全正常（与 v1.5.0 的 mode 半开同型）。历史两轮 fstA/fstB
+   * 因为同时设了 dealW 才侥幸没暴露。
+   * 修法不是"补一个 ||"（那正是它第二次犯错的方式），而是**单一来源**：env 名与"要不要覆写"
+   * 都只在 `server/fight-env.mjs` 里。这条断言扫全库训练侧代码文件，出现第二处读取点就红
+   * —— 与 D7（对手池单一来源）同一族。反证：把 `readFightEnv` 换回任一处裸读 ⇒ 立即红。 */
+  const files = ['server/train-server.mjs', 'server/train-worker.mjs', 'server/paralleltrain.mjs',
+    'tools/train-fast.mjs', 'tools/train-best.mjs', 'tools/train-3p.mjs', 'tools/ring2-run.mjs',
+    'js/train/evo.js', 'js/train/policy.js', 'js/train/trainer.js'];
+  const bad = [];
+  for (const f of files) {
+    const lines = readFileSync(f, 'utf8').split('\n');
+    for (let i2 = 0; i2 < lines.length; i2++) {
+      const L = lines[i2];
+      const t2 = L.trim();
+      if (t2.startsWith('*') || t2.startsWith('//') || t2.startsWith('/*')) continue;   // 注释里提到名字不算
+      const re = /EPIRUS_FIGHT_[A-Z_]+/g; let m2;
+      while ((m2 = re.exec(L))) bad.push(f + ':' + (i2 + 1) + '  ' + m2[0]);
+    }
+  }
+  eq(bad.length, 0, 'EPIRUS_FIGHT_* 的读取必须集中在 server/fight-env.mjs：\n    ' + bad.join('\n    '));
+
+  /* 正证：被集中的那一份必须真的覆盖三个 env，且两端都从它导入（否则"集中"只是集中了一半）。 */
+  const fe = readFileSync('server/fight-env.mjs', 'utf8');
+  for (const k of ['EPIRUS_FIGHT_WHISTLE', 'EPIRUS_FIGHT_DEAL', 'EPIRUS_FIGHT_FIRST']) {
+    ok(fe.indexOf(k) >= 0, 'fight-env.mjs 必须覆盖 ' + k);
+  }
+  ok(fe.indexOf('hasFightOverride') >= 0, 'fight-env.mjs 必须导出"要不要覆写"的判定（两端共用同一份）');
+  for (const f of ['server/train-server.mjs', 'server/train-worker.mjs']) {
+    ok(readFileSync(f, 'utf8').indexOf("from './fight-env.mjs'") >= 0, f + ' 必须从 fight-env.mjs 导入');
+  }
+});
+
+t('D25 播种必须**真的**可复现：同 seed 两遍逐字节相同、换 seed 必须不同（实测，不靠 grep）', function () {
+  /* 第三方复核 §5-2 的结论是"REPRO2 形同虚设"：它的判据是**字符串存在性**，而 2P 入口整段没播种
+   * 照样通过。这条把"可复现"从"代码里出现了某个词"变成**跑两遍比字节**。
+   * 反向对照同样重要：换 seed 必须产出不同结果 —— 否则可能是"播种了但没人用它"。
+   * （这也正是 §5.2-16 那条教训的固化：`workers` 都是行为输入，何况随机流。） */
+  const orig = sb.Math;
+  const runOnce = function (seed) {
+    const s0 = (seed >>> 0) || 1;
+    const M = Object.create(Math);
+    let s = s0;
+    M.random = function () {
+      s = (s + 0x6D2B79F5) | 0;
+      let t2 = Math.imul(s ^ (s >>> 15), 1 | s);
+      t2 = (t2 + Math.imul(t2 ^ (t2 >>> 7), 61 | t2)) ^ t2;
+      return ((t2 ^ (t2 >>> 14)) >>> 0) / 4294967296;
+    };
+    sb.Math = M;                                  // 覆盖 evo/bots 里的裸 Math.random（等价 __seedSandbox）
+    Pol.setRng(T.mulberry32(s0 * 7919 + 13));     // policy 的 randn
+    const tr = T.makeTrainer({ popSize: 8, gamesPerOpp: 4 });
+    for (let g = 0; g < 3; g++) T.step(tr);
+    return JSON.stringify(Pol.pack(tr.champion));
+  };
+  try {
+    const a1 = runOnce(31), a2 = runOnce(31), b1 = runOnce(32);
+    eq(a1, a2, '同 seed 同代数必须逐字节相同（不可复现 ⇒ 一切 A/B 都是噪声）');
+    ok(a1 !== b1, '换 seed 必须产出不同结果（若相同，说明"播种"根本没被用上）');
+  } finally { sb.Math = orig; }
+});
+
+t('D26 网络形状必须被钉住（FEAT_S/FEAT_A/paramCount）+ v5 裁剪规则精确（shapeOf 守门）', function () {
+  /* 第三方复核 §5-7：`docs/PARAMS-PLAN.md` 承诺过一条"shapeOf 守门"，但**它并不存在** ——
+   * np-test 全文没有 shapeOf，也没有任何断言钉住 FEAT_S=123 / paramCount=3337。
+   * 后果：静默改维度不会被任何用例发现，而那正是"升 v6 时 7 个 v5 存档当场变砖"的成因。
+   * 这条把常量、反推、以及**v5 裁剪规则**一起钉住：维度一变立刻红，逼你同步 PACK_VERSION 与裁剪规则。 */
+  eq(Pol.FEAT_S, 123, 'FEAT_S 变了 ⇒ 旧冠军包不兼容，必须同时升 PACK_VERSION 并写清裁剪规则');
+  eq(Pol.FEAT_A, 14, 'FEAT_A 变了 ⇒ 动作特征布局变了');
+  eq(Pol.FEAT_N, 137, 'FEAT_N 必须 = FEAT_S + FEAT_A');
+  eq(Pol.HID, 24, 'HID 变了 ⇒ 参数量与所有训练曲线不可比');
+  eq(Pol.PACK_VERSION, 6, 'PACK_VERSION 变了 ⇒ 游戏侧 checkPack 会拒绝所有旧包（要有意为之）');
+  eq(Pol.paramCount(), 3337, 'paramCount = HID*FEAT_N + HID + HID + 1');
+  /* ACT_KEYS 是"动作键表"（= R.skills 的 key），**不是** FEAT_A 那个 14 维动作特征。
+   * 这里钉住卡数：新增一张卡会同时改变 ACT_KEYS / `MIRROR_SELF` 归类 / 特征布局，
+   * 必须是有意为之（算法见 `PARAMS-PLAN.md` §3）。 */
+  eq(Pol.ACT_KEYS.length, 30, '技能表必须是 30 张卡（TOTAL 变了就要同步走一遍"新增卡必须显式归类"的守门）');
+
+  const cur = new Float64Array(Pol.paramCount());
+  const nw = Pol.shapeOf(cur);
+  ok(nw && nw.featS === Pol.FEAT_S && nw.legacy === false, 'shapeOf 对新形状必须给出 featS=' + Pol.FEAT_S + ' 且非 legacy');
+  const oldLen = Pol.HID * (122 + Pol.FEAT_A) + Pol.HID + Pol.HID + 1;
+  eq(oldLen, 3313, 'v5 参数量应当 = 3313');
+  const od = Pol.shapeOf(new Float64Array(oldLen));
+  ok(od && od.featS === 122 && od.legacy === true, 'shapeOf 必须从长度反推出 v5 的 featS=122 并标 legacy（否则按新行距读旧权重 = 静默错位）');
+  eq(Pol.unpack({ v: 5, a: new Array(oldLen).fill(0), f: 122, h: Pol.HID }), null,
+    '游戏侧 unpack 必须**拒绝** v5 包（严格校验是刻意的）');
+  const lg = Pol.unpack({ v: 5, a: new Array(oldLen).fill(0), f: 122, h: Pol.HID }, true);
+  ok(lg && lg.length === oldLen, '工具侧 unpack(o,true) 必须仍能读 v5 包（否则 A/B 证据链一次性）');
+
+  /* v5 裁剪规则必须精确等于"v6 去掉'自己跨得过环启动线'那一维"（运行时探测，不硬编码下标）。
+   * 裁错维度不会有任何报错 —— 只会让旧包静默错位，所以这条必须是逐位比较。 */
+  const mk = function (rs) {
+    const s2 = S.createState('standard', { next: function () { return 0.5; } }, 2);
+    s2.p[0].ep = 3; s2.p[0].ringStreak = rs;
+    return Pol.featuresV6(s2, 0);
+  };
+  const a0 = mk(0), b0 = mk(3);
+  let idx = -1;
+  for (let i = 0; i < a0.length; i++) if (a0[i] - b0[i] > 0.5) { idx = i; break; }
+  ok(idx >= 0, '应当能探测到"自己跨得过环启动线"那一维（特征加了新维度就得同步改裁剪规则）');
+  const st5 = S.createState('standard', { next: function () { return 0.5; } }, 2);
+  const f5 = Pol.features(st5, 0, 122);
+  eq(f5.length, 122, 'features(state,pid,122) 必须裁成 v5 长度');
+  const expect = Pol.featuresV6(st5, 0).filter(function (_, i) { return i !== idx; });
+  eq(f5.join(','), expect.join(','), 'v5 裁剪必须逐位等于"v6 去掉那一维"（裁错维度 = 旧包静默错位）');
+});
+
+t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {
+  /* 第三方复核 §7-4(1)：champ-audit 的 E/F 两列"只打印、不参与任何判定"，
+   * `promote-champion.mjs:77-81` 也只有三条 console.warn、末尾还写着"决定权在你"
+   * ⇒ "集体防御/打法坍缩"这种形状量出来了也没人挡。
+   * 修法有两半，这条守门的也正是这两半：① 指标只有一份实现（否则门槛会跟打印漂移）；
+   * ② 不过门槛必须**中止**，越过必须显式 `--force` 且在 meta 里留痕。 */
+  const ca = readFileSync('tools/champ-audit.mjs', 'utf8');
+  const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(ca.indexOf("from './audit-lib.mjs'") >= 0, 'champ-audit 必须用共享指标库（tools/audit-lib.mjs）');
+  ok(pc.indexOf("from './audit-lib.mjs'") >= 0, 'promote-champion 必须用**同一份**指标库');
+  for (const f of ['function fieldRate', 'function selfPlay', 'function loadChamp']) {
+    ok(ca.indexOf(f) < 0, 'champ-audit 不得再自带 ' + f + '（两处各写一遍必漂移）');
+    ok(pc.indexOf(f) < 0, 'promote-champion 不得再自带 ' + f);
+  }
+  ok(/process\.exit\(6\)/.test(pc), 'promote-champion 必须在体检不过时中止（exit 6），而不是只 warn');
+  ok(pc.indexOf('--force') >= 0, '必须提供显式 --force 才能越过阻断');
+  ok(pc.indexOf('auditForced') >= 0 && pc.indexOf('auditFails') >= 0, '越过阻断必须在 meta 里留痕（auditFails/auditForced）');
+  for (const k of ['selfPlayEffSkills', 'passiveStanceRate', 'activeAttackRate']) {
+    ok(pc.indexOf(k) >= 0, 'meta 必须记下 ' + k + '（否则"当年怎么过门的"又不可查）');
+  }
+});
+
+t('D28 模式入口一致性：MODES 的每个 key 都必须能在页面选到（且页面不许有幽灵选项）', function () {
+  /* 第三方复核 §3-2(d) 的建议。起因是实测：`MODES.lucky` 无入口无测试、`MODES.fast` 无入口
+   * 但引擎分支还在、`tests/spec.js` 的 R52 用例**还在跑**（守一条不可达路径）——
+   * 作者本人都以为删了。这条把"入口/实现/文档三者一致"变成机械检查，与 D8（版本号三方一致）同族。
+   * 反证：给 MODES 加一个不在 index.html 里的 key ⇒ 立即红；把 index.html 的某个 option 拼错也红。 */
+  const html = readFileSync('index.html', 'utf8');
+  const sel = /<select id="sel-mode">([\s\S]*?)<\/select>/.exec(html);
+  ok(sel, 'index.html 里找不到 #sel-mode');
+  const opts = [];
+  const re = /<option value="([^"]+)"/g; let m3;
+  while ((m3 = re.exec(sel[1]))) opts.push(m3[1]);
+  ok(opts.length >= 3, '#sel-mode 至少要有三个选项（现有 ' + opts.length + ' 个）');
+
+  const modes = Object.keys(R.MODES);
+  const missing = modes.filter(function (k) { return opts.indexOf(k) < 0; });
+  eq(missing.length, 0, 'MODES 里有页面选不到的模式（要么补 index.html 的 <option>，要么删掉它）：' + missing.join(', '));
+  const ghost = opts.filter(function (k) { return modes.indexOf(k) < 0; });
+  eq(ghost.length, 0, 'index.html 里有 MODES 中不存在的模式选项：' + ghost.join(', '));
+
+  /* 原始规则里有、本程序**明确不做**的模式必须显式登记（v1.5.18 用户裁定：快速/欧皇删掉）。 */
+  for (const k of ['fast', 'lucky', 'vampire']) {
+    ok(modes.indexOf(k) < 0, 'MODES 不应再有 ' + k + '（不做的模式只登记在文档里，不留在代码里）');
+  }
+  const r2p = readFileSync('docs/RULES-2P.md', 'utf8');
+  ok(r2p.indexOf('本程序不做') >= 0, 'RULES-2P.md 必须显式登记"本程序不做"的模式（快速/欧皇/吸血鬼）');
+});
+
+t('D29 "只有指纹在响"的规则数据必须有**行为**断言（判定 p / 爆头 3 轮 / 小雷豁免名单 / 费用 / 雷系集合）', function () {
+  /* 第三方复核 §2-2 做了 17 个变异注入，结论是：**用户报过 bug 的路径与刚裁定的路径守门是真的，
+   * 但"早就定稿、没人再质疑"的规则数据表没有任何行为断言在守** —— 改坏了只有 D16 指纹会响
+   * （那只说明"东西变了"，不说明"哪个行为错了"）。最典型的一条：`tests/spec.js` 里那条名叫
+   * 「三判定全胜=爆头」的测试，把 `judge3` 改成 `judge`（只判一次）**照样绿**。
+   * 下面每条都对应那 7 条注入之一，且都必须能反证（改坏 → 红）。 */
+  const seqRngN = function (vals) { let i = 0; return { next: function () { return i < vals.length ? vals[i++] : 0.9; } }; };
+  const mkst = function (rng) { return S.createState('standard', rng, 2); };
+
+  /* ① 判定 = 公平随机、阈值严格 0.5（原文"判定：双方进行猜拳"）。
+   * 反证：把 `resolve.js:63` 的 0.5 改成 0.65 ⇒ 第一、三条立刻红。 */
+  ok(X.judge(mkst(seqRngN([0.49]))) === true, '判定：0.49 < 0.5 ⇒ 胜');
+  ok(X.judge(mkst(seqRngN([0.5]))) === false, '判定：0.5 不算胜（严格小于）');
+  ok(X.judge(mkst(seqRngN([0.51]))) === false, '判定：0.51 ⇒ 负');
+
+  /* ② 爆头必须**三轮全胜**（原文「进行 3 轮判定，若攻击者均获胜」）。
+   * 反证：把 `judge3` 改成 `judge` ⇒ 第二条立刻红。 */
+  ok(X.judge3(mkst(seqRngN([0.1, 0.1, 0.1]))) === true, '三次全胜 ⇒ 爆头');
+  ok(X.judge3(mkst(seqRngN([0.1, 0.1, 0.6]))) === false, '2 胜 1 负 ⇒ **不**爆头（这一条才钉住那个"3"）');
+  ok(X.judge3(mkst(seqRngN([0.6, 0.1, 0.1]))) === false, '首轮即负 ⇒ 不爆头');
+
+  /* ③ 小雷豁免名单 = 防御 / 反弹 / 原型制御（原文"使除防御、反弹、原型制御外技能无效"）。 */
+  eq(R.MINI_T_IMMUNE.slice().sort().join(','), [R.SK.GUARD, R.SK.REFLECT, R.SK.PROTO].sort().join(','),
+    '小雷豁免名单必须恰好是 防御/反弹/原型制御（多一个少一个都是规则漂移；反证：把八卦阵加进去 ⇒ 红）');
+  /* 穷举表态（审计 R1 的建议）：防御族里每张卡都必须被显式判为"豁免 / 不豁免"。
+   * 这样以后新增一张防御卡，就必须先回答"小雷能不能无效它"，而不是静默漂移。 */
+  const GUARD_NON_IMMUNE = [R.SK.BAGUA, R.SK.SHIFT, R.SK.JINSHIELD, R.SK.ARMOR, R.SK.HOLO];
+  const cls = {};
+  for (const k of R.MINI_T_IMMUNE) { ok(!cls[k], '小雷豁免名单重复：' + k); cls[k] = 'immune'; }
+  for (const k of GUARD_NON_IMMUNE) { ok(!cls[k], '分类重复：' + k); cls[k] = 'not'; }
+  const unclassified = R.GUARD_FAMILY.filter(function (k) { return !cls[k]; });
+  eq(unclassified.length, 0, '防御族里有卡没表态"小雷是否豁免"（新增防御卡必须显式归类）：' + JSON.stringify(unclassified));
+
+  /* ④ 费用走**行为**口径（不是只比常量）：大雷 5 ジ、全息屏障 1 ジ。
+   * 反证：大雷改 3 / 全息改 3 ⇒ 下面各有一条红。 */
+  const stB = S.createState('multi', { next: mulberry32(77) }, 3);
+  stB.p[0].ep = 4; X.startTurn(stB);
+  eq(S.attemptAction(stB, 0, R.SK.BIG_T, { target: 1 }).outcome, 'insufficient', '大雷 4 ジ 必须不够（花费 5）');
+  stB.p[0].ep = 5;
+  eq(S.attemptAction(stB, 0, R.SK.BIG_T, { target: 1 }).outcome, 'ok', '大雷 5 ジ 必须够');
+  const stH = S.createState('multi', { next: mulberry32(79) }, 3);
+  stH.p[0].ep = 0; X.startTurn(stH);
+  eq(S.attemptAction(stH, 0, R.SK.HOLO, { target: 1 }).outcome, 'insufficient', '全息屏障 0 ジ 必须不够（花费 1）');
+  stH.p[0].ep = 1;
+  eq(S.attemptAction(stH, 0, R.SK.HOLO, { target: 1 }).outcome, 'ok', '全息屏障 1 ジ 必须够');
+
+  /* ⑤ 雷系集合（避雷针回馈 / 大雷传导都读它）必须含电磁炮 —— 并且看**行为**：
+   * 避雷针在场（情形 A）时电磁炮必须被无效化。反证：把 RAILGUN 从 LIGHTNING 删掉 ⇒ 这条红。 */
+  for (const k of [R.SK.RAILGUN, R.SK.MINI_T, R.SK.BIG_T]) ok(R.LIGHTNING.indexOf(k) >= 0, '雷系集合必须含 ' + k);
+  const stR = S.createState('multi', { next: mulberry32(83) }, 3);
+  for (const q of stR.p) { q.ep = 9; q.hp = 8; }
+  stR.p[1].elec = 1;                      // 电磁炮需要 1 电珠
+  X.startTurn(stR);
+  S.attemptAction(stR, 0, R.SK.ROD, {});
+  S.attemptAction(stR, 1, R.SK.RAILGUN, { target: 0 });
+  S.attemptAction(stR, 2, R.SK.JI, {});
+  X.resolveActions(stR);
+  ok(stR.actions[1].voided, '避雷针在场（情形 A）必须无效化本回合的电磁炮');
+  eq(stR.p[0].hp, 8, '避雷针使用者不该被那个电磁炮打到');
+  ok(stR.events.some(function (e) { return e.type === 'rod' && e.mode === 'A'; }), '必须走情形 A（当回合有雷系）');
+});
+
+t('D30 铁索连环一次性（真实摄魂路径）+ 合二为一 >=2（3 人同轰也只额外 +1）', function () {
+  /* 第三方复核 §3-1 指出两处实现与原文不符，用户 2026-09-13 裁定：
+   *   ① 铁索连环原文「**下一次**当其中一个角色受到伤害时，另一个也受到相同伤害」⇒ **一次性**；
+   *   ② 合二为一原文「**两个**角色同时对同一角色使用雷击之枪」⇒ **保持** `>=2`（3 人同轰同样只触发一次）。 */
+
+  /* ① 走真实路径建立连边：双方互勾【摄魂指法】（需目标 HP ≤ drainHpMax，multi 下 =1）。
+   * 按 RULES-2P 的顺序口径：先各自治愈到 2、再互相扣到 1 ⇒ 无人死亡 ⇒ 连环成立。 */
+  const st = S.createState('multi', { next: mulberry32(97) }, 3);
+  for (const q of st.p) { q.ep = 9; q.hp = 1; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.DRAIN, { target: 1 });
+  S.attemptAction(st, 1, R.SK.DRAIN, { target: 0 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[0].hp, 1, '互勾摄魂后 A 仍活着（先治愈后扣血）');
+  eq(st.p[1].hp, 1, '互勾摄魂后 B 仍活着');
+  eq((st.p[0].chains || []).join(','), '1', '互勾摄魂必须建立连边 A↔B');
+  eq((st.p[1].chains || []).join(','), '0', '连边必须是对称的');
+  st.p[0].hp = 5; st.p[1].hp = 5;                     // 抬高血量，便于观察共享
+  X.rawDamage(st, 0, 2, '测试', 'test', {});
+  eq(st.p[0].hp, 3, 'A 自身');
+  eq(st.p[1].hp, 3, 'B 共享同量伤害');
+  eq((st.p[0].chains || []).length, 0, '共享一次后 A 侧连边解除（一次性）');
+  eq((st.p[1].chains || []).length, 0, '共享一次后 B 侧连边解除');
+  X.rawDamage(st, 0, 2, '测试', 'test', {});
+  eq(st.p[1].hp, 3, '第二次不再共享 —— 要再连必须重新互勾摄魂');
+
+  /* ② 合二为一：**3 人**同时对同一目标用小雷 ⇒ 仍然只额外 +1（用户裁定保持 `>=2`）。
+   * 反证：把 `>= 2` 改成 `=== 2` ⇒ 本用例立刻红。 */
+  const st3 = S.createState('multi', { next: mulberry32(99) }, 4);
+  for (const q of st3.p) { q.ep = 9; q.hp = 9; }
+  X.startTurn(st3);
+  S.attemptAction(st3, 0, R.SK.MINI_T, { target: 3 });
+  S.attemptAction(st3, 1, R.SK.MINI_T, { target: 3 });
+  S.attemptAction(st3, 2, R.SK.MINI_T, { target: 3 });
+  S.attemptAction(st3, 3, R.SK.JI, {});
+  X.resolveActions(st3);
+  const unite = st3.events.filter(function (e) { return e.type === 'hidden' && e.name === '合二为一'; });
+  eq(unite.length, 1, '3 人同轰同一目标 ⇒ 合二为一只触发**一次**（保持 >=2 口径）');
+  eq(st3.p[3].hp, 8, '被作用者只额外吃 1 点电伤（不是 2 点）');
+});
+
+t('D31 复制避雷针的"挡本回合的雷"与免雷窗口的真实口径（v1.5.18 用户裁定 / 第三方复核 §6 R2）', function () {
+  /* 背景：R2 提议把"复制到避雷针"那一支从 ④b **提前到 ② 之前**，好让它挡本回合在飞的雷。
+   * **实现时的实测结论：那是空操作** —— ① 层的避雷针语义是"**当回合有任何雷系技能 ⇒ 它们全部无效**"
+   * （全场，见 `resolveActions` ① 段），而"镜面反射能复制到避雷针"的**前提**就是 t1 本回合真的用了避雷针
+   * ⇒ ① 必然已经把那一回合的雷清空了 ⇒ 复制来的窗口本回合无物可挡。
+   * 也就是说用户要的**结果**（a 不该吃到那个大雷）本来就成立，只是机制来自 t1 的真避雷针。
+   * 因此那段提前落位没有落进代码（"有实现、有测试、无入口"正是审计 §3-2 点名的最危险形态）；
+   * 改为把事实**钉成守门**：若将来有人把 ① 收窄成"只无效化指向避雷针使用者的雷"，下面第一条立刻红。 */
+
+  /* 场景一：a 用镜面反射复制 b 的【避雷针】，c 用【大雷】打 a ⇒ a 安全，且原因是 ① 的全场无效化。 */
+  const st = S.createState('multi', { next: mulberry32(131) }, 3);
+  for (const q of st.p) { q.ep = 9; q.hp = 5; }
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+  S.attemptAction(st, 1, R.SK.ROD, {});
+  S.attemptAction(st, 2, R.SK.BIG_T, { target: 0 });
+  X.resolveActions(st);
+  eq(st.p[0].hp, 5, 'a 不该吃到大雷的 2 点（这就是用户要的结果）');
+  ok(st.actions[2].voided, '那个大雷必须被无效化 —— 由 t1 的**真**避雷针在 ① 层全场无效化（不是复制体）');
+  ok(st.events.some(function (e) { return e.type === 'rod' && e.mode === 'A'; }), '必须走 ① 的情形 A（当回合有雷系 ⇒ 全部无效）');
+  ok(st.p[0].rodGuard > 0, '复制避雷针仍应给出免雷窗口（供后续回合用）');
+  ok(st.events.some(function (e) { return e.type === 'mirrorCopySelf' && e.key === R.SK.ROD; }), '复制本身照常发生');
+
+  /* 场景二：免雷窗口（R31 情形B）必须能挡【电磁炮】—— v1.5.18 修的**真实偏差**
+   *（电磁炮在 `R.LIGHTNING` 里，但它的投递原先从不查 `rodGuard`）。反证：删掉 ④ 的 `case SK.RAILGUN`
+   * 里那段 rodGuard 检查 ⇒ 本场景两条立刻红。 */
+  const st2 = S.createState('multi', { next: mulberry32(137) }, 3);
+  for (const q of st2.p) { q.ep = 9; q.hp = 5; }
+  st2.p[2].elec = 1;                    // 电磁炮需要 1 电珠
+  X.startTurn(st2);
+  st2.p[0].rodGuard = 4;                // 上一回合避雷针留下的窗口（本回合没人用避雷针 ⇒ ① 不介入）
+  S.attemptAction(st2, 2, R.SK.RAILGUN, { target: 0 });
+  S.attemptAction(st2, 0, R.SK.JI, {});
+  S.attemptAction(st2, 1, R.SK.JI, {});
+  X.resolveActions(st2);
+  eq(st2.p[0].hp, 5, '电磁炮必须被避雷针的免雷窗口挡下（v1.5.18 之前这里是坏的）');
+  ok(st2.actions[2].voided, '电磁炮那次行动必须被无效化');
+  ok(st2.events.some(function (e) { return e.type === 'rodBlock' && e.by === R.SK.RAILGUN; }), '应当出现 rodBlock(电磁炮)');
+
+  /* 场景三（**回归 v1.5.17**）：复制的是**防御架势**时，大雷照旧把镜面反射废掉 ⇒ 证明本节的结论
+   * 没有影响"大雷 pri4 先于镜面反射 pri3"这条裁定。 */
+  const st3 = S.createState('multi', { next: mulberry32(139) }, 3);
+  for (const q of st3.p) { q.ep = 9; q.hp = 5; }
+  X.startTurn(st3);
+  S.attemptAction(st3, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+  S.attemptAction(st3, 1, R.SK.REFLECT, {});
+  S.attemptAction(st3, 2, R.SK.BIG_T, { target: 0 });
+  X.resolveActions(st3);
+  ok(st3.actions[0].voided, 'v1.5.17 裁定仍成立：复制防御架势时大雷(pri4)先作废镜面反射');
+  eq(st3.p[0].hp, 3, 'a 必须实打实挨那 2 点（复制的反弹挡不住先前结算的大雷）');
 });
 
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));

@@ -14,7 +14,6 @@
       if (!s) continue;
       if (!S.canUseSkillInMode(state, s.key)) continue;
       if ((p.cooldown[s.key] || 0) > 0) continue;                 // 禁用中（AI 不会硬闯）
-      if (state.modeKey === 'fast' && s.key === R.SK.GUARD && p.guardStreak >= 2) continue;
       if (p.infiniteEnergy) { out.push({ key: s.key, affordable: true, loan: 0 }); continue; }
       const cost = S.computeCost(state, pid, s.key);
       if (!cost.ok) continue;                                     // 条件不满足

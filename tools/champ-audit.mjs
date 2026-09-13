@@ -1,4 +1,4 @@
-/* Epirus 冠军体检（v1.5.8）
+/* Epirus 冠军体检（v1.5.8；v1.5.18 抽出指标库 + 新增 G 列）
  *
  * 为什么要有它：**考卷 1st 率可以被"熬"骗**。
  * v1.5.7 我把 long-33 换上线，依据是 canonical 多人考卷 41.0%（旧产物 17.8%）。
@@ -8,22 +8,21 @@
  * 千问体检 §5-4 早就警告过这一点（"改报 cost≥3 落地伤害 + 哨声前 HP 领先，
  * 后者能量出'赢'还是'熬'"），我当时没把它变成硬指标 ⇒ 这次把它工具化。
  *
- * 输出四类指标：
- *   A. 考卷：canonical 多人 3 血考卷 1st%（外部脚本对手，可被"熬"骗）
- *   B. 打架活跃度（自对局，5 座同一冠军）：伤害/局、cost≥3 伤害/局、零伤害率、平均回合
- *   C. 病理：全息屏障施放/局（>0 且高 ⇒ 互套盾风险）、平局率（无人被淘汰）
- *   D. 反弹墙：长程口径 4 座纯反弹（`--mode=long --field=reflectwall`）
+ * ⚠️ v1.5.18：指标实现已抽到 `tools/audit-lib.mjs`，与 `tools/promote-champion.mjs` 的
+ * **阻断条件**共用同一份（第三方复核 §7-4(1)：指标只打印不判定 ⇒ 它建议把 E/F/G 变成门槛）。
+ * 想改口径请改那个文件，别在这里再写一遍。
  *
- * 用法：node tools/champ-audit.mjs [--games=20] [--exam-games=20] [文件...]
+ * 输出（列含义见 audit-lib.mjs 顶部）：
+ *   A 考卷1st · B 伤害/局 · B 重击/局 · C 盾/局 · 零伤害率 · 平局率 · 回合 · D 长程反弹墙 ·
+ *   E 被动场架势 · F 活跃场进攻 · F 回合 · **G 有效技能数**（非ジ出手的 exp(熵)）
+ *
+ * 用法：node tools/champ-audit.mjs [--games=20] [--exam-games=20] [--mode=multi|long] [文件...]
  *       （不给文件则体检全部在库冠军 + 线上 bundle）
  */
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import vm from 'node:vm';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readdirSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { ROOT, sandbox, loadChamp, exam, selfPlay, fieldRate } from './audit-lib.mjs';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const flag = function (n, d) {
   const hit = process.argv.find(function (a) { return a.indexOf('--' + n + '=') === 0; });
   return hit ? hit.split('=')[1] : d;
@@ -31,99 +30,9 @@ const flag = function (n, d) {
 const GAMES = Number(flag('games', 20));
 const EXG = Number(flag('exam-games', 20));
 const SP_MODE = flag('mode', 'multi');   // 自对局那几列用哪个模式（multi 默认；看"集体防御"要用 long）
-const CORE = ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js', 'js/train/policy.js', 'js/train/bots.js', 'js/train/evo.js'];
 
-function sandbox() {
-  const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, window: {} };
-  sb.globalThis = sb;
-  for (const f of CORE) vm.runInNewContext(readFileSync(join(ROOT, f), 'utf8'), sb, { filename: f });
-  return sb.window;
-}
-function mulberry32(a) {
-  return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-}
-function loadChamp(W, file) {
-  const src = readFileSync(join(ROOT, file), 'utf8');
-  const m = /EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src);
-  if (!m) return null;
-  return W.EpirusPolicy.unpack(JSON.parse(m[1]));
-}
-
-/* A. 外部考卷（沿用 canonical eval-5p，20 局） */
-function exam(file, extra) {
-  const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', String(EXG), '5', '77000', file].concat(extra || []), { cwd: ROOT, encoding: 'utf8' });
-  const out = (r.stdout || '') + (r.stderr || '');
-  const m = /\[(?:冠军|消融[^\]]*)\]\s*1st=([\d.]+)%/.exec(out);
-  const c3 = /cost>=3 出手占比=([\d.]+)%/.exec(out);
-  return { first: m ? Number(m[1]) : null, cost3: c3 ? Number(c3[1]) : null };
-}
-
-/* B/C. 自对局：5 座同一冠军 */
-function selfPlay(W, params, mode) {
-  const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
-  const N = mode === 'long' ? 5 : 5;
-  let dmg = 0, heavyDmg = 0, holo = 0, draws = 0, rounds = 0, zero = 0, attacks = 0;
-  for (let g = 0; g < GAMES; g++) {
-    const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(9000 + g) }, N);
-    const ch = []; for (let i = 0; i < N; i++) ch.push(T.policyChooserN(params, 0.15));
-    Play.autoGameN(st, ch);
-    let gd = 0;
-    const HP = st.mode.hp;
-    for (const e of st.events) {
-      if (e.type === 'holoSet') holo++;
-      if (e.type === 'damage') {
-        dmg += e.amt; gd += e.amt;
-        /* cost≥3 的落地伤害：从事件里认 via（技能）成本 */
-        const def = e.via ? R.byKey[e.via] : null;
-        if (def && def.cost != null && def.cost >= 3) heavyDmg += e.amt;
-      }
-      if (e.type === 'action' || e.type === 'cast') attacks++;
-    }
-    rounds += st.round;
-    if (gd === 0) zero++;
-    if (st.p.every(function (p) { return p.hp > 0; })) draws++;
-  }
-  return {
-    dmgPerGame: dmg / GAMES, heavyPerGame: heavyDmg / GAMES, holoPerGame: holo / GAMES,
-    zeroRate: zero / GAMES, drawRate: draws / GAMES, rounds: rounds / GAMES
-  };
-}
-
-/* E/F：**对手活跃度**对冠军行为的影响（v1.5.14 加，起因是用户实测"集体防御"）。
- * 0 号座用"被动（只ジ）"或"活跃（每回合进攻）"的固定策略，其余 4 座都是被测冠军 ⇒ 量 AI 座的架势/进攻占比。
- * 为什么必须单独看：这与"5 座全冠军"的自对局是两种场面 —— 用户那局就是被被动对手推到架势率 75% 的
- * （REVIEW §12：人类 68% ジ ⇒ AI 架势 75%；人类每回合进攻 ⇒ AI 架势 12%、28 回合结束）。 */
-function fieldRate(W, params, kind, mode) {
-  const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
-  const STANCE = [R.SK.GUARD, R.SK.REFLECT, R.SK.BAGUA, R.SK.JINGU, R.SK.PROTO];
-  const ATK = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.DRAIN];
-  let stance = 0, atk = 0, tot = 0, rds = 0;
-  for (let g = 0; g < 10; g++) {
-    const st = S.createState(mode, { next: mulberry32(5100 + g) }, 5);
-    const r = mulberry32(6100 + g);
-    const human = (kind === 'active')
-      ? function (state, pid, legal) {
-        const a = legal.filter(function (x) { return x.affordable && ATK.indexOf(x.key) >= 0; });
-        if (a.length) { const o = S.opponentsOf(state, pid); return { key: a[0].key, target: o[Math.floor(r() * o.length)] }; }
-        return { key: R.SK.JI };
-      }
-      : function () { return { key: R.SK.JI }; };
-    const ch = [human];
-    for (let i = 1; i < 5; i++) ch.push(T.policyChooserN(params, 0.15));
-    Play.autoGameN(st, ch);
-    for (const e of st.events) {
-      if (e.type === 'action' && e.pid > 0 && e.outcome === 'ok') {
-        tot++;
-        if (STANCE.indexOf(e.key) >= 0) stance++;
-        else if (ATK.indexOf(e.key) >= 0) atk++;
-      }
-    }
-    rds += st.round;
-  }
-  return { stance: tot ? stance / tot : 0, atk: tot ? atk / tot : 0, rounds: rds / 10 };
-}
-
-const list = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });const files = list.length ? list : (function () {
+const list = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
+const files = list.length ? list : (function () {
   const out = ['js/bundled-champion-3p.js'];
   const dir = join(ROOT, 'docs/artifacts');
   if (existsSync(dir)) {
@@ -139,13 +48,13 @@ const W = sandbox();
  * ⇒ 此时量 `js/bundled-champion-3p.js` 会得到旧冠军的特征（本轮踩过）。给该行打标记。 */
 const trainingLive = existsSync(join(ROOT, 'docs/artifacts/.training.lock'));
 console.log('冠军体检（自对局 ' + GAMES + ' 局 · 考卷 ' + EXG + ' 局）' + (trainingLive ? '  ⚠️ 训练进行中：bundle 行不可信，请看对应 .bak' : '') + '\n');
-console.log('文件'.padEnd(42) + 'A 考卷1st  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E被动场架势 F活跃场进攻 F回合');
+console.log('文件'.padEnd(42) + 'A 考卷1st  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E被动场架势 F活跃场进攻 F回合  G有效技能数');
 for (const f of files) {
   const params = loadChamp(W, f);
   if (!params) { console.log(f.padEnd(42) + '  (读不出冠军包)'); continue; }
-  const e1 = exam(f, []);
-  const e2 = params ? exam(f, ['--mode=long', '--field=reflectwall']) : { first: null };
-  const sp = selfPlay(W, params, SP_MODE);
+  const e1 = exam(f, [], EXG);
+  const e2 = exam(f, ['--mode=long', '--field=reflectwall'], EXG);
+  const sp = selfPlay(W, params, SP_MODE, GAMES);
   const fPass = fieldRate(W, params, 'passive', SP_MODE);
   const fAct = fieldRate(W, params, 'active', SP_MODE);
   const nm = f.replace('docs/artifacts/', '').replace('js/', '').slice(0, 41);
@@ -160,8 +69,12 @@ for (const f of files) {
     String(e2.first == null ? '?' : e2.first).padStart(14) + '%' +
     (fPass.stance * 100).toFixed(0).padStart(10) + '%' +
     (fAct.atk * 100).toFixed(0).padStart(11) + '%' +
-    fAct.rounds.toFixed(1).padStart(7));
+    fAct.rounds.toFixed(1).padStart(7) +
+    sp.effSkills.toFixed(2).padStart(12) + ' (' + sp.distinctKeys + '种)');
 }
 console.log('\n判读：**A 高但 B 伤害≈0** = 靠"熬到哨声"赢的，不是强度（long-33 就是这个形状）；');
 console.log('      C 盾/局 高 ⇒ 互套盾风险（v1.5.4 之后把盾套给对手）；零伤害率/平局率高 = 摆烂；');
-console.log('      **E 被动场架势率高 + F 活跃场进攻率低** ⇒ 学出了"互戒均衡"（REVIEW §12：三张架势牌费用为 0）。');
+console.log('      **E 被动场架势率高 + F 活跃场进攻率低** ⇒ 学出了"互戒均衡"（REVIEW §12：三张架势牌费用为 0）；');
+console.log('      **G 有效技能数**（非ジ出手的 exp(熵)）< 3 ⇒ 打法只剩两三张卡。');
+console.log('      ⚠️ v1.5.18 起这几列**不再只是打印**：`tools/promote-champion.mjs` 会拿 E/F/G 与');
+console.log('         伤害/平局/全息屏障一起做**阻断条件**（--force 可越过，但会留痕）。');

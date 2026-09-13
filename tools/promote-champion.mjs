@@ -7,18 +7,24 @@
  *   ③ 忘了记成绩 ⇒ 下一个人不知道这个包值多少分。
  * 这个脚本把三件事绑成一条命令。
  *
- * ⚠️ 它会**先跑一遍冠军体检的 A/B 两类指标**（考卷 + 自对局打架活跃度）并把结果打出来 ——
- * 因为"单一考卷分会被熬骗"（REVIEW §11）：v1.5.7 换上 long-33 时它考卷 45.3%，
- * 自对局却 20/20 局零伤害。低于阈值的候选会**明确警告**（不阻止，决定权在人）。
+ * ⚠️ 它会**先跑一遍冠军体检的 A/B/C/E/F/G 类指标**（考卷 + 自对局打架活跃度 + 被动/活跃场行为 + 有效技能数）
+ * 并把结果打出来 —— 因为"单一考卷分会被熬骗"（REVIEW §11）：v1.5.7 换上 long-33 时它考卷 45.3%，
+ * 自对局却 20/20 局零伤害。v1.5.8 起这些只是 `console.warn`（末尾还写着"决定权在你"）；
+ * **v1.5.18 起它们是阻断条件**（第三方复核 §7-4(1)）：6 项任一不过就中止、不换包，
+ * 确实要越过就 `--force`（会把越过的条件记进 meta 的 `auditFails`/`auditForced`）。
  *
  * 用法：node tools/promote-champion.mjs docs/artifacts/eco-34.bak [--exam-games=40] [--games=10] [--note="..."]
+ *       [--force] [--exam-first=<1st%>]   # 后者用于沙箱里子进程管道被拦时，先自己跑 eval-5p 再把数传进来
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import vm from 'node:vm';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
+/* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
+ * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
+ * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
+import { sandbox, selfPlay, fieldRate } from './audit-lib.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
@@ -48,46 +54,78 @@ const packJson = champM[2];
 const meta = JSON.parse(metaM[2]);
 
 console.log('== 换前体检：' + SRC + ' ==');
-const ev = spawnSync(process.execPath, ['tools/eval-5p.mjs', String(EXG), '5', '77000', SRC], { cwd: ROOT, encoding: 'utf8' });
-const evOut = (ev.stdout || '') + (ev.stderr || '');
-const first = (/\[冠军\]\s*1st=([\d.]+)%/.exec(evOut) || [])[1];
-console.log('   多人 3 血考卷 1st = ' + (first || '?') + '%（' + EXG + ' 局）');
+/* --exam-first=<百分数>：跳过内部 spawn（沙箱里 Node 的子进程管道可能被拦），
+ * 由调用方先单独跑 `node tools/eval-5p.mjs <局数> 5 77000 <包>` 再把 1st% 传进来。
+ * 这时 meta 里会记 examSource:'cli' 以示区分（内部跑的记 'spawn'）。 */
+const EXAM_FIRST = flag('exam-first', '');
+let first = null, examSource = 'spawn';
+if (EXAM_FIRST !== '') {
+  first = String(EXAM_FIRST);
+  examSource = 'cli';
+  console.log('   多人 3 血考卷 1st = ' + first + '%（由 --exam-first 传入，未内部复跑）');
+} else {
+  const ev = spawnSync(process.execPath, ['tools/eval-5p.mjs', String(EXG), '5', '77000', SRC], { cwd: ROOT, encoding: 'utf8' });
+  const evOut = (ev.stdout || '') + (ev.stderr || '');
+  first = (/\[冠军\]\s*1st=([\d.]+)%/.exec(evOut) || [])[1];
+  console.log('   多人 3 血考卷 1st = ' + (first || '?') + '%（' + EXG + ' 局）');
+}
 
-/* 自对局活跃度：直接内联跑（与 champ-audit 同一口径，5 座全是它自己） */
-const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, window: {} };
-sb.globalThis = sb;
-for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js', 'js/train/policy.js', 'js/train/bots.js', 'js/train/evo.js']) {
-  vm.runInNewContext(readFileSync(join(ROOT, f), 'utf8'), sb, { filename: f });
-}
-const W = sb.window;
-const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+/* 自对局活跃度 + E/F/G：**共享指标库**（与 champ-audit 逐字同口径，5 座全是它自己）。
+ * ⚠️ v1.5.18：`--games` 默认从 10 提到 **20** —— G（有效技能数）在小样本下会**系统性偏低**：
+ * 实测同一个冠军 eco-34 的 G = n5:3.08 / n10:2.99 / n20:4.24 / n40:4.54 / n80:4.21 / n160:4.21
+ * （罕见技能还没出现 ⇒ 熵被低估）。用 n=10 去卡 `G<3` 等于把噪声当结论（本项目"阈值是刀锋"的第 N 次）。
+ * B/C/E/F 几列在 n=10 与 n=20 下读数接近（伤害/局 13.60 → 13.50），所以统一用 20 不影响历史可比性。 */
+const W = sandbox();
 const params = W.EpirusPolicy.unpack(JSON.parse(packJson));
-const G = Number(flag('games', 10));
-let dmg = 0, draws = 0, holo = 0, rds = 0;
-for (let g = 0; g < G; g++) {
-  const st = W.EpirusState.createState('multi', { next: mulberry32(9000 + g) }, 5);
-  const ch = []; for (let i = 0; i < 5; i++) ch.push(W.EpirusTrainer.policyChooserN(params, 0.15));
-  W.EpirusPlay.autoGameN(st, ch);
-  for (const e of st.events) { if (e.type === 'damage') dmg += e.amt; if (e.type === 'holoSet') holo++; }
-  rds += st.round;
-  if (st.p.every((p) => p.hp > 0)) draws++;
+const G = Number(flag('games', 20));
+const sp = selfPlay(W, params, 'multi', G);
+const fPass = fieldRate(W, params, 'passive', 'multi');
+const fAct = fieldRate(W, params, 'active', 'multi');
+const dpg = sp.dmgPerGame, drawRate = sp.drawRate;
+console.log('   自对局（5 座同一冠军 ×' + G + '）：伤害/局 = ' + dpg.toFixed(1) +
+  '，平局率 = ' + (drawRate * 100).toFixed(0) + '%，回合 = ' + sp.rounds.toFixed(1) +
+  '，全息屏障/局 = ' + sp.holoPerGame.toFixed(1) + '，有效技能数 = ' + sp.effSkills.toFixed(2));
+console.log('   E 被动场架势率 = ' + (fPass.stance * 100).toFixed(0) + '%   F 活跃场进攻率 = ' + (fAct.atk * 100).toFixed(0) + '%');
+/* G 的样本下限：见上面 `--games` 的说明（n<20 时熵会被罕见技能的低估拖下去）。 */
+if (G < 20) console.warn('   ⚠️ 自对局只有 ' + G + ' 局：G（有效技能数）在小样本下会系统性偏低，别拿它下结论（n≥20 才收敛）。');
+
+/* v1.5.18（第三方复核 §7-4(1)）：原先只有 3 条 `console.warn`（末尾还写"决定权在你"），
+ * 而 champ-audit 的 E/F 两列**只打印、不参与任何判定** ⇒ "集体防御/打法坍缩"这类形状量出来了也没人挡。
+ * 现在 6 项全部是**阻断条件**；确实要越过就 `--force`，但会在 meta 里留痕（auditFails/auditForced）。 */
+const FORCE = process.argv.includes('--force');
+const fails = [];
+if (dpg < 5) fails.push('伤害/局 ' + dpg.toFixed(1) + ' < 5（很可能是"熬"型冠军：考卷分会被熬骗）');
+if (drawRate > 0.2) fails.push('平局率 ' + (drawRate * 100).toFixed(0) + '% > 20%（自对局打不起来）');
+if (sp.holoPerGame > 2) fails.push('全息屏障 ' + sp.holoPerGame.toFixed(1) + ' 次/局 > 2（v1.5.4 之前的产物会把盾套给对手）');
+if (fPass.stance > 0.85) fails.push('E 被动场架势率 ' + (fPass.stance * 100).toFixed(0) + '% > 85%（对手不进攻时它也不进攻）');
+if (fAct.atk < 0.35) fails.push('F 活跃场进攻率 ' + (fAct.atk * 100).toFixed(0) + '% < 35%（正常对局里也不进攻）');
+if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) + ' < 3（打法坍缩到两三张卡）');
+if (fails.length) {
+  console.error('⛔ 体检未过（' + fails.length + ' 项阻断条件）：');
+  for (const x of fails) console.error('   · ' + x);
+  if (!FORCE) {
+    console.error('   ⇒ 已中止，**未换包**。确实要换就加 `--force`（会在 meta 里留下这次越过的条件）。');
+    process.exit(6);
+  }
+  console.warn('   ⇒ --force：强制继续，并把这次越过的条件记进 meta。');
 }
-const dpg = dmg / G, drawRate = draws / G;
-console.log('   自对局（5 座同一冠军 ×' + G + '）：伤害/局 = ' + dpg.toFixed(1) + '，平局率 = ' + (drawRate * 100).toFixed(0) + '%，回合 = ' + (rds / G).toFixed(1) + '，全息屏障/局 = ' + (holo / G).toFixed(1));
-let warn = 0;
-if (dpg < 5) { console.warn('   ⚠️ 伤害/局 < 5：这很可能是"熬"型冠军（考卷分会被熬骗）'); warn++; }
-if (drawRate > 0.2) { console.warn('   ⚠️ 平局率 > 20%：自对局打不起来'); warn++; }
-if (holo / G > 2) { console.warn('   ⚠️ 全息屏障 > 2 次/局：v1.5.4 之前的产物会把盾套给对手，可能互套盾僵局'); warn++; }
-if (warn) console.warn('   ⇒ 有 ' + warn + ' 项警告，确认无误再继续（决定权在你）。');
 
 /* 2) 写 bundle：保留权重原样，只补 meta */
 const fp = rulesFingerprint();
 meta.shippedAs = NOTE || ('multi(3-5P) 默认冠军（由 tools/promote-champion.mjs 提升，源 ' + SRC + '）');
 meta.examScoreAtBuild = first ? Number(first) / 100 : null;
 meta.examMode = 'multi'; meta.examGames = EXG; meta.examSeed = 77000; meta.examAt = new Date().toISOString().slice(0, 10);
+meta.examSource = examSource;                 // 'spawn' = 本工具内部复跑；'cli' = 由 --exam-first 传入
 meta.rulesFingerprint = fp;
 meta.selfPlayDmgPerGame = Number(dpg.toFixed(2));
 meta.selfPlayDrawRate = Number(drawRate.toFixed(3));
+/* v1.5.18：把新增/新启用的门槛项也记进 meta（否则"这个包当年是怎么过门的"又变成不可查）。 */
+meta.selfPlayEffSkills = Number(sp.effSkills.toFixed(2));
+meta.selfPlayDistinctKeys = sp.distinctKeys;
+meta.passiveStanceRate = Number(fPass.stance.toFixed(3));
+meta.activeAttackRate = Number(fAct.atk.toFixed(3));
+meta.auditFails = fails;
+meta.auditForced = fails.length ? FORCE : false;
 const out = src.replace(metaM[0], metaM[1] + JSON.stringify(meta) + ';');
 /* 回读自检：冠军槽必须仍是**能解出参数的包**（第一版写坏槽位时就是这里没查，靠 np-test 才发现） */
 const reChamp = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(out);

@@ -137,9 +137,16 @@
      * 而且 5 血比 3 血更容易拖到点（E 卷 36.9%→49.2%）⇒ 有一半样本测的是"到时谁血多"，
      * 不是"谁把谁打死"。v1.5.10（用户裁定）起它**不再是长程模式专属**，而是**全局规则**
      * （见下面的 SUDDEN_DEATH）；maxRounds=140 只作安全网（正常情况在 ~105 回合就清完）。 */
-    long: { name: '长程模式(5血·3-5人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 3, maxRounds: 140 },
-    fast: { name: '快速模式', hp: 1, skills: [SK.JI, SK.GUN, SK.GUARD], rule: '防御不能连续使用 3 次', guardLimit: 2 },
-    lucky: { name: '欧皇模式', hp: 3, skills: [SK.JI, SK.JINSHIELD, SK.BAGUA, SK.GUN], rule: '' }
+    long: { name: '长程模式(5血·3-5人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 3, maxRounds: 140 }
+    /* v1.5.18（用户裁定）：**删除** `fast`（快速模式）与 `lucky`（欧皇模式）。
+     * 起因（第三方复核 §3-2）：这两个模式**没有入口**（`index.html` 的 `#sel-mode` 只有 standard/multi/long）、
+     * 没有工具/服务端引用，但 `MODES` 里还留着 `fast`、连带 `guardLimit: 2` 这个**纯死字段**
+     * （全库零消费者）与 `state.js`/`play.js` 里两条 `state.modeKey === 'fast'` 分支，
+     * 而 `tests/spec.js` 的 R52 用例**还在跑** ⇒ 守的是一条不可达的路径。
+     * 现状"有实现、有测试、无入口"是最容易骗过自己的形态（作者本人都以为删了）——
+     * 用户裁定"快速和欧皇模式去掉"，所以这里删干净（连 `guardStreak` 一起）。
+     * 原始规则里的这两个模式（含**吸血鬼模式**）登记为"本程序不做"，见 `docs/RULES-2P.md` 的模式表。
+     * 守卫：`np-test D28`（MODES 的每个 key 都必须能在页面选到）。 */
   };
 
   const MODE_DEFAULT = 'standard';

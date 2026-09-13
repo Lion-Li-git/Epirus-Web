@@ -15,7 +15,12 @@
  * 而旧冠军（v1.3.58）根本不出环 ⇒ 这条能证明**页面真的在用新换上去的那个包**，
  * 而不是被 localStorage 或 `?v=` 缓存留在旧冠军上（那正是换冠军最容易静默失败的地方）。
  *
- * 用法：node tools/battle-test.mjs [chrome路径] [端口] [--players=5] [--max-ms=180000] [--out=results]
+ * 用法：node tools/battle-test.mjs [chrome路径] [端口] [--players=5] [--max-ms=180000] [--out=docs/artifacts/battle-out]
+ *
+ * ⚠️ v1.5.18（第三方复核 §5-9）：`--out` 默认值从 `results` 改成 `docs/artifacts/battle-out`。
+ * 原因是原默认会覆写 **git 跟踪**的 `results/battle-0{1,2,3,4}.png` ⇒ 一次"只读复核"照抄
+ * 验收单里的命令就会把工作区弄脏（复核者实测踩到，还得 `git checkout --` 还原）。
+ * 新目录已进 `.gitignore`。要看历史截图仍在 `results/`（它们不再被覆盖）。
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
@@ -34,7 +39,8 @@ const PORT = Number(ARGV[1] || 9341);
 const URL = 'file:///' + join(ROOT, 'index.html').replace(/\\/g, '/');
 const PLAYERS = Number(flag('players', 5));
 const MAX_MS = Number(flag('max-ms', 180000));
-const OUT = join(ROOT, flag('out', 'results'));
+/* v1.5.18：默认落点改到**未跟踪**目录（原先写 results/，会覆写 git 跟踪的历史截图）。 */
+const OUT = join(ROOT, flag('out', 'docs/artifacts/battle-out'));
 
 const udd = mkdtempSync(join(tmpdir(), 'epirus-battle-'));
 const proc = spawn(CHROME, [

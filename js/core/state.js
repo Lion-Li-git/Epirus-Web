@@ -13,7 +13,6 @@
       beadNew: null,                // 本回合蓄能新得的珠类型（endTurn 据此决定谁过期）
       ringStreak: 0,                // 聚能环连击 R10
       cannonCount: 0,               // 过载炮次数 R42
-      guardStreak: 0,               // 防御连击（快速模式上限 2）R52
       cooldown: {},                 // 大雷禁用 R29
       rodGuard: 0,                  // 避雷针情形B（剩余免雷次数）R31
       mineArmed: false,             // R38
@@ -158,10 +157,6 @@
       p.hp -= 1;
       ev2({ type: 'damage', to: pid, amt: 1, reason: '禁用期间强行使用(' + def.name + ')', via: 'ban' });
       return fail('banned', '禁用中(-1HP)');
-    }
-    // 快速模式：防御不能连续 3 次（最多连续 2 次）R52
-    if (state.modeKey === 'fast' && key === R.SK.GUARD && p.guardStreak >= 2) {
-      return fail('invalid', '防御已连续2次');
     }
     if (p.infiniteEnergy) {
       state.actions[pid] = { key, voided: false, outcome: 'ok', opt: opt || null, target: tg, target2: tg2 };

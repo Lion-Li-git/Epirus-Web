@@ -19,6 +19,26 @@ for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/
 const R = sb.EpirusRules, P = sb.EpirusPolicy, T = sb.EpirusTrainer, Bots = sb.EpirusBots;
 const Play = sb.EpirusPlay, S = sb.EpirusState, X = sb.EpirusResolve;
 
+/* v1.5.18（第三方复核 §5-2）：本脚本是**第 6 个训练入口**（`T.makeTrainer` 调用点之一），
+ * 此前既不在 REPRO 的扫描表里、也不在 REPRO2 的名单里，而且**完全没播种** ⇒
+ * 每次跑出来的诊断对局都不一样（"同一现象复现不了"就是这么来的）。
+ * 与其它入口用同一套播种：policy 的 randn + 沙箱 Math。 */
+const DIAG_SEED = Number(process.env.EPIRUS_SEED || 1);
+if (P.setRng && T.mulberry32) P.setRng(T.mulberry32(DIAG_SEED * 7919 + 13));
+__seedSandbox(sb, DIAG_SEED);
+function __seedSandbox(sbox, seed) {
+  if (!seed) return;
+  const M = Object.create(Math);
+  let s = (seed >>> 0) || 1;
+  M.random = function () {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  sbox.Math = M;
+}
+
 const trainer = T.makeTrainer({ popSize: 16, gamesPerOpp: 6 });
 for (let g = 0; g < 150; g++) T.step(trainer);
 const champ = trainer.champion;

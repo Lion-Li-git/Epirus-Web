@@ -8,6 +8,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { makeAsyncStep } from '../server/paralleltrain.mjs';
+/* v1.5.18：2P 基准表改成**单一来源**（本文件与 `tools/promote-champion2p.mjs` 共用一份）。
+ * ⚠️ 键序就是基准顺序（考卷种子 = 20260207 + i*977）⇒ 插/删/重排都会改变历史成绩。 */
+import { P2_FNAME as fname, P2_NAMES as NAMES } from './p2-baselines.mjs';
+import { rulesFingerprint } from './rules-fingerprint.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -49,8 +53,8 @@ const workers = Number(process.argv[4]) || 0;
 const stepAsync = makeAsyncStep(T, workers ? { workers: workers } : {});
 console.log(`[parallel] worker 数：${stepAsync.workers}；训练 ${N} 个候选 × ${GENS} 代`);
 
-const fname = { random: 'pickRandom', aggro: 'pickAggro', defend: 'pickDefend', balanced: 'pickBalanced', breakdef: 'pickBreakDef', wall: 'pickWall', reflectspam: 'pickReflectSpam', guardspam: 'pickGuardSpam', baguaspam: 'pickBaguaSpam', combocounter: 'pickComboCounter', mix: 'pickMix', tankline: 'pickTankLine', heavyfire: 'pickHeavyFire', guardgun: 'pickGuardGun', protowall: 'pickProtoWall', whiff: 'pickWhiff', reflectmix: 'pickReflectMix', reflecttank: 'pickReflectTank', defreflectgun: 'pickDefReflectGun' };
-const NAMES = Object.keys(fname);
+/* v1.5.18：2P 基准表已抽到 `tools/p2-baselines.mjs`（单一来源；本文件与 promote-champion2p 共用）。
+ * ⚠️ 键序就是基准顺序（种子 = 20260207 + i*977）⇒ 重排会改变历史考卷分，见该文件注释。 */
 // 与页面“困难·冠军”一致的出招：temp 0.15、只挑可负担
 function champSel(c) {
   return function (state, pid, legal) {
@@ -124,7 +128,18 @@ for (const c of cands) console.log('   ' + c.tag.padEnd(8) + ' sc=' + c.sc.toFix
 console.log('   实际胜率损失 = ' + ((topSc - best.sc) * 100).toFixed(1) + 'pt');
 const packStr = JSON.stringify(best.pack);
 if (existsSync(dest)) copyFileSync(dest, dest + '.bak');   // 覆写前留一份 .bak
-const meta = { source: 'tools/train-best.mjs', seeds: N, gens: GENS, ts: new Date().toISOString(), champWr: best.ev.avg, divNorm: best.div.divNorm, distinct: best.div.distinct, wrTol: WR_TOL };
+const meta = {
+  source: 'tools/train-best.mjs', seeds: N, gens: GENS, ts: new Date().toISOString(),
+  champWr: best.ev.avg, divNorm: best.div.divNorm, distinct: best.div.distinct, wrTol: WR_TOL,
+  /* v1.5.18（第三方复核 §5-1）：2P 包此前**一个 meta 字段都没有** ⇒ `np-test D16` 完全看不到它，
+   * 于是"最后一次重训是 v1.3.47、此后 11 次提交动过 core、其中 v1.5.7 还把全息屏障移出 2P 卡表"
+   * 这件事没有任何机械检查能发现。现在 2P 包也必须记：考卷成绩 + **规则指纹**。 */
+  examMode: '2p-standard', examBaselines: NAMES.length, examGames: 40,
+  examScoreAtBuild: Number(best.ev.avg.toFixed(4)),
+  examMinBaseline: Number(Math.min.apply(null, NAMES.map(function (k) { return best.ev.per[k]; })).toFixed(4)),
+  examGateOk: NAMES.every(function (k) { return best.ev.per[k] > 0.5; }),
+  seed: __SEED, workers: stepAsync.workers, rulesFingerprint: rulesFingerprint()
+};
 writeFileSync(dest,
   '/* Epirus 内置冠军：由 tools/train-best.mjs 生成（' + N + ' 候选择优，' + GENS + ' 代，总 ' + bestTime.toFixed(0) + 's）。不要手改。 */\n' +
   'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(meta) + ';\n' +

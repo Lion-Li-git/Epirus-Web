@@ -197,6 +197,13 @@
     const st3 = game('standard', seqRng([0.1, 0.1, 0.1])); setEp(st3, 5, 0);
     play(st3, SK.SNIPE, SK.JI);
     eq(st3.p[1].hp, 1, '三判定全胜=爆头');
+    /* v1.5.18（第三方复核 §2-3 实测）：**上面那一条其实什么都没守住**。
+     * 它的构造是三次都拿 0.1 去比 0.5 ⇒ 把 `judge3` 改成 `judge`（只判一次）**照样绿**：
+     * 测试锁住了一个输出，没锁住规则里的那个"3"。下面这组才是真正的判据 ——
+     * "胜、胜、负"：judge3 ⇒ 不爆头；judge（只判一次）⇒ 会爆头 ⇒ 改坏了必红。 */
+    const st4 = game('standard', seqRng([0.1, 0.1, 0.6])); setEp(st4, 5, 0);
+    play(st4, SK.SNIPE, SK.JI);
+    eq(st4.p[1].hp, 2, '三轮必须**全胜**才爆头（2 胜 1 负 ⇒ 只有普通 1 点伤害）');
   });
 
   t('R25/26 摄魂：限1血、命中自愈1', function () {
@@ -302,16 +309,6 @@
     eq(st.p[1].hp, 2); eq(st.p[1].ep, 0);
     eq(st.p[0].hp, 2, '自损1');
     eq(st.p[0].ep, 0);
-  });
-
-  t('R52 快速模式防御连击上限', function () {
-    const st = game('fast'); setEp(st, 0, 0);
-    st.p[0].guardStreak = 2;
-    const r = S.attemptAction(st, 0, SK.GUARD);
-    eq(r.outcome, 'invalid', '第3次被拒');
-    st.p[0].guardStreak = 1;
-    const r2 = S.attemptAction(st, 0, SK.GUARD);
-    eq(r2.outcome, 'ok', '第2次允许');
   });
 
   t('R10 聚能环连击收益', function () {
@@ -458,13 +455,17 @@
     eq(st.p[0].elec, 0, 'R4 电磁炮消耗电珠');
   });
 
-  t('R45 铁索连环：天火与爆头也共享伤害（文档口径）', function () {
+  t('R45 铁索连环：天火与爆头也共享伤害（文档口径；v1.5.18 起连边**一次性**）', function () {
+    /* v1.5.18（用户裁定，按原文修正）：原文「**下一次**当其中一个角色受到伤害时，另一个也受到相同伤害」
+     * ⇒ 共享过一次连边即解除。本用例原先连续打两次、指望连边还在 —— 那正是"持久光环"的错误语义。 */
     const st = game(); setEp(st, 5, 5);
     st.p[0].chains = [1]; st.p[1].chains = [0];
     st.p[0].hp = 3; st.p[1].hp = 3;
     X.rawDamage(st, 1, 1, '天火', 'firestorm', { type: R.DMG.FIRE });
     eq(st.p[1].hp, 2, '天火命中目标');
     eq(st.p[0].hp, 2, '铁索把天火共享给另一方');
+    eq(st.p[1].chains.length, 0, '共享一次后连边解除（一次性）');
+    st.p[0].chains = [1]; st.p[1].chains = [0];      // 重新互勾才有连边（真实路径见 np-test N8/D30）
     st.p[0].hp = 3; st.p[1].hp = 3;
     X.rawDamage(st, 1, 1, '爆头', 'headshot', {});
     eq(st.p[1].hp, 2, '爆头命中目标');

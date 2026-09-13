@@ -10,6 +10,8 @@ import vm from 'node:vm';
 import { OPP_SPECS } from './opp-pool.mjs';   // v1.4.9：池子单一来源（原先 server/worker 各写一遍会静默漂移）
 /* v1.5.2：`champ:<路径>` 冠军对手。函数无法跨线程传 ⇒ 各 worker 自己构造，但解析规则是同一份。 */
 import { makeOppSelResolver } from './opp-champs.mjs';
+/* v1.5.18：反摆烂奖励 env 的**单一来源**（审计 §5-3：原先两端各写一遍 ⇒ 只设 FIRST 时静默半开）。 */
+import { readFightEnv, hasFightOverride } from './fight-env.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -54,9 +56,12 @@ const OPP_POOL = OPP_SPECS.map(function (o) {
 if (T.setEconomyReward && (process.env.EPIRUS_ECO_TARGET != null || process.env.EPIRUS_ECO_CAP != null || process.env.EPIRUS_ECO_DIVW != null)) {
   T.setEconomyReward({ target: process.env.EPIRUS_ECO_TARGET, cap: process.env.EPIRUS_ECO_CAP, divW: process.env.EPIRUS_ECO_DIVW });
 }
-/* v1.5.8：反摆烂覆盖（哨声惩罚 / 出手权重）—— 同 env 机制，两端一致 */
-if (T.setFightReward && (process.env.EPIRUS_FIGHT_WHISTLE != null || process.env.EPIRUS_FIGHT_DEAL != null || process.env.EPIRUS_FIGHT_FIRST != null)) {
-  T.setFightReward({ whistlePen: process.env.EPIRUS_FIGHT_WHISTLE, dealW: process.env.EPIRUS_FIGHT_DEAL, firstW: process.env.EPIRUS_FIGHT_FIRST });
+/* v1.5.8：反摆烂覆盖（哨声惩罚 / 出手权重 / 先手激励）—— 同 env 机制，两端一致。
+ * v1.5.18：改走 `server/fight-env.mjs`（与 `train-server.mjs` **同一份**判定）⇒
+ * "哪一侧漏判了一个 env"这个 bug 类别在结构上不可能再出现。 */
+const fightEnv = readFightEnv(process.env);
+if (T.setFightReward && hasFightOverride(fightEnv)) {
+  T.setFightReward(fightEnv);
 }
 /* v1.5.2：对手名走**与 server 同一个解析器**（脚本名 + `champ:<路径>` 冠军对手）。
  * 函数无法跨线程传 ⇒ worker 必须自己构造，但**规则只有一份**（opp-champs.mjs）——
@@ -127,9 +132,11 @@ parentPort.on('message', (msg) => {
         // (c) 承诺局记账：分巢精英与终局门槛都要靠它，丢了这一项 h 基因就白加了
         hGene: m.h || 0, commitGames: r.commitGames, commitFirstRate: r.commitFirstRate,
         modeUsed: (T.trainMode ? T.trainMode() : null),   // 自检回执：服务端据此确认模式真的生效
-        /* v1.5.11 自检回执：哨声惩罚现在是**按模式自动**开的（长程 0.5）⇒ worker 若不知道模式，
-         * 它那份就静默是 0（"半开"事故同型：日志完全正常、产物却少了一半适应度）。 */
-        fightPen: (T.fightReward ? T.fightReward().whistlePen : null),
+        /* v1.5.11 自检回执。⚠️ v1.5.18：原注释写"哨声惩罚现在是**按模式自动**开的（长程 0.5）"——
+         * 那是 v1.5.11 的旧口径，v1.5.12 已回滚（见 `evo.js` 的 `whistlePenNow()`）⇒ 现在回执的是
+         * env 覆盖后的实际值。同时从"只回 whistlePen"扩成**整份**（含 dealW / firstW）：
+         * 服务端只设 `EPIRUS_FIGHT_FIRST` 时曾漏判触发条件 ⇒ 两端不一致也查不出来（第三方复核 §5-3）。 */
+        fight: (T.fightReward ? T.fightReward() : null),
         styleGames: r.styleGames || 0, styleRate: r.styleRate || 0,   // v1.5.2：风格切片回执（服务端据此自检）
         commitTop2Rate: r.commitTop2Rate, commitMaxEp: r.commitMaxEp
       };
