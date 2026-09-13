@@ -85,7 +85,10 @@ const dpg = sp.dmgPerGame, drawRate = sp.drawRate;
 console.log('   自对局（5 座同一冠军 ×' + G + '）：伤害/局 = ' + dpg.toFixed(1) +
   '，平局率 = ' + (drawRate * 100).toFixed(0) + '%，回合 = ' + sp.rounds.toFixed(1) +
   '，全息屏障/局 = ' + sp.holoPerGame.toFixed(1) + '，有效技能数 = ' + sp.effSkills.toFixed(2));
-console.log('   E 被动场架势率 = ' + (fPass.stance * 100).toFixed(0) + '%   F 活跃场进攻率 = ' + (fAct.atk * 100).toFixed(0) + '%');
+console.log('   E 被动场：旧口径摆架势率 = ' + (fPass.stance * 100).toFixed(0) + '%   ' +
+  '**新口径·无威胁(对手ジ<5)时摆架势 = ' + (fPass.noThreatStanceRate * 100).toFixed(0) + '%**' +
+  '（无威胁回合 ' + fPass.noThreatRounds + '，最长无威胁连摆 ' + fPass.maxNoThreatRun + '）' +
+  '   F 活跃场进攻率 = ' + (fAct.atk * 100).toFixed(0) + '%');
 /* G 的样本下限：见上面 `--games` 的说明（n<20 时熵会被罕见技能的低估拖下去）。 */
 if (G < 20) console.warn('   ⚠️ 自对局只有 ' + G + ' 局：G（有效技能数）在小样本下会系统性偏低，别拿它下结论（n≥20 才收敛）。');
 
@@ -97,7 +100,13 @@ const fails = [];
 if (dpg < 5) fails.push('伤害/局 ' + dpg.toFixed(1) + ' < 5（很可能是"熬"型冠军：考卷分会被熬骗）');
 if (drawRate > 0.2) fails.push('平局率 ' + (drawRate * 100).toFixed(0) + '% > 20%（自对局打不起来）');
 if (sp.holoPerGame > 2) fails.push('全息屏障 ' + sp.holoPerGame.toFixed(1) + ' 次/局 > 2（v1.5.4 之前的产物会把盾套给对手）');
-if (fPass.stance > 0.85) fails.push('E 被动场架势率 ' + (fPass.stance * 100).toFixed(0) + '% > 85%（对手不进攻时它也不进攻）');
+/* v1.5.26（用户裁定）：E 改用**新口径**。旧口径（摆架势回合占比 > 85%）会**误伤合理防御** ——
+ * 用户原话："并不是说不能出防御，特定情况下反而是要出的（比如看到对手攒到 5 ji 防一下大雷），但总不能每回合都这样。"
+ * 实测（10 局被动场）：旧口径 eco-34 89% ✗ / v7press-36 95% ✗；而新口径它们分别是 16% / 46% ✓✓
+ * —— 也就是说旧口径把"有威胁时才防"和"无威胁也一直防"混为一谈了。
+ * 门槛 60%：实测病态样本 v7anneal-34 = 100%（挡），健康样本 1%~46%（放行）。 */
+if (fPass.noThreatStanceRate > 0.6) fails.push('E 无威胁时摆架势 ' + (fPass.noThreatStanceRate * 100).toFixed(0) +
+  '% > 60%（对手ジ还没到 5、没有大雷威胁时，它也一直摆架势）');
 if (fAct.atk < 0.35) fails.push('F 活跃场进攻率 ' + (fAct.atk * 100).toFixed(0) + '% < 35%（正常对局里也不进攻）');
 if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) + ' < 3（打法坍缩到两三张卡）');
 if (fails.length) {
@@ -123,6 +132,9 @@ meta.selfPlayDrawRate = Number(drawRate.toFixed(3));
 meta.selfPlayEffSkills = Number(sp.effSkills.toFixed(2));
 meta.selfPlayDistinctKeys = sp.distinctKeys;
 meta.passiveStanceRate = Number(fPass.stance.toFixed(3));
+meta.passiveNoThreatStanceRate = Number(fPass.noThreatStanceRate.toFixed(3));
+meta.passiveNoThreatRounds = fPass.noThreatRounds;
+meta.passiveMaxNoThreatRun = fPass.maxNoThreatRun;
 meta.activeAttackRate = Number(fAct.atk.toFixed(3));
 meta.auditFails = fails;
 meta.auditForced = fails.length ? FORCE : false;

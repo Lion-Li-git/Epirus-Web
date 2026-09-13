@@ -48,7 +48,7 @@ const W = sandbox();
  * ⇒ 此时量 `js/bundled-champion-3p.js` 会得到旧冠军的特征（本轮踩过）。给该行打标记。 */
 const trainingLive = existsSync(join(ROOT, 'docs/artifacts/.training.lock'));
 console.log('冠军体检（自对局 ' + GAMES + ' 局 · 考卷 ' + EXG + ' 局）' + (trainingLive ? '  ⚠️ 训练进行中：bundle 行不可信，请看对应 .bak' : '') + '\n');
-console.log('文件'.padEnd(42) + 'A 考卷1st  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E被动场架势 F活跃场进攻 F回合  G有效技能数');
+console.log('文件'.padEnd(42) + 'A 考卷1st  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F活跃场进攻 F回合 G有效技能数');
 for (const f of files) {
   const params = loadChamp(W, f);
   if (!params) { console.log(f.padEnd(42) + '  (读不出冠军包)'); continue; }
@@ -67,14 +67,16 @@ for (const f of files) {
     (sp.drawRate * 100).toFixed(0).padStart(7) + '%' +
     sp.rounds.toFixed(1).padStart(7) +
     String(e2.first == null ? '?' : e2.first).padStart(14) + '%' +
-    (fPass.stance * 100).toFixed(0).padStart(10) + '%' +
+    /* v1.5.26（用户裁定）：E 改用新口径 —— 对手ジ<5（无大雷威胁）时还摆架势的占比。
+     * 旧口径（总占比）会把"看到对手攒到 5 ジ 该防一下"也判成病：实测 eco-34 旧 89% / 新 16%。 */
+    (fPass.noThreatStanceRate * 100).toFixed(0).padStart(10) + '%' +
     (fAct.atk * 100).toFixed(0).padStart(11) + '%' +
     fAct.rounds.toFixed(1).padStart(7) +
     sp.effSkills.toFixed(2).padStart(12) + ' (' + sp.distinctKeys + '种)');
 }
 console.log('\n判读：**A 高但 B 伤害≈0** = 靠"熬到哨声"赢的，不是强度（long-33 就是这个形状）；');
 console.log('      C 盾/局 高 ⇒ 互套盾风险（v1.5.4 之后把盾套给对手）；零伤害率/平局率高 = 摆烂；');
-console.log('      **E 被动场架势率高 + F 活跃场进攻率低** ⇒ 学出了"互戒均衡"（REVIEW §12：三张架势牌费用为 0）；');
+console.log('      **E 无威胁摆架势率高 + F 活跃场进攻率低** ⇒ 学出了"互戒均衡"（REVIEW §12：三张架势牌费用为 0）；');
 console.log('      **G 有效技能数**（非ジ出手的 exp(熵)）< 3 ⇒ 打法只剩两三张卡。');
 console.log('      ⚠️ v1.5.18 起这几列**不再只是打印**：`tools/promote-champion.mjs` 会拿 E/F/G 与');
 console.log('         伤害/平局/全息屏障一起做**阻断条件**（--force 可越过，但会留痕）。');

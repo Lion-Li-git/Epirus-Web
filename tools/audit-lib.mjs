@@ -69,12 +69,59 @@ export function selfPlay(W, params, mode, GAMES) {
 
 /* E/F：**对手活跃度**对冠军行为的影响（v1.5.14 加，起因是用户实测"集体防御"）。
  * 0 号座用"被动（只ジ）"或"活跃（每回合进攻）"的固定策略，其余 4 座都是被测冠军 ⇒ 量 AI 座的架势/进攻占比。 */
+/* ===== E 新口径（v1.5.26，用户裁定）=====
+ * 用户原话："有人攒 ji 而自己也攒并没有什么问题；当初是有人攒 ji，结果冠军就一直出防御类技能，感觉非常奇怪。
+ * 并不是说不能出防御，特定情况下反而要出（比如看到对手攒到 5 ji 时防一下大雷），但总不能每回合都这样。"
+ * ⇒ 旧口径（摆架势回合占比 > 85% 即判病）会**误伤合理防御**。新口径两条：
+ *   ① `noThreatStanceRate`：**对手还没有威胁**（ep < 5，大雷门槛）的那些回合里，摆架势的占比；
+ *   ② `maxRun`：**最长连续摆架势**回合数（"总不能每回合都这样"）。
+ * 纯函数（入参是每回合每座位的出招记录 + 每回合的威胁标志），便于守门做行为断言。 */
+export function stanceProfile(rows, threatByRound) {
+  const bySeat = {};
+  let noThreatTot = 0, noThreatStance = 0, maxRun = 0, stanceTot = 0;
+  for (const r of rows) {
+    const th = !!(threatByRound && threatByRound[r.round]);
+    if (!th) { noThreatTot++; if (r.stance) noThreatStance++; }
+    if (r.stance) stanceTot++;
+    const st = bySeat[r.seat] || { run: 0, last: -2, max: 0 };
+    if (r.stance) {
+      st.run = (st.last === r.round - 1) ? st.run + 1 : 1;
+      if (st.run > st.max) st.max = st.run;
+    } else st.run = 0;
+    st.last = r.round;
+    bySeat[r.seat] = st;
+    if (st.max > maxRun) maxRun = st.max;
+  }
+  /* `maxNoThreatRun`：**只在"无威胁"回合里**数连续摆架势 —— 实测 `maxRun`（不区分威胁）没有区分度：
+   * 所有会打环的冠军后期都是 56~59 连摆，因为那时对手早就攒过 5 ジ（防大雷是**合理**的）。 */
+  const bySeatN = {};
+  let maxNoThreatRun = 0;
+  for (const r of rows) {
+    const th = !!(threatByRound && threatByRound[r.round]);
+    const st = bySeatN[r.seat] || { run: 0, last: -2, max: 0 };
+    if (r.stance && !th) {
+      st.run = (st.last === r.round - 1) ? st.run + 1 : 1;
+      if (st.run > st.max) st.max = st.run;
+    } else if (!r.stance) st.run = 0;
+    if (!th) st.last = r.round; else st.last = -2;   // 有威胁的回合会打断"无威胁连摆"
+    bySeatN[r.seat] = st;
+    if (st.max > maxNoThreatRun) maxNoThreatRun = st.max;
+  }
+  return {
+    rounds: rows.length, maxRun: maxRun, maxNoThreatRun: maxNoThreatRun,
+    noThreatRounds: noThreatTot,
+    noThreatStanceRate: noThreatTot ? noThreatStance / noThreatTot : 0,
+    stanceRate: rows.length ? stanceTot / rows.length : 0
+  };
+}
+
 export function fieldRate(W, params, kind, mode, GAMES) {
   const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
   const G = GAMES || 10;
   const STANCE = [R.SK.GUARD, R.SK.REFLECT, R.SK.BAGUA, R.SK.JINGU, R.SK.PROTO];
   const ATK = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.DRAIN];
   let stance = 0, atk = 0, tot = 0, rds = 0;
+  let noThreatRounds = 0, noThreatStance = 0, maxRun = 0, maxNoThreatRun = 0, stanceRows = 0, rowTot = 0;
   for (let g = 0; g < G; g++) {
     const st = S.createState(mode, { next: mulberry32(5100 + g) }, 5);
     const r = mulberry32(6100 + g);
@@ -88,14 +135,41 @@ export function fieldRate(W, params, kind, mode, GAMES) {
     const ch = [human];
     for (let i = 1; i < 5; i++) ch.push(T.policyChooserN(params, 0.15));
     Play.autoGameN(st, ch);
+    /* 重建回合：每回合每玩家最多一条 `action` 事件（`round` 字段不是所有事件都有，故不能用它）。
+     * 威胁判据 = 该回合开始时**被动座位（pid 0）**的累计 ep ≥ 5（大雷门槛）—— 他只会出ジ，所以是单调增的。 */
+    const rows = [], threat = {};
+    let seen = {}, cur = -1, ep0 = 0, pending = [];
+    const flush = function () { for (const q of pending) rows.push({ seat: q.seat, round: cur, stance: q.stance }); pending = []; };
     for (const e of st.events) {
-      if (e.type === 'action' && e.pid > 0 && e.outcome === 'ok') {
-        tot++;
-        if (STANCE.indexOf(e.key) >= 0) stance++;
-        else if (ATK.indexOf(e.key) >= 0) atk++;
+      if (e.type === 'ep' && e.pid === 0 && e.delta > 0) ep0 += e.delta;
+      if (e.type === 'action') {
+        if (seen[e.pid] !== undefined) { flush(); seen = {}; cur++; }
+        else if (cur < 0) cur = 0;
+        seen[e.pid] = true;
+        if (e.pid > 0 && e.outcome === 'ok') {
+          tot++;
+          const isStance = STANCE.indexOf(e.key) >= 0;
+          if (isStance) stance++;
+          else if (ATK.indexOf(e.key) >= 0) atk++;
+          pending.push({ seat: e.pid, stance: isStance });
+        }
       }
+      threat[cur] = ep0 >= 5;
     }
+    flush();
+    const prof = stanceProfile(rows, threat);
+    rowTot += prof.rounds; stanceRows += Math.round(prof.stanceRate * prof.rounds);
+    noThreatRounds += prof.noThreatRounds;
+    noThreatStance += Math.round(prof.noThreatStanceRate * prof.noThreatRounds);
+    if (prof.maxRun > maxRun) maxRun = prof.maxRun;
+    if (prof.maxNoThreatRun > maxNoThreatRun) maxNoThreatRun = prof.maxNoThreatRun;
     rds += st.round;
   }
-  return { stance: tot ? stance / tot : 0, atk: tot ? atk / tot : 0, rounds: rds / G };
+  return {
+    stance: tot ? stance / tot : 0, atk: tot ? atk / tot : 0, rounds: rds / G,
+    /* v1.5.26 新增（E 新口径） */
+    noThreatStanceRate: noThreatRounds ? noThreatStance / noThreatRounds : 0,
+    maxStanceRun: maxRun, maxNoThreatRun: maxNoThreatRun, stanceRateRounds: rowTot ? stanceRows / rowTot : 0,
+    noThreatRounds: noThreatRounds
+  };
 }

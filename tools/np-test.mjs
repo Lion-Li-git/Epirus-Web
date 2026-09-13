@@ -13,6 +13,8 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
   'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js', 'js/bundled-champion-3p.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
+import { stanceProfile } from './audit-lib.mjs';
+
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, X = sb.window.EpirusResolve, Play = sb.window.EpirusPlay;
 const T = sb.window.EpirusTrainer, Bots = sb.window.EpirusBots, Pol = sb.window.EpirusPolicy;
 
@@ -2032,6 +2034,39 @@ t('D40 训练信号：惩罚被动（只奖"打中了且这一回合没挨打"�
   /* ⑥ 可关闭（对照臂） */
   eq(T.setPressReward(0), 0, 'setPressReward(0) 必须能关掉');
   T.setPressReward(0.03);
+});
+
+t('D41 E 新口径：只有"**没有大雷威胁时还一直摆架势**"才算病（合理防御不算）', function () {
+  /* 用户裁定（v1.5.26）：旧 E（摆架势回合占比>85%）把"看到对手攒到 5 ジ 该防一下"也判成病 ——
+   * 实测 eco-34 旧口径 89%（判病）而新口径只有 16%（合理）。新口径两条：
+   *   ① noThreatStanceRate：对手ジ < 5（无大雷威胁）的回合里摆架势的占比 —— 主门槛；
+   *   ② maxNoThreatRun：无威胁回合里的最长连摆（只作参考，实测区分度不足）。 */
+  const rows = [
+    { seat: 1, round: 0, stance: true },
+    { seat: 1, round: 1, stance: true },     // 无威胁连摆 2 回合
+    { seat: 1, round: 2, stance: false },
+    { seat: 1, round: 3, stance: true },     // 这一回合**有威胁**（对手ジ≥5）⇒ 不该算病
+  ];
+  const threat = { 0: false, 1: false, 2: false, 3: true };
+  const p = stanceProfile(rows, threat);
+  eq(p.noThreatRounds, 3, '有威胁的回合不得计入"无威胁回合数"');
+  eq(p.noThreatStanceRate.toFixed(3), (2 / 3).toFixed(3), '无威胁回合里 2/3 摆架势 ⇒ 占比 0.667');
+  eq(p.maxNoThreatRun, 2, '无威胁最长连摆 = 2（第 0、1 回合）');
+  eq(p.stanceRate.toFixed(3), (3 / 4).toFixed(3), '旧口径占比仍然可算（3/4，用于对照打印）');
+  /* 全防 + 全无威胁 ⇒ 100%（这才是该挡的病理样本，实测 v7anneal-34 = 100%） */
+  eq(stanceProfile([{ seat: 1, round: 0, stance: true }, { seat: 1, round: 1, stance: true }],
+    { 0: false, 1: false }).noThreatStanceRate, 1, '全程无威胁还每回合摆架势 ⇒ 100%');
+  /* 合理防御：只在有威胁的回合摆 ⇒ 无威胁占比 0（旧口径仍会很高，正是要修掉的误伤） */
+  const fair = stanceProfile([
+    { seat: 1, round: 0, stance: false }, { seat: 1, round: 1, stance: false },
+    { seat: 1, round: 2, stance: true }, { seat: 1, round: 3, stance: true },
+  ], { 0: false, 1: false, 2: true, 3: true });
+  eq(fair.noThreatStanceRate, 0, '只在有威胁时防 ⇒ 新口径 0%（旧口径会是 50%）');
+  eq(fair.stanceRate, 0.5, '旧口径对照值 = 50%');
+  /* 门槛必须挂在**新口径**上 */
+  const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(pc.indexOf('fPass.noThreatStanceRate > 0.6') >= 0, 'promote-champion 的 E 门槛必须用新口径（noThreatStanceRate）');
+  ok(pc.indexOf('fPass.stance > 0.85') < 0, '旧口径（stance > 0.85）必须已从门槛里移除');
 });
 
 t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {
