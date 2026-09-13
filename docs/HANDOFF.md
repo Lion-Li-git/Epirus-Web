@@ -16,13 +16,19 @@
   **全部 30 个技能穷举归类**（dmg 复制 / 自效果 / 仅空指）/ 每个自效果技能真复制一遍。反证三次全红。
 - 详见 `CHANGELOG.md` v1.5.16。
 
-### ② 策略要能"选蓄哪种珠"（否则冠军永远学不会"为放电而蓄电珠"）
-- 引擎**已支持**：`js/core/state.js` 的 `attemptAction(state, pid, key, {bead:'elec'|'boom'})`。
-- 但只有**页面人类路径**在传；**AI 路径是结算时猜的**：`js/ui/ui.js` 约 238 行与约 396 行
-  `bead: b.elec > b.boom ? 'boom' : 'elec'`。
-- 策略输出（`js/core/play.js` 的 `normPick` / chooser 返回值）**没有 bead 这一项** ⇒ 这是"蓄能白费"的根因。
-- 要做的：给策略加一个**珠类型输出位**（`js/train/policy.js` 的输出 + `normPick` + 训练路径），
-  把 AI 路径改成用它；加用例。
+### ② 策略要能"选蓄哪种珠"（**下一步**；v1.5.16 复核过现状与代价）
+- 引擎**已支持**：`js/core/state.js` 的 `attemptAction(state, pid, key, {bead:'elec'|'boom'})` ✓。
+- 现状（v1.5.16 复核）：`js/core/play.js` 的 `autoGameN` 里**写死**了
+  `const beadOf = function (p) { return p.elec > p.boom ? 'boom' : 'elec'; }`（相等取电珠）
+  ⇒ **AI 从不选择珠类型**；`normPick` 也只透传 `{key,target,target2}` ⇒ 这就是"蓄能白费"的根因。
+  （页面人类路径另有 `js/ui/ui.js` 约 238 / 约 396 行的同款猜测式 `bead:`。）
+- **两条路，代价差很多（需要用户拍板）**：
+  · **A 建模成额外候选**（不动参数量）：把「蓄能」拆成 `蓄能(电)` / `蓄能(爆)` 两个候选，让 chooser 直接选。
+    参数量仍 3337 ⇒ **旧冠军包可直接加载**（但它没练过这两个候选 ⇒ 等于给了一个"未训练选项"）。
+  · **B 新增输出位**（动参数量）：`js/train/policy.js` 的输出 + `ACT_KEYS` + `normPick` + 训练路径一起改 ⇒
+    **参数量变化、旧冠军包全部不兼容**，必须重训。**建议与 §3 那条（特征看不到镜面反射复制内容）同批做**，
+    反正都要升 `FEAT_S`/`PACK_VERSION`。
+- ⚠️ 无论哪条：`np-test D22` 的"珠类型不得泄漏给对手"判据必须继续成立（类型只能影响**自己**的选择）。
 
 ### ③ 先手激励（可选，规则修完再谈）
 `EPIRUS_FIGHT_DEAL` / `EPIRUS_FIGHT_FIRST`（**默认关**）。v1.5.14 实测：**能治"集体防御"但考卷掉 14pt**
