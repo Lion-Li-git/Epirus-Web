@@ -1426,12 +1426,15 @@ t('D14 全息屏障必须给**目标**套盾（原始规则），不是给施放
   eq(st.p[2].hp, 3, '被套盾者自己的技能被无效化（枪没打出去）');
 });
 
-t('D23 镜面反射：没有"无可复制" —— 非伤害类复制到自己身上 + 对 t2 空指（v1.5.16 用户裁定）', function () {
-  /* 用户裁定原文：「没有"无可复制"这回事 —— 所有技能都能复制」：架势/自增益/能量类复制到**使用者自己**
-   * 身上（相当于自己也摆了那个架势 / 也蓄了能），同时对 t2 形成一个**"空指"**（指向保留、本身无效果，
-   * 但**要参与连带/传导判定**）。t1 本回合行动被作废时才是"无可复制"。
-   * 反证：① 删掉 applyMirrorSelf 的 default 分支 ② 把 guardOf 改回只读 a.key
-   *       ③ 把大雷快照的 snapT2 去掉 —— 三者任一，本用例立刻红。 */
+t('D23 镜面反射：没有"无可复制" + 优先级裁定（大雷 pri4 先于镜面 pri3）（v1.5.16/v1.5.17 用户裁定）', function () {
+  /* v1.5.16（用户裁定）：「没有"无可复制"这回事 —— 所有技能都能复制」：架势 / 自增益 / 能量类复制到
+   * **使用者自己**身上（相当于自己也摆了那个架势 / 也蓄了能）；t1 行动被作废时才是"无可复制"。
+   * v1.5.17（用户**二次 + 三次**裁定，推翻上一版）：**大雷(pri4) 优先于镜面反射(pri3)** ⇒ 目标若用镜面反射
+   * 会先被大雷**无效化**，"反弹并没有被复制成功"；而**同优先级时防御类先出现** ⇒ 复制来的防御架势
+   * 挡得住同优先级(pri3)的激光剑 / 坦克（按原本的伤害矩阵），也挡得住随后结算的 ⑤ 枪 / ⑥ 狙击。
+   * 反证（三条都会让本用例立刻红）：① 自效果表失效（复制ジ不给 ep）② `guardOf` 改回"从声明派生"
+   * （不看 `copiedGuard` 状态）③ 把镜面反射也豁免大雷的"非防御类无效化"。
+   * 另有 ④ 去掉 `mirrorGuardPass`（防御架势不在 ④ 之前落位）⇒ D23②c 红。 */
   function mk4() {
     const s = S.createState('multi', { next: mulberry32(11) }, 4);
     for (const q of s.p) q.ep = 6;
@@ -1442,7 +1445,8 @@ t('D23 镜面反射：没有"无可复制" —— 非伤害类复制到自己身
     return st.events.filter(function (e) { return e.type === type; }).length;
   };
 
-  /* ① 复制【反弹】⇒ 自己真的获得反弹架势（空指 → t2），且不再发"无可复制" */
+  /* ① 复制【反弹】⇒ 自己真的获得反弹架势（空指 → t2），且不再发"无可复制"。
+   *    对手的枪是 pri2 ⇒ 在镜面反射（pri3）之后结算 ⇒ 这一条正是"复制从结算那一刻起生效"的正例。 */
   let st = mk4();
   S.attemptAction(st, 1, R.SK.REFLECT, {});
   S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
@@ -1456,19 +1460,41 @@ t('D23 镜面反射：没有"无可复制" —— 非伤害类复制到自己身
   eq(st.p[0].hp, 3, '复制来的反弹挡住 P2 的枪');
   eq(st.p[2].hp, 2, '反弹把枪弹回 P2（R20：枪可被反弹）');
 
-  /* ② 用户的例子（N14 原话）：a 复制 b 的【反弹】并指向 c ⇒ d 用大雷打 a
-   *    ⇒ c 吃连带；a、b 因为有反弹都不受影响。 */
+  /* ② **优先级裁定**：a 复制 b 的【反弹】并指向 c，d 用大雷打 a
+   *    ⇒ 大雷(pri4) 先结算、把 a 的镜面反射无效化 ⇒ 复制根本没发生 ⇒ a 挨那 2 点电伤；
+   *      b 仍有自己的反弹（连带打不动它）；c 只是被声明的 t2，而施法已废 ⇒ 不产生指向、不受影响。 */
   st = mk4();
-  S.attemptAction(st, 1, R.SK.REFLECT, {});                       // b
-  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 }); // a：复制 b，空指 → c
+  S.attemptAction(st, 1, R.SK.REFLECT, {});                       // b：自己的反弹
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 }); // a：想复制 b、指向 c
   S.attemptAction(st, 2, R.SK.JI, {});                            // c
   S.attemptAction(st, 3, R.SK.BIG_T, { target: 0 });              // d：大雷打 a
   X.resolveActions(st);
-  eq(st.p[0].hp, 3, 'a 有复制来的反弹 ⇒ 不受大雷影响（复制来的架势在声明时就生效）');
-  eq(st.p[1].hp, 3, 'b 有自己的反弹 ⇒ 不受连带影响（N22：无对外目标的防御完全挡住）');
-  eq(st.p[2].hp, 1, 'c 是空指对象 ⇒ 必须吃 2 点大雷连带（空指仍算"指向"）');
-  ok(st.events.some(function (e) { return e.type === 'bigTChain' && e.to === 2; }), '必须有指向 c 的连带事件');
-  ok(st.actions[0] && !st.actions[0].voided, 'a 的镜面反射不该被大雷无效化（复制到防御族 ⇒ 算防御）');
+  ok(st.actions[0].voided, 'a 的镜面反射必须被大雷无效化（镜面反射不是防御族）');
+  eq(cnt(st, 'mirrorCopySelf'), 0, '被作废的镜面反射不该产生任何复制');
+  eq(st.p[0].hp, 1, '复制没发生 ⇒ a 实打实挨 2 点电伤（v1.5.16 那版会错误地护住他）');
+  eq(st.p[1].hp, 3, 'b 有自己的反弹 ⇒ 连带动不了它');
+  eq(st.p[2].hp, 3, 'c 只是被声明的 t2 而施法已废 ⇒ 不产生指向、不受连带');
+
+  /* ②c 同优先级（v1.5.17 用户三次澄清「同优先级的时候防御类先出现」）：复制来的防御架势要挡得住
+   *     **同优先级(pri3)** 的攻击 —— 坦克能穿防御但穿不了反弹 ⇒ 反弹挡得住并弹回。 */
+  st = mk4();
+  S.attemptAction(st, 1, R.SK.REFLECT, {});
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+  S.attemptAction(st, 2, R.SK.TANK, { target: 0 });              // 坦克 pri3，与镜面反射同优先级
+  S.attemptAction(st, 3, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[0].hp, 3, '复制来的反弹应挡住同优先级的坦克（同优先级防御类先出现）');
+  eq(st.p[2].hp, 2, '并把坦克弹回 P2（坦克在 REFLECTABLE 里）');
+
+  /* ②d 但"本来挡不住的"仍挡不住：激光剑可攻破反弹（pierce.reflect）⇒ 复制来的反弹也挡不住它
+   *     （否则就是把这个澄清改成了"复制来的防御无敌"，伤害矩阵被改坏）。 */
+  st = mk4();
+  S.attemptAction(st, 1, R.SK.REFLECT, {});
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+  S.attemptAction(st, 2, R.SK.SWORD, { target: 0 });
+  S.attemptAction(st, 3, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[0].hp, 2, '激光剑穿反弹 ⇒ 复制来的反弹挡不住（伤害矩阵保持原样）');
 
   /* ③ 自增益/能量类也复制到自己身上：复制【ジ】⇒ 自己 +1 ep（镜面反射 3 ⇒ 6-3+1=4） */
   st = mk4();

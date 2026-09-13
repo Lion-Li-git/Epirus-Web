@@ -18,6 +18,7 @@
       rodGuard: 0,                  // 避雷针情形B（剩余免雷次数）R31
       mineArmed: false,             // R38
       guardNext: false, baguaExtra: false,  // 无极变速第二回合 R21
+      copiedGuard: null,             // N14 v1.5.17：镜面反射复制来的架势（只在结算它的那个回合有效）
       fireWeakNext: false, fireWeakNow: false, // 藤甲 R22
       tauntPending: false, tauntActive: false, // 挑衅 R41/R54
       tauntFrom: null, tauntTo: null,          // N人：挑衅指向（2人时等价于布尔）
