@@ -2332,5 +2332,24 @@ t('D46 终局平局口径：全活但血量有差 = 按血量的胜局（只有�
 });
 
 
+t('D47 定向强制探索：**只在"有滚环者且我付得起小雷"这一格**生效，其余必须原样交回学习到的策略', function () {
+  /* 前五次实测（奖励/池子/示范/暴露度/可归因信号）都拿不到自然小雷 ⇒ 动作从未被采样。
+   * 定向强迫是最后一枪；但**不能**用教师槽做常开 ε（那会用 heavyfire 扰动全局）。 */
+  const mt = [{ key: R.SK.MINI_T, affordable: true }];
+  const ringers = { p: [{ hp: 3, ringStreak: 0 }, { hp: 3, ringStreak: 2 }] };
+  eq(T.ringForceTarget(ringers, 0, mt), 1, '有滚环者且付得起小雷 ⇒ 目标就是那个滚环者');
+  eq(T.ringForceTarget({ p: [{ hp: 3, ringStreak: 0 }, { hp: 3, ringStreak: 0 }] }, 0, mt), -1, '没人滚环 ⇒ 不出手（-1）');
+  eq(T.ringForceTarget(ringers, 0, [{ key: R.SK.MINI_T, affordable: false }]), -1, '付不起 ⇒ 不出手（-1）');
+  eq(T.ringForceTarget({ p: [{ hp: 3, ringStreak: 0 }, { hp: 0, ringStreak: 3 }] }, 0, mt), -1, '滚环者已死 ⇒ 不出手（-1）');
+  eq(T.setRingForceEps(0.05), 0.05, 'setRingForceEps 必须可设');
+  eq(T.setRingForceEps(0), 0, 'setRingForceEps(0) 必须能关掉（验收要在关掉后量自然行为）');
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  ok(evo.indexOf('RING_FORCE_EPS > 0 && Math.random() < RING_FORCE_EPS') >= 0, '强迫必须带概率门（不能常开）');
+  ok(evo.indexOf('return econ(state, pid2, legal);') >= 0, '非目标格必须原样返回学习到的动作');
+  const wk = readFileSync('server/train-worker.mjs', 'utf8');
+  ok(wk.indexOf('EPIRUS_RING_FORCE_EPS') >= 0, 'worker 必须能通过 env 打开强迫（独立进程）');
+});
+
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

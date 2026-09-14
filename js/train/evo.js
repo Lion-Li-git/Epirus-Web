@@ -783,7 +783,15 @@
           // (c) 承诺级 ε：h 取自**个体基因**，不再是每局随机抽的噪声
           const h = commitGame ? hGene : 0;
           const baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : policyChooserN(params, 0.35, 0.15);
-          econ = makeEconChooser(baseSel, agg, imitB > 0 ? (IMIT_TEACHER || BOT_PICKS['heavyfire']) : null, imitB); choosers.push(econ);
+          econ = makeEconChooser(baseSel, agg, imitB > 0 ? (IMIT_TEACHER || BOT_PICKS['heavyfire']) : null, imitB);
+          /* v1.5.39：定向 ε-强迫（只影响"有滚环者且我付得起小雷"这一格；其余原样返回学习到的动作）。 */
+          choosers.push(function (state, pid2, legal) {
+            if (RING_FORCE_EPS > 0 && Math.random() < RING_FORCE_EPS) {
+              const tg = ringForceTarget(state, pid2, legal);
+              if (tg >= 0) return { key: R.SK.MINI_T, target: tg };
+            }
+            return econ(state, pid2, legal);
+          });
         }
         else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
       }
@@ -1137,6 +1145,32 @@
    * "小雷作废开环者"这个动作**历史上从未被出过**（探针实测所有冠军小雷次数 = 0），
    * 而**奖励无法 bootstrap 一个从未发生的动作**。课程法：前 N 代让种群**模仿一个会出小雷的教师**，
    * 把动作先"示范"出来，再交给奖励强化。复用现成的 setImitUntil/imitBetaForGen 退火管道。 */
+  /* ===== v1.5.39（用户选 ①）：**定向强制探索** =====
+   * 前五次实测（奖励/池子/示范/暴露度/可归因信号）都拿不到"自然小雷" ⇒ 该动作从未被采样到。
+   * 这里只在**唯一那一格**做 ε-强迫：**有对手在滚环（ringStreak ≥ 1）且我付得起小雷** ⇒ 强制砸他。
+   * 关键：其余任何情形都返回 null（交回**学习到的**策略）—— 不能用教师槽做常开 ε，
+   * 那会顺带用 heavyfire 扰动全局（教师退化的默认动作）。
+   * **验收必须在关掉强迫后量自然行为**（复核 §5-5：否则 `miniTCasts ≥ 5` 是恒真式）。 */
+  let RING_FORCE_EPS = 0;
+  /* v1.5.39 修订：**上限提到 1.0**。理由（实测）：目标格（有人真在滚环）只占决策的 **0.15%**
+   * ⇒ 在格子里再乘 ε=5% 等于"整跑几乎不强制"（0.0075%），第一臂的 0 是**算术问题**不是证据。
+   * 格子本身极罕见 ⇒ **格内 ε=1.0（每次都强制）**才是正确的类比，且不会扰动非目标格。 */
+  function setRingForceEps(v) { const x = Number(v); RING_FORCE_EPS = (isFinite(x) && x > 0) ? Math.min(1, x) : 0; return RING_FORCE_EPS; }
+  function ringForceEps() { return RING_FORCE_EPS; }
+  /* 目标格的"该出手"判定：返回要打的环流者 pid，或 -1（不该出手）。纯函数，便于守门。 */
+  function ringForceTarget(state, pid, legal) {
+    const mt = (legal || []).filter(function (x) { return x.key === R.SK.MINI_T && x.affordable; })[0];
+    if (!mt) return -1;
+    let best = -1;
+    for (let q = 0; q < state.p.length; q++) {
+      if (q === pid) continue;
+      const pq = state.p[q];
+      if (!pq || pq.hp <= 0) continue;
+      if ((pq.ringStreak || 0) >= 1 && (best < 0 || pq.ringStreak > state.p[best].ringStreak)) best = q;
+    }
+    return best;
+  }
+
   let IMIT_TEACHER = null;           // null = 沿用老的 heavyfire 教师
   function setImitTeacher(fn) { IMIT_TEACHER = (typeof fn === 'function') ? fn : null; return !!IMIT_TEACHER; }
   function imitTeacher() { return IMIT_TEACHER; }
@@ -1492,7 +1526,7 @@
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
     setPressReward, pressReward, countPressRounds,
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
-    allAliveTied,
+    allAliveTied, setRingForceEps, ringForceEps, ringForceTarget,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

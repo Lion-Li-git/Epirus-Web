@@ -159,6 +159,13 @@ async function runTrain(gens, opts, cfg) {
   process.env.EPIRUS_IMIT_GENS = String(imitGens);
   /* v1.5.31：课程/示范 —— 反环教师（env 传给 worker；主线程也设一份，保证两侧口径一致）。 */
   if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) T.setAntiRingTeacher();
+  if (T.setRingForceEps) {
+    const _e = T.setRingForceEps(Number(process.env.EPIRUS_RING_FORCE_EPS || 0));
+    /* v1.5.39：主线程审计轨迹（worker 的 stdout 不进流，只有主线程的会）——
+     * 让"定向强迫有没有生效"可以直接看到，而不是靠权重差异猜。 */
+    console.log('[ringforce] 主线程 eps=' + _e + '  env=' + JSON.stringify(process.env.EPIRUS_RING_FORCE_EPS || null) +
+      (Number(process.env.EPIRUS_RING_FORCE_EPS || 0) > 0 && _e === 0 ? '  ⚠️ env 有值但主线程没设上（sandbox 版本问题？）' : ''));
+  }
   if (T.setImitUntil) T.setImitUntil(imitGens);
   cfg = cfg || {};
   const seedN = Math.max(1, cfg.seeds || 3);
