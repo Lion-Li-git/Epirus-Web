@@ -530,7 +530,11 @@
         /* v1.5.34（用户质疑根因修复）：`holo` 是 `target:'other'`，此前落进 else 分支 ⇒ **只有 1 个候选且 target=null**，
          * 而引擎把 null 解释成"第一个存活对手"（`oppOf`）⇒ **系统性把盾送给别人**（记录里 100% 送人）。
          * 现在把目标还给决策：**自己（null）+ 每个存活对手**，让网络自己学该给谁。 */
-        out.push({ key: l.key, target: null, target2: null, bead: null });
+        /* v1.5.37（第三方复核 §2-1，用户裁定）：`全息屏障` **本来就不能给自己**（自保用原型制御）——
+         * `resolve.js` 的 `holoShieldFrom` 明写"自己给自己套不算"，且 `targetOf()` 会把 null/自己
+         * 在**声明阶段**回退成"第一个存活对手" ⇒ 此前我加的 `target:null`（自己）是**幻影选项**：
+         * 实测被选中 35/330 次，每一次都是"策略以为在做 A、引擎执行的是送盾给 1 号"，
+         * 并把**错误归因**喂回训练。⇒ 这里只给真实对手。 */
         const poolOther = S.opponentsOf(state, pid);
         for (let j = 0; j < poolOther.length; j++) {
           out.push({ key: l.key, target: poolOther[j], target2: null, bead: null });

@@ -723,9 +723,14 @@
     const pending = [];
     for (const e of events) {
       if (e.type === 'action' && e.pid === seat && e.outcome === 'ok' && e.key === R.SK.MINI_T) miniT++;
-      if (e.type === 'ep' && e.pid !== seat && e.delta >= 2) { ringers[e.pid] = true; anyRinger = true; }
+      /* v1.5.37（复核 §5-3/反例 E）：判据改成**"该座真的施放了聚能环"这条动作事件** ——
+       * 旧判据 `ep delta >= 2` 有两处错：① 漏掉环的**第一次**（delta 是 1 然后 2）⇒ 越早打断越没分；
+       * ② 会把"被避雷针回馈 +4 ジ"这种非环的大额 ep 当开环。动作事件判据同时治好这两处。 */
+      if (e.type === 'action' && e.pid !== seat && e.outcome === 'ok' && e.key === R.SK.RING) { ringers[e.pid] = true; anyRinger = true; }
       if (e.type === 'damage' && e.source === seat && ringers[e.to]) { breaks++; ringers[e.to] = false; }
-      if (e.type === 'voided' && ringers[e.pid]) pending.push(e.pid);
+      /* v1.5.37（复核 §5-1）：作废必须**由我造成**（byPid === 我）才算我打断的 ——
+       * 此前只要求"我出过小雷"，于是"别人作废、我恰好放过小雷"会与我真打断**同分**（反例 A vs B）。 */
+      if (e.type === 'voided' && ringers[e.pid] && e.byPid === seat) pending.push(e.pid);
     }
     /* v1.5.29（用户实测逼出来的关键修正）：**先把信号做密**。
      * 实测：所有历史冠军的小雷次数都是 **0** ⇒ "小雷作废开环者"这条奖励**永远触发不了**，
@@ -1146,7 +1151,10 @@
           if (q === pid) continue;
           const pq = state.p[q];
           if (!pq || pq.hp <= 0) continue;
-          if ((pq.ep || 0) >= 2 && (best < 0 || pq.ep > state.p[best].ep)) best = q;
+          /* v1.5.37（复核 §5-2）：条件是 `ep >= 2` 时在真实自对局里 **45%** 的决策都成立，
+           * 而"有人真在滚环"只有 **0.15%** ⇒ 教师实际在教"见人兜里有 2 ジ就砸小雷"。
+           * 改成 `ringStreak >= 1`（该座真的在连开聚能环）⇒ 示范的动作才与"开环"这个状态相关。 */
+          if ((pq.ringStreak || 0) >= 1 && (best < 0 || pq.ringStreak > state.p[best].ringStreak)) best = q;
         }
         if (best >= 0) return { key: R.SK.MINI_T, target: best };
       }

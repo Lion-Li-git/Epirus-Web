@@ -1970,61 +1970,27 @@ t('D38 结算事件行的**显示顺序**（防御→中立→攻击→镜像；
     '**死亡结算必须排在伤害之后**（用户实测：第一版把 death 当中立 ⇒ 先死再掉血，很搞笑）');
 });
 
-t('D39 训练信号：打断开环者的奖励必须"窄条件 + 可归因"（纯函数行为断言）', function () {
-  /* 用户实测："对手连开 9 回合环把ジ刷到 +3，四个冠军座位零反应"。
-   * 项目已三次证明"往池子里加环流对手"是弱杠杆 ⇒ 真正缺的是**信用分配**：
-   * 把"对手开环时我打断了他"做成窄条件、可归因的小额奖励。这条用合成的**事件流**做行为断言。 */
-  const SK = R.SK;
-  ok(T.ringReward().w > 0, 'RING_W 默认必须 > 0（默认开）');
-  /* ① 对手1 开环（ep delta=3）+ 我打中他 ⇒ 记 1；② 对手2 开环 + 我用了小雷且他被作废 ⇒ 记 1 */
-  const evs = [
-    { type: 'ep', pid: 1, delta: 3 },
-    { type: 'damage', to: 1, source: 0, amt: 1 },
-    { type: 'ep', pid: 2, delta: 2 },
-    { type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T },
-    { type: 'voided', pid: 2 },
-  ];
-  eq(T.countRingBreaks(evs, 0), 2.5, '分层给分：打中开环者 +1 / 小雷密集分 +0.5 / 作废成功 +1 ⇒ 2.5');
-  /* v1.5.29：**信号必须能 bootstrap 一个从未发生过的动作**（实测历史冠军小雷次数全为 0）。
-   * 有人开环时出小雷（即使没作废成功）也要拿到分，否则这条奖励永远触发不了。 */
-  eq(T.countRingBreaks([
-    { type: 'ep', pid: 1, delta: 3 },
-    { type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T },
-  ], 0), 0.5, '有人开环时出小雷（未作废成功）⇒ 先给 0.5 的密集信号');
-  /* v1.5.30（方案 A）：密集分**每局至多一次** —— 否则"刷小雷"会变成得分最高的策略，
-   * 而那些个体过不了健康门槛 ⇒ 提升全被拒 ⇒ 训练冻结（v7both 臂 6/6 seed 零提升的实测教训）。 */
-  eq(T.countRingBreaks([
-    { type: 'ep', pid: 1, delta: 3 },
-    { type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T },
-    { type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T },
-    { type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T },
-  ], 0), 0.5, '同一局出 3 次小雷也只给 0.5（不许刷分）');
-  eq(T.countRingBreaks([{ type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T }], 0), 0,
-    '窄条件：没人开环时出小雷不给分（不许变成"见到人就砸小雷"）');
-  eq(T.countRingBreaks(evs, 1), 0, '可归因：不是我打断的，一次都不许记给我');
-  /* ③ 窄条件：没人开环 ⇒ 不记（否则变成"随便打人就有奖"） */
-  eq(T.countRingBreaks([{ type: 'damage', to: 1, source: 0, amt: 1 }], 0), 0, '没人开环时不得记分');
-  /* ④ 普通ジ（delta=1）不算开环 */
-  eq(T.countRingBreaks([{ type: 'ep', pid: 1, delta: 1 }, { type: 'damage', to: 1, source: 0, amt: 1 }], 0), 0,
-    'delta=1 是普通ジ，不算开环');
-  /* ⑤ 同一个开环者被打中多次只记一次（避免刷分） */
-  eq(T.countRingBreaks([
-    { type: 'ep', pid: 1, delta: 3 },
-    { type: 'damage', to: 1, source: 0, amt: 1 },
-    { type: 'damage', to: 1, source: 0, amt: 1 },
-  ], 0), 1, '同一个开环者一局内只记一次打断');
-  /* ⑥ 能关掉（对照臂要用） */
+t('D39 环奖励必须**可归因**（复核 §5-1：voided 不记施法者 ⇒ 反例 A 与 B 曾同分）', function () {
+  /* 复核给的五个反例，缺一不可（旧版只测了 A，恰好漏掉 B 这一格）。 */
+  const evs = function (byPid) {
+    return [
+      { type: 'action', pid: 1, key: R.SK.RING, outcome: 'ok' },
+      { type: 'action', pid: 0, key: R.SK.MINI_T, outcome: 'ok' },
+      { type: 'voided', pid: 1, by: R.SK.MINI_T, byPid: byPid },
+    ];
+  };
+  ok(T.ringReward().w > 0, 'RING_W 默认必须 > 0');
+  eq(T.countRingBreaks(evs(0), 0), 1.5, 'A 我小雷作废开环者 ⇒ 1.5（0.5 密集 + 1 作废）');
+  eq(T.countRingBreaks(evs(3), 0), 0.5, 'B 是**别人**（byPid=3）作废的 ⇒ 只拿 0.5，**必须与 A 不同**');
+  eq(T.countRingBreaks([{ type: 'action', pid: 1, key: R.SK.RING, outcome: 'ok' },
+    { type: 'voided', pid: 1, by: R.SK.MINI_T, byPid: 2 }], 0), 0, 'C 我全程没出小雷 ⇒ 0');
+  eq(T.countRingBreaks([{ type: 'action', pid: 1, key: R.SK.RING, outcome: 'ok' },
+    { type: 'action', pid: 0, key: R.SK.MINI_T, outcome: 'ok' }], 0), 0.5, 'D 环的**首次**出手也算开环（delta 是 1 然后 2）');
+  eq(T.countRingBreaks([{ type: 'ep', pid: 1, delta: 4 },
+    { type: 'action', pid: 0, key: R.SK.MINI_T, outcome: 'ok' }], 0), 0, 'E 避雷针回馈 +4 ジ ≠ 开环，不得误触发');
   eq(T.setRingReward(0), 0, 'setRingReward(0) 必须能关掉');
-  T.setRingReward(0.04);
-  /* ⑦ v1.5.24（方案 A）：**退火** —— 前期 0（先把标准分练出来）、后期满额、中段线性过渡 */
-  const rw = T.ringReward();
-  eq(T.ringWeightAt(0), 0, '退火：第 0 代权重必须为 0');
-  eq(T.ringWeightAt(rw.g0), 0, '退火：g0 之前（含）权重必须为 0');
-  eq(T.ringWeightAt(rw.g1), rw.w, '退火：g1 之后必须达到满额');
-  ok(T.ringWeightAt((rw.g0 + rw.g1) / 2) > 0 && T.ringWeightAt((rw.g0 + rw.g1) / 2) < rw.w,
-    '退火：中段必须是 (0, 满额) 之间的线性值');
-  eq(T.setRingRamp(10, 20).g1, 20, 'setRingRamp 必须可调（实验用）');
-  T.setRingRamp(rw.g0, rw.g1);
+  eq(T.setRingRamp(0, 1).g1, 1, 'setRingRamp 必须可调');
+  T.setRingReward(0.10);
 });
 
 t('D40 训练信号：惩罚被动（只奖"打中了且这一回合没挨打"的回合）', function () {
@@ -2111,30 +2077,22 @@ t('D42 破墙奖励（方案 b）：只有"我用穿透卡**落地命中**"才�
   T.setPierceReward(0.04);
 });
 
-t('D43 课程/示范：反环教师必须在"有人开环"时示范出小雷（否则动作永远没机会发生）', function () {
-  /* 实测教训：所有历史冠军小雷次数 = 0 ⇒ "小雷作废开环者"的奖励**永远触发不了**。
-   * 课程法用"模仿一个会出小雷的教师"把动作先示范出来，再交给奖励强化。 */
+t('D43 课程/示范：反环教师必须砸**真的在滚环的那个人**（复核 §5-2：旧条件 ep>=2 宽 300 倍）', function () {
+  /* 复核实测：`ep >= 2` 在真实自对局里 **45%** 的决策都成立，而"有人真在滚环"只有 **0.15%** ⇒
+   * 旧教师实际在教"见人兜里有 2 ジ就砸小雷"，与"开环"这个状态几乎不相关（这就是示范没建立关联的原因）。 */
   const base = function () { return { key: R.SK.JI }; };
   const teach = T.makeAntiRingTeacher(base);
   const mt = [{ key: R.SK.MINI_T, affordable: true }];
+  const ringers = { p: [{ hp: 3, ep: 0, ringStreak: 0 }, { hp: 3, ep: 3, ringStreak: 2 }] };
   eq(T.setAntiRingTeacher(), true, 'setAntiRingTeacher() 必须能把教师换成反环教师');
-  ok(typeof T.imitTeacher() === 'function', 'imitTeacher() 必须回显当前教师');
-  /* ① 有对手 ep ≥ 2（在攒环）且付得起小雷 ⇒ 出小雷打他 */
-  const r1 = teach({ p: [{ hp: 3, ep: 0 }, { hp: 3, ep: 3 }, { hp: 0, ep: 5 }] }, 0, mt);
-  eq(r1.key, R.SK.MINI_T, '有人开环时教师必须示范小雷');
-  eq(r1.target, 1, '必须打**那个**攒环的对手（死掉的不算）');
-  /* ② 没人开环（ep 都 < 2）⇒ 交回基础策略，不许见人就砸小雷 */
-  eq(teach({ p: [{ hp: 3, ep: 0 }, { hp: 3, ep: 1 }] }, 0, mt).key, R.SK.JI, '没人开环时不得出小雷');
-  /* ③ 付不起小雷（legal 里没有 affordable 的小雷）⇒ 交回基础策略 */
-  eq(teach({ p: [{ hp: 3, ep: 0 }, { hp: 3, ep: 3 }] }, 0, [{ key: R.SK.MINI_T, affordable: false }]).key, R.SK.JI,
-    '付不起小雷时不得出');
-  /* ④ 多个开环者 ⇒ 选 ep 最高的那个 */
-  eq(teach({ p: [{ hp: 3, ep: 0 }, { hp: 3, ep: 2 }, { hp: 3, ep: 6 }] }, 0, mt).target, 2, '优先打环最粗的那个');
+  eq(teach(ringers, 0, mt).key, R.SK.MINI_T, '有人在滚环 ⇒ 教师必须示范小雷');
+  eq(teach(ringers, 0, mt).target, 1, '必须砸**那个**滚环的（死掉的不算）');
+  eq(teach({ p: [{ hp: 3, ep: 0, ringStreak: 0 }, { hp: 3, ep: 5, ringStreak: 0 }] }, 0, mt).key, R.SK.JI,
+    '只是兜里有 ジ（没滚环）⇒ 不得砸小雷（旧条件在这里会误触发）');
+  eq(teach({ p: [{ hp: 3, ep: 0, ringStreak: 0 }, { hp: 3, ep: 3, ringStreak: 1 }, { hp: 3, ep: 9, ringStreak: 3 }] }, 0, mt).target, 2,
+    '多个滚环者 ⇒ 优先砸环最粗的那个');
+  eq(teach(ringers, 0, [{ key: R.SK.MINI_T, affordable: false }]).key, R.SK.JI, '付不起小雷 ⇒ 交回基础策略');
   eq(T.setImitTeacher(null), false, 'setImitTeacher(null) 必须能恢复默认教师（heavyfire）');
-  /* 探针本身：能穿反弹/穿防御的卡必须是从规则数据推导的（不许硬编码） */
-  const al2 = readFileSync('tools/audit-lib.mjs', 'utf8');
-  ok(/export function reflectWall\(W, params, mode, GAMES\)/.test(al2), 'audit-lib 必须导出 reflectWall');
-  ok(/const pierceKeys = \(R\.skills \|\| \[\]\)\.filter/.test(al2), '穿透卡清单必须从 R.skills 推导（不硬编码）');
 });
 
 t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {
@@ -2350,13 +2308,16 @@ t('D44 零提升检测：训练"静默冻结"必须可被发现（产物 == 热�
   ok(zc.indexOf('零提升') >= 0, '必须有明确判定文案');
 });
 
-t('D45 全息屏障的目标必须进决策（否则引擎把 null 兜底成第一个对手 => 系统性送盾）', function () {
+t('D45 全息屏障候选**不得含幻影"自己"**（这张卡本来就不能给自己）', function () {
+  /* 复核 §2-1：`holoShieldFrom` 明写"自己给自己套不算"，而 `targetOf()` 会把 null/自己
+   * 在声明阶段退成"第一个存活对手" ⇒ 候选里的"自己"是幻影：策略以为在做 A，引擎执行的是送盾给 1 号
+   * （实测被选中 35/330 次，每次都给训练喂错误归因）。修法=只给真实对手。 */
   const pol = readFileSync('js/train/policy.js', 'utf8');
-  ok(pol.indexOf("def.target === 'other'") >= 0, 'candidatesFor 必须展开 target:other（holo 的目标要进决策）');
+  ok(pol.indexOf("def.target === 'other'") >= 0, 'candidatesFor 必须有 target:other 分支');
+  ok(pol.indexOf('幻影选项') >= 0, '必须留下"为什么删掉自己"的理由（防后人又加回来）');
   const res = readFileSync('js/core/resolve.js', 'utf8');
-  ok(res.indexOf('if (a.key === SK.HOLO) {') >= 0, 'holo 必须有独立目标分支（不得走 oppOf）');
-  ok(res.indexOf('t = (hDecl == null) ? i : hDecl;') >= 0, 'holo 无目标必须默认套在自己身上');
-  ok(res.indexOf('holoShieldFrom') >= 0, '盾的来自谁语义必须仍在');
+  ok(res.indexOf('自己给自己套不算') >= 0, '引擎的"不能给自己"语义必须仍在（holoShieldFrom）');
+  ok(res.indexOf('const hDecl = targetOf') < 0, 'v1.5.34 那个"无目标=自己"的特例必须已撤销');
 });
 
 

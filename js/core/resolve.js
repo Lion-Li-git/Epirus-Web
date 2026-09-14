@@ -16,10 +16,15 @@
     const a = state.actions[pid];
     return a && !a.voided ? a : null;
   }
-  function setVoid(state, pid, by) {
+  /* v1.5.37（第三方复核 §5-1）：`by` 是**原因字符串**（'miniT'/'避雷针'/…）**不是施法者 pid**，
+   * 于是"我打断了开环者"与"别人打断、我恰好也放过小雷"在事件层**无法区分** ⇒ 奖励结构上无法归因。
+   * 加第 4 参 `byPid`（施法者 pid；不传时保持旧形状，兼容历史事件流）。 */
+  function setVoid(state, pid, by, byPid) {
     if (state.actions[pid] && !state.actions[pid].voided) {
       state.actions[pid].voided = true;
-      ev(state, { type: 'voided', pid, by });
+      const e = { type: 'voided', pid, by };
+      if (byPid != null) e.byPid = byPid;
+      ev(state, e);
     }
   }
 
@@ -664,7 +669,7 @@
       } else if (ta && R.MINI_T_IMMUNE.indexOf(ta.key) >= 0) {
         ev(state, { type: 'voidImmune', pid: t, by: SK.MINI_T, key: ta.key });
       } else {
-        setVoid(state, t, SK.MINI_T);
+        setVoid(state, t, SK.MINI_T, c);   // v1.5.37：带施法者 pid（奖励可归因）
         ev(state, { type: 'voidedBy', pid: t, by: SK.MINI_T });
       }
     }
@@ -708,7 +713,7 @@
        * v1.5.17（用户二次裁定）：镜面反射**不算防御族** ⇒ 被大雷打中时和别的非防御技能一样被废掉，
        * 复制随之不会发生（v1.5.16 曾按"有效技能"豁免它，那是错的）。 */
       if (!bothBig && ta && R.GUARD_FAMILY.indexOf(ta.key) < 0 && ta.key !== SK.MINI_T) {
-        setVoid(state, t, SK.BIG_T);
+        setVoid(state, t, SK.BIG_T, c);   // v1.5.37：同上
       }
       // 记录目标当面架势（用于 R23'：原型制御挡电但不免疫禁用）
       const guardKind = (guardOf(state, t) || {}).kind;
@@ -784,18 +789,13 @@
     for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
       if (!a || (R.byKey[a.key].pri || 3) !== 3) continue;
-      /* v1.5.34（用户质疑的根因修复）：`holo`（target:'other'）**不能走 `oppOf`** ——
-       * `oppOf` 在目标为 null 时会自己兜底成"第一个存活对手" ⇒ 表现为"系统性把盾送给别人"
-       * （用户实测：每局 18.7 次全息、100% 送人）。这里改成：显式目标照用，没目标就**套在自己身上**。
-       * 其余 pri=3 技能保持老口径（无目标则本次不出）。 */
-      let t;
-      if (a.key === SK.HOLO) {
-        const hDecl = targetOf(state, i);
-        t = (hDecl == null) ? i : hDecl;
-      } else {
-        t = oppOf(state, i);
-        if (t == null) continue;
-      }
+      /* v1.5.37：**撤销 v1.5.34 的 holo 特例**。复核 §2-1 证明它与引擎语义冲突：
+       * `holoShieldFrom` 明写"自己给自己套不算"（这张卡本来就只能给别人），
+       * 而我那版"无目标=自己"在声明阶段就被 `targetOf()` 退成"第一个存活对手"，
+       * 且候选集里的"自己"成了幻影选项（被选中 35/330 次，喂错归因）。
+       * ⇒ 恢复引擎原语义（`oppOf`；无目标本次不出），改为在**候选枚举**侧删掉幻影。 */
+      const t = oppOf(state, i);
+      if (t == null) continue;
       const me = state.p[i], you = state.p[t];
       switch (a.key) {
         case SK.JI: me.ep += 1; ev(state, { type: 'ep', pid: i, delta: 1 }); break;
