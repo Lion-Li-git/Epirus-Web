@@ -2396,7 +2396,9 @@ t('D50 对手槽位并列不得按 pid 升序（座位身份泄漏 ⇒ 0 号座�
   }
   ok(new Set(firsts).size > 1, '不同回合下"槽位 0"不得恒为同一人（修前对 pid=1 恒为 0 号座）');
   const pol = readFileSync('js/train/policy.js', 'utf8');
-  ok(pol.indexOf('_rot(x) - _rot(y)') >= 0, '并列排序必须用与 pid 无关的轮转（_rot）');
+  ok(pol.indexOf('slotRand(x) - slotRand(y)') >= 0, '并列排序必须用**不可预测的随机键**（slotRand）');
+  ok(pol.indexOf('_rot(x) - _rot(y)') < 0, '旧的"按回合起点轮转"必须已移除（它让回合起点占槽位 0 ⇒ 被集火）');
+  ok(pol.indexOf('let SLOT_RAND = { state: null, round: -1, keys: null };') >= 0, '随机键必须按 state+round 缓存（同一决策内一致）');
   ok(pol.indexOf('return d !== 0 ? d : x - y;') < 0, '旧的"并列按 pid 升序"必须已移除');
 });
 

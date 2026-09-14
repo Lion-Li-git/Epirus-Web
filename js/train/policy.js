@@ -114,18 +114,31 @@
   }
 
   /* ---- v5：对手槽位（存活 → 血量升序 → pid，稳定排序：槽 0 = 最可能被杀的）---- */
+  /* v1.5.51：**每次决策内一次**的随机键（用于并列排序），按 state+round 缓存。
+   * 同一决策内所有调用（featuresV7/actionFeatures/多候选打分）拿到同一组键 ⇒ 特征一致；
+   * 跨决策重新洗牌 ⇒ 与 pid、回合都不可预测 ⇒ 学不出"打槽位 0"的习惯。 */
+  let SLOT_RAND = { state: null, round: -1, keys: null };
+  function slotRand(i) {
+    if (!SLOT_RAND.keys) { SLOT_RAND.keys = {}; for (let k = 0; k < 8; k++) SLOT_RAND.keys[k] = __rng(); }
+    return SLOT_RAND.keys[i] != null ? SLOT_RAND.keys[i] : (SLOT_RAND.keys[i] = __rng());
+  }
+
   function oppSlots(state, pid) {
+    if (SLOT_RAND.state !== state || SLOT_RAND.round !== state.round) {
+      SLOT_RAND = { state: state, round: state.round, keys: null };
+    }
     const a = [];
     for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) a.push(i);
-    /* v1.5.46（第三方复核 §3，最高优先级）：并列**不得按 pid 升序**。
-     * 实测：5 席同策略自对局 **0 号座夺冠 81%（long）/ 59%（multi）**，其余座位 3~7%（期望 20%）。
-     * 机制：开局全员同血 ⇒ 1~4 号座看别人时"槽位 0"**永远是 0 号座** ⇒ 特征里出现与实力无关的
-     * **座位身份泄漏**（`FEAT_S` 的 4 槽 × 10 维是硬编码下标）⇒ 网络能学"槽位 0 该怎么对待"。
-     * 修法：按**当前回合的行动起点**轮转（与 pid 无关、每回合变化）—— L7 教训在此处的复现。 */
-    const _n = state.p.length;
-    const _ts = ((((state.round || 1) - 1) % _n) + _n) % _n;
-    const _rot = function (i) { return (((i - _ts) % _n) + _n) % _n; };
-    a.sort(function (x, y) { const d = state.p[x].hp - state.p[y].hp; return d !== 0 ? d : _rot(x) - _rot(y); });
+    /* v1.5.51（复核 §3 + 本会话实测）：并列**不得有任何确定性的身份映射**。
+     * 历史与实测：
+     *   · 旧版 `x - y`（pid 升序）⇒ 开局同血时"槽位 0"永远是 0 号座 ⇒ 上线冠军 **0 号座夺冠 81%**；
+     *   · v1.5.46 改成"按回合起点轮转" ⇒ **仍不对**：每回合"回合起点玩家"占所有人的槽位 0，
+     *     策略学出"打槽位 0"⇒ **回合起点被集火**；而第 1 回合的起点就是 0 号座 ⇒
+     *     实测 0 号座**死亡次数 45~48/50（其他座 34~42）、夺冠率 3~9%**（提高温度也不消失 ⇒ 非协调假象）。
+     * 正解（L7 教训的完整含义）：**槽位顺序必须不可预测** —— 并列用**每次决策内一次的随机洗牌**
+     * （同一次决策内一致：按 state+round+pid 缓存；跨座位/回合不可预测：与 pid、回合都无关）。
+     * 这样"打槽位 0"不再是可利用的习惯，各座对称。 */
+    a.sort(function (x, y) { const d = state.p[x].hp - state.p[y].hp; return d !== 0 ? d : slotRand(x) - slotRand(y); });
     return a;
   }
 
