@@ -1191,6 +1191,35 @@ t('D51 双目标技能必须**有序成对**进入决策（镜面反射 t1→t2 
   eq(cg.filter(function (x) { return x.target2 != null; }).length, 0, '单目标技能的 target2 必须恒为 null');
 });
 
+t('D52 结算起点必须每局随机（不得有确定性身份映射）；盐 0 保持旧口径', function () {
+  /* v1.5.53：`turnOrder` 原为 `start = (round-1) % n` —— **确定性映射** ⇒ 第 1 回合永远从 0 号座开始。
+   * 强策略下对局前几回合就定局 ⇒ 0 号座白拿首发优势。实测（5 个同一冠军坐满 5 座）：
+   * 修掉槽位焦点后反而变成"0 号座夺冠 37~54%、死亡最少"，方向与修前相反 ⇒ 同族的第二条身份映射。
+   * 修法：相位取每局的盐（纯函数、可复现、不消耗随机流）。 */
+  ok(typeof X.turnOrder === 'function', 'X.turnOrder 必须导出（守门要能直接测）');
+  const st = S.createState('multi', { next: function () { return 0.5; } }, 5);
+  const firsts = {};
+  for (let s = 0; s < 25; s++) {
+    st.slotSalt = ((s * 0x9e3779b9) >>> 0);
+    st.round = 1;
+    const o = X.turnOrder(st);
+    eq(o.length, 5, '5 人局的结算顺序必须含 5 个座位');
+    firsts[o[0]] = (firsts[o[0]] || 0) + 1;
+  }
+  eq(Object.keys(firsts).length, 5, '25 个不同盐下第 1 回合起点必须覆盖全部 5 座（实测 ' + JSON.stringify(firsts) + '）');
+  const vals = [0, 1, 2, 3, 4].map(function (i) { return firsts[i] || 0; });
+  ok(Math.min.apply(null, vals) >= 2, '各座作为起点的次数必须大致均匀（实测 ' + JSON.stringify(firsts) + '）');
+  st.slotSalt = 0; st.round = 1;
+  eq(X.turnOrder(st)[0], 0, '盐 0 必须保持旧口径（第 1 回合从 0 号座开始）⇒ 页面与既有对比基线不变');
+  st.slotSalt = 0; st.round = 3;
+  eq(X.turnOrder(st)[0], 2, '盐 0 时盐=0 的轮转必须与旧口径一致（第 3 回合起点 = 2）');
+  const st2 = S.createState('multi', { next: function () { return 0.5; } }, 2);
+  eq(X.turnOrder(st2).join(','), '0,1', '2 人局必须恒等顺序（v1.0 冻结）');
+  const rj = readFileSync('js/core/resolve.js', 'utf8');
+  ok(rj.indexOf('state.slotSalt') >= 0, 'turnOrder 必须使用每局的盐作为相位');
+  ok(rj.indexOf('const start = ((state.round || 1) - 1) % n;') < 0, '旧的确定性相位必须已移除');
+});
+
 t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规则指纹（否则成绩已过期）', function () {
   /* v1.5.7（千问体检 §5-2 建议 / HANDOFF §4-9 规矩）：v1.5.4 只改了 rules.js 里一个 `target` 字段，
    * 5P 线上冠军的考卷成绩就从 38.0% 掉到 15.0%，而当时**没有任何机制**能自动发现"产物与引擎错配"。

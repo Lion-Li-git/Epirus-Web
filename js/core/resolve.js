@@ -43,7 +43,15 @@
     const n = playerCount(state);
     const out = [];
     if (n <= 2) { for (let i = 0; i < n; i++) out.push(i); return out; }
-    const start = ((state.round || 1) - 1) % n;
+    /* v1.5.53：**每局随机相位**。原实现 `start = (round-1) % n` 是一个**确定性映射**
+     * ⇒ 第 1 回合**永远**从 0 号座开始；而强策略下对局往往前几回合就定局 ⇒ 0 号座白拿"首发优势"。
+     * 实测（5 个同一冠军坐满 5 座，60 局/候选）：修掉槽位焦点后变成 **0 号座夺冠 37~54%、死亡最少（31~40/60）**
+     * （其余座位 7~20%、死亡 43~52）—— 与修前的"0 号座被杀最多 45~48/50、夺冠 3~9%"**方向相反**，
+     * 说明这是**同族**的第二条确定性身份映射（L7：结算顺序也不许有确定性身份映射）。
+     * 修法：相位来自**每局的盐**（`state.slotSalt`，训练侧每局不同、页面缺省 0）——
+     * 纯函数、可复现、**不消耗任何随机流**（借流会扰动采样：v1.5.51 已踩过 D22/D26/D13）。
+     * 2 人局仍恒等顺序（成对相抵本质对称，v1.0 冻结）。 */
+    const start = ((((state.slotSalt || 0) >>> 0) % n) + ((state.round || 1) - 1)) % n;
     for (let k = 0; k < n; k++) out.push((start + k) % n);
     return out;
   }
@@ -1126,7 +1134,7 @@
   }
 
   global.EpirusResolve = {
-    startTurn, resolveActions, endTurn, checkOver,
+    startTurn, resolveActions, endTurn, checkOver, turnOrder,   // v1.5.53: 导出供守门直接测（纯函数）
     rawDamage, deliverDamage, guardOf, judge, judge3, actionOf, setVoid,
     /* v1.5.19：把"技能→架势种类"的两个真源也导出 —— 特征侧（js/train/policy.js）要看
      * "自己身上是什么架势 / 对手镜面反射复制到了什么"。**不许在 policy.js 里重写一遍 switch**：
