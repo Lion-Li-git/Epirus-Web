@@ -1337,6 +1337,18 @@
   function healthGate() { return { on: HEALTH.on, games: HEALTH.games, promoteGames: HEALTH.promoteGames, n: HEALTH.n, minG: HEALTH.minG, maxDraw: HEALTH.maxDraw, maxRounds: HEALTH.maxRounds }; }
 
   /* 自对局体检：5 座都是**同一个策略**（与 champ-audit 的 A/B/C/D 列同一口径）。 */
+  /* v1.5.35（用户裁定）：**终局平局的正确口径**。
+   * 规则里写的是"到上限按血最多者胜"（`rules.js:134`）⇒ 游戏本身已按血量排名次；
+   * 此前体检把"全员存活"一律记成平局 ⇒ 血量高的胜局被误记成"和"（农夫场 0% 胜 / 100% 和的假象）。
+   * 现在只有**全员存活且血量完全相同**才算平局；血量有差 ⇒ 那是**按血量的胜局**。
+   * （用户补充：若血量也相同，则判负/不分胜负——本项目按"不计胜"处理。） */
+  function allAliveTied(p) {
+    if (!p || !p.length) return false;
+    for (let i = 0; i < p.length; i++) if ((p[i].hp || 0) <= 0) return false;
+    for (let i = 1; i < p.length; i++) if (p[i].hp !== p[0].hp) return false;
+    return true;
+  }
+
   function mirrorHealth(params, games, n, mode) {
     const G = (games && games > 0) ? (games | 0) : 20;
     const N = (n && n >= 2) ? (n | 0) : 5;
@@ -1369,7 +1381,7 @@
       }
       rounds += st.round;
       if (gd === 0) zero++;
-      if (st.p.every(function (p) { return p.hp > 0; })) draws++;
+      if (allAliveTied(st.p)) draws++;   // v1.5.35：只有血量也相同才算平局
     }
     const ks = Object.keys(keyCount);
     const tot = ks.reduce(function (a, k) { return a + keyCount[k]; }, 0);
@@ -1472,6 +1484,7 @@
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
     setPressReward, pressReward, countPressRounds,
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
+    allAliveTied,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

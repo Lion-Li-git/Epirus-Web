@@ -2360,5 +2360,16 @@ t('D45 全息屏障的目标必须进决策（否则引擎把 null 兜底成第�
 });
 
 
+t('D46 终局平局口径：全活但血量有差 = 按血量的胜局（只有血量也相同才算平局）', function () {
+  /* 规则原文（rules.js:134）：到上限"按血最多者胜" ⇒ 游戏本身按血量排名次。
+   * 此前体检把"全员存活"一律当平局 ⇒ 农夫场出现"0% 胜 / 100% 和"的假象（复核两轮都提到）。 */
+  eq(T.allAliveTied([{ hp: 2 }, { hp: 2 }]), true, '全活且血量相同 ⇒ 真平局');
+  eq(T.allAliveTied([{ hp: 3 }, { hp: 2 }]), false, '全活但血量不同 ⇒ 不是平局（按血量分胜负）');
+  eq(T.allAliveTied([{ hp: 1 }, { hp: 1 }, { hp: 0 }]), false, '有人死了 ⇒ 不是平局');
+  eq(T.allAliveTied([{ hp: 0 }, { hp: 0 }]), false, '全死 ⇒ 不是平局');
+  eq(T.allAliveTied([]), false, '空数组 ⇒ 不是平局（防御性）');
+});
+
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
