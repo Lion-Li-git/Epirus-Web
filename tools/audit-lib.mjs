@@ -166,7 +166,7 @@ export function ringWallProbe(W, params, mode, GAMES) {
   const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, Bots = W.EpirusBots;
   const G = GAMES || 20, N = 5;
   const wall = Bots.pickRingSpam || Bots.pickFarmer;
-  let dmg = 0, miniT = 0, voided = 0, hitsByKey = {}, rounds = 0;
+  let dmg = 0, miniT = 0, voided = 0, voidedByMe = 0, hitsByKey = {}, rounds = 0;
   for (let g = 0; g < G; g++) {
     const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(8100 + g) }, N);
     const seat = g % N;
@@ -179,12 +179,15 @@ export function ringWallProbe(W, params, mode, GAMES) {
         dmg += e.amt || 0;
         if (e.via) hitsByKey[e.via] = (hitsByKey[e.via] || 0) + 1;
       }
+      /* v1.5.38（复核 §5-5）：验收要看的第二栏 —— **由我造成的作废**（`byPid === 我`）。
+       * 旧工具只数 `voided` 总数（含别人造成的），而 §5-1 修好后事件里才有 `byPid`。 */
       if (e.type === 'voided' && e.pid !== seat) voided++;
+      if (e.type === 'voided' && e.byPid === seat) voidedByMe++;
     }
     rounds += st.round;
   }
   return { games: G, dmgPerGame: dmg / G, hitsByKey: hitsByKey, miniTCasts: miniT,
-    voidedWallSeats: voided, rounds: rounds / G };
+    voidedWallSeats: voided, voidedByMe: voidedByMe, rounds: rounds / G };
 }
 
 export function fieldRate(W, params, kind, mode, GAMES) {
