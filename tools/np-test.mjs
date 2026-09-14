@@ -1984,7 +1984,23 @@ t('D39 训练信号：打断开环者的奖励必须"窄条件 + 可归因"（�
     { type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T },
     { type: 'voided', pid: 2 },
   ];
-  eq(T.countRingBreaks(evs, 0), 2, '开环者被我打中 / 被我用小雷作废 ⇒ 各记一次打断');
+  eq(T.countRingBreaks(evs, 0), 2.5, '分层给分：打中开环者 +1 / 小雷密集分 +0.5 / 作废成功 +1 ⇒ 2.5');
+  /* v1.5.29：**信号必须能 bootstrap 一个从未发生过的动作**（实测历史冠军小雷次数全为 0）。
+   * 有人开环时出小雷（即使没作废成功）也要拿到分，否则这条奖励永远触发不了。 */
+  eq(T.countRingBreaks([
+    { type: 'ep', pid: 1, delta: 3 },
+    { type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T },
+  ], 0), 0.5, '有人开环时出小雷（未作废成功）⇒ 先给 0.5 的密集信号');
+  /* v1.5.30（方案 A）：密集分**每局至多一次** —— 否则"刷小雷"会变成得分最高的策略，
+   * 而那些个体过不了健康门槛 ⇒ 提升全被拒 ⇒ 训练冻结（v7both 臂 6/6 seed 零提升的实测教训）。 */
+  eq(T.countRingBreaks([
+    { type: 'ep', pid: 1, delta: 3 },
+    { type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T },
+    { type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T },
+    { type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T },
+  ], 0), 0.5, '同一局出 3 次小雷也只给 0.5（不许刷分）');
+  eq(T.countRingBreaks([{ type: 'action', pid: 0, outcome: 'ok', key: SK.MINI_T }], 0), 0,
+    '窄条件：没人开环时出小雷不给分（不许变成"见到人就砸小雷"）');
   eq(T.countRingBreaks(evs, 1), 0, '可归因：不是我打断的，一次都不许记给我');
   /* ③ 窄条件：没人开环 ⇒ 不记（否则变成"随便打人就有奖"） */
   eq(T.countRingBreaks([{ type: 'damage', to: 1, source: 0, amt: 1 }], 0), 0, '没人开环时不得记分');
@@ -2074,6 +2090,25 @@ t('D41 E 新口径：只有"**没有大雷威胁时还一直摆架势**"才算�
   ok(pc.indexOf('reflectWall') >= 0, 'promote-champion 必须调用 reflectWall（反弹墙探针）');
   ok(pc.indexOf('rw.pierceLand === 0') >= 0, '反弹墙穿透卡零命中必须是阻断条件');
   ok(pc.indexOf("fails.push('穿透卡零命中") < 0, "自对局穿透卡零命中**不得**是阻断条件（实测所有冠军都没用过坦克/电磁炮）");
+});
+
+t('D42 破墙奖励（方案 b）：只有"我用穿透卡**落地命中**"才记分', function () {
+  /* 起因：v1.5.27 的冠军面对 4 面反弹墙一枪未发（穿透卡 0 命中）⇒ 长程反弹墙 85%→0%。
+   * 修法是在 fitness 里显式补一条窄条件奖励：只认能穿反弹/穿防御的卡，且必须落地命中、必须是我打的。 */
+  const pk = T.pierceKeyList();
+  ok(pk.length >= 3, '穿透卡清单必须从 R.skills 推导（实测：' + pk.join(',') + '）');
+  ok(pk.indexOf('sword') >= 0 && pk.indexOf('tank') >= 0 && pk.indexOf('snipe') >= 0,
+    '清单至少含 激光剑(sword)/坦克(tank)/狙击枪(snipe)');
+  ok(T.pierceReward().w > 0, 'PIERCE_W 默认必须 > 0（默认开）');
+  eq(T.countPierceHits([{ type: 'damage', to: 1, source: 0, via: 'sword' }], 0), 1, '我用激光剑打中 ⇒ 记 1');
+  eq(T.countPierceHits([{ type: 'damage', to: 1, source: 0, via: 'gun' }], 0), 0, '普通攻击卡（枪）不算破墙');
+  eq(T.countPierceHits([{ type: 'damage', to: 1, source: 1, via: 'sword' }], 0), 0, '可归因：不是我打的不算');
+  eq(T.countPierceHits([{ type: 'action', pid: 0, key: 'sword', outcome: 'ok' }], 0), 0,
+    '只出招没打中不算（要**落地命中**，否则"朝墙上砍空气"也能得分）');
+  eq(T.countPierceHits([{ type: 'damage', to: 1, source: 0, via: 'sword' }, { type: 'damage', to: 2, source: 0, via: 'snipe' }], 0), 2,
+    '两张不同的穿透卡各记一次');
+  eq(T.setPierceReward(0), 0, 'setPierceReward(0) 必须能关掉（对照臂）');
+  T.setPierceReward(0.04);
   /* 探针本身：能穿反弹/穿防御的卡必须是从规则数据推导的（不许硬编码） */
   const al2 = readFileSync('tools/audit-lib.mjs', 'utf8');
   ok(/export function reflectWall\(W, params, mode, GAMES\)/.test(al2), 'audit-lib 必须导出 reflectWall');

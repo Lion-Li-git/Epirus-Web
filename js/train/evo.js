@@ -719,19 +719,33 @@
   function countRingBreaks(events, seat) {
     let breaks = 0;
     let ringers = {};
-    let iUsedMiniT = false;
+    let miniT = 0, anyRinger = false;
     const pending = [];
     for (const e of events) {
-      if (e.type === 'action' && e.pid === seat && e.outcome === 'ok' && e.key === R.SK.MINI_T) iUsedMiniT = true;
-      if (e.type === 'ep' && e.pid !== seat && e.delta >= 2) ringers[e.pid] = true;
+      if (e.type === 'action' && e.pid === seat && e.outcome === 'ok' && e.key === R.SK.MINI_T) miniT++;
+      if (e.type === 'ep' && e.pid !== seat && e.delta >= 2) { ringers[e.pid] = true; anyRinger = true; }
       if (e.type === 'damage' && e.source === seat && ringers[e.to]) { breaks++; ringers[e.to] = false; }
       if (e.type === 'voided' && ringers[e.pid]) pending.push(e.pid);
     }
-    if (iUsedMiniT) { breaks += pending.length; }
+    /* v1.5.29（用户实测逼出来的关键修正）：**先把信号做密**。
+     * 实测：所有历史冠军的小雷次数都是 **0** ⇒ "小雷作废开环者"这条奖励**永远触发不了**，
+     * 而"不能 bootstrap 一个从未发生的动作"是奖励设计的经典死穴（环墙 85.5% 其实靠熬赢，不是打断）。
+     * 于是分层给分：
+     *   ① 有人开环（对手 ep 单次 ≥2）时我出了小雷 —— **0.5/次**（这个动作本身先被奖出来）；
+     *   ② 小雷真的让开环者被作废 —— 每次 **+1**；
+     *   ③ 我打中开环者 —— 每次 **+1**（原有）。
+     * 上层小项（环惩罚/破墙/惩罚被动）仍各自 min(1, x/2) 封顶，不会让任何一项压倒胜负。 */
+    /* v1.5.30（用户选 A）：密集分**每局至多一次**（原来是每次 +0.5）。
+     * 起因（实测）：每次都给 ⇒ **刷小雷成了得分最高的策略**，而刷小雷的个体过不了健康门槛
+     * ⇒ 每一次提升都被拒 ⇒ 6 个 seed 全部冻结在热启动种子上（v7both 臂零提升）。
+     * 现在只保留"让这个动作被发现"的最小推力，不给刷分空间。 */
+    if (anyRinger && miniT > 0) breaks += 0.5;
+    /* 归因：作废加分必须由**我出小雷**引起（否则"别人作废了开环者"会记到我头上）。 */
+    if (miniT > 0) breaks += pending.length;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let imitSum = 0, imitGames = 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
@@ -814,7 +828,9 @@
       const ringBonus = ringWeightAt(gen) * Math.min(1, ringBreaks / 2);
       /* v1.5.25：惩罚被动 —— 只奖"打中了且这一回合没挨打"的回合（三次封顶）。 */
       const pressBonus = PRESS_W * Math.min(1, pressRounds / 3);
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus));
+      /* v1.5.29：破墙奖励 —— 只有用能穿反弹/穿防御的卡打中才记分（两次封顶）。 */
+      const pierceBonus = PIERCE_W * Math.min(1, pierceHits / 2);
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -838,6 +854,7 @@
         /* v1.5.23/24：打断开环者（只用事件重建，不动引擎）；权重按**退火曲线**（前期 0）。 */
         if (ringWeightAt(gen) > 0) ringBreaks += countRingBreaks(r.state.events, seat);
         if (PRESS_W > 0) pressRounds += countPressRounds(r.state.events, seat);
+        if (PIERCE_W > 0) pierceHits += countPierceHits(r.state.events, seat);
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1187,6 +1204,31 @@
    * 判据（纯事件层，不动引擎）：把一局按回合分组（**每回合每玩家最多一条 `action` 事件**，
    * 于是"又看到某个 pid 的 action"就是新回合），记"我这个回合打中了、且这一回合一点没挨打"的回合数。
    * 奖励 `PRESS_W × min(1, 主动回合数/3)`（默认 0.03）——只奖"对手没威胁时我还在推进"，不奖乱打。 */
+  /* ===== v1.5.29（第三方复核 §5-1，用户选 b）：**破墙奖励** =====
+   * 起因（实测）：v1.5.27 的冠军在自对局里 G 6.55 很漂亮，但在 4 面反弹墙前**一枪未发**
+   * （穿透卡命中 0），长程反弹墙 85% -> 0% —— 它把唯一能穿反弹的激光剑这条线整个丢了。
+   * 做法：窄条件（**只认能穿反弹/穿防御的卡**，清单从 R.skills 推导）+ 可归因（damage.source === seat）
+   * => PIERCE_W x min(1, 命中数/2)，默认 0.04（两次封顶）。清单不硬编码 => 规则改了自动跟着变。 */
+  let PIERCE_W = 0.04;
+  function setPierceReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) PIERCE_W = v; return PIERCE_W; }
+  function pierceReward() { return { w: PIERCE_W, keys: pierceKeyList() }; }
+  /* 能穿反弹/穿防御的卡（从规则数据推导：激光剑/坦克/狙击枪/电磁炮） */
+  function pierceKeyList() {
+    return (R.skills || []).filter(function (sd) {
+      const pp = sd.pierce || {};
+      return !!(pp.reflect || pp.defense);
+    }).map(function (sd) { return sd.key; });
+  }
+  /* 纯函数：数我用穿透卡**落地命中**的次数（便于守门做行为断言） */
+  function countPierceHits(events, seat) {
+    const pk = pierceKeyList();
+    let n = 0;
+    for (const e of events) {
+      if (e.type === 'damage' && e.source === seat && e.via && pk.indexOf(e.via) >= 0) n++;
+    }
+    return n;
+  }
+
   let PRESS_W = 0.03;
   function setPressReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) PRESS_W = v; return PRESS_W; }
   function pressReward() { return { w: PRESS_W }; }
@@ -1218,7 +1260,11 @@
   /* v1.5.24（用户选方案 A）：**退火** —— 前期权重 0（先把标准分练出来），中段线性升，后期满额。
    * 为什么：v1.5.23 的常开奖励练出了"会打环但标准分掉 14pt"的偏科生（环墙 68.5% / 标准 30.5%）；
    * 退火让种群先在主目标上站住，再叠加"惩罚开环者"的方向性压力。 */
-  let RING_G0 = 100, RING_G1 = 200;
+  /* v1.5.29（用户实测 + 方案 b）：**退火默认关闭**（全程满额）。
+   * 依据：① 退火那一轮（v1.5.24）与常开那轮（v1.5.23）的配对差异不显著，没换来任何好处；
+   * ② 用户实测"我用聚能环时 v7press-36 也没做任何动作打断我" ⇒ 环奖励的**行为效果**本来就没建立起来，
+   *    再叠一层退火只会让它更弱。需要回退成退火的实验可以显式调 setRingRamp。 */
+  let RING_G0 = 0, RING_G1 = 1;
   function setRingReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) RING_W = v; return RING_W; }
   function setRingRamp(g0, g1) {
     const a = Number(g0), b = Number(g1);
@@ -1389,6 +1435,7 @@
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
     setPressReward, pressReward, countPressRounds,
+    setPierceReward, pierceReward, countPierceHits, pierceKeyList,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

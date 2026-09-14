@@ -154,6 +154,39 @@ export function reflectWall(W, params, mode, GAMES) {
   };
 }
 
+/* ===== v1.5.29：**环墙行为探针**（用户实测逼出来的）=====
+ * 用户原话："实际上我用聚能环的时候原本的 v7press-36 也没有做任何动作打断我"。
+ * 而 `--field=ringwall` 只报**胜率** ⇒ 85.5% 完全可能是靠"熬赢"而不是靠"打断"。
+ * 这条探针量的是**行为**：面对 4 席 ringspam，冠军
+ *   ① 打中开环者多少次（`damage` 且 `source === seat`）；
+ *   ② 用了几次小雷（`action` 且 key === miniT，N6/R10 里唯一能直接打掉环的卡）；
+ *   ③ 让开环者被作废了几次（`voided`）。
+ * 「会打断」的判据 = ②>0 或 ①达到足够量级 —— 胜率高低不代表会打断。 */
+export function ringWallProbe(W, params, mode, GAMES) {
+  const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, Bots = W.EpirusBots;
+  const G = GAMES || 20, N = 5;
+  const wall = Bots.pickRingSpam || Bots.pickFarmer;
+  let dmg = 0, miniT = 0, voided = 0, hitsByKey = {}, rounds = 0;
+  for (let g = 0; g < G; g++) {
+    const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(8100 + g) }, N);
+    const seat = g % N;
+    const ch = [];
+    for (let pid = 0; pid < N; pid++) ch.push(pid === seat ? T.policyChooserN(params, 0.15) : wall);
+    Play.autoGameN(st, ch);
+    for (const e of st.events) {
+      if (e.type === 'action' && e.pid === seat && e.outcome === 'ok' && e.key === R.SK.MINI_T) miniT++;
+      if (e.type === 'damage' && e.source === seat) {
+        dmg += e.amt || 0;
+        if (e.via) hitsByKey[e.via] = (hitsByKey[e.via] || 0) + 1;
+      }
+      if (e.type === 'voided' && e.pid !== seat) voided++;
+    }
+    rounds += st.round;
+  }
+  return { games: G, dmgPerGame: dmg / G, hitsByKey: hitsByKey, miniTCasts: miniT,
+    voidedWallSeats: voided, rounds: rounds / G };
+}
+
 export function fieldRate(W, params, kind, mode, GAMES) {
   const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
   const G = GAMES || 10;
