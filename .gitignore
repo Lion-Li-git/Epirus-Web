@@ -13,3 +13,5 @@ docs/artifacts/*-out.js
 # 而那里的 battle-0{1,2,3,4}.png 是**被 git 跟踪**的 ⇒ 一次只读复核照抄验收单命令
 # 就会弄脏工作区（第三方复核 §5-9 实测踩到）。历史截图仍在 results/，不再被覆盖。
 docs/artifacts/battle-out/
+# v1.5.50：训练隔离用的临时产物（ring2-run 的 EPIRUS_BUNDLE_IN/OUT 落点），不得入库
+docs/artifacts/.training-*
