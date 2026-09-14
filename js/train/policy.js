@@ -117,16 +117,27 @@
   /* v1.5.51：**每次决策内一次**的随机键（用于并列排序），按 state+round 缓存。
    * 同一决策内所有调用（featuresV7/actionFeatures/多候选打分）拿到同一组键 ⇒ 特征一致；
    * 跨决策重新洗牌 ⇒ 与 pid、回合都不可预测 ⇒ 学不出"打槽位 0"的习惯。 */
-  let SLOT_RAND = { state: null, round: -1, keys: null };
-  function slotRand(i) {
-    if (!SLOT_RAND.keys) { SLOT_RAND.keys = {}; for (let k = 0; k < 8; k++) SLOT_RAND.keys[k] = __rng(); }
-    return SLOT_RAND.keys[i] != null ? SLOT_RAND.keys[i] : (SLOT_RAND.keys[i] = __rng());
+  function __slotHash(salt, round, i) {
+    let h = (salt ^ Math.imul(round | 0, 0x9e3779b9) ^ Math.imul(i | 0, 0x85ebca6b)) >>> 0;
+    h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d) >>> 0;
+    h ^= h >>> 13; h = Math.imul(h, 0x297a2d39) >>> 0; h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  }
+  /* v1.5.52：槽位顺序 = **纯函数哈希**（salt, round, i），**不再借策略的采样随机流**。
+   * v1.5.51 的 slotRand 借 __rng() ⇒ ① 消耗采样流；② 任何"特征调用时机/次数"变化都会扰动它
+   * ⇒ 特征对隐藏状态敏感，实测把 D22（蓄能珠类型不得泄漏给对手）踩红。
+   * 现在：纯函数 ⇒ 决策内一致、不消耗任何随机流、D22 安全；
+   * salt 每局不同（首次使用时从该局 rng 抽一次；无 rng 则 0）⇒ 跨局不可预测 ⇒ 学不出"槽位 0 = 某座"（L7）。 */
+  /* 盐 = **调用方输入**（`state.slotSalt`，缺省 0）。三条约束同时满足：
+   *  ① 不消耗任何随机流（借流会扰动采样/对局：v1.5.51 借 __rng 踩红 D22，借 state.rng 踩红 D26）；
+   *  ② 纯函数 ⇒ 同一决策内一致、可复现（"同种子同结果"；计数器盐会让同种子两局不同 ⇒ 踩红 D13）；
+   *  ③ 跨局不可预测由调用方负责（每局传不同盐）⇒ 学不出"槽位 0 = 某座"（L7）。 */
+  function slotRand(i, state) {
+    const salt = (state && state.slotSalt != null) ? (state.slotSalt >>> 0) : 0;
+    return __slotHash(salt, state ? (state.round | 0) : 0, i | 0);
   }
 
   function oppSlots(state, pid) {
-    if (SLOT_RAND.state !== state || SLOT_RAND.round !== state.round) {
-      SLOT_RAND = { state: state, round: state.round, keys: null };
-    }
     const a = [];
     for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) a.push(i);
     /* v1.5.51（复核 §3 + 本会话实测）：并列**不得有任何确定性的身份映射**。
@@ -138,7 +149,7 @@
      * 正解（L7 教训的完整含义）：**槽位顺序必须不可预测** —— 并列用**每次决策内一次的随机洗牌**
      * （同一次决策内一致：按 state+round+pid 缓存；跨座位/回合不可预测：与 pid、回合都无关）。
      * 这样"打槽位 0"不再是可利用的习惯，各座对称。 */
-    a.sort(function (x, y) { const d = state.p[x].hp - state.p[y].hp; return d !== 0 ? d : slotRand(x) - slotRand(y); });
+    a.sort(function (x, y) { const d = state.p[x].hp - state.p[y].hp; return d !== 0 ? d : slotRand(x, state) - slotRand(y, state); });
     return a;
   }
 
@@ -539,7 +550,23 @@
       const l = legal[i];
       const def = R.byKey[l.key];
       if (!def) continue;
-      if (def.target === 'enemy') {
+      if (def.target2 === 'enemy') {
+        /* v1.5.52（用户指出）：**双目标技能**（镜面反射 t1=复制对象/t2=输出对象、双枪射手两个角色）
+         * 此前 `target2` 恒为 null ⇒ 引擎用自己的兜底（"索引最小的对手"）填第二个目标
+         * ⇒ 角色不可表达、且制造系统性的 0 号座焦点（实测 0 号座每局必死 60/60 的一部分来源）。
+         * 这里**成对有序枚举**：`target`=角色 1、`target2`=角色 2，**顺序不可交换**（两个目标不可调换）。 */
+        const pool2 = S.opponentsOf(state, pid);
+        if (pool2.length < 2) {
+          out.push({ key: l.key, target: null, target2: null, bead: null });
+        } else {
+          for (let a1 = 0; a1 < pool2.length; a1++) {
+            for (let a2 = 0; a2 < pool2.length; a2++) {
+              if (a2 === a1) continue;
+              out.push({ key: l.key, target: pool2[a1], target2: pool2[a2], bead: null });
+            }
+          }
+        }
+      } else if (def.target === 'enemy') {
         let pool = S.opponentsOf(state, pid);
         if (opts.lockTarget != null) {
           const alt = pool.filter(function (o) { return o !== opts.lockTarget; });

@@ -1164,6 +1164,33 @@ t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励
   T.setEconomyReward({ reset: true });   // 复位，别污染后面的用例
 });
 
+t('D51 双目标技能必须**有序成对**进入决策（镜面反射 t1→t2 / 双枪射手两个角色）', function () {
+  /* v1.5.52（用户指出）：镜面反射的两个目标**不可调换**（t1=复制对象、t2=输出对象），双枪射手同理。
+   * 此前 `candidatesFor` 每次 push 的 `target2` 都硬编码 null ⇒ 第二个目标由引擎兜底（"索引最小的对手"）
+   * ⇒ ① 角色不可表达；② 系统性把 0 号座当第二个目标（实测 0 号座每局必死 60/60 的一部分来源）。 */
+  ok(R.byKey[R.SK.MIRROR].target2 === 'enemy', '规则数据必须声明镜面反射有第二目标（target2=enemy）');
+  ok(R.byKey[R.SK.DUAL_GUN].target2 === 'enemy', '规则数据必须声明双枪射手有第二目标（target2=enemy）');
+  const pol = readFileSync('js/train/policy.js', 'utf8');
+  ok(pol.indexOf("def.target2 === 'enemy'") >= 0, 'candidatesFor 必须有"双目标技能"分支');
+  const stz = S.createState('multi', { next: function () { return 0.5; } }, 5);
+  const nopps = S.opponentsOf(stz, 0).length;
+  for (const k of [R.SK.MIRROR, R.SK.DUAL_GUN]) {
+    const c = Pol.candidatesFor(stz, 0, [{ key: k }]);
+    const pairs = c.filter(function (x) { return x.target != null && x.target2 != null; });
+    const selfPair = pairs.filter(function (x) { return x.target === x.target2; });
+    eq(pairs.length, nopps * (nopps - 1), k + '：必须枚举**全部有序**组合 n×(n-1)（实测 ' + pairs.length + '）');
+    eq(selfPair.length, 0, k + '：两个目标不得相同');
+    const fwd = c.filter(function (x) { return x.target === 1 && x.target2 === 2; }).length;
+    const bwd = c.filter(function (x) { return x.target === 2 && x.target2 === 1; }).length;
+    eq(fwd, 1, k + '：必须存在 (1→2) 这一个候选');
+    eq(bwd, 1, k + '：必须存在 (2→1) 这一个候选（**顺序不可交换** ⇒ 是两个不同候选）');
+  }
+  /* 对照：单目标技能不得被这条分支改变口径 */
+  const cg = Pol.candidatesFor(stz, 0, [{ key: R.SK.GUN }]);
+  eq(cg.length, nopps, '单目标技能（枪）候选数必须仍等于存活对手数（口径不变）');
+  eq(cg.filter(function (x) { return x.target2 != null; }).length, 0, '单目标技能的 target2 必须恒为 null');
+});
+
 t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规则指纹（否则成绩已过期）', function () {
   /* v1.5.7（千问体检 §5-2 建议 / HANDOFF §4-9 规矩）：v1.5.4 只改了 rules.js 里一个 `target` 字段，
    * 5P 线上冠军的考卷成绩就从 38.0% 掉到 15.0%，而当时**没有任何机制**能自动发现"产物与引擎错配"。
@@ -1769,8 +1796,13 @@ t('D26 网络形状必须被钉住（FEAT_S/FEAT_A/paramCount）+ v5 裁剪规�
   const fv = Pol.featuresV7(st3, 0);
   const tBase = Pol.FEAT_S - Pol.EFFECTS.length * Pol.PLAYER_SLOTS - 4 * Pol.PLAYER_SLOTS;
   eq(tBase, 123, 'T/B 两块必须正好从第 124 维（下标 123）开始');
-  eq(fv[tBase + 1 * 4 + 2], 1, 'T 块：玩家1 的"上一手指向别人"必须是 1（三人局"他们互相打"的核心信号）');
-  eq(fv[tBase + 1 * 4 + 1], 0, 'T 块：玩家1 上回合指的不是我 ⇒"指向我"必须是 0');
+  /* v1.5.52：对手槽顺序在并列时是**随机**的（L7：不得有确定性身份映射）⇒ 测试**不得硬编码槽下标**，
+   * 必须按 pid 反查槽位。（旧写法硬编码"玩家1 在槽 1"，那是"槽位永远按 pid 升序"时代的遗留。） */
+  const slots0 = Pol.oppSlots(st3, 0);
+  const SL1 = 1 + slots0.indexOf(1);
+  ok(slots0.indexOf(1) >= 0 && slots0.indexOf(2) >= 0, '三人局里 1、2 号都必须出现在对手槽里');
+  eq(fv[tBase + SL1 * 4 + 2], 1, 'T 块：玩家1 的"上一手指向别人"必须是 1（三人局"他们互相打"的核心信号）');
+  eq(fv[tBase + SL1 * 4 + 1], 0, 'T 块：玩家1 上回合指的不是我 ⇒"指向我"必须是 0');
   eq(fv[tBase + 0 * 4 + 0], 1, 'T 块：我上回合按ジ ⇒ 引擎解析出来的目标就是自己（"指向自己"=1）');
   /* B 效果快照块：值的符号 = 自己施加(+) / 他人施加(−)（镜面复制来的架势就是"他人给的"） */
   const bBase = Pol.FEAT_S - Pol.EFFECTS.length * Pol.PLAYER_SLOTS;
@@ -1781,8 +1813,8 @@ t('D26 网络形状必须被钉住（FEAT_S/FEAT_A/paramCount）+ v5 裁剪规�
   st3.p[1].copiedGuard = R.SK.REFLECT;                    // 镜面反射复制来的（他人技能）
   const fv2 = Pol.featuresV7(st3, 0);
   eq(fv2[bBase + 0 * Pol.EFFECTS.length + GP], 1, 'B 块：自己摆的架势应当是 +1');
-  eq(fv2[bBase + 1 * Pol.EFFECTS.length + CG], -1, 'B 块：镜面复制来的架势应当是 −1（他人施加）');
-  eq(fv2[tBase + 1 * 4 + 3], R.skills.findIndex(function (s) { return s.key === R.SK.REFLECT; }) / R.skills.length,
+  eq(fv2[bBase + SL1 * Pol.EFFECTS.length + CG], -1, 'B 块：镜面复制来的架势应当是 −1（他人施加）');
+  eq(fv2[tBase + SL1 * 4 + 3], R.skills.findIndex(function (s) { return s.key === R.SK.REFLECT; }) / R.skills.length,
     'T 块最后一维必须是"他复制到了哪张卡"（② 的可见性）');
 });
 
@@ -2396,9 +2428,21 @@ t('D50 对手槽位并列不得按 pid 升序（座位身份泄漏 ⇒ 0 号座�
   }
   ok(new Set(firsts).size > 1, '不同回合下"槽位 0"不得恒为同一人（修前对 pid=1 恒为 0 号座）');
   const pol = readFileSync('js/train/policy.js', 'utf8');
-  ok(pol.indexOf('slotRand(x) - slotRand(y)') >= 0, '并列排序必须用**不可预测的随机键**（slotRand）');
+  ok(pol.indexOf('slotRand(x, state) - slotRand(y, state)') >= 0, '并列排序必须用**不可预测的键**（slotRand(x,state)）');
+  {
+    /* v1.5.52 反证型守门：槽位键**绝不能借用采样/游戏随机流** ——
+     * v1.5.51 借了策略的 __rng() ⇒ ① 消耗采样流；② 任何"特征调用时机/次数"变化都扰动它 ⇒
+     * 实测把 D22（蓄能珠类型不得泄漏）踩红。旧实现还曾从 state.rng 抽盐 ⇒ 改变对局行为（D26 红）。 */
+    const i0 = pol.indexOf('function slotRand(');
+    const i1 = pol.indexOf('function oppSlots(');
+    const seg = (i0 >= 0 && i1 > i0) ? pol.slice(i0, i1) : '';
+    ok(seg.length > 0, '必须能定位 slotRand 的实现段');
+    ok(seg.indexOf('__rng') < 0, '槽位键不得使用策略采样随机流 __rng');
+    ok(seg.indexOf('state.rng') < 0 && seg.indexOf('rng.next') < 0, '槽位键不得消耗对局随机流 state.rng');
+    ok(seg.indexOf('__slotHash') >= 0, '槽位键必须是纯函数哈希（决策内一致、可复现）');
+  }
   ok(pol.indexOf('_rot(x) - _rot(y)') < 0, '旧的"按回合起点轮转"必须已移除（它让回合起点占槽位 0 ⇒ 被集火）');
-  ok(pol.indexOf('let SLOT_RAND = { state: null, round: -1, keys: null };') >= 0, '随机键必须按 state+round 缓存（同一决策内一致）');
+  ok(pol.indexOf('SLOT_RAND') < 0, '不得再用"缓存随机键"的旧实现（v1.5.52 改为纯函数哈希 ⇒ 决策内天然一致）');
   ok(pol.indexOf('return d !== 0 ? d : x - y;') < 0, '旧的"并列按 pid 升序"必须已移除');
 });
 
