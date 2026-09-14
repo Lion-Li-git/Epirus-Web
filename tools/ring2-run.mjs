@@ -168,6 +168,11 @@ async function trainSeed(seed, port) {
   const out = join(ART, ARM + '-' + seed + '.bak');
   const sseLog = join(ART, ARM + '-' + seed + '.sse.log');
   copyFileSync(BASE, STAGE_IN);
+  /* v1.5.55: snapshot the staged artifact BEFORE training. If the health gate blocks the
+   * candidate, the staged file is not refreshed, so "copying the previous bundle" is a
+   * NORMAL skip -- not a "seed did not take effect" mix-up. */
+  let stageBefore = null;
+  try { stageBefore = createHash('sha1').update(readFileSync(STAGE_OUT)).digest('hex'); } catch (e) { stageBefore = null; }
   const startMeta = readMeta(STAGE_IN);
   const url = 'http://127.0.0.1:' + port + '/train?gens=' + GENS + '&n=' + NP + '&pop=' + POP +
     '&gpo=' + GPO + '&seed=' + seed + '&opps=' + POOL + (TRAIN_MODE ? '&mode=' + TRAIN_MODE : '') +
@@ -213,6 +218,13 @@ async function trainSeed(seed, port) {
   }
   clearTimeout(timer);
   if (!sawDone) throw new Error('seed ' + seed + ' 没有 done 事件: ' + (sawErr || '未知（见 ' + sseLog + '）'));
+  /* v1.5.55: was the staged artifact really refreshed? If not -> health gate blocked it. */
+  let stageAfter = null;
+  try { stageAfter = createHash('sha1').update(readFileSync(STAGE_OUT)).digest('hex'); } catch (e) { stageAfter = null; }
+  if (stageBefore && stageAfter && stageBefore === stageAfter) {
+    say('seed ' + seed + ': staged artifact NOT refreshed => blocked by health gate (see [health] in the server log) -- skipping this seed');
+    return { seed: seed, firstRate: 0, top2Rate: 0, blockedByHealth: true };
+  }
   try {
     copyFileSync(STAGE_OUT, out);
   } catch (e) {
