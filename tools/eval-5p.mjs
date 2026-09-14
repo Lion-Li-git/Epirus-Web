@@ -227,7 +227,12 @@ const FIELDS = {
    * 最典型的用法就是打掉别人的环）。 */
   ringwall:   ['ringspam', 'ringspam', 'ringspam', 'ringspam'],
   /* 半墙：2 个开环 + 2 个普通进攻，避免纯经济场退化 */
-  ringmix:    ['ringspam', 'ringspam', 'aggro', 'random']
+  ringmix:    ['ringspam', 'ringspam', 'aggro', 'random'],
+  /* v1.5.36（第三方复核 §4-1/§4-2）：
+   * mix4 = **4 个不同风格同时在场**（最接近"人来打"的构造；A 考卷一局只面对 1~2 个脚本 ⇒ 对这类退化完全无感）；
+   * farmerwall = **4 席只按ジ**（"面对不还手的对手它自己也不动手"这个从 v1.5.17 就存在的空洞，此前没有任何指标覆盖）。 */
+  mix4:       ['aggro', 'defend', 'wall', 'farmer'],
+  farmerwall: ['farmer', 'farmer', 'farmer', 'farmer']
 };
 if (FIELD) {
   if (!FIELDS[FIELD]) { console.error('--field 未知: ' + FIELD + '（可选: ' + Object.keys(FIELDS).join(' ') + '）'); process.exit(1); }

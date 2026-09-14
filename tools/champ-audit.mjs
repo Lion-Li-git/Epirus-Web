@@ -48,12 +48,15 @@ const W = sandbox();
  * ⇒ 此时量 `js/bundled-champion-3p.js` 会得到旧冠军的特征（本轮踩过）。给该行打标记。 */
 const trainingLive = existsSync(join(ROOT, 'docs/artifacts/.training.lock'));
 console.log('冠军体检（自对局 ' + GAMES + ' 局 · 考卷 ' + EXG + ' 局）' + (trainingLive ? '  ⚠️ 训练进行中：bundle 行不可信，请看对应 .bak' : '') + '\n');
-console.log('文件'.padEnd(42) + 'A 考卷1st  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F活跃场进攻 F回合 G有效技能数');
+console.log('文件'.padEnd(42) + 'A 考卷1st  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F活跃场进攻 F回合 G有效技能数   H混合场  I对被动');
 for (const f of files) {
   const params = loadChamp(W, f);
   if (!params) { console.log(f.padEnd(42) + '  (读不出冠军包)'); continue; }
   const e1 = exam(f, [], EXG);
   const e2 = exam(f, ['--mode=long', '--field=reflectwall'], EXG);
+  /* v1.5.36（复核 §4-1/§4-2）：H = 4 风格同场夺冠率；I = 1 冠军 vs 4 只ジ的夺冠率（两列的盲区见 CHANGELOG）。 */
+  const eH = exam(f, ['--mode=long', '--field=mix4'], EXG);
+  const eI = exam(f, ['--mode=multi', '--field=farmerwall'], EXG);
   const sp = selfPlay(W, params, SP_MODE, GAMES);
   const fPass = fieldRate(W, params, 'passive', SP_MODE);
   const fAct = fieldRate(W, params, 'active', SP_MODE);
@@ -67,6 +70,8 @@ for (const f of files) {
     (sp.drawRate * 100).toFixed(0).padStart(7) + '%' +
     sp.rounds.toFixed(1).padStart(7) +
     String(e2.first == null ? '?' : e2.first).padStart(14) + '%' +
+    String(eH.first == null ? '?' : eH.first).padStart(8) + '%' +
+    String(eI.first == null ? '?' : eI.first).padStart(8) + '%' +
     /* v1.5.26（用户裁定）：E 改用新口径 —— 对手ジ<5（无大雷威胁）时还摆架势的占比。
      * 旧口径（总占比）会把"看到对手攒到 5 ジ 该防一下"也判成病：实测 eco-34 旧 89% / 新 16%。 */
     (fPass.noThreatStanceRate * 100).toFixed(0).padStart(10) + '%' +
