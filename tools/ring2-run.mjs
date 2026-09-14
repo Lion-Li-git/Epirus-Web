@@ -52,7 +52,7 @@ const ONLY = process.env.RING2_ONLY || '';            // '' | standard | ring
 const TAG = process.env.RING2_TAG ? '-' + process.env.RING2_TAG : '';
 /* v1.5.0：本工具从「ring2 专用」扩成**通用 seed-sweep**（换池子/换模式/换考卷都是环境变量）。
  *   RING2_MODE       训练模式（'long' = 5 血长程）；不设 ⇒ URL 里不带 mode ⇒ 旧行为逐位不变
- *   RING2_POOL       训练池（'A' = 12；默认 'B' = 13 含 ringspam；'C' = 15 再加 reflectspam+guardspam）
+ *   RING2_POOL       训练池（'A' = 12；默认 'B' = 13 含 ringspam；'C' = 15 再加 reflectspam+guardspam；'D' = 18 再叠 3 席 ringspam）
  *   RING2_ARM        实验臂产物前缀（默认 ring2 ⇒ ring2-<seed>.bak）
  *   RING2_CTRL       控制臂前缀（默认 ms2-p12）
  *   RING2_EXAM2FLAGS 第二考卷参数（默认环场；长程实验传 --mode=long = 5 血标准考卷） */
@@ -91,6 +91,10 @@ const POOL_A = 'random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,ta
 const POOL_B = POOL_A + ',ringspam';
 /* v1.5.29（方案 b）：池 C = B 再加墙对手（反弹墙/盾墙）—— 没有墙对手时破墙奖励永远触发不了。 */
 const POOL_C = POOL_B + ',reflectspam,guardspam';
+/* v1.5.31（用户选 ①）：池 D = C 再加 **3 席 ringspam**（共 4 席）。
+ * 动机：池里只有 1 个环流对手时，冠军绝大多数对局根本碰不到"有人开环"这个处境 ——
+ * 奖励/示范再强也架不住机会太少（v7teach 臂 20 局才 1 次小雷，疑似噪声）。 */
+const POOL_D = POOL_C + ',ringspam,ringspam,ringspam';
 /* v1.5.0：池子可选 —— 'A' = 12 对手（与 ms2-p12 控制臂同池），默认 'B' = 13（含 ringspam）。
  * v1.5.2：也可以直接传**自定义名单**（含 `champ:<路径>` 冠军对手），例：
  *   RING2_POOL='random,defend,champ:docs/artifacts/champion-5p-hA9.bak' */
@@ -100,6 +104,7 @@ const POOL = (function () {
   if (u === 'A') return POOL_A;
   if (u === 'B') return POOL_B;
   if (u === 'C') return POOL_C;
+  if (u === 'D') return POOL_D;
   return v;   // 当名单用
 })();
 const SEEDS = (process.env.RING2_SEEDS || '32,33,34,35,36').split(',').map(function (s) { return Number(s.trim()); }).filter(Boolean);
