@@ -38,7 +38,12 @@ const CHROME = ARGV[0] || 'C:\\Program Files\\Google\\Chrome\\Application\\chrom
 const PORT = Number(ARGV[1] || 9341);
 const URL = 'file:///' + join(ROOT, 'index.html').replace(/\\/g, '/');
 const PLAYERS = Number(flag('players', 5));
-const MAX_MS = Number(flag('max-ms', 180000));
+/* v1.5.35（第三方复核 §4-3）：本门的看门狗是**墙钟**，而长局对峙（60 回合上限）是分布的尾部
+ * ⇒ 会概率性在"还没跑到终局"时被判超时（复核实测 5 次里 1 次 FAILED）。
+ * 这里先把窗口放宽（180s → 300s）作为**止血**；
+ * ⚠️ 真正的修法是**按状态等待**：在出招循环里轮询 `window.EpirusUI.B.state.over`，
+ * 到终局（或回合上限）立即收尾，而不是靠固定墙钟 —— 见 METHODOLOGY「按状态等待，不按墙钟」。 */
+const MAX_MS = Number(flag('max-ms', 300000));
 /* v1.5.18：默认落点改到**未跟踪**目录（原先写 results/，会覆写 git 跟踪的历史截图）。 */
 const OUT = join(ROOT, flag('out', 'docs/artifacts/battle-out'));
 
