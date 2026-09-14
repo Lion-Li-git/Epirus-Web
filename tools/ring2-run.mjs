@@ -73,7 +73,15 @@ const root = join(__dirname, '..');
 const ART = join(root, 'docs', 'artifacts');
 const BUNDLE_MP = join(root, 'js', 'bundled-champion-3p.js');
 const INDEX = join(root, 'index.html');
-const BASE = join(ART, 'champion-5p-v1.3.58.bak');   // 热启动起点（与 ms2/ring2-31 同一权重）
+const BASE = join(ART, 'champion-5p-v1.3.58.bak');
+
+/* v1.5.48：**训练隔离** —— 训练服务把产物写到临时路径、热启动也从临时路径读，
+ * **永不覆写线上 `js/bundled-champion-3p.js` 与 `index.html`**（用户两次因此在训练窗口里打到坏包）。
+ * env 传**相对路径**（服务端 resolve(root, ...)）。 */
+const STAGE_IN = join(ART, '.training-in-3p.js');
+const STAGE_OUT = join(ART, '.training-out-3p.js');
+process.env.EPIRUS_BUNDLE_IN = 'docs/artifacts/.training-in-3p.js';
+process.env.EPIRUS_BUNDLE_OUT = 'docs/artifacts/.training-out-3p.js';   // 热启动起点（与 ms2/ring2-31 同一权重）
 const LOCK = join(ART, '.training.lock');            // v1.5.8：训练锁（见 main() 里的说明）
 const STATUS = join(ART, 'ring2-status' + TAG + '.log');
 const EVALLOG = join(ART, 'ring2-eval' + TAG + '.log');
@@ -157,8 +165,8 @@ async function waitServer(port, ms) {
 async function trainSeed(seed, port) {
   const out = join(ART, ARM + '-' + seed + '.bak');
   const sseLog = join(ART, ARM + '-' + seed + '.sse.log');
-  copyFileSync(BASE, BUNDLE_MP);
-  const startMeta = readMeta(BUNDLE_MP);
+  copyFileSync(BASE, STAGE_IN);
+  const startMeta = readMeta(STAGE_IN);
   const url = 'http://127.0.0.1:' + port + '/train?gens=' + GENS + '&n=' + NP + '&pop=' + POP +
     '&gpo=' + GPO + '&seed=' + seed + '&opps=' + POOL + (TRAIN_MODE ? '&mode=' + TRAIN_MODE : '') +
     (STYLE_OPPS ? '&styleopps=' + STYLE_OPPS : '') + (STYLE_W ? '&stylew=' + STYLE_W : '') +
@@ -203,7 +211,14 @@ async function trainSeed(seed, port) {
   }
   clearTimeout(timer);
   if (!sawDone) throw new Error('seed ' + seed + ' 没有 done 事件: ' + (sawErr || '未知（见 ' + sseLog + '）'));
-  copyFileSync(BUNDLE_MP, out);
+  try {
+    copyFileSync(STAGE_OUT, out);
+  } catch (e) {
+    /* v1.5.48：产物可能**被健康门槛拦下**（服务端日志里是 `[health] ⚠ 产物未过自对局体检 ⇒ 不写盘`）⇒
+     * 这时没有临时产物，属于**正常结果**（不是错误）⇒ 记一条并跳过该 seed，别让整臂失败退出。 */
+    say('seed ' + seed + ' 产物未落盘（多半被健康门槛拦下：见服务端日志的 [health] 行）—— 跳过该 seed');
+    return { seed: seed, firstRate: 0, top2Rate: 0, blockedByHealth: true };
+  }
   const meta = readMeta(out) || {};
   say('seed ' + seed + ' DONE  自评=' + Number(meta.firstRate || 0).toFixed(4) +
     ' top2=' + Number(meta.top2Rate || 0).toFixed(4) + '  → ' + out);
@@ -318,10 +333,10 @@ async function main() {
      * ② 收尾**自动跑零提升检测**：产物若等于热启动种子（整臂静默冻结）必须显式报出来，
      * 不能靠人记得执行。 */
     try {
-      const html = readFileSync(INDEX, 'utf8');
+      const html = process.env.EPIRUS_BUNDLE_OUT ? '' : readFileSync(INDEX, 'utf8');   // v1.5.48：隔离模式不碰线上 index.html
       const fresh = Date.now().toString(36);
       const bumped = html.replace(/\?v=[0-9a-z]+/g, '?v=' + fresh);
-      if (bumped !== html) { writeFileSync(INDEX, bumped, 'utf8'); say('已重打缓存戳 ?v=' + fresh + '（防止浏览器用缓存的旧包）'); }
+      if (!process.env.EPIRUS_BUNDLE_OUT && bumped !== html) { writeFileSync(INDEX, bumped, 'utf8'); say('已重打缓存戳 ?v=' + fresh + '（防止浏览器用缓存的旧包）'); }
     } catch (e) { say('⚠ 重打缓存戳失败：' + e.message); }
     if (process.env.RING2_ARM) {
       try {

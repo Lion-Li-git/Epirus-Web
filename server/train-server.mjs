@@ -10,7 +10,7 @@ import { OPP_FN } from './opp-pool.mjs';   // v1.4.9：对手池单一来源（�
 /* v1.5.2：对手池支持「风格化冠军」当靶子（`champ:<仓库相对路径>`）—— 机制单一来源见该模块。 */
 import { isChampOpp, champOppMissing, makeChampOppResolver, makeOppSelResolver } from './opp-champs.mjs';
 import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';   // v1.5.48：writeBundleMP 用 resolve（容忍绝对路径）
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
@@ -85,6 +85,9 @@ function sse(res, data) {
 }
 /* 更新 index.html 里冠军 script 的 ?v= 版本号（cache-busting）：冠军一变版本号就变，浏览器不再用旧缓存。 */
 function bumpChampionVersion() {
+  /* v1.5.48：**隔离模式下绝不改 index.html**（它也是线上交付物）。 */
+  if (process.env.EPIRUS_BUNDLE_OUT) return;
+
   const html = join(root, 'index.html');
   try {
     let s = readFileSync(html, 'utf8');
@@ -300,7 +303,8 @@ let runningN = false;
 
 function loadSeedN() {
   try {
-    const src = readFileSync(join(root, BUNDLE_MP), 'utf8');
+    /* v1.5.48：隔离模式下从 EPIRUS_BUNDLE_IN 读热启动（训练不再碰线上包）。 */
+    const src = readFileSync(resolve(root, process.env.EPIRUS_BUNDLE_IN || BUNDLE_MP), 'utf8');
     const m = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
     if (m) { const r = P.loadAny(JSON.parse(m[1])); if (r && r.legacy) seedLegacyFrom = r.from; return r ? r.params : null; }
   } catch (e) { /* 无热启动 */ }
@@ -308,7 +312,11 @@ function loadSeedN() {
 }
 
 function writeBundleMP(pack, meta) {
-  writeFileSync(join(root, BUNDLE_MP),
+  /* v1.5.48：**训练产物绝不写线上包** —— 写 EPIRUS_BUNDLE_OUT（线上包只由 tools/promote-champion.mjs 写）。
+   * 用 `resolve` 而非 `join`：env 里给绝对路径也不会被拼成坏路径（实测踩过：join 会把 D:\... 拼坏）。 */
+  const OUTP = process.env.EPIRUS_BUNDLE_OUT ? resolve(root, process.env.EPIRUS_BUNDLE_OUT) : join(root, BUNDLE_MP);
+  console.log('[bundle] wrote ' + OUTP + (process.env.EPIRUS_BUNDLE_OUT ? '  (隔离模式：未触碰线上包)' : '  (线上路径)'));
+  writeFileSync(OUTP,
     '/* Epirus \u591a\u4eba\u51a0\u519b\uff08\u7531 server/train-server.mjs \u751f\u6210\uff09\u3002\u53ea\u8bfb\u6570\u636e\uff0c\u4e0d\u8981\u624b\u6539\u3002 */\n' +
     'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
     'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(pack) + ';\n');
