@@ -115,6 +115,45 @@ export function stanceProfile(rows, threatByRound) {
   };
 }
 
+
+/* ===== v1.5.28（第三方复核 §3-1/§4-2b，用户裁定先做 1+2）：**反弹墙探针** =====
+ * 与 champ-audit 的 D 列同口径（4 席 `reflectspam`、长程 5 血、每局轮座）。
+ * 为什么必须单独测：v1.5.27 的冠军在**自对局**里激光剑命中 20 次（自对局根本测不出这个病），
+ * 但在**反弹墙**里一枪未发 ⇒ D 列 85%→0%。门槛必须量在"墙"上，不能量在自对局上。 */
+export function reflectWall(W, params, mode, GAMES) {
+  const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, Bots = W.EpirusBots;
+  const G = GAMES || 20, N = 5;
+  const wall = Bots.pickReflectSpam;
+  const pierceKeys = (R.skills || []).filter(function (sd) {
+    const pp = sd.pierce || {};
+    return !!(pp.reflect || pp.defense);
+  }).map(function (sd) { return sd.key; });
+  const landByKey = {};
+  let dmg = 0, rounds = 0, zeroGames = 0;
+  for (let g = 0; g < G; g++) {
+    const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(7300 + g) }, N);
+    const seat = g % N;                          // 轮座：每局冠军坐不同座位
+    const ch = [];
+    for (let pid = 0; pid < N; pid++) ch.push(pid === seat ? T.policyChooserN(params, 0.15) : wall);
+    Play.autoGameN(st, ch);
+    let gd = 0;
+    for (const e of st.events) {
+      if (e.type === 'damage' && e.source === seat && e.via) {
+        dmg += e.amt; gd += e.amt;
+        landByKey[e.via] = (landByKey[e.via] || 0) + 1;
+      }
+    }
+    if (gd === 0) zeroGames++;
+    rounds += st.round;
+  }
+  let pierceLand = 0;
+  for (const k of pierceKeys) pierceLand += (landByKey[k] || 0);
+  return {
+    games: G, dmgPerGame: dmg / G, rounds: rounds / G, zeroDamageRate: zeroGames / G,
+    landByKey: landByKey, pierceKeys: pierceKeys, pierceLand: pierceLand
+  };
+}
+
 export function fieldRate(W, params, kind, mode, GAMES) {
   const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
   const G = GAMES || 10;

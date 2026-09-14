@@ -24,7 +24,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall } from './audit-lib.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
@@ -85,6 +85,9 @@ const dpg = sp.dmgPerGame, drawRate = sp.drawRate;
 console.log('   自对局（5 座同一冠军 ×' + G + '）：伤害/局 = ' + dpg.toFixed(1) +
   '，平局率 = ' + (drawRate * 100).toFixed(0) + '%，回合 = ' + sp.rounds.toFixed(1) +
   '，全息屏障/局 = ' + sp.holoPerGame.toFixed(1) + '，有效技能数 = ' + sp.effSkills.toFixed(2));
+console.log('   穿透卡落地命中（自对局）：' + (sp.pierceKeys || []).map(function (k) {
+  return ((W.EpirusRules.byKey[k] || {}).name || k) + '=' + ((sp.landByKey || {})[k] || 0);
+}).join('  '));
 console.log('   E 被动场：旧口径摆架势率 = ' + (fPass.stance * 100).toFixed(0) + '%   ' +
   '**新口径·无威胁(对手ジ<5)时摆架势 = ' + (fPass.noThreatStanceRate * 100).toFixed(0) + '%**' +
   '（无威胁回合 ' + fPass.noThreatRounds + '，最长无威胁连摆 ' + fPass.maxNoThreatRun + '）' +
@@ -100,6 +103,32 @@ const fails = [];
 if (dpg < 5) fails.push('伤害/局 ' + dpg.toFixed(1) + ' < 5（很可能是"熬"型冠军：考卷分会被熬骗）');
 if (drawRate > 0.2) fails.push('平局率 ' + (drawRate * 100).toFixed(0) + '% > 20%（自对局打不起来）');
 if (sp.holoPerGame > 2) fails.push('全息屏障 ' + sp.holoPerGame.toFixed(1) + ' 次/局 > 2（v1.5.4 之前的产物会把盾套给对手）');
+/* v1.5.28（第三方复核 §4-2b，用户裁定先做）：**关键穿透卡下限**。
+ * G 只看出手分布的熵 ⇒ "变宽但丢关键卡"能骗过它：v1.5.27 实测 G 4.15→6.55、同时激光剑 0 命中、
+ * 长程反弹墙 85%→0%（对方 4 面反弹墙时它**一枪未发**，被终局收缩耗死）。
+ * 规则：**每一张能穿反弹/穿防御的攻击卡**（规则数据推导：激光剑/坦克/狙击枪/电磁炮）在自对局里
+ * 必须至少落地命中 1 次；一张都没有 ⇒ 阻断（要越过就 --force，并留痕）。 */
+const rw = reflectWall(W, params, 'long', G);
+console.log('   反弹墙（4 席 reflectspam · 长程 · ' + G + ' 局）：主动伤害 ' + rw.dmgPerGame.toFixed(2) + '/局' +
+  '，零伤害局 ' + (rw.zeroDamageRate * 100).toFixed(0) + '%' +
+  '，穿透卡命中 ' + rw.pierceLand + '（' + rw.pierceKeys.map(function (k) {
+    return ((W.EpirusRules.byKey[k] || {}).name || k) + '=' + (rw.landByKey[k] || 0);
+  }).join(' ') + '）');
+/* v1.5.28（复核 §3-1 实测）：**反弹墙里穿透卡零命中 = 打不破墙** ⇒ 阻断。
+ * 这是唯一能抓住"G 涨了但激光剑线丢了"的指标：v1.5.27 自对局激光剑命中 20 次、墙里 0 次。 */
+if (rw.pierceLand === 0) {
+  fails.push('反弹墙里穿透卡零命中（' + rw.pierceKeys.map(function (k) {
+    return ((W.EpirusRules.byKey[k] || {}).name || k);
+  }).join('/') + '）⇒ 面对 4 面反弹墙一枪未发（D 列会归零）');
+}
+/* ⚠️ v1.5.28 实测：审计 §4-2b 建议的"每张穿透卡在**自对局**里 ≥1 命中"**不能当阻断条件** ——
+ * 坦克与电磁炮是**所有冠军（含历史最好的 eco-34）都没用过**的卡 ⇒ 照字面做会把所有人挡在门外
+ * （与 E/F 的"阈值定在噪声带里"同型）。故降级为**提示**，真正阻断的是下面那条量在**反弹墙**上的门槛。 */
+if (sp.pierceMissing && sp.pierceMissing.length) {
+  const nm = sp.pierceMissing.map(function (k) { return (W.EpirusRules.byKey[k] || {}).name || k; });
+  console.warn('   ⚠️ 提示（不阻断）：自对局里这些穿透卡零命中 ' + nm.join('/') +
+    ' —— 若连**反弹墙**里也是 0 才会阻断；单张冷门卡（坦克/电磁炮）多数冠军都不用。');
+}
 /* v1.5.26（用户裁定）：E 改用**新口径**。旧口径（摆架势回合占比 > 85%）会**误伤合理防御** ——
  * 用户原话："并不是说不能出防御，特定情况下反而是要出的（比如看到对手攒到 5 ji 防一下大雷），但总不能每回合都这样。"
  * 实测（10 局被动场）：旧口径 eco-34 89% ✗ / v7press-36 95% ✗；而新口径它们分别是 16% / 46% ✓✓
@@ -139,6 +168,10 @@ meta.passiveStanceRate = Number(fPass.stance.toFixed(3));
 meta.passiveNoThreatStanceRate = Number(fPass.noThreatStanceRate.toFixed(3));
 meta.passiveNoThreatRounds = fPass.noThreatRounds;
 meta.passiveMaxNoThreatRun = fPass.maxNoThreatRun;
+meta.pierceLandByKey = sp.landByKey;
+meta.pierceMissingCards = sp.pierceMissing;
+meta.reflectWallPierceLand = rw.pierceLand;
+meta.reflectWallDmgPerGame = Number(rw.dmgPerGame.toFixed(2));
 meta.activeAttackRate = Number(fAct.atk.toFixed(3));
 meta.auditFails = fails;
 meta.auditForced = fails.length ? FORCE : false;

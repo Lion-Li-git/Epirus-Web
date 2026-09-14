@@ -2070,6 +2070,14 @@ t('D41 E 新口径：只有"**没有大雷威胁时还一直摆架势**"才算�
   /* v1.5.27：F 门槛按实测重标定（所有冠军 22%~35% ⇒ 35% 把所有人挡住；25% 才区分得开） */
   ok(pc.indexOf('fAct.atk < 0.25') >= 0, 'F 门槛必须已重标定为 25%（用户裁定）');
   ok(pc.indexOf('fAct.atk < 0.35') < 0, '旧的 F 门槛（35%）必须已移除');
+  /* v1.5.28：**反弹墙穿透卡零命中 = 阻断**（第三方复核 §3-1 实测：v1.5.27 自对局激光剑命中 20 次、墙里 0 次） */
+  ok(pc.indexOf('reflectWall') >= 0, 'promote-champion 必须调用 reflectWall（反弹墙探针）');
+  ok(pc.indexOf('rw.pierceLand === 0') >= 0, '反弹墙穿透卡零命中必须是阻断条件');
+  ok(pc.indexOf("fails.push('穿透卡零命中") < 0, "自对局穿透卡零命中**不得**是阻断条件（实测所有冠军都没用过坦克/电磁炮）");
+  /* 探针本身：能穿反弹/穿防御的卡必须是从规则数据推导的（不许硬编码） */
+  const al2 = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(/export function reflectWall\(W, params, mode, GAMES\)/.test(al2), 'audit-lib 必须导出 reflectWall');
+  ok(/const pierceKeys = \(R\.skills \|\| \[\]\)\.filter/.test(al2), '穿透卡清单必须从 R.skills 推导（不硬编码）');
 });
 
 t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）', function () {

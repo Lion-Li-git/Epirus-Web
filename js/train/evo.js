@@ -1263,6 +1263,10 @@
     const mk = (mode === 'long') ? 'long' : 'multi';
     let dmg = 0, heavyDmg = 0, holo = 0, draws = 0, rounds = 0, zero = 0;
     const keyCount = {};
+    /* v1.5.28（第三方复核 §4-2b）：**落地命中按卡统计** —— G（出手分布的熵）会被"变宽但丢关键卡"骗：
+     * v1.5.27 实测 G 4.15→6.55 的同时，把唯一能穿反弹的**激光剑**用到 0 命中（长程反弹墙 85%→0%）。
+     * 这里直接统计 `damage` 事件的 `via`，并**从规则数据推导**出"能穿反弹/穿防御"的卡（不硬编码）。 */
+    const landByKey = {};
     for (let g = 0; g < G; g++) {
       const st = S.createState(mk, { next: mulberry32(9000 + g) }, N);
       const ch = [];
@@ -1274,6 +1278,7 @@
         if (e.type === 'damage') {
           dmg += e.amt; gd += e.amt;
           const def = e.via ? R.byKey[e.via] : null;
+          if (e.via) landByKey[e.via] = (landByKey[e.via] || 0) + 1;
           if (def && def.cost != null && def.cost >= 3) heavyDmg += e.amt;
         }
         /* G：只统计**非ジ**的成功出手（ジ 占比 ~60% 是算术必然，算进去会把覆盖度量成常数）。 */
@@ -1287,12 +1292,20 @@
     }
     const ks = Object.keys(keyCount);
     const tot = ks.reduce(function (a, k) { return a + keyCount[k]; }, 0);
+    /* 从 R.skills 推导"能穿反弹/穿防御"的卡（激光剑/坦克/狙击枪/电磁炮）—— 规则改了它自动跟着变。 */
+    const pierceKeys = (R.skills || []).filter(function (sd) {
+      const pp = sd.pierce || {};
+      return !!(pp.reflect || pp.defense);
+    }).map(function (sd) { return sd.key; });
     let H = 0;
     for (const k of ks) { const pr = keyCount[k] / tot; H -= pr * Math.log(pr); }
     return {
       games: G, dmgPerGame: dmg / G, heavyPerGame: heavyDmg / G, holoPerGame: holo / G,
       zeroRate: zero / G, drawRate: draws / G, rounds: rounds / G,
-      effSkills: tot ? Math.exp(H) : 0, distinctKeys: ks.length, nonJi: tot
+      effSkills: tot ? Math.exp(H) : 0, distinctKeys: ks.length, nonJi: tot,
+      landByKey: landByKey, pierceKeys: pierceKeys,
+      /* 零落地的"穿透卡"（能穿反弹/穿防御）—— 为 0 就说明**破墙的那条线丢了** */
+      pierceMissing: pierceKeys.filter(function (k) { return !landByKey[k]; })
     };
   }
   function healthFails(mh) {
