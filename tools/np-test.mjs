@@ -2342,5 +2342,23 @@ t('D31 复制避雷针的"挡本回合的雷"与免雷窗口的真实口径（v1
   eq(st3.p[0].hp, 3, 'a 必须实打实挨那 2 点（复制的反弹挡不住先前结算的大雷）');
 });
 
+t('D44 零提升检测：训练"静默冻结"必须可被发现（产物 == 热启动种子）', function () {
+  const zc = readFileSync('tools/zero-promote-check.mjs', 'utf8');
+  ok(zc.indexOf("createHash('sha1')") >= 0, '检测必须用权重哈希比对（分数会骗人）');
+  ok(zc.indexOf('process.exit(3)') >= 0, '发现零提升必须非零退出（可被脚本捕获，不能只打印）');
+  ok(zc.indexOf('embedLegacy') >= 0, '必须按训练起点口径 embedLegacy 后再比');
+  ok(zc.indexOf('零提升') >= 0, '必须有明确判定文案');
+});
+
+t('D45 全息屏障的目标必须进决策（否则引擎把 null 兜底成第一个对手 => 系统性送盾）', function () {
+  const pol = readFileSync('js/train/policy.js', 'utf8');
+  ok(pol.indexOf("def.target === 'other'") >= 0, 'candidatesFor 必须展开 target:other（holo 的目标要进决策）');
+  const res = readFileSync('js/core/resolve.js', 'utf8');
+  ok(res.indexOf('if (a.key === SK.HOLO) {') >= 0, 'holo 必须有独立目标分支（不得走 oppOf）');
+  ok(res.indexOf('t = (hDecl == null) ? i : hDecl;') >= 0, 'holo 无目标必须默认套在自己身上');
+  ok(res.indexOf('holoShieldFrom') >= 0, '盾的来自谁语义必须仍在');
+});
+
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
