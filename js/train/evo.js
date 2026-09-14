@@ -787,6 +787,7 @@
           /* v1.5.39：定向 ε-强迫（只影响"有滚环者且我付得起小雷"这一格；其余原样返回学习到的动作）。 */
           choosers.push(function (state, pid2, legal) {
             const _fe = ringForceEpsAt(gen);
+            IN_EXPLORE = _fe > 0;   // 探索期（强迫窗口内）
             if (_fe > 0 && Math.random() < _fe) {
               const tg = ringForceTarget(state, pid2, legal);
               if (tg >= 0) return { key: R.SK.MINI_T, target: tg };
@@ -1035,7 +1036,9 @@
      * 等于门槛是空操作（教训：门槛要加在"决定产物的那一行"上，见 docs/METHODOLOGY.md 第 21 条）。
      * 成本：只在真的出现"更高分候选"时才跑 promoteGames 局（默认 8），不是每代都跑。 */
     let healthReject = null;
-    if (better && HEALTH.on) {
+    /* v1.5.42：**探索期内不惩罚探索** —— 被强迫的个体暂时不健康，但它们承载着"动作被采样过"的信息；
+     * 若在窗口内就用健康门槛拒掉，整条提升链会被堵死（实测逃逸率 1/6）。窗口外照旧。 */
+    if (better && HEALTH.on && !IN_EXPLORE) {
       const mh = mirrorHealth(cand.params, HEALTH.promoteGames, HEALTH.n, TRAIN_MODE);
       const hf = healthFails(mh);
       if (hf.length) healthReject = hf;
@@ -1162,6 +1165,11 @@
    * 实测（v1.5.39）：格内常开 ε=1.0 会把训练**整体冻死**（6/6 零提升，产物退回种子）；
    * 而 ε=5% 又因目标格极罕见（0.15%）等于没做 ⇒ 正确形态是"**早期强制示范、之后关掉**"，
    * 让最终产物来自**无强迫的后段**，验收才有意义。 */
+  /* v1.5.42（用户选 ②）：**探索期标志** —— 由 scoreMemberN 按当前代更新（= 是否在强迫窗口内）。
+   * 用途：提升闸门与选择过滤在探索期内**不惩罚**被强迫出来的个体（否则它们全被拒 ⇒ 整臂冻回种子，
+   * 实测窗口 20/40/80 的逃逸率只有 0/1/1 个 seed）。窗口外一切照旧。 */
+  let IN_EXPLORE = false;
+
   let RING_FORCE_UNTIL = 0;
   function setRingForceUntil(n) { const x = Number(n); RING_FORCE_UNTIL = (isFinite(x) && x > 0) ? Math.floor(x) : 0; return RING_FORCE_UNTIL; }
   function ringForceUntil() { return RING_FORCE_UNTIL; }
@@ -1491,7 +1499,7 @@
       const base = gateOk ? (0.5 * wr + 0.5 * (n ? minWr : 0)) : (gateMin * 0.4 - 1);
       /* v7：**自对局健康门槛**（见 mirrorHealth 的说明）。不过门槛的候选被压到所有健康候选之下，
        * 且不许进容差带 ⇒ 训练器不能再靠"熬"拿分。 */
-      const mh = HEALTH.on ? mirrorHealth(params, HEALTH.games, HEALTH.n, TRAIN_MODE) : null;
+      const mh = (HEALTH.on && !IN_EXPLORE) ? mirrorHealth(params, HEALTH.games, HEALTH.n, TRAIN_MODE) : null;   // v1.5.42：探索期不评估健康
       const hFails = healthFails(mh);
       const healthOk = hFails.length === 0;
       const score = healthOk ? base : base - 1;

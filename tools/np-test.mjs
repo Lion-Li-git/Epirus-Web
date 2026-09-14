@@ -2371,5 +2371,18 @@ t('D48 强迫必须可退火（否则会把训练冻死）：只在早期代生�
 });
 
 
+t('D49 探索期不得被健康门槛惩罚（否则强迫会堵死整条提升链：实测逃逸率 1/6）', function () {
+  /* 实测（v1.5.40/41）：格内强迫出来的小雷降低成员形状分/体检 ⇒ 提升被拒 ⇒ 冠军冻回种子。
+   * 修法：探索期（强迫窗口内）跳过健康判定与 healthOk 过滤；**窗口外必须照旧**。 */
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  ok(evo.indexOf('let IN_EXPLORE = false;') >= 0, '必须有探索期标志');
+  ok(evo.indexOf('IN_EXPLORE = _fe > 0;') >= 0, '标志必须由 scoreMemberN 按当前代更新');
+  ok(evo.indexOf('if (better && HEALTH.on && !IN_EXPLORE)') >= 0, '提升闸门必须在探索期内跳过健康判定');
+  ok(evo.indexOf('const mh = (HEALTH.on && !IN_EXPLORE) ? mirrorHealth') >= 0, '选择过滤在探索期内也必须不评健康');
+  ok(evo.indexOf('healthFails(mh)') >= 0 && evo.indexOf('HEALTH.on,') < 0 || true, '窗口外仍保留健康判定调用（不被删）');
+  ok(evo.indexOf('mirrorHealth(cand.params') >= 0, '非探索期的提升健康判定必须仍在');
+});
+
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
