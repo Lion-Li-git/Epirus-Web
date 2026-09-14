@@ -35,6 +35,7 @@
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readFileSync, writeFileSync, copyFileSync, existsSync, appendFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import net from 'node:net';
@@ -312,6 +313,24 @@ async function main() {
     if (bakBundle) writeFileSync(BUNDLE_MP, bakBundle);
     if (bakIndex) writeFileSync(INDEX, bakIndex);
     say('已还原 js/bundled-champion-3p.js 与 index.html（训练会刷 ?v= 缓存戳）');
+    /* v1.5.36（清理）：① **还原后重新打缓存戳** —— 还原会把 ?v= 退回旧值，浏览器于是在旧 URL 下
+     * 继续用缓存的旧冠军包 ⇒ 页面报"冠军包缺失/不兼容"（v1.5.32 实测踩过）。
+     * ② 收尾**自动跑零提升检测**：产物若等于热启动种子（整臂静默冻结）必须显式报出来，
+     * 不能靠人记得执行。 */
+    try {
+      const html = readFileSync(INDEX, 'utf8');
+      const fresh = Date.now().toString(36);
+      const bumped = html.replace(/\?v=[0-9a-z]+/g, '?v=' + fresh);
+      if (bumped !== html) { writeFileSync(INDEX, bumped, 'utf8'); say('已重打缓存戳 ?v=' + fresh + '（防止浏览器用缓存的旧包）'); }
+    } catch (e) { say('⚠ 重打缓存戳失败：' + e.message); }
+    if (process.env.RING2_ARM) {
+      try {
+        const r = spawnSync(process.execPath, [join(root, 'tools', 'zero-promote-check.mjs'), process.env.RING2_ARM,
+          join(root, 'docs', 'artifacts', 'champion-5p-v1.3.58.bak'), process.env.RING2_SEEDS || '31,32,33,34,35,36'],
+          { stdio: 'inherit' });
+        say(r.status === 0 ? '✅ 零提升检测通过（每个 seed 都有提升）' : '⚠ 零提升检测：有 seed 无提升（见上，status=' + r.status + '）');
+      } catch (e) { say('⚠ 零提升检测没跑起来：' + e.message); }
+    }
   }
 }
 main().catch(function (e) {

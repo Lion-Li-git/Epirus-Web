@@ -210,7 +210,7 @@ async function main() {
 
   /* ── 等终局 ── */
   let ended = false;
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 300; i++) {
     if (await over()) { ended = true; break; }
     await sleep(400);
   }
