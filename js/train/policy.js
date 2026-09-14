@@ -117,7 +117,15 @@
   function oppSlots(state, pid) {
     const a = [];
     for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) a.push(i);
-    a.sort(function (x, y) { const d = state.p[x].hp - state.p[y].hp; return d !== 0 ? d : x - y; });
+    /* v1.5.46（第三方复核 §3，最高优先级）：并列**不得按 pid 升序**。
+     * 实测：5 席同策略自对局 **0 号座夺冠 81%（long）/ 59%（multi）**，其余座位 3~7%（期望 20%）。
+     * 机制：开局全员同血 ⇒ 1~4 号座看别人时"槽位 0"**永远是 0 号座** ⇒ 特征里出现与实力无关的
+     * **座位身份泄漏**（`FEAT_S` 的 4 槽 × 10 维是硬编码下标）⇒ 网络能学"槽位 0 该怎么对待"。
+     * 修法：按**当前回合的行动起点**轮转（与 pid 无关、每回合变化）—— L7 教训在此处的复现。 */
+    const _n = state.p.length;
+    const _ts = ((((state.round || 1) - 1) % _n) + _n) % _n;
+    const _rot = function (i) { return (((i - _ts) % _n) + _n) % _n; };
+    a.sort(function (x, y) { const d = state.p[x].hp - state.p[y].hp; return d !== 0 ? d : _rot(x) - _rot(y); });
     return a;
   }
 

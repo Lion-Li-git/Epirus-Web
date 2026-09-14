@@ -2384,5 +2384,22 @@ t('D49 探索期不得被健康门槛惩罚（否则强迫会堵死整条提升�
 });
 
 
+t('D50 对手槽位并列不得按 pid 升序（座位身份泄漏 ⇒ 0 号座夺冠 81%）', function () {
+  /* 复核 §3 实测：5 席同策略自对局 **0 号座夺冠 81%（long）/ 59%（multi）**，其余 3~7%（期望 20%）。
+   * 机制：开局全员同血时并列按 pid 升序 ⇒ 1~4 号座看别人时"槽位 0"永远是 0 号座 ⇒ 特征里出现
+   * 与实力无关的座位身份泄漏 ⇒ 网络学"槽位 0 该怎么对待"。这是 L7 教训（并列不许按 pid 升序）的另一处复现。 */
+  const firsts = [];
+  for (let sd = 0; sd < 5; sd++) {
+    const st = S.createState('multi', { next: mulberry32(1000 + sd) }, 5);
+    st.round = 1 + sd;
+    firsts.push(Pol.oppSlots(st, 1)[0]);
+  }
+  ok(new Set(firsts).size > 1, '不同回合下"槽位 0"不得恒为同一人（修前对 pid=1 恒为 0 号座）');
+  const pol = readFileSync('js/train/policy.js', 'utf8');
+  ok(pol.indexOf('_rot(x) - _rot(y)') >= 0, '并列排序必须用与 pid 无关的轮转（_rot）');
+  ok(pol.indexOf('return d !== 0 ? d : x - y;') < 0, '旧的"并列按 pid 升序"必须已移除');
+});
+
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
