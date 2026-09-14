@@ -420,7 +420,7 @@ async function runTrainN(gens, cfg) {
   });
   let sigma = 0.18;
   const hall = [];
-  for (const c of clients) sse(c, { type: 'start', n: n, gens, pop: popSize, gpo: games, from: 0, workers: poolN.workers, fresh: !!cfg.fresh, mode: mode });
+  for (const c of clients) sse(c, { type: 'start', n: n, gens, pop: popSize, gpo: games, from: 0, workers: poolN.workers, fresh: !!cfg.fresh, mode: mode, seed: SEED0 });
   for (let gen = 0; gen < gens; gen++) {
     let res = await poolN.evalPopN(pop, gen, games, n, oppNames, hGenes, styleNames, slice.w, slice.games);
     if (!res) {
@@ -646,6 +646,12 @@ const server = http.createServer((req, res) => {
         runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh, seed0: seed0, opps: url.searchParams.get('opps'), mode: modeQ,
           styleopps: url.searchParams.get('styleopps'), styleW: url.searchParams.get('stylew'), styleGames: url.searchParams.get('stylegames') })
           .catch(function (e) { for (const c of clients) sse(c, { type: 'error', msg: String(e && e.message || e) }); runningN = false; });
+      } else {
+        /* v1.5.55 事故修复：此前这里是**静默 return** —— 第二个及以后的 /train 请求被无声丢弃，
+         * runner 抓到的是**正在跑的那一场**的 done ⇒ 12 个"独立 seed"拷到**同一个包**
+         * （实测 sha1 dfb399dab9 × 12、meta.seed 全 35）⇒ 一切"多种子对比"与"偏置验收"
+         * 的有效样本恒为 1。现在改为**明确报错**，让工具链立刻炸出来。 */
+        sse(res, { type: 'error', msg: '已有多人训练在跑：本次请求（seed=' + seed0 + '）被拒绝。一次只允许一场，避免产物串味。' });
       }
       return;
     }

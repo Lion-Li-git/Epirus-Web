@@ -38,6 +38,7 @@ import { readFileSync, writeFileSync, copyFileSync, existsSync, appendFileSync, 
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';   // v1.5.55: 产物串味守卫
 import net from 'node:net';
 
 /* ===== 环境配置（必须在下面用到 TAG / EGAMES 的路径常量之前声明：const 有 TDZ，
@@ -59,6 +60,7 @@ const TAG = process.env.RING2_TAG ? '-' + process.env.RING2_TAG : '';
  *   RING2_EXAM2FLAGS 第二考卷参数（默认环场；长程实验传 --mode=long = 5 血标准考卷） */
 const TRAIN_MODE = process.env.RING2_MODE || '';
 const ARM = process.env.RING2_ARM || 'ring2';
+let prevSha = null;   // v1.5.55: 上一个 seed 的产物 sha1（用于抓'不同 seed 拷到同一个包'）
 const CTRL = process.env.RING2_CTRL || 'ms2-p12';
 const EXAM2 = (process.env.RING2_EXAM2FLAGS || '--mode=long --field=ringwall').split(' ').filter(Boolean);
 /* v1.5.2：风格切片（复合适应度）—— 在池子预算之外追加 k 局对风格冠军的局，1st 率按权重并进 fit。 */
@@ -219,6 +221,17 @@ async function trainSeed(seed, port) {
     say('seed ' + seed + ' 产物未落盘（多半被健康门槛拦下：见服务端日志的 [health] 行）—— 跳过该 seed');
     return { seed: seed, firstRate: 0, top2Rate: 0, blockedByHealth: true };
   }
+  /* v1.5.55 事故守卫：**不同 seed 若拷到同一个包**，说明 seed 未生效 ——
+   * 本次事故：服务器 `if (!runningN)` 静默丢弃第二个及以后的 /train 请求 ⇒ 12 个 seed 拷到同一个包
+   * （sha1 dfb399dab9 × 12），而一切"多种子对比/偏置验收"看起来都正常、有效样本却恒为 1。
+   * 现在直接抛错：宁可整臂失败，也不要伪造出"多次独立实验"的假象。 */
+  const sha = createHash('sha1').update(readFileSync(out)).digest('hex').slice(0, 12);
+  if (prevSha && sha === prevSha) {
+    throw new Error('seed ' + seed + ' 的产物与上一个 seed **逐字节相同**（sha1=' + sha + '）'
+      + ' —— seed 未生效（服务端是否拒绝了并发 /train 请求？见服务端日志）');
+  }
+  prevSha = sha;
+  say('seed ' + seed + ' 产物 sha1=' + sha);
   const meta = readMeta(out) || {};
   say('seed ' + seed + ' DONE  自评=' + Number(meta.firstRate || 0).toFixed(4) +
     ' top2=' + Number(meta.top2Rate || 0).toFixed(4) + '  → ' + out);
