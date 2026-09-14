@@ -157,6 +157,8 @@ async function runTrain(gens, opts, cfg) {
   // 需要复验时设 EPIRUS_IMIT_FRAC=0.35 即可打开。
   const imitGens = Math.floor((gens || 0) * Number(process.env.EPIRUS_IMIT_FRAC || '0'));
   process.env.EPIRUS_IMIT_GENS = String(imitGens);
+  /* v1.5.31：课程/示范 —— 反环教师（env 传给 worker；主线程也设一份，保证两侧口径一致）。 */
+  if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) T.setAntiRingTeacher();
   if (T.setImitUntil) T.setImitUntil(imitGens);
   cfg = cfg || {};
   const seedN = Math.max(1, cfg.seeds || 3);

@@ -2109,6 +2109,28 @@ t('D42 破墙奖励（方案 b）：只有"我用穿透卡**落地命中**"才�
     '两张不同的穿透卡各记一次');
   eq(T.setPierceReward(0), 0, 'setPierceReward(0) 必须能关掉（对照臂）');
   T.setPierceReward(0.04);
+});
+
+t('D43 课程/示范：反环教师必须在"有人开环"时示范出小雷（否则动作永远没机会发生）', function () {
+  /* 实测教训：所有历史冠军小雷次数 = 0 ⇒ "小雷作废开环者"的奖励**永远触发不了**。
+   * 课程法用"模仿一个会出小雷的教师"把动作先示范出来，再交给奖励强化。 */
+  const base = function () { return { key: R.SK.JI }; };
+  const teach = T.makeAntiRingTeacher(base);
+  const mt = [{ key: R.SK.MINI_T, affordable: true }];
+  eq(T.setAntiRingTeacher(), true, 'setAntiRingTeacher() 必须能把教师换成反环教师');
+  ok(typeof T.imitTeacher() === 'function', 'imitTeacher() 必须回显当前教师');
+  /* ① 有对手 ep ≥ 2（在攒环）且付得起小雷 ⇒ 出小雷打他 */
+  const r1 = teach({ p: [{ hp: 3, ep: 0 }, { hp: 3, ep: 3 }, { hp: 0, ep: 5 }] }, 0, mt);
+  eq(r1.key, R.SK.MINI_T, '有人开环时教师必须示范小雷');
+  eq(r1.target, 1, '必须打**那个**攒环的对手（死掉的不算）');
+  /* ② 没人开环（ep 都 < 2）⇒ 交回基础策略，不许见人就砸小雷 */
+  eq(teach({ p: [{ hp: 3, ep: 0 }, { hp: 3, ep: 1 }] }, 0, mt).key, R.SK.JI, '没人开环时不得出小雷');
+  /* ③ 付不起小雷（legal 里没有 affordable 的小雷）⇒ 交回基础策略 */
+  eq(teach({ p: [{ hp: 3, ep: 0 }, { hp: 3, ep: 3 }] }, 0, [{ key: R.SK.MINI_T, affordable: false }]).key, R.SK.JI,
+    '付不起小雷时不得出');
+  /* ④ 多个开环者 ⇒ 选 ep 最高的那个 */
+  eq(teach({ p: [{ hp: 3, ep: 0 }, { hp: 3, ep: 2 }, { hp: 3, ep: 6 }] }, 0, mt).target, 2, '优先打环最粗的那个');
+  eq(T.setImitTeacher(null), false, 'setImitTeacher(null) 必须能恢复默认教师（heavyfire）');
   /* 探针本身：能穿反弹/穿防御的卡必须是从规则数据推导的（不许硬编码） */
   const al2 = readFileSync('tools/audit-lib.mjs', 'utf8');
   ok(/export function reflectWall\(W, params, mode, GAMES\)/.test(al2), 'audit-lib 必须导出 reflectWall');

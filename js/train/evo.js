@@ -778,7 +778,7 @@
           // (c) 承诺级 ε：h 取自**个体基因**，不再是每局随机抽的噪声
           const h = commitGame ? hGene : 0;
           const baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : policyChooserN(params, 0.35, 0.15);
-          econ = makeEconChooser(baseSel, agg, imitB > 0 ? BOT_PICKS['heavyfire'] : null, imitB); choosers.push(econ);
+          econ = makeEconChooser(baseSel, agg, imitB > 0 ? (IMIT_TEACHER || BOT_PICKS['heavyfire']) : null, imitB); choosers.push(econ);
         }
         else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
       }
@@ -1127,6 +1127,35 @@
    *   正是"会攒钱"的脚本化身），模仿率给一个**退火到 0** 的奖励；后期完全交给真实胜负。
    * 与"改规则"无关，纯训练侧；也不会固化——退火后教师影响消失，个体必须靠真实胜负站住。 */
   let IMIT_BETA = 0.12;              // 初始模仿奖励权重
+  /* ===== v1.5.31（用户选"课程/示范"）：**可配置教师 + 反环教师** =====
+   * 实测教训：环奖励三版（常开/退火/密集）要么把训练冻死、要么不触发 —— 根因是
+   * "小雷作废开环者"这个动作**历史上从未被出过**（探针实测所有冠军小雷次数 = 0），
+   * 而**奖励无法 bootstrap 一个从未发生的动作**。课程法：前 N 代让种群**模仿一个会出小雷的教师**，
+   * 把动作先"示范"出来，再交给奖励强化。复用现成的 setImitUntil/imitBetaForGen 退火管道。 */
+  let IMIT_TEACHER = null;           // null = 沿用老的 heavyfire 教师
+  function setImitTeacher(fn) { IMIT_TEACHER = (typeof fn === 'function') ? fn : null; return !!IMIT_TEACHER; }
+  function imitTeacher() { return IMIT_TEACHER; }
+
+  /* 反环教师：有对手 ep ≥ 2（正在攒环/够小雷）且我付得起小雷 ⇒ 打他一记小雷；否则交给基础策略。 */
+  function makeAntiRingTeacher(baseFn) {
+    return function (state, pid, legal) {
+      const mt = (legal || []).filter(function (x) { return x.key === R.SK.MINI_T && x.affordable; })[0];
+      if (mt) {
+        let best = -1;
+        for (let q = 0; q < state.p.length; q++) {
+          if (q === pid) continue;
+          const pq = state.p[q];
+          if (!pq || pq.hp <= 0) continue;
+          if ((pq.ep || 0) >= 2 && (best < 0 || pq.ep > state.p[best].ep)) best = q;
+        }
+        if (best >= 0) return { key: R.SK.MINI_T, target: best };
+      }
+      return baseFn(state, pid, legal);
+    };
+  }
+  /* 装成"反环教师"（基础策略用 heavyfire，与老的模仿教师一致） */
+  function setAntiRingTeacher() { return setImitTeacher(makeAntiRingTeacher(BOT_PICKS['heavyfire'])); }
+
   let IMIT_UNTIL = 0;                // 退火代数（由 setImitUntil 设置；0=关闭）
   function setImitUntil(n) { IMIT_UNTIL = Math.max(0, Math.floor(n) || 0); }
   function imitBetaForGen(gen) {
@@ -1256,7 +1285,9 @@
     return n;
   }
 
-  let RING_W = 0.04;
+  /* v1.5.31（方案 A）：示范期拉长到 0.8 + 接力调粗到 0.10。
+   * 依据：v7teach 臂第一次让"小雷打环"可达（ringWallProbe 小雷次数 1>0），但 20 局才 1 次 ⇒ 接力太弱。 */
+  let RING_W = 0.10;
   /* v1.5.24（用户选方案 A）：**退火** —— 前期权重 0（先把标准分练出来），中段线性升，后期满额。
    * 为什么：v1.5.23 的常开奖励练出了"会打环但标准分掉 14pt"的偏科生（环墙 68.5% / 标准 30.5%）；
    * 退火让种群先在主目标上站住，再叠加"惩罚开环者"的方向性压力。 */
@@ -1264,7 +1295,10 @@
    * 依据：① 退火那一轮（v1.5.24）与常开那轮（v1.5.23）的配对差异不显著，没换来任何好处；
    * ② 用户实测"我用聚能环时 v7press-36 也没做任何动作打断我" ⇒ 环奖励的**行为效果**本来就没建立起来，
    *    再叠一层退火只会让它更弱。需要回退成退火的实验可以显式调 setRingRamp。 */
-  let RING_G0 = 0, RING_G1 = 1;
+  /* v1.5.31（课程臂专用窗口）：示范期（前 125 代，占 250 代的一半）里**环奖励不开**——
+   * 实测：环奖励从第 0 代就开会让训练冻死（v7both/v7soft 两臂 6/6 seed 零提升）。
+   * 现在改成"先示范、后强化"：模仿教师把动作示范出来，之后奖励接手。 */
+  let RING_G0 = 125, RING_G1 = 200;
   function setRingReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) RING_W = v; return RING_W; }
   function setRingRamp(g0, g1) {
     const a = Number(g0), b = Number(g1);
@@ -1430,7 +1464,7 @@
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

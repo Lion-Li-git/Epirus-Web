@@ -53,6 +53,10 @@ const OPP_POOL = OPP_SPECS.map(function (o) {
 /* v1.5.7：经济奖励（ep 门槛 / 熵权重）的覆盖也必须进 **worker 沙箱**（同 mode、同风格切片的道理）。
  * 用 env 传而不是随消息下发：它**一次设好就够**、不需要每代同步，而 worker 由父进程继承 env
  * ⇒ 两端天然一致、不会半开。（"引擎内不读 env"那条规矩不破：读 env 的是 Node 侧的 worker。） */
+/* v1.5.31（课程/示范）：worker 是独立进程 ⇒ 示范代数与"反环教师"必须在这里读 env。 */
+if (T.setImitUntil) T.setImitUntil(Number(process.env.EPIRUS_IMIT_GENS || 0));
+if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) T.setAntiRingTeacher();
+
 if (T.setEconomyReward && (process.env.EPIRUS_ECO_TARGET != null || process.env.EPIRUS_ECO_CAP != null || process.env.EPIRUS_ECO_DIVW != null)) {
   T.setEconomyReward({ target: process.env.EPIRUS_ECO_TARGET, cap: process.env.EPIRUS_ECO_CAP, divW: process.env.EPIRUS_ECO_DIVW });
 }
