@@ -159,6 +159,7 @@ async function runTrain(gens, opts, cfg) {
   process.env.EPIRUS_IMIT_GENS = String(imitGens);
   /* v1.5.31：课程/示范 —— 反环教师（env 传给 worker；主线程也设一份，保证两侧口径一致）。 */
   if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) T.setAntiRingTeacher();
+  if (T.setRingForceUntil) T.setRingForceUntil(Number(process.env.EPIRUS_RING_FORCE_UNTIL || 0));
   if (T.setRingForceEps) {
     const _e = T.setRingForceEps(Number(process.env.EPIRUS_RING_FORCE_EPS || 0));
     /* v1.5.39：主线程审计轨迹（worker 的 stdout 不进流，只有主线程的会）——

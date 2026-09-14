@@ -786,7 +786,8 @@
           econ = makeEconChooser(baseSel, agg, imitB > 0 ? (IMIT_TEACHER || BOT_PICKS['heavyfire']) : null, imitB);
           /* v1.5.39：定向 ε-强迫（只影响"有滚环者且我付得起小雷"这一格；其余原样返回学习到的动作）。 */
           choosers.push(function (state, pid2, legal) {
-            if (RING_FORCE_EPS > 0 && Math.random() < RING_FORCE_EPS) {
+            const _fe = ringForceEpsAt(gen);
+            if (_fe > 0 && Math.random() < _fe) {
               const tg = ringForceTarget(state, pid2, legal);
               if (tg >= 0) return { key: R.SK.MINI_T, target: tg };
             }
@@ -1157,6 +1158,19 @@
    * 格子本身极罕见 ⇒ **格内 ε=1.0（每次都强制）**才是正确的类比，且不会扰动非目标格。 */
   function setRingForceEps(v) { const x = Number(v); RING_FORCE_EPS = (isFinite(x) && x > 0) ? Math.min(1, x) : 0; return RING_FORCE_EPS; }
   function ringForceEps() { return RING_FORCE_EPS; }
+  /* v1.5.40（用户选"继续"）：**强迫必须退火**。
+   * 实测（v1.5.39）：格内常开 ε=1.0 会把训练**整体冻死**（6/6 零提升，产物退回种子）；
+   * 而 ε=5% 又因目标格极罕见（0.15%）等于没做 ⇒ 正确形态是"**早期强制示范、之后关掉**"，
+   * 让最终产物来自**无强迫的后段**，验收才有意义。 */
+  let RING_FORCE_UNTIL = 0;
+  function setRingForceUntil(n) { const x = Number(n); RING_FORCE_UNTIL = (isFinite(x) && x > 0) ? Math.floor(x) : 0; return RING_FORCE_UNTIL; }
+  function ringForceUntil() { return RING_FORCE_UNTIL; }
+  /* 第 gen 代实际生效的强迫概率（纯函数，便于守门）：只在 < until 的代里生效。 */
+  function ringForceEpsAt(gen) {
+    if (RING_FORCE_EPS <= 0) return 0;
+    if (!RING_FORCE_UNTIL) return RING_FORCE_EPS;      // 未设 until ⇒ 全程（旧行为，仅用于对照）
+    return ((gen || 0) < RING_FORCE_UNTIL) ? RING_FORCE_EPS : 0;
+  }
   /* 目标格的"该出手"判定：返回要打的环流者 pid，或 -1（不该出手）。纯函数，便于守门。 */
   function ringForceTarget(state, pid, legal) {
     const mt = (legal || []).filter(function (x) { return x.key === R.SK.MINI_T && x.affordable; })[0];
@@ -1526,7 +1540,7 @@
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
     setPressReward, pressReward, countPressRounds,
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
-    allAliveTied, setRingForceEps, ringForceEps, ringForceTarget,
+    allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

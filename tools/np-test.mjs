@@ -2351,5 +2351,25 @@ t('D47 定向强制探索：**只在"有滚环者且我付得起小雷"这一格
 });
 
 
+t('D48 强迫必须可退火（否则会把训练冻死）：只在早期代生效，之后归零', function () {
+  /* 实测：格内常开 ε=1.0 ⇒ 6/6 零提升（训练整体冻死，产物退回种子）；格内 ε=5% 又因格子罕见（0.15%）等于没做。
+   * 正确形态：早期强制示范、之后关掉 ⇒ 最终产物来自无强迫的后段，验收才有意义。 */
+  eq(T.setRingForceEps(1), 1, 'setRingForceEps 必须可设到 1.0');
+  eq(T.setRingForceUntil(40), 40, 'setRingForceUntil 必须可设');
+  eq(T.ringForceEpsAt(0), 1, '第 0 代：强迫生效');
+  eq(T.ringForceEpsAt(39), 1, '第 39 代（<40）：仍生效');
+  eq(T.ringForceEpsAt(40), 0, '第 40 代起：必须归零（产物后段无强迫）');
+  eq(T.ringForceEpsAt(200), 0, '后期必须为 0，否则产物不可信');
+  eq(T.setRingForceEps(0), 0, '关掉后必须恒为 0');
+  eq(T.ringForceEpsAt(0), 0, '关掉后第 0 代也不强迫');
+  T.setRingForceEps(1); T.setRingForceUntil(40);
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  ok(evo.indexOf('const _fe = ringForceEpsAt(gen);') >= 0, '包装层必须**按代**取概率（不能是常数）');
+  const wk = readFileSync('server/train-worker.mjs', 'utf8');
+  ok(wk.indexOf('EPIRUS_RING_FORCE_UNTIL') >= 0, 'worker 必须能通过 env 设退火窗口');
+  T.setRingForceEps(0); T.setRingForceUntil(0);
+});
+
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);

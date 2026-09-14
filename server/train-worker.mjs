@@ -56,6 +56,7 @@ const OPP_POOL = OPP_SPECS.map(function (o) {
 /* v1.5.31（课程/示范）：worker 是独立进程 ⇒ 示范代数与"反环教师"必须在这里读 env。 */
 if (T.setImitUntil) T.setImitUntil(Number(process.env.EPIRUS_IMIT_GENS || 0));
 if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) T.setAntiRingTeacher();
+if (T.setRingForceUntil) T.setRingForceUntil(Number(process.env.EPIRUS_RING_FORCE_UNTIL || 0));
 if (T.setRingForceEps) {
   const _eps = T.setRingForceEps(Number(process.env.EPIRUS_RING_FORCE_EPS || 0));
   /* v1.5.39：一行审计轨迹 —— 让"强迫到底有没有生效"可以被**直接看到**（而不是靠权重差异猜）。 */
