@@ -42,6 +42,13 @@ for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/
   vm.runInNewContext(readFileSync(join(root, f), 'utf8'), sb, { filename: f });
 }
 const T = sb.EpirusTrainer;
+/* v1.5.48（复核 §3 的偏置二分）：实验掩码 env 通道。
+ * `setFeatMask('bead,target,effects,rel')` **只改特征取值、不改形状**（PACK_VERSION/paramCount 不变）
+ * ⇒ 逐块掩掉各训 2 个 seed，看哪块掩掉后座位偏置（G3 极差）塌回 ⇒ 定位泄漏通道。 */
+if (process.env.EPIRUS_FEAT_MASK && sb.EpirusPolicy && sb.EpirusPolicy.setFeatMask) {
+  console.log('[featmask] ' + JSON.stringify(sb.EpirusPolicy.setFeatMask(process.env.EPIRUS_FEAT_MASK)) +
+    '  env=' + process.env.EPIRUS_FEAT_MASK);
+}
 const B = sb.EpirusBots;
 /* 多人训练的对手池：**从 server/opp-pool.mjs 派生**（名字→函数，worker 内自己解析，
  * 因为函数无法跨线程传）。v1.4.9 之前这里与 server 的 BOT_FN_N 是两份独立清单，
