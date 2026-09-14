@@ -2131,6 +2131,18 @@ t('D43 课程/示范：反环教师必须在"有人开环"时示范出小雷（�
   /* ④ 多个开环者 ⇒ 选 ep 最高的那个 */
   eq(teach({ p: [{ hp: 3, ep: 0 }, { hp: 3, ep: 2 }, { hp: 3, ep: 6 }] }, 0, mt).target, 2, '优先打环最粗的那个');
   eq(T.setImitTeacher(null), false, 'setImitTeacher(null) 必须能恢复默认教师（heavyfire）');
+});
+
+t('D44 零提升检测：训练"静默冻结"必须可被发现（产物 == 热启动种子）', function () {
+  /* 实测教训：v7both/v7soft 两臂 6/6 seed 产物逐字节等于热启动种子（一次提升都没发生），
+   * 流程却当正常产物写盘评估 —— 静默烧掉整轮实验。根因见 CHANGELOG v1.5.31：
+   * 奖励把顶端个体推向不健康区 ⇒ 健康门槛拒掉每次提升 ⇒ 冠军冻在种子。 */
+  const zc = readFileSync('tools/zero-promote-check.mjs', 'utf8');
+  ok(/createHash\('sha1'\)/.test(zc), '检测必须用**权重哈希**比对（不能靠分数，分数会骗人）');
+  ok(zc.indexOf("process.exit(3)") >= 0, '发现零提升必须**非零退出**（可被脚本捕获，不能只打印）');
+  ok(/embedLegacy/.test(zc), '必须按训练的起点口径做 embedLegacy 后再比（否则形状不同永远不相等）');
+  ok(/零提升/.test(zc), '必须有明确的判定文案');
+});
   /* 探针本身：能穿反弹/穿防御的卡必须是从规则数据推导的（不许硬编码） */
   const al2 = readFileSync('tools/audit-lib.mjs', 'utf8');
   ok(/export function reflectWall\(W, params, mode, GAMES\)/.test(al2), 'audit-lib 必须导出 reflectWall');
