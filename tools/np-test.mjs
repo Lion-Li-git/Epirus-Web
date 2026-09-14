@@ -2143,6 +2143,20 @@ t('D44 零提升检测：训练"静默冻结"必须可被发现（产物 == 热�
   ok(/embedLegacy/.test(zc), '必须按训练的起点口径做 embedLegacy 后再比（否则形状不同永远不相等）');
   ok(/零提升/.test(zc), '必须有明确的判定文案');
 });
+
+t('D45 全息屏障的目标必须**进决策**（此前 target:other 不进候选 ⇒ 引擎把 null 兜底成"第一个对手" ⇒ 系统性送盾）', function () {
+  /* 用户实测：v7wall-33 每局 18.7 次全息屏障、100% 套在别人身上（把原型制御白送对手）。
+   * 根因不是网络学坏了，而是：① `candidatesFor` 只展开 `target==='enemy'`，holo（target:'other'）
+   * 只有 1 个候选且 target=null ⇒ **AI 没有目标可选**；② 引擎的 `oppOf()` 把 null 兜底成
+   * "第一个存活对手" ⇒ 每发盾都送人。修法：候选给出「自己+每个对手」，且 null 目标 = 自己。 */
+  const pol = readFileSync('js/train/policy.js', 'utf8');
+  ok(pol.indexOf("def.target === 'other'") >= 0, 'candidatesFor 必须展开 target:"other"（holo 的目标要进决策）');
+  const res = readFileSync('js/core/resolve.js', 'utf8');
+  ok(/if \(a\.key === SK\.HOLO\) \{[\s\S]{0,160}?t = \(hDecl == null\) \? i : hDecl;/.test(res),
+    'holo 不得走 oppOf：显式目标照用、无目标必须套在**自己**身上');
+  ok(res.indexOf('holoShieldFrom') >= 0, '盾的"来自谁"语义必须仍在（holoShieldFrom）');
+});
+});
   /* 探针本身：能穿反弹/穿防御的卡必须是从规则数据推导的（不许硬编码） */
   const al2 = readFileSync('tools/audit-lib.mjs', 'utf8');
   ok(/export function reflectWall\(W, params, mode, GAMES\)/.test(al2), 'audit-lib 必须导出 reflectWall');

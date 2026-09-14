@@ -526,6 +526,15 @@
         }
         if (!pool.length) out.push({ key: l.key, target: null, target2: null, bead: null });
         for (let j = 0; j < pool.length; j++) out.push({ key: l.key, target: pool[j], target2: null, bead: null });
+      } else if (def.target === 'other') {
+        /* v1.5.34（用户质疑根因修复）：`holo` 是 `target:'other'`，此前落进 else 分支 ⇒ **只有 1 个候选且 target=null**，
+         * 而引擎把 null 解释成"第一个存活对手"（`oppOf`）⇒ **系统性把盾送给别人**（记录里 100% 送人）。
+         * 现在把目标还给决策：**自己（null）+ 每个存活对手**，让网络自己学该给谁。 */
+        out.push({ key: l.key, target: null, target2: null, bead: null });
+        const poolOther = S.opponentsOf(state, pid);
+        for (let j = 0; j < poolOther.length; j++) {
+          out.push({ key: l.key, target: poolOther[j], target2: null, bead: null });
+        }
       } else if (beadOn && l.key === SK.CHARGE) {
         out.push({ key: l.key, target: null, target2: null, bead: 'elec' });
         out.push({ key: l.key, target: null, target2: null, bead: 'boom' });

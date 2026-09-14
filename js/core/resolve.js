@@ -784,8 +784,18 @@
     for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
       if (!a || (R.byKey[a.key].pri || 3) !== 3) continue;
-      const t = oppOf(state, i);
-      if (t == null) continue;
+      /* v1.5.34（用户质疑的根因修复）：`holo`（target:'other'）**不能走 `oppOf`** ——
+       * `oppOf` 在目标为 null 时会自己兜底成"第一个存活对手" ⇒ 表现为"系统性把盾送给别人"
+       * （用户实测：每局 18.7 次全息、100% 送人）。这里改成：显式目标照用，没目标就**套在自己身上**。
+       * 其余 pri=3 技能保持老口径（无目标则本次不出）。 */
+      let t;
+      if (a.key === SK.HOLO) {
+        const hDecl = targetOf(state, i);
+        t = (hDecl == null) ? i : hDecl;
+      } else {
+        t = oppOf(state, i);
+        if (t == null) continue;
+      }
       const me = state.p[i], you = state.p[t];
       switch (a.key) {
         case SK.JI: me.ep += 1; ev(state, { type: 'ep', pid: i, delta: 1 }); break;
