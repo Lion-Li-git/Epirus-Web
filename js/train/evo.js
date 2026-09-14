@@ -1341,7 +1341,7 @@
     const G = (games && games > 0) ? (games | 0) : 20;
     const N = (n && n >= 2) ? (n | 0) : 5;
     const mk = (mode === 'long') ? 'long' : 'multi';
-    let dmg = 0, heavyDmg = 0, holo = 0, draws = 0, rounds = 0, zero = 0;
+    let dmg = 0, heavyDmg = 0, holo = 0, holoOther = 0, draws = 0, rounds = 0, zero = 0;
     const keyCount = {};
     /* v1.5.28（第三方复核 §4-2b）：**落地命中按卡统计** —— G（出手分布的熵）会被"变宽但丢关键卡"骗：
      * v1.5.27 实测 G 4.15→6.55 的同时，把唯一能穿反弹的**激光剑**用到 0 命中（长程反弹墙 85%→0%）。
@@ -1354,7 +1354,8 @@
       Play.autoGameN(st, ch);
       let gd = 0;
       for (const e of st.events) {
-        if (e.type === 'holoSet') holo++;
+        /* v1.5.32：**把盾套给别人**要单独计数（用户实测：v7wall-33 每局 18.7 次全息、100% 送人）*/
+        if (e.type === 'holoSet') { holo++; if (e.target !== e.pid) holoOther++; }
         if (e.type === 'damage') {
           dmg += e.amt; gd += e.amt;
           const def = e.via ? R.byKey[e.via] : null;
@@ -1382,6 +1383,7 @@
     return {
       games: G, dmgPerGame: dmg / G, heavyPerGame: heavyDmg / G, holoPerGame: holo / G,
       zeroRate: zero / G, drawRate: draws / G, rounds: rounds / G,
+      holoOtherPerGame: holoOther / G,
       effSkills: tot ? Math.exp(H) : 0, distinctKeys: ks.length, nonJi: tot,
       landByKey: landByKey, pierceKeys: pierceKeys,
       /* 零落地的"穿透卡"（能穿反弹/穿防御）—— 为 0 就说明**破墙的那条线丢了** */

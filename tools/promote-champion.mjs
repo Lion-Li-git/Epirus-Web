@@ -154,6 +154,22 @@ if (fails.length) {
 
 /* 2) 写 bundle：保留权重原样，只补 meta */
 const fp = rulesFingerprint();
+/* ===== v1.5.32：**不可用 --force 越过的硬门槛** =====
+ * 教训（用户实测）：v7wall-33 每局 18.7 次全息屏障、**100% 套在别人身上**（把原型制御白送对手），
+ * 而它正是靠 --force 越过"全息屏障 > 2/局"那条上线的。行为缺陷不该被 --force 放行 ⇒ 单列硬门槛。 */
+const hardFails = [];
+const hOther = Number(sp.holoOtherPerGame || 0);
+console.log('   全息屏障（自对局）：' + sp.holoPerGame.toFixed(1) + ' 次/局，其中**套给别人** ' + hOther.toFixed(1) + ' 次/局');
+/* 阈值标定（实测）：**病态 18.7/局**（v7wall-33，100% 送人、用户手感异常）vs **偶发 2.0/局**（v7wall-31）
+ * ⇒ 硬门槛取 **>6**，只挡"把套盾当主业"的产物；>2 仍留在普通条件里（可 --force）。
+ * 教训同源：阈值不能定在噪声带里（E/F/holo 三次同型）。 */
+if (hOther > 6) hardFails.push('全息屏障套给别人 ' + hOther.toFixed(1) + ' 次/局 > 6（把原型制御白送对手当主业）');
+if (sp.pierceLand !== undefined && sp.pierceLand === 0) hardFails.push('自对局穿透卡零命中');
+if (hardFails.length) {
+  console.log('⛔ 硬门槛未过（**--force 也不放行**）：');
+  for (const h of hardFails) console.log('   · ' + h);
+  process.exit(6);
+}
 meta.shippedAs = NOTE || ('multi(3-5P) 默认冠军（由 tools/promote-champion.mjs 提升，源 ' + SRC + '）');
 meta.examScoreAtBuild = first ? Number(first) / 100 : null;
 meta.examMode = 'multi'; meta.examGames = EXG; meta.examSeed = 77000; meta.examAt = new Date().toISOString().slice(0, 10);
