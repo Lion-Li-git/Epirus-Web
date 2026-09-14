@@ -2344,7 +2344,7 @@ t('D47 定向强制探索：**只在"有滚环者且我付得起小雷"这一格
   eq(T.setRingForceEps(0.05), 0.05, 'setRingForceEps 必须可设');
   eq(T.setRingForceEps(0), 0, 'setRingForceEps(0) 必须能关掉（验收要在关掉后量自然行为）');
   const evo = readFileSync('js/train/evo.js', 'utf8');
-  ok(evo.indexOf('RING_FORCE_EPS > 0 && Math.random() < RING_FORCE_EPS') >= 0, '强迫必须带概率门（不能常开）');
+  ok(evo.indexOf('const _fe = ringForceEpsAt(gen);') >= 0, '强迫必须带**按代**概率门（v1.5.40 起；不能常开、也不能全程常数）');
   ok(evo.indexOf('return econ(state, pid2, legal);') >= 0, '非目标格必须原样返回学习到的动作');
   const wk = readFileSync('server/train-worker.mjs', 'utf8');
   ok(wk.indexOf('EPIRUS_RING_FORCE_EPS') >= 0, 'worker 必须能通过 env 打开强迫（独立进程）');
