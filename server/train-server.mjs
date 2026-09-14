@@ -574,6 +574,11 @@ async function runTrainN(gens, cfg) {
    * 实测把门槛只加在前两处时，12 个 seed 的权重与未加时**逐字节相同**（METHODOLOGY 新增第 26 条）。
    * 口径 = 自对局体检（与 champ-audit 的 G/回合/平局**同一实现** T.mirrorHealth）。
    * 不过门槛 ⇒ **不写盘**（保留上一版产物），并在 SSE 里显式报告 ⇒ 不会再有"退化包静默上线"。 */
+  /* v1.5.56: 实验臂开关（默认关 => 出厂路径一字不变）。今晚实测：12 个 seed 里 11 个被健康门槛拦下
+   * （`自对局回合 45.3 > 40`）=> 包永远不换 => 表现为"训练冻结"，而验收因此没有有效样本。
+   * 打开后：**仍记录** healthReject（SSE/meta 照报，透明）+ 大声打印，但**允许落盘**，
+   * 让实验能拿到候选去测量；出厂门槛（promote-champion / 页面包）**不受影响**。 */
+  const HEALTH_BYPASS = process.env.EPIRUS_ALLOW_HEALTH_FAIL === '1';
   let healthReject = null, healthInfo = null;
   const HGD = T.healthGate ? T.healthGate() : { on: false };
   if (HGD.on && finalParams) {
@@ -587,8 +592,12 @@ async function runTrainN(gens, cfg) {
       for (const c of clients) sse(c, { type: 'healthReject', fails: hf, info: healthInfo });
     }
   }
-  if (!healthReject) lastChampionPackN = pack;
-  if (healthReject) {
+  if (healthReject && HEALTH_BYPASS) {
+    console.log('[health] !! EPIRUS_ALLOW_HEALTH_FAIL=1（实验臂）：本次体检未过仍落盘（出厂门槛不受影响）：'
+      + healthReject.join('；'));
+  }
+  if (!healthReject || HEALTH_BYPASS) lastChampionPackN = pack;
+  if (healthReject && !HEALTH_BYPASS) {
     /* 保留上一版 bundle：本次**不产出物**。⚠️ 但必须把 `done` 事件照常发出去 ——
      * 第一版在这里直接 return，把 done 一起跳过了，runner 只能干等到 15 分钟超时后报
      * "没有 done 事件"（真因被埋掉）。 */
