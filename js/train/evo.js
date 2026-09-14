@@ -52,6 +52,17 @@
     return { w: STYLE_W, games: STYLE_GAMES, n: STYLE_OPPS ? STYLE_OPPS.length : 0 };
   }
 
+  /* v1.5.52: per-game slot salt. The tie-break order of opponent slots must be
+   * UNPREDICTABLE across games in training, otherwise the net can learn "slot 0 = seat X"
+   * (L7: no deterministic identity mapping in ties). Salt is a pure function of the
+   * seed/game index => the same experiment stays reproducible, and no random stream is
+   * consumed (so sampling and game behaviour are untouched). */
+  function slotSaltFor(seed) {
+    let h = (Math.imul((seed | 0) + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
+    h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d) >>> 0; h ^= h >>> 13;
+    return h >>> 0;
+  }
+
   function mulberry32(seed) {
     let a = seed >>> 0;
     return function () {
@@ -91,6 +102,7 @@
 
   function oneGame(aSel, bSel, seed, mode) {
     const st = S.createState(mode || 'standard', { next: mulberry32(seed) });
+    st.slotSalt = slotSaltFor(seed);
     Play.autoGame(st, aSel, bSel);
     const dmg = [0, 0];
     for (const e of st.events) if (e.type === 'damage') dmg[e.to] = (dmg[e.to] || 0) + e.amt;
@@ -464,6 +476,7 @@
   /* 某技能的真实费用（评测用） */
   function costOfKey(key, n) {
     const st = S.createState('multi', { next: mulberry32(7) }, (n > 2 ? n : 3));
+    st.slotSalt = slotSaltFor(7);
     for (let i = 0; i < st.p.length; i++) { st.p[i].ep = 99; st.p[i].elec = 3; st.p[i].boom = 3; }
     const c = S.computeCost(st, 0, key);
     return (c && c.ok) ? c.ep : null;
@@ -472,6 +485,7 @@
   function oneGameN(choosers, seed, n, opts) {
     /* v1.4.0：模式可传（默认 'multi'）—— 5 血长程模式的评测要在这里换考卷 */
     const st = S.createState((opts && opts.mode) || 'multi', { next: mulberry32(seed) }, n, opts);
+    st.slotSalt = slotSaltFor(seed);
     Play.autoGameN(st, choosers, undefined, (opts && opts.onRoundStart) || undefined);
     const dmg = [];
     for (let i = 0; i < n; i++) dmg.push(0);
@@ -1425,6 +1439,7 @@
     const landByKey = {};
     for (let g = 0; g < G; g++) {
       const st = S.createState(mk, { next: mulberry32(9000 + g) }, N);
+      st.slotSalt = slotSaltFor(9000 + g);
       const ch = [];
       for (let i = 0; i < N; i++) ch.push(policyChooserN(params, 0.15));
       Play.autoGameN(st, ch);
