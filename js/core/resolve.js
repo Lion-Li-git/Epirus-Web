@@ -35,6 +35,18 @@
     for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) out.push(i);
     return out;
   }
+  /* v1.5.54（L7 第四次）：**无显式目标时的默认作用者不许是固定索引**。
+   * 病：`oppOf` 与 `mirrorRefs` 的兜底一律取 `aliveOpps(...)[0]` = 索引最小的存活对手
+   *     ⇒ 0 号座是"所有人的默认靶子"（实测 0 号座每局必死 60/60 的一部分来源）。
+   * 修：按**每局的盐**轮换（纯函数、可复现、**不消耗任何随机流** —— 借流的三个坑 v1.5.51 已踩过）。
+   * **盐 0 保持旧口径**（页面与既有对比基线不变；训练侧每局都有盐）。 */
+  function saltPick(state, arr, seq) {
+    if (!arr || !arr.length) return null;
+    const salt = (state && state.slotSalt != null) ? (state.slotSalt >>> 0) : 0;
+    if (!salt) return arr[0];
+    const base = (salt ^ Math.imul(((state.round || 1) + 1) | 0, 0x9e3779b9)) >>> 0;
+    return arr[(base + (seq | 0)) % arr.length];
+  }
   /* N2 修正（座位偏置）：同优先级内若一律按座位号升序结算，先结算者会把后者作废，
    * 低 pid 在“同归于尽”局面里系统性占便宜（实测 3x 同一策略可达 73.5/14.5/0.0）。
    * 故按回合轮换结算起点，把系统性优势摊平到各座位。
@@ -69,7 +81,7 @@
     const t = targetOf(state, pid);
     if (t != null) return t;
     const o = aliveOpps(state, pid);
-    return o.length ? o[0] : null;
+    return saltPick(state, o, 0);        // v1.5.54: 不再恒定取最小索引
   }
 
   /* ---------- 判定 ---------- */
@@ -145,10 +157,12 @@
     if (!a || a.key !== SK.MIRROR) return null;
     const opps = aliveOpps(state, m);
     let t1 = a.target, t2 = a.target2;
-    if (t1 == null || t1 === m || !state.p[t1] || state.p[t1].hp <= 0) t1 = opps.length ? opps[0] : null;
+    if (t1 == null || t1 === m || !state.p[t1] || state.p[t1].hp <= 0) t1 = saltPick(state, opps, 1);   // v1.5.54: 同 oppOf
     if (t2 == null || t2 === m || t2 === t1 || !state.p[t2] || state.p[t2].hp <= 0) {
       t2 = null;
-      for (const o of opps) { if (o !== t1) { t2 = o; break; } }
+      const rest = [];
+      for (const o of opps) if (o !== t1) rest.push(o);
+      t2 = saltPick(state, rest, 2);     // v1.5.54: 不再恒定取最小索引
     }
     return { t1, t2 };
   }
@@ -1135,6 +1149,7 @@
 
   global.EpirusResolve = {
     startTurn, resolveActions, endTurn, checkOver, turnOrder,   // v1.5.53: 导出供守门直接测（纯函数）
+    oppOf, saltPick,                                            // v1.5.54: 同上（默认作用者的可测入口）
     rawDamage, deliverDamage, guardOf, judge, judge3, actionOf, setVoid,
     /* v1.5.19：把"技能→架势种类"的两个真源也导出 —— 特征侧（js/train/policy.js）要看
      * "自己身上是什么架势 / 对手镜面反射复制到了什么"。**不许在 policy.js 里重写一遍 switch**：

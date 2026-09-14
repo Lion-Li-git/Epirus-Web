@@ -1220,6 +1220,74 @@ t('D52 结算起点必须每局随机（不得有确定性身份映射）；盐 
   ok(rj.indexOf('const start = ((state.round || 1) - 1) % n;') < 0, '旧的确定性相位必须已移除');
 });
 
+t('D53 无显式目标时的默认作用者不得恒定取最小索引（L7 第四次）', function () {
+  /* v1.5.54：`oppOf` / `mirrorRefs` 的兜底原本一律 `aliveOpps(...)[0]` = 索引最小的存活对手
+   * ⇒ 0 号座是"所有人的默认靶子"（实测 0 号座每局必死 60/60 的一部分来源）。
+   * 修法：按每局的盐轮换（纯函数、可复现、不消耗随机流）；**盐 0 保持旧口径**。 */
+  ok(typeof X.saltPick === 'function', 'X.saltPick 必须导出（守门要能直测）');
+  eq(X.saltPick({ slotSalt: 0, round: 1 }, [3, 1, 4], 0), 3, '盐 0 必须保持旧口径（取 [0]）');
+  eq(X.saltPick({}, [3, 1, 4], 0), 3, '没有 slotSalt 时也必须保持旧口径（页面默认）');
+  const seen = {};
+  for (let sd = 1; sd <= 40; sd++) {
+    for (let r = 1; r <= 5; r++) {
+      const v = X.saltPick({ slotSalt: sd * 2654435761 >>> 0, round: r }, [1, 2, 3, 4], 0);
+      seen[v] = (seen[v] || 0) + 1;
+    }
+  }
+  eq(Object.keys(seen).length, 4, '有盐时默认作用者必须覆盖所有候选（实测 ' + JSON.stringify(seen) + '）');
+  const vals = [1, 2, 3, 4].map(function (i) { return seen[i] || 0; });
+  ok(Math.max.apply(null, vals) - Math.min.apply(null, vals) <= 40,
+    '分布必须大致均匀（实测 ' + JSON.stringify(seen) + '）');
+  /* oppOf：无目标时按盐轮换 */
+  const st = S.createState('multi', { next: function () { return 0.5; } }, 5);
+  X.startTurn(st);
+  st.actions[0] = { key: R.SK.ARMOR, target: null };
+  st.slotSalt = 0; st.round = 1;
+  eq(X.oppOf(st, 0), 1, '盐 0：无目标 ⇒ 旧口径（最小索引的存活对手）');
+  const oppSeen = {};
+  for (let sd = 1; sd <= 30; sd++) {
+    st.slotSalt = sd * 2654435761 >>> 0; st.round = 1;
+    const t = X.oppOf(st, 0);
+    oppSeen[t] = (oppSeen[t] || 0) + 1;
+  }
+  eq(Object.keys(oppSeen).length, 4, '有盐时 oppOf 必须覆盖 1..4 号对手（实测 ' + JSON.stringify(oppSeen) + '）');
+  const rj = readFileSync('js/core/resolve.js', 'utf8');
+  ok(rj.indexOf('return o.length ? o[0] : null;') < 0, 'oppOf 不得再有"恒定取最小索引"的兜底');
+  ok(rj.indexOf('t1 = opps.length ? opps[0] : null') < 0, 'mirrorRefs 的 t1 兜底不得再取最小索引');
+  ok(rj.indexOf('if (o !== t1) { t2 = o; break; }') < 0, 'mirrorRefs 的 t2 兜底不得再取最小索引');
+  ok(rj.indexOf('function saltPick(') >= 0, '必须存在 saltPick 助手');
+});
+
+t('D54 引擎层对称性烟测：同一策略坐满 5 座不得系统性偏座（L7 守卫）', function () {
+  /* v1.5.55：本会话修掉四条"确定性身份映射"（槽位并列 / 结算起点相位 / 默认作用者 t1,t2）。
+   * 这条是它们的**统计守卫**：固定种子的（近随机）策略坐满 5 座，各座胜场与死亡次数都不得系统性偏差。
+   * 修前实测（训练产物）：0 号座每局必死 60/60、其余座 37~46 ⇒ 死亡极差 20~26，本用例会红。 */
+  Pol.setRng(T.mulberry32(90210));
+  const p = Pol.makePolicy(0.25);
+  const win = [0, 0, 0, 0, 0], dead = [0, 0, 0, 0, 0];
+  let dec = 0;
+  for (let g = 0; g < 120; g++) {
+    const st = S.createState('multi', { next: T.mulberry32(31000 + g) }, 5);
+    st.slotSalt = ((g * 2654435761) >>> 0);
+    const base = T.policyChooserN(p, 0.15);
+    Play.autoGameN(st, [base, base, base, base, base]);
+    for (let i = 0; i < 5; i++) if (st.p[i].hp <= 0) dead[i]++;
+    let b = -1, bh = -1, tie = false;
+    for (let i = 0; i < 5; i++) {
+      const hp = Math.max(0, st.p[i].hp);
+      if (hp > bh) { bh = hp; b = i; tie = false; } else if (hp === bh) tie = true;
+    }
+    if (b >= 0 && !tie && bh > 0) { win[b]++; dec++; }
+  }
+  const winners = win.filter(function (w) { return w > 0; }).length;
+  const wSpread = Math.max.apply(null, win) - Math.min.apply(null, win);
+  const dSpread = Math.max.apply(null, dead) - Math.min.apply(null, dead);
+  ok(dec >= 20, '必须有足够多分出胜负的局（实测 ' + dec + '/120；未训练策略平局多，阈值放宽）');
+  ok(winners >= 4, '5 个座位里至少 4 个必须赢过（否则系统性偏座，win=' + JSON.stringify(win) + '）');
+  ok(wSpread <= 18, '各座胜场极差必须小（实测 ' + wSpread + '，win=' + JSON.stringify(win) + '）');
+  ok(dSpread <= 22, '各座死亡次数极差必须小（实测 ' + dSpread + '，dead=' + JSON.stringify(dead) + '）');
+});
+
 t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规则指纹（否则成绩已过期）', function () {
   /* v1.5.7（千问体检 §5-2 建议 / HANDOFF §4-9 规矩）：v1.5.4 只改了 rules.js 里一个 `target` 字段，
    * 5P 线上冠军的考卷成绩就从 38.0% 掉到 15.0%，而当时**没有任何机制**能自动发现"产物与引擎错配"。
