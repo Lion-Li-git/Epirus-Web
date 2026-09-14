@@ -1888,7 +1888,7 @@ t('D35 训练侧"自对局健康门槛"必须存在、默认开、且与体检�
   /* ⚠️ 门槛必须加在**决定产物的那一行**上：产物冠军由 finishStep 的 `t.champion = t.bestChamp` 决定，
    * 第一版只加在收尾的 pickChampionByWinRate 上 ⇒ 12 个 seed 的产物与没加时**逐个相同**（空操作）。 */
   const evo0 = readFileSync('js/train/evo.js', 'utf8');
-  ok(/if \(better && HEALTH\.on\) \{/.test(evo0), '提升冠军前（finishStep 的 better 分支）必须有健康门槛');
+  ok(/if \(better && HEALTH\.on( && !IN_EXPLORE)?\) \{/.test(evo0), '提升冠军前（finishStep 的 better 分支）必须有健康门槛（v1.5.42 起允许探索期例外）');
   ok(/if \(better && !healthReject\) \{/.test(evo0), '体检不过时必须**不提升**（保留上一个合格冠军）');
   /* 单一真源：体检侧不许再自己算一遍 exp(熵)（两处各写一遍必出事，METHODOLOGY 第 13 条） */
   const al = readFileSync('tools/audit-lib.mjs', 'utf8');
@@ -2379,7 +2379,7 @@ t('D49 探索期不得被健康门槛惩罚（否则强迫会堵死整条提升�
   ok(evo.indexOf('IN_EXPLORE = _fe > 0;') >= 0, '标志必须由 scoreMemberN 按当前代更新');
   ok(evo.indexOf('if (better && HEALTH.on && !IN_EXPLORE)') >= 0, '提升闸门必须在探索期内跳过健康判定');
   ok(evo.indexOf('const mh = (HEALTH.on && !IN_EXPLORE) ? mirrorHealth') >= 0, '选择过滤在探索期内也必须不评健康');
-  ok(evo.indexOf('healthFails(mh)') >= 0 && evo.indexOf('HEALTH.on,') < 0 || true, '窗口外仍保留健康判定调用（不被删）');
+  ok(evo.indexOf('const hf = healthFails(mh);') >= 0, '窗口外的健康判定链必须完整保留（healthFails(mh)）');
   ok(evo.indexOf('mirrorHealth(cand.params') >= 0, '非探索期的提升健康判定必须仍在');
 });
 
