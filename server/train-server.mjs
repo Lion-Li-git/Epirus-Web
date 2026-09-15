@@ -596,6 +596,42 @@ async function runTrainN(gens, cfg) {
       for (const c of clients) sse(c, { type: 'healthReject', fails: hf, info: healthInfo });
     }
   }
+  /* ===== v1.5.67（第五轮复核 §4 的 ④）：把**上线门槛做成"决定产物的那一行"的可行性判定** =====
+   * 病：训练的选择目标是"池上胜率 + 奖励"，而上线要求另外五道门槛（座位对称 / G / 反弹墙 / 场A / 场B）
+   * ⇒ 实测五批 30+ 候选全是"某一项精彩、其余崩掉"（v9/v11/v12/v13/v14）。
+   * 这里在**唯一的产物决定点**跑一次五道检查，把结论写进 meta（feasible / feasibilityFails / 各指标），
+   * 供选优、runner 汇总与审计使用。默认**不阻断落盘**（避免重演 v1.5.56 的"整臂拦下"⇒ 实验没有样本）；
+   * 出厂门槛仍由 tools/promote-champion.mjs 强制（那里才是"能不能上线"的判定）。 */
+  let feasibleInfo = null;
+  if (finalParams && process.env.EPIRUS_FEASIBILITY !== '0') {
+    try {
+      const audit = await import('../tools/audit-lib.mjs');
+      const ss = audit.seatSymmetry(sb, finalParams, 'multi', Number(process.env.EPIRUS_SEAT_GAMES || 60));
+      const gg = T.mirrorHealth(finalParams, 40, n, mode);
+      const rw = audit.reflectWall(sb, finalParams, 'long', 20);
+      const ag = audit.aggressionProfile(sb, finalParams, 20);
+      const ff = [];
+      if (ss.verdict === 'biased') ff.push('座位极差 ' + ss.spread.toFixed(0) + 'pt ≥30');
+      if (gg.effSkills < 3) ff.push('G ' + gg.effSkills.toFixed(2) + ' < 3');
+      if (!(rw.dmgPerGame > 0.5)) ff.push('反弹墙伤害 ' + rw.dmgPerGame.toFixed(2) + ' ≤ 0.5/局');
+      if (ag.fieldA.atk < 0.20) ff.push('场A 还手 ' + (ag.fieldA.atk * 100).toFixed(0) + '% < 20%');
+      if (ag.fieldB.clearedPerGame < 0.3) ff.push('场B 清场 ' + ag.fieldB.clearedPerGame.toFixed(2) + ' < 0.3/局');
+      feasibleInfo = {
+        ok: ff.length === 0, fails: ff,
+        seatSpread: Number(ss.spread.toFixed(1)), seatDecisive: Number(ss.decisiveRate.toFixed(2)),
+        G: Number(gg.effSkills.toFixed(2)), Gkeys: gg.distinctKeys,
+        wallDmg: Number(rw.dmgPerGame.toFixed(2)),
+        fieldA: Number(ag.fieldA.atk.toFixed(3)), fieldBClears: Number(ag.fieldB.clearedPerGame.toFixed(2))
+      };
+      console.log('[feasible] ' + (feasibleInfo.ok ? '✅ 五道全过' : '✗ ' + ff.join('；')) +
+        '（座位 ' + feasibleInfo.seatSpread + 'pt · G ' + feasibleInfo.G + '（' + gg.distinctKeys + '种）· 墙 ' +
+        feasibleInfo.wallDmg + '/局 · 场A ' + (feasibleInfo.fieldA * 100).toFixed(0) + '% · 场B ' +
+        feasibleInfo.fieldBClears + '/局）');
+      for (const c of clients) sse(c, { type: 'feasibility', info: feasibleInfo });
+    } catch (e) {
+      console.log('[feasible] ⚠ 判定失败（不阻断落盘）：' + String(e && e.message || e));
+    }
+  }
   if (healthReject && HEALTH_BYPASS) {
     console.log('[health] !! EPIRUS_ALLOW_HEALTH_FAIL=1（实验臂）：本次体检未过仍落盘（出厂门槛不受影响）：'
       + healthReject.join('；'));
@@ -609,7 +645,7 @@ async function runTrainN(gens, cfg) {
     runningN = false; poolN.close();
     return;
   }
-  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), fightOverride: (fightSet ? JSON.stringify(fightEnv) : ''),
+  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, feasibility: feasibleInfo, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), fightOverride: (fightSet ? JSON.stringify(fightEnv) : ''),
     /* v1.5.11：把**实际生效**的奖励参数也记下来（哨声惩罚现在长程默认开、不靠 env ⇒ 只记 env 会漏） */
     fightEffective: (T.fightReward ? JSON.stringify(T.fightReward()) : ''),
     ecoEffective: (T.economyReward ? JSON.stringify(T.economyReward()) : ''),
