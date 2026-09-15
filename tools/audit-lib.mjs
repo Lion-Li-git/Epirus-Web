@@ -282,3 +282,38 @@ export function seatSymmetry(W, params, mode, GAMES) {
     verdict: decisiveRate < 0.3 ? 'unjudgeable' : (maxPct - minPct >= 30 ? 'biased' : 'ok')
   };
 }
+
+/* 蓄能空转探针（v1.5.58，起因：用户实测"蓄能 34 次、电磁炮仅 4 次、第 6 回合三颗全过期"）。
+ * 事件是现成的真源（**不猜字段**，先打印过）：
+ *   {type:'action', pid, key:'charge', outcome:'ok'}  蓄能出手
+ *   {type:'bead', pid, kind:'elec'|'boom', delta:±1}  得珠/耗珠
+ *   {type:'beadExpire', ...}                          珠过期
+ * ⇒ wasteRate = 过期珠 / 得珠 ⇒ "蓄能来的珠有多少白攒了"。 */
+export function chargeProfile(W, params, mode, GAMES) {
+  const S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay, R = W.EpirusRules;
+  const G = GAMES || 20;
+  let charges = 0, gained = 0, expired = 0, spent = 0, games = 0, rounds = 0;
+  const bySeat = [0, 0, 0, 0, 0];
+  for (let g = 0; g < G; g++) {
+    const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(13000 + g) }, 5);
+    st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
+    const base = T.policyChooserN(params, 0.15);
+    Play.autoGameN(st, [base, base, base, base, base]);
+    games++; rounds += st.round;
+    for (const e of st.events) {
+      if (e.type === 'action' && e.key === R.SK.CHARGE && e.outcome === 'ok') {
+        charges++; if (typeof e.pid === 'number' && bySeat[e.pid] != null) bySeat[e.pid]++;
+      } else if (e.type === 'bead') {
+        if (e.delta > 0) gained += e.delta; else spent += Math.abs(e.delta);
+      } else if (e.type === 'beadExpire') {
+        expired += (e.delta != null ? Math.abs(e.delta) : 1);
+      }
+    }
+  }
+  return {
+    games: games, charges: charges, chargesPerGame: charges / Math.max(1, games),
+    gained: gained, spent: spent, expired: expired,
+    wasteRate: gained ? expired / gained : 0, spentRate: gained ? spent / gained : 0,
+    roundsPerGame: rounds / Math.max(1, games), bySeat: bySeat
+  };
+}

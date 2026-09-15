@@ -21,7 +21,7 @@
  */
 import { readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT, sandbox, loadChamp, exam, selfPlay, fieldRate, seatSymmetry } from './audit-lib.mjs';
+import { ROOT, sandbox, loadChamp, exam, selfPlay, fieldRate, seatSymmetry, chargeProfile, reflectWall } from './audit-lib.mjs';
 
 const flag = function (n, d) {
   const hit = process.argv.find(function (a) { return a.indexOf('--' + n + '=') === 0; });
@@ -30,6 +30,7 @@ const flag = function (n, d) {
 const GAMES = Number(flag('games', 20));
 const EXG = Number(flag('exam-games', 20));
 const SEAT_G = Number(process.env.EPIRUS_SEAT_GAMES || 100);   // v1.5.57：座位探针局数（≥100 才有判别力）
+const GAMES2 = Number(process.env.EPIRUS_CHARGE_GAMES || GAMES);   // v1.5.58：蓄能探针局数
 const SP_MODE = flag('mode', 'multi');   // 自对局那几列用哪个模式（multi 默认；看"集体防御"要用 long）
 
 const list = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
@@ -49,7 +50,7 @@ const W = sandbox();
  * ⇒ 此时量 `js/bundled-champion-3p.js` 会得到旧冠军的特征（本轮踩过）。给该行打标记。 */
 const trainingLive = existsSync(join(ROOT, 'docs/artifacts/.training.lock'));
 console.log('冠军体检（自对局 ' + GAMES + ' 局 · 考卷 ' + EXG + ' 局）' + (trainingLive ? '  ⚠️ 训练进行中：bundle 行不可信，请看对应 .bak' : '') + '\n');
-console.log('文件'.padEnd(42) + 'A 考卷1st  A严胜  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F活跃场进攻 F回合 G有效技能数 座位极差  H混合场  I对被动');
+console.log('文件'.padEnd(42) + 'A 考卷1st  A严胜  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F活跃场进攻 F回合 G有效技能数 座位极差 反弹墙伤害/局 蓄能/局 珠浪费  H混合场  I对被动');
 for (const f of files) {
   const params = loadChamp(W, f);
   if (!params) { console.log(f.padEnd(42) + '  (读不出冠军包)'); continue; }
@@ -62,7 +63,11 @@ for (const f of files) {
   const fPass = fieldRate(W, params, 'passive', SP_MODE);
   const fAct = fieldRate(W, params, 'active', SP_MODE);
   /* v1.5.57：局数必须够 —— 20 局时 5 席各约 4 局，30pt 阈值会被抽样噪声淹没（实测同一策略 37~50pt 抖动）。 */
-  const ss = seatSymmetry(W, params, 'multi', SEAT_G);   // 座位对称性（百分点口径）
+  const ss = seatSymmetry(W, params, 'multi', SEAT_G);
+  /* v1.5.59：D 的 1st 被并列污染（线上包 100% 里 87.5% 是并列，严胜仅 12.5%）⇒
+   * 真正有判别力的是**反弹墙里的穿透卡落地伤害**（0 = 面对 4 面反弹墙一枪未发）。 */
+  const rw = reflectWall(W, params, 'long', GAMES2);
+  const cp = chargeProfile(W, params, 'multi', GAMES2);   // v1.5.58：蓄能空转（过期珠/得珠）   // 座位对称性（百分点口径）
   const nm = f.replace('docs/artifacts/', '').replace('js/', '').slice(0, 41);
   console.log(nm.padEnd(42) +
     String(e1.first == null ? '?' : e1.first).padStart(8) + '%' +
@@ -82,6 +87,9 @@ for (const f of files) {
     fAct.rounds.toFixed(1).padStart(7) +
     sp.effSkills.toFixed(2).padStart(12) + ' (' + sp.distinctKeys + '种)' +
     ss.spread.toFixed(0).padStart(9) + 'pt' +
+    rw.dmgPerGame.toFixed(2).padStart(12) +
+    cp.chargesPerGame.toFixed(1).padStart(9) +
+    (cp.wasteRate * 100).toFixed(0).padStart(8) + '%' +
     /* v1.5.57（复核 §4-4）：H/I 原先印在 D 之后、表头却排在末尾 ⇒ 按表头读会整体错两格。现按表头顺序印。 */
     String(eH.first == null ? '?' : eH.first).padStart(8) + '%' +
     String(eI.first == null ? '?' : eI.first).padStart(8) + '%');
