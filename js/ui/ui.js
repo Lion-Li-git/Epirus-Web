@@ -55,6 +55,9 @@
     if (typeof syncDiffOptions === 'function') syncDiffOptions();
     syncModeOptions();   // v1.4.0：按人数校验模式（原来无条件改回 'multi'，会吃掉用户选的长程模式）
     B.state = S.createState(B.modeKey, null, n, sdOpts());
+    /* v1.5.66：**每局一个槽位/顺序盐** —— 让目标枚举顺序与结算相位在页面上也不再有身份
+     * （训练与评测早就带盐；此前只有页面缺省 0 ⇒ 页面走确定性顺序）。 */
+    B.state.slotSalt = (Math.random() * 4294967296) >>> 0;
     B.roundStarted = false; B.locked = false; B.aiKey = null;
     B.evCursor = 0; B.transcript = []; B.aiHistory = [];
     B.roundStartSnapshot = null; B.warnedChampNoTrain = false; B.undoUsed = false;

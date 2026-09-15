@@ -542,6 +542,23 @@
    *   · 「蓄能」⇒ 电珠/爆珠**两个候选**（珠类型是本人选择、不是公开信息 ⇒ 只有自己的候选带 bead）；
    *   · 其余（self / 无目标）⇒ 单候选；
    *   · 第二目标（双枪/镜面 t2）仍走 evo.js 的启发式 —— 枚举 t2 会让候选数再 ×(N-1)，先不做。 */
+  /* v1.5.66：**目标枚举顺序必须无身份**（L7 第七处，也是本轮新发现的通道）。
+   * 病：`candidatesFor` 按 `S.opponentsOf` 升序枚举目标，而 `forwardCands` 的 argmax **并列时取第一个下标**
+   * ⇒ 网络一旦对目标"无所谓"，实际规则就退化成"打最小 pid 的那个" ⇒ 那是一条**偏置规则**
+   * （实测镜像实验：脚本"打最小索引"⇒ P4 通吃 100%；"打最大索引"⇒ P0 通吃 100%；引擎本身是镜像对称的）。
+   * 而 v7 候选口径（v1.5.19 引入）让**每个新训出来的冠军**都暴露在这条通道上 —— 老种子是 v6 旧口径
+   * （键 + pickTargetN），不经过枚举，所以它均衡。修：按**每局盐**哈希排序目标池。
+   * 纯函数、决策内一致、不消耗任何随机流；**盐 0 保持旧序**（历史基线与页面默认不变）。 */
+  function poolOrder(state, pid, pool) {
+    const salt = (state && state.slotSalt != null) ? (state.slotSalt >>> 0) : 0;
+    if (!salt || !pool || pool.length < 2) return pool.slice();
+    const key = function (o) {
+      let h = (salt ^ Math.imul(((state.round | 0) + 1) | 0, 0x9e3779b9) ^ Math.imul((pid + 1) | 0, 0x85ebca6b) ^ Math.imul((o + 1) | 0, 0xc2b2ae35)) >>> 0;
+      h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d) >>> 0; h ^= h >>> 13; return h >>> 0;
+    };
+    return pool.slice().sort(function (a, b) { const ka = key(a), kb = key(b); return ka !== kb ? ka - kb : a - b; });
+  }
+
   function candidatesFor(state, pid, legal, opts) {
     opts = opts || {};
     const out = [];
@@ -555,7 +572,7 @@
          * 此前 `target2` 恒为 null ⇒ 引擎用自己的兜底（"索引最小的对手"）填第二个目标
          * ⇒ 角色不可表达、且制造系统性的 0 号座焦点（实测 0 号座每局必死 60/60 的一部分来源）。
          * 这里**成对有序枚举**：`target`=角色 1、`target2`=角色 2，**顺序不可交换**（两个目标不可调换）。 */
-        const pool2 = S.opponentsOf(state, pid);
+        const pool2 = poolOrder(state, pid, S.opponentsOf(state, pid));   // v1.5.66: 顺序无身份
         if (pool2.length < 2) {
           out.push({ key: l.key, target: null, target2: null, bead: null });
         } else {
@@ -567,7 +584,7 @@
           }
         }
       } else if (def.target === 'enemy') {
-        let pool = S.opponentsOf(state, pid);
+        let pool = poolOrder(state, pid, S.opponentsOf(state, pid));   // v1.5.66: 顺序无身份
         if (opts.lockTarget != null) {
           const alt = pool.filter(function (o) { return o !== opts.lockTarget; });
           if (alt.length) pool = alt;
@@ -583,7 +600,7 @@
          * 在**声明阶段**回退成"第一个存活对手" ⇒ 此前我加的 `target:null`（自己）是**幻影选项**：
          * 实测被选中 35/330 次，每一次都是"策略以为在做 A、引擎执行的是送盾给 1 号"，
          * 并把**错误归因**喂回训练。⇒ 这里只给真实对手。 */
-        const poolOther = S.opponentsOf(state, pid);
+        const poolOther = poolOrder(state, pid, S.opponentsOf(state, pid));   // v1.5.66: 顺序无身份
         for (let j = 0; j < poolOther.length; j++) {
           out.push({ key: l.key, target: poolOther[j], target2: null, bead: null });
         }

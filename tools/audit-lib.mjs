@@ -334,7 +334,7 @@ export function aggressionProfile(W, params, GAMES) {
   const OLD = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.DRAIN];
   const isDmg = function (k) { const d = R.byKey[k]; return !!(d && d.dmg && d.dmg.amt); };
   function run(kind) {
-    let atkOld = 0, atkNew = 0, acts = 0, dealt = 0, taken = 0, takenOpp = 0, wins = 0, draws = 0, rounds = 0, oppAtk = 0;
+    let atkOld = 0, atkNew = 0, acts = 0, dealt = 0, taken = 0, takenOpp = 0, wins = 0, draws = 0, rounds = 0, oppAtk = 0, cleared = 0;
     for (let g = 0; g < G; g++) {
       const me = g % 5;
       const st = S.createState('multi', { next: mulberry32(15000 + g) }, 5);
@@ -347,6 +347,7 @@ export function aggressionProfile(W, params, GAMES) {
           return { key: R.SK.JI };
         }
         : function () { return { key: R.SK.JI }; };
+      let shrinkStarted = false;   // v1.5.66: 清场判据的分界（收缩开始后的死者不算清场）
       const champ = T.policyChooserN(params, 0.15);
       const ch = [];
       for (let i = 0; i < 5; i++) ch.push(i === me ? champ : scripted);
@@ -360,6 +361,10 @@ export function aggressionProfile(W, params, GAMES) {
             if (isDmg(e.key)) atkNew++;
           } else if (kind === 'aggr' && OLD.indexOf(e.key) >= 0) oppAtk++;
         } else if (e.type === 'damage') {
+          /* v1.5.66: 清场数才是诚实判据 —— 新规则下打 1 点就在全灭判胜里赢，严格胜率变得太容易
+           * （线上包场 B 已 100%）=> 改量收缩开始前真的死了几个。收缩的伤 source==null（不可格挡）；
+           * 在此之前场 B 里唯一的伤害来源就是冠军本身。 */
+          if (e.source == null) shrinkStarted = true;
           if (e.source === me) dealt += e.amt;
           if (e.to === me) {
             taken += e.amt;
@@ -367,6 +372,8 @@ export function aggressionProfile(W, params, GAMES) {
              * 否则"场 B 里冠军不该挨打"会被收缩的伤打破（实测 3.00/局 = 3 血全掉）。 */
             if (e.source != null) takenOpp += e.amt;
           }
+        } else if (e.type === 'death' && !shrinkStarted) {
+          cleared++;
         }
       }
       if (st.winner === me) wins++;
@@ -375,6 +382,7 @@ export function aggressionProfile(W, params, GAMES) {
     return {
       games: G, actsPerGame: acts / G, atk: acts ? atkNew / acts : 0, atkOldWhitelist: acts ? atkOld / acts : 0,
       dealtPerGame: dealt / G, takenPerGame: taken / G, takenByOpponentPerGame: takenOpp / G, winRate: wins / G, drawRate: draws / G,
+      clearedPerGame: cleared / G, clearedTotal: cleared,
       roundsPerGame: rounds / G, oppAtkPerGame: oppAtk / G
     };
   }

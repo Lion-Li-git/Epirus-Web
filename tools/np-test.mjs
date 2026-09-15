@@ -1377,6 +1377,66 @@ t('D57 multi 的收缩必须落进回合上限内，且"全灭"必须按伤害�
   eq(cap, 0, '不该再有打满上限的局（实测 ' + cap + '/12）');
 });
 
+t('D58 L7 第七处：候选枚举顺序必须无身份（镜像对称 + 5 席不得某座通吃）', function () {
+  /* v1.5.66：`candidatesFor` 按 `opponentsOf` 升序枚举目标，而 argmax **并列取第一个下标**
+   * ⇒ 网络对目标"无所谓"时实际退化成"打最小 pid" ⇒ 那是一条偏置规则（镜像实验：打最小索引 ⇒ P4 通吃；
+   * 打最大索引 ⇒ P0 通吃，而引擎本身镜像对称）。v7 候选口径让**新训的冠军**都暴露在这条通道上；
+   * v6 老种子走旧口径（键 + pickTargetN）不经过枚举，所以它均衡。 */
+  const pol = readFileSync('js/train/policy.js', 'utf8');
+  ok(pol.indexOf('function poolOrder') >= 0, 'policy.js 必须有 poolOrder（按每局盐洗牌目标枚举顺序）');
+  ok(pol.indexOf('poolOrder(state, pid, S.opponentsOf') >= 0, '枚举处必须走 poolOrder');
+  ok(readFileSync('js/ui/ui.js', 'utf8').indexOf('B.state.slotSalt') >= 0, '页面必须每局带盐（否则产品仍走确定性顺序）');
+  /* ① 镜像对称（引擎层，最强形式）：脚本"打最小索引"与"打最大索引"必须给出镜像结果 */
+  const ATK = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.DRAIN];
+  const mk = function (pick) {
+    return function (state, pid, legal) {
+      const a = legal.filter(function (x) { return x.affordable && ATK.indexOf(x.key) >= 0; });
+      if (!a.length) return { key: R.SK.JI };
+      const o = S.opponentsOf(state, pid);
+      return { key: a[0].key, target: pick(o) };
+    };
+  };
+  const run = function (fn, G) {
+    const win = [0, 0, 0, 0, 0];
+    for (let g = 0; g < G; g++) {
+      const st = S.createState('multi', { next: T.mulberry32(12000 + g) }, 5);
+      st.slotSalt = ((Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0);
+      Play.autoGameN(st, [fn, fn, fn, fn, fn]);
+      if (st.winner !== 'draw' && st.winner != null) win[st.winner]++;
+    }
+    return win;
+  };
+  const lo = run(mk(function (o) { return o[0]; }), 10);
+  const hi = run(mk(function (o) { return o[o.length - 1]; }), 10);
+  eq(lo[4], 10, '脚本"打最小索引"必须让最高 pid 通吃（实测 ' + lo.join('/') + '）');
+  eq(hi[0], 10, '镜像规则"打最大索引"必须让最低 pid 通吃（实测 ' + hi.join('/') + '）⇒ 引擎镜像对称');
+  /* ② 5 席同一策略：不得某座通吃（修前实测 v13-106 是 60/60 全给 0 号座）。
+   * 用**仓库内的线上包**（它经过候选枚举 ⇒ 正对着这条通道）；未训练策略几乎不出手、样本不足。
+   * 包在训练中会被临时改写（D16 已有该守卫）⇒ 这里读不到就跳过而不是误报。 */
+  let liveParams = null;
+  try {
+    const liveSrc = readFileSync('js/bundled-champion-3p.js', 'utf8');
+    const lm = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(liveSrc);
+    if (lm) liveParams = Pol.unpack(JSON.parse(lm[1]), true);
+  } catch (e) { liveParams = null; }
+  if (!liveParams) {
+    console.log('  （跳过 5 席通吃统计：线上包此刻不可读，多半是训练中——D16 有同一守卫）');
+  } else {
+    const win2 = [0, 0, 0, 0, 0];
+    let dec = 0;
+    for (let g = 0; g < 60; g++) {
+      const st = S.createState('multi', { next: T.mulberry32(12000 + g) }, 5);
+      st.slotSalt = ((Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0);
+      const base = T.policyChooserN(liveParams, 0.15);
+      Play.autoGameN(st, [base, base, base, base, base]);
+      if (st.winner !== 'draw' && st.winner != null) { win2[st.winner]++; dec++; }
+    }
+    ok(dec >= 20, '必须有足够多分出胜负的局（实测 ' + dec + '/60）');
+    ok(Math.max.apply(null, win2) <= Math.round(dec * 0.55),
+      '5 席同一策略时不得某座通吃（最高座 ' + Math.max.apply(null, win2) + '/' + dec + '：' + win2.join('/') + '）');
+  }
+});
+
 t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规则指纹（否则成绩已过期）', function () {
   /* v1.5.7（千问体检 §5-2 建议 / HANDOFF §4-9 规矩）：v1.5.4 只改了 rules.js 里一个 `target` 字段，
    * 5P 线上冠军的考卷成绩就从 38.0% 掉到 15.0%，而当时**没有任何机制**能自动发现"产物与引擎错配"。
