@@ -328,6 +328,10 @@ async function runTrainN(gens, cfg) {
   /* WR_TOL is a CALLER input, not a hidden env read inside the engine
    * (Qianwen: CLI sandboxes have no `process`, so they always got the default). */
   if (T.setWrTol) T.setWrTol(Number(process.env.EPIRUS_WR_TOL || 0.03));
+  /* v1.5.60：覆盖熵权重（DIV_W）环境旋钮。动因：本晚筛选发现 **G≥3 与 F≥25% 在所有候选里几乎互斥**
+   * （打得凶的只用 2~3 张卡；用卡多的不够凶）⇒ 覆盖度这一维在演化目标里被压得太低，
+   * 虽然代码注释说'覆盖熵自然把只剩两三张卡的个体压低'，实测权重不足以对抗 fitness 主力项。 */
+  if (process.env.EPIRUS_DIV_W && T.setEconomyReward) T.setEconomyReward({ divW: Number(process.env.EPIRUS_DIV_W) });
   let __seedIdxN = 0;   // 每个种子递增，用于 setRng 配对
   if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
   cfg = cfg || {};
