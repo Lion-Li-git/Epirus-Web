@@ -21,7 +21,7 @@
  */
 import { readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT, sandbox, loadChamp, exam, selfPlay, fieldRate } from './audit-lib.mjs';
+import { ROOT, sandbox, loadChamp, exam, selfPlay, fieldRate, seatSymmetry } from './audit-lib.mjs';
 
 const flag = function (n, d) {
   const hit = process.argv.find(function (a) { return a.indexOf('--' + n + '=') === 0; });
@@ -29,6 +29,7 @@ const flag = function (n, d) {
 };
 const GAMES = Number(flag('games', 20));
 const EXG = Number(flag('exam-games', 20));
+const SEAT_G = Number(process.env.EPIRUS_SEAT_GAMES || 100);   // v1.5.57：座位探针局数（≥100 才有判别力）
 const SP_MODE = flag('mode', 'multi');   // 自对局那几列用哪个模式（multi 默认；看"集体防御"要用 long）
 
 const list = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
@@ -48,7 +49,7 @@ const W = sandbox();
  * ⇒ 此时量 `js/bundled-champion-3p.js` 会得到旧冠军的特征（本轮踩过）。给该行打标记。 */
 const trainingLive = existsSync(join(ROOT, 'docs/artifacts/.training.lock'));
 console.log('冠军体检（自对局 ' + GAMES + ' 局 · 考卷 ' + EXG + ' 局）' + (trainingLive ? '  ⚠️ 训练进行中：bundle 行不可信，请看对应 .bak' : '') + '\n');
-console.log('文件'.padEnd(42) + 'A 考卷1st  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F活跃场进攻 F回合 G有效技能数   H混合场  I对被动');
+console.log('文件'.padEnd(42) + 'A 考卷1st  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F活跃场进攻 F回合 G有效技能数 座位极差  H混合场  I对被动');
 for (const f of files) {
   const params = loadChamp(W, f);
   if (!params) { console.log(f.padEnd(42) + '  (读不出冠军包)'); continue; }
@@ -60,6 +61,8 @@ for (const f of files) {
   const sp = selfPlay(W, params, SP_MODE, GAMES);
   const fPass = fieldRate(W, params, 'passive', SP_MODE);
   const fAct = fieldRate(W, params, 'active', SP_MODE);
+  /* v1.5.57：局数必须够 —— 20 局时 5 席各约 4 局，30pt 阈值会被抽样噪声淹没（实测同一策略 37~50pt 抖动）。 */
+  const ss = seatSymmetry(W, params, 'multi', SEAT_G);   // 座位对称性（百分点口径）
   const nm = f.replace('docs/artifacts/', '').replace('js/', '').slice(0, 41);
   console.log(nm.padEnd(42) +
     String(e1.first == null ? '?' : e1.first).padStart(8) + '%' +
@@ -70,14 +73,16 @@ for (const f of files) {
     (sp.drawRate * 100).toFixed(0).padStart(7) + '%' +
     sp.rounds.toFixed(1).padStart(7) +
     String(e2.first == null ? '?' : e2.first).padStart(14) + '%' +
-    String(eH.first == null ? '?' : eH.first).padStart(8) + '%' +
-    String(eI.first == null ? '?' : eI.first).padStart(8) + '%' +
     /* v1.5.26（用户裁定）：E 改用新口径 —— 对手ジ<5（无大雷威胁）时还摆架势的占比。
      * 旧口径（总占比）会把"看到对手攒到 5 ジ 该防一下"也判成病：实测 eco-34 旧 89% / 新 16%。 */
     (fPass.noThreatStanceRate * 100).toFixed(0).padStart(10) + '%' +
     (fAct.atk * 100).toFixed(0).padStart(11) + '%' +
     fAct.rounds.toFixed(1).padStart(7) +
-    sp.effSkills.toFixed(2).padStart(12) + ' (' + sp.distinctKeys + '种)');
+    sp.effSkills.toFixed(2).padStart(12) + ' (' + sp.distinctKeys + '种)' +
+    ss.spread.toFixed(0).padStart(9) + 'pt' +
+    /* v1.5.57（复核 §4-4）：H/I 原先印在 D 之后、表头却排在末尾 ⇒ 按表头读会整体错两格。现按表头顺序印。 */
+    String(eH.first == null ? '?' : eH.first).padStart(8) + '%' +
+    String(eI.first == null ? '?' : eI.first).padStart(8) + '%');
 }
 console.log('\n判读：**A 高但 B 伤害≈0** = 靠"熬到哨声"赢的，不是强度（long-33 就是这个形状）；');
 console.log('      C 盾/局 高 ⇒ 互套盾风险（v1.5.4 之后把盾套给对手）；零伤害率/平局率高 = 摆烂；');

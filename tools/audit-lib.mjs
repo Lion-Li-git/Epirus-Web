@@ -248,3 +248,34 @@ export function fieldRate(W, params, kind, mode, GAMES) {
     noThreatRounds: noThreatRounds
   };
 }
+
+/* 座位对称性探针（v1.5.57，第五轮复核 §6 建议）。
+ * 5 席同一策略、每局带盐 ⇒ 量"某个座位是否系统性占便宜"。**口径一律用百分点**：
+ * 2026-09-15 我自己曾把"胜场数差"当成"百分点差"报出去（判据写成 18pt），据此得出
+ * "多数候选已修好"的错误结论 —— 这条探针把单位钉死在百分点上，防止再犯。
+ * 判据（复核 §6 的"比值 + 前置条件"思路）：
+ *   ① 前置：分出胜负的局 ≥ 30%（否则"各座≈0%"没有含义，如某候选 93% 平局时"极差 3pt"是空读数）；
+ *   ② 极差 ≥ 30pt（5 席期望各 20%）⇒ 判偏。同时回报 max/min 比值供参考（min=0 时该比值无意义）。 */
+export function seatSymmetry(W, params, mode, GAMES) {
+  const S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay;
+  const G = GAMES || 100;
+  const win = [0, 0, 0, 0, 0];
+  let dec = 0, draw = 0;
+  for (let g = 0; g < G; g++) {
+    const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(12000 + g) }, 5);
+    st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
+    const base = T.policyChooserN(params, 0.15);
+    Play.autoGameN(st, [base, base, base, base, base]);
+    if (st.winner === 'draw' || st.winner == null) { draw++; continue; }
+    win[st.winner]++; dec++;
+  }
+  const pct = win.map(function (w) { return 100 * w / Math.max(1, dec); });
+  const maxPct = Math.max.apply(null, pct), minPct = Math.min.apply(null, pct);
+  const decisiveRate = dec / G;
+  return {
+    pct: pct, win: win, decisive: dec, draw: draw, drawRate: draw / G, decisiveRate: decisiveRate,
+    spread: maxPct - minPct, maxPct: maxPct, minPct: minPct,
+    ratio: minPct > 0 ? maxPct / minPct : null,
+    verdict: decisiveRate < 0.3 ? 'unjudgeable' : (maxPct - minPct >= 30 ? 'biased' : 'ok')
+  };
+}

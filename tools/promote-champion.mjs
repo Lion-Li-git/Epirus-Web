@@ -24,7 +24,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry } from './audit-lib.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
@@ -146,6 +146,20 @@ if (fPass.noThreatStanceRate > 0.6) fails.push('E 无威胁时摆架势 ' + (fPa
  * ⇒ 35% 属于"阈值定在噪声带里"，连**现役冠军自己都过不了**（当年是 --force 推上去的）。
  * 25% 仍然挡住"正常对局里也不进攻"的形状（eco-34 22% 会被挡），但放过均衡型。 */
 if (fAct.atk < 0.25) fails.push('F 活跃场进攻率 ' + (fAct.atk * 100).toFixed(0) + '% < 25%（正常对局里也不进攻）');
+/* v1.5.57（第五轮复核 §6）：**座位对称性**必须进上线体检。
+ * 实测：上线包（v7wall-31）5 席同策略时 long 0 号座 84%、multi 58%（极差 82pt/51pt）——
+ * 玩家真正遇到的对手严重偏座；而此前所有体检项都看不见这件事。
+ * 判据按复核建议：**前置"分出胜负 ≥30%"**（平局过多时"各座≈0%"是空读数）+ **极差 ≥30pt ⇒ 拒**。
+ * 口径一律百分点（曾把"胜场数差"当百分点报出去 ⇒ 结论反了，见 CHANGELOG v1.5.57）。 */
+const ss = seatSymmetry(W, params, 'multi', Number(process.env.EPIRUS_SEAT_GAMES || 100));
+if (ss.verdict === 'biased') {
+  fails.push('座位对称性：5 席同策略下某座胜率极差 ' + ss.spread.toFixed(0) + 'pt（≥30pt）⇒ 偏座（' +
+    ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '，判胜 ' + ss.decisive + ' 局）');
+} else if (ss.verdict === 'unjudgeable') {
+  console.warn('  ⚠ 座位对称性不可判：分出胜负仅 ' + (ss.decisiveRate * 100).toFixed(0) + '%（平局过多）—— 不计入阻断，但别把它当"均衡"');
+} else {
+  console.log('  座位对称性 OK：极差 ' + ss.spread.toFixed(0) + 'pt（' + ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '）');
+}
 if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) + ' < 3（打法坍缩到两三张卡）');
 if (fails.length) {
   console.error('⛔ 体检未过（' + fails.length + ' 项阻断条件）：');
