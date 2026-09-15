@@ -65,6 +65,20 @@
     return h >>> 0;
   }
 
+  /* v1.5.65（第五轮复核 §4 的决定性发现）：**训练暴露度为零**。
+   * 旧采样 `opps[oi % opps.length]` 连续取**不同**项，而池里被动攒钱型只有 farmer/deepsaver 两项
+   * ⇒ "4 席全被动"这个局面在训练分布里概率是 **0（不是少，是不可能）** ⇒ 过去所有"惩罚攒钱"类奖励
+   * （惩罚被动/先手激励/密集分/EPIRUS_DIV_W）都在**样本量为 0 的分布**上优化 ⇒ 场 B 从 v1.5.17 到
+   * v1.5.63 一次都没练好。修法：按 `EPIRUS_PASSIVE_FIELD`（默认 1/8 局）把该局面**注入评估分布**。
+   * 只改"评估哪些局面"，不动参数量、不升 PACK_VERSION。 */
+  const PASSIVE_FIELD = (function () {
+    const v = (typeof process !== 'undefined' && process.env && process.env.EPIRUS_PASSIVE_FIELD != null)
+      ? Number(process.env.EPIRUS_PASSIVE_FIELD) : 0.125;
+    return (isFinite(v) && v > 0) ? Math.min(1, v) : 0;
+  })();
+  const PASSIVE_EVERY = PASSIVE_FIELD > 0 ? Math.max(1, Math.round(1 / PASSIVE_FIELD)) : 0;
+  function passiveFieldAt(g) { return PASSIVE_EVERY > 0 && (g % PASSIVE_EVERY === 0); }
+
   function mulberry32(seed) {
     let a = seed >>> 0;
     return function () {
@@ -793,6 +807,7 @@
       let oi = (gen * 3 + g) % opps.length;
       const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
       const commitGame = hGene > 0 && (g % 3 === 0);   // (c) 承诺局：每 3 局 1 局，h 来自基因
+      const passiveField = passiveFieldAt(g);   // v1.5.65：本局是否为'4 席全被动'暴露局
       let econ = null;
       for (let pid = 0; pid < n; pid++) {
         if (pid === seat) {
@@ -811,7 +826,10 @@
             return econ(state, pid2, legal);
           });
         }
-        else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
+        else if (passiveField && BOT_PICKS[(g % 2 === 0) ? 'farmer' : 'deepsaver']) {
+          /* 暴露度注入：这一局的 4 个对手席**全部**是被动攒钱型（轮换 farmer/deepsaver）。 */
+          choosers.push(wrapBotN(BOT_PICKS[(g % 2 === 0) ? 'farmer' : 'deepsaver']));
+        } else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
       }
       // 每回合回 ep 的对局权重（可选设施，默认 0 = 与线上规则一致）。
       // 实测结论：regen=1 不能解锁聚能环（+1/回合只够每回合放一个 1 ジ技能，
@@ -1559,7 +1577,7 @@
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

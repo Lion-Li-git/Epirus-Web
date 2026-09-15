@@ -1131,7 +1131,26 @@
       const p = state.p[i];
       if (!(p.hp <= 0 && !p.reviveNext && !p.infiniteEnergy)) alive.push(i);
     }
-    if (alive.length === 0) { state.over = true; state.winner = 'draw'; return true; }   // N10 全灭
+    if (alive.length === 0) {
+      /* v1.5.65：**全灭改按"累计造成伤害"判胜**（并列才平局）。
+       * 病：multi 的终局收缩（本版起 `suddenDeath = 45`）在"没人互相打"的场里会**同时**清场
+       * ⇒ 旧口径一律平局 ⇒ 实测"4 席只ジ vs 1 席冠军" 40 局 **0 胜 / 40 平**、回合恒 47
+       * ⇒ "不打"零代价、场 B（惩罚纯攒钱）的严格胜率上限恒为 0。
+       * 修：全灭时取**累计造成伤害最多者**（`damage` 事件的 `source`，与 `evo.rankOf` 的第 4 键同源），
+       * 并列仍平局。于是"打了人"才可能被判胜 ⇒ 攻击有回报、拖时间不再免费。 */
+      state.over = true;
+      const dealtSum = new Array(N).fill(0);
+      for (const e of (state.events || [])) {
+        if (e.type === 'damage' && e.source != null && dealtSum[e.source] != null) dealtSum[e.source] += e.amt;
+      }
+      let bv = 0, bp = null, tie = false;
+      for (let i = 0; i < N; i++) {
+        if (dealtSum[i] > bv) { bv = dealtSum[i]; bp = i; tie = false; }
+        else if (dealtSum[i] === bv) tie = true;
+      }
+      state.winner = (bp != null && !tie) ? bp : 'draw';
+      return true;
+    }
     if (alive.length === 1) { state.over = true; state.winner = alive[0]; return true; } // N10 最后存活
     if (state.round >= ((state.mode && state.mode.maxRounds) || R.MAX_ROUNDS)) {   // v1.4.0：按模式配回合上限
       state.over = true;

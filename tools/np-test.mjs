@@ -902,7 +902,10 @@ t('D3 round cap follows the mode (long safety net=140 + sudden death at 100)', f
   /* v1.5.10：收缩起点改为**全局规则** `R.SUDDEN_DEATH`（用户裁定），模式字段只用于覆盖 ⇒
    * 这里断言"该模式实际生效的阈值"，而不是"模式自带字段"（后者现在可以是 undefined）。 */
   eq(R.MODES.long.suddenDeath != null ? R.MODES.long.suddenDeath : R.SUDDEN_DEATH, 100, 'long 实际生效的收缩起点');
-  eq(R.MODES.multi.suddenDeath != null ? R.MODES.multi.suddenDeath : R.SUDDEN_DEATH, 100, 'multi 也必须接上全局收缩规则（上限 60 ⇒ 实际不触发）');
+  /* v1.5.65：multi 此前走全局 100 而上限 60 ⇒ **实际永不触发**（"不打"零代价，实测 40/40 平局、回合打满）；
+   * 现给它显式阈值（必须落进上限内）。 */
+  eq(R.MODES.multi.suddenDeath, 45, 'multi 实际生效的收缩起点');
+  ok(R.MODES.multi.suddenDeath < R.MAX_ROUNDS, 'multi 的收缩必须落进回合上限内（否则永不触发）');
   eq(R.MAX_ROUNDS, 60, 'default cap unchanged');
   const mk = function (mode, round) {
     const st = S.createState(mode, { next: mulberry32(74) }, 3);
@@ -1309,8 +1312,9 @@ t('D55 F 的口径必须是"场 A 被集火还手率"（考核依据修正），
   ok(agg.fieldA.oppAtkPerGame > agg.fieldB.oppAtkPerGame + 1,
     '场 A 的对手必须真的在进攻（A=' + agg.fieldA.oppAtkPerGame.toFixed(1) + ' vs B=' + agg.fieldB.oppAtkPerGame.toFixed(1) + '）');
   ok(agg.fieldA.atk >= 0 && agg.fieldA.atk <= 1 && agg.fieldB.atk >= 0 && agg.fieldB.atk <= 1, '两场都必须返回合法比率');
-  ok(agg.fieldA.takenPerGame >= 0 && agg.fieldB.takenPerGame === 0,
-    '场 B（对手只ジ）里冠军不该挨打（实测 ' + agg.fieldB.takenPerGame.toFixed(2) + '/局）');
+  /* v1.5.65：终局收缩的伤 source=null（不可格挡）⇒ 场 B 里冠军仍会掉血，必须按"对手造成的伤"判。 */
+  ok(agg.fieldB.takenByOpponentPerGame === 0,
+    '场 B（对手只ジ）里冠军不该被**对手**打（实测 ' + agg.fieldB.takenByOpponentPerGame.toFixed(2) + '/局）');
 });
 
 t('D56 旧冠军嵌入 v7 后必须仍走旧口径（否则目标退化：实测破墙 12.25→7.70）', function () {
@@ -1343,6 +1347,34 @@ t('D56 旧冠军嵌入 v7 后必须仍走旧口径（否则目标退化：实测
   const A = [0, 1, 2].map(function (k) { return play(legacy, 777 + k); }).join(' ; ');
   const B = [0, 1, 2].map(function (k) { return play(emb, 777 + k); }).join(' ; ');
   eq(B, A, '嵌入+标记后必须与原生旧口径逐场相同（旧版嵌入会改行为）');
+});
+
+t('D57 multi 的收缩必须落进回合上限内，且"全灭"必须按伤害判胜（否则场 B 上限恒为 0）', function () {
+  /* v1.5.65（第五轮复核 §4-2，第四轮就提过；本轮实测坐实）：
+   * ① multi 不设 suddenDeath ⇒ 走全局 100，而上限是 60 ⇒ **收缩永不触发** ⇒ "不打"零代价；
+   * ② 收缩一旦生效又会**同时**清场（实测 40 局回合恒 47、5/5 阵亡）⇒ 旧"全灭=平局"口径下
+   *    "4 席只ジ vs 1 席冠军"是 0 胜 / 40 平 ⇒ 严格胜率上限恒为 0，惩罚攒钱无从谈起。 */
+  ok(R.MODES.multi.suddenDeath > 0, 'multi 必须显式设 suddenDeath（否则走全局 100 > 上限 60）');
+  ok(R.MODES.multi.suddenDeath < R.MAX_ROUNDS, 'multi 的收缩起点必须 < MAX_ROUNDS（实测修前永不触发）');
+  const rj = readFileSync('js/core/resolve.js', 'utf8');
+  ok(rj.indexOf('dealtSum') >= 0, '全灭分支必须按累计造成伤害判胜');
+  /* 行为断言：4 席只ジ vs 1 席冠军 —— 修前 0/40 分出胜负、回合恒打满；修后必须出现胜者且不撞上限 */
+  ok(typeof T.passiveFieldAt === 'function', '训练侧必须导出暴露度判定 passiveFieldAt');
+  eq(T.passiveFieldAt(0), true, '第 0 局必须是"4 席全被动"暴露局');
+  eq(T.passiveFieldAt(1), false, '第 1 局不是暴露局（默认 1/8）');
+  Pol.setRng(T.mulberry32(777));
+  const pl = Pol.makePolicy(0.25);
+  const ji = function () { return { key: R.SK.JI }; };
+  let dec = 0, cap = 0;
+  for (let g = 0; g < 12; g++) {
+    const st = S.createState('multi', { next: T.mulberry32(900 + g) }, 5);
+    st.slotSalt = ((g + 1) * 2654435761) >>> 0;
+    Play.autoGameN(st, [T.policyChooserN(pl, 0.15), ji, ji, ji, ji]);
+    if (st.winner !== 'draw' && st.winner != null) dec++;
+    if (st.round >= R.MAX_ROUNDS) cap++;
+  }
+  ok(dec >= 1, '收缩+伤害判胜之后，"4 席只ジ"场里必须出现分出胜负的局（实测 ' + dec + '/12）');
+  eq(cap, 0, '不该再有打满上限的局（实测 ' + cap + '/12）');
 });
 
 t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规则指纹（否则成绩已过期）', function () {
@@ -1442,7 +1474,8 @@ t('D19 终局收缩是**全局规则**：第 100 回合起每回合末全员 −
    * 现在阈值是全局 `R.SUDDEN_DEATH`（模式仍可用自己的字段覆盖，写 0 = 关）。 */
   eq(R.SUDDEN_DEATH, 100, '全局阈值必须是 100');
   const mk = function (round) {
-    const st = S.createState('multi', { next: T.mulberry32(7) }, 3);
+    /* v1.5.65：全局 100 的用例改用 long（它继承全局阈值）；multi 已有自己的 45（下面单独断言）。 */
+    const st = S.createState('long', { next: T.mulberry32(7) }, 3);
     st.round = round;
     return st;
   };
@@ -1452,6 +1485,16 @@ t('D19 终局收缩是**全局规则**：第 100 回合起每回合末全员 −
   X.endTurn(st);
   eq(st.p[0].hp, hpA[0], '第 99 回合不该触发终局收缩');
   eq(st.p[1].hp, hpA[1], '第 99 回合不该触发终局收缩（所有人）');
+  /* v1.5.65 新增：multi 自己的阈值必须生效（44 不触发 / 45 触发） */
+  const mkMulti = function (round) { const st2 = S.createState('multi', { next: T.mulberry32(7) }, 3); st2.round = round; return st2; };
+  let sm = mkMulti(44);
+  const hpM = sm.p.map(function (p) { return p.hp; });
+  X.endTurn(sm);
+  eq(sm.p[0].hp, hpM[0], 'multi 第 44 回合不该触发收缩（阈值 45）');
+  sm = mkMulti(45);
+  const hpM2 = sm.p.map(function (p) { return p.hp; });
+  X.endTurn(sm);
+  eq(sm.p[0].hp, hpM2[0] - 1, 'multi 第 45 回合必须全员 −1（这是"不打"不再免费的规则基础）');
   /* ② 第 100 回合：全员 −1 */
   st = mk(100);
   const hpB = st.p.map(function (p) { return p.hp; });
@@ -1486,7 +1529,9 @@ t('D19 终局收缩是**全局规则**：第 100 回合起每回合末全员 −
   X.endTurn(st6);
   eq(st6.p[0].hp, hpE - 2, 'suddenDeathDmg=2 时每回合必须扣 2 血（实测 ' + st6.p[0].hp + ' vs ' + hpE + '）');
   eq(st6.mode.suddenDeath, 5, 'createState 的 opts 必须能覆盖起扣回合');
-  eq(R.MODES.multi.suddenDeath, undefined, 'opts 覆盖不得污染全局 MODES（必须是浅拷贝）');
+  /* v1.5.65：multi 现在**自己**有 suddenDeath=45（见 D3）⇒ 这里改成断言"全局值保持模式自身的 45"，
+   * 而上面那次 opts 覆盖是 5 ⇒ 若发生污染，这里就会变成 5（污染检查的效力不变）。 */
+  eq(R.MODES.multi.suddenDeath, 45, 'opts 覆盖不得污染全局 MODES（全局仍是模式自身的 45）');
   eq(R.SUDDEN_DEATH_DMG, 1, '全局默认每回合扣 1 血');
 });
 

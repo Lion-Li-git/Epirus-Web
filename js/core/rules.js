@@ -122,7 +122,7 @@
 
   const MODES = {
     standard: { name: '标准模式', hp: 3, skills: AVAILABLE_2P, rule: '' },
-    multi: { name: '多人模式(3-5人)', hp: 3, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 1 },
+    multi: { name: '多人模式(3-5人)', hp: 3, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 1, suddenDeath: 45 },   // v1.5.65：见下
     /* v1.4.0 长程模式（5 血）—— 用户 2026-09-12 提出：线下靠多人混乱达成平衡，
      * 程序里 3 血让最优线"太明显"。算术上确实如此：v1.3.60 实测 ep 收入只有 +1/回合
      * （resolve.js:501 只有 ジ 给），所以任何 ≥2 ジ 的卡都要 2+ 回合攒钱，而任何多回合轨迹
@@ -138,6 +138,12 @@
      * 不是"谁把谁打死"。v1.5.10（用户裁定）起它**不再是长程模式专属**，而是**全局规则**
      * （见下面的 SUDDEN_DEATH）；maxRounds=140 只作安全网（正常情况在 ~105 回合就清完）。 */
     long: { name: '长程模式(5血·3-5人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 3, maxRounds: 140 }
+    /* v1.5.65（第五轮复核 §4-2，第四轮就提过）：**multi 的终局收缩必须落进回合上限内**。
+     * 病：multi 不设 `suddenDeath` ⇒ 走全局 `SUDDEN_DEATH = 100`，而回合上限是 `MAX_ROUNDS = 60`
+     * ⇒ **收缩在多人局永不触发** ⇒ "不打"零代价（守到哨声就行），场 B 的严格胜率上限恒为 0（实测 60 回合 100% 平局）。
+     * 修：给 multi 设 `suddenDeath: 45`（正常局平均 22~30 回合 ⇒ 几乎不影响常规对局；
+     * 只惩罚"拖到 45 回合还不清场"）。收缩后血多者活得更久 ⇒ **任何伤害都会转化为胜负**（而非平局）。
+     * 反证：本版守门 D57 会在"4 席全被动"场里要求出现分出胜负的局（修前必然 0/红）。 */
     /* v1.5.18（用户裁定）：**删除** `fast`（快速模式）与 `lucky`（欧皇模式）。
      * 起因（第三方复核 §3-2）：这两个模式**没有入口**（`index.html` 的 `#sel-mode` 只有 standard/multi/long）、
      * 没有工具/服务端引用，但 `MODES` 里还留着 `fast`、连带 `guardLimit: 2` 这个**纯死字段**
