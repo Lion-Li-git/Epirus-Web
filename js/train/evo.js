@@ -908,12 +908,17 @@
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
      * 每局都是"n 座同一策略"⇒ 动作直方图并进 agg（只并直方图；first/played/dealt 一概不动）。 */
+    /* v1.5.68：mirror 局顺便统计各座胜场（零额外成本）—— 供下面 fit 里的阈值式座位惩罚使用。
+     * 声明必须在 if 之外：fit 的组装在外层作用域。 */
+    const mirSeatWins = new Array(n).fill(0);
+    let mirDec = 0;
     if (MIRROR_GAMES > 0) {
       for (let g = 0; g < MIRROR_GAMES; g++) {
         const seed = seedOfGen(gen, idx, 'mir') + g * 6151;
         const chs = [];
         for (let pid = 0; pid < n; pid++) chs.push(makeEconChooser(policyChooserN(params, 0.35, 0.15), agg, null, 0));
-        oneGameN(chs, seed, n, { regen: 0, mode: TRAIN_MODE });
+        const rm = oneGameN(chs, seed, n, { regen: 0, mode: TRAIN_MODE });
+        if (rm && rm.winner !== 'draw' && rm.winner != null) { mirSeatWins[rm.winner]++; mirDec++; }
         mirrorRan++;
       }
     }
@@ -936,6 +941,19 @@
      * 权重给得小（DIV_W=0.06，满额 +0.06），与 stock（+0.05 / −0.12）同量级 ⇒ 两项加起来仍远小于
      * 胜负项（base 1.0/0.3），符合"奖惩也不用给太多"。 */
     const divBonus = DIV_W * divNorm;
+    /* ===== v1.5.68（第五轮复核 §4 的 ④ 落地）：**阈值式座位惩罚**（约束处理，不是奖励权重）=====
+     * 病：训练从不评估"5 席同策略"这一配置 ⇒ 固定目标偏好的策略在机器人池上能赢、在 5 席测量里却某座通吃，
+     * 演化永远惩罚不到它（v9~v15 五批 30+ 候选全是这个形状）。
+     * 做法：用**已经在打的 mirror 局**（零额外成本）统计各座胜场；极差**超过阈值才扣分**，
+     * 低于阈值一分不扣 ⇒ 不改变"好个体之间的相对次序"，只在偏置真的大时把它压下去。
+     * 为什么不加奖励：先手激励 -14pt、破墙奖励让混合场 40%→17% —— 加权奖励已被两次实验证伪。 */
+    const SEAT_PEN_FROM = 35, SEAT_PEN_W = 0.5;
+    let seatPen = 0, seatSpreadMir = null;
+    if (mirDec >= 3) {
+      const pcts = mirSeatWins.map(function (w) { return 100 * w / mirDec; });
+      seatSpreadMir = Math.max.apply(null, pcts) - Math.min.apply(null, pcts);
+      if (seatSpreadMir > SEAT_PEN_FROM) seatPen = SEAT_PEN_W * ((seatSpreadMir - SEAT_PEN_FROM) / 100);
+    }
     /* ===== 风格表现切片（v1.5.2，见模块头部 setStyleSlice 的说明）=====
      * 追加在池子预算之外 ⇒ 不摊薄原有练习量；原生规则（regen=0）⇒ 量的是真实强度。 */
     let styleGames = 0, styleFirst = 0;
@@ -957,11 +975,12 @@
     const styleRate = styleGames ? styleFirst / styleGames : 0;
     const fitAvg = fitGames ? fit / fitGames : 0;
     return {
-      fit: fitAvg + divBonus + STYLE_W * styleRate,
+      fit: fitAvg + divBonus + STYLE_W * styleRate - seatPen,
       fitNoDiv: fitAvg,
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
       divBonus: divBonus,
+      seatPen: seatPen, seatSpreadMirror: seatSpreadMir, mirrorDecisive: mirDec,
       divW: DIV_W,
       mirrorGames: mirrorRan,
       avgStock: econGames ? stockSum / econGames : 0,
@@ -1452,6 +1471,8 @@
     const N = (n && n >= 2) ? (n | 0) : 5;
     const mk = (mode === 'long') ? 'long' : 'multi';
     let dmg = 0, heavyDmg = 0, holo = 0, holoOther = 0, draws = 0, rounds = 0, zero = 0;
+    const seatWins = new Array(N).fill(0);   // v1.5.68：5 席同策略的各座胜场（座位偏置的直接读数）
+    let seatDec = 0;
     const keyCount = {};
     /* v1.5.28（第三方复核 §4-2b）：**落地命中按卡统计** —— G（出手分布的熵）会被"变宽但丢关键卡"骗：
      * v1.5.27 实测 G 4.15→6.55 的同时，把唯一能穿反弹的**激光剑**用到 0 命中（长程反弹墙 85%→0%）。
@@ -1463,6 +1484,7 @@
       const ch = [];
       for (let i = 0; i < N; i++) ch.push(policyChooserN(params, 0.15));
       Play.autoGameN(st, ch);
+      if (st.winner !== 'draw' && st.winner != null) { seatWins[st.winner]++; seatDec++; }   // v1.5.68
       let gd = 0;
       for (const e of st.events) {
         /* v1.5.32：**把盾套给别人**要单独计数（用户实测：v7wall-33 每局 18.7 次全息、100% 送人）*/
@@ -1498,7 +1520,9 @@
       effSkills: tot ? Math.exp(H) : 0, distinctKeys: ks.length, nonJi: tot,
       landByKey: landByKey, pierceKeys: pierceKeys,
       /* 零落地的"穿透卡"（能穿反弹/穿防御）—— 为 0 就说明**破墙的那条线丢了** */
-      pierceMissing: pierceKeys.filter(function (k) { return !landByKey[k]; })
+      pierceMissing: pierceKeys.filter(function (k) { return !landByKey[k]; }),
+      seatWins: seatWins, seatDecisive: seatDec,
+      seatSpread: (function () { if (seatDec < 3) return null; const p = seatWins.map(function (w) { return 100 * w / seatDec; }); return Math.max.apply(null, p) - Math.min.apply(null, p); })()
     };
   }
   function healthFails(mh) {

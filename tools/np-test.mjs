@@ -1437,6 +1437,33 @@ t('D58 L7 第七处：候选枚举顺序必须无身份（镜像对称 + 5 席�
   }
 });
 
+t('D59 阈值式座位惩罚必须真的在 fit 里（让演化"看得见"偏置）', function () {
+  /* v1.5.68（第五轮复核 §4 的 ④ 落地）：训练从不评估"5 席同策略"配置 ⇒ 固定目标偏好的策略
+   * 在机器人池上能赢、在 5 席测量里却某座通吃（v9~v15 五批 30+ 候选全是这个形状）。
+   * 修：用**已经在打的 mirror 局**统计各座胜场，极差超过阈值才扣分（阈值式 = 约束处理，不是奖励权重）。 */
+  const ev = readFileSync('js/train/evo.js', 'utf8');
+  ok(ev.indexOf('SEAT_PEN_FROM') >= 0 && ev.indexOf('SEAT_PEN_W') >= 0, '必须有阈值式座位惩罚常量');
+  ok(ev.indexOf('- seatPen') >= 0, '座位惩罚必须真的减进 fit');
+  ok(ev.indexOf('seatSpreadMirror') >= 0, '成员评分必须回报座位极差（供审计）');
+  ok(ev.indexOf('seatWins: seatWins') >= 0, 'mirrorHealth 必须回报各座胜场');
+  /* 行为断言：mirrorHealth（5 席同策略）必须给出座位分布；线上包（已知均衡）极差应 <30pt */
+  let live = null;
+  try {
+    const src2 = readFileSync('js/bundled-champion-3p.js', 'utf8');
+    const lm2 = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src2);
+    if (lm2) live = Pol.unpack(JSON.parse(lm2[1]), true);
+  } catch (e) { live = null; }
+  if (!live) {
+    console.log('  （跳过座位分布统计：线上包此刻不可读，多半是训练中）');
+  } else {
+    const mh = T.mirrorHealth(live, 20, 5, 'multi');
+    ok(Array.isArray(mh.seatWins) && mh.seatWins.length === 5, 'mirrorHealth 必须回报 5 个座位的胜场');
+    ok(mh.seatDecisive >= 5, '必须有足够多分出胜负的局（实测 ' + mh.seatDecisive + '/20）');
+    ok(mh.seatSpread != null && mh.seatSpread < 40,
+      '线上包（已知均衡）的 5 席极差必须 <40pt（实测 ' + (mh.seatSpread == null ? '?' : mh.seatSpread.toFixed(0)) + 'pt，分布 ' + mh.seatWins.join('/') + '）');
+  }
+});
+
 t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规则指纹（否则成绩已过期）', function () {
   /* v1.5.7（千问体检 §5-2 建议 / HANDOFF §4-9 规矩）：v1.5.4 只改了 rules.js 里一个 `target` 字段，
    * 5P 线上冠军的考卷成绩就从 38.0% 掉到 15.0%，而当时**没有任何机制**能自动发现"产物与引擎错配"。
