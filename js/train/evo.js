@@ -16,6 +16,8 @@
      * 而 champVsBaseline 会拿它去建 chooser ⇒ 旧写法直接 TypeError（实测 train-best 崩在这里）。
      * 防御性判空：null 一律按"旧口径"处理（宁可用错口径，也不要整条训练线崩掉）。 */
     if (!params) return true;
+    /* v1.5.64：**容器显式标记优先**（嵌入 v7 的旧冠军仍必须走旧口径，否则目标退化）。 */
+    if (P.isLegacyChooser && P.isLegacyChooser(params)) return true;
     const sh = P.shapeOf(params);
     return !sh || sh.legacy === true;
   }

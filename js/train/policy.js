@@ -648,7 +648,21 @@
     if (typeof o.h === 'number' && o.h !== HID) return { ok: false, reason: 'hidden', got: o.h, want: HID };
     return { ok: true };
   }
-  function pack(p) { return { v: PACK_VERSION, a: Array.from(p), f: FEAT_S, fa: FEAT_A, h: HID }; }
+  /* v1.5.64（第五轮复核的"换回来的不是 eco-34"）：**容器必须显式带旧口径标记**。
+   * 病：`LEGACY(params)` 靠 `shapeOf(params).legacy` 反推，而它按 `params.length` 判断 ⇒
+   * `embedLegacy`（3337→5689）之后 `legacy=false` ⇒ 旧冠军被切到**它从没训练过的** v7 候选口径
+   * （动作侧目标/珠的权重是 0 ⇒ 网络分不出目标 ⇒ 目标退化成枚举顺序）⇒ 实测 eco-34 的破墙
+   * 伤害 12.25→7.70、穿透 242→152。修法：容器写 `lv`（来源版本），读取时挂到 params 上，
+   * chooser 用 `isLegacyChooser` 认标记而不是认长度。 */
+  function pack(p) {
+    const o = { v: PACK_VERSION, a: Array.from(p), f: FEAT_S, fa: FEAT_A, h: HID };
+    if (p && p.legacyFrom != null) o.lv = p.legacyFrom;
+    return o;
+  }
+  /* 显式标记：这份权重来自旧形状（即使已经嵌入 v7 容器）⇒ 必须走旧口径（键 + pickTargetN）。 */
+  function isLegacyChooser(params) {
+    return !!(params && params.legacyFrom != null && params.legacyFrom !== PACK_VERSION);
+  }
   /* allowLegacy=true 仅工具/评测用：按包内长度反推形状重建，**游戏侧绝不使用**。
    * 这样五次失败实验的存档重新可读，A/B 证据链不再是一次性的。 */
   function unpack(o, allowLegacy) {
@@ -658,11 +672,13 @@
       if (!(featN > 0 && Number.isInteger(featN))) return null;
       const q = new Float64Array(o.a.length);
       for (let i = 0; i < q.length; i++) q[i] = o.a[i];
+      if (o.lv != null) q.legacyFrom = o.lv;      // v1.5.64：容器显式标记（见下）
       return q;
     }
     if (!checkPack(o).ok) return null;   // 游戏侧一律拒绝不兼容包（旧冠军/错维度/缺版本）
     const p = new Float64Array(paramCount());
     for (let i = 0; i < p.length; i++) p[i] = o.a[i];
+    if (o.lv != null) p.legacyFrom = o.lv;        // v1.5.64：容器显式标记（见下）
     return p;
   }
 
@@ -707,6 +723,7 @@
   global.EpirusPolicy = {
     ACT_KEYS, FEAT_N, FEAT_S, FEAT_A, HID, PACK_VERSION, FEAT_S_V6,
     features, featuresV7, actionFeatures, value, forward, choose, shapeOf, setRng, oppAgg, oppSlots, skillHistory, OPP_SLOTS, HIST_K,
+    isLegacyChooser, embedLegacy, pack, unpack, loadAny, checkPack, paramCount,
     /* v7 新增对外面：候选体系 + 实验掩码 + 形状表 + 旧包等价嵌入（守门/训练/工具用） */
     candidatesFor, forwardCands, chooseCandidates, setFeatMask, featMask,
     EFFECTS, PLAYER_SLOTS, VER_SHAPES, paramsOf, embedLegacy, loadAny,

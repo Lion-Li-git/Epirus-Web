@@ -20,6 +20,7 @@ if (j.v === 7) { console.log('源包已是 v7（无需升级）：' + SRC); proc
 const native = Pol.unpack(j, true);
 if (!native || !native.length) { console.error('⛔ 原生读取失败'); process.exit(4); }
 const embedded = Pol.embedLegacy(native);
+embedded.legacyFrom = j.v;                 // v1.5.64：显式标记（来源版本）—— chooser 认它而不是认长度
 const packed = Pol.pack(embedded);
 const chk = Pol.checkPack(packed);
 console.log('源 v' + j.v + ' = ' + native.length + ' 位 ⇒ 嵌入 v7 = ' + embedded.length + ' 位；checkPack=' + JSON.stringify(chk));

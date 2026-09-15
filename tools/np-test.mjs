@@ -1313,6 +1313,38 @@ t('D55 F 的口径必须是"场 A 被集火还手率"（考核依据修正），
     '场 B（对手只ジ）里冠军不该挨打（实测 ' + agg.fieldB.takenPerGame.toFixed(2) + '/局）');
 });
 
+t('D56 旧冠军嵌入 v7 后必须仍走旧口径（否则目标退化：实测破墙 12.25→7.70）', function () {
+  /* v1.5.64（第五轮复核）：换回 eco-34 时用 upgrade-pack 嵌成 v7 容器，但 `LEGACY()` 靠
+   * `shapeOf(params).legacy`（按 `params.length` 反推）判断 ⇒ 嵌入后 legacy=false ⇒ 被切到
+   * **它从没训练过的** v7 候选口径（动作侧目标/珠权重为 0 ⇒ 分不出目标 ⇒ 目标退化成枚举顺序）
+   * ⇒ 实测破墙伤害 12.25→7.70、穿透 242→152。修法：容器写 `lv`、读取挂到 params、chooser 认标记。 */
+  const src = readFileSync('js/train/policy.js', 'utf8');
+  ok(src.indexOf('function isLegacyChooser') >= 0, 'policy.js 必须导出 isLegacyChooser');
+  ok(src.indexOf('o.lv != null') >= 0, 'unpack 必须把容器 lv 标记挂到 params 上');
+  ok(src.indexOf('o.lv = p.legacyFrom') >= 0, 'pack 必须把标记写回容器');
+  ok(readFileSync('js/train/evo.js', 'utf8').indexOf('P.isLegacyChooser') >= 0, 'LEGACY() 必须优先认显式标记');
+  /* 行为断言：同一份"旧形状权重"（3337 位）原生跑 vs 嵌入+标记跑 ⇒ 逐场结果必须相同。 */
+  Pol.setRng(T.mulberry32(4242));
+  const p7 = Pol.makePolicy(0.25);
+  const legacy = new Float64Array(3337);
+  for (let i = 0; i < legacy.length; i++) legacy[i] = p7[i];
+  const emb = Pol.embedLegacy(legacy);
+  ok(emb && emb.length === Pol.paramCount(), 'embedLegacy 必须把 3337 撑成 ' + Pol.paramCount() + ' 位');
+  emb.legacyFrom = 6;
+  ok(Pol.isLegacyChooser(emb) === true, '带 lv 标记的嵌入包必须被判为旧口径');
+  ok(Pol.isLegacyChooser(p7) === false, '纯 v7 包不得被判为旧口径');
+  const play = function (params, seed) {
+    const st = S.createState('multi', { next: T.mulberry32(seed) }, 5);
+    const ch = [];
+    for (let i = 0; i < 5; i++) ch.push(T.policyChooserN(params, 0.15));
+    Play.autoGameN(st, ch);
+    return String(st.winner) + '|' + st.round + '|' + st.p.map(function (x) { return Math.max(0, x.hp); }).join(',');
+  };
+  const A = [0, 1, 2].map(function (k) { return play(legacy, 777 + k); }).join(' ; ');
+  const B = [0, 1, 2].map(function (k) { return play(emb, 777 + k); }).join(' ; ');
+  eq(B, A, '嵌入+标记后必须与原生旧口径逐场相同（旧版嵌入会改行为）');
+});
+
 t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规则指纹（否则成绩已过期）', function () {
   /* v1.5.7（千问体检 §5-2 建议 / HANDOFF §4-9 规矩）：v1.5.4 只改了 rules.js 里一个 `target` 字段，
    * 5P 线上冠军的考卷成绩就从 38.0% 掉到 15.0%，而当时**没有任何机制**能自动发现"产物与引擎错配"。
