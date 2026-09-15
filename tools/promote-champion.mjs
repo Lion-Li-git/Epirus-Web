@@ -76,7 +76,10 @@ if (EXAM_FIRST !== '') {
  * （罕见技能还没出现 ⇒ 熵被低估）。用 n=10 去卡 `G<3` 等于把噪声当结论（本项目"阈值是刀锋"的第 N 次）。
  * B/C/E/F 几列在 n=10 与 n=20 下读数接近（伤害/局 13.60 → 13.50），所以统一用 20 不影响历史可比性。 */
 const W = sandbox();
-const params = W.EpirusPolicy.unpack(JSON.parse(packJson));
+/* v1.5.63：**必须原生读取**（`unpack(json, true)`）。历史包是 v5/v6 形状，`unpack(json)`（默认嵌入 v7）
+ * 对它们返回 **null** ⇒ 体检直接崩（实测 eco-34.bak：unpack(j)=null / unpack(j,true)=3337 位）。
+ * 规矩见 `audit-lib.loadChamp` 的注释："测量工具必须能读历史形状 —— 保持原生形状读取，不要嵌入"。 */
+const params = W.EpirusPolicy.unpack(JSON.parse(packJson), true);
 const G = Number(flag('games', 20));
 const sp = selfPlay(W, params, 'multi', G);
 const fPass = fieldRate(W, params, 'passive', 'multi');
@@ -222,9 +225,13 @@ meta.auditForced = fails.length ? FORCE : false;
 const out = src.replace(metaM[0], metaM[1] + JSON.stringify(meta) + ';');
 /* 回读自检：冠军槽必须仍是**能解出参数的包**（第一版写坏槽位时就是这里没查，靠 np-test 才发现） */
 const reChamp = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(out);
-const reParams = reChamp ? W.EpirusPolicy.unpack(JSON.parse(reChamp[1])) : null;
+const reJson = reChamp ? JSON.parse(reChamp[1]) : null;
+const reParams = reJson ? W.EpirusPolicy.unpack(reJson, true) : null;
 if (!reParams || !reParams.length) { console.error('⛔ 自检失败：写出的 bundle 冠军槽解不出参数（已中止，未落盘）'); process.exit(5); }
-const chk = W.EpirusPolicy.checkPack ? W.EpirusPolicy.checkPack(JSON.parse(reChamp[1])) : { ok: true };
+/* v1.5.63：`checkPack` 只校验 v7 容器（`o.v !== PACK_VERSION` 直接判 not-ok）；
+ * 旧形状包（v5/v6）走"原生读取 + 长度自检"这条路，否则换回历史冠军会被自检挡死。 */
+const chk = (reJson && reJson.v === 7 && W.EpirusPolicy.checkPack) ? W.EpirusPolicy.checkPack(reJson) : { ok: true };
+if (reJson && reJson.v !== 7) console.log('   旧形状包（v' + reJson.v + '）：跳过 checkPack（只校验 v7 容器）⇒ 已用原生读取 + 长度自检');
 if (chk && chk.ok === false) { console.error('⛔ 自检失败：checkPack ' + JSON.stringify(chk) + '（已中止，未落盘）'); process.exit(5); }
 writeFileSync(BUNDLE, out);
 console.log('   回读自检：冠军包 ok（参数量 ' + reParams.length + '）');
