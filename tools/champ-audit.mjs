@@ -49,7 +49,7 @@ const W = sandbox();
  * ⇒ 此时量 `js/bundled-champion-3p.js` 会得到旧冠军的特征（本轮踩过）。给该行打标记。 */
 const trainingLive = existsSync(join(ROOT, 'docs/artifacts/.training.lock'));
 console.log('冠军体检（自对局 ' + GAMES + ' 局 · 考卷 ' + EXG + ' 局）' + (trainingLive ? '  ⚠️ 训练进行中：bundle 行不可信，请看对应 .bak' : '') + '\n');
-console.log('文件'.padEnd(42) + 'A 考卷1st  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F活跃场进攻 F回合 G有效技能数 座位极差  H混合场  I对被动');
+console.log('文件'.padEnd(42) + 'A 考卷1st  A严胜  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F活跃场进攻 F回合 G有效技能数 座位极差  H混合场  I对被动');
 for (const f of files) {
   const params = loadChamp(W, f);
   if (!params) { console.log(f.padEnd(42) + '  (读不出冠军包)'); continue; }
@@ -66,6 +66,8 @@ for (const f of files) {
   const nm = f.replace('docs/artifacts/', '').replace('js/', '').slice(0, 41);
   console.log(nm.padEnd(42) +
     String(e1.first == null ? '?' : e1.first).padStart(8) + '%' +
+    /* v1.5.58（复核 §4-1）：并报**严格胜率**（引擎判胜）—— 只看 1st 会把'并列第一'当赢（farmerwall 实测 97.5% vs 严胜 0.0%）。 */
+    String(e1.strict == null ? '?' : e1.strict).padStart(8) + '%' +
     sp.dmgPerGame.toFixed(1).padStart(9) +
     sp.heavyPerGame.toFixed(1).padStart(10) +
     sp.holoPerGame.toFixed(1).padStart(8) +

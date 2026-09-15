@@ -268,6 +268,9 @@ function runSubject(makeSel, label) {
   /* v1.4.7 机制读数（第十轮复核 §3.2/3.3 用的量）：自己的攻击被弹回几次、平局率、终局血量。
    * `reflect` 事件的语义是 {to: 格挡持有者(墙), from: 攻击者(主体)} ⇒ 数 from===seat 就是"我被打回"。 */
   let reflectSelf = 0, drawGames = 0, hpEndSum = 0;
+  /* v1.5.58（第五轮复核 §4-1）：`1st` 走 rankOf ⇒ **并列算第一**（'熬满'场里多打 1 点伤害就第一）。
+   * 并报严格口径：严胜 = 引擎判我们赢；并列 = 名次第一但引擎没判我们赢。 */
+  let strictFirst = 0, tieOnlyFirst = 0;
   for (const combo of combos) {
     const hasDeep = combo.some(function (nm) { return !!DEEP[nm]; });
     for (let g = 0; g < GAMES; g++) {
@@ -310,6 +313,8 @@ function runSubject(makeSel, label) {
       const r = T.oneGameN(choosers, SEED + g * 977 + total, N, Object.keys(GOPT).length ? GOPT : undefined);
       const rank = T.rankOf(r.state, seat, SEED + g * 977 + total);   // v1.3.57: 名次平局用本局种子洗牌（pid 中性）
       ranks[rank - 1]++;
+      if (r.winner === seat) strictFirst++;
+      else if (rank === 1) tieOnlyFirst++;
       seatGames[seat]++; if (rank === 1) seatFirst[seat]++;
       if (hasDeep) { deepGames++; if (rank === 1) deepFirst++; }
       else { shallowGames++; if (rank === 1) shallowFirst++; }
@@ -337,6 +342,9 @@ function runSubject(makeSel, label) {
     hpEnd: takenGames ? hpEndSum / takenGames : 0,
     avgRounds: takenGames ? roundSum / takenGames : 0,
     firstRate: total ? ranks[0] / total : 0,
+    strictFirstRate: total ? strictFirst / total : 0,
+    tieFirstRate: total ? tieOnlyFirst / total : 0,
+    strictFirst: strictFirst, tieOnlyFirst: tieOnlyFirst,
     top2Rate: total ? (ranks[0] + ranks[1]) / total : 0,
     top3Rate: total ? (ranks[0] + ranks[1] + ranks[2]) / total : 0,
     pct: pct
@@ -552,6 +560,7 @@ const ctrl = runSubject(function () { return asChooser(Bots.pickRandom); }, '对
 
 for (const s of [champ, ctrl]) {
   console.log('[' + s.label + '] 1st=' + s.pct(s.ranks[0], s.total) +
+    ' 严胜=' + s.pct(s.strictFirst, s.total) + ' 并列=' + s.pct(s.tieOnlyFirst, s.total) +
     '  2nd=' + s.pct(s.ranks[1], s.total) + '  3rd=' + s.pct(s.ranks[2], s.total) +
     '  4th=' + s.pct(s.ranks[3], s.total) + '  5th=' + s.pct(s.ranks[4], s.total) +
     '   | top2=' + s.pct(s.ranks[0] + s.ranks[1], s.total) + ' top3=' + s.pct(s.ranks[0] + s.ranks[1] + s.ranks[2], s.total));

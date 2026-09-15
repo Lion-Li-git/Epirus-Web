@@ -55,7 +55,10 @@ export function exam(file, extra, EXG, root) {
   const out = (r.stdout || '') + (r.stderr || '');
   const m = /\[(?:冠军|消融[^\]]*)\]\s*1st=([\d.]+)%/.exec(out);
   const c3 = /cost>=3 出手占比=([\d.]+)%/.exec(out);
-  return { first: m ? Number(m[1]) : null, cost3: c3 ? Number(c3[1]) : null };
+  const st = /严胜=([0-9.]+)%/.exec(out);
+  const ti = /并列=([0-9.]+)%/.exec(out);
+  return { first: m ? Number(m[1]) : null, cost3: c3 ? Number(c3[1]) : null,
+    strict: st ? Number(st[1]) : null, tie: ti ? Number(ti[1]) : null };
 }
 
 /* B/C/G. 自对局：5 座同一冠军 */
