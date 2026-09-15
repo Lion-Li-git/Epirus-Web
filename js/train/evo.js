@@ -908,17 +908,30 @@
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
      * 每局都是"n 座同一策略"⇒ 动作直方图并进 agg（只并直方图；first/played/dealt 一概不动）。 */
-    /* v1.5.68：mirror 局顺便统计各座胜场（零额外成本）—— 供下面 fit 里的阈值式座位惩罚使用。
-     * 声明必须在 if 之外：fit 的组装在外层作用域。 */
-    const mirSeatWins = new Array(n).fill(0);
-    let mirDec = 0;
+    /* ===== v1.5.69：**独立座位探针**（供下面的阈值式座位惩罚）=====
+     * 5 席同一策略 × SEAT_GAMES 局 ⇒ 各座胜场 ⇒ 极差。独立取样（不蹭 MIRROR_GAMES=2 的局），
+     * 否则样本不足 ⇒ 惩罚静默失效（v1.5.68 的实际教训）。 */
+    const seatWinsProbe = new Array(n).fill(0);
+    let seatDec = 0;
+    if (SEAT_GAMES > 0) {
+      for (let g = 0; g < SEAT_GAMES; g++) {
+        const st = S.createState(TRAIN_MODE === 'long' ? 'long' : 'multi', { next: mulberry32(31000 + gen * 131 + idx * 17 + g) }, n);
+        st.slotSalt = slotSaltFor(31000 + gen * 131 + idx * 17 + g);
+        const chs2 = [];
+        for (let pid = 0; pid < n; pid++) chs2.push(makeEconChooser(policyChooserN(params, 0.35, 0.15), agg, null, 0));
+        Play.autoGameN(st, chs2);
+        if (st.winner !== 'draw' && st.winner != null) { seatWinsProbe[st.winner]++; seatDec++; }
+      }
+    }
+    const mirSeatWins = seatWinsProbe;
+    const mirDec = seatDec;
     if (MIRROR_GAMES > 0) {
       for (let g = 0; g < MIRROR_GAMES; g++) {
         const seed = seedOfGen(gen, idx, 'mir') + g * 6151;
         const chs = [];
         for (let pid = 0; pid < n; pid++) chs.push(makeEconChooser(policyChooserN(params, 0.35, 0.15), agg, null, 0));
         const rm = oneGameN(chs, seed, n, { regen: 0, mode: TRAIN_MODE });
-        if (rm && rm.winner !== 'draw' && rm.winner != null) { mirSeatWins[rm.winner]++; mirDec++; }
+        void rm;   // v1.5.69：座位统计已改走独立探针，这里不再重复计数
         mirrorRan++;
       }
     }
@@ -947,12 +960,17 @@
      * 做法：用**已经在打的 mirror 局**（零额外成本）统计各座胜场；极差**超过阈值才扣分**，
      * 低于阈值一分不扣 ⇒ 不改变"好个体之间的相对次序"，只在偏置真的大时把它压下去。
      * 为什么不加奖励：先手激励 -14pt、破墙奖励让混合场 40%→17% —— 加权奖励已被两次实验证伪。 */
-    const SEAT_PEN_FROM = 35, SEAT_PEN_W = 0.5;
-    let seatPen = 0, seatSpreadMir = null;
-    if (mirDec >= 3) {
+    /* v1.5.69 标定：6 局样本下"极差"的**噪声地板**就有 40~60pt（对称假设下 multinomial(6,1/5) 的
+     * 期望极差 ≈50pt）⇒ 用"极差 > 35pt"当触发条件等于**按噪声随机扣分** ✗。
+     * 改成只在**明显通吃**时触发：某座占 ≥70% 的分胜负局（对称假设下概率约 0.2%，不是噪声）。
+     * 权重量级：100% 通吃 ⇒ 扣 0.30（相对成员 fit 0.2~0.5 是重罚），70% ⇒ 一分不扣。 */
+    const SEAT_PEN_MAXPCT = 70, SEAT_PEN_W = 1.0;
+    let seatPen = 0, seatSpreadMir = null, seatMaxPct = null;
+    if (mirDec >= 4) {
       const pcts = mirSeatWins.map(function (w) { return 100 * w / mirDec; });
       seatSpreadMir = Math.max.apply(null, pcts) - Math.min.apply(null, pcts);
-      if (seatSpreadMir > SEAT_PEN_FROM) seatPen = SEAT_PEN_W * ((seatSpreadMir - SEAT_PEN_FROM) / 100);
+      seatMaxPct = Math.max.apply(null, pcts);
+      if (seatMaxPct >= SEAT_PEN_MAXPCT) seatPen = SEAT_PEN_W * ((seatMaxPct - SEAT_PEN_MAXPCT) / 100);
     }
     /* ===== 风格表现切片（v1.5.2，见模块头部 setStyleSlice 的说明）=====
      * 追加在池子预算之外 ⇒ 不摊薄原有练习量；原生规则（regen=0）⇒ 量的是真实强度。 */
@@ -980,7 +998,7 @@
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
       divBonus: divBonus,
-      seatPen: seatPen, seatSpreadMirror: seatSpreadMir, mirrorDecisive: mirDec,
+      seatPen: seatPen, seatSpreadMirror: seatSpreadMir, seatMaxPct: seatMaxPct, mirrorDecisive: mirDec,
       divW: DIV_W,
       mirrorGames: mirrorRan,
       avgStock: econGames ? stockSum / econGames : 0,
@@ -1434,12 +1452,20 @@
   function ringReward() { return { w: RING_W, g0: RING_G0, g1: RING_G1, at0: ringWeightAt(0), atEnd: ringWeightAt(1e9) }; }
 
   let MIRROR_GAMES = 2;
+  /* v1.5.69：**独立的座位探针局数** —— 阈值式座位惩罚的样本来源。
+   * 教训（v1.5.68）：最初想蹭 MIRROR_GAMES（=2）的局，但守卫 `seatDec >= 3` 永不满足
+   * ⇒ 惩罚**从未触发**、v16 那 6 个 seed 是在"惩罚关闭"下跑的（又是静默空操作）。
+   * 故独立取样：默认 6 局（`EPIRUS_SEAT_GAMES` 可调），守卫放宽到 `>= 4`。 */
+  let SEAT_GAMES = 6;
+  function setSeatGames(v) { if (isFinite(v) && v >= 0) SEAT_GAMES = v | 0; return SEAT_GAMES; }   // 模块级（内层那个同名定义不可见）
   function setMirrorGames(k) {
     const v = Number(k);
     if (isFinite(v) && v >= 0) MIRROR_GAMES = v | 0;
+  function setSeatGames(v) { if (isFinite(v) && v >= 0) SEAT_GAMES = v | 0; return SEAT_GAMES; }
     return MIRROR_GAMES;
   }
   function mirrorGames() { return MIRROR_GAMES; }
+  function seatGames() { return SEAT_GAMES; }
   function setHealthGate(o) {
     o = o || {};
     if (o.on != null) HEALTH.on = !!o.on;
@@ -1601,7 +1627,7 @@
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

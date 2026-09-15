@@ -1442,7 +1442,12 @@ t('D59 阈值式座位惩罚必须真的在 fit 里（让演化"看得见"偏置
    * 在机器人池上能赢、在 5 席测量里却某座通吃（v9~v15 五批 30+ 候选全是这个形状）。
    * 修：用**已经在打的 mirror 局**统计各座胜场，极差超过阈值才扣分（阈值式 = 约束处理，不是奖励权重）。 */
   const ev = readFileSync('js/train/evo.js', 'utf8');
-  ok(ev.indexOf('SEAT_PEN_FROM') >= 0 && ev.indexOf('SEAT_PEN_W') >= 0, '必须有阈值式座位惩罚常量');
+  ok(ev.indexOf('SEAT_PEN_MAXPCT') >= 0 && ev.indexOf('SEAT_PEN_W') >= 0, '必须有阈值式座位惩罚常量');
+  /* v1.5.69：触发条件必须是"明显通吃"（静音地板：6 局样本的极差噪声就有 40~60pt） */
+  ok(ev.indexOf('seatMaxPct >= SEAT_PEN_MAXPCT') >= 0, '触发条件必须按 maxPct（不是极差，否则等于按噪声扣分）');
+  /* v1.5.69：惩罚必须**真的能算出极差** —— v1.5.68 曾因蹭 MIRROR_GAMES=2 而静默失效（seatPen 恒 0） */
+  ok(readFileSync('js/train/evo.js', 'utf8').indexOf('SEAT_GAMES') >= 0, '必须有独立座位探针 SEAT_GAMES');
+  ok(typeof T.seatGames === 'function' && T.seatGames() >= 4, '座位探针局数必须 >=4（实测 ' + (typeof T.seatGames === 'function' ? T.seatGames() : '?') + '）');
   ok(ev.indexOf('- seatPen') >= 0, '座位惩罚必须真的减进 fit');
   ok(ev.indexOf('seatSpreadMirror') >= 0, '成员评分必须回报座位极差（供审计）');
   ok(ev.indexOf('seatWins: seatWins') >= 0, 'mirrorHealth 必须回报各座胜场');
