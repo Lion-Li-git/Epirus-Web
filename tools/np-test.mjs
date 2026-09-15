@@ -13,7 +13,7 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
   'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js', 'js/bundled-champion-3p.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
-import { stanceProfile } from './audit-lib.mjs';
+import { stanceProfile, aggressionProfile } from './audit-lib.mjs';
 
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, X = sb.window.EpirusResolve, Play = sb.window.EpirusPlay;
 const T = sb.window.EpirusTrainer, Bots = sb.window.EpirusBots, Pol = sb.window.EpirusPolicy;
@@ -1288,6 +1288,31 @@ t('D54 引擎层对称性烟测：同一策略坐满 5 座不得系统性偏座�
   ok(dSpread <= 22, '各座死亡次数极差必须小（实测 ' + dSpread + '，dead=' + JSON.stringify(dead) + '）');
 });
 
+t('D55 F 的口径必须是"场 A 被集火还手率"（考核依据修正），旧口径不得再作判据', function () {
+  /* v1.5.62（用户裁定）：旧 F 的场地是"1 席进攻者 + 4 席冠军自己" ⇒ 量到的是自对局均衡；
+   * 门槛从 35% 降到 25% 后仍靠 --force 越过（所有冠军 22~35%）⇒ 问题在考核依据。
+   * 新口径 = 场 A（4 席脚本猛攻 vs 1 席冠军）的还手率，阈值 20%（线上包 13% ✗ / 种子 27% ✓ / eco-34 25% ✓）。 */
+  const al = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(al.indexOf('export function aggressionProfile') >= 0, 'audit-lib 必须导出 aggressionProfile（单一真源）');
+  ok(al.indexOf('e.source === me') >= 0, '伤害归因必须用事件真字段 source（不是 from）');
+  ok(al.indexOf("me = g % 5") >= 0, '冠军座位必须逐局轮换（避免座位相位污染）');
+  const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(pc.indexOf('agg.fieldA.atk < 0.20') >= 0, '上线体检的 F 判据必须是场 A 的 >=20%');
+  ok(pc.indexOf('fAct.atk < 0.25') < 0, '旧的"活跃场进攻率 < 25%"判据必须已移除');
+  const sc = readFileSync('tools/screen-champ.mjs', 'utf8');
+  ok(sc.indexOf('agg.fieldA.atk < 0.20') >= 0, '筛选器必须同步用场 A');
+  /* 行为断言：两场必须真的不同构造 —— 场 A 的对手出手次数应远多于场 B（B 场对手只ジ） */
+  const Wl = { EpirusRules: R, EpirusState: S, EpirusTrainer: T, EpirusPlay: Play };
+  Pol.setRng(T.mulberry32(31337));
+  const pl = Pol.makePolicy(0.25);
+  const agg = aggressionProfile(Wl, pl, 8);
+  ok(agg.fieldA.oppAtkPerGame > agg.fieldB.oppAtkPerGame + 1,
+    '场 A 的对手必须真的在进攻（A=' + agg.fieldA.oppAtkPerGame.toFixed(1) + ' vs B=' + agg.fieldB.oppAtkPerGame.toFixed(1) + '）');
+  ok(agg.fieldA.atk >= 0 && agg.fieldA.atk <= 1 && agg.fieldB.atk >= 0 && agg.fieldB.atk <= 1, '两场都必须返回合法比率');
+  ok(agg.fieldA.takenPerGame >= 0 && agg.fieldB.takenPerGame === 0,
+    '场 B（对手只ジ）里冠军不该挨打（实测 ' + agg.fieldB.takenPerGame.toFixed(2) + '/局）');
+});
+
 t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规则指纹（否则成绩已过期）', function () {
   /* v1.5.7（千问体检 §5-2 建议 / HANDOFF §4-9 规矩）：v1.5.4 只改了 rules.js 里一个 `target` 字段，
    * 5P 线上冠军的考卷成绩就从 38.0% 掉到 15.0%，而当时**没有任何机制**能自动发现"产物与引擎错配"。
@@ -2178,8 +2203,9 @@ t('D41 E 新口径：只有"**没有大雷威胁时还一直摆架势**"才算�
   const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
   ok(pc.indexOf('fPass.noThreatStanceRate > 0.6') >= 0, 'promote-champion 的 E 门槛必须用新口径（noThreatStanceRate）');
   ok(pc.indexOf('fPass.stance > 0.85') < 0, '旧口径（stance > 0.85）必须已从门槛里移除');
-  /* v1.5.27：F 门槛按实测重标定（所有冠军 22%~35% ⇒ 35% 把所有人挡住；25% 才区分得开） */
-  ok(pc.indexOf('fAct.atk < 0.25') >= 0, 'F 门槛必须已重标定为 25%（用户裁定）');
+  /* v1.5.62：F 的口径已整体换成"场 A 被集火还手率"（≥20%）—— 新契约由 D55 专管。
+   * 这里只留**反断言**：旧的 25%/35% 阈值写法都必须不存在（防止回退到"所有人靠 --force 过"的老路）。 */
+  ok(pc.indexOf('fAct.atk < 0.25') < 0, '旧的 F 门槛（25%）必须已移除（口径已换成场 A，见 D55）');
   ok(pc.indexOf('fAct.atk < 0.35') < 0, '旧的 F 门槛（35%）必须已移除');
   /* v1.5.28：**反弹墙穿透卡零命中 = 阻断**（第三方复核 §3-1 实测：v1.5.27 自对局激光剑命中 20 次、墙里 0 次） */
   ok(pc.indexOf('reflectWall') >= 0, 'promote-champion 必须调用 reflectWall（反弹墙探针）');

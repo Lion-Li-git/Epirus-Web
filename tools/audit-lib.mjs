@@ -317,3 +317,62 @@ export function chargeProfile(W, params, mode, GAMES) {
     roundsPerGame: rounds / Math.max(1, games), bySeat: bySeat
   };
 }
+
+/* 侵略性双场探针（v1.5.62，用户裁定：**F 改用场 A**）。
+ * 旧 F（fieldRate）的考核依据有两处结构问题（代码证据见 CHANGELOG v1.5.61）：
+ *   ① "活跃场"里只有 1 席脚本进攻者，其余 4 席是**冠军自己的副本** ⇒ 量到的是自对局均衡；
+ *   ② 分子是硬编码 6 张卡名单（数据驱动看 bigT/dualGun 也带 dmg，未涵盖）。
+ * 本函数是**单一真源**（体检 / 筛选器 / 独立探针都调它），两个对置场：
+ *   场 A `aggr`（被集火）：4 席脚本猛攻 vs 1 席冠军 ⇒ 冠军的**还手率 + 造成/承受伤害/局 + 胜负**；
+ *   场 B `calm`（无压）  ：4 席只ジ   vs 1 席冠军 ⇒ 冠军面对纯攒钱者会不会主动打。
+ * 细节：冠军座位**逐局轮换**（g % 5，避免座位相位污染）；伤害归因用事件真字段 **`source`**
+ * （打印确认过：`{type:'damage', to, amt, via, source}`；早前猜 `from` 得 0 是错的）。
+ * 口径：`atk` = 冠军成功出手里属于**数据驱动伤害卡**（`R.byKey[key].dmg` 存在）的占比。 */
+export function aggressionProfile(W, params, GAMES) {
+  const R = W.EpirusRules, S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay;
+  const G = GAMES || 40;
+  const OLD = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.DRAIN];
+  const isDmg = function (k) { const d = R.byKey[k]; return !!(d && d.dmg && d.dmg.amt); };
+  function run(kind) {
+    let atkOld = 0, atkNew = 0, acts = 0, dealt = 0, taken = 0, wins = 0, draws = 0, rounds = 0, oppAtk = 0;
+    for (let g = 0; g < G; g++) {
+      const me = g % 5;
+      const st = S.createState('multi', { next: mulberry32(15000 + g) }, 5);
+      st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
+      const r = mulberry32(20000 + g);
+      const scripted = (kind === 'aggr')
+        ? function (state, pid, legal) {
+          const a = legal.filter(function (x) { return x.affordable && OLD.indexOf(x.key) >= 0; });
+          if (a.length) { const o = S.opponentsOf(state, pid); return { key: a[0].key, target: o[Math.floor(r() * o.length)] }; }
+          return { key: R.SK.JI };
+        }
+        : function () { return { key: R.SK.JI }; };
+      const champ = T.policyChooserN(params, 0.15);
+      const ch = [];
+      for (let i = 0; i < 5; i++) ch.push(i === me ? champ : scripted);
+      Play.autoGameN(st, ch);
+      rounds += st.round;
+      for (const e of st.events) {
+        if (e.type === 'action' && e.outcome === 'ok') {
+          if (e.pid === me) {
+            acts++;
+            if (OLD.indexOf(e.key) >= 0) atkOld++;
+            if (isDmg(e.key)) atkNew++;
+          } else if (kind === 'aggr' && OLD.indexOf(e.key) >= 0) oppAtk++;
+        } else if (e.type === 'damage') {
+          if (e.source === me) dealt += e.amt;
+          if (e.to === me) taken += e.amt;
+        }
+      }
+      if (st.winner === me) wins++;
+      if (st.winner === 'draw' || st.winner == null) draws++;
+    }
+    return {
+      games: G, actsPerGame: acts / G, atk: acts ? atkNew / acts : 0, atkOldWhitelist: acts ? atkOld / acts : 0,
+      dealtPerGame: dealt / G, takenPerGame: taken / G, winRate: wins / G, drawRate: draws / G,
+      roundsPerGame: rounds / G, oppAtkPerGame: oppAtk / G
+    };
+  }
+  const A = run('aggr'), B = run('calm');
+  return { fieldA: A, fieldB: B, atk: A.atk, dealtPerGame: A.dealtPerGame, winRate: A.winRate };
+}

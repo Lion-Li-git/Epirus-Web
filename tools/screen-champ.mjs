@@ -6,30 +6,31 @@
  *   ③ 活跃场进攻率（fieldRate 'active'：F，门槛 25%）
  * 用法：node tools/screen-champ.mjs <file...>  [SEAT_GAMES] [WALL_GAMES]
  */
-import { sandbox, loadChamp, seatSymmetry, reflectWall, fieldRate } from './audit-lib.mjs';
+import { sandbox, loadChamp, seatSymmetry, reflectWall, fieldRate, aggressionProfile } from './audit-lib.mjs';
 const W = sandbox();
 const SG = Number(process.argv[process.argv.length - 2]) || 60;
 const WG = Number(process.argv[process.argv.length - 1]) || 20;
 const files = process.argv.slice(2).filter(function (a) { return !/^\d+$/.test(a); });
-console.log('文件'.padEnd(38) + '座位极差  判胜  反弹墙伤害/局  穿透命中  活跃场进攻  G  结论');
+console.log('文件'.padEnd(38) + '座位极差  判胜  反弹墙伤害/局  穿透命中  被集火还手  G  结论');
 for (const f of files) {
   try {
     const params = loadChamp(W, f);
     const ss = seatSymmetry(W, params, 'multi', SG);
     const rw = reflectWall(W, params, 'long', WG);
-    const fa = fieldRate(W, params, 'active', 'multi', Math.min(SG, 40));
+    const fa = fieldRate(W, params, 'active', 'multi', Math.min(SG, 40));   // 旧口径：仅打印，不再用于判据
+    const agg = aggressionProfile(W, params, Math.min(SG, 40));               // v1.5.62：F 的判据改用场 A
     const sp = W.EpirusTrainer.mirrorHealth(params, 20, 5, 'multi');
     const bad = [];
     if (ss.verdict === 'biased') bad.push('偏座');
     if (!(rw.dmgPerGame > 0.5)) bad.push('反弹墙瘫');
-    if (fa.atk < 0.25) bad.push('不进攻');
+    if (agg.fieldA.atk < 0.20) bad.push('被集火不还手');
     if (sp.effSkills < 3) bad.push('G<3');
     console.log(f.replace('docs/artifacts/', '').replace('js/', '').padEnd(38) +
       (ss.spread.toFixed(0) + 'pt').padStart(8) +
       (Math.round(ss.decisiveRate * 100) + '%').padStart(7) +
       rw.dmgPerGame.toFixed(2).padStart(14) +
       String(rw.pierceLand).padStart(10) +
-      ((fa.atk * 100).toFixed(0) + '%').padStart(11) +
+      ((agg.fieldA.atk * 100).toFixed(0) + '%').padStart(11) +
       sp.effSkills.toFixed(2).padStart(7) + '  ' + (bad.length ? '✗ ' + bad.join('+') : '✅ 通过'));
   } catch (e) {
     console.log(f.padEnd(38) + ' 读失败: ' + String(e && e.message || e).slice(0, 60));

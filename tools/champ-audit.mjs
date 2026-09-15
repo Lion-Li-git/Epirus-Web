@@ -21,7 +21,7 @@
  */
 import { readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT, sandbox, loadChamp, exam, selfPlay, fieldRate, seatSymmetry, chargeProfile, reflectWall } from './audit-lib.mjs';
+import { ROOT, sandbox, loadChamp, exam, selfPlay, fieldRate, seatSymmetry, chargeProfile, reflectWall, aggressionProfile } from './audit-lib.mjs';
 
 const flag = function (n, d) {
   const hit = process.argv.find(function (a) { return a.indexOf('--' + n + '=') === 0; });
@@ -50,7 +50,7 @@ const W = sandbox();
  * ⇒ 此时量 `js/bundled-champion-3p.js` 会得到旧冠军的特征（本轮踩过）。给该行打标记。 */
 const trainingLive = existsSync(join(ROOT, 'docs/artifacts/.training.lock'));
 console.log('冠军体检（自对局 ' + GAMES + ' 局 · 考卷 ' + EXG + ' 局）' + (trainingLive ? '  ⚠️ 训练进行中：bundle 行不可信，请看对应 .bak' : '') + '\n');
-console.log('文件'.padEnd(42) + 'A 考卷1st  A严胜  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F活跃场进攻 F回合 G有效技能数 座位极差 反弹墙伤害/局 蓄能/局 珠浪费  H混合场  I对被动');
+console.log('文件'.padEnd(42) + 'A 考卷1st  A严胜  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F被集火还手 F回合 G有效技能数 座位极差 反弹墙伤害/局 蓄能/局 珠浪费  H混合场  I对被动');
 for (const f of files) {
   const params = loadChamp(W, f);
   if (!params) { console.log(f.padEnd(42) + '  (读不出冠军包)'); continue; }
@@ -62,6 +62,7 @@ for (const f of files) {
   const sp = selfPlay(W, params, SP_MODE, GAMES);
   const fPass = fieldRate(W, params, 'passive', SP_MODE);
   const fAct = fieldRate(W, params, 'active', SP_MODE);
+  const agg = aggressionProfile(W, params, GAMES2);   // v1.5.62：F 新口径（场 A 被集火还手率）
   /* v1.5.57：局数必须够 —— 20 局时 5 席各约 4 局，30pt 阈值会被抽样噪声淹没（实测同一策略 37~50pt 抖动）。 */
   const ss = seatSymmetry(W, params, 'multi', SEAT_G);
   /* v1.5.59：D 的 1st 被并列污染（线上包 100% 里 87.5% 是并列，严胜仅 12.5%）⇒
@@ -83,7 +84,7 @@ for (const f of files) {
     /* v1.5.26（用户裁定）：E 改用新口径 —— 对手ジ<5（无大雷威胁）时还摆架势的占比。
      * 旧口径（总占比）会把"看到对手攒到 5 ジ 该防一下"也判成病：实测 eco-34 旧 89% / 新 16%。 */
     (fPass.noThreatStanceRate * 100).toFixed(0).padStart(10) + '%' +
-    (fAct.atk * 100).toFixed(0).padStart(11) + '%' +
+    (agg.fieldA.atk * 100).toFixed(0).padStart(11) + '%' +
     fAct.rounds.toFixed(1).padStart(7) +
     sp.effSkills.toFixed(2).padStart(12) + ' (' + sp.distinctKeys + '种)' +
     ss.spread.toFixed(0).padStart(9) + 'pt' +

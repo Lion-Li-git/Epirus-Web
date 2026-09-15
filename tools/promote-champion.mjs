@@ -24,7 +24,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile } from './audit-lib.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
@@ -145,7 +145,16 @@ if (fPass.noThreatStanceRate > 0.6) fails.push('E 无威胁时摆架势 ' + (fPa
  * 数据：实测所有冠军的 F 都在 22%~35%（v7f-35 34%、v7anneal-34 35%、v7press-36 32%、eco-34 22%）
  * ⇒ 35% 属于"阈值定在噪声带里"，连**现役冠军自己都过不了**（当年是 --force 推上去的）。
  * 25% 仍然挡住"正常对局里也不进攻"的形状（eco-34 22% 会被挡），但放过均衡型。 */
-if (fAct.atk < 0.25) fails.push('F 活跃场进攻率 ' + (fAct.atk * 100).toFixed(0) + '% < 25%（正常对局里也不进攻）');
+/* v1.5.62（用户裁定）：**F 改用场 A**（4 席脚本猛攻 vs 1 席冠军的"还手率"）。
+ * 旧口径（`fieldRate('active')`）量的是"1 席进攻者 + 4 席冠军自己"的自对局均衡，所有人 22~35%、
+ * 门槛 35%→25% 之后仍靠 `--force` 越过 ⇒ 考核依据本身有问题（见 CHANGELOG v1.5.61 的代码证据）。
+ * 新口径的判别力：线上包 13% ✗ / 种子 27% ✓ / eco-34 25% ✓ ⇒ 阈值 20% 首次能把已知好与已知坏分开。 */
+const agg = aggressionProfile(W, params, Number(process.env.EPIRUS_AGGR_GAMES || 40));
+console.log('  场A 被集火还手率 = ' + (agg.fieldA.atk * 100).toFixed(0) + '%（造成伤害 ' + agg.fieldA.dealtPerGame.toFixed(2) +
+  '/局，承受 ' + agg.fieldA.takenPerGame.toFixed(2) + '/局，胜率 ' + (agg.fieldA.winRate * 100).toFixed(0) + '%）' +
+  '  场B 无压进攻 = ' + (agg.fieldB.atk * 100).toFixed(0) + '%（伤害 ' + agg.fieldB.dealtPerGame.toFixed(2) + '/局）' +
+  '  [旧口径 F=' + (fAct.atk * 100).toFixed(0) + '%，仅作历史对照]');
+if (agg.fieldA.atk < 0.20) fails.push('F 被集火还手率 ' + (agg.fieldA.atk * 100).toFixed(0) + '% < 20%（被 4 席猛攻时不还手）');
 /* v1.5.57（第五轮复核 §6）：**座位对称性**必须进上线体检。
  * 实测：上线包（v7wall-31）5 席同策略时 long 0 号座 84%、multi 58%（极差 82pt/51pt）——
  * 玩家真正遇到的对手严重偏座；而此前所有体检项都看不见这件事。
