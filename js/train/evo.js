@@ -780,7 +780,7 @@
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let imitSum = 0, imitGames = 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
@@ -879,7 +879,12 @@
       const pressBonus = PRESS_W * Math.min(1, pressRounds / 3);
       /* v1.5.29：破墙奖励 —— 只有用能穿反弹/穿防御的卡打中才记分（两次封顶）。 */
       const pierceBonus = PIERCE_W * Math.min(1, pierceHits / 2);
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus));
+      /* v1.5.76（P1）：珠子闭环 —— 只奖**花掉**（囤着/过期一律不计，两次封顶）。
+       * 动机：用户实测线上包 `chargeProfile` 浪费率 100%（得珠 0.30/局、花掉 0.00），
+       * 而珠子消费卡（电磁炮/天火）都要 2 ジ ⇒ 蓄能常发生在 ep=1 ⇒ 下回合必然凑不出。
+       * 既没有信号、也没有经济余量 ⇒ 闭环学不出来。这里补**信号**那半边。 */
+      const beadBonus = BEAD_W * Math.min(1, beadSpent / 2);
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -904,6 +909,8 @@
         if (ringWeightAt(gen) > 0) ringBreaks += countRingBreaks(r.state.events, seat);
         if (PRESS_W > 0) pressRounds += countPressRounds(r.state.events, seat);
         if (PIERCE_W > 0) pierceHits += countPierceHits(r.state.events, seat);
+        /* v1.5.76（P1，用户实测"蓄能 100% 浪费"逼出来的）：**珠子闭环**奖励。 */
+        if (BEAD_W > 0) beadSpent += countBeadSpent(r.state.events, seat);
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1393,6 +1400,21 @@
     return n;
   }
 
+  /* 纯函数：数我**花掉**蓄能珠的次数（v1.5.76 P1）。
+   * 真源 = `{type:'bead', pid, kind:'elec'|'boom', delta}`：得珠 `delta:+1`、花掉 `delta:-1`
+   * （state.js 的扣珠处与蓄能得珠处各发一条）。**只认花掉** —— 攒着不用、让它过期，都不记分。 */
+  function countBeadSpent(events, seat) {
+    let n = 0;
+    for (const e of (events || [])) {
+      if (e.type === 'bead' && e.pid === seat && (e.delta || 0) < 0) n++;
+    }
+    return n;
+  }
+  /* v1.5.76（P1）：珠子闭环奖励权重（默认 0.05，两次封顶）。窄条件 + 可归因 + 事件派生。 */
+  let BEAD_W = 0.05;
+  function setBeadReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) BEAD_W = v; return BEAD_W; }
+  function beadReward() { return { w: BEAD_W }; }
+
   let PRESS_W = 0.03;
   function setPressReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) PRESS_W = v; return PRESS_W; }
   function pressReward() { return { w: PRESS_W }; }
@@ -1633,6 +1655,7 @@
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
     setPressReward, pressReward, countPressRounds,
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
+    setBeadReward, beadReward, countBeadSpent,
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };

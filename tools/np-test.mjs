@@ -2941,5 +2941,31 @@ t('D65 候选表过滤买不起 + 两级采样抹平槽位放大（v1.5.74 F1/F2
 });
 
 
+/* ===== v1.5.76（P1）：珠子闭环奖励 =====
+ * 起因：用户实测线上包 `chargeProfile` 浪费率 100%（得珠 0.30/局、花掉 0.00），
+ * 而珠子消费卡（电磁炮/天火）都要 2 ジ、蓄能常发生在 ep=1 ⇒ 下回合必然凑不出 ⇒ 闭环学不出来。
+ * 窄条件 + 可归因 + 事件派生（与 RING_W/PRESS_W/PIERCE_W 同族）⇒ 不该引 D16 指纹 churn。 */
+t('D66 珠子闭环奖励：只认**花掉**，囤着/过期不记分（v1.5.76 P1）', function () {
+  const ev = [
+    { type: 'bead', pid: 0, kind: 'elec', delta: 1 },    // 蓄能得珠 ⇒ 不记
+    { type: 'bead', pid: 0, kind: 'elec', delta: -1 },   // 花掉 ⇒ 记
+    { type: 'bead', pid: 0, kind: 'boom', delta: -1 },   // 花掉 ⇒ 记
+    { type: 'beadExpire', pid: 0, kind: 'elec' },        // 过期 ⇒ 不记
+    { type: 'bead', pid: 1, kind: 'elec', delta: -1 },   // 别人花的 ⇒ 不记
+    { type: 'bead', pid: 0, kind: 'elec' }               // 无 delta ⇒ 不记
+  ];
+  eq(T.countBeadSpent(ev, 0), 2, '只数自己花掉的珠子（实测 ' + T.countBeadSpent(ev, 0) + '）');
+  eq(T.countBeadSpent(ev, 1), 1, '换座位视角只数它的');
+  eq(T.countBeadSpent(null, 0), 0, '空事件必须安全返回 0');
+  const r = T.beadReward();
+  ok(r && typeof r.w === 'number' && r.w > 0, '默认权重必须为正（否则奖励形同虚设）');
+  ok(typeof T.setBeadReward === 'function', '必须可调（实验臂/守门用）');
+  const src = readFileSync('js/train/evo.js', 'utf8');
+  ok(src.indexOf('const beadBonus = BEAD_W * Math.min(1, beadSpent / 2)') >= 0, '两次封顶的加成必须真的存在');
+  ok(src.indexOf('+ beadBonus)') >= 0, 'beadBonus 必须并进 gFit（漏了 = 静默空操作）');
+  ok(src.indexOf('if (BEAD_W > 0) beadSpent += countBeadSpent(') >= 0, '每局的计数必须接上');
+});
+
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 process.exit(FAIL ? 1 : 0);
