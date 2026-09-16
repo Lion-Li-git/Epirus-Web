@@ -162,6 +162,9 @@ async function runTrain(gens, opts, cfg) {
   process.env.EPIRUS_IMIT_GENS = String(imitGens);
   /* v1.5.31：课程/示范 —— 反环教师（env 传给 worker；主线程也设一份，保证两侧口径一致）。 */
   if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) T.setAntiRingTeacher();
+if (process.env.EPIRUS_TGT_W && T.setTargetReward) {
+  console.log('[tgt] 威胁靶向奖励权重 = ' + T.setTargetReward(Number(process.env.EPIRUS_TGT_W)) + '（复核 §15-1）');
+}
   if (T.setRingForceUntil) T.setRingForceUntil(Number(process.env.EPIRUS_RING_FORCE_UNTIL || 0));
   if (T.setRingForceEps) {
     const _e = T.setRingForceEps(Number(process.env.EPIRUS_RING_FORCE_EPS || 0));

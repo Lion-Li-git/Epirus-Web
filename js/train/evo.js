@@ -780,7 +780,7 @@
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let imitSum = 0, imitGames = 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
@@ -884,7 +884,12 @@
        * 而珠子消费卡（电磁炮/天火）都要 2 ジ ⇒ 蓄能常发生在 ep=1 ⇒ 下回合必然凑不出。
        * 既没有信号、也没有经济余量 ⇒ 闭环学不出来。这里补**信号**那半边。 */
       const beadBonus = BEAD_W * Math.min(1, beadSpent / 2);
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus));
+      /* v1.5.79（第七轮复核 §15-1）：**优先打威胁**（反狙击/反环）。两次封顶，与其它窄奖励同尺度。 */
+      const tgtBonus = TGT_W * Math.min(1, threatHits / 1);
+      /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
+       * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
+       * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -911,6 +916,8 @@
         if (PIERCE_W > 0) pierceHits += countPierceHits(r.state.events, seat);
         /* v1.5.76（P1，用户实测"蓄能 100% 浪费"逼出来的）：**珠子闭环**奖励。 */
         if (BEAD_W > 0) beadSpent += countBeadSpent(r.state.events, seat);
+        /* v1.5.79（复核 §15-1）：把"优先打威胁者"当能力奖（默认关，实验臂用 EPIRUS_TGT_W 打开）。 */
+        if (TGT_W > 0) threatHits += countThreatHits(r.state.events, seat);
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1410,6 +1417,53 @@
     }
     return n;
   }
+  /* ===== v1.5.79（第七轮复核 §15-1）：把"**优先打威胁**"当能力奖 =====
+   * 复核的机制发现：池子里**没人会瞄人**（脚本走 `pickTargetN`：能打死→血最多；v7 冠军能瞄但没被奖励过）
+   * ⇒ 所谓"狙击专精"其实是**池子漏洞**：给 4 席加一条"谁放冷枪就打谁"的一行规则，v17-146 的 A 考卷 30% → **0%**。
+   * 这与环课题的关键区别（也是它这次**有戏**的理由）：环的出手率是 **0**（奖励再大也 bootstrap 不到），
+   * 而"打威胁者"**已经在发生**（复核实测靶向率 22.5% ≈ 随机 25%）⇒ 窄奖励能给**已有的偶然行为**定向加压。
+   * 判据全部来自事件（不猜字段）：威胁 = 上一回合 q 出过 `pierce.*` 类或 `ring`，或上一回合 q 造成 ≥2 伤害；
+   * 计分 = 我这一回合**打在威胁者身上**的**不同受击者数**（`e.source === seat`，两次封顶 ⇒ 奖励广度而非堆叠）。 */
+  let TGT_W = 0;                       // 默认关：实验臂用 EPIRUS_TGT_W 打开
+  function setTargetReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) TGT_W = v; return TGT_W; }
+  function threatKeyList() { return pierceKeyList().concat([R.SK.RING]); }
+  function targetReward() { return { w: TGT_W, threatKeys: threatKeyList() }; }
+  function countThreatHits(events, seat) {
+    const tk = threatKeyList();
+    const rounds = [];                 // rounds[r] = { cast:{pid:[key]}, dmg:{pid:amt}, myTo:{pid:hits} }
+    let seen = {}, cur = -1;
+    for (const e of (events || [])) {
+      if (e.type === 'action') {
+        /* ⚠ 回合边界：**一个 pid 重复出现**就是新回合的开始，且必须把 seen 清空
+         * （漏了清空 => 所有 pid 都出现过之后，每个动作都被判成新回合 => 回合重建变垃圾 =>
+         *  countThreatHits 恒 0。这正是 v1.5.79 第一版奖励**静默空操作**的原因，D68 已加硬到 ≥4 回合守住）。 */
+        if (cur < 0) cur = 0;
+        else if (seen[e.pid] !== undefined) { seen = {}; cur++; }
+        seen[e.pid] = true;
+        const rr = rounds[cur] || (rounds[cur] = { cast: {}, dmg: {}, myTo: {} });
+        (rr.cast[e.pid] = rr.cast[e.pid] || []).push(e.key);
+      } else if (e.type === 'damage') {
+        if (cur < 0) continue;
+        const rr = rounds[cur] || (rounds[cur] = { cast: {}, dmg: {}, myTo: {} });
+        if (e.source != null) rr.dmg[e.source] = (rr.dmg[e.source] || 0) + (e.amt || 0);
+        if (e.source === seat && e.to != null) rr.myTo[e.to] = (rr.myTo[e.to] || 0) + 1;
+      }
+    }
+    const isThreat = function (q, r) {          // q 在上回合是否构成威胁（第 1 回合没有上回合）
+      if (r < 1) return false;
+      const pv = rounds[r - 1]; if (!pv) return false;
+      const ks = pv.cast[q] || [];
+      for (let i = 0; i < ks.length; i++) if (tk.indexOf(ks[i]) >= 0) return true;
+      return (pv.dmg[q] || 0) >= 2;
+    };
+    let hits = 0;
+    for (let r = 0; r < rounds.length; r++) {
+      const rr = rounds[r]; if (!rr) continue;
+      for (const q in rr.myTo) if (isThreat(Number(q), r)) hits++;
+    }
+    return hits;
+  }
+
   /* v1.5.76（P1）：珠子闭环奖励权重（默认 0.05，两次封顶）。窄条件 + 可归因 + 事件派生。 */
   let BEAD_W = 0.05;
   function setBeadReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) BEAD_W = v; return BEAD_W; }
@@ -1519,6 +1573,14 @@
     const N = (n && n >= 2) ? (n | 0) : 5;
     const mk = (mode === 'long') ? 'long' : 'multi';
     let dmg = 0, heavyDmg = 0, holo = 0, holoOther = 0, draws = 0, rounds = 0, zero = 0;
+
+    /* v1.5.79：威胁靶向奖励的 **支付诊断**（只读，不改变行为）。
+     * 封顶式奖励的天然风险是「每局都封顶」 => 奖励退化成**常量** => 梯度约等于 0
+     * （同型事故：v1.5.68 的 seatPen 恒 0，整臂在"惩罚关闭"下白跑）。
+     * threatCapRate = 有多少局真的吃满封顶，这是"奖惩有没有梯度"的直接读数。 */
+    let threatHitsSum = 0, threatCapGames = 0;
+    /* 同型体检：**已上线**的 press/pierce 奖励是不是也在空发？（它们同样依赖 e.source === seat） */
+    let pressSum = 0, pierceSum = 0;
     const seatWins = new Array(N).fill(0);   // v1.5.68：5 席同策略的各座胜场（座位偏置的直接读数）
     let seatDec = 0;
     const keyCount = {};
@@ -1551,6 +1613,10 @@
       rounds += st.round;
       if (gd === 0) zero++;
       if (allAliveTied(st.p)) draws++;   // v1.5.35：只有血量也相同才算平局
+
+      /* v1.5.79：统计"威胁命中"的真实分布（诊断奖励是否退化成常量） */
+      /* 与奖励的封顶同步：tgtBonus = TGT_W * min(1, hits/1) ⇒ hits>=1 即满额。 */
+      { const _seatD = g % N; const _th = countThreatHits(st.events, _seatD); threatHitsSum += _th; if (_th >= 1) threatCapGames++; pressSum += countPressRounds(st.events, _seatD); pierceSum += countPierceHits(st.events, _seatD); }
     }
     const ks = Object.keys(keyCount);
     const tot = ks.reduce(function (a, k) { return a + keyCount[k]; }, 0);
@@ -1570,6 +1636,8 @@
       /* 零落地的"穿透卡"（能穿反弹/穿防御）—— 为 0 就说明**破墙的那条线丢了** */
       pierceMissing: pierceKeys.filter(function (k) { return !landByKey[k]; }),
       seatWins: seatWins, seatDecisive: seatDec,
+      threatHitsPerGame: threatHitsSum / Math.max(1, G), threatCapRate: threatCapGames / Math.max(1, G),
+      pressRoundsPerGame: pressSum / Math.max(1, G), pierceHitsPerGame2: pierceSum / Math.max(1, G),
       seatSpread: (function () { if (seatDec < 3) return null; const p = seatWins.map(function (w) { return 100 * w / seatDec; }); return Math.max.apply(null, p) - Math.min.apply(null, p); })()
     };
   }
@@ -1656,6 +1724,7 @@
     setPressReward, pressReward, countPressRounds,
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
     setBeadReward, beadReward, countBeadSpent,
+    setTargetReward, targetReward, countThreatHits, threatKeyList,
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };

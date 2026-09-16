@@ -63,6 +63,11 @@ const OPP_POOL = OPP_SPECS.map(function (o) {
 /* v1.5.31（课程/示范）：worker 是独立进程 ⇒ 示范代数与"反环教师"必须在这里读 env。 */
 if (T.setImitUntil) T.setImitUntil(Number(process.env.EPIRUS_IMIT_GENS || 0));
 if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) T.setAntiRingTeacher();
+/* v1.5.79（第七轮复核 §15-1）：把"**优先打威胁**"当能力奖。
+ * 与环课题的区别（决定它有戏）：环出手率 0（bootstrap 不到），而"打威胁者"已在发生（22.5% ≈ 随机）⇒ 窄奖励能定向加压。 */
+if (T.setTargetReward && process.env.EPIRUS_TGT_W) {
+  console.log('[tgt] 威胁靶向奖励权重 = ' + T.setTargetReward(Number(process.env.EPIRUS_TGT_W)));
+}
 if (T.setRingForceUntil) T.setRingForceUntil(Number(process.env.EPIRUS_RING_FORCE_UNTIL || 0));
 if (T.setRingForceEps) {
   const _eps = T.setRingForceEps(Number(process.env.EPIRUS_RING_FORCE_EPS || 0));

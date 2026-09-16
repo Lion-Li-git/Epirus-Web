@@ -2963,7 +2963,8 @@ t('D66 珠子闭环奖励：只认**花掉**，囤着/过期不记分（v1.5.76 
   ok(typeof T.setBeadReward === 'function', '必须可调（实验臂/守门用）');
   const src = readFileSync('js/train/evo.js', 'utf8');
   ok(src.indexOf('const beadBonus = BEAD_W * Math.min(1, beadSpent / 2)') >= 0, '两次封顶的加成必须真的存在');
-  ok(src.indexOf('+ beadBonus)') >= 0, 'beadBonus 必须并进 gFit（漏了 = 静默空操作）');
+  const gfitLine = src.slice(src.indexOf('const gFit = '), src.indexOf('const gFit = ') + 500);
+  ok(gfitLine.indexOf('+ beadBonus') >= 0, 'beadBonus 必须并进 gFit（漏了 = 静默空操作）');
   ok(src.indexOf('if (BEAD_W > 0) beadSpent += countBeadSpent(') >= 0, '每局的计数必须接上');
 });
 
@@ -2998,4 +2999,61 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
 
 
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
+
+
+/* ===== v1.5.79（第七轮复核 §15-1）：**威胁靶向**奖励 =====
+ * 复核的机制发现：池子里没人会瞄人 ⇒"狙击专精"是池子漏洞（给 4 席加一条"谁放冷枪就打谁"的一行规则，
+ * v17-146 的 A 考卷 30%→0%）。与环课题的关键区别：环出手率 0（bootstrap 不到），
+ * 而"打威胁者"已在发生（22.5% ≈ 随机 25%）⇒ 窄奖励能给**已有的偶然行为**定向加压。
+ * 归因走 damage.source/to（真字段；动作事件**没有** target ⇒ 只能从结果归属）。 */
+t('D68 威胁靶向奖励：只记"我打的、上回合构成威胁的、不同受击者"（复核 §15-1）', function () {
+  eq(T.targetReward().w, 0, '默认必须是**关**（实验臂用 EPIRUS_TGT_W 打开，不改出厂口径）');
+  const tk = T.threatKeyList();
+  ok(tk.indexOf('snipe') >= 0 && tk.indexOf('ring') >= 0, '威胁键 = 穿透类 + 聚能环（实测 ' + tk.join(',') + '）');
+  const ev = [
+    { type: 'action', pid: 0, key: 'gun', outcome: 'ok' },
+    { type: 'damage', source: 0, to: 1, amt: 2, via: 'gun' },
+    { type: 'action', pid: 1, key: 'snipe', outcome: 'ok' },
+    { type: 'damage', source: 1, to: 0, amt: 2, via: 'snipe' },
+    { type: 'action', pid: 0, key: 'gun', outcome: 'ok' },
+    { type: 'damage', source: 0, to: 1, amt: 2, via: 'gun' },
+    { type: 'action', pid: 2, key: 'ji', outcome: 'ok' },
+    { type: 'action', pid: 0, key: 'gun', outcome: 'ok' },
+    { type: 'damage', source: 0, to: 2, amt: 2, via: 'gun' }
+  ];
+  eq(T.countThreatHits(ev, 0), 1, '只有"上回合放冷枪的人"记 1（打无威胁的攒ジ者不计）');
+  eq(T.countThreatHits(ev, 1), 0, '可归因：不是我打的不算我的分');
+  eq(T.countThreatHits([{ type: 'damage', source: 0, to: 1, amt: 2, via: 'gun' }], 0), 0, '第 1 回合没有"上一回合" ⇒ 一律不计');
+  const ev2 = [
+    { type: 'action', pid: 1, key: 'gun', outcome: 'ok' },
+    { type: 'damage', source: 1, to: 3, amt: 2, via: 'gun' },
+    { type: 'action', pid: 2, key: 'ji', outcome: 'ok' },
+    { type: 'action', pid: 1, key: 'gun', outcome: 'ok' },
+    { type: 'damage', source: 0, to: 1, amt: 2, via: 'gun' }
+  ];
+  eq(T.countThreatHits(ev2, 0), 1, '上回合造成 >=2 伤害也算威胁（事件派生，不硬编码技能名）');
+  const src = readFileSync('js/train/evo.js', 'utf8');
+  const gline = src.slice(src.indexOf('const gFit = '), src.indexOf('const gFit = ') + 500);
+  ok(gline.indexOf('+ tgtBonus') >= 0, 'tgtBonus 必须并进 gFit（漏了 = 静默空操作）');
+  const wk = readFileSync('server/train-worker.mjs', 'utf8');
+  ok(wk.indexOf('EPIRUS_TGT_W') >= 0 && wk.indexOf('setTargetReward') >= 0, 'worker 必须读 EPIRUS_TGT_W');
+  ok(readFileSync('server/train-server.mjs', 'utf8').indexOf('EPIRUS_TGT_W') >= 0, 'server 必须有审计轨迹（worker stdout 不进流）');
+  /* 加硬（v1.5.79 事故本身）：**多回合**序列才抓得住"回合边界不重置 seen"这类 bug ——
+   * 第一版 D68 只用 <=2 回合的序列 ⇒ 漏掉了 countThreatHits 恒 0 的**静默空操作**
+   * （奖励在 v7tgt4 整臂里从没发出去过，那一臂的读数因此作废）。 */
+  const evLong = [];
+  for (let r = 0; r < 6; r++) {
+    evLong.push({ type: 'action', pid: 0, key: 'gun', outcome: 'ok' });
+    evLong.push({ type: 'damage', source: 0, to: 1, amt: 1, via: 'gun' });
+    evLong.push({ type: 'action', pid: 1, key: 'ji', outcome: 'ok' });
+    evLong.push({ type: 'damage', source: 1, to: 3, amt: 2, via: 'gun' });
+  }
+  ok(T.countThreatHits(evLong, 0) >= 4, '6 回合重复序列必须认出 >=4 次（回合边界必须重置 seen；恒 0 = 静默空操作）');
+  const evSrc = readFileSync('js/train/evo.js', 'utf8');
+  ok(evSrc.indexOf('else if (seen[e.pid] !== undefined) { seen = {}; cur++; }') >= 0, 'countThreatHits 必须在换回合处重置 seen');
+  const mhSrc = evSrc.slice(evSrc.indexOf('function mirrorHealth'));
+  ok(mhSrc.indexOf('threatHitsPerGame') >= 0 && mhSrc.indexOf('threatCapRate') >= 0, '健康探针必须暴露奖励的支付诊断');
+  eq(T.setTargetReward(0.07), 0.07, 'setTargetReward 可设');
+  T.setTargetReward(0);
+});
 process.exit(FAIL ? 1 : 0);
