@@ -664,23 +664,45 @@
    * 比默认臂被拒的 2.3~2.8 更低，全被健康门禁拦下、零产物）。
    * 现在固定成 K：只有把直方图铺开到 ~K 种非ジ技能才能拿满。可用 EPIRUS_DIV_K 调。 */
   let DIV_K = 6;
-  /* ===== v1.5.92（用户裁定）：把"广度"拆成两层，并允许给**跨角色**那层加权 =====
-   * 起因：`v7f3-94` 的平铺熵 `G` 最高（4.63）却全是**类内**堆出来的（attack 94.9%、穿透 0%、防御 4.8%）
-   * ⇒ 平铺熵会把"单角色多招"误读成"广度"；而用户要的"技能多样性"更靠近**跨角色**
-   * （会防御、会用穿透/特殊、会做经济 —— 那才是"遇到没见过的局面会换卡"）。
-   * 组成：`混 = (1−DIV_CAT_W)·S_flat_norm + DIV_CAT_W·S_cat_norm`
-   *   `S_flat_norm` = 现口径（`spH/ln(DIV_K)`，**类间 + 类内**）
-   *   `S_cat_norm`  = `H(cat 分布)/ln(K_CAT)`（**只算跨了几类**）
-   * ⇒ `DIV_CAT_W = 0`（默认）时**逐位等于旧行为** ⇒ 旧产物、旧读数仍可比（本仓库"默认不设即不变"的规矩）。
-   * ⚠️ 已知可刷分风险：`K_CAT` 只有 4 ⇒ W=1 时"每类各用一次"就能吃满。这一版**故意不加下限**
-   *   （不引入新的拍脑袋常数），先让臂的读数说话：若 `S_cat` 蹿高而 A 考卷塌，就是它在被刷。
-   * 真源与 `tools/audit-lib.mjs` 的 `breadthProfile` **同一个**：`R.byKey[k].cat`（规则自己声明的类）。 */
-  let DIV_CAT_W = 0;
-  const K_CAT = (function () {
+  /* ===== v1.5.93（用户裁定）：把"类间"那一层从 4 个 `cat` 换成**功能角色表** =====
+   * 历史（v1.5.92）：`混 = (1−W)·S_flat_norm + W·S_cat_norm`，`S_cat_norm = H(cat 分布)/ln(K_CAT)`。
+   * **实测否掉了它**（CHANGELOG v1.5.92 §4/§5）：`W=1` 时类间熵**没升**（0.181 vs 对照 0.194），
+   * 2/3 产物塌成纯 attack；`W=0.5` 抬起来的 `S_cat` 只来自**个别 token 行为** ——
+   * skill report 显示处理臂与对照臂的**逐卡分布几乎相同**（激光剑 25.0% vs 24.0%、狙击 6.1% vs 6.4%）。
+   * 根因：`cat` 只有 4 类，而 `attack` 里混着三种**不同功能**（枪=廉价压制 / 激光剑=穿透反射 / 狙击=穿透防御）
+   * ⇒ **几次出手就能把 4 类熵拉满**，它量到的不是能力。
+   * ⇒ 换成 `roleOf(k)` 的 **8 个功能角色**，类间熵分母相应变成 `ln(K_ROLE)`。
+   * 公式形状不变（只换那一层的分区）：`混 = (1−DIV_ROLE_W)·S_flat_norm + DIV_ROLE_W·S_role_norm`
+   *   `S_flat_norm` = 现口径 `spH/ln(DIV_K)`（角色间 + 角色内）；`S_role_norm` = `H(role 分布)/ln(K_ROLE)`。
+   * ⇒ `DIV_ROLE_W = 0`（默认）时**逐位等于旧行为** ⇒ 旧产物、旧读数仍可比（"默认不设即不变"的规矩）。
+   * 命名：v1.5.92 的 env `EPIRUS_DIV_CATW` **仍可用**（旧名兜底、新名 `EPIRUS_DIV_ROLEW` 优先）。
+   * 真源：本函数与 `tools/audit-lib.mjs` 的 `breadthProfile` **共用同一个**（tools 侧调 `T.roleOf`）。 */
+  function roleOf(k) {
+    /* 推导**只用 `rules.js` 已声明的字段**（`cat` / `pierce.{defense,reflect}` / `dmg.amt`），
+     * **不写任何卡名清单** —— 手搓白名单是本仓库踩过三次的坑（D81 钉住"不得枚举卡名"）。
+     * ⚠️ 与"按落地伤害加权"（用户 v1.5.91 否掉的）不是一回事：这里用 `dmg.amt` 只做**分类**、
+     *    不做**权重**；每个角色内部对卡仍是**对称的熵**，没有给任何一张卡专属梯度。
+     * ⚠️ 诚实的局限：`utility` 一个人吞了 11 张（规则没给更细的声明字段）⇒ 这一层对"控制类"仍不敏感；
+     *    要再细就得动 `rules.js`（=指纹集，用户裁定"别动规则"）或手搓白名单（更糟）⇒ 到此为止并记录。 */
+    if (k === R.SK.JI) return 'ji';
+    const c = R.byKey[k];
+    if (!c) return 'unknown';
+    if (c.cat === 'energy') return 'economy';                 // 蓄能 / 聚能环
+    if (c.cat === 'defense') return 'defense';                // 防御/反弹/八卦阵/无极变速/金刚盾/藤甲/原型制御/全息屏障
+    const pi = c.pierce || {};
+    if (pi.defense && pi.reflect) return 'pierceBoth';        // 狙击枪 / 电磁炮（同时穿防 + 穿反）
+    if (pi.reflect) return 'pierceReflect';                   // 激光剑
+    if (pi.defense) return 'pierceDefense';                   // 坦克
+    if (c.dmg && Number(c.dmg.amt) >= 2) return 'burst';      // 真正的落雷
+    if (c.dmg) return 'damage';                               // 枪 / 摄魂指法 / 双枪射手
+    return 'utility';                                         // 11 张：地雷/挑衅/净化/镜面反射/天火…
+  }
+  const K_ROLE = (function () {
     const m = {};
-    for (const k in R.byKey) { if (k !== R.SK.JI && R.byKey[k] && R.byKey[k].cat) m[R.byKey[k].cat] = 1; }
+    for (const k in R.byKey) { if (k !== R.SK.JI) m[roleOf(k)] = 1; }
     return Math.max(1, Object.keys(m).length);
   })();
+  let DIV_ROLE_W = 0;
 /* v1.5.88（用户裁定 甲）：退火强迫多样性的窗口代数（0=关）与破墙硬过滤开关。 */
 let DIV_FORCE_GENS = 0;
 let WALL_FILTER_ON = false;
@@ -704,7 +726,10 @@ let WALL_GAMES = 3;
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
     if (o.divW != null) DIV_W = Math.max(0, Number(o.divW));
     if (o.divK != null) DIV_K = Math.max(2, Number(o.divK));
-    if (o.divCatW != null) DIV_CAT_W = Math.min(1, Math.max(0, Number(o.divCatW)));   // v1.5.92：类间（跨角色）广度的权重
+    /* v1.5.93：`divRoleW` 是新名（按 8 个**功能角色**），`divCatW` 是 v1.5.92 的旧名（按 4 个 `cat`）——
+     * 两者写的是**同一个**内部量；都给时新名优先（与 `EPIRUS_ECO_DIVW`→`EPIRUS_DIV_W` 同一套规矩）。 */
+    if (o.divRoleW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divRoleW)));
+    else if (o.divCatW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divCatW)));
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
     if (o.wallFilter != null) WALL_FILTER_ON = !!o.wallFilter;
     if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));   // v1.5.86：熵项固定分母（见 DIV_K）
@@ -712,7 +737,7 @@ let WALL_GAMES = 3;
     return economyReward();
   }
   function economyReward() {
-    return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divCatW: DIV_CAT_W, K_cat: K_CAT,
+    return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divCatW: DIV_ROLE_W, K_role: K_ROLE,
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
@@ -1039,17 +1064,17 @@ let WALL_GAMES = 3;
     let spH = 0;
     if (spTot > 0) for (const k in spUse) { const pr = spUse[k] / spTot; spH -= pr * Math.log(pr); }
     const spDivNorm = spTot > 0 ? (spH / Math.log(DIV_K)) : 0;
-    /* v1.5.92（用户裁定）：类间（跨角色）广度 —— 同一份 `spUse`，只按声明的 `cat` 再聚合一层。
-     * 分层熵恒等式 `S = S_cat + S_within` ⇒ 这里只需单独算 `S_cat`，类内由减法得到，不必重算。 */
-    const catUse = {};
+    /* v1.5.93（用户裁定）：类间广度 —— 同一份 `spUse`，只按 `roleOf` 再聚合一层（8 个功能角色）。
+     * 分层熵恒等式 `S = S_role + S_within` ⇒ 这里只需单独算 `S_role`，角色内由减法得到，不必重算。 */
+    const roleUse = {};
     for (const k in spUse) {
-      const c = (R.byKey[k] && R.byKey[k].cat) || '(未分类)';
-      catUse[c] = (catUse[c] || 0) + spUse[k];
+      const r2 = roleOf(k);
+      roleUse[r2] = (roleUse[r2] || 0) + spUse[k];
     }
-    let spCatH = 0;
-    if (spTot > 0) for (const c in catUse) { const pr = catUse[c] / spTot; spCatH -= pr * Math.log(pr); }
-    const spCatNorm = spTot > 0 ? (spCatH / Math.log(K_CAT)) : 0;
-    const spMixNorm = (1 - DIV_CAT_W) * spDivNorm + DIV_CAT_W * spCatNorm;
+    let spRoleH = 0;
+    if (spTot > 0) for (const r2 in roleUse) { const pr = roleUse[r2] / spTot; spRoleH -= pr * Math.log(pr); }
+    const spRoleNorm = spTot > 0 ? (spRoleH / Math.log(K_ROLE)) : 0;
+    const spMixNorm = (1 - DIV_ROLE_W) * spDivNorm + DIV_ROLE_W * spRoleNorm;
     /* v1.5.6：按用户裁定**恢复**技能熵奖励（Q3 曾把它移出目标函数）。
      * 权重给得小（DIV_W=0.06，满额 +0.06），与 stock（+0.05 / −0.12）同量级 ⇒ 两项加起来仍远小于
      * 胜负项（base 1.0/0.3），符合"奖惩也不用给太多"。 */
@@ -1103,7 +1128,7 @@ let WALL_GAMES = 3;
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
       spDivNorm: spDivNorm,
-      spCatNorm: spCatNorm, spCatH: spCatH, spMixNorm: spMixNorm, divCatW: DIV_CAT_W,
+      spRoleNorm: spRoleNorm, spRoleH: spRoleH, spMixNorm: spMixNorm, divRoleW: DIV_ROLE_W,
       spH: spH,
       divBonus: divBonus,
       seatPen: seatPen, seatSpreadMirror: seatSpreadMir, seatMaxPct: seatMaxPct, mirrorDecisive: mirDec,
@@ -1843,7 +1868,7 @@ let WALL_GAMES = 3;
 
   global.EpirusTrainer = {
     makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
-  setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat,
+  setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
     setPressReward, pressReward, countPressRounds,

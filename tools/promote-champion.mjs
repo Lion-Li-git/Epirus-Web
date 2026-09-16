@@ -217,6 +217,13 @@ console.log('   技能广度 S（n=' + brd.N + ' 个非ジ出手 · ' + brd.game
 console.log('     各类占比：' + Object.keys(brd.catShares).map(function (c) {
   return c + ' ' + (100 * brd.catShares[c]).toFixed(1) + '%';
 }).join(' · ') + '   ⇒ 目标形状 目标 = H + T·S（H=强度/T=EPIRUS_DIV_W）；本行**只记录**');
+/* v1.5.93：**功能角色**那一层（8 角色）与 4 个 `cat` 并存 —— 一眼看出"更细的分区是否真的不同"。 */
+console.log('     功能角色（' + brd.K_role + ' 个）：类间 ' + brd.S_role.toFixed(3) + ' · 角色内 ' + brd.S_roleWithin.toFixed(3) +
+  ' · 覆盖 ' + brd.rolesUsed + '/' + brd.K_role + ' · G_role=' + brd.G_role.toFixed(2) +
+  '（4 类老口径对照：类间 ' + brd.S_cat.toFixed(3) + ' · 覆盖 ' + brd.catsUsed + '/' + brd.K_cat + ' 类）');
+console.log('     角色占比：' + Object.keys(brd.roleShares).map(function (r2) {
+  return r2 + ' ' + (100 * brd.roleShares[r2]).toFixed(1) + '%';
+}).join(' · '));
 /* ===== v1.5.71（第五轮复核 §4-2）：**狙击场探针** —— 只记录，**暂不阻断** =====
  * 标定（40~60 局/包）把复核建议的判据否掉了：复核建议"靶向率 ≥20%"，但**它没有判别力** ——
  * 种子冠军 45.3% / eco-34 47.7% / 线上包 43.8%，全都远高于均匀 25% ⇒ 谁也分不开。

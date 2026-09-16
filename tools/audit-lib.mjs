@@ -648,13 +648,23 @@ export function breadthProfile(W, params, mode, GAMES) {
   const cats = {};   // 声明的类集合（固定，不受实测影响）
   Object.keys(byKey).forEach(function (k) { if (k !== R.SK.JI && byKey[k] && byKey[k].cat) cats[byKey[k].cat] = 1; });
   const K_cat = Object.keys(cats).length || 1;
+  /* v1.5.93：**功能角色表**（8 个角色：economy/defense/pierceBoth/pierceReflect/pierceDefense/burst/damage/utility）
+   * —— 真源是 `js/train/evo.js` 的 `roleOf`，这里**只调它、不自己再写一张表**（"清单两处各写一遍必出事"）。
+   * 没有它时退回 `cat`（老沙箱/老包），保证这个探针不会因为缺一个函数就崩。 */
+  const roleOf = function (k) {
+    if (typeof T.roleOf === 'function') return T.roleOf(k);
+    return (byKey[k] && byKey[k].cat) || '(未分类)';
+  };
+  const rolesDecl = {};   // 声明的角色集合（固定）
+  Object.keys(byKey).forEach(function (k) { if (k !== R.SK.JI) rolesDecl[roleOf(k)] = 1; });
+  const K_role = Object.keys(rolesDecl).length || 1;
   const h = function (arr) {
     let tot = 0; for (const x of arr) tot += x;
     if (tot <= 0) return 0;
     let e = 0; for (const x of arr) { if (x > 0) { const p = x / tot; e -= p * Math.log(p); } }
     return e;
   };
-  const cnt = {}, catCnt = {};
+  const cnt = {}, catCnt = {}, roleCnt = {};
   let N = 0;
   for (let g = 0; g < G; g++) {
     const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(21000 + g) }, 5);
@@ -663,15 +673,17 @@ export function breadthProfile(W, params, mode, GAMES) {
     Play.autoGameN(st, [base, base, base, base, base]);
     for (const e of st.events) {
       if (e.type === 'action' && e.outcome === 'ok' && e.key && e.key !== R.SK.JI) {
-        const c = catOf(e.key);
+        const c = catOf(e.key), r2 = roleOf(e.key);
         cnt[e.key] = (cnt[e.key] || 0) + 1;
         catCnt[c] = (catCnt[c] || 0) + 1;
+        roleCnt[r2] = (roleCnt[r2] || 0) + 1;
         N++;
       }
     }
   }
   const S_flat = h(Object.keys(cnt).map(function (k) { return cnt[k]; }));
   const S_cat = h(Object.keys(catCnt).map(function (c) { return catCnt[c]; }));
+  const S_role = h(Object.keys(roleCnt).map(function (r2) { return roleCnt[r2]; }));
   let S_within = 0;
   const catShares = {};
   Object.keys(catCnt).forEach(function (c) {
@@ -680,15 +692,19 @@ export function breadthProfile(W, params, mode, GAMES) {
     const inner = Object.keys(cnt).filter(function (k) { return catOf(k) === c; }).map(function (k) { return cnt[k]; });
     S_within += share * h(inner);
   });
+  const roleShares = {};
+  Object.keys(roleCnt).forEach(function (r2) { roleShares[r2] = roleCnt[r2] / Math.max(1, N); });
   let maxCardShare = 0;
   Object.keys(cnt).forEach(function (k) { const p = cnt[k] / Math.max(1, N); if (p > maxCardShare) maxCardShare = p; });
   const catsUsed = Object.keys(catShares).filter(function (c) { return catShares[c] >= 0.01; }).length;
+  const rolesUsed = Object.keys(roleShares).filter(function (r2) { return roleShares[r2] >= 0.01; }).length;
   return {
-    games: G, N: N, K_menu: K_menu, K_cat: K_cat, menuSize: menu.length,
+    games: G, N: N, K_menu: K_menu, K_cat: K_cat, K_role: K_role, menuSize: menu.length,
     S: S_flat, S_cat: S_cat, S_within: S_within,
+    S_role: S_role, S_roleWithin: S_flat - S_role,
     S_norm: S_flat / Math.log(K_menu),
-    G_eff: Math.exp(S_flat), G_role: Math.exp(S_cat),
-    maxCardShare: maxCardShare, catsUsed: catsUsed,
-    catShares: catShares, counts: cnt
+    G_eff: Math.exp(S_flat), G_cat: Math.exp(S_cat), G_role: Math.exp(S_role),
+    maxCardShare: maxCardShare, catsUsed: catsUsed, rolesUsed: rolesUsed,
+    catShares: catShares, roleShares: roleShares, counts: cnt
   };
 }

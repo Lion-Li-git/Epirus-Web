@@ -1,3 +1,50 @@
+## v1.5.93 — 类间那一层换成**功能角色表**（8 角色，从 `rules.js` 声明字段推导）+ 试验臂加到 6 seed
+
+> 承接 v1.5.92 的裁定：4 个 `cat` 太粗 —— `attack` 里混着三种**不同功能**，几次 token 出手就能把类间熵拉满。
+> 用户裁定"按你说的方法继续"⇒ 换成更细的角色表，并把 seed 加到 6。
+
+### 1. `roleOf(k)`（唯一真源 = `js/train/evo.js`；`audit-lib` 的 `breadthProfile` 调 `T.roleOf`）
+**只从声明字段推导、不枚举任何卡名**（D81 会把"不得枚举卡名"钉住）：
+
+| 角色 | 判据（声明字段）| 实测归入的卡（30 张）|
+|---|---|---|
+| `ji` | `k === SK.JI` | ジ |
+| `economy` | `cat === 'energy'` | charge, ring |
+| `defense` | `cat === 'defense'` | guard, reflect, bagua, shift, jinshield, armor, proto, holo（8）|
+| `pierceBoth` | `pierce.defense && pierce.reflect` | snipe, railgun |
+| `pierceReflect` | `pierce.reflect` | sword |
+| `pierceDefense` | `pierce.defense` | tank |
+| `burst` | `dmg.amt ≥ 2`（无穿透）| bigT |
+| `damage` | 其余有 `dmg` | gun, drain, dualGun |
+| `utility` | 其余 | miniT, rod, laserEye, transfer, curse, firestorm, mine, taunt, cannon, purify, mirror（11）|
+
+- **`K_ROLE = 8`**（非ジ），类间熵分母 `ln(8)`（固定）；`DIV_ROLE_W` 是新名，**旧名 `EPIRUS_DIV_CATW` 仍可用**（新名优先）。
+- ⚠️ **诚实的局限**：`utility` 一个人吞了 11 张（规则没给更细的声明字段）⇒ 这一层对"控制类"仍不敏感；
+  要再细就得动 `rules.js`（= 指纹集，用户裁定"别动规则"）或手搓白名单（更糟）⇒ 到此为止并记录。
+- ⚠️ 与"按落地伤害加权"（用户 v1.5.91 否掉的）**不是一回事**：用 `dmg.amt` 只做**分类**、不做**权重**；
+  角色内部对卡仍是**对称的熵**，没有给任何一张卡专属梯度。
+- 守门：**D81** 新增（只许用声明字段 / 不得枚举卡名 / 每张卡恰好一类 / 恰好 8 角色 / tools 侧调 `T.roleOf`）；
+  **D80** 更新（新名 + 旧名兜底 + 优先序 + `K_role=8`）；**D74** 同步更新（`spMixNorm` 的新公式）——
+  它这一轮**又拦了一次**（钉着旧变量名），照例是改断言、不绕过。
+
+### 2. 立刻显出的分辨率（线上包，长程 20 局自对局）
+| 口径 | 类间熵 | 覆盖 | 占比 |
+|---|---|---|---|
+| 4 个 `cat`（v1.5.92）| 0.578 | 2/4 类 | attack 77.1 · defense 22.0 · special 0.8 · energy 0.1 |
+| **8 个角色**（v1.5.93）| **1.099** | **3/8** | damage 55.7 · defense 22.0 · **pierceBoth 20.0** · pierceReflect 0.6 · pierceDefense 0.9 · utility 0.8 · economy 0.1 |
+
+⇒ 旧口径把"枪 + 激光剑 + 狙击"糊成一个 `attack 77%`；新口径直接看出**它在用三种不同功能**
+（廉价压制 55.7% / 穿透+防御 20.0% / 防御 22.0%）—— 这正是 v1.5.92 缺的那层分辨率。
+（`G_eff` 仍是平铺熵 `exp(S)=3.59`，**不变**；变的只是分解与分母。）
+
+### 3. 预注册判据（跑之前写下来）
+臂：`v7roleC`（`DIV_ROLE_W=0` 对照）· `v7role5`（=0.5）· `v7role1`（=1.0）；池 E、`ALLOW_HEALTH_FAIL=1`、
+**seed 31/81/82/91/92/93（6 个，可配对）**。
+1. **有效**：处理臂的 `S_role`（角色间）均值高于对照，且 `rolesUsed` 上升；
+2. **不是刷分**：`maxCardShare` **不升**（"每角色塞一次"会让它升 —— 这是识别作弊的关键）；
+3. **不塌**：A 考卷 ≥ 对照；若为广度牺牲胜率 ⇒ 必须报出**交换率**（用户原话是"要**平衡**"）。
+ETA ≈ 20~25 分钟（3 条臂 × 6 seed）。
+
 ## v1.5.92 — 类间广度权重 `DIV_CAT_W`：可给"**跨角色**广度"加权（默认 0 = 旧口径逐位不变）
 
 > 用户裁定："**试一下增加 S_cat 的权重能跑出什么东西来**。可以跑一个 skill report 看看具体技能分布"。

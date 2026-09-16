@@ -3130,12 +3130,12 @@ t('D74 熵奖励与门禁同口径：进 fit 的熵必须来自"自对局·成�
   ok(src.indexOf('const spUse = {};') >= 0, '必须有自对局成功动作直方图 spUse');
   ok(src.indexOf("e.outcome === 'ok' && e.key && e.key !== R.SK.JI") >= 0,
     'spUse 必须只收 outcome===ok 的非ジ动作（与 mirrorHealth 的 keyCount 同口径）');
-  /* v1.5.92 更新：进 fit 的那一项现在是"与门禁同源的量 × 类间/类内**混比**"。
-   * `DIV_CAT_W = 0`（默认）时 `spMixNorm === spDivNorm` ⇒ 逐位等于 v1.5.87 的口径，旧读数仍可比；
-   * 这条断言仍然钉住"必须与门禁同源"，同时钉住混比公式（免得有人把 spDivNorm 换成别的量）。 */
+  /* v1.5.92 引入、v1.5.93 换层：进 fit 的那一项是"与门禁同源的量 × 类间/类内**混比**"。
+   * `DIV_ROLE_W = 0`（默认）时 `spMixNorm === spDivNorm` ⇒ 逐位等于 v1.5.87 的口径，旧读数仍可比；
+   * 这条断言同时钉住"必须与门禁同源"和混比公式（免得有人把 spDivNorm 换成别的量）。 */
   ok(src.indexOf('const divBonus = DIV_W * spMixNorm;') >= 0 &&
-    src.indexOf('const spMixNorm = (1 - DIV_CAT_W) * spDivNorm + DIV_CAT_W * spCatNorm;') >= 0,
-    '进 fit 的必须是 spDivNorm 与类间熵的混比（DIV_CAT_W=0 时逐位等于 spDivNorm）');
+    src.indexOf('const spMixNorm = (1 - DIV_ROLE_W) * spDivNorm + DIV_ROLE_W * spRoleNorm;') >= 0,
+    '进 fit 的必须是 spDivNorm 与角色间熵的混比（DIV_ROLE_W=0 时逐位等于 spDivNorm）');
   ok(src.indexOf('coverageEntropy(agg.use, agg.aff, DIV_K)') >= 0, '旧口径保留为对照量（便于审计两口径之差）');
   ok(src.indexOf('effSkills: tot ? Math.exp(H) : 0') >= 0, '门禁量仍是自对局成功非ジ动作的 exp(H)（同源）');
 });
@@ -3297,28 +3297,69 @@ t('D79 技能广度 S：定义明确 + 按 rules.js 声明的 cat 分层（**不
     '广度**不得**进 fails（只测量；要上闸是独立决策）');
 });
 
-t('D80 类间广度权重 DIV_CAT_W：默认 0（逐位等于旧口径）+ 走单一来源接线 + 真源与 breadthProfile 同一个', function () {
-  /* v1.5.92（用户裁定："试一下增加 S_cat 的权重"）。设计上必须同时满足两条：
+t('D80 类间广度权重 DIV_ROLE_W：默认 0（逐位等于旧口径）+ 走单一来源接线 + 真源与 breadthProfile 同一个', function () {
+  /* v1.5.92 引入（当时叫 `DIV_CAT_W`、按 4 个 `cat`），v1.5.93 换成按 **8 个功能角色** 并更名 `DIV_ROLE_W`。
+   * 设计上必须同时满足三条：
    *   ① 默认（不设 env）**逐位等于** v1.5.87 的旧口径 ⇒ 旧产物 / 旧读数仍可比（"默认不设即不变"的规矩）；
-   *   ② 类别的真源必须与 `tools/audit-lib.mjs` 的 `breadthProfile` **同一个**（`R.byKey[k].cat`），
-   *      否则"训练在优化什么"与"体检在量什么"会分叉 —— v1.5.89 的静默半开就是这一族。 */
+   *   ② 类间那一层必须与 `tools/audit-lib.mjs` 的 `breadthProfile` **同一个真源**（现在是 `T.roleOf`），
+   *      否则"训练在优化什么"与"体检在量什么"会分叉 —— v1.5.89 的静默半开就是这一族；
+   *   ③ 旧 env `EPIRUS_DIV_CATW` 必须仍可用（新名优先），否则老命令会**静默变成空操作**。 */
   const evo = readFileSync('js/train/evo.js', 'utf8');
-  ok(evo.indexOf('let DIV_CAT_W = 0;') >= 0, '默认必须是 0（不设 env 即旧行为）');
-  ok(evo.indexOf('if (o.divCatW != null) DIV_CAT_W = Math.min(1, Math.max(0, Number(o.divCatW)));') >= 0,
-    '必须走 setter —— vm 沙箱里没有 process，env 只能在 server 侧读（v1.5.86 附录 E1 的教训）');
-  ok(evo.indexOf('const spMixNorm = (1 - DIV_CAT_W) * spDivNorm + DIV_CAT_W * spCatNorm;') >= 0,
+  ok(evo.indexOf('let DIV_ROLE_W = 0;') >= 0, '默认必须是 0（不设 env 即旧行为）');
+  ok(evo.indexOf('if (o.divRoleW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divRoleW)));') >= 0 &&
+    evo.indexOf('else if (o.divCatW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divCatW)));') >= 0,
+    '必须走 setter（新名 divRoleW 优先 + 旧名 divCatW 兜底）—— vm 沙箱没有 process，env 只能在 server 侧读');
+  ok(evo.indexOf('const spMixNorm = (1 - DIV_ROLE_W) * spDivNorm + DIV_ROLE_W * spRoleNorm;') >= 0,
     '混比公式必须显式可读（W=0 ⇒ 只剩 spDivNorm = 旧口径）');
   ok(evo.indexOf('const divBonus = DIV_W * spMixNorm;') >= 0, 'fit 必须用混比后的量');
-  ok(evo.indexOf('R.byKey[k].cat') >= 0, '类别真源必须是 rules.js 声明的 cat');
-  ok(evo.indexOf('Math.log(K_CAT)') >= 0, '类间熵的分母必须是**声明的类数** ln(K_CAT)（固定，不可随实测变）');
+  ok(evo.indexOf('Math.log(K_ROLE)') >= 0, '类间熵的分母必须是**声明的角色数** ln(K_ROLE)（固定，不可随实测变）');
   const ee = readFileSync('server/econ-env.mjs', 'utf8');
-  ok(ee.indexOf("'EPIRUS_DIV_CATW'") >= 0 && ee.indexOf("'divCatW'") >= 0,
-    'econ-env 必须覆盖 EPIRUS_DIV_CATW → divCatW（单一来源；D77 会顺带查"读到的键 setter 都认"）');
-  /* 行为：真模块上设一次/复位一次 —— 防"写了但从没生效"这类静默空操作 */
-  eq(T.economyReward().divCatW, 0, 'D80 跑到这里时它必须还是默认 0');
-  eq(T.setEconomyReward({ divCatW: 1 }).divCatW, 1, '设 divCatW=1 后 economyReward() 必须回读 1');
-  eq(T.economyReward().K_cat, 4, '声明的类数应为 4（energy/attack/defense/special）');
-  eq(T.setEconomyReward({ divCatW: 0 }).divCatW, 0, '复位必须回 0（别把状态泄漏给后面的用例）');
+  ok(ee.indexOf("'EPIRUS_DIV_ROLEW'") >= 0 && ee.indexOf("'EPIRUS_DIV_CATW'") >= 0 &&
+    ee.indexOf("'divRoleW'") >= 0 && ee.indexOf("'divCatW'") >= 0,
+    'econ-env 必须同时覆盖新名与旧名（D77 会顺带查"读到的键 setter 都认"）');
+  /* 行为：设一次 / 试旧名 / 试优先序 / 复位 —— 防"写了但从没生效"这类静默空操作 */
+  eq(T.economyReward().divRoleW, 0, 'D80 跑到这里时它必须还是默认 0');
+  eq(T.setEconomyReward({ divRoleW: 1 }).divRoleW, 1, '设 divRoleW=1 后 economyReward() 必须回读 1');
+  eq(T.setEconomyReward({ divCatW: 0.5 }).divRoleW, 0.5, '旧名 divCatW 必须仍能设（老命令不能变成空操作）');
+  eq(T.setEconomyReward({ divRoleW: 0.25, divCatW: 0.75 }).divRoleW, 0.25, '两个都给时新名优先');
+  eq(T.economyReward().K_role, 8, '声明的角色数应为 8');
+  eq(T.setEconomyReward({ divRoleW: 0 }).divRoleW, 0, '复位必须回 0（别把状态泄漏给后面的用例）');
+});
+
+t('D81 功能角色表 roleOf：只从声明字段推导（**不得枚举卡名**）+ 每张非ジ卡恰好一类 + tools 侧共用同一真源', function () {
+  /* v1.5.93（用户裁定的下一步）：v1.5.92 的 4 个 `cat` 太粗 —— `attack` 里混着三种**不同功能**
+   * （枪=廉价压制 / 激光剑=穿透反射 / 狙击=穿透防御）⇒ 几次 token 出手就能把类间熵拉满。
+   * 换成 8 个功能角色。这条守门钉住两件事：分类是**推导**出来的（不是手搓），以及两处**不许各写一张表**。 */
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  const i0 = evo.indexOf('  function roleOf(k) {');
+  const i1 = evo.indexOf('const K_ROLE = (function () {');
+  ok(i0 > 0 && i1 > i0, '必须能定位 roleOf 的定义（用 K_ROLE 定界）');
+  const seg = evo.slice(i0, i1);
+  ok(seg.indexOf('c.cat') >= 0 && seg.indexOf('c.pierce') >= 0 && seg.indexOf('c.dmg') >= 0,
+    '分类只许用 rules.js 已声明的字段（cat / pierce / dmg）');
+  const NAMES = ['gun', 'sword', 'tank', 'snipe', 'guard', 'reflect', 'bagua', 'shift', 'jinshield', 'armor',
+    'proto', 'holo', 'charge', 'ring', 'drain', 'railgun', 'miniT', 'bigT', 'rod', 'laserEye', 'transfer',
+    'curse', 'firestorm', 'mine', 'taunt', 'cannon', 'purify', 'dualGun', 'mirror'];
+  const hit = NAMES.filter(function (n) { return seg.indexOf("'" + n + "'") >= 0 || seg.indexOf('"' + n + '"') >= 0; });
+  ok(hit.length === 0, '不得枚举卡名（命中：' + hit.join(',') + '）—— 手搓白名单是本仓库踩过三次的坑');
+  const al = readFileSync('tools/audit-lib.mjs', 'utf8');
+  const seg2 = al.slice(al.indexOf('export function breadthProfile('));
+  ok(seg2.indexOf('T.roleOf') >= 0 && seg2.indexOf('K_role') >= 0,
+    'breadthProfile 必须调 T.roleOf（单一真源），不得自己再写一张角色表');
+  /* 行为：在**真卡表**上跑一遍 —— 每张卡都要有归属，且非ジ卡恰好 8 类 */
+  const roles = {};
+  const bad = [];
+  Object.keys(R.byKey).forEach(function (k) {
+    const r2 = T.roleOf(k);
+    if (typeof r2 !== 'string' || !r2) bad.push(k);
+    if (k !== R.SK.JI) roles[r2] = (roles[r2] || 0) + 1;
+  });
+  eq(bad.length, 0, '每张卡都必须能归类（未归类：' + bad.join(',') + '）');
+  eq(T.roleOf(R.SK.JI), 'ji', 'ジ 必须单独归为 ji（它是攒钱/等待，不算技能选择）');
+  eq(Object.keys(roles).length, 8, '非ジ卡应恰好分 8 个角色（实测 ' + Object.keys(roles).sort().join(',') + '）');
+  ['defense', 'economy', 'pierceBoth', 'pierceReflect', 'pierceDefense', 'burst', 'damage', 'utility'].forEach(function (n) {
+    ok(roles[n] >= 1, '角色 ' + n + ' 至少要有一张卡（实测 ' + (roles[n] || 0) + '）');
+  });
 });
 
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
