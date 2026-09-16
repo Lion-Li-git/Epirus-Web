@@ -3067,6 +3067,33 @@ t('D69 自检：汇总必须在 process.exit 之前，否则它是死代码（v1
 /* ===== v1.5.80（第八轮复核 §5）：UI 契约（目标弹窗可取消 / 结算期点击有反馈）=====
  * 探针 tools/ui-probe.mjs 在真页面上复现过三条缺陷（读数记在 CHANGELOG v1.5.80）。
  * Chrome 依赖 ⇒ 行为验证走探针，这里只锁**接线**，防它被改回去。 */
+/* ===== v1.5.86：对手注册表一致性（这个 bug 在本仓库已发生 ≥3 次，文件注释里自己都写着）=====
+ * 事故：往池子里加一个新对手名，只加了 runner 或只加了 worker ⇒ 服务端拿到未定义名字，
+ * 跑起来才 `sel is not a function` / `未知/缺失对手`。本轮我又踩了一次（protomine/prototransfer
+ * 只注册在 BOT_FN、没进 opp-pool ⇒ 整臂 0.4 秒就失败）。这里把三份清单绑成机械检查。 */
+t('D72 对手注册表一致性：runner 的池子名 / opp-pool 注册表 / BOT_FN 映射必须对齐', function () {
+  const pool = readFileSync('server/opp-pool.mjs', 'utf8');
+  const reg = {};
+  const re1 = /name:\s*'([a-z0-9_]+)'\s*,\s*fn:\s*'([A-Za-z0-9_]+)'/g;
+  let m; while ((m = re1.exec(pool))) reg[m[1]] = m[2];
+  ok(Object.keys(reg).length >= 15, 'opp-pool 注册表应 >=15 个对手（实测 ' + Object.keys(reg).length + '）');
+  const srv = readFileSync('server/train-server.mjs', 'utf8');
+  const fnBlk = (srv.match(/const BOT_FN = \{[^}]*\}/) || [''])[0];
+  ok(fnBlk.length > 0, 'train-server 必须有 BOT_FN 映射表');
+  const run = readFileSync('tools/ring2-run.mjs', 'utf8');
+  const names = [];
+  const re2 = /POOL_[A-E]\s*=\s*[^;]+/g; let m2;
+  while ((m2 = re2.exec(run))) {
+    const q = m2[0].match(/'([^']+)'/g) || [];
+    q.forEach(function (lit) { lit.replace(/'/g, '').split(',').forEach(function (n) { if (n && !/^[A-E]$/.test(n)) names.push(n); }); });
+  }
+  ok(names.length > 0, '必须能从 runner 里解析出池子名单');
+  const bad = names.filter(function (n) { return reg[n] === undefined && n.indexOf('champ:') !== 0; });
+  eq(bad.length, 0, 'runner 池子里的名字必须在 opp-pool 注册（未注册: ' + bad.join(',') + '）');
+  ok(reg['protomine'] === 'pickProtoMine' && reg['prototransfer'] === 'pickProtoTransfer',
+    '本轮补的两个原型系脚本（最强脚本，中立场 45%）必须在册');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

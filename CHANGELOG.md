@@ -2011,3 +2011,35 @@ E 无威胁摆架势 **0% ✓** · F 活跃场进攻 **11% ✗** · G 5.11（8 �
   ② `coverageEntropy` **已有** `capDiv` 形参 ⇒ 接线即可（无需改函数体）；
   ③ 之后重跑 T 曲线（`EPIRUS_DIV_W` 0.06 / 0.3 / 0.6）在**新产物**上量 (A, G)。
 - ⚠ 同时保留健康门禁：它是这轮唯一挡住退化的东西（`EPIRUS_ALLOW_HEALTH_FAIL` 只用于观察，不用于出厂）。
+
+## 附录 E — 熵项分母修正落地 + 对手注册表修复（v1.5.86；版本号仍不动，因新臂在跑）
+
+### E1 修正一：熵项的固定分母（D6 的落地）
+- `js/train/evo.js`：`coverageEntropy(agg.use, agg.aff, DIV_K)`，`let DIV_K = 6`（env `EPIRUS_DIV_K` 可调，
+  经既有的 `setEconomyReward({divK})` 由服务端注入 ⇒ 与 `EPIRUS_DIV_W` 同一模式）。
+- 语义变化：`divNorm = H(非ジ直方图) / ln(6)` ⇒ **只有把直方图铺开到 ~6 种非ジ技能才能拿满**，
+  不再能靠"把菜单变穷（少可负担项）"刷分。
+- ⚠ 踩坑记录（值得记）：我第一版把 `Number(process.env.EPIRUS_DIV_K || 6)` 直接写在 **evo.js 的模块作用域** ⇒
+  **加载即抛** ✗ —— 因为 `evo.js` 在 np-test / audit-lib 的 **vm 沙箱**里加载，沙箱**没有 `process`**。
+  正确做法：evo.js 只留常量 + setter，env 读取放 `server/train-server.mjs`（沿用 `EPIRUS_DIV_W` 的既有模式）。
+
+### E2 修正二：最强脚本没进池子（"加名字漏一处"第 3+ 次）
+- 事故：臂 B 用 `RING2_POOL='…,protomine,prototransfer'` 启动，**0.4 秒即失败** ✗：
+  `未知/缺失对手: combocounter`，并列出服务器真正认识的名单 ⇒ 服务器用的是 **`server/opp-pool.mjs`** 的注册表，
+  而它**没有** `protomine`/`prototransfer`（只有 `protowall`），尽管 `train-server.mjs` 的 `BOT_FN` 里**早有**这两个映射 ✗。
+- `server/opp-pool.mjs` 自己就写着「**这是第三次"加名字漏一处"**」⇒ 所以这次顺带加了一道守门
+  **D72**：解析 `opp-pool` 注册表与 runner 的 `POOL_*` 名单，断言 **runner 池子里的名字都必须在册**
+  （正是本轮踩到的形态）。
+- ⚠ 诚实记录：D72 的第一版我写得太严（要求 `opp-pool` 每个名字都在 `train-server` 的 `BOT_FN` 里）⇒ 它**红了** ✓，
+  但那是**我的断言错**（`antidef/farmer/deepsaver/ringspam/targeter/snipespam` 走的是另一张表）⇒ 已收窄到真实形态。
+
+### E3 臂 A 的最终读数（T×5，零产物）
+`v7div3`（`EPIRUS_DIV_W=0.3`）：seed 31/71/72 **全部被健康门禁拦下**（G=1.24 / 1.90 < 3）⇒
+**整臂 0 产物** ✓ —— 这是 D6 的独立证据：把 T 调大在当前实现下**连候选都交不出来**，
+原因是分母可被"变穷"刷分，而不是"网络不愿多样"。
+
+### E4 本轮新开的两条臂（后台，各 2 seed + 常备 31）
+- **P `v7proto2`**：默认 16 对手 **+ `protomine` + `prototransfer`**（两者已在册 ✓）⇒
+  验收：产物的 **proto 使用率 > 0**（学会用它/防它）且 A 考卷不低于线上包。
+- **K `v7divK`**：`EPIRUS_DIV_W=0.3` **+ 固定分母 `DIV_K=6`** ⇒ 验收：**至少产出健康候选**（G ≥ 3），
+  再看 (A, G) —— 用来回答"修好分母后，调 T 是否真的买到多样性而不掉强度"。

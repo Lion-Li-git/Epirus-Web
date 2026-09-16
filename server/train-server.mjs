@@ -335,6 +335,7 @@ async function runTrainN(gens, cfg) {
    * （打得凶的只用 2~3 张卡；用卡多的不够凶）⇒ 覆盖度这一维在演化目标里被压得太低，
    * 虽然代码注释说'覆盖熵自然把只剩两三张卡的个体压低'，实测权重不足以对抗 fitness 主力项。 */
   if (process.env.EPIRUS_DIV_W && T.setEconomyReward) T.setEconomyReward({ divW: Number(process.env.EPIRUS_DIV_W) });
+  if (process.env.EPIRUS_DIV_K && T.setEconomyReward) T.setEconomyReward({ divK: Number(process.env.EPIRUS_DIV_K) });   // v1.5.86：熵项固定分母
   let __seedIdxN = 0;   // 每个种子递增，用于 setRng 配对
   if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
   cfg = cfg || {};

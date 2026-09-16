@@ -659,6 +659,11 @@
   }
   let ECO_T = null, ECO_C = null;     // 显式覆盖（默认 null ⇒ 走 (n, mode) 推导）
   let DIV_W = 0.06;
+  /* v1.5.86（附录 D6）：分母必须是**固定目标**，不能用"当时可负担的技能数" ——
+   * 否则"把菜单变穷"就能把 divNorm 刷高（臂 A 实测：DIV_W×5 后产物 G=1.24/1.90，
+   * 比默认臂被拒的 2.3~2.8 更低，全被健康门禁拦下、零产物）。
+   * 现在固定成 K：只有把直方图铺开到 ~K 种非ジ技能才能拿满。可用 EPIRUS_DIV_K 调。 */
+  let DIV_K = 6;
   /* 单局"攒钱/囤积"分：0→T 线性升到满额 ⇒ T..C 不奖不罚 ⇒ 超过 C 按超出比例罚（2C 满额）。
    * 提成纯函数是为了能**直接单测门槛语义**（np-test D15），不必靠跑一遍训练去看数字。 */
   function economyStock(mEp, n, mode) {
@@ -677,11 +682,12 @@
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
     if (o.divW != null) DIV_W = Math.max(0, Number(o.divW));
+    if (o.divK != null) DIV_K = Math.max(2, Number(o.divK));   // v1.5.86：熵项固定分母（见 DIV_K）
     if (o.reset) { ECO_T = null; ECO_C = null; }
     return economyReward();
   }
   function economyReward() {
-    return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W,
+    return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
@@ -989,7 +995,7 @@
     const affN = Math.max(2, Object.keys(agg.aff || {}).length || (R.skills || []).length);
     /* v1.5.8：改走 coverageEntropy —— **只统计非ジ动作**（用户裁定），否则攒钱会把熵压到极低、
      * 反过来惩罚攒钱。旧的 H/uTot/affN 三行保留只为下方日志口径连续（H 已不参与 fit）。 */
-    const cov = coverageEntropy(agg.use, agg.aff);
+    const cov = coverageEntropy(agg.use, agg.aff, DIV_K);   // v1.5.86：固定分母（见 DIV_K 的说明）
     const divNorm = cov.divNorm;
     /* v1.5.6：按用户裁定**恢复**技能熵奖励（Q3 曾把它移出目标函数）。
      * 权重给得小（DIV_W=0.06，满额 +0.06），与 stock（+0.05 / −0.12）同量级 ⇒ 两项加起来仍远小于
