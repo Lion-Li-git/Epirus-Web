@@ -824,7 +824,9 @@
      * 推向"只在补贴下成立"的策略（历史上 min(pairSc, probeSc) 跨量纲就是这么塌的）。 */
     const hGene = (typeof hGeneIn === 'number' && hGeneIn > 0) ? (hGeneIn | 0) : 0;
     let fitGames = 0, commitFirst = 0, commitTop2 = 0, commitGames = 0, commitMaxEp = 0;
-    const agg = { use: {}, aff: {} };   // 该个体的动作直方图（跨局汇总：脚本对手局 + **自对局**）
+    const agg = { use: {}, aff: {} };
+    /* v1.5.87（用户裁定 A）：自对局里**成功**的非ジ动作直方图 —— 与门禁同口径。 */
+    const spUse = {};   // 该个体的动作直方图（跨局汇总：脚本对手局 + **自对局**）
     let mirrorRan = 0;                  // v1.5.19：本个体实际跑了多少局自对局（可观测）
     for (let g = 0; g < games; g++) {
       const seat = g % n;                                   // 座位轮换
@@ -968,6 +970,12 @@
         for (let pid = 0; pid < n; pid++) chs2.push(makeEconChooser(policyChooserN(params, 0.35, 0.15), agg, null, 0));
         Play.autoGameN(st, chs2);
         if (st.winner !== 'draw' && st.winner != null) { seatWinsProbe[st.winner]++; seatDec++; }
+        /* v1.5.87：累计"成功非ジ动作"，与 mirrorHealth 的 keyCount **同口径** ——
+         * 老的 agg.use 收的是 chooser 返回的每一个动作（含探索 ε、econ 覆盖、作废/失败）⇒
+         * 加大熵权重优化的是那个量，门禁的 G 不涨甚至下降（这就是用户问到的现象）。 */
+        for (const e of (st.events || [])) {
+          if (e.type === 'action' && e.outcome === 'ok' && e.key && e.key !== R.SK.JI) spUse[e.key] = (spUse[e.key] || 0) + 1;
+        }
       }
     }
     const mirSeatWins = seatWinsProbe;
@@ -995,12 +1003,18 @@
     const affN = Math.max(2, Object.keys(agg.aff || {}).length || (R.skills || []).length);
     /* v1.5.8：改走 coverageEntropy —— **只统计非ジ动作**（用户裁定），否则攒钱会把熵压到极低、
      * 反过来惩罚攒钱。旧的 H/uTot/affN 三行保留只为下方日志口径连续（H 已不参与 fit）。 */
-    const cov = coverageEntropy(agg.use, agg.aff, DIV_K);   // v1.5.86：固定分母（见 DIV_K 的说明）
+    const cov = coverageEntropy(agg.use, agg.aff, DIV_K);   // 保留：仅作历史口径的对照量（不再进 fit）
     const divNorm = cov.divNorm;
+    /* v1.5.87（用户裁定 A）：进 fit 的熵改用**自对局·成功非ジ动作**（与门禁 G 同源），固定分母 ln(DIV_K)。 */
+    let spTot = 0;
+    for (const k in spUse) spTot += spUse[k];
+    let spH = 0;
+    if (spTot > 0) for (const k in spUse) { const pr = spUse[k] / spTot; spH -= pr * Math.log(pr); }
+    const spDivNorm = spTot > 0 ? (spH / Math.log(DIV_K)) : 0;
     /* v1.5.6：按用户裁定**恢复**技能熵奖励（Q3 曾把它移出目标函数）。
      * 权重给得小（DIV_W=0.06，满额 +0.06），与 stock（+0.05 / −0.12）同量级 ⇒ 两项加起来仍远小于
      * 胜负项（base 1.0/0.3），符合"奖惩也不用给太多"。 */
-    const divBonus = DIV_W * divNorm;
+    const divBonus = DIV_W * spDivNorm;   // v1.5.87：与门禁同口径（自对局·成功非ジ动作）
     /* ===== v1.5.68（第五轮复核 §4 的 ④ 落地）：**阈值式座位惩罚**（约束处理，不是奖励权重）=====
      * 病：训练从不评估"5 席同策略"这一配置 ⇒ 固定目标偏好的策略在机器人池上能赢、在 5 席测量里却某座通吃，
      * 演化永远惩罚不到它（v9~v15 五批 30+ 候选全是这个形状）。
@@ -1044,6 +1058,8 @@
       fitNoDiv: fitAvg,
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
+      spDivNorm: spDivNorm,
+      spH: spH,
       divBonus: divBonus,
       seatPen: seatPen, seatSpreadMirror: seatSpreadMir, seatMaxPct: seatMaxPct, mirrorDecisive: mirDec,
       divW: DIV_W,

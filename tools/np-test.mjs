@@ -1169,8 +1169,10 @@ t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励
   const r = T.scoreMemberN(p, [{ name: 'random', sel: Bots.pickRandom }], 2, 3, 1, 0, 0);
   ok(Math.abs(r.fit - (r.fitNoDiv + r.divBonus + r.styleWeight * r.styleRate)) < 1e-9,
     'fit 必须 = 池子分 + 熵奖励 + 风格切片（实测 fit=' + r.fit.toFixed(5) + '）');
-  ok(Math.abs(r.divBonus - r.divW * r.divNorm) < 1e-9,
-    'divBonus 必须 = divW × divNorm（实测 ' + r.divBonus.toFixed(5) + ' vs ' + (r.divW * r.divNorm).toFixed(5) + '）');
+  /* v1.5.87（用户裁定 A）：进 fit 的熵改用与门禁同口径的 spDivNorm（自对局·成功非ジ动作），
+   * 旧口径 divNorm 只留作对照 ⇒ 这条公式断言跟着改（它红过一次，正是它该做的事）。 */
+  ok(Math.abs(r.divBonus - r.divW * r.spDivNorm) < 1e-9,
+    'divBonus 必须 = divW × spDivNorm（实测 ' + r.divBonus.toFixed(5) + ' vs ' + (r.divW * r.spDivNorm).toFixed(5) + '）');
   ok(r.avgStock != null, '必须回报 avgStock（攒钱分）便于诊断');
   T.setEconomyReward({ reset: true });   // 复位，别污染后面的用例
 });
@@ -3104,6 +3106,16 @@ t('D73 落盘阻断开关：EPIRUS_FEASIBILITY_BLOCK=1 时不可行候选不写�
   ok(i > 0, '必须有落盘阻断判断');
   ok(src.slice(i, i + 1500).indexOf('writeBundleMP(pack') >= 0, '阻断判断必须紧邻 writeBundleMP（在其之前，否则写了再拦等于没拦）');
   ok(src.indexOf('feasibility: feasibleInfo') >= 0, '可行时仍要把结论写进产物 meta（可追溯）');
+});
+
+t('D74 熵奖励与门禁同口径：进 fit 的熵必须来自"自对局·成功非ジ动作"（用户裁定 A）', function () {
+  const src = readFileSync('js/train/evo.js', 'utf8');
+  ok(src.indexOf('const spUse = {};') >= 0, '必须有自对局成功动作直方图 spUse');
+  ok(src.indexOf("e.outcome === 'ok' && e.key && e.key !== R.SK.JI") >= 0,
+    'spUse 必须只收 outcome===ok 的非ジ动作（与 mirrorHealth 的 keyCount 同口径）');
+  ok(src.indexOf('const divBonus = DIV_W * spDivNorm;') >= 0, '进 fit 的必须是 spDivNorm（旧 agg.use 口径只留对照）');
+  ok(src.indexOf('coverageEntropy(agg.use, agg.aff, DIV_K)') >= 0, '旧口径保留为对照量（便于审计两口径之差）');
+  ok(src.indexOf('effSkills: tot ? Math.exp(H) : 0') >= 0, '门禁量仍是自对局成功非ジ动作的 exp(H)（同源）');
 });
 
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
