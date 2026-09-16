@@ -24,7 +24,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField } from './audit-lib.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
@@ -33,6 +33,10 @@ const SRC = ARGV[0];
 if (!SRC) { console.error('用法: node tools/promote-champion.mjs <bak文件> [--exam-games=40] [--note="..."]'); process.exit(2); }
 const EXG = Number(flag('exam-games', 40));
 const NOTE = flag('note', '');
+/* v1.5.71：`--dry` = 只做体检与自检、**一个文件都不写**。
+ * 起因：这次给换包工具加了 `meta.feasibility` 记录块，我需要**真实运行证据**（而不是只跑单测），
+ * 但又绝不能顺手改写线上包/缓存戳（改了就得多跑一轮 smoke + battle 验证）。 */
+const DRY = process.argv.includes('--dry');
 const BUNDLE = join(ROOT, 'js/bundled-champion-3p.js');
 const INDEX = join(ROOT, 'index.html');
 
@@ -173,6 +177,28 @@ if (ss.verdict === 'biased') {
   console.log('  座位对称性 OK：极差 ' + ss.spread.toFixed(0) + 'pt（' + ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '）');
 }
 if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) + ' < 3（打法坍缩到两三张卡）');
+/* ===== v1.5.71（第五轮复核 §4-6）：**出厂换包也写一份 feasibility 记录** =====
+ * 病：线上包的 meta 里没有 `feasibility` —— 它是经 tools/upgrade-pack.mjs 换回来的、绕过了训练落盘
+ * 那一步 ⇒ "这个包当年怎么过的五道门"在产物上不可查。
+ * 阈值与 server/train-server.mjs **共用 audit-lib 的 `feasibilityOf`**（单一真源，复核 §4-6）。
+ * ⚠️ 这里**只记录、不新增阻断**：把五道门升级为硬门槛是独立决策（eco-34 的场B 清场=0.00 也会被它挡，
+ * 那会连带否决"换回历史冠军"这条路径）⇒ 见 CHANGELOG v1.5.71 的说明。 */
+const feas = feasibilityOf({ seat: ss, G: sp, wall: rw, aggr: agg });
+console.log('   可行性（与训练落盘同源）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
+  '（座位 ' + feas.seatSpread + 'pt/' + feas.seatVerdict + ' · G ' + feas.G + ' · 墙 ' + feas.wallDmg +
+  '/局 · 场A ' + (100 * feas.fieldA).toFixed(0) + '% · 场B 清场 ' + feas.fieldBClears + '/局' +
+  '（胜率 ' + (100 * (feas.fieldBWinRate || 0)).toFixed(0) + '% —— **规则红利，不作判据**））' +
+  (feas.notes.length ? ' ⚠ ' + feas.notes.join('；') : ''));
+/* ===== v1.5.71（第五轮复核 §4-2）：**狙击场探针** —— 只记录，**暂不阻断** =====
+ * 标定（40~60 局/包）把复核建议的判据否掉了：复核建议"靶向率 ≥20%"，但**它没有判别力** ——
+ * 种子冠军 45.3% / eco-34 47.7% / 线上包 43.8%，全都远高于均匀 25% ⇒ 谁也分不开。
+ * 真正分开的是**低压力场里的出手与目标多样性**：种子 2.73 伤害/局、打过 2~4 个人；
+ * eco-34/线上 0.47~0.53/局、37~40 局里只打过 **1 个**人（"只盯一个靶子"= 身份映射家族的另一面）。 */
+const snf = sniperField(W, params, 'long', Number(process.env.EPIRUS_SNIPER_GAMES || 20), 'mixed');
+console.log('   狙击场（1 席狙击 + 3 席被动 · ' + snf.games + ' 局）：自身伤害 ' + snf.dmgPerGame.toFixed(2) +
+  '/局（出手 ' + snf.attacksPerGame.toFixed(2) + '/局）· 平均打过 ' + snf.spreadAvg.toFixed(2) + ' 个人' +
+  ' · 靶向率 ' + (100 * (snf.aimedAtSniperRate || 0)).toFixed(1) + '%（均匀 25%，**已知无判别力**）' +
+  ' · 存活 ' + (100 * snf.survivalRate).toFixed(0) + '% · 胜率 ' + (100 * snf.winRate).toFixed(0) + '%');
 if (fails.length) {
   console.error('⛔ 体检未过（' + fails.length + ' 项阻断条件）：');
   for (const x of fails) console.error('   · ' + x);
@@ -219,6 +245,15 @@ meta.pierceLandByKey = sp.landByKey;
 meta.pierceMissingCards = sp.pierceMissing;
 meta.reflectWallPierceLand = rw.pierceLand;
 meta.reflectWallDmgPerGame = Number(rw.dmgPerGame.toFixed(2));
+/* v1.5.71（复核 §4-6）：出厂包也留一份五道可行性记录（与训练落盘同源） */
+meta.feasibility = feas;
+/* v1.5.71（复核 §4-2）：狙击场探针读数也进 meta（独立行为探针，暂不阻断） */
+meta.sniperField = {
+  kind: snf.kind, games: snf.games, dmgPerGame: Number(snf.dmgPerGame.toFixed(2)),
+  attacksPerGame: Number(snf.attacksPerGame.toFixed(2)), spreadAvg: Number(snf.spreadAvg.toFixed(2)),
+  aimedAtSniperRate: (snf.aimedAtSniperRate == null ? null : Number(snf.aimedAtSniperRate.toFixed(3))),
+  survivalRate: Number(snf.survivalRate.toFixed(3)), winRate: Number(snf.winRate.toFixed(3))
+};
 meta.activeAttackRate = Number(fAct.atk.toFixed(3));
 meta.auditFails = fails;
 meta.auditForced = fails.length ? FORCE : false;
@@ -233,24 +268,28 @@ if (!reParams || !reParams.length) { console.error('⛔ 自检失败：写出的
 const chk = (reJson && reJson.v === 7 && W.EpirusPolicy.checkPack) ? W.EpirusPolicy.checkPack(reJson) : { ok: true };
 if (reJson && reJson.v !== 7) console.log('   旧形状包（v' + reJson.v + '）：跳过 checkPack（只校验 v7 容器）⇒ 已用原生读取 + 长度自检');
 if (chk && chk.ok === false) { console.error('⛔ 自检失败：checkPack ' + JSON.stringify(chk) + '（已中止，未落盘）'); process.exit(5); }
-writeFileSync(BUNDLE, out);
-console.log('   回读自检：冠军包 ok（参数量 ' + reParams.length + '）');
+if (DRY) {
+  console.log('\n🧪 --dry：自检通过但**未写任何文件**（js/bundled-champion-3p.js 与 index.html 均未改动）');
+} else {
+  writeFileSync(BUNDLE, out);
+  console.log('   回读自检：冠军包 ok（参数量 ' + reParams.length + '）');
 
-/* 3) 刷 index.html 的缓存戳（否则浏览器继续用旧包） */
-let html = readFileSync(INDEX, 'utf8');
-const before = (html.match(/\?v=[0-9a-z]+/gi) || [])[0];
-html = html.replace(/(\?v=)[0-9a-z]+/gi, '$1' + Date.now().toString(36));
-writeFileSync(INDEX, html);
-console.log('\n✅ 已提升：' + SRC + ' → js/bundled-champion-3p.js');
-console.log('   rulesFingerprint = ' + fp + '（bundle 里记的 = ' + fingerprintOfBundle(out) + '）');
-console.log('   examScoreAtBuild = ' + meta.examScoreAtBuild + '（' + EXG + ' 局）  缓存戳 ' + before + ' → ' + (html.match(/\?v=[0-9a-z]+/gi) || [])[0]);
-console.log('   ⚠️ 别忘了：node tools/np-test.mjs（D16 指纹 + D14）+ node tools/battle-test.mjs（真浏览器对战）');
-console.log('   ⚠️ 且注意：localStorage 里已有冠军的用户**不会**被这次换包影响（REVIEW §11.1）。');
+  /* 3) 刷 index.html 的缓存戳（否则浏览器继续用旧包） */
+  let html = readFileSync(INDEX, 'utf8');
+  const before = (html.match(/\?v=[0-9a-z]+/gi) || [])[0];
+  html = html.replace(/(\?v=)[0-9a-z]+/gi, '$1' + Date.now().toString(36));
+  writeFileSync(INDEX, html);
+  console.log('\n✅ 已提升：' + SRC + ' → js/bundled-champion-3p.js');
+  console.log('   rulesFingerprint = ' + fp + '（bundle 里记的 = ' + fingerprintOfBundle(out) + '）');
+  console.log('   examScoreAtBuild = ' + meta.examScoreAtBuild + '（' + EXG + ' 局）  缓存戳 ' + before + ' → ' + (html.match(/\?v=[0-9a-z]+/gi) || [])[0]);
+  console.log('   ⚠️ 别忘了：node tools/np-test.mjs（D16 指纹 + D14）+ node tools/battle-test.mjs（真浏览器对战）');
+  console.log('   ⚠️ 且注意：localStorage 里已有冠军的用户**不会**被这次换包影响（REVIEW §11.1）。');
+}
 
 /* 4) 自动跑一遍 skill report（用户 2026-09-13：「以后每次冠军有大变化的时候都可以做一下」）
  * 它回答的是"每个技能的实际强度 vs 使用率"（高使用+负强度=坑 / 零使用+正强度=没学会的强招），
  * 与 champ-audit 的"打架活跃度"互补 —— 换冠军时正是最该看它的时候。用 --no-skill-report 可跳过。 */
-if (!process.argv.includes('--no-skill-report')) {
+if (!DRY && !process.argv.includes('--no-skill-report')) {
   const nP = Number(meta.n || 5);
   const outHtml = 'docs/skill-report.html';
   console.log('\n== 自动跑技能报告（' + nP + ' 人，每条件 6 局）→ ' + outHtml + ' ==');

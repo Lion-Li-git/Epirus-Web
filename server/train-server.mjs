@@ -610,23 +610,15 @@ async function runTrainN(gens, cfg) {
       const gg = T.mirrorHealth(finalParams, 40, n, mode);
       const rw = audit.reflectWall(sb, finalParams, 'long', 20);
       const ag = audit.aggressionProfile(sb, finalParams, 20);
-      const ff = [];
-      if (ss.verdict === 'biased') ff.push('座位极差 ' + ss.spread.toFixed(0) + 'pt ≥30');
-      if (gg.effSkills < 3) ff.push('G ' + gg.effSkills.toFixed(2) + ' < 3');
-      if (!(rw.dmgPerGame > 0.5)) ff.push('反弹墙伤害 ' + rw.dmgPerGame.toFixed(2) + ' ≤ 0.5/局');
-      if (ag.fieldA.atk < 0.20) ff.push('场A 还手 ' + (ag.fieldA.atk * 100).toFixed(0) + '% < 20%');
-      if (ag.fieldB.clearedPerGame < 0.3) ff.push('场B 清场 ' + ag.fieldB.clearedPerGame.toFixed(2) + ' < 0.3/局');
-      feasibleInfo = {
-        ok: ff.length === 0, fails: ff,
-        seatSpread: Number(ss.spread.toFixed(1)), seatDecisive: Number(ss.decisiveRate.toFixed(2)),
-        G: Number(gg.effSkills.toFixed(2)), Gkeys: gg.distinctKeys,
-        wallDmg: Number(rw.dmgPerGame.toFixed(2)),
-        fieldA: Number(ag.fieldA.atk.toFixed(3)), fieldBClears: Number(ag.fieldB.clearedPerGame.toFixed(2))
-      };
+      /* v1.5.71：这五道阈值**不再写在这里** —— 与 tools/promote-champion.mjs 共用 audit-lib 的单一真源
+       * （复核 §4-6：两头各写一份会漂；线上包是经 upgrade-pack 换的 ⇒ meta 里没有 feasibility）。 */
+      feasibleInfo = audit.feasibilityOf({ seat: ss, G: gg, wall: rw, aggr: ag });
+      const ff = feasibleInfo.fails;
       console.log('[feasible] ' + (feasibleInfo.ok ? '✅ 五道全过' : '✗ ' + ff.join('；')) +
         '（座位 ' + feasibleInfo.seatSpread + 'pt · G ' + feasibleInfo.G + '（' + gg.distinctKeys + '种）· 墙 ' +
         feasibleInfo.wallDmg + '/局 · 场A ' + (feasibleInfo.fieldA * 100).toFixed(0) + '% · 场B ' +
-        feasibleInfo.fieldBClears + '/局）');
+        feasibleInfo.fieldBClears + '/局）' +
+        (feasibleInfo.notes && feasibleInfo.notes.length ? ' ⚠ ' + feasibleInfo.notes.join('；') : ''));
       for (const c of clients) sse(c, { type: 'feasibility', info: feasibleInfo });
     } catch (e) {
       console.log('[feasible] ⚠ 判定失败（不阻断落盘）：' + String(e && e.message || e));

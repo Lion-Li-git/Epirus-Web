@@ -106,6 +106,11 @@ const POOL_C = POOL_B + ',reflectspam,guardspam';
  * 动机：池里只有 1 个环流对手时，冠军绝大多数对局根本碰不到"有人开环"这个处境 ——
  * 奖励/示范再强也架不住机会太少（v7teach 臂 20 局才 1 次小雷，疑似噪声）。 */
 const POOL_D = POOL_C + ',ringspam,ringspam,ringspam';
+/* v1.5.71（第五轮复核 §4-1）：池 E = C + **1 席会瞄人的对手**（`targeter`：谁在滚环 / 刚放冷枪 /
+ * 攒满大雷就指谁）。动机见 server/opp-pool.mjs 与 js/train/bots.js 的 `pickTargeter`：
+ * 池里没有会瞄人的对手 ⇒ 反狙击、反环、主动清场三条线在训练里都拿不到梯度。
+ * 只放 1 席 —— 要的是"造成威胁会被反制"这件事出现在对局里，不是把整池换成惩罚者。 */
+const POOL_E = POOL_C + ',targeter';
 /* v1.5.0：池子可选 —— 'A' = 12 对手（与 ms2-p12 控制臂同池），默认 'B' = 13（含 ringspam）。
  * v1.5.2：也可以直接传**自定义名单**（含 `champ:<路径>` 冠军对手），例：
  *   RING2_POOL='random,defend,champ:docs/artifacts/champion-5p-hA9.bak' */
@@ -116,6 +121,7 @@ const POOL = (function () {
   if (u === 'B') return POOL_B;
   if (u === 'C') return POOL_C;
   if (u === 'D') return POOL_D;
+  if (u === 'E') return POOL_E;
   return v;   // 当名单用
 })();
 const SEEDS = (process.env.RING2_SEEDS || '32,33,34,35,36').split(',').map(function (s) { return Number(s.trim()); }).filter(Boolean);

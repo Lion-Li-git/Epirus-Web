@@ -599,6 +599,58 @@
     return { key: SK.JI, target: null };                                  // 攒到能开枪再打
   }
 
+  /* ===== 会瞄人的对手 pickTargeter（v1.5.71，第五轮复核 §4-1/§3-2）=====
+   * 池子里**没有任何对手会瞄人**，这是三个现象的共同病根（复核 §3-2 的合成结论）：
+   *   · 狙击专精看起来"无解"—— 实测给 4 席对手加一条"谁用狙击就瞄谁"的规则 ⇒ 候选夺冠 30% → 0%；
+   *   · 场B（对手只ジ不还手）里冠军清不掉人（清场 0.00/局）；
+   *   · 聚能环从没被反制过（八次尝试都没学会）。
+   * 所以这里补的不是"又一个人格"，而是**梯度**：谁是威胁就指谁，让"被威胁"这件事在训练里真的出现。
+   *
+   * 威胁判据**只读状态真源**（不猜字段、不解析事件）：
+   *   `state.p[o].ringStreak > 0`（在滚环）· `lastSkill === SK.SNIPE`（上回合出过狙击）· `ep >= 5`（攒满大雷）；
+   *   都没有 ⇒ **攒钱**（它是个"惩罚者"，不是又一个乱打的激进派；没有威胁时不主动加压）。
+   * ⚠️ 与 `pickFocusFire`（打**残血**抢人头）方向相反：那条是抢，这条是掐，池里各有用途。
+   * ⚠️ 目标不会被引擎剥掉：`wrapBotN` 自 v1.3.55 起保留脚本自选目标（返回 {key,target} 即可）——
+   *   若这条不成立，本对手会退化成"又一个 pickTargetN"，整批实验会白跑（已加守门 D63）。 */
+  function pickTargeter(state, pid, legal) {
+    const bk = mpBk(legal), me = state.p[pid];
+    const o = mpOpps(state, pid);
+    if (!o.length) return { key: SK.JI, target: null };
+    const isThreat = function (i) {
+      const p = state.p[i];
+      return (p.ringStreak > 0) || (p.lastSkill === SK.SNIPE) || (p.ep >= 5);
+    };
+    const threats = o.filter(isThreat);
+    let t = null;
+    const ring = threats.filter(function (i) { return state.p[i].ringStreak > 0; });      // 复利最贵，优先掐
+    if (ring.length) t = mpPickOne(state, ring);
+    if (t == null) {
+      const sn = threats.filter(function (i) { return state.p[i].lastSkill === SK.SNIPE; }); // 其次：刚放冷枪的
+      if (sn.length) t = mpPickOne(state, sn);
+    }
+    if (t == null && threats.length) t = mpPickOne(state, threats);                        // 其次：攒满大雷的
+    if (t == null) return { key: SK.JI, target: null };                                    // 无威胁 ⇒ 攒钱
+    if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };         // 濒死先保命
+    if (mpAff(bk, SK.GUN)) return { key: SK.GUN, target: t };                              // 最便宜的手指他
+    return { key: SK.JI, target: null };                                                   // 攒到能开枪
+  }
+
+  /* ===== 狙击专精 pickSnipeSpam（v1.5.71，第五轮复核 §4-2）=====
+   * 狙击场探针的"威胁源"：4 席只会一件事的狙击手。为什么要它 —— 复核把"狙击看起来无解"证伪了：
+   * 任何带攻击效果的技能指过来就能让狙击无效（**1 ジ 的枪就够**），所以它是最容易被废的攻击卡；
+   * 而池里没人会瞄人 ⇒ 满分环境里它显得无敌（v17-146 夺冠 30%，加上"瞄狙击手"规则后 0%）。
+   * 口径与 reflectspam/ringspam 一致：只做一件事（能狙就狙），目标是"让'被瞄'真的发生"。 */
+  function pickSnipeSpam(state, pid, legal) {
+    const bk = mpBk(legal);
+    if (mpAff(bk, SK.SNIPE)) {
+      const k1 = mpKillable(state, pid, 1);                    // 能一击致命就杀（2 ジ 换 1 血）
+      if (k1 != null) return { key: SK.SNIPE, target: k1 };
+      const t = mpLeader(state, pid);                           // 否则压领先者
+      if (t != null) return { key: SK.SNIPE, target: t };
+    }
+    return { key: SK.JI, target: null };                        // 攒钱到能开枪
+  }
+
   /* ===== 深经济对手 pickDeepSaver（"会攒 + 会还手"）=====
    * ⚠️ 它曾在 v1.3.27 加入、在 v1.3.30（N20 地雷 AoE 重写）被**静默删除**——
    * 那个 commit 的 CHANGELOG 只字未提，之后 24 个版本没人发现，而 REVIEW-3P §1-D
@@ -663,7 +715,7 @@
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
-    pickMineSpam, pickCurseStorm, pickRingSpam,
+    pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'

@@ -228,6 +228,14 @@ const FIELDS = {
   ringwall:   ['ringspam', 'ringspam', 'ringspam', 'ringspam'],
   /* 半墙：2 个开环 + 2 个普通进攻，避免纯经济场退化 */
   ringmix:    ['ringspam', 'ringspam', 'aggro', 'random'],
+  /* v1.5.71（第五轮复核 §4-1/§4-2）：**会瞄人的对手**场 —— 复核反向验证的现成器材。
+   * 复核实测：给 4 席对手加一条"谁用狙击就瞄谁"的规则 ⇒ 候选 v17-146 的夺冠率 30% → 0%
+   * ⇒ 这条场就是"狙击专精是不是假优势"的判决实验（`--field=targeter` vs 默认 A 考卷）。
+   * `sniperwall` = 4 席狙击专精（量生存/胜率；**没有靶向判别力**，见 tools/probe-sniper.mjs）；
+   * `snipermix` = 1 席狙击 + 3 席只攒不还手 = 探针里的"混合场"（低压力场里出不出手）。 */
+  targeter:   ['targeter', 'targeter', 'targeter', 'targeter'],
+  sniperwall: ['snipespam', 'snipespam', 'snipespam', 'snipespam'],
+  snipermix:  ['snipespam', 'farmer', 'farmer', 'farmer'],
   /* v1.5.36（第三方复核 §4-1/§4-2）：
    * mix4 = **4 个不同风格同时在场**（最接近"人来打"的构造；A 考卷一局只面对 1~2 个脚本 ⇒ 对这类退化完全无感）；
    * farmerwall = **4 席只按ジ**（"面对不还手的对手它自己也不动手"这个从 v1.5.17 就存在的空洞，此前没有任何指标覆盖）。 */

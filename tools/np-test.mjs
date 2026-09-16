@@ -13,7 +13,7 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
   'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js', 'js/bundled-champion-3p.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
-import { stanceProfile, aggressionProfile } from './audit-lib.mjs';
+import { stanceProfile, aggressionProfile, feasibilityOf, attackAttribution } from './audit-lib.mjs';
 
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, X = sb.window.EpirusResolve, Play = sb.window.EpirusPlay;
 const T = sb.window.EpirusTrainer, Bots = sb.window.EpirusBots, Pol = sb.window.EpirusPolicy;
@@ -1116,14 +1116,20 @@ t('D13 风格切片（复合适应度）必须真的打进 fit —— 且是**�
   const b = T.scoreMemberN(p, opps, 2, 3, 1, 0, 0);
   ok(b.styleGames === 2, '切片打开后必须真的打 2 局，实测 ' + b.styleGames);
   ok(b.styleRate >= 0 && b.styleRate <= 1, 'styleRate 必须是比率，实测 ' + b.styleRate);
-  /* v1.5.6：fit 的组成多了熵奖励 ⇒ 这里的"多出来的部分"要把它算进去（D15 管熵项本身） */
-  ok(Math.abs((b.fit - b.fitNoDiv) - (b.divBonus + 0.5 * b.styleRate)) < 1e-9,
-    'fit 比 fitNoDiv 多出的部分必须恰好是 熵奖励 + w*styleRate（实测多出 ' + (b.fit - b.fitNoDiv).toFixed(6) + '，期望 ' + (b.divBonus + 0.5 * b.styleRate).toFixed(6) + '）');
+  /* v1.5.6：fit 的组成多了熵奖励 ⇒ 这里的"多出来的部分"要把它算进去（D15 管熵项本身）。
+   * v1.5.71：**原来漏了 `seatPen`**（v1.5.68 加的座位惩罚项）⇒ 惩罚一触发这条断言就随机变红
+   * （实测 5 次里 1 次，`实测多出 -0.069 vs 期望 0.031`）。修法不是放宽阈值，而是把 fit 的
+   * **全部加项**都纳入恒等式 —— 契约是"fit = 报告出来的各加项之和"，将来再加项也必须先报告再进 fit。 */
+  const residualB = (b.fit - b.fitNoDiv) - (b.divBonus + 0.5 * b.styleRate - (b.seatPen || 0));
+  ok(isFinite(b.seatPen), 'seatPen 必须照实报告（fit 的每个加项都要可审计，否则这条恒等式必然偶发红）');
+  ok(Math.abs(residualB) < 1e-9,
+    'fit 必须等于**全部**已报告加项之和（熵奖励 + w*styleRate - seatPen）；残差 ' + residualB.toFixed(6) +
+    '（实测多出 ' + (b.fit - b.fitNoDiv).toFixed(6) + '，报告项合计 ' + (b.divBonus + 0.5 * b.styleRate - b.seatPen).toFixed(6) + '）');
   ok(Math.abs(b.fitNoDiv - a.fitNoDiv) < 1e-9,
     '切片必须是**追加**：池子那部分 fit 不得被改变（无切片 ' + a.fitNoDiv + ' vs 有切片 ' + b.fitNoDiv + '）');
   T.setStyleSlice(null, 0, 0);
   const c = T.scoreMemberN(p, opps, 2, 3, 1, 0, 0);
-  ok(c.styleGames === 0 && Math.abs((c.fit - c.fitNoDiv) - c.divBonus) < 1e-9, '关掉切片后必须完全回到无切片状态（只剩熵奖励项）');
+  ok(c.styleGames === 0 && Math.abs((c.fit - c.fitNoDiv) - (c.divBonus - (c.seatPen || 0))) < 1e-9, '关掉切片后必须完全回到无切片状态（只剩熵奖励 - seatPen）');
   /* 两端接线（结构性）：这类"两处各写一遍"的机制漏一端就静默半开（v1.5.0 的 mode 事故同型） */
   const pt = readFileSync('server/train-server.mjs', 'utf8');
   ok(pt.indexOf('setStyleSlice') >= 0, 'server 必须调 setStyleSlice');
@@ -2736,6 +2742,150 @@ t('D50 对手槽位并列不得按 pid 升序（座位身份泄漏 ⇒ 0 号座�
   ok(pol.indexOf('_rot(x) - _rot(y)') < 0, '旧的"按回合起点轮转"必须已移除（它让回合起点占槽位 0 ⇒ 被集火）');
   ok(pol.indexOf('SLOT_RAND') < 0, '不得再用"缓存随机键"的旧实现（v1.5.52 改为纯函数哈希 ⇒ 决策内天然一致）');
   ok(pol.indexOf('return d !== 0 ? d : x - y;') < 0, '旧的"并列按 pid 升序"必须已移除');
+});
+
+
+/* ===== v1.5.71（第五轮复核 §2-1/§2-2/§2-3/§4-6）：门槛的**单一真源**与**样本量守卫** =====
+ * 三条更正各自的反证都做成用例：不能只在"病在的时候"绿，必须在**机制死掉时变红**。 */
+t('D60 场B 判据只认清场数，胜率是规则红利（复核 §2-1）', function () {
+  /* 背景：v1.5.65 的 multi 终局收缩 + 全灭按累计伤害判胜 ⇒ "打 1 点就赢"。线上包场B 严格胜率
+   * 100%，而清场 0.00/局、伤害 1.0/局 ⇒ 用胜率当门槛等于白送。 */
+  const base = {
+    seat: { verdict: 'ok', spread: 10, decisiveRate: 0.6, pct: [22, 20, 19, 21, 18] },
+    G: { effSkills: 4.0, distinctKeys: 11 }, wall: { dmgPerGame: 3.0, pierceLand: 100 },
+    aggr: { fieldA: { atk: 0.3, dealtPerGame: 5 }, fieldB: { clearedPerGame: 1.0, winRate: 0.0 } }
+  };
+  /* ① 反向反证：真的在清场（清场 1.0/局）即使胜率 0% 也必须**过** —— 证明判据不是胜率。 */
+  const okCase = feasibilityOf(base);
+  ok(okCase.fails.length === 0, '清场 1.0/局、胜率 0% 必须判可行（实测 fails=' + JSON.stringify(okCase.fails) + '）');
+  /* ② 正向反证：胜率 100% + 清场 0 ⇒ 必须**拒**，且文案说的是清场、不能出现"胜率"。 */
+  const windfall = JSON.parse(JSON.stringify(base));
+  windfall.aggr.fieldB = { clearedPerGame: 0.0, winRate: 1.0 };
+  const bad = feasibilityOf(windfall);
+  ok(bad.fails.length === 1, '只有场B 崩掉时应当恰好一条失败（实测 ' + JSON.stringify(bad.fails) + '）');
+  ok(bad.fails[0].indexOf('清场') >= 0, '失败文案必须是"清场"（实测：' + bad.fails[0] + '）');
+  ok(bad.fails[0].indexOf('胜率') < 0, '场B 失败文案里不得出现"胜率"（那是规则红利）');
+  /* ③ 胜率仍然**记录**（可查），但不参与判定 */
+  eq(bad.fieldBWinRate, 1, 'fieldBWinRate 必须照实记录');
+  eq(bad.fieldBClears, 0, 'fieldBClears 必须照实记录');
+});
+
+t('D61 五道门槛是单一真源：落盘处与出厂换包都必须走 feasibilityOf（复核 §4-6）', function () {
+  const srv = readFileSync('server/train-server.mjs', 'utf8');
+  const pro = readFileSync('tools/promote-champion.mjs', 'utf8');
+  const lib = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(srv.indexOf('audit.feasibilityOf(') >= 0, '训练落盘处必须调用 audit.feasibilityOf');
+  ok(srv.indexOf('fieldB.clearedPerGame < 0.3') < 0, '落盘处不得再自己写一份阈值（应已搬进 audit-lib）');
+  ok(pro.indexOf('feasibilityOf(') >= 0, '出厂换包处必须调用 feasibilityOf（线上包曾因绕过落盘而没有 feasibility 记录）');
+  ok(pro.indexOf('meta.feasibility') >= 0, '出厂包必须把可行性记录写进 meta');
+  /* 阈值必须在 lib 里，且五道齐全（搬运时漏一条 = 静默放宽） */
+  const i0 = lib.indexOf('export function feasibilityOf(');
+  const seg = i0 >= 0 ? lib.slice(i0, i0 + 4000) : '';
+  ok(seg.length > 0, '必须能定位 feasibilityOf 的实现段');
+  ok(seg.indexOf('clearedPerGame) < 0.3') >= 0, '五道之一：场B 清场 < 0.3/局');
+  ok(seg.indexOf('atk) < 0.20') >= 0, '五道之二：场A 还手 < 20%');
+  ok(seg.indexOf('effSkills) < 3') >= 0, '五道之三：G < 3');
+  ok(seg.indexOf('dmgPerGame) <= 0.5') >= 0, '五道之四：反弹墙伤害 ≤ 0.5/局');
+  ok(seg.indexOf("s.verdict === 'biased'") >= 0, '五道之五：座位偏座');
+  ok(seg.indexOf('winRate <') < 0 && seg.indexOf('winRate >=') < 0, 'feasibilityOf 里不得有任何以胜率为准的比较');
+  /* 缺值必须响亮：`!(NaN > 0.5)` 曾是本函数第一个 bug（把"探针没跑"读成"墙瘫了"，假红） */
+  ok(seg.indexOf('探针缺失') >= 0, '探针缺失/无值必须显式判失败（不许静默通过，也不许静默判死）');
+});
+
+t('D62 座位判据的样本量守卫：小样本必须报"不知道"，不得当"均衡"（复核 §2-3）', function () {
+  const lib = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(lib.indexOf("'underpowered'") >= 0, '必须存在第三态 underpowered（小样本=不知道）');
+  ok(/MIN_N_SPREAD = 50/.test(lib), '极差判据必须有最小局数门槛（n<50 的极差是噪声：n=6 期望 41pt/p99 67pt）');
+  ok(/SHARE_BIAS = 70/.test(lib), '占比判据必须是"某座 ≥70%"（对称假设下 ~0.2%，任意 n 稳健）');
+  /* 行为反证：underpowered 不许判 fail，但必须留 note；biased/missing 必须判 fail。
+   * 注意**必须给全四道探针**：缺值本身是另一条失败（见 D61 的"探针缺失"断言）。 */
+  const full = { G: { effSkills: 4.0 }, wall: { dmgPerGame: 3.0 }, aggr: { fieldA: { atk: 0.3 }, fieldB: { clearedPerGame: 1.0 } } };
+  const up = feasibilityOf(Object.assign({}, full, { seat: { verdict: 'underpowered', basis: 'n=6<50', pct: [40, 30, 15, 10, 5] } }));
+  eq(up.fails.length, 0, 'underpowered 不得作为失败条件（否则小样本噪声会挡住所有候选）');
+  ok(up.notes.length >= 1 && up.notes[0].indexOf('未判定') >= 0, 'underpowered 必须留下"未判定"的 note（不得沉默）');
+  const bi = feasibilityOf(Object.assign({}, full, { seat: { verdict: 'biased', basis: '某座≥70%', pct: [90, 10, 0, 0, 0], spread: 90, decisiveRate: 0.5 } }));
+  ok(bi.fails.length >= 1 && bi.fails[0].indexOf('座位') >= 0, 'biased 必须判 fail（实测 ' + JSON.stringify(bi.fails) + '）');
+  const noSeat = feasibilityOf({ G: { effSkills: 4.0 }, wall: { dmgPerGame: 3.0 }, aggr: { fieldA: { atk: 0.3 }, fieldB: { clearedPerGame: 1.0 } } });
+  eq(noSeat.fails.length, 1, '座位探针整个缺失必须判 fail（不许当"均衡"）');
+  ok(noSeat.fails[0].indexOf('座位') >= 0, '缺座位探针的失败文案必须点名"座位"（实测：' + noSeat.fails[0] + '）');
+});
+
+
+/* ===== v1.5.71（第五轮复核 §4-1）：会瞄人的对手 =====
+ * 复核的反向验证把病根钉死了：给 4 席对手加一条"谁用狙击就瞄谁"的规则 ⇒ 候选 v17-146 夺冠 30% → 0%。
+ * 也就是说池子里**没有任何对手会瞄人**（脚本走 pickTargetN = 击杀优先 → 血量最高，满血不出头的狙击手
+ * 永远进不了任何人的候选集）。这条用例盯三件事：① 它真的指威胁；② 目标**不被引擎剥掉**（否则退化成
+ * 又一个 pickTargetN ⇒ 整批实验白跑）；③ 无威胁时攒钱（它是惩罚者，不是又一个乱打的激进派）。 */
+t('D63 会瞄人的对手（targeter）：指威胁 + 目标不被引擎剥掉（复核 §4-1）', function () {
+  ok(typeof Bots.pickTargeter === 'function', 'Bots.pickTargeter 必须存在');
+  const poolSrc = readFileSync('server/opp-pool.mjs', 'utf8');
+  ok(/\{\s*name:\s*'targeter'/.test(poolSrc), 'targeter 必须登记进 server/opp-pool.mjs 的 OPP_SPECS（单一来源；漏登记 = 服务端拿到 undefined）');
+  ok(poolSrc.indexOf("fn: 'pickTargeter'") >= 0, 'OPP_SPECS 里的 fn 必须是 pickTargeter');
+  const st = S.createState('multi', { next: mulberry32(63) }, 5);
+  /* 场景：1 号座是**领先者**（血最多 ⇒ pickTargetN 会选他），真正在滚环的是 2 号座，3 号座攒满 5 ジ。 */
+  st.p[0].ep = 2;                       // 自己攒够一枪的钱（否则"指谁"这件事无从表达）
+  /* 血量故意造成"**没有可击杀目标**（无人 ≤ 枪的 1 点伤害）+ 领先者唯一"的确定性局面：
+   * 这样默认口径 pickTargetN 必然选 1 号座（血最多），而 targeter 必然选 2 号座（在滚环）——
+   * 两者不同 ⇒ 本用例才真的分得出"自己瞄"与"默认口径"（否则测试没有判别力）。 */
+  st.p[1].hp = 3; st.p[2].hp = 2; st.p[3].hp = 2; st.p[4].hp = 2;
+  st.p[2].ringStreak = 2; st.p[3].ep = 5;
+  const legal = Play.legalActions(st, 0);
+  eq(T.pickTargetN(st, 0, R.SK.GUN), 1, '对照：默认口径必须选领先者 1 号座（否则本用例分不出自己瞄与默认口径）');
+  const raw = Bots.pickTargeter(st, 0, legal);
+  eq(raw.target, 2, 'targeter 必须掐**在滚环**的那位（实测 target=' + raw.target + '）');
+  /* ① 关键：目标必须活着穿过 wrapBotN（v1.3.55 的"保留脚本自选目标"） */
+  const wrapped = T.wrapBotN(Bots.pickTargeter)(st, 0, legal);
+  eq(wrapped.target, 2, 'wrapBotN 必须保留脚本自选目标，实测 ' + wrapped.target + '（被剥掉 ⇒ 本对手退化成 pickTargetN）');
+  ok(wrapped.target !== 1, '不得退化成"打血最多的领先者"（那是 pickTargetN 的口径，= 病根本身）');
+  /* ② 只读状态真源：滚环者消失后必须转向"刚放冷枪的"，而不是永远指 2 号 */
+  st.p[2].ringStreak = 0; st.p[3].lastSkill = R.SK.SNIPE;
+  eq(T.wrapBotN(Bots.pickTargeter)(st, 0, legal).target, 3, '滚环者消失后必须转向刚放冷枪的');
+  /* ③ 无威胁 ⇒ 攒钱（惩罚者，不是又一个激进派） */
+  st.p[3].lastSkill = null; st.p[3].ep = 0;
+  const w3 = T.wrapBotN(Bots.pickTargeter)(st, 0, legal);
+  eq(w3.key, R.SK.JI, '场上无威胁时必须攒钱（实测 ' + w3.key + '）');
+  eq(w3.target, null, '无威胁时不该带目标');
+  /* ④ 濒死保命优先于补刀（别让它变成送人头机器） */
+  st.p[2].ringStreak = 1; st.p[0].hp = 1; st.p[0].ep = 3;
+  const w4 = T.wrapBotN(Bots.pickTargeter)(st, 0, Play.legalActions(st, 0));
+  eq(w4.key, R.SK.GUARD, '1 血且买得起盾时必须先保命（实测 ' + w4.key + '）');
+});
+
+
+/* ===== v1.5.71（第五轮复核 §4-2）：狙击场探针 =====
+ * 复核把"狙击无解"证伪了（任何攻击效果技能指过来就能让狙击无效，1 ジ 的枪就够）；池里之所以显得无解，
+ * 是因为**没人会瞄人**。这条用例盯两件事：① 归因口径是纯函数且双向可证（`source` 而非 `from`）；
+ * ② 混合场才带靶向判别力（4 席全狙击时比例恒 ~1 ⇒ 无判别力，那是我 `ringWallProbe` 犯过的错）。 */
+t('D64 狙击场探针：归因纯函数 + 混合场的靶向判据（复核 §4-2）', function () {
+  ok(typeof Bots.pickSnipeSpam === 'function', 'Bots.pickSnipeSpam 必须存在（狙击场探针的威胁源）');
+  const poolSrc = readFileSync('server/opp-pool.mjs', 'utf8');
+  ok(/\{\s*name:\s*'snipespam'/.test(poolSrc) && poolSrc.indexOf("fn: 'pickSnipeSpam'") >= 0,
+    'snipespam 必须登记进 OPP_SPECS（单一来源，实验臂按需加入；默认池不受影响）');
+  const lib = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(lib.indexOf('export function sniperField(') >= 0, 'audit-lib 必须导出 sniperField');
+  ok(lib.indexOf('export function attackAttribution(') >= 0, 'audit-lib 必须导出 attackAttribution（纯函数，可单测）');
+  /* ① 归因纯函数：只认 `source` + `via`；反向反证（别人的攻击、无 via 的伤害都必须不计） */
+  const ev = [
+    { type: 'damage', source: 0, to: 2, via: 'gun', amt: 1 },   // 我打的 ✓
+    { type: 'damage', source: 0, to: 2, via: 'gun', amt: 1 },   // 我打的 ✓
+    { type: 'damage', source: 0, to: 0, via: 'railgun', amt: 1 },// 自伤（计入 total，判据里排除）
+    { type: 'damage', source: 1, to: 2, via: 'gun', amt: 1 },   // **别人**打的 ✗
+    { type: 'damage', source: 0, to: 3, amt: 1 },               // 无 via（非技能）✗
+    { type: 'action', pid: 0, key: 'gun', outcome: 'ok' }       // action 不带目标，不该被当攻击 ✗
+  ];
+  const a = attackAttribution(ev, 0);
+  eq(a.total, 3, '只统计 source=我 且有 via 的伤害（实测 ' + a.total + '）');
+  eq(a.byTarget[2], 2, '命中 2 号座两次必须照实统计');
+  eq(a.byTarget[0], 1, '自伤照实统计（由调用方排除）');
+  eq(a.targets, 2, '打过的人数 = 2（0 号=自伤，2 号=对手）');
+  eq(attackAttribution(ev, 1).total, 1, '换成 1 号座视角只统计它自己那一次');
+  eq(attackAttribution(null, 0).total, 0, '空事件必须安全返回 0');
+  /* ② 判别力声明：混合场给"均匀乱打=25%"的基准，wall 场不得谎报基准 */
+  ok(lib.indexOf("uniformRate: (K === 'mixed') ? 0.25 : null") >= 0,
+    '混合场必须声明 uniformRate=0.25（4 席里 1 席是狙击手）；wall 场必须为 null（无靶向判别力）');
+  ok(readFileSync('tools/probe-sniper.mjs', 'utf8').indexOf('没有靶向判别力') >= 0 ||
+     readFileSync('tools/probe-sniper.mjs', 'utf8').indexOf('无靶向判别力') >= 0,
+    '探针工具必须写明 wall 口径没有靶向判别力（防止把恒 ~1 的比例当成果）');
 });
 
 

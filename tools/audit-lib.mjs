@@ -252,13 +252,107 @@ export function fieldRate(W, params, kind, mode, GAMES) {
   };
 }
 
+/* ===== v1.5.71（第五轮复核 §4-2）：**狙击场探针** =====
+ * 病（复核 §3-1/§3-2）：池里没有任何对手会瞄人 ⇒ "狙击专精"在满分环境里像无解卡（v17-146 夺冠 30%），
+ * 而给它加上一条"谁用狙击就瞄谁"的规则后立刻 0% ⇒ 那**不是强卡，是没人瞄人**。
+ * 判据必须是**行为**：冠军会不会把攻击用在"真正的威胁"身上。
+ *
+ * ⚠️ 判别力（这是我上一轮 `ringWallProbe` 犯过的错，先写清楚）：**4 席全是狙击手时**
+ * "命中狙击手的比例"恒等于 ~1（**没有任何判别力**）。所以默认场是**混合场**：
+ *   `mixed`（默认）= 1 席狙击 + 3 席被动（只攒不还手）⇒ 冠军的落地攻击里命中狙击手的比例
+ *   在"均匀乱打"下期望 **25%**，判据才分得出"会瞄"（≥40%）与"不会瞄"。
+ *   `wall` = 4 席狙击 ⇒ 只量**生存/胜率**（4 打 1 极难，别拿胜率当靶向判据）。
+ *
+ * ⚠️ 口径与限制（不许含糊）：`action` 事件**不带目标**（state.js:156 只有 pid/key/outcome），
+ * "指向谁"只能按伤害事件（`damage.to` + `damage.source`）归因 ⇒ 只统计**命中**的，被挡掉/被无效的
+ * 尝试不计 ⇒ 这是**下界**（真实瞄准率 ≥ 它）。归因字段是 `source`（**不是** `from`，曾猜错）。
+ * 命名同 `reflectWall`/`ringWallProbe`：探针只报数，阈值由调用方定（**先量基线**）。 */
+export function attackAttribution(events, seat) {
+  const byTarget = {}, byTargetDmg = {}; let total = 0, dmg = 0;
+  for (const e of (events || [])) {
+    if (e.type !== 'damage') continue;
+    if (e.source !== seat) continue;
+    if (!e.via) continue;              // 无 via = 非技能伤害（梦魇/挑衅违约）⇒ 不算"出手瞄准"
+    total++; dmg += (e.amt || 0);
+    byTarget[e.to] = (byTarget[e.to] || 0) + 1;
+    byTargetDmg[e.to] = (byTargetDmg[e.to] || 0) + (e.amt || 0);
+  }
+  return { total: total, dmg: dmg, byTarget: byTarget, byTargetDmg: byTargetDmg, targets: Object.keys(byTarget).length };
+}
+export function sniperField(W, params, mode, GAMES, kind) {
+  const S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, Bots = W.EpirusBots;
+  const G = GAMES || 20, N = 5;
+  const sniper = Bots.pickSnipeSpam, passive = Bots.pickFarmer;
+  const K = (kind === 'wall') ? 'wall' : 'mixed';
+  let hitsOnSniper = 0, hitsOnOthers = 0, attacks = 0, dmgToSniper = 0, takenFromSniper = 0, dealt = 0;
+  let alive = 0, wins = 0, rounds = 0;
+  const spreadHist = {};
+  for (let g = 0; g < G; g++) {
+    const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(9100 + g) }, N);
+    const seat = g % N;                                  // 冠军座位逐局轮换
+    const sn = (g + 2) % N;                              // 混合场的狙击席 ≠ 冠军席（也逐局轮换）
+    const isSn = function (pid) { return (K === 'wall') ? (pid !== seat) : (pid === sn); };
+    const ch = [];
+    for (let pid = 0; pid < N; pid++) {
+      ch.push(pid === seat ? T.policyChooserN(params, 0.15) : (isSn(pid) ? sniper : passive));
+    }
+    Play.autoGameN(st, ch);
+    const a = attackAttribution(st.events, seat);
+    attacks += a.total; dealt += a.dmg;
+    spreadHist[a.targets] = (spreadHist[a.targets] || 0) + 1;
+    for (const k in a.byTarget) {
+      const to = Number(k);
+      if (to === seat) continue;                         // 自伤（电磁炮/自损）不计
+      if (isSn(to)) { hitsOnSniper += a.byTarget[k]; dmgToSniper += (a.byTargetDmg[k] || 0); }
+      else hitsOnOthers += a.byTarget[k];
+    }
+    /* 从狙击席承受的伤害（`source` 同源归因；wall 场"狙击席"= 除冠军外全部，逐席拆分无意义） */
+    if (K === 'mixed') {
+      for (const e of st.events) {
+        if (e.type === 'damage' && e.source === sn && e.to === seat && e.via) takenFromSniper += (e.amt || 0);
+      }
+    }
+    if (st.p[seat].hp > 0) alive++;
+    if (st.winner === seat) wins++;
+    rounds += st.round;
+  }
+  const aimed = hitsOnSniper + hitsOnOthers;
+  return {
+    kind: K, games: G, attacksTotal: attacks,
+    /* ⚠️ v1.5.71 标定结果（40 局/包，见 CHANGELOG v1.5.71 §6）：**靶向率分不开好坏**——
+     * 种子冠军 45.3%、eco-34 47.7%、线上包 43.8%，全都高于"均匀 25%" ⇒ 复核建议的"≥20%"判据无效。
+     * 真正分开的是**低压力场里的出手量/伤害/目标多样性**：
+     *   种子 2.73 伤害/局、打过 2~4 人；线上 0.47/局、37/60 局只打过 1 个人。 */
+    hitsOnSniper: hitsOnSniper, hitsOnOthers: hitsOnOthers,
+    aimedAtSniperRate: aimed ? hitsOnSniper / aimed : null,
+    uniformRate: (K === 'mixed') ? 0.25 : null,
+    dmgPerGame: dealt / G,                        // ★ 真正的判据候选①（低压力场自身伤害/局）
+    attacksPerGame: attacks / G,
+    spreadAvg: (function () {                     // ★ 判据候选②：平均打过几个不同的人
+      let s = 0; for (const k in spreadHist) s += Number(k) * spreadHist[k];
+      return G ? s / G : 0;
+    })(),
+    dmgToSniperPerGame: dmgToSniper / G,
+    takenFromSniperPerGame: (K === 'mixed' ? takenFromSniper / G : null),
+    targetSpreadHist: spreadHist,
+    survivalRate: alive / G, winRate: wins / G, rounds: rounds / G
+  };
+}
+
 /* 座位对称性探针（v1.5.57，第五轮复核 §6 建议）。
  * 5 席同一策略、每局带盐 ⇒ 量"某个座位是否系统性占便宜"。**口径一律用百分点**：
  * 2026-09-15 我自己曾把"胜场数差"当成"百分点差"报出去（判据写成 18pt），据此得出
  * "多数候选已修好"的错误结论 —— 这条探针把单位钉死在百分点上，防止再犯。
  * 判据（复核 §6 的"比值 + 前置条件"思路）：
  *   ① 前置：分出胜负的局 ≥ 30%（否则"各座≈0%"没有含义，如某候选 93% 平局时"极差 3pt"是空读数）；
- *   ② 极差 ≥ 30pt（5 席期望各 20%）⇒ 判偏。同时回报 max/min 比值供参考（min=0 时该比值无意义）。 */
+ *   ② 判偏 = **占比判据**（某座 ≥70%，对称假设下 ~0.2%，任意 n 稳健）**或** 大样本极差（n ≥ 50 且 ≥30pt）。
+ * ⚠️ v1.5.71（第五轮复核 §2-3 的样本量表）：**极差判据在 n<50 时会被噪声打红** ——
+ * 对称假设下 5 席胜率极差（均值/p90/p99）：n=6 → 41/50/67pt · n=20 → 23/35/45pt ·
+ * n=30 → 19/27/37pt · n=50 → 15/22/28pt · n=100 → 10/16/20pt。
+ * ⇒ n=30 配 30pt 阈值仍有 5~8% 假红，n=6 配 30pt 约一半时间假红（= 用噪声当判据）。
+ * 小样本时返回 **'underpowered'（不知道）**，绝不能被读成"均衡"。 */
+const MIN_N_SPREAD = 50;    // 极差判据的最小局数（v1.5.71）
+const SHARE_BIAS = 70;      // 占比判据：某座 ≥70% 通吃（v1.5.71，v1.5.69 的惩罚触发已用同值）
 export function seatSymmetry(W, params, mode, GAMES) {
   const S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay;
   const G = GAMES || 100;
@@ -275,11 +369,67 @@ export function seatSymmetry(W, params, mode, GAMES) {
   const pct = win.map(function (w) { return 100 * w / Math.max(1, dec); });
   const maxPct = Math.max.apply(null, pct), minPct = Math.min.apply(null, pct);
   const decisiveRate = dec / G;
+  const spread = maxPct - minPct;
+  let verdict, basis;
+  if (decisiveRate < 0.3) { verdict = 'unjudgeable'; basis = '判胜<30%'; }
+  else if (maxPct >= SHARE_BIAS) { verdict = 'biased'; basis = '某座≥' + SHARE_BIAS + '%'; }
+  else if (G < MIN_N_SPREAD) { verdict = 'underpowered'; basis = 'n=' + G + '<' + MIN_N_SPREAD + '（极差判据在此局数会被噪声打红）'; }
+  else if (spread >= 30) { verdict = 'biased'; basis = '极差≥30pt(n≥' + MIN_N_SPREAD + ')'; }
+  else { verdict = 'ok'; basis = 'ok'; }
   return {
-    pct: pct, win: win, decisive: dec, draw: draw, drawRate: draw / G, decisiveRate: decisiveRate,
-    spread: maxPct - minPct, maxPct: maxPct, minPct: minPct,
+    pct: pct, win: win, decisive: dec, draw: draw, drawRate: draw / G, decisiveRate: decisiveRate, games: G,
+    spread: spread, maxPct: maxPct, minPct: minPct,
     ratio: minPct > 0 ? maxPct / minPct : null,
-    verdict: decisiveRate < 0.3 ? 'unjudgeable' : (maxPct - minPct >= 30 ? 'biased' : 'ok')
+    verdict: verdict, basis: basis, minNForSpread: MIN_N_SPREAD, shareBias: SHARE_BIAS
+  };
+}
+
+/* ===== 五道上线门槛的**单一真源**（v1.5.71；派生于 v1.5.67 的落盘处判定 + 第五轮复核 §4-6）=====
+ * 病：训练落盘（server/train-server.mjs）与出厂换包（tools/promote-champion.mjs）各写一份阈值 ⇒
+ * 两头会漂。实测线上包的 meta 里**没有 feasibility 字段** —— 因为它是经 tools/upgrade-pack.mjs
+ * 换回来的、绕过了落盘那一步 ⇒ 判定与记录都收进这个纯函数，两头都调它。
+ * ⚠️ 场 B 的判据**只能是清场数**（`fieldB.clearedPerGame`），**绝不能用胜率**：
+ * v1.5.65 给 multi 加了终局收缩 + 全灭按累计伤害判胜 ⇒ "打 1 点就赢"：线上包场 B 严格胜率 100%
+ * 而清场 0.00/局、伤害 1.0/局 ⇒ 用胜率当门槛等于白送（第五轮复核 §2-1）。
+ * 用法：feasibilityOf({ seat, G, wall, aggr }) —— 参数即四个探针的返回值（纯函数，可单测）。 */
+const _n = function (x, d) { return (isFinite(x) ? Number(Number(x).toFixed(d === undefined ? 2 : d)) : null); };
+export function feasibilityOf(o) {
+  const s = (o && o.seat) || {}, g = (o && o.G) || {}, w = (o && o.wall) || {}, a = (o && o.aggr) || {};
+  const fA = a.fieldA || {}, fB = a.fieldB || {};
+  const fails = [], notes = [];
+  /* 探针缺失必须**响亮**（不许静默通过、也不许静默判死）。
+   * 这个坑是本函数自己的第一个 bug：`!(dmgPerGame > 0.5)` 在探针缺失时 `NaN > 0.5` = false
+   * ⇒ 反向比较把"没跑探针"读成"墙瘫了"（假红）；而正向比较又会静默读成"过了"（假绿）。
+   * ⇒ 先判定值是否存在，再比较。 */
+  const miss = [];
+  if (!isFinite(g.effSkills)) miss.push('G');
+  if (!isFinite(w.dmgPerGame)) miss.push('反弹墙');
+  if (!isFinite(fA.atk)) miss.push('场A');
+  if (!isFinite(fB.clearedPerGame)) miss.push('场B');
+  if (!s.verdict) miss.push('座位');
+  if (miss.length) fails.push('探针缺失/无值：' + miss.join('、') + '（无法判定 ⇒ 视为未过，先修探针）');
+  if (s.verdict === 'biased') {
+    fails.push('座位偏座（' + (s.basis || '') + '）：' +
+      (s.pct || []).map(function (x) { return Number(x).toFixed(0) + '%'; }).join('/'));
+  }
+  if (s.verdict === 'underpowered') notes.push('座位探针 ' + (s.basis || 'underpowered') + ' ⇒ **未判定**（不等于均衡）');
+  if (s.verdict === 'unjudgeable') notes.push('座位探针不可判（' + (s.basis || '') + '）—— 别当"均衡"');
+  if (!miss.length) {
+    if (Number(g.effSkills) < 3) fails.push('G ' + Number(g.effSkills).toFixed(2) + ' < 3');
+    if (Number(w.dmgPerGame) <= 0.5) fails.push('反弹墙伤害 ' + Number(w.dmgPerGame).toFixed(2) + ' ≤ 0.5/局');
+    if (Number(fA.atk) < 0.20) fails.push('场A 还手 ' + (100 * Number(fA.atk)).toFixed(0) + '% < 20%');
+    if (Number(fB.clearedPerGame) < 0.3) fails.push('场B 清场 ' + Number(fB.clearedPerGame).toFixed(2) + ' < 0.3/局');
+  }
+  return {
+    ok: fails.length === 0, fails: fails, notes: notes,
+    seatSpread: _n(s.spread, 1), seatDecisive: _n(s.decisiveRate), seatVerdict: s.verdict || '?', seatBasis: s.basis || '',
+    seatPct: (s.pct || []).map(function (x) { return _n(x, 1); }),
+    G: _n(g.effSkills), Gkeys: (g.distinctKeys === undefined ? null : g.distinctKeys),
+    wallDmg: _n(w.dmgPerGame), wallPierce: (w.pierceLand === undefined ? null : w.pierceLand),
+    fieldA: _n(fA.atk, 3), fieldADealt: _n(fA.dealtPerGame),
+    fieldBClears: _n(fB.clearedPerGame),
+    /* 仅供参考、**永不参与判定**：规则红利下的严格胜率（复核 §2-1） */
+    fieldBWinRate: _n(fB.winRate, 3)
   };
 }
 
