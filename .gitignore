@@ -15,3 +15,4 @@ docs/artifacts/*-out.js
 docs/artifacts/battle-out/
 # v1.5.50：训练隔离用的临时产物（ring2-run 的 EPIRUS_BUNDLE_IN/OUT 落点），不得入库
 docs/artifacts/.training-*
+docs/artifacts/.training.lock
