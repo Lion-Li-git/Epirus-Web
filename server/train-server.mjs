@@ -641,6 +641,18 @@ async function runTrainN(gens, cfg) {
     runningN = false; poolN.close();
     return;
   }
+  /* ===== v1.5.86：落盘处也允许**阻断**（默认关；EPIRUS_FEASIBILITY_BLOCK=1 打开）=====
+   * 起因：`v7divK-82` 在训练里被正常写出（G 4.42、多样性最好），但换包时才被拦 ✗ ——
+   * 它面对 4 面反弹墙**零伤害**（wall 0.00）。而五道检查本来就在这个"唯一的产物决定点"算过（v1.5.67），
+   * 只是**只写进 meta、不断** ⇒ 训练把该自己做的事推给了换包那一步。
+   * 打开后：不可行的候选不写盘，并把 `done` 事件照常发出（与健康门禁同一模式，避免 runner 干等）。 */
+  if (process.env.EPIRUS_FEASIBILITY_BLOCK === '1' && feasibleInfo && feasibleInfo.ok === false) {
+    for (const c of clients) sse(c, { type: 'done', n: n, gens: gens, firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
+      secs: ((Date.now() - t0) / 1000).toFixed(1), champ: null, health: healthInfo, feasibility: feasibleInfo,
+      feasibilityReject: true, wrote: false });
+    runningN = false; poolN.close();
+    return;
+  }
   writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, feasibility: feasibleInfo, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), fightOverride: (fightSet ? JSON.stringify(fightEnv) : ''),
     /* v1.5.11：把**实际生效**的奖励参数也记下来（哨声惩罚现在长程默认开、不靠 env ⇒ 只记 env 会漏） */
     fightEffective: (T.fightReward ? JSON.stringify(T.fightReward()) : ''),

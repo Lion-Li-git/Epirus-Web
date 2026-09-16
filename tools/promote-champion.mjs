@@ -24,7 +24,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile } from './audit-lib.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));

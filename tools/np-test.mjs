@@ -3094,6 +3094,18 @@ t('D72 对手注册表一致性：runner 的池子名 / opp-pool 注册表 / BOT
     '本轮补的两个原型系脚本（最强脚本，中立场 45%）必须在册');
 });
 
+t('D73 落盘阻断开关：EPIRUS_FEASIBILITY_BLOCK=1 时不可行候选不写盘（默认关）', function () {
+  const src = readFileSync('server/train-server.mjs', 'utf8');
+  ok(src.indexOf("EPIRUS_FEASIBILITY_BLOCK === '1'") >= 0, '开关必须显式要求 =1（默认关，出厂口径不变）');
+  ok(src.indexOf('feasibilityReject: true') >= 0 && src.indexOf('wrote: false') >= 0, '拒绝时必须发 done 事件并标 wrote:false（否则 runner 干等超时）');
+  const i = src.indexOf('EPIRUS_FEASIBILITY_BLOCK');
+  /* ⚠ 用"就近"判定：文件里 writeBundleMP 出现**两次**（2P 路径也有一处）——
+   * 我第一版拿全局 indexOf 比大小，被前面那一处骗红（同 D72 的教训：锚点/位置判定要就近）。 */
+  ok(i > 0, '必须有落盘阻断判断');
+  ok(src.slice(i, i + 1500).indexOf('writeBundleMP(pack') >= 0, '阻断判断必须紧邻 writeBundleMP（在其之前，否则写了再拦等于没拦）');
+  ok(src.indexOf('feasibility: feasibleInfo') >= 0, '可行时仍要把结论写进产物 meta（可追溯）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
