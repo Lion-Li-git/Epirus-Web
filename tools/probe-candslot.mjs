@@ -36,7 +36,10 @@ for (let g = 0; g < G; g++) {
   const base = T.policyChooserN(params, 0.15);
   let hit = false;
   const wrap = function (state, pid, legal) {
-    if (pid === probeSeat && state.round === (TR + (g % 4)) && !hit) {
+    /* v1.5.75：触发器改成"第 0 号座在 round >= TR 的**第一个**决策"。
+     * 旧写法写死 `state.round === TR + (g%4)` ⇒ 快战型候选（如 v7f2b-82，99% 分出胜负）
+     * 在到达那个回合前就打完了 ⇒ 实测 0 个决策、探针空转。 */
+    if (pid === probeSeat && state.round >= TR && !hit) {
       hit = true;
       const cands = P.candidatesFor(state, pid, legal, {});
       const f = P.forwardCands(state, pid, cands, params, { temp: 0.15 });
