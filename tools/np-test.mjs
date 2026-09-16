@@ -2841,11 +2841,13 @@ t('D63 会瞄人的对手（targeter）：指威胁 + 目标不被引擎剥掉�
   /* ② 只读状态真源：滚环者消失后必须转向"刚放冷枪的"，而不是永远指 2 号 */
   st.p[2].ringStreak = 0; st.p[3].lastSkill = R.SK.SNIPE;
   eq(T.wrapBotN(Bots.pickTargeter)(st, 0, legal).target, 3, '滚环者消失后必须转向刚放冷枪的');
-  /* ③ 无威胁 ⇒ 攒钱（惩罚者，不是又一个激进派） */
+  /* ③ 无威胁 ⇒ **压领先者**，不许攒钱躺平
+   * （实测反噬：第一版"无威胁就攒钱"让 `--field=targeter` 随机基线都有 78.3%，
+   *   而且会给训练送一条"别成为威胁就不挨打"的反向梯度 = 喂大低压力场瘫） */
   st.p[3].lastSkill = null; st.p[3].ep = 0;
   const w3 = T.wrapBotN(Bots.pickTargeter)(st, 0, legal);
-  eq(w3.key, R.SK.JI, '场上无威胁时必须攒钱（实测 ' + w3.key + '）');
-  eq(w3.target, null, '无威胁时不该带目标');
+  eq(w3.key, R.SK.GUN, '无威胁时也必须出手（实测 ' + w3.key + '）');
+  eq(w3.target, 1, '无威胁时必须压领先者 1 号座（实测 ' + w3.target + '）');
   /* ④ 濒死保命优先于补刀（别让它变成送人头机器） */
   st.p[2].ringStreak = 1; st.p[0].hp = 1; st.p[0].ep = 3;
   const w4 = T.wrapBotN(Bots.pickTargeter)(st, 0, Play.legalActions(st, 0));

@@ -608,7 +608,7 @@
    *
    * 威胁判据**只读状态真源**（不猜字段、不解析事件）：
    *   `state.p[o].ringStreak > 0`（在滚环）· `lastSkill === SK.SNIPE`（上回合出过狙击）· `ep >= 5`（攒满大雷）；
-   *   都没有 ⇒ **攒钱**（它是个"惩罚者"，不是又一个乱打的激进派；没有威胁时不主动加压）。
+   *   有威胁 ⇒ 掐威胁；**没有威胁也压领先者**（不能攒钱躺平 —— 见下方 ⚠️ 的反噬说明）。
    * ⚠️ 与 `pickFocusFire`（打**残血**抢人头）方向相反：那条是抢，这条是掐，池里各有用途。
    * ⚠️ 目标不会被引擎剥掉：`wrapBotN` 自 v1.3.55 起保留脚本自选目标（返回 {key,target} 即可）——
    *   若这条不成立，本对手会退化成"又一个 pickTargetN"，整批实验会白跑（已加守门 D63）。 */
@@ -629,9 +629,16 @@
       if (sn.length) t = mpPickOne(state, sn);
     }
     if (t == null && threats.length) t = mpPickOne(state, threats);                        // 其次：攒满大雷的
-    if (t == null) return { key: SK.JI, target: null };                                    // 无威胁 ⇒ 攒钱
     if (me.hp <= 1 && mpAff(bk, SK.GUARD)) return { key: SK.GUARD, target: null };         // 濒死先保命
-    if (mpAff(bk, SK.GUN)) return { key: SK.GUN, target: t };                              // 最便宜的手指他
+    if (mpAff(bk, SK.GUN)) {
+      /* ⚠️ v1.5.71 修正（实测反噬）：没有威胁时**也必须施压**，不能一直攒钱。
+       * 第一版写成"无威胁 ⇒ 攒钱"，结果这个对手在不被挑衅时等于一个农民 ⇒
+       * ① `--field=targeter` 变成弱场（**随机基线都有 78.3%**，新候选 100%）；
+       * ② 更要紧的是它会给训练送一条**反向梯度**："别成为威胁（别开环/别用狙击/别攒到 5 ジ）
+       *    就不会被打" ⇒ 正好喂大我一直在打的"低压力场瘫"（E/场A/场B 那一族）。
+       * 现在：有威胁 ⇒ 掐威胁（原设计）；没有威胁 ⇒ 压领先者（与其他进攻脚本一致）。 */
+      return { key: SK.GUN, target: (t != null) ? t : mpLeader(state, pid) };
+    }
     return { key: SK.JI, target: null };                                                   // 攒到能开枪
   }
 
