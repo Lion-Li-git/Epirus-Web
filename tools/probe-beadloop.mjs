@@ -23,7 +23,7 @@ const MC = 24;
 const params = loadChamp(W, file);
 console.log('=== 珠子闭环诊断：' + file + '（' + GAMES + ' 局 multi，0 号座，蒙特卡洛 ' + MC + ' 次/决策）===');
 
-const BEAD_CARDS = ['railgun', 'laserEye'];      // 电磁炮（电珠）/ 激光眼（爆破能，首次 1ジ+1珠）
+const BEAD_CARDS = ['ring', 'railgun', 'laserEye', 'bigT', 'rod', 'drain'];   // 环 + 两张珠子卡 + 高 ep 技能
 const rows = [];
 let decisions = 0;
 
@@ -95,6 +95,20 @@ function summarize(card) {
 }
 console.log('\n决策点总数 = ' + decisions);
 for (const c of BEAD_CARDS) summarize(c);
+
+/* 高 ep 技能整体（cost>=3 且**非 null**）的可负担率 + 环专段（用户方向：先让环能用） */
+const heavyKeys = (W.EpirusRules.skills || []).filter(function (sd) {
+  return typeof sd.cost === 'number' && sd.cost >= 3;
+}).map(function (sd) { return sd.key; });
+const heavyReady = rows.filter(function (r) {
+  return heavyKeys.some(function (k) { return r.affordable.indexOf(k) >= 0; });
+});
+console.log('');
+console.log('高 ep 技能（cost>=3 且非 null，共 ' + heavyKeys.length + ' 张：' + heavyKeys.join(',') + '）可负担的决策点 = ' +
+  heavyReady.length + ' / ' + decisions);
+const epAll = rows.reduce(function (a, r) { const b = r.ep >= 3 ? '3+' : String(r.ep); a[b] = (a[b] || 0) + 1; return a; }, {});
+console.log('0 号座全部决策点的 ep 分布 = ' + JSON.stringify(epAll) + '（3+ 占比 = ' +
+  (100 * rows.filter(function (r) { return r.ep >= 3; }).length / Math.max(1, decisions)).toFixed(1) + '%）');
 
 /* 最尖的一问：**手里有珠的时候**，它用掉了吗？ */
 const withBead = rows.filter(function (r) { return (r.elec || 0) > 0 || (r.boom || 0) > 0; });
