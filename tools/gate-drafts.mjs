@@ -105,10 +105,15 @@ function probeFieldNoRinger(policyFn, opts) {
 }
 
 /* ---------- 座位偏置：同策略自对局的夺冠极差 ---------- */
+/* ⚠️ v1.5.78（Cyclone 采用时修）：这里**必须设 `slotSalt`**。
+ * 第七轮草稿漏了它 ⇒ 所有对局共用同一个槽位盐 ⇒ 若策略存在"身份通道"，它会被放大而不是被洗掉
+ * （同轮他们自己在 §14-1 已承认 `slotSalt = g*2654435761` 与 `g%5` 相关会造出假数；
+ *  但 G3 这条是"完全没设"）。盐用 avalanche 散列并与轮座去相关。 */
 function seatSpread(chooserFactory, mode, G) {
   const w = [0, 0, 0, 0, 0]; let draw = 0;
   for (let g = 0; g < G; g++) {
     const st = S.createState(mode, { next: mulberry32(60000 + g * 7) }, 5);
+    st.slotSalt = h32pre(60000 + g * 2246822519);
     const cs = []; for (let i = 0; i < 5; i++) cs.push(chooserFactory());
     Play.autoGameN(st, cs);
     if (st.winner === 'draw') draw++; else w[st.winner]++;
@@ -116,6 +121,13 @@ function seatSpread(chooserFactory, mode, G) {
   const decided = G - draw;
   const pct = w.map(x => x / G);
   return { pct: pct, decided: decided, spread: Math.round(100 * (Math.max(...pct) - Math.min(...pct))) };
+}
+/* h32 提到前面（seatSpread 要用；原定义在 G4 段） */
+function h32pre(n) {
+  let x = (n + 0x9e3779b9) >>> 0;
+  x = Math.imul(x ^ (x >>> 16), 0x85ebca6b) >>> 0;
+  x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35) >>> 0;
+  return (x ^ (x >>> 16)) >>> 0;
 }
 
 const out = [];
@@ -157,19 +169,163 @@ console.log('\n=== G2 换人反证（把唯一滚环者换成不滚环 ⇒ 出�
 }
 
 console.log('\n=== G3 座位偏置（同策略自对局的夺冠极差）===');
+const N3 = Number(process.env.GATE3_GAMES || 200);
 for (const mode of ['long', 'multi']) {
-  const s = seatSpread(() => T.policyChooserN(CH, 0.15), mode, 200);
+  const s = seatSpread(() => T.policyChooserN(CH, 0.15), mode, N3);
   gate(`G3[${mode}] 5 席同一冠军：座位夺冠率极差 ≤ 15pt`,
     s.decided >= 40 && s.spread <= 15,
-    `各座 ${s.pct.map(x => Math.round(100 * x) + '%').join(' ')}  有胜负局 ${s.decided}/200  极差 ${s.spread}pt` +
+    `各座 ${s.pct.map(x => Math.round(100 * x) + '%').join(' ')}  有胜负局 ${s.decided}/${N3}  极差 ${s.spread}pt` +
     (s.decided < 40 ? '  （注：无胜负局太少则本门不可判，必须先保证场地能分出胜负）' : ''));
+}
+
+/* ---------- G4 / G5 / G6（v1.5.77 第七轮实测的可反证形式） ----------
+ * 三条共同点：① 断言**行为**；② 每条先跑**合成参照系**证明量具本身有判别力，再量冠军；
+ * ③ 盐必须与轮座**去相关**（第六轮踩过：`slotSalt = f(g)` 与 `g % 5` 完全相关 ⇒ 基线自检出假数）。
+ */
+const h32 = h32pre;   // 单一实现（原为两份函数体，v1.5.78 合并，避免漂移）
+/* v1.5.78：既接受 `.bak` 产物，也接受**线上包/bundle**（promote-champion 会把候选直接传进来）。
+ * 原来的写法只会切 `{"v": …}` 到**最后一个 `}`** ⇒ 传 bundle 时会把 meta 也吞进去而解析失败。 */
+function loadBakParams(f) {
+  const t = readFileSync(REPO + f, 'utf8');
+  const m = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(t);
+  if (m) { const r = P.loadAny(JSON.parse(m[1])); if (r && r.params) return r.params; }
+  const j = JSON.parse(t.slice(t.indexOf('{"v":'), t.lastIndexOf('}') + 1));
+  const r = P.loadAny(j);
+  return r && r.params ? r.params : null;
+}
+const EXTRA = process.argv.slice(2).filter(function (a) { return /\.bak$/.test(a); });
+const PACKS = [['线上包', CH]].concat(EXTRA.map(function (f) {
+  return [f.replace(/^.*artifacts\//, '').replace(/\.bak$/, ''), loadBakParams(f)];
+}).filter(function (x) { return !!x[1]; }));
+const N4 = Number(process.env.GATE4_GAMES || 60);
+const N6 = Number(process.env.GATE6_GAMES || 40);
+
+const aff = function (l, k) { return l.find(function (x) { return x.key === k && x.affordable; }) ? { key: k } : null; };
+const pT = function (st, pid, o) { return { key: o.key, target: o.target != null ? o.target : T.pickTargetN(st, pid, o.key) }; };
+const COUNTERS = {
+  '只防御(不还手)': function (st, pid, legal) { return aff(legal, R.SK.GUARD) ? { key: R.SK.GUARD, target: null } : { key: R.SK.JI, target: null }; },
+  '只狙击': function (st, pid, legal) { return pT(st, pid, aff(legal, R.SK.SNIPE) ? { key: R.SK.SNIPE } : { key: R.SK.JI }); },
+  '激光剑连刺': function (st, pid, legal) { return pT(st, pid, aff(legal, R.SK.SWORD) ? { key: R.SK.SWORD } : { key: R.SK.JI }); },
+  '坦克线': function (st, pid, legal) { return pT(st, pid, aff(legal, R.SK.TANK) ? { key: R.SK.TANK } : { key: R.SK.JI }); },
+  '滚环流': function (st, pid, legal) {
+    if (aff(legal, R.SK.BIG_T)) return pT(st, pid, { key: R.SK.BIG_T });
+    return st.p[pid].ep >= 3 && aff(legal, R.SK.RING) ? { key: R.SK.RING, target: null } : { key: R.SK.JI, target: null };
+  },
+  '瞄威胁者(1ジ枪)': function (st, pid, legal) {
+    if (aff(legal, R.SK.GUN)) {
+      for (let q = 0; q < st.p.length; q++) {
+        if (q === pid || st.p[q].hp <= 0) continue;
+        if (st.p[q].ringStreak >= 1 || st.p[q].ep >= 5 || st.p[q].lastSkill === R.SK.SNIPE) return { key: R.SK.GUN, target: q };
+      }
+    }
+    return { key: R.SK.JI, target: null };
+  },
+};
+/* 1 席脚本 vs 4 席被测；fn==='champ' ⇒ 5 席同策略（= 基线，期望 ≈20%） */
+function duel(params, fn, mode, G, seed0) {
+  const ch = T.policyChooserN(params, 0.15);
+  let win = 0, draw = 0;
+  for (let g = 0; g < G; g++) {
+    const seat = g % 5;
+    const st = S.createState(mode, { next: mulberry32(seed0 + g * 991) }, 5);
+    st.slotSalt = h32(seed0 + g * 2246822519);          // 与 seat=g%5 无关
+    const cs = []; for (let i = 0; i < 5; i++) cs.push(i === seat ? (fn === 'champ' ? ch : fn) : ch);
+    Play.autoGameN(st, cs);
+    if (st.winner === seat) win++; else if (st.winner === 'draw') draw++;
+  }
+  return { win: Math.round(100 * win / G), draw: Math.round(100 * draw / G) };
+}
+
+console.log('\n=== G4 一行脚本克制表（任何克制格 > 45% 即红；基线格必须 ≈20% 否则本门不可判）===');
+for (const [nm, p] of PACKS) {
+  for (const mode of ['long', 'multi']) {
+    const base = duel(p, 'champ', mode, N4, 90210);
+    const cells = Object.keys(COUNTERS).map(function (k) { return [k, duel(p, COUNTERS[k], mode, N4, 90210).win]; });
+    const worst = cells.reduce(function (a, b) { return b[1] > a[1] ? b : a; });
+    const judgeable = base.win >= 8 && base.win <= 32;
+    gate(`G4[${nm}/${mode}] 无一行脚本能以 >45% 击败它（基线 ${base.win}%/${N4}局）`,
+      judgeable && worst[1] <= 45,
+      `基线 ${base.win}%（${judgeable ? '可判' : '⚠️ 不可判：harness 基线异常'}）  各格 ` +
+      cells.map(function (c) { return c[0] + ' ' + c[1] + '%'; }).join(' · ') +
+      `   ⇒ 最克它的脚本：「${worst[0]}」${worst[1]}%`);
+  }
+}
+
+console.log('\n=== G5 破防反射（1 席只防御 + 4 席被测：防席夺冠必须 ≤25%）===');
+for (const [nm, p] of PACKS) {
+  const ch = T.policyChooserN(p, 0.15);
+  for (const mode of ['long', 'multi']) {
+    let defWin = 0, pierceHit = 0, toDef = 0, defHp = 0;
+    for (let g = 0; g < N4; g++) {
+      const seat = g % 5;
+      const st = S.createState(mode, { next: mulberry32(7000 + g * 997) }, 5);
+      st.slotSalt = h32(7000 + g * 2246822519);
+      const def = function (s2, pid, legal) { return aff(legal, R.SK.GUARD) ? { key: R.SK.GUARD, target: null } : { key: R.SK.JI, target: null }; };
+      const cs = []; for (let i = 0; i < 5; i++) cs.push(i === seat ? def : ch);
+      Play.autoGameN(st, cs.map(function (c, idx) { return function (s2, pid, legal) {
+        const r = c(s2, pid, legal); const k = typeof r === 'string' ? { key: r, target: T.pickTargetN(s2, pid, r) } : r;
+        if (idx !== seat && R.ATK_EFFECT.indexOf(k.key) >= 0 && k.target === seat) {
+          toDef++;
+          const card = R.byKey[k.key];
+          if (card && card.pierce && card.pierce.defense) pierceHit++;
+        }
+        return k;
+      }; }));
+      defHp += Math.max(0, st.p[seat].hp);
+      if (st.winner === seat) defWin++;
+    }
+    const pct = Math.round(100 * defWin / N4);
+    gate(`G5[${nm}/${mode}] 面对"只防御不还手"必须能清场（防席夺冠 ≤25%）`, pct <= 25,
+      `防席夺冠 ${pct}%  终局血量 ${(defHp / N4).toFixed(1)}  打它的攻击 ${(toDef / N4).toFixed(1)}/局` +
+      `  其中**穿透防御**的 ${(pierceHit / N4).toFixed(1)}/局 ⇒ ${pct > 25 ? '缺"目标免疫普通攻击 ⇒ 换穿透卡"的反射' : '破防反射在'}`);
+  }
+}
+
+console.log('\n=== G6 靶向率（先证明量具有判别力，再量冠军；≥40% 才叫会瞄威胁）===');
+function aimRateOnRingField(chooser, G) {
+  let atk = 0, onThreat = 0;
+  for (let g = 0; g < G; g++) {
+    const victim = g % 5;
+    const st = S.createState('long', { next: mulberry32(4400 + g * 997) }, 5);
+    st.slotSalt = h32(4400 + g * 2246822519);
+    const cs = []; for (let i = 0; i < 5; i++) cs.push(i === victim ? ROLLER : chooser);
+    Play.autoGameN(st, cs.map(function (c, idx) { return function (s2, pid, legal) {
+      const r = c(s2, pid, legal); const k = typeof r === 'string' ? { key: r, target: T.pickTargetN(s2, pid, r) } : r;
+      if (idx !== victim && R.ATK_EFFECT.indexOf(k.key) >= 0 && k.target != null) {
+        atk++;
+        const q = s2.p[k.target];
+        if (q && (q.ringStreak >= 1 || q.ep >= 5 || q.lastSkill === R.SK.SNIPE)) onThreat++;
+      }
+      return k;
+    }; }));
+  }
+  return { rate: atk ? 100 * onThreat / atk : 0, atk: atk };
+}
+{
+  const ref1 = aimRateOnRingField(COUNTERS['瞄威胁者(1ジ枪)'], N6);          // 应当 ~100%
+  const ref2 = aimRateOnRingField(function (st, pid, legal) {                 // 只瞄最肥的：应当 ≈0
+    return aff(legal, R.SK.GUN) ? pT(st, pid, { key: R.SK.GUN }) : { key: R.SK.JI, target: null };
+  }, N6);
+  gate('G6[元测试] 同一场地必须能区分"会瞄"与"只瞄最肥"（差 ≥50pt）',
+    ref1.rate - ref2.rate >= 50,
+    `参照：一行代码的"瞄威胁者" ${ref1.rate.toFixed(1)}%（攻击 ${ref1.atk}）  vs  "只瞄血量最高" ${ref2.rate.toFixed(1)}%（攻击 ${ref2.atk}）  均匀乱打基线 25%`);
+  for (const [nm, p] of PACKS) {
+    const a = aimRateOnRingField(T.policyChooserN(p, 0.15), N6);
+    gate(`G6[${nm}] 靶向率 ≥40%（他自己在 probe-sniper.mjs 里写的阈值）`, a.rate >= 40,
+      `实测 ${a.rate.toFixed(1)}%（选择口径，攻击 ${a.atk} 次）⇒ ${a.rate >= 40 ? '过' : '未过：与"只瞄最肥"同档，能力未长出'}`);
+  }
 }
 
 console.log('\n=== 汇总 ===');
 for (const g of out) console.log(`  ${g.pass ? 'PASS' : 'FAIL'}  ${g.name}`);
-console.log('\n说明：G3 现在 FAIL 是**正确结果**——它测的是行为，而偏置实测仍在（0 号座 66~76%）。');
-console.log('      D50 现在是 PASS，但它断言的是"源码里换了比较器 + 槽位 0 会随回合变"，不是"偏置消失了"。');
-console.log('      ⇒ G3 请当作"待修的已知红"处理，不要 --force 掉；修好后它自然转绿并长期防回归。');
+console.log('\n说明（v1.5.78 采用时的分级）：');
+console.log('  ① **G4 克制表 / G5 破防反射 ⇒ 采纳为阻断门**（promote-champion）：它们能分开已知好与已知坏 ——');
+console.log('     线上包 G4 两模式 PASS（最克 22%/18%）、G5 PASS（0%）；91 FAIL（G4 78~82%、G5 65~75%）、94 FAIL（G4 67~68%）。');
+console.log('  ② **G6 靶向率 ⇒ 只记录不阻断**：四代包（含线上）全部 3.5~22.5% ⇒ 是"能力未长出"而非某包退化，');
+console.log('     把它做成阻断会把所有候选一起挡死（该走的路线是窄奖励/教师示范，见 §15-3）。');
+console.log('  ③ **G3 座位 ⇒ 只记录不阻断**：≤15pt 这个阈值**连线上包自己都过不了** ⇒ 不满足"能分开已知好与已知坏"，');
+console.log('     改用 audit-lib 的 `seatSymmetry`（占比判据 + n≥50 极差判据 + underpowered 第三态）。');
+console.log('  ④ 本脚本仍保留"任何 FAIL ⇒ 退出码 1"，供 CI/人工调用；promote-champion 只按 ① 阻断。');
 
 /* 退出码：有任何 FAIL 就非 0 ⇒ 可接进 CI / promote-champion / np-test 的汇总 */
 process.exitCode = out.some(function (g) { return !g.pass; }) ? 1 : 0;

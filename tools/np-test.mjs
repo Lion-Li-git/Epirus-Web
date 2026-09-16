@@ -1,6 +1,7 @@
 /* Epirus N 人（3-5）引擎测试：随机对局 fuzz + 关键裁定点（docs/RULES-NP.md） */
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -2964,6 +2965,35 @@ t('D66 珠子闭环奖励：只认**花掉**，囤着/过期不记分（v1.5.76 
   ok(src.indexOf('const beadBonus = BEAD_W * Math.min(1, beadSpent / 2)') >= 0, '两次封顶的加成必须真的存在');
   ok(src.indexOf('+ beadBonus)') >= 0, 'beadBonus 必须并进 gFit（漏了 = 静默空操作）');
   ok(src.indexOf('if (BEAD_W > 0) beadSpent += countBeadSpent(') >= 0, '每局的计数必须接上');
+});
+
+
+/* ===== v1.5.78（第七轮复核 §15-1）：G4/G5 行为门 =====
+ * 复核把"一行脚本能否克制它"（G4）与"面对只防御不还手能否清场"（G5）写成可跑代码，并**先证明量具有判别力**：
+ *   线上包 G4 两模式 PASS（最克 22%/18%）、G5 PASS（防席 0%）；91/94 分别在这些格上 FAIL。
+ * ⇒ 只有这两条进阻断面（G3 阈值连线上包都过不了；G6 四代全红=能力未长出，都不能当阻断）。
+ * 本条守门锁三件事：① 量具仍在且带判别力元测试；② 只有 G4/G5 进阻断；③ 退出码契约（有 FAIL ⇒ 1）。 */
+t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约（第七轮复核 §15-1）', function () {
+  const g = readFileSync('tools/gate-drafts.mjs', 'utf8');
+  ok(g.indexOf('st.slotSalt = h32pre(') >= 0, '对局必须设**与轮座去相关**的盐（否则座位/基线自检出假数）');
+  ok(g.indexOf('judgeable') >= 0 && g.indexOf('不可判') >= 0, 'G4 必须有"基线格可判"的前置守卫');
+  ok(g.indexOf('G6[元测试]') >= 0, 'G6 必须先有"量具判别力"元测试');
+  ok(g.indexOf('process.exitCode') >= 0, '必须有退出码契约（FAIL ⇒ 非 0）');
+  const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(pc.indexOf("['tools/gate-drafts.mjs', SRC]") >= 0, 'promote-champion 必须调用量具');
+  ok(pc.indexOf('/^G4\\[/.test(nm) || /^G5\\[/.test(nm)') >= 0, '只有 G4/G5 进阻断面（G3/G6 只记录）');
+  ok(pc.indexOf('行为门未过') >= 0 && pc.indexOf('meta.gateDrafts') >= 0, '阻断结论必须留痕（meta）');
+  /* 行为：用极小局数真跑一遍量具（不拖慢门禁），验元测试与退出码契约 */
+  const r = spawnSync(process.execPath, ['tools/gate-drafts.mjs'], {
+    cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24,
+    env: Object.assign({}, process.env, { GATE3_GAMES: '20', GATE4_GAMES: '6', GATE6_GAMES: '6' })
+  });
+  const out = String(r.stdout || '') + String(r.stderr || '');
+  ok(/PASS\s+G6\[元测试\]/.test(out), 'G6 元测试必须 PASS（量具判别力不足 ⇒ 后面所有读数不可信）');
+  ok(/PASS\s+G4\[线上包\/(long|multi)\]/.test(out), '线上包 G4 必须 PASS（否则"已知好"一侧不成立 ⇒ G4 不可作阻断）');
+  ok(/PASS\s+G5\[线上包\/(long|multi)\]/.test(out), '线上包 G5 必须 PASS（同上）');
+  const anyFail = /^\s*FAIL\s+/m.test(out);
+  eq(r.status, anyFail ? 1 : 0, '退出码必须与"是否存在 FAIL"一致（CI/promote 靠它判定）');
 });
 
 

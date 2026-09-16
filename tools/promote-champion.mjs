@@ -199,6 +199,52 @@ console.log('   狙击场（1 席狙击 + 3 席被动 · ' + snf.games + ' 局�
   '/局（出手 ' + snf.attacksPerGame.toFixed(2) + '/局）· 平均打过 ' + snf.spreadAvg.toFixed(2) + ' 个人' +
   ' · 靶向率 ' + (100 * (snf.aimedAtSniperRate || 0)).toFixed(1) + '%（均匀 25%，**已知无判别力**）' +
   ' · 存活 ' + (100 * snf.survivalRate).toFixed(0) + '% · 胜率 ' + (100 * snf.winRate).toFixed(0) + '%');
+/* ===== v1.5.78（第七轮复核 §11）：珠经济判据改成**双向** =====
+ * 复核指出我的"浪费率 0%"是**把行为删掉**刷出来的：新包连"蓄能"这一步都不做了（0.00~0.06/局），
+ * 而整条珠经济（蓄能 → 电磁炮/天火）在四代包里一次都没闭环过 ⇒ 只看 `wasteRate` 它永远绿。
+ * ⇒ 同时报"花珠率"（花掉/得珠）：**只有"得珠 > 0 且花珠率 > 0"才算闭环**，与复核 §11 的建议一致。 */
+const chg = chargeProfile(W, params, 'long', Number(process.env.EPIRUS_CHARGE_GAMES || 40));
+console.log('   珠经济（' + chg.games + ' 局）：蓄能 ' + chg.chargesPerGame.toFixed(2) + '/局 · 得珠 ' + chg.gained +
+  ' · 过期 ' + chg.expired + ' · **花掉 ' + chg.spent + '** · 浪费率 ' + (100 * chg.wasteRate).toFixed(0) +
+  '% · **花珠率 ' + (100 * chg.spentRate).toFixed(0) + '%**' +
+  (chg.gained > 0 && chg.spent > 0 ? '（闭环 ✓）' : '（**未闭环**：这是"没长出能力"，不是"指标好看"）'));
+/* ===== v1.5.78（第七轮复核 §15-1）：把 **G4 克制表 / G5 破防反射** 接进阻断面 =====
+ * 复核把这两条写成可跑代码（`tools/gate-drafts.mjs`）并**先证明了量具的判别力**：
+ *   线上包 G4 两模式 PASS（最克 22%/18%）、G5 PASS（防席 0%）；
+ *   `v7f3-91` FAIL（G4 78~82% / G5 65~75%）、`v7f3-94` FAIL（G4 67~68%）。
+ * ⇒ 满足"能分开已知好与已知坏"⇒ **采纳为阻断**（可用 `--force` 越过并留痕）。
+ * ⚠️ 同一脚本里的 G3（座位 ≤15pt）与 G6（靶向率 ≥40%）**不采纳为阻断**：
+ *   · G3 的阈值**连线上包自己都过不了** ⇒ 不满足判别力检验（座位改用 audit-lib 的 seatSymmetry）；
+ *   · G6 四代包（含线上）全部 3.5~22.5% ⇒ 是"能力未长出"不是某包退化，做成阻断会把所有候选一起挡死；
+ *     路线是把它当能力练（窄奖励/教师示范），见复核 §15-3。 */
+let gateDrafts = null;
+if (!process.argv.includes('--skip-gate-drafts')) {
+  try {
+    const gr = spawnSync(process.execPath, ['tools/gate-drafts.mjs', SRC], { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
+    const outTxt = String(gr.stdout || '') + String(gr.stderr || '');
+    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], g6: {} };
+    for (const ln of outTxt.split('\n')) {
+      const m = /^\s*(PASS|FAIL)\s+(G[3-6][^\n]*)$/.exec(ln);
+      if (!m) continue;
+      const nm = m[2].trim();
+      if (m[1] === 'FAIL' && (/^G4\[/.test(nm) || /^G5\[/.test(nm))) {
+        gateDrafts.blocking.push(nm);
+        fails.push('行为门未过：' + nm);
+      } else if (/^G6\[/.test(nm)) {
+        gateDrafts.recorded.push(m[1] + ' ' + nm);
+      } else if (m[1] === 'FAIL') {
+        gateDrafts.recorded.push('FAIL ' + nm);
+      }
+    }
+    const mg6 = /G6\[([^\]]+)\] 靶向率[^\n]*实测 ([\d.]+)%/g; let t6;
+    while ((t6 = mg6.exec(outTxt))) gateDrafts.g6[t6[1]] = Number(t6[2]);
+    console.log('   G4/G5 行为门（第七轮复核 §15-1）：' + (gateDrafts.blocking.length ? '✗ ' + gateDrafts.blocking.join('；') : '✅ 全过'));
+    console.log('   G6 靶向率（只记录不阻断）：' + JSON.stringify(gateDrafts.g6));
+  } catch (e) {
+    console.log('   ⚠ G4/G5 行为门未能运行（不阻断，但**别当通过**）：' + String(e && e.message || e));
+    gateDrafts = { error: String(e && e.message || e) };
+  }
+}
 if (fails.length) {
   console.error('⛔ 体检未过（' + fails.length + ' 项阻断条件）：');
   for (const x of fails) console.error('   · ' + x);
@@ -254,6 +300,8 @@ meta.sniperField = {
   aimedAtSniperRate: (snf.aimedAtSniperRate == null ? null : Number(snf.aimedAtSniperRate.toFixed(3))),
   survivalRate: Number(snf.survivalRate.toFixed(3)), winRate: Number(snf.winRate.toFixed(3))
 };
+/* v1.5.78（第七轮复核 §15-1）：G4/G5 阻断结论 + G6 记录值进 meta（"能力未长出"要能长期追踪） */
+meta.gateDrafts = gateDrafts;
 meta.activeAttackRate = Number(fAct.atk.toFixed(3));
 meta.auditFails = fails;
 meta.auditForced = fails.length ? FORCE : false;

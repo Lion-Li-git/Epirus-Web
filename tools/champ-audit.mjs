@@ -29,6 +29,15 @@ const flag = function (n, d) {
 };
 const GAMES = Number(flag('games', 20));
 const EXG = Number(flag('exam-games', 20));
+/* v1.5.78（第七轮复核 §8 的工具陷阱）：`flag()` 只认 `--k=v` ⇒ 裸 `--games 80` 会被**静默忽略**、
+ * 按默认局数跑完且没有任何警告（复核第一版表就是这么来的，整表重跑过）。这里显式点名。 */
+{
+  const bare = process.argv.slice(2).filter(function (a) { return /^--[a-zA-Z0-9-]+$/.test(a); });
+  if (bare.length) {
+    console.warn('⚠ 未识别的裸参数（本工具只认 `--k=v`）：' + bare.join(' ') +
+      ' ⇒ 这些参数**已被忽略**，本次用的是默认值（复核 §8 踩过这个坑）。');
+  }
+}
 const SEAT_G = Number(process.env.EPIRUS_SEAT_GAMES || 100);   // v1.5.57：座位探针局数（≥100 才有判别力）
 const GAMES2 = Number(process.env.EPIRUS_CHARGE_GAMES || GAMES);   // v1.5.58：蓄能探针局数
 const SP_MODE = flag('mode', 'multi');   // 自对局那几列用哪个模式（multi 默认；看"集体防御"要用 long）
