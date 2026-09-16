@@ -3081,6 +3081,17 @@ t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5
   ok(src.indexOf('请出招') >= 0, '回合开始的"请出招"提示必须保留（只改弹窗开着时的提示）');
 });
 
+t('D71 蓄能经济门槛：ep<2 不许蓄能（v7 口径），legacy 保持旧口径（用户裁定 v1.5.82）', function () {
+  const src = readFileSync('js/train/evo.js', 'utf8');
+  const i0 = src.indexOf('function policyChooserN(');
+  const i1 = src.indexOf('function pickChampion(');   // 用顶层兄弟函数定界（不能用'下一个 function'：内部有回调）
+  const seg = src.slice(i0, i1);
+  ok(seg.indexOf('gatedCharge') >= 0, 'policyChooserN 里必须有蓄能经济门槛');
+  ok(seg.indexOf('R.SK.CHARGE') >= 0 && seg.indexOf('(pp.ep || 0) >= 2') >= 0, '门槛必须是 ep>=2 才允许蓄能');
+  ok(seg.indexOf('candidatesFor(state, pid, v7base') >= 0, 'v7 分支必须用过滤后的 base');
+  ok(seg.indexOf('P.choose(state, pid, base,') >= 0, 'legacy 分支必须仍用未过滤的 base（历史基线可比）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。D69 自检守着这个顺序。 */
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));

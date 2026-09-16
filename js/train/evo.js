@@ -324,7 +324,21 @@
         const t1 = pickTargetN(state, pid, key);
         return { key: key, target: t1, target2: pickTarget2N(state, pid, key, t1), bead: null };
       }
-      const cands = P.candidatesFor(state, pid, base, { lockTarget: lastCancelOther(state, pid) });
+      /* ===== v1.5.82（用户裁定）：**ep < 2 不蓄能**（只作用于 v7 口径；legacy 保持旧口径 => 历史基线可比）=====
+       * 用户原话："ep=1 的时候本来就不应该蓄能，因为用到蓄能花费最低的激光眼也要额外一个 ep，
+       * 至少要让他 ep>=2 才开始用，不然就是浪费。"
+       * 规则依据（已核）：蓄能 cost=1，描述是"获得 1 枚能量珠……**只保留到下一回合**"；
+       *   唯一的珠子消费卡是**电磁炮**（2 ジ + 1 电珠）；天火是引爆**符咒**，与珠子无关。
+       * => 收入约 1 ジ/回合时，ep=1 蓄能**必然过期**。
+       * 实测佐证（改前）：线上包 24/24 次蓄能决策都落在 ep=1；chargeProfile 得珠 23 颗、过期 23、**花掉 0**。
+       * ⚠ 启发式而非定律：收入 >1/回合（聚能环第 3 次起 +3、避雷针 +4）时 ep=1 蓄能也可能成立。 */
+      const gatedCharge = base.filter(function (l) {
+        if (l.key !== R.SK.CHARGE) return true;
+        const pp = state.p[pid];
+        return !!pp && (pp.ep || 0) >= 2;
+      });
+      const v7base = gatedCharge.length ? gatedCharge : base;
+      const cands = P.candidatesFor(state, pid, v7base, { lockTarget: lastCancelOther(state, pid) });
       const pick = (eps && state.rng.next() < eps && cands.length)
         ? cands[Math.floor(state.rng.next() * cands.length)]
         : P.chooseCandidates(state, pid, cands, params, { temp: temp });
