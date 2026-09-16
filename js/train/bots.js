@@ -658,6 +658,29 @@
     return { key: SK.JI, target: null };                        // 攒钱到能开枪
   }
 
+  /* ===== 压制密度对手 pickGunSpam（v1.5.90，第八轮复核 §6 / §8-3）=====
+   * 复核的命门：**一行代码、用最便宜的一张卡**（枪，1 ジ，打血量最高者）在长程把线上冠军打死 65%；
+   * 四包里没有一包顶得住。机制**不是**"集火 vs 散射"（集火率最高的两条反而最弱），而是
+   * **overkill 浪费 + 输出密度** —— 冠军 57~65% 的回合在按 ジ、ep 峰值只有 2
+   * ⇒ "交 tempo 税去攒一种永远花不掉的东西"。
+   * 池里没有这种压迫 ⇒ 训练里"低密度"不受罚。所以这里补的不是"又一个人格"，而是**给密度补梯度**。
+   * 口径与其他 `*spam` 一致：只做一件事（付得起枪就开枪）。
+   * ⚠️ 目标选择：**只在血量最高的那一档里随机取一个**（`mpPickOne`），**不能**按 pid 取最肥 ——
+   *    那会重新引入"座位身份通道"（D50/D58 家族，本仓库栽过多次）。 */
+  function pickGunSpam(state, pid, legal) {
+    const bk = mpBk(legal);
+    if (mpAff(bk, SK.GUN)) {
+      const o = mpOpps(state, pid);
+      if (o.length) {
+        let mx = -Infinity;
+        for (const i of o) if (state.p[i].hp > mx) mx = state.p[i].hp;
+        const fattest = o.filter(function (i) { return state.p[i].hp >= mx - 1e-9; });
+        return { key: SK.GUN, target: mpPickOne(state, fattest) };
+      }
+    }
+    return { key: SK.JI, target: null };                        // 攒到能开枪
+  }
+
   /* ===== 深经济对手 pickDeepSaver（"会攒 + 会还手"）=====
    * ⚠️ 它曾在 v1.3.27 加入、在 v1.3.30（N20 地雷 AoE 重写）被**静默删除**——
    * 那个 commit 的 CHANGELOG 只字未提，之后 24 个版本没人发现，而 REVIEW-3P §1-D
@@ -722,7 +745,7 @@
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
-    pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam,
+    pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'

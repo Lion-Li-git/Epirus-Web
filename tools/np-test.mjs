@@ -3234,6 +3234,38 @@ t('D77 经济/熵奖励 env 只能有**一个**读取点（server/econ-env.mjs�
   eq(out.hb, true, '只设旧名也必须触发覆写');
 });
 
+t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一侧就不许上闸** + 密度对手必须在册', function () {
+  /* v1.5.90（第八轮复核 §8-3/§8-4）：把"输出密度 / 经济出口"机械化。
+   * 这条守门盯的不是阈值数字，而是**上闸的前提**：本仓库栽过多次"阈值把所有人挡住"
+   * （附录 B2-6 / C-4：阈值必须先能分开已知好与已知坏）。在位线上包花珠率 0%（未闭环）
+   * ⇒ 这道判据现在**没有**判别力 ⇒ 只许记录、不许阻断；等有候选真过了它再打开。
+   * 反证：把 `DENSITY_BLOCK` 改成 true ⇒ 这条立即红（它就开始挡所有候选了）。 */
+  const al = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(al.indexOf('export function densityProfile(') >= 0, '必须有输出密度探针（每回合出手伤害 / 按ジ占比）');
+  ok(al.indexOf('export const DENSITY_BLOCK = false;') >= 0, '第 6 道判据默认**不阻断**（现在没有判别力）');
+  ok(al.indexOf('density: dRec') >= 0, '第 6 道的读数必须进 feasibilityOf 的返回值（落盘 meta 要能查）');
+  const fs0 = al.indexOf('export function feasibilityOf(');
+  const fs1 = al.indexOf('export function chargeProfile(');
+  ok(fs0 > 0 && fs1 > fs0, '必须能定位 feasibilityOf 的函数体（用顶层兄弟函数定界，不能用"下一个 function"）');
+  const fs = al.slice(fs0, fs1);
+  ok(fs.indexOf('fails.push') >= 0, '前五道仍照旧记 fails');
+  ok(fs.indexOf('notes.push') >= 0 && /notes\.push\('第6道/.test(fs) && fs.indexOf('DENSITY_BLOCK') >= 0,
+    '第 6 道必须走 notes（记录）+ 由 DENSITY_BLOCK 显式控制 —— **不得**进 fails');
+  const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(pc.indexOf('densityProfile(W, params') >= 0 && pc.indexOf('输出密度') >= 0,
+    '体检必须打印输出密度（否则等于没量 —— "命门"就还只是口头的）');
+  ok(pc.indexOf('density: { dmgPerRound: dens.dmgPerRound') >= 0, '体检必须把密度读数喂给 feasibilityOf');
+  /* 上游：密度对手必须在册，否则"把压制密度放进池子"这条实验根本起不来（第 4 次"加名字漏一处"）。 */
+  const bots = readFileSync('js/train/bots.js', 'utf8');
+  ok(bots.indexOf('function pickGunSpam(') >= 0, '必须有"只枪·打最肥"的对手（复核 §6 那一行脚本）');
+  ok(bots.indexOf('pickGunSpam,') >= 0, 'pickGunSpam 必须导出');
+  ok(bots.indexOf('mpPickOne(state, fattest)') >= 0,
+    '打最肥必须在最高血那一档里**随机**取（按 pid 取 = 座位身份通道，D50/D58 家族）');
+  ok(readFileSync('server/opp-pool.mjs', 'utf8').indexOf("name: 'gunspam'") >= 0, 'gunspam 必须在对手注册表里');
+  const T2 = readFileSync('server/opp-pool.mjs', 'utf8');
+  ok(/OPP_DEFAULT = OPP_SPECS\.slice\(0, 9\)/.test(T2), '默认池仍取前 9 个 ⇒ 新增 specialist 不进默认基线');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

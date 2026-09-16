@@ -393,6 +393,13 @@ export function seatSymmetry(W, params, mode, GAMES) {
  * 而清场 0.00/局、伤害 1.0/局 ⇒ 用胜率当门槛等于白送（第五轮复核 §2-1）。
  * 用法：feasibilityOf({ seat, G, wall, aggr }) —— 参数即四个探针的返回值（纯函数，可单测）。 */
 const _n = function (x, d) { return (isFinite(x) ? Number(Number(x).toFixed(d === undefined ? 2 : d)) : null); };
+/* v1.5.90：第 6 道判据（输出密度 / 经济出口）**是否阻断**。
+ * 现在**必须**是 `false` —— 理由见 `feasibilityOf` 里那段长注释：
+ * 在位的线上包自己就过不了这道（花珠率 0% = 未闭环）⇒ 它现在不具备"阻断"的资格
+ * （本仓库规矩：阈值必须先能分开已知好与已知坏，附录 B2-6 / C-4）。
+ * 等真有候选过了它，把它改成 `true` 并补一条守门断言（那时"已知好"一侧才存在）。 */
+export const DENSITY_BLOCK = false;
+
 export function feasibilityOf(o) {
   const s = (o && o.seat) || {}, g = (o && o.G) || {}, w = (o && o.wall) || {}, a = (o && o.aggr) || {};
   const fA = a.fieldA || {}, fB = a.fieldB || {};
@@ -420,8 +427,31 @@ export function feasibilityOf(o) {
     if (Number(fA.atk) < 0.20) fails.push('场A 还手 ' + (100 * Number(fA.atk)).toFixed(0) + '% < 20%');
     if (Number(fB.clearedPerGame) < 0.3) fails.push('场B 清场 ' + Number(fB.clearedPerGame).toFixed(2) + ' < 0.3/局');
   }
+  /* ===== v1.5.90（第八轮复核 §8-3/§8-4）：第 6 道判据 = **输出密度 / 经济出口** =====
+   * 口径：① 珠经济**双向闭环**（得珠 > 0 且 **花掉** > 0 —— 单向"浪费率低"会被"把行为删掉"刷绿，
+   *   这是 v1.5.78 §1-3 的教训）；② 每回合出手伤害 / 按ジ占比（见 `densityProfile`，只打印对照）。
+   * **为什么现在只记录、不阻断**（这条是设计决定，不是偷懒）：按本仓库自己的规矩，
+   * 阈值必须先能分开"已知好"与"已知坏"。而这一个 —— 在位的线上包自己就是**未闭环**（花珠率 0%，
+   * 第八轮复核 §6/§7 同口径）⇒ 拿它当阻断会把**所有候选一起挡死**（与 G6 靶向率当时的处境一模一样）。
+   * 用法：进 `notes` + 进返回值（落盘 meta / 体检都能查）；等真有一个候选过了它再翻 `DENSITY_BLOCK`。 */
+  const dens = (o && o.density) || {};
+  const dRec = {};
+  if (isFinite(dens.dmgPerRound)) dRec.dmgPerRound = _n(dens.dmgPerRound, 3);
+  if (isFinite(dens.jiShare)) dRec.jiShare = _n(dens.jiShare, 3);
+  if (isFinite(dens.gained)) dRec.beadGained = _n(dens.gained, 0);
+  if (isFinite(dens.spentRate)) dRec.beadSpentRate = _n(dens.spentRate, 3);
+  dRec.beadLoopClosed = (isFinite(dens.gained) && isFinite(dens.spentRate))
+    ? (Number(dens.gained) > 0 && Number(dens.spentRate) > 0) : null;
+  dRec.blocking = DENSITY_BLOCK;
+  if (dRec.beadLoopClosed === null) notes.push('第6道（输出密度/经济出口）**探针缺失** ⇒ 未判定（不等于过）');
+  else if (dRec.beadLoopClosed) notes.push('第6道（输出密度/经济出口）：珠经济**闭环** ✓（得珠 ' +
+    dRec.beadGained + '、花珠率 ' + dRec.beadSpentRate + '，每回合出手伤害 ' + dRec.dmgPerRound +
+    '、按ジ占比 ' + dRec.jiShare + '）⇒ "经济动作有出口"的第一个形态（**目前只记录不阻断**）');
+  else notes.push('第6道（输出密度/经济出口）：珠经济**未闭环**（花珠率 ' + dRec.beadSpentRate +
+    '，按ジ占比 ' + dRec.jiShare + '）⇒ 记录不阻断 —— 连线上包都没过它（所以它现在没有判别力）');
   return {
     ok: fails.length === 0, fails: fails, notes: notes,
+    density: dRec,
     seatSpread: _n(s.spread, 1), seatDecisive: _n(s.decisiveRate), seatVerdict: s.verdict || '?', seatBasis: s.basis || '',
     seatPct: (s.pct || []).map(function (x) { return _n(x, 1); }),
     G: _n(g.effSkills), Gkeys: (g.distinctKeys === undefined ? null : g.distinctKeys),
@@ -433,6 +463,44 @@ export function feasibilityOf(o) {
   };
 }
 
+/* 输出密度 / 经济出口探针（v1.5.90，第八轮复核 §6 的"命门"机械化）。
+ * 复核的结论：冠军输给"一行代码的最便宜枪"，**不是**目标一致性问题，而是
+ * ① **overkill 浪费** ② **输出密度** —— 它 57~65% 的回合在按 ジ，而 ep 峰值只有 2
+ * ⇒ "交 tempo 税去攒一种永远花不掉的东西"。本函数把这条病变成可比的数：
+ *   `dmgPerRound` = 自己造成的伤害 / 对局回合数（= "每回合平均出手伤害"）
+ *   `jiShare`     = 按 ジ 的出手 / 全部成功出手（= "按ジ占比"）
+ *   `atkShare`    = 属于**数据驱动伤害卡**的出手占比（与 `aggressionProfile` 同口径）
+ * 口径与 `chargeProfile` 一致：5 席同一包自对局、每局固定盐、回合数取自 `st.round`；
+ * 伤害归因用事件真字段 **`source`**（`{type:'damage', source, to, amt, via}` —— **不猜字段**，
+ * 这一族坑本仓库踩过多次，`from` 是错的）。 */
+export function densityProfile(W, params, mode, GAMES) {
+  const S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay, R = W.EpirusRules;
+  const G = GAMES || 20;
+  const isDmg = function (k) { const d = R.byKey[k]; return !!(d && d.dmg && d.dmg.amt); };
+  let acts = 0, ji = 0, dmgActs = 0, dealt = 0, rounds = 0, games = 0;
+  for (let g = 0; g < G; g++) {
+    const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(17000 + g) }, 5);
+    st.slotSalt = (Math.imul(g + 2, 0x85ebca6b) ^ 0x27d4eb2f) >>> 0;
+    const base = T.policyChooserN(params, 0.15);
+    Play.autoGameN(st, [base, base, base, base, base]);
+    games++; rounds += st.round;
+    for (const e of st.events) {
+      if (e.type === 'action' && e.outcome === 'ok') {
+        acts++;
+        if (e.key === R.SK.JI) ji++;
+        if (isDmg(e.key)) dmgActs++;
+      } else if (e.type === 'damage' && e.source != null) {
+        dealt += e.amt;   // source==null 的伤害是终局收缩（不可归因）⇒ 不计
+      }
+    }
+  }
+  return {
+    games: games, rounds: rounds, roundsPerGame: rounds / Math.max(1, games),
+    actsPerGame: acts / Math.max(1, games), acts: acts,
+    dmgPerRound: rounds ? dealt / rounds : 0, dealtPerGame: dealt / Math.max(1, games),
+    jiShare: acts ? ji / acts : 0, atkShare: acts ? dmgActs / acts : 0
+  };
+}
 /* 蓄能空转探针（v1.5.58，起因：用户实测"蓄能 34 次、电磁炮仅 4 次、第 6 回合三颗全过期"）。
  * 事件是现成的真源（**不猜字段**，先打印过）：
  *   {type:'action', pid, key:'charge', outcome:'ok'}  蓄能出手

@@ -24,7 +24,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile } from './audit-lib.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
@@ -183,12 +183,26 @@ if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) 
  * 阈值与 server/train-server.mjs **共用 audit-lib 的 `feasibilityOf`**（单一真源，复核 §4-6）。
  * ⚠️ 这里**只记录、不新增阻断**：把五道门升级为硬门槛是独立决策（eco-34 的场B 清场=0.00 也会被它挡，
  * 那会连带否决"换回历史冠军"这条路径）⇒ 见 CHANGELOG v1.5.71 的说明。 */
-const feas = feasibilityOf({ seat: ss, G: sp, wall: rw, aggr: agg });
+/* v1.5.90（第八轮复核 §8-3）：第 6 道判据的两个输入必须在 `feasibilityOf` **之前**算出来（它要进 meta/notes）。
+ * 两个量：① 珠经济**双向**（得珠 / 花珠率）② **输出密度**（每回合出手伤害 / 按ジ占比）。 */
+const dens = densityProfile(W, params, 'long', Number(process.env.EPIRUS_DENSITY_GAMES || 20));
+const chgE = chargeProfile(W, params, 'long', Number(process.env.EPIRUS_CHARGE_GAMES || 40));
+const feas = feasibilityOf({ seat: ss, G: sp, wall: rw, aggr: agg,
+  density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chgE.gained, spentRate: chgE.spentRate } });
 console.log('   可行性（与训练落盘同源）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
   '（座位 ' + feas.seatSpread + 'pt/' + feas.seatVerdict + ' · G ' + feas.G + ' · 墙 ' + feas.wallDmg +
   '/局 · 场A ' + (100 * feas.fieldA).toFixed(0) + '% · 场B 清场 ' + feas.fieldBClears + '/局' +
   '（胜率 ' + (100 * (feas.fieldBWinRate || 0)).toFixed(0) + '% —— **规则红利，不作判据**））' +
   (feas.notes.length ? ' ⚠ ' + feas.notes.join('；') : ''));
+/* v1.5.90（第八轮复核 §6 / §8-3）：**输出密度** —— 把"冠军输给一行最便宜的枪"变成两个可比的数：
+ * 它到底把多少回合花在"按ジ攒一种永远花不掉的东西"上。判据**只打印**（阻断开关见 audit-lib 的
+ * `DENSITY_BLOCK`，现在是 false —— 在位包自己没过它 ⇒ 它现在没有判别力）。 */
+console.log('   输出密度（' + dens.games + ' 局自对局）：每回合出手伤害 ' + dens.dmgPerRound.toFixed(3) +
+  ' · 按ジ占比 ' + (100 * dens.jiShare).toFixed(1) + '% · 伤害卡出手占比 ' + (100 * dens.atkShare).toFixed(1) +
+  '% · 出手 ' + dens.actsPerGame.toFixed(1) + '/局 · 回合 ' + dens.roundsPerGame.toFixed(1) + ' ⇒ ' +
+  (feas.density && feas.density.beadLoopClosed === true
+    ? '**珠经济闭环** ✓（"经济动作有出口"的第一个形态）'
+    : '珠经济未闭环（按ジ攒了花不掉的东西 = 命门）'));
 /* ===== v1.5.71（第五轮复核 §4-2）：**狙击场探针** —— 只记录，**暂不阻断** =====
  * 标定（40~60 局/包）把复核建议的判据否掉了：复核建议"靶向率 ≥20%"，但**它没有判别力** ——
  * 种子冠军 45.3% / eco-34 47.7% / 线上包 43.8%，全都远高于均匀 25% ⇒ 谁也分不开。
@@ -203,7 +217,7 @@ console.log('   狙击场（1 席狙击 + 3 席被动 · ' + snf.games + ' 局�
  * 复核指出我的"浪费率 0%"是**把行为删掉**刷出来的：新包连"蓄能"这一步都不做了（0.00~0.06/局），
  * 而整条珠经济（蓄能 → 电磁炮/天火）在四代包里一次都没闭环过 ⇒ 只看 `wasteRate` 它永远绿。
  * ⇒ 同时报"花珠率"（花掉/得珠）：**只有"得珠 > 0 且花珠率 > 0"才算闭环**，与复核 §11 的建议一致。 */
-const chg = chargeProfile(W, params, 'long', Number(process.env.EPIRUS_CHARGE_GAMES || 40));
+const chg = chgE;   // v1.5.90：这次调用已提到 `feasibilityOf` 之前（第 6 道判据要用它的 gained/spentRate）⇒ 此处复用，别重复跑
 console.log('   珠经济（' + chg.games + ' 局）：蓄能 ' + chg.chargesPerGame.toFixed(2) + '/局 · 得珠 ' + chg.gained +
   ' · 过期 ' + chg.expired + ' · **花掉 ' + chg.spent + '** · 浪费率 ' + (100 * chg.wasteRate).toFixed(0) +
   '% · **花珠率 ' + (100 * chg.spentRate).toFixed(0) + '%**' +
