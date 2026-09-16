@@ -12,6 +12,9 @@ import { OPP_SPECS } from './opp-pool.mjs';   // v1.4.9：池子单一来源（�
 import { makeOppSelResolver } from './opp-champs.mjs';
 /* v1.5.18：反摆烂奖励 env 的**单一来源**（审计 §5-3：原先两端各写一遍 ⇒ 只设 FIRST 时静默半开）。 */
 import { readFightEnv, hasFightOverride } from './fight-env.mjs';
+/* v1.5.89：经济/熵奖励 env 的**单一来源**（第八轮复核 §2：原先只在服务进程内联读，
+ * `EPIRUS_DIV_W/DIV_K/DIV_FORCE_GENS/WALL_FILTER` 到不了 worker ⇒ 臂 K/臂甲的 A/B 实际是 A/A）。 */
+import { readEconEnv, hasEconOverride, econEcho } from './econ-env.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -75,8 +78,17 @@ if (T.setRingForceEps) {
   console.log('[ringforce] worker eps=' + _eps + (process.env.EPIRUS_RING_FORCE_EPS ? ' (env=' + process.env.EPIRUS_RING_FORCE_EPS + ')' : ' (未设置 ⇒ 关)'));
 }
 
-if (T.setEconomyReward && (process.env.EPIRUS_ECO_TARGET != null || process.env.EPIRUS_ECO_CAP != null || process.env.EPIRUS_ECO_DIVW != null)) {
-  T.setEconomyReward({ target: process.env.EPIRUS_ECO_TARGET, cap: process.env.EPIRUS_ECO_CAP, divW: process.env.EPIRUS_ECO_DIVW });
+/* v1.5.89（第八轮复核 §2 的修）：这里原先**只读 ECO 三个名字**，于是
+ * `EPIRUS_DIV_W / EPIRUS_DIV_K / EPIRUS_DIV_FORCE_GENS / EPIRUS_WALL_FILTER` 在 16 个 worker 里
+ * 全是空操作，而日志看不出任何异常（臂 K / 臂甲 的 A/B 实际是 A/A）。
+ * 现在解析改由 `server/econ-env.mjs` 统一提供 ⇒ 与 `train-server.mjs` 是**同一份**实现。 */
+const econEnv = readEconEnv(process.env);
+if (T.setEconomyReward && hasEconOverride(econEnv)) {
+  T.setEconomyReward(econEnv);
+  /* 回执：让"开关到底有没有到 worker"可以被**直接看到**（与 `[ringforce] worker eps=` 同族）。
+   * 每个 worker 打一行 ⇒ 16 行；这一行就是复核 §2-2 要求的那个判据。 */
+  console.log('[econ] worker 生效值: ' + JSON.stringify(T.economyReward ? T.economyReward() : econEcho(econEnv)) +
+    '  (env 键: ' + JSON.stringify(econEcho(econEnv)) + ')');
 }
 /* v1.5.8：反摆烂覆盖（哨声惩罚 / 出手权重 / 先手激励）—— 同 env 机制，两端一致。
  * v1.5.18：改走 `server/fight-env.mjs`（与 `train-server.mjs` **同一份**判定）⇒

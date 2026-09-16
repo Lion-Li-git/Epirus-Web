@@ -17,6 +17,8 @@ import { createHash } from 'node:crypto';
 import { makeAsyncStep, makeParallelEvalN } from './paralleltrain.mjs';
 /* v1.5.18：反摆烂奖励 env 的**单一来源**（审计 §5-3：两端各写一遍导致 firstW 静默半开）。 */
 import { readFightEnv, hasFightOverride, FIGHT_REWARD_KEYS } from './fight-env.mjs';
+/* v1.5.89：经济/熵奖励 env 的**单一来源**（与 worker 共用同一份解析，见该文件头部的同族 bug 说明）。 */
+import { readEconEnv, hasEconOverride } from './econ-env.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -333,11 +335,15 @@ async function runTrainN(gens, cfg) {
   if (T.setWrTol) T.setWrTol(Number(process.env.EPIRUS_WR_TOL || 0.03));
   /* v1.5.60：覆盖熵权重（DIV_W）环境旋钮。动因：本晚筛选发现 **G≥3 与 F≥25% 在所有候选里几乎互斥**
    * （打得凶的只用 2~3 张卡；用卡多的不够凶）⇒ 覆盖度这一维在演化目标里被压得太低，
-   * 虽然代码注释说'覆盖熵自然把只剩两三张卡的个体压低'，实测权重不足以对抗 fitness 主力项。 */
-  if (process.env.EPIRUS_DIV_W && T.setEconomyReward) T.setEconomyReward({ divW: Number(process.env.EPIRUS_DIV_W) });
-  if (process.env.EPIRUS_DIV_K && T.setEconomyReward) T.setEconomyReward({ divK: Number(process.env.EPIRUS_DIV_K) });   // v1.5.86：熵项固定分母
-  if (process.env.EPIRUS_DIV_FORCE_GENS && T.setEconomyReward) T.setEconomyReward({ divForceGens: Number(process.env.EPIRUS_DIV_FORCE_GENS) });
-  if (process.env.EPIRUS_WALL_FILTER && T.setEconomyReward) T.setEconomyReward({ wallFilter: process.env.EPIRUS_WALL_FILTER === '1' });
+   * 虽然代码注释说'覆盖熵自然把只剩两三张卡的个体压低'，实测权重不足以对抗 fitness 主力项。
+   *
+   * v1.5.89（第八轮复核 §2 的修）：这一组 env 原先在这里**内联**读，而 fitness 在 16 个 worker 里算
+   * （worker 只读 EPIRUS_ECO_*）⇒ `EPIRUS_DIV_W/DIV_K/DIV_FORCE_GENS/WALL_FILTER` 全是空操作，
+   * 臂 K / 臂甲 的 A/B 实际是 A/A。现在解析统一走 `server/econ-env.mjs`（worker 侧同一份），
+   * 并把**实际生效值**打进日志与产物 meta（`ecoOverride`）——"这一臂到底开了什么"可被追溯。 */
+  const ecoEnv = readEconEnv(process.env);
+  const ecoSet = hasEconOverride(ecoEnv) && T.setEconomyReward ? T.setEconomyReward(ecoEnv) : null;
+  if (ecoSet) console.log('[econ] 服务端生效值: ' + JSON.stringify(ecoSet));
   let __seedIdxN = 0;   // 每个种子递增，用于 setRng 配对
   if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
   cfg = cfg || {};
@@ -383,10 +389,9 @@ async function runTrainN(gens, cfg) {
   const styleOpps = styleNames.map(function (nm) { return { name: nm, sel: resolveOpp(nm) }; });
   const slice = T.setStyleSlice ? T.setStyleSlice(styleNames.length ? styleOpps : null, styleW, styleGamesN) : { games: 0, w: 0, n: 0 };
   /* v1.5.7：经济奖励覆盖（env 传；worker 继承同一份 env ⇒ 两端一致）。用途：跑"旧门槛"对照臂
-   * （`EPIRUS_ECO_TARGET=4 EPIRUS_ECO_CAP=10 EPIRUS_ECO_DIVW=0`），这样奖励的 A/B 不必回退代码版本。 */
-  const ecoEnv = { target: process.env.EPIRUS_ECO_TARGET, cap: process.env.EPIRUS_ECO_CAP, divW: process.env.EPIRUS_ECO_DIVW };
-  const ecoSet = (ecoEnv.target != null || ecoEnv.cap != null || ecoEnv.divW != null) && T.setEconomyReward ? T.setEconomyReward(ecoEnv) : null;
-  if (ecoSet) console.log('[eco] 经济奖励覆盖: ' + JSON.stringify(ecoSet));
+   * （`EPIRUS_ECO_TARGET=4 EPIRUS_ECO_CAP=10 EPIRUS_ECO_DIVW=0`），这样奖励的 A/B 不必回退代码版本。
+   * v1.5.89：解析已提到本函数开头（`ecoEnv` / `ecoSet`，与 worker 共用 `server/econ-env.mjs` 一份实现）
+   * ⇒ 这里**不再重复解析** —— "同一组 env 在两处各写一遍"正是第八轮复核 §2 那个 bug 的成因。 */
   /* v1.5.8：反摆烂覆盖（哨声惩罚 / 出手权重 / 先手激励）—— 同 env 机制，worker 继承同一份。
    * ⚠️ v1.5.18 修（第三方复核 §5-3）：触发条件**漏判 firstW** ⇒ 只设 `EPIRUS_FIGHT_FIRST` 时
    * worker 开、主线程不开（**静默半开**）。历史两轮 fstA/fstB 因为同时设了 dealW 才侥幸没暴露。

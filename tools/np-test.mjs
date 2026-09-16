@@ -3131,7 +3131,90 @@ t('D76 退火强迫多样性：窗口默认 0（关）、只作用于计分对�
   ok(src.indexOf('function makeDiversityForce(inner, gen)') >= 0, '必须有强迫器');
   ok(src.indexOf('let DIV_FORCE_GENS = 0;') >= 0, '窗口默认 0（出厂口径不变）');
   ok(src.indexOf('gen < DIV_FORCE_GENS) baseSel = makeDiversityForce') >= 0, '只包计分 chooser（自对局探针不动）');
-  ok(readFileSync('server/train-server.mjs', 'utf8').indexOf('EPIRUS_DIV_FORCE_GENS') >= 0, '必须有 env 接线');
+  /* v1.5.89：接线点从 train-server 的**内联读**挪到**单一来源** server/econ-env.mjs（见 D77）——
+   * 所以这里不能再断言"train-server 里有这个 env 名"（它已经不在那儿了），
+   * 要断言的是"真正被两端共用的那一份里有它" + "worker 确实导入了那一份"。
+   * （这正是本轮修的 bug：断言的是"名字存在"，而名字存在 ≠ 开关进得了算 fitness 的进程。） */
+  const eeW = readFileSync('server/econ-env.mjs', 'utf8');
+  ok(eeW.indexOf('EPIRUS_DIV_FORCE_GENS') >= 0, '必须有 env 接线（接线点在单一来源 econ-env.mjs）');
+  ok(readFileSync('server/train-worker.mjs', 'utf8').indexOf("from './econ-env.mjs'") >= 0,
+    'worker 必须导入同一份接线（否则这四个开关到不了算 fitness 的进程 —— 第八轮复核 §2）');
+});
+
+/* ===== v1.5.89（第八轮复核 §2）：经济/熵奖励 env 的**单一来源** + "worker 真的拿到了吗" =====
+ * 事故（[实测 + 代码事实]）：`EPIRUS_DIV_W / EPIRUS_DIV_K / EPIRUS_DIV_FORCE_GENS / EPIRUS_WALL_FILTER`
+ * 原先只在 `train-server.mjs` 内联读，而 fitness 在 **16 个 worker 线程**里算，worker 只读
+ * `EPIRUS_ECO_*` 三个名字 ⇒ 这四个开关在 worker 里**全是空操作**，而日志完全正常
+ * （服务端 `[eco] 生效值` 打的是被覆盖后的值）⇒ 臂 K（`DIV_W=0.3`）与臂甲（强迫 60 代 + 破墙过滤）
+ * 的 A/B 实际是 **A/A**，两条臂的读数整批作废。
+ * 同族：D24（fight env 半开）、D7/D72（对手池两份清单）、v1.5.79 的 `TGT_W` 空发。
+ * 解法同族：**单一来源** + 两端回执。反证：把 `readEconEnv` 换回任一处裸读 ⇒ 这条立即红。 */
+t('D77 经济/熵奖励 env 只能有**一个**读取点（server/econ-env.mjs），且 worker 必须拿到生效值', function () {
+  const ee = readFileSync('server/econ-env.mjs', 'utf8');
+  /* 键名表从模块里解析 ⇒ 以后往 econ-env.mjs 加一个键，这条扫描自动覆盖它（不会漏）。 */
+  const keyList = ((ee.match(/ECON_ENV_KEYS = \[([\s\S]*?)\]/) || ['', ''])[1].match(/'([^']+)'/g) || [])
+    .map(function (q) { return q.replace(/'/g, ''); });
+  ok(keyList.length >= 8, 'ECON_ENV_KEYS 应 >=8 个 env 名（实测 ' + keyList.length + '）');
+
+  /* ① 静态：这些 env 名不得出现在**任何**读取点。用**整名**匹配（不能用 EPIRUS_WALL_*
+   * 这种前缀正则 —— `EPIRUS_WALL_MS`（墙上时钟上限）是另一个无辜的 env，会被误伤）。 */
+  const files = ['server/train-server.mjs', 'server/train-worker.mjs', 'server/paralleltrain.mjs',
+    'tools/train-fast.mjs', 'tools/train-best.mjs', 'tools/train-3p.mjs', 'tools/ring2-run.mjs',
+    'js/train/evo.js', 'js/train/policy.js', 'js/train/trainer.js'];
+  const bad = [];
+  for (const f of files) {
+    const lines = readFileSync(f, 'utf8').split('\n');
+    for (let i2 = 0; i2 < lines.length; i2++) {
+      const L = lines[i2]; const t2 = L.trim();
+      if (t2.startsWith('*') || t2.startsWith('//') || t2.startsWith('/*')) continue;   // 注释里提到名字不算
+      for (const k of keyList) if (L.indexOf(k) >= 0) bad.push(f + ':' + (i2 + 1) + '  ' + k);
+    }
+  }
+  eq(bad.length, 0, '这些 env 的读取必须集中在 server/econ-env.mjs：\n    ' + bad.join('\n    '));
+
+  /* ② 正证：两端都从它导入，且 worker 把**生效值**打出来（"到没到 worker"唯一能直接看到的证据，
+   * 与 `[ringforce] worker eps=` 同族 —— 本轮全靠第三方复核才发现，就是因为没有这一行）。 */
+  for (const f of ['server/train-server.mjs', 'server/train-worker.mjs']) {
+    ok(readFileSync(f, 'utf8').indexOf("from './econ-env.mjs'") >= 0, f + ' 必须从 econ-env.mjs 导入');
+  }
+  const wk = readFileSync('server/train-worker.mjs', 'utf8');
+  ok(wk.indexOf('hasEconOverride(econEnv)') >= 0, 'worker 必须用 hasEconOverride 判"要不要覆写"');
+  ok(wk.indexOf('[econ] worker 生效值: ') >= 0, 'worker 必须有 [econ] worker 生效值 回执（否则静默半开看不出来）');
+  ok(wk.indexOf('T.economyReward()') >= 0, '回执必须报 setter 后的**生效值**，不能只报 env 原文');
+
+  /* ③ 契约：`readEconEnv` 可能返回的每个键，`evo.js:setEconomyReward` 都必须认 ——
+   * 漏一个键 = "开关看着接上了、实际被 setter 忽略"，与 §2 是同一类事故的另一种形态。 */
+  const keys = ((ee.match(/ECON_REWARD_KEYS = \[([\s\S]*?)\]/) || ['', ''])[1].match(/'([^']+)'/g) || [])
+    .map(function (q) { return q.replace(/'/g, ''); });
+  ok(keys.length >= 6, 'ECON_REWARD_KEYS 应 >=6 个键（实测 ' + keys.length + '）');
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  const i0 = evo.indexOf('function setEconomyReward(o)');
+  const setter = evo.slice(i0, i0 + 1200);
+  const miss = keys.filter(function (k) { return setter.indexOf('o.' + k + ' != null') < 0; });
+  eq(miss.length, 0, 'evo.js 的 setEconomyReward 必须接受 econ-env 返回的每个键（未接受: ' + miss.join(',') + '）');
+
+  /* ④ 行为：把真模块跑一遍 —— 新名优先、旧名兜底、空串＝未设、wallFilter 只认 '1'。 */
+  const prog = [
+    'const { pathToFileURL } = require("node:url");',
+    'import(pathToFileURL(process.cwd() + "/server/econ-env.mjs").href).then(function (M) {',
+    '  var a = M.readEconEnv({ EPIRUS_DIV_W: "0.3", EPIRUS_ECO_DIVW: "0.06", EPIRUS_DIV_K: "6", EPIRUS_DIV_FORCE_GENS: "60", EPIRUS_WALL_FILTER: "1", EPIRUS_WALL_GAMES: "3" });',
+    '  var b = M.readEconEnv({ EPIRUS_ECO_DIVW: "0.06" });',
+    '  var c = M.readEconEnv({ EPIRUS_DIV_W: "", EPIRUS_WALL_FILTER: "0" });',
+    '  console.log(JSON.stringify({ a: a, b: b, c: c, ha: M.hasEconOverride(a), hb: M.hasEconOverride(b), hc: M.hasEconOverride(c) }));',
+    '}).catch(function (e) { console.log("ERR " + e.message); });'
+  ].join('\n');
+  const r = spawnSync(process.execPath, ['-e', prog], { encoding: 'utf8' });
+  ok(r.status === 0 && String(r.stdout || '').indexOf('ERR ') < 0,
+    'econ-env 自检进程必须正常跑完（stdout: ' + String(r.stdout || '').slice(0, 120) +
+    ' stderr: ' + String(r.stderr || '').slice(0, 200) + '）');
+  const out = JSON.parse(String(r.stdout || '').trim().split('\n').pop());
+  eq(out.a.divW, '0.3', '新名 EPIRUS_DIV_W 必须优先于旧名 EPIRUS_ECO_DIVW');
+  eq(out.a.wallFilter, true, "EPIRUS_WALL_FILTER='1' 才是开");
+  eq(out.b.divW, '0.06', '旧名 EPIRUS_ECO_DIVW 必须继续生效（历史臂的启动命令仍可复现）');
+  eq(out.c.divW, null, "空串必须当**未设**（不能被静默当成 divW=0 从而改掉训练口径）");
+  eq(out.c.wallFilter, null, "EPIRUS_WALL_FILTER='0' 不是开（与改动前的语义逐字一致）");
+  eq(out.hc, false, "只有空串 / 非 '1' 的 wallFilter ⇒ 不应触发覆写（保持出厂行为一字不变）");
+  eq(out.hb, true, '只设旧名也必须触发覆写');
 });
 
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
