@@ -202,8 +202,11 @@ const N6 = Number(process.env.GATE6_GAMES || 40);
 
 const aff = function (l, k) { return l.find(function (x) { return x.key === k && x.affordable; }) ? { key: k } : null; };
 const pT = function (st, pid, o) { return { key: o.key, target: o.target != null ? o.target : T.pickTargetN(st, pid, o.key) }; };
+// ⚠️ 这张表必须包含"最便宜的攻击卡（枪 1ジ）"：第七轮就是因为漏了它，把线上包误判成"无一行脚本能打穿 45%"，
+//    实测真值是长程 65%（见 docs/AUDIT-RESPONSE-v1.5.85.md §6）。删行前先确认基线格与成本梯度都还在。
 const COUNTERS = {
   '只防御(不还手)': function (st, pid, legal) { return aff(legal, R.SK.GUARD) ? { key: R.SK.GUARD, target: null } : { key: R.SK.JI, target: null }; },
+  '只枪(1ジ压制·打最肥)': function (st, pid, legal) { return aff(legal, R.SK.GUN) ? pT(st, pid, { key: R.SK.GUN }) : { key: R.SK.JI, target: null }; },
   '只狙击': function (st, pid, legal) { return pT(st, pid, aff(legal, R.SK.SNIPE) ? { key: R.SK.SNIPE } : { key: R.SK.JI }); },
   '激光剑连刺': function (st, pid, legal) { return pT(st, pid, aff(legal, R.SK.SWORD) ? { key: R.SK.SWORD } : { key: R.SK.JI }); },
   '坦克线': function (st, pid, legal) { return pT(st, pid, aff(legal, R.SK.TANK) ? { key: R.SK.TANK } : { key: R.SK.JI }); },
