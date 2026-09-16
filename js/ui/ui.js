@@ -58,7 +58,7 @@
     /* v1.5.66：**每局一个槽位/顺序盐** —— 让目标枚举顺序与结算相位在页面上也不再有身份
      * （训练与评测早就带盐；此前只有页面缺省 0 ⇒ 页面走确定性顺序）。 */
     B.state.slotSalt = (Math.random() * 4294967296) >>> 0;
-    B.roundStarted = false; B.locked = false; B.aiKey = null;
+    B.roundStarted = false; B.locked = false; B.aiKey = null; B.picking = null;
     B.evCursor = 0; B.transcript = []; B.aiHistory = [];
     B.roundStartSnapshot = null; B.warnedChampNoTrain = false; B.undoUsed = false;
     closeOverlay();
@@ -236,12 +236,25 @@
   }
 
   function pickSkill(key) {
-    if (B.locked || B.state.over) return;
+    if (B.state.over) return;
+    /* v1.5.80（第八轮复核 §5-②，tools/ui-probe.mjs 复现）：结算期间（B.locked）点击被**静默丢弃**。
+     * 现在明确告知。**不做排队**：排队会引入"迟到的动作"这类新状态，风险大于收益。 */
+    if (B.locked) { hint('本回合正在结算，请等对手出手完再出招 —— 你刚才的点击没有生效。'); return; }
+    /* v1.5.80（§5-①，探针复现）：目标弹窗开着时再点别的技能，原本会**静默替换**弹窗
+     *（更糟的是点自指向技能会**立即落子** ⇒ 误触白扔一回合）。现在显式取消并留痕。 */
+    if (B.picking) {
+      const was = B.picking.key;
+      B.picking = null; closeModal();
+      addLog('div', 'ev dim', '（已放弃【' + skillName(was) + '】的目标选择）');
+    }
     if (key === R.SK.CHARGE) {
+      B.picking = { key: key, bead: null };
       openModal('<h3>蓄能：存哪种能量珠？</h3>', [
-        { label: '⚡ 电能（电磁炮用）', fn: function () { closeModal(); doPick(key, 'elec'); } },
-        { label: '💥 爆破能（激光眼用）', fn: function () { closeModal(); doPick(key, 'boom'); } }
+        { label: '⚡ 电能（电磁炮用）', fn: function () { B.picking = null; closeModal(); doPick(key, 'elec'); } },
+        { label: '💥 爆破能（激光眼用）', fn: function () { B.picking = null; closeModal(); doPick(key, 'boom'); } },
+        { label: '↩ 取消', fn: function () { cancelPick(); } }
       ]);
+      hint('请选择要存的能量珠种类（Esc 或「取消」可放弃）。');
       return;
     }
     doPick(key, null);
@@ -495,16 +508,21 @@
       if (def && def.target !== 'self' && opps.length > 1) {
         const need2 = key === R.SK.DUAL_GUN || key === R.SK.MIRROR;
         const title = key === R.SK.MIRROR ? '选择复制对象（目标 1/2）' : '选择目标' + (need2 ? ' 1/2' : '');
-        openModal('<h3>' + title + '：' + def.name + '</h3>', opps.map(function (o) {
+        B.picking = { key: key, bead: bead };
+        const opts = opps.map(function (o) {
           return {
             label: '👉 ' + B.state.p[o].name + '（HP ' + B.state.p[o].hp + '）',
             fn: function () {
+              B.picking = null;
               closeModal();
               if (need2) return pickSecondTarget(key, bead, o);
               doPickMulti(key, bead, o, null);
             }
           };
-        }));
+        });
+        opts.push({ label: '↩ 取消', fn: function () { cancelPick(); } });
+        openModal('<h3>' + title + '：' + def.name + '</h3>', opts);
+        hint('请为【' + def.name + '】选择目标（Esc 或「取消」可放弃）。');
         return;
       }
       target = opps.length ? opps[0] : null;
@@ -733,6 +751,16 @@
     $('modal-root').classList.remove('hidden');
   }
   function closeModal() { $('modal-root').classList.add('hidden'); }
+  /* v1.5.80（§5-①）：目标/蓄能的弹窗**必须能取消** —— 否则玩家只能"随便选一个"，
+   * 或者以为可以改主意（探针实测：改主意会静默替换/误触落子）。 */
+  function cancelPick() {
+    const was = B.picking ? B.picking.key : null;
+    B.picking = null; closeModal();
+    if (was) hint('已取消【' + skillName(was) + '】，请重新出招。');
+  }
+  /* 点弹窗外（遮罩）或按 Esc 都算取消；只在真的有待选状态时才拦截，避免影响结算/终局弹层。 */
+  if ($('modal-root')) $('modal-root').onclick = function (ev) { if (ev.target === this && B.picking) cancelPick(); };
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && B.picking) cancelPick(); });
   function openOverlay(html, buttons) {
     $('overlay-card').innerHTML = html +
       '<div class="btns" style="display:flex;justify-content:center;gap:10px">' +

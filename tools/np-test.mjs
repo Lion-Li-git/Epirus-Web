@@ -3064,6 +3064,23 @@ t('D69 自检：汇总必须在 process.exit 之前，否则它是死代码（v1
   ok(iSum < iExit, '汇总必须排在 process.exit **之前**（曾经被我挪到之后 => 永不执行）');
 });
 
+/* ===== v1.5.80（第八轮复核 §5）：UI 契约（目标弹窗可取消 / 结算期点击有反馈）=====
+ * 探针 tools/ui-probe.mjs 在真页面上复现过三条缺陷（读数记在 CHANGELOG v1.5.80）。
+ * Chrome 依赖 ⇒ 行为验证走探针，这里只锁**接线**，防它被改回去。 */
+t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
+  const src = readFileSync('js/ui/ui.js', 'utf8');
+  ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
+  ok(src.indexOf('function cancelPick()') >= 0, '必须有 cancelPick');
+  ok(src.indexOf("ev.key === 'Escape' && B.picking") >= 0, 'Esc 必须能取消（只在有待选状态时拦截）');
+  ok(src.indexOf("$('modal-root').onclick") >= 0 && src.indexOf('B.picking) cancelPick()') >= 0, '点遮罩也要能取消');
+  ok(src.indexOf('选择目标（Esc') >= 0, '弹窗开着时提示必须写"选择目标"');
+  ok(src.indexOf('你刚才的点击没有生效') >= 0, '结算期间点击必须明确告知（不再静默丢弃）');
+  ok(src.indexOf('已放弃【') >= 0, '改主意/误触必须留痕');
+  ok(src.indexOf('取消', src.indexOf('label:')) >= 0 || src.indexOf('↩ 取消') >= 0, '弹窗必须提供「取消」按钮');
+  ok(src.indexOf('B.aiKey = null; B.picking = null;') >= 0, '新局必须重置待选状态');
+  ok(src.indexOf('请出招') >= 0, '回合开始的"请出招"提示必须保留（只改弹窗开着时的提示）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。D69 自检守着这个顺序。 */
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
