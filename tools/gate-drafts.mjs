@@ -131,7 +131,16 @@ function h32pre(n) {
 }
 
 const out = [];
-function gate(name, pass, detail) { out.push({ name: name, pass: pass, detail: detail }); console.log((pass ? '  PASS  ' : '  FAIL  ') + name + '\n        ' + detail); }
+/* v1.5.89：三种状态，不是两种 —— `UNRUN` = **本门跑不了/不可判**（如 harness 基线异常）。
+ * 为什么必须分开：v1.5.78 的病根是"把没跑/没判的当成过了"。用一个 FAIL 去表达"不可判"同样有害 ——
+ * 它会把"量具没量出来"伪装成"候选不合格"，而 promote-champion 只认 FAIL ⇒ 两者被读成同一个结论。
+ * 与 `audit-lib.seatSymmetry` 的 underpowered 第三态同一套规矩。 */
+function gate(name, pass, detail, unrun) {
+  const st = unrun ? 'UNRUN' : (pass ? 'PASS' : 'FAIL');
+  out.push({ name: name, pass: !!pass, unrun: !!unrun, detail: detail });
+  console.log('  ' + st + '  ' + name + '\n        ' + detail);
+}
+const statusOf = function (g) { return g.unrun ? 'UNRUN' : (g.pass ? 'PASS' : 'FAIL'); };
 
 console.log('=== G1 探针判别力（元测试：测量工具本身能不能区分"会瞄"与"仪式"）===');
 {
@@ -246,11 +255,16 @@ for (const [nm, p] of PACKS) {
     const cells = Object.keys(COUNTERS).map(function (k) { return [k, duel(p, COUNTERS[k], mode, N4, 90210).win]; });
     const worst = cells.reduce(function (a, b) { return b[1] > a[1] ? b : a; });
     const judgeable = base.win >= 8 && base.win <= 32;
-    gate(`G4[${nm}/${mode}] 无一行脚本能以 >45% 击败它（基线 ${base.win}%/${N4}局）`,
+    /* v1.5.89②：把**最克那一格**写进标题（原先只在 detail 里）。动机：promote-champion 只解析
+     * `PASS/FAIL <标题>` 这一行 ⇒ 标题里只有基线时，判词读起来像"这条过了"（实测时连作者都被它误导），
+     * 而"为什么红"完全看不见 —— 判词必须与被判的那一格绑在一起。 */
+    gate(`G4[${nm}/${mode}] 无一行脚本能以 >45% 击败它（最克「${worst[0]}」${worst[1]}% · 基线 ${base.win}%/${N4}局）`,
       judgeable && worst[1] <= 45,
-      `基线 ${base.win}%（${judgeable ? '可判' : '⚠️ 不可判：harness 基线异常'}）  各格 ` +
+      `基线 ${base.win}%（${judgeable ? '可判' : '⚠️ 不可判：harness 基线异常 ⇒ 本格 UNRUN，**不得当作通过**'}）  各格 ` +
       cells.map(function (c) { return c[0] + ' ' + c[1] + '%'; }).join(' · ') +
-      `   ⇒ 最克它的脚本：「${worst[0]}」${worst[1]}%`);
+      `   ⇒ 最克它的脚本：「${worst[0]}」${worst[1]}%` +
+      (judgeable && worst[1] > 45 ? `   ⇒ **红的理由**：这一格 ${worst[1]}% > 45%` : ''),
+      !judgeable);
   }
 }
 
@@ -278,7 +292,7 @@ for (const [nm, p] of PACKS) {
       if (st.winner === seat) defWin++;
     }
     const pct = Math.round(100 * defWin / N4);
-    gate(`G5[${nm}/${mode}] 面对"只防御不还手"必须能清场（防席夺冠 ≤25%）`, pct <= 25,
+    gate(`G5[${nm}/${mode}] 面对"只防御不还手"必须能清场（实测防席夺冠 ${pct}% · 阈值 ≤25%）`, pct <= 25,
       `防席夺冠 ${pct}%  终局血量 ${(defHp / N4).toFixed(1)}  打它的攻击 ${(toDef / N4).toFixed(1)}/局` +
       `  其中**穿透防御**的 ${(pierceHit / N4).toFixed(1)}/局 ⇒ ${pct > 25 ? '缺"目标免疫普通攻击 ⇒ 换穿透卡"的反射' : '破防反射在'}`);
   }
@@ -320,15 +334,21 @@ function aimRateOnRingField(chooser, G) {
 }
 
 console.log('\n=== 汇总 ===');
-for (const g of out) console.log(`  ${g.pass ? 'PASS' : 'FAIL'}  ${g.name}`);
+for (const g of out) console.log(`  ${statusOf(g)}  ${g.name}`);
+const nUnrun = out.filter(function (g) { return g.unrun; }).length;
+if (nUnrun) console.log(`  ⛔ 另有 ${nUnrun} 格是 **UNRUN（跑不了 / 不可判）—— 不得当作通过**`);
 console.log('\n说明（v1.5.78 采用时的分级）：');
-console.log('  ① **G4 克制表 / G5 破防反射 ⇒ 采纳为阻断门**（promote-champion）：它们能分开已知好与已知坏 ——');
-console.log('     线上包 G4 两模式 PASS（最克 22%/18%）、G5 PASS（0%）；91 FAIL（G4 78~82%、G5 65~75%）、94 FAIL（G4 67~68%）。');
+console.log('  ① **G4 克制表 / G5 破防反射 ⇒ 采纳为阻断门**（promote-champion，且**只阻断"候选自己的"行**）：');
+console.log('     判别力依据（v1.5.78 采用时）：91 FAIL（G4 78~82% / G5 65~75%）、94 FAIL（G4 67~68%），而线上包当时两模式 PASS。');
+console.log('     ⚠ v1.5.89 起：补入"只枪(1ジ压制·打最肥)"这一格后，**线上包自己在 G4[long] 也是红的**（1 ジ枪长程能打穿它）——');
+console.log('       那是"**在位包该换**"的信号，属**参照行**，不得用来阻断候选（否则任何候选都被连坐，换包只能靠 --force）。');
 console.log('  ② **G6 靶向率 ⇒ 只记录不阻断**：四代包（含线上）全部 3.5~22.5% ⇒ 是"能力未长出"而非某包退化，');
 console.log('     把它做成阻断会把所有候选一起挡死（该走的路线是窄奖励/教师示范，见 §15-3）。');
 console.log('  ③ **G3 座位 ⇒ 只记录不阻断**：≤15pt 这个阈值**连线上包自己都过不了** ⇒ 不满足"能分开已知好与已知坏"，');
 console.log('     改用 audit-lib 的 `seatSymmetry`（占比判据 + n≥50 极差判据 + underpowered 第三态）。');
 console.log('  ④ 本脚本仍保留"任何 FAIL ⇒ 退出码 1"，供 CI/人工调用；promote-champion 只按 ① 阻断。');
 
-/* 退出码：有任何 FAIL 就非 0 ⇒ 可接进 CI / promote-champion / np-test 的汇总 */
-process.exitCode = out.some(function (g) { return !g.pass; }) ? 1 : 0;
+/* 退出码：有任何 FAIL 就非 0 ⇒ 可接进 CI / promote-champion / np-test 的汇总。
+ * ⚠ UNRUN **不计入** FAIL（它不是候选的错，而是量具没量出来）；但它也**不是通过** ——
+ * 读它的人/工具必须显式处理（promote-champion 会打 ⛔ 警示，np-test 的 D67 守着这条契约）。 */
+process.exitCode = out.some(function (g) { return !g.pass && !g.unrun; }) ? 1 : 0;

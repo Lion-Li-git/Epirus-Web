@@ -222,14 +222,25 @@ if (!process.argv.includes('--skip-gate-drafts')) {
   try {
     const gr = spawnSync(process.execPath, ['tools/gate-drafts.mjs', SRC], { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
     const outTxt = String(gr.stdout || '') + String(gr.stderr || '');
-    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], g6: {} };
+    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], unrun: [], g6: {} };
     for (const ln of outTxt.split('\n')) {
+      /* v1.5.89③：`UNRUN` = 该格**跑不了 / 不可判**（量具自己报的第三态，见 gate-drafts 的 gate()）。
+       * 它既不是 FAIL、更不是 PASS ⇒ 单独收集并**醒目打印**（"不得当作通过"）。 */
+      const mu = /^\s*UNRUN\s+(G[3-6][^\n]*)$/.exec(ln);
+      if (mu) { gateDrafts.unrun.push(mu[1].trim()); continue; }
       const m = /^\s*(PASS|FAIL)\s+(G[3-6][^\n]*)$/.exec(ln);
       if (!m) continue;
       const nm = m[2].trim();
-      if (m[1] === 'FAIL' && (/^G4\[/.test(nm) || /^G5\[/.test(nm))) {
+      /* v1.5.89①：**参照行只记录、不阻断**。gate-drafts 的输出同时含"线上包 / 元测试"这些**别的对象**的行；
+       * 补入"只枪(1ジ压制·打最肥)"这一格之后，线上包自己在 G4[long] 就是红的（长程被最便宜的一张卡打穿）。
+       * 若把参照行也当阻断：① 任何候选都被连坐（换包实际只能靠 --force）；② 会把"候选不行"这个
+       * **错误结论**传给人 —— 与 v1.5.78 想治的"把没过的当成过了"是同一类错误的反向版本。 */
+      const isRef = /^G[3-6]\[(线上包|元测试)/.test(nm);
+      if (m[1] === 'FAIL' && !isRef && (/^G4\[/.test(nm) || /^G5\[/.test(nm))) {
         gateDrafts.blocking.push(nm);
         fails.push('行为门未过：' + nm);
+      } else if (isRef && m[1] === 'FAIL') {
+        gateDrafts.recorded.push('参照(不阻断) FAIL ' + nm);
       } else if (/^G6\[/.test(nm)) {
         gateDrafts.recorded.push(m[1] + ' ' + nm);
       } else if (m[1] === 'FAIL') {
@@ -238,7 +249,17 @@ if (!process.argv.includes('--skip-gate-drafts')) {
     }
     const mg6 = /G6\[([^\]]+)\] 靶向率[^\n]*实测 ([\d.]+)%/g; let t6;
     while ((t6 = mg6.exec(outTxt))) gateDrafts.g6[t6[1]] = Number(t6[2]);
-    console.log('   G4/G5 行为门（第七轮复核 §15-1）：' + (gateDrafts.blocking.length ? '✗ ' + gateDrafts.blocking.join('；') : '✅ 全过'));
+    console.log('   G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：' +
+      (gateDrafts.blocking.length ? '✗ ' + gateDrafts.blocking.join('；') : '✅ 候选自己全过'));
+    const refFails = gateDrafts.recorded.filter(function (x) { return x.indexOf('参照(不阻断) FAIL') === 0; });
+    if (refFails.length) {
+      console.log('   ⚠ 参照行（**不阻断**）：' + refFails.length + ' 条 —— **在位包自己没过** ⇒ 这是"该换包"的信号，\n      ' +
+        '不是"候选不行"。为了它去 --force 越过候选门是搞错了主语。\n      ' + refFails.join('\n      '));
+    }
+    if (gateDrafts.unrun.length) {
+      console.log('   ⛔ **不得当作通过**：' + gateDrafts.unrun.length + ' 格 UNRUN（量具跑不了 / 不可判）：\n      ' +
+        gateDrafts.unrun.join('\n      '));
+    }
     console.log('   G6 靶向率（只记录不阻断）：' + JSON.stringify(gateDrafts.g6));
   } catch (e) {
     console.log('   ⚠ G4/G5 行为门未能运行（不阻断，但**别当通过**）：' + String(e && e.message || e));

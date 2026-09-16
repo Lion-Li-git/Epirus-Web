@@ -2986,6 +2986,19 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
   ok(pc.indexOf("['tools/gate-drafts.mjs', SRC]") >= 0, 'promote-champion 必须调用量具');
   ok(pc.indexOf('/^G4\\[/.test(nm) || /^G5\\[/.test(nm)') >= 0, '只有 G4/G5 进阻断面（G3/G6 只记录）');
   ok(pc.indexOf('行为门未过') >= 0 && pc.indexOf('meta.gateDrafts') >= 0, '阻断结论必须留痕（meta）');
+  /* v1.5.89：本轮实测发现的三处**判词缺陷**，各留一条"能失败"的断言（都与 v1.5.78 的原病根同族）：
+   * 原病根 = "把没跑 / 没判的当成过了"。这三个缺陷是它的三种变体：主语错位、判词不可读、缺第三态。 */
+  const gd = readFileSync('tools/gate-drafts.mjs', 'utf8');
+  ok(pc.indexOf("const isRef = /^G[3-6]\\[(线上包|元测试)/.test(nm);") >= 0,
+    '必须识别**参照行**（线上包 / 元测试）—— 它们说的是别的对象，不得阻断候选');
+  ok(/if \(m\[1\] === 'FAIL' && !isRef &&/.test(pc),
+    '阻断条件必须排除参照行：否则候选被"在位包是红的"连坐 ⇒ 任何换包都只能靠 --force（主语错位）');
+  ok(gd.indexOf("const st = unrun ? 'UNRUN'") >= 0, 'gate-drafts 必须支持 UNRUN 第三态（跑不了 / 不可判 ≠ 不合格）');
+  ok(pc.indexOf('gateDrafts.unrun') >= 0 && pc.indexOf('不得当作通过') >= 0,
+    'UNRUN 必须被单独收集 + 醒目提示"不得当作通过"（否则它读起来就是"过"）');
+  ok(gd.indexOf('最克「${worst[0]}」${worst[1]}%') >= 0,
+    'G4 标题必须带"最克那一格"：原先标题只有基线 ⇒ FAIL 行读起来像"这条过了"（实测时连作者都被误导）');
+  ok(gd.indexOf('实测防席夺冠 ${pct}%') >= 0, 'G5 标题必须带实测值而不是只有阈值');
   /* 行为：用极小局数真跑一遍量具（不拖慢门禁），验元测试与退出码契约 */
   const r = spawnSync(process.execPath, ['tools/gate-drafts.mjs'], {
     cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24,
@@ -2993,7 +3006,11 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
   });
   const out = String(r.stdout || '') + String(r.stderr || '');
   ok(/PASS\s+G6\[元测试\]/.test(out), 'G6 元测试必须 PASS（量具判别力不足 ⇒ 后面所有读数不可信）');
-  ok(/PASS\s+G4\[线上包\/(long|multi)\]/.test(out), '线上包 G4 必须 PASS（否则"已知好"一侧不成立 ⇒ G4 不可作阻断）');
+  /* v1.5.89：口径改了 —— 补入"只枪(1ジ压制·打最肥)"这一格之后，线上包自己在 **G4[long]** 就是红的
+   * （长程被最便宜的一张卡打穿，第八轮复核 §6 的结论）。判别力依据只要求"线上包**至少一个模式** PASS"；
+   * 而"在位包是红的"必须**只记录、不阻断候选** —— 该契约由上面那两条 isRef 断言守着。
+   * （不在这里断言 `FAIL G4[线上包/long]`：D67 用 GATE4_GAMES=6 跑，读数会抖 ⇒ 那样的断言本身就是"偶发红"。） */
+  ok(/PASS\s+G4\[线上包\/(long|multi)\]/.test(out), '线上包 G4 **至少一个模式**必须 PASS（"已知好"一侧才成立）');
   ok(/PASS\s+G5\[线上包\/(long|multi)\]/.test(out), '线上包 G5 必须 PASS（同上）');
   const anyFail = /^\s*FAIL\s+/m.test(out);
   eq(r.status, anyFail ? 1 : 0, '退出码必须与"是否存在 FAIL"一致（CI/promote 靠它判定）');
