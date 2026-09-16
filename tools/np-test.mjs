@@ -1273,21 +1273,21 @@ t('D54 引擎层对称性烟测：同一策略坐满 5 座不得系统性偏座�
    * 这条是它们的**统计守卫**：固定种子的（近随机）策略坐满 5 座，各座胜场与死亡次数都不得系统性偏差。
    * 修前实测（训练产物）：0 号座每局必死 60/60、其余座 37~46 ⇒ 死亡极差 20~26，本用例会红。 */
   Pol.setRng(T.mulberry32(90210));
-  const p = Pol.makePolicy(0.25);
+  /* v1.5.74：夹具改用**脚本**（同一脚本坐满 5 座）。原用随机权重神经网络，而 F2 两级采样后
+   * "条目少的技能（ジ/防御）"拿回份额 ⇒ 随机网络的局面更平（实测只剩 17/120 分出胜负）⇒
+   * 这条**引擎层**烟测会被夹具的被动性带偏（它要测的是引擎对称性，不需要神经网络）。 */
+  const scripted = T.wrapBotN(Bots.pickAggro);
   const win = [0, 0, 0, 0, 0], dead = [0, 0, 0, 0, 0];
   let dec = 0;
   for (let g = 0; g < 120; g++) {
     const st = S.createState('multi', { next: T.mulberry32(31000 + g) }, 5);
     st.slotSalt = ((g * 2654435761) >>> 0);
-    const base = T.policyChooserN(p, 0.15);
-    Play.autoGameN(st, [base, base, base, base, base]);
+    Play.autoGameN(st, [scripted, scripted, scripted, scripted, scripted]);
     for (let i = 0; i < 5; i++) if (st.p[i].hp <= 0) dead[i]++;
-    let b = -1, bh = -1, tie = false;
-    for (let i = 0; i < 5; i++) {
-      const hp = Math.max(0, st.p[i].hp);
-      if (hp > bh) { bh = hp; b = i; tie = false; } else if (hp === bh) tie = true;
-    }
-    if (b >= 0 && !tie && bh > 0) { win[b]++; dec++; }
+    /* v1.5.74：胜负要用**引擎自己的裁定**（v1.5.65 起"全灭按累计伤害判胜"）——
+     * 旧的"有人活着且血量唯一最高"口径会把全员阵亡的局全算成平局
+     * （脚本对局里几乎每局都全员阵亡 ⇒ 实测只有 12/120 被判"分出胜负"）。 */
+    if (st.winner !== 'draw' && st.winner != null) { win[st.winner]++; dec++; }
   }
   const winners = win.filter(function (w) { return w > 0; }).length;
   const wSpread = Math.max.apply(null, win) - Math.min.apply(null, win);
@@ -2889,6 +2889,55 @@ t('D64 狙击场探针：归因纯函数 + 混合场的靶向判据（复核 §4
   ok(readFileSync('tools/probe-sniper.mjs', 'utf8').indexOf('没有靶向判别力') >= 0 ||
      readFileSync('tools/probe-sniper.mjs', 'utf8').indexOf('无靶向判别力') >= 0,
     '探针工具必须写明 wall 口径没有靶向判别力（防止把恒 ~1 的比例当成果）');
+});
+
+
+/* ===== v1.5.74（用户 4 局实测两问 → F1/F2）=====
+ * ① F1：**买不起的招不得进候选表**（旧行为：进表 → 被选中 → 引擎静默降级成ジ = 幻影动作）；
+ * ② F2：**两级采样**（先技能、后条目）⇒ 槽位数不再放大某技能的抽样概率。
+ * 两条都必须能被反证：③ 用零权重（所有候选同分）检查"4 条槽位 vs 1 条槽位"的概率是否相等。 */
+t('D65 候选表过滤买不起 + 两级采样抹平槽位放大（v1.5.74 F1/F2）', function () {
+  const st = S.createState('multi', { next: mulberry32(6501) }, 5);
+  /* ① F1：显式 affordable:false 必须被排除（字段真源 = play.js:17/21） */
+  const legal = [
+    { key: R.SK.JI, affordable: true },
+    { key: R.SK.CHARGE, affordable: false },
+    { key: R.SK.GUN, affordable: true },
+    { key: R.SK.GUARD, affordable: false }
+  ];
+  const c1 = Pol.candidatesFor(st, 0, legal, {});
+  ok(c1.every(function (c) { return c.key !== R.SK.CHARGE && c.key !== R.SK.GUARD; }),
+    '买不起的招不得进候选表（实测 [' + c1.map(function (c) { return c.key; }).join(',') + ']）');
+  ok(c1.some(function (c) { return c.key === R.SK.GUN; }), '买得起的招必须仍在表里');
+  const c2 = Pol.candidatesFor(st, 0, legal, { allowUnaffordable: true });
+  ok(c2.some(function (c) { return c.key === R.SK.CHARGE; }), '逃生口 allowUnaffordable 必须能放回它们（评测脚本用）');
+  /* ② 只过滤**显式 false**：页面/工具/夹具自造的 legal 通常不带该字段，过滤会把表清空 ⇒ 冠军只出ジ */
+  const c3 = Pol.candidatesFor(st, 0, [{ key: R.SK.GUN }], {});
+  ok(c3.length >= 1 && c3.every(function (c) { return c.key === R.SK.GUN; }),
+    'legal 不带 affordable 字段时不得被过滤（D51 曾因此红；实测 ' + c3.length + ' 条）');
+  /* ③ F2 的判别性检查：零权重 ⇒ 所有候选同分 ⇒ 槽位多寡**不得**改变技能概率 */
+  const zero = new Array(Pol.paramCount()).fill(0);
+  const cands = [
+    { key: R.SK.GUN, target: 1, target2: null, bead: null },
+    { key: R.SK.GUN, target: 2, target2: null, bead: null },
+    { key: R.SK.GUN, target: 3, target2: null, bead: null },
+    { key: R.SK.GUN, target: 4, target2: null, bead: null },
+    { key: R.SK.PROTO, target: null, target2: null, bead: null }
+  ];
+  const f = Pol.forwardCands(st, 0, cands, zero, { temp: 0.5 });
+  let pg = 0; for (let i = 0; i < 4; i++) pg += f.probs[i];
+  ok(Math.abs(pg - f.probs[4]) < 0.05,
+    '同分时"4 条槽位"与"1 条槽位"的技能概率必须相等（实测 ' + (pg * 100).toFixed(1) + '% vs ' + (f.probs[4] * 100).toFixed(1) + '%）');
+  let s = 0; for (let i = 0; i < f.probs.length; i++) s += f.probs[i];
+  ok(Math.abs(s - 1) < 1e-9, '两级相乘后 prob 表必须仍严格归一（实测 ' + s + '）');
+  /* ④ argmax/greedy 语义必须不变（两级后"条目少"的条目概率反而更高 ⇒ 不能用 probs 取最大） */
+  const y = new Array(Pol.paramCount()).fill(0);
+  ok(Pol.forwardCands(st, 0, cands, y, { temp: 0.5 }).cand.key === R.SK.GUN,
+    'greedy 语义 = 全表最大对数几率（零权重时取第一个条目）');
+  /* ⑤ 结构断言：两级相乘与 F1 的"显式 false"必须真在源码里 */
+  const src = readFileSync('js/train/policy.js', 'utf8');
+  ok(src.indexOf('kProb[k] * within') >= 0, '两级采样必须写在 forwardCands（技能层 × 条目层）');
+  ok(src.indexOf('l.affordable === false') >= 0, 'F1 必须只过滤显式 false');
 });
 
 

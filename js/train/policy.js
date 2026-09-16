@@ -567,6 +567,20 @@
       const l = legal[i];
       const def = R.byKey[l.key];
       if (!def) continue;
+      /* ===== v1.5.74（F1，用户实测"没 ジ 却用蓄能"逼出来的）=====
+       * **买不起的招不进候选表**。病：`legal` 每项都带 `affordable`（play.js:17/21），
+       * 而这里只判 `l.key` ⇒ 实测 `ep = 0` 时蓄能仍在候选里
+       * （`tools/probe-candslot.mjs`：蓄能出现的 ep 分布 {0:12, 1:14, 2:2}），
+       * 而引擎拿到买不起的选择会**静默降级成「ジ」**（play.js:60/93：
+       * `(l && l.affordable) ? raw.key : R.SK.JI`）⇒ 网络以为放了招、实际只是攒 1 ジ
+       * = **幻影动作**，还把错误归因喂回训练。
+       * 逃生口：`opts.allowUnaffordable`（评测脚本"故意空挥"用；引擎的 whiffOk 语义在
+       * play.js 侧另有判定，这里默认严格）。 */
+      /* ⚠️ 只在**显式 `affordable === false`** 时跳过：`legal` 来自游戏引擎时每项都带该字段
+       * （play.js:17/21），但**页面/工具/测试夹具**可能自己造 `legal` 而不带它 ⇒
+       * 若按 `!l.affordable` 过滤会把它们的候选表清空（冠军只出ジ）—— 这是
+       * D51 在我第一版实现上抓到的真实回归。 */
+      if (l.affordable === false && !opts.allowUnaffordable) continue;
       if (def.target2 === 'enemy') {
         /* v1.5.52（用户指出）：**双目标技能**（镜面反射 t1=复制对象/t2=输出对象、双枪射手两个角色）
          * 此前 `target2` 恒为 null ⇒ 引擎用自己的兜底（"索引最小的对手"）填第二个目标
@@ -628,11 +642,45 @@
       if (v > maxL) maxL = v;
     }
     const probs = new Float64Array(n);
-    let sum = 0;
-    for (let i = 0; i < n; i++) { probs[i] = Math.exp((logits[i] - maxL) / (opts.temp || 0.6)); sum += probs[i]; }
-    for (let i = 0; i < n; i++) probs[i] = sum > 0 ? probs[i] / sum : 0;
-    let arg = 0, best = -1;
-    for (let i = 0; i < n; i++) if (probs[i] > best) { best = probs[i]; arg = i; }
+    /* ===== v1.5.74（F2，用户实测"爱用全息屏障却从不用原型制御"逼出来的）=====
+     * **两级采样**：先在**技能**上归一，再在该技能的条目里选目标/珠类型。
+     * 旧行为是在**条目**上直接 softmax ⇒ 条目多的技能概率被系统性放大
+     * （实测每决策平均槽位：狙击/枪/剑/坦克 3.36 · 全息屏障 3.36 · 双枪 8.29 ·
+     *  蓄能 2.00 · **原型制御/聚能环/防御/八卦阵 1.00**）⇒ 同费用同效果的一对（全息 vs 原型）
+     * 槽位是 3.36:1，网络**不需要学到任何偏好**就会被抽样结构推向全息（而它在混战里是劣势动作）。
+     * ① 技能层：每个技能取其**条目里的最大值**（"该技能最好的一种打法"）⇒ 每个技能恰好一个槽位；
+     * ② 条目层：在该技能内部按其自身 softmax 选目标（**目标学习性保留** —— 该打谁仍然由网络说了算）。
+     * `probs[i]` 仍是**条目 i 的最终概率**（两级相乘，全表仍严格和为 1）⇒
+     * `chooseCandidates` 的累积采样、诊断工具、单测都不需要改。
+     * `argmax` 与 `greedy` 语义不变（两级取最大的最大值 = 全表最大值）。 */
+    const temp = opts.temp || 0.6;
+    const bestOf = {}, kSum = {}, kProb = {}, keys = [];
+    for (let i = 0; i < n; i++) {
+      const k = cands[i].key;
+      if (!(k in bestOf)) { bestOf[k] = -1e9; kSum[k] = 0; keys.push(k); }
+      if (logits[i] > bestOf[k]) bestOf[k] = logits[i];
+    }
+    let kmax = -1e9;
+    for (let t = 0; t < keys.length; t++) if (bestOf[keys[t]] > kmax) kmax = bestOf[keys[t]];
+    let ktot = 0;
+    for (let t = 0; t < keys.length; t++) {
+      kProb[keys[t]] = Math.exp((bestOf[keys[t]] - kmax) / temp);
+      ktot += kProb[keys[t]];
+    }
+    for (let t = 0; t < keys.length; t++) kProb[keys[t]] = ktot > 0 ? kProb[keys[t]] / ktot : 0;
+    for (let i = 0; i < n; i++) {
+      const k = cands[i].key;
+      kSum[k] += Math.exp((logits[i] - bestOf[k]) / temp);
+    }
+    for (let i = 0; i < n; i++) {
+      const k = cands[i].key;
+      const within = kSum[k] > 0 ? Math.exp((logits[i] - bestOf[k]) / temp) / kSum[k] : 1 / n;
+      probs[i] = kProb[k] * within;
+    }
+    /* argmax 必须看**对数几率**而不是两级概率：两级归一后"条目少"的技能其条目概率反而更高，
+     * 用 probs 取最大会让 greedy 选错（与"两级取最大的最大值 = 全表最大值"的承诺不符）。 */
+    let arg = 0, best = -1e9;
+    for (let i = 0; i < n; i++) if (logits[i] > best) { best = logits[i]; arg = i; }
     return { probs: probs, argmax: arg, cand: cands[arg] || null };
   }
   /* 选**候选**（训练/评测/UI 都用这条）：返回 {key,target,target2,bead} */
