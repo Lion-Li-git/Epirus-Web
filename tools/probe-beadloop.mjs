@@ -23,7 +23,7 @@ const MC = 24;
 const params = loadChamp(W, file);
 console.log('=== 珠子闭环诊断：' + file + '（' + GAMES + ' 局 multi，0 号座，蒙特卡洛 ' + MC + ' 次/决策）===');
 
-const BEAD_CARDS = ['ring', 'railgun', 'laserEye', 'bigT', 'rod', 'drain'];   // 环 + 两张珠子卡 + 高 ep 技能
+const BEAD_CARDS = ['proto', 'transfer', 'mine', 'ring', 'railgun', 'laserEye', 'bigT'];   // 原型系 + 环 + 珠子卡 + 大雷
 const rows = [];
 let decisions = 0;
 
