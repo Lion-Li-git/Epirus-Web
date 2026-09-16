@@ -3266,6 +3266,32 @@ t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一
   ok(/OPP_DEFAULT = OPP_SPECS\.slice\(0, 9\)/.test(T2), '默认池仍取前 9 个 ⇒ 新增 specialist 不进默认基线');
 });
 
+t('D79 技能广度 S：定义明确 + 按 rules.js 声明的 cat 分层（**不按伤害加权**）+ 固定分母 + 只记录不阻断', function () {
+  /* v1.5.91（用户裁定）：用户要的目标形状是 `H + T·S`（H = 与胜率相关的强度、S = 技能广度、T = 交换率）。
+   * 这条守门盯的是**用户明确否定过的东西**，免得以后又走回去：
+   *   ① 不得按"落地伤害"加权 —— 那样梯度会全给最便宜的枪，而且防御类卡伤害恒 0 ⇒ 量不出防御技能的使用；
+   *      更根本：任何"按卡打分"的权重都会给某张卡一个**专属梯度**（v1.3.7 的 hold+conv 就是活例）；
+   *   ② 分母不得来自"当时可负担的技能数"（v1.5.86 那个可以靠"把菜单变穷"刷分的洞）；
+   *   ③ 不得悄悄变成阻断项（它现在**只测量**；上闸是独立决策，且要先有判别力）。 */
+  const al = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(al.indexOf('export function breadthProfile(') >= 0, '必须有广度的权威定义 breadthProfile');
+  const seg = al.slice(al.indexOf('export function breadthProfile('));
+  ok(seg.indexOf('.cat') >= 0, 'S 必须按 rules.js **自己声明的 cat** 分层（单一真源，不手搓角色表）');
+  ok(seg.indexOf('dmg') < 0 && seg.indexOf('amt') < 0,
+    'S **不得**按落地伤害加权（用户 v1.5.91：那会全跑去用枪，且量不出防御技能）');
+  ok(seg.indexOf('Math.log(K_menu)') >= 0, '分母必须是**固定的声明菜单** ln(K_menu)');
+  ok(seg.indexOf('aff') < 0, '分母不得取自"当时可负担的技能数"（v1.5.86 的刷分洞）');
+  ok(seg.indexOf('e.key !== R.SK.JI') >= 0, 'ジ 必须排除（它是攒钱/等待，不算技能选择）');
+  ok(seg.indexOf("e.outcome === 'ok'") >= 0, '只统计成功动作（与门禁 G 同源，D74 的同一条规矩）');
+  ok(seg.indexOf('N: N') >= 0 && seg.indexOf('maxCardShare') >= 0, '必须返回样本量 N 与反 spam 的 maxCardShare');
+  const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(pc.indexOf('breadthProfile(W, params') >= 0 && pc.indexOf('技能广度 S（n=') >= 0,
+    '体检必须打印 S，且**与 n 一起打**（S 对样本量敏感 —— METHODOLOGY 22）');
+  ok(pc.indexOf('目标 = H + T·S') >= 0, '打印里必须写清目标形状（用户要求"S 怎么算"必须明确）');
+  ok(pc.indexOf("fails.push('广度") < 0 && pc.indexOf('fails.push("广度') < 0,
+    '广度**不得**进 fails（只测量；要上闸是独立决策）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

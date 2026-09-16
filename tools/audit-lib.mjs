@@ -607,3 +607,88 @@ export function aggressionProfile(W, params, GAMES) {
   const A = run('aggr'), B = run('calm');
   return { fieldA: A, fieldB: B, atk: A.atk, dealtPerGame: A.dealtPerGame, winRate: A.winRate };
 }
+
+/* ===== 技能广度 S 的**权威定义**（v1.5.91，用户裁定的口径）=====
+ * 用户要的目标形状：**`目标 = H + T·S`**，其中
+ *   H = 与**胜率**相关的强度项（本项目 fit 的主项就是自对局回报均值 `fitAvg`；外部标尺是 A 考卷 1st%）；
+ *   S = **技能广度**（本函数算的那个量）；T = 交换率（`EPIRUS_DIV_W` 那一族）。
+ *   写成 `G = H − T·S'` 也成立，只要把 `S'` 定义成"集中度"= ln(K_menu) − S —— 两种写法同构；
+ *   **本仓库统一按 `H + T·S` 陈述**，免得符号打架。
+ *
+ * **为什么不按"落地伤害"加权**（用户 v1.5.91 逐条否掉，记在这里免得以后又有人提）：
+ *   ① 梯度会全给最便宜的可重复攻击卡（枪）⇒"大家都跑去用枪了"；
+ *   ② 伤害只是**一条轴**，卡的价值分布在多条轴上（伤害 / 穿透 / 防御 / 经济）：很多卡贵的理由是
+ *      **穿透能力**而不是伤害；而防御类卡伤害恒 0 ⇒ 被权成 0 ⇒ **量不出防御技能的使用**；
+ *   ③ 更根本的一条：任何"按卡打分"的权重都会给某张卡一个**专属梯度** ——
+ *      v1.3.7 的 `hold+conv`"literally 在为『ジ→激光剑』这一个循环付钱"就是这个失败的活例。
+ *   ⇒ 所以 S 用**熵**（对卡对称、无专属梯度），只把"支持集"按 `rules.js` **自己声明的 `cat`** 分层。
+ *
+ * 定义（唯一真源就是下面这段代码）：
+ *   n_k       = 自对局里 `outcome==='ok'` 且 `key!==ji` 的动作计数（**与门禁同源**，见 D74）
+ *   N         = Σ n_k；K_menu = `rules.js` 里带 `cat` 的非ジ技能数（**固定常量**，不随"能不能付得起"变化）
+ *   S_cat     = H(`cat` 的边缘分布)                       ← "用了几**类**"（能量/攻击/防御/特殊）
+ *   S_within  = Σ_c share_c · H(第 c 类**内部**的卡分布)     ← "每一类里铺得开不开"
+ *   S         = S_cat + S_within  ≡ H(全部非ジ卡的分布)
+ *               ⚠️ 分层熵**恒等于**平铺熵（这是数学事实，不能装作发现了新量）——
+ *                  分层带来的不是新总量，而是**可读性**：S 低到底是"只敢用一类"，还是"每类只薅一张"。
+ *   S_norm    = S / ln(K_menu) ∈ [0,1]（**固定分母** ⇒ 不能靠"把菜单变穷"刷分，v1.5.86/DIV_K 的教训）
+ *   G_eff     = exp(S)  —— 与历史的 `G 有效技能数` **同值**（口径不变 ⇒ 历史读数仍可比）
+ *   maxCardShare = 出现最多的那张卡的占比（**反 spam 守卫**，只打印、不参与判定）
+ *   catsUsed  = 占比 ≥1% 的类数（给人读的"覆盖了几类"）
+ * ⚠️ 样本敏感（`docs/METHODOLOGY.md` 规则 22）：同一个包 n5=3.08 / n10=2.99 / n20=4.24 / n40=4.54
+ *   ⇒ 返回值**必须带 N 与 games**，打印时一起报；小样本之间的 S 差**不可比**。
+ * 本函数**只测量**：不参与 fit、不参与任何阻断（改 fit 的归一化是另一件独立的事，改了必须记 pre/post 分界）。 */
+export function breadthProfile(W, params, mode, GAMES) {
+  const S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay, R = W.EpirusRules;
+  const G = GAMES || 20;
+  const byKey = R.byKey || {};
+  const catOf = function (k) { return (byKey[k] && byKey[k].cat) || '(未分类)'; };
+  const menu = Object.keys(byKey).filter(function (k) { return k !== R.SK.JI && byKey[k] && byKey[k].cat; });
+  const K_menu = menu.length || 1;
+  const cats = {};   // 声明的类集合（固定，不受实测影响）
+  Object.keys(byKey).forEach(function (k) { if (k !== R.SK.JI && byKey[k] && byKey[k].cat) cats[byKey[k].cat] = 1; });
+  const K_cat = Object.keys(cats).length || 1;
+  const h = function (arr) {
+    let tot = 0; for (const x of arr) tot += x;
+    if (tot <= 0) return 0;
+    let e = 0; for (const x of arr) { if (x > 0) { const p = x / tot; e -= p * Math.log(p); } }
+    return e;
+  };
+  const cnt = {}, catCnt = {};
+  let N = 0;
+  for (let g = 0; g < G; g++) {
+    const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(21000 + g) }, 5);
+    st.slotSalt = (Math.imul(g + 3, 0x9e3779b1) ^ 0x165667b1) >>> 0;
+    const base = T.policyChooserN(params, 0.15);
+    Play.autoGameN(st, [base, base, base, base, base]);
+    for (const e of st.events) {
+      if (e.type === 'action' && e.outcome === 'ok' && e.key && e.key !== R.SK.JI) {
+        const c = catOf(e.key);
+        cnt[e.key] = (cnt[e.key] || 0) + 1;
+        catCnt[c] = (catCnt[c] || 0) + 1;
+        N++;
+      }
+    }
+  }
+  const S_flat = h(Object.keys(cnt).map(function (k) { return cnt[k]; }));
+  const S_cat = h(Object.keys(catCnt).map(function (c) { return catCnt[c]; }));
+  let S_within = 0;
+  const catShares = {};
+  Object.keys(catCnt).forEach(function (c) {
+    const share = catCnt[c] / Math.max(1, N);
+    catShares[c] = share;
+    const inner = Object.keys(cnt).filter(function (k) { return catOf(k) === c; }).map(function (k) { return cnt[k]; });
+    S_within += share * h(inner);
+  });
+  let maxCardShare = 0;
+  Object.keys(cnt).forEach(function (k) { const p = cnt[k] / Math.max(1, N); if (p > maxCardShare) maxCardShare = p; });
+  const catsUsed = Object.keys(catShares).filter(function (c) { return catShares[c] >= 0.01; }).length;
+  return {
+    games: G, N: N, K_menu: K_menu, K_cat: K_cat, menuSize: menu.length,
+    S: S_flat, S_cat: S_cat, S_within: S_within,
+    S_norm: S_flat / Math.log(K_menu),
+    G_eff: Math.exp(S_flat), G_role: Math.exp(S_cat),
+    maxCardShare: maxCardShare, catsUsed: catsUsed,
+    catShares: catShares, counts: cnt
+  };
+}

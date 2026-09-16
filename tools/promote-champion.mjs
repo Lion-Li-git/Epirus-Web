@@ -24,7 +24,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile } from './audit-lib.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
@@ -203,6 +203,20 @@ console.log('   输出密度（' + dens.games + ' 局自对局）：每回合出
   (feas.density && feas.density.beadLoopClosed === true
     ? '**珠经济闭环** ✓（"经济动作有出口"的第一个形态）'
     : '珠经济未闭环（按ジ攒了花不掉的东西 = 命门）'));
+/* ===== v1.5.91（用户裁定）：**技能广度 S 的权威口径** —— `目标 = H + T·S` =====
+ *   H = 与胜率相关的强度项（fit 主项 = 自对局回报均值；外部标尺 = A 考卷 1st%）
+ *   S = 技能广度（熵，**对卡对称**：不按伤害/费用加权 —— 那会给某张卡专属梯度，见 audit-lib 里那段长注释）
+ *   T = 交换率（`EPIRUS_DIV_W`）
+ * 这里**只测量、只打印**，不参与 fit、不参与阻断。⚠ 必须与 N 一起报（G/S 对样本量很敏感）。 */
+const brd = breadthProfile(W, params, 'long', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
+console.log('   技能广度 S（n=' + brd.N + ' 个非ジ出手 · ' + brd.games + ' 局自对局）：S=' + brd.S.toFixed(3) +
+  ' = 类间 ' + brd.S_cat.toFixed(3) + ' + 类内 ' + brd.S_within.toFixed(3) +
+  ' · S_norm=' + brd.S_norm.toFixed(3) + '（分母 ln ' + brd.K_menu + ' 固定）' +
+  ' · G_eff=' + brd.G_eff.toFixed(2) + '（= 历史"有效技能数"，同值）' +
+  ' · 覆盖 ' + brd.catsUsed + '/' + brd.K_cat + ' 类 · 最大单卡占比 ' + (100 * brd.maxCardShare).toFixed(1) + '%');
+console.log('     各类占比：' + Object.keys(brd.catShares).map(function (c) {
+  return c + ' ' + (100 * brd.catShares[c]).toFixed(1) + '%';
+}).join(' · ') + '   ⇒ 目标形状 目标 = H + T·S（H=强度/T=EPIRUS_DIV_W）；本行**只记录**');
 /* ===== v1.5.71（第五轮复核 §4-2）：**狙击场探针** —— 只记录，**暂不阻断** =====
  * 标定（40~60 局/包）把复核建议的判据否掉了：复核建议"靶向率 ≥20%"，但**它没有判别力** ——
  * 种子冠军 45.3% / eco-34 47.7% / 线上包 43.8%，全都远高于均匀 25% ⇒ 谁也分不开。
