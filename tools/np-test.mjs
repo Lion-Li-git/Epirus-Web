@@ -3130,7 +3130,12 @@ t('D74 熵奖励与门禁同口径：进 fit 的熵必须来自"自对局·成�
   ok(src.indexOf('const spUse = {};') >= 0, '必须有自对局成功动作直方图 spUse');
   ok(src.indexOf("e.outcome === 'ok' && e.key && e.key !== R.SK.JI") >= 0,
     'spUse 必须只收 outcome===ok 的非ジ动作（与 mirrorHealth 的 keyCount 同口径）');
-  ok(src.indexOf('const divBonus = DIV_W * spDivNorm;') >= 0, '进 fit 的必须是 spDivNorm（旧 agg.use 口径只留对照）');
+  /* v1.5.92 更新：进 fit 的那一项现在是"与门禁同源的量 × 类间/类内**混比**"。
+   * `DIV_CAT_W = 0`（默认）时 `spMixNorm === spDivNorm` ⇒ 逐位等于 v1.5.87 的口径，旧读数仍可比；
+   * 这条断言仍然钉住"必须与门禁同源"，同时钉住混比公式（免得有人把 spDivNorm 换成别的量）。 */
+  ok(src.indexOf('const divBonus = DIV_W * spMixNorm;') >= 0 &&
+    src.indexOf('const spMixNorm = (1 - DIV_CAT_W) * spDivNorm + DIV_CAT_W * spCatNorm;') >= 0,
+    '进 fit 的必须是 spDivNorm 与类间熵的混比（DIV_CAT_W=0 时逐位等于 spDivNorm）');
   ok(src.indexOf('coverageEntropy(agg.use, agg.aff, DIV_K)') >= 0, '旧口径保留为对照量（便于审计两口径之差）');
   ok(src.indexOf('effSkills: tot ? Math.exp(H) : 0') >= 0, '门禁量仍是自对局成功非ジ动作的 exp(H)（同源）');
 });
@@ -3290,6 +3295,30 @@ t('D79 技能广度 S：定义明确 + 按 rules.js 声明的 cat 分层（**不
   ok(pc.indexOf('目标 = H + T·S') >= 0, '打印里必须写清目标形状（用户要求"S 怎么算"必须明确）');
   ok(pc.indexOf("fails.push('广度") < 0 && pc.indexOf('fails.push("广度') < 0,
     '广度**不得**进 fails（只测量；要上闸是独立决策）');
+});
+
+t('D80 类间广度权重 DIV_CAT_W：默认 0（逐位等于旧口径）+ 走单一来源接线 + 真源与 breadthProfile 同一个', function () {
+  /* v1.5.92（用户裁定："试一下增加 S_cat 的权重"）。设计上必须同时满足两条：
+   *   ① 默认（不设 env）**逐位等于** v1.5.87 的旧口径 ⇒ 旧产物 / 旧读数仍可比（"默认不设即不变"的规矩）；
+   *   ② 类别的真源必须与 `tools/audit-lib.mjs` 的 `breadthProfile` **同一个**（`R.byKey[k].cat`），
+   *      否则"训练在优化什么"与"体检在量什么"会分叉 —— v1.5.89 的静默半开就是这一族。 */
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  ok(evo.indexOf('let DIV_CAT_W = 0;') >= 0, '默认必须是 0（不设 env 即旧行为）');
+  ok(evo.indexOf('if (o.divCatW != null) DIV_CAT_W = Math.min(1, Math.max(0, Number(o.divCatW)));') >= 0,
+    '必须走 setter —— vm 沙箱里没有 process，env 只能在 server 侧读（v1.5.86 附录 E1 的教训）');
+  ok(evo.indexOf('const spMixNorm = (1 - DIV_CAT_W) * spDivNorm + DIV_CAT_W * spCatNorm;') >= 0,
+    '混比公式必须显式可读（W=0 ⇒ 只剩 spDivNorm = 旧口径）');
+  ok(evo.indexOf('const divBonus = DIV_W * spMixNorm;') >= 0, 'fit 必须用混比后的量');
+  ok(evo.indexOf('R.byKey[k].cat') >= 0, '类别真源必须是 rules.js 声明的 cat');
+  ok(evo.indexOf('Math.log(K_CAT)') >= 0, '类间熵的分母必须是**声明的类数** ln(K_CAT)（固定，不可随实测变）');
+  const ee = readFileSync('server/econ-env.mjs', 'utf8');
+  ok(ee.indexOf("'EPIRUS_DIV_CATW'") >= 0 && ee.indexOf("'divCatW'") >= 0,
+    'econ-env 必须覆盖 EPIRUS_DIV_CATW → divCatW（单一来源；D77 会顺带查"读到的键 setter 都认"）');
+  /* 行为：真模块上设一次/复位一次 —— 防"写了但从没生效"这类静默空操作 */
+  eq(T.economyReward().divCatW, 0, 'D80 跑到这里时它必须还是默认 0');
+  eq(T.setEconomyReward({ divCatW: 1 }).divCatW, 1, '设 divCatW=1 后 economyReward() 必须回读 1');
+  eq(T.economyReward().K_cat, 4, '声明的类数应为 4（energy/attack/defense/special）');
+  eq(T.setEconomyReward({ divCatW: 0 }).divCatW, 0, '复位必须回 0（别把状态泄漏给后面的用例）');
 });
 
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {

@@ -664,6 +664,23 @@
    * 比默认臂被拒的 2.3~2.8 更低，全被健康门禁拦下、零产物）。
    * 现在固定成 K：只有把直方图铺开到 ~K 种非ジ技能才能拿满。可用 EPIRUS_DIV_K 调。 */
   let DIV_K = 6;
+  /* ===== v1.5.92（用户裁定）：把"广度"拆成两层，并允许给**跨角色**那层加权 =====
+   * 起因：`v7f3-94` 的平铺熵 `G` 最高（4.63）却全是**类内**堆出来的（attack 94.9%、穿透 0%、防御 4.8%）
+   * ⇒ 平铺熵会把"单角色多招"误读成"广度"；而用户要的"技能多样性"更靠近**跨角色**
+   * （会防御、会用穿透/特殊、会做经济 —— 那才是"遇到没见过的局面会换卡"）。
+   * 组成：`混 = (1−DIV_CAT_W)·S_flat_norm + DIV_CAT_W·S_cat_norm`
+   *   `S_flat_norm` = 现口径（`spH/ln(DIV_K)`，**类间 + 类内**）
+   *   `S_cat_norm`  = `H(cat 分布)/ln(K_CAT)`（**只算跨了几类**）
+   * ⇒ `DIV_CAT_W = 0`（默认）时**逐位等于旧行为** ⇒ 旧产物、旧读数仍可比（本仓库"默认不设即不变"的规矩）。
+   * ⚠️ 已知可刷分风险：`K_CAT` 只有 4 ⇒ W=1 时"每类各用一次"就能吃满。这一版**故意不加下限**
+   *   （不引入新的拍脑袋常数），先让臂的读数说话：若 `S_cat` 蹿高而 A 考卷塌，就是它在被刷。
+   * 真源与 `tools/audit-lib.mjs` 的 `breadthProfile` **同一个**：`R.byKey[k].cat`（规则自己声明的类）。 */
+  let DIV_CAT_W = 0;
+  const K_CAT = (function () {
+    const m = {};
+    for (const k in R.byKey) { if (k !== R.SK.JI && R.byKey[k] && R.byKey[k].cat) m[R.byKey[k].cat] = 1; }
+    return Math.max(1, Object.keys(m).length);
+  })();
 /* v1.5.88（用户裁定 甲）：退火强迫多样性的窗口代数（0=关）与破墙硬过滤开关。 */
 let DIV_FORCE_GENS = 0;
 let WALL_FILTER_ON = false;
@@ -687,6 +704,7 @@ let WALL_GAMES = 3;
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
     if (o.divW != null) DIV_W = Math.max(0, Number(o.divW));
     if (o.divK != null) DIV_K = Math.max(2, Number(o.divK));
+    if (o.divCatW != null) DIV_CAT_W = Math.min(1, Math.max(0, Number(o.divCatW)));   // v1.5.92：类间（跨角色）广度的权重
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
     if (o.wallFilter != null) WALL_FILTER_ON = !!o.wallFilter;
     if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));   // v1.5.86：熵项固定分母（见 DIV_K）
@@ -694,7 +712,8 @@ let WALL_GAMES = 3;
     return economyReward();
   }
   function economyReward() {
-    return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
+    return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divCatW: DIV_CAT_W, K_cat: K_CAT,
+      divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
@@ -1020,10 +1039,21 @@ let WALL_GAMES = 3;
     let spH = 0;
     if (spTot > 0) for (const k in spUse) { const pr = spUse[k] / spTot; spH -= pr * Math.log(pr); }
     const spDivNorm = spTot > 0 ? (spH / Math.log(DIV_K)) : 0;
+    /* v1.5.92（用户裁定）：类间（跨角色）广度 —— 同一份 `spUse`，只按声明的 `cat` 再聚合一层。
+     * 分层熵恒等式 `S = S_cat + S_within` ⇒ 这里只需单独算 `S_cat`，类内由减法得到，不必重算。 */
+    const catUse = {};
+    for (const k in spUse) {
+      const c = (R.byKey[k] && R.byKey[k].cat) || '(未分类)';
+      catUse[c] = (catUse[c] || 0) + spUse[k];
+    }
+    let spCatH = 0;
+    if (spTot > 0) for (const c in catUse) { const pr = catUse[c] / spTot; spCatH -= pr * Math.log(pr); }
+    const spCatNorm = spTot > 0 ? (spCatH / Math.log(K_CAT)) : 0;
+    const spMixNorm = (1 - DIV_CAT_W) * spDivNorm + DIV_CAT_W * spCatNorm;
     /* v1.5.6：按用户裁定**恢复**技能熵奖励（Q3 曾把它移出目标函数）。
      * 权重给得小（DIV_W=0.06，满额 +0.06），与 stock（+0.05 / −0.12）同量级 ⇒ 两项加起来仍远小于
      * 胜负项（base 1.0/0.3），符合"奖惩也不用给太多"。 */
-    const divBonus = DIV_W * spDivNorm;   // v1.5.87：与门禁同口径（自对局·成功非ジ动作）
+    const divBonus = DIV_W * spMixNorm;   // v1.5.92：DIV_CAT_W=0 时**逐位等于** v1.5.87 的口径（自对局·成功非ジ动作）
     /* v1.5.88（甲·步 2）：破墙硬过滤（默认关，EPIRUS_WALL_FILTER=1 打开）。 */
     const wallDmg = WALL_FILTER_ON ? wallProbe(params, WALL_GAMES, n) : null;
     const wallReject = (wallDmg != null && wallDmg < 0.5);
@@ -1073,6 +1103,7 @@ let WALL_GAMES = 3;
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
       spDivNorm: spDivNorm,
+      spCatNorm: spCatNorm, spCatH: spCatH, spMixNorm: spMixNorm, divCatW: DIV_CAT_W,
       spH: spH,
       divBonus: divBonus,
       seatPen: seatPen, seatSpreadMirror: seatSpreadMir, seatMaxPct: seatMaxPct, mirrorDecisive: mirDec,
