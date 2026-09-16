@@ -15,6 +15,8 @@
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+/* v1.5.71：对手名字→函数的单一来源（见下面 ALL 的构造） */
+import { OPP_SPECS } from '../server/opp-pool.mjs';
 
 /* 位置参数：剔除 --flag（否则会被当成局数/人数） */
 const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
@@ -45,24 +47,29 @@ const params = P.unpack(JSON.parse(mm[1]), true);
 if (!params) { console.error('冠军包不兼容: ' + JSON.stringify(P.checkPack(JSON.parse(mm[1])))); process.exit(1); }
 
 /* ---------- 对手池 ---------- */
-const ALL = [
-  ['random', Bots.pickRandom], ['aggro', Bots.pickAggro], ['defend', Bots.pickDefend],
-  ['balanced', Bots.pickBalanced], ['antidef', Bots.pickAntiDef], ['breakdef', Bots.pickBreakDef],
-  ['wall', Bots.pickWall], ['mix', Bots.pickMix], ['farmer', Bots.pickFarmer],
-  ['tankline', Bots.pickTankLine], ['heavyfire', Bots.pickHeavyFire], ['deepsaver', Bots.pickDeepSaver],
+/* v1.5.71：名字→函数**从训练池的单一来源派生**（`server/opp-pool.mjs` 的 `OPP_SPECS`），
+ * 再补上只属于评测的器材（focusfire / minespam / cursestorm —— 它们故意不进训练池）。
+ * 起因（又一个"加名字漏一处"）：`--field=targeter` 直接崩栈 —— 这个文件自己持有一份名字表，
+ * 而 `opp-pool.mjs` 的文件头已记录过同类事故三次（v1.3.59 漏 worker、v1.4.8 漏 server、
+ * v1.4.14 漏 eval-5p）。派生之后，往 OPP_SPECS 加对手就自动在评测里可见。 */
+const EVAL_ONLY = [
   /* v1.3.60：集火脚本。转移伤害的价值 ∝ 本回合承伤 N，而 pickFocusFire 的注释写明
    * "当前 meta 里 N>=2 的唯一常见来源就是被集火" ⇒ 它是转移伤害的**前置条件提供者**。 */
   ['focusfire', Bots.pickFocusFire],
   /* v1.4.1：前置条件提供者（铺雷者 / 贴符咒+天火者），池里原先没有 ⇒ 藤甲的火弱、
    * 贴贴×天火这两条线在任何考卷上都测不到。 */
-  ['minespam', Bots.pickMineSpam], ['cursestorm', Bots.pickCurseStorm],
-  /* v1.4.7：单一防御 specialists。第十轮复核指出：它们作为"玩家对手"确实无聊（v1.3.22 按熵=1.00 剔除，
-   * 那是 UI 判断），但作为**训练/评测的 exploit cursor** 正是缺的那类 —— 它们暴露的是
-   * "冠军会不会反制一堵 0 ジ 的墙"。且它们**原本不在 server 的 BOT_FN_N 里**。 */
-  ['ringspam', Bots.pickRingSpam],                                  // v1.4.11：开环经济流（小雷的反制目标）
-  ['reflectspam', Bots.pickReflectSpam], ['guardspam', Bots.pickGuardSpam],
-  ['baguaspam', Bots.pickBaguaSpam], ['protowall', Bots.pickProtoWall]
+  ['minespam', Bots.pickMineSpam], ['cursestorm', Bots.pickCurseStorm]
 ];
+const ALL = OPP_SPECS
+  .map(function (o) { return [o.name, Bots[o.fn]]; })
+  .concat(EVAL_ONLY);
+/* 登记了名字但取不到函数 ⇒ **响亮报错**（不许静默剔除：那正是"漏一处"变成静默半开的老路） */
+for (const kv of ALL) {
+  if (typeof kv[1] !== 'function') {
+    console.error('对手登记了但函数不存在: ' + kv[0] + '（核对 server/opp-pool.mjs 的 fn 与 js/train/bots.js 的导出）');
+    process.exit(1);
+  }
+}
 /* "深经济对手"的定义：会攒钱**并且**会把攒的钱换成重击。farmer 只攒不还手，不算。 */
 const DEEP = { deepsaver: 1, heavyfire: 1 };
 const CORE = ['random', 'defend', 'antidef', 'wall', 'farmer', 'heavyfire', 'deepsaver'];
@@ -307,6 +314,12 @@ function runSubject(makeSel, label) {
           });
         } else {
           const nm = field[oi % field.length];
+          /* v1.5.71：场里出现未登记的名字必须**报错点名**，不许崩栈
+           * （`--field=targeter` 曾因漏登记而 `asChooser(undefined)` 抛栈，真因被埋掉）。 */
+          if (nm !== 'focusme' && !FN[nm]) {
+            console.error('--field 里的对手未登记: ' + nm + '（可选: ' + ALL.map(function (x) { return x[0]; }).join(' ') + '）');
+            process.exit(1);
+          }
           choosers.push(asChooser(nm === 'focusme' ? makeFocusMe(seat) : FN[nm]));
           oi++;
         }
