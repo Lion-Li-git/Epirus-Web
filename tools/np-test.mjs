@@ -2998,7 +2998,7 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
 });
 
 
-console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
+
 
 
 /* ===== v1.5.79（第七轮复核 §15-1）：**威胁靶向**奖励 =====
@@ -3056,4 +3056,17 @@ t('D68 威胁靶向奖励：只记"我打的、上回合构成威胁的、不同
   eq(T.setTargetReward(0.07), 0.07, 'setTargetReward 可设');
   T.setTargetReward(0);
 });
+t('D69 自检：汇总必须在 process.exit 之前，否则它是死代码（v1.5.79 踩过）', function () {
+  const self = readFileSync('tools/np-test.mjs', 'utf8');
+  const iSum = self.indexOf('N人测试');
+  const iExit = self.indexOf('process.exit(FAIL');
+  ok(iSum > 0 && iExit > 0, '汇总行与 process.exit 都必须存在');
+  ok(iSum < iExit, '汇总必须排在 process.exit **之前**（曾经被我挪到之后 => 永不执行）');
+});
+
+/* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
+ * 门禁会安静地不报结论）。D69 自检守着这个顺序。 */
+console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
+
+
 process.exit(FAIL ? 1 : 0);
