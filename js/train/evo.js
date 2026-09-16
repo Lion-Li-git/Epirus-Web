@@ -311,6 +311,24 @@
    * 训练用 eps>0；评测/UI 不传 eps → 行为不变。
    * `lockTarget`：上回合与本玩家"相抵"的对手不进候选（沿用 v6 pickTargetN 的反锁策略，
    * 避免无意义的互相消耗死循环）。第二目标 t2 仍由 pickTarget2N 兜底 —— 枚举 t2 会让候选数再 ×(N−1)。 */
+  /* ===== v1.5.82（用户裁定，v1.5.83 抽成单一真源）：**蓄能的经济门槛** =====
+   * 用户原话："ep=1 的时候本来就不应该蓄能……至少要让他 ep>=2 才开始用，不然就是浪费。"
+   * 规则依据（已核）：蓄能 cost=1，能量珠"只保留到下一回合"；珠子消费卡有两张 ——
+   *   · 电磁炮 railgun：2 ジ + 1 **电珠**（攻破反弹/防御）
+   *   · 激光眼 laserEye：首次 **1 ジ + 1 爆珠**、连续使用 2 ジ（无效化防御类/转移伤害；偏结盟用）
+   * 收入约 1 ジ/回合 ⇒ ep=1 蓄能后下回合刚好够激光眼、却完全不够电磁炮，且一旦被打断就白扔 ⇒ 取保守门槛 ep>=2。
+   * ⚠ 启发式不是定律：收入 >1/回合（聚能环第 3 次起 +3、避雷针 +4）时 ep=1 蓄能也可能成立。
+   * ⚠ 只作用于 v7 口径：legacy（v5/v6）保持旧口径，历史基线才可比。
+   * 抽成函数的动机：探针（tools/probe-beadloop.mjs）必须与线上**同一份**门槛，否则又会量错（对比 v1.5.83 的教训）。 */
+  function econBase(state, pid, legal) {
+    const gated = legal.filter(function (l) {
+      if (l.key !== R.SK.CHARGE) return true;
+      const pp = state.p[pid];
+      return !!pp && (pp.ep || 0) >= 2;
+    });
+    return gated.length ? gated : legal;
+  }
+
   function policyChooserN(params, temp, eps) {
     const legacy = LEGACY(params);
     return function (state, pid, legal) {
@@ -332,12 +350,7 @@
        * => 收入约 1 ジ/回合时，ep=1 蓄能**必然过期**。
        * 实测佐证（改前）：线上包 24/24 次蓄能决策都落在 ep=1；chargeProfile 得珠 23 颗、过期 23、**花掉 0**。
        * ⚠ 启发式而非定律：收入 >1/回合（聚能环第 3 次起 +3、避雷针 +4）时 ep=1 蓄能也可能成立。 */
-      const gatedCharge = base.filter(function (l) {
-        if (l.key !== R.SK.CHARGE) return true;
-        const pp = state.p[pid];
-        return !!pp && (pp.ep || 0) >= 2;
-      });
-      const v7base = gatedCharge.length ? gatedCharge : base;
+      const v7base = econBase(state, pid, base);
       const cands = P.candidatesFor(state, pid, v7base, { lockTarget: lastCancelOther(state, pid) });
       const pick = (eps && state.rng.next() < eps && cands.length)
         ? cands[Math.floor(state.rng.next() * cands.length)]
@@ -1740,6 +1753,6 @@
     setBeadReward, beadReward, countBeadSpent,
     setTargetReward, targetReward, countThreatHits, threatKeyList,
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
-    scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, wrapBotN, pickTargetN, pickTarget2N, rankOf
+    scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -3086,8 +3086,11 @@ t('D71 蓄能经济门槛：ep<2 不许蓄能（v7 口径），legacy 保持旧�
   const i0 = src.indexOf('function policyChooserN(');
   const i1 = src.indexOf('function pickChampion(');   // 用顶层兄弟函数定界（不能用'下一个 function'：内部有回调）
   const seg = src.slice(i0, i1);
-  ok(seg.indexOf('gatedCharge') >= 0, 'policyChooserN 里必须有蓄能经济门槛');
-  ok(seg.indexOf('R.SK.CHARGE') >= 0 && seg.indexOf('(pp.ep || 0) >= 2') >= 0, '门槛必须是 ep>=2 才允许蓄能');
+  ok(seg.indexOf('econBase(state, pid, base)') >= 0, 'policyChooserN 必须调用 econBase（单一真源）');
+  ok(src.indexOf('function econBase(state, pid, legal)') >= 0, 'econBase 必须存在');
+  ok(src.indexOf('return gated.length ? gated : legal;') >= 0, 'econBase 必须在滤空时回退（不改变"必须有招可选"）');
+  const segAll = src.slice(src.indexOf('function econBase('), src.indexOf('function policyChooserN('));
+  ok(segAll.indexOf('R.SK.CHARGE') >= 0 && segAll.indexOf('(pp.ep || 0) >= 2') >= 0, '门槛必须是 ep>=2 才允许蓄能');
   ok(seg.indexOf('candidatesFor(state, pid, v7base') >= 0, 'v7 分支必须用过滤后的 base');
   ok(seg.indexOf('P.choose(state, pid, base,') >= 0, 'legacy 分支必须仍用未过滤的 base（历史基线可比）');
 });
