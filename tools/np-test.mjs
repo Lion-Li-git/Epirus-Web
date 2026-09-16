@@ -1,5 +1,6 @@
 /* Epirus N 人（3-5）引擎测试：随机对局 fuzz + 关键裁定点（docs/RULES-NP.md） */
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -1482,17 +1483,17 @@ t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规�
    * 把新成绩与新指纹一起记回 bundle 的 meta。它**故意敏感**（连注释改动都会触发），
    * 因为重记的成本是"一次考卷 + 一行 meta"，而漏掉的成本是交付质量静默下降。 */
   const cur = rulesFingerprint();
-  /* v1.5.8：训练在跑时 bundle 会被临时覆盖成热启动基线（见 tools/ring2-run.mjs 的训练锁）
-   * ⇒ 此时校验必然误报。跳过并说明，跑完训练必须重跑本用例。 */
-  if (existsSync('docs/artifacts/.training.lock')) {
-    /* 训练在跑：bundle 被临时覆盖成热启动基线（自跑器 `copyFileSync(BASE, BUNDLE)`）。
-     * ⚠️ 这里**不能**写 `ok(true, …)` —— 那正是 L1 要抓的恒真断言（第一版就这么写的，被 L1 抓到）。
-     * 改成一条真断言：此刻的 bundle 必须**逐字节等于**那份基线文件；不等 ⇒ 不是"训练中"这种
-     * 可解释的临时态，而是真坏了。 */
-    const curBytes = readFileSync('js/bundled-champion-3p.js');
-    const baseBytes = readFileSync('docs/artifacts/champion-5p-v1.3.58.bak');
-    ok(curBytes.equals(baseBytes), '训练进行中：bundle 必须逐字节等于热启动基线（否则不是可解释的临时态）—— 跑完训练请重跑本用例');
-    return;
+  /* v1.5.71 **更正**：这条"训练期间 bundle = 热启动基线"的旧假设**已过期**。
+   * v1.5.48 做了训练隔离（自跑器只把基线拷到 staging `docs/artifacts/.training-in-3p.js`、
+   * 产物从 `.training-out-3p.js` 取；线上包只在臂首**备份**、臂尾**还原**，训练期间**不写**）——
+   * 实测铁证：本臂运行中 `js/bundled-champion-3p.js` 的 mtime 仍是**前一天**。
+   * 旧断言于是把**每一条臂**在训练期间都打红（我用它提交时被挡了一次）⇒ 属"门禁在正常运行时乱响"。
+   * 改成两条真断言：臂首快照存在 ⇒ 逐字节比对（能抓住"训练又去写线上包"这种回归 ——
+   * 用户被这个坑过两次）；无快照（旧臂）⇒ 走下面的正常路径校验指纹（隔离下本来就该成立）。 */
+  if (existsSync('docs/artifacts/.training.lock') && existsSync('docs/artifacts/.training-live.sha1')) {
+    const want = readFileSync('docs/artifacts/.training-live.sha1', 'utf8').trim().split(/\s+/)[0];
+    const got = createHash('sha1').update(readFileSync('js/bundled-champion-3p.js')).digest('hex');
+    eq(got, want, '训练进行中：线上包必须与臂首快照逐字节相同（不等 ⇒ 训练在写线上包，用户被这个坑过两次）');
   }
   const bundle = readFileSync('js/bundled-champion-3p.js', 'utf8');
   const fp = fingerprintOfBundle(bundle);

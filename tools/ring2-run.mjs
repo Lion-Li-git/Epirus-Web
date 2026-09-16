@@ -85,6 +85,13 @@ const STAGE_OUT = join(ART, '.training-out-3p.js');
 process.env.EPIRUS_BUNDLE_IN = 'docs/artifacts/.training-in-3p.js';
 process.env.EPIRUS_BUNDLE_OUT = 'docs/artifacts/.training-out-3p.js';   // 热启动起点（与 ms2/ring2-31 同一权重）
 const LOCK = join(ART, '.training.lock');            // v1.5.8：训练锁（见 main() 里的说明）
+/* v1.5.71：**线上包快照** —— 训练隔离的守门真源。
+ * 背景：用户两次被"训练覆写线上包 ⇒ 页面崩"坑过（v1.5.48 才做隔离）。隔离之后自跑器只把热启动
+ * 基线拷到 staging（`.training-in-3p.js`）、产物从 `.training-out-3p.js` 取，**不碰**
+ * `js/bundled-champion-3p.js`。但守门用例 D16 一直沿用隔离**之前**的旧假设（"训练期间线上包
+ * 必须逐字节等于 v1.3.58 基线"）⇒ 每条臂在训练期间都会把 D16 打红（我刚被它挡了一次提交）。
+ * 现在改成**真断言**：臂开始时记下线上包 sha1，臂结束时比对（不等 ⇒ 大声报错，这正是用户踩过的坑）。 */
+const LIVE_SNAP = join(ART, '.training-live.sha1');
 const STATUS = join(ART, 'ring2-status' + TAG + '.log');
 const EVALLOG = join(ART, 'ring2-eval' + TAG + '.log');
 const RUNLOG = join(ART, 'ring2-run' + TAG + '.log');
@@ -332,6 +339,11 @@ async function main() {
    * ① np-test D16（规则指纹）误报红；② `tools/champ-audit.mjs` 的 bundle 行显示成旧冠军的特征。
    * 现在两者都会先看这把锁：存在 ⇒ D16 跳过校验并明确说明、体检表给 bundle 行打"训练中"标记。 */
   try { writeFileSync(LOCK, JSON.stringify({ pid: process.pid, tag: process.env.RING2_TAG || '', at: new Date().toISOString() })); } catch (e) { /* */ }
+  /* v1.5.71：臂首记下线上包 sha1（隔离的**可验证**形式：训练期间线上包不该被任何人改动） */
+  try {
+    writeFileSync(LIVE_SNAP, createHash('sha1').update(readFileSync(BUNDLE_MP)).digest('hex') + '  ' +
+      new Date().toISOString() + '\n');
+  } catch (e) { /* */ }
   let child = null;
   try {
     if (STAGE !== 'eval') {
@@ -358,6 +370,19 @@ async function main() {
     try { rmSync(LOCK, { force: true }); } catch (e) { /* */ }
     if (bakBundle) writeFileSync(BUNDLE_MP, bakBundle);
     if (bakIndex) writeFileSync(INDEX, bakIndex);
+    /* v1.5.71：把"训练期间没碰线上包"从**注释里的承诺**变成**可验证的断言**（用户被这个坑过两次） */
+    try {
+      if (existsSync(LIVE_SNAP)) {
+        const want = readFileSync(LIVE_SNAP, 'utf8').trim().split(/\s+/)[0];
+        const got = createHash('sha1').update(readFileSync(BUNDLE_MP)).digest('hex');
+        if (got !== want) {
+          say('⛔ 线上包与臂首快照不一致（训练期间被写坏）：' + want.slice(0, 12) + ' → ' + got.slice(0, 12) +
+            '　⇒ 已用臂首备份还原，请人工核对 js/bundled-champion-3p.js');
+        } else {
+          say('✔ 线上包未被训练改动（sha1 ' + got.slice(0, 12) + ' 与臂首快照一致）');
+        }
+      }
+    } catch (e) { /* */ }
     say('已还原 js/bundled-champion-3p.js 与 index.html（训练会刷 ?v= 缓存戳）');
     /* v1.5.36（清理）：① **还原后重新打缓存戳** —— 还原会把 ?v= 退回旧值，浏览器于是在旧 URL 下
      * 继续用缓存的旧冠军包 ⇒ 页面报"冠军包缺失/不兼容"（v1.5.32 实测踩过）。
