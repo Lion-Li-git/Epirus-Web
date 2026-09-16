@@ -73,6 +73,8 @@ for (const k of keys) {
 console.log('\n实际采样命中（' + G + ' 次决策）：' + JSON.stringify(seen));
 console.log('选中蓄能时的 ep 分布：' + JSON.stringify(chargeEp) + '（蓄能花费 1 ジ）');
 console.log('蓄能出现在候选里时的 ep 分布：' + JSON.stringify(chargeCandEp));
-console.log('\n珠子消费技能的费用：电磁炮(railgun)=' + JSON.stringify(R.byKey[R.SK.RAILGUN].cost) +
-  ' 天火(firestorm)=' + JSON.stringify(R.byKey[R.SK.FIRESTORM].cost) +
-  '  ⇒ 若在 ep=1 时蓄能，下回合**必然凑不出**这两张卡 ⇒ 珠子必定过期。');
+console.log(
+  '珠子消费卡（v1.5.83 更正）：电磁炮 railgun = 2 ジ + 1 电珠；激光眼 laserEye（cost=null 变费）' +
+  '首次 1 ジ + 1 爆珠、连续使用 2 ジ（无效化防御类/转移伤害）。' +
+  '天火 firestorm 与珠子无关（它引爆符咒）。' +
+  '⇒ ep=1 蓄能基本只够激光眼、完全不够电磁炮，且一旦被打断就白扔。');
