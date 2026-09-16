@@ -3118,6 +3118,22 @@ t('D74 熵奖励与门禁同口径：进 fit 的熵必须来自"自对局·成�
   ok(src.indexOf('effSkills: tot ? Math.exp(H) : 0') >= 0, '门禁量仍是自对局成功非ジ动作的 exp(H)（同源）');
 });
 
+t('D75 破墙硬过滤：必须在**真的反弹墙**里量（自对局用量不能预测），wall<0.5 压到底', function () {
+  const src = readFileSync('js/train/evo.js', 'utf8');
+  ok(src.indexOf('function wallProbe(params, games, n)') >= 0, '必须有 wallProbe');
+  ok(src.indexOf("BOT_PICKS['reflectspam']") >= 0, '探针必须用真的 reflectspam 对手（不能拿自对局代理量）');
+  ok(src.indexOf('wallReject ? (-5.0)') >= 0, '不过关的成员必须被压到选择之外');
+  ok(src.indexOf('const wallDmg = WALL_FILTER_ON ? wallProbe') >= 0, '必须有开关（默认关）');
+  ok(src.indexOf('let WALL_FILTER_ON = false;') >= 0, '默认 false（出厂口径不变）');
+});
+t('D76 退火强迫多样性：窗口默认 0（关）、只作用于计分对局、有 env 接线', function () {
+  const src = readFileSync('js/train/evo.js', 'utf8');
+  ok(src.indexOf('function makeDiversityForce(inner, gen)') >= 0, '必须有强迫器');
+  ok(src.indexOf('let DIV_FORCE_GENS = 0;') >= 0, '窗口默认 0（出厂口径不变）');
+  ok(src.indexOf('gen < DIV_FORCE_GENS) baseSel = makeDiversityForce') >= 0, '只包计分 chooser（自对局探针不动）');
+  ok(readFileSync('server/train-server.mjs', 'utf8').indexOf('EPIRUS_DIV_FORCE_GENS') >= 0, '必须有 env 接线');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

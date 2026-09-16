@@ -664,6 +664,10 @@
    * 比默认臂被拒的 2.3~2.8 更低，全被健康门禁拦下、零产物）。
    * 现在固定成 K：只有把直方图铺开到 ~K 种非ジ技能才能拿满。可用 EPIRUS_DIV_K 调。 */
   let DIV_K = 6;
+/* v1.5.88（用户裁定 甲）：退火强迫多样性的窗口代数（0=关）与破墙硬过滤开关。 */
+let DIV_FORCE_GENS = 0;
+let WALL_FILTER_ON = false;
+let WALL_GAMES = 3;
   /* 单局"攒钱/囤积"分：0→T 线性升到满额 ⇒ T..C 不奖不罚 ⇒ 超过 C 按超出比例罚（2C 满额）。
    * 提成纯函数是为了能**直接单测门槛语义**（np-test D15），不必靠跑一遍训练去看数字。 */
   function economyStock(mEp, n, mode) {
@@ -682,12 +686,15 @@
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
     if (o.divW != null) DIV_W = Math.max(0, Number(o.divW));
-    if (o.divK != null) DIV_K = Math.max(2, Number(o.divK));   // v1.5.86：熵项固定分母（见 DIV_K）
+    if (o.divK != null) DIV_K = Math.max(2, Number(o.divK));
+    if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
+    if (o.wallFilter != null) WALL_FILTER_ON = !!o.wallFilter;
+    if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));   // v1.5.86：熵项固定分母（见 DIV_K）
     if (o.reset) { ECO_T = null; ECO_C = null; }
     return economyReward();
   }
   function economyReward() {
-    return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K,
+    return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
@@ -848,7 +855,9 @@
         if (pid === seat) {
           // (c) 承诺级 ε：h 取自**个体基因**，不再是每局随机抽的噪声
           const h = commitGame ? hGene : 0;
-          const baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : policyChooserN(params, 0.35, 0.15);
+          let baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : policyChooserN(params, 0.35, 0.15);
+          /* v1.5.88（甲）：退火窗内**计分对局**也走强迫（这样被强迫的行为才会被真实评分、进而被选择）。 */
+          if (DIV_FORCE_GENS > 0 && gen < DIV_FORCE_GENS) baseSel = makeDiversityForce(baseSel, gen);
           econ = makeEconChooser(baseSel, agg, imitB > 0 ? (IMIT_TEACHER || BOT_PICKS['heavyfire']) : null, imitB);
           /* v1.5.39：定向 ε-强迫（只影响"有滚环者且我付得起小雷"这一格；其余原样返回学习到的动作）。 */
           choosers.push(function (state, pid2, legal) {
@@ -1015,6 +1024,9 @@
      * 权重给得小（DIV_W=0.06，满额 +0.06），与 stock（+0.05 / −0.12）同量级 ⇒ 两项加起来仍远小于
      * 胜负项（base 1.0/0.3），符合"奖惩也不用给太多"。 */
     const divBonus = DIV_W * spDivNorm;   // v1.5.87：与门禁同口径（自对局·成功非ジ动作）
+    /* v1.5.88（甲·步 2）：破墙硬过滤（默认关，EPIRUS_WALL_FILTER=1 打开）。 */
+    const wallDmg = WALL_FILTER_ON ? wallProbe(params, WALL_GAMES, n) : null;
+    const wallReject = (wallDmg != null && wallDmg < 0.5);
     /* ===== v1.5.68（第五轮复核 §4 的 ④ 落地）：**阈值式座位惩罚**（约束处理，不是奖励权重）=====
      * 病：训练从不评估"5 席同策略"这一配置 ⇒ 固定目标偏好的策略在机器人池上能赢、在 5 席测量里却某座通吃，
      * 演化永远惩罚不到它（v9~v15 五批 30+ 候选全是这个形状）。
@@ -1054,7 +1066,9 @@
     const styleRate = styleGames ? styleFirst / styleGames : 0;
     const fitAvg = fitGames ? fit / fitGames : 0;
     return {
-      fit: fitAvg + divBonus + STYLE_W * styleRate - seatPen,
+      fit: (wallReject ? (-5.0) : (fitAvg + divBonus + STYLE_W * styleRate - seatPen)),
+      wallDmg: wallDmg,
+      wallReject: wallReject,
       fitNoDiv: fitAvg,
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
@@ -1615,6 +1629,37 @@
     for (let i = 0; i < p.length; i++) if ((p[i].hp || 0) <= 0) return false;
     for (let i = 1; i < p.length; i++) if (p[i].hp !== p[0].hp) return false;
     return true;
+  }
+
+  /* v1.5.88（甲·步 1）：**退火强迫多样性** —— 前 DIV_FORCE_GENS 代里，在被测成员的**计分对局**中
+   * 以 eps=1 在"可负担的非ジ候选"里**轮转**选招（逼出宽直方图）。产物必须取自窗口之后（与环那次同一配方：
+   * 强迫只负责"把状态走出来"，退火后由网络自己保住）。每代错开起点，避免所有成员同步。 */
+  function makeDiversityForce(inner, gen) {
+    let rr = (gen * 7) % 97;
+    return function (state, pid, legal) {
+      const aff = [];
+      for (let i = 0; i < legal.length; i++) if (legal[i].affordable && legal[i].key !== R.SK.JI) aff.push(legal[i].key);
+      if (aff.length > 1) { rr++; return { key: aff[rr % aff.length], target: null, target2: null, bead: null }; }
+      return inner(state, pid, legal);
+    };
+  }
+  /* v1.5.88（甲·步 2）：**破墙硬过滤** —— 成员在"4 席 reflectspam"里对我方造成的伤害 < 0.5/局就直接压到底。
+   * 起因：v7divK-82 多样性最好（G 4.42）却对 4 面反弹墙**零伤害**（0.00/局、100% 零伤害局），
+   * 换包时才被拦。而它在自对局里的穿透卡用量看起来正常（激光剑 28/坦克 16/狙击枪 44）⇒
+   * **"自对局用了穿透卡"不能预测"反弹墙里打不打得动"** ⇒ 必须在**真的反弹墙**里量（3 局就够抓 0 伤害）。 */
+  function wallProbe(params, games, n) {
+    const foe = BOT_PICKS['reflectspam'];
+    if (!foe) return null;
+    const G = Math.max(1, games | 0);
+    let dmg = 0;
+    for (let g = 0; g < G; g++) {
+      const st = S.createState(TRAIN_MODE === 'long' ? 'long' : 'multi', { next: mulberry32(91000 + g * 13) }, n);
+      const ch = [];
+      for (let pid = 0; pid < n; pid++) ch.push(pid === 0 ? policyChooserN(params, 0.15) : wrapBotN(foe));
+      Play.autoGameN(st, ch);
+      for (const e of (st.events || [])) if (e.type === 'damage' && e.source === 0) dmg += (e.amt || 0);
+    }
+    return dmg / G;
   }
 
   function mirrorHealth(params, games, n, mode) {
