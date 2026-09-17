@@ -609,7 +609,7 @@
    * 经济锁死的病根：AI 永远停在 ep≤1 的 ジ→枪 循环，2 ジ 以上技能永久不可负担。
    * 旧 fitness 的 proact/deal 奖励"立刻打伤害"，而攒钱必须先连出ジ（0 伤害）→
    * 旧口径实际上在惩罚攒钱，故加 save/conv 两项把梯度补上。 */
-  function makeEconChooser(inner, agg, teacherFn, imitB, onlyKey) {
+  function makeEconChooser(inner, agg, teacherFn, imitB, onlyKey, subFlag) {
     const rec = { maxEp: 0, heavy: 0, hold: 0, heavy4: 0 };
     const fn = function (state, pid, legal) {
       const p = state.p[pid];
@@ -621,7 +621,12 @@
        * 打开 `IMIT_OVERRIDE`：以 `imitB` 的概率**直接执行教师的动作**（退火期后自动失效，与一致性奖励同一条退火管道）；
        * 只在教师给的动作**确实可负担**时才覆盖（否则会白扔一回合，把示范教成"浪费"）。
        * **默认关 ⇒ 行为一字不变**（旧产物、旧读数仍可比）。 */
-      if (IMIT_OVERRIDE && teacherFn && imitB > 0 && state.rng && typeof state.rng.next === 'function') {
+      /* v1.5.99：`IMIT_SUB_ONLY` —— "只教目标卡"的示范**只在补贴局里发生**。
+       * 理由（v1.5.98 §3 的机制结论）：原生经济里示范"开环"≡ 对"攒"征税（逼它把攒的 ep 花掉）；
+       * 补贴局里花的是**白来的 ep**（`regenForGame`/承诺局）⇒ 不构成对"攒"的惩罚。
+       * 只对**设了 `onlyKey`** 的示范生效 ⇒ 段1（教攒、不设 only）**不受影响**。 */
+      const subOK = (!IMIT_SUB_ONLY || !onlyKey || !!subFlag);
+      if (IMIT_OVERRIDE && teacherFn && imitB > 0 && subOK && state.rng && typeof state.rng.next === 'function') {
         if (state.rng.next() < imitB) {
           const ta = teacherFull(teacherFn, state, pid, legal);
           const okL = ta && ta.key && legal.some(function (l) { return l.key === ta.key && l.affordable; });
@@ -644,8 +649,9 @@
         if (teacherFn && imitB > 0 && agg) {
           const tk = teacherAction(teacherFn, state, pid, legal);
           /* v1.5.98：`onlyKey` 过滤**也适用奖励计数** —— 只对"教师真要教的那张卡"计一致性；
-           * 否则"与教师的 fallback（蓄能/ジ）一致"会白拿奖励，正是抹掉"攒"的那股力。 */
-          if (tk != null && (!onlyKey || tk === onlyKey)) {
+           * 否则"与教师的 fallback（蓄能/ジ）一致"会白拿奖励，正是抹掉"攒"的那股力。
+           * v1.5.99：`IMIT_SUB_ONLY` 同理也适用计数（否则奖励侧仍在原生局里推它花掉攒的 ep）。 */
+          if (tk != null && (!onlyKey || tk === onlyKey) && subOK) {
             agg._mt = (agg._mt || 0) + 1; if (a.key === tk) agg._mm = (agg._mm || 0) + 1;
           }
         }
@@ -916,6 +922,9 @@ let WALL_GAMES = 3;
       const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
       const commitGame = hGene > 0 && (g % 3 === 0);   // (c) 承诺局：每 3 局 1 局，h 来自基因
       const passiveField = passiveFieldAt(g);   // v1.5.65：本局是否为'4 席全被动'暴露局
+      /* v1.5.99：本局是否"补贴局"（补贴 = 白来的 ep）—— 给"只教目标卡"的示范当门槛（见 makeEconChooser）。 */
+      const regenThisGame = commitGame ? 2 : regenForGame(g, games);
+      const subThisGame = regenThisGame > 0;
       let econ = null;
       for (let pid = 0; pid < n; pid++) {
         if (pid === seat) {
@@ -924,7 +933,7 @@ let WALL_GAMES = 3;
           let baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : policyChooserN(params, 0.35, 0.15);
           /* v1.5.88（甲）：退火窗内**计分对局**也走强迫（这样被强迫的行为才会被真实评分、进而被选择）。 */
           if (DIV_FORCE_GENS > 0 && gen < DIV_FORCE_GENS) baseSel = makeDiversityForce(baseSel, gen);
-          econ = makeEconChooser(baseSel, agg, imitB > 0 ? (imitTeacherForGen(gen) || BOT_PICKS['heavyfire']) : null, imitB, imitOnlyForGen(gen));
+          econ = makeEconChooser(baseSel, agg, imitB > 0 ? (imitTeacherForGen(gen) || BOT_PICKS['heavyfire']) : null, imitB, imitOnlyForGen(gen), subThisGame);
           /* v1.5.39：定向 ε-强迫（只影响"有滚环者且我付得起小雷"这一格；其余原样返回学习到的动作）。 */
           choosers.push(function (state, pid2, legal) {
             const _fe = ringForceEpsAt(gen);
@@ -949,7 +958,7 @@ let WALL_GAMES = 3;
       /* 承诺局的"主场"是补贴经济：原生经济下 ep 根本涨不起来，"连攒 3 回合"只是一条
        * 更慢的输法，学不到任何东西。原生局仍走 Q1(d) 的永久回放切片（每 12 局 1 局带补贴），
        * 两条通道互不干扰，故 fit 的口径不被污染。 */
-      const regen = commitGame ? 2 : regenForGame(g, games);
+      const regen = regenThisGame;   // v1.5.99：上面已算好（同一口径，避免两处各算一遍）
       const r = oneGameN(choosers, seed, n, { regen: regen, mode: TRAIN_MODE });
       const rank = rankOf(r.state, seat, seed);
       /* v1.5.8：终局还活着的人数 ⇒ 判断"这局是打出来的还是熬出来的"（≥2 人活着 = 哨声局） */
@@ -1523,6 +1532,9 @@ let WALL_GAMES = 3;
     if (s && s.only) return s.only;
     return IMIT_ONLY;
   }
+  /* v1.5.99：`IMIT_SUB_ONLY` —— 见 `makeEconChooser` 里的长注释（只对设了 only 的示范生效）。 */
+  let IMIT_SUB_ONLY = false;
+  function setImitSubOnly(on) { IMIT_SUB_ONLY = !!on; return IMIT_SUB_ONLY; }
   function imitBetaForGen(gen) {
     if (IMIT_PLAN) {
       const s = imitPlanSegment(gen);
@@ -2007,7 +2019,7 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

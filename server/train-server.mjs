@@ -191,10 +191,12 @@ function applyImitEnv(gens) {
    * 机制：v1.5.97 §4 里第二段的 fallback 覆盖把第一段教出来的"攒"抹掉了。 */
   let onlyK = null;
   if (T.setImitOnly) onlyK = T.setImitOnly(process.env.EPIRUS_IMIT_ONLY || null);
+  /* v1.5.99：**"只教目标卡"的示范只在补贴局里发生**（补贴局花的是白来的 ep ⇒ 不对"攒"征税）。 */
+  const subOnly = T.setImitSubOnly ? T.setImitSubOnly(process.env.EPIRUS_IMIT_SUB_ONLY === '1') : null;
   console.log('[imit] 主线程生效值 gens=' + imitGens + ' frac=' + String(process.env.EPIRUS_IMIT_FRAC || 0) +
     ' teacher=' + (process.env.EPIRUS_IMIT_TEACHER || '(默认 heavyfire)') + ' accepted=' + String(acc) +
     ' override=' + String(ovr) + ' plan=' + (process.env.EPIRUS_IMIT_PLAN || '(无)') + ' 段数=' + planN +
-    ' only=' + (onlyK || '(不过滤)') +
+    ' only=' + (onlyK || '(不过滤)') + ' subOnly=' + String(subOnly) +
     ' β(gen0)=' + (T.imitBetaForGen ? T.imitBetaForGen(0) : '?'));
   return imitGens;
 }

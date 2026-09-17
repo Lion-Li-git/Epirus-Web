@@ -3414,8 +3414,8 @@ t('D84 真示范（override）：默认关、只在教师动作**可负担**时�
    * 这条门钉住补上的"真示范"的三个安全性质，以及"名字→函数"只在 evo.js 里写一遍。 */
   const evo = readFileSync('js/train/evo.js', 'utf8');
   ok(evo.indexOf('let IMIT_OVERRIDE = false;') >= 0, '真示范必须**默认关**（旧产物、旧读数仍可比）');
-  ok(evo.indexOf("if (IMIT_OVERRIDE && teacherFn && imitB > 0 && state.rng && typeof state.rng.next === 'function')") >= 0,
-    '覆盖必须门控在"有教师 + 退火期内 + 有 rng"三重条件下');
+  ok(evo.indexOf("if (IMIT_OVERRIDE && teacherFn && imitB > 0 && subOK && state.rng && typeof state.rng.next === 'function')") >= 0,
+    '覆盖必须门控在"有教师 + 退火期内 + 补贴局门槛 + 有 rng"条件下（v1.5.99 加了 subOK）');
   ok(evo.indexOf('legal.some(function (l) { return l.key === ta.key && l.affordable; })') >= 0,
     '只在教师动作**确实可负担**时才覆盖（否则示范会教成"白扔一回合"）');
   ok(evo.indexOf('function teacherFull(') >= 0, '覆盖必须用带 target 的完整动作（teacherAction 只回 key）');
@@ -3516,9 +3516,9 @@ t('D86 只示范目标卡（only）：override 与奖励计数**都**过滤 + �
     '必须有 only 开关且默认 null（不过滤 ⇒ 行为与旧版逐位相同）');
   ok(evo.indexOf('if (okL && (!onlyKey || ta.key === onlyKey)) {') >= 0,
     'override 必须被 only 过滤（只覆盖教师真要教的那张卡）');
-  ok(evo.indexOf('if (tk != null && (!onlyKey || tk === onlyKey)) {') >= 0,
-    '**奖励计数也必须被 only 过滤** —— 否则"与 fallback 一致"白拿奖励，正是抹掉"攒"的那股力');
-  ok(evo.indexOf('function imitOnlyForGen(gen)') >= 0 && evo.indexOf('imitB, imitOnlyForGen(gen))') >= 0,
+  ok(evo.indexOf('if (tk != null && (!onlyKey || tk === onlyKey) && subOK) {') >= 0,
+    '**奖励计数也必须被 only 与 subOK 过滤** —— 否则"与 fallback 一致"白拿奖励，正是抹掉"攒"的那股力');
+  ok(evo.indexOf('function imitOnlyForGen(gen)') >= 0 && evo.indexOf('imitB, imitOnlyForGen(gen)') >= 0,
     '取值必须按当前代数走 imitOnlyForGen（计划里可**按段**设 only）');
   ok(evo.indexOf('(?:\\s*:\\s*([A-Za-z_][A-Za-z0-9_]*|\\*))?$/.exec(parts[i])') >= 0,
     '计划片段必须支持第三段 `:卡名`（或 `:*` = 不过滤）');
@@ -3539,6 +3539,31 @@ t('D86 只示范目标卡（only）：override 与奖励计数**都**过滤 + �
   eq(T.imitOnlyForGen(10), null, '段1（无 only）不设过滤');
   eq(T.imitOnlyForGen(90), 'ring', '段2 必须按段生效 only=ring');
   eq(T.setImitPlanByName('', 0), 0, '复位计划');
+});
+
+t('D87 只在补贴局里示范目标卡（subOnly）：只对设了 only 的示范生效、值随消息下发', function () {
+  /* v1.5.99（承接 v1.5.98 §3）：原生经济里示范"开环"≡ 对"攒"征税（逼它把攒的 ep 花掉）；
+   * 补贴局里花的是**白来的 ep** ⇒ 不构成对"攒"的惩罚。 */
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  ok(evo.indexOf('let IMIT_SUB_ONLY = false;') >= 0 && evo.indexOf('function setImitSubOnly(on)') >= 0,
+    '必须有 subOnly 开关且默认 false（不影响旧行为）');
+  ok(evo.indexOf('const subOK = (!IMIT_SUB_ONLY || !onlyKey || !!subFlag);') >= 0,
+    '门槛必须**只对设了 onlyKey 的示范**生效（段1 教攒不受影响）');
+  ok(evo.indexOf('imitB > 0 && subOK && state.rng') >= 0, 'override 必须被 subOK 门控');
+  ok(evo.indexOf('&& subOK) {') >= 0,
+    '**奖励计数也必须被 subOK 门控**（否则奖励侧仍在原生局里推它花掉攒的 ep）');
+  ok(evo.indexOf('const regenThisGame = commitGame ? 2 : regenForGame(g, games);') >= 0 &&
+    evo.indexOf('const regen = regenThisGame;') >= 0,
+    '补贴局的判定必须**只算一遍**（同一口径，避免两处各算一遍）');
+  ok(evo.indexOf('imitB, imitOnlyForGen(gen), subThisGame)') >= 0, '本局是否补贴必须传进 chooser');
+  const sv = readFileSync('server/train-server.mjs', 'utf8');
+  ok(sv.indexOf("T.setImitSubOnly(process.env.EPIRUS_IMIT_SUB_ONLY === '1')") >= 0, '主线程必须设 subOnly');
+  ok(readFileSync('server/paralleltrain.mjs', 'utf8').indexOf('imitSubOnly: process.env.EPIRUS_IMIT_SUB_ONLY || null') >= 0,
+    'evalN 消息必须带 imitSubOnly');
+  ok(readFileSync('server/train-worker.mjs', 'utf8').indexOf('T.setImitSubOnly(String(msg.imitSubOnly') >= 0,
+    'worker 必须按消息设 subOnly');
+  eq(T.setImitSubOnly(true), true, '可打开');
+  eq(T.setImitSubOnly(false), false, '可关回（默认关）');
 });
 
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {

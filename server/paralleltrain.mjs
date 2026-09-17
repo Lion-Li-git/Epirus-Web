@@ -123,7 +123,8 @@ export function makeParallelEvalN(T, opts) {
         /* v1.5.97：分段教师计划也随消息下发（只传**字符串**，解析在 worker 里由 evo.js 的同一函数做）。
          * v1.5.98：`only`（只示范哪张卡）同理随消息下发。 */
         imitPlan: process.env.EPIRUS_IMIT_PLAN || null,
-        imitOnly: process.env.EPIRUS_IMIT_ONLY || null }));
+        imitOnly: process.env.EPIRUS_IMIT_ONLY || null,
+        imitSubOnly: process.env.EPIRUS_IMIT_SUB_ONLY || null }));
     }
     const res = (await Promise.all(jobs)).flat();
     const out = new Array(pop.length).fill(null);
