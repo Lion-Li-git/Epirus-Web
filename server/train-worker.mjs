@@ -65,7 +65,16 @@ const OPP_POOL = OPP_SPECS.map(function (o) {
  * ⇒ 两端天然一致、不会半开。（"引擎内不读 env"那条规矩不破：读 env 的是 Node 侧的 worker。） */
 /* v1.5.31（课程/示范）：worker 是独立进程 ⇒ 示范代数与"反环教师"必须在这里读 env。 */
 if (T.setImitUntil) T.setImitUntil(Number(process.env.EPIRUS_IMIT_GENS || 0));
-if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) T.setAntiRingTeacher();
+/* v1.5.96：教师改**按名字**选（`antiring` 仍兼容；`ringspam`/`gunspam` 等从 bot 注册表取），
+ * 并支持**真示范**覆盖（`EPIRUS_IMIT_OVERRIDE=1`）。回执照 `[econ]` 的先例 —— worker 自己打出生效值，
+ * 免得再出现"开关看着接上了、其实作用在没跑的路径上"（v1.5.86 附录 E1 那一族）。 */
+{
+  let acc = null, ovr = null;
+  if (T.setImitTeacherByName && process.env.EPIRUS_IMIT_TEACHER) acc = T.setImitTeacherByName(process.env.EPIRUS_IMIT_TEACHER);
+  if (T.setImitOverride) ovr = T.setImitOverride(process.env.EPIRUS_IMIT_OVERRIDE === '1');
+  console.log('[imit] worker 生效值 teacher=' + (process.env.EPIRUS_IMIT_TEACHER || '(默认 heavyfire)') +
+    ' accepted=' + String(acc) + ' gens=' + String(process.env.EPIRUS_IMIT_GENS || 0) + ' override=' + String(ovr));
+}
 /* v1.5.79（第七轮复核 §15-1）：把"**优先打威胁**"当能力奖。
  * 与环课题的区别（决定它有戏）：环出手率 0（bootstrap 不到），而"打威胁者"已在发生（22.5% ≈ 随机）⇒ 窄奖励能定向加压。 */
 if (T.setTargetReward && process.env.EPIRUS_TGT_W) {

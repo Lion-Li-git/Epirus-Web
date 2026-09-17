@@ -162,8 +162,15 @@ async function runTrain(gens, opts, cfg) {
   // 需要复验时设 EPIRUS_IMIT_FRAC=0.35 即可打开。
   const imitGens = Math.floor((gens || 0) * Number(process.env.EPIRUS_IMIT_FRAC || '0'));
   process.env.EPIRUS_IMIT_GENS = String(imitGens);
-  /* v1.5.31：课程/示范 —— 反环教师（env 传给 worker；主线程也设一份，保证两侧口径一致）。 */
-  if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) T.setAntiRingTeacher();
+  /* v1.5.31 起：课程/示范教师；v1.5.96 改**按名字**选（`antiring` 兼容）并支持**真示范**覆盖。
+   * 主线程也设一份，保证与 worker 两侧口径一致；同时打回执。 */
+  if (T.setImitTeacherByName && process.env.EPIRUS_IMIT_TEACHER) {
+    console.log('[imit] 主线程教师 = ' + process.env.EPIRUS_IMIT_TEACHER + ' accepted=' +
+      String(T.setImitTeacherByName(process.env.EPIRUS_IMIT_TEACHER)));
+  } else if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) {
+    T.setAntiRingTeacher();   // 老沙箱兜底（没有 setImitTeacherByName 时）
+  }
+  if (T.setImitOverride) T.setImitOverride(process.env.EPIRUS_IMIT_OVERRIDE === '1');
 if (process.env.EPIRUS_TGT_W && T.setTargetReward) {
   console.log('[tgt] 威胁靶向奖励权重 = ' + T.setTargetReward(Number(process.env.EPIRUS_TGT_W)) + '（复核 §15-1）');
 }

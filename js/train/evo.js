@@ -614,6 +614,23 @@
     const fn = function (state, pid, legal) {
       const p = state.p[pid];
       if (p && p.ep > rec.maxEp) rec.maxEp = p.ep;
+      /* ===== v1.5.96：**真示范**（override），而不是只奖励"与教师一致" =====
+       * 现状（v1.5.31 起的 C 方案）：教师只用于 `_mt/_mm` 一致性计数，进 fit 的是 `imitB × 一致率`
+       * ⇒ 策略**从来没有真的走过教师那条线**："环先付 3 ジ、之后每回合 +3"这种**跨回合后果**从未被体验
+       * ⇒ 学不到"它值多少"（第九轮复核 §5-2 的**价值估计病**：可负担 59~98% / 候选表 100% / 转化 0.00%）。
+       * 打开 `IMIT_OVERRIDE`：以 `imitB` 的概率**直接执行教师的动作**（退火期后自动失效，与一致性奖励同一条退火管道）；
+       * 只在教师给的动作**确实可负担**时才覆盖（否则会白扔一回合，把示范教成"浪费"）。
+       * **默认关 ⇒ 行为一字不变**（旧产物、旧读数仍可比）。 */
+      if (IMIT_OVERRIDE && teacherFn && imitB > 0 && state.rng && typeof state.rng.next === 'function') {
+        if (state.rng.next() < imitB) {
+          const ta = teacherFull(teacherFn, state, pid, legal);
+          const okL = ta && ta.key && legal.some(function (l) { return l.key === ta.key && l.affordable; });
+          if (okL) {
+            if (agg) { agg.use[ta.key] = (agg.use[ta.key] || 0) + 1; }
+            return ta;
+          }
+        }
+      }
       const a = inner(state, pid, legal);
       // 真实费用必须走 computeCost（R.byKey[key].cost 是数字，不是对象）
       if (a) {
@@ -1400,6 +1417,35 @@ let WALL_GAMES = 3;
   let IMIT_TEACHER = null;           // null = 沿用老的 heavyfire 教师
   function setImitTeacher(fn) { IMIT_TEACHER = (typeof fn === 'function') ? fn : null; return !!IMIT_TEACHER; }
   function imitTeacher() { return IMIT_TEACHER; }
+  /* v1.5.96：**完整动作**的教师调用 —— `teacherAction` 只回 key，而覆盖时必须带 target。 */
+  function teacherFull(botFn, state, pid, legal) {
+    try {
+      const r = botFn(state, pid, legal);
+      if (typeof r === 'string') return { key: r, target: null };
+      return r || null;
+    } catch (e) { return null; }
+  }
+  /* v1.5.96：**真示范**开关（默认关 ⇒ 行为一字不变）。用法与理由见 `makeEconChooser` 里的长注释。 */
+  let IMIT_OVERRIDE = false;
+  function setImitOverride(on) { IMIT_OVERRIDE = !!on; return IMIT_OVERRIDE; }
+  /* v1.5.96：按**名字**选教师（`EPIRUS_IMIT_TEACHER=ringspam` 之类）。
+   * 名字→函数的映射**留在这个文件里**，免得 server / worker 各写一份清单（本仓库为这种"两处各写一遍"栽过四次）。 */
+  function setImitTeacherByName(name) {
+    if (!name) return false;
+    const n = String(name).trim();
+    if (n === 'antiring') return setAntiRingTeacher();
+    if (BOT_PICKS && typeof BOT_PICKS === 'object' && typeof BOT_PICKS[n] === 'function') {
+      IMIT_TEACHER = BOT_PICKS[n];
+      return true;
+    }
+    /* v1.5.96：也接受**全局 bot 注册表的函数名**（`pickRingSpam` 之类）。
+     * 为什么必须留这条路：环专精 **不在 `BOT_PICKS` 里** —— 那张表是"对手池"的注册表
+     * （`buildOpps` 与若干诊断循环都 `Object.keys(BOT_PICKS)`），往里加键会**改默认训练**
+     * ⇒ 拿环当教师只能走全局注册表，且**默认池一字不动**。 */
+    const G = (typeof global !== 'undefined' && global && global.EpirusBots) || null;
+    if (G && typeof G[n] === 'function') { IMIT_TEACHER = G[n]; return true; }
+    return false;
+  }
 
   /* 反环教师：有对手 ep ≥ 2（正在攒环/够小雷）且我付得起小雷 ⇒ 打他一记小雷；否则交给基础策略。 */
   function makeAntiRingTeacher(baseFn) {
@@ -1867,7 +1913,7 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

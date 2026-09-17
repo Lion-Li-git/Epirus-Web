@@ -3408,6 +3408,38 @@ t('D83 转化率探针：分母必须是"可负担的决策点"（**不得用使
   ok(p.indexOf('可负担 ≥10% 的决策点，却选中 <1%') >= 0, '转化拒绝的判据必须写清（可负担门槛 + 选中门槛）');
 });
 
+t('D84 真示范（override）：默认关、只在教师动作**可负担**时覆盖、教师按名字选、env 两端接线', function () {
+  /* v1.5.96（承接第九轮复核 §5-2 的"价值估计病"）：v1.5.31 起的"教师模仿"其实**只做一致性计数**
+   * （`_mt/_mm`），策略从来没走过教师那条线 ⇒ 跨回合后果（环先付 3 ジ、之后 +3/回合）没被体验过。
+   * 这条门钉住补上的"真示范"的三个安全性质，以及"名字→函数"只在 evo.js 里写一遍。 */
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  ok(evo.indexOf('let IMIT_OVERRIDE = false;') >= 0, '真示范必须**默认关**（旧产物、旧读数仍可比）');
+  ok(evo.indexOf("if (IMIT_OVERRIDE && teacherFn && imitB > 0 && state.rng && typeof state.rng.next === 'function')") >= 0,
+    '覆盖必须门控在"有教师 + 退火期内 + 有 rng"三重条件下');
+  ok(evo.indexOf('legal.some(function (l) { return l.key === ta.key && l.affordable; })') >= 0,
+    '只在教师动作**确实可负担**时才覆盖（否则示范会教成"白扔一回合"）');
+  ok(evo.indexOf('function teacherFull(') >= 0, '覆盖必须用带 target 的完整动作（teacherAction 只回 key）');
+  ok(evo.indexOf("if (n === 'antiring') return setAntiRingTeacher();") >= 0 &&
+    evo.indexOf('typeof BOT_PICKS[n] === \'function\'') >= 0,
+    '名字→函数映射必须在 evo.js 里（antiring 兼容 + bot 注册表），不许在 server/worker 各写一份');
+  /* 行为：真模块上设一次 / 复位；名字认不认 */
+  eq(T.setImitOverride(true), true, 'setImitOverride(true) 必须回读 true');
+  eq(T.setImitOverride(false), false, '复位必须回 false（别把状态泄漏给后面的用例）');
+  eq(T.setImitTeacherByName('antiring'), true, 'antiring 必须仍被认（老命令不能变成空操作）');
+  eq(T.setImitTeacherByName('heavyfire'), true, '必须能按名字取 `BOT_PICKS` 里的教师');
+  ok(evo.indexOf('global.EpirusBots') >= 0,
+    '环专精（`pickRingSpam`）不在 BOT_PICKS 里 ⇒ 必须留"全局注册表按函数名取"这条路（且不许往默认池加键）');
+  eq(T.setImitTeacherByName('绝对不存在的名字'), false, '认不出的名字必须返回 false（不许静默当没设）');
+  T.setImitTeacher(null);   // 复位成默认教师
+  /* 接线：worker 必须读 ENV 并打回执 */
+  const wk = readFileSync('server/train-worker.mjs', 'utf8');
+  ok(wk.indexOf("process.env.EPIRUS_IMIT_OVERRIDE === '1'") >= 0 && wk.indexOf('T.setImitTeacherByName') >= 0,
+    'worker 必须读 EPIRUS_IMIT_OVERRIDE 并按名字设教师');
+  ok(wk.indexOf("[imit] worker 生效值") >= 0, 'worker 必须打回执（照 [econ] 的先例，防静默半开）');
+  ok(readFileSync('server/train-server.mjs', 'utf8').indexOf('T.setImitTeacherByName') >= 0,
+    '主线程也要设一份（两侧口径一致）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
