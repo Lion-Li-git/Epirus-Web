@@ -3566,6 +3566,18 @@ t('D87 只在补贴局里示范目标卡（subOnly）：只对设了 only 的示
   eq(T.setImitSubOnly(false), false, '可关回（默认关）');
 });
 
+t('D88 门地形量具：挂科清单必须在第一个括号前截断（括号里是读数）+ 在位包单列参照 + 跳过 A 卷', function () {
+  /* v1.5.100：`promote-champion` 一次只看**一个**候选，而"门是否可达到"是**分布**问题 ⇒ 新增 `gate-landscape`。
+   * 这条门钉住三个容易出错的口径（第一版实现时我自己就踩了第一个）。 */
+  const s = readFileSync('tools/gate-landscape.mjs', 'utf8');
+  ok(s.indexOf("split('（')[0]") >= 0,
+    '挂科清单必须在**第一个括号之前**截断 —— 括号里是"座位 26.9pt · G 3.9 · …"这种读数，当成挂科会全表误判');
+  ok(s.indexOf('参照行') >= 0, '必须写明在位包是**参照行**（它自己过不了只枪格 G4，别读成"候选不行"）');
+  ok(s.indexOf('--exam-first=0') >= 0, '必须跳过 A 卷那 1400 局（五道门不依赖它，约 10~20s/包）');
+  ok(s.indexOf('五道全过 = ') >= 0 && s.indexOf('各门阻塞次数') >= 0, '必须汇总过门数与各门阻塞频次');
+  ok(s.indexOf('清场均值') >= 0, '必须给出"广度 vs 清场"的两组对照（它曾否掉一个假说）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
