@@ -3392,6 +3392,22 @@ t('D82 记账纪律：24 小时内落盘的 .bak 必须在 CHANGELOG 里被点�
     miss.slice(0, 12).join(', ') + (miss.length > 12 ? ' …' : ''));
 });
 
+t('D83 转化率探针：分母必须是"可负担的决策点"（**不得用使用率**）+ 蒙特卡洛不得消耗对局随机流', function () {
+  /* v1.5.95（第九轮复核 §5-2/§7-2）：验收"价值估计病"必须用**可负担时的选中率** ——
+   * 使用率会被"压根不出手"的退化包骗（`v7ctrlE-31` 0.00 攻击/回合，照样拿 A 卷 46.8%）。
+   * 这条门把这个口径选择**钉在源码里**，免得以后有人图省事换成使用率。 */
+  const p = readFileSync('tools/probe-convert.mjs', 'utf8');
+  ok(p.indexOf('const ready = rows.filter(function (r) { return r.affordable.indexOf(k) >= 0; });') >= 0,
+    '分母必须是**可负担的决策点**（不是全部决策点）');
+  ok(p.indexOf('picks += (r.mc[k] || 0); opp += MC;') >= 0, '分子必须是蒙特卡洛采样选中次数（按点数累计）');
+  ok(p.indexOf('const realRng = state.rng;') >= 0 && p.indexOf('state.rng = { next: mulberry32(') >= 0 &&
+    p.indexOf('finally { state.rng = realRng; }') >= 0,
+    '蒙特卡洛必须换**独立 RNG** 并在 finally 里还原（否则会污染对局随机流）');
+  ok(p.indexOf('实际选中率') >= 0 && p.indexOf('【转化拒绝】') >= 0 && p.indexOf('【收入饥饿】') >= 0,
+    '必须同时给"实际选中率"对照 + 转化拒绝/收入饥饿两张分类表（两种形态必须分开数）');
+  ok(p.indexOf('可负担 ≥10% 的决策点，却选中 <1%') >= 0, '转化拒绝的判据必须写清（可负担门槛 + 选中门槛）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
