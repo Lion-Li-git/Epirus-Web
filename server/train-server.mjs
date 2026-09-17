@@ -187,9 +187,14 @@ function applyImitEnv(gens) {
   if (T.setImitPlanByName && process.env.EPIRUS_IMIT_PLAN) {
     planN = T.setImitPlanByName(process.env.EPIRUS_IMIT_PLAN, imitGens) || 0;
   } else if (T.setImitPlan) { T.setImitPlan(null); }
+  /* v1.5.98：**只示范目标卡**（全局口径；计划里也能按段设，见片段第三段）。
+   * 机制：v1.5.97 §4 里第二段的 fallback 覆盖把第一段教出来的"攒"抹掉了。 */
+  let onlyK = null;
+  if (T.setImitOnly) onlyK = T.setImitOnly(process.env.EPIRUS_IMIT_ONLY || null);
   console.log('[imit] 主线程生效值 gens=' + imitGens + ' frac=' + String(process.env.EPIRUS_IMIT_FRAC || 0) +
     ' teacher=' + (process.env.EPIRUS_IMIT_TEACHER || '(默认 heavyfire)') + ' accepted=' + String(acc) +
     ' override=' + String(ovr) + ' plan=' + (process.env.EPIRUS_IMIT_PLAN || '(无)') + ' 段数=' + planN +
+    ' only=' + (onlyK || '(不过滤)') +
     ' β(gen0)=' + (T.imitBetaForGen ? T.imitBetaForGen(0) : '?'));
   return imitGens;
 }

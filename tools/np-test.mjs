@@ -3508,6 +3508,39 @@ t('D85 分段教师计划（两段课程）：解析只写一份、两条路径 
   eq(T.setImitPlanByName('', 0), 0, '复位成无计划（别把状态泄漏给后面的用例）');
 });
 
+t('D86 只示范目标卡（only）：override 与奖励计数**都**过滤 + 非法卡名抛错 + 随消息下发', function () {
+  /* v1.5.98（承接 v1.5.97 §4）：两段课程里第二段的 fallback 覆盖把第一段教出来的"攒"抹掉了。
+   * 修法 = 让示范只作用于**教师真要教的那张卡**（环）⇒ fallback 不再覆盖策略自己的好动作。 */
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  ok(evo.indexOf('let IMIT_ONLY = null;') >= 0 && evo.indexOf('function setImitOnly(k) {') >= 0,
+    '必须有 only 开关且默认 null（不过滤 ⇒ 行为与旧版逐位相同）');
+  ok(evo.indexOf('if (okL && (!onlyKey || ta.key === onlyKey)) {') >= 0,
+    'override 必须被 only 过滤（只覆盖教师真要教的那张卡）');
+  ok(evo.indexOf('if (tk != null && (!onlyKey || tk === onlyKey)) {') >= 0,
+    '**奖励计数也必须被 only 过滤** —— 否则"与 fallback 一致"白拿奖励，正是抹掉"攒"的那股力');
+  ok(evo.indexOf('function imitOnlyForGen(gen)') >= 0 && evo.indexOf('imitB, imitOnlyForGen(gen))') >= 0,
+    '取值必须按当前代数走 imitOnlyForGen（计划里可**按段**设 only）');
+  ok(evo.indexOf('(?:\\s*:\\s*([A-Za-z_][A-Za-z0-9_]*|\\*))?$/.exec(parts[i])') >= 0,
+    '计划片段必须支持第三段 `:卡名`（或 `:*` = 不过滤）');
+  const sv = readFileSync('server/train-server.mjs', 'utf8');
+  ok(sv.indexOf('T.setImitOnly(process.env.EPIRUS_IMIT_ONLY || null)') >= 0, '主线程必须设 only');
+  ok(readFileSync('server/paralleltrain.mjs', 'utf8').indexOf('imitOnly: process.env.EPIRUS_IMIT_ONLY || null') >= 0,
+    'evalN 消息必须带 imitOnly（env 是拷贝的正当教训）');
+  ok(readFileSync('server/train-worker.mjs', 'utf8').indexOf('T.setImitOnly(msg.imitOnly)') >= 0,
+    'worker 必须按消息设 only');
+  /* 行为：默认 null；合法卡可设；非法卡抛错；计划第三段能按段指定 */
+  eq(T.setImitOnly(null), null, '不设 ⇒ null（不过滤）');
+  eq(T.setImitOnly('ring'), 'ring', '合法卡必须能被设上');
+  let threwO = null;
+  try { T.setImitOnly('不是一张卡'); } catch (e) { threwO = String((e && e.message) || e); }
+  ok(threwO && threwO.indexOf('不是一张合法的卡') >= 0, '非法卡名必须抛错（实测：' + threwO + '）');
+  eq(T.setImitOnly(null), null, '复位');
+  eq(T.setImitPlanByName('pickDeepSaver:0.5,pickRingSpam:0.5:ring', 100), 2, '第三段形式的计划必须能解析');
+  eq(T.imitOnlyForGen(10), null, '段1（无 only）不设过滤');
+  eq(T.imitOnlyForGen(90), 'ring', '段2 必须按段生效 only=ring');
+  eq(T.setImitPlanByName('', 0), 0, '复位计划');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

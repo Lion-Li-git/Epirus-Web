@@ -609,7 +609,7 @@
    * 经济锁死的病根：AI 永远停在 ep≤1 的 ジ→枪 循环，2 ジ 以上技能永久不可负担。
    * 旧 fitness 的 proact/deal 奖励"立刻打伤害"，而攒钱必须先连出ジ（0 伤害）→
    * 旧口径实际上在惩罚攒钱，故加 save/conv 两项把梯度补上。 */
-  function makeEconChooser(inner, agg, teacherFn, imitB) {
+  function makeEconChooser(inner, agg, teacherFn, imitB, onlyKey) {
     const rec = { maxEp: 0, heavy: 0, hold: 0, heavy4: 0 };
     const fn = function (state, pid, legal) {
       const p = state.p[pid];
@@ -625,7 +625,8 @@
         if (state.rng.next() < imitB) {
           const ta = teacherFull(teacherFn, state, pid, legal);
           const okL = ta && ta.key && legal.some(function (l) { return l.key === ta.key && l.affordable; });
-          if (okL) {
+          /* v1.5.98：`onlyKey` 未设 ⇒ 与旧版一致；设了 ⇒ **只覆盖教师真要教的那张卡**。 */
+          if (okL && (!onlyKey || ta.key === onlyKey)) {
             if (agg) { agg.use[ta.key] = (agg.use[ta.key] || 0) + 1; }
             return ta;
           }
@@ -642,7 +643,11 @@
         // C 方案：与脚本教师比对（只在退火期内计数）
         if (teacherFn && imitB > 0 && agg) {
           const tk = teacherAction(teacherFn, state, pid, legal);
-          if (tk != null) { agg._mt = (agg._mt || 0) + 1; if (a.key === tk) agg._mm = (agg._mm || 0) + 1; }
+          /* v1.5.98：`onlyKey` 过滤**也适用奖励计数** —— 只对"教师真要教的那张卡"计一致性；
+           * 否则"与教师的 fallback（蓄能/ジ）一致"会白拿奖励，正是抹掉"攒"的那股力。 */
+          if (tk != null && (!onlyKey || tk === onlyKey)) {
+            agg._mt = (agg._mt || 0) + 1; if (a.key === tk) agg._mm = (agg._mm || 0) + 1;
+          }
         }
         const c = S.computeCost(state, pid, a.key);
         if (c && c.ok) {
@@ -919,7 +924,7 @@ let WALL_GAMES = 3;
           let baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : policyChooserN(params, 0.35, 0.15);
           /* v1.5.88（甲）：退火窗内**计分对局**也走强迫（这样被强迫的行为才会被真实评分、进而被选择）。 */
           if (DIV_FORCE_GENS > 0 && gen < DIV_FORCE_GENS) baseSel = makeDiversityForce(baseSel, gen);
-          econ = makeEconChooser(baseSel, agg, imitB > 0 ? (imitTeacherForGen(gen) || BOT_PICKS['heavyfire']) : null, imitB);
+          econ = makeEconChooser(baseSel, agg, imitB > 0 ? (imitTeacherForGen(gen) || BOT_PICKS['heavyfire']) : null, imitB, imitOnlyForGen(gen));
           /* v1.5.39：定向 ε-强迫（只影响"有滚环者且我付得起小雷"这一格；其余原样返回学习到的动作）。 */
           choosers.push(function (state, pid2, legal) {
             const _fe = ringForceEpsAt(gen);
@@ -1497,6 +1502,27 @@ let WALL_GAMES = 3;
     const s = imitPlanSegment(gen);
     return s ? s.teacher : IMIT_TEACHER;
   }
+  /* ===== v1.5.98：**只示范目标卡**（`onlyKey`）=====
+   * 动因（v1.5.97 §4 的机制结论）：两段课程里第二段把第一段教出来的"攒"抹掉了。
+   * 机制：override 在**环不可负担时**也会拿教师的动作覆盖 —— 而教师的 fallback（蓄能/ジ）是短视的，
+   * 于是每次覆盖都在把策略往"不攒、随手出牌"推。
+   * ⇒ 让示范**只在教师真要教那张卡时**才生效（覆盖与奖励计数**都**过滤）：
+   *   只对"环"计一致性/做覆盖 ⇒ fallback 不再覆盖策略自己的好动作 ⇒ 第一段的成果不被回冲。
+   * 默认 `null` = 不过滤（行为与旧版逐位相同）。可全局设（`EPIRUS_IMIT_ONLY`），
+   * 也可**按段**设在计划里：`EPIRUS_IMIT_PLAN="pickDeepSaver:0.5,pickRingSpam:0.5:ring"`。 */
+  let IMIT_ONLY = null;
+  function setImitOnly(k) {
+    if (k == null || k === '') { IMIT_ONLY = null; return null; }
+    const key = String(k).trim();
+    if (!R.byKey[key]) throw new Error('[imit] EPIRUS_IMIT_ONLY 不是一张合法的卡：' + key);
+    IMIT_ONLY = key;
+    return IMIT_ONLY;
+  }
+  function imitOnlyForGen(gen) {
+    const s = imitPlanSegment(gen);
+    if (s && s.only) return s.only;
+    return IMIT_ONLY;
+  }
   function imitBetaForGen(gen) {
     if (IMIT_PLAN) {
       const s = imitPlanSegment(gen);
@@ -1519,9 +1545,12 @@ let WALL_GAMES = 3;
     const segs = [];
     let at = 0, acc = 0;
     for (let i = 0; i < parts.length; i++) {
-      const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([0-9]*\.?[0-9]+)$/.exec(parts[i]);
-      if (!m) throw new Error('[imit] 计划片段无法解析：' + JSON.stringify(parts[i]) + '（应形如 pickDeepSaver:0.5）');
+      const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([0-9]*\.?[0-9]+)(?:\s*:\s*([A-Za-z_][A-Za-z0-9_]*|\*))?$/.exec(parts[i]);
+      if (!m) throw new Error('[imit] 计划片段无法解析：' + JSON.stringify(parts[i]) +
+        '（应形如 pickDeepSaver:0.5 或 pickRingSpam:0.5:ring；第三段 = 只示范哪张卡，`*` = 不过滤）');
       const name = m[1], frac = Number(m[2]);
+      const only = (!m[3] || m[3] === '*') ? null : m[3];
+      if (only && !R.byKey[only]) throw new Error('[imit] 计划里的 only 不是一张合法的卡：' + only);
       if (!(frac > 0)) throw new Error('[imit] 计划片段占比必须 > 0：' + parts[i]);
       const until = (i === parts.length - 1) ? total
         : Math.min(total, Math.max(at + 1, Math.round(total * (acc + frac))));
@@ -1535,7 +1564,7 @@ let WALL_GAMES = 3;
         throw new Error('[imit] 计划里的教师名字解析失败：' + name +
           '（可用：antiring / BOT_PICKS 的键 / 全局注册表函数名，如 pickRingSpam、pickDeepSaver）');
       }
-      segs.push({ start: at, until: until, teacher: teacher, name: name });
+      segs.push({ start: at, until: until, teacher: teacher, name: name, only: only });
       at = until; acc += frac;
     }
     if (segs.length && segs[segs.length - 1].until < total) segs[segs.length - 1].until = total;
@@ -1978,7 +2007,7 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

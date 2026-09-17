@@ -115,6 +115,7 @@ const resolveOpp = makeOppSelResolver(sb, root, FN_MAP, B);
 
 let imitEchoed = false;   // v1.5.96：消息生效值的回执只打一次（避免每代刷屏）
 let imitPlanEchoed = false;   // v1.5.97：分段计划的回执同样只打一次
+let imitOnlyEchoed = false;   // v1.5.98：`only` 的回执
 parentPort.on('message', (msg) => {
   if (msg && msg.type === 'eval') {
     const opps = T.buildOpps(msg.champion, 0.05);
@@ -164,6 +165,18 @@ parentPort.on('message', (msg) => {
         imitEchoed = true;
         console.log('[imit] worker **消息**生效值 imitGens=' + Number(msg.imitGens) + ' β(gen0)=' + beta0 +
           ' override=' + String(process.env.EPIRUS_IMIT_OVERRIDE === '1'));
+      }
+    }
+    /* v1.5.98：**只示范目标卡** —— 与计划同一条道理：值必须随消息来，解析失败要响亮。 */
+    if (T.setImitOnly && msg.imitOnly != null) {
+      try { T.setImitOnly(msg.imitOnly); }
+      catch (e) {
+        parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: String((e && e.message) || e) });
+        return;
+      }
+      if (!imitOnlyEchoed) {
+        imitOnlyEchoed = true;
+        console.log('[imit] worker **消息**only 生效 = ' + String(msg.imitOnly || '(不过滤)'));
       }
     }
     /* v1.5.97：分段教师计划（**同一份解析函数**，只传字符串过来）—— 解析失败必须响亮报错。 */
