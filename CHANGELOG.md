@@ -29,6 +29,31 @@
 3. 六道体检**不出现新的红**（尤其别再出现只枪格 ≥90% 或退化包）。
 ETA ≈ 8~10 分钟。
 
+### 3. 第一次跑**是 no-op** —— 根因查清并修好（诚实记录：这批产物与对照**逐位相同**）
+
+**症状**：`v7ringT` 六个 seed 的成绩与对照臂 `v7ctrlE` **逐位相同**
+（seed 31：0.4375 / 46.8% / 42.5%；seed 81：0.3283 / 26.9% / 40.0%；seed 82：0.4950 / 53.1% / 70.0%）
+⇒ **整臂等于没跑**。回执给出了原因：`[imit] worker 生效值 … gens=0`。
+
+**根因**：`worker_threads` 的 `process.env` 是**创建时的拷贝**，而 `EPIRUS_IMIT_GENS` 是服务端在
+`runTrain` 里**事后派生**（`floor(gens × EPIRUS_IMIT_FRAC)`）才写进 `process.env` 的 ⇒ worker 永远读到 0
+⇒ `imitB ≡ 0` ⇒ **一致性奖励与真示范**（本次新加的 override）**都没发生**。
+⚠️ 这与 v1.5.0（`mode`）、v1.5.2（`styleOppNames`）是**同一族** —— `paralleltrain.mjs` 里那两条注释
+当时就写着症状是"整条 best 曲线与 multi 轮**逐位相同**"。
+⇒ v1.5.89 的"单一来源 + 回执"治的是**变量名清单**，**没治"值从哪里来、什么时候来"**；这次补的是后者。
+
+**修法**（与 mode / style 同一套路：**随消息下发**）：
+- `paralleltrain.mjs`：`evalN` 消息加 `imitGens: Number(process.env.EPIRUS_IMIT_GENS || 0)`
+  （在**服务端进程**里读 ⇒ 值是对的）；
+- `train-worker.mjs`：按 `msg.imitGens` 调 `setImitUntil`，并**自检生效**（`imitBetaForGen(0) > 0`），
+  不生效就**响亮报错**（post `error` ⇒ 服务端 reject，不再"挂到 30 分钟超时"才算发现）；
+  启动回执改名 `[imit] worker 启动值 … gens(env)=…`（并标注"env 是拷贝、示范代数以消息为准"），
+  新增一次性回执 `[imit] worker **消息**生效值 imitGens=… β(gen0)=…`；
+- **D84** 追加四条断言（消息必须带 `imitGens` / worker 必须按消息设 / 必须自检并响亮报错 / 必须有回执）。
+
+**产物去向（D82 的账）**：`v7ringT-31` · `v7ringT-81` · `v7ringT-82` · `v7ringT-91` · `v7ringT-92` · `v7ringT-93`
+= **整批作废**（no-op 臂，与 `v7ctrlE-*` 逐位相同）；修复后**重跑**，验收条件仍按 §2 三条不变。
+
 ## v1.5.95 — "转化率"探针（第九轮复核 §5-2/§7-2 的验收量具）：把**收入饥饿**与**转化拒绝**分开数出来
 
 > 复核判定："环和原型制御现在是**同一个病**：价值估计病"（不是曝光度病 / 枚举病 / 经济门槛病）。

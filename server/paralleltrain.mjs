@@ -113,8 +113,13 @@ export function makeParallelEvalN(T, opts) {
        * 进化部分照旧按 3 血跑，只有服务端那次终局评估用 5 血。
        * 实测症状（我踩过）：整条 best 曲线与 multi 轮**逐位相同**。
        * v1.5.2 同理：**风格切片的名单/权重/局数也必须随消息下发**，否则只有服务端那份生效。 */
+      /* v1.5.96：**示范代数也必须随消息下发** —— 与上面 mode / styleOpps **逐位相同**的理由：
+       * `worker_threads` 的 `process.env` 是**创建时的拷贝**，而 `EPIRUS_IMIT_GENS` 是服务端在
+       * `runTrain` 里**事后**派生再写进 env 的 ⇒ 走 env 永远是 0。本轮实测症状：
+       * `[imit] worker 生效值 … gens=0`，整臂产物与对照臂**逐位相同**（等于没跑）。 */
       if (sl.length) jobs.push(runOne(pool[w], { type: 'evalN', members: sl, gen: gen, games: games, n: n, oppNames: oppNames, mode: (T.trainMode ? T.trainMode() : 'multi'),
-        styleOppNames: styleOppNames || null, styleW: styleW, styleGames: styleGames }));
+        styleOppNames: styleOppNames || null, styleW: styleW, styleGames: styleGames,
+        imitGens: Number(process.env.EPIRUS_IMIT_GENS || 0) }));
     }
     const res = (await Promise.all(jobs)).flat();
     const out = new Array(pop.length).fill(null);

@@ -72,8 +72,9 @@ if (T.setImitUntil) T.setImitUntil(Number(process.env.EPIRUS_IMIT_GENS || 0));
   let acc = null, ovr = null;
   if (T.setImitTeacherByName && process.env.EPIRUS_IMIT_TEACHER) acc = T.setImitTeacherByName(process.env.EPIRUS_IMIT_TEACHER);
   if (T.setImitOverride) ovr = T.setImitOverride(process.env.EPIRUS_IMIT_OVERRIDE === '1');
-  console.log('[imit] worker 生效值 teacher=' + (process.env.EPIRUS_IMIT_TEACHER || '(默认 heavyfire)') +
-    ' accepted=' + String(acc) + ' gens=' + String(process.env.EPIRUS_IMIT_GENS || 0) + ' override=' + String(ovr));
+  console.log('[imit] worker 启动值 teacher=' + (process.env.EPIRUS_IMIT_TEACHER || '(默认 heavyfire)') +
+    ' accepted=' + String(acc) + ' gens(env)=' + String(process.env.EPIRUS_IMIT_GENS || 0) +
+    ' override=' + String(ovr) + '  ⚠️ env 是**创建时拷贝** ⇒ 示范代数以**消息**为准');
 }
 /* v1.5.79（第七轮复核 §15-1）：把"**优先打威胁**"当能力奖。
  * 与环课题的区别（决定它有戏）：环出手率 0（bootstrap 不到），而"打威胁者"已在发生（22.5% ≈ 随机）⇒ 窄奖励能定向加压。 */
@@ -112,6 +113,7 @@ if (T.setFightReward && hasFightOverride(fightEnv)) {
 const FN_MAP = (function () { const m = {}; for (const o of OPP_SPECS) m[o.name] = o.fn; return m; })();
 const resolveOpp = makeOppSelResolver(sb, root, FN_MAP, B);
 
+let imitEchoed = false;   // v1.5.96：消息生效值的回执只打一次（避免每代刷屏）
 parentPort.on('message', (msg) => {
   if (msg && msg.type === 'eval') {
     const opps = T.buildOpps(msg.champion, 0.05);
@@ -145,6 +147,24 @@ parentPort.on('message', (msg) => {
     /* v1.5.0：worker 是**独立沙箱** ⇒ 服务端的 setTrainMode 不会传过来，必须按消息里的 mode 设。
      * 漏这一行的症状极隐蔽：进化照旧 3 血、只有服务端终局评估是 5 血，best 曲线看起来完全正常。 */
     if (T.setTrainMode) T.setTrainMode(msg.mode || 'multi');
+    /* ===== v1.5.96：示范代数（课程/示范）也必须**按消息**设，并自检生效 =====
+     * 病：`EPIRUS_IMIT_GENS` 走 env —— 而 worker 的 `process.env` 是**创建时的拷贝**，
+     * 该变量是服务端在 `runTrain` 里事后派生的 ⇒ worker 永远读到 0 ⇒ `imitB ≡ 0`
+     * ⇒ **既没有一致性奖励、也没有真示范**，整臂与对照**逐位相同**（本轮 v7ringT 实测）。
+     * 与 v1.5.0（mode）、v1.5.2（styleOpps）同族 —— 那两处注释当时就写着"逐位相同"这个症状。 */
+    if (msg.imitGens != null && T.setImitUntil) {
+      T.setImitUntil(Number(msg.imitGens) || 0);
+      const beta0 = (T.imitBetaForGen ? T.imitBetaForGen(0) : 0);
+      if (Number(msg.imitGens) > 0 && !(beta0 > 0)) {
+        parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: '示范代数没在 worker 生效（imitGens=' + msg.imitGens + '）' });
+        return;
+      }
+      if (!imitEchoed && Number(msg.imitGens) > 0) {
+        imitEchoed = true;
+        console.log('[imit] worker **消息**生效值 imitGens=' + Number(msg.imitGens) + ' β(gen0)=' + beta0 +
+          ' override=' + String(process.env.EPIRUS_IMIT_OVERRIDE === '1'));
+      }
+    }
     /* v1.5.2：风格切片也必须在**本 worker 的沙箱里**设一遍（同 mode 的道理：服务端那份改不到这里）。
      * 并把回执带回去，让服务端能自检"切片真的生效了"而不是静默半开。 */
     let sliceOk = null;

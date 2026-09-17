@@ -3435,9 +3435,20 @@ t('D84 真示范（override）：默认关、只在教师动作**可负担**时�
   const wk = readFileSync('server/train-worker.mjs', 'utf8');
   ok(wk.indexOf("process.env.EPIRUS_IMIT_OVERRIDE === '1'") >= 0 && wk.indexOf('T.setImitTeacherByName') >= 0,
     'worker 必须读 EPIRUS_IMIT_OVERRIDE 并按名字设教师');
-  ok(wk.indexOf("[imit] worker 生效值") >= 0, 'worker 必须打回执（照 [econ] 的先例，防静默半开）');
+  ok(wk.indexOf("[imit] worker 启动值") >= 0, 'worker 必须打启动回执（照 [econ] 的先例，防静默半开）');
+  ok(wk.indexOf('gens(env)=') >= 0 && wk.indexOf('以**消息**为准') >= 0,
+    '启动回执必须标明"env 是拷贝、示范代数以消息为准"（免得下一个人又被 gens=0 误导）');
   ok(readFileSync('server/train-server.mjs', 'utf8').indexOf('T.setImitTeacherByName') >= 0,
     '主线程也要设一份（两侧口径一致）');
+  /* v1.5.96 追加（被真实事故逼出来的）：示范代数必须**走消息**。
+   * `worker_threads` 的 process.env 是**创建时的拷贝**，而 `EPIRUS_IMIT_GENS` 是服务端事后派生的
+   * ⇒ 只走 env 时 worker 永远读到 0 ⇒ 整臂与对照**逐位相同**（本轮 `v7ringT` 实测，回执里 `gens=0`）。 */
+  const pt = readFileSync('server/paralleltrain.mjs', 'utf8');
+  ok(pt.indexOf('imitGens: Number(process.env.EPIRUS_IMIT_GENS || 0)') >= 0,
+    'evalN 消息必须带 `imitGens`（示范代数不能只走 env）');
+  ok(wk.indexOf('T.setImitUntil(Number(msg.imitGens) || 0)') >= 0, 'worker 必须按**消息**设示范代数');
+  ok(wk.indexOf('示范代数没在 worker 生效') >= 0, 'worker 必须自检生效并**响亮报错**（不许静默半开）');
+  ok(wk.indexOf('[imit] worker **消息**生效值') >= 0, '消息生效值必须有回执（照 [econ] 的先例）');
 });
 
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
