@@ -3449,6 +3449,14 @@ t('D84 真示范（override）：默认关、只在教师动作**可负担**时�
   ok(wk.indexOf('T.setImitUntil(Number(msg.imitGens) || 0)') >= 0, 'worker 必须按**消息**设示范代数');
   ok(wk.indexOf('示范代数没在 worker 生效') >= 0, 'worker 必须自检生效并**响亮报错**（不许静默半开）');
   ok(wk.indexOf('[imit] worker **消息**生效值') >= 0, '消息生效值必须有回执（照 [econ] 的先例）');
+  /* v1.5.96 真根因：IMIT 接线原先**只写在 2 人路径 `runTrain`**，而 runner 带 `n=5` 走的是
+   * `runTrainN` ⇒ N 人臂上 `imitB ≡ 0`、整臂与对照逐位相同。⇒ 两条路径必须**共用一份实现**。 */
+  const sv = readFileSync('server/train-server.mjs', 'utf8');
+  ok(sv.indexOf('function applyImitEnv(') >= 0, '必须抽成共用的 `applyImitEnv`（同一件事不许写两遍）');
+  ok((sv.match(/applyImitEnv\(/g) || []).length >= 3,
+    '`applyImitEnv` 必须被**两条训练路径**都调用（定义 1 + 调用 ≥2）—— 本轮事故正是"只写在 2 人路径"');
+  ok(/async function runTrainN\([\s\S]{0,400}applyImitEnv\(/.test(sv), '`runTrainN`（N 人路径）必须调用它（事故现场）');
+  ok(/\[imit\] 主线程生效值 gens=/.test(sv), '主线程必须打"生效值"回执（含 gens / frac / teacher / accepted / override / β(gen0)）');
 });
 
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {

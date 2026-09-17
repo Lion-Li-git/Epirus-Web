@@ -154,23 +154,36 @@ function maybeEarlyStop(it, gens) {
 
 /* 多种子 × 多轮训练：每轮 = seeds 个独立种子跑 gens 代（轮间重新择优/重开种子，避免长跑 sigma 坍缩与冠军蝉联）。
  * 每轮结束都按真实胜率择优并与现有冠军比（绝不回退）。 */
+/* ===== v1.5.96：示范/课程的 env 与主线程设定 —— **两条训练路径共用一份实现** =====
+ * 本轮事故的**真根因**：runner 的 URL 带 `n=5` ⇒ 请求走 **`runTrainN`**（多人路径），
+ * 而全部 IMIT 接线原先只写在 **`runTrain`**（2 人路径）里 ⇒ **N 人路径上 `imitB ≡ 0`**：
+ * 既没有一致性奖励、也没有真示范，整臂与对照**逐位相同**（`v7ringT` 实测）。
+ * ⚠️ 更大的后果：v1.5.31 那句"C 方案实测未奏效（只做动作级模仿，学不到跨回合轨迹）"
+ * **很可能是在 `imitB ≡ 0` 的空操作上得出的** ⇒ 与之前那批 A/A 臂同类，该结论应视为**未验证**。
+ * ⇒ 抽成一个函数、两条路径都调它（本仓库的规矩：同一件事不许写两遍）。 */
+function applyImitEnv(gens) {
+  const imitGens = Math.floor((gens || 0) * Number(process.env.EPIRUS_IMIT_FRAC || '0'));
+  process.env.EPIRUS_IMIT_GENS = String(imitGens);   // 给 worker 的**消息**读（paralleltrain 在消息里读它）
+  let acc = null;
+  if (T.setImitTeacherByName && process.env.EPIRUS_IMIT_TEACHER) {
+    acc = T.setImitTeacherByName(process.env.EPIRUS_IMIT_TEACHER);
+  } else if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) {
+    T.setAntiRingTeacher(); acc = true;   // 老沙箱兜底
+  }
+  const ovr = T.setImitOverride ? T.setImitOverride(process.env.EPIRUS_IMIT_OVERRIDE === '1') : null;
+  if (T.setImitUntil) T.setImitUntil(imitGens);
+  console.log('[imit] 主线程生效值 gens=' + imitGens + ' frac=' + String(process.env.EPIRUS_IMIT_FRAC || 0) +
+    ' teacher=' + (process.env.EPIRUS_IMIT_TEACHER || '(默认 heavyfire)') + ' accepted=' + String(acc) +
+    ' override=' + String(ovr) + ' β(gen0)=' + (T.imitBetaForGen ? T.imitBetaForGen(0) : '?'));
+  return imitGens;
+}
+
 async function runTrain(gens, opts, cfg) {
   if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
   /* C 方案：脚本教师模仿。注意 worker 是**独立进程**，主线程 setImitUntil 传不进去，
-   * 故走环境变量——worker 在懒创建时读它（池在首次 evalPopN 才建，此时 env 已写好）。 */
-  // C 方案实测未奏效（只做动作级模仿，学不到跨回合轨迹）→ **默认关闭**。
-  // 需要复验时设 EPIRUS_IMIT_FRAC=0.35 即可打开。
-  const imitGens = Math.floor((gens || 0) * Number(process.env.EPIRUS_IMIT_FRAC || '0'));
-  process.env.EPIRUS_IMIT_GENS = String(imitGens);
-  /* v1.5.31 起：课程/示范教师；v1.5.96 改**按名字**选（`antiring` 兼容）并支持**真示范**覆盖。
-   * 主线程也设一份，保证与 worker 两侧口径一致；同时打回执。 */
-  if (T.setImitTeacherByName && process.env.EPIRUS_IMIT_TEACHER) {
-    console.log('[imit] 主线程教师 = ' + process.env.EPIRUS_IMIT_TEACHER + ' accepted=' +
-      String(T.setImitTeacherByName(process.env.EPIRUS_IMIT_TEACHER)));
-  } else if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) {
-    T.setAntiRingTeacher();   // 老沙箱兜底（没有 setImitTeacherByName 时）
-  }
-  if (T.setImitOverride) T.setImitOverride(process.env.EPIRUS_IMIT_OVERRIDE === '1');
+   * 故走环境变量 **+ 消息**（v1.5.96 起消息是主路径：worker 的 env 是创建时的拷贝）。
+   * v1.5.96：这段**统一走 `applyImitEnv`**，与 `runTrainN` 共用一份实现。 */
+  const imitGens = applyImitEnv(gens);
 if (process.env.EPIRUS_TGT_W && T.setTargetReward) {
   console.log('[tgt] 威胁靶向奖励权重 = ' + T.setTargetReward(Number(process.env.EPIRUS_TGT_W)) + '（复核 §15-1）');
 }
@@ -337,6 +350,9 @@ function writeBundleMP(pack, meta) {
 
 async function runTrainN(gens, cfg) {
   const SEED0 = Number(cfg.seed0 || 0);
+  /* v1.5.96：**这条路径以前完全没有 IMIT 接线** —— 所有 N 人臂（含本晚全部实验）都走这里，
+   * 所以 `imitB ≡ 0`、整臂与对照**逐位相同**。现在与 `runTrain` 共用 `applyImitEnv`。 */
+  applyImitEnv(gens);
   /* WR_TOL is a CALLER input, not a hidden env read inside the engine
    * (Qianwen: CLI sandboxes have no `process`, so they always got the default). */
   if (T.setWrTol) T.setWrTol(Number(process.env.EPIRUS_WR_TOL || 0.03));
