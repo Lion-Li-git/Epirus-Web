@@ -919,7 +919,7 @@ let WALL_GAMES = 3;
           let baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : policyChooserN(params, 0.35, 0.15);
           /* v1.5.88（甲）：退火窗内**计分对局**也走强迫（这样被强迫的行为才会被真实评分、进而被选择）。 */
           if (DIV_FORCE_GENS > 0 && gen < DIV_FORCE_GENS) baseSel = makeDiversityForce(baseSel, gen);
-          econ = makeEconChooser(baseSel, agg, imitB > 0 ? (IMIT_TEACHER || BOT_PICKS['heavyfire']) : null, imitB);
+          econ = makeEconChooser(baseSel, agg, imitB > 0 ? (imitTeacherForGen(gen) || BOT_PICKS['heavyfire']) : null, imitB);
           /* v1.5.39：定向 ε-强迫（只影响"有滚环者且我付得起小雷"这一格；其余原样返回学习到的动作）。 */
           choosers.push(function (state, pid2, legal) {
             const _fe = ringForceEpsAt(gen);
@@ -1472,9 +1472,74 @@ let WALL_GAMES = 3;
 
   let IMIT_UNTIL = 0;                // 退火代数（由 setImitUntil 设置；0=关闭）
   function setImitUntil(n) { IMIT_UNTIL = Math.max(0, Math.floor(n) || 0); }
+  /* ===== v1.5.97：**分段教师计划**（两段课程）=====
+   * 动因（v1.5.96 §7 的机制结论）：一次性用"开环教师"无效 —— 环**恒不可负担**、教师够不着；
+   * 先用"攒钱教师"把 ep 攒起来（已证可行：`ep≥3` 从 0.0% → 12.6 / 9.5 / 40.1%），
+   * **第二段**再换"开环教师"，此时环才可负担 ⇒ 示范才落在环上。
+   * 口径：`EPIRUS_IMIT_PLAN="教师名:占比,教师名:占比"`（占比之和≈1），在 `[0, IMIT_UNTIL)` 内切段；
+   * **每段各自线性退火**（β 从 IMIT_BETA 降到 0）⇒ 第二段会**重新**施加示范压力。
+   * 不设 plan ⇒ 行为与旧版**逐位相同**（单教师 + 单一退火窗）。
+   * 解析**只写这一份**：`setImitPlanByName(spec, totalGens)` 供 server 与 worker **共用**（今晚的教训）。 */
+  let IMIT_PLAN = null;              // [{start, until, teacher, name}]
+  function setImitPlan(segs) {
+    IMIT_PLAN = (Object.prototype.toString.call(segs) === '[object Array]' && segs.length) ? segs : null;
+    return IMIT_PLAN ? IMIT_PLAN.length : 0;
+  }
+  function imitPlanSegment(gen) {
+    if (!IMIT_PLAN) return null;
+    for (let i = 0; i < IMIT_PLAN.length; i++) {
+      const s = IMIT_PLAN[i];
+      if (gen >= s.start && gen < s.until) return s;
+    }
+    return null;
+  }
+  function imitTeacherForGen(gen) {
+    const s = imitPlanSegment(gen);
+    return s ? s.teacher : IMIT_TEACHER;
+  }
   function imitBetaForGen(gen) {
+    if (IMIT_PLAN) {
+      const s = imitPlanSegment(gen);
+      if (!s) return 0;
+      const span = Math.max(1, s.until - s.start);
+      return IMIT_BETA * Math.max(0, 1 - (gen - s.start) / span);   // **每段各自**线性退火
+    }
     if (!IMIT_UNTIL || gen >= IMIT_UNTIL) return 0;
-    return IMIT_BETA * (1 - gen / IMIT_UNTIL);      // 线性退火
+    return IMIT_BETA * (1 - gen / IMIT_UNTIL);      // 线性退火（旧口径，不设 plan 时逐位不变）
+  }
+  /* 按名字建计划（唯一一份解析；server 与 worker 都调它）。
+   * `spec` = "name:frac,name:frac"；`totalGens` = 示范窗总代数（= IMIT_UNTIL）。
+   * 片段无法解析 / 名字解析不出来 ⇒ **抛错**（不许静默退回默认教师 —— `v7stock1` 的教训）。 */
+  function setImitPlanByName(spec, totalGens) {
+    const txt = String(spec == null ? '' : spec).trim();
+    if (!txt) return setImitPlan(null);
+    const parts = txt.split(',').map(function (p) { return p.trim(); })
+      .filter(function (p) { return p.length > 0; });
+    const total = Math.max(1, Math.floor(Number(totalGens) || 0));
+    const segs = [];
+    let at = 0, acc = 0;
+    for (let i = 0; i < parts.length; i++) {
+      const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([0-9]*\.?[0-9]+)$/.exec(parts[i]);
+      if (!m) throw new Error('[imit] 计划片段无法解析：' + JSON.stringify(parts[i]) + '（应形如 pickDeepSaver:0.5）');
+      const name = m[1], frac = Number(m[2]);
+      if (!(frac > 0)) throw new Error('[imit] 计划片段占比必须 > 0：' + parts[i]);
+      const until = (i === parts.length - 1) ? total
+        : Math.min(total, Math.max(at + 1, Math.round(total * (acc + frac))));
+      let teacher = (name === 'antiring') ? makeAntiRingTeacher(BOT_PICKS['heavyfire']) : null;
+      if (!teacher && BOT_PICKS && typeof BOT_PICKS[name] === 'function') teacher = BOT_PICKS[name];
+      if (!teacher) {
+        const G = (typeof global !== 'undefined' && global && global.EpirusBots) || null;
+        if (G && typeof G[name] === 'function') teacher = G[name];
+      }
+      if (!teacher) {
+        throw new Error('[imit] 计划里的教师名字解析失败：' + name +
+          '（可用：antiring / BOT_PICKS 的键 / 全局注册表函数名，如 pickRingSpam、pickDeepSaver）');
+      }
+      segs.push({ start: at, until: until, teacher: teacher, name: name });
+      at = until; acc += frac;
+    }
+    if (segs.length && segs[segs.length - 1].until < total) segs[segs.length - 1].until = total;
+    return setImitPlan(segs);
   }
   /* 脚本教师的一句话决策（供模仿比对用） */
   function teacherAction(botFn, state, pid, legal) {
@@ -1913,7 +1978,7 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

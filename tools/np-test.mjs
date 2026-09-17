@@ -3463,6 +3463,51 @@ t('D84 真示范（override）：默认关、只在教师动作**可负担**时�
     '教师名字解析不出来必须抛错拒绝（不许静默退回默认 heavyfire）');
 });
 
+t('D85 分段教师计划（两段课程）：解析只写一份、两条路径 + worker 都调它、每段各自退火、坏名字抛错', function () {
+  /* v1.5.97（承接 v1.5.96 §7 的机制结论）：一次性"开环教师"够不着环（环恒不可负担）；
+   * 两段课程 = 先用攒钱教师把 ep 攒起来，再换开环教师。这条门钉住这四件事。 */
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  ok(evo.indexOf('function setImitPlanByName(spec, totalGens) {') >= 0, '必须有**唯一一份**解析函数 setImitPlanByName');
+  ok(evo.indexOf('let IMIT_PLAN = null;') >= 0, '默认无计划（不设 plan ⇒ 行为与旧版逐位相同）');
+  ok(evo.indexOf('if (!IMIT_UNTIL || gen >= IMIT_UNTIL) return 0;') >= 0,
+    '旧口径（单一退火窗）必须保留 —— 不设 plan 时逐位不变');
+  ok(evo.indexOf('return IMIT_BETA * Math.max(0, 1 - (gen - s.start) / span);') >= 0,
+    '计划模式下必须**每段各自**线性退火（第二段要重新施加压力）');
+  ok(evo.indexOf("imitTeacherForGen(gen) || BOT_PICKS['heavyfire']") >= 0,
+    '取教师必须按当前代数走 imitTeacherForGen（分段）');
+  const sv = readFileSync('server/train-server.mjs', 'utf8');
+  ok(sv.indexOf('T.setImitPlanByName(process.env.EPIRUS_IMIT_PLAN, imitGens)') >= 0, '主线程必须按 plan 建计划');
+  ok(readFileSync('server/paralleltrain.mjs', 'utf8').indexOf('imitPlan: process.env.EPIRUS_IMIT_PLAN || null') >= 0,
+    'evalN 消息必须带 imitPlan（同 imitGens 的理由：env 是拷贝）');
+  const wk2 = readFileSync('server/train-worker.mjs', 'utf8');
+  ok(wk2.indexOf('T.setImitPlanByName(msg.imitPlan, Number(msg.imitGens) || 0)') >= 0,
+    'worker 必须调**同一个**解析函数（不许各写一份）');
+  ok(wk2.indexOf('[imit] worker **消息**计划生效') >= 0, '计划生效必须有回执（含第二段 β ⇒ 自证每段退火）');
+  ok(wk2.indexOf("[imit] worker **消息**计划生效") < wk2.indexOf('catch (e) {', wk2.indexOf('msg.imitPlan')) ||
+    wk2.indexOf('postMessage({ type: \'evalNResult\', id: msg.id, error: String((e && e.message) || e) })') >= 0,
+    'worker 侧解析失败必须 post error（不许崩、不许静默）');
+  /* 行为：空 spec ⇒ 无计划；单段 ⇒ 1 段；坏名字 ⇒ 抛错；两段 ⇒ 教师不同 + 第二段 β>0 */
+  eq(T.setImitPlanByName('', 100), 0, '空 spec 必须等于"无计划"');
+  eq(T.setImitPlanByName('heavyfire:1', 100), 1, '单段计划应有 1 段');
+  let threw = null;
+  try { T.setImitPlanByName('noSuchTeacher:1', 100); } catch (e) { threw = String((e && e.message) || e); }
+  ok(threw && threw.indexOf('教师名字解析失败') >= 0,
+    '计划里"认不出的名字"必须抛**名字解析**错误（实测：' + threw + '）');
+  let threw2 = null;
+  try { T.setImitPlanByName('不是合法片段:1', 100); } catch (e) { threw2 = String((e && e.message) || e); }
+  ok(threw2 && threw2.indexOf('无法解析') >= 0,
+    '计划里格式错的片段必须抛**片段解析**错误（实测：' + threw2 + '）—— 两条错路都得响亮');
+  eq(T.setImitPlanByName('heavyfire:0.5,guardgun:0.5', 100), 2, '两段计划应有 2 段');
+  ok(T.imitTeacherForGen(10) !== T.imitTeacherForGen(90), '两段的教师必须不同（前段 10 / 后段 90）');
+  /* 钉的是"**段边界处 β 回到接近满额**"（第二段重新施加压力）：
+   * 两段各 50 代 ⇒ β(50) 应≈0.12；旧的单窗口口径在 50 处只有 0.06 ⇒ 这条能判别。 */
+  ok(T.imitBetaForGen(50) > 0.10,
+    '第二段开头必须重新接近满额（β(50) 实测 ' + T.imitBetaForGen(50).toFixed(3) + ' > 0.10；旧口径会是 0.060）');
+  ok(T.imitBetaForGen(90) > 0, '第二段内部必须仍为正（β(90) 实测 ' + T.imitBetaForGen(90).toFixed(3) + '）');
+  ok(T.imitBetaForGen(100) === 0, '窗末 β 必须为 0（退火到底）');
+  eq(T.setImitPlanByName('', 0), 0, '复位成无计划（别把状态泄漏给后面的用例）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

@@ -114,6 +114,7 @@ const FN_MAP = (function () { const m = {}; for (const o of OPP_SPECS) m[o.name]
 const resolveOpp = makeOppSelResolver(sb, root, FN_MAP, B);
 
 let imitEchoed = false;   // v1.5.96：消息生效值的回执只打一次（避免每代刷屏）
+let imitPlanEchoed = false;   // v1.5.97：分段计划的回执同样只打一次
 parentPort.on('message', (msg) => {
   if (msg && msg.type === 'eval') {
     const opps = T.buildOpps(msg.champion, 0.05);
@@ -163,6 +164,22 @@ parentPort.on('message', (msg) => {
         imitEchoed = true;
         console.log('[imit] worker **消息**生效值 imitGens=' + Number(msg.imitGens) + ' β(gen0)=' + beta0 +
           ' override=' + String(process.env.EPIRUS_IMIT_OVERRIDE === '1'));
+      }
+    }
+    /* v1.5.97：分段教师计划（**同一份解析函数**，只传字符串过来）—— 解析失败必须响亮报错。 */
+    if (msg.imitPlan && T.setImitPlanByName) {
+      try { T.setImitPlanByName(msg.imitPlan, Number(msg.imitGens) || 0); }
+      catch (e) {
+        parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: String((e && e.message) || e) });
+        return;
+      }
+      if (!imitPlanEchoed) {
+        imitPlanEchoed = true;
+        const mid = Math.floor((Number(msg.imitGens) || 0) * 0.75);
+        console.log('[imit] worker **消息**计划生效 spec=' + msg.imitPlan + ' gens=' + Number(msg.imitGens) +
+          ' β(gen0)=' + (T.imitBetaForGen ? T.imitBetaForGen(0) : '?') +
+          ' β(0.75 处)=' + (T.imitBetaForGen ? T.imitBetaForGen(mid) : '?') +
+          '（第二段必须 > 0 ⇒ 证明每段各自退火）');
       }
     }
     /* v1.5.2：风格切片也必须在**本 worker 的沙箱里**设一遍（同 mode 的道理：服务端那份改不到这里）。

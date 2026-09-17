@@ -181,9 +181,16 @@ function applyImitEnv(gens) {
   }
   const ovr = T.setImitOverride ? T.setImitOverride(process.env.EPIRUS_IMIT_OVERRIDE === '1') : null;
   if (T.setImitUntil) T.setImitUntil(imitGens);
+  /* v1.5.97：**分段教师计划**（两段课程）。解析只走 evo.js 的 `setImitPlanByName`（与 worker 共用一份）；
+   * 名字/占比非法 ⇒ 它**抛错**，这里不吞 ⇒ 整个 /train 请求响亮失败（不许静默退回默认教师）。 */
+  let planN = 0;
+  if (T.setImitPlanByName && process.env.EPIRUS_IMIT_PLAN) {
+    planN = T.setImitPlanByName(process.env.EPIRUS_IMIT_PLAN, imitGens) || 0;
+  } else if (T.setImitPlan) { T.setImitPlan(null); }
   console.log('[imit] 主线程生效值 gens=' + imitGens + ' frac=' + String(process.env.EPIRUS_IMIT_FRAC || 0) +
     ' teacher=' + (process.env.EPIRUS_IMIT_TEACHER || '(默认 heavyfire)') + ' accepted=' + String(acc) +
-    ' override=' + String(ovr) + ' β(gen0)=' + (T.imitBetaForGen ? T.imitBetaForGen(0) : '?'));
+    ' override=' + String(ovr) + ' plan=' + (process.env.EPIRUS_IMIT_PLAN || '(无)') + ' 段数=' + planN +
+    ' β(gen0)=' + (T.imitBetaForGen ? T.imitBetaForGen(0) : '?'));
   return imitGens;
 }
 
