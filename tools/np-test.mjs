@@ -3457,6 +3457,10 @@ t('D84 真示范（override）：默认关、只在教师动作**可负担**时�
     '`applyImitEnv` 必须被**两条训练路径**都调用（定义 1 + 调用 ≥2）—— 本轮事故正是"只写在 2 人路径"');
   ok(/async function runTrainN\([\s\S]{0,400}applyImitEnv\(/.test(sv), '`runTrainN`（N 人路径）必须调用它（事故现场）');
   ok(/\[imit\] 主线程生效值 gens=/.test(sv), '主线程必须打"生效值"回执（含 gens / frac / teacher / accepted / override / β(gen0)）');
+  /* v1.5.96 补：名字解析不出来**必须响亮拒绝** —— `v7stock1` 就是 env 写了 `deepsaver`（不在 BOT_PICKS 里）
+   * 而库里静默用默认教师 heavyfire，整臂**贴着错标签跑完**（回执打了 accepted=false，但没人拦）。 */
+  ok(sv.indexOf('教师名字解析失败') >= 0 && /if \(!acc\) \{\s*throw new Error/.test(sv),
+    '教师名字解析不出来必须抛错拒绝（不许静默退回默认 heavyfire）');
 });
 
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {

@@ -167,6 +167,15 @@ function applyImitEnv(gens) {
   let acc = null;
   if (T.setImitTeacherByName && process.env.EPIRUS_IMIT_TEACHER) {
     acc = T.setImitTeacherByName(process.env.EPIRUS_IMIT_TEACHER);
+    /* v1.5.96 补：**名字解析不出来必须响亮拒绝**，不许静默退回默认教师 `heavyfire`。
+     * 本轮 `v7stock1` 就是这么暴露的：env 写 `deepsaver`（它不在 `BOT_PICKS` 里，正确名字是 `pickDeepSaver`），
+     * `accepted=false`，而库里照旧用 heavyfire ⇒ **整臂贴着错标签跑完**。
+     * 与"env 到不了 worker"、"接线只在 2 人路径"同族 ⇒ 规矩：**开关要么生效、要么响亮失败**。 */
+    if (!acc) {
+      throw new Error('[imit] 教师名字解析失败：EPIRUS_IMIT_TEACHER=' + process.env.EPIRUS_IMIT_TEACHER +
+        ' —— 可用名字 = `antiring`，或 `BOT_PICKS` 的键（heavyfire/guardgun/reflectspam…），' +
+        '或全局注册表的函数名（pickRingSpam / pickDeepSaver）。拒绝用默认教师跑完。');
+    }
   } else if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) {
     T.setAntiRingTeacher(); acc = true;   // 老沙箱兜底
   }
