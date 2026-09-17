@@ -1,5 +1,5 @@
 /* Epirus N 人（3-5）引擎测试：随机对局 fuzz + 关键裁定点（docs/RULES-NP.md） */
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import vm from 'node:vm';
@@ -3248,6 +3248,16 @@ t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一
   const al = readFileSync('tools/audit-lib.mjs', 'utf8');
   ok(al.indexOf('export function densityProfile(') >= 0, '必须有输出密度探针（每回合出手伤害 / 按ジ占比）');
   ok(al.indexOf('export const DENSITY_BLOCK = false;') >= 0, '第 6 道判据默认**不阻断**（现在没有判别力）');
+  /* v1.5.94（第九轮复核 §6）：复核要求"上闸"，我**部分不采纳**，理由必须钉在源码里 ——
+   * 它点名的"密度门"是 `只枪(打最肥)` 那一格，而那一格**早就已经是阻断项**（G4，标定包 `v7f3-94` = 5%/5%）；
+   * 本常量管的是**珠经济闭环**，过了它的两个包都是废包 ⇒ 翻了只会挡死所有候选。 */
+  ok(al.indexOf('v7f3-94') >= 0 && al.indexOf('已经是闸') >= 0,
+    '必须把"只枪格已由 G4 阻断、本常量管的是另一件事"写进源码注释（免得下轮又有人来翻它）');
+  /* v1.5.94（第九轮复核 §5-1）：**退化包**（自对局从不出手）必须能被判负，且走 fails */
+  ok(al.indexOf('zeroAtkRate') >= 0 && al.indexOf('自对局零攻击局') >= 0 &&
+    al.indexOf("fails.push('自对局零攻击局") >= 0,
+    '退化包判据必须存在且进 fails（复核实测：0 出手的包照样拿 A 考卷 46.8~47.1%）');
+  ok(al.indexOf('zeroDealtRate') >= 0, '零出手率与零伤害率必须分两列（复核 §7-1）');
   ok(al.indexOf('density: dRec') >= 0, '第 6 道的读数必须进 feasibilityOf 的返回值（落盘 meta 要能查）');
   const fs0 = al.indexOf('export function feasibilityOf(');
   const fs1 = al.indexOf('export function chargeProfile(');
@@ -3360,6 +3370,26 @@ t('D81 功能角色表 roleOf：只从声明字段推导（**不得枚举卡名*
   ['defense', 'economy', 'pierceBoth', 'pierceReflect', 'pierceDefense', 'burst', 'damage', 'utility'].forEach(function (n) {
     ok(roles[n] >= 1, '角色 ' + n + ' 至少要有一张卡（实测 ' + (roles[n] || 0) + '）');
   });
+});
+
+t('D82 记账纪律：24 小时内落盘的 .bak 必须在 CHANGELOG 里被点名（第九轮复核 §7-5）', function () {
+  /* 复核抓到：整晚 20 个产物零记录（其中一个座位极差 99pt）—— "产物=证据，没记账的产物等于没有结论"。
+   * 这条门只看**最近 24 小时**（不去追溯历史堆积，那是另一件清理工作）；它的作用是：
+   * **新落的臂在下次跑门禁时就被点名**，直到写进 CHANGELOG 为止。 */
+  const cd = readFileSync('CHANGELOG.md', 'utf8');
+  const dir = 'docs/artifacts';
+  const cutoff = Date.now() - 24 * 3600 * 1000;
+  const fresh = readdirSync(dir).filter(function (f) { return /\.bak$/.test(f); })
+    .filter(function (f) { return statSync(dir + '/' + f).mtimeMs >= cutoff; });
+  if (!fresh.length) {
+    /* 没有新产物时这条门不适用；但**不能写恒真断言**（L1 会红 —— 它刚才就抓了我一次）。
+     * 所以这里改成一条**真**的检查：账本本身必须存在且非空。 */
+    ok(cd.length > 1000, 'CHANGELOG 必须非空（它是产物账本；长度 ' + cd.length + '）—— 本时窗内无新产物');
+    return;
+  }
+  const miss = fresh.filter(function (f) { return cd.indexOf(f.replace(/\.bak$/, '')) < 0; });
+  ok(miss.length === 0, '这些 24h 内的产物在 CHANGELOG 里查无字（' + fresh.length + ' 个里缺 ' + miss.length + '）：' +
+    miss.slice(0, 12).join(', ') + (miss.length > 12 ? ' …' : ''));
 });
 
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {

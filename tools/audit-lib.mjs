@@ -398,6 +398,15 @@ const _n = function (x, d) { return (isFinite(x) ? Number(Number(x).toFixed(d ==
  * 在位的线上包自己就过不了这道（花珠率 0% = 未闭环）⇒ 它现在不具备"阻断"的资格
  * （本仓库规矩：阈值必须先能分开已知好与已知坏，附录 B2-6 / C-4）。
  * 等真有候选过了它，把它改成 `true` 并补一条守门断言（那时"已知好"一侧才存在）。 */
+/* v1.5.90 建、v1.5.94 复核过**不翻**：第 6 道（珠经济**闭环**）是否阻断。
+ * ⚠️ 第九轮复核 §6 说"有已知好一侧了 ⇒ 可以阻断"。**我部分不采纳，理由必须写清楚**：
+ *   ① 复核点名的那个"密度门"是 **`只枪(打最肥)` 那一格**，而它**早在 v1.5.78 就已经是阻断项**
+ *      （`promote-champion` 调 `gate-drafts` 的 G4，阈值 45%，标定包 = `v7f3-94` 的 **5%/5%**）——
+ *      也就是说**它已经是闸**，不需要在这里再翻一次。
+ *   ② 本常量管的是**另一件事**：珠经济闭环（得珠>0 且 花掉>0）。它确实有两个包过（`v7divK2b-82` 11%、
+ *      `v7densE-31` 69%），但**两个都是废包**（前者场B 清场 0.28<0.3，后者是退化臂产物）⇒
+ *      拿它阻断 = 连在位包一起挡死，且**没有任何可上线候选受益**。这与 v1.5.78 保留 G6 非阻断是同一条理由。
+ * ⇒ 保持 `false`。翻转条件不变：**等真有一个可上线候选过了它**。 */
 export const DENSITY_BLOCK = false;
 
 export function feasibilityOf(o) {
@@ -443,6 +452,19 @@ export function feasibilityOf(o) {
   dRec.beadLoopClosed = (isFinite(dens.gained) && isFinite(dens.spentRate))
     ? (Number(dens.gained) > 0 && Number(dens.spentRate) > 0) : null;
   dRec.blocking = DENSITY_BLOCK;
+  /* ===== v1.5.94（第九轮复核 §5-1）：**退化包**必须挡下来 =====
+   * 复核实测：`roleC2-31` / `ctrlE-31` 自对局**一次攻击都不出**（0.00 攻/回合、104 回合、0 胜、`G=1.00`），
+   * 可 **A 考卷照样给 46.8~47.1%**（入口是"并列判胜也计入 1st"）⇒ A 会给"沉默"高分，
+   * 这是比"窄"更严重的口径漏洞。
+   * 判据：自对局里**从未出过带 `dmg` 的卡**的局占比 ≥ 90% ⇒ 判负。
+   * **可阻断的依据**（本仓库规矩：阈值必须已能分开已知好与已知坏）：退化包 = **1.00**，在位包与其余全部产包 = **0.00**。 */
+  if (isFinite(dens.zeroAtkRate)) {
+    dRec.zeroAtkRate = _n(dens.zeroAtkRate, 3);
+    dRec.zeroDealtRate = _n(dens.zeroDealtRate, 3);
+    if (Number(dens.zeroAtkRate) >= 0.9) {
+      fails.push('自对局零攻击局 ' + (100 * Number(dens.zeroAtkRate)).toFixed(0) + '% ≥ 90%（退化包：从不出手）');
+    }
+  }
   if (dRec.beadLoopClosed === null) notes.push('第6道（输出密度/经济出口）**探针缺失** ⇒ 未判定（不等于过）');
   else if (dRec.beadLoopClosed) notes.push('第6道（输出密度/经济出口）：珠经济**闭环** ✓（得珠 ' +
     dRec.beadGained + '、花珠率 ' + dRec.beadSpentRate + '，每回合出手伤害 ' + dRec.dmgPerRound +
@@ -478,25 +500,36 @@ export function densityProfile(W, params, mode, GAMES) {
   const G = GAMES || 20;
   const isDmg = function (k) { const d = R.byKey[k]; return !!(d && d.dmg && d.dmg.amt); };
   let acts = 0, ji = 0, dmgActs = 0, dealt = 0, rounds = 0, games = 0;
+  let atkGames = 0, dealtGames = 0;   // v1.5.94：按**局**统计"这一局出过手没有"（第九轮复核 §5-1）
   for (let g = 0; g < G; g++) {
     const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(17000 + g) }, 5);
     st.slotSalt = (Math.imul(g + 2, 0x85ebca6b) ^ 0x27d4eb2f) >>> 0;
     const base = T.policyChooserN(params, 0.15);
     Play.autoGameN(st, [base, base, base, base, base]);
     games++; rounds += st.round;
+    let gAtk = 0, gDealt = 0;
     for (const e of st.events) {
       if (e.type === 'action' && e.outcome === 'ok') {
         acts++;
         if (e.key === R.SK.JI) ji++;
-        if (isDmg(e.key)) dmgActs++;
+        if (isDmg(e.key)) { dmgActs++; gAtk++; }
       } else if (e.type === 'damage' && e.source != null) {
         dealt += e.amt;   // source==null 的伤害是终局收缩（不可归因）⇒ 不计
+        gDealt += e.amt;
       }
     }
+    if (gAtk > 0) atkGames++;
+    if (gDealt > 0) dealtGames++;
   }
   return {
     games: games, rounds: rounds, roundsPerGame: rounds / Math.max(1, games),
-    actsPerGame: acts / Math.max(1, games), acts: acts,
+    actsPerGame: acts / Math.max(1, games), acts: acts, dmgActs: dmgActs,
+    atkActsPerRound: rounds ? dmgActs / rounds : 0,
+    /* v1.5.94（第九轮复核 §5-1）——**零出手率与零伤害率必须分两列**：
+     * 前者量"这一局有没有出过带 `dmg` 的卡"，后者量"这一局有没有造成伤害"。
+     * 只量伤害会漏掉"完全不出手"的包（复核指出这正是 `零伤害率` 一直显示 0% 的原因）。 */
+    zeroAtkRate: games ? (games - atkGames) / games : 0,
+    zeroDealtRate: games ? (games - dealtGames) / games : 0,
     dmgPerRound: rounds ? dealt / rounds : 0, dealtPerGame: dealt / Math.max(1, games),
     jiShare: acts ? ji / acts : 0, atkShare: acts ? dmgActs / acts : 0
   };

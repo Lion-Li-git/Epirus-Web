@@ -73,6 +73,10 @@ if (EXAM_FIRST !== '') {
   first = (/\[冠军\]\s*1st=([\d.]+)%/.exec(evOut) || [])[1];
   console.log('   多人 3 血考卷 1st = ' + (first || '?') + '%（' + EXG + ' 局）');
 }
+/* v1.5.94（第九轮复核 §7-4）：**把 A 考卷降级为诊断量**，并在这里写明为什么 ——
+ * 连续两轮它都与稳健性**反相关**：`role1w-31` A 53.4% ↔ 只枪格 90%；`densE-31` 49.6% ↔ 78%；
+ * `w3r1-31` A 48.3% ↔ 只枪格 100% / 破防 G5 75%+38%。⇒ 若只留一个换包判据，留**最坏格 minimax**。 */
+console.log('   ⚠ A 考卷**只作诊断**：连续两轮它与稳健性反相关（A 最高的包往往最脆）⇒ 换包判据以 G4/G5 的**最坏格**为准。');
 
 /* 自对局活跃度 + E/F/G：**共享指标库**（与 champ-audit 逐字同口径，5 座全是它自己）。
  * ⚠️ v1.5.18：`--games` 默认从 10 提到 **20** —— G（有效技能数）在小样本下会**系统性偏低**：
@@ -188,7 +192,8 @@ if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) 
 const dens = densityProfile(W, params, 'long', Number(process.env.EPIRUS_DENSITY_GAMES || 20));
 const chgE = chargeProfile(W, params, 'long', Number(process.env.EPIRUS_CHARGE_GAMES || 40));
 const feas = feasibilityOf({ seat: ss, G: sp, wall: rw, aggr: agg,
-  density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chgE.gained, spentRate: chgE.spentRate } });
+  density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chgE.gained, spentRate: chgE.spentRate,
+    zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
 console.log('   可行性（与训练落盘同源）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
   '（座位 ' + feas.seatSpread + 'pt/' + feas.seatVerdict + ' · G ' + feas.G + ' · 墙 ' + feas.wallDmg +
   '/局 · 场A ' + (100 * feas.fieldA).toFixed(0) + '% · 场B 清场 ' + feas.fieldBClears + '/局' +
@@ -199,7 +204,8 @@ console.log('   可行性（与训练落盘同源）：' + (feas.ok ? '✅ 五�
  * `DENSITY_BLOCK`，现在是 false —— 在位包自己没过它 ⇒ 它现在没有判别力）。 */
 console.log('   输出密度（' + dens.games + ' 局自对局）：每回合出手伤害 ' + dens.dmgPerRound.toFixed(3) +
   ' · 按ジ占比 ' + (100 * dens.jiShare).toFixed(1) + '% · 伤害卡出手占比 ' + (100 * dens.atkShare).toFixed(1) +
-  '% · 出手 ' + dens.actsPerGame.toFixed(1) + '/局 · 回合 ' + dens.roundsPerGame.toFixed(1) + ' ⇒ ' +
+  '% · 出手 ' + dens.actsPerGame.toFixed(1) + '/局 · 回合 ' + dens.roundsPerGame.toFixed(1) +
+  ' · **零出手局 ' + (100 * dens.zeroAtkRate).toFixed(0) + '%** · 零伤害局 ' + (100 * dens.zeroDealtRate).toFixed(0) + '%' + ' ⇒ ' +
   (feas.density && feas.density.beadLoopClosed === true
     ? '**珠经济闭环** ✓（"经济动作有出口"的第一个形态）'
     : '珠经济未闭环（按ジ攒了花不掉的东西 = 命门）'));
