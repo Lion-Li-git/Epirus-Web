@@ -966,7 +966,16 @@
         case SK.SHIFT: me.guardNext = true; /* fallthrough 记录架势 */
         case SK.GUARD: case SK.REFLECT: case SK.BAGUA:
         case SK.JINSHIELD: case SK.ARMOR: case SK.PROTO:
-          if (a.key === SK.ARMOR) you.fireWeakNext = true; // R22 藤甲贴在对手身上，使对手下回合火伤+1
+          /* v1.5.108（**用户裁定 2026-09-18** = R58）：藤甲改成"**本回合贴上 → 下回合结束才消失**"的 buff
+           * ⇒ **同时点亮 Now 与 Next**：
+           *   · `fireWeakNow`  ⇒ **本回合**就吃火伤 +1（原实现只给 Next ⇒ 当回合白贴）；
+           *   · `fireWeakNext` ⇒ 回合开始被提升为 Now（本文件 :125）⇒ **下回合**继续 +1；
+           *   · 到期由既有机制自然完成：回合末清 `fireWeakNow`（:1151），而 Next 在回合开始就已消费
+           *     ⇒ **第三回合起失效**。
+           * 依据（旧文）：`RULES-2P.md:159` R22"仅在下回合内有效" —— 那是把藤甲当纯预置 debuff 的写法，
+           * 用户认为它应当**多覆盖一回合**（贴上就被利用）。
+           * ⚠️ 诚实边界：本层是**顺序结算**，同回合内**先于**藤甲结算的火伤吃不到这次 +1（R56 同款边界）。 */
+          if (a.key === SK.ARMOR) { you.fireWeakNext = true; you.fireWeakNow = true; }
           ev(state, { type: 'guardSet', pid: i, key: a.key });
           break;
         case SK.HOLO:

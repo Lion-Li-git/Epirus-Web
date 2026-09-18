@@ -399,6 +399,30 @@
     eq(st.p[0].hp, 3, '你无伤');
   });
 
+  t('R58 藤甲覆盖面 +1 回合（用户裁定）：贴上**当回合**就吃火伤 +1，持续到下回合结束', function () {
+    /* 旧文 R22「仅在下回合内有效」= 把藤甲当**纯预置 debuff**；用户 2026-09-18 要求它
+     * **多覆盖一回合**（贴上就被利用）。实现：贴上时同时点亮 `fireWeakNow`（本回合）与
+     * `fireWeakNext`（下回合）；到期沿用既有机制（回合末清 Now、Next 在回合开始被消费）。
+     * 本用例**能反证**：旧实现只挂 Next ⇒ **当回合**那发坦克只吃 1 点（下面第一断言会红）。
+     * ⚠️ 之所以要三人局：两人局里"贴上者"当回合已经没有第二个动作能去打那个目标。 */
+    const st = S.createState('multi', { next: function () { return 0.9; } }, 3);
+    st.p[0].ep = 9; st.p[1].ep = 9; st.p[2].hp = 6;
+    function turn(k0, k1, o0, o1) {
+      st.events = []; X.startTurn(st);
+      S.attemptAction(st, 0, k0, o0); S.attemptAction(st, 1, k1, o1); S.attemptAction(st, 2, R.SK.JI);
+      X.resolveActions(st); X.endTurn(st);
+    }
+    // 回合1：0 号把藤甲贴到 2 号（pri3），1 号**当回合**就用坦克（火）打 2 号 ⇒ 应吃 +1
+    turn(R.SK.ARMOR, R.SK.TANK, { target: 2 }, { target: 2 });
+    eq(st.p[2].hp, 4, '当回合：坦克 1 + 藤甲 1 = 2 点（旧实现只挂下回合 ⇒ 这里会是 5）');
+    st.p[0].ep = 9; st.p[1].ep = 9;
+    turn(R.SK.JI, R.SK.TANK, null, { target: 2 });
+    eq(st.p[2].hp, 2, '下回合：仍然 2 点（Next 被提升为 Now）');
+    st.p[0].ep = 9; st.p[1].ep = 9;
+    turn(R.SK.JI, R.SK.TANK, null, { target: 2 });
+    eq(st.p[2].hp, 1, '第三回合：只剩基础 1 点（buff 已到期）');
+  });
+
   t('R22 藤甲火弱：天火(直扣血 rawDamage)也吃+1 & 地雷反击火弱+1', function () {
     // 天火路径：贴符咒 → 藤甲→对手火弱 → 天火引爆，直扣血应+1
     const st = game(); setEp(st, 9, 9); st.p[0].hp = st.p[1].hp = 3;

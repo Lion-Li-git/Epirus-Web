@@ -3697,6 +3697,21 @@ t('D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必
     'spec 必须留下能反证的用例（旧实现只会打中选中的那一个）');
 });
 
+t('D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下回合结束）', function () {
+  /* 旧文 R22「仅在下回合内有效」= 纯预置 debuff；用户 2026-09-18 要求多覆盖一回合。 */
+  const rs = readFileSync('js/core/resolve.js', 'utf8');
+  ok(rs.indexOf('if (a.key === SK.ARMOR) { you.fireWeakNext = true; you.fireWeakNow = true; }') >= 0,
+    '藤甲必须**同时**点亮 Now（本回合）与 Next（下回合）—— 只挂 Next 是旧行为（当回合白贴）');
+  ok(rs.indexOf('if (a.key === SK.ARMOR) you.fireWeakNext = true;') < 0,
+    '旧的"只挂 Next"写法不得回来（那是 R22 的旧口径）');
+  const rp = readFileSync('docs/RULES-2P.md', 'utf8');
+  ok(rp.indexOf('R58') >= 0, 'RULES-2P 必须记下 R58');
+  ok(rp.indexOf('仅在下回合内有效') < 0 || rp.indexOf('旧口径（R22 原文）') >= 0,
+    'R22 的"仅在下回合内有效"必须被标注为**已被 R58 取代**（不许留着一句与实现对不上的旧文）');
+  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R58 藤甲覆盖面 +1 回合') >= 0,
+    'spec 必须留下 R58 的反证用例（旧实现当回合只吃 1 点）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
