@@ -1461,7 +1461,10 @@ t('D59 阈值式座位惩罚必须真的在 fit 里（让演化"看得见"偏置
   ok(ev.indexOf('- seatPen') >= 0, '座位惩罚必须真的减进 fit');
   ok(ev.indexOf('seatSpreadMirror') >= 0, '成员评分必须回报座位极差（供审计）');
   ok(ev.indexOf('seatWins: seatWins') >= 0, 'mirrorHealth 必须回报各座胜场');
-  /* 行为断言：mirrorHealth（5 席同策略）必须给出座位分布；线上包（已知均衡）极差应 <30pt */
+  /* 行为断言：mirrorHealth（5 席同策略）必须给出座位分布；线上包（已知均衡）极差应 <40pt。
+   * v1.5.104：样本 20 → **60 局**。原因（METHODOLOGY §31/§35 的第三次现身）：20 局里常常只有
+   * ~10 个分胜负局，**极差本身就是个小样本统计量**（换包后新包在 n=20 读到 40pt、n≥50 读到 27.8pt，
+   * 一次抽样就能跨过判据）⇒ 判据要用**够用的样本**，而不是放宽阈值。 */
   let live = null;
   try {
     const src2 = readFileSync('js/bundled-champion-3p.js', 'utf8');
@@ -1471,9 +1474,9 @@ t('D59 阈值式座位惩罚必须真的在 fit 里（让演化"看得见"偏置
   if (!live) {
     console.log('  （跳过座位分布统计：线上包此刻不可读，多半是训练中）');
   } else {
-    const mh = T.mirrorHealth(live, 20, 5, 'multi');
+    const mh = T.mirrorHealth(live, 60, 5, 'multi');
     ok(Array.isArray(mh.seatWins) && mh.seatWins.length === 5, 'mirrorHealth 必须回报 5 个座位的胜场');
-    ok(mh.seatDecisive >= 5, '必须有足够多分出胜负的局（实测 ' + mh.seatDecisive + '/20）');
+    ok(mh.seatDecisive >= 20, '必须有足够多分出胜负的局（实测 ' + mh.seatDecisive + '/60；<20 时极差不可判）');
     ok(mh.seatSpread != null && mh.seatSpread < 40,
       '线上包（已知均衡）的 5 席极差必须 <40pt（实测 ' + (mh.seatSpread == null ? '?' : mh.seatSpread.toFixed(0)) + 'pt，分布 ' + mh.seatWins.join('/') + '）');
   }
@@ -3002,15 +3005,25 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
   /* 行为：用极小局数真跑一遍量具（不拖慢门禁），验元测试与退出码契约 */
   const r = spawnSync(process.execPath, ['tools/gate-drafts.mjs'], {
     cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24,
-    env: Object.assign({}, process.env, { GATE3_GAMES: '20', GATE4_GAMES: '6', GATE6_GAMES: '6' })
+    env: Object.assign({}, process.env, { GATE3_GAMES: '20', GATE4_GAMES: '60', GATE6_GAMES: '6' })
   });
   const out = String(r.stdout || '') + String(r.stderr || '');
   ok(/PASS\s+G6\[元测试\]/.test(out), 'G6 元测试必须 PASS（量具判别力不足 ⇒ 后面所有读数不可信）');
   /* v1.5.89：口径改了 —— 补入"只枪(1ジ压制·打最肥)"这一格之后，线上包自己在 **G4[long]** 就是红的
    * （长程被最便宜的一张卡打穿，第八轮复核 §6 的结论）。判别力依据只要求"线上包**至少一个模式** PASS"；
    * 而"在位包是红的"必须**只记录、不阻断候选** —— 该契约由上面那两条 isRef 断言守着。
-   * （不在这里断言 `FAIL G4[线上包/long]`：D67 用 GATE4_GAMES=6 跑，读数会抖 ⇒ 那样的断言本身就是"偶发红"。） */
+   * （v1.5.104：`GATE4_GAMES` 由 6 抬到 **60** —— n=6 的"哪一格最克 / 是否越线"本身就是小样本统计量
+   *  （§31/§35 的同一条教训），拿它断言等于内置"偶发红"；仍**不**断言 `FAIL G4[线上包/long]`，
+   *  因为在位包/候选的 long 读数会随包更替而变。） */
   ok(/PASS\s+G4\[线上包\/(long|multi)\]/.test(out), '线上包 G4 **至少一个模式**必须 PASS（"已知好"一侧才成立）');
+  /* v1.5.104（用户裁定）：G4 阈值 45% → 60%。**阈值必须有单一常量 + 标定理由**，
+   * 否则它会像 `sed` 不匹配那样静默漂移；同时把"理想线 45%"单独留着，别让绿灯被读成"已达理想"。 */
+  const gsrc = readFileSync('tools/gate-drafts.mjs', 'utf8');
+  ok(gsrc.indexOf('const G4_MAX = 60, G4_IDEAL = 45;') >= 0,
+    'G4 阈值必须是**单一常量**（`G4_MAX`），理想线（`G4_IDEAL = 45`）分开存');
+  ok(gsrc.indexOf('在位包自己在 G4[long] 就是 65%') >= 0,
+    '必须写明标定理由：45% 是**现役包都达不到**的线（用户裁定 60%），否则下轮又会有人把它当"该回到 45%"');
+  ok(gsrc.indexOf('距理想线') >= 0, '过闸但未达理想线时，判词必须显式写出差距（别让绿灯冒充"已达理想"）');
   ok(/PASS\s+G5\[线上包\/(long|multi)\]/.test(out), '线上包 G5 必须 PASS（同上）');
   const anyFail = /^\s*FAIL\s+/m.test(out);
   eq(r.status, anyFail ? 1 : 0, '退出码必须与"是否存在 FAIL"一致（CI/promote 靠它判定）');

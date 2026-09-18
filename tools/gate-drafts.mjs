@@ -248,7 +248,18 @@ function duel(params, fn, mode, G, seed0) {
   return { win: Math.round(100 * win / G), draw: Math.round(100 * draw / G) };
 }
 
-console.log('\n=== G4 一行脚本克制表（任何克制格 > 45% 即红；基线格必须 ≈20% 否则本门不可判）===');
+/* ===== v1.5.104（**用户裁定**）：G4 阈值 45% → **60%**（标定理由必须与阈值写在一起）=====
+ * 原阈值 45% 的标定包是 `v7f3-94`（5%/5%）。但 v1.5.89 补入「只枪(1ジ压制·打最肥)」这一格后，
+ * **在位包自己在 G4[long] 就是 65%** ⇒ 45% 成了**现役包都达不到的线**：用它否候选 =
+ * "拿一个不存在的标准判人"（第十轮复核 §6 也指出：候选② 有四格同时贴 49~53%）。
+ * ⇒ 重新标定到 **60%**：① **在位包仍过不了**（long 65%）⇒ 判别力没丢（比现役更脆的仍判红）；
+ *    ② 候选 `v7seat24-31`（long 54% / multi 51%）通过 ⇒ 判据回到"可达、且优于现役"。
+ * ⚠️ **理想线仍然是 45%**（第七轮标定值）：通过 60% 但没到 45% 的，判词里会显式写出差距，
+ *    免得"绿灯"被误读成"已达理想"。 */
+const G4_MAX = 60, G4_IDEAL = 45;
+
+console.log('\n=== G4 一行脚本克制表（任何克制格 > ' + G4_MAX + '% 即红 · 理想线 ' + G4_IDEAL +
+  '%；基线格必须 ≈20% 否则本门不可判）===');
 for (const [nm, p] of PACKS) {
   for (const mode of ['long', 'multi']) {
     const base = duel(p, 'champ', mode, N4, 90210);
@@ -258,12 +269,14 @@ for (const [nm, p] of PACKS) {
     /* v1.5.89②：把**最克那一格**写进标题（原先只在 detail 里）。动机：promote-champion 只解析
      * `PASS/FAIL <标题>` 这一行 ⇒ 标题里只有基线时，判词读起来像"这条过了"（实测时连作者都被它误导），
      * 而"为什么红"完全看不见 —— 判词必须与被判的那一格绑在一起。 */
-    gate(`G4[${nm}/${mode}] 无一行脚本能以 >45% 击败它（最克「${worst[0]}」${worst[1]}% · 基线 ${base.win}%/${N4}局）`,
-      judgeable && worst[1] <= 45,
+    gate(`G4[${nm}/${mode}] 无一行脚本能以 >${G4_MAX}% 击败它（最克「${worst[0]}」${worst[1]}% · 基线 ${base.win}%/${N4}局）`,
+      judgeable && worst[1] <= G4_MAX,
       `基线 ${base.win}%（${judgeable ? '可判' : '⚠️ 不可判：harness 基线异常 ⇒ 本格 UNRUN，**不得当作通过**'}）  各格 ` +
       cells.map(function (c) { return c[0] + ' ' + c[1] + '%'; }).join(' · ') +
       `   ⇒ 最克它的脚本：「${worst[0]}」${worst[1]}%` +
-      (judgeable && worst[1] > 45 ? `   ⇒ **红的理由**：这一格 ${worst[1]}% > 45%` : ''),
+      (judgeable && worst[1] > G4_MAX ? `   ⇒ **红的理由**：这一格 ${worst[1]}% > ${G4_MAX}%` : '') +
+      (judgeable && worst[1] <= G4_MAX && worst[1] > G4_IDEAL
+        ? `   ⚠️ 过闸，但**距理想线 ${G4_IDEAL}% 还差 ${worst[1] - G4_IDEAL}pt**（这里不是"已达理想"）` : ''),
       !judgeable);
   }
 }
