@@ -35,7 +35,11 @@ function load(f) {
 /* 一场：k 席被测（座位连续、按局轮转起点以摊平座位效应），其余 random */
 function run(me, k, mode, seed0) {
   let wins = 0, draws = 0;
-  const rnd = (st, pid, lg) => B.pickRandom(st, pid, lg);
+  /* 对手可选是为了做**控制实验**：候选包在 k=1 打 random 时普遍 80~92%，而线上包只有 54~58% ——
+   * 差得太大，必须先排除"random 太软 / 我这个装配把对手削弱了"这个解释 ⇒ `CROWD_OPP=balanced` 再量一遍。 */
+  const OPP = (process.env.CROWD_OPP || 'random').toLowerCase();
+  const BN = 'pick' + OPP.charAt(0).toUpperCase() + OPP.slice(1);
+  const rnd = B[BN] ? ((st, pid, lg) => B[BN](st, pid, lg)) : (() => { throw new Error('EpirusBots 里没有 ' + BN); });
   for (let g = 0; g < N; g++) {
     const off = g % 5;
     const mine = []; for (let i = 0; i < k; i++) mine.push((off + i) % 5);
@@ -47,7 +51,7 @@ function run(me, k, mode, seed0) {
   }
   return { total: 100 * wins / N, perSeat: 100 * wins / N / k, draw: 100 * draws / N };
 }
-console.log(`=== 拥挤度（对手恒为 random · ${N} 局轮座 · 每席位胜率）===`);
+console.log(`=== 拥挤度（对手恒为 ${(process.env.CROWD_OPP || 'random').toLowerCase()} · ${N} 局轮座 · 每席位胜率）===`);
 console.log('  包                 k=1/席   k=2/席   k=4/席    拥挤指数(4÷1)   k=4 和棋率');
 for (const f of FILES) {
   let p; try { p = load(f); } catch (e) { console.log(`  跳过 ${f}: ${e.message}`); continue; }
