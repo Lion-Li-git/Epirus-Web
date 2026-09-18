@@ -47,7 +47,12 @@ const ARMS = [
    * ⇒ `conv` 与"余款惩罚"都只问"花没花"、没问"花在进攻上没有" ⇒ 被"最便宜的常驻出口"captured。
    * `EPIRUS_CONV_OFFENSE=1` 把兑现比率收窄成"**花在 `R.ATK_EFFECT` 上的 ep** / 已获得"。
    * 判据三条一起看：targeter 场**仍**高于随机 · A 卷回到 ≥44% · 防御族占比回到 12~30% 的带内。 */
-  { key: 'o', arm: 'v7l2o', tag: 'l2o',
+  /* ⚠ key 从 'o' 改成 'o2' 是**拆弹**：16:55 我 detached 起过一个排程器（包装层 exit=1，进程死活未知），
+   * 它的第二步写死了 `L2_ARMS=o`。若它还活着，批次 2 一结束就会自己起一个 ring2-run ——
+   * 而 ring2-run 共享 `.training-in/out-3p.js` 暂存 ⇒ 与我自己起的臂并发会**静默**把 A 臂的包写进 B 臂的文件名。
+   * 改名之后：那个 stray 触发时 `L2_ARMS=o` 匹配不到任何臂 ⇒ 空转（它后面的 eval/leftover 都是只读，重复跑无害）。
+   * 真要跑这一臂请用 **`L2_ARMS=o2,p`**。 */
+  { key: 'o2', arm: 'v7l2o', tag: 'l2o',
     env: { EPIRUS_HOARD_LEFTOVER: '1', EPIRUS_CONV_RATIO: '1', EPIRUS_CONV_OFFENSE: '1', EPIRUS_HOARD_CAP_MULT: '4' },
     note: '全开 + 兑现只认进攻卡（治龟壳）' },
   /* 批次 4（`p`）：验我那条**被降级成假设**的话 —— "在位包的龟/偏科是训练场压迫不够"。

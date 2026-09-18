@@ -297,8 +297,12 @@
   ① **批次 2 臂批**（`tools/l2-arms.mjs`，日志 `docs/artifacts/l2-arms-status.log` + `ring2-status-l2{c,h,f}.log`）
      进度：`v7l2c` 新 seed 101~106 完 → `v7l2h` 101~106 完 → **`v7l2f` 101~106 正在跑** → 之后 `v7l2a`(教师+开关) 与 `v7l2s`(只抬攒钱上限)。
      完成标记：`docs/artifacts/l2-batch2.log` 里出现 `BATCH2 COMPLETE`。
-  ② **排程器**（`tools/l2-schedule.mjs`）**状态未知**（启动命令 exit=1，进程可能已死也可能还活着）。
-     判据：批次 2 结束后看 `docs/artifacts/l2-schedule.log` 有没有新行 —— **有就别自己再起臂**（见"排程协议"）。
+  ② **排程器已废弃，不要再用**。第二个实例我用 TaskStop 杀掉了；第一个（16:55 detached，包装层 exit=1）
+     死活不可知 ⇒ 我把 `tools/l2-arms.mjs` 里那只臂的 key 从 **`o` 改成 `o2`** 拆弹：
+     万一那个 stray 排程器还活着，它写死的 `L2_ARMS=o` 会匹配不到任何臂 ⇒ 空转（它后续的 eval/leftover 只读，重复跑无害）。
+     ⇒ **批次 3/4 由我手动起**：`L2_ARMS=o2,p L2_SEEDS=81,82,91,92,93 node tools/l2-arms.mjs`。
+     ⇒ 教训（写死）：以后**不要**用 `&` 起需要独占共享资源的长任务 —— 起不活你不知道，活着了你也不知道。
+     要么用可追踪的后台任务（能 TaskStop），要么干脆串行做。
   ③ **audit 汇总表**（`docs/artifacts/audit-table.log`）：对全部产物跑 `champ-audit`（20+20 局），
      用来回答"能不能只要 F"；与训练并行只是慢一点，不冲突（它不碰 `.training-*` 暂存）。
 - 还没做的（按顺序）：
