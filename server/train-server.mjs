@@ -188,6 +188,12 @@ function applyImitEnv(gens) {
     seatG = T.setSeatGames(Number(process.env.EPIRUS_TRAIN_SEAT_GAMES));
     console.log('[seat] 主线程生效值 SEAT_GAMES=' + seatG + '（原默认 6 局；门禁/落盘默认 60 局）');
   }
+  /* v1.5.103（v1.5.100 §20）：**清场计数**奖励（默认关）。门禁要 `场B 清场 ≥ 0.3/局` 而训练 `fit` 里
+   * 一项都没有 ⇒ 补上；worker 侧走消息（env 是拷贝）。 */
+  if (T.setClearReward && Number(process.env.EPIRUS_CLEAR_W || 0) > 0) {
+    console.log('[clear] 主线程生效值 CLEAR_W=' + T.setClearReward(Number(process.env.EPIRUS_CLEAR_W)) +
+      '（封顶 /1，与 tgtBonus 同尺度；口径 = 收缩开始前由我打死的对手数）');
+  }
   /* v1.5.97：**分段教师计划**（两段课程）。解析只走 evo.js 的 `setImitPlanByName`（与 worker 共用一份）；
    * 名字/占比非法 ⇒ 它**抛错**，这里不吞 ⇒ 整个 /train 请求响亮失败（不许静默退回默认教师）。 */
   let planN = 0;

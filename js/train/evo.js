@@ -892,7 +892,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let imitSum = 0, imitGames = 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
@@ -1005,10 +1005,16 @@ let WALL_GAMES = 3;
       const beadBonus = BEAD_W * Math.min(1, beadSpent / 2);
       /* v1.5.79（第七轮复核 §15-1）：**优先打威胁**（反狙击/反环）。两次封顶，与其它窄奖励同尺度。 */
       const tgtBonus = TGT_W * Math.min(1, threatHits / 1);
+      /* v1.5.103（v1.5.100 §20）：**清场计数**奖励 —— 补上第二个"门禁在量、选择看不见"的量。
+       * 门禁要 `场B 清场 ≥ 0.3/局`（**收缩开始前真把对手打死**，不是胜率），而训练侧 `fit` 里
+       * **一项都没有** ⇒ 新规则下"打 1 点就能在全灭判胜里赢"⇒ 演化没有理由去长这个能力
+       * （实测：`DIV_W=0.3` + 真示范那批 6 个里 4 个场B 清场 = 0.00，在位包 0.63）。
+       * 封顶 /1，与 `tgtBonus` 同尺度（标度按 v1.5.79 的教训取"0 次得 0、1 次吃满"）。 */
+      const clearBonus = CLEAR_W * Math.min(1, clears / 1);
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -1037,6 +1043,8 @@ let WALL_GAMES = 3;
         if (BEAD_W > 0) beadSpent += countBeadSpent(r.state.events, seat);
         /* v1.5.79（复核 §15-1）：把"优先打威胁者"当能力奖（默认关，实验臂用 EPIRUS_TGT_W 打开）。 */
         if (TGT_W > 0) threatHits += countThreatHits(r.state.events, seat);
+        /* v1.5.103（v1.5.100 §20）：**清场**（收缩开始前把对手打死）—— 与门禁 `场B 清场` 同口径。 */
+        if (CLEAR_W > 0) clears += countClears(r.state.events, seat);
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1697,6 +1705,28 @@ let WALL_GAMES = 3;
    * 计分 = 我这一回合**打在威胁者身上**的**不同受击者数**（`e.source === seat`，两次封顶 ⇒ 奖励广度而非堆叠）。 */
   let TGT_W = 0;                       // 默认关：实验臂用 EPIRUS_TGT_W 打开
   function setTargetReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) TGT_W = v; return TGT_W; }
+  /* ===== v1.5.103（v1.5.100 §20）：**清场计数**奖励（默认关，实验臂用 `EPIRUS_CLEAR_W` 打开）=====
+   * 口径**必须与门禁同源**（`tools/audit-lib.mjs` 场B 那一段）：
+   *   ① 分界是**收缩开始** —— 收缩的伤 `source == null`（不可格挡），它之后的死者**不算**清场；
+   *   ② 新规则下"打 1 点就能在全灭判胜里赢" ⇒ **胜率不作判据**（第五轮复核 §2-1）。
+   * ⚠️ `death` 事件**不带凶手**（只有 `pid`/`reason`）⇒ 只能自己维护"最后一次伤害来源"来归因；
+   *    不归因就等于奖励"别人把场子清了"（在 5 席同策略自对局里那是白送分）。 */
+  let CLEAR_W = 0;
+  function setClearReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) CLEAR_W = v; return CLEAR_W; }
+  function clearReward() { return { w: CLEAR_W }; }
+  function countClears(events, seat) {
+    let shrink = false, n = 0;
+    const lastBy = {};                 // 谁最后伤了谁（死亡事件无凶手字段 ⇒ 用伤害事件回溯）
+    for (const e of (events || [])) {
+      if (e.type === 'damage') {
+        if (e.source == null) shrink = true;                  // 与门禁同一分界
+        else if (e.to != null) lastBy[e.to] = e.source;       // 覆盖式：最后一次伤害者才可能算凶手
+      } else if (e.type === 'death') {
+        if (!shrink && e.pid !== seat && lastBy[e.pid] === seat) n++;
+      }
+    }
+    return n;
+  }
   function threatKeyList() { return pierceKeyList().concat([R.SK.RING]); }
   function targetReward() { return { w: TGT_W, threatKeys: threatKeyList() }; }
   function countThreatHits(events, seat) {
@@ -2027,6 +2057,7 @@ let WALL_GAMES = 3;
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
     setBeadReward, beadReward, countBeadSpent,
     setTargetReward, targetReward, countThreatHits, threatKeyList,
+    setClearReward, clearReward, countClears,
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };

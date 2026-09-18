@@ -118,6 +118,7 @@ let imitPlanEchoed = false;   // v1.5.97：分段计划的回执同样只打一�
 let imitOnlyEchoed = false;   // v1.5.98：`only` 的回执
 let imitSubEchoed = false;    // v1.5.99：`subOnly` 的回执
 let seatGamesEchoed = false;  // v1.5.102：训练侧座位探针局数的回执
+let clearWEchoed = false;     // v1.5.103：清场计数奖励的回执
 parentPort.on('message', (msg) => {
   if (msg && msg.type === 'eval') {
     const opps = T.buildOpps(msg.champion, 0.05);
@@ -194,6 +195,14 @@ parentPort.on('message', (msg) => {
       if (!seatGamesEchoed) {
         seatGamesEchoed = true;
         console.log('[seat] worker **消息**生效值 SEAT_GAMES=' + gotSeat + '（门禁/落盘口径默认 60 局 ⇒ 两者现在能对齐）');
+      }
+    }
+    /* v1.5.103（v1.5.100 §20）：**清场计数**奖励（默认关；消息优先于 env）。 */
+    if (msg.clearW != null && T.setClearReward) {
+      const gotClear = T.setClearReward(Number(msg.clearW) || 0);
+      if (!clearWEchoed) {
+        clearWEchoed = true;
+        console.log('[clear] worker **消息**生效值 CLEAR_W=' + gotClear + '（0 = 关；口径 = 收缩开始前由我打死的对手数）');
       }
     }
     /* v1.5.97：分段教师计划（**同一份解析函数**，只传字符串过来）—— 解析失败必须响亮报错。 */

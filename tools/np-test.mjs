@@ -3604,6 +3604,29 @@ t('D89 训练侧座位探针局数：必须能按**消息**设（`setSeatGames` 
   eq(T.setSeatGames(6), 6, '复位回 6（别把状态泄漏给后面的用例）');
 });
 
+t('D90 清场计数奖励：口径必须与门禁同源（收缩分界 + 归因）且默认关', function () {
+  /* v1.5.103（v1.5.100 §20）：门禁要 `场B 清场 ≥ 0.3/局`，而训练 `fit` 里**一项都没有** ⇒
+   * 演化没有理由去长"真的能打死人"（新规则下打 1 点就赢）。这条门钉住口径与接线。 */
+  const ev = readFileSync('js/train/evo.js', 'utf8');
+  ok(ev.indexOf('function countClears(events, seat)') >= 0, '必须有 countClears');
+  ok(ev.indexOf('if (e.source == null) shrink = true;') >= 0,
+    '分界必须是"收缩的伤（source==null）" —— 与 `audit-lib` 场B 清场的口径同源');
+  ok(ev.indexOf('lastBy[e.pid] === seat') >= 0,
+    '必须**归因**（`death` 事件不带凶手 ⇒ 只能用"最后一次伤害来源"回溯；不归因等于奖励"别人清场"）');
+  ok(ev.indexOf('const clearBonus = CLEAR_W * Math.min(1, clears / 1)') >= 0,
+    '奖励必须进 `fit` 且封顶 /1（与 tgtBonus 同尺度，按 v1.5.79 的标度教训）');
+  ok(ev.indexOf('let CLEAR_W = 0;') >= 0, '默认必须是 0（不开就是原行为）');
+  eq(T.clearReward().w, 0, 'D90 跑到这里时 CLEAR_W 必须仍是 0');
+  eq(T.setClearReward(0.2), 0.2, 'setClearReward 必须回读生效值');
+  eq(T.setClearReward(0), 0, '复位回 0（别把状态泄漏给后面的用例）');
+  const pt = readFileSync('server/paralleltrain.mjs', 'utf8');
+  ok(pt.indexOf('clearW: Number(process.env.EPIRUS_CLEAR_W || 0) || null') >= 0,
+    '必须随**消息**下发（env 是 worker 创建时的拷贝）');
+  const wk = readFileSync('server/train-worker.mjs', 'utf8');
+  ok(wk.indexOf('T.setClearReward(Number(msg.clearW) || 0)') >= 0 && wk.indexOf('[clear] worker **消息**生效值') >= 0,
+    'worker 必须按消息设 + 打回执（今晚已四次栽在"看着接了、其实没通"）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
