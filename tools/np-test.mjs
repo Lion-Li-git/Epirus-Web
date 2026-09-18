@@ -3772,6 +3772,26 @@ t('D97 环的**段长口径**（复核 §4）：必须按"用成了"数段（被
   ok(readFileSync('CHANGELOG.md', 'utf8').indexOf('ringRun2') >= 0, 'CHANGELOG 必须记这次口径替换');
 });
 
+t('D98 "终局收缩"的哨兵必须是它自己的标记（不许再用 source==null —— 地雷/天火按规则就是无来源）', function () {
+  /* 病：`场B 清场` 的判据用 `damage.source == null` 当"收缩开始"的哨兵，可是
+   * **地雷伤害按规则就是无来源**（N20 第 6 条）· **天火被用户裁定为无目标伤害**（R57，也是 null）
+   * ⇒ 收缩前第一颗雷/第一发天火会被误判成收缩开始 ⇒ **场B 清场被系统性少读**。 */
+  const al = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(al.indexOf("if (e.reason === '终局收缩') shrinkStarted = true;") >= 0,
+    '量具必须用 `reason === \'终局收缩\'` 当哨兵');
+  ok(al.indexOf('if (e.source == null) shrinkStarted = true;') < 0,
+    '旧的 `source == null` 哨兵**不得**回来');
+  const ev = readFileSync('js/train/evo.js', 'utf8');
+  ok(ev.indexOf("if (e.reason === '终局收缩') shrink = true;") >= 0,
+    '训练侧 `countClears`（清场奖励）必须与门禁**同口径**（否则奖励与判据量的是两件事）');
+  ok(ev.indexOf('if (e.source == null) shrink = true;') < 0, '训练侧旧哨兵不得回来');
+  /* 反向证据：引擎里收缩伤害确实带这个 reason，且地雷/天火确实无来源。 */
+  const rs = readFileSync('js/core/resolve.js', 'utf8');
+  ok(rs.indexOf("reason: '终局收缩'") >= 0, '引擎的收缩伤害必须带 `reason: \'终局收缩\'`（哨兵的真源）');
+  ok(rs.indexOf("地雷伤害无来源") >= 0 || rs.indexOf('noMine: true') >= 0,
+    '地雷的无来源是有明文规则依据的（N20 第 6 条）—— 这正是旧哨兵会误判的原因');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

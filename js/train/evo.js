@@ -1719,7 +1719,9 @@ let WALL_GAMES = 3;
     const lastBy = {};                 // 谁最后伤了谁（死亡事件无凶手字段 ⇒ 用伤害事件回溯）
     for (const e of (events || [])) {
       if (e.type === 'damage') {
-        if (e.source == null) shrink = true;                  // 与门禁同一分界
+        /* v1.5.113（与 `audit-lib` 同步修）：哨兵用收缩**自己的标记**，不能用 `source == null`
+         * （地雷/天火按规则就是无来源伤害 ⇒ 旧口径会提前停止计数、**少算清场**）。 */
+        if (e.reason === '终局收缩') shrink = true;
         else if (e.to != null) lastBy[e.to] = e.source;       // 覆盖式：最后一次伤害者才可能算凶手
       } else if (e.type === 'death') {
         if (!shrink && e.pid !== seat && lastBy[e.pid] === seat) n++;

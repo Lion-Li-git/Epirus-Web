@@ -623,8 +623,13 @@ export function aggressionProfile(W, params, GAMES) {
         } else if (e.type === 'damage') {
           /* v1.5.66: 清场数才是诚实判据 —— 新规则下打 1 点就在全灭判胜里赢，严格胜率变得太容易
            * （线上包场 B 已 100%）=> 改量收缩开始前真的死了几个。收缩的伤 source==null（不可格挡）；
-           * 在此之前场 B 里唯一的伤害来源就是冠军本身。 */
-          if (e.source == null) shrinkStarted = true;
+           * 在此之前场 B 里唯一的伤害来源就是冠军本身。
+           * ⚠️ v1.5.113（**量具 bug 修复**）：哨兵必须用收缩**自己的标记** `reason === '终局收缩'`
+           * （`resolve.js:1146`：`source: null, bypassGuards: true, noMine: true` + `reason: '终局收缩'`），
+           * **不能再用 `source == null`** —— 地雷伤害按规则就是无来源（N20 第 6 条），
+           * 天火刚被裁定为无目标伤害（R57）也是 `null` ⇒ 旧哨兵会把"收缩前第一颗雷/第一发天火"
+           * 误判成收缩开始 ⇒ **场B 清场被系统性少读**（而它正是这一夜的拦路门）。 */
+          if (e.reason === '终局收缩') shrinkStarted = true;
           if (e.source === me) dealt += e.amt;
           if (e.to === me) {
             taken += e.amt;
