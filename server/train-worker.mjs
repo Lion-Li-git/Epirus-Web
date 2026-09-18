@@ -117,6 +117,7 @@ let imitEchoed = false;   // v1.5.96：消息生效值的回执只打一次（�
 let imitPlanEchoed = false;   // v1.5.97：分段计划的回执同样只打一次
 let imitOnlyEchoed = false;   // v1.5.98：`only` 的回执
 let imitSubEchoed = false;    // v1.5.99：`subOnly` 的回执
+let seatGamesEchoed = false;  // v1.5.102：训练侧座位探针局数的回执
 parentPort.on('message', (msg) => {
   if (msg && msg.type === 'eval') {
     const opps = T.buildOpps(msg.champion, 0.05);
@@ -184,6 +185,16 @@ parentPort.on('message', (msg) => {
     if (T.setImitSubOnly) {
       const gotSub = T.setImitSubOnly(String(msg.imitSubOnly || '') === '1');
       if (!imitSubEchoed) { imitSubEchoed = true; console.log('[imit] worker **消息**subOnly 生效 = ' + String(gotSub)); }
+    }
+    /* ===== v1.5.102：训练侧**座位探针局数**（按消息设 + 回执；env 是拷贝，主路径是消息）=====
+     * 病（v1.5.100 §17）：座位惩罚的样本是 `SEAT_GAMES = 6`（写死），而门禁要 ≥50 局 ⇒
+     * **同一个量、两个样本量**，选择过程看不见"某座 93%"这种塌方；`setSeatGames` 导出却从没被调用。 */
+    if (msg.seatGames != null && T.setSeatGames) {
+      const gotSeat = T.setSeatGames(Number(msg.seatGames) || 0);
+      if (!seatGamesEchoed) {
+        seatGamesEchoed = true;
+        console.log('[seat] worker **消息**生效值 SEAT_GAMES=' + gotSeat + '（门禁/落盘口径默认 60 局 ⇒ 两者现在能对齐）');
+      }
     }
     /* v1.5.97：分段教师计划（**同一份解析函数**，只传字符串过来）—— 解析失败必须响亮报错。 */
     if (msg.imitPlan && T.setImitPlanByName) {

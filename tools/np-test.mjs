@@ -3586,6 +3586,24 @@ t('D88 门地形量具：挂科清单必须在第一个括号前截断（括号�
   ok(s.indexOf('清场均值') >= 0, '必须给出"广度 vs 清场"的两组对照（它曾否掉一个假说）');
 });
 
+t('D89 训练侧座位探针局数：必须能按**消息**设（`setSeatGames` 以前导出却从没被调用）+ 缺省不改', function () {
+  /* v1.5.102（v1.5.100 §17）：训练侧座位惩罚的样本写死 6 局，而门禁要 ≥50 局 ⇒ **同一个量、两个样本量**。
+   * 这条门钉住：① 有旋钮；② 走**消息**（env 是 worker 创建时的拷贝）；③ 缺省不改（`SEAT_GAMES` 仍 6）。 */
+  const pt = readFileSync('server/paralleltrain.mjs', 'utf8');
+  ok(pt.indexOf('seatGames: Number(process.env.EPIRUS_TRAIN_SEAT_GAMES || 0) || null') >= 0,
+    'evalN 消息必须带 `seatGames`（env 到不了 worker ⇒ 必须随消息）');
+  const wk = readFileSync('server/train-worker.mjs', 'utf8');
+  ok(wk.indexOf('T.setSeatGames(Number(msg.seatGames) || 0)') >= 0, 'worker 必须按消息设座位探针局数');
+  ok(wk.indexOf('[seat] worker **消息**生效值') >= 0, '必须有回执（照 [econ]/[imit] 的先例）');
+  const sv = readFileSync('server/train-server.mjs', 'utf8');
+  ok(sv.indexOf('T.setSeatGames(Number(process.env.EPIRUS_TRAIN_SEAT_GAMES))') >= 0, '主线程也要设一份');
+  ok(sv.indexOf('Number(process.env.EPIRUS_TRAIN_SEAT_GAMES || 0) > 0') >= 0,
+    '缺省必须**不改**（0/未设 ⇒ 保持 6 局；"默认不设即不变"）');
+  eq(T.seatGames(), 6, 'D89 跑到这里时训练侧探针必须仍是默认 6 局');
+  eq(T.setSeatGames(40), 40, 'setSeatGames(40) 必须回读 40');
+  eq(T.setSeatGames(6), 6, '复位回 6（别把状态泄漏给后面的用例）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

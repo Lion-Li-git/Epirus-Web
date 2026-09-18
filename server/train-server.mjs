@@ -181,6 +181,13 @@ function applyImitEnv(gens) {
   }
   const ovr = T.setImitOverride ? T.setImitOverride(process.env.EPIRUS_IMIT_OVERRIDE === '1') : null;
   if (T.setImitUntil) T.setImitUntil(imitGens);
+  /* v1.5.102：训练侧**座位探针局数**（主线程一份；worker 侧走消息 —— env 是拷贝）。
+   * 缺省不改 ⇒ 保持 `SEAT_GAMES = 6` 的旧行为（"默认不设即不变"）。 */
+  let seatG = null;
+  if (T.setSeatGames && Number(process.env.EPIRUS_TRAIN_SEAT_GAMES || 0) > 0) {
+    seatG = T.setSeatGames(Number(process.env.EPIRUS_TRAIN_SEAT_GAMES));
+    console.log('[seat] 主线程生效值 SEAT_GAMES=' + seatG + '（原默认 6 局；门禁/落盘默认 60 局）');
+  }
   /* v1.5.97：**分段教师计划**（两段课程）。解析只走 evo.js 的 `setImitPlanByName`（与 worker 共用一份）；
    * 名字/占比非法 ⇒ 它**抛错**，这里不吞 ⇒ 整个 /train 请求响亮失败（不许静默退回默认教师）。 */
   let planN = 0;

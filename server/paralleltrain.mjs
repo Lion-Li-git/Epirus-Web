@@ -124,7 +124,12 @@ export function makeParallelEvalN(T, opts) {
          * v1.5.98：`only`（只示范哪张卡）同理随消息下发。 */
         imitPlan: process.env.EPIRUS_IMIT_PLAN || null,
         imitOnly: process.env.EPIRUS_IMIT_ONLY || null,
-        imitSubOnly: process.env.EPIRUS_IMIT_SUB_ONLY || null }));
+        imitSubOnly: process.env.EPIRUS_IMIT_SUB_ONLY || null,
+        /* v1.5.102：**训练侧座位探针局数**也随消息下发（0/缺省 = 不改，保持 `SEAT_GAMES = 6` 的旧行为）。
+         * 动因（v1.5.100 §17）：训练侧座位惩罚的样本只有 **6 局**，而门禁要 **≥50 局** ——
+         * 同一个量、两个样本量 ⇒ 选择过程看不见"某座 93%"这种塌方；
+         * 而 `setSeatGames` 虽然导出，**全仓库从没被调用过**（等于没有旋钮）。 */
+        seatGames: Number(process.env.EPIRUS_TRAIN_SEAT_GAMES || 0) || null }));
     }
     const res = (await Promise.all(jobs)).flat();
     const out = new Array(pop.length).fill(null);
