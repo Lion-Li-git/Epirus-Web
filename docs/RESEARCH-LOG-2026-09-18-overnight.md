@@ -308,8 +308,6 @@
   3. 补 `CHANGELOG.md` 的 D82 记账段（**逐字列全** 24h 内所有 `.bak`，缩写不算）⇒ 目标 np-test **146/146**。
   4. 填交接文档 §8（批次 2/3 的 12-seed 分布 + `v7l2o`/`v7l2s`/`v7l2a` 结果），最后再推一次。
 - ⛔ 全程红线：不换包、不动 `js/bundled-champion-3p.js`、不 bump 版本号、不 `git add results/`、只推 `qoder`。
-
-## DOING
 - **N3 三臂正在跑**（`tools/l2-arms.mjs`，后台，约 35~40 分钟）：
   `v7l2c` 对照（开关全关）→ `v7l2h`（只开 `EPIRUS_HOARD_LEFTOVER=1`）→ `v7l2f`（+`CONV_RATIO=1`+`HOARD_CAP_MULT=4`）。
   共同配置 = 池 E+gunspam(17) · `CLEAR_W=0.05` · `TRAIN_SEAT_GAMES=24` · **无 imit 教师**

@@ -50,6 +50,16 @@ const ARMS = [
   { key: 'o', arm: 'v7l2o', tag: 'l2o',
     env: { EPIRUS_HOARD_LEFTOVER: '1', EPIRUS_CONV_RATIO: '1', EPIRUS_CONV_OFFENSE: '1', EPIRUS_HOARD_CAP_MULT: '4' },
     note: '全开 + 兑现只认进攻卡（治龟壳）' },
+  /* 批次 4（`p`）：验我那条**被降级成假设**的话 —— "在位包的龟/偏科是训练场压迫不够"。
+   * 池子换成实测"造成伤害/回合 ≥ 8 且不给随机席留活路"的 12 个脚本（`tools/probe-pool-pressure.mjs` 排的）：
+   *   aggro 10.92 · heavyfire 10.71 · gunspam 11.63 · targeter 8.13 · breakdef 16.79 · antidef 9.92
+   *   balanced 11.25 · tankline 10.71 · mix 12.33（各按需要重复到 12 席）
+   * ⚠ 故意**排除** `ringspam`(12.58) 与 `deepsaver`(13.58)：它们伤害高却给随机席 54%/25% 的夺冠率
+   *   ⇒ **"伤害高"≠"压迫强"**，把它们放进来这个实验就白做。
+   * 也排除 farmer/guardspam/wall（0.00/0.00/0.42）与 random/defend。
+   * 判据（对今天的 E17 对照）：**防御族占比降** · **F 不靠龟壳也上去** · D 破墙与 G 多样性不明显变差。 */
+  { key: 'p', arm: 'v7l2p', tag: 'l2p', pool: 'aggro,aggro,heavyfire,heavyfire,gunspam,gunspam,targeter,targeter,breakdef,antidef,balanced,mix',
+    env: {}, note: '高压池（开关全关）：验"偏科是环境造成的"这条降级后的假设' },
   { key: 't', arm: 'v7l2a', tag: 'l2a',
     env: { EPIRUS_HOARD_LEFTOVER: '1', EPIRUS_CONV_RATIO: '1', EPIRUS_HOARD_CAP_MULT: '4',
       EPIRUS_IMIT_TEACHER: 'pickDeepSaver', EPIRUS_IMIT_OVERRIDE: '1', EPIRUS_IMIT_FRAC: '0.5' },
@@ -63,7 +73,8 @@ for (const a of ARMS) {
   const t0 = Date.now();
   appendFileSync(STATUS, `\n[${new Date().toISOString()}] === 臂 ${a.arm} 开跑：${a.note}\n  env: ${JSON.stringify(a.env)}\n`);
   const r = spawnSync(process.execPath, ['tools/ring2-run.mjs'], {
-    cwd: root, env: Object.assign({}, process.env, COMMON, a.env, { RING2_ARM: a.arm, RING2_TAG: a.tag }),
+    cwd: root, env: Object.assign({}, process.env, COMMON, a.env,
+      { RING2_ARM: a.arm, RING2_TAG: a.tag, RING2_POOL: a.pool || POOL }),   // 臂可自带池（批次 4 用高压池）
     stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024,
   });
   const out = String(r.stdout || '') + String(r.stderr || '');
