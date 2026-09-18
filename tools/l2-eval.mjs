@@ -30,7 +30,11 @@ function run(file, extra) {
     rFirst: rand ? Number(rand[1]) : NaN, raw: out };
 }
 const LOGF = join(ART, 'l2-eval.log'), MDF = join(ART, 'l2-eval.md');
-writeFileSync(LOGF, `# l2-eval（eval-5p ${GAMES} 局 / 席 5 / seed 88100）\n`);
+/* ⚠ 这张矩阵是我 §11 配对分析的**数据源**，而 `.log` 在 .gitignore 里 ⇒ 它只活在这一个文件中。
+ * 原来这里无条件 `writeFileSync` ⇒ **补跑几个新产物就会把已跑的 60 行整张抹掉**（我差点踩了）。
+ * 现在默认**追加**；要重建成新表就显式传 `L2_EVAL_FRESH=1`。 */
+const prev = existsSync(LOGF) && process.env.L2_EVAL_FRESH !== '1' ? readFileSync(LOGF, 'utf8') : '';
+writeFileSync(LOGF, prev + (prev ? '\n' : '') + `# l2-eval（eval-5p ${GAMES} 局 / 席 5 / seed 88100）\n`);
 const rows = [];
 for (const f of FILES) {
   const label = basename(f).replace('.bak', '');
