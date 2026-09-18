@@ -1,3 +1,63 @@
+## 第三方复核者代记 · 2026-09-19 通宵（**未发版：不 bump 任何版本号**）
+
+> 用户授权自主工作一夜（"做一晚上都行，9 点前停工"）。**未换包**（线上包仍 `268461f7c9f0`，
+> 每个臂首尾各比对一次 sha1）、**未动 `index.html` / `README` 版本号**、**未推 `main`**（全部在 `qoder` 分支）。
+> 详细证据与结论见 `docs/AUDIT-RESPONSE-2026-09-19-overnight.md`（**§0 是最终版**，后面各节是过程与自我修正）
+> 与防失忆工作日志 `docs/RESEARCH-LOG-2026-09-18-overnight.md`。
+
+### 本条同时是 `D82` 记账段：以下 `.bak` 全部是本夜新落盘的产物（`node tools/l2-bookkeep.mjs` 生成，逐字列全）
+
+· `v7clear2`（3 个）：`v7clear2-31.bak` · `v7clear2-81.bak` · `v7clear2-82.bak`
+
+· `v7f5div3`（6 个）：`v7f5div3-31.bak` · `v7f5div3-81.bak` · `v7f5div3-82.bak` · `v7f5div3-91.bak` · `v7f5div3-92.bak` · `v7f5div3-93.bak`
+
+· `v7l2a`（1 个）：`v7l2a-81.bak`
+
+· `v7l2c`（21 个）：`v7l2c-31.bak` · `v7l2c-82.bak` · `v7l2c-91.bak` · `v7l2c-93.bak` · `v7l2c-101.bak` · `v7l2c-102.bak` · `v7l2c-103.bak` · `v7l2c-111.bak` · `v7l2c-114.bak` · `v7l2c-124.bak` · `v7l2c-141.bak` · `v7l2c-142.bak` · `v7l2c-143.bak` · `v7l2c-144.bak` · `v7l2c-145.bak` · `v7l2c-146.bak` · `v7l2c-147.bak` · `v7l2c-148.bak` · `v7l2c-149.bak` · `v7l2c-150.bak` · `v7l2c-151.bak`
+
+· `v7l2f`（5 个）：`v7l2f-81.bak` · `v7l2f-82.bak` · `v7l2f-101.bak` · `v7l2f-102.bak` · `v7l2f-106.bak`
+
+· `v7l2h`（4 个）：`v7l2h-81.bak` · `v7l2h-91.bak` · `v7l2h-93.bak` · `v7l2h-106.bak`
+
+· `v7l2o`（3 个）：`v7l2o-91.bak` · `v7l2o-92.bak` · `v7l2o-93.bak`
+
+· `v7l2s`（5 个）：`v7l2s-82.bak` · `v7l2s-91.bak` · `v7l2s-93.bak` · `v7l2s-111.bak` · `v7l2s-115.bak`
+
+· `v7new1`（6 个）：`v7new1-31.bak` · `v7new1-81.bak` · `v7new1-82.bak` · `v7new1-91.bak` · `v7new1-92.bak` · `v7new1-93.bak`
+
+· `v7new2`（6 个）：`v7new2-31.bak` · `v7new2-81.bak` · `v7new2-82.bak` · `v7new2-91.bak` · `v7new2-92.bak` · `v7new2-93.bak`
+
+· `v7new3`（6 个）：`v7new3-31.bak` · `v7new3-81.bak` · `v7new3-82.bak` · `v7new3-91.bak` · `v7new3-92.bak` · `v7new3-93.bak`
+
+· `v7new4`（6 个）：`v7new4-31.bak` · `v7new4-81.bak` · `v7new4-82.bak` · `v7new4-91.bak` · `v7new4-92.bak` · `v7new4-93.bak`
+
+· `v7new5_005`（6 个）：`v7new5_005-31.bak` · `v7new5_005-81.bak` · `v7new5_005-82.bak` · `v7new5_005-91.bak` · `v7new5_005-92.bak` · `v7new5_005-93.bak`
+
+· `v7new5_01`（6 个）：`v7new5_01-31.bak` · `v7new5_01-81.bak` · `v7new5_01-82.bak` · `v7new5_01-91.bak` · `v7new5_01-92.bak` · `v7new5_01-93.bak`
+
+· `v7new6`（7 个）：`v7new6-31.bak` · `v7new6-94.bak` · `v7new6-95.bak` · `v7new6-96.bak` · `v7new6-97.bak` · `v7new6-98.bak` · `v7new6-99.bak`
+
+· `v7ringA1`（6 个）：`v7ringA1-31.bak` · `v7ringA1-81.bak` · `v7ringA1-82.bak` · `v7ringA1-91.bak` · `v7ringA1-92.bak` · `v7ringA1-93.bak`
+
+· `v7ringB1`（6 个）：`v7ringB1-31.bak` · `v7ringB1-81.bak` · `v7ringB1-82.bak` · `v7ringB1-91.bak` · `v7ringB1-92.bak` · `v7ringB1-93.bak`
+
+· `v7seat24`（3 个）：`v7seat24-31.bak` · `v7seat24-81.bak` · `v7seat24-82.bak`
+
+· `v7seat24b`（4 个）：`v7seat24b-31.bak` · `v7seat24b-91.bak` · `v7seat24b-92.bak` · `v7seat24b-93.bak`
+
+### 范围与凭据（一句话版）
+- **引擎侧只有默认关闭的新旋钮**：`js/train/evo.js` + `server/econ-env.mjs` 五个 env 开关
+  ⇒ 不设 env 时出厂行为逐位不变（`tools/probe-l2-shaping.mjs` 在 2420 个点上验证；实测 12/12 绿）。
+  规则指纹仍 **`1391c094`**、`spec 42/42`、`smoke OK`、`ui-probe 10/10`、线上包 sha1 未变。
+- **工具侧新增**：`crowding.mjs`（"打整局/打乱局/成群"三根新轴 + `CROWD_SELFCHECK` 对称性自检）·
+  `probe-ep-unfrozen.mjs`（**在内存里**替换 `policy.js` 的 6 个 ep 编码点 ⇒ 磁盘一字未动）·
+  `probe-defense-visible.mjs` · `l2-e1-check.mjs`（同 seed 配对 + 符号翻转检验）· `l2-h2h-join.mjs` / `l2-axis-join.mjs` ·
+  `probe-leftover.mjs` 增"终局余款 >C 触发率"栏 · `l2-eval.mjs` **不再截断**评测矩阵（默认追加；矩阵另固化为 tracked 的 `docs/l2-eval-matrix-120.tsv`）。
+- **修了一个真 bug**：`tools/ring2-run.mjs` 的 `finally` 无条件 `rmSync(.training.lock)` ⇒
+  一个**被服务端拒绝**的并发 run 会把**另一个正在训练**的 run 的锁删掉，训练保护标志随之全部失效（本夜实测撞上）。
+  改为按锁内 `pid` 判归属（自己 ⇒ 删；持有者已死 ⇒ 删，陈旧锁自愈；别人的活 pid ⇒ 不删并说明），四种情形用真实活进程验证。
+
+
 ## v1.5.115 — 第三方复核者代记（用户委托动手）：修 `D59` 的小样本红 + **两臂恢复聚能环实验全部否定**
 
 > 本条由独立复核方（千问，第十二轮）在用户授权下亲自改动并记录，**不是 ds 的工作记录**。
