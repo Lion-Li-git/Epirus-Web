@@ -325,6 +325,19 @@
      看"只要 F"能不能不靠养成龟拿到（判据：F↑ 且 D/H/G 不低于线上包）。
   3. 补 `CHANGELOG.md` 的 D82 记账段（**逐字列全** 24h 内所有 `.bak`，缩写不算）⇒ 目标 np-test **146/146**。
   4. 填交接文档 §8（批次 2/3 的 12-seed 分布 + `v7l2o`/`v7l2s`/`v7l2a` 结果），最后再推一次。
+- 01:38 更新（头对头全量已跑完，见 `docs/artifacts/h2h-sweep.log` 与交接文档 §9）：
+  最强挑战者 = **`v7l2c-82`**（正向 45.0%/46.7%，对基线 15%；A 卷 51.4 · F 34% · D 100% · 墙伤 17.9 · G 4.11/7种），
+  次强 = `v7l2c-103`（43.3/41.7 · G 5.61/10种 · 座位极差 6pt）与 `v7l2s-91`（43.3/46.7）。
+  ⚠ 三者都出自**没开任何新开关**的臂 ⇒ L2′ 目前没有被证实的强度贡献。
+- 剩余步骤的**确切命令**（按顺序，串行；`promote-champion` 与 `gate-landscape` 都必须等锁消失）：
+  1. `L2_ARMS=o2,p L2_SEEDS=81,82,91,92,93 node tools/l2-arms.mjs`         # 批次 3/4
+  2. `node tools/l2-eval.mjs 120` ; `node tools/head2head.mjs 60`            # 全量评测（新产物出来后重跑）
+  3. `node tools/probe-leftover.mjs 60 js/bundled-champion-3p.js docs/artifacts/v7l2o-81.bak ...`
+  4. `node tools/promote-champion.mjs --dry docs/artifacts/v7l2c-82.bak`      # **只 dry**，看门禁怎么说
+  5. `node tools/gate-landscape.mjs docs/artifacts/v7l2c-82.bak js/bundled-champion-3p.js`
+  6. `node tools/l2-bookkeep.mjs` ⇒ 把名单贴进 `CHANGELOG.md` ⇒ `node tools/np-test.mjs` 目标 **146/146**
+  7. 填交接文档 §8/§9 ⇒ commit+push ⇒ `UpdateGoal complete`
+  ⚠ 已验证过的行为：`promote-champion` 在锁存在时**连 `--dry` 都拒绝**（正确，别绕）。
 - ⛔ 全程红线：不换包、不动 `js/bundled-champion-3p.js`、不 bump 版本号、不 `git add results/`、只推 `qoder`。
 - **N3 三臂正在跑**（`tools/l2-arms.mjs`，后台，约 35~40 分钟）：
   `v7l2c` 对照（开关全关）→ `v7l2h`（只开 `EPIRUS_HOARD_LEFTOVER=1`）→ `v7l2f`（+`CONV_RATIO=1`+`HOARD_CAP_MULT=4`）。
