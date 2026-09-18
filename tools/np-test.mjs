@@ -3757,6 +3757,21 @@ t('D96 R60 净化清除"自身全部持续状态"（含增益）+ 写入点只�
     'spec 必须留下 R60 的反证用例');
 });
 
+t('D97 环的**段长口径**（复核 §4）：必须按"用成了"数段（被无效化=断链）+ 不许只报"上环率"', function () {
+  /* 复核 §4 的原话：现在报的"环转化率 8.06%"只数"上没上环" ⇒ **一个疯狂单按的包会被读成"很会用环"**，
+   * 而成本表是"首次净 −2 / 第 2 次刚好回本 / 第 3 次起才 +3" ⇒ 必须有段长口径。 */
+  const pc = readFileSync('tools/probe-convert.mjs', 'utf8');
+  ok(pc.indexOf('ringRun2') >= 0 && pc.indexOf('ringRun3') >= 0,
+    '探针必须给出 ringRun2（段长≥2 / 可负担点）与 ringRun3（段长≥3 / 可负担点）');
+  ok(pc.indexOf("e.key !== R.SK.RING) close(e.pid)") >= 0, '非环出手必须终止当前段（出手侧口径）');
+  ok(pc.indexOf("e.type === 'voided'") >= 0 && pc.indexOf('close(e.pid);                                                // R10') >= 0,
+    '被无效化必须终止当前段 —— 这是 R10 之后的真口径（所以必须读**事件**而不是选择序列）');
+  ok(pc.indexOf('会被单按刷高') >= 0, '必须写明旧口径"上环率"的失效方式（会被单按刷高）');
+  ok(pc.indexOf('extractRingRuns(st.events)') >= 0,
+    '**调用点必须在**（v1.5.111 我第一版只写了定义、漏了调用 ⇒ 读数全是 0 —— 与 D28"接线在文件里≠在跑的那条路径上"同族）');
+  ok(readFileSync('CHANGELOG.md', 'utf8').indexOf('ringRun2') >= 0, 'CHANGELOG 必须记这次口径替换');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

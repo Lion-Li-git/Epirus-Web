@@ -62,12 +62,50 @@ function recorder(sel, seat) {
   };
 }
 
+/* ===== v1.5.111（第十一轮复核 §4）：环的**段长口径** =====
+ * 换口径的动因：旧的"环转化率 = 上环率"只数"上没上环" ⇒ **一个疯狂单按的包会被读成"很会用环"**；
+ * 而按 R10 的成本表：首次 花 3 得 1 = **净 −2**；连续第 2 次 花 0 得 2 = **累计 0**（刚好回本）；
+ * 第 3 次起 **+3**（才开始赚钱）⇒ **单按的那一段是确定性亏损**。
+ * ⇒ `ringRun2 = 段长≥2 的段数 / 环可负担点数`（"不犯蠢"的下限）
+ *    `ringRun3 = 段长≥3 的段数 / 环可负担点数`（真赚钱的"有效投资"）
+ * 段 = **同一玩家连续回合里"用成了"的环次数**；"用成了" = 出手键是 RING **且没有被无效化**
+ * （与 R10 的"被废即断链"同口径，所以必须读事件而不是选择序列）。任何其它出手/死亡都终止当前段。
+ * 事件依据（`state.js`）：`ev2({type:'action', pid, key, outcome})` = 该玩家本回合出手；
+ * 结算里若被废会补 `{type:'voided', pid}`；环真正发钱是 `{type:'ep', pid, delta>0}`。 */
+const ringRuns = [];
+function extractRingRuns(events) {
+  const used = {}, voided = {}, run = {};
+  const close = function (pid) {
+    const n = run[pid] || 0;
+    if (n >= 1) ringRuns.push(n);
+    run[pid] = 0;
+  };
+  for (const e of (events || [])) {
+    if (e.type === 'action' && e.pid != null) {
+      used[e.pid] = e.key;
+      voided[e.pid] = false;
+      if (e.key !== R.SK.RING) close(e.pid);                       // 这回合没出环 ⇒ 断链
+    } else if (e.type === 'voided' && e.pid != null) {
+      voided[e.pid] = true;
+      close(e.pid);                                                // R10：被无效化 ⇒ 不算"续"
+    } else if (e.type === 'ep' && e.pid != null && used[e.pid] === R.SK.RING &&
+               !voided[e.pid] && (e.delta || 0) > 0) {
+      run[e.pid] = (run[e.pid] || 0) + 1;                          // 环**结算**发钱 ⇒ 这一次算"用成了"
+      used[e.pid] = null;
+    } else if (e.type === 'death' && e.pid != null) {
+      close(e.pid);
+    }
+  }
+  for (const pid of Object.keys(run)) close(Number(pid));
+}
+
 for (let g = 0; g < GAMES; g++) {
   const st = S.createState(MODE, { next: mulberry32(9300 + g) }, 5);
   if (T.slotSaltFor) st.slotSalt = T.slotSaltFor(9300 + g);
   const ch = [];
   for (let i = 0; i < 5; i++) ch.push(recorder(T.policyChooserN(params, 0.15), i));
   Play.autoGameN(st, ch);
+  extractRingRuns(st.events);   // v1.5.111（复核 §4）：环的段长口径 —— 读事件，含"被无效化=断链"
 }
 
 /* 统计：**分母一律是"可负担的决策点"** */
@@ -125,3 +163,23 @@ for (const k of ['ring', 'proto', 'charge']) {
 }
 const ep3 = rows.filter(function (r) { return r.ep >= 3; }).length;
 console.log('· ep≥3 的决策点 = ' + ep3 + '（' + (100 * ep3 / Math.max(1, decisions)).toFixed(1) + '%）');
+
+/* ===== v1.5.111（第十一轮复核 §4）：环的**段长**口径（旧的"转化率"会被单按刷高）===== */
+{
+  const b = bucket[R.SK.RING];
+  const ready = b ? b.ready : 0;
+  const tot = ringRuns.length;
+  const n1 = ringRuns.filter(function (n) { return n === 1; }).length;
+  const n2 = ringRuns.filter(function (n) { return n === 2; }).length;
+  const n3 = ringRuns.filter(function (n) { return n >= 3; }).length;
+  const pc = function (x) { return tot ? (100 * x / tot).toFixed(0) + '%' : '—'; };
+  console.log('');
+  console.log('=== 环的**段长**口径（复核 §4；旧"转化率"= 上环率 ⇒ **会被单按刷高**）===');
+  console.log('  段数 = ' + tot + '（=1: ' + pc(n1) + ' · =2: ' + pc(n2) + ' · ≥3: ' + pc(n3) +
+    '）· 最长段 ' + (tot ? Math.max.apply(null, ringRuns) : 0));
+  console.log('  **ringRun2** = ' + (ready ? (100 * (n2 + n3) / ready).toFixed(1) + '%' : '—') +
+    '（段长≥2 的段数 / 环可负担点数 ' + ready + '）⇒ "不犯蠢"的下限（≥2 才刚好回本）');
+  console.log('  **ringRun3** = ' + (ready ? (100 * n3 / ready).toFixed(1) + '%' : '—') +
+    '（段长≥3 / 环可负担点数）⇒ 真赚钱的"有效投资"（第 3 次起 +3）');
+  console.log('  ⚠️ 成本表：首次 花 3 得 1 = **净 −2** · 第 2 次 +2（累计 0，刚好回本）· 第 3 次起 +3 ⇒ **单按是确定性亏损**');
+}
