@@ -306,7 +306,7 @@
 - 批次 3 的臂是 `v7l2o`（全开 + `EPIRUS_CONV_OFFENSE=1`，治龟壳）；它的判据三条一起看：
   **targeter 场仍高于随机** · **A 卷回到 ≥44%** · **防御族出手占比回到 12~30% 带内（不许 ≥50%）**。
 
-## DOING（01:19 快照 · 重启前先读这一节）
+## DOING（01:19 快照 · **已被 01:52 快照取代，只看文件末尾那一节**）
 - 正在跑的后台任务：
   ① **批次 2 臂批**（`tools/l2-arms.mjs`，日志 `docs/artifacts/l2-arms-status.log` + `ring2-status-l2{c,h,f}.log`）
      进度：`v7l2c` 新 seed 101~106 完 → `v7l2h` 101~106 完 → **`v7l2f` 101~106 正在跑** → 之后 `v7l2a`(教师+开关) 与 `v7l2s`(只抬攒钱上限)。
@@ -348,3 +348,34 @@
   ⇒ 无 imit 教师时这配置更容易长窄。若某臂 6 个 seed 全被拦，就改用 `EPIRUS_ALLOW_HEALTH_FAIL=1` 重跑**并显式记账**。
 - **接线凭据**：worker 只在 `hasEconOverride` 为真时打 `[econ] worker 生效值` ⇒ 到 `v7l2h`/`v7l2f` 的
   server 日志里应有 **16 行**（这就是"开关真到了 worker"的判据，对照臂没有是正常的）。
+
+## DOING（01:52 快照 · **压缩后先读这一节**）
+### 进程真相（用 `Get-CimInstance Win32_Process -Filter "Name='node.exe'"` 实测，不要凭记忆猜）
+- **排程器 `tools/l2-schedule.mjs` PID 19908 是活的**（00:55 起）。我上一条快照写"已废弃/拆弹"——
+  **拆弹成功了、但"死了"这个判断是错的**：它 17:47:19 看到 `BATCH2 COMPLETE` ⇒
+  ① 先跑 `l2-arms.mjs`（env 写死 `L2_ARMS=o` ⇒ 因为我改了 key `o`→`o2`，**空转 70ms、status=0，没污染任何产物** ✅ 拆弹按设计生效）
+  ② 然后**自己起了** `node tools/l2-eval.mjs 120`（PID 40032，17:47:19 起，正在跑）
+  ③ 之后它还会自动跑 `probe-leftover.mjs`（全产物资源线），最后往 `l2-batch2.log` 追加 `NIGHT_DONE`。
+- 我的后台任务 `b4wkfwpau` = 批次 3/4：`L2_ARMS=o2,p L2_SEEDS=81,82,91,92,93 node tools/l2-arms.mjs`
+  （PID 15296 + 子 `ring2-run.mjs` 34384 + `train-server 8906` 40656，日志 `docs/artifacts/l2-batch34.log`，
+  完成标记 `BATCH34_DONE`；**注意它按 ALL_SEEDS 先训 seed 31**，所以 `v7l2o-31.sse.log` 是它的正常产物，不是 stray 幽灵）。
+- ⇒ **排程器的评测矩阵不含 o/p 臂**（它的产物清单在 17:47 就固定了）⇒ 批次 3/4 跑完必须**再跑一次** `l2-eval.mjs`，
+  但那一次是"只补新臂"，不是重跑全量（重跑全量浪费 40 分钟；`l2-eval.log` 里已有的行照抄）。
+- 并发安全性：评测只读 `.bak`、训练只写 `.training-*` 暂存 ⇒ 不冲突（唯一共享风险是 `copyFileSync` 非原子，
+  若 leftover 矩阵正好读到写一半的包会报加载失败 —— 重跑那一个文件即可，不必恐慌）。
+### 已完成（01:52 为止）
+- 批次 1+2 全量三考卷 **11 个包 × (A卷/targeter/ringwall) @120 局**：读数在 `docs/artifacts/l2-eval.log`
+  （矩阵还在收尾，已出 11 行）。**别重跑。**
+- 头对头全量：`docs/artifacts/h2h-sweep.log`（交接文档 §9）。
+- 红线复核（01:52 实测）：`js/bundled-champion-3p.js` sha1 **仍是 `268461f7c9f0`**，分支 `qoder`，未 bump 版本。
+### 待做（串行，做完一件划一件）
+1. 等 `BATCH34_DONE` + `NIGHT_DONE` ⇒ 对 `v7l2o-*`/`v7l2p-*` 补跑 `l2-eval.mjs`（看是否需要限定新产物，别全量重跑）。
+2. `node tools/head2head.mjs 60`（若 o/p 臂有候选再补一次头对头）。
+3. `node tools/probe-leftover.mjs` 对 o/p 臂 + 线上包（余 ep / 兑现率 / 出手每回合 / 防御预算四栏一起看）。
+4. 锁消失后：`node tools/gate-landscape.mjs <候选> js/bundled-champion-3p.js`；
+   `node tools/promote-champion.mjs --dry <候选>` —— **只 dry，绝不真 promote**。
+5. `node tools/l2-bookkeep.mjs` ⇒ 名单逐字贴进 `CHANGELOG.md` ⇒ `np-test` 目标 **146/146**（现 145/146，只 D82 红）。
+6. 填交接文档 §8/§9 ⇒ commit+push（**只 add 我自己点名的文件，绝不 `git add -A`**）。
+### ⚠ `results/` 现状（01:52 实测 `git status`）：4 个 `D`（21/25/41/60 回合）+ 8 个未跟踪新增
+**不是我删的、也不是我建的** —— 用户今天自己打的对局记录（16/26/28/36/39/100 回合等）。
+⇒ 红线：不 `git add`、不 `git checkout --` 还原、不 `git clean`。留在工作区里别碰。
