@@ -3640,6 +3640,27 @@ t('D90 清场计数奖励：口径必须与门禁同源（收缩分界 + 归因�
     'worker 必须按消息设 + 打回执（今晚已四次栽在"看着接了、其实没通"）');
 });
 
+t('D91 被无效化的聚能环不得续计（v1.5.105：出招即计次 + 复位漏 voided ⇒ 打断者反而送 +3）', function () {
+  /* 用户实盘 bug（`results/epirus-battle-26回合.txt:52-64`）：第 9 回合环被雷击之枪无效化（无ジ进账），
+   * 第 10 回合却直接吃 **+3**。根因：`state.js:190` 出招即 `ringStreak++`，`endTurn` 的复位只看
+   * `outcome === 'ok'`，而 `setVoid` 只置 `voided` ⇒ 被废的那次照样算"续"。
+   * ⚠️ 注意性质：这不是"没文档的事故" —— 旧行为被 `docs/RULES-2P.md:73` 的 R10 条款**文档化**过
+   * （且那句话自相矛盾："计数已+1"与"不再连续"互斥）。用户 2026-09-18 裁定按"打断必须断链"改。
+   * 这条门是**结构反证**；行为证据在 `tests/spec.js` 的 R10 新用例（旧实现读到 ep=5/streak=2）。 */
+  const rs = readFileSync('js/core/resolve.js', 'utf8');
+  ok(rs.indexOf('!a.voided && a.key === SK.RING') >= 0,
+    'endTurn 的连击复位必须与 actionOf 同口径（加 `!a.voided`）');
+  ok(rs.indexOf("if (!(a && a.outcome === 'ok' && a.key === SK.RING)) p.ringStreak = 0;") < 0,
+    '旧的"只看 outcome"复位**不得**回来 —— 那是本 bug 的成因');
+  ok(readFileSync('tests/spec.js', 'utf8').indexOf('被小雷无效化的聚能环') >= 0,
+    'spec 必须留下这条能反证的行为用例');
+  ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('**被无效化的聚能环不续计**') >= 0,
+    'RULES-2P 的 R10 条款必须同步（旧措辞"不再连续（计数已+1）"自相矛盾，是 bug 的温床）');
+  /* 边界：**过载炮**的"出招即计次"是 R43 的**用户裁定明文** ⇒ 不许被这次修复顺手波及。 */
+  ok(readFileSync('js/core/state.js', 'utf8').indexOf('if (key === R.SK.CANNON) p.cannonCount++;') >= 0,
+    '过载炮 R43（被无效化仍计次）不得被顺手改掉 —— 它与环是**两条不同的明文**');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

@@ -1033,7 +1033,15 @@
     for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i];
       const a = acts[i];
-      if (!(a && a.outcome === 'ok' && a.key === SK.RING)) p.ringStreak = 0;
+      /* v1.5.105（用户实盘 bug，`results/epirus-battle-26回合.txt:52-64`）：**被无效化的聚能环不算"续"**。
+       * 病：`state.js:190` 是"**出招即计次**"，而这里原先只看 `outcome === 'ok'`；
+       * `setVoid`（本文件 :22-29）**只置 `voided`、不动 `outcome`** ⇒ 被小雷废掉的那次环
+       * 既没复位、又已经进过位 ⇒ **打断方每回合花 2 ジ，反把受害方的连击推到 +3 档**
+       * （而且第 2 次起环费为 0）⇒ 现行规则下"打断环"对打断者是严格亏损动作。
+       * 修：与 `actionOf`（:15-18）**同口径**加 `!a.voided`。
+       * ⚠️ 注意区别：**过载炮**有明文 R43"被无效化仍计入次数"（`state.js:189`，用户裁定）⇒ 那条**不动**；
+       * 聚能环**没有**对应明文，按原版"连续使用"的语义，被废的那次不该算"用成了"。 */
+      if (!(a && a.outcome === 'ok' && !a.voided && a.key === SK.RING)) p.ringStreak = 0;
       p.lastSkill = (a && a.outcome === 'ok') ? a.key : null;
     }
     // 蓄能珠时效 R9'：只供下一回合——回合结束时，非"本回合新蓄"的珠一律清空

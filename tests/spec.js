@@ -323,6 +323,24 @@
     eq(st.p[0].ep, 3, '3用 +3');
   });
 
+  t('R10 被小雷无效化的聚能环**不续计**（v1.5.105 修：出招即计次 + 复位漏 voided ⇒ 打断反而送 +3）', function () {
+    /* 用户实盘（`results/epirus-battle-26回合.txt:52-64`）：
+     *   第 9 回合 玩家1 聚能环 被 玩家2 雷击之枪 无效化 ⇒ 本回合无ジ进账（这部分原本就是对的）；
+     *   第 10 回合 玩家1 再聚能环 ⇒ **直接 +3**（最高档）。
+     * 根因：`state.js:190` 出招即 `ringStreak++`，而 `endTurn` 的复位只看 `outcome === 'ok'`，
+     *       `setVoid` 只置 `voided` ⇒ 被废的那次照样算"续"。
+     * 本用例是**能反证**的：旧实现第二回合会读到 ep=5（免费续 + 吃满档）/ streak=2，
+     * 修好后是 ep=1（按"首次"花 3 得 1）/ streak=0。 */
+    const st = game(); setEp(st, 5, 5);
+    play(st, SK.RING, SK.MINI_T);            // 小雷 无效化 聚能环
+    ok(st.actions[0].voided, '聚能环必须被无效化');
+    eq(st.p[0].ep, 2, '被废 ⇒ 本回合没有环的收入（5-3）');
+    eq(st.p[0].ringStreak, 0, '被废 ⇒ 连击计数必须归零（不得算作"续"）');
+    setEp(st, 3, 5);
+    play(st, SK.RING, SK.JI);                // 再来一次：必须按"首次"算（花 3 得 1）
+    eq(st.p[0].ep, 1, '重新按首次算：3-3+1（旧实现会免费续 +2 ⇒ 5）');
+  });
+
   t('R32 激光眼连续使用免爆破珠', function () {
     const st = game(); setEp(st, 3, 0); st.p[0].boom = 1;
     play(st, SK.LASER_EYE, SK.JI);   // 首次 1ジ+1爆珠
