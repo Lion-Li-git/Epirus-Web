@@ -41,6 +41,29 @@
     ev(state, { type: 'mineArm', pid: pid });
   }
 
+  /* ===== v1.5.110（**用户裁定 2026-09-18** = R60）：净化的清除清单 = **自身全部持续状态** =====
+   * 用户口径："藤甲与地雷既然做成了 buff，就一并会被净化掉（同样会被净化掉的还有
+   * **避雷针、符咒、大雷禁用效果**以及几乎不会出现的**梦魇**）"。
+   * ⇒ 清单**从状态字段推导**（不写卡名清单）：`stickers`（符咒）/`nightmare`（梦魇 R50）/
+   *    `tauntPending`（挑衅）/`fireWeakNow + fireWeakNext`（藤甲 R58）/`mineArmed + mineTurns`（地雷 R59）/
+   *    `rodGuard`（避雷针 R31）/`cooldown`（大雷禁用 R29）。
+   * ⚠️ **写入只有这一处**（下面两个 `case SK.PURIFY` —— 正式路径与镜面复制路径 —— 都只调它）。
+   *    环（R10）与地雷（R59）都是"两处各自写一遍"埋出来的雷，这条不再犯。
+   * ⚠️ 副作用（用户口径的自然结果，记录在案）：**增益也一起被清** ⇒ 净化会对"自己挂着地雷/避雷针"
+   *    的局面造成自损 ⇒ 它不再是"纯赚"的牌。这是裁定的一部分，不是 bug。 */
+  function purgeSelf(state, me, pid) {
+    const n = me.stickers.length;
+    me.stickers = [];
+    me.nightmare = false;
+    me.tauntPending = false;
+    me.fireWeakNow = false; me.fireWeakNext = false;       // 藤甲（R58）
+    me.mineArmed = false; me.mineTurns = 0;                // 地雷（R59）
+    me.rodGuard = 0;                                       // 避雷针（R31）
+    me.cooldown = {};                                      // 大雷禁用（R29）
+    if (n >= 1) { me.hp += n - 1; ev(state, { type: 'heal', pid: pid, amt: n - 1, reason: '净化' }); }
+    ev(state, { type: 'purify', pid: pid, curses: n });
+  }
+
   /* ---------- N 人通用：人数/目标 ---------- */
   function playerCount(state) { return state.p.length; }
   function aliveOpps(state, pid) {
@@ -630,13 +653,7 @@
        * 而 ① 层"当回合有雷系 ⇒ 全部无效"已经把本回合的雷清空了 ⇒ 复制来的窗口本回合无物可挡。
        * 论证与守门见 `mirrorPass` 上方的长注释与 `np-test D31`。 */
       case SK.ROD: me.rodGuard = 4; ev(state, { type: 'rod', pids: [m], mode: 'B' }); break;
-      case SK.PURIFY: {
-        const n = me.stickers.length;
-        me.stickers = []; me.nightmare = false; me.tauntPending = false;
-        if (n >= 1) { me.hp += n - 1; ev(state, { type: 'heal', pid: m, amt: n - 1, reason: '净化' }); }
-        ev(state, { type: 'purify', pid: m, curses: n });
-        break;
-      }
+      case SK.PURIFY: purgeSelf(state, me, m); break;
       default: {
         /* 防御族（含复制全息屏障 = 原型制御式自保架势）。
          * 架势**不在这里才生效**：`guardOf` 通过 effectiveKeyOf() 直接读"复制内容"，
@@ -1066,19 +1083,13 @@
       }
     }
 
-    // ====== ⑥b 净化 pri1（清除自身状态与符咒）======
+    // ====== ⑥b 净化 pri1（清除自身状态与符咒；v1.5.110 R60：清单扩到**全部持续状态**）======
     for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
       if (!a || a.key !== SK.PURIFY) continue;
-      const me = state.p[i];
-      const n = me.stickers.length;
-      me.stickers = [];
-      me.nightmare = false;
-      me.tauntPending = false;
-      if (n >= 1) { me.hp += n - 1; ev(state, { type: 'heal', pid: i, amt: n - 1, reason: '净化' }); }
-      ev(state, { type: 'purify', pid: i, curses: n });
+      purgeSelf(state, state.p[i], i);   // 唯一写入点（见 purgeSelf 的注释）
     }
-  
+
     mineResolveAll(state);   // N20：所有伤害结算完，统一按「直接优先」结地雷
   }
 

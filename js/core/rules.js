@@ -79,7 +79,7 @@
     mk(SK.MINE, '地雷', CAT.SPECIAL, 3, 0, 'self', { desc: '被非狙击枪攻击时，**除自己外全场其他角色**各受 1 点火伤；被打中的持雷者会间接触发（所有间接触发合并为一波，且不伤害间接触发者）；地雷伤害无来源', gesture: '握拳+左手托底' }),
     mk(SK.TAUNT, '挑衅', CAT.SPECIAL, 2, 3, 'enemy', { desc: '目标下回合必须使用攻击类技能，否则 -1 血', gesture: '手背朝下回勾' }),
     mk(SK.CANNON, '过载炮', CAT.SPECIAL, null, 3, 'enemy', { desc: '按使用次数循环：1 次 1伤；2 次 1伤+失ジ；3 次 1伤+失ジ+自损 1 血。**新规：可打穿防御与反弹，但会被任何攻击类技能抵消**', gesture: '握拳手背朝下' }),
-    mk(SK.PURIFY, '净化', CAT.SPECIAL, 3, 1, 'self', { desc: '清除自身持续负面状态并移除身上符咒，每枚回复 1 血（n-1规则）', gesture: '双手正立相扣' }),
+    mk(SK.PURIFY, '净化', CAT.SPECIAL, 3, 1, 'self', { desc: '清除自身**全部持续状态**（符咒/梦魇/挑衅/藤甲火弱/地雷/避雷针/大雷禁用），每枚符咒回复 1 血（n-1规则）', gesture: '双手正立相扣' }),
     // ---- 多人专用（2人局置灰）----
     mk(SK.DUAL_GUN, '双枪射手', CAT.ATTACK, 3, 3, 'enemy', { desc: '（多人）对两个角色同时使用“枪”', dmg: { amt: 1, type: DMG.NORMAL }, extra: { target2: 'enemy' } }),
     mk(SK.MIRROR, '镜面反射', CAT.SPECIAL, 3, 3, 'enemy', { desc: '（多人）复制目标 1 本回合的伤害技能，对目标 2 施加；复制双枪只算一枪', extra: { target2: 'enemy' } })

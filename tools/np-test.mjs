@@ -3736,6 +3736,27 @@ t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被�
   ok(readFileSync('tests/spec.js', 'utf8').indexOf('R59 地雷时效') >= 0, 'spec 必须留下 R59 的反证用例');
 });
 
+t('D96 R60 净化清除"自身全部持续状态"（含增益）+ 写入点只有一处', function () {
+  /* 用户裁定："藤甲与地雷既然成了 buff，就一并会被净化掉（还有避雷针、符咒、大雷禁用、梦魇）"。
+   * 旧实现只清 stickers/nightmare/tauntPending，且**两个 case 各写一遍**（环/地雷同族隐患）。 */
+  const rs = readFileSync('js/core/resolve.js', 'utf8');
+  ok(rs.indexOf('function purgeSelf(state, me, pid)') >= 0, '必须有唯一的净化函数');
+  ok(rs.indexOf('me.fireWeakNow = false; me.fireWeakNext = false;') >= 0, '必须清藤甲火弱（R58 的两个标志）');
+  ok(rs.indexOf('me.mineArmed = false; me.mineTurns = 0;') >= 0, '必须清地雷（R59 含计时）');
+  ok(rs.indexOf('me.rodGuard = 0;') >= 0, '必须清避雷针（R31）');
+  ok(rs.indexOf('me.cooldown = {};') >= 0, '必须清大雷禁用（R29）');
+  ok(rs.indexOf('case SK.PURIFY: purgeSelf(state, me, m); break;') >= 0 &&
+     rs.indexOf('purgeSelf(state, state.p[i], i);') >= 0,
+    '两个 `case SK.PURIFY`（正式路径 + 镜面复制路径）都必须走 purgeSelf');
+  ok(rs.indexOf('me.stickers = []; me.nightmare = false; me.tauntPending = false;') < 0,
+    '旧的"两处各写一遍"写法不得回来');
+  ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('**R60**') >= 0, 'RULES-2P 必须记下 R60');
+  ok(readFileSync('js/core/rules.js', 'utf8').indexOf('清除自身**全部持续状态**') >= 0,
+    '卡面描述必须同步（否则玩家看到的是旧的"只清负面"）');
+  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R60 净化清除**自身全部持续状态**') >= 0,
+    'spec 必须留下 R60 的反证用例');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

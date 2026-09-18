@@ -449,6 +449,37 @@
     ok(!st3.p[0].mineArmed && st3.p[0].mineTurns === 0, '触发即失效（含计时清零）');
   });
 
+  t('R60 净化清除**自身全部持续状态**（用户裁定）：藤甲/地雷/避雷针/符咒/大雷禁用/梦魇', function () {
+    /* 用户口径："藤甲与地雷既然成了 buff，就一并会被净化掉（同样会被净化掉的还有避雷针、符咒、
+     * 大雷禁用效果、以及几乎不会出现的梦魇）"。
+     * 本用例**能反证**：旧实现只清 `stickers / nightmare / tauntPending` 三项 ⇒ 下面
+     * `fireWeakNext / mineArmed / mineTurns / rodGuard / cooldown` 五条断言在旧代码上会红。 */
+    const st = game(); setEp(st, 9, 9);
+    st.p[0].nightmare = true;
+    st.p[0].tauntPending = true;
+    st.p[0].fireWeakNow = true; st.p[0].fireWeakNext = true;
+    st.p[0].mineArmed = true; st.p[0].mineTurns = 3;
+    st.p[0].rodGuard = 4;
+    st.p[0].cooldown = { bigT: 2 };
+    st.p[0].hp = 5;                              // 给足血：梦魇回合开始 -0.5HP（R50）不参与断言
+    play(st, SK.PURIFY, SK.JI);
+    eq(st.p[0].fireWeakNow, false, '藤甲火弱（本回合）被清');
+    eq(st.p[0].fireWeakNext, false, '藤甲火弱（下回合那份）被清（旧实现漏这条）');
+    eq(st.p[0].mineArmed, false, '地雷被清（旧实现漏）');
+    eq(st.p[0].mineTurns, 0, '地雷计时清零');
+    eq(st.p[0].rodGuard, 0, '避雷针被清（旧实现漏）');
+    eq(Object.keys(st.p[0].cooldown).length, 0, '大雷禁用被清（旧实现漏）');
+    eq(st.p[0].nightmare, false, '梦魇被清');
+    eq(st.p[0].tauntPending, false, '挑衅被清');
+    // B) 符咒与回血（n-1 规则）—— 单独一局，别让其它状态的价格混进血量断言
+    const st2 = game(); setEp(st2, 9, 9);
+    st2.p[0].stickers = [{ owner: 1, age: 0 }, { owner: 1, age: 1 }];
+    st2.p[0].hp = 2;
+    play(st2, SK.PURIFY, SK.JI);
+    eq(st2.p[0].stickers.length, 0, '符咒被清');
+    eq(st2.p[0].hp, 3, '两枚符咒 ⇒ 回 1 血（n-1 规则）');
+  });
+
   t('R22 藤甲火弱：天火(直扣血 rawDamage)也吃+1 & 地雷反击火弱+1', function () {
     // 天火路径：贴符咒 → 藤甲→对手火弱 → 天火引爆，直扣血应+1
     const st = game(); setEp(st, 9, 9); st.p[0].hp = st.p[1].hp = 3;
