@@ -808,7 +808,23 @@
     mirrorGuardPass(state);
 
     // ====== ④ 默认优先级 3 ======
-    for (const i of turnOrder(state)) {
+    /* v1.5.106（**用户裁定** 2026-09-18）：**资源型（`cat === ENERGY` ⇒ ジ / 蓄能 / 聚能环）在本层内先结算**，
+     * 过载炮随后 ⇒ 过载炮第 3 次的「清空目标ジ」能吃到目标**本回合刚生的收入**。
+     * 病（第十一轮复核 §10-4 实测）：本层原先一律按 `turnOrder` 的座位轮换序 ⇒ **同一发炮效果差 3 ジ**
+     * （炮手 0 号先手 ⇒ 只吃到 6；炮手 3 号后手 ⇒ 目标 9 ジ 全没）⇒ "谁先手"成了**座位红利**。
+     * 口径**从声明推导**（`R.byKey[key].cat`）—— 不许写卡名清单（D81/D72 的教训）。
+     * ⚠️ 两组**各自**仍按 `turnOrder`（座位轮换）⇒ 反座位偏置的随机化只在**跨组**顺序上被固定、
+     * 组内仍然轮换（两个资源型同时出手时仍会换先后）。 */
+    const ord3 = (function () {
+      const inc = [], oth = [];
+      for (const i of turnOrder(state)) {
+        const a0 = actionOf(state, i);
+        const isEnergy = !!(a0 && R.byKey[a0.key] && R.byKey[a0.key].cat === R.CAT.ENERGY);
+        (isEnergy ? inc : oth).push(i);
+      }
+      return inc.concat(oth);
+    })();
+    for (const i of ord3) {
       const a = actionOf(state, i);
       if (!a || (R.byKey[a.key].pri || 3) !== 3) continue;
       /* v1.5.37：**撤销 v1.5.34 的 holo 特例**。复核 §2-1 证明它与引擎语义冲突：

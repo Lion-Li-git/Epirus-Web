@@ -3661,6 +3661,20 @@ t('D91 被无效化的聚能环不得续计（v1.5.105：出招即计次 + 复�
     '过载炮 R43（被无效化仍计次）不得被顺手改掉 —— 它与环是**两条不同的明文**');
 });
 
+t('D92 R56 同层内资源型先结算（用户裁定：过载炮的清除须含目标本回合收入）', function () {
+  /* 病（第十一轮复核 §10-4 实测）：同层原先按座位轮换序结算 ⇒ 同一发炮效果差 3 ジ ⇒ 座位红利。
+   * 用户 2026-09-18 裁定：资源型（ENERGY 类）先结算。 */
+  const rs = readFileSync('js/core/resolve.js', 'utf8');
+  ok(rs.indexOf('R.byKey[a0.key].cat === R.CAT.ENERGY') >= 0,
+    '资源型必须**从卡面声明推导**（`cat === CAT.ENERGY`）—— 不许写卡名清单（D81/D72 的教训）');
+  ok(rs.indexOf('const ord3 = (function ()') >= 0 && rs.indexOf('return inc.concat(oth);') >= 0,
+    '同层遍历顺序必须"先资源型、再其余"（两组各自保持轮换）');
+  ok(rs.indexOf('for (const i of ord3) {') >= 0, '那一层必须真的用新顺序遍历（别只造了数组不用）');
+  ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R56') >= 0, 'RULES-2P 必须记下 R56 这条裁定');
+  ok(readFileSync('tests/spec.js', 'utf8').indexOf('资源型先结算') >= 0,
+    'spec 必须留下能反证的顺序用例（旧顺序读到目标 ep=3）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
