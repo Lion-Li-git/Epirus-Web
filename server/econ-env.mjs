@@ -33,12 +33,12 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
    * （`tools/probe-leftover.mjs`：线上包 multi 兑现率 94%、余 ep/人 0.9、峰 ep 2；arm A 兑现率 23%、余 23.2）
    * ⇒ 余款惩罚对在位包是空操作（它没余款可罚，它是"攒不到就花光"）。给它开一臂：把 0.05 抬到 0.15，
    *    直接检验"**奖惩不对称**才是环学不出来的阻力"这条假设（否则这句话永远只是评论）。 */
-  'EPIRUS_STOCK_BONUS'];
+  'EPIRUS_STOCK_BONUS', 'EPIRUS_CONV_OFFENSE'];
 
 /* 与 `js/train/evo.js` 的 `setEconomyReward(o)` / `economyReward()` 字段名对齐
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
 export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
-  'hoardOnLeftover', 'convRatio', 'hoardCapMult', 'stockBonus'];
+  'hoardOnLeftover', 'convRatio', 'convOffense', 'hoardCapMult', 'stockBonus'];
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -74,7 +74,8 @@ export function readEconEnv(env) {
     hoardOnLeftover: e.EPIRUS_HOARD_LEFTOVER === '1' ? true : null,
     convRatio: e.EPIRUS_CONV_RATIO === '1' ? true : null,
     hoardCapMult: nv(e.EPIRUS_HOARD_CAP_MULT),
-    stockBonus: nv(e.EPIRUS_STOCK_BONUS)
+    stockBonus: nv(e.EPIRUS_STOCK_BONUS),
+    convOffense: e.EPIRUS_CONV_OFFENSE === '1' ? true : null
   };
 }
 

@@ -42,6 +42,14 @@ const ARMS = [
    * （对照自己就兑现 97~99%、余 ep 0.2~0.5，而门槛在 C=10 ⇒ 罚不到）⇒ seed 91 两臂长出**逐位相同**的冠军。
    * 囤积是 `IMIT_TEACHER=pickDeepSaver` + `IMIT_OVERRIDE=0.5` 注入的（deepSaver = "86% ジ 攒钱"），
    * 所以 L2′-① 的正确实验对象就是 arm A 那套配方。它的对照 = 已训好的 `v7ringA1-*`，不用重跑。 */
+  /* 批次 3（`o`）：**修"龟壳 captured"**。00:41 的实测发现 `v7l2f-81` 在 targeter 场 +27.5pt 的代价是
+   * 它 82.3% 的出手都在摁防御（八卦 28%+防御 27%+反弹 27%），A 卷反而从 46% 掉到 36%
+   * ⇒ `conv` 与"余款惩罚"都只问"花没花"、没问"花在进攻上没有" ⇒ 被"最便宜的常驻出口"captured。
+   * `EPIRUS_CONV_OFFENSE=1` 把兑现比率收窄成"**花在 `R.ATK_EFFECT` 上的 ep** / 已获得"。
+   * 判据三条一起看：targeter 场**仍**高于随机 · A 卷回到 ≥44% · 防御族占比回到 12~30% 的带内。 */
+  { key: 'o', arm: 'v7l2o', tag: 'l2o',
+    env: { EPIRUS_HOARD_LEFTOVER: '1', EPIRUS_CONV_RATIO: '1', EPIRUS_CONV_OFFENSE: '1', EPIRUS_HOARD_CAP_MULT: '4' },
+    note: '全开 + 兑现只认进攻卡（治龟壳）' },
   { key: 't', arm: 'v7l2a', tag: 'l2a',
     env: { EPIRUS_HOARD_LEFTOVER: '1', EPIRUS_CONV_RATIO: '1', EPIRUS_HOARD_CAP_MULT: '4',
       EPIRUS_IMIT_TEACHER: 'pickDeepSaver', EPIRUS_IMIT_OVERRIDE: '1', EPIRUS_IMIT_FRAC: '0.5' },

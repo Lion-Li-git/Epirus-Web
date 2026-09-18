@@ -658,6 +658,9 @@
         const c = S.computeCost(state, pid, a.key);
         if (c && c.ok) {
           if (c.ep >= 2) rec.heavy++;
+          /* v1.5.116：花在"会造成伤害"的卡上的 ep（`R.ATK_EFFECT` 是规则里声明的攻击向卡表）⇒
+           * `CONV_OFFENSE` 用它做分子，专治"把兑现奖励刷成乱摁防御"这条 captured 路径。 */
+          if (R.ATK_EFFECT.indexOf(a.key) >= 0) rec.offSpend = (rec.offSpend || 0) + (c.ep || 0);
           if (c.ep >= 4) rec.heavy4++;
           // 攒钱动作：手里有 ep 却选择不花钱。
           // 这是每一步都可得的稠密信号——否则 ep=1 时 99.8% 选枪，
@@ -685,6 +688,7 @@
    * 修法不是把权重调大（用户"奖惩不用给太多"的裁定继续成立），而是**换成不会被夹住的分母**。 */
   let HOARD_LEFTOVER = false;   // true ⇒ 惩罚自变量 maxEp → **终局余款**（攒钱奖励那一段不动）
   let CONV_RATIO = false;       // true ⇒ conv 第一改数从"次数/2 封顶" → **已花 ep / 已获得 ep**
+  let CONV_OFFENSE = false;     // true ⇒ 上面那个"已花"**只算花在会造成伤害的卡上**（防"龟壳 captured"，见日志 00:41）
   let HOARD_CAP_MULT = 2;       // 饱和点 = C×mult；默认 2 ⇒ 与现状逐位相同
 
   /* ===== 经济 shaping 的门槛：按 (人数, 模式) 定（v1.5.6，用户裁定）=====
@@ -773,13 +777,14 @@ let WALL_GAMES = 3;
    * ⚠ 这五个 `if (o.X != null)` 必须留在 setter 的**开头 1200 字符内** —— 门禁 D77 是用
    *   `setter.slice(i0, i0+1200).indexOf('o.'+key+' != null')` 查"econ-env 返回的键有没有被认"，
    *   写在后面会被判"未接受"（我第一版就栽在这里，注释把长度顶出了窗口）。
-   * 不要再加别名键 —— setter 开头 1200 字符是硬预算，多一个键就挤掉 wallGames。 */
+   * 不要再加别名键 —— setter 开头 1200 字符是硬预算，多一个键就挤掉 wallGames。
+   * ⚠ 这五个 handler 写成**两条紧凑行**也是门禁逼的：D77 用 `slice(0,1200).indexOf('o.'+key+' != null')`
+   *   查"econ-env 返回的键有没有被认"，而文件是 **CRLF** ⇒ 每个换行算 2 个字符，窗口比看起来小得多
+   *   （实测：一行一个键时 `wallGames` 落在 1202 ⇒ 红；注释写进函数体里也会把窗口吃掉）。 */
   function setEconomyReward(o) {
     o = o || {};
-    if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover;
-    if (o.convRatio != null) CONV_RATIO = !!o.convRatio;
-    if (o.hoardCapMult != null) { const m = Number(o.hoardCapMult); if (m >= 1) HOARD_CAP_MULT = m; }
-    if (o.stockBonus != null) { const b = Number(o.stockBonus); if (b >= 0) STOCK_BONUS = Math.min(1, b); }
+    if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover; if (o.convRatio != null) CONV_RATIO = !!o.convRatio; if (o.convOffense != null) CONV_OFFENSE = !!o.convOffense;
+    if (o.hoardCapMult != null) HOARD_CAP_MULT = Math.max(1, Number(o.hoardCapMult) || 1); if (o.stockBonus != null) STOCK_BONUS = Math.max(0, Math.min(1, Number(o.stockBonus)));
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
     if (o.divW != null) DIV_W = Math.max(0, Number(o.divW));
@@ -796,7 +801,7 @@ let WALL_GAMES = 3;
      * 于是"设过 HOARD_LEFTOVER 之后 reset"会留下脏状态（自检脚本第一版就被这个坑过一次假 DIFF）。 */
     if (o.reset) {
       ECO_T = null; ECO_C = null;
-      HOARD_LEFTOVER = false; CONV_RATIO = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05;
+      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05;
     }
     return economyReward();
   }
@@ -804,7 +809,7 @@ let WALL_GAMES = 3;
     return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divCatW: DIV_ROLE_W, K_role: K_ROLE,
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
-      hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, hoardCapMult: HOARD_CAP_MULT,
+      hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
 
@@ -1042,7 +1047,9 @@ let WALL_GAMES = 3;
       // 经济分档：贵的技能更值钱（不再指向某个特定循环）
       /* L2′-②：`CONV_RATIO` ⇒ 第一改数换成**比率**（0~1 天然有界、任何规模都有梯度、不奖励刷次数）；
        * 第二改数（cost≥4 的"大件至少来一次"）**保持封顶** —— 它问的是"到没到过那一档"，本来就该是台阶。 */
-      const conv = (CONV_RATIO ? 0.08 * Math.min(1, gSpent / Math.max(1, gGain))
+      /* `CONV_OFFENSE` 把分子从"花掉的钱"收窄成"花在进攻卡上的钱"（默认关 ⇒ 逐位不变） */
+      const spentTerm = CONV_OFFENSE ? ((econ && econ.rec.offSpend) || 0) : gSpent;
+      const conv = (CONV_RATIO ? 0.08 * Math.min(1, spentTerm / Math.max(1, gGain))
                                : 0.08 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2))
                  + 0.08 * Math.min(1, (econ ? econ.rec.heavy4 : 0) / 1);
       /* 打断开环者：窄条件（真的有人开环）+ 可归因（是我打中的）⇒ 小额加分，两次封顶。 */
