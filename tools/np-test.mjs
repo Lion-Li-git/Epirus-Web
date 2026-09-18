@@ -3622,8 +3622,9 @@ t('D90 清场计数奖励：口径必须与门禁同源（收缩分界 + 归因�
    * 演化没有理由去长"真的能打死人"（新规则下打 1 点就赢）。这条门钉住口径与接线。 */
   const ev = readFileSync('js/train/evo.js', 'utf8');
   ok(ev.indexOf('function countClears(events, seat)') >= 0, '必须有 countClears');
-  ok(ev.indexOf('if (e.source == null) shrink = true;') >= 0,
-    '分界必须是"收缩的伤（source==null）" —— 与 `audit-lib` 场B 清场的口径同源');
+  ok(ev.indexOf("if (e.reason === '终局收缩') shrink = true;") >= 0,
+    '分界必须是**收缩自己的标记**（`reason === \'终局收缩\'`）—— 与 audit-lib 场B 清场同口径；'
+    + 'v1.5.113 之前两边都用 `source == null`，那会被地雷/天火的无来源伤害误触发（见 D98）');
   ok(ev.indexOf('lastBy[e.pid] === seat') >= 0,
     '必须**归因**（`death` 事件不带凶手 ⇒ 只能用"最后一次伤害来源"回溯；不归因等于奖励"别人清场"）');
   ok(ev.indexOf('const clearBonus = CLEAR_W * Math.min(1, clears / 1)') >= 0,
