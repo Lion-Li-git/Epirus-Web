@@ -37,6 +37,15 @@ const ARMS = [
    * 所以单独开一臂只抬**攒钱奖励上限** `STOCK_BONUS 0.05 → 0.15`，直接检验
    * "奖惩不对称才是环学不出来的阻力"这句话（不检验它就永远只是一条评论）。 */
   { key: 's', arm: 'v7l2s', tag: 'l2s', env: { EPIRUS_STOCK_BONUS: '0.15' }, note: '只抬攒钱奖励上限（治"攒不到就花光"那一侧）' },
+  /* 批次 2 的关键臂（`t`）：**arm A 的原配置**（deepSaver 真示范 0.5）+ 三个开关。
+   * 为什么必须带着教师跑：`v7l2c` vs `v7l2h` 实测出**无教师配置根本不产出囤积包**
+   * （对照自己就兑现 97~99%、余 ep 0.2~0.5，而门槛在 C=10 ⇒ 罚不到）⇒ seed 91 两臂长出**逐位相同**的冠军。
+   * 囤积是 `IMIT_TEACHER=pickDeepSaver` + `IMIT_OVERRIDE=0.5` 注入的（deepSaver = "86% ジ 攒钱"），
+   * 所以 L2′-① 的正确实验对象就是 arm A 那套配方。它的对照 = 已训好的 `v7ringA1-*`，不用重跑。 */
+  { key: 't', arm: 'v7l2a', tag: 'l2a',
+    env: { EPIRUS_HOARD_LEFTOVER: '1', EPIRUS_CONV_RATIO: '1', EPIRUS_HOARD_CAP_MULT: '4',
+      EPIRUS_IMIT_TEACHER: 'pickDeepSaver', EPIRUS_IMIT_OVERRIDE: '1', EPIRUS_IMIT_FRAC: '0.5' },
+    note: 'arm A 原配置（deepSaver 真示范）+ 三个开关 ⇒ 看能不能把兑现率 23% 治上去' },
   { key: 'b', arm: 'v7l2b', tag: 'l2b', env: { EPIRUS_STOCK_BONUS: '0.15', EPIRUS_HOARD_LEFTOVER: '1', EPIRUS_CONV_RATIO: '1', EPIRUS_HOARD_CAP_MULT: '4' }, note: '攒与花**同时**给斜率（两侧一起治）' },
 ];
 const want = (process.env.L2_ARMS || 'c,h,f').split(',').map(s => s.trim()).filter(Boolean);
