@@ -1462,9 +1462,13 @@ t('D59 阈值式座位惩罚必须真的在 fit 里（让演化"看得见"偏置
   ok(ev.indexOf('seatSpreadMirror') >= 0, '成员评分必须回报座位极差（供审计）');
   ok(ev.indexOf('seatWins: seatWins') >= 0, 'mirrorHealth 必须回报各座胜场');
   /* 行为断言：mirrorHealth（5 席同策略）必须给出座位分布；线上包（已知均衡）极差应 <40pt。
-   * v1.5.104：样本 20 → **60 局**。原因（METHODOLOGY §31/§35 的第三次现身）：20 局里常常只有
-   * ~10 个分胜负局，**极差本身就是个小样本统计量**（换包后新包在 n=20 读到 40pt、n≥50 读到 27.8pt，
-   * 一次抽样就能跨过判据）⇒ 判据要用**够用的样本**，而不是放宽阈值。 */
+   * v1.5.104：样本 20 → 60 局（METHODOLOGY §31/§35 的第三次现身）。
+   * v1.5.115（第十二轮复核 §31 的第四次现身）：60 局仍不够 —— v1.5.114 换包后本门被新包打到 **43pt 红**，
+   * 但同一份包的极差随样本量单调收敛：n=20→57.1 · 60→43.2 · 80→39.0 · 120→37.0 · 160→34.1
+   * · 240→27.7 · 320→27.0 · 400→26.6pt ⇒ 真值约 27pt，43pt 是抽样噪声。
+   * 按 §31「判据要用够用的样本，而不是放宽阈值」⇒ n 提到 **400**（实测 3.5 秒，相对全套件可忽略），
+   * **阈值 40pt 一字不放宽**；分胜负守卫同比抬到 ≥120（不可判时必须红）。 */
+  const SEAT_N = 400;
   let live = null;
   try {
     const src2 = readFileSync('js/bundled-champion-3p.js', 'utf8');
@@ -1474,9 +1478,9 @@ t('D59 阈值式座位惩罚必须真的在 fit 里（让演化"看得见"偏置
   if (!live) {
     console.log('  （跳过座位分布统计：线上包此刻不可读，多半是训练中）');
   } else {
-    const mh = T.mirrorHealth(live, 60, 5, 'multi');
+    const mh = T.mirrorHealth(live, SEAT_N, 5, 'multi');
     ok(Array.isArray(mh.seatWins) && mh.seatWins.length === 5, 'mirrorHealth 必须回报 5 个座位的胜场');
-    ok(mh.seatDecisive >= 20, '必须有足够多分出胜负的局（实测 ' + mh.seatDecisive + '/60；<20 时极差不可判）');
+    ok(mh.seatDecisive >= 120, '必须有足够多分出胜负的局（实测 ' + mh.seatDecisive + '/' + SEAT_N + '；<120 时极差不可判）');
     ok(mh.seatSpread != null && mh.seatSpread < 40,
       '线上包（已知均衡）的 5 席极差必须 <40pt（实测 ' + (mh.seatSpread == null ? '?' : mh.seatSpread.toFixed(0)) + 'pt，分布 ' + mh.seatWins.join('/') + '）');
   }
