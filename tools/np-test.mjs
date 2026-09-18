@@ -3675,6 +3675,28 @@ t('D92 R56 同层内资源型先结算（用户裁定：过载炮的清除须含
     'spec 必须留下能反证的顺序用例（旧顺序读到目标 ep=3）');
 });
 
+t('D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必须一致）', function () {
+  /* 用户报的 UI bug：用天火时会弹目标选择 —— 根因是**卡面声明成 `target: 'enemy'`**
+   * （UI 与 AI 都从声明推导），而引擎也只在选中的那一个目标上引爆。
+   * 权威口径：README「你贴出的符咒引爆」·`RULES-2P:240`「**每个目标**每枚符咒受 1 火伤害」·
+   * `RULES-NP:322` 列它进「仅空指」。 */
+  const ru = readFileSync('js/core/rules.js', 'utf8');
+  ok(ru.indexOf("mk(SK.FIRESTORM, '天火', CAT.SPECIAL, 2, 3, 'self',") >= 0,
+    '天火的卡面必须声明为**无目标**（`self`）—— UI 与 AI 都从这一处推导');
+  ok(ru.indexOf("mk(SK.FIRESTORM, '天火', CAT.SPECIAL, 2, 3, 'enemy',") < 0,
+    '旧的 `enemy` 声明**不得**回来 —— 那正是"用天火要选目标"的来源');
+  const rs = readFileSync('js/core/resolve.js', 'utf8');
+  ok(rs.indexOf('for (let v = 0; v < playerCount(state); v++)') >= 0 &&
+     rs.indexOf('const pg = guardOf(state, v);') >= 0,
+    '引擎必须**全场遍历**且**原型制御按每个受害者各自判定**（不许再只打 `state.p[t]`）');
+  ok(rs.indexOf("rawDamage(state, v, 1, '天火', 'firestorm', { type: R.DMG.FIRE });") >= 0,
+    '天火伤害必须是**无目标伤害**（不传 `source`）—— 用户裁定：天火无目标 ⇒ 不参与大雷连带传导');
+  ok(rs.indexOf("{ type: R.DMG.FIRE, source: i }") < 0, '天火不许带 `source`（v1.5.107 首版加过、被用户纠正）');
+  ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R57') >= 0, 'RULES-2P 必须记下 R57');
+  ok(readFileSync('tests/spec.js', 'utf8').indexOf('天火：**不需要目标**') >= 0,
+    'spec 必须留下能反证的用例（旧实现只会打中选中的那一个）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

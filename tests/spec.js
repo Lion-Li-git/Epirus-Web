@@ -311,6 +311,25 @@
     eq(st.p[0].ep, 0);
   });
 
+  t('R37 天火：**不需要目标**，引爆全场自己贴的符咒（每个目标各受其枚数伤害）', function () {
+    /* 用户报的 UI bug 的根因（v1.5.107）：卡面错声明成 `target:'enemy'` ⇒ UI 弹目标选择、AI 按对手造候选，
+     * 而引擎也只在 `you = state.p[t]` 上引爆。权威口径：README「你贴出的符咒引爆」·
+     * `RULES-2P:240`「**每个目标**每枚符咒受 1 火伤害」· `RULES-NP:322` 列为「仅空指」。
+     * 本用例**能反证**：旧实现只会打中"选中的那一个" ⇒ 两个受害者里必有一个满血。 */
+    const st = S.createState('multi', { next: function () { return 0.9; } }, 3);
+    st.p[1].stickers = [{ owner: 0, age: 0 }];              // 0 号贴的 1 枚
+    st.p[2].stickers = [{ owner: 0, age: 1 }, { owner: 2, age: 0 }];   // 1 枚是我的 + 1 枚不是我的
+    st.p[0].ep = 2;
+    X.startTurn(st);
+    S.attemptAction(st, 0, R.SK.FIRESTORM);
+    S.attemptAction(st, 1, R.SK.JI);
+    S.attemptAction(st, 2, R.SK.JI);
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[1].hp, 2, '受害者 1：我贴的 1 枚 ⇒ 1 点火伤');
+    eq(st.p[2].hp, 2, '受害者 2：我贴的 1 枚 ⇒ 1 点火伤（**别人贴的那枚不算**）');
+    eq(R.byKey[R.SK.FIRESTORM].target, 'self', '卡面声明必须是"不需要目标"⇒ UI 不再弹目标选择');
+  });
+
   t('结算顺序裁定（v1.5.106 用户裁定）：同层内**资源型先结算** ⇒ 过载炮第 3 发吃到目标本回合刚生的ジ', function () {
     /* 复核 §10-4 实测：同层原先按座位轮换 ⇒ 炮手 0 号先手只吃到 6、炮手 3 号后手 9 ジ全没 ⇒
      * **同一发炮差 3 ジ，纯粹由座位决定**。用户裁定：资源型（ENERGY 类 = ジ/蓄能/聚能环）先结算。

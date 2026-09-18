@@ -926,14 +926,32 @@
           break;
         }
         case SK.FIRESTORM: {
-          const pg = guardOf(state, t);
-          const protoBlock = pg && pg.kind === 'proto'; // 只有原型制御可挡 R36
+          /* v1.5.107（**用户报的 UI bug 的真正根因**）：天火**不需要选目标** ——
+           * README「使三回合内你贴出的符咒引爆，每个符咒造成 1 点火焰伤害」；
+           * `RULES-2P.md:240`「引爆你贴出且停留≤3 个你的回合的**所有**符咒：**每个目标**每枚符咒受 1 火伤害」；
+           * `RULES-NP.md:322` 把天火列进「**仅空指**（效果本身都是状态附加）」。
+           * 原实现只打 `you = state.p[t]`（**那一个选中的目标**），而卡面又声明 `target: 'enemy'`
+           * ⇒ UI 会弹目标选择、AI 会对每个对手各造一个候选 ⇒ 三处同错。
+           * 改法：**全场遍历**，对每个存活角色身上 `owner === i && age <= 3` 的符咒各造成 1 火伤；
+           * **原型制御按每个受害者各自判定**（R36：只有原型制御挡天火）；符咒引爆后仍存在（不删）。
+           * ⚠️ **不要**给它加 `source`（v1.5.107 首版我加过，被用户当场纠正）：天火是**无目标**技能 ⇒
+           * 它的引爆伤害是**无目标伤害**，**不参与大雷连带传导**（连带判定的输入是"这回合对 T 产生了交互的人"，
+           * 见本文件 :748-773 的 N6/N22）。`source:null` 是**规则语义**，不是遗漏。
+           * （副作用记录在案：`source==null` 同时是"终局收缩"的哨兵口径 —— 那是 `tools/audit-lib.mjs`
+           * 的量具问题，**要在量具侧收紧**，不许反过来改规则。） */
           let n = 0;
-          for (const st of you.stickers.slice()) {
-            if (st.owner === i && st.age <= 3) {
-              n++;
-              if (!protoBlock) rawDamage(state, t, 1, '天火', 'firestorm', { type: R.DMG.FIRE });   // R45：铁索共享火焰（文档口径）
-              else ev(state, { type: 'blocked', to: t, by: '原型制御', amt: 1, via: 'firestorm' });
+          for (let v = 0; v < playerCount(state); v++) {
+            if (v === i) continue;
+            const holder = state.p[v];
+            if (!holder || holder.hp <= 0) continue;
+            const pg = guardOf(state, v);
+            const protoBlock = pg && pg.kind === 'proto';
+            for (const st of holder.stickers.slice()) {
+              if (st.owner === i && st.age <= 3) {
+                n++;
+                if (!protoBlock) rawDamage(state, v, 1, '天火', 'firestorm', { type: R.DMG.FIRE });   // R45：铁索共享火焰（文档口径）
+                else ev(state, { type: 'blocked', to: v, by: '原型制御', amt: 1, via: 'firestorm' });
+              }
             }
           }
           ev(state, { type: 'firestorm', pid: i, n });
