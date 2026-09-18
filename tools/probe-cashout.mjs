@@ -50,9 +50,12 @@ function resumeN(state, choosers, skipStart, trace) {
       S.attemptAction(state, pid, picks[pid].key, { bead: picks[pid].bead || beadOf(state.p[pid]), target: picks[pid].target, target2: picks[pid].target2 });
     }
     X.resolveActions(state); X.endTurn(state);
-    if (trace && trace.length < 80) {
-      const d = state.events.filter(e => e.type === 'damage' && e.source === 0).length;
-      trace.push({ round: state.round, ep: state.p[0].ep, hp: state.p[0].hp, act: picks[0] ? picks[0].key : '-', dmg: d });
+    if (trace) {   // 峰值 ep 必须**逐回合**取：trace 会被截断，只在前 200 条里取峰就会把"攥到 40"读成"只有 12"
+      const e2 = state.p[0].ep; if (e2 > (trace.peak || 0)) trace.peak = e2;
+      if (trace.length < 200) {
+        const d = state.events.filter(e => e.type === 'damage' && e.source === 0).length;
+        trace.push({ round: state.round, ep: e2, hp: state.p[0].hp, act: picks[0] ? picks[0].key : '-', dmg: d });
+      }
     }
     if (++guard > 5000) throw new Error('resume guard');
   }
@@ -128,23 +131,27 @@ for (const mode of ['multi', 'long']) {
   console.log(`\n=== arm A [${mode}] “卡在无限攒钱区”的快照 ${snaps.length} 个 · 来自 ${snaps.games} 局 · 均 round ${mm(snaps.map(s => s.round)).toFixed(1)} 均 hp ${mm(snaps.map(s => s.hp)).toFixed(1)} 均 ep ${mm(snaps.map(s => s.ep)).toFixed(1)} ===`);
   if (!snaps.length) { console.log('  无快照'); continue; }
   const res = ARMS.map(() => []), wins = ARMS.map(() => 0), eps = ARMS.map(() => []), dmg = ARMS.map(() => 0);
+  const pk = ARMS.map(() => []); const pk0 = [];
   let w0 = 0, n0 = 0, ep0 = [], dmg0 = 0;
   snaps.forEach(s => {
     for (let k = 0; k < K; k++) {
       const seed = 9000 + k * 7919;
       const tr0 = []; const a = rollout(ARM, s, null, seed, tr0);
-      w0 += a.won ? 1 : 0; n0++; ep0.push(a.ep); dmg0 += tr0.length ? tr0[tr0.length - 1].dmg : 0;
+      w0 += a.won ? 1 : 0; n0++; ep0.push(a.ep); dmg0 += tr0.length ? tr0[tr0.length - 1].dmg : 0; pk0.push(tr0.peak || a.ep);
+      void 0;
       for (let ai = 0; ai < ARMS.length; ai++) {
         const tr = []; const b = rollout(ARM, s, ARMS[ai][1], seed, tr);
         res[ai].push({ g: s.game, d: (b.won ? 1 : 0) - (a.won ? 1 : 0) });
         wins[ai] += b.won ? 1 : 0; eps[ai].push(b.ep); dmg[ai] += tr.length ? tr[tr.length - 1].dmg : 0;
+        pk[ai].push(tr.peak || b.ep);
       }
     }
   });
-  console.log(`  对照（继续攒）：胜率 ${(100 * w0 / n0).toFixed(1)}% · 累计出手伤害 ${dmg0 / n0} · 终局余 ep ${mm(ep0).toFixed(1)}`);
+
+  console.log(`  对照（继续攒）：胜率 ${(100 * w0 / n0).toFixed(1)}% · 累计出手 ${(dmg0 / n0).toFixed(1)} · **局内峰 ep ${mm(pk0).toFixed(1)}** · 终局余 ep ${mm(ep0).toFixed(1)}`);
   for (let ai = 0; ai < ARMS.length; ai++) {
     const m = 100 * mm(res[ai].map(p => p.d)); const [lo, hi] = clusterCI(res[ai]);
-    console.log(`    ${ARMS[ai][0].padEnd(10)} 胜率 ${(100 * wins[ai] / res[ai].length).toFixed(1)}%  Δ胜 = ${m >= 0 ? '+' : ''}${m.toFixed(1)}pt  95%CI[${lo.toFixed(1)}, ${hi.toFixed(1)}]（局数 ${new Set(res[ai].map(p => p.g)).size}·n=${res[ai].length}）· 累计出手 ${(dmg[ai] / res[ai].length).toFixed(1)} · 余ep ${(mm(eps[ai])).toFixed(1)}`);
+    console.log(`    ${ARMS[ai][0].padEnd(10)} 胜率 ${(100 * wins[ai] / res[ai].length).toFixed(1)}%  Δ胜 = ${m >= 0 ? '+' : ''}${m.toFixed(1)}pt  95%CI[${lo.toFixed(1)}, ${hi.toFixed(1)}]（局数 ${new Set(res[ai].map(p => p.g)).size}·n=${res[ai].length}）· 累计出手 ${(dmg[ai] / res[ai].length).toFixed(1)} · **局内峰 ep ${mm(pk[ai]).toFixed(1)}** · 余ep ${(mm(eps[ai])).toFixed(1)}`);
   }
 }
 console.log('\n=== 追踪：arm A 在"卡在攒钱区"的快照上，兑现 3 手 vs 继续攒 ===');

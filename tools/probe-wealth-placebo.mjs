@@ -49,7 +49,10 @@ function resumeN(state, choosers, skipStart, trace) {
       S.attemptAction(state, pid, picks[pid].key, { bead: picks[pid].bead || beadOf(state.p[pid]), target: picks[pid].target, target2: picks[pid].target2 });
     }
     X.resolveActions(state); X.endTurn(state);
-    if (trace && trace.length < 200) trace.push({ round: state.round, ep: state.p[0].ep, hp: state.p[0].hp, act: picks[0] ? picks[0].key : '-', dmg: state.events.filter(e => e.type === 'damage' && e.source === 0).length });
+    if (trace) {   // 峰值 ep 逐回合取：trace 会截断，只在前 200 条里取峰会把"攥到 40"读成"只有 12"
+      const e2 = state.p[0].ep; if (e2 > (trace.peak || 0)) trace.peak = e2;
+      if (trace.length < 200) trace.push({ round: state.round, ep: e2, hp: state.p[0].hp, act: picks[0] ? picks[0].key : '-', dmg: state.events.filter(e => e.type === 'damage' && e.source === 0).length });
+    }
     if (++guard > 5000) throw new Error('guard');
   }
   return state.winner;
@@ -110,24 +113,26 @@ for (const mode of ['multi', 'long']) {
   console.log(`\n=== arm A [${mode}] 快照 ${snaps.length} 个 · 来自 ${snaps.games} 局 · 均 round ${mm(snaps.map(s => s.round)).toFixed(1)} 均 hp ${mm(snaps.map(s => s.hp)).toFixed(1)} 均 ep ${mm(snaps.map(s => s.ep)).toFixed(1)} ===`);
   if (!snaps.length) continue;
   const res = ARMS.map(() => []), wins = ARMS.map(() => 0), eps = ARMS.map(() => []), out = ARMS.map(() => 0);
+  const pk = ARMS.map(() => []); const pk0 = [];
   let w0 = 0, n0 = 0, e0 = [], o0 = 0;
   snaps.forEach(s => {
     for (let k = 0; k < K; k++) {
       const seed = 9000 + k * 7919; const tr0 = [];
       const a = rollout(ARM, s, null, seed, tr0);
-      w0 += a.won ? 1 : 0; n0++; e0.push(a.ep); o0 += tr0.length ? tr0[tr0.length - 1].dmg : 0;
+      w0 += a.won ? 1 : 0; n0++; e0.push(a.ep); o0 += tr0.length ? tr0[tr0.length - 1].dmg : 0; pk0.push(tr0.peak || a.ep);
       for (let ai = 0; ai < ARMS.length; ai++) {
         const f = Object.assign({}, ARMS[ai][1]);
         const tr = []; const b = rollout(ARM, s, f.extra != null ? Object.assign({ grant: f.extra }, f) : f, seed, tr);
         res[ai].push({ g: s.game, d: (b.won ? 1 : 0) - (a.won ? 1 : 0) });
         wins[ai] += b.won ? 1 : 0; eps[ai].push(b.ep); out[ai] += tr.length ? tr[tr.length - 1].dmg : 0;
+        pk[ai].push(tr.peak || b.ep);
       }
     }
   });
-  console.log(`  对照：胜率 ${(100 * w0 / n0).toFixed(1)}% · 终局余 ep ${mm(e0).toFixed(1)} · 累计出手 ${(o0 / n0).toFixed(1)}`);
+  console.log(`  对照：胜率 ${(100 * w0 / n0).toFixed(1)}% · **局内峰 ep ${mm(pk0).toFixed(1)}** · 终局余 ep ${mm(e0).toFixed(1)} · 累计出手 ${(o0 / n0).toFixed(1)}`);
   for (let ai = 0; ai < ARMS.length; ai++) {
     const m = 100 * mm(res[ai].map(p => p.d)); const [lo, hi] = clusterCI(res[ai]);
-    console.log(`    ${ARMS[ai][0].padEnd(11)} 胜率 ${(100 * wins[ai] / res[ai].length).toFixed(1)}%  Δ胜=${m >= 0 ? '+' : ''}${m.toFixed(1)}pt  95%CI[${lo.toFixed(1)}, ${hi.toFixed(1)}]（${new Set(res[ai].map(p => p.g)).size} 局·n=${res[ai].length}）· 余ep ${mm(eps[ai]).toFixed(1)} · 累计出手 ${(out[ai] / res[ai].length).toFixed(1)}`);
+    console.log(`    ${ARMS[ai][0].padEnd(11)} 胜率 ${(100 * wins[ai] / res[ai].length).toFixed(1)}%  Δ胜=${m >= 0 ? '+' : ''}${m.toFixed(1)}pt  95%CI[${lo.toFixed(1)}, ${hi.toFixed(1)}]（${new Set(res[ai].map(p => p.g)).size} 局·n=${res[ai].length}）· **峰ep ${mm(pk[ai]).toFixed(1)}** · 余ep ${mm(eps[ai]).toFixed(1)} · 累计出手 ${(out[ai] / res[ai].length).toFixed(1)}`);
   }
 }
 console.log('\n=== 追踪：加钱+18 vs 环×8（同一快照、同一 seed）===');
