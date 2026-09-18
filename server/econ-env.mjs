@@ -25,11 +25,15 @@
 /* 本组覆盖涉及的全部 env 名。旧名 `EPIRUS_ECO_DIVW`（历史臂的启动命令用它）与新名
  * `EPIRUS_DIV_W` 并存：两个都设时**新名优先**（新名是文档口径，旧名只为让老命令仍可复现）。 */
 export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO_DIVW',
-  'EPIRUS_DIV_W', 'EPIRUS_DIV_K', 'EPIRUS_DIV_ROLEW', 'EPIRUS_DIV_CATW', 'EPIRUS_DIV_FORCE_GENS', 'EPIRUS_WALL_FILTER', 'EPIRUS_WALL_GAMES'];
+  'EPIRUS_DIV_W', 'EPIRUS_DIV_K', 'EPIRUS_DIV_ROLEW', 'EPIRUS_DIV_CATW', 'EPIRUS_DIV_FORCE_GENS', 'EPIRUS_WALL_FILTER', 'EPIRUS_WALL_GAMES',
+  /* v1.5.116（第十二轮复核 L2′）：经济 shaping 去阶梯化的三个开关。同样必须走这条单一来源 ——
+   * 否则又会落到"服务进程自己那份模块上、16 个 worker 仍是代码默认值"那个事故形状（附录 D 臂 K 的 A/A）。 */
+  'EPIRUS_HOARD_LEFTOVER', 'EPIRUS_CONV_RATIO', 'EPIRUS_HOARD_CAP_MULT'];
 
 /* 与 `js/train/evo.js` 的 `setEconomyReward(o)` / `economyReward()` 字段名对齐
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
-export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames'];
+export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
+  'hoardOnLeftover', 'convRatio', 'hoardCapMult'];
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -53,7 +57,18 @@ export function readEconEnv(env) {
     /* 破墙过滤只在**显式 ='1'** 时打开（与改动前 train-server 的判定逐字一致：
      * '0' / 'true' / 空串都不是"开" ⇒ 不与历史臂的语义漂移）。 */
     wallFilter: e.EPIRUS_WALL_FILTER === '1' ? true : null,
-    wallGames: nv(e.EPIRUS_WALL_GAMES)
+    wallGames: nv(e.EPIRUS_WALL_GAMES),
+    /* ===== v1.5.116（第十二轮复核 L2′）：三个"把阶梯换成斜率"的开关，**默认全关 ⇒ 出厂行为一字不变** =====
+     * `HOARD_LEFTOVER`：囤积惩罚的自变量从 `maxEp`（本局最高 ep）换成**终局余款**。
+     *   病：`evo.js:986` 取的是 `econ.rec.maxEp` ⇒ "攒到 40 花光赢下来"和"攥着 40 点被打死"**拿同一个罚分**。
+     *   实测（multi·24 快照/12 局·n=144）：对照峰 ep 39.9（胜 8.3%）与环×8 峰 ep 21.3（胜 27.1%）
+     *   都过 `2C=20` 的夹住点 ⇒ **两项同为 −0.070**，这一项既分不开好坏也谈不上方向。
+     * `CONV_RATIO`：`conv` 从"2 次大件封顶"改成比率 `已花 ep / 已获得 ep`（天然 0~1、任何规模都有梯度、
+     *   且不奖励"刷次数"）。实测各臂"累计出手"从 1.2 到 5.5 横跨 4 倍，**奖励只体现在前 2 次**。
+     * `HOARD_CAP_MULT`：饱和点 `C×mult`（默认 2 ⇒ 与现状逐位相同；臂上试 4 让 40~100 区间重新有斜率）。 */
+    hoardOnLeftover: e.EPIRUS_HOARD_LEFTOVER === '1' ? true : null,
+    convRatio: e.EPIRUS_CONV_RATIO === '1' ? true : null,
+    hoardCapMult: nv(e.EPIRUS_HOARD_CAP_MULT)
   };
 }
 

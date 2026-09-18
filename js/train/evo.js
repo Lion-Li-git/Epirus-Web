@@ -673,7 +673,16 @@
 
   const DIV_BETA = 0.60;   // 技能覆盖熵权重
   const STOCK_BONUS = 0.05;  // 攒钱奖励上限（到 target 点满额）
-  const HOARD_PEN = 0.12;    // 囤积惩罚上限（到 2×cap 满额）
+  const HOARD_PEN = 0.12;    // 囤积惩罚上限（到 cap×HOARD_CAP_MULT 满额）
+  /* ===== v1.5.116（第十二轮复核 L2′）：把经济 shaping 的"阶梯"换回"斜率"，**默认全关 ⇒ 出厂行为一字不变** =====
+   * 复核实测（docs/OPTIMIZATION-ep-cliff.md §3/§5）：
+   *   · 惩罚挂在 `maxEp` ⇒ 对照（峰 ep 39.9·胜 8.3%）与环×8（峰 21.3·胜 27.1%）**同为 −0.070**，分不开好坏；
+   *   · 2C 处 `min(1,·)` 夹住 ⇒ 环线的目标区间（ep 20~100）**整个在夹住之后**，攒 43 与攒 99 同一个分；
+   *   · `conv` 只数到 2 次 cost≥2 ⇒ 实测各臂"累计出手"1.2 → 5.5 横跨 4 倍，奖励只体现在前 2 次。
+   * 修法不是把权重调大（用户"奖惩不用给太多"的裁定继续成立），而是**换成不会被夹住的分母**。 */
+  let HOARD_LEFTOVER = false;   // true ⇒ 惩罚自变量 maxEp → **终局余款**（攒钱奖励那一段不动）
+  let CONV_RATIO = false;       // true ⇒ conv 第一改数从"次数/2 封顶" → **已花 ep / 已获得 ep**
+  let HOARD_CAP_MULT = 2;       // 饱和点 = C×mult；默认 2 ⇒ 与现状逐位相同
 
   /* ===== 经济 shaping 的门槛：按 (人数, 模式) 定（v1.5.6，用户裁定）=====
    * 用户回忆的"ep 奖励/惩罚"就是这个 stock 项；此前门槛**写死 4/10**、与人数和模式无关，于是
@@ -737,13 +746,21 @@ let WALL_FILTER_ON = false;
 let WALL_GAMES = 3;
   /* 单局"攒钱/囤积"分：0→T 线性升到满额 ⇒ T..C 不奖不罚 ⇒ 超过 C 按超出比例罚（2C 满额）。
    * 提成纯函数是为了能**直接单测门槛语义**（np-test D15），不必靠跑一遍训练去看数字。 */
-  function economyStock(mEp, n, mode) {
+  function economyStock(mEp, n, mode, leftEp) {
     const d = economyTargets(n, mode);
     const T = Math.max(1, ECO_T != null ? ECO_T : d.target);
     const C = Math.max(T, ECO_C != null ? ECO_C : d.cap);
+    const M = Math.max(1, HOARD_CAP_MULT);
+    /* L2′-①：把**罚分**的自变量从"本局最高"换成"终局余款" ⇒ "攒到 40 花光赢下来"不再和
+     * "攥着 40 点被打死"同分。**奖励那一支不动**（`maxEp` 问的是"能不能跨过 T 这个门槛"，与余款无关；
+     * 若让它也跟着余款走，就变成"结束时留点钱有奖"，那是反向激励）。 */
+    if (HOARD_LEFTOVER && leftEp != null) {
+      const bonus = mEp <= T ? STOCK_BONUS * (mEp / T) : STOCK_BONUS;
+      return bonus - HOARD_PEN * Math.min(1, Math.max(0, leftEp - C) / (C * (M - 1)));
+    }
     if (mEp <= T) return STOCK_BONUS * (mEp / T);
     if (mEp <= C) return STOCK_BONUS;
-    return STOCK_BONUS - HOARD_PEN * Math.min(1, (mEp - C) / C);
+    return STOCK_BONUS - HOARD_PEN * Math.min(1, (mEp - C) / (C * (M - 1)));   // M=2 ⇒ 与旧式逐位相同
   }
   /* 技能覆盖熵奖励（v1.5.6：**用户要求恢复**；Q3 曾把它移出目标函数）。
    * Q3 的理由仍成立（熵与"见过那个状态"是两回事、光加熵会推向乱打），所以权重**给得很小**（DIV_W），
@@ -761,6 +778,10 @@ let WALL_GAMES = 3;
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
     if (o.wallFilter != null) WALL_FILTER_ON = !!o.wallFilter;
     if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));   // v1.5.86：熵项固定分母（见 DIV_K）
+    /* v1.5.116 L2′ 三个开关（键名与 server/econ-env.mjs 的 ECON_REWARD_KEYS 逐字对齐 ⇒ D77 盯得住） */
+    if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover;
+    if (o.convRatio != null) CONV_RATIO = !!o.convRatio;
+    if (o.hoardCapMult != null) { const m = Number(o.hoardCapMult); if (isFinite(m) && m >= 1) HOARD_CAP_MULT = m; }
     if (o.reset) { ECO_T = null; ECO_C = null; }
     return economyReward();
   }
@@ -768,6 +789,7 @@ let WALL_GAMES = 3;
     return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divCatW: DIV_ROLE_W, K_role: K_ROLE,
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
+      hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, hoardCapMult: HOARD_CAP_MULT,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
 
@@ -894,6 +916,7 @@ let WALL_GAMES = 3;
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
     let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
+    let leftEpSum = 0, spentEpSum = 0, gainEpSum = 0;   // v1.5.116 L2′：余款/已花/已获得（每局）
     let imitSum = 0, imitGames = 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
      * 此前它是每局随机抽的噪声（30% 的局抽 h∈1..4）：个体不携带它 ⇒ 选择压力
@@ -984,13 +1007,28 @@ let WALL_GAMES = 3;
       const imit = (imitB > 0 && agg._mt) ? (agg._mm || 0) / agg._mt : 0;
       if (imitB > 0) { imitSum += imit; imitGames++; }
       const mEp = econ ? econ.rec.maxEp : 0;
-      const stock = economyStock(mEp, n, TRAIN_MODE);   // 门槛按 (人数, 模式)：3 人→3/10、5 人 5 血→5/20
+      /* ===== v1.5.116（L2′）：本局这一席的 ep 账本恒等式：已获得 = 已花 + 被抢 + 终局余款 =====
+       * 用恒等式而不是新加事件类型：`computeCost` 的扣费本来就**不发事件**（state.js:180 只有掉血/掉珠发），
+       * 所以"已花"只能这么回收；三条都在同一份 events + 终局 p.ep 里，不引入第二口径。 */
+      let gGain = 0, gLost = 0;
+      for (let ei = 0; ei < r.state.events.length; ei++) {
+        const e = r.state.events[ei];
+        if (e.type !== 'ep' || e.pid !== seat) continue;
+        if (e.delta > 0) gGain += e.delta; else gLost += -e.delta;
+      }
+      const gLeft = r.state && r.state.p && r.state.p[seat] ? (r.state.p[seat].ep || 0) : 0;
+      const gSpent = Math.max(0, gGain - gLost - gLeft);
+      leftEpSum += gLeft; spentEpSum += gSpent; gainEpSum += gGain;
+      const stock = economyStock(mEp, n, TRAIN_MODE, gLeft);   // 门槛按 (人数, 模式)：3 人→3/10、5 人 5 血→5/20
       stockSum += stock;
       deepSum += econ ? econ.rec.heavy4 : 0;
 
       // 花得出：把攒的 ep 换成贵技能（2 次封顶）——只有 save 没有 conv 就是 farmer，故两项并重
       // 经济分档：贵的技能更值钱（不再指向某个特定循环）
-      const conv = 0.08 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2)
+      /* L2′-②：`CONV_RATIO` ⇒ 第一改数换成**比率**（0~1 天然有界、任何规模都有梯度、不奖励刷次数）；
+       * 第二改数（cost≥4 的"大件至少来一次"）**保持封顶** —— 它问的是"到没到过那一档"，本来就该是台阶。 */
+      const conv = (CONV_RATIO ? 0.08 * Math.min(1, gSpent / Math.max(1, gGain))
+                               : 0.08 * Math.min(1, (econ ? econ.rec.heavy : 0) / 2))
                  + 0.08 * Math.min(1, (econ ? econ.rec.heavy4 : 0) / 1);
       /* 打断开环者：窄条件（真的有人开环）+ 可归因（是我打中的）⇒ 小额加分，两次封顶。 */
       const ringBonus = ringWeightAt(gen) * Math.min(1, ringBreaks / 2);
@@ -1026,10 +1064,8 @@ let WALL_GAMES = 3;
         if (econ) { maxEpSum += econ.rec.maxEp; heavySum += econ.rec.heavy; holdSum += econ.rec.hold; econGames++; }
         // 经济引擎质量：本局获得的 ep 总量。聚能环第 3 次起每回合 +3（ジ 只 +1），
         // 直接在这个量上体现 → 不用为“环”单独写奖励，避免又指向特定循环。
-        for (let ei = 0; ei < r.state.events.length; ei++) {
-          const e = r.state.events[ei];
-          if (e.type === 'ep' && e.pid === seat && e.delta > 0) epGain += e.delta;
-        }
+        // v1.5.116（L2′）：同一件事在上面已经随 `gGain` 扫过一遍 ⇒ 这里只做累计，不再重扫 events。
+        epGain += gGain;
         if (rank === 1) first++;
         else if (rank === 2) second++;
         dealt += r.dmg[seat];
@@ -1182,6 +1218,8 @@ let WALL_GAMES = 3;
       avgDealt: played ? dealt / played : 0,
       avgRounds: played ? rounds / played : 0,
       avgMaxEp: econGames ? maxEpSum / econGames : 0,
+      avgLeftEp: econGames ? leftEpSum / econGames : 0, avgSpentEp: econGames ? spentEpSum / econGames : 0,
+      avgGainEp: econGames ? gainEpSum / econGames : 0,
       avgHeavy: econGames ? heavySum / econGames : 0,
       avgHold: econGames ? holdSum / econGames : 0,
       avgDeep: econGames ? deepSum / econGames : 0,
