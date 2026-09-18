@@ -6,7 +6,7 @@
  *   正向 = 被测占 1 席打 4 席线上包；反向 = 被测占 4 席打 1 席线上包。两向不对称就要单独报出来。
  * 用法：node tools/head2head.mjs [GAMES=80] [包...]（默认线上包 + 今夜各臂一个 seed）
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import vm from 'node:vm';
 const REPO = process.env.EPIRUS_REPO || './';
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map };
@@ -19,8 +19,11 @@ const S = sb.window.EpirusState, Play = sb.window.EpirusPlay, T = sb.window.Epir
   P = sb.window.EpirusPolicy, R = sb.window.EpirusRules;
 const argv = process.argv.slice(2);
 const N = Number(argv[0] && /^\d+$/.test(argv[0]) ? argv.shift() : 80);
-const FILES = argv.length ? argv : ['js/bundled-champion-3p.js', 'docs/artifacts/v7l2f-81.bak',
-  'docs/artifacts/v7l2h-93.bak', 'docs/artifacts/v7l2c-93.bak', 'docs/artifacts/v7ringA1-82.bak'];
+/* 默认扫**全部**今夜产物 + 昨夜两臂 + 上一版线上包的旧产物 ⇒ 头对头是判据第一条，
+ * 就不该逼人手工点名文件（漏一个 seed 就又是一次"样本里少一格"）。 */
+const ART = 'docs/artifacts';
+const auto = readdirSync(ART).filter(f => /^(v7l2[a-z]?|v7ring[AB]1|v7new5_005|v7seat24)-\d+\.bak$/.test(f)).sort().map(f => ART + '/' + f);
+const FILES = argv.length ? argv : auto;
 function mb(seed) { let a = seed >>> 0; return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let x = Math.imul(a ^ (a >>> 15), 1 | a); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
 function h32(n) { let x = (n + 0x9e3779b9) >>> 0; x = Math.imul(x ^ (x >>> 16), 0x85ebca6b) >>> 0; x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35) >>> 0; return (x ^ (x >>> 16)) >>> 0; }
 function load(f) {
