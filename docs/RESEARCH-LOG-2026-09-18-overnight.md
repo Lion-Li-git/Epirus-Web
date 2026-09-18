@@ -233,6 +233,22 @@
 ⇒ 顺带一条给用户的设计问题（不改规则也能问）：一个 82% 时间在摁防御的电脑对手，
   线下 4~7 人局里**根本没人想跟它玩** ⇒ "龟"即便赢指标也不该要。
 
+## 排程协议（**必读：违反会静默污染产物归属**）
+- ⛔ **同一时刻只允许一个 `ring2-run.mjs` 在跑**。它用**共享**的暂存文件
+  `docs/artifacts/.training-in-3p.js` / `.training-out-3p.js` 传起点与产物 ⇒
+  两个臂批并发 = A 臂的包可能被写进 B 臂的文件名里，而且**不会报错**（v1.5.55 的 prevSha 守卫只查连续同字节）。
+- 我已启动过一个"排程器" `tools/l2-schedule.mjs`（等 `l2-batch2.log` 里的 `BATCH2 COMPLETE` ⇒
+  自动跑批次 3 的 `o` 臂 + 评测矩阵 + 资源线矩阵，最后往 `l2-batch2.log` 追加 `NIGHT_DONE`）。
+  它的启动命令返回了 exit=1（`&`  detached 的包装层退出），**不确定那个 node 进程还活着**。
+- ⇒ 批次 2 结束后的正确做法：先 `test -f docs/artifacts/l2-schedule.log` 并看它有没有新行 ——
+  **有** ⇒ 排程器活着，就让它跑完，我等 `NIGHT_DONE`，**绝不再手动起臂**；
+  **没有** ⇒ 排程器已死，我自己按顺序起：
+  `L2_ARMS=o L2_SEEDS=81,82,91,92,93 node tools/l2-arms.mjs`
+  → `node tools/l2-eval.mjs 120`（三考卷 × 全产物，自带随机基线）
+  → `node tools/probe-leftover.mjs 60 js/bundled-champion-3p.js docs/artifacts/v7l2*.bak`。
+- 批次 3 的臂是 `v7l2o`（全开 + `EPIRUS_CONV_OFFENSE=1`，治龟壳）；它的判据三条一起看：
+  **targeter 场仍高于随机** · **A 卷回到 ≥44%** · **防御族出手占比回到 12~30% 带内（不许 ≥50%）**。
+
 ## DOING
 - **N3 三臂正在跑**（`tools/l2-arms.mjs`，后台，约 35~40 分钟）：
   `v7l2c` 对照（开关全关）→ `v7l2h`（只开 `EPIRUS_HOARD_LEFTOVER=1`）→ `v7l2f`（+`CONV_RATIO=1`+`HOARD_CAP_MULT=4`）。
