@@ -449,8 +449,16 @@ export function feasibilityOf(o) {
   if (isFinite(dens.jiShare)) dRec.jiShare = _n(dens.jiShare, 3);
   if (isFinite(dens.gained)) dRec.beadGained = _n(dens.gained, 0);
   if (isFinite(dens.spentRate)) dRec.beadSpentRate = _n(dens.spentRate, 3);
-  dRec.beadLoopClosed = (isFinite(dens.gained) && isFinite(dens.spentRate))
-    ? (Number(dens.gained) > 0 && Number(dens.spentRate) > 0) : null;
+  if (isFinite(dens.expiredPerGame)) dRec.beadExpiredPerGame = _n(dens.expiredPerGame, 2);
+  /* ===== v1.5.101（第十轮复核 §4-2）：**布尔判据会被"最小非零"刷分** =====
+   * 复核实测：候选② `v7wall1-93` 得珠 835 / **花掉 1**（花/得 **0.12%**）就点亮了"闭环 ✓"，
+   * 而它每局浪费 **20.9** 颗（≈在位包的 250 倍）⇒ 这是**第七轮 §11 陷阱的镜像**
+   * （当时是"干脆不用 ⇒ 浪费率 0% ⇒ 绿"，现在是"象征性花一颗 ⇒ 闭环 ⇒ 绿"）。
+   * ⇒ 改成**双条件**：① **花/得 ≥ 20%**（真的在用，不是象征性用一下）
+   *                ② **过期/局 ≤ 1**（不是靠"攒了全烂掉"换来的 ①）。
+   * ⚠️ 这条仍然**只记录不阻断**（`DENSITY_BLOCK`）：收紧后连在位包也不达标，翻闸会把所有候选挡死。 */
+  dRec.beadLoopClosed = (isFinite(dens.gained) && isFinite(dens.spentRate) && isFinite(dens.expiredPerGame))
+    ? (Number(dens.gained) > 0 && Number(dens.spentRate) >= 0.2 && Number(dens.expiredPerGame) <= 1) : null;
   dRec.blocking = DENSITY_BLOCK;
   /* ===== v1.5.94（第九轮复核 §5-1）：**退化包**必须挡下来 =====
    * 复核实测：`roleC2-31` / `ctrlE-31` 自对局**一次攻击都不出**（0.00 攻/回合、104 回合、0 胜、`G=1.00`），

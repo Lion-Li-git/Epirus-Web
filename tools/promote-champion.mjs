@@ -193,6 +193,7 @@ const dens = densityProfile(W, params, 'long', Number(process.env.EPIRUS_DENSITY
 const chgE = chargeProfile(W, params, 'long', Number(process.env.EPIRUS_CHARGE_GAMES || 40));
 const feas = feasibilityOf({ seat: ss, G: sp, wall: rw, aggr: agg,
   density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chgE.gained, spentRate: chgE.spentRate,
+    expiredPerGame: chgE.games ? chgE.expired / chgE.games : 0,
     zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
 console.log('   可行性（与训练落盘同源）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
   '（座位 ' + feas.seatSpread + 'pt/' + feas.seatVerdict + ' · G ' + feas.G + ' · 墙 ' + feas.wallDmg +
@@ -221,7 +222,9 @@ console.log('   技能广度 S（n=' + brd.N + ' 个非ジ出手 · ' + brd.game
   ' · G_eff=' + brd.G_eff.toFixed(2) + '（= 历史"有效技能数"，同值）' +
   ' · 覆盖 ' + brd.catsUsed + '/' + brd.K_cat + ' 类 · 最大单卡占比 ' + (100 * brd.maxCardShare).toFixed(1) + '%');
 console.log('     各类占比：' + Object.keys(brd.catShares).map(function (c) {
-  return c + ' ' + (100 * brd.catShares[c]).toFixed(1) + '%';
+  /* v1.5.101（第十轮复核 §4-3）：`energy` 这一档**必须标注含"攒了没花"** —— 否则 25.4% 会被读成
+   * "开始用能量类"，实际是"开始囤积"（候选② 就是这种：energy 25.4% 而 `ep≥3` 决策点 = 0）。 */
+  return (c === 'energy' ? 'energy(含空转/过期珠)' : c) + ' ' + (100 * brd.catShares[c]).toFixed(1) + '%';
 }).join(' · ') + '   ⇒ 目标形状 目标 = H + T·S（H=强度/T=EPIRUS_DIV_W）；本行**只记录**');
 /* v1.5.93：**功能角色**那一层（8 角色）与 4 个 `cat` 并存 —— 一眼看出"更细的分区是否真的不同"。 */
 console.log('     功能角色（' + brd.K_role + ' 个）：类间 ' + brd.S_role.toFixed(3) + ' · 角色内 ' + brd.S_roleWithin.toFixed(3) +
@@ -247,8 +250,12 @@ console.log('   狙击场（1 席狙击 + 3 席被动 · ' + snf.games + ' 局�
 const chg = chgE;   // v1.5.90：这次调用已提到 `feasibilityOf` 之前（第 6 道判据要用它的 gained/spentRate）⇒ 此处复用，别重复跑
 console.log('   珠经济（' + chg.games + ' 局）：蓄能 ' + chg.chargesPerGame.toFixed(2) + '/局 · 得珠 ' + chg.gained +
   ' · 过期 ' + chg.expired + ' · **花掉 ' + chg.spent + '** · 浪费率 ' + (100 * chg.wasteRate).toFixed(0) +
-  '% · **花珠率 ' + (100 * chg.spentRate).toFixed(0) + '%**' +
-  (chg.gained > 0 && chg.spent > 0 ? '（闭环 ✓）' : '（**未闭环**：这是"没长出能力"，不是"指标好看"）'));
+  '% · **花珠率 ' + (100 * chg.spentRate).toFixed(1) + '%** · 过期 ' + (chg.games ? (chg.expired / chg.games).toFixed(1) : '—') + '/局' +
+  /* v1.5.101（第十轮复核 §4-2）：判据与 `feasibilityOf` 的**双条件**对齐 ——
+   * 旧口径"得珠>0 且花掉>0"会被"象征性花一颗"点亮（候选② 花/得 0.12% ⇒ 假绿）。 */
+  (chg.gained > 0 && chg.spentRate >= 0.2 && chg.games && (chg.expired / chg.games) <= 1
+    ? '（闭环 ✓：花/得 ' + (100 * chg.spentRate).toFixed(0) + '%、过期 ' + (chg.expired / chg.games).toFixed(1) + '/局）'
+    : '（**未闭环**：这是"没长出能力"，不是"指标好看"）'));
 /* ===== v1.5.78（第七轮复核 §15-1）：把 **G4 克制表 / G5 破防反射** 接进阻断面 =====
  * 复核把这两条写成可跑代码（`tools/gate-drafts.mjs`）并**先证明了量具的判别力**：
  *   线上包 G4 两模式 PASS（最克 22%/18%）、G5 PASS（防席 0%）；

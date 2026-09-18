@@ -3258,6 +3258,14 @@ t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一
     al.indexOf("fails.push('自对局零攻击局") >= 0,
     '退化包判据必须存在且进 fails（复核实测：0 出手的包照样拿 A 考卷 46.8~47.1%）');
   ok(al.indexOf('zeroDealtRate') >= 0, '零出手率与零伤害率必须分两列（复核 §7-1）');
+  /* v1.5.101（第十轮复核 §4-2）：**布尔化的经济判据会被"最小非零"刷分** ——
+   * 候选② `v7wall1-93` 得珠 835 / 花掉 **1**（花/得 0.12%）就点亮了"闭环 ✓"，而它每局浪费 20.9 颗。
+   * ⇒ 闭环改成**双条件**，并单列"过期/局"。 */
+  ok(al.indexOf('Number(dens.spentRate) >= 0.2 && Number(dens.expiredPerGame) <= 1') >= 0,
+    '珠经济闭环必须是**双条件**（花/得 ≥20% 且 过期/局 ≤1）');
+  ok(al.indexOf('beadExpiredPerGame') >= 0, '必须记录"过期/局"（双条件的第二项）');
+  ok(readFileSync('tools/promote-champion.mjs', 'utf8').indexOf('含空转/过期珠') >= 0,
+    '`energy` 那一档必须标注"含空转/过期珠" —— 否则 25.4% 会被读成"开始用能量类"（实际是囤积）');
   ok(al.indexOf('density: dRec') >= 0, '第 6 道的读数必须进 feasibilityOf 的返回值（落盘 meta 要能查）');
   const fs0 = al.indexOf('export function feasibilityOf(');
   const fs1 = al.indexOf('export function chargeProfile(');
