@@ -301,9 +301,17 @@ A<45% 却头对头 ≥2× 基线：      v7l2f-81(A40.7/40%) v7l2f-101(A32.0/38%
   我的忠实性自检 0/6 → 用 `tools/probe-ring-value.mjs` 里的 `resumeN(state, chs, skipStart)` 后 8/8）。
   凡想做分支/反事实/搜索类评测或训练改进，都得走这个驱动。
 - 我今夜**新增的量具**（都在 `tools/`，不带守门，可直接搬）：
-  `probe-l2-shaping`（开关接线自检）· `probe-leftover`（资源线判据）· `probe-ep-encoding`（表征注入性）
+  `probe-l2-shaping`（开关接线自检）· `probe-leftover`（资源线判据，**02:56 起新增"终局余款 >C 触发率"栏**）
+  · `probe-ep-encoding`（表征注入性）· `probe-ep-saturation`（整条 ep 阶梯上的 argmax 稳定性）
   · `probe-ring-highep`（高 ep 窗口配对反事实）· `probe-targeter-why`（弱点轴机制追踪）
-  · `l2-eval`（三考卷矩阵 + 强制随机基线）· `l2-arms` / `l2-schedule`（臂批跑与排程）。
+  · `probe-ring-afford` / `probe-cashout` / `probe-wealth-placebo` / `probe-pool-pressure`（可负担性 / 兑现 / 白送钱上界 / 池压力）
+  · **`crowding.mjs`（新轴 V1/V2/V4 + `CROWD_SELFCHECK=1` 对称性自检）** ⇒ §16/§17/§21 三条结论全出自它
+  · `l2-eval`（三考卷矩阵 + 强制随机基线）· `head2head`（正反两向）· **`l2-h2h-join` / `l2-axis-join`（h2h × 考卷 × 新轴联表算相关）**
+  · `l2-arms` / `l2-schedule` / `l2-batch5-wait.sh` / `l2-batch6-wait.sh`（臂批跑与**可追踪**排程）· `l2-bookkeep`（D82 名单生成）。
+- ⚠ 两处修的是**会毁数据**的行为，请注意别改回去：
+  1. `l2-eval.mjs` 以前每次运行**截断重写** `l2-eval.log` —— 那张 60+ 行矩阵是 §11/§13/§16 的唯一数据源，而 `.log` 在 gitignore 里。
+     现在默认**追加**（要重建传 `L2_EVAL_FRESH=1`），并且矩阵已固化成 tracked 文件 **`docs/l2-eval-matrix-120.tsv`**（每次补跑后重新 `cp` 一次再提交）。
+  2. `probe-convert.mjs` 的环成本以前读 `def.cost`（环声明的是 `null` ⇒ 恒漏报"聚能环 0.0%"），改成走 `computeCost` 的实际 ep。
 
 ## 9. 给早上的你：一张决策表（**不换包**，这只是材料）
 
