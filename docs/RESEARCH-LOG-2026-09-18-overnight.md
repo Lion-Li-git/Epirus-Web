@@ -497,3 +497,26 @@
   现在 l2-eval 默认**追加**不截断，且矩阵已 tracked 化成 `docs/l2-eval-matrix-120.tsv`）。
 - 待做没变：批次 5/6 评测 → 重算 §11a 配对表 → `probe-leftover`（o/p/新臂）→ 锁消失后 `gate-landscape` +
   `promote-champion --dry` → `l2-bookkeep` ⇒ CHANGELOG ⇒ np-test 146/146 → 填 §8 → 收尾核对。
+
+## DOING 更新（02:57 · 覆盖 02:07 那节的"待做"，其余仍有效）
+### 现在的状态（实测，不是回忆）
+- **批次 5 已结束**（`b8uqq8iiq` exit 0）：`c` 2/5 过门槛（111、114）、`f` **0/5 全被健康门槛拦**、`s` 2/5（111、115）。
+- **批次 6 正在跑**（`bawr3j2i5`，脚本 `tools/l2-batch6-wait.sh`）：`L2_ARMS=c,f L2_SEEDS=121..132`。
+  02:49 起 `c` 臂，现在 seed 31（`ring2-status-l2c.log`）⇒ 完成标记 `docs/artifacts/l2-batch6.log` 末尾 `BATCH6_DONE`。
+  ⚠ 按批次 5 的通过率预估：`f` 臂 12 个 seed 大概只能活 3~5 个 ⇒ **配对 n 到不了 §11b 要的 9**，
+    到早上能拿到 4~6 对就是好结果。**不要因为"没到 9 对"就再排第三批** —— 那只是把同一个结论再稀释一次。
+- **交接文档已写到 §21**，§0 已重写成最终版（**要读 §0，别从 §9 开始读，§9 有一格"待补"已在 §19 补齐**）。
+### 今夜新增的量具（都是我的、未进门禁；已 commit）
+`tools/crowding.mjs`（**新轴 V2/V4 + 对称性自检**，恒等式是 `(100−和棋)/5` 不是 20%）、
+`tools/l2-h2h-join.mjs`、`tools/l2-axis-join.mjs`（七把尺子相关矩阵）、`tools/l2-batch5-wait.sh`、`tools/l2-batch6-wait.sh`；
+另给 `probe-leftover.mjs` 加了"终局余款 >C 触发率"栏、给 `l2-eval.mjs` 修了**截断矩阵**的坑（默认改追加）。
+### 剩下的步骤（批次 6 结束后，按顺序）
+1. `node tools/crowding.mjs 80 <新产物...>`（几十秒/包，**先跑这个**，它就是 §17/§21 的确认数据）＋ `node tools/l2-eval.mjs 120 <新产物>` ⇒ 重算 §11a 配对表与 §21 的分层检验，把新数字**追加**进 §22（不要改旧表的数，另开一节写"批次 6 之后"）。
+2. `node tools/head2head.mjs 60 <新产物>`（正向为主，反向只当诊断）。
+3. 等 `.training.lock` 消失 ⇒ `node tools/gate-landscape.mjs docs/artifacts/v7l2s-91.bak docs/artifacts/v7l2c-103.bak js/bundled-champion-3p.js`
+   ＋ `node tools/promote-champion.mjs --dry docs/artifacts/v7l2s-91.bak`（**只 dry，绝不真 promote**）。
+4. `node tools/l2-bookkeep.mjs` ⇒ 名单逐字贴进 `CHANGELOG.md` ⇒ `node tools/np-test.mjs` 目标 **146/146**（现在 145/146，只 D82 红）。
+5. `node tools/spec-run.mjs`、`node tools/smoke.mjs`、`node tools/ui-probe.mjs` 最后一次；核对 `sha1sum js/bundled-champion-3p.js` 仍是 `268461f7c9f0`、`git status` 里 `results/` 的增删**不是我做的、也不要动**。
+6. 填 §8（把批次 6 的结果写进去，或明说"配对 n 不足，假设仍待判"）⇒ commit+push ⇒ `UpdateGoal complete`。
+### ⛔ 红线（一夜没破，收尾再核一次）
+不换包 · 不动 `js/bundled-champion-3p.js` · 不 bump `index.html`/`README` 版本号 · 不 `git add results/` · 只推 `qoder`。
