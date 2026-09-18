@@ -520,3 +520,22 @@
 6. 填 §8（把批次 6 的结果写进去，或明说"配对 n 不足，假设仍待判"）⇒ commit+push ⇒ `UpdateGoal complete`。
 ### ⛔ 红线（一夜没破，收尾再核一次）
 不换包 · 不动 `js/bundled-champion-3p.js` · 不 bump `index.html`/`README` 版本号 · 不 `git add results/` · 只推 `qoder`。
+
+## 03:05 E4 的实现规格（**等批次 6 结束才能动手**，写在这里免得明早重想）
+§23 定位到的机制是"目标函数不为『挡下一次伤害』付钱"，而防御卡**费用 0 ep** ⇒ 与 ep 深度那条不同，
+这一条**不需要多回合计划**，只需要在**单次决策**上倾斜 ⇒ 正是 shaping 能做事的尺度（§10b 否证的是跨期，不是这个）。
+**⚠ 时序红线**：批次 6 的 `f` 臂会在 `c` 臂结束后**新起一个 train-server**（启动时才读 `evo.js`）
+⇒ 现在改 `evo.js`/`econ-env.mjs` 会让 `f` 臂用上新代码而 `c` 臂没有 ⇒ **两臂不可比，整批作废**。
+   所以：**必须等 `BATCH6_DONE` 之后再动这两个文件**（改完立刻 `probe-l2-shaping` + `np-test` + 指纹三件套）。
+
+规格（照 L2′ 的既有模式，全部默认关闭 ⇒ 出厂行为逐位不变）：
+1. `server/econ-env.mjs`：`ECON_ENV_KEYS` 加 `EPIRUS_BLOCK_W`，`ECON_REWARD_KEYS` 加 `blockW`。
+   ⚠ **D77 只切 `setEconomyReward` 函数体前 1200 字符**（CRLF 按 2 字符计）⇒ 新 setter 必须写成**紧凑两行**、
+     注释一律放在 `function` 之外（今夜我把它打断过三次，全记录在 evo.js 的注释里）。
+2. `js/train/evo.js`：`let BLOCK_W = 0;`（默认 0 ⇒ 逐位不变）；在 `scoreMemberN` 的记账处累加
+   `R.ATK_EFFECT`/`outcome==='blocked'` 类事件（**先读 `resolve.js` 确认"挡下"到底以什么事件形式出现** ——
+   这一步没做就直接写的话，很可能像今夜 `damage` 事件不带 `round` 那样静默记 0）。
+   `gFit += BLOCK_W * min(1, 挡下的伤害 / 3)`，并把 `reset` 里清 0。
+3. 验收三件套 + 新臂 `L2_ARMS=w`（`EPIRUS_BLOCK_W=0.02`，与 `c` 同池同代数量），判据：
+   **V2 ↑（`crowding.mjs`）· `champ-audit` 的 D/F ↑ · G ≥5（多样性不许塌）· A 卷不退步**。
+   ⚠ 关键对照：必须和 `c` 臂**同 seed 配对**（今夜所有假阳性都来自未配对/未分层，见 §11/§13/§21）。
