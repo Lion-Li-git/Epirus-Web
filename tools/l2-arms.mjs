@@ -32,6 +32,12 @@ const ARMS = [
   { key: 'c', arm: 'v7l2c', tag: 'l2c', env: {}, note: '对照：三个开关全关（应当与"改码前"同分布）' },
   { key: 'h', arm: 'v7l2h', tag: 'l2h', env: { EPIRUS_HOARD_LEFTOVER: '1' }, note: '只把囤积惩罚换成终局余款' },
   { key: 'f', arm: 'v7l2f', tag: 'l2f', env: { EPIRUS_HOARD_LEFTOVER: '1', EPIRUS_CONV_RATIO: '1', EPIRUS_HOARD_CAP_MULT: '4' }, note: '余款 + 比率化兑现 + 4C（全开）' },
+  /* 第二组（批次 2）：这组测的是**相反方向**的病。`probe-leftover.mjs` 实测两包的病方向相反
+   * ⇒ 线上包是"攒不到就花光"（兑现率 94%、余 ep 0.9、峰 ep 2），对它而言"余款惩罚"是空操作。
+   * 所以单独开一臂只抬**攒钱奖励上限** `STOCK_BONUS 0.05 → 0.15`，直接检验
+   * "奖惩不对称才是环学不出来的阻力"这句话（不检验它就永远只是一条评论）。 */
+  { key: 's', arm: 'v7l2s', tag: 'l2s', env: { EPIRUS_STOCK_BONUS: '0.15' }, note: '只抬攒钱奖励上限（治"攒不到就花光"那一侧）' },
+  { key: 'b', arm: 'v7l2b', tag: 'l2b', env: { EPIRUS_STOCK_BONUS: '0.15', EPIRUS_HOARD_LEFTOVER: '1', EPIRUS_CONV_RATIO: '1', EPIRUS_HOARD_CAP_MULT: '4' }, note: '攒与花**同时**给斜率（两侧一起治）' },
 ];
 const want = (process.env.L2_ARMS || 'c,h,f').split(',').map(s => s.trim()).filter(Boolean);
 writeFileSync(STATUS, '# L2′ 臂批跑（tools/l2-arms.mjs）· 池 = E+gunspam(17) · CLEAR_W=0.05 · SEAT_GAMES=24 · 无 imit 教师\n');

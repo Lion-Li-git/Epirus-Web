@@ -56,6 +56,17 @@ const m4 = T.economyStock(39.9, 5, 'multi', 38.9);
 ok(m4 > hoard, `G2c 饱和点 2C→4C：余款 38.9 的罚分 −0.0700 → ${m4.toFixed(4)}（40~100 区间重新有斜率）`);
 T.setEconomyReward({ hoardOnLeftover: false, convRatio: false, hoardCapMult: 2 });
 ok(Math.abs(T.economyStock(39.9, 5, 'multi') - (-0.07)) < 1e-9, 'G2d 复位后回到旧值 −0.0700（setter 可逆）');
+/* G4：`reset:true` 必须把**五个新旋钮一起**复位（旧实现只清 ECO_T/ECO_C ⇒ 留脏状态） */
+T.setEconomyReward({ hoardOnLeftover: true, convRatio: true, hoardCapMult: 4, stockBonus: 0.15 });
+T.setEconomyReward({ reset: true });
+const r = T.economyReward();
+ok(r.hoardOnLeftover === false && r.convRatio === false && r.hoardCapMult === 2 && Math.abs(r.stockBonus - 0.05) < 1e-12,
+  'G4 reset:true 把 HOARD_LEFTOVER / CONV_RATIO / CAP_MULT / STOCK_BONUS 全部复位到出厂值');
+T.setEconomyReward({ stockBonus: 0.15 });
+const hi = T.economyStock(1, 5, 'multi'), hi2 = T.economyStock(5, 5, 'multi');
+T.setEconomyReward({ reset: true });
+ok(Math.abs(hi2 - 0.15) < 1e-12 && Math.abs(T.economyStock(5, 5, 'multi') - 0.05) < 1e-12,
+  `G5 STOCK_BONUS 可抬：0.15 时"攒满 target"给 ${hi2.toFixed(3)}（出厂 0.050）· 未设时不变`);
 
 /* ---------- G3 env 单一来源接线 ---------- */
 const env = readEconEnv({ EPIRUS_HOARD_LEFTOVER: '1', EPIRUS_CONV_RATIO: '1', EPIRUS_HOARD_CAP_MULT: '4' });

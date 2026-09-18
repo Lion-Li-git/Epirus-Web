@@ -28,12 +28,17 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
   'EPIRUS_DIV_W', 'EPIRUS_DIV_K', 'EPIRUS_DIV_ROLEW', 'EPIRUS_DIV_CATW', 'EPIRUS_DIV_FORCE_GENS', 'EPIRUS_WALL_FILTER', 'EPIRUS_WALL_GAMES',
   /* v1.5.116（第十二轮复核 L2′）：经济 shaping 去阶梯化的三个开关。同样必须走这条单一来源 ——
    * 否则又会落到"服务进程自己那份模块上、16 个 worker 仍是代码默认值"那个事故形状（附录 D 臂 K 的 A/A）。 */
-  'EPIRUS_HOARD_LEFTOVER', 'EPIRUS_CONV_RATIO', 'EPIRUS_HOARD_CAP_MULT'];
+  'EPIRUS_HOARD_LEFTOVER', 'EPIRUS_CONV_RATIO', 'EPIRUS_HOARD_CAP_MULT',
+  /* 攒钱奖励的**上限**（对应 evo.js 里的 `STOCK_BONUS`）。为什么也要能开：实测两包的病方向**相反**
+   * （`tools/probe-leftover.mjs`：线上包 multi 兑现率 94%、余 ep/人 0.9、峰 ep 2；arm A 兑现率 23%、余 23.2）
+   * ⇒ 余款惩罚对在位包是空操作（它没余款可罚，它是"攒不到就花光"）。给它开一臂：把 0.05 抬到 0.15，
+   *    直接检验"**奖惩不对称**才是环学不出来的阻力"这条假设（否则这句话永远只是评论）。 */
+  'EPIRUS_STOCK_BONUS'];
 
 /* 与 `js/train/evo.js` 的 `setEconomyReward(o)` / `economyReward()` 字段名对齐
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
 export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
-  'hoardOnLeftover', 'convRatio', 'hoardCapMult'];
+  'hoardOnLeftover', 'convRatio', 'hoardCapMult', 'stockBonus'];
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -68,7 +73,8 @@ export function readEconEnv(env) {
      * `HOARD_CAP_MULT`：饱和点 `C×mult`（默认 2 ⇒ 与现状逐位相同；臂上试 4 让 40~100 区间重新有斜率）。 */
     hoardOnLeftover: e.EPIRUS_HOARD_LEFTOVER === '1' ? true : null,
     convRatio: e.EPIRUS_CONV_RATIO === '1' ? true : null,
-    hoardCapMult: nv(e.EPIRUS_HOARD_CAP_MULT)
+    hoardCapMult: nv(e.EPIRUS_HOARD_CAP_MULT),
+    stockBonus: nv(e.EPIRUS_STOCK_BONUS)
   };
 }
 

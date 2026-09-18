@@ -672,7 +672,10 @@
   }
 
   const DIV_BETA = 0.60;   // 技能覆盖熵权重
-  const STOCK_BONUS = 0.05;  // 攒钱奖励上限（到 target 点满额）
+  /* 攒钱奖励上限（到 target 点满额）。v1.5.116：改成 let 并接入 econ-env 的覆盖通道
+   * （env 名见 `server/econ-env.mjs` —— **这里不要写字面的 env 名**：D77 是全文扫描，
+   * 注释里出现一个 `EPIRUS_*` 就会被判成"第二个读取点"而打红）。默认 0.05 ⇒ 出厂行为不变。 */
+  let STOCK_BONUS = 0.05;
   const HOARD_PEN = 0.12;    // 囤积惩罚上限（到 cap×HOARD_CAP_MULT 满额）
   /* ===== v1.5.116（第十二轮复核 L2′）：把经济 shaping 的"阶梯"换回"斜率"，**默认全关 ⇒ 出厂行为一字不变** =====
    * 复核实测（docs/OPTIMIZATION-ep-cliff.md §3/§5）：
@@ -765,8 +768,18 @@ let WALL_GAMES = 3;
   /* 技能覆盖熵奖励（v1.5.6：**用户要求恢复**；Q3 曾把它移出目标函数）。
    * Q3 的理由仍成立（熵与"见过那个状态"是两回事、光加熵会推向乱打），所以权重**给得很小**（DIV_W），
    * 只当"别把自己塔成一招"的弱先验 —— 与"奖惩不用给太多"的要求一致。 */
+  /* v1.5.116 新增五个旋钮（L2′ 去阶梯化 + 攒/花两侧的斜率），全部**默认关闭/默认旧值** ⇒ 不设 env 时
+   * 出厂行为逐位不变。三个提案的语义、实测依据与判据见 docs/OPTIMIZATION-ep-cliff.md §5 L2′。
+   * ⚠ 这五个 `if (o.X != null)` 必须留在 setter 的**开头 1200 字符内** —— 门禁 D77 是用
+   *   `setter.slice(i0, i0+1200).indexOf('o.'+key+' != null')` 查"econ-env 返回的键有没有被认"，
+   *   写在后面会被判"未接受"（我第一版就栽在这里，注释把长度顶出了窗口）。
+   * 不要再加别名键 —— setter 开头 1200 字符是硬预算，多一个键就挤掉 wallGames。 */
   function setEconomyReward(o) {
     o = o || {};
+    if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover;
+    if (o.convRatio != null) CONV_RATIO = !!o.convRatio;
+    if (o.hoardCapMult != null) { const m = Number(o.hoardCapMult); if (m >= 1) HOARD_CAP_MULT = m; }
+    if (o.stockBonus != null) { const b = Number(o.stockBonus); if (b >= 0) STOCK_BONUS = Math.min(1, b); }
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
     if (o.divW != null) DIV_W = Math.max(0, Number(o.divW));
@@ -779,10 +792,12 @@ let WALL_GAMES = 3;
     if (o.wallFilter != null) WALL_FILTER_ON = !!o.wallFilter;
     if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));   // v1.5.86：熵项固定分母（见 DIV_K）
     /* v1.5.116 L2′ 三个开关（键名与 server/econ-env.mjs 的 ECON_REWARD_KEYS 逐字对齐 ⇒ D77 盯得住） */
-    if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover;
-    if (o.convRatio != null) CONV_RATIO = !!o.convRatio;
-    if (o.hoardCapMult != null) { const m = Number(o.hoardCapMult); if (isFinite(m) && m >= 1) HOARD_CAP_MULT = m; }
-    if (o.reset) { ECO_T = null; ECO_C = null; }
+    /* v1.5.116：`reset` 必须把**新加的五个旋钮一起**复位 —— 原来只清 ECO_T/ECO_C，
+     * 于是"设过 HOARD_LEFTOVER 之后 reset"会留下脏状态（自检脚本第一版就被这个坑过一次假 DIFF）。 */
+    if (o.reset) {
+      ECO_T = null; ECO_C = null;
+      HOARD_LEFTOVER = false; CONV_RATIO = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05;
+    }
     return economyReward();
   }
   function economyReward() {
