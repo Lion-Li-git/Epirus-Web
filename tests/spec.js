@@ -423,6 +423,32 @@
     eq(st.p[2].hp, 1, '第三回合：只剩基础 1 点（buff 已到期）');
   });
 
+  t('R59 地雷时效：**当前回合 + 其后两个回合**（用户裁定），第三回合结束后卸下；触发即失效；再埋=刷新', function () {
+    /* 旧文 R38「持续**直到被触发**」= 永久。用户裁定取 **3 回合**（千问实测：严格单回合会把这张牌
+     * 打成废牌 —— 引爆 1.90→0.08 次/局）。
+     * 本用例**能反证**：旧实现（永久）第 4 回合仍然 `mineArmed` ⇒ 最后一个断言会红。 */
+    const st = game(); setEp(st, 9, 9);
+    play(st, SK.MINE, SK.JI);                 // 回合1 埋雷 ⇒ 计数 3 → 回合末 2
+    ok(st.p[0].mineArmed && st.p[0].mineTurns === 2, '回合1 结束后仍在（覆盖本回合 + 后两回合）');
+    play(st, SK.JI, SK.JI);                   // 回合2
+    ok(st.p[0].mineArmed && st.p[0].mineTurns === 1, '回合2 结束后仍在（后两回合的第 1 个）');
+    play(st, SK.JI, SK.JI);                   // 回合3：武装着走完这回合，回合末减到 0
+    ok(!st.p[0].mineArmed && st.p[0].mineTurns === 0, '回合3 结束后卸下（旧实现是永久 ⇒ 本断言抓得住）');
+    play(st, SK.JI, SK.JI);                   // 回合4：确认卸下后不会自己回来
+    ok(!st.p[0].mineArmed, '回合4 仍卸下');
+
+    // 已武装时再埋 ⇒ **刷新**计时（保留 R40"重新埋雷 = 刷新为新雷，同源不叠加"）
+    const st2 = game(); setEp(st2, 9, 9);
+    play(st2, SK.MINE, SK.JI);
+    play(st2, SK.MINE, SK.JI);
+    ok(st2.p[0].mineArmed && st2.p[0].mineTurns === 2, '再埋刷新为 3（回合末 2），不是叠加');
+    // 触发即失效（N20 原文"地雷随后失效"）
+    const st3 = game(); setEp(st3, 9, 9);
+    st3.p[0].mineArmed = true; st3.p[0].mineTurns = 3;
+    play(st3, SK.JI, SK.GUN);                 // 被枪打 ⇒ 触发
+    ok(!st3.p[0].mineArmed && st3.p[0].mineTurns === 0, '触发即失效（含计时清零）');
+  });
+
   t('R22 藤甲火弱：天火(直扣血 rawDamage)也吃+1 & 地雷反击火弱+1', function () {
     // 天火路径：贴符咒 → 藤甲→对手火弱 → 天火引爆，直扣血应+1
     const st = game(); setEp(st, 9, 9); st.p[0].hp = st.p[1].hp = 3;

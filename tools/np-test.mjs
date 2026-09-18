@@ -3712,6 +3712,30 @@ t('D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下
     'spec 必须留下 R58 的反证用例（旧实现当回合只吃 1 点）');
 });
 
+t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被触发」）+ 写入点只有一处', function () {
+  /* 旧 R38 = 永久 ⇒ 实测"身上有雷还再敲"占 68%(多)/81%(长)（≈21/50 ジ每局纯浪费）；
+   * 严格单回合又把牌打废（引爆 1.90→0.08 次/局）⇒ 用户裁定 3 回合。 */
+  const rs = readFileSync('js/core/resolve.js', 'utf8');
+  ok(rs.indexOf('function armMine(state, me, pid)') >= 0, '必须有一个统一的埋雷函数');
+  ok(rs.indexOf('me.mineTurns = 3;') >= 0, '埋雷必须记 3 回合（本回合 + 后两个回合）');
+  ok(rs.indexOf('case SK.MINE: armMine(state, me, m); break;') >= 0 &&
+     rs.indexOf('case SK.MINE: armMine(state, me, i); break;') >= 0,
+    '两个 `case SK.MINE` 都必须走 armMine（**写入只此一份** —— 环的"两处写入"就是 R10 bug 的温床）');
+  ok((rs.match(/me\.mineArmed = true;/g) || []).length === 1,
+    '直接置位 `me.mineArmed = true` 只允许出现在 armMine 里（一处）');
+  ok(rs.indexOf('state.p[v].mineArmed = false; state.p[v].mineTurns = 0;') >= 0 &&
+     rs.indexOf('state.p[i].mineArmed = false; state.p[i].mineTurns = 0;') >= 0,
+    '触发失效（直接/间接两条路）都必须同时清零计时');
+  ok(rs.indexOf('if (p.mineTurns > 0) {') >= 0 && rs.indexOf("type: 'mineExpire'") >= 0,
+    '回合末必须递减并在归零时卸下（并留事件便于量具核对）');
+  ok(readFileSync('js/core/state.js', 'utf8').indexOf('mineTurns: 0,') >= 0, 'state 必须有 mineTurns');
+  ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R59') >= 0, 'RULES-2P 必须记下 R59');
+  ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('持续直到被触发') < 0 ||
+     readFileSync('docs/RULES-2P.md', 'utf8').indexOf('旧文 R38 是') >= 0,
+    'R38 的"持续直到被触发"必须被标注为**已被 R59 取代**');
+  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R59 地雷时效') >= 0, 'spec 必须留下 R59 的反证用例');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

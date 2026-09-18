@@ -16,7 +16,8 @@
       cannonCount: 0,               // 过载炮次数 R42
       cooldown: {},                 // 大雷禁用 R29
       rodGuard: 0,                  // 避雷针情形B（剩余免雷次数）R31
-      mineArmed: false,             // R38
+      mineArmed: false,             // R38（v1.5.109 R59：不再是"直到被触发"，而是 3 回合计时）
+      mineTurns: 0,                 // v1.5.109 R59：剩余回合数（3 = 本回合 + 后两个回合）
       guardNext: false, baguaExtra: false,  // 无极变速第二回合 R21
       copiedGuard: null,             // N14 v1.5.17：镜面反射复制来的架势（只在结算它的那个回合有效）
       fireWeakNext: false, fireWeakNow: false, // 藤甲 R22

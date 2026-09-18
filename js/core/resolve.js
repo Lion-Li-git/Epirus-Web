@@ -28,6 +28,19 @@
     }
   }
 
+  /* ===== v1.5.109（**用户裁定 2026-09-18** = R59）：地雷改成"**当前回合 + 其后两个回合**"的自身 buff =====
+   * 旧文 R38「持续**直到被触发**」= 永久（实测：一局内不触发就挂到死，平均挂 33.4 回合(多)/74.2 回合(长)；
+   * 且"身上还有雷还再敲"占 68%(多)/81%(长)，纯浪费 ≈21 ジ/局(多)、50 ジ/局(长)）。
+   * 千问实测**严格单回合**又把这张牌打成废牌（引爆 1.90→0.08 次/局）⇒ 用户裁定取 **3 回合**。
+   * · 触发即失效（N20 原文"地雷随后失效" ✓ 不动）；
+   * · **已武装时再埋 = 刷新计时**（保留 R40"重新埋雷 = 刷新为新雷，同源不叠加"）；
+   * ⚠️ **写入只有这一处**（下面两个 `case SK.MINE` 都调它）—— 环的"两处写入"就是 R10 bug 的温床。 */
+  function armMine(state, me, pid) {
+    me.mineArmed = true;
+    me.mineTurns = 3;                     // 本回合 + 后两个回合（回合末递减，减到 0 卸下）
+    ev(state, { type: 'mineArm', pid: pid });
+  }
+
   /* ---------- N 人通用：人数/目标 ---------- */
   function playerCount(state) { return state.p.length; }
   function aliveOpps(state, pid) {
@@ -315,7 +328,7 @@
     if (!direct.length) return;
     const indirect = [];
     for (const v of direct) {
-      state.p[v].mineArmed = false;
+      state.p[v].mineArmed = false; state.p[v].mineTurns = 0;   // v1.5.109 R59：触发即失效（含计时清零）
       ev(state, { type: 'mine', from: v, kind: 'direct' });
       for (let i = 0; i < N; i++) {
         if (i === v || state.p[i].hp <= 0) continue;
@@ -325,7 +338,7 @@
       }
     }
     if (!indirect.length) return;
-    for (const i of indirect) state.p[i].mineArmed = false;
+    for (const i of indirect) { state.p[i].mineArmed = false; state.p[i].mineTurns = 0; }   // v1.5.109 R59
     ev(state, { type: 'mine', from: indirect.slice(), kind: 'indirect' });
     for (let i = 0; i < N; i++) {
       if (indirect.indexOf(i) >= 0 || state.p[i].hp <= 0) continue;
@@ -611,7 +624,7 @@
         me.ep += g; ev(state, { type: 'ep', pid: m, delta: g });
         break;
       }
-      case SK.MINE: me.mineArmed = true; ev(state, { type: 'mineArm', pid: m }); break;
+      case SK.MINE: armMine(state, me, m); break;
       /* 避雷针：得到免雷窗口（同 R31 情形B，一次性：免掉一次雷后窗口结束）。
        * ⚠️ v1.5.18：**不需要**把它提前到 ② 之前 —— 复制成立的**前提**是 t1 本回合真的用了避雷针，
        * 而 ① 层"当回合有雷系 ⇒ 全部无效"已经把本回合的雷清空了 ⇒ 复制来的窗口本回合无物可挡。
@@ -846,7 +859,7 @@
           const g = me.ringStreak >= 3 ? 3 : me.ringStreak; // attempt 时已 +1
           me.ep += g; ev(state, { type: 'ep', pid: i, delta: g }); break;
         }
-        case SK.MINE: me.mineArmed = true; ev(state, { type: 'mineArm', pid: i }); break;
+        case SK.MINE: armMine(state, me, i); break;
         case SK.DRAIN: {
           const res = deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.DRAIN }, t, { reason: '摄魂指法' });
           if (res.result === 'land') {
@@ -1086,6 +1099,13 @@
        * 聚能环**没有**对应明文，按原版"连续使用"的语义，被废的那次不该算"用成了"。 */
       if (!(a && a.outcome === 'ok' && !a.voided && a.key === SK.RING)) p.ringStreak = 0;
       p.lastSkill = (a && a.outcome === 'ok') ? a.key : null;
+      /* v1.5.109（R59，用户裁定）：地雷计时 —— 回合末递减，减到 0 就卸下。
+       * 语义：埋下的那一回合记 3，回合末 → 2（仍在，本回合有效）；后两回合末 → 1 → 0（卸下）
+       * ⇒ **武装覆盖"当前回合 + 其后两个回合"共 3 个回合**，第三回合结束后失效。 */
+      if (p.mineTurns > 0) {
+        p.mineTurns -= 1;
+        if (p.mineTurns <= 0) { p.mineTurns = 0; p.mineArmed = false; ev(state, { type: 'mineExpire', pid: i }); }
+      }
     }
     // 蓄能珠时效 R9'：只供下一回合——回合结束时，非"本回合新蓄"的珠一律清空
     for (let i = 0; i < playerCount(state); i++) {
