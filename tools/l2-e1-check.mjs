@@ -75,13 +75,14 @@ for (const exam of ['A卷', 'TN']) {
   const sd = Math.sqrt(dv.reduce((a, b) => a + (b - mean) * (b - mean), 0) / Math.max(1, dv.length - 1));
   console.log(`  考卷 ${exam}（n=${dv.length} 对）      均值 ${mean >= 0 ? '+' : ''}${mean.toFixed(1)}pt · SD ${sd.toFixed(1)}   ← 与上面 V2 对照：考卷的 SD 大一个量级`);
 }
-/* 有 G 就读一下协变量；没有就明说（不许默默跳过） */
+/* 有 G 就分层读协变量；缺几对不影响总判定，只影响能分层的那几对 */
 const gMissing = seeds.filter(s => G[A[s]] == null || G[B[s]] == null);
-console.log(`\n  G 协变量：${seeds.length - gMissing.length}/${seeds.length} 对可分层` +
-  (gMissing.length ? ` ⇒ **先跑 champ-audit 再分层**（缺：${gMissing.slice(0, 6).join(' ')}${gMissing.length > 6 ? ' …' : ''}）` : ''));
-if (!gMissing.length) {
-  for (const band of [[3, 4], [4, 99]]) {
-    const ss = seeds.filter(s => G[A[s]] >= band[0] && G[A[s]] < band[1] && G[B[s]] >= band[0] && G[B[s]] < band[1]);
+const gseeds = seeds.filter(s => G[A[s]] != null && G[B[s]] != null);
+console.log(`\n  G 协变量：${gseeds.length}/${seeds.length} 对可分层` +
+  (gMissing.length ? `（缺：${gMissing.slice(0, 6).join(' ')}${gMissing.length > 6 ? ' …' : ''} ⇒ 只不参与分层，不影响上面的总判定）` : ''));
+if (gseeds.length >= 2) {
+  for (const band of [[0, 3], [3, 4], [4, 99]]) {
+    const ss = gseeds.filter(s => G[A[s]] >= band[0] && G[A[s]] < band[1] && G[B[s]] >= band[0] && G[B[s]] < band[1]);
     if (ss.length < 2) { console.log(`  G∈[${band[0]},${band[1]}) 层内配对 ${ss.length} 对 ⇒ 太少`); continue; }
     const d = ss.map(s => V2[A[s]] - V2[B[s]]);
     const mean = d.reduce((a, b) => a + b, 0) / d.length, sd = Math.sqrt(d.reduce((a, b) => a + (b - mean) * (b - mean), 0) / Math.max(1, d.length - 1));
