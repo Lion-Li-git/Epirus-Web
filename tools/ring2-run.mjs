@@ -367,7 +367,19 @@ async function main() {
     say('全部完成');
   } finally {
     if (child) { try { child.kill(); } catch (e) { /* */ } }
-    try { rmSync(LOCK, { force: true }); } catch (e) { /* */ }
+    /* v1.5.117（09-19 复核夜）：**只删自己那把锁**。
+     * 原来是 `rmSync(LOCK,{force:true})` 无条件删 ⇒ 一个**被拒绝的**并发 run（服务端 `已有多人训练在跑` 那条）
+     * 走 finally 时会把**另一个正在训练的 run** 的锁删掉 ⇒ 锁形同不存在，D16 的"训练中跳过"与
+     * `champ-audit` 的"bundle 行不可信"标记全部失效（我这夜实测撞上过一次：批次 7 在跑而 `.training.lock` 消失）。
+     * 锁文件里本来就写了 pid ⇒ 拿它做归属判断；持有者已死（陈旧锁）仍然要清，否则门禁会永远拒绝。 */
+    try {
+      if (existsSync(LOCK)) {
+        const own = (() => { try { return Number(JSON.parse(readFileSync(LOCK, 'utf8')).pid); } catch (e) { return null; } })();
+        const alive = (p) => { if (!p) return false; try { process.kill(p, 0); return true; } catch (e) { return false; } };
+        if (own === process.pid || !alive(own)) rmSync(LOCK, { force: true });
+        else console.log('[lock] 锁的持有者是 pid ' + own + '（还活着）而非本进程 ' + process.pid + ' ⇒ 不删，避免把别人的训练保护标志清掉');
+      }
+    } catch (e) { /* */ }
     if (bakBundle) writeFileSync(BUNDLE_MP, bakBundle);
     if (bakIndex) writeFileSync(INDEX, bakIndex);
     /* v1.5.71：把"训练期间没碰线上包"从**注释里的承诺**变成**可验证的断言**（用户被这个坑过两次） */
