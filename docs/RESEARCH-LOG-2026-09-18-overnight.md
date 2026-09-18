@@ -62,6 +62,10 @@
       `EPIRUS_EP_FEAT_CAP=<新上限/编码>` 的**影子前向**（同一份参数、只换 ep 编码），看 16/20/30/40 四档
       是否不再逐位相同。⚠ 旧包参数是在旧编码下学出来的 ⇒ 换编码必然错乱，所以这里只看**输入是否可区分**，
       不看胜率；判据：p(ジ) 在 ep 阶梯上**不再逐位相同**即成立。
+- [x] **N5′ 已修 `probe-convert` 的收入饥饿判据**（§1 报的那条量具 bug）：`realCost()` 改走 `computeCost`
+      的实际 ep，并把"0 个可负担点"的卡也纳入 ⇒ 线上包现在正确报出
+      `【收入饥饿】= 聚能环 0.0% · 摄魂指法 0.0% · 真正的落雷 0.0% · 避雷针 0.0% · 地雷 0.0%…`
+      （原来恒为"无"，因为环声明的 `cost` 是 `null` 且 ready=0 时它连 `list` 都不进）。
 - [ ] **N2** 实现 L2′：`evo.js` 里
       ① `rec` 加 `leftEp`（终局余款）与 `epGained/epSpent`；② `economyStock` 自变量 `maxEp`→`leftEp`（开关 `EPIRUS_HOARD_ON_LEFTOVER=1`）；
       ③ `conv` 改比率 `已花/已获得`（开关 `EPIRUS_CONV_RATIO=1`）；④ `HOARD` 饱和点 `2C`→可配 `EPIRUS_HOARD_CAP_MULT`（默认 2，臂上试 4）。

@@ -144,12 +144,32 @@ console.log((nm(R.SK.JI) + '（ji）').padEnd(22) + (' ' + '100%').padStart(8) +
 
 /* 病征分类（复核 §5-2 要的就是这张表） */
 const refuse = list.filter(function (it) { return it.b.ready / decisions >= 0.10 && it.b.mc < 0.01; });
-const starve = list.filter(function (it) { return it.b.ready / decisions < 0.02 && typeof R.byKey[it.k].cost === 'number' && R.byKey[it.k].cost >= 3; });
+/* v1.5.116（第十二轮复核 §1）：贵卡判据不能读 `def.cost` —— **聚能环声明的 cost 是 `null`**
+ * （真成本 3 写在 `state.js:106 computeCost` 里，因为是动态成本），于是"最重要的贵卡"永远进不了这条筛子；
+ * 而 `ring` 可负担点数为 0 时它连 `list` 都不在（下面 `if (!ready.length) continue` 的副作用）
+ * ⇒ 打印出来永远是【收入饥饿】= 无，与"环从来没到过 3"这个事实读反了方向。
+ * 修法：取 computeCost 在**零钱代表态**下的实际 ep；并把"0 个可负担点"的卡也纳入候选。
+ * ⚠ 动态成本卡按 `ringStreak=0 / cannonCount=0` 读（= 第一次用的成本），这是**有意**的：
+ *    要问的就是"这张卡第一次掏得出来吗"。*/
+const REPR = S.createState('multi', { next: function () { return 0.5; } }, 5);
+function realCost(k) {
+  const d = R.byKey[k]; if (!d) return null;
+  if (typeof d.cost === 'number') return d.cost;
+  try { const c = S.computeCost(REPR, 0, k); return (c && c.ok) ? c.ep : null; } catch (e) { return null; }
+}
+const starveKeys = Object.keys(R.byKey).filter(function (k) {
+  if (k === R.SK.JI) return false;
+  const c = realCost(k);
+  if (!(c >= 3)) return false;
+  const ready = rows.filter(function (r) { return r.affordable.indexOf(k) >= 0; }).length;
+  return ready / decisions < 0.02;
+});
+const starve = starveKeys.map(function (k) { return { k: k, b: { ready: rows.filter(function (r) { return r.affordable.indexOf(k) >= 0; }).length } }; });
 console.log('');
 console.log('【转化拒绝】（可负担 ≥10% 的决策点，却选中 <1%）= ' + (refuse.length ? refuse.map(function (it) {
   return nm(it.k) + ' ' + (100 * it.b.ready / decisions).toFixed(0) + '%→' + (100 * it.b.mc).toFixed(2) + '%';
 }).join(' · ') : '无'));
-console.log('【收入饥饿】（可负担 <2% 的贵卡 cost≥3）= ' + (starve.length ? starve.map(function (it) {
+console.log('【收入饥饿】（可负担 <2% 的贵卡，**cost 取 computeCost 的实际值** ⇒ 含声明为 null 的动态成本卡）= ' + (starve.length ? starve.map(function (it) {
   return nm(it.k) + ' ' + (100 * it.b.ready / decisions).toFixed(1) + '%';
 }).join(' · ') : '无'));
 
