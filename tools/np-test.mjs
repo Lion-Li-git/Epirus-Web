@@ -10,6 +10,8 @@ import { isChampOpp, loadChampParams } from '../server/opp-champs.mjs';
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
 import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG } from './pick-best.mjs';
+/* v1.5.132：V1/V2/V4「整局」三装配的**单一来源**（D105 与 `probe-ring-ablate.mjs` 共用一份实现）。 */
+import { measureAll } from './v2v4-lib.mjs';
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
 sb.window = sb; sb.globalThis = sb;
@@ -4103,8 +4105,57 @@ t('D71 蓄能经济门槛：ep<2 不许蓄能（v7 口径），legacy 保持旧�
   ok(seg.indexOf('P.choose(state, pid, base,') >= 0, 'legacy 分支必须仍用未过滤的 base（历史基线可比）');
 });
 
+t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草案、待用户裁定**）· V2 只记录不阻断', function () {
+  /* 动机（两条独立证据，都出自 v1.5.131）：
+   *  ① R61 改引擎后，线上 3P 包（权重是在旧语义下训的）在 V4/V2 上掉了 1.1pt / **24.7pt**，
+   *     而**这两条轴当时没有任何门** ⇒ 静默丢了两个版本（CHANGELOG v1.5.131 §4/§5、HANDOFF §4-11/§4-12）。
+   *  ② 同引擎跑一条 6 seed 臂：V4 落在 **1.8~15.0%/席** ⇒ "臂把包送到哪里就是哪里"。
+   * 量什么（用户已否掉"数动作投向谁" ⇒ 量**后果**）：**V4 每席位胜率** = 产品形态（满桌同包、会不会跟自己人互杀）；
+   *  公平份额 **20%/席**。口径与 `tools/probe-ring-ablate.mjs` **共用同一份实现**（`tools/v2v4-lib.mjs`），n=600、seed 7777。
+   * ⚠️ **阈值与标定理由写在一起**（v1.5.104 给 G4 立 45%→60% 时定的规矩）。标定证据（本次实跑 · n=600 · 同 seed）：
+   *   线上包 **V4 16.1%/席**；**零权重常数策略 V4 3.4%/席**（阳性对照）；6 个臂包 1.8 / 5.1 / 2.5 / 5.8 / 15.0 / 4.0。
+   *   ⇒ 草案 **V4 ≥ 10%/席**：现包余量 6.1pt、零权重 3.4 被挡、**6 个臂里 5 个跌破** ⇒ 判别力够。
+   *   **阈值是草案，等用户裁定**；改它只需改下面的 `V4_MIN`（判词会自动跟上）。
+   * ⚠️⚠️ **V2 为什么只记录不阻断**（v1.5.132 实测，与 G3 座位同族）：**零权重常数策略在 V2 上拿到 10.2%，
+   *   与线上冠军的 10.0% 一模一样** ⇒ 这条轴对"包好不好"**没有判别力**（任何阈值都会被垃圾满足）。
+   *   但它作为**历史坐标**仍有意义：R61 之前同一个包在 V2 上是 **34.7%** ⇒ 那次引擎改动把它**从"明显高于
+   *   什么都不做"打到了"就是什么都不做"**。⇒ 想让它重新有判别力，得先让"什么都不做"显著低于"好包"，
+   *   那是**另一件工作**（不是加个阈值就能解决的）。 */
+  const V4_MIN = 10;
+  const G = 600, SEED = 7777;
+  const DEP = { S: S, Play: Play, T: T, R: R, B: Bots };
+  const params = Pol.unpack(sb.window.EPIRUS_CHAMPION_3P, true);
+  ok(!!params, '线上 3P 包必须能解包（否则本门没有测量对象）');
+  const meas = function (pp) {
+    const m = measureAll(DEP, pp, { games: G, seed: SEED, countKey: null, ablate: false });
+    return { V1: m.V1.rate, V2: m.V2.rate, V4: m.V4.rate };
+  };
+  const o = meas(params);
+  const zero = new Float64Array(Pol.paramCount());     // 什么都不学的常数策略 = 本门的"地板参考"
+  const z = meas(zero);
+  ok(isFinite(o.V4) && isFinite(o.V2) && isFinite(z.V4), '量具必须给出有限数（V4=' + o.V4 + ' V2=' + o.V2 + '）');
+  /* ① 主判据：V4 地板 */
+  ok(o.V4 >= V4_MIN, 'V4（满桌同包 · 每席位胜率）必须 ≥ ' + V4_MIN + '%（实测 **' + o.V4.toFixed(1) +
+    '%** / 公平份额 20%）—— 低于它 = 这个包跟自己人互杀到没意义（v1.5.131 实测：6 个臂里 5 个只有 1.8~5.8%）');
+  /* ② **仪器必须能看见"坏"**（阳性对照；同族做法见 `probe-ring-ablate` 的"禁一张高频卡必须掉分"）：
+   *    零权重策略必须**被这条门挡住** —— 否则这条门的绿是"量具死了"，不是"包好"。 */
+  ok(z.V4 < V4_MIN, '阳性对照：零权重常数策略的 V4 必须低于 ' + V4_MIN + '%（实测 **' + z.V4.toFixed(1) +
+    '%**）⇒ 否则这条门只是"量具死了"');
+  ok(o.V4 > z.V4, '线上包的 V4 必须高于零权重策略（' + o.V4.toFixed(1) + '% vs ' + z.V4.toFixed(1) + '%）');
+  /* ③ V2 的**判别力自检**（记录不阻断，但要能发现"它将来变得有判别力了 / 或量具坏了"）：
+   *    现在它必须与零权重**同档**（±4pt）—— 这正是它不被立成阈值的原因。若哪天这条红了，
+   *    说明 V2 变有判别力了（好事）⇒ 那时再按 G4 的规矩给它标定阈值。 */
+  ok(Math.abs(o.V2 - z.V2) <= 4, 'V2 现状必须与零权重同档（线上 ' + o.V2.toFixed(1) + '% vs 零权重 ' + z.V2.toFixed(1) +
+    '%）—— 若拉开了 ⇒ V2 变有判别力了，**那时**再给它标定阈值并升成阻断门（本门只记录）');
+  /* ④ 单一来源：装配只许有一份（本仓"同一规则两处维护必然漂移"栽过四次）。 */
+  const pb = readFileSync('tools/probe-ring-ablate.mjs', 'utf8');
+  ok(pb.indexOf("from './v2v4-lib.mjs'") >= 0, '探针必须从 v2v4-lib.mjs 导入装配（不许自己再写一份）');
+  ok(pb.indexOf('pickBalanced') < 0, ' 且探针里不许再出现对手名清单（它是装配定义的一部分）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
- * 门禁会安静地不报结论）。D69 自检守着这个顺序。 */
+ * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
+ * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 
 

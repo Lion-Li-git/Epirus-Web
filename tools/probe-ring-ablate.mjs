@@ -11,6 +11,8 @@
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+/* v1.5.132：V1/V2/V4 的装配抽到**单一来源** `tools/v2v4-lib.mjs`（探针与 `np-test D105` 共用一份实现）。 */
+import { ASSEMBLIES, playAssembly, rates } from './v2v4-lib.mjs';
 const REPO = process.env.EPIRUS_REPO || './';
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map };
 sb.window = sb; sb.globalThis = sb;
@@ -27,38 +29,13 @@ const SEED = Number(process.env.CROWD_SEED || 7777);
 /* ABLATE_KEY=另一个技能名 ⇒ 本工具可当**任意单卡的消融**用，也用来做**阳性对照**
  *   （禁一张它高频使用的卡，必须看到明显掉分；否则"禁环没影响"这条读数是量具死了，不是环没用）。 */
 const KEY = process.env.ABLATE_KEY || A.RING;
-function mb(seed) { let a = seed >>> 0; return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let x = Math.imul(a ^ (a >>> 15), 1 | a); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
-function h32(n) { let x = (n + 0x9e3779b9) >>> 0; x = Math.imul(x ^ (x >>> 16), 0x85ebca6b) >>> 0; x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35) >>> 0; return (x ^ (x >>> 16)) >>> 0; }
 function load(f) {
   const src = readFileSync(REPO + f, 'utf8');
   if (f.includes('bundled')) { const m = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src); return P.unpack(JSON.parse(m[1]), true); }
   return P.loadAny(JSON.parse(src.slice(src.indexOf('{"v":'), src.lastIndexOf('}') + 1))).params;
 }
-/* 一臂：k 席被测，返回逐局"我席是否获胜"(1/0) + 和棋数 + 该臂里环出手次数 */
-function playGames(params, k, opp, ablate) {
-  const me = T.policyChooserN(params, 0.15);
-  let ring = 0, draw = 0;
-  const w = [];
-  for (let g = 0; g < N; g++) {
-    const off = g % 5;
-    const mine = []; for (let i = 0; i < k; i++) mine.push((off + i) % 5);
-    const st = S.createState('multi', { next: mb(SEED + g * 991) }, 5);
-    st.slotSalt = h32(SEED + g * 2246822519);
-    const chooser = (s2, pid, lg) => {
-      const r = me(s2, pid, lg);
-      if (r && r.key === KEY) {
-        ring++;
-        if (ablate) { const ji = lg.find(x => x.key === A.JI); if (ji) return { key: A.JI }; }
-      }
-      return r;
-    };
-    const cs = []; for (let i = 0; i < 5; i++) cs.push(mine.indexOf(i) >= 0 ? chooser : opp);
-    Play.autoGameN(st, cs);
-    if (st.winner === 'draw') draw++;
-    w.push(mine.indexOf(st.winner) >= 0 ? 1 : 0);
-  }
-  return { w, draw, ring };
-}
+/* 装配与播种都在 `tools/v2v4-lib.mjs`（单一来源）；这里只准备一个 deps 包。 */
+const D = { S: S, Play: Play, T: T, R: R, B: B };
 /* 符号翻转精确检验：d_i = 基线−消融 ∈ {+1,0,−1}；H0 下非零对独立等概率翻号 */
 function signFlip(b, a) {
   const d = b.map((x, i) => x - a[i]);
@@ -79,19 +56,19 @@ console.log(`=== 消融「${KEY}」（同 seed 同轮座 · 只把 chooser 输�
 for (const f of FILES) {
   let p; try { p = load(f); } catch (e) { console.log(`  跳过 ${f}: ${e.message}`); continue; }
   console.log(`\n  包：${f.split('/').pop()}`);
-  for (const [nm, oppName] of [['V1 打乱局（对手 random）', 'pickRandom'], ['V2 打整局（对手 balanced）', 'pickBalanced'], ['V4 成群（4 席自家族 vs 1 balanced）', 'pickBalanced']]) {
-    const opp = B[oppName];
-    if (typeof opp !== 'function') throw new Error('EpirusBots 里没有 ' + oppName);
-    const O = (st, pid, lg) => opp(st, pid, lg);
-    const k = nm.startsWith('V4') ? 4 : 1;
-    const b = playGames(p, k, O, false);
-    const a = playGames(p, k, O, true);
+  for (const asm of ASSEMBLIES) {
+    const opp = B[asm.opp];
+    if (typeof opp !== 'function') throw new Error('EpirusBots 里没有 ' + asm.opp);
+    const k = asm.k, nm = asm.key + ' ' + asm.name;
+    const opt = { k: k, opp: opp, games: N, seed: SEED, countKey: KEY };
+    const b = playAssembly(D, p, Object.assign({}, opt, { ablate: false }));
+    const a = playAssembly(D, p, Object.assign({}, opt, { ablate: true }));
     const sf = signFlip(b.w, a.w);
-    const bw = 100 * b.w.reduce((x, y) => x + y, 0) / N / k, aw = 100 * a.w.reduce((x, y) => x + y, 0) / N / k;
+    const bw = rates(b.w, k), aw = rates(a.w, k);
     console.log(`  ${nm}`);
     console.log(`      基线 ${bw.toFixed(1)}%${k > 1 ? '/席' : ''}  →  消融 ${aw.toFixed(1)}${k > 1 ? '/席' : ''}   差 ${(aw - bw).toFixed(1)}pt   非零配对 ${sf.nz}/${N}   符号翻转 p = ${sf.p < 0.001 ? sf.p.toExponential(1) : sf.p.toFixed(3)}`);
-    console.log(`      基线「${KEY}」出手 ${b.ring} 次 · 消融臂改判 ${a.ring} 次   和棋 基线 ${b.draw} / 消融 ${a.draw}`);
-    if (a.ring === 0) console.log(`      ⛔ 空枪：这个装配里它本来就不出「${KEY}」⇒ 本行无信息，别读成"这张卡没用"`);
+    console.log(`      基线「${KEY}」出手 ${b.keyUses} 次 · 消融臂改判 ${a.keyUses} 次   和棋 基线 ${b.draw} / 消融 ${a.draw}`);
+    if (a.keyUses === 0) console.log(`      ⛔ 空枪：这个装配里它本来就不出「${KEY}」⇒ 本行无信息，别读成"这张卡没用"`);
   }
 }
 console.log('\n  判据：三行差值同负且 p 小 ⇒ 环对这个包是**净贡献**（该继续投表征/训练）；');
