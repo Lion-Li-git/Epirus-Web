@@ -8,6 +8,8 @@ import vm from 'node:vm';
 import { isChampOpp, loadChampParams } from '../server/opp-champs.mjs';
 /* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
+/* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
+import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG } from './pick-best.mjs';
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
 sb.window = sb; sb.globalThis = sb;
@@ -3818,6 +3820,46 @@ t('D103 「珠爆发」线必须同时在册（2P 考卷 + G4 克制表），且
    * 而实际什么都没测（v1.5.89「把没跑的/没判的当成过了」同族）。行为上无法廉价复现，故用文本钉。 */
   ok(gd.indexOf('const B = sb.window.EpirusBots;') >= 0,
     '前提：gate-drafts 必须真的把 EpirusBots 取出来（否则「珠爆发」格会静默退化成"只出ジ"的**假安全读数**）');
+});
+
+t('D104 「择优不得回归」必须是机械保证（而不是注释里的承诺）', function () {
+  /* 病（v1.5.130 实测反例，`train2p.log`）：`train-best` 的择优原先只有 `sc` + 容差带 + 发散度三步，
+   * 而 `evScore()` 的闸门罚项**在有洞时退化成常数**（`gateMin*0.4-1`，gateMin=0 ⇒ sc ≡ -1）
+   * ⇒ 5 个候选 sc 全 -1、容差带 = 全部 ⇒ 择优实际由 `divNorm` 决定，
+   * 实测把现有冠军（1 个洞：beadburst 0%）换成了更差的包（2 个洞：defend 0% / reflectspam 0%，avg 89%→85%）。
+   * 而第 92 行的注释从 v1.5.18 起就一直写着"保证**绝不会**回归到比现有更弱的冠军"——**假承诺**。
+   * 现在择优是纯函数（`tools/pick-best.mjs`），这里喂**合成候选表**验行为（不是钉排版）。 */
+  const INC = { tag: INCUMBENT_TAG, sc: -1,
+    ev: { avg: 0.89, per: { wall: 1.0, defend: 1.0, beadburst: 0.0, reflectspam: 0.9 } }, div: { divNorm: 0.201, distinct: 2 } };
+  /* 那次运行里**被选中**的那个候选（数值逐条取自 `train2p.log`） */
+  const REGRESS = { tag: '候选1', sc: -1,
+    ev: { avg: 0.85, per: { wall: 0.70, defend: 0.0, beadburst: 0.93, reflectspam: 0.0 } }, div: { divNorm: 0.366, distinct: 5 } };
+  const FIX = { tag: '候选X', sc: -1,
+    ev: { avg: 0.88, per: { wall: 1.0, defend: 1.0, beadburst: 0.70, reflectspam: 0.9 } }, div: { divNorm: 0.22, distinct: 3 } };
+  /* ① 回归数（冠军已过、却被候选打回 ≤50% 的条数）必须数得出来 */
+  eq(regressionsOf(REGRESS, INC), 2, '「候选1」把冠军已过的 defend/reflectspam 打回 0% ⇒ 回归数必须是 2');
+  eq(fixesOf(REGRESS, INC), 1, ' 且它确实新过了 1 条（beadburst 0%→93%）—— 修了洞也**不能**抵掉回归');
+  eq(regressionsOf(FIX, INC), 0, '「候选X」不回归');
+  eq(fixesOf(FIX, INC), 1, ' 且修好了那个洞');
+  /* ② 回归型候选**不许**当选 —— 旧实现正会选它（发散度最大 0.366）。这是本条门的核心。 */
+  eq(pickBestByExam([INC, REGRESS], { wrTol: 0.03 }).best.tag, INCUMBENT_TAG,
+    '把冠军已过的基准打回 ≤50% 的候选一律不许当选（哪怕它修好了别的洞、发散度更大）');
+  eq(pickBestByExam([INC, REGRESS], { wrTol: 0.03 }).dropped, 1,
+    '该候选必须是被"不回归层"**剔除**的（而不是碰巧没被挑中）');
+  /* ③ 0 回归且真修好了洞 ⇒ 必须能当选（否则修法本身成了障碍，这条线永远修不动） */
+  eq(pickBestByExam([INC, FIX], { wrTol: 0.03 }).best.tag, '候选X', '0 回归且修好了洞的候选必须能当选');
+  /* ④ 所有候选都有回归 ⇒ 现有冠军必须原样留下 */
+  const ALLREG = { tag: '候选Y', sc: 0.2,
+    ev: { avg: 0.95, per: { wall: 1.0, defend: 0.0, beadburst: 0.9, reflectspam: 0.9 } }, div: { divNorm: 0.9, distinct: 6 } };
+  eq(pickBestByExam([INC, REGRESS, ALLREG], { wrTol: 0.03 }).best.tag, INCUMBENT_TAG,
+    '全部候选都有回归 ⇒ 现有冠军必须留下（这才是"绝不回归"的实际含义）');
+  /* ⑤ 现有冠军自身在不回归层里恒成立（否则会把自己剔掉 ⇒ 无包可用） */
+  eq(regressionsOf(INC, INC), 0, '现有冠军对自己没有回归');
+  eq(pickBestByExam([INC], { wrTol: 0.03 }).best.tag, INCUMBENT_TAG, '只有现有冠军时也必须选出它（不许抛）');
+  /* ⑥ 单一来源：工具必须 import 这个纯函数 —— 否则上面这些用例测的是**另一份**实现 */
+  const tb = readFileSync('tools/train-best.mjs', 'utf8');
+  ok(tb.indexOf("from './pick-best.mjs'") >= 0, 'tools/train-best.mjs 必须从 pick-best.mjs 导入择优');
+  ok(tb.indexOf('const regressOf = function') < 0, ' 且不许再内联一份 regressOf（两处实现必然漂移）');
 });
 
 t('D92 R56 同层内资源型先结算（用户裁定：过载炮的清除须含目标本回合收入）', function () {

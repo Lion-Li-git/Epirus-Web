@@ -12,6 +12,9 @@ import { makeAsyncStep } from '../server/paralleltrain.mjs';
  * ⚠️ 键序就是基准顺序（考卷种子 = 20260207 + i*977）⇒ 插/删/重排都会改变历史成绩。 */
 import { P2_FNAME as fname, P2_NAMES as NAMES } from './p2-baselines.mjs';
 import { rulesFingerprint } from './rules-fingerprint.mjs';
+/* v1.5.130：择优（不回归层 + 容差带 + 发散度）抽成**纯函数单一来源** `tools/pick-best.mjs` ——
+ * 动机见该文件头：旧实现内联在这里，`np-test` 想守它只能钉文本；抽出来后门可以喂合成候选表验行为。 */
+import { pickBestByExam, regressionsOf, fixesOf } from './pick-best.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -52,6 +55,13 @@ const GENS = Number(process.argv[3] || 500);
 const workers = Number(process.argv[4]) || 0;
 const stepAsync = makeAsyncStep(T, workers ? { workers: workers } : {});
 console.log(`[parallel] worker 数：${stepAsync.workers}；训练 ${N} 个候选 × ${GENS} 代`);
+/* v1.5.130：**热启动开关**（默认开）。
+ * 背景（本轮实测反例）：本工具原先让 16 个个体**全部随机重开**（`makeTrainer` 的 `P.makePolicy(0.25)`），
+ * 于是一次"学会了新线（珠爆发 0%→93%）"的运行同时把 `defend`/`reflectspam` 打成 **0%**
+ * —— 修一个洞、开两个洞。3P 侧早就是热启动（`EPIRUS_BUNDLE_IN` = 最新冠军，HANDOFF §2.2），
+ * 2P CLI 是唯一的例外；`evo.js` 的 `seedChampion()` 本来就是为"围绕冠军变异"写的。
+ * `EPIRUS_HOTSTART=0` 可退回旧口径（与 v1.5.129 及之前的读数同口径）。 */
+const HOTSTART = process.env.EPIRUS_HOTSTART !== '0';
 
 /* v1.5.18：2P 基准表已抽到 `tools/p2-baselines.mjs`（单一来源；本文件与 promote-champion2p 共用）。
  * ⚠️ 键序就是基准顺序（种子 = 20260207 + i*977）⇒ 重排会改变历史考卷分，见该文件注释。 */
@@ -89,13 +99,14 @@ function evScore(ev) {
 
 let best = null, bestTime = 0;
 const cands = [];   // 多目标择优：先收集，再在胜率容差带内取最发散
+let curP = null;    // v1.5.130：现有冠军的参数（提到 try 外层 —— 训练循环的热启动 `seedChampion` 要用它）
 // 候选 0：现有磁盘冠军（不训练，仅评估）——保证新一轮择优绝不会回归到比现有更弱的冠军
 try {
   const curSrc = readFileSync(dest, 'utf8');
   const curM = curSrc.match(/window\.EPIRUS_CHAMPION\s*=\s*(\{[\s\S]*?\})\s*;/);
   const curObj = curM ? JSON.parse(curM[1]) : null;
   const curRaw = curObj ? P.unpack(curObj, true) : null;
-  const curP = curRaw ? P.embedLegacy(curRaw) : null;   // v7：旧形状逐位等价嵌入（热启动）
+  curP = curRaw ? P.embedLegacy(curRaw) : null;   // v7：旧形状逐位等价嵌入（热启动）
   if (curP) {
     const curEv = evalChamp(curP);
     console.log(`候选 0 (现有冠军): 不训练 | avg wr=${(curEv.avg * 100).toFixed(0)}% | wall=${(curEv.per.wall * 100).toFixed(0)}% defend=${(curEv.per.defend * 100).toFixed(0)}%`);
@@ -104,6 +115,8 @@ try {
 } catch (e) { /* 无现有冠军则跳过 */ }
 for (let k = 0; k < N; k++) {
   const t = T.makeTrainer({ popSize: 16, gamesPerOpp: 6 });
+  /* v1.5.130：热启动 —— 围绕**现有冠军**变异，而不是 16 个体全随机重开（说明见上面 HOTSTART）。 */
+  if (HOTSTART && curP) T.seedChampion(t, curP);
   const t0 = Date.now();
   for (let g = 0; g < GENS; g++) await stepAsync(t);
   const secs = ((Date.now() - t0) / 1000).toFixed(1);
@@ -119,14 +132,16 @@ for (let k = 0; k < N; k++) {
 // ===== 多目标择优：胜率容差带内取覆盖熵最高者 =====
 // 只用 argmax(胜率) 必然挑中最强也最窄的个体（实测 2.52 vs 3.25 有效技能）。
 // 这里改成：先把「胜率分 ≥ 最高分 - WR_TOL」的候选圈成 band，再在 band 里取 divNorm 最大者。
+/* v1.5.130：择优改成调 `tools/pick-best.mjs` 的纯函数（不回归层 + 容差带 + 发散度）。
+ * 为什么要抽出来、以及它修的那个**假承诺**（"绝不会回归到更弱的冠军"）的实测反例，见该文件头。 */
 const WR_TOL = 0.03;
-const topSc = Math.max.apply(null, cands.map(function (c) { return c.sc; }));
-const band = cands.filter(function (c) { return c.sc >= topSc - WR_TOL; });
-band.sort(function (a, b) { return b.div.divNorm - a.div.divNorm; });
-best = band[0];
-console.log('[多目标择优] 候选=' + cands.length + '  容差带=' + band.length + '（胜率分 ≥ ' + (topSc - WR_TOL).toFixed(3) + '）');
-for (const c of cands) console.log('   ' + c.tag.padEnd(8) + ' sc=' + c.sc.toFixed(3) + '  avg=' + (c.ev.avg * 100).toFixed(0) + '%  divNorm=' + c.div.divNorm.toFixed(3) + '  种类=' + c.div.distinct + (c === best ? '   ← 选中' : ''));
-console.log('   实际胜率损失 = ' + ((topSc - best.sc) * 100).toFixed(1) + 'pt');
+const pick = pickBestByExam(cands, { wrTol: WR_TOL });
+best = pick.best;
+const inc = pick.incumbent;
+if (inc) console.log('[不回归层] 现有冠军=' + inc.tag + '；剔除候选=' + pick.dropped + ' 个（回归了冠军已过的基准）');
+console.log('[多目标择优] 候选=' + cands.length + '  可择优=' + pick.safe.length + '  容差带=' + pick.band.length + '（胜率分 ≥ ' + (pick.topSc - WR_TOL).toFixed(3) + '）');
+for (const c of cands) console.log('   ' + c.tag.padEnd(8) + ' sc=' + c.sc.toFixed(3) + '  avg=' + (c.ev.avg * 100).toFixed(0) + '%  divNorm=' + c.div.divNorm.toFixed(3) + '  种类=' + c.div.distinct + '  回归=' + regressionsOf(c, inc) + '  新过=' + fixesOf(c, inc) + (c === best ? '   ← 选中' : ''));
+console.log('   实际胜率损失 = ' + ((pick.topSc - best.sc) * 100).toFixed(1) + 'pt');
 const packStr = JSON.stringify(best.pack);
 if (existsSync(dest)) copyFileSync(dest, dest + '.bak');   // 覆写前留一份 .bak
 const meta = {
@@ -139,6 +154,12 @@ const meta = {
   examScoreAtBuild: Number(best.ev.avg.toFixed(4)),
   examMinBaseline: Number(Math.min.apply(null, NAMES.map(function (k) { return best.ev.per[k]; })).toFixed(4)),
   examGateOk: NAMES.every(function (k) { return best.ev.per[k] > 0.5; }),
+  /* v1.5.130：把"相对上一包"的账记进**产物本身**（不回归层必须可审计，而不是只活在日志里）：
+   * `regressionsVsPrev` 恒为 0 —— 否则上面的不回归层不会放行它（现有冠军自身也在候选里）。 */
+  prevScoreAtBuild: inc ? Number(inc.ev.avg.toFixed(4)) : null,
+  fixesVsPrev: inc ? fixesOf(best, inc) : 0,
+  regressionsVsPrev: inc ? regressionsOf(best, inc) : 0,
+  hotStart: !!(HOTSTART && curP),
   seed: __SEED, workers: stepAsync.workers, rulesFingerprint: rulesFingerprint()
 };
 writeFileSync(dest,

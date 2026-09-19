@@ -110,7 +110,17 @@
     reflectspam: Bots.pickReflectSpam, guardspam: Bots.pickGuardSpam, baguaspam: Bots.pickBaguaSpam, combocounter: Bots.pickComboCounter,
     tankline: Bots.pickTankLine, heavyfire: Bots.pickHeavyFire, guardgun: Bots.pickGuardGun,
     protowall: Bots.pickProtoWall, whiff: Bots.pickWhiff,
-    reflectmix: Bots.pickReflectMix, reflecttank: Bots.pickReflectTank, defreflectgun: Bots.pickDefReflectGun
+    reflectmix: Bots.pickReflectMix, reflecttank: Bots.pickReflectTank, defreflectgun: Bots.pickDefReflectGun,
+    /* ===== v1.5.130：**珠爆发线**（ジ→蓄电珠→电磁炮，残血摄魂）—— 进**默认池**是有意的例外 =====
+     * 它把当时的线上 2P 冠军打到 **100% 胜**（探针 `tools/probe-beadburst.mjs`：100.0% / 均 9.2 回合）。
+     * `np-test` 的判词里写着"不许往默认池加键"，那条纪律针对的是 `ringspam` 这类**专精**
+     * （加进来会改变所有后续训练的分布，而它并非"打穿线上包"的线）。这里的理由**相反**：
+     *   ① 它是**实测打穿线上包**的线 —— 不进来就等于"训练永远看不见自己最大的洞"；
+     *   ② v7 特征**本来就有**"对手持珠 / 对手刚蓄能"的输入（`policy.js:208-212` / `:242` / `:259`），
+     *      缺的只是"对手池里从没人这么干过"这条梯度。
+     * ⚠️ **代价要说清**：池子分布变了 ⇒ 之后所有 2P 训练臂的数字与本版之前**不可直接比**
+     *    （先例 v1.5.119：动了对手池，代价落在场B 清场）。 */
+    beadburst: Bots.pickBeadBurst
   };
   // 硬门槛：任何一条基准 <50% 的候选一律不许当冠军（否则"对某类打法更脆"会被 avg 平均掉）。
   // 起初只挡人类式三条，实测仍放过"永久防御 50% / 永久反弹 27%"这类洞，故扩到全部基准。
@@ -192,6 +202,9 @@
       { name: 'guardspam', w: 1.6, sel: BOT_PICKS.guardspam },
       { name: 'baguaspam', w: 1.0, sel: BOT_PICKS.baguaspam },
       { name: 'balanced', w: 1.0, sel: BOT_PICKS.balanced },
+      /* v1.5.130：**唯一"蓄珠 → 放电"的对手线**，权重给到 2.0（与 tankline 同档；它 100% 打穿越线包）。
+       * ≈ 6% 的对局（池子总权重 30 → 32）—— 与 guardspam(5%) 同量级，不动整个分布的重心。 */
+      { name: 'beadburst', w: 2.0, sel: BOT_PICKS.beadburst },
       { name: 'defend', w: 2.2, sel: BOT_PICKS.defend }
     ];
   }
