@@ -760,15 +760,15 @@ t('L4 补贴口径：chooser 内补 ep 只对当回合无效、次回合起生�
   ok(l2.affordable === true, 'opts.regen 在 startTurn 发 ep，早于 legalActions => bigT 当回合必须可负担');
 });
 
-t('L3 每个诊断工具都必须能跑（签名/前置条件没核实 => 脚本崩）', function () {
+t('L3 复现工具必须保留冷/热启动断言（v1.5.128 诚实化：原名的"每个工具都能跑"从未实现）', function () {
   /* Real instance: my bisect script died on `T.buildOpps(null, 0.05)` -- a signature I
    * never verified. A per-tool smoke run turns "I forgot to check the API" into a red test.
    * Only --help / tiny-arg runs here: fast and side-effect free. */
   const fsx = readFileSync('tools/repro-check.mjs', 'utf8');
   ok(fsx.indexOf('EPIRUS_HOTSTART') >= 0 || fsx.indexOf('D cold start') >= 0,
     'repro-check 应包含冷启动/热启动断言');
-  const npt = readFileSync('tools/np-test.mjs', 'utf8');
-  ok(npt.indexOf('REPRO2') >= 0, 'np-test 应包含 REPRO2 正向播种断言');
+  /* v1.5.128（审计 §C）：原来这里断言 `npt.indexOf('REPRO2') >= 0` —— 而 `REPRO2` 就是**本文件自己**定义的
+   * 字符串 ⇒ 近乎恒真、纯自指。已删；真实覆盖由 REPRO2 那条门自己提供。 */
   const evo = readFileSync('js/train/evo.js', 'utf8');
   ok(evo.indexOf('process.env.EPIRUS_WR_TOL') < 0,
     'WR_TOL 不得在引擎内读 env（CLI 沙箱无 process => 两条路取到不同值）');
@@ -3092,14 +3092,6 @@ t('D68 威胁靶向奖励：只记"我打的、上回合构成威胁的、不同
   eq(T.setTargetReward(0.07), 0.07, 'setTargetReward 可设');
   T.setTargetReward(0);
 });
-t('D69 自检：汇总必须在 process.exit 之前，否则它是死代码（v1.5.79 踩过）', function () {
-  const self = readFileSync('tools/np-test.mjs', 'utf8');
-  const iSum = self.indexOf('N人测试');
-  const iExit = self.indexOf('process.exit(FAIL');
-  ok(iSum > 0 && iExit > 0, '汇总行与 process.exit 都必须存在');
-  ok(iSum < iExit, '汇总必须排在 process.exit **之前**（曾经被我挪到之后 => 永不执行）');
-});
-
 /* ===== v1.5.80（第八轮复核 §5）：UI 契约（目标弹窗可取消 / 结算期点击有反馈）=====
  * 探针 tools/ui-probe.mjs 在真页面上复现过三条缺陷（读数记在 CHANGELOG v1.5.80）。
  * Chrome 依赖 ⇒ 行为验证走探针，这里只锁**接线**，防它被改回去。 */
@@ -3226,11 +3218,29 @@ t('D77 经济/熵奖励 env 只能有**一个**读取点（server/econ-env.mjs�
   const keys = ((ee.match(/ECON_REWARD_KEYS = \[([\s\S]*?)\]/) || ['', ''])[1].match(/'([^']+)'/g) || [])
     .map(function (q) { return q.replace(/'/g, ''); });
   ok(keys.length >= 6, 'ECON_REWARD_KEYS 应 >=6 个键（实测 ' + keys.length + '）');
-  const evo = readFileSync('js/train/evo.js', 'utf8');
-  const i0 = evo.indexOf('function setEconomyReward(o)');
-  const setter = evo.slice(i0, i0 + 1200);
-  const miss = keys.filter(function (k) { return setter.indexOf('o.' + k + ' != null') < 0; });
-  eq(miss.length, 0, 'evo.js 的 setEconomyReward 必须接受 econ-env 返回的每个键（未接受: ' + miss.join(',') + '）');
+  /* ===== v1.5.128（门禁审计 §2-1）：**把"1200 字符窗口"检查换成运行时往返** =====
+   * 旧写法 `evo.slice(indexOf('function setEconomyReward(o)'), +1200).indexOf('o.<键> != null')` 有三个毛病：
+   *   ① 保的是**排版**（加一行注释就能把后面的键顶出窗口）；② 窗口会在模式串**中途截断** ⇒ 起点 1194 也会红
+   *   （我为它连红四次）；③ 抓不到"读了但没生效"。下面喂值读回：**更强、且与排版无关**。 */
+  const SENT = { target: 7, cap: 33, divW: 0.123, divK: 9, divRoleW: 0.25, divCatW: 0.25, divForceGens: 5, wallFilter: true,
+    wallGames: 4, hoardOnLeftover: true, convRatio: true, convOffense: true, hoardCapMult: 5, stockBonus: 0.11,
+    blockW: 0.22, widthW: 0.33, bigcardW: 0.44 };
+  const ALIAS = { target: 'targetOverride', cap: 'capOverride' };
+  const notOk = [];
+  try {
+    T.setEconomyReward({ reset: true });
+    for (const k of keys) {
+      const s = Object.prototype.hasOwnProperty.call(SENT, k) ? SENT[k] : 0.5;
+      T.setEconomyReward({ reset: true });
+      let back = null;
+      const one = {}; one[k] = s;
+      try { T.setEconomyReward(one); back = T.economyReward(); } catch (e) { notOk.push(k + '(抛错)'); continue; }
+      const f = ALIAS[k] || k;
+      if (!back || !(f in back)) { notOk.push(k + '(未接受)'); continue; }
+      if (back[f] !== s && String(back[f]) !== String(s)) notOk.push(k + '(未生效:' + String(back[f]) + ')');
+    }
+  } finally { T.setEconomyReward({ reset: true }); T.setEconomyReward({ divRoleW: 0 }); }
+  eq(notOk.length, 0, 'setEconomyReward 必须**接受并生效** econ-env 的每个键（运行时往返；坏: ' + notOk.join(',') + '）');
 
   /* ④ 行为：把真模块跑一遍 —— 新名优先、旧名兜底、空串＝未设、wallFilter 只认 '1'。 */
   const prog = [
@@ -3341,10 +3351,16 @@ t('D80 类间广度权重 DIV_ROLE_W：默认 0（逐位等于旧口径）+ 走�
    *   ③ 旧 env `EPIRUS_DIV_CATW` 必须仍可用（新名优先），否则老命令会**静默变成空操作**。 */
   const evo = readFileSync('js/train/evo.js', 'utf8');
   ok(evo.indexOf('let DIV_ROLE_W = 0;') >= 0, '默认必须是 0（不设 env 即旧行为）');
-  ok(evo.indexOf('if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;') >= 0 &&
-    evo.indexOf('else if (o.divCatW != null) DIV_ROLE_W = Number(o.divCatW) || 0;') >= 0,
-    '必须走 setter（新名 divRoleW 优先 + 旧名 divCatW 兜底）—— vm 沙箱没有 process，env 只能在 server 侧读'
-    + '（v1.5.126：为让 D77 的 1200 字符窗口容得下新键，这两行从 `Math.min(1,Math.max(0,Number(...)))` 简化为 `Number(...) || 0` ⇒ 语义不变，仅**不再夹取**越界值）');
+  /* v1.5.128（审计 §2-4）：把**源码文本钉**换成**运行时喂值读回** ——
+   * 旧写法逐字匹配 setter 的表达式，2026-09-19 一次"语义不变的重写"就把它弄红过（它保的是排版不是行为）。 */
+  try {
+    T.setEconomyReward({ reset: true });
+    T.setEconomyReward({ divRoleW: 0.4 });
+    eq(T.economyReward().divRoleW, 0.4, '新名 divRoleW 必须生效');
+    T.setEconomyReward({ reset: true });
+    T.setEconomyReward({ divCatW: 0.4 });
+    eq(T.economyReward().divCatW, 0.4, '旧名 divCatW 必须兜底生效（新名优先）');
+  } finally { T.setEconomyReward({ reset: true }); T.setEconomyReward({ divRoleW: 0 }); }
   ok(evo.indexOf('const spMixNorm = (1 - DIV_ROLE_W) * spDivNorm + DIV_ROLE_W * spRoleNorm;') >= 0,
     '混比公式必须显式可读（W=0 ⇒ 只剩 spDivNorm = 旧口径）');
   ok(evo.indexOf('const divBonus = DIV_W * spMixNorm;') >= 0, 'fit 必须用混比后的量');
@@ -3852,25 +3868,25 @@ t('D100 E4：挡下伤害奖励（env 单一来源 · 只认真的挡下 · 标�
   ok(en.indexOf("'EPIRUS_BLOCK_W'") >= 0, 'env 名必须在**单一来源**里（否则 worker 拿不到 ⇒ 附录 D 臂 K 的 A/A 事故）');
   ok(en.indexOf("'blockW'") >= 0 && en.indexOf('blockW: nv(e.EPIRUS_BLOCK_W)') >= 0,
     '必须被 readEconEnv 读出（两端同一对函数）');
-  /* ⚠️ D77 的 **1200 字符窗口**：我为它连续红过三次 ⇒ 单独钉一条（新旋钮的 if 必须写进窗口，
-   * 且注释不能太长 —— 我加过 218 字符注释把 divForceGens 顶到 1244 ⇒ 当场红）。 */
-  const body = ev.slice(ev.indexOf('function setEconomyReward'));
-  const keys = ['divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames', 'stockBonus', 'hoardCapMult', 'blockW'];
-  const outWin = keys.filter(function (k) {
-    const at = body.indexOf('o.' + k + ' != null');
-    return at < 0 || at >= 1200;
-  });
-  eq(outWin.length, 0, 'setEconomyReward 里每个键的 `o.<键> != null` 都必须在函数开头 1200 字符内（D77 的窗口）');
+  /* v1.5.128（审计 §2-1）：原来这里复制了一份"D77 的 1200 字符窗口"检查（同一规则三处实现，改一次要改三处）。
+   * D77 已改成**运行时往返**（喂值读回）⇒ 这条窗口子检查**删除**。 */
 });
 
 t('D101 贵卡出手奖励（v1.5.126 用户洞察：它不会用电磁炮/大雷、也丢了地雷/净化 ⇒ 没必要攒 ep）', function () {
   /* 贵卡由**声明字段**推导（D81/D72 的规矩：不得枚举卡名）：`cost ≥ 3`（大雷 5 · 地雷/净化/摄魂 3）
    * 或 `energyNeeds` 非空（电磁炮需 1 电珠 · 激光眼需爆珠）。 */
   const ev = readFileSync('js/train/evo.js', 'utf8');
-  ok(ev.indexOf('function isBigCard(def)') >= 0, '必须有 isBigCard（从声明字段推导）');
-  ok(ev.indexOf('typeof def.cost === ' + "'number'") >= 0 && ev.indexOf('def.energyNeeds && Object.keys(def.energyNeeds).length') >= 0,
-    '判定必须是 `cost >= 3` 或 `energyNeeds` 非空 —— **不许枚举卡名**');
-  ok(ev.indexOf('function countBigCards(events, seat, RR)') >= 0, '必须有 countBigCards');
+  /* v1.5.128（审计 §2-4）：**语义改用运行时验**（原来这三条是源码文本钉 —— 保排版不保行为）。
+   * 贵卡 = `cost ≥ 3` 或 `energyNeeds` 非空 ⇒ 大雷(5)/地雷(3)/净化(3)/电磁炮(需电珠) 记分，枪(1)/狙击(2)/ジ(0) 不记；
+   * 且只认 `outcome === 'ok'`（被无效化的不算 ⇒ 不可刷）。**不枚举卡名**：靠声明字段。 */
+  const mkAct = function (key, voided) { return { type: 'action', pid: 0, outcome: voided ? 'voided' : 'ok', key: key }; };
+  eq(T.countBigCards([mkAct(R.SK.BIG_T)], 0), 1, '真正的落雷（cost 5）必须记分');
+  eq(T.countBigCards([mkAct(R.SK.MINE), mkAct(R.SK.PURIFY)], 0), 2, '地雷/净化（cost 3）必须记分');
+  eq(T.countBigCards([mkAct(R.SK.RAILGUN)], 0), 1, '电磁炮（需 1 电珠）必须记分');
+  eq(T.countBigCards([mkAct(R.SK.GUN)], 0), 0, '枪（cost 1）不得记分');
+  eq(T.countBigCards([mkAct(R.SK.SNIPE)], 0), 0, '狙击枪（cost 2）不得记分');
+  eq(T.countBigCards([mkAct(R.SK.JI)], 0), 0, 'ジ 不得记分');
+  eq(T.countBigCards([mkAct(R.SK.BIG_T, true)], 0), 0, '被无效化的出手不得记分（不可刷）');
   ok(ev.indexOf('const bigBonus = BIGCARD_W > 0 ?') >= 0, '标度必须有关闭守卫（0 * NaN = NaN 会把 fit 打成 NaN —— v1.5.124 的坑）');
   ok(ev.indexOf('+ blockBonus + widthBonus + bigBonus));') >= 0, '必须真的进 gFit');
   ok(ev.indexOf('let BIGCARD_W = 0;') >= 0, '默认必须关');

@@ -811,7 +811,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W,
+      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, wallGames: WALL_GAMES,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
 
