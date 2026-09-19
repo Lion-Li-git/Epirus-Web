@@ -400,12 +400,26 @@
     for (let i = 0; i < state.p.length; i++) {
       if (i !== pid && state.p[i].hp > 0 && state.p[i].hp < minHp) minHp = state.p[i].hp;
     }
+    /* ===== v1.5.116（**用户实盘"无根据的突然集火"的根因**）=====
+     * 这一维原本是 `(X && X.guardOf(state, tid)) ? 1 : 0` —— 看起来是"目标身上有架势 ⇒ 打他会被挡/被弹"，
+     * 但**决策时刻它恒为 0**（实测：`X.guardOf(state, 0)` 在每一步都返回 null）：
+     *   · `guardOf` 读的是 `state.actions`（**本回合**的出手）；
+     *   · 而每回合开始 `startTurn` 会把 actions 清成 `[null,null,…]`，`Play.autoGameN` 又是
+     *     **先收集全部 picks、再统一施加** ⇒ 任何座位在**选择的那一刻**，actions 里谁都还没有东西。
+     * ⇒ **死特征**：AI 根本看不见"谁会摆架势挡我"，于是会出现多个座位一起把狙击/大雷砸进一个
+     *   挂着原型制御/反弹的对手（用户日志 `results/epirus-battle-22回合.txt:28-33` 三席同狙一人、三发全被挡）。
+     * 改用**决策时刻真的存在**的信号（与状态特征 `anyOp(o => o.guardNext)` 同源，只是**按目标拆开**）：
+     *   `guardNext` = 该目标上一回合摆过防御架势（可预测"他大概还会守"）；
+     *   `baguaExtra`（无极变速第二回合的八卦阵延续）/ `copiedGuard`（镜面复制来的架势）= **延续性**架势
+     *   ⇒ 这两项在本回合真的会生效，属于"打他会被挡"的硬信号。
+     * ⚠️ 语义变了（旧权重下它恒为 0 ⇒ 这一维的权重从未受过训练）⇒ **必须重训后才用于线上**。 */
+    const tgtGuard = (t.guardNext || t.baguaExtra || t.copiedGuard) ? 1 : 0;
     base.push(
       t.hp / hpm,                                   // 目标血量
       Math.min(t.ep, 12) / 12,                      // 目标ジ
       (t.hp <= 1) ? 1 : 0,                          // 收割窗口（0.5 血也算）
       (t.ep >= 2) ? 1 : 0,                          // 目标有前摇 ⇒ 该压他
-      (X && X.guardOf(state, tid)) ? 1 : 0,         // 目标身上有架势 ⇒ 打他会被挡/被弹
+      tgtGuard,                                     // 目标带架势（v1.5.116：改用决策时刻可得的信号）
       (t.hp <= minHp + 1e-9) ? 1 : 0                // 目标是最脆的那个（集中火力）
     );
     return base;

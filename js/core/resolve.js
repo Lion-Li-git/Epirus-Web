@@ -399,8 +399,27 @@
     if (guard) {
       const g = guard.kind;
       if (g === 'proto') {
-        // 原型制御：阻挡除 地雷/转移 外一切技能伤害（含坦克/狙击/大雷）R23/R24
+        /* 原型制御：阻挡除 地雷/转移 外一切技能伤害（含坦克/狙击/大雷）R23/R24
+         * ===== v1.5.116（**用户实盘报的 bug**）：原版规则还有后半句，而实现里只有"阻挡" =====
+         * 原版 `D:\code\Epirus\README.md:257` 原文：
+         *   「阻止除地雷、转移伤害以外的技能伤害，**若伤害总数大于等于3则将伤害各自转移给作用者**」
+         * 本仓 `docs/RULES-2P.md:169`（R24）也写着这条，并注明"2 人对局不触发（单技能伤害≤2）"。
+         * ⇒ 触发条件是**这次攻击的伤害总数 ≥3**（`dmg.totalAmt`，缺省 = 本次交付量）：
+         *    · 多人局的"总数 ≥3"主要来自**多目标**技能（大雷连带 2×N、铁索共享、双目标技能…）；
+         *    · 2 人局单技能 ≤2 ⇒ 永不触发 —— 与 R24 的注记一致 ✓。
+         * ⇒ 不是"挡下"，而是把**这一份**伤害**弹回给施法者**（"各自转移给作用者"＝每个受害者各自
+         *    把自己那份转给造成它的人）。⚠️ 边界：地雷（`via==='mine'`）与转移伤害（`dmg.redirected`）
+         *    本来就不阻挡 ⇒ 也不转移；天火自己另有一处判定（见 `case SK.FIRESTORM` 的注释）。
+         * ⚠️ 反弹出去的那一份**不再触发本分支**（`totalAmt: null` ⇒ 按自身 amt 判，通常 <3）。 */
         if (via === 'mine' || dmg.redirected) { /* 不挡 */ }
+        else if ((dmg.totalAmt != null ? dmg.totalAmt : dmg.amt) >= 3) {
+          ev(state, { type: 'reflect', to, from: dmg.source, amt: dmg.amt, via, by: 'proto' });
+          if (dmg.source != null && dmg.source !== to && state.p[dmg.source] && state.p[dmg.source].hp > 0) {
+            deliverDamage(state, Object.assign({}, dmg, { source: to, reflected: true, noMine: true, totalAmt: null }),
+              dmg.source, { reason: '原型制御·转移' });
+          }
+          return { result: 'reflected' };
+        }
         else { ev(state, { type: 'blocked', to, by: '原型制御', amt: dmg.amt, via }); return { result: 'blocked' }; }
       } else if (g === 'guard') {
         if (!pierce.defense) { ev(state, { type: 'blocked', to, by: '防御', amt: dmg.amt, via }); return { result: 'blocked' }; }

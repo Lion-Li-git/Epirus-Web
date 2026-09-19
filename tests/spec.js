@@ -449,6 +449,25 @@
     ok(!st3.p[0].mineArmed && st3.p[0].mineTurns === 0, '触发即失效（含计时清零）');
   });
 
+  t('R24 原型制御：**伤害总数 ≥3 时转移给作用者**（v1.5.116 修；原版 README:257 的后半句从未实现）', function () {
+    /* 原版 `README.md:257`：「阻止除地雷、转移伤害以外的技能伤害，**若伤害总数大于等于3则将伤害
+     * 各自转移给作用者**」；`RULES-2P.md:169`（R24）同款。而实现里**只有"阻挡"**（用户实测没触发）。
+     * 本用例**能反证**：旧实现会把这份 3 点伤害挡掉、施法者毫发无伤 ⇒ 第二、三条断言会红。 */
+    const mk = function (key) { return { key: key, voided: false, outcome: 'ok', opt: null, target: null }; };
+    const st = S.createState('multi', { next: function () { return 0.9; } }, 3);
+    st.actions = [mk(R.SK.PROTO), mk(R.SK.JI), mk(R.SK.JI)];
+    const res = X.deliverDamage(st, { amt: 3, type: R.DMG.NORMAL, source: 2, via: R.SK.CANNON }, 0, { reason: '测试' });
+    ok(res && res.result === 'reflected', '≥3 ⇒ 判定必须是 reflected（不是 blocked）');
+    eq(st.p[0].hp, 3, '持有者不掉血（那份伤害被转走）');
+    eq(st.p[2].hp, 0, '施法者吃下这 3 点（"各自转移给作用者"）');
+    // 对照：<3 ⇒ 仍然只是"阻挡"（2 人局永不触发的那一支，行为一字不变）
+    const st2 = S.createState('multi', { next: function () { return 0.9; } }, 3);
+    st2.actions = [mk(R.SK.PROTO), mk(R.SK.JI), mk(R.SK.JI)];
+    const res2 = X.deliverDamage(st2, { amt: 2, type: R.DMG.NORMAL, source: 2, via: R.SK.MINI_T }, 0, { reason: '测试' });
+    ok(res2 && res2.result === 'blocked', '<3 ⇒ 仍然只是阻挡');
+    eq(st2.p[2].hp, 3, '施法者不掉血（对照支路）');
+  });
+
   t('R60 净化清除**自身全部持续状态**（用户裁定）：藤甲/地雷/避雷针/符咒/大雷禁用/梦魇', function () {
     /* 用户口径："藤甲与地雷既然成了 buff，就一并会被净化掉（同样会被净化掉的还有避雷针、符咒、
      * 大雷禁用效果、以及几乎不会出现的梦魇）"。

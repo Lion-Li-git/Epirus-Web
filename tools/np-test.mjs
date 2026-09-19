@@ -3797,6 +3797,32 @@ t('D98 "终局收缩"的哨兵必须是它自己的标记（不许再用 source=
     '地雷的无来源是有明文规则依据的（N20 第 6 条）—— 这正是旧哨兵会误判的原因');
 });
 
+t('D99 两处修正：原型制御 ≥3 转移（R24）+ 目标架势特征不再是死特征', function () {
+  /* ① 原版 `README.md:257` 后半句「若伤害总数≥3 则将伤害各自转移给作用者」从未实现（用户实测没触发）。
+   * ② 用户实盘"无根据的突然集火"的根因：`policy.js` 的"目标带架势"那一维读 `X.guardOf(state, tid)`，
+   *    而决策时刻 `state.actions` 全 null（startTurn 清空 + autoGameN 先收 picks 再施加）⇒ **恒为 0**。 */
+  const rs = readFileSync('js/core/resolve.js', 'utf8');
+  ok(rs.indexOf('(dmg.totalAmt != null ? dmg.totalAmt : dmg.amt) >= 3') >= 0,
+    '原型制御必须有"伤害总数 ≥3"分支（R24）');
+  ok(rs.indexOf("reason: '原型制御·转移'") >= 0, '≥3 时必须把那份伤害**弹回给施法者**（不是只挡下）');
+  ok(rs.indexOf("by: '原型制御', amt: dmg.amt, via }); return { result: 'blocked' };") >= 0,
+    '<3 时仍然只是"阻挡"（2 人局那一支行为不变）');
+  const po = readFileSync('js/train/policy.js', 'utf8');
+  /* ⚠️ 只看**代码行**：这条根因的注释里必然会提到旧写法（`guardOf(…)`），扫全文会自己把自己判红
+   * （我第一版就这么栽的）。注释行以 `*` 或 `//` 开头 ⇒ 滤掉再断言。 */
+  const poCode = po.split('\n').filter(function (l) {
+    const s = l.trim();
+    return s.indexOf('*') !== 0 && s.indexOf('//') !== 0 && s.indexOf('/*') !== 0;
+  }).join('\n');
+  ok(poCode.indexOf('guardOf(state, tid)') < 0,
+    '**死特征**不得回来 —— `guardOf` 在决策时刻恒为 null（旧写法读的是本回合 actions）');
+  ok(poCode.indexOf('(t.guardNext || t.baguaExtra || t.copiedGuard) ? 1 : 0') >= 0,
+    '目标架势特征必须用**决策时刻真的存在**的信号（guardNext / baguaExtra / copiedGuard）');
+  ok(po.indexOf('无根据的突然集火') >= 0, 'policy.js 必须写下这条根因（否则下一个人又会以为它读得到）');
+  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R24 原型制御：**伤害总数 ≥3 时转移给作用者**') >= 0,
+    'spec 必须留下 R24 的能反证用例（旧实现只会 blocked）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
