@@ -44,13 +44,17 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
   'EPIRUS_WIDTH_W',
   /* v1.5.126（**用户洞察**）：**贵卡出手**的奖励权重 —— "这个包不会用电磁炮/大雷、也丢了地雷/净化 ⇒
    * 它当然没必要攒 ep"。贵卡由**声明字段**推导（`cost ≥ 3` 或 `energyNeeds`），不写卡名清单。 */
-  'EPIRUS_BIGCARD_W'];
+  'EPIRUS_BIGCARD_W',
+  /* qoder-research 0920（RESEARCH-LOG §5b · HANDOFF §4-2 候选①）：**环奖励权重**（`evo.js` 的 `RING_W`，
+   * 出厂 0.10）接进单一来源 ⇒ 臂上可开"贵卡 + 环"同抬的配方，找那个"既打环又会花贵卡"的合格包。
+   * 不设 ⇒ 逐字不变。 */
+  'EPIRUS_RING_W'];
 
 /* 与 `js/train/evo.js` 的 `setEconomyReward(o)` / `economyReward()` 字段名对齐
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
 export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
   'hoardOnLeftover', 'convRatio', 'convOffense', 'hoardCapMult', 'stockBonus',
-  'blockW', 'widthW', 'bigcardW'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡（与 setter 逐字对齐 ⇒ D77 盯得住）
+  'blockW', 'widthW', 'bigcardW', 'ringW'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重（与 setter 逐字对齐 ⇒ D77 盯得住）
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -93,7 +97,9 @@ export function readEconEnv(env) {
     /* v1.5.124（§28a）：广度收益项的权重（0 = 关 ⇒ 出厂行为一字不变）。 */
     widthW: nv(e.EPIRUS_WIDTH_W),
     /* v1.5.126（用户洞察）：贵卡出手的权重（0 = 关 ⇒ 出厂行为一字不变）。 */
-    bigcardW: nv(e.EPIRUS_BIGCARD_W)
+    bigcardW: nv(e.EPIRUS_BIGCARD_W),
+    /* 0920 qoder：环奖励权重（不设 ⇒ null ⇒ evo 原样 0.10）。 */
+    ringW: nv(e.EPIRUS_RING_W)
   };
 }
 

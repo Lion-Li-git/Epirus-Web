@@ -801,6 +801,9 @@ let WALL_GAMES = 3;
    *   （实测：一行一个键时 `wallGames` 落在 1202 ⇒ 红；注释写进函数体里也会把窗口吃掉）。 */
   function setEconomyReward(o) {
     o = o || {};
+    /* qoder-research 0920（RESEARCH-LOG §5b）：环奖励权重接进 econ-env 单一来源（默认不设 ⇒ RING_W 原样 0.10）。
+     * setRingReward 自带 `isFinite && >=0` 校验；调用发生在模块求值之后 ⇒ 无 TDZ 问题（RING_W 声明在 :1955）。 */
+    if (o.ringW != null) setRingReward(o.ringW);
     if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;
     else if (o.divCatW != null) DIV_ROLE_W = Number(o.divCatW) || 0;
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
@@ -824,7 +827,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, wallGames: WALL_GAMES,
+      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, wallGames: WALL_GAMES, ringW: RING_W,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
 
