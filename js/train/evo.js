@@ -703,6 +703,9 @@
   }
   let ECO_T = null, ECO_C = null;     // 显式覆盖（默认 null ⇒ 走 (n, mode) 推导）
   let DIV_W = 0.06;
+  /* v1.5.124（复核 §28a）：**广度收益项**的权重与阈值（默认关 ⇒ 出厂行为一字不变）。
+   * 形状：G 从 `WIDTH_FLOOR` 到 `WIDTH_TARGET` 线性给钱 ⇒ 与 `DIV_W` 那个"归一化熵"不同，**刷不动**。 */
+  let WIDTH_W = 0, WIDTH_FLOOR = 3, WIDTH_TARGET = 7;
   /* v1.5.86（附录 D6）：分母必须是**固定目标**，不能用"当时可负担的技能数" ——
    * 否则"把菜单变穷"就能把 divNorm 刷高（臂 A 实测：DIV_W×5 后产物 G=1.24/1.90，
    * 比默认臂被拒的 2.3~2.8 更低，全被健康门禁拦下、零产物）。
@@ -783,7 +786,7 @@ let WALL_GAMES = 3;
    *   （实测：一行一个键时 `wallGames` 落在 1202 ⇒ 红；注释写进函数体里也会把窗口吃掉）。 */
   function setEconomyReward(o) {
     o = o || {};
-    if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
+    if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
     if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover; if (o.convRatio != null) CONV_RATIO = !!o.convRatio; if (o.convOffense != null) CONV_OFFENSE = !!o.convOffense;
     if (o.hoardCapMult != null) HOARD_CAP_MULT = Math.max(1, Number(o.hoardCapMult) || 1); if (o.stockBonus != null) STOCK_BONUS = Math.max(0, Math.min(1, Number(o.stockBonus)));
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
@@ -793,7 +796,6 @@ let WALL_GAMES = 3;
     if (o.wallFilter != null) WALL_FILTER_ON = !!o.wallFilter;
     if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
-    /* divRoleW 新名 / divCatW 旧名（同一内部量，新名优先）；完整说明见 econ-env.mjs。 */
     if (o.divRoleW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divRoleW)));
     else if (o.divCatW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divCatW)));
     if (o.wallFilter != null) WALL_FILTER_ON = !!o.wallFilter;
@@ -801,7 +803,7 @@ let WALL_GAMES = 3;
     /* reset 必须把新旋钮一起复位（否则"设过之后 reset"留脏状态、自检会读出假 DIFF）。 */
     if (o.reset) {
       ECO_T = null; ECO_C = null;
-      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0;
+      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0;
     }
     return economyReward();
   }
@@ -810,7 +812,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W,
+      blockW: BLOCK_W, widthW: WIDTH_W,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
 
@@ -935,7 +937,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0, varietyMax = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let leftEpSum = 0, spentEpSum = 0, gainEpSum = 0;   // v1.5.116 L2′：余款/已花/已获得（每局）
     let imitSum = 0, imitGames = 0;
@@ -1076,10 +1078,20 @@ let WALL_GAMES = 3;
        * 封顶 /1（**量出来的标度**：线上包自对局实测每席每局只有 **0.10** 次挡下、最大 0.40 ⇒
        * 用 /2 会几乎恒为 0、奖励退化成常数微扰；改用 v1.5.79 那条"0 次得 0、1 次即吃满"的规矩）。 */
       const blockBonus = BLOCK_W * Math.min(1, blocks / 1);
+      /* ===== v1.5.124（复核 §28a 的处方 (ii)）：**把"广度"从门槛升格为收益项** =====
+       * 病：出厂 `DIV_W=0.06` 在胜率项（量级 ~1.0）前**没有梯度**；而 `G≥3` 只是**事后砍窄包**
+       * （无筛选种群 G 中位 **2.4**、12 个 seed 只有 2 个过门槛）⇒ 门槛不生产宽包。
+       * ⚠️ 为什么不直接给 `divBonus` 加权：它是**归一化**熵（可行集合越穷越高 ⇒ 可被"把菜单变穷"刷高，
+       * 见 v1.5.92 的注释）；这里改用**绝对**的"用过的招数种类数"（`countVariety` 去重计数），
+       * 并挂在阈值之上：`≤ WIDTH_FLOOR(3)` 不给钱 · `≥ WIDTH_TARGET(7)` 给满 ⇒ 刷不动、有 0→1 梯度。
+       * ⚠️ 关掉时必须是**严格 0**（`0 * NaN = NaN` 会把整个 fit 打成 NaN —— 我第一版就这么踩的）。 */
+      const widthBonus = WIDTH_W > 0
+        ? (WIDTH_W * Math.min(1, Math.max(0, varietyMax - WIDTH_FLOOR) / Math.max(1, WIDTH_TARGET - WIDTH_FLOOR)))
+        : 0;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus + widthBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -1112,6 +1124,9 @@ let WALL_GAMES = 3;
          * 论点：防御族**费用 0 ep** ⇒ 与"ep 深度"不同，它不需要多回合计划 ⇒
          * 是"shaping 只在 0.0X 尺度、买不动多回合计划"这条限制**唯一**还可能绕过的方向。 */
         if (BLOCK_W > 0) blocks += countBlocks(r.state.events, seat);
+        /* v1.5.124（§28a）：**广度**的绝对量 —— 该快照里"用过的招数种类数"（去重）。
+         * 取 `max` 而不是累加：要的是"这个策略的招式面有多宽"，不是"出手多少次"。 */
+        if (WIDTH_W > 0) varietyMax = Math.max(varietyMax, countVariety(r.state.events, seat));
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1185,6 +1200,7 @@ let WALL_GAMES = 3;
      * 权重给得小（DIV_W=0.06，满额 +0.06），与 stock（+0.05 / −0.12）同量级 ⇒ 两项加起来仍远小于
      * 胜负项（base 1.0/0.3），符合"奖惩也不用给太多"。 */
     const divBonus = DIV_W * spMixNorm;   // v1.5.92：DIV_CAT_W=0 时**逐位等于** v1.5.87 的口径（自对局·成功非ジ动作）
+    /* v1.5.124（§28a）：广度收益项在 `gFit` 之前算（用 `agg.use`）—— 见那一处的说明。 */
     /* v1.5.88（甲·步 2）：破墙硬过滤（默认关，EPIRUS_WALL_FILTER=1 打开）。 */
     const wallDmg = WALL_FILTER_ON ? wallProbe(params, WALL_GAMES, n) : null;
     const wallReject = (wallDmg != null && wallDmg < 0.5);
@@ -1799,7 +1815,18 @@ let WALL_GAMES = 3;
     }
     return n;
   }
+  /* v1.5.124（§28a）：**用过的招数种类数**（去重、排除 ジ）—— 广度收益项的绝对量。
+   * 只认"成功结算"的出手（`outcome === 'ok'`），被无效化的不算（否则刷被废的假动作也能赚钱）。 */
+  function countVariety(events, seat) {
+    const seen = {};
+    for (const e of (events || [])) {
+      if (e.type === 'action' && e.pid === seat && e.outcome === 'ok' && e.key && e.key !== R.SK.JI) seen[e.key] = 1;
+    }
+    return Object.keys(seen).length;
+  }
   function blockReward() { return { w: BLOCK_W }; }
+  /* v1.5.124（§28a）：广度收益项的只读回执（权重 + 阈值；判据用**无筛选种群**的 G 中位，见 CHANGELOG）。 */
+  function widthReward() { return { w: WIDTH_W, floor: WIDTH_FLOOR, target: WIDTH_TARGET }; }
   function countClears(events, seat) {
     let shrink = false, n = 0;
     const lastBy = {};                 // 谁最后伤了谁（死亡事件无凶手字段 ⇒ 用伤害事件回溯）
@@ -2147,6 +2174,7 @@ let WALL_GAMES = 3;
     setTargetReward, targetReward, countThreatHits, threatKeyList,
     setClearReward, clearReward, countClears,
     blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）
+    widthReward,                // v1.5.124 §28a：广度收益项（权重走 econ-env 的 widthW）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };

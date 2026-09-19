@@ -37,13 +37,17 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
   /* v1.5.121（第十三轮复核 §23 的 **E4**）：**挡下伤害**的奖励权重。
    * 为什么必须有这一条：防御族**费用 0 ep** ⇒ 不需要多回合计划 ⇒ 是"shaping 只在 0.0X 尺度、
    * 买不动多回合计划"这条限制唯一还可能绕过的方向。走这条单一来源 ⇒ 服务端与 16 个 worker 同时生效。 */
-  'EPIRUS_BLOCK_W'];
+  'EPIRUS_BLOCK_W',
+  /* v1.5.124（复核 §28a 的处方 (ii)）：**把"广度"从门槛升格为收益项**的权重。
+   * 病：`DIV_W=0.06` 在胜率项前没有梯度，而 `G≥3` 只是事后砍窄包（无筛选种群 G 中位 2.4）⇒ 门槛不生产宽包。
+   * 形状：按**绝对**有效技能数（`coverageEntropy` 的 exp(H)）从 G=3 到 G=6 线性给钱 ⇒ 刷不动。 */
+  'EPIRUS_WIDTH_W'];
 
 /* 与 `js/train/evo.js` 的 `setEconomyReward(o)` / `economyReward()` 字段名对齐
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
 export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
   'hoardOnLeftover', 'convRatio', 'convOffense', 'hoardCapMult', 'stockBonus',
-  'blockW'];   // v1.5.121 E4（键名与 js/train/evo.js 的 setEconomyReward 逐字对齐 ⇒ D77 盯得住）
+  'blockW', 'widthW'];   // v1.5.121 E4 / v1.5.124 §28a（键名与 setEconomyReward 逐字对齐 ⇒ D77 盯得住）
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -82,7 +86,9 @@ export function readEconEnv(env) {
     stockBonus: nv(e.EPIRUS_STOCK_BONUS),
     convOffense: e.EPIRUS_CONV_OFFENSE === '1' ? true : null,
     /* v1.5.121（E4）：挡下伤害的权重（0 = 关 ⇒ 出厂行为一字不变）。 */
-    blockW: nv(e.EPIRUS_BLOCK_W)
+    blockW: nv(e.EPIRUS_BLOCK_W),
+    /* v1.5.124（§28a）：广度收益项的权重（0 = 关 ⇒ 出厂行为一字不变）。 */
+    widthW: nv(e.EPIRUS_WIDTH_W)
   };
 }
 
