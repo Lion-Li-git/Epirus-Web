@@ -3831,6 +3831,36 @@ t('D99 两处修正：原型制御 ≥3 转移（R24）+ 目标架势特征不�
     'RULES-2P 必须写下用户口径的三个例子（三枪各反 1 / 大雷+天火 / 单发只挡）');
 });
 
+t('D100 E4：挡下伤害奖励（env 单一来源 · 只认真的挡下 · 标度按实测 · 必须进 gFit）', function () {
+  /* 复核 §23/E4：防御族**费用 0 ep** ⇒ 不需要多回合计划 ⇒ 是"shaping 只在 0.0X 尺度、买不动多回合计划"
+   * 这条限制唯一还可能绕过的方向。口径：只数 `{type:'blocked'|'reflect', to: seat}`（**不认摆架势**）。 */
+  const ev = readFileSync('js/train/evo.js', 'utf8');
+  ok(ev.indexOf('function countBlocks(events, seat)') >= 0, '必须有 countBlocks');
+  ok(ev.indexOf("(e.type === 'blocked' || e.type === 'reflect') && e.to === seat") >= 0,
+    '只认"真的挡掉/弹走"（blocked / reflect），且必须是**发生在我身上**的那一次');
+  ok(ev.indexOf('const blockBonus = BLOCK_W * Math.min(1, blocks / 1);') >= 0,
+    '标度必须是 /1（量出来的：线上包每席每局 0.10 次挡下 ⇒ 用 /2 会退化成常数微扰）');
+  ok(ev.indexOf('+ blockBonus));') >= 0, '必须真的进 gFit（不是只算不用 —— D28 的教训）');
+  ok(ev.indexOf('let BLOCK_W = 0;') >= 0, '默认必须关（0 ⇒ 出厂行为一字不变）');
+  ok(ev.indexOf('if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));') >= 0,
+    'setEconomyReward 必须接受 blockW');
+  ok(ev.indexOf('if (BLOCK_W > 0) blocks += countBlocks') >= 0, '必须在快照循环里累加（与 CLEAR_W 同一处）');
+  ok(ev.indexOf('BLOCK_W = 0;') >= 0, 'reset 必须把它复位');
+  const en = readFileSync('server/econ-env.mjs', 'utf8');
+  ok(en.indexOf("'EPIRUS_BLOCK_W'") >= 0, 'env 名必须在**单一来源**里（否则 worker 拿不到 ⇒ 附录 D 臂 K 的 A/A 事故）');
+  ok(en.indexOf("'blockW'") >= 0 && en.indexOf('blockW: nv(e.EPIRUS_BLOCK_W)') >= 0,
+    '必须被 readEconEnv 读出（两端同一对函数）');
+  /* ⚠️ D77 的 **1200 字符窗口**：我为它连续红过三次 ⇒ 单独钉一条（新旋钮的 if 必须写进窗口，
+   * 且注释不能太长 —— 我加过 218 字符注释把 divForceGens 顶到 1244 ⇒ 当场红）。 */
+  const body = ev.slice(ev.indexOf('function setEconomyReward'));
+  const keys = ['divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames', 'stockBonus', 'hoardCapMult', 'blockW'];
+  const outWin = keys.filter(function (k) {
+    const at = body.indexOf('o.' + k + ' != null');
+    return at < 0 || at >= 1200;
+  });
+  eq(outWin.length, 0, 'setEconomyReward 里每个键的 `o.<键> != null` 都必须在函数开头 1200 字符内（D77 的窗口）');
+});
+
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');

@@ -33,12 +33,17 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
    * （`tools/probe-leftover.mjs`：线上包 multi 兑现率 94%、余 ep/人 0.9、峰 ep 2；arm A 兑现率 23%、余 23.2）
    * ⇒ 余款惩罚对在位包是空操作（它没余款可罚，它是"攒不到就花光"）。给它开一臂：把 0.05 抬到 0.15，
    *    直接检验"**奖惩不对称**才是环学不出来的阻力"这条假设（否则这句话永远只是评论）。 */
-  'EPIRUS_STOCK_BONUS', 'EPIRUS_CONV_OFFENSE'];
+  'EPIRUS_STOCK_BONUS', 'EPIRUS_CONV_OFFENSE',
+  /* v1.5.121（第十三轮复核 §23 的 **E4**）：**挡下伤害**的奖励权重。
+   * 为什么必须有这一条：防御族**费用 0 ep** ⇒ 不需要多回合计划 ⇒ 是"shaping 只在 0.0X 尺度、
+   * 买不动多回合计划"这条限制唯一还可能绕过的方向。走这条单一来源 ⇒ 服务端与 16 个 worker 同时生效。 */
+  'EPIRUS_BLOCK_W'];
 
 /* 与 `js/train/evo.js` 的 `setEconomyReward(o)` / `economyReward()` 字段名对齐
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
 export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
-  'hoardOnLeftover', 'convRatio', 'convOffense', 'hoardCapMult', 'stockBonus'];
+  'hoardOnLeftover', 'convRatio', 'convOffense', 'hoardCapMult', 'stockBonus',
+  'blockW'];   // v1.5.121 E4（键名与 js/train/evo.js 的 setEconomyReward 逐字对齐 ⇒ D77 盯得住）
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -75,7 +80,9 @@ export function readEconEnv(env) {
     convRatio: e.EPIRUS_CONV_RATIO === '1' ? true : null,
     hoardCapMult: nv(e.EPIRUS_HOARD_CAP_MULT),
     stockBonus: nv(e.EPIRUS_STOCK_BONUS),
-    convOffense: e.EPIRUS_CONV_OFFENSE === '1' ? true : null
+    convOffense: e.EPIRUS_CONV_OFFENSE === '1' ? true : null,
+    /* v1.5.121（E4）：挡下伤害的权重（0 = 关 ⇒ 出厂行为一字不变）。 */
+    blockW: nv(e.EPIRUS_BLOCK_W)
   };
 }
 

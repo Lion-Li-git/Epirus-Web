@@ -783,25 +783,25 @@ let WALL_GAMES = 3;
    *   （实测：一行一个键时 `wallGames` 落在 1202 ⇒ 红；注释写进函数体里也会把窗口吃掉）。 */
   function setEconomyReward(o) {
     o = o || {};
+    if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
     if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover; if (o.convRatio != null) CONV_RATIO = !!o.convRatio; if (o.convOffense != null) CONV_OFFENSE = !!o.convOffense;
     if (o.hoardCapMult != null) HOARD_CAP_MULT = Math.max(1, Number(o.hoardCapMult) || 1); if (o.stockBonus != null) STOCK_BONUS = Math.max(0, Math.min(1, Number(o.stockBonus)));
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
     if (o.divW != null) DIV_W = Math.max(0, Number(o.divW));
     if (o.divK != null) DIV_K = Math.max(2, Number(o.divK));
-    /* v1.5.93：`divRoleW` 是新名（按 8 个**功能角色**），`divCatW` 是 v1.5.92 的旧名（按 4 个 `cat`）——
-     * 两者写的是**同一个**内部量；都给时新名优先（与 `EPIRUS_ECO_DIVW`→`EPIRUS_DIV_W` 同一套规矩）。 */
+    if (o.wallFilter != null) WALL_FILTER_ON = !!o.wallFilter;
+    if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));
+    if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
+    /* divRoleW 新名 / divCatW 旧名（同一内部量，新名优先）；完整说明见 econ-env.mjs。 */
     if (o.divRoleW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divRoleW)));
     else if (o.divCatW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divCatW)));
-    if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
     if (o.wallFilter != null) WALL_FILTER_ON = !!o.wallFilter;
-    if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));   // v1.5.86：熵项固定分母（见 DIV_K）
-    /* v1.5.116 L2′ 三个开关（键名与 server/econ-env.mjs 的 ECON_REWARD_KEYS 逐字对齐 ⇒ D77 盯得住） */
-    /* v1.5.116：`reset` 必须把**新加的五个旋钮一起**复位 —— 原来只清 ECO_T/ECO_C，
-     * 于是"设过 HOARD_LEFTOVER 之后 reset"会留下脏状态（自检脚本第一版就被这个坑过一次假 DIFF）。 */
+    if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));
+    /* reset 必须把新旋钮一起复位（否则"设过之后 reset"留脏状态、自检会读出假 DIFF）。 */
     if (o.reset) {
       ECO_T = null; ECO_C = null;
-      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05;
+      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0;
     }
     return economyReward();
   }
@@ -810,6 +810,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
+      blockW: BLOCK_W,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
 
@@ -934,7 +935,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let leftEpSum = 0, spentEpSum = 0, gainEpSum = 0;   // v1.5.116 L2′：余款/已花/已获得（每局）
     let imitSum = 0, imitGames = 0;
@@ -1071,10 +1072,14 @@ let WALL_GAMES = 3;
        * （实测：`DIV_W=0.3` + 真示范那批 6 个里 4 个场B 清场 = 0.00，在位包 0.63）。
        * 封顶 /1，与 `tgtBonus` 同尺度（标度按 v1.5.79 的教训取"0 次得 0、1 次吃满"）。 */
       const clearBonus = CLEAR_W * Math.min(1, clears / 1);
+      /* v1.5.121（E4）：**挡下一次伤害** —— 与"清场"互补的那把尺子（清场 = 打死人；这个是扛住）。
+       * 封顶 /1（**量出来的标度**：线上包自对局实测每席每局只有 **0.10** 次挡下、最大 0.40 ⇒
+       * 用 /2 会几乎恒为 0、奖励退化成常数微扰；改用 v1.5.79 那条"0 次得 0、1 次即吃满"的规矩）。 */
+      const blockBonus = BLOCK_W * Math.min(1, blocks / 1);
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -1103,6 +1108,10 @@ let WALL_GAMES = 3;
         if (TGT_W > 0) threatHits += countThreatHits(r.state.events, seat);
         /* v1.5.103（v1.5.100 §20）：**清场**（收缩开始前把对手打死）—— 与门禁 `场B 清场` 同口径。 */
         if (CLEAR_W > 0) clears += countClears(r.state.events, seat);
+        /* v1.5.121（第十三轮复核 §23 的 **E4**）：**挡下伤害**（真的挡掉/弹走，**不认摆架势**）。
+         * 论点：防御族**费用 0 ep** ⇒ 与"ep 深度"不同，它不需要多回合计划 ⇒
+         * 是"shaping 只在 0.0X 尺度、买不动多回合计划"这条限制**唯一**还可能绕过的方向。 */
+        if (BLOCK_W > 0) blocks += countBlocks(r.state.events, seat);
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1774,6 +1783,23 @@ let WALL_GAMES = 3;
   let CLEAR_W = 0;
   function setClearReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) CLEAR_W = v; return CLEAR_W; }
   function clearReward() { return { w: CLEAR_W }; }
+  /* ===== v1.5.121（第十三轮复核 §23 的 **E4**）：**挡下伤害**计数奖励（默认关；实验臂用 `EPIRUS_BLOCK_W` 打开）
+   * 事件口径（只认"真的挡掉/弹走"，**不认摆架势**）：
+   *   · `{type:'blocked', to: seat}` —— 防御 / 反弹 / 原型制御 / 金刚盾 / 八卦阵 / 藤甲 / 全息 挡下；
+   *   · `{type:'reflect', to: seat}` —— 反弹与原型制御把伤害**弹回**给施法者（也算"我挡住了"）。
+   * ⚠️ 接线坑（我实测踩过）：`setEconomyReward` 里的 `if (o.<键> != null)` 必须落在**函数开头 1200 字符内**
+   * —— D77 就是按这个 slice 查的；新旋钮的注释写太长会把 `divForceGens/wallFilter/wallGames` 顶出窗口 ⇒ 门当场红。
+   * 实测：`divForceGens` 落在 1244 时红；把我那条 218 字符的前置注释压到 60 字符后就回到窗口内 ✓。
+   * ⚠️ 只数**发生在我身上**的那一次（`e.to === seat`），与"攻击方打空"无关。 */
+  let BLOCK_W = 0;
+  function countBlocks(events, seat) {
+    let n = 0;
+    for (const e of (events || [])) {
+      if ((e.type === 'blocked' || e.type === 'reflect') && e.to === seat) n++;
+    }
+    return n;
+  }
+  function blockReward() { return { w: BLOCK_W }; }
   function countClears(events, seat) {
     let shrink = false, n = 0;
     const lastBy = {};                 // 谁最后伤了谁（死亡事件无凶手字段 ⇒ 用伤害事件回溯）
@@ -2120,6 +2146,7 @@ let WALL_GAMES = 3;
     setBeadReward, beadReward, countBeadSpent,
     setTargetReward, targetReward, countThreatHits, threatKeyList,
     setClearReward, clearReward, countClears,
+    blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
