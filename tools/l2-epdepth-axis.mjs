@@ -7,8 +7,11 @@
  *   + crowd-random.log(V1) + crowd-balanced.log(V2/V4) + docs/l2-eval-matrix-120.tsv(A卷/TN)
  * ⚠ 相关的单位是"包"，同臂的 seed 之间不独立 ⇒ 只读符号与量级，别当显著性检验用（§13a 的教训）。
  */
-import { readFileSync, existsSync } from 'node:fs';
-const req = ['docs/artifacts/leftover-all.log', 'docs/artifacts/crowd-random.log', 'docs/artifacts/crowd-balanced.log', 'docs/l2-eval-matrix-120.tsv'];
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+/* 09-19 下午：引擎换过两次（1391c094 -> 61a7711c），旧引擎那一份已快照到 docs/artifacts/eng1391/ 与
+ *   docs/l2-eval-matrix-engine-1391c094.tsv ⇒ 这里全部改成可用 env 指到新引擎那一份，方便新旧并排比。 */
+const req = [process.env.LEFTOVER || 'docs/artifacts/leftover-all.log', process.env.CROWD1 || 'docs/artifacts/crowd-random.log',
+  process.env.CROWD2 || 'docs/artifacts/crowd-balanced.log', process.env.MATRIX || 'docs/l2-eval-matrix-120.tsv'];
 for (const f of req) if (!existsSync(f)) throw new Error('缺输入：' + f);
 /* 1) ep 深度指标（multi 那一段）：峰 ep / ep≥3 占比 / 环可负担 / 兑现率 / 终局余款 */
 const EP = {};

@@ -35,7 +35,7 @@ for (const f of FILES) {
   const inner = T.policyChooserN(params, 0.15);
   const nm = f.split('/').pop().replace('.bak', '').replace('bundled-champion-3p.js', '线上包');
   for (const mode of ['multi', 'long']) {
-    const hist = {}; let dec = 0, ge3 = 0, ring = 0, peak = 0, left = 0, casts = 0, heavy = 0, rounds = 0, epGain = 0, epLost = 0;
+    const hist = {}; let dec = 0, ge3 = 0, ring = 0, ringOk = 0, peak = 0, left = 0, casts = 0, heavy = 0, rounds = 0, epGain = 0, epLost = 0;
     /* L2′-① 的死因量具：囤积惩罚的自变量换成**终局余款**后，惩罚只在 `leftEp > C` 才非零
      * （C = 该模式的 ep 上限：3 血 10 / 5 血 20）⇒ 必须量"终局余款越过 C"的**触发率**。
      * 实测：seed 91 开这个开关训出来的包与对照**逐位相同** ⇒ 触发率恒 0，是字面意义的空操作。 */
@@ -64,13 +64,14 @@ for (const f of FILES) {
       const DYN = new Set([A.RING, A.CANNON, A.LASER_EYE, A.JI]);
       for (const e of st.events) if (e.type === 'action' && e.outcome === 'ok') {
         casts++;
+        if (e.key === A.RING) ringOk++;
         const c = COST[e.key];
         if (!DYN.has(e.key) && c != null && c >= 2) heavy++;
       }
     }
     const spent = Math.max(0, epGain - epLost - left);
     console.log(`  ${nm.padEnd(16)} [${mode}] 余ep/人 ${(left / (N * 5)).toFixed(1)} · 出手/回合 ${(casts / rounds).toFixed(2)}（cost≥2 占 ${(100 * heavy / Math.max(1, casts)).toFixed(1)}%）`);
-    console.log(`  ${''.padEnd(16)}          ep 直方 0/1/2/3/≥4 = ${[0, 1, 2, 3, 4].map(k => (100 * (hist[k] || 0) / dec).toFixed(1) + '%').join(' ')} · 峰 ep ${peak} · 环可负担 ${(100 * ge3 / dec).toFixed(2)}% · 打环 ${ring}`);
+    console.log(`  ${''.padEnd(16)}          ep 直方 0/1/2/3/≥4 = ${[0, 1, 2, 3, 4].map(k => (100 * (hist[k] || 0) / dec).toFixed(1) + '%').join(' ')} · 峰 ep ${peak} · 环可负担 ${(100 * ge3 / dec).toFixed(2)}% · 打环 ${ring}（其中实际执行 ${ringOk} 次 —— chooser 输出不等于落子，买不起会被换成ジ）`);
     console.log(`  ${''.padEnd(16)}          ep 账本：已获得 ${(epGain / N).toFixed(1)}/局 · 已花 ${(spent / N).toFixed(1)} · 被抢 ${(epLost / N).toFixed(1)} · 余 ${(left / N).toFixed(1)} ⇒ **兑现率 ${(100 * spent / Math.max(1, epGain)).toFixed(0)}%**`);
     console.log(`  ${''.padEnd(16)}          终局余款：人均 ${(endSum / endTot).toFixed(2)} · 最大 ${endMax} · **>C(${C_CAP}) 触发率 ${(100 * endGT / endTot).toFixed(2)}%** · ≥3 占比 ${(100 * endGE3 / endTot).toFixed(1)}%`);
   }
