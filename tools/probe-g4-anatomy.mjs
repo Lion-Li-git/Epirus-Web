@@ -73,6 +73,10 @@ function anatomyLine(tag, r) {
   console.log('        决策 ' + r.champDecisions + ' · ジ占比 ' + (100 * r.jiShare).toFixed(1) + '%' +
     ' · 均 ' + r.avgRounds.toFixed(1) + ' 回合 · 终局存活(被测) ' + r.aliveChampEnd.toFixed(2) + '/4 席' +
     ' · 脚本席存活 ' + (100 * r.aliveScriptedEnd / GAMES).toFixed(0) + '% 余血 ' + r.hpScriptedEnd.toFixed(2));
+  /* v1.5.134：**伤害归属**这一列是 v1.5.133 跨包读数里与那格相关性最强的一条
+   *   （只枪格 vs「打在枪手身上」r = −0.82；vs「ジ占比」只有 +0.23）⇒ 解剖行必须打印它。 */
+  console.log('        伤害：我方合计 ' + r.champDmgPerGame.toFixed(2) + '/局 · **打在枪手身上 ' +
+    r.dmgToScriptedPerGame.toFixed(2) + '/局** · 枪手打出 ' + r.dmgByScriptedPerGame.toFixed(2) + '/局');
   console.log('        被测席出手（前 7）：' + (top || '（无）'));
 }
 
@@ -87,10 +91,12 @@ for (const f of FILES) {
     console.log('\n  ── 模式 ' + mode + ' ──');
     const base = duelAssembly(D, p, { games: GAMES, mode: mode, seed0: SEED0, scripted: 'champ', countKeys: KEYS });
     const gun = duelAssembly(D, p, { games: GAMES, mode: mode, seed0: SEED0, scripted: JI_LINE, countKeys: KEYS });
-    /* §A 自检：G4 那格的读数必须在 ±2pt 内（同 seed、同局数 ⇒ 理论上应逐局相同） */
-    const ok = Math.abs(gun.winPct - EXPECT[mode]) <= 2;
-    console.log('  §A 自检  只枪线 vs 线上包：' + gun.winPct + '%（期望 ' + EXPECT[mode] + '%）' +
-      (ok ? '   ✅ 装配对上了' : '   ⛔ **复现失败** ⇒ 下面的读数先别读，去查装配/包'));
+    /* §A 自检：**线上包**必须复现已记录的 75%/62%（同 seed、同局数 ⇒ 理论上逐局相同）。
+     * 量别的候选包时跳过自检（否则每次都会喊"复现失败"，把一个好量具变成噪音）。 */
+    const isOnline = f === 'js/bundled-champion-3p.js';
+    const ok = !isOnline ? null : Math.abs(gun.winPct - EXPECT[mode]) <= 2;
+    console.log('  §A 自检  只枪线 vs ' + (isOnline ? '线上包' : '本包') + '：' + gun.winPct + '%（线上包应 ' + EXPECT[mode] + '%）' +
+      (ok === null ? '   （非线上包 ⇒ 跳过自检）' : (ok ? '   ✅ 装配对上了' : '   ⛔ **复现失败** ⇒ 下面的读数先别读，去查装配/包')));
     console.log('  §B 解剖（同一 seed 序列，只换脚本席）');
     anatomyLine('基线(5 席同包)', base);
     anatomyLine('只枪(1 席脚本)', gun);

@@ -4191,6 +4191,12 @@ t('D107 G4「1 席脚本 vs 4 席被测」装配只许有一份实现（v1.5.133
   const lib = readFileSync('tools/v2v4-lib.mjs', 'utf8');
   ok(lib.indexOf('export function duelAssembly') >= 0, 'v2v4-lib 必须导出 duelAssembly');
   ok(lib.indexOf('forceAttack') >= 0 && lib.indexOf('forceTurtle') >= 0, ' 且带双向反事实钩子');
+  /* v1.5.134：这一轮真正的载重列是**伤害归属**（跨 13 个包 r = −0.82；"攒钱比例"只有 +0.23）
+   * ⇒ 钩子与那一列计数都得在，否则下次读 G4 又会退回到"看分数猜原因"。 */
+  ok(lib.indexOf('aimGunner') >= 0, ' 且带「只改目标」的单杠杆（v1.5.134 实测：主因是瞄准，不是花钱）');
+  ok(lib.indexOf('dmgToScriptedPerGame') >= 0, ' 且统计"打在脚本席（枪手）身上的伤害" —— 那一格相关性最强的一列');
+  const pg = readFileSync('tools/probe-g4-anatomy.mjs', 'utf8');
+  ok(pg.indexOf('dmgToScriptedPerGame') >= 0, '解剖探针必须打印"打在枪手身上 X/局"（否则看不到主因那一列）');
   const pb = readFileSync('tools/probe-g4-anatomy.mjs', 'utf8');
   ok(pb.indexOf("from './v2v4-lib.mjs'") >= 0, '解剖探针必须从单一来源导入装配');
   ok(pb.indexOf('EXPECT') >= 0 && /EXPECT = \{ long: 75, multi: 62 \}/.test(pb),

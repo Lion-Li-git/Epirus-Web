@@ -681,6 +681,39 @@
     return { key: SK.JI, target: null };                        // 攒到能开枪
   }
 
+  /* ===== 只枪对手 pickGunFocus（v1.5.133；**G4 那格的口径写成人格**）=====
+   * 为什么要有它：`G4[long] 只枪` 是**全仓唯一已知红门**（线上包 **75%(long)/62%(multi)**，阈值 60%），
+   *   而 v1.5.133 把它的机制量成了因果读数 —— **不是被打死，是"龟"**：只枪局里被测席 **62.2% 的决策是ジ**、
+   *   其中 **1759 次是"当回合枪买得起却选攒钱"**；只把这一条规则改成"买得起就开枪" ⇒ 只枪胜率
+   *   **75% → 13%**（long）/ **62% → 17%**（multi），而**场B 清场 1.00 → 1.00**
+   *   （CHANGELOG v1.5.133 · `docs/HANDOFF-2026-09-19.md` §0d/§4-13 · 探针 `tools/probe-g4-anatomy.mjs`）。
+   * ⚠️ **它与 `pickGunSpam` 不是同一条线**（名字骗过很久）：
+   *   · `pickGunSpam` = **只打最肥**（血量最高）＝ 稀释/喷子线；
+   *   · 本函数 = **击杀优先 → 再压血量最高者**（与 `gate-drafts.mjs` 的 `pT` → `T.pickTargetN` 同口径）
+   *     ＝ 聚焦线，**这才是 G4 那格真正在考的东西**。
+   *   ⚠️ 顺带记一处**标签错误**：G4 把那格叫「只枪(1ジ压制·**打最肥**)」（`gate-drafts.mjs:222`），
+   *     但实现是 `pT(...)` = **击杀优先**；真正的"打最肥"是 `pickGunSpam`。**故意不改那个标签**：
+   *     `G4_POOL_ID` = 「键序 + 阈值」的 sha1（`gate-drafts.mjs:284-289`）⇒ 改标签会让 id 变，
+   *     线上包 meta 里已记录的 `--force` 例外（D67）会当场失效。要改就得同时改包 meta（另立一条）。
+   * 实测（同一个 G4 harness，n=60）：池里那条 `pickGunSpam` 打线上包 **83%(long)/77%(multi)**，
+   *   **比 G4 那格更狠 8/15pt** ⇒ "池里没有枪线"这个解释**站不住**（本函数加进池子是去打**另一个假设**：
+   *   "缺的是**枪在聚我**这个压力"）。
+   * ⚠️ **预注册预测（v1.5.133，跑臂之前写下来）**：这次池子单杠杆**很可能不动 G4** —— 因为
+   *   训练局的**压力座次份额**与考卷不同：训练是"1 席候选 vs 4 席对手"（枪手的目标里只有 ~1/4 是候选），
+   *   考卷是"4 席我的家族 vs 1 席枪手"（**子弹全落在我家**）；而 v1.5.89 的头注**已经**把机制写成
+   *   "低密度不受罚"并加了 `pickGunSpam` —— 池里早有密度线，G4 仍然是红的。若这次真的不动，
+   *   下一根杠杆是**训练形状**（4 席自家族 + 1 席脚本外部人），不是再加对手。
+   * 口径与其他 `*spam` 一致：只做一件事，**不按 pid 取人**（避免座位身份通道 D50/D58）。 */
+  function pickGunFocus(state, pid, legal) {
+    const bk = mpBk(legal);
+    if (mpAff(bk, SK.GUN)) {
+      const k1 = mpKillable(state, pid, 1);                  // 枪 1 点：能一击必杀先杀
+      const t = (k1 != null) ? k1 : mpLeader(state, pid);    // 否则压血量最高者
+      if (t != null) return { key: SK.GUN, target: t };
+    }
+    return { key: SK.JI, target: null };                     // 攒到能开枪
+  }
+
   /* ===== 珠爆发对手 pickBeadBurst（v1.5.129；第三方复核 §3 的实锤线，写成人格）=====
    * 实锤（`docs/REVIEW-QODER-2026-09-19.md` §3，复核者独立复跑 n=100~200）：这条线对
    * **2P 线上冠军 100% 胜**（standard · 均 9 回合）、对 3P 冠军 99%、multi@N=2 98%。机理**全在规则内**：
@@ -787,6 +820,7 @@
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,
+    pickGunFocus,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'

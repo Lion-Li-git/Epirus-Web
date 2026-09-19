@@ -111,6 +111,7 @@ export function duelAssembly(deps, params, opts) {
   const counts = {}; if (keys) keys.forEach(function (k) { counts[k] = 0; });
   let win = 0, draw = 0, rounds = 0, dec = 0, ji = 0, forced = 0;
   let aliveChampEnd = 0, aliveScriptedEnd = 0, hpScriptedEnd = 0;
+  let dmgToScripted = 0, dmgByScripted = 0, champDmg = 0;
   for (let g = 0; g < G; g++) {
     const seat = g % 5;
     const st = S.createState(mode, { next: mb(seed0 + g * 991) }, 5);
@@ -128,6 +129,15 @@ export function duelAssembly(deps, params, opts) {
         const j = lg.find(function (x) { return x.key === JI; });
         if (j) { forced++; r = { key: JI, target: null }; }
       }
+      /* v1.5.133：**「瞄准」单杠杆**（与"攒不攒钱"拆开）—— 只把**伤害卡**的目标改成脚本席（枪手），
+       * 不动它的出卡选择（所以不额外花钱、不改密度）。动机：跨包读数是「打在枪手身上的伤害」
+       * 与这一格的相关 −0.82（"攒钱比例"只有 +0.23）⇒ 得知道到底是"花不花"还是"往哪打"在载重。
+       * 只对伤害卡改目标：`lg` 的项不带目标（`{key,affordable,loan}`），自目标卡（防御/蓄能/环）
+       * 强行塞目标会变成空挥 ⇒ 用 `R.byKey[key].dmg.amt` 判定（与体检 `isDmg` 同口径）。 */
+      if (o.aimGunner && r && r.key !== JI) {
+        const d = R.byKey[r.key];
+        if (d && d.dmg && d.dmg.amt && s2.p[seat] && s2.p[seat].hp > 0) { forced++; r = { key: r.key, target: seat }; }
+      }
       if (keys && r && keys.indexOf(r.key) >= 0) counts[r.key]++;
       return r;
     };
@@ -140,6 +150,15 @@ export function duelAssembly(deps, params, opts) {
     aliveChampEnd += ac;
     if (st.p[seat].hp > 0) aliveScriptedEnd++;
     hpScriptedEnd += st.p[seat].hp;
+    /* v1.5.133：**伤害归属**（v1.5.133 的跨包读数发现"攒钱比例"解释不了一半的方差，
+     * 而"往不往枪手身上打"看得出来 —— 6 个臂包的脚本席余血 2.37~4.60 vs 线上包 1.73）
+     * ⇒ 直接按事件统计：谁打的、打给谁（口径与 `audit-lib.aggressionProfile` 同字段名）。 */
+    if (st.events) for (const e of st.events) {
+      if (e.type !== 'damage') continue;
+      if (e.source === seat) dmgByScripted += e.amt;
+      else if (e.source != null) champDmg += e.amt;
+      if (e.to === seat) dmgToScripted += e.amt;
+    }
   }
   return {
     winPct: Math.round(100 * win / G), drawPct: Math.round(100 * draw / G),
@@ -147,7 +166,9 @@ export function duelAssembly(deps, params, opts) {
     avgRounds: rounds / G, champDecisions: dec,
     jiShare: dec ? ji / dec : 0, counts: counts, forced: forced,
     aliveChampEnd: aliveChampEnd / G, aliveScriptedEnd: aliveScriptedEnd / G,
-    hpScriptedEnd: hpScriptedEnd / G
+    hpScriptedEnd: hpScriptedEnd / G,
+    dmgToScriptedPerGame: dmgToScripted / G, dmgByScriptedPerGame: dmgByScripted / G,
+    champDmgPerGame: champDmg / G
   };
 }
 
