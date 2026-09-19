@@ -7,11 +7,35 @@
 
 ## 状态灯（最近一次更新在标题行时间戳）
 
-- [23:0x] **DOING** = Q1 教师臂的实现（新教师 bot）
-- [pending] Q3 环+贵卡臂 → 合格包上重做环消融
-- [pending] 小修两件：`meta.g6` 正则 · G4POOL 实现身份缝
-- [pending] （若顺利）createState N<3 过滤 + 门（放最后：动指纹文件，会把两包 meta 全部要重记）
-- [pending] Q2 形状适应度（最需要设计的一根；有干净单一来源路径才做）
+- [00:2x] **DONE** = Q1 臂训练过半（seed 31/81/82/91/92 完成，93 在跑 200/250；教师 accepted=true、CLEAR_W=0.1 到 worker、谱系与 v7gf1 逐字同）
+- [00:2x] **DONE** = 小修三件（已 commit）：① G6 读回跨行正则；② `G4IMPL` 实现身份 id + D67 双绑（冻结豁免基准 `caecc92f`）；③ **ring2-run 谱系事实核查 + `RING2_HOT` 显式开关**（见 §5 的新发现）
+- [DOING] 等臂完 → 评估 G4/场A/场B/anatomy/V4 → 预注册判据裁定 Q1
+- [pending] Q3：`EPIRUS_RING_W` 接 econ-env（补丁文本已备 §5b）→ 3 seed 探臂 → 合格包消融
+- [pending] 全门禁复跑 + 本日志收尾 + push
+
+## 5. 新发现（训练进行中顺手查的）——**"热启动 = 最新冠军"在 NP 臂路线上其实是假**
+
+事实链（全部可复核）：
+1. `ring2-run.mjs:85` **无条件覆写** `process.env.EPIRUS_BUNDLE_IN = staging`，随后每次 seed 前 `copyFileSync(BASE, STAGE_IN)`，
+   `BASE = docs/artifacts/champion-5p-v1.3.58.bak` ⇒ 外部传的 `EPIRUS_BUNDLE_IN=js/bundled-champion-3p.js`（HANDOFF §1.2/§3 的启动命令）**整条被吞**。
+2. 用 `train-server.weightsId` 同款算法实测：`v1.3.58.bak → d13d3c856c6cff62`、线上包 → `03b35fca…`；
+   而 `v7ws1-91 / v7big1-92 / v7gf1-92 / 线上包` 的 meta `hotstartFrom` **全是 d13d…** ⇒ 全部臂与线上包**同谱系**（都从 v1.3.58 旧种子长出来）。
+3. ⇒ HANDOFF §1.2"热启动起点改用最新冠军"与 §2.2"热启动真的生效的硬凭据（五道门读数逐项相同）"**归因错了**：
+   读数逐项相同恰恰是因为**起点根本没换**；"种群 G 中位 3.55 vs 2.4"的差若要成立，变量得另找（池子/CLEAR_W/recipe）。
+   ⚠️ 我没有重跑 §2.2 的实验，这条只是**谱系记账与代码事实**，不是对"G 变高"的否定。
+4. A/B 可比性**没坏**（所有近期臂同谱系）——坏的是那句话说的是另一件事。
+5. 修法（本版已做）：`RING2_HOT=<路径>` 显式开关（不设 ⇒ 默认行为逐字不变），产物 meta 的 `hotstartFrom` 变成可核对的"所选起点的 weightsId"。
+   **留给早上的裁定**：要不要真做一次"从线上冠军热启动"的臂（第一次让 `RING2_HOT=js/bundled-champion-3p.js` 成为实验而不是口号）；
+   以及 2P 侧 `train-best.mjs:61` 的"3P 侧早就是热启动（= 最新冠军）"同样要按本节口径改写。
+
+## 5b. Q3 待打补丁文本（等臂完才动 js/server）
+
+- `server/econ-env.mjs`：`ECON_ENV_KEYS` 追加 `'EPIRUS_RING_W'`；`ECON_REWARD_KEYS` 追加 `'ringW'`；`readEconEnv` 返回加 `ringW: nv(e.EPIRUS_RING_W)`。
+- `js/train/evo.js`：`setEconomyReward(o)` 开头加 `if (o.ringW != null) setRingReward(o.ringW);`（D77 的 1200 字符窗口教训：写函数最前面）；
+  `economyReward()` 回读字段加 `ringW: RING_W`。
+- 臂配方：v7gf1 逐字 + `EPIRUS_BIGCARD_W=0.2` + `EPIRUS_RING_W=0.25`（线上默认 0.10 的 2.5 倍）；先 3 seed（31,82,92）。
+- 合格判据（§2 原文）达标者上跑 `ABLATE_KEY=ring` 的 `probe-ring-ablate`（n=600），只回答"环值不值钱"。
+
 
 ## 0. 起点事实（HEAD = `c7076ac` · v1.5.134 · 指纹 `00e732a7`）
 

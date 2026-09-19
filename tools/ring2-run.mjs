@@ -36,7 +36,7 @@ import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readFileSync, writeFileSync, copyFileSync, existsSync, appendFileSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';   // v1.5.55: 产物串味守卫
 import net from 'node:net';
@@ -82,6 +82,16 @@ const BASE = join(ART, 'champion-5p-v1.3.58.bak');
  * env 传**相对路径**（服务端 resolve(root, ...)）。 */
 const STAGE_IN = join(ART, '.training-in-3p.js');
 const STAGE_OUT = join(ART, '.training-out-3p.js');
+/* qoder-research 0920（RESEARCH-LOG §5 · 谱系事实核查）：**本 runner 历史上把所有外部
+ * `EPIRUS_BUNDLE_IN` 无声覆写掉**（下面那行赋值）⇒ HANDOFF §1.2/§3 里"热启动 = 最新冠军"的
+ * 启动命令其实一直是**从 v1.3.58 旧种子（BASE）长出来的**（近期全部臂与线上包的
+ * `hotstartFrom = d13d3c856c6cff62` 逐字相同 = BASE 的 weightsId，可复核）。
+ * A/B 的可比性没坏（大家同谱系），坏的是那句话说的是另一件事。
+ * 现在给一个**显式开关**：`RING2_HOT=js/bundled-champion-3p.js`（或任意 bundle/.bak 路径）
+ * ⇒ staging 起点改拷该文件；不设 ⇒ 与历史臂逐字同谱系（默认行为一字不变）。
+ * 产物 meta 的 `hotstartFrom` 会跟着变 —— 谱系校验点从"恒等于 e379/d13d"改成"等于所选 HOT 的 weightsId"。 */
+const HOT = process.env.RING2_HOT || '';              // '' = 旧行为（BASE）
+const HOT_SRC = HOT ? resolve(root, HOT) : BASE;
 process.env.EPIRUS_BUNDLE_IN = 'docs/artifacts/.training-in-3p.js';
 process.env.EPIRUS_BUNDLE_OUT = 'docs/artifacts/.training-out-3p.js';   // 热启动起点（与 ms2/ring2-31 同一权重）
 const LOCK = join(ART, '.training.lock');            // v1.5.8：训练锁（见 main() 里的说明）
@@ -180,7 +190,7 @@ async function waitServer(port, ms) {
 async function trainSeed(seed, port) {
   const out = join(ART, ARM + '-' + seed + '.bak');
   const sseLog = join(ART, ARM + '-' + seed + '.sse.log');
-  copyFileSync(BASE, STAGE_IN);
+  copyFileSync(HOT_SRC, STAGE_IN);
   /* v1.5.55: snapshot the staged artifact BEFORE training. If the health gate blocks the
    * candidate, the staged file is not refreshed, so "copying the previous bundle" is a
    * NORMAL skip -- not a "seed did not take effect" mix-up. */
@@ -191,9 +201,9 @@ async function trainSeed(seed, port) {
     '&gpo=' + GPO + '&seed=' + seed + '&opps=' + POOL + (TRAIN_MODE ? '&mode=' + TRAIN_MODE : '') +
     (STYLE_OPPS ? '&styleopps=' + STYLE_OPPS : '') + (STYLE_W ? '&stylew=' + STYLE_W : '') +
     (STYLE_G ? '&stylegames=' + STYLE_G : '');
-  /* 起点 = champion-5p-v1.3.58.bak 的**权重**（其 weightsId 见产物 meta 的 hotstartFrom：
-     产出的 .bak 里 hotstartFrom 应恒为 e379c62ccd2648fa，这就是热启动谱系的校验点）。 */
-  say('seed ' + seed + ' 开跑（起点 = v1.3.58 权重, meta seed=' + (startMeta && startMeta.seed) + '）: ' + url);
+  /* 起点 = BASE（champion-5p-v1.3.58.bak）的权重，或 `RING2_HOT` 指定的包（qoder-research 0920）；
+     产物 meta 的 hotstartFrom 记下其 weightsId —— 谱系校验点 = "等于所选起点的 weightsId"。 */
+  say('seed ' + seed + ' 开跑（起点 = ' + (HOT || 'v1.3.58 权重') + ', meta seed=' + (startMeta && startMeta.seed) + '）: ' + url);
   const ac = new AbortController();
   const timer = setTimeout(function () { ac.abort(); }, SEED_TIMEOUT_MS);
   let sawDone = false, sawErr = null, lastGen = -1, carry = '';
