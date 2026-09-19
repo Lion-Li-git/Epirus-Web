@@ -755,6 +755,39 @@
     return { key: SK.JI, target: null };                       // 攒到"能蓄且下一回合能放"
   }
 
+  /* ===== 防守型瞄准教师 pickAimDefender（qoder-research 0920 · Q1 臂专用，**只走教师通道、不进对手池**）=====
+   * 动机（CHANGELOG v1.5.134 §3/§5 + docs/REVIEW-QODER-2026-09-19.md §6-2）：G4「只枪」那格的主杠杆
+   * 是**往谁身上打**（aimGunner：同一包只改目标、不多花钱 ⇒ 75%→0%），不是**花不花钱**。
+   * 池子加对手买到的是"躲"（v7gf1-92 变被动过门 ⇒ 场B 清场 0.00 挂 G5），而"打枪手"是**教师型行为**
+   * ——模仿通道（`EPIRUS_IMIT_TEACHER` + OVERRIDE）是全仓唯一被复现过的学习杠杆（无教师对照 0/6）。
+   * 本教师示范三件事：① **谁在压迫我我就打谁**（本局造成伤害最高者）② **能杀就先杀** ③ **买得起就打**
+   * （示范花钱密度）；面对架势（上回合 guard/reflect 族）**用狙击穿**。⚠️ 它**从不摆防御** ——
+   * 龟这条轴已被 v1.5.133 反事实钉死为**负样本**，教师哪怕捎带防御倾向都会把臂带回被动解。
+   * ⚠️ 取目标只在"最高一档"里 `mpPickOne` 随机（D50/D58 座位身份通道规矩，同 `pickGunSpam`）。 */
+  function pickAimDefender(state, pid, legal) {
+    const bk = mpBk(legal);
+    const opps = mpOpps(state, pid);
+    if (!opps.length) return { key: SK.JI, target: null };
+    /* 威胁榜：本局"造成伤害"最多的人 = 该集火的那一个（跨回合累计） */
+    const dmg = {};
+    for (const e of state.events) {
+      if (e && e.type === 'damage' && e.source != null && e.amt) dmg[e.source] = (dmg[e.source] || 0) + e.amt;
+    }
+    let tgt = mpKillable(state, pid, 1);                      // ① 能一击必杀先杀
+    if (tgt == null) {
+      let mx = -Infinity; const cand = [];
+      for (const i of opps) {
+        const d = dmg[i] || 0;
+        if (d > mx + 1e-9) { mx = d; cand.length = 0; cand.push(i); }
+        else if (Math.abs(d - mx) < 1e-9) cand.push(i);
+      }
+      tgt = mpPickOne(state, cand);                           // ② 否则打"造成最高伤害"的压迫者
+    }
+    if (mpStanceOf(state, tgt) !== 'none' && mpAff(bk, SK.SNIPE)) return { key: SK.SNIPE, target: tgt };
+    if (mpAff(bk, SK.GUN)) return { key: SK.GUN, target: tgt };                        // ③ 买得起就打
+    return { key: SK.JI, target: null };
+  }
+
   /* ===== 深经济对手 pickDeepSaver（"会攒 + 会还手"）=====
    * ⚠️ 它曾在 v1.3.27 加入、在 v1.3.30（N20 地雷 AoE 重写）被**静默删除**——
    * 那个 commit 的 CHANGELOG 只字未提，之后 24 个版本没人发现，而 REVIEW-3P §1-D
@@ -820,7 +853,7 @@
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,
-    pickGunFocus,
+    pickGunFocus, pickAimDefender,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'
