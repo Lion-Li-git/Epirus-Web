@@ -6,6 +6,7 @@
  *      任何奖励塑形（环奖励/兑现奖励）都只是在猜一个网络测不到的量。
  */
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import vm from 'node:vm';
 const REPO = process.env.EPIRUS_REPO || './';
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map };
@@ -44,7 +45,11 @@ function harvest(params, mode, want) {
   return pool.slice(0, want);
 }
 const LADDER = [2, 3, 5, 8, 11, 12, 13, 16, 20, 30, 40];
-for (const [label, params] of [['arm A (v7ringA1-82)', ARM], ['在位包 v7new5_005-31', LIVE]]) {
+/* 包名不写死：这里曾硬编码 `v7new5_005-31`，换包后这张表会指着错的包读（09-19 实测到 LIVE 已经是新包）。
+ * EP_PROBE_BAK=逗号分隔的 .bak ⇒ 与线上包同引擎、同量具并排测（换包归因用）。 */
+const LIVE_TAG = '线上包 payload#' + createHash('sha1').update(JSON.stringify(sb.window.EPIRUS_CHAMPION_3P)).digest('hex').slice(0, 8);
+const EXTRA = (process.env.EP_PROBE_BAK || '').split(',').filter(Boolean).map(f => [f.replace(/^.*\//, '').replace('.bak', ''), loadBak(f)]);
+for (const [label, params] of [['arm A (v7ringA1-82)', ARM], [LIVE_TAG, LIVE], ...EXTRA]) {
   const snaps = harvest(params, 'multi', 12);
   console.log(`\n=== ${label}：同一快照只改 ep，看网络的 p(JI) / p(最贵可负担攻击) 动不动（${snaps.length} 个快照 × 阶梯 ${LADDER.join('/')}）===`);
   const tab = {};

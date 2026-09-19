@@ -21,9 +21,9 @@ function crowd(file, col) {
   }
   return o;
 }
-const V1 = crowd(ART + '/crowd-random.log', 1);        // k=1 每席（对手 random）= 打乱局
-const V2 = crowd(ART + '/crowd-balanced.log', 1);      // k=1 每席（对手 balanced）= 打整局
-const V4 = crowd(ART + '/crowd-balanced.log', 3);      // k=4 每席（对手 balanced）= 成群打整局
+const V1 = crowd(process.env.CROWD1 || ART + '/crowd-random.log', 1);        // k=1 每席（对手 random）= 打乱局
+const V2 = crowd(process.env.CROWD2 || ART + '/crowd-balanced.log', 1);      // k=1 每席（对手 balanced）= 打整局
+const V4 = crowd(process.env.CROWD4 || ART + '/crowd-balanced.log', 3);      // k=4 每席（对手 balanced）= 成群打整局
 const G = {};
 for (const f of readdirSync(ART).filter(x => /^audit.*\.log$/.test(x))) {
   for (const l of readFileSync(ART + '/' + f, 'utf8').split(/\r?\n/)) {
@@ -33,7 +33,7 @@ for (const f of readdirSync(ART).filter(x => /^audit.*\.log$/.test(x))) {
   }
 }
 const EX = {};
-for (const l of readFileSync('docs/l2-eval-matrix-120.tsv', 'utf8').split(/\r?\n/).filter(x => x.includes('\t'))) {
+for (const l of readFileSync(process.env.MATRIX || 'docs/l2-eval-matrix-120.tsv', 'utf8').split(/\r?\n/).filter(x => x.includes('\t'))) {
   const p = l.split('\t'), nm = p[0].replace('.bak', '');
   const v = Number((/1st=([\d.]+)%/.exec(p[2]) || [0, 0])[1]) - Number((/([\d.]+)%/.exec(p[4]) || [0, 0])[1]);
   (EX[nm] = EX[nm] || {})[p[1]] = v;
@@ -49,12 +49,14 @@ if (seeds.length < 4) console.log('⚠ 配对数 <4 ⇒ 只能算方向，别报
 function signFlip(d, iters = 200000) {
   const obs = d.reduce((a, b) => a + b, 0) / d.length;
   let seed = 20260919; const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  /* 两个 p 都算：只报单尾会被读成"反方向不显著"（V1 那一行夜里就印成 p=0.99 过，
+   * 而它的真实形状是"显著为负"）。方向先写死在主判据行里，别让人猜。 */
   let cnt = 0;
   for (let i = 0; i < iters; i++) {
     let s = 0; for (const x of d) s += x * (rnd() < 0.5 ? 1 : -1);
     if (s / d.length >= obs - 1e-12) cnt++;
   }
-  return { obs, p: (cnt + 1) / (iters + 1) };
+  return { obs, p: (cnt + 1) / (iters + 1), p2: Math.min(1, (2 * Math.min(cnt, iters - cnt) + 1) / (iters + 1)) };
 }
 for (const [label, col] of [['V2 打整局（主判据）', V2], ['V4 成群打整局', V4], ['V1 打乱局（预期为负＝代价）', V1]]) {
   const d = seeds.map(s => col[A[s]] - col[B[s]]);
@@ -63,7 +65,7 @@ for (const [label, col] of [['V2 打整局（主判据）', V2], ['V4 成群打�
   const sd = Math.sqrt(d.reduce((a, b) => a + (b - mean) * (b - mean), 0) / Math.max(1, d.length - 1));
   const sf = signFlip(d);
   const pos = d.filter(x => x > 0).length;
-  console.log(`  ${label.padEnd(26)} 均值 ${mean >= 0 ? '+' : ''}${mean.toFixed(1).padStart(5)}pt · SD ${sd.toFixed(1)} · SE ${(sd / Math.sqrt(d.length)).toFixed(1)} · 同号 ${pos}/${d.length} · **符号翻转检验 p=${sf.p.toFixed(4)}**`);
+  console.log(`  ${label.padEnd(26)} 均值 ${mean >= 0 ? '+' : ''}${mean.toFixed(1).padStart(5)}pt · SD ${sd.toFixed(1)} · SE ${(sd / Math.sqrt(d.length)).toFixed(1)} · 同号 ${pos}/${d.length} · **符号翻转检验 p(单尾,H1=差>0)=${sf.p.toFixed(4)} / p(双尾)=${sf.p2.toFixed(4)}**`);
   console.log(`      逐对 ${d.map(x => (x >= 0 ? '+' : '') + x.toFixed(0)).join(' ')}`);
 }
 /* 考卷口径的同一批配对（对照用：证明"为什么考卷读不出来"） */
