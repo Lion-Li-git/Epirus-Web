@@ -3341,9 +3341,10 @@ t('D80 类间广度权重 DIV_ROLE_W：默认 0（逐位等于旧口径）+ 走�
    *   ③ 旧 env `EPIRUS_DIV_CATW` 必须仍可用（新名优先），否则老命令会**静默变成空操作**。 */
   const evo = readFileSync('js/train/evo.js', 'utf8');
   ok(evo.indexOf('let DIV_ROLE_W = 0;') >= 0, '默认必须是 0（不设 env 即旧行为）');
-  ok(evo.indexOf('if (o.divRoleW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divRoleW)));') >= 0 &&
-    evo.indexOf('else if (o.divCatW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divCatW)));') >= 0,
-    '必须走 setter（新名 divRoleW 优先 + 旧名 divCatW 兜底）—— vm 沙箱没有 process，env 只能在 server 侧读');
+  ok(evo.indexOf('if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;') >= 0 &&
+    evo.indexOf('else if (o.divCatW != null) DIV_ROLE_W = Number(o.divCatW) || 0;') >= 0,
+    '必须走 setter（新名 divRoleW 优先 + 旧名 divCatW 兜底）—— vm 沙箱没有 process，env 只能在 server 侧读'
+    + '（v1.5.126：为让 D77 的 1200 字符窗口容得下新键，这两行从 `Math.min(1,Math.max(0,Number(...)))` 简化为 `Number(...) || 0` ⇒ 语义不变，仅**不再夹取**越界值）');
   ok(evo.indexOf('const spMixNorm = (1 - DIV_ROLE_W) * spDivNorm + DIV_ROLE_W * spRoleNorm;') >= 0,
     '混比公式必须显式可读（W=0 ⇒ 只剩 spDivNorm = 旧口径）');
   ok(evo.indexOf('const divBonus = DIV_W * spMixNorm;') >= 0, 'fit 必须用混比后的量');
@@ -3840,7 +3841,8 @@ t('D100 E4：挡下伤害奖励（env 单一来源 · 只认真的挡下 · 标�
     '只认"真的挡掉/弹走"（blocked / reflect），且必须是**发生在我身上**的那一次');
   ok(ev.indexOf('const blockBonus = BLOCK_W * Math.min(1, blocks / 1);') >= 0,
     '标度必须是 /1（量出来的：线上包每席每局 0.10 次挡下 ⇒ 用 /2 会退化成常数微扰）');
-  ok(ev.indexOf('+ blockBonus));') >= 0, '必须真的进 gFit（不是只算不用 —— D28 的教训）');
+  ok(ev.indexOf('+ blockBonus') >= 0,
+    '必须真的进 gFit（不是只算不用 —— D28 的教训）');
   ok(ev.indexOf('let BLOCK_W = 0;') >= 0, '默认必须关（0 ⇒ 出厂行为一字不变）');
   ok(ev.indexOf('if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));') >= 0,
     'setEconomyReward 必须接受 blockW');
@@ -3859,6 +3861,23 @@ t('D100 E4：挡下伤害奖励（env 单一来源 · 只认真的挡下 · 标�
     return at < 0 || at >= 1200;
   });
   eq(outWin.length, 0, 'setEconomyReward 里每个键的 `o.<键> != null` 都必须在函数开头 1200 字符内（D77 的窗口）');
+});
+
+t('D101 贵卡出手奖励（v1.5.126 用户洞察：它不会用电磁炮/大雷、也丢了地雷/净化 ⇒ 没必要攒 ep）', function () {
+  /* 贵卡由**声明字段**推导（D81/D72 的规矩：不得枚举卡名）：`cost ≥ 3`（大雷 5 · 地雷/净化/摄魂 3）
+   * 或 `energyNeeds` 非空（电磁炮需 1 电珠 · 激光眼需爆珠）。 */
+  const ev = readFileSync('js/train/evo.js', 'utf8');
+  ok(ev.indexOf('function isBigCard(def)') >= 0, '必须有 isBigCard（从声明字段推导）');
+  ok(ev.indexOf('typeof def.cost === ' + "'number'") >= 0 && ev.indexOf('def.energyNeeds && Object.keys(def.energyNeeds).length') >= 0,
+    '判定必须是 `cost >= 3` 或 `energyNeeds` 非空 —— **不许枚举卡名**');
+  ok(ev.indexOf('function countBigCards(events, seat, RR)') >= 0, '必须有 countBigCards');
+  ok(ev.indexOf('const bigBonus = BIGCARD_W > 0 ?') >= 0, '标度必须有关闭守卫（0 * NaN = NaN 会把 fit 打成 NaN —— v1.5.124 的坑）');
+  ok(ev.indexOf('+ blockBonus + widthBonus + bigBonus));') >= 0, '必须真的进 gFit');
+  ok(ev.indexOf('let BIGCARD_W = 0;') >= 0, '默认必须关');
+  ok(ev.indexOf('if (o.bigcardW != null) BIGCARD_W') >= 0, 'setEconomyReward 必须接受 bigcardW');
+  const en = readFileSync('server/econ-env.mjs', 'utf8');
+  ok(en.indexOf("'EPIRUS_BIGCARD_W'") >= 0 && en.indexOf("'bigcardW'") >= 0 && en.indexOf('bigcardW: nv(e.EPIRUS_BIGCARD_W)') >= 0,
+    'env 名/键/读出三处都要在**单一来源**里');
 });
 
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {

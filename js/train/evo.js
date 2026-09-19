@@ -706,6 +706,8 @@
   /* v1.5.124（复核 §28a）：**广度收益项**的权重与阈值（默认关 ⇒ 出厂行为一字不变）。
    * 形状：G 从 `WIDTH_FLOOR` 到 `WIDTH_TARGET` 线性给钱 ⇒ 与 `DIV_W` 那个"归一化熵"不同，**刷不动**。 */
   let WIDTH_W = 0, WIDTH_FLOOR = 3, WIDTH_TARGET = 7;
+  /* v1.5.126（用户洞察）：**贵卡**（cost≥3 或需珠）出手的奖励权重（默认关）。 */
+  let BIGCARD_W = 0;
   /* v1.5.86（附录 D6）：分母必须是**固定目标**，不能用"当时可负担的技能数" ——
    * 否则"把菜单变穷"就能把 divNorm 刷高（臂 A 实测：DIV_W×5 后产物 G=1.24/1.90，
    * 比默认臂被拒的 2.3~2.8 更低，全被健康门禁拦下、零产物）。
@@ -786,24 +788,21 @@ let WALL_GAMES = 3;
    *   （实测：一行一个键时 `wallGames` 落在 1202 ⇒ 红；注释写进函数体里也会把窗口吃掉）。 */
   function setEconomyReward(o) {
     o = o || {};
-    if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
+    if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;
+    else if (o.divCatW != null) DIV_ROLE_W = Number(o.divCatW) || 0;
+    if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
+    if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
     if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover; if (o.convRatio != null) CONV_RATIO = !!o.convRatio; if (o.convOffense != null) CONV_OFFENSE = !!o.convOffense;
-    if (o.hoardCapMult != null) HOARD_CAP_MULT = Math.max(1, Number(o.hoardCapMult) || 1); if (o.stockBonus != null) STOCK_BONUS = Math.max(0, Math.min(1, Number(o.stockBonus)));
+    if (o.hoardCapMult != null) HOARD_CAP_MULT = Number(o.hoardCapMult) || 1; if (o.stockBonus != null) STOCK_BONUS = Number(o.stockBonus) || 0;
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
     if (o.divW != null) DIV_W = Math.max(0, Number(o.divW));
     if (o.divK != null) DIV_K = Math.max(2, Number(o.divK));
     if (o.wallFilter != null) WALL_FILTER_ON = !!o.wallFilter;
     if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));
-    if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
-    if (o.divRoleW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divRoleW)));
-    else if (o.divCatW != null) DIV_ROLE_W = Math.min(1, Math.max(0, Number(o.divCatW)));
-    if (o.wallFilter != null) WALL_FILTER_ON = !!o.wallFilter;
-    if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));
-    /* reset 必须把新旋钮一起复位（否则"设过之后 reset"留脏状态、自检会读出假 DIFF）。 */
     if (o.reset) {
       ECO_T = null; ECO_C = null;
-      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0;
+      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0; BIGCARD_W = 0;
     }
     return economyReward();
   }
@@ -812,7 +811,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W,
+      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
 
@@ -937,7 +936,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0, varietyMax = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0, varietyMax = 0, bigUses = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let leftEpSum = 0, spentEpSum = 0, gainEpSum = 0;   // v1.5.116 L2′：余款/已花/已获得（每局）
     let imitSum = 0, imitGames = 0;
@@ -1088,10 +1087,14 @@ let WALL_GAMES = 3;
       const widthBonus = WIDTH_W > 0
         ? (WIDTH_W * Math.min(1, Math.max(0, varietyMax - WIDTH_FLOOR) / Math.max(1, WIDTH_TARGET - WIDTH_FLOOR)))
         : 0;
+      /* v1.5.126（用户洞察）：**贵卡出手**奖励 —— "贵卡"由**声明字段推导**（`cost ≥ 3` 或 `energyNeeds`），
+       * 不写卡名清单（D81/D72 的规矩）。这一族正是"用不上就没必要攒 ep"的那几张（大雷/地雷/净化/电磁炮/摄魂/激光眼）。
+       * 标度同 v1.5.79 的规矩：**0 次得 0、1 次即吃满**（现状是 0% ⇒ 先给"从不会到会"这一步的梯度）。 */
+      const bigBonus = BIGCARD_W > 0 ? (BIGCARD_W * Math.min(1, bigUses / 1)) : 0;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus + widthBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus + widthBonus + bigBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -1127,6 +1130,9 @@ let WALL_GAMES = 3;
         /* v1.5.124（§28a）：**广度**的绝对量 —— 该快照里"用过的招数种类数"（去重）。
          * 取 `max` 而不是累加：要的是"这个策略的招式面有多宽"，不是"出手多少次"。 */
         if (WIDTH_W > 0) varietyMax = Math.max(varietyMax, countVariety(r.state.events, seat));
+        /* v1.5.126：**贵卡**（声明费用 ≥3 或需珠）的出手 —— 用户指出"这个包不会用电磁炮/大雷、也丢了地雷/净化
+         * ⇒ 它当然没必要攒 ep" ⇒ 直接给这一族付钱（它们不可刷：真的用出来才给钱）。 */
+        if (BIGCARD_W > 0) bigUses += countBigCards(r.state.events, seat, R);
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1824,6 +1830,25 @@ let WALL_GAMES = 3;
     }
     return Object.keys(seen).length;
   }
+  /* v1.5.126（用户洞察）：**贵卡**的判定与计数 —— 从**声明字段**推导，不写卡名清单（D81/D72 的规矩）：
+   *   `cost >= 3`（大雷 5 · 地雷/净化/摄魂 3）**或** `energyNeeds` 非空（电磁炮需 1 电珠 · 激光眼需爆珠）。
+   * 只认 `outcome === 'ok'` 的出手（被无效化的不算 ⇒ 不可刷）。 */
+  function isBigCard(def) {
+    if (!def) return false;
+    if (typeof def.cost === 'number' && def.cost >= 3) return true;
+    if (def.energyNeeds && Object.keys(def.energyNeeds).length) return true;
+    return false;
+  }
+  function countBigCards(events, seat, RR) {
+    const rules = RR || R;
+    let n = 0;
+    for (const e of (events || [])) {
+      if (e.type !== 'action' || e.pid !== seat || e.outcome !== 'ok' || !e.key) continue;
+      if (isBigCard(rules.byKey[e.key])) n++;
+    }
+    return n;
+  }
+  function bigCardReward() { return { w: BIGCARD_W }; }
   function blockReward() { return { w: BLOCK_W }; }
   /* v1.5.124（§28a）：广度收益项的只读回执（权重 + 阈值；判据用**无筛选种群**的 G 中位，见 CHANGELOG）。 */
   function widthReward() { return { w: WIDTH_W, floor: WIDTH_FLOOR, target: WIDTH_TARGET }; }
@@ -2175,6 +2200,7 @@ let WALL_GAMES = 3;
     setClearReward, clearReward, countClears,
     blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）
     widthReward,                // v1.5.124 §28a：广度收益项（权重走 econ-env 的 widthW）
+    bigCardReward, countBigCards,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, wrapBotN, pickTargetN, pickTarget2N, rankOf
   };
