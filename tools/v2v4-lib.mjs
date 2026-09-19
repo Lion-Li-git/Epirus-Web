@@ -79,6 +79,78 @@ export function rates(w, k) {
   return 100 * s / w.length / (k || 1);
 }
 
+/* ===== 「1 席脚本 vs 4 席同包」= G4 克制表的装配（`gate-drafts.mjs` 的 `duel()`）=====
+ * 口径必须与 `gate-drafts.mjs:256-268` **逐字一致**（seed0=90210、`seat = g % 5`、
+ * `slotSalt = h32(seed0 + g*2246822519)`、被测席 `T.policyChooserN(params, 0.15)`），
+ * 否则复现不出已记录的读数。**自检在 `tools/probe-g4-anatomy.mjs` §A**：只枪那格必须复现
+ * 线上包的 75%(long) / 62%(multi)。
+ *
+ * 为什么需要它：G4 是**唯一**用这个装配的量具，而它的实现原先只存在于 gate-drafts 内部（不可复用）
+ * ⇒ 任何"想解剖 G4 到底输在哪"的探针都只能抄一份（本仓栽过四次的老病）。抽出来后两边口径同源。
+ *
+ * `opts`：
+ *   · `scripted`：脚本席的 chooser（或字符串 `'champ'` = 5 席同包 = G4 的基线格）；
+ *   · `mode`：`'long'` | `'multi'`（G4 两档都量）；`games`、`seed0`（默认 90210）；
+ *   · `countKeys`：要统计出手次数的卡键数组（**被测席**的最终输出）；
+ *   · `forceAttack`：**反事实钩子** —— 被测席若选「ジ」且当回合**枪买得起**，改判成枪（目标按
+ *     `T.pickTargetN`，与 `gate-drafts` 的 `pT` 同口径）。这测的就是"**它本来买得起却没进攻**"那些回合；
+ *   · `forceTurtle`：反方向 —— 被测席任何非ジ输出都改判成ジ（只测"完全不还手"会怎样）。
+ *   两个钩子都记 `forced` 次数（**空枪检测**：为 0 ⇒ 本行无信息，不得读成"改了没用"）。
+ * 返回：{ winPct, drawPct, champWinPct, avgRounds, champDecisions, jiShare, counts, forced,
+ *        aliveChampEnd, aliveScriptedEnd, hpScriptedEnd } */
+export function duelAssembly(deps, params, opts) {
+  const S = deps.S, Play = deps.Play, T = deps.T, R = deps.R;
+  const o = opts || {};
+  const G = o.games, mode = o.mode || 'multi';
+  const seed0 = o.seed0 != null ? o.seed0 : 90210;
+  const scripted = o.scripted;
+  if (typeof scripted !== 'function' && scripted !== 'champ') throw new Error('[v2v4] scripted 必须是 chooser 函数或 \'champ\'');
+  const ch = T.policyChooserN(params, 0.15);
+  const JI = R.SK.JI, GUN = R.SK.GUN;
+  const keys = o.countKeys || null;
+  const counts = {}; if (keys) keys.forEach(function (k) { counts[k] = 0; });
+  let win = 0, draw = 0, rounds = 0, dec = 0, ji = 0, forced = 0;
+  let aliveChampEnd = 0, aliveScriptedEnd = 0, hpScriptedEnd = 0;
+  for (let g = 0; g < G; g++) {
+    const seat = g % 5;
+    const st = S.createState(mode, { next: mb(seed0 + g * 991) }, 5);
+    st.slotSalt = h32(seed0 + g * 2246822519);
+    const mine = function (s2, pid, lg) {
+      let r = ch(s2, pid, lg);
+      dec++;
+      if (r && r.key === JI) {
+        ji++;
+        if (o.forceAttack) {
+          const gun = lg.find(function (x) { return x.key === GUN && x.affordable; });
+          if (gun) { forced++; r = { key: GUN, target: T.pickTargetN(s2, pid, GUN) }; }
+        }
+      } else if (r && o.forceTurtle && r.key !== JI) {
+        const j = lg.find(function (x) { return x.key === JI; });
+        if (j) { forced++; r = { key: JI, target: null }; }
+      }
+      if (keys && r && keys.indexOf(r.key) >= 0) counts[r.key]++;
+      return r;
+    };
+    const cs = []; for (let i = 0; i < 5; i++) cs.push(i === seat ? (scripted === 'champ' ? mine : scripted) : mine);
+    Play.autoGameN(st, cs);
+    rounds += st.round;
+    if (st.winner === seat) win++; else if (st.winner === 'draw') draw++;
+    let ac = 0;
+    for (let i = 0; i < 5; i++) if (i !== seat && st.p[i].hp > 0) ac++;
+    aliveChampEnd += ac;
+    if (st.p[seat].hp > 0) aliveScriptedEnd++;
+    hpScriptedEnd += st.p[seat].hp;
+  }
+  return {
+    winPct: Math.round(100 * win / G), drawPct: Math.round(100 * draw / G),
+    champWinPct: Math.round(100 * (G - win - draw) / G),
+    avgRounds: rounds / G, champDecisions: dec,
+    jiShare: dec ? ji / dec : 0, counts: counts, forced: forced,
+    aliveChampEnd: aliveChampEnd / G, aliveScriptedEnd: aliveScriptedEnd / G,
+    hpScriptedEnd: hpScriptedEnd / G
+  };
+}
+
 /* 三个装配一次量完：返回 { V1, V2, V4 } 的每席位胜率（%）+ 逐局原始数组（配对检验要它）。 */
 export function measureAll(deps, params, opts) {
   const Bots = deps.B;

@@ -8,6 +8,8 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import vm from 'node:vm';
+/* v1.5.133：G4 的「1 席脚本 vs 4 席被测」装配本体在 `tools/v2v4-lib.mjs` 的 `duelAssembly()`（单一来源）。 */
+import { duelAssembly } from './v2v4-lib.mjs';
 
 const REPO = process.cwd() + '/';
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map };
@@ -252,19 +254,15 @@ const COUNTERS = {
    *    ⇒ 可复现、且**不按 pid 取人**（避免重新引入座位身份通道 D50/D58 家族）。 */
   '珠爆发(ジ→蓄电珠→电磁炮/摄魂)': B.pickBeadBurst,
 };
-/* 1 席脚本 vs 4 席被测；fn==='champ' ⇒ 5 席同策略（= 基线，期望 ≈20%） */
+/* 1 席脚本 vs 4 席被测；fn==='champ' ⇒ 5 席同策略（= 基线，期望 ≈20%）
+ * v1.5.133：**装配本体移到 `tools/v2v4-lib.mjs` 的 `duelAssembly()`**（单一来源）—— 原先它只存在于这里，
+ *   于是任何"想解剖 G4 到底输在哪"的探针都只能抄一份（本仓"同一规则两处维护必然漂移"栽过四次）。
+ *   口径一个字都没动（seed0=90210、`seat = g%5`、`slotSalt`、chooser 0.15）⇒ **本工具的 G4 全表读数
+ *   必须逐字不变**，这是重构的验收条件（自己就是探针的 `probe-g4-anatomy.mjs` §A 也拿这条当自检）。 */
 function duel(params, fn, mode, G, seed0) {
-  const ch = T.policyChooserN(params, 0.15);
-  let win = 0, draw = 0;
-  for (let g = 0; g < G; g++) {
-    const seat = g % 5;
-    const st = S.createState(mode, { next: mulberry32(seed0 + g * 991) }, 5);
-    st.slotSalt = h32(seed0 + g * 2246822519);          // 与 seat=g%5 无关
-    const cs = []; for (let i = 0; i < 5; i++) cs.push(i === seat ? (fn === 'champ' ? ch : fn) : ch);
-    Play.autoGameN(st, cs);
-    if (st.winner === seat) win++; else if (st.winner === 'draw') draw++;
-  }
-  return { win: Math.round(100 * win / G), draw: Math.round(100 * draw / G) };
+  const r = duelAssembly({ S: S, Play: Play, T: T, R: R, B: B }, params,
+    { games: G, mode: mode, seed0: seed0, scripted: fn === 'champ' ? 'champ' : fn });
+  return { win: r.winPct, draw: r.drawPct };
 }
 
 /* ===== v1.5.104（**用户裁定**）：G4 阈值 45% → **60%**（标定理由必须与阈值写在一起）=====

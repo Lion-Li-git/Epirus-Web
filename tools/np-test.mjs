@@ -4153,10 +4153,53 @@ t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草�
   ok(pb.indexOf('pickBalanced') < 0, ' 且探针里不许再出现对手名清单（它是装配定义的一部分）');
 });
 
+t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
+  /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
+   * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/
+   * `takenPerGame`/`roundsPerGame`）⇒ `undefined.toFixed()` 每行抛错、被 catch 吞成一行「读失败」
+   * ⇒ **全仓没有一个能用的场A/场B 打印器**，而这两条轴正是 G4/五道门争论里被反复引用的东西。
+   * 本门**真跑一次探针**（1 局），不钉源码文本；同时要求它打印**门禁真正判的那一列**「清场/局」
+   * （阈值 ≥0.3 局；D60 明确：场B 判据只能是清场数，胜率是规则红利）—— 原探针只打胜率/平局。 */
+  const r = spawnSync(process.execPath, ['tools/probe-aggr.mjs', '1', 'js/bundled-champion-3p.js'],
+    { encoding: 'utf8', timeout: 180000 });
+  const out = String(r.stdout || '') + String(r.stderr || '');
+  ok(r.status === 0, '探针必须正常退出（实测 status=' + r.status + '）');
+  ok(out.indexOf('读失败') < 0, '探针输出不许出现「读失败」（= 字段名与真源漂移，整行读数无效）：' +
+    out.split('\n').filter(function (l) { return l.indexOf('读失败') >= 0; }).join(' | ').slice(0, 90));
+  ok(out.indexOf('清场/局') >= 0, '探针必须打印「清场/局」——那是场B 唯一被门禁判的数（≥0.3/局）');
+  /* 真源 → 打印器 的键对账（比钉文本结实：字段名两边一起改才不会红） */
+  const Wl = { EpirusRules: R, EpirusState: S, EpirusTrainer: T, EpirusPlay: Play };
+  Pol.setRng(T.mulberry32(31337));
+  const one = aggressionProfile(Wl, Pol.makePolicy(0.25), 1);
+  for (const k of ['fieldA', 'fieldB']) {
+    const keys = Object.keys(one[k]);
+    ok(keys.indexOf('clearedPerGame') >= 0 && keys.indexOf('jiShare') >= 0 && keys.indexOf('forced') >= 0,
+      k + ' 必须带诊断字段（clearedPerGame / jiShare / forced）—— 反事实读数要靠 forced 判空枪');
+    ok(one[k].forced === 0, '默认关闭诊断钩子时 ' + k + '.forced 必须是 0（钩子不得改变基线读数）');
+  }
+});
+
+t('D107 G4「1 席脚本 vs 4 席被测」装配只许有一份实现（v1.5.133 收拢）', function () {
+  /* 病：该装配原先**只写在 gate-drafts 内部** ⇒ 任何"想解剖 G4 到底输在哪"的探针只能抄一份
+   * （本仓"同一规则两处维护必然漂移"栽过四次）。现在它在 `tools/v2v4-lib.mjs` 的 `duelAssembly()`，
+   * gate-drafts 与 `probe-g4-anatomy.mjs` 共用。重构的验收 = G4 全表逐字不变（已对 `g4-check.log` 全部对账）。 */
+  const gd = readFileSync('tools/gate-drafts.mjs', 'utf8');
+  ok(gd.indexOf("from './v2v4-lib.mjs'") >= 0, 'gate-drafts 必须从 v2v4-lib.mjs 导入（装配单一来源）');
+  ok(gd.indexOf('duelAssembly(') >= 0, ' 且真的调用它');
+  ok(gd.indexOf('function duel(') >= 0, ' 但保留 duel() 薄壳（调用点与判词一字不动）');
+  ok(gd.indexOf('h32(seed0 + g * 2246822519)') < 0, '装配本体不许再出现在 gate-drafts 里（否则又成两份）');
+  const lib = readFileSync('tools/v2v4-lib.mjs', 'utf8');
+  ok(lib.indexOf('export function duelAssembly') >= 0, 'v2v4-lib 必须导出 duelAssembly');
+  ok(lib.indexOf('forceAttack') >= 0 && lib.indexOf('forceTurtle') >= 0, ' 且带双向反事实钩子');
+  const pb = readFileSync('tools/probe-g4-anatomy.mjs', 'utf8');
+  ok(pb.indexOf("from './v2v4-lib.mjs'") >= 0, '解剖探针必须从单一来源导入装配');
+  ok(pb.indexOf('EXPECT') >= 0 && /EXPECT = \{ long: 75, multi: 62 \}/.test(pb),
+    '探针必须自带"复现 G4 已记录读数"的自检（long 75 / multi 62）—— 装配错了就不许读后面的数');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
- * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */
-console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
+ * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 
 
 process.exit(FAIL ? 1 : 0);

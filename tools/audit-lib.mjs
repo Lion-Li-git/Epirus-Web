@@ -588,13 +588,23 @@ export function chargeProfile(W, params, mode, GAMES) {
  * 细节：冠军座位**逐局轮换**（g % 5，避免座位相位污染）；伤害归因用事件真字段 **`source`**
  * （打印确认过：`{type:'damage', to, amt, via, source}`；早前猜 `from` 得 0 是错的）。
  * 口径：`atk` = 冠军成功出手里属于**数据驱动伤害卡**（`R.byKey[key].dmg` 存在）的占比。 */
-export function aggressionProfile(W, params, GAMES) {
+export function aggressionProfile(W, params, GAMES, opts) {
   const R = W.EpirusRules, S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay;
   const G = GAMES || 40;
+  /* v1.5.133：**诊断钩子**（默认关闭 ⇒ 读数逐位不变）。只改**冠军席**的一个决策规则，做反事实：
+   *   `forceAttack`：它选ジ、而当回合 `GUN` 买得起时 → 改判成枪（目标 `T.pickTargetN`，与 G4 的 `pT` 同口径）；
+   *   `forceTurtle`：它任何非ジ输出 → 改判成ジ。
+   * 动机（`docs/HANDOFF-2026-09-19.md` §2.1 的「场B 清场 ↔ 抗只枪单调互斥」）：那条互斥是**沿 `CLEAR_W`
+   *   一个旋钮**、比较**两个不同的包**得到的；要判它是不是**根本**的，得在**同一个包、同一 seed 序列**下
+   *   只动一个决策规则（与 `probe-ring-ablate.mjs` 的消融同法）。
+   *   `forced` = 实际改判次数（**空枪检测**：0 ⇒ 本行无信息，不得读成"改了没用"）。 */
+  const HOOK = opts || {};
+  const doForceAttack = !!HOOK.forceAttack, doForceTurtle = !!HOOK.forceTurtle;
   const OLD = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.DRAIN];
   const isDmg = function (k) { const d = R.byKey[k]; return !!(d && d.dmg && d.dmg.amt); };
   function run(kind) {
     let atkOld = 0, atkNew = 0, acts = 0, dealt = 0, taken = 0, takenOpp = 0, wins = 0, draws = 0, rounds = 0, oppAtk = 0, cleared = 0;
+    let forced = 0, jiActs = 0;
     for (let g = 0; g < G; g++) {
       const me = g % 5;
       const st = S.createState('multi', { next: mulberry32(15000 + g) }, 5);
@@ -608,7 +618,18 @@ export function aggressionProfile(W, params, GAMES) {
         }
         : function () { return { key: R.SK.JI }; };
       let shrinkStarted = false;   // v1.5.66: 清场判据的分界（收缩开始后的死者不算清场）
-      const champ = T.policyChooserN(params, 0.15);
+      const raw = T.policyChooserN(params, 0.15);
+      const champ = (doForceAttack || doForceTurtle) ? function (s2, pid, lg) {
+        let r = raw(s2, pid, lg);
+        if (doForceAttack && r && r.key === R.SK.JI) {
+          const gun = lg.find(function (x) { return x.key === R.SK.GUN && x.affordable; });
+          if (gun) { forced++; return { key: R.SK.GUN, target: T.pickTargetN(s2, pid, R.SK.GUN) }; }
+        } else if (doForceTurtle && r && r.key !== R.SK.JI) {
+          const j = lg.find(function (x) { return x.key === R.SK.JI; });
+          if (j) { forced++; return { key: R.SK.JI }; }
+        }
+        return r;
+      } : raw;
       const ch = [];
       for (let i = 0; i < 5; i++) ch.push(i === me ? champ : scripted);
       Play.autoGameN(st, ch);
@@ -617,6 +638,7 @@ export function aggressionProfile(W, params, GAMES) {
         if (e.type === 'action' && e.outcome === 'ok') {
           if (e.pid === me) {
             acts++;
+            if (e.key === R.SK.JI) jiActs++;
             if (OLD.indexOf(e.key) >= 0) atkOld++;
             if (isDmg(e.key)) atkNew++;
           } else if (kind === 'aggr' && OLD.indexOf(e.key) >= 0) oppAtk++;
@@ -648,6 +670,7 @@ export function aggressionProfile(W, params, GAMES) {
       games: G, actsPerGame: acts / G, atk: acts ? atkNew / acts : 0, atkOldWhitelist: acts ? atkOld / acts : 0,
       dealtPerGame: dealt / G, takenPerGame: taken / G, takenByOpponentPerGame: takenOpp / G, winRate: wins / G, drawRate: draws / G,
       clearedPerGame: cleared / G, clearedTotal: cleared,
+      forced: forced, jiActs: jiActs, jiShare: acts ? jiActs / acts : 0,
       roundsPerGame: rounds / G, oppAtkPerGame: oppAtk / G
     };
   }
