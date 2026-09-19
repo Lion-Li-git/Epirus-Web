@@ -372,6 +372,21 @@
     eq(st.p[0].ep, 1, '重新按首次算：3-3+1（旧实现会免费续 +2 ⇒ 5）');
   });
 
+  t('R61 被小雷无效化的**激光眼**不写 lastSkill（v1.5.129：打断方不再白送一次"连用价"）', function () {
+    /* 与 R10（被无效化的聚能环不续计）**同族的另一半**：`setVoid` 只置 `voided`、**不动** `outcome`，
+     * 而 `endTurn` 原先只看 `outcome === 'ok'` ⇒ 被废掉的那一手照样成为 `lastSkill`。
+     * 反应到规则上就是 **R32 被白送**：下一次激光眼只收 2 ジ、**且免爆破珠**。
+     * 本用例能反证：旧实现会读到 `lastSkill = LASER_EYE`，且第二次激光眼在**没有爆珠**时照样成功。 */
+    const st = game(); setEp(st, 5, 5); st.p[0].boom = 1;
+    play(st, SK.LASER_EYE, SK.MINI_T);      // 小雷(pri5) 无效化 激光眼(pri3)
+    ok(st.actions[0].voided, '激光眼必须被无效化');
+    eq(st.p[0].lastSkill, null, '被无效化 ⇒ 不得写 lastSkill（旧实现写的是 LASER_EYE）');
+    setEp(st, 5, 5); st.p[0].boom = 0;      // 故意不给爆珠：白送的"连用"恰好会绕过这个要求
+    play(st, SK.LASER_EYE, SK.JI);
+    eq(st.actions[0].outcome, 'invalid', '没有爆珠 ⇒ 必须按"首次"判为不合法（白送的连用会让它成功）');
+    eq(st.p[1].hp, 3, '两次都没造成伤害（第一次被无效化、第二次没发动）');
+  });
+
   t('R32 激光眼连续使用免爆破珠', function () {
     const st = game(); setEp(st, 3, 0); st.p[0].boom = 1;
     play(st, SK.LASER_EYE, SK.JI);   // 首次 1ジ+1爆珠

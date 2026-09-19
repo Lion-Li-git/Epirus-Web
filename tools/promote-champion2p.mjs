@@ -105,7 +105,7 @@ const meta = {
   examMode: '2p-standard', examBaselines: P2_NAMES.length, examGames: GAMES, examSeedBase: 20260207,
   examScoreAtBuild: Number(avg.toFixed(4)), examMinBaseline: Number(mn.toFixed(4)), examGateOk: gateOk,
   examAt: new Date().toISOString().slice(0, 10), rulesFingerprint: fp,
-  selfPlayNote: '2P 自对局是镜像局（项目实测几乎全平），故不作为活跃度指标；打架活跃度看 19 基准胜率'
+  selfPlayNote: '2P 自对局是镜像局（项目实测几乎全平），故不作为活跃度指标；打架活跃度看基准表胜率（v1.5.129 起 20 个）'
 };
 const metaRe = /window\.EPIRUS_CHAMPION_META\s*=\s*\{[\s\S]*?\}\s*;/;
 const out = metaRe.test(src)

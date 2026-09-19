@@ -270,7 +270,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
   try {
     const gr = spawnSync(process.execPath, ['tools/gate-drafts.mjs', SRC], { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
     const outTxt = String(gr.stdout || '') + String(gr.stderr || '');
-    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], unrun: [], g6: {} };
+    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [] };
     for (const ln of outTxt.split('\n')) {
       /* v1.5.89③：`UNRUN` = 该格**跑不了 / 不可判**（量具自己报的第三态，见 gate-drafts 的 gate()）。
        * 它既不是 FAIL、更不是 PASS ⇒ 单独收集并**醒目打印**（"不得当作通过"）。 */
@@ -297,6 +297,14 @@ if (!process.argv.includes('--skip-gate-drafts')) {
     }
     const mg6 = /G6\[([^\]]+)\] 靶向率[^\n]*实测 ([\d.]+)%/g; let t6;
     while ((t6 = mg6.exec(outTxt))) gateDrafts.g6[t6[1]] = Number(t6[2]);
+    /* v1.5.129（用户裁定②）：把 **G4 克制表的口径 id** 与**这一轮自己越过的 G4 行**分别留下 ——
+     * `np-test D67` 靠它们把"线上包 G4 全红"从硬红降为"**已记录的例外**"，**且只在口径 id 相等时认账**。 */
+    const m4p = /G4POOL\s+([0-9a-f]{8})/.exec(outTxt);
+    gateDrafts.g4Pool = m4p ? m4p[1] : null;
+    gateDrafts.g4Blocking = gateDrafts.blocking.filter(function (x) { return /^G4\[/.test(x); });
+    if (!gateDrafts.g4Pool) {
+      console.log('   ⚠ 没能从 gate-drafts 输出里解析到 `G4POOL` 口径 id ⇒ 这次越线的 G4 例外**不算留痕**（D67 会照旧判红）');
+    }
     console.log('   G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：' +
       (gateDrafts.blocking.length ? '✗ ' + gateDrafts.blocking.join('；') : '✅ 候选自己全过'));
     const refFails = gateDrafts.recorded.filter(function (x) { return x.indexOf('参照(不阻断) FAIL') === 0; });
@@ -374,6 +382,20 @@ meta.gateDrafts = gateDrafts;
 meta.activeAttackRate = Number(fAct.atk.toFixed(3));
 meta.auditFails = fails;
 meta.auditForced = fails.length ? FORCE : false;
+/* ===== v1.5.129（用户裁定②）：G4 例外的**留痕块** —— `np-test D67` 的判据就是这三样 =====
+ *  ① `forced` —— 这次确实是"用 `--force` 把一条 G4 阻断行放过"的（而不是碰巧没红）；
+ *  ② `pool`   —— 当时那张克制表的口径 id（`gate-drafts` 打印的 `G4POOL`）；
+ *  ③ `lines`  —— 被放过的具体行（含"最克「…」X%"的读数，读的人不用回翻 CHANGELOG）。
+ * 三者缺一 ⇒ D67 仍判红（判词会写"例外必须为**当前口径**重记"）。这样**改了池子/阈值后旧记录自动失效**，
+ * 而不是变成一张"永久免检"的通行证 —— 后者正是本仓最忌讳的形态："门看着在、其实没判"。 */
+const g4Blocked = (gateDrafts && gateDrafts.g4Blocking) || [];
+meta.gate4Pool = (gateDrafts && gateDrafts.g4Pool) || null;
+meta.gate4Forced = {
+  forced: (g4Blocked.length > 0 && !!FORCE),
+  pool: (gateDrafts && gateDrafts.g4Pool) || null,
+  lines: g4Blocked,
+  ts: new Date().toISOString()
+};
 const out = src.replace(metaM[0], metaM[1] + JSON.stringify(meta) + ';');
 /* 回读自检：冠军槽必须仍是**能解出参数的包**（第一版写坏槽位时就是这里没查，靠 np-test 才发现） */
 const reChamp = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(out);

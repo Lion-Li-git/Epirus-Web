@@ -6,6 +6,7 @@
  *      —— 否则会出现"探针永远测不出失败"的假通过（v1.5.44 的教训）。
  */
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import vm from 'node:vm';
 
 const REPO = process.cwd() + '/';
@@ -17,6 +18,9 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
 }
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, Play = sb.window.EpirusPlay,
   T = sb.window.EpirusTrainer, P = sb.window.EpirusPolicy;
+/* v1.5.129：G4 的「珠爆发」格**直接复用 bots.js 的实现**（见 COUNTERS 里那一格的注释）——
+ * 本脚本的文件头 vm 清单本来就加载 `js/train/bots.js`，所以拿得到同一个函数对象。 */
+const B = sb.window.EpirusBots;
 const CH = P.unpack(sb.window.EPIRUS_CHAMPION_3P);
 
 function mulberry32(seed) {
@@ -232,6 +236,21 @@ const COUNTERS = {
     }
     return { key: R.SK.JI, target: null };
   },
+  /* ===== v1.5.129（第三方复核 §3 的实锤线）：珠爆发「ジ→蓄电珠→电磁炮，残血摄魂收尾」=====
+   * 它是**唯一一格"要先花钱蓄珠、再用珠开火"的脚本** —— 原有七格全是"付得起就直接用那一张"，
+   * 所以"会不会防电 / 会不会花珠"这件事**在 G4 里从来没被考过**。
+   * ⚠️ **但它在 5 席 harness 里不是杀手**（v1.5.129 实测 n=60/格）：本格 **30%(long) / 15%(multi)**，
+   *    而基线是 18% / 10% ⇒ 有牙（远高于"什么都不做"档的 坦克线 12% / 只防御 13%），但**打不过"只枪"的 75%**。
+   *    复核那条 99~100% 是 **1v1（2P）** 量出来的（本仓同口径复现：`standard` 200 局
+   *    **100% 胜 · 均 9.2 回合**，见 `tools/p2-baselines.mjs` 的 `beadburst`）。
+   * ⇒ 教训（已进 `docs/METHODOLOGY.md` §E.38）：**判据的座位数必须匹配洞的座位数** ——
+   *    G4 结构上只跑 5 席，所以任何"1v1 专用洞"它都看不见。留着这一格是为了**池子覆盖类型**
+   *    （将来包的 2 席行为若退化，这里能看见），但**真正的信号在 2P 考卷那一侧**。
+   * ⚠️ 实现**直接复用 `js/train/bots.js` 的 `pickBeadBurst`**（同一个函数对象），不在这里抄第二份 ——
+   *    "同一规则两处维护"是本仓栽过四次的老病（见 `tools/p2-baselines.mjs` 文件头）。
+   *    口径：击杀优先 → 压血量最高者（与 `pT` 用的 `T.pickTargetN` 同口径），并列随机走 `state.rng`
+   *    ⇒ 可复现、且**不按 pid 取人**（避免重新引入座位身份通道 D50/D58 家族）。 */
+  '珠爆发(ジ→蓄电珠→电磁炮/摄魂)': B.pickBeadBurst,
 };
 /* 1 席脚本 vs 4 席被测；fn==='champ' ⇒ 5 席同策略（= 基线，期望 ≈20%） */
 function duel(params, fn, mode, G, seed0) {
@@ -257,9 +276,24 @@ function duel(params, fn, mode, G, seed0) {
  * ⚠️ **理想线仍然是 45%**（第七轮标定值）：通过 60% 但没到 45% 的，判词里会显式写出差距，
  *    免得"绿灯"被误读成"已达理想"。 */
 const G4_MAX = 60, G4_IDEAL = 45;
+/* ===== v1.5.129（用户裁定②，配合 `np-test D67`）：**克制表口径 id** = 键序 + 阈值 的 sha1 前 8 位 =====
+ * 动机：D67 现在允许"线上包 G4 全红"以**已记录的 `--force` 例外**通过（promote-champion 把越线条件
+ * 写进 meta）。但例外必须与**当时那张克制表**绑定 —— 否则"改了池子之后旧记录继续免检"会变成一个新洞，
+ * 而那正是本仓最忌讳的形态："门看着在、其实没判"（v1.5.89 的"主语错位"同族）。
+ * ⇒ promote-champion 把本 id 记进 `meta.gate4Pool`，D67 只在**口径 id 相等**时才认这条例外。 */
+const G4_POOL_ID = (function () {
+  const h = createHash('sha1');
+  h.update('G4_MAX=' + G4_MAX + '\n');
+  Object.keys(COUNTERS).forEach(function (k) { h.update(k + '\n'); });
+  return h.digest('hex').slice(0, 8);
+})();
 
 console.log('\n=== G4 一行脚本克制表（任何克制格 > ' + G4_MAX + '% 即红 · 理想线 ' + G4_IDEAL +
   '%；基线格必须 ≈20% 否则本门不可判）===');
+/* 机器可读的口径 id（promote-champion 与 np-test D67 都解析这一行）——
+ * 与 `PASS/FAIL <标题>` 同属对外契约：改这一行的格式要同步改那两处。 */
+console.log('   G4POOL ' + G4_POOL_ID + '（克制表口径 id = 键序 + G4_MAX 的 sha1 前 8 位 · 格数 ' +
+  Object.keys(COUNTERS).length + '；换一格或改阈值 ⇒ 这个 id 必变）');
 for (const [nm, p] of PACKS) {
   for (const mode of ['long', 'multi']) {
     const base = duel(p, 'champ', mode, N4, 90210);

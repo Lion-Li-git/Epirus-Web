@@ -1519,7 +1519,7 @@ t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规�
   const fp2 = fingerprintOfBundle(bundle2);
   ok(!!fp2, '2P bundle（js/bundled-champion.js）的 meta 必须记 rulesFingerprint（v1.5.18 起；用 tools/promote-champion2p.mjs 补记）');
   eq(fp2, cur, '2P bundle 记的规则指纹必须等于当前规则指纹');
-  ok(/"examScoreAtBuild"\s*:\s*[0-9.]+/.test(bundle2), '2P bundle 的 meta 必须记 examScoreAtBuild（19 基准 × 40 局的平均胜率）');
+  ok(/"examScoreAtBuild"\s*:\s*[0-9.]+/.test(bundle2), '2P bundle 的 meta 必须记 examScoreAtBuild（2P 基准表 × 40 局的平均胜率）');
   ok(/window\.EPIRUS_CHAMPION\s*=/.test(bundle2), '2P bundle 的冠军槽必须还在（补 meta 不得写坏权重槽）');
 });
 
@@ -3019,7 +3019,37 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
    * （v1.5.104：`GATE4_GAMES` 由 6 抬到 **60** —— n=6 的"哪一格最克 / 是否越线"本身就是小样本统计量
    *  （§31/§35 的同一条教训），拿它断言等于内置"偶发红"；仍**不**断言 `FAIL G4[线上包/long]`，
    *  因为在位包/候选的 long 读数会随包更替而变。） */
-  ok(/PASS\s+G4\[线上包\/(long|multi)\]/.test(out), '线上包 G4 **至少一个模式**必须 PASS（"已知好"一侧才成立）');
+  /* ===== v1.5.129（**用户裁定②**）：这一条从"硬红"改成"**已记录的例外**" =====
+   * 背景（v1.5.123 §3，如实记录过）：线上包 `v7press3-91` 是**用 `--force` 越过 G4** 换上的
+   * ⇒ 它两个模式都红 ⇒ 旧措辞（"线上包至少一个模式必须 PASS"）**会一直红**。
+   * "长期红"的代价不是"少一道网"，而是**以后的真红会被已知红淹没**（每次提交都要人肉分辨哪条是新的）。
+   * 现在的判据是**三分支**（口径 id 来自 gate-drafts 打印的 `G4POOL` 行，见其 `G4_POOL_ID`）：
+   *   ① 至少一个模式 PASS ⇒ 通过（原口径，锚还在）；
+   *   ② 两模式都红 **且** bundle 的 meta 里有一条**格式良好 + 口径匹配**的 G4 越线留痕 ⇒ 通过（已记录的例外）；
+   *   ③ 两模式都红 **且** 无留痕 / 留痕口径与当前克制表不一致 ⇒ **红**。
+   * ⇒ 安全网没丢：丢掉的只是"记过账的旧账"，留下的是"**没记的账**"与"**改了池子却没重记的账**"
+   *   （后者正是本次自己会踩的那一步：加了「珠爆发」一格 ⇒ 口径 id 变 ⇒ 旧留痕自动失效 ⇒ 必须重记）。 */
+  const refPassG4 = /PASS\s+G4\[线上包\/(long|multi)\]/.test(out);
+  const poolM = /G4POOL\s+([0-9a-f]{8})/.exec(out);
+  const curPool = poolM ? poolM[1] : null;
+  let meta3p = null;
+  try {
+    const m3 = /(window\.EPIRUS_CHAMPION_3P_META\s*=\s*)(\{[\s\S]*?\})(\s*;)/.exec(readFileSync('js/bundled-champion-3p.js', 'utf8'));
+    meta3p = m3 ? JSON.parse(m3[2]) : null;
+  } catch (e) { meta3p = null; }
+  const g4rec = (meta3p && meta3p.gate4Forced && typeof meta3p.gate4Forced === 'object') ? meta3p.gate4Forced : null;
+  /* ⚠️ 例外的**完整性**并进判据本身（而不是另立一条恒真断言）：
+   * `forced` 为真 + **口径 id 相等** + **带上被放过的具体行**，三者缺一 ⇒ 不认这条例外。
+   * 第三条（`lines`）不是排版洁癖：promote-champion 哪天只写 `forced` 而丢掉 `lines`，
+   * 例外就变成"记了账但不知道记了什么"—— 那时这条门必须**红**，而不是静默放行。 */
+  const g4recOk = !!(g4rec && g4rec.forced === true && curPool && g4rec.pool === curPool &&
+    Array.isArray(g4rec.lines) && g4rec.lines.length > 0 && /^G4\[/.test(String(g4rec.lines[0])));
+  ok(refPassG4 || g4recOk,
+    refPassG4 ? '线上包 G4 **至少一个模式** PASS（"已知好"一侧成立）'
+      : (g4recOk ? '线上包 G4 两模式都红，但 meta 有**完整且口径匹配的 `--force` 留痕** ⇒ 已记录的例外（' +
+        String(g4rec.ts || '?') + ' · pool ' + g4rec.pool + ' · ' + g4rec.lines.length + ' 行）'
+        : '线上包 G4 两模式都红，且 meta 里**没有可用的越线留痕**（缺失 / 未 `--force` / 口径 id 与当前克制表不一致' +
+          ' / 留痕没带被放过的具体行）⇒ **必须重记**：node tools/promote-champion.mjs <源.bak> --force'));
   /* v1.5.104（用户裁定）：G4 阈值 45% → 60%。**阈值必须有单一常量 + 标定理由**，
    * 否则它会像 `sed` 不匹配那样静默漂移；同时把"理想线 45%"单独留着，别让绿灯被读成"已达理想"。 */
   const gsrc = readFileSync('tools/gate-drafts.mjs', 'utf8');
@@ -3681,6 +3711,113 @@ t('D91 被无效化的聚能环不得续计（v1.5.105：出招即计次 + 复�
   /* 边界：**过载炮**的"出招即计次"是 R43 的**用户裁定明文** ⇒ 不许被这次修复顺手波及。 */
   ok(readFileSync('js/core/state.js', 'utf8').indexOf('if (key === R.SK.CANNON) p.cannonCount++;') >= 0,
     '过载炮 R43（被无效化仍计次）不得被顺手改掉 —— 它与环是**两条不同的明文**');
+});
+
+t('D102 R61 被无效化的一手不写 lastSkill（第三方复核 §2-1：与 R10 同族 · 打断不再白送激光眼连用）', function () {
+  /* 病（`docs/REVIEW-QODER-2026-09-19.md` §2-1）：`setVoid` 只置 `voided`、**不动** `outcome`，
+   * 而 `endTurn` 的 `p.lastSkill = ...` 只看 `outcome === 'ok'`（`js/core/resolve.js:1179`）
+   * ⇒ "被雷击之枪废掉的那一手"照样成为 `lastSkill`，喂给两个真实下游：
+   *   ① **R32 激光眼连用**（`state.js:118-123`：连用只收 2 ジ**且免爆珠**）⇒ 打断方反而送出一次免珠连用；
+   *   ② 特征块（`policy.js:209-212` / `:259-260`）⇒ 读到一手**根本没发生**的动作。
+   * 它是 R10（被无效化的**聚能环**不续计，D91）的**另一半** —— D91 只钉了环。
+   * 本条按 v1.5.128 的规矩写成**运行时行为门**（不是源码文本钉），并且**带对照组**：
+   * 只有"被无效化 ⇒ null"与"没被无效化 ⇒ 照旧"**两个方向都能失败**，才排除"恒 null"这种假修法。 */
+  const mkEye = function (seed) {
+    const st = S.createState('standard', { next: mulberry32(seed) }, 2);
+    st.p[0].ep = 5; st.p[0].boom = 1;
+    eq(S.computeCost(st, 0, R.SK.LASER_EYE).ep, 1, '前提：**首次**激光眼收 1 ジ（R32 的另一半是连用收 2 ジ）');
+    S.attemptAction(st, 0, R.SK.LASER_EYE, { bead: 'boom' }, null);
+    return st;
+  };
+  /* ① 被无效化的一手 */
+  const a = mkEye(9101);
+  X.setVoid(a, 0, 1);                                  // 模拟"被雷击之枪废掉这一手"
+  const act = a.actions[0];
+  ok(act && act.outcome === 'ok' && act.voided === true,
+    '前提：`setVoid` 只置 `voided`、**不动** `outcome` —— 这正是本 bug 的成因（前提若不成立，本门要重写）');
+  X.endTurn(a);
+  eq(a.p[0].lastSkill, null, 'R61：被无效化的一手**不得**写进 `lastSkill`');
+  a.p[0].boom = 1;                                     // 补一枚爆珠，专门看"连用价"有没有被白送
+  const c1 = S.computeCost(a, 0, R.SK.LASER_EYE);
+  eq(c1.ep, 1, '被无效化 ⇒ **拿不到连用价**（仍按首次 1 ジ）');
+  eq(!!(c1.beads && c1.beads.boom), true, '被无效化 ⇒ 也**不得免掉爆珠**要求');
+  /* ② 对照组：没被无效化的一手必须照旧写 —— 否则本门会被"恒 null"的假修法骗过 */
+  const b = mkEye(9102);
+  X.endTurn(b);
+  eq(b.p[0].lastSkill, R.SK.LASER_EYE, '对照组：**没被无效化**的一手照旧写 `lastSkill`（R32 连用仍成立）');
+  b.p[0].boom = 1;
+  eq(S.computeCost(b, 0, R.SK.LASER_EYE).ep, 2, '对照组：连用价 2 ジ（R32 不得被这次修复一起改掉）');
+  /* ③ 边界（**这段能失败**）：**过载炮** R43"被无效化**仍**计入次数"是**另一条用户裁定明文**
+   *    （`state.js:190` 出招即计次）⇒ 被无效化之后，下一发必须还是"第 **2** 次"（花光现有多数ジ、且需 ≥1 ジ），
+   *    而**不是**退回第 1 次的固定 2 ジ。若有人把 R61 的 `!voided` 顺手套到计次上（"被废就当没出"），
+   *    这里会读回 `ep=2 / phase=1` ⇒ 红。（它与环/`lastSkill` 是两条不同的明文，D91 也守着同一件事。） */
+  const st3 = S.createState('standard', { next: mulberry32(9103) }, 2);
+  st3.p[0].ep = 9;
+  eq(S.computeCost(st3, 0, R.SK.CANNON).ep, 2, '前提：过载炮第 1 次固定 2 ジ（`state.js:111`）');
+  S.attemptAction(st3, 0, R.SK.CANNON, { target: 1 }, null);
+  X.setVoid(st3, 0, 1);
+  X.endTurn(st3);
+  st3.p[0].ep = 5;
+  const c3 = S.computeCost(st3, 0, R.SK.CANNON);
+  eq(c3.ep, 5, 'R43：被无效化**仍计入次数** ⇒ 下一发是第 2 次（花光现有ジ = 5），不是第 1 次的 2 ジ');
+  eq(c3.cannonPhase, 2, '  且相位必须仍是 2（把 `!voided` 套到计次上会读回相位 1）');
+});
+
+t('D103 「珠爆发」线必须同时在册（2P 考卷 + G4 克制表），且 G4 **复用同一份实现**', function () {
+  /* 动机（第三方复核 §3 的建议 + 本仓**栽过四次**的老病"加名字漏一处"）：
+   * v1.3.59 只补 worker、v1.4.8 只补 server、v1.4.14 漏 opp-pool 本身、v1.5.19 漏 trainer.js。
+   * 这条线要同时出现在**两处池子**才有意义：2P 考卷（`p2-baselines`）量"2 人局防不防电"、
+   * G4 克制表量"5 席 multi/long 防不防电"。少一处 ⇒ 那个洞在那一侧仍然不可见。
+   * ① **行为**部分（运行时，不是文本钉）：这个脚本必须真的是"为放电而蓄电珠 → 有珠就放电 → 残血摄魂"。 */
+  ok(typeof Bots.pickBeadBurst === 'function', 'pickBeadBurst 必须在 EpirusBots 里（并被 p2-baselines 指向）');
+  const mk = function (ep, elec, hp0) {
+    const st = S.createState('standard', { next: mulberry32(9501) }, 2);
+    st.p[0].ep = ep; st.p[0].elec = elec; st.p[0].boom = 0;
+    if (hp0 != null) st.p[0].hp = hp0;
+    return st;
+  };
+  const pickOf = function (st) { return Bots.pickBeadBurst(st, 0, Play.legalActions(st, 0)); };
+  /* ⚠️ 下面这组断言来自 v1.5.129 的**实测教训**：我的第一版写成"买得起蓄能就蓄"，而**珠只活一回合**、
+   * 蓄能又花 1 ジ ⇒ 退化成 `蓄能 → ジ → 珠过期 → 蓄能 → …` **永不放炮**
+   * （200 局里 `railgun` 出手 **0** 次、造成伤害 **0.00/局**）。所以"ep=1 不许蓄珠"不是风格问题，
+   * 而是**这条线能不能成立**的条件；单点行为全对也救不了——必须另有端到端断言（见 ①b）。 */
+  const s1 = mk(1, 0);
+  eq(pickOf(s1).key, R.SK.JI, 'ep=1 **不许**蓄珠（蓄完只剩 0 ジ，珠活不过下一回合 ⇒ 永不放炮）');
+  const s2 = mk(3, 0);
+  const r2 = pickOf(s2);
+  eq(r2.key, R.SK.CHARGE, 'ep=3 ⇒ **蓄珠**（花 1 后余 2，下一回合正好付得起电磁炮）');
+  eq(r2.bead, 'elec', ' 且必须**显式指定电珠**（`play.js:33-37` 的 v7 珠类型通道；不指定就学不会为放电蓄珠）');
+  const s3 = mk(2, 1);
+  const r3 = pickOf(s3);
+  eq(r3.key, R.SK.RAILGUN, '有电珠且付得起（2 ジ）⇒ 必须放**电磁炮**');
+  ok(r3.target === 1, ' 且目标必须指向唯一对手（不按 pid 乱指）');
+  const s4 = mk(0, 0);
+  eq(pickOf(s4).key, R.SK.JI, '什么都买不起 ⇒ 只能ジ（攒钱）');
+  const s5 = mk(3, 0, 1);
+  eq(pickOf(s5).key, R.SK.DRAIN, '自己残血（standard 摄魂窗口 = 自己 HP≤1）且付得起 ⇒ 摄魂收尾');
+  /* ①b **端到端**（这条才是抓第一版那个 bug 的那条）：单点行为全对而整条链死循环，
+   *    正是第一版的形态 ⇒ 必须有一条"**链条真的转起来**"的断言。
+   *    对手只出ジ（零伤害）⇒ 只要脚本放得出炮，`railgun` 次数必 > 0；第一版在这里读到 **0**。 */
+  const stG = S.createState('standard', { next: mulberry32(9502) }, 2);
+  Play.autoGame(stG, [function (st2, pid, legal) { return Bots.pickBeadBurst(st2, pid, legal); },
+    function () { return { key: R.SK.JI, target: null }; }]);
+  const rg = stG.events.filter(function (e) { return e.type === 'action' && e.pid === 0 && e.key === R.SK.RAILGUN; }).length;
+  ok(rg > 0, '整条线必须真的转起来（对"只出ジ"的对手，脚本必须放得出电磁炮；第一版这里是 0）');
+  /* ② 注册部分：2P 考卷**只能追加在表尾**（`p2-baselines.mjs:8-10`：顺序是行为输入）。
+   * 文本口径在这里是**有意**的 —— 它守的是"插入位置"这条纪律，运行时读不出"是第几个"。 */
+  const pb = readFileSync('tools/p2-baselines.mjs', 'utf8');
+  ok(/beadburst: 'pickBeadBurst'/.test(pb), '`tools/p2-baselines.mjs` 必须登记 beadburst（否则 2P 考卷量不到这个洞）');
+  ok(/beadburst: 'pickBeadBurst'\s*\n\};/.test(pb),
+    'beadburst 必须是**表尾最后一项** —— 插在中间会改掉后面每个对手的种子（`20260207 + i*977`）⇒ 历史考卷分全漂移');
+  /* ③ 单一来源：G4 那一格必须**复用** bots.js 的函数对象，不许抄第二份实现。 */
+  const gd = readFileSync('tools/gate-drafts.mjs', 'utf8');
+  ok(gd.indexOf("'珠爆发(ジ→蓄电珠→电磁炮/摄魂)': B.pickBeadBurst") >= 0,
+    'G4 的第 8 格必须直接引用 `B.pickBeadBurst`（抄一份副本 = 同一规则两处维护，本仓栽过四次）');
+  /* ⚠️ 这条文本钉**不是**排版洁癖，它挡的是**假绿**：`B` 若没绑上，那一格就是 `undefined`
+   * ⇒ `duel` 把该席当"没有 chooser"跑，`autoGameN` 兜底成只出ジ ⇒ **读数看起来更"安全"**，
+   * 而实际什么都没测（v1.5.89「把没跑的/没判的当成过了」同族）。行为上无法廉价复现，故用文本钉。 */
+  ok(gd.indexOf('const B = sb.window.EpirusBots;') >= 0,
+    '前提：gate-drafts 必须真的把 EpirusBots 取出来（否则「珠爆发」格会静默退化成"只出ジ"的**假安全读数**）');
 });
 
 t('D92 R56 同层内资源型先结算（用户裁定：过载炮的清除须含目标本回合收入）', function () {

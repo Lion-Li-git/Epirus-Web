@@ -681,6 +681,47 @@
     return { key: SK.JI, target: null };                        // 攒到能开枪
   }
 
+  /* ===== 珠爆发对手 pickBeadBurst（v1.5.129；第三方复核 §3 的实锤线，写成人格）=====
+   * 实锤（`docs/REVIEW-QODER-2026-09-19.md` §3，复核者独立复跑 n=100~200）：这条线对
+   * **2P 线上冠军 100% 胜**（standard · 均 9 回合）、对 3P 冠军 99%、multi@N=2 98%。机理**全在规则内**：
+   *   · 电磁炮 2 点电伤**同时破防御与反弹**（`rules.js:68` 的 `pierce`）、优先级 3 压过冠军主力狙击
+   *     （狙击 pri 1），而"任何攻击动作都废掉对面狙击"；
+   *   · 冠军**从不备电系防御、从不花珠** —— 它自己的 meta 就量着"花珠率 0.0% · 珠经济未闭环"。
+   * 考卷/G4 池里**没有这条线** ⇒ 体检看不见这个洞（这正是"可利用的战术洞"与"体检脚注"的区别）。
+   * 口径与其他 `*spam` 一致：只做一件事 —— **为放电而蓄电珠 · 有电珠就放电磁炮 · 残血摄魂收尾**。
+   * ⚠️ 取目标与 pickGunSpam 同规矩：只在"最该打的那一档"里随机取（`mpPickOne`），**不按 pid 取**，
+   *    否则会重新引入座位身份通道（D50/D58 家族，本仓库栽过多次）。
+   * ⚠️ 摄魂的门在**施法者自己**身上（`state.js:128-131` 读 `p.hp > drainHpMax` ⇒ standard/multi 是
+   *    **自己 HP≤1**、long 是 ≤3）⇒ `mpAff(bk, SK.DRAIN)` 为真时它必然已在窗口内，不必再判。 */
+  function pickBeadBurst(state, pid, legal) {
+    const bk = mpBk(legal), me = state.p[pid];
+    /* ① 放电：能一击必杀（2 点）先杀，否则压领先者 */
+    if (mpAff(bk, SK.RAILGUN)) {
+      const k2 = mpKillable(state, pid, 2);
+      if (k2 != null) return { key: SK.RAILGUN, target: k2 };
+      const ld = mpLeader(state, pid);
+      if (ld != null) return { key: SK.RAILGUN, target: ld };
+    }
+    /* ② 残血收尾：只有自己在摄魂窗口内这一手才在 legal 里（见上），命中还自愈 1 血 */
+    if (mpAff(bk, SK.DRAIN)) {
+      const k1 = mpKillable(state, pid, 1);
+      const dt = (k1 != null) ? k1 : mpLeader(state, pid);
+      if (dt != null) return { key: SK.DRAIN, target: dt };
+    }
+    /* ③ 心脏：**蓄电珠** —— 但**必须等到"下一回合付得起电磁炮"再蓄**（v1.5.129 实测踩到的坑）！
+     *   珠只活到下一回合末（`resolve.js:1203-1209`：`keep = p.beadNew || null`），而蓄能花 1 ジ。
+     *   若写成"买得起蓄能就蓄"（我的第一版），这张卡会退化成
+     *   `蓄能 → ジ → 珠过期 → 蓄能 → …` **永不放炮**：实测 200 局里 `railgun` 出手 **0 次**、
+     *   造成伤害 **0.00/局**（探针 `tools/probe-beadburst.mjs`），而冠军只打出 1.60 伤/局
+     *   ⇒ "这条线能赢"与"这条线打得出炮"**完全是两件事**，脚本必须显式保证后者。
+     *   ⇒ 门槛 **`me.ep >= 3`**：花 1 蓄珠后余 ≥2，下一回合才付得起电磁炮的 2 ジ。
+     *   ⚠️ 返回的 `bead:'elec'` **不可省** —— `play.js:33-37` + `:65-69` 是 v7 的珠类型通道，
+     *      不显式给就只会拿到启发式兜底（"蓄珠为放电"这件事就永远学不到）。
+     *   （蓄能花费 = 1 是 `rules.js:44` 的卡面常量；`mpAff` 只是同时挡住"经济门槛/禁用"这类引擎侧条件。） */
+    if (me.elec < 1 && me.ep >= 3 && mpAff(bk, SK.CHARGE)) return { key: SK.CHARGE, target: null, bead: 'elec' };
+    return { key: SK.JI, target: null };                       // 攒到"能蓄且下一回合能放"
+  }
+
   /* ===== 深经济对手 pickDeepSaver（"会攒 + 会还手"）=====
    * ⚠️ 它曾在 v1.3.27 加入、在 v1.3.30（N20 地雷 AoE 重写）被**静默删除**——
    * 那个 commit 的 CHANGELOG 只字未提，之后 24 个版本没人发现，而 REVIEW-3P §1-D
@@ -745,7 +786,7 @@
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
-    pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam,
+    pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'
