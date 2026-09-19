@@ -8,6 +8,10 @@
   const store = {
     // 最近一次“本地冠军被拒绝”的原因（供 UI 提示：版本不符/维度不符）。valid 加载后清空。
     lastInvalidReason: null,
+    /* v1.5.131：**最近一次 load() 实际用的是哪一个**（'local' | 'builtin' | null）—— 供 UI 如实标注。
+     * 为什么必须由这里报、而不是让 UI 自己再判一次：`load()` 的"本地优先"规则是**单一来源**，
+     * 在 ui.js 里重写一遍必然漂移（本仓"同一规则两处维护"栽过四次）。回传方式与 `lastInvalidReason` 同族。 */
+    lastSource: null,
     load: function () {
       // 1) 本地冠军（localStorage）
       try {
@@ -16,7 +20,7 @@
           try {
             const j = JSON.parse(raw);
             const c = P.checkPack(j);
-            if (c.ok) { store.lastInvalidReason = null; return P.unpack(j); }
+            if (c.ok) { store.lastInvalidReason = null; store.lastSource = 'local'; return P.unpack(j); }
             store.lastInvalidReason = c.reason || 'invalid';
             localStorage.removeItem(LS_KEY);   // 旧架构冠军无法用于新网络 → 清掉，避免它一直遮蔽内置冠军
           } catch (e) {
@@ -29,10 +33,11 @@
       if (typeof window !== 'undefined' && window.EPIRUS_CHAMPION) {
         try {
           const c = P.checkPack(window.EPIRUS_CHAMPION);
-          if (c.ok) return P.unpack(window.EPIRUS_CHAMPION);
+          if (c.ok) { store.lastSource = 'builtin'; return P.unpack(window.EPIRUS_CHAMPION); }
           store.lastInvalidReason = store.lastInvalidReason || ('builtin-' + c.reason);
-        } catch (e) { return null; }
+        } catch (e) { store.lastSource = null; return null; }
       }
+      store.lastSource = null;
       return null;
     },
     save: function (params) {

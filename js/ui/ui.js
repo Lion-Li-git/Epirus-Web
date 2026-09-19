@@ -336,19 +336,34 @@
   }
   /* v1.5.10（用户要求）：把本机自训/导入的冠军清掉、改回**内置冠军**。
    * 为什么需要：页面优先读 `localStorage['epirus.champion3p']` ⇒ 换 bundle 对老用户无效
-   * （REVIEW §11.1 实测踩过：换包后浏览器对战测试其实还在打旧冠军）。 */
+   * （REVIEW §11.1 实测踩过：换包后浏览器对战测试其实还在打旧冠军）。
+   * ===== v1.5.131（handoff §4-10；复核 §4-4 第 3 条也点到过）：**2P 槽位原先漏了** =====
+   * 2P 的本机冠军存在 **`epirus.champion.v3`**（`js/train/trainer.js:6`），而本函数原先只清 3P 那个键
+   * ⇒ 本地训过冠军的用户**永远打自己那个旧包**：v1.5.130 刚把线上 2P 冠军从"被珠爆发线 100% 打穿"
+   * 修到 `examGateOk:true`，**这一整类用户拿不到**；而按钮 tooltip 写着"清除本机自训/导入的冠军、
+   * 改回内置冠军"= **假承诺**。两个槽位的语义本来就一样（都是"改回内置"）⇒ 一起清。
+   * 反证：`tools/battle-test.mjs` 同时种两个键再点这个按钮 —— 修前只有 3P 键会消失。 */
   function useBuiltinChampion() {
-    let had = false;
-    try { had = !!localStorage.getItem('epirus.champion3p'); localStorage.removeItem('epirus.champion3p'); } catch (e) { /* ignore */ }
+    let had3 = false, had2 = false;
+    try {
+      had3 = !!localStorage.getItem('epirus.champion3p');
+      localStorage.removeItem('epirus.champion3p');
+      had2 = !!localStorage.getItem('epirus.champion.v3');
+      localStorage.removeItem('epirus.champion.v3');
+    } catch (e) { /* ignore */ }
     resetMultiChampCache();
     const loaded = loadMultiChamp();
     /* ⚠️ 顺序要紧：`newGame()` 会把提示刷成"请选择技能出招"⇒ 提示必须放在它后面
      * （v1.5.10 第一版写反了，被 tools/battle-test.mjs 的 "提示告知已改回内置冠军" 抓到）。 */
-    if (B.multi && B.diff === 'champ') newGame();   // 重开一局，让新 AI 立刻生效
-    hint(had
-      ? ('已清除本机冠军，改回内置冠军（' + (loaded ? '已加载' : '⚠ 内置包缺失/不兼容') + '）')
+    /* v1.5.131：2P 侧也要重开一局（原先只判 `B.multi`）。2P 的 chooser **每次决策都重读**
+     * `Champ.store.load()`（`chooseAI:574`）⇒ 清键下次决策即生效；重开只是让这一局从干净状态开始。 */
+    if (B.multi ? B.diff === 'champ' : (B.diff === 'hard' && had2)) newGame();
+    renderChampState();   // 训练场「当前冠军」必须立刻反映"已改回内置"
+    hint(had3 || had2
+      ? ('已清除本机冠军（' + [(had3 ? '多人' : ''), (had2 ? '2 人' : '')].filter(Boolean).join(' + ') +
+         '），改回内置冠军（' + (loaded ? '多人包已加载' : '⚠ 多人内置包缺失/不兼容') + '）')
       : '本机没有自训/导入的冠军，本来就在用内置冠军');
-    return { had: had, loaded: !!loaded, from: multiChampFrom || null };
+    return { had: had3, had2: had2, loaded: !!loaded, from: multiChampFrom || null };
   }
   /* 当前多人对局实际用的是哪个 AI（供 UI 显示与探针断言） */
   function styleOf(id) {
@@ -372,7 +387,18 @@
   }
 
   function aiInfo() {
-    if (!B.multi) return { source: B.diff === 'hard' ? '2人冠军' : '脚本', champ: B.diff === 'hard' };
+    /* v1.5.131：2P 侧原先只写"2人冠军" ⇒ 用户**看不出**自己面对的是本机旧包还是内置包
+     * （handoff §4-10 的第 3 个症状；3P 侧早就有 `multiChampFrom` 这个标注，两边对齐）。
+     * 来源由 `Champ.store.load()` 自己回传（单一来源在 `trainer.js`，不在这里重判一次）。 */
+    if (!B.multi) {
+      if (B.diff !== 'hard') return { source: '脚本', champ: false };
+      const c = Champ.store.load();
+      const from = Champ.store.lastSource;
+      return {
+        source: '2人冠军（' + (from === 'local' ? '本机自训/导入' : from === 'builtin' ? '内置' : '缺失/不兼容') + '）',
+        champ: !!c, from: from
+      };
+    }
     if (B.diff === 'champ') {
       return loadMultiChamp()
         ? { source: '3P 冠军（' + (multiChampFrom === 'local' ? '本机自训/导入' : '内置') + '）', champ: true, from: multiChampFrom }
@@ -784,12 +810,23 @@
   let lastTrainer = null;
   let stats = { swaps: 0 };
   function renderChampState() {
+    /* v1.5.131：**原先"内置包"也会被标成"已保存本地冠军"** —— 因为 `store.load()` 在本地缺失时会回退内置，
+     * `c` 照样是真值 ⇒ "当前冠军"永远显示成"已保存本地冠军"（handoff §4-10 的第 3 个症状：
+     * 2P 用户既看不出自己在打哪个包，也看不到"用内置冠军"到底有没有生效）。
+     * 现在按 `store.lastSource`（由 `trainer.js` 单一来源回传）如实区分三种情形。 */
     const c = Champ.store.load();
+    const from = Champ.store.lastSource;
     const el = $('tr-has');
-    let label = c ? '已保存本地冠军' : '无（困难难度将代打中等逻辑）';
-    if (!c && typeof window !== 'undefined' && window.EPIRUS_CHAMPION_META) {
-      const m = window.EPIRUS_CHAMPION_META;
-      label = '内置冠军 · ' + (m.source || '?') + ' · ' + (m.seeds != null ? m.seeds + '×' : '') + (m.gens != null ? m.gens + '代' : '') + (m.ts ? ' · ' + m.ts : '');
+    let label;
+    if (from === 'local') {
+      label = '已保存本地冠军（本机自训/导入）';
+    } else if (from === 'builtin') {
+      const m = (typeof window !== 'undefined' && window.EPIRUS_CHAMPION_META) || null;
+      label = m
+        ? ('内置冠军 · ' + (m.source || '?') + ' · ' + (m.seeds != null ? m.seeds + '×' : '') + (m.gens != null ? m.gens + '代' : '') + (m.ts ? ' · ' + m.ts : ''))
+        : '内置冠军';
+    } else {
+      label = '无（困难难度将代打中等逻辑）';
     }
     el.textContent = label;
   }

@@ -166,6 +166,46 @@ async function main() {
   const srcBuiltin = await aiSource();
   check('重开后用的是内置冠军', srcBuiltin.indexOf('内置') >= 0, '对手AI=' + srcBuiltin);
 
+  /* ── v1.5.131（handoff §4-10）：**2P 槽位**上的同一件事（原先只测了 3P 键）──
+   * 病：2P 的本机冠军存在 `epirus.champion.v3`（`js/train/trainer.js:6`），而「用内置冠军」原先
+   * **只清 `epirus.champion3p`** ⇒ 本地训过冠军的用户**永远打自己那个旧包**（v1.5.130 修好的线上
+   * 2P 冠军发不到他们手里），而按钮 tooltip 写着"清除本机自训/导入的冠军、改回内置冠军"= 假承诺。
+   * 反证：把 `js/ui/ui.js` 里那句 `localStorage.removeItem('epirus.champion.v3')` 删掉 ⇒ 本段立即红。 */
+  await evalJS(`(()=>{try{localStorage.setItem('epirus.champion.v3', JSON.stringify(window.EPIRUS_CHAMPION));}catch(e){}})()`);
+  await send('Page.navigate', { url: URL });
+  await sleep(1600);
+  check('能写入 2P 本机冠军（模拟本地训过冠军的老用户）',
+    await evalJS(`(()=>{try{return !!localStorage.getItem('epirus.champion.v3');}catch(e){return false;}})()`));
+  /* 2P 起局：人数=2（模式互斥逻辑会把它切回 standard）、难度=困难（= 走冠军包那条路） */
+  const setupBattle2P = async function () {
+    await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='2'; s.dispatchEvent(new Event('change'));})()`);
+    await sleep(400);
+    await evalJS(`(()=>{const s=document.getElementById('sel-diff'); if(!s) return; const o=[...s.options].find(x=>x.value==='hard'); if(o){s.value='hard'; s.dispatchEvent(new Event('change'));}})()`);
+    await sleep(300);
+    await evalJS(`document.getElementById('btn-newgame').click()`);
+    await sleep(700);
+  };
+  await setupBattle2P();
+  const src2Local = await aiSource();
+  check('2P 对战面板如实标注用的是**本机**冠军（v1.5.131 之前只写"2人冠军"）',
+    src2Local.indexOf('本机') >= 0, '对手AI=' + src2Local);
+  const trHasLocal = await evalJS(`(document.getElementById('tr-has')||{}).textContent || ''`);
+  check('训练场「当前冠军」在本机包生效时标注本机', /本地/.test(String(trHasLocal)), 'tr-has=' + trHasLocal);
+  const reset2 = await evalJS(`(()=>{const b=document.getElementById('btn-champ-reset'); if(!b) return 'no-btn'; b.click();
+    let v3='?', v3p='?'; try{v3=localStorage.getItem('epirus.champion.v3'); v3p=localStorage.getItem('epirus.champion3p');}catch(e){v3='ERR';}
+    return JSON.stringify({v3: v3, v3p: v3p, hint: document.getElementById('battle-hint').textContent,
+      trHas: (document.getElementById('tr-has')||{}).textContent||''});})()`);
+  const r2 = JSON.parse(reset2 === 'no-btn' ? '{"v3":"no-btn"}' : reset2);
+  check('点「用内置冠军」后 **2P 键**也被清掉（v1.5.131 修的就是这条；修前读到"有"）',
+    r2.v3 === null, 'localStorage(2P)=' + (r2.v3 === null ? 'null' : '仍在（' + String(r2.v3).length + ' 字节的包）'));
+  check('两个槽位一起清（同一语义：改回内置）', r2.v3p === null, 'localStorage(3P)=' + r2.v3p);
+  check('提示点明清掉的是哪几个槽位（须含"2 人"）', /2\s*人/.test(String(r2.hint || '')), '提示=' + r2.hint);
+  check('训练场「当前冠军」随后显示内置（原先它会一直说"已保存本地冠军"）',
+    /内置/.test(String(r2.trHas || '')), 'tr-has=' + r2.trHas);
+  await setupBattle2P();
+  const src2Builtin = await aiSource();
+  check('2P 重开后用的是内置冠军', src2Builtin.indexOf('内置') >= 0, '对手AI=' + src2Builtin);
+
   /* ── 正式对局：5 人 + 难度=冠军 ── */
   const setup = await setupBattle();
   const modeSet = setup.mode, diffSet = setup.diff;
