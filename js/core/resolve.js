@@ -241,6 +241,38 @@
     return null;
   }
 
+  /* ===== v1.5.117：原型制御的"待反清单"与决算 =====
+   * 用户口径："伤害总数" = **可以生效、且会被原型制御挡住的伤害之和**，按持有者、在同一次结算内累加；
+   * 总 ≥3 ⇒ **有来源的那几份各自反给它的施法者**（三个人各用枪打 ⇒ 三人各被反 1 滴），
+   * **无来源的那几份（天火等）计入总数但不反**。
+   * ⇒ 因为要"看到全部才算"，`deliverDamage` 只负责**照旧挡住 + 记账**，裁决放到伤害阶段末尾。 */
+  function protoNote(state, to, source, amt, type, via) {
+    state._proto = state._proto || {};
+    (state._proto[to] = state._proto[to] || []).push({
+      source: (source != null ? source : null), amt: amt, type: type || R.DMG.NORMAL, via: via || null
+    });
+  }
+  function protoReflectAll(state) {
+    const bag = state._proto || {};
+    for (const k of Object.keys(bag)) {
+      const to = Number(k), list = bag[to] || [];
+      let total = 0;
+      for (const it of list) total += (it.amt || 0);
+      if (total >= 3) {
+        for (const it of list) {
+          if (it.source == null || it.source === to) continue;        // 无来源（天火…）⇒ 只计入总数、不反
+          const src = it.source;
+          if (!state.p[src] || state.p[src].hp <= 0) continue;
+          ev(state, { type: 'reflect', to: to, from: src, amt: it.amt, via: it.via, by: 'proto' });
+          deliverDamage(state, { amt: it.amt, type: it.type, source: to, reflected: true, noMine: true },
+            src, { reason: '原型制御·转移' });
+        }
+      }
+      delete bag[to];
+    }
+    state._proto = {};
+  }
+
   /* 本回合是否有人用「全息屏障」把盾套在 `pid` 身上 —— 返回施放者 pid，没有则 null */
   function holoShieldFrom(state, pid) {
     for (let i = 0; i < state.actions.length; i++) {
@@ -412,15 +444,25 @@
          *    本来就不阻挡 ⇒ 也不转移；天火自己另有一处判定（见 `case SK.FIRESTORM` 的注释）。
          * ⚠️ 反弹出去的那一份**不再触发本分支**（`totalAmt: null` ⇒ 按自身 amt 判，通常 <3）。 */
         if (via === 'mine' || dmg.redirected) { /* 不挡 */ }
-        else if ((dmg.totalAmt != null ? dmg.totalAmt : dmg.amt) >= 3) {
-          ev(state, { type: 'reflect', to, from: dmg.source, amt: dmg.amt, via, by: 'proto' });
-          if (dmg.source != null && dmg.source !== to && state.p[dmg.source] && state.p[dmg.source].hp > 0) {
-            deliverDamage(state, Object.assign({}, dmg, { source: to, reflected: true, noMine: true, totalAmt: null }),
-              dmg.source, { reason: '原型制御·转移' });
-          }
-          return { result: 'reflected' };
+        else {
+          /* ===== v1.5.117（**用户口径**）：判定要看**本回合全部可挡伤害之后**才做 =====
+           * 原版 `README.md:257`：「…若伤害总数大于等于3则将伤害各自转移给作用者」。
+           * 用户给出的精确解释：**"伤害总数" = 可以生效、且会被原型制御挡住的伤害之和**，
+           * 按**持有者**在**同一次结算内**累加 —— 例：
+           *   · **三个人各用枪打**同一个持有者 ⇒ 总 3 ⇒ **三人各被反 1 滴**（持有者不掉血）；
+           *   · **大雷(2，有来源) + 天火(1，无来源)** ⇒ 总 3 ⇒ **大雷被反 2**，
+           *     而天火**计入总数但不反**（它伤害无来源，没得可反）；
+           *   · 只挨一发枪（总 1）⇒ 照旧只挡。
+           * ⇒ 所以这里**先照旧挡住**（持有者不掉血；返回值仍是 `'blocked'` ⇒ 大雷禁用(R23')、
+           *   镜面复制等既有判定**一字不变**），同时把这一份**记进待反清单**；
+           *   伤害阶段末尾由 `protoReflectAll` 统一裁决"反给谁、反多少"。
+           * ⚠️ 豁免（既不挡也不计入）：地雷（`via==='mine'`）· 转移伤害（`dmg.redirected`）·
+           *   **铁索连环的传导**（它在 `rawDamage` 里直接改血、根本不经过本函数 ⇒ 天然不被挡，
+           *   见 `rawDamage` 的 `p.chains` 段，用户第 4 条）。 */
+          protoNote(state, to, dmg.source, dmg.amt, dmg.type, via);
+          ev(state, { type: 'blocked', to, by: '原型制御', amt: dmg.amt, via });
+          return { result: 'blocked' };
         }
-        else { ev(state, { type: 'blocked', to, by: '原型制御', amt: dmg.amt, via }); return { result: 'blocked' }; }
       } else if (g === 'guard') {
         if (!pierce.defense) { ev(state, { type: 'blocked', to, by: '防御', amt: dmg.amt, via }); return { result: 'blocked' }; }
       } else if (g === 'reflect' || g === 'armor') {
@@ -998,8 +1040,13 @@
             for (const st of holder.stickers.slice()) {
               if (st.owner === i && st.age <= 3) {
                 n++;
-                if (!protoBlock) rawDamage(state, v, 1, '天火', 'firestorm', { type: R.DMG.FIRE });   // R45：铁索共享火焰（文档口径）
-                else ev(state, { type: 'blocked', to: v, by: '原型制御', amt: 1, via: 'firestorm' });
+                if (!protoBlock) rawDamage(state, v, 1, '天火', 'firestorm', { type: R.DMG.FIRE });
+                else {
+                  /* v1.5.117：天火的伤害**无来源**（R57/用户裁定）⇒ 按用户口径它**计入原型制御的"伤害总数"**
+                   * （"可以生效且会被挡住的伤害"），但**决算时不会被反**（没得可反）。 */
+                  protoNote(state, v, null, 1, R.DMG.FIRE, 'firestorm');
+                  ev(state, { type: 'blocked', to: v, by: '原型制御', amt: 1, via: 'firestorm' });
+                }
               }
             }
           }
@@ -1110,6 +1157,7 @@
     }
 
     mineResolveAll(state);   // N20：所有伤害结算完，统一按「直接优先」结地雷
+    protoReflectAll(state);  // v1.5.117：然后裁决原型制御的"≥3 各自转移"（要看完全部可挡伤害才算）
   }
 
   /* ---------- 回合结束 ---------- */
@@ -1271,6 +1319,7 @@
     startTurn, resolveActions, endTurn, checkOver, turnOrder,   // v1.5.53: 导出供守门直接测（纯函数）
     oppOf, saltPick,                                            // v1.5.54: 同上（默认作用者的可测入口）
     rawDamage, deliverDamage, guardOf, judge, judge3, actionOf, setVoid,
+    protoNote, protoReflectAll,   // v1.5.117：原型制御"≥3 各自转移"的记账与决算（供 spec 直测）
     /* v1.5.19：把"技能→架势种类"的两个真源也导出 —— 特征侧（js/train/policy.js）要看
      * "自己身上是什么架势 / 对手镜面反射复制到了什么"。**不许在 policy.js 里重写一遍 switch**：
      * 本项目"两处各写一遍"已栽过四次（见 docs/METHODOLOGY.md 第 13 条）。 */

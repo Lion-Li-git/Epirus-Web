@@ -449,23 +449,50 @@
     ok(!st3.p[0].mineArmed && st3.p[0].mineTurns === 0, '触发即失效（含计时清零）');
   });
 
-  t('R24 原型制御：**伤害总数 ≥3 时转移给作用者**（v1.5.116 修；原版 README:257 的后半句从未实现）', function () {
-    /* 原版 `README.md:257`：「阻止除地雷、转移伤害以外的技能伤害，**若伤害总数大于等于3则将伤害
-     * 各自转移给作用者**」；`RULES-2P.md:169`（R24）同款。而实现里**只有"阻挡"**（用户实测没触发）。
-     * 本用例**能反证**：旧实现会把这份 3 点伤害挡掉、施法者毫发无伤 ⇒ 第二、三条断言会红。 */
+  t('R24 原型制御：**伤害总数 ≥3 各自转移给作用者**（用户口径：可挡伤害之和 · 按持有者 · 结算末尾决算）', function () {
+    /* 原版 `README.md:257` / `RULES-2P.md:169`（R24）。用户口径（2026-09-19）：
+     *   ① "伤害总数" = **可以生效、且会被原型制御挡住的伤害之和**，按持有者、在同一次结算内累加；
+     *   ② **三个人各用枪打**同一个持有者 ⇒ 总 3 ⇒ **三人各被反 1 滴**，持有者不掉血；
+     *   ③ **大雷(2，有来源) + 天火(1，无来源)** ⇒ 总 3 ⇒ **大雷被反 2**；天火**计入总数但不反**；
+     *   ④ 只挨一发（总 1）⇒ 照旧只挡。
+     * 本用例**能反证**：旧实现（只有"阻挡"）下三个攻击者一滴都不掉 ⇒ ② 那三条断言会红。 */
+    const mk = function (key) { return { key: key, voided: false, outcome: 'ok', opt: null, target: null }; };
+    // ② 三个人各用枪打同一个持有者（各 1 点）⇒ 总 3 ⇒ 三人各被反 1
+    const st = S.createState('multi', { next: function () { return 0.9; } }, 4);
+    st.actions = [mk(R.SK.PROTO), mk(R.SK.JI), mk(R.SK.JI), mk(R.SK.JI)];
+    for (const src of [1, 2, 3]) X.deliverDamage(st, { amt: 1, type: R.DMG.NORMAL, source: src, via: R.SK.GUN }, 0, { reason: '测试' });
+    X.protoReflectAll(st);
+    eq(st.p[0].hp, 3, '持有者不掉血（三发全被挡：3/3/3/3 里 0 号仍是 3）');
+    eq(st.p[1].hp, 2, '攻击者 1 被反 1（旧实现会停在 3）');
+    eq(st.p[2].hp, 2, '攻击者 2 被反 1');
+    eq(st.p[3].hp, 2, '攻击者 3 被反 1');
+    // ③ 大雷(2，有来源) + 天火(1，无来源) ⇒ 总 3 ⇒ 只反有来源的那一份
+    const st2 = S.createState('multi', { next: function () { return 0.9; } }, 3);
+    st2.actions = [mk(R.SK.PROTO), mk(R.SK.JI), mk(R.SK.JI)];
+    X.deliverDamage(st2, { amt: 2, type: R.DMG.ELECTRIC, source: 1, via: R.SK.BIG_T }, 0, { reason: '测试' });
+    X.protoNote(st2, 0, null, 1, R.DMG.FIRE, 'firestorm');     // 天火那一份（与引擎同一条 protoNote 路径）
+    X.protoReflectAll(st2);
+    eq(st2.p[0].hp, 3, '持有者不掉血');
+    eq(st2.p[1].hp, 1, '大雷被反 2（3−2）');
+    // ④ 对照：只挨一发 ⇒ 只挡不反
+    const st3 = S.createState('multi', { next: function () { return 0.9; } }, 3);
+    st3.actions = [mk(R.SK.PROTO), mk(R.SK.JI), mk(R.SK.JI)];
+    X.deliverDamage(st3, { amt: 1, type: R.DMG.NORMAL, source: 1, via: R.SK.GUN }, 0, { reason: '测试' });
+    X.protoReflectAll(st3);
+    eq(st3.p[0].hp, 3, '持有者不掉血');
+    eq(st3.p[1].hp, 3, '攻击者不掉血（总数 1 < 3）');
+  });
+
+  t('铁索连环的传导**不被原型制御挡住**（用户口径；回归钉）', function () {
+    /* 传导发生在 `rawDamage` 内部（直接 `op.hp -= hit`，不经过 `deliverDamage`）⇒ 天然不被任何架势挡。
+     * 这条是**回归钉**（旧实现也过）：钉住它别被"顺手把传导也接进架势判定"改坏。 */
     const mk = function (key) { return { key: key, voided: false, outcome: 'ok', opt: null, target: null }; };
     const st = S.createState('multi', { next: function () { return 0.9; } }, 3);
     st.actions = [mk(R.SK.PROTO), mk(R.SK.JI), mk(R.SK.JI)];
-    const res = X.deliverDamage(st, { amt: 3, type: R.DMG.NORMAL, source: 2, via: R.SK.CANNON }, 0, { reason: '测试' });
-    ok(res && res.result === 'reflected', '≥3 ⇒ 判定必须是 reflected（不是 blocked）');
-    eq(st.p[0].hp, 3, '持有者不掉血（那份伤害被转走）');
-    eq(st.p[2].hp, 0, '施法者吃下这 3 点（"各自转移给作用者"）');
-    // 对照：<3 ⇒ 仍然只是"阻挡"（2 人局永不触发的那一支，行为一字不变）
-    const st2 = S.createState('multi', { next: function () { return 0.9; } }, 3);
-    st2.actions = [mk(R.SK.PROTO), mk(R.SK.JI), mk(R.SK.JI)];
-    const res2 = X.deliverDamage(st2, { amt: 2, type: R.DMG.NORMAL, source: 2, via: R.SK.MINI_T }, 0, { reason: '测试' });
-    ok(res2 && res2.result === 'blocked', '<3 ⇒ 仍然只是阻挡');
-    eq(st2.p[2].hp, 3, '施法者不掉血（对照支路）');
+    st.p[2].chains = [0]; st.p[0].chains = [2];              // 0 号与 2 号互索（铁索连环）
+    X.rawDamage(st, 2, 1, '枪', R.SK.GUN, { type: R.DMG.NORMAL, source: 1 });
+    eq(st.p[2].hp, 2, '被直接打中的 2 号掉 1 点');
+    eq(st.p[0].hp, 2, '持有原型制御的 0 号**照样吃传导**（不能被挡）');
   });
 
   t('R60 净化清除**自身全部持续状态**（用户裁定）：藤甲/地雷/避雷针/符咒/大雷禁用/梦魇', function () {

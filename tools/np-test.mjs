@@ -3802,11 +3802,15 @@ t('D99 两处修正：原型制御 ≥3 转移（R24）+ 目标架势特征不�
    * ② 用户实盘"无根据的突然集火"的根因：`policy.js` 的"目标带架势"那一维读 `X.guardOf(state, tid)`，
    *    而决策时刻 `state.actions` 全 null（startTurn 清空 + autoGameN 先收 picks 再施加）⇒ **恒为 0**。 */
   const rs = readFileSync('js/core/resolve.js', 'utf8');
-  ok(rs.indexOf('(dmg.totalAmt != null ? dmg.totalAmt : dmg.amt) >= 3') >= 0,
-    '原型制御必须有"伤害总数 ≥3"分支（R24）');
-  ok(rs.indexOf("reason: '原型制御·转移'") >= 0, '≥3 时必须把那份伤害**弹回给施法者**（不是只挡下）');
-  ok(rs.indexOf("by: '原型制御', amt: dmg.amt, via }); return { result: 'blocked' };") >= 0,
-    '<3 时仍然只是"阻挡"（2 人局那一支行为不变）');
+  ok(rs.indexOf('function protoReflectAll(state)') >= 0, '原型制御必须有"决算"函数（≥3 各自转移）');
+  ok(rs.indexOf('protoNote(state, to, dmg.source, dmg.amt, dmg.type, via)') >= 0,
+    '挡住的同时必须**记账**（"伤害总数"= 可以生效且会被挡住的伤害之和 —— 用户口径）');
+  ok(rs.indexOf('if (total >= 3)') >= 0 && rs.indexOf('if (it.source == null || it.source === to) continue;') >= 0,
+    '决算：总数 ≥3 时反给施法者；**无来源的那几份（天火）计入总数但跳过**');
+  ok(rs.indexOf('protoReflectAll(state);  // v1.5.117') >= 0, '决算必须真的被调用（不是只定义 —— D28 的教训）');
+  ok(rs.indexOf("protoNote(state, v, null, 1, R.DMG.FIRE, 'firestorm')") >= 0,
+    '天火那一份必须**计入总数**（用户口径：它会被挡住，所以算进总数；但无来源 ⇒ 不被反）');
+  ok(rs.indexOf("reason: '原型制御·转移'") >= 0, '转移伤害必须有事件标记便于量具核对');
   const po = readFileSync('js/train/policy.js', 'utf8');
   /* ⚠️ 只看**代码行**：这条根因的注释里必然会提到旧写法（`guardOf(…)`），扫全文会自己把自己判红
    * （我第一版就这么栽的）。注释行以 `*` 或 `//` 开头 ⇒ 滤掉再断言。 */
@@ -3819,8 +3823,12 @@ t('D99 两处修正：原型制御 ≥3 转移（R24）+ 目标架势特征不�
   ok(poCode.indexOf('(t.guardNext || t.baguaExtra || t.copiedGuard) ? 1 : 0') >= 0,
     '目标架势特征必须用**决策时刻真的存在**的信号（guardNext / baguaExtra / copiedGuard）');
   ok(po.indexOf('无根据的突然集火') >= 0, 'policy.js 必须写下这条根因（否则下一个人又会以为它读得到）');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R24 原型制御：**伤害总数 ≥3 时转移给作用者**') >= 0,
-    'spec 必须留下 R24 的能反证用例（旧实现只会 blocked）');
+  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R24 原型制御：**伤害总数 ≥3 各自转移给作用者**') >= 0,
+    'spec 必须留下 R24 的能反证用例（旧实现只会 blocked：三个枪手一滴都不掉）');
+  ok(readFileSync('tests/spec.js', 'utf8').indexOf('铁索连环的传导**不被原型制御挡住**') >= 0,
+    'spec 必须钉住"铁索传导不被架势挡"这条（用户口径第 4 条）');
+  ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('三个人各用枪打') >= 0,
+    'RULES-2P 必须写下用户口径的三个例子（三枪各反 1 / 大雷+天火 / 单发只挡）');
 });
 
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
