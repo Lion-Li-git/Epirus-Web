@@ -295,15 +295,25 @@ if (!process.argv.includes('--skip-gate-drafts')) {
         gateDrafts.recorded.push('FAIL ' + nm);
       }
     }
-    const mg6 = /G6\[([^\]]+)\] 靶向率[^\n]*实测 ([\d.]+)%/g; let t6;
+    /* v1.5.129 §7-3 的自记账修复（qoder-research 0920）：gate() 打印是**两行**
+     * （标题行 + 缩进的 detail 行，"实测 X%" 在 detail 里）⇒ 旧正则带 `[^\n]*` 永不跨行 ⇒
+     * `meta.gateDrafts.g6` 恒 `{}`（旧包也一样）。跨行版：标题与 detail 之间的 `\n\s*`。 */
+    const mg6 = /G6\[([^\]]+)\] 靶向率[^\n]*\n\s*实测 ([\d.]+)%/g; let t6;
     while ((t6 = mg6.exec(outTxt))) gateDrafts.g6[t6[1]] = Number(t6[2]);
     /* v1.5.129（用户裁定②）：把 **G4 克制表的口径 id** 与**这一轮自己越过的 G4 行**分别留下 ——
      * `np-test D67` 靠它们把"线上包 G4 全红"从硬红降为"**已记录的例外**"，**且只在口径 id 相等时认账**。 */
     const m4p = /G4POOL\s+([0-9a-f]{8})/.exec(outTxt);
     gateDrafts.g4Pool = m4p ? m4p[1] : null;
+    /* qoder-research 0920（RESEARCH-LOG §3-2）：**实现身份 id** 第二绑 —— 改某一格 chooser 的源码
+     * （不改键名/阈值）以前洗不掉旧例外，从现在起会。缺这一行 ⇒ 视同无留痕（与 g4Pool 同罪）。 */
+    const m4i = /G4IMPL\s+([0-9a-f]{8})/.exec(outTxt);
+    gateDrafts.g4Impl = m4i ? m4i[1] : null;
     gateDrafts.g4Blocking = gateDrafts.blocking.filter(function (x) { return /^G4\[/.test(x); });
     if (!gateDrafts.g4Pool) {
       console.log('   ⚠ 没能从 gate-drafts 输出里解析到 `G4POOL` 口径 id ⇒ 这次越线的 G4 例外**不算留痕**（D67 会照旧判红）');
+    }
+    if (!gateDrafts.g4Impl) {
+      console.log('   ⚠ 没能解析到 `G4IMPL` 实现身份 id ⇒ 同上，例外**不算留痕**（gate-drafts 少了那一行？）');
     }
     console.log('   G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：' +
       (gateDrafts.blocking.length ? '✗ ' + gateDrafts.blocking.join('；') : '✅ 候选自己全过'));
@@ -385,14 +395,18 @@ meta.auditForced = fails.length ? FORCE : false;
 /* ===== v1.5.129（用户裁定②）：G4 例外的**留痕块** —— `np-test D67` 的判据就是这三样 =====
  *  ① `forced` —— 这次确实是"用 `--force` 把一条 G4 阻断行放过"的（而不是碰巧没红）；
  *  ② `pool`   —— 当时那张克制表的口径 id（`gate-drafts` 打印的 `G4POOL`）；
- *  ③ `lines`  —— 被放过的具体行（含"最克「…」X%"的读数，读的人不用回翻 CHANGELOG）。
- * 三者缺一 ⇒ D67 仍判红（判词会写"例外必须为**当前口径**重记"）。这样**改了池子/阈值后旧记录自动失效**，
+ *  ③ `lines`  —— 被放过的具体行（含"最克「…」X%"的读数，读的人不用回翻 CHANGELOG）；
+ *  ④ `impl`（qoder-research 0920，RESEARCH-LOG §3-2）—— 当时那张表的**实现身份**（`G4IMPL`）：
+ *     改了某一格的 chooser 源码而没改键名/阈值时，`pool` 不变但 `impl` 必变 ⇒ 旧例外当场失效、必须重记。
+ * 四者缺一 ⇒ D67 仍判红（判词会写"例外必须为**当前口径**重记"）。这样**改了池子/阈值/格子实现后旧记录自动失效**，
  * 而不是变成一张"永久免检"的通行证 —— 后者正是本仓最忌讳的形态："门看着在、其实没判"。 */
 const g4Blocked = (gateDrafts && gateDrafts.g4Blocking) || [];
 meta.gate4Pool = (gateDrafts && gateDrafts.g4Pool) || null;
+meta.gate4Impl = (gateDrafts && gateDrafts.g4Impl) || null;
 meta.gate4Forced = {
   forced: (g4Blocked.length > 0 && !!FORCE),
   pool: (gateDrafts && gateDrafts.g4Pool) || null,
+  impl: (gateDrafts && gateDrafts.g4Impl) || null,
   lines: g4Blocked,
   ts: new Date().toISOString()
 };

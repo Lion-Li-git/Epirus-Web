@@ -3036,6 +3036,14 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
   const refPassG4 = /PASS\s+G4\[线上包\/(long|multi)\]/.test(out);
   const poolM = /G4POOL\s+([0-9a-f]{8})/.exec(out);
   const curPool = poolM ? poolM[1] : null;
+  /* qoder-research 0920（RESEARCH-LOG §3-2 · 缝自曝于 v1.5.133 §5）：**实现身份双绑**。
+   * `G4IMPL` = 各格 chooser 源码 + `pT` 的 sha1 ⇒ **改格子行为不改键名**时它也变，旧例外失效。
+   * 在位包的留痕记于"实现身份"发明**之前**（meta 无 `impl` 字段）⇒ 给一条**冻结豁免**：
+   * 仅当"当前实现 == v1.5.134 那一版（`caecc92f`）"时放行；谁改了任何一格，豁免随 id 一起作废，
+   * 届时必须 `--force` 重记（新留痕会带 impl，走正常比对）。这是**一次性**的迁移垫脚，不是永久通道。 */
+  const G4IMPL_AT_EXCEPTION = 'caecc92f';
+  const implM = /G4IMPL\s+([0-9a-f]{8})/.exec(out);
+  const curImpl = implM ? implM[1] : null;
   let meta3p = null;
   try {
     const m3 = /(window\.EPIRUS_CHAMPION_3P_META\s*=\s*)(\{[\s\S]*?\})(\s*;)/.exec(readFileSync('js/bundled-champion-3p.js', 'utf8'));
@@ -3046,14 +3054,16 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
    * `forced` 为真 + **口径 id 相等** + **带上被放过的具体行**，三者缺一 ⇒ 不认这条例外。
    * 第三条（`lines`）不是排版洁癖：promote-champion 哪天只写 `forced` 而丢掉 `lines`，
    * 例外就变成"记了账但不知道记了什么"—— 那时这条门必须**红**，而不是静默放行。 */
+  const implOk = !!(curImpl && (g4rec && g4rec.impl != null ? g4rec.impl === curImpl : curImpl === G4IMPL_AT_EXCEPTION));
   const g4recOk = !!(g4rec && g4rec.forced === true && curPool && g4rec.pool === curPool &&
-    Array.isArray(g4rec.lines) && g4rec.lines.length > 0 && /^G4\[/.test(String(g4rec.lines[0])));
+    Array.isArray(g4rec.lines) && g4rec.lines.length > 0 && /^G4\[/.test(String(g4rec.lines[0])) && implOk);
   ok(refPassG4 || g4recOk,
     refPassG4 ? '线上包 G4 **至少一个模式** PASS（"已知好"一侧成立）'
       : (g4recOk ? '线上包 G4 两模式都红，但 meta 有**完整且口径匹配的 `--force` 留痕** ⇒ 已记录的例外（' +
-        String(g4rec.ts || '?') + ' · pool ' + g4rec.pool + ' · ' + g4rec.lines.length + ' 行）'
+        String(g4rec.ts || '?') + ' · pool ' + g4rec.pool + ' · impl ' + (g4rec.impl || G4IMPL_AT_EXCEPTION + '(冻结豁免)') +
+        ' · ' + g4rec.lines.length + ' 行）'
         : '线上包 G4 两模式都红，且 meta 里**没有可用的越线留痕**（缺失 / 未 `--force` / 口径 id 与当前克制表不一致' +
-          ' / 留痕没带被放过的具体行）⇒ **必须重记**：node tools/promote-champion.mjs <源.bak> --force'));
+          ' / **实现身份已变而例外未重记** / 留痕没带被放过的具体行）⇒ **必须重记**：node tools/promote-champion.mjs <源.bak> --force'));
   /* v1.5.104（用户裁定）：G4 阈值 45% → 60%。**阈值必须有单一常量 + 标定理由**，
    * 否则它会像 `sed` 不匹配那样静默漂移；同时把"理想线 45%"单独留着，别让绿灯被读成"已达理想"。 */
   const gsrc = readFileSync('tools/gate-drafts.mjs', 'utf8');

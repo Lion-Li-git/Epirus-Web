@@ -285,6 +285,20 @@ const G4_POOL_ID = (function () {
   Object.keys(COUNTERS).forEach(function (k) { h.update(k + '\n'); });
   return h.digest('hex').slice(0, 8);
 })();
+/* ===== qoder-research 0920（RESEARCH-LOG §3-2 · 缝自曝于 v1.5.133 §5）：**实现身份 id**，与口径 id 分家 =====
+ * 病：`G4POOL` 只绑"键序 + 阈值" ⇒ **改某一格的 chooser 实现**（不改键名/阈值）时 id 不变，
+ * 线上包 meta 里的 `--force` 例外会**继续免检** —— 门的"口径"换了血而账不变。
+ * `G4IMPL` = 各格 chooser 源码 + `pT`（目标选择器本体；珠爆发格外挂 `B.pickBeadBurst`，
+ * 其函数体由 `String(fn)` 天然带入）的 sha1，CRLF⇒LF 归一（本仓是混合换行，v1.5.129 §7-4）。
+ * ⚠️ **为什么不并进 G4POOL**：那会让在位包的例外当场失效，而在位包此刻**行为并没有变** ——
+ *   迁移走"另发一个 id + D67 的冻结豁免基准"（基准 = 该 id 在 v1.5.134 实现下的值，写死在 D67）。 */
+const G4_IMPL_ID = (function () {
+  const norm = function (x) { return String(x).replace(/\r\n?/g, '\n'); };
+  const h = createHash('sha1');
+  h.update('pT:' + norm(pT) + '\n');
+  Object.keys(COUNTERS).forEach(function (k) { h.update(k + ' ' + norm(COUNTERS[k]) + '\n'); });
+  return h.digest('hex').slice(0, 8);
+})();
 
 console.log('\n=== G4 一行脚本克制表（任何克制格 > ' + G4_MAX + '% 即红 · 理想线 ' + G4_IDEAL +
   '%；基线格必须 ≈20% 否则本门不可判）===');
@@ -292,6 +306,8 @@ console.log('\n=== G4 一行脚本克制表（任何克制格 > ' + G4_MAX + '% 
  * 与 `PASS/FAIL <标题>` 同属对外契约：改这一行的格式要同步改那两处。 */
 console.log('   G4POOL ' + G4_POOL_ID + '（克制表口径 id = 键序 + G4_MAX 的 sha1 前 8 位 · 格数 ' +
   Object.keys(COUNTERS).length + '；换一格或改阈值 ⇒ 这个 id 必变）');
+/* 对外契约第二行（promote-champion 记进 meta.gate4Forced.impl / np-test D67 比对；改格式同步那两处） */
+console.log('   G4IMPL ' + G4_IMPL_ID + '（实现身份 id = 各格 chooser 源码 + pT 的 sha1 前 8 位 · 改任何一格**行为**必变）');
 for (const [nm, p] of PACKS) {
   for (const mode of ['long', 'multi']) {
     const base = duel(p, 'champ', mode, N4, 90210);
