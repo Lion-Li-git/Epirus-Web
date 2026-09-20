@@ -2,8 +2,8 @@
  * 为什么在宿主侧而不是 evo.js 里：装配本体 `duelAssembly` 的唯一真源在 `tools/v2v4-lib.mjs`（D107 守着
  * "1 席脚本 vs 4 席被测"只许一份实现）；evo.js 跑在 vm 沙箱里 import 不了 ESM ⇒ 由宿主把评分器
  * **注入沙箱全局** `__shapeScorer`，evo 只调用、不复制装配。
- * 口径（RESEARCH-LOG §12/§15）：四行——`pickGunFocus` 聚焦枪手 · `pickBeadBurst` 珠爆发 · 真·场B 清场 · G5 防席夺冠取反
- * 各跑 V4 形状（4 席被测家族 vs 1 席脚本），取 `dmgToScriptedPerGame / 4.0`（封顶 1）的平均 ——
+ * 口径（RESEARCH-LOG §12/§15/§19）：五行——`pickGunFocus` 聚焦枪手 · `pickBeadBurst` 珠爆发 · 真·场B 清场 ·
+ * G5 防席夺冠取反 · **打龟穿透占比（N1，与第四行共用对局）**。前三行取 `dmgToScriptedPerGame / 4.0`（封顶 1）——
  * 即"**家族会不会把火力压到外部威胁身上**"这一列，正是 v1.5.134 §4 里与只枪格 r=−0.82 的那条轴。
  * ⚠️ 不奖励"赢没赢"（v7gf1-92 演示过：标量胜利率会被被动解占领）。 */
 import { duelAssembly } from '../tools/v2v4-lib.mjs';
@@ -32,14 +32,25 @@ export function makeShapeScorer(win, games) {
      * **G5 同形状** —— duelAssembly 的"1 席脚本 vs 4 席被测"里脚本席换成"每回合防御"，
      * `winPct` 就是防席夺冠率；行分 = 1 − min(1, 防席夺冠/25)（阈值与 G5 门禁逐字同）。 */
     const guardOnly = function () { return { key: 'guard', target: null }; };
-    const guardRow = function () {
+    /* 第四行 + 第五行共用这两次对局（**不加对局成本**）。第五行（N1 · DS 的实测诊断，本机复跑吻合：
+     * 线上包打龟 7.3 次/局、穿透占 57% ⇒ 防席夺冠 7%；v7s8/s9-82 打龟 44.5 次/局、穿透仅 4.5~7.3%
+     * ⇒ 夺冠 18~43% —— "攻击量大但全砸在免疫普攻的目标上"）。
+     * 行分 = 穿透占比（/0.5 封顶，DS 预注册判据同点）× 参与度（打龟 ≥4 次/局才给满，
+     * 封死"整局只出一发穿透刷 100%"的占比游戏）。第四行奖励**结果**（防席别夺冠），
+     * 第五行奖励**手段**（打在龟身上的卡得是穿防卡）—— Q5~Q10 证明只有结果项时权重会
+     * 把防御轴整体压掉（v7s9-82 墙 18.1→1.8）而不是教会"看目标换卡"。 */
+    const turtleRow = function (r) {
+      return Math.min(1, r.turtlePierceShare / 0.5) * Math.min(1, r.turtleAtkPerGame / 4);
+    };
+    const guardRows = function () {
       /* Q8 教训（v7s7-31：long G5 过、multi G5 仍 35%）：防龟能力**分模式**——行分必须与门禁一样
        * 两模式都量（G5 判 long+multi），否则训练只修 long、multi 留死角。 */
       const a = duelAssembly(deps, params, { games: G, mode: 'long', seed0: 90210, scripted: guardOnly });
       const b = duelAssembly(deps, params, { games: G, mode: 'multi', seed0: 90210, scripted: guardOnly });
       const pen = function (w) { return Math.max(0, 1 - Math.min(1, w / 25)); };
-      return (pen(a.winPct) + pen(b.winPct)) / 2;
+      return [(pen(a.winPct) + pen(b.winPct)) / 2, (turtleRow(a) + turtleRow(b)) / 2];
     };
-    return (one(B.pickGunFocus) + one(B.pickBeadBurst) + clearRow() + guardRow()) / 4;
+    const [guardScore, turtleScore] = guardRows();
+    return (one(B.pickGunFocus) + one(B.pickBeadBurst) + clearRow() + guardScore + turtleScore) / 5;
   };
 }
