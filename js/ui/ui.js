@@ -437,8 +437,17 @@
         B.aiFallback = false;
         const base = legal.filter(function (l) { return l.affordable; });
         const legalForAI = base.length ? base : [{ key: R.SK.JI, affordable: true }];
-        /* v7：候选感知入口（技能, 目标, 珠类型）—— 旧包在 pickChampion 内部自动回退旧口径 */
-        return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15));
+        /* v1.5.137（用户裁定 09-20 深夜：运行时 AI 加一点随机破镜像僵局）：**ε-greedy 0.25**，温度维持
+         * 评测口径 0.15 不动。
+         * 病（用户实测 results/93/…104回合）：两席同包在对称局面下 softmax 温度再高也破不了——
+         *   · 2 人长程：双方每回合都【ジ】（冷战，攻击=互爆所以都不打），一路拖到**第 104 回合收缩**双双阵亡（平局）；
+         *   · 5 人残局：两个幸存者互【枪→对方】同优先级**相抵 132 次**，同样烧到收缩。
+         * 关键诊断：温度只是按 logit 重加权，**当某动作以巨大优势独大时（ジ/枪在镜像里）温度抬到 0.7 仍是 104 回合零决胜**；
+         *   只有 ε-greedy 的"以 ε 概率在**全体候选**里均匀采样"能强制探索、真正打破对称。
+         * 实测（2 席同包镜像 · 40 局）：eps=0 ⇒ 决胜 0%；eps=0.25 ⇒ 长程 52 回合/100% 决胜、多人 28 回合/98%。
+         * 取 0.25 = 每 4 手约 1 手试探性随机：够破对称，又保留 3/4 的强网络判断（"该打谁"仍是网络说了算）。
+         * ⚠️ **只影响浏览器运行时**：温度仍是评测/门禁/skill-report 的 0.15、且 evalN 不传 eps ⇒ 训练读数逐字不变。 */
+        return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15, 0.25));
       }
       B.aiFallback = true;                                  // 冠军缺失 → 显式回退，不静默
       return finish(DN.hard.pick(state, pid, legal));

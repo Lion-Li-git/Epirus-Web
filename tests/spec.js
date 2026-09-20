@@ -322,6 +322,22 @@
     eq(fresh.p[1].hp, 2, '当回合埋当回合炸 ⇒ 不可转移，P1 自己挨');
     eq(fresh.p[3].hp, 2, 'P3 只吃自己那跳');
   });
+  t('R23c 转移伤害**不得**干扰狙击（用户裁定 09-20 深夜：可干扰的是激光眼等带攻击效果技能）', function () {
+    /* v1.5.13 把旧口径里的 `|| ta.key===SK.TRANSFER` 收窄成"指向狙击手的转移才干扰"——但**转移本就不该
+     * 在干扰集合里**：它不"带攻击效果"，只是把已落下的伤害转走。反证组：第三人 P2 把转移指向狙击手 P0
+     * （旧代码：狙击被废、P1 不掉血；新代码：狙击照常命中 P1）。干扰对照组走 D20（枪指狙击手⇒必废）。 */
+    const st = S.createState('multi', { next: Math.random }, 3);
+    for (let i = 0; i < 3; i++) st.p[i].ep = 9;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.SNIPE, { target: 1 });
+    S.attemptAction(st, 1, SK.JI, null);
+    S.attemptAction(st, 2, SK.TRANSFER, { target: 0 });   // P2 的转移**指着狙击手**
+    X.resolveActions(st); X.endTurn(st);
+    ok(!st.events.some(function (e) { return e.type === 'voided' && e.by === '狙击被干扰'; }),
+      '转移指向狙击手 ⇒ 不得判"狙击被干扰"');
+    eq(st.p[1].hp, 2, '狙击必须照常落在目标身上');
+    eq(st.p[2].hp, 3, 'P2 没挨打 ⇒ 他的转移本来就不该有事');
+  });
   t('R60 双大雷互轰：均2伤、各禁用自己当回合用的大雷', function () {
     const st = game(); setEp(st, 5, 5);
     play(st, SK.BIG_T, SK.BIG_T);

@@ -1153,7 +1153,13 @@
         if (j === who) continue;
         const ja = actionOf(st, j);
         if (!ja) continue;
-        if (ja.key !== SK.TRANSFER && R.ATK_EFFECT.indexOf(ja.key) < 0) continue;
+        /* v1.5.137（用户裁定 09-20 深夜）：**转移伤害不能干扰狙击**——原文的干扰集合是
+         * "带攻击效果技能"（激光眼/剑/枪/坦…都在 ATK_EFFECT 里），而转移本身不造成攻击效果：
+         * 它顶多把**已经落下来的**狙击伤害转走（那是转移的正常作用，不是"干扰"）。
+         * v1.5.13 收窄的是"必须指向狙击手"，但把旧的 `|| ta.key===SK.TRANSFER` 一并照抄了进来 ——
+         * 用户实机（results/93 多局见"狙击被干扰"）复跑确认这一条不属于裁定范围。
+         * 爆头口径不变：被击方把狙击**转给狙击手本人**仍算"对攻击者有影响"（下面 affect 保留）。 */
+        if (R.ATK_EFFECT.indexOf(ja.key) < 0) continue;
         if (targetOf(st, j) === who) return j;
       }
       return null;
