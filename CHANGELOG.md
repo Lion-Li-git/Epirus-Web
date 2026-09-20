@@ -1,3 +1,11 @@
+## research(qoder 0921 夜班1) t 系臂产物记账 · 不升版本 · 全部未 promote
+
+> 分支 `qoder-bugs-0921`（新语义 56402bbf 下的训练探索；另含 #19 指向盲五修 f42891d + #20 键级探索 36a6a88）。判据与否证账：`docs/RESEARCH-LOG-2026-09-21-qoder.md` §1-3。
+> 产物（`.bak`，gitignored，按 D82 点名）：
+> - `v7t1-31.bak` `v7t1-82.bak` `v7t1-93.bak` —— BIGCARD_W=0.1 唯一变量臂：**①贵卡否证**（大雷/电磁炮/小雷/地雷三粒全 0%），
+>   但 ②零回退（G4 三粒全 PASS 最坏 58% · G5 0~7%）；"没学会的强招=大雷+11pt/电磁炮+9.4pt"=value-blind 签名。
+> - `v7t2-31.bak` `v7t2-82.bak` `v7t2-93.bak` —— heavyfire 教师段臂（四段计划；跑完终裁补记于 RESEARCH-LOG）。
+
 ## research(qoder 0920 · 晚班 N1/N3 记账 · 不升版本 · 未 promote)
 
 > 过程与预注册判据：`docs/RESEARCH-LOG-2026-09-20-qoder.md` §19/§20。
