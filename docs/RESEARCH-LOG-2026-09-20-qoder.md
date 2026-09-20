@@ -207,3 +207,14 @@ seeds 31,82,93。
 
 **分支收尾**：`qoder-research-0920` @ 本 commit；np-test **154/154** · spec 45/45 · smoke OK · 指纹 00e732a7（未动引擎）。
 main 一字未动，线上包/2P 包未 promote。早上顺序建议：先读 §5（账）→ §5h-3（分段课程臂）→ 裁 §5e-补（刷收缩判据）。
+
+## 7. 白班 1h 补充（09:5x 起 · 读 RESEARCH-QUEUE 后开工）
+
+- **P1 已开跑**（v7cur · 分段计划 `pickDeepSaver:0.5,pickAimDefender:0.5` · frac 0.25 · HOT=v7aim2-82 · seeds 31,82,93）。
+  通道核实：`[imit] 主线程生效值 ... plan=... 段数=2`；worker 走 `msg.imitPlan` 回执（v1.5.97 设计），无 A/A 半开。
+- **P4 同步在跑**（`scripts/p4-seat-phase.mjs`：3 盐配置 × 3 seed base × 120 局自对局，82 与线上包对照）。判读规矩：
+  **换 base 后最差席位稳定同一格 ⇒ 相位；乱跳 ⇒ 噪声**（"极差 35pt"是 n≈91 的标量，先证伪它是不是抽样）。
+- **P2 设计稿（不动手，等 P1 否证再花训练成本）**：项 = `S4_W · min(1, 打在脚本席伤害/局 ÷ 4.0)`，装配复用 V4 形状
+  （4 席家族 vs 1 席 `pickGunFocus`）；**判据用伤害列不用胜负标量**（§0-5 与 v7gf1-92 的教训）。
+  单一来源的正解是把装配**下沉到 `js/train/evo.js`**、让 `tools/v2v4-lib.mjs` 反向取用（deps 已有 T/S/Play/R 通道），
+  否则就是 D107 禁止的第二份拷贝。默认 `S4_W=0` ⇒ 出厂逐字不变，走 econ-env 单一来源 + D77 往返。
