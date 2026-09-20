@@ -23,6 +23,7 @@
       copiedGuard: null,             // N14 v1.5.17：镜面反射复制来的架势（只在结算它的那个回合有效）
       fireWeakNext: false, fireWeakNow: false, // 藤甲 R22
       tauntPending: false, tauntActive: false, // 挑衅 R41/R54
+      tauntBy: [], tauntByPending: [],          // v1.5.138（指向盲审计）：义务期"必须攻击谁"的挑衅者名单（N 人可多人、pending/active 与布尔同步）
       tauntFrom: null, tauntTo: null,          // N人：挑衅指向（2人时等价于布尔）
       nightmare: false,             // R50
       chains: [],                   // R45 铁索：我连着的对手 pid 列表（2人=1个）
@@ -87,7 +88,11 @@
     if (state.p.length === 2) return opp[0];
     const t = opt && opt.target;
     if (typeof t === 'number' && t !== pid && state.p[t] && state.p[t].hp > 0) return t;
-    return opp[0];
+    /* v1.5.138：兜底从 `opp[0]`（最小索引）改 saltPick —— v1.5.54 已在 oppOf/wrapBotN 等处
+     * 明令禁止"恒定取最小对手"的座位偏置（D108 同族），这里是漏网的一处。
+     * `saltPick` 单一真源在 resolve（避免两处公式漂移）；resolveTarget 只在**对局运行期**被调，
+     * 那时 `EpirusResolve` 早已挂好（load 期不触达）。 */
+    return global.EpirusResolve.saltPick(state, opp, 0);
   }
 
   function canUseSkillInMode(state, key) {

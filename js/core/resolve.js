@@ -57,6 +57,7 @@
     me.stickers = [];
     me.nightmare = false;
     me.tauntPending = false;
+    me.tauntByPending = [];                                // v1.5.138：pending 清了，待用名单也要清（否则下回合 pending→active 会把已被净化掉的挑主带进去）
     me.fireWeakNow = false; me.fireWeakNext = false;       // 藤甲（R58）
     me.mineArmed = false; me.mineTurns = 0;                // 地雷（R59）
     me.rodGuard = 0;                                       // 避雷针（R31）
@@ -794,17 +795,34 @@
     // ====== ② 小雷 pri5 R27 ======
     const mini = [];
     for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && a.key === SK.MINI_T) mini.push(i); }
+    /* v1.5.138（指向盲审计）：原文「如果雷击之枪连接成环状，则不会有任何效果」**不限两两** ——
+     * 旧实现只认 A↔B 互指，三人环 A→B→C→A 检不出，退化成按座位逐边作废、先手独赢。
+     * 现在先在 miniT 指向图上游走找环（每人至多一条出边 ⇒ 顺指针走、回到本次路径上的点即环），
+     * 环上成员整体作废（"不会有任何效果"，含免雷/被免疫分支都不走），每环发一条 thunderRing；
+     * **非环链**仍按下方旧路逐边结算（原文"多个连接从最开始的进行结算"——setVoid 后
+     * `actionOf` 即 null，被作废者的出边自然不再触发，先手序就是"从最开始"）。 */
+    const ringSeen = {};
+    for (const start of mini) {
+      if (ringSeen[start]) continue;
+      const pos = {}, path = [];
+      let cur = start, ring = null;
+      while (cur != null && !ringSeen[cur]) {
+        if (cur in pos) { ring = path.slice(pos[cur]); break; }
+        pos[cur] = path.length; path.push(cur);
+        const nx = targetOf(state, cur);
+        const na = nx == null ? null : actionOf(state, nx);
+        cur = (na && na.key === SK.MINI_T) ? nx : null;
+      }
+      if (ring) {
+        ev(state, { type: 'thunderRing', pids: ring.slice() });
+        for (const r of ring) { ringSeen[r] = true; setVoid(state, r, '互雷成环'); }
+      }
+    }
     for (const c of mini) {
-      if (!actionOf(state, c)) continue;                 // 已被更早规则作废
+      if (!actionOf(state, c)) continue;                 // 已被更早规则作废（含上面的成环）
       const t = targetOf(state, c);
       if (t == null) continue;
       const ta = actionOf(state, t);
-      // 互雷成环（N3：逐边判定）
-      if (ta && ta.key === SK.MINI_T && targetOf(state, t) === c) {
-        if (c < t) ev(state, { type: 'thunderRing' });
-        setVoid(state, c, '互雷成环'); setVoid(state, t, '互雷成环');
-        continue;
-      }
       if (state.p[t].rodGuard > 0) {
         state.p[t].rodGuard = 0; // 一次免雷后守卫结束 R31
         setVoid(state, c, '避雷针');
@@ -916,7 +934,11 @@
       const t = targetOf(state, i);
       if (t == null) continue;
       const tb = actionOf(state, t);
-      if (tb && R.ATK_EFFECT.indexOf(tb.key) >= 0) {
+      /* v1.5.138（指向盲审计 · 同 N4"只有互为目标才交锋"铁律）：反制者的攻击必须**指回炮手**才抵消。
+       * 旧实现只看"被炮者出了任意攻击卡"⇒ 3P 里 A炮B、B枪C（B 根本没理 A）也会白废 A 的炮。
+       * 2P 恒等（B 只有 A 可打）⇒ 一直没露馅。本块留在 clashPass 之前：原文"可与**任何**攻击性
+       * 技能抵消"含低优先级反制（如大雷），这是它独立于相抵规则存在的原因，不许合并。 */
+      if (tb && R.ATK_EFFECT.indexOf(tb.key) >= 0 && targetOf(state, t) === i) {
         setVoid(state, i, '过载炮被攻击抵消');
         ev(state, { type: 'cannonCountered', pid: i, by: t, key: tb.key });
       }
@@ -1037,7 +1059,9 @@
         }
         case SK.CURSE: {
           const g = guardOf(state, t);
-          const blockKinds = ['guard', 'reflect', 'proto', 'jinshield', 'armor'];
+          /* v1.5.138：原文"可以被**防御类**技能阻挡"，GUARD_FAMILY 含八卦阵（无极变速在 guardOf
+           * 里同 kind 'bagua'）——旧清单漏了它 ⇒ 贴贴穿八卦阵。 */
+          const blockKinds = ['guard', 'reflect', 'proto', 'jinshield', 'armor', 'bagua'];
           if (g && blockKinds.indexOf(g.kind) >= 0) {
             ev(state, { type: 'curseBlock', pid: t, by: g.kind });
           } else {
@@ -1085,6 +1109,10 @@
         }
         case SK.TAUNT: {
           you.tauntPending = true;
+          /* v1.5.138（指向盲审计 · 用户实机报）：原文「必须**对使用者**使用攻击类技能」——旧实现
+           * 只把目标置一个布尔义务，回合末判"用了任意攻击卡"就算合规 ⇒ N 人局里被挑者打第三人
+           * 也能白嫖（2 人局唯一的对手就是挑主，恒等，所以一直没露馅）。现在把施法者记进名单。 */
+          if (you.tauntByPending.indexOf(i) < 0) you.tauntByPending.push(i);
           roundTaunts.push({ caster: i, target: t });
           ev(state, { type: 'taunt', pid: i, target: t });
           break;
@@ -1266,15 +1294,26 @@
       const p = state.p[i];
       if (p.tauntActive) {
         const a = acts[i];
-        const ok = !!(a && a.outcome === 'ok' && R.TAUNT_SATISFY.indexOf(a.key) >= 0);
+        /* v1.5.138：合规必须"**对挑衅者本人**用攻击卡"——旧实现只看 `TAUNT_SATISFY`（用了什么卡），
+         * 不看这刀砍向谁 ⇒ N 人局被挑者打第三人也能免罚（2 人局对手唯一，恒等 ⇒ 一直没露馅，
+         * 与 v1.5.13 狙击、v1.5.136 转移同族）。`a.target` 是解析后的真实落点。多个挑衅者时，
+         * 攻击其中任一个即算履约（原文"对使用者"，多使用者取"任一"的自然读法）。 */
+        /* 挑主全员阵亡 ⇒ 义务物理不可履行 ⇒ 免罚（与"转移指定目标阵亡⇒转移落空"同族原则；
+         * 2 人局里挑主阵亡=对手没了=本局通常已在结算胜利，行为不变）。 */
+        const impossible = p.tauntBy.every(function (c) { return state.p[c].hp <= 0; });
+        const ok = impossible || !!(a && a.outcome === 'ok' && R.TAUNT_SATISFY.indexOf(a.key) >= 0
+          && p.tauntBy.indexOf(a.target) >= 0);
         if (!ok) { p.hp -= 1; ev(state, { type: 'damage', to: i, amt: 1, reason: '挑衅违约', via: 'taunt' }); }
-        p.tauntActive = false;
+        p.tauntActive = false; p.tauntBy = [];
         ev(state, { type: 'tauntCheck', pid: i, ok });
       }
     }
     // 新挑衅 → 下回合义务
     for (let i = 0; i < playerCount(state); i++) {
-      if (state.p[i].tauntPending) { state.p[i].tauntActive = true; state.p[i].tauntPending = false; }
+      if (state.p[i].tauntPending) {
+        state.p[i].tauntActive = true; state.p[i].tauntPending = false;
+        state.p[i].tauntBy = state.p[i].tauntByPending; state.p[i].tauntByPending = [];
+      }
     }
     // 符咒 age++；停留 >3 回合后自动消失（R37 引爆窗口到期，buff 不再显示在状态栏）
     for (let i = 0; i < playerCount(state); i++) {
