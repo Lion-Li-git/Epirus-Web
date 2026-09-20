@@ -109,7 +109,7 @@ export function duelAssembly(deps, params, opts) {
   const JI = R.SK.JI, GUN = R.SK.GUN;
   const keys = o.countKeys || null;
   const counts = {}; if (keys) keys.forEach(function (k) { counts[k] = 0; });
-  let win = 0, draw = 0, rounds = 0, dec = 0, ji = 0, forced = 0;
+  let win = 0, draw = 0, rounds = 0, dec = 0, ji = 0, forced = 0, clears = 0;
   let aliveChampEnd = 0, aliveScriptedEnd = 0, hpScriptedEnd = 0;
   let dmgToScripted = 0, dmgByScripted = 0, champDmg = 0;
   for (let g = 0; g < G; g++) {
@@ -143,6 +143,11 @@ export function duelAssembly(deps, params, opts) {
     };
     const cs = []; for (let i = 0; i < 5; i++) cs.push(i === seat ? (scripted === 'champ' ? mine : scripted) : mine);
     Play.autoGameN(st, cs);
+    /* qoder-research 0920（P2 第三行）：**收缩前击杀数** —— 与场B 门禁同口径（`countClears` 单一真源，
+     * 只认"收缩开始前打死"，按伤害归属记在击杀者头上）。V4 形状里脚本席只有 1 个 ⇒ 每局合计 ∈ {0,1}。 */
+    if (typeof T.countClears === 'function') {
+      for (let i = 0; i < 5; i++) if (i !== seat) clears += T.countClears(st.events, i);
+    }
     rounds += st.round;
     if (st.winner === seat) win++; else if (st.winner === 'draw') draw++;
     let ac = 0;
@@ -168,6 +173,7 @@ export function duelAssembly(deps, params, opts) {
     aliveChampEnd: aliveChampEnd / G, aliveScriptedEnd: aliveScriptedEnd / G,
     hpScriptedEnd: hpScriptedEnd / G,
     dmgToScriptedPerGame: dmgToScripted / G, dmgByScriptedPerGame: dmgByScripted / G,
+    clearsPerGame: clears / G,
     champDmgPerGame: champDmg / G
   };
 }
