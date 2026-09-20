@@ -6,6 +6,7 @@ import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
 import { isChampOpp, loadChampParams } from '../server/opp-champs.mjs';
+import { makeShapeScorer } from '../server/shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
 /* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
@@ -4108,6 +4109,32 @@ t('D108 候选特征不得把"打 0 号座"当成"无目标"（qoder-research 09
   let anyDiff = false;
   for (let i = 0; i < a.length; i++) if (c2[i] !== a[i]) anyDiff = true;
   ok(anyDiff, '对照组（不对称局面）：换目标的特征不得全同（挡"永远返回零块"的假修法）；对称局面特征全同是**正确的**');
+});
+t('D109 形状适应度 S4_W：默认关 · 断线必抛 · 真评分器可跑（P2 · qoder-research 0920）', function () {
+  /* 三件事：① 出厂 s4W=0（不加项）；② S4_W>0 而宿主没注入 __shapeScorer ⇒ scoreMemberN **抛错**
+   *    （静默降级 = 又一次"开关看着接上、实际作用在没跑的那条路"——附录 D 臂 K 的 A/A 事故形状）；
+   * ③ 真接线可跑：shape-scorer.mjs（复用 tools/v2v4-lib 的 duelAssembly，D107 单一来源）在 np-test 沙箱里
+   *    对随机策略出 0..1 的分。 */
+  eq(T.economyReward().s4W, 0, '默认 s4W 必须 0（econ-env 不设 ⇒ 出厂逐字不变）');
+  T.setEconomyReward({ wallFilter: false });   // 自防：不依赖前面门的收尾（wallFilter 泄漏史见 evo reset 注释）
+  const p = Pol.makePolicy(0.25);
+  const opps = [{ name: 'random', sel: Bots.pickRandom }];
+  const had = sb.window.__shapeScorer;
+  try {
+    T.setEconomyReward({ s4W: 0.2 });
+    delete sb.window.__shapeScorer;
+    let threw = false;
+    try { T.scoreMemberN(p, opps, 1, 3, 1, 0, 0); } catch (e) { threw = /__shapeScorer/.test(String(e && e.message)); }
+    ok(threw, 'S4_W>0 且评分器缺线 ⇒ 必须抛错（不许静默跑成 A/A）');
+    sb.window.__shapeScorer = function () { return 0.5; };
+    const r1 = T.scoreMemberN(p, opps, 1, 3, 1, 0, 0);
+    ok(r1 && typeof r1.fit === 'number' && isFinite(r1.fit), '接上桩评分器后打分必须正常出 fit');
+    const v = makeShapeScorer(sb.window, 2)(p);
+    ok(typeof v === 'number' && v >= 0 && v <= 1, '真评分器（V4 形状 × 两条外部线）输出须在 0..1，实测 ' + v);
+  } finally {
+    T.setEconomyReward({ reset: true }); T.setEconomyReward({ divRoleW: 0 });
+    if (had) sb.window.__shapeScorer = had; else delete sb.window.__shapeScorer;
+  }
 });
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');

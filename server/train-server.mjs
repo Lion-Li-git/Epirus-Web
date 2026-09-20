@@ -19,6 +19,7 @@ import { makeAsyncStep, makeParallelEvalN } from './paralleltrain.mjs';
 import { readFightEnv, hasFightOverride, FIGHT_REWARD_KEYS } from './fight-env.mjs';
 /* v1.5.89：经济/熵奖励 env 的**单一来源**（与 worker 共用同一份解析，见该文件头部的同族 bug 说明）。 */
 import { readEconEnv, hasEconOverride } from './econ-env.mjs';
+import { makeShapeScorer } from './shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -49,6 +50,8 @@ for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/
   vm.runInNewContext(readFileSync(join(root, f), 'utf8'), sb, { filename: f });
 }
 const T = sb.EpirusTrainer, P = sb.EpirusPolicy, R = sb.EpirusRules;
+/* P2（qoder-research 0920）：与 worker 同一份宿主接线（server 的无 worker 回退路径也要能跑形状项）。 */
+sb.__shapeScorer = makeShapeScorer(sb, Number(process.env.EPIRUS_S4_GAMES || 8));
 const stepAsync = makeAsyncStep(T);   // 并行加速：每代把评估切到 worker 池跑多核
 console.log('[parallel] 训练 worker 数：' + stepAsync.workers);
 
