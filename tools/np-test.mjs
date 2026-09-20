@@ -4087,6 +4087,28 @@ t('D101 贵卡出手奖励（v1.5.126 用户洞察：它不会用电磁炮/大�
     'env 名/键/读出三处都要在**单一来源**里');
 });
 
+t('D108 候选特征不得把"打 0 号座"当成"无目标"（qoder-research 0920 · 座位身份泄漏现行犯）', function () {
+  /* 病（policy.js:397 旧写法 `if (!tid ...)`）：target pid 0 是 falsy ⇒ "打 0 号"的候选
+   * 拿到与"无目标"同款的**全零目标块** ⇒ 网络能把"零块"学成"软目标"，镜像局全员集火 0 号座。
+   * 实测（RESEARCH-LOG §9）：v7aim1-82 自对局 120 局 × 3 盐配置，**首死 120/120 全是 0 号座**。
+   * 守门 = 镜像等性价对：完全对称局面上，(座1 打 座0) 与 (座0 打 座1) 是同一相对局面，
+   * actionFeatures 必须**逐位相等**；并对照组 (座1 打 0) vs (座1 打 2) 允许不等（防止"恒输出零块"的假修法）。 */
+  const st = S.createState('long', { next: function () { return 0.5; } }, 5);
+  st.slotSalt = 123456;
+  const a = Pol.actionFeatures(st, 1, 'snipe', { key: 'snipe', target: 0 });
+  const b = Pol.actionFeatures(st, 0, 'snipe', { key: 'snipe', target: 1 });
+  eq(a.length, b.length, '两侧维数一致');
+  const diff = [];
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff.push(i);
+  eq(diff.length, 0, '镜像等性价对（1→0 vs 0→1）特征必须逐位相等，不等的维：' + JSON.stringify(diff));
+  /* 对照组必须造**不对称**局面：完全对称局面上不同目标的特征**本应全同**（那是真对称，不是假修法）。 */
+  st.p[2].hp = 3;
+  const c2 = Pol.actionFeatures(st, 1, 'snipe', { key: 'snipe', target: 2 });
+  st.p[2].hp = 5;
+  let anyDiff = false;
+  for (let i = 0; i < a.length; i++) if (c2[i] !== a[i]) anyDiff = true;
+  ok(anyDiff, '对照组（不对称局面）：换目标的特征不得全同（挡"永远返回零块"的假修法）；对称局面特征全同是**正确的**');
+});
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
