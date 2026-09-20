@@ -729,10 +729,15 @@
       case 'holoSet': return { cls: 'ev dim', html: '🛡 ' + nm(e.pid) + ' 用【全息屏障】护住 ' + nm(e.target) + '（本回合视为原型制御架势）' };
       case 'blocked': return { cls: 'ev dim', html: '🛡 ' + nm(e.to) + ' 的【' + (e.by || '架势') + '】挡下伤害' + (e.judge ? '（判定成功）' : '') };
       case 'reflect': {
-        const guardName = e.by === 'armor' ? '藤甲' : '反弹';
+        /* v1.5.136（用户实机报的 bug ③）：原型制御的弹回原先也印成【反弹】⇒ 日志里分不清是反弹架势还是
+         * 原型制御（两者语义不同：反弹只格挡枪/剑线，原型制御挡除地雷/转移外一切）。事件早带了 `by:'proto'`，
+         * 只是渲染器没读。 */
+        const guardName = e.by === 'armor' ? '藤甲' : (e.by === 'proto' ? '原型制御' : '反弹');
         return { cls: 'ev gold', html: '↩ ' + nm(e.from) + ' 的攻击被 ' + nm(e.to) + ' 的【' + guardName + '】弹回 → 伤害落到 ' + nm(e.from) };
       }
-      case 'transfer': return { cls: 'ev gold', html: '↩ ' + nm(e.to) + ' 使用【转移伤害】，伤害弹回给 ' + nm(e.from) };
+      /* v1.5.136（bug ①的 UI 面）：转移是"转给转移者指定的那个人"（e.dest），不是"弹回攻击者"（e.from）。
+       * 旧文案跟着错误实现写；`e.dest` 缺省（旧记录回放）时退回 from，不至于显示 undefined。 */
+      case 'transfer': return { cls: 'ev gold', html: '↩ ' + nm(e.to) + ' 使用【转移伤害】，伤害转移给 ' + nm(e.dest != null ? e.dest : e.from) };
       case 'curse': return { cls: 'ev pur', html: '🧧 ' + nm(e.owner) + ' 给 ' + nm(e.pid) + ' 贴上符咒' };
       case 'curseBlock': return { cls: 'ev dim', html: '🧧 符咒被 ' + nm(e.pid) + ' 的架势挡下' };
       case 'firestorm': return e.n > 0 ? { cls: 'ev dmg', html: '🔥 ' + nm(e.pid) + ' 引燃 ' + e.n + ' 枚符咒！' } : { cls: 'ev dim', html: nm(e.pid) + ' 放天火，但没有可引爆的符咒' };

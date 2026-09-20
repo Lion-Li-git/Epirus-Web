@@ -38,6 +38,7 @@
   function armMine(state, me, pid) {
     me.mineArmed = true;
     me.mineTurns = 3;                     // 本回合 + 后两个回合（回合末递减，减到 0 卸下）
+    me.mineRound = state.round;           // v1.5.136（N6 裁定）：判"埋雷当回合就炸"用（那波不可转移）
     ev(state, { type: 'mineArm', pid: pid });
   }
 
@@ -352,17 +353,37 @@
    *   间接触发（挨了地雷伤害且自己装着雷）→ 所有间接触发者**合并成一波**，
    *     打**除这些间接触发者之外**的所有存活角色；间接触发只发生一次。
    *   火弱逐目标计算（藤甲挂在被攻击者身上）；地雷伤害**无来源**（source=null）
-   *     ⇒ 不被铁索共享 / 不被转移 / 不被大雷传导，但事件里带 mineFrom 以便归因。
+   *     ⇒ 不被铁索共享 / 不被大雷传导，但事件里带 mineFrom 以便归因。
+   *     （v1.5.136 N6 更正旧表述："不被转移"只对**埋雷当回合就炸**的波成立；
+   *      后续 buff 雷的波可被【转移伤害】一跳转走 —— 见 `mineHit`。）
    * 用例核对（a,b,c 装雷，4 人）：
    *   d 打 a → a 直接: b,c,d 各 1；b,c 间接合并: a,d 各 1
    *   d 双枪打 a,b → a 直接: b,c,d；b 直接: a,c,d；c 间接合并: a,b,d
    */
-  function mineHit(state, to, mineFrom) {
+  /* v1.5.136（用户裁定 N6）："后续 buff 地雷触发时**跟随触发来源**" ⇒ 早于本回合埋下的雷，其波伤害
+   * 可被挨到的人用【转移伤害】转给自己指定的目标；**当回合埋下当回合就炸**的仍不可转移
+   * （= 原口径"地雷优先级 0"只保护这一种）。连锁一并定（裁定③）：转移只走**一跳**——
+   * 落点按普通雷伤吃下（source 仍为 null ⇒ 不再触发落点自己的雷、不再二次转移、上限仍是 2 波）；
+   * 把伤害转走的挨打者**没有实际吃到**这波，因而**不再**作为间接触发者入列（返回落点供上层收集）。 */
+  function mineHit(state, to, mineFrom, transferable) {
     const p = state.p[to];
-    if (p.hp <= 0) return;
+    if (p.hp <= 0) return null;
+    let hitTo = to;
+    if (transferable) {
+      const ta = state.actions[to];
+      if (ta && ta.key === SK.TRANSFER && !ta.voided) {
+        const dest = targetOf(state, to);
+        if (dest != null && dest !== to && state.p[dest].hp > 0) {
+          ev(state, { type: 'transfer', to, from: mineFrom, dest, amt: 1, via: 'mine' });
+          hitTo = dest;
+        }
+      }
+    }
+    const q = state.p[hitTo];
     let amt = 1;
-    if (p.fireWeakNow) amt += 1;                       // 火弱：只加到挂了 debuff 的那个人
-    rawDamage(state, to, amt, '地雷', 'mine', { source: null, mineFrom: mineFrom });
+    if (q.fireWeakNow) amt += 1;                        // 火弱：只加到最终挨这跳的人身上
+    rawDamage(state, hitTo, amt, '地雷', 'mine', { source: null, mineFrom: mineFrom });
+    return hitTo;
   }
   /* N20 mine resolution (called after the damage phase in resolveActions).
    * DIRECT-FIRST: a mine triggered by being attacked counts as direct, even if it also
@@ -383,21 +404,24 @@
     if (!direct.length) return;
     const indirect = [];
     for (const v of direct) {
+      const transferable = state.p[v].mineRound !== state.round;   // N6：埋雷当回合即炸 ⇒ 不可转移
       state.p[v].mineArmed = false; state.p[v].mineTurns = 0;   // v1.5.109 R59：触发即失效（含计时清零）
       ev(state, { type: 'mine', from: v, kind: 'direct' });
       for (let i = 0; i < N; i++) {
         if (i === v || state.p[i].hp <= 0) continue;
-        mineHit(state, i, v);
-        if (state.p[i].hp > 0 && state.p[i].mineArmed && direct.indexOf(i) < 0 && indirect.indexOf(i) < 0)
-          indirect.push(i);
+        const struck = mineHit(state, i, v, transferable);
+        const s = struck == null ? i : struck;           // 转走了 ⇒ 判定对象是真正吃到这跳的人
+        if (state.p[s].hp > 0 && state.p[s].mineArmed && direct.indexOf(s) < 0 && indirect.indexOf(s) < 0)
+          indirect.push(s);
       }
     }
     if (!indirect.length) return;
+    const indirectTransferable = indirect.every(function (i) { return state.p[i].mineRound !== state.round; });
     for (const i of indirect) { state.p[i].mineArmed = false; state.p[i].mineTurns = 0; }   // v1.5.109 R59
     ev(state, { type: 'mine', from: indirect.slice(), kind: 'indirect' });
     for (let i = 0; i < N; i++) {
       if (indirect.indexOf(i) >= 0 || state.p[i].hp <= 0) continue;
-      mineHit(state, i, indirect[0]);
+      mineHit(state, i, indirect[0], indirectTransferable);
     }
   }
 
@@ -415,14 +439,20 @@
     const via = dmg.via;
 
     // ---- 转移伤害拦截（坦克不可转移）----
+    /* v1.5.136（用户实机报的 bug ①）：转移的**正确语义**是"把本回合所受的可转移伤害，转给
+     * 转移者自己指定的那一个人"——而旧实现写成了"弹回攻击者"（`deliverDamage(..., src)`）。
+     * 两者只在"转移者恰好指着攻击者"时偶然一致（R23 的老用例正是这种巧合，所以自测一直没抓到）。
+     * 现在取转移动作的**指定目标** `targetOf(state, to)`；没有指定目标（目标已死/未指）⇒ 转移不生效，
+     * 伤害照旧落在转移者身上（原版无"落空消失"的说法）。地雷走 `source==null` 分支，天然不进这里
+     * （= 用户口径"地雷优先级 0 不可转移"；buff 雷的可转移性待用户二次裁定，见 RESEARCH-LOG §23）。 */
     const tAct = actionOf(state, to);
-    if (!dmg.bypassGuards && !pierce.transfer && tAct && tAct.key === SK.TRANSFER) {
-      const src = dmg.source;
-      if (src != null && src !== to && state.p[src].hp > 0) {
-        ev(state, { type: 'transfer', to, from: src, amt: dmg.amt, via });
-        const redir = Object.assign({}, dmg, { source: src, redirected: true, noMine: true });
-        deliverDamage(state, redir, src, { reason: ctx.reason });
-        return { result: 'redirected', to: src };
+    if (!dmg.bypassGuards && !pierce.transfer && !dmg.redirected && tAct && tAct.key === SK.TRANSFER) {
+      const dest = targetOf(state, to);           // 转移者指定的那个人
+      if (dest != null && dest !== to && state.p[dest].hp > 0) {
+        ev(state, { type: 'transfer', to, from: dmg.source, dest, amt: dmg.amt, via });
+        const redir = Object.assign({}, dmg, { redirected: true, noMine: true });
+        deliverDamage(state, redir, dest, { reason: ctx.reason });
+        return { result: 'redirected', to: dest };
       }
     }
 

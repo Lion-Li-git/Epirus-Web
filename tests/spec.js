@@ -267,17 +267,61 @@
     eq(st2.p[1].hp, 2, '未攻击违约-1');
   });
 
-  t('R23 转移伤害拦截枪；坦克穿透', function () {
+  t('R23 转移伤害：转给**指定目标**（不是弹回攻击者）；坦克穿透', function () {
+    /* v1.5.136（用户实机报的 bug ①）：旧实现把转移写成"弹回攻击者"，而 2 人局里"指定目标"
+     * 与"攻击者"恒同一人 ⇒ 老用例永远分不出来。这里补 3 人反证组：指定目标≠攻击者。 */
     const st = game(); setEp(st, 5, 5);
-    play(st, SK.GUN, SK.TRANSFER);
+    play(st, SK.GUN, SK.TRANSFER, { target: 1 }, { target: 0 });
     eq(st.p[1].hp, 3, '转移者无事');
-    eq(st.p[0].hp, 2, '枪弹回自身');
+    eq(st.p[0].hp, 2, '（2P 巧合组）指定=攻击者 ⇒ 落攻击者');
+    const s3 = S.createState('multi', { next: Math.random }, 3);
+    s3.p[0].ep = 5; s3.p[1].ep = 5; s3.p[2].ep = 5;
+    s3.events = []; X.startTurn(s3);
+    S.attemptAction(s3, 0, SK.GUN, { target: 1 });
+    S.attemptAction(s3, 1, SK.TRANSFER, { target: 2 });   // P1 把伤害转给 P2（不是打他的 P0）
+    S.attemptAction(s3, 2, SK.JI, null);
+    X.resolveActions(s3); X.endTurn(s3);
+    eq(s3.p[0].hp, 3, 'P0（攻击者）不该吃自己的转移伤害 —— 旧实现在这里必红');
+    eq(s3.p[1].hp, 3, '转移者无事');
+    eq(s3.p[2].hp, 2, '指定目标 P2 吃到转移伤害');
+    const tf = s3.events.filter(function (e) { return e.type === 'transfer'; });
+    ok(tf.length === 1 && tf[0].dest === 2 && tf[0].to === 1, 'transfer 事件必须带 dest=指定目标（UI 文案要吃这个字段）');
     const st2 = game(); setEp(st2, 5, 5);
-    play(st2, SK.TANK, SK.TRANSFER);
+    play(st2, SK.TANK, SK.TRANSFER, { target: 1 }, { target: 0 });
     eq(st2.p[1].hp, 2, '坦克破转移');
     eq(st2.p[0].hp, 3);
   });
 
+  t('R23b 地雷波的转移性（N6 裁定）：后续 buff 雷可被转移一跳；埋雷当回合即炸不可转移', function () {
+    /* 4 人局：P0 埋雷（旧雷/新雷两组），P2 枪打 P0 直接引爆；P1 的转移指定 P3。
+     * 波（除雷主外的所有人）：旧雷组 ⇒ P1 把这一跳转给 P3（P3 挨两跳：自己那跳+转来的一跳）；
+     * 新雷组 ⇒ P1 转移无效，一人一跳。落点不再连锁（source=null），P1 转走后也不作为间接触发者。 */
+    function build(mineAsCurrentRound) {
+      const st = S.createState('multi', { next: Math.random }, 4);
+      for (let i = 0; i < 4; i++) st.p[i].ep = 5;
+      st.events = []; X.startTurn(st);
+      /* ⚠️ `startTurn` 会推进 `st.round` ⇒ mineRound 必须按**结算回合**写（先手写在 build 时会差 1） */
+      st.p[0].mineArmed = true;
+      st.p[0].mineTurns = 3;
+      st.p[0].mineRound = mineAsCurrentRound ? st.round : (st.round - 1);
+      S.attemptAction(st, 0, SK.JI, null);
+      S.attemptAction(st, 1, SK.TRANSFER, { target: 3 });
+      S.attemptAction(st, 2, SK.GUN, { target: 0 });
+      S.attemptAction(st, 3, SK.JI, null);
+      X.resolveActions(st); X.endTurn(st);
+      return st;
+    }
+    const old = build(false);
+    eq(old.p[0].hp, 2, '雷主被枪 -1（雷不烧主）');
+    eq(old.p[1].hp, 3, 'P1 把 buff 雷的一跳转走了 ⇒ 无事');
+    eq(old.p[2].hp, 2, 'P2 吃到直接波');
+    eq(old.p[3].hp, 1, 'P3 = 自己那跳 + P1 转来的一跳');
+    ok(old.events.some(function (e) { return e.type === 'transfer' && e.via === 'mine' && e.dest === 3 && e.to === 1; }),
+      '转移雷波必须发 transfer 事件（via=mine，UI 要能显示）');
+    const fresh = build(true);
+    eq(fresh.p[1].hp, 2, '当回合埋当回合炸 ⇒ 不可转移，P1 自己挨');
+    eq(fresh.p[3].hp, 2, 'P3 只吃自己那跳');
+  });
   t('R60 双大雷互轰：均2伤、各禁用自己当回合用的大雷', function () {
     const st = game(); setEp(st, 5, 5);
     play(st, SK.BIG_T, SK.BIG_T);
