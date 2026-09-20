@@ -721,6 +721,12 @@
   let WIDTH_W = 0, WIDTH_FLOOR = 3, WIDTH_TARGET = 7;
   /* v1.5.126（用户洞察）：**贵卡**（cost≥3 或需珠）出手的奖励权重（默认关）。 */
   let BIGCARD_W = 0;
+  /* ===== P2（qoder-research 0920 · RESEARCH-QUEUE P2 / RESEARCH-LOG §11-附-3）：**形状适应度**权重（默认关）=====
+   * 三角跷跷板：{主动清场}↔{按住只枪}↔{防珠线}，教师课程怎么排都只能占两边（段与段互相覆盖）。
+   * 这一项不示范动作，而是把"4 席家族压在外部压迫席身上的伤害"这一**后果**直接进 fit。
+   * 评分器由宿主注入（`server/shape-scorer.mjs` 复用 `tools/v2v4-lib.mjs` 的 `duelAssembly` ⇒ D107 单一来源不破），
+   * evo 只认 `global.__shapeScorer(params) → 0..1`。默认 0 ⇒ **严格不加项**（0*NaN 的教训：关着就一个字节都不碰）。 */
+  let S4_W = 0;
   /* v1.5.86（附录 D6）：分母必须是**固定目标**，不能用"当时可负担的技能数" ——
    * 否则"把菜单变穷"就能把 divNorm 刷高（臂 A 实测：DIV_W×5 后产物 G=1.24/1.90，
    * 比默认臂被拒的 2.3~2.8 更低，全被健康门禁拦下、零产物）。
@@ -801,6 +807,11 @@ let WALL_GAMES = 3;
    *   （实测：一行一个键时 `wallGames` 落在 1202 ⇒ 红；注释写进函数体里也会把窗口吃掉）。 */
   function setEconomyReward(o) {
     o = o || {};
+    /* qoder-research 0920（RESEARCH-LOG §5b）：环奖励权重接进 econ-env 单一来源（默认不设 ⇒ RING_W 原样 0.10）。
+     * setRingReward 自带 `isFinite && >=0` 校验；调用发生在模块求值之后 ⇒ 无 TDZ 问题（RING_W 声明在 :1955）。 */
+    if (o.ringW != null) setRingReward(o.ringW);
+    /* P2（qoder-research 0920）：形状适应度权重走 econ-env 单一来源（默认不设 ⇒ 0 ⇒ 严格不加项）。 */
+    if (o.s4W != null) S4_W = Math.max(0, Number(o.s4W) || 0);
     if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;
     else if (o.divCatW != null) DIV_ROLE_W = Number(o.divCatW) || 0;
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
@@ -816,6 +827,12 @@ let WALL_GAMES = 3;
     if (o.reset) {
       ECO_T = null; ECO_C = null;
       HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0; BIGCARD_W = 0;
+      /* qoder-research 0920：D77 的运行时往返会喂**每个键**的哨兵再 reset —— ringW/s4W 是后加的键，
+       * 漏在这里会把 0.5 的哨兵泄漏给后续门（s4W 泄漏 = 后续 scoreMemberN 直接抛错）。
+       * ⚠️ D109 第一次跑红还顺带抓出一个**既存泄漏**：`wallFilter` 的哨兵 true 从没被 reset 抹掉
+       *   （D77 的 finally 只补了 divRoleW）⇒ 后续任何 scoreMemberN 都活在"破墙硬过滤开着"的假世界里。
+       *   一并收进 reset。 */
+      S4_W = 0; setRingReward(0.10); WALL_FILTER_ON = false; WALL_GAMES = 3;
     }
     return economyReward();
   }
@@ -824,7 +841,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, wallGames: WALL_GAMES,
+      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
 
@@ -1261,8 +1278,14 @@ let WALL_GAMES = 3;
     }
     const styleRate = styleGames ? styleFirst / styleGames : 0;
     const fitAvg = fitGames ? fit / fitGames : 0;
+    /* P2（qoder-research 0920）：形状项 = S4_W × 宿主评分器(0..1)。评分器抛错**不吞**（与教师计划同规矩：
+     * 静默退回默认 = 又一次 A/A 事故的形状）。`S4_W=0` 时连评分器都不调用 ⇒ 出厂行为逐字不变。 */
+    const shapeBonus = (S4_W > 0 && !wallReject)
+      ? (typeof global.__shapeScorer === 'function' ? S4_W * Math.max(0, Math.min(1, global.__shapeScorer(params)))
+        : (() => { throw new Error('[shape] S4_W>0 但宿主未注入 __shapeScorer（worker/server 接线断了 ⇒ 不许静默跑）'); })())
+      : 0;
     return {
-      fit: (wallReject ? (-5.0) : (fitAvg + divBonus + STYLE_W * styleRate - seatPen)),
+      fit: (wallReject ? (-5.0) : (fitAvg + divBonus + STYLE_W * styleRate - seatPen + shapeBonus)),
       wallDmg: wallDmg,
       wallReject: wallReject,
       fitNoDiv: fitAvg,

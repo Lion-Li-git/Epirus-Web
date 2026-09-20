@@ -6,6 +6,7 @@ import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
 import { isChampOpp, loadChampParams } from '../server/opp-champs.mjs';
+import { makeShapeScorer } from '../server/shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
 /* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
@@ -3036,6 +3037,14 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
   const refPassG4 = /PASS\s+G4\[线上包\/(long|multi)\]/.test(out);
   const poolM = /G4POOL\s+([0-9a-f]{8})/.exec(out);
   const curPool = poolM ? poolM[1] : null;
+  /* qoder-research 0920（RESEARCH-LOG §3-2 · 缝自曝于 v1.5.133 §5）：**实现身份双绑**。
+   * `G4IMPL` = 各格 chooser 源码 + `pT` 的 sha1 ⇒ **改格子行为不改键名**时它也变，旧例外失效。
+   * 在位包的留痕记于"实现身份"发明**之前**（meta 无 `impl` 字段）⇒ 给一条**冻结豁免**：
+   * 仅当"当前实现 == v1.5.134 那一版（`caecc92f`）"时放行；谁改了任何一格，豁免随 id 一起作废，
+   * 届时必须 `--force` 重记（新留痕会带 impl，走正常比对）。这是**一次性**的迁移垫脚，不是永久通道。 */
+  const G4IMPL_AT_EXCEPTION = 'caecc92f';
+  const implM = /G4IMPL\s+([0-9a-f]{8})/.exec(out);
+  const curImpl = implM ? implM[1] : null;
   let meta3p = null;
   try {
     const m3 = /(window\.EPIRUS_CHAMPION_3P_META\s*=\s*)(\{[\s\S]*?\})(\s*;)/.exec(readFileSync('js/bundled-champion-3p.js', 'utf8'));
@@ -3046,14 +3055,16 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
    * `forced` 为真 + **口径 id 相等** + **带上被放过的具体行**，三者缺一 ⇒ 不认这条例外。
    * 第三条（`lines`）不是排版洁癖：promote-champion 哪天只写 `forced` 而丢掉 `lines`，
    * 例外就变成"记了账但不知道记了什么"—— 那时这条门必须**红**，而不是静默放行。 */
+  const implOk = !!(curImpl && (g4rec && g4rec.impl != null ? g4rec.impl === curImpl : curImpl === G4IMPL_AT_EXCEPTION));
   const g4recOk = !!(g4rec && g4rec.forced === true && curPool && g4rec.pool === curPool &&
-    Array.isArray(g4rec.lines) && g4rec.lines.length > 0 && /^G4\[/.test(String(g4rec.lines[0])));
+    Array.isArray(g4rec.lines) && g4rec.lines.length > 0 && /^G4\[/.test(String(g4rec.lines[0])) && implOk);
   ok(refPassG4 || g4recOk,
     refPassG4 ? '线上包 G4 **至少一个模式** PASS（"已知好"一侧成立）'
       : (g4recOk ? '线上包 G4 两模式都红，但 meta 有**完整且口径匹配的 `--force` 留痕** ⇒ 已记录的例外（' +
-        String(g4rec.ts || '?') + ' · pool ' + g4rec.pool + ' · ' + g4rec.lines.length + ' 行）'
+        String(g4rec.ts || '?') + ' · pool ' + g4rec.pool + ' · impl ' + (g4rec.impl || G4IMPL_AT_EXCEPTION + '(冻结豁免)') +
+        ' · ' + g4rec.lines.length + ' 行）'
         : '线上包 G4 两模式都红，且 meta 里**没有可用的越线留痕**（缺失 / 未 `--force` / 口径 id 与当前克制表不一致' +
-          ' / 留痕没带被放过的具体行）⇒ **必须重记**：node tools/promote-champion.mjs <源.bak> --force'));
+          ' / **实现身份已变而例外未重记** / 留痕没带被放过的具体行）⇒ **必须重记**：node tools/promote-champion.mjs <源.bak> --force'));
   /* v1.5.104（用户裁定）：G4 阈值 45% → 60%。**阈值必须有单一常量 + 标定理由**，
    * 否则它会像 `sed` 不匹配那样静默漂移；同时把"理想线 45%"单独留着，别让绿灯被读成"已达理想"。 */
   const gsrc = readFileSync('tools/gate-drafts.mjs', 'utf8');
@@ -4077,6 +4088,54 @@ t('D101 贵卡出手奖励（v1.5.126 用户洞察：它不会用电磁炮/大�
     'env 名/键/读出三处都要在**单一来源**里');
 });
 
+t('D108 候选特征不得把"打 0 号座"当成"无目标"（qoder-research 0920 · 座位身份泄漏现行犯）', function () {
+  /* 病（policy.js:397 旧写法 `if (!tid ...)`）：target pid 0 是 falsy ⇒ "打 0 号"的候选
+   * 拿到与"无目标"同款的**全零目标块** ⇒ 网络能把"零块"学成"软目标"，镜像局全员集火 0 号座。
+   * 实测（RESEARCH-LOG §9）：v7aim1-82 自对局 120 局 × 3 盐配置，**首死 120/120 全是 0 号座**。
+   * 守门 = 镜像等性价对：完全对称局面上，(座1 打 座0) 与 (座0 打 座1) 是同一相对局面，
+   * actionFeatures 必须**逐位相等**；并对照组 (座1 打 0) vs (座1 打 2) 允许不等（防止"恒输出零块"的假修法）。 */
+  const st = S.createState('long', { next: function () { return 0.5; } }, 5);
+  st.slotSalt = 123456;
+  const a = Pol.actionFeatures(st, 1, 'snipe', { key: 'snipe', target: 0 });
+  const b = Pol.actionFeatures(st, 0, 'snipe', { key: 'snipe', target: 1 });
+  eq(a.length, b.length, '两侧维数一致');
+  const diff = [];
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff.push(i);
+  eq(diff.length, 0, '镜像等性价对（1→0 vs 0→1）特征必须逐位相等，不等的维：' + JSON.stringify(diff));
+  /* 对照组必须造**不对称**局面：完全对称局面上不同目标的特征**本应全同**（那是真对称，不是假修法）。 */
+  st.p[2].hp = 3;
+  const c2 = Pol.actionFeatures(st, 1, 'snipe', { key: 'snipe', target: 2 });
+  st.p[2].hp = 5;
+  let anyDiff = false;
+  for (let i = 0; i < a.length; i++) if (c2[i] !== a[i]) anyDiff = true;
+  ok(anyDiff, '对照组（不对称局面）：换目标的特征不得全同（挡"永远返回零块"的假修法）；对称局面特征全同是**正确的**');
+});
+t('D109 形状适应度 S4_W：默认关 · 断线必抛 · 真评分器可跑（P2 · qoder-research 0920）', function () {
+  /* 三件事：① 出厂 s4W=0（不加项）；② S4_W>0 而宿主没注入 __shapeScorer ⇒ scoreMemberN **抛错**
+   *    （静默降级 = 又一次"开关看着接上、实际作用在没跑的那条路"——附录 D 臂 K 的 A/A 事故形状）；
+   * ③ 真接线可跑：shape-scorer.mjs（复用 tools/v2v4-lib 的 duelAssembly，D107 单一来源）在 np-test 沙箱里
+   *    对随机策略出 0..1 的分。 */
+  eq(T.economyReward().s4W, 0, '默认 s4W 必须 0（econ-env 不设 ⇒ 出厂逐字不变）');
+  T.setEconomyReward({ wallFilter: false });   // 自防：不依赖前面门的收尾（wallFilter 泄漏史见 evo reset 注释）
+  const p = Pol.makePolicy(0.25);
+  const opps = [{ name: 'random', sel: Bots.pickRandom }];
+  const had = sb.window.__shapeScorer;
+  try {
+    T.setEconomyReward({ s4W: 0.2 });
+    delete sb.window.__shapeScorer;
+    let threw = false;
+    try { T.scoreMemberN(p, opps, 1, 3, 1, 0, 0); } catch (e) { threw = /__shapeScorer/.test(String(e && e.message)); }
+    ok(threw, 'S4_W>0 且评分器缺线 ⇒ 必须抛错（不许静默跑成 A/A）');
+    sb.window.__shapeScorer = function () { return 0.5; };
+    const r1 = T.scoreMemberN(p, opps, 1, 3, 1, 0, 0);
+    ok(r1 && typeof r1.fit === 'number' && isFinite(r1.fit), '接上桩评分器后打分必须正常出 fit');
+    const v = makeShapeScorer(sb.window, 2)(p);
+    ok(typeof v === 'number' && v >= 0 && v <= 1, '真评分器（V4 形状 × 两条外部线）输出须在 0..1，实测 ' + v);
+  } finally {
+    T.setEconomyReward({ reset: true }); T.setEconomyReward({ divRoleW: 0 });
+    if (had) sb.window.__shapeScorer = had; else delete sb.window.__shapeScorer;
+  }
+});
 t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）', function () {
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
@@ -4105,7 +4164,7 @@ t('D71 蓄能经济门槛：ep<2 不许蓄能（v7 口径），legacy 保持旧�
   ok(seg.indexOf('P.choose(state, pid, base,') >= 0, 'legacy 分支必须仍用未过滤的 base（历史基线可比）');
 });
 
-t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草案、待用户裁定**）· V2 只记录不阻断', function () {
+t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草案、待用户裁定**）· V2 已标定成阈值门（09-20 夜，草案待裁定）', function () {
   /* 动机（两条独立证据，都出自 v1.5.131）：
    *  ① R61 改引擎后，线上 3P 包（权重是在旧语义下训的）在 V4/V2 上掉了 1.1pt / **24.7pt**，
    *     而**这两条轴当时没有任何门** ⇒ 静默丢了两个版本（CHANGELOG v1.5.131 §4/§5、HANDOFF §4-11/§4-12）。
@@ -4116,12 +4175,15 @@ t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草�
    *   线上包 **V4 16.1%/席**；**零权重常数策略 V4 3.4%/席**（阳性对照）；6 个臂包 1.8 / 5.1 / 2.5 / 5.8 / 15.0 / 4.0。
    *   ⇒ 草案 **V4 ≥ 10%/席**：现包余量 6.1pt、零权重 3.4 被挡、**6 个臂里 5 个跌破** ⇒ 判别力够。
    *   **阈值是草案，等用户裁定**；改它只需改下面的 `V4_MIN`（判词会自动跟上）。
-   * ⚠️⚠️ **V2 为什么只记录不阻断**（v1.5.132 实测，与 G3 座位同族）：**零权重常数策略在 V2 上拿到 10.2%，
+   * ⚠️⚠️ **V2 为什么（当时）只记录不阻断**（v1.5.132 实测；**09-20 夜已升级为阈值门，见下面 ③ 的标定证据**，
+   *   本段留作升级前的背景账）：**零权重常数策略在 V2 上拿到 10.2%，
    *   与线上冠军的 10.0% 一模一样** ⇒ 这条轴对"包好不好"**没有判别力**（任何阈值都会被垃圾满足）。
    *   但它作为**历史坐标**仍有意义：R61 之前同一个包在 V2 上是 **34.7%** ⇒ 那次引擎改动把它**从"明显高于
    *   什么都不做"打到了"就是什么都不做"**。⇒ 想让它重新有判别力，得先让"什么都不做"显著低于"好包"，
    *   那是**另一件工作**（不是加个阈值就能解决的）。 */
   const V4_MIN = 10;
+  /* V2 阈值（2026-09-20 夜标定，证据与"草案待裁定"标注在下方 ③ 的注释里）。 */
+  const V2_MIN = 15;
   const G = 600, SEED = 7777;
   const DEP = { S: S, Play: Play, T: T, R: R, B: Bots };
   const params = Pol.unpack(sb.window.EPIRUS_CHAMPION_3P, true);
@@ -4142,11 +4204,17 @@ t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草�
   ok(z.V4 < V4_MIN, '阳性对照：零权重常数策略的 V4 必须低于 ' + V4_MIN + '%（实测 **' + z.V4.toFixed(1) +
     '%**）⇒ 否则这条门只是"量具死了"');
   ok(o.V4 > z.V4, '线上包的 V4 必须高于零权重策略（' + o.V4.toFixed(1) + '% vs ' + z.V4.toFixed(1) + '%）');
-  /* ③ V2 的**判别力自检**（记录不阻断，但要能发现"它将来变得有判别力了 / 或量具坏了"）：
-   *    现在它必须与零权重**同档**（±4pt）—— 这正是它不被立成阈值的原因。若哪天这条红了，
-   *    说明 V2 变有判别力了（好事）⇒ 那时再按 G4 的规矩给它标定阈值。 */
-  ok(Math.abs(o.V2 - z.V2) <= 4, 'V2 现状必须与零权重同档（线上 ' + o.V2.toFixed(1) + '% vs 零权重 ' + z.V2.toFixed(1) +
-    '%）—— 若拉开了 ⇒ V2 变有判别力了，**那时**再给它标定阈值并升成阻断门（本门只记录）');
+  /* ③ V2 阈值门（**2026-09-20 夜由"判别力示警"升级而来**，路径正是旧注释预留的：示警红了 ⇒ 按 G4 规矩
+   *    标定阈值并升成阻断门）。标定证据（v7n1-93 上线时实测 · n=600 · seed 7777）：
+   *      零权重 10.2% · 前任 v7press3-91 10.0%（当时与零权重同档 ⇒ 才判"无判别力、只记录"）·
+   *      **现役 v7n1-93 21.2%** · v7n1-31 25.2% · v7s9-82 32.7% · v7s8-82 14.7%
+   *    ⇒ 轴现在分得开"什么都不做"和"好包"了。草案阈值 **V2 ≥ 15%**：挡零权重/前任（10.0~10.2），
+   *    现役余量 6.2pt（n=600 抽样 σ≈1.6pt，不贴线）；旧臂 s8-82 的 14.7 会被挡——正是要候选超过它。
+   *    ⚠️ **阈值仍是草案、待用户裁定**（与 V4_MIN 同规格）；改它只需改下面的 `V2_MIN`。 */
+  ok(z.V2 < V2_MIN, '阳性对照：零权重常数策略的 V2 必须低于 ' + V2_MIN + '%（实测 **' + z.V2.toFixed(1) +
+    '%**）⇒ 否则 V2 阈值门的绿是"量具死了"');
+  ok(o.V2 >= V2_MIN, 'V2（每席位胜率）必须 ≥ ' + V2_MIN + '%（线上 ' + o.V2.toFixed(1) + '% vs 零权重 ' + z.V2.toFixed(1) +
+    '%）—— 低于它 = 在"两席同包"形状上不比什么都不做强（标定证据见上方注释）');
   /* ④ 单一来源：装配只许有一份（本仓"同一规则两处维护必然漂移"栽过四次）。 */
   const pb = readFileSync('tools/probe-ring-ablate.mjs', 'utf8');
   ok(pb.indexOf("from './v2v4-lib.mjs'") >= 0, '探针必须从 v2v4-lib.mjs 导入装配（不许自己再写一份）');

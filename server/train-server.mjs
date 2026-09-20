@@ -19,6 +19,10 @@ import { makeAsyncStep, makeParallelEvalN } from './paralleltrain.mjs';
 import { readFightEnv, hasFightOverride, FIGHT_REWARD_KEYS } from './fight-env.mjs';
 /* v1.5.89：经济/熵奖励 env 的**单一来源**（与 worker 共用同一份解析，见该文件头部的同族 bug 说明）。 */
 import { readEconEnv, hasEconOverride } from './econ-env.mjs';
+/* N3（qoder-research 0920 · RESEARCH-QUEUE 09-20）：产物 meta 记**落盘时的规则指纹** ——
+ * 09-20 语义变更（policy.js !tid 修）之后，677 个 .bak 里哪些是旧语义训的没有任何机械手段可分辨。 */
+import { rulesFingerprint } from '../tools/rules-fingerprint.mjs';
+import { makeShapeScorer } from './shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -49,6 +53,8 @@ for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/
   vm.runInNewContext(readFileSync(join(root, f), 'utf8'), sb, { filename: f });
 }
 const T = sb.EpirusTrainer, P = sb.EpirusPolicy, R = sb.EpirusRules;
+/* P2（qoder-research 0920）：与 worker 同一份宿主接线（server 的无 worker 回退路径也要能跑形状项）。 */
+sb.__shapeScorer = makeShapeScorer(sb, Number(process.env.EPIRUS_S4_GAMES || 8));
 const stepAsync = makeAsyncStep(T);   // 并行加速：每代把评估切到 worker 池跑多核
 console.log('[parallel] 训练 worker 数：' + stepAsync.workers);
 
@@ -333,7 +339,7 @@ if (process.env.EPIRUS_TGT_W && T.setTargetReward) {
     for (const c of clients) sse(c, { type: 'lineage', round: r + 1, parents: nextParents.map(function (p) { return { label: p.label, seedId: p.seedId }; }) });
     const finalPack = P.pack(best ? best.champion : cur);
     lastChampionPack = finalPack;
-    writeBundle(finalPack, { source: 'server/train-server.mjs', seeds: seedN, gens, round: r + 1, rounds, ts: new Date().toISOString(), keptExisting: bestSeed < 0, fresh: fresh, champWr: bestWr, seed: Number((cfg && cfg.seed0) || 0), hotstartFrom: hotstartFrom, seedEmbeddedFrom: seedLegacyFrom });
+    writeBundle(finalPack, { source: 'server/train-server.mjs', seeds: seedN, gens, round: r + 1, rounds, ts: new Date().toISOString(), keptExisting: bestSeed < 0, fresh: fresh, champWr: bestWr, rulesFingerprint: rulesFingerprint(), seed: Number((cfg && cfg.seed0) || 0), hotstartFrom: hotstartFrom, seedEmbeddedFrom: seedLegacyFrom });
     last = { best: bestScore, champWr: bestWr, bestSeed, keptExisting: bestSeed < 0 };
     for (const c of clients) sse(c, { type: 'roundDone', round: r, rounds, champWr: bestWr, bestSeed, keptExisting: bestSeed < 0 });
   }
@@ -719,7 +725,7 @@ async function runTrainN(gens, cfg) {
     runningN = false; poolN.close();
     return;
   }
-  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, feasibility: feasibleInfo, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), fightOverride: (fightSet ? JSON.stringify(fightEnv) : ''),
+  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, rulesFingerprint: rulesFingerprint(), styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, feasibility: feasibleInfo, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), fightOverride: (fightSet ? JSON.stringify(fightEnv) : ''),
     /* v1.5.11：把**实际生效**的奖励参数也记下来（哨声惩罚现在长程默认开、不靠 env ⇒ 只记 env 会漏） */
     fightEffective: (T.fightReward ? JSON.stringify(T.fightReward()) : ''),
     ecoEffective: (T.economyReward ? JSON.stringify(T.economyReward()) : ''),

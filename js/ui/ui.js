@@ -437,8 +437,17 @@
         B.aiFallback = false;
         const base = legal.filter(function (l) { return l.affordable; });
         const legalForAI = base.length ? base : [{ key: R.SK.JI, affordable: true }];
-        /* v7：候选感知入口（技能, 目标, 珠类型）—— 旧包在 pickChampion 内部自动回退旧口径 */
-        return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15));
+        /* v1.5.137（用户裁定 09-20 深夜：运行时 AI 加一点随机破镜像僵局）：**ε-greedy 0.25**，温度维持
+         * 评测口径 0.15 不动。
+         * 病（用户实测 results/93/…104回合）：两席同包在对称局面下 softmax 温度再高也破不了——
+         *   · 2 人长程：双方每回合都【ジ】（冷战，攻击=互爆所以都不打），一路拖到**第 104 回合收缩**双双阵亡（平局）；
+         *   · 5 人残局：两个幸存者互【枪→对方】同优先级**相抵 132 次**，同样烧到收缩。
+         * 关键诊断：温度只是按 logit 重加权，**当某动作以巨大优势独大时（ジ/枪在镜像里）温度抬到 0.7 仍是 104 回合零决胜**；
+         *   只有 ε-greedy 的"以 ε 概率在**全体候选**里均匀采样"能强制探索、真正打破对称。
+         * 实测（2 席同包镜像 · 40 局）：eps=0 ⇒ 决胜 0%；eps=0.25 ⇒ 长程 52 回合/100% 决胜、多人 28 回合/98%。
+         * 取 0.25 = 每 4 手约 1 手试探性随机：够破对称，又保留 3/4 的强网络判断（"该打谁"仍是网络说了算）。
+         * ⚠️ **只影响浏览器运行时**：温度仍是评测/门禁/skill-report 的 0.15、且 evalN 不传 eps ⇒ 训练读数逐字不变。 */
+        return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15, 0.25));
       }
       B.aiFallback = true;                                  // 冠军缺失 → 显式回退，不静默
       return finish(DN.hard.pick(state, pid, legal));
@@ -729,10 +738,15 @@
       case 'holoSet': return { cls: 'ev dim', html: '🛡 ' + nm(e.pid) + ' 用【全息屏障】护住 ' + nm(e.target) + '（本回合视为原型制御架势）' };
       case 'blocked': return { cls: 'ev dim', html: '🛡 ' + nm(e.to) + ' 的【' + (e.by || '架势') + '】挡下伤害' + (e.judge ? '（判定成功）' : '') };
       case 'reflect': {
-        const guardName = e.by === 'armor' ? '藤甲' : '反弹';
+        /* v1.5.136（用户实机报的 bug ③）：原型制御的弹回原先也印成【反弹】⇒ 日志里分不清是反弹架势还是
+         * 原型制御（两者语义不同：反弹只格挡枪/剑线，原型制御挡除地雷/转移外一切）。事件早带了 `by:'proto'`，
+         * 只是渲染器没读。 */
+        const guardName = e.by === 'armor' ? '藤甲' : (e.by === 'proto' ? '原型制御' : '反弹');
         return { cls: 'ev gold', html: '↩ ' + nm(e.from) + ' 的攻击被 ' + nm(e.to) + ' 的【' + guardName + '】弹回 → 伤害落到 ' + nm(e.from) };
       }
-      case 'transfer': return { cls: 'ev gold', html: '↩ ' + nm(e.to) + ' 使用【转移伤害】，伤害弹回给 ' + nm(e.from) };
+      /* v1.5.136（bug ①的 UI 面）：转移是"转给转移者指定的那个人"（e.dest），不是"弹回攻击者"（e.from）。
+       * 旧文案跟着错误实现写；`e.dest` 缺省（旧记录回放）时退回 from，不至于显示 undefined。 */
+      case 'transfer': return { cls: 'ev gold', html: '↩ ' + nm(e.to) + ' 使用【转移伤害】，伤害转移给 ' + nm(e.dest != null ? e.dest : e.from) };
       case 'curse': return { cls: 'ev pur', html: '🧧 ' + nm(e.owner) + ' 给 ' + nm(e.pid) + ' 贴上符咒' };
       case 'curseBlock': return { cls: 'ev dim', html: '🧧 符咒被 ' + nm(e.pid) + ' 的架势挡下' };
       case 'firestorm': return e.n > 0 ? { cls: 'ev dmg', html: '🔥 ' + nm(e.pid) + ' 引燃 ' + e.n + ' 枚符咒！' } : { cls: 'ev dim', html: nm(e.pid) + ' 放天火，但没有可引爆的符咒' };

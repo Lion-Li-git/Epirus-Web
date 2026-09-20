@@ -97,7 +97,12 @@ export function rates(w, k) {
  *   · `forceTurtle`：反方向 —— 被测席任何非ジ输出都改判成ジ（只测"完全不还手"会怎样）。
  *   两个钩子都记 `forced` 次数（**空枪检测**：为 0 ⇒ 本行无信息，不得读成"改了没用"）。
  * 返回：{ winPct, drawPct, champWinPct, avgRounds, champDecisions, jiShare, counts, forced,
- *        aliveChampEnd, aliveScriptedEnd, hpScriptedEnd } */
+ *        aliveChampEnd, aliveScriptedEnd, hpScriptedEnd,
+ *        turtleAtkPerGame, turtlePierceShare, turtleLandShare }
+ *  —— 末三列（qoder-research 0920 · N1）只在脚本席常开防御时有意义：
+ *  `turtleAtkPerGame` = 被测席对防御中的脚本席出手的频次（被挡 + 落害都算）；
+ *  `turtlePierceShare` = 其中"穿防卡"（坦克/狙击/电磁炮/过载炮）占比 —— DS 预注册的行为判据分母；
+ *  `turtleLandShare` = 落害/总出手（作废防御后落害也算数）—— 训练行分用它，判据两个都读。 */
 export function duelAssembly(deps, params, opts) {
   const S = deps.S, Play = deps.Play, T = deps.T, R = deps.R;
   const o = opts || {};
@@ -109,9 +114,14 @@ export function duelAssembly(deps, params, opts) {
   const JI = R.SK.JI, GUN = R.SK.GUN;
   const keys = o.countKeys || null;
   const counts = {}; if (keys) keys.forEach(function (k) { counts[k] = 0; });
-  let win = 0, draw = 0, rounds = 0, dec = 0, ji = 0, forced = 0;
+  let win = 0, draw = 0, rounds = 0, dec = 0, ji = 0, forced = 0, clears = 0;
   let aliveChampEnd = 0, aliveScriptedEnd = 0, hpScriptedEnd = 0;
   let dmgToScripted = 0, dmgByScripted = 0, champDmg = 0;
+  /* N1 打龟归因：穿防卡集合 —— 规则表带 pierce.defense 的 + 过载炮（resolve 里硬编码穿防反弹）。 */
+  const pierceDef = new Set((R.skills || []).filter(function (sd) { return sd.pierce && sd.pierce.defense; })
+    .map(function (sd) { return sd.key; }));
+  pierceDef.add(R.SK.CANNON);
+  let turtleAtk = 0, turtlePierce = 0, turtleLand = 0;
   for (let g = 0; g < G; g++) {
     const seat = g % 5;
     const st = S.createState(mode, { next: mb(seed0 + g * 991) }, 5);
@@ -143,6 +153,11 @@ export function duelAssembly(deps, params, opts) {
     };
     const cs = []; for (let i = 0; i < 5; i++) cs.push(i === seat ? (scripted === 'champ' ? mine : scripted) : mine);
     Play.autoGameN(st, cs);
+    /* qoder-research 0920（P2 第三行）：**收缩前击杀数** —— 与场B 门禁同口径（`countClears` 单一真源，
+     * 只认"收缩开始前打死"，按伤害归属记在击杀者头上）。V4 形状里脚本席只有 1 个 ⇒ 每局合计 ∈ {0,1}。 */
+    if (typeof T.countClears === 'function') {
+      for (let i = 0; i < 5; i++) if (i !== seat) clears += T.countClears(st.events, i);
+    }
     rounds += st.round;
     if (st.winner === seat) win++; else if (st.winner === 'draw') draw++;
     let ac = 0;
@@ -154,10 +169,20 @@ export function duelAssembly(deps, params, opts) {
      * 而"往不往枪手身上打"看得出来 —— 6 个臂包的脚本席余血 2.37~4.60 vs 线上包 1.73）
      * ⇒ 直接按事件统计：谁打的、打给谁（口径与 `audit-lib.aggressionProfile` 同字段名）。 */
     if (st.events) for (const e of st.events) {
-      if (e.type !== 'damage') continue;
-      if (e.source === seat) dmgByScripted += e.amt;
-      else if (e.source != null) champDmg += e.amt;
-      if (e.to === seat) dmgToScripted += e.amt;
+      if (e.type === 'damage') {
+        if (e.source === seat) dmgByScripted += e.amt;
+        else if (e.source != null) champDmg += e.amt;
+        if (e.to === seat) dmgToScripted += e.amt;
+        /* N1：打在脚本席身上的"实卡伤害"（via 必须是真技能键，排除 counter/chain/dream 等间接伤害） */
+        if (e.to === seat && e.source != null && e.source !== seat && R.byKey[e.via]) {
+          turtleAtk++; turtleLand++;
+          if (pierceDef.has(e.via)) turtlePierce++;
+        }
+      } else if (e.type === 'blocked' && e.to === seat && (e.by === '防御' || e.by === '金刚盾')) {
+        /* 被防御挡下 ⇒ 这次出手也是"砸龟"，但没穿（via 缺省时不计键） */
+        turtleAtk++;
+        if (R.byKey[e.via] && pierceDef.has(e.via)) turtlePierce++;
+      }
     }
   }
   return {
@@ -168,7 +193,11 @@ export function duelAssembly(deps, params, opts) {
     aliveChampEnd: aliveChampEnd / G, aliveScriptedEnd: aliveScriptedEnd / G,
     hpScriptedEnd: hpScriptedEnd / G,
     dmgToScriptedPerGame: dmgToScripted / G, dmgByScriptedPerGame: dmgByScripted / G,
-    champDmgPerGame: champDmg / G
+    clearsPerGame: clears / G,
+    champDmgPerGame: champDmg / G,
+    turtleAtkPerGame: turtleAtk / G,
+    turtlePierceShare: turtleAtk ? turtlePierce / turtleAtk : 0,
+    turtleLandShare: turtleAtk ? turtleLand / turtleAtk : 0
   };
 }
 

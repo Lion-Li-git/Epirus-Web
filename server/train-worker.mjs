@@ -15,6 +15,7 @@ import { readFightEnv, hasFightOverride } from './fight-env.mjs';
 /* v1.5.89：经济/熵奖励 env 的**单一来源**（第八轮复核 §2：原先只在服务进程内联读，
  * `EPIRUS_DIV_W/DIV_K/DIV_FORCE_GENS/WALL_FILTER` 到不了 worker ⇒ 臂 K/臂甲的 A/B 实际是 A/A）。 */
 import { readEconEnv, hasEconOverride, econEcho } from './econ-env.mjs';
+import { makeShapeScorer } from './shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -45,6 +46,10 @@ for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/
   vm.runInNewContext(readFileSync(join(root, f), 'utf8'), sb, { filename: f });
 }
 const T = sb.EpirusTrainer;
+/* P2（qoder-research 0920 · RESEARCH-LOG §12）：形状评分器宿主注入（单一来源 = tools/v2v4-lib 的 duelAssembly）。
+ * 常驻注入、由 evo 侧的 S4_W 决定调不调（S4_W=0 ⇒ 一次都不跑 ⇒ 出厂行为逐字不变；
+ * S4_W>0 而这里没注入 ⇒ evo 会**抛错**而不是静默降级——A/A 事故的教训写死在门里）。 */
+sb.__shapeScorer = makeShapeScorer(sb, Number(process.env.EPIRUS_S4_GAMES || 8));
 /* v1.5.48（复核 §3 的偏置二分）：实验掩码 env 通道。
  * `setFeatMask('bead,target,effects,rel')` **只改特征取值、不改形状**（PACK_VERSION/paramCount 不变）
  * ⇒ 逐块掩掉各训 2 个 seed，看哪块掩掉后座位偏置（G3 极差）塌回 ⇒ 定位泄漏通道。 */

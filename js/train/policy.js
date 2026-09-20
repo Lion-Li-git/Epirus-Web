@@ -394,7 +394,15 @@
     if (MASK.bead) base.push(bead === 'elec' ? 1 : 0, bead === 'boom' ? 1 : 0);
     else base.push(0, 0);
     const tid = (cand && cand.target != null && state.p[cand.target]) ? cand.target : null;
-    if (!tid || !MASK.target) { for (let z = 0; z < 6; z++) base.push(0); return base; }
+    /* ⚠️ qoder-research 0920（RESEARCH-LOG §9 · D108 守门）：这里**必须**用 `== null` 判"无目标"。
+     * 旧写法 `!tid` 把**合法目标 0 号座**（falsy）也判成无目标 ⇒ "打 0 号"的候选拿到一整个
+     * 全零特征块（= "hp0/ep0 的软目标"），而其他目标拿到真值 —— 座位身份经由候选特征泄漏进网络。
+     * 实测（镜像自对局 120 局 × 3 种盐配置）：**每一局第一个死的都是 0 号座（120/120）**，
+     * 且只在"会瞄准"的包里发作到极端（Q1/课程系偏座 33~44pt 的真凶；线上包轻度 10~15pt）。
+     * 守门：`np-test D108`（镜像等性价对测试：座1→0 与 座0→1 的 actionFeatures 必须逐位相等）。
+     * ⚠️ 语义修正会让**在旧语义下训出的包**行为偏移（policy.js 在指纹清单里 ⇒ D16 要求两包 meta 重记），
+     *   处理口径与 R61/v1.5.129 完全同款：先重记、重训臂一律在新语义下跑。 */
+    if (tid == null || !MASK.target) { for (let z = 0; z < 6; z++) base.push(0); return base; }
     const t = state.p[tid], hpm = state.mode.hp;
     let minHp = Infinity;
     for (let i = 0; i < state.p.length; i++) {
