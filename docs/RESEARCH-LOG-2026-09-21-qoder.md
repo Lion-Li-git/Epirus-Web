@@ -72,3 +72,13 @@ frac 0.25、DIV_W=0.3、CLEAR_W=0.1、SEAT_GAMES=24、22 席池、ALLOW_HEALTH_F
 `pickDeepSaver:0.25,pickAimDefender:0.25,pickBreakDef:0.25,pickHeavyFire:0.25`（frac 0.25 不变）。HOT=v7n1-93，seeds 31,82,93，产物 v7t2-*。
 判据 = 同 t1 的①~④；**通过**：任一 seed 大雷或电磁炮使用率 ≥2%（原生口径）且 ② 不回退；**否证**：示范段也长不出 ⇒
 贵卡问题定论为**形状/特征面**（网络看不见"我 ep 富余 & 目标防姿/残血"与贵卡价值的连接），转 6th-row/特征交叉设计给 DS，臂路停止。
+
+## 4. #22 v7t2p（2P 专训臂）预注册 + 槽位安全规程
+
+**通道**：`tools/train-best.mjs`（2P 专用训练器；热启动=现 2P 冠军 seedChampion，本仓唯一真生效热启动）。
+配方：默认 3 候选 × 500 代，评测=20 基准×40 局（>0.5 门 + min 主导），新语义 56402bbf 下训练。
+**槽位安全**：train-best **直写 js/bundled-champion.js** ⇒ 跑完立即：产物拷贝进 `docs/artifacts/v7t2p-2p.bak` →
+`git checkout -- js/bundled-champion.js index.html` 还原槽位到已提交字节（.bak 残留删除）。**本臂只测路通不通，不动槽**。
+**判据**（跑前写死）：① 对现 2P 冠军 H2H（standard，120 局，先手轮转）**胜差 >0**；② 20 基准考卷 avg ≥ 现冠军的 0.9831−2pt；
+③ N=2 对脚本席胜率 ≥ 现 2P 冠军同场读数。**通过** ⇒ 早班报"2P 可换专训包"裁定件；**否证** ⇒ 2P 槽维持现冠军、
+"删 2P 改多人可选 2 人"的原计划按人数适应性数据另议（3P 包 2P 失校已量化：32% vs 97%）。
