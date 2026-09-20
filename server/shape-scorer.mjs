@@ -33,8 +33,12 @@ export function makeShapeScorer(win, games) {
      * `winPct` 就是防席夺冠率；行分 = 1 − min(1, 防席夺冠/25)（阈值与 G5 门禁逐字同）。 */
     const guardOnly = function () { return { key: 'guard', target: null }; };
     const guardRow = function () {
-      const r = duelAssembly(deps, params, { games: G, mode: 'long', seed0: 90210, scripted: guardOnly });
-      return Math.max(0, 1 - Math.min(1, r.winPct / 25));
+      /* Q8 教训（v7s7-31：long G5 过、multi G5 仍 35%）：防龟能力**分模式**——行分必须与门禁一样
+       * 两模式都量（G5 判 long+multi），否则训练只修 long、multi 留死角。 */
+      const a = duelAssembly(deps, params, { games: G, mode: 'long', seed0: 90210, scripted: guardOnly });
+      const b = duelAssembly(deps, params, { games: G, mode: 'multi', seed0: 90210, scripted: guardOnly });
+      const pen = function (w) { return Math.max(0, 1 - Math.min(1, w / 25)); };
+      return (pen(a.winPct) + pen(b.winPct)) / 2;
     };
     return (one(B.pickGunFocus) + one(B.pickBeadBurst) + clearRow() + guardRow()) / 4;
   };
