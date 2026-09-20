@@ -58,8 +58,13 @@ console.log(`[parallel] worker 数：${stepAsync.workers}；训练 ${N} 个候�
 /* v1.5.130：**热启动开关**（默认开）。
  * 背景（本轮实测反例）：本工具原先让 16 个个体**全部随机重开**（`makeTrainer` 的 `P.makePolicy(0.25)`），
  * 于是一次"学会了新线（珠爆发 0%→93%）"的运行同时把 `defend`/`reflectspam` 打成 **0%**
- * —— 修一个洞、开两个洞。3P 侧早就是热启动（`EPIRUS_BUNDLE_IN` = 最新冠军，HANDOFF §2.2），
- * 2P CLI 是唯一的例外；`evo.js` 的 `seedChampion()` 本来就是为"围绕冠军变异"写的。
+ * —— 修一个洞、开两个洞。
+ * ⚠️ **原话此处写"3P 侧早就是热启动（`EPIRUS_BUNDLE_IN` = 最新冠军，HANDOFF §2.2）"—— 那句已被证伪**
+ * （`qoder-research-0920` §5，2026-09-20；DS 复核）：`tools/ring2-run.mjs:95` **无条件覆写** `EPIRUS_BUNDLE_IN`，
+ * 起点恒为 `docs/artifacts/champion-5p-v1.3.58.bak`（:78）⇒ 3P 侧从来没有"从最新冠军热启动"过；
+ * 它的真开关是 **`RING2_HOT=<包路径>`**（近期臂与线上包的 `meta.hotstartFrom` 全是 `d13d3c856c6cff62` 即此故）。
+ * ⇒ **2P 侧这条（`EPIRUS_HOTSTART` + `T.seedChampion(t, curP)`）是本仓唯一真正生效的热启动**。
+ * `evo.js` 的 `seedChampion()` 本来就是为"围绕冠军变异"写的。
  * `EPIRUS_HOTSTART=0` 可退回旧口径（与 v1.5.129 及之前的读数同口径）。 */
 const HOTSTART = process.env.EPIRUS_HOTSTART !== '0';
 
