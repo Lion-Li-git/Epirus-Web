@@ -15,6 +15,8 @@
 > - Q3 环×贵卡臂（BASE 谱系）：`v7rb1-31.bak` `v7rb1-82.bak` `v7rb1-92.bak`（2/3 长成 CLEAR_W 长寿刷收缩被动解，95-102 回合/局）
 > - Q3b（线上包热启动候选②）：`v7rb2-31.bak` `v7rb2-82.bak` `v7rb2-92.bak`（共存两代 0/6 ⇒ §4-2 建议按带证据否证结案）
 >
+> - P1 课程臂（分段教师 deepsaver→aimdefender · HOT=v7aim2-82）：`v7cur-31.bak` `v7cur-82.bak` `v7cur-93.bak`（**未 promote**）
+>   · 93=行为门 G4/G5 **全表首次两模式绿**（只枪 20/10 · 瞄威胁 33/10 · 场A 34 · 场B 0.8 · 座位 22 ✓）但挂 墙 0.00 + G 2.88；82=G 6.44 但座位 44pt/墙 0/场B 0.00；31=退化（只枪 100）。三粒**齐挂反弹墙 0.00** ⇒ 课程把火力全押瞄准轴。
 > 代码侧（本分支）：`pickAimDefender` 教师 · `EPIRUS_RING_W` 接 econ-env（默认关）· `RING2_HOT` ·
 > G6 读回跨行修复 · **G4IMPL 实现身份双绑（阳性对照：POOL 不变/IMPL 变）** ·
 > **账目更正：NP 臂的“热启动=最新冠军”此前是假的（runner 覆写 EPIRUS_BUNDLE_IN、恒拷 v1.3.58 BASE；近期全部臂与线上包同谱系 d13d3c856c6cff62）**。
