@@ -1,3 +1,13 @@
+## research(qoder 0920 · 晚班 N1/N3 记账 · 不升版本 · 未 promote)
+
+> 过程与预注册判据：`docs/RESEARCH-LOG-2026-09-20-qoder.md` §19/§20。
+> 新产物（`.bak`，gitignored，按 D82 点名）：`v7n1-31.bak` `v7n1-82.bak` `v7n1-93.bak` —— 第五行（打龟穿透占比）臂，
+> Q10 配方逐字、唯一变化 = 形状评分器四行→五行。**31/93 三条预注册判据（n=120：G5-long ≤25%、G4 两模式 ≤60%、
+> 打龟穿透占比 ≥50%）全中 = 史上第一个全判据零阻断代**；82 只枪格 90% 红（血缘方差，如实记不救）。
+> 首批 meta 带 `rulesFingerprint=a78c28cb`（N3 落地）。**未 promote**（N4 裁定件等用户，推荐 v7n1-93；不再需要 --force）。
+> 配套：`tools/v2v4-lib.duelAssembly` 加打龟归因三列 · `server/shape-scorer.mjs` 五行化（复用第四行对局，零额外成本）·
+> `server/train-server.mjs` 两处落盘写指纹。np-test 156/156。
+
 ## research(qoder-research-0920 · 通宵臂产物记账 · 不升版本 · 全部未 promote)
 
 > 分支 `qoder-research-0920`（第三方 AI 接管训练研究一晚）。完整过程与预注册判据：`docs/RESEARCH-LOG-2026-09-20-qoder.md`。
