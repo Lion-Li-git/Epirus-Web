@@ -123,6 +123,7 @@ let imitPlanEchoed = false;   // v1.5.97：分段计划的回执同样只打一�
 let imitOnlyEchoed = false;   // v1.5.98：`only` 的回执
 let imitSubEchoed = false;    // v1.5.99：`subOnly` 的回执
 let subBeadEchoed = false;    // v1.5.141（DS）：`subBead` 的回执
+let beadSeedEchoed = false;   // v1.5.143（千问）：`beadSeed`（状态分布塑形）的回执
 let seatGamesEchoed = false;  // v1.5.102：训练侧座位探针局数的回执
 let clearWEchoed = false;     // v1.5.103：清场计数奖励的回执
 parentPort.on('message', (msg) => {
@@ -198,6 +199,12 @@ parentPort.on('message', (msg) => {
     if (T.setSubBead) {
       const gotBead = T.setSubBead(String(msg.subBead || '') === '1');
       if (!subBeadEchoed) { subBeadEchoed = true; console.log('[imit] worker **消息**subBead 生效 = ' + String(gotBead)); }
+    }
+    /* v1.5.143（千问 0921 午班）：**状态分布塑形**（`EPIRUS_BEAD_SEED=0.5` ⇒ 一半非补贴局开局带珠 + 2 ジ）。
+     * 与 `subBead` 分家：这条把"蓄能→放炮"的两回合序列**当场降成一回合**，检验珠线的瓶颈是信用分配还是价格。 */
+    if (T.setBeadSeed) {
+      const gotSeed = T.setBeadSeed(msg.beadSeed || 0);
+      if (!beadSeedEchoed) { beadSeedEchoed = true; console.log('[beadseed] worker **消息** beadSeed 生效 = ' + String(gotSeed)); }
     }
     /* ===== v1.5.102：训练侧**座位探针局数**（按消息设 + 回执；env 是拷贝，主路径是消息）=====
      * 病（v1.5.100 §17）：座位惩罚的样本是 `SEAT_GAMES = 6`（写死），而门禁要 ≥50 局 ⇒

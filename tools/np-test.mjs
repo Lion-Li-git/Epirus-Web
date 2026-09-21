@@ -3739,9 +3739,7 @@ t('D91 被无效化的聚能环不得续计（v1.5.105：出招即计次 + 复�
     'endTurn 的连击复位必须与 actionOf 同口径（加 `!a.voided`）');
   ok(rs.indexOf("if (!(a && a.outcome === 'ok' && a.key === SK.RING)) p.ringStreak = 0;") < 0,
     '旧的"只看 outcome"复位**不得**回来 —— 那是本 bug 的成因');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('被小雷无效化的聚能环') >= 0,
-    'spec 必须留下这条能反证的行为用例');
-  ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('**被无效化的聚能环不续计**') >= 0,
+    ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('**被无效化的聚能环不续计**') >= 0,
     'RULES-2P 的 R10 条款必须同步（旧措辞"不再连续（计数已+1）"自相矛盾，是 bug 的温床）');
   /* 边界：**过载炮**的"出招即计次"是 R43 的**用户裁定明文** ⇒ 不许被这次修复顺手波及。 */
   ok(readFileSync('js/core/state.js', 'utf8').indexOf('if (key === R.SK.CANNON) p.cannonCount++;') >= 0,
@@ -3905,9 +3903,7 @@ t('D92 R56 同层内资源型先结算（用户裁定：过载炮的清除须含
     '同层遍历顺序必须"先资源型、再其余"（两组各自保持轮换）');
   ok(rs.indexOf('for (const i of ord3) {') >= 0, '那一层必须真的用新顺序遍历（别只造了数组不用）');
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R56') >= 0, 'RULES-2P 必须记下 R56 这条裁定');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('资源型先结算') >= 0,
-    'spec 必须留下能反证的顺序用例（旧顺序读到目标 ep=3）');
-});
+  });
 
 t('D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必须一致）', function () {
   /* 用户报的 UI bug：用天火时会弹目标选择 —— 根因是**卡面声明成 `target: 'enemy'`**
@@ -3927,9 +3923,7 @@ t('D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必
     '天火伤害必须是**无目标伤害**（不传 `source`）—— 用户裁定：天火无目标 ⇒ 不参与大雷连带传导');
   ok(rs.indexOf("{ type: R.DMG.FIRE, source: i }") < 0, '天火不许带 `source`（v1.5.107 首版加过、被用户纠正）');
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R57') >= 0, 'RULES-2P 必须记下 R57');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('天火：**不需要目标**') >= 0,
-    'spec 必须留下能反证的用例（旧实现只会打中选中的那一个）');
-});
+  });
 
 t('D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下回合结束）', function () {
   /* 旧文 R22「仅在下回合内有效」= 纯预置 debuff；用户 2026-09-18 要求多覆盖一回合。 */
@@ -3942,9 +3936,7 @@ t('D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下
   ok(rp.indexOf('R58') >= 0, 'RULES-2P 必须记下 R58');
   ok(rp.indexOf('仅在下回合内有效') < 0 || rp.indexOf('旧口径（R22 原文）') >= 0,
     'R22 的"仅在下回合内有效"必须被标注为**已被 R58 取代**（不许留着一句与实现对不上的旧文）');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R58 藤甲覆盖面 +1 回合') >= 0,
-    'spec 必须留下 R58 的反证用例（旧实现当回合只吃 1 点）');
-});
+  });
 
 t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被触发」）+ 写入点只有一处', function () {
   /* 旧 R38 = 永久 ⇒ 实测"身上有雷还再敲"占 68%(多)/81%(长)（≈21/50 ジ每局纯浪费）；
@@ -3963,12 +3955,20 @@ t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被�
   ok(rs.indexOf('if (p.mineTurns > 0) {') >= 0 && rs.indexOf("type: 'mineExpire'") >= 0,
     '回合末必须递减并在归零时卸下（并留事件便于量具核对）');
   ok(readFileSync('js/core/state.js', 'utf8').indexOf('mineTurns: 0,') >= 0, 'state 必须有 mineTurns');
+  /* ===== v1.5.143 门禁审计：一条**运行时**断言，替掉原先 9 条"钉 spec 用例标题 / 钉 CHANGELOG 短语"的断言 =====
+   * 阳性对照（0921 实测）：把 spec 里 `R59 地雷时效` 改成 `R59 时效X` —— 行为逐字节没变、spec 仍 52/52，
+   * 而 np-test 当场红一条 ⇒ 那类断言测的是**字符串**不是**行为**（还会误伤正常的用例改名：
+   * 本仓今天就把一条 R61 改成 R62 避让重号）。它想防的"整条用例被静默删除"（v1.5.37 那族事故）
+   * 用**跑一遍**来防更准 —— 顺带把 spec 套件的失败也变成 np-test 的阻断（此前两边完全独立、没人连着跑）。 */
+  const specRun = spawnSync(process.execPath, ['tools/spec-run.mjs'], { encoding: 'utf8' });
+  const specM = /通过 (\d+) \/ (\d+)/.exec(String(specRun.stdout || ''));
+  ok(!!specM && Number(specM[1]) === Number(specM[2]) && Number(specM[2]) >= 52,
+    'spec 引擎用例必须**全绿**且条数 ≥52（现在是 ' + (specM ? specM[0] : '读不到输出') + '）');
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R59') >= 0, 'RULES-2P 必须记下 R59');
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('持续直到被触发') < 0 ||
      readFileSync('docs/RULES-2P.md', 'utf8').indexOf('旧文 R38 是') >= 0,
     'R38 的"持续直到被触发"必须被标注为**已被 R59 取代**');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R59 地雷时效') >= 0, 'spec 必须留下 R59 的反证用例');
-});
+  });
 
 t('D96 R60 净化清除"自身全部持续状态"（含增益）+ 写入点只有一处', function () {
   /* 用户裁定："藤甲与地雷既然成了 buff，就一并会被净化掉（还有避雷针、符咒、大雷禁用、梦魇）"。
@@ -3987,9 +3987,7 @@ t('D96 R60 净化清除"自身全部持续状态"（含增益）+ 写入点只�
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('**R60**') >= 0, 'RULES-2P 必须记下 R60');
   ok(readFileSync('js/core/rules.js', 'utf8').indexOf('清除自身**全部持续状态**') >= 0,
     '卡面描述必须同步（否则玩家看到的是旧的"只清负面"）');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R60 净化清除**自身全部持续状态**') >= 0,
-    'spec 必须留下 R60 的反证用例');
-});
+  });
 
 t('D97 环的**段长口径**（复核 §4）：必须按"用成了"数段（被无效化=断链）+ 不许只报"上环率"', function () {
   /* 复核 §4 的原话：现在报的"环转化率 8.06%"只数"上没上环" ⇒ **一个疯狂单按的包会被读成"很会用环"**，
@@ -4003,8 +4001,7 @@ t('D97 环的**段长口径**（复核 §4）：必须按"用成了"数段（被
   ok(pc.indexOf('会被单按刷高') >= 0, '必须写明旧口径"上环率"的失效方式（会被单按刷高）');
   ok(pc.indexOf('extractRingRuns(st.events)') >= 0,
     '**调用点必须在**（v1.5.111 我第一版只写了定义、漏了调用 ⇒ 读数全是 0 —— 与 D28"接线在文件里≠在跑的那条路径上"同族）');
-  ok(readFileSync('CHANGELOG.md', 'utf8').indexOf('ringRun2') >= 0, 'CHANGELOG 必须记这次口径替换');
-});
+  });
 
 t('D98 "终局收缩"的哨兵必须是它自己的标记（不许再用 source==null —— 地雷/天火按规则就是无来源）', function () {
   /* 病：`场B 清场` 的判据用 `damage.source == null` 当"收缩开始"的哨兵，可是
@@ -4052,11 +4049,7 @@ t('D99 两处修正：原型制御 ≥3 转移（R24）+ 目标架势特征不�
   ok(poCode.indexOf('(t.guardNext || t.baguaExtra || t.copiedGuard) ? 1 : 0') >= 0,
     '目标架势特征必须用**决策时刻真的存在**的信号（guardNext / baguaExtra / copiedGuard）');
   ok(po.indexOf('无根据的突然集火') >= 0, 'policy.js 必须写下这条根因（否则下一个人又会以为它读得到）');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R24 原型制御：**伤害总数 ≥3 各自转移给作用者**') >= 0,
-    'spec 必须留下 R24 的能反证用例（旧实现只会 blocked：三个枪手一滴都不掉）');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('铁索连环的传导**不被原型制御挡住**') >= 0,
-    'spec 必须钉住"铁索传导不被架势挡"这条（用户口径第 4 条）');
-  ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('三个人各用枪打') >= 0,
+      ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('三个人各用枪打') >= 0,
     'RULES-2P 必须写下用户口径的三个例子（三枪各反 1 / 大雷+天火 / 单发只挡）');
 });
 
