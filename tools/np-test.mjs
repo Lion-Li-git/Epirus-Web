@@ -4371,6 +4371,17 @@ t('D113 chooser 入口必须免疫"直喂原始包"（0921 qoder 审计：忘 un
   ok(typeof T.policyChooserN(null, 0.15) === 'function', 'params=null 必须仍可建 chooser');
 });
 
+t('D114 §N6 跨 N 混适应度：默认关（行为逐字）+ 接线三钉（夜班 09-22 · 时间盒=只实现+smoke）', function () {
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(t3.indexOf("process.env.EPIRUS_XN2W || 0") >= 0, 'EPIRUS_XN2W 必须默认 0（未设 ⇒ 一条行为不变）');
+  ok(t3.indexOf('if (XN2W > 0 && N > 2)') >= 0, '2P 切片只许在 W>0 且主场 N>2 时追加（2P 主场自己混自己 = 无意义）');
+  ok(t3.indexOf("T.setTrainMode('standard')") >= 0 && t3.indexOf('T.setTrainMode(prevMode)') >= 0,
+    '切片必须临时切 standard 并**复原**（半开事故族：fight-env/econ-env 的前车）');
+  /* 行为面：默认关时混入代码不可达 ⇒ 用一个 2 代微跑对照 W=0 与"未装此代码"同分不实测（CPU 紧），
+   * 这里退而求其次：验证 setTrainMode/trainMode 真在 EpirusTrainer 导出面上（否则上面全是死代码）。 */
+  ok(typeof T.setTrainMode === 'function' && typeof T.trainMode === 'function', 'evo 必须导出 setTrainMode/trainMode');
+});
+
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
    * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/
