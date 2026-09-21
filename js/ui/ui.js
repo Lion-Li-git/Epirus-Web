@@ -1146,14 +1146,40 @@
     if (!file) return;
     const rd = new FileReader();
     rd.onload = function () {
-      const r = Champ.store.importJSON(String(rd.result));
+      /* v1.5.141（用户要求"给界面加一个选冠军包的功能"）：先剥外壳 —— 训练产物 `docs/artifacts/*.bak`
+       * 是 `window.EPIRUS_CHAMPION[_3P] = {…};`（不是纯 JSON），原来会被 `JSON.parse` 打回。
+       * 剥壳逻辑单一来源在 `js/champion-pack.js`（纯函数，可单测）。槽位由外壳名判定。 */
+      const PACK = window.EpirusChampionPack;
+      const ex = (PACK && PACK.extract) ? PACK.extract(String(rd.result)) : { ok: false, reason: 'parse-error' };
+      if (!ex.ok) {
+        alert('导入失败：' + champReasonText(ex.reason, ex));
+        return;
+      }
+      const c = P.checkPack(ex.pack);
+      if (!c.ok) {
+        alert('导入失败：' + champReasonText(c.reason, c));
+        return;
+      }
+      /* 多人槽（3P/NP）：写 window 全局 + localStorage（页面优先读后者）+ 清缓存 ⇒ 对局"困难"档即时生效。
+       * 还原入口就是页面上那个「用内置冠军」按钮（v1.5.10 起已有，会清 `epirus.champion3p`）。 */
+      if (ex.slot === '3p') {
+        window.EPIRUS_CHAMPION_3P = ex.pack;
+        try { localStorage.setItem('epirus.champion3p', JSON.stringify(ex.pack)); } catch (e) { /* 隐私模式等 */ }
+        resetMultiChampCache();
+        renderChampState();
+        alert('多人冠军包已载入：' + (file.name || '(未命名)') + '\n对局「困难」档即时生效（3~5 人场）。\n想还原内置冠军：点「用内置冠军」。');
+        return;
+      }
+      /* 2P 槽：维持原路径（`importJSON` 做版本/维度校验），只是喂**剥壳后**的 JSON。 */
+      const r = Champ.store.importJSON(JSON.stringify(ex.pack));
       if (!r.ok) {
         alert('导入失败：' + champReasonText(r.reason, r));
         return;
       }
       Champ.store.save(r.policy);
       renderChampState();
-      alert('冠军策略导入成功，可用于“困难·冠军”难度。');
+      alert('冠军策略导入成功，可用于“困难·冠军”难度（2 人场）。' +
+        (ex.slot === null ? '\n⚠️ 这个文件没有 `window.EPIRUS_CHAMPION_3P` 外壳 ⇒ 按 2P 包处理；多人包请用训练产出的 .bak。' : ''));
     };
     rd.readAsText(file);
   }

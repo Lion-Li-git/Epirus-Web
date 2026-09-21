@@ -4293,6 +4293,30 @@ t('D107 G4「1 席脚本 vs 4 席被测」装配只许有一份实现（v1.5.133
     '探针必须自带"复现 G4 已记录读数"的自检（long 75 / multi 62）—— 装配错了就不许读后面的数');
 });
 
+t('D110 冠军包解析单一来源：吃得下产物 .bak 外壳 / 纯 JSON / 垃圾必拒（页面「导入冠军包」的底座）', function () {
+  /* v1.5.141（用户要求）：页面的「导入」原本只吃自己导出的 JSON，而训练产物是
+   * `window.EPIRUS_CHAMPION[_3P] = {…};` 外壳 ⇒ 候选包没法直接拿去实机试。剥壳逻辑单一来源在
+   * `js/champion-pack.js`（纯函数、不碰 DOM）。这条门**真跑一遍**：拿仓里 tracked 的真 bundle 当输入。 */
+  const src = readFileSync('js/champion-pack.js', 'utf8');
+  ok(src.indexOf('EPIRUS_CHAMPION(_3P)?') >= 0, '必须认产物的 window.EPIRUS_CHAMPION[_3P] 外壳');
+  const html = readFileSync('index.html', 'utf8');
+  ok(html.indexOf('js/champion-pack.js') >= 0, 'index.html 必须加载 champion-pack.js（否则页面里 undefined ⇒ 静默失效）');
+  ok(html.indexOf('.bak') >= 0, '文件选择器必须收 .bak（否则用户选不到产物）');
+  ok(readFileSync('js/ui/ui.js', 'utf8').indexOf('EpirusChampionPack') >= 0, 'ui.js 的导入必须走这个单一来源');
+  /* 真跑：真 bundle ⇒ 外壳形态与纯 JSON 形态**逐字节相等**；垃圾必拒。 */
+  const box = { console: console, Math: Math, JSON: JSON, Object: Object, Array: Array, Number: Number, String: String, Error: Error, isNaN: isNaN };
+  box.window = box; box.globalThis = box;
+  vm.runInNewContext(src, box, { filename: 'js/champion-pack.js' });
+  const X = box.EpirusChampionPack;
+  ok(X && typeof X.extract === 'function', '必须导出 extract');
+  const a = X.extract(readFileSync('js/bundled-champion-3p.js', 'utf8'));
+  ok(a.ok && a.slot === '3p' && a.source === 'bundle', '真 3P bundle 必须解析成 slot=3p（实测 slot=' + a.slot + '）');
+  const b = X.extract(JSON.stringify(a.pack));
+  ok(b.ok && JSON.stringify(b.pack) === JSON.stringify(a.pack), '纯 JSON 形态必须与外壳形态逐字节相等（保真）');
+  ok(X.extract('这不是包').ok === false, '垃圾文本必须被拒（不许塞个空 pack 进槽）');
+  ok(X.extract('/* 注释 */\nwindow.EPIRUS_CHAMPION = {"v":7,"params":[1,2]};\n').slot === '2p', '2P 外壳（含前置注释）必须判成 2p');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));

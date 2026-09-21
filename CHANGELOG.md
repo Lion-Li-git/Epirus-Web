@@ -1,3 +1,26 @@
+## v1.5.141 — 界面新增「**导入冠军包**」：吃得下训练产物 `.bak`（按外壳名自动落 2P 槽 / 多人槽，困难档即时生效）
+
+> **动因（用户要求）**："你的 82 上线了我才能实机试，或者你可以给界面加一个选冠军包的功能。"
+> 页面原本的「导入」只吃**自己导出的 JSON**（`Champ.store.importJSON`），而训练产物是
+> `window.EPIRUS_CHAMPION[_3P] = {…};` 外壳 ⇒ **候选包没法直接拿去实机试**。本版把这一步补上。
+>
+> - 新增 **`js/champion-pack.js`**（纯函数、不碰 DOM）：`extract(text)` 吃三种输入 ——
+>   ① 页面导出的 JSON ② 产物 `.bak`/`.js`（含外壳，**槽位由外壳名判定**：`_3P` ⇒ 多人、否则 2P）
+>   ③ 兜底（从第一个 `{` 切到最后一个 `}`，容忍前置注释）。返回 `{ok, pack, slot, source}` 或 `{ok:false, reason}`；
+>   **兼容性校验仍归 `P.checkPack`**（本模块只管"取出来"）。
+> - `index.html`：脚本引入 + 文件选择器 `accept` 加 `.bak,.js,.txt` + 按钮改名「导入冠军包」（带用法 tooltip）。
+> - `js/ui/ui.js` 的 `importChamp`：先剥壳 + `P.checkPack` 校验，再按槽位分流 ——
+>   **多人槽**写 `window.EPIRUS_CHAMPION_3P` + `localStorage['epirus.champion3p']` + `resetMultiChampCache()`
+>   ⇒ 对局「困难」档**即时生效**；**2P 槽**维持原路径（只是喂剥壳后的 JSON）。还原用页面上已有的「用内置冠军」。
+> - 门 **D110**（`tools/np-test.mjs`）：**真跑一遍**解析器 —— 拿仓里 tracked 的真 bundle 当输入，
+>   断言"外壳形态与纯 JSON 形态**逐字节相等**"（保真）+ 垃圾必拒 + 2P 外壳（含前置注释）判成 2p +
+>   `index.html` 真的加载了这个模块（否则页面里 undefined ⇒ 静默失效）。
+> - 自证（落盘前手工跑过）：`.bak` ⇒ `slot=3p/source=bundle` ✓；`JSON.stringify(pack)` ⇒ 与外壳形态逐字节相等 ✓；
+>   `'这不是包'` ⇒ `{ok:false, reason:'parse-error'}` ✓；带注释的 2P 外壳 ⇒ `slot='2p'` ✓。
+> - 指纹不变（**`be6c2195`**，本版没动引擎与两槽权重）；两槽成绩沿用。
+>
+> ⚠️ 与产品无关的一点如实记：本版是**界面/工具**改动（v1.0.0 的 2 人玩法冻结不受影响，只是多了一个导入入口）。
+
 ## research(0921 · DS 班 · 不升版本 · 全部未 promote) —— "教师示范为什么失败"：**不是学生学不会，是那件事从来没被示范过**
 
 > 承接千问 §5/#21 结案时移交的"特征面设计题"。完整过程/预注册/读数：`docs/RESEARCH-LOG-2026-09-21-ds.md`。
