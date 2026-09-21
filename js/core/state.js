@@ -96,9 +96,21 @@
   }
 
   function canUseSkillInMode(state, key) {
-    return state.mode.skills.some(function (s) {
+    const inMode = state.mode.skills.some(function (s) {
       return (typeof s === 'string' ? s : s.key) === key;
     });
+    if (!inMode) return false;
+    /* v1.5.140（用户 09-21 裁定）：MULTI_ONLY 三张（双枪射手/镜面反射/全息屏障）必须按**当前存活人数**
+     * 过滤，不只是按开局模式 —— 多人局残局只剩两人时本就是"两人在打"，那三张在 2 人形态
+     * 退化或无意义（09-19 合并分析的原结论：N<3 过滤）。旧实现只在 mode 层过滤 ⇒ 冠军在残局继续
+     * 花 1 ジ 套全息（results/93-2 的 22/28 回合局可见），是它 2P 残局崩的一根直接原因（93 对现 2P
+     * 冠军 0-120 的账里这一条占多少，重训臂 v7u1 拆）。回魂把人数抬回 3+ ⇒ 本判定动态恢复可用。 */
+    if (R.MULTI_ONLY.indexOf(key) >= 0) {
+      let alive = 0;
+      for (let i = 0; i < state.p.length; i++) if (state.p[i].hp > 0) alive++;
+      if (alive <= 2) return false;
+    }
+    return true;
   }
 
   /* 费用计算。ok=false = 条件不满足的“无效出招”（不贷款、不惩罚）。

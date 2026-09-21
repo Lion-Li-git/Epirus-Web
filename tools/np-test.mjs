@@ -2313,6 +2313,11 @@ t('D38 结算事件行的**显示顺序**（防御→中立→攻击→镜像；
   ok(fn.indexOf('a.i - b.i') >= 0, '同档必须用原始下标做**稳定**排序（否则无关事件被打乱）');
   ok(ui.indexOf("if (e.type === 'death') return [2, 1];") >= 0,
     '**死亡结算必须排在伤害之后**（用户实测：第一版把 death 当中立 ⇒ 先死再掉血，很搞笑）');
+  /* v1.5.140（用户实机 R9/R10/R23 抓到"挡下先于摆出"）：防御档内部必须再分子档——
+   * 摆出架势类（guardSet/holoSet/rod）sub=0，其结果类（blocked/reflect/voidImmune/curseBlock/rodBlock）sub=1。 */
+  ok(ui.indexOf('EV_SUB_RESULT') >= 0, '必须有"架势结果"子档表 EV_SUB_RESULT（blocked/reflect/…排在摆出之后）');
+  ok(/EV_TIER_DEF\[e\.type\]\) return \[0, EV_SUB_RESULT\[e\.type\] \? 1 : 0\]/.test(ui),
+    'evDisplayRank 的防御档必须按 EV_SUB_RESULT 分 [0,0]/[0,1]（一律 [0,0] = 老 bug 复现）');
 });
 
 t('D39 环奖励必须**可归因**（复核 §5-1：voided 不记施法者 ⇒ 反例 A 与 B 曾同分）', function () {

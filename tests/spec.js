@@ -407,6 +407,23 @@
     eq(fresh.p[1].hp, 2, '当回合埋当回合炸 ⇒ 不可转移，P1 自己挨');
     eq(fresh.p[3].hp, 2, 'P3 只吃自己那跳');
   });
+  t('R62 多人局存活降到 2 人 ⇒ MULTI_ONLY（双枪/镜面/全息）动态禁用；回到 3 人恢复（用户 09-21 裁定）', function () {
+    const Play = window.EpirusPlay;
+    const has = function (st, key) { return Play.legalActions(st, 0).some(function (l) { return l.key === key; }); }
+    const st = S.createState('multi', { next: Math.random }, 4);
+    for (let i = 0; i < 4; i++) st.p[i].ep = 9;
+    ok(has(st, SK.HOLO), '4 人存活：全息屏障必须在菜单里');
+    ok(has(st, SK.DUAL_GUN) && has(st, SK.MIRROR), '4 人存活：双枪/镜面必须在菜单里');
+    st.p[2].hp = 0;
+    ok(has(st, SK.HOLO), '3 人存活：全息仍须可用（阈值是 ≤2，不是 <3 人开局）');
+    st.p[3].hp = 0;                                     // 只剩 0/1 两人
+    ok(!has(st, SK.HOLO), '残局 2 人 ⇒ 全息屏障不得再出现在菜单（旧实现：一直可用 ⇒ 93 残局浪费 1ジ）');
+    ok(!has(st, SK.DUAL_GUN) && !has(st, SK.MIRROR), '残局 2 人 ⇒ 双枪/镜面同样禁用');
+    const r = S.attemptAction(st, 0, SK.HOLO, { target: 1 });
+    ok(r && r.outcome !== 'ok', '硬闯也要被拒（attemptAction 不返回 ok）');
+    st.p[2].hp = 1;                                     // 回到 3 人存活
+    ok(has(st, SK.HOLO), '人数回到 3+ ⇒ 动态恢复可用');
+  });
   t('R23c 转移伤害**不得**干扰狙击（用户裁定 09-20 深夜：可干扰的是激光眼等带攻击效果技能）', function () {
     /* v1.5.13 把旧口径里的 `|| ta.key===SK.TRANSFER` 收窄成"指向狙击手的转移才干扰"——但**转移本就不该
      * 在干扰集合里**：它不"带攻击效果"，只是把已落下的伤害转走。反证组：第三人 P2 把转移指向狙击手 P0

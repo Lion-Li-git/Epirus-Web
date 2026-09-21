@@ -196,6 +196,10 @@
    * ⚠️ 只排**渲染用的副本**（`.map` 出新数组），`state.events` 本身绝不排序 —— 引擎怎么结算就怎么结算。
    * 反证（np-test D38）：把 logEvents 改回直接遍历 list、或去掉 tier/sub ⇒ D38 立刻红。 */
   const EV_TIER_DEF = { guardSet: 1, holoSet: 1, blocked: 1, reflect: 1, voidImmune: 1, curseBlock: 1, rodBlock: 1, rod: 1 };
+  /* v1.5.140（用户实机报的显示顺序 bug）：同是防御档，**"摆出架势"必须排在"它的挡下/免疫/反弹"之前**。
+   * 引擎按发射顺序记事件（攻击方的结算常早于防守方的 guardSet ⇒ `blocked` 先发射），
+   * 渲染层不重排就会出现"先看到挡下、后看到摆出"的先果后因（results/93-2 三局抓到 R9/R10/R23）。 */
+  const EV_SUB_RESULT = { blocked: 1, reflect: 1, voidImmune: 1, curseBlock: 1, rodBlock: 1 };
   const EV_TIER_ATK = { damage: 1, headshot: 1, bigTChain: 1, ban: 1, hidden: 1 };
   const EV_TIER_MIRROR = { mirror: 1, mirrorCopySelf: 1, mirrorNoEffect: 1 };
   const EV_SUB_VOIDER = { cancel: 1, clash: 1, thunderRing: 1 };
@@ -206,7 +210,7 @@
     if (e.type === 'death') return [2, 1];
     if (EV_TIER_MIRROR[e.type] || (e.type === 'guardSet' && e.copied)) return [3, 0];
     if (EV_SUB_VOIDER[e.type]) return [1, 1];
-    if (EV_TIER_DEF[e.type]) return [0, 0];
+    if (EV_TIER_DEF[e.type]) return [0, EV_SUB_RESULT[e.type] ? 1 : 0];
     if (EV_TIER_ATK[e.type]) return [2, 0];
     return [1, 0];
   }
