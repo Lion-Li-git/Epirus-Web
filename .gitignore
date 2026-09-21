@@ -25,3 +25,8 @@ results/
 # v1.5.145（DS 整理）：训练/探针的**运行日志**（*.out）与成批输出目录不进仓库（可重跑得到）。
 *.out
 docs/artifacts/*-out*/
+
+# 夜班 09-22 教训：git add -A 曾吞掉臂记账文件（.done/.summary/.marker）。
+# *.bak 早被全局忽略，但这些点文件/摘要没有 —— 补上（含既有 .training-*，规则合并）。
+docs/artifacts/.*
+docs/artifacts/*.summary
