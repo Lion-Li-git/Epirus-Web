@@ -4171,8 +4171,22 @@ t('D71 蓄能经济门槛：ep<2 不许蓄能（v7 口径），legacy 保持旧�
   ok(seg.indexOf('econBase(state, pid, base)') >= 0, 'policyChooserN 必须调用 econBase（单一真源）');
   ok(src.indexOf('function econBase(state, pid, legal)') >= 0, 'econBase 必须存在');
   ok(src.indexOf('return gated.length ? gated : legal;') >= 0, 'econBase 必须在滤空时回退（不改变"必须有招可选"）');
-  const segAll = src.slice(src.indexOf('function econBase('), src.indexOf('function policyChooserN('));
-  ok(segAll.indexOf('R.SK.CHARGE') >= 0 && segAll.indexOf('(pp.ep || 0) >= 2') >= 0, '门槛必须是 ep>=2 才允许蓄能');
+  /* v1.5.143：这一条原本是 `segAll.indexOf('(pp.ep || 0) >= 2') >= 0`（**钉源码字符**）——
+   * 门槛变成可调旋钮（`EPIRUS_CHARGE_MIN_EP`，默认仍是 2）之后，钉字符串既挡不住改错方向、
+   * 又会误伤合法改动（我加旋钮的当下它就红了）。换成**跑一遍 econBase**：默认口径 + 抬到 3 的口径都验。 */
+  const EB = sb.window.EpirusTrainer.econBase, SKc = R.SK.CHARGE;
+  const mk = function (ep) {
+    const s2 = S.createState('multi', { next: function () { return 0.5; } }, 3);
+    s2.p[0].ep = ep;
+    const lg = [{ key: SKc, affordable: ep >= 1 }, { key: R.SK.JI, affordable: true }];
+    return EB(s2, 0, lg).some(function (l) { return l.key === SKc; });
+  };
+  ok(mk(1) === false && mk(2) === true, '默认口径：ep=1 不许蓄能、ep=2 许（v1.5.82 裁定，跑出来而不是钉字符串）');
+  const T7 = sb.window.EpirusTrainer;
+  T7.setChargeMinEp(3);
+  const raised = mk(2) === false && mk(3) === true;
+  T7.setChargeMinEp(2);          // **必须复位**：沙箱是共享的，漏出去会污染后面每一条门
+  ok(raised && mk(2) === true, '门槛可调且能复位：抬到 3 ⇒ ep=2 被摘、ep=3 可蓄，设回 2 后逐字恢复');
   ok(seg.indexOf('candidatesFor(state, pid, v7base') >= 0, 'v7 分支必须用过滤后的 base');
   ok(seg.indexOf('P.choose(state, pid, base,') >= 0, 'legacy 分支必须仍用未过滤的 base（历史基线可比）');
 });

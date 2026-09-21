@@ -333,6 +333,19 @@
    * ⚠ 启发式不是定律：收入 >1/回合（聚能环第 3 次起 +3、避雷针 +4）时 ep=1 蓄能也可能成立。
    * ⚠ 只作用于 v7 口径：legacy（v5/v6）保持旧口径，历史基线才可比。
    * 抽成函数的动机：探针（tools/probe-beadloop.mjs）必须与线上**同一份**门槛，否则又会量错（对比 v1.5.83 的教训）。 */
+  /* v1.5.143（千问 0921 晚）：**蓄能门槛可调**，默认 2 = v1.5.82 的原裁定 ⇒ 不设则逐字不变。
+   * 为什么要有这个旋钮（0921 取证钉出来的机制）：包在 **ep=2** 蓄能 ⇒ 扣 1 之后手上剩 1 ジ，而珠活到下一回合末
+   * ⇒ "**有珠的那一回合必然买不起电磁炮**（要 2 ジ + 1 珠）"。实测 `v7beadseed-31`：226 次持珠决策里 **225 次 ep=1**、
+   * 唯一一次 ep=2 它就放了（1/1）。⇒ 训练分布本身在教"珠=花不掉"，所以 `BEAD_W` 四档与状态塑形都买不动。
+   * 把门槛抬到 3（蓄完仍 ≥2）是让"有珠"与"可负担"**同时出现**的最小改动 —— 只作用于训练侧评测口径时可以随消息设。 */
+  let CHARGE_MIN_EP = 2;
+  function setChargeMinEp(v) {
+    const n = Number(v);
+    if (isFinite(n) && n > 0) CHARGE_MIN_EP = Math.min(9, Math.floor(n));
+    return CHARGE_MIN_EP;
+  }
+  function chargeMinEpOn() { return CHARGE_MIN_EP; }
+
   function econBase(state, pid, legal) {
     /* 菜单级"严格必废"闸门（v1.5.139 扩第二项，用户实机报"空爆"）：
      * ① ep<2 不蓄能（v1.5.82 原裁定，注释见 policyChooserN 上方）；
@@ -350,7 +363,7 @@
       if (l.key === R.SK.FIRESTORM) return myLiveStickers > 0;
       if (l.key !== R.SK.CHARGE) return true;
       const pp = state.p[pid];
-      return !!pp && (pp.ep || 0) >= 2;
+      return !!pp && (pp.ep || 0) >= CHARGE_MIN_EP;
     });
     return gated.length ? gated : legal;
   }
@@ -2367,7 +2380,7 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

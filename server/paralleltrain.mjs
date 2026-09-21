@@ -132,6 +132,8 @@ export function makeParallelEvalN(T, opts) {
          * 与 `subBead` 分家：那条只作用于**补贴局**（示范通道），这条作用于**非补贴局** ⇒
          * 让"放炮"的回报**当场**进 fit，检验"两回合序列的信用分配"是不是珠线真正的瓶颈（DS §5 提案未跑）。 */
         beadSeed: process.env.EPIRUS_BEAD_SEED || null,
+        /* v1.5.143：蓄能门槛（默认 2 = v1.5.82 原裁定；抬到 3 ⇒ 蓄完仍 ≥2 ジ，珠才可能当场花掉 */
+        chargeMinEp: process.env.EPIRUS_CHARGE_MIN_EP || null,
         /* v1.5.102：**训练侧座位探针局数**也随消息下发（0/缺省 = 不改，保持 `SEAT_GAMES = 6` 的旧行为）。
          * 动因（v1.5.100 §17）：训练侧座位惩罚的样本只有 **6 局**，而门禁要 **≥50 局** ——
          * 同一个量、两个样本量 ⇒ 选择过程看不见"某座 93%"这种塌方；
