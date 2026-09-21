@@ -888,7 +888,7 @@ let WALL_GAMES = 3;
        * ⚠️ D109 第一次跑红还顺带抓出一个**既存泄漏**：`wallFilter` 的哨兵 true 从没被 reset 抹掉
        *   （D77 的 finally 只补了 divRoleW）⇒ 后续任何 scoreMemberN 都活在"破墙硬过滤开着"的假世界里。
        *   一并收进 reset。 */
-      S4_W = 0; setRingReward(0.10); WALL_FILTER_ON = false; WALL_GAMES = 3;
+      S4_W = 0; setRingReward(0.10); setBeadReward(0.05); WALL_FILTER_ON = false; WALL_GAMES = 3;
     }
     return economyReward();
   }
@@ -898,6 +898,9 @@ let WALL_GAMES = 3;
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
       blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
+      /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
+       * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
+      beadW: BEAD_W,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
 
