@@ -368,7 +368,28 @@
     return gated.length ? gated : legal;
   }
 
+  /* ===== v1.5.146（qoder 0921 审计抓到的静默坑）=====
+   * 把 `window.EPIRUS_CHAMPION[_3P]` 的**原始外壳**直接喂进 chooser 时：checkPack 照过、
+   * 不抛任何异常，而权重取不到 ⇒ forwardCands 输出**均匀分布** ⇒ 工具会拿着"冠军只出ジ"
+   * 这种假结论对账（09-21 写对战台实测踩中；单独复跑 unpack 后同包 50/50 胜 balanced）。
+   * 现在：① 原始包外壳 ⇒ **自动 unpack**（对调用方是行为修复，不是口径变更）；
+   * ② 其它非权重输入 ⇒ **显式抛错**，绝不静默均匀。
+   * ⚠️ 认"已 unpack 的 typed array"不许用 `instanceof Float64Array` —— np-test/tools 把 evo 装进
+   *   vm 沙箱，params 可能在**另一个 realm** 里造出来（沙箱间 Float64Array 不同构）；
+   *   旧路径靠 shapeOf 只读 `.length` 恰好跨 realm 可用，守卫不能反而把它打破 ⇒ 用鸭子判据。 */
+  function normChampParams(params) {
+    if (!params) return params;                                   // null = 既有"按旧口径兜底"路径，不动
+    if (typeof params.length === 'number' && typeof params[0] === 'number') return params;  // typed array（含跨 realm）
+    if (typeof params === 'object' && Array.isArray(params.a)) {
+      const q = P.unpack(params, true);
+      if (q) return q;
+      throw new Error('policyChooserN: 原始包 checkPack 失败（版本/维度不符）⇒ 需重训重发，不能直喂');
+    }
+    throw new Error('policyChooserN: params 必须是 EpirusPolicy.unpack() 后的权重数组；不许直喂 window.EPIRUS_CHAMPION（忘 unpack 会静默输出均匀分布）');
+  }
+
   function policyChooserN(params, temp, eps, epsK, epsMode) {
+    params = normChampParams(params);
     const legacy = LEGACY(params);
     return function (state, pid, legal) {
       const aff = legal.filter(function (l) { return l.affordable; });

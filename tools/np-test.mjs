@@ -3960,26 +3960,34 @@ t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被�
    * 而 np-test 当场红一条 ⇒ 那类断言测的是**字符串**不是**行为**（还会误伤正常的用例改名：
    * 本仓今天就把一条 R61 改成 R62 避让重号）。它想防的"整条用例被静默删除"（v1.5.37 那族事故）
    * 用**跑一遍**来防更准 —— 顺带把 spec 套件的失败也变成 np-test 的阻断（此前两边完全独立、没人连着跑）。 */
-  const specRun = (function () {
-    for (let k = 0; k < 2; k++) {
-      const r = spawnSync(process.execPath, ['tools/spec-run.mjs'], { encoding: 'utf8' });
-      if (/通过 \d+ \/ \d+/.test(String(r.stdout || ''))) return r;
-    }
-    return { stdout: '' };
+  const specRes = (function () {
+    /* ===== v1.5.146（去 spawn 化，RESEARCH-LOG §22 NEXT 的收尾）=====
+     * 旧实现 spawnSync 跑 tools/spec-run.mjs 拿 stdout。Windows 上 spawn 偶发**空 stdout**
+     * （0921 夜班自报 + 0921 审计复现：并发负载下 np-test 五次里红一次 158/159），
+     * 两次重试 + "退回源码用例计数"只把假红概率压低、没有归零，还给门塞了第二口径。
+     * spec-run 本身就是"vm 沙箱装 5 个文件、读 innerHTML"，同口径在进程内直接做 ⇒
+     * **没有子进程就没有抖动**；读不到结果从此是**真红**（加载抛异常 / 用例没全绿 / 条数被人删少），不再降级。 */
+    const ssb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
+    ssb.window = ssb; ssb.globalThis = ssb;
+    let OUT = '';
+    ssb.document = {
+      getElementById: function () {
+        return { set innerHTML(v) { OUT = v; }, get innerHTML() { return OUT; }, textContent: '' };
+      },
+      createElement: function () { return { style: {}, appendChild() {} }; }
+    };
+    try {
+      for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js', 'tests/spec.js'])
+        vm.runInNewContext(readFileSync(f, 'utf8'), ssb, { filename: f });
+    } catch (e) { return { err: String((e && e.message) || e), out: OUT }; }
+    return { out: OUT };
   })();
-  const specM = /通过 (\d+) \/ (\d+)/.exec(String(specRun.stdout || ''));
-  /* ⚠️ 只在**真读到结果**时判定。Windows 上 spawn 偶发返回空 stdout（实测两次 np-test 里红一次、单独跑 spec-run 恒 52/52），
-   * 把它判红就是本仓反复警惕的那种"会误伤的脆门"（0921 加这条后第一次复跑就自己踩到）⇒ 读不到就打一行记录、不阻断。 */
-  if (specM) {
-    ok(Number(specM[1]) === Number(specM[2]) && Number(specM[2]) >= 52,
-      'spec 引擎用例必须**全绿**且条数 ≥52（实测 ' + specM[0] + '）');
-  } else {
-    /* 读不到子进程输出时不放过、也不误红：改判**源码里的用例条数**（当前 50 个 `t(` 调用点，
-     * 运行期是 52 —— 有两条在循环里注册）。这条兜底抓的正是原意图："整条用例被静默删掉要响"。 */
-    console.log('  [记录] D95：spec-run 本次返回空 stdout（Windows spawn 抖动）⇒ 退回源码用例计数判定');
-    ok((readFileSync('tests/spec.js', 'utf8').match(/^\s{2}t\('/gm) || []).length >= 50,
-      'spec 源码里的用例调用点不得少于 50（spawn 读不到时的兜底：防"整条用例被静默删除"）');
-  }
+  ok(!specRes.err, 'spec 套件必须能在进程内无异常跑完（真实错误：' + (specRes.err || '') + '）');
+  const specM = /通过 (\d+) \/ (\d+)/.exec(String(specRes.out));
+  ok(!!specM && Number(specM[1]) === Number(specM[2]) && Number(specM[2]) >= 52,
+    'spec 引擎用例必须**全绿**且条数 ≥52（实测 ' + (specM ? specM[0] : String(specRes.out).slice(0, 200)) + '）');
+  const specFails = [...String(specRes.out).matchAll(/<li class="fail">✘ ([^<]+)/g)].map(function (x) { return x[1]; });
+  ok(specFails.length === 0, 'spec 失败用例不许有：' + specFails.slice(0, 3).join(' | '));
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R59') >= 0, 'RULES-2P 必须记下 R59');
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('持续直到被触发') < 0 ||
      readFileSync('docs/RULES-2P.md', 'utf8').indexOf('旧文 R38 是') >= 0,
@@ -4282,6 +4290,54 @@ t('D112 **广度两个模式都判** + 最大单卡占比排除ジ且打出卡�
   ok(pc.indexOf('最大单卡占比（**非ジ**）') >= 0 && pc.indexOf('brd.maxCardKey') >= 0,
     '打印必须写明"非ジ"并把卡名印出来');
   ok(pc.indexOf('两个模式都判') >= 0, '打印必须说明两模式都判（否则读者以为另一栏只记录）');
+});
+
+t('D113 chooser 入口必须免疫"直喂原始包"（0921 qoder 审计：忘 unpack ⇒ 静默均匀分布、零报错）', function () {
+  /* 病（实测踩中）：把 `window.EPIRUS_CHAMPION_3P` 的**原始外壳**直接喂 `policyChooserN` /
+   * `Trainer.pickChampion` 不抛错，权重取不到 ⇒ forwardCands 输出**均匀分布**（25 候选实测全 0.002）
+   * ⇒ 谁写新工具忘了 unpack，就会拿着"冠军只出ジ"这种假结论去对账（09-21 写对战台当场中招，
+   * unpack 后同包复跑 balanced 50/50）。守卫在 `evo.js` 的 `normChampParams`：原始壳自动 unpack、
+   * 垃圾**响亮抛错**、Float64Array/null 走原路（训练热路径零成本 + 不打破健康门槛兜底）。 */
+  const raw = sb.window.EPIRUS_CHAMPION_3P;
+  ok(!!raw && Array.isArray(raw.a), '前置：仓库里必须有真 3P 包（门不依赖本机 .bak）');
+  const W = Pol.unpack(raw);
+  ok(!!W, '前置：原始包必须能过 checkPack 并 unpack（否则先修包，别动这条门）');
+  Pol.setRng(T.mulberry32(113113));
+  /* ① 行为一致：同一装配逐 seed 出招相同（eps=0 贪心 ⇒ 判定不含抽样噪声） */
+  for (let g = 0; g < 3; g++) {
+    const mk = function () {
+      const st = S.createState('long', { next: T.mulberry32(77000 + g) }, 3);
+      X.startTurn(st); st.p[0].ep = 5;
+      return st;
+    };
+    const s1 = mk(), s2 = mk();
+    const l1 = Play.legalActions(s1, 0).filter(function (x) { return x.affordable; });
+    const l2 = Play.legalActions(s2, 0).filter(function (x) { return x.affordable; });
+    const p1 = T.policyChooserN(raw, 0.15)(s1, 0, l1);
+    const p2 = T.policyChooserN(W, 0.15)(s2, 0, l2);
+    ok(p1.key === p2.key, '直喂原始包与 unpack 后必须同一手（seed ' + g + '：' + p1.key + ' vs ' + p2.key + '）');
+  }
+  /* ② "相同"不许是两条都退化成均匀分布的巧合 ⇒ 单独证明 W 在该态下给的是**尖**分布 */
+  const s3 = S.createState('long', { next: T.mulberry32(77000) }, 3);
+  X.startTurn(s3); s3.p[0].ep = 5;
+  const l3 = Play.legalActions(s3, 0).filter(function (x) { return x.affordable; });
+  const cands3 = Pol.candidatesFor(s3, 0, l3, {});
+  const f3 = Pol.forwardCands(s3, 0, cands3, W, { temp: 0.05 });
+  let mx = 0; for (let i = 0; i < f3.probs.length; i++) mx = Math.max(mx, f3.probs[i]);
+  /* ⚠️ 阈值必须是**相对均匀基线**而不是绝对值：两级 softmax（先技能后条目）把 joint 峰的
+   * 上界压到恰好 0.5（v1.5.74 的两级归一 + temp 0.05 ⇒ "技能概率 1.0 × 键内 0.5"），
+   * 写 `>0.5` 会把**正确实现**判红（0921 首跑实测峰恰好 0.5000）。均匀退化读数是 1/n（此处 ≈0.024）
+   * ⇒ 判据取 4/n：离退化线两个数量级、离上界留够余量，任何"真尖"包都过、任何平摊都红。 */
+  ok(mx > 4 / f3.probs.length, 'unpack 权重必须产生非均匀分布（实测峰 p=' + mx.toFixed(3) + ' vs 均匀基线 ' +
+    (1 / f3.probs.length).toFixed(3) + '；旧坑读数就是那个平摊值）');
+  /* ③ 垃圾输入必须响亮 */
+  let thr1 = false, thr2 = false;
+  try { T.policyChooserN({}, 0.15); } catch (e) { thr1 = /unpack|权重/.test(String(e && e.message)); }
+  try { T.policyChooserN({ a: [1, 2, 3] }, 0.15); } catch (e) { thr2 = true; }
+  ok(thr1, '空对象必须被守卫挡下并给出点名 unpack 的错（不许再走静默均匀）');
+  ok(thr2, '维度错的假包必须被挡下（checkPack 失败 ⇒ 重训重发，不许静默）');
+  /* ④ null 的既有兜底不许被守卫打破（LEGACY(null)=true 是健康门槛拒配时的活路） */
+  ok(typeof T.policyChooserN(null, 0.15) === 'function', 'params=null 必须仍可建 chooser');
 });
 
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {

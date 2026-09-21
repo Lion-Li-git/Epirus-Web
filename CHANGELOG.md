@@ -1,3 +1,37 @@
+## v1.5.146 — 三件零规则风险小修（qoder 09-21 审计提出 · 用户批准）：**D95 去 spawn 化** · **D113 chooser 免疫"直喂原始包"** · **README 卡数口径 28→27**
+
+> **① D95 去 spawn 化**（`tools/np-test.mjs`）。病：D95 的"spec 必须全绿"半边原先 `spawnSync` 跑
+> `tools/spec-run.mjs`，而 Windows 上 spawn 偶发**空 stdout**（RESEARCH-LOG §22 NEXT 自报过这条；
+> 09-21 审计复现：与另一条命令并发时五次里红一次 158/159，干净复跑四次 159/159）。
+> 旧实现的"重试两次 + 退回源码用例计数"只压低假红概率、还给门塞了第二口径。
+> 改法：spec 套件**进程内 vm 沙箱直跑**（与 spec-run 同五文件、同 document stub、同 innerHTML 读法），
+> 没有子进程就没有抖动 ⇒ 读不到结果从"降级记录"升级为**真红**（加载抛异常 / 没全绿 / 条数 <52 三种都响）。
+> `tools/spec-run.mjs` 本体保留（CI/命令行仍用）。
+>
+> **② D113 + `normChampParams` 守卫**（`js/train/evo.js`）。病（审计写对战台**实测踩中**）：把
+> `window.EPIRUS_CHAMPION[_3P]` 的原始外壳不经 `EpirusPolicy.unpack()` 直接喂 `pickChampion`/`policyChooserN` ⇒
+> **不抛任何异常**、`forwardCands` 对 25 个候选输出逐字相等的均匀分布（实测全 0.002）⇒ 工具会静默得出
+> "冠军只出ジ"这类**假读数**（同包 unpack 后复跑 balanced **50/50 胜**、ep5 富态 argmax=狙击）。
+> 修法（守卫只放 `evo.js`，**不碰指纹文件 policy.js**）：`policyChooserN` 入口 ① Float64Array ⇒ 原路
+> （`instanceof` 跨 vm realm 会误伤既有路径 ⇒ 用"数值 length + 首元素是数"的鸭子判据）；
+> ② 带 `a` 数组的原始壳 ⇒ **自动 unpack**（行为修复，不是口径变更）；③ 其它输入 ⇒ **显式抛错**；
+> ④ `null` 保持既有"LEGACY 兜底"活路。门 **D113** 行为式守全四臂：真 3P 包直喂 vs unpack **逐 seed 同手**、
+> W 分布必须**出尖**（峰相对均匀基线 ≥4 倍：两级 softmax 把 joint 峰的上界压到恰好 0.5，
+>    首版写 `>0.5` 把**正确实现**判红了 0.5000 —— 本仓"阈值必须留口径余量"又添一例）、`{}` 与维度错的假包必抛、`null` 仍可建 chooser。
+>
+> **③ README 卡数口径**：`28 个可用技能`→ **27**（卡表共 31 张 − 多人专用 3 张：双枪/镜面/全息；
+> v1.5.7 全息移出 2P 后 README 一直没跟上，`docs/RULES-2P.md:215-219` 是对的）。
+> 顺带把"已知限制"里"均匀用 28 张"的满值参考改为"27~30（按模式）"、隐藏技注明"不是可点的卡，是结算触发"。
+> 并按"README 只留当前版本"的既定口径**把头部历史版本块压回数行**（v1.5.145~134 的细节在 CHANGELOG 全有底 · 用户指令）。
+>
+> **实测（本版落盘前）**：`node --check` evo/np-test OK · spec **52/52** · np-test **160/160（D95 新口径 + D113 ✔）** ·
+> smoke **SMOKE OK** · battle-test **BATTLE OK**（均无 JS 错误）·
+> `rulesFingerprint` = **be6c2195 未变**（不碰五件套 ⇒ 两槽成绩逐字沿用、无需重录）。
+> ⚠️ 另如实记：把 np-test 放到满 CPU 负载下连跑 4 次，**未能复现**审计当天那次 158/159 ⇒ 肇事门仍未指认；
+> D95 去 spawn 化消掉的是其中最可疑的一族（空 stdout），其余 spawn 门（gate-drafts / econ-env 自检 / D106 probe）保持原样。
+> ⚠️ 如实记边界：守卫放在 chooser 入口 ⇒ **绕过它直接调 `P.forwardCands` 仍可静默均匀**（policy.js 是指纹文件，
+> 那条线要动就得单独立项 + 全链重记 —— 本版按"小修不碰指纹"执行）。
+
 ## v1.5.145 — 门禁口径（用户裁定）：技能广度 **两个模式都判** + 最大单卡占比**明确排除ジ并打出卡名**
 
 > **动因（用户追问）**："这个包在不探索的时候技能广度非常差，是怎么通过门禁上线的？"
