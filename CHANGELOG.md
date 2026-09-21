@@ -1,3 +1,12 @@
+### 夜班账（分支 qoder-explore-0921night · 不占版本号 · 随做随记 · 明细见 docs/RESEARCH-LOG-2026-09-22-qoder-night.md）
+
+- N1 报告件（3P 壳只读复制 · 不 promote）：v7xfer44-3psh.bak、v7xfer44b-3psh.bak ⇒ 结论：tgt-44 家族 5P 全不过门
+  （tgt-44 墙 0.00/场B 0.00/G5 防席 58%；xfer44 只挂场B 0.07 且 G4/G5 全过；xfer44b 挂场A 19% + G4 只枪 81%）。
+  回答用户之问："2P 调得好 ≠ 5P 能打"——在现有门体系下成立，家族无 5P 合格品。
+- N2 产物（预登记，band-save 新机制首跑）：v7xfer44c6-2p.bak、v7xfer44c7-2p.bak、v7xfer44c8-2p.bak、v7xfer44c9-2p.bak、
+  v7xfer44c10-2p.bak、v7xfer44c11-2p.bak、v7xfer44c12-2p.bak、v7xfer44c13-2p.bak、v7xfer44d6w-2p.bak
+  与各臂全部 *-band*.bak ⇒ 读数与判据结案见夜日志 §N2/§N3。
+
 ## v1.5.147 — 择优的"能量项"换掉：**divNorm(归一 Shannon) → hill05(Rényi-0.5 有效技能数) → distinct → divNorm** · 带内候选全落盘（xfer44 反例 · 用户批准 + gemini 建议）
 
 > **动因（0921 实测反例）**：xfer44 臂（tgt-44 热启动进 2P 专训器）三候选 avg 98~99% 全进容差带，
