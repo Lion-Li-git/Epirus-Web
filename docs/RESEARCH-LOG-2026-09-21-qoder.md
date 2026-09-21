@@ -532,3 +532,15 @@ n=60/点 · 1 冠军席 vs (N-1) 脚本席 · seat 轮转 · ε=0：
 ⇒ 于是"改不改默认"不再是行为问题，只是**口径一致性**问题（防止以后 A 包在 2 下练、B 包在 3 下评测，读数互相冒充）。
 ⇒ 若要留痕，正确做法是**把训练时的门槛记进产物 meta**（如 `rulesFingerprint`/`gate4Forced` 那类"口径身份"），
    而不是新增第二个旋钮。`v7cmin3-*` 三粒的 meta 里目前**没有**这个字段 ⇒ 交用户裁定是否补（补 = 一行写 + 一行读）。
+
+## 22. 状态灯（约 18:40，供压缩上下文后续接 · 只列 DONE/DOING/NEXT）
+- **DONE**：v1.5.140~**v1.5.144** 五版已推（分支 `qoder-train-0921`，tip `cc49ef3`）。**3P 槽 = `v7cmin4-31`**
+  （长程电磁炮 4.30/局、反弹墙 21 点/局、考卷 54.4%、五门 + n=120 G4/G5 自然全过、零 `--force`）；2P 槽未动。
+  交接件 P1/P2/P3 全结；§16 删 9 条零判别力文本钉 + D95 换成跑 spec-run；§17-§21 珠线与"门槛两档"取证。
+  新工具/旋钮：`tools/behavior-profile.mjs`（`--field=self --gamemode=long` + 每局出现率）· `tools/count-spectrum.mjs`（残局胜率 + `--duel`）·
+  `tools/script-value.mjs`（价值表：传导/施放）· `pickBigTFocus`/`pickBigTRandom` · `EPIRUS_BEAD_SEED` · `EPIRUS_CHARGE_MIN_EP`。
+  np-test 158/158、spec 52/52。
+- **欠（下一步先做这两件）**：① **真浏览器 `node tools/battle-test.mjs --players=5` 还没跑** ⇒ "页面确实用上新包、无 JS 错误"未验；
+  用户实机须点「用内置冠军」（localStorage 旧包优先）。② `#26` 的 `epsMode='soft'` 只有一条构造态门（D111），**没有"实局可达"层面的门**。
+- **NEXT（候选，未开工）**：`cmin4-82` 蓄能 71.8/局 是"刷蓄能"病理的阳性对照样本（可用来立第 7 道判据）；
+  大雷只剩规则面（降价/珠存活期，动指纹文件 ⇒ 等用户裁定）；D95 那条 spec 断言在 Windows 上偶发空 stdout，已做兜底但可考虑改成不 spawn。
