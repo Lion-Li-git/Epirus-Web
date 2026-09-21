@@ -6,6 +6,7 @@
 - N2 产物（预登记，band-save 新机制首跑）：v7xfer44c6-2p.bak、v7xfer44c7-2p.bak、v7xfer44c8-2p.bak、v7xfer44c9-2p.bak、
   v7xfer44c10-2p.bak、v7xfer44c11-2p.bak、v7xfer44c12-2p.bak、v7xfer44c13-2p.bak、v7xfer44d6w-2p.bak
   与各臂全部 *-band*.bak ⇒ 读数与判据结案见夜日志 §N2/§N3。
+- N2/N3 实产物点名：v7xfer44c10-2p、v7xfer44c10-band1、v7xfer44c11-2p、v7xfer44c11-band1、v7xfer44c12-2p、v7xfer44c12-band1、v7xfer44c12-band2、v7xfer44c12-band3、v7xfer44c13-2p、v7xfer44c13-band1、v7xfer44c13-band2、v7xfer44c13-band3、v7xfer44c6-2p、v7xfer44c6-band1、v7xfer44c7-2p、v7xfer44c7-band1、v7xfer44c7-band2、v7xfer44c7-band3、v7xfer44c8-2p、v7xfer44c8-band1、v7xfer44c9-2p、v7xfer44c9-band1、v7xfer44c9-band2、v7xfer44d6w-2p、v7xfer44d6w-band1。（band-save 首跑全留档）
 - 夜班修（spec 定值化）：D95 去 spawn 化当晚就抓到潜伏 1/8 抖动的场景用例 **R23c**（裸 Math.random 撞上爆头判定，
   连跑五次红一次——也是"下午那次 158/159"最可信的事后解释）。修法：11 处场景用例 + game() 默认 rng 改判定恒败
   常量 noJudge()（要判定胜的本就显式喂 seqRng；Fuzz 自带 mulberry 不受影响）⇒ spec 连跑 6 次全 52/52；

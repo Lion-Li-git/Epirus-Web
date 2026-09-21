@@ -3906,6 +3906,17 @@ t('D104 「择优不得回归」必须是机械保证（而不是注释里的承
   /* ⑨ 带内候选必须全部落盘（D82 精神：落选者也是证据）—— 行为式钉：train-best 源码里存在 band-save 写盘点 */
   ok(tb.indexOf("ARM + '-band'") >= 0 && tb.indexOf('selected: c === best') >= 0,
     'train-best 必须把容差带内每一粒写成 <arm>-band<k>.bak 并标 selected（候选3 那种"死了都没碑"不许再有）');
+  /* ⑩ 夜班（seed 11 反例）：`vetoDegenerate` 双向验——不开时退化包凭 avg=100% 必当选（量具有判别力），
+   * 开了必须把它踢下去、由正常候选继承。 */
+  const INC10 = { tag: INCUMBENT_TAG, sc: 0.8, ev: { avg: 0.98, per: { wall: 1.0 } }, div: { divNorm: 0.2, distinct: 3, hill05: 2.0 } };
+  const DEGEN = { tag: '候选D', sc: 0.99, ev: { avg: 1.00, per: { wall: 1.0 } }, div: { divNorm: 0, distinct: 0, hill05: 0 } };
+  const OK10 = { tag: '候选O', sc: 0.82, ev: { avg: 0.98, per: { wall: 1.0 } }, div: { divNorm: 0.3, distinct: 4, hill05: 2.8 } };
+  eq(pickBestByExam([INC10, DEGEN, OK10], { wrTol: 0.03 }).best.tag, '候选D',
+    '不开闸时退化包凭考卷分必当选（证明该反例真实存在、闸有东西可挡）');
+  eq(pickBestByExam([INC10, DEGEN, OK10], { wrTol: 0.03, vetoDegenerate: true }).best.tag, '候选O',
+    '开 vetoDegenerate 后：种类=0 的退化包取消资格，正常候选继承（现有冠军/闸内豁免不许被误杀）');
+  eq(pickBestByExam([INC10], { wrTol: 0.03, vetoDegenerate: true }).best.tag, INCUMBENT_TAG,
+    '现有冠军即使 distinct=0 也恒在层内（闸不打破 D104 的冠军豁免承诺）');
 });
 
 t('D92 R56 同层内资源型先结算（用户裁定：过载炮的清除须含目标本回合收入）', function () {

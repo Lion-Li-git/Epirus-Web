@@ -58,8 +58,20 @@ export function pickBestByExam(cands, opts) {
   const WR_TOL = (opts && opts.wrTol != null) ? opts.wrTol : 0.03;
   const list = (cands || []).slice();
   const incumbent = list.filter(function (c) { return c.tag === INCUMBENT_TAG; })[0] || null;
+  /* ===== 夜班 00:2x（seed 11 反例 · v1.5.94 退化包闸的 2P 择优侧对应物）=====
+   * `opts.vetoDegenerate` ⇒ 镜像零攻击（div.distinct===0）的候选**不许当选**（现有冠军豁免，
+   * 它恒在层内是 D104 的承诺）。病：2P 考卷对"只ジ不动手"的包能读 avg=100%（脚本互杀自己），
+   * 择优若不看出手面就会给退化包发冠冕。3P promote 早有"自对局零攻击局判负"，两入口从此同判。 */
+  let pool = list;
+  if (opts && opts.vetoDegenerate) {
+    pool = list.filter(function (c) {
+      if (c === incumbent) return true;
+      if (c.div && c.div.distinct === 0) { (c.__vetoed = true); return false; }
+      return true;
+    });
+  }
   /* 没有现有冠军（首次训练）⇒ 无从谈"回归"，不回归层不生效（行为与旧版一致）。 */
-  const safe = incumbent ? list.filter(function (c) { return regressionsOf(c, incumbent) === 0; }) : list;
+  const safe = incumbent ? pool.filter(function (c) { return regressionsOf(c, incumbent) === 0; }) : pool;
   if (!safe.length) throw new Error('[pick-best] 不回归层把所有候选都剔除了（现有冠军应恒在层内）');
   const topSc = Math.max.apply(null, safe.map(function (c) { return c.sc; }));
   const band = safe.filter(function (c) { return c.sc >= topSc - WR_TOL; });

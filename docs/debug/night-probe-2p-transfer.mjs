@@ -2,7 +2,7 @@
  * 用法：node probe2p-transfer.mjs f1.bak f2.bak ...
  */
 import { readFileSync } from 'node:fs';
-import { sandbox, loadChamp } from 'file:///./tools/audit-lib.mjs';
+import { sandbox, loadChamp } from '../../tools/audit-lib.mjs';
 const W = sandbox();
 const { EpirusState: S, EpirusPlay: Play, EpirusPolicy: P, EpirusTrainer: T, EpirusBots: Bots } = W;
 const files = process.argv.slice(2);
