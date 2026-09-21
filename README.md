@@ -102,12 +102,18 @@ Epirus-Web/
 │   ├─ eval-3p.mjs             多人冠军评测（1st/top2 + 出招分布）
 │   ├─ smoke.mjs               CDP 真浏览器冒烟测试（2 人）
 │   ├─ spec-run.mjs            Node 桩跑 2 人引擎自测（52/52）
-│   ├─ np-test.mjs             N 人引擎自测（157/157：D1–D110 + N/L 族守门）
+│   ├─ np-test.mjs             N 人引擎自测（159/159：D1–D112 + N/L 族守门）
 │   ├─ np-probe.mjs            CDP 真浏览器多人（3/5 人）探测
+│   ├─ log-behavior.mjs        **真机栏**：从实机对局记录按席位统计行动构成（只读 results/*.txt）
+│   ├─ promote-champion.mjs   换包前体检（含广度**两个模式都判** + G4/G5 + 珠经济闭环）
 │   └─ diag.mjs / remote-probe.mjs  诊断脚本
 ├─ docs/RULES-2P.md         ★ 2 人规则裁定版（R1..R55 + 子证 R23'/R34'/R19'）
 ├─ docs/RULES-NP.md         ★ 多人（3~5 人）裁定版（N1..N13）
-├─ results/                 导出的训练 CSV 样例
+├─ docs/METHODOLOGY.md      ★ 方法学（含"打印机必须打印门所判的量"等 40+ 条）
+├─ docs/RESEARCH-LOG-2026-09-21-{ds,qoder}.md  当日研究日志（DS / 千问）
+├─ docs/HANDOFF-FOR-QWEN-2026-09-21.md         给千问的训练侧交接件（当前有效）
+├─ docs/archive/            历史审核/交接文档存档（只读；索引见其 README.md）
+├─ results/                 用户私人对局记录（**已不进仓库**：.gitignore 整目录忽略）
 └─ tests/spec.html          引擎自测（浏览器打开即可，通过数 = 用例数）
 ```
 
@@ -119,13 +125,14 @@ Epirus-Web/
 
 ## 自测
 
-浏览器打开 `tests/spec.html`：**45 条规则场景用例 + 500 场随机对局无异常**（`node tools/spec-run.mjs` 报 45/45），全部 ✔ 即引擎与文档一致。
+浏览器打开 `tests/spec.html`：**52 条规则场景用例 + 500 场随机对局无异常**（`node tools/spec-run.mjs` 报 52/52），全部 ✔ 即引擎与文档一致。
 
 命令行（无需浏览器）：
 
 ```bash
 node tools/spec-run.mjs    # 2 人引擎：52/52（含 v1.5.129 的 R61、v1.5.140 的 R62 残局多目标禁用等）
-node tools/np-test.mjs     # 多人引擎 + 门禁：157 条（N 人口径 + 座位均等 + 地雷 AoE N20a~e + 大雷禁用/传导 N21/N22 + 激光眼 N23 + REPRO/REPRO2 + L 族；D 族覆盖模式入口一致性、维度/shapeOf、指纹（两个包）、播种实测、体检门槛、判定与爆头口径、G4/G5 行为门（D67）、择优不回归层（D104）、V4 满桌同包地板（D105）、场A/场B 打印器能工作（D106）、G4 装配单一来源（D107）、座位身份等性价对（D108）、形状适应度（D109）、冠军包解析单一来源（D110）…**末号 D110**）
+node tools/np-test.mjs     # 多人引擎 + 门禁：159 条（N 人口径 + 座位均等 + 地雷 AoE N20a~e + 大雷禁用/传导 N21/N22 + 激光眼 N23 + REPRO/REPRO2 + L 族；D 族覆盖模式入口一致性、维度/shapeOf、指纹（两个包）、播种实测、体检门槛、判定与爆头口径、G4/G5 行为门（D67）、择优不回归层（D104）、V4 满桌同包地板（D105）、场A/场B 打印器能工作（D106）、G4 装配单一来源（D107）、座位身份等性价对（D108）、形状适应度（D109）、冠军包解析单一来源（D110）、前台探索三规则（D111）、广度两模式都判（D112）…**末号 D112**）
+node tools/log-behavior.mjs results/31   # 真机栏：实机日志的行动构成（只读；配合体检的 ε=0 栏 / 浏览器模拟栏 = 三栏验收）
 node tools/probe-g4-anatomy.mjs 60   # G4「只枪」那格的解剖 + 双向反事实（只读；§A 自检须复现 75%/62%）
 node tools/eval-3p.mjs     # 3 人冠军评测：28 对手对 × 座位轮换 → 1st/top2 + 出招分布
 node tools/smoke.mjs       # 2 人页面冒烟（CDP 真 Chrome）
