@@ -355,7 +355,7 @@
     return gated.length ? gated : legal;
   }
 
-  function policyChooserN(params, temp, eps, epsK) {
+  function policyChooserN(params, temp, eps, epsK, epsMode) {
     const legacy = LEGACY(params);
     return function (state, pid, legal) {
       const aff = legal.filter(function (l) { return l.affordable; });
@@ -385,26 +385,49 @@
        *   降到 ~30 回合、100% 决胜），又把昏手率压到近零（5 席空爆/局：全候选 0.77 → top5 键 0.07）。
        * `epsK` 默认 5；只在**浏览器运行时**（ui 传 eps>0）生效，训练/评测/门禁 eps=0 ⇒ 读数逐字不变。 */
       let pick;
+      const greedyOf = function () { return P.chooseCandidates(state, pid, cands, params, { temp: temp }); };
       if (eps && state.rng.next() < eps && cands.length) {
-        const f = P.forwardCands(state, pid, cands, params, { temp: 1 });
-        const bestOf = {}, keys = [], keyIdx = {};
-        for (let i = 0; i < cands.length; i++) {
-          const k = cands[i].key;
-          if (!(k in bestOf)) { bestOf[k] = f.probs[i]; keyIdx[k] = i; keys.push(k); }
-          else if (f.probs[i] > bestOf[k]) { bestOf[k] = f.probs[i]; keyIdx[k] = i; }
+        /* v1.5.141（#26 · 用户实机"防御偏多、丢了集火和滚环"）：`epsMode='soft'` 时探索**不得覆盖**
+         * 贪心已经选定的"防御类型 / 聚能环"两型出手。理由不是审美，是算术：同一包同一装配下，均匀抽 top-K
+         * 把防御出现率从贪心的 4.0% 抬到 26.4%，聚能环从 1.2% 抬到 **0.0%** —— 环是**连段**机制（第 3 次起 +3 ジ），
+         * 40% 的随机打断等于把它从经济里删掉（量具：`tools/behavior-profile.mjs`）。
+         * 默认不传 `epsMode` = v1.5.139 的原口径逐字不变 ⇒ 训练/评测/门禁读数不动。 */
+        if (epsMode === 'soft') {
+          const g = greedyOf();
+          const gcat = R.byKey[g.key] && R.byKey[g.key].cat;
+          if (g.key === R.SK.RING || gcat === R.CAT.DEFENSE) pick = g;
         }
-        const top = keys.sort(function (a, b) { return bestOf[b] - bestOf[a]; }).slice(0, Math.max(2, epsK || 5));
-        pick = cands[keyIdx[top[Math.floor(state.rng.next() * top.length)]]];
+        if (!pick) {
+          const f = P.forwardCands(state, pid, cands, params, { temp: 1 });
+          const bestOf = {}, keys = [], keyIdx = {};
+          for (let i = 0; i < cands.length; i++) {
+            const k = cands[i].key;
+            if (!(k in bestOf)) { bestOf[k] = f.probs[i]; keyIdx[k] = i; keys.push(k); }
+            else if (f.probs[i] > bestOf[k]) { bestOf[k] = f.probs[i]; keyIdx[k] = i; }
+          }
+          /* `soft` 的第二半：探索集里**不放防御键** ⇒ 噪声只能"换一种打法"，不能"凭空摆一个架势"。
+           * （只有防御键可选时不过滤 —— 否则退化成一个确定性的ジ。） */
+          let pool = keys;
+          if (epsMode === 'soft') {
+            const nonDef = keys.filter(function (k) {
+              const d = R.byKey[k];
+              return !(d && d.cat === R.CAT.DEFENSE);
+            });
+            if (nonDef.length >= 2) pool = nonDef;
+          }
+          const top = pool.sort(function (a, b) { return bestOf[b] - bestOf[a]; }).slice(0, Math.max(2, epsK || 5));
+          pick = cands[keyIdx[top[Math.floor(state.rng.next() * top.length)]]];
+        }
       } else {
-        pick = P.chooseCandidates(state, pid, cands, params, { temp: temp });
+        pick = greedyOf();
       }
       return { key: pick.key, target: pick.target, target2: pickTarget2N(state, pid, pick.key, pick.target), bead: pick.bead };
     };
   }
   /* v7：页面/工具的统一入口（候选感知 + 旧包自动回退）。
    * 返回 {key,target,target2,bead} —— 调用方**整个交给引擎**（play.js 的 normPick 认这个形状）。 */
-  function pickChampion(state, pid, legal, params, temp, eps, epsK) {
-    return policyChooserN(params, temp, eps, epsK)(state, pid, legal);
+  function pickChampion(state, pid, legal, params, temp, eps, epsK, epsMode) {
+    return policyChooserN(params, temp, eps, epsK, epsMode)(state, pid, legal);
   }
 
   /* 脚本 chooser 包一层（补目标），供 N 人局使用 */
