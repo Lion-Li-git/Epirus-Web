@@ -416,6 +416,42 @@
             if (nonDef.length >= 2) pool = nonDef;
           }
           const top = pool.sort(function (a, b) { return bestOf[b] - bestOf[a]; }).slice(0, Math.max(2, epsK || 5));
+          /* ===== v1.5.142（用户 09-21 裁定）：修"探索只付铺垫成本、永远拿不到收益" =====
+           * 病（DS 实测，`docs/RESEARCH-LOG-2026-09-21-ds.md` §10）：贴贴/蓄能**只在 ε>0 时出现**（ε=0 ⇒ 0.00/局；
+           *   前台 ε.2 ⇒ 2.7/局），而**天火在两档都是 0.00/局** —— 因为探索只在"网络打分 top-K 键"里挑，
+           *   天火从没被训练过、分低到进不了 top-K ⇒ **探索抽得到铺垫卡、结构性地抽不到收尾卡** ⇒
+           *   每次探索出贴贴 = 净亏 1 ep 且必然不引爆。用户三条裁定（原话）：
+           *   ① "把贴贴和蓄能的探索限制调到 3ep 才能使用"；
+           *   ② "蓄能之后增加用电磁炮或激光眼的优先度"；
+           *   ③ "贴贴之后增加继续贴以及天火的优先度"（理由："性价比最高的是贴三张然后引爆两次"）。
+           * 只作用于 `epsMode==='soft'`（浏览器运行时口径）⇒ 缺省 epsMode 与 eps=0 的读数**逐字不变**。 */
+          if (epsMode === 'soft') {
+            const me = state.p && state.p[pid] ? state.p[pid] : {};
+            const epN = Number(me.ep || 0);
+            /* ① 铺垫型键的 ep 门槛：ep<3 时不进探索集（贴贴 1ep / 蓄能 1ep，低 ep 花掉必然过期或白贴）。 */
+            const HOLD_MIN_EP = {};
+            HOLD_MIN_EP[R.SK.CURSE] = 3;
+            HOLD_MIN_EP[R.SK.CHARGE] = 3;
+            let smart = top.filter(function (k) { return !(HOLD_MIN_EP[k] && epN < HOLD_MIN_EP[k]); });
+            /* ② 蓄能之后：手上持电珠（或上一手是蓄能）⇒ 把珠子的出口**并进**探索集。 */
+            const held = !!(me.elec || me.boom) || me.lastSkill === R.SK.CHARGE;
+            /* ③ 贴贴之后：自己还有存活符咒（`stickers` 里 owner 是我）或上一手是贴贴 ⇒ 并入天火/继续贴。 */
+            let cursing = me.lastSkill === R.SK.CURSE;
+            if (!cursing && state.p) {
+              for (let zi = 0; zi < state.p.length && !cursing; zi++) {
+                const zs = state.p[zi].stickers || [];
+                for (let zj = 0; zj < zs.length; zj++) if (zs[zj] && zs[zj].owner === pid) { cursing = true; break; }
+              }
+            }
+            const forced = [];
+            if (held) { forced.push(R.SK.RAILGUN); forced.push(R.SK.LASER_EYE); }
+            if (cursing) { forced.push(R.SK.FIRESTORM); forced.push(R.SK.CURSE); }
+            for (let fi = 0; fi < forced.length; fi++) {
+              /* 只在**可负担**（= 真在 keys 里）时并入；已在集里的不重复。 */
+              if (keys.indexOf(forced[fi]) >= 0 && smart.indexOf(forced[fi]) < 0) smart.push(forced[fi]);
+            }
+            if (smart.length) top.length = 0, Array.prototype.push.apply(top, smart);   // 兜底：绝不让集合变空
+          }
           pick = cands[keyIdx[top[Math.floor(state.rng.next() * top.length)]]];
         }
       } else {

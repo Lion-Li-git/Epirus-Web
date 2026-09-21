@@ -4317,6 +4317,39 @@ t('D110 冠军包解析单一来源：吃得下产物 .bak 外壳 / 纯 JSON / �
   ok(X.extract('/* 注释 */\nwindow.EPIRUS_CHAMPION = {"v":7,"params":[1,2]};\n').slot === '2p', '2P 外壳（含前置注释）必须判成 2p');
 });
 
+t('D111 前台探索的三条状态规则（v1.5.142 用户裁定）：铺垫卡 ep 门槛 + 持珠并入电磁炮 + 有符咒并入天火', function () {
+  /* 病（docs/RESEARCH-LOG-2026-09-21-ds.md §10，DS 实测）：贴贴/蓄能只在 ε>0 时出现（ε=0 ⇒ 0.00/局、
+     前台 ε.2 ⇒ 2.7/局），而**天火两档都是 0.00/局** ⇒ 探索只付铺垫成本、结构性地拿不到收尾。
+     用户三条裁定 → 落在 `policyChooserN` 的 `epsMode==='soft'` 分支里。本门**行为式**验证。 */
+  const evoSrc = readFileSync('js/train/evo.js', 'utf8');
+  ok(evoSrc.indexOf("epsMode === 'soft'") >= 0 && evoSrc.indexOf('HOLD_MIN_EP') >= 0,
+    '规则必须只作用于 soft（缺省 epsMode 与 eps=0 的读数逐字不变）');
+  const params = loadChampParams(Pol, 'js/bundled-champion-3p.js');   // 线上 3P 包（S / R / T / mulberry32 用外层句柄）
+  const draws = function (st, pid, key, n) {   // 用 ε=1（必探索）+ soft ⇒ 只测"探索集"本身
+    const chooser = T.policyChooserN(params, 0.15, 1, 5, 'soft');
+    const legal = key.map(function (k) { return { key: k, affordable: true }; });
+    const hit = {};
+    for (let i = 0; i < n; i++) { const r = chooser(st, pid, legal); hit[r.key] = (hit[r.key] || 0) + 1; }
+    return hit;
+  };
+  const mk = function () { return S.createState('multi', { next: mulberry32(11) }, 5); };
+  const K = R.SK;
+  const KEYS = [K.JI, K.CURSE, K.CHARGE, K.RAILGUN, K.FIRESTORM, K.GUN, K.SNIPE];
+  /* ① 低 ep（<3）：贴贴/蓄能**不许**进探索集 ⇒ 200 次抽样里一次都不该出现 */
+  const st1 = mk(); st1.p[0].ep = 1;
+  const h1 = draws(st1, 0, KEYS, 200);
+  eq((h1[K.CURSE] || 0) + (h1[K.CHARGE] || 0), 0, 'ep=1 时探索不得抽到贴贴/蓄能（实测 ' +
+    (h1[K.CURSE] || 0) + '/' + (h1[K.CHARGE] || 0) + ' 次）');
+  /* ② 持电珠 + ep≥2：电磁炮必须被并进探索集 ⇒ 200 次里至少出现一次 */
+  const st2 = mk(); st2.p[0].ep = 4; st2.p[0].elec = 1;
+  const h2 = draws(st2, 0, KEYS, 200);
+  ok((h2[K.RAILGUN] || 0) > 0, '持电珠时探索必须能抽到电磁炮（实测 ' + (h2[K.RAILGUN] || 0) + ' 次）');
+  /* ③ 自己有存活符咒 + ep≥2：天火必须被并进探索集 ⇒ 200 次里至少出现一次 */
+  const st3 = mk(); st3.p[0].ep = 4; st3.p[1].stickers = [{ owner: 0, age: 1 }];
+  const h3 = draws(st3, 0, KEYS, 200);
+  ok((h3[K.FIRESTORM] || 0) > 0, '有存活符咒时探索必须能抽到天火（实测 ' + (h3[K.FIRESTORM] || 0) + ' 次）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
