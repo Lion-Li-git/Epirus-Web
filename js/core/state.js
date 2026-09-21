@@ -23,6 +23,7 @@
       copiedGuard: null,             // N14 v1.5.17：镜面反射复制来的架势（只在结算它的那个回合有效）
       fireWeakNext: false, fireWeakNow: false, // 藤甲 R22
       tauntPending: false, tauntActive: false, // 挑衅 R41/R54
+      tauntBy: [], tauntByPending: [],          // v1.5.138（指向盲审计）：义务期"必须攻击谁"的挑衅者名单（N 人可多人、pending/active 与布尔同步）
       tauntFrom: null, tauntTo: null,          // N人：挑衅指向（2人时等价于布尔）
       nightmare: false,             // R50
       chains: [],                   // R45 铁索：我连着的对手 pid 列表（2人=1个）
@@ -87,13 +88,29 @@
     if (state.p.length === 2) return opp[0];
     const t = opt && opt.target;
     if (typeof t === 'number' && t !== pid && state.p[t] && state.p[t].hp > 0) return t;
-    return opp[0];
+    /* v1.5.138：兜底从 `opp[0]`（最小索引）改 saltPick —— v1.5.54 已在 oppOf/wrapBotN 等处
+     * 明令禁止"恒定取最小对手"的座位偏置（D108 同族），这里是漏网的一处。
+     * `saltPick` 单一真源在 resolve（避免两处公式漂移）；resolveTarget 只在**对局运行期**被调，
+     * 那时 `EpirusResolve` 早已挂好（load 期不触达）。 */
+    return global.EpirusResolve.saltPick(state, opp, 0);
   }
 
   function canUseSkillInMode(state, key) {
-    return state.mode.skills.some(function (s) {
+    const inMode = state.mode.skills.some(function (s) {
       return (typeof s === 'string' ? s : s.key) === key;
     });
+    if (!inMode) return false;
+    /* v1.5.140（用户 09-21 裁定）：MULTI_ONLY 三张（双枪射手/镜面反射/全息屏障）必须按**当前存活人数**
+     * 过滤，不只是按开局模式 —— 多人局残局只剩两人时本就是"两人在打"，那三张在 2 人形态
+     * 退化或无意义（09-19 合并分析的原结论：N<3 过滤）。旧实现只在 mode 层过滤 ⇒ 冠军在残局继续
+     * 花 1 ジ 套全息（results/93-2 的 22/28 回合局可见），是它 2P 残局崩的一根直接原因（93 对现 2P
+     * 冠军 0-120 的账里这一条占多少，重训臂 v7u1 拆）。回魂把人数抬回 3+ ⇒ 本判定动态恢复可用。 */
+    if (R.MULTI_ONLY.indexOf(key) >= 0) {
+      let alive = 0;
+      for (let i = 0; i < state.p.length; i++) if (state.p[i].hp > 0) alive++;
+      if (alive <= 2) return false;
+    }
+    return true;
   }
 
   /* 费用计算。ok=false = 条件不满足的“无效出招”（不贷款、不惩罚）。

@@ -334,7 +334,20 @@
    * ⚠ 只作用于 v7 口径：legacy（v5/v6）保持旧口径，历史基线才可比。
    * 抽成函数的动机：探针（tools/probe-beadloop.mjs）必须与线上**同一份**门槛，否则又会量错（对比 v1.5.83 的教训）。 */
   function econBase(state, pid, legal) {
+    /* 菜单级"严格必废"闸门（v1.5.139 扩第二项，用户实机报"空爆"）：
+     * ① ep<2 不蓄能（v1.5.82 原裁定，注释见 policyChooserN 上方）；
+     * ② 全场无人带符咒 ⇒ 天火必然 0 引爆（花 2 ジ 放空气）——从菜单摘掉。
+     * 与①同性质：这是"恒亏动作"的门禁，不是新的规则语义（README 天火的作用对象就是符咒）；
+     * 键级探索（下面 epsK）因此永远不会把天火采进 top-K。训练/浏览器同享此菜单。 */
+    // v1.5.139：天火引爆的是**施法者自己贴出、age≤3** 的符咒（resolve `case SK.FIRESTORM` 的
+    // owner/age 判定）——闸门必须与它同判据：数"pid 拥有的存活符咒"，不是"场上任何符咒"。
+    let myLiveStickers = 0;
+    for (let i = 0; i < state.p.length; i++) {
+      const tk = state.p[i].stickers || [];
+      for (let j = 0; j < tk.length; j++) if (tk[j].owner === pid && tk[j].age <= 3) myLiveStickers++;
+    }
     const gated = legal.filter(function (l) {
+      if (l.key === R.SK.FIRESTORM) return myLiveStickers > 0;
       if (l.key !== R.SK.CHARGE) return true;
       const pp = state.p[pid];
       return !!pp && (pp.ep || 0) >= 2;
@@ -342,7 +355,7 @@
     return gated.length ? gated : legal;
   }
 
-  function policyChooserN(params, temp, eps) {
+  function policyChooserN(params, temp, eps, epsK, epsMode) {
     const legacy = LEGACY(params);
     return function (state, pid, legal) {
       const aff = legal.filter(function (l) { return l.affordable; });
@@ -365,16 +378,56 @@
        * ⚠ 启发式而非定律：收入 >1/回合（聚能环第 3 次起 +3、避雷针 +4）时 ep=1 蓄能也可能成立。 */
       const v7base = econBase(state, pid, base);
       const cands = P.candidatesFor(state, pid, v7base, { lockTarget: lastCancelOther(state, pid) });
-      const pick = (eps && state.rng.next() < eps && cands.length)
-        ? cands[Math.floor(state.rng.next() * cands.length)]
-        : P.chooseCandidates(state, pid, cands, params, { temp: temp });
+      /* ===== v1.5.139（用户 09-21 晨裁定：ε=0.25 全候选太糙，出现"贴贴不引爆/空爆"昏手，要"均匀但随机性小"）=====
+       * 探索不再在**全体候选**上均匀采（那样会采到天火空爆、无意义贴贴这类网络几乎不给分的废着），
+       * 而是：取网络打分前 K 的**不同技能键**（按各键最好候选的概率排序），在其中均匀采一个键、
+       * 再取该键概率最高的候选。→ 既保证"多个不同技能"的对称破（2 席长程镜像从 ε=0 的 104 回合零决胜
+       *   降到 ~30 回合、100% 决胜），又把昏手率压到近零（5 席空爆/局：全候选 0.77 → top5 键 0.07）。
+       * `epsK` 默认 5；只在**浏览器运行时**（ui 传 eps>0）生效，训练/评测/门禁 eps=0 ⇒ 读数逐字不变。 */
+      let pick;
+      const greedyOf = function () { return P.chooseCandidates(state, pid, cands, params, { temp: temp }); };
+      if (eps && state.rng.next() < eps && cands.length) {
+        /* v1.5.141（#26 · 用户实机"防御偏多、丢了集火和滚环"）：`epsMode='soft'` 时探索**不得覆盖**
+         * 贪心已经选定的"防御类型 / 聚能环"两型出手。理由不是审美，是算术：同一包同一装配下，均匀抽 top-K
+         * 把防御出现率从贪心的 4.0% 抬到 26.4%，聚能环从 1.2% 抬到 **0.0%** —— 环是**连段**机制（第 3 次起 +3 ジ），
+         * 40% 的随机打断等于把它从经济里删掉（量具：`tools/behavior-profile.mjs`）。
+         * 默认不传 `epsMode` = v1.5.139 的原口径逐字不变 ⇒ 训练/评测/门禁读数不动。 */
+        if (epsMode === 'soft') {
+          const g = greedyOf();
+          const gcat = R.byKey[g.key] && R.byKey[g.key].cat;
+          if (g.key === R.SK.RING || gcat === R.CAT.DEFENSE) pick = g;
+        }
+        if (!pick) {
+          const f = P.forwardCands(state, pid, cands, params, { temp: 1 });
+          const bestOf = {}, keys = [], keyIdx = {};
+          for (let i = 0; i < cands.length; i++) {
+            const k = cands[i].key;
+            if (!(k in bestOf)) { bestOf[k] = f.probs[i]; keyIdx[k] = i; keys.push(k); }
+            else if (f.probs[i] > bestOf[k]) { bestOf[k] = f.probs[i]; keyIdx[k] = i; }
+          }
+          /* `soft` 的第二半：探索集里**不放防御键** ⇒ 噪声只能"换一种打法"，不能"凭空摆一个架势"。
+           * （只有防御键可选时不过滤 —— 否则退化成一个确定性的ジ。） */
+          let pool = keys;
+          if (epsMode === 'soft') {
+            const nonDef = keys.filter(function (k) {
+              const d = R.byKey[k];
+              return !(d && d.cat === R.CAT.DEFENSE);
+            });
+            if (nonDef.length >= 2) pool = nonDef;
+          }
+          const top = pool.sort(function (a, b) { return bestOf[b] - bestOf[a]; }).slice(0, Math.max(2, epsK || 5));
+          pick = cands[keyIdx[top[Math.floor(state.rng.next() * top.length)]]];
+        }
+      } else {
+        pick = greedyOf();
+      }
       return { key: pick.key, target: pick.target, target2: pickTarget2N(state, pid, pick.key, pick.target), bead: pick.bead };
     };
   }
   /* v7：页面/工具的统一入口（候选感知 + 旧包自动回退）。
    * 返回 {key,target,target2,bead} —— 调用方**整个交给引擎**（play.js 的 normPick 认这个形状）。 */
-  function pickChampion(state, pid, legal, params, temp, eps) {
-    return policyChooserN(params, temp, eps)(state, pid, legal);
+  function pickChampion(state, pid, legal, params, temp, eps, epsK, epsMode) {
+    return policyChooserN(params, temp, eps, epsK, epsMode)(state, pid, legal);
   }
 
   /* 脚本 chooser 包一层（补目标），供 N 人局使用 */

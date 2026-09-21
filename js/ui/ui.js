@@ -196,6 +196,10 @@
    * ⚠️ 只排**渲染用的副本**（`.map` 出新数组），`state.events` 本身绝不排序 —— 引擎怎么结算就怎么结算。
    * 反证（np-test D38）：把 logEvents 改回直接遍历 list、或去掉 tier/sub ⇒ D38 立刻红。 */
   const EV_TIER_DEF = { guardSet: 1, holoSet: 1, blocked: 1, reflect: 1, voidImmune: 1, curseBlock: 1, rodBlock: 1, rod: 1 };
+  /* v1.5.140（用户实机报的显示顺序 bug）：同是防御档，**"摆出架势"必须排在"它的挡下/免疫/反弹"之前**。
+   * 引擎按发射顺序记事件（攻击方的结算常早于防守方的 guardSet ⇒ `blocked` 先发射），
+   * 渲染层不重排就会出现"先看到挡下、后看到摆出"的先果后因（results/93-2 三局抓到 R9/R10/R23）。 */
+  const EV_SUB_RESULT = { blocked: 1, reflect: 1, voidImmune: 1, curseBlock: 1, rodBlock: 1 };
   const EV_TIER_ATK = { damage: 1, headshot: 1, bigTChain: 1, ban: 1, hidden: 1 };
   const EV_TIER_MIRROR = { mirror: 1, mirrorCopySelf: 1, mirrorNoEffect: 1 };
   const EV_SUB_VOIDER = { cancel: 1, clash: 1, thunderRing: 1 };
@@ -206,7 +210,7 @@
     if (e.type === 'death') return [2, 1];
     if (EV_TIER_MIRROR[e.type] || (e.type === 'guardSet' && e.copied)) return [3, 0];
     if (EV_SUB_VOIDER[e.type]) return [1, 1];
-    if (EV_TIER_DEF[e.type]) return [0, 0];
+    if (EV_TIER_DEF[e.type]) return [0, EV_SUB_RESULT[e.type] ? 1 : 0];
     if (EV_TIER_ATK[e.type]) return [2, 0];
     return [1, 0];
   }
@@ -437,17 +441,20 @@
         B.aiFallback = false;
         const base = legal.filter(function (l) { return l.affordable; });
         const legalForAI = base.length ? base : [{ key: R.SK.JI, affordable: true }];
-        /* v1.5.137（用户裁定 09-20 深夜：运行时 AI 加一点随机破镜像僵局）：**ε-greedy 0.25**，温度维持
-         * 评测口径 0.15 不动。
-         * 病（用户实测 results/93/…104回合）：两席同包在对称局面下 softmax 温度再高也破不了——
-         *   · 2 人长程：双方每回合都【ジ】（冷战，攻击=互爆所以都不打），一路拖到**第 104 回合收缩**双双阵亡（平局）；
-         *   · 5 人残局：两个幸存者互【枪→对方】同优先级**相抵 132 次**，同样烧到收缩。
-         * 关键诊断：温度只是按 logit 重加权，**当某动作以巨大优势独大时（ジ/枪在镜像里）温度抬到 0.7 仍是 104 回合零决胜**；
-         *   只有 ε-greedy 的"以 ε 概率在**全体候选**里均匀采样"能强制探索、真正打破对称。
-         * 实测（2 席同包镜像 · 40 局）：eps=0 ⇒ 决胜 0%；eps=0.25 ⇒ 长程 52 回合/100% 决胜、多人 28 回合/98%。
-         * 取 0.25 = 每 4 手约 1 手试探性随机：够破对称，又保留 3/4 的强网络判断（"该打谁"仍是网络说了算）。
-         * ⚠️ **只影响浏览器运行时**：温度仍是评测/门禁/skill-report 的 0.15、且 evalN 不传 eps ⇒ 训练读数逐字不变。 */
-        return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15, 0.25));
+        /* ===== v1.5.139 → v1.5.141（两次用户实机裁定叠出来的这一行）=====
+         * 浏览器冠军 = softmax(0.15) + **键级探索**（探索时只在网络打分前 K 的**不同技能键**里均匀选，
+         * 键内取最优候选——目标仍由网络说了算）。机制在 evo.js `policyChooserN`；温度/eval 路径不动：
+         * 训练与门禁调用 eps=0 ⇒ 读数逐字不变（全仓 eps>0 的只有这一行）。
+         * v1.5.139：ε=0.25 全候选"昏手太多"（贴贴不引爆/天火空爆）⇒ 改 top5 键。对照（93 权重 · headless）：
+         *   2 席长程镜像 ε=0 ⇒ 104 回合 0% 决胜；ε.25 全候选 ⇒ 56 回合/97% 但空爆 1.07/局；ε.4~.5 top5 ⇒ ~30 回合/100%。
+         * v1.5.141（用户："这一版随机还可以，但**防御偏多**、**丢了集火和滚环**"）⇒ 降 ε 并加 `epsMode='soft'`
+         *   （探索**不许**覆盖贪心选定的防御/聚能环，且探索集里不放防御键）。同包同装配 40 局/点（`tools/behavior-profile.mjs`）：
+         *     ε.4 uniform：防御 26.4% · 攻击 23.2% · 环 0.0% · 集火 22.0% · 胜率 30% · 镜像破局 100%
+         *     ε.4 soft   ：防御 22.8% · 攻击 23.9% · 环 0.2% · 集火 26.5% · 胜率 25% · 镜像破局 100%
+         *   **ε.2 soft（现役）：防御 9.1% · 攻击 28.6% · 环 1.5% · 集火 34.1% · 胜率 33% · 镜像破局 100%**
+         *     ε.2 uniform：防御 16.7% · 攻击 26.4% · 环 1.4% · 集火 26.7% · 胜率 35%（用户报的病它没治）
+         *   代价如实记：昏手（被无效化的出手）3.0% ⇒ 6.2%，仍远低于 ε.25 全候选那代的 1.07 次/局空爆。 */
+        return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15, 0.2, 5, 'soft'));
       }
       B.aiFallback = true;                                  // 冠军缺失 → 显式回退，不静默
       return finish(DN.hard.pick(state, pid, legal));

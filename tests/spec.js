@@ -258,15 +258,100 @@
 
   t('R54 挑衅：不攻击则回合末-1；攻击则无事', function () {
     const st = game(); setEp(st, 0, 5);
-    st.p[1].tauntActive = true;
+    st.p[1].tauntActive = true; st.p[1].tauntBy = [0];   // v1.5.138：义务要带"必须打谁"（2P=对面）
     play(st, SK.JI, SK.GUN);
     eq(st.p[1].hp, 3, '用了枪不违约(受自己攻击?)'); // gun at 你——无防御 你-1
     eq(st.p[0].hp, 2, '枪命中你');
-    const st2 = game(); setEp(st2, 0, 0); st2.p[1].tauntActive = true;
+    const st2 = game(); setEp(st2, 0, 0); st2.p[1].tauntActive = true; st2.p[1].tauntBy = [0];
     play(st2, SK.JI, SK.JI);
     eq(st2.p[1].hp, 2, '未攻击违约-1');
   });
 
+  t('R54b 挑衅合规必须**打对目标**（v1.5.138 指向盲审计；2P 恒等 ⇒ 3P 反证组）', function () {
+    /* 组1：P2 挑衅 P1，P1 攻击第三人 P0（错误目标）⇒ 违约（旧实现：只看 TAUNT_SATISFY 会误判合规）。 */
+    const run = function (attackTarget) {
+      const st = S.createState('multi', { next: Math.random }, 3);
+      for (let i = 0; i < 3; i++) st.p[i].ep = 9;
+      st.events = []; X.startTurn(st);
+      S.attemptAction(st, 0, SK.JI, null);
+      S.attemptAction(st, 2, SK.TAUNT, { target: 1 });      // 这回合挑 ⇒ 下回合义务
+      S.attemptAction(st, 1, SK.JI, null);
+      X.resolveActions(st); X.endTurn(st);                   // pending → active
+      X.startTurn(st);
+      S.attemptAction(st, 0, SK.JI, null);
+      S.attemptAction(st, 1, SK.GUN, { target: attackTarget }); // P1 的枪指谁由组别给
+      S.attemptAction(st, 2, SK.JI, null);
+      X.resolveActions(st); X.endTurn(st);
+      return st;
+    };
+    const wrong = run(0);   // 打第三人 P0
+    ok(wrong.events.some(function (e) { return e.reason === '挑衅违约'; }), '攻击错误目标 ⇒ 必须违约（旧实现红）');
+    eq(wrong.p[1].hp, 2, 'P1 违约 -1');
+    const right = run(2);   // 打挑衅者 P2
+    ok(!right.events.some(function (e) { return e.reason === '挑衅违约'; }), '打对挑衅者 ⇒ 免罚');
+    /* 组3：挑主 P2 在义务期内被 P0 打死 ⇒ 义务不可履行 ⇒ 免罚（死亡兜底豁免） */
+    const st3 = S.createState('multi', { next: Math.random }, 3);
+    for (let i = 0; i < 3; i++) st3.p[i].ep = 9;
+    st3.events = []; X.startTurn(st3);
+    S.attemptAction(st3, 0, SK.JI, null);
+    S.attemptAction(st3, 2, SK.TAUNT, { target: 1 });
+    S.attemptAction(st3, 1, SK.JI, null);
+    X.resolveActions(st3); X.endTurn(st3);
+    X.startTurn(st3);
+    st3.p[2].hp = 0;                                        // 挑主阵亡
+    S.attemptAction(st3, 0, SK.JI, null);
+    S.attemptAction(st3, 1, SK.JI, null);                   // 被挑者只能ジ
+    X.resolveActions(st3); X.endTurn(st3);
+    ok(!st3.events.some(function (e) { return e.reason === '挑衅违约'; }), '挑主全死 ⇒ 义务免罚');
+    eq(st3.p[1].hp, 3, '免罚不掉血');
+  });
+
+  t('R23d 过载炮反制必须"攻击指回炮手"（v1.5.138 指向盲：2P 恒等 ⇒ 3P 反证）', function () {
+    /* A炮B、B枪**C**（B 没理 A）：旧实现只看 B 出了攻击卡就白废 A 的炮。修后 B 的枪不指向 A ⇒ 炮应照常打 B。 */
+    const st = S.createState('multi', { next: Math.random }, 3);
+    for (let i = 0; i < 3; i++) st.p[i].ep = 9;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.CANNON, { target: 1 });
+    S.attemptAction(st, 1, SK.GUN, { target: 2 });     // B 打第三人
+    S.attemptAction(st, 2, SK.JI, null);
+    X.resolveActions(st); X.endTurn(st);
+    ok(!st.events.some(function (e) { return e.type === 'cannonCountered'; }), 'B 的枪没指炮手 ⇒ 不得判"过载炮被抵消"');
+    eq(st.p[1].hp, 2, '炮照常落到 B');
+    eq(st.p[2].hp, 2, 'B 的枪打到 C');
+    const st2 = S.createState('multi', { next: Math.random }, 3);
+    for (let i = 0; i < 3; i++) st2.p[i].ep = 9;
+    st2.events = []; X.startTurn(st2);
+    S.attemptAction(st2, 0, SK.CANNON, { target: 1 });
+    S.attemptAction(st2, 1, SK.GUN, { target: 0 });    // B 反指炮手 ⇒ 该抵消
+    S.attemptAction(st2, 2, SK.JI, null);
+    X.resolveActions(st2); X.endTurn(st2);
+    ok(st2.events.some(function (e) { return e.type === 'cannonCountered'; }), 'B 的枪指回炮手 ⇒ 必须抵消');
+  });
+
+  t('R38b 小雷三人成环 A→B→C→A：**全部无效果**（v1.5.138；旧实现只认两两互指 ⇒ 先手独赢）', function () {
+    const st = S.createState('multi', { next: Math.random }, 3);
+    for (let i = 0; i < 3; i++) st.p[i].ep = 9;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.MINI_T, { target: 1 });
+    S.attemptAction(st, 1, SK.MINI_T, { target: 2 });
+    S.attemptAction(st, 2, SK.MINI_T, { target: 0 });
+    X.resolveActions(st);
+    ok(st.events.some(function (e) { return e.type === 'thunderRing'; }), '三人环必须发 thunderRing');
+    ok([0, 1, 2].every(function (i) { return st.actions[i] && st.actions[i].voided; }), '环上三人全部作废');
+    eq(st.p.map(function (p) { return p.hp; }).join(','), '3,3,3', '无人受击/被爆头（"不会有任何效果"）');
+  });
+
+  t('R39b 贴贴可被**八卦阵**阻挡（v1.5.138：blockKinds 漏了 bagua）', function () {
+    const st = S.createState('multi', { next: Math.random }, 3);
+    for (let i = 0; i < 3; i++) st.p[i].ep = 9;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.CURSE, { target: 1 });
+    S.attemptAction(st, 1, SK.BAGUA, null);            // P1 摆八卦阵（判定必胜的稳态用 rng 偏向：见下）
+    S.attemptAction(st, 2, SK.JI, null);
+    st.p[1].baguaExtra = true;                         // 若判定失败仍可挡（八卦阵挡贴贴不依赖判定赢）
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[1].stickers.length, 0, '八卦阵应挡下贴贴（旧实现漏 block ⇒ 会被贴上）');
+  });
   t('R23 转移伤害：转给**指定目标**（不是弹回攻击者）；坦克穿透', function () {
     /* v1.5.136（用户实机报的 bug ①）：旧实现把转移写成"弹回攻击者"，而 2 人局里"指定目标"
      * 与"攻击者"恒同一人 ⇒ 老用例永远分不出来。这里补 3 人反证组：指定目标≠攻击者。 */
@@ -321,6 +406,23 @@
     const fresh = build(true);
     eq(fresh.p[1].hp, 2, '当回合埋当回合炸 ⇒ 不可转移，P1 自己挨');
     eq(fresh.p[3].hp, 2, 'P3 只吃自己那跳');
+  });
+  t('R62 多人局存活降到 2 人 ⇒ MULTI_ONLY（双枪/镜面/全息）动态禁用；回到 3 人恢复（用户 09-21 裁定）', function () {
+    const Play = window.EpirusPlay;
+    const has = function (st, key) { return Play.legalActions(st, 0).some(function (l) { return l.key === key; }); }
+    const st = S.createState('multi', { next: Math.random }, 4);
+    for (let i = 0; i < 4; i++) st.p[i].ep = 9;
+    ok(has(st, SK.HOLO), '4 人存活：全息屏障必须在菜单里');
+    ok(has(st, SK.DUAL_GUN) && has(st, SK.MIRROR), '4 人存活：双枪/镜面必须在菜单里');
+    st.p[2].hp = 0;
+    ok(has(st, SK.HOLO), '3 人存活：全息仍须可用（阈值是 ≤2，不是 <3 人开局）');
+    st.p[3].hp = 0;                                     // 只剩 0/1 两人
+    ok(!has(st, SK.HOLO), '残局 2 人 ⇒ 全息屏障不得再出现在菜单（旧实现：一直可用 ⇒ 93 残局浪费 1ジ）');
+    ok(!has(st, SK.DUAL_GUN) && !has(st, SK.MIRROR), '残局 2 人 ⇒ 双枪/镜面同样禁用');
+    const r = S.attemptAction(st, 0, SK.HOLO, { target: 1 });
+    ok(r && r.outcome !== 'ok', '硬闯也要被拒（attemptAction 不返回 ok）');
+    st.p[2].hp = 1;                                     // 回到 3 人存活
+    ok(has(st, SK.HOLO), '人数回到 3+ ⇒ 动态恢复可用');
   });
   t('R23c 转移伤害**不得**干扰狙击（用户裁定 09-20 深夜：可干扰的是激光眼等带攻击效果技能）', function () {
     /* v1.5.13 把旧口径里的 `|| ta.key===SK.TRANSFER` 收窄成"指向狙击手的转移才干扰"——但**转移本就不该
