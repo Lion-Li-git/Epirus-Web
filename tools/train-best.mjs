@@ -131,12 +131,12 @@ for (let k = 0; k < N; k++) {
   console.log(`候选 ${k + 1}: ${GENS}代 ${secs}s | score=${t.bestChampScore.toFixed(3)} | avg wr=${(ev.avg * 100).toFixed(0)}% | wall=${(ev.per.wall * 100).toFixed(0)}% defend=${(ev.per.defend * 100).toFixed(0)}% | sel=${evScore(ev).toFixed(3)}`);
   { const e = T.champEntropy(t.champion, 0.15, 60, 31337);
     cands.push({ tag: '候选' + (k + 1), pack: P.pack(t.champion), ev: ev, score: t.bestChampScore, secs: secs, sc: evScore(ev), div: e });
-    console.log(`    └ 有效技能数=${Math.exp(e.divNorm * Math.log(28)).toFixed(2)} (${e.distinct} 种, divNorm=${e.divNorm.toFixed(3)})`); }
+    console.log(`    └ 有效技能数=${e.effSkills.toFixed(2)}（hill05=${e.hill05.toFixed(2)} · ${e.distinct} 种 · divNorm=${e.divNorm.toFixed(3)}）`); }
   bestTime += Number(secs);
 }
-// ===== 多目标择优：胜率容差带内取覆盖熵最高者 =====
+// ===== 多目标择优：胜率容差带内取**广度**最大者（v1.5.147：hill05→distinct→divNorm，理由见 pick-best.mjs 头） =====
 // 只用 argmax(胜率) 必然挑中最强也最窄的个体（实测 2.52 vs 3.25 有效技能）。
-// 这里改成：先把「胜率分 ≥ 最高分 - WR_TOL」的候选圈成 band，再在 band 里取 divNorm 最大者。
+// 这里改成：先把「胜率分 ≥ 最高分 - WR_TOL」的候选圈成 band，再在 band 里取广度序最高者。
 /* v1.5.130：择优改成调 `tools/pick-best.mjs` 的纯函数（不回归层 + 容差带 + 发散度）。
  * 为什么要抽出来、以及它修的那个**假承诺**（"绝不会回归到更弱的冠军"）的实测反例，见该文件头。 */
 const WR_TOL = 0.03;
@@ -145,8 +145,27 @@ best = pick.best;
 const inc = pick.incumbent;
 if (inc) console.log('[不回归层] 现有冠军=' + inc.tag + '；剔除候选=' + pick.dropped + ' 个（回归了冠军已过的基准）');
 console.log('[多目标择优] 候选=' + cands.length + '  可择优=' + pick.safe.length + '  容差带=' + pick.band.length + '（胜率分 ≥ ' + (pick.topSc - WR_TOL).toFixed(3) + '）');
-for (const c of cands) console.log('   ' + c.tag.padEnd(8) + ' sc=' + c.sc.toFixed(3) + '  avg=' + (c.ev.avg * 100).toFixed(0) + '%  divNorm=' + c.div.divNorm.toFixed(3) + '  种类=' + c.div.distinct + '  回归=' + regressionsOf(c, inc) + '  新过=' + fixesOf(c, inc) + (c === best ? '   ← 选中' : ''));
+for (const c of cands) console.log('   ' + c.tag.padEnd(8) + ' sc=' + c.sc.toFixed(3) + '  avg=' + (c.ev.avg * 100).toFixed(0) + '%  hill05=' + (c.div.hill05 || 0).toFixed(2) + '  有效技能=' + (c.div.effSkills || 0).toFixed(2) + '  种类=' + c.div.distinct + '  divNorm=' + c.div.divNorm.toFixed(3) + '  回归=' + regressionsOf(c, inc) + '  新过=' + fixesOf(c, inc) + (c === best ? '   ← 选中' : ''));
 console.log('   实际胜率损失 = ' + ((pick.topSc - best.sc) * 100).toFixed(1) + 'pt');
+/* ===== v1.5.147（流程缺口，xfer44 反例）：带内全部候选落盘 =====
+ * 旧实现只持久化当选者 —— 落选候选（如那天"种类=5/avg 99%"的候选3）**连复盘机会都没有**，
+ * 与 D82"产物点名"的精神相悖。现在带内每一粒都写 `docs/artifacts/<ARM>-band<k>.bak`
+ * （ARM=EPIRUS_ARM，默认 tb<seed>；.gitignore 已整目录忽略 artifacts，仓库不脏）。 */
+try {
+  const ARM = (process.env.EPIRUS_ARM || ('tb' + __SEED)).replace(/[^A-Za-z0-9_.-]/g, '');
+  const dir = join(root, 'docs', 'artifacts');
+  if (!existsSync(dir)) { console.log('[band-save] 无 docs/artifacts 目录，跳过'); }
+  else for (let bi = 0; bi < pick.band.length; bi++) {
+    const c = pick.band[bi];
+    const bmeta = { source: 'tools/train-best.mjs (band-save)', arm: ARM, bandIdx: bi, tag: c.tag,
+      selected: c === best, seed: __SEED, gens: GENS, avg: Number(c.ev.avg.toFixed(4)),
+      div: { hill05: c.div.hill05 || null, effSkills: c.div.effSkills || null, distinct: c.div.distinct, divNorm: c.div.divNorm },
+      rulesFingerprint: rulesFingerprint(), ts: new Date().toISOString() };
+    writeFileSync(join(dir, ARM + '-band' + (bi + 1) + '.bak'),
+      'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(bmeta) + ';\nwindow.EPIRUS_CHAMPION = ' + JSON.stringify(c.pack) + ';\n', 'utf8');
+    console.log('[band-save] ' + ARM + '-band' + (bi + 1) + '.bak  ' + c.tag + (bmeta.selected ? '（当选）' : ''));
+  }
+} catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
 const packStr = JSON.stringify(best.pack);
 if (existsSync(dest)) copyFileSync(dest, dest + '.bak');   // 覆写前留一份 .bak
 const meta = {

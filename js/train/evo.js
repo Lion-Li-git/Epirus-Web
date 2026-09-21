@@ -1042,17 +1042,30 @@ let WALL_GAMES = 3;
       if (use[k] > 0) distinct++;
       tot += use[k];
     }
-    if (tot <= 0) return { divNorm: 0, H: 0, nonJi: 0, ji: ji, distinct: 0 };
+    if (tot <= 0) return { divNorm: 0, H: 0, nonJi: 0, ji: ji, distinct: 0, effSkills: 0, hill05: 0 };
     let H = 0;
     for (const k in use) {
       if (k === R.SK.JI) continue;
       const pr = use[k] / tot;
       H -= pr * Math.log(pr);
     }
+    /* ===== v1.5.147（xfer44 反例：0.005 的 divNorm 差杀死了"种类 5 vs 种类 2"）=====
+     * 加 Hill 数家族两列（D_q = (Σp^q)^(1/(1-q))，q=1 极限 = exp(H)）：
+     *  · `effSkills = exp(H)` —— 与门禁/体检的 `mirrorHealth.effSkills` **同一量纲**（择优第一次和上线判据同语言）；
+     *  · `hill05 = (Σ√p)²` —— q=0.5 的 Rényi 有效技能数：长尾按 √p 计权，"真用出第五张卡"比"两张卡打花"贵
+     *    （用户/gemini 裁定：游戏的技能分布本就不该均匀，平衡熵奖励的是时序噪声不是广度）。
+     * ⚠️ q<1 对稀有卡敏感 ⇒ 60 局样本下偶发一手会抬 hill05 —— 这正是"广度"想要的方向，
+     *    但排序主键仍是它、divNorm 退居末级（历史臂 div 里没有这两列 ⇒ 取 0，行为退旧口径，可比性保）。 */
+    let sq = 0;
+    for (const k in use) {
+      if (k === R.SK.JI) continue;
+      if (use[k] > 0) sq += Math.sqrt(use[k] / tot);
+    }
     let div;
     if (capDiv != null) div = Math.max(2, capDiv);
     else { let aff = 0; for (const k in (affKeys || {})) if (k !== R.SK.JI) aff++; div = Math.max(2, aff); }
-    return { divNorm: H / Math.log(div), H: H, nonJi: tot, ji: ji, distinct: distinct };
+    return { divNorm: H / Math.log(div), H: H, nonJi: tot, ji: ji, distinct: distinct,
+             effSkills: Math.exp(H), hill05: sq * sq };
   }
 
   /* N 人适应度（N19）：名次基础分（1/0.6/0.2）+ 轻量 shaped 项 */
@@ -1644,7 +1657,7 @@ let WALL_GAMES = 3;
     for (const k in use) { const pr = use[k] / dec; H -= pr * Math.log(pr); }
     /* v1.5.8：与 fit 里那条同源 —— **只统计非ジ动作**（否则"多出ジ"会被当成"打法更广"） */
     const cov = coverageEntropy(use, null, Math.max(2, (R.skills || []).length - 1));
-    return { divNorm: dec ? cov.divNorm : 0, distinct: cov.distinct };
+    return { divNorm: dec ? cov.divNorm : 0, distinct: cov.distinct, effSkills: cov.effSkills, hill05: cov.hill05 };
   }
 
   /* 多目标择优：在「胜率分不低于最高分 - WR_TOL」的候选里，取覆盖熵最高者。

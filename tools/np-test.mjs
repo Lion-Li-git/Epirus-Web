@@ -3891,6 +3891,21 @@ t('D104 「择优不得回归」必须是机械保证（而不是注释里的承
   const tb = readFileSync('tools/train-best.mjs', 'utf8');
   ok(tb.indexOf("from './pick-best.mjs'") >= 0, 'tools/train-best.mjs 必须从 pick-best.mjs 导入择优');
   ok(tb.indexOf('const regressOf = function') < 0, ' 且不许再内联一份 regressOf（两处实现必然漂移）');
+  /* ⑦ v1.5.147（xfer44 反例）：带内排序主键 = hill05（Rényi-0.5 有效技能数），divNorm 退居末级。
+   * 病形复刻：候选N"两件套打花"divNorm .194 / hill05 1.98，候选W"五件套一主四辅"divNorm .189 / hill05 3.1
+   * ⇒ 旧序选 N（0.005 的采样熵噪声定冠军），新序必须选 W。 */
+  const INC7 = { tag: INCUMBENT_TAG, sc: 0.90, ev: { avg: 0.99, per: { wall: 1.0 } }, div: { divNorm: 0.10, distinct: 2, hill05: 1.5 } };
+  const NARROW = { tag: '候选N', sc: 0.90, ev: { avg: 0.99, per: { wall: 1.0 } }, div: { divNorm: 0.194, distinct: 2, hill05: 1.98 } };
+  const WIDE = { tag: '候选W', sc: 0.89, ev: { avg: 0.98, per: { wall: 1.0 } }, div: { divNorm: 0.189, distinct: 5, hill05: 3.1 } };
+  eq(pickBestByExam([INC7, NARROW, WIDE], { wrTol: 0.03 }).best.tag, '候选W',
+    '带内（胜率差在容差内）必须选 hill05 更大的广包 —— divNorm 更高但 hill05 更低的窄包不许赢（0921 xfer44 实测反例）');
+  /* ⑧ 旧对象没有 hill05 列 ⇒ 退回 distinct→divNorm 的老序（历史可比性不许被打破） */
+  const OLDA = { tag: '候选A', sc: 0.9, ev: { avg: 0.99, per: {} }, div: { divNorm: 0.30, distinct: 2 } };
+  const OLDB = { tag: '候选B', sc: 0.9, ev: { avg: 0.98, per: {} }, div: { divNorm: 0.20, distinct: 5 } };
+  eq(pickBestByExam([OLDA, OLDB], { wrTol: 0.03 }).best.tag, '候选B', '无 hill05 列时按 distinct 退回（种类多者赢）');
+  /* ⑨ 带内候选必须全部落盘（D82 精神：落选者也是证据）—— 行为式钉：train-best 源码里存在 band-save 写盘点 */
+  ok(tb.indexOf("ARM + '-band'") >= 0 && tb.indexOf('selected: c === best') >= 0,
+    'train-best 必须把容差带内每一粒写成 <arm>-band<k>.bak 并标 selected（候选3 那种"死了都没碑"不许再有）');
 });
 
 t('D92 R56 同层内资源型先结算（用户裁定：过载炮的清除须含目标本回合收入）', function () {

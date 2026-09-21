@@ -43,9 +43,17 @@ export function fixesOf(cand, incumbent) {
   return n;
 }
 
-/* 择优：① 不回归层 → ② 胜率容差带 → ③ 带内取覆盖熵最大者。
- * cands: [{ tag, sc, ev:{ avg, per:{...} }, div:{ divNorm, distinct } }]（现有冠军的 tag 必须是 INCUMBENT_TAG）
- * 返回 { best, band, safe, incumbent, topSc, dropped } */
+/* 择优：① 不回归层 → ② 胜率容差带 → ③ 带内取**广度**最大者。
+ * cands: [{ tag, sc, ev:{ avg, per:{...} }, div:{ divNorm, distinct, effSkills, hill05 } }]（现有冠军的 tag 必须是 INCUMBENT_TAG）
+ * 返回 { best, band, safe, incumbent, topSc, dropped }
+ *
+ * ===== v1.5.147（xfer44 臂反例 · 用户批准）：带内排序键 divNorm → hill05 → distinct → divNorm =====
+ * 病（2026-09-21 实测）：三候选 avg 98~99% 全进带，divNorm 差 **0.194 vs 0.189** ⇒ 0.005 的分差
+ * （60 局采样熵的噪声以下）把"种类=2 的两件套"选成了冠军，杀掉"种类=5"的候选 ——
+ * Shannon 归一熵把"两张卡打花"记成和"五种卡有主次"**同价**，能量项在"广度"这个轴上是瞎的。
+ * 新主键 hill05 = (Σ√p)²（Rényi-0.5 有效技能数，D_q=(Σp^q)^{1/(1-q)}）：长尾按 √p 计权，
+ * "真用出下一张卡"严格贵于"把已有两张摇匀"；与门禁 `effSkills=exp(H)`（Hill-1）同一量纲家族。
+ * 历史对象没有这两列 ⇒ `|| 0` 兜底后自然退回 distinct→divNorm（旧可比性不破坏）。 */
 export function pickBestByExam(cands, opts) {
   const WR_TOL = (opts && opts.wrTol != null) ? opts.wrTol : 0.03;
   const list = (cands || []).slice();
@@ -55,6 +63,11 @@ export function pickBestByExam(cands, opts) {
   if (!safe.length) throw new Error('[pick-best] 不回归层把所有候选都剔除了（现有冠军应恒在层内）');
   const topSc = Math.max.apply(null, safe.map(function (c) { return c.sc; }));
   const band = safe.filter(function (c) { return c.sc >= topSc - WR_TOL; });
-  band.sort(function (a, b) { return b.div.divNorm - a.div.divNorm; });
+  band.sort(function (a, b) {
+    const da = a.div || {}, db = b.div || {};
+    return (db.hill05 || 0) - (da.hill05 || 0)
+        || (db.distinct || 0) - (da.distinct || 0)
+        || (db.divNorm || 0) - (da.divNorm || 0);
+  });
   return { best: band[0], band: band, safe: safe, incumbent: incumbent, topSc: topSc, dropped: list.length - safe.length };
 }

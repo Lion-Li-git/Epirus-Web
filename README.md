@@ -3,8 +3,10 @@
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）
 重新实现的一整套 **2 人可玩、可自对战训练** 程序。
 
-> **当前版本：v1.5.146** · 2 人对战（v1.0.0 功能冻结）+ **多人 3~5 人（技能齐全 · AI 状态特征 v7，FEAT_S=213）**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`。
-> **本版改动**：三件小修 —— ① D95 spec 检查改**进程内直跑**（去 spawn，消掉 Windows 偶发假红）；② 新门 **D113**：冠军 chooser 免疫"直喂原始包"（旧坑：忘 `unpack` 不报错、静默输出均匀分布）；③ README 卡数口径修正（2 人实为 **27** 张可用）。指纹 `be6c2195` 未变 ⇒ 两槽成绩沿用。
+> **当前版本：v1.5.147** · 2 人对战（v1.0.0 功能冻结）+ **多人 3~5 人（技能齐全 · AI 状态特征 v7，FEAT_S=213）**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`。
+> **本版改动**：择优的带内排序键从归一 Shannon 熵换成 **hill05（Rényi-0.5 有效技能数）→ distinct → divNorm**，
+> 并新增 `effSkills` 直读列与**带内候选全落盘**（`<arm>-band<k>.bak`）——动因是 xfer44 臂 0.005 的熵噪声把种类 2 的窄包选走了冠军（门 D104⑦⑧⑨ 守住）。指纹未动。
+> 上一版（v1.5.146）：D95 去 spawn 化 · D113 chooser 免疫直喂原始包 · README 卡数口径 27。
 > ⚠️ 现役 3P 冠军 = `v7cmin4-31`：**老用户要点页面「用内置冠军」才会换到新包**（localStorage 旧包优先）。
 > 之前每一版的改动与实验结论都记在 [`CHANGELOG.md`](CHANGELOG.md)（**README 只留当前版本**）。
 
