@@ -125,6 +125,9 @@ export function makeParallelEvalN(T, opts) {
         imitPlan: process.env.EPIRUS_IMIT_PLAN || null,
         imitOnly: process.env.EPIRUS_IMIT_ONLY || null,
         imitSubOnly: process.env.EPIRUS_IMIT_SUB_ONLY || null,
+        /* v1.5.141（DS 研究）：**补贴局里连"珠"一起补**（`EPIRUS_SUB_BEAD=1`）—— 让"电磁炮"在补贴局里
+         * 随时可负担，否则 v1.5.96 那条"只示范可负担动作"的覆盖永远示范不到"放炮"（见 evo.js 的注释）。 */
+        subBead: process.env.EPIRUS_SUB_BEAD || null,
         /* v1.5.102：**训练侧座位探针局数**也随消息下发（0/缺省 = 不改，保持 `SEAT_GAMES = 6` 的旧行为）。
          * 动因（v1.5.100 §17）：训练侧座位惩罚的样本只有 **6 局**，而门禁要 **≥50 局** ——
          * 同一个量、两个样本量 ⇒ 选择过程看不见"某座 93%"这种塌方；

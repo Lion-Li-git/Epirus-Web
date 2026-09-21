@@ -122,6 +122,7 @@ let imitEchoed = false;   // v1.5.96：消息生效值的回执只打一次（�
 let imitPlanEchoed = false;   // v1.5.97：分段计划的回执同样只打一次
 let imitOnlyEchoed = false;   // v1.5.98：`only` 的回执
 let imitSubEchoed = false;    // v1.5.99：`subOnly` 的回执
+let subBeadEchoed = false;    // v1.5.141（DS）：`subBead` 的回执
 let seatGamesEchoed = false;  // v1.5.102：训练侧座位探针局数的回执
 let clearWEchoed = false;     // v1.5.103：清场计数奖励的回执
 parentPort.on('message', (msg) => {
@@ -191,6 +192,12 @@ parentPort.on('message', (msg) => {
     if (T.setImitSubOnly) {
       const gotSub = T.setImitSubOnly(String(msg.imitSubOnly || '') === '1');
       if (!imitSubEchoed) { imitSubEchoed = true; console.log('[imit] worker **消息**subOnly 生效 = ' + String(gotSub)); }
+    }
+    /* v1.5.141（DS 研究）：**补贴局里连"珠"一起补**（`EPIRUS_SUB_BEAD=1`）—— 与上一条同一族：
+     * 不补珠 ⇒ 电磁炮在补贴局里也不可负担 ⇒ 示范永远落不到"放炮"上（见 evo.js `setSubBead` 的长注释）。 */
+    if (T.setSubBead) {
+      const gotBead = T.setSubBead(String(msg.subBead || '') === '1');
+      if (!subBeadEchoed) { subBeadEchoed = true; console.log('[imit] worker **消息**subBead 生效 = ' + String(gotBead)); }
     }
     /* ===== v1.5.102：训练侧**座位探针局数**（按消息设 + 回执；env 是拷贝，主路径是消息）=====
      * 病（v1.5.100 §17）：座位惩罚的样本是 `SEAT_GAMES = 6`（写死），而门禁要 ≥50 局 ⇒

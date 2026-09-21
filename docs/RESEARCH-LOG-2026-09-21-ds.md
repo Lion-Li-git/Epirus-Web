@@ -67,6 +67,30 @@ seeds 31,82,93。产物 `docs/artifacts/v7bead1-{31,82,93}.bak`（未 promote）
 而这条否证是**用对的教师**做出来的（比现在的两次更有分量）。
 **风险登记**：换掉 `pickBreakDef` 段可能动 G5 轴（破防段是它 Q9/Q10 用来压 `只防御` 的）⇒ 若 ② 红在 G5，按"红格搬家"如实记。
 
+## 6. v7bead2 预注册（**跑前写死**）：把"能放炮"这件事先做成可负担的
+
+**沿着 §2 的诊断做的第二臂**（`v7bead1` 已证：教师对、但覆盖**永远示范不到放炮**）。读码定位到确切机制：
+
+- `makeEconChooser`（`evo.js:695-704`，v1.5.96）的覆盖**只在教师动作"确实可负担"时才执行**；
+  而 v1.5.99 的补贴局（`IMIT_SUB_ONLY`）补贴的是 **ep（白来的 ep）**，**不含珠** ⇒
+  **"电磁炮"（`cost 2` + `energyNeeds {elec:1}`）在补贴局里仍然不可负担** ⇒ 覆盖只能示范"蓄能"
+  ⇒ **93 粒"蓄能 5 次、得珠 5、全过期、放炮 0"就是这条机制的形状**（不是学生不肯学）。
+- 因此本臂的**唯一改动 = 让"放炮"在补贴局里可负担**：新增 `EPIRUS_SUB_BEAD=1`
+  （`evo.js` 的 `setSubBead`，默认关；只给**受评席**每回合补一颗珠，**只作用于 `regen>0` 的补贴局**，
+  对手席不动 ⇒ 不改变补贴局的对手行为；`evo.js` 不在 `FINGERPRINT_FILES` ⇒ **零重记成本**），
+  并配 `EPIRUS_IMIT_SUB_ONLY=1` + 计划里写 `only=railgun`（v1.5.98/99 现成的"只教目标卡"通道）。
+
+**配方**：`v7bead1` 逐字 + `EPIRUS_SUB_BEAD=1` + `EPIRUS_IMIT_SUB_ONLY=1` +
+`EPIRUS_IMIT_PLAN='pickDeepSaver:0.33,pickAimDefender:0.34,pickBeadBurst:0.33:railgun'`。
+HOT=`docs/artifacts/v7n1-93.bak` · seeds 31,82,93 · 产物 `docs/artifacts/v7bead2-{31,82,93}.bak`（未 promote）。
+
+**判据**：① **花珠率 > 0 且电磁炮出手 > 0**（本仓从未达成过；现役 0.0%/0.0%）· ② 五道门 + G4 两模式 ≤60% +
+G5 ≤25%（n≥120）· ③ 代价记账（G≥3 / 座位<30pt / 场A≥20%）。
+**非空枪自检**：worker 回执 `[imit] worker **消息**subBead 生效 = true` 必须出现（否则本臂没生效，读数作废）。
+**通过** ⇒ "时序信用分配"这个定位成立且可训；**否证**（① 仍 0）⇒ 连"当场可放"都学不会 ⇒ 下一步只能动**奖励形状**
+（给 `charge→fire` 序列单独计价，而不是给"出贵卡"这个动作）。
+
+
 ## 2. v7bead1 终裁（**我的预注册否证被触发** —— 老实报）
 
 服务端日志确认实验按设计跑（`plan=pickDeepSaver:0.33,pickAimDefender:0.34,pickBeadBurst:0.33`、`imitGens=62`）⇒ **教师确实换上了**，不是静默退回 heavyfire。

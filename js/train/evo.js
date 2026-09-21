@@ -1087,7 +1087,13 @@ let WALL_GAMES = 3;
        * 更慢的输法，学不到任何东西。原生局仍走 Q1(d) 的永久回放切片（每 12 局 1 局带补贴），
        * 两条通道互不干扰，故 fit 的口径不被污染。 */
       const regen = regenThisGame;   // v1.5.99：上面已算好（同一口径，避免两处各算一遍）
-      const r = oneGameN(choosers, seed, n, { regen: regen, mode: TRAIN_MODE });
+      /* v1.5.141（DS）：补贴局里给**受评席**每回合补一颗珠 ⇒ "电磁炮"随时可负担（见 setSubBead 处的长注释）。
+       * 只补受评席（`seat`）；`regen=0` 的原生局完全不走这条 ⇒ 真实强度读数量不到差别。 */
+      const subBeadHook = (SUB_BEAD && regen > 0) ? function (state) {
+        const me = state.p[seat];
+        if (me && me.hp > 0 && !me.elec && !me.boom) me.elec = 1;
+      } : undefined;
+      const r = oneGameN(choosers, seed, n, { regen: regen, mode: TRAIN_MODE, onRoundStart: subBeadHook });
       const rank = rankOf(r.state, seat, seed);
       /* v1.5.8：终局还活着的人数 ⇒ 判断"这局是打出来的还是熬出来的"（≥2 人活着 = 哨声局） */
       const aliveEnd = r.state.p.filter(function (q) { return q.hp > 0; }).length;
@@ -1723,6 +1729,17 @@ let WALL_GAMES = 3;
   /* v1.5.99：`IMIT_SUB_ONLY` —— 见 `makeEconChooser` 里的长注释（只对设了 only 的示范生效）。 */
   let IMIT_SUB_ONLY = false;
   function setImitSubOnly(on) { IMIT_SUB_ONLY = !!on; return IMIT_SUB_ONLY; }
+  /* ===== v1.5.141（DS 研究 · `docs/RESEARCH-LOG-2026-09-21-ds.md` §5）：**补贴局里连"珠"一起补**（默认关）=====
+   * 病（本日实测，臂 `v7bead1`）：v1.5.99 的补贴局补贴的是 **ep**（白来的 ep），而"电磁炮"还需要 `elec:1`
+   * ⇒ 它在补贴局里**仍然不可负担** ⇒ v1.5.96 那条"只在教师动作**确实可负担**时才覆盖"的示范
+   * **永远示范不到"放炮"** —— 93 粒的读数（蓄能 5 次、得珠 5 颗、全过期、放炮 **0**）正是这条机制的形状。
+   * 打开它 = 在补贴局里给**受评席**每回合补一颗珠 ⇒ "放炮"随时可示范（配 `IMIT_SUB_ONLY` + `only=railgun`
+   * 就能只教这一张卡）。⚠️ **只补受评席**（不动对手席 ⇒ 不改变补贴局的对手行为）；
+   * **只影响 `regen>0` 的补贴局** ⇒ 原生考卷/体检/五道门读数不受影响。
+   * `evo.js` **不在** `FINGERPRINT_FILES` ⇒ 零重记成本（这是选在这里做的主要原因）。 */
+  let SUB_BEAD = false;
+  function setSubBead(on) { SUB_BEAD = !!on; return SUB_BEAD; }
+  function subBeadOn() { return SUB_BEAD; }
   function imitBetaForGen(gen) {
     if (IMIT_PLAN) {
       const s = imitPlanSegment(gen);
@@ -2278,7 +2295,7 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
