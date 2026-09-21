@@ -3656,6 +3656,21 @@ t('D87 只在补贴局里示范目标卡（subOnly）：只对设了 only 的示
     'worker 必须按消息设 subOnly');
   eq(T.setImitSubOnly(true), true, '可打开');
   eq(T.setImitSubOnly(false), false, '可关回（默认关）');
+  /* v1.5.141（DS 研究）：`subBead` 与 `subOnly` **同一族**（补贴局里连"珠"一起补）——
+   * 接线必须齐，否则旋钮会**静默无效**：本日研究查出的病正是"教师示范了 0 次"却没人发现
+   * （`pickHeavyFire` 最大 ep=2 ⇒ 结构上买不起 cost≥3 ⇒ v7t2 那一臂的"贵卡示范段"是空的）。
+   * 所以这条旋钮**自己先被门管住**：默认关 + 四个接线点 + 只作用于补贴局。 */
+  const ev3 = readFileSync('js/train/evo.js', 'utf8');
+  ok(ev3.indexOf('function setSubBead') >= 0, 'evo 必须实现 setSubBead');
+  ok(ev3.indexOf('SUB_BEAD && regen > 0') >= 0, '补珠只许作用于 regen>0 的补贴局（原生局/体检读数不受影响）');
+  ok(ev3.indexOf('onRoundStart: subBeadHook') >= 0, '补贴局必须把补珠钩子真的传进 onRoundStart');
+  ok(readFileSync('server/paralleltrain.mjs', 'utf8').indexOf('subBead: process.env.EPIRUS_SUB_BEAD || null') >= 0,
+    'evalN 消息必须带 subBead');
+  ok(readFileSync('server/train-worker.mjs', 'utf8').indexOf('T.setSubBead(String(msg.subBead') >= 0,
+    'worker 必须按消息设 subBead（否则旋钮静默无效）');
+  eq(T.subBeadOn(), false, '默认必须是关（不设 EPIRUS_SUB_BEAD ⇒ 旧行为逐位不变）');
+  eq(T.setSubBead(true), true, '可打开');
+  eq(T.setSubBead(false), false, '可关回');
 });
 
 t('D88 门地形量具：挂科清单必须在第一个括号前截断（括号里是读数）+ 在位包单列参照 + 跳过 A 卷', function () {
