@@ -4003,6 +4003,11 @@ t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被�
     'spec 引擎用例必须**全绿**且条数 ≥52（实测 ' + (specM ? specM[0] : String(specRes.out).slice(0, 200)) + '）');
   const specFails = [...String(specRes.out).matchAll(/<li class="fail">✘ ([^<]+)/g)].map(function (x) { return x[1]; });
   ok(specFails.length === 0, 'spec 失败用例不许有：' + specFails.slice(0, 3).join(' | '));
+  /* 夜班（0922 00:1x）：去 spawn 化当场把潜伏的 1/8 flake 钉出来（R23c 场景用例用裸 Math.random，
+   * 爆头判定把 hp=2 打成 1 ⇒ 同一 spec 连跑五次能红一次）。修法是场景用例改判定恒败常量 `noJudge()`
+   * （需要判定胜的本来就显式喂 seqRng）；这条防回归钉保证裸随机不再回流场景用例。 */
+  ok(readFileSync('tests/spec.js', 'utf8').indexOf('next: Math.random') < 0,
+    'tests/spec.js 场景用例不许再用裸 Math.random 当 rng（1/8 抖动会红门禁；判定敏感的用例显式喂 seqRng）');
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R59') >= 0, 'RULES-2P 必须记下 R59');
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('持续直到被触发') < 0 ||
      readFileSync('docs/RULES-2P.md', 'utf8').indexOf('旧文 R38 是') >= 0,

@@ -6,6 +6,10 @@
 - N2 产物（预登记，band-save 新机制首跑）：v7xfer44c6-2p.bak、v7xfer44c7-2p.bak、v7xfer44c8-2p.bak、v7xfer44c9-2p.bak、
   v7xfer44c10-2p.bak、v7xfer44c11-2p.bak、v7xfer44c12-2p.bak、v7xfer44c13-2p.bak、v7xfer44d6w-2p.bak
   与各臂全部 *-band*.bak ⇒ 读数与判据结案见夜日志 §N2/§N3。
+- 夜班修（spec 定值化）：D95 去 spawn 化当晚就抓到潜伏 1/8 抖动的场景用例 **R23c**（裸 Math.random 撞上爆头判定，
+  连跑五次红一次——也是"下午那次 158/159"最可信的事后解释）。修法：11 处场景用例 + game() 默认 rng 改判定恒败
+  常量 noJudge()（要判定胜的本就显式喂 seqRng；Fuzz 自带 mulberry 不受影响）⇒ spec 连跑 6 次全 52/52；
+  D95 加防回归钉"spec 不许再出现裸 Math.random"。
 
 ## v1.5.147 — 择优的"能量项"换掉：**divNorm(归一 Shannon) → hill05(Rényi-0.5 有效技能数) → distinct → divNorm** · 带内候选全落盘（xfer44 反例 · 用户批准 + gemini 建议）
 
