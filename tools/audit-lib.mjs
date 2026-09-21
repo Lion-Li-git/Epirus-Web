@@ -412,6 +412,12 @@ export const DENSITY_BLOCK = false;
 
 export function feasibilityOf(o) {
   const s = (o && o.seat) || {}, g = (o && o.G) || {}, w = (o && o.wall) || {}, a = (o && o.aggr) || {};
+  /* ===== v1.5.145（用户裁定："两个模式都判"）：第二个模式（long = 长程，产品常用模式）的 G 也**阻断** =====
+   * 动因（用户追问"这个包在不探索的时候技能广度非常差，是怎么通过门禁上线的"）：阻断项原本只取
+   * `selfPlay(..., 'multi', G)` ⇒ 现役包 multi 4.44 过门，而 **long G_eff 2.79 < 3 却无人管**。
+   * 口径：`o.G2` 给了就按**同一条线 3** 判（不给 ⇒ 与旧行为逐字一致，便于历史调用点/单测不动）。 */
+  const g2 = (o && o.G2) || null;
+  const g2n = (o && o.G2name) || 'long';
   const fA = a.fieldA || {}, fB = a.fieldB || {};
   const fails = [], notes = [];
   /* 探针缺失必须**响亮**（不许静默通过、也不许静默判死）。
@@ -433,6 +439,11 @@ export function feasibilityOf(o) {
   if (s.verdict === 'unjudgeable') notes.push('座位探针不可判（' + (s.basis || '') + '）—— 别当"均衡"');
   if (!miss.length) {
     if (Number(g.effSkills) < 3) fails.push('G ' + Number(g.effSkills).toFixed(2) + ' < 3');
+    /* v1.5.145（用户裁定"两个模式都判"）：第二模式（默认 long）同一条线 3。 */
+    if (g2) {
+      if (!isFinite(g2.effSkills)) fails.push('第二模式（' + g2n + '）G 探针缺失/无值 ⇒ 无法判定（视为未过）');
+      else if (Number(g2.effSkills) < 3) fails.push('G(' + g2n + ') ' + Number(g2.effSkills).toFixed(2) + ' < 3');
+    }
     if (Number(w.dmgPerGame) <= 0.5) fails.push('反弹墙伤害 ' + Number(w.dmgPerGame).toFixed(2) + ' ≤ 0.5/局');
     if (Number(fA.atk) < 0.20) fails.push('场A 还手 ' + (100 * Number(fA.atk)).toFixed(0) + '% < 20%');
     if (Number(fB.clearedPerGame) < 0.3) fails.push('场B 清场 ' + Number(fB.clearedPerGame).toFixed(2) + ' < 0.3/局');
@@ -486,6 +497,7 @@ export function feasibilityOf(o) {
     seatSpread: _n(s.spread, 1), seatDecisive: _n(s.decisiveRate), seatVerdict: s.verdict || '?', seatBasis: s.basis || '',
     seatPct: (s.pct || []).map(function (x) { return _n(x, 1); }),
     G: _n(g.effSkills), Gkeys: (g.distinctKeys === undefined ? null : g.distinctKeys),
+    G2: g2 ? _n(g2.effSkills) : null, G2name: g2 ? g2n : null,   // v1.5.145：第二模式（默认 long）的 G，进阻断也进打印
     wallDmg: _n(w.dmgPerGame), wallPierce: (w.pierceLand === undefined ? null : w.pierceLand),
     fieldA: _n(fA.atk, 3), fieldADealt: _n(fA.dealtPerGame),
     fieldBClears: _n(fB.clearedPerGame),
@@ -764,8 +776,10 @@ export function breadthProfile(W, params, mode, GAMES) {
   });
   const roleShares = {};
   Object.keys(roleCnt).forEach(function (r2) { roleShares[r2] = roleCnt[r2] / Math.max(1, N); });
-  let maxCardShare = 0;
-  Object.keys(cnt).forEach(function (k) { const p = cnt[k] / Math.max(1, N); if (p > maxCardShare) maxCardShare = p; });
+  let maxCardShare = 0, maxCardKey = null;
+  Object.keys(cnt).forEach(function (k) { const p = cnt[k] / Math.max(1, N); if (p > maxCardShare) { maxCardShare = p; maxCardKey = k; } });
+  /* v1.5.145（用户裁定："最大单卡占比要排除 ji"）：这里**本来就**排除了ジ（上面的计数条件 `key !== R.SK.JI`），
+   * 但打印里只给数字 ⇒ 用户看到 59.5% 会以为那是ジ的份额。⇒ 把**卡名**一并返回/打印，读者一眼可验。 */
   const catsUsed = Object.keys(catShares).filter(function (c) { return catShares[c] >= 0.01; }).length;
   const rolesUsed = Object.keys(roleShares).filter(function (r2) { return roleShares[r2] >= 0.01; }).length;
   return {
@@ -774,7 +788,7 @@ export function breadthProfile(W, params, mode, GAMES) {
     S_role: S_role, S_roleWithin: S_flat - S_role,
     S_norm: S_flat / Math.log(K_menu),
     G_eff: Math.exp(S_flat), G_cat: Math.exp(S_cat), G_role: Math.exp(S_role),
-    maxCardShare: maxCardShare, catsUsed: catsUsed, rolesUsed: rolesUsed,
+    maxCardShare: maxCardShare, maxCardKey: maxCardKey, catsUsed: catsUsed, rolesUsed: rolesUsed,
     catShares: catShares, roleShares: roleShares, counts: cnt
   };
 }

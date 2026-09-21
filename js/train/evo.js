@@ -333,6 +333,19 @@
    * ⚠ 启发式不是定律：收入 >1/回合（聚能环第 3 次起 +3、避雷针 +4）时 ep=1 蓄能也可能成立。
    * ⚠ 只作用于 v7 口径：legacy（v5/v6）保持旧口径，历史基线才可比。
    * 抽成函数的动机：探针（tools/probe-beadloop.mjs）必须与线上**同一份**门槛，否则又会量错（对比 v1.5.83 的教训）。 */
+  /* v1.5.143（千问 0921 晚）：**蓄能门槛可调**，默认 2 = v1.5.82 的原裁定 ⇒ 不设则逐字不变。
+   * 为什么要有这个旋钮（0921 取证钉出来的机制）：包在 **ep=2** 蓄能 ⇒ 扣 1 之后手上剩 1 ジ，而珠活到下一回合末
+   * ⇒ "**有珠的那一回合必然买不起电磁炮**（要 2 ジ + 1 珠）"。实测 `v7beadseed-31`：226 次持珠决策里 **225 次 ep=1**、
+   * 唯一一次 ep=2 它就放了（1/1）。⇒ 训练分布本身在教"珠=花不掉"，所以 `BEAD_W` 四档与状态塑形都买不动。
+   * 把门槛抬到 3（蓄完仍 ≥2）是让"有珠"与"可负担"**同时出现**的最小改动 —— 只作用于训练侧评测口径时可以随消息设。 */
+  let CHARGE_MIN_EP = 2;
+  function setChargeMinEp(v) {
+    const n = Number(v);
+    if (isFinite(n) && n > 0) CHARGE_MIN_EP = Math.min(9, Math.floor(n));
+    return CHARGE_MIN_EP;
+  }
+  function chargeMinEpOn() { return CHARGE_MIN_EP; }
+
   function econBase(state, pid, legal) {
     /* 菜单级"严格必废"闸门（v1.5.139 扩第二项，用户实机报"空爆"）：
      * ① ep<2 不蓄能（v1.5.82 原裁定，注释见 policyChooserN 上方）；
@@ -350,7 +363,7 @@
       if (l.key === R.SK.FIRESTORM) return myLiveStickers > 0;
       if (l.key !== R.SK.CHARGE) return true;
       const pp = state.p[pid];
-      return !!pp && (pp.ep || 0) >= 2;
+      return !!pp && (pp.ep || 0) >= CHARGE_MIN_EP;
     });
     return gated.length ? gated : legal;
   }
@@ -1135,7 +1148,21 @@ let WALL_GAMES = 3;
         const me = state.p[seat];
         if (me && me.hp > 0 && !me.elec && !me.boom) me.elec = 1;
       } : undefined;
-      const r = oneGameN(choosers, seed, n, { regen: regen, mode: TRAIN_MODE, onRoundStart: subBeadHook });
+      /* v1.5.143：状态分布塑形（**只在非补贴局**、**只在开局那一回合**、**全席对称**）—— 见 setBeadSeed 的长注释。
+       * 抛硬币用**本局自己的 rng**（不是 Math.random）⇒ 同一 seed 序列可复现；`BEAD_SEED=0` 时短路 ⇒ 不消耗随机数、逐字不变。 */
+      const beadSeedHook = (!subBeadHook && BEAD_SEED > 0)
+        ? function (state) {
+          if (state.round !== 1) return;
+          if (state.rng.next() >= BEAD_SEED) return;
+          for (let i = 0; i < state.p.length; i++) {
+            const q = state.p[i];
+            if (!q || q.hp <= 0) continue;
+            if (!q.elec && !q.boom) q.elec = 1;
+            if (q.ep < 2) q.ep = 2;
+          }
+        }
+        : undefined;
+      const r = oneGameN(choosers, seed, n, { regen: regen, mode: TRAIN_MODE, onRoundStart: subBeadHook || beadSeedHook });
       const rank = rankOf(r.state, seat, seed);
       /* v1.5.8：终局还活着的人数 ⇒ 判断"这局是打出来的还是熬出来的"（≥2 人活着 = 哨声局） */
       const aliveEnd = r.state.p.filter(function (q) { return q.hp > 0; }).length;
@@ -1782,6 +1809,22 @@ let WALL_GAMES = 3;
   let SUB_BEAD = false;
   function setSubBead(on) { SUB_BEAD = !!on; return SUB_BEAD; }
   function subBeadOn() { return SUB_BEAD; }
+  /* ===== v1.5.143（状态分布塑形 · DS §5 提案过未跑，0921 午班接手）=====
+   * 假说：珠线失败的瓶颈**不是价格**（0921 实测：`BEAD_W` 0.15/0.25/0.5/1.0 四档 × 三 seed 的长程电磁炮
+   * 频率是彩票表，1.0 档连"蓄能"都归零 ⇒ 标度连单调都不是），而是**两回合序列的信用分配**：
+   * 蓄能当回合 0 伤害、珠只活到下一回合末 ⇒ 中间那一回合被"按即时伤害/密度给钱"的主梯度惩罚。
+   * 这条旋钮把序列**降成一回合**：以概率 p 让普通训练局（`regen=0`，即**非补贴局**，与 `SUB_BEAD` 通道互不干扰）
+   * **开局**就给全部席位一颗电珠 + 至少 2 ジ ⇒ 电磁炮在**第一个决策**就可负担、放炮的回报当场计入 fit。
+   * ⚠️ **对称注入**（全席都给，不是只给受评席）：只给受评席等于把"有珠"和"这一席更强"混在一起，
+   *    会漏进座位身份通道（本仓 D50/D58 家族的老形状）；对称则只改变**状态分布**、不改变席位间的相对关系。
+   * 默认 0 = 逐字不变（不设 env ⇒ 训练/门禁读数一字不动）。 */
+  let BEAD_SEED = 0;
+  function setBeadSeed(v) {
+    const n = Number(v);
+    BEAD_SEED = (isFinite(n) && n > 0) ? Math.min(1, n) : 0;
+    return BEAD_SEED;
+  }
+  function beadSeedOn() { return BEAD_SEED; }
   function imitBetaForGen(gen) {
     if (IMIT_PLAN) {
       const s = imitPlanSegment(gen);
@@ -2337,7 +2380,7 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

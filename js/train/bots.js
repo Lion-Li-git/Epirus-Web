@@ -788,6 +788,57 @@
     return { key: SK.JI, target: null };
   }
 
+  /* ===== 会传导的大雷线 pickBigTFocus（DS 交接件 P3 · 规格按用户 09-21 口径写死）=====
+   * 为什么要有它：本仓关于大雷的两次结论都用的是**不会为传导选目标**的脚本
+   * （`pickHeavyFire` 实测最大 ep=2 ⇒ 结构上买不起；纯攒大雷线盲放 ⇒ 传导/施放只有 0.43），
+   * 而用户实盘 4 次施放传导 0/0/1/2 人（均值 3.50 点/次 vs 不传导 2.00）⇒ 那两行"大雷亏本"量的不是这张卡。
+   * **规则依据**（`resolve.js` 的 N22 段）：传导集合 = 目标 T 的「本回合打了 T 的人」∪「T 自己指着的人」，
+   * 每人 2 点电伤 + 该技能被无效化（防御族与小雷不失效）⇒ 收益口径是**封住的行动数**，不只是伤害。
+   * 目标函数只用**公共信息**（`p[*].lastTarget/ep/hp`，不读身份 ⇒ 与 D50/D58 座位公平家族兼容）：
+   *   ① 用户口径 A"攒到 2~3 ep 的人更可能出手" ⇒ 有出手能力（ep≥2）的第三方"上手指向 T"计 2 票；
+   *   ② 用户口径 B"血厚者被集火 ⇒ 本回合仍有人打他" ⇒ 用上一回合的集火对象做预测（`lastTarget===T`）；
+   *   ③ T 自己上一手指着谁，那个人也吃一发（计 1 票，权重低于①，因为它不看 ep 会误判无力者）；
+   *   ④ 血厚（hp≥3）加半票（既撑得起"被集火"的推断，也更难被一发带走）。
+   * 先攒到 5 ジ 才放（`pickDeepSaver` 的同族纪律 —— 不攒就等于永远买不起，那正是空示范老坑的成因）。 */
+  function bigtHubTarget(state, pid) {
+    const opps = mpOpps(state, pid);
+    if (!opps.length) return null;
+    let best = -Infinity; const cand = [];
+    for (const t of opps) {
+      let votes = 0;
+      for (const q of opps) {
+        if (q === t) continue;
+        const pq = state.p[q];
+        if (pq.lastTarget === t && (pq.ep || 0) >= 2) votes += 2;      // ①+②：有能力、且上一手打过 T
+        else if (pq.lastTarget === t) votes += 1;                      // 打过但暂时没 ep ⇒ 弱信号
+      }
+      const lt = state.p[t].lastTarget;
+      if (lt != null && lt !== t && lt !== pid && state.p[lt].hp > 0) votes += 1;   // ③
+      if (state.p[t].hp >= 3) votes += 0.5;                            // ④
+      if (votes > best + 1e-9) { best = votes; cand.length = 0; cand.push(t); }
+      else if (Math.abs(votes - best) < 1e-9) cand.push(t);
+    }
+    return mpPickOne(state, cand);
+  }
+  function pickBigTFocus(state, pid, legal) {
+    const bk = mpBk(legal);
+    if (!mpAff(bk, SK.BIG_T)) return { key: SK.JI, target: null };     // 攒钱（5 ジ），中途不分薄
+    const k2 = mpKillable(state, pid, 2);
+    if (k2 != null) return { key: SK.BIG_T, target: k2 };              // 能一发带走就先带走
+    return { key: SK.BIG_T, target: bigtHubTarget(state, pid) };
+  }
+  /* **对照组**（P3 预注册要求的那一条）：同样攒到 5 ジ 才放、同样"能一发带走就先带走"，
+   * 唯一区别 = 目标随机取。它用来回答"传导到底是**选出来的**还是**这片场自己撞出来的**"——
+   * 没有它，`pickBigTFocus` 与 `pickBreakDef` 那 0.03 的差就无从判读。 */
+  function pickBigTRandom(state, pid, legal) {
+    const bk = mpBk(legal);
+    if (!mpAff(bk, SK.BIG_T)) return { key: SK.JI, target: null };
+    const k2 = mpKillable(state, pid, 2);
+    if (k2 != null) return { key: SK.BIG_T, target: k2 };
+    const o = mpOpps(state, pid);
+    return { key: SK.BIG_T, target: mpPickOne(state, o) };
+  }
+
   /* ===== 深经济对手 pickDeepSaver（"会攒 + 会还手"）=====
    * ⚠️ 它曾在 v1.3.27 加入、在 v1.3.30（N20 地雷 AoE 重写）被**静默删除**——
    * 那个 commit 的 CHANGELOG 只字未提，之后 24 个版本没人发现，而 REVIEW-3P §1-D
@@ -853,7 +904,7 @@
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,
-    pickGunFocus, pickAimDefender,
+    pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, bigtHubTarget,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'

@@ -3739,9 +3739,7 @@ t('D91 被无效化的聚能环不得续计（v1.5.105：出招即计次 + 复�
     'endTurn 的连击复位必须与 actionOf 同口径（加 `!a.voided`）');
   ok(rs.indexOf("if (!(a && a.outcome === 'ok' && a.key === SK.RING)) p.ringStreak = 0;") < 0,
     '旧的"只看 outcome"复位**不得**回来 —— 那是本 bug 的成因');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('被小雷无效化的聚能环') >= 0,
-    'spec 必须留下这条能反证的行为用例');
-  ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('**被无效化的聚能环不续计**') >= 0,
+    ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('**被无效化的聚能环不续计**') >= 0,
     'RULES-2P 的 R10 条款必须同步（旧措辞"不再连续（计数已+1）"自相矛盾，是 bug 的温床）');
   /* 边界：**过载炮**的"出招即计次"是 R43 的**用户裁定明文** ⇒ 不许被这次修复顺手波及。 */
   ok(readFileSync('js/core/state.js', 'utf8').indexOf('if (key === R.SK.CANNON) p.cannonCount++;') >= 0,
@@ -3905,9 +3903,7 @@ t('D92 R56 同层内资源型先结算（用户裁定：过载炮的清除须含
     '同层遍历顺序必须"先资源型、再其余"（两组各自保持轮换）');
   ok(rs.indexOf('for (const i of ord3) {') >= 0, '那一层必须真的用新顺序遍历（别只造了数组不用）');
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R56') >= 0, 'RULES-2P 必须记下 R56 这条裁定');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('资源型先结算') >= 0,
-    'spec 必须留下能反证的顺序用例（旧顺序读到目标 ep=3）');
-});
+  });
 
 t('D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必须一致）', function () {
   /* 用户报的 UI bug：用天火时会弹目标选择 —— 根因是**卡面声明成 `target: 'enemy'`**
@@ -3927,9 +3923,7 @@ t('D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必
     '天火伤害必须是**无目标伤害**（不传 `source`）—— 用户裁定：天火无目标 ⇒ 不参与大雷连带传导');
   ok(rs.indexOf("{ type: R.DMG.FIRE, source: i }") < 0, '天火不许带 `source`（v1.5.107 首版加过、被用户纠正）');
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R57') >= 0, 'RULES-2P 必须记下 R57');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('天火：**不需要目标**') >= 0,
-    'spec 必须留下能反证的用例（旧实现只会打中选中的那一个）');
-});
+  });
 
 t('D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下回合结束）', function () {
   /* 旧文 R22「仅在下回合内有效」= 纯预置 debuff；用户 2026-09-18 要求多覆盖一回合。 */
@@ -3942,9 +3936,7 @@ t('D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下
   ok(rp.indexOf('R58') >= 0, 'RULES-2P 必须记下 R58');
   ok(rp.indexOf('仅在下回合内有效') < 0 || rp.indexOf('旧口径（R22 原文）') >= 0,
     'R22 的"仅在下回合内有效"必须被标注为**已被 R58 取代**（不许留着一句与实现对不上的旧文）');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R58 藤甲覆盖面 +1 回合') >= 0,
-    'spec 必须留下 R58 的反证用例（旧实现当回合只吃 1 点）');
-});
+  });
 
 t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被触发」）+ 写入点只有一处', function () {
   /* 旧 R38 = 永久 ⇒ 实测"身上有雷还再敲"占 68%(多)/81%(长)（≈21/50 ジ每局纯浪费）；
@@ -3963,12 +3955,36 @@ t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被�
   ok(rs.indexOf('if (p.mineTurns > 0) {') >= 0 && rs.indexOf("type: 'mineExpire'") >= 0,
     '回合末必须递减并在归零时卸下（并留事件便于量具核对）');
   ok(readFileSync('js/core/state.js', 'utf8').indexOf('mineTurns: 0,') >= 0, 'state 必须有 mineTurns');
+  /* ===== v1.5.143 门禁审计：一条**运行时**断言，替掉原先 9 条"钉 spec 用例标题 / 钉 CHANGELOG 短语"的断言 =====
+   * 阳性对照（0921 实测）：把 spec 里 `R59 地雷时效` 改成 `R59 时效X` —— 行为逐字节没变、spec 仍 52/52，
+   * 而 np-test 当场红一条 ⇒ 那类断言测的是**字符串**不是**行为**（还会误伤正常的用例改名：
+   * 本仓今天就把一条 R61 改成 R62 避让重号）。它想防的"整条用例被静默删除"（v1.5.37 那族事故）
+   * 用**跑一遍**来防更准 —— 顺带把 spec 套件的失败也变成 np-test 的阻断（此前两边完全独立、没人连着跑）。 */
+  const specRun = (function () {
+    for (let k = 0; k < 2; k++) {
+      const r = spawnSync(process.execPath, ['tools/spec-run.mjs'], { encoding: 'utf8' });
+      if (/通过 \d+ \/ \d+/.test(String(r.stdout || ''))) return r;
+    }
+    return { stdout: '' };
+  })();
+  const specM = /通过 (\d+) \/ (\d+)/.exec(String(specRun.stdout || ''));
+  /* ⚠️ 只在**真读到结果**时判定。Windows 上 spawn 偶发返回空 stdout（实测两次 np-test 里红一次、单独跑 spec-run 恒 52/52），
+   * 把它判红就是本仓反复警惕的那种"会误伤的脆门"（0921 加这条后第一次复跑就自己踩到）⇒ 读不到就打一行记录、不阻断。 */
+  if (specM) {
+    ok(Number(specM[1]) === Number(specM[2]) && Number(specM[2]) >= 52,
+      'spec 引擎用例必须**全绿**且条数 ≥52（实测 ' + specM[0] + '）');
+  } else {
+    /* 读不到子进程输出时不放过、也不误红：改判**源码里的用例条数**（当前 50 个 `t(` 调用点，
+     * 运行期是 52 —— 有两条在循环里注册）。这条兜底抓的正是原意图："整条用例被静默删掉要响"。 */
+    console.log('  [记录] D95：spec-run 本次返回空 stdout（Windows spawn 抖动）⇒ 退回源码用例计数判定');
+    ok((readFileSync('tests/spec.js', 'utf8').match(/^\s{2}t\('/gm) || []).length >= 50,
+      'spec 源码里的用例调用点不得少于 50（spawn 读不到时的兜底：防"整条用例被静默删除"）');
+  }
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R59') >= 0, 'RULES-2P 必须记下 R59');
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('持续直到被触发') < 0 ||
      readFileSync('docs/RULES-2P.md', 'utf8').indexOf('旧文 R38 是') >= 0,
     'R38 的"持续直到被触发"必须被标注为**已被 R59 取代**');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R59 地雷时效') >= 0, 'spec 必须留下 R59 的反证用例');
-});
+  });
 
 t('D96 R60 净化清除"自身全部持续状态"（含增益）+ 写入点只有一处', function () {
   /* 用户裁定："藤甲与地雷既然成了 buff，就一并会被净化掉（还有避雷针、符咒、大雷禁用、梦魇）"。
@@ -3987,9 +4003,7 @@ t('D96 R60 净化清除"自身全部持续状态"（含增益）+ 写入点只�
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('**R60**') >= 0, 'RULES-2P 必须记下 R60');
   ok(readFileSync('js/core/rules.js', 'utf8').indexOf('清除自身**全部持续状态**') >= 0,
     '卡面描述必须同步（否则玩家看到的是旧的"只清负面"）');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R60 净化清除**自身全部持续状态**') >= 0,
-    'spec 必须留下 R60 的反证用例');
-});
+  });
 
 t('D97 环的**段长口径**（复核 §4）：必须按"用成了"数段（被无效化=断链）+ 不许只报"上环率"', function () {
   /* 复核 §4 的原话：现在报的"环转化率 8.06%"只数"上没上环" ⇒ **一个疯狂单按的包会被读成"很会用环"**，
@@ -4003,8 +4017,7 @@ t('D97 环的**段长口径**（复核 §4）：必须按"用成了"数段（被
   ok(pc.indexOf('会被单按刷高') >= 0, '必须写明旧口径"上环率"的失效方式（会被单按刷高）');
   ok(pc.indexOf('extractRingRuns(st.events)') >= 0,
     '**调用点必须在**（v1.5.111 我第一版只写了定义、漏了调用 ⇒ 读数全是 0 —— 与 D28"接线在文件里≠在跑的那条路径上"同族）');
-  ok(readFileSync('CHANGELOG.md', 'utf8').indexOf('ringRun2') >= 0, 'CHANGELOG 必须记这次口径替换');
-});
+  });
 
 t('D98 "终局收缩"的哨兵必须是它自己的标记（不许再用 source==null —— 地雷/天火按规则就是无来源）', function () {
   /* 病：`场B 清场` 的判据用 `damage.source == null` 当"收缩开始"的哨兵，可是
@@ -4052,11 +4065,7 @@ t('D99 两处修正：原型制御 ≥3 转移（R24）+ 目标架势特征不�
   ok(poCode.indexOf('(t.guardNext || t.baguaExtra || t.copiedGuard) ? 1 : 0') >= 0,
     '目标架势特征必须用**决策时刻真的存在**的信号（guardNext / baguaExtra / copiedGuard）');
   ok(po.indexOf('无根据的突然集火') >= 0, 'policy.js 必须写下这条根因（否则下一个人又会以为它读得到）');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('R24 原型制御：**伤害总数 ≥3 各自转移给作用者**') >= 0,
-    'spec 必须留下 R24 的能反证用例（旧实现只会 blocked：三个枪手一滴都不掉）');
-  ok(readFileSync('tests/spec.js', 'utf8').indexOf('铁索连环的传导**不被原型制御挡住**') >= 0,
-    'spec 必须钉住"铁索传导不被架势挡"这条（用户口径第 4 条）');
-  ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('三个人各用枪打') >= 0,
+      ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('三个人各用枪打') >= 0,
     'RULES-2P 必须写下用户口径的三个例子（三枪各反 1 / 大雷+天火 / 单发只挡）');
 });
 
@@ -4178,8 +4187,22 @@ t('D71 蓄能经济门槛：ep<2 不许蓄能（v7 口径），legacy 保持旧�
   ok(seg.indexOf('econBase(state, pid, base)') >= 0, 'policyChooserN 必须调用 econBase（单一真源）');
   ok(src.indexOf('function econBase(state, pid, legal)') >= 0, 'econBase 必须存在');
   ok(src.indexOf('return gated.length ? gated : legal;') >= 0, 'econBase 必须在滤空时回退（不改变"必须有招可选"）');
-  const segAll = src.slice(src.indexOf('function econBase('), src.indexOf('function policyChooserN('));
-  ok(segAll.indexOf('R.SK.CHARGE') >= 0 && segAll.indexOf('(pp.ep || 0) >= 2') >= 0, '门槛必须是 ep>=2 才允许蓄能');
+  /* v1.5.143：这一条原本是 `segAll.indexOf('(pp.ep || 0) >= 2') >= 0`（**钉源码字符**）——
+   * 门槛变成可调旋钮（`EPIRUS_CHARGE_MIN_EP`，默认仍是 2）之后，钉字符串既挡不住改错方向、
+   * 又会误伤合法改动（我加旋钮的当下它就红了）。换成**跑一遍 econBase**：默认口径 + 抬到 3 的口径都验。 */
+  const EB = sb.window.EpirusTrainer.econBase, SKc = R.SK.CHARGE;
+  const mk = function (ep) {
+    const s2 = S.createState('multi', { next: function () { return 0.5; } }, 3);
+    s2.p[0].ep = ep;
+    const lg = [{ key: SKc, affordable: ep >= 1 }, { key: R.SK.JI, affordable: true }];
+    return EB(s2, 0, lg).some(function (l) { return l.key === SKc; });
+  };
+  ok(mk(1) === false && mk(2) === true, '默认口径：ep=1 不许蓄能、ep=2 许（v1.5.82 裁定，跑出来而不是钉字符串）');
+  const T7 = sb.window.EpirusTrainer;
+  T7.setChargeMinEp(3);
+  const raised = mk(2) === false && mk(3) === true;
+  T7.setChargeMinEp(2);          // **必须复位**：沙箱是共享的，漏出去会污染后面每一条门
+  ok(raised && mk(2) === true, '门槛可调且能复位：抬到 3 ⇒ ep=2 被摘、ep=3 可蓄，设回 2 后逐字恢复');
   ok(seg.indexOf('candidatesFor(state, pid, v7base') >= 0, 'v7 分支必须用过滤后的 base');
   ok(seg.indexOf('P.choose(state, pid, base,') >= 0, 'legacy 分支必须仍用未过滤的 base（历史基线可比）');
 });
@@ -4241,6 +4264,24 @@ t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草�
   const pb = readFileSync('tools/probe-ring-ablate.mjs', 'utf8');
   ok(pb.indexOf("from './v2v4-lib.mjs'") >= 0, '探针必须从 v2v4-lib.mjs 导入装配（不许自己再写一份）');
   ok(pb.indexOf('pickBalanced') < 0, ' 且探针里不许再出现对手名清单（它是装配定义的一部分）');
+});
+
+t('D112 **广度两个模式都判** + 最大单卡占比排除ジ且打出卡名（v1.5.145 用户裁定）', function () {
+  /* 病（用户 2026-09-21 晚）：现役包"不探索时广度非常差"却能上线。查证：阻断项 `G` 只取
+     `selfPlay(..., 'multi', G)`，而产品常用模式是 long（现役 long G_eff 2.79 < 3 却无人管）。
+     用户裁定："**两个模式都判**" + "**最大单卡占比要排除 ji**"（查证：`breadthProfile` 的计数条件本就
+     `key !== R.SK.JI` ⇒ 已排除，但打印只给数字 ⇒ 会被读成ジ的份额 ⇒ 补卡名）。 */
+  const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(pc.indexOf("selfPlay(W, params, 'multi', G)") >= 0, '第一模式（multi）必须仍走自对局');
+  ok(pc.indexOf("selfPlay(W, params, 'long', G)") >= 0, '第二模式（long = 产品常用模式）必须也有自对局 G');
+  ok(pc.indexOf('G2: spL') >= 0 && pc.indexOf("G2name: 'long'") >= 0, 'long 的 G 必须传进 feasibilityOf 才会**阻断**');
+  const al = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(al.indexOf('o.G2') >= 0 && al.indexOf('第二模式') >= 0, 'feasibilityOf 必须真的用 G2 判（否则只是打印）');
+  ok(al.indexOf('e.key !== R.SK.JI') >= 0, '广度计数必须排除ジ（S/最大单卡占比同源）');
+  ok(al.indexOf('maxCardKey: maxCardKey') >= 0, 'maxCardShare 必须带卡名返回（读者可自证"不含ジ"）');
+  ok(pc.indexOf('最大单卡占比（**非ジ**）') >= 0 && pc.indexOf('brd.maxCardKey') >= 0,
+    '打印必须写明"非ジ"并把卡名印出来');
+  ok(pc.indexOf('两个模式都判') >= 0, '打印必须说明两模式都判（否则读者以为另一栏只记录）');
 });
 
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {

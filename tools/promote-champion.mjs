@@ -90,6 +90,9 @@ const W = sandbox();
 const params = W.EpirusPolicy.unpack(JSON.parse(packJson), true);
 const G = Number(flag('games', 20));
 const sp = selfPlay(W, params, 'multi', G);
+/* v1.5.145（用户裁定"两个模式都判"）：long 也跑一份**自对局**并进阻断（与 multi 同一条线 3）。
+ * 动因：阻断项原本只取 multi ⇒ 现役包 multi 4.44 过门，而 long G_eff 2.79 < 3 无人管（用户追问"这怎么过的门"）。 */
+const spL = selfPlay(W, params, 'long', G);
 const fPass = fieldRate(W, params, 'passive', 'multi');
 const fAct = fieldRate(W, params, 'active', 'multi');
 const dpg = sp.dmgPerGame, drawRate = sp.drawRate;
@@ -191,12 +194,13 @@ if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) 
  * 两个量：① 珠经济**双向**（得珠 / 花珠率）② **输出密度**（每回合出手伤害 / 按ジ占比）。 */
 const dens = densityProfile(W, params, 'long', Number(process.env.EPIRUS_DENSITY_GAMES || 20));
 const chgE = chargeProfile(W, params, 'long', Number(process.env.EPIRUS_CHARGE_GAMES || 40));
-const feas = feasibilityOf({ seat: ss, G: sp, wall: rw, aggr: agg,
+const feas = feasibilityOf({ seat: ss, G: sp, G2: spL, G2name: 'long', wall: rw, aggr: agg,
   density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chgE.gained, spentRate: chgE.spentRate,
     expiredPerGame: chgE.games ? chgE.expired / chgE.games : 0,
     zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
 console.log('   可行性（与训练落盘同源）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
-  '（座位 ' + feas.seatSpread + 'pt/' + feas.seatVerdict + ' · G ' + feas.G + ' · 墙 ' + feas.wallDmg +
+  '（座位 ' + feas.seatSpread + 'pt/' + feas.seatVerdict + ' · G(multi) ' + feas.G +
+  (feas.G2 != null ? ' · **G(' + feas.G2name + ') ' + feas.G2 + '**' : '') + ' · 墙 ' + feas.wallDmg +
   '/局 · 场A ' + (100 * feas.fieldA).toFixed(0) + '% · 场B 清场 ' + feas.fieldBClears + '/局' +
   '（胜率 ' + (100 * (feas.fieldBWinRate || 0)).toFixed(0) + '% —— **规则红利，不作判据**））' +
   (feas.notes.length ? ' ⚠ ' + feas.notes.join('；') : ''));
@@ -216,11 +220,28 @@ console.log('   输出密度（' + dens.games + ' 局自对局）：每回合出
  *   T = 交换率（`EPIRUS_DIV_W`）
  * 这里**只测量、只打印**，不参与 fit、不参与阻断。⚠ 必须与 N 一起报（G/S 对样本量很敏感）。 */
 const brd = breadthProfile(W, params, 'long', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
+/* ===== v1.5.145（用户追问"这个包在不探索的时候技能广度非常差，是怎么通过门禁上线的？"）=====
+ * 实情：**阻断项 `G` 取自 `selfPlay(..., 'multi', G)`（上面第 92 行），而本行打印的是 `breadthProfile(..., 'long')`**
+ *   ⇒ 同一份体检里出现**两个模式**的广度：门判 multi（现役 4.44 ⇒ 过），用户玩 long（现役 **G_eff 2.79 < 3** ⇒ 不过）。
+ * ⇒ 违反本仓老规矩"**打印机必须打印门所判的那个量**"（METHODOLOGY 第 44 条）。
+ * 本改动**只补打印、不动任何判据**（阻断仍是 multi 的 `sp.G`，逐字不变）；把 long 的 G 与它和门的差**并列报出来**，
+ *   并把"哪边是门"写清楚 —— 否则读体检的人会把只记录的那一栏当成门。 */
+const brdM = breadthProfile(W, params, 'multi', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
+console.log('   ⚠️ 广度**两个模式都判**（v1.5.145 用户裁定）：multi 有效技能数=' + Number(sp.effSkills).toFixed(2) +
+  '（selfPlay）· **long（= 长程，产品常用模式）** 有效技能数=' + Number(spL.effSkills).toFixed(2) + '（selfPlay）· ' +
+  '（另两个熵量具作对照：multi G_eff=' + brdM.G_eff.toFixed(2) + '（n=' + brdM.N + '）· long G_eff=' + brd.G_eff.toFixed(2) +
+  '（n=' + brd.N + '）—— 同模式不同量具/样本会有差，属已知的样本敏感性' +
+  ((feas.G2 != null && Number(feas.G2) >= 3 && brd.G_eff < 3)
+    ? ' ⇒ ⚠️ **同一模式两量具分歧**：门用的 selfPlay long G=' + Number(feas.G2).toFixed(2) +
+      ' ≥3 过，而 breadthProfile long G_eff=' + brd.G_eff.toFixed(2) + ' <3 不过 ⇒ 这条线恰好骑在门槛上，' +
+      '要不要让门**取更严的那个**请用户裁定（DS 不改判据）'
+    : '') + '）');
 console.log('   技能广度 S（n=' + brd.N + ' 个非ジ出手 · ' + brd.games + ' 局自对局）：S=' + brd.S.toFixed(3) +
   ' = 类间 ' + brd.S_cat.toFixed(3) + ' + 类内 ' + brd.S_within.toFixed(3) +
   ' · S_norm=' + brd.S_norm.toFixed(3) + '（分母 ln ' + brd.K_menu + ' 固定）' +
   ' · G_eff=' + brd.G_eff.toFixed(2) + '（= 历史"有效技能数"，同值）' +
-  ' · 覆盖 ' + brd.catsUsed + '/' + brd.K_cat + ' 类 · 最大单卡占比 ' + (100 * brd.maxCardShare).toFixed(1) + '%');
+  ' · 覆盖 ' + brd.catsUsed + '/' + brd.K_cat + ' 类 · 最大单卡占比（**非ジ**）' + (100 * brd.maxCardShare).toFixed(1) +
+  '%（' + (brd.maxCardKey || '—') + '）');
 console.log('     各类占比：' + Object.keys(brd.catShares).map(function (c) {
   /* v1.5.101（第十轮复核 §4-3）：`energy` 这一档**必须标注含"攒了没花"** —— 否则 25.4% 会被读成
    * "开始用能量类"，实际是"开始囤积"（候选② 就是这种：energy 25.4% 而 `ep≥3` 决策点 = 0）。 */

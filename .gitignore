@@ -17,3 +17,11 @@ docs/artifacts/battle-out/
 docs/artifacts/.training-*
 docs/artifacts/.training.lock
 docs/artifacts/ui-out/
+
+# v1.5.145（DS 整理）：results/ 是用户的私人对局记录，整目录不再进仓库（此前有 15 个被跟踪）。
+# 只动索引、不动磁盘：清缓存用 `git rm -r --cached results/`。
+results/
+
+# v1.5.145（DS 整理）：训练/探针的**运行日志**（*.out）与成批输出目录不进仓库（可重跑得到）。
+*.out
+docs/artifacts/*-out*/

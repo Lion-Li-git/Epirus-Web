@@ -128,6 +128,12 @@ export function makeParallelEvalN(T, opts) {
         /* v1.5.141（DS 研究）：**补贴局里连"珠"一起补**（`EPIRUS_SUB_BEAD=1`）—— 让"电磁炮"在补贴局里
          * 随时可负担，否则 v1.5.96 那条"只示范可负担动作"的覆盖永远示范不到"放炮"（见 evo.js 的注释）。 */
         subBead: process.env.EPIRUS_SUB_BEAD || null,
+        /* v1.5.143（千问 0921 午班）：**状态分布塑形**（`EPIRUS_BEAD_SEED=0.5` ⇒ 一半普通训练局开局带珠+2ジ）。
+         * 与 `subBead` 分家：那条只作用于**补贴局**（示范通道），这条作用于**非补贴局** ⇒
+         * 让"放炮"的回报**当场**进 fit，检验"两回合序列的信用分配"是不是珠线真正的瓶颈（DS §5 提案未跑）。 */
+        beadSeed: process.env.EPIRUS_BEAD_SEED || null,
+        /* v1.5.143：蓄能门槛（默认 2 = v1.5.82 原裁定；抬到 3 ⇒ 蓄完仍 ≥2 ジ，珠才可能当场花掉 */
+        chargeMinEp: process.env.EPIRUS_CHARGE_MIN_EP || null,
         /* v1.5.102：**训练侧座位探针局数**也随消息下发（0/缺省 = 不改，保持 `SEAT_GAMES = 6` 的旧行为）。
          * 动因（v1.5.100 §17）：训练侧座位惩罚的样本只有 **6 局**，而门禁要 **≥50 局** ——
          * 同一个量、两个样本量 ⇒ 选择过程看不见"某座 93%"这种塌方；
