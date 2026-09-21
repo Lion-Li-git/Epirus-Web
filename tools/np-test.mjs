@@ -4266,6 +4266,21 @@ t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草�
   ok(pb.indexOf('pickBalanced') < 0, ' 且探针里不许再出现对手名清单（它是装配定义的一部分）');
 });
 
+t('D112 体检必须并列报两个模式的广度、并写明**门判的是哪一个**（v1.5.145 用户追问"广度这么差怎么过的门"）', function () {
+  /* 病（用户 2026-09-21 晚）：现役包"不探索时广度非常差"却能上线。查证：阻断项 `G` 取自
+     `selfPlay(..., 'multi', G)`（promote-champion.mjs:92），而同一份体检打印的"技能广度 S"取自
+     `breadthProfile(..., 'long', 20)`（:218）⇒ **同一屏两个模式**：门判 multi（现役 4.44 ⇒ 过）、
+     用户玩 long（现役 G_eff 2.79 < 3 ⇒ 不过）。违反本仓"打印机必须打印门所判的那个量"（METHODOLOGY 44）。
+     本条守住"补打印"这件事（**不拦判据**：阻断仍是 multi 的那个值，逐字不变）。 */
+  const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(pc.indexOf("selfPlay(W, params, 'multi', G)") >= 0, '阻断用的 G 必须仍取自 multi 自对局（口径别被改掉）');
+  ok(pc.indexOf("breadthProfile(W, params, 'long'") >= 0 && pc.indexOf("breadthProfile(W, params, 'multi'") >= 0,
+    '必须两个模式都量（long = 产品常用模式，multi = 门判的那个）');
+  ok(pc.indexOf('**门判的是 multi**') >= 0 && pc.indexOf('sp.effSkills') >= 0,
+    '打印必须写明"门判的是 multi"并把该值印出来（否则读体检的人会把只记录的那栏当成门）');
+  ok(pc.indexOf('long 低于门线 3') >= 0, 'long 低于门线时必须显式告警（用户玩的就是 long）');
+});
+
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
    * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/

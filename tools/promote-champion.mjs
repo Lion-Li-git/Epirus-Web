@@ -216,6 +216,17 @@ console.log('   输出密度（' + dens.games + ' 局自对局）：每回合出
  *   T = 交换率（`EPIRUS_DIV_W`）
  * 这里**只测量、只打印**，不参与 fit、不参与阻断。⚠ 必须与 N 一起报（G/S 对样本量很敏感）。 */
 const brd = breadthProfile(W, params, 'long', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
+/* ===== v1.5.145（用户追问"这个包在不探索的时候技能广度非常差，是怎么通过门禁上线的？"）=====
+ * 实情：**阻断项 `G` 取自 `selfPlay(..., 'multi', G)`（上面第 92 行），而本行打印的是 `breadthProfile(..., 'long')`**
+ *   ⇒ 同一份体检里出现**两个模式**的广度：门判 multi（现役 4.44 ⇒ 过），用户玩 long（现役 **G_eff 2.79 < 3** ⇒ 不过）。
+ * ⇒ 违反本仓老规矩"**打印机必须打印门所判的那个量**"（METHODOLOGY 第 44 条）。
+ * 本改动**只补打印、不动任何判据**（阻断仍是 multi 的 `sp.G`，逐字不变）；把 long 的 G 与它和门的差**并列报出来**，
+ *   并把"哪边是门"写清楚 —— 否则读体检的人会把只记录的那一栏当成门。 */
+const brdM = breadthProfile(W, params, 'multi', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
+console.log('   ⚠️ 广度有两个模式（本条只补打印、不参与阻断）：**门判的是 multi** 有效技能数=' + Number(sp.effSkills).toFixed(2) +
+  '（第 92 行 selfPlay）· multi 的另一量具 G_eff=' + brdM.G_eff.toFixed(2) + '（' + brdM.games + ' 局/n=' + brdM.N +
+  '，同模式不同样本 ⇒ 会有差）· **long（= 长程，产品常用模式）** G_eff=' + brd.G_eff.toFixed(2) + '（' + brd.games + ' 局/n=' + brd.N + '）' +
+  (brd.G_eff < 3 ? ' ⇒ ⚠ **long 低于门线 3，而 multi 达标**：换包前请确认用户玩的模式' : ''));
 console.log('   技能广度 S（n=' + brd.N + ' 个非ジ出手 · ' + brd.games + ' 局自对局）：S=' + brd.S.toFixed(3) +
   ' = 类间 ' + brd.S_cat.toFixed(3) + ' + 类内 ' + brd.S_within.toFixed(3) +
   ' · S_norm=' + brd.S_norm.toFixed(3) + '（分母 ln ' + brd.K_menu + ' 固定）' +
