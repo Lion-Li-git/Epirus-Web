@@ -56,7 +56,7 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
 export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
   'hoardOnLeftover', 'convRatio', 'convOffense', 'hoardCapMult', 'stockBonus',
-  'blockW', 'widthW', 'bigcardW', 'ringW', 's4W'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W（与 setter 逐字对齐 ⇒ D77 盯得住）
+  'blockW', 'widthW', 'bigcardW', 'ringW', 's4W', 'beadW'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W / 0921 DS 珠奖励标度（与 setter 逐字对齐 ⇒ D77 盯得住）
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -103,7 +103,12 @@ export function readEconEnv(env) {
     /* 0920 qoder：环奖励权重（不设 ⇒ null ⇒ evo 原样 0.10）。 */
     ringW: nv(e.EPIRUS_RING_W),
     /* P2（qoder-research 0920）：形状适应度权重（不设 ⇒ null ⇒ S4_W 原样 0 ⇒ 严格不加项）。 */
-    s4W: nv(e.EPIRUS_S4_W)
+    s4W: nv(e.EPIRUS_S4_W),
+    /* v1.5.141（DS 研究）：**珠奖励的标度**（`BEAD_W`，出厂 0.05）。动因见
+     * `docs/RESEARCH-LOG-2026-09-21-ds.md` §7：花珠本来就有奖励（0.05），但它是 0.0x 微扰，
+     * 压不过 `base`（名次 0~1 量级）⇒ 要判"是钱不够还是结构不允许"，就得能扫这个标度。
+     * 不设 ⇒ null ⇒ evo 原样 0.05（出厂行为逐字不变）。 */
+    beadW: nv(e.EPIRUS_BEAD_W)
   };
 }
 

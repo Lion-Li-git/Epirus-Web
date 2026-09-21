@@ -863,6 +863,9 @@ let WALL_GAMES = 3;
     /* qoder-research 0920（RESEARCH-LOG §5b）：环奖励权重接进 econ-env 单一来源（默认不设 ⇒ RING_W 原样 0.10）。
      * setRingReward 自带 `isFinite && >=0` 校验；调用发生在模块求值之后 ⇒ 无 TDZ 问题（RING_W 声明在 :1955）。 */
     if (o.ringW != null) setRingReward(o.ringW);
+    /* v1.5.141（DS 研究）：**珠奖励标度**走同一条 econ-env 单一来源（默认不设 ⇒ BEAD_W 原样 0.05）。
+     * setBeadReward 自带 `isFinite && >=0` 校验（同 setRingReward）；用途见 RESEARCH-LOG-2026-09-21-ds.md §7。 */
+    if (o.beadW != null) setBeadReward(o.beadW);
     /* P2（qoder-research 0920）：形状适应度权重走 econ-env 单一来源（默认不设 ⇒ 0 ⇒ 严格不加项）。 */
     if (o.s4W != null) S4_W = Math.max(0, Number(o.s4W) || 0);
     if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;
