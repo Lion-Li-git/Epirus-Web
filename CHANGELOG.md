@@ -1,3 +1,25 @@
+## v1.5.163 — 删除死键 **`EPIRUS_PASSIVE_FIELD`**（用户 09-22 裁定"那还是算了…要么删掉"）＝**整族拆除 + 已删键也要响亮拒绝**，行为零变化已证
+
+> **删的是什么**：v1.5.65 放的"按密度注入 4 席全被动局面"这条训练分布旋钮。**它自落地起一局都没开过火** —— 消费点 `evo.js` 查
+> `BOT_PICKS['farmer'|'deepsaver']`，而那张表从来没有这两个键（它是对手池注册表，`buildOpps`/`champVsBaseline` 都 `Object.keys` 它，加键会改默认训练）
+> ⇒ 条件恒假、每局都走正常池抽。两道门当时都判在**变量**上（序号谓词 + 横幅"消费点读回"），没一道判在**效果**上
+> ⇒ 臂 `v7xn10c`/`v7xn11a` 各 100 代白跑（都是 7′ 的逐字节复现），直到 §N11 才查出来。
+>
+> **拆了哪几处**（一次拆干净，别留半死状态：setter 还在、作用点没了 = 最坏的那种）：
+> `js/train/evo.js`（变量族 + setter + 读回器 + 加载时兜底读 + `passiveFieldAt` + 注入分支 + 4 个导出符号，**留两行墓碑**说明为什么别再这么写）、
+> `server/train-env.mjs`（键与字段；`TRAIN_ENV_KEYS` 现只剩 `EPIRUS_KILL_FIELD`）、
+> `tools/train-3p.mjs`（闭集项 + 下达块）、`server/train-worker.mjs`（同名块）。
+>
+> **新增一条闸**：`REMOVED_TRAIN_KEYS` 单一来源 + `detectRemovedKnobs` ⇒ 谁再传 `EPIRUS_PASSIVE_FIELD`，**`exit 6` 并说明"删于哪一版、为什么、用什么替代"**
+> （静默忽略等于把"传了等于没传"换个形态留下）。
+>
+> **零变化证明（不是声明）**：D123③ 那条基线（seed 7 · `3 3 6 4`）改前后冠军权重 sha1 同为 **`aa743488cc`** ✓ —— 因为这一族本来就一次都没生效过。
+> 门 **D122** 的两格随之改写：③a 已删键 ⇒ exit 6；③b **空枪检测改用活键 `EPIRUS_KILL_FIELD`，判"开火计数 + 覆盖 ≥2 个受评座位"，不再判横幅**；
+> ④ 静态清单 `DEAD_LITERAL` **清空** ⇒ 从此往 `js/` 里加任何 `process.env.EPIRUS_*` 字面读都立刻红。
+> **D123/D125 的断言同步反向化**：`passiveFieldAt`/`setPassiveField`/`PASSIVE_EVERY` 现在必须**不存在**（复活一次就等于再烧一臂）。
+> np **172/172** · spec **52/52** · smoke OK；`evo.js` 不在指纹五件套 ⇒ **指纹仍 `71b5927f` ✓**、两槽读数不需重记（本版零行为变化）。
+> 产物点名（D82）：（无新增）
+
 ## v1.5.162 — 可行性五道的**样本量收进单一来源** `audit-lib.feasPlan`（§N17 · 用户批准）+ 门 D125 —— 顺带翻出服务器路径把 n **硬编码**成 60/20/20
 
 > **病（§N16 实测，不是猜）**：同一个候选在三条路径上读出不一样 —— `promote-champion` 的 `selfPlay`/`reflectWall` 吃 `--games`（默认 **20**）、

@@ -98,19 +98,18 @@ if (T.setRingForceEps) {
  * `EPIRUS_DIV_W / EPIRUS_DIV_K / EPIRUS_DIV_FORCE_GENS / EPIRUS_WALL_FILTER` 在 16 个 worker 里
  * 全是空操作，而日志看不出任何异常（臂 K / 臂甲 的 A/B 实际是 A/A）。
  * 现在解析改由 `server/econ-env.mjs` 统一提供 ⇒ 与 `train-server.mjs` 是**同一份**实现。 */
-/* v1.5.159（DS 09-22）：训练分布旋钮 `EPIRUS_PASSIVE_FIELD` —— 与上面 econ/fight **同一条路**（唯一下发机制）。
- * 病：`js/train/evo.js` 原先只在加载时字面读 `process.env`，而本 worker 的沙箱 `sb` 是手搭的（**无 `process`**）
- * ⇒ 传进来的值永远到不了 `evalChamp` 的分布里，静默吃默认 0.125 ✗（qoder §N10 的"CLI 黑旋钮"同族）。
- * 回执：打印**消费点读回**的值（空枪检测——证明真到了，而不是"没报错"）。
- * 缺 setter ⇒ **抛错**（照 `S4_W` 注入那条 A/A 事故教训：宁可炸，不可静默降级）。 */
+/* v1.5.159 建的这条训练分布旋钮路（宿主读 env ⇒ setter 打进沙箱），第一个键 `EPIRUS_PASSIVE_FIELD`
+ * 已于 **v1.5.163 整族删除**（死作用点：注入自 v1.5.65 起一局未开火；见 CHANGELOG / 夜日志 §N11）。
+ * 现在这条路上只剩 `EPIRUS_KILL_FIELD`（v1.5.160 · 收割席注入）。
+ * ⚠️ worker 是**长驻进程** ⇒ `countKillSeats()` 在此跨任务累计，只作观测；
+ *    "本臂开火了几局"的作废闸（exit 8）在 `tools/train-3p.mjs`（一进程一臂 ⇒ 计数才等于本臂）。 */
 const trainEnv = readTrainEnv(process.env);
-if (trainEnv.field != null) {   // v1.5.160：改成"逐旋钮各看各的"——只下达 killField 时不许把 passiveField 打成 undefined
-  if (typeof T.setPassiveField !== 'function') {
-    throw new Error('传了 EPIRUS_PASSIVE_FIELD 但引擎没有 setPassiveField ⇒ 拒绝静默空转');
+if (trainEnv.kill != null && Number(trainEnv.kill) > 0) {
+  if (typeof T.setKillField !== 'function') {
+    throw new Error('传了 EPIRUS_KILL_FIELD 但引擎没有 setKillField ⇒ 拒绝静默空转');
   }
-  T.setPassiveField(trainEnv.field);
-  console.log('[train] worker 训练分布生效值: passiveField=' + (T.passiveField ? T.passiveField() : '?') +
-    '  (env: EPIRUS_PASSIVE_FIELD=' + trainEnv.field + ')');
+  console.log('[train] worker 训练分布生效值: killField=' + T.setKillField(trainEnv.kill) +
+    '  (env: EPIRUS_KILL_FIELD=' + trainEnv.kill + ')');
 }
 /* v1.5.160（qoder §N13）：收割席注入 —— 与 CLI 同一条 setter 路（避免"CLI 能下达、server 不能"的不对称）。
  * 注意：worker 是**长驻进程** ⇒ `countKillSeats()` 在这里是跨任务累计的，只作观测；

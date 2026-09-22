@@ -579,3 +579,24 @@ git checkout js/bundled-champion.js                                       # TB_O
 **分支实况（用户 09-22 手动删过一轮）**：本地只剩 `main` + `qoder-explore-0921night`；远端只剩 `origin/main` + `origin/qoder-explore-0921night`
 （DS 交接件里说的"远端 5 条"已被删到只剩这 1 条）。`git branch --merged main` 显示该分支**已完全并入 main**、`main..该分支` 为空 ⇒ 删它不丢任何提交，
 但删分支是对外可见动作，**等用户点头**再做。
+
+---
+
+## §N18 删 `EPIRUS_PASSIVE_FIELD`（用户同批批准 · 已发 v1.5.163）
+
+按 v1.5.157 那次指纹换代的顺序走：**先证零变化 → 整族拆 → 改声明表 → 断言反向化 → 全链 → 记账**。
+拆干净是重点：**半死状态最坏**（setter 还在、作用点没了 ⇒ 横幅还会骗人一次）。清单一处不留：
+`evo.js`（变量族/setter/读回器/加载时兜底读/`passiveFieldAt`/注入分支/4 个导出）· `train-env`（键 + 字段，`TRAIN_ENV_KEYS` 现只剩 `EPIRUS_KILL_FIELD`）·
+`train-3p`（闭集项 + 下达块）· `train-worker`（同名块）。留两行墓碑写清"为什么别再这么写"。
+
+**新增一条通用闸**：`REMOVED_TRAIN_KEYS`（单源）+ `detectRemovedKnobs` ⇒ **已删除的旋钮也必须响亮**：
+传 `EPIRUS_PASSIVE_FIELD` ⇒ `exit 6` 并打印"删于 v1.5.163 / 为什么 / 用什么替代 / 残留变量怎么放行"。
+这条是给下一次删除留的：静默忽略 = 把"传了等于没传"换个形态留下。
+
+**门的改写**（这次真正值钱的地方）：
+· D122③a 已删键 ⇒ exit 6 + 说明；③b 空枪检测**换成活键** `EPIRUS_KILL_FIELD`，判**开火计数 >0 且覆盖 ≥2 个受评座位**（不是"消费点读回"）；
+· D122④ 静态清单 `DEAD_LITERAL` **清空** ⇒ 从此往 `js/` 里加任何 `process.env.EPIRUS_*` 字面读立刻红（v1.5.155 当初的野心，到这里才算真闭上）；
+· D123/D125 断言**反向**：`passiveFieldAt`/`setPassiveField`/`PASSIVE_EVERY` 必须不存在；D123 的分支边界随删改。
+
+**零变化**：基线（seed 7 · `3 3 6 4`）冠军权重 sha1 改前后同为 `aa743488cc` ✓ —— 它本来就从没生效过，这也是本条最硬的旁证。
+np 172/172 · spec 52/52 · smoke OK · 指纹仍 `71b5927f`（`evo.js` 不在五件套 ⇒ 两槽读数不需重记）。

@@ -1376,9 +1376,13 @@ t('D57 multi 的收缩必须落进回合上限内，且"全灭"必须按伤害�
   const rj = readFileSync('js/core/resolve.js', 'utf8');
   ok(rj.indexOf('dealtSum') >= 0, '全灭分支必须按累计造成伤害判胜');
   /* 行为断言：4 席只ジ vs 1 席冠军 —— 修前 0/40 分出胜负、回合恒打满；修后必须出现胜者且不撞上限 */
-  ok(typeof T.passiveFieldAt === 'function', '训练侧必须导出暴露度判定 passiveFieldAt');
-  eq(T.passiveFieldAt(0), true, '第 0 局必须是"4 席全被动"暴露局');
-  eq(T.passiveFieldAt(1), false, '第 1 局不是暴露局（默认 1/8）');
+  /* v1.5.163：这里原来钉的是 `passiveFieldAt` 的三条**正向**断言（"第 0 局必须是暴露局"）——
+   * 而那条注入自 v1.5.65 起一局没开过火（消费点查 `BOT_PICKS` 不存在的键）。键与分支都已删除，
+   * 断言随之**反向**：不许复活。复活一次就要再白跑一臂才看得见，那正是 §N11 的代价。 */
+  eq(typeof T.passiveFieldAt, 'undefined', 'passiveFieldAt 必须已随 EPIRUS_PASSIVE_FIELD 一起删除');
+  eq(typeof T.setPassiveField, 'undefined', 'setPassiveField 同上');
+  ok(readFileSync('js/train/evo.js', 'utf8').indexOf('PASSIVE_EVERY') < 0,
+    'evo.js 里不许留下该机制的残留变量（半删状态最坏： setter 还在、作用点没了）');
   Pol.setRng(T.mulberry32(777));
   const pl = Pol.makePolicy(0.25);
   const ji = function () { return { key: R.SK.JI }; };
@@ -4495,17 +4499,26 @@ t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：�
   const okRun = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
     { env: Object.assign({}, process.env, { EPIRUS_FIGHT_WHISTLE: '0.34', EPIRUS_ALLOW_DARK: '1', EPIRUS_BAND_DIR: dir2, EPIRUS_ARM: 'nptest-dark' }), encoding: 'utf8', timeout: 300000 });
   ok(okRun.status === 0, 'EPIRUS_ALLOW_DARK=1 必须放行（实测 exit=' + okRun.status + '）');
-  /* ③ 行为（v1.5.159 新增 · **空枪检测**）：已下达的键传值 ⇒ 必须跑通，且**消费点读回同一个值**。
-   * 这一条比"没报错"强：它要求日志里出现 consumer 侧读回值（防"传了等于没传"的死键复活）。 */
+  /* ③a 行为（v1.5.163）：**已删除的键也必须响亮** —— 传 `EPIRUS_PASSIVE_FIELD` ⇒ exit 6 + 说明删于哪一版。
+   * 静默忽略等于把"传了等于没传"换个形态留下（它就是白跑两臂的那个病）。 */
+  const goneRun = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
+    { env: Object.assign({}, process.env, { EPIRUS_PASSIVE_FIELD: '0.34' }), encoding: 'utf8', timeout: 120000 });
+  eq(goneRun.status, 6, '已删除的键必须 exit 6（实测 exit=' + String(goneRun.status) + '）');
+  ok(/已被删除/.test(String(goneRun.stderr || '')), '必须说清"已被删除 + 删于哪一版 + 用什么替代"');
+  /* ③b 行为（v1.5.163 取代旧"横幅读回"式空枪检测）：**活键必须改到评估分布本身** ——
+   * 判据是跑完打印的 `开火计数` 与它覆盖的受评座位数，不是"消费点读回 X"（§N11 的教训：读回 = 变量到位 ≠ 效果发生）。 */
   const dir3 = mkdtempSync(join(tmpdir(), 'knobok-'));
-  const knobRun = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
-    { env: Object.assign({}, process.env, { EPIRUS_PASSIVE_FIELD: '0.34', EPIRUS_BAND_DIR: dir3, EPIRUS_ARM: 'nptest-knob' }), encoding: 'utf8', timeout: 300000 });
-  ok(knobRun.status === 0, 'EPIRUS_PASSIVE_FIELD 已下达 ⇒ 不许 exit 6/7（实测 exit=' + knobRun.status + '）');
-  ok(/passiveField=0\.34[\s\S]*消费点读回 0\.34/.test(String(knobRun.stdout || '')),
-    '必须打印"消费点读回 0.34"（空枪检测：证明旋钮真到了 evalChamp 的分布里）');
+  const knobRun = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '8', '4'],
+    { env: Object.assign({}, process.env, { EPIRUS_KILL_FIELD: '0.2', EPIRUS_SEED: '7', EPIRUS_BAND_DIR: dir3, EPIRUS_ARM: 'nptest-knob' }), encoding: 'utf8', timeout: 300000 });
+  ok(knobRun.status === 0, 'EPIRUS_KILL_FIELD 下达 ⇒ 不许 exit 5/6/7/8（实测 exit=' + String(knobRun.status) + '）');
+  const fired = /开火计数：注入 (\d+) 局 · 覆盖受评座位 (\d+) 个/.exec(String(knobRun.stdout || ''));
+  ok(fired, '必须打印开火计数（没有它 = 回到"横幅自证"）');
+  ok(fired && Number(fired[1]) > 0, '真注到局才算下达（实测 ' + (fired ? fired[1] : '无') + ' 局）');
+  ok(fired && Number(fired[2]) >= 2, '注入必须覆盖 >=2 个受评座位（座位偏置 = 用户 09-22 裁掉的对象）');
   /* ④ 静态：引擎里"字面读 process.env"的清单（新增一处 ⇒ 红；修掉一处 ⇒ 也要来改这份清单）
-   * 注：`js/train/evo.js` 的兜底读**故意保留**（v1.5.159）⇒ 它仍在这份清单里 ✓ */
-  const DEAD_LITERAL = { 'js/train/evo.js': ['EPIRUS_PASSIVE_FIELD'] };
+   * v1.5.163：清单**清空** —— `EPIRUS_PASSIVE_FIELD` 是最后一个字面死读，随整族删除一起退场。
+   * 从此往 `js/` 里加任何 `process.env.EPIRUS_*` 都会立刻红 ⇒ 必须走宿主 setter（或显式登记为死键）。 */
+  const DEAD_LITERAL = {};
   const found = {};
   const walk = function (d) {
     for (const nm of readdirSync(d)) {
@@ -4538,8 +4551,8 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
   const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
   /* ① 静态：注入分支取的是注册表函数，且该分支里不许出现纯攒钱型 */
   ok(evo.indexOf('Bots.pickKillSecure') >= 0, '注入必须直接取 Bots.pickKillSecure（不查 BOT_PICKS —— 那张表加键会改默认池）');
-  const br = /else if \(killSeatPid[\s\S]*?\n        else if/.exec(evo);
-  ok(br, '收割席分支必须存在且在 passiveField 之前（顺序即优先级）');
+  const br = /else if \(killSeatPid[\s\S]*?\n        \} else/.exec(evo);
+  ok(br, '收割席分支必须存在（v1.5.163 起它是唯一的注入分支）');
   ok(!/farmer|deepsaver/.test(br[0]), '注入分支里不许出现 farmer/deepsaver（用户裁定：囤是有效打法，不许拿它当陪练罚）');
   ok(evo.indexOf('KILL_STAT.fired++') >= 0 && typeof T.countKillSeats === 'function',
     '必须有开火计数（§N12 教训：setter + 横幅读回证明不了作用点）');

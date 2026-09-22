@@ -65,31 +65,10 @@
     return h >>> 0;
   }
 
-  /* v1.5.65（第五轮复核 §4 的决定性发现）：**训练暴露度为零**。
-   * 旧采样 `opps[oi % opps.length]` 连续取**不同**项，而池里被动攒钱型只有 farmer/deepsaver 两项
-   * ⇒ "4 席全被动"这个局面在训练分布里概率是 **0（不是少，是不可能）** ⇒ 过去所有"惩罚攒钱"类奖励
-   * （惩罚被动/先手激励/密集分/EPIRUS_DIV_W）都在**样本量为 0 的分布**上优化 ⇒ 场 B 从 v1.5.17 到
-   * v1.5.63 一次都没练好。修法：按 `EPIRUS_PASSIVE_FIELD`（默认 1/8 局）把该局面**注入评估分布**。
-   * 只改"评估哪些局面"，不动参数量、不升 PACK_VERSION。 */
-  /* v1.5.159（DS 09-22）：改为**可被宿主 setter 覆盖**。原先只在加载时读 `process.env`，而 vm 沙箱
-   * **没有 `process`**（CLI 与 server 的手搭沙箱都没有）⇒ 传进来的 `EPIRUS_PASSIVE_FIELD` **永远是默认
-   * 0.125** ✗ —— 这正是 qoder 审计里"CLI 黑旋钮"的一例（历史上想调它的臂都静默吃到默认值）。
-   * 现在走与 `setEconomyReward` 族同一条路：宿主读 env（单一来源 `server/train-env.mjs`）后 `setPassiveField`。
-   * 默认（无人下发）= 0.125 ⇒ 行为**逐位不变** ✓；`process.env` 兜底读**保留**（D122 静态声明表据此不变）。 */
-  let PASSIVE_FIELD = 0.125, PASSIVE_EVERY = 8;
-  function setPassiveField(v) {
-    const n = Number(v);
-    PASSIVE_FIELD = (isFinite(n) && n > 0) ? Math.min(1, n) : 0;
-    PASSIVE_EVERY = PASSIVE_FIELD > 0 ? Math.max(1, Math.round(1 / PASSIVE_FIELD)) : 0;
-    return PASSIVE_FIELD;
-  }
-  function passiveField() { return PASSIVE_FIELD; }   // 供"空枪检测"：读回消费点真正看见的值
-  (function () {
-    const v = (typeof process !== 'undefined' && process.env && process.env.EPIRUS_PASSIVE_FIELD != null)
-      ? process.env.EPIRUS_PASSIVE_FIELD : null;
-    if (v != null) setPassiveField(v);
-  })();
-  function passiveFieldAt(g) { return PASSIVE_EVERY > 0 && (g % PASSIVE_EVERY === 0); }
+  /* v1.5.65 曾在这里放"4 席全被动"暴露注入（`EPIRUS_PASSIVE_FIELD`），**于 v1.5.163 整族删除**（用户裁定）。
+   * 墓碑留两行就够，但别删：那段机制**自落地起一局都没开过火** —— 消费点查 `BOT_PICKS['farmer'|'deepsaver']`，
+   * 而那张表从来没有这两个键（它是对手池注册表，加键会改默认训练）；两道门都判在**变量**上（序号谓词 + 横幅读回），
+   * 没一道判在**效果**上 ⇒ 白跑两臂才被查出（§N11）。真要做收割压力请看下面的 `KILL_FIELD`，来龙去脉见 CHANGELOG v1.5.160/163。 */
 
   /* ===== v1.5.160（qoder §N13 · 用户 09-22 裁定"场B 缺口走对手池"）：收割席注入 =====
    * 要买的东西：7′ 的 3P 只挂"场B 清场 0.10 < 0.3/局"，而**现役 cmin4 同读法是 0.33** ⇒ 缺口是候选自己的。
@@ -99,10 +78,10 @@
    * 三条设计约束，全部来自 §N11/§N12 用两臂白跑换来的教训：
    *   ① 取函数**直接走 `Bots.pickKillSecure`**，不查 `BOT_PICKS`（那是对手池注册表，`buildOpps`/`champVsBaseline`
    *      都 `Object.keys` 它 ⇒ 往里加键会顺带改默认池与基线均值，`evo.js:1799` 自己警告过）；
-   *   ② **每局只注 1 席**（不是 `passiveField` 那种 4 席全注）——要的是"抢收割的对手"，不是一桌木桩；
+   *   ② **每局只注 1 席**（不是 v1.5.65 那条已删注入的 4 席全注）——要的是"抢收割的对手"，不是一桌木桩；
    *      而且注的**必须是会还手的**：用户 09-22 明说"囤一点 ep 放大招也是有好处的"⇒ 只攒不打的 `farmer`
    *      当陪练等于"出一道没有反击的题"，罚的是正常打法（D123 把这条钉成门）。
-   *   ③ **去座位偏置**：`passiveField` 的默认 1/8 在 `GAMES=8` 下恒落在 `g=0` ⇒ 恒 0 号座（`seat=g%n`）、
+   *   ③ **去座位偏置**：v1.5.65 那条注入的默认 1/8 在 `GAMES=8` 下恒落在 `g=0` ⇒ 恒 0 号座（`seat=g%n`）、
    *      恒偶数 ⇒ 只喂 farmer、且 g=0 同时是**不进 fit 的承诺局**（三处错位）。这里相位按代旋转
    *      （步长 3 与 games=8 / n=5 互质）、注的席位由 `(gen+g)` 决定并**避开受评席本身**、且**跳过承诺局**。
    * **默认 0 = 一个都不注 ⇒ 历史臂逐位不变 ✓**（这路方向是新语义，必须显式下达）。
@@ -1223,7 +1202,6 @@ let WALL_GAMES = 3;
       let oi = (gen * 3 + g) % opps.length;
       const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
       const commitGame = hGene > 0 && (g % 3 === 0);   // (c) 承诺局：每 3 局 1 局，h 来自基因
-      const passiveField = passiveFieldAt(g);   // v1.5.65：本局是否为'4 席全被动'暴露局
       const killSeatPid = killSeatFor(g, gen, seat, n, hGene);   // v1.5.160：本局注收割席在第几席（-1=不注）
       /* v1.5.99：本局是否"补贴局"（补贴 = 白来的 ep）—— 给"只教目标卡"的示范当门槛（见 makeEconChooser）。 */
       const regenThisGame = commitGame ? 2 : regenForGame(g, games);
@@ -1249,18 +1227,13 @@ let WALL_GAMES = 3;
           });
         }
         else if (killSeatPid >= 0 && pid === killSeatPid && killSeatBot()) {
-          /* v1.5.160：这一局的第 killSeatPid 席换成了**会抢收割**的对手 ⇒ 逼受评席"该收就收"。
-           * 排在 passiveField 之前：注入席优先（两条同时命中时本条语义更强，且 passiveField 那条
-           * 自 v1.5.65 起就是死分支 —— 见 §N11，用户 09-22 已裁定那条路要么删要么先去座位偏置）。 */
+          /* v1.5.160：这一局的第 killSeatPid 席换成**会抢收割**的对手 ⇒ 逼受评席"该收就收"。
+           * （v1.5.65 那条"4 席全被动"注入于 v1.5.163 删除 —— 它查 `BOT_PICKS` 里不存在的键，一局没开过火。） */
           const kb = killSeatBot();
           choosers.push(wrapBotN(kb));
           KILL_STAT.fired++;
           KILL_STAT.seats[seat] = (KILL_STAT.seats[seat] || 0) + 1;
           KILL_STAT.names.killsecure = (KILL_STAT.names.killsecure || 0) + 1;
-        }
-        else if (passiveField && BOT_PICKS[(g % 2 === 0) ? 'farmer' : 'deepsaver']) {
-          /* 暴露度注入：这一局的 4 个对手席**全部**是被动攒钱型（轮换 farmer/deepsaver）。 */
-          choosers.push(wrapBotN(BOT_PICKS[(g % 2 === 0) ? 'farmer' : 'deepsaver']));
         } else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
       }
       // 每回合回 ep 的对局权重（可选设施，默认 0 = 与线上规则一致）。
@@ -2510,14 +2483,13 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, passiveFieldAt, PASSIVE_FIELD, PASSIVE_EVERY, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
     setPressReward, pressReward, countPressRounds,
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
     setBeadReward, beadReward, countBeadSpent,
-    setPassiveField, passiveField,
     setKillField, killField, countKillSeats, killSeatFor,   // v1.5.160 收割席注入（含**开火计数**，§N12 教训）
     setTargetReward, targetReward, countThreatHits, threatKeyList,
     setClearReward, clearReward, countClears,
