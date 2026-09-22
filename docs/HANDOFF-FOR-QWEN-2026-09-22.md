@@ -123,11 +123,15 @@
    读出一颗**假的 99.00%（其实是还原后的 c13）**。**读考卷请"一候选一次独立调用 + 每轮还原槽"**。
 5. **产物必须点名**（D82）：本轮我踩了 3 次（每次都是新臂产物没写进 CHANGELOG）；夜班账用的是**短名**、
    D82 按 `*.bak` **完整文件名**匹配 ⇒ 写全名。
+6. **提交消息不要用 `git commit -m "…"` 写长中文**（DS 09-22 实测踩中）：消息里只要出现**嵌套的 ASCII 双引号**
+   （例如 `每 1 局` 被引号包起来），外层引号就会被提前闭合 ⇒ 后半段消息被 git 当成**路径**，报
+   `pathspec '…' did not match any file(s)` 而 **commit 静默失败**（`git add` 已成功 ⇒ 看起来像"提交了"）。
+   **正解：`git commit -q -F - <<'MSG' … MSG`**（heredoc，中文与引号都安全），或改用 `「」`/去掉引号。
 
 ## 4. 交接的状态与命令
 
 - 分支：只有 `main`（本地 5 条已并入的旧分支上一轮已删）；远端仍留 5 条 `origin/qoder*`（要不要删由用户点头）。
-- 自测：`node tools/np-test.mjs`（166）· `node tools/spec-run.mjs`（52）· `node tools/smoke.mjs`。
+- 自测：`node tools/np-test.mjs`（**169**）· `node tools/spec-run.mjs`（52）· `node tools/smoke.mjs`。
 - 换包前体检：`node tools/promote-champion.mjs <包> --dry`（含**产品代理栏**；`EPIRUS_NO_PROXY=1` 可关）。
 - 2P 考卷：`node tools/promote-champion2p.mjs js/bundled-champion.js --dry`（**读槽文件** ⇒ 评候选要临时换槽并还原）。
 - 2P 头对头：`node tools/probe-2p-h2h.mjs <A> <B> [局数=120]`（ε=0 · 交替先手）。
