@@ -4721,6 +4721,48 @@ t('D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测
   ok(r.status === 0 || r.status === 9, '迷你臂只许 0/9 收场（实测 ' + r.status + '）');
 });
 
+t('D126 R48「回魂复活回合」只免**花费**、不免**条件**（v1.5.166 · 用户报的摄魂 bug 追到的三处短路）', function () {
+  /* 规则原文（docs/RULES-2P.md:336）：「下回合开始你以 1HP 复活，本回合内拥有无限各类能量
+   * （**一切花费为 0**，含蓄能产物无限 ⚠️ R48）」。"花费为 0" ≠ "条件作废"。
+   * 旧实现在三处整体短路：`state.js:computeCost` 开头就 return ok、`state.js:attemptAction` 干脆不走 computeCost、
+   * `play.js:legalActions` 直接 push affordable ⇒ 满血也能摄魂、电磁炮免备珠、过载炮免血债。
+   * 行为变化范围（配对复现 6480 局，新旧引擎同种子）：只有 13 局触发过回魂、4 局读数不同、**胜者全部相同**
+   * ⇒ 这条不是"能赢多少"的改动，是"规则说的是什么"的改动。 */
+  const mkLong = function () { const s = S.createState('long', { next: T.mulberry32(4242) }, 5); return s; };
+  /* ① 满血 + 免费回合：三个条件门都不许被绕过 */
+  let st = mkLong();
+  Object.assign(st.p[0], { hp: 5, ep: 0, infiniteEnergy: true, elec: 0, boom: 0 });
+  eq(S.computeCost(st, 0, R.SK.DRAIN).ok, false, '满血（hp=5 > long 的 ≤3）⇒ 摄魂必须仍判非法（这是用户报的那一格）');
+  eq(S.computeCost(st, 0, R.SK.RAILGUN).ok, false, '无电珠 ⇒ 电磁炮必须仍判非法（"含珠无限"是免花费，不是凭空给珠）');
+  eq(S.computeCost(st, 0, R.SK.LASER_EYE).ok, false, '首次激光眼无爆珠 ⇒ 必须仍判非法');
+  const legal = Play.legalActions(st, 0).map(function (l) { return l.key; });
+  ok(legal.indexOf(R.SK.DRAIN) < 0, '合法表里不许出现摄魂（页面按钮因此不可点、AI 因此看不见它）');
+  ok(legal.indexOf(R.SK.RAILGUN) < 0, '合法表里不许出现免珠的电磁炮');
+  /* ② 真在窗口内（复活后 hp=1）⇒ 可用，且**花费**归零 */
+  st = mkLong(); Object.assign(st.p[0], { hp: 1, ep: 0, infiniteEnergy: true });
+  const c2 = S.computeCost(st, 0, R.SK.DRAIN);
+  eq(c2.ok, true, 'hp=1 ≤3 ⇒ 免费回合摄魂应合法'); eq(c2.ep, 0, '免费回合 ep 必须归零');
+  S.attemptAction(st, 0, R.SK.DRAIN, { target: 1 }, null);
+  eq(st.p[0].ep, 0, '执行后不扣ジ'); eq(st.p[0].hp, 1, '执行后不掉血（血债属花费）');
+  /* ③ 免费回合的过载炮：第 2 次不要求 ≥1ジ、第 3 次不自损 1 血 */
+  st = mkLong(); Object.assign(st.p[0], { hp: 4, ep: 0, infiniteEnergy: true, cannonCount: 1 });
+  eq(S.computeCost(st, 0, R.SK.CANNON).ok, true, '过载炮第 2 次在免费回合不该被"需至少 1ジ"挡住');
+  st.p[0].cannonCount = 2;
+  S.attemptAction(st, 0, R.SK.CANNON, null, null);
+  eq(st.p[0].hp, 4, '过载炮第 3 次的自损 1 血是**花费** ⇒ 免费回合不该扣（R42 × R48）');
+  /* ④ 非免费回合回归：旧口径一字不变 */
+  st = mkLong(); Object.assign(st.p[0], { hp: 5, ep: 0, elec: 0, boom: 0 });
+  eq(S.computeCost(st, 0, R.SK.RAILGUN).ok, false, '普通回合电磁炮照旧需要电珠');
+  eq(S.computeCost(st, 0, R.SK.DRAIN).ok, false, '普通回合摄魂照旧看 HP 窗口');
+  eq(S.attemptAction(st, 0, R.SK.SNIPE, { target: 1 }, null).outcome, 'insufficient', '普通回合 ep 不足 ⇒ 照旧 insufficient（不是 ok）');
+  /* ⑤ 反抄：三处短路都不许复活 */
+  ok(readFileSync('js/core/state.js', 'utf8').indexOf('if (p.infiniteEnergy) return { ok: true') < 0, 'computeCost 不许再整体短路');
+  ok(readFileSync('js/core/play.js', 'utf8').indexOf('if (p.infiniteEnergy) { out.push') < 0, 'legalActions 不许再整体短路');
+  const sj = readFileSync('js/core/state.js', 'utf8');
+  ok(sj.indexOf('if (p.infiniteEnergy) {') < 0 || sj.indexOf('const cost = computeCost') < sj.indexOf('if (p.infiniteEnergy) {'),
+    'attemptAction 必须先过 computeCost（条件）再谈免费');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };

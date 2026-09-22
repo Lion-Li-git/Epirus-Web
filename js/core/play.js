@@ -14,11 +14,13 @@
       if (!s) continue;
       if (!S.canUseSkillInMode(state, s.key)) continue;
       if ((p.cooldown[s.key] || 0) > 0) continue;                 // 禁用中（AI 不会硬闯）
-      if (p.infiniteEnergy) { out.push({ key: s.key, affordable: true, loan: 0 }); continue; }
+      /* v1.5.166（R48 第三处短路）：这里原先 `if (p.infiniteEnergy) push(affordable:true)` 直接跳过
+       * `computeCost` ⇒ 免费回合把"条件不满足"的技能也列进合法表（页面按钮因此可点、AI 因此看得见它）。
+       * 现在交给 `computeCost` 判条件（它已改成"只免花费、不免条件"），这里不再短路。 */
       const cost = S.computeCost(state, pid, s.key);
       if (!cost.ok) continue;                                     // 条件不满足
       const loan = Math.max(0, cost.ep - p.ep);
-      out.push({ key: s.key, affordable: loan === 0, loan });
+      out.push({ key: s.key, affordable: loan === 0, loan, free: !!cost.free });
     }
     return out;
   }

@@ -114,13 +114,26 @@
   }
 
   /* 费用计算。ok=false = 条件不满足的“无效出招”（不贷款、不惩罚）。
-   * 无限能量（回魂复活回合）：能量类花费全免。 */
+   * v1.5.166（R48 正名 · 用户报的 bug 追到这里的）：回魂复活回合是「一切**花费**为 0」（`docs/RULES-2P.md:336`），
+   * **不是「条件作废」**。旧实现第一步就 `if (p.infiniteEnergy) return {ok:true}` ⇒ 一次性绕过了**五处**条件判据：
+   *   模式白名单之外还算 ok（这行在 `canUseSkillInMode` 之后，但下面四条全被跳过）、
+   *   摄魂的「仅限自己 HP≤drainHpMax」、电磁炮的「需 1 枚电珠」、激光眼的「首次需 1 枚爆珠」、
+   *   过载炮的三阶段（含第 2 次需 ≥1 ジ、第 3 次自损 1 血）。
+   * ⇒ 现在：**先照原判据查条件，通过后只把 ep / hp / 珠子 的“花费”归零**。
+   * 资源数量类条件（炮第 2 次要 ≥1 ジ）在免费回合本来就该豁免，用 `free` 传下去。 */
   function computeCost(state, pid, key) {
+    const p = state.p[pid];
+    const free = !!p.infiniteEnergy;
+    const c = rawCost(state, pid, key, free);
+    if (!c.ok) return c;
+    if (!free) return c;
+    return { ok: true, ep: 0, hp: 0, beads: null, free: true, cannonPhase: c.cannonPhase };
+  }
+  function rawCost(state, pid, key, free) {
     const p = state.p[pid];
     const def = R.byKey[key];
     if (!def) return { ok: false, reason: '未知技能' };
     if (!canUseSkillInMode(state, key)) return { ok: false, reason: '该模式不可用' };
-    if (p.infiniteEnergy) return { ok: true, ep: 0, hp: 0, beads: null }; // R48
     if (key === R.SK.RING) {
       return { ok: true, ep: p.ringStreak === 0 ? 3 : 0, hp: 0, beads: null };
     }
@@ -128,7 +141,7 @@
       const phase = (p.cannonCount % 3) + 1;
       if (phase === 1) return { ok: true, ep: 2, hp: 0, beads: null, cannonPhase: 1 };
       if (phase === 2) {
-        if (p.ep < 1) return { ok: false, reason: '过载炮第2次需至少1ジ' }; // R55
+        if (!free && p.ep < 1) return { ok: false, reason: '过载炮第2次需至少1ジ' }; // R55
         return { ok: true, ep: p.ep, hp: 0, beads: null, cannonPhase: 2 };
       }
       return { ok: true, ep: p.ep, hp: 1, beads: null, cannonPhase: 3 }; // R42 自损1血
@@ -163,7 +176,10 @@
     /* v1.5.19：把"这一手指向谁"留在**玩家对象上**（`state.actions` 每回合会被清空 ⇒ 决策时刻
      * 完全看不到上一回合谁打过谁，见 docs/PARAMS-PLAN.md §0 与 v7 的关系特征 T 块）。
      * 这是**公共信息**（真人局里手势指向谁大家都看得见），存进去不产生信息泄漏。
-     * `lastSkill` 同理已经在玩家对象上；两者配对才是"(actor, skill, target)"三元组。 */
+     * `lastSkill` 同理已经在玩家对象上；两者配对才是"(actor, skill, target)"三元组。
+     * ⚠️ v1.5.166 夜班试过"被拒/作废的一手不该建立关系"⇒ 挪到成功分支后被 **D26 判红**
+     *   （那条 pin 就是要 `lastTarget` 无条件留在玩家身上）。既然这是判据级取舍而不是规则错误，
+     *   已**退回原行为**，把问题记进夜日志 §N21 待裁：作废的手势要不要进入 v7 的关系特征 T 块。 */
     p.lastTarget = tg;
     p.lastTarget2 = tg2;
 
@@ -184,15 +200,12 @@
       ev2({ type: 'damage', to: pid, amt: 1, reason: '禁用期间强行使用(' + def.name + ')', via: 'ban' });
       return fail('banned', '禁用中(-1HP)');
     }
-    if (p.infiniteEnergy) {
-      state.actions[pid] = { key, voided: false, outcome: 'ok', opt: opt || null, target: tg, target2: tg2 };
-      ev2({ type: 'action', pid, key, outcome: 'ok', free: true });
-      return { skill: key, outcome: 'ok' };
-    }
+    /* v1.5.166（R48）：原来这里再短路一次（不走 computeCost、任何技能直接 ok）⇒ 与 computeCost 同病，已删。
+     * 现在统一：`computeCost` 判完条件后把免费回合的 ep/hp/珠子花费归零 ⇒ 下面的扣费代码自然变成空操作。 */
     const cost = computeCost(state, pid, key);
     if (!cost.ok) return fail('invalid', cost.reason);
     // 资源不足 → 无法发动（电脑游戏口径：不再贷款、不扣血；技能直接作废）
-    if (cost.ep > p.ep) {
+    if (!cost.free && cost.ep > p.ep) {
       return fail('insufficient', 'ジ不足（需' + cost.ep + '，有' + p.ep + '）');
     }
     // 正常扣费
