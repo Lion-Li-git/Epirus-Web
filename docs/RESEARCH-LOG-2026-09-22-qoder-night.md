@@ -231,5 +231,24 @@ EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/v7xn6-2p.bak EPIRUS_SEED=31 \
 仍单变量；两臂皆否 ⇒ "收割要示范不要奖励"记账，交回用户/DS，不滑权重找甜点（第四次复发警告）。
 **banner 义务**：见不到「热启动：以现有冠军为种子」即作废本臂（§3.1）。
 
-### §N8 读数（跑完填）
-- v7xn10a：（跑中）
+### §N8 读数（结案 · 全部 ε=0 门禁口径 · n=120）
+
+| 臂 | 变量 | 2P 考卷 | 2P H2H vs c13 | 3P 场B | G4[long]珠爆发 | 判定 |
+|---|---|---|---|---|---|---|
+| v7xn10a | "CLEAR_W=0.1"（**实际没生效**，见下） | 96.63/65 ✓ | 92-28 | 0.10 ✗ | 63% ✗ | =7′ 逐字节复现（同种子确定性反证） |
+| v7xn10b | CLEAR_W=0.1（**生效**：banner 回显 0.1） | 68.38/0 ✗ | 75%(90-30) | 0.00 ✗ | ✅全过(退化成龟) | **①不中·否证**：收割奖励在本配方下长不出击杀，反而将包推向纯ジ退化（G=0、零攻击 100%、按ジ占比 1） |
+| v7xn10c | "PASSIVE_FIELD=0.34"（**没生效**，见坑⑥） | — 未跑（判定不需要） | — | 0.10 | 63% | 臂作废（no-op ⇒ 又是 7′ 复现，数字逐位相同即证据） |
+
+**两个真发现（比臂本身值钱）**：
+1. **第六例静默空转 = 沙箱 env 黑洞**：`train-3p` 的 vm 沙箱里没有 `process`，而 evo 的 `EPIRUS_PASSIVE_FIELD` 等
+   一批 env 是**加载时读 `process.env`** 的 ⇒ 从 CLI 传这类 env **全部无效**（PASSIVE_FIELD 永远默认 1/8）。
+   server 路径靠 `econ-env 单源 + msg 下发 + 宿主 setter` 早解过这题——**train-3p CLI 绕开了这套架构**。
+   受影响旋钮清单（待查全）：PASSIVE_FIELD / CHARGE_MIN_EP / SUB_BEAD / BEAD_SEED / FIREWEAK_PERSIST / DIV_* …
+   ⇒ **提案（给 DS/用户）：train-3p 对齐 econ-env 模式（宿主读 env→setter 打进沙箱），并立"CLI env 面"门**——
+   没有 setter 的 env 在 CLI 侧要么接通要么响亮拒绝，不许默认"看起来传了"。我今晚只接通了 CLEAR_W 一个（setter 已存在）。
+2. **CLEAR_W 的否证与 v1.5.103 警告同型**（"DIV_W=0.3+真示范那批 6 个里 4 个场B=0"）：
+   奖励收割 ≠ 学会收割——存活型 rank 主梯度下,"零出手混到收缩哨声"反而是收割奖励的捷径 ⇒ 退化包拿 band 内最高 trainFit 当选。
+   附带暴露 **train-3p 自己的当选面没有退化包闸**（promote 有、2P pick-best 我昨夜加了 vetoDegenerate，CLI 3P 路径三者不一致）。
+   ⇒ 预注册否证分支生效：**不滑第三个值、不换第四根旋钮**；"场B 收割"升级为机制问题（示范/课程级），交回用户/DS。
+
+**产物点名（D82）**：v7xn10a-31.bak v7xn10a-2psh.bak v7xn10a-band1..6.bak v7xn10b-31.bak v7xn10b-2psh.bak v7xn10b-band1..6.bak v7xn10c-31.bak v7xn10c-2psh.bak v7xn10c-band1..6.bak（全部 gitignored；b=否证档、c=作废档，均留作反例证据）。
