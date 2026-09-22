@@ -5,6 +5,8 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
+import { ECON_ENV_KEYS } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
+import { FIGHT_ENV_KEYS } from '../server/fight-env.mjs';
 import { rejectDegenerateWinners } from './pick-best.mjs';   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）
 
 /* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
@@ -42,6 +44,37 @@ const GENS = Number(process.argv[2] || 200);
 const N = Number(process.argv[3] || 3);
 const GAMES = Number(process.argv[4] || 8);
 const POP = Number(process.argv[5] || 12);
+
+/* ===== v1.5.155 · CLI 黑旋钮侦测（DS 09-22 裁定 · qoder §N10 提案）=====
+ * 病：本工具的 env 面是一个**闭集**（下表），而 server 侧有一大批旋钮经 `server/econ-env.mjs` /
+ *   `fight-env.mjs` 下发，或由 `js/` 里的代码"加载时读 `process.env`"。从 **CLI** 传这些键**一律无效、
+ *   却没有任何提示** ⇒ 会跑出"看起来在调参、其实是默认经济"的臂（本会话已踩到第 5、6 例：
+ *   `EPIRUS_CLEAR_W` 传了没人读、`EPIRUS_PASSIVE_FIELD` 因沙箱无 `process` 永远默认）。
+ * 改法：启动时把 env 里出现的 `EPIRUS_*` 与本工具闭集比对，命中**暗键** ⇒ 打印名单 + `exit 6`
+ *   （与 D119/D120 的"要了开关不许静默"同一条规矩）。有意为之的情形用 `EPIRUS_ALLOW_DARK=1` 放行。 */
+const SELF_ENV_KEYS = [
+  'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
+  'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
+  'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W'
+];
+/* 名单 = server 下发族（单一来源：`server/econ-env.mjs` / `fight-env.mjs`）+ `js/` 里"加载时字面读"的死键。
+ * ⚠️ 只盯**这份名单**，不是"任何 EPIRUS_*"——否则用户 shell 里随便一个旧旋钮（如 `EPIRUS_NO_PROXY`）
+ *    就会让所有 np-test 迷你臂 exit 6（那是误伤，不是本项要治的病）。 */
+const ENGINE_SIDE_KEYS = ECON_ENV_KEYS.concat(FIGHT_ENV_KEYS,
+  ['EPIRUS_PASSIVE_FIELD', 'EPIRUS_FIREWEAK_PERSIST']);
+(function detectDarkKnobs() {
+  const dark = ENGINE_SIDE_KEYS.filter(function (k) {
+    return process.env[k] !== undefined && SELF_ENV_KEYS.indexOf(k) < 0;
+  }).sort();
+  if (!dark.length || process.env.EPIRUS_ALLOW_DARK === '1') return;
+  console.error('[train-3p] ⛔ 检测到本工具**读不到的旋钮**（CLI 黑键，传了等于没传）：' + dark.join(', '));
+  console.error('  · 本工具闭集：' + SELF_ENV_KEYS.join(', '));
+  console.error('  · 这一类旋钮要么走 server 路径（`tools/ring2-run.mjs`：econ-env/fight-env 下发），');
+  console.error('    要么根本读不到（`js/` 里加载时读 `process.env`，而 vm 沙箱**没有 `process`** ⇒ 永远是默认值）。');
+  console.error('  · 有意要传（例如只想透传给别处）请显式 `EPIRUS_ALLOW_DARK=1`。');
+  process.exit(6);
+})();
+
 /* §N6 跨 N 混适应度开关（默认 0 = 行为逐字不变；用法与红线见循环内注释） */
 const XN2W = Number(process.env.EPIRUS_XN2W || 0);
 const ANCHOR = Number(process.env.EPIRUS_ANCHOR || 0);   // v1.5.153：锚定正则 λ（0=关，逐字不变）

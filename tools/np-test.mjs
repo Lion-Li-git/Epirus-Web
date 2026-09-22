@@ -4476,6 +4476,45 @@ t('D119 热启动不许静默失败（v1.5.153 · DS）：两种外壳都认 + �
   ok(bad.status === 5, '坏种子必须 exit 5（实测 exit=' + bad.status + '）');
 });
 
+t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定）：train-3p 命中读不到的 EPIRUS_* ⇒ exit 6 + 静态钉住"引擎里字面读 env"的清单', function () {
+  /* 病（qoder §N10 审计 + DS 本会话第 5/6 例）：`train-3p` 的 env 面是**闭集**，而 server 侧旋钮走
+   * `server/econ-env.mjs`/`fight-env.mjs` 下发（CLI 不 import ⇒ 全黑）；`js/` 里还有两处**加载时字面读**
+   * `process.env`（而 vm 沙箱没有 `process` ⇒ 永远默认）⇒ 从 CLI 传这些键**一律无效却毫无提示**，
+   * 会跑出"看起来在调参、其实是默认经济"的臂。用户/DS 裁定：**采纳黑键侦测 + 加静态门**。 */
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(t3.indexOf('SELF_ENV_KEYS') >= 0 && t3.indexOf('detectDarkKnobs') >= 0, '必须有黑键侦测（闭集 + 名单）');
+  ok(t3.indexOf('CLI 黑键') >= 0 && t3.indexOf('EPIRUS_ALLOW_DARK') >= 0, '必须响亮说明白 + 留逃逸口');
+  /* ① 行为：暗键 ⇒ exit 6（在 qoder §N10 的活例上测） */
+  const dark = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
+    { env: Object.assign({}, process.env, { EPIRUS_PASSIVE_FIELD: '0.34' }), encoding: 'utf8', timeout: 120000 });
+  ok(dark.status === 6, '暗键必须 exit 6（实测 exit=' + dark.status + '）');
+  /* ② 行为：逃逸口放行（1 代迷你臂，写临时目录 ⇒ 不欠 D82） */
+  const dir2 = mkdtempSync(join(tmpdir(), 'darkok-'));
+  const okRun = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
+    { env: Object.assign({}, process.env, { EPIRUS_PASSIVE_FIELD: '0.34', EPIRUS_ALLOW_DARK: '1', EPIRUS_BAND_DIR: dir2, EPIRUS_ARM: 'nptest-dark' }), encoding: 'utf8', timeout: 300000 });
+  ok(okRun.status === 0, 'EPIRUS_ALLOW_DARK=1 必须放行（实测 exit=' + okRun.status + '）');
+  /* ③ 静态：引擎里"字面读 process.env"的清单（新增一处 ⇒ 红；修掉一处 ⇒ 也要来改这份清单） */
+  const DEAD_LITERAL = { 'js/core/resolve.js': ['EPIRUS_FIREWEAK_PERSIST'], 'js/train/evo.js': ['EPIRUS_PASSIVE_FIELD'] };
+  const found = {};
+  const walk = function (d) {
+    for (const nm of readdirSync(d)) {
+      const p = d + '/' + nm;
+      if (statSync(p).isDirectory()) { walk(p); continue; }
+      if (!/\.js$/.test(nm)) continue;
+      const ks = (readFileSync(p, 'utf8').match(/process\.env\.EPIRUS_[A-Z0-9_]+/g) || [])
+        .map(function (s) { return s.replace('process.env.', ''); });
+      if (ks.length) found[p.replace(/\\/g, '/')] = Array.from(new Set(ks)).sort();
+    }
+  };
+  walk('js');
+  ok(JSON.stringify(Object.keys(found).sort()) === JSON.stringify(Object.keys(DEAD_LITERAL).sort()),
+    'js/ 里字面读 env 的文件清单必须与声明一致（新增一处就得来处理：走宿主 setter 或显式登记为死键）\n      实测 ' +
+    JSON.stringify(found) + '\n      声明 ' + JSON.stringify(DEAD_LITERAL));
+  for (const f of Object.keys(DEAD_LITERAL)) {
+    ok(JSON.stringify(found[f]) === JSON.stringify(DEAD_LITERAL[f].slice().sort()), f + ' 的字面读键必须与声明一致');
+  }
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };

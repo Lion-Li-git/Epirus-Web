@@ -1,3 +1,24 @@
+## v1.5.155 — **CLI 黑旋钮侦测**（DS 09-22 裁定 · 落实 qoder §N10）+ 门 D122：静态钉住"引擎里字面读 env"的清单
+
+> **裁定**（DS）：采纳 qoder §N10 的提案 —— **"传了等于没传"必须在启动时就响**，不许跑完一整臂才发现。
+
+> **① 运行期侦测**（`tools/train-3p.mjs`）：启动时把 env 与两份名单比对 ——
+> · **本工具闭集**（12 键）：ANCHOR/ARM/BAND_DIR/CLEAR_W/HOTSTART/PUBLISH/SEED/SEEDPACK/XN2G/XN2REF/XN2SCRIPTS/XN2W；
+> · **server/引擎侧名单**（单一来源）：`ECON_ENV_KEYS`（`server/econ-env.mjs`）∪ `FIGHT_ENV_KEYS`（`server/fight-env.mjs`）
+>   ∪ `{EPIRUS_PASSIVE_FIELD, EPIRUS_FIREWEAK_PERSIST}`（`js/` 里"加载时字面读"的两个死键）。
+> 命中"名单内、但本 CLI 读不到"的键 ⇒ 打印名单 + **`exit 6`**；有意为之用 **`EPIRUS_ALLOW_DARK=1`** 放行。
+> ⚠️ 只盯这份名单、**不是"任何 `EPIRUS_*`"** —— 否则用户 shell 里随便一个无关旧旋钮（如 `EPIRUS_NO_PROXY`）
+>   会让所有 np-test 迷你臂 exit 6（那是误伤）。实测：`PASSIVE_FIELD` ⇒ 6 ✓ · `DIV_W` ⇒ 6 ✓ · `NO_PROXY` ⇒ 0 ✓ ·
+>   `ALLOW_DARK=1` ⇒ 0 ✓ · 闭集内照常 ✓。
+
+> **② 静态门 D122**（更要紧的一半）：扫 `js/**/*.js`，把"字面读 `process.env.EPIRUS_*`"的清单与**声明表**逐一比对
+> （声明表 = `{js/core/resolve.js: [EPIRUS_FIREWEAK_PERSIST], js/train/evo.js: [EPIRUS_PASSIVE_FIELD]}`）⇒
+> **新增一处 ⇒ 红**（要么改走宿主 setter、要么显式登记为死键）⇒ 这样"第 5/6 例静默空转"从"下次小心"变成"**下次跑不起来**"。
+> D122 同时行为式验证 exit 6 与逃逸口（迷你臂写临时目录 ⇒ 不欠 D82）。
+> ⚠️ 顺带记一条设计债：`EPIRUS_FIREWEAK_PERSIST` 读在 **`js/core/resolve.js`——一个指纹文件**里 ⇒ 想真正接通它
+>   必须动指纹（全线重测重记）⇒ 目前只能"登记为死键 + 运行期响亮拒绝"。
+> 产物点名（D82）：（无新增）
+
 ## v1.5.154 — train-3p **当选面退化闸**（§N9 · qoder 09-22 午后）+ 门 D120/D121 + CLI 暗旋钮审计（§N10）
 
 > ⚠️ **本条由 DS 代补**：qoder 的提交标题写了 `v1.5.154`，但 CHANGELOG 里没有对应条目（版本序列当时是 153→152），
