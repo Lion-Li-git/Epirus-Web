@@ -1,3 +1,44 @@
+## research(0922 · 夜产物点名 · DS 代记 · 不升版本) —— 补 D82 记账：夜班（`qoder-explore-0921night`）24h 内落盘的 `.bak`
+
+> **动因**：`main` 上 `np-test` D82 红（24h 窗口 62 个产物缺 **31** 个）—— 千问的点名只落在夜班分支的 CHANGELOG 里，
+> main 收不到；即使合并该分支也只补 10 个（其余 21 个是他们日志里自己写的"待 B 段尾巴一起注入夜班账"那批）。
+> 本条**只补名字**（D82 的唯一要求），不改任何版本条目、不改判据。真实读数见
+> `docs/RESEARCH-LOG-2026-09-22-qoder-night.md`（分支上）与其 §登记簿。
+
+夜产物（D82 点名 · 全部 gitignored）：
+
+- `v7xfer44-3psh.bak`
+- `v7xfer44b-3psh.bak`
+- `v7xfer44c10-2p.bak`
+- `v7xfer44c10-band1.bak`
+- `v7xfer44c11-2p.bak`
+- `v7xfer44c11-band1.bak`
+- `v7xfer44c11b-2p.bak`
+- `v7xfer44c11b-band1.bak`
+- `v7xfer44c11b-band2.bak`
+- `v7xfer44c12-2p.bak`
+- `v7xfer44c12-band1.bak`
+- `v7xfer44c12-band2.bak`
+- `v7xfer44c12-band3.bak`
+- `v7xfer44c13-band1.bak`
+- `v7xfer44c13-band2.bak`
+- `v7xfer44c13-band3.bak`
+- `v7xfer44c6-2p.bak`
+- `v7xfer44c6-band1.bak`
+- `v7xfer44c7-2p.bak`
+- `v7xfer44c7-band1.bak`
+- `v7xfer44c7-band2.bak`
+- `v7xfer44c7-band3.bak`
+- `v7xfer44c8-2p.bak`
+- `v7xfer44c8-band1.bak`
+- `v7xfer44c9-2p.bak`
+- `v7xfer44c9-3psh.bak`
+- `v7xfer44c9-band1.bak`
+- `v7xfer44c9-band2.bak`
+- `v7xfer44d6w-2p.bak`
+- `v7xfer44d6w-band1.bak`
+- `v7xn-smoke.bak`
+
 ## v1.5.148 — **2P 槽换代：`v7xfer44c13-2p.bak` 上槽**（本仓第一个"移植血统 + 宽体"的 2P 冠军 · 夜班食物链冠军 · 用户 GO）
 
 > **候选来历**（数据全在 `docs/RESEARCH-LOG-2026-09-22-qoder-night.md`，分支）：tgt-44（5P 训练包里 2P 移植的正例）热启动
