@@ -30,3 +30,4 @@ docs/artifacts/*-out*/
 # *.bak 早被全局忽略，但这些点文件/摘要没有 —— 补上（含既有 .training-*，规则合并）。
 docs/artifacts/.*
 docs/artifacts/*.summary
+docs/artifacts/*.marker
