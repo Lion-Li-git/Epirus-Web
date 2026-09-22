@@ -8,7 +8,8 @@ import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径�
 import { ECON_ENV_KEYS } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { FIGHT_ENV_KEYS } from '../server/fight-env.mjs';
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
-import { rejectDegenerateWinners } from './pick-best.mjs';   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）
+import { rejectDegenerateWinners, bandPickByLand, rejectNarrowWinners } from './pick-best.mjs';
+import { HOLO_GIFT_MAX } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
 
 /* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
  * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
@@ -55,7 +56,10 @@ const POP = Number(process.argv[5] || 12);
  *   （与 D119/D120 的"要了开关不许静默"同一条规矩）。有意为之的情形用 `EPIRUS_ALLOW_DARK=1` 放行。 */
 const SELF_ENV_KEYS = [
   'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
+  'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
+  'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
   'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
+  'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
   'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W'
 ];
@@ -89,6 +93,19 @@ const ENGINE_SIDE_KEYS = ECON_ENV_KEYS.concat(FIGHT_ENV_KEYS);
 
 /* §N6 跨 N 混适应度开关（默认 0 = 行为逐字不变；用法与红线见循环内注释） */
 const XN2W = Number(process.env.EPIRUS_XN2W || 0);
+/* v1.5.167（qoder §N24 · 默认 0 ⇒ 行为逐字不变）：**当选面在同分带内按「兑现广度」取大者**。
+ * 动因（实测 `tools/probe-cast-vs-land.mjs`）：门禁的 G 只数「发起了几种」⇒ 现役包 G=4.44 而出手:落地 = 530:237
+ * （一半以上出手没变成伤害）。把「兑现」写进**奖励**这条路已被否证（乱挥双枪 −27pt，见 `evo.js:evalSubsidyProbe` 头注）
+ * ⇒ 所以它只当**同分带内的排序键**：胜率不为广度让路，带外者永不参与。 */
+const SEL_LAND = Number(process.env.EPIRUS_SEL_LAND || 0);
+const SEL_LAND_GAMES = Number(process.env.EPIRUS_SEL_LAND_GAMES || 20);
+const SEL_LAND_TOL = Number(process.env.EPIRUS_SEL_LAND_TOL || 0.03);
+/* v1.5.170（qoder §N29 · 默认 0 ⇒ 行为逐字不变）：**广度准入线**（不是排序键）。
+ * 判据 = `mirrorHealth(SEL_LAND_GAMES, N, 'multi')` 的净 `effSkillsLand ≥ 本值` **且** `landedKeys ≥ 2`。
+ * 标定（`mirrorHealth(20,5,'multi')` 实测）：现役 `2.66（3 种）` · 2P 槽 `2.98（3 种）` · §N28 三粒塌缩冠军 `1.00~1.24` · 最宽那粒 `1.75（3 种）`
+ * ⇒ 线画在 1.5 只砍"塌成一种卡"，不砍"宽但兑现率低"。默认关，开了必须自己说剔了几粒。 */
+const BREADTH_FLOOR = Number(process.env.EPIRUS_BREADTH_FLOOR || 0);
+let BREADTH_LOG = null, BREADTH_ALL_NARROW = false;
 const ANCHOR = Number(process.env.EPIRUS_ANCHOR || 0);   // v1.5.153：锚定正则 λ（0=关，逐字不变）
 const XN2G = Number(process.env.EPIRUS_XN2G || Math.max(4, (GAMES / 2) | 0));
 
@@ -138,7 +155,7 @@ const T = sb.window.EpirusTrainer;
  * 与 v1.5.159 那条已删的 passiveField 接线的**关键区别**：这条带**开火计数**（跑完必须报"注了几局 / 覆盖几个受评座位"，
  * 一局未注 ⇒ `exit 8`）。§N11 的教训就是"横幅读回 0.34 ✓ 而作用点 0 局"烧掉两臂 ⇒ 横幅只能证明**变量**到位，
  * 证明不了**效果**发生。语义与三条设计约束见 `js/train/evo.js` 的 `killSeatFor` 注释。 */
-let KILL_REQ = 0;
+let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null;   // 兑现广度当选的账（写进 meta，事后能查这臂到底改没改判）
 {
   const trainEnv = readTrainEnv(process.env);
   if (trainEnv.kill != null && Number(trainEnv.kill) > 0) {
@@ -154,6 +171,32 @@ let KILL_REQ = 0;
     KILL_REQ = Number(got);
     console.log('[train-3p] 收割席注入已下达：killField=' + got + ' ⇒ 消费点读回 ' + T.killField() +
       '（每 ' + Math.max(2, Math.round(1 / got)) + ' 局注 **1 席** pickKillSecure · 相位按代旋转 · 只注多人局 · 避开承诺局）');
+  }
+  /* ===== v1.5.169（§N28）：训练**模式**下达（`EPIRUS_TRAIN_MODE=long` ⇒ 5 血长程考卷）=====
+   * 动因（用户 09-22 的原话目标）："理想情况下应该炼一个 5 血长程能通吃其他模式" —— 而 `TRAIN_MODE` 一直是写死的 `'multi'`，
+   * 所以这句**从来没被当成实验跑过**（`evo.js:28` 自己注释着"5 血冠军从来没被训过"）。
+   * 三条纪律：① 认不认这个模式由 `R.MODES` 判，不认 ⇒ `exit 7`（**拒绝"要了 long 却静默训 multi"**，那是 §N11 那一族）；
+   * ② 下达后必须**读回**消费点的值；③ 生效值进 `meta.recipe.trainMode`，让产物自己说它是在哪种考卷下选出来的。 */
+  if (trainEnv.mode != null && trainEnv.mode !== '') {
+    const want = trainEnv.mode;
+    if (typeof T.setTrainMode !== 'function') {
+      console.error('[train-3p] ⛔ 传了 EPIRUS_TRAIN_MODE 但引擎没有 setTrainMode ⇒ 拒绝静默空转');
+      process.exit(7);
+    }
+    const Rules = sb.window.EpirusRules;
+    if (!Rules || !Rules.MODES || !Rules.MODES[want]) {
+      console.error('[train-3p] ⛔ EPIRUS_TRAIN_MODE=' + want + ' 不是规则表里的模式（可选 ' + Object.keys((Rules && Rules.MODES) || {}).join(',') + '）⇒ 不跑（不许静默退回 multi）');
+      process.exit(7);
+    }
+    const gotMode = T.setTrainMode(want);
+    if (gotMode !== want) {
+      console.error('[train-3p] ⛔ setTrainMode(' + want + ') 读回 ' + gotMode + '（不等于下达值）⇒ 本臂作废');
+      process.exit(7);
+    }
+    TRAIN_MODE_REQ = want;
+    const M = Rules.MODES[want];
+    console.log('[train-3p] 训练模式已下达：EPIRUS_TRAIN_MODE=' + want + ' ⇒ 消费点读回 ' + T.trainMode() +
+      '（建局 hp=' + (M.hp != null ? M.hp : '?') + ' · suddenDeath=' + (M.suddenDeath != null ? M.suddenDeath : '?') + '）');
   }
 }
 
@@ -392,6 +435,60 @@ for (const h of hall) {
 {
   const sel = rejectDegenerateWinners(hallEntries);
   if (sel.dropped) console.log('[退化闸] 剔除 ' + sel.dropped + ' 粒零攻击≥90% 的名人堂成员（与 promote/2P 同判据）');
+  /* v1.5.170（§N29）：两把"兑现"口径的闸共用一次 `mirrorHealth`（同一量具测两遍 = 白跑一遍）。
+   * 未开任何一个开关 ⇒ 这段一行都不跑 ⇒ 与 v1.5.166 之前的行为逐字相同。 */
+  if ((BREADTH_FLOOR > 0 || SEL_LAND > 0) && sel.clean && sel.clean.length) {
+    for (const e of sel.clean) {
+      const mh = T.mirrorHealth(e.ref.params, SEL_LAND_GAMES, N, 'multi');
+      e.landG = mh.effSkillsLand || 0; e.landedKeys = mh.landedKeys || 0; e.castG = mh.effSkills || 0;
+      e.conv = (mh.nonJi ? (mh.landedTotal || 0) / mh.nonJi : 0);
+      /* 与 promote 的"不可 --force"硬门槛同阈值（`HOLO_GIFT_MAX`，单源）：送盾当主业的候选**不参与**广度换人 */
+      e.gateOk = (mh.holoOtherPerGame || 0) <= HOLO_GIFT_MAX;
+    }
+  }
+  /* ===== v1.5.170（§N29）：广度**准入线**（默认关）——把"塌成一种卡"当不合格，而不是当排序键 =====
+   * 依据（§N28 实测）：两对种子 4 粒冠军里有 3 粒净兑现只剩 1 种卡（`1.00（1 种）`）⇒ 塌缩是常态不是意外；
+   * 而 §N25 已证明"广度当排序键"要么咬不动（带里只剩 1 粒）要么咬错（换上来的是过不了硬门槛的包）。 */
+  if (BREADTH_FLOOR > 0 && sel.clean && sel.clean.length) {
+    const nf = rejectNarrowWinners(sel.clean, BREADTH_FLOOR);
+    console.log('[广度线] 判据 = 净 `G(落地) ≥ ' + BREADTH_FLOOR + '` 且 `landedKeys ≥ 2`（n=' + SEL_LAND_GAMES + ' 局 multi 镜）· 各粒：' +
+      sel.clean.slice().sort(function (a, b) { return b.landG - a.landG; })
+        .map(function (e) { return e.landG.toFixed(2) + '(' + e.landedKeys + '种,兑现' + (100 * e.conv).toFixed(0) + '%)'; }).join('  '));
+    console.log('[广度线] 剔除 ' + nf.dropped + '/' + sel.clean.length + ' 粒塌缩候选' +
+      (nf.best ? ' ⇒ 池内冠军 ' + (nf.best.score === sel.best.score ? '**没换人**' : '**换成 ' + nf.best.landG.toFixed(2) + '(' + nf.best.landedKeys + '种)**') : ''));
+    if (nf.allRejected) {
+      BREADTH_ALL_NARROW = true;
+      console.error('⛔ [广度线] 名人堂**全部塌缩**（没有一粒 `landedKeys≥2 且 G(落地)≥' + BREADTH_FLOOR + '`）⇒ 产物照写但标 breadthFloorAllNarrow；' +
+        '这按预注册是**走向②**（该回去改奖励面，不是继续加排序键），别拿这粒去换包');
+    } else { sel.clean = nf.clean; if (nf.best) sel.best = nf.best; }
+    BREADTH_LOG = { floor: BREADTH_FLOOR, games: SEL_LAND_GAMES, dropped: nf.dropped, of: sel.clean.length + nf.dropped,
+      allNarrow: nf.allRejected, winnerLandG: sel.best ? sel.best.landG : null, winnerKeys: sel.best ? sel.best.landedKeys : null };
+  }
+  /* v1.5.167（§N24）：兑现广度参与当选（默认关）。量具 = `mirrorHealth.effSkillsLand`（同一套熵，把"出手次数"换成"落地次数"）；
+   * 必须打印「换没换人」(`tieBrokenBy`)——排序键不咬就等于没接线（§N12 的教训：判作用点，不判有没有配置）。 */
+  if (SEL_LAND > 0 && sel.clean && sel.clean.length) {
+    const lp = bandPickByLand(sel.clean, SEL_LAND_TOL);
+    console.log('[兑现广度] n=' + SEL_LAND_GAMES + ' 局 · 同分带 ' + lp.band.length + '/' + sel.clean.length + '（先剔送盾等硬门槛不过 ' + (lp.skipped || 0) + ' 粒）' +
+      '（tol=' + SEL_LAND_TOL + '）· 各粒 G(出手→落地)：' +
+      sel.clean.slice().sort(function (a, b) { return b.landG - a.landG; })
+        .map(function (e) { return e.castG.toFixed(2) + '→' + e.landG.toFixed(2) + '(' + e.landedKeys + '种)'; }).join('  '));
+    if (lp.best) {
+      /* 归因要说全：L1b 实测暴露——"未改判"只说了带内没换人，**预筛换掉了池**（6 粒里剔了 4 粒），
+       * 结果照样换包 ⇒ 只报"带内没改判"会让读数人以为这臂与不开开关逐字相同。三格分开报。 */
+      const poolChanged = !!(sel.best && lp.best && sel.best !== lp.best);
+      if (lp.tieBrokenBy === 'land' && poolChanged) {
+        console.log('[兑现广度] **改判（排序键换人）**：' + sel.best.landG.toFixed(2) + ' → ' + lp.best.landG.toFixed(2) +
+          '（胜负分差 ' + ((lp.best.score - sel.best.score) * 100).toFixed(1) + 'pt，在带内 ⇒ 用一点胜负分换兑现广度）');
+      } else if (lp.skipped > 0 && poolChanged) {
+        console.log('[兑现广度] **改判（是预筛选掉的，不是排序键）**：剔 ' + lp.skipped + ' 粒过硬门槛不过的 ⇒ 池变小后冠军从 ' +
+          sel.best.landG.toFixed(2) + '(' + (sel.best.castG || 0).toFixed(2) + ' 出手) 变成 ' + lp.best.landG.toFixed(2) +
+          '(' + (lp.best.castG || 0).toFixed(2) + ' 出手)');
+      } else console.log('[兑现广度] 未改判（池与排序键都没换人）');
+      sel.best = lp.best;
+    }
+    SEL_LAND_LOG = { tol: SEL_LAND_TOL, band: lp.band.length, by: lp.tieBrokenBy,
+      landG: sel.best ? sel.best.landG : null, castG: sel.best ? sel.best.castG : null };
+  }
   if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; }
   else if (hallEntries.length) {
     DEGENERATE_ONLY = true;
@@ -407,6 +504,7 @@ bestParams = finalParams;
 if (KILL_REQ > 0) {
   const ks = (typeof T.countKillSeats === 'function') ? T.countKillSeats() : { fired: -1, seats: {}, names: {} };
   const seatKeys = Object.keys(ks.seats || {}).sort();
+  KILL_REC = { req: KILL_REQ, fired: ks.fired, seats: seatKeys, names: Object.keys(ks.names || {}) };
   console.log('[kill] 开火计数：注入 ' + ks.fired + ' 局 · 覆盖受评座位 ' + seatKeys.length + ' 个 [' + seatKeys.join(',') + ']' +
     ' · 注入名单 ' + Object.keys(ks.names || {}).join(',') + '（killField=' + KILL_REQ + '）');
   if (!(ks.fired > 0)) {
@@ -451,6 +549,15 @@ console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
 
 const pack = P.pack(bestParams);
 const meta = {
+  selLand: SEL_LAND_LOG,
+  /* v1.5.169：产物自带配方。§N11 的教训是"读日志才知道这臂开了什么"，而日志会滚走、`.bak` 会留下来——
+   * 于是事后复盘（和 DS 那边跑对照）只能靠文件名猜。把**下达值 + 开火计数**一起写进 meta，
+   * 让每一粒产物能自证"我当时是在什么分布下选出来的"。只加字段，不改任何判定。 */
+  recipe: { arm: (process.env.EPIRUS_ARM || null), seed: __SEED, gens: GENS, games: GAMES, pop: POP,
+    xn2w: XN2W, xn2g: XN2G, selLand: SEL_LAND, selLandGames: SEL_LAND_GAMES, selLandTol: SEL_LAND_TOL,
+    kill: KILL_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
+    breadthFloor: BREADTH_LOG },
+  breadthFloorAllNarrow: BREADTH_ALL_NARROW,   // §N29 走向②的标记：全池塌缩 ⇒ 该改奖励面，不是换排序键
   degenerateOnlyWinner: DEGENERATE_ONLY,   // §N9 退化闸：true=没有合格当选者、promote 会拒收
   source: 'tools/train-3p.mjs', n: N, gens: GENS, games: GAMES, pop: POP,
   ts: new Date().toISOString(), firstRate: ev.firstRate, top2Rate: ev.top2Rate

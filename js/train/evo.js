@@ -2393,11 +2393,31 @@ let WALL_GAMES = 3;
     }).map(function (sd) { return sd.key; });
     let H = 0;
     for (const k of ks) { const pr = keyCount[k] / tot; H -= pr * Math.log(pr); }
+    /* v1.5.167（qoder §N24 · 用户"G_eff 像是为了刷 eff 只用最容易被测到的卡"）：**兑现加权**的第二把尺子。
+     * `effSkills` 数的是"发起了几种"——一张常出手常被防住的卡与一张少见但每次掉血的卡**在这把尺上等价**；
+     * `effSkillsLand` 用同一套熵去数 `landByKey`（真正造成过伤害的卡），于是"广"必须是"打得出血"的广。
+     * 实测差距（`tools/probe-cast-vs-land.mjs`，现役 cmin4）：出手:落地 = 537:278 ⇒ `G=4.44` 而净兑现只有 `2.66（3 种真卡）`。
+     * ⚠️ 它**只当同分带内的排序键/体检读数**，不当奖励：仓里有前例——"奖励贵技能落地"的探针会选出
+     *   乱挥双枪的冠军（实测 −27pt，见 `evalSubsidyProbe` 的注释），所以**兑现次数进 fit 是错的路**。
+     * ⚠️ **只数真卡名**（发布前自查发现的口径缺陷）：`landByKey` 按 `damage.via` 统计，而 `via` 有一批取值**不是一张卡**——
+     *   `deliverDamage` 在 `via` 缺省时会回落到中文 `reason`（`resolve.js:305`）⇒ "终局收缩"（`source==null` 的全员 −1）按规则白送的血入账；
+     *   另有 `headshot`（爆头 = 狙击的**结果修饰**，`resolve.js:1207`）、`dream`/`chain`/`counter`/`taunt` 这些引擎内标记。
+     *   不滤就会**奖励"拖到收缩阶段还活着"的包**、惩罚主动进攻的包：实测同臂 6 粒候选的非卡名占"落地"10%~41%（band4 是 104/293=41%），
+     *   ⇒ §N25 的 L1"改判"整条是这个 bug 的产物（污染下 band5 的 `落地G=2.62` 是全场最大，净口径下只有 1.51、最大者换成 band1）。
+     *   ⇒ `landByKey` 本身**保持原样**（v1.5.28 起 `pierceMissing` 吃它，动它 = 偷改既有判据），只在新字段上收口径。
+     *   **已知偏保守的一处**：`原型制御·转移`（`resolve.js:270` 只给 reason）是真卡伤害，但键名不是 `SK.proto` ⇒ 被一并滤掉。
+     *   代价 = 少数一种卡；收益 = 永不把"非卡的血"算成卡。选**宁可少计**，并把滤掉的量记在 `landedFiltered` 里自证。 */
+    const lks = Object.keys(landByKey).filter(function (k) { return landByKey[k] > 0 && !!R.byKey[k]; });
+    const ltot = lks.reduce(function (a, k) { return a + landByKey[k]; }, 0);
+    const lfilt = Object.keys(landByKey).reduce(function (a, k) { return a + (R.byKey[k] ? 0 : landByKey[k]); }, 0);
+    let HL = 0;
+    for (const k of lks) { const pr = landByKey[k] / ltot; HL -= pr * Math.log(pr); }
     return {
       games: G, dmgPerGame: dmg / G, heavyPerGame: heavyDmg / G, holoPerGame: holo / G,
       zeroRate: zero / G, drawRate: draws / G, rounds: rounds / G,
       holoOtherPerGame: holoOther / G,
       effSkills: tot ? Math.exp(H) : 0, distinctKeys: ks.length, nonJi: tot,
+      effSkillsLand: ltot ? Math.exp(HL) : 0, landedKeys: lks.length, landedTotal: ltot, landedFiltered: lfilt,
       landByKey: landByKey, pierceKeys: pierceKeys,
       /* 零落地的"穿透卡"（能穿反弹/穿防御）—— 为 0 就说明**破墙的那条线丢了** */
       pierceMissing: pierceKeys.filter(function (k) { return !landByKey[k]; }),

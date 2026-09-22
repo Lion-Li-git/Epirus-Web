@@ -42,7 +42,15 @@ export function mulberry32(a) {
 export function loadChamp(W, file, root) {
   const src = readFileSync(join(root || ROOT, file), 'utf8');
   const m = /EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src);
-  if (!m) return null;
+  /* v1.5.171（§N31 实测到的读不出）：`train-best` 的 band-save 与 2P 槽产物用的是 **2P 外壳**
+   * （`window.EPIRUS_CHAMPION = {...}`），本函数原本只认 `_3P` ⇒ `champ-audit` 对这些文件整行打"(读不出冠军包)"，
+   * 而同一批文件 `js/champion-pack.js` 的 `extract` 能吃下（D110）——**两个读取口不同源**就是本仓的老病。
+   * 这里只在 3P 外壳缺席时退回，且**必须避开 `EPIRUS_CHAMPION_META`**（它先出现，贪婪匹配会把账当包）。 */
+  if (!m) {
+    const m2 = /(?:^|\n)[\w.]*EPIRUS_CHAMPION(?!_3P|_META)\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src);
+    if (!m2) return null;
+    return W.EpirusPolicy.unpack(JSON.parse(m2[1]), true);
+  }
   /* v7：测量工具必须能读历史形状（v5/v6）——**保持原生形状**读取，不要嵌入：
    * 嵌入会把形状变成 v7，chooser 就切到候选口径，历史基线分复现不了。 */
   return W.EpirusPolicy.unpack(JSON.parse(m[1]), true);
@@ -409,6 +417,11 @@ const _n = function (x, d) { return (isFinite(x) ? Number(Number(x).toFixed(d ==
  *      拿它阻断 = 连在位包一起挡死，且**没有任何可上线候选受益**。这与 v1.5.78 保留 G6 非阻断是同一条理由。
  * ⇒ 保持 `false`。翻转条件不变：**等真有一个可上线候选过了它**。 */
 export const DENSITY_BLOCK = false;
+
+/* v1.5.168（§N25）：「全息屏障套给别人 > 6 次/局 ⇒ 硬门槛，`--force` 也不放行」的阈值单一来源。
+ * 为什么现在抽出来：当选面要拿它当**预筛**（兑现广度不许把一包"送盾当主业"的候选换上来），
+ * 而它在 `promote-champion` 里原本是一个字面量 —— 两处各写一个 6 = 本仓栽过四次的那类漂移。 */
+export const HOLO_GIFT_MAX = 6;
 
 /* ===== v1.5.162（qoder §N17）：可行性五道的**样本量计划 = 单一来源** =====
  * 病（§N16 实测，不是猜）：同一个候选在两个入口读出不一样 ——

@@ -24,7 +24,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX } from './audit-lib.mjs';
 /* v1.5.152（DS 09-22 · 用户裁定"把真桌 ε=0.2 接进体检，只记录不阻断"）：
  * **产品代理栏** —— 单一来源：借 `behavior-profile.mjs` 的 `fieldProfile`（不抄第二份实现；该模块被 import 时不跑 main）。
  * 依据（`docs/RESEARCH-LOG-2026-09-22-ds.md` §7）：同一包同一 ε=0，**镜像**装配电磁炮 4.30 每局、
@@ -213,7 +213,13 @@ const feas = feasibilityOf({ seat: ss, G: sp, G2: spL, G2name: 'long', wall: rw,
     zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
 console.log('   可行性（与训练落盘同源 · 样本量 ' + FEAS_N.tag + '）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
   '（座位 ' + feas.seatSpread + 'pt/' + feas.seatVerdict + ' · G(multi) ' + feas.G +
-  (feas.G2 != null ? ' · **G(' + feas.G2name + ') ' + feas.G2 + '**' : '') + ' · 墙 ' + feas.wallDmg +
+  (feas.G2 != null ? ' · **G(' + feas.G2name + ') ' + feas.G2 + '**' : '') +
+  /* v1.5.167（§N24）：门禁那把 G 只数"发起了几种" ⇒ 与"打得出血几种"**并排印**。
+   * 不印就会漏掉这种包：`G=4.44` 而出手:落地 = 530:237（一半以上出手没变成伤害，`tools/probe-cast-vs-land.mjs` 实测）。 */
+  ' · **兑现 G ' + (sp.effSkills || 0).toFixed(2) + '→' + (sp.effSkillsLand || 0).toFixed(2) +
+  '（' + (sp.landedKeys || 0) + ' 种打上血）' +
+  (spL ? ' / long ' + (spL.effSkills || 0).toFixed(2) + '→' + (spL.effSkillsLand || 0).toFixed(2) : '') + '**' +
+  ' · 墙 ' + feas.wallDmg +
   '/局 · 场A ' + (100 * feas.fieldA).toFixed(0) + '% · 场B 清场 ' + feas.fieldBClears + '/局' +
   '（胜率 ' + (100 * (feas.fieldBWinRate || 0)).toFixed(0) + '% —— **规则红利，不作判据**））' +
   (feas.notes.length ? ' ⚠ ' + feas.notes.join('；') : ''));
@@ -404,7 +410,7 @@ console.log('   全息屏障（自对局）：' + sp.holoPerGame.toFixed(1) + ' 
 /* 阈值标定（实测）：**病态 18.7/局**（v7wall-33，100% 送人、用户手感异常）vs **偶发 2.0/局**（v7wall-31）
  * ⇒ 硬门槛取 **>6**，只挡"把套盾当主业"的产物；>2 仍留在普通条件里（可 --force）。
  * 教训同源：阈值不能定在噪声带里（E/F/holo 三次同型）。 */
-if (hOther > 6) hardFails.push('全息屏障套给别人 ' + hOther.toFixed(1) + ' 次/局 > 6（把原型制御白送对手当主业）');
+if (hOther > HOLO_GIFT_MAX) hardFails.push('全息屏障套给别人 ' + hOther.toFixed(1) + ' 次/局 > ' + HOLO_GIFT_MAX + '（把原型制御白送对手当主业）');
 if (sp.pierceLand !== undefined && sp.pierceLand === 0) hardFails.push('自对局穿透卡零命中');
 if (hardFails.length) {
   console.log('⛔ 硬门槛未过（**--force 也不放行**）：');

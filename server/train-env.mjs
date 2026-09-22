@@ -14,10 +14,10 @@
  */
 
 /** env 键名清单（与 econ-env/fight-env 同规矩：单一来源，别处不许再抄一份） */
-export const TRAIN_ENV_KEYS = ['EPIRUS_KILL_FIELD'];
+export const TRAIN_ENV_KEYS = ['EPIRUS_KILL_FIELD', 'EPIRUS_TRAIN_MODE'];
 
 /** 旋钮字段名清单（下发对象里允许出现的键；给"空枪检测"与回显用） */
-export const TRAIN_KNOB_KEYS = ['kill'];
+export const TRAIN_KNOB_KEYS = ['kill', 'mode'];
 
 /** v1.5.163 删掉的键：仍要**响亮**拒绝，不许"传了等于没传"（那是本仓烧过三臂的那类病） */
 export const REMOVED_TRAIN_KEYS = { EPIRUS_PASSIVE_FIELD: 'v1.5.163（死作用点：注入从未开火；见 CHANGELOG 与夜日志 §N11）' };
@@ -32,15 +32,23 @@ export function readTrainEnv(env) {
    * 它买的是新语义（桌上放一个会抢收割的对手），且用户 09-22 裁掉过"顺手改默认分布"的做法 ⇒ 只许显式下达。 */
   const k = nv(e.EPIRUS_KILL_FIELD);
   if (k != null) { const n = Number(k); if (isFinite(n)) o.kill = n; }
+  /* 训练**模式**（v1.5.169 · qoder §N28）：`evo.js` 早有 `setTrainMode`（v1.4.0，门 D10 钉着"透传到建局"），
+   * 但 CLI 侧从来没有键 ⇒ "5 血长程冠军"从来没被训过（`evo.js:28` 的注释自己就写着这句）。
+   * 这里只**搬运字符串**，认不认这个模式由调用点拿 `R.MODES` 判（本模块是纯函数，看不见规则表）。 */
+  const md = nv(e.EPIRUS_TRAIN_MODE);
+  if (md != null) o.mode = String(md).trim();
   return o;
 }
 
 /** 是否有真正的覆盖（空对象 ⇒ false） */
 export function hasTrainOverride(o) {
-  return !!(o && o.kill != null && isFinite(Number(o.kill)));
+  return !!((o && o.kill != null && isFinite(Number(o.kill))) || (o && o.mode != null && o.mode !== ''));
 }
 
 /** 一行式回显（给日志/体检用；无覆盖时返回空串） */
 export function trainEcho(o) {
-  return (o && o.kill != null && isFinite(Number(o.kill))) ? ('killField=' + Number(o.kill)) : '';
+  const parts = [];
+  if (o && o.kill != null && isFinite(Number(o.kill))) parts.push('killField=' + Number(o.kill));
+  if (o && o.mode != null && o.mode !== '') parts.push('trainMode=' + o.mode);
+  return parts.join(' ');
 }

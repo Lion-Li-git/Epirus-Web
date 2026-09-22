@@ -1,3 +1,134 @@
+## v1.5.171 — 测量侧读得到 2P 外壳产物了（`audit-lib.loadChamp` 的退回分支）——`champ-audit` 对一整类候选一直打"(读不出冠军包)"
+
+> **怎么发现的**：§N31 拿历史池与今晚臂冠军横量"考卷 × 净兑现广度"时，`v7xn14a-band2`（§N14/§N15 那条线上最被看好的候选）
+> 在 `tools/champ-audit.mjs` 里整行是 `(读不出冠军包)` —— 而**同一粒文件** `tools/probe-cross-mode.mjs` 吃得下（它走 `js/champion-pack.js` 的 `extract`，D110 的单一来源）。
+> 两读因不同源 = 本仓第四次同一族病（`FEAS_N`/`ECON_ENV_KEYS`/`pierceKeys`/`HOLO_GIFT_MAX` 同型）。
+>
+> **真因**：`audit-lib.loadChamp` 的正则只认 `EPIRUS_CHAMPION_3P` ⇒ 凡 **2P 外壳**（`window.EPIRUS_CHAMPION = {…}`，即 `train-best` 的 band-save 与 2P 槽 bundle）一律 `return null`。
+> 表现是"读不出"而不是"读错" ⇒ 它不会骗人，但**会让人以为这类候选没法量**，于是跨槽比较长期缺席。
+>
+> **改法**：只在 3P 外壳缺席时退回 2P 外壳；负向断言 `(?!_3P|_META)` 必须有 —— 产物里 `EPIRUS_CHAMPION_META` **先出现**，贪婪匹配会把账当包。
+> 主路径（3P）**一字未动** ⇒ 既有体检读数逐位不变（D82/D16 同批复跑核对）。退回后仍有些列是 `?`（`A 考卷`/`D 长程反弹墙` 那几列走 `tools/eval-5p.mjs`，它按 5 人槽读包），
+> 这是**已知边界**、不是新病：至少 B/C/G/座位/墙伤害这几列现在能看了。
+>
+> 明细：`docs/RESEARCH-LOG-2026-09-23-qoder-night.md` §N31。
+
+## v1.5.170 — 广度**准入线** `EPIRUS_BREADTH_FLOOR`（默认关）：把"塌成一种卡"当**不合格**，不当排序键 · 门 D128
+>
+> **动因是 §N28 的一条实测，不是审美**：两对种子（long/multi）四粒冠军里**三粒**的净兑现只剩一种卡（`G(落地) 1.00~1.23`）
+> ⇒ 塌缩不是意外而是常态。而 §N25 已经把"广度当排序键"这条路否掉了两次（同分带里只剩 1 粒 ⇒ 咬不动；咬动了换上来的还是过不了硬门槛的病包）。
+> 剩下的唯一姿势是**线**：不达标 = 不合格；达标者之间**仍按胜负分**排（不让广度换胜率）。
+>
+> **口径**：`rejectNarrowWinners(entries, floor)`（`tools/pick-best.mjs`，纯函数）判 `mirrorHealth` 的**净** `effSkillsLand ≥ floor` **且** `landedKeys ≥ 2`。
+> 两条而不是两条之一：`landedKeys ≥ 2` 就是"塌缩"的定义（只有一种卡打上血），**G 再高也不许绕过它**（门里钉了 `G=9.00/1 种 ⇒ 仍不合格`）；
+> `≥ floor` 防"两种但一种占 99%"。标定（`mirrorHealth(20,5,'multi')` 实测）：现役 `2.66（3 种）` · 2P 槽 `2.98` · 今晚三粒塌缩冠军 `1.00~1.24` · 最宽那粒 `1.75（3 种）` ⇒ 草案线 **1.5**。
+> **⚠️ 这条线目前是训练侧读数，不是门禁判据**——要不要进 `promote`、线画在哪，属判据改动，**要用户裁定**（夜日志 Q-7）。
+>
+> **行为与"不许静默"**：全池不合格 ⇒ `meta.breadthFloorAllNarrow=true` + stderr 响亮指向"走向②：该回去改奖励面"，**不退回"不过滤"**；
+> 当选者的 `landG/landedKeys` 写进 `meta.recipe.breadthFloor` ⇒ D128 拿**产物**判这条线生没生效（判效果不判横幅，§N11 那条纪律）。
+> 默认 `0` ⇒ 整段不跑；D127 的默认关基线哈希 `aa743488cc` 本版仍然绿（同一次复跑顺带证明"共用一次 `mirrorHealth`"的重构没动行为）。
+>
+> **第一臂读数（`v7xn23a` 冷启动 · 关掉收割席 · seed 31）**：池子里**第一次同时有宽候选和窄冠军** ——
+> `band4` 净落地 `2.76（3 种）` 而考卷只有 `27.9%`；当选的 `band3` 净落地 `1.00（1 种）` 考卷 `40.6%`
+> ⇒ **在这个配方尺度上，"要宽"的明码标价 ≈ 12.7pt 考卷分**（`xn23b` = 同臂开线 1.5 的对照在跑，读"付了这 12.7pt 之后通吃矩阵长什么样"）。
+> 另：`v7xn19a`（冷 + 收割席开 + 开线）报的是 `剔除 6/6 ⇒ 全池塌缩` ⇒ **收割席压力本身就是塌缩来源之一**（与 §N28 的 Q-6 同向）。
+>
+> **§N31 顺带把两句我自己的话降级**：① "考卷偏爱窄包"不成立 —— 历史 20 包同尺横量 `Pearson r(考卷, 净兑现G) = +0.234`（弱正相关，几乎无判别力）；
+> ② "这条管线产不出宽包"也不成立 —— 产线包普遍是宽的（`v7cmin4-82 净落地 3.80（4 种）`、`v7cmin3-31 4 种`、2P 槽 `2.98`），塌缩集中在**今晚这种 100 代小配方**。
+> 而"宽的历史包能不能上线"另有一关：`v7cmin4-82` 体检 `D 长程反弹墙 5%`、`反弹墙伤害 4.30`（现役 21.00）、`珠浪费 86%` ⇒ **它过不了墙那道硬门**，只是"值得量"，不是"可以换"。
+>
+> 产物点名（D82）：`v7xn19a-31.bak` `v7xn19a-band1.bak` `v7xn19a-band2.bak` `v7xn19a-band3.bak` `v7xn19a-band4.bak` `v7xn19a-band5.bak` `v7xn19a-band6.bak` ·
+> `v7xn20a-31.bak` `v7xn20a-band1.bak` `v7xn20a-band2.bak` `v7xn20a-band3.bak` `v7xn20a-band4.bak` `v7xn20a-band5.bak` `v7xn20a-band6.bak` ·
+> `v7xn20b-31.bak` `v7xn20b-band1.bak` `v7xn20b-band2.bak` `v7xn20b-band3.bak` `v7xn20b-band4.bak` `v7xn20b-band5.bak` `v7xn20b-band6.bak` ·
+> `v7xn21a-31.bak` `v7xn21a-band1.bak` `v7xn21a-band2.bak` `v7xn21a-band3.bak` `v7xn21a-band4.bak` `v7xn21a-band5.bak` `v7xn21a-band6.bak` ·
+> `v7xn23a-31.bak` `v7xn23a-band1.bak` `v7xn23a-band2.bak` `v7xn23a-band3.bak` `v7xn23a-band4.bak` `v7xn23a-band5.bak` `v7xn23a-band6.bak` ·
+> `v7xn23b-31.bak` `v7xn23b-band1.bak` `v7xn23b-band2.bak` `v7xn23b-band3.bak` `v7xn23b-band4.bak` `v7xn23b-band5.bak` `v7xn23b-band6.bak` ·
+> `v7xn22a-31.bak` `v7xn22a-band1.bak` `v7xn22a-band2.bak` `v7xn22a-band3.bak` `v7xn22a-band4.bak` `v7xn22a-band5.bak` `v7xn22a-band6.bak`
+> 明细：`docs/RESEARCH-LOG-2026-09-23-qoder-night.md` §N29/§N30/§N31。
+
+## v1.5.169 — CLI 终于能**训长程**了（`EPIRUS_TRAIN_MODE`）＋产物自带配方 `meta.recipe`
+
+> **动因（用户 09-22 的目标原话）**："理想情况下应该炼一个 5 血长程能通吃其他模式"。查了一下这句的**前一半在仓里从来没跑过**：
+> `js/train/evo.js` v1.4.0 就有 `setTrainMode`（门 D10 一直钉着"`setTrainMode('long')` ⇒ 建局 5 血"），但**CLI 侧从来没有这个键** ⇒
+> `TRAIN_MODE` 恒 `'multi'`，而 `evo.js:28` 的注释自己就写着"**5 血冠军从来没被训过**"。也就是说"通吃长程"这句话一直是**愿望**，不是一条实验记录。
+>
+> **改法**：`server/train-env.mjs`（训练分布旋钮的单一来源）加第二个键 `EPIRUS_TRAIN_MODE` ⇒ `train-3p` 下发前先用 `R.MODES` 认名字，
+> 三条纪律一起上：① **不认就 `exit 7`**（绝不允许"要了 long、静默训成 multi"—— 那是 §N11 烧掉两臂的那一族）；② 下达后**读回消费点**并印出建局尺（`hp=5`）；
+> ③ 生效值进产物 `meta.recipe`。
+>
+> **`meta.recipe` 是这版的第二件东西**（同一条纪律的推广）：以前"这臂开了什么旋钮"只在**日志**里，而日志会滚走、`.bak` 会留下来 ⇒ 事后复盘只能靠文件名猜。
+> 现在每粒产物自带 `arm / seed / gens / games / pop / xn2w / xn2g / selLand(+games/tol) / kill{req,fired,seats,names} / trainMode / trainModeEffective`。
+> 实测（臂 `v7xn17a`）产物里读出 `"trainMode":"long","trainModeEffective":"long","kill":{"req":0.125,"fired":516,"seats":["0","1","2","3","4"]}` ⇒ **横幅与日志都不是证据，产物自己才是**。
+>
+> **首臂读数（预注册判据判负 + 我自己的一次过度归因被复现打回）**：`v7xn17a` = 与 `v7xn15c` **逐字同配方**只把训练模式换成 `long`。
+> 主判（跑前写死）= 通吃矩阵（`tools/probe-cross-mode.mjs`，40 局/格）`脚本池` 环境的**最弱格**：seed 31 对 `long 7.5%` vs `multi 12.5%`、seed 32 对 `long 5.0%` vs `multi 7.5%`
+> ⇒ **两对种子都是长程臂更差 = 预注册走向 ③（负结果入档）**；而四臂的池最弱格**全都 ≤ 现役包的 12.5%** ⇒ 这条配方（100 代 × 种群 8 × 每代 8 局 · XN2W=1 · KILL_FIELD=0.125）在**跨模式鲁棒性上没有产出增益**。
+>
+> **⚠️ 我只看了 seed 31 一臂就写下一句错话，这里就地撤回并留档**：当时读到"长程臂各格 `G(出手)` 只有 1.00~2.41、净兑现 1 种、平均回合从 17.5 拖到 49.9"，
+> 就下结论说"**长程模式下的最优解就是便宜卡反复蹭 + 拖到收缩**"。**seed 32 的复现把它否了**：同一模式那臂反而是今晚**最宽**的一粒（各格 `G(出手) 5.52~6.74`、净兑现 1.5~2.0），
+> 而它的 multi 孪生臂才塌成"只有 `枪` 打上血"（净兑现 `1.00（1 种）`）。⇒ **"广度塌缩"是臂级（种子）方差，不是模式属性**。
+> 附带一条也降级：期末考卷与广度**不同向、但也不是系统性反向**（seed 31 长程臂考卷更高更窄、seed 32 长程臂考卷更高也更宽）⇒ "考卷偏爱窄包"只能记成**未定**。
+> 教训按本仓老规矩写死：**一臂一线索不叫发现，叫噪声的一个样本**（今晚第二次由复现推翻我自己的因果句，第一次是 §N25 那个污染口径）。
+> 该问的问题因此换掉了：不是"long 还是 multi"，而是"**为什么同一配方会有一半的臂塌成一张卡**"⇒ 提案见夜日志 §N29（把广度当**准入线**，不是当排序键）。
+>
+> **产物点名（D82 · 把 §N25/§N28 这几臂的全部落盘一次点齐，含每条臂的带内候选 `band1..band6`）**：
+> `v7xn15a-band1.bak` `v7xn15a-band2.bak` `v7xn15a-band3.bak` `v7xn15a-band4.bak` `v7xn15a-band5.bak` `v7xn15a-band6.bak` `v7xn15a-31.bak` `v7xn15a-2psh.bak` ·
+> `v7xn15b-band1.bak` `v7xn15b-band2.bak` `v7xn15b-band3.bak` `v7xn15b-band4.bak` `v7xn15b-band5.bak` `v7xn15b-band6.bak` `v7xn15b-31.bak` `v7xn15b-2psh.bak` ·
+> `v7xn15c-band1.bak` `v7xn15c-band2.bak` `v7xn15c-band3.bak` `v7xn15c-band4.bak` `v7xn15c-band5.bak` `v7xn15c-band6.bak` `v7xn15c-31.bak` ·
+> `v7xn15d-band1.bak` `v7xn15d-band2.bak` `v7xn15d-band3.bak` `v7xn15d-band4.bak` `v7xn15d-band5.bak` `v7xn15d-band6.bak` `v7xn15d-31.bak` ·
+> `v7xn15f-band1.bak` `v7xn15f-band2.bak` `v7xn15f-band3.bak` `v7xn15f-band4.bak` `v7xn15f-band5.bak` `v7xn15f-band6.bak` `v7xn15f-31.bak` ·
+> `v7xn17a-band1.bak` `v7xn17a-band2.bak` `v7xn17a-band3.bak` `v7xn17a-band4.bak` `v7xn17a-band5.bak` `v7xn17a-band6.bak` `v7xn17a-31.bak` ·
+> `v7xn17b-band1.bak` `v7xn17b-band2.bak` `v7xn17b-band3.bak` `v7xn17b-band4.bak` `v7xn17b-band5.bak` `v7xn17b-band6.bak` `v7xn17b-31.bak`
+> （`v7xn15*` = §N25 兑现广度线；`v7xn17a/b` 与它们的 `multi` 孪生 `v7xn15c/f` 只差一个变量：训练模式。）
+>
+> 明细：`docs/RESEARCH-LOG-2026-09-23-qoder-night.md` §N28。
+
+## v1.5.168 — 当选面加「硬门槛预筛」＋送盾阈值收进单一来源，并把"改判"拆成**三格归因**（§N25 · L1 臂的反例自证）
+
+> **为什么要有这一版**：v1.5.167 的兑现广度排序键**咬了，但咬错了**。臂 `v7xn15a`（`EPIRUS_SEL_LAND=1`）带内改按 `landG` 取大者后选上了 `band5`，
+> 体检实测：`考卷 35.1%` · **`C 盾/局 11.9`**（> `HOLO_GIFT_MAX=6` ⇒ 这是 `promote` 里**连 `--force` 都不放行**的硬门槛）· **`D 长程反弹墙 0%`** · `反弹墙伤害/局 3.20` · `E 无威胁摆架势 49%`。
+> 也就是**用 0.8pt 训练分换来一粒过不了硬门槛的包** —— 广度这条线不该有能力把不可上线的候选换上来。
+>
+> **改法（两处）**：① `bandPickByLand` 先剔 `gateOk === false` 再算带（未提供 `gateOk` 的旧调用点行为与 v1.5.167 **逐字一致**）；
+> ② `train-3p` 给每粒候选算 `gateOk = mirrorHealth.holoOtherPerGame <= HOLO_GIFT_MAX`，而 `HOLO_GIFT_MAX` 从 `promote-champion` 里那个字面量 `6` 抽进 `audit-lib` ——
+> 同一阈值两处各写一遍正是本仓栽过四次的那类漂移（`FEAS_N`/`ECON_ENV_KEYS`/`pierceKeys` 同型）。
+>
+> **顺带修掉一条我自己写下的误导性打印**：L1b 那臂报"未改判"，可产物其实**换了包**。原因是打印只回答"带内排序键换没换人"，
+> 而预筛**换掉了池**（6 粒 → 2 粒）。现在三格分开报：`改判（排序键换人）` / `改判（是预筛选掉的，不是排序键）` / `未改判（池与排序键都没换人）`。
+> ⇒ 判据级教训：**只要一个开关能改变产物，它就必须说清是哪条机制改的**，否则读数人会把它当成"没开"。
+>
+> 产物点名（D82）：`v7xn15b-31.bak`、`v7xn15b-2psh.bak`、`v7xn15b-band1.bak`…`v7xn15b-band6.bak`（同臂 L1 侧见 v1.5.167 的点名行）
+> 明细：`docs/RESEARCH-LOG-2026-09-23-qoder-night.md` §N25(b)。
+
+## v1.5.167 — 第二把广度量具 `effSkillsLand`（**出手熵 → 兑现熵**，只数真卡名）；当选面排序键 `EPIRUS_SEL_LAND`（默认关）· **本版结论：只做读数，不当判据**
+
+> **动因（用户原话）**："现在的 `v7cmin4-31` 虽然 `G_eff` 有 4.44，但他真的只用 6 个技能，感觉像是为了刷 eff 只用那些最容易被测到的技能。"
+> 这条怀疑**量化成立**：`G_eff = exp(出手次数的熵)` 只看"发起了几种"⇒ 一张常出手常被防住的卡与一张少见但每次掉血的卡**在同一把尺上等价**。
+> 现役包 multi 镜像 **出手:落地 = 537:278**（**约一半出手没变成伤害**）。
+>
+> **改法**：`mirrorHealth` 本来就有 `landByKey`（按 `damage.via` 归因）⇒ 用同一套熵数它，新增 `effSkillsLand / landedKeys / landedTotal / landedFiltered`；
+> `promote-champion` 的可行性那行**并排印** `兑现 G 4.44→2.66（3 种打上血）`（multi 与 long 都印）。**只加读数、不动任何既有阈值** ⇒ 两槽所有旧门读数逐位不变。
+> 现役包净读数：`G(出手) 4.44 → 兑现 2.66（3 种真卡）`，长程 `3.43 → 2.48（4 种）`。
+>
+> **⚠️ 发布前自查抓到一个方向性口径 bug（这一版差点把一根假轴当真轴发出去）**：`landByKey` 统计的是 `damage.via`，而 `via` 里有一批取值**不是一张卡**——
+> `deliverDamage` 在 `via` 缺省时会回落到**中文 reason**（`resolve.js:305`）⇒ `终局收缩`（规则白送的全员 −1）入账；另有 `headshot`（爆头 = 狙击的**结果修饰**，`resolve.js:1207`）、
+> `原型制御·转移`（`resolve.js:270` 只给 reason）、`dream`/`chain`/`counter`/`taunt`。
+> **污染不是"数字偏大"而是方向错**：不滤就等于**奖励"拖到收缩阶段还活着"的包**、惩罚主动进攻的包。实测同臂 6 粒候选的非卡名占"落地" **10%~41%**（`band4`：293 次落地里 104 次是收缩）。
+> 后果可查：§N25 的 L1"改判"整条是这个 bug 的产物 —— 污染口径下 `band5` 的 `落地G=2.62` 是全场最大（比 `band2` 只高 **0.01** ⇒ 噪声级差决定换人），
+> 净口径下它只有 `1.51`（6 粒里排第 5），最大者换成 `band1=1.61`。 ⇒ 口径改成**只数 `R.byKey` 认得的键**，并把滤掉的量记成 `landedFiltered` 自证。
+> 已知**偏保守**的一处：`原型制御·转移` 是真卡伤害但键名不是 `SK.proto`，被一并滤掉（代价 = 少数一种卡；收益 = 永不把非卡的血算成卡）。
+>
+> **为什么不把"落地"写进奖励**：仓里有前例 —— "奖励贵技能落地"的探针会选出**乱挥双枪**的冠军（实测 −27pt，`evo.js:evalSubsidyProbe` 头注）
+> ⇒ 它最多当**同分带内的排序键**（胜率不为广度让路、带外者永不参与），这就是 `EPIRUS_SEL_LAND`（默认 0）。
+> **而它现在仍未被证明有用**：净口径 + 预筛后重跑的同配方 A/B（`v7xn15c` 关 / `v7xn15d` 开）读出 `同分带 1/6 · 未改判` —— 本配方 6 粒的胜负分差距大于 `tol=0.03`，**排序键根本没得咬**，两臂冠军是同一粒。
+> ⇒ 结论：**`净兑现 G` 当读数已被证明有用**（它一把拆穿了 `band5`：出手 938 次/20 局是现役的 1.8 倍、兑现率只有 29%），
+> **当排序键目前既没优势也没被否证** ⇒ 保持默认关；下次别急着再加第三根排序键，先问"带里到底有几粒"。
+>
+> **门 D127**：`effSkillsLand` 与 `effSkills` 同时可读 + **独立复算净熵逐位相等** + `landedFiltered` 等式 + "这份读数里必须真出现非卡名 via，否则本断言是空枪" + `bandPickByLand` 九向（带外永不参与 / 缺 `landG` 记 0 / 换人必须报 `tieBrokenBy=land`）+ **默认关基线哈希钉 `aa743488cc`**。np 172→**174**。
+>
+> 产物点名（D82）：`v7xn15a-31.bak`、`v7xn15a-2psh.bak`、`v7xn15a-band1.bak`…`v7xn15a-band6.bak`；同配方 A/B 的净口径臂：`v7xn15c-31.bak`、`v7xn15c-band1.bak`…`v7xn15c-band6.bak`、`v7xn15d-31.bak`、`v7xn15d-band1.bak`…`v7xn15d-band6.bak`
+> 明细：`docs/RESEARCH-LOG-2026-09-23-qoder-night.md` §N24/§N25。
+
 ## research(0923 · qoder 夜班两件新量具) —— 技能**边际价值**（机会式 ε 注入 + 定向垫钱）与 **G_eff 出手 vs 落地** · 不升版本
 
 > `tools/probe-skill-marginal.mjs`（第三套技能口径）+ `tools/probe-cast-vs-land.mjs`（把"有效技能数"拆成发起与兑现）。都只读、不写产物。

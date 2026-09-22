@@ -54,7 +54,31 @@ export function rejectDegenerateWinners(entries, thr) {
   const clean = (entries || []).filter(function (e) { return !(e && e.ref) || !(Number(e.zeroAtkRate) >= T); });
   const dropped = (entries || []).length - clean.length;
   clean.sort(function (a, b) { return b.score - a.score; });
-  return { best: clean.length ? clean[0] : null, dropped: dropped };
+  /* v1.5.167：`clean` 也返回 —— 当选面还要在闸后按兑现广度取大者（`bandPickByLand`）。
+   * 不在这里开口子，调用点就会再抄一遍 0.9 阈值（本仓"两处各写一遍"的老毛病）。 */
+  return { best: clean.length ? clean[0] : null, dropped: dropped, clean: clean };
+}
+
+/** v1.5.170（qoder §N29 · `EPIRUS_BREADTH_FLOOR`）：**广度塌缩当"不合格"，不当"排序键"**。
+ * 为什么换成"线"：§N25 已否掉排序键（同分带里只剩 1 粒 ⇒ 咬不动；咬动了换上来的是病包），
+ * 而 §N28 两对种子实测**四粒冠军里有三粒净兑现只剩一种卡**（`xn17a`/`xn15f` = `G(落地) 1.00、1 种`）
+ * ⇒ 塌缩不是意外而是常态，需要的是**准入线**而不是第三根排序键。
+ * 口径（只数真卡名的那一套，见 `mirrorHealth.effSkillsLand`）：`landedKeys ≥ 2` **且** `effSkillsLand ≥ floor`。
+ * 前者是"塌缩"的定义本身（只有一种卡打上血），后者防"两种但一种占 99%"。标定（`mirrorHealth(20,5,'multi')` 实测）：
+ *   现役 3P `2.66（3 种）` · 2P 槽 `2.98（3 种）` · 塌缩臂 `1.00（1 种）` · 今晚最宽的那粒 `1.75（3 种）` ⇒ 默认线 1.5 只砍塌缩，不砍宽包。
+ * 与 `rejectDegenerateWinners` 同规矩：**全不合格 ⇒ `allRejected=true`，调用方必须响亮**，不许静默退回"不过滤"。 */
+export function rejectNarrowWinners(entries, floor) {
+  const F = (floor != null ? floor : 1.5);
+  const list = (entries || []).filter(function (e) { return !!e; });
+  const bad = function (e) { return !!(e && e.ref) && ((Number(e.landedKeys) || 0) < 2 || !(Number(e.landG) >= F)); };
+  const clean = list.filter(function (e) { return !bad(e); });
+  const dropped = list.length - clean.length;
+  clean.sort(function (a, b) { return b.score - a.score; });
+  return {
+    best: clean.length ? clean[0] : null, clean: clean, dropped: dropped, floor: F,
+    allRejected: list.length > 0 && clean.length === 0,
+    victims: list.filter(bad).map(function (e) { return { landG: Number(e.landG) || 0, landedKeys: Number(e.landedKeys) || 0, score: e.score }; })
+  };
 }
 
 /** v1.5.161（qoder P1 · §N14 实证）：**3P 第二栏否决** —— 过不了 3P 可行性五道的候选不许当选。
@@ -118,4 +142,36 @@ export function pickBestByExam(cands, opts) {
         || (db.divNorm || 0) - (da.divNorm || 0);
   });
   return { best: band[0], band: band, safe: safe, incumbent: incumbent, topSc: topSc, dropped: list.length - safe.length };
+}
+
+/** v1.5.167（qoder §N24 · `EPIRUS_SEL_LAND`）：**同分带内按"兑现广度"取大者**。
+ * 为什么不是把"落地"写进奖励：仓里有前例 —— "奖励贵技能落地"的探针会选出**乱挥双枪**的冠军（实测 −27pt，
+ * 见 `evo.js:evalSubsidyProbe` 的头注）⇒ 兑现只能当**同分带内的排序键**（胜率不许为广度让路），不能当 fit 的一项。
+ * 入参：`entries[i] = { score, landG }`（`score` = 该候选的胜负分；`landG` = `mirrorHealth.effSkillsLand`）。
+ * 规则：① 取最高分 top；② 带 = `score ≥ top − tol`；③ 带内按 `landG` 取大、再同则按 `score`；
+ * ④ **带外者永不参与**（广度不许用来救一个胜率更差的包）；缺 `landG` 记 0（= 不参与"广"的竞争，而不是当它满格）。 */
+export function bandPickByLand(entries, tol) {
+  const list = (entries || []).filter(function (e) { return !!e; });
+  if (!list.length) return { best: null, band: [], top: 0, dropped: 0, tieBrokenBy: 'none' };
+  const T = (tol != null ? tol : 0.03);
+  /* v1.5.168：先剔掉 `gateOk === false` 的候选 —— 兑现广度**不许**把一粒"过不了不可 --force 硬门槛"的包换上来
+   * （L1 臂实测就是这么错的：用 0.8pt 胜负分换到一粒每局给别人套 11.9 次全息屏障的包）。
+   * 未提供 gateOk（旧调用点）⇒ 视为通过，行为与 v1.5.167 逐字一致。 */
+  const gated = list.filter(function (e) { return e.gateOk !== false; });
+  const skipped = list.length - gated.length;
+  const top2 = gated.length ? gated.reduce(function (m, e) { return Math.max(m, Number(e.score) || 0); }, 0) : 0;
+  const band = gated.filter(function (e) { return (Number(e.score) || 0) >= top2 - T; });
+  const dropped = list.length - band.length;
+  const byLand = band.slice().sort(function (a, b) {
+    const la = Number(a.landG) || 0, lb = Number(b.landG) || 0;
+    if (lb !== la) return lb - la;
+    return (Number(b.score) || 0) - (Number(a.score) || 0);
+  });
+  const byScore = band.slice().sort(function (a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); });
+  const best = byLand[0] || null;
+  return {
+    best: best, band: band, top: top2, dropped: dropped, skipped: skipped,
+    /* 只有"换人"才算被广度改判 —— 门 D127 钉这一格，防止排序键变成哑元素 */
+    tieBrokenBy: (best && byScore[0] && best !== byScore[0]) ? 'land' : 'score'
+  };
 }

@@ -12,7 +12,8 @@ import { makeShapeScorer } from '../server/shape-scorer.mjs';   // P2 形状适�
 /* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
-import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p } from './pick-best.mjs';
+import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand, rejectNarrowWinners } from './pick-best.mjs';
+import { readTrainEnv, hasTrainOverride, TRAIN_ENV_KEYS as TEK } from '../server/train-env.mjs';   // v1.5.169 D129：训练旋钮单一来源
 /* v1.5.132：V1/V2/V4「整局」三装配的**单一来源**（D105 与 `probe-ring-ablate.mjs` 共用一份实现）。 */
 import { measureAll } from './v2v4-lib.mjs';
 
@@ -4761,6 +4762,146 @@ t('D126 R48「回魂复活回合」只免**花费**、不免**条件**（v1.5.16
   const sj = readFileSync('js/core/state.js', 'utf8');
   ok(sj.indexOf('if (p.infiniteEnergy) {') < 0 || sj.indexOf('const cost = computeCost') < sj.indexOf('if (p.infiniteEnergy) {'),
     'attemptAction 必须先过 computeCost（条件）再谈免费');
+});
+
+t('D127 兑现广度（v1.5.167 · §N24 · 用户"G_eff 像刷分"）：mirrorHealth 出 effSkillsLand + 同分带内按落地取大者（默认关 ⇒ 逐位不变）', function () {
+  /* 为什么需要第二把尺：`effSkills` 数的是**发起**几种（`keyCount` 的熵）⇒ 一张常出手常被防的卡与
+   * 一张少见但每次掉血的卡等价。实测（`tools/probe-cast-vs-land.mjs`）现役包出手:落地 = 530:237，
+   * G=4.44 而真打上血的只有 3~4 种 ⇒ 用户那句"像是为了刷 eff 只用最容易被测到的技能"成立。
+   * ⚠️ 它**只许当选面当排序键**，不许进 fit：仓里已证"奖励贵技能落地"会选出乱挥双枪的冠军（−27pt）。 */
+  const mh = T.mirrorHealth(sb.window.EPIRUS_CHAMPION_3P ? sb.window.EpirusPolicy.unpack(sb.window.EPIRUS_CHAMPION_3P, true) : null, 6, 3, 'multi');
+  ok(mh && typeof mh.effSkillsLand === 'number', 'mirrorHealth 必须同时给 G(出手) 与 G(落地)');
+  ok(mh.effSkillsLand >= 0 && Number.isInteger(mh.landedKeys), 'landedKeys 必须是整数种（来自 landByKey，不另数一遍）');
+  /* ⚠️ 口径钉（发布前自查发现的缺陷）：`damage.via` 有两类取值**不是一张卡**——`终局收缩`（`deliverDamage` 在 `via`
+   * 缺省时回落成中文 reason，`resolve.js:305`）与 `headshot`（爆头 = 结果修饰）。它们能占"落地"计数的 35%（实测 band4 那粒
+   * 293 次落地里 104 次是收缩）⇒ 不滤就会**奖励"拖到收缩阶段活着"的包**、惩罚主动进攻的包，L1 臂的"改判"whole 是这个 bug 的产物。
+   * 本断言在**已知会出非卡名 via** 的读数上独立复算熵，不许只比个大小。 */
+  const mh20 = T.mirrorHealth(sb.window.EPIRUS_CHAMPION_3P ? Pol.unpack(sb.window.EPIRUS_CHAMPION_3P, true) : null, 20, 5, 'multi');
+  const lbk = mh20.landByKey || {};
+  const nonCard = Object.keys(lbk).filter(function (k) { return !R.byKey[k]; });
+  ok(nonCard.length > 0, '这份读数里必须真的出现非卡名 via（终局收缩/headshot），否则本断言是空枪');
+  {
+    const ck = Object.keys(lbk).filter(function (k) { return lbk[k] > 0 && R.byKey[k]; });
+    const ct = ck.reduce(function (a, k) { return a + lbk[k]; }, 0);
+    let he = 0; for (const k of ck) { const pr = lbk[k] / ct; he -= pr * Math.log(pr); }
+    eq(mh20.landedTotal, ct, 'landedTotal 必须只加真卡名（非卡名 via 一次都不许进）');
+    eq(Math.round(Math.exp(he) * 1e9) / 1e9, Math.round(mh20.effSkillsLand * 1e9) / 1e9, 'effSkillsLand 必须 = 只数真卡名的那套熵（独立复算）');
+    ok(mh20.landedKeys === ck.length && ck.length < Object.keys(lbk).length, 'landedKeys 要比 landByKey 的键数小（滤是真动作，不是恒等）');
+    eq(mh20.landedFiltered, Object.keys(lbk).reduce(function (a, k) { return a + (R.byKey[k] ? 0 : lbk[k]); }, 0),
+      'landedFiltered 必须等于被滤掉的量（尺子要自证"我少算了多少"，不许悄悄丢数）');
+  }
+  /* ① 纯函数：带外永不参与 / 带内按落地取大 / 缺 landG 记 0 / tieBrokenBy 说真话 */
+  const E = function (score, landG) { return { score: score, landG: landG }; };
+  let r = bandPickByLand([E(1.00, 2), E(0.99, 5), E(0.90, 9)], 0.03);
+  eq(r.best.score, 0.99, '带内（0.99 与 1.00）必须按落地取大者 ⇒ 选 0.99/land5');
+  eq(r.tieBrokenBy, 'land', '改了判就得说"是广度改的"');
+  r = bandPickByLand([E(1.00, 2), E(0.90, 99)], 0.03);
+  eq(r.best.score, 1.00, '带外的"超广"候选永不参与（广度不许救一个胜率更差的包）');
+  eq(r.dropped, 1, '带外者要计数（不能静默消失）');
+  r = bandPickByLand([E(1.00, 2), E(0.99)], 0.03);
+  eq(r.best.score, 1.00, '缺 landG 记 0（不是当它无限好）—— 未测 = 不占便宜');
+  r = bandPickByLand([E(1.00, 4), E(0.99, 4)], 0.03);
+  eq(r.tieBrokenBy, 'score', '落地相同则回到胜率，不许拿并列当理由乱换');
+  eq(bandPickByLand([], 0.03).best, null, '空表 ⇒ best=null（调用方须自己响）');
+  /* ② 接线：默认关逐位不变（与 D123③ 同一基线哈希）；开 ⇒ 必须真打印两把尺并说改没改判 */
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(t3.indexOf("EPIRUS_SEL_LAND || 0") >= 0, 'EPIRUS_SEL_LAND 必须默认 0');
+  ok(t3.indexOf('bandPickByLand(') >= 0 && t3.indexOf('sel.best = lp.best') >= 0, 'train-3p 当选面必须真用它（接了不看结果 = 死作用点）');
+  const wh = function (p2) {
+    const m = /"a":\[([^\]]*)\]/.exec(readFileSync(p2, 'utf8'));
+    return m ? createHash('sha1').update(m[1]).digest('hex').slice(0, 10) : 'NOPARSE';
+  };
+  /* v1.5.168：预筛也必须被记账 —— L1b 实测：`gateOk` 预筛换掉了池（6 剔 4），排序键自己没换人，
+   *  当时只报"未改判" ⇒ 读表的人会以为这臂与不开开关逐字相同。三条分支缺一不可。 */
+  r = bandPickByLand([{ score: 1.00, landG: 2, gateOk: true }, { score: 0.99, landG: 9, gateOk: false }], 0.03);
+  eq(r.skipped, 1, '过不了不可 --force 硬门槛的候选必须先被剔出池（兑现广度不许把病包换上来）');
+  eq(r.best.score, 1.00, '被剔的"超广"病包不许赢');
+  r = bandPickByLand([{ score: 1.00, landG: 2 }, { score: 0.99, landG: 9 }], 0.03);
+  eq(r.skipped || 0, 0, '未提供 gateOk（旧调用点）⇒ 视为通过，行为与 v1.5.167 一致');
+  const dirA = mkdtempSync(join(tmpdir(), 'd127a-')), dirB = mkdtempSync(join(tmpdir(), 'd127b-'));
+  const off = spawnSync(process.execPath, ['tools/train-3p.mjs', '3', '3', '6', '4'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127off', EPIRUS_BAND_DIR: dirA }), encoding: 'utf8', timeout: 300000 });
+  eq(off.status, 0, '默认关必须跑通');
+  eq(wh('docs/artifacts/train-3p-out.js'), 'aa743488cc', '默认关的产物必须仍是那条基线（动了它 = 所有 CLI 臂的当选规则被偷改）');
+  const on = spawnSync(process.execPath, ['tools/train-3p.mjs', '3', '3', '6', '4'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127on', EPIRUS_SEL_LAND: '1', EPIRUS_BAND_DIR: dirB }), encoding: 'utf8', timeout: 300000 });
+  eq(on.status, 0, '开开关也要跑通');
+  ok(/\[兑现广度\].*G\(出手→落地\)/.test(String(on.stdout || '')), '开了必须印出每候选的两把尺（不印 = 又一根暗旋钮）');
+  ok(/改判（排序键换人）|改判（是预筛选掉的|未改判/.test(String(on.stdout || '')),
+    '必须三分归因：排序键换人 / 预筛换池 / 都没换 —— 只报"未改判"会让人误以为与不开开关逐字相同');
+  ok(readFileSync('tools/train-3p.mjs', 'utf8').indexOf('HOLO_GIFT_MAX') >= 0, '送盾阈值必须与 promote 同源（不许两处各写一个 6）');
+});
+
+t('D128 广度准入线（v1.5.170 · §N29 · §N28"四粒冠军三粒塌成一种卡"）：塌缩当**不合格**，不当排序键（默认关 ⇒ 逐位不变）', function () {
+  /* 为什么是"线"不是"键"：§N25 实测排序键要么咬不动（同分带只剩 1 粒）要么咬错（换上来过不了硬门槛的包）；
+   * 而 §N28 两对种子 4 粒冠军里 3 粒净兑现只剩 `1.00（1 种）` ⇒ 塌缩是常态，需要准入线。 */
+  const E = function (score, landG, landedKeys) { return { ref: { params: 'p' + score }, score: score, landG: landG, landedKeys: landedKeys }; };
+  let r = rejectNarrowWinners([E(1.00, 2.66, 3), E(0.99, 1.00, 1)], 1.5);
+  eq(r.dropped, 1, '塌缩粒（landedKeys=1）必须被剔');
+  eq(r.best.score, 1.00, '留下的必须是过线的那粒');
+  r = rejectNarrowWinners([E(1.00, 9.00, 1), E(0.50, 1.60, 2)], 1.5);
+  eq(r.best.score, 0.50, 'G 再高但只有 1 种卡 ⇒ 仍然不合格（**"塌缩的定义"不许被大数绕过**）');
+  r = rejectNarrowWinners([E(1.00, 1.49, 3), E(0.98, 1.50, 2)], 1.5);
+  eq(r.dropped, 1, '线是 `>=`：1.49 不过、1.50 过');
+  r = rejectNarrowWinners([E(1.00, undefined, undefined), E(0.90, 2.0, 3)], 1.5);
+  eq(r.dropped, 1, '未测（缺 landG/landedKeys）= 不合格（与 vetoBy3p"看不见就当不过"同规矩）');
+  r = rejectNarrowWinners([E(1.00, 1.0, 1), E(0.90, 1.2, 1)], 1.5);
+  eq(r.allRejected, true, '全塌缩 ⇒ allRejected=true，调用方必须响亮（不许静默退回"不过滤"）');
+  eq(r.best, null, 'allRejected 时没有 best');
+  eq(rejectNarrowWinners([E(1.00, 1.6, 2), E(0.90, 2.5, 3)]).floor, 1.5, '默认线 1.5（标定见函数头注：现役 2.66 / 2P 槽 2.98 / 塌缩 1.00~1.24）');
+  /* 接线：默认 0 ⇒ 逐位不变；开了 ⇒ **产物自己必须满足这条线**（判效果，不判横幅） */
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(t3.indexOf("EPIRUS_BREADTH_FLOOR || 0") >= 0, 'EPIRUS_BREADTH_FLOOR 必须默认 0');
+  ok(t3.indexOf('rejectNarrowWinners(') >= 0 && t3.indexOf('sel.best = nf.best') >= 0, 'train-3p 当选面必须真用它（接了不看结果 = 死作用点）');
+  ok(t3.indexOf("'EPIRUS_BREADTH_FLOOR'") >= 0, '必须进 SELF_ENV_KEYS（否则黑键侦测会把它当"传了没人读"）');
+  const dir = mkdtempSync(join(tmpdir(), 'd128-'));
+  const run = spawnSync(process.execPath, ['tools/train-3p.mjs', '3', '3', '6', '4'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd128floor', EPIRUS_BREADTH_FLOOR: '1.5', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
+  eq(run.status, 0, '开了线也要跑通');
+  ok(/\[广度线\] 判据 = 净 `G\(落地\)/.test(String(run.stdout || '')), '开了必须印出判据与每粒的净兑现（不印 = 又一根暗旋钮）');
+  const txt = readFileSync('docs/artifacts/train-3p-out.js', 'utf8');
+  const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(txt);
+  ok(!!jm, '产物 meta 必须能解析（配方自证的前提）');
+  const mt = JSON.parse(jm[1]);
+  ok(mt.recipe && Number(mt.recipe.breadthFloor && mt.recipe.breadthFloor.floor) === 1.5, 'meta.recipe.breadthFloor 必须记下这臂的线');
+  if (mt.breadthFloorAllNarrow) {
+    ok(/⛔ \[广度线\] 名人堂\*\*全部塌缩\*\*/.test(String(run.stderr || '') + String(run.stdout || '')),
+      '全塌缩必须响亮（并指向"走向②：该改奖励面"）');
+  } else {
+    ok(Number(mt.recipe.breadthFloor.winnerKeys) >= 2 && Number(mt.recipe.breadthFloor.winnerLandG) >= 1.5,
+      '当选者必须真满足这条线（判产物，不判打印）：实测 winnerKeys=' + mt.recipe.breadthFloor.winnerKeys +
+      ' winnerLandG=' + mt.recipe.breadthFloor.winnerLandG);
+  }
+});
+
+t('D129 训练模式可以在 CLI 上下达（v1.5.169 · §N28 · 用户"炼一个 5 血长程通吃其他模式"）：认不了就 exit 7，不许静默退回 multi', function () {
+  /* 病（这次是"从来没接过"）：`evo.js` v1.4.0 就有 `setTrainMode`（门 D10 钉着它透传到建局），
+   * 但 CLI 从来没有这个键 ⇒ `TRAIN_MODE` 恒 multi，"5 血冠军从来没被训过"（`evo.js:28` 自己注释着）。 */
+  ok(TEK.indexOf('EPIRUS_TRAIN_MODE') >= 0, '必须进 train-env 的单一来源清单（别处不许再抄键名）');
+  eq(readTrainEnv({ EPIRUS_TRAIN_MODE: 'long ' }).mode, 'long', 'readTrainEnv 要搬运并去空格');
+  eq(readTrainEnv({}).mode, undefined, '没下达 ⇒ 不带 mode 键（⇒ 行为逐字不变）');
+  eq(hasTrainOverride({ mode: 'long' }), true, '只有 mode 也算覆盖（不许被 kill 一家独占）');
+  const dir = mkdtempSync(join(tmpdir(), 'd129-'));
+  /* ① 乱写的模式名 ⇒ 必须 exit 7 且**不产出**（静默退回 multi 就是 §N11 那一族） */
+  const bad = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd129bad', EPIRUS_TRAIN_MODE: 'nope', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
+  eq(bad.status, 7, '不认的模式名必须 exit 7（实测 ' + bad.status + '）');
+  ok(/不是规则表里的模式/.test(String(bad.stderr || '')), 'exit 7 要说清为什么');
+  /* ② 合法名 ⇒ 跑通 + 横幅读回 + 产物 meta 自证 */
+  const good = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd129long', EPIRUS_TRAIN_MODE: 'long', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
+  eq(good.status, 0, '长程臂要跑得通');
+  ok(/训练模式已下达：EPIRUS_TRAIN_MODE=long ⇒ 消费点读回 long/.test(String(good.stdout || '')), '必须印"下达 ⇒ 读回"（横幅只证明变量，读回证明消费点）');
+  const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync('docs/artifacts/train-3p-out.js', 'utf8'));
+  const mt = JSON.parse(jm[1]);
+  eq(mt.recipe.trainMode, 'long', '产物要自带这臂的模式（日志会滚走，.bak 不会）');
+  eq(mt.recipe.trainModeEffective, 'long', '连消费点读回值一起记');
+  /* ③ 长程臂建局真的 5 血（D10 证的是 setter；这里证**整条 CLI 路**通到建局） */
+  eq(T.setTrainMode('long'), 'long', 'setter 要能读回');
+  const stL = S.createState(T.trainMode(), { next: T.mulberry32(5) }, 5);
+  eq(stL.mode.hp, 5, '`long` 模式建局 hp 必须是 5（否则"训长程"是空话）');
+  const stM = S.createState(T.setTrainMode('multi'), { next: T.mulberry32(5) }, 5);
+  eq(stM.mode.hp, 3, '切回 multi 必须是 3 血（同一批建局参数，只有模式在动）');
 });
 
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
