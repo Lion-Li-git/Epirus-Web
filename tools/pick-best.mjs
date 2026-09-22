@@ -57,6 +57,28 @@ export function rejectDegenerateWinners(entries, thr) {
   return { best: clean.length ? clean[0] : null, dropped: dropped };
 }
 
+/** v1.5.161（qoder P1 · §N14 实证）：**3P 第二栏否决** —— 过不了 3P 可行性五道的候选不许当选。
+ * 病：收口臂 `v7xn14a` 里 `band2`（考卷 98.25%/最差 85%、3P 五道全过、场B 4.00/局、score 0.916 **高于**当选者）
+ * 只因容差带内 hill05 低被挤掉，而当选的 `band1` 在 3P 侧是**场B 0.00 + 墙 0.00/局** ⇒ 本臂目标对择优完全透明。
+ * 入参：`entries[i].col3p = { measured, ok, fails }`；**未测/缺栏一律视为不合格**（拒绝"看不见就当过"的静默降级）。
+ * `isIncumbent` 的在位参照不参与否决（它是"不回归层"的基线，不是竞争者）。
+ * 返回 `{ kept, rejected, allRejected }` —— `allRejected` 时**调用方必须响亮退出**，不许退回单栏硬选（§N14 就是这么错的）。 */
+export function vetoBy3p(entries) {
+  const list = (entries || []).filter(function (e) { return !!e; });
+  const kept = [], rejected = [];
+  for (const e of list) {
+    if (e.isIncumbent) { kept.push(e); continue; }
+    const c = e.col3p;
+    if (c && c.measured === true && c.ok === true) kept.push(e); else rejected.push(e);
+  }
+  const comp = list.filter(function (e) { return !e.isIncumbent; });
+  return {
+    kept: kept, rejected: rejected,
+    /* "有竞争者、但一合格都没有" —— 与"根本没有竞争者"分开判，别把空池当成全否决 */
+    allRejected: comp.length > 0 && kept.filter(function (e) { return !e.isIncumbent; }).length === 0
+  };
+}
+
 /* 择优：① 不回归层 → ② 胜率容差带 → ③ 带内取**广度**最大者。
  * cands: [{ tag, sc, ev:{ avg, per:{...} }, div:{ divNorm, distinct, effSkills, hill05 } }]（现有冠军的 tag 必须是 INCUMBENT_TAG）
  * 返回 { best, band, safe, incumbent, topSc, dropped }

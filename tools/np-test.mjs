@@ -12,7 +12,7 @@ import { makeShapeScorer } from '../server/shape-scorer.mjs';   // P2 形状适�
 /* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
-import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners } from './pick-best.mjs';
+import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p } from './pick-best.mjs';
 /* v1.5.132：V1/V2/V4「整局」三装配的**单一来源**（D105 与 `probe-ring-ablate.mjs` 共用一份实现）。 */
 import { measureAll } from './v2v4-lib.mjs';
 
@@ -4593,6 +4593,57 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
   /* ⑤ 反证 · 密度小到不可能开火 ⇒ 必须 exit 8（证明这道闸自己会响，而不是摆设） */
   const never = mini({ EPIRUS_KILL_FIELD: '1e-9' });
   eq(never.status, 8, 'EPIRUS_KILL_FIELD 小到一局未注时必须 exit 8（拒绝白跑；实测 exit=' + never.status + '）');
+});
+
+t('D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证"band2 被 hill05 挤掉、当选者 3P 场B/墙双 0"）：纯函数四向 + 缺栏即不合格 + 全否决必须响', function () {
+  /* 这一族病叫"择优看不见本臂目标"：`train-best` 的 fit 就是 2P 考卷，收口臂里 3P 那一栏**从来没进过选择**，
+   * 于是 §N14 里两栏都更强的 band2（考卷 98.25%/最差 85、3P 五道全过、场B 4.00、score 0.916>0.891）被 hill05 挤掉。
+   * ⚠️ 判据必须判在**作用点**上（§N12 的教训）：既钉纯函数，也钉"栏真的跑过"的那行输出，不钉横幅口号。 */
+  const mk = function (tag, ok, measured, inc) {
+    return { tag: tag, isIncumbent: !!inc, col3p: measured === false ? undefined : { measured: true, ok: !!ok, fails: ok ? [] : ['场B 清场 0.00 < 0.3/局'] } };
+  };
+  const inc = mk('现有冠军', false, true, true);
+  /* ① 全合格 ⇒ 一个不拒 */
+  let r = vetoBy3p([inc, mk('A', true), mk('B', true)]);
+  eq(r.rejected.length, 0, '全合格时不许拒任何候选'); eq(r.allRejected, false, '全合格不许报"全否决"');
+  /* ② 部分不合格 ⇒ 拒的是那粒，在位参照永不参与否决 */
+  r = vetoBy3p([inc, mk('A', true), mk('B', false)]);
+  eq(r.rejected.length, 1, '不合格的那粒必须被拒');
+  eq(r.rejected[0].tag, 'B', '被拒的必须是 B');
+  ok(r.kept.indexOf(inc) >= 0, '在位参照必须永远留在池里（它是不回归层的基线，不是竞争者）');
+  /* ③ **缺栏/未测 = 不合格**（拒绝"看不见就当过"的静默降级 —— §N11 那两臂正是"读到了值就当生效了"）*/
+  r = vetoBy3p([inc, mk('A', true, false)]);
+  eq(r.rejected.length, 1, 'col3p 缺失的候选必须判不合格（没测 ≠ 过了）');
+  /* ④ 全否决 ⇒ allRejected 为真（调用方据此 exit 9，不许退回单栏硬选） */
+  r = vetoBy3p([inc, mk('A', false), mk('B', false)]);
+  eq(r.allRejected, true, '有竞争者但无一合格 ⇒ 必须报全否决');
+  eq(r.kept.length, 1, '全否决时池里应只剩在位参照');
+  /* ⑤ 空池不误判（没有竞争者 ≠ 全否决） */
+  eq(vetoBy3p([inc]).allRejected, false, '只有在位参照时不许误报全否决');
+  /* ⑥ 接线：必须在 `pickBestByExam` **之前**否决，且用的是 audit-lib 那批量具（不许另抄实现） */
+  const tb = readFileSync('tools/train-best.mjs', 'utf8');
+  ok(tb.indexOf('vetoBy3p(') >= 0 && tb.indexOf('process.exit(9)') >= 0, 'train-best 必须接 vetoBy3p 并有全否决的 exit 9');
+  ok(tb.indexOf('pickBestByExam(pool') >= 0 && tb.indexOf('vetoBy3p(cands)') < tb.indexOf('pickBestByExam(pool'),
+    '否决必须发生在择优**之前**（之后改结果就是暗改）');
+  ok(tb.indexOf("from './audit-lib.mjs'") >= 0 && tb.indexOf('feasibilityOf(') >= 0,
+    '3P 栏必须复用 audit-lib 的 feasibilityOf/量具（另抄一份 = 本仓栽过四次的"两处各写一遍"）');
+  ok(tb.indexOf('EPIRUS_TB_OUT') >= 0 && tb.indexOf('if (OUT === dest)') >= 0,
+    '产物必须可改道，且**只有真覆写 2P 槽时**才动 index.html 的缓存戳（§N14 实测：还原了槽、忘了还原戳 ⇒ 工作区脏）');
+  ok(/const dir = TB_OUT \? dirname\(/.test(tb),
+    '改道必须**改彻底**：带内候选也要跟着走 —— 否则门每跑一次就在 docs/artifacts 欠一粒未点名 .bak（实测 D82 抓住 `tb31-band1.bak`）');
+  /* ⑦ 行为：迷你臂开栏 ⇒ 必须真跑出那一栏（默认关的逐位不变另有实测：HEAD 对照跑权重同为 f256cb100f） */
+  const dir = mkdtempSync(join(tmpdir(), 'd124-'));
+  const out = join(dir, 'tb-out.js');
+  const run = spawnSync(process.execPath, ['tools/train-best.mjs', '1', '4'], {
+    env: Object.assign({}, process.env, { EPIRUS_SEED: '31', EPIRUS_TB3P: '1', EPIRUS_TB3P_GAMES: '20', EPIRUS_TB_OUT: out, EPIRUS_ARM: 'd124' }),
+    encoding: 'utf8', timeout: 600000,
+  });
+  const so = String(run.stdout || '') + String(run.stderr || '');
+  ok(/\[3P栏 n=20\]/.test(so), '开了 EPIRUS_TB3P 必须真跑 3P 栏并打印读数（实测输出无该行 = 又一处死作用点）');
+  ok(run.status === 0 || run.status === 9, '只许两种收场：0=有合格候选并择优、9=全否决响亮退出（实测 exit=' + run.status + '）\n' + so.slice(-500));
+  if (run.status === 9) ok(so.indexOf('不接受静默退回单栏择优') >= 0, 'exit 9 必须说清"不接受退回单栏"');
+  else ok(existsSync(out), 'exit 0 时产物必须写在 EPIRUS_TB_OUT 指的位置');
+  ok(so.indexOf('已写入 js/bundled-champion.js') < 0, '改道跑时**一个字都不许碰 2P 槽**');
 });
 
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {

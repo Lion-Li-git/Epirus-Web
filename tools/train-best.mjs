@@ -4,7 +4,7 @@
  * 产物：js/bundled-champion.js
  */
 import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { makeAsyncStep } from '../server/paralleltrain.mjs';
@@ -14,7 +14,10 @@ import { P2_FNAME as fname, P2_NAMES as NAMES } from './p2-baselines.mjs';
 import { rulesFingerprint } from './rules-fingerprint.mjs';
 /* v1.5.130：择优（不回归层 + 容差带 + 发散度）抽成**纯函数单一来源** `tools/pick-best.mjs` ——
  * 动机见该文件头：旧实现内联在这里，`np-test` 想守它只能钉文本；抽出来后门可以喂合成候选表验行为。 */
-import { pickBestByExam, regressionsOf, fixesOf } from './pick-best.mjs';
+import { pickBestByExam, regressionsOf, fixesOf, vetoBy3p } from './pick-best.mjs';
+/* v1.5.161（P1）：3P 第二栏必须用**同一批量具 + 同一个 `feasibilityOf` 阈值**（`promote-champion` 与 `train-server` 都吃它），
+ * 否则"当选面过了、体检没过"这种两套口径的裂缝又会出现（本仓为"量具抄两遍"栽过至少四次）。 */
+import { selfPlay, reflectWall, aggressionProfile, seatSymmetry, densityProfile, chargeProfile, feasibilityOf, sandbox } from './audit-lib.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -50,6 +53,18 @@ function __seedSandbox(sbox, seed) {
 }
 
 
+/* v1.5.161（qoder §N16 · P1）：当选面的**第二栏（3P 可行性五道）** + 产物改道
+ * 病（§N14 实证，不是猜）：收口臂 `v7xn14a` 里 `band2`（候选3）考卷 98.25%/最差 85%、3P 五道全过、场B 4.00/局，
+ * `score=0.916` 也**高于**当选 band1 的 0.891 —— 却只因容差带内 hill05 3.38 < 5.79 被挤掉；
+ * 而当选者 band1 的 3P 侧是 **场B 0.00 + 墙 0.00/局**。**择优函数从头到尾没有 3P 这一栏** ⇒ 本臂目标被自己人扔掉。
+ * 修法：`EPIRUS_TB3P=1` 时给每粒**训练候选**跑一遍 3P 五道（与 promote 同一批 `audit-lib` 量具、同一 `feasibilityOf` 阈值，
+ * 不另抄一份），不过者**取消当选资格**；全不过 ⇒ `exit 9` 响亮（绝不"看不见就当过"、也绝不退回单栏硬选一个烂的）。
+ * 默认 0 ⇒ 一行都不跑 ⇒ **行为逐字不变** ✓。`EPIRUS_TB3P_GAMES` 默认 120 = 本会话预注册的口径。
+ * `EPIRUS_TB_OUT=<路径>`：产物写去别处（**门与探针因此不必碰 2P 槽**；§N14 那次 `train-best` 顺手把
+ * `index.html` 的 `?v=` 缓存戳改了、槽内容还原了而戳没还 ⇒ 工作区脏，这条也是治它的）。 */
+const TB3P = Number(process.env.EPIRUS_TB3P || 0);
+const TB3P_GAMES = Number(process.env.EPIRUS_TB3P_GAMES || 120);
+const TB_OUT = process.env.EPIRUS_TB_OUT || null;
 const N = Number(process.argv[2] || 3);
 const GENS = Number(process.argv[3] || 500);
 const workers = Number(process.argv[4]) || 0;
@@ -115,7 +130,7 @@ try {
   if (curP) {
     const curEv = evalChamp(curP);
     console.log(`候选 0 (现有冠军): 不训练 | avg wr=${(curEv.avg * 100).toFixed(0)}% | wall=${(curEv.per.wall * 100).toFixed(0)}% defend=${(curEv.per.defend * 100).toFixed(0)}%`);
-    cands.push({ tag: '现有冠军', pack: P.pack(curP), ev: curEv, score: null, secs: 0, sc: evScore(curEv), div: T.champEntropy(curP, 0.15, 60, 31337) });
+    cands.push({ tag: '现有冠军', isIncumbent: true, params: curP, pack: P.pack(curP), ev: curEv, score: null, secs: 0, sc: evScore(curEv), div: T.champEntropy(curP, 0.15, 60, 31337) });
   }
 } catch (e) { /* 无现有冠军则跳过 */ }
 for (let k = 0; k < N; k++) {
@@ -130,7 +145,7 @@ for (let k = 0; k < N; k++) {
   const ev = evalChamp(t.champion);
   console.log(`候选 ${k + 1}: ${GENS}代 ${secs}s | score=${t.bestChampScore.toFixed(3)} | avg wr=${(ev.avg * 100).toFixed(0)}% | wall=${(ev.per.wall * 100).toFixed(0)}% defend=${(ev.per.defend * 100).toFixed(0)}% | sel=${evScore(ev).toFixed(3)}`);
   { const e = T.champEntropy(t.champion, 0.15, 60, 31337);
-    cands.push({ tag: '候选' + (k + 1), pack: P.pack(t.champion), ev: ev, score: t.bestChampScore, secs: secs, sc: evScore(ev), div: e });
+    cands.push({ tag: '候选' + (k + 1), params: (t.champion && t.champion.slice) ? t.champion.slice() : t.champion, pack: P.pack(t.champion), ev: ev, score: t.bestChampScore, secs: secs, sc: evScore(ev), div: e });
     console.log(`    └ 有效技能数=${e.effSkills.toFixed(2)}（hill05=${e.hill05.toFixed(2)} · ${e.distinct} 种 · divNorm=${e.divNorm.toFixed(3)}）`); }
   bestTime += Number(secs);
 }
@@ -143,13 +158,47 @@ const WR_TOL = 0.03;
 /* 夜班（seed 11 反例 · 00:2x）：`vetoDegenerate` = 镜像零攻击（种类=0）的候选不许当选。
  * 病：2P 考卷对"只ジ不动手"的包能读 avg=100%（脚本互杀自己），择优看不出它会加冕退化包；
  * 3P promote 早有 v1.5.94"自对局零攻击判负"，两入口从此同判。闸在纯函数侧（D104⑩ 行为化守门）。 */
-const pick = pickBestByExam(cands, { wrTol: WR_TOL, vetoDegenerate: true });
+/* ===== v1.5.161（qoder P1 · §N14 实证）：当选面的 **3P 第二栏**（默认关 ⇒ 一行都不跑）=====
+ * 为什么必须判在**作用点**上（§N12 的教训）：这一栏不参与择优 = 本臂目标（3P 的场B/墙）对选择完全透明，
+ * 于是 `band2`（考卷 98.25%/最差 85%、3P 五道全过、场B 4.00/局、score 0.916 更高）被 hill05 挤掉，
+ * 当选的 `band1` 反而是 3P 侧 **场B 0.00 + 墙 0.00/局** 的那粒。 */
+let pool = cands;
+if (TB3P > 0) {
+  const W3 = sandbox();
+  for (const c of cands) {
+    if (c.isIncumbent || !c.params) { c.col3p = { measured: false, skipped: true }; continue; }
+    const sp = selfPlay(W3, c.params, 'multi', TB3P_GAMES);
+    const spL = selfPlay(W3, c.params, 'long', TB3P_GAMES);
+    const rw = reflectWall(W3, c.params, 'long', TB3P_GAMES);
+    const agg = aggressionProfile(W3, c.params, Number(process.env.EPIRUS_AGGR_GAMES || 40));
+    const ss = seatSymmetry(W3, c.params, 'multi', Number(process.env.EPIRUS_SEAT_GAMES || 100));
+    const dens = densityProfile(W3, c.params, 'long', Number(process.env.EPIRUS_DENSITY_GAMES || 20));
+    const chgE = chargeProfile(W3, c.params, 'long', Number(process.env.EPIRUS_CHARGE_GAMES || 40));
+    const feas = feasibilityOf({ seat: ss, G: sp, G2: spL, G2name: 'long', wall: rw, aggr: agg,
+      density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chgE.gained, spentRate: chgE.spentRate,
+        expiredPerGame: chgE.games ? chgE.expired / chgE.games : 0, zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
+    c.col3p = { measured: true, ok: !!feas.ok, fails: feas.fails || [], n: TB3P_GAMES,
+      seat: feas.seatSpread, G: feas.G, G2: feas.G2, wall: feas.wallDmg, fieldA: feas.fieldA, fieldBClears: feas.fieldBClears };
+    console.log('[3P栏 n=' + TB3P_GAMES + '] ' + c.tag + ' ' + (feas.ok ? '✅ 五道全过' : '✗ 不过：' + (feas.fails || []).join('；')) +
+      '（G ' + feas.G + ' · G(long) ' + feas.G2 + ' · 墙 ' + feas.wallDmg + '/局 · 场A ' + (100 * feas.fieldA).toFixed(0) + '% · 场B 清场 ' + feas.fieldBClears + '/局 · 座位 ' + feas.seatSpread + 'pt）');
+  }
+  const veto = vetoBy3p(cands);
+  if (veto.allRejected) {
+    console.error('⛔ [3P栏] ' + veto.rejected.length + ' 粒候选**全部**过不了 3P 五道 ⇒ 不选"烂得最轻的"当冠军（§N14 的 band1 就是这么当选的）。');
+    console.error('   要么承认这一配方买不到两栏、要么改配方重跑；**不接受静默退回单栏择优**。');
+    process.exit(9);
+  }
+  for (const c of veto.rejected) console.log('[3P栏] ' + c.tag + ' ⇒ 取消当选资格（在位参照不参与否决）');
+  pool = veto.kept;
+  console.log('[3P栏] 参与择优 = ' + (pool.length - (pool.some(c => c.isIncumbent) ? 1 : 0)) + ' / ' + (cands.length - 1) + ' 粒候选');
+}
+const pick = pickBestByExam(pool, { wrTol: WR_TOL, vetoDegenerate: true });
 for (const c of cands) if (c.__vetoed) console.log('[退化闸] ' + c.tag + ' 镜像零攻击（种类=0）⇒ 取消当选资格（v1.5.94 同族）');
 best = pick.best;
 const inc = pick.incumbent;
 if (inc) console.log('[不回归层] 现有冠军=' + inc.tag + '；剔除候选=' + pick.dropped + ' 个（回归了冠军已过的基准）');
 console.log('[多目标择优] 候选=' + cands.length + '  可择优=' + pick.safe.length + '  容差带=' + pick.band.length + '（胜率分 ≥ ' + (pick.topSc - WR_TOL).toFixed(3) + '）');
-for (const c of cands) console.log('   ' + c.tag.padEnd(8) + ' sc=' + c.sc.toFixed(3) + '  avg=' + (c.ev.avg * 100).toFixed(0) + '%  hill05=' + (c.div.hill05 || 0).toFixed(2) + '  有效技能=' + (c.div.effSkills || 0).toFixed(2) + '  种类=' + c.div.distinct + '  divNorm=' + c.div.divNorm.toFixed(3) + '  回归=' + regressionsOf(c, inc) + '  新过=' + fixesOf(c, inc) + (c === best ? '   ← 选中' : ''));
+for (const c of cands) console.log('   ' + c.tag.padEnd(8) + ' sc=' + c.sc.toFixed(3) + '  avg=' + (c.ev.avg * 100).toFixed(0) + '%  hill05=' + (c.div.hill05 || 0).toFixed(2) + '  有效技能=' + (c.div.effSkills || 0).toFixed(2) + '  种类=' + c.div.distinct + '  divNorm=' + c.div.divNorm.toFixed(3) + '  回归=' + regressionsOf(c, inc) + '  新过=' + fixesOf(c, inc) + (TB3P > 0 ? ('  3P栏=' + (c.col3p && c.col3p.measured ? (c.col3p.ok ? '✅' : '✗') : '未测')) : '') + (c === best ? '   ← 选中' : ''));
 console.log('   实际胜率损失 = ' + ((pick.topSc - best.sc) * 100).toFixed(1) + 'pt');
 /* ===== v1.5.147（流程缺口，xfer44 反例）：带内全部候选落盘 =====
  * 旧实现只持久化当选者 —— 落选候选（如那天"种类=5/avg 99%"的候选3）**连复盘机会都没有**，
@@ -157,13 +206,20 @@ console.log('   实际胜率损失 = ' + ((pick.topSc - best.sc) * 100).toFixed(
  * （ARM=EPIRUS_ARM，默认 tb<seed>；.gitignore 已整目录忽略 artifacts，仓库不脏）。 */
 try {
   const ARM = (process.env.EPIRUS_ARM || ('tb' + __SEED)).replace(/[^A-Za-z0-9_.-]/g, '');
-  const dir = join(root, 'docs', 'artifacts');
-  if (!existsSync(dir)) { console.log('[band-save] 无 docs/artifacts 目录，跳过'); }
+  /* v1.5.161：**改道要改彻底** —— 设了 `EPIRUS_TB_OUT` 时带内候选也写到那个目录旁边，
+   * 否则门/探针每跑一次就在 `docs/artifacts` 留一粒未点名的 `.bak`（实测：D124 首跑即被 D82 抓住 `tb31-band1.bak`）。
+   * 不设 ⇒ 仍旧写 `docs/artifacts` ⇒ 历史臂行为逐字不变 ✓。 */
+  const dir = TB_OUT ? dirname(isAbsolute(TB_OUT) ? TB_OUT : join(root, TB_OUT)) : join(root, 'docs', 'artifacts');
+  if (!existsSync(dir)) { console.log('[band-save] 无 ' + dir + ' 目录，跳过'); }
   else for (let bi = 0; bi < pick.band.length; bi++) {
     const c = pick.band[bi];
     const bmeta = { source: 'tools/train-best.mjs (band-save)', arm: ARM, bandIdx: bi, tag: c.tag,
       selected: c === best, seed: __SEED, gens: GENS, avg: Number(c.ev.avg.toFixed(4)),
       div: { hill05: c.div.hill05 || null, effSkills: c.div.effSkills || null, distinct: c.div.distinct, divNorm: c.div.divNorm },
+      /* v1.5.161（P1）：带内每一粒也带 3P 栏读数 ⇒ 落选的"另一栏更强"那种候选（§N14 的 band2）复盘时看得见 */
+      col3p: c.col3p ? { measured: !!c.col3p.measured, ok: !!c.col3p.ok, n: c.col3p.n || null,
+        fieldBClears: c.col3p.fieldBClears != null ? Number(c.col3p.fieldBClears) : null,
+        wall: c.col3p.wall != null ? Number(c.col3p.wall) : null, fails: c.col3p.fails || [] } : null,
       rulesFingerprint: rulesFingerprint(), ts: new Date().toISOString() };
     writeFileSync(join(dir, ARM + '-band' + (bi + 1) + '.bak'),
       'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(bmeta) + ';\nwindow.EPIRUS_CHAMPION = ' + JSON.stringify(c.pack) + ';\n', 'utf8');
@@ -171,7 +227,10 @@ try {
   }
 } catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
 const packStr = JSON.stringify(best.pack);
-if (existsSync(dest)) copyFileSync(dest, dest + '.bak');   // 覆写前留一份 .bak
+/* v1.5.161：产物可改道（`EPIRUS_TB_OUT`）⇒ 门/探针跑真训练臂时**不必碰 2P 槽**，也不会顺手改 index.html 的缓存戳
+ * （§N14 实测：还原了槽内容、忘了还原戳 ⇒ 工作区脏）。改道时既不备份槽、也不动戳 —— 因为槽根本没被写。 */
+const OUT = TB_OUT ? (isAbsolute(TB_OUT) ? TB_OUT : join(root, TB_OUT)) : dest;
+if (OUT === dest && existsSync(dest)) copyFileSync(dest, dest + '.bak');   // 覆写前留一份 .bak
 const meta = {
   source: 'tools/train-best.mjs', seeds: N, gens: GENS, ts: new Date().toISOString(),
   champWr: best.ev.avg, divNorm: best.div.divNorm, distinct: best.div.distinct, wrTol: WR_TOL,
@@ -188,21 +247,28 @@ const meta = {
   fixesVsPrev: inc ? fixesOf(best, inc) : 0,
   regressionsVsPrev: inc ? regressionsOf(best, inc) : 0,
   hotStart: !!(HOTSTART && curP),
+  /* v1.5.161（P1）：当选者当年的 **3P 栏读数**随产物走（与 `meta.feasibility` 同精神：不可查 = 等于没测）。
+   * `tb3p=0` 表示这一臂没跑第二栏（默认关）⇒ 读历史包时先看到这行，才不会把"没测"误读成"过了"。 */
+  col3pAtBuild: best.col3p ? { measured: !!best.col3p.measured, ok: !!best.col3p.ok, n: best.col3p.n || null,
+    fieldBClears: best.col3p.fieldBClears != null ? Number(best.col3p.fieldBClears) : null,
+    wall: best.col3p.wall != null ? Number(best.col3p.wall) : null,
+    G2: best.col3p.G2 != null ? Number(best.col3p.G2) : null, fails: best.col3p.fails || [] } : null,
+  tb3p: TB3P > 0 ? TB3P_GAMES : 0,
   seed: __SEED, workers: stepAsync.workers, rulesFingerprint: rulesFingerprint()
 };
-writeFileSync(dest,
+writeFileSync(OUT,
   '/* Epirus 内置冠军：由 tools/train-best.mjs 生成（' + N + ' 候选择优，' + GENS + ' 代，总 ' + bestTime.toFixed(0) + 's）。不要手改。 */\n' +
   'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(meta) + ';\n' +
   'window.EPIRUS_CHAMPION = ' + packStr + ';\n', 'utf8');
-// cache-busting：更新 index.html 里冠军 script 的 ?v= 版本号，避免浏览器用旧缓存
-try {
+// cache-busting：只在**真的覆写了 2P 槽**时更新 index.html 里冠军 script 的 ?v=（改道产物不该动槽的戳）
+if (OUT === dest) try {
   const htmlPath = join(root, 'index.html');
   let html = readFileSync(htmlPath, 'utf8');
   html = html.replace(/(bundled-champion\.js\?v=)[0-9a-z]+/i, '$1' + Date.now().toString(36));
   writeFileSync(htmlPath, html, 'utf8');
 } catch (e) { /* ignore */ }
 console.log(`择优完成：avg wr=${(best.ev.avg * 100).toFixed(0)}% wall=${(best.ev.per.wall * 100).toFixed(0)}% defend=${(best.ev.per.defend * 100).toFixed(0)}% score=${best.score != null ? best.score.toFixed(3) : '--(现有冠军)'}`);
-console.log('已写入 js/bundled-champion.js（' + packStr.length + ' 字节）');
+console.log('已写入 ' + (OUT === dest ? 'js/bundled-champion.js' : OUT) + '（' + packStr.length + ' 字节）');
 for (const nm of NAMES) console.log('  ' + nm.padEnd(9) + (best.ev.per[nm] * 100).toFixed(0) + '%');
 stepAsync.close();
 process.exit(0);

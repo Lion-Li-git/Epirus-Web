@@ -514,3 +514,23 @@ EPIRUS_ARM=v7xn14a EPIRUS_SEED=31 node tools/train-best.mjs 3 500
 
 **结案动作**：预注册第三格未触发（考卷过了）；**不换第三根旋钮、不再滑密度**；`v7xn14a` 三粒产物全部点名留档、**一律未 promote、两槽未动**。
 下一步只有一件是干净的：**把 3P 栏接进 `train-best`/`train-3p` 的当选面**（P1），然后重跑本臂的同一配方 —— 那时 band2 这一类候选才有机会被自己人看见。
+
+---
+
+## §N16 重跑收口臂（v1.5.161 的第二栏生效后 · 用户"按你的方法改一下继续跑" · 跑前预注册）
+
+**变了什么**：`train-best` 的当选面从此看得见 3P（`EPIRUS_TB3P=1` ⇒ 五道不过者取消当选资格；全不过 ⇒ `exit 9`，不退回单栏）。
+配方与 §N14 **逐字相同**（同起点 `band5`、同 `3 候选 × 500 代`、同 seed 31）⇒ **单变量 = 第二栏是否参与选择**。
+
+```
+cp docs/artifacts/v7xn13a-band5-2psh.bak js/bundled-champion.js          # train-best 的种子/在位参照只认槽
+EPIRUS_ARM=v7xn16a EPIRUS_SEED=31 EPIRUS_TB3P=1 EPIRUS_TB3P_GAMES=120   EPIRUS_TB_OUT=docs/artifacts/v7xn16a-out.js node tools/train-best.mjs 3 500
+git checkout js/bundled-champion.js                                       # TB_OUT 已保证不覆写槽，仍按规程还原
+```
+**判据（与 §N14 同一条，不许放宽）**：当选者必须**同一次**满足 ① 2P 考卷 ≥94.6%（记 vs c13 的 99%/82.5%）
+② 3P 五道全过（场B ≥0.3/局 · 墙 >0.5/局 · 场A ≥20% · G 与 G(long) ≥3 · 座位不差于 15pt 档）。
+**分支（预先写死）**：
+· 过 `exit 9` ⇒ **本配方买不到两栏**（这就是答案，不是失败）⇒ 记为"跨 N + 收口在现有密度下互斥"，回到"7′/band4 当第三包"的出货路，**不再滑密度**；
+· 选出合格者 ⇒ 独立复跑它的两栏（`promote-champion --dry` + `promote-champion2p --dry`，一候选一次调用 + 每轮还原槽），并加读 **G4/G5** 与 **§N14 发现 B 的教训**：场B 清场必须与 G5（克硬防守）成对读，单栏高不许当上线理由；
+· 两栏都过且 G4/G5 也过 ⇒ **只报告、不动槽**（换 3P 槽 = 用户裁定）。
+指纹代 **71b5927f**。
