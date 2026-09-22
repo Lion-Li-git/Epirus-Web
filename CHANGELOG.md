@@ -1,3 +1,34 @@
+## v1.5.154 — train-3p **当选面退化闸**（§N9 · qoder 09-22 午后）+ 门 D120/D121 + CLI 暗旋钮审计（§N10）
+
+> ⚠️ **本条由 DS 代补**：qoder 的提交标题写了 `v1.5.154`，但 CHANGELOG 里没有对应条目（版本序列当时是 153→152），
+> 于是 D8 读到的三方仍是 v1.5.153、**看不出版本缺口**。补记如下（内容全部来自 `docs/RESEARCH-LOG-2026-09-22-qoder-night.md` §N8/§N9/§N10）。
+
+> **① 当选面退化闸**（`tools/pick-best.mjs` 新纯函数 `rejectDegenerateWinners` + `train-3p` 名人堂过滤）：
+> 阈值与 promote 的"零攻击 ≥90% 阻断"对齐（界内 0.89 放行）；`densityProfile.zeroAtkRate`（`audit-lib` **单一来源**）；
+> **全退化 ⇒ `best: null` + `meta.degenerateOnlyWinner=true` + ⛔ 响亮**（产物照写，下一道 promote 自己会砍）。
+> 动因：§N8 暴露**三处不一致** —— promote 有闸、2P `pick-best` 昨夜加了 `vetoDegenerate`、**CLI(train-3p) 当选面什么都没有**
+> ⇒ `xn10b` 让"纯ジ龟包"以带内最高 trainFit 当选。**真反例复验**：`xn10b` 当选者 zeroAtkRate=**100%**（会被剔）、
+> 现役 `cmin4`=**0%**（不误伤）。门 **D121** 三向（合成表让位 / 阈值界 / 全退化 null + 接线两钉）。
+
+> **② 门 D120**（`fix(train)`）：`train-3p` 接通 `EPIRUS_CLEAR_W` —— 09-22 的"臂 a"**实为 7′ 逐字节复现**
+> （开关传了没人读，**第五例静默空转**）；现在 >0 会打进 evo 沙箱 + 回显生效值 + 拒绝即 `exit 5`。
+
+> **③ §N8 的两个真发现（比臂本身值钱）**：
+> - **CLEAR_W 否证**（生效后的 `xn10b`）：收割奖励在本配方下**长不出击杀**，反而把包推向**纯ジ退化**（G=0 · 零攻击 100%）
+>   ⇒ "**奖励收割 ≠ 学会收割**"（与 v1.5.103 的警告同型）；**不滑第三个值、不换第四根旋钮**（第四次复发警告生效）。
+> - **第六例静默空转 = 沙箱 env 黑洞**：`train-3p` 的 vm 沙箱**没有 `process`** ⇒ `js/` 里"加载时读 `process.env`"的旋钮
+>   在 CLI 下一律等于默认（`PASSIVE_FIELD` / `FIREWEAK_PERSIST` 字面死读；DIV_*/CHARGE_MIN_EP/SUB_BEAD/BEAD_SEED… 靠 server 下发）
+>   ⇒ **历史上用 `train-3p.mjs` 手动跑的臂一律是"默认经济"**（本条对**已记录的 CLI 臂读数**是复核义务）。
+>   （注：DS 09-22 的臂 1–9′ 只用闭集内的键 —— XN2W/XN2G/XN2REF/XN2SCRIPTS/ARM/ANCHOR/HOTSTART/SEEDPACK/SEED/BAND_DIR —— ⇒ 不受影响；
+>   更早用 `tools/ring2-run.mjs`（server 路径）的臂也不受影响。）
+
+> **④ §N10 的裁定（DS）**：**采纳"黑旋钮侦测 + `exit 6`"**，并再加一道**静态门**——
+> 运行期：`train-3p` 启动时把 env 里出现的 `EPIRUS_*` 与"本工具闭集 ∪ 引擎侧真正接通的项"比对，
+> 出现名单内的**暗键** ⇒ 打印名单 + `exit 6`（留 `EPIRUS_ALLOW_DARK=1` 逃逸口给有意为之的情形）；
+> 静态：立门钉"**被塞进 vm 沙箱的 `js/` 文件里不许字面读 `process.env`**"（要么走宿主 setter，要么显式声明为死键）⇒
+> 这才是把"第五/第六例"从"下次小心"变成"下次跑不起来"的那一刀。**未开工**（属新立项，等 DS/用户排期）。
+> 产物点名（D82）：`v7xn10a-band1.bak`、`v7xn10a-band2.bak`、`v7xn10a-band3.bak`、`v7xn10a-band4.bak`、`v7xn10a-band5.bak`、`v7xn10a-band6.bak`、`v7xn10b-2psh.bak`、`v7xn10b-band1.bak`、`v7xn10b-band2.bak`、`v7xn10b-band3.bak`、`v7xn10b-band4.bak`、`v7xn10b-band5.bak`、`v7xn10b-band6.bak`、`v7xn10c-2psh.bak`、`v7xn10c-31.bak`、`v7xn10c-band1.bak`、`v7xn10c-band2.bak`、`v7xn10c-band3.bak`、`v7xn10c-band4.bak`、`v7xn10c-band5.bak`、`v7xn10c-band6.bak`
+
 ## research(0922 · DS 臂 7′/8′/9′＝热启动修正后重跑跨 N · 不升版本 · 未 promote) —— **跨 N 成立** ✓✓（前两轮"两败"是冷启动 bug）
 
 > 见 `docs/RESEARCH-LOG-2026-09-22-ds.md` §11。三臂都确认 `热启动：以现有冠军为种子` ✓（起点 = 过门 2P 种子 `v7xn6-2p`）：
