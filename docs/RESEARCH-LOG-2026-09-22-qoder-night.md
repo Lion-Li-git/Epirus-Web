@@ -282,3 +282,23 @@ train-3p hall 逐粒算 `densityProfile.zeroAtkRate`（audit-lib 单一来源）
 - **server 下发族**（宿主经 econ-env/fight-env 读 + msg/setter 打进 worker）：DIV_W/DIV_K/DIV_FORCE_GENS/DIV_CATW/DIV_ROLEW、FIGHT_WHISTLE/DEAL/FIRST、CHARGE_MIN_EP、SUB_BEAD、BEAD_SEED、BEAD_W…（全名单见 `server/econ-env.mjs`/`fight-env.mjs`/`train-server.mjs`）——**server 路径活、CLI 路径一律不生效**。
 ⇒ 推论：**所有拿 `train-3p.mjs` 手动跑的臂，历史上一律是"默认经济"**——凡是以为自己在调 DIV_W/CHARGE_MIN_EP 的 CLI 臂都要按此复核读数（本会话的 xn10c 就是活例：PASSIVE_FIELD=0.34 从未生效）。
 **建议（不擅动）**：train-3p 顶部加"未知/黑旋钮侦测"——凡 env 里出现 econ/fight-env 名单内而本 CLI 不接的键 ⇒ 打印 ⚠️ 名单 + `exit 6`（对齐 D119/D120 的"要了开关不许静默"）。归 DS/用户裁。
+
+---
+
+## §N11 暴露密度臂（09-22 晚 · 用户"继续" · 跑前预注册）
+
+**前提**：§N8 的 b2 当年作废是因为键是死的；v1.5.159 把 `EPIRUS_PASSIVE_FIELD` 接成可下达（train-env 单源 + setter + 空枪检测）⇒ 今天可以真跑。
+
+**臂 v7xn11a = 7′ 配方逐字 + 单变量 `EPIRUS_PASSIVE_FIELD=0.34`**（1/8→约 1/3 局为"4 席全被动"）：
+```
+EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/v7xn6-2p.bak EPIRUS_SEED=31 \
+  EPIRUS_XN2W=1 EPIRUS_XN2G=4 EPIRUS_XN2REF=exam EPIRUS_PASSIVE_FIELD=0.34 \
+  EPIRUS_ARM=v7xn11a node tools/train-3p.mjs 100 5 8 8
+```
+义务：banner 有「热启动」+ 有 PASSIVE_FIELD 读回行（无 ⇒ 本臂作废）；当选面退化闸（v1.5.154）在场盯零攻击列。
+**判据（n=120 · 只记录不 promote）**：① 场B 清场 ≥0.3；② G4[long] 珠爆发 ≤60% 且不新增越线；③ 2P 考卷 ≥94.6%；④ G 两模式 ≥3；⑤ 座位/场A/墙不回归。
+**分支**：①中②不中 ⇒ 收割与珠爆两缺口分开记（可能一个暴露密度修不了两个洞）；①不中 ⇒ "暴露密度也买不动收割"入账——机制路只剩"对手池改造"（需工具改动+门，且 pickKillSecure 1.5.158 已被裁'留池不当教师'，池侧动作等用户），臂停。
+指纹代：**71b5927f**（本臂起全部新代读数）。
+
+### §N11 读数（跑完填）
+- （跑中）
