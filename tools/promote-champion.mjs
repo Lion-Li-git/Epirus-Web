@@ -25,6 +25,12 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
 import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile } from './audit-lib.mjs';
+/* v1.5.152（DS 09-22 · 用户裁定"把真桌 ε=0.2 接进体检，只记录不阻断"）：
+ * **产品代理栏** —— 单一来源：借 `behavior-profile.mjs` 的 `fieldProfile`（不抄第二份实现；该模块被 import 时不跑 main）。
+ * 依据（`docs/RESEARCH-LOG-2026-09-22-ds.md` §7）：同一包同一 ε=0，**镜像**装配电磁炮 4.30 每局、
+ * **真桌**（1 冠军 + 4 脚本）只有 0.10 每局（**43 倍**）⇒ 门禁/体检里的贵卡数字是**镜像局特有**的；
+ * 而"真桌 + ε=0.2"与**真机**几乎重合（电磁炮 0.20 对 0.20、蓄能 0.30 对 0.40）⇒ 它才是最接近产品的模拟。 */
+import { fieldProfile, share as bpShare } from './behavior-profile.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
@@ -204,6 +210,23 @@ console.log('   可行性（与训练落盘同源）：' + (feas.ok ? '✅ 五�
   '/局 · 场A ' + (100 * feas.fieldA).toFixed(0) + '% · 场B 清场 ' + feas.fieldBClears + '/局' +
   '（胜率 ' + (100 * (feas.fieldBWinRate || 0)).toFixed(0) + '% —— **规则红利，不作判据**））' +
   (feas.notes.length ? ' ⚠ ' + feas.notes.join('；') : ''));
+/* ===== 产品代理栏（v1.5.152 · DS 09-22 · 用户裁定"只记录、不阻断"）=====
+ * 真桌装配（1 席冠军 + 4 席脚本）· **ε=0.2 soft**（浏览器实际用的探索率）· 长程。
+ * 为什么单列：同一包同一 ε=0，镜像装配电磁炮 4.30/局、真桌只有 0.10/局（43 倍）⇒ 门禁/体检判的那个数
+ * 是**镜像局特有**的；而"真桌 + ε=0.2"与真机几乎重合 ⇒ 这一栏才是"玩家会看到什么"。
+ * ⚠️ 只打印、不进任何判定（`feas` 的结论逐字不变）；`EPIRUS_NO_PROXY=1` 可关掉省 30 秒。 */
+if (process.env.EPIRUS_NO_PROXY !== '1') {
+  const SK = W.EpirusRules.SK;
+  const PROXY_N = Number(process.env.EPIRUS_PROXY_GAMES || 20);
+  const proxy = fieldProfile(params, 0.2, 'soft', PROXY_N, 4100, 'pool', 'long');
+  const per = function (k) { return ((proxy.keys[k] || 0) / PROXY_N).toFixed(2); };
+  console.log('   产品代理栏（**真桌 1+4 · ε=0.2 soft · 长程 ' + PROXY_N + ' 局 · 只记录不阻断**）：' +
+    '电磁炮 ' + per(SK.RAILGUN) + '/局 · 蓄能 ' + per(SK.CHARGE) + '/局 · 防御类 ' + bpShare(proxy, 'def') +
+    ' · 集火 ' + (proxy.tgtActs ? (100 * proxy.focus / proxy.tgtActs).toFixed(1) + '%' : '—') +
+    ' · 最大ep ' + proxy.maxEp + ' · 局长 ' + (proxy.rounds / PROXY_N).toFixed(1) +
+    ' ⇒ 与真机对照见 `docs/RESEARCH-LOG-2026-09-22-ds.md` §7');
+}
+
 /* v1.5.90（第八轮复核 §6 / §8-3）：**输出密度** —— 把"冠军输给一行最便宜的枪"变成两个可比的数：
  * 它到底把多少回合花在"按ジ攒一种永远花不掉的东西"上。判据**只打印**（阻断开关见 audit-lib 的
  * `DENSITY_BLOCK`，现在是 false —— 在位包自己没过它 ⇒ 它现在没有判别力）。 */

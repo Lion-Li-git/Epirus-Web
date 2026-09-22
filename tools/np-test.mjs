@@ -4440,6 +4440,25 @@ t('D117 口径工具（v1.5.151）：防御类必须**从 rules.js 取表**（�
   ok(bp.indexOf("flag('field', 'mixed')") >= 0, '默认口径不许被改（历史读数靠它可比）');
 });
 
+t('D118 体检必须并报"产品代理栏"（真桌 1+4 · ε=0.2 soft）—— **只记录不阻断**（v1.5.152 · 用户裁定）', function () {
+  /* 病（DS 09-22 §7 实测 · 用户追问"ε=0 下防御 0% 也不是很对吧"）：同一包同一 **ε=0**，
+   *   **镜像**装配（5 席同包 · 门禁/体检用的就是它）电磁炮 4.30/局，**真桌**（1 冠 + 4 脚本）只有 0.10/局
+   *   ⇒ **装配单独值 43 倍、ε 只值 2 倍** ⇒ 体检打印的贵卡数字是**镜像局特有**的，却被当成"这个包的能力"
+   *   （千问 §23 的"4 倍口径差"也是把 ε 与装配混算的结果 ✗）。
+   * 用户裁定：把"真桌 + ε=0.2"接进体检，**只记录不阻断**（在它有判别力之前不拦人）。
+   * 本条钉四件事：那一栏必须打印 · 必须借 `behavior-profile` 的实现（**单一来源**，不抄第二份）·
+   * 必须写明"只记录不阻断"· 可关掉（`EPIRUS_NO_PROXY`）；并守住 `behavior-profile` 的导出/守卫。 */
+  const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(pc.indexOf('产品代理栏') >= 0 && pc.indexOf("fieldProfile(params, 0.2, 'soft'") >= 0,
+    '体检必须并报产品代理栏（真桌装配 · ε=0.2 soft）');
+  ok(pc.indexOf("from './behavior-profile.mjs'") >= 0, '必须借 behavior-profile 的实现（单一来源 —— 本仓"同一份名单抄两遍"栽过三次）');
+  ok(pc.indexOf('只记录不阻断') >= 0, '必须写明只记录不阻断（否则读者会以为它参与判定）');
+  ok(pc.indexOf('EPIRUS_NO_PROXY') >= 0, '必须能关掉（省时间；也留一条"不装它也能跑"的活路）');
+  const bp = readFileSync('tools/behavior-profile.mjs', 'utf8');
+  ok(bp.indexOf('export function fieldProfile') >= 0 && bp.indexOf('RUN_AS_MAIN') >= 0,
+    'behavior-profile 必须导出 fieldProfile、且**被 import 时不跑 main**（否则体检一 import 就把整个剖面跑一遍）');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };

@@ -52,14 +52,14 @@ const WATCH = [
   [SK.CURSE, '贴贴'], [SK.FIRESTORM, '天火'], [SK.RAILGUN, '电磁炮'],
   [SK.LASER_EYE, '激光眼'], [SK.CHARGE, '蓄能'], [SK.BIG_T, '大雷']
 ];
-function share(t, k) { return t.acts ? (100 * t[k] / t.acts).toFixed(1) + '%' : '—'; }
+export function share(t, k) { return t.acts ? (100 * t[k] / t.acts).toFixed(1) + '%' : '—'; }
 
 /* 场型（`--field`）：
  *   mixed = 1 冠军席 + 4 脚本席（人数谱同款装配）—— 看"对脚本的行为"与胜率；
  *   self  = 5 席同一冠军（DS §10.2 那张表的口径，配合 `--gamemode=long` 复现"贴贴 2.70/局"）—— 看纯行为，胜率无意义。
  * ⚠️ 出手取自 **chooser 的返回值**（引擎不保留逐回合动作历史，`state.actions` 只有当回合），
  * 顺带得到 §9 判据④ 的机械核对量：`endgameMultiOnly` = 存活≤2 时仍提出 MULTI_ONLY 三张的次数（必须为 0）。 */
-function fieldProfile(params, eps, mode, G, seed0, field, gamemode) {
+export function fieldProfile(params, eps, mode, G, seed0, field, gamemode) {
   const N = 5, t = tally();
   for (let g = 0; g < G; g++) {
     const seat = g % N;
@@ -117,7 +117,10 @@ function mirrorProfile(params, eps, mode, G, seed0) {
   return { dec, rounds, G };
 }
 
-for (const file of CHAMPS) {
+/* v1.5.152：**被 import 时不跑 main**（`tools/promote-champion.mjs` 要用 `fieldProfile` 打"真桌 ε=0.2"
+ * 那一栏 —— 本仓规矩是**单一来源**：不许在体检里抄第二份实现，所以这里把实现导出、把 main 守住）。 */
+const RUN_AS_MAIN = process.argv[1] && /behavior-profile\.mjs$/.test(process.argv[1]);
+if (RUN_AS_MAIN) for (const file of CHAMPS) {
   const params = loadChamp(W, file, ROOT);
   const name = file.replace(/^.*\//, '').replace(/\.bak$/, '').replace(/\.js$/, '');
   console.log('== ' + name + '（参数量 ' + params.length + ' · temp=' + TEMP + ' epsK=' + EPSK + ' · ' + GAMES + ' 局/点）==');
