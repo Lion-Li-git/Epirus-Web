@@ -714,6 +714,31 @@
     return { key: SK.JI, target: null };                     // 攒到能开枪
   }
 
+  /* ===== 收割型对手 pickKillSecure（v1.5.156 · DS 09-22）=====
+   * 为什么写它：跨 N 的臂 7′（`docs/RESEARCH-LOG-2026-09-22-ds.md` §11）两场都拿得出手，
+   * 唯一缺口是「**把击杀收干净**」（场B 清场 0.10 < 0.3/局 ＋ G4[long]「珠爆发」63% ✗）。
+   * 而池子里**没有**这条线 —— 最接近的 `pickGunFocus` 打的是**最肥**的（`mpLeader`）✗，
+   * 本线打**最残**的（`oppPidOf` = 血量最低的存活对手 ✓）。
+   * 口径（只做一件事，与 `*spam` 族一致 —— 它是对手/教师线上的**专才**，不是冠军）：
+   *   ① 本回合能一击必杀 ⇒ 走**最便宜**的必杀（枪 1 → 狙击/坦克/激光剑 1 → 电磁炮 2），把击杀兑现；
+   *   ② 没有必杀 ⇒ 把伤害压在**血量最低**的对手身上（持续削，直到能收）；
+   *   ③ 都打不动 ⇒ 攒ジ。
+   * ⚠️ 取目标只用 `mpKillable` / `oppPidOf`（**不按 pid 取**）⇒ 不引入座位身份通道（D50/D58 家族，栽过多次）。
+   * ⚠️ 这是"先量价值再投入"的第一半：先用价值表量它值不值钱，再决定进不进池/教师计划。 */
+  function pickKillSecure(state, pid, legal) {
+    const bk = mpBk(legal);
+    const order = [[SK.GUN, 1], [SK.SNIPE, 1], [SK.TANK, 1], [SK.SWORD, 1], [SK.RAILGUN, 2]];
+    for (let i = 0; i < order.length; i++) {
+      if (!mpAff(bk, order[i][0])) continue;
+      const t = mpKillable(state, pid, order[i][1]);
+      if (t != null) return { key: order[i][0], target: t };
+    }
+    if (mpAff(bk, SK.GUN)) { const t = oppPidOf(state, pid); if (t != null) return { key: SK.GUN, target: t }; }
+    if (mpAff(bk, SK.JI)) return { key: SK.JI, target: null };
+    const a = legal.find(function (l) { return l.affordable; });
+    return { key: a ? a.key : SK.JI, target: null };
+  }
+
   /* ===== 珠爆发对手 pickBeadBurst（v1.5.129；第三方复核 §3 的实锤线，写成人格）=====
    * 实锤（`docs/REVIEW-QODER-2026-09-19.md` §3，复核者独立复跑 n=100~200）：这条线对
    * **2P 线上冠军 100% 胜**（standard · 均 9 回合）、对 3P 冠军 99%、multi@N=2 98%。机理**全在规则内**：
@@ -904,7 +929,7 @@
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,
-    pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, bigtHubTarget,
+    pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, bigtHubTarget, pickKillSecure,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'
