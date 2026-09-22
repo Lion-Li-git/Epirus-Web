@@ -271,3 +271,14 @@ train-3p hall 逐粒算 `densityProfile.zeroAtkRate`（audit-lib 单一来源）
    （PASSIVE_FIELD/CHARGE_MIN_EP/SUB_BEAD/BEAD_SEED/FIREWEAK/DIV_* 待全量点名）；修法二选一——
    对齐 econ-env（宿主读+setter 打进沙箱）或"检测到沙箱读不到的 EPIRUS_* 就 exit 响亮"。**没做**：面大、影响历史臂可比性，归 DS 裁。
 ② 交接件勘误已记 §N8：7′ 的 3P 缺口两处（场B + G4[long] 珠爆发 63% @n=120）。
+
+---
+
+## §N10 CLI 暗旋钮点名（09-22 14:1x · 只读审计 · 给 DS 对账）
+
+`train-3p.mjs` 的 env 面是**闭集**：{ANCHOR, ARM, BAND_DIR, CLEAR_W(新), HOTSTART, PUBLISH, SEED, SEEDPACK, XN2G, XN2REF, XN2SCRIPTS, XN2W}。
+它 **不 import econ-env/fight-env**（计数 0），而 shaping/课程一族旋钮的读法分两类，在 CLI 下全黑：
+- **沙箱字面读**（`js/` 里 `process.env.X`，vm 沙箱无 process ⇒ 永远默认）：`EPIRUS_PASSIVE_FIELD`（evo·加载时）、`EPIRUS_FIREWEAK_PERSIST`（resolve·加载时）——只有这两个是字面死读；
+- **server 下发族**（宿主经 econ-env/fight-env 读 + msg/setter 打进 worker）：DIV_W/DIV_K/DIV_FORCE_GENS/DIV_CATW/DIV_ROLEW、FIGHT_WHISTLE/DEAL/FIRST、CHARGE_MIN_EP、SUB_BEAD、BEAD_SEED、BEAD_W…（全名单见 `server/econ-env.mjs`/`fight-env.mjs`/`train-server.mjs`）——**server 路径活、CLI 路径一律不生效**。
+⇒ 推论：**所有拿 `train-3p.mjs` 手动跑的臂，历史上一律是"默认经济"**——凡是以为自己在调 DIV_W/CHARGE_MIN_EP 的 CLI 臂都要按此复核读数（本会话的 xn10c 就是活例：PASSIVE_FIELD=0.34 从未生效）。
+**建议（不擅动）**：train-3p 顶部加"未知/黑旋钮侦测"——凡 env 里出现 econ/fight-env 名单内而本 CLI 不接的键 ⇒ 打印 ⚠️ 名单 + `exit 6`（对齐 D119/D120 的"要了开关不许静默"）。归 DS/用户裁。
