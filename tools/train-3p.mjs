@@ -61,7 +61,7 @@ const SELF_ENV_KEYS = [
  * ⚠️ 只盯**这份名单**，不是"任何 EPIRUS_*"——否则用户 shell 里随便一个旧旋钮（如 `EPIRUS_NO_PROXY`）
  *    就会让所有 np-test 迷你臂 exit 6（那是误伤，不是本项要治的病）。 */
 const ENGINE_SIDE_KEYS = ECON_ENV_KEYS.concat(FIGHT_ENV_KEYS,
-  ['EPIRUS_PASSIVE_FIELD', 'EPIRUS_FIREWEAK_PERSIST']);
+  ['EPIRUS_PASSIVE_FIELD']);
 (function detectDarkKnobs() {
   const dark = ENGINE_SIDE_KEYS.filter(function (k) {
     return process.env[k] !== undefined && SELF_ENV_KEYS.indexOf(k) < 0;

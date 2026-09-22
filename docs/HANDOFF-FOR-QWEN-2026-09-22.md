@@ -3,33 +3,40 @@
 > 用户 09-22：「等这个跑完你就整理完停下来吧，两点前结束，后面给千问」。
 > 本文只写**状态 + 待办 + 坑**；机制与读数细节在 `docs/RESEARCH-LOG-2026-09-22-ds.md` §0–§11 与 `CHANGELOG.md`。
 
-## ★ 最高优先（用户 09-22 明确指令）：**删掉"火弱持续"这条规则** —— 它是一次**指纹换代**，必须整体做完
+## ★ 已完成（DS 09-22 执行）：**删除"火弱持续"死键** ⇒ 指纹换代 `be6c2195` → **`71b5927f`**（v1.5.157 · 行为零变化）
 
-**用户原话**：「火弱持续这个规则删掉吧。别的你继续」。
+**用户原话**：「火弱持续这个规则删掉吧。别的你继续」⇒ **已于 v1.5.157 做完并推** ✓，本节保留为**执行记录 + 复核指引**。
 
-**要删的是什么**（别删错）：删的是 `EPIRUS_FIREWEAK_PERSIST` 这个**训练侧实验开关**（以及它带的两处消费点），
-**R22「藤甲火弱：一切火焰伤害 +1」本身保留** ✓。开关现状（`js/core/resolve.js`）：
+**做了什么**（删的是**训练侧实验开关**，R22「藤甲火弱+1」**保留** ✓）：
+- `js/core/resolve.js` 三处删除：`:163` 改为**无条件** `p.fireWeakNext = false;`（原实验分支"Next 不清除、每回合重新武装"消失）· `:294` 死键常量删除 · `:304` 兑现即消费分支删除；
+- 门 **D122 静态声明表**删掉 `'js/core/resolve.js'` 一项（`js/train/evo.js` 的 `PASSIVE_FIELD` **保留** —— 它仍是 js/ 里的字面死读，D122 继续钉着它）；
+- `tools/train-3p.mjs` 的 CLI 侦测名单去掉该键（键已不存在 ⇒ 现在传它照样 `exit 6`）。
+
+**零变化证明（双向，强形式）**：
+- **2P**：`node tools/promote-champion2p.mjs js/bundled-champion.js`（**不动一个权重字节**，只重测考卷 + 补记 meta）⇒
+  **760 局：平均 99.00% / 最差 82.50% / 过门=是**，与旧指纹下的 `examScoreAtBuild: 0.99` **逐位一致**；回读自检"权重逐字节未变"；meta 已补记新指纹。
+- **3P**：`node tools/promote-champion.mjs js/bundled-champion-3p.js --dry`（**只读，不写文件**）⇒ **5P 考卷 54.4%** 与旧记 `0.544` **逐位一致**；**五道可行性全过** + G4/G5 行为门过。
+  ⚠️ 3P 侧**故意没走换包流程**（非 dry 会动槽位，违反"不 promote"）⇒ 改为"只读体检拿证据 + **定点刷新 meta 指纹**"，meta 里留了 `fingerprintRefresh` 说明原委。
+- 门：`np-test` 169/169（**D16 ✔ 两包指纹** · **D122 ✔**）· `spec-run` 52/52 · `smoke` OK · D8 三方 = v1.5.157。
+
+**复核指引（第三方）**：① `node tools/rules-fingerprint.mjs` 应打印 `71b5927f`；② `grep -c FIREWEAK_PERSIST js/core/resolve.js` 只应命中**注释**（不构成 `process.env.` 读）；③ `node tools/promote-champion2p.mjs js/bundled-champion.js --dry` 应仍报 99.00%/82.50%。
+**⚠️ 跨代注意**：`be6c2195` 及更早的**所有成绩/读数属于旧指纹代**，跨代比较必须注明（本仓规矩：指纹改动要单独立项 + 全链重测重记）。
+
+**仍留给规则的题（不是工程债）**：要不要*正式评估*"火弱持续"这条备选规则本身？若要，必须按指纹项目流程走（声明新一代 + 全链重测重记）。
+
+---
+
+
+**原状快照（删除前 `js/core/resolve.js` 的三处，留作复核比对）**：
 - `:294  const FIREWEAK_PERSIST = (typeof process !== 'undefined' && process.env && process.env.EPIRUS_FIREWEAK_PERSIST === '1');`
 - `:163  p.fireWeakNow = !!p.fireWeakNext; if (!FIREWEAK_PERSIST) p.fireWeakNext = false;   // R22`
 - `:304  if (FIREWEAK_PERSIST) { p.fireWeakNext = false; p.fireWeakNow = false; }   // 兑现即消费`
-**它是死开关**（浏览器与所有 vm 沙箱都没有 `process` ⇒ 恒 false ⇒ 删掉**行为零变化** ✓）—— 但**必须自己验证这一点**，别只信这句话。
+（现状：`:163` 已改为无条件的 `p.fireWeakNext = false;`，另两行删除 ✓。）
 
-**执行顺序（一步都不能跳，中间任何一步红了就停下来修，不要推半个指纹变更）**：
-1. **先证明"零变化"**（删之前）：`git show HEAD:js/core/resolve.js` 取出旧文件，与当前文件分别跑同一批定种子对局
-   （例如 `tools/spec-run.mjs` + 一段固定 seed 的自对局），逐局结果、伤害、回合数必须**完全一致**；
-2. 删三处（上面 `:294` / `:163` / `:304`）：`:163` 改为**无条件** `p.fireWeakNext = false;`，`:294`/`:304` 整行删掉，
-   并把注释改成"（原训练侧实验开关已于 v1.5.15x 删除；死键 ⇒ 删除行为零变化）"；
-3. **门 D122 的声明表要跟着改** ✗：`tools/np-test.mjs` 的 `DEAD_LITERAL` 里删掉 `'js/core/resolve.js'` 一项
-   （否则 D122 会红：实测清单少一个文件 ≠ 声明）；
-4. **重记两个线上包**（D16 会红，必须补）：`node tools/promote-champion2p.mjs js/bundled-champion.js --dry` 先核考卷
-   （**分数应逐位不变** —— 零变化证明的延伸），再走正式重记；3P 侧用 `tools/promote-champion.mjs`
-   （参考它 §"记 `rulesFingerprint`"的注释路径）。**两个包的 `rulesFingerprint` 都要变成新值**；
-5. 全链：`node tools/np-test.mjs`（D16 必须绿）· `node tools/spec-run.mjs` · `node tools/smoke.mjs`；
-6. **记账**：CHANGELOG 单独一条（**明写"指纹换代 + 行为零变化 + 证明方法"**），并在研究日志里记下新指纹值，
-   说明"**此前所有读数属于旧指纹代**"（这是本仓的规矩：指纹改动要单独立项 + 全链重测重记）。
-
-**为什么 DS 没直接做完**：我这一轮上下文已用满，而上面 ④⑤ 要跑两次考卷重记 + 两轮门禁 ⇒ 做不完会留下
-**D16 红的半成品**（`js/core/resolve.js` 是 `FINGERPRINT_FILES` 五件套之一）✗ ⇒ 按仓规**宁可不动**。
+**这次的流程教训（写给以后任何指纹改动）**：本轮证明"零变化"用的**不是** `git show` 取旧文件对跑，而是更省且更强的两条 ——
+① **2P 考卷重测**（760 局，由**专为指纹换代设计**的 `promote-champion2p.mjs` 承担：文档明写"**不动一个权重字节**"，只重测 + 补记 meta）；
+② **3P 只读体检**（`promote-champion.mjs --dry`，明写"**一个文件都不写**"）⇒ 拿到"分数逐位不变"的证据后，**定点刷新 meta 指纹**即可，
+**不必**走换包流程（非 dry 会动槽位 = 违反"不 promote"）。两条证据都来自**两个包各自的官方口径**，比自造脚本更可信 ✓。
 
 ---
 

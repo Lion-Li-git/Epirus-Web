@@ -4494,7 +4494,7 @@ t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定）：train-3p 命中�
     { env: Object.assign({}, process.env, { EPIRUS_PASSIVE_FIELD: '0.34', EPIRUS_ALLOW_DARK: '1', EPIRUS_BAND_DIR: dir2, EPIRUS_ARM: 'nptest-dark' }), encoding: 'utf8', timeout: 300000 });
   ok(okRun.status === 0, 'EPIRUS_ALLOW_DARK=1 必须放行（实测 exit=' + okRun.status + '）');
   /* ③ 静态：引擎里"字面读 process.env"的清单（新增一处 ⇒ 红；修掉一处 ⇒ 也要来改这份清单） */
-  const DEAD_LITERAL = { 'js/core/resolve.js': ['EPIRUS_FIREWEAK_PERSIST'], 'js/train/evo.js': ['EPIRUS_PASSIVE_FIELD'] };
+  const DEAD_LITERAL = { 'js/train/evo.js': ['EPIRUS_PASSIVE_FIELD'] };
   const found = {};
   const walk = function (d) {
     for (const nm of readdirSync(d)) {
