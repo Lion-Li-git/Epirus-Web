@@ -1,3 +1,22 @@
+## v1.5.162 — 可行性五道的**样本量收进单一来源** `audit-lib.feasPlan`（§N17 · 用户批准）+ 门 D125 —— 顺带翻出服务器路径把 n **硬编码**成 60/20/20
+
+> **病（§N16 实测，不是猜）**：同一个候选在三条路径上读出不一样 —— `promote-champion` 的 `selfPlay`/`reflectWall` 吃 `--games`（默认 **20**）、
+> `train-best` 的 3P 栏默认 **120** ⇒ 同包 **墙 17.85 vs 18.04、G(multi) 4.76 vs 4.80**；统一时又翻出 `train-server` 把
+> **seat 60 / wall 20 / aggr 20 硬编码**在服务器路径里（而 `champ-audit` 的注释自己写着"座位探针 ≥100 才有判别力"）。
+> ⇒ "五道"看着是一个名字，其实是**三把尺子**；这四个 n 的默认值当时抄在 4 个文件里（本仓"量具抄两遍"家族的又一例）。
+>
+> **改法**：`FEAS_N_DEFAULTS` + `feasPlan(env, over)`（优先级 **调用点显式 override > env > 默认**），
+> 四个入口（`promote-champion` / `train-best` 3P 栏 / `champ-audit` / `train-server`）全部改读它；`train-best` 的 `EPIRUS_TB3P_GAMES` 不设时**与体检同尺**。
+> 并且**读数必须自带尺子**：体检行现在印 `（与训练落盘同源 · 样本量 n=20/aggr40/seat100）`，3P 栏印 `[3P栏 n=20/aggr40/seat100]`。
+>
+> **门 D125**：`feasPlan` 优先级/非法值回落（`abc`、`0` 都不许变成 NaN 或 0 局空读数）+ **反抄扫描**（`EPIRUS_(SEAT|AGGR|DENSITY|CHARGE)_GAMES || <数字>` 只许出现在 `audit-lib`）
+> + 行为式（迷你收口臂不设 `TB3P_GAMES` ⇒ 必须打印体检那把尺子）。**门第一次跑就抓到我把优先级写反（env 赢了显式 override）**，已修。
+>
+> **零变化证明**：`GATE4_GAMES=40` 下重跑现役 `v7cmin4-31` 体检 ⇒ 座位 12.5pt · G 4.44 · G(long) 3.43 · 墙 21 · 场A 35% · 场B 0.33 **逐字同改前** ✓
+> （唯一变化是多印了尺子）。`train-server` 那处**只记录不阻断**（出厂门槛在 `promote-champion`），所以改的是读数口径、不是判定；
+> 它那里还有一处更深的分叉**没动**：G 用 `mirrorHealth` 而 CLI 用 `selfPlay` ⇒ 记进 §N17 待裁。
+> np **172/172** · spec **52/52** · smoke OK · 指纹仍 `71b5927f` ✓（改动全在 `tools/`+`server/`）。
+
 ## research(0922 · qoder §N16 = §N14 同配方重跑，唯一变量是"当选面有了 3P 眼" · 不升版本 · 未 promote · 两槽未动) —— **P1 不是纸面修复：上一臂那个"3P 双 0"的当选者被否决了**
 
 > 训练部分与 §N14 **逐字复现**（三候选 `score`/`avg` 全同：−1.000·88% / 0.964·98% / 0.966·98%）⇒ 单变量成立。

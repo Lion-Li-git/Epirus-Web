@@ -24,7 +24,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan } from './audit-lib.mjs';
 /* v1.5.152（DS 09-22 · 用户裁定"把真桌 ε=0.2 接进体检，只记录不阻断"）：
  * **产品代理栏** —— 单一来源：借 `behavior-profile.mjs` 的 `fieldProfile`（不抄第二份实现；该模块被 import 时不跑 main）。
  * 依据（`docs/RESEARCH-LOG-2026-09-22-ds.md` §7）：同一包同一 ε=0，**镜像**装配电磁炮 4.30 每局、
@@ -94,7 +94,14 @@ const W = sandbox();
  * 对它们返回 **null** ⇒ 体检直接崩（实测 eco-34.bak：unpack(j)=null / unpack(j,true)=3337 位）。
  * 规矩见 `audit-lib.loadChamp` 的注释："测量工具必须能读历史形状 —— 保持原生形状读取，不要嵌入"。 */
 const params = W.EpirusPolicy.unpack(JSON.parse(packJson), true);
-const G = Number(flag('games', 20));
+/* v1.5.162（§N17）：五道的样本量改成**单一来源** `audit-lib.feasPlan` —— 原先 `--games` 默认 20 与
+ * `EPIRUS_*_GAMES` 的默认值在这里各写一份，而 `train-best` 的 3P 栏另写一份 ⇒ 同一个包两处读出 墙 17.85 vs 18.04。
+ * `--games=` 仍是本工具的显式 override（优先级最高），并且**必须**把 n 印在读数旁边。 */
+const FEAS_N = feasPlan(process.env, (function () {
+  const h = process.argv.find(function (a) { return a.indexOf('--games=') === 0; });
+  return h ? { games: Number(h.split('=')[1]) } : null;
+})());
+const G = FEAS_N.games;
 const sp = selfPlay(W, params, 'multi', G);
 /* v1.5.145（用户裁定"两个模式都判"）：long 也跑一份**自对局**并进阻断（与 multi 同一条线 3）。
  * 动因：阻断项原本只取 multi ⇒ 现役包 multi 4.44 过门，而 long G_eff 2.79 < 3 无人管（用户追问"这怎么过的门"）。 */
@@ -169,7 +176,7 @@ if (fPass.noThreatStanceRate > 0.6) fails.push('E 无威胁时摆架势 ' + (fPa
  * 旧口径（`fieldRate('active')`）量的是"1 席进攻者 + 4 席冠军自己"的自对局均衡，所有人 22~35%、
  * 门槛 35%→25% 之后仍靠 `--force` 越过 ⇒ 考核依据本身有问题（见 CHANGELOG v1.5.61 的代码证据）。
  * 新口径的判别力：线上包 13% ✗ / 种子 27% ✓ / eco-34 25% ✓ ⇒ 阈值 20% 首次能把已知好与已知坏分开。 */
-const agg = aggressionProfile(W, params, Number(process.env.EPIRUS_AGGR_GAMES || 40));
+const agg = aggressionProfile(W, params, FEAS_N.aggr);
 console.log('  场A 被集火还手率 = ' + (agg.fieldA.atk * 100).toFixed(0) + '%（造成伤害 ' + agg.fieldA.dealtPerGame.toFixed(2) +
   '/局，承受 ' + agg.fieldA.takenPerGame.toFixed(2) + '/局，胜率 ' + (agg.fieldA.winRate * 100).toFixed(0) + '%）' +
   '  场B 无压进攻 = ' + (agg.fieldB.atk * 100).toFixed(0) + '%（伤害 ' + agg.fieldB.dealtPerGame.toFixed(2) + '/局）' +
@@ -180,7 +187,7 @@ if (agg.fieldA.atk < 0.20) fails.push('F 被集火还手率 ' + (agg.fieldA.atk 
  * 玩家真正遇到的对手严重偏座；而此前所有体检项都看不见这件事。
  * 判据按复核建议：**前置"分出胜负 ≥30%"**（平局过多时"各座≈0%"是空读数）+ **极差 ≥30pt ⇒ 拒**。
  * 口径一律百分点（曾把"胜场数差"当百分点报出去 ⇒ 结论反了，见 CHANGELOG v1.5.57）。 */
-const ss = seatSymmetry(W, params, 'multi', Number(process.env.EPIRUS_SEAT_GAMES || 100));
+const ss = seatSymmetry(W, params, 'multi', FEAS_N.seat);
 if (ss.verdict === 'biased') {
   fails.push('座位对称性：5 席同策略下某座胜率极差 ' + ss.spread.toFixed(0) + 'pt（≥30pt）⇒ 偏座（' +
     ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '，判胜 ' + ss.decisive + ' 局）');
@@ -198,13 +205,13 @@ if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) 
  * 那会连带否决"换回历史冠军"这条路径）⇒ 见 CHANGELOG v1.5.71 的说明。 */
 /* v1.5.90（第八轮复核 §8-3）：第 6 道判据的两个输入必须在 `feasibilityOf` **之前**算出来（它要进 meta/notes）。
  * 两个量：① 珠经济**双向**（得珠 / 花珠率）② **输出密度**（每回合出手伤害 / 按ジ占比）。 */
-const dens = densityProfile(W, params, 'long', Number(process.env.EPIRUS_DENSITY_GAMES || 20));
-const chgE = chargeProfile(W, params, 'long', Number(process.env.EPIRUS_CHARGE_GAMES || 40));
+const dens = densityProfile(W, params, 'long', FEAS_N.density);
+const chgE = chargeProfile(W, params, 'long', FEAS_N.charge);
 const feas = feasibilityOf({ seat: ss, G: sp, G2: spL, G2name: 'long', wall: rw, aggr: agg,
   density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chgE.gained, spentRate: chgE.spentRate,
     expiredPerGame: chgE.games ? chgE.expired / chgE.games : 0,
     zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
-console.log('   可行性（与训练落盘同源）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
+console.log('   可行性（与训练落盘同源 · 样本量 ' + FEAS_N.tag + '）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
   '（座位 ' + feas.seatSpread + 'pt/' + feas.seatVerdict + ' · G(multi) ' + feas.G +
   (feas.G2 != null ? ' · **G(' + feas.G2name + ') ' + feas.G2 + '**' : '') + ' · 墙 ' + feas.wallDmg +
   '/局 · 场A ' + (100 * feas.fieldA).toFixed(0) + '% · 场B 清场 ' + feas.fieldBClears + '/局' +

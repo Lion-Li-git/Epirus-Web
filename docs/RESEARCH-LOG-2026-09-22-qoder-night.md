@@ -561,3 +561,21 @@ git checkout js/bundled-champion.js                                       # TB_O
 **结案动作**：路 B（对手池/收割席）到此为一段落——**不加密度档、不再换旋钮**；
 产物 `v7xn16a-2p.bak` / `v7xn16a-band1.bak` 点名留档；**两槽未动**（3P=`v7cmin4-31` · 2P=`v7xfer44c13-2p`）；
 `git status` 干净（`EPIRUS_TB_OUT` 全程没碰槽与缓存戳）。
+
+---
+
+## §N17 `n` 单一来源（用户批准 · 已发 v1.5.162）+ 删 `EPIRUS_PASSIVE_FIELD`（同批批准，见 §N18）+ 分支实况
+
+**做完了什么**：`FEAS_N_DEFAULTS`/`feasPlan(env, over)` 落在 `audit-lib`，四个入口改读它
+（`promote-champion` / `train-best` 的 3P 栏 / `champ-audit` / `train-server`），读数一律自带尺子标签。
+**统一时翻出的第二处**：`train-server` 把 seat **60** / wall 20 / aggr **20** 硬编码在服务器路径里 —— 而 `champ-audit` 注释写着"座位探针 ≥100 才有判别力"
+⇒ 浏览器训练路径记的 `meta.feasibility` 一直和 CLI 体检不是一把尺子（好在那处**只记录不阻断**，出厂门槛在 `promote-champion`）。
+**门 D125 第一次跑就抓到我自己**：`feasPlan` 优先级写成"env 赢过显式 override"⇒ 修成 **override > env > 默认**。
+**零变化证明**：`GATE4_GAMES=40` 重跑 `v7cmin4-31` ⇒ 座位 12.5pt / G 4.44 / G(long) 3.43 / 墙 21 / 场A 35% / 场B 0.33 **逐字同改前**。
+
+**留给裁定的下一处口径分叉（我没动）**：`train-server` 的 **G 用 `mirrorHealth`**，而 `promote-champion`/`train-best` 的 G 用 `selfPlay`
+⇒ 同一个"有效技能数"名字下其实两种量具（`feasibilityOf` 只吃数字、看不出来源）。要统一得先定哪一种是产品口径 —— 这是判据级决定，不在这次范围内。
+
+**分支实况（用户 09-22 手动删过一轮）**：本地只剩 `main` + `qoder-explore-0921night`；远端只剩 `origin/main` + `origin/qoder-explore-0921night`
+（DS 交接件里说的"远端 5 条"已被删到只剩这 1 条）。`git branch --merged main` 显示该分支**已完全并入 main**、`main..该分支` 为空 ⇒ 删它不丢任何提交，
+但删分支是对外可见动作，**等用户点头**再做。

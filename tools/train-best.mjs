@@ -17,7 +17,7 @@ import { rulesFingerprint } from './rules-fingerprint.mjs';
 import { pickBestByExam, regressionsOf, fixesOf, vetoBy3p } from './pick-best.mjs';
 /* v1.5.161（P1）：3P 第二栏必须用**同一批量具 + 同一个 `feasibilityOf` 阈值**（`promote-champion` 与 `train-server` 都吃它），
  * 否则"当选面过了、体检没过"这种两套口径的裂缝又会出现（本仓为"量具抄两遍"栽过至少四次）。 */
-import { selfPlay, reflectWall, aggressionProfile, seatSymmetry, densityProfile, chargeProfile, feasibilityOf, sandbox } from './audit-lib.mjs';
+import { selfPlay, reflectWall, aggressionProfile, seatSymmetry, densityProfile, chargeProfile, feasibilityOf, sandbox, feasPlan } from './audit-lib.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -59,11 +59,14 @@ function __seedSandbox(sbox, seed) {
  * 而当选者 band1 的 3P 侧是 **场B 0.00 + 墙 0.00/局**。**择优函数从头到尾没有 3P 这一栏** ⇒ 本臂目标被自己人扔掉。
  * 修法：`EPIRUS_TB3P=1` 时给每粒**训练候选**跑一遍 3P 五道（与 promote 同一批 `audit-lib` 量具、同一 `feasibilityOf` 阈值，
  * 不另抄一份），不过者**取消当选资格**；全不过 ⇒ `exit 9` 响亮（绝不"看不见就当过"、也绝不退回单栏硬选一个烂的）。
- * 默认 0 ⇒ 一行都不跑 ⇒ **行为逐字不变** ✓。`EPIRUS_TB3P_GAMES` 默认 120 = 本会话预注册的口径。
+ * 默认 0 ⇒ 一行都不跑 ⇒ **行为逐字不变** ✓。`EPIRUS_TB3P_GAMES` 显式给的才换（默认与体检同尺）。
  * `EPIRUS_TB_OUT=<路径>`：产物写去别处（**门与探针因此不必碰 2P 槽**；§N14 那次 `train-best` 顺手把
  * `index.html` 的 `?v=` 缓存戳改了、槽内容还原了而戳没还 ⇒ 工作区脏，这条也是治它的）。 */
 const TB3P = Number(process.env.EPIRUS_TB3P || 0);
-const TB3P_GAMES = Number(process.env.EPIRUS_TB3P_GAMES || 120);
+/* v1.5.162（§N17）：默认**跟随 `audit-lib.feasPlan`**（= 体检同一套 n），要换必须显式给 `EPIRUS_TB3P_GAMES`。
+ * 原先这里默认 120、而 promote 的 `--games` 默认 20 ⇒ 同一包两处读出 墙 17.85 vs 18.04（"五道"看着一个名字、其实是两副尺子）。 */
+let TB3P_PLAN_GAMES = 0;   // 实际生效的计划 n（写进 meta：这栏到底用了多少局必须可查，不许口口相传）
+const TB3P_GAMES = process.env.EPIRUS_TB3P_GAMES != null && process.env.EPIRUS_TB3P_GAMES !== '' ? Number(process.env.EPIRUS_TB3P_GAMES) : null;
 const TB_OUT = process.env.EPIRUS_TB_OUT || null;
 const N = Number(process.argv[2] || 3);
 const GENS = Number(process.argv[3] || 500);
@@ -165,21 +168,25 @@ const WR_TOL = 0.03;
 let pool = cands;
 if (TB3P > 0) {
   const W3 = sandbox();
+  const FN = feasPlan(process.env, TB3P_GAMES ? { games: TB3P_GAMES } : null);
+  const G3 = FN.games;
+  TB3P_PLAN_GAMES = G3;
+  TB3P_PLAN_GAMES = G3;
   for (const c of cands) {
     if (c.isIncumbent || !c.params) { c.col3p = { measured: false, skipped: true }; continue; }
-    const sp = selfPlay(W3, c.params, 'multi', TB3P_GAMES);
-    const spL = selfPlay(W3, c.params, 'long', TB3P_GAMES);
-    const rw = reflectWall(W3, c.params, 'long', TB3P_GAMES);
-    const agg = aggressionProfile(W3, c.params, Number(process.env.EPIRUS_AGGR_GAMES || 40));
-    const ss = seatSymmetry(W3, c.params, 'multi', Number(process.env.EPIRUS_SEAT_GAMES || 100));
-    const dens = densityProfile(W3, c.params, 'long', Number(process.env.EPIRUS_DENSITY_GAMES || 20));
-    const chgE = chargeProfile(W3, c.params, 'long', Number(process.env.EPIRUS_CHARGE_GAMES || 40));
+    const sp = selfPlay(W3, c.params, 'multi', G3);
+    const spL = selfPlay(W3, c.params, 'long', G3);
+    const rw = reflectWall(W3, c.params, 'long', G3);
+    const agg = aggressionProfile(W3, c.params, FN.aggr);
+    const ss = seatSymmetry(W3, c.params, 'multi', FN.seat);
+    const dens = densityProfile(W3, c.params, 'long', FN.density);
+    const chgE = chargeProfile(W3, c.params, FN.charge);
     const feas = feasibilityOf({ seat: ss, G: sp, G2: spL, G2name: 'long', wall: rw, aggr: agg,
       density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chgE.gained, spentRate: chgE.spentRate,
         expiredPerGame: chgE.games ? chgE.expired / chgE.games : 0, zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
-    c.col3p = { measured: true, ok: !!feas.ok, fails: feas.fails || [], n: TB3P_GAMES,
+    c.col3p = { measured: true, ok: !!feas.ok, fails: feas.fails || [], n: G3, plan: FN.tag,
       seat: feas.seatSpread, G: feas.G, G2: feas.G2, wall: feas.wallDmg, fieldA: feas.fieldA, fieldBClears: feas.fieldBClears };
-    console.log('[3P栏 n=' + TB3P_GAMES + '] ' + c.tag + ' ' + (feas.ok ? '✅ 五道全过' : '✗ 不过：' + (feas.fails || []).join('；')) +
+    console.log('[3P栏 ' + FN.tag + '] ' + c.tag + ' ' + (feas.ok ? '✅ 五道全过' : '✗ 不过：' + (feas.fails || []).join('；')) +
       '（G ' + feas.G + ' · G(long) ' + feas.G2 + ' · 墙 ' + feas.wallDmg + '/局 · 场A ' + (100 * feas.fieldA).toFixed(0) + '% · 场B 清场 ' + feas.fieldBClears + '/局 · 座位 ' + feas.seatSpread + 'pt）');
   }
   const veto = vetoBy3p(cands);
@@ -253,7 +260,7 @@ const meta = {
     fieldBClears: best.col3p.fieldBClears != null ? Number(best.col3p.fieldBClears) : null,
     wall: best.col3p.wall != null ? Number(best.col3p.wall) : null,
     G2: best.col3p.G2 != null ? Number(best.col3p.G2) : null, fails: best.col3p.fails || [] } : null,
-  tb3p: TB3P > 0 ? TB3P_GAMES : 0,
+  tb3p: TB3P_PLAN_GAMES,
   seed: __SEED, workers: stepAsync.workers, rulesFingerprint: rulesFingerprint()
 };
 writeFileSync(OUT,

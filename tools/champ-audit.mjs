@@ -21,7 +21,7 @@
  */
 import { readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT, sandbox, loadChamp, exam, selfPlay, fieldRate, seatSymmetry, chargeProfile, reflectWall, aggressionProfile } from './audit-lib.mjs';
+import { ROOT, sandbox, loadChamp, exam, selfPlay, fieldRate, seatSymmetry, chargeProfile, reflectWall, aggressionProfile , feasPlan} from './audit-lib.mjs';
 
 const flag = function (n, d) {
   const hit = process.argv.find(function (a) { return a.indexOf('--' + n + '=') === 0; });
@@ -38,7 +38,7 @@ const EXG = Number(flag('exam-games', 20));
       ' ⇒ 这些参数**已被忽略**，本次用的是默认值（复核 §8 踩过这个坑）。');
   }
 }
-const SEAT_G = Number(process.env.EPIRUS_SEAT_GAMES || 100);   // v1.5.57：座位探针局数（≥100 才有判别力）
+const SEAT_G = feasPlan(process.env).seat;   // v1.5.162：默认值收进 feasPlan（值仍是 100 ⇒ 读数不变）   // v1.5.57：座位探针局数（≥100 才有判别力）
 const GAMES2 = Number(process.env.EPIRUS_CHARGE_GAMES || GAMES);   // v1.5.58：蓄能探针局数
 const SP_MODE = flag('mode', 'multi');   // 自对局那几列用哪个模式（multi 默认；看"集体防御"要用 long）
 

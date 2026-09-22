@@ -682,10 +682,16 @@ async function runTrainN(gens, cfg) {
   if (finalParams && process.env.EPIRUS_FEASIBILITY !== '0') {
     try {
       const audit = await import('../tools/audit-lib.mjs');
-      const ss = audit.seatSymmetry(sb, finalParams, 'multi', Number(process.env.EPIRUS_SEAT_GAMES || 60));
+      /* v1.5.162（§N17）：这三处的 n 原先是**硬编码在服务器路径里**（seat 60 / wall 20 / aggr 20），
+       * 而 CLI 体检用的是 seat 100 / wall 20 / aggr 40 ⇒ 同一个包两条路径读出的"五道"不是一把尺子
+       * （champ-audit 的注释自己写着"座位探针 ≥100 才有判别力"）。现在统一走 `audit.feasPlan`。
+       * 本处**只记录不阻断**（出厂门槛在 promote-champion），所以改的是读数口径、不是判定；
+       * 另有一处更深的分叉没动：这里的 G 用 `mirrorHealth`，CLI 用 `selfPlay` —— 记进 §N17 待裁。 */
+      const FPN = audit.feasPlan(process.env);
+      const ss = audit.seatSymmetry(sb, finalParams, 'multi', FPN.seat);
       const gg = T.mirrorHealth(finalParams, 40, n, mode);
-      const rw = audit.reflectWall(sb, finalParams, 'long', 20);
-      const ag = audit.aggressionProfile(sb, finalParams, 20);
+      const rw = audit.reflectWall(sb, finalParams, 'long', FPN.games);
+      const ag = audit.aggressionProfile(sb, finalParams, FPN.aggr);
       /* v1.5.71：这五道阈值**不再写在这里** —— 与 tools/promote-champion.mjs 共用 audit-lib 的单一真源
        * （复核 §4-6：两头各写一份会漂；线上包是经 upgrade-pack 换的 ⇒ meta 里没有 feasibility）。 */
       feasibleInfo = audit.feasibilityOf({ seat: ss, G: gg, wall: rw, aggr: ag });

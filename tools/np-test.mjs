@@ -22,7 +22,7 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
   'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js', 'js/bundled-champion-3p.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
-import { stanceProfile, aggressionProfile, feasibilityOf, attackAttribution } from './audit-lib.mjs';
+import { stanceProfile, aggressionProfile, feasibilityOf, attackAttribution, feasPlan, FEAS_N_DEFAULTS } from './audit-lib.mjs';
 
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, X = sb.window.EpirusResolve, Play = sb.window.EpirusPlay;
 const T = sb.window.EpirusTrainer, Bots = sb.window.EpirusBots, Pol = sb.window.EpirusPolicy;
@@ -4639,11 +4639,54 @@ t('D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证"band2 被 hil
     encoding: 'utf8', timeout: 600000,
   });
   const so = String(run.stdout || '') + String(run.stderr || '');
-  ok(/\[3P栏 n=20\]/.test(so), '开了 EPIRUS_TB3P 必须真跑 3P 栏并打印读数（实测输出无该行 = 又一处死作用点）');
+  ok(/\[3P栏 n=20[\/]/.test(so), '开了 EPIRUS_TB3P 必须真跑 3P 栏并打印读数（实测输出无该行 = 又一处死作用点）');
   ok(run.status === 0 || run.status === 9, '只许两种收场：0=有合格候选并择优、9=全否决响亮退出（实测 exit=' + run.status + '）\n' + so.slice(-500));
   if (run.status === 9) ok(so.indexOf('不接受静默退回单栏择优') >= 0, 'exit 9 必须说清"不接受退回单栏"');
   else ok(existsSync(out), 'exit 0 时产物必须写在 EPIRUS_TB_OUT 指的位置');
   ok(so.indexOf('已写入 js/bundled-champion.js') < 0, '改道跑时**一个字都不许碰 2P 槽**');
+});
+
+t('D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测同一包两条路径读出 墙 17.85 vs 18.04）', function () {
+  /* 病（§N16 实测，不是猜）：`promote-champion` 的 selfPlay/reflectWall 吃 `--games`（默认 20）、
+   * `train-best` 的 3P 栏默认 120、`train-server` 干脆把 seat 60 / wall 20 / aggr 20 **硬编码**在服务器路径里
+   * （而 `champ-audit` 的注释写着"座位探针 ≥100 才有判别力"）⇒ 同一个包三条路径三把尺子，读数互相不等。
+   * 本仓为"量具抄两遍"栽过至少四次，这次抄的是**默认值**。 */
+  /* ① 纯函数：默认 / env / 显式 override 的优先级，以及非法值必须回落到默认而不是变成 0 */
+  eq(FEAS_N_DEFAULTS.games, 20, '体检默认 n 仍是 20（改了 = 历史读数口径变了，得走裁定）');
+  eq(FEAS_N_DEFAULTS.seat, 100, '座位探针默认 100（champ-audit 注释：≥100 才有判别力）');
+  let p = feasPlan({});
+  eq(p.games, 20, '空 env ⇒ 默认'); eq(p.aggr, 40, 'aggr 默认'); eq(p.seat, 100, 'seat 默认');
+  p = feasPlan({ EPIRUS_FEAS_GAMES: '120' });
+  eq(p.games, 120, 'EPIRUS_FEAS_GAMES 必须能整体换尺');
+  p = feasPlan({ EPIRUS_FEAS_GAMES: '120' }, { games: 40 });
+  eq(p.games, 40, '调用点显式 override 必须赢过 env（体检与训练栏各自要能声明自己用了多少局）');
+  eq(feasPlan({ EPIRUS_FEAS_GAMES: 'abc' }).games, 20, '非法 n 必须回落默认（不许变 NaN 把五道全判糊）');
+  eq(feasPlan({ EPIRUS_SEAT_GAMES: '0' }).seat, 100, 'n=0 必须回落默认 —— 0 局探针 = 空读数冒充测量');
+  ok(/n=\d+\/aggr\d+\/seat\d+/.test(feasPlan({}).tag), '必须自带可打印的尺子标签（读数旁边不印 n = 可疑）');
+  /* ② 反抄：五道用到的四个 n 的字面默认值，**只许出现在 audit-lib** */
+  const dupes = [];
+  const mjsFiles = readdirSync('tools').filter(function (x) { return /\.mjs$/.test(x); }).map(function (x) { return 'tools/' + x; })
+    .concat(readdirSync('server').filter(function (x) { return /\.mjs$/.test(x); }).map(function (x) { return 'server/' + x; }));
+  for (const f of mjsFiles) {
+    if (f.indexOf('audit-lib') >= 0) continue;
+    const hits = (readFileSync(f, 'utf8').match(/EPIRUS_(SEAT|AGGR|DENSITY|CHARGE)_GAMES\s*\|\|\s*\d/g) || []);
+    if (hits.length) dupes.push(f + ' → ' + hits.join(','));
+  }
+  eq(dupes.join(' | '), '', '五道的 n 不许再有任何第二处默认（统一走 feasPlan）');
+  ok(readFileSync('tools/promote-champion.mjs', 'utf8').indexOf("flag('games', 20)") < 0, 'promote 不许留自己的 --games 默认');
+  for (const f of ['tools/promote-champion.mjs', 'tools/train-best.mjs', 'tools/champ-audit.mjs', 'server/train-server.mjs']) {
+    ok(readFileSync(f, 'utf8').indexOf('feasPlan') >= 0, f + ' 必须改用 feasPlan（漏一个 = 那条路径继续用自己的尺子）');
+  }
+  /* ③ 行为式（判作用点，不判声明）：迷你收口臂不设 `EPIRUS_TB3P_GAMES` ⇒ 3P 栏必须打印体检那把尺子 */
+  const dir = mkdtempSync(join(tmpdir(), 'd125-'));
+  const r = spawnSync(process.execPath, ['tools/train-best.mjs', '1', '3'], {
+    env: Object.assign({}, process.env, { EPIRUS_SEED: '31', EPIRUS_TB3P: '1', EPIRUS_TB_OUT: join(dir, 'o.js'), EPIRUS_ARM: 'd125' }),
+    encoding: 'utf8', timeout: 600000,
+  });
+  const so = String(r.stdout || '');
+  ok(/\[3P栏 n=20\/aggr40\/seat100\]/.test(so),
+    '不设 EPIRUS_TB3P_GAMES 时 3P 栏必须与体检同尺（实测打印的是：' + ((so.match(/\[3P栏[^\]]*\]/) || ['（没跑这一栏）'])[0]) + '）');
+  ok(r.status === 0 || r.status === 9, '迷你臂只许 0/9 收场（实测 ' + r.status + '）');
 });
 
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {

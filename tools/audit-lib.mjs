@@ -410,6 +410,35 @@ const _n = function (x, d) { return (isFinite(x) ? Number(Number(x).toFixed(d ==
  * ⇒ 保持 `false`。翻转条件不变：**等真有一个可上线候选过了它**。 */
 export const DENSITY_BLOCK = false;
 
+/* ===== v1.5.162（qoder §N17）：可行性五道的**样本量计划 = 单一来源** =====
+ * 病（§N16 实测，不是猜）：同一个候选在两个入口读出不一样 ——
+ *   `promote-champion` 的 `selfPlay`/`reflectWall` 吃 `--games`（默认 **20**），而 `train-best` 的 3P 栏把
+ *   `n=120` 喂给全部量具 ⇒ 同一包 **墙 17.85 vs 18.04、G(multi) 4.76 vs 4.80**。
+ * 差得很小，但这正是本仓反复付过学费的一族（v1.5.18："G 在小样本下**系统性偏低**，n5:3.08 / n20:4.24 ⇒ 用 n=10 卡 G<3 等于把噪声当结论"）。
+ * 而 `EPIRUS_SEAT_GAMES`/`EPIRUS_AGGR_GAMES`/`EPIRUS_DENSITY_GAMES`/`EPIRUS_CHARGE_GAMES` 的默认值当时**抄在四个文件里**
+ * （promote-champion / train-best / champ-audit / train-server）⇒ 改一处就分叉。
+ * 规矩：**一个计划、一处默认**；入口要换 n 必须显式传 override，并且**把 n 印在读数旁边**（不印 n 的五道读数视为可疑）。 */
+export const FEAS_N_DEFAULTS = { games: 20, aggr: 40, seat: 100, density: 20, charge: 40 };
+export function feasPlan(env, over) {
+  const e = env || {};
+  const pick = function (k, envKey, dft) {
+    /* 优先级：**调用点显式 override > env > 默认**（D125① 钉这条 —— 我第一版写反成 env 赢，被门当场抓住） */
+    const v = k != null && k !== '' ? k : (e[envKey] != null && e[envKey] !== '' ? e[envKey] : dft);
+    const n = Number(v);
+    return (isFinite(n) && n > 0) ? n : dft;
+  };
+  const o = over || {};
+  const p = {
+    games: pick(o.games, 'EPIRUS_FEAS_GAMES', FEAS_N_DEFAULTS.games),
+    aggr: pick(o.aggr, 'EPIRUS_AGGR_GAMES', FEAS_N_DEFAULTS.aggr),
+    seat: pick(o.seat, 'EPIRUS_SEAT_GAMES', FEAS_N_DEFAULTS.seat),
+    density: pick(o.density, 'EPIRUS_DENSITY_GAMES', FEAS_N_DEFAULTS.density),
+    charge: pick(o.charge, 'EPIRUS_CHARGE_GAMES', FEAS_N_DEFAULTS.charge)
+  };
+  p.tag = 'n=' + p.games + '/aggr' + p.aggr + '/seat' + p.seat;   // 印在读数旁边用
+  return p;
+}
+
 export function feasibilityOf(o) {
   const s = (o && o.seat) || {}, g = (o && o.G) || {}, w = (o && o.wall) || {}, a = (o && o.aggr) || {};
   /* ===== v1.5.145（用户裁定："两个模式都判"）：第二个模式（long = 长程，产品常用模式）的 G 也**阻断** =====
