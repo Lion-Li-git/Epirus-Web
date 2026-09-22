@@ -4423,6 +4423,23 @@ t('D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（�
     'banner 必须打出 2P 对手（非空枪自检就靠这一行）');
 });
 
+t('D117 口径工具（v1.5.151）：防御类必须**从 rules.js 取表**（手写正则漏过"金刚盾"）+ 行为剖面必须能一次报多个装配', function () {
+  /* 病（用户 09-22 追问"ε=0 下防御 0% 也不是很对吧"时查出两件事）：
+   * ① `tools/log-behavior.mjs`（真机栏）的防御类是**手写正则** `/防御|反弹|八卦阵|原型制御|金钟|镜面/`：
+   *    匹配不上真卡名「**金刚盾**」（不是"金钟"）、漏了「无极变速/藤甲/全息屏障」、还列了不存在的「镜面」
+   *    ⇒ 真机栏的防御占比长期是**漏数**的结果（修后 23.0% → **24.8%**）。
+   * ② **装配是比 ε 更大的口径因素**：同一包同一 ε=0，镜像（5 席同包）电磁炮 **4.30/局**，
+   *    真桌（1 冠 + 4 脚本）只有 **0.10/局**（43 倍）⇒ 一个口径点必须同时报**装配**，否则读数会被当成"包的能力"。 */
+  const lb = readFileSync('tools/log-behavior.mjs', 'utf8');
+  ok(lb.indexOf('js/core/rules.js') >= 0 && lb.indexOf('RUL.CAT.DEFENSE') >= 0,
+    '防御类必须从规则表取（手写正则漏过真卡名 —— 本仓"同一份名单抄两遍"栽过三次，这是第四个同类隐患）');
+  ok(lb.indexOf('DEF_NAMES') >= 0 && lb.indexOf('取不到防御类卡') >= 0, '取不到必须响（不许静默退化成"数 0 个"）');
+  const bp = readFileSync('tools/behavior-profile.mjs', 'utf8');
+  ok(bp.indexOf('FIELDS') >= 0 && bp.indexOf('for (const fld of FIELDS)') >= 0,
+    '行为剖面必须能一次报多个装配（`--field=self,pool`）⇒ 否则"装配口径"永远缺一栏、读数继续被误读');
+  ok(bp.indexOf("flag('field', 'mixed')") >= 0, '默认口径不许被改（历史读数靠它可比）');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };

@@ -13,6 +13,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import vm from 'node:vm';
 
 const SEAT_ARG = (function () {
   const h = process.argv.find(function (a) { return a.indexOf('--seats=') === 0; });
@@ -35,7 +36,22 @@ const CAP = {
   '狙击枪': /狙击枪/,
   'ジ': /^ジ/
 };
-const DEF_KEY = /防御|反弹|八卦阵|原型制御|金钟|镜面/;
+/* ===== 防御类：**从规则表取**，不再手写正则（v1.5.151 · DS 09-22 · 用户指正后查出）=====
+ * 病：这里原来是手写的 `/防御|反弹|八卦阵|原型制御|金钟|镜面/` ⇒
+ *   · **匹配不上真卡名**：规则表里叫**金刚盾**（不是"金钟"）⇒ 那张卡从来没被数进去；
+ *   · **漏卡**：无极变速 / 藤甲 / 全息屏障（同为 `CAT.DEFENSE`）都不在正则里；
+ *   · **多卡**：镜面根本不存在于卡表；
+ *   ⇒ 真机栏的"防御类占比"长期是**漏数**的结果（用户 09-22 追问"ε=0 防御 0% 也不太对"时查出来的）。
+ * 改法：直接加载 `js/core/rules.js`，取 `cat === CAT.DEFENSE` 的**全部卡**的显示名组正则 ⇒ 单一来源，
+ *   规则表加卡/改名后这里自动跟随（本仓"对手池/基准表各写一遍"栽过三次，这是第四个同类隐患）。 */
+const sbR = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map };
+sbR.window = sbR; sbR.globalThis = sbR;
+vm.runInNewContext(readFileSync('js/core/rules.js', 'utf8'), sbR, { filename: 'js/core/rules.js' });
+const RUL = sbR.window.EpirusRules;
+const DEF_NAMES = Object.keys(RUL.skills).filter(function (k) { return RUL.skills[k].cat === RUL.CAT.DEFENSE; })
+  .map(function (k) { return RUL.skills[k].name; });
+if (!DEF_NAMES.length) { console.error('⛔ 从 js/core/rules.js 取不到防御类卡（卡表结构变了？）'); process.exit(3); }
+const DEF_KEY = new RegExp(DEF_NAMES.map(function (n) { return n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|'));
 
 function list(dir) {
   const out = [];
@@ -90,7 +106,7 @@ for (const f of FILES) {
 const r = function (n) { return (n / games).toFixed(2); };
 console.log('\n=== ' + games + ' 局合计（AI 席 ' + SEAT_ARG.join('/') + ' · 均 ' + (roundsAll / games).toFixed(1) + ' 回合/局）===');
 console.log('  ' + Object.keys(CAP).map(function (k) { return k + ' **' + r(cap[k] || 0) + '**/局'; }).join(' · '));
-console.log('  防御类（防御/反弹/八卦/原型制御/金钟/镜面）**' + r(defTotal.def || 0) + '**/局 · 占 AI 出手 ' +
+console.log('  防御类（' + DEF_NAMES.join('/') + '）**' + r(defTotal.def || 0) + '**/局 · 占 AI 出手 ' +
   (100 * (defTotal.def || 0) / Math.max(1, defTotal.n)).toFixed(1) + '%');
 console.log('\n读法：这一栏 = "真机栏"。千问 DOING-1 要的是"能力项**两栏**（ε=0 与浏览器口径）都达标才写进上线理由"；');
 console.log('      模拟替代不了产品（真人席在场时威胁结构与 ep 节奏都不同）⇒ 真机栏应是**第三个**必看列。');

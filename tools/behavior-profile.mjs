@@ -31,6 +31,11 @@ const GAMES = Number(flag('games', 60));
 const MIRROR = Number(flag('mirror', 40));
 const CHAMPS = String(flag('champion', 'js/bundled-champion-3p.js')).split(',').filter(Boolean);
 const FIELD = flag('field', 'mixed');       // mixed = 1 冠军 + 4 脚本 · self = 5 席同包（DS §10.2 口径）
+/* v1.5.151（DS 09-22 · 用户追问"ε=0 防御 0% 也不太对"时查出）：**装配是比 ε 更大的口径因素** ——
+ * 同一包同一 ε=0，镜像（5 席同包）电磁炮 4.30/局，真桌（1 冠 + 4 脚本）只有 0.10/局（43 倍）。
+ * ⇒ 一个口径点必须同时报**装配**，否则读数会被误读成"这个包的能力"。
+ * 用法：`--field=self,pool`（逗号分隔）⇒ 一次把多个装配并排打出来（见 FIELD_LIST）。 */
+const FIELDS = FIELD.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
 const GAMEMODE = flag('gamemode', 'multi'); // multi(3 血) · long(5 血长程) · standard
 
 const W = sandbox(ROOT);
@@ -118,9 +123,10 @@ for (const file of CHAMPS) {
   console.log('== ' + name + '（参数量 ' + params.length + ' · temp=' + TEMP + ' epsK=' + EPSK + ' · ' + GAMES + ' 局/点）==');
   for (const mode of EPSMODE) {
     for (const eps of EPS) {
-      const t = fieldProfile(params, eps, mode, GAMES, 4100, FIELD, GAMEMODE);
+     for (const fld of FIELDS) {
+      const t = fieldProfile(params, eps, mode, GAMES, 4100, fld, GAMEMODE);
       const m = mirrorProfile(params, eps, mode, MIRROR, 880);
-      console.log('  ε=' + eps + ' ' + mode.padEnd(8) + '[' + FIELD + '/' + GAMEMODE + '] ' +
+      console.log('  ε=' + eps + ' ' + mode.padEnd(8) + '[' + fld + '/' + GAMEMODE + '] ' +
         WATCH.map(function (w) { return w[1] + ' ' + ((t.keys[w[0]] || 0) / GAMES).toFixed(2) + '/局'; }).join(' ') +
         ' 最大ep ' + t.maxEp);
       console.log('        防御 ' + share(t, 'def') + ' 攻击 ' + share(t, 'atk') + ' 环 ' + share(t, 'ring') + ' ジ ' + share(t, 'ji') +
@@ -128,6 +134,7 @@ for (const file of CHAMPS) {
         '  昏手 ' + share(t, 'voided') + ' 残局 MULTI_ONLY 出手 ' + t.endgameMultiOnly +
         '  胜率 ' + (100 * t.wins / GAMES).toFixed(0) + '% 决胜 ' + (100 * t.decisive / GAMES).toFixed(0) + '% 局长 ' + (t.rounds / GAMES).toFixed(1) +
         '  |  镜像破局 ' + (100 * m.dec / m.G).toFixed(0) + '% 局长 ' + (m.rounds / m.G).toFixed(1));
+     }
     }
   }
 }
