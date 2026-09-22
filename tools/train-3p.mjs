@@ -3,6 +3,7 @@
  * 产出：js/bundled-champion-3p.js（window.EPIRUS_CHAMPION_3P）
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 
 /* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
  * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
@@ -120,6 +121,18 @@ function champChooser(params) {
 }
 const XN2_OPPS = [];
 for (const rp of XN2REF_PATHS) {
+  /* v1.5.150 追加（DS 09-22 臂 3 的教训）：`exam` = **直接用 2P 考卷那 20 个基准**当切片对手
+   * （单一来源 `tools/p2-baselines.mjs`，与 `promote-champion2p`/`train-best.evalChamp` 同表）。
+   * 为什么需要：臂 3（冠军 + 9 个多人池脚本）把信号**平均稀释**掉了 ⇒ 退回 0%；而考卷基准全部是
+   * **可打的**（现役 2P 冠军对它们 99%）⇒ 只对着它们打 = 对着**产品判据本身**训 ⇒ 目标与验收一致。 */
+  if (rp === 'exam') {
+    for (const nm in P2_FNAME) {
+      const fn = Bots[P2_FNAME[nm]];
+      if (typeof fn !== 'function') { console.error('[train-3p] ⛔ 考卷基准 EpirusBots.' + P2_FNAME[nm] + ' 不存在（p2-baselines 与 bots.js 漂移）'); process.exit(4); }
+      XN2_OPPS.push({ name: 'exam:' + nm, sel: fn });
+    }
+    continue;
+  }
   let rpParams = null;
   try { rpParams = loadPackParamsAny(rp); } catch (e) { rpParams = null; }
   if (!rpParams) { console.error('[train-3p] ⛔ EPIRUS_XN2REF 读不出包：' + rp + '（拒绝静默退化：无梯度的切片等于白跑）'); process.exit(2); }

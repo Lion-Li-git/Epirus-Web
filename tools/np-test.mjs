@@ -4396,6 +4396,13 @@ t('D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（�
     '参照包读不出必须**立刻退出**（静默退化正是这次踩的坑）');
   ok(t3.indexOf('-band') >= 0 && t3.indexOf('EPIRUS_BAND_DIR') >= 0,
     '必须带内候选落盘，且目录可指（门才测得了它，且不欠 D82 的账）');
+  /* v1.5.150 追加：`exam` 关键词 = 直接用 2P 考卷那 20 个基准当切片对手（与产品判据同表）。
+   * 为什么钉：臂 3 的教训是"混入弱对手 ⇒ 信号被平均稀释 ⇒ 退回常数切片"；而考卷基准**全部可打**
+   * （现役 2P 冠军对它们 99%）⇒ "对着验收标准训"是唯一能让目标与验收一致的路径，这条接线不许悄悄断。 */
+  ok(t3.indexOf("from './p2-baselines.mjs'") >= 0 && t3.indexOf("rp === 'exam'") >= 0,
+    'exam 模式必须接**单一来源** p2-baselines（自己抄一份基准表 = 本仓栽过三次的老坑）');
+  ok(t3.indexOf('exam:') >= 0 && t3.indexOf('p2-baselines 与 bots.js 漂移') >= 0,
+    'exam 模式的基准函数缺失必须响（不许静默少几个对手 ⇒ 验收口径偷偷变窄）');
   /* 行为一：坏参照 ⇒ 训练前就 exit 2（无副作用、不写任何产物）。 */
   const bad = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
     { env: Object.assign({}, process.env, { EPIRUS_XN2W: '1', EPIRUS_XN2REF: 'no/such/pack.bak' }), encoding: 'utf8', timeout: 120000 });
