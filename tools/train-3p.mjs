@@ -58,6 +58,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
+  'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
   'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
@@ -226,6 +227,31 @@ const OPPS = [
   { name: 'mix', sel: Bots.pickMix },
   { name: 'farmer', sel: Bots.pickFarmer }
 ];
+
+/* ===== v1.5.172（qoder §N35）：把**判它的那张桌子**搬进训练（`EPIRUS_COUNTER_OPPS=1`，默认关）=====
+ * 病（`v7xn22a` 实测，不是猜）：那条 400 代大配方终于长出了"兑现广度"（各格净 `G(落地) 3.5~3.9`、4 种真卡打上血，
+ * 现役只有 2.2~2.7），结果 `promote --dry` 把它砍在**行为门**上 ——
+ * `G4 无一行脚本能以 >60% 击败它`：最克它的就是「只防御(不还手)」（85%）与「只枪 1ジ压制」（82%）。
+ * 而这两个原型**根本不在训练桌上**：`OPPS` 里最接近的 `defend` 是"会还手的防御"，`guardSpam`（纯不还手）
+ * 在 `EpirusBots` 里早就有、只是没人用它当对手 ⇒ **判它的对手从不出现，适应力当然学不出来**。
+ * 与 `EPIRUS_XN2REF=exam`（v1.5.150）同一条设计：**对着产品判据本身训 ⇒ 目标与验收一致**。
+ * 默认关 ⇒ `OPPS` 逐字不变 ⇒ 历史臂仍可逐位复现。 */
+const COUNTER_OPPS = Number(process.env.EPIRUS_COUNTER_OPPS || 0) > 0 ? [
+  { name: 'cnt:guardSpam', sel: Bots.pickGuardSpam },     // = gate-drafts 的「只防御(不还手)」
+  { name: 'cnt:gunSpam', sel: Bots.pickGunSpam },         // ≈「只枪(1ジ压制)」
+  { name: 'cnt:snipeSpam', sel: Bots.pickSnipeSpam }      // ≈「只狙击」
+] : [];
+if (COUNTER_OPPS.length) {
+  for (const o of COUNTER_OPPS) {
+    if (typeof o.sel !== 'function') {
+      console.error('[train-3p] ⛔ EPIRUS_COUNTER_OPPS 要的对手在 EpirusBots 里不存在：' + o.name + ' ⇒ 拒绝静默少放对手（少一个就是一根空枪）');
+      process.exit(4);
+    }
+    OPPS.push(o);
+  }
+  console.log('[counter-ops] 判据原型已进训练桌：' + COUNTER_OPPS.map(function (o) { return o.name; }).join(',') +
+    ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（fitness 现在能看见"只防御不还手"这一克）');
+}
 
 /* ===== §N6 修正（v1.5.150 · DS 09-22）：**2P 切片的对手必须是 2P 强参照，不能是多人池** =====
  * 病（实测，`docs/RESEARCH-LOG-2026-09-22-ds.md` §2）：原实现让每个个体对**多人池**打 2P，而现役包对
@@ -556,6 +582,7 @@ const meta = {
   recipe: { arm: (process.env.EPIRUS_ARM || null), seed: __SEED, gens: GENS, games: GAMES, pop: POP,
     xn2w: XN2W, xn2g: XN2G, selLand: SEL_LAND, selLandGames: SEL_LAND_GAMES, selLandTol: SEL_LAND_TOL,
     kill: KILL_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
+    counterOpps: COUNTER_OPPS.map(function (o) { return o.name; }),   // v1.5.172：这臂的训练桌上放了哪几个判据原型
     breadthFloor: BREADTH_LOG },
   breadthFloorAllNarrow: BREADTH_ALL_NARROW,   // §N29 走向②的标记：全池塌缩 ⇒ 该改奖励面，不是换排序键
   degenerateOnlyWinner: DEGENERATE_ONLY,   // §N9 退化闸：true=没有合格当选者、promote 会拒收

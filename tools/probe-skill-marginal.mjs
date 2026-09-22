@@ -35,6 +35,8 @@ const PACK = arg('pack', 'js/bundled-champion-3p.js');
 const MODE = arg('mode', 'long');
 const N = Number(arg('n', 5));
 const GAMES = Number(arg('games', 80));
+/* v1.5.172（§N36）：目标配对 SE（pt）——只影响"需多少局"这句**价码**怎么报，不影响任何 Δ 读数 */
+const TARGET_SE = Number(arg('target-se', 3));
 const EPS = Number(arg('eps', 0.25));
 const ONLY = arg('only', '');
 const SEED0 = Number(arg('seed', 20260923));
@@ -190,7 +192,12 @@ for (const k of cards) {
   else if (pc(w.ok) < 0.05) blocker = '几乎从不合法（合计 ' + (100 * (pc(w.money) + pc(w.bead) + pc(w.cd) + pc(w.cond))).toFixed(0) + '% 被挡住）';
   let verdict;
   if (t.chance < 0.5) verdict = '机会≈0（结构性不可测 ⇒ 先看右列缺什么）';
-  else if (seP === 0 || Math.abs(d1) <= Math.max(NOISE * 100, 2 * seP)) verdict = '噪声内（Δ 读不出，先加局数）';
+  else if (seP === 0 || Math.abs(d1) <= Math.max(NOISE * 100, 2 * seP)) {
+    /* "读不出"必须有**价码**，否则它只是一句免责声明。配对 SE 随 √n 缩 ⇒ 要把 SE 压到 TARGET_SE，
+     * 需要 `GAMES × (se/TARGET_SE)²` 局；顺手报"当前能分辨的最小效应 ≈ 2.8·SE"（α=.05 + 80% power）。 */
+    const need = seP > 0 ? Math.ceil(GAMES * Math.pow(seP / TARGET_SE, 2)) : 0;
+    verdict = '噪声内（当前只能分辨 ≥' + (2.8 * seP).toFixed(1) + 'pt · 要 SE→' + TARGET_SE + 'pt 需 ~' + need + ' 局）';
+  }
   else verdict = (d1 > 0 ? '可测 · 正边际' : '可测 · 负边际');
   list.push({ key: k, name: def.name, cost: def.cost, chance: t.chance, hit: t.hit, d1: d1, subOnly: subOnly, se: seP, dd: (t.dealt - base0.dealt), okRate: pc(w.ok), blocker: blocker, verdict: verdict });
 }

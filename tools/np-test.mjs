@@ -4904,6 +4904,41 @@ t('D129 训练模式可以在 CLI 上下达（v1.5.169 · §N28 · 用户"炼一
   eq(stM.mode.hp, 3, '切回 multi 必须是 3 血（同一批建局参数，只有模式在动）');
 });
 
+t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a` 被"只防御不还手"85% 击败）：`EPIRUS_COUNTER_OPPS` 默认关 + 缺对手必须响', function () {
+  /* 病（实测）：`promote --dry` 把大配方臂砍在 G4/G5 上，最克的两个原型是「只防御(不还手)」「只枪 1ジ压制」——
+   * 而 `train-3p` 的 `OPPS` 九个里最接近的 `defend` 是**会还手**的防御，纯不还手的 `guardSpam` 在 `EpirusBots` 里早就有却没人拿它当对手。
+   * ⇒ "判它的对手从不出现，适应力学不出来"。修法与 v1.5.150 的 `EPIRUS_XN2REF=exam` 同一条：**对着产品判据本身训**。 */
+  ok(Bots && typeof Bots.pickGuardSpam === 'function' && typeof Bots.pickGunSpam === 'function' && typeof Bots.pickSnipeSpam === 'function',
+    '三个判据原型必须真在 `EpirusBots` 里（不在就是 train-3p 引用了不存在的名字）');
+  /* ① 行为：`guardSpam` 必须**只防不还手**——它值钱就正是因为它"没有攻击性"（把它改成会还手 = 把量具改没了） */
+  const stG = S.createState('multi', { next: mulberry32(3) }, 5);
+  stG.p[0].ep = 9;
+  const lgG = Play.legalActions(stG, 0).filter(function (x) { return x.affordable; });
+  const gk = lgG.find(function (x) { return x.key === R.SK.GUARD; });
+  ok(!!gk, '构造态必须让防御卡合法（否则本断言空转）');
+  eq(Bots.pickGuardSpam(stG, 0, lgG), R.SK.GUARD, '防御在手 ⇒ 必须出防御');
+  const atk = lgG.filter(function (x) { return x.key !== R.SK.GUARD && x.key !== R.SK.JI; }).map(function (x) { return x.key; });
+  ok(atk.length > 0, '构造态里必须**有**可出的攻击卡（否则"不还手"是白测）');
+  const noRet = atk.every(function (k) { return Bots.pickGuardSpam(stG, 0, lgG) !== k; });
+  ok(noRet, '手里有攻击卡也不许出 ⇒ 这才叫"不还手"原型');
+  /* ② 接线：默认关 ⇒ `OPPS` 逐字不变；开了 ⇒ 三个都进桌且**产物自证** */
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(t3.indexOf("EPIRUS_COUNTER_OPPS || 0") >= 0, 'EPIRUS_COUNTER_OPPS 必须默认 0');
+  ok(t3.indexOf('OPPS.push(o)') >= 0, '开了必须真推进 fitness 的对手表（推进别处 = 死作用点）');
+  ok(t3.indexOf("'EPIRUS_COUNTER_OPPS'") >= 0, '必须进 SELF_ENV_KEYS（否则黑键侦测会判它"传了没人读"）');
+  ok(/typeof o\.sel !== 'function'[\s\S]{0,160}process\.exit\(4\)/.test(t3), '缺一个对手必须 exit 4（少一个 = 一根空枪，不许静默少放）');
+  const dir = mkdtempSync(join(tmpdir(), 'd130-'));
+  const on = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130on', EPIRUS_COUNTER_OPPS: '1', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
+  eq(on.status, 0, '开了要跑得通');
+  ok(/\[counter-ops\] 判据原型已进训练桌：cnt:guardSpam,cnt:gunSpam,cnt:snipeSpam/.test(String(on.stdout || '')),
+    '必须印出进了哪三个（不印 = 又一根暗旋钮）');
+  const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync('docs/artifacts/train-3p-out.js', 'utf8'));
+  const mt = JSON.parse(jm[1]);
+  ok(mt.recipe && Array.isArray(mt.recipe.counterOpps) && mt.recipe.counterOpps.length === 3,
+    '产物要自带"这臂的训练桌上放了哪几个判据原型"（实测 ' + JSON.stringify(mt.recipe && mt.recipe.counterOpps) + '）');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };

@@ -56,7 +56,12 @@ const CELLS = arg('cells', ALL_CELLS.map(function (c) { return c.id; }).join(','
   if (!c) { console.error('⛔ 不认识的格子：' + id + '（可选 ' + ALL_CELLS.map(function (x) { return x.id; }).join(',') + '）'); process.exit(2); }
   return c;
 });
-const ALL_FIELDS = [{ id: 'mirror', label: '镜像（全场同一包）' }, { id: 'pool', label: '脚本池（其余席轮换固定套路）' }, { id: 'vschamp', label: '对现役（其余席 = 现役包）' }];
+const ALL_FIELDS = [{ id: 'mirror', label: '镜像（全场同一包）' }, { id: 'pool', label: '脚本池（其余席轮换固定套路）' }, { id: 'vschamp', label: '对现役（其余席 = 现役包）' },
+  /* v1.5.172（§N37）：**破防栏** —— 其余 4 席全部 `pickGuardSpam`（只防御不还手）。
+   * 为什么单独加一栏（实测）：`gate-drafts` 的 G5 用这一场判过今晚所有臂 ⇒ `xn15c 98% / xn17b 65~70% / xn23b 48~55% 防席夺冠`，
+   * 而**现役包是 0%**、`xn14a-band2` 长程 23% —— 这是一条我从没在任何表里量过、却能一刀分开"在位水平 vs 臂产物"的轴。
+   * 它量的正是用户那句话里的"适应能力"：对面不跟你打，你会不会收尾。 */
+  { id: 'guardwall', label: '破防（其余席只防御不还手）' }];
 const FIELDS = arg('fields', ALL_FIELDS.map(function (f) { return f.id; }).join(',')).split(',').map(function (id) {
   const f = ALL_FIELDS.find(function (x) { return x.id === id.trim(); });
   if (!f) { console.error('⛔ 不认识的环境：' + id); process.exit(2); }
@@ -103,6 +108,7 @@ for (const fd of FIELDS) {
           if (pid === seat) fn = function (s2, p2, lg) { return bs(s2, p2, lg); };
           else if (fd.id === 'mirror') fn = function (s2, p2, lg) { return bs(s2, p2, lg); };
           else if (fd.id === 'pool') { const bot = POOL[(g * 3 + pid) % POOL.length]; fn = function (s2, p2, lg) { return bot(s2, p2, lg); }; }
+          else if (fd.id === 'guardwall') fn = function (s2, p2, lg) { return B.pickGuardSpam(s2, p2, lg); };
           else fn = function (s2, p2, lg) { return refBs(s2, p2, lg); };
           ch.push(fn);
         }
