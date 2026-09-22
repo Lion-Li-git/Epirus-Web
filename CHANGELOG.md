@@ -36,7 +36,15 @@
 >
 > **零变化证明**：`GATE4_GAMES=40` 下重跑现役 `v7cmin4-31` 体检 ⇒ 座位 12.5pt · G 4.44 · G(long) 3.43 · 墙 21 · 场A 35% · 场B 0.33 **逐字同改前** ✓
 > （唯一变化是多印了尺子）。`train-server` 那处**只记录不阻断**（出厂门槛在 `promote-champion`），所以改的是读数口径、不是判定；
-> 它那里还有一处更深的分叉**没动**：G 用 `mirrorHealth` 而 CLI 用 `selfPlay` ⇒ 记进 §N17 待裁。
+> 它那里还有一处分叉**没动**（**勘误见下**）：记 `feasibility` 的那行 G 用的参数与其他调用点不一致。
+>
+> **勘误（同一晚，写 v1.5.163 时读到函数体才发现，我上一条写错了）**：原话「server 用 `mirrorHealth`、CLI 用 `selfPlay` ⇒ 两种量具」**不成立**——
+> `audit-lib.selfPlay` 从 **v1.5.19** 起就是 `mirrorHealth` 的三行转发（`return W.EpirusTrainer.mirrorHealth(params, GAMES||20, 5, mode)`）⇒ **同一个函数**。
+> 真差别在**参数**：全仓另外 8 个调用点（`selfPlay`/`g-calib`/`screen-champ`/`np-test`）席位都**硬编码 5**、games 用 20，
+> 只有 `train-server:692` 记 `feasibility` 那一处传 `(40, n, mode)` ⇒ **games 40、席位数 = 当前训练人数（3~5）**
+> ⇒ 同一个包在 3 人桌读的 G ≠ 5 人桌读的 G，浏览器路径记进 `meta.feasibility` 的那份**与 CLI 体检不可直接比**。
+> `g-calib` 同时跑 20 与 40 做标定，恰恰证明"G 对 n 敏感"是真实问题（它自己的注释就这么写着）。统一方案（走 `feasPlan` + 席位固定 5，或明写"按训练人数"并打印）等裁定 —— 那条路**只记录不阻断**，不动判定。
+> **教训同 §N11：读到函数体再下结论。**
 > np **172/172** · spec **52/52** · smoke OK · 指纹仍 `71b5927f` ✓（改动全在 `tools/`+`server/`）。
 
 ## research(0922 · qoder §N16 = §N14 同配方重跑，唯一变量是"当选面有了 3P 眼" · 不升版本 · 未 promote · 两槽未动) —— **P1 不是纸面修复：上一臂那个"3P 双 0"的当选者被否决了**

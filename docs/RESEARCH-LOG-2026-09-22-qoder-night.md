@@ -573,8 +573,15 @@ git checkout js/bundled-champion.js                                       # TB_O
 **门 D125 第一次跑就抓到我自己**：`feasPlan` 优先级写成"env 赢过显式 override"⇒ 修成 **override > env > 默认**。
 **零变化证明**：`GATE4_GAMES=40` 重跑 `v7cmin4-31` ⇒ 座位 12.5pt / G 4.44 / G(long) 3.43 / 墙 21 / 场A 35% / 场B 0.33 **逐字同改前**。
 
-**留给裁定的下一处口径分叉（我没动）**：`train-server` 的 **G 用 `mirrorHealth`**，而 `promote-champion`/`train-best` 的 G 用 `selfPlay`
-⇒ 同一个"有效技能数"名字下其实两种量具（`feasibilityOf` 只吃数字、看不出来源）。要统一得先定哪一种是产品口径 —— 这是判据级决定，不在这次范围内。
+**留给裁定的下一处分叉（我没动，且先把我说错的改掉）**：我原话「server 用 `mirrorHealth`、CLI 用 `selfPlay` ⇒ 两种量具」**是错的**——
+`audit-lib.selfPlay` 从 **v1.5.19** 起就是 `mirrorHealth` 的三行转发（`return W.EpirusTrainer.mirrorHealth(params, GAMES||20, 5, mode)`）
+⇒ **同一个函数、同一个算法**（`effSkills = exp(出手分布的 Shannon 熵)`），差别全在**参数**：
+全仓另外 8 个调用点（`selfPlay` 自身 / `g-calib` / `screen-champ` / `np-test`）席位都**硬编码 5**、games 用 20；
+只有 `train-server:692` 记 `feasibility` 那一处传 `(40, n, mode)` ⇒ **games 40、席位数 = 当前训练人数（3~5）**。
+⇒ 后果：同一个包在 3 人桌上读的 G ≠ 在 5 人桌上读的 G，而浏览器训练路径把前者记进 `meta.feasibility` ⇒ **与 CLI 体检不可直接比**。
+（`g-calib` 存在的理由恰恰是"G 对 n 敏感"——它同时跑 20 和 40 做标定 ⇒ 这条不是吹毛求疵。）
+**要统一很简单也很安全**：那处改走 `feasPlan` 并把席位固定成 5（或明写"按训练人数"并打印出来）—— 它在**只记录不阻断**那一档，不动任何判定。等裁定。
+**教训同 §N11：读到函数体再下结论**（这次是我没打开 `selfPlay` 的函数体就写了"两种量具"）。
 
 **分支实况（用户 09-22 手动删过一轮）**：本地只剩 `main` + `qoder-explore-0921night`；远端只剩 `origin/main` + `origin/qoder-explore-0921night`
 （DS 交接件里说的"远端 5 条"已被删到只剩这 1 条）。`git branch --merged main` 显示该分支**已完全并入 main**、`main..该分支` 为空 ⇒ 删它不丢任何提交，
