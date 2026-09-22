@@ -686,10 +686,15 @@ async function runTrainN(gens, cfg) {
        * 而 CLI 体检用的是 seat 100 / wall 20 / aggr 40 ⇒ 同一个包两条路径读出的"五道"不是一把尺子
        * （champ-audit 的注释自己写着"座位探针 ≥100 才有判别力"）。现在统一走 `audit.feasPlan`。
        * 本处**只记录不阻断**（出厂门槛在 promote-champion），所以改的是读数口径、不是判定；
-       * 另有一处更深的分叉没动：这里的 G 用 `mirrorHealth`，CLI 用 `selfPlay` —— 记进 §N17 待裁。 */
+       * v1.5.164 续：同一块里那行 G 也统一了 —— 原先传 `(40, n, mode)`，而全仓另外 8 个调用点都是
+       * `(20, 5, mode)`（`selfPlay` 本身就是 `mirrorHealth` 的三行转发，见 §N17 勘误）⇒ 镜像自对局的
+       * G 同时依赖**局数**与**桌子大小**（`g-calib` 就是为标定 n 敏感性而存在）⇒ 浏览器路径记进
+       * `meta.feasibility` 的那份一直与 CLI 体检不可直接比。现在同尺：**games 走 feasPlan、席位固定 5**。
+       * 注意别误统一：上面 `[health]` 那处 `mirrorHealth(finalParams, HGD.games, HGD.n, mode)` 是**换冠军的健康门槛**，
+       * 它按当前训练人数评估是有意的（门槛要判的就是"这张桌子上能不能打"），**不属于体检读数**。 */
       const FPN = audit.feasPlan(process.env);
       const ss = audit.seatSymmetry(sb, finalParams, 'multi', FPN.seat);
-      const gg = T.mirrorHealth(finalParams, 40, n, mode);
+      const gg = T.mirrorHealth(finalParams, FPN.games, 5, mode);
       const rw = audit.reflectWall(sb, finalParams, 'long', FPN.games);
       const ag = audit.aggressionProfile(sb, finalParams, FPN.aggr);
       /* v1.5.71：这五道阈值**不再写在这里** —— 与 tools/promote-champion.mjs 共用 audit-lib 的单一真源
@@ -700,6 +705,8 @@ async function runTrainN(gens, cfg) {
         '（座位 ' + feasibleInfo.seatSpread + 'pt · G ' + feasibleInfo.G + '（' + gg.distinctKeys + '种）· 墙 ' +
         feasibleInfo.wallDmg + '/局 · 场A ' + (feasibleInfo.fieldA * 100).toFixed(0) + '% · 场B ' +
         feasibleInfo.fieldBClears + '/局）' +
+        /* v1.5.164（§N19）：读数旁边必须自带尺子 —— 这条是给审计看的：以后谁再改 n/席位，日志一眼能看出来 */
+        ' 〔' + FPN.tag + ' · G=mirrorHealth(' + FPN.games + ' 局, 5 席)〕' +
         (feasibleInfo.notes && feasibleInfo.notes.length ? ' ⚠ ' + feasibleInfo.notes.join('；') : ''));
       for (const c of clients) sse(c, { type: 'feasibility', info: feasibleInfo });
     } catch (e) {

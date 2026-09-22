@@ -4687,6 +4687,19 @@ t('D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测
   }
   eq(dupes.join(' | '), '', '五道的 n 不许再有任何第二处默认（统一走 feasPlan）');
   ok(readFileSync('tools/promote-champion.mjs', 'utf8').indexOf("flag('games', 20)") < 0, 'promote 不许留自己的 --games 默认');
+  /* ②b v1.5.164（§N19）：镜像 G 在服务器路径上有**两种用途**，参数不许混。
+   *   · 记 `feasibility` 那处 = **体检读数** ⇒ 必须与 CLI 同尺（games 走 feasPlan、席位固定 5）；
+   *   · `[health]` 那处 = **产物决定点的健康门槛** ⇒ 必须按**当前训练人数**评估（判的是"这张桌子上能不能打"）。
+   * 旧参数 `(40, n, mode)` 记的是体检，却用 40 局 + n 席 ⇒ 与全仓另外 8 个调用点（20 局 / 5 席）不可比。 */
+  const tsv = readFileSync('server/train-server.mjs', 'utf8');
+  ok(/mirrorHealth\(finalParams, FPN\.games, 5, mode\)/.test(tsv), 'server 记 feasibility 的 G 必须与 CLI 同尺（games=plan · 5 席）');
+  ok(tsv.indexOf('mirrorHealth(finalParams, 40, n, mode)') < 0, '旧的 (40, n) 不许复活（同包在 3 人桌读的 G ≠ 5 人桌读的）');
+  ok(/mirrorHealth\(finalParams, HGD\.games, HGD\.n, mode\)/.test(tsv), '健康门槛那处必须继续按训练人数评估（它是门槛不是体检读数，别顺手统一掉）');
+  /* 尺子必须落在**那一条** [feasible] 日志里（只查"文件里两个字符串都存在"是假断言 —— 换个位置就糊过去了） */
+  const fS = tsv.indexOf("console.log('[feasible] '");
+  const fE = tsv.indexOf("for (const c of clients) sse(c, { type: 'feasibility'");
+  ok(fS >= 0 && fE > fS && tsv.slice(fS, fE).indexOf('G=mirrorHealth(') >= 0,
+    'server 的 [feasible] 那条日志本身必须印尺子（以后改 n/席位要能从日志看出来）');
   for (const f of ['tools/promote-champion.mjs', 'tools/train-best.mjs', 'tools/champ-audit.mjs', 'server/train-server.mjs']) {
     ok(readFileSync(f, 'utf8').indexOf('feasPlan') >= 0, f + ' 必须改用 feasPlan（漏一个 = 那条路径继续用自己的尺子）');
   }
