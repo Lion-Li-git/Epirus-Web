@@ -15,6 +15,7 @@ import { readFightEnv, hasFightOverride } from './fight-env.mjs';
 /* v1.5.89：经济/熵奖励 env 的**单一来源**（第八轮复核 §2：原先只在服务进程内联读，
  * `EPIRUS_DIV_W/DIV_K/DIV_FORCE_GENS/WALL_FILTER` 到不了 worker ⇒ 臂 K/臂甲的 A/B 实际是 A/A）。 */
 import { readEconEnv, hasEconOverride, econEcho } from './econ-env.mjs';
+import { readTrainEnv, hasTrainOverride } from './train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同一条 setter 路）
 import { makeShapeScorer } from './shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -97,6 +98,20 @@ if (T.setRingForceEps) {
  * `EPIRUS_DIV_W / EPIRUS_DIV_K / EPIRUS_DIV_FORCE_GENS / EPIRUS_WALL_FILTER` 在 16 个 worker 里
  * 全是空操作，而日志看不出任何异常（臂 K / 臂甲 的 A/B 实际是 A/A）。
  * 现在解析改由 `server/econ-env.mjs` 统一提供 ⇒ 与 `train-server.mjs` 是**同一份**实现。 */
+/* v1.5.159（DS 09-22）：训练分布旋钮 `EPIRUS_PASSIVE_FIELD` —— 与上面 econ/fight **同一条路**（唯一下发机制）。
+ * 病：`js/train/evo.js` 原先只在加载时字面读 `process.env`，而本 worker 的沙箱 `sb` 是手搭的（**无 `process`**）
+ * ⇒ 传进来的值永远到不了 `evalChamp` 的分布里，静默吃默认 0.125 ✗（qoder §N10 的"CLI 黑旋钮"同族）。
+ * 回执：打印**消费点读回**的值（空枪检测——证明真到了，而不是"没报错"）。
+ * 缺 setter ⇒ **抛错**（照 `S4_W` 注入那条 A/A 事故教训：宁可炸，不可静默降级）。 */
+const trainEnv = readTrainEnv(process.env);
+if (hasTrainOverride(trainEnv)) {
+  if (typeof T.setPassiveField !== 'function') {
+    throw new Error('传了 EPIRUS_PASSIVE_FIELD 但引擎没有 setPassiveField ⇒ 拒绝静默空转');
+  }
+  T.setPassiveField(trainEnv.field);
+  console.log('[train] worker 训练分布生效值: passiveField=' + (T.passiveField ? T.passiveField() : '?') +
+    '  (env: EPIRUS_PASSIVE_FIELD=' + trainEnv.field + ')');
+}
 const econEnv = readEconEnv(process.env);
 if (T.setEconomyReward && hasEconOverride(econEnv)) {
   T.setEconomyReward(econEnv);

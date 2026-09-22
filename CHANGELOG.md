@@ -1,3 +1,38 @@
+## v1.5.159 — **`EPIRUS_PASSIVE_FIELD` 从"死键"升级为"可下达"**（§N10 逐旋钮接通第一步 · CLI 与 server 两端同路）
+
+> **病**（qoder §N10 审计的"CLI 黑旋钮"）：`js/train/evo.js` 里"把 4 席全被动局面注入评估分布"的旋钮
+> `EPIRUS_PASSIVE_FIELD` **只在加载时字面读 `process.env`**，而 **CLI（`tools/train-3p.mjs`）与 server
+> （`server/train-worker.mjs`）用的都是手搭沙箱对象**（`{ console, Math, … }`，**没有 `process`**）
+> ⇒ **传进去的值永远到不了消费点，静默吃默认 0.125** ✗ ⇒ 历史上任何"想调它"的臂都是**空枪**。
+>
+> **修法（与 `setEconomyReward` 族完全同构，不另造机制）**：
+> - 新增 **`server/train-env.mjs`**（纯函数，与 `econ-env.mjs`/`fight-env.mjs` 同形）：
+>   `TRAIN_ENV_KEYS` · `readTrainEnv(env)` · `hasTrainOverride(o)` · `trainEcho(o)` ⇒ **env 解析的单一来源**；
+> - `js/train/evo.js`：`PASSIVE_FIELD` 由 `const` 改为**可被 `setPassiveField(v)` 覆盖**（并加 `passiveField()`
+>   读回器），**默认仍 0.125 ⇒ 行为逐位不变** ✓；`process.env` 兜底读**故意保留**（D122 的静态声明表据此不变 ✓）；
+> - **两端都接**：`tools/train-3p.mjs`（历史臂跑的地方 ✓）与 `server/train-worker.mjs`，都按
+>   `if (hasTrainOverride(...)) T.setPassiveField(...)` 下达；**缺 setter ⇒ 抛错 / exit 7**（照 `S4_W` 那条
+>   "宁可炸，不可静默降级"的 A/A 事故教训 ✓）。
+> - ⚠️ **不构成指纹换代**：消费点是 `js/train/evo.js`，**不在 `FINGERPRINT_FILES` 五件套**里 ⇒ 指纹仍 `71b5927f` ✓。
+>
+> **空枪检测（本条的判据，实测 ✓）**：`EPIRUS_PASSIVE_FIELD=0.5 node tools/train-3p.mjs 1 3 2 2`
+> ⇒ 打印 `训练分布旋钮已下达：passiveField=0.5 ⇒ 消费点读回 0.5（每 2 局注入一次"4 席全被动"局面）` ✓；
+> **不传** ⇒ 该行完全不打印（默认路径逐位不变 ✓）；**传 0** ⇒ `（注入已关闭）` ✓
+> （修掉了我第一版日志里"传 0 ⇒ 每 1 局注入一次"的**错话** ✗ —— 那会把"关闭"读成"最频繁"）。
+>
+> **门 D122 升级**（原用例的期待已过时，改为更强形态）：① exit-6 用例改用**仍是死键**的 `EPIRUS_FIGHT_WHISTLE`
+> （CLI 至今不 import fight 族 ⇒ 传它本就无效 ✓）；② 逃逸口用例同键；③ **新增空枪检测用例**：
+> 传 `EPIRUS_PASSIVE_FIELD=0.34` ⇒ 必须 exit 0 **且** stdout 出现 `passiveField=0.34` + `消费点读回 0.34` ✓。
+>
+> **仍不能下达的（留给用户裁）**：econ/fight 两族在 `train-3p` 上**依然无法生效** —— 仓里给它们指定的
+> CLI 路径是 `tools/ring2-run.mjs`（同样机制、已接通 ✓）⇒ 要不要把这两族也接到 `train-3p`（方便、但会
+> 扩大 CLI 的旋钮面），或维持现行分工，请用户定 ✓。
+>
+> **历史复核义务**：凡**曾**在 `train-3p` 臂里设过 `EPIRUS_PASSIVE_FIELD` 的结论，实际都跑在**默认分布**
+> （每 8 局注入一次）上 ⇒ 跨该旋钮的 A/B 实际是 **A/A**，需按此复核（DS 自己的臂 1–9′ 未用过该键 ⇒ 不受影响 ✓）。
+>
+> 门：np-test **169/169**（**D122 ✔** 升级版）· spec 52/52 · smoke OK · D8 三方 = v1.5.159 · 指纹仍 `71b5927f`。
+
 ## v1.5.158 — 价值表补「场B 清场」读数（`aggressionProfile` 加 `seatAct` 钩子）⇒ **当次即证伪：该列对脚本线已饱和、不能用来挑教师**
 
 > **动机**：v1.5.156 的 `pickKillSecure` 胜率 28% < `pickGunFocus` 35% / `pickAggro` 38%，但它要证的是

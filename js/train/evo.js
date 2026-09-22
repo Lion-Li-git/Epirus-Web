@@ -71,12 +71,24 @@
    * （惩罚被动/先手激励/密集分/EPIRUS_DIV_W）都在**样本量为 0 的分布**上优化 ⇒ 场 B 从 v1.5.17 到
    * v1.5.63 一次都没练好。修法：按 `EPIRUS_PASSIVE_FIELD`（默认 1/8 局）把该局面**注入评估分布**。
    * 只改"评估哪些局面"，不动参数量、不升 PACK_VERSION。 */
-  const PASSIVE_FIELD = (function () {
+  /* v1.5.159（DS 09-22）：改为**可被宿主 setter 覆盖**。原先只在加载时读 `process.env`，而 vm 沙箱
+   * **没有 `process`**（CLI 与 server 的手搭沙箱都没有）⇒ 传进来的 `EPIRUS_PASSIVE_FIELD` **永远是默认
+   * 0.125** ✗ —— 这正是 qoder 审计里"CLI 黑旋钮"的一例（历史上想调它的臂都静默吃到默认值）。
+   * 现在走与 `setEconomyReward` 族同一条路：宿主读 env（单一来源 `server/train-env.mjs`）后 `setPassiveField`。
+   * 默认（无人下发）= 0.125 ⇒ 行为**逐位不变** ✓；`process.env` 兜底读**保留**（D122 静态声明表据此不变）。 */
+  let PASSIVE_FIELD = 0.125, PASSIVE_EVERY = 8;
+  function setPassiveField(v) {
+    const n = Number(v);
+    PASSIVE_FIELD = (isFinite(n) && n > 0) ? Math.min(1, n) : 0;
+    PASSIVE_EVERY = PASSIVE_FIELD > 0 ? Math.max(1, Math.round(1 / PASSIVE_FIELD)) : 0;
+    return PASSIVE_FIELD;
+  }
+  function passiveField() { return PASSIVE_FIELD; }   // 供"空枪检测"：读回消费点真正看见的值
+  (function () {
     const v = (typeof process !== 'undefined' && process.env && process.env.EPIRUS_PASSIVE_FIELD != null)
-      ? Number(process.env.EPIRUS_PASSIVE_FIELD) : 0.125;
-    return (isFinite(v) && v > 0) ? Math.min(1, v) : 0;
+      ? process.env.EPIRUS_PASSIVE_FIELD : null;
+    if (v != null) setPassiveField(v);
   })();
-  const PASSIVE_EVERY = PASSIVE_FIELD > 0 ? Math.max(1, Math.round(1 / PASSIVE_FIELD)) : 0;
   function passiveFieldAt(g) { return PASSIVE_EVERY > 0 && (g % PASSIVE_EVERY === 0); }
 
   function mulberry32(seed) {
@@ -2454,6 +2466,7 @@ let WALL_GAMES = 3;
     setPressReward, pressReward, countPressRounds,
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
     setBeadReward, beadReward, countBeadSpent,
+    setPassiveField, passiveField,
     setTargetReward, targetReward, countThreatHits, threatKeyList,
     setClearReward, clearReward, countClears,
     blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）

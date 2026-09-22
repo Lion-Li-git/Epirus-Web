@@ -41,6 +41,27 @@
 ---
 
 
+## ★ 已完成（DS 09-22）：§N10 逐旋钮接通第一步 —— `EPIRUS_PASSIVE_FIELD` **从死键变可下达**（v1.5.159）
+
+**病**：`js/train/evo.js` 的"把 4 席全被动局面注入评估分布"旋钮 `EPIRUS_PASSIVE_FIELD` 只在**加载时**读
+`process.env`，而 CLI（`tools/train-3p.mjs`）与 server（`server/train-worker.mjs`）的沙箱都是手搭对象
+（**无 `process`**）⇒ 传进去**永远到不了消费点**，静默吃默认 0.125 ✗。
+
+**做了什么**：新增 `server/train-env.mjs`（与 econ-env/fight-env **同构的单一来源**：`readTrainEnv`/`hasTrainOverride`）；
+`evo.js` 的 `PASSIVE_FIELD` 改为可被 `setPassiveField` 覆盖 + 加 `passiveField()` 读回器（**默认仍 0.125 ⇒ 逐位不变**，
+`process.env` 兜底读保留 ⇒ D122 静态表不变）；**两端都接**（CLI + worker，缺 setter ⇒ 抛错 / exit 7）。
+⚠️ **不是指纹换代**（消费点 `js/train/evo.js` 不在五件套）⇒ 指纹仍 `71b5927f` ✓。
+
+**验证（空枪检测，实测）**：传 `0.5` ⇒ 打印 **"消费点读回 0.5（每 2 局注入一次）"** ✓；不传 ⇒ 该行**不打印** ✓；
+传 `0` ⇒ "**注入已关闭**" ✓。门 **D122 已升级**：exit-6 用例改用仍是死键的 `EPIRUS_FIGHT_WHISTLE`，
+**新增 ③ 空枪检测用例**（传 `0.34` 必须 exit 0 且打印读回 `0.34`）✓。门禁：np-test 169/169 · spec 52/52 · smoke OK。
+
+**仍不能下达的（留给用户裁）**：econ/fight 两族在 `train-3p` 上依然无效（仓里给它们的 CLI 路径是
+`tools/ring2-run.mjs`）⇒ 要不要也接到 `train-3p`，或维持分工，请用户定。
+**历史复核义务**：曾在 `train-3p` 臂里设过 `EPIRUS_PASSIVE_FIELD` 的结论，实际都跑在**默认分布**上（A/B 实为 A/A）。
+
+---
+
 ## ★ 已完成（DS 09-22）：价值表补「场B 清场」读数 ⇒ **当次即证伪**（v1.5.158）
 
 **做了什么**：`tools/audit-lib.mjs` 的 `aggressionProfile` 加换主角钩子 `opts.seatAct`（默认 null ⇒ 读数**逐位不变**，

@@ -7,6 +7,7 @@ import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来�
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
 import { ECON_ENV_KEYS } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { FIGHT_ENV_KEYS } from '../server/fight-env.mjs';
+import { readTrainEnv, hasTrainOverride } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
 import { rejectDegenerateWinners } from './pick-best.mjs';   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）
 
 /* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
@@ -54,14 +55,15 @@ const POP = Number(process.argv[5] || 12);
  *   （与 D119/D120 的"要了开关不许静默"同一条规矩）。有意为之的情形用 `EPIRUS_ALLOW_DARK=1` 放行。 */
 const SELF_ENV_KEYS = [
   'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
+  'EPIRUS_PASSIVE_FIELD',   // v1.5.159：本工具**已能下达**（读 env ⇒ setPassiveField 打进沙箱）⇒ 不再算黑键
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
   'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W'
 ];
 /* 名单 = server 下发族（单一来源：`server/econ-env.mjs` / `fight-env.mjs`）+ `js/` 里"加载时字面读"的死键。
  * ⚠️ 只盯**这份名单**，不是"任何 EPIRUS_*"——否则用户 shell 里随便一个旧旋钮（如 `EPIRUS_NO_PROXY`）
- *    就会让所有 np-test 迷你臂 exit 6（那是误伤，不是本项要治的病）。 */
-const ENGINE_SIDE_KEYS = ECON_ENV_KEYS.concat(FIGHT_ENV_KEYS,
-  ['EPIRUS_PASSIVE_FIELD']);
+ *    就会让所有 np-test 迷你臂 exit 6（那是误伤，不是本项要治的病）。
+ * v1.5.159：`EPIRUS_PASSIVE_FIELD` **已从死键升级为可下达**（见下 TRAIN_ENV 段）⇒ 从本名单移出、进闭集。 */
+const ENGINE_SIDE_KEYS = ECON_ENV_KEYS.concat(FIGHT_ENV_KEYS);
 (function detectDarkKnobs() {
   const dark = ENGINE_SIDE_KEYS.filter(function (k) {
     return process.env[k] !== undefined && SELF_ENV_KEYS.indexOf(k) < 0;
@@ -121,6 +123,29 @@ if (P.setRng && sb.window.EpirusTrainer.mulberry32) P.setRng(sb.window.EpirusTra
 
 const Bots = sb.window.EpirusBots;
 const T = sb.window.EpirusTrainer;
+
+/* ===== v1.5.159（DS 09-22）：接通训练分布旋钮 `EPIRUS_PASSIVE_FIELD` =====
+ * 病（qoder §N10 的"CLI 黑旋钮"）：`js/train/evo.js` 只在**加载时字面读 `process.env`**，而本工具的
+ * 沙箱 `sb` 是手搭的 `{ console, Math, … }`、**没有 `process`** ⇒ 传进来的值**永远到不了消费点**，
+ * 静默吃默认 0.125（每 8 局注入一次"4 席全被动"局面）✗ —— 历史上想调它的臂全是空枪。
+ * 修法：与 `setEconomyReward` 族**同一条路**（宿主读 env ⇒ setter 下达），env 的单一来源是
+ * 新增的 `server/train-env.mjs`（与 econ-env/fight-env 同构，纯函数）。
+ * **空枪检测**：必须打印"消费点读回的值"，证明旋钮真的到了 `evalChamp` 的分布里，而不是"没报错"。 */
+{
+  const trainEnv = readTrainEnv(process.env);
+  if (hasTrainOverride(trainEnv)) {
+    if (typeof T.setPassiveField !== 'function') {
+      console.error('[train-3p] ⛔ 传了 EPIRUS_PASSIVE_FIELD 但引擎没有 setPassiveField ⇒ 拒绝静默空转');
+      process.exit(7);
+    }
+    T.setPassiveField(trainEnv.field);
+    const back = (typeof T.passiveField === 'function') ? T.passiveField() : NaN;
+    console.log('[train-3p] 训练分布旋钮已下达：passiveField=' + trainEnv.field +
+      ' ⇒ 消费点读回 ' + back + (back > 0
+        ? ('（每 ' + Math.max(1, Math.round(1 / back)) + ' 局注入一次"4 席全被动"局面）')
+        : '（**注入已关闭**）'));
+  }
+}
 
 /* ===== §N8b（qoder 09-22）：接通"CLI 上没人读"的 EPIRUS_CLEAR_W =====
  * 门禁"场B 清场"是**在量的量**，但 `EPIRUS_CLEAR_W` 此前只接在 train-server/worker（浏览器训练路径）——

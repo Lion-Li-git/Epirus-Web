@@ -4476,24 +4476,35 @@ t('D119 热启动不许静默失败（v1.5.153 · DS）：两种外壳都认 + �
   ok(bad.status === 5, '坏种子必须 exit 5（实测 exit=' + bad.status + '）');
 });
 
-t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定）：train-3p 命中读不到的 EPIRUS_* ⇒ exit 6 + 静态钉住"引擎里字面读 env"的清单', function () {
+t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：已下达的键改用**空枪检测**）：train-3p 命中读不到的 EPIRUS_* ⇒ exit 6 + 静态钉住"引擎里字面读 env"的清单', function () {
   /* 病（qoder §N10 审计 + DS 本会话第 5/6 例）：`train-3p` 的 env 面是**闭集**，而 server 侧旋钮走
-   * `server/econ-env.mjs`/`fight-env.mjs` 下发（CLI 不 import ⇒ 全黑）；`js/` 里还有两处**加载时字面读**
-   * `process.env`（而 vm 沙箱没有 `process` ⇒ 永远默认）⇒ 从 CLI 传这些键**一律无效却毫无提示**，
-   * 会跑出"看起来在调参、其实是默认经济"的臂。用户/DS 裁定：**采纳黑键侦测 + 加静态门**。 */
+   * `server/econ-env.mjs`/`fight-env.mjs` 下发（CLI 不 import ⇒ 全黑）；`js/` 里还有**加载时字面读**
+   * `process.env` 的键（而 vm 沙箱没有 `process` ⇒ 永远默认）⇒ 从 CLI 传这些键**一律无效却毫无提示**，
+   * 会跑出"看起来在调参、其实是默认经济"的臂。用户/DS 裁定：**采纳黑键侦测 + 加静态门**。
+   * v1.5.159：`EPIRUS_PASSIVE_FIELD` 已**升级为可下达**（`server/train-env.mjs` + `T.setPassiveField`）
+   * ⇒ 它从"死键"移入闭集，本门对它的期待**从 exit 6 改为"必须真到达消费点"**（空枪检测，见 ③）。 */
   const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
   ok(t3.indexOf('SELF_ENV_KEYS') >= 0 && t3.indexOf('detectDarkKnobs') >= 0, '必须有黑键侦测（闭集 + 名单）');
   ok(t3.indexOf('CLI 黑键') >= 0 && t3.indexOf('EPIRUS_ALLOW_DARK') >= 0, '必须响亮说明白 + 留逃逸口');
-  /* ① 行为：暗键 ⇒ exit 6（在 qoder §N10 的活例上测） */
+  /* ① 行为：**仍未下达**的暗键 ⇒ exit 6（用 fight 族键：CLI 至今不 import 它 ⇒ 传它本就无效） */
   const dark = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
-    { env: Object.assign({}, process.env, { EPIRUS_PASSIVE_FIELD: '0.34' }), encoding: 'utf8', timeout: 120000 });
+    { env: Object.assign({}, process.env, { EPIRUS_FIGHT_WHISTLE: '0.34' }), encoding: 'utf8', timeout: 120000 });
   ok(dark.status === 6, '暗键必须 exit 6（实测 exit=' + dark.status + '）');
   /* ② 行为：逃逸口放行（1 代迷你臂，写临时目录 ⇒ 不欠 D82） */
   const dir2 = mkdtempSync(join(tmpdir(), 'darkok-'));
   const okRun = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
-    { env: Object.assign({}, process.env, { EPIRUS_PASSIVE_FIELD: '0.34', EPIRUS_ALLOW_DARK: '1', EPIRUS_BAND_DIR: dir2, EPIRUS_ARM: 'nptest-dark' }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_FIGHT_WHISTLE: '0.34', EPIRUS_ALLOW_DARK: '1', EPIRUS_BAND_DIR: dir2, EPIRUS_ARM: 'nptest-dark' }), encoding: 'utf8', timeout: 300000 });
   ok(okRun.status === 0, 'EPIRUS_ALLOW_DARK=1 必须放行（实测 exit=' + okRun.status + '）');
-  /* ③ 静态：引擎里"字面读 process.env"的清单（新增一处 ⇒ 红；修掉一处 ⇒ 也要来改这份清单） */
+  /* ③ 行为（v1.5.159 新增 · **空枪检测**）：已下达的键传值 ⇒ 必须跑通，且**消费点读回同一个值**。
+   * 这一条比"没报错"强：它要求日志里出现 consumer 侧读回值（防"传了等于没传"的死键复活）。 */
+  const dir3 = mkdtempSync(join(tmpdir(), 'knobok-'));
+  const knobRun = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
+    { env: Object.assign({}, process.env, { EPIRUS_PASSIVE_FIELD: '0.34', EPIRUS_BAND_DIR: dir3, EPIRUS_ARM: 'nptest-knob' }), encoding: 'utf8', timeout: 300000 });
+  ok(knobRun.status === 0, 'EPIRUS_PASSIVE_FIELD 已下达 ⇒ 不许 exit 6/7（实测 exit=' + knobRun.status + '）');
+  ok(/passiveField=0\.34[\s\S]*消费点读回 0\.34/.test(String(knobRun.stdout || '')),
+    '必须打印"消费点读回 0.34"（空枪检测：证明旋钮真到了 evalChamp 的分布里）');
+  /* ④ 静态：引擎里"字面读 process.env"的清单（新增一处 ⇒ 红；修掉一处 ⇒ 也要来改这份清单）
+   * 注：`js/train/evo.js` 的兜底读**故意保留**（v1.5.159）⇒ 它仍在这份清单里 ✓ */
   const DEAD_LITERAL = { 'js/train/evo.js': ['EPIRUS_PASSIVE_FIELD'] };
   const found = {};
   const walk = function (d) {
