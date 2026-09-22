@@ -104,13 +104,23 @@ if (T.setRingForceEps) {
  * 回执：打印**消费点读回**的值（空枪检测——证明真到了，而不是"没报错"）。
  * 缺 setter ⇒ **抛错**（照 `S4_W` 注入那条 A/A 事故教训：宁可炸，不可静默降级）。 */
 const trainEnv = readTrainEnv(process.env);
-if (hasTrainOverride(trainEnv)) {
+if (trainEnv.field != null) {   // v1.5.160：改成"逐旋钮各看各的"——只下达 killField 时不许把 passiveField 打成 undefined
   if (typeof T.setPassiveField !== 'function') {
     throw new Error('传了 EPIRUS_PASSIVE_FIELD 但引擎没有 setPassiveField ⇒ 拒绝静默空转');
   }
   T.setPassiveField(trainEnv.field);
   console.log('[train] worker 训练分布生效值: passiveField=' + (T.passiveField ? T.passiveField() : '?') +
     '  (env: EPIRUS_PASSIVE_FIELD=' + trainEnv.field + ')');
+}
+/* v1.5.160（qoder §N13）：收割席注入 —— 与 CLI 同一条 setter 路（避免"CLI 能下达、server 不能"的不对称）。
+ * 注意：worker 是**长驻进程** ⇒ `countKillSeats()` 在这里是跨任务累计的，只作观测；
+ * "本臂开火了几局"的**作废闸（exit 8）**在 `tools/train-3p.mjs`（一进程一臂 ⇒ 计数才等于本臂）。 */
+if (trainEnv.kill != null && Number(trainEnv.kill) > 0) {
+  if (typeof T.setKillField !== 'function') {
+    throw new Error('传了 EPIRUS_KILL_FIELD 但引擎没有 setKillField ⇒ 拒绝静默空转');
+  }
+  console.log('[train] worker 训练分布生效值: killField=' + T.setKillField(trainEnv.kill) +
+    '  (env: EPIRUS_KILL_FIELD=' + trainEnv.kill + ')');
 }
 const econEnv = readEconEnv(process.env);
 if (T.setEconomyReward && hasEconOverride(econEnv)) {

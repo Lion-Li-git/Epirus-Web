@@ -91,6 +91,46 @@
   })();
   function passiveFieldAt(g) { return PASSIVE_EVERY > 0 && (g % PASSIVE_EVERY === 0); }
 
+  /* ===== v1.5.160（qoder §N13 · 用户 09-22 裁定"场B 缺口走对手池"）：收割席注入 =====
+   * 要买的东西：7′ 的 3P 只挂"场B 清场 0.10 < 0.3/局"，而**现役 cmin4 同读法是 0.33** ⇒ 缺口是候选自己的。
+   * 奖励侧已否证过（§N8 的 `xn10b`：`CLEAR_W` 一生效，带内最高分被"纯ジ龟包"拿走 ⇒ **奖励收割 ≠ 学会收割**）
+   * ⇒ 只能从**环境**买：桌上放一个**会跟你抢收割**的对手（`pickKillSecure`，v1.5.156），
+   *   "该打死的不打死，别人替你打" ⇒ 转化才有价格。
+   * 三条设计约束，全部来自 §N11/§N12 用两臂白跑换来的教训：
+   *   ① 取函数**直接走 `Bots.pickKillSecure`**，不查 `BOT_PICKS`（那是对手池注册表，`buildOpps`/`champVsBaseline`
+   *      都 `Object.keys` 它 ⇒ 往里加键会顺带改默认池与基线均值，`evo.js:1799` 自己警告过）；
+   *   ② **每局只注 1 席**（不是 `passiveField` 那种 4 席全注）——要的是"抢收割的对手"，不是一桌木桩；
+   *      而且注的**必须是会还手的**：用户 09-22 明说"囤一点 ep 放大招也是有好处的"⇒ 只攒不打的 `farmer`
+   *      当陪练等于"出一道没有反击的题"，罚的是正常打法（D123 把这条钉成门）。
+   *   ③ **去座位偏置**：`passiveField` 的默认 1/8 在 `GAMES=8` 下恒落在 `g=0` ⇒ 恒 0 号座（`seat=g%n`）、
+   *      恒偶数 ⇒ 只喂 farmer、且 g=0 同时是**不进 fit 的承诺局**（三处错位）。这里相位按代旋转
+   *      （步长 3 与 games=8 / n=5 互质）、注的席位由 `(gen+g)` 决定并**避开受评席本身**、且**跳过承诺局**。
+   * **默认 0 = 一个都不注 ⇒ 历史臂逐位不变 ✓**（这路方向是新语义，必须显式下达）。
+   * `countKillSeats()` 是 §N12 的教训的机器化：**setter + 横幅读回证明不了作用点开火**，必须有开火计数。 */
+  let KILL_FIELD = 0, KILL_EVERY = 0;
+  const KILL_STAT = { fired: 0, seats: {}, names: {} };
+  function setKillField(v) {
+    const n = Number(v);
+    KILL_FIELD = (isFinite(n) && n > 0) ? Math.min(1, n) : 0;
+    KILL_EVERY = KILL_FIELD > 0 ? Math.max(2, Math.round(1 / KILL_FIELD)) : 0;
+    return KILL_FIELD;
+  }
+  function killField() { return KILL_FIELD; }
+  function countKillSeats() {
+    return { fired: KILL_STAT.fired, seats: Object.assign({}, KILL_STAT.seats), names: Object.assign({}, KILL_STAT.names) };
+  }
+  /** 本局要不要注、注在第几席；-1 = 不注。 */
+  function killSeatFor(g, gen, seat, n, hGene) {
+    if (KILL_EVERY === 0 || n < 3) return -1;   // **只注多人局**：2P 那条切片的全部意义是"对着考卷基准打"（v1.5.150），
+                                                // 2P 只有 1 个对手席，注进去等于把参照换掉 ⇒ 目标与验收就不一致了。
+    if (((g + gen * 3) % KILL_EVERY) !== 0) return -1;
+    if (hGene > 0 && g % 3 === 0) return -1;   // 承诺局一分不进 fit ⇒ 注了也白注
+    return (seat + 1 + ((gen + g) % (n - 1))) % n;
+  }
+  function killSeatBot() {
+    return (Bots && typeof Bots.pickKillSecure === 'function') ? Bots.pickKillSecure : null;
+  }
+
   function mulberry32(seed) {
     let a = seed >>> 0;
     return function () {
@@ -1184,6 +1224,7 @@ let WALL_GAMES = 3;
       const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
       const commitGame = hGene > 0 && (g % 3 === 0);   // (c) 承诺局：每 3 局 1 局，h 来自基因
       const passiveField = passiveFieldAt(g);   // v1.5.65：本局是否为'4 席全被动'暴露局
+      const killSeatPid = killSeatFor(g, gen, seat, n, hGene);   // v1.5.160：本局注收割席在第几席（-1=不注）
       /* v1.5.99：本局是否"补贴局"（补贴 = 白来的 ep）—— 给"只教目标卡"的示范当门槛（见 makeEconChooser）。 */
       const regenThisGame = commitGame ? 2 : regenForGame(g, games);
       const subThisGame = regenThisGame > 0;
@@ -1206,6 +1247,16 @@ let WALL_GAMES = 3;
             }
             return econ(state, pid2, legal);
           });
+        }
+        else if (killSeatPid >= 0 && pid === killSeatPid && killSeatBot()) {
+          /* v1.5.160：这一局的第 killSeatPid 席换成了**会抢收割**的对手 ⇒ 逼受评席"该收就收"。
+           * 排在 passiveField 之前：注入席优先（两条同时命中时本条语义更强，且 passiveField 那条
+           * 自 v1.5.65 起就是死分支 —— 见 §N11，用户 09-22 已裁定那条路要么删要么先去座位偏置）。 */
+          const kb = killSeatBot();
+          choosers.push(wrapBotN(kb));
+          KILL_STAT.fired++;
+          KILL_STAT.seats[seat] = (KILL_STAT.seats[seat] || 0) + 1;
+          KILL_STAT.names.killsecure = (KILL_STAT.names.killsecure || 0) + 1;
         }
         else if (passiveField && BOT_PICKS[(g % 2 === 0) ? 'farmer' : 'deepsaver']) {
           /* 暴露度注入：这一局的 4 个对手席**全部**是被动攒钱型（轮换 farmer/deepsaver）。 */
@@ -2467,6 +2518,7 @@ let WALL_GAMES = 3;
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
     setBeadReward, beadReward, countBeadSpent,
     setPassiveField, passiveField,
+    setKillField, killField, countKillSeats, killSeatFor,   // v1.5.160 收割席注入（含**开火计数**，§N12 教训）
     setTargetReward, targetReward, countThreatHits, threatKeyList,
     setClearReward, clearReward, countClears,
     blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）

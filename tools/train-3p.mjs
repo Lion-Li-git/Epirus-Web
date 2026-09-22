@@ -55,6 +55,7 @@ const POP = Number(process.argv[5] || 12);
  *   （与 D119/D120 的"要了开关不许静默"同一条规矩）。有意为之的情形用 `EPIRUS_ALLOW_DARK=1` 放行。 */
 const SELF_ENV_KEYS = [
   'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
+  'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
   'EPIRUS_PASSIVE_FIELD',   // v1.5.159：本工具**已能下达**（读 env ⇒ setPassiveField 打进沙箱）⇒ 不再算黑键
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
   'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W'
@@ -133,7 +134,8 @@ const T = sb.window.EpirusTrainer;
  * **空枪检测**：必须打印"消费点读回的值"，证明旋钮真的到了 `evalChamp` 的分布里，而不是"没报错"。 */
 {
   const trainEnv = readTrainEnv(process.env);
-  if (hasTrainOverride(trainEnv)) {
+  if (trainEnv.field != null) {   // v1.5.160：从 `hasTrainOverride(trainEnv)` 收成"只看本旋钮"——
+                                  // 否则只下达 killField 时也会把 passiveField 打成 undefined ⇒ 悄悄改了另一个旋钮
     if (typeof T.setPassiveField !== 'function') {
       console.error('[train-3p] ⛔ 传了 EPIRUS_PASSIVE_FIELD 但引擎没有 setPassiveField ⇒ 拒绝静默空转');
       process.exit(7);
@@ -144,6 +146,29 @@ const T = sb.window.EpirusTrainer;
       ' ⇒ 消费点读回 ' + back + (back > 0
         ? ('（每 ' + Math.max(1, Math.round(1 / back)) + ' 局注入一次"4 席全被动"局面）')
         : '（**注入已关闭**）'));
+  }
+}
+
+/* ===== v1.5.160（qoder §N13 · 用户 09-22 裁定"场B 缺口走对手池"）：收割席注入 `EPIRUS_KILL_FIELD` =====
+ * 与上面 passiveField 那条的**关键区别**：这条带**开火计数**（跑完必须报"注了几局 / 覆盖几个受评座位"，
+ * 一局未注 ⇒ `exit 8`）。§N11 的教训就是"横幅读回 0.34 ✓ 而作用点 0 局"烧掉两臂 ⇒ 横幅只能证明**变量**到位，
+ * 证明不了**效果**发生。语义与三条设计约束见 `js/train/evo.js` 的 `killSeatFor` 注释。 */
+let KILL_REQ = 0;
+{
+  const trainEnv = readTrainEnv(process.env);
+  if (trainEnv.kill != null && Number(trainEnv.kill) > 0) {
+    if (typeof T.setKillField !== 'function') {
+      console.error('[train-3p] ⛔ 传了 EPIRUS_KILL_FIELD 但引擎没有 setKillField ⇒ 拒绝静默空转');
+      process.exit(7);
+    }
+    const got = T.setKillField(trainEnv.kill);
+    if (!(Number(got) > 0)) {
+      console.error('[train-3p] ⛔ EPIRUS_KILL_FIELD=' + trainEnv.kill + ' 被 setter 拒绝（读回 ' + got + '）');
+      process.exit(7);
+    }
+    KILL_REQ = Number(got);
+    console.log('[train-3p] 收割席注入已下达：killField=' + got + ' ⇒ 消费点读回 ' + T.killField() +
+      '（每 ' + Math.max(2, Math.round(1 / got)) + ' 局注 **1 席** pickKillSecure · 相位按代旋转 · 只注多人局 · 避开承诺局）');
   }
 }
 
@@ -389,6 +414,25 @@ for (const h of hall) {
   }
 }
 bestParams = finalParams;
+
+/* ===== v1.5.160（qoder §N13）：**开火计数**——作用点自证，不接受"横幅说下达了所以一定生效" =====
+ * 两条硬闸都来自用户 09-22 的裁定：一局未注 ⇒ 本臂作废（exit 8，别再白跑一整臂）；
+ * 注入只覆盖 1 个受评座位 ⇒ 座位偏置没消掉（`passiveField` 的默认 1/8 在 `GAMES=8` 下恒落 `g=0` ⇒ 恒 0 号座，
+ * 就是被裁掉的那个病）⇒ 同样 exit 8。 */
+if (KILL_REQ > 0) {
+  const ks = (typeof T.countKillSeats === 'function') ? T.countKillSeats() : { fired: -1, seats: {}, names: {} };
+  const seatKeys = Object.keys(ks.seats || {}).sort();
+  console.log('[kill] 开火计数：注入 ' + ks.fired + ' 局 · 覆盖受评座位 ' + seatKeys.length + ' 个 [' + seatKeys.join(',') + ']' +
+    ' · 注入名单 ' + Object.keys(ks.names || {}).join(',') + '（killField=' + KILL_REQ + '）');
+  if (!(ks.fired > 0)) {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_KILL_FIELD=' + KILL_REQ + ' 却**一局未注** ⇒ 本臂作废（§N11 教训：横幅不等于作用点）');
+    process.exit(8);
+  }
+  if (seatKeys.length < 2) {
+    console.error('[train-3p] ⛔ 注入只覆盖 ' + seatKeys.length + ' 个受评座位 ⇒ 座位偏置未消（用户 09-22 裁定）⇒ 本臂作废');
+    process.exit(8);
+  }
+}
 
 /* ===== 带内候选落盘（v1.5.150 · 移植自 `tools/train-best.mjs` 的 band-save）=====
  * 病：本工具的终局是"名人堂里用新种子重验、只取最优"，**其余候选全被丢掉** ⇒ 一旦重验选中热启动点，

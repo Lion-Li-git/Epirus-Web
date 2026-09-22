@@ -13,10 +13,10 @@
  */
 
 /** env 键名清单（与 econ-env/fight-env 同规矩：单一来源，别处不许再抄一份） */
-export const TRAIN_ENV_KEYS = ['EPIRUS_PASSIVE_FIELD'];
+export const TRAIN_ENV_KEYS = ['EPIRUS_PASSIVE_FIELD', 'EPIRUS_KILL_FIELD'];
 
 /** 旋钮字段名清单（下发对象里允许出现的键；给"空枪检测"与回显用） */
-export const TRAIN_KNOB_KEYS = ['field'];
+export const TRAIN_KNOB_KEYS = ['field', 'kill'];
 
 const nv = function (v) { return (v == null || v === '') ? null : v; };
 
@@ -26,15 +26,23 @@ export function readTrainEnv(env) {
   const o = {};
   const f = nv(e.EPIRUS_PASSIVE_FIELD);
   if (f != null) { const n = Number(f); if (isFinite(n)) o.field = n; }
+  /* v1.5.160（qoder §N13）：收割席注入密度。默认 0（**不注**）—— 它买的是新语义（桌上放一个会抢收割的对手），
+   * 不像 passiveField 那样有"历史默认"要保，所以显式下达才生效 ⇒ 历史臂逐位不变。 */
+  const k = nv(e.EPIRUS_KILL_FIELD);
+  if (k != null) { const n2 = Number(k); if (isFinite(n2)) o.kill = n2; }
   return o;
 }
 
 /** 是否有真正的覆盖（空对象 ⇒ false） */
 export function hasTrainOverride(o) {
-  return !!(o && o.field != null && isFinite(Number(o.field)));
+  return !!(o && ((o.field != null && isFinite(Number(o.field))) || (o.kill != null && isFinite(Number(o.kill)))));
 }
 
 /** 一行式回显（给日志/体检用；无覆盖时返回空串） */
 export function trainEcho(o) {
-  return hasTrainOverride(o) ? ('passiveField=' + Number(o.field)) : '';
+  if (!o) return '';
+  const parts = [];
+  if (o.field != null && isFinite(Number(o.field))) parts.push('passiveField=' + Number(o.field));
+  if (o.kill != null && isFinite(Number(o.kill))) parts.push('killField=' + Number(o.kill));
+  return parts.join(' ');
 }

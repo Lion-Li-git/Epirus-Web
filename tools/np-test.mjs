@@ -4526,6 +4526,75 @@ t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：�
   }
 });
 
+t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手池"）：默认关逐位不变 + **判开火计数不判横幅** + 座位不偏置 + 不拿纯攒钱型当陪练', function () {
+  /* 四条各钉一类 09-22 实测过的病：
+   *  · **默认关 ⇒ 逐位不变**（一次加旋钮不许偷偷挪所有历史臂的评估分布）；
+   *  · **判作用点**：§N11 的病是"横幅读回 0.34 ✓ 而一局未注"（`PASSIVE_FIELD` 查 `BOT_PICKS` 不存在的键 ⇒ 死分支），
+   *    烧掉 `v7xn10c`/`v7xn11a` 两臂 —— 所以本门**不钉横幅**，钉"跑完报了几局注入"；
+   *  · **座位不偏置**：用户 09-22 裁掉"每 8 局注入"那种恒落 `g=0` ⇒ 恒 0 号座的覆盖（`seat = g % n`）；
+   *  · **不罚囤**：用户原话"囤一点 ep 放大招也是有好处的" ⇒ 陪练必须是**会抢收割**的 `pickKillSecure`，
+   *    只攒不打的 farmer/deepsaver 不许上这条分支（那等于出一道没有反击的题）。 */
+  const evo = readFileSync('js/train/evo.js', 'utf8');
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  /* ① 静态：注入分支取的是注册表函数，且该分支里不许出现纯攒钱型 */
+  ok(evo.indexOf('Bots.pickKillSecure') >= 0, '注入必须直接取 Bots.pickKillSecure（不查 BOT_PICKS —— 那张表加键会改默认池）');
+  const br = /else if \(killSeatPid[\s\S]*?\n        else if/.exec(evo);
+  ok(br, '收割席分支必须存在且在 passiveField 之前（顺序即优先级）');
+  ok(!/farmer|deepsaver/.test(br[0]), '注入分支里不许出现 farmer/deepsaver（用户裁定：囤是有效打法，不许拿它当陪练罚）');
+  ok(evo.indexOf('KILL_STAT.fired++') >= 0 && typeof T.countKillSeats === 'function',
+    '必须有开火计数（§N12 教训：setter + 横幅读回证明不了作用点）');
+  ok(t3.indexOf('process.exit(8)') >= 0 && t3.indexOf('本臂作废') >= 0, '一局未注 / 座位偏置 ⇒ 必须 exit 8 响亮');
+  /* ② 单元：只注多人局 + 永不注到受评席自己 + 相位真的按代旋转（自建沙箱，别污染共享 T） */
+  const sb2 = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
+  sb2.window = sb2; sb2.globalThis = sb2;
+  for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
+    'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) vm.runInNewContext(readFileSync(f, 'utf8'), sb2, { filename: f });
+  const T2 = sb2.window.EpirusTrainer;
+  eq(T2.setKillField(0.2), 0.2, 'setKillField 必须回读生效值');
+  for (let g = 0; g < 8; g++) for (let gen = 0; gen < 20; gen++) {
+    const pid = T2.killSeatFor(g, gen, 0, 2, 0);
+    eq(pid, -1, '2P 局一律不许注（切片的全部意义是"对着考卷基准打"，注进去等于换参照 ⇒ 目标与验收不一致）');
+    const p5 = T2.killSeatFor(g, gen, 2, 5, 0);
+    ok(p5 === -1 || p5 !== 2, '注入席永远不许是受评席自己（g=' + g + ' gen=' + gen + ' 实得 ' + p5 + '）');
+  }
+  /* 承诺局（hGene>0 且 g%3===0）**一分不进 fit** ⇒ 那一局不许注（注了等于白注，§N12 的第三处错位） */
+  let commitLeaks = 0;
+  for (let gen = 0; gen < 40; gen++) for (let g = 0; g < 8; g++) if (g % 3 === 0 && T2.killSeatFor(g, gen, g % 5, 5, 2) >= 0) commitLeaks++;
+  eq(commitLeaks, 0, '承诺局不许注入（那局不进 fit ⇒ 白注）');
+  const seen = new Set();
+  for (let gen = 0; gen < 6; gen++) for (let g = 0; g < 8; g++) { const p = T2.killSeatFor(g, gen, g % 5, 5, 0); if (p >= 0) seen.add(g % 5); }
+  ok(seen.size >= 3, '受评座位必须随代旋转（6 代里至少覆盖 3 个不同座位；实测 ' + seen.size + ' 个 [' + Array.from(seen).sort().join(',') + ']）');
+  T2.setKillField(0);
+  /* ③ 行为 · 默认关 ⇒ 与登记产物**逐位相同**（seed 7 · 3 代 × 3 人 × 6 局 × 种群 4） */
+  const wh = function (p) {
+    const s = readFileSync(p, 'utf8');
+    const m = /"a":\[([^\]]*)\]/.exec(s);
+    return m ? createHash('sha1').update(m[1]).digest('hex').slice(0, 10) : 'NOPARSE';
+  };
+  const dir = mkdtempSync(join(tmpdir(), 'd123-'));
+  const mini = function (env) {
+    return spawnSync(process.execPath, ['tools/train-3p.mjs', '3', '3', '6', '4'], {
+      env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd123', EPIRUS_BAND_DIR: dir }, env || {}),
+      encoding: 'utf8', timeout: 300000,
+    });
+  };
+  let r = mini({});
+  eq(r.status, 0, '默认关必须跑通（实测 exit=' + r.status + '）');
+  eq(wh('docs/artifacts/train-3p-out.js'), 'aa743488cc', '默认关的产物必须与登记基线逐位相同（动了它 = 偷偷改了所有 CLI 臂的分布）');
+  /* ④ 行为 · 下达 ⇒ **必须真开火**，且覆盖 ≥2 个受评座位（判计数，不判横幅） */
+  r = mini({ EPIRUS_KILL_FIELD: '0.2' });
+  const so = String(r.stdout || '');
+  eq(r.status, 0, 'KILL_FIELD=0.2 必须跑通（实测 exit=' + r.status + '）\n' + so.slice(-400));
+  const fired = /开火计数：注入 (\d+) 局 · 覆盖受评座位 (\d+) 个/.exec(so);
+  ok(fired, '必须打印开火计数（没有它 = 回到"横幅自证"的老病）');
+  ok(Number(fired[1]) > 0, '注入了密度就必须真注到局（实测 0 局 ⇒ 死作用点，正是 §N11 那两臂的病）');
+  ok(Number(fired[2]) >= 2, '注入覆盖的受评座位必须 ≥2 个（座位偏置 = 用户 09-22 裁掉的对象；实测 ' + fired[2] + '）');
+  ok(so.indexOf('注入名单 killsecure') >= 0, '名单只许 killsecure（出现别的 = 有人往这条路上加了罚囤陪练）');
+  /* ⑤ 反证 · 密度小到不可能开火 ⇒ 必须 exit 8（证明这道闸自己会响，而不是摆设） */
+  const never = mini({ EPIRUS_KILL_FIELD: '1e-9' });
+  eq(never.status, 8, 'EPIRUS_KILL_FIELD 小到一局未注时必须 exit 8（拒绝白跑；实测 exit=' + never.status + '）');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };
