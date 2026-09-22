@@ -4,6 +4,8 @@
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
+import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
+import { rejectDegenerateWinners } from './pick-best.mjs';   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）
 
 /* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
  * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
@@ -302,13 +304,31 @@ for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) 
 
 // 名人堂逐个用全部 28 对手对验证（新种子），取 1st 最高者作为最终冠军
 let finalParams = bestParams, ev = null;
+let DEGENERATE_ONLY = false;   // §N9：名人堂全退化时置真并写进 meta
 console.log('=== 名人堂验证（' + ALL_PAIRS.length + ' 对 x 20 局）===');
+/* ===== §N9（qoder 09-22 · xn10b 反例）：当选面退化闸 =====
+ * 收割/存活混合梯度能把"纯ジ龟包"推成带内最高 trainFit（奖励的反向捷径），
+ * 而本工具的终局当选**过去没有任何退化检查** ⇒ 三处（promote 阻断 / 2P vetoDegenerate / 这里）必须同判据。
+ * 口径抄 promote：`densityProfile.zeroAtkRate ≥ 0.9` = 退化（从不出手的局占比）。
+ * 全退化时：不静默——产物照写但 meta.degenerateOnlyWinner=true + ⛔ 响亮（下一道 promote 本来也会砍它）。 */
+const hallEntries = [];
 for (const h of hall) {
   const v = T.evalN(h.params, ALL_PAIRS, 20, N, 987654);
   const sc = v.firstRate + 0.5 * v.top2Rate;
+  const zr = densityProfile(sb, h.params, 'multi', 12).zeroAtkRate;
   console.log('  trainFit=' + h.fit.toFixed(3) + ' -> 1st=' + (v.firstRate * 100).toFixed(1) +
-    '% top2=' + (v.top2Rate * 100).toFixed(1) + '%');
+    '% top2=' + (v.top2Rate * 100).toFixed(1) + '% 零攻击局=' + (zr * 100).toFixed(0) + '%');
+  hallEntries.push({ ref: h, score: sc, zeroAtkRate: zr, ev: v });
   if (!ev || sc > (ev.firstRate + 0.5 * ev.top2Rate)) { finalParams = h.params; ev = v; }
+}
+{
+  const sel = rejectDegenerateWinners(hallEntries);
+  if (sel.dropped) console.log('[退化闸] 剔除 ' + sel.dropped + ' 粒零攻击≥90% 的名人堂成员（与 promote/2P 同判据）');
+  if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; }
+  else if (hallEntries.length) {
+    DEGENERATE_ONLY = true;
+    console.error('⛔ [退化闸] 名人堂**全部退化**——产物仍写盘但标 degenerateOnlyWinner；promote 会拒收，别拿它换包');
+  }
 }
 bestParams = finalParams;
 
@@ -344,6 +364,7 @@ console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
 
 const pack = P.pack(bestParams);
 const meta = {
+  degenerateOnlyWinner: DEGENERATE_ONLY,   // §N9 退化闸：true=没有合格当选者、promote 会拒收
   source: 'tools/train-3p.mjs', n: N, gens: GENS, games: GAMES, pop: POP,
   ts: new Date().toISOString(), firstRate: ev.firstRate, top2Rate: ev.top2Rate
 };

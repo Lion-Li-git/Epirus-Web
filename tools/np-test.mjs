@@ -12,7 +12,7 @@ import { makeShapeScorer } from '../server/shape-scorer.mjs';   // P2 形状适�
 /* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
-import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG } from './pick-best.mjs';
+import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners } from './pick-best.mjs';
 /* v1.5.132：V1/V2/V4「整局」三装配的**单一来源**（D105 与 `probe-ring-ablate.mjs` 共用一份实现）。 */
 import { measureAll } from './v2v4-lib.mjs';
 
@@ -4662,6 +4662,24 @@ t('D111 前台探索三条规则（v1.5.142 · ②③ 于 09-22 夜升级为序�
   eq(eqGreedy(st2, 100), 0, '持电珠回合 ε=1soft 与 ε=0 不许有任何改判（序列锁·白班②升级）');
   const st3 = mk(); st3.p[0].ep = 4; st3.p[1].stickers = [{ owner: 0, age: 1 }];
   eq(eqGreedy(st3, 100), 0, '有我方符咒回合 ε=1soft 与 ε=0 不许有任何改判（序列锁·白班③升级）');
+});
+
+t('D121 当选面退化闸三处对齐（§N9 · xn10b 龟包以带内最高 trainFit 当选的反例）', function () {
+  /* 纯函数行为：退化但分数最高 ⇒ 必须让位给干净的第二名；阈值边界（0.89 过 / 0.90 剔）与 promote 同 0.9；
+   * 全退化 ⇒ best:null（调用方必须响亮，门③钉 train-3p 真的接了这条响亮路径）。 */
+  const A = { ref: 'A', score: 1.15, zeroAtkRate: 0.95 };
+  const B = { ref: 'B', score: 1.02, zeroAtkRate: 0.30 };
+  const C = { ref: 'C', score: 0.90, zeroAtkRate: 0.89 };
+  let r = rejectDegenerateWinners([A, B, C]);
+  eq(r.best.ref, 'B', 'trainFit 最高的退化龟包不许当选，第一名让位给最高分干净候选');
+  eq(r.dropped, 1, '只剔 A（0.95）；C=0.89 在阈值内侧（与 promote 的 ≥0.9 一字同界）');
+  r = rejectDegenerateWinners([A, { ref: 'D', score: 2, zeroAtkRate: 0.9 }]);
+  eq(r.best, null, '全退化 ⇒ best:null（调用方必须响亮，不许回退当选）');
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(t3.indexOf('rejectDegenerateWinners(hallEntries)') >= 0 && t3.indexOf('degenerateOnlyWinner') >= 0,
+    'train-3p 必须真接这道闸（当选过滤 + 全退化写 meta.degenerateOnlyWinner）——纯函数有闸不接线=没闸');
+  ok(t3.indexOf('densityProfile(sb, h.params') >= 0,
+    '零攻击率必须走 audit-lib 单一来源（不许在 CLI 里再造一个"数出手"的口径）');
 });
 
 t('D120 CLI 训练器上的 EPIRUS_* 开关不许"传了没人读"（§N8b · qoder 09-22 空转臂反例）', function () {

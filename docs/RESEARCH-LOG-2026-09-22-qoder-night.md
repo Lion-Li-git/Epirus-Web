@@ -252,3 +252,22 @@ EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/v7xn6-2p.bak EPIRUS_SEED=31 \
    ⇒ 预注册否证分支生效：**不滑第三个值、不换第四根旋钮**；"场B 收割"升级为机制问题（示范/课程级），交回用户/DS。
 
 **产物点名（D82）**：v7xn10a-31.bak v7xn10a-2psh.bak v7xn10a-band1..6.bak v7xn10b-31.bak v7xn10b-2psh.bak v7xn10b-band1..6.bak v7xn10c-31.bak v7xn10c-2psh.bak v7xn10c-band1..6.bak（全部 gitignored；b=否证档、c=作废档，均留作反例证据）。
+
+---
+
+## §N9 当选面退化闸（09-22 午后 · 用户 GO"做到 14:45" · 已推 main）
+
+**动因**：§N8 暴露三处不一致——promote 有"零攻击≥90% 阻断"、2P pick-best 有 vetoDegenerate（昨夜）、
+**train-3p 名人堂当选什么都没有** ⇒ xn10b 让纯ジ龟包以带内最高 trainFit 当选。
+
+**实现**：`pick-best.mjs` 新纯函数 `rejectDegenerateWinners`（阈值同 promote 0.9，界内 0.89 放行）；
+train-3p hall 逐粒算 `densityProfile.zeroAtkRate`（audit-lib 单一来源）过滤当选；全退化 ⇒ best:null +
+`meta.degenerateOnlyWinner=true` + ⛔ 响亮（产物照写、下一道 promote 自己会砍）。门 **D121** 三向
+（合成表让位/阈值界/全退化 null + 接线两钉）。**真反例复验**：xn10b 当选者 zeroAtkRate=**100%**（会被剔）、
+现役 cmin4=0%（不误伤）。np **168/168** 全绿。README 门数行顺带追平（D116-D121 一直没登记，DS 的四个门也欠账，一并补了）。
+
+**留给明早/DS 的对账项（未动）**：
+① xn10b/c 两档的教训上升为设计题：CLI(train-3p) 沙箱无 `process` ⇒ evo 那批"加载时读 env"的旋钮全黑
+   （PASSIVE_FIELD/CHARGE_MIN_EP/SUB_BEAD/BEAD_SEED/FIREWEAK/DIV_* 待全量点名）；修法二选一——
+   对齐 econ-env（宿主读+setter 打进沙箱）或"检测到沙箱读不到的 EPIRUS_* 就 exit 响亮"。**没做**：面大、影响历史臂可比性，归 DS 裁。
+② 交接件勘误已记 §N8：7′ 的 3P 缺口两处（场B + G4[long] 珠爆发 63% @n=120）。

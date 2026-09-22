@@ -43,6 +43,20 @@ export function fixesOf(cand, incumbent) {
   return n;
 }
 
+/* ===== v1.5.154-night（§N9 · 三处对齐）：当选面的退化闸 =====
+ * 2P `train-best` 有 vetoDegenerate、`promote-champion` 有"零攻击 ≥90% 阻断"，
+ * 但 **train-3p 的名人堂当选**什么都没有 —— xn10b 让纯ジ龟包以带内最高 trainFit 当选
+ * （收割奖励在"存活 rank 主梯度"下的反向捷径）。本函数把三处拉平。
+ * entries: [{ ref, score, zeroAtkRate }]（按 score 降序或任意序）；阈值与 promote 同 0.9。
+ * 全退化 ⇒ 返回 {best:null}：调用方**必须响亮**，不许回退当选（"回退旧行为"= 本闸要堵的东西）。 */
+export function rejectDegenerateWinners(entries, thr) {
+  const T = (thr != null ? thr : 0.9);
+  const clean = (entries || []).filter(function (e) { return !(e && e.ref) || !(Number(e.zeroAtkRate) >= T); });
+  const dropped = (entries || []).length - clean.length;
+  clean.sort(function (a, b) { return b.score - a.score; });
+  return { best: clean.length ? clean[0] : null, dropped: dropped };
+}
+
 /* 择优：① 不回归层 → ② 胜率容差带 → ③ 带内取**广度**最大者。
  * cands: [{ tag, sc, ev:{ avg, per:{...} }, div:{ divNorm, distinct, effSkills, hill05 } }]（现有冠军的 tag 必须是 INCUMBENT_TAG）
  * 返回 { best, band, safe, incumbent, topSc, dropped }
