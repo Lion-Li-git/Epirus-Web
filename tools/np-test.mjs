@@ -4459,6 +4459,23 @@ t('D118 体检必须并报"产品代理栏"（真桌 1+4 · ε=0.2 soft）——
     'behavior-profile 必须导出 fieldProfile、且**被 import 时不跑 main**（否则体检一 import 就把整个剖面跑一遍）');
 });
 
+t('D119 热启动不许静默失败（v1.5.153 · DS）：两种外壳都认 + 读不出种子必须 exit 5 —— 否则整臂白跑', function () {
+  /* 病（DS 09-22 实测 · 两臂白跑）：`tools/train-3p.mjs` 的热启动正则只认 `window.EPIRUS_CHAMPION_3P`，
+   * 而 `train-best` 产的包是 **2P 外壳** `window.EPIRUS_CHAMPION` ⇒ `EPIRUS_SEEDPACK=<2P 包>` 时
+   * `try/catch` **静默不热启动** ⇒ 臂 7/臂 8（跨 N 的 W 轴与排练轴）实际是**冷启动**跑的 ✗ ——
+   * 预注册前提没成立、两条结论作废，直到做锚定正则时 `距种子` 一直不打才发现。
+   * ⇒ 本条钉两件事：① 兼容两种外壳；② **明确要了热启动却读不出 ⇒ exit 5**（与 `EPIRUS_XN2REF` 同规矩）。 */
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(t3.indexOf('window\\.EPIRUS_CHAMPION(?:_3P)?') >= 0, '热启动必须兼容两种外壳（2P 壳 = train-best 的产物）');
+  ok(t3.indexOf('拒绝静默冷启动') >= 0 && t3.indexOf('process.exit(5)') >= 0,
+    '读不出种子必须 exit 5（静默冷启动会让整臂白跑且看起来"有结果"）');
+  ok(t3.indexOf('热启动：以现有冠军为种子') >= 0, '生效时必须打印那一行（非空枪自检就靠它）');
+  /* 行为式：坏种子 ⇒ exit 5（训练前就退出，不写任何产物）。 */
+  const bad = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
+    { env: Object.assign({}, process.env, { EPIRUS_HOTSTART: '1', EPIRUS_SEEDPACK: 'no/such/seed.bak' }), encoding: 'utf8', timeout: 120000 });
+  ok(bad.status === 5, '坏种子必须 exit 5（实测 exit=' + bad.status + '）');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };

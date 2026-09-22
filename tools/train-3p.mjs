@@ -42,6 +42,7 @@ const GAMES = Number(process.argv[4] || 8);
 const POP = Number(process.argv[5] || 12);
 /* §N6 跨 N 混适应度开关（默认 0 = 行为逐字不变；用法与红线见循环内注释） */
 const XN2W = Number(process.env.EPIRUS_XN2W || 0);
+const ANCHOR = Number(process.env.EPIRUS_ANCHOR || 0);   // v1.5.153：锚定正则 λ（0=关，逐字不变）
 const XN2G = Number(process.env.EPIRUS_XN2G || Math.max(4, (GAMES / 2) | 0));
 
 const sb = {
@@ -156,11 +157,22 @@ const t0 = Date.now();
 let seedParams = null, hotstartFrom = null;
 if (process.env.EPIRUS_HOTSTART === '1') {
   const srcPath = process.env.EPIRUS_SEEDPACK || 'js/bundled-champion-3p.js';
+  /* v1.5.153 修正（DS 09-22 · **两臂白跑**的根因）：这里原来只认 `window.EPIRUS_CHAMPION_3P`，
+   * 而 `train-best` 产的包是 **2P 外壳**（`window.EPIRUS_CHAMPION`）⇒ `EPIRUS_SEEDPACK=<2P 包>` 时
+   * **静默不热启动**（`catch` 吞掉一切）⇒ 臂 7/臂 8 实际是**冷启动**跑的 ✗ —— 预注册前提没成立、结论作废。
+   * ⇒ 两条修正：① 兼容两种外壳（与 `loadPackParamsAny` 同正则）；
+   * ② **明确要了热启动却读不出 ⇒ 立刻退出**（拒绝静默退化；与 `EPIRUS_XN2REF` 同一条规矩）。 */
+  let ok = false;
   try {
     const src = readFileSync(srcPath, 'utf8');
-    const m = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
-    if (m) { const raw = P.unpack(JSON.parse(m[1]), true); seedParams = raw ? P.embedLegacy(raw) : null; hotstartFrom = srcPath; }   // v7：旧形状逐位等价嵌入
-  } catch (e) { /* no hot start */ }
+    const m = src.match(/window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/);
+    if (m) { const raw = P.unpack(JSON.parse(m[1]), true); seedParams = raw ? P.embedLegacy(raw) : null; hotstartFrom = srcPath; ok = !!seedParams; }
+  } catch (e) { ok = false; }
+  if (!ok) {
+    console.error('[train-3p] ⛔ EPIRUS_HOTSTART=1 但读不出种子包：' + srcPath +
+      '（拒绝静默冷启动 —— 白跑一整臂正是 09-22 臂 7/8 的教训）');
+    process.exit(5);
+  }
 }
 
 let pop = [];
@@ -188,7 +200,8 @@ function addHall(params, fit) {
 
 console.log('[train-3p] 人数=' + N + ' 代=' + GENS + ' 种群=' + POP + ' 每代局数=' + GAMES +
   ' 参数=' + P.paramCount() + (XN2W > 0 ? (' · XN混适应度 W=' + XN2W + ' 2P局=' + XN2G + '/个体 · 2P对手=' +
-    XN2_OPPS.map(function (o) { return o.name; }).join('+')) : ''));
+    XN2_OPPS.map(function (o) { return o.name; }).join('+')) : '') +
+  (ANCHOR > 0 ? (' · **锚定正则 λ=' + ANCHOR + '**（治遗忘：把个体拉回热启动种子）') : ''));
 
 for (let gen = 0; gen < GENS; gen++) {
   const scored = pop.map(function (params, i) {
@@ -207,6 +220,19 @@ for (let gen = 0; gen < GENS; gen++) {
       T.setTrainMode(prevMode);
       r = Object.assign({}, r, { fit: (r.fit + XN2W * r2.fit) / (1 + XN2W), xn2fit: r2.fit });
     }
+    /* ===== 锚定正则（v1.5.153 · DS 09-22 · "冻结/分区"立项的最小可测形式）=====
+     * 依据（`docs/RESEARCH-LOG-2026-09-22-ds.md` §9/§10）：跨 N 两轴的失败机理是**遗忘** ——
+     *   每阶段都牺牲上一场（练会 2P 忘 3P、找回 3P 又忘 2P），且**排练（4→16 局）也治不了**（零和）。
+     * 机制可选的最小实现：向量化进化没有梯度 ⇒ "冻结"用**适应度锚定**表达：
+     *   fit' = fit − λ · mean((θ−θ_seed)²)
+     * 即"离种子越远，需要越高的原始分才配赢" ⇒ 直接压制漂移。λ=0（默认）⇒ 一条行为都不变。
+     * 锚点 = 热启动种子（`EPIRUS_SEEDPACK`）；没热启动就没有锚点（本项自然失效）。 */
+    if (ANCHOR > 0 && seedParams && params.length === seedParams.length) {
+      let s = 0;
+      for (let ai = 0; ai < params.length; ai++) { const d = params[ai] - seedParams[ai]; s += d * d; }
+      const ms = s / params.length;
+      r = Object.assign({}, r, { anchorDist: Math.sqrt(ms), fit: r.fit - ANCHOR * ms });
+    }
     return { params: params, r: r };
   });
   scored.sort(function (a, b) { return b.r.fit - a.r.fit; });
@@ -217,7 +243,8 @@ for (let gen = 0; gen < GENS; gen++) {
     const r = scored[0].r;
     console.log('gen ' + gen + ' bestFit=' + r.fit.toFixed(3) +
       ' 1st=' + (r.firstRate * 100).toFixed(0) + '% top2=' + (r.top2Rate * 100).toFixed(0) +
-      '% avgDealt=' + r.avgDealt.toFixed(2) + ' sigma=' + sigma.toFixed(3));
+      '% avgDealt=' + r.avgDealt.toFixed(2) + ' sigma=' + sigma.toFixed(3) +
+      (r.anchorDist !== undefined ? ' 距种子=' + r.anchorDist.toFixed(4) : ''));
   }
   const breedRng = T.mulberry32 ? T.mulberry32(__SEED * 100003 + gen) : Math.random;
   const elite = scored.slice(0, 3).map(function (x) { return x.params; });
