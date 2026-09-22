@@ -612,6 +612,11 @@ export function aggressionProfile(W, params, GAMES, opts) {
    *   `forced` = 实际改判次数（**空枪检测**：0 ⇒ 本行无信息，不得读成"改了没用"）。 */
   const HOOK = opts || {};
   const doForceAttack = !!HOOK.forceAttack, doForceTurtle = !!HOOK.forceTurtle;
+  /* v1.5.158（DS 09-22）：**换主角钩子** `seatAct`（默认 null ⇒ 本函数读数**逐位不变**，与上面两个钩子同规矩）。
+   * 动机：场B 清场是"把击杀收干净"这一能力的官方量具（判据只能是 `fieldB.clearedPerGame`，见 §feasibilityOf），
+   * 但它原先只能用**冠军包**当主角 ⇒ 量不了**脚本线**（如 `pickKillSecure`）的收割力 ⇒ 价值表只能看胜率。
+   * 有了它，`tools/script-value.mjs` 就能用**同一套官方口径**（同 seeds、同清场判定、同收缩哨兵）量任意脚本。 */
+  const seatAct = (typeof HOOK.seatAct === 'function') ? HOOK.seatAct : null;
   const OLD = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.DRAIN];
   const isDmg = function (k) { const d = R.byKey[k]; return !!(d && d.dmg && d.dmg.amt); };
   function run(kind) {
@@ -630,7 +635,7 @@ export function aggressionProfile(W, params, GAMES, opts) {
         }
         : function () { return { key: R.SK.JI }; };
       let shrinkStarted = false;   // v1.5.66: 清场判据的分界（收缩开始后的死者不算清场）
-      const raw = T.policyChooserN(params, 0.15);
+      const raw = seatAct ? seatAct : T.policyChooserN(params, 0.15);   // v1.5.158：seatAct 钩子换主角
       const champ = (doForceAttack || doForceTurtle) ? function (s2, pid, lg) {
         let r = raw(s2, pid, lg);
         if (doForceAttack && r && r.key === R.SK.JI) {
