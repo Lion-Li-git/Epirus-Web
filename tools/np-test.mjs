@@ -4692,9 +4692,15 @@ t('D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测
    *   · `[health]` 那处 = **产物决定点的健康门槛** ⇒ 必须按**当前训练人数**评估（判的是"这张桌子上能不能打"）。
    * 旧参数 `(40, n, mode)` 记的是体检，却用 40 局 + n 席 ⇒ 与全仓另外 8 个调用点（20 局 / 5 席）不可比。 */
   const tsv = readFileSync('server/train-server.mjs', 'utf8');
-  ok(/mirrorHealth\(finalParams, FPN\.games, 5, mode\)/.test(tsv), 'server 记 feasibility 的 G 必须与 CLI 同尺（games=plan · 5 席）');
+  ok(/mirrorHealth\(finalParams, FPN\.games, 5, '(multi|long)'\)/.test(tsv), 'server 记 feasibility 的 G 必须与 CLI 同尺（games=plan · 5 席）');
   ok(tsv.indexOf('mirrorHealth(finalParams, 40, n, mode)') < 0, '旧的 (40, n) 不许复活（同包在 3 人桌读的 G ≠ 5 人桌读的）');
   ok(/mirrorHealth\(finalParams, HGD\.games, HGD\.n, mode\)/.test(tsv), '健康门槛那处必须继续按训练人数评估（它是门槛不是体检读数，别顺手统一掉）');
+  /* ②c v1.5.165（§N20）：浏览器路径的 feasibility 也必须**两个模式都判**（对齐 CLI 的 v1.5.145 用户裁定），
+   * 且不许把"训练模式"当 G 喂 —— 训练长程时那会让 meta 里的 `G(multi)` 其实是 long 读数（标签与实测量不符）。 */
+  ok(/mirrorHealth\(finalParams, FPN\.games, 5, 'multi'\)/.test(tsv) && /mirrorHealth\(finalParams, FPN\.games, 5, 'long'\)/.test(tsv),
+    'server 记 feasibility 必须显式跑 multi 与 long 两遍（与 promote 同尺）');
+  ok(tsv.indexOf("mirrorHealth(finalParams, FPN.games, 5, mode)") < 0, '不许拿训练模式当 G 喂（会造成 meta 标签与实测量不符）');
+  ok(/feasibilityOf\(\{[^}]*G2: ggL/.test(tsv), 'G2 必须真传进 feasibilityOf —— 否则第四道（long 的 G）在浏览器路径上根本不存在');
   /* 尺子必须落在**那一条** [feasible] 日志里（只查"文件里两个字符串都存在"是假断言 —— 换个位置就糊过去了） */
   const fS = tsv.indexOf("console.log('[feasible] '");
   const fE = tsv.indexOf("for (const c of clients) sse(c, { type: 'feasibility'");

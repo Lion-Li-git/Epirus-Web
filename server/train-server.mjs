@@ -694,15 +694,21 @@ async function runTrainN(gens, cfg) {
        * 它按当前训练人数评估是有意的（门槛要判的就是"这张桌子上能不能打"），**不属于体检读数**。 */
       const FPN = audit.feasPlan(process.env);
       const ss = audit.seatSymmetry(sb, finalParams, 'multi', FPN.seat);
-      const gg = T.mirrorHealth(finalParams, FPN.games, 5, mode);
+      /* v1.5.165（§N20）：**两个模式都判**（对齐 CLI 体检，v1.5.145 的用户裁定"long = 产品常用模式，也必须判"）。
+       * 原来这里只传一个 `G`，且喂的是**训练模式** `mode`（可能是 'long'）⇒ 训练长程时记进 `meta.feasibility` 的那格
+       * 其实是 long 的读数、却被 `feasibilityOf` 打印成 `G(multi)`（标签与实测量不符），而且**根本没有第四道**（G(long)）。
+       * 现在按 CLI 的口径显式跑两遍：G = 5 席 multi、G2 = 5 席 long，与 `promote-champion` 完全同尺。 */
+      const gg = T.mirrorHealth(finalParams, FPN.games, 5, 'multi');
+      const ggL = T.mirrorHealth(finalParams, FPN.games, 5, 'long');
       const rw = audit.reflectWall(sb, finalParams, 'long', FPN.games);
       const ag = audit.aggressionProfile(sb, finalParams, FPN.aggr);
       /* v1.5.71：这五道阈值**不再写在这里** —— 与 tools/promote-champion.mjs 共用 audit-lib 的单一真源
        * （复核 §4-6：两头各写一份会漂；线上包是经 upgrade-pack 换的 ⇒ meta 里没有 feasibility）。 */
-      feasibleInfo = audit.feasibilityOf({ seat: ss, G: gg, wall: rw, aggr: ag });
+      feasibleInfo = audit.feasibilityOf({ seat: ss, G: gg, G2: ggL, G2name: 'long', wall: rw, aggr: ag });
       const ff = feasibleInfo.fails;
       console.log('[feasible] ' + (feasibleInfo.ok ? '✅ 五道全过' : '✗ ' + ff.join('；')) +
-        '（座位 ' + feasibleInfo.seatSpread + 'pt · G ' + feasibleInfo.G + '（' + gg.distinctKeys + '种）· 墙 ' +
+        '（座位 ' + feasibleInfo.seatSpread + 'pt · G(multi) ' + feasibleInfo.G + '（' + gg.distinctKeys + '种）' +
+        (feasibleInfo.G2 != null ? ' · **G(long) ' + feasibleInfo.G2 + '**（' + ggL.distinctKeys + '种）' : '') + ' · 墙 ' +
         feasibleInfo.wallDmg + '/局 · 场A ' + (feasibleInfo.fieldA * 100).toFixed(0) + '% · 场B ' +
         feasibleInfo.fieldBClears + '/局）' +
         /* v1.5.164（§N19）：读数旁边必须自带尺子 —— 这条是给审计看的：以后谁再改 n/席位，日志一眼能看出来 */

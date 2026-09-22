@@ -1,3 +1,19 @@
+## v1.5.165 — 浏览器训练路径的 feasibility 补上**第四道（G(long)）**，并修掉一处"标签与实测量不符"（§N20 · 用户批准）
+
+> **两个问题一起暴露**：`train-server` 记 `meta.feasibility` 那处 ① **不传 `G2`** ⇒ v1.5.145 用户裁定"两个模式都判"在浏览器路径上根本不存在；
+> ② 它把**训练模式**当 `G` 喂（`mirrorHealth(finalParams, …, mode)`）⇒ 训练长程时记下的那格其实是 long 的读数，却被 `feasibilityOf` 打印成 `G(multi)`。
+>
+> **改法**：显式跑两遍、与 CLI 同尺 —— `G = mirrorHealth(finalParams, FPN.games, 5, 'multi')`、`G2 = …, 'long'`，
+> 传进 `feasibilityOf`，`[feasible]` 行同时打印 `G(multi)` 与 **`G(long)`**。仍属**只记录不阻断**（出厂门槛在 `promote-champion`；
+> `feasibilityReject` 那格走的是 `[health]` 健康门槛，与本版无关，已核对未被当 veto 用）。
+>
+> **运行时验证（不是静态钉）**：拿现役 3P 槽 `v7cmin4-31` 走一遍新序列 ⇒ `G(multi)=4.44`、`G(long)=3.43` —— **与 CLI 体检记给它的两个数完全一致** ✓；
+> 反证：把 `G2` 压成 1.2 ⇒ 第四道立刻判红（`G(long) 1.20 < 3`）⇒ 这一栏真的在咬，不是摆设。
+>
+> 门 **D125②c** 三条：必须显式跑 multi 与 long 两遍 / 不许再拿训练模式当 `G` 喂 / `G2` 必须真传进 `feasibilityOf`。
+> np **172/172** · spec **52/52** · smoke OK；指纹仍 `71b5927f` ✓（`train-server.mjs` 不在五件套）；两槽未动。
+> 附带：用户自行删除远端分支后，本会话按其指示删掉最后一条本地分支 `qoder-explore-0921night`（已完全并入 main，`2d95f7c`）⇒ 仓库只剩 `main`。
+
 ## v1.5.164 — 服务器路径的**体检读数**与 CLI 同尺：`mirrorHealth(finalParams, 40, n, mode)` → `(FPN.games, 5, mode)`（§N19 · 用户批准）
 
 > **前提纠正（我自己的错，见 v1.5.162 那条勘误）**：不存在"两种 G 量具"——`audit-lib.selfPlay` 从 v1.5.19 起就是 `evo.js:mirrorHealth` 的三行转发。

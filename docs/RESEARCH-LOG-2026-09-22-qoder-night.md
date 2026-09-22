@@ -631,3 +631,20 @@ np 172/172 · spec 52/52 · smoke OK · 指纹仍 `71b5927f`（`evo.js` 不在�
 
 **仍未闭、且我故意没做的下一条**：服务器那处 `feasibilityOf` **不传 `G2`** ⇒ 浏览器记的 feasibility 里缺 v1.5.145 那条"long 也判"。
 补它是**加判据**（会让更多 `fails` 进 meta），不是统一参数 ⇒ 等用户点头再做。
+
+---
+
+## §N20 浏览器路径补第四道（v1.5.165 · 用户"按你的意思修 G2"）
+
+**改前查到两件事，第二件是顺带的**：① `train-server` 记 feasibility 不传 `G2` ⇒ v1.5.145"两个模式都判"在这条路径上不存在；
+② 它把**训练模式**当 `G` 喂（`mirrorHealth(finalParams, games, 5, mode)`）⇒ 练长程时那格实测量是 long，却被 `feasibilityOf` 打印成 `G(multi)`。
+**改法**：显式两遍 `multi` / `long`，与 CLI 同尺；`[feasible]` 行两数一起印。作用域仍是"只记录不阻断"
+（核过：`feasibilityReject` 走的是 `[health]` 健康门槛那条线，本版无关；`feasibleInfo` 只进 meta 与 SSE）。
+
+**这次没走"静态钉住了就算过"的老路**，而是把新序列在沙箱里真跑一遍：
+现役 `v7cmin4-31` ⇒ `G(multi)=4.44`、`G(long)=3.43` —— **与 CLI 体检记给它的两个数完全一致** ✓；
+反证 `G2=1.2` ⇒ `G(long) 1.20 < 3` 立刻判红 ⇒ 第四道真的在咬，不是又一个"传了没人读"。
+
+门 D125②c 三条：必须显式跑两遍 / 不许拿训练模式当 G 喂 / `G2` 必须真传进 `feasibilityOf`。
+np 172/172 · spec 52/52 · smoke OK · 指纹仍 `71b5927f`（`train-server.mjs` 不在五件套）。
+**分支**：远端由用户删净后，按用户指示删掉最后一条本地分支 `qoder-explore-0921night`（已完全并入 main，was `2d95f7c`）⇒ 仓库只剩 `main`。
