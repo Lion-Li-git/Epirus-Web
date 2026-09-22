@@ -20,8 +20,12 @@
     return { next: function () { return i < vals.length ? vals[i++] : 0.9; } };
   }
 
+  /* v1.5.147n（夜班）：场景用例的默认 rng 从裸 Math.random 换成**判定恒败**常量 ——
+   * R23c 被抓出自带 1/8 抖动（爆头判定把 hp=2 打成 1），且 D95 去 spawn 化后这种抖动会直接红门禁。
+   * 需要判定胜的用例本来就显式喂 seqRng([...])；Fuzz 自带 mulberry32(42) 不受影响 ⇒ 全套确定可复现。 */
+  function noJudge() { return { next: function () { return 0.9; } }; }
   function game(mode, rng, hp0, hp1) {
-    const st = S.createState(mode || 'standard', rng || { next: Math.random });
+    const st = S.createState(mode || 'standard', rng || noJudge());
     if (hp0 !== undefined) st.p[0].hp = hp0;
     if (hp1 !== undefined) st.p[1].hp = hp1;
     return st;
@@ -270,7 +274,7 @@
   t('R54b 挑衅合规必须**打对目标**（v1.5.138 指向盲审计；2P 恒等 ⇒ 3P 反证组）', function () {
     /* 组1：P2 挑衅 P1，P1 攻击第三人 P0（错误目标）⇒ 违约（旧实现：只看 TAUNT_SATISFY 会误判合规）。 */
     const run = function (attackTarget) {
-      const st = S.createState('multi', { next: Math.random }, 3);
+      const st = S.createState('multi', noJudge(), 3);
       for (let i = 0; i < 3; i++) st.p[i].ep = 9;
       st.events = []; X.startTurn(st);
       S.attemptAction(st, 0, SK.JI, null);
@@ -290,7 +294,7 @@
     const right = run(2);   // 打挑衅者 P2
     ok(!right.events.some(function (e) { return e.reason === '挑衅违约'; }), '打对挑衅者 ⇒ 免罚');
     /* 组3：挑主 P2 在义务期内被 P0 打死 ⇒ 义务不可履行 ⇒ 免罚（死亡兜底豁免） */
-    const st3 = S.createState('multi', { next: Math.random }, 3);
+    const st3 = S.createState('multi', noJudge(), 3);
     for (let i = 0; i < 3; i++) st3.p[i].ep = 9;
     st3.events = []; X.startTurn(st3);
     S.attemptAction(st3, 0, SK.JI, null);
@@ -308,7 +312,7 @@
 
   t('R23d 过载炮反制必须"攻击指回炮手"（v1.5.138 指向盲：2P 恒等 ⇒ 3P 反证）', function () {
     /* A炮B、B枪**C**（B 没理 A）：旧实现只看 B 出了攻击卡就白废 A 的炮。修后 B 的枪不指向 A ⇒ 炮应照常打 B。 */
-    const st = S.createState('multi', { next: Math.random }, 3);
+    const st = S.createState('multi', noJudge(), 3);
     for (let i = 0; i < 3; i++) st.p[i].ep = 9;
     st.events = []; X.startTurn(st);
     S.attemptAction(st, 0, SK.CANNON, { target: 1 });
@@ -318,7 +322,7 @@
     ok(!st.events.some(function (e) { return e.type === 'cannonCountered'; }), 'B 的枪没指炮手 ⇒ 不得判"过载炮被抵消"');
     eq(st.p[1].hp, 2, '炮照常落到 B');
     eq(st.p[2].hp, 2, 'B 的枪打到 C');
-    const st2 = S.createState('multi', { next: Math.random }, 3);
+    const st2 = S.createState('multi', noJudge(), 3);
     for (let i = 0; i < 3; i++) st2.p[i].ep = 9;
     st2.events = []; X.startTurn(st2);
     S.attemptAction(st2, 0, SK.CANNON, { target: 1 });
@@ -329,7 +333,7 @@
   });
 
   t('R38b 小雷三人成环 A→B→C→A：**全部无效果**（v1.5.138；旧实现只认两两互指 ⇒ 先手独赢）', function () {
-    const st = S.createState('multi', { next: Math.random }, 3);
+    const st = S.createState('multi', noJudge(), 3);
     for (let i = 0; i < 3; i++) st.p[i].ep = 9;
     st.events = []; X.startTurn(st);
     S.attemptAction(st, 0, SK.MINI_T, { target: 1 });
@@ -342,7 +346,7 @@
   });
 
   t('R39b 贴贴可被**八卦阵**阻挡（v1.5.138：blockKinds 漏了 bagua）', function () {
-    const st = S.createState('multi', { next: Math.random }, 3);
+    const st = S.createState('multi', noJudge(), 3);
     for (let i = 0; i < 3; i++) st.p[i].ep = 9;
     st.events = []; X.startTurn(st);
     S.attemptAction(st, 0, SK.CURSE, { target: 1 });
@@ -359,7 +363,7 @@
     play(st, SK.GUN, SK.TRANSFER, { target: 1 }, { target: 0 });
     eq(st.p[1].hp, 3, '转移者无事');
     eq(st.p[0].hp, 2, '（2P 巧合组）指定=攻击者 ⇒ 落攻击者');
-    const s3 = S.createState('multi', { next: Math.random }, 3);
+    const s3 = S.createState('multi', noJudge(), 3);
     s3.p[0].ep = 5; s3.p[1].ep = 5; s3.p[2].ep = 5;
     s3.events = []; X.startTurn(s3);
     S.attemptAction(s3, 0, SK.GUN, { target: 1 });
@@ -382,7 +386,7 @@
      * 波（除雷主外的所有人）：旧雷组 ⇒ P1 把这一跳转给 P3（P3 挨两跳：自己那跳+转来的一跳）；
      * 新雷组 ⇒ P1 转移无效，一人一跳。落点不再连锁（source=null），P1 转走后也不作为间接触发者。 */
     function build(mineAsCurrentRound) {
-      const st = S.createState('multi', { next: Math.random }, 4);
+      const st = S.createState('multi', noJudge(), 4);
       for (let i = 0; i < 4; i++) st.p[i].ep = 5;
       st.events = []; X.startTurn(st);
       /* ⚠️ `startTurn` 会推进 `st.round` ⇒ mineRound 必须按**结算回合**写（先手写在 build 时会差 1） */
@@ -410,7 +414,7 @@
   t('R62 多人局存活降到 2 人 ⇒ MULTI_ONLY（双枪/镜面/全息）动态禁用；回到 3 人恢复（用户 09-21 裁定）', function () {
     const Play = window.EpirusPlay;
     const has = function (st, key) { return Play.legalActions(st, 0).some(function (l) { return l.key === key; }); }
-    const st = S.createState('multi', { next: Math.random }, 4);
+    const st = S.createState('multi', noJudge(), 4);
     for (let i = 0; i < 4; i++) st.p[i].ep = 9;
     ok(has(st, SK.HOLO), '4 人存活：全息屏障必须在菜单里');
     ok(has(st, SK.DUAL_GUN) && has(st, SK.MIRROR), '4 人存活：双枪/镜面必须在菜单里');
@@ -428,7 +432,7 @@
     /* v1.5.13 把旧口径里的 `|| ta.key===SK.TRANSFER` 收窄成"指向狙击手的转移才干扰"——但**转移本就不该
      * 在干扰集合里**：它不"带攻击效果"，只是把已落下的伤害转走。反证组：第三人 P2 把转移指向狙击手 P0
      * （旧代码：狙击被废、P1 不掉血；新代码：狙击照常命中 P1）。干扰对照组走 D20（枪指狙击手⇒必废）。 */
-    const st = S.createState('multi', { next: Math.random }, 3);
+    const st = S.createState('multi', noJudge(), 3);
     for (let i = 0; i < 3; i++) st.p[i].ep = 9;
     st.events = []; X.startTurn(st);
     S.attemptAction(st, 0, SK.SNIPE, { target: 1 });

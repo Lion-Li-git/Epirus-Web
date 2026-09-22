@@ -140,7 +140,11 @@ for (let k = 0; k < N; k++) {
 /* v1.5.130：择优改成调 `tools/pick-best.mjs` 的纯函数（不回归层 + 容差带 + 发散度）。
  * 为什么要抽出来、以及它修的那个**假承诺**（"绝不会回归到更弱的冠军"）的实测反例，见该文件头。 */
 const WR_TOL = 0.03;
-const pick = pickBestByExam(cands, { wrTol: WR_TOL });
+/* 夜班（seed 11 反例 · 00:2x）：`vetoDegenerate` = 镜像零攻击（种类=0）的候选不许当选。
+ * 病：2P 考卷对"只ジ不动手"的包能读 avg=100%（脚本互杀自己），择优看不出它会加冕退化包；
+ * 3P promote 早有 v1.5.94"自对局零攻击判负"，两入口从此同判。闸在纯函数侧（D104⑩ 行为化守门）。 */
+const pick = pickBestByExam(cands, { wrTol: WR_TOL, vetoDegenerate: true });
+for (const c of cands) if (c.__vetoed) console.log('[退化闸] ' + c.tag + ' 镜像零攻击（种类=0）⇒ 取消当选资格（v1.5.94 同族）');
 best = pick.best;
 const inc = pick.incumbent;
 if (inc) console.log('[不回归层] 现有冠军=' + inc.tag + '；剔除候选=' + pick.dropped + ' 个（回归了冠军已过的基准）');

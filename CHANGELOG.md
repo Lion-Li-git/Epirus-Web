@@ -1,57 +1,62 @@
-## research(0922 · 夜产物点名 · DS 代记 · 不升版本) —— 补 D82 记账：夜班（`qoder-explore-0921night`）24h 内落盘的 `.bak`
+## research(0922 · 夜产物**全名**点名 · DS 代记 · 不升版本) —— D82 只看**完整文件名**，夜班账里写的是短名
 
-> **动因**：`main` 上 `np-test` D82 红（24h 窗口 62 个产物缺 **31** 个）—— 千问的点名只落在夜班分支的 CHANGELOG 里，
-> main 收不到；即使合并该分支也只补 10 个（其余 21 个是他们日志里自己写的"待 B 段尾巴一起注入夜班账"那批）。
-> 本条**只补名字**（D82 的唯一要求），不改任何版本条目、不改判据。真实读数见
-> `docs/RESEARCH-LOG-2026-09-22-qoder-night.md`（分支上）与其 §登记簿。
+> 夜班账（本文件下方 `### 夜班账`）用的是短名（`v7xfer44c10-2p`），而 **D82 按 `*.bak` 完整文件名匹配** ⇒ 会被判"查无字"。
+> 本条只补**全名**（D82 的唯一要求），不改夜班账、不改判据。
 
-夜产物（D82 点名 · 全部 gitignored）：
-
-- `v7xfer44-3psh.bak`
-- `v7xfer44b-3psh.bak`
-- `v7xfer44c10-2p.bak`
 - `v7xfer44c10-band1.bak`
-- `v7xfer44c11-2p.bak`
 - `v7xfer44c11-band1.bak`
 - `v7xfer44c11b-2p.bak`
 - `v7xfer44c11b-band1.bak`
 - `v7xfer44c11b-band2.bak`
-- `v7xfer44c12-2p.bak`
 - `v7xfer44c12-band1.bak`
 - `v7xfer44c12-band2.bak`
 - `v7xfer44c12-band3.bak`
 - `v7xfer44c13-band1.bak`
 - `v7xfer44c13-band2.bak`
 - `v7xfer44c13-band3.bak`
-- `v7xfer44c6-2p.bak`
 - `v7xfer44c6-band1.bak`
-- `v7xfer44c7-2p.bak`
 - `v7xfer44c7-band1.bak`
 - `v7xfer44c7-band2.bak`
 - `v7xfer44c7-band3.bak`
-- `v7xfer44c8-2p.bak`
 - `v7xfer44c8-band1.bak`
-- `v7xfer44c9-2p.bak`
 - `v7xfer44c9-3psh.bak`
 - `v7xfer44c9-band1.bak`
 - `v7xfer44c9-band2.bak`
-- `v7xfer44d6w-2p.bak`
 - `v7xfer44d6w-band1.bak`
 - `v7xn-smoke.bak`
 
-## v1.5.148 — **2P 槽换代：`v7xfer44c13-2p.bak` 上槽**（本仓第一个"移植血统 + 宽体"的 2P 冠军 · 夜班食物链冠军 · 用户 GO）
+### 夜班账（分支 qoder-explore-0921night · 不占版本号 · 随做随记 · 明细见 docs/RESEARCH-LOG-2026-09-22-qoder-night.md）
 
-> **候选来历**（数据全在 `docs/RESEARCH-LOG-2026-09-22-qoder-night.md`，分支）：tgt-44（5P 训练包里 2P 移植的正例）热启动
-> → train-best 3×500（seed 13）→ 当选者**种类=6 · hill05 3.82 · 平均考卷 99%**。
-> **换槽前判据（三层，全部 ε=0 门禁口径）**：
-> ① 20 基准考卷（本次 `promote-champion2p` 实测）：**平均 99.00% · 最差基准 mix 82.50% · 过门=是**（前任同口径 0.9831）；
-> ② 头对头：对前任 2P 槽冠军 **120-0**、对白班窄体专家 `v7t2p-2p.bak`（它此前 120-0 胜前任）同样 **120-0** ⇒ 食物链顶端；
-> ③ 广度：2P 镜像 60 局非ジ有效种类 **6**（前任 3 · t2p 2）——"又强又宽"第一次同时成立。
-> **权重逐字节未动**（promote 回读自检通过）；`rulesFingerprint = be6c2195` 已记进 meta ⇒ **D16 绿、3P 槽不受影响**。
-> 缓存戳 `?v=mub4athq → muc0mokd`。**老用户照旧：要点页面「用内置冠军」（localStorage 旧包优先）。**
-> ⚠️ 如实记三条：① c13 血统 = 5P 训练包微调，其**5P 体检不过门**（同族粒 ✗场B/G5）⇒ 它只进 2P 槽，不构成"一包吃三包"结论；
-> ② `mix 82.5%` 是它最弱一格（前任该格更强）——换的是平均与上限、接受一格回落；2P 侧无 G4 门背书，此权衡随"用户 GO"入账；
-> ③ 本版只动 `js/bundled-champion.js`（meta+槽）与缓存戳；夜班分支的工具改进（退化闸/hill 择优落地/去 spawn/spec 定值化）**尚未合 main**，各自等 GO。
+- N1 报告件（3P 壳只读复制 · 不 promote）：v7xfer44-3psh.bak、v7xfer44b-3psh.bak ⇒ 结论：tgt-44 家族 5P 全不过门
+  （tgt-44 墙 0.00/场B 0.00/G5 防席 58%；xfer44 只挂场B 0.07 且 G4/G5 全过；xfer44b 挂场A 19% + G4 只枪 81%）。
+  回答用户之问："2P 调得好 ≠ 5P 能打"——在现有门体系下成立，家族无 5P 合格品。
+- N2 产物（预登记，band-save 新机制首跑）：v7xfer44c6-2p.bak、v7xfer44c7-2p.bak、v7xfer44c8-2p.bak、v7xfer44c9-2p.bak、
+  v7xfer44c10-2p.bak、v7xfer44c11-2p.bak、v7xfer44c12-2p.bak、v7xfer44c13-2p.bak、v7xfer44d6w-2p.bak
+  与各臂全部 *-band*.bak ⇒ 读数与判据结案见夜日志 §N2/§N3。
+- N2/N3 实产物点名：v7xfer44c10-2p、v7xfer44c10-band1、v7xfer44c11-2p、v7xfer44c11-band1、v7xfer44c12-2p、v7xfer44c12-band1、v7xfer44c12-band2、v7xfer44c12-band3、v7xfer44c13-2p、v7xfer44c13-band1、v7xfer44c13-band2、v7xfer44c13-band3、v7xfer44c6-2p、v7xfer44c6-band1、v7xfer44c7-2p、v7xfer44c7-band1、v7xfer44c7-band2、v7xfer44c7-band3、v7xfer44c8-2p、v7xfer44c8-band1、v7xfer44c9-2p、v7xfer44c9-band1、v7xfer44c9-band2、v7xfer44d6w-2p、v7xfer44d6w-band1。（band-save 首跑全留档）
+- 夜产物点名（含 B 段/N6）：v7xfer44c11b-2p、v7xfer44c11b-band1、v7xfer44c11b-band2、v7xfer44c9-3psh、v7xn-smoke；旧清单：v7xfer44-2p、v7xfer44-3psh、v7xfer44b-2p、v7xfer44b-3psh、v7xfer44b-band1、v7xfer44c10-2p、v7xfer44c10-band1、v7xfer44c11-2p、v7xfer44c11-band1、v7xfer44c11b-2p、v7xfer44c11b-band1、v7xfer44c11b-band2、v7xfer44c12-2p、v7xfer44c12-band1、v7xfer44c12-band2、v7xfer44c12-band3、v7xfer44c13-2p、v7xfer44c13-band1、v7xfer44c13-band2、v7xfer44c13-band3、v7xfer44c6-2p、v7xfer44c6-band1、v7xfer44c7-2p、v7xfer44c7-band1、v7xfer44c7-band2、v7xfer44c7-band3、v7xfer44c8-2p、v7xfer44c8-band1、v7xfer44c9-2p、v7xfer44c9-band1、v7xfer44c9-band2、v7xfer44d6w-2p、v7xfer44d6w-band1。
+- 夜班修（spec 定值化）：D95 去 spawn 化当晚就抓到潜伏 1/8 抖动的场景用例 **R23c**（裸 Math.random 撞上爆头判定，
+  连跑五次红一次——也是"下午那次 158/159"最可信的事后解释）。修法：11 处场景用例 + game() 默认 rng 改判定恒败
+  常量 noJudge()（要判定胜的本就显式喂 seqRng；Fuzz 自带 mulberry 不受影响）⇒ spec 连跑 6 次全 52/52；
+  D95 加防回归钉"spec 不许再出现裸 Math.random"。
+
+## v1.5.149-night（分支 qoder-explore-0921night · **未出版本、未动槽** · 序列窗锁 + 退化闸 + hill 择优 + D95 去 spawn + spec 定值化 + N6 开关）
+
+> **序列窗锁（用户 09-22 晨 GO）**：`policyChooserN` 的 soft 分支里，**链上状态整回合作废探索** ——
+> 判据 `seqLockedTurn(state,pid)` 挂**状态**不挂"贪心采样结果"（D115 首版实测：temp0.15 的贪心本身随机，
+> 采样后判锁在 RAILGUN 贪心率<1 的持珠态上 40 抽样只锁住 11 ⇒ 泄漏），条件 = 持电珠 ∨ 持爆珠 ∨ 上一手=蓄能 ∨ 身上有自己贴的存活符咒。
+> 只作用于 `epsMode==='soft'` ⇒ 训练/评测/门禁读数逐字不变。**D111 的 ②③ 随之升级**："收尾卡并入探索集"
+> 被更强语义覆盖（链上根本不改判）——白班"抽得到"与夜班"不撒手"两条同题裁定撞车，取夜裁（数据背书），
+> 断言改写并留字（用户可推翻）。**D115** 三向守：判据 3正3负 / 真链上态 ε=1 soft 与 ε=0 逐手相等（4/4 态 × 40 抽样）/
+> 反证无 epsMode 的 ε=1 必打断（防假绿）。
+> **悬崖复测（self/long · 20 局/点 · 锁后）**：电磁炮 ε=0.1 1.10（锁前 0.90）、ε=0.15 1.10、ε=0.2 1.00（锁前 0.95）；
+> 镜像破局 98-100% 保住；昏手 4.8-7.6% 与锁前同级；蓄能 1.60-2.05/局。**如实记两条边界**：
+> ① 4.30(ε=0)→1.0-1.1 的**残差主要是"储蓄税"**：探索在解锁的起点手把 ep 池花掉（最大 ep 76→8）⇒ 蓄能机会消失——
+> **起点锁（ep≥3 即锁）没上**：它会把中期噪声几乎清零、镜像破局有归零风险，属产品口味问题，留给 NEXT-2 预算制一并裁；
+> ② 对照线校准：用户 09-21 晚裁过"**每局 0.35 个电磁炮我觉得足够了**"⇒ 浏览器口径现在 1.0/局已 3 倍过线，
+> 锁的功劳真实但不戏剧；戏剧的部分（4.30）仍只活在 ε=0 的门禁读数里——这正是 §23 三栏要分开报的原因。
+> 其余分支内容（D104⑦⑧⑨⑩/hill05 择优/vetoDegenerate/band-save/D95 去 spawn/spec noJudge 定值化/D114/EPIRUS_XN2W）
+> 逐条见本版上方的"夜班账"与夜日志。**合 main 与转正版本号等用户 GO。**
 
 ## v1.5.147 — 择优的"能量项"换掉：**divNorm(归一 Shannon) → hill05(Rényi-0.5 有效技能数) → distinct → divNorm** · 带内候选全落盘（xfer44 反例 · 用户批准 + gemini 建议）
 

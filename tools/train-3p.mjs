@@ -39,6 +39,9 @@ const GENS = Number(process.argv[2] || 200);
 const N = Number(process.argv[3] || 3);
 const GAMES = Number(process.argv[4] || 8);
 const POP = Number(process.argv[5] || 12);
+/* §N6 跨 N 混适应度开关（默认 0 = 行为逐字不变；用法与红线见循环内注释） */
+const XN2W = Number(process.env.EPIRUS_XN2W || 0);
+const XN2G = Number(process.env.EPIRUS_XN2G || Math.max(4, (GAMES / 2) | 0));
 
 const sb = {
   console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN,
@@ -141,11 +144,25 @@ function addHall(params, fit) {
 }
 
 console.log('[train-3p] 人数=' + N + ' 代=' + GENS + ' 种群=' + POP + ' 每代局数=' + GAMES +
-  ' 参数=' + P.paramCount());
+  ' 参数=' + P.paramCount() + (XN2W > 0 ? (' · XN混适应度 W=' + XN2W + ' 2P局=' + XN2G + '/个体') : ''));
 
 for (let gen = 0; gen < GENS; gen++) {
   const scored = pop.map(function (params, i) {
-    return { params: params, r: T.scoreMemberN(params, OPPS, GAMES, N, gen, i, hGenes[i]) };
+    let r = T.scoreMemberN(params, OPPS, GAMES, N, gen, i, hGenes[i]);
+    /* ===== §N6 跨 N 混适应度（夜班 09-22 · 用户时间盒：只实现 + smoke，不产可换包候选）=====
+     * EPIRUS_XN2W>0 ⇒ 每个个体**追加** XN2G 局 N=2 standard 切片，fit 按权重平均：
+     *   fit' = (fit_main + W·fit_2)/(1+W)。
+     * 直接检验白班两问："训最大即包含"是否只要把小场**写进目标**就成立；
+     *   以及 2P 切片能不能让一包同时过 5P 门与 2P 对决（正式判据等用户 GO 后预注册）。
+     * 默认 W=0 ⇒ 一条行为都不变（np-test D114 钉接线 + 默认值）。 */
+    if (XN2W > 0 && N > 2) {
+      const prevMode = T.trainMode();
+      T.setTrainMode('standard');
+      const r2 = T.scoreMemberN(params, OPPS, XN2G, 2, gen, i, 0);
+      T.setTrainMode(prevMode);
+      r = Object.assign({}, r, { fit: (r.fit + XN2W * r2.fit) / (1 + XN2W), xn2fit: r2.fit });
+    }
+    return { params: params, r: r };
   });
   scored.sort(function (a, b) { return b.r.fit - a.r.fit; });
   if (scored[0].r.fit > bestFit) { bestFit = scored[0].r.fit; bestParams = scored[0].params; }
