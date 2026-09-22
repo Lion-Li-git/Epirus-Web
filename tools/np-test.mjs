@@ -4664,6 +4664,21 @@ t('D111 前台探索三条规则（v1.5.142 · ②③ 于 09-22 夜升级为序�
   eq(eqGreedy(st3, 100), 0, '有我方符咒回合 ε=1soft 与 ε=0 不许有任何改判（序列锁·白班③升级）');
 });
 
+t('D120 CLI 训练器上的 EPIRUS_* 开关不许"传了没人读"（§N8b · qoder 09-22 空转臂反例）', function () {
+  /* 病：`EPIRUS_CLEAR_W` 只接在 train-server/worker；train-3p CLI 读了 env 也没人调 setter ⇒
+     09-22 臂 a 的"单变量"实为**逐字节复现 7′**（同种子 ⇒ 连门读数都一模一样，幸而当场看穿）。
+     与 v1.5.153 热启动静默同族。门两半：① setter 行为（打进/复位）；② train-3p 的接线与 exit-5 拒绝存在。 */
+  const w0 = T.clearReward ? T.clearReward().w : 0;
+  const got = T.setClearReward(0.1);
+  eq(Number(got), 0.1, 'setClearReward(0.1) 必须回读 0.1（生效值 ≠ 请求值 ⇒ 静默钳位在骗人）');
+  T.setClearReward(0);   // 复位：不污染后面的门
+  const t3src = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(t3src.indexOf('EPIRUS_CLEAR_W') >= 0 && t3src.indexOf('setClearReward') >= 0,
+    'train-3p 必须读 EPIRUS_CLEAR_W 并打进本沙箱 evo（CLI 与 server 两条入口同口径）');
+  ok(t3src.indexOf('拒绝静默空转') >= 0, '开关 >0 但 setter 拒绝 ⇒ 必须 exit 5 响亮（同 D119 规矩）');
+  T.setClearReward(w0);
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));

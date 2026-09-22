@@ -1132,4 +1132,5 @@
 - 附录 H — v1.5.89：经济/熵奖励 env 的**静默半开**已修（第八轮复核 §2 的落地）+ 两条被作废的臂拿到**真读数**
 - research(qoder 0920 深夜) 语义修第二轮：转移/地雷/原型制御UI（指纹 a78c28cb→de02be9e · 不升版本）
 - research(qoder 0920 深夜2) 狙击×转移裁定 + 运行时 ε-greedy（指纹 de02be9e→72a9c1b5 · 不升版本）
-- research(qoder 0920 晚班2) 换包 v7n1-93 + D105/V2 标定升级 · 不升版本（main 未动）
+- research(qoder 0920 晚班2) 换包 v7n1-93 + D105/V2 标定升级 · 不升版本（main 未动）- §N8 臂产物点名：v7xn10a-31.bak（**空转臂=7′ 的逐字节复现**，因 EPIRUS_CLEAR_W 在 CLI 无人读；留档作反例）、v7xn10a-2psh.bak（考卷用壳副本）、v7xn10a-band1..6.bak、后续真臂 v7xn10b-31.bak 与其 band*。
+

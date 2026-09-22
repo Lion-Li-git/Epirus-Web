@@ -87,6 +87,21 @@ if (P.setRng && sb.window.EpirusTrainer.mulberry32) P.setRng(sb.window.EpirusTra
 const Bots = sb.window.EpirusBots;
 const T = sb.window.EpirusTrainer;
 
+/* ===== §N8b（qoder 09-22）：接通"CLI 上没人读"的 EPIRUS_CLEAR_W =====
+ * 门禁"场B 清场"是**在量的量**，但 `EPIRUS_CLEAR_W` 此前只接在 train-server/worker（浏览器训练路径）——
+ * CLI 传了等于没传（09-22 实测：臂 a 因此把 7′ 逐字节复现了一遍，"单变量"是空转的）。
+ * 与 v1.5.153 的热启动静默同族："要了开关却静默无效"。现在：>0 就打进本沙箱的 evo，并回显**生效值**；
+ * 被 evo 的入参钳位拒绝 ⇒ exit 5（拒绝继续静默）。 */
+const CLEAR_W_CLI = Number(process.env.EPIRUS_CLEAR_W || 0);
+if (CLEAR_W_CLI > 0) {
+  const gotClear = T.setClearReward ? T.setClearReward(CLEAR_W_CLI) : 0;
+  if (!(Number(gotClear) > 0)) {
+    console.error('⛔ EPIRUS_CLEAR_W=' + CLEAR_W_CLI + ' 未能生效（setClearReward 返回 ' + gotClear + '）—— 拒绝静默空转');
+    process.exit(5);
+  }
+  console.log('[clear] train-3p 主线程生效值 CLEAR_W=' + gotClear);
+}
+
 const OPPS = [
   { name: 'random', sel: Bots.pickRandom },
   { name: 'balanced', sel: Bots.pickBalanced },
