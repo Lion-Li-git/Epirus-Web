@@ -4382,6 +4382,77 @@ t('D114 §N6 跨 N 混适应度：默认关（行为逐字）+ 接线三钉（�
   ok(typeof T.setTrainMode === 'function' && typeof T.trainMode === 'function', 'evo 必须导出 setTrainMode/trainMode');
 });
 
+t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
+  ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
+  const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };
+  /* ① 判据：三正（珠/上手蓄能/我方符咒）+ 三负（空态/他人符咒/只有 ep 富余） */
+  ok(T.seqLockedTurn(mk(p => { p.elec = 1; }), 0), '持电珠 ⇒ 锁（终点炮在手，这一回合不赌）');
+  ok(T.seqLockedTurn(mk(p => { p.lastSkill = 'charge'; }), 0), '上一手蓄能 ⇒ 锁（链不许中途撒手）');
+  (function () { const s = mk(() => {}); s.p[2].stickers.push({ owner: 0, age: 1 });
+    ok(T.seqLockedTurn(s, 0), '自己贴的存活符咒 ⇒ 锁（引爆/续贴线）'); })();
+  ok(!T.seqLockedTurn(mk(p => { p.ep = 9; }), 0), 'ep 富余但不在链上 ⇒ 不锁（噪声留给非序列手）');
+  (function () { const s = mk(() => {}); s.p[2].stickers.push({ owner: 1, age: 1 });
+    ok(!T.seqLockedTurn(s, 0), '别人贴的符咒不算（owner 必须是自己）'); })();
+  ok(!T.seqLockedTurn(mk(() => {}), 0), '空态不锁');
+  /* ② 端到端：真·链上态 ε=1 soft 的 40 抽样必须与 ε=0（同 rng）逐手相等 ⇒ 锁=探索整回合作废 */
+  const W3b = Pol.unpack(sb.window.EPIRUS_CHAMPION_3P);
+  Pol.setRng(mulberry32(115115));
+  const lockedStates = [];
+  const seen = { n: 0 };
+  for (let g = 0; g < 30 && lockedStates.length < 4; g++) {
+    const st = S.createState('long', { next: mulberry32(330000 + g) }, 5);
+    const ch = (state, pid, legal) => {
+      const aff = legal.filter(l => l.affordable); const b = aff.length ? aff : [{ key: 'ji', affordable: true }];
+      const p = T.pickChampion(state, pid, b, W3b, 0.15);
+      if (lockedStates.length < 4 && T.seqLockedTurn(state, pid)) {
+        seen.n++;
+        lockedStates.push({ snap: JSON.parse(JSON.stringify({ p: state.p, round: state.round })), pid });
+      }
+      return p;
+    };
+    Play.autoGameN(st, [ch, ch, ch, ch, ch]);
+  }
+  ok(lockedStates.length >= 2, '长程自对局里必须存在链上决策态（找不到 ⇒ 珠线又断了，先查 §18-21）· 实测 ' + lockedStates.length);
+  for (const rec of lockedStates) {
+    let same = 0;
+    for (let d = 0; d < 40; d++) {
+      const mkSt = function (eps) {
+        const st2 = S.createState('long', { next: mulberry32(77000 + d) }, 5);
+        const sp = JSON.parse(JSON.stringify(rec.snap));
+        for (let i = 0; i < 5; i++) Object.assign(st2.p[i], sp.p[i]);
+        st2.round = sp.round;
+        const legal = Play.legalActions(st2, rec.pid).filter(l => l.affordable);
+        if (!legal.length) return null;
+        return T.pickChampion(st2, rec.pid, legal, W3b, 0.15, eps ? 1 : 0, 5, eps ? 'soft' : undefined);
+      };
+      const a = mkSt(false), b = mkSt(true);
+      if (a && b && a.key === b.key) same++;
+    }
+    ok(same === 40, '链上态 ε=1 soft 必须与 ε=0 逐手相等（实测 ' + same + '/40 ⇒ 锁漏或 rng 假象）');
+  }
+  /* ③ 反证：锁只在 soft —— 同一批态 ε=1 无 epsMode（uniform 原口径）必须出现改判（否则 ② 是假绿） */
+  (function () {
+    if (!lockedStates.length) return;
+    const rec = lockedStates[0];
+    let diff = 0;
+    for (let d = 0; d < 40; d++) {
+      const st2 = S.createState('long', { next: mulberry32(77000 + d) }, 5);
+      const sp = JSON.parse(JSON.stringify(rec.snap));
+      for (let i = 0; i < 5; i++) Object.assign(st2.p[i], sp.p[i]);
+      st2.round = sp.round;
+      const legal = Play.legalActions(st2, rec.pid).filter(l => l.affordable);
+      const g0 = T.pickChampion(st2, rec.pid, legal, W3b, 0.15, 0);
+      const st3 = S.createState('long', { next: mulberry32(77000 + d) }, 5);
+      for (let i = 0; i < 5; i++) Object.assign(st3.p[i], JSON.parse(JSON.stringify(rec.snap)).p[i]);
+      st3.round = sp.round;
+      const legal3 = Play.legalActions(st3, rec.pid).filter(l => l.affordable);
+      const gu = T.pickChampion(st3, rec.pid, legal3, W3b, 0.15, 1, 5);
+      if (gu.key !== g0.key) diff++;
+    }
+    ok(diff > 0, '无 epsMode 的 ε=1 必须会打断链上回合（实测改判 ' + diff + '/40 —— 为 0 说明量具没判别力）');
+  })();
+});
+
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
    * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/
@@ -4456,7 +4527,7 @@ t('D110 冠军包解析单一来源：吃得下产物 .bak 外壳 / 纯 JSON / �
   ok(X.extract('/* 注释 */\nwindow.EPIRUS_CHAMPION = {"v":7,"params":[1,2]};\n').slot === '2p', '2P 外壳（含前置注释）必须判成 2p');
 });
 
-t('D111 前台探索的三条状态规则（v1.5.142 用户裁定）：铺垫卡 ep 门槛 + 持珠并入电磁炮 + 有符咒并入天火', function () {
+t('D111 前台探索三条规则（v1.5.142 · ②③ 于 09-22 夜升级为序列窗锁）：铺垫卡 ep 门槛 + 链上回合整锁', function () {
   /* 病（docs/RESEARCH-LOG-2026-09-21-ds.md §10，DS 实测）：贴贴/蓄能只在 ε>0 时出现（ε=0 ⇒ 0.00/局、
      前台 ε.2 ⇒ 2.7/局），而**天火两档都是 0.00/局** ⇒ 探索只付铺垫成本、结构性地拿不到收尾。
      用户三条裁定 → 落在 `policyChooserN` 的 `epsMode==='soft'` 分支里。本门**行为式**验证。 */
@@ -4479,14 +4550,24 @@ t('D111 前台探索的三条状态规则（v1.5.142 用户裁定）：铺垫卡
   const h1 = draws(st1, 0, KEYS, 200);
   eq((h1[K.CURSE] || 0) + (h1[K.CHARGE] || 0), 0, 'ep=1 时探索不得抽到贴贴/蓄能（实测 ' +
     (h1[K.CURSE] || 0) + '/' + (h1[K.CHARGE] || 0) + ' 次）');
-  /* ② 持电珠 + ep≥2：电磁炮必须被并进探索集 ⇒ 200 次里至少出现一次 */
+  /* ②③（09-22 夜裁升级）：白班的"并入探索集"被**序列窗锁**覆盖 —— 持珠/持符的回合整回合作废探索，
+   * 比"收尾卡抽得到"更强（抽不到≠会被改判；夜测 §N4：悬崖在 ε=0.1 就跌满 ⇒ 可达性不够，要原子性）。
+   * 断言随之改写：这类态上 ε=1 soft 必须**逐手等于 ε=0**（锁生效；deviation=0）。① 原样保留。 */
+  const eqGreedy = function (st, n) {
+    const soft = T.policyChooserN(params, 0.15, 1, 5, 'soft');
+    const zero = T.policyChooserN(params, 0.15, 0);
+    const legal = K ? KEYS.map(function (k) { return { key: k, affordable: true }; }) : [];
+    let diff = 0;
+    for (let i = 0; i < n; i++) {
+      const a = zero(st, 0, legal), b = soft(st, 0, legal);
+      if (a.key !== b.key) diff++;
+    }
+    return diff;
+  };
   const st2 = mk(); st2.p[0].ep = 4; st2.p[0].elec = 1;
-  const h2 = draws(st2, 0, KEYS, 200);
-  ok((h2[K.RAILGUN] || 0) > 0, '持电珠时探索必须能抽到电磁炮（实测 ' + (h2[K.RAILGUN] || 0) + ' 次）');
-  /* ③ 自己有存活符咒 + ep≥2：天火必须被并进探索集 ⇒ 200 次里至少出现一次 */
+  eq(eqGreedy(st2, 100), 0, '持电珠回合 ε=1soft 与 ε=0 不许有任何改判（序列锁·白班②升级）');
   const st3 = mk(); st3.p[0].ep = 4; st3.p[1].stickers = [{ owner: 0, age: 1 }];
-  const h3 = draws(st3, 0, KEYS, 200);
-  ok((h3[K.FIRESTORM] || 0) > 0, '有存活符咒时探索必须能抽到天火（实测 ' + (h3[K.FIRESTORM] || 0) + ' 次）');
+  eq(eqGreedy(st3, 100), 0, '有我方符咒回合 ε=1soft 与 ε=0 不许有任何改判（序列锁·白班③升级）');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>

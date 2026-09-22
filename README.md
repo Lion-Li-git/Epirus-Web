@@ -3,11 +3,9 @@
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）
 重新实现的一整套 **2 人可玩、可自对战训练** 程序。
 
-> **当前版本：v1.5.147** · 2 人对战（v1.0.0 功能冻结）+ **多人 3~5 人（技能齐全 · AI 状态特征 v7，FEAT_S=213）**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`。
-> **本版改动**：择优的带内排序键从归一 Shannon 熵换成 **hill05（Rényi-0.5 有效技能数）→ distinct → divNorm**，
-> 并新增 `effSkills` 直读列与**带内候选全落盘**（`<arm>-band<k>.bak`）——动因是 xfer44 臂 0.005 的熵噪声把种类 2 的窄包选走了冠军（门 D104⑦⑧⑨ 守住）。指纹未动。
-> 上一版（v1.5.146）：D95 去 spawn 化 · D113 chooser 免疫直喂原始包 · README 卡数口径 27。
-> ⚠️ 现役 3P 冠军 = `v7cmin4-31`：**老用户要点页面「用内置冠军」才会换到新包**（localStorage 旧包优先）。
+> **当前版本：v1.5.149**（分支 `qoder-explore-0921night` · **未合 main**）· 2 人对战（v1.0.0 功能冻结）+ **多人 3~5 人（技能齐全 · AI 状态特征 v7，FEAT_S=213）**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`。
+> **本分支内容**：序列窗锁（链上回合作废探索 · D115 三向守，D111②③ 升级为锁）+ 退化闸 vetoDegenerate + hill05 择优 + band-save 全落盘 + D95 去 spawn + spec 定值化 + N6 跨 N 开关（默认关）。main 现为 v1.5.148（2P 槽=c13 宽体冠军）。
+> ⚠️ 现役 3P 冠军 = `v7cmin4-31`；**老用户要点页面「用内置冠军」才会换到新包**（两槽同理）。
 > 之前每一版的改动与实验结论都记在 [`CHANGELOG.md`](CHANGELOG.md)（**README 只留当前版本**）。
 
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩，不需要装任何东西、不需要联网。
@@ -82,7 +80,7 @@ Epirus-Web/
 │   ├─ eval-3p.mjs             多人冠军评测（1st/top2 + 出招分布）
 │   ├─ smoke.mjs               CDP 真浏览器冒烟测试（2 人）
 │   ├─ spec-run.mjs            Node 桩跑 2 人引擎自测（52/52）
-│   ├─ np-test.mjs             N 人引擎自测（161/161：D1–D114 + N/L 族守门）
+│   ├─ np-test.mjs             N 人引擎自测（162/162：D1–D115 + N/L 族守门）
 │   ├─ np-probe.mjs            CDP 真浏览器多人（3/5 人）探测
 │   ├─ log-behavior.mjs        **真机栏**：从实机对局记录按席位统计行动构成（只读 results/*.txt）
 │   ├─ promote-champion.mjs   换包前体检（含广度**两个模式都判** + G4/G5 + 珠经济闭环）
@@ -111,7 +109,7 @@ Epirus-Web/
 
 ```bash
 node tools/spec-run.mjs    # 2 人引擎：52/52（含 v1.5.129 的 R61、v1.5.140 的 R62 残局多目标禁用等）
-node tools/np-test.mjs     # 多人引擎 + 门禁：161 条（N 人口径 + 座位均等 + 地雷 AoE N20a~e + 大雷禁用/传导 N21/N22 + 激光眼 N23 + REPRO/REPRO2 + L 族；D 族覆盖模式入口一致性、维度/shapeOf、指纹（两个包）、播种实测、体检门槛、判定与爆头口径、G4/G5 行为门（D67）、择优不回归层（D104）、V4 满桌同包地板（D105）、场A/场B 打印器能工作（D106）、G4 装配单一来源（D107）、座位身份等性价对（D108）、形状适应度（D109）、冠军包解析单一来源（D110）、前台探索三规则（D111）、广度两模式都判（D112）、chooser 免疫直喂原始包（D113）、跨N混适应度默认关+接线（D114）…**末号 D114**）
+node tools/np-test.mjs     # 多人引擎 + 门禁：162 条（N 人口径 + 座位均等 + 地雷 AoE N20a~e + 大雷禁用/传导 N21/N22 + 激光眼 N23 + REPRO/REPRO2 + L 族；D 族覆盖模式入口一致性、维度/shapeOf、指纹（两个包）、播种实测、体检门槛、判定与爆头口径、G4/G5 行为门（D67）、择优不回归层（D104）、V4 满桌同包地板（D105）、场A/场B 打印器能工作（D106）、G4 装配单一来源（D107）、座位身份等性价对（D108）、形状适应度（D109）、冠军包解析单一来源（D110）、前台探索三规则（D111，其②③于 09-22 夜升级为序列锁）、广度两模式都判（D112）、chooser 免疫直喂原始包（D113）、跨N混适应度默认关+接线（D114）、序列窗锁（D115）…**末号 D115**）
 node tools/log-behavior.mjs results/31   # 真机栏：实机日志的行动构成（只读；配合体检的 ε=0 栏 / 浏览器模拟栏 = 三栏验收）
 node tools/probe-g4-anatomy.mjs 60   # G4「只枪」那格的解剖 + 双向反事实（只读；§A 自检须复现 75%/62%）
 node tools/eval-3p.mjs     # 3 人冠军评测：28 对手对 × 座位轮换 → 1st/top2 + 出招分布

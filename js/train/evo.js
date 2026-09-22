@@ -388,6 +388,32 @@
     throw new Error('policyChooserN: params 必须是 EpirusPolicy.unpack() 后的权重数组；不许直喂 window.EPIRUS_CHAMPION（忘 unpack 会静默输出均匀分布）');
   }
 
+  /* ===== v1.5.149-night · 序列窗锁的判据（纯函数，门 D115 直接喂构造态）=====
+   * 夜测（`RESEARCH-LOG-2026-09-22-qoder-night.md` §N4）：电磁炮 4.30/局在 **ε=0.1 就跌到 0.90** ——
+   * 悬崖与 ε 大小不成比例。机理：蓄能→开炮/贴符→引爆是**跨回合序列**，任何一步被改判都会让整条链归零
+   * （蓄能被换 ⇒ 下回合无珠；持珠没开炮 ⇒ 珠回合末过期）。D111 三规则保证"收尾卡在菜单上"（可达性），
+   * 但探索仍能在**序列步**上改判（原子性没人管）。
+   * ⚠️ 判据挂在**状态特征**上而不是"贪心采样结果"上（D115 首版实测泄漏：temp0.15 的贪心本身是随机的，
+   *   RAILGUN 贪心率 <1 的持珠态有 (1−q)·ε 概率被改判 ⇒ 采样后判锁 40 抽样只锁住 11）。
+   * 锁语义：
+   *   · 持电珠 ⇒ 锁（终点 RAILGUN 在手，回合不赌）；持爆珠 ⇒ 锁（终点 LASER_EYE）；
+   *   · 身上有自己贴的存活符咒 ⇒ 锁（终点 FIRESTORM / 续贴线）；
+   *   · 上一手 = CHARGE ⇒ 锁（无论本手开什么，都不许在链中途撒手）；
+   *   · CHARGE ∧ ep≥3 **不锁起点**（否则 D111①"ep<3 不进探索"的噪声源就被清零——起点交给终点锁 + 上手段保护，
+   *     实测蓄能频率仍受 ε 影响但**放炮链**完整，悬崖修复见夜测复跑）。
+   * 只在 `epsMode==='soft'` 生效 ⇒ 训练/评测/门禁（eps=0 或缺省口径）逐字不变。 */
+  function seqLockedTurn(state, pid) {
+    if (!state || !state.p || !state.p[pid]) return false;
+    const me = state.p[pid];
+    if ((me.elec || 0) > 0 || (me.boom || 0) > 0) return true;
+    if (me.lastSkill === R.SK.CHARGE) return true;
+    for (let zi = 0; zi < state.p.length; zi++) {
+      const zs = state.p[zi].stickers || [];
+      for (let zj = 0; zj < zs.length; zj++) if (zs[zj] && zs[zj].owner === pid) return true;
+    }
+    return false;
+  }
+
   function policyChooserN(params, temp, eps, epsK, epsMode) {
     params = normChampParams(params);
     const legacy = LEGACY(params);
@@ -427,9 +453,16 @@
          * 40% 的随机打断等于把它从经济里删掉（量具：`tools/behavior-profile.mjs`）。
          * 默认不传 `epsMode` = v1.5.139 的原口径逐字不变 ⇒ 训练/评测/门禁读数不动。 */
         if (epsMode === 'soft') {
-          const g = greedyOf();
-          const gcat = R.byKey[g.key] && R.byKey[g.key].cat;
-          if (g.key === R.SK.RING || gcat === R.CAT.DEFENSE) pick = g;
+          /* v1.5.149-night 序列窗锁：**状态在链上（持珠/上手蓄能/有我方符咒）⇒ 本回合作废探索**，
+           * 直接走贪心 —— 判据挂状态而非挂"贪心采样结果"（D115 首版证明采样后判锁会漏 (1−q)·ε）。
+           * 与 v1.5.139-141 的"防御/环豁免"同族：那只管"这一手的类型"，这条管"这一手在不在序列上"。 */
+          if (seqLockedTurn(state, pid)) {
+            pick = greedyOf();
+          } else {
+            const g = greedyOf();
+            const gcat = R.byKey[g.key] && R.byKey[g.key].cat;
+            if (g.key === R.SK.RING || gcat === R.CAT.DEFENSE) pick = g;
+          }
         }
         if (!pick) {
           const f = P.forwardCands(state, pid, cands, params, { temp: 1 });
@@ -2427,6 +2460,6 @@ let WALL_GAMES = 3;
     widthReward,                // v1.5.124 §28a：广度收益项（权重走 econ-env 的 widthW）
     bigCardReward, countBigCards,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
-    scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, wrapBotN, pickTargetN, pickTarget2N, rankOf
+    scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn
   };
 })(typeof window !== 'undefined' ? window : globalThis);
