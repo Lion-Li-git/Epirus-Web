@@ -2,7 +2,7 @@
  * 用法：node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
  * 产出：js/bundled-champion-3p.js（window.EPIRUS_CHAMPION_3P）
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 /* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
  * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
@@ -97,6 +97,36 @@ const OPPS = [
   { name: 'farmer', sel: Bots.pickFarmer }
 ];
 
+/* ===== §N6 修正（v1.5.150 · DS 09-22）：**2P 切片的对手必须是 2P 强参照，不能是多人池** =====
+ * 病（实测，`docs/RESEARCH-LOG-2026-09-22-ds.md` §2）：原实现让每个个体对**多人池**打 2P，而现役包对
+ *   `pickBalanced`/`pickGunSpam`/`pickAggro` 在 2P 里**全是 0% 胜率** ⇒ 人人 ≈0 分 ⇒ 该切片是**常数**
+ *   ⇒ `fit'=(fit_main+W·fit₂)/(1+W)` 加常数**不改变排序** ⇒ 选择完全由 3P 侧驱动
+ *   ⇒ 第一臂（`v7xn1-31.bak`）与热启动**逐字节相同**（空枪）。
+ * 改法：切片的对手 = `EPIRUS_XN2REF`（逗号分隔的包路径，默认 = 现役 2P 冠军 `js/bundled-champion.js`），
+ *   即"**跟 2P 强者打**"⇒ 分数能分出"谁在 2P 里撑得久"⇒ 梯度回来了。
+ * `EPIRUS_XN2SCRIPTS=1` 可把多人池也并进来（默认**不并**：混入弱对手会稀释梯度）。
+ * ⚠️ 读不出参照包 ⇒ **立刻退出**（拒绝静默退化：无梯度的切片等于白跑一整臂，正是本次踩的坑）。 */
+const XN2REF_PATHS = (process.env.EPIRUS_XN2REF || 'js/bundled-champion.js')
+  .split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+function loadPackParamsAny(p) {
+  const src = readFileSync(p, 'utf8');
+  const m = src.match(/window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/);
+  if (!m) throw new Error('没有 window.EPIRUS_CHAMPION[_3P] 外壳');
+  const raw = P.unpack(JSON.parse(m[1]), true);
+  return raw ? P.embedLegacy(raw) : null;
+}
+function champChooser(params) {
+  return function (s, pl, legal) { return T.pickChampion(s, pl, legal, params, 0.15, 0, 5, 'soft'); };
+}
+const XN2_OPPS = [];
+for (const rp of XN2REF_PATHS) {
+  let rpParams = null;
+  try { rpParams = loadPackParamsAny(rp); } catch (e) { rpParams = null; }
+  if (!rpParams) { console.error('[train-3p] ⛔ EPIRUS_XN2REF 读不出包：' + rp + '（拒绝静默退化：无梯度的切片等于白跑）'); process.exit(2); }
+  XN2_OPPS.push({ name: 'ref:' + rp.replace(/^.*[\\/]/, ''), sel: champChooser(rpParams) });
+}
+if (Number(process.env.EPIRUS_XN2SCRIPTS || 0) === 1) for (const o of OPPS) XN2_OPPS.push(o);
+
 const t0 = Date.now();
 
 /* ===== Hot start: THIS WAS THE ROOT CAUSE (located by Qianwen) =====
@@ -144,7 +174,8 @@ function addHall(params, fit) {
 }
 
 console.log('[train-3p] 人数=' + N + ' 代=' + GENS + ' 种群=' + POP + ' 每代局数=' + GAMES +
-  ' 参数=' + P.paramCount() + (XN2W > 0 ? (' · XN混适应度 W=' + XN2W + ' 2P局=' + XN2G + '/个体') : ''));
+  ' 参数=' + P.paramCount() + (XN2W > 0 ? (' · XN混适应度 W=' + XN2W + ' 2P局=' + XN2G + '/个体 · 2P对手=' +
+    XN2_OPPS.map(function (o) { return o.name; }).join('+')) : ''));
 
 for (let gen = 0; gen < GENS; gen++) {
   const scored = pop.map(function (params, i) {
@@ -158,7 +189,8 @@ for (let gen = 0; gen < GENS; gen++) {
     if (XN2W > 0 && N > 2) {
       const prevMode = T.trainMode();
       T.setTrainMode('standard');
-      const r2 = T.scoreMemberN(params, OPPS, XN2G, 2, gen, i, 0);
+      /* v1.5.150：对手 = `XN2_OPPS`（2P 强参照），**不是** `OPPS`（多人池在 2P 里是常数 ⇒ 无梯度 ⇒ 空枪）。 */
+      const r2 = T.scoreMemberN(params, XN2_OPPS, XN2G, 2, gen, i, 0);
       T.setTrainMode(prevMode);
       r = Object.assign({}, r, { fit: (r.fit + XN2W * r2.fit) / (1 + XN2W), xn2fit: r2.fit });
     }
@@ -224,6 +256,32 @@ for (const h of hall) {
   if (!ev || sc > (ev.firstRate + 0.5 * ev.top2Rate)) { finalParams = h.params; ev = v; }
 }
 bestParams = finalParams;
+
+/* ===== 带内候选落盘（v1.5.150 · 移植自 `tools/train-best.mjs` 的 band-save）=====
+ * 病：本工具的终局是"名人堂里用新种子重验、只取最优"，**其余候选全被丢掉** ⇒ 一旦重验选中热启动点，
+ *     整臂的工作就没了（`v7xn1-31.bak` 与现役**逐字节相同**就是这么来的：候选连看都看不到）。
+ * 改法：hall 里每一粒都写 `docs/artifacts/<ARM>-band<k>.bak`（ARM = `EPIRUS_ARM` 或输出名去掉扩展名），
+ *     并把 `xn2*` 口径写进 meta（谁跑的、什么权重、对谁打 2P —— 产物要能自证来历）。
+ * 只写盘、不改当选判定；失败不影响当选者写盘。 */
+try {
+  const ARM = process.env.EPIRUS_ARM || OUT_PATH.replace(/^.*[\\/]/, '').replace(/\.js$/, '');
+  const BAND_DIR = process.env.EPIRUS_BAND_DIR || 'docs/artifacts';   // 可指向临时目录 ⇒ 门 D116 能行为式测它而**不欠 D82 的账**
+  if (!existsSync(BAND_DIR)) console.log('[band-save] 无 ' + BAND_DIR + ' 目录，跳过');
+  else for (let bi = 0; bi < hall.length; bi++) {
+    const hh = hall[bi];
+    const bmeta = {
+      source: 'tools/train-3p.mjs (band-save)', arm: ARM, bandIdx: bi, trainFit: hh.fit,
+      xn2w: XN2W || 0, xn2g: XN2G, xn2refs: (XN2W > 0 ? XN2REF_PATHS : []),
+      n: N, gens: GENS, games: GAMES, pop: POP, seed: __SEED,
+      selected: hh.params === bestParams, ts: new Date().toISOString()
+    };
+    writeFileSync(BAND_DIR + '/' + ARM + '-band' + (bi + 1) + '.bak',
+      '/* band-save ' + ARM + '-band' + (bi + 1) + '（tools/train-3p.mjs v1.5.150 起） */\n' +
+      'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(bmeta) + ';\n' +
+      'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(hh.params)) + ';\n');
+    console.log('[band-save] ' + ARM + '-band' + (bi + 1) + '.bak  trainFit=' + hh.fit.toFixed(3) + (bmeta.selected ? '（当选）' : ''));
+  }
+} catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
 console.log('\n=== ' + N + ' 人实测（最终冠军，28 对 × 20 局，座位轮换，temp0.15）===');
 console.log('1st=' + (ev.firstRate * 100).toFixed(1) + '%  top2=' + (ev.top2Rate * 100).toFixed(1) +
   '%   (1st/2nd/3rd = ' + ev.first + '/' + ev.second + '/' + ev.third + ' of ' + ev.games + ')');
