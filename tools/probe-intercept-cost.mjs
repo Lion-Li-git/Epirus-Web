@@ -102,7 +102,10 @@ const FIELDS = [
     const other = legal.filter(function (l) { return isGuard(l.key) && l.affordable; });
     if (other.length) return { key: other[0].key };
     return atkPick(st, pid, legal);
-  } }
+  } },
+  /* v1.5.192：**自适应场**（其余席 = 同一只包的策略）—— 只有在这里，"对手设防"才是**被我逼出来的**，
+   * 固定脚本场里它们的设防与我无关（每回合都防），所以"逼防"这个机制在脚本场结构上测不到。 */
+  { id: 'champ', label: '自适应（其余席=同一只包，会看状态）', adaptive: true, pick: null }
 ];
 
 function baseSel() { return T.policyChooserN(params, TEMP); }
@@ -114,7 +117,7 @@ function baseSel() { return T.policyChooserN(params, TEMP); }
  *   ① `--grant=card`（默认开）每回合把**受评席**的 ep 垫到刚够这张卡，**两臂同垫** ⇒ 钱相同，Δ 只反映用不用它；
  *   ② 记 `chance`（这卡合法且买得起的回合数）与 `rounds`（活了几回合）⇒ 出手太少时判"未测到"，不判方向。 */
 function run(field, injectKey, games, seedBase) {
-  const s = { first: 0, casts: 0, blocked: 0, reflected: 0, backDmg: 0, dealt: 0, epSpent: 0, rounds: 0, chance: 0, perGame: [], byWho: {} };
+  const s = { first: 0, casts: 0, blocked: 0, reflected: 0, backDmg: 0, dealt: 0, epSpent: 0, rounds: 0, chance: 0, oppGuard: 0, oppAtk: 0, perGame: [], byWho: {} };
   const need = injectKey && R.byKey[injectKey] ? (R.byKey[injectKey].cost || 0) : 0;
   for (let g = 0; g < games; g++) {
     const seed = seedBase + g * 7919;
@@ -125,6 +128,10 @@ function run(field, injectKey, games, seedBase) {
       if (q && q.hp > 0 && need > 0 && q.ep < need) q.ep = need;   // 两臂同垫：基线臂也垫，只是它不强制用
     } : undefined;
     const ch = [];
+    /* adaptive 场（`champ`）：对手 = 同一只包的策略 chooser ⇒ 它们的"设防/进攻"会**随我怎么打而变**。
+     * 为什么非要有这一场：固定脚本线的设防与我无关（它们每回合都防），于是"逼对手设防"这个机制
+     * 在脚本场里**结构上测不到** —— 而这正是大雷那张卡的全部收益来源。 */
+    const oppSel = field.adaptive ? baseSel() : null;
     for (let pid = 0; pid < N; pid++) {
       if (pid === seat) {
         ch.push(function (state, p2, legal) {
@@ -138,7 +145,7 @@ function run(field, injectKey, games, seedBase) {
       } else {
         ch.push(function (state, p2, legal) {
           const allowed = legal.filter(function (x) { return x.key !== injectKey; });
-          const r = field.pick(state, p2, allowed);
+          const r = field.adaptive ? oppSel(state, p2, allowed) : field.pick(state, p2, allowed);
           return (r && allowed.some(function (x) { return x.key === r.key; })) ? r
             : (allowed[0] ? { key: allowed[0].key } : { key: 'ji' });
         });
@@ -148,7 +155,10 @@ function run(field, injectKey, games, seedBase) {
     const evs = r.state.events;
     const cost = injectKey && R.byKey[injectKey] ? (R.byKey[injectKey].cost || 0) : 0;
     for (const e of evs) {
-      if (e.type === 'action' && e.pid === seat && e.outcome === 'ok') {
+      if (e.type === 'action' && e.outcome === 'ok' && e.pid !== seat) {
+        /* 对手这一手是"防"还是"打"——逼防效应的分子/分母 */
+        if (isGuard(e.key)) s.oppGuard++; else s.oppAtk++;
+      } else if (e.type === 'action' && e.pid === seat && e.outcome === 'ok') {
         if (!injectKey || e.key === injectKey) { s.casts++; s.epSpent += (R.byKey[e.key] ? (R.byKey[e.key].cost || 0) : 0); }
       } else if (e.type === 'blocked' && (!injectKey || e.via === injectKey)) {
         s.blocked++; s.byWho[e.by] = (s.byWho[e.by] || 0) + 1;
@@ -179,8 +189,12 @@ function paired(base, arm) {
 console.log('# 拦截代价表 · 包=' + PACK + ' 模式=' + MODE + ' n=' + N + ' 每格 ' + GAMES + ' 局 · 强制口径 ε=1（合法且买得起就用）' +
   ' · 对手一律禁用被测卡（否则 blocked 无 source，归因会混）');
 const rows = [];
+const BASES = {};   // 每个场的基线（含"对手设防/进攻"率）⇒ 逼防效应 = 强制臂 − 基线，同场同种子
 for (const fld of FIELDS) {
   const base = run(fld, null, GAMES, SEED0);
+  BASES[fld.id] = { first: base.first,
+    guardRate: base.st.oppGuard / Math.max(1, base.st.oppGuard + base.st.oppAtk),
+    atkPerGame: base.st.oppAtk / GAMES, guardPerGame: base.st.oppGuard / GAMES };
   for (const k of (ONLY.length ? SKILLS.filter(function (x) { return ONLY.indexOf(x) >= 0; }) : SKILLS)) {
     const arm = run(fld, k, GAMES, SEED0);
     const pd = paired(base, arm);
@@ -188,6 +202,8 @@ for (const fld of FIELDS) {
     rows.push({ field: fld.id, key: k, name: def.name || k, cost: def.cost,
       casts: arm.st.casts / GAMES, chance: arm.st.chance / GAMES, rounds: arm.st.rounds / GAMES,
       blockRate: arm.st.casts ? (arm.st.blocked + arm.st.reflected) / arm.st.casts : 0,
+      guardRate: arm.st.oppGuard / Math.max(1, arm.st.oppGuard + arm.st.oppAtk),
+      atkPerGame: arm.st.oppAtk / GAMES, guardPerGame: arm.st.oppGuard / GAMES,
       dealt: arm.st.dealt / GAMES, backDmg: arm.st.backDmg / GAMES, ep: arm.st.epSpent / GAMES,
       d: pd.d, se: pd.se, who: arm.st.byWho, baseFirst: base.first });
   }
@@ -245,4 +261,37 @@ console.log('# 判读合计：R 理性回避=' + cnt.R + ' · L 惰性回避=' +
 console.log('# 规则：R=被挡率≥10% 且**两场符号翻转**（会防场显著亏·不防场显著赚）⇒ "不用它"是理性，该动"先清防再打"（判据层），逼它用只会更差；' +
   'L=被挡率高但 Δ混合>0 ⇒ 在会防的场里用它仍然比冠军自由发挥强 ⇒ 不用它是**惰性**（躲的是"怕被挡"的印象，不是被挡的事实）；' +
   'N=被挡率<10%；U=出手<0.5/局（没测到）；C=基线贴边（无分辨空间）。`拦截代价`=Δ混合−Δ不防 是**机制列**（同卡同种子同惩罚 ⇒ 相减只剩拦截），不单独定判读');
-if (process.argv.indexOf('--json') >= 0) console.log(JSON.stringify({ games: GAMES, mode: MODE, pack: PACK, rows: rows, judged: out }));
+/* ===== 逼防效应（自适应场专属）=====
+ * 为什么单独一张表：`def/mix/nodef` 里对手的设防是**脚本规定的**，与我怎么打无关 ⇒ "我逼得对手不敢打我"
+ * 这件事在那些场里结构上测不到。只有 `champ`（对手=同一只包、会看状态）里，"对手设防率的抬升"才是我的功劳。
+ * 最后一列 `每局逼防次数` = 强制臂对手设防次数 − 基线 ⇒ **这就是未来"逼防收益项"的标度依据**（本仓规矩：标度必须量出来，不许凑）。 */
+const chRows = rows.filter(function (r) { return r.field === 'champ'; });
+const eff = [];
+for (const r of chRows) {
+  const b = BASES.champ;
+  eff.push({ key: r.key, name: r.name, cost: r.cost, guardFrom: b.guardRate, guardTo: r.guardRate,
+    atkFrom: b.atkPerGame, atkTo: r.atkPerGame, d: r.d, se: r.se, liftGuard: r.guardPerGame - b.guardPerGame,
+    casts: r.casts, blockRate: r.blockRate });
+}
+if (eff.length) {
+  const b = BASES.champ;
+  console.log('\n# 逼防效应（自适应场：其余席 = 同一只包）· 基线：对手设防率 ' + (100 * b.guardRate).toFixed(0) +
+    '% · 对手进攻 ' + b.atkPerGame.toFixed(1) + ' 次/局 · 基线 1st ' + (100 * b.first).toFixed(0) + '%');
+  console.log('# 卡名           费用  设防率(基线→强制)  对手进攻/局(基线→强制)  Δ自适应1st  **每局逼防次数**  出手/局  被挡率');
+  eff.sort(function (x, y) { return y.liftGuard - x.liftGuard; });
+  for (const e of eff) {
+    console.log('  ' + (e.name + '          ').slice(0, 12).padEnd(12) + String(e.cost).padStart(3) + '      ' +
+      (100 * e.guardFrom).toFixed(0) + '%→' + (100 * e.guardTo).toFixed(0).padStart(3) + '%   ' +
+      e.atkFrom.toFixed(1) + '→' + e.atkTo.toFixed(1).padStart(5) + '        ' +
+      (100 * e.d >= 0 ? '+' : '') + (100 * e.d).toFixed(0).padStart(4) + (e.se > 0 && Math.abs(e.d) > 1.96 * e.se ? '*' : ' ') + '      ' +
+      (e.liftGuard >= 0 ? '+' : '') + e.liftGuard.toFixed(2).padStart(5) + '      ' +
+      e.casts.toFixed(1).padStart(5) + '   ' + (100 * e.blockRate).toFixed(0).padStart(3) + '%');
+  }
+  console.log('# 读法：`每局逼防次数`>0 且 Δ自适应1st 为正 ⇒ 这张卡买的是"对手把回合花在防上"，**被挡不等于没用**；' +
+    '次数就是将来收益项的标度（0→该值 是完整梯度）。`*` = Δ 过 1.96·SE');
+}
+/* JSON 只出**一份**（第一版这里写了两条互斥分支，第二条会把 rows/judged 整份丢掉） */
+if (process.argv.indexOf('--json') >= 0) {
+  console.log(JSON.stringify({ games: GAMES, mode: MODE, pack: PACK, rows: rows, judged: out,
+    champBase: BASES.champ || null, champEffect: eff }));
+}
