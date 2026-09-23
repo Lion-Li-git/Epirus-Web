@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   const R = window.EpirusRules, S = window.EpirusState, X = window.EpirusResolve;
+  const Tip = window.EpirusSkillTip;   // v1.5.173：卡面提示的组装单一来源（`js/ui/skill-tip.js`，门 D131 钉"必须被用、必须被加载"）
   const Play = window.EpirusPlay, Bots = window.EpirusBots;
   const P = window.EpirusPolicy, Trainer = window.EpirusTrainer, Champ = window.EpirusChampion;
 
@@ -164,7 +165,12 @@
       const ct = document.createElement('span'); ct.className = 'ct';
       ct.textContent = multiOnly ? '多人模式' : (cd > 0 ? ('禁用剩' + cd + '回合') : costLabel(s));
       btn.appendChild(nm); btn.appendChild(ct);
-      btn.title = '【' + CAT_NM[s.cat] + ' · 优先级' + (s.pri || 3) + '】手势：' + (s.gesture || '—') + '\n' + s.desc;
+      /* v1.5.173（用户实测报"摄魂 bug 没解决"追到的真凶）：**卡面文案与引擎门槛不同源**。
+       * `SK.DRAIN` 的 `desc` 把窗口写死成"HP 小于等于 1"（R25 原口径），而长程按 `state.mode.drainHpMax=3` 放行（`RULES-NP.md` N24）
+       * ⇒ HP 2 上格子按规则**应该亮**（也确实亮），提示却说 1 ⇒ 玩家读出来就是"血回上去了摄魂还能用"。
+       * **引擎没错（实测 HP4/5 一律拒），错在那句话。**组装放在 `js/ui/skill-tip.js`（纯函数、单一来源，
+       * 且 `rules.js` 是指纹五件套之一、不能为一个显示字符串换代），这样门 D131 能 headless 直接跑它。 */
+      btn.title = '【' + CAT_NM[s.cat] + ' · 优先级' + (s.pri || 3) + '】手势：' + (s.gesture || '—') + '\n' + Tip.of(R, st, s);
       btn.disabled = multiOnly || !modeOk || cd > 0 || st.over || unaffordable;
       if (multiOnly) btn.title += '\n（多人专用（2 人局不开放），见 docs/RULES-NP.md N14）';
       else if (!modeOk) btn.title += '\n（本模式不可用）';

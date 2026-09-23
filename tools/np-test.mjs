@@ -4939,6 +4939,44 @@ t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a
     '产物要自带"这臂的训练桌上放了哪几个判据原型"（实测 ' + JSON.stringify(mt.recipe && mt.recipe.counterOpps) + '）');
 });
 
+t('D131 卡面提示必须说真话（v1.5.173 · 用户实测"摄魂 bug 没解决"追到的成因）：门槛按模式取真值，文案不许自己抄一份数字', function () {
+  /* 成因（`results/摄魂.txt`）：引擎按 `state.mode.drainHpMax` 放行（长程 3），而 `rules.js` 的 `desc` 写死"仅限 HP≤1"
+   * ⇒ 长程 HP 2 时格子**该亮**也确实亮，提示却说"≤1" ⇒ 玩家读成"血回上去了还能用 = 没修"。**引擎没错，文案过期。**
+   * 所以这条门两半：① 判**引擎**逐档（防真闩锁回来）；② 判**提示跟着模式变数字**（防这次这种"说的≠做的"）。 */
+  const caps = { long: 3, multi: 1, standard: 1 };
+  for (const mode in caps) {
+    const cap = (R.MODES[mode].hp) || 3, lim = caps[mode];
+    for (let hp = cap; hp >= 1; hp--) {
+      const st = S.createState(mode, { next: mulberry32(4242) }, mode === 'standard' ? 2 : 5);
+      st.p[0].hp = hp; st.p[0].ep = 9;
+      const okCost = S.computeCost(st, 0, R.SK.DRAIN).ok;
+      const inLegal = Play.legalActions(st, 0).some(function (x) { return x.key === R.SK.DRAIN && x.affordable; });
+      eq(okCost, hp <= lim, mode + ' HP' + hp + ' 的 computeCost 必须按 ≤' + lim + ' 判（实测 ok=' + okCost + '）');
+      eq(inLegal, hp <= lim, mode + ' HP' + hp + ' 的合法表必须与 computeCost 同口径（防"UI 亮着而引擎拒"那种分裂）');
+    }
+  }
+  /* ② 提示组装：单一来源 `js/ui/skill-tip.js`（纯函数 ⇒ 这里能直接跑），数字必须来自 `st.mode.drainHpMax` */
+  const box = { console: console, Math: Math, JSON: JSON, Object: Object, Array: Array, Number: Number, String: String, Error: Error, isNaN: isNaN };
+  box.window = box; box.globalThis = box;
+  vm.runInNewContext(readFileSync('js/ui/skill-tip.js', 'utf8'), box, { filename: 'js/ui/skill-tip.js' });
+  ok(box.EpirusSkillTip && typeof box.EpirusSkillTip.of === 'function', '必须导出 EpirusSkillTip.of');
+  const drain = R.skills.find(function (x) { return x.key === R.SK.DRAIN; });
+  const tipLong = box.EpirusSkillTip.of(R, { mode: { drainHpMax: 3 } }, drain);
+  const tipStd = box.EpirusSkillTip.of(R, { mode: {} }, drain);
+  ok(/仅限 HP≤3/.test(tipLong), '长程提示必须写 ≤3（实测：' + tipLong + '）');
+  ok(/仅限 HP≤1/.test(tipStd), '2 人/多人提示必须仍是 ≤1（实测：' + tipStd + '）');
+  ok(tipLong !== tipStd, '两种模式的提示不许相同（相同 = 又回到"一个数字写死"）');
+  ok(tipLong.indexOf('HP≤1') < 0, '长程提示里不许残留过期数字');
+  /* 非摄魂卡必须逐字不变（本函数只换它负责的那一处数字） */
+  const gun = R.skills.find(function (x) { return x.key === R.SK.GUN; });
+  eq(box.EpirusSkillTip.of(R, { mode: { drainHpMax: 3 } }, gun), String(gun.desc), '别的卡一个字都不许动');
+  /* ③ 接线：ui.js 必须走这个单一来源，index.html 必须加载它（否则页面里 undefined ⇒ 静默不显示） */
+  const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
+  ok(uiSrc.indexOf('Tip.of(R, st, s)') >= 0, 'ui.js 组卡面提示必须走 EpirusSkillTip（自己再抄一份数字 = 本仓那四次同型病）');
+  ok(uiSrc.indexOf("仅限 HP≤") < 0, 'ui.js 里不许再出现写死的"仅限 HP≤N"');
+  ok(readFileSync('index.html', 'utf8').indexOf('js/ui/skill-tip.js') >= 0, 'index.html 必须加载 skill-tip.js');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };
