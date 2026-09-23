@@ -29,85 +29,39 @@ const GAMES = Number(arg('games', 120));
 const N = Number(arg('n', 5));
 const GAME_MODE = arg('mode', 'multi');
 const RULES = String(arg('rules', '0,1,2')).split(',').map(Number);
+const KR_TRANSFER = arg('kr-transfer', 'owner');   // 转移伤害的功劳记给谁：owner=转移者（默认）/ source=原攻击者
 const FIELDS = String(arg('fields', 'mirror,pool,guardwall')).split(',');
 const PACKS = String(arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/v7aim3-93.bak,docs/artifacts/v7divK-31.bak,docs/artifacts/v7cmin4-82.bak')).split(',');
 const SEED0 = Number(arg('seed', 20260923));
 
+/* 规则实现：**一律走 `tools/kill-reward-lib.mjs`**（与 `train-3p` 同源）
+ * —— 本仓为"同一规则写两遍"栽过六次，而这里两遍跑在不同进程、比对的是冠军产物，
+ *    一旦漂移就是"训出来的冠军和量出来的冠军不是一套规则"这种最坏的错误。
+ * 三条口径（用户 09-23 夜点名）也全在 lib 里：蓄能计入开销 / 地雷·天火无来源仍归因 / 转移伤害记给转移者。 */
+import { patchResolve, patchPlay, makeKR } from './kill-reward-lib.mjs';
+
 const CORE = ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
   'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js'];
-
-/* 补丁点：`X.resolveActions(state);` 与 `X.endTurn(state);` 之间。
- * 找不到锚点必须**抛错** —— 静默没打上补丁 = 三档跑的是同一个引擎 = 整份实验是假的（本仓"空枪"那一族）。 */
-function patchPlay(txt) {
-  /* ⚠️ 锚点必须容忍 CRLF：仓库里 `js/core/play.js` 在 Windows 工作区是 **CRLF**，
-   *   第一版我用 `\n` 拼锚点 ⇒ 直接抛错（幸好抛了 —— 静默没打上补丁 = 三档跑的是同一个引擎 = 整份实验是假的）。 */
-  const NL = txt.indexOf('\r\n') >= 0 ? '\r\n' : '\n';
-  const anchor = '      X.resolveActions(state);' + NL + '      X.endTurn(state);';
-  if (txt.indexOf(anchor) < 0) throw new Error('play.js 的结算锚点找不到 ⇒ 补丁没打上，实验作废（别读它的输出）');
-  const anchor2 = '      for (let pid = 0; pid < N; pid++) {' + NL + '        if (!picks[pid]) continue;';
-  if (txt.indexOf(anchor2) < 0) throw new Error('play.js 的"行动前"锚点找不到 ⇒ 补丁没打上，实验作废');
-  return txt.replace(anchor,
-      '      X.resolveActions(state);' + NL + '      if (global.__KR) global.__KR.post(state);' + NL + '      X.endTurn(state);')
-    .replace(anchor2, '      if (global.__KR) global.__KR.pre(state);' + NL + anchor2);
-}
-
-/* 规则实现（宿主函数，跑在沙箱之外但只碰传进来的 state）
- * ⚠️ 必须同时记**发出去几次**（`__krPaid`）：一条奖励如果在其真正想治的场里一次都没发放，
- *   那它的"胜率没变"就不是"没效果"，而是**根本没触发** —— 本仓"seam 2 / 空枪"那一族的规矩。 */
-function makeKR(mode, R) {
-  if (!mode) return null;
-  return {
-    paid: 0,
-    pre: function (state) { state.__krHp = state.p.map(function (q) { return q.hp; }); state.__krMark = state.events.length; state.__krPaid = 0; },
-    post: function (state) {
-      if (!state.__krHp) return;
-      for (let v = 0; v < state.p.length; v++) {
-        if (!(state.__krHp[v] > 0) || state.p[v].hp > 0) continue;      // 本回合新死的人
-        let hp = state.__krHp[v];
-        const pay = [];
-        for (let i = state.__krMark; i < state.events.length; i++) {
-          const e = state.events[i];
-          if (e.type !== 'damage' || e.to !== v || e.source == null || !(e.amt > 0)) continue;
-          if (hp <= 0) { if (mode === 2) continue; }                     // 规则 2：结算时对方已归零 ⇒ 这一份不给
-          const eff = Math.min(e.amt, hp);
-          hp -= eff;
-          pay.push({ src: e.source, key: e.via, eff: eff });
-        }
-        if (!pay.length) continue;                                        // 无来源（地雷/天火）⇒ 都不回
-        if (mode === 1) {
-          const val = function (p) { const d = R.byKey[p.key] || {}; return { pri: d.pri || 0, cost: d.cost || 0 }; };
-          let best = null;
-          for (const p of pay) {
-            const q = val(p);
-            if (!best || q.pri > best.pri || (q.pri === best.pri && q.cost > best.cost)) best = { pri: q.pri, cost: q.cost, src: p.src };
-          }
-          const rival = pay.some(function (p) {
-            const q = val(p);
-            return p.src !== best.src && q.pri === best.pri && q.cost === best.cost;
-          });
-          if (!rival) { state.p[best.src].ep += 1; state.__krPaid++; }
-        } else if (mode === 2) {
-          for (const p of pay) { if (p.eff > 0) { state.p[p.src].ep += p.eff; state.__krPaid++; } }
-        }
-      }
-    }
-  };
-}
 
 /* 每个规则档一个沙箱（补丁不同），包与场都跑在同一档里 ⇒ 单变量 */
 const boxes = {};
 for (const rm of RULES) {
-  const files = CORE.map(function (f) { return f === 'js/core/play.js' ? patchPlay(readFileSync(f, 'utf8')) : readFileSync(f, 'utf8'); });
   const sb = {
     console: { log: function () { }, warn: function () { }, error: console.error },
     Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Float64Array, Date
   };
   sb.window = sb; sb.globalThis = sb;
-  files.forEach(function (txt, i) { vm.runInNewContext(txt, sb, { filename: CORE[i] }); });
-  sb.__KR = makeKR(rm, sb.window.EpirusRules);
+  for (const f of CORE) {
+    let txt = readFileSync(f, 'utf8');
+    if (rm === 1 || rm === 2) {
+      if (f === 'js/core/resolve.js') txt = patchResolve(txt);
+      if (f === 'js/core/play.js') txt = patchPlay(txt);
+    }
+    vm.runInNewContext(txt, sb, { filename: f });
+  }
+  sb.__KR = makeKR(sb.window.EpirusRules, rm, { transfer: KR_TRANSFER });
   boxes[rm] = { sb: sb, R: sb.window.EpirusRules, T: sb.window.EpirusTrainer, P: sb.window.EpirusPolicy, B: sb.window.EpirusBots };
 }
-
 const POOL = [boxes[RULES[0]].B.pickAggro, boxes[RULES[0]].B.pickBalanced, boxes[RULES[0]].B.pickMix,
   boxes[RULES[0]].B.pickBeadBurst, boxes[RULES[0]].B.pickComboCounter];
 

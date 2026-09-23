@@ -10,6 +10,9 @@ import { FIGHT_ENV_KEYS } from '../server/fight-env.mjs';
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
 import { rejectDegenerateWinners, bandPickByLand, rejectNarrowWinners } from './pick-best.mjs';
 import { HOLO_GIFT_MAX } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
+/* v1.5.194（qoder 0924 夜）：击杀奖励规则的**单一来源**实现（与 `probe-kill-reward.mjs` 共用同一份 ⇒
+ * 不会出现"训出来的冠军和量出来的冠军不是一套规则"）*/
+import { patchResolve as krPatchResolve, patchPlay as krPatchPlay, makeKR as krMakeKR } from './kill-reward-lib.mjs';
 
 /* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
  * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
@@ -59,6 +62,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
+  'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
   'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
@@ -148,10 +152,53 @@ function __seedSandbox(sbox, seed) {
 
 
 const __SEED = Number(process.env.EPIRUS_SEED || 1);
+/* ===== v1.5.194（qoder 0924 夜 · 用户指派）：**击杀奖励规则下的训练** =====
+ * `EPIRUS_KILL_REWARD=1|2` ⇒ 在**内存里**给 `resolve.js`/`play.js` 打补丁（仓库文件一字不动 ⇒ **规则指纹不变**、
+ * 门禁不红、线上不受影响），让整条训练链（评分 / 终评 / 当选面）都跑在"带击杀奖励的世界"里。
+ * 三条纪律：
+ *   ① 规则的**实现**在 `tools/kill-reward-lib.mjs`，与 `probe-kill-reward` **同源** —— 两处各写一遍会训出
+ *      "和量出来的不是一套规则"的冠军（本仓为这类病栽过六次）；
+ *   ② 下达后必须**行为式读回**：跑一局确认钩子真跑过（`state.__krPaid` 在）且事件真带上归因字段 ——
+ *      只看变量到位就是本仓最恨的 "seam 2"；
+ *   ③ 产物 meta 必须记 `killReward`，否则第二天没人知道这粒是哪套规则训出来的。 */
+const KR_MODE = Number(process.env.EPIRUS_KILL_REWARD || 0);
+if (!(KR_MODE === 0 || KR_MODE === 1 || KR_MODE === 2)) {
+  console.error('[train-3p] ⛔ EPIRUS_KILL_REWARD=' + process.env.EPIRUS_KILL_REWARD + ' 不是合法档（只认 0=关 / 1=单点 / 2=按伤害）');
+  process.exit(7);
+}
 for (const f of [
   'js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
   'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js'
-]) vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
+]) {
+  let txt = readFileSync(f, 'utf8');
+  if (KR_MODE === 1 || KR_MODE === 2) {
+    if (f === 'js/core/resolve.js') txt = krPatchResolve(txt);
+    if (f === 'js/core/play.js') txt = krPatchPlay(txt);
+  }
+  vm.runInNewContext(txt, sb, { filename: f });
+}
+let KR_REQ = 0, KR_PAID_PROBE = -1;
+if (KR_MODE === 1 || KR_MODE === 2) {
+  sb.__KR = krMakeKR(sb.window.EpirusRules, KR_MODE, { transfer: process.env.EPIRUS_KR_TRANSFER || 'owner' });
+  /* 行为式读回：跑一局确认钩子真跑过（`state.__krPaid` 在）且事件真带上归因字段。
+   * ⚠️ 这里**故意不用冠军包** —— 此刻 `js/bundled-champion-3p.js` 还没进沙箱（它在下面才加载），
+   *    第一版我拿 `EPIRUS_CHAMPION_3P` 去 unpack ⇒ 拿到 null ⇒ policy 里 `shapeOf(null)` 直接抛。
+   *    钩子是否与谁下注无关，用脚本池照样能证明"补丁真的在引擎里跑"。 */
+  const T0 = sb.window.EpirusTrainer, B0 = sb.window.EpirusBots;
+  const chs = [];
+  for (let pid = 0; pid < 5; pid++) chs.push(function (s2, p2, lg) { return B0.pickAggro(s2, p2, lg); });
+  const probe = T0.oneGameN(chs, 99991, 5, { mode: 'multi' });
+  KR_PAID_PROBE = probe.state.__krPaid;
+  const hasAttr = (probe.state.events || []).every(function (e) { return e.type !== 'damage' || ('mineFrom' in e && 'fireFrom' in e && 'transferBy' in e); });
+  if (KR_PAID_PROBE === undefined || KR_PAID_PROBE === null || !hasAttr) {
+    console.error('[train-3p] ⛔ 击杀奖励钩子没跑起来（__krPaid=' + KR_PAID_PROBE + ' · 归因字段齐=' + hasAttr + '）⇒ 拒绝静默按现状训练');
+    process.exit(7);
+  }
+  KR_REQ = KR_MODE;
+  console.log('[train-3p] **击杀奖励规则已下达**：mode=' + KR_MODE + '（' + (KR_MODE === 1 ? '单点：+1ep 给最高优先级/最高开销者，仍并列则都不回' : '按伤害：每位参与者按有效伤害回 ep，overkill 不付') + '）' +
+    ' · 转移归因=' + (process.env.EPIRUS_KR_TRANSFER || 'owner') + ' · 行为式读回 __krPaid=' + KR_PAID_PROBE +
+    ' · 蓄能计入开销（电磁炮/激光眼首次 +1）· 地雷/天火无来源也归因（走 mineFrom/fireFrom，**不动 R57 的 source:null**）');
+}
 
 const P = sb.window.EpirusPolicy;
 // setRng must run AFTER the engine is loaded.
@@ -793,6 +840,9 @@ const meta = {
     kill: KILL_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     counterOpps: COUNTER_OPPS.map(function (o) { return o.name; }),   // v1.5.172：这臂的训练桌上放了哪几个判据原型
     bigtChainW: BIGT_CHAIN_REQ,   // v1.5.187：这臂有没有给"连带"付钱（0 = 出厂口径）
+    /* v1.5.194：这臂是**在哪套规则下训的**。写在最显眼处 —— 否则第二天没人知道这粒冠军学过击杀奖励，
+     * 拿回现状引擎里一评就成了"冠军莫名变弱"的悬案。 */
+    killReward: KR_REQ, krTransfer: (KR_REQ ? (process.env.EPIRUS_KR_TRANSFER || 'owner') : null), killRewardProbe: KR_PAID_PROBE,
     breadthFloor: BREADTH_LOG },
   breadthFloorAllNarrow: BREADTH_ALL_NARROW,   // §N29 走向②的标记：全池塌缩 ⇒ 该改奖励面，不是换排序键
   degenerateOnlyWinner: DEGENERATE_ONLY,   // §N9 退化闸：true=没有合格当选者、promote 会拒收
