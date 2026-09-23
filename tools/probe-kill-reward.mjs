@@ -29,7 +29,8 @@ const GAMES = Number(arg('games', 120));
 const N = Number(arg('n', 5));
 const GAME_MODE = arg('mode', 'multi');
 const RULES = String(arg('rules', '0,1,2')).split(',').map(Number);
-const KR_TRANSFER = arg('kr-transfer', 'owner');   // 转移伤害的功劳记给谁：owner=转移者（默认）/ source=原攻击者
+const KR_TRANSFER = arg('kr-transfer', 'owner');
+const OPP_PACK = arg('opp', '');   // `vs` 场的对手包（头对头：其余席 = 这只包）   // 转移伤害的功劳记给谁：owner=转移者（默认）/ source=原攻击者
 const FIELDS = String(arg('fields', 'mirror,pool,guardwall')).split(',');
 const PACKS = String(arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/v7aim3-93.bak,docs/artifacts/v7divK-31.bak,docs/artifacts/v7cmin4-82.bak')).split(',');
 const SEED0 = Number(arg('seed', 20260923));
@@ -59,25 +60,54 @@ for (const rm of RULES) {
     }
     vm.runInNewContext(txt, sb, { filename: f });
   }
-  sb.__KR = makeKR(sb.window.EpirusRules, rm, { transfer: KR_TRANSFER });
-  boxes[rm] = { sb: sb, R: sb.window.EpirusRules, T: sb.window.EpirusTrainer, P: sb.window.EpirusPolicy, B: sb.window.EpirusBots };
+  sb.__KR = makeKR(sb.window.EpirusRules, sb.window.EpirusState, rm, { transfer: KR_TRANSFER });
+  boxes[rm] = { id: 'r' + rm, sb: sb, R: sb.window.EpirusRules, T: sb.window.EpirusTrainer, P: sb.window.EpirusPolicy, B: sb.window.EpirusBots };
 }
 const POOL = [boxes[RULES[0]].B.pickAggro, boxes[RULES[0]].B.pickBalanced, boxes[RULES[0]].B.pickMix,
   boxes[RULES[0]].B.pickBeadBurst, boxes[RULES[0]].B.pickComboCounter];
 
 function packName(p) { return p.replace(/^.*[\\/]/, '').replace(/\.[A-Za-z0-9]+$/, ''); }
 
-function runOne(box, params, field, games, seedBase) {
-  const T = box.T, B = box.B, R = box.R;
+/* 广度读数（P3 的尺）：`mirrorHealth` 跑在**同一个沙箱**里 ⇒ 它量的就是这个规则世界里的兑现广度 */
+const BREADTH_CACHE = {};
+function breadthOf(box, params, tag) {
+  /* ⚠️ 缓存键必须含**包身份**：第一版只用了场名 ⇒ 十只包全被报成同一份广度（4.44→2.66）。
+   *   我发现它的方式就是"十行一模一样"——同形读数本身就是危险信号，本仓为这类事栽过不止一次。 */
+  const k = tag + '|' + box.id + '|' + (params && params.__krTag ? params.__krTag : 'p');
+  if (BREADTH_CACHE[k]) return BREADTH_CACHE[k];
+  const mh = box.T.mirrorHealth(params, 20, N, GAME_MODE === 'long' ? 'long' : 'multi');
+  BREADTH_CACHE[k] = { castG: mh.effSkills, landG: mh.effSkillsLand || 0, landKeys: mh.landedKeys || 0 };
+  return BREADTH_CACHE[k];
+}
+/* `--opp=<包>`：其余席 = 另一只包 ⇒ 真正的**头对头**（P1/P2 要的"新冠军 vs 现役"，不是自对局） */
+function oppParamsOf(box) {
+  if (!OPP_PACK) return null;
+  if (!box._opp) {
+    const t = readFileSync(OPP_PACK, 'utf8');
+    vm.runInNewContext(t, box.sb, { filename: OPP_PACK });
+    const o = /EPIRUS_CHAMPION_3P\s*=/.test(t) ? box.sb.window.EPIRUS_CHAMPION_3P : box.sb.window.EPIRUS_CHAMPION;
+    box._opp = box.P.unpack(o, true);
+    if (!box._opp) { console.error('⛔ 对手包解不开：' + OPP_PACK); process.exit(2); }
+  }
+  return box._opp;
+}
+
+function runOne(box, params, field, games, seedBase, packTag) {
+  if (params && packTag) params.__krTag = packTag;   // 只当缓存身份用，不参与任何计算
+  const T = box.T, B = box.B;
   let first = 0, draws = 0, rounds = 0, kills = 0, epSum = 0, maxEp = 0, paid = 0;
   const wins = [];   // 逐局胜负（同种子 ⇒ 三档之间可**配对**求差，SE 才是真 SE）
+  const oppP = field === 'vs' ? oppParamsOf(box) : null;
+  if (field === 'vs' && !oppP) throw new Error('`vs` 场需要 --opp=<包>');
   for (let g = 0; g < games; g++) {
     const seat = g % N, seed = seedBase + g * 7919;
     const bs = T.policyChooserN(params, 0.15);
+    const obs = oppP ? T.policyChooserN(oppP, 0.15) : null;
     const ch = [];
     for (let pid = 0; pid < N; pid++) {
       if (pid === seat) ch.push(function (s2, p2, lg) { return bs(s2, p2, lg); });
       else if (field === 'mirror') ch.push(function (s2, p2, lg) { return bs(s2, p2, lg); });
+      else if (field === 'vs') ch.push(function (s2, p2, lg) { return obs(s2, p2, lg); });
       else if (field === 'guardwall') ch.push(function (s2, p2, lg) { return B.pickGuardSpam(s2, p2, lg); });
       else { const bot = POOL[(g * 3 + pid) % POOL.length]; ch.push(function (s2, p2, lg) { return bot(s2, p2, lg); }); }
     }
@@ -91,8 +121,10 @@ function runOne(box, params, field, games, seedBase) {
     paid += r.state.__krPaid || 0;
     for (const q of r.state.p) { epSum += q.ep; if (q.ep > maxEp) maxEp = q.ep; }
   }
+  const br = breadthOf(box, params, field);
   return { first: first / games, draws: draws / games, rounds: rounds / games, wins: wins,
-    kills: kills / games, paid: paid / games, ep: epSum / (games * N), maxEp: maxEp };
+    kills: kills / games, paid: paid / games, ep: epSum / (games * N), maxEp: maxEp,
+    castG: br.castG, landG: br.landG, landKeys: br.landKeys };
 }
 /* 配对差与 SE（同种子逐局配对 ⇒ 比两次独立抽样灵敏得多） */
 function pairedDiff(base, arm) {
@@ -109,7 +141,7 @@ console.log('# 击杀奖励实验 · 规则档 0=现状 / 1=单点(+1ep 给最�
 const res = [];
 for (const field of FIELDS) {
   console.log('\n=== 场：' + field + ' ===');
-  console.log('  包                     规则  受评席1st   平局率    局长    击杀/局  奖励发放/局  终局ep  最高ep');
+  console.log('  包                     规则  受评席1st   平局率    局长    击杀/局  奖励发放/局  终局ep  最高ep   出手G→净兑现G');
   for (const p of PACKS) {
     const row = { field: field, pack: packName(p), by: {} };
     for (const rm of RULES) {
@@ -119,14 +151,15 @@ for (const field of FIELDS) {
       const obj = /EPIRUS_CHAMPION_3P\s*=/.test(txt) ? box.sb.window.EPIRUS_CHAMPION_3P : box.sb.window.EPIRUS_CHAMPION;
       const params = box.P.unpack(obj, true);
       if (!params) { console.error('⛔ 包解不开：' + p); process.exit(2); }
-      row.by[rm] = runOne(box, params, field, GAMES, SEED0);
+      row.by[rm] = runOne(box, params, field, GAMES, SEED0, row.pack + '#' + rm);
     }
     for (const rm of RULES) {
       const v = row.by[rm];
       console.log('  ' + row.pack.slice(0, 20).padEnd(22) + String(rm).padStart(3) + '   ' +
         (100 * v.first).toFixed(1).padStart(6) + '%  ' + (100 * v.draws).toFixed(0).padStart(5) + '%  ' +
         v.rounds.toFixed(1).padStart(6) + '  ' + v.kills.toFixed(2).padStart(6) + '      ' +
-        v.paid.toFixed(2).padStart(6) + '     ' + v.ep.toFixed(2).padStart(5) + ' ' + String(v.maxEp).padStart(5));
+        v.paid.toFixed(2).padStart(6) + '     ' + v.ep.toFixed(2).padStart(5) + ' ' + String(v.maxEp).padStart(5) +
+        '    ' + v.castG.toFixed(2) + '→' + v.landG.toFixed(2) + '(' + v.landKeys + '种)');
     }
     const b0 = row.by[0];
     if (b0) {

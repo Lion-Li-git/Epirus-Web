@@ -179,7 +179,7 @@ for (const f of [
 }
 let KR_REQ = 0, KR_PAID_PROBE = -1;
 if (KR_MODE === 1 || KR_MODE === 2) {
-  sb.__KR = krMakeKR(sb.window.EpirusRules, KR_MODE, { transfer: process.env.EPIRUS_KR_TRANSFER || 'owner' });
+  sb.__KR = krMakeKR(sb.window.EpirusRules, sb.window.EpirusState, KR_MODE, { transfer: process.env.EPIRUS_KR_TRANSFER || 'owner' });
   /* 行为式读回：跑一局确认钩子真跑过（`state.__krPaid` 在）且事件真带上归因字段。
    * ⚠️ 这里**故意不用冠军包** —— 此刻 `js/bundled-champion-3p.js` 还没进沙箱（它在下面才加载），
    *    第一版我拿 `EPIRUS_CHAMPION_3P` 去 unpack ⇒ 拿到 null ⇒ policy 里 `shapeOf(null)` 直接抛。

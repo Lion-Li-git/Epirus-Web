@@ -66,25 +66,41 @@ export function patchPlay(txt) {
 }
 
 /* ---------- 开销口径（蓄能计进开销） ---------- */
-/** 规则 1 的"开销"比较值：卡面费用 + **为这一手付出的珠子**（电磁炮需电珠、激光眼首次需爆珠）。
- *  激光眼的"续招"（上一手就是激光眼）费用 2 且不吃珠 ⇒ 同样记 2，两种路径平价。 */
-export function effCost(R, key, wasFirstUse) {
-  const d = R.byKey[key] || {};
-  let c = d.cost || 0;
-  if (key === R.SK.RAILGUN) c += 1;                       // 需 1 枚电珠（蓄能攒出来的）
-  if (key === R.SK.LASER_EYE && !wasFirstUse) c += 0;     // 续招：费用已是 2，不再加价
-  else if (key === R.SK.LASER_EYE) c += 1;                // 首次：需 1 枚爆珠
-  return c;
+/** "开销比较值"（规则 1 同优先级时的判据，用户 09-23 夜点名：**蓄能要算进开销 ⇒ 等价于多耗 1ep**）。
+ *
+ * ⚠️ **不自己写一份费用规则**：卡表里 `聚能环 / 激光眼 / 过载炮` 的 `cost` 是 **`null`**（动态费用，真值在
+ *   `state.js:computeCost` 里）⇒ 直接读 `def.cost` 会把它们当成 0，"蓄能加价"就加在了空气上。
+ *   所以动态费用一律**问引擎**（`computeCost` 在一个标准空局上的首次值），与 `skill-report.costOf` 同一口径。
+ * 结果（实测）：枪 1 · 狙击 2 · 大雷 5 · 电磁炮 2+1=**3** · 激光眼 1+1=**2**（续招路径本身也是 2 ⇒ 平价）·
+ *   聚能环 3 · 过载炮 2。 */
+export function buildCostOf(R, S) {
+  const cache = {};
+  return function (key) {
+    if (Object.prototype.hasOwnProperty.call(cache, key)) return cache[key];
+    let c = (R.byKey[key] || {}).cost;
+    if (c == null) {
+      c = 0;
+      try {
+        const st = S.createState('multi', { next: function () { return 0.5; } }, 3);
+        for (let i = 0; i < st.p.length; i++) { st.p[i].ep = 99; st.p[i].elec = 3; st.p[i].boom = 3; }
+        const r = S.computeCost(st, 0, key);
+        if (r && r.ok) c = r.ep || 0;
+      } catch (e) { c = 0; }
+    }
+    if (key === R.SK.RAILGUN || key === R.SK.LASER_EYE) c += 1;   // 蓄能：攒一颗珠等价于多花 1ep
+    cache[key] = c;
+    return c;
+  };
 }
-/** 从事件推"这一手是不是激光眼续招"：`reason` 里带卡名，但续招与首次的 `via` 相同 ⇒ 交给调用方给 flag。 */
 export function priOf(R, key) { return (R.byKey[key] || {}).pri || 0; }
 
 /* ---------- 规则本体 ---------- */
 /** @param mode 0=现状（不打钩子）/ 1=单点 / 2=按伤害
  *  @param opts {transfer:'owner'|'source', log:boolean} */
-export function makeKR(R, mode, opts) {
+export function makeKR(R, S, mode, opts) {
   const o = opts || {};
   const transferTo = o.transfer === 'source' ? 'source' : 'owner';
+  const costOf = buildCostOf(R, S);
   if (!mode) return null;
   const attributionOf = function (e) {
     /* ③ 转移：记给转移者（`transferBy`），除非显式要求记给原攻击者 */
@@ -117,11 +133,11 @@ export function makeKR(R, mode, opts) {
           const eff = Math.min(e.amt, hp);
           hp -= eff;
           if (dead && mode === 2) continue;                          // overkill 不付费（规则 2 原话）
-          pay.push({ src: src, key: e.via, eff: eff, laser: (e.via === R.SK.LASER_EYE && e.reason !== '激光眼(续)') });
+          pay.push({ src: src, key: e.via, eff: eff });
         }
         if (!pay.length) continue;
         if (mode === 1) {
-          const score = function (p) { return { pri: priOf(R, p.key), cost: effCost(R, p.key, true) }; };
+          const score = function (p) { return { pri: priOf(R, p.key), cost: costOf(p.key) }; };
           let best = null;
           for (const p of pay) {
             const q = score(p);

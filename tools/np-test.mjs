@@ -16,6 +16,8 @@ import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerate
 import { readTrainEnv, hasTrainOverride, TRAIN_ENV_KEYS as TEK } from '../server/train-env.mjs';   // v1.5.169 D129：训练旋钮单一来源
 /* v1.5.132：V1/V2/V4「整局」三装配的**单一来源**（D105 与 `probe-ring-ablate.mjs` 共用一份实现）。 */
 import { measureAll } from './v2v4-lib.mjs';
+/* v1.5.194：击杀奖励规则的单一来源实现（D140 直接喂合成局面验语义）*/
+import * as KR_LIB from './kill-reward-lib.mjs';
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
 sb.window = sb; sb.globalThis = sb;
@@ -5376,6 +5378,125 @@ t('D139 击杀奖励实验台（v1.5.193）：补丁必须真打上、破防场�
     '上面那些"逐位相同"就只是"永远不发放"的同义反复；实测 ' + paidAny.length + ' 格');
   ok(/Δ胜率 vs 现状（同种子配对）/.test(out) && /噪声内 ±[\d.]+/.test(out),
     '必须印**配对**噪声（±1.96SE）—— 只印 Δ 百分点不印噪声，读表人就会把 ±5pt 的抖动当成结论（Q-9 同族病）');
+});
+
+t('D140 击杀奖励规则库（v1.5.194 · 单一来源）：合成局面逐个钉五条语义 —— 单点/按伤害/overkill/蓄能加价/无来源归因/转移记给', function () {
+  /* 这份 lib 现在决定"冠军是在哪个世界里训出来的" ⇒ 语义必须逐条钉死，且**不许**只在真对局里顺带验到。
+   * 全部用合成 state 喂 `makeKR().pre/post`（不依赖引擎跑局 ⇒ 每条都是确定性的）。 */
+  const KR = KR_LIB;   // ESM 里没有 require ⇒ 用顶部静态导入
+  const mkState = function (hps) {
+    return { p: hps.map(function (h) { return { hp: h, ep: 0 }; }), events: [], round: 1 };
+  };
+  const dmg = function (to, amt, source, via, extra) {
+    return Object.assign({ type: 'damage', to: to, amt: amt, source: source, via: via, reason: via }, extra || {});
+  };
+  /* ① 规则 1：集火时只回给"优先级最高"者（大雷 pri4 > 枪 pri2） */
+  let st = mkState([3, 3, 3]);
+  let kr = KR.makeKR(R, S, 1, {});
+  kr.pre(st);
+  st.p[1].hp = 0;   // 1 号席死
+  st.events.push(dmg(1, 2, 0, R.SK.BIG_T), dmg(1, 1, 2, R.SK.GUN));
+  kr.post(st);
+  eq(st.p[0].ep, 1, '规则1：最高优先级（大雷 pri4）拿 1 ep');
+  eq(st.p[2].ep, 0, '规则1：低优先级参与者（枪 pri2）一分不得');
+  /* ② 同优先级 + 仍并列 ⇒ 都不回 */
+  st = mkState([3, 3, 3, 3]); kr = KR.makeKR(R, S, 1, {}); kr.pre(st);
+  st.p[1].hp = 0;
+  st.events.push(dmg(1, 1, 0, R.SK.GUN), dmg(1, 1, 2, R.SK.GUN));
+  kr.post(st);
+  eq(st.p[0].ep + st.p[2].ep, 0, '规则1：同 pri 同 cost 的**不同角色**并列 ⇒ 都不回（用户明说）');
+  /* ③ 蓄能算进开销 ⇒ 同优先级里需珠的那手占优（坦克 vs 电磁炮：pri 相同时电磁炮 cost+1 胜出） */
+  const priTank = (R.byKey[R.SK.TANK] || {}).pri, priRail = (R.byKey[R.SK.RAILGUN] || {}).pri;
+  /* 开销比较值：**动态费用必须问引擎**（聚能环/激光眼/过载炮 的 `cost` 是 null ⇒ 读卡表会把它们当 0） */
+  {
+    const costOf = KR.buildCostOf(R, S);
+    eq(costOf(R.SK.GUN), 1, '枪 = 1');
+    eq(costOf(R.SK.BIG_T), 5, '大雷 = 5');
+    eq(costOf(R.SK.RAILGUN), 3, '电磁炮 = 费用 2 + 蓄能 1（用户点名要算进开销）');
+    eq(costOf(R.SK.LASER_EYE), 2, '激光眼 = 首次 1 + 蓄能 1 = 2（与"续招 2ep"那条路径平价）');
+    eq((R.byKey[R.SK.LASER_EYE] || {}).cost, null, '前置事实：激光眼在卡表里是**动态费用（null）** ⇒ 不问引擎就会算成 0');
+    eq(costOf(R.SK.RING), 3, '聚能环（动态费用）必须问引擎拿到 3，而不是读卡表得 0');
+    ok(costOf(R.SK.CANNON) >= 2, '过载炮（动态费用）≥2；实测 ' + costOf(R.SK.CANNON));
+  }
+  void priTank; void priRail;
+  /* ④ 规则 2：按有效伤害付，overkill 不付（**起始血量必须与注释一致** —— 第一版写了"目标只有 2 血"
+   *    却用 `mkState([3,3,3])` 造了 3 血 ⇒ 该发其实不是 overkill，是这条断言自己错了） */
+  st = mkState([3, 2, 3]); kr = KR.makeKR(R, S, 2, {}); kr.pre(st);
+  st.p[1].hp = 0;
+  st.events.push(dmg(1, 1, 0, R.SK.GUN), dmg(1, 3, 2, R.SK.SNIPE));   // 目标开局 2 血：第二发 3 点里 2 点是 overkill
+  kr.post(st);
+  eq(st.p[0].ep, 1, '规则2：第一发全额付 1 ep');
+  eq(st.p[2].ep, 1, '规则2：致命那发只付"把血打到 0"的部分（3 点里 2 点是 overkill ⇒ 只付 1）；实测 ' + st.p[2].ep);
+  /* ⑤ 无来源的地雷 / 天火也要回 ep（走 mineFrom / fireFrom，**不动 source**） */
+  st = mkState([3, 3, 3]); kr = KR.makeKR(R, S, 1, {}); kr.pre(st);
+  st.p[1].hp = 0;
+  st.events.push(dmg(1, 1, null, 'mine', { mineFrom: 2 }));
+  kr.post(st);
+  eq(st.p[2].ep, 1, '地雷炸死 ⇒ 回给埋雷者（`mineFrom`），而不是因为 `source:null` 就谁都不回');
+  st = mkState([3, 3, 3]); kr = KR.makeKR(R, S, 2, {}); kr.pre(st);
+  st.p[1].hp = 0;
+  st.events.push(dmg(1, 2, null, 'firestorm', { fireFrom: 0 }));
+  kr.post(st);
+  eq(st.p[0].ep, 2, '天火引爆致死 ⇒ 按伤害回给引爆者（`fireFrom`）');
+  /* ⑥ 转移伤害：功劳记给**转移者**（默认），可切成原攻击者 */
+  st = mkState([3, 3, 3, 3]); kr = KR.makeKR(R, S, 1, {}); kr.pre(st);
+  st.p[3].hp = 0;
+  st.events.push(dmg(3, 2, 0, R.SK.SNIPE, { transferBy: 1 }));   // 0 打出的伤害被 1 转移给 3
+  kr.post(st);
+  eq(st.p[1].ep, 1, '转移伤害致死 ⇒ 默认记给转移者（1 号席）');
+  eq(st.p[0].ep, 0, '默认口径下原攻击者（0 号席）不拿');
+  st = mkState([3, 3, 3, 3]); kr = KR.makeKR(R, S, 1, { transfer: 'source' }); kr.pre(st);
+  st.p[3].hp = 0;
+  st.events.push(dmg(3, 2, 0, R.SK.SNIPE, { transferBy: 1 }));
+  kr.post(st);
+  eq(st.p[0].ep, 1, '`--kr-transfer=source` 时改记给原攻击者（两种读法都留了开关）');
+  /* ⑦ 真正无主的死亡（铁索传导 / 禁用扣血 / 终局收缩）⇒ 一律不回，也不许崩 */
+  st = mkState([3, 3, 3]); kr = KR.makeKR(R, S, 2, {}); kr.pre(st);
+  st.p[2].hp = 0;
+  st.events.push(dmg(2, 1, null, 'chain'), dmg(2, 1, null, 'ban'), dmg(2, 2, null, '终局收缩'));
+  kr.post(st);
+  eq(st.p[0].ep + st.p[1].ep, 0, '无归因的死亡 ⇒ 谁都不回（且不许 NaN/抛错）');
+  /* ⑧ 引擎补丁：锚点漂了必须抛错（静默没打上 = 三档跑同一个引擎 = 假实验） */
+  {
+    let threw = 0;
+    try { KR.patchResolve('这是一段被改过的、没有锚点的 resolve.js'); } catch (e) { threw = 1; }
+    eq(threw, 1, '锚点找不到必须**抛错**，不许静默返回原文');
+    const patched = KR.patchResolve(readFileSync('js/core/resolve.js', 'utf8'));
+    ok(patched.indexOf('mineFrom:') >= 0 && patched.indexOf('fireFrom:') >= 0 && patched.indexOf('transferBy:') >= 0,
+      'resolve.js 补丁必须真的把三个归因字段接进事件（缺一个就有某类死亡回不了 ep）');
+    ok(patched.indexOf("source: (opts.source != null ? opts.source : null)") >= 0,
+      '**不许动 `source`**（R57：地雷/天火是无来源伤害，且 `source==null` 还是大雷连带与"终局收缩"哨兵的输入）');
+  }
+  /* ⑨ 补丁行为中性：打了补丁但不挂规则钩子 ⇒ 与未打补丁**逐位相同** */
+  {
+    const boot = function (patched) {
+      const box = {
+        console: { log: function () { }, warn: function () { }, error: function () { } },
+        Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Float64Array, Date
+      };
+      box.window = box; box.globalThis = box;
+      for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
+        'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) {
+        let t = readFileSync(f, 'utf8');
+        if (patched && f === 'js/core/resolve.js') t = KR.patchResolve(t);
+        if (patched && f === 'js/core/play.js') t = KR.patchPlay(t);
+        vm.runInNewContext(t, box, { filename: f });
+      }
+      return box;
+    };
+    const play = function (box) {
+      const T = box.window.EpirusTrainer, B = box.window.EpirusBots, sig = [];
+      for (let g = 0; g < 14; g++) {
+        const ch = [];
+        for (let pid = 0; pid < 5; pid++) ch.push(function (s2, p2, lg) { return B.pickMix(s2, p2, lg); });
+        const r = T.oneGameN(ch, 4242 + g * 7919, 5, { mode: 'multi' });
+        sig.push(r.state.winner + '|' + r.state.round + '|' + r.state.p.map(function (q) { return q.hp; }).join(','));
+      }
+      return sig.join(' ');
+    };
+    const a = play(boot(false)), b = play(boot(true));
+    eq(a, b, 'mode 0（打了补丁、钩子不发）必须与未打补丁**逐位相同** —— 否则所有 Δ 都不是纯规则差');
+  }
 });
 
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
