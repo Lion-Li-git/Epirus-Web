@@ -5499,6 +5499,35 @@ t('D140 击杀奖励规则库（v1.5.194 · 单一来源）：合成局面逐个
   }
 });
 
+t('D141 破龟群栏（v1.5.195）：`归因伤害/局` 与 `终场存活` 必须存在、必须与 `resolve.js` 的判胜口径同源、且**不是恒 0 的死读数**', function () {
+  /* 病（今晚量出来的）：`--field=guardwall` 的 1st 是**下限判据** —— 那格 4 席不还手 ⇒ 全员被终局收缩清场 ⇒
+   * 判胜走 `resolve.js` 的 `alive.length === 0` 分支 = "累计**有归因**伤害最高者胜"。
+   * 于是"破防 100%"只等价于"至少蹭到一发"，实测同为 100% 的两粒包幅值差 4 倍（2.17 vs 8.77 点/局）。
+   * ⇒ 光有胜率会把"蹭一发"和"凿穿"排进同一档 ⇒ 必须并读幅值。这条门钉三件事：
+   *   ① 两个新读数存在；② 归因口径与引擎判胜口径**同一个表达式**（不许自己抄一份 `source != null`）；
+   *   ③ 读数**会动**（现役在破龟群场 = 0，在头对头场 > 0）—— 防"死读数当结论"（seam 2 那一族）。 */
+  const p = readFileSync('tools/probe-kill-reward.mjs', 'utf8');
+  ok(/if \(e\.type === 'damage' && e\.source != null && dsum\[e\.source\] != null\) dsum\[e\.source\] \+= e\.amt;/.test(p),
+    '受评席伤害累计必须按 `damage` 事件 + `e.source != null` 累加 —— 与 `resolve.js` 全灭判胜的表达式同形（换槽径）');
+  ok(/deal: deal \/ games, alive: aliveEnd \/ games,/.test(p) && /if \(r\.state\.p\[seat\]\.hp > 0\) aliveEnd\+\+;/.test(p),
+    '两栏都必须真累加并归一（`终场存活`判据 = 终场血量 > 0，**不是**"局长 < 回合上限"：那格是被收缩清场的，人人都会"提前"）');
+  const run = spawnSync(process.execPath, ['tools/probe-kill-reward.mjs', '--games=40',
+    '--fields=guardwall,vs', '--opp=js/bundled-champion-3p.js', '--rules=0', '--json'],
+    { encoding: 'utf8', timeout: 900000 });
+  eq(run.status, 0, '实验台要跑得通（' + String(run.stderr || '').slice(0, 160) + '）');
+  const out = String(run.stdout || '');
+  const j = JSON.parse(out.slice(out.lastIndexOf('{"games"')));
+  const cell = function (f) { return j.rows.filter(function (r) { return r.field === f && r.pack.indexOf('bundled-champion') === 0; })[0]; };
+  const wall = cell('guardwall'), vs = cell('vs');
+  ok(wall && vs, '必须有"破龟群 × 现役包"和"头对头 × 现役包"两格');
+  eq(typeof wall.by[0].deal, 'number', '`归因伤害/局` 必须进 JSON 读数（不印出来的读数下次没人信）');
+  eq(typeof wall.by[0].alive, 'number', '`终场存活` 必须进 JSON 读数');
+  eq(wall.by[0].deal, 0, '现役包在破龟群场必须仍是 **0.00 点/局**（23 次出手全被防御挡 ⇒ 一发都没落地）；实测 ' + wall.by[0].deal);
+  eq(wall.by[0].alive, 0, '现役包在那格必须**一局都没活着收场**');
+  ok(vs.by[0].deal > 0, '同一只包在头对头场必须有非 0 归因伤害（否则上面那个 0 是"死读数"而不是"那格打不穿"）；实测 ' + vs.by[0].deal);
+  ok(/归因伤害\/局.*终场存活/.test(out), '表头必须印出这两栏（读表人看得见才知道不能只看 1st）');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };

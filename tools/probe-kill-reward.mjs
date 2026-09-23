@@ -96,6 +96,14 @@ function runOne(box, params, field, games, seedBase, packTag) {
   if (params && packTag) params.__krTag = packTag;   // 只当缓存身份用，不参与任何计算
   const T = box.T, B = box.B;
   let first = 0, draws = 0, rounds = 0, kills = 0, epSum = 0, maxEp = 0, paid = 0;
+  /* `deal`＝受评席累计**有归因**伤害／局，`alive`＝终场时受评席**还活着**的占比。
+   * 为什么必须加这两栏（v1.5.195）：破防场里 4 席不还手 ⇒ 大家一起被"终局收缩"清场（实测局长恒 47 = 收缩点 + 血量），
+   * 而判胜口径是"全灭时按累计**有归因**伤害最高者胜"（`resolve.js` 的 `alive.length === 0` 分支）
+   * ⇒ **1st=100% 只等价于"47 回合里至少蹭到一发"**，是**下限**判据。
+   * 实测同为 100% 的包幅值差 4 倍（`co1s3` 2.17 点/局 vs `co1s8` 8.63 点/局），而只有 `alive>0` 才是"真把龟打死"。
+   * ⚠️ 第一版我用"局长 < 回合上限"当"提前收场"，读出来人人 100% —— 因为游戏是**被收缩清场**结束的（47 回合），
+   *    远早于上限（100）⇒ 那个判据量的不是它声称的东西。改判据：终场血量 > 0。 */
+  let deal = 0, aliveEnd = 0;
   const wins = [];   // 逐局胜负（同种子 ⇒ 三档之间可**配对**求差，SE 才是真 SE）
   const oppP = field === 'vs' ? oppParamsOf(box) : null;
   if (field === 'vs' && !oppP) throw new Error('`vs` 场需要 --opp=<包>');
@@ -119,11 +127,18 @@ function runOne(box, params, field, games, seedBase, packTag) {
     rounds += r.state.round;
     kills += r.state.p.filter(function (q) { return q.hp <= 0; }).length;
     paid += r.state.__krPaid || 0;
+    const dsum = new Array(N).fill(0);
+    for (const e of r.state.events) {
+      if (e.type === 'damage' && e.source != null && dsum[e.source] != null) dsum[e.source] += e.amt;
+    }
+    deal += dsum[seat];
+    if (r.state.p[seat].hp > 0) aliveEnd++;
     for (const q of r.state.p) { epSum += q.ep; if (q.ep > maxEp) maxEp = q.ep; }
   }
   const br = breadthOf(box, params, field);
   return { first: first / games, draws: draws / games, rounds: rounds / games, wins: wins,
     kills: kills / games, paid: paid / games, ep: epSum / (games * N), maxEp: maxEp,
+    deal: deal / games, alive: aliveEnd / games,
     castG: br.castG, landG: br.landG, landKeys: br.landKeys };
 }
 /* 配对差与 SE（同种子逐局配对 ⇒ 比两次独立抽样灵敏得多） */
@@ -141,7 +156,7 @@ console.log('# 击杀奖励实验 · 规则档 0=现状 / 1=单点(+1ep 给最�
 const res = [];
 for (const field of FIELDS) {
   console.log('\n=== 场：' + field + ' ===');
-  console.log('  包                     规则  受评席1st   平局率    局长    击杀/局  奖励发放/局  终局ep  最高ep   出手G→净兑现G');
+  console.log('  包                     规则  受评席1st   平局率    局长    击杀/局  奖励发放/局  归因伤害/局  终场存活  终局ep  最高ep   出手G→净兑现G');
   for (const p of PACKS) {
     const row = { field: field, pack: packName(p), by: {} };
     for (const rm of RULES) {
@@ -158,7 +173,9 @@ for (const field of FIELDS) {
       console.log('  ' + row.pack.slice(0, 20).padEnd(22) + String(rm).padStart(3) + '   ' +
         (100 * v.first).toFixed(1).padStart(6) + '%  ' + (100 * v.draws).toFixed(0).padStart(5) + '%  ' +
         v.rounds.toFixed(1).padStart(6) + '  ' + v.kills.toFixed(2).padStart(6) + '      ' +
-        v.paid.toFixed(2).padStart(6) + '     ' + v.ep.toFixed(2).padStart(5) + ' ' + String(v.maxEp).padStart(5) +
+        v.paid.toFixed(2).padStart(6) + '     ' + v.deal.toFixed(2).padStart(7) + '  ' +
+        (100 * v.alive).toFixed(0).padStart(5) + '%   ' +
+        v.ep.toFixed(2).padStart(5) + ' ' + String(v.maxEp).padStart(5) +
         '    ' + v.castG.toFixed(2) + '→' + v.landG.toFixed(2) + '(' + v.landKeys + '种)');
     }
     const b0 = row.by[0];
@@ -180,4 +197,8 @@ for (const field of FIELDS) {
 console.log('\n# 读法：防龟成不成立看**破防场**（现状现役包在那里 0% 胜 / 100% 平）—— 但要先看"奖励发放/局"：' +
   '若那一格里奖励**一次都没发出去**，那"胜率没变"就不是"没效果"，而是**根本没触发**（本仓 seam 2 那一族）。' +
   '而"谁受益"要看各包 Δ 的方向是否一致：不一致就说明这条规则实际是在**改判据**（偏某种打法），不是修龟。');
+console.log('# ⚠️ 破防场的 **1st 是下限判据**（v1.5.195）：那格 4 席不还手 ⇒ 全员被"终局收缩"清场 ⇒ 判胜口径是' +
+  '「累计**有归因**伤害最高者胜」（`resolve.js` 的 `alive.length === 0` 分支）⇒ 100% 只意味着"47 回合里至少蹭到一发"。' +
+  '\n#   所以必须并读两栏：**归因伤害/局**＝凿墙的幅值、**终场存活**＝>0% 才是真把龟打死（不是被清场后判分赢）。' +
+  '\n#   同幅读数（破防 100%）实测差 4 倍 ⇒ 只看 1st 会把"蹭一发"和"凿穿"排在同一档。');
 if (process.argv.indexOf('--json') >= 0) console.log(JSON.stringify({ games: GAMES, mode: GAME_MODE, rows: res }));
