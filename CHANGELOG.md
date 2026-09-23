@@ -1,3 +1,65 @@
+## v1.5.175 — 分支合并 + 试训练 + **"收割压广度"在干净单变量下被否证** + 聚能环的边际价值
+
+### 1. 合并与推送
+
+`qoder-explore-0922night` 的 3 个提交已推（`95390c1..acfe3f7`），并**快进合并进 main**（`fd9cba3..acfe3f7`）。
+合并后复验：`np-test 178/178` · `spec 52/52` · 指纹 `ebdbff36`。
+
+### 2. 试训练（30 代 · 3 人 · 8 局/代 · 种群 8 · 热启动自现役冠军）
+
+`EPIRUS_HOTSTART=1 EPIRUS_SEED=31 EPIRUS_ARM=v7ds1 node tools/train-3p.mjs 30 3 8 8`
+⇒ 横幅 `[train-3p] 热启动：以现有冠军为种子` ✓（§N8 的 banner 义务）· 当选冠军 3P **1st=49.2% top2=88.1%** ·
+名人堂零攻击局 **0%**（退化包闸在 ✓）· **耗时 13.8s** · 产物写 `docs/artifacts/train-3p-out.js`（**未碰线上包** ✓）。
+
+### 3. ★ Q-6「收割压广度」：**干净单变量对里不成立**（否证）
+
+配方：冷启动 · 60 代 · 3 人 · 8 局/代 · 种群 8 · seed 31/81/82/91 · 单变量 = `EPIRUS_KILL_FIELD` 0 vs 0.125。
+**接线凭据**：每个 kill-on 臂都打印 `收割席注入已下达：killField=0.125 ⇒ 消费点读回 0.125（每 8 局注 1 席
+pickKillSecure · 相位按代旋转 · 只注多人局 · 避开承诺局）` ✓
+
+- **强度**：当选冠军 1st — kill 关 50.3/50.4/49.3/53.1（均 **50.8%**）· kill 开 44.3/46.8/56.5/48.6（均 **49.1%**）
+  ⇒ **−1.7pt，噪声内**。
+- **广度**（独立量的**种群级**：8 臂 × 6 band = 各 24 个包，5 席自对局 × 8 局，`G_eff(出手)=exp(熵)`）：
+
+| 组 | 出手 G_eff 均值 | 中位 | ジ占比 | 退化(≤1 种) | G<3 | G≥4 |
+|---|---|---|---|---|---|---|
+| kill=0（关）| 2.74 | 1.60 | 47.6% | 3 | 15 | 6 |
+| **kill=0.125（开）** | **3.25** | **2.58** | 50.5% | **1** | 16 | **7** |
+
+⇒ **开启收割注入后反而略宽**（均值 +0.51 · 中位 +0.98 · 退化包更少）⇒ **"KILL_FIELD 压广度"在干净单变量下否证**；
+此前 `xn15c/d` 的窄化更可能来自**与启动方式/配方同变**（复核者自己就把那条标成"尚未结案"）。
+⇒ 结论：**保留 `KILL_FIELD`**（它没压广度、强度侧也是噪声内）；真正压广度的是**奖励型**收割
+（`v7xn10b` 的纯ジ退化：存活型 rank 主梯度下"零出手混到收缩哨声"是捷径）。
+⚠️ 一个反例级观察：kill-on 的 seed 82 名人堂里出现过 **零攻击局 92%** 的退化包（**未当选** ⇒ 闸挡住了）。
+⚠️ 边界：我的臂是 60 代/pop8/冷启动，与 `xn15c/d` 配方不同 ⇒ 这是**否证它的普遍性**，不是否定他那两条读数。
+
+### 4. ★ Q-2「垫钱⇒聚能环没学会」：**钱是瓶颈 ✓，但"教环"救不了（环在 long 下学会了也亏）**
+
+今天的冠军在 long 的卡面（20 局）：ジ 73.1% · 枪 14.8% · 狙击 7.4% · **电磁炮 2.0%** · **聚能环 0.2%（5 次/20 局）** ·
+大雷/地雷/净化/摄魂 **全 0**。用 `tools/probe-skill-marginal.mjs --mode=long --only=ring`：
+
+| 口径 | 机会/局 | Δ1st | 光垫钱 |
+|---|---|---|---|
+| 原生世界 | **1.23**（合法率 3% ⇒ "97% 的回合买不起"）| −1.7 ± 1.7（噪声内）| +0.0pt |
+| 定向垫钱 `--rich=card` | **21.25** | **−23.3 ± 7.3（可测 · 负边际）** | **+45.0pt** |
+
+⇒ **不是"没学会"，是"学会了也亏"**：把环垫到刚够之后，多打环 **−23.3pt**（3 ep 只换回 ≈+0.46 伤害/次，
+机会成本远大于收益）⇒ **补钱的方式不能是环**；要动的是**贵卡的费用/收益**或**非环的 ep 收入通道**（规则级）。
+（详见 `docs/RESEARCH-2026-09-23-ds-ring-and-harvest.md`）
+
+### 5. 产物点名（D82）
+
+`v7ds1-band1.bak` `v7ds1-band2.bak` `v7ds1-band3.bak` `v7ds1-band4.bak` `v7ds1-band5.bak` `v7ds1-band6.bak`
+`v7k0s31-band1.bak` `v7k0s31-band2.bak` `v7k0s31-band3.bak` `v7k0s31-band4.bak` `v7k0s31-band5.bak` `v7k0s31-band6.bak`
+`v7k0s81-band1.bak` `v7k0s81-band2.bak` `v7k0s81-band3.bak` `v7k0s81-band4.bak` `v7k0s81-band5.bak` `v7k0s81-band6.bak`
+`v7k0s82-band1.bak` `v7k0s82-band2.bak` `v7k0s82-band3.bak` `v7k0s82-band4.bak` `v7k0s82-band5.bak` `v7k0s82-band6.bak`
+`v7k0s91-band1.bak` `v7k0s91-band2.bak` `v7k0s91-band3.bak` `v7k0s91-band4.bak` `v7k0s91-band5.bak` `v7k0s91-band6.bak`
+`v7k1s31-band1.bak` `v7k1s31-band2.bak` `v7k1s31-band3.bak` `v7k1s31-band4.bak` `v7k1s31-band5.bak` `v7k1s31-band6.bak`
+`v7k1s81-band1.bak` `v7k1s81-band2.bak` `v7k1s81-band3.bak` `v7k1s81-band4.bak` `v7k1s81-band5.bak` `v7k1s81-band6.bak`
+`v7k1s82-band1.bak` `v7k1s82-band2.bak` `v7k1s82-band3.bak` `v7k1s82-band4.bak` `v7k1s82-band5.bak` `v7k1s82-band6.bak`
+`v7k1s91-band1.bak` `v7k1s91-band2.bak` `v7k1s91-band3.bak` `v7k1s91-band4.bak` `v7k1s91-band5.bak` `v7k1s91-band6.bak`
+= **有效实验产物**（**均未上线**）。
+
 ## v1.5.174 — 长程摄魂窗口 `drainHpMax` **3 → 2**（用户裁定）＝**指纹换代 `0f931cb7` → `ebdbff36`** ＋ 结案一份挂了 12 版的"裁定与实测互斥"
 
 > **这条改动的性质先说清楚**：它**不是修 AI**——现役冠军在长程里**根本不打这张卡**（下面有数）。它是关掉一份档案矛盾 + 收回人类玩家一扇过宽的窗。
