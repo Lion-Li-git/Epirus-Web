@@ -852,6 +852,42 @@
     if (k2 != null) return { key: SK.BIG_T, target: k2 };              // 能一发带走就先带走
     return { key: SK.BIG_T, target: bigtHubTarget(state, pid) };
   }
+  /* ===== v1.5.183（DS · **用户洞察**）：连带感知的大雷教师 =====
+   * 用户原话意思："现在的冠军有**一定程度的集火能力**，既然有集火就会可以**大量连带**，这可能是一个挑时机的方法"。
+   * 机制（`resolve.js:884-909` · N6/N22）：与**被劈中的目标**产生交互的第三方**各受 2 点电伤**且其出手被 `setVoid` 作废
+   * ⇒ 大雷"值钱"的时刻 = **目标正被多人盯上**（集火）时劈它 —— 一份 5 ジ买到的不是 2 点，而是 N 份 2 点 + N 份作废。
+   * 信号（**决策时刻的公共信息**，`state.js:12/187`）：`p[q].lastTarget / lastTarget2` = 该席上一手指向谁
+   * ⇒ 数"有几席指着同一个人"。⚠️ 条件必须**状态相关且稀有**（v1.5.37 的教训：旧条件 `ep>=2` 在 **45%** 的决策
+   * 都成立 ⇒ 教师实际在教"见人兜里有 2 ジ就砸小雷"，示范动作与"开环"这个状态无关）。
+   * 与 `pickBigTFocus` 的关键区别：它"买得起就打"，这条**集火不成立就不打**（乱放 = 白扔 5 ジ，正是用户警告的那种浪费）。 */
+  function focusTarget(state, pid) {
+    const tally = {};
+    for (let q = 0; q < state.p.length; q++) {
+      if (q === pid) continue;
+      const pq = state.p[q];
+      if (!pq || pq.hp <= 0) continue;
+      const t1 = pq.lastTarget, t2 = pq.lastTarget2;
+      if (t1 != null && t1 !== q) tally[t1] = (tally[t1] || 0) + 1;
+      if (t2 != null && t2 !== q && t2 !== t1) tally[t2] = (tally[t2] || 0) + 1;
+    }
+    let best = -1, bestN = 0;
+    for (const k in tally) {
+      const qi = Number(k);
+      const pq = state.p[qi];
+      if (!pq || pq.hp <= 0 || qi === pid) continue;
+      if (tally[k] > bestN) { bestN = tally[k]; best = qi; }
+    }
+    return bestN >= 2 ? { seat: best, n: bestN } : null;   // ≥2 席指向同一人 ⇒ 判为集火
+  }
+  function pickBigTChain(state, pid, legal) {
+    const bk = mpBk(legal);
+    if (!mpAff(bk, SK.BIG_T)) return { key: SK.JI, target: null };   // 攒到 5 ジ（中途不分薄）
+    const k2 = mpKillable(state, pid, 2);
+    if (k2 != null) return { key: SK.BIG_T, target: k2 };            // 能一发带走仍优先
+    const f = focusTarget(state, pid);
+    if (!f) return { key: SK.JI, target: null };                     // **没有集火就不打** = 挑时机
+    return { key: SK.BIG_T, target: f.seat };
+  }
   /* **对照组**（P3 预注册要求的那一条）：同样攒到 5 ジ 才放、同样"能一发带走就先带走"，
    * 唯一区别 = 目标随机取。它用来回答"传导到底是**选出来的**还是**这片场自己撞出来的**"——
    * 没有它，`pickBigTFocus` 与 `pickBreakDef` 那 0.03 的差就无从判读。 */
@@ -929,7 +965,7 @@
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,
-    pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, bigtHubTarget, pickKillSecure,
+    pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, pickBigTChain, bigtHubTarget, pickKillSecure,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'
