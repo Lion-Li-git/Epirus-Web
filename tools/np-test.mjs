@@ -5351,6 +5351,33 @@ t('D138 拦截代价表（v1.5.191 新量具）：归因必须真收到 blocked/
   ok(/判读合计/.test(out) && /规则：/.test(out), '必须印分类合计与判读规则（没有规则的话，这张表就是一堆没有口径的数）');
 });
 
+t('D139 击杀奖励实验台（v1.5.193）：补丁必须真打上、破防场必须证明"奖励根本没发出去"、脚本池场必须证明"它能触发"', function () {
+  /* 这条门钉的不是游戏行为，是**实验台本身**的两件事（本仓吃过亏的形状）：
+   *   ① 引擎补丁如果没打上（锚点漂了/CRLF），三档跑的是同一个引擎 ⇒ 整份对照是假的 ⇒ 工具必须**抛错**而不是静默跑；
+   *   ② "胜率没变"必须能被区分成"没效果"还是"根本没触发" ⇒ 所以要同时钉**发放计数为 0**（破防场）与**> 0**（脚本池场）。
+   * 实测结论（§N49）：破防场里现役包三档读数**逐位相同**且 `奖励发放 = 0.00 次/局` ——
+   *   因为那场里 5 个座位全死、却没有一次死亡是"被某个有来源的伤害打死的"（都是反弹/自损）⇒
+   *   **任何"按击杀归因"的奖励都碰不到龟缩场**。这条就是那个结论的钉子。 */
+  const run = spawnSync(process.execPath, ['tools/probe-kill-reward.mjs', '--games=40', '--fields=guardwall,pool', '--json'],
+    { encoding: 'utf8', timeout: 900000 });
+  eq(run.status, 0, '实验台要跑得通；若报"锚点找不到"就是 play.js 改了而补丁没跟着改（' + String(run.stderr || '').slice(0, 160) + '）');
+  const out = String(run.stdout || '');
+  const j = JSON.parse(out.slice(out.lastIndexOf('{"games"')));
+  const wall = j.rows.filter(function (r) { return r.field === 'guardwall' && r.pack.indexOf('bundled-champion') === 0; })[0];
+  ok(wall, '必须有"破防场 × 现役包"这一格（它就是防龟的靶心）');
+  eq(wall.by[1].paid, 0, '破防场里**规则 1 的奖励发放必须是 0** —— 大于 0 就说明死亡归因变了，那条"没效果"的结论要重读');
+  eq(wall.by[2].paid, 0, '破防场里规则 2 同样发放 0 次');
+  eq(wall.by[1].first, wall.by[0].first, '破防场：规则 1 与现状的胜率必须**逐位相同**（没触发 ⇒ 不许有任何差别）');
+  eq(wall.by[2].rounds, wall.by[0].rounds, '破防场：规则 2 的局长也必须逐位相同');
+  ok(wall.by[0].draws === 1 && wall.by[0].first === 0, '破防场现役必须仍是 `0% 胜 / 100% 平`（这是 §N37/§N46 三次复现的那条形）');
+  const poolRows = j.rows.filter(function (r) { return r.field === 'pool'; });
+  const paidAny = poolRows.filter(function (r) { return r.by[1].paid > 0.3; });
+  ok(paidAny.length >= 2, '脚本池场里奖励必须**能触发**（≥2 格发放 >0.3 次/局）—— 否则这两条规则是死代码，' +
+    '上面那些"逐位相同"就只是"永远不发放"的同义反复；实测 ' + paidAny.length + ' 格');
+  ok(/Δ胜率 vs 现状（同种子配对）/.test(out) && /噪声内 ±[\d.]+/.test(out),
+    '必须印**配对**噪声（±1.96SE）—— 只印 Δ 百分点不印噪声，读表人就会把 ±5pt 的抖动当成结论（Q-9 同族病）');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };
