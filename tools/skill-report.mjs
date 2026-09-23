@@ -1,5 +1,5 @@
 /* Epirus AI 训练结果可视化报告
- * 用法：node tools/skill-report.mjs [人数=3] [每条件局数=6] [输出=docs/skill-report.html]
+ * 用法：node tools/skill-report.mjs [人数=3] [每条件局数=6] [输出=docs/skill-report.html] [--champ=文件] [--target=2]
  *
  * 回答两个问题：
  *   ① 每个技能的**实际强度** —— 用「富裕经济 A/B」：每回合把 ep 补到 RICH（让所有技能都买得起），
@@ -7,6 +7,9 @@
  *   ② AI **有没有掉进坑里** —— 把「实际使用率」和「实际强度」并排：
  *        高使用 + 负强度 = 坑（在自残）    ~0 使用 + 正强度 = 没学会的强招
  *        高使用 + 正强度 = 主力    ~0 使用 + 负强度 = 死技能
+ *   ⚠️ v1.5.190：上面那四个象限**只在 `|Δ| > 1.96·SE` 时才成立**（SE 由同种子逐场配对算出，见 `pairedDiff`）；
+ *      分不出的统一标「噪声内」，并按 `--target`（默认想辨 2pt）反推"要把局/组抬到几"。
+ *      ⇒ 旧版拿 `|Δ|>0.5pt` 当门槛，比本工具自己的噪声还小 ⇒ 有一部分标签是贴给噪声的（Q-9）。
  * 产出单文件 HTML，可直接双击打开。
  */
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -29,6 +32,14 @@ const CHAMP_FILE = FLAG.champ || '';
 const JSON_OUT = FLAG.json || '';
 const RICH = 10;         // v1.3.59：原为 6，导致 大雷(5)/避雷针(4) 因余额不足强制不中（命中率 11%/50%）
 const TEMP = 0.15;
+/* ===== v1.5.190（Q-9 / Q-10）：把"能不能分辨"写进表里，而不是只写一个 Δ =====
+ * 病（用户口径）：30 张卡里 21 张读不出来，而旧表只印 Δ 与判定 ⇒ 读表人会把"读不出"当成"没价值"。
+ * 更糟的是旧判定门槛是 `|Δ| > 0.5pt` —— 那**远小于本工具自己的噪声**（默认 126 组 × 6 局 = 756 场/条件，
+ * 配对 SE 实测就有 2~4pt）⇒ 一大半判定其实是拿噪声贴的标签。
+ * 改法：① `runCondition` 逐场留胜负向量 ⇒ 与基线**同种子逐场配对**求差 ⇒ 配对 SE；
+ *      ② 判定先过 `|Δ| > 1.96·SE` 这一关，过不了就老实写"噪声内"，不再贴"死技能/陷阱"；
+ *      ③ 每行印 `1.96·SE` 与"要分辨 `--target`（默认 2pt）还需几场/组"⇒ 算力价码摆在明面上。 */
+const TARGET_PT = Math.max(0.5, Number(FLAG.target || 2));   // 想分辨的最小效应（pt）
 
 const sb = {
   console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN,
@@ -127,6 +138,7 @@ function makeSel(forceKey, rich, seat, acc, banKey) {
 
 function runCondition(forceKey, rich, seedBase, acc, banKey) {
   let first = 0, total = 0;
+  const wins = [];   // v1.5.190：逐场胜负（0/1）⇒ 同 seedBase 的两个条件可以**逐场配对**求差，SE 才是真配对 SE
   for (const pair of PAIRS) {
     for (let g = 0; g < GAMES; g++) {
       const seat = g % N;
@@ -137,11 +149,31 @@ function runCondition(forceKey, rich, seedBase, acc, banKey) {
         else { choosers.push(T.wrapBotN(B[pair[oi % pair.length]])); oi++; }
       }
       const r = T.oneGameN(choosers, seedBase + g * 977 + total, N, { mode: MODE });
-      if (T.rankOf(r.state, seat, seedBase + g * 977 + total) === 1) first++;   // v1.3.57: 名次平局需本局种子
+      const w = T.rankOf(r.state, seat, seedBase + g * 977 + total) === 1 ? 1 : 0;
+      first += w; wins.push(w);
       total++;
     }
   }
-  return { firstRate: first / total, games: total };
+  return { firstRate: first / total, games: total, wins: wins };
+}
+/* v1.5.190：**配对**差与它的 SE。同一 `(pair, g)` 用同一个种子 ⇒ 两条件逐场可配对，
+ * 直接按二项近似会把噪声估大好几倍（本表 126 组之间对手强度差异极大，组间方差才是主项）。
+ * 返回 `{d, se, n}`，`se` 是"场均差"的标准误（比例单位）。 */
+function pairedDiff(base, arm) {
+  const n = Math.min(base.wins.length, arm.wins.length);
+  if (!n) return { d: 0, se: NaN, n: 0 };
+  let s = 0, s2 = 0;
+  for (let i = 0; i < n; i++) { const dd = arm.wins[i] - base.wins[i]; s += dd; s2 += dd * dd; }
+  const mean = s / n;
+  if (n < 2) return { d: mean, se: NaN, n: n };
+  const varr = Math.max(0, (s2 - n * mean * mean) / (n - 1));
+  return { d: mean, se: Math.sqrt(varr / n), n: n };
+}
+/* 要把 1.96·SE 压到 `TARGET_PT`（pt）需要把每条件的场数乘多少倍 ⇒ 反推"每组该跑几局"。 */
+function needGamesPerPair(se) {
+  if (!(se > 0)) return null;
+  const k = Math.pow(1.96 * se / (TARGET_PT / 100), 2);
+  return Math.max(1, Math.ceil(GAMES * k));
 }
 
 /* ① 实际使用率（原生经济，正常对局） */
@@ -196,13 +228,19 @@ const rows = [];
 for (const k of SKILLS) {
   const acc = { tries: 0, hit: 0 };
   const rich = runCondition(k, true, 555001, acc);
-  const delta = rich.firstRate - baseRich.firstRate;
+  const pd = pairedDiff(baseRich, rich);            // v1.5.190：同种子逐场配对 ⇒ Δ 与配对 SE
+  const delta = pd.d;
   const nm = R.byKey[k] ? R.byKey[k].name : k;
   const cnt = u.use[k] || 0;
   const rate = u.dec ? cnt / u.dec : 0;
   rows.push({ key: k, name: nm, cost: costOf(k), use: rate, richWr: rich.firstRate, delta: delta,
+    se: pd.se, mde: 1.96 * pd.se, needPair: needGamesPerPair(pd.se), n: pd.n,
     forceHit: acc.tries ? acc.hit / acc.tries : 0, tries: acc.tries });
-  console.log('    ' + nm.padEnd(8) + ' 费用=' + String(costOf(k)).padStart(2) + '  使用=' + (rate * 100).toFixed(1).padStart(5) + '%  富经济1st=' + (rich.firstRate * 100).toFixed(1).padStart(5) + '%  Δ=' + (delta * 100 >= 0 ? '+' : '') + (delta * 100).toFixed(1) + 'pt  强制命中=' + ((acc.tries ? acc.hit / acc.tries : 0) * 100).toFixed(0) + '%');
+  console.log('    ' + nm.padEnd(8) + ' 费用=' + String(costOf(k)).padStart(2) + '  使用=' + (rate * 100).toFixed(1).padStart(5) + '%  富经济1st=' + (rich.firstRate * 100).toFixed(1).padStart(5) + '%  Δ=' + (delta * 100 >= 0 ? '+' : '') + (delta * 100).toFixed(1) + 'pt' +
+    '  1.96SE=' + (isFinite(100 * 1.96 * pd.se) ? (100 * 1.96 * pd.se).toFixed(1) : '?') + 'pt' +
+    (pd.se > 0 && 1.96 * pd.se > Math.abs(delta) ? '（噪声内）' : '') +
+    '  要辨' + TARGET_PT + 'pt需' + (needGamesPerPair(pd.se) || '?') + '局/组' +
+    '  强制命中=' + ((acc.tries ? acc.hit / acc.tries : 0) * 100).toFixed(0) + '%');
 }
 
 /* ② 分类：坑 / 主力 / 没学会的强招 / 死技能 */
@@ -259,6 +297,14 @@ for (const r of rows) {
   /* 只在 Δ 为负时才归因"结构性"：辅助类的 mono-spam 通常必然更差，但若它 Δ 为正，
    * 那是真发现（v1.3.59 实测：全息屏障 +17.1pt、原型制御 +15.9pt 都是辅助类却更强），
    * 不能被这条吞掉。 */
+  /* v1.5.190（Q-9）：**先问"分不分得出"，再问"是正是负"** —— 旧门槛 `|Δ|>0.5pt` 在本表的配对噪声之下，
+   * 于是一大半判定其实是给噪声贴的标签（用户那句"21/30 读不出来"的另一半成因）。 */
+  if (!(r.se > 0)) { r.verdict = 'SE 读不出（场数 <2 ⇒ 不敢下结论）'; continue; }
+  if (Math.abs(r.delta) <= 1.96 * r.se) {
+    r.verdict = '噪声内（|Δ|≤1.96SE=' + (196 * r.se).toFixed(1) + 'pt）';
+    r.tool += '　⚠ 要辨 ' + TARGET_PT + 'pt ⇒ 需 ' + (r.needPair || '?') + ' 局/组';
+    continue;
+  }
   if (isUtil && neg) { r.verdict = '辅助/防御（Δ 结构性为负）'; continue; }
   r.verdict = hi && neg ? '坑（常用却亏）' : hi && pos ? '主力（强且常用）' : hi ? '中性常用'
     : !hi && pos ? '没学会的强招' : !hi && neg ? '死技能（弱且不用）' : '边缘';
@@ -272,16 +318,41 @@ console.log('  消融臂（拿掉冠军已在用的技能）…');
 const inUsePre = rows.filter(function (r) { return r.use >= USE_BAN; });
 for (const r of inUsePre) {
   const ban = runCondition(null, false, 555001, null, r.key);
+  const pdb = pairedDiff(baseNative, ban);          // 拿掉后 − 原生（配对）
   r.banArm = ban.firstRate;
-  r.banLost = baseNative.firstRate - ban.firstRate;
+  r.banLost = -pdb.d;                                // Δ_lost = 原生 − 拿掉后 ⇒ 正数=承重
+  r.banSe = pdb.se; r.banMde = 1.96 * pdb.se; r.banNeedPair = needGamesPerPair(pdb.se);
   console.log('    ' + r.name + '：原生 ' + (baseNative.firstRate * 100).toFixed(1) + '% → 拿掉 ' +
-    (ban.firstRate * 100).toFixed(1) + '%  Δ_lost=' + (r.banLost >= 0 ? '+' : '') + (r.banLost * 100).toFixed(1) + 'pt');
+    (ban.firstRate * 100).toFixed(1) + '%  Δ_lost=' + (r.banLost >= 0 ? '+' : '') + (r.banLost * 100).toFixed(1) + 'pt' +
+    '  1.96SE=' + (r.banSe > 0 ? (100 * r.banMde).toFixed(1) : '?') + 'pt' +
+    (r.banSe > 0 && r.banMde > Math.abs(r.banLost) ? '（噪声内）' : '') +
+    (r.banSe > 0 ? '  要辨' + TARGET_PT + 'pt需' + (r.banNeedPair || '?') + '局/组' : ''));
   /* 反制卡（有 NOTE）的价值是**场依赖**的 ⇒ 判定标签也标（本场），避免把"本场没目标可打"
    * 读成"这张卡是陷阱"（实测小雷：本场 −2.6pt / 环场 +20pt）。 */
   const cond = NOTE[r.key] ? '（本场）' : '';
-  r.verdict = r.banLost > 0.005 ? ('承重' + cond + '（拿掉掉 ' + (r.banLost * 100).toFixed(0) + 'pt）')
-    : r.banLost < -0.005 ? ('陷阱' + cond + '（拿掉反而 +' + (-r.banLost * 100).toFixed(0) + 'pt）')
-    : ('中性' + cond + '（拿掉无差）');
+  /* v1.5.190：消融臂同样先过显著性这一关（旧写法 `|Δ_lost|>0.5pt` 与上面同病）。 */
+  if (!(r.banSe > 0)) r.verdict = '消融 SE 读不出';
+  else if (Math.abs(r.banLost) <= r.banMde) r.verdict = '消融噪声内（|Δ_lost|≤1.96SE=' + (100 * r.banMde).toFixed(1) + 'pt）';
+  else r.verdict = r.banLost > 0 ? ('承重' + cond + '（拿掉掉 ' + (r.banLost * 100).toFixed(0) + 'pt）')
+    : ('陷阱' + cond + '（拿掉反而 +' + (-r.banLost * 100).toFixed(0) + 'pt）');
+}
+
+/* ===== v1.5.190（Q-10）：把"要不要加算力"变成一个可读的价码 =====
+ * 旧表只有 Δ ⇒ 读表人无法区分"这张卡没价值"与"这场实验分辨不出这张卡"（用户那句"21/30 读不出来"）。
+ * 现在直接算：本表每条件 `PAIRS × GAMES` 场，配对 1.96SE 的中位数是多少、
+ * 要把"分不出"变成"可辨 " + TARGET_PT + "pt"需要把场数抬到几倍（SE ∝ 1/√n ⇒ 倍数 = (SE/目标)²）。 */
+const meas = rows.filter(function (r) { return r.se > 0; });
+const noiseRows = rows.filter(function (r) { return String(r.verdict).indexOf('噪声内') >= 0; });
+if (meas.length) {
+  const ses = meas.map(function (r) { return r.se; }).sort(function (a, b) { return a - b; });
+  const med = ses[Math.floor(ses.length / 2)], worst = ses[ses.length - 1];
+  const needs = meas.map(function (r) { return r.needPair || 0; }).filter(function (v) { return v > 0; });
+  const recGames = needs.length ? Math.max.apply(null, needs) : 0;
+  console.log('  [可测量性] 每条件 ' + PAIRS.length + ' 组 × ' + GAMES + ' 局 = ' + (PAIRS.length * GAMES) + ' 场' +
+    ' ⇒ 配对 1.96SE 中位 ±' + (196 * med).toFixed(1) + 'pt（最差 ±' + (196 * worst).toFixed(1) + 'pt）' +
+    ' · **判为"噪声内"的有 ' + noiseRows.length + ' 张**' +
+    '\n               要把**全部**卡辨到 ' + TARGET_PT + 'pt ⇒ 第 2 个参数（局/组）要从 ' + GAMES + ' 抬到约 ' + recGames +
+    '（≈ ×' + (recGames / GAMES).toFixed(1) + ' 算力；SE∝1/√n）');
 }
 
 const maxAbsDelta = Math.max(0.01, ...rows.map(function (r) { return Math.abs(r.delta); }));
@@ -313,6 +384,9 @@ html += '<div class="card"><b>' + u.maxEp + '</b><span>最高 ep（经济深度�
 html += '<div class="card"><b>' + (baseNative.firstRate * 100).toFixed(0) + '%</b><span>原生经济 1st</span></div>';
 html += '<div class="card"><b>' + (baseRich.firstRate * 100).toFixed(0) + '%</b><span>富经济 1st（上限参考）</span></div>';
 html += '<div class="card"><b>' + rows.filter(function (r) { return r.forceHit >= 0.05; }).length + ' / ' + rows.length + '</b><span>Δ 本口径可量</span></div>';
+/* v1.5.190：这两张卡是这次改动的全部理由 —— "实验跑到了"不等于"分得出正负"。 */
+html += '<div class="card"><b>' + rows.filter(function (r) { return r.forceHit >= 0.05 && r.se > 0 && Math.abs(r.delta) > 1.96 * r.se; }).length + ' / ' + rows.length + '</b><span>Δ 过显著性（|Δ|&gt;1.96·SE）</span></div>';
+html += '<div class="card"><b>' + noiseRows.length + '</b><span>噪声内（分不出，<b>不等于没价值</b>）</span></div>';
 html += '<div class="card"><b>' + rows.filter(function (r) { return r.use >= USE_BAN; }).length + '</b><span>冠军已在用（该用 --ban 消融）</span></div>';
 html += '</div>';
 
@@ -332,7 +406,8 @@ if (!inUse.length) html += '<tr><td colspan="3">（无 —— 冠军几乎不用
 html += '</table></div></div>';
 
 html += '<h2>每技能：实际使用率 × 实际强度（富裕经济下强制使用的收益差）</h2>';
-html += '<table><tr><th>技能</th><th>费用</th><th>实际使用率</th><th></th><th>强制命中率</th><th>强制使用的 1st</th><th>强度 Δ vs 自由发挥</th><th></th><th>消融 Δ_lost</th><th>判定</th><th>该用口径</th></tr>';
+html += '<table><tr><th>技能</th><th>费用</th><th>实际使用率</th><th></th><th>强制命中率</th><th>强制使用的 1st</th><th>强度 Δ vs 自由发挥</th><th></th>' +
+  '<th>1.96·SE（分不出就小于它）</th><th>要辨 ' + TARGET_PT + 'pt 需</th><th>消融 Δ_lost</th><th>判定</th><th>该用口径</th></tr>';
 rows.sort(function (a, b) { return b.use - a.use; });
 for (const r of rows) {
   html += '<tr><td>' + esc(r.name) + '</td><td>' + (r.cost == null ? '?' : r.cost) + '</td>';
@@ -341,10 +416,15 @@ for (const r of rows) {
   html += '<td>' + (r.richWr * 100).toFixed(0) + '%</td>';
   html += '<td>' + (r.delta >= 0 ? '+' : '') + (r.delta * 100).toFixed(1) + 'pt</td>';
   html += '<td>' + bar(r.delta, maxAbsDelta, r.delta >= 0 ? 'pos' : 'neg') + '</td>';
+  /* v1.5.190：SE 与"要辨 target 需几局/组"必须占列 —— 否则"读不出"和"没价值"在表上同形（Q-9 的原话）。 */
+  html += '<td>' + (r.se > 0 ? '±' + (196 * r.se).toFixed(1) + 'pt' : '—') + '</td>';
+  html += '<td>' + (r.needPair ? r.needPair + ' 局/组' : '—') + '</td>';
   let vc = VCOLOR[r.verdict];
-  if (!vc) vc = r.verdict.indexOf('承重') === 0 ? '#30a46c' : r.verdict.indexOf('陷阱') === 0 ? '#e5484d' : r.verdict.indexOf('中性') === 0 ? '#8b8d98' : '#555';
+  if (!vc) vc = r.verdict.indexOf('承重') === 0 ? '#30a46c' : r.verdict.indexOf('陷阱') === 0 ? '#e5484d'
+    : r.verdict.indexOf('中性') === 0 ? '#8b8d98' : r.verdict.indexOf('噪声内') >= 0 ? '#7d8590' : '#555';
   html += '<td><span class="tag" style="background:' + vc + '">' + r.verdict + '</span></td>';
-  html += '<td>' + (r.banLost == null ? '—' : ((r.banLost >= 0 ? '+' : '') + (r.banLost * 100).toFixed(1) + 'pt')) + '</td>';
+  html += '<td>' + (r.banLost == null ? '—' : ((r.banLost >= 0 ? '+' : '') + (r.banLost * 100).toFixed(1) + 'pt' +
+    (r.banSe > 0 ? '（±' + (100 * r.banMde).toFixed(1) + '）' : ''))) + '</td>';
   html += '<td><code' + (r.inUse ? ' style="color:#f5a623"' : '') + '>' + esc(r.tool) + '</code></td></tr>';
 }
 html += '</table>';
@@ -360,13 +440,19 @@ html += '<br><b>最后一列「该用口径」</b>：本口径量不到的技能
      + '<code>--smart</code> 条件注入 / <code>--ban</code> 消融）。橙色 = 冠军已在用 ⇒ 应测"拿掉它"，而不是"强制 spam"。';
 html += '<br><b>灰色「实验未生效」</b>= 这一招**进不了 legal**（条件门/珠子类），强制根本打不出去 ⇒ Δ 不能读，'
      + '不是「死技能」；<b>深灰「辅助/防御（Δ 结构性为负）」</b>= 无伤害类技能，mono-spam 必然不如混合策略，'
-     + 'Δ 天然为负、不代表它没用（若它 Δ 为正会改判「没学会的强招」）。<b>务必先看「强制命中率」再看 Δ。</b></div>';
+     + 'Δ 天然为负、不代表它没用（若它 Δ 为正会改判「没学会的强招」）。<b>务必先看「强制命中率」再看 Δ。</b>'
+     + '<br><b>⚠ 判定门槛（v1.5.190 写死）：只对 <code>|Δ| &gt; 1.96·SE</code> 的卡下结论。</b>'
+     + '旧版门槛是 <code>|Δ|&gt;0.5pt</code>，而本表默认口径（' + PAIRS.length + ' 组 × ' + GAMES + ' 局 = ' + (PAIRS.length * GAMES) + ' 场/条件）的'
+     + '配对 1.96·SE 实测就有若干张卡到 ±3~5pt ⇒ 旧表里一部分「死技能/陷阱」其实是<b>给噪声贴的标签</b>。'
+     + '现在分不出的会明确写「<span class="tag" style="background:#7d8590">噪声内</span>」，并在最后一列告诉你'
+     + '<b>要辨到 ' + TARGET_PT + 'pt 需要把局/组抬到几</b>（SE∝1/√n）。'
+     + '「读不出」≠「没价值」，这两件事在表上必须长得不一样。</div>';
 html += '</body></html>';
 writeFileSync(OUT, html, 'utf8');
 if (JSON_OUT) {
   writeFileSync(JSON_OUT, JSON.stringify({
     champ: file, label: file.replace(/^.*[^0-9A-Za-z_.-]/, '').replace(/[.][A-Za-z]+$/, ''),
-    n: N, games: GAMES, rich: RICH, mode: MODE, baseNative: baseNative.firstRate, baseRich: baseRich.firstRate,
+    n: N, games: GAMES, rich: RICH, mode: MODE, targetPt: TARGET_PT, baseNative: baseNative.firstRate, baseRich: baseRich.firstRate,
     banArms: rows.filter(function (r) { return r.banLost != null; }).map(function (r) { return { name: r.name, use: r.use, banArm: r.banArm, banLost: r.banLost }; }),
     meta: metaM ? metaM[1] : '', rows: rows
   }), 'utf8');

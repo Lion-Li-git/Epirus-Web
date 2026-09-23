@@ -5242,6 +5242,75 @@ t('D136 示范归因（v1.5.189）：教师的手必须能从包自己的手里�
     '大雷必须至少在补贴局桶里有原生出手（今天的读数）；两桶都为 0 说明注入根本没发生');
 });
 
+t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"除 2P"排序 · "读不出"必须分得出是算力还是钱墙（Q-9/Q-10）', function () {
+  /* ===== ① skill-report：判定标签只许贴在"分得出"的卡上 =====
+   * 病（Q-9 原话：30 张里 21 张读不出，而表上没有 SE ⇒ 读表人把"读不出"当"没价值"）：
+   * 旧门槛 `|Δ|>0.5pt` 比本工具自己的配对噪声（实测中位 ±3.4pt）**还小** ⇒ 一部分标签是贴给噪声的。
+   * 判据不钉文本：**从 --json 产物里逐行复核不变式**（四象限标签 ⇒ |Δ|>1.96·SE；消融标签 ⇒ |Δ_lost|>1.96·banSE）。 */
+  const dir = mkdtempSync(join(tmpdir(), 'd137-'));
+  const outHtml = join(dir, 'r.html'), outJson = join(dir, 'r.json');
+  const run = spawnSync(process.execPath,
+    ['tools/skill-report.mjs', '3', '2', outHtml, '--champ=js/bundled-champion-3p.js', '--json=' + outJson],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, 'skill-report 要跑得通（stderr=' + String(run.stderr || '').slice(0, 200) + '）');
+  ok(existsSync(outJson), '必须能导出 --json（否则这条判据只能靠肉眼读 HTML）');
+  const rep = JSON.parse(readFileSync(outJson, 'utf8'));
+  ok(rep.targetPt > 0, 'JSON 里要带 `targetPt`（"要辨几 pt"这件事必须随产物一起落盘，不然价码就丢了）');
+  const QUAD = ['坑（', '主力（', '没学会的强招', '死技能（'];
+  const monoBad = [], banBad = [], noSe = [];
+  for (const r of rep.rows) {
+    if (typeof r.se !== 'number') noSe.push(r.name);
+    if (r.banLost == null) {
+      if (QUAD.some(function (q) { return String(r.verdict).indexOf(q) === 0; })) {
+        if (!(r.se > 0) || !(Math.abs(r.delta) > 1.96 * r.se)) monoBad.push(r.name + '=' + r.verdict + ' Δ=' + (100 * r.delta).toFixed(1) + ' SE=' + (100 * r.se).toFixed(1));
+      }
+    } else {
+      if (typeof r.banSe !== 'number') noSe.push(r.name + '(消融)');
+      const isLoad = String(r.verdict).indexOf('承重') === 0 || String(r.verdict).indexOf('陷阱') === 0;
+      if (isLoad && !(r.banSe > 0) || (isLoad && Math.abs(r.banLost) <= r.banMde)) {
+        banBad.push(r.name + '=' + r.verdict + ' Δ_lost=' + (100 * r.banLost).toFixed(1) + ' SE=' + (r.banSe > 0 ? (100 * r.banSe).toFixed(1) : '?'));
+      }
+    }
+  }
+  eq(noSe.length, 0, '每行都必须带配对 SE（`se` / `banSe`）：' + JSON.stringify(noSe));
+  eq(monoBad.length, 0, '不许给"分不出"的卡贴四象限标签（Q-9 的正面钉）：' + JSON.stringify(monoBad));
+  eq(banBad.length, 0, '消融臂同一条规矩（承重/陷阱要过 1.96·SE）：' + JSON.stringify(banBad));
+  ok(/要辨[\d.]+pt需\d+局\/组/.test(String(run.stdout || '')),
+    '控制台必须印"要辨 X pt 需几局/组"（算力价码；没有它就只剩一句"噪声内"，等于没回答 Q-10）');
+  ok(/噪声内.*张/.test(String(run.stdout || '')) && /1\.96SE 中位/.test(String(run.stdout || '')),
+    '必须有"可测量性"汇总（多少张分不出 + 本口径噪声中位）⇒ 这是把"读不出"和"没价值"分开的那句话');
+  /* ===== ② probe-cross-mode：通吃排序必须"除 2P" =====
+   * 病（今天 9 粒历史包实测）：3P 包塞进 2P 格是**结构性 0% 胜/100% 平**（含现役）⇒ 含 2P 的"最弱格"对这批包恒 0，
+   * 排序键等于没有，把真正分辨得出的四格糊平。 */
+  const cm = spawnSync(process.execPath, ['tools/probe-cross-mode.mjs',
+    'js/bundled-champion-3p.js', 'docs/artifacts/v7aim3-93.bak', 'docs/artifacts/v7divK-31.bak', '--games=6', '--json'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(cm.status, 0, '通吃矩阵要跑得通');
+  const mx = JSON.parse(String(cm.stdout)).rows;
+  ok(mx.length > 0 && mx[0].weakestMulti !== undefined, '每行必须带 `weakestMulti`（除 2P 的最弱格）');
+  const byField = {};
+  for (const r of mx) { (byField[r.field] = byField[r.field] || []).push(r); }
+  for (const f in byField) {
+    const arr = byField[f];
+    for (let i = 1; i < arr.length; i++) {
+      ok(arr[i - 1].weakestMulti.first >= arr[i].weakestMulti.first - 1e-12,
+        '环境 ' + f + ' 的排序必须按 `weakestMulti`（第 ' + i + ' 行 ' + arr[i].pack + ' 排在 ' + arr[i - 1].pack + ' 后面却更高）');
+    }
+  }
+  ok(mx.some(function (r) { return r.weakest.id === '2P' && r.weakestMulti.id !== '2P'; }),
+    '必须真的存在"含 2P 最弱格 ≠ 除 2P 最弱格"的行（否则这条改动是空操作，两列同形等于没加）');
+  /* ===== ③ probe-skill-marginal：把"读不出"分成两种病 =====
+   * `机会≈0` 的判据是 `chance`（每局几次机会）⇒ **与局数无关 ⇒ 加算力救不了**；`噪声内` 才是算力问题。
+   * 混为一谈就会白烧算力（Q-10 的实际答复：×3.1 算力只把原生口径的可测从 3/30 抬到 4/30，换 `--rich=card` 才到 14/30）。 */
+  const mg = spawnSync(process.execPath, ['tools/probe-skill-marginal.mjs', '--mode=multi', '--games=6', '--only=ji,gun'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(mg.status, 0, '边际价值探针要跑得通');
+  const mgOut = String(mg.stdout || '');
+  ok(/病因拆开/.test(mgOut), '汇总必须把"读不出"拆成**钱墙 / 算力**两种病（不拆就是让人拿算力去治钱墙）');
+  ok(/合计 \d+ 张卡/.test(mgOut), '汇总行要在（可测/噪声内/机会≈0 三分类）');
+  ok(!/要 SE→.*需 ~0 局/.test(mgOut), '不许出现"需 0 局"这种假价码（se=0 时该走"读不出"而不是"再跑 0 局就行"）');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };

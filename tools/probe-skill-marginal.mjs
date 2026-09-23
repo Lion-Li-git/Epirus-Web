@@ -190,16 +190,16 @@ for (const k of cards) {
   else if (pc(w.cd) >= 0.3) blocker = '冷却（' + (100 * pc(w.cd)).toFixed(0) + '%）';
   else if (pc(w.cond) >= 0.3) blocker = '条件/模式（' + (100 * pc(w.cond)).toFixed(0) + '%）';
   else if (pc(w.ok) < 0.05) blocker = '几乎从不合法（合计 ' + (100 * (pc(w.money) + pc(w.bead) + pc(w.cd) + pc(w.cond))).toFixed(0) + '% 被挡住）';
-  let verdict;
+  let verdict, need = 0;
   if (t.chance < 0.5) verdict = '机会≈0（结构性不可测 ⇒ 先看右列缺什么）';
   else if (seP === 0 || Math.abs(d1) <= Math.max(NOISE * 100, 2 * seP)) {
     /* "读不出"必须有**价码**，否则它只是一句免责声明。配对 SE 随 √n 缩 ⇒ 要把 SE 压到 TARGET_SE，
      * 需要 `GAMES × (se/TARGET_SE)²` 局；顺手报"当前能分辨的最小效应 ≈ 2.8·SE"（α=.05 + 80% power）。 */
-    const need = seP > 0 ? Math.ceil(GAMES * Math.pow(seP / TARGET_SE, 2)) : 0;
+    need = seP > 0 ? Math.ceil(GAMES * Math.pow(seP / TARGET_SE, 2)) : 0;
     verdict = '噪声内（当前只能分辨 ≥' + (2.8 * seP).toFixed(1) + 'pt · 要 SE→' + TARGET_SE + 'pt 需 ~' + need + ' 局）';
   }
   else verdict = (d1 > 0 ? '可测 · 正边际' : '可测 · 负边际');
-  list.push({ key: k, name: def.name, cost: def.cost, chance: t.chance, hit: t.hit, d1: d1, subOnly: subOnly, se: seP, dd: (t.dealt - base0.dealt), okRate: pc(w.ok), blocker: blocker, verdict: verdict });
+  list.push({ key: k, name: def.name, cost: def.cost, chance: t.chance, hit: t.hit, d1: d1, subOnly: subOnly, se: seP, need: need, dd: (t.dealt - base0.dealt), okRate: pc(w.ok), blocker: blocker, verdict: verdict });
 }
 list.sort(function (a, b) { return b.d1 - a.d1; });
 
@@ -218,4 +218,17 @@ for (const r of list) {
 const measurable = list.filter(function (r) { return r.verdict.indexOf('可测') === 0; }).length;
 const zeroChance = list.filter(function (r) { return r.verdict.indexOf('机会≈0') === 0; }).length;
 console.log('# 合计 ' + list.length + ' 张卡：可测 ' + measurable + ' · 噪声内 ' + (list.length - measurable - zeroChance) + ' · 机会≈0 ' + zeroChance);
+/* ===== v1.5.190（Q-10）：把"读不出来"拆成两种病，因为它们的治疗方式完全相反 =====
+ * `机会≈0` 的判据是 `chance < 0.5`（**每局几次机会**）—— 这是个与局数无关的量 ⇒ **加算力救不了它**，
+ * 只有换口径（`--rich=card`：只为被测卡垫到刚够、两臂同垫）才动得它；
+ * 而 `噪声内` 才是算力问题（SE∝1/√n），所以这里顺手报"全部辨到 TARGET_SE 需要几局"。
+ * 实测（现役包 · 30 张 · 80→250 局）：原生口径 可测 3→2（long）/0→4（multi）——**翻三倍算力基本没动**；
+ * 换定向垫钱口径 10→14（long）/10→12（multi），且 `机会≈0` 直接归零 ⇒ 瓶颈是钱墙，不是算力。 */
+const noiseRows = list.filter(function (r) { return r.verdict.indexOf('噪声内') === 0; });
+const zeroMoney = list.filter(function (r) { return r.verdict.indexOf('机会≈0') === 0 && /缺ジ|缺珠/.test(r.blocker); }).length;
+const maxNeed = noiseRows.reduce(function (m, r) { return Math.max(m, r.need || 0); }, 0);
+console.log('# 病因拆开：机会≈0 的 ' + zeroChance + ' 张里 **' + zeroMoney + ' 张是钱/珠买不起** ⇒ `chance` 与局数无关 ⇒ 加算力救不了，要换 `--rich=card`；' +
+  '噪声内的 ' + noiseRows.length + ' 张才是算力问题' +
+  (maxNeed ? '（全部辨到 ' + TARGET_SE + 'pt ⇒ 最多需 ' + maxNeed + ' 局 = 当前的 ×' + (maxNeed / GAMES).toFixed(1) + '）' : '') +
+  (RICH_CARD ? '【本口径已是定向垫钱 ⇒ 这一栏的"机会≈0"不再由钱造成】' : ''));
 if (arg('json', '')) console.log(JSON.stringify({ pack: PACK, mode: MODE, games: GAMES, eps: EPS, base: base0.first, noise: NOISE, rows: list }));

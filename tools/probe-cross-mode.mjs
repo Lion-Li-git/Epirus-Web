@@ -140,15 +140,24 @@ for (const fd of FIELDS) {
     /* 通吃分 = 该环境下**最弱一格**的 1st（不是平均：通吃的意思就是"没有短板格"） */
     row.weakest = CELLS.reduce(function (m, c) { return row.cells[c.id].first < m.first ? { id: c.id, first: row.cells[c.id].first } : m; },
       { id: CELLS[0].id, first: row.cells[CELLS[0].id].first });
+    /* v1.5.190：**还要一个"除 2P"的最弱格**，并且排序按它。
+     * 起因（今天 9 粒历史包的实测）：把 3P 包放进 2P 格，它是**结构性 0% 胜 / 100% 平**（9 粒里 7 粒如此，连现役也如此）
+     * ⇒ 含 2P 的"最弱格"对这批包恒等于 0%，等于**没有排序键**，把真正会分辨的那四格糊平。
+     * 2P 该由 2P 自己的包来量（见 `promote-champion2p`），不该拿 3P 包去 2P 格挨打。 */
+    const multi = CELLS.filter(function (c) { return c.id !== '2P'; });
+    row.weakestMulti = multi.length
+      ? multi.reduce(function (m, c) { return row.cells[c.id].first < m.first ? { id: c.id, first: row.cells[c.id].first } : m; },
+        { id: multi[0].id, first: row.cells[multi[0].id].first })
+      : row.weakest;
     row.minSeatSpread = CELLS.reduce(function (m, c) { return Math.max(m, row.cells[c.id].seatSpread); }, 0);
     row.minLandG = CELLS.reduce(function (m, c) { return Math.min(m, row.cells[c.id].landG); }, Infinity);
     rows.push(row);
     out.push(row);
   }
-  rows.sort(function (a, b) { return b.weakest.first - a.weakest.first; });
+  rows.sort(function (a, b) { return b.weakestMulti.first - a.weakestMulti.first; });
   if (!ASJSON) {
     console.log('\n=== 环境：' + fd.label + ' · ' + GAMES + ' 局/格 · 同种子配对 · 受评席轮转 ===');
-    console.log('  包'.padEnd(20) + CELLS.map(function (c) { return c.id.padEnd(19); }).join('') + '  最弱格');
+    console.log('  包'.padEnd(20) + CELLS.map(function (c) { return c.id.padEnd(19); }).join('') + '  最弱格（含 2P | **除 2P**）');
     for (const r of rows) {
       let line = '  ' + r.pack.slice(0, 18).padEnd(19);
       for (const c of CELLS) {
@@ -157,9 +166,11 @@ for (const fd of FIELDS) {
          * ⇒ 只印 1st 会把读表的人推向完全错误的结论（本工具第一版就是这么骗到自己的）。 */
         line += (' ' + (100 * x.first).toFixed(1) + '%/平' + (100 * x.draws).toFixed(0) + '%/极' + x.seatSpread.toFixed(0)).padEnd(19);
       }
-      console.log(line + '  ' + r.weakest.id + ' ' + (100 * r.weakest.first).toFixed(1) + '%');
+      console.log(line + '  含2P ' + r.weakest.id + ' ' + (100 * r.weakest.first).toFixed(1) + '%' +
+        ' | **除2P ' + r.weakestMulti.id + ' ' + (100 * r.weakestMulti.first).toFixed(1) + '%**');
     }
-    console.log('  （每格 = 1st 胜率 / 平局率 / 受评席胜率极差；`严胜` = 去掉平局后的胜率，在 --json 里）');
+    console.log('  （每格 = 1st 胜率 / 平局率 / 受评席胜率极差；`严胜` = 去掉平局后的胜率，在 --json 里；' +
+      '**排序按"除 2P 最弱格"**，因为 3P 包在 2P 格里是结构性平局 ⇒ 含 2P 那一列对这批包恒 0%、不分辨）');
     console.log('  兑现广度（各格 G(出手→落地)）：');
     for (const r of rows) {
       console.log('  ' + r.pack.slice(0, 18).padEnd(19) + CELLS.map(function (c) {
@@ -168,9 +179,20 @@ for (const fd of FIELDS) {
     }
   }
 }
-if (ASJSON) console.log(JSON.stringify({ games: GAMES, seed0: SEED0, ref: REF, rows: out }, null, 1));
+/* v1.5.190：JSON 导出要**与表格同一套顺序**（每个环境内按"除 2P 最弱格"降序）。
+ * 原来导的是计算顺序 ⇒ "排序键是什么"在 --json 里根本看不出来（门 D137 第一次就撞在这上面）。
+ * ⚠️ `rows` 是**每个环境的局部数组**（在 FIELDS 循环里），顶层拿不到 ⇒ 这里排的是跨环境的 `out`；
+ *    分环境分组靠"同 field 才比大小"+ 稳定排序（`out` 本来就是按环境顺序推进去的）。 */
+if (ASJSON) {
+  const ordered = out.slice().sort(function (a, b) {
+    return a.field === b.field ? b.weakestMulti.first - a.weakestMulti.first : 0;
+  });
+  console.log(JSON.stringify({ games: GAMES, seed0: SEED0, ref: REF, rows: ordered }, null, 1));
+}
 if (!ASJSON) {
   console.log('\n读法：①**最弱格**才是"通吃"的两个字的意思（平均会被一格高分糊过去）；' +
+    '但**读 3P 包时要读"除 2P 最弱格"** —— 2P 是另一套包（`promote-champion2p` 那条路），把 3P 包塞进 2P 格只会得到"结构性 100% 平"，' +
+    '那一列不分辨任何东西（今天 9 粒包里 7 粒如此，含现役）；' +
     '②"对现役"那一栏里现役包自己必然 1st≈镜像值（它就是对手）⇒ 看**别人**在它面前是多少；' +
     '③极差大 = 这个包只在某个座位上凶，不等于强；' +
     '④`G(出手)→G(落地)` 拉开的差 = 用户说的"为刷 eff 只挑最容易测到的卡"的那部分，兑现率 <40% 就要看是不是大量出手白给。');
