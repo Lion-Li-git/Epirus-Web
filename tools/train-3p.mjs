@@ -173,6 +173,28 @@ let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null;  
     console.log('[train-3p] 收割席注入已下达：killField=' + got + ' ⇒ 消费点读回 ' + T.killField() +
       '（每 ' + Math.max(2, Math.round(1 / got)) + ' 局注 **1 席** pickKillSecure · 相位按代旋转 · 只注多人局 · 避开承诺局）');
   }
+  /* ===== v1.5.177（DS）：**补贴率下达** `EPIRUS_REGEN_SLICE` =====
+   * 动因（数据）：全卡边际扫描显示"钱是**系统性**的墙"（long 只有 59%/18%/3% 的回合买得起 1/2/3 费；
+   * multi 更紧到 30 张卡 0 张可测）—— 而要跑"给钱 + 教卡"的双侧实验，**必须先能调"给多少钱"**，
+   * 此前它是硬编码常量 0.08（每 12 局 1 局）。纪律与 KILL_FIELD 完全一致：没有 setter ⇒ `exit 7`
+   * （**拒绝静默空转**）；下令后**读回消费点**；被 setter 拒（含超界 clamp）也 `exit 7`。 */
+  if (process.env.EPIRUS_REGEN_SLICE != null && String(process.env.EPIRUS_REGEN_SLICE).trim() !== '') {
+    if (typeof T.setRegenSlice !== 'function') {
+      console.error('[train-3p] ⛔ 传了 EPIRUS_REGEN_SLICE 但引擎没有 setRegenSlice ⇒ 拒绝静默空转');
+      process.exit(7);
+    }
+    const gotSlice = T.setRegenSlice(process.env.EPIRUS_REGEN_SLICE);
+    /* ⚠️ NaN 安全：`Math.abs(got - NaN) > 1e-9` 恒为 **false** ⇒ 非数值会被静默放行
+     * （我第一版就这么写的，`EPIRUS_REGEN_SLICE=abc` 实测 exit 0 静默跑完 ⇒ 正是本项目最恨的那一族）。 */
+    const reqSlice = Number(process.env.EPIRUS_REGEN_SLICE);
+    if (!isFinite(reqSlice) || !(Number(gotSlice) > 0) || Math.abs(Number(gotSlice) - reqSlice) > 1e-9) {
+      console.error('[train-3p] ⛔ EPIRUS_REGEN_SLICE=' + process.env.EPIRUS_REGEN_SLICE +
+        ' 被 setter 拒绝（读回 ' + gotSlice + '；注意超界会被 clamp 到 [0.01,1] ⇒ 也算被拒）');
+      process.exit(7);
+    }
+    console.log('[train-3p] 补贴率已下达：regenSlice=' + gotSlice + ' ⇒ 消费点读回 ' + T.regenSlice() +
+      '（每 ' + Math.max(2, Math.round(1 / gotSlice)) + ' 局留 1 局带补贴：受评席在白拿 ep 的世界里被评估）');
+  }
   /* ===== v1.5.169（§N28）：训练**模式**下达（`EPIRUS_TRAIN_MODE=long` ⇒ 5 血长程考卷）=====
    * 动因（用户 09-22 的原话目标）："理想情况下应该炼一个 5 血长程能通吃其他模式" —— 而 `TRAIN_MODE` 一直是写死的 `'multi'`，
    * 所以这句**从来没被当成实验跑过**（`evo.js:28` 自己注释着"5 血冠军从来没被训过"）。

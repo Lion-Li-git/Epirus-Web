@@ -1983,7 +1983,18 @@ let WALL_GAMES = 3;
     } catch (e) { return null; }
   }
 
-  const REGEN_SLICE = 0.08;   // 每 12 局留 1 局（约 8%）带补贴
+  /* v1.5.177（DS）：补贴率从**硬编码常量**变成可下达的旋钮 ——
+   * 动因（数据）：全卡边际扫描证明"钱是系统性的墙"（long 里只有 59%/18%/3% 的回合买得起 1/2/3 费，
+   * multi 更紧：30 张卡里 0 张可测）；而"给钱+教卡"的双侧实验**必须先能调"给多少钱"**。
+   * 默认仍是 0.08 ⇒ 不下达时逐位等于旧行为；非法值原样返回（宿主据此判"被拒"）。 */
+  let REGEN_SLICE = 0.08;   // 每 12 局留 1 局（约 8%）带补贴
+  function setRegenSlice(v) {
+    const n = Number(v);
+    if (!isFinite(n) || n <= 0) return REGEN_SLICE;
+    REGEN_SLICE = Math.min(1, Math.max(0.01, n));
+    return REGEN_SLICE;
+  }
+  function regenSlice() { return REGEN_SLICE; }
   function regenForGen(gen) { return 0; }   // 兼容旧入口；回放切片按局索引走
   function setRegenTotal(n) { /* 保留兼容：回放切片不再依赖总代数 */ }
   function regenForGame(g, games) {
@@ -2503,7 +2514,7 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setRegenSlice, regenSlice, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

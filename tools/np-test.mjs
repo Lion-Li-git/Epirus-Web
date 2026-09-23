@@ -4949,6 +4949,25 @@ t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a
     '产物要自带"这臂的训练桌上放了哪几个判据原型"（实测 ' + JSON.stringify(mt.recipe && mt.recipe.counterOpps) + '）');
 });
 
+t('D132 补贴率旋钮 `EPIRUS_REGEN_SLICE`（v1.5.177 · 双侧实验的前置）：默认 0.08 逐位不变 + 下达必须读回 + 拒静默空转', function () {
+  /* 动因：全卡边际扫描证明"钱是系统性的墙"（long 59%/18%/3% 买得起 1/2/3 费；multi 0 张可测）
+   * ⇒ "给钱+教卡"的双侧实验**必须先能调"给多少钱"**，而它此前是硬编码常量 `REGEN_SLICE = 0.08`。 */
+  const ev = readFileSync('js/train/evo.js', 'utf8');
+  ok(ev.indexOf('let REGEN_SLICE = 0.08;') >= 0, '必须是 let（可下达）且默认 0.08（不下达 ⇒ 逐位等于旧行为）');
+  ok(ev.indexOf('function setRegenSlice(v)') >= 0 && ev.indexOf('function regenSlice()') >= 0, '必须有 setter 与回执');
+  ok(ev.indexOf('if (!isFinite(n) || n <= 0) return REGEN_SLICE;') >= 0, '非法值必须原样返回（宿主据此判"被拒"）');
+  ok(ev.indexOf('setRegenSlice, regenSlice,') >= 0, '必须导出（CLI/服务端两边都要能调）');
+  ok(ev.indexOf('const step = Math.max(2, Math.round(1 / REGEN_SLICE));') >= 0, '消费点必须真的读这个变量（不是只定义）');
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(t3.indexOf('process.env.EPIRUS_REGEN_SLICE') >= 0, 'CLI 必须读这个 env');
+  ok(t3.indexOf('没有 setRegenSlice ⇒ 拒绝静默空转') >= 0 && t3.indexOf('process.exit(7)') >= 0,
+    '没有 setter 必须**响亮拒绝**（§N11/§N8 那一族：横幅读回不等于作用点发生）');
+  ok(t3.indexOf('消费点读回') >= 0, '下达后必须**读回消费点**的值');
+  ok(t3.indexOf('const reqSlice = Number(process.env.EPIRUS_REGEN_SLICE);') >= 0 &&
+    t3.indexOf('!isFinite(reqSlice)') >= 0,
+    '非数值必须被挡（**NaN 安全**：`Math.abs(got - NaN) > 1e-9` 恒 false ⇒ 我第一版 `abc` 实测 exit 0 静默跑完）');
+});
+
 t('D131 卡面提示必须说真话（v1.5.173 · 用户实测"摄魂 bug 没解决"追到的成因）：门槛按模式取真值，文案不许自己抄一份数字', function () {
   /* 成因（`results/摄魂.txt`）：引擎按 `state.mode.drainHpMax` 放行（长程 3），而 `rules.js` 的 `desc` 写死"仅限 HP≤1"
    * ⇒ 长程 HP 2 时格子**该亮**也确实亮，提示却说"≤1" ⇒ 玩家读成"血回上去了还能用 = 没修"。**引擎没错，文案过期。**
