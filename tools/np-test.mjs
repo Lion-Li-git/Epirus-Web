@@ -897,14 +897,24 @@ t('D1 drain gate in multi stays HP<=1 (R25 unchanged)', function () {
   st.p[0].hp = 2; ok(!S.computeCost(st, 0, R.SK.DRAIN).ok, 'multi HP=2 must be banned');
 });
 
-t('D2 long mode hp=5 / drainHpMax=3', function () {
+t('D2 long mode hp=5 / drainHpMax=2（v1.5.174 用户裁定 3 → 2；0 必须能真关掉）', function () {
   const m = R.MODES.long;
   ok(!!m, 'MODES.long must exist');
-  eq(m.hp, 5, 'long.hp'); eq(m.drainHpMax, 3, 'long.drainHpMax');
+  eq(m.hp, 5, 'long.hp'); eq(m.drainHpMax, 2, 'long.drainHpMax');
   eq(S.createState('long', { next: mulberry32(72) }, 5).p[0].hp, 5, 'long initial hp');
   const st = S.createState('long', { next: mulberry32(73) }, 5);
-  st.p[0].hp = 3; ok(S.computeCost(st, 0, R.SK.DRAIN).ok, 'long HP=3 usable');
-  st.p[0].hp = 4; ok(!S.computeCost(st, 0, R.SK.DRAIN).ok, 'long HP=4 must be banned (gate is 3)');
+  st.p[0].hp = 2; ok(S.computeCost(st, 0, R.SK.DRAIN).ok, 'long HP=2 usable（新窗口的上沿）');
+  st.p[0].hp = 3; ok(!S.computeCost(st, 0, R.SK.DRAIN).ok, 'long HP=3 must be banned（v1.5.174 起窗口是 2，不再是 3）');
+  st.p[0].hp = 4; ok(!S.computeCost(st, 0, R.SK.DRAIN).ok, 'long HP=4 must be banned (gate is 2)');
+  /* v1.5.174 顺手修的那条语义：`state.js` 原来写 `(mode.drainHpMax) || 1` ⇒ **0 会静默变成 1**，"关掉这张卡"这个选项根本不存在。
+   * （我做"永不可用"对照组时被它骗过一次：`drainHpMax:0` 跑出来与 `≤1` 逐位相同才发现。） */
+  const keep = m.drainHpMax;
+  try {
+    m.drainHpMax = 0; st.p[0].hp = 1;
+    ok(!S.computeCost(st, 0, R.SK.DRAIN).ok, 'drainHpMax=0 必须真的永不可用（HP1 也不行）');
+    m.drainHpMax = 1; st.p[0].hp = 1;
+    ok(S.computeCost(st, 0, R.SK.DRAIN).ok, '未设/设 1 仍走 R25 原口径（HP1 可用）');
+  } finally { m.drainHpMax = keep; }
 });
 
 t('D3 round cap follows the mode (long safety net=140 + sudden death at 100)', function () {
@@ -4943,7 +4953,7 @@ t('D131 卡面提示必须说真话（v1.5.173 · 用户实测"摄魂 bug 没解
   /* 成因（`results/摄魂.txt`）：引擎按 `state.mode.drainHpMax` 放行（长程 3），而 `rules.js` 的 `desc` 写死"仅限 HP≤1"
    * ⇒ 长程 HP 2 时格子**该亮**也确实亮，提示却说"≤1" ⇒ 玩家读成"血回上去了还能用 = 没修"。**引擎没错，文案过期。**
    * 所以这条门两半：① 判**引擎**逐档（防真闩锁回来）；② 判**提示跟着模式变数字**（防这次这种"说的≠做的"）。 */
-  const caps = { long: 3, multi: 1, standard: 1 };
+  const caps = { long: 2, multi: 1, standard: 1 };   // v1.5.174：长程窗口 3 → 2（用户裁定）
   for (const mode in caps) {
     const cap = (R.MODES[mode].hp) || 3, lim = caps[mode];
     for (let hp = cap; hp >= 1; hp--) {
@@ -4963,7 +4973,11 @@ t('D131 卡面提示必须说真话（v1.5.173 · 用户实测"摄魂 bug 没解
   const drain = R.skills.find(function (x) { return x.key === R.SK.DRAIN; });
   const tipLong = box.EpirusSkillTip.of(R, { mode: { drainHpMax: 3 } }, drain);
   const tipStd = box.EpirusSkillTip.of(R, { mode: {} }, drain);
-  ok(/仅限 HP≤3/.test(tipLong), '长程提示必须写 ≤3（实测：' + tipLong + '）');
+  ok(/仅限 HP≤3/.test(tipLong), '提示必须跟着模式给的数字走（合成态喂 3 就要写 3；实测：' + tipLong + '）');
+  /* v1.5.174（用户裁定长程 3 → 2）：**真模式对象**的提示必须写 ≤2 —— 这条才是"页面此刻对用户说了什么" */
+  const tipReal = box.EpirusSkillTip.of(R, { mode: R.MODES.long }, drain);
+  ok(/仅限 HP≤2/.test(tipReal), '长程（真配置）提示必须写 ≤2（实测：' + tipReal + '）');
+  ok(!/仅限 HP≤3/.test(tipReal), '长程提示里不许残留上一代的 ≤3');
   ok(/仅限 HP≤1/.test(tipStd), '2 人/多人提示必须仍是 ≤1（实测：' + tipStd + '）');
   ok(tipLong !== tipStd, '两种模式的提示不许相同（相同 = 又回到"一个数字写死"）');
   ok(tipLong.indexOf('HP≤1') < 0, '长程提示里不许残留过期数字');
