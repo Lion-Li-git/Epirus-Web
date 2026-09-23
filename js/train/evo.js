@@ -809,6 +809,22 @@
    * 经济锁死的病根：AI 永远停在 ep≤1 的 ジ→枪 循环，2 ジ 以上技能永久不可负担。
    * 旧 fitness 的 proact/deal 奖励"立刻打伤害"，而攒钱必须先连出ジ（0 伤害）→
    * 旧口径实际上在惩罚攒钱，故加 save/conv 两项把梯度补上。 */
+  /* v1.5.181（DS）：示范注入的**开火计数 + 未开火原因分解** ——
+   * 动因（实测）：三种配置（只给钱 / 教师 heavyfire / 教师 pickBigTFocus）下"真正的落雷"使用率全是 0.00%，
+   * 却**无法判断**是"从未轮到 / 教师无动作 / 买不起 / 被 only 过滤 / 注入了没被选择"。
+   * `KILL_FIELD` 在 v1.5.160 补 `countKillSeats()` 之前也是这个处境（§N12：**横幅读回证明不了作用点发生**）。
+   * 位置：`makeEconChooser` 里**唯一**的注入出口。 */
+  const IMIT_STAT = { tries: 0, fired: 0, noTeacherAction: 0, unaffordable: 0, filteredByOnly: 0, seats: {}, keys: {} };
+  function countImitInject() {
+    return { tries: IMIT_STAT.tries, fired: IMIT_STAT.fired, noTeacherAction: IMIT_STAT.noTeacherAction,
+      unaffordable: IMIT_STAT.unaffordable, filteredByOnly: IMIT_STAT.filteredByOnly,
+      seats: Object.assign({}, IMIT_STAT.seats), keys: Object.assign({}, IMIT_STAT.keys) };
+  }
+  function resetImitStat() {
+    IMIT_STAT.tries = 0; IMIT_STAT.fired = 0; IMIT_STAT.noTeacherAction = 0;
+    IMIT_STAT.unaffordable = 0; IMIT_STAT.filteredByOnly = 0; IMIT_STAT.seats = {}; IMIT_STAT.keys = {};
+    return true;
+  }
   function makeEconChooser(inner, agg, teacherFn, imitB, onlyKey, subFlag) {
     const rec = { maxEp: 0, heavy: 0, hold: 0, heavy4: 0 };
     const fn = function (state, pid, legal) {
@@ -828,11 +844,19 @@
       const subOK = (!IMIT_SUB_ONLY || !onlyKey || !!subFlag);
       if (IMIT_OVERRIDE && teacherFn && imitB > 0 && subOK && state.rng && typeof state.rng.next === 'function') {
         if (state.rng.next() < imitB) {
+          IMIT_STAT.tries++;                     // v1.5.181：轮到了（rng 过）
           const ta = teacherFull(teacherFn, state, pid, legal);
           const okL = ta && ta.key && legal.some(function (l) { return l.key === ta.key && l.affordable; });
-          /* v1.5.98：`onlyKey` 未设 ⇒ 与旧版一致；设了 ⇒ **只覆盖教师真要教的那张卡**。 */
-          if (okL && (!onlyKey || ta.key === onlyKey)) {
+          /* v1.5.98：`onlyKey` 未设 ⇒ 与旧版一致；设了 ⇒ **只覆盖教师真要教的那张卡**。
+           * v1.5.181：这里同时记下**没开火的原因**，好把"没注入 / 没被选择"分开。 */
+          if (!ta || !ta.key) { IMIT_STAT.noTeacherAction++; }
+          else if (!okL) { IMIT_STAT.unaffordable++; }
+          else if (onlyKey && ta.key !== onlyKey) { IMIT_STAT.filteredByOnly++; }
+          else {
             if (agg) { agg.use[ta.key] = (agg.use[ta.key] || 0) + 1; }
+            IMIT_STAT.fired++;
+            IMIT_STAT.seats[pid] = (IMIT_STAT.seats[pid] || 0) + 1;
+            IMIT_STAT.keys[ta.key] = (IMIT_STAT.keys[ta.key] || 0) + 1;
             return ta;
           }
         }
@@ -2514,7 +2538,7 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setRegenSlice, regenSlice, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setRegenSlice, regenSlice, countImitInject, resetImitStat, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

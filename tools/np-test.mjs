@@ -3623,8 +3623,10 @@ t('D86 只示范目标卡（only）：override 与奖励计数**都**过滤 + �
   const evo = readFileSync('js/train/evo.js', 'utf8');
   ok(evo.indexOf('let IMIT_ONLY = null;') >= 0 && evo.indexOf('function setImitOnly(k) {') >= 0,
     '必须有 only 开关且默认 null（不过滤 ⇒ 行为与旧版逐位相同）');
-  ok(evo.indexOf('if (okL && (!onlyKey || ta.key === onlyKey)) {') >= 0,
-    'override 必须被 only 过滤（只覆盖教师真要教的那张卡）');
+  ok(evo.indexOf('else if (onlyKey && ta.key !== onlyKey) { IMIT_STAT.filteredByOnly++; }') >= 0 &&
+    evo.indexOf('IMIT_STAT.fired++;') >= 0,
+    'override 必须被 only 过滤（只覆盖教师真要教的那张卡）—— v1.5.181 起同时记"被 only 过滤"的次数'
+    + '（这条原来是钉旧文本形态的，随 v1.5.181 的结构改动而红 ⇒ 见门禁审计 §2-4：这类文本钉应改运行时）');
   ok(evo.indexOf('if (tk != null && (!onlyKey || tk === onlyKey) && subOK) {') >= 0,
     '**奖励计数也必须被 only 与 subOK 过滤** —— 否则"与 fallback 一致"白拿奖励，正是抹掉"攒"的那股力');
   ok(evo.indexOf('function imitOnlyForGen(gen)') >= 0 && evo.indexOf('imitB, imitOnlyForGen(gen)') >= 0,
