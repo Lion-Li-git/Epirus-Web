@@ -224,15 +224,22 @@ let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null, B
         process.exit(7);
       }
       T.setEconomyReward({ bigtChainW: chainReq });
-      const gotChain = (T.bigTChainReward() || {}).w;
+      const back = T.bigTChainReward() || {};
+      const gotChain = back.w;
       if (!isFinite(reqChain) || reqChain < 0 || !(Number(gotChain) === reqChain)) {
         console.error('[train-3p] ⛔ 大雷连带权重=' + chainReq +
           ' 未生效（读回 ' + gotChain + '）—— 非数值/负数/被 clamp 都算被拒');
         process.exit(7);
       }
+      /* v1.5.188（用户裁 Q-14 ②）：**形状也要读回**。这次改的就是形状（计数 → 率），而"权重读回了"证明不了
+       * 项按哪种方式进 fit ⇒ 读不回 `shape === 'rate'` 就是"旧形状还活着"，必须响（同一族的"seam 2"病）。 */
+      if (back.shape !== 'rate') {
+        console.error('[train-3p] ⛔ 连带项形状读回=' + JSON.stringify(back.shape) + '（要 `rate` ⇒ 分母是"该席大雷出手数"）');
+        process.exit(7);
+      }
       BIGT_CHAIN_REQ = reqChain;
       console.log('[train-3p] 大雷连带权重已下达：' + reqChain + ' ⇒ 消费点读回 ' + gotChain +
-        '（进 gFit 的形状：W × min(1, 本快照该席 `bigTChain` 次数 / 1) ⇒ 0 次得 0、一发吃满）');
+        '（形状=' + back.shape + '：**W × min(1, 该席连带数 / 该席大雷出手数)** ⇒ 付的是"用它时真赚了"，不是"多抽几次"；0 出手 = 0 分）');
     }
   }
   /* ===== v1.5.179（DS · **Q-8 的最小版本**）：示范族下达 `EPIRUS_IMIT_*` =====
@@ -539,7 +546,10 @@ for (let gen = 0; gen < GENS; gen++) {
       /* v1.5.187：把"这一代最优个体打出几条连带"直接印出来（DS 交接 §2b 的验收判据是 `连带 ≥ 0.2/局`）。
        * 为什么必须挂在臂上而不是事后量产物：我实测过四档越来越有利的造局（含"全场集火同一人 + 教师永远提议大雷"），
        * **产物级链数一直是 0** ⇒ 只有逐代的读数能区分"权重没生效"与"要付钱的行为在评分局里根本没出现"。 */
-      (r.chainEvents !== undefined ? ' **连带=' + r.chainEvents + ' 条/' + (r.chainPerGame || 0).toFixed(3) + '每局**' : ''));
+      (r.chainEvents !== undefined ? ' **连带=' + r.chainEvents + ' 条/' + (r.chainPerGame || 0).toFixed(3) + '每局**' +
+        /* v1.5.188（率形）：**分母必须一起印** —— 只印分子的话，"1 条 / 1 次出手"（率 1.0）与
+         * "1 条 / 8 次出手"（率 0.125）在尺子上完全同形，而这正是这次换形状要分开的那两件事。 */
+        ' 出手=' + (r.chainCasts || 0) + ' 率=' + (r.chainRate || 0).toFixed(3) : ''));
   }
   const breedRng = T.mulberry32 ? T.mulberry32(__SEED * 100003 + gen) : Math.random;
   const elite = scored.slice(0, 3).map(function (x) { return x.params; });

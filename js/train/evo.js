@@ -1222,7 +1222,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0, varietyMax = 0, bigUses = 0, chains = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0, varietyMax = 0, bigUses = 0, chains = 0, bigTCasts = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let leftEpSum = 0, spentEpSum = 0, gainEpSum = 0;   // v1.5.116 L2′：余款/已花/已获得（每局）
     let imitSum = 0, imitGames = 0;
@@ -1402,11 +1402,17 @@ let WALL_GAMES = 3;
        * 不写卡名清单（D81/D72 的规矩）。这一族正是"用不上就没必要攒 ep"的那几张（大雷/地雷/净化/电磁炮/摄魂/激光眼）。
        * 标度同 v1.5.79 的规矩：**0 次得 0、1 次即吃满**（现状是 0% ⇒ 先给"从不会到会"这一步的梯度）。 */
       const bigBonus = BIGCARD_W > 0 ? (BIGCARD_W * Math.min(1, bigUses / 1)) : 0;
-      /* v1.5.187（DS 交接 §2b）：**大雷连带**收益项。标度依据是量出来的（不是凑的）：
-       *   把"会挑时机的大雷教师"当一个席位直接量 ⇒ multi 连带 **0.57/局**、long **0.49/局**（DS 读 0.35/0.55）
-       *   ⇒ `min(1, chains/1)` 正好是 0→1 的完整梯度（0 次得 0、一次即吃满），与 v1.5.79 那条"标度必须量出来"的规矩一致。
-       * 用户口径写死：**每 4~5 局一发就够（0.2/局）** ⇒ 权重给小（默认 0 ⇒ 出厂行为一字不变）。 */
-      const chainBonus = BIGT_CHAIN_W > 0 ? (BIGT_CHAIN_W * Math.min(1, chains / 1)) : 0;
+      /* v1.5.188（用户裁 Q-14 选项 ②）：**按"率"付，不按"绝对计数"付** —— 形状改为
+      *     `W × min(1, 该席连带数 / 该席大雷出手数)`（0 出手 ⇒ 0 分，**不做 0/0**）。
+      * 为什么换（v1.5.187 的失败读数）：`min(1, 链数/1)` 是"一发幸运链 = 吃满 W" ⇒ 想看见梯度必须把 W 抬到 ~1.5，
+      * 而那量级已经把名次适应度（0~1）整个盖掉 ⇒ 选出的是**又窄又低分**的包（考卷 35.4%→23.5%、净落地 3.29→1.24）。
+      * 率形同时改掉了**激励方向**（这才是用户口径的原话）："追的是打出连导，不是使用率" ——
+      *   计数形付的是"搅动了几次"（多出手就多机会抽中），率形付的是"**你用它的时候是不是真的赚了**"（挑时机）。
+      * ⚠️ 分母 `bigTCasts` 与分子 `chains` **都不受权重门控**（同 v1.5.187 那条教训：读数跟着开关关 ⇒ "死作用点"与"真没链"分不开）。
+      * 分母不写常数、写"率"本身：0~1 天然就是完整梯度，不需要再凑一个目标值（历史臂 `chainw15` 用的是旧形状，已在 CHANGELOG 注明作废）。 */
+      const chainBonus = BIGT_CHAIN_W > 0
+        ? (BIGT_CHAIN_W * Math.min(1, bigTCasts > 0 ? chains / bigTCasts : 0))
+        : 0;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
@@ -1452,8 +1458,10 @@ let WALL_GAMES = 3;
         /* v1.5.187（DS 交接 §2b 的唯一待做）：**连带**才是要付钱的东西（用户口径："追的是打出连导，不是使用率"）
          * ⇒ 这一项与 `BIGCARD_W` 分开是有意的：那个数"用了贵卡"，这个数"用了大雷并且真的搅动了全场"。
          * ⚠️ **计数不设门槛**（只有 `chainBonus` 受 `BIGT_CHAIN_W` 门控）⇒ 这样 `W=0` 的臂也能白拿"连带/局"这个读数，
-         *   门才能拿它判"权重到没到作用点"（否则 W=0 时链数永远是 0，`fit` 不动到底是"死作用点"还是"真没链"就分不开 —— 这次就卡在这一步过）。 */
+         *   门才能拿它判"权重到没到作用点"（否则 W=0 时链数永远是 0，`fit` 不动到底是"死作用点"还是"真没链"就分不开 —— 这次就卡在这一步过）。
+         * v1.5.188：分母（该席**真正打出的大雷**次数）同样**不设门槛** ⇒ 率形要能算，也要能在 W=0 的臂上被量出来。 */
         chains += countBigTChain(r.state.events, seat, R);
+        bigTCasts += countBigTCasts(r.state.events, seat, R);
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1581,8 +1589,11 @@ let WALL_GAMES = 3;
       wallReject: wallReject,
       fitNoDiv: fitAvg,
       /* v1.5.187：连带读数**始终**随评分返回（不受权重门控）⇒ 臂上/门都能看"这一粒到底搅动了几次"，
-       * 也才分得开"权重没生效"与"根本没打出链"。 */
+       * 也才分得开"权重没生效"与"根本没打出链"。
+       * v1.5.188：加上**分母**（`chainCasts` = 该席真正打出的大雷数）与**率**（`chainRate`）⇒
+       * 换形状之后必须还能看见"率是几、分母是几"，否则又一次只能事后量（而且 `0/0` 这条路要显式走 0）。 */
       chainEvents: chains, chainPerGame: (fitGames || played) ? chains / (fitGames || played) : 0,
+      chainCasts: bigTCasts, chainRate: bigTCasts > 0 ? chains / bigTCasts : 0,
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
       spDivNorm: spDivNorm,
@@ -2224,8 +2235,18 @@ let WALL_GAMES = 3;
     for (const e of (events || [])) if (e.type === 'bigTChain' && e.from === seat) n++;
     return n;
   }
+  /** v1.5.188（Q-14 ② 的分母）：该席**真正打出的大雷**次数（`outcome === 'ok'` ⇒ 被无效化的不算，
+   *  与 `countBigCards` 同一口径 ⇒ 不可刷）。卡从 `rules.SK.BIG_T` 取，不写字面卡名。 */
+  function countBigTCasts(events, seat, RR) {
+    const rules = RR || R;
+    let n = 0;
+    for (const e of (events || [])) {
+      if (e.type === 'action' && e.pid === seat && e.outcome === 'ok' && e.key === rules.SK.BIG_T) n++;
+    }
+    return n;
+  }
   function bigCardReward() { return { w: BIGCARD_W }; }
-  function bigTChainReward() { return { w: BIGT_CHAIN_W }; }   // v1.5.187：读回生效值（CLI/门用它判"下达是否落地"）
+  function bigTChainReward() { return { w: BIGT_CHAIN_W, shape: 'rate' }; }   // v1.5.187：读回生效值 · v1.5.188：连"形状"一起读回（率形 vs 计数形）
   function blockReward() { return { w: BLOCK_W }; }
   /* v1.5.124（§28a）：广度收益项的只读回执（权重 + 阈值；判据用**无筛选种群**的 G 中位，见 CHANGELOG）。 */
   function widthReward() { return { w: WIDTH_W, floor: WIDTH_FLOOR, target: WIDTH_TARGET }; }
@@ -2598,7 +2619,7 @@ let WALL_GAMES = 3;
     setClearReward, clearReward, countClears,
     blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）
     widthReward,                // v1.5.124 §28a：广度收益项（权重走 econ-env 的 widthW）
-    bigCardReward, countBigCards, bigTChainReward, countBigTChain,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187：大雷连带收益项（bigtChainW）
+    bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn
   };

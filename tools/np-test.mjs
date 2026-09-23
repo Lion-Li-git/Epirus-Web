@@ -5068,7 +5068,7 @@ t('D134 切片相位不许与座位轮换锁死（v1.5.186 · 复核 DS 交接 �
   ok(top <= 0.8, '单个席位的占比不许超过 80%（修前实测 92% ⇒ 这条就是那次的反例）；实测 ' + (100 * top).toFixed(0) + '%');
 });
 
-t('D135 大雷连带收益项（v1.5.187 · DS 交接 §2b 的"唯一待做"）：归因走 bigTChain.from、读数**不受权重门控**、且证明它真能推动 fit', function () {
+t('D135 大雷连带收益项（v1.5.187 接线 · v1.5.188 换**率形**）：归因走 bigTChain.from、分子分母都不受权重门控、且证明"这一项的非零只能来自注入"', function () {
   /* ① 计数器的归因口径（DS 自己踩过的 L2 坑：`voided` 事件**没有 reason**，连带主标记是 `bigTChain{from,to,kind}`） */
   const evs = [
     { type: 'bigTChain', from: 2, to: 0, kind: 'attack' },
@@ -5081,40 +5081,90 @@ t('D135 大雷连带收益项（v1.5.187 · DS 交接 §2b 的"唯一待做"）�
   eq(T.countBigTChain(evs, 2, R), 2, '只数 `from === 该席` 的 bigTChain（别人的、damage 的、voided 的都不算）');
   eq(T.countBigTChain(evs, 1, R), 1, '换一个席位看归因是否跟着走');
   eq(T.countBigTChain([], 0, R), 0, '空事件 ⇒ 0');
-  /* ② 权重三件套：setter 生效 / 读回 / reset 复位（econ-env 的键对齐由 D77 管） */
+  /* ①b v1.5.188（用户裁 Q-14 ② = 按率付）：**分母**的口径 —— 只数该席"真正打出的大雷"（`outcome === 'ok'`，
+   *  与 `countBigCards` 同规矩 ⇒ 被无效化的不算，不可刷）；卡从 `rules.SK.BIG_T` 取，不许写字面卡名。 */
+  const casts = [
+    { type: 'action', pid: 0, key: R.SK.BIG_T, outcome: 'ok' },
+    { type: 'action', pid: 0, key: R.SK.BIG_T, outcome: 'voided' },     // 被无效化 ⇒ 不算
+    { type: 'action', pid: 1, key: R.SK.BIG_T, outcome: 'ok' },         // 别人的出手 ⇒ 不算
+    { type: 'action', pid: 0, key: R.SK.MINE, outcome: 'ok' },          // 贵卡但不是大雷 ⇒ 不算
+    { type: 'bigTChain', from: 0, to: 2, kind: 'attack' }               // 链事件本身不是出手
+  ];
+  eq(T.countBigTCasts(casts, 0, R), 1, '分母只数该席 `outcome:ok` 的 `BIG_T` 出手');
+  eq(T.countBigTCasts([], 0, R), 0, '空事件 ⇒ 分母 0（**0 出手必须走 0 分这条路，不许 0/0**）');
+  /* ①c 率形本身：`0 出手 ⇒ 0 分`（`NaN` 会把整个 fit 打坏 —— DS §3 坑#2/#3 那一族）⇒ 用评分器直接判产物 */
+  {
+    const pack = sb.window.EpirusPolicy.unpack(sb.window.EPIRUS_CHAMPION_3P, true);
+    const opps = [{ name: 'balanced', sel: Bots.pickBalanced }, { name: 'defend', sel: Bots.pickDefend }];
+    T.setEconomyReward({ bigtChainW: 4 });          // 故意给到能把 fit 顶满的量级
+    const hot = T.scoreMemberN(pack, opps, 6, 3, 0, 0, 0);
+    T.setEconomyReward({ reset: true });
+    const cold = T.scoreMemberN(pack, opps, 6, 3, 0, 0, 0);
+    ok(isFinite(hot.fit) && isFinite(hot.chainRate), 'fit 与率都必须是有限数（0/0 会出 NaN）');
+    if (hot.chainCasts === 0) {
+      eq(hot.chainRate, 0, '分母 0 ⇒ 率必须是 0（不许 NaN）');
+      ok(Math.abs(hot.fit - cold.fit) < 1e-12,
+        '分母 0 ⇒ **即使 W=4 也不许加一分钱**（这条就是"0 出手却吃到连带奖励"的防伪钉；实测 fit ' + hot.fit + ' vs ' + cold.fit + '）');
+    } else {
+      ok(Math.abs(hot.chainRate - hot.chainEvents / hot.chainCasts) < 1e-12, '率必须等于分子/分母（读数不许各算一份）');
+    }
+  }
+  /* ② 权重三件套：setter 生效 / 读回 / reset 复位（econ-env 的键对齐由 D77 管）
+   *    v1.5.188：**形状也要读得回** —— 这次改的就是形状（计数 → 率），而"权重读回了"证明不了项按哪种方式进 fit。 */
   T.setEconomyReward({ bigtChainW: 0.4 });
   eq((T.bigTChainReward() || {}).w, 0.4, 'setEconomyReward ⇒ bigTChainReward 必须读回生效值');
+  eq((T.bigTChainReward() || {}).shape, 'rate', '必须读回形状 `rate`（付的是"连带/出手"，不是"连带绝对数"）');
   T.setEconomyReward({ bigtChainW: -3 });
   eq((T.bigTChainReward() || {}).w, 0, '负数 ⇒ clamp 到 0（不许负权重把 fit 往下拽出反向梯度）');
   T.setEconomyReward({});
   eq((T.bigTChainReward() || {}).w, 0, '未设 ⇒ 不动');
   /* ③ 读数必须**不受权重门控**（W=0 也要能看"这一代打出几条链"）—— 否则"死作用点"与"真没链"永远分不开
-   *    （这次就卡在这一步：三档剂量逐位相同，我一度判它死了，其实是链数为 0） */
+   *    （这次就卡在这一步：三档剂量逐位相同，我一度判它死了，其实是链数为 0）
+   *    v1.5.188：**分母同样不许跟着门控**（率形没有分母读数 = 又一根只能事后量的尺） */
   T.setEconomyReward({ bigtChainW: 0 });
   const s0 = T.scoreMemberN(sb.window.EpirusPolicy.unpack(sb.window.EPIRUS_CHAMPION_3P, true),
     [{ name: 'balanced', sel: Bots.pickBalanced }, { name: 'defend', sel: Bots.pickDefend }], 4, 3, 0, 0, 0);
   ok(typeof s0.chainEvents === 'number', 'W=0 时评分也必须返回 chainEvents（读数不能跟着权重一起关）');
-  /* ④ **判活**：跑一臂 W=1.5，看那条 +1.5 的签名有没有把 bestFit 顶出基准带（实测 gen20 连带=1 ⇒ fit 1.602，其余代 ~0.8）
-   *    ⇒ 这一格是"判效果"，不是判横幅：没有它，我上一轮的结论会是错的（"三臂逐位相同 ⇒ 死作用点"）。 */
+  ok(typeof s0.chainCasts === 'number' && typeof s0.chainRate === 'number',
+    'W=0 时也必须返回**分母与率**（只给分子就无法判断率是几）');
+  /* ④a **判活**（示范开着）：跑一臂 W=0.5 ⇒ 必须印"形状=rate"、每代印分子/分母/率；
+   *      若整臂一条链都没打出，fit 不许出现 +0.5 级的跳变（否则 = 计数漏了、奖励却在动）。
+   *      v1.5.187 用的是 W=1.5 计数形（一发幸运链吃满 ⇒ 把名次适应度整个盖掉，实测考卷 35.4%→23.5%）⇒ 剂量降到 0.5。 */
   const dir = mkdtempSync(join(tmpdir(), 'd135-'));
   const run = spawnSync(process.execPath, ['tools/train-3p.mjs', '60', '3', '8', '8'], {
     env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTChain', EPIRUS_IMIT_ONLY: 'bigT', EPIRUS_IMIT_OVERRIDE: '1',
-      EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '1.5', EPIRUS_ARM: 'd135', EPIRUS_BAND_DIR: dir
+      EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd135', EPIRUS_BAND_DIR: dir
     }), encoding: 'utf8', timeout: 600000
   });
   eq(run.status, 0, '带连带权重的臂要跑得通');
   const out = String(run.stdout || '');
   /* v1.5.187：CLI 的横幅里**不许出现那个 env 名**（D77 ① 按整名扫，train-3p.mjs 在读的清单里）
    * ⇒ 改钉"下达值 ⇒ 消费点读回同值"，判的还是同一件事（值真到了引擎），只是不钉字面量。 */
-  ok(/大雷连带权重已下达：1\.5 ⇒ 消费点读回 1\.5/.test(out), '必须印"下达 ⇒ 读回"');
-  ok(/连带=\d+ 条\/[\d.]+每局/.test(out), '每代必须印连带读数（不印 = 又一根只能事后量的尺）');
-  const withChain = /连带=([1-9]\d*) 条/.test(out);
+  ok(/大雷连带权重已下达：0\.5 ⇒ 消费点读回 0\.5/.test(out), '必须印"下达 ⇒ 读回"');
+  ok(/形状=rate/.test(out), '横幅必须印**读到的形状**（形状读不回 = 旧形状还活着也没人知道）');
+  ok(/连带=\d+ 条\/[\d.]+每局\*\* 出手=\d+ 率=[\d.]+/.test(out),
+    '每代必须把**分子、分母、率**一起印（只印分子时"1 条/1 次出手"与"1 条/8 次出手"在尺子上同形 —— 正是换形状要分开的那两件事）');
   const fitJump = (out.match(/bestFit=([0-9.]+)/g) || []).map(function (s) { return Number(s.split('=')[1]); });
-  ok(withChain || Math.max.apply(null, fitJump) < 1.2,
-    '若整臂一条链都没打出，则 fit 不许出现 +1.5 级的跳变（否则说明计数漏了、奖励却在动）；实测最大 bestFit=' + Math.max.apply(null, fitJump));
-  if (withChain) ok(Math.max.apply(null, fitJump) > 1.2,
-    '打出了链 ⇒ 权重必须把 bestFit 顶上去（这条就是"活作用点"的证据；实测最大 ' + Math.max.apply(null, fitJump) + '）');
+  const withChain = /连带=([1-9]\d*) 条/.test(out);
+  ok(withChain || Math.max.apply(null, fitJump) < 1.5,
+    '整臂没链时 fit 不许出现 +0.5 级跳变；实测最大 bestFit=' + Math.max.apply(null, fitJump));
+  /* ④b **今天真正的结论**（v1.5.188 单变量：把示范关掉，其余与 ④a 同）⇒ 链与出手必须**恒 0**，
+   *      且 fit 不许被这项顶起来。含义：`BIGT_CHAIN_W` 的非零信号**只能来自教师注入的那几手**
+   *      （事件流里注入与原生出手不可区分 —— 没有标记），所以在"原生零出手"的物种上，这一项**不是在评这个包**。
+   *      ⇒ 这就是 Q-14 ①② 都买不到行为的机制解释；钉在这里，防以后有人拿"率很高"当出货。 */
+  const dir2 = mkdtempSync(join(tmpdir(), 'd135b-'));
+  const run2 = spawnSync(process.execPath, ['tools/train-3p.mjs', '60', '3', '8', '8'], {
+    env: Object.assign({}, process.env, {
+      EPIRUS_SEED: '31', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd135b', EPIRUS_BAND_DIR: dir2
+    }), encoding: 'utf8', timeout: 600000
+  });
+  eq(run2.status, 0, '关掉示范的对照臂要跑得通');
+  const out2 = String(run2.stdout || '');
+  const castLines = (out2.match(/出手=(\d+)/g) || []).map(function (s) { return Number(s.split('=')[1]); });
+  ok(castLines.length > 0, '对照臂也必须印分母（不印 = 这项在没示范时根本不看数据）');
+  eq(Math.max.apply(null, castLines), 0, '没有示范 ⇒ 该席大雷出手必须恒 0（实测最大 ' + Math.max.apply(null, castLines) + '）');
+  ok(!/连带=([1-9]\d*) 条/.test(out2), '没有示范 ⇒ 一条链都不许出现（出现就说明分子数到了别人/注入之外的东西）');
 });
 
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
