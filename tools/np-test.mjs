@@ -3663,9 +3663,9 @@ t('D87 只在补贴局里示范目标卡（subOnly）：只对设了 only 的示
   ok(evo.indexOf('imitB > 0 && subOK && state.rng') >= 0, 'override 必须被 subOK 门控');
   ok(evo.indexOf('&& subOK) {') >= 0,
     '**奖励计数也必须被 subOK 门控**（否则奖励侧仍在原生局里推它花掉攒的 ep）');
-  ok(evo.indexOf('const regenThisGame = commitGame ? 2 : regenForGame(g, games);') >= 0 &&
+  ok(evo.indexOf('const regenThisGame = commitGame ? 2 : regenForGame(g, games, gen);') >= 0 &&
     evo.indexOf('const regen = regenThisGame;') >= 0,
-    '补贴局的判定必须**只算一遍**（同一口径，避免两处各算一遍）');
+    '补贴局的判定必须**只算一遍**（同一口径，避免两处各算一遍）；v1.5.186 起必须把 `gen` 传进去（相位按代旋转）');
   ok(evo.indexOf('imitB, imitOnlyForGen(gen), subThisGame)') >= 0, '本局是否补贴必须传进 chooser');
   const sv = readFileSync('server/train-server.mjs', 'utf8');
   ok(sv.indexOf("T.setImitSubOnly(process.env.EPIRUS_IMIT_SUB_ONLY === '1')") >= 0, '主线程必须设 subOnly');
@@ -4583,9 +4583,11 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
     const p5 = T2.killSeatFor(g, gen, 2, 5, 0);
     ok(p5 === -1 || p5 !== 2, '注入席永远不许是受评席自己（g=' + g + ' gen=' + gen + ' 实得 ' + p5 + '）');
   }
-  /* 承诺局（hGene>0 且 g%3===0）**一分不进 fit** ⇒ 那一局不许注（注了等于白注，§N12 的第三处错位） */
+  /* 承诺局（`T.isCommitGame`）**一分不进 fit** ⇒ 那一局不许注（注了等于白注，§N12 的第三处错位）
+   * ⚠️ v1.5.186：这里原来自己写了一遍 `g % 3 === 0` —— 而承诺局的相位从本版起**按代旋转**（修 DS 交接 §3 坑#8 的席位锁死），
+   *    于是这条门立刻变成"用旧口径判新代码"的红。**门也不许复制判据**（同一味药，换了个病人）。 */
   let commitLeaks = 0;
-  for (let gen = 0; gen < 40; gen++) for (let g = 0; g < 8; g++) if (g % 3 === 0 && T2.killSeatFor(g, gen, g % 5, 5, 2) >= 0) commitLeaks++;
+  for (let gen = 0; gen < 40; gen++) for (let g = 0; g < 8; g++) if (T2.isCommitGame(g, gen, 2) && T2.killSeatFor(g, gen, g % 5, 5, 2) >= 0) commitLeaks++;
   eq(commitLeaks, 0, '承诺局不许注入（那局不进 fit ⇒ 白注）');
   const seen = new Set();
   for (let gen = 0; gen < 6; gen++) for (let g = 0; g < 8; g++) { const p = T2.killSeatFor(g, gen, g % 5, 5, 0); if (p >= 0) seen.add(g % 5); }
@@ -5010,6 +5012,58 @@ t('D131 卡面提示必须说真话（v1.5.173 · 用户实测"摄魂 bug 没解
   ok(uiSrc.indexOf('Tip.of(R, st, s)') >= 0, 'ui.js 组卡面提示必须走 EpirusSkillTip（自己再抄一份数字 = 本仓那四次同型病）');
   ok(uiSrc.indexOf("仅限 HP≤") < 0, 'ui.js 里不许再出现写死的"仅限 HP≤N"');
   ok(readFileSync('index.html', 'utf8').indexOf('js/ui/skill-tip.js') >= 0, 'index.html 必须加载 skill-tip.js');
+});
+
+t('D134 切片相位不许与座位轮换锁死（v1.5.186 · 复核 DS 交接 §3 坑#8）：承诺局/补贴局必须按代旋转，且示范要真覆盖各席', function () {
+  /* 病（我实测到的，DS 只记了"注入偏向 0 号席，未结案"）：受评席 `seat = g % n`，而承诺局用 `g % 3`、补贴局用 `g % step`
+   * ⇒ **n=3（CLI 臂默认人数）时两者锁死**：示范覆盖席 `{0:236,1:20,2:1}`（92% 在 0 号席）；n=5·12 局时 2 号席**整晚一次没拿到**。
+   * ⇒ "给钱/示范"类读数全带席位运气。修法 = 相位按代旋转 + 收成单一来源 `sliceHit`（原来"承诺局"在两个函数里各写一遍 `% 3`）。 */
+  const SH = T.sliceHit, IC = T.isCommitGame;
+  ok(typeof SH === 'function' && typeof IC === 'function', '必须导出 sliceHit/isCommitGame（不导出 = 门只能钉文本）');
+  /* ① 相位随代旋转，且三代合起来覆盖全部余数（否则总有席位拿不到补贴） */
+  const hitSets = [0, 1, 2].map(function (gen) {
+    const s = []; for (let g = 0; g < 9; g++) if (SH(g, 3, gen)) s.push(g); return s.join(',');
+  });
+  ok(new Set(hitSets).size === 3, '同一 step 下 gen=0/1/2 的命中集合必须互不相同（实测 ' + hitSets.join(' | ') + '）');
+  const seatsByGen = [0, 1, 2].map(function (gen) {
+    const s = new Set(); for (let g = 0; g < 12; g++) if (IC(g, gen, 2)) s.add(g % 3); return s;
+  });
+  eq(seatsByGen[0].size, 1, '单代内 n=3 时承诺局确实只落 1 个席（这就是锁死的形状 —— 本门要钉的是"跨代必须换席"）');
+  const union = new Set([].concat.apply([], seatsByGen.map(function (s) { return Array.from(s); })));
+  eq(union.size, 3, 'gen=0/1/2 合起来必须覆盖 3 个受评席（有席位整晚拿不到补贴 = 这次的病）');
+  /* ② 不传 gen ⇒ 相位 0 ⇒ 与旧版逐字相同（历史臂仍可复现） */
+  eq(SH(0, 3), true, 'sliceHit 缺省 gen ⇒ 命中 g=0（旧口径 g % step === 0）');
+  eq(SH(1, 3), false, '旧口径下 g=1 不命中');
+  /* ③ 单一来源：`killSeatFor` 与评分循环必须用同一个承诺局判据（原来各写一遍 `% 3`） */
+  for (let gen = 0; gen < 4; gen++) for (let g = 0; g < 8; g++) {
+    if (IC(g, gen, 2)) eq(T.killSeatFor(g, gen, g % 3, 3, 2), -1,
+      'gen' + gen + ' g' + g + '：承诺局不许注收割席（两个判据必须一致，否则一处旋转一处没旋转）');
+  }
+  const evoSrc = readFileSync('js/train/evo.js', 'utf8');
+  /* 只判**代码行**：注释里出现这个字面量是历史说明（"原来两处各写一遍"），不是漂移 */
+  const bare = evoSrc.split('\n').filter(function (ln) {
+    return ln.indexOf('g % 3 === 0') >= 0 && !/^\s*(\*|\/\/|\/\*)/.test(ln);
+  });
+  eq(bare.length, 0, '`g % 3 === 0` 不许再出现在代码里（只许走 isCommitGame）实测 ' + bare.map(function (l) { return l.trim(); }).join(' / '));
+  ok(evoSrc.indexOf('regenForGame(g, games, gen)') >= 0, '补贴切片必须收到 gen（不传 = 相位不转 = 病复发）');
+  /* ④ 真跑一臂：判**产出的覆盖席**，不判横幅（§N11 那条纪律） */
+  const dir = mkdtempSync(join(tmpdir(), 'd134-'));
+  const run = spawnSync(process.execPath, ['tools/train-3p.mjs', '40', '3', '8', '8'], {
+    env: Object.assign({}, process.env, {
+      EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTFocus', EPIRUS_IMIT_ONLY: 'bigT',
+      EPIRUS_IMIT_OVERRIDE: '1', EPIRUS_IMIT_FRAC: '0.5', EPIRUS_IMIT_SUBONLY: '0',
+      EPIRUS_REGEN_SLICE: '0.25', EPIRUS_ARM: 'd134', EPIRUS_BAND_DIR: dir
+    }), encoding: 'utf8', timeout: 600000
+  });
+  eq(run.status, 0, '示范臂要跑得通');
+  const mm = /覆盖席 \{([^}]*)\}/.exec(String(run.stdout || ''));
+  ok(!!mm, '退出前必须报示范注入的覆盖席（不报 = 又一根没计数的旋钮）');
+  const seats = mm[1].split(',').map(function (kv) { const a = kv.split(':'); return { k: a[0].replace(/"/g, ''), v: Number(a[1]) }; });
+  const tot = seats.reduce(function (p, s) { return p + s.v; }, 0);
+  ok(tot > 20, '注入必须真的发生（实测 fired=' + tot + '）');
+  ok(seats.length >= 3, 'n=3 · 40 代后示范必须覆盖到 3 个受评席（实测 ' + mm[1] + '）');
+  const top = Math.max.apply(null, seats.map(function (s) { return s.v / tot; }));
+  ok(top <= 0.8, '单个席位的占比不许超过 80%（修前实测 92% ⇒ 这条就是那次的反例）；实测 ' + (100 * top).toFixed(0) + '%');
 });
 
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {

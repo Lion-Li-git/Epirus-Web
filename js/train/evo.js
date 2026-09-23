@@ -98,12 +98,27 @@
   function countKillSeats() {
     return { fired: KILL_STAT.fired, seats: Object.assign({}, KILL_STAT.seats), names: Object.assign({}, KILL_STAT.names) };
   }
+  /* ===== v1.5.186（qoder 复核 DS 交接 §3 坑#8）：切片相位必须按代旋转，否则**与座位轮换锁死** =====
+   * 病（实测，不是推断）：受评席是 `seat = g % n`，而承诺局用 `g % 3`、补贴局用 `g % step` ⇒
+   *   **n=3 时 `g ≡ c (mod 3)` 把 `g % 3` 钉成同一个常数** ⇒ 每代补贴/示范只落在同一个席位上：
+   *   示范注入覆盖席 `{0:236, 1:20, 2:1}`（**92% 在 0 号席**）；n=5·每代 12 局时 **2 号席整晚一次都没拿到**（`{0:32,1:43,3:80,4:49}`）。
+   *   ⇒ 一切"给钱/示范"类读数都混着席位运气 —— 而"这个席位"恰恰不是任何判据想问的问题
+   *   （用户 09-22 已就同族病裁过："要么删掉，要么调整成不至于座位偏置"）。
+   * 修法：相位按代旋转（与 v1.5.160 `killSeatFor` 的 `(g + gen*3)` 同一招），并且**收成一个单一来源 `sliceHit`** ——
+   *   原来"承诺局"这个概念在 `killSeatFor` 与 `scoreMemberN` 各写了一遍 `g % 3 === 0`，那正是本仓栽过四次的"两处各写一遍"。
+   * ⚠️ 不传 `gen` ⇒ 相位 0 ⇒ 与旧版逐字相同（历史臂仍可复现）；调用点必须**显式把 gen 传进来**。 */
+  function sliceHit(g, step, gen) {
+    const s = Math.max(2, Number(step) || 2);
+    return ((((g + (gen || 0)) % s) + s) % s) === 0;
+  }
+  /** 承诺局（每 3 局 1 局，h 来自基因）—— 唯一判据，别处不许再写 `% 3` */
+  function isCommitGame(g, gen, hGene) { return hGene > 0 && sliceHit(g, 3, gen); }
   /** 本局要不要注、注在第几席；-1 = 不注。 */
   function killSeatFor(g, gen, seat, n, hGene) {
     if (KILL_EVERY === 0 || n < 3) return -1;   // **只注多人局**：2P 那条切片的全部意义是"对着考卷基准打"（v1.5.150），
                                                 // 2P 只有 1 个对手席，注进去等于把参照换掉 ⇒ 目标与验收就不一致了。
     if (((g + gen * 3) % KILL_EVERY) !== 0) return -1;
-    if (hGene > 0 && g % 3 === 0) return -1;   // 承诺局一分不进 fit ⇒ 注了也白注
+    if (isCommitGame(g, gen, hGene)) return -1;   // 承诺局一分不进 fit ⇒ 注了也白注（v1.5.186：与 scoreMemberN 同一个判据）
     return (seat + 1 + ((gen + g) % (n - 1))) % n;
   }
   function killSeatBot() {
@@ -1225,10 +1240,10 @@ let WALL_GAMES = 3;
        * 跨代旋转即可覆盖任意大的池子（池子 > games+3 时尾部队手也不会被漏掉）。 */
       let oi = (gen * 3 + g) % opps.length;
       const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
-      const commitGame = hGene > 0 && (g % 3 === 0);   // (c) 承诺局：每 3 局 1 局，h 来自基因
+      const commitGame = isCommitGame(g, gen, hGene);   // (c) 承诺局：每 3 局 1 局，h 来自基因（v1.5.186：相位按代旋转，判据单一来源）
       const killSeatPid = killSeatFor(g, gen, seat, n, hGene);   // v1.5.160：本局注收割席在第几席（-1=不注）
       /* v1.5.99：本局是否"补贴局"（补贴 = 白来的 ep）—— 给"只教目标卡"的示范当门槛（见 makeEconChooser）。 */
-      const regenThisGame = commitGame ? 2 : regenForGame(g, games);
+      const regenThisGame = commitGame ? 2 : regenForGame(g, games, gen);
       const subThisGame = regenThisGame > 0;
       let econ = null;
       for (let pid = 0; pid < n; pid++) {
@@ -2021,9 +2036,9 @@ let WALL_GAMES = 3;
   function regenSlice() { return REGEN_SLICE; }
   function regenForGen(gen) { return 0; }   // 兼容旧入口；回放切片按局索引走
   function setRegenTotal(n) { /* 保留兼容：回放切片不再依赖总代数 */ }
-  function regenForGame(g, games) {
+  function regenForGame(g, games, gen) {
     const step = Math.max(2, Math.round(1 / REGEN_SLICE));
-    return (g % step === 0) ? 2 : 0;
+    return sliceHit(g, step, gen) ? 2 : 0;   // v1.5.186：相位按代旋转（原来 `g % step` 与 `seat = g % n` 会锁死）
   }
 
   /* ===== 承诺级 ε（千问方案）=====
@@ -2538,7 +2553,7 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setRegenSlice, regenSlice, countImitInject, resetImitStat, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setRegenSlice, regenSlice, countImitInject, resetImitStat, sliceHit, isCommitGame, regenForGame, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
