@@ -5311,6 +5311,46 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
   ok(!/要 SE→.*需 ~0 局/.test(mgOut), '不许出现"需 0 局"这种假价码（se=0 时该走"读不出"而不是"再跑 0 局就行"）');
 });
 
+t('D138 拦截代价表（v1.5.191 新量具）：归因必须真收到 blocked/reflect、"没测到"必须单独成类、判读必须要求两场符号翻转', function () {
+  /* 这把尺子要回答的是用户那句"AI 为了防止技能被拦截、倾向于完全不用可能被拦截的技能"。
+   * 它有三个可失败点，逐个钉：① `blocked` 事件**没有 source** ⇒ 对手必须禁用被测卡，否则被挡率会混进别人的手；
+   * ② 贵卡在猛攻场里"4 回合就死 ⇒ 一次都没出手"，只报 0% 被挡率就会把**没测到**当成"拦截不成立"（门 L2 那句原话）；
+   * ③ ε=1 的 mono-spam 自带"只会一招"的惩罚 ⇒ 判"理性"必须要求**两场符号翻转**，不能只看 Δ 为负。 */
+  const run = spawnSync(process.execPath, ['tools/probe-intercept-cost.mjs', '--games=12', '--only=bigT,gun,ji', '--json'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, '探针要跑得通（stderr=' + String(run.stderr || '').slice(0, 200) + '）');
+  const out = String(run.stdout || '');
+  ok(out.indexOf('{"games"') >= 0, '探针必须能把结果导成 JSON（找不到就是 `--json` 这条路断了，别拿人读表格凑数）');
+  const j = JSON.parse(out.slice(out.indexOf('{"games"')));
+  ok(j.judged.length >= 3, '三张被测卡都要有判读行（实测 ' + j.judged.length + '）');
+  /* ① 归因活着：枪/大雷在"半数席设防"的场里必须**真收到**拦截事件（收不到 = 字段筛错 = 整张表是空枪） */
+  const gun = j.judged.filter(function (r) { return r.key === 'gun'; })[0];
+  const big = j.judged.filter(function (r) { return r.key === 'bigT'; })[0];
+  ok(gun && gun.casts > 0.5, '枪必须真出手（否则被挡率是 0/0 的假 0；实测 casts/局=' + (gun && gun.casts) + '）');
+  ok(gun.blockRate > 0.10, '枪在会防的混合场里必须**收到**拦截事件（实测被挡率 ' + (100 * gun.blockRate).toFixed(0) + '%；为 0 说明 `via`/归因断了）');
+  ok(Object.keys(gun.who || {}).length > 0, '必须记下"被哪张防御卡挡的"（`blocked.by`），否则这张表只剩一个数、解释不了机制');
+  /* ② "没测到"必须能单独成类，且优先级高于 N/R/L */
+  const clsOf = function (r) { return r.cls; };
+  ok(j.judged.map(clsOf).every(function (c) { return 'RLNUC?'.indexOf(c) >= 0; }), '判读只能落在 R/L/N/U/C/? 里');
+  {
+    const u = spawnSync(process.execPath, ['tools/probe-intercept-cost.mjs', '--games=6', '--only=drain', '--grant=0', '--json'],
+      { encoding: 'utf8', timeout: 600000 });
+    ok(u.status === 0, '关掉垫钱的对照臂要跑得通（status=' + u.status + '）');
+    const uu = JSON.parse((function (s) { return s.slice(s.indexOf('{"games"')); })(String(u.stdout || '')));
+    const r0 = uu.judged.filter(function (x) { return x.key === 'drain'; })[0];
+    ok(r0 && r0.cls === 'U', '关掉定向垫钱后，"活不到有钱"的卡必须判 **U（未测到）**而不是 N —— ' +
+      '把"没测到"读成"拦截解释不成立"就是本仓门 L2 点名的那族病（实测 cls=' + (r0 && r0.cls) + ' casts/局=' + (r0 && r0.casts) + '）');
+  }
+  /* ③ 判据形状：R 要求两场符号翻转（Δ混合<0 且 Δ不防>0）；L 要求 Δ混合>0 —— 直接从产物复核，不钉源码文本 */
+  for (const r of j.judged) {
+    if (r.cls === 'R') ok(r.dMix < 0 && r.dNodef > 0, 'R 必须两场符号翻转：' + r.name + ' Δ混合=' + r.dMix + ' Δ不防=' + r.dNodef);
+    if (r.cls === 'L') ok(r.dMix > 0 && r.blockRate >= 0.10, 'L 必须是"会防场里仍赚 + 真被挡"：' + r.name);
+    if (r.cls === 'N') ok(r.blockRate < 0.10, 'N 只能给被挡率 <10% 的卡：' + r.name + ' 实测 ' + (100 * r.blockRate).toFixed(0) + '%');
+    ok(typeof r.interceptCost === 'number', '机制列（拦截代价=Δ混合−Δ不防）必须在');
+  }
+  ok(/判读合计/.test(out) && /规则：/.test(out), '必须印分类合计与判读规则（没有规则的话，这张表就是一堆没有口径的数）');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };
