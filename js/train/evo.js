@@ -947,6 +947,17 @@
   let WIDTH_W = 0, WIDTH_FLOOR = 3, WIDTH_TARGET = 7;
   /* v1.5.126（用户洞察）：**贵卡**（cost≥3 或需珠）出手的奖励权重（默认关）。 */
   let BIGCARD_W = 0;
+  /* ===== v1.5.187（qoder 按 DS 交接 §2b 的"唯一待做"）：**大雷连带**收益项 `BIGT_CHAIN_W` =====
+   * 为什么是这一项（DS 的结论链 + 我的独立复跑，见交接 §2 步 7/8 与 `RESEARCH-LOG-2026-09-23-qoder-night.md`）：
+   *   现役产物在长程/多人里**大雷出手 0.000/局、连带 0.00/局**（我复跑：出手 0.00、连带 0.00 ⇒ 复现）；
+   *   而把"会挑时机的大雷教师"当一个席位直接量，连带是真的：**multi 0.57/局、long 0.49/局**（DS 读 0.35/0.55，数量级一致、排序相反 ⇒ 场地相关）
+   *   ⇒ 机制/时机/payoff 都在，缺的是**选择不给它付钱**。示范（哪怕时机对、量也足）活不过"选择"。
+   * 归因入口 = 事件 `type:'bigTChain'` 的 **`from`**（施法者席），**不要用 `damage.reason`**：
+   *   它只覆盖"吃到伤害的那半"，且 `voided` 事件**没有 `reason` 字段**（原因在 `by`）—— DS 自己踩过（门 L2 那句"筛错字段⇒把没发生当结论"）。
+   * ⚠️ 一条我量出来但**没有擅自改判据**的事：连带事件与"连带作废"**不是一一对应**（实测 84%/86%；
+   *   发射端 `if (!qIsDef && qa && qa.key !== MINI_T)` 本来就漏掉防御者与互雷）⇒ 本项付的是"Provoked 出交互"，
+   *   约 15% 付在没真作废的那半上。要改成"按作废付"是判据选择，等用户/DS 裁（Q-14）。 */
+  let BIGT_CHAIN_W = 0;
   /* ===== P2（qoder-research 0920 · RESEARCH-QUEUE P2 / RESEARCH-LOG §11-附-3）：**形状适应度**权重（默认关）=====
    * 三角跷跷板：{主动清场}↔{按住只枪}↔{防珠线}，教师课程怎么排都只能占两边（段与段互相覆盖）。
    * 这一项不示范动作，而是把"4 席家族压在外部压迫席身上的伤害"这一**后果**直接进 fit。
@@ -1044,7 +1055,7 @@ let WALL_GAMES = 3;
     if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;
     else if (o.divCatW != null) DIV_ROLE_W = Number(o.divCatW) || 0;
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
-    if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
+    if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.bigtChainW != null) BIGT_CHAIN_W = Math.max(0, Number(o.bigtChainW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
     if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover; if (o.convRatio != null) CONV_RATIO = !!o.convRatio; if (o.convOffense != null) CONV_OFFENSE = !!o.convOffense;
     if (o.hoardCapMult != null) HOARD_CAP_MULT = Number(o.hoardCapMult) || 1; if (o.stockBonus != null) STOCK_BONUS = Number(o.stockBonus) || 0;
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
@@ -1055,7 +1066,7 @@ let WALL_GAMES = 3;
     if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));
     if (o.reset) {
       ECO_T = null; ECO_C = null;
-      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0; BIGCARD_W = 0;
+      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0; BIGCARD_W = 0; BIGT_CHAIN_W = 0;
       /* qoder-research 0920：D77 的运行时往返会喂**每个键**的哨兵再 reset —— ringW/s4W 是后加的键，
        * 漏在这里会把 0.5 的哨兵泄漏给后续门（s4W 泄漏 = 后续 scoreMemberN 直接抛错）。
        * ⚠️ D109 第一次跑红还顺带抓出一个**既存泄漏**：`wallFilter` 的哨兵 true 从没被 reset 抹掉
@@ -1070,7 +1081,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
+      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
       /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
        * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
       beadW: BEAD_W,
@@ -1211,7 +1222,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0, varietyMax = 0, bigUses = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0, varietyMax = 0, bigUses = 0, chains = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let leftEpSum = 0, spentEpSum = 0, gainEpSum = 0;   // v1.5.116 L2′：余款/已花/已获得（每局）
     let imitSum = 0, imitGames = 0;
@@ -1391,10 +1402,15 @@ let WALL_GAMES = 3;
        * 不写卡名清单（D81/D72 的规矩）。这一族正是"用不上就没必要攒 ep"的那几张（大雷/地雷/净化/电磁炮/摄魂/激光眼）。
        * 标度同 v1.5.79 的规矩：**0 次得 0、1 次即吃满**（现状是 0% ⇒ 先给"从不会到会"这一步的梯度）。 */
       const bigBonus = BIGCARD_W > 0 ? (BIGCARD_W * Math.min(1, bigUses / 1)) : 0;
+      /* v1.5.187（DS 交接 §2b）：**大雷连带**收益项。标度依据是量出来的（不是凑的）：
+       *   把"会挑时机的大雷教师"当一个席位直接量 ⇒ multi 连带 **0.57/局**、long **0.49/局**（DS 读 0.35/0.55）
+       *   ⇒ `min(1, chains/1)` 正好是 0→1 的完整梯度（0 次得 0、一次即吃满），与 v1.5.79 那条"标度必须量出来"的规矩一致。
+       * 用户口径写死：**每 4~5 局一发就够（0.2/局）** ⇒ 权重给小（默认 0 ⇒ 出厂行为一字不变）。 */
+      const chainBonus = BIGT_CHAIN_W > 0 ? (BIGT_CHAIN_W * Math.min(1, chains / 1)) : 0;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus + widthBonus + bigBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus + widthBonus + bigBonus + chainBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -1433,6 +1449,11 @@ let WALL_GAMES = 3;
         /* v1.5.126：**贵卡**（声明费用 ≥3 或需珠）的出手 —— 用户指出"这个包不会用电磁炮/大雷、也丢了地雷/净化
          * ⇒ 它当然没必要攒 ep" ⇒ 直接给这一族付钱（它们不可刷：真的用出来才给钱）。 */
         if (BIGCARD_W > 0) bigUses += countBigCards(r.state.events, seat, R);
+        /* v1.5.187（DS 交接 §2b 的唯一待做）：**连带**才是要付钱的东西（用户口径："追的是打出连导，不是使用率"）
+         * ⇒ 这一项与 `BIGCARD_W` 分开是有意的：那个数"用了贵卡"，这个数"用了大雷并且真的搅动了全场"。
+         * ⚠️ **计数不设门槛**（只有 `chainBonus` 受 `BIGT_CHAIN_W` 门控）⇒ 这样 `W=0` 的臂也能白拿"连带/局"这个读数，
+         *   门才能拿它判"权重到没到作用点"（否则 W=0 时链数永远是 0，`fit` 不动到底是"死作用点"还是"真没链"就分不开 —— 这次就卡在这一步过）。 */
+        chains += countBigTChain(r.state.events, seat, R);
       }
     }
     /* ===== v1.5.19（方向 A）：自对局折进多样性 =====
@@ -1559,6 +1580,9 @@ let WALL_GAMES = 3;
       wallDmg: wallDmg,
       wallReject: wallReject,
       fitNoDiv: fitAvg,
+      /* v1.5.187：连带读数**始终**随评分返回（不受权重门控）⇒ 臂上/门都能看"这一粒到底搅动了几次"，
+       * 也才分得开"权重没生效"与"根本没打出链"。 */
+      chainEvents: chains, chainPerGame: (fitGames || played) ? chains / (fitGames || played) : 0,
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
       spDivNorm: spDivNorm,
@@ -2192,7 +2216,16 @@ let WALL_GAMES = 3;
     }
     return n;
   }
+  /** v1.5.187：数**该席打出大雷后引发的交互**（连带）。归因走 `bigTChain.from`（施法者），
+   *  不看 `damage.reason`（只覆盖吃到伤害那半）、不看 `voided.reason`（**该事件没有 reason 字段**，原因在 `by`）。 */
+  function countBigTChain(events, seat, RR) {
+    const rules = RR || R;
+    let n = 0;
+    for (const e of (events || [])) if (e.type === 'bigTChain' && e.from === seat) n++;
+    return n;
+  }
   function bigCardReward() { return { w: BIGCARD_W }; }
+  function bigTChainReward() { return { w: BIGT_CHAIN_W }; }   // v1.5.187：读回生效值（CLI/门用它判"下达是否落地"）
   function blockReward() { return { w: BLOCK_W }; }
   /* v1.5.124（§28a）：广度收益项的只读回执（权重 + 阈值；判据用**无筛选种群**的 G 中位，见 CHANGELOG）。 */
   function widthReward() { return { w: WIDTH_W, floor: WIDTH_FLOOR, target: WIDTH_TARGET }; }
@@ -2565,7 +2598,7 @@ let WALL_GAMES = 3;
     setClearReward, clearReward, countClears,
     blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）
     widthReward,                // v1.5.124 §28a：广度收益项（权重走 econ-env 的 widthW）
-    bigCardReward, countBigCards,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）
+    bigCardReward, countBigCards, bigTChainReward, countBigTChain,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187：大雷连带收益项（bigtChainW）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn
   };

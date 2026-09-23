@@ -5,7 +5,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
-import { ECON_ENV_KEYS } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
+import { ECON_ENV_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { FIGHT_ENV_KEYS } from '../server/fight-env.mjs';
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
 import { rejectDegenerateWinners, bandPickByLand, rejectNarrowWinners } from './pick-best.mjs';
@@ -64,6 +64,19 @@ const SELF_ENV_KEYS = [
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
   'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W'
 ];
+/* v1.5.187：**大雷连带收益权重**（`evo.js` 的 `BIGT_CHAIN_W`，DS 交接 §2b 的唯一待做）走 econ 族，
+ * 而它的 env 名按 D77 只许出现在 `server/econ-env.mjs` ⇒ 这里**不写字面量**，
+ * 而是从单一来源**反推**："喂一个 econ env 名 ⇒ `readEconEnv` 读出哪个奖励键"，与本 CLI 真正下发的那一个对上，
+ * 才算"本工具认识它"（不是暗键）。派生而非抄名单 = 少一处"两处各写一遍"。 */
+const CLI_ECON_REWARD_KEYS = ['bigtChainW'];
+(function extendSelfWithCliEcon() {
+  for (const k of ECON_ENV_KEYS) {
+    const probe = {}; probe[k] = 0.5;
+    const g = readEconEnv(probe);
+    const hit = Object.keys(g).filter(function (r) { return g[r] != null; });
+    if (hit.length === 1 && CLI_ECON_REWARD_KEYS.indexOf(hit[0]) >= 0 && SELF_ENV_KEYS.indexOf(k) < 0) SELF_ENV_KEYS.push(k);
+  }
+})();
 /* 名单 = server 下发族（单一来源：`server/econ-env.mjs` / `fight-env.mjs`）+ `js/` 里"加载时字面读"的死键。
  * ⚠️ 只盯**这份名单**，不是"任何 EPIRUS_*"——否则用户 shell 里随便一个旧旋钮（如 `EPIRUS_NO_PROXY`）
  *    就会让所有 np-test 迷你臂 exit 6（那是误伤，不是本项要治的病）。
@@ -156,7 +169,7 @@ const T = sb.window.EpirusTrainer;
  * 与 v1.5.159 那条已删的 passiveField 接线的**关键区别**：这条带**开火计数**（跑完必须报"注了几局 / 覆盖几个受评座位"，
  * 一局未注 ⇒ `exit 8`）。§N11 的教训就是"横幅读回 0.34 ✓ 而作用点 0 局"烧掉两臂 ⇒ 横幅只能证明**变量**到位，
  * 证明不了**效果**发生。语义与三条设计约束见 `js/train/evo.js` 的 `killSeatFor` 注释。 */
-let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null;   // 兑现广度当选的账（写进 meta，事后能查这臂到底改没改判）
+let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null, BIGT_CHAIN_REQ = 0;   // 兑现广度当选的账（写进 meta，事后能查这臂到底改没改判）
 {
   const trainEnv = readTrainEnv(process.env);
   if (trainEnv.kill != null && Number(trainEnv.kill) > 0) {
@@ -194,6 +207,33 @@ let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null;  
     }
     console.log('[train-3p] 补贴率已下达：regenSlice=' + gotSlice + ' ⇒ 消费点读回 ' + T.regenSlice() +
       '（每 ' + Math.max(2, Math.round(1 / gotSlice)) + ' 局留 1 局带补贴：受评席在白拿 ep 的世界里被评估）');
+  }
+  /* ===== v1.5.187（qoder · DS 交接 §2b 的"唯一待做"）：**大雷连带收益权重** =====
+   * 为什么是这一项（DS 的结论链 + 我的独立复跑）：现役产物**大雷 0.000/局、连带 0.00/局**，
+   * 而把"会挑时机的大雷教师"当一个席位直接量，连带是真的（multi 0.57/局 · long 0.49/局）
+   * ⇒ 机制/时机/payoff 都在，缺的是**选择不给它付钱**（示范活不过"选择"）。
+   * 纪律与 `REGEN_SLICE`/`KILL_FIELD` 逐字一致：无 setter ⇒ `exit 7`；下达后**读回消费点**；
+   * NaN/被 clamp 都算被拒 ⇒ `exit 7`（`Math.abs(got - NaN) > 1e-9` 恒 false 那个坑已写进下面的判据）。
+   * ⚠️ 取值**必须**经 `server/econ-env.mjs` 的 `readEconEnv`（D77 的单一来源 ⇒ 本文件不出现那个 env 名）。 */
+  {
+    const chainReq = readEconEnv(process.env).bigtChainW;
+    if (chainReq != null && String(chainReq).trim() !== '') {
+      const reqChain = Number(chainReq);
+      if (typeof T.setEconomyReward !== 'function' || typeof T.bigTChainReward !== 'function') {
+        console.error('[train-3p] ⛔ 下达了大雷连带权重但引擎没有 setEconomyReward/bigTChainReward ⇒ 拒绝静默空转');
+        process.exit(7);
+      }
+      T.setEconomyReward({ bigtChainW: chainReq });
+      const gotChain = (T.bigTChainReward() || {}).w;
+      if (!isFinite(reqChain) || reqChain < 0 || !(Number(gotChain) === reqChain)) {
+        console.error('[train-3p] ⛔ 大雷连带权重=' + chainReq +
+          ' 未生效（读回 ' + gotChain + '）—— 非数值/负数/被 clamp 都算被拒');
+        process.exit(7);
+      }
+      BIGT_CHAIN_REQ = reqChain;
+      console.log('[train-3p] 大雷连带权重已下达：' + reqChain + ' ⇒ 消费点读回 ' + gotChain +
+        '（进 gFit 的形状：W × min(1, 本快照该席 `bigTChain` 次数 / 1) ⇒ 0 次得 0、一发吃满）');
+    }
   }
   /* ===== v1.5.179（DS · **Q-8 的最小版本**）：示范族下达 `EPIRUS_IMIT_*` =====
    * 动因（实测）：全卡边际扫描 + "只给钱"实验 ⇒ **钱能让它更勤**（出手 G_eff 2.63→4.01）但**贵卡仍是 0.00%**
@@ -495,7 +535,11 @@ for (let gen = 0; gen < GENS; gen++) {
     console.log('gen ' + gen + ' bestFit=' + r.fit.toFixed(3) +
       ' 1st=' + (r.firstRate * 100).toFixed(0) + '% top2=' + (r.top2Rate * 100).toFixed(0) +
       '% avgDealt=' + r.avgDealt.toFixed(2) + ' sigma=' + sigma.toFixed(3) +
-      (r.anchorDist !== undefined ? ' 距种子=' + r.anchorDist.toFixed(4) : ''));
+      (r.anchorDist !== undefined ? ' 距种子=' + r.anchorDist.toFixed(4) : '') +
+      /* v1.5.187：把"这一代最优个体打出几条连带"直接印出来（DS 交接 §2b 的验收判据是 `连带 ≥ 0.2/局`）。
+       * 为什么必须挂在臂上而不是事后量产物：我实测过四档越来越有利的造局（含"全场集火同一人 + 教师永远提议大雷"），
+       * **产物级链数一直是 0** ⇒ 只有逐代的读数能区分"权重没生效"与"要付钱的行为在评分局里根本没出现"。 */
+      (r.chainEvents !== undefined ? ' **连带=' + r.chainEvents + ' 条/' + (r.chainPerGame || 0).toFixed(3) + '每局**' : ''));
   }
   const breedRng = T.mulberry32 ? T.mulberry32(__SEED * 100003 + gen) : Math.random;
   const elite = scored.slice(0, 3).map(function (x) { return x.params; });
@@ -680,6 +724,7 @@ const meta = {
     xn2w: XN2W, xn2g: XN2G, selLand: SEL_LAND, selLandGames: SEL_LAND_GAMES, selLandTol: SEL_LAND_TOL,
     kill: KILL_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     counterOpps: COUNTER_OPPS.map(function (o) { return o.name; }),   // v1.5.172：这臂的训练桌上放了哪几个判据原型
+    bigtChainW: BIGT_CHAIN_REQ,   // v1.5.187：这臂有没有给"连带"付钱（0 = 出厂口径）
     breadthFloor: BREADTH_LOG },
   breadthFloorAllNarrow: BREADTH_ALL_NARROW,   // §N29 走向②的标记：全池塌缩 ⇒ 该改奖励面，不是换排序键
   degenerateOnlyWinner: DEGENERATE_ONLY,   // §N9 退化闸：true=没有合格当选者、promote 会拒收

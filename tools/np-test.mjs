@@ -4167,7 +4167,9 @@ t('D101 贵卡出手奖励（v1.5.126 用户洞察：它不会用电磁炮/大�
   eq(T.countBigCards([mkAct(R.SK.JI)], 0), 0, 'ジ 不得记分');
   eq(T.countBigCards([mkAct(R.SK.BIG_T, true)], 0), 0, '被无效化的出手不得记分（不可刷）');
   ok(ev.indexOf('const bigBonus = BIGCARD_W > 0 ?') >= 0, '标度必须有关闭守卫（0 * NaN = NaN 会把 fit 打成 NaN —— v1.5.124 的坑）');
-  ok(ev.indexOf('+ blockBonus + widthBonus + bigBonus));') >= 0, '必须真的进 gFit');
+  /* v1.5.187：原来钉的是 `+ blockBonus + widthBonus + bigBonus));`（**带尾巴**）⇒ 任何新加权项接到后面都会误伤这条门。
+   * 与 D100 同形（只钉"+ 该项"，不钉求和式的顺序/结尾）。 */
+  ok(ev.indexOf('+ bigBonus') >= 0, '必须真的进 gFit');
   ok(ev.indexOf('let BIGCARD_W = 0;') >= 0, '默认必须关');
   ok(ev.indexOf('if (o.bigcardW != null) BIGCARD_W') >= 0, 'setEconomyReward 必须接受 bigcardW');
   const en = readFileSync('server/econ-env.mjs', 'utf8');
@@ -5064,6 +5066,55 @@ t('D134 切片相位不许与座位轮换锁死（v1.5.186 · 复核 DS 交接 �
   ok(seats.length >= 3, 'n=3 · 40 代后示范必须覆盖到 3 个受评席（实测 ' + mm[1] + '）');
   const top = Math.max.apply(null, seats.map(function (s) { return s.v / tot; }));
   ok(top <= 0.8, '单个席位的占比不许超过 80%（修前实测 92% ⇒ 这条就是那次的反例）；实测 ' + (100 * top).toFixed(0) + '%');
+});
+
+t('D135 大雷连带收益项（v1.5.187 · DS 交接 §2b 的"唯一待做"）：归因走 bigTChain.from、读数**不受权重门控**、且证明它真能推动 fit', function () {
+  /* ① 计数器的归因口径（DS 自己踩过的 L2 坑：`voided` 事件**没有 reason**，连带主标记是 `bigTChain{from,to,kind}`） */
+  const evs = [
+    { type: 'bigTChain', from: 2, to: 0, kind: 'attack' },
+    { type: 'bigTChain', from: 2, to: 1, kind: 'targeted' },
+    { type: 'bigTChain', from: 1, to: 2, kind: 'attack' },        // 别人打出的链 ⇒ 不许算到我头上
+    { type: 'voided', pid: 0, by: '真正的落雷连带' },                 // 作废事件不是链标记
+    { type: 'damage', to: 0, amt: 2, reason: '真正的落雷·连带' },      // damage.reason 只覆盖"吃到伤害"那半
+    { type: 'action', pid: 2, key: R.SK.BIG_T, outcome: 'ok' }
+  ];
+  eq(T.countBigTChain(evs, 2, R), 2, '只数 `from === 该席` 的 bigTChain（别人的、damage 的、voided 的都不算）');
+  eq(T.countBigTChain(evs, 1, R), 1, '换一个席位看归因是否跟着走');
+  eq(T.countBigTChain([], 0, R), 0, '空事件 ⇒ 0');
+  /* ② 权重三件套：setter 生效 / 读回 / reset 复位（econ-env 的键对齐由 D77 管） */
+  T.setEconomyReward({ bigtChainW: 0.4 });
+  eq((T.bigTChainReward() || {}).w, 0.4, 'setEconomyReward ⇒ bigTChainReward 必须读回生效值');
+  T.setEconomyReward({ bigtChainW: -3 });
+  eq((T.bigTChainReward() || {}).w, 0, '负数 ⇒ clamp 到 0（不许负权重把 fit 往下拽出反向梯度）');
+  T.setEconomyReward({});
+  eq((T.bigTChainReward() || {}).w, 0, '未设 ⇒ 不动');
+  /* ③ 读数必须**不受权重门控**（W=0 也要能看"这一代打出几条链"）—— 否则"死作用点"与"真没链"永远分不开
+   *    （这次就卡在这一步：三档剂量逐位相同，我一度判它死了，其实是链数为 0） */
+  T.setEconomyReward({ bigtChainW: 0 });
+  const s0 = T.scoreMemberN(sb.window.EpirusPolicy.unpack(sb.window.EPIRUS_CHAMPION_3P, true),
+    [{ name: 'balanced', sel: Bots.pickBalanced }, { name: 'defend', sel: Bots.pickDefend }], 4, 3, 0, 0, 0);
+  ok(typeof s0.chainEvents === 'number', 'W=0 时评分也必须返回 chainEvents（读数不能跟着权重一起关）');
+  /* ④ **判活**：跑一臂 W=1.5，看那条 +1.5 的签名有没有把 bestFit 顶出基准带（实测 gen20 连带=1 ⇒ fit 1.602，其余代 ~0.8）
+   *    ⇒ 这一格是"判效果"，不是判横幅：没有它，我上一轮的结论会是错的（"三臂逐位相同 ⇒ 死作用点"）。 */
+  const dir = mkdtempSync(join(tmpdir(), 'd135-'));
+  const run = spawnSync(process.execPath, ['tools/train-3p.mjs', '60', '3', '8', '8'], {
+    env: Object.assign({}, process.env, {
+      EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTChain', EPIRUS_IMIT_ONLY: 'bigT', EPIRUS_IMIT_OVERRIDE: '1',
+      EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '1.5', EPIRUS_ARM: 'd135', EPIRUS_BAND_DIR: dir
+    }), encoding: 'utf8', timeout: 600000
+  });
+  eq(run.status, 0, '带连带权重的臂要跑得通');
+  const out = String(run.stdout || '');
+  /* v1.5.187：CLI 的横幅里**不许出现那个 env 名**（D77 ① 按整名扫，train-3p.mjs 在读的清单里）
+   * ⇒ 改钉"下达值 ⇒ 消费点读回同值"，判的还是同一件事（值真到了引擎），只是不钉字面量。 */
+  ok(/大雷连带权重已下达：1\.5 ⇒ 消费点读回 1\.5/.test(out), '必须印"下达 ⇒ 读回"');
+  ok(/连带=\d+ 条\/[\d.]+每局/.test(out), '每代必须印连带读数（不印 = 又一根只能事后量的尺）');
+  const withChain = /连带=([1-9]\d*) 条/.test(out);
+  const fitJump = (out.match(/bestFit=([0-9.]+)/g) || []).map(function (s) { return Number(s.split('=')[1]); });
+  ok(withChain || Math.max.apply(null, fitJump) < 1.2,
+    '若整臂一条链都没打出，则 fit 不许出现 +1.5 级的跳变（否则说明计数漏了、奖励却在动）；实测最大 bestFit=' + Math.max.apply(null, fitJump));
+  if (withChain) ok(Math.max.apply(null, fitJump) > 1.2,
+    '打出了链 ⇒ 权重必须把 bestFit 顶上去（这条就是"活作用点"的证据；实测最大 ' + Math.max.apply(null, fitJump) + '）');
 });
 
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {

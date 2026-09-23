@@ -45,6 +45,10 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
   /* v1.5.126（**用户洞察**）：**贵卡出手**的奖励权重 —— "这个包不会用电磁炮/大雷、也丢了地雷/净化 ⇒
    * 它当然没必要攒 ep"。贵卡由**声明字段**推导（`cost ≥ 3` 或 `energyNeeds`），不写卡名清单。 */
   'EPIRUS_BIGCARD_W',
+  /* v1.5.187（qoder 按 DS 交接 §2b 的"唯一待做"）：**大雷连带**的奖励权重（`evo.js` 的 `BIGT_CHAIN_W`，出厂 0）。
+   * 与 `EPIRUS_BIGCARD_W` 分开是有意的那个区分（用户口径）：**追的是"打出连导"，不是"使用率"**——
+   * 大雷乱放=白扔 5 ジ，所以付钱给"这一发真的搅动了全场"（事件 `bigTChain.from = 施法者席`）。 */
+  'EPIRUS_BIGT_CHAIN_W',
   /* qoder-research 0920（RESEARCH-LOG §5b · HANDOFF §4-2 候选①）：**环奖励权重**（`evo.js` 的 `RING_W`，
    * 出厂 0.10）接进单一来源 ⇒ 臂上可开"贵卡 + 环"同抬的配方，找那个"既打环又会花贵卡"的合格包。
    * 不设 ⇒ 逐字不变。 */
@@ -56,7 +60,7 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
 export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
   'hoardOnLeftover', 'convRatio', 'convOffense', 'hoardCapMult', 'stockBonus',
-  'blockW', 'widthW', 'bigcardW', 'ringW', 's4W', 'beadW'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W / 0921 DS 珠奖励标度（与 setter 逐字对齐 ⇒ D77 盯得住）
+  'blockW', 'widthW', 'bigcardW', 'bigtChainW', 'ringW', 's4W', 'beadW'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W / 0921 DS 珠奖励标度 / 0923 qoder 大雷连带（与 setter 逐字对齐 ⇒ D77 盯得住）
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -100,6 +104,8 @@ export function readEconEnv(env) {
     widthW: nv(e.EPIRUS_WIDTH_W),
     /* v1.5.126（用户洞察）：贵卡出手的权重（0 = 关 ⇒ 出厂行为一字不变）。 */
     bigcardW: nv(e.EPIRUS_BIGCARD_W),
+    /* v1.5.187（DS 交接 §2b 的唯一待做）：大雷**连带**的权重（0/不设 ⇒ 严格不加项 ⇒ 出厂行为一字不变）。 */
+    bigtChainW: nv(e.EPIRUS_BIGT_CHAIN_W),
     /* 0920 qoder：环奖励权重（不设 ⇒ null ⇒ evo 原样 0.10）。 */
     ringW: nv(e.EPIRUS_RING_W),
     /* P2（qoder-research 0920）：形状适应度权重（不设 ⇒ null ⇒ S4_W 原样 0 ⇒ 严格不加项）。 */
