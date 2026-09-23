@@ -1,3 +1,42 @@
+## v1.5.179 — 示范族接进 CLI（Q-8 最小版）+ **"空枪"陷阱** + 双侧臂：**教一张卡需要一个会打它的教师**
+
+### 1. 示范族下达（`tools/train-3p.mjs`）—— Q-8 的最小版本
+
+按 `KILL_FIELD`/`REGEN_SLICE` 同一范式接通 `EPIRUS_IMIT_OVERRIDE / _ONLY / _TEACHER / _SUBONLY`
+（**没有 setter ⇒ `exit 7` 拒静默空转** · 下令后读回 · setter 抛错也 `exit 7`）。
+凭证：`示范族已下达：EPIRUS_IMIT_ONLY=bigT ⇒ 消费点读回 "bigT"` ✓（非法卡名 `BIG_T` 被**响亮拒绝** ✓ —— 卡键是 camelCase）。
+
+### 2. ★ "空枪"陷阱（我踩到并修掉，值得记）
+
+只设 `_OVERRIDE/_ONLY/_TEACHER` **什么都不发生**：退火窗口 `IMIT_UNTIL` 默认 **0** ⇒ `imitBetaForGen()` 恒 0
+⇒ 覆盖从不触发。我第一版双侧臂因此跑出**与"无示范"臂逐字节相同**的输出（同一串 bestFit / 同一批 trainFit /
+同样的 1st）⇒ 不是"效果为零"而是**从未触发**。修法：补 `EPIRUS_IMIT_FRAC` ⇒
+`imitUntil = floor(gens × frac)`（服务端口径 `train-server.mjs:171`）+ **行为式读回** `β(gen0) > 0`
+（不然只读回一个数，等于横幅自证）。凭证：`示范窗口已下达：EPIRUS_IMIT_FRAC=0.5 ⇒ imitUntil=30 代 · 行为式读回 β(gen0)=0.12` ✓
+
+### 3. 双侧臂读数（钱 0.25 + 示范 `bigT`，教师 `heavyfire`，seed 31/81，60 代）
+
+| 组 | 强度（当选 3P 1st）| 出手 `G_eff` | ジ占比 | **真正的落雷** | 摄魂 | 电磁炮 |
+|---|---|---|---|---|---|---|
+| 只给钱（0.25）| 49.2 / 47.2（均 48.2%）| 4.01 | 56.1% | **0.00%** | 0.00% | 0.01% |
+| **钱 + 示范**（**真触发**）| 52.5 / 47.6（均 **50.1%**）| 4.22 | **43.6%** | **0.00%** | 0.00% | 0.00% |
+
+⇒ 示范**确实改变了行为**（ジ 56%→44%，`G_eff` 略升，强度 +1.9pt 噪声内），
+⇒ **但大雷使用率仍是 `0.00%`** ⇒ **教师 `heavyfire` 压根不打大雷**（`only=bigT` 过滤下**无牌可教**）。
+⇒ **结论**：`教一张卡 ≠ 打开示范开关`，**得有一个真的会打它的教师**（项目里已有先例：`makeAntiRingTeacher`
+就是为"反环"专门写的教师；`setImitPlan` 支持按段换教师）。下一臂应做 **`bigT` 专用教师**（合法且买得起时打大雷），
+再做"钱 + 真教师"的双侧臂 —— 那也是"大雷 +17.5/+22.5 最大正边际"能不能被兑现的唯一路径。
+
+### 4. 产物点名（D82）
+
+`v7b1s31-band1.bak` … `v7b1s31-band6.bak` · `v7b1s81-band1.bak` … `v7b1s81-band6.bak` ·
+`v7b2s31-band1.bak` … `v7b2s31-band6.bak` · `v7b2s81-band1.bak` … `v7b2s81-band6.bak`
+（逐名展开：`v7b1s31-band1.bak` `v7b1s31-band2.bak` `v7b1s31-band3.bak` `v7b1s31-band4.bak` `v7b1s31-band5.bak` `v7b1s31-band6.bak`
+`v7b1s81-band1.bak` `v7b1s81-band2.bak` `v7b1s81-band3.bak` `v7b1s81-band4.bak` `v7b1s81-band5.bak` `v7b1s81-band6.bak`
+`v7b2s31-band1.bak` `v7b2s31-band2.bak` `v7b2s31-band3.bak` `v7b2s31-band4.bak` `v7b2s31-band5.bak` `v7b2s31-band6.bak`
+`v7b2s81-band1.bak` `v7b2s81-band2.bak` `v7b2s81-band3.bak` `v7b2s81-band4.bak` `v7b2s81-band5.bak` `v7b2s81-band6.bak`）
+= **有效实验产物**（`v7b1s*` 为**空枪反例**，`v7b2s*` 为真触发档；**均未上线**）。
+
 ## v1.5.178 — 补贴率旋钮 `EPIRUS_REGEN_SLICE`（门 D132）+ "只给钱"实验：**钱能买到强度，但买不出贵卡**
 
 ### 1. 补贴率从硬编码常量变成旋钮（`v1.5.177` 的代码，本节一并记账）

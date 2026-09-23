@@ -195,6 +195,62 @@ let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null;  
     console.log('[train-3p] 补贴率已下达：regenSlice=' + gotSlice + ' ⇒ 消费点读回 ' + T.regenSlice() +
       '（每 ' + Math.max(2, Math.round(1 / gotSlice)) + ' 局留 1 局带补贴：受评席在白拿 ep 的世界里被评估）');
   }
+  /* ===== v1.5.179（DS · **Q-8 的最小版本**）：示范族下达 `EPIRUS_IMIT_*` =====
+   * 动因（实测）：全卡边际扫描 + "只给钱"实验 ⇒ **钱能让它更勤**（出手 G_eff 2.63→4.01）但**贵卡仍是 0.00%**
+   * ⇒ "教"那一侧必须上桌；而它此前**只在服务端**接通（`paralleltrain.mjs:126` 下发 → `train-worker.mjs:206` 应用 + 回执），
+   * `train-3p` 侧传了**静默无效**（§N8 那一族的 CLI 版本）。这里按 `KILL_FIELD`/`REGEN_SLICE` 的同一范式接通：
+   * **没有 setter ⇒ `exit 7` 拒静默空转** · 下令后**读回消费点** · setter 抛错（如非法卡名）也 `exit 7`。 */
+  {
+    const DEMO_KEYS = [
+      ['EPIRUS_IMIT_OVERRIDE', 'setImitOverride', 1],
+      ['EPIRUS_IMIT_ONLY', 'setImitOnly', 0],
+      ['EPIRUS_IMIT_TEACHER', 'setImitTeacherByName', 0],
+      ['EPIRUS_IMIT_SUBONLY', 'setImitSubOnly', 1]
+    ];
+    for (const spec of DEMO_KEYS) {
+      const envKey = spec[0], setterName = spec[1], isBool = spec[2] === 1;
+      const raw = process.env[envKey];
+      if (raw == null || String(raw).trim() === '') continue;
+      if (typeof T[setterName] !== 'function') {
+        console.error('[train-3p] ⛔ 传了 ' + envKey + ' 但引擎没有 ' + setterName + ' ⇒ 拒绝静默空转');
+        process.exit(7);
+      }
+      let got = null;
+      try { got = T[setterName](isBool ? (String(raw) === '1') : String(raw)); }
+      catch (e) {
+        console.error('[train-3p] ⛔ ' + envKey + '=' + raw + ' 被 setter 拒绝：' + (e && e.message));
+        process.exit(7);
+      }
+      console.log('[train-3p] 示范族已下达：' + envKey + '=' + raw + ' ⇒ 消费点读回 ' + JSON.stringify(got));
+    }
+  }
+  /* ===== v1.5.179b（DS）：示范族的**退火窗口** `EPIRUS_IMIT_FRAC` =====
+   * ⚠️ 踩过的坑（实测）：只设 `_OVERRIDE/_ONLY/_TEACHER` **什么都不发生** —— 退火窗口 `IMIT_UNTIL` 默认 **0**
+   * ⇒ `imitBetaForGen()` 恒 0 ⇒ 覆盖从不触发。我上一版就是这么跑出一臂**与"无示范"臂逐字节相同**的"空枪"
+   * （同一串 bestFit / 同一批 trainFit / 同样的 1st ⇒ 不是"效果为零"而是**从未触发**）。
+   * 这里按服务端口径 `imitGens = floor(gens × frac)`（`train-server.mjs:171`）下达，并**行为式读回** `β(gen0) > 0`。 */
+  {
+    const rawFrac = process.env.EPIRUS_IMIT_FRAC;
+    if (rawFrac != null && String(rawFrac).trim() !== '') {
+      const frac = Number(rawFrac);
+      const gens = Math.max(1, Number(process.argv[2]) || 200);
+      if (!isFinite(frac) || frac <= 0) {
+        console.error('[train-3p] ⛔ EPIRUS_IMIT_FRAC=' + rawFrac + ' 非法（要 > 0）'); process.exit(7);
+      }
+      if (typeof T.setImitUntil !== 'function' || typeof T.imitBetaForGen !== 'function') {
+        console.error('[train-3p] ⛔ 传了 EPIRUS_IMIT_FRAC 但引擎没有 setImitUntil/imitBetaForGen ⇒ 拒绝静默空转');
+        process.exit(7);
+      }
+      const imitGens = Math.max(1, Math.floor(gens * frac));
+      T.setImitUntil(imitGens);
+      const beta0 = T.imitBetaForGen(0);
+      if (!(Number(beta0) > 0)) {
+        console.error('[train-3p] ⛔ 示范窗口没打开（β(gen0)=' + beta0 + '）⇒ 拒绝静默空转'); process.exit(7);
+      }
+      console.log('[train-3p] 示范窗口已下达：EPIRUS_IMIT_FRAC=' + frac + ' ⇒ imitUntil=' + imitGens +
+        ' 代 · **行为式读回** β(gen0)=' + beta0);
+    }
+  }
   /* ===== v1.5.169（§N28）：训练**模式**下达（`EPIRUS_TRAIN_MODE=long` ⇒ 5 血长程考卷）=====
    * 动因（用户 09-22 的原话目标）："理想情况下应该炼一个 5 血长程能通吃其他模式" —— 而 `TRAIN_MODE` 一直是写死的 `'multi'`，
    * 所以这句**从来没被当成实验跑过**（`evo.js:28` 自己注释着"5 血冠军从来没被训过"）。
