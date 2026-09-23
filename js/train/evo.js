@@ -838,10 +838,66 @@
   function resetImitStat() {
     IMIT_STAT.tries = 0; IMIT_STAT.fired = 0; IMIT_STAT.noTeacherAction = 0;
     IMIT_STAT.unaffordable = 0; IMIT_STAT.filteredByOnly = 0; IMIT_STAT.seats = {}; IMIT_STAT.keys = {};
+    resetImitAttribution();
+    return true;
+  }
+  /* ===== v1.5.189：把"教师替该席下的手"从"这个包自己的手"里**分出来** =====
+   * 病（今天用一条单变量对照才抓到的）：`IMIT_OVERRIDE` 的注入是 `return ta` —— 事件流里**没有任何东西**
+   * 说明这一手是谁选的 ⇒ 于是"示范族"的所有臂内读数（`bigUses` / 连带 / 链率…）都混着教师的手，
+   * 而"这一项到底在评谁"这句话根本没有答案（`BIGT_CHAIN_W` 那条线就是这么被判死刑的：示范一关，链恒 0）。
+   * 做法：局末拿本局的注入台账（`rec.imit`，按卡名计数）**按事件顺序**给该席的 `action` 事件补 `e.imit = true`。
+   *   · 只加字段、只记账 ⇒ **不进 fit、不动 rng ⇒ 行为逐字不变**（默认关时连台账都不建）。
+   *   · 同一张卡被同一席打多次时，"哪一次是注入的"这件事**顺序相关、可能错配**，但**条数一定对**
+   *     ⇒ 所以对外只承诺计数（`imitAttribution()`），不承诺"这一条事件是教师的手"。
+   *   · 台账有条数、事件里却不够 ⇒ 记进 `unmatched`（= 注入了但那一手没成为事件，例如当回合被淘汰）⇒ 必须看得见，不许静默。 */
+  const IMIT_ATTR = { games: 0, tagged: 0, unmatched: 0, keys: {} };
+  function tagImitActions(events, imitPend, seat, ctx) {
+    const pend = Object.assign({}, imitPend || {});
+    let tagged = 0;
+    const perKey = {};
+    /* v1.5.189：还要按**经济口径**分桶 —— 臂上开着 `REGEN_SLICE`/承诺局时，"窗口后还在打大雷"这句话
+     * 可能只是"在白拿 ep 的那些局里打"。不分这一刀，就等于把补贴局的行为当成学会的行为（今天的读数正需要它）。 */
+    const bucket = (ctx && ctx.subsidy) ? 'sub' : 'econ';
+    for (const e of (events || [])) {
+      if (!e || e.type !== 'action' || e.pid !== seat || !e.key) continue;
+      const k = e.key;
+      if (!perKey[k]) perKey[k] = { imit: 0, native: 0 };
+      if (e.outcome !== 'ok') continue;                 // 失败/作废的一手不记进"出手"账（与 countBigCards 同口径）
+      if ((pend[k] || 0) > 0) { e.imit = true; pend[k]--; tagged++; perKey[k].imit++; }
+      else perKey[k].native++;
+    }
+    let left = 0;
+    for (const k in pend) left += pend[k] || 0;
+    IMIT_ATTR.games++; IMIT_ATTR.tagged += tagged; IMIT_ATTR.unmatched += left;
+    for (const k in perKey) {
+      if (!IMIT_ATTR.keys[k]) {
+        IMIT_ATTR.keys[k] = { imit: 0, native: 0, imitSub: 0, nativeSub: 0, imitEcon: 0, nativeEcon: 0 };
+      }
+      const a = IMIT_ATTR.keys[k], o = perKey[k];
+      a.imit += o.imit; a.native += o.native;
+      if (bucket === 'sub') { a.imitSub += o.imit; a.nativeSub += o.native; }
+      else { a.imitEcon += o.imit; a.nativeEcon += o.native; }
+    }
+    return { tagged: tagged, unmatched: left, keys: perKey };
+  }
+  function imitAttribution() {
+    const keys = {};
+    for (const k in IMIT_ATTR.keys) {
+      const a = IMIT_ATTR.keys[k];
+      keys[k] = { imit: a.imit, native: a.native, imitSub: a.imitSub, nativeSub: a.nativeSub, imitEcon: a.imitEcon, nativeEcon: a.nativeEcon };
+    }
+    return { games: IMIT_ATTR.games, tagged: IMIT_ATTR.tagged, unmatched: IMIT_ATTR.unmatched, keys: keys };
+  }
+  function resetImitAttribution() {
+    IMIT_ATTR.games = 0; IMIT_ATTR.tagged = 0; IMIT_ATTR.unmatched = 0; IMIT_ATTR.keys = {};
     return true;
   }
   function makeEconChooser(inner, agg, teacherFn, imitB, onlyKey, subFlag) {
-    const rec = { maxEp: 0, heavy: 0, hold: 0, heavy4: 0 };
+    /* v1.5.189：`rec.imit` = 本局**教师替该席下过的手**（按卡名计数，懒创建 ⇒ 示范关时零开销）。
+     * 为什么必须有：override 是直接 `return ta`，事件流里"教师那一手"与"包自己那一手"**长得一模一样**
+     * ⇒ 一切"示范到底学会了什么"的读数都混着教师的手（今天靠"示范全关"的单变量对照才看出来）。
+     * 只做记账，不参与任何 fit ⇒ 默认关/开都不改行为。 */
+    const rec = { maxEp: 0, heavy: 0, hold: 0, heavy4: 0, imit: null };
     const fn = function (state, pid, legal) {
       const p = state.p[pid];
       if (p && p.ep > rec.maxEp) rec.maxEp = p.ep;
@@ -872,6 +928,9 @@
             IMIT_STAT.fired++;
             IMIT_STAT.seats[pid] = (IMIT_STAT.seats[pid] || 0) + 1;
             IMIT_STAT.keys[ta.key] = (IMIT_STAT.keys[ta.key] || 0) + 1;
+            /* v1.5.189：本局台账（局末由 `tagImitActions` 拿去给事件打标记）。**不动 rng、不进 fit** ⇒ 行为逐字不变。 */
+            if (!rec.imit) rec.imit = {};
+            rec.imit[ta.key] = (rec.imit[ta.key] || 0) + 1;
             return ta;
           }
         }
@@ -1316,6 +1375,11 @@ let WALL_GAMES = 3;
         }
         : undefined;
       const r = oneGameN(choosers, seed, n, { regen: regen, mode: TRAIN_MODE, onRoundStart: subBeadHook || beadSeedHook });
+      /* v1.5.189：局末把"教师替受评席下的手"标记出来（**只记账，不改 fit、不改 rng**）
+       * ⇒ 示范开着时，`bigUses`/链率这类臂内读数第一次能拆开"是包自己会，还是教师替它打的"。
+       * ⚠️ **每一局都要过一遍**（不能只在"本局有注入"时过）：退火窗口之后注入恒 0，而那正是"学没学会"要看的段落
+       *   —— 第一版我把这条挂在 `econ.rec.imit` 非空上 ⇒ 窗口后整段没有读数，量具自己把要测的那半砍掉了。 */
+      if (econ && IMIT_OVERRIDE) tagImitActions(r.state.events, (econ.rec && econ.rec.imit) || {}, seat, { subsidy: subThisGame });
       const rank = rankOf(r.state, seat, seed);
       /* v1.5.8：终局还活着的人数 ⇒ 判断"这局是打出来的还是熬出来的"（≥2 人活着 = 哨声局） */
       const aliveEnd = r.state.p.filter(function (q) { return q.hp > 0; }).length;
@@ -2607,7 +2671,7 @@ let WALL_GAMES = 3;
   }
 
   global.EpirusTrainer = {
-    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setRegenSlice, regenSlice, countImitInject, resetImitStat, sliceHit, isCommitGame, regenForGame, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, seatGames, setSeatGames,
+    makeTrainer, step, finishStep, scoreMember, buildOpps, oneGame, correctedWinRate, champVsBaseline, mulberry32, seedChampion, pickChampionByWinRate, champEntropy, setRegenTotal, regenForGen, makeCommitChooser, evalEconProbe, evalSubsidyProbe, costOfKey, setImitUntil, imitBetaForGen, setImitTeacher, imitTeacher, makeAntiRingTeacher, setAntiRingTeacher, setImitTeacherByName, setImitOverride, teacherFull, setImitPlan, setImitPlanByName, imitTeacherForGen, setImitOnly, imitOnlyForGen, setImitSubOnly, setSubBead, subBeadOn, setBeadSeed, beadSeedOn, setRegenSlice, regenSlice, countImitInject, resetImitStat, tagImitActions, imitAttribution, resetImitAttribution, sliceHit, isCommitGame, regenForGame, setChargeMinEp, chargeMinEpOn, setWrTol, setTrainMode, trainMode, setStyleSlice, styleSlice, seatGames, setSeatGames,
   setEconomyReward, economyReward, economyTargets, economyStock, coverageEntropy, setFightReward, fightReward, rankCredit, firstBloodSeat, roleOf,
     mirrorHealth, setHealthGate, healthGate, healthFails, setMirrorGames, mirrorGames,
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,

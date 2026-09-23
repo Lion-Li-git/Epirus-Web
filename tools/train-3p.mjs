@@ -170,6 +170,7 @@ const T = sb.window.EpirusTrainer;
  * 一局未注 ⇒ `exit 8`）。§N11 的教训就是"横幅读回 0.34 ✓ 而作用点 0 局"烧掉两臂 ⇒ 横幅只能证明**变量**到位，
  * 证明不了**效果**发生。语义与三条设计约束见 `js/train/evo.js` 的 `killSeatFor` 注释。 */
 let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null, BIGT_CHAIN_REQ = 0;   // 兑现广度当选的账（写进 meta，事后能查这臂到底改没改判）
+let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注入"的归因（必须在下达块之前声明 —— 那里要赋值）
 {
   const trainEnv = readTrainEnv(process.env);
   if (trainEnv.kill != null && Number(trainEnv.kill) > 0) {
@@ -269,6 +270,8 @@ let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null, B
         process.exit(7);
       }
       console.log('[train-3p] 示范族已下达：' + envKey + '=' + raw + ' ⇒ 消费点读回 ' + JSON.stringify(got));
+      /* v1.5.189：逐代归因只在**示范真会开火**时印。条件不在这里重推 —— 直接取 setter 的返回值（引擎是唯一口径）。 */
+      if (setterName === 'setImitOverride' && got === true) IMIT_ON = true;
     }
   }
   /* ===== v1.5.181（DS）：示范注入的**开火计数**必须在退出前报 =====
@@ -283,6 +286,18 @@ let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null, B
         console.log('[train-3p] 示范注入统计：tries=' + c.tries + ' · **fired=' + c.fired + '** · 未开火原因：教师无动作 ' +
           c.noTeacherAction + ' / 买不起 ' + c.unaffordable + ' / 被 only 过滤 ' + c.filteredByOnly +
           ' · 覆盖席 ' + JSON.stringify(c.seats) + ' · 注入的卡 ' + JSON.stringify(c.keys));
+        /* v1.5.189：臂末把**归因**也报一遍 —— `fired` 是"教师伸了几次手"，这一行才是"受评席自己留下几次手"。
+         * 二者以前没法分开（同一张卡、同一个事件形状），所以"示范学会了没有"这个问题在臂上根本问不出来。 */
+        if (typeof T.imitAttribution === 'function') {
+          const a = T.imitAttribution();
+          console.log('[train-3p] 出手归因（受评席 · 只数 `outcome:ok`）：' +
+            (Object.keys(a.keys).length ? JSON.stringify(a.keys) : '（一张都没打）') +
+            ' · tagged=' + a.tagged + ' · **unmatched=' + a.unmatched + '**（注入了但没成为事件 ⇒ 不该大于 0）');
+          if (a.tagged > 0 && a.unmatched > a.tagged) {
+            console.error('[train-3p] ⛔ 归因不可信：unmatched(' + a.unmatched + ') > tagged(' + a.tagged + ') ⇒ 事件与台账对不上（exit 8）');
+            process.exitCode = 8;
+          }
+        }
         if (c.tries > 0 && c.fired === 0) {
           console.error('[train-3p] ⛔ 示范要了、也轮到过 ' + c.tries + ' 次，但**一次都没注入** ⇒ 拒绝静默空转（exit 8）');
           process.exitCode = 8;
@@ -316,6 +331,8 @@ let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null, B
       console.log('[train-3p] 示范窗口已下达：EPIRUS_IMIT_FRAC=' + frac + ' ⇒ imitUntil=' + imitGens +
         ' 代 · **行为式读回** β(gen0)=' + beta0);
     }
+    /* v1.5.189：退火窗口没开 ⇒ β≡0 ⇒ 覆盖永不触发（DS §N12 那个"空枪臂"的形状）⇒ 归因也就无从谈起。 */
+    if (IMIT_ON && typeof T.imitBetaForGen === 'function' && !(Number(T.imitBetaForGen(0)) > 0)) IMIT_ON = false;
   }
   /* ===== v1.5.169（§N28）：训练**模式**下达（`EPIRUS_TRAIN_MODE=long` ⇒ 5 血长程考卷）=====
    * 动因（用户 09-22 的原话目标）："理想情况下应该炼一个 5 血长程能通吃其他模式" —— 而 `TRAIN_MODE` 一直是写死的 `'multi'`，
@@ -501,6 +518,44 @@ console.log('[train-3p] 人数=' + N + ' 代=' + GENS + ' 种群=' + POP + ' 每
     XN2_OPPS.map(function (o) { return o.name; }).join('+')) : '') +
   (ANCHOR > 0 ? (' · **锚定正则 λ=' + ANCHOR + '**（治遗忘：把个体拉回热启动种子）') : ''));
 
+/* v1.5.189：逐代**归因**的上一格快照 ⇒ 打印"这一代里受评席自己打了 vs 教师替它打了"。
+ * 为什么值得单独一条尺：`IMIT_OVERRIDE` 的注入在事件流里与原生出手不可区分（今天才发现，见门 D136），
+ * 所以"示范到底学会了没有"以前**根本没有读法** —— 只能看产物（产物是示范退火之后的，看不到学习过程）。 */
+let ATTR_LAST = { tagged: 0, keys: {} };   // v1.5.189：逐代归因的上一格快照（`IMIT_ON` 在上面声明，下达块要早于这里）
+function attrLine() {
+  if (typeof T.imitAttribution !== 'function') return '';
+  const a = T.imitAttribution();
+  const d = {};
+  for (const k in a.keys) {
+    const prev = ATTR_LAST.keys[k] || {};
+    const cur = a.keys[k];
+    const z = x => Number(x) || 0;   // v1.5.189：分桶字段是后加的 ⇒ 旧快照里读不到就是 0，不许变 NaN
+    if (cur.imit > z(prev.imit) || cur.native > z(prev.native)) {
+      d[k] = {
+        imit: cur.imit - z(prev.imit), native: cur.native - z(prev.native),
+        nativeSub: z(cur.nativeSub) - z(prev.nativeSub), nativeEcon: z(cur.nativeEcon) - z(prev.nativeEcon)
+      };
+    }
+  }
+  ATTR_LAST = { tagged: a.tagged, keys: JSON.parse(JSON.stringify(a.keys)) };
+  /* 一行要能读完：逐个列**这只臂里教师伸过手的那几张卡**（含退火窗口之后 —— 那正是"学没学会"要看的段落），
+   * 其余卡折成一个总数（27 张全列会把臂日志淹掉）。 */
+  const hot = [], other = { imit: 0, native: 0 };
+  for (const k in d) {
+    const everImit = a.keys[k] && a.keys[k].imit > 0;
+    if (d[k].imit > 0 || everImit) {
+      hot.push(k + ' 原生' + d[k].native + '（补贴局 ' + d[k].nativeSub + ' · 原生经济 ' + d[k].nativeEcon + '）/注入' + d[k].imit);
+    } else other.native += d[k].native;
+    if (d[k].imit > 0) other.imit += d[k].imit;
+  }
+  hot.sort();
+  const body = (hot.length ? hot.join(' · ') : '（教师这一代一次手都没伸）') +
+    ' · 其余卡合计 原生' + other.native + '/注入' + other.imit;
+  if (!hot.length && !other.native && !a.unmatched) return '';
+  return '[归因·本代] ' + body + ' · 累计 tagged=' + a.tagged +
+    (a.unmatched ? ' **unmatched=' + a.unmatched + '**（注入了却没成为事件）' : '');
+}
+
 for (let gen = 0; gen < GENS; gen++) {
   const scored = pop.map(function (params, i) {
     let r = T.scoreMemberN(params, OPPS, GAMES, N, gen, i, hGenes[i]);
@@ -551,6 +606,9 @@ for (let gen = 0; gen < GENS; gen++) {
          * "1 条 / 8 次出手"（率 0.125）在尺子上完全同形，而这正是这次换形状要分开的那两件事。 */
         ' 出手=' + (r.chainCasts || 0) + ' 率=' + (r.chainRate || 0).toFixed(3) : ''));
   }
+  /* v1.5.189：归因**逐代**印（不塞进那条 20 代的块里）—— "示范有没有转成原生行为"是随代数变化的问题，
+   * 20 代一跳就把"前期靠教师、退火后归零"这条曲线糊成两个点。 */
+  if (IMIT_ON) { const attr = attrLine(); if (attr) console.log('  gen ' + gen + ' ' + attr); }
   const breedRng = T.mulberry32 ? T.mulberry32(__SEED * 100003 + gen) : Math.random;
   const elite = scored.slice(0, 3).map(function (x) { return x.params; });
   /* (c) 分巢精英：每个 h 值保留它自己承诺局夺 1 率最高的个体（h 参与选择的唯一机制）。 */

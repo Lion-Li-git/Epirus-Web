@@ -5167,6 +5167,81 @@ t('D135 大雷连带收益项（v1.5.187 接线 · v1.5.188 换**率形**）：�
   ok(!/连带=([1-9]\d*) 条/.test(out2), '没有示范 ⇒ 一条链都不许出现（出现就说明分子数到了别人/注入之外的东西）');
 });
 
+t('D136 示范归因（v1.5.189）：教师的手必须能从包自己的手里分出来，且**没有注入的局也照样计数**、**不进 fit**、**按经济口径分桶**', function () {
+  /* 病（今天用两条单变量对照才抓到的）：`IMIT_OVERRIDE` 的注入是直接 `return ta` ⇒ 事件流里"教师替它打的那一手"
+   * 与"包自己打的那一手"**一模一样** ⇒ 一切"示范学会了没有"的臂内读数都混着教师的手。
+   * ⚠️ 这条门自己也要防那个坑：第一版我把打标记挂在"本局有注入"上 ⇒ 退火窗口之后整段没有读数，
+   *    等于**量具自己把要测的那半砍掉了**（"没测到"又会被读成"没发生"）。所以 ② 是这条门的主钉。 */
+  const mk = function (pid, key, outcome) { return { type: 'action', pid: pid, key: key, outcome: outcome }; };
+  T.resetImitStat();
+  /* ① 归因口径：只数该席、只数 `outcome:'ok'`；台账按事件顺序消费 ⇒ **条数一定对**（同卡多次谁是被注入的不保证） */
+  const ev1 = [mk(0, R.SK.BIG_T, 'ok'), mk(0, R.SK.BIG_T, 'ok'), mk(0, R.SK.GUN, 'ok'),
+    mk(0, R.SK.BIG_T, 'voided'), mk(1, R.SK.BIG_T, 'ok')];
+  const r1 = T.tagImitActions(ev1, { bigT: 1 }, 0, { subsidy: true });
+  eq(r1.tagged, 1, '台账说"教师伸过 1 次手" ⇒ 必须标出 1 条');
+  eq(ev1[0].imit, true, '该席第一条 ok 的 bigT ⇒ 打上 `imit`（**同卡多次时"哪一条是注入的"顺序相关、不保证；条数保证**）');
+  ok(!ev1[1].imit && !ev1[2].imit && !ev1[3].imit && !ev1[4].imit, '第二条同卡出手（记成原生）/ 别的卡 / 被作废的一手 / 别人的出手都不许标');
+  let a = T.imitAttribution();
+  eq(a.keys.bigT.imit, 1, '分子账：注入 1');
+  eq(a.keys.bigT.native, 1, '分子账：该席 bigT 另有 1 次是**原生**（`voided` 那条不记 ⇒ 与 `countBigCards` 同口径，不可刷）');
+  eq(a.keys.bigT.nativeSub, 1, '分桶：补贴局');
+  eq(a.keys.bigT.nativeEcon, 0, '分桶：原生经济局 0');
+  /* ② **没有注入的局也必须计数**（那次砍掉另一半的回归钉）⇒ 空台账喂进去，原生数照样涨、且进的是 `econ` 桶 */
+  const ev2 = [mk(0, R.SK.BIG_T, 'ok'), mk(0, R.SK.GUN, 'ok')];
+  const r2 = T.tagImitActions(ev2, {}, 0, { subsidy: false });
+  eq(r2.tagged, 0, '空台账 ⇒ 零条注入');
+  a = T.imitAttribution();
+  eq(a.keys.bigT.nativeEcon, 1, '**无注入的局也要计数** ⇒ `nativeEcon` 必须涨（否则退火后整段没有读数）');
+  eq(a.keys.bigT.nativeSub, 1, '两桶各记各的，不许互相污染');
+  eq(a.games, 2, '每次调用都算一局（窗口后的那些局同样进账）');
+  /* ③ 台账有条数、事件里却没有 ⇒ 必须落进 `unmatched` 被看见，不许静默 */
+  T.resetImitAttribution();
+  const r3 = T.tagImitActions([mk(0, R.SK.BIG_T, 'ok')], { bigT: 3 }, 0, { subsidy: false });
+  eq(r3.unmatched, 2, '注入了 3 次只有 1 次成为事件 ⇒ unmatched=2（不许装作没事）');
+  eq(T.imitAttribution().unmatched, 2, '累计账里也要看得见');
+  T.resetImitAttribution();
+  a = T.imitAttribution();
+  eq(a.tagged + a.unmatched + a.games, 0, 'reset 必须真清空（否则上一门的账会污染下一门）');
+  ok(T.resetImitStat() === true, '`resetImitStat` 要顺带清归因（同一族账，只清一半就会串代）');
+  /* ④ **不进 fit**：β=0（示范窗口没开）⇒ 归因照跑，但评分逐位等于"示范关" —— 这一项只许记账，不许买行为 */
+  const pack = sb.window.EpirusPolicy.unpack(sb.window.EPIRUS_CHAMPION_3P, true);
+  const opps = [{ name: 'balanced', sel: Bots.pickBalanced }, { name: 'defend', sel: Bots.pickDefend }];
+  T.setImitPlan(null); T.setImitUntil(0);            // 显式关窗口：别的手段（前面的门）留下的计划/窗口都不算
+  eq(T.imitBetaForGen(0), 0, '前置条件：β(gen0) 必须是 0（否则 ④ 判的就不是"只记账"，而是"示范确实会改行为"）');
+  T.setImitOverride(false);
+  const sOff = T.scoreMemberN(pack, opps, 4, 3, 0, 0, 0);
+  T.resetImitAttribution();
+  T.setImitOverride(true);                            // 开 override，但 β≡0 ⇒ 从不注入
+  const sOn = T.scoreMemberN(pack, opps, 4, 3, 0, 0, 0);
+  T.setImitOverride(false);
+  ok(T.imitAttribution().games > 0, '归因这一趟**必须真的跑过**（否则"fit 相同"是空枪：压根没执行就打不开这个证明）');
+  eq(sOn.fit, sOff.fit, '示范开着但窗口=0 ⇒ fit 必须逐位相同（归因只记账，不许动目标函数）');
+  ok(sOn.chainEvents !== undefined, '顺带：连带读数仍在（与 D135 同一把尺，不许跟着开关关）');
+  /* ⑤ 真跑一臂：窗口后的代数里必须仍有归因读数，且**分桶不是恒零尺**（别的卡要在 `econ` 桶里有出手） */
+  const dir = mkdtempSync(join(tmpdir(), 'd136-'));
+  const run = spawnSync(process.execPath, ['tools/train-3p.mjs', '30', '3', '8', '6'], {
+    env: Object.assign({}, process.env, {
+      EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTChain', EPIRUS_IMIT_ONLY: 'bigT', EPIRUS_IMIT_OVERRIDE: '1',
+      EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd136', EPIRUS_BAND_DIR: dir
+    }), encoding: 'utf8', timeout: 600000
+  });
+  eq(run.status, 0, '归因臂要跑得通');
+  const out = String(run.stdout || '');
+  const lines = (out.match(/\[归因·本代\][^\n]*/g) || []);
+  ok(lines.length >= 8, '逐代印归因（30 代 ⇒ 至少 8 行；实测 ' + lines.length + ' 行）');
+  const postWindow = lines.slice(Math.ceil(lines.length * 0.6));
+  ok(postWindow.length > 0 && postWindow.every(function (l) { return /注入0/.test(l) || /教师这一代一次手都没伸/.test(l); }),
+    '退火窗口之后必须**仍有读数**且注入=0 ⇒ 这就是"量具别再砍掉要测的那半"的产物级证据');
+  ok(/unmatched=0/.test(out), '臂末 unmatched 必须为 0（台账与事件逐条对得上；实测：' +
+    ((/unmatched=(\d+)/.exec(out) || ['', '?'])[1]) + '）');
+  const econTot = (/出手归因（受评席 · 只数 `outcome:ok`）：(\{[^\n]*?\}) · tagged=/.exec(out) || [null, '{}'])[1];
+  let econSum = 0;
+  try { const o = JSON.parse(econTot); for (const k in o) econSum += (o[k].nativeEcon || 0); } catch (e) { econSum = -1; }
+  ok(econSum > 0, '`原生经济` 桶不许是恒零尺（别的卡要在里面有出手，否则这条分桶等于没测；实测合计 ' + econSum + '）');
+  ok(/bigT.*"nativeSub":([1-9])/.test(out) || /bigT 原生[1-9]（补贴局/.test(out),
+    '大雷必须至少在补贴局桶里有原生出手（今天的读数）；两桶都为 0 说明注入根本没发生');
+});
+
 t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ soft 探索整回合作废（v1.5.149-night · 夜测 §N4 悬崖）', function () {
   ok(typeof T.seqLockedTurn === 'function', '判据必须导出（门喂构造态，不钉文本）');
   const mk = function (f) { const s = S.createState('long', { next: mulberry32(9) }, 3); f(s.p[0]); return s; };
