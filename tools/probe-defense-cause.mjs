@@ -12,6 +12,7 @@
  *
  * 用法：node tools/probe-defense-cause.mjs [--packs=js/bundled-champion-3p.js] [--games=200] [--eps=0.2]
  */
+import { readFileSync } from 'node:fs';
 import { build } from './probe-layer-caliber.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
@@ -48,7 +49,14 @@ for (const f0 of PACKS) {
   /* `.bak` 在 `docs/artifacts/` 里**不全是冠军包**（实测有 `index-html-before-ab*.bak` 是 index.html 的备份）
    *   ⇒ 扫池子的工具必须**先认货再装载**，否则一粒非包文件会把整场筛作废（E12 第一次就跑崩在第 159 个上）。 */
   let head = '';
-  try { head = readFileSync(f, 'utf8').slice(0, 4000); } catch (e) { SKIP.push(f + '（读不动：' + e.code + '）'); continue; }
+  try { head = readFileSync(f, 'utf8').slice(0, 4000); }
+  catch (e) {
+    /* ⚠️ 只吞"文件系统级"的错误（ENOENT/EISDIR/...）。03:30 的实测教训：我加这道过滤时**忘了 import `readFileSync`**，
+     *   于是 ReferenceError 也被这个 catch 吃掉 ⇒ 200 粒全被判成"读不动"、SWEEP 全空、**退出码还是 0**。
+     *   ⇒ 宽 catch 会把编程错误洗成"数据问题"；这里改成只认 e.code，其余一律往上抛。 */
+    if (!e || !e.code) throw e;
+    SKIP.push(f + '（读不动：' + e.code + '）'); continue;
+  }
   if (head.indexOf('window.EPIRUS_CHAMPION') < 0) { SKIP.push(f + '（非冠军包备份）'); continue; }
   const ctx = build({ on: EPS > 0, pack: f, temp: TEMP, eps: EPS, epsK: EPSK, epsMode: EPSMODE });
   if (EPS > 0 && ctx.patched !== ctx.hardwired) { console.log('⛔ 口径搬运自检失败（' + ctx.patched + '/' + ctx.hardwired + '）'); process.exit(9); }
@@ -194,6 +202,11 @@ for (const f0 of PACKS) {
     '⇒ 判"是不是因为对方有钱"要看上面那条**按回合号的曲线**，并与另一档（`--saver=cycle`：钱被压住）在**同一回合号**上对照。');
 }
 
+if (QUIET && SKIP.length && !SWEEP.length) {
+  console.log('\n## 一粒都没量到（跳过 ' + SKIP.length + ' 粒）⇒ 这不是"没有体质"，是没跑成，非零退出');
+  console.log('   跳过原因：' + SKIP.slice(0, 8).join('、'));
+  process.exit(6);
+}
 if (QUIET && SWEEP.length) {
   /* 跨包筛：**按"响应倍差"降序**（倍差 = `ep≥10` 设防率 / `ep0~1` 设防率，只看两桶分母都 ≥40 的）
    * ⇒ 倍差大 = 会因对方有钱而转防（v1.5.210 那粒候选的病）；倍差≤1 且连防短 = 无此响应 */

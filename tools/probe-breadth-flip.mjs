@@ -10,7 +10,7 @@
  *
  * 用法：node tools/probe-breadth-flip.mjs [--every=12] [--limit=140] [--games=60] [--line=3]
  */
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { build } from './probe-layer-caliber.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };

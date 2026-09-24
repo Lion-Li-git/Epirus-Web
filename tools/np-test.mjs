@@ -5911,6 +5911,13 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
     '被 import 的量具必须"装载不跑 main"（与 behavior-profile.mjs 同规），否则复用时会连带跑出两张表');
   ok(/HARDWIRED/.test(p) && /EVO_HARDWIRED = \(EVO_SRC\.match\(HARDWIRED\)/.test(p),
     '写死处的正则与期望数量必须**同一份常量**（现算），两处各写一遍必漂');
+  /* 档案筛（复用同一套搬运）也必须**真跑得通**：09-25 03:30 我给它加"先认货再装载"时漏 import `readFileSync`，
+   *   只有把它跑一次才暴露（`node --check` 只抓语法）⇒ 这类"import 漏了"的错误必须由跑通断言兜。 */
+  const sw2 = spawnSync(process.execPath, ['tools/probe-breadth-flip.mjs', '--every=700', '--limit=2', '--games=6'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(sw2.status, 0, '`probe-breadth-flip` 要跑得通（' + String(sw2.stderr || '').slice(0, 200) + '）');
+  ok(/结论（n=/.test(String(sw2.stdout)), '筛完必须印结论块（含被跳过的非包 .bak 计数）');
+  ok(/SKIP/.test(sw) && /跳过/.test(sw), '扫池工具必须**点名跳过项**——静默跳过会把"没跑成"读成"没体质"（而漏 import 会被洗成数据问题）');
 });
 
 t('D151 「攒钱→防御」量具：ep 必须**决策时实读**，因果必须靠**两档配对**，小分母不许当结论', function () {
