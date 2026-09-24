@@ -148,7 +148,7 @@ for (const f of PACKS) {
     merged++;
   }
   for (const c of cells) if (!c.name) c.name = 'ep ' + c.lo + '~' + (c.hi >= 1e9 ? '∞' : c.hi);
-  console.log('## ' + f.replace(/^.*\//, '').replace(/\.bak$/, '') + '（受评 4 席 · 出手事件 ' +
+  console.log('## ' + f.replace(/^.*[\/]/, '').replace(/\.bak$/, '') + '（受评 4 席 · 出手事件 ' +
     cells.reduce(function (a, b) { return a + b.tot; }, 0) + ' 次' + (merged ? ' · 高桶自适应合并 ' + merged + ' 次（阈值 n≥' + BMIN + '）' : '') + '）');
   for (const b of cells) {
     const c = b;

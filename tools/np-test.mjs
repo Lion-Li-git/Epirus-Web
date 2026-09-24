@@ -5954,6 +5954,27 @@ t('D151 「攒钱→防御」量具：ep 必须**决策时实读**，因果必�
   }
 });
 
+t('D152 「空蓄能」分因量具 `probe-bead-loop.mjs`：两种相反的病不许挤在同一个"浪费率"里，两把尺不许互相校验', function () {
+  /* 动因（§H-27）：`chargeProfile` 只给"得珠/花掉/过期"三个总量。按"蓄能后下一次决策时电磁炮买不买得起"拆开之后，
+   *   现役是 **② 买得起却没射 68.1%**（选择），`v7cmin4-82` 是 **① 买不起 83.3%**（经济）—— 同一个"浪费率高"指向两层完全不同的修法。
+   * ⇒ 本门钉的是"这把尺别又长回一个总量"。 */
+  const p = readFileSync('tools/probe-bead-loop.mjs', 'utf8');
+  ok(p.indexOf('writeFileSync') < 0, '量具必须只读');
+  ok(/import \{ build \} from '\.\/probe-layer-caliber\.mjs'/.test(p) && /import \{ chargeProfile \} from '\.\/audit-lib\.mjs'/.test(p),
+    '口径搬运复用 `build`、总量复用真源 `chargeProfile`（都不许有第二份实现）');
+  ok(/beadAlive/.test(p) && /beadGone/.test(p),
+    '必须先判"珠子还活不活"：该席下一次决策可能已隔两三回合 ⇒ 那批要单列 `beadGone`，不混进①②的分母（第一版没判，造出过 8 次假"买不起"）');
+  ok(/按决策计/.test(p) && /按珠子计/.test(p),
+    '必须写明"本表按决策计、真源按珠子计，两者不该相等"—— 不写就会有人拿其中一个去"校验"另一个，把发现当 bug 删掉');
+  ok(/实际干了什么/.test(p), '② 必须并排印"那些决策实际出了什么卡"（不然"选择问题"这四个字没有内容）');
+  const run = spawnSync(process.execPath, ['tools/probe-bead-loop.mjs', '--games=8', '--packs=js/bundled-champion-3p.js'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 180) + '）');
+  const out = String(run.stdout || '');
+  ok(/① 下一回合电磁炮/.test(out) && /② 买得起/.test(out) && /③ 买得起也射了/.test(out), '三桶必须都在且互斥（加起来等于分母）');
+  ok(/真源 `chargeProfile`（\*\*按珠子计\*\*）/.test(out), '必须印真源那一行做并排对照');
+});
+
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
    * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/
