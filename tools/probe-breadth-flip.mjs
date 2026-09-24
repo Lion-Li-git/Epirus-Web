@@ -28,11 +28,13 @@ const picked = all.filter(function (f, i) { return i % EVERY === 0; }).slice(0, 
 console.log('# 档案广度口径筛（`docs/artifacts/*.bak` 共 ' + all.length + ' 粒，按每 ' + EVERY + ' 取 1 得 ' + picked.length + ' 粒 · 门线 G≥' + LINE + ' · mirrorHealth ' + GAMES + ' 局 × 5 席 · 确定性）\n');
 
 const rows = [];
+const SKIP = [];
 function pct(x) { return x.toFixed(0) + '%'; }
 let i = 0;
 for (const f of picked) {
   i++;
   const path = 'docs/artifacts/' + f;
+  if (readFileSync(path, 'utf8').slice(0, 4000).indexOf('window.EPIRUS_CHAMPION') < 0) { SKIP.push(f); continue; }   // .bak 里混着非包备份
   let g0, g1;
   try {
     const A = build({ on: false, pack: path });

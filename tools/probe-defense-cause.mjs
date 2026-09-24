@@ -42,7 +42,14 @@ console.log('# 攒钱替身 = `' + SAVER + '`（hold=永远出ジ、钱一路堆
 console.log('# 为什么两档要一起跑：`hold` 里 ep 与回合号是**同一条轴**（第 r 回合 ep≈r−1）⇒ 单跑它只能说"越晚越不防"，分不开"钱"与"晚"。');
 console.log('# `cycle` 把 ep 压回 0~' + (CYCLE_AT - 1) + '，于是"**同一回合号、不同 ep**"的配对比较成为可能 —— 那才是因果那一问的判据。\n');
 
-for (const f of PACKS) {
+const SKIP = [];
+for (const f0 of PACKS) {
+  const f = f0;
+  /* `.bak` 在 `docs/artifacts/` 里**不全是冠军包**（实测有 `index-html-before-ab*.bak` 是 index.html 的备份）
+   *   ⇒ 扫池子的工具必须**先认货再装载**，否则一粒非包文件会把整场筛作废（E12 第一次就跑崩在第 159 个上）。 */
+  let head = '';
+  try { head = readFileSync(f, 'utf8').slice(0, 4000); } catch (e) { SKIP.push(f + '（读不动：' + e.code + '）'); continue; }
+  if (head.indexOf('window.EPIRUS_CHAMPION') < 0) { SKIP.push(f + '（非冠军包备份）'); continue; }
   const ctx = build({ on: EPS > 0, pack: f, temp: TEMP, eps: EPS, epsK: EPSK, epsMode: EPSMODE });
   if (EPS > 0 && ctx.patched !== ctx.hardwired) { console.log('⛔ 口径搬运自检失败（' + ctx.patched + '/' + ctx.hardwired + '）'); process.exit(9); }
   const R = ctx.sb.EpirusRules, S = ctx.sb.EpirusState, T = ctx.sb.EpirusTrainer, Play = ctx.sb.EpirusPlay, P = ctx.sb.EpirusPolicy;
@@ -201,6 +208,7 @@ if (QUIET && SWEEP.length) {
       '  ' + (isFinite(r.ratio) && r.ratio >= 2 && r.hi >= 20 ? '⚠ 有钱→转防' : (isFinite(r.ratio) && r.ratio >= 1.5 ? '轻微' : '无响应')));
   }
   const bad = SWEEP.filter(function (r) { return isFinite(r.ratio) && r.ratio >= 2 && r.hi >= 20; });
+  if (SKIP.length) console.log('   ⚠️ 跳过 ' + SKIP.length + ' 个非包/读不动的 .bak：' + SKIP.slice(0, 6).map(function (x) { return x.replace(/^.*[\/]/, ''); }).join('、') + (SKIP.length > 6 ? '…' : ''));
   console.log('   ⇒ ' + bad.length + '/' + SWEEP.length + ' 粒有"对手有钱→转防"的响应（倍差≥2 且高桶设防率≥20%）：' +
     (bad.length ? bad.map(function (r) { return r.pack + '(' + r.ratio.toFixed(1) + '×)'; }).join('、') : '无'));
   console.log('   ⚠️ 这张表**不是判据**：它只用来在"过门/破防"之外再筛一遍，最终换槽仍需用户裁定与 `promote --dry` 全套。');
