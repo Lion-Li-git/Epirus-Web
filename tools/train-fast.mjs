@@ -9,6 +9,9 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { makeAsyncStep } from '../server/paralleltrain.mjs';
 import { rulesFingerprint } from './rules-fingerprint.mjs';
+/* v1.5.200：同 train-best —— 读不到的旋钮不许静默（判定单一来源 `server/knob-guard.mjs`）。 */
+import { enforceKnobs } from '../server/knob-guard.mjs';
+enforceKnobs({ tool: 'train-fast', env: process.env, entry: 'tools/train-fast.mjs' });
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');

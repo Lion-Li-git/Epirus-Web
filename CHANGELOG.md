@@ -1,3 +1,69 @@
+## v1.5.200 — 黑键闸收成**单一来源**并铺到**每个**训练入口（`server/knob-guard.mjs`）＋ `EPIRUS_WALL_MS=0` 终于真的是"关闭"（`server/wall-cap.mjs`）＝ 实测：同种子 KR=1 vs KR=0 在 `train-best` 与页面训练服务上**逐字节相同**（这就是"击杀奖励训练结果没有变化"的一种真身）
+
+> **来的路**：v1.5.199 之后做独立复核（`docs/REVIEW-2026-09-24-killreward-ds.md`），量到一件事：
+> `EPIRUS_KILL_REWARD` **全仓只有一个读取点**（`tools/train-3p.mjs:164`）。从别的入口跑，它被**静默忽略** ——
+> 这就是本仓栽过至少 9 次的"传了没人读"那一族（`FEAS_N` / `ECON_ENV_KEYS` / `pierceKeys` / `HOLO_GIFT_MAX` /
+> 承诺局 `% 3` / `countBigCards` / `EPIRUS_PASSIVE_FIELD` / `EPIRUS_DIV_*` / 本次）。用户裁定：先做前两条。
+>
+> **① 判定收成单一来源**（`server/knob-guard.mjs`，与 `econ-env.mjs`/`fight-env.mjs`/`train-env.mjs` 同处一个目录）。
+> 原先只有 `train-3p` 自己一份 IIFE，所以**只有它**有这道闸。现在四个入口都挂：
+> `tools/train-3p.mjs` · `tools/train-best.mjs` · `tools/train-fast.mjs` · `server/train-server.mjs`（长驻进程在**起监听之前**就拒绝）。
+>
+> **② 判据升级：不再手抄名单。** 旧口径是"`ECON ∪ FIGHT` 名单 − 本工具闭集"，于是**新旋钮天生不在名单里** ⇒
+> 永远测不到（`EPIRUS_KILL_REWARD` 就是这么漏的）。新口径：
+> **全仓（`tools/` + `server/`，排除 `js/`）里有人真读的键 − 本入口读得到的键 = 暗键 ⇒ `exit 6`**，
+> 而"本入口读得到"由 `entry` 的**传递 import 闭包**扫出来（不手抄名单）∪ `extraReadKeys`。
+> `EPIRUS_ALLOW_DARK=1` 放行；`REMOVED_TRAIN_KEYS`（已删除的键）仍响亮拒绝。
+>
+> **实测（这就是"没有变化"的真身，两个入口各一对）**：
+>
+> | 入口 | KR=0 | KR=1 | 判语 |
+> |---|---|---|---|
+> | `tools/train-3p.mjs`（**接了线**） | `a[]`=`42fa1202f8d1` | `1e86bf8fd78e` | **5689/5689 个参数全不同** ⇒ 规则真生效 |
+> | `tools/train-best.mjs` | pack=`c67521d82ff32d2a` | `c67521d82ff32d2a` | **去掉 ts 后逐字节相同** ⇒ 静默 A/A |
+> | `server/train-server.mjs`（页面训练场） | pack=`ad5baadcd32aaec8` | `ad5baadcd32aaec8` | 同上 |
+>
+> **③ `EPIRUS_WALL_MS=0` 的语义与注释相反（本轮实测踩到，属"注释骗人"那一族）**：
+> `train-server.mjs` 两处判定都是 `if (Date.now() - t0 > cap)`，**没有 `cap > 0` 这一半**，
+> 而同文件 `:247`/`:476` 的注释写着「`EPIRUS_WALL_MS=0` **关闭**（纯按代数收敛）」。
+> 我拿它去关上限 ⇒ 第一次检查就成立 ⇒ 训练**当场中止**并回 `训练超时上限（30 分钟）`，两轮 server 实验变成空炮。
+> 现在语义收进纯函数 `server/wall-cap.mjs` 的 `wallCapExceeded` / `wallCapOf`（`cap <= 0` 或 NaN ⇒ 关闭），
+> 两处判定同时换成它 ⇒ **注释与实现终于一致**。
+>
+> **我自己在实现里犯的两个错（都留在门里，不留成"以后注意"）**：
+> ① 第一版把"import 了名单模块"当成"本入口读得到它" ⇒ `EPIRUS_FIGHT_WHISTLE` 传给 `train-3p`
+>   从 `exit 6` 变成**静默通过**（假阴性，正是本版要治的病）—— 被 **D122** 当场抓住。
+>   改法：名单模块（`*-env.mjs`）的键**必须显式声明**（`train-3p` 声明 `SELF_ENV_KEYS`，server 声明 ECON∪FIGHT∪TRAIN）。
+> ② 同一处正则只认 `/` 分隔符，而 Windows 上闭包返回 `server\fight-env.mjs` ⇒ 这条跳过规则**整条失效**（同一个假阴性又出现一次）。
+>   两条都写进 D143 的断言里（"只 import 名单来点名 ⇒ 不许算读得到"）。
+> ③ 中间还试过"只认点号取值才算读"，结果把 `audit-lib` 的 `pick(o,'EPIRUS_AGGR_GAMES',20)` 那种**真读**判成不读
+>   （会把活键误报成黑键）⇒ 最终按**文件级**区分，而不是token 形态。
+>
+> **门**：新增 **D143**（四个入口都挂 + 名单模块不许自动继承 + 行为：KILL_REWARD→`train-best`/COUNTER_OPPS→`train-fast`/KILL_REWARD→训练服务 三条都必须 `exit 6`，逃逸口必须放行）
+> 与 **D144**（`wallCapExceeded(0, 1e12)===false` 等 7 条纯函数口径 + 静态钉"不许再留裸的 `Date.now() - t0 > cap`"）。
+> **D122 的静态钉改指单一来源**（行为断言**一个字没改**——门守的是行为，不是实现放在哪个文件）。
+> `np-test` **188 → 190**；`spec-run 52/52`；`smoke OK`；**规则指纹仍 `ebdbff36`**（只动 `tools/` 与 `server/`，不在指纹五件套里）。
+>
+> **⚠️ 记账：我自己踩的坑（不藏）**：验证矩阵里我漏传了 `EPIRUS_TB_OUT`，于是 `train-best` 按它的默认行为
+> **写了线上 2P 槽 `js/bundled-champion.js` 并改了 `index.html` 的缓存戳**。已 `git checkout` 还原，
+> 并用 `git diff --exit-code` 逐位核对（干净）；`train-best` 覆写前轮换的本地 `js/bundled-champion.js.bak` 也被我的迷你臂顶掉过，已用线上包恢复。
+> ⇒ **顺手量出一条真问题（本版不动，等裁定）**：`tools/train-best.mjs` **没有 `EPIRUS_PUBLISH` 门槛**
+> （`train-3p` / `train-fast` 都有），默认就写线上槽 + 改缓存戳；而 np-test 现有的那条
+> "用了 `-out.js` 落点就必须有 `EPIRUS_PUBLISH`" **覆盖不到它**（它写的是 `dest`，不是 `-out.js`）。
+> 改它等于改掉 README 记的推荐用法（`node tools/train-best.mjs 4 600` 就是产出冠军），属**行为变更** ⇒ 留给用户。
+>
+> **⚠️ 另一笔记账（我把它写下来，因为它不该只活在聊天里）**：清理自己的实验残留时，我把 `docs/artifacts/train-3p-out-band1..6.bak`**一起删掉了** ——
+> 那是 **09-22「排练臂」**那轮的产物账本，CHANGELOG 第 1763 行点过名（其中 band1/band2 更早已经被我的迷你臂**覆写**过）。
+> `.bak` 全部未跟踪 ⇒ **不可恢复**。整套门禁**全绿、没有一条发现**：D82 只查了一半契约（`在场但没点名`），
+> 反向的「点过名却不在场」它看不见（已记进 `docs/REVIEW-2026-09-24-metrology-audit.md` §2-6b）。
+> 教训同族：「产物点名」这条纪律**只在写入方向有闸**，删除方向没有。
+> **红线**：两槽线上包与 `results/*` 一字未动（且本轮逐位证明了与 HEAD 一致）；无新落盘 `.bak`（D82 不欠账）；
+> 未 promote、未动 `main`。**本版没有新增任何实验产物。**
+>
+> **给下一步**：复核件 `docs/REVIEW-2026-09-24-killreward-ds.md`（击杀奖励线"没有变化"的三层根因）与
+> `docs/REVIEW-2026-09-24-gate-layer-audit.md`（139 条 D 门逐条分级：12 条真空 / 0 条失效 / 7 对重复）与
+> `docs/REVIEW-2026-09-24-metrology-audit.md`（三条审计线汇总：规模 / 阻断-vs-只记录 / 失准阈值 / 死重清单）**随本版一起入库**。
+
 ## v1.5.199 — 第三个"恒亏动作"：**空净化进菜单闸门**（`hasPurgeable` · 门 D142）＋「这一手蓄能攒哪种珠」收成单一来源 `js/ui/bead-choice.js` ＝ **线上包逐位不变，实测把某只候选 200 局里 112 次"清除 0 枚"的净化全挡掉**
 
 > **用户实盘报的三件事，先分清哪些是"修过又回来"**（详见 `docs/RESEARCH-LOG-2026-09-24-qoder-night.md` §K-14 与下面三条）：

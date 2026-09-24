@@ -18,6 +18,14 @@ import { pickBestByExam, regressionsOf, fixesOf, vetoBy3p } from './pick-best.mj
 /* v1.5.161（P1）：3P 第二栏必须用**同一批量具 + 同一个 `feasibilityOf` 阈值**（`promote-champion` 与 `train-server` 都吃它），
  * 否则"当选面过了、体检没过"这种两套口径的裂缝又会出现（本仓为"量具抄两遍"栽过至少四次）。 */
 import { selfPlay, reflectWall, aggressionProfile, seatSymmetry, densityProfile, chargeProfile, feasibilityOf, sandbox, feasPlan } from './audit-lib.mjs';
+/* v1.5.200：传了本入口**读不到的**旋钮 ⇒ 响亮 exit 6（此前是一律静默 —— `EPIRUS_KILL_REWARD` 就是
+ * 这么在本入口上跑出「与不带它逐字节相同」的产物的；判定单一来源见 `server/knob-guard.mjs`）。 */
+import { enforceKnobs } from '../server/knob-guard.mjs';
+
+/* v1.5.200：本入口原先对**任何**自己不读的键都是静默忽略。实测：
+ *   EPIRUS_KILL_REWARD=1 与 =0 两跑，pack sha1 相同（c67521d82ff32d2a）、去掉 ts 后文件逐字节相同。
+ * 现在传了本仓**别的入口真读**、而本入口读不到的键 ⇒ 响亮 exit 6，`EPIRUS_ALLOW_DARK=1` 放行。 */
+enforceKnobs({ tool: 'train-best', env: process.env, entry: 'tools/train-best.mjs' });
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');

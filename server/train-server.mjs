@@ -16,13 +16,26 @@ import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import { makeAsyncStep, makeParallelEvalN } from './paralleltrain.mjs';
 /* v1.5.18：反摆烂奖励 env 的**单一来源**（审计 §5-3：两端各写一遍导致 firstW 静默半开）。 */
-import { readFightEnv, hasFightOverride, FIGHT_REWARD_KEYS } from './fight-env.mjs';
+import { readFightEnv, hasFightOverride, FIGHT_REWARD_KEYS, FIGHT_ENV_KEYS } from './fight-env.mjs';
 /* v1.5.89：经济/熵奖励 env 的**单一来源**（与 worker 共用同一份解析，见该文件头部的同族 bug 说明）。 */
-import { readEconEnv, hasEconOverride } from './econ-env.mjs';
+import { readEconEnv, hasEconOverride, ECON_ENV_KEYS } from './econ-env.mjs';
 /* N3（qoder-research 0920 · RESEARCH-QUEUE 09-20）：产物 meta 记**落盘时的规则指纹** ——
  * 09-20 语义变更（policy.js !tid 修）之后，677 个 .bak 里哪些是旧语义训的没有任何机械手段可分辨。 */
 import { rulesFingerprint } from '../tools/rules-fingerprint.mjs';
 import { makeShapeScorer } from './shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
+/* v1.5.200：① 读不到的旋钮不许静默（页面「训练场」走的就是这条路 —— `EPIRUS_KILL_REWARD` 在这里
+ *   被静默忽略过：与不带它那次 pack sha1 相同）；② 墙上时钟上限的语义收进单一来源。 */
+import { enforceKnobs } from './knob-guard.mjs';
+import { wallCapExceeded, wallCapOf } from './wall-cap.mjs';
+import { REMOVED_TRAIN_KEYS, TRAIN_ENV_KEYS } from './train-env.mjs';
+/* 服务端真读 env 的地方不止本文件：worker 是**继承** env 起来的（`paralleltrain` 建 worker 池），
+ * 所以 worker 与并行池里读得到的键，服务端也是认的 ⇒ 一并算进读集，否则会把活键误报成黑键。
+ * 三个 `*-env.mjs` 名单模块的键**必须显式声明**（`knob-guard` 不从名单模块自动继承读权，
+ * 否则"只 import 名单来点名"会被当成真读 ⇒ 假阴性）。 */
+enforceKnobs({ tool: 'train-server', env: process.env, entry: 'server/train-server.mjs',
+  selfFiles: ['server/train-worker.mjs', 'server/paralleltrain.mjs'],
+  extraReadKeys: ECON_ENV_KEYS.concat(FIGHT_ENV_KEYS, TRAIN_ENV_KEYS),
+  removed: REMOVED_TRAIN_KEYS });
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -246,7 +259,7 @@ if (process.env.EPIRUS_TGT_W && T.setTargetReward) {
   /* v1.4.7：原为写死的 30 分钟墙上时钟上限（第十轮复核 §6-4：同 seed 同 gens 在慢机器上可能
      * 一整份产物都不产出，破坏"同参数可复现"）。改成可关/可调：EPIRUS_WALL_MS=0 关闭（纯按代数收敛），
      * 默认仍是 30 分钟以保持既有行为。 */
-  const cap = Number(process.env.EPIRUS_WALL_MS == null ? 1800000 : process.env.EPIRUS_WALL_MS); // 30 分钟上限
+  const cap = wallCapOf(process.env);   // v1.5.200：语义收进 server/wall-cap.mjs（`0` = 关闭；此前 0 会当场超时）
   /* v1.5.18 修（第三方复核 §5-2，实测）：**2P 这条路径此前整段没有播种** ——
    * `T.makeTrainer` → `P.makePolicy` 与 `evo.breed()`（用裸 `Math.random`）全走宿主随机，
    * 于是 `seed` / `fresh` / `hotstartFrom` 都记进了 meta，产物却永远不可复现。
@@ -288,7 +301,7 @@ if (process.env.EPIRUS_TGT_W && T.setTargetReward) {
         const rec = await stepAsync(it.t);                 // 每种子推 1 代（曲线同步长）
         for (const c of clients) sse(c, { type: 'gen', round: r, seed: it.seed, rec });
         maybeEarlyStop(it, gens);
-        if (Date.now() - t0 > cap) { for (const c of clients) sse(c, { type: 'error', msg: '训练超时上限（30 分钟）' }); running = false; return; }
+        if (wallCapExceeded(cap, Date.now() - t0)) { for (const c of clients) sse(c, { type: 'error', msg: '训练超时上限（30 分钟）' }); running = false; return; }
       }
       allDone = list.every(it => it.done || it.t.gen >= gens);
     }
@@ -475,7 +488,7 @@ async function runTrainN(gens, cfg) {
   /* v1.4.7：原为写死的 30 分钟墙上时钟上限（第十轮复核 §6-4：同 seed 同 gens 在慢机器上可能
      * 一整份产物都不产出，破坏"同参数可复现"）。改成可关/可调：EPIRUS_WALL_MS=0 关闭（纯按代数收敛），
      * 默认仍是 30 分钟以保持既有行为。 */
-  const cap = Number(process.env.EPIRUS_WALL_MS == null ? 1800000 : process.env.EPIRUS_WALL_MS);
+  const cap = wallCapOf(process.env);   // v1.5.200：语义收进 server/wall-cap.mjs（`0` = 关闭；此前 0 会当场超时）
   process.env.EPIRUS_SEED0 = String((SEED0 || 1) * 7919 + 13);   // worker 在下一行创建，必须在此之前设好
   const poolN = makeParallelEvalN(T);
   const seedP = cfg.fresh ? null : loadSeedN();
@@ -559,7 +572,7 @@ async function runTrainN(gens, cfg) {
       hDist: hGenes.join(','),
       commitBest: (function () { let b = 0; for (let i = 0; i < scored.length; i++) { const r = scored[i].r; if (r && r.commitGames && r.commitFirstRate > b) b = r.commitFirstRate; } return b; })()
     } });
-    if (Date.now() - t0 > cap) { for (const c of clients) sse(c, { type: 'error', msg: '\u8bad\u7ec3\u8d85\u65f6\u4e0a\u9650\uff0830 \u5206\u949f\uff09' }); runningN = false; poolN.close(); return; }
+    if (wallCapExceeded(cap, Date.now() - t0)) { for (const c of clients) sse(c, { type: 'error', msg: '\u8bad\u7ec3\u8d85\u65f6\u4e0a\u9650\uff0830 \u5206\u949f\uff09' }); runningN = false; poolN.close(); return; }
     const elite = scored.slice(0, 3).map(function (x) { return x.params; });
     /* (c) 分巢精英：每个 h 值额外保留它自己**承诺局夺 1 率**最高的那个个体。
      * 这是 h 真正参与选择的唯一机制——否则承诺局只记在诊断里，深承诺的权重

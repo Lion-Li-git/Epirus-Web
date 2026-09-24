@@ -18,6 +18,10 @@ import { readTrainEnv, hasTrainOverride, TRAIN_ENV_KEYS as TEK } from '../server
 import { measureAll } from './v2v4-lib.mjs';
 /* v1.5.194：击杀奖励规则的单一来源实现（D140 直接喂合成局面验语义）*/
 import * as KR_LIB from './kill-reward-lib.mjs';
+/* v1.5.200：黑键闸与墙上时钟上限的**单一来源** —— D143/D144 直接喂合成 env / 合成 cap 验口径，
+ * 而不是只 grep 源码（本仓「钉文本」的门已经太多，见 D122 的教训）。 */
+import { detectDarkKnobs, readKeysOf } from '../server/knob-guard.mjs';
+import { wallCapExceeded, wallCapOf } from '../server/wall-cap.mjs';
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
 sb.window = sb; sb.globalThis = sb;
@@ -4505,8 +4509,14 @@ t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：�
    * v1.5.159：`EPIRUS_PASSIVE_FIELD` 已**升级为可下达**（`server/train-env.mjs` + `T.setPassiveField`）
    * ⇒ 它从"死键"移入闭集，本门对它的期待**从 exit 6 改为"必须真到达消费点"**（空枪检测，见 ③）。 */
   const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
-  ok(t3.indexOf('SELF_ENV_KEYS') >= 0 && t3.indexOf('detectDarkKnobs') >= 0, '必须有黑键侦测（闭集 + 名单）');
-  ok(t3.indexOf('CLI 黑键') >= 0 && t3.indexOf('EPIRUS_ALLOW_DARK') >= 0, '必须响亮说明白 + 留逃逸口');
+  /* v1.5.200：判定已搬进单一来源 `server/knob-guard.mjs`（原先只有 train-3p 一份 IIFE ⇒
+   * train-best / train-fast / 页面训练服务全都没有这道闸）。静态钉跟着搬到单一来源，
+   * 行为断言（下面 ①②③）**一个字没改** —— 门守的是行为，不是实现放在哪个文件。 */
+  const kgSrc = readFileSync('server/knob-guard.mjs', 'utf8');
+  ok(t3.indexOf('SELF_ENV_KEYS') >= 0 && t3.indexOf('enforceKnobs(') >= 0 && t3.indexOf('knob-guard.mjs') >= 0,
+    'train-3p 必须走单一来源的黑键闸（enforceKnobs + 自己的闭集 SELF_ENV_KEYS）');
+  ok(kgSrc.indexOf('detectDarkKnobs') >= 0 && kgSrc.indexOf('CLI 黑键') >= 0 && kgSrc.indexOf('EPIRUS_ALLOW_DARK') >= 0,
+    '单一来源里必须响亮说明白 + 留逃逸口');
   /* ① 行为：**仍未下达**的暗键 ⇒ exit 6（用 fight 族键：CLI 至今不 import 它 ⇒ 传它本就无效） */
   const dark = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
     { env: Object.assign({}, process.env, { EPIRUS_FIGHT_WHISTLE: '0.34' }), encoding: 'utf8', timeout: 120000 });
@@ -5858,6 +5868,70 @@ t('D120 CLI 训练器上的 EPIRUS_* 开关不许"传了没人读"（§N8b · qo
     'train-3p 必须读 EPIRUS_CLEAR_W 并打进本沙箱 evo（CLI 与 server 两条入口同口径）');
   ok(t3src.indexOf('拒绝静默空转') >= 0, '开关 >0 但 setter 拒绝 ⇒ 必须 exit 5 响亮（同 D119 规矩）');
   T.setClearReward(w0);
+});
+
+t('D143 黑键闸必须铺到**每个**训练入口（v1.5.200）：`EPIRUS_KILL_REWARD` 传给 train-best / 页面训练服务时曾是**静默无效**（产物与不带它逐字节相同）', function () {
+  /* 病（本轮实测，不是推演）：`EPIRUS_KILL_REWARD` 全仓只在 tools/train-3p.mjs 被读。
+   *   KR=1 与 KR=0 在 train-best 上跑出的 pack sha1 相同（c67521d82ff32d2a），去掉 ts 后两个产物
+   *   文件逐字节相同；页面「训练场」的 server 路径同理（ad5baadcd32aaec8）。本仓为"传了没人读"
+   *   这一族栽过至少 9 次 ⇒ 判定抽成单一来源之后，必须**每个入口都挂上**，而且要在握手/训练之前。 */
+  const SRC = 'server/knob-guard.mjs';
+  ok(existsSync(SRC), '判定必须是单一来源 ' + SRC);
+  const kg = readFileSync(SRC, 'utf8');
+  ok(kg.indexOf('detectDarkKnobs') >= 0 && kg.indexOf('enforceKnobs') >= 0, '单一来源必须导出 detectDarkKnobs / enforceKnobs');
+  const ENTRIES = ['tools/train-3p.mjs', 'tools/train-best.mjs', 'tools/train-fast.mjs', 'server/train-server.mjs'];
+  for (const e of ENTRIES) {
+    const src = readFileSync(e, 'utf8');
+    ok(src.indexOf('knob-guard.mjs') >= 0 && src.indexOf('enforceKnobs(') >= 0,
+      e + ' 必须挂 enforceKnobs —— 否则它继续静默忽略自己读不到的键（整臂可能跑成 A/A）');
+  }
+  /* ① 纯口径：名单模块（*-env.mjs）不许靠 import 自动继承读权（否则"只 import 名单来点名"被当成真读 ⇒ 假阴性）。
+   * 第一版就是这么错的：FIGHT_WHISTLE 传 train-3p 从 exit 6 变成静默通过，被 D122 当场抓住。 */
+  const wr = readKeysOf({ entry: 'tools/train-3p.mjs' });
+  ok(!wr.read.has('EPIRUS_FIGHT_WHISTLE'),
+    'train-3p 只 import 了 FIGHT_ENV_KEYS（点名）、没读它的值 ⇒ 不许算"读得到"');
+  eq(detectDarkKnobs({ EPIRUS_KILL_REWARD: '1' }, { entry: 'tools/train-best.mjs' }).dark.join(','), 'EPIRUS_KILL_REWARD',
+    'train-best 读不到的 KILL_REWARD 必须被列为暗键');
+  eq(detectDarkKnobs({ EPIRUS_KILL_REWARD: '1' }, { entry: 'tools/train-3p.mjs' }).dark.length, 0,
+    'train-3p 真读它 ⇒ 不许误报（误报会让迷你臂无故 exit 6）');
+  eq(detectDarkKnobs({ EPIRUS_TB3P: '1', EPIRUS_CHARGE_GAMES: '8' }, { entry: 'tools/train-best.mjs' }).dark.length, 0,
+    'train-best 经 audit-lib 的 feasPlan 真读 EPIRUS_CHARGE_GAMES ⇒ 闭包要跟到 reader 那一层，不许误报');
+  /* ② 行为：用户报的那个病 —— 传 KILL_REWARD 给 train-best 必须响亮 */
+  const d1 = spawnSync(process.execPath, ['tools/train-best.mjs', '1', '1'],
+    { env: Object.assign({}, process.env, { EPIRUS_KILL_REWARD: '1' }), encoding: 'utf8', timeout: 120000 });
+  eq(d1.status, 6, 'KILL_REWARD 传给 train-best 必须 exit 6（实测 ' + d1.status + '）');
+  ok(/EPIRUS_KILL_REWARD/.test(String(d1.stderr || '')), '拒绝时必须点名是哪个键');
+  const d2 = spawnSync(process.execPath, ['tools/train-fast.mjs', '1'],
+    { env: Object.assign({}, process.env, { EPIRUS_COUNTER_OPPS: '1' }), encoding: 'utf8', timeout: 120000 });
+  eq(d2.status, 6, 'COUNTER_OPPS 传给 train-fast 必须 exit 6（实测 ' + d2.status + '）');
+  /* 页面训练服务是长驻进程 —— 静默起来最难发现 ⇒ 必须在**起监听之前**就拒绝 */
+  const d3 = spawnSync(process.execPath, ['server/train-server.mjs', '8799'],
+    { env: Object.assign({}, process.env, { EPIRUS_KILL_REWARD: '1' }), encoding: 'utf8', timeout: 90000 });
+  eq(d3.status, 6, 'KILL_REWARD 传给页面训练服务必须 exit 6（实测 ' + d3.status + '）');
+  ok(!/Epirus train server on/.test(String(d3.stdout || '')), '拒绝时不许已经起监听');
+  /* ③ 行为：逃逸口仍放行（1 代迷你臂 + 临时落点 ⇒ 不欠 D82） */
+  const dirE = mkdtempSync(join(tmpdir(), 'knobesc-'));
+  const d4 = spawnSync(process.execPath, ['tools/train-best.mjs', '1', '1'],
+    { env: Object.assign({}, process.env, { EPIRUS_KILL_REWARD: '1', EPIRUS_ALLOW_DARK: '1',
+      EPIRUS_TB_OUT: join(dirE, 'out.js'), EPIRUS_ARM: 'nptest-esc' }), encoding: 'utf8', timeout: 300000 });
+  ok(d4.status === 0 || d4.status === 9, 'EPIRUS_ALLOW_DARK=1 必须放行（实测 exit=' + d4.status + '）');
+});
+
+t('D144 墙上时钟上限：`EPIRUS_WALL_MS=0` 必须是**关闭**（v1.5.200）—— 此前它第一次检查就判超时、训练当场中止，与它自己的注释正好相反', function () {
+  /* 病（本轮实测）：`server/train-server.mjs` 两处 `if (Date.now() - t0 > cap)` 都**没有 `cap > 0` 这一半**，
+   * 而同文件 :247/:476 的注释写着「EPIRUS_WALL_MS=0 关闭（纯按代数收敛）」。我拿它去关上限时被它打成两轮空炮
+   * （SSE 直接回 `训练超时上限（30 分钟）`、一代都没跑）。语义收进纯函数 ⇒ 门喂合成值即可判，不必真等 30 分钟。 */
+  eq(wallCapExceeded(0, 1e12), false, 'cap=0 必须是**关闭**（旧写法此刻判超时 —— 这就是被修的那条）');
+  eq(wallCapExceeded(-1, 1e12), false, 'cap<0 也是关闭');
+  eq(wallCapExceeded(NaN, 1e12), false, 'cap=NaN 不许静默变成"永远超时"');
+  eq(wallCapExceeded(1800000, 100), false, '未到上限不许判超');
+  eq(wallCapExceeded(1800000, 1800001), true, '过了上限必须判超（别把闸修成死的）');
+  eq(wallCapOf({}), 1800000, '缺省仍是 30 分钟（改了 = 历史行为变）');
+  eq(wallCapOf({ EPIRUS_WALL_MS: '0' }), 0, '显式 0 要原样传下去（不许 \|\| 之类把它变成默认值）');
+  const sv = readFileSync('server/train-server.mjs', 'utf8');
+  eq((sv.match(/wallCapExceeded\(cap, Date\.now\(\) - t0\)/g) || []).length, 2, '两处（2P 与 N 人）都必须走 wallCapExceeded');
+  ok(sv.indexOf('Date.now() - t0 > cap') < 0, '不许再留裸的 `Date.now() - t0 > cap`（缺 cap>0 的那一半）');
+  ok(sv.indexOf('wallCapOf(process.env)') >= 0, '上限的读取也必须走单一来源（默认值与判定不许两处各写一遍）');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>

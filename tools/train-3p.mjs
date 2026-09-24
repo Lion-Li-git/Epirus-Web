@@ -6,13 +6,14 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
 import { ECON_ENV_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
-import { FIGHT_ENV_KEYS } from '../server/fight-env.mjs';
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
 import { rejectDegenerateWinners, bandPickByLand, rejectNarrowWinners } from './pick-best.mjs';
 import { HOLO_GIFT_MAX } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
 /* v1.5.194（qoder 0924 夜）：击杀奖励规则的**单一来源**实现（与 `probe-kill-reward.mjs` 共用同一份 ⇒
  * 不会出现"训出来的冠军和量出来的冠军不是一套规则"）*/
 import { patchResolve as krPatchResolve, patchPlay as krPatchPlay, makeKR as krMakeKR } from './kill-reward-lib.mjs';
+/* v1.5.200：黑键 / 已删键的判定搬进**单一来源**（原先只有本工具自己一份 IIFE ⇒ 别的入口没有这道闸）。 */
+import { enforceKnobs } from '../server/knob-guard.mjs';
 
 /* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
  * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
@@ -81,33 +82,20 @@ const CLI_ECON_REWARD_KEYS = ['bigtChainW'];
     if (hit.length === 1 && CLI_ECON_REWARD_KEYS.indexOf(hit[0]) >= 0 && SELF_ENV_KEYS.indexOf(k) < 0) SELF_ENV_KEYS.push(k);
   }
 })();
-/* 名单 = server 下发族（单一来源：`server/econ-env.mjs` / `fight-env.mjs`）+ `js/` 里"加载时字面读"的死键。
- * ⚠️ 只盯**这份名单**，不是"任何 EPIRUS_*"——否则用户 shell 里随便一个旧旋钮（如 `EPIRUS_NO_PROXY`）
- *    就会让所有 np-test 迷你臂 exit 6（那是误伤，不是本项要治的病）。
- * v1.5.163：`EPIRUS_PASSIVE_FIELD` **已整族删除** ⇒ 不再走这条暗键判定，改由上面的 `detectRemovedKnobs` 专判（传了就 exit 6，见 CHANGELOG）。 */
-const ENGINE_SIDE_KEYS = ECON_ENV_KEYS.concat(FIGHT_ENV_KEYS);
-/* v1.5.163：**删掉的键也要响亮拒绝** —— 静默忽略等于把"传了等于没传"这个病换个形态留下
- * （`EPIRUS_PASSIVE_FIELD` 就是这么白跑过两臂的）。清单是单一来源：`server/train-env.mjs` 的 `REMOVED_TRAIN_KEYS`。 */
-(function detectRemovedKnobs() {
-  const gone = Object.keys(REMOVED_TRAIN_KEYS).filter(function (k) { return process.env[k] !== undefined; });
-  if (!gone.length || process.env.EPIRUS_ALLOW_DARK === '1') return;
-  for (const k of gone) console.error('[train-3p] ⛔ ' + k + ' 已被删除 —— ' + REMOVED_TRAIN_KEYS[k]);
-  console.error('  · 想真做收割压力请用 `EPIRUS_KILL_FIELD`（v1.5.160，带开火计数 + 门 D123）；');
-  console.error('  · 只是环境里残留这个变量 ⇒ `EPIRUS_ALLOW_DARK=1` 放行。');
-  process.exit(6);
-})();
-(function detectDarkKnobs() {
-  const dark = ENGINE_SIDE_KEYS.filter(function (k) {
-    return process.env[k] !== undefined && SELF_ENV_KEYS.indexOf(k) < 0;
-  }).sort();
-  if (!dark.length || process.env.EPIRUS_ALLOW_DARK === '1') return;
-  console.error('[train-3p] ⛔ 检测到本工具**读不到的旋钮**（CLI 黑键，传了等于没传）：' + dark.join(', '));
-  console.error('  · 本工具闭集：' + SELF_ENV_KEYS.join(', '));
-  console.error('  · 这一类旋钮要么走 server 路径（`tools/ring2-run.mjs`：econ-env/fight-env 下发），');
-  console.error('    要么根本读不到（`js/` 里加载时读 `process.env`，而 vm 沙箱**没有 `process`** ⇒ 永远是默认值）。');
-  console.error('  · 有意要传（例如只想透传给别处）请显式 `EPIRUS_ALLOW_DARK=1`。');
-  process.exit(6);
-})();
+/* v1.5.200：黑键 / 已删键的判定交给**单一来源** `server/knob-guard.mjs`（原先只有本工具一份 IIFE，
+ * 于是只有这一个入口有这道闸 —— `train-best` / `train-fast` / 页面训练服务收到读不到的键一律**静默**，
+ * `EPIRUS_KILL_REWARD` 就是这么在那些入口上跑成 A/A 的：产物与不带它那次逐字节相同）。
+ * 判据同时升级：不再是「ECON ∪ FIGHT 名单 − 本工具闭集」，而是
+ *   **全仓（tools/ + server/，排除 js/）有人真读的键 − 本入口读得到的键**，
+ * 而「本入口读得到」由 `entry` 的**传递 import 闭包**扫出来（不手抄名单）∪ `SELF_ENV_KEYS`（经单一来源列表读的那些）。
+ * `EPIRUS_ALLOW_DARK=1` 仍放行；`REMOVED_TRAIN_KEYS`（已删除的键）仍响亮拒绝。 */
+enforceKnobs({
+  tool: 'train-3p',
+  env: process.env,
+  entry: 'tools/train-3p.mjs',
+  extraReadKeys: SELF_ENV_KEYS,
+  removed: REMOVED_TRAIN_KEYS,
+});
 
 /* §N6 跨 N 混适应度开关（默认 0 = 行为逐字不变；用法与红线见循环内注释） */
 const XN2W = Number(process.env.EPIRUS_XN2W || 0);
