@@ -22,6 +22,19 @@ const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(p
 const PACK = arg('pack', 'js/bundled-champion-3p.js');
 const GAMES = Number(arg('games', 200));
 const MODE = arg('mode', 'multi');
+/* E5（09-24 夜 · 交接 §4）：**两个旋钮必须分开**，否则会扫错杠杆 ——
+ *   `policyChooserN(params, temp, eps, ...)` 的第 2 个参数是 **softmax 温度**（原来这里只有它，写死 0.15），
+ *   第 3 个才是**探索率 ε**（`evo.js:496` 的 `state.rng.next() < eps` ⇒ 在候选里均匀抽，`epsK` 默认 top-5）。
+ *   「电磁炮 4.30→0.90」那个悬崖是 **ε** 造成的（只在浏览器传 eps>0 时生效），拿温度去扫是扫不出来的
+ *   ⇒ 实测：temp 0.05→0.25 时 镜像场电磁炮 0.47/0.43/0.43/0.44、序列率 0.47/0.43/0.43/0.44 —— **几乎不动**，
+ *      这不是"悬崖不存在"，是**拉错了杆**。默认 `temp=0.15, eps=0` ⇒ 历史读数逐字不变。 */
+const TEMP = Number(arg('temp', 0.15));
+const EPS = Number(arg('eps', 0));
+/* ⚠️ 第二个陷阱：产品跑的是 `pickChampion(..., 0.15, 0.2, 5, 'soft')` —— **ε=0.2 + 键级 top5 + soft**，
+ *   而只传 `eps`（`epsK`/`epsMode` 缺省）= "**全候选均匀抽**"，那是 v1.5.139 被用户否掉的那一代口径
+ *   （"ε=0.25 全候选昏手太多 ⇒ 改 top5 键"）。⇒ 想复现"玩家会看到什么"，三个参数必须一起给。 */
+const EPSK = Number(arg('epsk', 5));
+const EPSMODE = arg('epsmode', 'soft');
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
 sb.window = sb; sb.globalThis = sb;
@@ -53,7 +66,7 @@ function runField(name, games, makeOpp, seedBase) {
     const ch = [];
     for (let i = 0; i < 5; i++) {
       if (i !== seat) { ch.push(makeOpp(i, seedBase + g)); continue; }
-      const inner = T.policyChooserN(live, 0.15);
+      const inner = T.policyChooserN(live, TEMP, EPS, EPSK, EPSMODE);
       ch.push(function (state, pid, legal) {
         const a = inner(state, pid, legal);
         log.push({ round: state.round, key: a && a.key });
@@ -107,8 +120,8 @@ const gunOpp = function () { return function (s2, p2, lg) { return B.pickGunSpam
 const balOpp = function () { return function (s2, p2, lg) { return B.pickBalanced(s2, p2, lg); }; };
 const defOpp = function () { return function (s2, p2, lg) { return B.pickDefend(s2, p2, lg); }; };
 
-console.log('=== 理想冠军规格 · 现役包实测（' + PACK + ' · ' + MODE + ' · 每场 ' + GAMES + ' 局）===\n');
-const mirror = runField('镜像(5 席同包)', GAMES, function () { const inner = T.policyChooserN(live, 0.15); return inner; }, 31000);
+console.log('=== 理想冠军规格 · 现役包实测（' + PACK + ' · ' + MODE + ' · 每场 ' + GAMES + ' 局 · temp=' + TEMP + ' · eps=' + EPS + ' · epsK=' + EPSK + ' · epsMode=' + EPSMODE + '）===\n');
+const mirror = runField('镜像(5 席同包)', GAMES, function () { const inner = T.policyChooserN(live, TEMP, EPS, EPSK, EPSMODE); return inner; }, 31000);
 const pool = runField('脚本池(gun+balanced)', GAMES, gunOpp, 32000);
 const nodef = runField('不防场(4×只枪)', GAMES, gunOpp, 33000);
 const def = runField('会防场(4×防御)', GAMES, guardOpp, 34000);

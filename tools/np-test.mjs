@@ -5794,6 +5794,35 @@ t('D142 空净化闸门（v1.5.199 · 用户实机报）必须与引擎 `purgeSe
   }
 });
 
+t('D148 E1/E2 量具 `probe-ep-reach.mjs`（09-24 夜 · 交接 §4）：门槛可达性必须问引擎、无决策点必须响、改价必须还原', function () {
+  /* 这份量具的产出直接决定"该改价还是该改判据"（交接 §0 的两条来路）⇒ 它自己不能是错的。
+   * 三条会复发的形状，逐条钉：
+   *  ① 门槛数字**不许自己抄**（抄了就与 `computeCost` 的动态费用漂移：大雷 5、电磁炮 2+珠、聚能环/过载炮是 null）；
+   *  ② 决策点为 0 必须**非零退出**（交接 §5-4：静默跳过 = 把测量关掉而汇总仍全绿）；
+   *  ③ §B 的改价是**内存里改 `R.byKey`** ⇒ 必须在 finally 还原，否则"改价反事实"会污染后一场读数。 */
+  const p = readFileSync('tools/probe-ep-reach.mjs', 'utf8');
+  ok(p.indexOf('S.computeCost') >= 0 && p.indexOf('const canNow = ep >= need') >= 0,
+    '门槛必须问引擎（`S.computeCost`），再与 ep 比 —— 不许硬写数字');
+  ok(!/\bep >= \d+\s*&&/.test(p), '不许出现"ep ≥ 某常量 &&"这种把硬编码门槛喂进判定式的写法（与动态费用必漂）；' +
+    '直方图分桶（`ep >= 5 ? \'5+\'`）不算判定，所以只禁"参与判定"的那种');
+  ok(p.indexOf("String(rr.need)") >= 0, '打印的门槛数字必须来自引擎回传的 `need`，不是字面量');
+  ok(p.indexOf('finally') >= 0 && /R\.byKey\[R\.SK\.BIG_T\]\.cost = prevCost/.test(p),
+    '改价反事实必须在 finally 还原单价（否则 §B 三档之间互相污染）');
+  const run = spawnSync(process.execPath, ['tools/probe-ep-reach.mjs', '--games=6', '--fields=pool,mirror'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 160) + '）');
+  const out = String(run.stdout || '');
+  ok(/可达时成交率/.test(out) && /只差≤2ep/.test(out),
+    '必须同时印"可达时成交率"与"只差≤2ep"两列 —— 缺任何一列就分不开"够不着"与"不想去"（E1 的全部意义）');
+  ok(/ep 支出结构/.test(out) && /ep 收入/.test(out), 'E2 的收支两栏必须在（不然只剩"钱不够"这一种解释）');
+  ok(/n=\d+/.test(out), '每个比例必须带 n（交接 §5-5：阈值不写 n 就没有意义）');
+  ok(/真放出去|真买了/.test(out), '必须印"真放出去/真买了" —— 只有"买得起 X%"会把"够不着"与"不去"混成一格');
+  /* ② 空枪检测：--games=0 ⇒ 决策点必为 0 ⇒ 必须非零退出，不许印一排 0% 假装量到了 */
+  const zero = spawnSync(process.execPath, ['tools/probe-ep-reach.mjs', '--games=0', '--fields=pool'],
+    { encoding: 'utf8', timeout: 300000 });
+  ok(zero.status !== 0, '零决策点必须**非零退出**（实测 exit=' + zero.status + '）—— 静默返回 0 就是把这条测量关掉');
+});
+
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
    * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/
@@ -5840,8 +5869,14 @@ t('D107 G4「1 席脚本 vs 4 席被测」装配只许有一份实现（v1.5.133
   ok(pg.indexOf('dmgToScriptedPerGame') >= 0, '解剖探针必须打印"打在枪手身上 X/局"（否则看不到主因那一列）');
   const pb = readFileSync('tools/probe-g4-anatomy.mjs', 'utf8');
   ok(pb.indexOf("from './v2v4-lib.mjs'") >= 0, '解剖探针必须从单一来源导入装配');
-  ok(pb.indexOf('EXPECT') >= 0 && /EXPECT = \{ long: 75, multi: 62 \}/.test(pb),
-    '探针必须自带"复现 G4 已记录读数"的自检（long 75 / multi 62）—— 装配错了就不许读后面的数');
+  ok(pb.indexOf('EXPECT') >= 0 && /EXPECT = \{ long: 38, multi: 35 \}/.test(pb),
+    '探针必须自带"复现 G4 在位包记录值"的自检（现役 v7cmin4-31：long 38 / multi 35）—— 装配错了就不许读后面的数');
+  /* v1.5.205 校正：这条钉原先写死 `long: 75 / multi: 62`，那是 **v1.5.144 之前**那件线上包的读数
+   * ⇒ 常量不随换包走，后果不是"数字旧"，而是**每次跑都自证「⛔ 复现失败 ⇒ 下面的读数先别读」**（一个好量具被自己的记账废掉）。
+   * 所以这里除了钉数值，还必须钉"来历写清楚"（包名 + n + 日期），换包时漏改就会红 —— 文本钉反过来当防腐用。 */
+  ok(/现役 `v7cmin4-31`（v1\.5\.144 上槽）实测 38% \/ 35%/.test(pb) || /现役 `v7cmin4-31` 在同一装配、同一 seed、n=60 上是 \*\*long 38% \/ multi 35%\*\*/.test(pb),
+    'EXPECT 旁边必须写清"这个值属于哪件在位包 + n"（否则下一次换包又会把它变成永久自检失败）');
+  ok(pb.indexOf('75%/62%') < 0, '历史数字 75%/62% 不许再被当成"当前在位包的记录值"引用（它属于 v1.5.144 之前那件包）');
 });
 
 t('D110 冠军包解析单一来源：吃得下产物 .bak 外壳 / 纯 JSON / 垃圾必拒（页面「导入冠军包」的底座）', function () {

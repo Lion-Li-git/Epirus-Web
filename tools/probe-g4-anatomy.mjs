@@ -1,7 +1,8 @@
 /* G4「只枪」那格的解剖 + 干预（只读探针，不训练、不写任何包）
  *
- * 背景：`gate-drafts.mjs` 的 G4[long] 是**全仓唯一已知红门** —— 一行脚本「只枪(1ジ压制·打最肥)」能以
- *   **75%(long) / 62%(multi)** 击败线上包（阈值 60%，D67 记的是 `--force` 例外）。
+ * 背景：`gate-drafts.mjs` 的 G4[long]「只枪(1ジ压制·打最肥)」这一格 ——
+ *   **09-19 那件线上包**被它打 **75%(long) / 62%(multi)**（阈值 60%，D67 记的是 `--force` 例外）；
+ *   **现役 `v7cmin4-31`（v1.5.144 上槽）实测 38% / 35% ⇒ 这一格对现役不是红门**（09-24 复跑，见下面 EXPECT 的来历）。
  *   09-19 实测：换包不是出路 —— 6 个 r61fix 臂包在这一格是 **80~100%**（long），
  *   **7 个包里现包最好** ⇒ 只能靠**针对性干预**，不能靠"再抽一次 seed"。
  *
@@ -9,7 +10,7 @@
  *   这条**只被间接支持过**（E4 奖励挡下的臂）⇒ 本探针把它做成**可在 G4 自己的装配里直接量的因果读数**。
  *
  * 四段：
- *   §A 自检       —— 用与 `gate-drafts` **同口径**的只枪线（`aff`+`pT`）复现 75%/62%。
+ *   §A 自检       —— 用与 `gate-drafts` **同口径**的只枪线（`aff`+`pT`）复现**在位包**的记录值（现役 38%/35%，来历见下面的 EXPECT 注释）。
  *                    ⚠ 复现不出来 ⇒ 后面所有读数都不算数（装配/包加载错了），先修这里。
  *   §B 解剖       —— 只枪 vs 基线（5 席同包）两栏对照：被测席的出手构成、ジ占比、平均回合、
  *                    终局存活席数、脚本席剩余血量。**看"它是不是在龟、"枪手有没有被打"。**
@@ -17,7 +18,7 @@
  *                      `forceAttack`：它选ジ、而**当回合枪买得起**时 → 改判成枪（= 不许它攒着不出手）；
  *                      `forceTurtle`：它的任何非ジ输出 → 改判成ジ（= 完全不还手）。
  *                    两个方向都记 `forced` 次数（**空枪检测**：0 ⇒ 本行无信息）。
- *                    ⇒ 「只枪靠吃龟」若成立：forceAttack 该让 75% 明显掉、forceTurtle 该让它升到 ~100%。
+ *                    ⇒ 「只枪靠吃龟」若成立：forceAttack 该让这一格明显掉、forceTurtle 该让它升到 ~100%。
  *   §D 池子那条线 —— 训练池里的 `Bots.pickGunSpam`（**打最肥、无击杀优先**）当脚本席，与 G4 那格
  *                    （`pT` → `T.pickTargetN`，**击杀优先再打最肥**）对照。两者**几乎同一条线但不逐字相同**
  *                    ⇒ 若 §D 与 §A 差得多，"加池子就能修这格"的推理要打折。
@@ -54,7 +55,7 @@ function load(f) {
 
 /* ===== 与 `gate-drafts.mjs:216-222` 同口径的只枪线 =====
  * ⚠ 这里是**复刻**（那两行只存在于 gate-drafts 内部、且它 import 即执行，不能拿来用）。
- *   复刻的合法性靠 §A 自检背书：**必须复现 75%/62%**，否则就是另一条线。若要长期用，
+ *   复刻的合法性靠 §A 自检背书：**必须复现在位包的记录值**，否则就是另一条线。若要长期用，
  *   应把 G4 的克制表抽成模块（与 `v2v4-lib.mjs` 同法），那是另一件工作。 */
 const aff = function (l, k) { return l.find(function (x) { return x.key === k && x.affordable; }) ? { key: k } : null; };
 const pT = function (st, pid, o) { return { key: o.key, target: o.target != null ? o.target : T.pickTargetN(st, pid, o.key) }; };
@@ -82,7 +83,13 @@ function anatomyLine(tag, r) {
 
 console.log('=== G4「只枪」解剖（口径与 gate-drafts 逐字一致 · ' + GAMES + ' 局/行 · seed0=' + SEED0 + '）===');
 /* 期望值 = 09-19 实测的线上包读数（`g4-check.log`）—— 复现不出就是量具坏了 */
-const EXPECT = { long: 75, multi: 62 };
+/* 自检的期望值必须跟着**在位包**走（09-24 实测校正）：
+ *   原先这里硬写 `long: 75 / multi: 62` —— 那是 **v1.5.144 之前**那件线上包的读数；
+ *   现役 `v7cmin4-31` 在同一装配、同一 seed、n=60 上是 **long 38% / multi 35%**（与 `gate-drafts` n=300 的 38%/35% 吻合）。
+ *   ⇒ 常量不跟着换包走，后果不是"数字旧"，而是**每次跑都自证「⛔ 复现失败 ⇒ 下面的读数先别读」**
+ *     —— 一个好量具被自己的记账废掉（交接 §5-6「从算式出发、不实测会错在量级」的同族，这次长在工具里）。
+ *   换线上包时必须同时改这里与门 D1xx 的钉，并标 n / 日期，否则宁可让门红。 */
+const EXPECT = { long: 38, multi: 35 };   // 线上包 = js/bundled-champion-3p.js（v7cmin4-31）· n=60 · 09-24 实测
 
 for (const f of FILES) {
   let p; try { p = load(f); } catch (e) { console.log('  跳过 ' + f + ': ' + e.message); continue; }
@@ -91,7 +98,7 @@ for (const f of FILES) {
     console.log('\n  ── 模式 ' + mode + ' ──');
     const base = duelAssembly(D, p, { games: GAMES, mode: mode, seed0: SEED0, scripted: 'champ', countKeys: KEYS });
     const gun = duelAssembly(D, p, { games: GAMES, mode: mode, seed0: SEED0, scripted: JI_LINE, countKeys: KEYS });
-    /* §A 自检：**线上包**必须复现已记录的 75%/62%（同 seed、同局数 ⇒ 理论上逐局相同）。
+    /* §A 自检：**线上包**必须复现已记录的 38%/35%（同 seed、同局数 ⇒ 理论上逐局相同）。
      * 量别的候选包时跳过自检（否则每次都会喊"复现失败"，把一个好量具变成噪音）。 */
     const isOnline = f === 'js/bundled-champion-3p.js';
     const ok = !isOnline ? null : Math.abs(gun.winPct - EXPECT[mode]) <= 2;
