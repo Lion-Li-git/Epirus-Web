@@ -29,7 +29,9 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
   'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js', 'js/bundled-champion-3p.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
-import { stanceProfile, aggressionProfile, feasibilityOf, attackAttribution, feasPlan, FEAS_N_DEFAULTS } from './audit-lib.mjs';
+import { stanceProfile, aggressionProfile, feasibilityOf, attackAttribution, feasPlan, FEAS_N_DEFAULTS, nullSpreadQuantile } from './audit-lib.mjs';
+/* v1.5.202：G4 `--force` 越线例外的判定抽成**纯函数单一来源**（D146 用合成 meta 直接覆盖它）。 */
+import { g4ExceptionOk, G4IMPL_AT_EXCEPTION as G4FROZEN } from './gate4-exception.mjs';
 
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, X = sb.window.EpirusResolve, Play = sb.window.EpirusPlay;
 const T = sb.window.EpirusTrainer, Bots = sb.window.EpirusBots, Pol = sb.window.EpirusPolicy;
@@ -2125,6 +2127,11 @@ t('D26 网络形状必须被钉住（FEAT_S/FEAT_A/paramCount）+ v5 裁剪规�
   const expect = Pol.featuresV7(st5, 0).slice(0, 123).filter(function (_, i) { return i !== idx; });
   eq(f5.join(','), expect.join(','), 'v5 裁剪必须逐位等于"v6 去掉那一维"（裁错维度 = 旧包静默错位）');
 
+});
+
+/* v1.5.202：本块原**嵌在 D26 的用例里** —— 它失败会报成 `✘ D26 网络形状必须被钉住…`，
+ * 把读者指向网络形状常量（而那是对的），是"名字与内容不对应"的典型。提成独立用例，判定一个字没改。 */
+t('D33b v7 两块新状态特征的语义：T 关系块（上一手指向谁）+ B 效果快照块（符号 = 自施/他施）—— 原嵌在 D26 里，失败会误报成 D26', function () {
   /* ===== D33（同一条用例里）：v7 两块新状态特征的语义 ===== */
   /* T 关系块：上一手"指向谁"必须可读 —— `state.actions` 每回合清空，所以引擎把它落在
    * `p.lastTarget` 上（js/core/state.js）。这里同时钉住"引擎真的写了"和"特征真的读了"。 */
@@ -3053,6 +3060,11 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
   ok(g.indexOf('st.slotSalt = h32pre(') >= 0, '对局必须设**与轮座去相关**的盐（否则座位/基线自检出假数）');
   ok(g.indexOf('judgeable') >= 0 && g.indexOf('不可判') >= 0, 'G4 必须有"基线格可判"的前置守卫');
   ok(g.indexOf('G6[元测试]') >= 0, 'G6 必须先有"量具判别力"元测试');
+  /* v1.5.202：把"默认值"也钉住 —— 否则上面那条 spawn 用的是显式 GATE4_GAMES=60，默认被改回去也没人发现。
+   * 默认 300 的依据：同一只包的参照行基线在 n=60→300 之间摆 **7pt**（long 27%→20%）；代价实测 +35 秒（15s→50s）。
+   * 生产路径（promote-champion）走的就是这个默认值；本用例自己显式传 60 只为跑得快。 */
+  ok(g.indexOf('GATE4_GAMES || 300') >= 0, 'G4/G5 的**默认**样本量必须是 300（n=60 的参照行基线会摆 ±7pt）');
+  ok(g.indexOf(' 记录  G6[') >= 0 && g.indexOf('gate(`G6[${nm}]') < 0, 'G6 的逐包行必须是**记录**而不是 PASS/FAIL（四代包全未达 ⇒ 恒假）；元测试那条仍是门');
   ok(g.indexOf('process.exitCode') >= 0, '必须有退出码契约（FAIL ⇒ 非 0）');
   const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
   ok(pc.indexOf("['tools/gate-drafts.mjs', SRC]") >= 0, 'promote-champion 必须调用量具');
@@ -3102,7 +3114,7 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
    * 在位包的留痕记于"实现身份"发明**之前**（meta 无 `impl` 字段）⇒ 给一条**冻结豁免**：
    * 仅当"当前实现 == v1.5.134 那一版（`caecc92f`）"时放行；谁改了任何一格，豁免随 id 一起作废，
    * 届时必须 `--force` 重记（新留痕会带 impl，走正常比对）。这是**一次性**的迁移垫脚，不是永久通道。 */
-  const G4IMPL_AT_EXCEPTION = 'caecc92f';
+  const G4IMPL_AT_EXCEPTION = G4FROZEN;   // v1.5.202：单一来源（原为手抄常量）
   const implM = /G4IMPL\s+([0-9a-f]{8})/.exec(out);
   const curImpl = implM ? implM[1] : null;
   let meta3p = null;
@@ -3115,9 +3127,11 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
    * `forced` 为真 + **口径 id 相等** + **带上被放过的具体行**，三者缺一 ⇒ 不认这条例外。
    * 第三条（`lines`）不是排版洁癖：promote-champion 哪天只写 `forced` 而丢掉 `lines`，
    * 例外就变成"记了账但不知道记了什么"—— 那时这条门必须**红**，而不是静默放行。 */
-  const implOk = !!(curImpl && (g4rec && g4rec.impl != null ? g4rec.impl === curImpl : curImpl === G4IMPL_AT_EXCEPTION));
-  const g4recOk = !!(g4rec && g4rec.forced === true && curPool && g4rec.pool === curPool &&
-    Array.isArray(g4rec.lines) && g4rec.lines.length > 0 && /^G4\[/.test(String(g4rec.lines[0])) && implOk);
+  /* v1.5.202：判定搬进 pure function（\`tools/gate4-exception.mjs\`）。
+   * 原来这段被 \`refPassG4\` 短路 ⇒ 只要在位包 G4 有一个模式 PASS（常态）它就**从未被求值**，
+   * 第一次真正运行会发生在"正要发一只过不了门的冠军"的那次提交里 —— 那是最不能出错、却唯一没被验证过的时刻。
+   * 抽出来之后 D146 用**合成 meta** 把六种组合逐一跑过。语义一个字没改。 */
+  const g4recOk = g4ExceptionOk(curImpl, curPool, g4rec);
   ok(refPassG4 || g4recOk,
     refPassG4 ? '线上包 G4 **至少一个模式** PASS（"已知好"一侧成立）'
       : (g4recOk ? '线上包 G4 两模式都红，但 meta 有**完整且口径匹配的 `--force` 留痕** ⇒ 已记录的例外（' +
@@ -5983,6 +5997,46 @@ t('D144 墙上时钟上限：`EPIRUS_WALL_MS=0` 必须是**关闭**（v1.5.200�
   eq((sv.match(/wallCapExceeded\(cap, Date\.now\(\) - t0\)/g) || []).length, 2, '两处（2P 与 N 人）都必须走 wallCapExceeded');
   ok(sv.indexOf('Date.now() - t0 > cap') < 0, '不许再留裸的 `Date.now() - t0 > cap`（缺 cap>0 的那一半）');
   ok(sv.indexOf('wallCapOf(process.env)') >= 0, '上限的读取也必须走单一来源（默认值与判定不许两处各写一遍）');
+});
+
+t('D145 座位极差线必须随 n 标定（v1.5.202）：固定 30pt 线在 n=400 会**放走**真偏置包（26.6pt）—— 而座位事故在本仓真实发生过', function () {
+  /* 历史实测（np-test D59 注释的收敛表 + `docs/REVIEW-3P.md:29`）：
+   *   `v7new5_005-31`（v1.5.114 用 --force 换掉的那只）在 n=60 读 **43.2pt**、n=400 读 **26.6pt**；
+   *   另一只破防脚本三座 1st 率 **73.5 / 14.5 / 0.0**（极差 73.5pt）。
+   * 而 v1.5.69 修的正是"**座位惩罚从未触发**（我自己的错）"⇒ 这条线**复发过**，用户明确要求保留。
+   * 旧口径 = 固定 30pt ⇒ 在 n=400 上 26.6 < 30，**放它过去**；同时 30pt 又坐在零分布的最大值上（n=100 的 max=30.0，2 万次）。
+   * 新口径 = **该 n 下均匀零分布的分位**（种子固定 ⇒ 可复现）。这不是放宽/收紧阈值，而是让阈值跟着样本量走。 */
+  const line100 = nullSpreadQuantile(100, 5, 0.99), line400 = nullSpreadQuantile(400, 5, 0.99);
+  ok(line100 > 15 && line100 < 28, 'n=100 的线必须落在标定锚点附近（实测 20~21pt，本机 ' + line100.toFixed(1) + '）');
+  ok(line400 > 8 && line400 < 14, 'n=400 的线必须落在标定锚点附近（实测 10.3pt，本机 ' + line400.toFixed(1) + '）');
+  ok(line400 < line100, '线必须随 n 单调下降（n 越大，真偏置的读数与噪声同比缩小）');
+  /* 判定演练：历史上真实出现过的三个读数都必须被抓住 */
+  for (const c of [[60, 43.2], [100, 38], [400, 26.6], [100, 73.5]]) {
+    ok(c[1] >= nullSpreadQuantile(c[0], 5, 0.99), '历史的偏置读数必须被抓住：n=' + c[0] + ' 极差 ' + c[1] + 'pt（线 ' + nullSpreadQuantile(c[0], 5, 0.99).toFixed(1) + '）');
+  }
+  ok(11.6 < line100 && 6.5 < line400, '现役 v7cmin4-31（n=100 读 11.6、n=400 读 6.5）必须有约 2 倍余量地通过');
+  const al = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(al.indexOf('spread >= 30') < 0 && al.indexOf('spreadLine') >= 0, '极差判定必须走 spreadLine（不许回到裸的 30）');
+});
+
+t('D146 G4 `--force` 越线例外的判定必须是被**覆盖**的纯函数（v1.5.202）：它原来只在"在位包 G4 红了"那天才求值', function () {
+  /* 病（门层审计）：`ok(refPassG4 || g4recOk, …)` 被 `refPassG4` 短路 —— 现役包 G4 有模式 PASS（常态）⇒
+   * `implOk`/`g4recOk` 整段**从未被求值**，第一次真正运行会发生在"正要发一只过不了门的冠军"的那次提交里。
+   * 现在判定是 `tools/gate4-exception.mjs` 的纯函数 ⇒ 这里用**合成 meta** 把每种组合跑一遍。 */
+  const good = { forced: true, pool: 'p1', impl: 'i1', lines: ['G4[foo/multi] 无一行脚本能以 >60% 击败它'], ts: 't' };
+  ok(g4ExceptionOk('i1', 'p1', good), '齐全的例外必须认（forced + pool 匹配 + impl 匹配 + 带 G4 行）');
+  ok(!g4ExceptionOk('i1', 'p1', Object.assign({}, good, { forced: false })), 'forced=false 不许认');
+  ok(!g4ExceptionOk('i1', 'p1', Object.assign({}, good, { lines: [] })), '没有"被放过的具体行"不许认（记了账但不知道记了什么）');
+  ok(!g4ExceptionOk('i1', 'p1', Object.assign({}, good, { lines: ['G5[x] 别的门'] })), 'lines 第一行不是 G4[ 不许认');
+  ok(!g4ExceptionOk('i1', 'p2', good), '口径 id（pool）不匹配不许认 —— 克制表键序/阈值变过，旧例外当场失效');
+  ok(!g4ExceptionOk('i2', 'p1', good), '实现身份（impl）不匹配不许认 —— 改过任何一格，豁免随 id 作废');
+  ok(!g4ExceptionOk(null, 'p1', good), '读不出当前 G4IMPL 时不许认');
+  ok(!g4ExceptionOk('i1', 'p1', null), 'meta 里根本没有 gate4Forced 不许认');
+  const old = { forced: true, pool: 'p1', lines: ['G4[foo/multi] x'], ts: 't' };
+  ok(g4ExceptionOk(G4FROZEN, 'p1', old), '无 impl 字段的旧留痕 + 当前实现 == 冻结版 ⇒ 放行（一次性迁移垫脚）');
+  ok(!g4ExceptionOk('deadbeef', 'p1', old), '无 impl 字段 + 当前实现已变 ⇒ 豁免作废');
+  const nt = readFileSync('tools/np-test.mjs', 'utf8');
+  ok(nt.indexOf('g4ExceptionOk(curImpl, curPool, g4rec)') >= 0, 'D67 必须调用纯函数（判定的单一来源，不许再抄一份）');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>

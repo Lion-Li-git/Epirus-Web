@@ -212,7 +212,15 @@ const EXTRA = process.argv.slice(2).filter(function (a) { return /\.bak$/.test(a
 const PACKS = [['线上包', CH]].concat(EXTRA.map(function (f) {
   return [f.replace(/^.*artifacts\//, '').replace(/\.bak$/, ''), loadBakParams(f)];
 }).filter(function (x) { return !!x[1]; }));
-const N4 = Number(process.env.GATE4_GAMES || 60);
+/* v1.5.202（实测裁定 · 用户批准）：60 → **300**。
+ * 为什么：同一只包（= 参照行／线上包自己）的基线读数在 n=60→300 之间摆动 **7pt**
+ *   （long 27%→20%、multi 10%→13%），阈值处标准误从 **5.59pt** 降到 **2.50pt**。
+ *   ⇒ 原来"真值恰好压在阈值的包有 43.1% 被判 FAIL"就是掷硬币；本仓曾据此把一粒
+ *   **头对头更强**的候选（co1s8-band1）按 28% 挡掉，n=300 复测是 4%/22%（CHANGELOG v1.5.195 / b728545）。
+ * 代价实测（不是估算）：整支 gate-drafts `N4=60 → 15 秒`、`N4=300 → 50 秒`；
+ *   D67 给它的子进程超时是 600 秒 ⇒ **12 倍余量**。
+ * ⚠️ 这条**不是**放宽阈值（阈值 25%/60% 一个字没动），只是把样本量给够。 */
+const N4 = Number(process.env.GATE4_GAMES || 300);
 const N6 = Number(process.env.GATE6_GAMES || 40);
 
 const aff = function (l, k) { return l.find(function (x) { return x.key === k && x.affordable; }) ? { key: k } : null; };
@@ -389,8 +397,12 @@ function aimRateOnRingField(chooser, G) {
     `参照：一行代码的"瞄威胁者" ${ref1.rate.toFixed(1)}%（攻击 ${ref1.atk}）  vs  "只瞄血量最高" ${ref2.rate.toFixed(1)}%（攻击 ${ref2.atk}）  均匀乱打基线 25%`);
   for (const [nm, p] of PACKS) {
     const a = aimRateOnRingField(T.policyChooserN(p, 0.15), N6);
-    gate(`G6[${nm}] 靶向率 ≥40%（他自己在 probe-sniper.mjs 里写的阈值）`, a.rate >= 40,
-      `实测 ${a.rate.toFixed(1)}%（选择口径，攻击 ${a.atk} 次）⇒ ${a.rate >= 40 ? '过' : '未过：与"只瞄最肥"同档，能力未长出'}`);
+    /* v1.5.202（实测裁定 · 用户批准）：G6 的**逐包**行从 gate() 降级为**一行记录**。
+     * 实测：两档（n=60 与 n=300）里 G6[线上包] **都是 FAIL**（16.7% / 18.5%），**与 n 无关** ——
+     * 四代包（含线上）全部 3.5~22.5% ⇒ 是"能力未长出"，不是某包退化（本仓自己的结语就这么写）。
+     * 而"每次都红"的代价是真实的：它会训练读者忽略红行（L1 那条"恒真断言会被当成门"的教训是对称的）。
+     * ⚠️ 上面那条 **G6[元测试]** 保留为门 —— 它证明量具有判别力（91% vs ~0%），那是真的门。 */
+    console.log(`  记录  G6[${nm}] 靶向率 ${a.rate.toFixed(1)}%（阈值 40%，四代包全未达 ⇒ 能力未长出；攻击 ${a.atk} 次）`);
   }
 }
 

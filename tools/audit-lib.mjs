@@ -361,6 +361,37 @@ export function sniperField(W, params, mode, GAMES, kind) {
  * 小样本时返回 **'underpowered'（不知道）**，绝不能被读成"均衡"。 */
 const MIN_N_SPREAD = 50;    // 极差判据的最小局数（v1.5.71）
 const SHARE_BIAS = 70;      // 占比判据：某座 ≥70% 通吃（v1.5.71，v1.5.69 的惩罚触发已用同值）
+/* v1.5.202（实测裁定 · 用户要求"这条判定要留，能弄得更好就调"）：极差线**随 n 标定**，不再是固定 30pt。
+ *
+ * ## 病（历史实测，不是推演）
+ * 同一只偏置包在 n=60 读 **43.2pt**、n=400 读 **26.6pt**（`v7new5_005-31`，v1.5.114 用 --force 换掉的那只；
+ * 见 np-test D59 注释的收敛表）⇒ **固定 30pt 线在 n=60 抓得住，在 n=400 会漏掉**。而本仓一直在抬 n（20→60→400）
+ * ⇒ 这是**活的风险**。历史上真实发生过的座位事故：73.5pt（`docs/REVIEW-3P.md:29` 破防脚本三座 1st 率 73.5/14.5/0.0）、
+ * 43pt、26.6pt —— 都在"该抓"的范围里；而 v1.5.69 修的正是"**座位惩罚从未触发**（我自己的错）"，说明这条线**复发过**。
+ *
+ * ## 另一半（本轮实测）：固定线还**不够灵敏**
+ * 均匀零假设（5 席等概率）在 n=100 的分布：p50=10.0 / p95=17.0 / **p99=20.0 / max=30.0**（2 万次）
+ * ⇒ 30pt 坐在零分布的**最大值**上 ⇒ 对 20~30pt 的"中等偏置"没有判别力。
+ *
+ * ## 修法：线 = **该 n 下均匀零分布的分位**（默认 p99）
+ * 这不是"放宽/收紧阈值"，而是让阈值**跟着样本量走**：n 越大，真偏置的读数越小、噪声也越小，两者同比缩放。
+ * 种子固定 ⇒ 判定可复现（本仓不接受"门自己带随机性"）。实测锚点：n=100 → 20.0pt、n=200 → 14.5pt、n=400 → 10.3pt。
+ * 对照：现役包 `v7cmin4-31` 在 n=100 读 11.6pt（24 次独立重复 mean，p95 17.9）、n=400 读 6.5pt ⇒ 有 2 倍余量；
+ * 而那只偏置包在 n=400 的 26.6pt 会被**抓住**（旧固定线会放它过去）。 */
+const NULL_TRIALS = 4000, NULL_SEED = 20260924, NULL_P = 0.99;
+/** 5 席等概率、n 局全部有胜负时的"夺冠率极差"零分布分位（种子固定 ⇒ 可复现）。 */
+export function nullSpreadQuantile(n, seats, p) {
+  const N = Math.max(1, n | 0), K = Math.max(2, seats | 0), T = NULL_TRIALS;
+  const rnd = mulberry32(NULL_SEED), out = [];
+  for (let t = 0; t < T; t++) {
+    const w = new Array(K).fill(0);
+    for (let i = 0; i < N; i++) w[(rnd() * K) | 0]++;
+    const pc = w.map(function (x) { return 100 * x / N; });
+    out.push(Math.max.apply(null, pc) - Math.min.apply(null, pc));
+  }
+  out.sort(function (a, b) { return a - b; });
+  return out[Math.min(out.length - 1, Math.floor((p == null ? NULL_P : p) * out.length))];
+}
 export function seatSymmetry(W, params, mode, GAMES) {
   const S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay;
   const G = GAMES || 100;
@@ -378,16 +409,18 @@ export function seatSymmetry(W, params, mode, GAMES) {
   const maxPct = Math.max.apply(null, pct), minPct = Math.min.apply(null, pct);
   const decisiveRate = dec / G;
   const spread = maxPct - minPct;
+  /* v1.5.202：线跟着 n 走（见 nullSpreadQuantile 上面的长注释）。 */
+  const spreadLine = Math.round(nullSpreadQuantile(G, 5, NULL_P) * 10) / 10;
   let verdict, basis;
   if (decisiveRate < 0.3) { verdict = 'unjudgeable'; basis = '判胜<30%'; }
   else if (maxPct >= SHARE_BIAS) { verdict = 'biased'; basis = '某座≥' + SHARE_BIAS + '%'; }
   else if (G < MIN_N_SPREAD) { verdict = 'underpowered'; basis = 'n=' + G + '<' + MIN_N_SPREAD + '（极差判据在此局数会被噪声打红）'; }
-  else if (spread >= 30) { verdict = 'biased'; basis = '极差≥30pt(n≥' + MIN_N_SPREAD + ')'; }
+  else if (spread >= spreadLine) { verdict = 'biased'; basis = '极差≥' + spreadLine.toFixed(1) + 'pt(该 n 的零分布 p99)'; }
   else { verdict = 'ok'; basis = 'ok'; }
   return {
     pct: pct, win: win, decisive: dec, draw: draw, drawRate: draw / G, decisiveRate: decisiveRate, games: G,
     spread: spread, maxPct: maxPct, minPct: minPct,
-    ratio: minPct > 0 ? maxPct / minPct : null,
+    ratio: minPct > 0 ? maxPct / minPct : null, spreadLine: spreadLine, nullP: NULL_P,
     verdict: verdict, basis: basis, minNForSpread: MIN_N_SPREAD, shareBias: SHARE_BIAS
   };
 }
