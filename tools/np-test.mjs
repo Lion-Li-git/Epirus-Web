@@ -5913,6 +5913,41 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
     '写死处的正则与期望数量必须**同一份常量**（现算），两处各写一遍必漂');
 });
 
+t('D151 「攒钱→防御」量具：ep 必须**决策时实读**，因果必须靠**两档配对**，小分母不许当结论', function () {
+  /* 这条门是被自己的第一版**逼**出来的：我最初从事件流前缀和重建"对手 ep"，并假定"一回合内 5 条 action 全先于结算"。
+   * 实测该假定为假（一局里 64 次结算落在 action 之前/之间、只有 13 次是干净分界）⇒ 前缀和既不是"开始值"、又只加不减（花了不扣）。
+   * ⇒ 唯一站得住的读法是**在被评席做决策的那一刻直接读 `state.p[0].ep`**（这才是这只包看得见的钱），回合号用 `state.round`。 */
+  const p = readFileSync('tools/probe-defense-cause.mjs', 'utf8');
+  ok(p.indexOf('from \'./probe-layer-caliber.mjs\'') >= 0 && /import \{ build \}/.test(p),
+    '口径搬运必须继续复用 `build`（单一来源，同 D150）');
+  ok(/ep0: opp \? \(opp\.ep \|\| 0\)/.test(p) && !/epAtRound/.test(p),
+    '桶变量必须是**决策时实读**的 `state.p[0].ep`；不许回到"从事件流重建 ep"（那种写法只加不减，量的是"一辈子挣过多少"）');
+  ok(/const REC = \[\];/.test(p) && /rd: s2\.round/.test(p),
+    '决策记录必须带 `state.round`（实测单调），不许再用"某 pid 重复出现"当回合边界');
+  /* 因果那一问：单档里 ep 与回合号是同一条轴 ⇒ 必须有两档才能配对判 */
+  ok(/arg\('saver', 'hold'\)/.test(p) && /SAVER === 'cycle'/.test(p) && /CYCLE_AT = Number\(arg\('cycle-at', 4\)\)/.test(p),
+    '必须提供 `hold`（钱一路堆）与 `cycle`（堆到 `--cycle-at` 就花掉）两档替身 —— 单档答不了"是不是因为对方有钱"');
+  ok(/按回合号的曲线/.test(p) && /同一回合号/.test(p),
+    '必须印"按回合号的曲线"并写明"同一回合号跨两档配对"才是因果判据（否则读者会拿单档的负相关当因果结论）');
+  ok(/该桶平均回合/.test(p), '每个 ep 桶必须并排印该桶平均回合 ⇒ 让"ep 轴 = 回合轴"这个混淆在读数里就看得见');
+  ok(/'%（n=' \+ n \+ '）'/.test(p) && /—（n=0）/.test(p),
+    '每个比例必须带分母，且空桶印成"—（n=0）"而不是 0.0%（那会把"没量到"读成"量为零"）');
+  ok(/const BMIN = Number\(arg\('bucket-min', 40\)\)/.test(p) && /自适应合并|并入/.test(p) && /分母不足/.test(p),
+    '必须有分母下限（`--bucket-min`，默认 40）+ 空桶丢弃/高桶自适应合并 + 小样本时输出"分母不足/没量到"');
+  ok(/同一席连续设防/.test(p) && /gamesWithRun3/.test(p),
+    '"维持很久"是**游程长度**问题，必须单独印（设防率答不了它）');
+  /* 引擎侧：决策时读到的是**当下**的 ep（不是回合开始）—— 这条钉的是"包看得见什么" */
+  ok(p.indexOf('state.p[0]') >= 0 || /s2\.p\[0\]/.test(p), '必须从 state 直接读对手席');
+  for (const sv of ['hold', 'cycle']) {
+    const run = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--games=6', '--packs=js/bundled-champion-3p.js', '--saver=' + sv],
+      { encoding: 'utf8', timeout: 600000 });
+    eq(run.status, 0, '量具两档都要跑得通（saver=' + sv + '：' + String(run.stderr || '').slice(0, 140) + '）');
+    const out = String(run.stdout || '');
+    ok(/攒钱替身 = `' + SAVER + '`|攒钱替身 = `' + sv + '`/.test(out) || out.indexOf(sv) >= 0, 'saver=' + sv + ' 必须把档位印在表头（读数要带装配）');
+    ok(/维持很久/.test(out) && /判读/.test(out), 'saver=' + sv + ' 必须同时印"游程长度"与"方向判读"两行');
+  }
+});
+
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
    * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/

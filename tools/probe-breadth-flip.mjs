@@ -21,7 +21,10 @@ const LINE = Number(arg('line', 3));
 const TEMP = Number(arg('temp', 0.15)), EPS = Number(arg('eps', 0.2)), EPSK = Number(arg('epsk', 5)), EPSMODE = arg('epsmode', 'soft');
 
 const all = readdirSync('docs/artifacts').filter(function (f) { return /\.bak$/.test(f); }).sort();
-const picked = all.filter(function (f, i) { return i % EVERY === 0; }).slice(0, LIMIT);
+const EXTRA = String(arg('extra', '')).split(',').filter(Boolean);
+const picked = all.filter(function (f, i) { return i % EVERY === 0; }).slice(0, LIMIT)
+  /* 锚点包必须**显式进表**：不然"这条线能不能分开已知好/已知坏"根本没法判（本仓规矩：阈值先要能分开两端） */
+  .concat(EXTRA.map(function (x) { return x.replace(/^docs\/artifacts\//, ''); }));
 console.log('# 档案广度口径筛（`docs/artifacts/*.bak` 共 ' + all.length + ' 粒，按每 ' + EVERY + ' 取 1 得 ' + picked.length + ' 粒 · 门线 G≥' + LINE + ' · mirrorHealth ' + GAMES + ' 局 × 5 席 · 确定性）\n');
 
 const rows = [];
@@ -43,7 +46,7 @@ for (const f of picked) {
     if (B.patched !== B.hardwired) { console.log('  ⚠️ 搬运自检：替换 ' + B.patched + ' 处 ≠ 源码实测 ' + B.hardwired + ' 处 ⇒ 作废退出'); process.exit(9); }
   } catch (e) { console.log('  ⚠️ ' + f + ' 跑不动：' + e.message); continue; }
   rows.push({
-    pack: f.replace(/\.bak$/, ''),
+    pack: f.replace(/\.bak$/, ''), anchor: EXTRA.indexOf(f) >= 0,
     gA: g0.m.effSkills, gB: g1.m.effSkills,
     lA: g0.l.effSkills, lB: g1.l.effSkills,
     landA: g0.m.effSkillsLand || 0, landB: g1.m.effSkillsLand || 0,
@@ -68,6 +71,20 @@ console.log('   其中"ε=0 挡 → 产品过"（=被口径挡掉的）=' + free
 console.log('   ΔG 中位数 ' + (med >= 0 ? '+' : '') + med.toFixed(2) + ' · 正 ' + pos + ' 粒 / 负 ' + neg + ' 粒 / 其余 0');
 console.log('   long 同判：挡 ' + rows.filter(function (r) { return r.lA < LINE; }).length + ' → ' + rows.filter(function (r) { return r.lB < LINE; }).length + ' 粒');
 console.log('   净兑现：<3 的粒数 ' + rows.filter(function (r) { return r.landA < LINE; }).length + ' → ' + rows.filter(function (r) { return r.landB < LINE; }).length + '（同一条线，只列不改判）');
+/* 分布 + 两端锚点：一条线值不值得立，先看它**分不分得开**已知好与已知坏（附录 B2-6 / C-4） */
+const q = function (arr, x) { const a = arr.slice().sort(function (m, n) { return m - n; }); return a[Math.min(a.length - 1, Math.floor(x * a.length))]; };
+const lA = rows.map(function (r) { return r.landA; }), lB = rows.map(function (r) { return r.landB; });
+const gA = rows.map(function (r) { return r.gA; }), gB = rows.map(function (r) { return r.gB; });
+const line = function (nm, arr) { return nm.padEnd(16) + ['p10', 'p25', 'p50', 'p75', 'p90'].map(function (t, i) { return t + ' ' + q(arr, [0.1, 0.25, 0.5, 0.75, 0.9][i]).toFixed(2); }).join('  '); };
+console.log('   分布（同一条线要落在两端的哪一侧，先看分位数）：');
+console.log('     ' + line('G ε=0', gA)); console.log('     ' + line('G 产品', gB));
+console.log('     ' + line('净兑现 ε=0', lA)); console.log('     ' + line('净兑现 产品', lB));
+const anch = rows.filter(function (r) { return r.anchor; });
+if (anch.length) {
+  console.log('   两端锚点（显式进表 ' + anch.length + ' 粒）：');
+  for (const r of anch) console.log('     ' + r.pack.slice(0, 22).padEnd(23) + ' G ' + r.gA.toFixed(2) + '→' + r.gB.toFixed(2) +
+    '   净兑现 ' + r.landA.toFixed(2) + '→' + r.landB.toFixed(2) + '   出手种类 ' + r.keysA + '→' + r.keysB);
+}
 const nBlock = Math.max(blockA.length, blockB.length);
 console.log('\n   预注册判据落点：' + (rows.length < 30 || nBlock < 10
   ? '⚠️ **样本不足**（n=' + rows.length + ' · 被挡最多的一栏只有 ' + nBlock + ' 粒）⇒ 两向计数都不足以定方向，只能当"要不要跑全量"的前置检查'
