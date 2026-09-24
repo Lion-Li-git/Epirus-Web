@@ -29,7 +29,7 @@ const EVO_SRC = readFileSync('js/train/evo.js', 'utf8');
 const EVO_HARDWIRED = (EVO_SRC.match(HARDWIRED) || []).length;
 const AL_HARDWIRED = (readFileSync('tools/audit-lib.mjs', 'utf8').match(HARDWIRED) || []).length;
 
-function build(caliber) {
+export function build(caliber) {
   const sb = { console: { log() {}, warn() {}, error() {} }, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
   sb.window = sb; sb.globalThis = sb;
   let patched = 0;
@@ -49,7 +49,7 @@ function build(caliber) {
     };
     sb.__viaWrapper = 0;
   }
-  return { sb: sb, patched: patched, viaWrapper: sb.__viaWrapper || 0, caliberOn: !!caliber.on };
+  return { sb: sb, patched: patched, hardwired: EVO_HARDWIRED, viaWrapper: sb.__viaWrapper || 0, caliberOn: !!caliber.on };
 }
 
 function measure(ctx, games) {
@@ -79,9 +79,14 @@ function runPack(f, caliber, games) {
 }
 
 const pct = x => (100 * (x || 0)).toFixed(0) + '%';
-console.log('# 五道门的输入：评测口径 ε=0  vs  产品口径 ε=' + EPS + ' k=' + EPSK + ' ' + EPSMODE + '（`ui.js:464`）');
-console.log('# 只读；口径靠"内存里改装载源码 + 包一层 `EpirusTrainer.policyChooserN`"实现 ⇒ 仓库一字未动、指纹不变。\n');
 
+/* 被 import 时**不跑 main**（与 `behavior-profile.mjs` 同规）—— 这样 `probe-breadth-flip.mjs` 能复用同一套搬运手法，
+ * 而不会出现"第二份口径实现"（本仓规矩：同一规则只许写一遍）。 */
+const IS_MAIN = !process.argv[1] || /probe-layer-caliber\.mjs$/.test(process.argv[1].replace(/\\/g, '/'));
+if (IS_MAIN) main();
+function main() {
+  console.log('# 五道门的输入：评测口径 ε=0  vs  产品口径 ε=' + EPS + ' k=' + EPSK + ' ' + EPSMODE + '（`ui.js:464`）');
+  console.log('# 只读；口径靠"内存里改装载源码 + 包一层 `EpirusTrainer.policyChooserN`"实现 ⇒ 仓库一字未动、指纹不变。\n');
 const summary = [];
 let SELF = { patched: 0, wrapper: 0 };
 for (const f of PACKS) {
@@ -148,3 +153,5 @@ if (!summary.length) { console.log('⛔ 一格都没量到 ⇒ 非零退出'); p
 const nFlip = summary.filter(function (s) { return s.flipped; }).length;
 console.log('   ⇒ ' + nFlip + '/' + summary.length + ' 粒包"换到产品口径过不过门"结论不同；' +
   '（若为 0 也不等于"口径无关"—— 单栏仍可能翻，见表）');
+
+}

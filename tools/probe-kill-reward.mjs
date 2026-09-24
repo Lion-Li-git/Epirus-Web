@@ -15,7 +15,7 @@
  *   每个规则档各起一个 vm 沙箱 ⇒ 仓库文件一字不动、线上引擎不受影响。若将来真要采纳，那是**规则换代**
  *   （指纹必换）+ 用户裁定，不是本探针的事。
  *
- * 用法：node tools/probe-kill-reward.mjs [--packs=a,b,c] [--fields=mirror,pool,guardwall]
+ * 用法：node tools/probe-kill-reward.mjs [--packs=a,b,c] [--fields=mirror,pool,guardwall] [--temp/--eps/--epsk/--epsmode]
  *        [--rules=0,1,2] [--games=120] [--mode=multi|long] [--json]
  */
 import { readFileSync } from 'node:fs';
@@ -34,6 +34,10 @@ const OPP_PACK = arg('opp', '');   // `vs` 场的对手包（头对头：其余�
 const FIELDS = String(arg('fields', 'mirror,pool,guardwall')).split(',');
 const PACKS = String(arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/v7aim3-93.bak,docs/artifacts/v7divK-31.bak,docs/artifacts/v7cmin4-82.bak')).split(',');
 const SEED0 = Number(arg('seed', 20260923));
+/* v1.5.208 口径开关（§H-12 那课长在**我自己的**另一件量具上）：这里原先只有写死的 `policyChooserN(params, 0.15)`
+ *   ⇒ 破龟群那三栏（1st / 归因伤害 / 终场存活）只能在 ε=0 上读，而 E5 已经证明龟型局在 ε=0 大面积拖平。
+ *   默认 `temp=0.15, eps=0` ⇒ 与历史读数**逐字相同**（eps=0 时 `epsK/epsMode` 根本不参与）。 */
+const TEMP = Number(arg('temp', 0.15)), EPS = Number(arg('eps', 0)), EPSK = Number(arg('epsk', 5)), EPSMODE = arg('epsmode', 'soft');
 
 /* 规则实现：**一律走 `tools/kill-reward-lib.mjs`**（与 `train-3p` 同源）
  * —— 本仓为"同一规则写两遍"栽过六次，而这里两遍跑在不同进程、比对的是冠军产物，
@@ -109,8 +113,8 @@ function runOne(box, params, field, games, seedBase, packTag) {
   if (field === 'vs' && !oppP) throw new Error('`vs` 场需要 --opp=<包>');
   for (let g = 0; g < games; g++) {
     const seat = g % N, seed = seedBase + g * 7919;
-    const bs = T.policyChooserN(params, 0.15);
-    const obs = oppP ? T.policyChooserN(oppP, 0.15) : null;
+    const bs = T.policyChooserN(params, TEMP, EPS, EPSK, EPSMODE);
+    const obs = oppP ? T.policyChooserN(oppP, TEMP, EPS, EPSK, EPSMODE) : null;
     const ch = [];
     for (let pid = 0; pid < N; pid++) {
       if (pid === seat) ch.push(function (s2, p2, lg) { return bs(s2, p2, lg); });

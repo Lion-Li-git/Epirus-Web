@@ -5901,6 +5901,16 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
   const cSeat = num(cout, '座位极差'), cWall = num(cout, '反弹墙伤害/局');
   ok(!!cSeat && !!cWall && cSeat[0] === cSeat[1] && cWall[0] === cWall[1],
     'ε=0 对照下两栏必须相同（实测 座位 ' + (cSeat || []).join('/') + ' · 墙 ' + (cWall || []).join('/') + '）');
+  /* 档案筛必须**复用**上面那两条搬运路，不许出现第二份口径实现（本仓"同一规则只写一遍"的规矩） */
+  const sw = readFileSync('tools/probe-breadth-flip.mjs', 'utf8');
+  ok(/from '\.\/probe-layer-caliber\.mjs'/.test(sw) && /import \{ build \}/.test(sw),
+    '`probe-breadth-flip.mjs` 必须 import `build`（搬运手法单一来源）');
+  ok(!/HARDWIRED/.test(sw) && !/vm\.runInNewContext/.test(sw),
+    '复用方不许在自己文件里再写一份"替换/装载"逻辑（`HARDWIRED`/`runInNewContext` 都只能活在 `build` 里）');
+  ok(/export function build/.test(p) && /IS_MAIN/.test(p),
+    '被 import 的量具必须"装载不跑 main"（与 behavior-profile.mjs 同规），否则复用时会连带跑出两张表');
+  ok(/HARDWIRED/.test(p) && /EVO_HARDWIRED = \(EVO_SRC\.match\(HARDWIRED\)/.test(p),
+    '写死处的正则与期望数量必须**同一份常量**（现算），两处各写一遍必漂');
 });
 
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
