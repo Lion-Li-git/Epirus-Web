@@ -62,7 +62,8 @@ for (const f of PACKS) {
   for (let g = 0; g < GAMES; g++) {
     const st = S.createState('multi', { next: mul(SEED0 + g * 7919) }, 5);
     st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
-    /* 攒钱替身：买得起就出攻击卡（打掉对手，让局继续），否则出ジ攒 ep ⇒ ep 单调涨 */
+    /* 攒钱替身三档（`--saver`）：`hold`=永远出ジ（钱一路堆，默认）；`cycle`=堆到 `--cycle-at` 才全花掉（把 ep 钉住，用来做同回合配对）；
+     *   其它值＝`spend`（买得起攻击卡就打）。⚠️ 只有 `hold` 里 ep 才与回合号同轴 ⇒ 判因果必须至少跑 `hold` 与 `cycle` 两档。 */
     const ATK = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK];
     const rr = mul(SEED0 + g * 7919 + 1);
     const REC = [];   // 本局所有"被评席决策"的快照：{rd, pid, ep0(对手**当下**的 ep), key, unhurt}
@@ -174,7 +175,8 @@ for (const f of PACKS) {
     const r2 = f1(cells[1]), r5 = cells.filter(function (c) { return c.lo === 5; })[0], r10 = cells.filter(function (c) { return c.lo === 10; })[0];
     SWEEP.push({ pack: f.replace(/^.*\//, '').replace(/\.bak$/, ''), lo: f1(cells[0]), mid: f1(r5), hi: f1(r10),
       ratio: (isFinite(f1(cells[0])) && f1(cells[0]) > 0 && isFinite(f1(r10) - 0) ? f1(r10) / f1(cells[0]) : NaN),
-      maxRun: maxRunAll, run3: 100 * gamesWithRun3 / GAMES, tot: cells.reduce(function (a, c) { return a + c.tot; }, 0) });
+      maxRun: maxRunAll, run3: 100 * gamesWithRun3 / GAMES, tot: cells.reduce(function (a, c) { return a + c.tot; }, 0),
+      medRound: rdArr.length ? rdArr[rdArr.length >> 1] : 0, saverWin: 100 * saverWin / Math.max(1, GAMEO.length) });
   }
   console.log('   ⇒ 判读：' + (rh == null || rl == null
     ? '**分母不足**（高桶或低桶 n<40）⇒ 这条因果**没量到**，不是"没有因果"'
@@ -190,12 +192,13 @@ if (QUIET && SWEEP.length) {
    * ⇒ 倍差大 = 会因对方有钱而转防（v1.5.210 那粒候选的病）；倍差≤1 且连防短 = 无此响应 */
   SWEEP.sort(function (a, b) { return (b.ratio || 0) - (a.ratio || 0); });
   console.log('\n## 跨包筛（' + SWEEP.length + ' 粒 · ' + GAMES + ' 局/粒 · saver=' + SAVER + ' · 按"有钱→转防"倍差降序）');
-  console.log('   包'.padEnd(24) + 'ep0~1'.padStart(8) + 'ep5~9'.padStart(8) + 'ep≥10'.padStart(8) + '倍差'.padStart(7) + '连防'.padStart(6) + '≥3连%'.padStart(8) + '  备注');
+  console.log('   包'.padEnd(24) + 'ep0~1'.padStart(8) + 'ep5~9'.padStart(8) + 'ep≥10'.padStart(8) + '倍差'.padStart(7) + '连防'.padStart(6) + '≥3连%'.padStart(7) + '局长'.padStart(6) + '攒钱赢%'.padStart(9) + '  备注');
   for (const r of SWEEP) {
     const num = function (x) { return isFinite(x) ? x.toFixed(1) + '%' : '—'; };   // f1 已经是百分数，别再乘 100
     console.log('   ' + r.pack.slice(0, 22).padEnd(23) + num(r.lo).padStart(8) + num(r.mid).padStart(8) + num(r.hi).padStart(8) +
       (isFinite(r.ratio) ? r.ratio.toFixed(2) : '—').padStart(7) + String(r.maxRun).padStart(6) + r.run3.toFixed(0).padStart(7) +
-      '   ' + (isFinite(r.ratio) && r.ratio >= 2 && r.hi >= 0.2 ? '⚠ 有钱→转防' : (isFinite(r.ratio) && r.ratio >= 1.5 ? '轻微' : '无响应')));
+      String(r.medRound || 0).padStart(6) + (r.saverWin || 0).toFixed(0).padStart(8) +
+      '  ' + (isFinite(r.ratio) && r.ratio >= 2 && r.hi >= 20 ? '⚠ 有钱→转防' : (isFinite(r.ratio) && r.ratio >= 1.5 ? '轻微' : '无响应')));
   }
   const bad = SWEEP.filter(function (r) { return isFinite(r.ratio) && r.ratio >= 2 && r.hi >= 20; });
   console.log('   ⇒ ' + bad.length + '/' + SWEEP.length + ' 粒有"对手有钱→转防"的响应（倍差≥2 且高桶设防率≥20%）：' +
