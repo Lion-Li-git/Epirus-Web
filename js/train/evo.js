@@ -392,12 +392,36 @@
   }
   function chargeMinEpOn() { return CHARGE_MIN_EP; }
 
+  /* ===== v1.5.199（用户实机报"空净化"）：净化有没有东西可清 =====
+   * 清单**逐项对齐 `js/core/resolve.js` 的 `purgeSelf`**（R60 / v1.5.110 的清除清单从状态字段推导）：
+   *   `stickers`（符咒）· `nightmare`（梦魇 R50）· `tauntPending`/`tauntByPending`（挑衅）·
+   *   `fireWeakNow`/`fireWeakNext`（藤甲 R58）· `mineArmed`/`mineTurns`（地雷 R59）· `rodGuard`（避雷针 R31）·
+   *   `cooldown`（大雷禁用 R29）。
+   * ⚠️ 这是"同一份清单写在两个文件里"——**故意如此**：`resolve.js` 是**规则指纹面**（改它 = 规则换代、
+   *   全部历史基线作废），不能为了共享一行代码去动它。漂移风险由门 **D142** 用引擎本身逐字段对账
+   *   （挂上某个状态 ⇒ 引擎真清得动 ⇒ 本函数必须返回 true；全空 ⇒ 引擎 `purify.curses===0` 且状态零变化）。
+   * 判"能不能清"而不是"值不值"：身上挂着地雷/避雷针时净化会**自损增益**（R60 裁定的自然结果），
+   *   那属于策略权衡，不归这道门管 —— 这道门只挡"3 ジ 清 0 个"的**恒亏**动作。 */
+  function hasPurgeable(p) {
+    if (!p) return false;
+    if (p.stickers && p.stickers.length > 0) return true;
+    if (p.nightmare) return true;
+    if (p.tauntPending) return true;
+    if (p.tauntByPending && p.tauntByPending.length > 0) return true;
+    if (p.fireWeakNow || p.fireWeakNext) return true;
+    if (p.mineArmed || (p.mineTurns || 0) > 0) return true;
+    if ((p.rodGuard || 0) > 0) return true;
+    if (p.cooldown && Object.keys(p.cooldown).length > 0) return true;
+    return false;
+  }
+
   function econBase(state, pid, legal) {
     /* 菜单级"严格必废"闸门（v1.5.139 扩第二项，用户实机报"空爆"）：
      * ① ep<2 不蓄能（v1.5.82 原裁定，注释见 policyChooserN 上方）；
      * ② 全场无人带符咒 ⇒ 天火必然 0 引爆（花 2 ジ 放空气）——从菜单摘掉。
-     * 与①同性质：这是"恒亏动作"的门禁，不是新的规则语义（README 天火的作用对象就是符咒）；
-     * 键级探索（下面 epsK）因此永远不会把天火采进 top-K。训练/浏览器同享此菜单。 */
+     * ③ v1.5.199：自己身上没有任何持续状态 ⇒ 净化必然"清除 0 枚"（花 3 ジ 放空气）——同样摘掉。
+     * 与①②同性质：这是"恒亏动作"的门禁，不是新的规则语义（README 净化的作用对象就是自身持续状态）；
+     * 键级探索（下面 epsK）因此永远不会把净化采进 top-K。训练/浏览器同享此菜单。 */
     // v1.5.139：天火引爆的是**施法者自己贴出、age≤3** 的符咒（resolve `case SK.FIRESTORM` 的
     // owner/age 判定）——闸门必须与它同判据：数"pid 拥有的存活符咒"，不是"场上任何符咒"。
     let myLiveStickers = 0;
@@ -407,6 +431,7 @@
     }
     const gated = legal.filter(function (l) {
       if (l.key === R.SK.FIRESTORM) return myLiveStickers > 0;
+      if (l.key === R.SK.PURIFY) return hasPurgeable(state.p[pid]);
       if (l.key !== R.SK.CHARGE) return true;
       const pp = state.p[pid];
       return !!pp && (pp.ep || 0) >= CHARGE_MIN_EP;
@@ -2685,6 +2710,6 @@ let WALL_GAMES = 3;
     widthReward,                // v1.5.124 §28a：广度收益项（权重走 econ-env 的 widthW）
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
-    scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn
+    scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn
   };
 })(typeof window !== 'undefined' ? window : globalThis);

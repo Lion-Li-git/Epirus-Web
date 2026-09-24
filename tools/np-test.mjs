@@ -5599,6 +5599,117 @@ t('D115 序列窗锁：链上状态（持珠/上手蓄能/有我方符咒）⇒ 
   })();
 });
 
+t('D142 空净化闸门（v1.5.199 · 用户实机报）必须与引擎 `purgeSelf` 逐字段对账，且「攒哪种珠」必须单一来源', function () {
+  /* ===== (a) 净化：与天火空爆（v1.5.139）/ 蓄能 ep<2（v1.5.82）同族的第三个"恒亏动作" =====
+   * 用户实盘（`results/band2/*.txt`）里 5 次净化全是「清除 **0** 枚符咒与负面状态」，而同装配下现役包 0 次净化
+   * ⇒ 说明这不是"某只包爱用"，而是**菜单从来允许出空转的一张牌**。 */
+  ok(typeof T.hasPurgeable === 'function', '判据必须导出（门喂构造态，不钉文本）');
+  eq(T.hasPurgeable({}), false, '全空 ⇒ 不可清（这正是"空净化"）');
+  eq(T.hasPurgeable(null), false, '席位不存在也不许抛');
+  /* 引擎 R60（v1.5.110）`purgeSelf` 清的字段清单 —— 这里逐字段挂上，两边必须同判** */
+  const FIELDS = [
+    ['stickers', [{ owner: 0, age: 1 }]], ['nightmare', true], ['tauntPending', true],
+    ['tauntByPending', [2]], ['fireWeakNow', true], ['fireWeakNext', true],
+    ['mineArmed', true], ['mineTurns', 2], ['rodGuard', 1], ['cooldown', { bigT: 1 }]
+  ];
+  for (const f of FIELDS) {
+    const p = {}; p[f[0]] = f[1];
+    eq(T.hasPurgeable(p), true, '挂了 ' + f[0] + ' 必须算"有东西可清"（漏一个字段 = 把有用的净化也摘掉）');
+  }
+  /* ② 与**引擎本身**逐字段对账：只挂这一个状态 ⇒ 出一次净化 ⇒ 判据必须"事前 true / 事后 false"，
+   *    且引擎得真把它清掉（清单漂了 —— 比如以后新增一类持续状态 —— 当场红）。 */
+  {
+    const st0 = S.createState('multi', { next: mulberry32(909) }, 3);
+    ok(Play.legalActions(st0, 0).some(function (x) { return x.key === R.SK.PURIFY; }),
+      '前置事实：净化在 multi 合法表里（否则下面的对账全是空判）');
+  }
+  for (const f of FIELDS.concat([['（全空）', null]])) {
+    const st = S.createState('multi', { next: mulberry32(909) }, 3);
+    X.startTurn(st);
+    st.p[0].ep = 9;
+    if (f[1] !== null) st.p[0][f[0]] = f[1];
+    const before = T.hasPurgeable(st.p[0]);
+    eq(before, f[1] !== null, f[0] + '：判据事前判定（挂了才该说有东西可清）');
+    S.attemptAction(st, 0, R.SK.PURIFY, {});
+    for (let i = 1; i < 3; i++) S.attemptAction(st, i, R.SK.JI, {});
+    X.resolveActions(st);
+    const acted = st.events.filter(function (e) { return e.type === 'purify'; })[0];
+    ok(acted, f[0] + '：净化必须真落地（被合法表/费用挡下 ⇒ 这条对账是假的）');
+    eq(T.hasPurgeable(st.p[0]), false, f[0] + '：净化之后判据必须认为"已无可清"（引擎没清干净 = 清单漂了）');
+    if (f[1] === null) {
+      eq(acted.curses, 0, '空净化在引擎侧的读数必须就是 curses===0（用户看到的那行字）');
+      eq(st.p[0].hp, (R.MODES.multi || {}).hp || 3, '空净化不许顺带回血（n-1 规则里 n=0 ⇒ 不该有 heal）');
+      ok(!st.events.some(function (e) { return e.type === 'heal' && e.pid === 0; }), '空净化那一手不得产生 heal 事件');
+    }
+  }
+  /* ③ 作用点必须活着：`econBase` 在"干净 + 买得起"时把 PURIFY 摘掉，挂上符咒就必须留着 */
+  {
+    const st = S.createState('multi', { next: mulberry32(11) }, 3);
+    st.p[0].ep = 9;
+    const legal = Play.legalActions(st, 0).map(function (x) { return { key: x.key, affordable: true }; });
+    ok(legal.some(function (x) { return x.key === R.SK.PURIFY; }), '前置事实：净化本来就在合法表里（否则 ③ 是空判）');
+    eq(T.econBase(st, 0, legal).some(function (x) { return x.key === R.SK.PURIFY; }), false,
+      '身上干净 ⇒ 菜单里必须没有净化（摘掉，不是"降权"）');
+    st.p[0].stickers = [{ owner: 0, age: 1, key: R.SK.CURSE }];
+    eq(T.econBase(st, 0, legal).some(function (x) { return x.key === R.SK.PURIFY; }), true,
+      '有东西可清 ⇒ 必须还在（不许把好牌一起摘掉）');
+  }
+  /* ④ 症状级双对照（正反各一）：**强制**每回合尽量出净化，走 `econBase` 后真实对局里"空净化"必须归零；
+   *    而绕过 `econBase` 的对照组必须**测得出非零** —— 否则 ④ 只是"它本来就没出"的假绿（seam 2 那一族）。 */
+  {
+    const runForced = function (useGate, games) {
+      let emptyPurify = 0, purify = 0;
+      for (let g = 0; g < games; g++) {
+        const seed = 5150 + g * 977;
+        const ch = [];
+        for (let pid = 0; pid < 3; pid++) ch.push(function (s2, p2, lg) {
+          /* ⚠️ chooser 只许**返回**动作（下注由 `oneGameN` 去 attempt）—— 自己再 attempt 一次会 double 掉，
+           *    第一版我就这么写出了"对照组 0 次净化"的假绿。 */
+          const pool = useGate ? T.econBase(s2, p2, lg) : lg;
+          const aff = pool.filter(function (x) { return x.affordable; });
+          const pu = aff.find(function (x) { return x.key === R.SK.PURIFY; });
+          return pu ? { key: R.SK.PURIFY, target: null } : { key: R.SK.JI, target: null };
+        });
+        const r = T.oneGameN(ch, seed, 3, { mode: 'multi' });
+        for (const e of r.state.events) if (e.type === 'purify') { purify++; if (!e.curses) emptyPurify++; }
+      }
+      return { purify: purify, empty: emptyPurify };
+    };
+    const noGate = runForced(false, 12);
+    ok(noGate.empty > 0, '对照组（绕过闸门）必须测得出空净化，否则整条 ④ 无判别力；实测 ' + JSON.stringify(noGate));
+    const gated = runForced(true, 12);
+    eq(gated.empty, 0, '走了 `econBase` 之后真实对局里的"清除 0 枚"必须为 0（对照组 ' + noGate.empty + ' 次）');
+    ok(gated.purify > 0 || noGate.purify > 0, '至少一边要真出过净化（两边都没出 ⇒ 装配不成立）');
+  }
+  /* ===== (b) 「这一手蓄能攒哪种珠」：三处各自写过的三元式必须收成一处 =====
+   * 事实（读代码得出来，非推断）：冠军策略返回的动作里 `bead` 基本恒为 null ⇒ **珠类型是 UI 层替 AI 决定的**，
+   * 原本在 `ui.js` 里有三份同样的 `p.elec > p.boom ? 'boom' : 'elec'`（2P 主循环 / 多人主循环 / 观战循环）
+   * ⇒ 漂了就是"你活着时和死后，同一个包打法不同"。这一步**只收拢、不改行为**。 */
+  {
+    const box = { console: console, Math: Math, JSON: JSON, Object: Object, Array: Array, Number: Number, String: String, Error: Error, isNaN: isNaN };
+    box.window = box; box.globalThis = box;
+    vm.runInNewContext(readFileSync('js/ui/bead-choice.js', 'utf8'), box, { filename: 'js/ui/bead-choice.js' });
+    const BC = box.EpirusBeadChoice;
+    ok(BC && typeof BC.prefer === 'function' && typeof BC.of === 'function', '必须导出 EpirusBeadChoice.{prefer,of}');
+    eq(BC.prefer({ elec: 1, boom: 0 }), 'boom', '电珠多于爆珠 ⇒ 攒爆珠（原口径）');
+    eq(BC.prefer({ elec: 0, boom: 1 }), 'elec', '爆珠多于电珠 ⇒ 攒电珠（原口径）');
+    eq(BC.prefer({ elec: 1, boom: 1 }), 'elec', '相等 ⇒ 电珠（原口径，不许改成随机）');
+    eq(BC.prefer({}), 'elec', '全新 ⇒ 电珠');
+    eq(BC.of({ elec: 2, boom: 0 }, 'boom'), 'boom', '策略自己给了珠型 ⇒ 必须听策略的');
+    eq(BC.of({ elec: 2, boom: 0 }, null), 'boom', '策略没给 ⇒ 回落到单一口径（这里 elec>boom ⇒ boom）');
+    eq(BC.of({ elec: 0, boom: 0 }, 'nonsense'), 'elec', '非法值 ⇒ 走回落，不许原样透传');
+    const html = readFileSync('index.html', 'utf8');
+    const iBead = html.indexOf('js/ui/bead-choice.js'), iUI = html.indexOf('js/ui/ui.js');
+    ok(iBead >= 0, 'index.html 必须加载 bead-choice.js');
+    ok(iBead < iUI, '必须在 ui.js **之前**加载（ui.js 顶层就取 window.EpirusBeadChoice）');
+    const ui = readFileSync('js/ui/ui.js', 'utf8');
+    const calls = (ui.match(/BeadChoice\.of\(/g) || []).length;
+    ok(calls >= 3, '三处出手点（2P 主循环 / 多人主循环 / 观战循环）都必须走单一来源；实测 ' + calls + ' 处');
+    ok(!/elec\s*>\s*[\w.\[\]]*\.?boom\s*\?\s*'boom'\s*:\s*'elec'/.test(ui),
+      'ui.js 里不许再留内联的 elec>boom 三元式（"同一规则写两遍"的第七例就在这条线上）');
+  }
+});
+
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
    * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/

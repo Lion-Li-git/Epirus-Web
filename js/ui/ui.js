@@ -3,6 +3,7 @@
   'use strict';
   const R = window.EpirusRules, S = window.EpirusState, X = window.EpirusResolve;
   const Tip = window.EpirusSkillTip;   // v1.5.173：卡面提示的组装单一来源（`js/ui/skill-tip.js`，门 D131 钉"必须被用、必须被加载"）
+  const BeadChoice = window.EpirusBeadChoice;   // v1.5.199：「这一手蓄能攒哪种珠」的单一来源（`js/ui/bead-choice.js`，门 D142 钉加载顺序与三处调用）
   const Play = window.EpirusPlay, Bots = window.EpirusBots;
   const P = window.EpirusPolicy, Trainer = window.EpirusTrainer, Champ = window.EpirusChampion;
 
@@ -289,7 +290,7 @@
     hint('你选择了【' + skillName(key) + '】，电脑思考中…');
     setTimeout(function () {
       // 电脑出招（用先决策好的 aiKey）
-      S.attemptAction(B.state, 1, aiPick0.key, { bead: aiPick0.bead || (B.state.p[1].elec > B.state.p[1].boom ? 'boom' : 'elec'), target: aiPick0.target, target2: aiPick0.target2 });
+      S.attemptAction(B.state, 1, aiPick0.key, { bead: BeadChoice.of(B.state.p[1], aiPick0.bead), target: aiPick0.target, target2: aiPick0.target2 });
       const aiPick = aiPick0.key;
       // 结算
       X.resolveActions(B.state);
@@ -518,7 +519,7 @@
       for (let pid = 1; pid < N; pid++) {
         if (!picks[pid - 1]) continue;
         const b = B.state.p[pid];
-        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: picks[pid - 1].bead || (b.elec > b.boom ? 'boom' : 'elec'), target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
+        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: BeadChoice.of(b, picks[pid - 1].bead), target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
       }
       X.resolveActions(B.state);
       X.endTurn(B.state);
@@ -592,7 +593,7 @@
       for (let pid = 1; pid < N; pid++) {
         if (!picks[pid - 1]) continue;
         const b = B.state.p[pid];
-        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: picks[pid - 1].bead || (b.elec > b.boom ? 'boom' : 'elec'), target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
+        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: BeadChoice.of(b, picks[pid - 1].bead), target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
       }
       X.resolveActions(B.state);
       X.endTurn(B.state);
