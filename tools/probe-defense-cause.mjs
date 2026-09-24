@@ -51,7 +51,7 @@ for (const f of PACKS) {
   const isDef = function (key) { const d = R.byKey[key]; return !!(d && d.cat === DEF); };
   const localB = BASE_BUCKETS.slice();
   const st2 = {};   // bucket 名 -> {def, tot}
-  for (const b of localB) st2[b[2]] = { def: 0, tot: 0, rdSum: 0, rdN: 0 };
+  for (const b of localB) st2[b[2]] = { def: 0, tot: 0, uDef: 0, uTot: 0, rdSum: 0, rdN: 0 };
   let maxRunAll = 0, gamesWithRun3 = 0, gamesWithRun5 = 0;
   const ALL = [];
   for (let g = 0; g < GAMES; g++) {
@@ -60,7 +60,8 @@ for (const f of PACKS) {
     /* 攒钱替身：买得起就出攻击卡（打掉对手，让局继续），否则出ジ攒 ep ⇒ ep 单调涨 */
     const ATK = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK];
     const rr = mul(SEED0 + g * 7919 + 1);
-    const REC = [];   // 本局所有"被评席决策"的快照：{rd, pid, ep0(对手**当下**的 ep), key}
+    const REC = [];   // 本局所有"被评席决策"的快照：{rd, pid, ep0(对手**当下**的 ep), key, unhurt}
+    const LASTHP = {};
     const saver = function (state, pid, legal) {
       const mine = state.p[pid];
       if (SAVER === 'hold') return { key: R.SK.JI };            // 纯攒：钱堆着不花
@@ -78,8 +79,14 @@ for (const f of PACKS) {
      * ⇒ 现在直接在**被评席做决策的那一刻**读 `state.p[0].ep`（这才是这只包看得见的量），回合号用 `state.round`（实测单调）。 */
     for (let i = 1; i < 5; i++) ch.push(function (s2, p2, lg) {
       const pick = bs(s2, p2, lg);
-      const opp = s2.p[0];
-      REC.push({ rd: s2.round, pid: p2, ep0: opp ? (opp.ep || 0) : 0, key: pick.key });
+      const opp = s2.p[0], me = s2.p[p2];
+      /* 配对之外还要**钉住"被打过"这条混淆**：`cycle` 档的对手每几回合真会打出一发，`hold` 档从不打
+       *   ⇒ 两档在同一回合号上的差，可能有一部分是"被攻击过所以防"。修法：记录该席**上次决策到现在的净掉血**，
+       *   再单独印"没掉过血"子样本的设防率（那才是只随对手 ep 动的那一半）。 */
+      const hpNow = me ? (me.hp || 0) : 0;
+      const dHp = (LASTHP[p2] === undefined) ? 0 : (hpNow - LASTHP[p2]);
+      LASTHP[p2] = hpNow;
+      REC.push({ rd: s2.round, pid: p2, ep0: opp ? (opp.ep || 0) : 0, key: pick.key, unhurt: dHp >= 0 });
       return pick;
     });
     Play.autoGameN(st, ch);
@@ -91,9 +98,10 @@ for (const f of PACKS) {
       const bk = localB.filter(function (b) { return d.ep0 >= b[0] && d.ep0 <= b[1]; })[0];
       if (!bk) continue;
       const cell = st2[bk[2]];
-      cell.tot++; cell.rdSum += d.rd; cell.rdN++;
       const def = isDef(d.key);
-      ALL.push({ rd: d.rd, def: def, ep0: d.ep0 });
+      cell.tot++; cell.rdSum += d.rd; cell.rdN++;
+      if (d.unhurt) { cell.uTot++; if (def) cell.uDef++; }
+      ALL.push({ rd: d.rd, def: def, ep0: d.ep0, unhurt: d.unhurt });
       if (def) {
         cell.def++;
         const prev = lastRd[d.pid];
@@ -108,19 +116,27 @@ for (const f of PACKS) {
   }
   /* 合并：从最高的两桶开始往下并，直到**除最后一桶外**每桶 n≥BMIN（并完仍不足就如实报"分母不足"） */
   const byRound = {};
-  for (const d of ALL) { const k = d.rd; if (!byRound[k]) byRound[k] = { def: 0, tot: 0, ep: 0 }; byRound[k].tot++; byRound[k].def += d.def ? 1 : 0; byRound[k].ep += d.ep0; }
+  for (const d of ALL) { const k = d.rd; if (!byRound[k]) byRound[k] = { def: 0, tot: 0, ep: 0, uDef: 0, uTot: 0 };
+    byRound[k].tot++; byRound[k].def += d.def ? 1 : 0; byRound[k].ep += d.ep0;
+    if (d.unhurt) { byRound[k].uTot++; byRound[k].uDef += d.def ? 1 : 0; } }
   console.log('   按回合号的曲线（`--pair` 就是比这条）：' +
     Object.keys(byRound).map(Number).sort(function (a, b) { return a - b; }).slice(0, 14).map(function (r) {
       const c = byRound[r]; return 'r' + r + ' ' + (100 * c.def / c.tot).toFixed(1) + '%(ep' + (c.ep / c.tot).toFixed(1) + ')';
     }).join(' · '));
+  console.log('   └ 同一曲线、但**只取"自上次决策以来没掉过血"的那些决策**（钉住"被打过"这条混淆）：' +
+    Object.keys(byRound).map(Number).sort(function (a, b) { return a - b; }).slice(0, 14).map(function (r) {
+      const c = byRound[r];
+      return 'r' + r + ' ' + (c.uTot >= 20 ? (100 * c.uDef / c.uTot).toFixed(1) + '%' : '—') + '(n' + c.uTot + ')';
+    }).join(' · '));
   const cells = localB.map(function (b) { const c = st2[b[2]] || { def: 0, tot: 0, rdSum: 0, rdN: 0 };
-    return { lo: b[0], hi: b[1], parts: [b[2] + '(n=' + c.tot + ')'], def: c.def, tot: c.tot, rdSum: c.rdSum, rdN: c.rdN }; });
+    return { lo: b[0], hi: b[1], parts: [b[2] + '(n=' + c.tot + ')'], def: c.def, tot: c.tot, uDef: c.uDef, uTot: c.uTot, rdSum: c.rdSum, rdN: c.rdN }; });
   /* 空桶（n=0）先丢掉再谈合并：把 n=0 并进上一桶只会造出一串读不懂的嵌套名字 */
   for (let i = cells.length - 1; i >= 1; i--) if (cells[i].tot === 0) cells.splice(i, 1);
   let merged = 0;
   while (cells.length > 2 && cells[cells.length - 1].tot < BMIN) {
     const last = cells.pop(), prev = cells[cells.length - 1];
     prev.hi = last.hi; prev.def += last.def; prev.tot += last.tot; prev.rdSum += last.rdSum; prev.rdN += last.rdN;
+    prev.uDef += last.uDef; prev.uTot += last.uTot;
     prev.parts.push(last.parts.join('+'));
     prev.name = 'ep ' + prev.lo + '~' + (prev.hi >= 1e9 ? '∞' : prev.hi);
     merged++;
@@ -133,7 +149,8 @@ for (const f of PACKS) {
     const nm = b.name;
     console.log('   对手 ' + (nm + (merged && c.parts && c.parts.length > 1 ? ' ⟵并入 ' + c.parts.slice(1).join('、') : '')).padEnd(24) + ' 该桶设防率 ' + (c.tot ? pct(c.def / c.tot, c.tot) : '—（n=0）').padEnd(22) +
       (c.tot < BMIN ? ' ⚠️ 该桶分母 < ' + BMIN : '') +
-      '   该桶平均回合 ' + (c.rdN ? (c.rdSum / c.rdN).toFixed(1) : '—'));
+      '   该桶平均回合 ' + (c.rdN ? (c.rdSum / c.rdN).toFixed(1) : '—') +
+      '   ｜钉住"没掉过血"的子样本 ' + (c.uTot >= 40 ? (100 * c.uDef / c.uTot).toFixed(1) + '%（n=' + c.uTot + '）' : '—（n=' + c.uTot + '，不足 40）'));
   }
   console.log('   "维持很久"那半：全表最长**同一席连续设防** ' + maxRunAll + ' 回合 · 出现 ≥3 连的局 ' +
     (100 * gamesWithRun3 / GAMES).toFixed(1) + '% · ≥5 连 ' + (100 * gamesWithRun5 / GAMES).toFixed(1) + '%（' + GAMES + ' 局）');
