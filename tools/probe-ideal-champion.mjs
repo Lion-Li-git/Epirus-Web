@@ -13,6 +13,12 @@
  *   5 座位无偏       = seatSymmetry 的极差 vs **该 n 的零分布 p99 线**（v1.5.202 新口径）
  *   6 广度当约束     = 出手 G 与**净兑现 G**、**打上血的不同卡数**
  *   7 不要的两条     = ① 有多少张"能造成伤害的卡"从未被挡过；② 镜像场设防率
+ *
+ *   ⚠️ **本表不是单一口径**（v1.5.205 实测发现，见下面【5】【6】的行走标注）：【1】~【4】【7】用 TEMP/EPS/EPSK/EPSMODE，
+ *   【5】seatSymmetry（audit-lib.mjs:403）与【6】mirrorHealth（evo.js:2554）**各自在内部建 Chooser、把参数写死成 `policyChooserN(params, 0.15)`**（ε=0），
+ *   所以 `--eps=0.2 --epsmode=soft` 扫动时这两行逐字不变 —— 那不是"座位/广度对探索不敏感"，是**这两行没接到旋钮**。
+ *   ⇒ 这不是这两处的孤例：`audit-lib.mjs` 的 reflectWall/ringWallProbe/fieldRate/sniperField/seatSymmetry/densityProfile/chargeProfile/aggressionProfile/breadthProfile
+ *   共 **9 处**、`js/train/evo.js` 4 处全是同一个写死 ⇒ **整个评测层的口径是 ε=0，而产品是 ε=0.2 soft**（METHODOLOGY 49）。
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -158,6 +164,8 @@ for (const n of [100, 400]) {
   const r = seatSymmetry(sb, live, MODE, n);
   console.log('   n=' + String(n).padStart(3) + '  各座 ' + r.pct.map(x => x.toFixed(1)).join('/') + '  极差 ' + r.spread.toFixed(1) + 'pt  仓线 ' + r.spreadLine.toFixed(1) + 'pt  ⇒ ' + r.verdict + (r.spread <= 10 ? '（≤10pt ✓）' : '（>10pt ✗ 按理想规格）'));
 }
+console.log('   ⚠️ 口径：本条**不吃** --temp/--eps —— seatSymmetry（audit-lib.mjs:403）自建 Chooser 时把参数写死成 `policyChooserN(params, 0.15)`（第 3 个参数 ε 缺省=0）。');
+console.log('      ⇒ 这两行永远是"贪心+一点温度"的座位分布，与【1】~【4】那条扫描线不是同一个口径，别当"产品口径的座位极差"读。');
 
 console.log('\n【6】广度当约束不当目标 —— 阈值：净兑现 G≥3 且 ≥4 种打上血');
 {
@@ -166,6 +174,8 @@ console.log('\n【6】广度当约束不当目标 —— 阈值：净兑现 G≥
   console.log('   出手 G = ' + f2(mh.effSkills) + '（出手卡 ' + mh.distinctKeys + ' 种）');
   console.log('   净兑现 G = ' + f2(mh.effSkillsLand) + '（打上血的卡 ' + (mh.landedKeys != null ? mh.landedKeys : lk.length) + ' 种 · 落地次数 ' + mh.landedTotal + '）');
   console.log('   ⇒ ' + (mh.effSkillsLand >= 3 && (mh.landedKeys || lk.length) >= 4 ? '达标' : '未达标（净兑现 ' + f2(mh.effSkillsLand) + ' < 3 或种类 < 4）'));
+  console.log('   ⚠️ 口径：本条同样**不吃** --temp/--eps —— mirrorHealth（evo.js:2530 起，写死处 evo.js:2554）内部 `policyChooserN(params, 0.15)`，ε=0。');
+  console.log('      ⇒ 凡走 mirrorHealth / audit-lib.selfPlay 的读数（体检 G 列、训练侧健康门槛）都与这条同源；产品口径（ε=0.2/k=5/soft）下的广度要另跑，见 probe-ep-reach §E。');
 }
 
 console.log('\n【7】不要的两条');

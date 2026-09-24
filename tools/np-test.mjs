@@ -5832,6 +5832,38 @@ t('D148 E1/E2 量具 `probe-ep-reach.mjs`（09-24 夜 · 交接 §4）：门槛�
   ok(zero.status !== 0, '零决策点必须**非零退出**（实测 exit=' + zero.status + '）—— 静默返回 0 就是把这条测量关掉');
 });
 
+t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、不吃旋钮的【5】【6】必须自报口径', function () {
+  /* 病（09-25 凌晨实测）：`probe-ideal-champion.mjs` 原本只有一个写死的 `0.15`，名字读起来像 ε、实际是**温度**（交接 §4-E5 让人拿温度去扫探索率，整晚白跑）；
+   * 拆成 `--temp/--eps` 之后又发现第二层：**【5】seatSymmetry 与【6】mirrorHealth 各自在内部建 Chooser**（audit-lib.mjs:403 / evo.js:403 都是
+   * `policyChooserN(params, 0.15)`），所以 ε 扫描时那两行**逐字不变** —— 容易被读成"座位/广度对探索不敏感"，而真实原因是**它们没接到旋钮**。
+   * ⇒ 钉三件：旋钮分开、调用点真用、不吃旋钮的行必须**在输出里自报口径**。 */
+  const p = readFileSync('tools/probe-ideal-champion.mjs', 'utf8');
+  ok(/arg\('temp'/.test(p) && /arg\('eps'/.test(p),
+    '温度与探索率必须是**两个**参数（只有一个 0.15 时谁按交接做 E5 都会拉错杆）');
+  ok(/policyChooserN\(live, TEMP, EPS, EPSK, EPSMODE\)/.test(p),
+    '受评席的 Chooser 必须把四个参数一起传（只传 eps = 全候选均匀抽，那是 v1.5.139 被用户否掉的口径）');
+  ok(!/policyChooserN\(live, 0\.15\)/.test(p), '调用点不许再留写死的 0.15');
+  const i5 = p.lastIndexOf('【5】'), i6 = p.lastIndexOf('【6】'), i7 = p.lastIndexOf('【7】');
+  ok(i5 > 0 && i6 > i5 && i7 > i6, '【5】【6】【7】三条必须都在（用 lastIndexOf 定位打印行，头注释里也出现这些标号）');
+  ok(/seatSymmetry\(sb, live, MODE, n\)/.test(p) && /T\.mirrorHealth\(live, 400, 5, MODE\)/.test(p),
+    '【5】【6】仍走 seatSymmetry / mirrorHealth（单一真源，不许在这份表里另起一份实现）');
+  const seg5 = p.slice(i5, i6), seg6 = p.slice(i6, i7);
+  ok(/不吃/.test(seg5) && /audit-lib\.mjs:403/.test(seg5), '【5】必须自报"不吃 --temp/--eps"并指到 seatSymmetry 的写死处');
+  ok(/不吃/.test(seg6) && /evo\.js:2554/.test(seg6), '【6】必须自报"不吃 --temp/--eps"并指到 mirrorHealth 的写死处（行号要实测，别抄注释）');
+  const run = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8', '--eps=0.2', '--epsmode=soft'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, '表要跑得通（' + String(run.stderr || '').slice(0, 160) + '）');
+  const out = String(run.stdout || '');
+  const n5 = (out.match(/极差 [\d.]+pt/g) || []).join('|'), n6 = (out.match(/净兑现 G = [\d.]+/g) || []).join('|');
+  ok(/口径：本条\*\*不吃\*\* --temp\/--eps/.test(out) && out.split('口径：本条**不吃** --temp/--eps').length === 3,
+    '两条口径警示必须真的**打印出来**（源码里有、输出里没有 = 读表的人看不见），且恰好 2 处');
+  const r2 = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8'],
+    { encoding: 'utf8', timeout: 600000 });
+  const out2 = String(r2.stdout || '');
+  eq((out2.match(/极差 [\d.]+pt/g) || []).join('|'), n5, '【5】在 eps=0.2 与默认下必须逐字相同（它不吃旋钮 ⇒ 这条相等本身就是那处写死的证据）');
+  eq((out2.match(/净兑现 G = [\d.]+/g) || []).join('|'), n6, '【6】同上 —— 若哪天这两行开始随 ε 动，说明单一真源被改散了，要重看钉法');
+});
+
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
    * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/
