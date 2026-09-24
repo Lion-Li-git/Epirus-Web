@@ -5975,6 +5975,22 @@ t('D152 「空蓄能」分因量具 `probe-bead-loop.mjs`：两种相反的病�
   ok(/真源 `chargeProfile`（\*\*按珠子计\*\*）/.test(out), '必须印真源那一行做并排对照');
 });
 
+t('D153 产品的两个口径必须钉住（5 人 = ε0.2/k5/soft、2 人困难 = ε0）——本夜全部"口径"结论都挂在这两行代码上', function () {
+  /* 为什么单独立一条：§H-6/H-10/H-12/H-13 的整串"评测口径 ≠ 产品口径"结论，**唯一的凭据就是 `ui.js` 里那一次调用**；
+   *   而那行没有任何门钉着（D111/D118 钉的是探索规则与代理栏存在，不钉这四个值）。⇒ 有人调了它，全夜的读数就失去所指。 */
+  const ui = readFileSync('js/ui/ui.js', 'utf8');
+  ok(/Trainer\.pickChampion\(state, pid, legalForAI, c, 0\.15, 0\.2, 5, 'soft'\)/.test(ui),
+    '5 人冠军路径必须是 temp0.15 / ε0.2 / epsK=5 / soft —— 这是本仓唯一一份"玩家实际看到的探索口径"');
+  ok(/Trainer\.pickChampion\(state, 1, legalForAI, c, 0\.15\)/.test(ui),
+    '2 人困难槽仍是 ε=0（`ui.js` 里那句"播放口径：与训练口径一致"是**有意的**）⇒ 所以"产品口径"不是一个数，报数必须指明哪个槽');
+  const m = readFileSync('docs/METHODOLOGY.md', 'utf8');
+  ok(/2 人口径|2 人槽/.test(m) && /评测口径/.test(m),
+    'METHODOLOGY 必须留着"两槽口径不同"这段（否则下一个人会把"产品口径"当成单一口径去改门）');
+  /* 反向钉：代理栏与门的输入必须**仍可分辨**（代理栏用 0.2 soft，门禁输入用 ε=0） */
+  const pr = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(/fieldProfile\(params, 0\.2, 'soft'/.test(pr), 'D118 的产品代理栏必须继续显式带 0.2/soft（它存在的意义就是"另一口径"）');
+});
+
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
    * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/
