@@ -56,6 +56,9 @@ for (const f of PACKS) {
   for (const b of localB) st2[b[2]] = { def: 0, tot: 0, uDef: 0, uTot: 0, rdSum: 0, rdN: 0 };
   let maxRunAll = 0, gamesWithRun3 = 0, gamesWithRun5 = 0;
   const ALL = [];
+  /* 玩家体验那一侧：这只包把"有人攒钱"的局拖成什么样（局长 / 平局率 / 那个攒钱的人赢没赢）
+   *   ⇒ 病要能落到"玩家会不会遇到"才有意义，光有设防率不足以说明代价。 */
+  const GAMEO = [];
   for (let g = 0; g < GAMES; g++) {
     const st = S.createState('multi', { next: mul(SEED0 + g * 7919) }, 5);
     st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
@@ -112,6 +115,7 @@ for (const f of PACKS) {
         if (runPerSeat[d.pid] > runThisGame) runThisGame = runPerSeat[d.pid];
       } else { runPerSeat[d.pid] = 0; lastRd[d.pid] = d.rd; }
     }
+    GAMEO.push({ rounds: st.round, winner: st.winner, draw: (st.winner === 'draw' || st.winner == null) });
     if (runThisGame >= 3) gamesWithRun3++;
     if (runThisGame >= 5) gamesWithRun5++;
     if (runThisGame > maxRunAll) maxRunAll = runThisGame;
@@ -154,6 +158,12 @@ for (const f of PACKS) {
       '   该桶平均回合 ' + (c.rdN ? (c.rdSum / c.rdN).toFixed(1) : '—') +
       '   ｜钉住"没掉过血"的子样本 ' + (c.uTot >= 40 ? (100 * c.uDef / c.uTot).toFixed(1) + '%（n=' + c.uTot + '）' : '—（n=' + c.uTot + '，不足 40）'));
   }
+  const rdArr = GAMEO.map(function (x) { return x.rounds; }).sort(function (a, b) { return a - b; });
+  const drawN = GAMEO.filter(function (x) { return x.draw; }).length;
+  const saverWin = GAMEO.filter(function (x) { return x.winner === 0; }).length;
+  console.log('   玩家侧代价（攒钱那位=0 号席）：局长中位 ' + (rdArr.length ? rdArr[rdArr.length >> 1] : '—') +
+    ' 回合（p90 ' + (rdArr.length ? rdArr[Math.floor(0.9 * rdArr.length)] : '—') + ' · 上限 47）· 平局率 ' +
+    (100 * drawN / Math.max(1, GAMEO.length)).toFixed(0) + '% · 攒钱者夺冠 ' + (100 * saverWin / Math.max(1, GAMEO.length)).toFixed(1) + '%（' + GAMEO.length + ' 局）');
   console.log('   "维持很久"那半：全表最长**同一席连续设防** ' + maxRunAll + ' 回合 · 出现 ≥3 连的局 ' +
     (100 * gamesWithRun3 / GAMES).toFixed(1) + '% · ≥5 连 ' + (100 * gamesWithRun5 / GAMES).toFixed(1) + '%（' + GAMES + ' 局）');
   const hi = cells[cells.length - 1], lo = cells[0];
