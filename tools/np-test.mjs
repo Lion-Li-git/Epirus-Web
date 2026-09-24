@@ -5855,13 +5855,52 @@ t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、�
   eq(run.status, 0, '表要跑得通（' + String(run.stderr || '').slice(0, 160) + '）');
   const out = String(run.stdout || '');
   const n5 = (out.match(/极差 [\d.]+pt/g) || []).join('|'), n6 = (out.match(/净兑现 G = [\d.]+/g) || []).join('|');
-  ok(/口径：本条\*\*不吃\*\* --temp\/--eps/.test(out) && out.split('口径：本条**不吃** --temp/--eps').length === 3,
-    '两条口径警示必须真的**打印出来**（源码里有、输出里没有 = 读表的人看不见），且恰好 2 处');
+  const nWarn = (out.match(/口径：本条(?:同样)?\*\*不吃\*\* --temp\/--eps/g) || []).length;
+  ok(nWarn === 2, '两条口径警示必须真的**打印出来**（源码里有、输出里没有 = 读表的人看不见），且恰好 2 处 —— 实测 ' + nWarn + ' 处');
   const r2 = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8'],
     { encoding: 'utf8', timeout: 600000 });
   const out2 = String(r2.stdout || '');
   eq((out2.match(/极差 [\d.]+pt/g) || []).join('|'), n5, '【5】在 eps=0.2 与默认下必须逐字相同（它不吃旋钮 ⇒ 这条相等本身就是那处写死的证据）');
   eq((out2.match(/净兑现 G = [\d.]+/g) || []).join('|'), n6, '【6】同上 —— 若哪天这两行开始随 ε 动，说明单一真源被改散了，要重看钉法');
+});
+
+t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自证生效**，且判据数量不许冻结成常数', function () {
+  /* 为什么要有这份量具：五道门的输入全部写在 ε=0 上（`audit-lib` 9 处 + `evo.js` 4 处 `policyChooserN(params, 0.15)`），
+   * 而 5 人产品跑 ε=0.2 soft（`ui.js:464`）—— v1.5.152 只给"真桌出招份额"补了代理栏（D118），**门本身的输入没有第二口径**。
+   * 搬运是两条"改内存不改仓库"的路：① 装载 `evo.js` 前做字符串替换；② 装载后把沙箱里的 `EpirusTrainer.policyChooserN` 包一层。
+   * ⇒ 最大风险不是数不对，是**没搬成功而两栏一样**（会被读成"口径无关"）。所以本门判的是"搬运有没有留下证据"，不是某个读数。 */
+  const p = readFileSync('tools/probe-layer-caliber.mjs', 'utf8');
+  ok(p.indexOf('writeFileSync') < 0 && p.indexOf('appendFile') < 0, '量具必须只读（不许落任何产物）');
+  ok(/process\.exit\(9\)/.test(p) && /SELF\.patched !== EVO_HARDWIRED \|\| SELF\.wrapper <= 0/.test(p),
+    '必须有"两条路都自证生效否则作废"的自检（非零退出）—— 缺它时两栏相同会被当成"口径无关"');
+  ok(/EVO_HARDWIRED = \(EVO_SRC\.match\(HARDWIRED\)/.test(p) && !/patched !== 4/.test(p),
+    '期望的写死处数量必须**从源码现算**（METHODOLOGY 52：冻结成常数的"期望值"会在别人补一处后静默少覆盖）');
+  ok(/arguments\.length >= 3 \? orig\.apply/.test(p),
+    '包装层必须**原样透传**已经传了 ≥3 个参数的调用（否则会把产品口径自己的四参数调用改坏，制造假差异）');
+  const run = spawnSync(process.execPath, ['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 200) + '）');
+  const out = String(run.stdout || '');
+  ok(/工具自检：`evo\.js` 写死处实测 \d+ 处 → 内存里替换了 \d+ 处/.test(out) && /经包装调用 \d+ 次/.test(out),
+    '必须印出自检两半（现算数量 + 经包装次数）');
+  ok(/攒钱场 设防率/.test(out) && /最长连设防/.test(out) && /五道门总结论/.test(out),
+    '必须同时印"五道门的输入"与"门不看的栏（设防持续性）"—— 后者是用户 09-24 实机报的病，前者是门唯一在读的东西');
+  const num = function (o, label) {
+    const m = new RegExp(label + '[^\\n]*ε=0\\s+([\\d.]+)\\s+产品\\s+([\\d.]+)').exec(o);
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  };
+  const seat = num(out, '座位极差'), wall = num(out, '反弹墙伤害/局');
+  ok(!!seat && !!wall, '座位与反弹墙两栏必须能被抓出来（格式变了就一起改本门）');
+  ok(seat[0] !== seat[1] || wall[0] !== wall[1],
+    '两栏至少一列必须**不同** ⇒ 证明搬运真的到了引擎（全同 = 测量没打开）。实测 座位 ' + seat.join(' vs ') + ' / 墙 ' + wall.join(' vs '));
+  /* 对照：把产品口径也设成 ε=0，则两栏必须**逐字相同** —— 这条是上面那条的反证，也顺手钉住"差异来自口径而不是别的参数" */
+  const ctl = spawnSync(process.execPath, ['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30', '--eps=0'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(ctl.status, 0, 'eps=0 对照要跑得通');
+  const cout = String(ctl.stdout || '');
+  const cSeat = num(cout, '座位极差'), cWall = num(cout, '反弹墙伤害/局');
+  ok(!!cSeat && !!cWall && cSeat[0] === cSeat[1] && cWall[0] === cWall[1],
+    'ε=0 对照下两栏必须相同（实测 座位 ' + (cSeat || []).join('/') + ' · 墙 ' + (cWall || []).join('/') + '）');
 });
 
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
