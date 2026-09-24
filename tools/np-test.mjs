@@ -32,6 +32,8 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
 import { stanceProfile, aggressionProfile, feasibilityOf, attackAttribution, feasPlan, FEAS_N_DEFAULTS, nullSpreadQuantile } from './audit-lib.mjs';
 /* v1.5.202：G4 `--force` 越线例外的判定抽成**纯函数单一来源**（D146 用合成 meta 直接覆盖它）。 */
 import { g4ExceptionOk, G4IMPL_AT_EXCEPTION as G4FROZEN } from './gate4-exception.mjs';
+/* v1.5.202：UNRUN 的处置（哪个方向阻断）也是纯函数单一来源（D147 直接喂合成输入）。 */
+import { unrunDisposition, UNRUN_KINDS } from './unrun-policy.mjs';
 
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, X = sb.window.EpirusResolve, Play = sb.window.EpirusPlay;
 const T = sb.window.EpirusTrainer, Bots = sb.window.EpirusBots, Pol = sb.window.EpirusPolicy;
@@ -3077,7 +3079,14 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
     '必须识别**参照行**（线上包 / 元测试）—— 它们说的是别的对象，不得阻断候选');
   ok(/if \(m\[1\] === 'FAIL' && !isRef &&/.test(pc),
     '阻断条件必须排除参照行：否则候选被"在位包是红的"连坐 ⇒ 任何换包都只能靠 --force（主语错位）');
-  ok(gd.indexOf("const st = unrun ? 'UNRUN'") >= 0, 'gate-drafts 必须支持 UNRUN 第三态（跑不了 / 不可判 ≠ 不合格）');
+  /* v1.5.202：第三态现在**带方向**（`UNRUN:弱|强|缺`）—— 因为处置按方向分，光有"第三态"不够了。 */
+  ok(gd.indexOf("const st = unrun ? ('UNRUN'") >= 0 && gd.indexOf("unrunKind") >= 0,
+    'gate-drafts 必须支持 UNRUN 第三态（跑不了 / 不可判 ≠ 不合格）**且带方向**（弱/强/缺 ⇒ 处置不同）');
+  /* v1.5.202：UNRUN 不再"一律只打印" —— 处置走纯函数、按**方向**分（弱/强/缺）。 */
+  ok(pc.indexOf('unrunDisposition(') >= 0 && pc.indexOf('unrun-policy.mjs') >= 0,
+    'UNRUN 的处置必须是单一来源纯函数（v1.5.202：原来它从不进 fails ⇒ 基线退化的候选可零阻断通过）');
+  ok(g.indexOf("'UNRUN' + (unrunKind") >= 0 && g.indexOf('unrunKind') >= 0,
+    'gate-drafts 必须给 UNRUN 带上**方向**（弱/强/缺）—— 可判窗口把两个相反形状合并了');
   ok(pc.indexOf('gateDrafts.unrun') >= 0 && pc.indexOf('不得当作通过') >= 0,
     'UNRUN 必须被单独收集 + 醒目提示"不得当作通过"（否则它读起来就是"过"）');
   ok(gd.indexOf('最克「${worst[0]}」${worst[1]}%') >= 0,
@@ -6037,6 +6046,32 @@ t('D146 G4 `--force` 越线例外的判定必须是被**覆盖**的纯函数（v
   ok(!g4ExceptionOk('deadbeef', 'p1', old), '无 impl 字段 + 当前实现已变 ⇒ 豁免作废');
   const nt = readFileSync('tools/np-test.mjs', 'utf8');
   ok(nt.indexOf('g4ExceptionOk(curImpl, curPool, g4rec)') >= 0, 'D67 必须调用纯函数（判定的单一来源，不许再抄一份）');
+});
+
+t('D147 UNRUN 必须有**处置语义**且按方向分（v1.5.202）：原来它从不进 fails ⇒ 基线退化的候选可零阻断通过', function () {
+  /* 病（门层审计）：`promote-champion` 把 UNRUN 单独收集、醒目打印"不得当作通过"，却**从不送进 `fails`**
+   * ⇒ 一个"基线退化、整格不可判"的候选能零阻断通过，全靠一句 print 兜着，而门只钉了那句话的**文本**。
+   * 但不能无脑阻断：G4 的可判窗口 [8%,32%] 把两个**相反**方向合并了 ——
+   *   `base.win < 8%` ⇒ 候选压着克制表打（**强包**形状，阻断它会把最强的候选挡在门外）；
+   *   `base.win > 32%` ⇒ 候选打不过最弱的克制脚本（**真缺陷**被"不可判"这个措辞盖住了）。
+   * ⇒ 弱 = 只记录；强 / 缺 = 阻断；参照行与参照行的 FAIL 同待遇（只记录）。 */
+  eq(unrunDisposition(UNRUN_KINDS.WEAK, false).blocking, false, '基线太弱（候选压着克制表打）⇒ 只记录（否则会把最强候选挡掉）');
+  eq(unrunDisposition(UNRUN_KINDS.STRONG, false).blocking, true, '基线太强（候选打不过最弱脚本）⇒ 必须阻断');
+  eq(unrunDisposition(UNRUN_KINDS.MISSING, false).blocking, true, '读不出基线 ⇒ 未知，保守判红（同 audit-lib 探针缺失守卫）');
+  eq(unrunDisposition(null, false).blocking, true, '未知种类（旧格式）⇒ 保守判红');
+  eq(unrunDisposition(UNRUN_KINDS.STRONG, true).blocking, false, '**参照行**的 UNRUN 与参照行的 FAIL 同待遇：只记录、不阻断');
+  eq(unrunDisposition(UNRUN_KINDS.WEAK, true).blocking, false, '参照行 + 弱 ⇒ 同样只记录');
+  /* 静态：三处必须真的接通（出方向 / 按方向判 / 不再是"一律只打印"） */
+  const g3 = readFileSync('tools/gate-drafts.mjs', 'utf8');
+  const pc3 = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(g3.indexOf("'弱' ") >= 0 && g3.indexOf('unrunKind') >= 0, 'gate-drafts 必须算出方向（弱/强/缺）');
+  ok(pc3.indexOf('uD.blocking') >= 0 && pc3.indexOf('unrunDisposition(') >= 0, 'promote 必须按方向把阻断项送进 fails');
+  /* v1.5.202：**被打穿**必须优先于**不可判** —— 否则真 FAIL 会被 UNRUN 盖住。
+   * 实测（本轮扫 12 个真实候选）：`v7xn8c-31-band4` 的 multi 格最克脚本 **65% > 60%**（真 FAIL），
+   * 却因为**基线那格**退化（0%）而整格报 UNRUN ⇒ 旧口径下它零阻断通过。 */
+  ok(g3.indexOf('const hardFail = worst[1] > G4_MAX;') >= 0 && g3.indexOf('const isUnrun = !hardFail && !judgeable;') >= 0,
+    '被打穿必须优先于不可判（UNRUN 不许盖住真 FAIL）');
+  ok(pc3.indexOf('【阻断】') >= 0 && pc3.indexOf('【只记录】') >= 0, '输出必须能分辨「阻断」与「只记录」，不许含糊成一句「不得当作通过」');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>

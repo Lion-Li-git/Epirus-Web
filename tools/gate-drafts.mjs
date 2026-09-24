@@ -141,12 +141,17 @@ const out = [];
  * 为什么必须分开：v1.5.78 的病根是"把没跑/没判的当成过了"。用一个 FAIL 去表达"不可判"同样有害 ——
  * 它会把"量具没量出来"伪装成"候选不合格"，而 promote-champion 只认 FAIL ⇒ 两者被读成同一个结论。
  * 与 `audit-lib.seatSymmetry` 的 underpowered 第三态同一套规矩。 */
-function gate(name, pass, detail, unrun) {
-  const st = unrun ? 'UNRUN' : (pass ? 'PASS' : 'FAIL');
-  out.push({ name: name, pass: !!pass, unrun: !!unrun, detail: detail });
+/* v1.5.202：UNRUN 必须带**方向**。可判窗口 [8%,32%] 把两个相反的形状合并了：
+ *   base.win < 8%  ⇒ 候选压着克制表打（**强包**，不是缺陷）
+ *   base.win > 32% ⇒ 候选打不过最弱的克制脚本（**真缺陷**被"不可判"盖住）
+ *   读不出         ⇒ 未知
+ * 处置（哪个方向阻断）见 \`tools/unrun-policy.mjs\`：**弱 = 只记录；强 / 缺 = 阻断**。 */
+function gate(name, pass, detail, unrun, unrunKind) {
+  const st = unrun ? ('UNRUN' + (unrunKind ? ':' + unrunKind : '')) : (pass ? 'PASS' : 'FAIL');
+  out.push({ name: name, pass: !!pass, unrun: !!unrun, unrunKind: unrunKind || null, detail: detail });
   console.log('  ' + st + '  ' + name + '\n        ' + detail);
 }
-const statusOf = function (g) { return g.unrun ? 'UNRUN' : (g.pass ? 'PASS' : 'FAIL'); };
+const statusOf = function (g) { return g.unrun ? ('UNRUN' + (g.unrunKind ? ':' + g.unrunKind : '')) : (g.pass ? 'PASS' : 'FAIL'); };
 
 console.log('=== G1 探针判别力（元测试：测量工具本身能不能区分"会瞄"与"仪式"）===');
 {
@@ -322,18 +327,30 @@ for (const [nm, p] of PACKS) {
     const cells = Object.keys(COUNTERS).map(function (k) { return [k, duel(p, COUNTERS[k], mode, N4, 90210).win]; });
     const worst = cells.reduce(function (a, b) { return b[1] > a[1] ? b : a; });
     const judgeable = base.win >= 8 && base.win <= 32;
+    /* v1.5.202：不可判时还要说清**往哪个方向**不可判（弱 / 强 / 缺），因为处置不同。 */
+    const unrunKind = judgeable ? null : (!isFinite(base.win) ? '缺' : (base.win < 8 ? '弱' : '强'));
+    /* v1.5.202：「被打穿」与「不可判」是两件事，且不互斥 —— 被打穿优先（headline 不依赖基线可判性）。 */
+    const hardFail = worst[1] > G4_MAX;
+    const isUnrun = !hardFail && !judgeable;
     /* v1.5.89②：把**最克那一格**写进标题（原先只在 detail 里）。动机：promote-champion 只解析
      * `PASS/FAIL <标题>` 这一行 ⇒ 标题里只有基线时，判词读起来像"这条过了"（实测时连作者都被它误导），
      * 而"为什么红"完全看不见 —— 判词必须与被判的那一格绑在一起。 */
     gate(`G4[${nm}/${mode}] 无一行脚本能以 >${G4_MAX}% 击败它（最克「${worst[0]}」${worst[1]}% · 基线 ${base.win}%/${N4}局）`,
-      judgeable && worst[1] <= G4_MAX,
-      `基线 ${base.win}%（${judgeable ? '可判' : '⚠️ 不可判：harness 基线异常 ⇒ 本格 UNRUN，**不得当作通过**'}）  各格 ` +
+      /* v1.5.202：**先判「被打穿」、再判「不可判」**。原来 `!judgeable` 会让整格变 UNRUN，
+       * 连 `worst[1] > G4_MAX`（被某一行脚本打穿）也被盖成「不可判」—— 实测 `v7xn8c-31-band4` 就是：
+       * 它 multi 格的最克脚本 65% > 60%（真 FAIL），却因为**基线那格**退化而整格报 UNRUN ⇒ 零阻断通过。
+       * 最克那一格的读数**与基线可判性无关** ⇒ 它才是唯一的 headline。 */
+      !hardFail,
+      `基线 ${base.win}%（${hardFail ? '⚠️ 已被打穿（这一格 >60%）—— 与基线可判性无关' : (judgeable ? '可判'
+        : (unrunKind === '弱' ? '⚠️ 不可判：基线 <8% ⇒ 候选**压着克制表打**（强包形状，只记录、不阻断）'
+          : unrunKind === '强' ? '⚠️ 不可判：基线 >32% ⇒ 候选**打不过最弱的克制脚本**（真缺陷 ⇒ **阻断**）'
+            : '⚠️ 不可判：读不出基线（探针缺失 / NaN）⇒ 未知 ⇒ **阻断**'))}）  各格 ` +
       cells.map(function (c) { return c[0] + ' ' + c[1] + '%'; }).join(' · ') +
       `   ⇒ 最克它的脚本：「${worst[0]}」${worst[1]}%` +
-      (judgeable && worst[1] > G4_MAX ? `   ⇒ **红的理由**：这一格 ${worst[1]}% > ${G4_MAX}%` : '') +
+      (hardFail ? `   ⇒ **红的理由**：这一格 ${worst[1]}% > ${G4_MAX}%` : '') +
       (judgeable && worst[1] <= G4_MAX && worst[1] > G4_IDEAL
         ? `   ⚠️ 过闸，但**距理想线 ${G4_IDEAL}% 还差 ${worst[1] - G4_IDEAL}pt**（这里不是"已达理想"）` : ''),
-      !judgeable);
+      isUnrun, isUnrun ? unrunKind : null);
   }
 }
 

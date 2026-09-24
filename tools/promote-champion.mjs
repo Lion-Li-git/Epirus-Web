@@ -18,6 +18,8 @@
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+/* v1.5.202：UNRUN 的**处置**（哪个方向阻断）是单一来源纯函数 ⇒ 门可以喂合成输入验它。 */
+import { unrunDisposition, UNRUN_KINDS } from './unrun-policy.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
@@ -331,8 +333,22 @@ if (!process.argv.includes('--skip-gate-drafts')) {
     for (const ln of outTxt.split('\n')) {
       /* v1.5.89③：`UNRUN` = 该格**跑不了 / 不可判**（量具自己报的第三态，见 gate-drafts 的 gate()）。
        * 它既不是 FAIL、更不是 PASS ⇒ 单独收集并**醒目打印**（"不得当作通过"）。 */
-      const mu = /^\s*UNRUN\s+(G[3-6][^\n]*)$/.exec(ln);
-      if (mu) { gateDrafts.unrun.push(mu[1].trim()); continue; }
+      /* v1.5.202：UNRUN 现在带**方向**（\`UNRUN:弱|强|缺\`）。处置不再"一律只打印" ——
+       * 原来它 \`continue\` 掉了、从不进 \`fails\` ⇒ 一个"基线退化、整格不可判"的候选可以**零阻断**通过，
+       * 全靠一句 print 兜着（而门只钉了那句话的文本）。但也不能无脑阻断：**弱**方向是强包的形状
+       * （候选压着克制表打），阻断它会把最强的候选挡在门外。处置表见 \`tools/unrun-policy.mjs\`。 */
+      const mu = /^\s*UNRUN(?::(\S+))?\s+(G[3-6][^\n]*)$/.exec(ln);
+      if (mu) {
+        const uKind = mu[1] || null, uName = mu[2].trim();
+        const uIsRef = /^G[3-6]\[(线上包|元测试)/.test(uName);
+        const uD = unrunDisposition(uKind, uIsRef);
+        if (uD.blocking) {
+          gateDrafts.blocking.push(uName);
+          fails.push('行为门不可判且按判红处置（UNRUN:' + (uKind || '?') + '）：' + uName + ' —— ' + uD.why);
+        }
+        gateDrafts.unrun.push((uD.blocking ? '【阻断】' : '【只记录】') + 'UNRUN:' + (uKind || '?') + ' ' + uName + ' —— ' + uD.why);
+        continue;
+      }
       const m = /^\s*(PASS|FAIL)\s+(G[3-6][^\n]*)$/.exec(ln);
       if (!m) continue;
       const nm = m[2].trim();
@@ -380,8 +396,10 @@ if (!process.argv.includes('--skip-gate-drafts')) {
         '不是"候选不行"。为了它去 --force 越过候选门是搞错了主语。\n      ' + refFails.join('\n      '));
     }
     if (gateDrafts.unrun.length) {
-      console.log('   ⛔ **不得当作通过**：' + gateDrafts.unrun.length + ' 格 UNRUN（量具跑不了 / 不可判）：\n      ' +
-        gateDrafts.unrun.join('\n      '));
+      const uBlock = gateDrafts.unrun.filter(function (x) { return x.indexOf('【阻断】') === 0; }).length;
+      console.log('   ⛔ UNRUN（量具跑不了 / 不可判）' + gateDrafts.unrun.length + ' 格，其中**阻断** ' + uBlock + ' 格：\n      ' +
+        gateDrafts.unrun.join('\n      ') +
+        (uBlock ? '' : '\n      （剩下的都是"基线太弱 ⇒ 候选压着克制表打"或参照行 ⇒ 只记录、不阻断）'));
     }
     console.log('   G6 靶向率（只记录不阻断）：' + JSON.stringify(gateDrafts.g6));
   } catch (e) {
