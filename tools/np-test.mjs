@@ -1458,7 +1458,11 @@ t('D58 L7 第七处：候选枚举顺序必须无身份（镜像对称 + 5 席�
     if (lm) liveParams = Pol.unpack(JSON.parse(lm[1]), true);
   } catch (e) { liveParams = null; }
   if (!liveParams) {
-    console.log('  （跳过 5 席通吃统计：线上包此刻不可读，多半是训练中——D16 有同一守卫）');
+    /* v1.5.201（门层审计 D58/D59）：**不可判必须红** —— 静默跳过等于把这条测量关掉，
+     * 而汇总仍显示全绿（"190/190"里完全看不见）。它守的正是"5 席通吃"这个产品级退化。 */
+    ok(false, '线上多人包必须可读（不可判 = 红，不允许静默跳过）：' +
+      (existsSync('js/bundled-champion-3p.js') ? '文件在但解析失败' : '文件不存在') +
+      ' —— 训练进行中请先停训练再跑门禁');
   } else {
     const win2 = [0, 0, 0, 0, 0];
     let dec = 0;
@@ -1504,7 +1508,10 @@ t('D59 阈值式座位惩罚必须真的在 fit 里（让演化"看得见"偏置
     if (lm2) live = Pol.unpack(JSON.parse(lm2[1]), true);
   } catch (e) { live = null; }
   if (!live) {
-    console.log('  （跳过座位分布统计：线上包此刻不可读，多半是训练中）');
+    /* v1.5.201：同 D58 —— 这条是守 v1.5.114 "43pt 红"的哨兵，不许在读不出包时变成一句打印。 */
+    ok(false, '线上多人包必须可读（不可判 = 红，不允许静默跳过）：' +
+      (existsSync('js/bundled-champion-3p.js') ? '文件在但解析失败' : '文件不存在') +
+      ' —— 训练进行中请先停训练再跑门禁');
   } else {
     const mh = T.mirrorHealth(live, SEAT_N, 5, 'multi');
     ok(Array.isArray(mh.seatWins) && mh.seatWins.length === 5, 'mirrorHealth 必须回报 5 个座位的胜场');
@@ -2688,9 +2695,15 @@ t('D45 全息屏障候选**不得含幻影"自己"**（这张卡本来就不能�
    * （实测被选中 35/330 次，每次都给训练喂错误归因）。修法=只给真实对手。 */
   const pol = readFileSync('js/train/policy.js', 'utf8');
   ok(pol.indexOf("def.target === 'other'") >= 0, 'candidatesFor 必须有 target:other 分支');
-  ok(pol.indexOf('幻影选项') >= 0, '必须留下"为什么删掉自己"的理由（防后人又加回来）');
+  /* v1.5.201（审计 D45）：原来这两条钉的是**注释文本**（policy.js 的「幻影选项」、resolve.js 的「自己给自己套不算」）
+   * —— 注释一改就红，而它描述的 bug 完全可以在注释仍在的情况下复活。改成**行为断言**：直接枚举候选。
+   * 判据 = 候选里不许出现 target==null（引擎会把 null 退成"第一个存活对手" ⇒ 送盾给别人却按"给自己"归因）。 */
+  const st45 = S.createState('multi', { next: function () { return 0.5; } }, 5);
+  const holo45 = Pol.candidatesFor(st45, 0, [{ key: R.SK.HOLO }]);
+  eq(holo45.length, S.opponentsOf(st45, 0).length, '全息屏障候选数必须等于存活对手数（一人一个真实对手）');
+  eq(holo45.filter(function (x) { return x.target == null; }).length, 0,
+    '全息屏障候选里**不许有自己的幻影选项**（target=null ⇒ 引擎退成「第一个存活对手」，归因全错）');
   const res = readFileSync('js/core/resolve.js', 'utf8');
-  ok(res.indexOf('自己给自己套不算') >= 0, '引擎的"不能给自己"语义必须仍在（holoShieldFrom）');
   ok(res.indexOf('const hDecl = targetOf') < 0, 'v1.5.34 那个"无目标=自己"的特例必须已撤销');
 });
 
@@ -2814,6 +2827,22 @@ t('D60 场B 判据只认清场数，胜率是规则红利（复核 §2-1）', fu
   eq(bad.fieldBClears, 0, 'fieldBClears 必须照实记录');
 });
 
+/* v1.5.201：按**配对花括号**取函数体，取代"锚点 + 固定字符窗"（D61/D73 的老毛病：
+ * 代码只要挪出窗口，报错就读成"实现错了"，而真相是"实现搬了"）。
+ * 假设：函数体里的花括号不被字符串/模板字面量包着（audit-lib 的 feasibilityOf 满足）。 */
+function fnBody(src, anchor) {
+  const i = src.indexOf(anchor);
+  if (i < 0) return '';
+  const b = src.indexOf('{', i);
+  if (b < 0) return '';
+  let d = 0;
+  for (let j = b; j < src.length; j++) {
+    if (src[j] === '{') d++;
+    else if (src[j] === '}') { d--; if (d === 0) return src.slice(i, j + 1); }
+  }
+  return src.slice(i);
+}
+
 t('D61 五道门槛是单一真源：落盘处与出厂换包都必须走 feasibilityOf（复核 §4-6）', function () {
   const srv = readFileSync('server/train-server.mjs', 'utf8');
   const pro = readFileSync('tools/promote-champion.mjs', 'utf8');
@@ -2824,7 +2853,10 @@ t('D61 五道门槛是单一真源：落盘处与出厂换包都必须走 feasib
   ok(pro.indexOf('meta.feasibility') >= 0, '出厂包必须把可行性记录写进 meta');
   /* 阈值必须在 lib 里，且五道齐全（搬运时漏一条 = 静默放宽） */
   const i0 = lib.indexOf('export function feasibilityOf(');
-  const seg = i0 >= 0 ? lib.slice(i0, i0 + 4000) : '';
+  /* v1.5.201（审计 D61）：原来是"锚点 + 固定 4000 字符窗"。实测最远的钉点离锚 2114 字符，
+   * 余量只剩 ~1.9KB —— 代码一挪出窗口，红出来的信息会读成"实现错了"，而真相是"实现搬了"。
+   * 改成按**配对花括号**取整个函数体（fnBody），阈值还在不在就是"在不在这个函数里"。 */
+  const seg = fnBody(lib, 'export function feasibilityOf(');
   ok(seg.length > 0, '必须能定位 feasibilityOf 的实现段');
   ok(seg.indexOf('clearedPerGame) < 0.3') >= 0, '五道之一：场B 清场 < 0.3/局');
   ok(seg.indexOf('atk) < 0.20') >= 0, '五道之二：场A 还手 < 20%');
@@ -3203,7 +3235,11 @@ t('D73 落盘阻断开关：EPIRUS_FEASIBILITY_BLOCK=1 时不可行候选不写�
   /* ⚠ 用"就近"判定：文件里 writeBundleMP 出现**两次**（2P 路径也有一处）——
    * 我第一版拿全局 indexOf 比大小，被前面那一处骗红（同 D72 的教训：锚点/位置判定要就近）。 */
   ok(i > 0, '必须有落盘阻断判断');
-  ok(src.slice(i, i + 1500).indexOf('writeBundleMP(pack') >= 0, '阻断判断必须紧邻 writeBundleMP（在其之前，否则写了再拦等于没拦）');
+  /* v1.5.201（审计 D73）：原来切 1500 字符窗 —— 窗口一挪空，报错读成「阻断逻辑放错地方」，
+   * 而真相多半是"代码被搬远/被注释掉了"。改成**就近判据**：锚点之后的第一次落盘调用。 */
+  const jW = src.indexOf('writeBundleMP(pack', i);
+  ok(jW > i && (jW - i) < 4000, '阻断判断必须紧邻 writeBundleMP（在其之前，否则写了再拦等于没拦）—— ' +
+    '若这条红了但代码确实在附近，先怀疑「它被搬远了/被注释了」，别当成阈值写错（实测距离 ' + (jW - i) + ' 字符）');
   ok(src.indexOf('feasibility: feasibleInfo') >= 0, '可行时仍要把结论写进产物 meta（可追溯）');
 });
 
@@ -3496,12 +3532,22 @@ t('D82 记账纪律：24 小时内落盘的 .bak 必须在 CHANGELOG 里被点�
   const cutoff = Date.now() - 24 * 3600 * 1000;
   const fresh = readdirSync(dir).filter(function (f) { return /\.bak$/.test(f); })
     .filter(function (f) { return statSync(dir + '/' + f).mtimeMs >= cutoff; });
-  if (!fresh.length) {
-    /* 没有新产物时这条门不适用；但**不能写恒真断言**（L1 会红 —— 它刚才就抓了我一次）。
-     * 所以这里改成一条**真**的检查：账本本身必须存在且非空。 */
-    ok(cd.length > 1000, 'CHANGELOG 必须非空（它是产物账本；长度 ' + cd.length + '）—— 本时窗内无新产物');
-    return;
-  }
+  /* v1.5.201（门层审计 D82）：原来"时窗内无产物"时退化成 ok(cd.length > 1000)
+   * = "CHANGELOG 大于 1000 字节"（该文件 307KB）—— 一条恒真断言，等于这条门在干净检出上不存在。
+   * 现在**两个方向都查**：① 在场但没点名（下面这一段，原有）；② **点过名却不在场**（这里）。
+   * ② 只认 **显式产物点名行**（`> 产物点名（D82）：a.bak, b.bak`）且只查**最新条目**那一块 ——
+   * 正文里随口提到的文件名不是账本（第一版就是这么误报的：把 v1.5.200 正文里的
+   * `js/bundled-champion.js.bak` 与范围写法 `train-3p-out-band1..6.bak` 都当成了账本条目），
+   * 而历史条目里被清理掉的产物属正常，全查会永久红。
+   * 补这半条的直接起因：本轮我误删了 6 个 09-22「排练臂」产物，整套门禁全绿、没有一条发现。 */
+  const i2 = cd.indexOf('\n## ', 1);
+  const topBlock = i2 > 0 ? cd.slice(0, i2) : cd;
+  const ledLine = (topBlock.match(/^> 产物点名（D82）：(.*)$/m) || [])[1] || '';
+  const namedTop = (ledLine.match(/[A-Za-z0-9_./-]+\.bak/g) || []);
+  const absent = namedTop.filter(function (n) {
+    return !existsSync(n.indexOf('/') >= 0 ? n : (dir + '/' + n));
+  });
+  ok(absent.length === 0, '最新条目的产物点名行点过名、但盘上不在的产物（被删了？改名了？）：' + absent.join(', '));
   const miss = fresh.filter(function (f) { return cd.indexOf(f.replace(/\.bak$/, '')) < 0; });
   ok(miss.length === 0, '这些 24h 内的产物在 CHANGELOG 里查无字（' + fresh.length + ' 个里缺 ' + miss.length + '）：' +
     miss.slice(0, 12).join(', ') + (miss.length > 12 ? ' …' : ''));
@@ -4566,6 +4612,11 @@ t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：�
   }
 });
 
+/* v1.5.201（审计：硬编码复制 D123/D127 各写一遍）：默认关的 CLI 臂产物基线只留**一处**。
+ * 红了 = 默认关的产物变了（那等于偷偷改了所有 CLI 臂的分布）⇒ 先查是不是有意的；
+ * 确认有意要重记，就只改这一行（别再去两个用例里各改一处）。 */
+const CLI_ARM_BASELINE = 'aa743488cc';
+
 t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手池"）：默认关逐位不变 + **判开火计数不判横幅** + 座位不偏置 + 不拿纯攒钱型当陪练', function () {
   /* 四条各钉一类 09-22 实测过的病：
    *  · **默认关 ⇒ 逐位不变**（一次加旋钮不许偷偷挪所有历史臂的评估分布）；
@@ -4622,7 +4673,7 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
   };
   let r = mini({});
   eq(r.status, 0, '默认关必须跑通（实测 exit=' + r.status + '）');
-  eq(wh('docs/artifacts/train-3p-out.js'), 'aa743488cc', '默认关的产物必须与登记基线逐位相同（动了它 = 偷偷改了所有 CLI 臂的分布）');
+  eq(wh('docs/artifacts/train-3p-out.js'), CLI_ARM_BASELINE, '默认关的产物必须与登记基线逐位相同（动了它 = 偷偷改了所有 CLI 臂的分布）');
   /* ④ 行为 · 下达 ⇒ **必须真开火**，且覆盖 ≥2 个受评座位（判计数，不判横幅） */
   r = mini({ EPIRUS_KILL_FIELD: '0.2' });
   const so = String(r.stdout || '');
@@ -4850,7 +4901,7 @@ t('D127 兑现广度（v1.5.167 · §N24 · 用户"G_eff 像刷分"）：mirrorH
   const off = spawnSync(process.execPath, ['tools/train-3p.mjs', '3', '3', '6', '4'],
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127off', EPIRUS_BAND_DIR: dirA }), encoding: 'utf8', timeout: 300000 });
   eq(off.status, 0, '默认关必须跑通');
-  eq(wh('docs/artifacts/train-3p-out.js'), 'aa743488cc', '默认关的产物必须仍是那条基线（动了它 = 所有 CLI 臂的当选规则被偷改）');
+  eq(wh('docs/artifacts/train-3p-out.js'), CLI_ARM_BASELINE, '默认关的产物必须仍是那条基线（动了它 = 所有 CLI 臂的当选规则被偷改）');
   const on = spawnSync(process.execPath, ['tools/train-3p.mjs', '3', '3', '6', '4'],
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127on', EPIRUS_SEL_LAND: '1', EPIRUS_BAND_DIR: dirB }), encoding: 'utf8', timeout: 300000 });
   eq(on.status, 0, '开开关也要跑通');
