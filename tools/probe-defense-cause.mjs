@@ -31,7 +31,9 @@ const BUCKETS = [];
 
 const mul = function (a) { a >>>= 0; return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
 const pct = function (x, n) { return (100 * x).toFixed(1) + '%（n=' + n + '）'; };
+const QUIET = arg('quiet', '') === '1';   // 一粒一行，用于跨包筛（配合 `--sweep`）
 
+const SWEEP = [];
 console.log('# 「攒钱→防御」这条因果，按**对手 ep 分桶**重量（装配：1 席攒钱替身 + 4 席被评包 · ' + GAMES + ' 局 · ' +
   (EPS === 0 ? '评测口径 ε=0' : '产品口径 ε=' + EPS + ' k=' + EPSK + ' ' + EPSMODE) + ' · 只读）');
 console.log('# 桶变量 = **被评席做那次决策的当下**对手手里的 ep（`state.p[0].ep` 实读，**不从事件流重建**）⇒ 这才是这只包"看得见"的钱。');
@@ -157,6 +159,13 @@ for (const f of PACKS) {
   const hi = cells[cells.length - 1], lo = cells[0];
   const rat = function (c) { return c.tot >= 40 ? c.def / c.tot : null; };
   const rh = rat(hi), rl = rat(lo);
+  if (QUIET) {
+    const f1 = function (c) { return c && c.tot >= 40 ? (100 * c.def / c.tot) : NaN; };
+    const r2 = f1(cells[1]), r5 = cells.filter(function (c) { return c.lo === 5; })[0], r10 = cells.filter(function (c) { return c.lo === 10; })[0];
+    SWEEP.push({ pack: f.replace(/^.*\//, '').replace(/\.bak$/, ''), lo: f1(cells[0]), mid: f1(r5), hi: f1(r10),
+      ratio: (isFinite(f1(cells[0])) && f1(cells[0]) > 0 && isFinite(f1(r10) - 0) ? f1(r10) / f1(cells[0]) : NaN),
+      maxRun: maxRunAll, run3: 100 * gamesWithRun3 / GAMES, tot: cells.reduce(function (a, c) { return a + c.tot; }, 0) });
+  }
   console.log('   ⇒ 判读：' + (rh == null || rl == null
     ? '**分母不足**（高桶或低桶 n<40）⇒ 这条因果**没量到**，不是"没有因果"'
     : (rh >= 2 * Math.max(rl, 0.001) ? '高 ep 桶设防率是低桶的 ' + (rh / Math.max(rl, 1e-9)).toFixed(1) + ' 倍 ⇒ **用户说的方向成立**'
@@ -164,4 +173,22 @@ for (const f of PACKS) {
   const rdGap = (hi.rdN && lo.rdN) ? Math.abs(hi.rdSum / hi.rdN - lo.rdSum / lo.rdN) : 1e9;
   console.log('   ⚠️ 单跑这一档**答不了因果**：本档里 ep 与回合号是同一条轴（最高桶与最低桶的平均回合差 ' + (rdGap >= 1e8 ? '—（分母不足）' : rdGap.toFixed(1)) + ' 回合）。' +
     '⇒ 判"是不是因为对方有钱"要看上面那条**按回合号的曲线**，并与另一档（`--saver=cycle`：钱被压住）在**同一回合号**上对照。');
+}
+
+if (QUIET && SWEEP.length) {
+  /* 跨包筛：**按"响应倍差"降序**（倍差 = `ep≥10` 设防率 / `ep0~1` 设防率，只看两桶分母都 ≥40 的）
+   * ⇒ 倍差大 = 会因对方有钱而转防（v1.5.210 那粒候选的病）；倍差≤1 且连防短 = 无此响应 */
+  SWEEP.sort(function (a, b) { return (b.ratio || 0) - (a.ratio || 0); });
+  console.log('\n## 跨包筛（' + SWEEP.length + ' 粒 · ' + GAMES + ' 局/粒 · saver=' + SAVER + ' · 按"有钱→转防"倍差降序）');
+  console.log('   包'.padEnd(24) + 'ep0~1'.padStart(8) + 'ep5~9'.padStart(8) + 'ep≥10'.padStart(8) + '倍差'.padStart(7) + '连防'.padStart(6) + '≥3连%'.padStart(8) + '  备注');
+  for (const r of SWEEP) {
+    const num = function (x) { return isFinite(x) ? x.toFixed(1) + '%' : '—'; };   // f1 已经是百分数，别再乘 100
+    console.log('   ' + r.pack.slice(0, 22).padEnd(23) + num(r.lo).padStart(8) + num(r.mid).padStart(8) + num(r.hi).padStart(8) +
+      (isFinite(r.ratio) ? r.ratio.toFixed(2) : '—').padStart(7) + String(r.maxRun).padStart(6) + r.run3.toFixed(0).padStart(7) +
+      '   ' + (isFinite(r.ratio) && r.ratio >= 2 && r.hi >= 0.2 ? '⚠ 有钱→转防' : (isFinite(r.ratio) && r.ratio >= 1.5 ? '轻微' : '无响应')));
+  }
+  const bad = SWEEP.filter(function (r) { return isFinite(r.ratio) && r.ratio >= 2 && r.hi >= 20; });
+  console.log('   ⇒ ' + bad.length + '/' + SWEEP.length + ' 粒有"对手有钱→转防"的响应（倍差≥2 且高桶设防率≥20%）：' +
+    (bad.length ? bad.map(function (r) { return r.pack + '(' + r.ratio.toFixed(1) + '×)'; }).join('、') : '无'));
+  console.log('   ⚠️ 这张表**不是判据**：它只用来在"过门/破防"之外再筛一遍，最终换槽仍需用户裁定与 `promote --dry` 全套。');
 }
