@@ -5817,6 +5817,15 @@ t('D148 E1/E2 量具 `probe-ep-reach.mjs`（09-24 夜 · 交接 §4）：门槛�
   ok(/ep 支出结构/.test(out) && /ep 收入/.test(out), 'E2 的收支两栏必须在（不然只剩"钱不够"这一种解释）');
   ok(/n=\d+/.test(out), '每个比例必须带 n（交接 §5-5：阈值不写 n 就没有意义）');
   ok(/真放出去|真买了/.test(out), '必须印"真放出去/真买了" —— 只有"买得起 X%"会把"够不着"与"不去"混成一格');
+  /* §E 广度含多少空转：判据必须**来自事件**（写卡名清单必然与引擎的清除清单漂 —— 同 D142 的教训） */
+  ok(p.indexOf("e.type === 'purify' && !e.curses") >= 0 && p.indexOf("'beadExpire'") >= 0 &&
+     p.indexOf("e.reason === '天火'") >= 0,
+    '空转的三类判据必须来自事件（`purify.curses===0` / `beadExpire` / 该回合无 `reason===天火` 的伤害），不许维护第二份卡名清单');
+  const b = spawnSync(process.execPath, ['tools/probe-ep-reach.mjs', '--games=4', '--fields=pool', '--breadth-games=8'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(b.status, 0, '§E 要跑得通（' + String(b.stderr || '').slice(0, 160) + '）');
+  ok(/G 有效技能数：原始 [\d.]+（\d+ 种 \/ \d+ 次非ジ出手） → 扣空转/.test(String(b.stdout)),
+    '§E 必须把"原始 G → 扣空转 G"并排印出来 —— 只印一个数就会让人以为扣空转必然变小（实测 `v7cmin4-82` 扣完从 4.83 **涨**到 5.79）');
   /* ② 空枪检测：--games=0 ⇒ 决策点必为 0 ⇒ 必须非零退出，不许印一排 0% 假装量到了 */
   const zero = spawnSync(process.execPath, ['tools/probe-ep-reach.mjs', '--games=0', '--fields=pool'],
     { encoding: 'utf8', timeout: 300000 });

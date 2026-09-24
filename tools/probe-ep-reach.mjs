@@ -165,5 +165,63 @@ for (const cost of [5, 3, 2]) {
   }
   console.log('  大雷 cost=' + cost + '   ' + line.join('   '));
 }
+/* ===== §E 广度的"含空转"审计（METHODOLOGY 第 51 条留的半成品）=====
+ * 为什么要：`G 有效技能数`/`净兑现` 数的是**非ジ出手**的种类与熵 ⇒ 一次"清除 0 枚"的空净化、一次没人被烧的空天火、
+ *   一次蓄完就过期的空蓄能，**都算一张有效卡**。v1.5.199 挡掉空净化后 `cbs1s2-band2` 的 G 从 3.83 掉到 2.95（跨过广度门），
+ *   说明"广度里含多少空转"不是小数 —— 但总效应不等于归因，这里**按事件逐条剔掉空转**再算一遍，才能分清
+ *   "计数上少一张卡"与"行为真的变窄"。
+ * 空转的判据一律**来自事件**（不写卡名清单）：净化看 `purify.curses===0`、天火看该回合有没有 `reason==='天火'` 的伤害、
+ *   蓄能看 `beadExpire`（珠只活到下一回合，过期即从未被用）。 */
+function breadthAudit(games) {
+  const bs = T.policyChooserN(params, 0.15);
+  const casts = {}, wasted = { 净化: 0, 天火: 0, 蓄能: 0 };
+  let rounds = 0, seatCasts = {};
+  for (let g = 0; g < games; g++) {
+    const seed = SEED0 + g * 7919;
+    const ch = [];
+    for (let pid = 0; pid < N; pid++) ch.push(function (s2, p2, lg) { return bs(s2, p2, lg); });
+    const r = T.oneGameN(ch, seed, N, { mode: MODE });
+    rounds += r.state.round;
+    const fireRounds = {};
+    for (const e of r.state.events) if (e.type === 'damage' && e.reason === '天火') fireRounds[e.round] = (fireRounds[e.round] || 0) + 1;
+    for (const e of r.state.events) {
+      if (e.type === 'action' && e.outcome === 'ok' && e.key !== R.SK.JI) {
+        casts[e.key] = (casts[e.key] || 0) + 1;
+        (seatCasts[e.pid] = seatCasts[e.pid] || {})[e.key] = ((seatCasts[e.pid] || {})[e.key] || 0) + 1;
+      } else if (e.type === 'purify' && !e.curses) wasted.净化++;
+      else if (e.type === 'beadExpire') wasted.蓄能 += (e.n || 1);
+    }
+    /* 天火：出手了但那回合没有任何"天火"伤害 ⇒ 空爆（v1.5.139 的菜单闸应当已挡住 ⇒ 这里也是那道闸的回归哨） */
+    for (const e of r.state.events) {
+      if (e.type === 'action' && e.outcome === 'ok' && e.key === R.SK.FIRESTORM && !fireRounds[e.round]) wasted.天火++;
+    }
+  }
+  const G = function (obj) {
+    const vals = Object.keys(obj).map(function (k) { return obj[k]; });
+    const tot = vals.reduce(function (a, b2) { return a + b2; }, 0);
+    if (!tot) return { g: 0, kinds: 0, n: 0 };
+    let H = 0;
+    for (const c of vals) { const p = c / tot; H -= p * Math.log(p); }
+    return { g: Math.exp(H), kinds: vals.length, n: tot };
+  };
+  /* "扣空转"的口径：把三类恒亏出手按次数从对应卡里减掉（不够减就整张清零）*/
+  const ded = JSON.parse(JSON.stringify(casts));
+  ded[R.SK.PURIFY] = Math.max(0, (ded[R.SK.PURIFY] || 0) - wasted.净化);
+  ded[R.SK.FIRESTORM] = Math.max(0, (ded[R.SK.FIRESTORM] || 0) - wasted.天火);
+  ded[R.SK.CHARGE] = Math.max(0, (ded[R.SK.CHARGE] || 0) - wasted.蓄能);
+  for (const k of Object.keys(ded)) if (!ded[k]) delete ded[k];
+  return { raw: G(casts), clean: G(ded), wasted: wasted, rounds: rounds / games, games: games };
+}
+{
+  const BG = Math.min(Number(arg('breadth-games', 24)), 60);
+  const b = breadthAudit(BG);
+  console.log('\n=== §E 广度里含多少空转（镜像 ' + BG + ' 局 · ' + MODE + ' · 判据全部来自事件）===');
+  console.log('  空转出手：净化 ' + b.wasted['净化'] + ' 次 · 天火 ' + b.wasted['天火'] + ' 次（v1.5.139 的菜单闸应挡到 0）· 蓄能珠过期 ' + b.wasted['蓄能'] + ' 颗');
+  console.log('  G 有效技能数：原始 ' + b.raw.g.toFixed(2) + '（' + b.raw.kinds + ' 种 / ' + b.raw.n + ' 次非ジ出手）' +
+    ' → 扣空转 ' + b.clean.g.toFixed(2) + '（' + b.clean.kinds + ' 种）  ⇒ 虚高 ' +
+    (b.raw.g - b.clean.g).toFixed(2) + '（' + pct(b.raw.g - b.clean.g, Math.max(0.0001, b.raw.g)) + '）· 门线 3.0');
+  console.log('  ⚠️ 门用的是 selfPlay 的 G；这里同一装配两次计数只演示"空转算一张卡"这件事，不改任何门（判据要用户裁定）。');
+  out.push({ breadth: b });
+}
 console.log('# 预注册（跑前写死，见日志 §E1）：`cost=3` 时"翻过门槛"的决策占比仍 **<5%** ⇒ 要动的是收入/支出结构（习惯），不是大雷单价。');
 if (ASJSON) console.log(JSON.stringify({ games: GAMES, mode: MODE, n: N, pack: PACK, fields: out, sweep: sweep }));
