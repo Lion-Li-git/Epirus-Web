@@ -27,7 +27,13 @@
 import { seatSymmetry, rejectUnknownFlags } from './audit-lib.mjs';
 /* 口径搬运**单一来源**：`build()` 来自 `probe-layer-caliber.mjs`（D150 已把"替换/装载逻辑只能活在 build 里"立成门）。
  * 复用方的规矩（照 `probe-breadth-flip.mjs`，门 D150 守着）：**自己文件里不许再写一份"替换写死处 / 装载引擎"的逻辑**。 */
-import { build } from './probe-layer-caliber.mjs';
+import { build, hardwiredLine, srcLine } from './probe-layer-caliber.mjs';
+/* 指针行号现算（不写死）：D149 检查的就是"印出来的行号 = 源码里那一行的真实位置" */
+const LN_SEAT_AL = hardwiredLine('tools/audit-lib.mjs', 'export function seatSymmetry(');
+/* v1.5.237（E28）：`evo.js` 内部那四处两参直调已收成一个漏斗 `trainChooser()` ⇒ 【6】的 ε **决定在漏斗里**，
+ *   而 `mirrorHealth` 自己不再有写死处（行号若还在 mirrorHealth 里找，会读不出 ⇒ 必须指漏斗）。 */
+const LN_EVO_MH = hardwiredLine('js/train/evo.js', 'function trainChooser(');
+const LN_EVO_MH0 = srcLine('js/train/evo.js', 'function mirrorHealth(');
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
 /* v1.5.236（仓规 v1.5.234）：本工具的第【5】【6】条**不吃** `--temp/--eps`（D149 钉的就是这件事），
@@ -196,7 +202,7 @@ if (!(B2.sb.__viaWrapper > 0)) {
   process.exit(9);
 }
 console.log('   （口径搬运自证：`evo.js` 写死处 ' + B2.hardwired + ' 处 → 内存替换 ' + B2.patched + ' 处；`audit-lib` 路径经包装调用 ' + B2.sb.__viaWrapper + ' 次）');
-console.log('   ⚠️ `seatSymmetry`（audit-lib.mjs:403）内部写死 `policyChooserN(params, 0.15)`（ε=0）⇒「ε=0」那行是它的**原生**口径；');
+console.log('   ⚠️ `seatSymmetry`（audit-lib.mjs:' + (LN_SEAT_AL || '行号读不出') + '）内部写死 `policyChooserN(params, 0.15)`（ε=0）⇒「ε=0」那行是它的**原生**口径；');
 console.log('      「产品」那行靠 `build({on:true})` 把沙箱里的 `EpirusTrainer.policyChooserN` 包一层实现（与门禁口径**故意不同**：门禁仍用 ε=0）。');
 
 console.log('\n【6】广度当约束不当目标 —— 阈值：净兑现 G≥3 且 ≥4 种打上血 · v1.5.223 起**两口径并列**');
@@ -212,7 +218,7 @@ console.log('\n【6】广度当约束不当目标 —— 阈值：净兑现 G≥
   const a = show('ε=0 ', A.sb), b = show('产品', B2.sb);
   console.log('   ⇒ 两口径差：净兑现 G ' + f2(a.effSkillsLand) + ' → ' + f2(b.effSkillsLand) +
     ' · 打上血的卡 ' + (a.landedKeys != null ? a.landedKeys : 0) + ' → ' + (b.landedKeys != null ? b.landedKeys : 0) + ' 种');
-  console.log('   ⚠️ `mirrorHealth`（evo.js:2530 起，写死处 evo.js:2554）内部同样写死 ε=0 ⇒ **训练侧健康门槛与体检 G 列都是 ε=0 口径**。');
+  console.log('   ⚠️ `mirrorHealth`（evo.js:' + (LN_EVO_MH0 || '行号读不出') + ' 起）建 Chooser 走漏斗 `trainChooser()`（写死处 evo.js:' + (LN_EVO_MH || '行号读不出') + '）⇒ **训练侧健康门槛与体检 G 列都是 ε=0 口径**。');
 }
 
 console.log('\n【7】不要的两条');

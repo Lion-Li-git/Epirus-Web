@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { parsePairTable } from './defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
+import { makeGuardCost } from './guard-cost-lib.mjs';   /* D161 用：直接对库做单元级判定（不靠探针的输出措辞） */
+import { hardwiredLine } from './probe-layer-caliber.mjs';   /* D149 用：指针行号从源码现算（钉死数字会在别人插一行后变成假行号） */
 /* v1.5.225（用户批准方案 a）：确定性重活的**内容寻址缓存** —— 键 = argv + EPIRUS_* env + 源码树内容。
  * 只缓存 (status, stdout, stderr)，**断言照旧跑**；命中响亮打印；`NP_NOCACHE=1` 一律真跑。
  * ⚠️ 只许缓存"断言只用 stdout/status"的子进程（前置要求见 tools/np-cache.mjs 头注）。
@@ -5866,9 +5868,14 @@ t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、�
     '第二口径必须复用 build()（D150 的单一来源），不许自建第二份"替换/装载"');
   ok(/B2\.patched !== B2\.hardwired/.test(p) && /__viaWrapper > 0/.test(p),
     '搬运必须**两半自证**（替换数 = 源码现算数；包装层真被调用）—— 否则"两栏相同"会被误读成"口径无关"');
-  const seg5 = p.slice(i5, i6), seg6 = p.slice(i6, i7);
-  ok(/audit-lib\.mjs:403/.test(seg5) && /产品/.test(seg5), '【5】必须指到 seatSymmetry 的写死处，并印出**产品口径**那一列');
-  ok(/evo\.js:2554/.test(seg6) && /产品/.test(seg6), '【6】必须指到 mirrorHealth 的写死处（行号要实测，别抄注释），并印出**产品口径**那一列');
+  /* 指针行号**从源码现算**（原来门钉的是探针**源码里**的字面量 `403`/`2554` ⇒ 谁在它们上面插一行，
+   *   探针印的就是假行号而门仍绿；这正是 METHODOLOGY 52 那族"冻结的期望值"）。
+   *   改判法：不查源码字面，改查**输出里印出来的行号 == 源码现算的行号**（见下面 o5/o6 那两条）。 */
+  const LN_AL = hardwiredLine('tools/audit-lib.mjs', 'export function seatSymmetry(');
+  const LN_MH = hardwiredLine('js/train/evo.js', 'function trainChooser(');
+  ok(LN_AL != null && LN_MH != null, '两处 ε 决定点必须还能从源码定位到（定位不到 ⇒ 探针的口径警示会印"行号读不出"，本门判红）');
+  ok(/function mirrorHealth\([\s\S]{0,9000}?\btrainChooser\(params\)/.test(readFileSync('js/train/evo.js', 'utf8')),
+    '【6】的 ε 现在决定在漏斗 `trainChooser()` 里 ⇒ 必须真看到 `mirrorHealth` 通过漏斗建 Chooser（v1.5.237 E28 把四处收成一处；漏斗若被拆回四处，本门红着提醒去重钉指针）');
   /* v1.5.224：spawn 用**门禁专用小样本档**（座位 60/120、广度 120）—— 门只要"两列都在且不同"，
    * 不需要报告里那个 n（座位 100+400、广度 400 ⇒ 这一段让本门吃 46.5 秒、是整支门禁最慢的一道）。
    * 两次 spawn 必须传**同一组**档位，否则下面"逐字相同"那条对照就不成立了。 */
@@ -5882,6 +5889,10 @@ t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、�
   const o5 = out.slice(out.indexOf('【5】'), out.indexOf('【6】')), o6 = out.slice(out.indexOf('【6】'), out.indexOf('【7】'));
   ok(/ε=0/.test(o5) && /产品/.test(o5), '【5】输出里必须两口径都看得见（ε=0 与产品）');
   ok(/ε=0/.test(o6) && /产品/.test(o6), '【6】输出里必须两口径都看得见（ε=0 与产品）');
+  ok(new RegExp('audit-lib\\.mjs:' + LN_AL + '(?!\\d)').test(o5),
+    '【5】输出里必须指到 seatSymmetry 的写死处，且**行号 = 源码现算的 ' + LN_AL + '**（印死数字会在别人插一行后撒谎）');
+  ok(new RegExp('evo\\.js:' + LN_MH + '(?!\\d)').test(o6),
+    '【6】输出里必须指到 ε 的决定点（现算行号 = 漏斗 `trainChooser()` 的 ' + LN_MH + '）—— 印死数字会在别人插一行后变成假行号');
   ok(/口径搬运自证/.test(out) && /经包装调用 \d+ 次/.test(out),
     '自证两半必须**打印出来**（现算数量 + 经包装次数）—— 源码里有、输出里没有就等于没自证');
   const r2 = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8', '--seat-n=60,120', '--mirror-n=120'],
@@ -5932,8 +5943,11 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
    * v1.5.223：复用方从 1 个扩到 2 个 —— 理想冠军 7 条量具也要读产品口径的【5】【6】。 */
   for (const rf of ['tools/probe-breadth-flip.mjs', 'tools/probe-ideal-champion.mjs']) {
     const rfSrc = readFileSync(rf, 'utf8');
-    ok(/from '\.\/probe-layer-caliber\.mjs'/.test(rfSrc) && /import \{ build \}/.test(rfSrc),
-      '`' + rf + '` 必须 import `build`（搬运手法单一来源）');
+    /* 语义判定（原来钉的是 `import { build }` 这个**精确形状** ⇒ 复用方一旦同时要第二个 helper，
+     *   合法改动就把本门打红；D152/D159 同一族教训）。现在判的是"从那个模块导入的名单里含 build"。 */
+    const imp = /import\s*\{([^}]*)\}\s*from\s*'\.\/probe-layer-caliber\.mjs'/.exec(rfSrc);
+    ok(!!imp && (imp[1].split(',').map(function (s) { return s.trim(); }).indexOf('build') >= 0),
+      '`' + rf + '` 必须从 `probe-layer-caliber.mjs` 导入 `build`（搬运手法单一来源）');
     ok(!/HARDWIRED/.test(rfSrc) && !/vm\.runInNewContext/.test(rfSrc),
       '复用方不许在自己文件里再写一份"替换/装载"逻辑（`HARDWIRED`/`runInNewContext` 都只能活在 `build` 里）：' + rf);
   }
@@ -6136,6 +6150,134 @@ t('D160 探针的参数守卫：接过的不许掉、位置要对、且不许误
     .filter(function (f) { return GUARDED.indexOf(f.replace(/\.mjs$/, '')) < 0; })
     .filter(function (f) { const s = readFileSync('tools/' + f, 'utf8'); return /arg\('/.test(s) && !/rejectUnknownFlags/.test(s); });
   console.log('   ℹ️ 另有 ' + rest.length + ' 个读 `--参数` 的工具尚未接守卫（**只记录不阻断**，各归其 owner）：' + (rest.join('、') || '无'));
+});
+
+t('D161 「防御定价」量具必须自带三把自检：零价档逐字等于对照 · 重价档不许读成空枪 · 补丁真打进**内部调用点**（v1.5.237 · E23 那三个假读数换来的）', function () {
+  /* 这道门钉的是**量具**，不是任何一条实验结论。三个假读数都真实发生过（见 RESEARCH-LOG 09-26 §E23）：
+   *   ① `Number(o.cost || 1)` 把 `--cost=0` 静默变成 1ep ⇒ "零价对照档"根本不存在（同族：v1.5.174 的 `|| 1` 让 0 关不掉）；
+   *   ② 空枪判据写成 `billed===0` ⇒ `cost=99`（防御被整条摘光、一分钱没扣）会被自己的自检判成"读数作废"；
+   *   ③ route ②（只包属性层）打不进 `mirrorHealth` 的内部闭包调用 ⇒ 强度栏三档"逐字相同"，看着像"定价不影响强度"。
+   * 全部**真跑 + 语义比较**，不钉探针的措辞（D152/D159 的教训）。 */
+  const DEFK = Object.keys(R.byKey).find(function (k) { return R.byKey[k] && R.byKey[k].cat === R.CAT.DEFENSE; });
+  const ATKK = Object.keys(R.byKey).find(function (k) { return R.byKey[k] && R.byKey[k].cat !== R.CAT.DEFENSE; });
+  ok(!!DEFK, '规则表里必须至少有一张 DEFENSE 族卡（这道门的载体）');
+
+  /* ① 零价不许被吞 */
+  eq(makeGuardCost(R, S, { mode: 'L2', cost: 0 }).stat.cost, 0, '`cost:0` 必须真的是 0（`|| 1` 会把零价对照档变成 1ep 档）');
+  /* 对照组不许套壳：`off` 档与"不打补丁"必须是**同一个函数对象**，否则"对照"二字是假的 */
+  { const f = function () { return 0; }; eq(makeGuardCost(R, S, { mode: 'off' }).wrapOne(f), f, '`off` 档必须原样返回传入的决策者（对照组不许被包一层）'); }
+
+  /* ② 事前摘菜单 + 真选了才扣 */
+  {
+    const gc = makeGuardCost(R, S, { mode: 'L2', cost: 2 });
+    const st = { p: [{ ep: 5 }] };
+    const pick = gc.wrapOne(function (s2, i2, lg) { return lg[0]; })(st, 0, [{ key: DEFK }, { key: ATKK }]);
+    eq(pick.key, DEFK, '付得起时防御不许被摘');
+    eq(st.p[0].ep, 3, '选了防御必须真扣到钱（5 − 2 = 3）');
+    eq(gc.stat.billed, 1, '`billed` 计一次');
+    eq(gc.stat.epTaken, 2, '`epTaken` 计 2ep');
+  }
+  {
+    const gc = makeGuardCost(R, S, { mode: 'L2', cost: 99 });
+    const st = { p: [{ ep: 0 }] };
+    let saw = null;
+    const pick = gc.wrapOne(function (s2, i2, lg) { saw = lg.map(function (l) { return l.key; }); return lg[0]; })(st, 0, [{ key: DEFK }, { key: ATKK }]);
+    ok(saw.indexOf(DEFK) < 0, '付不起时防御必须**事前**从菜单里摘掉（事后扣 = 从 0 里扣，实测等于没扣）');
+    eq(pick.key, ATKK, '摘掉之后 chooser 只能在剩下的里选');
+    eq(gc.stat.dropped, 1, '`dropped` 必须计到这一次摘除 ⇒ 它是"补丁有没有作用点"的唯一凭据');
+    eq(gc.stat.billed, 0, '没选防御就不许扣钱');
+  }
+  {
+    /* 摘到空必须**退回原菜单**：不许为了"看起来生效"造出一局无路可走的假局 */
+    const gc = makeGuardCost(R, S, { mode: 'L2', cost: 99 });
+    const st = { p: [{ ep: 0 }] };
+    let sawLen = -1;
+    gc.wrapOne(function (s2, i2, lg) { sawLen = lg.length; return lg[0]; })(st, 0, [{ key: DEFK }]);
+    eq(sawLen, 1, '菜单只有防御一张时不许摘成空集（退回原菜单 ⇒ chooser 仍有一手可出）');
+    ok(gc.stat.dropped > 0, '退回原菜单这件事仍要计入 `dropped`（否则"没得选"会被读成"选了别的"）');
+  }
+
+  /* ③ 真跑两档：零价必须与对照逐字相同；重价必须改变**强度栏**（= route ① 打进内部调用点的证据） */
+  const tailOf = function (txt, mode) {
+    const ln = txt.split('\n').filter(function (l) { return new RegExp('^\\s+' + mode + '\\s').test(l); })[0];
+    if (!ln) return null;
+    const i = ln.search(/\d+\.\d%/);
+    return i < 0 ? null : ln.slice(i);
+  };
+  const zero = spawnSync(process.execPath, ['tools/probe-guard-cost.mjs', '--packs=docs/artifacts/cbs1s2-band2.bak',
+    '--modes=off,L1', '--cost=0', '--games=12', '--feas-games=3'], { encoding: 'utf8', timeout: 300000 });
+  eq(zero.status, 0, '零价档探针必须正常退出（实测 status=' + zero.status + '）');
+  {
+    const zo = tailOf(String(zero.stdout || ''), 'off'), z1 = tailOf(String(zero.stdout || ''), 'L1');
+    ok(zo && z1, '探针必须能解析出 off/L1 两行（行形一改，这道门就红着提醒）');
+    eq(z1, zo, '`cost=0` 的行为读数必须与对照**逐字相同**（不一样 ⇒ 补丁有观察者效应，或在偷读别的档）');
+    ok(String(zero.stdout).indexOf('⛔ 空枪：') >= 0, '零价档必须被自检抓出来（一分钱没拿走 = 这一档没有作用点，不许留成"两档相同 ⇒ 定价无效"的结论）');
+  }
+  const hot = spawnSync(process.execPath, ['tools/probe-guard-cost.mjs', '--packs=docs/artifacts/cbs1s2-band2.bak',
+    '--modes=off,L2', '--cost=99', '--games=12', '--feas-games=3'], { encoding: 'utf8', timeout: 300000 });
+  eq(hot.status, 0, '重价档探针必须正常退出（实测 status=' + hot.status + '）');
+  {
+    const out = String(hot.stdout || '');
+    ok(out.indexOf('⛔ 空枪：') < 0, '重价档不许被判成空枪：防御被整条摘光时 `billed=0` 而 `dropped>0`，那正是补丁生效到顶（E23 建台时实测就是这个形状）');
+    const dm = out.match(/摘掉菜单项 (\d+)/);
+    ok(dm && Number(dm[1]) > 0, '必须打印被摘掉的菜单项数（`dropped` 是这条档唯一的自证）');
+    const ho = tailOf(out, 'off'), h2 = tailOf(out, 'L2');
+    ok(ho && h2, '重价档必须解析出 off/L2 两行');
+    ok(h2.slice(0, h2.indexOf('%') + 1) === '0.0%', '防御被定价 99ep 时【病】栏设防率必须是 0.0%（不是 ⇒ 地形闸没关住防御）');
+    const cut = function (t2) { const i = t2.indexOf('‖'); return i < 0 ? t2 : t2.slice(i); };
+    ok(cut(h2) !== cut(ho),
+      '【强度】栏必须与对照**不同** ⇒ 这是"补丁打进 mirrorHealth 内部调用点"的行为证据（route ② 只包属性层时这里会逐字相同，而那正是我第一版读到的假"定价不影响强度"）：\n     off ' +
+      cut(ho).trim() + '\n     L2  ' + cut(h2).trim());
+  }
+});
+
+t('D162 训练/选择执行口径旋钮（v1.5.237 · E28）：默认关要**可逆**、开了要**真打到适应度**、没接的入口要**响亮**', function () {
+  /* 建台过程中先纠正了写门的人自己的一条前提（记在 `evo.js` 那段注释与夜日志 §E28b）：
+   *   出厂的**每代评分**并不在 ε=0 —— 被评席走"temp 0.35 · ε=0.15 · 不带 epsMode"（硬档）；
+   *   ε=0 的是自评/健康门槛那一路。所以这个旋钮改的是"选择压力用哪种噪声"，而"默认关 = 逐字不变"必须能证。
+   * 判的四件事（全部真调用，不钉措辞）：
+   *   ① `eps=0` 不许被 `|| 默认` 吞（同 v1.5.174 `drainHpMax` 那一族）；非法值必须抛；
+   *   ② 开档必须**改变** `mirrorHealth`（= 打进了它的内部闭包调用，不是只包了属性层）与 `scoreMemberN` 的 fit（= 真的在适应度通路上）；
+   *   ③ 关档之后两个读数必须**回到原值**（不许留隐性状态）；
+   *   ④ `train-3p` 真读它（不算暗键），而 `train-best` 没读 ⇒ 必须被列为暗键（宁可 exit 6，不许静默 A/A，D143 那族的规矩）。 */
+  const params = Pol.unpack(sb.window.EPIRUS_CHAMPION_3P, true);
+  ok(!!params, '载体：现役 3P 权重要能 unpack（本门全部读数都挂在它身上）');
+  eq(typeof T.setTrainEps, 'function', '引擎必须导出 setTrainEps（CLI 侧"没有 setter 就 exit 7"靠它）');
+  eq(typeof T.countTrainEps, 'function', '必须导出**开火计数**（横幅读回证明不了作用点发生 · D123 的原话）');
+  eq(T.countTrainEps().eps, 0, '出厂默认必须是 eps=0');
+  const mhOff = T.mirrorHealth(params, 8, 5, 'multi');
+  const fitOff = T.scoreMemberN(params, T.buildOpps(params, 0.05), 4, 5, 0, 0, 0);
+  try {
+    const back = T.setTrainEps(0.2, 5, 'soft', 0.15);
+    eq(back.eps, 0.2, 'setter 必须读回生效值（引擎是唯一口径）');
+    eq(back.mode, 'soft', 'mode 必须能下达（出厂每代评分是**硬档** ⇒ "挪到产品口径"这件事一半在 mode 上）');
+    eq(T.setTrainEps(0).eps, 0, '`eps=0` 必须真的是 0（`|| 默认` 会把"零档对照"变成 0.2 档）');
+    let threw = false;
+    try { T.setTrainEps(3); } catch (e) { threw = true; }
+    ok(threw, 'eps 越界（>1）必须抛，不许静默夹紧');
+    T.setTrainEps(0.2, 5, 'soft', 0.15);
+    const mhOn = T.mirrorHealth(params, 8, 5, 'multi');
+    ok(Math.abs(mhOn.rounds - mhOff.rounds) > 1e-9 || Math.abs(mhOn.dmgPerGame - mhOff.dmgPerGame) > 1e-9,
+      '【作用点 1】开档必须改变 `mirrorHealth` 的读数（不变 ⇒ 漏斗没打进它的内部闭包调用，那正是 E23 第一版读到的假"三档相同"）');
+    const fitOn = T.scoreMemberN(params, T.buildOpps(params, 0.05), 4, 5, 0, 0, 0);
+    ok(Math.abs((fitOn.fit || 0) - (fitOff.fit || 0)) > 1e-9,
+      '【作用点 2】开档必须改变**每代评分的 fit**（同 gen/idx ⇒ 同种子，唯一变量就是口径；不变 ⇒ 选择压力没接到这个旋钮，整臂会跑成 A/A）');
+    const c1 = T.countTrainEps();
+    ok(c1.fitSeen > 0 && c1.seen > 0, '两条漏斗都必须留下**决策计数**（fit=' + c1.fitSeen + ' · 自评=' + c1.seen + '）');
+  } finally {
+    T.setTrainEps(0);                 // 门内不许把口径留在开档状态去跑后面的门
+  }
+  const mhBack = T.mirrorHealth(params, 8, 5, 'multi');
+  const fitBack = T.scoreMemberN(params, T.buildOpps(params, 0.05), 4, 5, 0, 0, 0);
+  ok(Math.abs(mhBack.rounds - mhOff.rounds) < 1e-12 && Math.abs(mhBack.dmgPerGame - mhOff.dmgPerGame) < 1e-12,
+    '关档后 `mirrorHealth` 必须**逐字回到**开档前（差一丝 = 有隐性状态，那"出厂读数不变"这句话就是假的）');
+  ok(Math.abs((fitBack.fit || 0) - (fitOff.fit || 0)) < 1e-12, '关档后 fit 同样必须逐字回到原值');
+  eq(detectDarkKnobs({ EPIRUS_TRAIN_EPS: '0.2' }, { entry: 'tools/train-3p.mjs' }).dark.indexOf('EPIRUS_TRAIN_EPS'), -1,
+    'train-3p 必须被认成"真读这个键"（否则整臂一开就 exit 6 跑不起来）');
+  ok(detectDarkKnobs({ EPIRUS_TRAIN_EPS: '0.2' }, { entry: 'tools/train-best.mjs' }).dark.indexOf('EPIRUS_TRAIN_EPS') >= 0,
+    'train-best 没接这个旋钮 ⇒ 必须被列为**暗键**并在握手前 exit 6（宁可响，不许"传了没人读"跑成一整臂 A/A —— D143 那一族栽过 9 次）');
+  ok(readFileSync('tools/audit-lib.mjs', 'utf8').indexOf('EPIRUS_TRAIN_EPS') < 0,
+    '作用范围必须**关在训练侧**：`audit-lib` 的 9 处写死不许经过这两个漏斗（否则门禁口径会被一个训练旋钮悄悄搬走）');
 });
 
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {

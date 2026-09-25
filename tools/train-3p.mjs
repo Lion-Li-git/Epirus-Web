@@ -361,6 +361,44 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
       if (setterName === 'setImitOverride' && got === true) IMIT_ON = true;
     }
   }
+  /* ===== v1.5.237（E28）：训练侧**执行口径**旋钮 `EPIRUS_TRAIN_EPS` 的下达与自证 =====
+   * 为什么值得开这一格（实测在 `docs/RESEARCH-LOG-2026-09-26-qoder-night.md` §E28a）：适应度与五道门全在 ε=0，
+   *   产品跑 ε=0.2 soft，而"按 `dmg/局` 排的 Spearman ρ(0 vs 0.2) = 0.480、随剂量单调" ⇒ **口径在换答案**。
+   * 为什么这一段必须长这样（同 `KILL_FIELD`/示范族那一族的教训：横幅读回证明不了作用点发生）：
+   *   "env 传进去没生效"是最容易犯的错（setter 名打错、eps 被 `|| 0` 吞、只接了 CLI 没接服务端……）
+   *   ⇒ 三条硬规矩：**没有 setter 就 exit 7**（拒静默空转）· 下令后**读回消费点** · 退出前印**开火计数**，
+   *     `eps>0 而一次决策都没经过漏斗` ⇒ `exitCode=8`（空枪，与 D123 同规矩）。 */
+  {
+    const rawEps = process.env.EPIRUS_TRAIN_EPS;
+    if (rawEps != null && String(rawEps).trim() !== '') {
+      if (typeof T.setTrainEps !== 'function') {
+        console.error('[train-3p] ⛔ 传了 EPIRUS_TRAIN_EPS 但引擎没有 setTrainEps ⇒ 拒绝静默空转');
+        process.exit(7);
+      }
+      let epsBack = null;
+      try {
+        epsBack = T.setTrainEps(Number(rawEps), process.env.EPIRUS_TRAIN_EPS_K || null, process.env.EPIRUS_TRAIN_EPS_MODE || null,
+          process.env.EPIRUS_TRAIN_TEMP || null);
+      } catch (e) {
+        console.error('[train-3p] ⛔ EPIRUS_TRAIN_EPS=' + rawEps + ' 被 setter 拒绝：' + (e && e.message));
+        process.exit(7);
+      }
+      console.log('[train-3p] 训练/选择执行口径已下达 ⇒ 消费点读回 eps=' + epsBack.eps + ' k=' + epsBack.k + ' mode=' + epsBack.mode +
+        ' temp=' + (epsBack.temp == null ? '各点出厂值' : epsBack.temp) +
+        '\n            作用范围 = `fitChooser()`（每代评分的被评席，出厂 temp0.35·ε0.15·硬档）+ `trainChooser()`（自评/健康门槛漏斗，出厂 ε=0）；' +
+        '`audit-lib` 的 9 处与承诺局(`makeCommitChooser`)不经过它');
+      process.on('exit', function () {
+        if (typeof T.countTrainEps !== 'function') return;
+        const c = T.countTrainEps();
+        console.log('[train-3p] ε 臂统计：建探索型 Chooser ' + c.built + ' 个 · 经它决策 **' + c.seen + '** 次 ‖ 每代评分被评席 **fit ' + c.fitSeen + '** 次 · eps=' + c.eps +
+          ' k=' + c.k + ' ' + c.mode);
+        if (c.eps > 0 && c.seen + c.fitSeen === 0) {
+          console.error('[train-3p] ⛔ 空枪：eps>0 却一次决策都没经过两个漏斗 ⇒ 这一臂与出厂臂逐字相同，读数作废（同 D123）');
+          process.exitCode = 8;
+        }
+      });
+    }
+  }
   /* ===== v1.5.181（DS）：示范注入的**开火计数**必须在退出前报 =====
    * 动因（实测）：三种配置下"真正的落雷"使用率全是 0.00%，而**唯一能分辨原因的信息**（轮到过几次 / 教师无动作 /
    * 买不起 / 被 only 过滤）此前根本没人记 ⇒ 我只能靠"输出是否与无示范臂逐字节相同"去**反推**（§N12 的原话：

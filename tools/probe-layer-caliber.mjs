@@ -28,18 +28,48 @@ const HARDWIRED = /policyChooserN\(params, 0\.15\)/g;
 const EVO_SRC = readFileSync('js/train/evo.js', 'utf8');
 const EVO_HARDWIRED = (EVO_SRC.match(HARDWIRED) || []).length;
 const AL_HARDWIRED = (readFileSync('tools/audit-lib.mjs', 'utf8').match(HARDWIRED) || []).length;
+const HARDWIRED_TEXT = 'policyChooserN(params, 0.15)';
+
+/** 某个字面量在文件里的**第一行行号**（1-based；读不出给 null ⇒ 调用方必须显式印"读不出"，不许印 0） */
+export function srcLine(file, needle) {
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) if (lines[i].indexOf(needle) >= 0) return i + 1;
+  return null;
+}
+
+/** 「某个函数里那处写死在第几行」= **从源码现算的指针**。
+ * 为什么要对外给这两个函数：`probe-ideal-champion` 的【5】【6】两行原来把 `evo.js:2554`/`audit-lib.mjs:403`
+ *   当**字面文本**印出来、门 D149 又按这串字面文本去正则 ⇒ 任何人在它上面插一行，文档就在撒谎而门仍绿
+ *   （METHODOLOGY 52 同一族：冻结成常数的"期望值"会在别人改动后静默失效）。 */
+export function hardwiredLine(file, withinFn) {
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/);
+  let from = 0;
+  if (withinFn) {
+    from = lines.findIndex(function (l) { return l.indexOf(withinFn) >= 0; });
+    if (from < 0) return null;
+  }
+  for (let i = from; i < lines.length; i++) if (lines[i].indexOf(HARDWIRED_TEXT) >= 0) return i + 1;
+  return null;
+}
 
 export function build(caliber) {
   const sb = { console: { log() {}, warn() {}, error() {} }, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
   sb.window = sb; sb.globalThis = sb;
-  let patched = 0;
+  let patched = 0, mutated = 0;
   for (const f of ENGINE.concat([caliber.pack])) {
     let src = readFileSync(f, 'utf8');
     if (f === 'js/train/evo.js' && caliber.on) {
       src = src.replace(HARDWIRED, function () { patched++; return 'policyChooserN(params, ' + TEMP + ', ' + caliber.eps + ', ' + caliber.epsK + ', ' + JSON.stringify(caliber.epsMode) + ')'; });
     }
+    /* v1.5.236（E23 逼出来的）：可选的**源码改写钩子** `caliber.mutate` + 注入句柄 `caliber.inject`。
+     * 为什么非走这条：`selfPlay` 只是 `W.EpirusTrainer.mirrorHealth` 的薄壳，而 mirrorHealth 内部调的是
+     *   **闭包里的 `policyChooserN`** ⇒ 只在属性层包一层（route ②）打不进去（METHODOLOGY 54 早写过，
+     *   今天 E23 第一版把"补丁开了却没反应"读了半天才发现就是这个）。要问"内部调用点也生效时怎样"，只能改源码。
+     * 没传 mutate 时与改前逐字相同（只多返回一个 `mutated` 计数）。 */
+    if (f === 'js/train/evo.js' && typeof caliber.mutate === 'function') { src = caliber.mutate(src); mutated++; }
     vm.runInNewContext(src, sb, { filename: f });
   }
+  if (caliber.inject) sb.__INJ = caliber.inject;
   if (caliber.on) {
     /* ② audit-lib 走的这条路：它只传 `(params, 0.15)` ⇒ 在属性层把后三个参数补上（忽略它传的温度，与产品一致） */
     const T = sb.EpirusTrainer, orig = T.policyChooserN;
@@ -49,7 +79,7 @@ export function build(caliber) {
     };
     sb.__viaWrapper = 0;
   }
-  return { sb: sb, patched: patched, hardwired: EVO_HARDWIRED, viaWrapper: sb.__viaWrapper || 0, caliberOn: !!caliber.on };
+  return { sb: sb, patched: patched, hardwired: EVO_HARDWIRED, mutated: mutated, viaWrapper: sb.__viaWrapper || 0, caliberOn: !!caliber.on };
 }
 
 function measure(ctx, games) {

@@ -485,6 +485,60 @@
     return false;
   }
 
+  /* ===== v1.5.237（E28 · **默认关 ⇒ 出厂读数逐字不变**）：训练/选择的"执行口径"旋钮 =====
+   * 建台时先纠正我自己的一条前提（差点据此写进报告）：我原以为"适应度在 ε=0"。实测**不是**：
+   *   · 每代评分那一路（`scoreMemberN` 里被评席的 base chooser）出厂就是 **temp 0.35 · ε=0.15 · 不带 epsMode**；
+   *   · 而 5 人产品是 **temp 0.15 · ε=0.2 · k=5 · soft**（`ui.js:464`）；自评/健康门槛那一路（`mirrorHealth` 漏斗）才是 ε=0。
+   *   ⇒ 真正的问题不是"训练 ε=0 vs 产品 ε=0.2"，而是**选择压力作用在一格玩家永远看不见的硬档噪声上**：
+   *     `epsMode` 缺省 ⇒ 不走 v1.5.141 的"防御/环豁免"、不走 v1.5.149 的序列窗锁、防御键**留在探索池里**。
+   *     而那三件事的原始动机正是"同一包同一装配下，硬档把防御出现率从 4.0% 抬到 26.4%、把聚能环从 1.2% 抬到 0.0%"
+   *     —— 也就是说：**我们在用一种已知会虚增防御、杀死滚环的口径去挑"该防不防、该环不环"的包。**
+   * ⇒ 这个旋钮让一臂可以改在**产品口径**下被选择（ε/temp/k/mode 一起挪），与同配方的出厂臂孪生对跑。
+   * 作用范围（D162 钉这条，别让它悄悄扩大）：只有 `trainChooser()`（自评/门槛四处漏斗）与 `fitChooser()`（每代评分被评席）
+   *   读它；`tools/audit-lib.mjs` 自己写死的 9 处**不经过这里** ⇒ 同一进程里 promote 类读数仍 ε=0；
+   *   `makeCommitChooser` 的内部 chooser（承诺局，出厂 ε=0）**也不经过这里** ⇒ 承诺局口径不动。
+   * ⚠️ 关档分支必须与出厂**同一串参数**（`0.15` / `0.35, 0.15`），否则"默认不变"没法证；
+   *   也不许用 `Number(env.X || 默认)` 之外的写法吞掉 0（`--eps=0` 会被 `||` 吃掉，v1.5.174 的 `drainHpMax` 同族）。 */
+  let TRAIN_EPS = 0, TRAIN_EPS_K = 5, TRAIN_EPS_MODE = 'soft', TRAIN_TEMP = null;
+  const TRAIN_EPS_ST = { seen: 0, built: 0, fitSeen: 0 };
+  function setTrainEps(v, k, m, temp) {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0 || n > 1) throw new Error('setTrainEps: eps 必须是 0~1 的数，收到 ' + JSON.stringify(v));
+    TRAIN_EPS = n;
+    if (k != null && k !== '') TRAIN_EPS_K = Math.max(1, Number(k) | 0);
+    if (m) TRAIN_EPS_MODE = String(m);
+    if (temp != null && temp !== '') {
+      const t = Number(temp);
+      if (!Number.isFinite(t) || t <= 0) throw new Error('setTrainEps: temp 必须是正数，收到 ' + JSON.stringify(temp));
+      TRAIN_TEMP = t;
+    }
+    return { eps: TRAIN_EPS, k: TRAIN_EPS_K, mode: TRAIN_EPS_MODE, temp: TRAIN_TEMP };
+  }
+  function trainEps() { return { eps: TRAIN_EPS, k: TRAIN_EPS_K, mode: TRAIN_EPS_MODE, temp: TRAIN_TEMP }; }
+  function countTrainEps() {
+    return { eps: TRAIN_EPS, k: TRAIN_EPS_K, mode: TRAIN_EPS_MODE, temp: TRAIN_TEMP, seen: TRAIN_EPS_ST.seen, built: TRAIN_EPS_ST.built, fitSeen: TRAIN_EPS_ST.fitSeen };
+  }
+  function resetTrainEpsStat() { TRAIN_EPS_ST.seen = 0; TRAIN_EPS_ST.built = 0; TRAIN_EPS_ST.fitSeen = 0; }
+
+  /* 自评/健康门槛那一族的**唯一漏斗**（出厂 temp 0.15 · ε=0）。
+   * ⚠️ 关档那一行必须保留"两参直调 `policyChooserN`"这个**原形状**（权重 + 温度，不传 eps）：
+   *   `tools/probe-layer-caliber.mjs` 的 route ① 就是靠匹配那串字面量、在装载前做替换来"把口径打进内部调用点"的
+   *   （门 D150 判的是"替换数 = 源码现算数"；形状一改或注释里再出现一次，搬运会静默少覆盖而自检仍绿）。
+   *    ⇒ 顺带一条好消息：漏斗之前 route ① 要命中四处，现在只需一处，少三处漏网的可能。 */
+  function trainChooser(params) {
+    if (!TRAIN_EPS) return policyChooserN(params, 0.15);
+    TRAIN_EPS_ST.built++;
+    const f = policyChooserN(params, TRAIN_TEMP == null ? 0.15 : TRAIN_TEMP, TRAIN_EPS, TRAIN_EPS_K, TRAIN_EPS_MODE);
+    return function (state, pid, legal, econ) { TRAIN_EPS_ST.seen++; return f(state, pid, legal, econ); };
+  }
+
+  /* 每代评分里**被评席**的 chooser（出厂 temp 0.35 · ε=0.15 · 硬档）。关档分支逐字保留出厂那三个参数。 */
+  function fitChooser(params) {
+    if (!TRAIN_EPS) return policyChooserN(params, 0.35, 0.15);
+    TRAIN_EPS_ST.fitSeen++;
+    return policyChooserN(params, TRAIN_TEMP == null ? 0.35 : TRAIN_TEMP, TRAIN_EPS, TRAIN_EPS_K, TRAIN_EPS_MODE);
+  }
+
   function policyChooserN(params, temp, eps, epsK, epsMode) {
     params = normChampParams(params);
     const legacy = LEGACY(params);
@@ -1345,7 +1399,7 @@ let WALL_GAMES = 3;
         if (pid === seat) {
           // (c) 承诺级 ε：h 取自**个体基因**，不再是每局随机抽的噪声
           const h = commitGame ? hGene : 0;
-          let baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : policyChooserN(params, 0.35, 0.15);
+          let baseSel = h > 0 ? makeCommitChooser(params, 0.35, h) : fitChooser(params);
           /* v1.5.88（甲）：退火窗内**计分对局**也走强迫（这样被强迫的行为才会被真实评分、进而被选择）。 */
           if (DIV_FORCE_GENS > 0 && gen < DIV_FORCE_GENS) baseSel = makeDiversityForce(baseSel, gen);
           econ = makeEconChooser(baseSel, agg, imitB > 0 ? (imitTeacherForGen(gen) || BOT_PICKS['heavyfire']) : null, imitB, imitOnlyForGen(gen), subThisGame);
@@ -1565,7 +1619,7 @@ let WALL_GAMES = 3;
         const st = S.createState(TRAIN_MODE === 'long' ? 'long' : 'multi', { next: mulberry32(31000 + gen * 131 + idx * 17 + g) }, n);
         st.slotSalt = slotSaltFor(31000 + gen * 131 + idx * 17 + g);
         const chs2 = [];
-        for (let pid = 0; pid < n; pid++) chs2.push(makeEconChooser(policyChooserN(params, 0.35, 0.15), agg, null, 0));
+        for (let pid = 0; pid < n; pid++) chs2.push(makeEconChooser(fitChooser(params), agg, null, 0));
         Play.autoGameN(st, chs2);
         if (st.winner !== 'draw' && st.winner != null) { seatWinsProbe[st.winner]++; seatDec++; }
         /* v1.5.87：累计"成功非ジ动作"，与 mirrorHealth 的 keyCount **同口径** ——
@@ -1582,7 +1636,7 @@ let WALL_GAMES = 3;
       for (let g = 0; g < MIRROR_GAMES; g++) {
         const seed = seedOfGen(gen, idx, 'mir') + g * 6151;
         const chs = [];
-        for (let pid = 0; pid < n; pid++) chs.push(makeEconChooser(policyChooserN(params, 0.35, 0.15), agg, null, 0));
+        for (let pid = 0; pid < n; pid++) chs.push(makeEconChooser(fitChooser(params), agg, null, 0));
         const rm = oneGameN(chs, seed, n, { regen: 0, mode: TRAIN_MODE });
         void rm;   // v1.5.69：座位统计已改走独立探针，这里不再重复计数
         mirrorRan++;
@@ -1655,7 +1709,7 @@ let WALL_GAMES = 3;
         const choosers = [];
         let oi = (gen * 3 + g) % STYLE_OPPS.length;
         for (let pid = 0; pid < n; pid++) {
-          if (pid === seat) choosers.push(policyChooserN(params, 0.15));
+          if (pid === seat) choosers.push(trainChooser(params));
           else { choosers.push(wrapBotN(STYLE_OPPS[oi % STYLE_OPPS.length].sel)); oi++; }
         }
         const sd = seedOfGen(gen, idx, 'style') + g * 7919;
@@ -1726,7 +1780,7 @@ let WALL_GAMES = 3;
         const choosers = [];
         let oi = 0;
         for (let pid = 0; pid < n; pid++) {
-          if (pid === seat) choosers.push(policyChooserN(params, 0.15));
+          if (pid === seat) choosers.push(trainChooser(params));
           else { choosers.push(wrapBotN(pair[oi % pair.length])); oi++; }
         }
         const r = oneGameN(choosers, seedBase + g * 977 + total, n, { mode: TRAIN_MODE });
@@ -2520,7 +2574,7 @@ let WALL_GAMES = 3;
     for (let g = 0; g < G; g++) {
       const st = S.createState(TRAIN_MODE === 'long' ? 'long' : 'multi', { next: mulberry32(91000 + g * 13) }, n);
       const ch = [];
-      for (let pid = 0; pid < n; pid++) ch.push(pid === 0 ? policyChooserN(params, 0.15) : wrapBotN(foe));
+      for (let pid = 0; pid < n; pid++) ch.push(pid === 0 ? trainChooser(params) : wrapBotN(foe));
       Play.autoGameN(st, ch);
       for (const e of (st.events || [])) if (e.type === 'damage' && e.source === 0) dmg += (e.amt || 0);
     }
@@ -2551,7 +2605,7 @@ let WALL_GAMES = 3;
       const st = S.createState(mk, { next: mulberry32(9000 + g) }, N);
       st.slotSalt = slotSaltFor(9000 + g);
       const ch = [];
-      for (let i = 0; i < N; i++) ch.push(policyChooserN(params, 0.15));
+      for (let i = 0; i < N; i++) ch.push(trainChooser(params));
       Play.autoGameN(st, ch);
       if (st.winner !== 'draw' && st.winner != null) { seatWins[st.winner]++; seatDec++; }   // v1.5.68
       let gd = 0;
@@ -2710,6 +2764,7 @@ let WALL_GAMES = 3;
     widthReward,                // v1.5.124 §28a：广度收益项（权重走 econ-env 的 widthW）
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
-    scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn
+    scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
+    setTrainEps, trainEps, countTrainEps, resetTrainEpsStat   // v1.5.237 E28：训练侧执行口径旋钮（默认关）+ **开火计数**
   };
 })(typeof window !== 'undefined' ? window : globalThis);
