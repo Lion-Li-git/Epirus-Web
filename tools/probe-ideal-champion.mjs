@@ -13,6 +13,12 @@
  *   5 座位无偏       = seatSymmetry 的极差 vs **该 n 的零分布 p99 线**（v1.5.202 新口径）
  *   6 广度当约束     = 出手 G 与**净兑现 G**、**打上血的不同卡数**
  *   7 不要的两条     = ① 有多少张"能造成伤害的卡"从未被挡过；② 镜像场设防率
+ *
+ *   ⚠️ **本表不是单一口径**（v1.5.205 实测发现，见下面【5】【6】的行走标注）：【1】~【4】【7】用 TEMP/EPS/EPSK/EPSMODE，
+ *   【5】seatSymmetry（audit-lib.mjs:403）与【6】mirrorHealth（evo.js:2554）**各自在内部建 Chooser、把参数写死成 `policyChooserN(params, 0.15)`**（ε=0），
+ *   所以 `--eps=0.2 --epsmode=soft` 扫动时这两行逐字不变 —— 那不是"座位/广度对探索不敏感"，是**这两行没接到旋钮**。
+ *   ⇒ 这不是这两处的孤例：`audit-lib.mjs` 的 reflectWall/ringWallProbe/fieldRate/sniperField/seatSymmetry/densityProfile/chargeProfile/aggressionProfile/breadthProfile
+ *   共 **9 处**、`js/train/evo.js` 4 处全是同一个写死 ⇒ **整个评测层的口径是 ε=0，而产品是 ε=0.2 soft**（METHODOLOGY 49）。
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -22,6 +28,19 @@ const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(p
 const PACK = arg('pack', 'js/bundled-champion-3p.js');
 const GAMES = Number(arg('games', 200));
 const MODE = arg('mode', 'multi');
+/* E5（09-24 夜 · 交接 §4）：**两个旋钮必须分开**，否则会扫错杠杆 ——
+ *   `policyChooserN(params, temp, eps, ...)` 的第 2 个参数是 **softmax 温度**（原来这里只有它，写死 0.15），
+ *   第 3 个才是**探索率 ε**（`evo.js:496` 的 `state.rng.next() < eps` ⇒ 在候选里均匀抽，`epsK` 默认 top-5）。
+ *   「电磁炮 4.30→0.90」那个悬崖是 **ε** 造成的（只在浏览器传 eps>0 时生效），拿温度去扫是扫不出来的
+ *   ⇒ 实测：temp 0.05→0.25 时 镜像场电磁炮 0.47/0.43/0.43/0.44、序列率 0.47/0.43/0.43/0.44 —— **几乎不动**，
+ *      这不是"悬崖不存在"，是**拉错了杆**。默认 `temp=0.15, eps=0` ⇒ 历史读数逐字不变。 */
+const TEMP = Number(arg('temp', 0.15));
+const EPS = Number(arg('eps', 0));
+/* ⚠️ 第二个陷阱：产品跑的是 `pickChampion(..., 0.15, 0.2, 5, 'soft')` —— **ε=0.2 + 键级 top5 + soft**，
+ *   而只传 `eps`（`epsK`/`epsMode` 缺省）= "**全候选均匀抽**"，那是 v1.5.139 被用户否掉的那一代口径
+ *   （"ε=0.25 全候选昏手太多 ⇒ 改 top5 键"）。⇒ 想复现"玩家会看到什么"，三个参数必须一起给。 */
+const EPSK = Number(arg('epsk', 5));
+const EPSMODE = arg('epsmode', 'soft');
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
 sb.window = sb; sb.globalThis = sb;
@@ -53,7 +72,7 @@ function runField(name, games, makeOpp, seedBase) {
     const ch = [];
     for (let i = 0; i < 5; i++) {
       if (i !== seat) { ch.push(makeOpp(i, seedBase + g)); continue; }
-      const inner = T.policyChooserN(live, 0.15);
+      const inner = T.policyChooserN(live, TEMP, EPS, EPSK, EPSMODE);
       ch.push(function (state, pid, legal) {
         const a = inner(state, pid, legal);
         log.push({ round: state.round, key: a && a.key });
@@ -107,8 +126,8 @@ const gunOpp = function () { return function (s2, p2, lg) { return B.pickGunSpam
 const balOpp = function () { return function (s2, p2, lg) { return B.pickBalanced(s2, p2, lg); }; };
 const defOpp = function () { return function (s2, p2, lg) { return B.pickDefend(s2, p2, lg); }; };
 
-console.log('=== 理想冠军规格 · 现役包实测（' + PACK + ' · ' + MODE + ' · 每场 ' + GAMES + ' 局）===\n');
-const mirror = runField('镜像(5 席同包)', GAMES, function () { const inner = T.policyChooserN(live, 0.15); return inner; }, 31000);
+console.log('=== 理想冠军规格 · 现役包实测（' + PACK + ' · ' + MODE + ' · 每场 ' + GAMES + ' 局 · temp=' + TEMP + ' · eps=' + EPS + ' · epsK=' + EPSK + ' · epsMode=' + EPSMODE + '）===\n');
+const mirror = runField('镜像(5 席同包)', GAMES, function () { const inner = T.policyChooserN(live, TEMP, EPS, EPSK, EPSMODE); return inner; }, 31000);
 const pool = runField('脚本池(gun+balanced)', GAMES, gunOpp, 32000);
 const nodef = runField('不防场(4×只枪)', GAMES, gunOpp, 33000);
 const def = runField('会防场(4×防御)', GAMES, guardOpp, 34000);
@@ -145,6 +164,8 @@ for (const n of [100, 400]) {
   const r = seatSymmetry(sb, live, MODE, n);
   console.log('   n=' + String(n).padStart(3) + '  各座 ' + r.pct.map(x => x.toFixed(1)).join('/') + '  极差 ' + r.spread.toFixed(1) + 'pt  仓线 ' + r.spreadLine.toFixed(1) + 'pt  ⇒ ' + r.verdict + (r.spread <= 10 ? '（≤10pt ✓）' : '（>10pt ✗ 按理想规格）'));
 }
+console.log('   ⚠️ 口径：本条**不吃** --temp/--eps —— seatSymmetry（audit-lib.mjs:403）自建 Chooser 时把参数写死成 `policyChooserN(params, 0.15)`（第 3 个参数 ε 缺省=0）。');
+console.log('      ⇒ 这两行永远是"贪心+一点温度"的座位分布，与【1】~【4】那条扫描线不是同一个口径，别当"产品口径的座位极差"读。');
 
 console.log('\n【6】广度当约束不当目标 —— 阈值：净兑现 G≥3 且 ≥4 种打上血');
 {
@@ -153,6 +174,8 @@ console.log('\n【6】广度当约束不当目标 —— 阈值：净兑现 G≥
   console.log('   出手 G = ' + f2(mh.effSkills) + '（出手卡 ' + mh.distinctKeys + ' 种）');
   console.log('   净兑现 G = ' + f2(mh.effSkillsLand) + '（打上血的卡 ' + (mh.landedKeys != null ? mh.landedKeys : lk.length) + ' 种 · 落地次数 ' + mh.landedTotal + '）');
   console.log('   ⇒ ' + (mh.effSkillsLand >= 3 && (mh.landedKeys || lk.length) >= 4 ? '达标' : '未达标（净兑现 ' + f2(mh.effSkillsLand) + ' < 3 或种类 < 4）'));
+  console.log('   ⚠️ 口径：本条同样**不吃** --temp/--eps —— mirrorHealth（evo.js:2530 起，写死处 evo.js:2554）内部 `policyChooserN(params, 0.15)`，ε=0。');
+  console.log('      ⇒ 凡走 mirrorHealth / audit-lib.selfPlay 的读数（体检 G 列、训练侧健康门槛）都与这条同源；产品口径（ε=0.2/k=5/soft）下的广度要另跑，见 probe-ep-reach §E。');
 }
 
 console.log('\n【7】不要的两条');

@@ -33,6 +33,7 @@ import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProf
  * **真桌**（1 冠军 + 4 脚本）只有 0.10 每局（**43 倍**）⇒ 门禁/体检里的贵卡数字是**镜像局特有**的；
  * 而"真桌 + ε=0.2"与**真机**几乎重合（电磁炮 0.20 对 0.20、蓄能 0.30 对 0.40）⇒ 它才是最接近产品的模拟。 */
 import { fieldProfile, share as bpShare } from './behavior-profile.mjs';
+import { parsePairTable, formatRecord } from './defense-axis.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
@@ -257,6 +258,23 @@ console.log('   输出密度（' + dens.games + ' 局自对局）：每回合出
  *   S = 技能广度（熵，**对卡对称**：不按伤害/费用加权 —— 那会给某张卡专属梯度，见 audit-lib 里那段长注释）
  *   T = 交换率（`EPIRUS_DIV_W`）
  * 这里**只测量、只打印**，不参与 fit、不参与阻断。⚠ 必须与 N 一起报（G/S 对样本量很敏感）。 */
+
+/* ===== v1.5.222（qoder 09-25 · E17/E20）：**设防持续性栏** —— 又是"只记录、不阻断"（同 v1.5.152 产品代理栏的治理形状）=====
+ * 起因（两条实测）：① 3P 槽历史上**真正上线过**的冠军里，可比子样本 13 粒有 **4 粒带"对手有钱→转防"体质**（E17 §H-52，
+ *   含 v1.5.104~143 的线上包 `v7seat24-31`）；而它当初"六条全过、广度每项不输在位" ⇒ **不是门不够严，是门里没这一维**。
+ * ② 这一维在 ε=0 镜像里**量不出来**（E18/§H-45：六栏现成读数 ROC 全贴对角线、`按ジ%` 方向还是反的）
+ *   ⇒ 必须单独装配"1 席攒钱替身 + 4 席被评包"并跑**产品口径 + 两档（hold/cycle）同回合配对**。
+ * 单一来源：本栏**不自己仿真**，spawn `tools/probe-defense-cause.mjs --pair=1` 再交 `defense-axis.mjs` 解析（D150 同规矩）。
+ * ⚠️ **只打印，不进任何判定**：`feas` 与阻断结论逐字不变 —— 阈值还没裁（§H-55 线立不出、§H-56 中间带是分布本身的形状，
+ *   两端之间挤着 7 粒 Δ +13.5~+15.6 的包）。关掉省时间：`EPIRUS_NO_GUARD=1`。 */
+if (process.env.EPIRUS_NO_GUARD !== '1') {
+  const GN = Number(process.env.EPIRUS_GUARD_GAMES || 40), GS = Number(process.env.EPIRUS_GUARD_SEEDS || 2);
+  const ar = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + SRC, '--games=' + GN, '--pair=1', '--seeds=' + GS],
+    { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
+  const arows = parsePairTable(ar.stdout);
+  console.log(formatRecord(arows[0], (ar.status === 0 ? '' : '探针 exit ' + ar.status + ' · ') + '真桌 1+4 攒钱替身 · ε=0.2 · ' + GN + ' 局 × ' + GS + ' 种子 · '));
+}
+
 const brd = breadthProfile(W, params, 'long', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
 /* ===== v1.5.145（用户追问"这个包在不探索的时候技能广度非常差，是怎么通过门禁上线的？"）=====
  * 实情：**阻断项 `G` 取自 `selfPlay(..., 'multi', G)`（上面第 92 行），而本行打印的是 `breadthProfile(..., 'long')`**

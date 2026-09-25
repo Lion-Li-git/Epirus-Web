@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { parsePairTable } from './defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -5794,6 +5795,289 @@ t('D142 空净化闸门（v1.5.199 · 用户实机报）必须与引擎 `purgeSe
   }
 });
 
+t('D148 E1/E2 量具 `probe-ep-reach.mjs`（09-24 夜 · 交接 §4）：门槛可达性必须问引擎、无决策点必须响、改价必须还原', function () {
+  /* 这份量具的产出直接决定"该改价还是该改判据"（交接 §0 的两条来路）⇒ 它自己不能是错的。
+   * 三条会复发的形状，逐条钉：
+   *  ① 门槛数字**不许自己抄**（抄了就与 `computeCost` 的动态费用漂移：大雷 5、电磁炮 2+珠、聚能环/过载炮是 null）；
+   *  ② 决策点为 0 必须**非零退出**（交接 §5-4：静默跳过 = 把测量关掉而汇总仍全绿）；
+   *  ③ §B 的改价是**内存里改 `R.byKey`** ⇒ 必须在 finally 还原，否则"改价反事实"会污染后一场读数。 */
+  const p = readFileSync('tools/probe-ep-reach.mjs', 'utf8');
+  ok(p.indexOf('S.computeCost') >= 0 && p.indexOf('const canNow = ep >= need') >= 0,
+    '门槛必须问引擎（`S.computeCost`），再与 ep 比 —— 不许硬写数字');
+  ok(!/\bep >= \d+\s*&&/.test(p), '不许出现"ep ≥ 某常量 &&"这种把硬编码门槛喂进判定式的写法（与动态费用必漂）；' +
+    '直方图分桶（`ep >= 5 ? \'5+\'`）不算判定，所以只禁"参与判定"的那种');
+  ok(p.indexOf("String(rr.need)") >= 0, '打印的门槛数字必须来自引擎回传的 `need`，不是字面量');
+  ok(p.indexOf('finally') >= 0 && /R\.byKey\[R\.SK\.BIG_T\]\.cost = prevCost/.test(p),
+    '改价反事实必须在 finally 还原单价（否则 §B 三档之间互相污染）');
+  const run = spawnSync(process.execPath, ['tools/probe-ep-reach.mjs', '--games=6', '--fields=pool,mirror'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 160) + '）');
+  const out = String(run.stdout || '');
+  ok(/可达时成交率/.test(out) && /只差≤2ep/.test(out),
+    '必须同时印"可达时成交率"与"只差≤2ep"两列 —— 缺任何一列就分不开"够不着"与"不想去"（E1 的全部意义）');
+  ok(/ep 支出结构/.test(out) && /ep 收入/.test(out), 'E2 的收支两栏必须在（不然只剩"钱不够"这一种解释）');
+  ok(/n=\d+/.test(out), '每个比例必须带 n（交接 §5-5：阈值不写 n 就没有意义）');
+  ok(/真放出去|真买了/.test(out), '必须印"真放出去/真买了" —— 只有"买得起 X%"会把"够不着"与"不去"混成一格');
+  /* §E 广度含多少空转：判据必须**来自事件**（写卡名清单必然与引擎的清除清单漂 —— 同 D142 的教训） */
+  ok(p.indexOf("e.type === 'purify' && !e.curses") >= 0 && p.indexOf("'beadExpire'") >= 0 &&
+     p.indexOf("e.reason === '天火'") >= 0,
+    '空转的三类判据必须来自事件（`purify.curses===0` / `beadExpire` / 该回合无 `reason===天火` 的伤害），不许维护第二份卡名清单');
+  const b = spawnSync(process.execPath, ['tools/probe-ep-reach.mjs', '--games=4', '--fields=pool', '--breadth-games=8'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(b.status, 0, '§E 要跑得通（' + String(b.stderr || '').slice(0, 160) + '）');
+  ok(/G 有效技能数：原始 [\d.]+（\d+ 种 \/ \d+ 次非ジ出手） → 扣空转/.test(String(b.stdout)),
+    '§E 必须把"原始 G → 扣空转 G"并排印出来 —— 只印一个数就会让人以为扣空转必然变小（实测 `v7cmin4-82` 扣完从 4.83 **涨**到 5.79）');
+  /* ② 空枪检测：--games=0 ⇒ 决策点必为 0 ⇒ 必须非零退出，不许印一排 0% 假装量到了 */
+  const zero = spawnSync(process.execPath, ['tools/probe-ep-reach.mjs', '--games=0', '--fields=pool'],
+    { encoding: 'utf8', timeout: 300000 });
+  ok(zero.status !== 0, '零决策点必须**非零退出**（实测 exit=' + zero.status + '）—— 静默返回 0 就是把这条测量关掉');
+});
+
+t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、不吃旋钮的【5】【6】必须自报口径', function () {
+  /* 病（09-25 凌晨实测）：`probe-ideal-champion.mjs` 原本只有一个写死的 `0.15`，名字读起来像 ε、实际是**温度**（交接 §4-E5 让人拿温度去扫探索率，整晚白跑）；
+   * 拆成 `--temp/--eps` 之后又发现第二层：**【5】seatSymmetry 与【6】mirrorHealth 各自在内部建 Chooser**（audit-lib.mjs:403 / evo.js:403 都是
+   * `policyChooserN(params, 0.15)`），所以 ε 扫描时那两行**逐字不变** —— 容易被读成"座位/广度对探索不敏感"，而真实原因是**它们没接到旋钮**。
+   * ⇒ 钉三件：旋钮分开、调用点真用、不吃旋钮的行必须**在输出里自报口径**。 */
+  const p = readFileSync('tools/probe-ideal-champion.mjs', 'utf8');
+  ok(/arg\('temp'/.test(p) && /arg\('eps'/.test(p),
+    '温度与探索率必须是**两个**参数（只有一个 0.15 时谁按交接做 E5 都会拉错杆）');
+  ok(/policyChooserN\(live, TEMP, EPS, EPSK, EPSMODE\)/.test(p),
+    '受评席的 Chooser 必须把四个参数一起传（只传 eps = 全候选均匀抽，那是 v1.5.139 被用户否掉的口径）');
+  ok(!/policyChooserN\(live, 0\.15\)/.test(p), '调用点不许再留写死的 0.15');
+  const i5 = p.lastIndexOf('【5】'), i6 = p.lastIndexOf('【6】'), i7 = p.lastIndexOf('【7】');
+  ok(i5 > 0 && i6 > i5 && i7 > i6, '【5】【6】【7】三条必须都在（用 lastIndexOf 定位打印行，头注释里也出现这些标号）');
+  ok(/seatSymmetry\(sb, live, MODE, n\)/.test(p) && /T\.mirrorHealth\(live, 400, 5, MODE\)/.test(p),
+    '【5】【6】仍走 seatSymmetry / mirrorHealth（单一真源，不许在这份表里另起一份实现）');
+  const seg5 = p.slice(i5, i6), seg6 = p.slice(i6, i7);
+  ok(/不吃/.test(seg5) && /audit-lib\.mjs:403/.test(seg5), '【5】必须自报"不吃 --temp/--eps"并指到 seatSymmetry 的写死处');
+  ok(/不吃/.test(seg6) && /evo\.js:2554/.test(seg6), '【6】必须自报"不吃 --temp/--eps"并指到 mirrorHealth 的写死处（行号要实测，别抄注释）');
+  const run = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8', '--eps=0.2', '--epsmode=soft'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, '表要跑得通（' + String(run.stderr || '').slice(0, 160) + '）');
+  const out = String(run.stdout || '');
+  const n5 = (out.match(/极差 [\d.]+pt/g) || []).join('|'), n6 = (out.match(/净兑现 G = [\d.]+/g) || []).join('|');
+  const nWarn = (out.match(/口径：本条(?:同样)?\*\*不吃\*\* --temp\/--eps/g) || []).length;
+  ok(nWarn === 2, '两条口径警示必须真的**打印出来**（源码里有、输出里没有 = 读表的人看不见），且恰好 2 处 —— 实测 ' + nWarn + ' 处');
+  const r2 = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8'],
+    { encoding: 'utf8', timeout: 600000 });
+  const out2 = String(r2.stdout || '');
+  eq((out2.match(/极差 [\d.]+pt/g) || []).join('|'), n5, '【5】在 eps=0.2 与默认下必须逐字相同（它不吃旋钮 ⇒ 这条相等本身就是那处写死的证据）');
+  eq((out2.match(/净兑现 G = [\d.]+/g) || []).join('|'), n6, '【6】同上 —— 若哪天这两行开始随 ε 动，说明单一真源被改散了，要重看钉法');
+});
+
+t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自证生效**，且判据数量不许冻结成常数', function () {
+  /* 为什么要有这份量具：五道门的输入全部写在 ε=0 上（`audit-lib` 9 处 + `evo.js` 4 处 `policyChooserN(params, 0.15)`），
+   * 而 5 人产品跑 ε=0.2 soft（`ui.js:464`）—— v1.5.152 只给"真桌出招份额"补了代理栏（D118），**门本身的输入没有第二口径**。
+   * 搬运是两条"改内存不改仓库"的路：① 装载 `evo.js` 前做字符串替换；② 装载后把沙箱里的 `EpirusTrainer.policyChooserN` 包一层。
+   * ⇒ 最大风险不是数不对，是**没搬成功而两栏一样**（会被读成"口径无关"）。所以本门判的是"搬运有没有留下证据"，不是某个读数。 */
+  const p = readFileSync('tools/probe-layer-caliber.mjs', 'utf8');
+  ok(p.indexOf('writeFileSync') < 0 && p.indexOf('appendFile') < 0, '量具必须只读（不许落任何产物）');
+  ok(/process\.exit\(9\)/.test(p) && /SELF\.patched !== EVO_HARDWIRED \|\| SELF\.wrapper <= 0/.test(p),
+    '必须有"两条路都自证生效否则作废"的自检（非零退出）—— 缺它时两栏相同会被当成"口径无关"');
+  ok(/EVO_HARDWIRED = \(EVO_SRC\.match\(HARDWIRED\)/.test(p) && !/patched !== 4/.test(p),
+    '期望的写死处数量必须**从源码现算**（METHODOLOGY 52：冻结成常数的"期望值"会在别人补一处后静默少覆盖）');
+  ok(/arguments\.length >= 3 \? orig\.apply/.test(p),
+    '包装层必须**原样透传**已经传了 ≥3 个参数的调用（否则会把产品口径自己的四参数调用改坏，制造假差异）');
+  const run = spawnSync(process.execPath, ['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 200) + '）');
+  const out = String(run.stdout || '');
+  ok(/工具自检：`evo\.js` 写死处实测 \d+ 处 → 内存里替换了 \d+ 处/.test(out) && /经包装调用 \d+ 次/.test(out),
+    '必须印出自检两半（现算数量 + 经包装次数）');
+  ok(/攒钱场 设防率/.test(out) && /最长连设防/.test(out) && /五道门总结论/.test(out),
+    '必须同时印"五道门的输入"与"门不看的栏（设防持续性）"—— 后者是用户 09-24 实机报的病，前者是门唯一在读的东西');
+  const num = function (o, label) {
+    const m = new RegExp(label + '[^\\n]*ε=0\\s+([\\d.]+)\\s+产品\\s+([\\d.]+)').exec(o);
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  };
+  const seat = num(out, '座位极差'), wall = num(out, '反弹墙伤害/局');
+  ok(!!seat && !!wall, '座位与反弹墙两栏必须能被抓出来（格式变了就一起改本门）');
+  ok(seat[0] !== seat[1] || wall[0] !== wall[1],
+    '两栏至少一列必须**不同** ⇒ 证明搬运真的到了引擎（全同 = 测量没打开）。实测 座位 ' + seat.join(' vs ') + ' / 墙 ' + wall.join(' vs '));
+  /* 对照：把产品口径也设成 ε=0，则两栏必须**逐字相同** —— 这条是上面那条的反证，也顺手钉住"差异来自口径而不是别的参数" */
+  const ctl = spawnSync(process.execPath, ['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30', '--eps=0'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(ctl.status, 0, 'eps=0 对照要跑得通');
+  const cout = String(ctl.stdout || '');
+  const cSeat = num(cout, '座位极差'), cWall = num(cout, '反弹墙伤害/局');
+  ok(!!cSeat && !!cWall && cSeat[0] === cSeat[1] && cWall[0] === cWall[1],
+    'ε=0 对照下两栏必须相同（实测 座位 ' + (cSeat || []).join('/') + ' · 墙 ' + (cWall || []).join('/') + '）');
+  /* 档案筛必须**复用**上面那两条搬运路，不许出现第二份口径实现（本仓"同一规则只写一遍"的规矩） */
+  const sw = readFileSync('tools/probe-breadth-flip.mjs', 'utf8');
+  ok(/from '\.\/probe-layer-caliber\.mjs'/.test(sw) && /import \{ build \}/.test(sw),
+    '`probe-breadth-flip.mjs` 必须 import `build`（搬运手法单一来源）');
+  ok(!/HARDWIRED/.test(sw) && !/vm\.runInNewContext/.test(sw),
+    '复用方不许在自己文件里再写一份"替换/装载"逻辑（`HARDWIRED`/`runInNewContext` 都只能活在 `build` 里）');
+  ok(/export function build/.test(p) && /IS_MAIN/.test(p),
+    '被 import 的量具必须"装载不跑 main"（与 behavior-profile.mjs 同规），否则复用时会连带跑出两张表');
+  ok(/HARDWIRED/.test(p) && /EVO_HARDWIRED = \(EVO_SRC\.match\(HARDWIRED\)/.test(p),
+    '写死处的正则与期望数量必须**同一份常量**（现算），两处各写一遍必漂');
+  /* 档案筛（复用同一套搬运）也必须**真跑得通**：09-25 03:30 我给它加"先认货再装载"时漏 import `readFileSync`，
+   *   只有把它跑一次才暴露（`node --check` 只抓语法）⇒ 这类"import 漏了"的错误必须由跑通断言兜。 */
+  const sw2 = spawnSync(process.execPath, ['tools/probe-breadth-flip.mjs', '--every=700', '--limit=2', '--games=6'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(sw2.status, 0, '`probe-breadth-flip` 要跑得通（' + String(sw2.stderr || '').slice(0, 200) + '）');
+  ok(/结论（n=/.test(String(sw2.stdout)), '筛完必须印结论块（含被跳过的非包 .bak 计数）');
+  ok(/SKIP/.test(sw) && /跳过/.test(sw), '扫池工具必须**点名跳过项**——静默跳过会把"没跑成"读成"没体质"（而漏 import 会被洗成数据问题）');
+});
+
+t('D151 「攒钱→防御」量具：ep 必须**决策时实读**，因果必须靠**两档配对**，小分母不许当结论', function () {
+  /* 这条门是被自己的第一版**逼**出来的：我最初从事件流前缀和重建"对手 ep"，并假定"一回合内 5 条 action 全先于结算"。
+   * 实测该假定为假（一局里 64 次结算落在 action 之前/之间、只有 13 次是干净分界）⇒ 前缀和既不是"开始值"、又只加不减（花了不扣）。
+   * ⇒ 唯一站得住的读法是**在被评席做决策的那一刻直接读 `state.p[0].ep`**（这才是这只包看得见的钱），回合号用 `state.round`。 */
+  const p = readFileSync('tools/probe-defense-cause.mjs', 'utf8');
+  ok(p.indexOf('from \'./probe-layer-caliber.mjs\'') >= 0 && /import \{ build \}/.test(p),
+    '口径搬运必须继续复用 `build`（单一来源，同 D150）');
+  ok(/ep0: opp \? \(opp\.ep \|\| 0\)/.test(p) && !/epAtRound/.test(p),
+    '桶变量必须是**决策时实读**的 `state.p[0].ep`；不许回到"从事件流重建 ep"（那种写法只加不减，量的是"一辈子挣过多少"）');
+  ok(/const REC = \[\];/.test(p) && /rd: s2\.round/.test(p),
+    '决策记录必须带 `state.round`（实测单调），不许再用"某 pid 重复出现"当回合边界');
+  /* 因果那一问：单档里 ep 与回合号是同一条轴 ⇒ 必须有两档才能配对判 */
+  ok(/arg\('saver', 'hold'\)/.test(p) && /SAVER === 'cycle'/.test(p) && /CYCLE_AT = Number\(arg\('cycle-at', 4\)\)/.test(p),
+    '必须提供 `hold`（钱一路堆）与 `cycle`（堆到 `--cycle-at` 就花掉）两档替身 —— 单档答不了"是不是因为对方有钱"');
+  ok(/按回合号的曲线/.test(p) && /同一回合号/.test(p),
+    '必须印"按回合号的曲线"并写明"同一回合号跨两档配对"才是因果判据（否则读者会拿单档的负相关当因果结论）');
+  ok(/该桶平均回合/.test(p), '每个 ep 桶必须并排印该桶平均回合 ⇒ 让"ep 轴 = 回合轴"这个混淆在读数里就看得见');
+  ok(/玩家侧代价/.test(p) && /攒钱者夺冠/.test(p),
+    '必须把代价落到玩家侧（局长中位/p90、平局率、攒钱者夺冠率）——只有设防率的报告会被读成"AI 变弱了"，而实际是它开始奖励龟缩');
+  ok(/没掉过血/.test(p) && /LASTHP/.test(p),
+    '必须有"自上次决策以来没掉过血"的子样本曲线 —— 缺它时两档的差值可以全是"装配里另一件事（对手会不会真打你）"的差，而不是钱的差');
+  ok(/安慰剂|两档在 ep 还没分岔/.test(p) || /同一曲线、但\*\*只取/.test(p),
+    '必须印那条"只取没掉过血"的第二曲线（与主曲线同格式，好让人做分岔前/分岔后的对照）');
+  ok(/'%（n=' \+ n \+ '）'/.test(p) && /—（n=0）/.test(p),
+    '每个比例必须带分母，且空桶印成"—（n=0）"而不是 0.0%（那会把"没量到"读成"量为零"）');
+  ok(/const BMIN = Number\(arg\('bucket-min', 40\)\)/.test(p) && /自适应合并|并入/.test(p) && /分母不足/.test(p),
+    '必须有分母下限（`--bucket-min`，默认 40）+ 空桶丢弃/高桶自适应合并 + 小样本时输出"分母不足/没量到"');
+  ok(/同一席连续设防/.test(p) && /gamesWithRun3/.test(p),
+    '"维持很久"是**游程长度**问题，必须单独印（设防率答不了它）');
+  /* 引擎侧：决策时读到的是**当下**的 ep（不是回合开始）—— 这条钉的是"包看得见什么" */
+  ok(p.indexOf('state.p[0]') >= 0 || /s2\.p\[0\]/.test(p), '必须从 state 直接读对手席');
+  for (const sv of ['hold', 'cycle']) {
+    const run = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--games=6', '--packs=js/bundled-champion-3p.js', '--saver=' + sv],
+      { encoding: 'utf8', timeout: 600000 });
+    eq(run.status, 0, '量具两档都要跑得通（saver=' + sv + '：' + String(run.stderr || '').slice(0, 140) + '）');
+    const out = String(run.stdout || '');
+    ok(/攒钱替身 = `' + SAVER + '`|攒钱替身 = `' + sv + '`/.test(out) || out.indexOf(sv) >= 0, 'saver=' + sv + ' 必须把档位印在表头（读数要带装配）');
+    ok(/维持很久/.test(out) && /判读/.test(out), 'saver=' + sv + ' 必须同时印"游程长度"与"方向判读"两行');
+  }
+});
+
+t('D152 「空蓄能」分因量具 `probe-bead-loop.mjs`：两种相反的病不许挤在同一个"浪费率"里，两把尺不许互相校验', function () {
+  /* 动因（§H-27）：`chargeProfile` 只给"得珠/花掉/过期"三个总量。按"蓄能后下一次决策时电磁炮买不买得起"拆开之后，
+   *   现役是 **② 买得起却没射 68.1%**（选择），`v7cmin4-82` 是 **① 买不起 83.3%**（经济）—— 同一个"浪费率高"指向两层完全不同的修法。
+   * ⇒ 本门钉的是"这把尺别又长回一个总量"。 */
+  const p = readFileSync('tools/probe-bead-loop.mjs', 'utf8');
+  ok(p.indexOf('writeFileSync') < 0, '量具必须只读');
+  ok(/import \{ build \} from '\.\/probe-layer-caliber\.mjs'/.test(p) && /import \{ chargeProfile \} from '\.\/audit-lib\.mjs'/.test(p),
+    '口径搬运复用 `build`、总量复用真源 `chargeProfile`（都不许有第二份实现）');
+  ok(/beadAlive/.test(p) && /beadGone/.test(p),
+    '必须先判"珠子还活不活"：该席下一次决策可能已隔两三回合 ⇒ 那批要单列 `beadGone`，不混进①②的分母（第一版没判，造出过 8 次假"买不起"）');
+  ok(/按决策计/.test(p) && /按珠子计/.test(p),
+    '必须写明"本表按决策计、真源按珠子计，两者不该相等"—— 不写就会有人拿其中一个去"校验"另一个，把发现当 bug 删掉');
+  ok(/实际干了什么/.test(p), '② 必须并排印"那些决策实际出了什么卡"（不然"选择问题"这四个字没有内容）');
+  const run = spawnSync(process.execPath, ['tools/probe-bead-loop.mjs', '--games=8', '--packs=js/bundled-champion-3p.js'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 180) + '）');
+  const out = String(run.stdout || '');
+  ok(/① 下一回合电磁炮/.test(out) && /② 买得起/.test(out) && /③ 买得起也射了/.test(out), '三桶必须都在且互斥（加起来等于分母）');
+  ok(/真源 `chargeProfile`（\*\*按珠子计\*\*）/.test(out), '必须印真源那一行做并排对照');
+});
+
+t('D153 产品的两个口径必须钉住（5 人 = ε0.2/k5/soft、2 人困难 = ε0）——本夜全部"口径"结论都挂在这两行代码上', function () {
+  /* 为什么单独立一条：§H-6/H-10/H-12/H-13 的整串"评测口径 ≠ 产品口径"结论，**唯一的凭据就是 `ui.js` 里那一次调用**；
+   *   而那行没有任何门钉着（D111/D118 钉的是探索规则与代理栏存在，不钉这四个值）。⇒ 有人调了它，全夜的读数就失去所指。 */
+  const ui = readFileSync('js/ui/ui.js', 'utf8');
+  ok(/Trainer\.pickChampion\(state, pid, legalForAI, c, 0\.15, 0\.2, 5, 'soft'\)/.test(ui),
+    '5 人冠军路径必须是 temp0.15 / ε0.2 / epsK=5 / soft —— 这是本仓唯一一份"玩家实际看到的探索口径"');
+  ok(/Trainer\.pickChampion\(state, 1, legalForAI, c, 0\.15\)/.test(ui),
+    '2 人困难槽仍是 ε=0（`ui.js` 里那句"播放口径：与训练口径一致"是**有意的**）⇒ 所以"产品口径"不是一个数，报数必须指明哪个槽');
+  const m = readFileSync('docs/METHODOLOGY.md', 'utf8');
+  ok(/2 人口径|2 人槽/.test(m) && /评测口径/.test(m),
+    'METHODOLOGY 必须留着"两槽口径不同"这段（否则下一个人会把"产品口径"当成单一口径去改门）');
+  /* 反向钉：代理栏与门的输入必须**仍可分辨**（代理栏用 0.2 soft，门禁输入用 ε=0） */
+  const pr = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(/fieldProfile\(params, 0\.2, 'soft'/.test(pr), 'D118 的产品代理栏必须继续显式带 0.2/soft（它存在的意义就是"另一口径"）');
+});
+t('D154 `--pair=1` 必须**一条命令跑两档并自带 placebo 自检**（09-25 E18 那次自我作废换来的）', function () {
+  const p = readFileSync('tools/probe-defense-cause.mjs', 'utf8');
+  ok(/const PAIR = arg\('pair', ''\) === '1';/.test(p), "两档配对要成为**一个档**（`--pair=1`），不能靠人眼比两根曲线");
+  ok(/const SAVES = PAIR \? \['hold', 'cycle'\] : \[SAVER\];/.test(p) && /for \(const SAV of SAVES\)/.test(p) && /SAVER = SAV;/.test(p),
+    '配对模式必须**在同一次调用里**跑 hold+cycle（同种子同局数）⇒ 唯一变量是"对手手里的钱"；跨两次调用会漂');
+  ok(/CURVES\.push\(\{ pack:.*byRound: byRound/.test(p), '每档的"按回合号曲线"必须留档到内存 ⇒ 才有逐回合对齐的原料（探针不写文件）');
+  ok(/placebo 自检/.test(p) && /两档不该分岔的回合/.test(p),
+    '必须自带 placebo 自检：两档在 ep 未分岔的前几回合读数**必须逐字相同**，不同就当场作废（这条抓到过替身做错）');
+  ok(/不能当体质流行率/.test(p), '输出里必须留着那句更正：**单档 `hold` 的"倍差≥2"是含混了回合轴的粗筛**（E18：八成在配对后掉下 Δ≥15pt）');
+  ok(p.indexOf('不是拍的（§H-55') >= 0 && p.indexOf('池化 Δ') >= 0,
+    '判定线要自己声明带宽是实测来的（跨种子极差），不是拍的 —— §H-55 的教训：贴线那一段本身就是噪声');
+  const one = 'docs/artifacts/cbs1s2-band2.bak';
+  const r = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=25', '--pair=1'], { encoding: 'utf8' });
+  eq(r.status, 0, '`--pair=1` 要跑得通（' + String(r.stderr || '').slice(0, 200) + '）');
+  const o = String(r.stdout || '');
+  ok(o.indexOf('同回合配对') >= 0, '`--pair=1` 必须印出同回合配对表');
+  ok(o.indexOf('✓ placebo 自检通过') >= 0, '小样本上 placebo 自检必须**通过**（不通过 = 两档连不该分岔的地方都分了岔，读数没意义）');
+  ok(o.indexOf("⇒ 判定用的是") >= 0 && o.indexOf("12~18 灰区 / ≤12 低") >= 0,
+    '配对表必须把三档判定线（含灰区）印在表尾 —— 线不许只存在于源码里');
+  const q = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=15'], { encoding: 'utf8' });
+  eq(q.status, 0, '不开 `--pair` 的默认档要照常跑完');
+  ok(String(q.stdout || '').indexOf('同回合配对') < 0, '默认档**不许**偷跑两档（历史读数必须逐字节可复现：09-25 已用 diff 自证过）');
+
+  /* --seeds=N：多种子池化 + 跨种子极差（§H-55 立这条的理由：贴线那一段本身就是噪声，只看单种子会把"线"当成"事实"） */
+  ok(/const NSEEDS = Math.max\(1, Number\(arg\('seeds', 1\)\)\)/.test(p),
+    '--seeds 必须存在且默认 1（默认时取到的种子与改前完全相同 ⇒ 历史读数一字不变）');
+  ok(/SEED_LIST\.push\(\(SEED0 \+ si \* 100003\)/.test(p) && /let SEED_BASE = SEED0;/.test(p),
+    '每粒种子必须走同一条 SEED_BASE 通道（两处 mul(SEED0…) 都要改，漏一处就等于"换了参数却没换种子"）');
+  ok(/池化计数/.test(p) && /spread/.test(p),
+    '多种子必须**按计数池化**（不是把率求平均）并印跨种子极差 ⇒ 极差才是判"线落在噪声里吗"的量');
+  ok(/灰区 12~18pt/.test(p) && /灰区宽度来自实测跨种子极差/.test(p),
+    '灰区宽度必须声明是实测来的，不是拍的（§H-55：eco-34 换种子从 +14.2 跨到 +15.9）');
+  const sr = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=8', '--pair=1', '--seeds=2'], { encoding: 'utf8' });
+  eq(sr.status, 0, '--seeds=2 要跑得通（' + String(sr.stderr || '').slice(0, 200) + '）');
+  ok(/每粒种子Δ/.test(String(sr.stdout || '')) && /极差/.test(String(sr.stdout || '')),
+    '多种子必须逐粒印 Δ 与极差（只印均值会把"这条线站不站得住"藏掉）');
+  const sn = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=6', '--seeds=2'], { encoding: 'utf8' });
+  eq(sn.status, 4, '不开 --pair 却要求多粒种子必须**报错退出**，不许静默按单种子跑完装作跑了两种子');
+  const sp = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=8', '--pair=1', '--seeds=1'], { encoding: 'utf8' });
+  ok(/同回合配对/.test(String(sp.stdout || '')) && !/多种子：/.test(String(sp.stdout || '')),
+    'seeds=1 时退回单种子表（不印池化说明），配对表照常存在'
+  );
+});
+t('D155 设防持续性栏必须**只记录不阻断**，且配对表的解析只有 defense-axis.mjs 一处', function () {
+  const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
+  const ax = readFileSync('tools/defense-axis.mjs', 'utf8');
+  ok(pc.indexOf('设防持续性栏') >= 0 && /EPIRUS_NO_GUARD/.test(pc), 'promote 必须印这一栏，且给一条能关掉省时间的开关');
+  ok(pc.indexOf("from './defense-axis.mjs'") >= 0 && ax.indexOf('export function parsePairTable') >= 0,
+    '解析必须单一来源：promote 里不许有第二份 parsePairTable（同 D150 的"搬运不许各写一份"）');
+  ok(pc.indexOf('createState') < 0, 'promote 的新栏**不许自己仿真** —— 只 spawn 探针再解析（自己搭桌子必然与探针漂移）');
+  ok(ax.indexOf('不许按 0 处理') >= 0, '解析不出行时必须明说"没量到"，不许静默回 0（0 会被读成"这包不龟"）');
+  /* ① 固定样本回归：第一版把 Δ 读成了"跨种子极差"（每粒种子列有 1~3 个数，按空白切下标就串位） */
+  const SAMPLE = ['   包                      placebo    hold均%  cycle均%      Δpt  每粒种子Δ                 极差   判定',
+    '   cbs1s2-band2                2 粒      37.2      13.7     +23.5  +22.0 +25.1       3.1   钱驱动（高，≥18pt）',
+    '   v7cmin4-31                  单粒       5.5       4.4      +1.6  +1.6                    —    非钱驱动（≤12pt）'].join('\n');
+  const parsed = parsePairTable('# 同回合配对（占位表头）\n' + SAMPLE);
+  eq(parsed.length, 2, '两行都得解析出来（实际 ' + parsed.length + '）');
+  eq(parsed[0].delta, 23.5, 'Δ 必须取 Δpt 那一列，不是极差（v1.5.222 第一版就在这串了位）');
+  eq(parsed[0].spread, 3.1, '跨种子极差要单独拿到（判"线落在不落在噪声里"用的就是它）');
+  eq(parsed[1].delta, 1.6, '单种子行（极差列是 —）也要解析对');
+  ok(!isFinite(parsed[1].spread), '单种子时极差必须是 NaN 而不是 0（0 会被读成"完全稳定"）');
+  eq(parsed[0].hold, 37.2, 'hold 均%'); eq(parsed[0].cycle, 13.7, 'cycle 基线%（= 水平轴）');
+  /* ② 真链：小样本跑探针 → 同一份解析 → 必须是有限数 + 有判定文案 */
+  const one = 'docs/artifacts/cbs1s2-band2.bak';
+  const rr = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=25', '--pair=1', '--seeds=2'], { encoding: 'utf8' });
+  eq(rr.status, 0, '探针要跑得通');
+  const rows = parsePairTable(rr.stdout);
+  ok(rows.length >= 1 && isFinite(rows[0].delta) && rows[0].verdict.length > 0,
+    '真表必须解析出有限 Δ 与判定文案（解析 0 行 = 探针换了列序而没人发现，正是本门要防的）');
+  /* ③ 行为式铁证：开/关这一栏，promote 的其余输出与退出码必须**逐字相同**（"只记录"不许是口头承诺） */
+  const on = spawnSync(process.execPath, ['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'], { encoding: 'utf8' });
+  const off = spawnSync(process.execPath, ['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'], { encoding: 'utf8', env: Object.assign({}, process.env, { EPIRUS_NO_GUARD: '1' }) });
+  eq(on.status, off.status, '退出码必须一致（实测 ' + on.status + ' vs ' + off.status + '）⇒ 这栏不许改变判定');
+  const strip = x => String(x || '').split(/\r?\n/).filter(l => l.indexOf('设防持续性栏') < 0).join('\n');
+  eq(strip(on.stdout + on.stderr), strip(off.stdout + off.stderr), '去掉这一行后两次的全部输出（含 stderr 里的阻断结论）必须逐字相同');
+  ok((on.stdout + on.stderr).indexOf('G 有效技能数') >= 0 || on.status === 0, '顺带确认这次 dry-run 真走到了门结论（阻断文案在 stderr，别只拼 stdout）');
+});
+
+
+
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
    * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/
@@ -5840,8 +6124,14 @@ t('D107 G4「1 席脚本 vs 4 席被测」装配只许有一份实现（v1.5.133
   ok(pg.indexOf('dmgToScriptedPerGame') >= 0, '解剖探针必须打印"打在枪手身上 X/局"（否则看不到主因那一列）');
   const pb = readFileSync('tools/probe-g4-anatomy.mjs', 'utf8');
   ok(pb.indexOf("from './v2v4-lib.mjs'") >= 0, '解剖探针必须从单一来源导入装配');
-  ok(pb.indexOf('EXPECT') >= 0 && /EXPECT = \{ long: 75, multi: 62 \}/.test(pb),
-    '探针必须自带"复现 G4 已记录读数"的自检（long 75 / multi 62）—— 装配错了就不许读后面的数');
+  ok(pb.indexOf('EXPECT') >= 0 && /EXPECT = \{ long: 38, multi: 35 \}/.test(pb),
+    '探针必须自带"复现 G4 在位包记录值"的自检（现役 v7cmin4-31：long 38 / multi 35）—— 装配错了就不许读后面的数');
+  /* v1.5.205 校正：这条钉原先写死 `long: 75 / multi: 62`，那是 **v1.5.144 之前**那件线上包的读数
+   * ⇒ 常量不随换包走，后果不是"数字旧"，而是**每次跑都自证「⛔ 复现失败 ⇒ 下面的读数先别读」**（一个好量具被自己的记账废掉）。
+   * 所以这里除了钉数值，还必须钉"来历写清楚"（包名 + n + 日期），换包时漏改就会红 —— 文本钉反过来当防腐用。 */
+  ok(/现役 `v7cmin4-31`（v1\.5\.144 上槽）实测 38% \/ 35%/.test(pb) || /现役 `v7cmin4-31` 在同一装配、同一 seed、n=60 上是 \*\*long 38% \/ multi 35%\*\*/.test(pb),
+    'EXPECT 旁边必须写清"这个值属于哪件在位包 + n"（否则下一次换包又会把它变成永久自检失败）');
+  ok(pb.indexOf('75%/62%') < 0, '历史数字 75%/62% 不许再被当成"当前在位包的记录值"引用（它属于 v1.5.144 之前那件包）');
 });
 
 t('D110 冠军包解析单一来源：吃得下产物 .bak 外壳 / 纯 JSON / 垃圾必拒（页面「导入冠军包」的底座）', function () {
