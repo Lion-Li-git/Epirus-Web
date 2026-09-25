@@ -1,10 +1,15 @@
 /* Epirus N 人（3-5）引擎测试：随机对局 fuzz + 关键裁定点（docs/RULES-NP.md） */
-import { readFileSync, existsSync, readdirSync, statSync, mkdtempSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { parsePairTable } from './defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
+/* v1.5.225（用户批准方案 a）：确定性重活的**内容寻址缓存** —— 键 = argv + EPIRUS_* env + 源码树内容。
+ * 只缓存 (status, stdout, stderr)，**断言照旧跑**；命中响亮打印；`NP_NOCACHE=1` 一律真跑。
+ * ⚠️ 只许缓存"断言只用 stdout/status"的子进程（前置要求见 tools/np-cache.mjs 头注）。
+ * ⚠️ 门里**不许**把缓存计数器清零（模块里那个清零 API，np-test 一律不许 import）：那会把收尾的"命中/省下多少"抹掉。 */
+import { spawnCached, inputHash, cacheStats } from './np-cache.mjs';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -49,9 +54,13 @@ function mulberry32(seed) {
   };
 }
 let PASS = 0, FAIL = 0;
+const __T = [];   /* v1.5.224：按门计时。默认**零成本**（只 push 两个数），NP_TIME=1 时才在收尾印排行榜。
+                   * 整轮墙钟用 `process.uptime()`（见收尾），不另记起点 —— 少一个变量就少一处能写错的地方。 */
 function t(name, fn) {
+  const __t0 = Date.now();
   try { fn(); PASS++; console.log('  ✔ ' + name); }
   catch (e) { FAIL++; console.log('  ✘ ' + name + '  → ' + e.message); }
+  __T.push([Date.now() - __t0, name]);
 }
 function ok(c, m) { if (!c) throw new Error(m || 'assert failed'); }
 function eq(a, b, m) { if (a !== b) throw new Error((m || '') + ' got=' + a + ' want=' + b); }
@@ -4690,7 +4699,7 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
   };
   const dir = mkdtempSync(join(tmpdir(), 'd123-'));
   const mini = function (env) {
-    return spawnSync(process.execPath, ['tools/train-3p.mjs', '3', '3', '6', '4'], {
+    return spawnCached(['tools/train-3p.mjs', '3', '3', '6', '4'], {
       env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd123', EPIRUS_BAND_DIR: dir }, env || {}),
       encoding: 'utf8', timeout: 300000,
     });
@@ -4922,11 +4931,11 @@ t('D127 兑现广度（v1.5.167 · §N24 · 用户"G_eff 像刷分"）：mirrorH
   r = bandPickByLand([{ score: 1.00, landG: 2 }, { score: 0.99, landG: 9 }], 0.03);
   eq(r.skipped || 0, 0, '未提供 gateOk（旧调用点）⇒ 视为通过，行为与 v1.5.167 一致');
   const dirA = mkdtempSync(join(tmpdir(), 'd127a-')), dirB = mkdtempSync(join(tmpdir(), 'd127b-'));
-  const off = spawnSync(process.execPath, ['tools/train-3p.mjs', '3', '3', '6', '4'],
+  const off = spawnCached(['tools/train-3p.mjs', '3', '3', '6', '4'],
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127off', EPIRUS_BAND_DIR: dirA }), encoding: 'utf8', timeout: 300000 });
   eq(off.status, 0, '默认关必须跑通');
   eq(wh('docs/artifacts/train-3p-out.js'), CLI_ARM_BASELINE, '默认关的产物必须仍是那条基线（动了它 = 所有 CLI 臂的当选规则被偷改）');
-  const on = spawnSync(process.execPath, ['tools/train-3p.mjs', '3', '3', '6', '4'],
+  const on = spawnCached(['tools/train-3p.mjs', '3', '3', '6', '4'],
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127on', EPIRUS_SEL_LAND: '1', EPIRUS_BAND_DIR: dirB }), encoding: 'utf8', timeout: 300000 });
   eq(on.status, 0, '开开关也要跑通');
   ok(/\[兑现广度\].*G\(出手→落地\)/.test(String(on.stdout || '')), '开了必须印出每候选的两把尺（不印 = 又一根暗旋钮）');
@@ -5137,7 +5146,7 @@ t('D134 切片相位不许与座位轮换锁死（v1.5.186 · 复核 DS 交接 �
   ok(evoSrc.indexOf('regenForGame(g, games, gen)') >= 0, '补贴切片必须收到 gen（不传 = 相位不转 = 病复发）');
   /* ④ 真跑一臂：判**产出的覆盖席**，不判横幅（§N11 那条纪律） */
   const dir = mkdtempSync(join(tmpdir(), 'd134-'));
-  const run = spawnSync(process.execPath, ['tools/train-3p.mjs', '40', '3', '8', '8'], {
+  const run = spawnCached(['tools/train-3p.mjs', '40', '3', '8', '8'], {
     env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTFocus', EPIRUS_IMIT_ONLY: 'bigT',
       EPIRUS_IMIT_OVERRIDE: '1', EPIRUS_IMIT_FRAC: '0.5', EPIRUS_IMIT_SUBONLY: '0',
@@ -5218,7 +5227,7 @@ t('D135 大雷连带收益项（v1.5.187 接线 · v1.5.188 换**率形**）：�
    *      若整臂一条链都没打出，fit 不许出现 +0.5 级的跳变（否则 = 计数漏了、奖励却在动）。
    *      v1.5.187 用的是 W=1.5 计数形（一发幸运链吃满 ⇒ 把名次适应度整个盖掉，实测考卷 35.4%→23.5%）⇒ 剂量降到 0.5。 */
   const dir = mkdtempSync(join(tmpdir(), 'd135-'));
-  const run = spawnSync(process.execPath, ['tools/train-3p.mjs', '60', '3', '8', '8'], {
+  const run = spawnCached(['tools/train-3p.mjs', '60', '3', '8', '8'], {
     env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTChain', EPIRUS_IMIT_ONLY: 'bigT', EPIRUS_IMIT_OVERRIDE: '1',
       EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd135', EPIRUS_BAND_DIR: dir
@@ -5241,7 +5250,7 @@ t('D135 大雷连带收益项（v1.5.187 接线 · v1.5.188 换**率形**）：�
    *      （事件流里注入与原生出手不可区分 —— 没有标记），所以在"原生零出手"的物种上，这一项**不是在评这个包**。
    *      ⇒ 这就是 Q-14 ①② 都买不到行为的机制解释；钉在这里，防以后有人拿"率很高"当出货。 */
   const dir2 = mkdtempSync(join(tmpdir(), 'd135b-'));
-  const run2 = spawnSync(process.execPath, ['tools/train-3p.mjs', '60', '3', '8', '8'], {
+  const run2 = spawnCached(['tools/train-3p.mjs', '60', '3', '8', '8'], {
     env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd135b', EPIRUS_BAND_DIR: dir2
     }), encoding: 'utf8', timeout: 600000
@@ -5306,7 +5315,7 @@ t('D136 示范归因（v1.5.189）：教师的手必须能从包自己的手里�
   ok(sOn.chainEvents !== undefined, '顺带：连带读数仍在（与 D135 同一把尺，不许跟着开关关）');
   /* ⑤ 真跑一臂：窗口后的代数里必须仍有归因读数，且**分桶不是恒零尺**（别的卡要在 `econ` 桶里有出手） */
   const dir = mkdtempSync(join(tmpdir(), 'd136-'));
-  const run = spawnSync(process.execPath, ['tools/train-3p.mjs', '30', '3', '8', '6'], {
+  const run = spawnCached(['tools/train-3p.mjs', '30', '3', '8', '6'], {
     env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTChain', EPIRUS_IMIT_ONLY: 'bigT', EPIRUS_IMIT_OVERRIDE: '1',
       EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd136', EPIRUS_BAND_DIR: dir
@@ -5369,7 +5378,7 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
   /* ===== ② probe-cross-mode：通吃排序必须"除 2P" =====
    * 病（今天 9 粒历史包实测）：3P 包塞进 2P 格是**结构性 0% 胜/100% 平**（含现役）⇒ 含 2P 的"最弱格"对这批包恒 0，
    * 排序键等于没有，把真正分辨得出的四格糊平。 */
-  const cm = spawnSync(process.execPath, ['tools/probe-cross-mode.mjs',
+  const cm = spawnCached(['tools/probe-cross-mode.mjs',
     'js/bundled-champion-3p.js', 'docs/artifacts/v7aim3-93.bak', 'docs/artifacts/v7divK-31.bak', '--games=6', '--json'],
     { encoding: 'utf8', timeout: 600000 });
   eq(cm.status, 0, '通吃矩阵要跑得通');
@@ -5389,7 +5398,7 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
   /* ===== ③ probe-skill-marginal：把"读不出"分成两种病 =====
    * `机会≈0` 的判据是 `chance`（每局几次机会）⇒ **与局数无关 ⇒ 加算力救不了**；`噪声内` 才是算力问题。
    * 混为一谈就会白烧算力（Q-10 的实际答复：×3.1 算力只把原生口径的可测从 3/30 抬到 4/30，换 `--rich=card` 才到 14/30）。 */
-  const mg = spawnSync(process.execPath, ['tools/probe-skill-marginal.mjs', '--mode=multi', '--games=6', '--only=ji,gun'],
+  const mg = spawnCached(['tools/probe-skill-marginal.mjs', '--mode=multi', '--games=6', '--only=ji,gun'],
     { encoding: 'utf8', timeout: 600000 });
   eq(mg.status, 0, '边际价值探针要跑得通');
   const mgOut = String(mg.stdout || '');
@@ -5833,7 +5842,7 @@ t('D148 E1/E2 量具 `probe-ep-reach.mjs`（09-24 夜 · 交接 §4）：门槛�
   ok(zero.status !== 0, '零决策点必须**非零退出**（实测 exit=' + zero.status + '）—— 静默返回 0 就是把这条测量关掉');
 });
 
-t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、不吃旋钮的【5】【6】必须自报口径', function () {
+t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、【5】【6】必须**两口径都印**且搬运自证（v1.5.224 契约升级）', function () {
   /* 病（09-25 凌晨实测）：`probe-ideal-champion.mjs` 原本只有一个写死的 `0.15`，名字读起来像 ε、实际是**温度**（交接 §4-E5 让人拿温度去扫探索率，整晚白跑）；
    * 拆成 `--temp/--eps` 之后又发现第二层：**【5】seatSymmetry 与【6】mirrorHealth 各自在内部建 Chooser**（audit-lib.mjs:403 / evo.js:403 都是
    * `policyChooserN(params, 0.15)`），所以 ε 扫描时那两行**逐字不变** —— 容易被读成"座位/广度对探索不敏感"，而真实原因是**它们没接到旋钮**。
@@ -5851,8 +5860,8 @@ t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、�
    * ② 口径必须在**输出里**可见；③ 旋钮分开、四参数调用（上面几条仍钉着）。 */
   ok(/seatSymmetry\((A|B2)\.sb, live, MODE, n\)/.test(p),
     '【5】仍走 seatSymmetry（单一真源，不许在这份表里另起一份实现）');
-  ok(/\.EpirusTrainer\.mirrorHealth\(live, 400, 5, MODE\)/.test(p),
-    '【6】仍走 mirrorHealth（单一真源，不许在这份表里另起一份实现）');
+  ok(/\.EpirusTrainer\.mirrorHealth\(live, (MIRROR_N|400), 5, MODE\)/.test(p),
+    '【6】仍走 mirrorHealth（单一真源，不许在这份表里另起一份实现）—— 样本量可以是门禁小档，但函数不许换');
   ok(/from '\.\/probe-layer-caliber\.mjs'/.test(p) && p.indexOf('build({ on: true') >= 0,
     '第二口径必须复用 build()（D150 的单一来源），不许自建第二份"替换/装载"');
   ok(/B2\.patched !== B2\.hardwired/.test(p) && /__viaWrapper > 0/.test(p),
@@ -5860,7 +5869,10 @@ t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、�
   const seg5 = p.slice(i5, i6), seg6 = p.slice(i6, i7);
   ok(/audit-lib\.mjs:403/.test(seg5) && /产品/.test(seg5), '【5】必须指到 seatSymmetry 的写死处，并印出**产品口径**那一列');
   ok(/evo\.js:2554/.test(seg6) && /产品/.test(seg6), '【6】必须指到 mirrorHealth 的写死处（行号要实测，别抄注释），并印出**产品口径**那一列');
-  const run = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8', '--eps=0.2', '--epsmode=soft'],
+  /* v1.5.224：spawn 用**门禁专用小样本档**（座位 60/120、广度 120）—— 门只要"两列都在且不同"，
+   * 不需要报告里那个 n（座位 100+400、广度 400 ⇒ 这一段让本门吃 46.5 秒、是整支门禁最慢的一道）。
+   * 两次 spawn 必须传**同一组**档位，否则下面"逐字相同"那条对照就不成立了。 */
+  const run = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8', '--eps=0.2', '--epsmode=soft', '--seat-n=60,120', '--mirror-n=120'],
     { encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, '表要跑得通（' + String(run.stderr || '').slice(0, 160) + '）');
   const out = String(run.stdout || '');
@@ -5872,7 +5884,7 @@ t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、�
   ok(/ε=0/.test(o6) && /产品/.test(o6), '【6】输出里必须两口径都看得见（ε=0 与产品）');
   ok(/口径搬运自证/.test(out) && /经包装调用 \d+ 次/.test(out),
     '自证两半必须**打印出来**（现算数量 + 经包装次数）—— 源码里有、输出里没有就等于没自证');
-  const r2 = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8'],
+  const r2 = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8', '--seat-n=60,120', '--mirror-n=120'],
     { encoding: 'utf8', timeout: 600000 });
   const out2 = String(r2.stdout || '');
   eq((out2.match(/极差 [\d.]+pt/g) || []).join('|'), n5, '【5】在 eps=0.2 与默认下必须逐字相同（它不吃旋钮 ⇒ 这条相等本身就是那处写死的证据）');
@@ -5892,7 +5904,7 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
     '期望的写死处数量必须**从源码现算**（METHODOLOGY 52：冻结成常数的"期望值"会在别人补一处后静默少覆盖）');
   ok(/arguments\.length >= 3 \? orig\.apply/.test(p),
     '包装层必须**原样透传**已经传了 ≥3 个参数的调用（否则会把产品口径自己的四参数调用改坏，制造假差异）');
-  const run = spawnSync(process.execPath, ['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30'],
+  const run = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30'],
     { encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 200) + '）');
   const out = String(run.stdout || '');
@@ -5909,7 +5921,7 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
   ok(seat[0] !== seat[1] || wall[0] !== wall[1],
     '两栏至少一列必须**不同** ⇒ 证明搬运真的到了引擎（全同 = 测量没打开）。实测 座位 ' + seat.join(' vs ') + ' / 墙 ' + wall.join(' vs '));
   /* 对照：把产品口径也设成 ε=0，则两栏必须**逐字相同** —— 这条是上面那条的反证，也顺手钉住"差异来自口径而不是别的参数" */
-  const ctl = spawnSync(process.execPath, ['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30', '--eps=0'],
+  const ctl = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30', '--eps=0'],
     { encoding: 'utf8', timeout: 600000 });
   eq(ctl.status, 0, 'eps=0 对照要跑得通');
   const cout = String(ctl.stdout || '');
@@ -5931,7 +5943,7 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
     '写死处的正则与期望数量必须**同一份常量**（现算），两处各写一遍必漂');
   /* 档案筛（复用同一套搬运）也必须**真跑得通**：09-25 03:30 我给它加"先认货再装载"时漏 import `readFileSync`，
    *   只有把它跑一次才暴露（`node --check` 只抓语法）⇒ 这类"import 漏了"的错误必须由跑通断言兜。 */
-  const sw2 = spawnSync(process.execPath, ['tools/probe-breadth-flip.mjs', '--every=700', '--limit=2', '--games=6'],
+  const sw2 = spawnCached(['tools/probe-breadth-flip.mjs', '--every=700', '--limit=2', '--games=6'],
     { encoding: 'utf8', timeout: 600000 });
   eq(sw2.status, 0, '`probe-breadth-flip` 要跑得通（' + String(sw2.stderr || '').slice(0, 200) + '）');
   ok(/结论（n=/.test(String(sw2.stdout)), '筛完必须印结论块（含被跳过的非包 .bak 计数）');
@@ -6081,14 +6093,14 @@ t('D155 设防持续性栏必须**只记录不阻断**，且配对表的解析�
   eq(parsed[0].hold, 37.2, 'hold 均%'); eq(parsed[0].cycle, 13.7, 'cycle 基线%（= 水平轴）');
   /* ② 真链：小样本跑探针 → 同一份解析 → 必须是有限数 + 有判定文案 */
   const one = 'docs/artifacts/cbs1s2-band2.bak';
-  const rr = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=25', '--pair=1', '--seeds=2'], { encoding: 'utf8' });
+  const rr = spawnCached(['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=25', '--pair=1', '--seeds=2'], { encoding: 'utf8' });
   eq(rr.status, 0, '探针要跑得通');
   const rows = parsePairTable(rr.stdout);
   ok(rows.length >= 1 && isFinite(rows[0].delta) && rows[0].verdict.length > 0,
     '真表必须解析出有限 Δ 与判定文案（解析 0 行 = 探针换了列序而没人发现，正是本门要防的）');
   /* ③ 行为式铁证：开/关这一栏，promote 的其余输出与退出码必须**逐字相同**（"只记录"不许是口头承诺） */
-  const on = spawnSync(process.execPath, ['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'], { encoding: 'utf8' });
-  const off = spawnSync(process.execPath, ['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'], { encoding: 'utf8', env: Object.assign({}, process.env, { EPIRUS_NO_GUARD: '1' }) });
+  const on = spawnCached(['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'], { encoding: 'utf8' });
+  const off = spawnCached(['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'], { encoding: 'utf8', env: Object.assign({}, process.env, { EPIRUS_NO_GUARD: '1' }) });
   eq(on.status, off.status, '退出码必须一致（实测 ' + on.status + ' vs ' + off.status + '）⇒ 这栏不许改变判定');
   const strip = x => String(x || '').split(/\r?\n/).filter(l => l.indexOf('设防持续性栏') < 0).join('\n');
   eq(strip(on.stdout + on.stderr), strip(off.stdout + off.stderr), '去掉这一行后两次的全部输出（含 stderr 里的阻断结论）必须逐字相同');
@@ -6383,28 +6395,95 @@ t('D147 UNRUN 必须有**处置语义**且按方向分（v1.5.202）：原来它
   ok(pc3.indexOf('【阻断】') >= 0 && pc3.indexOf('【只记录】') >= 0, '输出必须能分辨「阻断」与「只记录」，不许含糊成一句「不得当作通过」');
 });
 
-t('D156 理想冠军 7 条量具：口径必须**两列并列**且搬运自证（v1.5.223）', function () {
-  /* 病：本探针原来自建沙箱、且只跑"贪心+温度"（ε=0）一把尺子 ⇒ 【5】座位与【6】广度两行**永远是评测口径**，
-   * 而玩家看到的是产品口径（`ui.js:464`）。实测两行都会翻转：座位 n=100 从 12.5pt（ok）变 **24.0pt（biased）**；
-   * 广度净兑现 G 从 2.63 变 **3.01**（4 种 → 7 种，未达标 → **达标**）。
-   * ⇒ 修法：装载与口径搬运都复用 `probe-layer-caliber.mjs` 的 `build()`（D150 已把"只许有一份"立成门），
-   *   并且**两半自证**：替换数 = 源码现算数；包装层真被调用过。否则"两栏相同"会被误读成"口径无关"。 */
-  const src = readFileSync('tools/probe-ideal-champion.mjs', 'utf8');
-  ok(/import \{ build \} from '\.\/probe-layer-caliber\.mjs'/.test(src), '必须复用 build（不许自建第二份搬运/装载）');
-  ok(/B2\.patched !== B2\.hardwired/.test(src) && /__viaWrapper > 0/.test(src),
-    '必须有搬运自证的两半（替换数对不上、包装层没被调用 ⇒ 整表作废非零退出）');
-  const run = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8'], { encoding: 'utf8', timeout: 600000 });
-  eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 200) + '）');
-  const out = String(run.stdout || '');
-  ok(/【5】座位无偏[\s\S]*?ε=0[\s\S]*?产品/.test(out), '【5】必须印 ε=0 与产品两行');
-  ok(/【6】广度当约束[\s\S]*?ε=0[\s\S]*?产品/.test(out), '【6】必须印 ε=0 与产品两行');
-  ok(/口径搬运自证：`evo\.js` 写死处 \d+ 处 → 内存替换 \d+ 处/.test(out) && /经包装调用 \d+ 次/.test(out),
-    '必须印出自证两半（现算数量 + 经包装次数）');
+t('D157 确定性重活的缓存必须**内容寻址**、**响亮**、且不许把"没跑"伪装成"过了"（v1.5.225 · 用户批准方案 a）', function () {
+  /* 病：D134/D135/D136 里的训练臂是**确定性**的（固定 seed + 固定 env + 固定输入），却每次全量重跑 ——
+   * 实测 D135 一条 41.4 秒、D134 16.1、D136 13.8，合计约 71 秒；而绝大多数提交根本没碰训练侧。
+   * 危险不在"慢"，在**修错方向**：把"门跑过"变成"门认定输入没变"就是 D58/D59 那族"静默跳过"的新外衣。
+   * ⇒ 所以本门判三件：① 键必须是**内容**（不是路径/时间）；② 只缓存 (status,stdout,stderr) 且**断言照旧跑**；
+   *   ③ 命中必须**响亮**（独立一行 + 收尾计数），且有 `NP_NOCACHE=1` 逃生口。 */
+  const src = readFileSync('tools/np-test.mjs', 'utf8');
+  ok(/import \{ spawnCached, inputHash, cacheStats \}/.test(src), 'np-test 必须接缓存模块（spawnCached / inputHash / cacheStats）');
+  /* 门里**绝不许**把缓存计数器清零：那会把收尾"命中 N 次 · 省下 X 秒"抹掉 —— D157 第一版就这么把自己的成绩抹了
+   * （热跑明明省 140+ 秒，收尾却印"命中 2 次 · 省 0.2 秒"）。
+   * ⚠️ 判的是**整份源码里不许出现那个名字**（含注释）：v1.5.225 试过"逐行过滤掉注释行"，被 `/*` 与字符串骗了两次。 */
+  ok(!src.includes('cache' + 'Reset'), 'np-test 里不许出现缓存清零的那个 API 名（连注释也别提，免得断言与注释打架）');
+  /* 计数断言用**下限**而不是等号：本版只接了 7 条 train-3p，以后扩到别的确定性 spawn 是**好事**，
+   * 写成 `=== 4` 会在扩展时无故变红（门不该阻止自己被扩）。 */
+  ok((src.match(/spawnCached\(\['tools\/train-3p\.mjs'/g) || []).length >= 4,
+    '至少四条最重的训练臂要走缓存（40/60/60/30 代那四条）—— 实测 ' + (src.match(/spawnCached\(\['tools\/train-3p\.mjs'/g) || []).length + ' 条');
+  ok((src.match(/spawnCached\(/g) || []).length >= 12,
+    '确定性 spawn 的缓存覆盖面 ≥12 处（本版：4 条重臂 + D123/D127 的臂 + D150/D137 的只读探针）—— 实测 ' +
+    (src.match(/spawnCached\(/g) || []).length + ' 处');
+  ok(/缓存：命中 ' \+ __cs\.hit/.test(src), '收尾必须印命中数与省下的秒数（亮不亮要看得见）');
+  const mod = readFileSync('tools/np-cache.mjs', 'utf8');
+  ok(/NP_NOCACHE/.test(mod) && /export function spawnCached/.test(mod) && /createHash\('sha1'\)/.test(mod),
+    '模块必须有逃生口 + sha1 内容键');
+  ok(!/pass|fail|PASS|FAIL/.test(mod.replace(/[\s\S]*?## ⚠️/, '')), '模块**绝不许**缓存"通过/失败"（只许缓存 status/stdout/stderr）');
+
+  /* ===== 行为断言（不是钉文本）：键的四种敏感性 ===== */
+  const k1 = inputHash(['--probe-a'], { EPIRUS_X: '1' });
+  eq(k1, inputHash(['--probe-a'], { EPIRUS_X: '1' }), '同一个 argv+env 必须给同一个键（否则永不命中）');
+  ok(k1 !== inputHash(['--probe-b'], { EPIRUS_X: '1' }), 'argv 变 ⇒ 键必须变');
+  ok(k1 !== inputHash(['--probe-a'], { EPIRUS_X: '2' }), 'EPIRUS_* 值变 ⇒ 键必须变（旋钮就是靠这个）');
+  /* **内容敏感**这条最要紧：同一个路径、同一份大小，只改一个字节，键就必须变
+   * （否则"改了源码却复用旧结果"就是必然事故） */
+  const d = mkdtempSync(join(tmpdir(), 'd157-'));
+  const tf = join(d, 'fake-input.mjs');
+  writeFileSync(tf, 'const A = 1;\n');
+  const kA = inputHash([tf], {});
+  writeFileSync(tf, 'const A = 2;\n');
+  const kB = inputHash([tf], {});
+  ok(kA !== kB, '**同一个路径、只改一个字节 ⇒ 键必须变**（这条挂了就等于"改了源码还复用旧结果"）');
+
+  /* **临时路径必须被归一化**（这条是 v1.5.225 我自己连栽两版的坑，必须由门钉住）：
+   * 训练臂传 `EPIRUS_BAND_DIR = mkdtempSync(...)`，**每次随机** ⇒ 若不折成 `<TMP>`，键每次都变、缓存永不命中
+   * （第一版冷跑写 4 条、热跑又写 4 条新条目；第二版只折了前缀、没折 `mkdtemp` 的随机后缀，照样不命中）。 */
+  const e1 = { EPIRUS_SEED: '31', EPIRUS_BAND_DIR: join(tmpdir(), 'd134-AAA') };
+  const e2 = { EPIRUS_SEED: '31', EPIRUS_BAND_DIR: join(tmpdir(), 'd134-BBB') };
+  const e3 = { EPIRUS_SEED: '32', EPIRUS_BAND_DIR: join(tmpdir(), 'd134-AAA') };
+  eq(inputHash(['tools/train-3p.mjs'], e1), inputHash(['tools/train-3p.mjs'], e2),
+    '同一个旋钮、只有**临时输出目录不同** ⇒ 键必须相同（否则缓存永远不命中）');
+  ok(inputHash(['tools/train-3p.mjs'], e1) !== inputHash(['tools/train-3p.mjs'], e3),
+    '旋钮值真变了（EPIRUS_SEED 31→32）⇒ 键必须变');
+
+  /* ===== 命中/未命中行为：命中必须给出**与真跑逐字相同**的输出 =====
+   * ⚠️ 用**差值**判、绝不清零计数器 —— 清零会把收尾"命中 N 次 · 省下 X 秒"的成绩抹掉
+   * （v1.5.225 第一版就犯了这个：热跑明明省了 142 秒，收尾却印"命中 2 次 · 省 0.2 秒"）。 */
+  const cs0 = cacheStats();
+  const argv = ['-e', 'process.stdout.write("cache-probe-42")'];
+  const r1 = spawnCached(argv, { encoding: 'utf8' });
+  const r2 = spawnCached(argv, { encoding: 'utf8' });
+  const cs = cacheStats();
+  ok(cs.hit - cs0.hit >= 1, '第二次必须**命中**（实测本次增量 ' + (cs.hit - cs0.hit) + '）');
+  eq(r2.status, r1.status, '命中与真跑的 status 必须一致');
+  eq(String(r2.stdout), String(r1.stdout), '命中与真跑的 stdout 必须逐字一致');
+  /* 逃生口的行为断言：设上之后必须**真跑**（命中数不许再涨） */
+  const bak = process.env.NP_NOCACHE;
+  process.env.NP_NOCACHE = '1';
+  const r3 = spawnCached(argv, { encoding: 'utf8' });
+  ok(String(r3.stdout) === String(r1.stdout) && cacheStats().hit === cs.hit,
+    '`NP_NOCACHE=1` 时必须**真跑**（命中数不许再涨）');
+  if (bak == null) delete process.env.NP_NOCACHE; else process.env.NP_NOCACHE = bak;
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
- * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
+ * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
+  /* v1.5.224：**按门计时**（默认零成本，只有 NP_TIME=1 时才印排行榜）。
+   * 动机：用户问"门禁为什么要 4 分钟"，我先前只能靠猜 —— 现在先量再优化。 */
+  const __tot = __T.reduce(function (a, b) { return a + b[0]; }, 0);
+  const __slow = __T.slice().sort(function (a, b) { return b[0] - a[0]; });
+  /* v1.5.224：**整轮**用 `process.uptime()`（真·进程墙钟，含引擎装载）；`门槛外` = 整轮 − 门内合计。 */
+  const __wall = process.uptime();
+  console.log('\n=== 计时：整轮 ' + __wall.toFixed(1) + ' 秒 · 门内合计 ' + (__tot / 1000).toFixed(1) +
+    ' 秒 · 门槛外 ' + (__wall - __tot / 1000).toFixed(1) + ' 秒（进程启动 + 沙箱装载）===');
+  const __cs = cacheStats();
+  console.log('=== 缓存：命中 ' + __cs.hit + ' 次 · 真跑 ' + __cs.miss + ' 次 · 省下 ' + (__cs.savedMs / 1000).toFixed(1) +
+    ' 秒（`NP_NOCACHE=1` 关闭；键 = argv + EPIRUS_* env + 源码树内容）===');
+  console.log('=== 最慢的 15 道门 ===');
+  for (const r of __slow.slice(0, 15)) console.log('  ' + (r[0] / 1000).toFixed(1).padStart(6) + ' 秒  ' + r[1].slice(0, 76));
+}
+console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 
 
 process.exit(FAIL ? 1 : 0);

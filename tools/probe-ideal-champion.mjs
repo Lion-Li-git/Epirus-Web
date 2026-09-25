@@ -41,6 +41,11 @@ const MODE = arg('mode', 'multi');
  *      这不是"悬崖不存在"，是**拉错了杆**。默认 `temp=0.15, eps=0` ⇒ 历史读数逐字不变。 */
 const TEMP = Number(arg('temp', 0.15));
 const EPS = Number(arg('eps', 0));
+/* v1.5.224：门禁专用的小样本档（默认值不变 ⇒ 报告照旧跑满）。
+ * D149 要 spawn 本探针两次，而【5】【6】是它最贵的两段（座位 n=100+400、广度 n=400，且各跑两口径）
+ * ⇒ 实测 D149 吃 46.5 秒、是整支门禁最慢的一道。门只需要"两列都在且不同"，不需要那个 n。 */
+const SEAT_NS = String(arg('seat-n', '100,400')).split(',').map(Number).filter(function (x) { return x > 0; });
+const MIRROR_N = Number(arg('mirror-n', 400));
 /* ⚠️ 第二个陷阱：产品跑的是 `pickChampion(..., 0.15, 0.2, 5, 'soft')` —— **ε=0.2 + 键级 top5 + soft**，
  *   而只传 `eps`（`epsK`/`epsMode` 缺省）= "**全候选均匀抽**"，那是 v1.5.139 被用户否掉的那一代口径
  *   （"ε=0.25 全候选昏手太多 ⇒ 改 top5 键"）。⇒ 想复现"玩家会看到什么"，三个参数必须一起给。 */
@@ -172,7 +177,10 @@ console.log('\n【4】能完成 ≥2 回合序列（蓄能[电珠] → 下一回
 for (const d of [mirror, pool, nodef]) console.log('   ' + d.name.padEnd(22) + ' 完成率 ' + f2(d.seqPerGame) + ' 次/局（有序列的局占比 ' + pct(d.seqGameRate) + '）');
 
 console.log('\n【5】座位无偏 —— 阈值：极差 ≤10pt（仓线 = 该 n 的零分布 p99）· v1.5.223 起**两口径并列**');
-for (const n of [100, 400]) {
+/* v1.5.224：`--seat-n` / `--mirror-n` 是**门禁专用的小样本档**（默认值不变：报告照旧跑满）。
+ * 动机：门禁里 D149 要 spawn 本探针两次，而【5】【6】是它最贵的两段（座位 n=100+400、广度 n=400，还各跑两口径）
+ * ⇒ 实测 D149 一个人吃 46.5 秒、是整支门禁最慢的一道。门只需要"两列都在且不同"，不需要那个 n。 */
+for (const n of SEAT_NS) {
   const a = seatSymmetry(A.sb, live, MODE, n), b = seatSymmetry(B2.sb, live, MODE, n);
   const fmt = r => '各座 ' + r.pct.map(x => x.toFixed(1)).join('/') + '  极差 ' + r.spread.toFixed(1) + 'pt  仓线 ' + r.spreadLine.toFixed(1) + 'pt';
   console.log('   n=' + String(n).padStart(3) + '  ε=0  ' + fmt(a) + '  ⇒ ' + a.verdict + (a.spread <= 10 ? '（≤10pt ✓）' : '（>10pt ✗ 按理想规格）'));
@@ -191,7 +199,7 @@ console.log('      「产品」那行靠 `build({on:true})` 把沙箱里的 `Epi
 console.log('\n【6】广度当约束不当目标 —— 阈值：净兑现 G≥3 且 ≥4 种打上血 · v1.5.223 起**两口径并列**');
 {
   const show = function (tag, sbx) {
-    const mh = sbx.EpirusTrainer.mirrorHealth(live, 400, 5, MODE);
+    const mh = sbx.EpirusTrainer.mirrorHealth(live, MIRROR_N, 5, MODE);
     const lk = Object.keys(mh.landByKey || {}).filter(function (k) { return !/[\u4e00-\u9fa5]/.test(k) && ['headshot', 'dream', 'chain', 'counter', 'taunt'].indexOf(k) < 0; });
     const kn = (mh.landedKeys != null ? mh.landedKeys : lk.length);
     console.log('   ' + tag + ' 出手 G = ' + f2(mh.effSkills) + '（' + mh.distinctKeys + ' 种）· 净兑现 G = ' + f2(mh.effSkillsLand) +
