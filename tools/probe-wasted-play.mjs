@@ -14,10 +14,10 @@
  */
 import { readdirSync } from 'node:fs';
 import { build } from './probe-layer-caliber.mjs';
-import { rejectUnknownFlags } from './audit-lib.mjs';
+import { rejectUnknownFlags, selfPlay, seatSymmetry, densityProfile } from './audit-lib.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
-rejectUnknownFlags(process.argv.slice(2), ['packs', 'games', 'every', 'limit', 'quiet', 'temp', 'eps', 'epsk', 'epsmode', 'seed', 'assembly', 'bots'], 'probe-wasted-play');
+rejectUnknownFlags(process.argv.slice(2), ['packs', 'games', 'every', 'limit', 'quiet', 'temp', 'eps', 'epsk', 'epsmode', 'seed', 'assembly', 'bots', 'correlate', 'gate-n'], 'probe-wasted-play');
 const GAMES = Number(arg('games', 60));
 const TEMP = Number(arg('temp', 0.15)), EPS = Number(arg('eps', 0.2)), EPSK = Number(arg('epsk', 5)), EPSMODE = arg('epsmode', 'soft');
 const SEED0 = Number(arg('seed', 5200));
@@ -25,12 +25,17 @@ const EVERY = Number(arg('every', 0)), LIMIT = Number(arg('limit', 40));
 const QUIET = arg('quiet', '') === '1';
 const ASM = arg('assembly', 'banker');
 const BOTS = arg('bots', 'pickGunSpam,pickSnipeSpam,pickHeavyFire').split(',');
+/* E30：`--correlate=1` 顺手把**现有读数**（ε=0 未搬档）与"空挡率/倍差/打空率"对表 ⇒ 判"门禁那一层对防御条件性到底有没有预测力"
+ *   （METHODOLOGY 63 的规矩：想立一条新栏，先测旧栏的方向，别直接开新栏。） */
+const CORR = arg('correlate', '') === '1';
 let PACKS = arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/cbs1s2-band2.bak,docs/artifacts/v7seat24-31.bak,docs/artifacts/v7cmin4-82.bak,docs/artifacts/v7divK-31.bak').split(',');
 if (EVERY > 0) {
   PACKS = readdirSync('docs/artifacts').filter(f => /\.bak$/.test(f)).sort()
     .filter((_, i) => i % EVERY === 0).slice(0, LIMIT).map(f => 'docs/artifacts/' + f);
 }
 const mul = function (a) { a >>>= 0; return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+/** 分位数（按升序取第 floor(p·n) 个；小样本上不叫分位数，只叫"位置统计"） */
+const q = function (a, p) { const s = a.slice().filter(Number.isFinite).sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(p * s.length))] : NaN; };
 
 console.log('# 无效出手率（产品口径 ε=' + EPS + ' k=' + EPSK + ' ' + EPSMODE + ' · temp ' + TEMP + ' · ' + GAMES + ' 局/格 · 装配 = ' +
   (ASM === 'hotseat' ? 'hotseat（seat0 攒钱 + 3 席脚本攻击手 ' + BOTS.join('/') + ' + **seat4 被评包**）' : 'banker（seat0 永远出 ジ + 其余 4 席都是被评包 ⇒ 与 §E23/§E24 同桌子，但四席同包 ⇒ 决策相关）'));
@@ -158,6 +163,20 @@ function run(pack) {
   }
   const keys = Object.keys(agg).map(k => ({ k: k, name: agg[k].name, cat: agg[k].cat, n: agg[k].n, eff: agg[k].eff, skip: agg[k].skip }))
     .sort((a, b) => (b.n - a.n));
+  /* E30：同一粒包在**未搬档（ε=0 = 门禁口径）**下的现有读数，用来与"空挡率/倍差"对相关性 */
+  const gate = {};
+  if (CORR) {
+    const gn = Number(arg('gate-n', 60));
+    const nat = build({ on: false, pack: pack });
+    const PN = nat.sb.EpirusPolicy;
+    const pn = PN.unpack(nat.sb.EPIRUS_CHAMPION_3P, true) || PN.unpack(nat.sb.EPIRUS_CHAMPION, true);
+    const m0 = selfPlay(nat.sb, pn, 'multi', gn);
+    const dens = densityProfile(nat.sb, pn, 'long', Math.max(10, gn >> 1));
+    const ss = seatSymmetry(nat.sb, pn, 'multi', gn);
+    gate.gateG = m0.effSkills; gate.gateLand = m0.effSkillsLand; gate.gateKeys = m0.landedKeys;
+    gate.gateRounds = m0.rounds; gate.gateDraw = 100 * m0.drawRate; gate.gateJi = dens.jiShare;
+    gate.gateSpread = ss.spread;
+  }
   return {
     defN, defEff, defEmpty: defN ? 100 * (1 - defEff / defN) : NaN,
     atkN, atkEff, atkMiss: atkN ? 100 * (1 - atkEff / atkN) : NaN,
@@ -165,7 +184,7 @@ function run(pack) {
     allHands, wastedHands, voidRate: allHands ? 100 * wastedHands / (allHands + wastedHands) : NaN,
     brDefN, brDefHit, brNonN, brNonHit,
     hitIfDef: brDefN ? 100 * brDefHit / brDefN : NaN, hitIfNot: brNonN ? 100 * brNonHit / brNonN : NaN,
-    keys: keys
+    gate: gate, keys: keys
   };
 }
 
@@ -199,12 +218,49 @@ for (const f of PACKS) {
 }
 if (!rows.length) { console.log('⛔ 一粒都没量到 ⇒ 非零退出'); process.exit(6); }
 if (rows.length > 3) {
-  const de = rows.map(x => x.r.defEmpty).filter(isFinite).sort((a, b) => a - b);
-  const am = rows.map(x => x.r.atkMiss).filter(isFinite).sort((a, b) => a - b);
-  const q = (a, p) => a.length ? a[Math.min(a.length - 1, Math.floor(p * a.length))] : NaN;
+  const de = rows.map(x => x.r.defEmpty).filter(isFinite);
+  const am = rows.map(x => x.r.atkMiss).filter(isFinite);
   console.log('## 汇总（n=' + rows.length + ' 粒）');
   console.log('   空挡率分布：p10 ' + q(de, .1).toFixed(1) + '% · 中位 ' + q(de, .5).toFixed(1) + '% · p90 ' + q(de, .9).toFixed(1) + '%');
   console.log('   打空率分布：p10 ' + q(am, .1).toFixed(1) + '% · 中位 ' + q(am, .5).toFixed(1) + '% · p90 ' + q(am, .9).toFixed(1) + '%');
   const worst = rows.slice().sort((a, b) => (b.r.defEmpty || 0) - (a.r.defEmpty || 0)).slice(0, 6);
   console.log('   空挡率最高的几粒：' + worst.map(x => x.nm + ' ' + (isFinite(x.r.defEmpty) ? x.r.defEmpty.toFixed(1) : '—') + '%(n=' + x.r.defN + ')').join(' · '));
+}
+
+/* ===== E30：现有读数（ε=0 门禁口径）对"防御条件性/空挡率"有没有预测力？ =====
+ * 判方向不判阈值（METHODOLOGY 63）：若某一栏已能预测倍差，就不必新立栏；若全都不能（预期如此），
+ *   那"防御条件性"就是一个**新的、门禁读不到的维度** —— 但那是裁定的材料，不是我替他做的决定。 */
+if (CORR && rows.length >= 20) {
+  const ranks = a => {
+    const idx = a.map((x, i) => [x, i]).sort((p, q) => p[0] - q[0]); const r = new Array(a.length);
+    let i = 0;
+    while (i < idx.length) { let j = i; while (j + 1 < idx.length && idx[j + 1][0] === idx[i][0]) j++; const avg = (i + j) / 2 + 1; for (let k = i; k <= j; k++) r[idx[k][1]] = avg; i = j + 1; }
+    return r;
+  };
+  const rho = (x, y) => {
+    const a = ranks(x), b = ranks(y), n = x.length;
+    let ma = 0, mb = 0; for (let i = 0; i < n; i++) { ma += a[i]; mb += b[i]; } ma /= n; mb /= n;
+    let sab = 0, sa = 0, sb = 0;
+    for (let i = 0; i < n; i++) { const da = a[i] - ma, db = b[i] - mb; sab += da * db; sa += da * da; sb += db * db; }
+    return sa && sb ? sab / Math.sqrt(sa * sb) : NaN;
+  };
+  const live = rows.filter(x => x.r.gate && Number.isFinite(x.r.hitIfDef) && Number.isFinite(x.r.hitIfNot) && x.r.hitIfNot > 0);
+  if (live.length >= 20) {
+    const ratio = live.map(x => x.r.hitIfDef / x.r.hitIfNot);
+    const empty = live.map(x => x.r.defEmpty);
+    const defN = live.map(x => x.r.defN);
+    const cols = { '空挡率': empty, '防御手数': defN };
+    for (const k of ['gateG', 'gateLand', 'gateKeys', 'gateRounds', 'gateDraw', 'gateJi', 'gateSpread']) {
+      cols[k] = live.map(x => x.r.gate[k]);
+    }
+    console.log('\n## E30 相关性（Spearman ρ，n=' + live.length + ' 粒；"倍差"= 防的回合被招呼 vs 没防）');
+    console.log('   对「倍差」的预测力：' + Object.keys(cols).filter(k => k !== '空挡率' && k !== '防御手数')
+      .map(k => k + ' ρ=' + rho(cols[k], ratio).toFixed(2)).join(' · '));
+    console.log('   对「空挡率」的预测力：' + Object.keys(cols).filter(k => k !== '空挡率')
+      .map(k => (cols[k] === ratio ? '倍差' : k) + ' ρ=' + rho(cols[k], empty).toFixed(2)).join(' · '));
+    console.log('   倍差自身分布：p10 ' + q(ratio, .1).toFixed(2) + ' · 中位 ' + q(ratio, .5).toFixed(2) + ' · p90 ' + q(ratio, .9).toFixed(2) +
+      ' ⇒ >1.3 的 ' + ratio.filter(x => x > 1.3).length + ' 粒 · <0.8 的 ' + ratio.filter(x => x < 0.8).length + ' 粒');
+  } else {
+    console.log('\n## E30 相关性：可用配对只有 ' + live.length + ' 粒（<20）⇒ 不做相关性判定');
+  }
 }
