@@ -14,15 +14,20 @@
  *   6 广度当约束     = 出手 G 与**净兑现 G**、**打上血的不同卡数**
  *   7 不要的两条     = ① 有多少张"能造成伤害的卡"从未被挡过；② 镜像场设防率
  *
+ *   ⚠️ **口径（v1.5.223 起）**：【1】~【4】【7】吃 `--temp/--eps/--epsk/--epsmode`；
+ *   **【5】【6】固定印两列**（ε=0 原生口径 + 产品口径 0.15/0.2/5/soft），因为 `seatSymmetry` 与 `mirrorHealth`
+ *   内部把参数写死了。两列都由 `build()` 产（**单一来源**，见 `probe-layer-caliber.mjs` / 门 D150）。
+ *
  *   ⚠️ **本表不是单一口径**（v1.5.205 实测发现，见下面【5】【6】的行走标注）：【1】~【4】【7】用 TEMP/EPS/EPSK/EPSMODE，
  *   【5】seatSymmetry（audit-lib.mjs:403）与【6】mirrorHealth（evo.js:2554）**各自在内部建 Chooser、把参数写死成 `policyChooserN(params, 0.15)`**（ε=0），
  *   所以 `--eps=0.2 --epsmode=soft` 扫动时这两行逐字不变 —— 那不是"座位/广度对探索不敏感"，是**这两行没接到旋钮**。
  *   ⇒ 这不是这两处的孤例：`audit-lib.mjs` 的 reflectWall/ringWallProbe/fieldRate/sniperField/seatSymmetry/densityProfile/chargeProfile/aggressionProfile/breadthProfile
  *   共 **9 处**、`js/train/evo.js` 4 处全是同一个写死 ⇒ **整个评测层的口径是 ε=0，而产品是 ε=0.2 soft**（METHODOLOGY 49）。
  */
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
 import { seatSymmetry } from './audit-lib.mjs';
+/* 口径搬运**单一来源**：`build()` 来自 `probe-layer-caliber.mjs`（D150 已把"替换/装载逻辑只能活在 build 里"立成门）。
+ * 复用方的规矩（照 `probe-breadth-flip.mjs`，门 D150 守着）：**自己文件里不许再写一份"替换写死处 / 装载引擎"的逻辑**。 */
+import { build } from './probe-layer-caliber.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
 const PACK = arg('pack', 'js/bundled-champion-3p.js');
@@ -42,15 +47,22 @@ const EPS = Number(arg('eps', 0));
 const EPSK = Number(arg('epsk', 5));
 const EPSMODE = arg('epsmode', 'soft');
 
-const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
-sb.window = sb; sb.globalThis = sb;
-for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js', PACK]) {
-  vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
-}
+/* 引擎装载走 `build()` 的**关闭档**（= 与仓库当前行为逐字相同 ⇒ 所有历史读数不变）。 */
+const A = build({ on: false, pack: PACK });
+const sb = A.sb;
 const R = sb.EpirusRules, S = sb.EpirusState, T = sb.EpirusTrainer, B = sb.EpirusBots, Pol = sb.EpirusPolicy, Play = sb.EpirusPlay;
 const live = Pol.unpack(sb.EPIRUS_CHAMPION_3P, true) || Pol.unpack(sb.EPIRUS_CHAMPION, true);
 if (!live) { console.log('✗ 读不出包：' + PACK); process.exit(1); }
+/* 产品口径 = `js/ui/ui.js:464` 的 `pickChampion(..., 0.15, 0.2, 5, soft)`。
+ * ⚠️ 门禁**故意**仍用 ε=0（D153 把两个产品口径钉成常量）—— 这里只是给读数补第二把尺子。
+ * 自检：搬运必须**留下证据**（替换数 = 源码现算数，且包装层真被调用过），否则"两栏相同"会被误读成"口径无关"。 */
+const B2 = build({ on: true, pack: PACK, temp: 0.15, eps: 0.2, epsK: 5, epsMode: 'soft' });
+/* 第一半自证（立刻可判）：`evo.js` 的写死处数量**从源码现算**，替换数必须等于它。
+ * 第二半（`audit-lib` 那条路包了一层）要到【5】跑完才能判 —— 见那里。 */
+if (B2.patched !== B2.hardwired) {
+  console.log('✗ 口径搬运自证失败：`evo.js` 写死处 ' + B2.hardwired + ' 处，实际只替换 ' + B2.patched + ' 处 ⇒ 整表作废');
+  process.exit(9);
+}
 
 function mulberry32(seed) { let a = seed >>> 0; return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const pct = x => (100 * x).toFixed(1) + '%';
@@ -159,23 +171,37 @@ console.log('   破防场 受评席 1st = ' + pct(wall.firstRate) + '  平局率
 console.log('\n【4】能完成 ≥2 回合序列（蓄能[电珠] → 下一回合电磁炮）—— 阈值：>0.5 次/局');
 for (const d of [mirror, pool, nodef]) console.log('   ' + d.name.padEnd(22) + ' 完成率 ' + f2(d.seqPerGame) + ' 次/局（有序列的局占比 ' + pct(d.seqGameRate) + '）');
 
-console.log('\n【5】座位无偏 —— 阈值：极差 ≤10pt（仓里 v1.5.202 起改用"该 n 的零分布 p99"作线）');
+console.log('\n【5】座位无偏 —— 阈值：极差 ≤10pt（仓线 = 该 n 的零分布 p99）· v1.5.223 起**两口径并列**');
 for (const n of [100, 400]) {
-  const r = seatSymmetry(sb, live, MODE, n);
-  console.log('   n=' + String(n).padStart(3) + '  各座 ' + r.pct.map(x => x.toFixed(1)).join('/') + '  极差 ' + r.spread.toFixed(1) + 'pt  仓线 ' + r.spreadLine.toFixed(1) + 'pt  ⇒ ' + r.verdict + (r.spread <= 10 ? '（≤10pt ✓）' : '（>10pt ✗ 按理想规格）'));
+  const a = seatSymmetry(A.sb, live, MODE, n), b = seatSymmetry(B2.sb, live, MODE, n);
+  const fmt = r => '各座 ' + r.pct.map(x => x.toFixed(1)).join('/') + '  极差 ' + r.spread.toFixed(1) + 'pt  仓线 ' + r.spreadLine.toFixed(1) + 'pt';
+  console.log('   n=' + String(n).padStart(3) + '  ε=0  ' + fmt(a) + '  ⇒ ' + a.verdict + (a.spread <= 10 ? '（≤10pt ✓）' : '（>10pt ✗ 按理想规格）'));
+  console.log('           产品 ' + fmt(b) + '  ⇒ ' + b.verdict + (b.spread <= 10 ? '（≤10pt ✓）' : '（>10pt ✗ 按理想规格）') + (a.verdict !== b.verdict ? '   ⚠️ **两口径结论相反**' : ''));
 }
-console.log('   ⚠️ 口径：本条**不吃** --temp/--eps —— seatSymmetry（audit-lib.mjs:403）自建 Chooser 时把参数写死成 `policyChooserN(params, 0.15)`（第 3 个参数 ε 缺省=0）。');
-console.log('      ⇒ 这两行永远是"贪心+一点温度"的座位分布，与【1】~【4】那条扫描线不是同一个口径，别当"产品口径的座位极差"读。');
+/* 第二半自证（这时才可判）：`audit-lib` 那条路（把沙箱里的 `EpirusTrainer.policyChooserN` 包一层）
+ * 必须**真被调用过** —— 否则"两口径座位相同"会被误读成"口径无关"，实际是搬运没生效。 */
+if (!(B2.sb.__viaWrapper > 0)) {
+  console.log('✗ 口径搬运自证失败：`audit-lib` 路径（包一层 `policyChooserN`）一次都没被调用 ⇒ 座位那两行没真正换口径 ⇒ 整表作废');
+  process.exit(9);
+}
+console.log('   （口径搬运自证：`evo.js` 写死处 ' + B2.hardwired + ' 处 → 内存替换 ' + B2.patched + ' 处；`audit-lib` 路径经包装调用 ' + B2.sb.__viaWrapper + ' 次）');
+console.log('   ⚠️ `seatSymmetry`（audit-lib.mjs:403）内部写死 `policyChooserN(params, 0.15)`（ε=0）⇒「ε=0」那行是它的**原生**口径；');
+console.log('      「产品」那行靠 `build({on:true})` 把沙箱里的 `EpirusTrainer.policyChooserN` 包一层实现（与门禁口径**故意不同**：门禁仍用 ε=0）。');
 
-console.log('\n【6】广度当约束不当目标 —— 阈值：净兑现 G≥3 且 ≥4 种打上血');
+console.log('\n【6】广度当约束不当目标 —— 阈值：净兑现 G≥3 且 ≥4 种打上血 · v1.5.223 起**两口径并列**');
 {
-  const mh = T.mirrorHealth(live, 400, 5, MODE);
-  const lk = Object.keys(mh.landByKey || {}).filter(function (k) { return !/[\u4e00-\u9fa5]/.test(k) && ['headshot', 'dream', 'chain', 'counter', 'taunt'].indexOf(k) < 0; });
-  console.log('   出手 G = ' + f2(mh.effSkills) + '（出手卡 ' + mh.distinctKeys + ' 种）');
-  console.log('   净兑现 G = ' + f2(mh.effSkillsLand) + '（打上血的卡 ' + (mh.landedKeys != null ? mh.landedKeys : lk.length) + ' 种 · 落地次数 ' + mh.landedTotal + '）');
-  console.log('   ⇒ ' + (mh.effSkillsLand >= 3 && (mh.landedKeys || lk.length) >= 4 ? '达标' : '未达标（净兑现 ' + f2(mh.effSkillsLand) + ' < 3 或种类 < 4）'));
-  console.log('   ⚠️ 口径：本条同样**不吃** --temp/--eps —— mirrorHealth（evo.js:2530 起，写死处 evo.js:2554）内部 `policyChooserN(params, 0.15)`，ε=0。');
-  console.log('      ⇒ 凡走 mirrorHealth / audit-lib.selfPlay 的读数（体检 G 列、训练侧健康门槛）都与这条同源；产品口径（ε=0.2/k=5/soft）下的广度要另跑，见 probe-ep-reach §E。');
+  const show = function (tag, sbx) {
+    const mh = sbx.EpirusTrainer.mirrorHealth(live, 400, 5, MODE);
+    const lk = Object.keys(mh.landByKey || {}).filter(function (k) { return !/[\u4e00-\u9fa5]/.test(k) && ['headshot', 'dream', 'chain', 'counter', 'taunt'].indexOf(k) < 0; });
+    const kn = (mh.landedKeys != null ? mh.landedKeys : lk.length);
+    console.log('   ' + tag + ' 出手 G = ' + f2(mh.effSkills) + '（' + mh.distinctKeys + ' 种）· 净兑现 G = ' + f2(mh.effSkillsLand) +
+      '（' + kn + ' 种 / ' + mh.landedTotal + ' 次落地）⇒ ' + (mh.effSkillsLand >= 3 && kn >= 4 ? '达标' : '未达标'));
+    return mh;
+  };
+  const a = show('ε=0 ', A.sb), b = show('产品', B2.sb);
+  console.log('   ⇒ 两口径差：净兑现 G ' + f2(a.effSkillsLand) + ' → ' + f2(b.effSkillsLand) +
+    ' · 打上血的卡 ' + (a.landedKeys != null ? a.landedKeys : 0) + ' → ' + (b.landedKeys != null ? b.landedKeys : 0) + ' 种');
+  console.log('   ⚠️ `mirrorHealth`（evo.js:2530 起，写死处 evo.js:2554）内部同样写死 ε=0 ⇒ **训练侧健康门槛与体检 G 列都是 ε=0 口径**。');
 }
 
 console.log('\n【7】不要的两条');

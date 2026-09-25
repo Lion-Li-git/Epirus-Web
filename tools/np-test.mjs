@@ -5846,18 +5846,32 @@ t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、�
   ok(!/policyChooserN\(live, 0\.15\)/.test(p), '调用点不许再留写死的 0.15');
   const i5 = p.lastIndexOf('【5】'), i6 = p.lastIndexOf('【6】'), i7 = p.lastIndexOf('【7】');
   ok(i5 > 0 && i6 > i5 && i7 > i6, '【5】【6】【7】三条必须都在（用 lastIndexOf 定位打印行，头注释里也出现这些标号）');
-  ok(/seatSymmetry\(sb, live, MODE, n\)/.test(p) && /T\.mirrorHealth\(live, 400, 5, MODE\)/.test(p),
-    '【5】【6】仍走 seatSymmetry / mirrorHealth（单一真源，不许在这份表里另起一份实现）');
+  /* v1.5.223 契约**升级**（不是放宽）：原来这两行只能"自报不吃旋钮"；现在必须**两个口径都印出来**。
+   * 原有每一层意图都保留：① 单一真源（仍调 seatSymmetry / mirrorHealth，不许另起实现）；
+   * ② 口径必须在**输出里**可见；③ 旋钮分开、四参数调用（上面几条仍钉着）。 */
+  ok(/seatSymmetry\((A|B2)\.sb, live, MODE, n\)/.test(p),
+    '【5】仍走 seatSymmetry（单一真源，不许在这份表里另起一份实现）');
+  ok(/\.EpirusTrainer\.mirrorHealth\(live, 400, 5, MODE\)/.test(p),
+    '【6】仍走 mirrorHealth（单一真源，不许在这份表里另起一份实现）');
+  ok(/from '\.\/probe-layer-caliber\.mjs'/.test(p) && p.indexOf('build({ on: true') >= 0,
+    '第二口径必须复用 build()（D150 的单一来源），不许自建第二份"替换/装载"');
+  ok(/B2\.patched !== B2\.hardwired/.test(p) && /__viaWrapper > 0/.test(p),
+    '搬运必须**两半自证**（替换数 = 源码现算数；包装层真被调用）—— 否则"两栏相同"会被误读成"口径无关"');
   const seg5 = p.slice(i5, i6), seg6 = p.slice(i6, i7);
-  ok(/不吃/.test(seg5) && /audit-lib\.mjs:403/.test(seg5), '【5】必须自报"不吃 --temp/--eps"并指到 seatSymmetry 的写死处');
-  ok(/不吃/.test(seg6) && /evo\.js:2554/.test(seg6), '【6】必须自报"不吃 --temp/--eps"并指到 mirrorHealth 的写死处（行号要实测，别抄注释）');
+  ok(/audit-lib\.mjs:403/.test(seg5) && /产品/.test(seg5), '【5】必须指到 seatSymmetry 的写死处，并印出**产品口径**那一列');
+  ok(/evo\.js:2554/.test(seg6) && /产品/.test(seg6), '【6】必须指到 mirrorHealth 的写死处（行号要实测，别抄注释），并印出**产品口径**那一列');
   const run = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8', '--eps=0.2', '--epsmode=soft'],
     { encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, '表要跑得通（' + String(run.stderr || '').slice(0, 160) + '）');
   const out = String(run.stdout || '');
   const n5 = (out.match(/极差 [\d.]+pt/g) || []).join('|'), n6 = (out.match(/净兑现 G = [\d.]+/g) || []).join('|');
-  const nWarn = (out.match(/口径：本条(?:同样)?\*\*不吃\*\* --temp\/--eps/g) || []).length;
-  ok(nWarn === 2, '两条口径警示必须真的**打印出来**（源码里有、输出里没有 = 读表的人看不见），且恰好 2 处 —— 实测 ' + nWarn + ' 处');
+  /* 输出侧：两条口径都必须**看得见**（源码里有、输出里没有 = 读表的人看不见）。
+   * v1.5.223 起判的是"两列都在"，而不是"两条不吃旋钮的警示"—— 后者已被两列并列取代。 */
+  const o5 = out.slice(out.indexOf('【5】'), out.indexOf('【6】')), o6 = out.slice(out.indexOf('【6】'), out.indexOf('【7】'));
+  ok(/ε=0/.test(o5) && /产品/.test(o5), '【5】输出里必须两口径都看得见（ε=0 与产品）');
+  ok(/ε=0/.test(o6) && /产品/.test(o6), '【6】输出里必须两口径都看得见（ε=0 与产品）');
+  ok(/口径搬运自证/.test(out) && /经包装调用 \d+ 次/.test(out),
+    '自证两半必须**打印出来**（现算数量 + 经包装次数）—— 源码里有、输出里没有就等于没自证');
   const r2 = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8'],
     { encoding: 'utf8', timeout: 600000 });
   const out2 = String(r2.stdout || '');
@@ -5902,12 +5916,15 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
   const cSeat = num(cout, '座位极差'), cWall = num(cout, '反弹墙伤害/局');
   ok(!!cSeat && !!cWall && cSeat[0] === cSeat[1] && cWall[0] === cWall[1],
     'ε=0 对照下两栏必须相同（实测 座位 ' + (cSeat || []).join('/') + ' · 墙 ' + (cWall || []).join('/') + '）');
-  /* 档案筛必须**复用**上面那两条搬运路，不许出现第二份口径实现（本仓"同一规则只写一遍"的规矩） */
-  const sw = readFileSync('tools/probe-breadth-flip.mjs', 'utf8');
-  ok(/from '\.\/probe-layer-caliber\.mjs'/.test(sw) && /import \{ build \}/.test(sw),
-    '`probe-breadth-flip.mjs` 必须 import `build`（搬运手法单一来源）');
-  ok(!/HARDWIRED/.test(sw) && !/vm\.runInNewContext/.test(sw),
-    '复用方不许在自己文件里再写一份"替换/装载"逻辑（`HARDWIRED`/`runInNewContext` 都只能活在 `build` 里）');
+  /* 复用方必须**共用**上面那两条搬运路，不许出现第二份口径实现（本仓"同一规则只写一遍"的规矩）。
+   * v1.5.223：复用方从 1 个扩到 2 个 —— 理想冠军 7 条量具也要读产品口径的【5】【6】。 */
+  for (const rf of ['tools/probe-breadth-flip.mjs', 'tools/probe-ideal-champion.mjs']) {
+    const rfSrc = readFileSync(rf, 'utf8');
+    ok(/from '\.\/probe-layer-caliber\.mjs'/.test(rfSrc) && /import \{ build \}/.test(rfSrc),
+      '`' + rf + '` 必须 import `build`（搬运手法单一来源）');
+    ok(!/HARDWIRED/.test(rfSrc) && !/vm\.runInNewContext/.test(rfSrc),
+      '复用方不许在自己文件里再写一份"替换/装载"逻辑（`HARDWIRED`/`runInNewContext` 都只能活在 `build` 里）：' + rf);
+  }
   ok(/export function build/.test(p) && /IS_MAIN/.test(p),
     '被 import 的量具必须"装载不跑 main"（与 behavior-profile.mjs 同规），否则复用时会连带跑出两张表');
   ok(/HARDWIRED/.test(p) && /EVO_HARDWIRED = \(EVO_SRC\.match\(HARDWIRED\)/.test(p),
@@ -5918,7 +5935,9 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
     { encoding: 'utf8', timeout: 600000 });
   eq(sw2.status, 0, '`probe-breadth-flip` 要跑得通（' + String(sw2.stderr || '').slice(0, 200) + '）');
   ok(/结论（n=/.test(String(sw2.stdout)), '筛完必须印结论块（含被跳过的非包 .bak 计数）');
-  ok(/SKIP/.test(sw) && /跳过/.test(sw), '扫池工具必须**点名跳过项**——静默跳过会把"没跑成"读成"没体质"（而漏 import 会被洗成数据问题）');
+  /* v1.5.223：这条原来靠上面那个 `const sw`（我把它收进复用方循环里了）⇒ 改成**自己读**，不再依赖外层绑定。 */
+  const bfSrc = readFileSync('tools/probe-breadth-flip.mjs', 'utf8');
+  ok(/SKIP/.test(bfSrc) && /跳过/.test(bfSrc), '扫池工具必须**点名跳过项**——静默跳过会把"没跑成"读成"没体质"（而漏 import 会被洗成数据问题）');
 });
 
 t('D151 「攒钱→防御」量具：ep 必须**决策时实读**，因果必须靠**两档配对**，小分母不许当结论', function () {
@@ -6362,6 +6381,25 @@ t('D147 UNRUN 必须有**处置语义**且按方向分（v1.5.202）：原来它
   ok(g3.indexOf('const hardFail = worst[1] > G4_MAX;') >= 0 && g3.indexOf('const isUnrun = !hardFail && !judgeable;') >= 0,
     '被打穿必须优先于不可判（UNRUN 不许盖住真 FAIL）');
   ok(pc3.indexOf('【阻断】') >= 0 && pc3.indexOf('【只记录】') >= 0, '输出必须能分辨「阻断」与「只记录」，不许含糊成一句「不得当作通过」');
+});
+
+t('D156 理想冠军 7 条量具：口径必须**两列并列**且搬运自证（v1.5.223）', function () {
+  /* 病：本探针原来自建沙箱、且只跑"贪心+温度"（ε=0）一把尺子 ⇒ 【5】座位与【6】广度两行**永远是评测口径**，
+   * 而玩家看到的是产品口径（`ui.js:464`）。实测两行都会翻转：座位 n=100 从 12.5pt（ok）变 **24.0pt（biased）**；
+   * 广度净兑现 G 从 2.63 变 **3.01**（4 种 → 7 种，未达标 → **达标**）。
+   * ⇒ 修法：装载与口径搬运都复用 `probe-layer-caliber.mjs` 的 `build()`（D150 已把"只许有一份"立成门），
+   *   并且**两半自证**：替换数 = 源码现算数；包装层真被调用过。否则"两栏相同"会被误读成"口径无关"。 */
+  const src = readFileSync('tools/probe-ideal-champion.mjs', 'utf8');
+  ok(/import \{ build \} from '\.\/probe-layer-caliber\.mjs'/.test(src), '必须复用 build（不许自建第二份搬运/装载）');
+  ok(/B2\.patched !== B2\.hardwired/.test(src) && /__viaWrapper > 0/.test(src),
+    '必须有搬运自证的两半（替换数对不上、包装层没被调用 ⇒ 整表作废非零退出）');
+  const run = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8'], { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 200) + '）');
+  const out = String(run.stdout || '');
+  ok(/【5】座位无偏[\s\S]*?ε=0[\s\S]*?产品/.test(out), '【5】必须印 ε=0 与产品两行');
+  ok(/【6】广度当约束[\s\S]*?ε=0[\s\S]*?产品/.test(out), '【6】必须印 ε=0 与产品两行');
+  ok(/口径搬运自证：`evo\.js` 写死处 \d+ 处 → 内存替换 \d+ 处/.test(out) && /经包装调用 \d+ 次/.test(out),
+    '必须印出自证两半（现算数量 + 经包装次数）');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
