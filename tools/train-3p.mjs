@@ -14,7 +14,7 @@ import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：�
 import { patchResolve as krPatchResolve, patchPlay as krPatchPlay, makeKR as krMakeKR } from './kill-reward-lib.mjs';
 /* v1.5.229（用户批准方案 a）：**序列奖励** —— "蓄能[电珠] → 下一回合电磁炮"完成时给 +W ep。
  * 与击杀奖励同族：只包一层 `policyChooserN` 工厂，**仓库文件一字不动 ⇒ 规则指纹不变**，默认关。 */
-import { makeSeqReward } from './seq-reward-lib.mjs';
+import { makeSeqReward, patchEvoChooser as seqPatchEvoChooser } from './seq-reward-lib.mjs';
 /* v1.5.200：黑键 / 已删键的判定搬进**单一来源**（原先只有本工具自己一份 IIFE ⇒ 别的入口没有这道闸）。
  * v1.5.226：同一个读集还用来把**实际生效的配方**写进 meta（见下面的 EFFECTIVE_ENV）。 */
 import { enforceKnobs, readKeysOf } from '../server/knob-guard.mjs';
@@ -184,6 +184,9 @@ for (const f of [
   if (KR_MODE === 1 || KR_MODE === 2) {
     if (f === 'js/core/resolve.js') txt = krPatchResolve(txt);
     if (f === 'js/core/play.js') txt = krPatchPlay(txt);
+    /* v1.5.232：序列奖励必须**打进源码** —— `evo.js` 内部构造 chooser 走模块级局部函数，
+     * 属性层包装会被绕过 ⇒ 付款进不了被打分的对局（实测四次 A/B 付款 78/28/125/165 次、冠军却逐字相同）。 */
+    if (f === 'js/train/evo.js' && Number(process.env.EPIRUS_SEQ_W || 0) > 0) txt = seqPatchEvoChooser(txt);
   }
   vm.runInNewContext(txt, sb, { filename: f });
 }
@@ -201,6 +204,8 @@ if (!(SEQ_W >= 0 && SEQ_W <= 10)) {
 }
 if (SEQ_W > 0) {
   SEQ = makeSeqReward(sb.window.EpirusRules, SEQ_W);
+  /* 关键：把 SEQ 挂成**沙箱全局** —— `patchEvoChooser` 插进 evo.js 的包装层读的就是 `__SEQ`。 */
+  sb.__SEQ = SEQ;
   sb.window.EpirusTrainer.policyChooserN = SEQ.wrapChooserFactory(sb.window.EpirusTrainer.policyChooserN);
   console.log('[序列奖励] EPIRUS_SEQ_W=' + SEQ_W + ' ⇒ **在内存里**给"蓄能[电珠] → 下一回合电磁炮"每次完成 +' + SEQ_W +
     ' ep（仓库文件一字不动 ⇒ 规则指纹不变；本臂产物**不是**现状规则下的冠军，`meta.recipe.env` 会记下）');

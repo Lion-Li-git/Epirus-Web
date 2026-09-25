@@ -58,6 +58,36 @@ export function makeSeqReward(R, W) {
         if (typeof f !== 'function') return f;
         return function (st, pid, legal) { self.tick(st); return f(st, pid, legal); };
       };
+    },
+
+    /** 包**单个** chooser（给 `evo.js` **内部**的调用点用，见下面的 `patchEvoChooser`）。 */
+    wrapOne: function (f) {
+      const self = this;
+      if (typeof f !== 'function') return f;
+      return function (st, pid, legal) { self.tick(st); return f(st, pid, legal); };
     }
   };
+}
+
+/** 把 `evo.js` **内部**的 `policyChooserN(...)` 接到 `__SEQ` 上。
+ *
+ * ⚠️ **为什么必须改源码**：我第一版只包装了 `EpirusTrainer.policyChooserN` 的**属性** ——
+ *   而 `evo.js` 内部构造 chooser 时调的是**模块内的局部函数** ⇒ 属性层包装被绕过：
+ *   付款只发生在别的路径上（实测四轮 A/B 付款 78/28/125/165 次，而**当选冠军逐字相同** ⇒
+ *   那些付款**从没进入被用来打分的对局**）。这也正是击杀奖励要用 `patchResolve/patchPlay` 改源码的原因。
+ * 手法：把定义改名成 `__policyChooserN_raw`，再加一层同名包装 ⇒ **所有 13 个内部调用点**自动走包装。
+ */
+export function patchEvoChooser(txt) {
+  const A = '  function policyChooserN(params, temp, eps, epsK, epsMode) {';
+  if (txt.indexOf(A) < 0) throw new Error('seq-reward: evo.js 的 policyChooserN 锚点没找到（引擎改过？）');
+  const RAW = '  function __policyChooserN_raw(params, temp, eps, epsK, epsMode) {';
+  return txt
+    .replace(A, RAW)
+    /* ⚠️ 第二次替换必须锚在**改名后**的那行上：v1.5.232 第一版还用 `A` 当锚点 ⇒
+     *   第一次 replace 已经把它改掉了 ⇒ 包装层**根本没插进去**（自证打印"包装层存在: false"抓到的）。 */
+    .replace(RAW,
+      '  function policyChooserN(params, temp, eps, epsK, epsMode) {\n' +
+      '    const f = __policyChooserN_raw(params, temp, eps, epsK, epsMode);\n' +
+      '    return (typeof __SEQ !== \'undefined\' && __SEQ) ? __SEQ.wrapOne(f) : f;\n' +
+      '  }\n' + RAW);
 }
