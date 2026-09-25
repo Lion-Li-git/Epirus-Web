@@ -28,6 +28,9 @@ const PACK = arg('pack', 'js/bundled-champion-3p.js');
 const SEED0 = Number(arg('seed', 20260924));
 const ASJSON = process.argv.indexOf('--json') >= 0;
 const NOJI = process.argv.indexOf('--noji') >= 0;   // v1.5.228：禁ジ反事实（压缩ジ的极端版）
+/* v1.5.228：**水源旋钮**（`js/core/state.js:48` 的 `opts.regen`，2P v1.0 口径 = 0 = 关）。
+ * 这是一等规则参数（不是补丁）⇒ 用它做"多给多少 ep 才够开大招"的扫描；默认 0 ⇒ 现有输出逐字不变。 */
+const REGEN = (function () { const h = process.argv.find(function (a) { return a.indexOf('--regen=') === 0; }); return h ? Number(h.split('=')[1]) : 0; })();
 
 const sb = {
   console: { log: function () { }, warn: function () { }, error: console.error },
@@ -152,7 +155,7 @@ function runField(field, games, costOverride) {
           return a;
         });
       }
-      const r = T.oneGameN(ch, seed, N, { mode: MODE });
+      const r = T.oneGameN(ch, seed, N, { mode: MODE, regen: REGEN });
       d.rounds += r.state.round;
       if (r.state.winner === seat) d.first++;
       /* 收入侧：只认 `ep` 事件里 delta>0 的（按 reason 分，缺 reason = 技能/ジ 给的钱） */
