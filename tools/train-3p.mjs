@@ -12,6 +12,9 @@ import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：�
 /* v1.5.194（qoder 0924 夜）：击杀奖励规则的**单一来源**实现（与 `probe-kill-reward.mjs` 共用同一份 ⇒
  * 不会出现"训出来的冠军和量出来的冠军不是一套规则"）*/
 import { patchResolve as krPatchResolve, patchPlay as krPatchPlay, makeKR as krMakeKR } from './kill-reward-lib.mjs';
+/* v1.5.229（用户批准方案 a）：**序列奖励** —— "蓄能[电珠] → 下一回合电磁炮"完成时给 +W ep。
+ * 与击杀奖励同族：只包一层 `policyChooserN` 工厂，**仓库文件一字不动 ⇒ 规则指纹不变**，默认关。 */
+import { makeSeqReward } from './seq-reward-lib.mjs';
 /* v1.5.200：黑键 / 已删键的判定搬进**单一来源**（原先只有本工具自己一份 IIFE ⇒ 别的入口没有这道闸）。
  * v1.5.226：同一个读集还用来把**实际生效的配方**写进 meta（见下面的 EFFECTIVE_ENV）。 */
 import { enforceKnobs, readKeysOf } from '../server/knob-guard.mjs';
@@ -65,6 +68,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
+  'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
   'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
   'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
@@ -182,6 +186,31 @@ for (const f of [
     if (f === 'js/core/play.js') txt = krPatchPlay(txt);
   }
   vm.runInNewContext(txt, sb, { filename: f });
+}
+/* ===== v1.5.229（用户批准方案 a）：序列奖励 =====
+ * 判定不需要打源码补丁（与击杀奖励不同）：蓄能/电磁炮在**事件流**里已有
+ *   `{type:'bead', pid, kind:'elec'}` 与 `{type:'action', pid, key:'railgun', outcome:'ok'}`
+ * ⇒ 只要在**决策点**上扫一次新增事件。注入点 = 包一层 `EpirusTrainer.policyChooserN` **工厂**：
+ *   返回的每个 chooser 都先 tick ⇒ 一次覆盖 mirrorHealth / 评估 / 真桌**所有**路径（含 evo.js 内部调用）。
+ * 默认 0 ⇒ 不包、行为逐字不变。⭐ 用了它训出来的包是在**另一套经济**下长大的，`meta.recipe.env` 会自动记下。 */
+const SEQ_W = Number(process.env.EPIRUS_SEQ_W || 0);
+let SEQ = null;
+if (!(SEQ_W >= 0 && SEQ_W <= 10)) {
+  console.error('[train-3p] ⛔ EPIRUS_SEQ_W=' + process.env.EPIRUS_SEQ_W + ' 不是合法档（只认 0~10 的数字，0=关）');
+  process.exit(6);
+}
+if (SEQ_W > 0) {
+  SEQ = makeSeqReward(sb.window.EpirusRules, SEQ_W);
+  sb.window.EpirusTrainer.policyChooserN = SEQ.wrapChooserFactory(sb.window.EpirusTrainer.policyChooserN);
+  console.log('[序列奖励] EPIRUS_SEQ_W=' + SEQ_W + ' ⇒ **在内存里**给"蓄能[电珠] → 下一回合电磁炮"每次完成 +' + SEQ_W +
+    ' ep（仓库文件一字不动 ⇒ 规则指纹不变；本臂产物**不是**现状规则下的冠军，`meta.recipe.env` 会记下）');
+  /* v1.5.229：收尾必须印**实际付了多少** —— 否则"奖励没效果"分不清是"代际太短"还是"训练场里这个事件根本不发生"
+   * （后者意味着奖励永远付不出去，梯度为零 ⇒ 与击杀奖励"付得太少"同族，但更极端）。 */
+  process.on('exit', function () {
+    console.log('[序列奖励·结账] 本臂共发放 ' + SEQ.events + ' 次 · ' + SEQ.paid + ' ep（按场次折算 = 每局 ' +
+      (SEQ.events / Math.max(1, GENS * GAMES * POP)).toFixed(4) + ' 次）' +
+      (SEQ.events === 0 ? '  ⛔ **一次都没付出去** ⇒ 本臂的奖励梯度恒为零，效果为空是必然' : ''));
+  });
 }
 let KR_REQ = 0, KR_PAID_PROBE = -1;
 if (KR_MODE === 1 || KR_MODE === 2) {
