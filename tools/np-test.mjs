@@ -6006,18 +6006,39 @@ t('D154 `--pair=1` 必须**一条命令跑两档并自带 placebo 自检**（09-
   ok(/placebo 自检/.test(p) && /两档不该分岔的回合/.test(p),
     '必须自带 placebo 自检：两档在 ep 未分岔的前几回合读数**必须逐字相同**，不同就当场作废（这条抓到过替身做错）');
   ok(/不能当体质流行率/.test(p), '输出里必须留着那句更正：**单档 `hold` 的"倍差≥2"是含混了回合轴的粗筛**（E18：八成在配对后掉下 Δ≥15pt）');
-  ok(/是\*\*约定线\*\*不是数据给的/.test(p), '分型门槛要自己声明是约定的（Δ≥15pt 不是数据给的线）');
-  /* 跑通断言（09-25 的教训：`node --check` 抓不到 ReferenceError，只有真跑才抓得到） */
+  ok(p.indexOf('不是拍的（§H-55') >= 0 && p.indexOf('池化 Δ') >= 0,
+    '判定线要自己声明带宽是实测来的（跨种子极差），不是拍的 —— §H-55 的教训：贴线那一段本身就是噪声');
   const one = 'docs/artifacts/cbs1s2-band2.bak';
   const r = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=25', '--pair=1'], { encoding: 'utf8' });
   eq(r.status, 0, '`--pair=1` 要跑得通（' + String(r.stderr || '').slice(0, 200) + '）');
   const o = String(r.stdout || '');
   ok(o.indexOf('同回合配对') >= 0, '`--pair=1` 必须印出同回合配对表');
   ok(o.indexOf('✓ placebo 自检通过') >= 0, '小样本上 placebo 自检必须**通过**（不通过 = 两档连不该分岔的地方都分了岔，读数没意义）');
-  ok(/⇒ 分型：A 钱驱动 \d+ · B 钱\+晚局双重 \d+ · C 回合日程为主 \d+/.test(o), '分型三档都要印（0 也要印，缺档会让人以为没跑）');
+  ok(o.indexOf("⇒ 判定用的是") >= 0 && o.indexOf("12~18 灰区 / ≤12 低") >= 0,
+    '配对表必须把三档判定线（含灰区）印在表尾 —— 线不许只存在于源码里');
   const q = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=15'], { encoding: 'utf8' });
   eq(q.status, 0, '不开 `--pair` 的默认档要照常跑完');
   ok(String(q.stdout || '').indexOf('同回合配对') < 0, '默认档**不许**偷跑两档（历史读数必须逐字节可复现：09-25 已用 diff 自证过）');
+
+  /* --seeds=N：多种子池化 + 跨种子极差（§H-55 立这条的理由：贴线那一段本身就是噪声，只看单种子会把"线"当成"事实"） */
+  ok(/const NSEEDS = Math.max\(1, Number\(arg\('seeds', 1\)\)\)/.test(p),
+    '--seeds 必须存在且默认 1（默认时取到的种子与改前完全相同 ⇒ 历史读数一字不变）');
+  ok(/SEED_LIST\.push\(\(SEED0 \+ si \* 100003\)/.test(p) && /let SEED_BASE = SEED0;/.test(p),
+    '每粒种子必须走同一条 SEED_BASE 通道（两处 mul(SEED0…) 都要改，漏一处就等于"换了参数却没换种子"）');
+  ok(/池化计数/.test(p) && /spread/.test(p),
+    '多种子必须**按计数池化**（不是把率求平均）并印跨种子极差 ⇒ 极差才是判"线落在噪声里吗"的量');
+  ok(/灰区 12~18pt/.test(p) && /灰区宽度来自实测跨种子极差/.test(p),
+    '灰区宽度必须声明是实测来的，不是拍的（§H-55：eco-34 换种子从 +14.2 跨到 +15.9）');
+  const sr = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=8', '--pair=1', '--seeds=2'], { encoding: 'utf8' });
+  eq(sr.status, 0, '--seeds=2 要跑得通（' + String(sr.stderr || '').slice(0, 200) + '）');
+  ok(/每粒种子Δ/.test(String(sr.stdout || '')) && /极差/.test(String(sr.stdout || '')),
+    '多种子必须逐粒印 Δ 与极差（只印均值会把"这条线站不站得住"藏掉）');
+  const sn = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=6', '--seeds=2'], { encoding: 'utf8' });
+  eq(sn.status, 4, '不开 --pair 却要求多粒种子必须**报错退出**，不许静默按单种子跑完装作跑了两种子');
+  const sp = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=8', '--pair=1', '--seeds=1'], { encoding: 'utf8' });
+  ok(/同回合配对/.test(String(sp.stdout || '')) && !/多种子：/.test(String(sp.stdout || '')),
+    'seeds=1 时退回单种子表（不印池化说明），配对表照常存在'
+  );
 });
 
 
