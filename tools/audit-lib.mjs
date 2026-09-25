@@ -885,3 +885,21 @@ export function breadthProfile(W, params, mode, GAMES) {
     catShares: catShares, roleShares: roleShares, counts: cnt
   };
 }
+
+/** v1.5.234：**不认识的 `--` 参数必须响亮失败**（仓规：静默忽略 = 假读数）。
+ * 病：我今天两次栽在这里 —— `probe-ep-reach --cost=3`（该工具没有这个参数）与
+ *   `probe-bead-loop --fields=mirror`（**头注写了、代码没实现**）⇒ 两次读数都照旧出来，
+ *   而我会以为"我控制了这个变量"。凡"文档承诺、代码没实现"的参数都是静默坑。
+ * 用法：在各量具开头 `rejectUnknownFlags(process.argv.slice(2), ['games','pack'], 'probe-x');` */
+export function rejectUnknownFlags(argv, known, tool) {
+  const bad = argv.filter(function (a) {
+    if (a.indexOf('--') !== 0) return false;
+    return !known.some(function (k) { return a === '--' + k || a.indexOf('--' + k + '=') === 0; });
+  });
+  if (bad.length) {
+    console.error('⛔ [' + tool + '] 不认识的参数：' + bad.join(' '));
+    console.error('   ⇒ 仓规：不认识的 `--` 参数必须**响亮失败**（静默忽略会让"我以为我控制了这个变量"变成假读数；');
+    console.error('     `probe-ep-reach --cost` 与 `probe-bead-loop --fields` 两次都栽在这里）。');
+    process.exit(64);
+  }
+}

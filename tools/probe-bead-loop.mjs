@@ -14,9 +14,11 @@
  */
 import { readFileSync } from 'node:fs';
 import { build } from './probe-layer-caliber.mjs';
-import { chargeProfile } from './audit-lib.mjs';
+import { chargeProfile, rejectUnknownFlags } from './audit-lib.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
+/* v1.5.234：参数守卫 —— 本工具的**头注曾承诺 `--fields` 而代码没实现**（传了被静默忽略 ⇒ 假读数）。 */
+rejectUnknownFlags(process.argv.slice(2), ['packs','games','temp','eps','epsk','epsmode','json'], 'probe-bead-loop');
 const PACKS = arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/cbs1s2-band2.bak,docs/artifacts/v7cmin4-82.bak').split(',');
 const GAMES = Number(arg('games', 120));
 const TEMP = Number(arg('temp', 0.15)), EPS = Number(arg('eps', 0.2)), EPSK = Number(arg('epsk', 5)), EPSMODE = arg('epsmode', 'soft');

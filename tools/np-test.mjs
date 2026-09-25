@@ -5999,7 +5999,10 @@ t('D152 「空蓄能」分因量具 `probe-bead-loop.mjs`：两种相反的病�
    * ⇒ 本门钉的是"这把尺别又长回一个总量"。 */
   const p = readFileSync('tools/probe-bead-loop.mjs', 'utf8');
   ok(p.indexOf('writeFileSync') < 0, '量具必须只读');
-  ok(/import \{ build \} from '\.\/probe-layer-caliber\.mjs'/.test(p) && /import \{ chargeProfile \} from '\.\/audit-lib\.mjs'/.test(p),
+  /* v1.5.234：改成**语义**断言 —— 原来钉的是 `import { chargeProfile }` 的**字面文本**，
+   * 于是我加一个 `rejectUnknownFlags` 进同一行 import、行为一字未改，门就红了（同族：D159 那次正则没算括号）。
+   * 门该守的是"**从单一来源 import、不许自建第二份**"，不是"这行长什么样"。 */
+  ok(/import \{ build \} from '\.\/probe-layer-caliber\.mjs'/.test(p) && /import \{[^}]*chargeProfile[^}]*\} from '\.\/audit-lib\.mjs'/.test(p),
     '口径搬运复用 `build`、总量复用真源 `chargeProfile`（都不许有第二份实现）');
   ok(/beadAlive/.test(p) && /beadGone/.test(p),
     '必须先判"珠子还活不活"：该席下一次决策可能已隔两三回合 ⇒ 那批要单列 `beadGone`，不混进①②的分母（第一版没判，造出过 8 次假"买不起"）');

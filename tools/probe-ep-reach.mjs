@@ -17,6 +17,7 @@
  * 用法：node tools/probe-ep-reach.mjs [--games=200] [--fields=pool,guardwall,mirror] [--pack=<包>] [--json]
  */
 import { readFileSync } from 'node:fs';
+import { rejectUnknownFlags } from './audit-lib.mjs';   // v1.5.234 参数守卫
 import vm from 'node:vm';
 
 const arg = function (k, d) { const h = process.argv.find(function (a) { return a.indexOf('--' + k + '=') === 0; }); return h ? h.split('=')[1] : d; };
@@ -32,6 +33,8 @@ const NOJI = process.argv.indexOf('--noji') >= 0;   // v1.5.228：禁ジ反事�
  * 这是一等规则参数（不是补丁）⇒ 用它做"多给多少 ep 才够开大招"的扫描；默认 0 ⇒ 现有输出逐字不变。 */
 const REGEN = (function () { const h = process.argv.find(function (a) { return a.indexOf('--regen=') === 0; }); return h ? Number(h.split('=')[1]) : 0; })();
 
+/* v1.5.234：参数守卫 —— 我曾给它传 `--cost=3` 而它**没有这个参数**，读数照旧出来，我据此写错了结论。 */
+rejectUnknownFlags(process.argv.slice(2), ['games','n','mode','fields','pack','seed','json','breadth-games','noji','regen'], 'probe-ep-reach');
 const sb = {
   console: { log: function () { }, warn: function () { }, error: console.error },
   Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Float64Array, Date
