@@ -18,9 +18,12 @@
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { seatSymmetry, nullSpreadQuantile, mulberry32 } from './audit-lib.mjs';
+import { seatSymmetry, nullSpreadQuantile, mulberry32, rejectUnknownFlags } from './audit-lib.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
+/* v1.5.236（仓规 v1.5.234）：`--ns` / `--reps` 决定"座位极差的线随 n 标定"这件事（D145）⇒
+ *   打错一个字母就会拿 n=60 的线去判 n=400 的读数，而输出的形状完全一样。 */
+rejectUnknownFlags(process.argv.slice(2), ['packs', 'ns', 'reps', 'seed0', 'mode'], 'probe-seat-caliber');
 const PACKS = arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/cbs1s2-band2.bak,docs/artifacts/cbs1s5-band1.bak,docs/artifacts/co1s8-band1.bak,docs/artifacts/v7aim3-93.bak').split(',');
 const NS = arg('ns', '60,100,200,400').split(',').map(Number);
 const MODE = arg('mode', 'multi');

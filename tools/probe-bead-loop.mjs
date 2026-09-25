@@ -10,7 +10,9 @@
  * 实现：在**决策那一刻**看该席的合法动作表（`legal`）里电磁炮在不在、买不买得起 —— 不重建、不猜。
  *   规则：珠只保留到下一回合（README/`evo.js` 的 `CHARGE_MIN_EP` 注释同口径）⇒ 判"这次蓄能成不成立"的窗口就是**它下一次做决策的那一回合**。
  *
- * 用法：node tools/probe-bead-loop.mjs [--packs=...] [--games=120] [--eps=0.2] [--fields=mirror,pool]
+ * 用法：node tools/probe-bead-loop.mjs [--packs=...] [--games=120] [--mode=multi|long] [--eps=0.2]
+ *   ⚠️ 本工具**没有** `--fields`（v1.5.236 起从用法里删掉，不再"文档撒谎"）：它的装配是**五席同一只包的镜像**，
+ *     没有"场地"这一维可言；要分场地（pool/镜像/破防）请走 `probe-cross-mode` 或 `promote --dry`。
  */
 import { readFileSync } from 'node:fs';
 import { build } from './probe-layer-caliber.mjs';
@@ -21,9 +23,13 @@ const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(p
 rejectUnknownFlags(process.argv.slice(2), ['packs','games','temp','eps','epsk','epsmode','json','mode'], 'probe-bead-loop');
 const PACKS = arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/cbs1s2-band2.bak,docs/artifacts/v7cmin4-82.bak').split(',');
 const GAMES = Number(arg('games', 120));
-/* ⚠️ v1.5.234：**模式必须可选且必须印出来** —— 本工具原来写死 `'multi'`，而 `promote-champion` 的珠经济栏
- * 调的是 `chargeProfile(..., 'long', ...)`。同一粒包、两个数差 7~10 倍（得珠 215 vs 1501），我一开始以为是
- * "两把尺子的账本不同"，查下去才发现是**模式不同**（long 局长 65 回合 vs multi 39）⇒ 读数不写口径就没法互比。 */
+/* ⚠️ v1.5.234 加了 `--mode` 并把模式印出来；但**"两把尺子差 7 倍 = 模式不同"这个解释已被 DS 自己在交接 §2.6 收回**，
+ *   我 09-25 下午做了 §3.2 那步定案实验（同包、同 `long`、同 40 局，只换"沙箱有没有被搬过口径"）：
+ *     搬过（route ② 把 `EpirusTrainer.policyChooserN` 包了一层 ⇒ 2 参调用升成 ε=0.2 soft）：得珠 **91** · 浪费率 29.7% · 蓄能 2.27/局 · 局长 25.5
+ *     没搬（ε=0，与 `promote-champion` 同）：            得珠 **273** · 浪费率 13.6% · 蓄能 6.83/局 · 局长 53.5
+ *   ⇒ **光口径就差 3.00 倍**（`chargeProfile` 内部调的是 `policyChooserN(params, 0.15)` 两参形式，正好被包装层接走）。
+ *   所以本工具下面那行"对照真源"以前其实是**产品口径**的数，却写着"真源" ⇒ 这是我的口径漏印，不是 `chargeProfile` 有隐性状态。
+ *   修法：对照行改跑在**没搬口径**的沙箱上，并把两个口径都印出来（METHODOLOGY 53/54/66 同族：读数必须带口径才能互比）。 */
 const MODE = arg('mode', 'multi');
 const TEMP = Number(arg('temp', 0.15)), EPS = Number(arg('eps', 0.2)), EPSK = Number(arg('epsk', 5)), EPSMODE = arg('epsmode', 'soft');
 const mul = function (a) { a >>>= 0; return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -38,6 +44,10 @@ for (const f of PACKS) {
   const sb = ctx.sb, R = sb.EpirusRules, S = sb.EpirusState, T = sb.EpirusTrainer, Play = sb.EpirusPlay, P = sb.EpirusPolicy;
   const params = P.unpack(sb.EPIRUS_CHAMPION_3P, true) || P.unpack(sb.EPIRUS_CHAMPION, true);
   if (!params) { console.log('⚠️ ' + f + ' 解不出参数'); continue; }
+  /* v1.5.236：对照行必须跑在**没搬口径**的沙箱上（否则"真源"其实是 ε=0.2 的数，见上面那段注释里的 3.00× 实测）。
+   * 同一次 `build` 只是 `on:false` ⇒ 装载器/参数解析与主口径逐字相同，唯一变量是"有没有把 chooser 换掉"。 */
+  const ctx0 = build({ on: false, pack: f });
+  const params0 = ctx0.sb.EpirusPolicy.unpack(ctx0.sb.EPIRUS_CHAMPION_3P, true) || ctx0.sb.EpirusPolicy.unpack(ctx0.sb.EPIRUS_CHAMPION, true);
   const bs = T.policyChooserN(params, TEMP, EPS, EPSK, EPSMODE);
   const NAME = {}; for (const k in R.byKey) NAME[k] = R.byKey[k].name;
   const st = { charged: 0, cantAfford: 0, couldButNoFire: 0, fired: 0, beadGone: 0, noNextDecision: 0 };
@@ -79,12 +89,21 @@ for (const f of PACKS) {
   console.log('   └ 其中 ' + st.beadGone + ' 次蓄能后**隔了两回合以上才决策**（珠子早过期 ⇒ 与①②无关，单列，不混进分母）');
   console.log('   在珠子还活的 ' + ok + ' 次里：① 下一回合电磁炮**买不起** ' + st.cantAfford + ' 次（' + pctv(st.cantAfford, ok) +
     '） · ② 买得起**却没射** ' + st.couldButNoFire + ' 次（' + pctv(st.couldButNoFire, ok) + '） · ③ 买得起也射了 ' + st.fired + ' 次（' + pctv(st.fired, ok) + '）');
-  const cp = chargeProfile(ctx.sb, params, MODE, Math.max(60, GAMES));
+  const cpN = Math.max(60, GAMES);
+  /* 两口径各跑一次：`cp` = 本工具的口径（搬过 ⇒ 五席 chooser 带探索），`cp0` = **未搬口径**（ε=0，与 `promote-champion` 珠经济栏可直接对表） */
+  const cp = chargeProfile(ctx.sb, params, MODE, cpN);
+  const cp0 = params0 ? chargeProfile(ctx0.sb, params0, MODE, cpN) : null;
   const share = Object.keys(NEXTKEY).sort(function (a, b) { return NEXTKEY[b] - NEXTKEY[a]; }).slice(0, 5)
     .map(function (k) { return (NAME[k] || k) + ' ' + NEXTKEY[k]; }).join(' · ');
-  console.log('   对照真源 `chargeProfile`（**按珠子计**）：得珠 ' + cp.gained + ' · 花掉 ' + cp.spent + '（' + pctv(cp.spent, cp.gained) + '） · 过期 ' + cp.expired +
-    '（浪费率 ' + pctv(cp.expired, cp.gained) + '） · 蓄能 ' + cp.chargesPerGame.toFixed(2) + ' 次/局' +
-    '  ←— 本表是**按决策计**，两者不该相等（一颗珠可能被别的卡吃掉、一次蓄能也可能与已有珠混在一起）');
+  console.log('   账本 A（**本工具口径 · 搬过 ε**）：得珠 ' + cp.gained + ' · 花掉 ' + cp.spent + '（' + pctv(cp.spent, cp.gained) +
+    '） · 过期 ' + cp.expired + '（浪费率 ' + pctv(cp.expired, cp.gained) + '） · 蓄能 ' + cp.chargesPerGame.toFixed(2) + ' 次/局 · 局长 ' + cp.roundsPerGame.toFixed(1) +
+    '  ←— ' + MODE + ' × ' + cpN + ' 局 · ' + (EPS === 0 ? 'ε=0' : 'ε=' + EPS + ' ' + EPSMODE));
+  console.log('   账本 B：真源 `chargeProfile`（**按珠子计**）· **未搬口径 ε=0** · 同 ' + MODE + ' × ' + cpN + ' 局 ⇒ 与 `promote --dry` 的珠经济栏同尺：' + (cp0 ?
+    ('得珠 ' + cp0.gained + ' · 花掉 ' + cp0.spent + '（' + pctv(cp0.spent, cp0.gained) + '） · 过期 ' + cp0.expired +
+      '（浪费率 ' + pctv(cp0.expired, cp0.gained) + '） · 蓄能 ' + cp0.chargesPerGame.toFixed(2) + ' 次/局 · 局长 ' + cp0.roundsPerGame.toFixed(1) +
+      (cp.gained ? '   ⇒ **A/B 得珠差 ' + (cp0.gained / cp.gained).toFixed(2) + '×：这一整块差异属于口径，不属于账本' : '')) :
+    '没量到（对照沙箱解不出参数 ⇒ 不许按 0 处理）'));
+  console.log('   （本表按决策计、真源按珠子计，两者不该相等：一颗珠可能被别的卡吃掉、一次蓄能也可能与已有珠混在一起 ⇒ 只并排、不互校）');
   console.log('   ② 里那些"下一次决策"实际干了什么：' + (share || '无') + '   ⇒ 若大头是"又蓄一次/出ジ"，那是**攒着不放**；若是"花了别的珠卡"，那是**珠子被旁路**');
   console.log('   ⇒ 落点：' + judge + '；' + (ok < 60 ? '⚠️ 样本 <60，这句只当方向' : '样本够，但**仍不是判据** —— 它只说明该往哪一层找解'));
 }

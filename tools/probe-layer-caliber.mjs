@@ -14,7 +14,7 @@
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { seatSymmetry, reflectWall, fieldRate, densityProfile, chargeProfile, aggressionProfile, feasibilityOf, FEAS_N_DEFAULTS as FN } from './audit-lib.mjs';
+import { seatSymmetry, reflectWall, fieldRate, densityProfile, chargeProfile, aggressionProfile, feasibilityOf, FEAS_N_DEFAULTS as FN, rejectUnknownFlags } from './audit-lib.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
 const PACKS = arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/cbs1s2-band2.bak,docs/artifacts/cbs1s5-band1.bak,docs/artifacts/co1s8-band1.bak').split(',');
@@ -85,6 +85,9 @@ const pct = x => (100 * (x || 0)).toFixed(0) + '%';
 const IS_MAIN = !process.argv[1] || /probe-layer-caliber\.mjs$/.test(process.argv[1].replace(/\\/g, '/'));
 if (IS_MAIN) main();
 function main() {
+  /* v1.5.236（仓规 v1.5.234）：守卫**只在作为主程序跑时生效** —— 本文件被别的探针 `import { build }` 时，
+   *   调用方自己的 `--packs/--pair/--seeds…` 会在这里"看起来不认识"，那样就会把别人的工具打死。 */
+  rejectUnknownFlags(process.argv.slice(2), ['packs', 'games', 'temp', 'eps', 'epsk', 'epsmode'], 'probe-layer-caliber');
   console.log('# 五道门的输入：评测口径 ε=0  vs  产品口径 ε=' + EPS + ' k=' + EPSK + ' ' + EPSMODE + '（`ui.js:464`）');
   console.log('# 只读；口径靠"内存里改装载源码 + 包一层 `EpirusTrainer.policyChooserN`"实现 ⇒ 仓库一字未动、指纹不变。\n');
 const summary = [];

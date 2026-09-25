@@ -6112,6 +6112,32 @@ t('D155 设防持续性栏必须**只记录不阻断**，且配对表的解析�
 
 
 
+t('D160 探针的参数守卫：接过的不许掉、位置要对、且不许误伤自己；没接的**点名只记录**（v1.5.236 · 落地仓规 v1.5.234）', function () {
+  /* 语义断言优先（D152/D159 的教训：钉字面文本会被合法重构打红）——这里判的是"守卫存在 + 位置 + 真跑行为"。 */
+  const GUARDED = ['probe-defense-cause', 'screen-cheap-predict', 'probe-breadth-flip', 'probe-seat-caliber',
+    'probe-layer-caliber', 'probe-kill-reward', 'probe-ideal-champion', 'probe-bead-loop', 'probe-ep-reach'];
+  for (const nm of GUARDED) {
+    const src = readFileSync('tools/' + nm + '.mjs', 'utf8');
+    ok(/rejectUnknownFlags\(/.test(src), nm + ' 必须调用 rejectUnknownFlags（不认识的 `--` 参数必须 exit 64）');
+  }
+  const dc = readFileSync('tools/probe-defense-cause.mjs', 'utf8');
+  ok(dc.indexOf('rejectUnknownFlags(') < dc.indexOf("arg('packs'"),
+    '守卫必须**早于**任何 arg() 读取 —— 晚跑的守卫挡不住已经算完的读数（那正是"假成功"的形态）');
+  const lc = readFileSync('tools/probe-layer-caliber.mjs', 'utf8');
+  ok(lc.indexOf('rejectUnknownFlags(') > lc.indexOf('function main()'),
+    '被 import 的模块（probe-layer-caliber）守卫必须只在自己的 main() 里跑 —— 放在顶层会把调用方的 --packs/--pair 当成非法参数打死');
+  const bad = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--typo-flag=1'], { encoding: 'utf8' });
+  eq(bad.status, 64, '真跑：不认识的参数必须 exit 64（实测 ' + bad.status + '）');
+  ok(/不认识的参数/.test(String(bad.stderr || '')) && /--typo-flag/.test(String(bad.stderr || '')),
+    '必须**点名**是哪个参数（只给退出码 = 下一次还要再猜）');
+  const good = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=docs/artifacts/cbs1s2-band2.bak', '--games=6', '--pair=1'], { encoding: 'utf8' });
+  eq(good.status, 0, '真跑：认识的那一串参数不许被自己的守卫误伤（**守卫名单漏项是这类门最常见的死法**）');
+  const rest = readdirSync('tools').filter(function (f) { return /^(probe|screen)-.*\.mjs$/.test(f); })
+    .filter(function (f) { return GUARDED.indexOf(f.replace(/\.mjs$/, '')) < 0; })
+    .filter(function (f) { const s = readFileSync('tools/' + f, 'utf8'); return /arg\('/.test(s) && !/rejectUnknownFlags/.test(s); });
+  console.log('   ℹ️ 另有 ' + rest.length + ' 个读 `--参数` 的工具尚未接守卫（**只记录不阻断**，各归其 owner）：' + (rest.join('、') || '无'));
+});
+
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的
    * 漂移了（它读 `x.atkOld`/`x.dealt`/`x.taken`/`x.rounds`；真源给的是 `atkOldWhitelist`/`dealtPerGame`/

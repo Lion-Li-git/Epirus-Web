@@ -12,8 +12,12 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { build } from './probe-layer-caliber.mjs';
+import { rejectUnknownFlags } from './audit-lib.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
+/* v1.5.236（仓规 v1.5.234）：不认识的参数必须 exit 64 —— 本工具是"档案广度口径筛"，
+ *   `--extra`（锚点包）打错就等于**没有两端锚点的阈值表**，而那种表最容易被当成结论引用。 */
+rejectUnknownFlags(process.argv.slice(2), ['every', 'limit', 'games', 'temp', 'eps', 'epsk', 'epsmode', 'line', 'extra'], 'probe-breadth-flip');
 const EVERY = Number(arg('every', 12));
 const LIMIT = Number(arg('limit', 140));
 const GAMES = Number(arg('games', 60));

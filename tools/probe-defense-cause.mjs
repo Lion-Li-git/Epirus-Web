@@ -14,8 +14,13 @@
  */
 import { readFileSync } from 'node:fs';
 import { build } from './probe-layer-caliber.mjs';
+import { rejectUnknownFlags } from './audit-lib.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
+/* v1.5.236（仓规 v1.5.234 的落地）：不认识的 `--` 参数必须响亮失败。
+ * 这条对本工具尤其重要：`--pair` / `--seeds` / `--saver` 都是"我以为我控制了那个变量"的档 ——
+ *   打错一个字就不是静默降级，而是**换了一道题还在报同一份读数**（同 `probe-ep-reach --cost` 那一族）。 */
+rejectUnknownFlags(process.argv.slice(2), ['packs', 'games', 'temp', 'eps', 'epsk', 'epsmode', 'seed', 'seeds', 'bucket-min', 'saver', 'cycle-at', 'quiet', 'pair'], 'probe-defense-cause');
 const PACKS = arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/cbs1s2-band2.bak').split(',');
 const GAMES = Number(arg('games', 200));
 const TEMP = Number(arg('temp', 0.15)), EPS = Number(arg('eps', 0.2)), EPSK = Number(arg('epsk', 5)), EPSMODE = arg('epsmode', 'soft');

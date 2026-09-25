@@ -20,11 +20,15 @@
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { rejectUnknownFlags } from './audit-lib.mjs';
 
 const arg = function (k, d) {
   const h = process.argv.find(function (a) { return a.indexOf('--' + k + '=') === 0; });
   return h ? h.split('=')[1] : d;
 };
+/* v1.5.236（仓规 v1.5.234）：本工具是"内存里改规则做反事实"的量具，`--rules` / `--kr-transfer` 打错一个字母
+ *   就等于**换了一道题还在报同一份读数**（`probe-ep-reach --cost` 那一族的翻版）。 */
+rejectUnknownFlags(process.argv.slice(2), ['packs', 'games', 'n', 'mode', 'fields', 'opp', 'rules', 'kr-transfer', 'seed', 'temp', 'eps', 'epsk', 'epsmode', 'json'], 'probe-kill-reward');
 const GAMES = Number(arg('games', 120));
 const N = Number(arg('n', 5));
 const GAME_MODE = arg('mode', 'multi');

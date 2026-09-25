@@ -10,9 +10,12 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { build } from './probe-layer-caliber.mjs';
-import { densityProfile, chargeProfile } from './audit-lib.mjs';
+import { densityProfile, chargeProfile, rejectUnknownFlags } from './audit-lib.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
+/* v1.5.236：仓规 v1.5.234 —— 不认识的参数必须 exit 64。本工具的 `--packlist` 是"与筛表按名字对表"的前提，
+ *   打错它会退回抽样池，而两张表就再也合不上了（还不是崩，是**悄悄换了样本框**）。 */
+rejectUnknownFlags(process.argv.slice(2), ['every', 'limit', 'games', 'packlist'], 'screen-cheap-predict');
 const EVERY = Number(arg('every', 2)), LIMIT = Number(arg('limit', 90)), GAMES = Number(arg('games', 60));
 const SKIP = [];
 /* 能与同夜筛表**按名字合并**的前提：跑的是同一批包 ⇒ `--packlist=文件`（每行一个 .bak）优先于抽样。 */

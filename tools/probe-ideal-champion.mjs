@@ -24,12 +24,15 @@
  *   ⇒ 这不是这两处的孤例：`audit-lib.mjs` 的 reflectWall/ringWallProbe/fieldRate/sniperField/seatSymmetry/densityProfile/chargeProfile/aggressionProfile/breadthProfile
  *   共 **9 处**、`js/train/evo.js` 4 处全是同一个写死 ⇒ **整个评测层的口径是 ε=0，而产品是 ε=0.2 soft**（METHODOLOGY 49）。
  */
-import { seatSymmetry } from './audit-lib.mjs';
+import { seatSymmetry, rejectUnknownFlags } from './audit-lib.mjs';
 /* 口径搬运**单一来源**：`build()` 来自 `probe-layer-caliber.mjs`（D150 已把"替换/装载逻辑只能活在 build 里"立成门）。
  * 复用方的规矩（照 `probe-breadth-flip.mjs`，门 D150 守着）：**自己文件里不许再写一份"替换写死处 / 装载引擎"的逻辑**。 */
 import { build } from './probe-layer-caliber.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
+/* v1.5.236（仓规 v1.5.234）：本工具的第【5】【6】条**不吃** `--temp/--eps`（D149 钉的就是这件事），
+ *   所以更要把不认识的参数挡住 —— 不然打错一个档位名，人以为自己在扫 ε，其实那两条一直同一口径。 */
+rejectUnknownFlags(process.argv.slice(2), ['pack', 'games', 'mode', 'temp', 'eps', 'epsk', 'epsmode', 'seat-n', 'mirror-n'], 'probe-ideal-champion');
 const PACK = arg('pack', 'js/bundled-champion-3p.js');
 const GAMES = Number(arg('games', 200));
 const MODE = arg('mode', 'multi');
