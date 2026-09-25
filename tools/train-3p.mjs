@@ -12,8 +12,9 @@ import { HOLO_GIFT_MAX } from './audit-lib.mjs';   // v1.5.168：送盾阈值与
 /* v1.5.194（qoder 0924 夜）：击杀奖励规则的**单一来源**实现（与 `probe-kill-reward.mjs` 共用同一份 ⇒
  * 不会出现"训出来的冠军和量出来的冠军不是一套规则"）*/
 import { patchResolve as krPatchResolve, patchPlay as krPatchPlay, makeKR as krMakeKR } from './kill-reward-lib.mjs';
-/* v1.5.200：黑键 / 已删键的判定搬进**单一来源**（原先只有本工具自己一份 IIFE ⇒ 别的入口没有这道闸）。 */
-import { enforceKnobs } from '../server/knob-guard.mjs';
+/* v1.5.200：黑键 / 已删键的判定搬进**单一来源**（原先只有本工具自己一份 IIFE ⇒ 别的入口没有这道闸）。
+ * v1.5.226：同一个读集还用来把**实际生效的配方**写进 meta（见下面的 EFFECTIVE_ENV）。 */
+import { enforceKnobs, readKeysOf } from '../server/knob-guard.mjs';
 
 /* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
  * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
@@ -96,6 +97,23 @@ enforceKnobs({
   extraReadKeys: SELF_ENV_KEYS,
   removed: REMOVED_TRAIN_KEYS,
 });
+
+/* ===== v1.5.226（用户批准）：把**实际生效的 `EPIRUS_*` 配方**机械地写进产物 meta =====
+ * 病：meta.recipe 原先是**手抄名单**（arm/seed/xn2w/kill/trainMode/counterOpps/bigtChainW/killReward/…）
+ *   ⇒ **新旋钮天生不在里面**（METHODOLOGY 13「白名单两处各写一遍必出事」的同族）。
+ *   后果很具体：千问 的 E9/E10 想问"哪根旋钮养出这粒包"，查 `meta` 却**没有 env** ⇒
+ *   只能归因到"抽奖"，并用**前瞻实验绕道**才把问题问出来。
+ * 修法：问 `knob-guard`「本入口**读得到**哪些键」（与上面 `enforceKnobs` **同一个读集**，不另抄一份），
+ *   再取**环境里真的设了的**那些 ⇒ 以后加旋钮**不用改这里**。
+ * 记的是"实际生效的配方"而不是"默认值"：没设的键**不**出现（默认值要看代码，不在这里猜）。 */
+const EFFECTIVE_ENV = (function () {
+  try {
+    const r = readKeysOf({ entry: 'tools/train-3p.mjs', extraReadKeys: SELF_ENV_KEYS });
+    const e = {};
+    Array.from(r.read).sort().forEach(function (k) { if (process.env[k] !== undefined) e[k] = process.env[k]; });
+    return e;
+  } catch (err) { return { __error: String((err && err.message) || err) }; }   // 读集算不出来也必须留痕，不许静默成空表
+})();
 
 /* §N6 跨 N 混适应度开关（默认 0 = 行为逐字不变；用法与红线见循环内注释） */
 const XN2W = Number(process.env.EPIRUS_XN2W || 0);
@@ -803,7 +821,9 @@ try {
       source: 'tools/train-3p.mjs (band-save)', arm: ARM, bandIdx: bi, trainFit: hh.fit,
       xn2w: XN2W || 0, xn2g: XN2G, xn2refs: (XN2W > 0 ? XN2REF_PATHS : []),
       n: N, gens: GENS, games: GAMES, pop: POP, seed: __SEED,
-      selected: hh.params === bestParams, ts: new Date().toISOString()
+      selected: hh.params === bestParams, ts: new Date().toISOString(),
+      /* v1.5.226：band 也要能自证来历 —— 原先只有 arm/gens/seed 这些手写字段，**没有旋钮配方**。 */
+      recipe: { env: EFFECTIVE_ENV, envKeys: Object.keys(EFFECTIVE_ENV).length }
     };
     writeFileSync(BAND_DIR + '/' + ARM + '-band' + (bi + 1) + '.bak',
       '/* band-save ' + ARM + '-band' + (bi + 1) + '（tools/train-3p.mjs v1.5.150 起） */\n' +
@@ -831,7 +851,10 @@ const meta = {
     /* v1.5.194：这臂是**在哪套规则下训的**。写在最显眼处 —— 否则第二天没人知道这粒冠军学过击杀奖励，
      * 拿回现状引擎里一评就成了"冠军莫名变弱"的悬案。 */
     killReward: KR_REQ, krTransfer: (KR_REQ ? (process.env.EPIRUS_KR_TRANSFER || 'owner') : null), killRewardProbe: KR_PAID_PROBE,
-    breadthFloor: BREADTH_LOG },
+    breadthFloor: BREADTH_LOG,
+    /* v1.5.226：**机械算出的实际生效配方**（= knob-guard 的读集 ∩ 环境里真设了的键）。
+     * 与上面那些手写字段并存：手写字段是"这一臂的口径摘要"，`env` 是"当时环境里到底有哪些旋钮"。 */
+    env: EFFECTIVE_ENV, envKeys: Object.keys(EFFECTIVE_ENV).length },
   breadthFloorAllNarrow: BREADTH_ALL_NARROW,   // §N29 走向②的标记：全池塌缩 ⇒ 该改奖励面，不是换排序键
   degenerateOnlyWinner: DEGENERATE_ONLY,   // §N9 退化闸：true=没有合格当选者、promote 会拒收
   source: 'tools/train-3p.mjs', n: N, gens: GENS, games: GAMES, pop: POP,

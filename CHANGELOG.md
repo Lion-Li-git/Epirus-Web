@@ -1,3 +1,33 @@
+## v1.5.226 — 产物自证**实际生效的 `EPIRUS_*` 配方**（用户批准的第 2 项）：主 meta 与 band `.bak` 的 `recipe.env` 现在写全，且**加了旋钮不用改代码**
+
+> **病（这是千问 E9/E10 被迫绕道跑的根因）**：`tools/train-3p.mjs` 的产物 `meta.recipe` 一直是**手抄名单**
+> （`arm/seed/gens/games/pop/xn2w/xn2g/selLand/kill/trainMode/counterOpps/bigtChainW/killReward/breadthFloor`…）——
+> **新旋钮天生不在里面**（METHODOLOGY 13「同一份名单两处各写一遍必出事」的同族）。
+> 后果很具体：想问"**哪根旋钮养出这粒包**"，查 `meta` 却发现**没有 env** ⇒ 只能归因到"抽奖"，
+> 并用**前瞻实验绕道**才能把问题问出来。
+>
+> **修法（单一来源，不另抄名单）**：读集问 `server/knob-guard.mjs` 的 `readKeysOf`
+> —— **与 `enforceKnobs` 用的是同一份读集**（`entry: 'tools/train-3p.mjs'` + `SELF_ENV_KEYS`），
+> 再取**环境里真的设了的**那些键 ⇒ **以后加旋钮不用改这里**。
+> - 记的是"**实际生效的配方**"，不是默认值：**没设的键不出现**（默认值要看代码，不在这里猜）。
+> - 两处都写：主 meta 的 `recipe.env`（+ 自洽计数 `recipe.envKeys`）与 **band `.bak` 的 `recipe.env`**
+>   —— 后者才是长期留存的那一份（`.bak` 会留下来，日志会滚走）。
+> - 读集算不出来时写 `{"__error": "..."}`，**绝不静默成空表**（空表会被读成"这臂没配方"）。
+>
+> **实测（小臂 + 两个旋钮 + 临时 `EPIRUS_BAND_DIR`）**
+> `train-3p.mjs 1 3 2 2` 写出的 `d158probe-band1.bak` 里：
+> `recipe.env = {"EPIRUS_ARM":"d158probe","EPIRUS_BAND_DIR":"<tmp>","EPIRUS_BIGT_CHAIN_W":"0.5","EPIRUS_KILL_REWARD":"2"}` ✓
+> 逐键逐值对上，且**没设的 `EPIRUS_XN2W` 没有出现**。
+>
+> **新门 D158**（`np-test` 204 门）：静态 —— 读集必须来自 knob-guard、必须与 `enforceKnobs` 同一 entry+extraReadKeys、
+> 主 meta 与 band meta 都要带配方；行为 —— 真跑一条小臂，**读它写出来的 `.bak` 的 META**，判逐键逐值、
+> 臂名在、**没设的旋钮不许凭空出现**、`envKeys` 与 `env` 自洽。
+> ⚠️ 这条 spawn **故意不走缓存**：它要读子进程**产出的文件**，正落在 `tools/np-cache.mjs` 前置要求的排除面上
+> （那条规矩这次直接派上了用场）。
+>
+> **红线**：只改 `tools/`（+ 文档/版本号）；引擎与两槽未动、指纹仍 **`ebdbff36`**、未训练、未 promote。
+> 门禁 204 门（v1.5.225 的 203 + D158）；缓存机制照旧（本版新增的门不缓存，因为它读产物）。
+
 ## v1.5.225 — 门禁提速·第二步：确定性重活上**内容寻址缓存**（用户批准方案 a）= 冷跑 **263.9 秒 → 热跑 121.6 秒**（**省 142.3 秒 / −54%**），两次都 203/203
 
 > **起因**：v1.5.224 之后门禁仍约 4 分钟，用户指出「没改动的地方重复跑浪费时间」⇒ 批准方案 (a)。
