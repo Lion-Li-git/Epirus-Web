@@ -67,17 +67,40 @@ export function rejectDegenerateWinners(entries, thr) {
  * 前者是"塌缩"的定义本身（只有一种卡打上血），后者防"两种但一种占 99%"。标定（`mirrorHealth(20,5,'multi')` 实测）：
  *   现役 3P `2.66（3 种）` · 2P 槽 `2.98（3 种）` · 塌缩臂 `1.00（1 种）` · 今晚最宽的那粒 `1.75（3 种）` ⇒ 默认线 1.5 只砍塌缩，不砍宽包。
  * 与 `rejectDegenerateWinners` 同规矩：**全不合格 ⇒ `allRejected=true`，调用方必须响亮**，不许静默退回"不过滤"。 */
+/** v1.5.227：**塌缩线**（最大单卡落地份额）—— 单一来源，探针/门/训练都 import 它，不许各处各写一个数。 */
+export const COLLAPSE_LINE = 0.60;
 export function rejectNarrowWinners(entries, floor) {
   const F = (floor != null ? floor : 1.5);
   const list = (entries || []).filter(function (e) { return !!e; });
-  const bad = function (e) { return !!(e && e.ref) && ((Number(e.landedKeys) || 0) < 2 || !(Number(e.landG) >= F)); };
+  /* v1.5.227（用户裁定"换 G 的定义"）：**塌缩 = 最大单卡落地份额**，不再是"数种类"。
+   * 病（实测，见 `tools/probe-g-collapse.mjs` 的 20 粒样本）：旧子句 `landedKeys < 2` **从来没触发过** ——
+   *   池里每粒包都是 4~10 种（中位 5），连 `v7expo-31` 那种 **10 种卡打上血、却有 76.4% 的伤害来自 `sword`**
+   *   的粒也照样放行；口语里的"≥4 种"线更是恒真。⇒ **宽度会误导**：种类多与塌缩可以同时成立。
+   * 改成判份额：`max(landByKey)/landedTotal > 0.60` ⇒ 塌缩（"一种卡吃掉六成以上落地"）。
+   * 实测散布（产品口径 · 20 粒）：36.0% → 97.7%，中位 69.1%，**11/20 超线**，现役在 **45.9%**（安全侧）
+   * ⇒ 这个轴有判别力，旧轴没有。份额线是**加严**：`landedKeys<2` 蕴含其中（只有一种卡 ⇒ 份额 100%）。
+   * 缺 `maxLandShare` 的条目退回旧子句，并把缺的个数报成 `shareMissing`（不许静默降级成"看不见就当过"；
+   * 也不许因老调用方没传就把它们全判死 —— 那会把 D128 的既有单测全打红）。训练路径总是传 ⇒ 由 D159 钉住。 */
+  let shareMissing = 0;
+  const bad = function (e) {
+    if (!(e && e.ref)) return false;
+    const keys = Number(e.landedKeys) || 0;
+    const share = (e.maxLandShare == null || e.maxLandShare === '') ? null : Number(e.maxLandShare);
+    if (share == null) shareMissing++;
+    const collapsed = (share == null) ? (keys < 2) : (share > COLLAPSE_LINE);
+    return collapsed || !(Number(e.landG) >= F);
+  };
   const clean = list.filter(function (e) { return !bad(e); });
   const dropped = list.length - clean.length;
   clean.sort(function (a, b) { return b.score - a.score; });
   return {
     best: clean.length ? clean[0] : null, clean: clean, dropped: dropped, floor: F,
+    collapseLine: COLLAPSE_LINE, shareMissing: shareMissing,
     allRejected: list.length > 0 && clean.length === 0,
-    victims: list.filter(bad).map(function (e) { return { landG: Number(e.landG) || 0, landedKeys: Number(e.landedKeys) || 0, score: e.score }; })
+    victims: list.filter(bad).map(function (e) {
+      return { landG: Number(e.landG) || 0, landedKeys: Number(e.landedKeys) || 0, score: e.score,
+        maxLandShare: (e.maxLandShare == null ? null : Number(e.maxLandShare)), maxLandKey: e.maxLandKey || null };
+    })
   };
 }
 

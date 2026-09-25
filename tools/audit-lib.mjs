@@ -800,6 +800,19 @@ export function aggressionProfile(W, params, GAMES, opts) {
  * ⚠️ 样本敏感（`docs/METHODOLOGY.md` 规则 22）：同一个包 n5=3.08 / n10=2.99 / n20=4.24 / n40=4.54
  *   ⇒ 返回值**必须带 N 与 games**，打印时一起报；小样本之间的 S 差**不可比**。
  * 本函数**只测量**：不参与 fit、不参与任何阻断（改 fit 的归一化是另一件独立的事，改了必须记 pre/post 分界）。 */
+/** v1.5.227：「**最大单卡落地份额**」只在这里算一次（探针 / 训练 / 门都 import 它）。
+ * 口径与 `mirrorHealth.effSkillsLand` **逐字同源**：只数**真卡名**（`R.byKey[k]` 存在），分母用**过滤后**的 `landedTotal`。
+ * 病（我自己 09-25 踩的，值荒谬到一眼能看出）：`landByKey` 是**未过滤**的 —— 它按 `damage.via` 统计，而 `via`
+ *   有一批取值不是一张卡（"终局收缩"、"叠盾反噬"…），`landedTotal` 却是过滤后的数
+ *   ⇒ 直接 `max(landByKey) / landedTotal` 会算出 **44900%**（实测 `v7teach-32`，那粒只剩 1 张真卡）。
+ * ⇒ 写成一个函数，省得三处各写一遍再各错一遍。 */
+export function landShareOf(W, mh) {
+  const R = W.EpirusRules, by = (mh && mh.landByKey) || {}, tot = (mh && mh.landedTotal) || 0;
+  let key = null, count = 0;
+  Object.keys(by).forEach(function (k) { if (R.byKey[k] && by[k] > count) { count = by[k]; key = k; } });
+  return { key: key, count: count, total: tot, share: tot ? count / tot : 0 };
+}
+
 export function breadthProfile(W, params, mode, GAMES) {
   const S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay, R = W.EpirusRules;
   const G = GAMES || 20;

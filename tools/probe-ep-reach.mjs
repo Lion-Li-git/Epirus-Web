@@ -27,6 +27,7 @@ const FIELDS = String(arg('fields', 'pool,guardwall,mirror')).split(',');
 const PACK = arg('pack', 'js/bundled-champion-3p.js');
 const SEED0 = Number(arg('seed', 20260924));
 const ASJSON = process.argv.indexOf('--json') >= 0;
+const NOJI = process.argv.indexOf('--noji') >= 0;   // v1.5.228：禁ジ反事实（压缩ジ的极端版）
 
 const sb = {
   console: { log: function () { }, warn: function () { }, error: console.error },
@@ -53,21 +54,69 @@ const TARGETS = [
   { key: R.SK.LASER_EYE, name: '激光眼', bead: 'boom' }
 ];
 const epOf = function (st, pid, key) { const c = S.computeCost(st, pid, key); return c && c.ok !== false ? (c.ep || 0) : null; };
+/* v1.5.227（新 G 用）：**高价层**（基础价 ≥3 ep 的卡）的可达性与选择率。
+ * 为什么不手抄名单：这个仓栽过太多次"两处各写一份名单"（METHODOLOGY 13）——
+ *   所以逐决策按 **live menu + 定价** 现算：价格取 `byKey[key].cost`（数字），函数费用（聚能环/过载炮/激光眼）
+ *   取 `computeCost` 算出的 `ep`；而"能不能现在打出去"一律以 `computeCost.ok` 为准（含珠子前置，与线上同一道闸）。 */
+const priceOf = function (st, pid, key) {
+  const def = R.byKey[key]; if (!def) return null;
+  if (typeof def.cost === 'number') return def.cost;
+  const c = S.computeCost(st, pid, key);
+  return (c && typeof c.ep === 'number') ? c.ep : null;
+};
+/* ⚠️ `computeCost().ok` 判的是**前置**（例如"电磁炮需 1 枚电珠"），**不是买得起** ——
+ * 我第一版拿它当"现在打得出去"，于是印出"高价层 100% 可达"这种荒谬值（decisions 的 ep 均值才 0.76）。
+ * 买得起一律用**菜单自带**的 `l.affordable`（`randChooser` 用的就是它，单一来源）；缺这个字段时才退回 `ep >= 价格`。 */
+const affordableNow = function (l, ep, price) {
+  if (l && l.affordable !== undefined) return !!l.affordable;
+  return ep >= price;
+};
+const COSTLY_MIN = 3;
 
 function runField(field, games, costOverride) {
-  const d = { field: field, games: games, decisions: 0, epSum: 0, epHist: {}, reach: {}, near: {}, affordNoBuy: {}, holds: 0, holdWithGunAfford: 0, spendByCard: {}, spendTot: 0, incomeByReason: {}, incomeTot: 0, rounds: 0, first: 0 };
+  const d = { field: field, games: games, decisions: 0, epSum: 0, epHist: {}, reach: {}, near: {}, affordNoBuy: {}, holds: 0, holdWithGunAfford: 0, spendByCard: {}, spendTot: 0, incomeByReason: {}, incomeTot: 0, rounds: 0, first: 0,
+    /* v1.5.228：出招**类别构成**（同一批决策点）—— 回答"把ジ压下去，牌桌会不会只剩防御"这类**水床**问题。 */
+    mix: { all: 0, ji: 0, energy: 0, attack: 0, defense: 0, special: 0 },
+    costly: { min: COSTLY_MIN, n: 0, ok: 0, bought: 0, affordNoBuy: 0, byKey: {}, priceMax: 0 } };
   const prevCost = {};
   if (costOverride != null) { prevCost[R.SK.BIG_T] = R.byKey[R.SK.BIG_T].cost; R.byKey[R.SK.BIG_T].cost = costOverride; }
   try {
     for (let g = 0; g < games; g++) {
       const seat = g % N, seed = SEED0 + g * 7919;
-      const bs = T.policyChooserN(params, 0.15);
+      const __bsRaw = T.policyChooserN(params, 0.15);
+      /* v1.5.228 `--noji`：**压缩ジ**的极端版（在菜单里直接去掉ジ）。这是**策略**干预，不改规则 ⇒ 指纹不变。
+       * 用途：回答"把ジ压下去之后，高费卡还用不用得起 / 牌桌会不会只剩防御"这个**水床**问题。 */
+      const bs = NOJI ? function (s2, p2, lg) {
+        const f = (lg || []).filter(function (l) { return l.key !== R.SK.JI; });
+        return __bsRaw(s2, p2, f.length ? f : lg);
+      } : __bsRaw;
       const rec = function (st, pid, legal, act) {
         if (pid !== seat || !act || !act.key) return;
         const ep = st.p[pid].ep || 0;
         d.decisions++; d.epSum += ep;
         const band = ep >= 5 ? '5+' : (ep >= 3 ? '3-4' : (ep >= 2 ? '2' : '0-1'));
         d.epHist[band] = (d.epHist[band] || 0) + 1;
+        /* v1.5.227：高价层（≥3ep）逐决策判定 —— 与上面那些门槛读数**同一批决策点**（免得又是两把尺子）。 */
+        {
+          let anyCostly = false, anyOk = false;
+          for (const l of legal) {
+            if (!l || !l.key) continue;
+            const pr = priceOf(st, pid, l.key);
+            if (pr == null || pr < COSTLY_MIN) continue;
+            anyCostly = true;
+            if (pr > d.costly.priceMax) d.costly.priceMax = pr;
+            if (affordableNow(l, ep, pr)) anyOk = true;
+          }
+          if (anyCostly) {
+            d.costly.n++;
+            if (anyOk) d.costly.ok++;
+            const ap = priceOf(st, pid, act.key);
+            if (ap != null && ap >= COSTLY_MIN) {
+              d.costly.bought++;
+              d.costly.byKey[act.key] = (d.costly.byKey[act.key] || 0) + 1;
+            } else if (anyOk) d.costly.affordNoBuy++;
+          }
+        }
         for (const t of TARGETS) {
           if (!legal.some(function (x) { return x.key === t.key; })) continue;
           const c = epOf(st, pid, t.key);
@@ -81,6 +130,10 @@ function runField(field, games, costOverride) {
           if (canNow) { d.reach[rk].ok++; if (act.key !== t.key) d.affordNoBuy[rk] = (d.affordNoBuy[rk] || 0) + 1; }
           else if (need - ep <= 2) { d.near[rk] = (d.near[rk] || 0) + 1; }
         }
+        /* v1.5.228：类别构成（ジ / 能量 / 攻击 / 防御 / 特殊）—— 与上面所有读数**同一批决策点**。 */
+        d.mix.all++;
+        if (act.key === R.SK.JI) d.mix.ji++;
+        else { const __c = R.byKey[act.key] && R.byKey[act.key].cat; if (__c) d.mix[__c] = (d.mix[__c] || 0) + 1; }
         if (act.key === R.SK.JI) {
           d.holds++;
           const gc = epOf(st, pid, R.SK.GUN);
@@ -133,6 +186,11 @@ for (const f of FIELDS) {
       ' · 只差≤2ep ' + pct(d.near[rk] || 0, rr.n) + '   (n=' + rr.n + ')');
   }
   console.log('  选 ジ 的决策 = ' + pct(d.holds, d.decisions) + '  其中"枪本来买得起"占 ' + pct(d.holdWithGunAfford, Math.max(1, d.holds)) + '（= holding 率，E4 的自变量）');
+  /* v1.5.228：**出招类别构成** —— 与上面同一批决策点。用来回答"压ジ会不会把牌桌压成防御"这类**水床**问题：
+   * ジ 是唯一水源 ⇒ 压它 = 压整张预算，高费卡先消失、剩下的回合只能靠**免费防御**填。 */
+  console.log('  出招构成（受评席 ' + d.mix.all + ' 次决策）：ジ ' + pct(d.mix.ji, d.mix.all) + ' · 攻击 ' + pct(d.mix.attack, d.mix.all) +
+    ' · **防御 ' + pct(d.mix.defense, d.mix.all) + '** · 能量 ' + pct(d.mix.energy, d.mix.all) + ' · 特殊 ' + pct(d.mix.special, d.mix.all) +
+    (NOJI ? '   ⚠️ 本次是 `--noji` **禁ジ反事实**（策略干预，规则未动）' : ''));
   const top = Object.keys(d.spendByCard).sort(function (a, b2) { return d.spendByCard[b2] - d.spendByCard[a]; }).slice(0, 6);
   console.log('  ep 支出结构（合计 ' + d.spendTot.toFixed(0) + ' ep，占收入 ' + pct(d.spendTot, Math.max(1, d.incomeTot)) + '）：' +
     top.map(function (k) { return ((R.byKey[k] || {}).name || k) + ' ' + pct(d.spendByCard[k], Math.max(1, d.spendTot)); }).join(' · '));
@@ -140,7 +198,7 @@ for (const f of FIELDS) {
     Object.keys(d.incomeByReason).sort(function (a, b2) { return d.incomeByReason[b2] - d.incomeByReason[a]; }).slice(0, 4)
       .map(function (k) { return k + ' ' + pct(d.incomeByReason[k], Math.max(1, d.incomeTot)); }).join(' · ') +
     '   受评席 1st ' + pct(d.first, GAMES) + ' · 局长 ' + (d.rounds / GAMES).toFixed(1));
-  out.push({ field: f, decisions: d.decisions, epMean: d.epSum / d.decisions, epHist: d.epHist, reach: d.reach, near: d.near, affordNoBuy: d.affordNoBuy, holds: d.holds, holdWithGunAfford: d.holdWithGunAfford, spendTot: d.spendTot, incomeTot: d.incomeTot, first: d.first / GAMES, rounds: d.rounds / GAMES });
+  out.push({ field: f, decisions: d.decisions, epMean: d.epSum / d.decisions, epHist: d.epHist, reach: d.reach, near: d.near, affordNoBuy: d.affordNoBuy, holds: d.holds, holdWithGunAfford: d.holdWithGunAfford, spendTot: d.spendTot, incomeTot: d.incomeTot, first: d.first / GAMES, rounds: d.rounds / GAMES, costly: d.costly, mix: d.mix, noji: NOJI });
 }
 /* §B 改价反事实：只改内存里的大雷单价，量"翻过门槛"的决策占比怎么动（预注册：cost=3 时 ep≥3 仍 <5%） */
 console.log('\n=== §B 改价反事实（只改内存里的 `R.byKey[大雷].cost`，仓库文件一字不动 ⇒ 指纹不变）===');
@@ -157,6 +215,11 @@ for (const cost of [5, 3, 2]) {
   const line = [];
   for (const f of FIELDS) {
     const d = runField(f, Math.min(GAMES, 120), cost);
+    /* v1.5.227：高价层（≥3ep）的**可达性 vs 选择率** —— 把"够不着"和"够得着但不去"分开印。 */
+    const cy = d.costly;
+    line.push('  [高价层 ≥' + cy.min + 'ep] 菜单里出现过 ' + pct(cy.n, d.decisions) + ' 的决策（n=' + cy.n + '）· ' +
+      '**当时真能打出** ' + pct(cy.ok, Math.max(1, cy.n)) + ' · **真打出去了** ' + pct(cy.bought, Math.max(1, cy.n)) +
+      ' · 可达却没选 ' + pct(cy.affordNoBuy, Math.max(1, cy.ok)) + (Object.keys(cy.byKey).length ? ' · 选过：' + JSON.stringify(cy.byKey) : ''));
     const rr = d.reach['大雷'] || { n: 0, ok: 0, bought: 0, boughtWhenOk: 0 };
     line.push(f + ' 买得起 ' + pct(rr.ok, rr.n) + ' · **真放出去** ' + pct(rr.bought, rr.n) +
       ' · 可达时成交率 ' + pct(rr.boughtWhenOk, Math.max(1, rr.ok)) +

@@ -8,7 +8,7 @@ import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径�
 import { ECON_ENV_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
 import { rejectDegenerateWinners, bandPickByLand, rejectNarrowWinners } from './pick-best.mjs';
-import { HOLO_GIFT_MAX } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
+import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
 /* v1.5.194（qoder 0924 夜）：击杀奖励规则的**单一来源**实现（与 `probe-kill-reward.mjs` 共用同一份 ⇒
  * 不会出现"训出来的冠军和量出来的冠军不是一套规则"）*/
 import { patchResolve as krPatchResolve, patchPlay as krPatchPlay, makeKR as krMakeKR } from './kill-reward-lib.mjs';
@@ -729,6 +729,13 @@ for (const h of hall) {
     for (const e of sel.clean) {
       const mh = T.mirrorHealth(e.ref.params, SEL_LAND_GAMES, N, 'multi');
       e.landG = mh.effSkillsLand || 0; e.landedKeys = mh.landedKeys || 0; e.castG = mh.effSkills || 0;
+      /* v1.5.227（用户裁定换 G）：**塌缩判据 = 最大单卡落地份额**（旧判据"数种类"从来没触发过，见 pick-best 头注）。
+       * 与 `landG` 取自**同一次** `mirrorHealth` ⇒ 两个读数天然同一口径、同一批局，不另跑一遍。
+       * 归属计算走 `audit-lib.landShareOf`（单一来源：只数真卡名、分母用过滤后的 landedTotal）——
+       * ⚠️ 我第一版在这里直接 `max(landByKey)/landedTotal`，而 `landByKey` 含**非卡键**（"终局收缩"…）
+       * ⇒ 算出过 44900% 的份额（实测 `v7teach-32`）。 */
+      const __ls = landShareOf(sb, mh);
+      e.maxLandShare = __ls.share; e.maxLandKey = __ls.key;
       e.conv = (mh.nonJi ? (mh.landedTotal || 0) / mh.nonJi : 0);
       /* 与 promote 的"不可 --force"硬门槛同阈值（`HOLO_GIFT_MAX`，单源）：送盾当主业的候选**不参与**广度换人 */
       e.gateOk = (mh.holoOtherPerGame || 0) <= HOLO_GIFT_MAX;
@@ -739,14 +746,14 @@ for (const h of hall) {
    * 而 §N25 已证明"广度当排序键"要么咬不动（带里只剩 1 粒）要么咬错（换上来的是过不了硬门槛的包）。 */
   if (BREADTH_FLOOR > 0 && sel.clean && sel.clean.length) {
     const nf = rejectNarrowWinners(sel.clean, BREADTH_FLOOR);
-    console.log('[广度线] 判据 = 净 `G(落地) ≥ ' + BREADTH_FLOOR + '` 且 `landedKeys ≥ 2`（n=' + SEL_LAND_GAMES + ' 局 multi 镜）· 各粒：' +
+    console.log('[广度线] 判据 = 净 `G(落地) ≥ ' + BREADTH_FLOOR + '` 且 **最大单卡落地份额 ≤ ' + (nf.collapseLine * 100).toFixed(0) + '%**（v1.5.227 起；旧判据是 `landedKeys ≥ 2`，实测从不触发）· n=' + SEL_LAND_GAMES + ' 局 multi 镜 · 各粒：' +
       sel.clean.slice().sort(function (a, b) { return b.landG - a.landG; })
-        .map(function (e) { return e.landG.toFixed(2) + '(' + e.landedKeys + '种,兑现' + (100 * e.conv).toFixed(0) + '%)'; }).join('  '));
-    console.log('[广度线] 剔除 ' + nf.dropped + '/' + sel.clean.length + ' 粒塌缩候选' +
-      (nf.best ? ' ⇒ 池内冠军 ' + (nf.best.score === sel.best.score ? '**没换人**' : '**换成 ' + nf.best.landG.toFixed(2) + '(' + nf.best.landedKeys + '种)**') : ''));
+        .map(function (e) { return e.landG.toFixed(2) + '(' + e.landedKeys + '种,最大' + (100 * (e.maxLandShare || 0)).toFixed(0) + '%' + (e.maxLandKey ? '-' + e.maxLandKey : '') + ',兑现' + (100 * e.conv).toFixed(0) + '%)'; }).join('  '));
+    console.log('[广度线] 剔除 ' + nf.dropped + '/' + sel.clean.length + ' 粒塌缩候选' + (nf.shareMissing ? '（⚠️ ' + nf.shareMissing + ' 粒没带份额字段 ⇒ 走了旧子句）' : '') +
+      (nf.best ? ' ⇒ 池内冠军 ' + (nf.best.score === sel.best.score ? '**没换人**' : '**换成 ' + nf.best.landG.toFixed(2) + '(' + nf.best.landedKeys + '种,最大' + (100 * (nf.best.maxLandShare || 0)).toFixed(0) + '%' + (nf.best.maxLandKey ? '-' + nf.best.maxLandKey : '') + ')**') : ''));
     if (nf.allRejected) {
       BREADTH_ALL_NARROW = true;
-      console.error('⛔ [广度线] 名人堂**全部塌缩**（没有一粒 `landedKeys≥2 且 G(落地)≥' + BREADTH_FLOOR + '`）⇒ 产物照写但标 breadthFloorAllNarrow；' +
+      console.error('⛔ [广度线] 名人堂**全部塌缩**（没有一粒 `最大单卡落地份额 ≤ ' + (nf.collapseLine * 100).toFixed(0) + '% 且 G(落地)≥' + BREADTH_FLOOR + '`）⇒ 产物照写但标 breadthFloorAllNarrow；' +
         '这按预注册是**走向②**（该回去改奖励面，不是继续加排序键），别拿这粒去换包');
     } else { sel.clean = nf.clean; if (nf.best) sel.best = nf.best; }
     BREADTH_LOG = { floor: BREADTH_FLOOR, games: SEL_LAND_GAMES, dropped: nf.dropped, of: sel.clean.length + nf.dropped,

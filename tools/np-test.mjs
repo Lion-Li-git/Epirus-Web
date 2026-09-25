@@ -18,7 +18,7 @@ import { makeShapeScorer } from '../server/shape-scorer.mjs';   // P2 形状适�
 /* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
-import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand, rejectNarrowWinners } from './pick-best.mjs';
+import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand, rejectNarrowWinners, COLLAPSE_LINE } from './pick-best.mjs';
 import { readTrainEnv, hasTrainOverride, TRAIN_ENV_KEYS as TEK } from '../server/train-env.mjs';   // v1.5.169 D129：训练旋钮单一来源
 /* v1.5.132：V1/V2/V4「整局」三装配的**单一来源**（D105 与 `probe-ring-ablate.mjs` 共用一份实现）。 */
 import { measureAll } from './v2v4-lib.mjs';
@@ -6500,6 +6500,50 @@ t('D158 产物必须能自证**实际生效的 EPIRUS_* 配方**（v1.5.226 · �
   ok(bmeta.recipe.env.EPIRUS_XN2W === undefined, '**没设的旋钮不许凭空出现在配方里**（记的是配方，不是默认值）');
   eq(bmeta.recipe.envKeys, Object.keys(bmeta.recipe.env).length, 'envKeys 必须等于 env 的键数（自洽）');
   try { rmSync(d, { recursive: true, force: true }); } catch (e) {}
+});
+
+t('D159 广度判据必须是**最大单卡落地份额**（v1.5.227 · 用户裁定换 G）：数种类会误导，且旧子句从不触发', function () {
+  /* 病（实测 `tools/probe-g-collapse.mjs` 20 粒产品口径样本）：
+   *   旧判据 `landedKeys < 2`（以及口语里的"≥4 种"）**从来没触发过** —— 池里每粒都是 4~10 种（中位 5）。
+   *   反例就在样本里：`v7expo-31`/`v7r3-42`/`v7soft-36` **10 种卡打上血、却有 76.4% 的伤害来自 `sword`**
+   *   ⇒ **宽度会误导**（种类多与塌缩可以同时成立）。
+   * 新判据 = `max(landByKey)/landedTotal > 0.60` ⇒ 塌缩。实测散布 36.0%→97.7%、中位 69.1%、11/20 超线，
+   *   现役 45.9% 在安全侧 ⇒ **这个轴有判别力，旧轴没有**（这就是"先量判别力再立门"那条纪律的产物）。 */
+  const pb = readFileSync('tools/pick-best.mjs', 'utf8');
+  ok(/export const COLLAPSE_LINE = 0\.60/.test(pb), '塌缩线必须是单一来源常量（探针/门/训练都 import 它）');
+  /* 断言用**语义**而不是逐字（v1.5.227 第一版把正则写死成 `share == null ? ...`，
+   * 而真代码是 `(share == null) ? ...` ⇒ 门因为多了一对括号就红 —— 那种门守的是空白，不是行为）。 */
+  ok(/share == null[\s\S]{0,48}keys < 2/.test(pb) && /share > COLLAPSE_LINE/.test(pb) && /shareMissing/.test(pb),
+    '缺 `maxLandShare` 时必须退回旧子句**并把缺的个数报出来**（不许静默降级成"看不见就当过"）');
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  /* 训练路径必须**真的**把份额传进否决（否则新判据在真路径上是死代码），而且必须走 `landShareOf` 单一来源 ——
+   * 顺手**禁止**退回手写：我第一版写的是 `max(landByKey)/landedTotal`，而 `landByKey` 含非卡键 ⇒ 算出过 44900%。 */
+  ok(/landShareOf\(sb, mh\)/.test(t3) && /e\.maxLandShare = __ls\.share; e\.maxLandKey = __ls\.key;/.test(t3),
+    '训练路径必须把份额传进否决，且走 `landShareOf`（单一来源）');
+  ok(!/Object\.keys\(__lb\)/.test(t3),
+    '不许退回手写 `max(landByKey)/landedTotal`：`landByKey` 含**非卡键**（"终局收缩"…）而 landedTotal 是过滤后的 ⇒ 份额会 >100%');
+  ok(/HOLO_GIFT_MAX/.test(t3) && /最大单卡落地份额/.test(t3), '训练日志必须按新口径印（含阈值与最大卡名）');
+
+  /* ===== 行为断言：判别力本身 ===== */
+  const mk = function (score, landG, keys, share, key) {
+    return { ref: { params: 'p' + score }, score: score, landG: landG, landedKeys: keys, maxLandShare: share, maxLandKey: key };
+  };
+  /* ① **旧判据放行、新判据必须砍**的那一粒（10 种但 76.4% 塌缩）—— 本门存在的理由 */
+  let r = rejectNarrowWinners([mk(1.00, 3.2, 10, 0.764, 'sword'), mk(0.90, 3.0, 5, 0.459, 'gun')], 1.5);
+  eq(r.dropped, 1, '10 种卡但 76.4% 来自一张 ⇒ 必须判塌缩（旧判据会放行它）');
+  ok(r.best && r.best.score === 0.90, '该留的是份额健康的那一粒');
+  eq(r.victims[0].maxLandKey, 'sword', '被剔者必须带上是哪张卡塌的（否则日志读不出病因）');
+  /* ② 线的方向：`>` 而非 `>=`（恰好 0.60 不砍、0.601 砍）—— 阈值语义不许漂 */
+  eq(rejectNarrowWinners([mk(1, 3.2, 5, 0.60, 'gun')], 1.5).dropped, 0, '恰好 60% 不算塌缩（线是 >）');
+  eq(rejectNarrowWinners([mk(1, 3.2, 5, 0.601, 'gun')], 1.5).dropped, 1, '60.1% 必须判塌缩');
+  /* ③ 加严而非放宽：只有一种卡 ⇒ 份额 100% ⇒ 一定被砍（旧子句的 case 被蕴含） */
+  eq(rejectNarrowWinners([mk(1, 3.2, 1, 1.0, 'gun')], 1.5).dropped, 1, '只剩一种卡必须仍被砍（新线蕴含旧线）');
+  /* ④ 缺字段的老调用方：不许静默当"过"，也不许一律判死 —— 走旧子句 + 计数 */
+  r = rejectNarrowWinners([mk(1, 3.2, 3, null) ], 1.5);
+  eq(r.dropped, 0, '缺份额且种类够 ⇒ 按旧子句放行');
+  eq(r.shareMissing, 1, '缺份额必须被计数（让调用方看得见）');
+  /* ⑤ G(落地) 那条下限仍在（两条子句是"且"的关系） */
+  eq(rejectNarrowWinners([mk(1, 1.49, 5, 0.3, 'gun')], 1.5).dropped, 1, '净兑现低于地板仍要砍');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
