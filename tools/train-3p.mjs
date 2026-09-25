@@ -207,9 +207,9 @@ if (SEQ_W > 0) {
   /* v1.5.229：收尾必须印**实际付了多少** —— 否则"奖励没效果"分不清是"代际太短"还是"训练场里这个事件根本不发生"
    * （后者意味着奖励永远付不出去，梯度为零 ⇒ 与击杀奖励"付得太少"同族，但更极端）。 */
   process.on('exit', function () {
-    console.log('[序列奖励·结账] 本臂共发放 ' + SEQ.events + ' 次 · ' + SEQ.paid + ' ep（按场次折算 = 每局 ' +
-      (SEQ.events / Math.max(1, GENS * GAMES * POP)).toFixed(4) + ' 次）' +
-      (SEQ.events === 0 ? '  ⛔ **一次都没付出去** ⇒ 本臂的奖励梯度恒为零，效果为空是必然' : ''));
+    console.log('[序列奖励·结账] 本臂共发放 ' + SEQ.events + ' 次 · ' + SEQ.paid + ' ep（分母：充到电珠 ' + SEQ.charges +
+      ' 次 · 首次第 ' + SEQ.firstCharge + ' 回合 · 首次付款第 ' + SEQ.firstPayRound + ' 回合；每股 ' + (SEQ.events / Math.max(1, GENS * GAMES * POP)).toFixed(4) + ' 次）' +
+      (SEQ.charges === 0 ? '  ⛔ **训练场里连一次电珠都没充过** ⇒ 不是奖励的问题，是课程/热启动的问题' : (SEQ.events === 0 ? '  ⛔ 充了珠但一次没转化 ⇒ 奖励付不出去' : '')));
   });
 }
 let KR_REQ = 0, KR_PAID_PROBE = -1;

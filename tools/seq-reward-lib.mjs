@@ -31,7 +31,7 @@ export function makeSeqReward(R, W) {
   if (!w) return null;
   const KR = R.SK.RAILGUN;
   return {
-    w: w, paid: 0, events: 0, granted: [],   // granted：给谁、第几局，便于自证
+    w: w, paid: 0, events: 0, granted: [], charges: 0, firstCharge: -1, firstPayRound: -1,   // granted：给谁、第几局，便于自证
     /** 每个决策点调一次。**幂等**：同一事件不会被处理两次（cursor 记账）。 */
     tick: function (state) {
       const evs = state.events, n = evs.length;
@@ -39,13 +39,13 @@ export function makeSeqReward(R, W) {
       const pend = state.__seqPend || (state.__seqPend = {});
       for (; k < n; k++) {
         const e = evs[k];
-        if (e.type === 'bead' && e.kind === 'elec' && e.pid != null) pend[e.pid] = 1;
+        if (e.type === 'bead' && e.kind === 'elec' && e.pid != null) { pend[e.pid] = 1; this.charges++; if (this.firstCharge < 0) this.firstCharge = state.round; }
         else if (e.type === 'action' && e.outcome === 'ok' && !e.voided && e.key === KR && e.pid != null && pend[e.pid]) {
           delete pend[e.pid];
           state.p[e.pid].ep += w;
           state.events.push({ type: 'ep', pid: e.pid, delta: w, reason: '序列奖励(蓄能→电磁炮)' });
           this.paid += w; this.events++;
-          this.granted.push(e.pid);
+          this.granted.push(e.pid); if (this.firstPayRound < 0) this.firstPayRound = state.round;
         }
       }
       state.__seqCur = evs.length;   // ⚠️ 用**扫描后**的长度：中途 push 的那条 ep 事件不该被再扫一遍
