@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { parsePairTable } from './defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -6040,6 +6041,41 @@ t('D154 `--pair=1` 必须**一条命令跑两档并自带 placebo 自检**（09-
     'seeds=1 时退回单种子表（不印池化说明），配对表照常存在'
   );
 });
+t('D155 设防持续性栏必须**只记录不阻断**，且配对表的解析只有 defense-axis.mjs 一处', function () {
+  const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
+  const ax = readFileSync('tools/defense-axis.mjs', 'utf8');
+  ok(pc.indexOf('设防持续性栏') >= 0 && /EPIRUS_NO_GUARD/.test(pc), 'promote 必须印这一栏，且给一条能关掉省时间的开关');
+  ok(pc.indexOf("from './defense-axis.mjs'") >= 0 && ax.indexOf('export function parsePairTable') >= 0,
+    '解析必须单一来源：promote 里不许有第二份 parsePairTable（同 D150 的"搬运不许各写一份"）');
+  ok(pc.indexOf('createState') < 0, 'promote 的新栏**不许自己仿真** —— 只 spawn 探针再解析（自己搭桌子必然与探针漂移）');
+  ok(ax.indexOf('不许按 0 处理') >= 0, '解析不出行时必须明说"没量到"，不许静默回 0（0 会被读成"这包不龟"）');
+  /* ① 固定样本回归：第一版把 Δ 读成了"跨种子极差"（每粒种子列有 1~3 个数，按空白切下标就串位） */
+  const SAMPLE = ['   包                      placebo    hold均%  cycle均%      Δpt  每粒种子Δ                 极差   判定',
+    '   cbs1s2-band2                2 粒      37.2      13.7     +23.5  +22.0 +25.1       3.1   钱驱动（高，≥18pt）',
+    '   v7cmin4-31                  单粒       5.5       4.4      +1.6  +1.6                    —    非钱驱动（≤12pt）'].join('\n');
+  const parsed = parsePairTable('# 同回合配对（占位表头）\n' + SAMPLE);
+  eq(parsed.length, 2, '两行都得解析出来（实际 ' + parsed.length + '）');
+  eq(parsed[0].delta, 23.5, 'Δ 必须取 Δpt 那一列，不是极差（v1.5.222 第一版就在这串了位）');
+  eq(parsed[0].spread, 3.1, '跨种子极差要单独拿到（判"线落在不落在噪声里"用的就是它）');
+  eq(parsed[1].delta, 1.6, '单种子行（极差列是 —）也要解析对');
+  ok(!isFinite(parsed[1].spread), '单种子时极差必须是 NaN 而不是 0（0 会被读成"完全稳定"）');
+  eq(parsed[0].hold, 37.2, 'hold 均%'); eq(parsed[0].cycle, 13.7, 'cycle 基线%（= 水平轴）');
+  /* ② 真链：小样本跑探针 → 同一份解析 → 必须是有限数 + 有判定文案 */
+  const one = 'docs/artifacts/cbs1s2-band2.bak';
+  const rr = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=25', '--pair=1', '--seeds=2'], { encoding: 'utf8' });
+  eq(rr.status, 0, '探针要跑得通');
+  const rows = parsePairTable(rr.stdout);
+  ok(rows.length >= 1 && isFinite(rows[0].delta) && rows[0].verdict.length > 0,
+    '真表必须解析出有限 Δ 与判定文案（解析 0 行 = 探针换了列序而没人发现，正是本门要防的）');
+  /* ③ 行为式铁证：开/关这一栏，promote 的其余输出与退出码必须**逐字相同**（"只记录"不许是口头承诺） */
+  const on = spawnSync(process.execPath, ['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'], { encoding: 'utf8' });
+  const off = spawnSync(process.execPath, ['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'], { encoding: 'utf8', env: Object.assign({}, process.env, { EPIRUS_NO_GUARD: '1' }) });
+  eq(on.status, off.status, '退出码必须一致（实测 ' + on.status + ' vs ' + off.status + '）⇒ 这栏不许改变判定');
+  const strip = x => String(x || '').split(/\r?\n/).filter(l => l.indexOf('设防持续性栏') < 0).join('\n');
+  eq(strip(on.stdout + on.stderr), strip(off.stdout + off.stderr), '去掉这一行后两次的全部输出（含 stderr 里的阻断结论）必须逐字相同');
+  ok((on.stdout + on.stderr).indexOf('G 有效技能数') >= 0 || on.status === 0, '顺带确认这次 dry-run 真走到了门结论（阻断文案在 stderr，别只拼 stdout）');
+});
+
 
 
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
