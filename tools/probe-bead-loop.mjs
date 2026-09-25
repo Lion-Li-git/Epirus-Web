@@ -18,13 +18,17 @@ import { chargeProfile, rejectUnknownFlags } from './audit-lib.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
 /* v1.5.234：参数守卫 —— 本工具的**头注曾承诺 `--fields` 而代码没实现**（传了被静默忽略 ⇒ 假读数）。 */
-rejectUnknownFlags(process.argv.slice(2), ['packs','games','temp','eps','epsk','epsmode','json'], 'probe-bead-loop');
+rejectUnknownFlags(process.argv.slice(2), ['packs','games','temp','eps','epsk','epsmode','json','mode'], 'probe-bead-loop');
 const PACKS = arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/cbs1s2-band2.bak,docs/artifacts/v7cmin4-82.bak').split(',');
 const GAMES = Number(arg('games', 120));
+/* ⚠️ v1.5.234：**模式必须可选且必须印出来** —— 本工具原来写死 `'multi'`，而 `promote-champion` 的珠经济栏
+ * 调的是 `chargeProfile(..., 'long', ...)`。同一粒包、两个数差 7~10 倍（得珠 215 vs 1501），我一开始以为是
+ * "两把尺子的账本不同"，查下去才发现是**模式不同**（long 局长 65 回合 vs multi 39）⇒ 读数不写口径就没法互比。 */
+const MODE = arg('mode', 'multi');
 const TEMP = Number(arg('temp', 0.15)), EPS = Number(arg('eps', 0.2)), EPSK = Number(arg('epsk', 5)), EPSMODE = arg('epsmode', 'soft');
 const mul = function (a) { a >>>= 0; return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
 
-console.log('# 「空蓄能」两种病的拆分（' + GAMES + ' 局/格 · 5 席 · ' +
+console.log('# 「空蓄能」两种病的拆分（' + GAMES + ' 局/格 · 5 席 · **' + MODE + ' 模式** · ' +
   (EPS === 0 ? '评测口径 ε=0' : '产品口径 ε=' + EPS + ' k=' + EPSK + ' ' + EPSMODE) + ' · 只读）');
 console.log('# ① 用不上（下一回合电磁炮不可负担）＝经济问题；② 用得上没射＝选择问题。两者混在"过期珠"这一个数里会互相掩盖。\n');
 
@@ -39,7 +43,7 @@ for (const f of PACKS) {
   const st = { charged: 0, cantAfford: 0, couldButNoFire: 0, fired: 0, beadGone: 0, noNextDecision: 0 };
   const NEXTKEY = {};   // ②"买得起却没射"的那些决策，下一次实际干了什么（不写这个就解释不了与 `chargeProfile` 的差）
   for (let g = 0; g < GAMES; g++) {
-    const state = S.createState('multi', { next: mul(4100 + g * 7919) }, 5);
+    const state = S.createState(MODE, { next: mul(4100 + g * 7919) }, 5);
     state.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
     const pending = {};   // pid -> 该席上次蓄能时的回合与当时珠数
     const seenRound = {};
@@ -75,7 +79,7 @@ for (const f of PACKS) {
   console.log('   └ 其中 ' + st.beadGone + ' 次蓄能后**隔了两回合以上才决策**（珠子早过期 ⇒ 与①②无关，单列，不混进分母）');
   console.log('   在珠子还活的 ' + ok + ' 次里：① 下一回合电磁炮**买不起** ' + st.cantAfford + ' 次（' + pctv(st.cantAfford, ok) +
     '） · ② 买得起**却没射** ' + st.couldButNoFire + ' 次（' + pctv(st.couldButNoFire, ok) + '） · ③ 买得起也射了 ' + st.fired + ' 次（' + pctv(st.fired, ok) + '）');
-  const cp = chargeProfile(ctx.sb, params, 'multi', Math.max(60, GAMES));
+  const cp = chargeProfile(ctx.sb, params, MODE, Math.max(60, GAMES));
   const share = Object.keys(NEXTKEY).sort(function (a, b) { return NEXTKEY[b] - NEXTKEY[a]; }).slice(0, 5)
     .map(function (k) { return (NAME[k] || k) + ' ' + NEXTKEY[k]; }).join(' · ');
   console.log('   对照真源 `chargeProfile`（**按珠子计**）：得珠 ' + cp.gained + ' · 花掉 ' + cp.spent + '（' + pctv(cp.spent, cp.gained) + '） · 过期 ' + cp.expired +
