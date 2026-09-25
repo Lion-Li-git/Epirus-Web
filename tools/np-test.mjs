@@ -5997,6 +5997,29 @@ t('D153 产品的两个口径必须钉住（5 人 = ε0.2/k5/soft、2 人困难 
   const pr = readFileSync('tools/promote-champion.mjs', 'utf8');
   ok(/fieldProfile\(params, 0\.2, 'soft'/.test(pr), 'D118 的产品代理栏必须继续显式带 0.2/soft（它存在的意义就是"另一口径"）');
 });
+t('D154 `--pair=1` 必须**一条命令跑两档并自带 placebo 自检**（09-25 E18 那次自我作废换来的）', function () {
+  const p = readFileSync('tools/probe-defense-cause.mjs', 'utf8');
+  ok(/const PAIR = arg\('pair', ''\) === '1';/.test(p), "两档配对要成为**一个档**（`--pair=1`），不能靠人眼比两根曲线");
+  ok(/const SAVES = PAIR \? \['hold', 'cycle'\] : \[SAVER\];/.test(p) && /for \(const SAV of SAVES\)/.test(p) && /SAVER = SAV;/.test(p),
+    '配对模式必须**在同一次调用里**跑 hold+cycle（同种子同局数）⇒ 唯一变量是"对手手里的钱"；跨两次调用会漂');
+  ok(/CURVES\.push\(\{ pack:.*byRound: byRound/.test(p), '每档的"按回合号曲线"必须留档到内存 ⇒ 才有逐回合对齐的原料（探针不写文件）');
+  ok(/placebo 自检/.test(p) && /两档不该分岔的回合/.test(p),
+    '必须自带 placebo 自检：两档在 ep 未分岔的前几回合读数**必须逐字相同**，不同就当场作废（这条抓到过替身做错）');
+  ok(/不能当体质流行率/.test(p), '输出里必须留着那句更正：**单档 `hold` 的"倍差≥2"是含混了回合轴的粗筛**（E18：八成在配对后掉下 Δ≥15pt）');
+  ok(/是\*\*约定线\*\*不是数据给的/.test(p), '分型门槛要自己声明是约定的（Δ≥15pt 不是数据给的线）');
+  /* 跑通断言（09-25 的教训：`node --check` 抓不到 ReferenceError，只有真跑才抓得到） */
+  const one = 'docs/artifacts/cbs1s2-band2.bak';
+  const r = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=25', '--pair=1'], { encoding: 'utf8' });
+  eq(r.status, 0, '`--pair=1` 要跑得通（' + String(r.stderr || '').slice(0, 200) + '）');
+  const o = String(r.stdout || '');
+  ok(o.indexOf('同回合配对') >= 0, '`--pair=1` 必须印出同回合配对表');
+  ok(o.indexOf('✓ placebo 自检通过') >= 0, '小样本上 placebo 自检必须**通过**（不通过 = 两档连不该分岔的地方都分了岔，读数没意义）');
+  ok(/⇒ 分型：A 钱驱动 \d+ · B 钱\+晚局双重 \d+ · C 回合日程为主 \d+/.test(o), '分型三档都要印（0 也要印，缺档会让人以为没跑）');
+  const q = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + one, '--games=15'], { encoding: 'utf8' });
+  eq(q.status, 0, '不开 `--pair` 的默认档要照常跑完');
+  ok(String(q.stdout || '').indexOf('同回合配对') < 0, '默认档**不许**偷跑两档（历史读数必须逐字节可复现：09-25 已用 diff 自证过）');
+});
+
 
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {
   /* 病（v1.5.133 实测）：`tools/probe-aggr.mjs` 读的字段名与 `audit-lib.aggressionProfile()` 实际返回的

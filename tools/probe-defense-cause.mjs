@@ -24,7 +24,13 @@ const BMIN = Number(arg('bucket-min', 40));
 /* 攒钱替身有两种，**分开读才分得清"有钱"与"有威胁"**：
  *   `hold`（默认）= 永远出ジ ⇒ ep 真会堆起来（用户看到的就是这种"一个人在攒钱"）；
  *   `spend` = 买得起攻击卡就打 ⇒ ep 永远停在 0~1（前一版量出来就是这个，所以那一版**根本没法回答因果问**）。 */
-const SAVER = arg('saver', 'hold');
+let SAVER = arg('saver', 'hold');
+/* `--pair=1`：同一次调用里把 `hold` 与 `cycle` **两档都跑**，末尾输出"同回合配对表"（= 因果那一问的正式判据）。
+ *   为什么要内置：09-25 的 E14 只跑了 `hold` 一档就把"倍差≥2"当体质流行率报出去，补跑 `cycle` 配对后
+ *   81% 的标记不再复现（它们是"晚局龟"）⇒ 单档比值**不构成因果证据**（METHODOLOGY 64），两档得一起跑。 */
+const PAIR = arg('pair', '') === '1';
+const SAVES = PAIR ? ['hold', 'cycle'] : [SAVER];
+const CURVES = [];
 const CYCLE_AT = Number(arg('cycle-at', 4));
 /* 高桶天然稀疏（攒钱替身买得起就打 ⇒ ep 很少堆到 10 以上）⇒ 桶要能**自适应合并**，否则高桶永远是 n<20 的噪声 */
 const BASE_BUCKETS = [[0, 1, 'ep 0~1'], [2, 4, 'ep 2~4'], [5, 9, 'ep 5~9（大雷门槛到 9）'], [10, 1e9, 'ep ≥10']];
@@ -44,6 +50,8 @@ console.log('# 为什么两档要一起跑：`hold` 里 ep 与回合号是**同�
 console.log('# `cycle` 把 ep 压回 0~' + (CYCLE_AT - 1) + '，于是"**同一回合号、不同 ep**"的配对比较成为可能 —— 那才是因果那一问的判据。\n');
 
 const SKIP = [];
+for (const SAV of SAVES) {
+  SAVER = SAV;
 for (const f0 of PACKS) {
   const f = f0;
   /* `.bak` 在 `docs/artifacts/` 里**不全是冠军包**（实测有 `index-html-before-ab*.bak` 是 index.html 的备份）
@@ -141,6 +149,7 @@ for (const f0 of PACKS) {
   for (const d of ALL) { const k = d.rd; if (!byRound[k]) byRound[k] = { def: 0, tot: 0, ep: 0, uDef: 0, uTot: 0 };
     byRound[k].tot++; byRound[k].def += d.def ? 1 : 0; byRound[k].ep += d.ep0;
     if (d.unhurt) { byRound[k].uTot++; byRound[k].uDef += d.def ? 1 : 0; } }
+  CURVES.push({ pack: f0.replace(/^.*[\/]/, '').replace(/\.(bak|js)$/, ''), saver: SAVER, byRound: byRound });
   console.log('   按回合号的曲线（`--pair` 就是比这条）：' +
     Object.keys(byRound).map(Number).sort(function (a, b) { return a - b; }).slice(0, 14).map(function (r) {
       const c = byRound[r]; return 'r' + r + ' ' + (100 * c.def / c.tot).toFixed(1) + '%(ep' + (c.ep / c.tot).toFixed(1) + ')';
@@ -201,6 +210,7 @@ for (const f0 of PACKS) {
   console.log('   ⚠️ 单跑这一档**答不了因果**：本档里 ep 与回合号是同一条轴（最高桶与最低桶的平均回合差 ' + (rdGap >= 1e8 ? '—（分母不足）' : rdGap.toFixed(1)) + ' 回合）。' +
     '⇒ 判"是不是因为对方有钱"要看上面那条**按回合号的曲线**，并与另一档（`--saver=cycle`：钱被压住）在**同一回合号**上对照。');
 }
+}   /* ← 收 `for (const SAV of SAVES)`：两档模式下这里换档 */
 
 if (QUIET && SKIP.length && !SWEEP.length) {
   console.log('\n## 一粒都没量到（跳过 ' + SKIP.length + ' 粒）⇒ 这不是"没有体质"，是没跑成，非零退出');
@@ -225,4 +235,42 @@ if (QUIET && SWEEP.length) {
   console.log('   ⇒ ' + bad.length + '/' + SWEEP.length + ' 粒有"对手有钱→转防"的响应（倍差≥2 且高桶设防率≥20%）：' +
     (bad.length ? bad.map(function (r) { return r.pack + '(' + r.ratio.toFixed(1) + '×)'; }).join('、') : '无'));
   console.log('   ⚠️ 这张表**不是判据**：它只用来在"过门/破防"之外再筛一遍，最终换槽仍需用户裁定与 `promote --dry` 全套。');
+}
+
+/* ===== `--pair=1` 的正式输出：同回合配对表 = 因果那一问的判据（E15 · 09-25）=====
+ * 为什么内置：E14 只跑 `hold` 一档，把"倍差≥2"当体质流行率报了出去；补跑 `cycle` 同回合配对后八成标记不再复现
+ *   ⇒ 单档比值把"时间轴"记到了"钱"头上（METHODOLOGY 64）。所以配对必须是**一条命令**，不能靠人眼比两根曲线。*/
+if (PAIR) {
+  const dv = function (c) { return (c && c.tot) ? 100 * c.def / c.tot : NaN; };
+  const byPack = new Map();
+  for (const c of CURVES) { if (!byPack.has(c.pack)) byPack.set(c.pack, {}); byPack.get(c.pack)[c.saver] = c.byRound; }
+  console.log('\n## 同回合配对（`hold`=钱一路堆 vs `cycle`=堆到 ' + CYCLE_AT + ' 就全花掉 ⇒ ep 钉在 0~' + (CYCLE_AT - 1) + '）· 同种子同局数 ⇒ 两档唯一变量是"对手手里的钱"');
+  console.log('#   placebo 窗 = r1~r5（两档 ep 还没分岔，读数**必须逐字相同**，否则这副替身作废）；净效应窗 = r6~r14（每回合两侧分母都 ≥20 才算）');
+  console.log('   包                       placebo   hold均%  cycle均%    Δpt    倍差   型');
+  const rowsP = []; let badPlacebo = 0, missing = 0;
+  for (const ent of byPack) {
+    const p = ent[0], H = ent[1].hold, C = ent[1].cycle;
+    if (!H || !C) { missing++; console.log('   ' + p.padEnd(24) + '⚠️ 缺档（只跑到 ' + (H ? 'hold' : 'cycle') + '）⇒ 这一粒配对不成立'); continue; }
+    let same = 0, tot = 0, sH = 0, sC = 0, n = 0;
+    for (let r = 1; r <= 5; r++) { const a = dv(H[r]), b = dv(C[r]); if (isFinite(a) && isFinite(b)) { tot++; if (Math.abs(a - b) < 0.15) same++; } }
+    for (let r = 6; r <= 14; r++) { const x = H[r], y = C[r]; if (x && y && x.tot >= 20 && y.tot >= 20) { sH += 100 * x.def / x.tot; sC += 100 * y.def / y.tot; n++; } }
+    if (!tot || !n) { console.log('   ' + p.padEnd(24) + '⚠️ 分母不足（placebo 窗 ' + tot + ' / 净效应窗 ' + n + '）⇒ 不下判定'); continue; }
+    if (same !== tot) badPlacebo++;
+    const mH = sH / n, mC = sC / n, dlt = mH - mC;
+    rowsP.push({ p: p, same: same, tot: tot, mH: mH, mC: mC, dlt: dlt, ratio: mC > 0.05 ? mH / mC : NaN,
+      type: dlt >= 15 ? (mC < 25 ? 'A 钱驱动' : 'B 钱+晚局') : 'C 回合日程为主' });
+  }
+  rowsP.sort(function (a, b) { return b.dlt - a.dlt; });
+  for (const r of rowsP) {
+    console.log('   ' + r.p.slice(0, 22).padEnd(24) + (r.same + '/' + r.tot + (r.same === r.tot ? ' ✓' : ' ⚠️')).padEnd(11) +
+      r.mH.toFixed(1).padStart(7) + '  ' + r.mC.toFixed(1).padStart(8) + '  ' + ((r.dlt >= 0 ? '+' : '') + r.dlt.toFixed(1)).padStart(7) +
+      '  ' + (isFinite(r.ratio) ? r.ratio.toFixed(2) : '—').padStart(6) + '   ' + r.type);
+  }
+  const cnt = t => rowsP.filter(r => r.type === t).length;
+  console.log('   ⇒ 分型：A 钱驱动 ' + cnt('A 钱驱动') + ' · B 钱+晚局双重 ' + cnt('B 钱+晚局') + ' · C 回合日程为主 ' + cnt('C 回合日程为主') +
+    '（Δ≥15pt 是**约定线**不是数据给的 ⇒ 要换门槛请用上面两列自己重算）');
+  console.log('   ' + (badPlacebo || missing
+    ? '⚠️ placebo 自检**没全过**：' + badPlacebo + ' 粒在两档不该分岔的回合上已不同' + (missing ? '，另有 ' + missing + ' 粒缺档' : '') + ' ⇒ 判定前先查两档的 `--seed/--games` 是否一致'
+    : '✓ placebo 自检通过：' + rowsP.length + ' 粒在两档 ep 未分岔的回合上读数逐字相同'));
+  console.log('   ⚠️ 只跑 `hold` 一档读出的"倍差≥2"**不能当体质流行率**：E18 实测其中约八成在配对后掉到 Δ<15pt（METHODOLOGY 64）。');
 }
