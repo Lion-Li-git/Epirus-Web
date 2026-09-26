@@ -2,7 +2,7 @@
  * 用法：node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
  * 产出：js/bundled-champion-3p.js（window.EPIRUS_CHAMPION_3P）
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
 import { ECON_ENV_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
@@ -909,8 +909,14 @@ if (KILL_REQ > 0) {
 try {
   const ARM = process.env.EPIRUS_ARM || OUT_PATH.replace(/^.*[\\/]/, '').replace(/\.js$/, '');
   const BAND_DIR = process.env.EPIRUS_BAND_DIR || 'docs/artifacts';   // 可指向临时目录 ⇒ 门 D116 能行为式测它而**不欠 D82 的账**
-  if (!existsSync(BAND_DIR)) console.log('[band-save] 无 ' + BAND_DIR + ' 目录，跳过');
-  else for (let bi = 0; bi < hall.length; bi++) {
+  /* v1.5.247：目录不存在 ⇒ **自己建**，不再静默跳过。
+   * 起因（09-26 实测，我自己的漏）：E35/E39 两批共 52 支臂我都把 `EPIRUS_BAND_DIR` 指到 `<tmp>/bands/<arm>`，
+   * 但并发脚本只 `mkdir` 了父目录 ⇒ 每支臂都打了 `[band-save] 无 … 目录，跳过` 就**把带内候选全丢了**
+   * （只留下当选者）。这恰好废掉了本节存在的理由——"落选者也是证据"，而且**它不影响退出码、不影响当选**，
+   * 所以臂"跑成功"了、证据却没了。改成建目录；建不出来（权限等）才**响亮**报告。 */
+  let bandDirReady = true;
+  if (!existsSync(BAND_DIR)) { try { mkdirSync(BAND_DIR, { recursive: true }); } catch (e2) { bandDirReady = false; console.log('[band-save] ⛔ 建不出 ' + BAND_DIR + '：' + e2.message + ' ⇒ 带内候选会丢，只剩当选者'); } }
+  if (bandDirReady) for (let bi = 0; bi < hall.length; bi++) {
     const hh = hall[bi];
     const bmeta = {
       source: 'tools/train-3p.mjs (band-save)', arm: ARM, bandIdx: bi, trainFit: hh.fit,

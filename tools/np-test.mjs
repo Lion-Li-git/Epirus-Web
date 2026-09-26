@@ -4522,6 +4522,20 @@ t('D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（�
   ok(run.status === 0, '迷你臂必须跑通（exit=' + run.status + '）');
   const bands = readdirSync(dir).filter(function (f) { return /-band\d+\.bak$/.test(f); });
   ok(bands.length > 0, '带内候选必须落盘（实测 ' + bands.length + ' 个）');
+  /* 行为二b（v1.5.247）：**目录不存在**时必须自己建，不许静默跳过。
+   * 为什么单独钉：上面那条"行为二"用 `mkdtempSync` 先把目录建好了 ⇒ **门自己替被测代码满足了它的前置条件**，
+   * 于是 09-26 两批共 52 支臂（把 BAND_DIR 指到没建过的嵌套路径）每支都打 `[band-save] 无 … 目录，跳过`
+   * 把带内候选全丢了，而门一直是绿的 —— 这是"用例把前提喂饱"的典型盲区（METHODOLOGY 63 同族）。 */
+  const bandRoot = mkdtempSync(join(tmpdir(), 'xn2band2-'));
+  const dir2 = join(bandRoot, 'deep', 'nested');
+  const run2 = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
+    { env: Object.assign({}, process.env, { EPIRUS_XN2W: '1', EPIRUS_XN2G: '2', EPIRUS_BAND_DIR: dir2, EPIRUS_ARM: 'nptest-nodir', EPIRUS_T3P_OUT: join(bandRoot, 'out.js') }), encoding: 'utf8', timeout: 300000 });
+  eq(run2.status, 0, 'BAND_DIR 不存在时迷你臂仍须跑通（exit=' + run2.status + ' ' + String(run2.stderr || '').slice(0, 80) + '）');
+  const bands2 = existsSync(dir2) ? readdirSync(dir2).filter(function (f) { return /-band\d+\.bak$/.test(f); }) : [];
+  ok(bands2.length > 0, 'BAND_DIR 不存在 ⇒ 必须**自建嵌套目录**并落盘带内候选（实测目录在场=' + existsSync(dir2) + ' · 候选 ' + bands2.length + ' 个）——'
+    + '静默跳过 = 臂"跑成功"但落选证据全丢（09-26 实测丢过 52 支）');
+  ok(String(run2.stdout || '').indexOf('目录，跳过') < 0, '不许再出现"无目录，跳过"这条静默退路');
+  rmSync(bandRoot, { recursive: true, force: true });
   if (bands.length) {
     const txt = readFileSync(join(dir, bands[0]), 'utf8');
     ok(txt.indexOf('"xn2w":1') >= 0 && txt.indexOf('bundled-champion.js') >= 0,
