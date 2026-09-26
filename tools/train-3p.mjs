@@ -19,6 +19,18 @@ import { makeSeqReward, patchEvoChooser as seqPatchEvoChooser } from './seq-rewa
  * v1.5.226：同一个读集还用来把**实际生效的配方**写进 meta（见下面的 EFFECTIVE_ENV）。 */
 import { enforceKnobs, readKeysOf } from '../server/knob-guard.mjs';
 
+/* ===== v1.5.244：本入口只吃**位置参数** ⇒ 任何 `--…` 一律 exit 64（仓规 v1.5.234 的延长线）=====
+ * 起因是我自己 15:12 亲手踩的：`node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+ * （打印到"3 人实测"才在中途抛错），而它默认落点就是门禁拿去比哈希的 `docs/artifacts/train-3p-out.js`
+ * ⇒ 一次打错的帮助页，能把正在跑的门禁基线文件改脏。
+ * 与 `audit-lib.rejectUnknownFlags` 同码（64 = 用法错），且**排在所有昂贵动作之前**（连经济快照都不做）。 */
+const __badFlag = process.argv.slice(2).find(function (a) { return String(a).slice(0, 2) === '--'; });
+if (__badFlag !== undefined) {
+  console.error('[train-3p] ⛔ 不认识的参数：' + __badFlag + ' —— 本工具只吃位置参数：'
+    + 'train-3p [代=200] [人数=3] [每代局数=8] [种群=12]；旋钮一律走 EPIRUS_* 环境变量（暗键会 exit 6）。');
+  process.exit(64);
+}
+
 /* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
  * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
  * 并被 git add -A 提交（线下冠军就这么被换掉了，我还据此写错过文档）。
@@ -28,7 +40,11 @@ import { enforceKnobs, readKeysOf } from '../server/knob-guard.mjs';
  * shipped path inside the guard itself), producing a self-reference / TDZ. */
 const OUT_PATH = process.env.EPIRUS_PUBLISH === '1'
   ? 'js/bundled-champion-3p.js'
-  : ('docs/artifacts/' + 'train-3p' + '-out.js');
+  /* v1.5.244（E34）：`EPIRUS_T3P_OUT=<路径>` 可把产物改道 —— 与 `train-best` 的 `EPIRUS_TB_OUT` 同形。
+   * 为什么现在要：孪生臂要**并发**跑（一台 18 核机器上一次 10+ 臂），而所有臂默认都写同一个
+   * `docs/artifacts/train-3p-out.js` ⇒ 并发时互相覆盖，只能串行（用户 09-26 指令：别再单核慢慢跑）。
+   * 改道后默认路径**一字不动**（门禁那两道比对它哈希的 CLI 基线门因此不会被我的臂污染）。 */
+  : (process.env.EPIRUS_T3P_OUT || ('docs/artifacts/' + 'train-3p' + '-out.js'));
 
 /* ===== Hard guard (belt & braces) =====
  * Twice now a training run silently replaced the SHIPPED champion (js/bundled-champion-3p.js):

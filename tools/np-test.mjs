@@ -6280,6 +6280,34 @@ t('D162 训练/选择执行口径旋钮（v1.5.237 · E28）：默认关要**可
     'train-best 没接这个旋钮 ⇒ 必须被列为**暗键**并在握手前 exit 6（宁可响，不许"传了没人读"跑成一整臂 A/A —— D143 那一族栽过 9 次）');
   ok(readFileSync('tools/audit-lib.mjs', 'utf8').indexOf('EPIRUS_TRAIN_EPS') < 0,
     '作用范围必须**关在训练侧**：`audit-lib` 的 9 处写死不许经过这两个漏斗（否则门禁口径会被一个训练旋钮悄悄搬走）');
+  /* ===== 并发臂的前提：产物必须能改道（用户 09-26 指令"别单核慢慢跑"）=====
+   * 所有臂默认都写同一个 `docs/artifacts/train-3p-out.js` ⇒ 并发时互相覆盖，只能串行；而门禁里有两道门
+   * 拿这个文件的哈希当 CLI 基线 ⇒ 并发臂还会把基线文件改脏。`EPIRUS_T3P_OUT`（与 `train-best` 的 `EPIRUS_TB_OUT` 同形）解决这两件事。 */
+  {
+    const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+    ok(/EPIRUS_T3P_OUT/.test(t3) && /EPIRUS_PUBLISH === '1'[\s\S]{0,220}EPIRUS_T3P_OUT/.test(t3),
+      'train-3p 必须支持产物改道（`EPIRUS_T3P_OUT`），且**顺序必须在 `EPIRUS_PUBLISH` 之后**（否则一个 env 就能把臂写进线下槽）');
+    const def = 'docs/artifacts/train-3p-out.js';
+    const before = createHash('sha1').update(readFileSync(def)).digest('hex');
+    const dir = mkdtempSync(join(tmpdir(), 't3pout-'));
+    const rr = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '5', '4', '4'], {
+      encoding: 'utf8', timeout: 300000,
+      env: Object.assign({}, process.env, { EPIRUS_ARM: 'nptest-rr', EPIRUS_SEED: '999', EPIRUS_BAND_DIR: join(dir, 'bands'), EPIRUS_T3P_OUT: join(dir, 'RR.js') })
+    });
+    eq(rr.status, 0, '改道跑一支迷你臂必须成功（status=' + rr.status + ' ' + String(rr.stderr || '').slice(0, 90) + '）');
+    ok(existsSync(join(dir, 'RR.js')), '产物必须写到 `EPIRUS_T3P_OUT` 指的地方');
+    const after = createHash('sha1').update(readFileSync(def)).digest('hex');
+    eq(after, before, '默认 CLI 产物**一个字节都不许动**（并发臂不得污染门禁比对的基线文件）');
+    ok(String(rr.stdout).indexOf('已写入 ' + def) < 0, '日志里不许出现"已写入默认路径"（改道要改彻底，含打印）');
+    /* 我自己 15:12 踩过的那一下：`train-3p --help` 曾被读成 `GENS=NaN` ⇒ 真开跑一支臂，
+     * 默认落点就是上面那个被门禁比哈希的基线文件 ⇒ 一次打错的帮助页能污染正在跑的门禁。
+     * **行为式**判定（真跑一遍看退出码），不判横幅。 */
+    const hf = spawnSync(process.execPath, ['tools/train-3p.mjs', '--help'], { encoding: 'utf8', timeout: 60000 });
+    eq(hf.status, 64, '`train-3p --help` 必须 exit 64（只吃位置参数的入口收到 `--` 一律响亮拒绝），实际 status=' + hf.status + ' 输出=' + String(hf.stdout || '').slice(0, 80));
+    ok(String(hf.stderr || '').indexOf('不认识的参数') >= 0, '拒绝时必须说清"不认识的参数"并给出正确用法');
+    eq(createHash('sha1').update(readFileSync(def)).digest('hex'), before, '那次 `--help` 尝试之后基线文件仍须逐字节不变（不许它已经把臂跑出来）');
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 t('D163 防御质量三档（用户 09-26 裁定：白防 / 被穿透=半 / 有效）必须**判在事件语义上**、单一来源、且 promote 那栏只记录不阻断', function () {
