@@ -6869,6 +6869,83 @@ t('D164 池子前沿量具（v1.5.249）：三判据在线上方向正确、"三
     '必须把"老维包"与"2P 壳"的跳过数印出来（09-26 我手工筛时把一粒 2P 壳混进过 3P 池，而 276 个老维包会被今天的引擎解成另一种行为）');
 });
 
+t('D165 尾部聚合适应度开关（v1.5.251 · 夜班 §E49）：默认关要**逐位可逆**、开了只换聚合不加局、越界/非数值要**响亮拒**', function () {
+  /* 为什么值得建门：档案级实测（863 等价类 × 33 环境）说 `fit` 那条"逐局求平均"看不见地板
+   * —— τ(池内均值, 池外地板) = 0.380，而尾部统计量给 0.749。旋钮本身可逆与否不是看法问题，
+   * 是**断言**问题 ⇒ 判四件事：
+   *   ① 关着 / 显式 `=0` / reset 之后，fit 必须**逐位相同**（`|| 默认` 那一族：0 是一个真实取值）；
+   *   ② 开着必须改变 `fit` 但**不改变** `fitMean` 与 `fitGames`（= 同一批局，只换了聚合；多花一局就是另一回事了）；
+   *   ③ `q=1` ⇒ 尾部 = 整体 ⇒ fit 必须回到平均（判**形状**，不只判"数值动了"）；
+   *   ④ 臂上真跑：`EPIRUS_FIT_TAIL_W` 不设 vs 设 0 ⇒ **产物权重逐位相同**；设 0.4 ⇒ 必须不同；
+   *      非数值 / 越界 ⇒ `exit 7`（"下达了但被 clamp 掉"不许当成开了）。 */
+  const params = Pol.unpack(sb.window.EPIRUS_CHAMPION_3P, true);
+  ok(!!params, '载体：现役 3P 权重要能 unpack');
+  const opps = T.buildOpps(params, 0.05);
+  ok(Array.isArray(opps) && opps.length >= 2, '要 ≥2 个对手才谈得上"最差那几局"（实测 ' + (opps && opps.length) + '）');
+  const er0 = T.economyReward();
+  eq(er0.fitTailW, 0, '出厂必须是 W=0（不加项）');
+  eq(er0.fitTailQ, 0.25, '出厂 q 必须是 0.25');
+  const SCORE = () => T.scoreMemberN(params, opps, 8, 3, 1200, 5, 0);
+  const f0 = SCORE();
+  ok(typeof f0.fitMean === 'number', '必须回传 `fitMean`（没有它，"它本来分低"与"被地板拖下来"永远分不开）');
+  eq(f0.fitGames, 8, '逐局数必须就是下达的局数');
+  try {
+    T.setEconomyReward({ fitTailW: 0 });
+    const f0z = SCORE();
+    ok(f0z.fit === f0.fit && f0z.fitMean === f0.fitMean, '`W=0` 必须逐位等于不设（被当成"未设"再吞回默认 = 零档对照根本不存在）');
+    T.setEconomyReward({ fitTailW: 0.6, fitTailQ: 0.25 });
+    eq(T.economyReward().fitTailW, 0.6, 'setter 要读回生效值');
+    const f1 = SCORE();
+    ok(f1.fitMean === f0.fitMean, '开档**不许改局**：fitMean 必须逐位相同（变了就是多跑/换了局，那 A/B 就不是同一个量）');
+    eq(f1.fitGames, f0.fitGames, '逐局数也不许变');
+    ok(f1.fit !== f0.fit, '【作用点】开档必须改变 fit（不变 ⇒ 该项没接到每代评分通路，整臂会跑成 A/A）');
+    ok(f1.fit < f0.fit, '尾部聚合只会往下压（ES ≤ mean ⇒ 上界只能等于平均）');
+    T.setEconomyReward({ fitTailQ: 1 });
+    const f2 = SCORE();
+    ok(Math.abs(f2.fit - f0.fit) < 1e-12, '`q=1` 时 ES = 整体平均 ⇒ fit 必须回到原值（差一丝 = 形状写错了，实测 Δ=' + (f2.fit - f0.fit) + '）');
+    T.setEconomyReward({ fitTailW: 1, fitTailQ: 0.25 });
+    const f3 = SCORE();
+    ok(Math.abs(f3.fit - (f0.fitMean - 0)) >= 0 && f3.fit < f0.fit, 'W=1（纯 ES）必须比平均更低');
+  } finally { T.setEconomyReward({ reset: true }); }
+  const fBack = SCORE();
+  ok(fBack.fit === f0.fit && fBack.fitMean === f0.fitMean, 'reset 之后必须逐位回到出厂（留隐性状态 ⇒ "出厂行为不变"这句话就是假的）');
+  eq(T.economyReward().fitTailW, 0, 'reset 必须抹掉 W（D77 的往返会喂 0.5 哨兵，漏抹就泄漏给后面的门）');
+  /* ⚠ 这里**不**再用 `detectDarkKnobs({entry})` 判"是不是暗键"：那个调用不传 `extraReadKeys`，
+   *   而 econ 族键在 `train-3p` 里是**运行时**从 `ECON_ENV_KEYS` + `CLI_ECON_REWARD_KEYS` 派生出来的
+   *   ⇒ 静态判它会把 `EPIRUS_BIGT_CHAIN_W`/`EPIRUS_S4_W`/`EPIRUS_RING_W` 一律报成暗键（实测三条全红）。
+   *   判"真接上了"改用下面那条**行为式**的：开档臂必须不是 `exit 6`，且**同族没接线的键必须是 6** ——
+   *   两条一起才排除"守卫自己关了"这个混淆（METHODOLOGY 73 的变异测试同族）。 */
+
+  /* ---- ④ 臂上真跑（同种子 2 代 × 3 粒，只换开关）---- */
+  const dir = mkdtempSync(join(tmpdir(), 'd165-'));
+  const runArm = (name, extra) => spawnSync(process.execPath, ['tools/train-3p.mjs', '2'], {
+    encoding: 'utf8', timeout: 240000,
+    env: Object.assign({}, process.env, { EPIRUS_ARM: name, EPIRUS_T3P_OUT: dir + '/' + name + '.js', EPIRUS_BAND_DIR: dir + '/band' }, extra || {})
+  });
+  try {
+    const rU = runArm('d165u'), rZ = runArm('d165z', { EPIRUS_FIT_TAIL_W: '0' }), rK = runArm('d165k', { EPIRUS_FIT_TAIL_W: '0.4' });
+    eq(rU.status, 0, '对照臂必须成功（' + String(rU.stderr || '').slice(0, 90) + '）');
+    eq(rZ.status, 0, '`W=0` 臂必须成功');
+    eq(rK.status, 0, '`W=0.4` 臂必须成功');
+    ok(/尾部聚合已下达.*\(1−0\)/.test(String(rZ.stdout)), '`W=0` 必须真的下达并印读回（不许"0 当没设"）');
+    ok(/尾部聚合已下达：.*\(1−0\.4\)/.test(String(rK.stdout)), '开档臂必须印读回');
+    ok(!/尾部聚合已下达/.test(String(rU.stdout)), '不设 ⇒ 一行都不许印（"开了但没生效"与"没开"必须看得见差别）');
+    const wtOf = f => { const m = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(readFileSync(f, 'utf8')); return m ? JSON.stringify((JSON.parse(m[1]) || {}).a) : null; };
+    const wU = wtOf(dir + '/d165u.js'), wZ = wtOf(dir + '/d165z.js'), wK = wtOf(dir + '/d165k.js');
+    ok(wU && wZ && wK, '三臂产物都要能读出权重（读到的是**数组本体**，不是"数组有几个"那种形状签名 —— 建门时我自己先踩过一次假通过）');
+    ok(wU === wZ, '【P3 门票】不设 vs 显式 0 ⇒ 产物权重必须**逐位相同**（不同 ⇒ 这根开关改了出厂训练结果，那"默认关"是假的）');
+    ok(wU !== wK, '开档臂必须训出**不同的**权重（相同 ⇒ 开关在臂这条路上是空转的）');
+    const rBad = runArm('d165bad', { EPIRUS_FIT_TAIL_W: 'abc' });
+    eq(rBad.status, 7, '非数值必须 exit 7（读回不相等就算被拒），实际 ' + rBad.status);
+    const rOver = runArm('d165over', { EPIRUS_FIT_TAIL_W: '5' });
+    eq(rOver.status, 7, '越界（W=5 会被 clamp 成 1）必须 exit 7，实际 ' + rOver.status);
+    const rDark = runArm('d165dark', { EPIRUS_FIT_TAIL_OOPS: '0.4' });
+    eq(rDark.status, 6, '同族但**没接线**的键必须 `exit 6` ⇒ 守卫是活的，上面"W=0.4 那臂活着跑完"才真是"接上了"而不是"没人管"');
+  } finally {
+    try { rmSync(dir, { recursive: true, force: true }); } catch (e) { }
+  }
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 
 

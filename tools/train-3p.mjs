@@ -94,7 +94,7 @@ const SELF_ENV_KEYS = [
  * 而它的 env 名按 D77 只许出现在 `server/econ-env.mjs` ⇒ 这里**不写字面量**，
  * 而是从单一来源**反推**："喂一个 econ env 名 ⇒ `readEconEnv` 读出哪个奖励键"，与本 CLI 真正下发的那一个对上，
  * 才算"本工具认识它"（不是暗键）。派生而非抄名单 = 少一处"两处各写一遍"。 */
-const CLI_ECON_REWARD_KEYS = ['bigtChainW'];
+const CLI_ECON_REWARD_KEYS = ['bigtChainW', 'fitTailW', 'fitTailQ'];
 (function extendSelfWithCliEcon() {
   for (const k of ECON_ENV_KEYS) {
     const probe = {}; probe[k] = 0.5;
@@ -344,6 +344,34 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
       BIGT_CHAIN_REQ = reqChain;
       console.log('[train-3p] 大雷连带权重已下达：' + reqChain + ' ⇒ 消费点读回 ' + gotChain +
         '（形状=' + back.shape + '：**W × min(1, 该席连带数 / 该席大雷出手数)** ⇒ 付的是"用它时真赚了"，不是"多抽几次"；0 出手 = 0 分）');
+    }
+  }
+  /* ===== §E49（qoder 09-26 夜班）：**尾部聚合适应度**开关 =====
+   * 与 `REGEN_SLICE`/`KILL_FIELD`/大雷连带同一范式：**取值只经 `readEconEnv`**（本文件不写那个 env 名）·
+   * 无 setter ⇒ `exit 7` 拒静默空转 · 下达后**读回消费点** · 非数值/越界/被 clamp 都算被拒。
+   * "开关到底有没有改掉 fit" 不在这里判 —— 那是门禁 D165 的**行为式**断言
+   * （同一份 params 跑两次，比 `fitMean` 与返回值；判在效果上，不判在横幅上）。 */
+  {
+    const tailEnv = readEconEnv(process.env);
+    const hasW = tailEnv.fitTailW != null && String(tailEnv.fitTailW).trim() !== '';
+    const hasQ = tailEnv.fitTailQ != null && String(tailEnv.fitTailQ).trim() !== '';
+    if (hasW || hasQ) {
+      if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
+        console.error('[train-3p] ⛔ 下达了尾部聚合，但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
+        process.exit(7);
+      }
+      T.setEconomyReward({ fitTailW: hasW ? tailEnv.fitTailW : null, fitTailQ: hasQ ? tailEnv.fitTailQ : null });
+      const tb = T.economyReward() || {};
+      const reqW = hasW ? Number(tailEnv.fitTailW) : Number(tb.fitTailW);
+      const reqQ = hasQ ? Number(tailEnv.fitTailQ) : Number(tb.fitTailQ);
+      if (!isFinite(reqW) || reqW < 0 || reqW > 1 || !isFinite(reqQ) || reqQ < 0.05 || reqQ > 1 ||
+        !(Number(tb.fitTailW) === reqW) || !(Number(tb.fitTailQ) === reqQ)) {
+        console.error('[train-3p] ⛔ 尾部聚合 W=' + tailEnv.fitTailW + ' Q=' + tailEnv.fitTailQ +
+          ' 未生效（读回 ' + tb.fitTailW + '/' + tb.fitTailQ + '）—— 非数值/越界/被 clamp 都算被拒');
+        process.exit(7);
+      }
+      console.log('[train-3p] 尾部聚合已下达：fit_逐局 = (1−' + tb.fitTailW + ')·mean +' + tb.fitTailW +
+        '·ES(最差 ' + Math.round(100 * tb.fitTailQ) + '%)（消费点读回；不开时 W=0 ⇒ 恒等于原来的平均）');
     }
   }
   /* ===== v1.5.179（DS · **Q-8 的最小版本**）：示范族下达 `EPIRUS_IMIT_*` =====

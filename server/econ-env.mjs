@@ -54,13 +54,19 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
    * 不设 ⇒ 逐字不变。 */
   'EPIRUS_RING_W',
   /* P2（qoder-research 0920）：**形状适应度**权重（0/不设 ⇒ 严格不加项；>0 ⇒ evo 调宿主注入的 __shapeScorer）。 */
-  'EPIRUS_S4_W'];
+  'EPIRUS_S4_W',
+  /* qoder 09-26 夜班 §E49：**尾部聚合适应度**（`evo.js` 的 `FIT_TAIL_W` / `FIT_TAIL_Q`，出厂 0 / 0.25）。
+   * 动因是档案级实测（863 等价类 × 33 环境）：`τ(池内均值, 池外地板) = 0.380` 而尾部统计量给 0.749
+   * ⇒ 现在这条"逐局求平均"的目标函数**看不见地板**，所以每轮都选不到"换地形还会打"的那一粒。
+   * 不设 ⇒ null ⇒ evo 原样 0 ⇒ 逐位不变；必须走这条单一来源，否则会重演"臂上开了开关、
+   * fitness 却在另一份模块里读默认值"的 A/A 事故（附录 D 臂 K）。 */
+  'EPIRUS_FIT_TAIL_W', 'EPIRUS_FIT_TAIL_Q'];
 
 /* 与 `js/train/evo.js` 的 `setEconomyReward(o)` / `economyReward()` 字段名对齐
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
 export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
   'hoardOnLeftover', 'convRatio', 'convOffense', 'hoardCapMult', 'stockBonus',
-  'blockW', 'widthW', 'bigcardW', 'bigtChainW', 'ringW', 's4W', 'beadW'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W / 0921 DS 珠奖励标度 / 0923 qoder 大雷连带（与 setter 逐字对齐 ⇒ D77 盯得住）
+  'blockW', 'widthW', 'bigcardW', 'bigtChainW', 'ringW', 's4W', 'beadW', 'fitTailW', 'fitTailQ'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W / 0921 DS 珠奖励标度 / 0923 qoder 大雷连带（与 setter 逐字对齐 ⇒ D77 盯得住） / 09-26 夜班 §E49 尾部聚合
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -114,7 +120,11 @@ export function readEconEnv(env) {
      * `docs/RESEARCH-LOG-2026-09-21-ds.md` §7：花珠本来就有奖励（0.05），但它是 0.0x 微扰，
      * 压不过 `base`（名次 0~1 量级）⇒ 要判"是钱不够还是结构不允许"，就得能扫这个标度。
      * 不设 ⇒ null ⇒ evo 原样 0.05（出厂行为逐字不变）。 */
-    beadW: nv(e.EPIRUS_BEAD_W)
+    beadW: nv(e.EPIRUS_BEAD_W),
+    /* §E49 尾部聚合：`W` = 混进 fit 的权重（0~1），`Q` = 取最差多少分（0.05~1）。
+     * 两个键各自只映射一个奖励键 ⇒ `train-3p` 的"env ⇒ 唯一键"派生判定才认它不是暗键。 */
+    fitTailW: nv(e.EPIRUS_FIT_TAIL_W),
+    fitTailQ: nv(e.EPIRUS_FIT_TAIL_Q)
   };
 }
 

@@ -16,10 +16,11 @@
  * 只读：一个字节都不写仓库（`--stage=1` 连子进程都不开）。样本单位 = **按权重哈希去重的等价类**（METHODOLOGY 62）。
  * ⚠️ 老维包（`FEAT_S ≠ 当前`）**只列不判**（09-26 实测：拿今天的引擎解老维包是另一种行为）。
  * ==========================================================================*/
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { sandbox, selfPlay, chargeProfile, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
+/* 等价类的定义 = 单一来源（与 probe-regime-fitness 共用） */
+import { listArchiveFiles, collectClasses } from './archive-classes.mjs';
 /* 三条判据的**单一来源**：门 D164 对同一个模块喂合成行（判据不许在门里再抄一份） */
 import { isWide, isClosed, isRobust, frontierOf } from './pool-frontier-lib.mjs';
 
@@ -39,42 +40,19 @@ const INCUMBENT = arg('incumbent', 'js/bundled-champion-3p.js');
 
 /* ---------- ① + ②：档案去重 + 宽/闭环 ---------- */
 const W = sandbox();
-const FEAT = W.EpirusPolicy.FEAT_S || (W.EpirusState && W.EpirusState.FEAT_S) || null;
-function unpackOf(file) {
-  let src;
-  try { src = readFileSync(file, 'utf8'); } catch (e) { return { err: 'read' }; }
-  const params = loadChamp(W, file);
-  if (!params) return { err: 'unpack' };
-  const m = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src) || /EPIRUS_CHAMPION(?!_3P|_META)\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src);
-  const packObj = m ? JSON.parse(m[1]) : null;
-  const hash = packObj ? createHash('sha1').update(JSON.stringify(packObj)).digest('hex').slice(0, 12) : 'no-pack';
-  const feat = packObj && packObj.f != null ? packObj.f : null;
-  return { params, hash, feat, twoP: !/window\.EPIRUS_CHAMPION_3P\s*=/.test(src) };
-}
+/* 等价类的定义**不在这里** —— 与 probe-regime-fitness 共用 archive-classes（METHODOLOGY 62） */
+const { classes: ALL_CLASSES, FEAT, counts } = collectClasses(W, listArchiveFiles(LIST), { every: EVERY, limit: LIMIT });
+const classes = ALL_CLASSES;
 function metricsOf(params) {
   const sm = selfPlay(W, params, 'multi', GAMES), sl = selfPlay(W, params, 'long', GAMES);
   const c = chargeProfile(W, params, 'long', 40);
   return { gMulti: sm.effSkills, gLong: sl.effSkills, landMulti: sm.effSkillsLand, landLong: sl.effSkillsLand,
     gained: c.gained, spentRate: c.spentRate || 0 };
 }
-const files = LIST ? LIST.split(',').map(s => s.trim()).filter(Boolean)
-  : readdirSync('docs/artifacts').filter(f => /\.bak$/.test(f)).sort().map(f => 'docs/artifacts/' + f);
-const uniq = new Map();
-const skip = { read: 0, unpack: 0, oldFeat: 0, twoP: 0 };
-for (const f of files) {
-  const u = unpackOf(f);
-  if (u.err === 'read') { skip.read++; continue; }
-  if (u.err === 'unpack') { skip.unpack++; continue; }
-  if (u.twoP) { skip.twoP++; continue; }                       // 2P 壳不是 3P 候选（09-26 曾把它混进池子）
-  if (FEAT != null && u.feat != null && u.feat !== FEAT) { skip.oldFeat++; continue; }
-  if (!uniq.has(u.hash)) uniq.set(u.hash, { file: f, params: u.params });
-}
-let classes = [...uniq.values()];
-if (LIMIT > 0) classes = classes.filter((_, i) => i % EVERY === 0).slice(0, LIMIT);
-else if (EVERY > 1) classes = classes.filter((_, i) => i % EVERY === 0);
 
-console.log('# 池子前沿（' + (FEAT == null ? '?' : FEAT) + ' 维）· 文件 ' + files.length + ' → 等价类 ' + uniq.size +
-  '（跳过：读不出 ' + skip.read + ' · 无权重 ' + skip.unpack + ' · 2P 壳 ' + skip.twoP + ' · 老维包 ' + skip.oldFeat + '）· 本次量 ' + classes.length + ' 类');
+console.log('# 池子前沿（' + (FEAT == null ? '?' : FEAT) + ' 维）· 文件 ' + counts.files + ' → 等价类 ' + counts.uniq +
+  '（跳过：读不出 ' + counts.skip.read + ' · 无权重 ' + counts.skip.unpack + ' · 2P 壳 ' + counts.skip.twoP +
+  ' · 老维包 ' + counts.skip.oldFeat + '）· 本次量 ' + classes.length + ' 类');
 
 const rows = [];
 for (const c of classes) {

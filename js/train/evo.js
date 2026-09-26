@@ -1180,6 +1180,17 @@ let WALL_GAMES = 3;
    * ⚠ 这五个 handler 写成**两条紧凑行**也是门禁逼的：D77 用 `slice(0,1200).indexOf('o.'+key+' != null')`
    *   查"econ-env 返回的键有没有被认"，而文件是 **CRLF** ⇒ 每个换行算 2 个字符，窗口比看起来小得多
    *   （实测：一行一个键时 `wallGames` 落在 1202 ⇒ 红；注释写进函数体里也会把窗口吃掉）。 */
+  /* ===== 尾部聚合适应度（qoder 09-26 夜班 §E49 · 默认关 ⇒ 出厂行为逐位不变）=====
+   * 病（档案级实测：863 个等价类 × 33 个环境块，见 RESEARCH-LOG-2026-09-26-qoder-night2 §E49）：
+   *   `fitAvg` 是"跨环境求平均"，而**平均值看不见地板** —— τ(池内均值, 池外地板) = 0.380，
+   *   换成 bottom-3 / mean−1·sd 这类尾部统计量给到 0.749 / 0.675。⇒ 目标函数每换一次人，
+   *   几乎没换到"没见过的地形上的下限"，这才是"训了半天气也不会看环境打"的账。
+   * 形状：`fit = (1−w)·mean + w·ES_q`，`ES_q` = 逐局 `gFit` 里最差 q 分的均值（预期 shortfall）。
+   *   **混而不是替**，是为了保住标度：那条和式里 `base` 是 0~1 量级，纯 ES 会把整项系统性下移
+   *   ⇒ 另外十几个 shaping 项的相对权重跟着变形（本项目反复撞到的"动态范围"病）。
+   * 代价：零额外对局 —— 只用**已经跑完的那些局**的分布，不加局数、不加代。
+   * `evo.js` 不在 `FINGERPRINT_FILES` 里 ⇒ 这根开关**不改引擎指纹**。 */
+  let FIT_TAIL_W = 0, FIT_TAIL_Q = 0.25;
   function setEconomyReward(o) {
     o = o || {};
     /* qoder-research 0920（RESEARCH-LOG §5b）：环奖励权重接进 econ-env 单一来源（默认不设 ⇒ RING_W 原样 0.10）。
@@ -1190,6 +1201,9 @@ let WALL_GAMES = 3;
     if (o.beadW != null) setBeadReward(o.beadW);
     /* P2（qoder-research 0920）：形状适应度权重走 econ-env 单一来源（默认不设 ⇒ 0 ⇒ 严格不加项）。 */
     if (o.s4W != null) S4_W = Math.max(0, Number(o.s4W) || 0);
+    /* 尾部聚合（09-26 夜班 §E49）：非数值就当没设，不许 clamp 成 0 再谎称"开过了"。 */
+    if (o.fitTailW != null && isFinite(Number(o.fitTailW))) FIT_TAIL_W = Math.min(1, Math.max(0, Number(o.fitTailW)));
+    if (o.fitTailQ != null && isFinite(Number(o.fitTailQ))) FIT_TAIL_Q = Math.min(1, Math.max(0.05, Number(o.fitTailQ)));
     if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;
     else if (o.divCatW != null) DIV_ROLE_W = Number(o.divCatW) || 0;
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
@@ -1211,6 +1225,7 @@ let WALL_GAMES = 3;
        *   （D77 的 finally 只补了 divRoleW）⇒ 后续任何 scoreMemberN 都活在"破墙硬过滤开着"的假世界里。
        *   一并收进 reset。 */
       S4_W = 0; setRingReward(0.10); setBeadReward(0.05); WALL_FILTER_ON = false; WALL_GAMES = 3;
+      FIT_TAIL_W = 0; FIT_TAIL_Q = 0.25;   // 09-26 夜班 §E49：D77 往返的哨兵必须在这里抹掉，否则 0.5 泄漏给后续门
     }
     return economyReward();
   }
@@ -1220,6 +1235,7 @@ let WALL_GAMES = 3;
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
       blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
+      fitTailW: FIT_TAIL_W, fitTailQ: FIT_TAIL_Q,   // 09-26 §E49：ECON_REWARD_KEYS 里每个键都要"设得进、读得回"（D77 往返）
       /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
        * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
       beadW: BEAD_W,
@@ -1372,6 +1388,8 @@ let WALL_GAMES = 3;
      * 推向"只在补贴下成立"的策略（历史上 min(pairSc, probeSc) 跨量纲就是这么塌的）。 */
     const hGene = (typeof hGeneIn === 'number' && hGeneIn > 0) ? (hGeneIn | 0) : 0;
     let fitGames = 0, commitFirst = 0, commitTop2 = 0, commitGames = 0, commitMaxEp = 0;
+    /* 尾部聚合开着才逐局记账（关着 ⇒ 连数组都不建 ⇒ 热路径与旧口径逐字相同）。 */
+    const gFits = FIT_TAIL_W > 0 ? [] : null;
     const agg = { use: {}, aff: {} };
     /* v1.5.87（用户裁定 A）：自对局里**成功**的非ジ动作直方图 —— 与门禁同口径。 */
     const spUse = {};   // 该个体的动作直方图（跨局汇总：脚本对手局 + **自对局**）
@@ -1568,6 +1586,7 @@ let WALL_GAMES = 3;
         if (mEp > commitMaxEp) commitMaxEp = mEp;
       } else {
         fit += gFit; fitGames++;
+        if (gFits) gFits.push(gFit);   // 尾部聚合的原料 = **这些已经跑完的局**，不多花一局
         if (econ) { maxEpSum += econ.rec.maxEp; heavySum += econ.rec.heavy; holdSum += econ.rec.hold; econGames++; }
         // 经济引擎质量：本局获得的 ep 总量。聚能环第 3 次起每回合 +3（ジ 只 +1），
         // 直接在这个量上体现 → 不用为“环”单独写奖励，避免又指向特定循环。
@@ -1720,6 +1739,16 @@ let WALL_GAMES = 3;
     }
     const styleRate = styleGames ? styleFirst / styleGames : 0;
     const fitAvg = fitGames ? fit / fitGames : 0;
+    /* 尾部聚合（§E49）：`w=0` ⇒ 整段是恒等操作，`fitAgg` 与 `fitAvg` 逐位相同 ⇒ 出厂行为不变。
+     * 少于 4 局不算尾部：q=0.25 时 4 局才够一个样本，再少就是拿单局噪声当分布。 */
+    let fitAgg = fitAvg;
+    if (FIT_TAIL_W > 0 && gFits && gFits.length >= 4) {
+      const srt = gFits.slice().sort(function (a, b) { return a - b; });
+      const kk = Math.max(1, Math.floor(srt.length * FIT_TAIL_Q));
+      let es = 0;
+      for (let i = 0; i < kk; i++) es += srt[i];
+      fitAgg = (1 - FIT_TAIL_W) * fitAvg + FIT_TAIL_W * (es / kk);
+    }
     /* P2（qoder-research 0920）：形状项 = S4_W × 宿主评分器(0..1)。评分器抛错**不吞**（与教师计划同规矩：
      * 静默退回默认 = 又一次 A/A 事故的形状）。`S4_W=0` 时连评分器都不调用 ⇒ 出厂行为逐字不变。 */
     const shapeBonus = (S4_W > 0 && !wallReject)
@@ -1727,10 +1756,13 @@ let WALL_GAMES = 3;
         : (() => { throw new Error('[shape] S4_W>0 但宿主未注入 __shapeScorer（worker/server 接线断了 ⇒ 不许静默跑）'); })())
       : 0;
     return {
-      fit: (wallReject ? (-5.0) : (fitAvg + divBonus + STYLE_W * styleRate - seatPen + shapeBonus)),
+      fit: (wallReject ? (-5.0) : (fitAgg + divBonus + STYLE_W * styleRate - seatPen + shapeBonus)),
       wallDmg: wallDmg,
       wallReject: wallReject,
-      fitNoDiv: fitAvg,
+      fitNoDiv: fitAgg,
+      /* §E49 读数：开关关着时 `fitMean === fitNoDiv − 加项` 的旧均值；开着时两者之差就是尾部罚的分量
+       * ⇒ 臂上/终评能分开"它本来分低"与"它被地板拖下来"。 */
+      fitMean: fitAvg,
       /* v1.5.187：连带读数**始终**随评分返回（不受权重门控）⇒ 臂上/门都能看"这一粒到底搅动了几次"，
        * 也才分得开"权重没生效"与"根本没打出链"。
        * v1.5.188：加上**分母**（`chainCasts` = 该席真正打出的大雷数）与**率**（`chainRate`）⇒
