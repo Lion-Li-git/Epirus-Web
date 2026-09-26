@@ -9,6 +9,8 @@ import { makeGuardCost } from './guard-cost-lib.mjs';   /* D161 用：直接对�
 import { hardwiredLine } from './probe-layer-caliber.mjs';   /* D149 用：指针行号从源码现算（钉死数字会在别人插一行后变成假行号） */
 /* D163 用：防御质量三档的单一来源（用户 09-26 裁定："出防御的时候完全没人打他就算白防御，被穿透算半有效"） */
 import { classifyDefenseWindow, defenseQuality, formatQuality, parseQuality, formatQualityRecord } from './defense-quality.mjs';
+/* D164 用：池子前沿的三条判据（**只 import 纯函数模块**，探针本体会去扫 1457 个文件） */
+import * as PF_FRONT from './pool-frontier-lib.mjs';
 /* v1.5.225（用户批准方案 a）：确定性重活的**内容寻址缓存** —— 键 = argv + EPIRUS_* env + 源码树内容。
  * 只缓存 (status, stdout, stderr)，**断言照旧跑**；命中响亮打印；`NP_NOCACHE=1` 一律真跑。
  * ⚠️ 只许缓存"断言只用 stdout/status"的子进程（前置要求见 tools/np-cache.mjs 头注）。
@@ -6824,6 +6826,49 @@ t('D159 广度判据必须是**最大单卡落地份额**（v1.5.227 · 用户�
   console.log('=== 最慢的 15 道门 ===');
   for (const r of __slow.slice(0, 15)) console.log('  ' + (r[0] / 1000).toFixed(1).padStart(6) + ' 秒  ' + r[1].slice(0, 76));
 }
+/* ===== D164：池子前沿量具（v1.5.249 · Qoder 09-26）=====
+ * 钉四件事，全部判在**效果**上：
+ *  ① 三条判据在**线处**方向正确（"两模式都要"是今天的核心教训：只看 multi 会让 long 2.86 的包混进来）；
+ *  ② "三合一"必须真是三样求交，且**没量到 ≠ 通过**；
+ *  ③ 未知 `--` 参数一律 exit 64（真跑，不判文本）；
+ *  ④ `--stage=1` 真的不起 gate-drafts（那 ~40 分钟必须能**真的**跳过，而不是"照跑但没印"）。
+ * 判据从 `pool-frontier-lib.mjs` import —— 不 import 探针本体（它一被 import 就会去扫 1457 个文件）。 */
+t('D164 池子前沿量具（v1.5.249）：三判据在线上方向正确、"三合一"必须真是三样求交、没量到不许当通过、参数守卫与 stage 语义判在输出上', function () {
+  const M = o => Object.assign({ gMulti: 4, gLong: 4, landMulti: 3, landLong: 3, gained: 200, spentRate: 0.8 }, o);
+  ok(PF_FRONT.isWide(M({}), 2.66) === true, '两模式都过线 ⇒ 判宽');
+  ok(PF_FRONT.isWide(M({ gLong: 2.99 }), 2.66) === false, 'long 的 G 差 0.01 ⇒ 不许判宽（只看 multi 是本仓踩过的形状）');
+  ok(PF_FRONT.isWide(M({ landLong: 2.65 }), 2.66) === false, '净兑现只有一模式过 ⇒ 不许判宽');
+  ok(PF_FRONT.isClosed(M({}), 0.5, 100) === true, '花珠率 0.8 + 得珠 200 ⇒ 闭环');
+  ok(PF_FRONT.isClosed(M({ spentRate: 0.49 }), 0.5, 100) === false, '花珠率差 0.01 ⇒ 不算闭环');
+  ok(PF_FRONT.isClosed(M({ gained: 60 }), 0.5, 100) === false, '率高但攒得少 ⇒ 不算闭环');
+  ok(PF_FRONT.isClosed({ gained: NaN, spentRate: NaN }, 0.5, 100) === false, '读数 NaN ⇒ 不许当闭环');
+  ok(PF_FRONT.isRobust({ long: 30, multi: 30 }, { long: 38, multi: 35 }) === true, '两模式都低于现役 ⇒ 抗克');
+  ok(PF_FRONT.isRobust({ long: 39, multi: 10 }, { long: 38, multi: 35 }) === false, '只一模式超线 ⇒ 不许判抗克');
+  ok(PF_FRONT.isRobust(null, { long: 38, multi: 35 }) === false, '没量到 ⇒ 必须判"不抗克"，不许当通过');
+  /* 四行合成样本，让"两两组合"与"三样全有"各自至少有一粒（第一版我把第二行写成 wide:true ⇒
+   * `robustNotWide` 期望 1 实得 0，被自己的门当场逮住 —— 这正是门该干的事） */
+  const fr = PF_FRONT.frontierOf([
+    { wide: true, closed: true, robust: false },     // 宽+闭环，但不抗克
+    { wide: false, closed: false, robust: true },    // 只抗克（不宽）—— 09-26 那 7 粒档案包里有这个形状
+    { wide: true, closed: true, robust: true },      // 三样全有
+    { wide: true, closed: false, robust: false },    // 只宽
+  ], { long: 38, multi: 35 });
+  eq(fr.wide, 3, '宽的计数（含三样全有那粒）');
+  eq(fr.wideAndClosed, 2, '宽∩闭环 计数不该含抗克');
+  eq(fr.three, 1, '"三合一"必须真的是三样求交');
+  eq(fr.robustNotWide, 1, '"只抗克不宽"要单独报 —— 它正是"加筛子也筛不出东西"那一类');
+  eq(fr.wideNotRobust, 2, '"只宽不抗克" = 2（第一行"宽+闭环不抗克"与第四行"只宽"都算 —— 这一维本来就是大多数）');
+  const bad = spawnSync(process.execPath, ['tools/probe-pool-frontier.mjs', '--oops=1'], { encoding: 'utf8', timeout: 90000 });
+  eq(bad.status, 64, '`--oops` 必须 exit 64，实际 status=' + bad.status);
+  const s1 = spawnSync(process.execPath, ['tools/probe-pool-frontier.mjs', '--stage=1', '--limit=3', '--every=200'],
+    { encoding: 'utf8', timeout: 900000 });
+  eq(s1.status, 0, 'stage=1 迷你跑必须成功（status=' + s1.status + ' ' + String(s1.stderr || '').slice(0, 90) + '）');
+  ok(/前沿计数/.test(String(s1.stdout)), 'stage=1 仍要印出前沿计数（"跑了"与"跑出东西"分不开就是假绿）');
+  ok(String(s1.stdout).indexOf('gate-drafts exit=') < 0, 'stage=1 不许起 gate-drafts（跳过的那 ~40 分钟必须是真跳过）');
+  ok(/老维包 \d+/.test(String(s1.stdout)) && /2P 壳 \d+/.test(String(s1.stdout)),
+    '必须把"老维包"与"2P 壳"的跳过数印出来（09-26 我手工筛时把一粒 2P 壳混进过 3P 池，而 276 个老维包会被今天的引擎解成另一种行为）');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 
 
