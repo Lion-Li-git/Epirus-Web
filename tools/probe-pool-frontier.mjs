@@ -24,7 +24,7 @@ import { listArchiveFiles, collectClasses } from './archive-classes.mjs';
 /* 三条判据的**单一来源**：门 D164 对同一个模块喂合成行（判据不许在门里再抄一份） */
 import { isWide, isClosed, isRobust, frontierOf } from './pool-frontier-lib.mjs';
 
-const FLAGS = ['every', 'limit', 'games', 'land-line', 'bead-line', 'gained-line', 'packs', 'stage', 'incumbent', 'g4-scope', 'g4-chunk'];
+const FLAGS = ['every', 'limit', 'games', 'land-line', 'bead-line', 'gained-line', 'packs', 'stage', 'incumbent', 'g4-scope', 'g4-chunk', 'rows'];
 rejectUnknownFlags(process.argv.slice(2), FLAGS, 'probe-pool-frontier');
 const arg = (k, d) => { const m = new RegExp('^--' + k + '=(.*)$').exec(process.argv.find(a => a.startsWith('--' + k + '=')) || ''); return m ? m[1] : d; };
 
@@ -70,9 +70,12 @@ const incM = metricsOf(incParams);
  *   第一版我写成"宽 ∪ 闭环"= 99 类，一个进程吃到 60 分钟被超时掐掉 ⇒ 抗克全空、
  *   而"三合一"照样印出 0 —— 那是**缺数据的假 0**。现在：范围收窄 + 分批 + 每批印进度 +
  *   **任一子批失败或"宽∩闭环"里有类没量到读数 ⇒ 响亮失败并非零退出**（见下面的 g4Unmeasured）。 */
-const G4_SCOPE = arg('g4-scope', 'intersection');       // intersection（默认）| union
+const G4_SCOPE = arg('g4-scope', 'intersection');       // intersection（默认）| union | all（臂终评：每一粒都要最克数）
 const CH = Number(arg('g4-chunk', 6));                  // 每批几类（~2-3 分钟/批）
-const needG4 = STAGE >= 2 ? rows.filter(r => (G4_SCOPE === 'union' ? (r.wide || r.closed) : (r.wide && r.closed))).concat([{ file: INCUMBENT, params: incParams }]) : [];
+/* 抗克范围只写**一次**：`needG4` 与"有没有漏量"的自查必须共用同一个谓词，否则 `--g4-scope=all`
+ * 时漏量的那几十粒会被"宽∩闭环都有读数"糊过去（假 0 的第三种形状）。 */
+const inG4Scope = r => G4_SCOPE === 'union' ? (r.wide || r.closed) : (G4_SCOPE === 'all' ? true : (r.wide && r.closed));
+const needG4 = STAGE >= 2 ? rows.filter(inG4Scope).concat([{ file: INCUMBENT, params: incParams }]) : [];
 function runG4Chunk(files) {
   const rr = spawnSync(process.execPath, ['tools/gate-drafts.mjs'].concat(files), { encoding: 'utf8', timeout: 1800000, maxBuffer: 1 << 25 });
   if (rr.status !== 0 && rr.status !== 1) { console.log('  ⛔ gate-drafts 这批异常退出 status=' + rr.status + '（被超时掐掉？）—— 不许把它当"没量到=不合格"'); return null; }
@@ -131,10 +134,10 @@ console.log('\n## 参照：现役 ' + INCUMBENT + '  G ' + incM.gMulti.toFixed(2
 console.log('## 判据：宽 = 两模式 G≥3 且 净兑现≥' + LAND + ' ‖ 闭环 = 花珠率≥' + BEAD + ' 且 得珠≥' + GAINED + ' ‖ 抗克 = 两模式最克 ≤ 现役');
 const fr = frontierOf(rows, incRef);
 /* ⚠️ 假 0 的守门（09-26 实测被自己绊过一次：抗克整批被超时掐掉，"三合一"照样印 0）：
- * 只要"宽∩闭环"里有任一类的抗克**没量到**，这个 0 就不可信 ⇒ 响亮失败 + 非零退出。 */
-const noG4 = STAGE >= 2 ? rows.filter(r => r.wide && r.closed && !r.g4).length : 0;
+ * 只要**本次抗克范围内**有任一类的抗克没量到 ⇒ 响亮失败 + 非零退出（范围用 `inG4Scope`，与上面同一个谓词）。 */
+const noG4 = STAGE >= 2 ? rows.filter(r => inG4Scope(r) && !r.g4).length : 0;
 if (STAGE >= 2 && (noG4 > 0 || chunkFailed > 0)) {
-  console.log('\n⛔ 抗克未量到 ' + (noG4 + chunkFailed) + ' 处（' + noG4 + ' 类宽∩闭环无读数 · ' + chunkFailed + ' 批异常退出）'
+  console.log('\n⛔ 抗克未量到 ' + (noG4 + chunkFailed) + ' 处（' + noG4 + ' 类在范围「' + G4_SCOPE + '」内无读数 · ' + chunkFailed + ' 批异常退出）'
     + ' ⇒ **"三合一 = ' + fr.three + '" 这个数不可信，本工具按失败处理**（不许把缺数据读成 0）');
   process.exitCode = 7;
 }
@@ -149,4 +152,16 @@ if (STAGE >= 2) {
   console.log('\n## 宽∩闭环 按抗克排序（最接近三合一的那几粒离现役多远）');
   for (const r of wc.slice(0, 10)) console.log('   ' + r.file.replace('docs/artifacts/', '').padEnd(30) + (r.g4 ? ' 最克 ' + String(r.g4.long).padStart(3) + '/' + String(r.g4.multi).padStart(3) + '  杀手 ' + (r.g4.script || '').slice(0, 12) : ' 最克 —') +
     '  G ' + r.gMulti.toFixed(2) + '/' + r.gLong.toFixed(2) + ' 得珠 ' + r.gained + ' 花珠率 ' + r.spentRate.toFixed(2));
+}
+
+/* ---------- `--rows`：结构化逐类读数（给臂终评吃） ----------
+ * 为什么要它：终评的统计若靠**正则解析上面那些散文表格**，改一行印法结论就跟着变
+ * （METHODOLOGY 76/80 的同族）。散文给人看，TSV 给判词用，两者同源同一次运行。 */
+if (process.argv.includes('--rows')) {
+  console.log('\n#ROWS\tfile\tgMulti\tgLong\tlandMulti\tlandLong\tgained\tspentRate\twide\tclosed\trobust\tg4long\tg4multi\tg4killer');
+  for (const r of rows) console.log(['#ROWS', r.file, r.gMulti, r.gLong, r.landMulti, r.landLong, r.gained, r.spentRate,
+    r.wide ? 1 : 0, r.closed ? 1 : 0, (r.robust === true ? 1 : (r.robust === false ? 0 : '')),
+    r.g4 ? r.g4.long : '', r.g4 ? r.g4.multi : '', r.g4 ? (r.g4.script || '') : ''].join('\t'));
+  console.log('#ROWS-INCUMBENT\t' + INCUMBENT + '\t' + [incM.gMulti, incM.gLong, incM.landMulti, incM.landLong, incM.gained, incM.spentRate,
+    '', '', Number.isFinite(incRef.long) ? 1 : '', Number.isFinite(incRef.long) ? incG4.long : '', Number.isFinite(incRef.multi) ? incG4.multi : ''].join('\t'));
 }
