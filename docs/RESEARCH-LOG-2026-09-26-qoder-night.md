@@ -347,7 +347,7 @@
 复现：`env EPIRUS_ARM=hsprod$S EPIRUS_SEED=$S EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=js/bundled-champion-3p.js EPIRUS_TRAIN_EPS=0.2 EPIRUS_TRAIN_TEMP=0.15 EPIRUS_TRAIN_EPS_MODE=soft node tools/train-3p.mjs 300 5 12 12`（对照去掉那三个 `EPIRUS_TRAIN_*` 即出厂格）。
 产物与逐对表在 `%TEMP%/kr3/{artifacts, e28b-eval-out.txt, e28b-eval-hs.txt, e28b-eval5-out.txt}`（**临时目录，会过期** ⇒ 数字已全部抄进本节；要复现请照上面的命令重跑）。
 
-## E33 11:30 · 用户裁定落地：防御质量三档（白防 / 被穿透=半 / 有效）——**这把尺比我的"空挡率"好测一个数量级**
+## E33 11:22 · 用户裁定落地：防御质量三档（白防 / 被穿透=半 / 有效）——**这把尺比我的"空挡率"好测一个数量级**
 原话：「设一下防御打空率的质量判断，也就是出防御的时候完全没人打他就算白防御了（被穿透算防御半有效）」⇒ 质量分 = `(有效 + 0.5×被穿透) / 防御手数`，单一来源 `tools/defense-quality.mjs`（探针 / promote / 门 D163 共用），promote 那栏**只记录不阻断**（`EPIRUS_NO_DEFQ=1` 可关）。
 四处实现时必须选的边界（原话没说，全部写进注释并被 D163 用**合成事件窗**逐条钉）：非卡伤害（梦魇/连环/违约/血债）**不算**"打我"；一回合里既挡下又被穿透记**有效**；自损 / 打别人 / 反击都不算"朝我来"。
 **首批读数（攒钱者装配 · 产品口径 · 60 局）**
