@@ -23,7 +23,7 @@ import { sandbox, selfPlay, chargeProfile, loadChamp, rejectUnknownFlags } from 
 /* 三条判据的**单一来源**：门 D164 对同一个模块喂合成行（判据不许在门里再抄一份） */
 import { isWide, isClosed, isRobust, frontierOf } from './pool-frontier-lib.mjs';
 
-const FLAGS = ['every', 'limit', 'games', 'land-line', 'bead-line', 'gained-line', 'packs', 'stage', 'incumbent'];
+const FLAGS = ['every', 'limit', 'games', 'land-line', 'bead-line', 'gained-line', 'packs', 'stage', 'incumbent', 'g4-scope', 'g4-chunk'];
 rejectUnknownFlags(process.argv.slice(2), FLAGS, 'probe-pool-frontier');
 const arg = (k, d) => { const m = new RegExp('^--' + k + '=(.*)$').exec(process.argv.find(a => a.startsWith('--' + k + '=')) || ''); return m ? m[1] : d; };
 
@@ -87,37 +87,63 @@ const incParams = loadChamp(W, INCUMBENT);
 if (!incParams) { console.error('⛔ 参照包读不出：' + INCUMBENT); process.exit(2); }
 const incM = metricsOf(incParams);
 
-/* ---------- ③：抗克 = spawn 真源 gate-drafts，解析它自己的标题行 ---------- */
-const needG4 = STAGE >= 2 ? rows.filter(r => r.wide || r.closed).concat([{ file: INCUMBENT, params: incParams }]) : [];
-function runG4(list) {
-  if (!list.length) return {};
-  const args = list.map(r => r.file);
-  const rr = spawnSync(process.execPath, ['tools/gate-drafts.mjs'].concat(args), { encoding: 'utf8', timeout: 3600000, maxBuffer: 1 << 25 });
-  const out = String(rr.stdout || '');
+/* ---------- ③：抗克 = spawn 真源 gate-drafts，解析它自己的标题行 ----------
+ * ⚠️ 范围默认 = **宽∩闭环**（三合一的定义要求两样都成立 ⇒ 别的历史类不需要量）。
+ *   第一版我写成"宽 ∪ 闭环"= 99 类，一个进程吃到 60 分钟被超时掐掉 ⇒ 抗克全空、
+ *   而"三合一"照样印出 0 —— 那是**缺数据的假 0**。现在：范围收窄 + 分批 + 每批印进度 +
+ *   **任一子批失败或"宽∩闭环"里有类没量到读数 ⇒ 响亮失败并非零退出**（见下面的 g4Unmeasured）。 */
+const G4_SCOPE = arg('g4-scope', 'intersection');       // intersection（默认）| union
+const CH = Number(arg('g4-chunk', 6));                  // 每批几类（~2-3 分钟/批）
+const needG4 = STAGE >= 2 ? rows.filter(r => (G4_SCOPE === 'union' ? (r.wide || r.closed) : (r.wide && r.closed))).concat([{ file: INCUMBENT, params: incParams }]) : [];
+function runG4Chunk(files) {
+  const rr = spawnSync(process.execPath, ['tools/gate-drafts.mjs'].concat(files), { encoding: 'utf8', timeout: 1800000, maxBuffer: 1 << 25 });
+  if (rr.status !== 0 && rr.status !== 1) { console.log('  ⛔ gate-drafts 这批异常退出 status=' + rr.status + '（被超时掐掉？）—— 不许把它当"没量到=不合格"'); return null; }
   const g = {};
-  for (const ln of out.split('\n')) {
-    const m = /^\s*(PASS|FAIL)\s+G4\[(?:docs\/artifacts\/)?(.+?)\.(?:bak|js)\/(long|multi)\].*?最克「(.+?)」(\d+)%/.exec(ln);
+  /* ⚠️ 标签必须与 `gate-drafts` 自己的打印**逐字同源**：它已经把路径与 `.bak` 剥掉
+   *   （`f.replace(/^.*artifacts\//,'').replace(/\.bak$/,'')`），所以这里**不许**再要求标签里带扩展名 ——
+   *   第一版我写成 `\.(bak|js)/` ⇒ 一行都匹不上，"抗克全空"被误读成"超时"（09-26 实测）。 */
+  for (const ln of String(rr.stdout || '').split('\n')) {
+    const m = /^\s*(PASS|FAIL)\s+G4\[(.+)\/(long|multi)\].*?最克「(.+?)」(\d+)%/.exec(ln);
     if (!m) continue;
     (g[m[2]] = g[m[2]] || {})[m[3]] = Number(m[5]);
     (g[m[2]] = g[m[2]] || {})[m[3] + 'S'] = m[4];
   }
-  return { g, exit: rr.status };
+  return g;
 }
-let incG4 = { long: NaN, multi: NaN };
+const G4ALL = {};
+let chunksRun = 0, chunkFailed = 0;
 if (needG4.length) {
-  const base = 'docs/artifacts/';
-  const res = runG4(needG4.map(r => ({ file: r.file.indexOf('/') === 0 || existsSync(r.file) ? r.file : base + r.file })));
-  for (const r of rows) {
-    const key = r.file.replace(/^.*artifacts\//, '').replace(/\.bak$/, '');
-    const hit = res.g && (res.g[key] || res.g[r.file.replace(/\.bak$/, '')]);
-    if (hit) { r.g4 = { long: hit.long, multi: hit.multi, script: hit.longS }; r.robust = isRobust(hit, { long: 1e9, multi: 1e9 }); }
+  console.log('# 抗克（gate-drafts 真源 · N4=' + (process.env.GATE4_GAMES || 300) + '）范围 = ' + G4_SCOPE + ' ⇒ ' + needG4.length + ' 类，分 ' + Math.ceil(needG4.length / CH) + ' 批 × ' + CH);
+  for (let i = 0; i < needG4.length; i += CH) {
+    const files = needG4.slice(i, i + CH).map(r => (r.file.indexOf('/') === 0 || existsSync(r.file) ? r.file : 'docs/artifacts/' + r.file));
+    const g = runG4Chunk(files);
+    chunksRun++;
+    if (!g) { chunkFailed++; continue; }
+    for (const k of Object.keys(g)) for (const kk of Object.keys(g[k])) (G4ALL[k] = G4ALL[k] || {})[kk] = g[k][kk];
+    console.log('  · 批 ' + chunksRun + '（累计 ' + Object.keys(G4ALL).length + ' 类有读数）' + new Date().toTimeString().slice(0, 8));
   }
-  const ik = INCUMBENT.replace(/^.*\//, '').replace(/\.js$/, '');
-  incG4 = (res.g && (res.g[ik] || res.g[INCUMBENT.replace(/\.js$/, '')])) || incG4;
-  console.log('# gate-drafts exit=' + res.exit + '（抗克判据 = 两模式最克都 ≤ 现役）');
 }
+/* 与 gate-drafts 的标签派生**同一行代码**：剥掉到 artifacts/ 的路径 + 剥掉 .bak（其余原样保留） */
+function keyOf(f) { return f.replace(/^.*artifacts\//, '').replace(/\.bak$/, ''); }
+for (const r of rows) {
+  const hit = G4ALL[keyOf(r.file)];
+  if (hit && Number.isFinite(hit.long) && Number.isFinite(hit.multi)) { r.g4 = { long: hit.long, multi: hit.multi, script: hit.longS }; }
+}
+/* 参照必须解析到，否则"抗克"会被悄悄换成绝对线 60 ⇒ 判据变了而输出长得一样（09-26 实测踩过：
+ * gate-drafts 把线上槽打印成 `G4[线上包/…]` 而不是文件路径，所以我按路径查就查不到）。 */
+function pickRef(g) {
+  const cands = [keyOf(INCUMBENT), '线上包'];
+  for (const k of cands) { const h = g[k]; if (h && Number.isFinite(h.long) && Number.isFinite(h.multi)) return h; }
+  return null;
+}
+const incG4 = pickRef(G4ALL) || { long: NaN, multi: NaN };
 const incRef = { long: incG4.long, multi: incG4.multi };
-for (const r of rows) if (r.g4) r.robust = isRobust(r.g4, Number.isFinite(incRef.long) ? incRef : { long: 60, multi: 60 });
+if (STAGE >= 2 && !(Number.isFinite(incRef.long) && Number.isFinite(incRef.multi))) {
+  console.log('\n⛔ 参照（现役）的 G4 没解析到 ⇒ "抗克 = 两模式最克 ≤ 现役"这条判据**无法成立**；'
+    + '本工具**不许**退回绝对线 60（那会把判据悄悄换掉而输出看不出来）⇒ 按失败处理');
+  process.exitCode = 7;
+}
+for (const r of rows) if (r.g4 && Number.isFinite(incRef.long)) r.robust = isRobust(r.g4, incRef);
 
 /* ---------- 汇总 ---------- */
 const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : NaN; };
@@ -126,7 +152,15 @@ console.log('\n## 参照：现役 ' + INCUMBENT + '  G ' + incM.gMulti.toFixed(2
   ' · 花珠率 ' + incM.spentRate.toFixed(3) + (Number.isFinite(incRef.long) ? ' · 最克 ' + incRef.long + '/' + incRef.multi : ' · 最克 —'));
 console.log('## 判据：宽 = 两模式 G≥3 且 净兑现≥' + LAND + ' ‖ 闭环 = 花珠率≥' + BEAD + ' 且 得珠≥' + GAINED + ' ‖ 抗克 = 两模式最克 ≤ 现役');
 const fr = frontierOf(rows, incRef);
-console.log('\n## 前沿计数（n=' + fr.n + ' 个等价类）');
+/* ⚠️ 假 0 的守门（09-26 实测被自己绊过一次：抗克整批被超时掐掉，"三合一"照样印 0）：
+ * 只要"宽∩闭环"里有任一类的抗克**没量到**，这个 0 就不可信 ⇒ 响亮失败 + 非零退出。 */
+const noG4 = STAGE >= 2 ? rows.filter(r => r.wide && r.closed && !r.g4).length : 0;
+if (STAGE >= 2 && (noG4 > 0 || chunkFailed > 0)) {
+  console.log('\n⛔ 抗克未量到 ' + (noG4 + chunkFailed) + ' 处（' + noG4 + ' 类宽∩闭环无读数 · ' + chunkFailed + ' 批异常退出）'
+    + ' ⇒ **"三合一 = ' + fr.three + '" 这个数不可信，本工具按失败处理**（不许把缺数据读成 0）');
+  process.exitCode = 7;
+}
+console.log('\n## 前沿计数（n=' + fr.n + ' 个等价类）' + (STAGE >= 2 && (noG4 || chunkFailed) ? ' ⛔见上' : ''));
 console.log('   宽 ' + fr.wide + ' · 闭环 ' + fr.closed + ' · **宽∩闭环 ' + fr.wideAndClosed + '** · **三合一(宽∩闭环∩抗克) ' + fr.three + '** · 只抗克不宽 ' + fr.robustNotWide);
 console.log('   全池中位：得珠 ' + med(rows.map(r => r.gained)) + ' · 花珠率 ' + med(rows.map(r => r.spentRate)).toFixed(2) +
   ' · 花珠率恰好为 0 的 ' + rows.filter(r => r.spentRate === 0).length + ' 粒（' + (100 * rows.filter(r => r.spentRate === 0).length / Math.max(1, fr.n)).toFixed(0) + '%）');
