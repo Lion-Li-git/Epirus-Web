@@ -7,6 +7,8 @@ import { spawnSync } from 'node:child_process';
 import { parsePairTable } from './defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
 import { makeGuardCost } from './guard-cost-lib.mjs';   /* D161 用：直接对库做单元级判定（不靠探针的输出措辞） */
 import { hardwiredLine } from './probe-layer-caliber.mjs';   /* D149 用：指针行号从源码现算（钉死数字会在别人插一行后变成假行号） */
+/* D163 用：防御质量三档的单一来源（用户 09-26 裁定："出防御的时候完全没人打他就算白防御，被穿透算半有效"） */
+import { classifyDefenseWindow, defenseQuality, formatQuality, parseQuality, formatQualityRecord } from './defense-quality.mjs';
 /* v1.5.225（用户批准方案 a）：确定性重活的**内容寻址缓存** —— 键 = argv + EPIRUS_* env + 源码树内容。
  * 只缓存 (status, stdout, stderr)，**断言照旧跑**；命中响亮打印；`NP_NOCACHE=1` 一律真跑。
  * ⚠️ 只许缓存"断言只用 stdout/status"的子进程（前置要求见 tools/np-cache.mjs 头注）。
@@ -6278,6 +6280,52 @@ t('D162 训练/选择执行口径旋钮（v1.5.237 · E28）：默认关要**可
     'train-best 没接这个旋钮 ⇒ 必须被列为**暗键**并在握手前 exit 6（宁可响，不许"传了没人读"跑成一整臂 A/A —— D143 那一族栽过 9 次）');
   ok(readFileSync('tools/audit-lib.mjs', 'utf8').indexOf('EPIRUS_TRAIN_EPS') < 0,
     '作用范围必须**关在训练侧**：`audit-lib` 的 9 处写死不许经过这两个漏斗（否则门禁口径会被一个训练旋钮悄悄搬走）');
+});
+
+t('D163 防御质量三档（用户 09-26 裁定：白防 / 被穿透=半 / 有效）必须**判在事件语义上**、单一来源、且 promote 那栏只记录不阻断', function () {
+  /* 用户给的判据形状很具体："出防御的时候完全没人打他就算白防御了（被穿透算防御半有效）"
+   * ⇒ 三档全靠**回合结算窗里的事件语义**判，所以本门喂**合成窗口**（不靠真跑一局去"希望碰上"某种局面）。
+   * 会骗人的三种写法都被下面钉死：① 把梦魇/连环/违约/血债这些**非卡伤害**当成"有人打我"（⇒ 白防被误判成半有效）；
+   *   ② 把自损（`source === 我`）算成攻击；③ 解析不到行时回 0（0 会被读成"这包不白防"—— 与 D155 同族）。 */
+  const Rk = R;
+  const ATKK = Object.keys(Rk.byKey).find(k => Rk.byKey[k] && Rk.byKey[k].cat === Rk.CAT.ATTACK);
+  ok(!!ATKK, '载体：得有一张攻击卡当 `via`（合成窗口用它表示"有人朝我来"）');
+  eq(classifyDefenseWindow([], Rk, 0), 'idle', '空窗（那一回合没人朝我来）⇒ 白防');
+  eq(classifyDefenseWindow([{ type: 'blocked', to: 0, by: '防御', via: ATKK }], Rk, 0), 'eff', '挡下一次 ⇒ 有效');
+  eq(classifyDefenseWindow([{ type: 'reflect', to: 0, from: 2, via: ATKK }], Rk, 0), 'eff', '弹回也算有效');
+  eq(classifyDefenseWindow([{ type: 'damage', to: 0, source: 2, via: ATKK, amt: 1 }], Rk, 0), 'part', '被卡打穿 ⇒ 半有效');
+  eq(classifyDefenseWindow([{ type: 'damage', to: 0, source: 2, via: '梦魇', amt: 0.5 }], Rk, 0), 'idle',
+    '`via` 不是一张真卡（梦魇/连环/违约/血债）⇒ **不许**算"有人打我"（这是 `landByKey` 含非卡键那族事故的镜像）');
+  eq(classifyDefenseWindow([{ type: 'damage', to: 0, source: null, via: ATKK, amt: 1 }], Rk, 0), 'idle', '`source` 为空的地形伤不算攻击');
+  eq(classifyDefenseWindow([{ type: 'damage', to: 0, source: 0, via: ATKK, amt: 1 }], Rk, 0), 'idle', '自损（打自己）不算"有人朝我来"');
+  eq(classifyDefenseWindow([{ type: 'damage', to: 1, source: 2, via: ATKK }], Rk, 0), 'idle', '打别人不算招呼我');
+  eq(classifyDefenseWindow([{ type: 'blocked', to: 0, by: '防御', via: ATKK }, { type: 'damage', to: 0, source: 2, via: ATKK }], Rk, 0), 'eff',
+    '一回合里既挡到又被穿透 ⇒ 记"有效"（它确实挡下了东西，不许两档重复计）');
+  const qq = defenseQuality({ eff: 2, part: 2, idle: 6 });
+  ok(Math.abs(qq.q - 0.3) < 1e-12, '质量分 = (有效 + 0.5×半) / 手数 ⇒ 2/2/6 应为 0.30（实测 ' + qq.q + '）');
+  ok(isNaN(defenseQuality({ eff: 0, part: 0, idle: 0 }).q), '没量到防御手 ⇒ NaN，**不许是 0**');
+  const line = formatQuality(defenseQuality({ eff: 3, part: 1, idle: 6 }));
+  const back = parseQuality(line);
+  ok(back && Math.abs(back.q * 100 - 35) < 0.051 && back.n === 10,
+    '打印器与解析器必须闭环（producers/consumers 一份契约）：' + JSON.stringify(back));
+  ok(formatQualityRecord(null, {}).indexOf('没量到') >= 0 && formatQualityRecord(null, {}).indexOf('0.0%') < 0,
+    '读不到时必须明说"没量到"，不许印成 0.0%（0 会被读成"这包不白防"）');
+  /* 真链：探针跑得出这一行，且数字落在合法区间 */
+  const one = 'docs/artifacts/cbs1s2-band2.bak';
+  const pr = spawnCached(['tools/probe-wasted-play.mjs', '--packs=' + one, '--games=20', '--quiet=1', '--assembly=banker'], { encoding: 'utf8' });
+  eq(pr.status, 0, '探针要跑得通（status=' + pr.status + '）');
+  const pq = parseQuality(pr.stdout);
+  ok(pq && pq.n > 0 && pq.q >= 0 && pq.q <= 1, '真跑必须解析出有限质量分与 >0 的手数（解析 0 行 = 探针改了列序而没人发现）：' + JSON.stringify(pq));
+  /* 行为式铁证：开/关 promote 这一栏，其余输出与退出码逐字相同（"只记录"不许是口头承诺） */
+  const on = spawnCached(['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'], { encoding: 'utf8' });
+  const off = spawnCached(['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'],
+    { encoding: 'utf8', env: Object.assign({}, process.env, { EPIRUS_NO_DEFQ: '1' }) });
+  eq(on.status, off.status, '退出码必须一致（' + on.status + ' vs ' + off.status + '）⇒ 这栏不许改变判定');
+  const stripQ = x => String(x || '').split(/\r?\n/).filter(l => l.indexOf('防御质量栏') < 0).join('\n');
+  eq(stripQ(on.stdout + on.stderr), stripQ(off.stdout + off.stderr), '去掉这一行后两次的全部输出（含 stderr 的阻断结论）必须逐字相同');
+  ok(on.stdout.indexOf('防御质量栏') >= 0 && on.stdout.indexOf('只记录不阻断') >= 0, '这一栏必须印出来，且自己说清"只记录不阻断"');
+  ok(readFileSync('tools/probe-wasted-play.mjs', 'utf8').indexOf("from './defense-quality.mjs'") >= 0,
+    '探针与 promote 必须共用同一个分类器（不许两处各写一遍"什么算打到我"）');
 });
 
 t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）', function () {

@@ -15,6 +15,7 @@
 import { readdirSync } from 'node:fs';
 import { build } from './probe-layer-caliber.mjs';
 import { rejectUnknownFlags, selfPlay, seatSymmetry, densityProfile } from './audit-lib.mjs';
+import { classifyDefenseWindow, defenseQuality, formatQuality } from './defense-quality.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
 rejectUnknownFlags(process.argv.slice(2), ['packs', 'games', 'every', 'limit', 'quiet', 'temp', 'eps', 'epsk', 'epsmode', 'seed', 'assembly', 'bots', 'correlate', 'gate-n'], 'probe-wasted-play');
@@ -58,6 +59,7 @@ function run(pack) {
   const base = T.policyChooserN(params, TEMP, EPS, EPSK, EPSMODE);
   const agg = {};   // key -> {n, eff, voided}
   let defN = 0, defEff = 0, atkN = 0, atkEff = 0, purN = 0, purEmpty = 0, wastedHands = 0, allHands = 0;
+  const dq = { eff: 0, part: 0, idle: 0 };   // 用户 09-26 裁定的三档（单一来源见 defense-quality.mjs）
   let brDefN = 0, brDefHit = 0, brNonN = 0, brNonHit = 0;
   const perSeat = { 1: 0, 2: 0, 3: 0, 4: 0 };
   for (let g = 0; g < GAMES; g++) {
@@ -117,8 +119,11 @@ function run(pack) {
       let eff = false;
       if (selfGuard(d.key)) {
         defN++;
-        eff = w.some(e => (e.type === 'blocked' || e.type === 'reflect') && e.to === d.pid);
-        if (eff) defEff++;
+        /* 用户 09-26 裁定的三档（有效 / 被穿透=半 / 白防）走**单一来源** `defense-quality.mjs` ⇒ 探针、promote 记录栏、门三处同一把尺 */
+        const kind = classifyDefenseWindow(w, R, d.pid);
+        dq[kind === 'eff' ? 'eff' : kind === 'part' ? 'part' : 'idle']++;
+        eff = kind !== 'idle';
+        if (kind === 'eff') defEff++;
       } else if (cat === ATK) {
         atkN++;
         eff = w.some(e => (e.type === 'damage' && e.source === d.pid) ||
@@ -183,6 +188,7 @@ function run(pack) {
     purN, purEmpty, purEmptyRate: purN ? 100 * purEmpty / purN : NaN,
     allHands, wastedHands, voidRate: allHands ? 100 * wastedHands / (allHands + wastedHands) : NaN,
     brDefN, brDefHit, brNonN, brNonHit,
+    dq: dq, quality: defenseQuality(dq),
     hitIfDef: brDefN ? 100 * brDefHit / brDefN : NaN, hitIfNot: brNonN ? 100 * brNonHit / brNonN : NaN,
     gate: gate, keys: keys
   };
@@ -201,6 +207,7 @@ for (const f of PACKS) {
     '   ‖   攻击族 ' + r.atkN + ' 手 · **打空率 ' + (isFinite(r.atkMiss) ? r.atkMiss.toFixed(1) : '—') + '%' +
     '   ‖   净化 ' + r.purN + ' 手 · **空净化 ' + (isFinite(r.purEmptyRate) ? r.purEmptyRate.toFixed(1) : '—') + '%（上界）**' +
     '   ‖   废手 ' + r.wastedHands + '/' + (r.allHands + r.wastedHands) + ' = ' + (isFinite(r.voidRate) ? r.voidRate.toFixed(2) : '—') + '%');
+  console.log('   ' + formatQuality(r.quality));
   console.log('   placebo/基线率：防的那一回合被招呼到 ' + (isFinite(r.hitIfDef) ? r.hitIfDef.toFixed(1) : '—') + '%（n=' + r.brDefN +
     '） vs 没防的回合 ' + (isFinite(r.hitIfNot) ? r.hitIfNot.toFixed(1) : '—') + '%（n=' + r.brNonN + '） ⇒ 倍差 ' +
     (isFinite(r.hitIfDef) && isFinite(r.hitIfNot) && r.hitIfNot > 0 ? (r.hitIfDef / r.hitIfNot).toFixed(2) + '×' : '—') +
@@ -223,6 +230,10 @@ if (rows.length > 3) {
   console.log('## 汇总（n=' + rows.length + ' 粒）');
   console.log('   空挡率分布：p10 ' + q(de, .1).toFixed(1) + '% · 中位 ' + q(de, .5).toFixed(1) + '% · p90 ' + q(de, .9).toFixed(1) + '%');
   console.log('   打空率分布：p10 ' + q(am, .1).toFixed(1) + '% · 中位 ' + q(am, .5).toFixed(1) + '% · p90 ' + q(am, .9).toFixed(1) + '%');
+  const qq = rows.map(x => x.r.quality && x.r.quality.n ? 100 * x.r.quality.q : NaN).filter(isFinite);
+  const idle = rows.map(x => x.r.quality && x.r.quality.n ? x.r.quality.idle : NaN).filter(isFinite);
+  console.log('   防御质量分（用户裁定：(有效+0.5×被穿透)/防御手数）：p10 ' + q(qq, .1).toFixed(1) + ' · 中位 ' + q(qq, .5).toFixed(1) +
+    ' · p90 ' + q(qq, .9).toFixed(1) + '   ‖ 白防率：中位 ' + q(idle, .5).toFixed(1) + '% · p90 ' + q(idle, .9).toFixed(1) + '%');
   const worst = rows.slice().sort((a, b) => (b.r.defEmpty || 0) - (a.r.defEmpty || 0)).slice(0, 6);
   console.log('   空挡率最高的几粒：' + worst.map(x => x.nm + ' ' + (isFinite(x.r.defEmpty) ? x.r.defEmpty.toFixed(1) : '—') + '%(n=' + x.r.defN + ')').join(' · '));
 }

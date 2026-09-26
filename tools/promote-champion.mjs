@@ -34,6 +34,7 @@ import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProf
  * 而"真桌 + ε=0.2"与**真机**几乎重合（电磁炮 0.20 对 0.20、蓄能 0.30 对 0.40）⇒ 它才是最接近产品的模拟。 */
 import { fieldProfile, share as bpShare } from './behavior-profile.mjs';
 import { parsePairTable, formatRecord } from './defense-axis.mjs';
+import { parseQuality, formatQualityRecord } from './defense-quality.mjs';   /* v1.5.243：防御质量三档的单一来源 */
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
@@ -273,6 +274,21 @@ if (process.env.EPIRUS_NO_GUARD !== '1') {
     { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
   const arows = parsePairTable(ar.stdout);
   console.log(formatRecord(arows[0], (ar.status === 0 ? '' : '探针 exit ' + ar.status + ' · ') + '真桌 1+4 攒钱替身 · ε=0.2 · ' + GN + ' 局 × ' + GS + ' 种子 · '));
+}
+
+/* ===== v1.5.243（qoder 09-26 · 用户裁定）：**防御质量栏** —— 还是"只记录、不阻断" =====
+ * 用户原话（裁定）：「设一下防御打空率的质量判断，也就是出防御的时候完全没人打他就算白防御了（被穿透算防御半有效）」
+ *   ⇒ 三档分类与质量分（(有效 + 0.5×被穿透) / 防御手数）的**单一来源在 `tools/defense-quality.mjs`**，
+ *     本栏不自己仿真 ⇒ spawn `tools/probe-wasted-play.mjs`（攒钱者装配 · 产品口径）再交同一模块解析（D150 同规矩）。
+ * ⚠️ 只打印，不进任何判定；关掉省时间：`EPIRUS_NO_DEFQ=1`。线还没裁 ⇒ 立线之前这栏只负责让"98% 白防"这种事**看得见**。 */
+if (process.env.EPIRUS_NO_DEFQ !== '1') {
+  const QN = Number(process.env.EPIRUS_DEFQ_GAMES || 30);
+  const qr = spawnSync(process.execPath, ['tools/probe-wasted-play.mjs', '--packs=' + SRC, '--games=' + QN, '--quiet=1', '--assembly=banker'],
+    { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
+  const q = parseQuality(qr.stdout);
+  console.log(formatQualityRecord(q, {
+    err: qr.status === 0 ? '' : '探针 exit ' + qr.status, asm: '攒钱者（1 席 hold + 4 席被评）', eps: 0.2, mode: 'soft'
+  }));
 }
 
 const brd = breadthProfile(W, params, 'long', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
