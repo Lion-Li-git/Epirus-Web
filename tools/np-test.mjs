@@ -11,6 +11,7 @@ import { hardwiredLine } from './probe-layer-caliber.mjs';   /* D149 用：指�
 import { classifyDefenseWindow, defenseQuality, formatQuality, parseQuality, formatQualityRecord } from './defense-quality.mjs';
 /* D164 用：池子前沿的三条判据（**只 import 纯函数模块**，探针本体会去扫 1457 个文件） */
 import * as AUDIT from './audit-lib.mjs';
+import * as PS from './play-shape.mjs';
 import * as PF_FRONT from './pool-frontier-lib.mjs';
 /* v1.5.225（用户批准方案 a）：确定性重活的**内容寻址缓存** —— 键 = argv + EPIRUS_* env + 源码树内容。
  * 只缓存 (status, stdout, stderr)，**断言照旧跑**；命中响亮打印；`NP_NOCACHE=1` 一律真跑。
@@ -7029,6 +7030,64 @@ t('D169 闭环判据的**分形态版**必须只在"贵卡真出手且余珠不�
     '【实测反例】Lctl 的珠子经济（花珠率 9.2% · 过期 9.1/局）必须被判 ✘ —— 旧判据在这件事上是对的');
   ok(/洗白/.test(readFileSync('tools/pool-frontier-lib.mjs', 'utf8')),
     '`isClosedShaped` 的文档必须**留痕**这条反例（说明它为什么不能被采用）—— 不许后人看不出它被否过');
+});
+
+t('D170 出手形状的两条记录读数（目标死磕 / ジ⇄枪交替）必须可复现、缺读数给 NaN、且**只记录不阻断**（v1.5.258 · 用户 09-27 点名）', function () {
+  /* 动因（用户原话）：「不过还是有一些**奇怪的公式打法**」+ 点名让我把另外两条也做记录测试：
+   *   ① 同一目标死磕（实盘 4 局里 `玩家4→玩家5 ×5`、`玩家3→玩家5 ×4` …）
+   *   ② ジ⇄枪 机械交替（30 回合局玩家4 从第16~30回合几乎就是 `枪,ジ,枪,ジ,…`）
+   * 另注：**"空防御"那条用户说千问已列过** ⇒ 不要在别处另立一套，用 `tools/defense-quality.mjs` 的**白防**（用户 09-26 裁定）。 */
+  const S = PS;
+  ok(S && typeof S.attackTargets === 'function' && typeof S.targetFixation === 'function' &&
+     typeof S.actionKeys === 'function' && typeof S.jiGunShape === 'function',
+    'play-shape 的四个纯函数必须都导出（**唯一一份**这种读数）');
+
+  /* ① 出手目标序列：只认**带 source 的结算事件**（action 事件本身不带目标 —— 别去猜） */
+  const ev = [
+    { type: 'action', pid: 0, key: 'gun', outcome: 'ok' },
+    { type: 'damage', source: 0, to: 2, via: 'gun' },
+    { type: 'action', pid: 0, key: 'gun', outcome: 'ok' },
+    { type: 'blocked', source: 0, to: 2, via: 'gun', reason: '反弹' },
+    { type: 'damage', source: 1, to: 0, via: 'gun' },        // 别人打我 ⇒ 不算我的出手
+    { type: 'damage', source: 0, to: 3, via: 'sword' },
+    { type: 'damage', source: 0 },                             // 没 to ⇒ 跳过
+    { type: 'action', pid: 0, key: 'ji', outcome: 'ok' },
+    { type: 'action', pid: 0, key: 'ji', outcome: 'noep' }     // 被拒 ⇒ 不算
+  ];
+  eq(JSON.stringify(S.attackTargets(ev, 0)), '[2,2,3]', '只取带 source 的结算事件（被挡也算一次出手），跳过无 to/他人所为');
+  const fx = S.targetFixation([2, 2, 2, 3]);
+  eq(fx.maxRun, 3, '最长连打同一目标必须是 3（实盘 `×5` 那种形状要能读出来）');
+  eq(Number(fx.sameRate.toFixed(3)), 0.667, '同目标率 = 2/3');
+  ok(isNaN(S.targetFixation([]).sameRate) && isNaN(S.targetFixation([]).maxRun),
+    '【NaN 纪律】没量到出手 ⇒ 必须 NaN，**不许是 0**（"没量到"≠"量到 0"，与 defense-quality 同规矩）');
+  ok(isNaN(S.targetFixation([5]).sameRate), '只有 1 次出手 ⇒ 同目标率 NaN（没有"上一次"可比）');
+
+  /* ② 出手序列 + ジ⇄枪交替 */
+  eq(JSON.stringify(S.actionKeys(ev, 0)), '["gun","gun","ji"]', '只取 outcome===ok 的本席 action（被拒的 noep 不算；ev 里那条 ok 的 ji 要算）');
+  const jg = S.jiGunShape(['ji', 'gun', 'ji', 'gun'], 'ji', 'gun');
+  eq(jg.altRate, 1, '纯交替 ⇒ 交替率 1');
+  const jg2 = S.jiGunShape(['ji', 'ji', 'ji'], 'ji', 'gun');
+  eq(jg2.altRate, 0, '有相邻对、但一次都不交替 ⇒ 交替率 **0**（那是真的"从不交替"，不是缺读数）');
+  ok(isNaN(S.jiGunShape(['ji'], 'ji', 'gun').altRate), '【NaN 纪律】只有 1 次出手 ⇒ 连相邻对都没有 ⇒ 交替率必须 NaN，不许 0');
+  eq(jg2.meanJiRun, 3, '连ジ段均长 = 3（"攒钱深度"这半条要能读）');
+  eq(jg2.jiShare, 1, 'ジ占比 = 1');
+  eq(S.jiGunShape(['gun', 'sword', 'gun'], 'ji', 'gun').jiShare, 0, '没出ジ ⇒ 占比 0（这里**该**是 0，因为有分母）');
+
+  /* ③ 措辞唯一 + 可解析回数字（探针与体检共用同一串） */
+  const line = S.formatShape({ n: 5, maxRun: 3, sameRate: 0.5 }, { n: 5, altRate: 0.4, meanJiRun: 2, jiShare: 0.6 });
+  ok(/最长 3 连/.test(line) && /ジ⇄枪交替 \*\*40\.0%\*\*/.test(line), '一行读数必须把四条都印出来：' + line);
+  const back = S.parseShape(line);
+  eq(back.maxRun, 3, 'parseShape 必须能解回最长连打（措辞唯一，免得两处各写一遍）');
+  eq(back.altRate, 0.4, 'parseShape 必须能解回交替率');
+
+  /* ④ 【只记录】不许接成判据 —— 判据变更属用户裁定；本门就是那句"留痕" */
+  const pro = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(pro.indexOf('play-shape') < 0 && pro.indexOf('targetFixation') < 0,
+    'promote 当前**不许**引用出手形状读数（只记录；要立判据先请用户裁定）');
+  const lib = readFileSync('tools/play-shape.mjs', 'utf8');
+  ok(/只记录不阻断/.test(lib), '`play-shape.mjs` 的头注必须写明"只记录不阻断"');
+  ok(/defense-quality/.test(lib) && /白防/.test(lib),
+    '头注必须指向**已有的白防口径**（用户 09-26 裁定 + 千问已列）—— 不许在别处另立一套"空防御"');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
