@@ -41,7 +41,7 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
   'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js', 'js/bundled-champion-3p.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
-import { stanceProfile, aggressionProfile, feasibilityOf, attackAttribution, feasPlan, FEAS_N_DEFAULTS, nullSpreadQuantile } from './audit-lib.mjs';
+import { sandbox, stanceProfile, aggressionProfile, feasibilityOf, attackAttribution, feasPlan, FEAS_N_DEFAULTS, nullSpreadQuantile } from './audit-lib.mjs';
 /* v1.5.202：G4 `--force` 越线例外的判定抽成**纯函数单一来源**（D146 用合成 meta 直接覆盖它）。 */
 import { g4ExceptionOk, G4IMPL_AT_EXCEPTION as G4FROZEN } from './gate4-exception.mjs';
 /* v1.5.202：UNRUN 的处置（哪个方向阻断）也是纯函数单一来源（D147 直接喂合成输入）。 */
@@ -6807,6 +6807,65 @@ t('D159 广度判据必须是**最大单卡落地份额**（v1.5.227 · 用户�
   eq(r.shareMissing, 1, '缺份额必须被计数（让调用方看得见）');
   /* ⑤ G(落地) 那条下限仍在（两条子句是"且"的关系） */
   eq(rejectNarrowWinners([mk(1, 1.49, 5, 0.3, 'gun')], 1.5).dropped, 1, '净兑现低于地板仍要砍');
+});
+
+t('D166 大雷连带**被挡下时 UI 不许说"造成伤害"**（v1.5.253 用户报）：文案必须按同回合的真事件反推', function () {
+  /* 病（用户在实盘里发现）：`bigTChain` 事件在 `js/core/resolve.js` 里是**无条件发出**的 —— 发完才可能
+   *   `continue` 完全挡住、或把伤害转给防御者的作用目标。UI 原来把这条**硬编码**成"受 2 点电伤"
+   *   ⇒ "被挡下"被渲染成"造成了伤害"（**结算是对的，错的只有文案**）。
+   * 本门做两件事：① 从 `js/ui/ui.js` **真源码**里抽出 `bigTChainText` 并跑它（不拷一份，测试跑的就是产品代码）；
+   *   ② 三档现场用**引擎真结算**造出来（不手搓事件）：自守防御=完全挡住 / 藤甲=转给被贴者 / 非防御族=真打中。 */
+  const src = readFileSync('js/ui/ui.js', 'utf8').split('\r\n').join('\n');
+  const i0 = src.indexOf('const BIGT_CHAIN_REASON');
+  const i1 = src.indexOf('function evText(e, roundEvents)');
+  ok(i0 >= 0 && i1 > i0, 'ui.js 里必须存在 `bigTChainText`（连带文案的唯一来源）');
+  const NM = ['你', '电脑1', '电脑2', '电脑3', '电脑4'];
+  const nm = function (pid) { return NM[pid] != null ? NM[pid] : String(pid); };
+  const mod = new Function('nm', src.slice(i0, i1) + '\n return { bigTChainText: bigTChainText };')(nm);
+  ok(typeof mod.bigTChainText === 'function', '抽出的 `bigTChainText` 必须可调用（源码形状变了就要改本门）');
+
+  const W = sandbox('.');
+  const R = W.EpirusRules, S = W.EpirusState, X = W.EpirusResolve;
+  const rng = function (a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+  /* 现场：c=0 放【真正的落雷】→2；T=2 用【枪】打 q=1（让 q 成为连带候选）；q=1 用 `qKey`。 */
+  const scen = function (qKey, qTarget) {
+    const st = S.createState('long', { next: rng(7) }, 5);
+    X.startTurn(st);
+    st.p.forEach(function (p) { p.ep = 0; });
+    st.p[0].ep = 10; st.p[2].ep = 3;
+    st.actions[0] = { key: R.SK.BIG_T, target: 2, opt: null };
+    st.actions[2] = { key: R.SK.GUN, target: 1, opt: null };
+    st.actions[1] = { key: qKey, target: qTarget, opt: null };
+    st.actions[3] = { key: R.SK.JI, target: 3, opt: null };
+    st.actions[4] = { key: R.SK.JI, target: 4, opt: null };
+    const before = st.events.length;
+    X.resolveActions(st);
+    const evs = st.events.slice(before);
+    return { evs: evs,
+      chain: evs.filter(function (e) { return e.type === 'bigTChain'; }),
+      dmg: evs.filter(function (e) { return e.type === 'damage' && e.reason === '真正的落雷·连带'; }) };
+  };
+  const A = scen(R.SK.GUARD, 1);      // 自守防御 ⇒ 完全挡住
+  const B = scen(R.SK.ARMOR, 2);      // 藤甲（enemy 目标）⇒ 伤害转给被贴者
+  const C = scen(R.SK.GUN, 2);        // 非防御族 ⇒ 真打中（对照）
+  /* 前置（本门要测的三档都必须真的被造出来，否则门会变成"测空气"） */
+  eq(A.chain.length, 1, '前置：自守防御那档必须产生 bigTChain 事件');
+  eq(A.dmg.length, 0, '前提：自守防御那档**没有连带伤害**（这正是用户看到"被挡下"的情形）');
+  eq(B.dmg.length, 1, '前置：藤甲那档必须产生连带伤害（转给被贴者）');
+  eq(C.dmg.length, 1, '前置：非防御族那档必须真的打中');
+
+  const aT = mod.bigTChainText(A.chain[0], A.evs).html;
+  ok(!/受 2 点电伤|受 2 点伤害/.test(aT) && /挡下/.test(aT),
+    '【用户报的那条】被挡下时绝对不许说"受 2 点电伤"，必须说"挡下"：实际=' + aT);
+  const bT = mod.bigTChainText(B.chain[0], B.evs).html;
+  ok(bT.indexOf(NM[B.dmg[0].to]) >= 0 && /转给/.test(bT) && !new RegExp(NM[B.chain[0].to] + ' 受').test(bT),
+    '转走时必须指出**真实受害者**、不许记在连带候选头上：实际=' + bT);
+  const cT = mod.bigTChainText(C.chain[0], C.evs).html;
+  ok(/受 2 点电伤/.test(cT), '真打中时仍要报数（不许为了修 A 把 C 也改哑）：实际=' + cT);
+  /* 接线：三处调用点都必须把**整回合事件表**传进去（否则 `roundEvents` 恒为 undefined、修了等于没修） */
+  eq((src.match(/evText\(e, (list|events)\)/g) || []).length, 3, '三处 `evText` 调用点都必须传整回合事件表');
+  ok(/case 'bigTChain': return bigTChainText\(e, roundEvents\);/.test(src),
+    '`evText` 的 bigTChain 分支必须委托给 `bigTChainText`（不许再内联硬编码）');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>

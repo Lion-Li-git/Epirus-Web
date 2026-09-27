@@ -228,7 +228,7 @@
   }
   function logEvents(list, rootCls) {
     for (const e of orderEventsForDisplay(list)) {
-      const t = evText(e);
+      const t = evText(e, list);   // v1.5.253：把**整回合事件表**传进去（连带是否真打中要它才判得出）
       if (t) addLog('div', t.cls || 'ev', t.html);
     }
   }
@@ -306,7 +306,7 @@
       logEvents(events);
       // 记录 transcript（纯文本，供导出复查）
       const lines = events.map(function (e) {
-        const t = evText(e);
+        const t = evText(e, events);
         return t ? t.html.replace(/<[^>]+>/g, '') : null;
       }).filter(Boolean);
       B.transcript.push({
@@ -494,7 +494,7 @@
   }
   function pushTranscript(parts, events) {
     const lines = events.map(function (e) {
-      const t = evText(e);
+      const t = evText(e, events);
       return t ? t.html.replace(/<[^>]+>/g, '') : null;
     }).filter(Boolean);
     B.transcript.push({
@@ -731,7 +731,30 @@
 
   /* ---------- 事件文案 ---------- */
   function nm(pid) { return (B.state && B.state.p[pid]) ? B.state.p[pid].name : (NAME[pid] || pid); }
-  function evText(e) {
+  /* ===== v1.5.253（用户报：**大雷连带被挡下之后 UI 仍显示造成伤害**）=====
+   * 根因：`bigTChain` 事件在 `js/core/resolve.js` 里是**无条件发出**的（发完才可能 `continue` 完全挡住、
+   *   或把伤害转给防御者的作用目标）⇒ **它自己不含"有没有真打中"的信息**，而 UI 原来把这条**硬编码**成
+   *   "受 2 点电伤" ⇒ 于是"被挡下"被渲染成了"造成了伤害"。**结算本身是对的，错的只有文案。**
+   * 真相在同回合的 `damage` 事件里（`reason === '真正的落雷·连带'`、`to` = 真实受害者）⇒ 从这里反推，三种情形：
+   *   · 有 `to === e.to` 的连带伤害 ⇒ 真打中（并按事件里的 `amt` 印数，不再写死 2）
+   *   · 有连带伤害但 `to` 是别人 ⇒ 被挡下并把伤害**转给**了防御者的作用目标（金刚盾/藤甲那种）
+   *   · 本回合根本没有连带伤害事件 ⇒ **完全挡住**（自守型防御），不许说"造成了伤害"
+   * ⚠️ 必须在 **UI 层**解决：`js/core/resolve.js` 是**指纹五文件之一**，改它 = 规则换代（历史基线作废），
+   *   而 `js/ui/` **不在指纹里** ⇒ 文案问题就在 UI 层修。 */
+  const BIGT_CHAIN_REASON = '真正的落雷·连带';
+  function bigTChainText(e, roundEvents) {
+    const tag = (e.kind === 'attack' ? '（其攻击被无效）' : '（被目标攻击）');
+    const chain = (roundEvents || []).filter(function (x) {
+      return x && x.type === 'damage' && x.reason === BIGT_CHAIN_REASON;
+    });
+    const mine = chain.filter(function (x) { return x.to === e.to; })[0];
+    if (mine) return { cls: 'ev dmg', html: '⚡ ' + nm(e.from) + ' 的大雷连带：' + nm(e.to) + ' 受 ' + mine.amt + ' 点电伤' + tag };
+    const moved = chain[0];
+    if (moved) return { cls: 'ev', html: '⚡ ' + nm(e.from) + ' 的大雷连带：' + nm(e.to) + ' 挡下，伤害转给 ' + nm(moved.to) + '（' + moved.amt + ' 点电伤）' + tag };
+    return { cls: 'ev dim', html: '⚡ ' + nm(e.from) + ' 的大雷连带：' + nm(e.to) + ' 挡下（未造成电伤）' + tag };
+  }
+
+  function evText(e, roundEvents) {
     const dim = { cls: 'ev dim' }, g = { cls: 'ev gold' }, p = { cls: 'ev pur' }, d = { cls: 'ev dmg' }, h = { cls: 'ev heal' };
     switch (e.type) {
       case 'insufficient': return { cls: 'ev dim', html: '💸 ' + nm(e.pid) + ' ジ不足，' + (R.byKey[e.skill] ? R.byKey[e.skill].name : e.skill) + ' 未发动' };
@@ -778,7 +801,8 @@
       case 'rodBlock': return { cls: 'ev gold', html: '☂ ' + nm(e.pid) + ' 的避雷针挡下雷击' };
       case 'ban': return { cls: 'ev dmg', html: '🌩 ' + nm(e.pid) + ' 被雷劈中：多数技能禁用 3 回合（防御/反弹/金刚盾/ジ 除外）' };
       case 'hidden': return { cls: 'ev pur', html: '🌑 触发隐藏技能【' + e.name + '】' + (e.pid != null ? '（' + nm(e.pid) + '）' : '') + (e.to != null ? ' → ' + nm(e.to) : '') };
-      case 'bigTChain': return { cls: 'ev dmg', html: '⚡ ' + nm(e.from) + ' 的大雷连带：' + nm(e.to) + ' 受 2 点电伤' + (e.kind === 'attack' ? '（其攻击被无效）' : '（被目标攻击）') };
+      /* v1.5.253：不再硬编码"受 2 点电伤" —— 是否真打中要按同回合的连带伤害事件反推（见 `bigTChainText`）。 */
+      case 'bigTChain': return bigTChainText(e, roundEvents);
       case 'mirror': return { cls: 'ev pur', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】→ ' + nm(e.to) };
       case 'mirrorNoEffect': return { cls: 'ev dim', html: '🪞 ' + nm(e.pid) + ' 镜面反射：' + nm(e.from) + ' 本回合的行动不存在或已被作废，无可复制' };
       /* N14 v1.5.16：非伤害类技能 = 效果落在自己身上 + 对 t2 空指（指向保留、本身无效果） */
