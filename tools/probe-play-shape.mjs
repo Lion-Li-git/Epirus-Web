@@ -10,8 +10,8 @@
  * 判据地位：**只记录**。θ 与线由用户裁定；本探针不阻断任何流程。
  */
 import { build } from './probe-layer-caliber.mjs';
-import { rejectUnknownFlags, extractJsonObject } from './audit-lib.mjs';
-import { attackTargets, targetFixation, actionKeys, jiGunShape, formatShape } from './play-shape.mjs';
+import { rejectUnknownFlags, extractJsonObject, chargeProfile } from './audit-lib.mjs';   /* 珠账的单一来源在 audit-lib（第一版我错调了 trainer 上的同名方法 ⇒ 过期率恒 NaN） */
+import { attackTargets, targetFixation, actionKeys, jiGunShape, formatShape, costlyProfile, beadRotRate, formatCostly } from './play-shape.mjs';
 import { readFileSync } from 'node:fs';
 
 /** 读包：走 `audit-lib` 的**唯一一份**花括号配平抽取器（`avoid='_META'` 必需：`_META` 写在 `_3P` 前面） */
@@ -52,6 +52,10 @@ for (const pf of PACKS) {
   catch (e) { console.log('  ⛔ ' + pf + ' 读不出：' + (e && e.message)); continue; }
   if (!params || !params.length) { console.log('  ⛔ ' + pf + ' 没有权重'); continue; }
   const fxAll = [], jgAll = [], per = [];
+  /* v1.5.259：昂贵层累计（大雷次数 / ≥3ep 出手 / 总出手）—— 只记录 */
+  const BIG_T = R.SK.BIG_T || R.SK.BIGT || 'bigT';
+  const isCostly = (k) => { const c = R.byKey && R.byKey[k]; const v = c ? (c.cost != null ? c.cost : c.ep) : 0; return Number(v) >= 3; };
+  let cpBigT = 0, cpCostly = 0, cpN = 0;
   for (let g = 0; g < GAMES; g++) {
     const bs = T.policyChooserN(params, 0.15, EPS, 5, EPS_MODE);
     const ch = [];
@@ -61,7 +65,11 @@ for (const pf of PACKS) {
     for (let seat = 0; seat < 5; seat++) {
       const fx = targetFixation(attackTargets(ev, seat));
       const jg = jiGunShape(actionKeys(ev, seat), JI, GUN);
-      if (seat === 0) { fxAll.push(fx); jgAll.push(jg); }
+      if (seat === 0) {
+        fxAll.push(fx); jgAll.push(jg);
+        const kk = actionKeys(ev, seat), cpp = costlyProfile(kk, BIG_T, isCostly);
+        cpBigT += cpp.bigT; cpCostly += cpp.costly; cpN += cpp.n;
+      }
       else per.push({ fx: fx, jg: jg });
     }
   }
@@ -78,6 +86,12 @@ for (const pf of PACKS) {
   const fx = { n: sumFx.n, maxRun: sumFx.maxRun || NaN, sameRate: sumFx.n > 1 ? (() => { let s = 0, p = 0; for (const f of fxAll) if (f.n > 1) { s += f.sameRate * (f.n - 1); p += f.n - 1; } return p ? s / p : NaN; })() : NaN };
   const jg = { n: sumJg.n, altRate: sumJg.pairs ? sumJg.alt / sumJg.pairs : NaN, meanJiRun: sumJg.runs ? sumJg.runSum / sumJg.runs : NaN, jiShare: sumJg.n ? sumJg.ji / sumJg.n : NaN };
   console.log('  ' + pf.replace(/^.*[\\/]/, '').padEnd(24) + ' 冠军席: ' + formatShape(fx, jg));
+  /* v1.5.259（用户 GO"做 B"）：昂贵层只记录读数 —— 大雷出手 / ≥3ep 出手占比 / 珠过期率 */
+  {
+    let rot = NaN;
+    try { const chp = chargeProfile(sb, params, MODE, 40); rot = beadRotRate(chp.gained, chp.expired); } catch (e) {}
+    console.log('  ' + ''.padEnd(24) + ' ' + formatCostly({ n: cpN, bigT: cpBigT, bigTShare: cpN ? cpBigT / cpN : NaN, costly: cpCostly, costlyShare: cpN ? cpCostly / cpN : NaN }, rot));
+  }
   /* 其它 4 席（脚本池）当参照：形状读数有没有判别力，先看它与冠军席分不分得开 */
   const oppFx = per.map(x => x.fx).filter(f => f.n);
   const oppJg = per.map(x => x.jg).filter(j => j.n);

@@ -98,3 +98,39 @@ export function parseShape(text) {
     altRate: g(/ジ⇄枪交替 \*\*([\d.]+)%\*\*/) / 100
   };
 }
+
+/** ===== 昂贵层读数（v1.5.259 · 用户 GO"做 B"）=====
+ * 动因（本班 §20.1/§20.2 实测）：大雷是**抽到就得留住**的瞬态性状（21 个种子只 1 粒学会；从学会者续训三臂全掉回 ~0）。
+ * 根因候选：**适应度里没有读数量它**（3 局即时收益；5ep 的机会成本是不还手）⇒ 选择压力方向与它相反。
+ * 这一步**只做读数**（进 fit 属判据裁定，需用户另裁）：让"它出现过没有、以什么代价"第一次可见。
+ *   · `bigTCasts`：真·落雷出手次数（键从规则单一来源取）
+ *   · `costlyShare`：≥3ep 出手占比（"贵卡预算"的粗读数）
+ *   · `beadRotRate`：珠**过期率** = 过期/得珠 —— 与"花掉"分开：`花珠率` 高是"有出口"，`过期率` 高是"攒着烂掉"。
+ *     （本班 §15 就是靠这两个数把"攒着不花"与"根本没经济"分开的 —— 但当时是在日志里手算，现在进栏。） */
+
+/** 该席的"昂贵层画像"：大雷出手数、贵卡出手占比（`isCostly(key)` 由调用方给，价格口径在规则里） */
+export function costlyProfile(keys, bigTKey, isCostly) {
+  const n = (keys || []).length;
+  if (!n) return { n: 0, bigT: NaN, bigTShare: NaN, costly: NaN, costlyShare: NaN };
+  let bigT = 0, costly = 0;
+  for (const k of keys) {
+    if (k === bigTKey) bigT++;
+    if (isCostly && isCostly(k)) costly++;
+  }
+  return { n: n, bigT: bigT, bigTShare: bigT / n, costly: costly, costlyShare: costly / n };
+}
+
+/** 珠过期率：**过期/得珠**（得珠为 0 ⇒ NaN，不许 0 —— 与 defense-quality 同规矩） */
+export function beadRotRate(gained, expired) {
+  if (!isFinite(gained) || gained <= 0) return NaN;
+  return (Number(expired) || 0) / gained;
+}
+
+/** 昂贵层那一行（探针与体检共用同一串措辞） */
+export function formatCostly(cp, rotRate) {
+  const f = (x, d) => (isFinite(x) ? x.toFixed(d == null ? 3 : d) : '—');
+  const t = cp && cp.n ? ('昂贵层 大雷 **' + cp.bigT + ' 次**（占比 ' + f(100 * cp.bigTShare, 1) + '%）· ≥3ep 出手 ' +
+    f(100 * cp.costlyShare, 1) + '%（' + cp.costly + '/' + cp.n + '）')
+    : '昂贵层 —（没量到出手）';
+  return t + ' · 珠过期率 ' + (isFinite(rotRate) ? (100 * rotRate).toFixed(1) + '%' : '—');
+}

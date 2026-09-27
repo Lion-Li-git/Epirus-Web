@@ -7091,6 +7091,22 @@ t('D170 出手形状的两条记录读数（目标死磕 / ジ⇄枪交替）必
   ok(/出手形状栏（同上，\*\*只记录不阻断\*\*/.test(pro), '栏名必须写明"只记录不阻断"（以后有人想拿它阻断，得先改这行字）');
   const lib = readFileSync('tools/play-shape.mjs', 'utf8');
   ok(/只记录不阻断/.test(lib), '`play-shape.mjs` 的头注必须写明"只记录不阻断"');
+  /* ===== v1.5.259（用户 GO"做 B"）：**昂贵层只记录读数** —— 大雷出手 / ≥3ep 出手占比 / 珠过期率 =====
+   * 动因（§20.1/§20.2）：大雷是"抽到就得留住"的瞬态（21 粒只 1 粒学会；从学会者续训三臂全掉回 ~0），
+   *   根因候选是**适应度里没有读数量它**。这一步只让"它出现过没有、以什么代价"可见；进 fit 属判据裁定。 */
+  const keys = ['ji', 'gun', 'gun', 'ring', 'ji'];
+  const isCostly = (k) => k === 'ring' || k === 'bigT';
+  const cpp = PS.costlyProfile(keys, 'bigT', isCostly);
+  eq(cpp.n, 5, '昂贵层画像要给出总出手数（分母）');
+  eq(cpp.costly, 1, '≥3ep 出手数必须按调用方给的价格口径数（价格在规则里，别在这里复写一份）');
+  eq(Number(cpp.costlyShare.toFixed(3)), 0.2, '≥3ep 出手占比 = 1/5');
+  ok(isNaN(PS.costlyProfile([], 'bigT', isCostly).costlyShare), '【NaN 纪律】没出手 ⇒ 占比 NaN，不许 0');
+  eq(PS.costlyProfile(['bigT', 'bigT'], 'bigT', isCostly).bigT, 2, '真·落雷出手数要单独数（这就是判据缺失的那个量）');
+  ok(isNaN(PS.beadRotRate(0, 5)), '【NaN 纪律】得珠 0 ⇒ 过期率 NaN（不许把"没经济"读成"过期率 0 = 很好"）');
+  eq(Number(PS.beadRotRate(100, 96.7).toFixed(3)), 0.967,
+    '过期率 = 过期/得珠（本班实测 Lctl = 96.7% vs 现役 48.1% —— 这条就是"用贵卡的代价"第一次可见）');
+  ok(/昂贵层/.test(PS.formatCostly(cpp, 0.967)) && /96\.7%/.test(PS.formatCostly(cpp, 0.967)),
+    '昂贵层那一行的措辞必须把三个数都印出来（探针与体检共用同一串）');
   ok(/defense-quality/.test(lib) && /白防/.test(lib),
     '头注必须指向**已有的白防口径**（用户 09-26 裁定 + 千问已列）—— 不许在别处另立一套"空防御"');
 });
