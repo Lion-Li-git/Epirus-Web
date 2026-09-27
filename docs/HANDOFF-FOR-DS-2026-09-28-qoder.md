@@ -75,6 +75,8 @@ node tools/eval-5p.mjs 4 5 77000 <包> --pool=all        # 5P 全池，实测 14
 EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/eval-out/win-Ldemo.bak EPIRUS_SEED=31 \
   EPIRUS_ANCHOR=0.08 EPIRUS_ARM=g08 EPIRUS_T3P_OUT=/tmp/g08.js node tools/train-3p.mjs 1200 3 8 8
 node tools/promote-champion.mjs docs/artifacts/e78-out/G08-71.bak --dry     # 只 --dry
+node tools/probe-human-seat.mjs --packs=a.bak,b.bak --games=200        # v1.5.271：1 席"人" vs 4 席被测（G4 同一份装配）
+node tools/probe-dead-term.mjs --key=ringW --rounds=40                 # v1.5.275：判收益项死活的四层尺（不许据此写"可摘"）
 ```
 **账本**：`docs/RESEARCH-LOG-2026-09-28-qoder.md` §E64~§E80（每条都有预注册与现场数据）· CHANGELOG v1.5.263~269 段。
 
