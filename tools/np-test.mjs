@@ -7537,6 +7537,115 @@ t('D182 死项筛子（v1.5.275 · §E102）：预热可复现 + 恒真必须标
 });
 
 
+/* ===== D183（qoder 09-28 §E115）：权重逐位对账必须有常驻工具，且**不许是个恒真比较器** =====
+ * 今晚一半的"证明"（行为中性 / 两臂同配置可复现 / λ 饱和 0.08≡0.15 / veto 容差 100% 不改人）
+ * 都靠"逐位比两粒产物的权重"，而我一直用临时脚本 ⇒ 下一班要么重写、要么拿**整文件哈希**代替（头注与 META 每次都变 ⇒ 会误报）。
+ * 钉四条：① 比的是权重数组（不许退成文件字节）；② 仓库里**自带一对已知相同**与**一对已知不同**的用例 ⇒ 判别力自证；
+ * ③ 读不出包必须点名 + `exit 7`；④ `--self-test` 在"全部逐位相同"时必须判失败（防恒真）。 */
+t('D183 权重逐位对账工具（v1.5.276 · §E115）：比数组 + 判别力自证 + 缺包点名 + 反恒真', function () {
+  const src = readFileSync('tools/probe-pack-identity.mjs', 'utf8');
+  ok(/loadChamp\(W, f\)/.test(src) && /x\[i\] !== y\[i\]/.test(src), '① 必须解出权重数组逐元素比（不是文件字节 / 整文件哈希）');
+  ok(/self-test/.test(src) && /恒真的比较器/.test(src), '④ 必须带 --self-test 这条反恒真路径');
+  const P = function (args) { return spawnSync(process.execPath, ['tools/probe-pack-identity.mjs'].concat(args),
+    { encoding: 'utf8', timeout: 120000 }); };
+  /* 用两份**门禁自带的 fixture** 造"一对不同"：线上包与 2P 壳/不同 seed 的产物结构不同 ⇒ 数组不同。
+   * 为避免依赖 gitignore 的实验产物，这里现造两份临时包：把线上包原样复制一份（必同）与把它某维 +1（必不同）。 */
+  const dir = mkdtempSync(join(tmpdir(), 'd183-'));
+  const live = readFileSync('js/bundled-champion-3p.js', 'utf8');
+  const mm = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\});/.exec(live);
+  ok(!!mm, '① 前置：线上包里要能取到权重对象（取不到说明 fixture 变了，本门该红去修 fixture）');
+  const obj = JSON.parse(mm[1]);
+  const bumped = JSON.parse(JSON.stringify(obj)); bumped.a[0] = (bumped.a[0] || 0) + 1;
+  const same = join(dir, 'same.js'), same2 = join(dir, 'same2.js'), diffp = join(dir, 'diff.js');
+  writeFileSync(same, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(obj) + ';\n');
+  writeFileSync(same2, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(obj) + ';\n');
+  writeFileSync(diffp, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(bumped) + ';\n');
+  const rEq = P([same, same2]);
+  eq(rEq.status, 0, '② 两份内容相同、路径不同的包必须 exit 0：' + String(rEq.stderr || '').slice(0, 140));
+  ok(/逐位相同/.test(String(rEq.stdout)), '② 必须报"逐位相同"（并报维度数 n，否则不知道它读了几个数）');
+  ok(/n=\d{3,}/.test(String(rEq.stdout)), '② 必须印出维度数 n（一个只读到 0 维的比较器会永远"相同"）');
+  const rDup = P([same, same]);
+  eq(rDup.status, 7, '⑤ 同一个路径传两次必须**拒**（去重后无对可比 ⇒ "零比较然后 exit 0"就是把没比报成相同）：实得 ' + rDup.status);
+  const rNe = P([same, diffp]);
+  ok(/不同 \d+\/\d+ 维/.test(String(rNe.stdout)), '② **必须能报出"不同"** —— 只会说相等不叫比较器（这里改了一维）');
+  const rST = P([same, same2, '--self-test']);
+  eq(rST.status, 7, '④ 全同输入 + --self-test 必须判失败（恒真比较器是本仓最怕的形状）');
+  const rMiss = P([same, join(dir, 'nope.js')]);
+  eq(rMiss.status, 7, '③ 读不出的包必须非零退出（缺行 ≠ 相同）');
+  ok(/nope\.js/.test(String(rMiss.stderr) + String(rMiss.stdout)), '③ 且要点名是哪个包');
+});
+
+
+/* ===== D184（qoder 09-28 §E113）：接力"把起点重新当选"必须**自己喊出来** =====
+ * 病（今晚最贵的一条）：§E111 两臂（λ=0.30 × costlyW=0.02 × N=5 × 1200 代）产物与现役**逐位相同**，
+ *   而日志一切照常（逐代行、`[band-save] …（当选）`、`已写入 …` 全都在）⇒ 我把起点的读数（炮 2.23 / maxEp 93）
+ *   当成了那根旋钮的成绩。机制：种子常驻种群 0 号 + 锚定罚对它恰为 0 ⇒ 它照样进名人堂、照样在终局重验里当选。
+ *   v1.5.150 的 band-save 注释六晚前就点名了这件事，但**只补了落盘、没补读数**。
+ * 钉三向（都用真跑的迷你臂，fixture 现造在临时目录 ⇒ 不欠 D82 的账）：
+ *   ① 正例必须喊 + `meta.productIsSeed=true`；② **反例必须能不喊**（换成全 0 的起点、训够代 ⇒ `false`）——
+ *      没有这条，"永远喊"与"永远不喊"一样是恒真；③ 冷启动必须是 `null`（"没起点"≠"产物等于起点"）。 */
+t('D184 产物=起点读数（v1.5.276 · §E113）：正例喊、反例不喊、冷启动为 null', function () {
+  const src = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(/for \(let i = 0; i < p\.length; i\+\+\) if \(p\[i\] !== seedParams\[i\]\) return false;/.test(src),
+    '① 必须是**逐维权重**比较（对象同一 `===` 会漏掉"同一粒权重的另一个对象"，文件哈希会被头注骗）');
+  ok(/productIsSeed: PRODUCT_IS_SEED/.test(src) && /hallSeedEntries: HALL_SEED_ENTRIES/.test(src),
+    '① 必须写进产物 meta（只在 stdout 喊一遍 ⇒ 事后拿到 .bak 的人看不见）');
+  ok(/dupOfBand/.test(src) && /同一粒权重/.test(src),
+    '① 名人堂重复席位必须标出来（今晚就是"两个（当选）"让我发现产物是起点）');
+
+  const dir = mkdtempSync(join(tmpdir(), 'd184-'));
+  const live = readFileSync('js/bundled-champion-3p.js', 'utf8');
+  const mm = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\});/.exec(live);
+  ok(!!mm, '① 前置：线上包要能取到权重对象（取不到 ⇒ fixture 变了，本门该红去修）');
+  const zeroObj = JSON.parse(mm[1]);
+  zeroObj.a = zeroObj.a.map(function () { return 0; });
+  const zeroSeed = join(dir, 'zero-seed.js');
+  writeFileSync(zeroSeed, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(zeroObj) + ';\n');
+  const arm = function (argv, extra) {
+    return spawnSync(process.execPath, ['tools/train-3p.mjs'].concat(argv), {
+      encoding: 'utf8', timeout: 600000,
+      env: Object.assign({}, process.env, extra, { EPIRUS_BAND_DIR: join(dir, 'b' + Math.random().toString(36).slice(2)) })
+    });
+  };
+  const metaOf = function (p) {
+    const s = readFileSync(p, 'utf8');
+    return JSON.parse(/window\.EPIRUS_CHAMPION_3P_META = (\{.*\});\n/.exec(s)[1]);
+  };
+
+  /* ① 正例：热启动 + 极大的 λ ⇒ 除了起点没人能在训练分上活着 ⇒ 必然"产物=起点"（实测同配置两次逐位复现）。
+   * 种子包用**线上包本身**（`EPIRUS_SEEDPACK` 指到不存在的文件会 exit 5，不是回退 ⇒ 不能给假路径）。 */
+  const hot = arm(['1', '3', '2', '2'], {
+    EPIRUS_ARM: 'd184-hot', EPIRUS_SEED: '5', EPIRUS_HOTSTART: '1', EPIRUS_ANCHOR: '50',
+    EPIRUS_SEEDPACK: 'js/bundled-champion-3p.js', EPIRUS_T3P_OUT: join(dir, 'hot.js')
+  });
+  eq(hot.status, 0, '① 正例迷你臂必须跑通（exit=' + hot.status + ' ' + String(hot.stderr || '').slice(0, 120) + '）');
+  ok(/产物=起点/.test(String(hot.stderr)), '① 产物与起点逐位相同时必须**喊出来**（这条线六晚前只在注释里，无人读数 ⇒ 我今晚重新掉了一遍）');
+  ok(/产物与起点逐位相同（本臂零改包）/.test(String(hot.stdout)), '① 末行"已写入"也要带（很多人只读最后一行）');
+  eq(metaOf(join(dir, 'hot.js')).productIsSeed, true, '① meta.productIsSeed 必须为 true');
+  ok(metaOf(join(dir, 'hot.js')).hallSeedEntries >= 1, '① 起点占了几席要写出来（0 席却当选 = 说明读数逻辑 itself 有问题）');
+  eq(String(hot.stdout).split('（当选）').length - 1, 1, '① "（当选）"只许出现一次（重复席位改标"与 bandN 同一粒权重"）');
+
+  /* ② 反例：起点是**全 0 的坏包** + 训 40 代 ⇒ 一定有候选赢过它 ⇒ 不许喊、meta 必须 false。
+   * 为什么专门钉：正例只证明"它会喊"，不证明"它会不喊"。 */
+  const rev = arm(['40', '3', '2', '8'], {
+    EPIRUS_ARM: 'd184-rev', EPIRUS_SEED: '5', EPIRUS_HOTSTART: '1', EPIRUS_ANCHOR: '0',
+    EPIRUS_SEEDPACK: zeroSeed, EPIRUS_T3P_OUT: join(dir, 'rev.js')
+  });
+  eq(rev.status, 0, '② 反例臂必须跑通（exit=' + rev.status + ' ' + String(rev.stderr || '').slice(0, 120) + '）');
+  ok(!/产物=起点/.test(String(rev.stderr)), '② 产物**不等于**起点时不许喊（永远喊 = 又一个恒真）');
+  eq(metaOf(join(dir, 'rev.js')).productIsSeed, false, '② meta 必须读成 false（不是 null、不是缺字段）');
+
+  /* ③ 冷启动：没有起点 ⇒ 这个判断根本不适用，必须是 null（"没起点" ≠ "产物等于起点"） */
+  const cold = arm(['1', '3', '2', '2'], {
+    EPIRUS_ARM: 'd184-cold', EPIRUS_SEED: '5', EPIRUS_T3P_OUT: join(dir, 'cold.js')
+  });
+  eq(cold.status, 0, '③ 冷启动迷你臂必须跑通（exit=' + cold.status + '）');
+  ok(!/产物=起点/.test(String(cold.stderr)), '③ 冷启动不许喊"产物=起点"');
+  eq(metaOf(join(dir, 'cold.js')).productIsSeed, null, '③ 冷启动的 productIsSeed 必须是 null（未定义 ≠ 假）');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {

@@ -20,7 +20,7 @@
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import vm from 'node:vm';
-import { dirname, join } from 'node:path';
+import { dirname, join, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -107,7 +107,12 @@ export function parseMetaTolerant(json, label) {
 
 
 export function loadChamp(W, file, root) {
-  const src = readFileSync(join(root || ROOT, file), 'utf8');
+  /* ⚠ 绝对路径必须**原样用**：`root || ROOT` 这种写法下，调用方传 `root=''` 也会被判成"没传"⇒ 绝对路径被拼到仓库根后面
+   *   （实测 `D:\...\same.js` 变成 `D:\code\Epirus-Web\C:\Users\...` 的 ENOENT）。
+   *   后果比报错更坏：拿临时目录里的包做"读不出必须点名 + 非零退出"的用例时，它会**因为拼接错误而红**，
+   *   也就是"结果对、理由错"的用例（本仓最怕的形状之一）。 */
+  const R = isAbsolute(file) ? '' : (root || ROOT);
+  const src = readFileSync(join(R, file), 'utf8');
   const m = /EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src);
   /* v1.5.171（§N31 实测到的读不出）：`train-best` 的 band-save 与 2P 槽产物用的是 **2P 外壳**
    * （`window.EPIRUS_CHAMPION = {...}`），本函数原本只认 `_3P` ⇒ `champ-audit` 对这些文件整行打"(读不出冠军包)"，

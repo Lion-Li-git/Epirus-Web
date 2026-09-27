@@ -1214,6 +1214,29 @@ for (const h of hall) {
 }
 bestParams = finalParams;
 
+/* ===== v1.5.277（qoder §E113）：**"产物 = 起点逐位"必须自己喊出来** =====
+ * 病（09-28 夜班实测踩到）：λ 抬到 0.30（N=5 桌，两个 seed 都是）时，热启动种子以"锚定罚恰好为 0"挤进名人堂，
+ *   终局重验又常由它夺冠 ⇒ 写盘的产物与起点**逐位相同**。这条线下面 band-save 的注释（v1.5.150）六晚前就点名了
+ *   —— "一旦重验选中热启动点，整臂的工作就没了" —— 但**只补了落盘、没补读数** ⇒ 日志一切照常，
+ *   我当场把起点的行为读数（炮 2.23 / maxEp 93）当成了那根旋钮的成绩（= 恒真读数，本仓最怕的形状）。
+ * 处置：不改判定、不动权重，只**印 + 写进 meta**（`productIsSeed`），让下一班一眼看见"这臂零改包"。 */
+let PRODUCT_IS_SEED = null, HALL_SEED_ENTRIES = null;
+if (seedParams) {
+  const sameAsSeed = function (p) {
+    if (!p || p.length !== seedParams.length) return false;
+    for (let i = 0; i < p.length; i++) if (p[i] !== seedParams[i]) return false;
+    return true;
+  };
+  HALL_SEED_ENTRIES = hall.filter(function (h) { return sameAsSeed(h.params); }).length;
+  PRODUCT_IS_SEED = sameAsSeed(bestParams);
+  if (PRODUCT_IS_SEED) {
+    console.error('[train-3p] ⚠ [产物=起点] 终局重验选出的冠军与热启动种子**逐位相同**' +
+      '（名人堂 ' + hall.length + ' 席里 ' + HALL_SEED_ENTRIES + ' 席就是起点）⇒ 本臂**零改包**：' +
+      '这粒产物的任何读数都是起点的读数，**不能**当本臂旋钮的效果。训练确实跑过（见逐代行），' +
+      '但没有任何候选在重验里赢过起点 ⇒ 要看训练出了什么，读 band-save 落盘的那些候选。');
+  }
+}
+
 /* ===== v1.5.160（qoder §N13）：**开火计数**——作用点自证，不接受"横幅说下达了所以一定生效" =====
  * 两条硬闸都来自用户 09-22 的裁定：一局未注 ⇒ 本臂作废（exit 8，别再白跑一整臂）；
  * 注入只覆盖 1 个受评座位 ⇒ 座位偏置没消掉（v1.5.65 那条注入的默认 1/8 在 `GAMES=8` 下恒落 `g=0` ⇒ 恒 0 号座，
@@ -1250,13 +1273,19 @@ try {
    * 所以臂"跑成功"了、证据却没了。改成建目录；建不出来（权限等）才**响亮**报告。 */
   let bandDirReady = true;
   if (!existsSync(BAND_DIR)) { try { mkdirSync(BAND_DIR, { recursive: true }); } catch (e2) { bandDirReady = false; console.log('[band-save] ⛔ 建不出 ' + BAND_DIR + '：' + e2.message + ' ⇒ 带内候选会丢，只剩当选者'); } }
+  /* 名人堂**可以装同一粒权重两次**（同一对象在不同代被重采样进前二）⇒ "（当选）"会打两遍。
+   * 09-28 就是这个"两个当选"让我发现产物其实是起点，所以重复席位必须显式说出来，不能靠读者自己数。 */
+  const selFirst = hall.findIndex(function (x) { return x.params === bestParams; });
   if (bandDirReady) for (let bi = 0; bi < hall.length; bi++) {
     const hh = hall[bi];
+    const dupWinner = hh.params === bestParams && bi !== selFirst;
     const bmeta = {
       source: 'tools/train-3p.mjs (band-save)', arm: ARM, bandIdx: bi, trainFit: hh.fit,
       xn2w: XN2W || 0, xn2g: XN2G, xn2refs: (XN2W > 0 ? XN2REF_PATHS : []),
       n: N, gens: GENS, games: GAMES, pop: POP, seed: __SEED,
-      selected: hh.params === bestParams, ts: new Date().toISOString(),
+      selected: hh.params === bestParams && bi === selFirst,
+      dupOfBand: (dupWinner ? selFirst + 1 : null),   // 与第几席是同一粒权重（null = 不重复）
+      ts: new Date().toISOString(),
       /* v1.5.226：band 也要能自证来历 —— 原先只有 arm/gens/seed 这些手写字段，**没有旋钮配方**。 */
       recipe: { env: EFFECTIVE_ENV, envKeys: Object.keys(EFFECTIVE_ENV).length }
     };
@@ -1264,7 +1293,8 @@ try {
       '/* band-save ' + ARM + '-band' + (bi + 1) + '（tools/train-3p.mjs v1.5.150 起） */\n' +
       'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(bmeta) + ';\n' +
       'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(hh.params)) + ';\n');
-    console.log('[band-save] ' + ARM + '-band' + (bi + 1) + '.bak  trainFit=' + hh.fit.toFixed(3) + (bmeta.selected ? '（当选）' : ''));
+    console.log('[band-save] ' + ARM + '-band' + (bi + 1) + '.bak  trainFit=' + hh.fit.toFixed(3) +
+      (bmeta.selected ? '（当选）' : (dupWinner ? '（与 band' + bmeta.dupOfBand + ' 同一粒权重）' : '')));
   }
 } catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
 console.log('\n=== ' + N + ' 人实测（最终冠军，28 对 × 20 局，座位轮换，temp0.15）===');
@@ -1295,6 +1325,7 @@ const meta = {
     env: EFFECTIVE_ENV, envKeys: Object.keys(EFFECTIVE_ENV).length },
   breadthFloorAllNarrow: BREADTH_ALL_NARROW,   // §N29 走向②的标记：全池塌缩 ⇒ 该改奖励面，不是换排序键
   degenerateOnlyWinner: DEGENERATE_ONLY,   // §N9 退化闸：true=没有合格当选者、promote 会拒收
+  productIsSeed: PRODUCT_IS_SEED, hallSeedEntries: HALL_SEED_ENTRIES,   // v1.5.277 §E113：产物=起点逐位 ⇒ 本臂零改包
   source: 'tools/train-3p.mjs', n: N, gens: GENS, games: GAMES, pop: POP,
   ts: new Date().toISOString(), firstRate: ev.firstRate, top2Rate: ev.top2Rate
 };
@@ -1302,4 +1333,5 @@ writeFileSync(OUT_PATH,
   '/* Epirus \u591a\u4eba\u51a0\u519b\uff08\u7531 tools/train-3p.mjs \u751f\u6210\uff09\u3002\u53ea\u8bfb\u6570\u636e\uff0c\u4e0d\u8981\u624b\u6539\u3002 */\n' +
   'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
   'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(pack) + ';\n');
-console.log('\n\u5df2\u5199\u5165 ' + OUT_PATH + '  (coldStart=' + (!seedParams) + ', seed=' + __SEED + ')');
+console.log('\n\u5df2\u5199\u5165 ' + OUT_PATH + '  (coldStart=' + (!seedParams) + ', seed=' + __SEED + ')' +
+  (PRODUCT_IS_SEED ? '  ⚠ 产物与起点逐位相同（本臂零改包）' : ''));
