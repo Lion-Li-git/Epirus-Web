@@ -7137,6 +7137,21 @@ t('D172 贵卡预算权重 costlyW：默认 0 · 线性形状 · **三处名单�
    *   这里只钉静态三处 + 形状，行为由探针/训练臂体现，免得门为了一个数去起沙箱。 */
 });
 
+t('D173 贵卡预算的**剂量表**（开火计数）：非零才计数、随回执一起给出、且不许改任何判定（v1.5.261 · §22.1 的教训）', function () {
+  /* 动因（本班 §22.1）：`costlyW` 0/0.05/0.2 三档跑出**逐字节相同**的当选者与 **相同 bestFit**
+   *   ⇒ 不是"压力不够大"，而是**剂量恒 0**（`bigUses` 在每代每席 3 局的训练场里几乎总是 0）。
+   * 本仓既有规矩（`EPIRUS_TRAIN_EPS` 的开火计数）：**先装计数、再谈剂量**。本门钉三件事：
+   *   ① 只在 `costlyBonus > 0` 时 +1（否则计数本身没意义）② 随 `economyReward()` 一起回执（读得到）
+   *   ③ **只计数、不改判定**（不许碰 fit/排序/参数）。 */
+  const EVO = readFileSync('js/train/evo.js', 'utf8');
+  ok(/let COSTLY_HITS = 0;/.test(EVO), '剂量计数必须显式声明（第一版瞬态快照就是栽在"裸用未声明标识符"上）');
+  ok(/if \(costlyBonus > 0\) COSTLY_HITS\+\+;/.test(EVO), '只在 costlyBonus **非零**时 +1（剂量表的意义就在"有没有非零过"）');
+  ok(/costlyHits: COSTLY_HITS,/.test(EVO), '必须随 `economyReward()` 回执给出（读不到 = 没法用）');
+  ok(/COSTLY_HITS\+\+[\s\S]{0,80}(?!fit)/.test(EVO), '（形状检查）计数语句不许夹带 fit 赋值');
+  const seg = (function () { const i = EVO.indexOf('COSTLY_HITS++'); return EVO.slice(Math.max(0, i - 200), i + 200); })();
+  ok(seg.indexOf('gFit') < 0 && seg.indexOf('.fit =') < 0, '【只计数】计数处附近不许改 fit/判定（与 D171 同规矩）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {

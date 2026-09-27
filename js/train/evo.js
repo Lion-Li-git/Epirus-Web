@@ -1088,6 +1088,10 @@
   /* v1.5.260（用户 GO"做 B+"）：**贵卡预算权重**（默认 0 ⇒ 行为逐字不变）。形状故意用**线性计数**，
    * 因为现役的 `bigcardW` 是 `min(1, bigUses/1)`（1 次即吃满）⇒ 对"已经出 3~8 次"的粒没有梯度（本班 §20 的读数）。 */
   let COSTLY_W = 0;
+  /* v1.5.261（DS · §22.1 的剂量优先）：**开火计数** —— 本项在训练里到底非零过几次？
+   * 动因：`costlyW` 0/0.05/0.2 三档跑出**逐字节相同**的结果（bestFit 也一致）⇒ 不是"压力不够大"，是**剂量恒 0**。
+   * 形状同 `EPIRUS_TRAIN_EPS` 的开火计数（本仓既有规矩）：非零即 +1，随 `economyReward()` 一起回执。 */
+  let COSTLY_HITS = 0;
   /* ===== v1.5.187（qoder 按 DS 交接 §2b 的"唯一待做"）：**大雷连带**收益项 `BIGT_CHAIN_W` =====
    * 为什么是这一项（DS 的结论链 + 我的独立复跑，见交接 §2 步 7/8 与 `RESEARCH-LOG-2026-09-23-qoder-night.md`）：
    *   现役产物在长程/多人里**大雷出手 0.000/局、连带 0.00/局**（我复跑：出手 0.00、连带 0.00 ⇒ 复现）；
@@ -1237,7 +1241,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, costlyW: COSTLY_W, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
+      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
       fitTailW: FIT_TAIL_W, fitTailQ: FIT_TAIL_Q,   // 09-26 §E49：ECON_REWARD_KEYS 里每个键都要"设得进、读得回"（D77 往返）
       /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
        * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
@@ -1572,6 +1576,7 @@ let WALL_GAMES = 3;
        * 本项用**线性计数**：0 次 0 分、每多一次多一份 ⇒ 选择压力第一次**朝向**它。
        * ⚠️ 默认 0 ⇒ 与旧行为逐字相同（门钉 A/A）；开不开属用户裁定，本版只接线。 */
       const costlyBonus = COSTLY_W > 0 ? (COSTLY_W * bigUses) : 0;
+      if (costlyBonus > 0) COSTLY_HITS++;   // 剂量表：只记'这项真的非零过'，不改任何判定
       /* v1.5.188（用户裁 Q-14 选项 ②）：**按"率"付，不按"绝对计数"付** —— 形状改为
       *     `W × min(1, 该席连带数 / 该席大雷出手数)`（0 出手 ⇒ 0 分，**不做 0/0**）。
       * 为什么换（v1.5.187 的失败读数）：`min(1, 链数/1)` 是"一发幸运链 = 吃满 W" ⇒ 想看见梯度必须把 W 抬到 ~1.5，
