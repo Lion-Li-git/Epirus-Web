@@ -60,9 +60,20 @@ const W = sandbox();
 const trainingLive = existsSync(join(ROOT, 'docs/artifacts/.training.lock'));
 console.log('冠军体检（自对局 ' + GAMES + ' 局 · 考卷 ' + EXG + ' 局）' + (trainingLive ? '  ⚠️ 训练进行中：bundle 行不可信，请看对应 .bak' : '') + '\n');
 console.log('文件'.padEnd(42) + 'A 考卷1st  A严胜  B伤害/局  B重击/局  C盾/局  零伤害率 平局率  回合   D长程反弹墙  E无威胁摆架势 F被集火还手 F回合 G有效技能数 座位极差 反弹墙伤害/局 蓄能/局 珠浪费  H混合场  I对被动');
+let badPacks = 0, badWhy = [];
 for (const f of files) {
-  const params = loadChamp(W, f);
-  if (!params) { console.log(f.padEnd(42) + '  (读不出冠军包)'); continue; }
+  /* v1.5.270（qoder 09-28 实测）：这里原本**不包 try** ⇒ 只要有一个路径不存在/JSON 坏，`loadChamp` 的
+   * `readFileSync` 就把**整张表**炸掉（我传错目录时亲手踩到：6 个包里 1 个不存在 ⇒ 前面已经打出的行也全废，
+   * 而现场只看到一句 ENOENT，没人知道是哪个包）。现在**逐包响亮报告 + 末尾非零退出**：
+   * 缺行绝不能被读成"量了没测出来"（与 `gate-drafts` 静默忽略非 `.bak` 是同族两种表现）。 */
+  let params = null;
+  try { params = loadChamp(W, f); }
+  catch (e) {
+    badPacks++; badWhy.push(f + '：' + String(e && e.message || e).split('\n')[0].slice(0, 90));
+    console.log(f.padEnd(42) + '  ⛔ 读不出（' + String(e && e.message || e).split('\n')[0].slice(0, 90) + '）');
+    continue;
+  }
+  if (!params) { badPacks++; badWhy.push(f + '：文件里没有可解的冠军包'); console.log(f.padEnd(42) + '  (读不出冠军包)'); continue; }
   const e1 = exam(f, [], EXG);
   const e2 = exam(f, ['--mode=long', '--field=reflectwall'], EXG);
   /* v1.5.36（复核 §4-1/§4-2）：H = 4 风格同场夺冠率；I = 1 冠军 vs 4 只ジ的夺冠率（两列的盲区见 CHANGELOG）。 */
@@ -110,3 +121,8 @@ console.log('      **E 无威胁摆架势率高 + F 活跃场进攻率低** ⇒ 
 console.log('      **G 有效技能数**（非ジ出手的 exp(熵)）< 3 ⇒ 打法只剩两三张卡。');
 console.log('      ⚠️ v1.5.18 起这几列**不再只是打印**：`tools/promote-champion.mjs` 会拿 E/F/G 与');
 console.log('         伤害/平局/全息屏障一起做**阻断条件**（--force 可越过，但会留痕）。');
+if (badPacks) {
+  console.error('\n⛔ 有 ' + badPacks + ' 个包**整行没量到**：\n   ' + badWhy.join('\n   ') +
+    '\n   ⇒ 本工具按失败处理（退出码 7）：**缺行不等于"量了没测出东西"**，先看路径/外壳形状（`.bak` 还是 2P 壳）。');
+  process.exit(7);
+}

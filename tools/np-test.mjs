@@ -7320,6 +7320,23 @@ t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + �
     '严座位臂要么没换人（则不许印"改判"），要么换人并**明说改判**——两者必须一致');
 });
 
+/* ===== D177（qoder 09-28 §E81）：`champ-audit` 遇到读不出的包**不许把整张表带走** =====
+ * 动因（09-28 实测）：我传了一个不存在的包路径 ⇒ `loadChamp` 里裸的 `readFileSync` 抛 ENOENT ⇒
+ * **前面已经打完的行全部作废**，现场只剩一句报错，没人知道是哪个包；同族另一种表现是 `gate-drafts`
+ * 对非 `.bak` 路径**静默忽略**。⇒ 钉三条行为：坏包要**点名**、好包的行必须**还在**、整体**非零退出**。 */
+t('D177 champ-audit 缺包必须点名 + 保留其余行 + exit 7（v1.5.270 · §E81）', function () {
+  const rGood = spawnSync(process.execPath, ['tools/champ-audit.mjs', 'js/bundled-champion-3p.js'],
+    { encoding: 'utf8', timeout: 420000 });
+  eq(rGood.status, 0, '只给一个正常包时必须 exit 0（新加的"缺包即失败"不许误伤常规路径）：' + String(rGood.stderr || '').slice(0, 120));
+  ok(/^bundled-champion-3p\.js\s+\d/m.test(String(rGood.stdout)), '正常路径必须真的打出行（否则下面那条"保留其余行"是恒真）');
+  const rBad = spawnSync(process.execPath, ['tools/champ-audit.mjs', 'js/bundled-champion-3p.js', 'docs/artifacts/__d177_missing__.bak'],
+    { encoding: 'utf8', timeout: 420000 });
+  eq(rBad.status, 7, '有一个包读不出必须非零退出（缺行 ≠ 量了没测出来）');
+  ok(/__d177_missing__/.test(String(rBad.stdout) + String(rBad.stderr)), '要点名**是哪个包**读不出（只报一句 ENOENT 等于没报）');
+  ok(/^bundled-champion-3p\.js\s+\d/m.test(String(rBad.stdout)), '坏包**不能带走整张表**：好包那一行必须仍然打出来');
+  ok(/整行没量到/.test(String(rBad.stdout) + String(rBad.stderr)), '末尾必须汇总"有几个包整行没量到"');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
