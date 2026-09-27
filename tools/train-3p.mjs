@@ -361,6 +361,16 @@ const T = sb.window.EpirusTrainer;
  * 本块把 `readEconEnv(process.env)` 里**名单内**的键统一下达，并**逐键回执比对**：
  *   回执与下达不一致 ⇒ exit 7（拒静默空转 —— 这正是上次我写 `typeof` 守卫栽的坑）。
  * ⚠️ 位置必须在 `T` 装配之后（第一条修复尝试放在文件顶部 ⇒ 连日志都没出来）。 */
+/* 回执比对必须**按数值语义**比，不能按字符串比（实测事故 09-28：`EPIRUS_BEAD_W=0.10` ⇒ 引擎里是 `0.1`，
+ * `String('0.10') !== String(0.1)` ⇒ 一条**合法下达被拒**、整臂 `exit 7`，一行的量都没跑到）。
+ * 但也不许放宽成"差不多就行"：两边读不出数值时仍返回 false ⇒ "回执字段名对不上"照样红
+ * （实测 `EPIRUS_BEAD_W=-5` 被引擎拒收、回执仍是 0.05 ⇒ 仍 exit 7，闸门判别力没被这次放宽吃掉）。
+ * 注：布尔档走不到这里 —— `readEconEnv` 已经把 `'1'` 转成 `true`，字符串等值那一行就过了。 */
+function rcptEq(a, b) {
+  if (String(a) === String(b)) return true;
+  const na = Number(a), nb = Number(b);
+  return a !== '' && b !== '' && isFinite(na) && isFinite(nb) && Math.abs(na - nb) < 1e-12;
+}
 {
   if (!Array.isArray(ECON_REWARD_KEYS)) {
     console.error('[train-3p] ⛔ 拿不到 ECON_REWARD_KEYS（单一来源没导入）⇒ 拒静默空转');
@@ -377,7 +387,7 @@ const T = sb.window.EpirusTrainer;
     try { T.setEconomyReward(payload); }
     catch (e) { console.error('[train-3p] ⛔ econ 下达被拒：' + (e && e.message)); process.exit(7); }
     const echo = (typeof T.economyReward === 'function' ? (T.economyReward() || {}) : {});
-    const miss = Object.keys(payload).filter(function (k) { return String(echo[k]) !== String(payload[k]); });
+    const miss = Object.keys(payload).filter(function (k) { return !rcptEq(echo[k], payload[k]); });
     if (miss.length) {
       console.error('[train-3p] ⛔ econ 下达后回执不一致：' + miss.map(function (k) { return k + '=' + payload[k] + '(回执 ' + echo[k] + ')'; }).join(' · ') +
         ' ⇒ 拒静默空转（回执字段名可能与输入键不同 ⇒ 先在 economyReward() 里对齐）');
@@ -910,6 +920,7 @@ for (let gen = 0; gen < GENS; gen++) {
   addHall(scored[1].params, scored[1].r.fit);
   if (gen % 20 === 0 || gen === GENS - 1) {
     const r = scored[0].r;
+    const nf3 = function (v) { return v === null || v === undefined ? '未量' : v.toFixed(3); };
     console.log('gen ' + gen + ' bestFit=' + r.fit.toFixed(3) +
       ' 1st=' + (r.firstRate * 100).toFixed(0) + '% top2=' + (r.top2Rate * 100).toFixed(0) +
       '% avgDealt=' + r.avgDealt.toFixed(2) + ' sigma=' + sigma.toFixed(3) +
@@ -924,7 +935,15 @@ for (let gen = 0; gen < GENS; gen++) {
       /* v1.5.265（§E65）：**贵卡剂量必须逐代可见** —— 09-27 那三档 `costlyW` 之所以被读成"结构性惰性"，
        * 就是因为剂量只在 `BIGCARD_W>0` 时才累加、且从不打印 ⇒ 假零结果与"真没出手"在 stdout 上不可分。
        * 现在计数不设门槛（`evo.js:1639`），这里把分子/每局量一起印出来当**剂量表**。 */
-      (r.costlyUses !== undefined ? ' 贵卡=' + r.costlyUses + '(' + (r.costlyPerGame || 0).toFixed(3) + '/局)' : ''));
+      (r.costlyUses !== undefined ? ' 贵卡=' + r.costlyUses + '(' + (r.costlyPerGame || 0).toFixed(3) + '/局)' : '') +
+      /* v1.5.272（§E83）：**整族行为剂量**（门在 `evo.js` 的 `DOSE_ON`）—— 这一族里只要有任何一根 W 被下达，
+       * 引擎就把 8 个计数全算出来，这里全印：被下达的那根看剂量，没被下达的兄弟当**对照组**。
+       * 整族都没下达时不印（读数会是 null=未量，绝不能印成 0 —— 0 会被读成"这粒真没做出该行为"，
+       * 而那正是本条要消灭的混淆）。 */
+      (r.doseOn ? ' 剂量[/局]' + ' 环打=' + nf3(r.ringBreakPerGame) + ' 压=' + nf3(r.pressPerGame) +
+        ' 穿=' + nf3(r.piercePerGame) + ' 珠=' + nf3(r.beadPerGame) + ' 威=' + nf3(r.threatPerGame) +
+        ' 场=' + nf3(r.clearPerGame) + ' 挡=' + nf3(r.blockPerGame) + ' 广max=' + (r.varietyMaxEv === null ? '未量' : r.varietyMaxEv)
+        : ''));
   }
   /* v1.5.189：归因**逐代**印（不塞进那条 20 代的块里）—— "示范有没有转成原生行为"是随代数变化的问题，
    * 20 代一跳就把"前期靠教师、退火后归零"这条曲线糊成两个点。 */

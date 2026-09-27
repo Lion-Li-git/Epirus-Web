@@ -1403,6 +1403,16 @@ let WALL_GAMES = 3;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     let leftEpSum = 0, spentEpSum = 0, gainEpSum = 0;   // v1.5.116 L2′：余款/已花/已获得（每局）
     let imitSum = 0, imitGames = 0;
+    /* ===== v1.5.272（qoder 09-28 §E83）：**行为计数剂的门槛从"各自的 W"换成"这一族有没有任何 W 被下达"** =====
+     * 病（`bigUses` 那次的同族，见 :1649 的说明）：下面 8 个计数原本各自包在 `if (X_W > 0)` 里，
+     * 而它们的剂量**从不单独返回** ⇒ 只要某个 W 为 0，那个计数就恒 0 ⇒
+     * "这个杠杆没作用"与"这个个体真的没做出该行为"在臂上长得一模一样，**假零结果无法否证**。
+     * 修法不是"永远算"（默认臂全都白扫一遍事件、纯付算力），而是：
+     *   **这一族里只要有一个 W 非零，就把 8 个计数全部算出来** ⇒ 被下达的那根能看到剂量，
+     *   没被下达的兄弟也能当**对照组**读；全 0 时没有任何杠杆需要否证 ⇒ 直接不算、逐位不变、零成本。
+     * 收益项（`pressBonus` 等，:1553~:1582）**仍各自按自己的 W 门控** ⇒ `fit` 一字不变。 */
+    const DOSE_ON = PRESS_W > 0 || PIERCE_W > 0 || BEAD_W > 0 || TGT_W > 0 || CLEAR_W > 0 ||
+      BLOCK_W > 0 || WIDTH_W > 0 || BIGCARD_W > 0 || COSTLY_W > 0 || BIGT_CHAIN_W > 0 || ringWeightAt(gen) > 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
      * 此前它是每局随机抽的噪声（30% 的局抽 h∈1..4）：个体不携带它 ⇒ 选择压力
      * 作用不到它 ⇒ "走通连续攒钱长轨迹"的能力没有任何机制被保留下来。
@@ -1628,22 +1638,24 @@ let WALL_GAMES = 3;
         rounds += r.rounds;
         played++;
         /* v1.5.23/24：打断开环者（只用事件重建，不动引擎）；权重按**退火曲线**（前期 0）。 */
-        if (ringWeightAt(gen) > 0) ringBreaks += countRingBreaks(r.state.events, seat);
-        if (PRESS_W > 0) pressRounds += countPressRounds(r.state.events, seat);
-        if (PIERCE_W > 0) pierceHits += countPierceHits(r.state.events, seat);
+        /* ⚠ v1.5.272（§E83）：下面 8 行的门从"各自的 W"换成 `DOSE_ON`（见 :1407 的说明）——
+         *   **计数按族一起算、收益项仍各自按 W 付钱** ⇒ `fit` 逐位不变，但剂量表在任何一根被下达时都全族可见。 */
+        if (DOSE_ON) ringBreaks += countRingBreaks(r.state.events, seat);
+        if (DOSE_ON) pressRounds += countPressRounds(r.state.events, seat);
+        if (DOSE_ON) pierceHits += countPierceHits(r.state.events, seat);
         /* v1.5.76（P1，用户实测"蓄能 100% 浪费"逼出来的）：**珠子闭环**奖励。 */
-        if (BEAD_W > 0) beadSpent += countBeadSpent(r.state.events, seat);
+        if (DOSE_ON) beadSpent += countBeadSpent(r.state.events, seat);
         /* v1.5.79（复核 §15-1）：把"优先打威胁者"当能力奖（默认关，实验臂用 EPIRUS_TGT_W 打开）。 */
-        if (TGT_W > 0) threatHits += countThreatHits(r.state.events, seat);
+        if (DOSE_ON) threatHits += countThreatHits(r.state.events, seat);
         /* v1.5.103（v1.5.100 §20）：**清场**（收缩开始前把对手打死）—— 与门禁 `场B 清场` 同口径。 */
-        if (CLEAR_W > 0) clears += countClears(r.state.events, seat);
+        if (DOSE_ON) clears += countClears(r.state.events, seat);
         /* v1.5.121（第十三轮复核 §23 的 **E4**）：**挡下伤害**（真的挡掉/弹走，**不认摆架势**）。
          * 论点：防御族**费用 0 ep** ⇒ 与"ep 深度"不同，它不需要多回合计划 ⇒
          * 是"shaping 只在 0.0X 尺度、买不动多回合计划"这条限制**唯一**还可能绕过的方向。 */
-        if (BLOCK_W > 0) blocks += countBlocks(r.state.events, seat);
+        if (DOSE_ON) blocks += countBlocks(r.state.events, seat);
         /* v1.5.124（§28a）：**广度**的绝对量 —— 该快照里"用过的招数种类数"（去重）。
          * 取 `max` 而不是累加：要的是"这个策略的招式面有多宽"，不是"出手多少次"。 */
-        if (WIDTH_W > 0) varietyMax = Math.max(varietyMax, countVariety(r.state.events, seat));
+        if (DOSE_ON) varietyMax = Math.max(varietyMax, countVariety(r.state.events, seat));
         /* v1.5.126：**贵卡**（声明费用 ≥3 或需珠）的出手 —— 用户指出"这个包不会用电磁炮/大雷、也丢了地雷/净化
          * ⇒ 它当然没必要攒 ep" ⇒ 直接给这一族付钱（它们不可刷：真的用出来才给钱）。 */
         /* v1.5.265（qoder §E65）：**累加移出权重门** —— 这一行原本包在 `if (BIGCARD_W > 0)` 里，
@@ -1791,6 +1803,12 @@ let WALL_GAMES = 3;
       ? (typeof global.__shapeScorer === 'function' ? S4_W * Math.max(0, Math.min(1, global.__shapeScorer(params)))
         : (() => { throw new Error('[shape] S4_W>0 但宿主未注入 __shapeScorer（worker/server 接线断了 ⇒ 不许静默跑）'); })())
       : 0;
+    /* v1.5.272（§E83）：行为剂量表的分母 —— 与 `costlyPerGame` 同口径（优先计分局，退回已完成局）。 */
+    const doseG = fitGames || played;
+    /* ⚠ `DOSE_ON` 为假时这些字段必须是 **null（未量）**而不是 0 —— 0 会被读成"这个个体真没做出该行为"，
+     * 而那正是本条要消灭的混淆（同 D138「没测到必须单独成类」的规矩）。 */
+    const doseEv = function (v) { return DOSE_ON ? v : null; };
+    const dosePer = function (v) { return DOSE_ON ? (doseG ? v / doseG : 0) : null; };
     return {
       fit: (wallReject ? (-5.0) : (fitAgg + divBonus + STYLE_W * styleRate - seatPen + shapeBonus)),
       wallDmg: wallDmg,
@@ -1808,6 +1826,18 @@ let WALL_GAMES = 3;
       /* v1.5.265（§E65）：贵卡剂量**始终**随评分返回（同 `chainEvents` 的规矩）⇒
        * 否则"这项没生效"与"这一粒真没打贵卡"在臂上长得一模一样（09-27 那次假零结果的直接成因）。 */
       costlyUses: bigUses, costlyPerGame: (fitGames || played) ? bigUses / (fitGames || played) : 0,
+      /* v1.5.272（§E83）：**整族行为剂量**随评分返回（门见 :1407 的 `DOSE_ON`）——
+       * 这 8 根杠杆（环打断/压制/穿防/珠闭环/瞄威胁/清场/挡下/广度）原本"计数与收益项同门"，
+       * 于是 W=0 时读数恒 0 ⇒ "这根杠杆没作用"永远无法被否证（`bigUses` 那次假零结果的同族）。
+       * 现在同一族的兄弟互为对照组：只有 `fit` 里的收益项仍各自按 W 门控。 */
+      ringBreakEv: doseEv(ringBreaks), ringBreakPerGame: dosePer(ringBreaks),
+      pressEv: doseEv(pressRounds), pressPerGame: dosePer(pressRounds),
+      pierceEv: doseEv(pierceHits), piercePerGame: dosePer(pierceHits),
+      beadEv: doseEv(beadSpent), beadPerGame: dosePer(beadSpent),
+      threatEv: doseEv(threatHits), threatPerGame: dosePer(threatHits),
+      clearEv: doseEv(clears), clearPerGame: dosePer(clears),
+      blockEv: doseEv(blocks), blockPerGame: dosePer(blocks),
+      varietyMaxEv: doseEv(varietyMax), doseOn: DOSE_ON,
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
       spDivNorm: spDivNorm,

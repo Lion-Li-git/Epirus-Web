@@ -3066,7 +3066,11 @@ t('D66 珠子闭环奖励：只认**花掉**，囤着/过期不记分（v1.5.76 
   ok(src.indexOf('const beadBonus = BEAD_W * Math.min(1, beadSpent / 2)') >= 0, '两次封顶的加成必须真的存在');
   const gfitLine = src.slice(src.indexOf('const gFit = '), src.indexOf('const gFit = ') + 500);
   ok(gfitLine.indexOf('+ beadBonus') >= 0, 'beadBonus 必须并进 gFit（漏了 = 静默空操作）');
-  ok(src.indexOf('if (BEAD_W > 0) beadSpent += countBeadSpent(') >= 0, '每局的计数必须接上');
+  /* ⚠ 这一行原本钉的是字面量 `if (BEAD_W > 0) beadSpent += …`，被 v1.5.272（§E83）换成了整族门 `DOSE_ON`
+   * ⇒ 钉的**语义不变**（"计数必须逐局接上"），换的是那根门的形状：计数按族算，**付钱仍按 `BEAD_W`**（上面那条 `beadBonus` 断言就是守这一半的）。
+   * 反过来也钉：不许再退回"跟着自己的 W 关"（那正是本门当初要防的假零结果的成因）。 */
+  ok(src.indexOf('if (DOSE_ON) beadSpent += countBeadSpent(') >= 0, '每局的计数必须接上（v1.5.272 起按整族 `DOSE_ON` 算）');
+  ok(src.indexOf('if (BEAD_W > 0) beadSpent +=') < 0, '计数不许再退回跟着自己的 W 关（§E65 那族假零结果）');
 });
 
 
@@ -4234,7 +4238,10 @@ t('D100 E4：挡下伤害奖励（env 单一来源 · 只认真的挡下 · 标�
   ok(ev.indexOf('let BLOCK_W = 0;') >= 0, '默认必须关（0 ⇒ 出厂行为一字不变）');
   ok(ev.indexOf('if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));') >= 0,
     'setEconomyReward 必须接受 blockW');
-  ok(ev.indexOf('if (BLOCK_W > 0) blocks += countBlocks') >= 0, '必须在快照循环里累加（与 CLEAR_W 同一处）');
+  /* 同 D66：v1.5.272（§E83）把"跟着自己的 W 计数"换成整族 `DOSE_ON` ⇒ 钉的语义没变（必须在快照循环里累加），
+   * 换的是形状；`blockBonus` 那条断言仍单独守着"付钱按 `BLOCK_W`"这一半（全族 8 个形状由门 D179 统一钉）。 */
+  ok(ev.indexOf('if (DOSE_ON) blocks += countBlocks') >= 0, '必须在快照循环里累加（v1.5.272 起按整族 `DOSE_ON`）');
+  ok(ev.indexOf('if (BLOCK_W > 0) blocks +=') < 0, '不许退回"计数跟着自己的 W 关"（§E65 那族假零结果的成因）');
   ok(ev.indexOf('BLOCK_W = 0;') >= 0, 'reset 必须把它复位');
   const en = readFileSync('server/econ-env.mjs', 'utf8');
   ok(en.indexOf("'EPIRUS_BLOCK_W'") >= 0, 'env 名必须在**单一来源**里（否则 worker 拿不到 ⇒ 附录 D 臂 K 的 A/A 事故）');
@@ -7336,6 +7343,137 @@ t('D177 champ-audit 缺包必须点名 + 保留其余行 + exit 7（v1.5.270 · 
   ok(/^bundled-champion-3p\.js\s+\d/m.test(String(rBad.stdout)), '坏包**不能带走整张表**：好包那一行必须仍然打出来');
   ok(/整行没量到/.test(String(rBad.stdout) + String(rBad.stderr)), '末尾必须汇总"有几个包整行没量到"');
 });
+
+/* ===== D178（qoder 09-28 §E82）：新量具 `probe-human-seat`（1 席"人" vs 4 席被测冠军） =====
+ * 动因：仓里两种装配（`eval-5p` 的 1 主体+4 脚本 / G4 的 1 脚本+4 被测）里，**用户实盘那一格从来没有常驻读数**
+ * —— G4 虽然就是这个形状，但它的脚本席八格里没有一格是反弹型，而 §E63 量到线上冠军在"4 席纯反弹"场严胜 0%。
+ * 钉四条：① 必须**复用** `v2v4-lib.duelAssembly`（不许另写一份装配，否则与 G4 不同尺）；
+ * ② 同种子两次必须逐字相同（量具自己先要可复现）；③ 缺包必须点名 + 保留其余行 + 非零退出；
+ * ④ 这一格必须有判别力（全行 0% = 尺子坏了，不许读成"冠军无敌"）。 */
+t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可复现 + 缺包点名 + 判别力', function () {
+  const src = readFileSync('tools/probe-human-seat.mjs', 'utf8');
+  ok(/import \{ duelAssembly \} from '\.\/v2v4-lib\.mjs'/.test(src), '① 必须 import v2v4-lib 的 duelAssembly（与 G4 同源）');
+  ok(!/autoGameN\(/.test(src), '① 不许自己写装配（第二份实现必然漂移，本仓栽过四次）');
+  ok(!/pickDefend \|\|/.test(src) && !/\|\| *B\.pick/.test(src), '① 人类原型不许写兜底链（把"名字写错"伪装成"这原型不赢"）');
+  const run = (extra) => spawnSync(process.execPath, ['tools/probe-human-seat.mjs',
+    '--packs=js/bundled-champion-3p.js', '--games=40'].concat(extra || []), { encoding: 'utf8', timeout: 420000 });
+  const r1 = run(), r2 = run();
+  eq(r1.status, 0, '正常包必须 exit 0：' + String(r1.stderr || '').slice(0, 160));
+  const nm = ['全程刷反弹', '全程只防御', '只攒不打(农民)', '只枪压制', '攒钱+反弹(会玩)', '重火力+反弹'];
+  const out1 = String(r1.stdout);
+  for (const k of nm) ok(out1.indexOf(k) >= 0, '② 六个"人类原型"必须都在（缺一个 = 那格静默消失）：' + k);
+  ok(/multi/.test(out1) && /long/.test(out1), '② 两个模式都要印（与 G4 同规矩）');
+  eq(String(r2.stdout), out1, '② 同 seed0 两次必须逐字相同（量具不可复现 = 读数无意义）');
+  ok(!/所有"人"都 0%/.test(out1), '④ 现役包上这一格必须有判别力（全行 0% 时工具自己会警告）');
+  const cells = (out1.match(/(\d+\.\d)%\(和\d+%\)/g) || []);
+  eq(cells.length, 12, '④ 必须正好 6 原型 × 2 模式 = 12 格（少一格 = 有原型静默失败）');
+  const rBad = spawnSync(process.execPath, ['tools/probe-human-seat.mjs',
+    '--packs=js/bundled-champion-3p.js,docs/artifacts/__d178_missing__.bak', '--games=20'], { encoding: 'utf8', timeout: 420000 });
+  eq(rBad.status, 7, '③ 缺包必须非零退出（缺行 ≠ 量了没测出来）');
+  ok(/__d178_missing__/.test(String(rBad.stdout) + String(rBad.stderr)), '③ 要点名是哪个包');
+  ok(/== js\/bundled-champion-3p\.js/.test(String(rBad.stdout)), '③ 坏包不许带走整张表');
+  const rFlag = spawnSync(process.execPath, ['tools/probe-human-seat.mjs', '--packs=js/bundled-champion-3p.js', '--mode=multi'],
+    { encoding: 'utf8', timeout: 120000 });
+  eq(rFlag.status, 64, '③ 不认识的 `--mode=` 必须响亮失败（写错开关名不许当默认值跑）');
+});
+
+/* ===== D179（qoder 09-28 §E83）：行为剂量表——计数门的粒度从"各自的 W"换成"整族有没有被下达" =====
+ * 动因：`bigUses` 那次假零结果（§E65）的同族形状在 `evo.js` 里还留着 8 处，而且这 8 个计数**连剂量字段都不返回**
+ * ⇒ "这根杠杆没作用"永远无法否证。更要紧的是**其中 4 根是出厂就开着的**（pierceW .04 / beadW .05 / pressW .03 / ringW .10）
+ * ⇒ 现役配方里这 4 项的剂量从未被打印过一次。
+ * 钉五条：① 8 个累加点必须都写 `if (DOSE_ON)`，一处都不许留"跟着自己的 W"；
+ * ② 8 个**收益项**必须仍各自按自己的 W ⇒ 这才是"逐位不变"的结构保证；
+ * ③ 族里有任何一根 W 非零 ⇒ `doseOn===true` 且 8 个读数全是数字（未下达的兄弟也必须给出数，那是对照组）；
+ * ④ 整族全 0 ⇒ `doseOn===false` 且读数必须是 **null（未量）**，不许是 0（把"未量"印成 0 就是重新制造这次的事）；
+ * ⑤ `train-3p` 的逐代行只在 `r.doseOn` 时印剂量表。 */
+t('D179 整族行为剂量（v1.5.272 · §E83）：计数按族算 + 收益按各自 W 付 + 未量必须 null + 打印有门', function () {
+  const ev = readFileSync('js/train/evo.js', 'utf8'), T3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  const CNT = [['ringBreaks', 'countRingBreaks'], ['pressRounds', 'countPressRounds'], ['pierceHits', 'countPierceHits'],
+    ['beadSpent', 'countBeadSpent'], ['threatHits', 'countThreatHits'], ['clears', 'countClears'],
+    ['blocks', 'countBlocks'], ['varietyMax', 'countVariety']];
+  for (const c of CNT) {
+    ok(new RegExp('if \\(DOSE_ON\\) ' + c[0] + ' [+=]').test(ev), '① ' + c[0] + ' 的累加必须走 DOSE_ON');
+    ok(!new RegExp('if \\([A-Z_]+_W > 0\\) ' + c[0] + ' [+=]').test(ev) &&
+      !new RegExp('if \\(ringWeightAt\\(gen\\) > 0\\) ' + c[0]).test(ev),
+      '① ' + c[0] + ' 不许再跟着自己那根的 W（假零结果的形状）');
+  }
+  ok(/const DOSE_ON = PRESS_W > 0 \|\| PIERCE_W > 0/.test(ev), '① DOSE_ON 必须**存在**且按族取或');
+  const BON = [['pressBonus', 'PRESS_W', 'pressRounds'], ['pierceBonus', 'PIERCE_W', 'pierceHits'],
+    ['beadBonus', 'BEAD_W', 'beadSpent'], ['tgtBonus', 'TGT_W', 'threatHits'], ['clearBonus', 'CLEAR_W', 'clears'],
+    ['blockBonus', 'BLOCK_W', 'blocks'], ['ringBonus', 'ringWeightAt\\(gen\\)', 'ringBreaks']];
+  for (const b of BON) {
+    ok(new RegExp('const ' + b[0] + ' = ' + b[1] + ' \\*').test(ev), '② ' + b[0] + ' 必须仍按自己的 W 付钱（fit 逐位不变的保证）');
+  }
+  ok(/WIDTH_W \* Math\.min\(1, Math\.max\(0, varietyMax/.test(ev), '② widthBonus 同理');
+  const er0 = T.economyReward(), w0 = { press: T.pressReward().w, pierce: T.pierceReward().w, tgt: T.targetReward().w, clear: T.clearReward().w };
+  /* 本门跑在整套门禁的最后段，前面的用例可能动过这些权重 ⇒ **不假设出厂值**：
+   * 先读回当前值当"要复位的原值"，再显式保证族里至少有一根非零（`Math.max(0.01, 原值)`，不新造默认值），
+   * 这样 ③ 判的是"剂量表跟着 `DOSE_ON` 出现"这件事本身，而不是"前面的门有没有复位干净"。 */
+  T.setPressReward(Math.max(0.01, w0.press));
+  const params = Pol.unpack(sb.window.EPIRUS_CHAMPION_3P, true);
+  const opps = [{ name: 'balanced', sel: Bots.pickBalanced }, { name: 'defend', sel: Bots.pickDefend }];
+  const KEYS = ['ringBreakEv', 'pressEv', 'pierceEv', 'beadEv', 'threatEv', 'clearEv', 'blockEv', 'varietyMaxEv'];
+  const dOn = T.scoreMemberN(params, opps, 4, 3, 0, 0, 0);
+  eq(dOn.doseOn, true, '③ 族里有一根被下达 ⇒ `doseOn` 必须为 true');
+  for (const k of KEYS) {
+    ok(typeof dOn[k] === 'number', '③ 族里有一根被下达时，' + k + ' 必须是数字（没下达的兄弟是对照组，不许缺席）');
+  }
+  ok(dOn.varietyMaxEv > 0, '③ **WIDTH_W=0 的兄弟也必须真的在数** —— 旧形状下 varietyMax 恒 0，这一条就是"修法生效"的证据');
+  T.setPierceReward(0); T.setPressReward(0); T.setTargetReward(0); T.setClearReward(0);
+  T.setEconomyReward({ ringW: 0, beadW: 0, blockW: 0, widthW: 0, bigcardW: 0, costlyW: 0, bigtChainW: 0 });
+  const dOff = T.scoreMemberN(params, opps, 4, 3, 0, 0, 0);
+  eq(dOff.doseOn, false, '④ 整族全 0 ⇒ 不必否证任何杠杆 ⇒ 不算');
+  for (const k of KEYS) {
+    eq(dOff[k], null, '④ 全 0 时 ' + k + ' 必须是 null（"未量"印成 0 会被读成"这粒真没做出该行为"）');
+  }
+  T.setPressReward(w0.press); T.setPierceReward(w0.pierce); T.setTargetReward(w0.tgt); T.setClearReward(w0.clear);
+  T.setEconomyReward({ ringW: er0.ringW, beadW: er0.beadW, blockW: er0.blockW, widthW: er0.widthW,
+    bigcardW: er0.bigcardW, costlyW: er0.costlyW, bigtChainW: er0.bigtChainW });
+  const back = { pierce: T.pierceReward().w, press: T.pressReward().w, tgt: T.targetReward().w, clear: T.clearReward().w, er: T.economyReward() };
+  /* ⚠ 复位检查走各自的 getter，**不走 `economyReward()` 的快照**：那四根里有些键根本不在快照里，
+   * `eq(undefined, undefined)` 会当"通过"印出来（本仓最怕的形状之一就是恒真断言）。 */
+  eq(back.pierce, w0.pierce, '⑤ 复位必须真的恢复出厂 pierceW（本门自己不许污染后续用例）');
+  eq(back.press, w0.press, '⑤ 同上（pressW）');
+  eq(back.tgt, w0.tgt, '⑤ 同上（tgtW）');
+  eq(back.clear, w0.clear, '⑤ 同上（clearW）');
+  eq(back.er.beadW, er0.beadW, '⑤ 同上（beadW，走 econ 快照）');
+  eq(back.er.ringW, er0.ringW, '⑤ 同上（ringW）');
+  ok(/r\.doseOn \? ' 剂量\[\/局\]/.test(T3), '⑤ `train-3p` 的逐代行必须只在 doseOn 时印剂量表');
+});
+
+
+/* ===== D180（qoder 09-28 §E85）：econ 回执比对必须按**数值语义**比，但闸门本身不许被放宽 =====
+ * 实测事故：`EPIRUS_BEAD_W=0.10` 被 `String('0.10') !== String(0.1)` 判成"下达没生效"⇒ **整臂 exit 7、一行的量都没跑**。
+ * 这类"把合法输入拒了"和"把没生效的放过去"一样糟 ⇒ 三条一起钉：小数写法能过（修好了）·
+ * **引擎拒收的值仍必须红**（`-5` 过不了 `setBeadReward` 的 `>=0` ⇒ 回执还是 0.05 ⇒ 必须 exit 7）·
+ * 名字写错仍必须响（黑键闸没被吃掉）。后两条是防"为了修第一条把闸门拆了"。 */
+t('D180 econ 回执按数值比（v1.5.273 · §E85）：0.10 写法不再被拒 + 拒收值仍红 + 黑键闸仍响', function () {
+  const src = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(/function rcptEq\(a, b\)/.test(src) && /return !rcptEq\(echo\[k\], payload\[k\]\)/.test(src),
+    '① 比对必须走 `rcptEq`（不许退回字符串等值）');
+  ok(/isFinite\(na\) && isFinite\(nb\) && Math\.abs\(na - nb\) < 1e-12/.test(src),
+    '① 数值档必须真的比数值（且两边都不是数值时返回 false ⇒ 兜底不放宽）');
+  /* ⚠ 必须落到 `mkdtemp` 出来的临时目录：第一版写成 `process.env.TMPDIR || '.'` ⇒ 在 Git Bash 下 `TMPDIR` 为空 ⇒
+   *   产物与 `*-bandN.bak` 直接落在**仓库根目录**（顶层 `.bak` 会触发 D82 点名、也是脏工作区）。 */
+  const d180Dir = mkdtempSync(join(tmpdir(), 'd180-'));
+  const short = (env) => spawnSync(process.execPath, ['tools/train-3p.mjs', '3', '3', '4', '4'], {
+    encoding: 'utf8', timeout: 420000,
+    env: Object.assign({}, process.env, {
+      EPIRUS_ARM: 'D180', EPIRUS_SEED: '5', EPIRUS_HOTSTART: '1',
+      EPIRUS_BAND_DIR: d180Dir + '/bands', EPIRUS_T3P_OUT: d180Dir + '/d180-out.js'
+    }, env)
+  });
+  const r10 = short({ EPIRUS_BEAD_W: '0.10' });
+  eq(r10.status, 0, '② `=0.10` 这种写法必须能跑（实测它曾把整臂顶成非零）：' + String(r10.stderr || '').slice(0, 140));
+  ok(/逐键回执一致/.test(String(r10.stdout)), '② 而且必须仍然**打印**回执一致（不是靠跳过检查过的）');
+  const rNeg = short({ EPIRUS_BEAD_W: '-5' });
+  ok(rNeg.status !== 0, '③ 引擎拒收的值（`-5` ⇒ 回执仍是出厂 0.05）必须仍然失败 —— 这次放宽只放宽格式：实得 ' + rNeg.status);
+  ok(/回执不一致/.test(String(rNeg.stderr) + String(rNeg.stdout)), '③ 且必须是"回执不一致"这条响，不是别的偶然报错');
+  const rDark = short({ EPIRUS_BEAD_W_ROLL: '0.10' });
+  ok(rDark.status !== 0, '④ 名字写错仍必须失败（黑键闸没被吃掉）：实得 ' + rDark.status);
+  ok(/读不到/.test(String(rDark.stderr) + String(rDark.stdout)), '④ 且要明说"本入口读不到这个旋钮"');
+});
+
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
