@@ -84,6 +84,7 @@ const POP = Number(process.argv[5] || 12);
 const SELF_ENV_KEYS = [
   'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
+  'EPIRUS_HALL_SEED',   // v1.5.277 §E114：把起点补进终局重验的候选池（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
@@ -167,6 +168,15 @@ const XN2W = Number(process.env.EPIRUS_XN2W || 0);
 const SEL_LAND = Number(process.env.EPIRUS_SEL_LAND || 0);
 const SEL_LAND_GAMES = Number(process.env.EPIRUS_SEL_LAND_GAMES || 20);
 const SEL_LAND_TOL = Number(process.env.EPIRUS_SEL_LAND_TOL || 0.03);
+/* ===== v1.5.277（qoder 09-28 夜班 §E114 · 默认 0 ⇒ 行为逐字不变）：**把起点也放进终局重验的候选池** =====
+ * 动因（§E113 补，实测）：今晚 9 支接力臂的名人堂逐席与现役比 —— **7 支的 6 席里没有一席是起点**
+ *   （只有 λ0.30+costlyW 那两支占了 1~2 席，而那两支恰好把起点选成了产物）。
+ * ⇒ 结构缺口：**接力交出的包从来没跟现役比过**。"训练成功出货"与"这粒比现役强"是两个互不蕴含的命题，
+ *   这正是档案里"臂产物从来没上过槽"的机制形状（不是"门不够严"，是**候选池里没有参照**）。
+ * 开关语义：终局重验之前，若起点不在名人堂里就**追加**成一粒候选（`fit=null` ⇒ 只标"起点"，不参与任何打分）。
+ *   不改训练评分、不改 `fit`、不动种群、不改 promote 的五道门 —— 它只让"最后一次选人"看得见起点。
+ * ⚠ 这不是判据变更，但它**会改变交出去的那一粒** ⇒ 属训练侧配方：先实测（§E114 两 seed），再提请用户裁定，不默认开。 */
+const HALL_SEED = Number(process.env.EPIRUS_HALL_SEED || 0) > 0 ? 1 : 0;
 /* v1.5.170（qoder §N29 · 默认 0 ⇒ 行为逐字不变）：**广度准入线**（不是排序键）。
  * 判据 = `mirrorHealth(SEL_LAND_GAMES, N, 'multi')` 的净 `effSkillsLand ≥ 本值` **且** `landedKeys ≥ 2`。
  * 标定（`mirrorHealth(20,5,'multi')` 实测）：现役 `2.66（3 种）` · 2P 槽 `2.98（3 种）` · §N28 三粒塌缩冠军 `1.00~1.24` · 最宽那粒 `1.75（3 种）`
@@ -1000,12 +1010,23 @@ console.log('=== 名人堂验证（' + ALL_PAIRS.length + ' 对 x 20 局）===')
  * 而本工具的终局当选**过去没有任何退化检查** ⇒ 三处（promote 阻断 / 2P vetoDegenerate / 这里）必须同判据。
  * 口径抄 promote：`densityProfile.zeroAtkRate ≥ 0.9` = 退化（从不出手的局占比）。
  * 全退化时：不静默——产物照写但 meta.degenerateOnlyWinner=true + ⛔ 响亮（下一道 promote 本来也会砍它）。 */
+/* v1.5.277（§E114 · 默认关）：起点不在名人堂 ⇒ 追加成终局重验的一粒候选（见文件头 `EPIRUS_HALL_SEED` 的注释）。 */
+let HALL_SEED_APPENDED = false;
+if (HALL_SEED > 0 && seedParams) {
+  if (!hall.some(function (h) { return h.params === seedParams; })) {
+    hall.push({ params: seedParams, fit: null });
+    HALL_SEED_APPENDED = true;
+    console.log('[hall-seed] 起点已追加为终局重验候选（现在 ' + hall.length + ' 席，逐位来自 ' + hotstartFrom + '）');
+  } else {
+    console.log('[hall-seed] 起点本来就在名人堂里（' + hall.filter(function (h) { return h.params === seedParams; }).length + ' 席）⇒ 不重复追加');
+  }
+}
 const hallEntries = [];
 for (const h of hall) {
   const v = T.evalN(h.params, ALL_PAIRS, 20, N, 987654);
   const sc = v.firstRate + 0.5 * v.top2Rate;
   const zr = densityProfile(sb, h.params, 'multi', 12).zeroAtkRate;
-  console.log('  trainFit=' + h.fit.toFixed(3) + ' -> 1st=' + (v.firstRate * 100).toFixed(1) +
+  console.log('  trainFit=' + (typeof h.fit === 'number' ? h.fit.toFixed(3) : '起点') + ' -> 1st=' + (v.firstRate * 100).toFixed(1) +
     '% top2=' + (v.top2Rate * 100).toFixed(1) + '% 零攻击局=' + (zr * 100).toFixed(0) + '%');
   hallEntries.push({ ref: h, score: sc, zeroAtkRate: zr, ev: v });
   if (!ev || sc > (ev.firstRate + 0.5 * ev.top2Rate)) { finalParams = h.params; ev = v; }
@@ -1278,6 +1299,9 @@ try {
   const selFirst = hall.findIndex(function (x) { return x.params === bestParams; });
   if (bandDirReady) for (let bi = 0; bi < hall.length; bi++) {
     const hh = hall[bi];
+    /* v1.5.277：`EPIRUS_HALL_SEED` 追加的那一席（`fit === null`）**不写候选文件** —— 它就是线上包本身，
+     * 落一份带内候选只会让下一班以为"训练挖出了一粒 = 现役的粒"。 */
+    if (hh.fit === null) { console.log('[band-save] 第 ' + (bi + 1) + ' 席 = 追加的起点 ⇒ 不另存（线上包本来就在仓里）'); continue; }
     const dupWinner = hh.params === bestParams && bi !== selFirst;
     const bmeta = {
       source: 'tools/train-3p.mjs (band-save)', arm: ARM, bandIdx: bi, trainFit: hh.fit,
@@ -1326,6 +1350,7 @@ const meta = {
   breadthFloorAllNarrow: BREADTH_ALL_NARROW,   // §N29 走向②的标记：全池塌缩 ⇒ 该改奖励面，不是换排序键
   degenerateOnlyWinner: DEGENERATE_ONLY,   // §N9 退化闸：true=没有合格当选者、promote 会拒收
   productIsSeed: PRODUCT_IS_SEED, hallSeedEntries: HALL_SEED_ENTRIES,   // v1.5.277 §E113：产物=起点逐位 ⇒ 本臂零改包
+  hallSeedReq: HALL_SEED, hallSeedAppended: HALL_SEED_APPENDED,   // v1.5.277 §E114：重验池有没有被补进起点
   source: 'tools/train-3p.mjs', n: N, gens: GENS, games: GAMES, pop: POP,
   ts: new Date().toISOString(), firstRate: ev.firstRate, top2Rate: ev.top2Rate
 };

@@ -7642,6 +7642,64 @@ t('D184 产物=起点读数（v1.5.276 · §E113）：正例喊、反例不喊�
   eq(cold.status, 0, '③ 冷启动迷你臂必须跑通（exit=' + cold.status + '）');
   ok(!/产物=起点/.test(String(cold.stderr)), '③ 冷启动不许喊"产物=起点"');
   eq(metaOf(join(dir, 'cold.js')).productIsSeed, null, '③ 冷启动的 productIsSeed 必须是 null（未定义 ≠ 假）');
+
+});
+
+
+/* ===== D185（qoder 09-28 §E114）：`EPIRUS_HALL_SEED` 只**多一粒候选**，一分打分都不许动 =====
+ * 背景：今晚 9 支接力臂里 **7 支的名人堂一席起点都没有** ⇒ "接力交出的包从没跟现役比过"是常态（§E113 补）。
+ * 这个开关把起点补进终局重验的池子。它是**训练侧配方**（会改变交出去的那一粒）⇒ 出厂必须关、必须可证中性。
+ * 钉三向：① 关时一行 `[hall-seed]` 都不许出现；② 开时"真的多了一席"，而**六席的 trainFit 逐字不变**、
+ * 且起点是坏包时**产物必须逐位相同**（只多候选、不改判据）；③ 起点已在堂必须走"不重复追加"（幂等 ——
+ * 否则同一粒被当两票，§E113 那"两个（当选）"就是这个形状）。 */
+t('D185 起点补进重验池（v1.5.277 · §E114）：默认零行 + 只多候选不动打分 + 幂等', function () {
+  const src = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(/'EPIRUS_HALL_SEED'/.test(src.split('const SELF_ENV_KEYS')[1].split('];')[0]),
+    '① 必须登记进 `SELF_ENV_KEYS`（否则按 D122 它是个"黑键"，一设就 exit 6）');
+  ok(/if \(HALL_SEED > 0 && seedParams\)/.test(src), '① 追加必须在开关后面（默认 0 ⇒ 一行不跑）');
+  ok(/hall\.push\(\{ params: seedParams, fit: null \}\)/.test(src), '② 追加那席的 `fit` 必须是 null（它没参加过训练打分，不许编一个数）');
+  ok(/hh\.fit === null/.test(src), '② band-save 必须跳过追加的起点席（线上包本来就在仓里，另存一份会误导下一班）');
+
+  const dir = mkdtempSync(join(tmpdir(), 'd185-'));
+  const live = readFileSync('js/bundled-champion-3p.js', 'utf8');
+  const zeroObj = JSON.parse(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\});/.exec(live)[1]);
+  zeroObj.a = zeroObj.a.map(function () { return 0; });
+  const zeroSeed = join(dir, 'zero-seed.js');
+  writeFileSync(zeroSeed, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(zeroObj) + ';\n');
+  const arm = function (argv, extra) {
+    return spawnSync(process.execPath, ['tools/train-3p.mjs'].concat(argv), {
+      encoding: 'utf8', timeout: 600000,
+      env: Object.assign({}, process.env, extra, { EPIRUS_BAND_DIR: join(dir, 'b' + Math.random().toString(36).slice(2)) })
+    });
+  };
+  const fitsOf = function (txt) {
+    return String(txt).split('\n').filter(function (l) { return /^\s+trainFit=[\d.]/.test(l); }).map(function (l) { return l.trim(); });
+  };
+  const common = { EPIRUS_SEED: '5', EPIRUS_HOTSTART: '1', EPIRUS_ANCHOR: '0', EPIRUS_SEEDPACK: zeroSeed };
+  const offOut = join(dir, 'off.js'), onOut = join(dir, 'on.js');
+  const off = arm(['40', '3', '2', '8'], Object.assign({}, common, { EPIRUS_ARM: 'd185-off', EPIRUS_HALL_SEED: '0', EPIRUS_T3P_OUT: offOut }));
+  eq(off.status, 0, '① 开关关的迷你臂必须跑通（exit=' + off.status + ' ' + String(off.stderr || '').slice(0, 100) + '）');
+  ok(!/hall-seed/.test(String(off.stdout) + String(off.stderr)), '① 默认（关）不许出现任何 `[hall-seed]` 行 ⇒ 出厂路径一行都不跑');
+  const fitsOff = fitsOf(off.stdout);
+  eq(fitsOff.length, 6, '① 前置：关档要读到 6 席重验行（实测 ' + fitsOff.length + ' ⇒ 终局形状变了，本门的比较基准得跟着改）');
+  const on = arm(['40', '3', '2', '8'], Object.assign({}, common, { EPIRUS_ARM: 'd185-on', EPIRUS_HALL_SEED: '1', EPIRUS_T3P_OUT: onOut }));
+  eq(on.status, 0, '② 开关开的迷你臂必须跑通（exit=' + on.status + '）');
+  ok(/起点已追加为终局重验候选（现在 7 席/.test(String(on.stdout)), '② 必须**真的多了一席候选**（只打横幅不改池子 = 本仓"seam 2"族的老病）');
+  const fitsOn = fitsOf(on.stdout);
+  eq(fitsOn.length, 6, '② 开档的**训练打分**席仍必须只有 6 行（起点那行标 `trainFit=起点`，不许混进来）');
+  eq(fitsOn.join('|'), fitsOff.join('|'), '② 六席读数必须**逐字相同** ⇒ 这个开关不动任何打分，只多一粒候选');
+  ok(/第 7 席 = 追加的起点 ⇒ 不另存/.test(String(on.stdout)), '② 追加的起点席不许写成带内候选（会让人以为训练挖出了一粒"等于现役"的料）');
+  const idp = spawnSync(process.execPath, ['tools/probe-pack-identity.mjs', offOut, onOut], { encoding: 'utf8', timeout: 120000 });
+  eq(idp.status, 0, '② 起点是坏包时开/关的产物必须**逐位相同**（它是"多一粒候选"，不是"改判据"）：' + String(idp.stderr || '').slice(0, 120));
+  const idem = arm(['1', '3', '2', '2'], {
+    EPIRUS_ARM: 'd185-idem', EPIRUS_SEED: '5', EPIRUS_HOTSTART: '1', EPIRUS_ANCHOR: '50',
+    EPIRUS_SEEDPACK: 'js/bundled-champion-3p.js', EPIRUS_HALL_SEED: '1', EPIRUS_T3P_OUT: join(dir, 'idem.js')
+  });
+  ok(/起点本来就在名人堂里/.test(String(idem.stdout)), '③ 起点已在堂必须走"不重复追加"（幂等 ⇒ 同一粒不许被当两票）');
+  ok(!/现在 7 席/.test(String(idem.stdout)), '③ 幂等分支不许又声称追加了');
+  const mOn = JSON.parse(/window\.EPIRUS_CHAMPION_3P_META = (\{.*\});\n/.exec(readFileSync(onOut, 'utf8'))[1]);
+  eq(mOn.hallSeedAppended, true, '④ 追加与否必须写进产物 meta（只有 stdout 有账 ⇒ 事后拿 .bak 的人看不见）');
+  eq(mOn.hallSeedReq, 1, '④ meta 还要记"这臂请求过这个开关"（开了但没追加，事后要能区分）');
   rmSync(dir, { recursive: true, force: true });
 });
 
