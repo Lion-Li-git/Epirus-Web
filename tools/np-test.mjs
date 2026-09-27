@@ -7442,6 +7442,34 @@ t('D179 整族行为剂量（v1.5.272 · §E83）：计数按族算 + 收益按�
 });
 
 
+/* ===== D181（qoder 09-28 §E91）：`train-3p` 必须能命令 `EPIRUS_RING_W`，且"投不到"这件事必须自己会说话 =====
+ * 动因：§E91 那批"把 `ringW` 整根关掉"的臂**一秒就死**在黑键闸上 ⇒ 查出一个事实：
+ * 引擎认 `ringW`、env 名单也登记了 `EPIRUS_RING_W`，但**本入口的投递名单 `CLI_ECON_REWARD_KEYS` 没有它**
+ * ⇒ 这个入口从来没能命令环权重（D172 立的"三处名单齐全"里缺第三处）。
+ * 钉两条：① 补上之后必须**真投递**（回执一致 + 消费点读回 0）；② 顺手把"仍有 8 根投不到"这件事**印出来**
+ * （不是假装全通，而是让下一班看得见边界：`widthW/blockW/s4W/wallFilter/divK/hoardCapMult/convOffense/wallGames`）。 */
+t('D181 `EPIRUS_RING_W` 在 train-3p 可命令（v1.5.274 · §E91）：三处名单齐 + 边界必须可见', function () {
+  const T3 = readFileSync('tools/train-3p.mjs', 'utf8'), E = readFileSync('server/econ-env.mjs', 'utf8');
+  const cli = ((T3.match(/CLI_ECON_REWARD_KEYS = \[([\s\S]*?)\]/) || ['', ''])[1].match(/'([^']+)'/g) || [])
+    .map(function (q) { return q.replace(/'/g, ''); });
+  ok(cli.indexOf('ringW') >= 0, '① 投递名单必须有 `ringW`（这次缺的就是这一处）');
+  const envK = ((E.match(/ECON_ENV_KEYS = \[([\s\S]*?)\]/) || ['', ''])[1].match(/'([^']+)'/g) || [])
+    .map(function (q) { return q.replace(/'/g, ''); });
+  ok(envK.indexOf('ringW') >= 0 || /EPIRUS_RING_W/.test(E), '① env 单一名名单里也得有它（两处缺一处就是"设了没人读"）');
+  const d = mkdtempSync(join(tmpdir(), 'd181-'));
+  const r = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '2', '2'], {
+    encoding: 'utf8', timeout: 420000,
+    env: Object.assign({}, process.env, {
+      EPIRUS_ARM: 'D181', EPIRUS_SEED: '9', EPIRUS_HOTSTART: '1', EPIRUS_RING_W: '0',
+      EPIRUS_BAND_DIR: d + '/bands', EPIRUS_T3P_OUT: d + '/out.js'
+    })
+  });
+  eq(r.status, 0, '② 下达 `EPIRUS_RING_W=0` 必须能跑起来（实测补名单前是 exit 6 的黑键拒绝）：' + String(r.stderr || '').slice(0, 160));
+  ok(/ringW/.test(String(r.stdout)) && /逐键回执一致/.test(String(r.stdout)),
+    '② 必须打印"投递 + 回执一致"（静默生效 = 下次又查不到）');
+});
+
+
 /* ===== D180（qoder 09-28 §E85）：econ 回执比对必须按**数值语义**比，但闸门本身不许被放宽 =====
  * 实测事故：`EPIRUS_BEAD_W=0.10` 被 `String('0.10') !== String(0.1)` 判成"下达没生效"⇒ **整臂 exit 7、一行的量都没跑**。
  * 这类"把合法输入拒了"和"把没生效的放过去"一样糟 ⇒ 三条一起钉：小数写法能过（修好了）·
