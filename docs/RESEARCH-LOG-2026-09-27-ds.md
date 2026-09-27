@@ -534,3 +534,28 @@ isClosedShaped(m, beadLine, gainedLine) =
    成本 ≈ 0（用的是已有的每代对局）；收益 = 把"瞬态"变成**可留存的样本**。
 3. **要立读数**（否则它永远被压）：把 `大雷出手率` 与 `过期率` 并进**只记录栏**（本班已建形状栏的先例）；
    若要让它在选择里活下来，就必须把"贵卡预算"**进 fit**（属判据裁定，等用户点头）。
+
+## 21. B+（把"贵卡预算"接进适应度）· **接线未完成，已撤回**（诚实记一笔）
+
+**目标**：给 `js/train/evo.js` 加一档 `costlyW`（默认 0 ⇒ 行为逐字不变），形状用**线性计数** `costlyW × bigUses`
+—— 因为现役那条 `bigcardW` 是 `min(1, bigUses/1)`（**1 次即吃满**）⇒ 对"已经出 3~8 次"的粒**没有梯度**（§20 的读数）。
+
+**做了什么**：`evo.js` 4 处（声明 `let COSTLY_W = 0` · `setEconomyReward` 收口 · 生效值回执 · `costlyBonus` 与 fit 求和）
++ `server/econ-env.mjs` 2 处（`ECON_REWARD_KEYS` 驼峰表 · `ECON_ENV_KEYS` env 名单 `EPIRUS_COSTLY_W`）。
+
+**结果**：**训练入口自己把它当"黑键"拦下了** ——
+```
+[train-3p] ⛔ 检测到本入口读不到的旋钮（CLI 黑键一族）：EPIRUS_COSTLY_W
+  · 这些键在本仓别的入口里是真读的 ⇒ 想让它们在这里生效，先把线接过来
+```
+即：**入口侧的读集没认出这条线**（尽管 `train-3p` 确实 import 了 `server/econ-env.mjs` 的 `readEconEnv`）
+⇒ 传 `EPIRUS_COSTLY_W` = **等于没传**。
+
+**处置**：**撤回**（`git checkout -- js/train/evo.js server/econ-env.mjs`），**不用 `EPIRUS_ALLOW_DARK=1` 糊过去**
+（那正是这道闸要防的东西；本班刚在瞬态快照上栽过"静默不生效"一次，不能再来一次）。
+**A/A 也没能跑**（三次 3 代臂里只有不设 env 的那次落了带内文件，另两次被闸挡在入口）⇒ 没有验证 ⇒ 不发行。
+
+**接手要点**：黑键闸的读集 = **入口源码 + 传递 import 闭包 + 单一来源列表**。
+本仓既有先例（`EPIRUS_BEAD_W` 曾"漏在 ECON_ENV_KEYS 名单外"被当暗键）⇒ 这条线要生效，
+需要让**入口闭包里出现对该名的真实读取**（或把 `readEconEnv` 的读法与闸的扫描对齐），然后再跑
+**A/A（不设 vs =0 ⇒ 权重逐字相同）+ A/B（=0.05 ⇒ 不同）** 才算接线完成。
