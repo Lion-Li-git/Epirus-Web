@@ -26,7 +26,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX, extractJsonObject, parseMetaTolerant } from './audit-lib.mjs';
 /* v1.5.152（DS 09-22 · 用户裁定"把真桌 ε=0.2 接进体检，只记录不阻断"）：
  * **产品代理栏** —— 单一来源：借 `behavior-profile.mjs` 的 `fieldProfile`（不抄第二份实现；该模块被 import 时不跑 main）。
  * 依据（`docs/RESEARCH-LOG-2026-09-22-ds.md` §7）：同一包同一 ε=0，**镜像**装配电磁炮 4.30 每局、
@@ -60,12 +60,26 @@ const src = readFileSync(join(ROOT, SRC), 'utf8');
 /* ⚠️ 两个槽位必须分清楚：`EPIRUS_CHAMPION_3P`（权重包）与 `EPIRUS_CHAMPION_3P_META`（元数据）。
  * 第一版我把 meta 写进了**冠军槽**（replace 用错了捕获组）⇒ 包直接损坏（np-test N19/D12 立刻红）。
  * 现在：分开两个正则、只替换 meta 那一段，并在写完做**回读自检**。 */
-const champM = /(window\.EPIRUS_CHAMPION_3P\s*=\s*)(\{[\s\S]*?\})(\s*;)/.exec(src);
-const metaM = /(window\.EPIRUS_CHAMPION_3P_META\s*=\s*)(\{[\s\S]*?\})(\s*;)/.exec(src);
-if (!champM) { console.error('⛔ 源文件里找不到 window.EPIRUS_CHAMPION_3P'); process.exit(4); }
-if (!metaM) { console.error('⛔ 源文件里找不到 window.EPIRUS_CHAMPION_3P_META'); process.exit(4); }
-const packJson = champM[2];
-const meta = JSON.parse(metaM[2]);
+/* v1.5.255（DS）：抽 JSON 改走 `audit-lib` 的**唯一一份**花括号配平抽取器（旧的两条懒惰正则
+ * `(\{[\s\S]*?\})` 在对象**有嵌套**时会在第一个 `}` 就截断 —— v1.5.226 给 META 加了 `recipe.env` 之后
+ * 这个形状就真实存在了）。`avoid='_META'` 是必需的：`EPIRUS_CHAMPION_3P_META` **写在 `_3P` 之前**，
+ * 不跳过就会把元数据当权重包抽出来。 */
+const packJson = extractJsonObject(src, 'window.EPIRUS_CHAMPION_3P', '_META');
+const metaJson = extractJsonObject(src, 'window.EPIRUS_CHAMPION_3P_META');
+if (!packJson) { console.error('⛔ 源文件里找不到（或花括号不配平）window.EPIRUS_CHAMPION_3P'); process.exit(4); }
+if (!metaJson) { console.error('⛔ 源文件里找不到（或花括号不配平）window.EPIRUS_CHAMPION_3P_META'); process.exit(4); }
+/* 线上槽的 META **是手改坏的**（实测：`js/bundled-champion-3p.js` 少了 `fingerprintRefresh` 的起始引号、
+ * `js/bundled-champion.js` 同类）⇒ 走容错读取并**响亮报告**；超出已知缺陷就抛，绝不静默。 */
+let meta;
+try {
+  meta = parseMetaTolerant(metaJson, SRC).meta;
+} catch (e) {
+  console.error('⛔ ' + SRC + ' 的 META **无法解析**：' + e.message + '\n'
+    + '   （已知形状：手改追加的键少了起始引号 ⇒ `,key:"…"`。容错只修这一种；若是别的损坏，'
+    + '本工具**不猜**。⚠️ 线上槽是**红线文件** ⇒ 修不修由用户裁定。）');
+  process.exit(4);
+}
+if (!/^\{/.test(String(metaJson).trim())) { console.error('⛔ META 不是对象字面量'); process.exit(4); }
 
 console.log('== 换前体检：' + SRC + ' ==');
 /* --exam-first=<百分数>：跳过内部 spawn（沙箱里 Node 的子进程管道可能被拦），
@@ -519,10 +533,16 @@ meta.gate4Forced = {
   lines: g4Blocked,
   ts: new Date().toISOString()
 };
-const out = src.replace(metaM[0], metaM[1] + JSON.stringify(meta) + ';');
-/* 回读自检：冠军槽必须仍是**能解出参数的包**（第一版写坏槽位时就是这里没查，靠 np-test 才发现） */
-const reChamp = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(out);
-const reJson = reChamp ? JSON.parse(reChamp[1]) : null;
+/* v1.5.255（DS）：写回同样用**扫描器**定位 META 段（那条懒惰正则 `metaM` 已删 —— 它在嵌套 META 上会截断，
+ * 留着就是"读用新路、写用旧路"的两套口径）。替换用**函数形式**：`JSON.stringify` 的结果里若含 `$&`/`$'`
+ * 之类序列，字符串形式的替换会被当成特殊模式（本仓栽过"字符串替换吃字符"的形状）。 */
+const metaSeg = extractJsonObject(src, 'window.EPIRUS_CHAMPION_3P_META');
+if (!metaSeg) { console.error('⛔ 找不到（或花括号不配平）META 段 ⇒ 中止（未落盘）'); process.exit(4); }
+const out = src.replace(metaSeg, function () { return JSON.stringify(meta); });
+/* 回读自检：冠军槽必须仍是**能解出参数的包**（第一版写坏槽位时就是这里没查，靠 np-test 才发现）。
+ * v1.5.255：这里也用扫描器（权重对象目前是平铺的，但"读用新路、自检用旧正则"正是同一族的隐患）。 */
+const reChampJson = extractJsonObject(out, 'window.EPIRUS_CHAMPION_3P', '_META');
+const reJson = reChampJson ? JSON.parse(reChampJson) : null;
 const reParams = reJson ? W.EpirusPolicy.unpack(reJson, true) : null;
 if (!reParams || !reParams.length) { console.error('⛔ 自检失败：写出的 bundle 冠军槽解不出参数（已中止，未落盘）'); process.exit(5); }
 /* v1.5.63：`checkPack` 只校验 v7 容器（`o.v !== PACK_VERSION` 直接判 not-ok）；

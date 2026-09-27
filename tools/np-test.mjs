@@ -10,6 +10,7 @@ import { hardwiredLine } from './probe-layer-caliber.mjs';   /* D149 用：指�
 /* D163 用：防御质量三档的单一来源（用户 09-26 裁定："出防御的时候完全没人打他就算白防御，被穿透算半有效"） */
 import { classifyDefenseWindow, defenseQuality, formatQuality, parseQuality, formatQualityRecord } from './defense-quality.mjs';
 /* D164 用：池子前沿的三条判据（**只 import 纯函数模块**，探针本体会去扫 1457 个文件） */
+import * as AUDIT from './audit-lib.mjs';
 import * as PF_FRONT from './pool-frontier-lib.mjs';
 /* v1.5.225（用户批准方案 a）：确定性重活的**内容寻址缓存** —— 键 = argv + EPIRUS_* env + 源码树内容。
  * 只缓存 (status, stdout, stderr)，**断言照旧跑**；命中响亮打印；`NP_NOCACHE=1` 一律真跑。
@@ -6934,6 +6935,57 @@ t('D167 econ 族 5 键必须能在 CLI **真下达并读回消费点**（用户 
   } finally {
     try { rmSync(dir, { recursive: true, force: true }); } catch (e) { }
   }
+});
+
+t('D168 包 META 的读取必须扛得住**嵌套**与**线上槽的手改损坏**（v1.5.255 · 本班撞上的两个真缺陷）', function () {
+  /* 病一（嵌套截断）：旧代码用懒惰正则 `(\{[\s\S]*?\})` 抽 JSON ⇒ 对象里有嵌套时在**第一个** `}` 就截断。
+   *   v1.5.226 给 META 加了 `recipe.env` ⇒ 这个形状真实存在（713 那种平铺 meta 恰好不触发）。
+   * 病二（线上槽真的坏了）：`js/bundled-champion-3p.js` 与 `js/bundled-champion.js` 的 META 都**少了
+   *   `fingerprintRefresh` 的起始引号**（手改追加时丢的）⇒ 任何 `JSON.parse(meta)` 的入口在**线上槽**上必崩 ——
+   *   而线上槽恰恰是最该能读的那一个。⇒ 本门两条都钉：扫描器扛嵌套、容错只修这一种且**必须响亮**。 */
+  const A = readFileSync('tools/audit-lib.mjs', 'utf8');
+  ok(/export function extractJsonObject/.test(A), '`extractJsonObject` 必须是 audit-lib 的导出（**唯一一份**这种抽取）');
+  ok(/export function parseMetaTolerant/.test(A), '`parseMetaTolerant` 必须是 audit-lib 的导出');
+
+  /* ① 扫描器：嵌套 / 字符串里带花括号 / 转义 / marker 后紧跟 avoid 时跳过 */
+  const nested = 'window.M = {"a":1,"r":{"env":{"X":"1"}},"z":2};';
+  eq(AUDIT.extractJsonObject(nested, 'window.M'), '{"a":1,"r":{"env":{"X":"1"}},"z":2}', '嵌套对象必须完整抽出（旧懒惰正则会截断）');
+  eq(AUDIT.extractJsonObject('window.M = {"s":"}{","a":1};', 'window.M'), '{"s":"}{","a":1}', '字符串里的花括号不许影响配平');
+  eq(AUDIT.extractJsonObject('window.M = {"s":"a\\"b"};', 'window.M'), '{"s":"a\\"b"}', '转义引号不许破坏字符串状态');
+  eq(AUDIT.extractJsonObject('window.M = {"a":1', 'window.M'), null, '没配平 ⇒ 返回 null（不许静默给半截）');
+  eq(AUDIT.extractJsonObject('window.M_META = {"m":1};window.M = {"w":2};', 'window.M', '_META'), '{"w":2}',
+    'marker 后紧跟 avoid ⇒ 必须跳过（`_META` 写在 `_3P` **前面**，不跳过就会把元数据当权重包）');
+
+  /* ② 容错解析：合法输入**不许**被改；已知缺陷**修好且报告**；别的损坏**原样抛** */
+  const legal = '{"a":1,"s":"x,y:1"}';
+  const r0 = AUDIT.parseMetaTolerant(legal, 'unit-legal');
+  eq(r0.repaired.length, 0, '合法 JSON 不许报告"修过"');
+  eq(r0.meta.s, 'x,y:1', '合法 JSON 的值不许被改（尤其别把值里的 `,x:` 当初坏点）');
+  const r1 = AUDIT.parseMetaTolerant('{"a":1,broken:"v"}', 'unit-broken');
+  eq(r1.repaired.join(','), 'broken', '已知缺陷（裸键名缺起始引号）必须被修并**列出键名**');
+  eq(r1.meta.broken, 'v', '【本条防的是我自己踩过的坑】修引号时**不许把值的开引号吃掉**（第一版写坏 ⇒ 值成了裸的 `v`）');
+  let threw = false;
+  try { AUDIT.parseMetaTolerant('{"a":,}', 'unit-other'); } catch (e) { threw = true; }
+  ok(threw, '不是"缺起始引号"这一种的损坏 ⇒ 必须**原样抛**（不许瞎修）');
+
+  /* ③ 【最有价值的一条】用**真·线上槽**跑一遍：这两个文件正是崩过的现场 */
+  for (const f of ['js/bundled-champion-3p.js', 'js/bundled-champion.js']) {
+    const src = readFileSync(f, 'utf8');
+    const seg = AUDIT.extractJsonObject(src, 'EPIRUS_CHAMPION_3P_META') || AUDIT.extractJsonObject(src, 'EPIRUS_CHAMPION_META');
+    ok(!!seg, f + ' 的 META 段必须能被扫描器定位（配平）');
+    let got = null;
+    try { got = AUDIT.parseMetaTolerant(seg, f).meta; } catch (e) { got = null; }
+    ok(got && typeof got === 'object' && Object.keys(got).length >= 8,
+      f + ' 的 META 必须能被解析出 ≥8 个顶层键（**这两个文件就是当初崩的现场** ⇒ 本门防回归）');
+  }
+
+  /* ④ promote-champion 必须走扫描器：不许再留**读 META 的懒惰正则**，也不许残留旧的 `metaM` 变量 */
+  const P = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(/extractJsonObject\(src, 'window\.EPIRUS_CHAMPION_3P_META'\)/.test(P), 'promote 必须用扫描器定位 META');
+  ok(P.indexOf('metaM[0]') < 0 && P.indexOf('metaM[1]') < 0, 'promote 不许再引用那条懒惰正则的捕获组（写回路径也在里面）');
+  ok(!/EPIRUS_CHAMPION_3P_META\\s\*=\\s\*\)\(\\\{\[\\s\\S\]\*\?\\\}/.test(P), 'promote 里不许再有"抽 META 的懒惰正则"');
+  ok(/src\.replace\(metaSeg, function \(\) \{ return JSON\.stringify\(meta\); \}\)/.test(P),
+    '写回必须用**函数形式**替换（字符串形式的替换会把 `$&`/`$\'` 当特殊模式 —— 同一族的"替换吃字符"）');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>

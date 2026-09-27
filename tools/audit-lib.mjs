@@ -39,6 +39,73 @@ export function mulberry32(a) {
   return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
+/** v1.5.255（DS）：从源码里抽一个**可能嵌套**的 JSON 对象字面量（花括号配平 + 字符串/转义状态机）。
+ *
+ * 为什么必须替换懒惰正则 `(\{[\s\S]*?\})`：它在**第一个** `}` 就停 ⇒ 对象里一旦有嵌套
+ * （v1.5.226 给 META 加了 `recipe.env` 这种嵌套）就被**截断**，`JSON.parse` 抛
+ * `Expected double-quoted property name`。
+ * 实测形状（本班撞上）：`tools/promote-champion.mjs` 读**线上槽**必崩，而读训练产物 `.bak`
+ * （平铺 meta）正常 ⇒ 这个 bug **只在线上包上出现**，恰好是最该能读的那一个
+ * （Qoder 09-26 交接把它记成"隐患账"，本班正面撞上）。
+ * ⚠️ 本函数是**唯一**一份这种抽取；新增读 META/嵌套 JSON 的地方一律调它，不要再写正则。 */
+export function extractJsonObject(src, marker, avoid) {
+  const s = String(src);
+  let from = 0;
+  for (;;) {
+    const i = s.indexOf(marker, from);
+    if (i < 0) return null;
+    /* `avoid`：命中的 marker 后面**紧跟**这个串就跳过。
+     * 为什么需要它（实测形状）：`EPIRUS_CHAMPION_3P_META` **写在 `_3P` 前面**（两个槽都在文件第 2/3 行），
+     * 而 `_META` 里含 `_3P` ⇒ 不跳过就会把**元数据当成权重包**抽出来（本仓栽过的同一形状）。 */
+    if (avoid && s.startsWith(avoid, i + String(marker).length)) { from = i + 1; continue; }
+    const start = s.indexOf('{', i + String(marker).length);
+    if (start < 0) return null;
+    let depth = 0, inStr = false, esc = false;
+    for (let k = start; k < s.length; k++) {
+      const c = s[k];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (c === '\\') esc = true;
+        else if (c === '"') inStr = false;
+        continue;
+      }
+      if (c === '"') { inStr = true; continue; }
+      if (c === '{') depth++;
+      else if (c === '}') { depth--; if (depth === 0) return s.slice(start, k + 1); }
+    }
+    return null;   // 没配平 ⇒ null（调用方自己决定响亮失败，不要静默给半截）
+  }
+}
+
+/** v1.5.255（DS）：解析包 META。**严格优先**；只在严格失败时，对**已知的手改缺陷**做一次"只补引号"的修复，
+ * 并且**响亮报告**（绝不静默 —— 静默容错比崩溃更危险）。
+ *
+ * 实测缺陷（两个线上槽都有，红线文件我无权改）：
+ *   `js/bundled-champion-3p.js` 的 META 在 `...","rulesFingerprint":"ebdbff36",fingerprintRefresh:"..."` 处
+ *   **少了 `fingerprintRefresh` 的起始引号**（position 311）；
+ *   `js/bundled-champion.js` 的 META 在 `..."examGateOk":true,"examA…` 处同类（position 453）。
+ *   ⇒ 任何 `JSON.parse(meta)` 的工具在**线上槽**上必崩（Qoder 09-26 交接把它记成"隐患账"，本班正面撞上）。
+ * 修复规则：只把 `,key:` 形状里的**裸键名**补上引号，**不猜内容、不改值**；修完仍解析不了就**抛原来的错**。 */
+export function parseMetaTolerant(json, label) {
+  try { return { meta: JSON.parse(json), repaired: [] }; }
+  catch (e) {
+    const bad = [];
+    /* ⚠️ 替换必须**把吃掉的那条引号还回去**：匹配到的是 `,key:"`（含**值**的开引号），
+     * 第一版我写成 `sep + '"' + key + '":'` ⇒ 值就变成裸的 `v1.5.174：…`（实测报
+     * `Unexpected token 'v'`）——"修引号"的代码自己吃引号，正是本班这条线的主题。 */
+    const fixed = String(json).replace(/([,{])\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*:\s*"/g,
+      function (m, sep, key) { bad.push(key); return sep + '"' + key + '":"'; });
+    if (!bad.length) throw e;                          // 不是这个已知缺陷 ⇒ 原样抛（不许瞎修）
+    let out;
+    try { out = JSON.parse(fixed); } catch (e2) { throw e; }   // 修不好 ⇒ 抛**原来的**错（别用第二个错盖住第一个）
+    console.warn('⚠ ' + (label || 'META') + ' 的 JSON **损坏**：' + bad.join(', ') + ' 缺起始引号 ⇒ 本工具已按'
+      + '「只补引号」修复后继续。⚠️ 源文件是**红线包**（`js/bundled-champion*.js`）⇒ 是否修正由用户裁定；'
+      + '不修的话，每个读 META 的工具都要走这条容错路。');
+    return { meta: out, repaired: bad };
+  }
+}
+
+
 export function loadChamp(W, file, root) {
   const src = readFileSync(join(root || ROOT, file), 'utf8');
   const m = /EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src);
