@@ -1085,6 +1085,9 @@
   let WIDTH_W = 0, WIDTH_FLOOR = 3, WIDTH_TARGET = 7;
   /* v1.5.126（用户洞察）：**贵卡**（cost≥3 或需珠）出手的奖励权重（默认关）。 */
   let BIGCARD_W = 0;
+  /* v1.5.260（用户 GO"做 B+"）：**贵卡预算权重**（默认 0 ⇒ 行为逐字不变）。形状故意用**线性计数**，
+   * 因为现役的 `bigcardW` 是 `min(1, bigUses/1)`（1 次即吃满）⇒ 对"已经出 3~8 次"的粒没有梯度（本班 §20 的读数）。 */
+  let COSTLY_W = 0;
   /* ===== v1.5.187（qoder 按 DS 交接 §2b 的"唯一待做"）：**大雷连带**收益项 `BIGT_CHAIN_W` =====
    * 为什么是这一项（DS 的结论链 + 我的独立复跑，见交接 §2 步 7/8 与 `RESEARCH-LOG-2026-09-23-qoder-night.md`）：
    *   现役产物在长程/多人里**大雷出手 0.000/局、连带 0.00/局**（我复跑：出手 0.00、连带 0.00 ⇒ 复现）；
@@ -1207,7 +1210,7 @@ let WALL_GAMES = 3;
     if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;
     else if (o.divCatW != null) DIV_ROLE_W = Number(o.divCatW) || 0;
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
-    if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.bigtChainW != null) BIGT_CHAIN_W = Math.max(0, Number(o.bigtChainW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
+    if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.costlyW != null) COSTLY_W = Math.max(0, Number(o.costlyW)); if (o.bigtChainW != null) BIGT_CHAIN_W = Math.max(0, Number(o.bigtChainW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
     if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover; if (o.convRatio != null) CONV_RATIO = !!o.convRatio; if (o.convOffense != null) CONV_OFFENSE = !!o.convOffense;
     if (o.hoardCapMult != null) HOARD_CAP_MULT = Number(o.hoardCapMult) || 1; if (o.stockBonus != null) STOCK_BONUS = Number(o.stockBonus) || 0;
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
@@ -1234,7 +1237,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
+      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, costlyW: COSTLY_W, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
       fitTailW: FIT_TAIL_W, fitTailQ: FIT_TAIL_Q,   // 09-26 §E49：ECON_REWARD_KEYS 里每个键都要"设得进、读得回"（D77 往返）
       /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
        * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
@@ -1563,6 +1566,12 @@ let WALL_GAMES = 3;
        * 不写卡名清单（D81/D72 的规矩）。这一族正是"用不上就没必要攒 ep"的那几张（大雷/地雷/净化/电磁炮/摄魂/激光眼）。
        * 标度同 v1.5.79 的规矩：**0 次得 0、1 次即吃满**（现状是 0% ⇒ 先给"从不会到会"这一步的梯度）。 */
       const bigBonus = BIGCARD_W > 0 ? (BIGCARD_W * Math.min(1, bigUses / 1)) : 0;
+      /* v1.5.260（用户 GO"做 B+"）：**贵卡预算权重**（默认 0 ⇒ 逐字不变）。
+       * 病（§20.1/§20.2）：大雷/贵卡是"抽到就得留住"的瞬态（21 粒只 1 粒学会、续训三臂全掉回 ~0）；
+       *   而 `bigBonus` 的形状 `min(1, bigUses/1)` **1 次就吃满** ⇒ 对"已经出 3~8 次"的粒**没有梯度**。
+       * 本项用**线性计数**：0 次 0 分、每多一次多一份 ⇒ 选择压力第一次**朝向**它。
+       * ⚠️ 默认 0 ⇒ 与旧行为逐字相同（门钉 A/A）；开不开属用户裁定，本版只接线。 */
+      const costlyBonus = COSTLY_W > 0 ? (COSTLY_W * bigUses) : 0;
       /* v1.5.188（用户裁 Q-14 选项 ②）：**按"率"付，不按"绝对计数"付** —— 形状改为
       *     `W × min(1, 该席连带数 / 该席大雷出手数)`（0 出手 ⇒ 0 分，**不做 0/0**）。
       * 为什么换（v1.5.187 的失败读数）：`min(1, 链数/1)` 是"一发幸运链 = 吃满 W" ⇒ 想看见梯度必须把 W 抬到 ~1.5，
@@ -1577,7 +1586,7 @@ let WALL_GAMES = 3;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus + widthBonus + bigBonus + chainBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus + widthBonus + bigBonus + costlyBonus + chainBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;

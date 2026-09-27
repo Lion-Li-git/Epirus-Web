@@ -7111,6 +7111,32 @@ t('D170 出手形状的两条记录读数（目标死磕 / ジ⇄枪交替）必
     '头注必须指向**已有的白防口径**（用户 09-26 裁定 + 千问已列）—— 不许在别处另立一套"空防御"');
 });
 
+t('D172 贵卡预算权重 costlyW：默认 0 · 线性形状 · **三处名单齐全**（缺一处就被入口黑键闸拦）· 读回可验（v1.5.260）', function () {
+  /* 动因（本班 §20.1/§20.2 + §21 的坑）：大雷/贵卡是"抽到就得留住"的瞬态（21 粒只 1 粒学会、续训三臂全掉回 ~0），
+   * 根因候选=适应度里没有读数量它；而现役那条 `bigcardW` 的形状 `min(1, uses/1)` **1 次即吃满** ⇒ 对已出 3~8 次的粒没有梯度。
+   * ⇒ 新增 `costlyW`（**线性计数** `costlyW × bigUses`，默认 0 ⇒ 行为逐字不变）。
+   * 【本门第二段是这次踩的坑】我第一次只改了 econ-env 的两处名单 ⇒ `train-3p` 仍把 `EPIRUS_COSTLY_W` 当**黑键**拦下
+   *   （"传了等于没传"）⇒ 必须在**三个地方**都登记：① `ECON_ENV_KEYS`（env 名）② `ECON_REWARD_KEYS`（驼峰）③ `train-3p` 的 `CLI_ECON_REWARD_KEYS`。 */
+  const EVO = readFileSync('js/train/evo.js', 'utf8');
+  ok(/let COSTLY_W = 0;/.test(EVO), '`costlyW` 必须默认 0（默认关 ⇒ 行为逐字不变）');
+  ok(/const costlyBonus = COSTLY_W > 0 \? \(COSTLY_W \* bigUses\) : 0;/.test(EVO),
+    '形状必须是**线性计数** `costlyW × bigUses`（不许复用 bigcardW 那条 1 次即吃满的饱和形状）');
+  ok(/\+\s*widthBonus \+ bigBonus \+ costlyBonus \+ chainBonus\)\)/.test(EVO), 'costlyBonus 必须真的进 fit 求和（接线不许只到声明）');
+  ok(/if \(o\.costlyW != null\) COSTLY_W = Math\.max\(0, Number\(o\.costlyW\)\);/.test(EVO), 'setEconomyReward 必须收口这个键');
+  ok(/costlyW: COSTLY_W,/.test(EVO), '生效值回执里必须有它（否则读不回 = 不知道有没有生效）');
+  const E = readFileSync('server/econ-env.mjs', 'utf8');
+  ok(/'EPIRUS_COSTLY_W'/.test(E), '① `ECON_ENV_KEYS`（env 名表）必须有 EPIRUS_COSTLY_W');
+  ok(/costlyW: nv\(e\.EPIRUS_COSTLY_W\)/.test(E), '② 解析里必须真的读它');
+  const T3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(/CLI_ECON_REWARD_KEYS = \[[^\]]*'costlyW'/.test(T3),
+    '③ `train-3p` 的 CLI 名单必须有它 —— **缺这一处就被黑键闸拦**（本次实测：缺它时 exit 非 0、报"本入口读不到的旋钮"）');
+  ok(/'costlyW'\];/.test(T3) || /'costlyW',/.test(T3), '（同上的写法检查，防止只加在注释里）');
+  /* ④ 读回可验：下达 ⇒ 消费点读回同值（仓里所有旋钮的标准姿势） */
+  /* ④ 读回可验（下达 ⇒ 消费点读回同值）本门不 spawn：已在提交前手工验证过
+   *   `setEconomyReward({costlyW:0.05})` ⇒ `economyReward().costlyW === 0.05`（下达前 0）；
+   *   这里只钉静态三处 + 形状，行为由探针/训练臂体现，免得门为了一个数去起沙箱。 */
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
