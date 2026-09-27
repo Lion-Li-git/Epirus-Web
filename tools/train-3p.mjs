@@ -94,12 +94,26 @@ const SELF_ENV_KEYS = [
  * 而它的 env 名按 D77 只许出现在 `server/econ-env.mjs` ⇒ 这里**不写字面量**，
  * 而是从单一来源**反推**："喂一个 econ env 名 ⇒ `readEconEnv` 读出哪个奖励键"，与本 CLI 真正下发的那一个对上，
  * 才算"本工具认识它"（不是暗键）。派生而非抄名单 = 少一处"两处各写一遍"。 */
-const CLI_ECON_REWARD_KEYS = ['bigtChainW', 'fitTailW', 'fitTailQ'];
+/** v1.5.254（用户 GO · 千问 §E59 NEXT 第 6 条）：把 **econ 族**里治"花掉"那一半的 5 个旋钮接上 CLI。
+ * 病：`beadW / bigcardW / stockBonus / hoardOnLeftover / convRatio` 只走 server/worker，
+ *   而本工具不 dispatch 这些键 ⇒ **CLI 传进去静默 `exit 6`**（千问要治闭环的"花"那一半时被卡在这里）。
+ * ⚠️ 这里**只写奖励键名**、不写 env 字面量：下面的 `extendSelfWithCliEcon()` 会按 D77 的单一来源反推出 env 名。 */
+const CLI_ECON_REWARD_KEYS = ['bigtChainW', 'fitTailW', 'fitTailQ',
+  'beadW', 'bigcardW', 'stockBonus', 'hoardOnLeftover', 'convRatio'];
 (function extendSelfWithCliEcon() {
   for (const k of ECON_ENV_KEYS) {
-    const probe = {}; probe[k] = 0.5;
-    const g = readEconEnv(probe);
-    const hit = Object.keys(g).filter(function (r) { return g[r] != null; });
+    /* v1.5.254：**同一个 env 名要试两种取值** —— 数值档喂 `0.5`、布尔档喂 `'1'`。
+     * 病（我接 econ 族 5 键时实测）：`EPIRUS_CONV_RATIO`/`EPIRUS_HOARD_LEFTOVER` 在 `readEconEnv` 里是
+     * `=== '1' ? true : null`（**布尔档**）⇒ 只喂 `0.5` 时它返回 null、命中列表为空 ⇒ 派生失败 ⇒
+     * 这两个键在 CLI 上仍是 `exit 6`（"名单里有、但本工具认不出"）。试两档能一次治好**所有**布尔档键，
+     * 而不是给这两个名字开特例。 */
+    let hit = [];
+    for (const v of [0.5, '1']) {
+      const probe = {}; probe[k] = v;
+      const g = readEconEnv(probe);
+      hit = Object.keys(g).filter(function (r) { return g[r] != null; });
+      if (hit.length === 1) break;
+    }
     if (hit.length === 1 && CLI_ECON_REWARD_KEYS.indexOf(hit[0]) >= 0 && SELF_ENV_KEYS.indexOf(k) < 0) SELF_ENV_KEYS.push(k);
   }
 })();
@@ -372,6 +386,40 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
       }
       console.log('[train-3p] 尾部聚合已下达：fit_逐局 = (1−' + tb.fitTailW + ')·mean +' + tb.fitTailW +
         '·ES(最差 ' + Math.round(100 * tb.fitTailQ) + '%)（消费点读回；不开时 W=0 ⇒ 恒等于原来的平均）');
+    }
+  }
+  /* ===== v1.5.254（用户 GO · 千问 §E59 NEXT 第 6 条）：**econ 族 5 键**接上 CLI =====
+   * 纪律与 `fitTailW`/`bigtChainW` 逐字一致：无 setter/读回接口 ⇒ `exit 7`；下达后**读回消费点**；
+   *   非数值/越界/被 clamp 都算被拒 ⇒ `exit 7`；**不设时一行都不印**（"开了但没生效"与"没开"必须看得见差别）。
+   * `convRatio` 是**布尔档**（`readEconEnv` 里 `EPIRUS_CONV_RATIO === '1' ? true : null`）⇒ 按真值比较，不按数值。
+   * ⚠️ 取值一律经 `readEconEnv`（D77 单一来源 ⇒ 本文件不出现那些 env 名）。 */
+  {
+    const econEnv = readEconEnv(process.env);
+    const NUM_ECON = ['beadW', 'bigcardW', 'stockBonus', 'hoardOnLeftover'];
+    const want = {}, picked = [];
+    for (const k of NUM_ECON) {
+      const raw = econEnv[k];
+      if (raw != null && String(raw).trim() !== '') { want[k] = Number(raw); picked.push(k); }
+    }
+    if (econEnv.convRatio != null) { want.convRatio = econEnv.convRatio === true; picked.push('convRatio'); }
+    if (picked.length) {
+      if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
+        console.error('[train-3p] ⛔ 下达了 econ 旋钮但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
+        process.exit(7);
+      }
+      T.setEconomyReward(want);
+      const eb = T.economyReward() || {};
+      const bad = [];
+      for (const k of picked) {
+        if (k === 'convRatio') { if (!!eb[k] !== !!want[k]) bad.push(k + ' 读回 ' + eb[k]); }
+        else if (!isFinite(want[k]) || want[k] < 0 || Number(eb[k]) !== want[k]) bad.push(k + '=' + want[k] + ' 读回 ' + eb[k]);
+      }
+      if (bad.length) {
+        console.error('[train-3p] ⛔ econ 旋钮未生效：' + bad.join(' · ') + '（非数值/越界/被 clamp 都算被拒）');
+        process.exit(7);
+      }
+      console.log('[train-3p] econ 旋钮已下达并读回消费点：' +
+        picked.map(function (k) { return k + '=' + (k === 'convRatio' ? !!eb[k] : eb[k]); }).join(' · '));
     }
   }
   /* ===== v1.5.179（DS · **Q-8 的最小版本**）：示范族下达 `EPIRUS_IMIT_*` =====

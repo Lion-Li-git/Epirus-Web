@@ -11,6 +11,21 @@
  *   抗克 = 两个模式的 G4「最克%」**都** ≤ 现役（读数缺失/NaN 一律判"不抗克"，不许当通过）
  * ==========================================================================*/
 
+/* v1.5.254（用户 GO · Qoder §E55 第 3 条）：**净兑现的"宽"判据必须同 n 并排**，不许用绝对线。
+ * 病（实测）：绝对线自带**样本量依赖** —— 现役**自己**在 80 局下 `净兑现 2.63 < 线 2.66`
+ *   （2.66 是从另一次 n 的实测抄来的）⇒ 同一粒包换个 n 就被判成"不宽"，而判据会静默换掉。
+ * 与「抗克 = 两模式最克 ≤ 现役」那条**同形**（都相对参照），这也是把这一族一次收掉的动机。 */
+export const LAND_TOL = 0.10;   // 容差（净兑现量纲约 0~6；0.10 ≈ 半个现役的噪声带）
+export function isWideVs(m, inc, tol) {
+  const T = (tol != null ? tol : LAND_TOL);
+  if (!(m.gMulti >= 3 && m.gLong >= 3)) return false;
+  /* 参照缺 ⇒ **判不宽**（fail-closed）：不许因为"读不到现役"就悄悄退回绝对线 —— 那会把判据换掉而输出看不出来
+   * （与 `isRobust` 对缺失读数的处置逐字一致：没量到 ≠ 过了）。 */
+  if (!inc || !Number.isFinite(inc.landMulti) || !Number.isFinite(inc.landLong)) return false;
+  return m.landMulti >= inc.landMulti - T && m.landLong >= inc.landLong - T;
+}
+
+/** ⚠️ **绝对线版**：只给①门喂合成行 ②复现历史读数用；新代码一律走 `isWideVs`。 */
 export function isWide(m, landLine) {
   return m.gMulti >= 3 && m.gLong >= 3 && m.landMulti >= landLine && m.landLong >= landLine;
 }

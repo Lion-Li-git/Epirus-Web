@@ -45,6 +45,12 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
   /* v1.5.126（**用户洞察**）：**贵卡出手**的奖励权重 —— "这个包不会用电磁炮/大雷、也丢了地雷/净化 ⇒
    * 它当然没必要攒 ep"。贵卡由**声明字段**推导（`cost ≥ 3` 或 `energyNeeds`），不写卡名清单。 */
   'EPIRUS_BIGCARD_W',
+  /* v1.5.254（用户 GO · 千问 §E59 NEXT 第 6 条）：**珠奖励标度** `BEAD_W` 的 env 名**原先漏在这张名单之外** ——
+   * `readEconEnv` 一直在读它（见下面的 `beadW: nv(e.EPIRUS_BEAD_W)`），但名单里没有 ⇒
+   * ① 任何"按名单派生自己认得哪些键"的入口（`train-3p` 的黑键闸）都会把它当**暗键**（实测：`exit 6`）；
+   * ② 这张名单是"本族覆盖了哪些 env"的**单一来源**，漏一个名字等于对外少承诺一个旋钮。
+   * ⇒ 补上。（发现路径：给 `train-3p` 接 econ 族 5 键时，`EPIRUS_BEAD_W` 单独报 `exit 6`。） */
+  'EPIRUS_BEAD_W',
   /* v1.5.187（qoder 按 DS 交接 §2b 的"唯一待做"）：**大雷连带**的奖励权重（`evo.js` 的 `BIGT_CHAIN_W`，出厂 0）。
    * 与 `EPIRUS_BIGCARD_W` 分开是有意的那个区分（用户口径）：**追的是"打出连导"，不是"使用率"**——
    * 大雷乱放=白扔 5 ジ，所以付钱给"这一发真的搅动了全场"（事件 `bigTChain.from = 施法者席`）。 */

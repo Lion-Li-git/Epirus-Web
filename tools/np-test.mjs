@@ -6898,6 +6898,44 @@ t('D166 大雷连带**被挡下时 UI 不许说"造成伤害"**（v1.5.253 用�
     '`evText` 的 bigTChain 分支必须委托给 `bigTChainText`（不许再内联硬编码）');
 });
 
+t('D167 econ 族 5 键必须能在 CLI **真下达并读回消费点**（用户 GO · 千问 §E59 NEXT 6）：开档臂不许 exit 6、同族没接线的键必须仍是 6', function () {
+  /* 病：`beadW/bigcardW/stockBonus/hoardOnLeftover/convRatio` 只走 server/worker，
+   *   `train-3p` 不 dispatch ⇒ CLI 传进去**静默 exit 6**（治闭环"花"那一半时卡在这里）。
+   * 判"真接上了"用**行为式**两条一起（METHODOLOGY 73 的变异测试同族）：
+   *   ①开档臂必须跑通并印**读回**；②同族但没接线的键必须仍 `exit 6`（证明守卫没被自己关掉）。 */
+  const src = readFileSync('tools/train-3p.mjs', 'utf8');
+  for (const k of ['beadW', 'bigcardW', 'stockBonus', 'hoardOnLeftover', 'convRatio']) {
+    ok(src.indexOf("'" + k + "'") >= 0, 'CLI 白名单 `CLI_ECON_REWARD_KEYS` 必须含 ' + k);
+  }
+  const econ = readFileSync('server/econ-env.mjs', 'utf8');
+  ok(econ.indexOf("'EPIRUS_BEAD_W'") >= 0,
+    '`ECON_ENV_KEYS` 必须含 `EPIRUS_BEAD_W`（v1.5.254 之前**漏在名单外**：`readEconEnv` 一直在读它 ⇒ 名单是"本族覆盖了哪些 env"的单一来源，漏名 = 任何按名单派生的入口都把它当暗键）');
+  ok(/for \(const v of \[0\.5, '1'\]\)/.test(src),
+    '派生探针必须**一试两档**（`0.5` 与 `\'1\'`）：布尔档键（`convRatio`/`hoardOnLeftover`）只喂 `0.5` 时命中为空 ⇒ 会被误判成"本工具不认得"');
+
+  const dir = mkdtempSync(join(tmpdir(), 'd167-'));
+  const runArm = (name, extra) => spawnSync(process.execPath, ['tools/train-3p.mjs', '1'], {
+    encoding: 'utf8', timeout: 240000,
+    env: Object.assign({}, process.env, { EPIRUS_ARM: name, EPIRUS_T3P_OUT: dir + '/' + name + '.js', EPIRUS_BAND_DIR: dir + '/band' }, extra || {})
+  });
+  try {
+    const rU = runArm('d167u');
+    ok(!/econ 旋钮已下达/.test(String(rU.stdout)), '不设 ⇒ 一行都不许印（"开了但没生效"与"没开"要看得见差别）');
+    const rB = runArm('d167b', { EPIRUS_BEAD_W: '0.4' });
+    eq(rB.status, 0, '`EPIRUS_BEAD_W=0.4` 必须成功（不许再 `exit 6`）：' + String(rB.stderr || '').slice(0, 90));
+    ok(/econ 旋钮已下达并读回消费点：beadW=0\.4/.test(String(rB.stdout)), '`beadW` 必须印**消费点读回**值');
+    const rC = runArm('d167c', { EPIRUS_CONV_RATIO: '1' });
+    eq(rC.status, 0, '`EPIRUS_CONV_RATIO=1` 必须成功：' + String(rC.stderr || '').slice(0, 90));
+    ok(/convRatio=true/.test(String(rC.stdout)), '布尔档必须按**真值**读回（印 true，不是 1）');
+    const rBad = runArm('d167bad', { EPIRUS_BEAD_W: 'abc' });
+    eq(rBad.status, 7, '非数值必须 `exit 7`（读回不相等就算被拒），实际 ' + rBad.status);
+    const rDark = runArm('d167dark', { EPIRUS_S4_W: '0.4' });
+    eq(rDark.status, 6, '同族但**没接线的键**（`EPIRUS_S4_W`）必须仍 `exit 6` ⇒ 守卫是活的，上面"开档臂跑通"才真是"接上了"');
+  } finally {
+    try { rmSync(dir, { recursive: true, force: true }); } catch (e) { }
+  }
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
@@ -6927,6 +6965,29 @@ t('D164 池子前沿量具（v1.5.249）：三判据在线上方向正确、"三
   ok(PF_FRONT.isWide(M({}), 2.66) === true, '两模式都过线 ⇒ 判宽');
   ok(PF_FRONT.isWide(M({ gLong: 2.99 }), 2.66) === false, 'long 的 G 差 0.01 ⇒ 不许判宽（只看 multi 是本仓踩过的形状）');
   ok(PF_FRONT.isWide(M({ landLong: 2.65 }), 2.66) === false, '净兑现只有一模式过 ⇒ 不许判宽');
+  /* ===== v1.5.254（用户 GO）：**"宽"的净兑现判据必须同 n 并排**，绝对线是被实测否掉的形状 =====
+   * 病：绝对线自带样本量依赖 —— 现役**自己**在 80 局下 `净兑现 2.63 < 线 2.66`（线抄自另一次 n 的实测）
+   *    ⇒ 同一粒包换个 n 就被判成"不宽"。本门钉三件：①同 n 判据本身 ②参照缺时 fail-closed ③探针真用它。 */
+  const INC = { landMulti: 2.63, landLong: 2.70 };
+  ok(PF_FRONT.isWideVs(M({ gMulti: 3.4, gLong: 3.2, landMulti: 2.63, landLong: 2.70 }), INC) === true,
+    '【本条就是要防的】现役**自己**在旧绝对线(2.66)下会被判"不宽"（landMulti 2.63 < 2.66）⇒ 同 n 并排下必须判宽');
+  ok(PF_FRONT.isWide(M({ gMulti: 3.4, gLong: 3.2, landMulti: 2.63, landLong: 2.70 }, 2.66)) === false,
+    '（前提自检）同一条读数在绝对线下确实是 false —— 不成立就说明这条门在测空气');
+  ok(PF_FRONT.isWideVs(M({ gMulti: 3.4, gLong: 3.2, landMulti: 2.58, landLong: 2.65 }), INC) === true,
+    '低于现役 ' + PF_FRONT.LAND_TOL + ' 以内（容差内）⇒ 仍判宽');
+  ok(PF_FRONT.isWideVs(M({ gMulti: 3.4, gLong: 3.2, landMulti: 2.13, landLong: 2.20 }), INC) === false,
+    '低于现役超过容差 ⇒ 不许判宽');
+  ok(PF_FRONT.isWideVs(M({ gMulti: 3.4, gLong: 3.2, landMulti: 9, landLong: 9 }), { landLong: 2.1 }) === false,
+    '【fail-closed】参照的净兑现读不到 ⇒ 必须判**不宽**，不许因为缺参照就悄悄退回绝对线');
+  ok(PF_FRONT.isWideVs(M({ gMulti: 2.9, gLong: 3.2, landMulti: 9, landLong: 9 }), INC) === false,
+    '同 n 判据不许覆盖 G≥3 那条（G=2.9 仍不算宽）');
+  const pfSrc = readFileSync('tools/probe-pool-frontier.mjs', 'utf8');
+  ok(/isWideVs\(m, incM, LAND_TOL\)/.test(pfSrc) && /isWide\(m, LAND\)/.test(pfSrc),
+    '探针默认必须走 `isWideVs(m, incM, LAND_TOL)`；绝对线 `isWide(m, LAND)` 只许留在**显式 `--land-line`** 那条支路上');
+  ok(/ABS_LAND/.test(pfSrc) && /--land-line=/.test(pfSrc),
+    '显式传 `--land-line` 时必须走绝对线并**响亮说明**（历史读数可复现，但不许静默换判据）');
+  ok(pfSrc.indexOf('const rows = []') > pfSrc.indexOf('const incM = metricsOf(incParams)'),
+    '参照块必须在 rows **之前**算出来（否则同 n 判据拿不到现役读数）');
   ok(PF_FRONT.isClosed(M({}), 0.5, 100) === true, '花珠率 0.8 + 得珠 200 ⇒ 闭环');
   ok(PF_FRONT.isClosed(M({ spentRate: 0.49 }), 0.5, 100) === false, '花珠率差 0.01 ⇒ 不算闭环');
   ok(PF_FRONT.isClosed(M({ gained: 60 }), 0.5, 100) === false, '率高但攒得少 ⇒ 不算闭环');

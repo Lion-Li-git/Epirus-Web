@@ -22,7 +22,7 @@ import { sandbox, selfPlay, chargeProfile, loadChamp, rejectUnknownFlags } from 
 /* 等价类的定义 = 单一来源（与 probe-regime-fitness 共用） */
 import { listArchiveFiles, collectClasses } from './archive-classes.mjs';
 /* 三条判据的**单一来源**：门 D164 对同一个模块喂合成行（判据不许在门里再抄一份） */
-import { isWide, isClosed, isRobust, frontierOf } from './pool-frontier-lib.mjs';
+import { isWide, isWideVs, LAND_TOL, isClosed, isRobust, frontierOf } from './pool-frontier-lib.mjs';
 
 const FLAGS = ['every', 'limit', 'games', 'land-line', 'bead-line', 'gained-line', 'packs', 'stage', 'incumbent', 'g4-scope', 'g4-chunk', 'rows'];
 rejectUnknownFlags(process.argv.slice(2), FLAGS, 'probe-pool-frontier');
@@ -54,16 +54,28 @@ console.log('# 池子前沿（' + (FEAT == null ? '?' : FEAT) + ' 维）· 文�
   '（跳过：读不出 ' + counts.skip.read + ' · 无权重 ' + counts.skip.unpack + ' · 2P 壳 ' + counts.skip.twoP +
   ' · 老维包 ' + counts.skip.oldFeat + '）· 本次量 ' + classes.length + ' 类');
 
+/* ---------- 现役参照（同一把尺） ----------
+ * v1.5.254（用户 GO · Qoder §E55 第 3 条）：参照块**必须先在 rows 之前算出来** —— "宽"的净兑现判据
+ * 已从**绝对线**改成**同 n 并排**（`isWideVs`：不劣于现役 − 容差）。绝对线自带样本量依赖
+ * （现役自己在 80 局下 `2.63 < 线 2.66`）⇒ 同一粒包换个 n 就被判成"不宽"。 */
+const incParams = loadChamp(W, INCUMBENT);
+if (!incParams) { console.error('⛔ 参照包读不出：' + INCUMBENT); process.exit(2); }
+const incM = metricsOf(incParams);
+/* `--land-line` **被显式传入** ⇒ 走旧的绝对线并**响亮说明**（历史读数要能复现，但不许静默换判据）。 */
+const ABS_LAND = /--land-line=/.test(process.argv.join(' '));
+if (ABS_LAND) {
+  console.log('⚠ 显式传了 `--land-line=' + LAND + '` ⇒ "宽"按**绝对线**判（历史口径）。'
+    + '该口径自带样本量依赖（现役自己 80 局下 2.63 < 2.66 线）⇒ 只应与同 n 的旧读数比。');
+}
+
 const rows = [];
 for (const c of classes) {
   let m;
   try { m = metricsOf(c.params); } catch (e) { console.log('  ⚠ 量不出：' + c.file + ' —— ' + e.message); continue; }
-  rows.push({ file: c.file, params: c.params, ...m, wide: isWide(m, LAND), closed: isClosed(m, BEAD, GAINED), robust: null });
+  rows.push({ file: c.file, params: c.params, ...m,
+    wide: ABS_LAND ? isWide(m, LAND) : isWideVs(m, incM, LAND_TOL),
+    closed: isClosed(m, BEAD, GAINED), robust: null });
 }
-/* ---------- 现役参照（同一把尺） ---------- */
-const incParams = loadChamp(W, INCUMBENT);
-if (!incParams) { console.error('⛔ 参照包读不出：' + INCUMBENT); process.exit(2); }
-const incM = metricsOf(incParams);
 
 /* ---------- ③：抗克 = spawn 真源 gate-drafts，解析它自己的标题行 ----------
  * ⚠️ 范围默认 = **宽∩闭环**（三合一的定义要求两样都成立 ⇒ 别的历史类不需要量）。
