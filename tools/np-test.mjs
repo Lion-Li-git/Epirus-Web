@@ -7082,8 +7082,13 @@ t('D170 出手形状的两条记录读数（目标死磕 / ジ⇄枪交替）必
 
   /* ④ 【只记录】不许接成判据 —— 判据变更属用户裁定；本门就是那句"留痕" */
   const pro = readFileSync('tools/promote-champion.mjs', 'utf8');
-  ok(pro.indexOf('play-shape') < 0 && pro.indexOf('targetFixation') < 0,
-    'promote 当前**不许**引用出手形状读数（只记录；要立判据先请用户裁定）');
+  /* v1.5.258 追加：本栏已**并进 promote 的只记录体检栏**（照 DEFQ 栏同一套：spawn 探针、不自己仿真）⇒
+   * 门钉三件事：① 栏在（spawn 探针）② promote 不自己算（不许 import 那两个函数去参与判定）③ 有逃生阀。 */
+  ok(/probe-play-shape\.mjs/.test(pro), 'promote 必须 spawn 探针来出这一栏（单一来源，别自己仿真）');
+  ok(pro.indexOf('targetFixation(') < 0 && pro.indexOf('jiGunShape(') < 0,
+    'promote **不许**自己 import 并计算这两个读数（那就成了第二份实现；要立判据先请用户裁定）');
+  ok(/EPIRUS_NO_SHAPE/.test(pro), '这一栏必须有逃生阀 EPIRUS_NO_SHAPE=1（与 DEFQ/GUARD 两栏同规矩）');
+  ok(/出手形状栏（同上，\*\*只记录不阻断\*\*/.test(pro), '栏名必须写明"只记录不阻断"（以后有人想拿它阻断，得先改这行字）');
   const lib = readFileSync('tools/play-shape.mjs', 'utf8');
   ok(/只记录不阻断/.test(lib), '`play-shape.mjs` 的头注必须写明"只记录不阻断"');
   ok(/defense-quality/.test(lib) && /白防/.test(lib),

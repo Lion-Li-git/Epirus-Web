@@ -290,6 +290,23 @@ if (process.env.EPIRUS_NO_GUARD !== '1') {
   console.log(formatRecord(arows[0], (ar.status === 0 ? '' : '探针 exit ' + ar.status + ' · ') + '真桌 1+4 攒钱替身 · ε=0.2 · ' + GN + ' 局 × ' + GS + ' 种子 · '));
 }
 
+/* ===== v1.5.258（DS · 用户 09-27 点名"奇怪的公式打法"）：**出手形状栏** —— 同样"只记录、不阻断" =====
+ * 用户原话：「不过还是有一些**奇怪的公式打法**」+ 实盘点数出来的两个形状（`results/Ldemo/*.txt`）：
+ *   ① 同一目标死磕（`玩家4→玩家5 ×5` …）② ジ⇄枪 机械交替（30 回合局玩家4 第16~30回合几乎就是 `枪,ジ,枪,ジ,…`）。
+ * 单一来源在 `tools/play-shape.mjs`（纯函数 + NaN 纪律）⇒ 本栏**不自己仿真**，只 spawn 探针并原样打印它那一行
+ *   （与上面 DEFQ 栏同规矩：D150"别处再实现一份"的教训）。口径固定 **ε=0（long）** 以便与五道门同尺。
+ * ⚠️ 只打印，不进任何判定；要跳过它省时间：`EPIRUS_NO_SHAPE=1`。
+ *    ⚠️ 注意这条栏**不是**"空防御" —— 空防御是用户 09-26 裁定的**白防**，口径在 `tools/defense-quality.mjs`
+ *    （上面那一栏已经在印），**不许**在这里再立一套。 */
+if (!process.env.EPIRUS_NO_SHAPE) {
+  const SHAPE_N = Number(process.env.EPIRUS_SHAPE_GAMES || 30);
+  const sr = spawnSync(process.execPath, ['tools/probe-play-shape.mjs', '--packs=' + SRC, '--games=' + SHAPE_N, '--mode=long'],
+    { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
+  const sline = /冠军席: (.+)$/m.exec(sr.stdout || '');
+  console.log('   出手形状栏（同上，**只记录不阻断** · 口径 ε=0/long · n=' + SHAPE_N + ' 局）：' +
+    (sline ? sline[1].trim() : '探针没给出读数（exit ' + sr.status + '）'));
+}
+
 /* ===== v1.5.243（qoder 09-26 · 用户裁定）：**防御质量栏** —— 还是"只记录、不阻断" =====
  * 用户原话（裁定）：「设一下防御打空率的质量判断，也就是出防御的时候完全没人打他就算白防御了（被穿透算防御半有效）」
  *   ⇒ 三档分类与质量分（(有效 + 0.5×被穿透) / 防御手数）的**单一来源在 `tools/defense-quality.mjs`**，
