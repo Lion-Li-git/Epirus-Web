@@ -2737,6 +2737,10 @@ let WALL_GAMES = 3;
       effSkills: tot ? Math.exp(H) : 0, distinctKeys: ks.length, nonJi: tot,
       effSkillsLand: ltot ? Math.exp(HL) : 0, landedKeys: lks.length, landedTotal: ltot, landedFiltered: lfilt,
       landByKey: landByKey, pierceKeys: pierceKeys,
+      /* v1.5.266（§E68）：**出手计数**也随读数返回（只加字段，不改任何判定）。
+       * 动机：`landByKey` 只数"造成过伤害"的卡 ⇒ 聚能环/蓄能这类**不打血**的卡在里面永远是 0，
+       * 拿它当"优点还在不在"的判据会把这两维**静默判成不可判**（09-28 实测 veto 就撞在这里）。 */
+      castByKey: keyCount,
       /* 零落地的"穿透卡"（能穿反弹/穿防御）—— 为 0 就说明**破墙的那条线丢了** */
       pierceMissing: pierceKeys.filter(function (k) { return !landByKey[k]; }),
       seatWins: seatWins, seatDecisive: seatDec,

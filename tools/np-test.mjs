@@ -7276,8 +7276,14 @@ t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + �
   } else {
     ok(wTight !== wCtl || /未改判/.test(String(rTight.stdout)), '有达标候选时 veto 必须给出"改判/未改判"的明确归因');
   }
-  ok(/无法判的维：charge/.test(String(rTight.stdout)),
-    '起点该卡落地为 0 的维要**点名印出来**（`landByKey` 只数造成过伤害的卡 ⇒ 蓄能/环这类不打血的卡天然判不到，不许静默当通过）');
+  /* v1.5.266：**出手口径**那一维必须真生效（`landByKey` 只数造成过伤害的卡 ⇒ 环/蓄能按落地判会永远是 0） */
+  const castKeys = ((sk && sk.keys) || []).filter(function (x) { return /:cast$/.test(x); });
+  ok(castKeys.length >= 2, '账里必须有**按出手判**的维（默认 `ring:cast`/`charge:cast`）；实测 keys=' + JSON.stringify(sk && sk.keys));
+  const castRef = ((sk && sk.ref) || []).filter(function (r) { return r.src === 'cast'; });
+  ok(castRef.length >= 2 && castRef.every(function (r) { return r.perGame > 0 && r.line >= 0 && r.line < r.perGame; }),
+    '出手参照必须**当场量到非零**且线低于参照（0 = 起点根本没打这两张卡 ⇒ 该维不该进判据）：' + JSON.stringify(castRef));
+  ok(!((sk && sk.unjudgeable) || []).some(function (x) { return /^charge/.test(x); }),
+    'v1.5.266 修的就是这条：`charge` 从前只按落地判 ⇒ 被点名"无法判"（09-28 实测），现在按出手判就不该再出现');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>

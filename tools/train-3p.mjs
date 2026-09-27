@@ -82,7 +82,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
-  'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS',   // v1.5.265b（§E66）：载重优点 veto（默认关；共用 SEL_LAND_GAMES）
+  'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS',   // v1.5.265b/266（§E66/§E68）：载重 veto 的两个名单（落地 / 出手）
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
@@ -177,7 +177,12 @@ let BREADTH_LOG = null, BREADTH_ALL_NARROW = false;
  * 起点读数**当场用同一次 `mirrorHealth` 量**，不抄数字（09-27 那条"文案抄数字"的同族病）。
  * ⚠ 参照缺失（没热启动 / 该卡起点落地为 0）⇒ **响亮失败**，不许把"判不了"读成"通过"。 */
 const SEL_KEEP = Number(process.env.EPIRUS_SEL_KEEP || 0);
-const SEL_KEEP_KEYS = String(process.env.EPIRUS_SEL_KEEP_KEYS || 'railgun,charge').split(',')
+const SEL_KEEP_KEYS = String(process.env.EPIRUS_SEL_KEEP_KEYS || 'railgun').split(',')
+  .map(function (s) { return s.trim(); }).filter(Boolean);
+/* v1.5.265b：**出手口径**的那一维（09-28 实测补）：`landByKey` 只数造成过伤害的卡 ⇒
+ * 聚能环/蓄能**天然判不到**，把它们放进 `SEL_KEEP_KEYS` 只会得到"起点为 0、无法判"的点名。
+ * ⇒ 分成两个名单：`_KEYS` 按**落地**判，`_CAST_KEYS` 按**成功出手**判（`mirrorHealth.castByKey`，v1.5.266 新增字段）。 */
+const SEL_KEEP_CAST_KEYS = String(process.env.EPIRUS_SEL_KEEP_CAST_KEYS || 'ring,charge').split(',')
   .map(function (s) { return s.trim(); }).filter(Boolean);
 let SEL_KEEP_LOG = null;
 if (!(SEL_KEEP >= 0 && SEL_KEEP <= 1)) {
@@ -747,9 +752,9 @@ if (SEL_KEEP > 0) {
     process.exit(7);
   }
   const Rules0 = sb.window.EpirusRules;
-  const bad = SEL_KEEP_KEYS.filter(function (k) { return !(Rules0.byKey && Rules0.byKey[k]); });
+  const bad = SEL_KEEP_KEYS.concat(SEL_KEEP_CAST_KEYS).filter(function (k) { return !(Rules0.byKey && Rules0.byKey[k]); });
   if (bad.length) {
-    console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP_KEYS 里有不认识的卡名：' + bad.join(',') +
+    console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP_KEYS / EPIRUS_SEL_KEEP_CAST_KEYS 里有不认识的卡名：' + bad.join(',') +
       '（合法的是 `EpirusRules.byKey` 的键）⇒ 拒绝按"判不到的维"放行');
     process.exit(7);
   }
@@ -946,6 +951,7 @@ for (const h of hall) {
       const mh = T.mirrorHealth(e.ref.params, SEL_LAND_GAMES, N, 'multi');
       e.landG = mh.effSkillsLand || 0; e.landedKeys = mh.landedKeys || 0; e.castG = mh.effSkills || 0;
       e.landByKey = mh.landByKey || {}; e.mhGames = SEL_LAND_GAMES;   // v1.5.265b：veto 吃逐卡落地量
+      e.castByKey = mh.castByKey || {};                                //          与**出手量**（环/蓄能不打血）
       /* v1.5.227（用户裁定换 G）：**塌缩判据 = 最大单卡落地份额**（旧判据"数种类"从来没触发过，见 pick-best 头注）。
        * 与 `landG` 取自**同一次** `mirrorHealth` ⇒ 两个读数天然同一口径、同一批局，不另跑一遍。
        * 归属计算走 `audit-lib.landShareOf`（单一来源：只数真卡名、分母用过滤后的 landedTotal）——
@@ -981,36 +987,43 @@ for (const h of hall) {
    * 起点参照**当场量**（不抄数字）。判不到的维（起点该卡落地为 0）⇒ 整臂 `exit 7`，不许静默当"通过"。 */
   if (SEL_KEEP > 0 && sel.clean && sel.clean.length && seedParams) {
     const refMh = T.mirrorHealth(seedParams, SEL_LAND_GAMES, N, 'multi');
-    const refLand = refMh.landByKey || {};
+    const refLand = refMh.landByKey || {}, refCast = refMh.castByKey || {};
     const usable = [], zeroRef = [];
+    /* 两个名单 = 两把尺：`SEL_KEEP_KEYS` 看**落地**（会造成伤害的卡），`SEL_KEEP_CAST_KEYS` 看**成功出手**（环/蓄能这类不打血的） */
     for (const k of SEL_KEEP_KEYS) {
       const pg = (refLand[k] || 0) / SEL_LAND_GAMES;
-      if (pg > 0) usable.push({ key: k, ref: pg, line: pg * (1 - SEL_KEEP) }); else zeroRef.push(k);
+      if (pg > 0) usable.push({ key: k, src: 'land', ref: pg, line: pg * (1 - SEL_KEEP) }); else zeroRef.push(k + '(落地)');
     }
+    for (const k of SEL_KEEP_CAST_KEYS) {
+      const pg = (refCast[k] || 0) / SEL_LAND_GAMES;
+      if (pg > 0) usable.push({ key: k, src: 'cast', ref: pg, line: pg * (1 - SEL_KEEP) }); else zeroRef.push(k + '(出手)');
+    }
+    const valOf = function (e, u) { return ((u.src === 'land' ? e.landByKey[u.key] : e.castByKey[u.key]) || 0) / SEL_LAND_GAMES; };
     if (!usable.length) {
-      console.error('[train-3p] ⛔ 起点（' + (hotstartFrom || '热启动种子包') + '）在 ' + SEL_KEEP_KEYS.join('/') +
-        ' 上落地**全为 0** ⇒ "不劣于起点"没有参照，拒绝按恒真判据空转（可换 --keys 或加大 EPIRUS_SEL_LAND_GAMES）');
+      console.error('[train-3p] ⛔ 起点（' + (hotstartFrom || '热启动种子包') + '）在 ' +
+        SEL_KEEP_KEYS.concat(SEL_KEEP_CAST_KEYS).join('/') + ' 上落地与出手**全为 0** ⇒ "不劣于起点"没有参照，' +
+        '拒绝按恒真判据空转（可换 --keys 或加大 EPIRUS_SEL_LAND_GAMES）');
       process.exit(7);
     }
     const fmt = function (e) {
       return usable.map(function (u) {
-        const v = (e.landByKey[u.key] || 0) / SEL_LAND_GAMES;
-        return u.key + ' ' + v.toFixed(2) + '/' + u.ref.toFixed(2);
+        return u.key + (u.src === 'cast' ? '≈' : ' ') + valOf(e, u).toFixed(2) + '/' + u.ref.toFixed(2);
       }).join(' ');
     };
-    console.log('[载重veto] 参照 = 起点逐卡落地（' + SEL_LAND_GAMES + ' 局 multi 镜，与广度线同一次量具）：' +
-      usable.map(function (u) { return u.key + ' ' + u.ref.toFixed(2) + '/局 → 线 ' + u.line.toFixed(2) + '（容差 ' + (100 * SEL_KEEP).toFixed(0) + '%）'; }).join(' · ') +
+    console.log('[载重veto] 参照 = 起点逐卡量（' + SEL_LAND_GAMES + ' 局 multi 镜，与广度线共用同一次量具；`≈` = 按**出手**判）：' +
+      usable.map(function (u) { return u.key + (u.src === 'cast' ? '≈' : '') + ' ' + u.ref.toFixed(2) + '/局 → 线 ' + u.line.toFixed(2) + '（容差 ' + (100 * SEL_KEEP).toFixed(0) + '%）'; }).join(' · ') +
       (zeroRef.length ? ' ｜ ⚠ 起点为 0、无法判的维：' + zeroRef.join(',') : '') +
       ' ｜ 广度参照 G(落地)=' + (refMh.effSkillsLand || 0).toFixed(2));
     const kept = [], dropped = [];
     for (const e of sel.clean) {
-      const fails = usable.filter(function (u) { return ((e.landByKey[u.key] || 0) / SEL_LAND_GAMES) < u.line; });
+      const fails = usable.filter(function (u) { return valOf(e, u) < u.line; });
       if (fails.length) dropped.push({ e: e, why: fails.map(function (f) { return f.key; }).join(',') }); else kept.push(e);
     }
     console.log('[载重veto] 候选 ' + sel.clean.length + ' 粒逐卡（本粒/起点）：' +
       sel.clean.map(function (e) { return fmt(e) + (e === sel.best ? '(当选)' : ''); }).join('  '));
-    SEL_KEEP_LOG = { tol: SEL_KEEP, keys: usable.map(function (u) { return u.key; }), games: SEL_LAND_GAMES,
-      ref: usable.map(function (u) { return { key: u.key, perGame: Number(u.ref.toFixed(3)), line: Number(u.line.toFixed(3)) }; }),
+    SEL_KEEP_LOG = { tol: SEL_KEEP,
+      keys: usable.map(function (u) { return u.key + (u.src === 'cast' ? ':cast' : ':land'); }), games: SEL_LAND_GAMES,
+      ref: usable.map(function (u) { return { key: u.key, src: u.src, perGame: Number(u.ref.toFixed(3)), line: Number(u.line.toFixed(3)) }; }),
       unjudgeable: zeroRef, dropped: dropped.length, of: sel.clean.length,
       droppedDetail: dropped.map(function (d) { return { score: Number(d.e.score.toFixed(4)), why: d.why }; }),
       allRejected: false, changedWinner: false, winnerKept: false };
@@ -1131,7 +1144,8 @@ const meta = {
    * 让每一粒产物能自证"我当时是在什么分布下选出来的"。只加字段，不改任何判定。 */
   recipe: { arm: (process.env.EPIRUS_ARM || null), seed: __SEED, gens: GENS, games: GAMES, pop: POP,
     xn2w: XN2W, xn2g: XN2G, selLand: SEL_LAND, selLandGames: SEL_LAND_GAMES, selLandTol: SEL_LAND_TOL,
-    selKeep: SEL_KEEP, selKeepKeys: (SEL_KEEP > 0 ? SEL_KEEP_KEYS : null),   // v1.5.265b
+    selKeep: SEL_KEEP, selKeepKeys: (SEL_KEEP > 0 ? SEL_KEEP_KEYS : null),
+    selKeepCastKeys: (SEL_KEEP > 0 ? SEL_KEEP_CAST_KEYS : null),   // v1.5.266：出手口径名单（环/蓄能不打血）
     kill: KILL_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     counterOpps: COUNTER_OPPS.map(function (o) { return o.name; }),   // v1.5.172：这臂的训练桌上放了哪几个判据原型
     bigtChainW: BIGT_CHAIN_REQ,   // v1.5.187：这臂有没有给"连带"付钱（0 = 出厂口径）
