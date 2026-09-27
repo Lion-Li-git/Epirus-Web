@@ -73,10 +73,14 @@ for (const kv of ALL) {
 /* "深经济对手"的定义：会攒钱**并且**会把攒的钱换成重击。farmer 只攒不还手，不算。 */
 const DEEP = { deepsaver: 1, heavyfire: 1 };
 /* ===== E62（qoder 09-27 晚）：**反弹席**分箱 —— 只记录，不判 =====
- * 动因（两条实测对上）：`Ldemo` 上槽前已知"反弹墙里主动伤害 2.00/局 vs 在位 21.00"，而我昨夜那把
- * 环境尺复量到它对**反弹系**的胜率掉得最狠（`defreflectgun` 60%→21%、`reflectspam` 60%→41%），
- * 而 `gate-drafts` 的 G4 **七格里没有一格是反弹型** ⇒ "最克 24/26 通过"与"对反弹掉 20~39pt"能同时成立。
- * ⇒ 这里补的是**判据盲区的量化**：同一份考卷，把"牌桌里至少有一席反弹型"的组合单独分箱。
+ * 动因：`Ldemo` 上槽前已知"反弹墙里主动伤害 2.00/局 vs 在位 21.00"，而我昨夜那把
+ * 环境尺复量到它对**反弹系**的胜率掉得最狠（`defreflectgun` 60%→21%、`reflectspam` 60%→41%）。
+ * ⇒ 本分箱量的是**混合桌**（14,950 组合 × 4 局）里"至少一席反弹"的那一格，与"整桌都是反弹"是两场不同的仗。
+ * ⚠ **09-28 更正（我原来把这条动因写成了"判据盲区"，那是错的）**：单型反弹场**早就有覆盖** ——
+ *   `--field=reflectwall`（4 席 reflectspam · v1.4.7）+ `promote` 的反弹墙闸（v1.5.28）+ `champ-audit` 的 D 列（就是这一场的 1st 率）。
+ *   真缺口不是"没有场"，是**这一场阻断的量选的是伤害/穿透落地（`pierceLand>0`、`dmgPerGame>0.5`），胜率只印不判**
+ *   （v1.5.59 因"1st 被并列污染"把它降权）⇒ 实测线上包在 D 列 **0%**、被换下的旧包 **99%**（§E63）。
+ *   另：G4 是 **8 格**（v1.5.129 加了「珠爆发」），其中仍没有反弹型反手格 —— 那句本来是对的，但它不等于"反弹场没尺"。
  * 严格口径：只算 `reflectspam`（脚本行为就是刷反弹）；`protowall`/`wall` 是墙不是反弹，不算。 */
 const REFL = { reflectspam: 1 };
 const CORE = ['random', 'defend', 'antidef', 'wall', 'farmer', 'heavyfire', 'deepsaver'];
@@ -604,7 +608,8 @@ for (const s of [champ, ctrl]) {
   console.log('    拆分: 含深经济对手 ' + s.pct(s.deepFirst, s.deepGames) + '（' + s.deepGames + ' 局）  vs  不含 ' +
     s.pct(s.shallowFirst, s.shallowGames) + '（' + s.shallowGames + ' 局）  Δ=' +
     ((s.deepGames && s.shallowGames) ? ((s.deepFirst / s.deepGames - s.shallowFirst / s.shallowGames) * 100).toFixed(1) + 'pt' : '-'));
-  /* E62（qoder 09-27）：**反弹席**分箱（只记录）—— 与"含深经济"同构，专门用来看 G4 七格盲区里那一类对手。 */
+  /* E62（qoder 09-27）：**反弹席**分箱（只记录）—— 看的是"混合桌里有一席反弹"这一格；
+   * 整桌反弹那一格由 `--field=reflectwall` 量（v1.4.7 起就在，见本文件 `REFL` 处的 09-28 更正）。 */
   console.log('    拆分: 含反弹席(reflectspam) ' + s.pct(s.reflFirst, s.reflGames) + '（' + s.reflGames + ' 局）  vs  不含 ' +
     s.pct(s.noreflFirst, s.noreflGames) + '（' + s.noreflGames + ' 局）  Δ=' +
     ((s.reflGames && s.noreflGames) ? ((s.reflFirst / s.reflGames - s.noreflFirst / s.noreflGames) * 100).toFixed(1) + 'pt' : '-'));
