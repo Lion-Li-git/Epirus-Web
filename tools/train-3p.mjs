@@ -394,34 +394,12 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
         '（形状=' + back.shape + '：**W × min(1, 该席连带数 / 该席大雷出手数)** ⇒ 付的是"用它时真赚了"，不是"多抽几次"；0 出手 = 0 分）');
     }
   }
-  /* ===== §E49（qoder 09-26 夜班）：**尾部聚合适应度**开关 =====
-   * 与 `REGEN_SLICE`/`KILL_FIELD`/大雷连带同一范式：**取值只经 `readEconEnv`**（本文件不写那个 env 名）·
-   * 无 setter ⇒ `exit 7` 拒静默空转 · 下达后**读回消费点** · 非数值/越界/被 clamp 都算被拒。
-   * "开关到底有没有改掉 fit" 不在这里判 —— 那是门禁 D165 的**行为式**断言
-   * （同一份 params 跑两次，比 `fitMean` 与返回值；判在效果上，不判在横幅上）。 */
-  {
-    const tailEnv = readEconEnv(process.env);
-    const hasW = tailEnv.fitTailW != null && String(tailEnv.fitTailW).trim() !== '';
-    const hasQ = tailEnv.fitTailQ != null && String(tailEnv.fitTailQ).trim() !== '';
-    if (hasW || hasQ) {
-      if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
-        console.error('[train-3p] ⛔ 下达了尾部聚合，但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
-        process.exit(7);
-      }
-      T.setEconomyReward({ fitTailW: hasW ? tailEnv.fitTailW : null, fitTailQ: hasQ ? tailEnv.fitTailQ : null });
-      const tb = T.economyReward() || {};
-      const reqW = hasW ? Number(tailEnv.fitTailW) : Number(tb.fitTailW);
-      const reqQ = hasQ ? Number(tailEnv.fitTailQ) : Number(tb.fitTailQ);
-      if (!isFinite(reqW) || reqW < 0 || reqW > 1 || !isFinite(reqQ) || reqQ < 0.05 || reqQ > 1 ||
-        !(Number(tb.fitTailW) === reqW) || !(Number(tb.fitTailQ) === reqQ)) {
-        console.error('[train-3p] ⛔ 尾部聚合 W=' + tailEnv.fitTailW + ' Q=' + tailEnv.fitTailQ +
-          ' 未生效（读回 ' + tb.fitTailW + '/' + tb.fitTailQ + '）—— 非数值/越界/被 clamp 都算被拒');
-        process.exit(7);
-      }
-      console.log('[train-3p] 尾部聚合已下达：fit_逐局 = (1−' + tb.fitTailW + ')·mean +' + tb.fitTailW +
-        '·ES(最差 ' + Math.round(100 * tb.fitTailQ) + '%)（消费点读回；不开时 W=0 ⇒ 恒等于原来的平均）');
-    }
-  }
+  /* ===== §E49（qoder 09-26 夜班）：尾部聚合开关 `EPIRUS_FIT_TAIL_W/Q` 的下达 =====
+   * **这里不再自己写一块** —— v1.5.262（DS §24 根因："闸放行 ≠ 线接通"）的**通用 econ 下达**已经
+   * 把 `ECON_REWARD_KEYS` 里每个键（含 `fitTailW`/`fitTailQ`）统一下达并**逐键比对回执**（不一致 `exit 7`）。
+   * 我昨夜那版"一键一块"与它重复，而且正是那次修复要消灭的形状 ⇒ 删掉，只留这条指路注释。
+   * "开关到底有没有改掉 fit"仍由门禁 **D165** 用**行为**判：同一份 params 跑两次比 `fitMean`/`fit`，
+   * 臂级再钉"不设 vs 显式 0 ⇒ 产物权重逐位相同"与"=0.4 ⇒ 必须不同"（判在效果上，不判在横幅上）。 */
   /* ===== v1.5.254（用户 GO · 千问 §E59 NEXT 第 6 条）：**econ 族 5 键**接上 CLI =====
    * 纪律与 `fitTailW`/`bigtChainW` 逐字一致：无 setter/读回接口 ⇒ `exit 7`；下达后**读回消费点**；
    *   非数值/越界/被 clamp 都算被拒 ⇒ `exit 7`；**不设时一行都不印**（"开了但没生效"与"没开"必须看得见差别）。

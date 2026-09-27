@@ -146,8 +146,14 @@ console.log('\n## 参照：现役 ' + INCUMBENT + '  G ' + incM.gMulti.toFixed(2
 console.log('## 判据：宽 = 两模式 G≥3 且 净兑现≥' + LAND + ' ‖ 闭环 = 花珠率≥' + BEAD + ' 且 得珠≥' + GAINED + ' ‖ 抗克 = 两模式最克 ≤ 现役');
 const fr = frontierOf(rows, incRef);
 /* ⚠️ 假 0 的守门（09-26 实测被自己绊过一次：抗克整批被超时掐掉，"三合一"照样印 0）：
- * 只要**本次抗克范围内**有任一类的抗克没量到 ⇒ 响亮失败 + 非零退出（范围用 `inG4Scope`，与上面同一个谓词）。 */
-const noG4 = STAGE >= 2 ? rows.filter(r => inG4Scope(r) && !r.g4).length : 0;
+ * 只要**本次抗克范围内**有任一类的抗克没量到 ⇒ 响亮失败 + 非零退出（范围用 `inG4Scope`，与上面同一个谓词）。
+ * ⚠ 例外：**现役自己**当参数传进来时必定"没读数" —— `gate-drafts` 把它打成 `线上包` 而不是路径（09-27 §E59 实测：
+ *   我把它同时当"类"和"参照"传，就误报过一次 exit 7）。它的答案已经在 `incRef` 里，故从"漏量"集合里排除，
+ *   但**不许**因此给它塞一个"自己 ≤ 自己"的 robust（那会把参照伪造成通过）。 */
+const isIncumbentRow = r => r.file === INCUMBENT || keyOf(r.file) === keyOf(INCUMBENT);
+const noG4 = STAGE >= 2 ? rows.filter(r => inG4Scope(r) && !r.g4 && !isIncumbentRow(r)).length : 0;
+if (STAGE >= 2 && rows.some(r => isIncumbentRow(r) && !r.g4))
+  console.log('  ℹ 现役作为参数传入时没有自己的 G4 行（gate-drafts 打成「线上包」）⇒ 不计入漏量，也不给它塞 robust');
 if (STAGE >= 2 && (noG4 > 0 || chunkFailed > 0)) {
   console.log('\n⛔ 抗克未量到 ' + (noG4 + chunkFailed) + ' 处（' + noG4 + ' 类在范围「' + G4_SCOPE + '」内无读数 · ' + chunkFailed + ' 批异常退出）'
     + ' ⇒ **"三合一 = ' + fr.three + '" 这个数不可信，本工具按失败处理**（不许把缺数据读成 0）');

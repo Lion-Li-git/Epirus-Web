@@ -72,6 +72,13 @@ for (const kv of ALL) {
 }
 /* "深经济对手"的定义：会攒钱**并且**会把攒的钱换成重击。farmer 只攒不还手，不算。 */
 const DEEP = { deepsaver: 1, heavyfire: 1 };
+/* ===== E62（qoder 09-27 晚）：**反弹席**分箱 —— 只记录，不判 =====
+ * 动因（两条实测对上）：`Ldemo` 上槽前已知"反弹墙里主动伤害 2.00/局 vs 在位 21.00"，而我昨夜那把
+ * 环境尺复量到它对**反弹系**的胜率掉得最狠（`defreflectgun` 60%→21%、`reflectspam` 60%→41%），
+ * 而 `gate-drafts` 的 G4 **七格里没有一格是反弹型** ⇒ "最克 24/26 通过"与"对反弹掉 20~39pt"能同时成立。
+ * ⇒ 这里补的是**判据盲区的量化**：同一份考卷，把"牌桌里至少有一席反弹型"的组合单独分箱。
+ * 严格口径：只算 `reflectspam`（脚本行为就是刷反弹）；`protowall`/`wall` 是墙不是反弹，不算。 */
+const REFL = { reflectspam: 1 };
 const CORE = ['random', 'defend', 'antidef', 'wall', 'farmer', 'heavyfire', 'deepsaver'];
 const poolNames = (POOL_MODE === 'all') ? ALL.map(function (x) { return x[0]; }) : CORE;
 const FN = {};
@@ -276,6 +283,8 @@ function runSubject(makeSel, label) {
   const epBands = [0, 0, 0, 0];          // 决策时的 ep 分带：0-1 / 2-4 / 5-9 / 10+
   let maxEp = 0, epGe3 = 0, decisions = 0;
   let deepGames = 0, deepFirst = 0, shallowGames = 0, shallowFirst = 0;
+  /* 反弹席分箱与深经济分箱**可以同真**（一桌里既能有大雷/重火力也能有反弹）⇒ 不用 else。 */
+  let reflGames = 0, reflFirst = 0, noreflGames = 0, noreflFirst = 0;
   let total = 0;
   /* v1.3.60 前置条件自检：没有这三个数，"条件性卡的 Δ" 无法解释 ——
    * 中性场上 转移伤害 的 Δ=−30.8pt 完全可能只是"前置条件不存在"。 */
@@ -288,6 +297,7 @@ function runSubject(makeSel, label) {
   let strictFirst = 0, tieOnlyFirst = 0;
   for (const combo of combos) {
     const hasDeep = combo.some(function (nm) { return !!DEEP[nm]; });
+    const hasRefl = combo.some(function (nm) { return !!REFL[nm]; });
     for (let g = 0; g < GAMES; g++) {
       const seat = g % N;
       /* ⚠️ 必须把"对手槽位"相对座位旋转：否则 combo 的第 k 个脚本总是坐在固定几个座位上，
@@ -339,6 +349,8 @@ function runSubject(makeSel, label) {
       seatGames[seat]++; if (rank === 1) seatFirst[seat]++;
       if (hasDeep) { deepGames++; if (rank === 1) deepFirst++; }
       else { shallowGames++; if (rank === 1) shallowFirst++; }
+      if (hasRefl) { reflGames++; if (rank === 1) reflFirst++; }
+      else { noreflGames++; if (rank === 1) noreflFirst++; }
       for (const e of r.state.events) {
         if (e.type === 'damage' && e.to === seat) takenSum += e.amt;
         if (e.type === 'damage' && (e.via === R.SK.MINE || e.via === R.SK.FIRESTORM)) fireEv++;
@@ -357,6 +369,7 @@ function runSubject(makeSel, label) {
     maxEp: maxEp, epGe3: epGe3, cost3: cost3Picks.n, epBands: epBands,
     seatFirst: seatFirst, seatGames: seatGames,
     deepGames: deepGames, deepFirst: deepFirst, shallowGames: shallowGames, shallowFirst: shallowFirst,
+    reflGames: reflGames, reflFirst: reflFirst, noreflGames: noreflGames, noreflFirst: noreflFirst,
     takenPerGame: takenGames ? takenSum / takenGames : 0, transferEv: transferEv, fireEv: fireEv,
     reflectSelfPerGame: takenGames ? reflectSelf / takenGames : 0,
     drawRate: takenGames ? drawGames / takenGames : 0,
@@ -591,6 +604,10 @@ for (const s of [champ, ctrl]) {
   console.log('    拆分: 含深经济对手 ' + s.pct(s.deepFirst, s.deepGames) + '（' + s.deepGames + ' 局）  vs  不含 ' +
     s.pct(s.shallowFirst, s.shallowGames) + '（' + s.shallowGames + ' 局）  Δ=' +
     ((s.deepGames && s.shallowGames) ? ((s.deepFirst / s.deepGames - s.shallowFirst / s.shallowGames) * 100).toFixed(1) + 'pt' : '-'));
+  /* E62（qoder 09-27）：**反弹席**分箱（只记录）—— 与"含深经济"同构，专门用来看 G4 七格盲区里那一类对手。 */
+  console.log('    拆分: 含反弹席(reflectspam) ' + s.pct(s.reflFirst, s.reflGames) + '（' + s.reflGames + ' 局）  vs  不含 ' +
+    s.pct(s.noreflFirst, s.noreflGames) + '（' + s.noreflGames + ' 局）  Δ=' +
+    ((s.reflGames && s.noreflGames) ? ((s.reflFirst / s.reflGames - s.noreflFirst / s.noreflGames) * 100).toFixed(1) + 'pt' : '-'));
 }
 
 if (PURE && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !planSubjectSel) {

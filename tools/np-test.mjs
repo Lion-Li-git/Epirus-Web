@@ -7313,9 +7313,11 @@ t('D165 尾部聚合适应度开关（v1.5.251 · 夜班 §E49）：默认关要
     eq(rU.status, 0, '对照臂必须成功（' + String(rU.stderr || '').slice(0, 90) + '）');
     eq(rZ.status, 0, '`W=0` 臂必须成功');
     eq(rK.status, 0, '`W=0.4` 臂必须成功');
-    ok(/尾部聚合已下达.*\(1−0\)/.test(String(rZ.stdout)), '`W=0` 必须真的下达并印读回（不许"0 当没设"）');
-    ok(/尾部聚合已下达：.*\(1−0\.4\)/.test(String(rK.stdout)), '开档臂必须印读回');
-    ok(!/尾部聚合已下达/.test(String(rU.stdout)), '不设 ⇒ 一行都不许印（"开了但没生效"与"没开"必须看得见差别）');
+    /* 下达自 v1.5.262 起走 **DS 的通用 econ 派发**（名单驱动 + 逐键回执），本门只认那一处的回执 ⇒
+     * 断言"这个键真的被点名下达过"，而不是我自己的横幅措辞（横幅会改，回执是机制）。 */
+    ok(/econ 族通用下达[^\n]*"fitTailW":"0"/.test(String(rZ.stdout)), '`W=0` 必须被通用派发点名并回执（不许把 "0" 当未设）');
+    ok(/econ 族通用下达[^\n]*"fitTailW":"0\.4"/.test(String(rK.stdout)), '开档臂必须在派发回执里出现 fitTailW=0.4');
+    ok(!/fitTailW/.test(String(rU.stdout)), '不设 ⇒ 派发与回执里都不许出现这个键（"开了但没生效"与"没开"要看得见差别）');
     const wtOf = f => { const m = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(readFileSync(f, 'utf8')); return m ? JSON.stringify((JSON.parse(m[1]) || {}).a) : null; };
     const wU = wtOf(dir + '/d165u.js'), wZ = wtOf(dir + '/d165z.js'), wK = wtOf(dir + '/d165k.js');
     ok(wU && wZ && wK, '三臂产物都要能读出权重（读到的是**数组本体**，不是"数组有几个"那种形状签名 —— 建门时我自己先踩过一次假通过）');
