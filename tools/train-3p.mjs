@@ -5,7 +5,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
-import { ECON_ENV_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
+import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
 import { rejectDegenerateWinners, bandPickByLand, rejectNarrowWinners } from './pick-best.mjs';
 import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
@@ -282,6 +282,39 @@ if (P.setRng && sb.window.EpirusTrainer.mulberry32) P.setRng(sb.window.EpirusTra
 
 const Bots = sb.window.EpirusBots;
 const T = sb.window.EpirusTrainer;
+
+/* ===== v1.5.262（DS · §24 的根因修复）：**通用 econ 下达**（名单驱动 + 强制逐键回执）=====
+ * 病（本班三族实验全部逐字节相同才查出来）：本文件对 econ 旋钮是**逐个键各写一块**下达代码
+ *   （bigtChainW 一块 / fitTailW 一块 …）⇒ 新登记进名单的键（costlyW）**通过了黑键闸却从没送给引擎**
+ *   ⇒ 训练进程里它恒为默认 0 ⇒ 0 / 0.05 / 0.2 三档、长程场、从会出贵卡的粒出发 —— 跑出同一份权重。
+ * 本块把 `readEconEnv(process.env)` 里**名单内**的键统一下达，并**逐键回执比对**：
+ *   回执与下达不一致 ⇒ exit 7（拒静默空转 —— 这正是上次我写 `typeof` 守卫栽的坑）。
+ * ⚠️ 位置必须在 `T` 装配之后（第一条修复尝试放在文件顶部 ⇒ 连日志都没出来）。 */
+{
+  if (!Array.isArray(ECON_REWARD_KEYS)) {
+    console.error('[train-3p] ⛔ 拿不到 ECON_REWARD_KEYS（单一来源没导入）⇒ 拒静默空转');
+    process.exit(7);
+  }
+  const eff = readEconEnv(process.env);
+  const payload = {};
+  for (const k of ECON_REWARD_KEYS) if (eff[k] != null) payload[k] = eff[k];
+  if (Object.keys(payload).length) {
+    if (typeof T.setEconomyReward !== 'function') {
+      console.error('[train-3p] ⛔ 有 econ 键要下达但引擎没有 setEconomyReward ⇒ 拒静默空转');
+      process.exit(7);
+    }
+    try { T.setEconomyReward(payload); }
+    catch (e) { console.error('[train-3p] ⛔ econ 下达被拒：' + (e && e.message)); process.exit(7); }
+    const echo = (typeof T.economyReward === 'function' ? (T.economyReward() || {}) : {});
+    const miss = Object.keys(payload).filter(function (k) { return String(echo[k]) !== String(payload[k]); });
+    if (miss.length) {
+      console.error('[train-3p] ⛔ econ 下达后回执不一致：' + miss.map(function (k) { return k + '=' + payload[k] + '(回执 ' + echo[k] + ')'; }).join(' · ') +
+        ' ⇒ 拒静默空转（回执字段名可能与输入键不同 ⇒ 先在 economyReward() 里对齐）');
+      process.exit(7);
+    }
+    console.log('[train-3p] econ 族通用下达：' + JSON.stringify(payload) + ' ⇒ 逐键回执一致 ✓');
+  }
+}
 
 /* ===== v1.5.160（qoder §N13 · 用户 09-22 裁定"场B 缺口走对手池"）：收割席注入 `EPIRUS_KILL_FIELD` =====
  * 与 v1.5.159 那条已删的 passiveField 接线的**关键区别**：这条带**开火计数**（跑完必须报"注了几局 / 覆盖几个受评座位"，

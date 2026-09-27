@@ -7152,6 +7152,26 @@ t('D173 贵卡预算的**剂量表**（开火计数）：非零才计数、随�
   ok(seg.indexOf('gFit') < 0 && seg.indexOf('.fit =') < 0, '【只计数】计数处附近不许改 fit/判定（与 D171 同规矩）');
 });
 
+t('D174 econ 通用下达：**名单驱动** + **逐键回执比对**（不一致 exit 7）+ 位置在 T 之后 + 禁止 typeof 静默守卫（v1.5.262 · §24）', function () {
+  /* 动因（本班 §24 的根因）：`train-3p` 原来对 econ 键**逐个键各写一块**下达代码 ⇒
+   * 新登记进名单的键（`costlyW`）**通过了黑键闸却从没送给引擎** ⇒ 三族实验（0/0.05/0.2 · 长程场 · 从会出贵卡的粒出发）
+   * 全部跑出**逐字节相同**的权重 —— 看起来像"压力无效"，实际是"**线根本没接**"。
+   * 本门钉五条，缺一条就会退回那种"静默无效果"的状态。 */
+  const T3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(/import \{[^}]*ECON_REWARD_KEYS[^}]*\} from '\.\.\/server\/econ-env\.mjs'/.test(T3),
+    '必须从**单一来源** import ECON_REWARD_KEYS（第一版漏了它 ⇒ 静默空转）');
+  ok(/for \(const k of ECON_REWARD_KEYS\) if \(eff\[k\] != null\) payload\[k\] = eff\[k\];/.test(T3),
+    '下达内容必须**由名单驱动**（不许再逐个键手写一块 —— 那正是新键从来不发的原因）');
+  ok(/T\.setEconomyReward\(payload\)/.test(T3), '必须真的调 setEconomyReward');
+  ok(/const miss = Object\.keys\(payload\)\.filter/.test(T3) && /if \(miss\.length\)/.test(T3),
+    '**逐键回执比对**必须有：不一致就 exit 7 —— 这是"下达了但没生效"的唯一自动防线');
+  const iT = T3.indexOf('const T = sb.window.EpirusTrainer;');
+  const iD = T3.indexOf('econ 族通用下达');
+  ok(iT >= 0 && iD > iT, '下达块必须在 **T 装配之后**（第一条修复尝试放在文件顶部 ⇒ 连日志都没出来）');
+  ok(T3.indexOf("typeof ECON_REWARD_KEYS !== 'undefined'") < 0,
+    '【本班教训】禁止 `typeof <常量> !== undefined` 这种**静默守卫**：它把"接线 bug"变成"静默无效果"（我在这条路上栽了两次）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
