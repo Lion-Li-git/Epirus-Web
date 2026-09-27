@@ -6862,6 +6862,36 @@ t('D166 大雷连带**被挡下时 UI 不许说"造成伤害"**（v1.5.253 用�
     '转走时必须指出**真实受害者**、不许记在连带候选头上：实际=' + bT);
   const cT = mod.bigTChainText(C.chain[0], C.evs).html;
   ok(/受 2 点电伤/.test(cT), '真打中时仍要报数（不许为了修 A 把 C 也改哑）：实际=' + cT);
+  /* ===== 第四档：**一回合两个候选**（q=1 自守防御=被挡 · q=3 非防御族=真中）=====
+   * 这一档是**第一版说假话的地方**，而它是我在**真 Chrome**里跑页面才发现的：
+   *   第一版扫的是"整回合的连带伤害" ⇒ 被挡的那条看到**别的候选的伤害**，把它误报成"转给你"。
+   * 引擎对每个候选是"先发 `bigTChain`、紧跟自己的投递" ⇒ 判据必须落在**段内**（到下一个 bigTChain 为止）。 */
+  const two = (function () {
+    const st = S.createState('long', { next: rng(7) }, 5);
+    X.startTurn(st);
+    st.p.forEach(function (p) { p.ep = 0; });
+    st.p[0].ep = 10; st.p[2].ep = 3;
+    st.actions[0] = { key: R.SK.BIG_T, target: 2, opt: null };
+    st.actions[2] = { key: R.SK.GUN, target: 1, opt: null };
+    st.actions[1] = { key: R.SK.GUARD, target: 1, opt: null };   // 自守防御 ⇒ q=1 被完全挡住
+    st.actions[3] = { key: R.SK.GUN, target: 2, opt: null };     // 非防御族 ⇒ q=3 真吃 2 点
+    st.actions[4] = { key: R.SK.JI, target: 4, opt: null };
+    const before = st.events.length;
+    X.resolveActions(st);
+    const evs = st.events.slice(before);
+    return { evs: evs,
+      chain: evs.filter(function (e) { return e.type === 'bigTChain'; }),
+      dmg: evs.filter(function (e) { return e.type === 'damage' && e.reason === '真正的落雷·连带'; }) };
+  })();
+  eq(two.chain.length, 2, '前置：一回合两候选必须产生两条 bigTChain');
+  eq(two.dmg.length, 1, '前置：这一回合只有**一个**候选真吃到连带伤害');
+  const blk = two.chain.filter(function (x) { return x.to === 1; })[0];
+  const hit = two.chain.filter(function (x) { return x.to === 3; })[0];
+  ok(blk && /挡下（未造成电伤）/.test(mod.bigTChainText(blk, two.evs).html),
+    '同回合还有别的候选真中时，被挡的那条**仍**必须说"挡下（未造成电伤）"，不许说"转给"（第一版就是在这里说假话）：实际=' +
+    (blk ? mod.bigTChainText(blk, two.evs).html : '(缺候选)'));
+  ok(hit && /受 2 点电伤/.test(mod.bigTChainText(hit, two.evs).html), '同回合真中的那条仍要报数：实际=' +
+    (hit ? mod.bigTChainText(hit, two.evs).html : '(缺候选)'));
   /* 接线：三处调用点都必须把**整回合事件表**传进去（否则 `roundEvents` 恒为 undefined、修了等于没修） */
   eq((src.match(/evText\(e, (list|events)\)/g) || []).length, 3, '三处 `evText` 调用点都必须传整回合事件表');
   ok(/case 'bigTChain': return bigTChainText\(e, roundEvents\);/.test(src),

@@ -744,7 +744,16 @@
   const BIGT_CHAIN_REASON = '真正的落雷·连带';
   function bigTChainText(e, roundEvents) {
     const tag = (e.kind === 'attack' ? '（其攻击被无效）' : '（被目标攻击）');
-    const chain = (roundEvents || []).filter(function (x) {
+    const list = roundEvents || [];
+    /* ⚠️ v1.5.253 **第二版**：只看**本候选自己那一段**（从这条 `bigTChain` 到**下一条** `bigTChain`）——
+     * 因为引擎对每个候选是"先发 `bigTChain`、紧跟它自己的投递"。
+     * 第一版我扫的是**整回合**的连带伤害 ⇒ 一回合里有多个候选时，"被挡下的那条"会看到**别的候选的伤害**，
+     * 于是把它误报成"转给你"（我在**真 Chrome**里跑出来就是这句假话，见截图复核）。
+     * ⇒ 判据必须落在"段内"，而不是"回合内"。 */
+    const here = list.indexOf(e);
+    let seg = here < 0 ? list : list.slice(here + 1);
+    for (let k = 0; k < seg.length; k++) if (seg[k] && seg[k].type === 'bigTChain') { seg = seg.slice(0, k); break; }
+    const chain = seg.filter(function (x) {
       return x && x.type === 'damage' && x.reason === BIGT_CHAIN_REASON;
     });
     const mine = chain.filter(function (x) { return x.to === e.to; })[0];
