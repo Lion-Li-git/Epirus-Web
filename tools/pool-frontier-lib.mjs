@@ -35,6 +35,31 @@ export function isClosed(m, beadLine, gainedLine) {
     m.spentRate >= beadLine && m.gained >= gainedLine;
 }
 
+/** v1.5.256（DS · 证据见 `docs/RESEARCH-LOG-2026-09-27-ds.md` §15）：闭环判据的**分形态版**。
+ *
+ * 病（5 种子实测）：`isClosed`（`得珠 ≥100 且 花珠率 ≥0.5`）把**两种不同病因**判成同一个 ✗：
+ *   ① **攒着不花**（seed31：得珠 **402**、花珠率 **9.2%**）—— 而这一形态恰恰是"为 5ep 的大雷攒钱"；
+ *   ② **根本没有经济**（seed71/191：得珠 **0**）。
+ * 且实测"大雷 > 0"与"花珠率 ≥0.5"两点集**不相交**，而 skill report 独立地说大雷值 **+4.9~7.7pt**
+ *   ⇒ **现有那条线在惩罚"会用贵卡"这条产品目标**。
+ *
+ * 新形态以"**钱有没有出口**"为实质，而不是"花掉的**比例**"：
+ *   `得珠 ≥ gainedLine` **且** （`花珠率 ≥ spendRateLine` **或** （`贵卡出手/局 ≥ bigCardMin` **且** `终局余珠/局 ≤ leftoverMax`））。
+ *
+ * ⚠️ **阈值是占位值**（按 §15 的实测形状取保守值），**默认不启用** —— 当前所有调用点仍走 `isClosed`。
+ *    启用前必须由用户裁定并留痕（本仓规矩：判据变更要能在线两侧钉住，`np-test` D169 已把两侧都钉了）。 */
+export const CARD_BUDGET = { bigCardMin: 1.0, leftoverMax: 8.0 };
+
+export function isClosedShaped(m, beadLine, gainedLine, opt) {
+  const o = opt || CARD_BUDGET;
+  if (!Number.isFinite(m.gained) || m.gained < gainedLine) return false;      // 先要"挣到"
+  if (Number.isFinite(m.spentRate) && m.spentRate >= beadLine) return true;   // 花得动 ⇒ 出口在
+  /* 花不动：看是不是"为了贵卡攒着"这一形态 —— 贵卡真出手**且**余珠不多（不是攒了不用） */
+  const big = m.bigCardPerGame, left = m.leftoverPerGame;
+  if (!Number.isFinite(big) || !Number.isFinite(left)) return false;          // 读数缺失 ⇒ 判不闭环（fail-closed，与 isRobust 同规矩）
+  return big >= o.bigCardMin && left <= o.leftoverMax;
+}
+
 export function isRobust(g4, inc) {
   if (!g4) return false;                                  // 没量到 ≠ 过了
   const L = g4.long, M = g4.multi;

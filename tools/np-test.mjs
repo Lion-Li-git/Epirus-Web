@@ -6988,6 +6988,36 @@ t('D168 包 META 的读取必须扛得住**嵌套**与**线上槽的手改损坏
     '写回必须用**函数形式**替换（字符串形式的替换会把 `$&`/`$\'` 当特殊模式 —— 同一族的"替换吃字符"）');
 });
 
+t('D169 闭环判据的**分形态版**必须只在"贵卡真出手且余珠不多"时才算闭环，且**默认不启用**（v1.5.256 · §15 实测）', function () {
+  /* 病（5 种子实测 · 日志 §15）：`isClosed`（得珠≥100 且 花珠率≥0.5）把两种**不同病因**判成同一个 ✗ ——
+   *   ① 攒着不花（seed31：得珠 402、花珠率 9.2%）② 根本没有经济（seed71/191：得珠 0）；
+   * 而"大雷>0"与"花珠率≥0.5"两点集不相交，skill report 又说大雷值 +4.9~7.7pt
+   *   ⇒ 旧线在惩罚"会用贵卡"。分形态版以"**钱有没有出口**"为实质。
+   * 本门两侧都钉：**该收的形态必须收**、**不该收的假对冲必须拒**，并且**默认路径不许被换掉**。 */
+  const rows = {
+    hoardWithBig: { gained: 402, spentRate: 0.092, bigCardPerGame: 2.92, leftoverPerGame: 5.0 },   // seed31 形状 ⇒ 该收
+    noEconomy: { gained: 0, spentRate: 0, bigCardPerGame: 1.7, leftoverPerGame: 0 },               // 没经济 ⇒ 拒
+    spender: { gained: 290, spentRate: 0.886, bigCardPerGame: 2.5, leftoverPerGame: 1 },           // 花得动 ⇒ 收
+    fakeHedge: { gained: 402, spentRate: 0.09, bigCardPerGame: 0.3, leftoverPerGame: 30 }          // 攒着且贵卡不出 ⇒ 拒
+  };
+  ok(AUDIT && PF_FRONT.isClosedShaped, '`isClosedShaped` 必须从 pool-frontier-lib 导出');
+  eq(PF_FRONT.isClosed(rows.hoardWithBig, 0.5, 100), false, '（前提自检）旧判据对"攒着不花"确实判 ✘ —— 这条门才有意义');
+  eq(PF_FRONT.isClosedShaped(rows.hoardWithBig, 0.5, 100), true,
+    '攒着但**贵卡真出手**且余珠不多 ⇒ 分形态版必须判闭环（这正是被旧线误杀的形态）');
+  eq(PF_FRONT.isClosedShaped(rows.spender, 0.5, 100), true, '花得动 ⇒ 两种判据都要收（不许把旧的正确判定弄丢）');
+  eq(PF_FRONT.isClosedShaped(rows.noEconomy, 0.5, 100), false, '得珠 0（根本没经济）⇒ 拒（"挣到"这条是前提）');
+  eq(PF_FRONT.isClosedShaped(rows.fakeHedge, 0.5, 100), false,
+    '攒着不花且贵卡也不出手 ⇒ 必须拒（余珠门槛就是防"假对冲"把这条线刷松）');
+  eq(PF_FRONT.isClosedShaped({ gained: 402, spentRate: 0.09, bigCardPerGame: NaN, leftoverPerGame: NaN }, 0.5, 100), false,
+    '【fail-closed】读数缺失 ⇒ 判**不闭环**（不许因为读不到就当通过，与 `isRobust` 同规矩）');
+  ok(Number.isFinite(PF_FRONT.CARD_BUDGET.bigCardMin) && Number.isFinite(PF_FRONT.CARD_BUDGET.leftoverMax),
+    '阈值必须是**具名单一来源**（`CARD_BUDGET`），不许散在调用点里');
+  /* 【默认不启用】当前调用路径必须仍是旧判据 —— 判据变更属用户裁定，不许代码偷偷换 */
+  const pfSrc = readFileSync('tools/probe-pool-frontier.mjs', 'utf8');
+  ok(!/isClosedShaped/.test(pfSrc), 'probe-pool-frontier **不许**已经改用分形态版：切换要用户点头、并留痕（本门就是那句"留痕"）');
+  ok(/isClosed\(m, BEAD, GAINED\)/.test(pfSrc), 'probe-pool-frontier 当前必须仍走 `isClosed`');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
