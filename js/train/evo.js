@@ -1198,8 +1198,19 @@ let WALL_GAMES = 3;
    * 代价：零额外对局 —— 只用**已经跑完的那些局**的分布，不加局数、不加代。
    * `evo.js` 不在 `FINGERPRINT_FILES` 里 ⇒ 这根开关**不改引擎指纹**。 */
   let FIT_TAIL_W = 0, FIT_TAIL_Q = 0.25;
+  /* v1.5.265（qoder §E65b）：**出厂值快照**，给 `reset` 用。
+   * 动因（09-28 实测，名单驱动的全键审计）：`setEconomyReward({reset:true})` 的名单是**手写**的，
+   * 于是 `divW/divK/divRoleW(=divCatW)/divForceGens/costlyW` 五个键**从来没被抹掉过** ⇒
+   * 同一进程里"下达哨兵 → reset"之后，后续所有 `scoreMemberN` 都活在脏值世界里
+   * （与本文件 :1228 那条 `wallFilter` 既存泄漏同形，也是 D77 反复补哨兵却补不全的根因）。
+   * 这里刻意**不抄字面量**：第一次非 reset 的下达之前抓一次出厂值 ⇒ 加新键不需要再记得改 reset 名单，
+   * 名单驱动的检查由门钉（D175：reset 后逐键必须等于抓到的出厂值）。 */
+  let ECON_DEFAULTS = null;
   function setEconomyReward(o) {
     o = o || {};
+    if (!ECON_DEFAULTS && !o.reset) {
+      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W };
+    }
     /* qoder-research 0920（RESEARCH-LOG §5b）：环奖励权重接进 econ-env 单一来源（默认不设 ⇒ RING_W 原样 0.10）。
      * setRingReward 自带 `isFinite && >=0` 校验；调用发生在模块求值之后 ⇒ 无 TDZ 问题（RING_W 声明在 :1955）。 */
     if (o.ringW != null) setRingReward(o.ringW);
@@ -1233,6 +1244,11 @@ let WALL_GAMES = 3;
        *   一并收进 reset。 */
       S4_W = 0; setRingReward(0.10); setBeadReward(0.05); WALL_FILTER_ON = false; WALL_GAMES = 3;
       FIT_TAIL_W = 0; FIT_TAIL_Q = 0.25;   // 09-26 夜班 §E49：D77 往返的哨兵必须在这里抹掉，否则 0.5 泄漏给后续门
+      /* v1.5.265（§E65b）：这五个键以前**不在** reset 名单里（手写名单漏的）。走出厂值快照，不抄字面量。 */
+      if (ECON_DEFAULTS) {
+        DIV_W = ECON_DEFAULTS.divW; DIV_K = ECON_DEFAULTS.divK; DIV_ROLE_W = ECON_DEFAULTS.divRoleW;
+        DIV_FORCE_GENS = ECON_DEFAULTS.divForceGens; COSTLY_W = ECON_DEFAULTS.costlyW;
+      }
     }
     return economyReward();
   }
@@ -1630,7 +1646,13 @@ let WALL_GAMES = 3;
         if (WIDTH_W > 0) varietyMax = Math.max(varietyMax, countVariety(r.state.events, seat));
         /* v1.5.126：**贵卡**（声明费用 ≥3 或需珠）的出手 —— 用户指出"这个包不会用电磁炮/大雷、也丢了地雷/净化
          * ⇒ 它当然没必要攒 ep" ⇒ 直接给这一族付钱（它们不可刷：真的用出来才给钱）。 */
-        if (BIGCARD_W > 0) bigUses += countBigCards(r.state.events, seat, R);
+        /* v1.5.265（qoder §E65）：**累加移出权重门** —— 这一行原本包在 `if (BIGCARD_W > 0)` 里，
+         * 于是"只开 `costlyW`、不开 `bigcardW`"的臂**剂量恒 0**（`costlyBonus = COSTLY_W × bigUses`），
+         * 而这件事在臂的读数上完全看不出来 ⇒ 09-27 那次"三档产出逐字节相同"被当成了
+         * "`bigUses` 在评分局里恒为 0 ⇒ 这条杠杆结构性惰性"（**假零结果**，本仓 §24 根因的同族第二例：
+         * 线没接通 ≠ 信号不存在）。`bigBonus` / `costlyBonus` **仍各按自己的权重门控**（:1572/:1578）⇒ 两个 W 都为 0 时逐字不变。
+         * 规矩与本文件 :1639 的 `chains`/`bigTCasts` 一致：**计数不设门槛，只有付钱的那一项设门槛**。 */
+        bigUses += countBigCards(r.state.events, seat, R);
         /* v1.5.187（DS 交接 §2b 的唯一待做）：**连带**才是要付钱的东西（用户口径："追的是打出连导，不是使用率"）
          * ⇒ 这一项与 `BIGCARD_W` 分开是有意的：那个数"用了贵卡"，这个数"用了大雷并且真的搅动了全场"。
          * ⚠️ **计数不设门槛**（只有 `chainBonus` 受 `BIGT_CHAIN_W` 门控）⇒ 这样 `W=0` 的臂也能白拿"连带/局"这个读数，
@@ -1783,6 +1805,9 @@ let WALL_GAMES = 3;
        * 换形状之后必须还能看见"率是几、分母是几"，否则又一次只能事后量（而且 `0/0` 这条路要显式走 0）。 */
       chainEvents: chains, chainPerGame: (fitGames || played) ? chains / (fitGames || played) : 0,
       chainCasts: bigTCasts, chainRate: bigTCasts > 0 ? chains / bigTCasts : 0,
+      /* v1.5.265（§E65）：贵卡剂量**始终**随评分返回（同 `chainEvents` 的规矩）⇒
+       * 否则"这项没生效"与"这一粒真没打贵卡"在臂上长得一模一样（09-27 那次假零结果的直接成因）。 */
+      costlyUses: bigUses, costlyPerGame: (fitGames || played) ? bigUses / (fitGames || played) : 0,
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
       spDivNorm: spDivNorm,

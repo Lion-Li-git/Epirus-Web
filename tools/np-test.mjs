@@ -7172,6 +7172,114 @@ t('D174 econ 通用下达：**名单驱动** + **逐键回执比对**（不一�
     '【本班教训】禁止 `typeof <常量> !== undefined` 这种**静默守卫**：它把"接线 bug"变成"静默无效果"（我在这条路上栽了两次）');
 });
 
+/* ===== D175（qoder 09-28 夜班 §E65b）：econ 族的**两条接线卫生**必须判在效果上 =====
+ * 动因（今天实测推翻的一条结论）：09-27 那三档 `costlyW`（0/0.05/0.2）跑出逐字节相同的产物，被写成
+ * "`bigUses` 在训练评分局里恒为 0 ⇒ 这条杠杆**结构性惰性**"。真相是 `evo.js` 把**累加本身**包在
+ * `if (BIGCARD_W > 0)` 里 ⇒ 只开 `costlyW` 的臂剂量恒 0 是**开关造成的**，不是训练场造成的（同 §24 的"闸放行≠线接通"）。
+ * 同一次审计还抓出 `setEconomyReward({reset:true})` 的手写名单**漏了 5 个键**
+ * （`divW/divK/divRoleW/divForceGens/costlyW`）⇒ 同进程后续所有评分都活在哨兵脏值里。
+ * 本门不钉源码文本（文本会重构掉），钉三件**行为**：剂量在权重全 0 时仍可见、开档必须改变 fit、reset 必须逐位可逆；
+ * 外加"臂上必须印剂量"与"名单驱动 ⇒ 新键不可能被忘记"。 */
+t('D175 econ 接线卫生：贵卡计数**不受权重门控** + costlyW 到作用点 + reset 名单驱动全覆盖（v1.5.265 · §E65b）', function () {
+  const dir = mkdtempSync(join(tmpdir(), 'd175-'));
+  const outJson = dir + '/audit.json';
+  const r = spawnSync(process.execPath, ['tools/probe-econ-reset-audit.mjs', '--games=32', '--json=' + outJson],
+    { encoding: 'utf8', timeout: 120000 });
+  eq(r.status, 0, '审计探针必须通过（泄漏/没接上/不可逆都会 exit 7）：' + String(r.stderr || '').slice(0, 160));
+  let j = null;
+  try { j = JSON.parse(readFileSync(outJson, 'utf8')); } catch (e) { /* 下面会判 */ }
+  ok(!!j, '探针必须按 `--json` 落结构化结果（没有它，门只能去 grep 中文横幅）');
+  ok(j && j.leak.length === 0, 'reset 之后**每个** ECON_REWARD_KEYS 键都要回出厂（漏一个 = 哨兵泄漏给后续门/臂）：' + (j ? j.leak.join(' · ') : '-'));
+  ok(j && j.notApplied.length === 0, '名单里的键必须**都**被 setter 吃（登记了却没接线 = §24 那个形状）：' + (j ? j.notApplied.join(' · ') : '-'));
+  ok(j && j.dose > 0, '【作用点 A】两个权重全 0 时也必须量到**贵卡剂量**（读不到 = 计数又被关进某个 W 的门里，09-27 的假零结果就是这么来的）。实测 dose=' + (j && j.dose));
+  ok(j && j.fitW !== null && Math.abs(j.dFit) > 0, '【作用点 B】`costlyW` 开档必须改变 fit（不变 = 项没接到每代评分通路）。实测 Δfit=' + (j && j.dFit));
+  ok(j && j.resetReversible === true, 'reset 之后 fit 必须**逐位**回到出厂（留隐性状态 ⇒ "出厂行为不变"这句话就是假的）');
+  /* 臂上必须看得见剂量：这是 09-27 那次"事后也查不到"的直接补救 */
+  const runArm = (name, extra) => spawnSync(process.execPath, ['tools/train-3p.mjs', '2'], {
+    encoding: 'utf8', timeout: 240000,
+    env: Object.assign({}, process.env, { EPIRUS_ARM: name, EPIRUS_T3P_OUT: dir + '/' + name + '.js', EPIRUS_BAND_DIR: dir + '/band' }, extra || {})
+  });
+  const rOff = runArm('d175off'), rOn = runArm('d175on', { EPIRUS_COSTLY_W: '0.2' });
+  eq(rOff.status, 0, '对照臂必须成功：' + String(rOff.stderr || '').slice(0, 120));
+  eq(rOn.status, 0, '`costlyW=0.2` 臂必须成功');
+  ok(/贵卡=\d+/.test(String(rOff.stdout)), '不设权重时逐代行**也要**印剂量（只在开档时印 ⇒ 又变回"没生效"与"没出手"不可分）');
+  ok(/贵卡=\d+/.test(String(rOn.stdout)), '开档臂必须印剂量');
+  const rBad = runArm('d175bad', { EPIRUS_COSTLY_W: 'abc' });
+  eq(rBad.status, 7, '非数值必须 `exit 7`（不许 clamp 成 0 再谎称"开过了"）');
+});
+
+/* ===== D176（qoder 09-28 夜班 §E66）：**载重优点 veto** 的语义必须判在产物上 =====
+ * 动因（同批臂实测）：从现役接力，**60 代**就把名人堂 6 粒的电磁炮落地全部打掉（起点 1.25/局 → 候选 ≤0.55），
+ * 1200 代产物级 2.23→0~0.75/局、最大 ep 93→2~18，5P 三粒全部低于现役（38.7/25.0/37.1 vs 42.5）。
+ * ⇒ 这根开关不许"开了等于没开"，也不许"为了保优点把别的塞进 fit"：
+ *   ① 容差 100% ⇒ **产物逐位等于不设**（证明它只挑人不加项）；
+ *   ② 全塌缩 ⇒ 产物仍等于不设 + 标 `allRejected`（不许硬换人）；
+ *   ③ 账必须落在**产物 META** 上（参照/线/剔了几粒/分母），否则事后无法复核；
+ *   ④ 参照缺失 / 非法卡名 / 越界 ⇒ `exit 7`（拒绝恒真判据与静默空转）。 */
+t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + 全塌缩不硬换人 + 账进产物 + 无参照即拒', function () {
+  const dir = mkdtempSync(join(tmpdir(), 'd176-'));
+  const SEEDPACK = 'docs/artifacts/eval-out/win-Ldemo.bak';   // 与线上槽权重逐位相同（09-28 实测 d490dc136293）
+  ok(existsSync(SEEDPACK), '用例需要一粒"起点包"当参照（缺了就只能造静默通过的假绿）');
+  const arm = (name, extra) => {
+    const r = spawnSync(process.execPath, ['tools/train-3p.mjs', '60'], {
+      encoding: 'utf8', timeout: 420000,
+      env: Object.assign({}, process.env, {
+        EPIRUS_HOTSTART: '1', EPIRUS_SEEDPACK: SEEDPACK, EPIRUS_SEED: '31', EPIRUS_ARM: name,
+        EPIRUS_BAND_DIR: dir + '/band-' + name, EPIRUS_T3P_OUT: dir + '/' + name + '.js'
+      }, extra || {})
+    });
+    return r;
+  };
+  const metaOf = f => {
+    const s = readFileSync(f, 'utf8'); const i = s.indexOf('EPIRUS_CHAMPION_3P_META = ');
+    if (i < 0) return null;
+    const b = s.indexOf('{', i), j = s.indexOf(';\n', b);
+    try { return JSON.parse(s.slice(b, j)); } catch (e) { return null; }
+  };
+  const wOf = f => { const m = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(readFileSync(f, 'utf8')); return m ? JSON.stringify(JSON.parse(m[1]).a) : null; };
+  /* ④ 三条响亮拒绝（都不该跑到训练，秒级） */
+  const rBad = arm('d176bad', { EPIRUS_SEL_KEEP: 'abc' });
+  eq(rBad.status, 7, '`SEL_KEEP` 非数值必须 exit 7（不许 clamp 后谎称开过）');
+  const rNoRef = spawnSync(process.execPath, ['tools/train-3p.mjs', '2'], {
+    encoding: 'utf8', timeout: 240000,
+    env: Object.assign({}, process.env, { EPIRUS_SEL_KEEP: '0.5', EPIRUS_ARM: 'd176noref', EPIRUS_T3P_OUT: dir + '/noref.js', EPIRUS_BAND_DIR: dir + '/band-noref' })
+  });
+  eq(rNoRef.status, 7, '开了 veto 却**没有热启动参照包**必须 exit 7（无参照的"不劣于起点"是恒真判据）');
+  const rBadKey = arm('d176badkey', { EPIRUS_SEL_KEEP: '0.5', EPIRUS_SEL_KEEP_KEYS: 'notacard' });
+  eq(rBadKey.status, 7, '`SEL_KEEP_KEYS` 里非法卡名必须 exit 7（判不到的维不许当通过）');
+  /* ①② 三臂并排：不设 / 容差 100% / 容差 35%（现役起点 60 代实测会全塌缩） */
+  const rCtl = arm('d176ctl');
+  const rWide = arm('d176wide', { EPIRUS_SEL_KEEP: '1' });
+  const rTight = arm('d176tight', { EPIRUS_SEL_KEEP: '0.35' });
+  eq(rCtl.status, 0, '对照臂必须成功：' + String(rCtl.stderr || '').slice(0, 140));
+  eq(rWide.status, 0, '容差 100% 臂必须成功');
+  eq(rTight.status, 0, '容差 35% 臂必须成功（全塌缩也只许响亮报告，不改退出码）');
+  const wCtl = wOf(dir + '/d176ctl.js'), wWide = wOf(dir + '/d176wide.js'), wTight = wOf(dir + '/d176tight.js');
+  ok(wCtl && wWide && wTight, '三臂产物都要能读出权重本体');
+  /* 变异对照：不同 seed 的产物必须不同，否则上面的"逐位相同"是恒真比较器 */
+  const rOther = arm('d176other', { EPIRUS_SEED: '57' });
+  eq(rOther.status, 0, '变异对照臂必须成功');
+  const wOther = wOf(dir + '/d176other.js');
+  ok(wOther && wOther !== wCtl, '【比较器自检】换 seed 必须产出**不同**的权重（相同 = 比较器恒真，D165 建门时踩过同族）');
+  ok(wCtl === wWide, '【①】容差 100% 的产物必须与**不设 veto 逐位相同**（veto 只挑人不加项；不同 = 它往 fit 里塞了东西）');
+  const mWide = metaOf(dir + '/d176wide.js'), mTight = metaOf(dir + '/d176tight.js');
+  ok(mWide && mWide.selKeep && mWide.selKeep.dropped === 0, '【③】容差 100% 臂的账必须写着"剔了 0 粒"：' + JSON.stringify(mWide && mWide.selKeep));
+  ok(mTight && mTight.selKeep && Array.isArray(mTight.selKeep.ref) && mTight.selKeep.ref.length > 0,
+    '【③】账必须进**产物**（参照逐卡落地量与线），否则事后没人能复核这臂按什么判的：' + JSON.stringify(mTight && mTight.selKeep));
+  const sk = mTight && mTight.selKeep;
+  ok(sk && sk.of > 0 && (sk.dropped === sk.of ? sk.allRejected === true : sk.allRejected === false),
+    '【②】"全剔"与 `allRejected` 必须互推（实测 dropped=' + (sk && sk.dropped) + ' of=' + (sk && sk.of) + ' allRejected=' + (sk && sk.allRejected) + '）');
+  if (sk && sk.dropped === sk.of) {
+    ok(wTight === wCtl, '【②】全塌缩时**不许硬换人**：产物必须仍逐位等于不设 veto 的对照');
+    ok(/名人堂\*\*全部\*\*丢了起点载重卡|走向②/.test(String(rTight.stdout) + String(rTight.stderr)),
+      '全塌缩必须响亮（写进 stdout/stderr，不许只留在 META 字段里）');
+  } else {
+    ok(wTight !== wCtl || /未改判/.test(String(rTight.stdout)), '有达标候选时 veto 必须给出"改判/未改判"的明确归因');
+  }
+  ok(/无法判的维：charge/.test(String(rTight.stdout)),
+    '起点该卡落地为 0 的维要**点名印出来**（`landByKey` 只数造成过伤害的卡 ⇒ 蓄能/环这类不打血的卡天然判不到，不许静默当通过）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
