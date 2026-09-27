@@ -82,7 +82,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
-  'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
+  'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
@@ -184,6 +184,16 @@ const SEL_KEEP_KEYS = String(process.env.EPIRUS_SEL_KEEP_KEYS || 'railgun').spli
  * ⇒ 分成两个名单：`_KEYS` 按**落地**判，`_CAST_KEYS` 按**成功出手**判（`mirrorHealth.castByKey`，v1.5.266 新增字段）。 */
 const SEL_KEEP_CAST_KEYS = String(process.env.EPIRUS_SEL_KEEP_CAST_KEYS || 'ring,charge').split(',')
   .map(function (s) { return s.trim(); }).filter(Boolean);
+/* v1.5.268（§E75）：载重 veto **两模式都判**（默认 `multi,long`）。
+ * 起因：只按 multi 镜判"炮还在不在"，与 long 口径的载重读数**反向**（NCV-71 改判后 炮 2.90→0.90、5P 41.3→39.2）。
+ * 每多一个模式 = 每名候选多跑一次 `mirrorHealth`（实测 20 局 ≈ 百毫秒级），**不加对局进 fit**、不改判定，只在当选时多筛一道。 */
+const SEL_KEEP_MODES = String(process.env.EPIRUS_SEL_KEEP_MODES || 'multi,long').split(',')
+  .map(function (s) { return s.trim(); }).filter(Boolean);
+const BAD_MODE = SEL_KEEP_MODES.filter(function (m) { return m !== 'multi' && m !== 'long'; });
+if (BAD_MODE.length) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP_MODES 里有不认识的模式：' + BAD_MODE.join(',') + '（只认 multi / long）');
+  process.exit(7);
+}
 /* v1.5.267（§E73 第 4 条）：**座位对称性**也是一条会随接力退化的优点（现役 5pt 是本仓历史最好，M 组 6~15pt）。
  * 它不是一张卡 ⇒ 不能走"逐卡落地/出手"那两把尺，但 `mirrorHealth` **同一次**就已经回了 `seatSpread` ⇒ 几乎免费。
  * 本值 = 允许比起点**多出**多少 pt（0 表示"不许比起点差"）；起点读不到（`underpowered`）⇒ 点名、不据此剔人。
@@ -967,6 +977,7 @@ for (const h of hall) {
   if ((BREADTH_FLOOR > 0 || SEL_LAND > 0 || SEL_KEEP > 0) && sel.clean && sel.clean.length) {
     for (const e of sel.clean) {
       const mh = T.mirrorHealth(e.ref.params, SEL_LAND_GAMES, N, 'multi');
+      e.mhByMode = { multi: mh };   // v1.5.268：载重 veto 需要 long 口径时复用，不重复跑 multi
       e.landG = mh.effSkillsLand || 0; e.landedKeys = mh.landedKeys || 0; e.castG = mh.effSkills || 0;
       e.landByKey = mh.landByKey || {}; e.mhGames = SEL_LAND_GAMES;   // v1.5.265b：veto 吃逐卡落地量
       e.castByKey = mh.castByKey || {};                                //          与**出手量**（环/蓄能不打血）
@@ -1010,23 +1021,39 @@ for (const h of hall) {
    * 量具与广度线**共用同一次** `mirrorHealth` ⇒ 同一口径、同一批局，不另跑一遍（§N29 的规矩）。
    * 起点参照**当场量**（不抄数字）。判不到的维（起点该卡落地为 0）⇒ 整臂 `exit 7`，不许静默当"通过"。 */
   if (SEL_KEEP > 0 && sel.clean && sel.clean.length && seedParams) {
-    const refMh = T.mirrorHealth(seedParams, SEL_LAND_GAMES, N, 'multi');
-    const refLand = refMh.landByKey || {}, refCast = refMh.castByKey || {};
+    /* v1.5.268（§E75 第 3 条）：**两模式都判**。09-28 实测：只按 `multi` 镜的逐卡落地判"炮还在不在"，
+     * 与按 `long` 自读的载重读数**反向**（`NCV-71` 改判后 炮 2.90→0.90、5P 41.3%→39.2%）
+     * ⇒ 单模式尺当判据会骗人（本仓先例：广度"两个模式都判"，v1.5.145 用户裁定）。 */
+    const modes = SEL_KEEP_MODES.length ? SEL_KEEP_MODES : ['multi'];
+    const mhOf = function (params, entry, mode) {
+      if (entry && entry.mhByMode && entry.mhByMode[mode]) return entry.mhByMode[mode];
+      const m = T.mirrorHealth(params, SEL_LAND_GAMES, N, mode);
+      if (entry) { entry.mhByMode = entry.mhByMode || {}; entry.mhByMode[mode] = m; }
+      return m;
+    };
     const usable = [], zeroRef = [];
-    /* 两个名单 = 两把尺：`SEL_KEEP_KEYS` 看**落地**（会造成伤害的卡），`SEL_KEEP_CAST_KEYS` 看**成功出手**（环/蓄能这类不打血的） */
-    for (const k of SEL_KEEP_KEYS) {
-      const pg = (refLand[k] || 0) / SEL_LAND_GAMES;
-      if (pg > 0) usable.push({ key: k, src: 'land', ref: pg, line: pg * (1 - SEL_KEEP) }); else zeroRef.push(k + '(落地)');
+    for (const mode of modes) {
+      const refMh = mhOf(seedParams, null, mode);
+      const refLand = refMh.landByKey || {}, refCast = refMh.castByKey || {};
+      /* 两个名单 = 两把尺：`SEL_KEEP_KEYS` 看**落地**（会造成伤害的卡），`SEL_KEEP_CAST_KEYS` 看**成功出手**（环/蓄能这类不打血的） */
+      for (const k of SEL_KEEP_KEYS) {
+        const pg = (refLand[k] || 0) / SEL_LAND_GAMES;
+        if (pg > 0) usable.push({ key: k, src: 'land', mode: mode, ref: pg, line: pg * (1 - SEL_KEEP) }); else zeroRef.push(k + '(落地/' + mode + ')');
+      }
+      for (const k of SEL_KEEP_CAST_KEYS) {
+        const pg = (refCast[k] || 0) / SEL_LAND_GAMES;
+        if (pg > 0) usable.push({ key: k, src: 'cast', mode: mode, ref: pg, line: pg * (1 - SEL_KEEP) }); else zeroRef.push(k + '(出手/' + mode + ')');
+      }
     }
-    for (const k of SEL_KEEP_CAST_KEYS) {
-      const pg = (refCast[k] || 0) / SEL_LAND_GAMES;
-      if (pg > 0) usable.push({ key: k, src: 'cast', ref: pg, line: pg * (1 - SEL_KEEP) }); else zeroRef.push(k + '(出手)');
-    }
-    const valOf = function (e, u) { return ((u.src === 'land' ? e.landByKey[u.key] : e.castByKey[u.key]) || 0) / SEL_LAND_GAMES; };
+    const valOf = function (e, u) {
+      const m = mhOf(e.ref.params, e, u.mode);
+      const map = (u.src === 'land' ? m.landByKey : m.castByKey) || {};
+      return (map[u.key] || 0) / SEL_LAND_GAMES;
+    };
     if (!usable.length) {
-      console.error('[train-3p] ⛔ 起点（' + (hotstartFrom || '热启动种子包') + '）在 ' +
+      console.error('[train-3p] ⛔ 起点（' + (hotstartFrom || '热启动种子包') + '）在 ' + modes.join('/') + ' 镜的 ' +
         SEL_KEEP_KEYS.concat(SEL_KEEP_CAST_KEYS).join('/') + ' 上落地与出手**全为 0** ⇒ "不劣于起点"没有参照，' +
-        '拒绝按恒真判据空转（可换 --keys 或加大 EPIRUS_SEL_LAND_GAMES）');
+        '拒绝按恒真判据空转（可换 --keys / --modes 或加大 EPIRUS_SEL_LAND_GAMES）');
       process.exit(7);
     }
     /* v1.5.267：座位极差是一条"越小越好"的规则 ⇒ 单独走，且用**专用量具**（`SEL_KEEP_SEAT_GAMES` 局）；
@@ -1049,30 +1076,31 @@ for (const h of hall) {
         e.seatDec = sMh.seatDecisive || 0;
       }
     }
+    const mLbl = function (u) { return modes.length > 1 ? '@' + u.mode : ''; };
     const fmt = function (e) {
       return usable.map(function (u) {
-        return u.key + (u.src === 'cast' ? '≈' : ' ') + valOf(e, u).toFixed(2) + '/' + u.ref.toFixed(2);
-      }).join(' ') + (seatRule ? ' 座位' + (e.seatSpread === null ? '?' : e.seatSpread.toFixed(0)) + '/' + seatRule.line.toFixed(0) : '');
+        return u.key + (u.src === 'cast' ? '≈' : ' ') + mLbl(u) + ' ' + valOf(e, u).toFixed(2) + '/' + u.ref.toFixed(2);
+      }).join('  ') + (seatRule ? ' 座位' + (e.seatSpread === null ? '?' : e.seatSpread.toFixed(0)) + '/' + seatRule.line.toFixed(0) : '');
     };
-    console.log('[载重veto] 参照 = 起点逐卡量（' + SEL_LAND_GAMES + ' 局 multi 镜，与广度线共用同一次量具；`≈` = 按**出手**判）：' +
-      usable.map(function (u) { return u.key + (u.src === 'cast' ? '≈' : '') + ' ' + u.ref.toFixed(2) + '/局 → 线 ' + u.line.toFixed(2) + '（容差 ' + (100 * SEL_KEEP).toFixed(0) + '%）'; }).join(' · ') +
+    console.log('[载重veto] 参照 = 起点逐卡量（' + SEL_LAND_GAMES + ' 局 · 模式 ' + modes.join('+') + '，与广度线共用同一次量具；`≈` = 按**出手**判）：' +
+      usable.map(function (u) { return u.key + (u.src === 'cast' ? '≈' : '') + mLbl(u) + ' ' + u.ref.toFixed(2) + '/局 → 线 ' + u.line.toFixed(2) + '（容差 ' + (100 * SEL_KEEP).toFixed(0) + '%）'; }).join(' · ') +
       (seatRule ? ' · 座位极差 ' + seatRule.ref.toFixed(1) + 'pt → 线 ≤' + seatRule.line.toFixed(1) + 'pt（容差 +' + seatRule.tol.toFixed(0) + 'pt）' : '') +
       (zeroRef.length ? ' ｜ ⚠ 起点为 0、无法判的维：' + zeroRef.join(',') : '') +
-      ' ｜ 广度参照 G(落地)=' + (refMh.effSkillsLand || 0).toFixed(2));
+      ' ｜ 广度参照 G(落地)=' + (mhOf(seedParams, null, modes[0]).effSkillsLand || 0).toFixed(2) + '（' + modes[0] + ' 镜）');
     const kept = [], dropped = [];
     for (const e of sel.clean) {
       const fails = usable.filter(function (u) { return valOf(e, u) < u.line; });
-      if (seatRule && e.seatSpread !== null && e.seatSpread > seatRule.line) fails.push({ key: '座位' });
-      if (fails.length) dropped.push({ e: e, why: fails.map(function (f) { return f.key; }).join(',') }); else kept.push(e);
+      if (seatRule && e.seatSpread !== null && e.seatSpread > seatRule.line) fails.push({ key: '座位', mode: 'seat' });
+      if (fails.length) dropped.push({ e: e, why: fails.map(function (f) { return f.key + (modes.length > 1 && f.mode !== 'seat' ? '@' + f.mode : ''); }).join(',') }); else kept.push(e);
     }
     console.log('[载重veto] 候选 ' + sel.clean.length + ' 粒逐卡（本粒/起点）：' +
       sel.clean.map(function (e) { return fmt(e) + (e === sel.best ? '(当选)' : ''); }).join('  '));
-    SEL_KEEP_LOG = { tol: SEL_KEEP,
+    SEL_KEEP_LOG = { tol: SEL_KEEP, modes: modes,
+      keys: usable.map(function (u) { return u.key + (u.src === 'cast' ? ':cast' : ':land') + '@' + u.mode; }), games: SEL_LAND_GAMES,
+      ref: usable.map(function (u) { return { key: u.key, src: u.src, mode: u.mode, perGame: Number(u.ref.toFixed(3)), line: Number(u.line.toFixed(3)) }; }),
+      unjudgeable: zeroRef, dropped: dropped.length, of: sel.clean.length,
       seat: seatRule ? { ref: Number(seatRule.ref.toFixed(2)), line: Number(seatRule.line.toFixed(2)), tol: SEL_KEEP_SEAT, games: seatRule.games }
         : (SEL_KEEP_SEAT !== null ? { requested: SEL_KEEP_SEAT, games: SEL_KEEP_SEAT_GAMES, unjudgeable: SEL_KEEP_UNJUDGED_SEAT || '起点 underpowered' } : null),
-      keys: usable.map(function (u) { return u.key + (u.src === 'cast' ? ':cast' : ':land'); }), games: SEL_LAND_GAMES,
-      ref: usable.map(function (u) { return { key: u.key, src: u.src, perGame: Number(u.ref.toFixed(3)), line: Number(u.line.toFixed(3)) }; }),
-      unjudgeable: zeroRef, dropped: dropped.length, of: sel.clean.length,
       droppedDetail: dropped.map(function (d) { return { score: Number(d.e.score.toFixed(4)), why: d.why }; }),
       allRejected: false, changedWinner: false, winnerKept: false };
     if (!kept.length) {

@@ -7277,8 +7277,15 @@ t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + �
     ok(wTight !== wCtl || /未改判/.test(String(rTight.stdout)), '有达标候选时 veto 必须给出"改判/未改判"的明确归因');
   }
   /* v1.5.266：**出手口径**那一维必须真生效（`landByKey` 只数造成过伤害的卡 ⇒ 环/蓄能按落地判会永远是 0） */
-  const castKeys = ((sk && sk.keys) || []).filter(function (x) { return /:cast$/.test(x); });
+  const castKeys = ((sk && sk.keys) || []).filter(function (x) { return /:cast$/.test(x) || /:cast@/.test(x); });
   ok(castKeys.length >= 2, '账里必须有**按出手判**的维（默认 `ring:cast`/`charge:cast`）；实测 keys=' + JSON.stringify(sk && sk.keys));
+  /* v1.5.268：**两模式都判**（09-28 实测单模式尺会反向：NCV-71 改判后 炮 2.90→0.90、5P 41.3→39.2） */
+  ok(Array.isArray(sk && sk.modes) && sk.modes.indexOf('multi') >= 0 && sk.modes.indexOf('long') >= 0,
+    '默认判据必须同时覆盖 multi 与 long 两个模式（实测 modes=' + JSON.stringify(sk && sk.modes) + '）');
+  ok(((sk && sk.keys) || []).some(function (x) { return /@multi$/.test(x); }) && ((sk && sk.keys) || []).some(function (x) { return /@long$/.test(x); }),
+    '账里每条规则要带它属于哪个模式（缺了就没法复核"两模式都判"到底判没判）：keys=' + JSON.stringify(sk && sk.keys));
+  const rBadMode = arm('d176badmode', { EPIRUS_SEL_KEEP: '0.35', EPIRUS_SEL_KEEP_MODES: 'notamode' });
+  eq(rBadMode.status, 7, '`SEL_KEEP_MODES` 里不认识的模式必须 exit 7（静默丢掉一个模式 = 又回到单模式尺骗人）');
   const castRef = ((sk && sk.ref) || []).filter(function (r) { return r.src === 'cast'; });
   ok(castRef.length >= 2 && castRef.every(function (r) { return r.perGame > 0 && r.line >= 0 && r.line < r.perGame; }),
     '出手参照必须**当场量到非零**且线低于参照（0 = 起点根本没打这两张卡 ⇒ 该维不该进判据）：' + JSON.stringify(castRef));
