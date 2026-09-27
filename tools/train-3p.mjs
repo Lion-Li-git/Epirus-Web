@@ -823,6 +823,30 @@ for (let gen = 0; gen < GENS; gen++) {
          * "1 条 / 8 次出手"（率 0.125）在尺子上完全同形，而这正是这次换形状要分开的那两件事。 */
         ' 出手=' + (r.chainCasts || 0) + ' 率=' + (r.chainRate || 0).toFixed(3) : ''));
   }
+  /* ===== v1.5.259（DS · 用户 GO"接下来怎么训练"）：**瞬态快照** =====
+   * 动因（本班实测 · 日志 §20.2）：从"已经会打大雷"的粒续训 1200 代，**三臂全掉回 ~0**
+   *   ⇒ 大雷不是"多训更好"，而是**抽到就得留住**的瞬态性状（适应度是 3 局即时收益，大雷 5ep 的机会成本是不还手，
+   *   选择压力方向与它相反）。而训练日志**本来每代就印** `连带=N 条`（`scored[0].r.chainEvents`）⇒ 抓它**成本≈0**。
+   * 行为：每代查一次该代最优个体的连带数，**首次 >0 立刻**把它当时的权重落成 `<ARM>-bigT@gen<N>.bak`（只落一次，留最早证据）。
+   * 逃生阀：`EPIRUS_NO_BIGTSNAP=1`。⚠️ 这是**取证**工具：不改适应度、不改选择（要让它留下必须动判据/奖励 —— 属用户裁定）。 */
+  if (!process.env.EPIRUS_NO_BIGTSNAP && typeof bandDirReady !== 'undefined' && bandDirReady) {
+    const cr = scored[0] && scored[0].r;
+    if (cr && cr.chainEvents > 0 && !__bigTSnapGen) {
+      __bigTSnapGen = gen;
+      try {
+        writeFileSync(BAND_DIR + '/' + ARM + '-bigT@gen' + gen + '.bak',
+          '/* 瞬态快照 bigT@gen' + gen + '（tools/train-3p.mjs v1.5.259 · 触发：该代最优个体连带=' + cr.chainEvents + ' 条） */\n' +
+          'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({
+            source: 'tools/train-3p.mjs (bigT snapshot)', arm: ARM, gen: gen, chainEvents: cr.chainEvents,
+            chainPerGame: cr.chainPerGame || 0, chainCasts: cr.chainCasts || 0, trainFit: cr.fit,
+            n: N, gens: GENS, games: GAMES, pop: POP, seed: __SEED, ts: new Date().toISOString(),
+            recipe: { env: EFFECTIVE_ENV, envKeys: Object.keys(EFFECTIVE_ENV).length }
+          }) + ';\n' +
+          'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(scored[0].params)) + ';\n');
+        console.log('[bigT-snapshot] 第 ' + gen + ' 代连带=' + cr.chainEvents + ' 条 ⇒ 已落 ' + ARM + '-bigT@gen' + gen + '.bak');
+      } catch (e) { console.log('[bigT-snapshot] 落盘失败（不影响训练）：' + e.message); }
+    }
+  }
   /* v1.5.189：归因**逐代**印（不塞进那条 20 代的块里）—— "示范有没有转成原生行为"是随代数变化的问题，
    * 20 代一跳就把"前期靠教师、退火后归零"这条曲线糊成两个点。 */
   if (IMIT_ON) { const attr = attrLine(); if (attr) console.log('  gen ' + gen + ' ' + attr); }
