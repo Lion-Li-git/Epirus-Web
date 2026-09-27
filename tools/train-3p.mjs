@@ -82,7 +82,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
-  'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS',   // v1.5.265b/266（§E66/§E68）：载重 veto 的两个名单（落地 / 出手）
+  'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
@@ -184,7 +184,25 @@ const SEL_KEEP_KEYS = String(process.env.EPIRUS_SEL_KEEP_KEYS || 'railgun').spli
  * ⇒ 分成两个名单：`_KEYS` 按**落地**判，`_CAST_KEYS` 按**成功出手**判（`mirrorHealth.castByKey`，v1.5.266 新增字段）。 */
 const SEL_KEEP_CAST_KEYS = String(process.env.EPIRUS_SEL_KEEP_CAST_KEYS || 'ring,charge').split(',')
   .map(function (s) { return s.trim(); }).filter(Boolean);
-let SEL_KEEP_LOG = null;
+/* v1.5.267（§E73 第 4 条）：**座位对称性**也是一条会随接力退化的优点（现役 5pt 是本仓历史最好，M 组 6~15pt）。
+ * 它不是一张卡 ⇒ 不能走"逐卡落地/出手"那两把尺，但 `mirrorHealth` **同一次**就已经回了 `seatSpread` ⇒ 几乎免费。
+ * 本值 = 允许比起点**多出**多少 pt（0 表示"不许比起点差"）；起点读不到（`underpowered`）⇒ 点名、不据此剔人。
+ * ⚠ 09-28 实测：广度线共用的 `SEL_LAND_GAMES=20` 局里**只有 18 个决胜局** ⇒ 起点自己读出 25~33pt（而 promote 用 100 局读 5pt）
+ *   ⇒ 拿那把尺判"对称性退化"是**拿噪声当判据**。所以这一维**单开一次专用量具**（`SEL_KEEP_SEAT_GAMES`，默认 60），
+ *   并要求**决胜局数 ≥ `SEL_KEEP_SEAT_MIN`（默认 24）**才参与判定；不够就点名"未判定"，既不剔人也不当通过。 */
+const SEL_KEEP_SEAT = process.env.EPIRUS_SEL_KEEP_SEAT == null ? null : Number(process.env.EPIRUS_SEL_KEEP_SEAT);
+const SEL_KEEP_SEAT_GAMES = Number(process.env.EPIRUS_SEL_KEEP_SEAT_GAMES || 60);
+const SEL_KEEP_SEAT_MIN = Number(process.env.EPIRUS_SEL_KEEP_SEAT_MIN || 24);
+if (SEL_KEEP_SEAT !== null && !(SEL_KEEP_SEAT >= 0 && SEL_KEEP_SEAT <= 100)) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP_SEAT 必须是 0~100 的pt数（不给 = 关闭这一维）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_KEEP_SEAT));
+  process.exit(7);
+}
+if (SEL_KEEP_SEAT !== null && !(SEL_KEEP_SEAT_GAMES >= 20 && SEL_KEEP_SEAT_MIN >= 1)) {
+  console.error('[train-3p] ⛔ 座位维的量具参数不成立：GAMES=' + SEL_KEEP_SEAT_GAMES + ' MIN=' + SEL_KEEP_SEAT_MIN +
+    '（GAMES 至少 20、MIN 至少 1 —— 否则"判得到"是假的）');
+  process.exit(7);
+}
+let SEL_KEEP_LOG = null, SEL_KEEP_UNJUDGED_SEAT = null;
 if (!(SEL_KEEP >= 0 && SEL_KEEP <= 1)) {
   console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP 必须是 0~1 的数（0=关）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_KEEP) +
     ' —— 非数值/越界一律拒，不许 clamp 之后谎称"开过了"');
@@ -952,6 +970,12 @@ for (const h of hall) {
       e.landG = mh.effSkillsLand || 0; e.landedKeys = mh.landedKeys || 0; e.castG = mh.effSkills || 0;
       e.landByKey = mh.landByKey || {}; e.mhGames = SEL_LAND_GAMES;   // v1.5.265b：veto 吃逐卡落地量
       e.castByKey = mh.castByKey || {};                                //          与**出手量**（环/蓄能不打血）
+      /* v1.5.267：座位维用**专用量具**（共用 20 局只有 ~18 个决胜局 ⇒ 噪声当判据）。只在开了这一维时才多跑一次。 */
+      if (SEL_KEEP_SEAT !== null) {
+        const mhS = T.mirrorHealth(e.ref.params, SEL_KEEP_SEAT_GAMES, N, 'multi');
+        e.seatSpread = (typeof mhS.seatSpread === 'number' ? mhS.seatSpread : null);
+        e.seatDec = mhS.seatDecisive || 0;
+      } else e.seatSpread = (mh.seatSpread === undefined ? null : mh.seatSpread);
       /* v1.5.227（用户裁定换 G）：**塌缩判据 = 最大单卡落地份额**（旧判据"数种类"从来没触发过，见 pick-best 头注）。
        * 与 `landG` 取自**同一次** `mirrorHealth` ⇒ 两个读数天然同一口径、同一批局，不另跑一遍。
        * 归属计算走 `audit-lib.landShareOf`（单一来源：只数真卡名、分母用过滤后的 landedTotal）——
@@ -1005,23 +1029,47 @@ for (const h of hall) {
         '拒绝按恒真判据空转（可换 --keys 或加大 EPIRUS_SEL_LAND_GAMES）');
       process.exit(7);
     }
+    /* v1.5.267：座位极差是一条"越小越好"的规则 ⇒ 单独走，且用**专用量具**（`SEL_KEEP_SEAT_GAMES` 局）；
+     * 决胜局不够 ⇒ 整维点名"未判定"，既不据此剔人也不当通过。 */
+    let seatRule = null;
+    if (SEL_KEEP_SEAT !== null) {
+      const refSeatMh = T.mirrorHealth(seedParams, SEL_KEEP_SEAT_GAMES, N, 'multi');
+      if (typeof refSeatMh.seatSpread !== 'number' || (refSeatMh.seatDecisive || 0) < SEL_KEEP_SEAT_MIN) {
+        console.log('[载重veto] ⚠ 起点的座位极差**未判定**（' + SEL_KEEP_SEAT_GAMES + ' 局里只有 ' + (refSeatMh.seatDecisive || 0) +
+          ' 个决胜局 < 门槛 ' + SEL_KEEP_SEAT_MIN + '）⇒ 这一维不进判据');
+        SEL_KEEP_UNJUDGED_SEAT = '起点 underpowered（决胜 ' + (refSeatMh.seatDecisive || 0) + '/' + SEL_KEEP_SEAT_MIN + '）';
+      } else {
+        seatRule = { line: refSeatMh.seatSpread + SEL_KEEP_SEAT, ref: refSeatMh.seatSpread, tol: SEL_KEEP_SEAT, games: SEL_KEEP_SEAT_GAMES };
+      }
+    }
+    if (seatRule) {
+      for (const e of sel.clean) {
+        const sMh = T.mirrorHealth(e.ref.params, SEL_KEEP_SEAT_GAMES, N, 'multi');
+        e.seatSpread = (typeof sMh.seatSpread === 'number' && (sMh.seatDecisive || 0) >= SEL_KEEP_SEAT_MIN) ? sMh.seatSpread : null;
+        e.seatDec = sMh.seatDecisive || 0;
+      }
+    }
     const fmt = function (e) {
       return usable.map(function (u) {
         return u.key + (u.src === 'cast' ? '≈' : ' ') + valOf(e, u).toFixed(2) + '/' + u.ref.toFixed(2);
-      }).join(' ');
+      }).join(' ') + (seatRule ? ' 座位' + (e.seatSpread === null ? '?' : e.seatSpread.toFixed(0)) + '/' + seatRule.line.toFixed(0) : '');
     };
     console.log('[载重veto] 参照 = 起点逐卡量（' + SEL_LAND_GAMES + ' 局 multi 镜，与广度线共用同一次量具；`≈` = 按**出手**判）：' +
       usable.map(function (u) { return u.key + (u.src === 'cast' ? '≈' : '') + ' ' + u.ref.toFixed(2) + '/局 → 线 ' + u.line.toFixed(2) + '（容差 ' + (100 * SEL_KEEP).toFixed(0) + '%）'; }).join(' · ') +
+      (seatRule ? ' · 座位极差 ' + seatRule.ref.toFixed(1) + 'pt → 线 ≤' + seatRule.line.toFixed(1) + 'pt（容差 +' + seatRule.tol.toFixed(0) + 'pt）' : '') +
       (zeroRef.length ? ' ｜ ⚠ 起点为 0、无法判的维：' + zeroRef.join(',') : '') +
       ' ｜ 广度参照 G(落地)=' + (refMh.effSkillsLand || 0).toFixed(2));
     const kept = [], dropped = [];
     for (const e of sel.clean) {
       const fails = usable.filter(function (u) { return valOf(e, u) < u.line; });
+      if (seatRule && e.seatSpread !== null && e.seatSpread > seatRule.line) fails.push({ key: '座位' });
       if (fails.length) dropped.push({ e: e, why: fails.map(function (f) { return f.key; }).join(',') }); else kept.push(e);
     }
     console.log('[载重veto] 候选 ' + sel.clean.length + ' 粒逐卡（本粒/起点）：' +
       sel.clean.map(function (e) { return fmt(e) + (e === sel.best ? '(当选)' : ''); }).join('  '));
     SEL_KEEP_LOG = { tol: SEL_KEEP,
+      seat: seatRule ? { ref: Number(seatRule.ref.toFixed(2)), line: Number(seatRule.line.toFixed(2)), tol: SEL_KEEP_SEAT, games: seatRule.games }
+        : (SEL_KEEP_SEAT !== null ? { requested: SEL_KEEP_SEAT, games: SEL_KEEP_SEAT_GAMES, unjudgeable: SEL_KEEP_UNJUDGED_SEAT || '起点 underpowered' } : null),
       keys: usable.map(function (u) { return u.key + (u.src === 'cast' ? ':cast' : ':land'); }), games: SEL_LAND_GAMES,
       ref: usable.map(function (u) { return { key: u.key, src: u.src, perGame: Number(u.ref.toFixed(3)), line: Number(u.line.toFixed(3)) }; }),
       unjudgeable: zeroRef, dropped: dropped.length, of: sel.clean.length,

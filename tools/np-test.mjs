@@ -7284,6 +7284,25 @@ t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + �
     '出手参照必须**当场量到非零**且线低于参照（0 = 起点根本没打这两张卡 ⇒ 该维不该进判据）：' + JSON.stringify(castRef));
   ok(!((sk && sk.unjudgeable) || []).some(function (x) { return /^charge/.test(x); }),
     'v1.5.266 修的就是这条：`charge` 从前只按落地判 ⇒ 被点名"无法判"（09-28 实测），现在按出手判就不该再出现');
+  /* ===== v1.5.267：座位对称性维（第三条尺）—— 起点读 16.7pt(N=3/60 局)，宽容差必须完全不动人 ===== */
+  const rSeatLax = arm('d176seatlax', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '100' });
+  const rSeatStrict = arm('d176seat', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '0' });
+  const rSeatBad = arm('d176seatbad', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: 'abc' });
+  eq(rSeatBad.status, 7, '`SEL_KEEP_SEAT` 非数值必须 exit 7');
+  const rSeatBig = arm('d176seatbig', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '999' });
+  eq(rSeatBig.status, 7, '`SEL_KEEP_SEAT` 越界（>100pt）必须 exit 7（不许 clamp 成"最松档"后谎称开了）');
+  eq(rSeatLax.status, 0, '宽容差座位臂必须成功');
+  eq(rSeatStrict.status, 0, '严座位臂必须成功（剔人也不改退出码）');
+  ok(wOf(dir + '/d176seatlax.js') === wCtl,
+    '【①同形】座位容差 +100pt（等于"什么都放行"）时产物必须与不设 veto **逐位相同** ⇒ 证明这一维不加任何项');
+  const mSeat = metaOf(dir + '/d176seat.js');
+  ok(mSeat && mSeat.selKeep && mSeat.selKeep.seat && typeof mSeat.selKeep.seat.ref === 'number',
+    '【③账进产物】严臂的 META 要写下座位参照与线（实测 seat=' + JSON.stringify(mSeat && mSeat.selKeep && mSeat.selKeep.seat) + '）');
+  ok(mSeat && mSeat.selKeep && mSeat.selKeep.seat && mSeat.selKeep.seat.games >= 20,
+    '座位维必须用**专用量具**（09-28 实测：共用 20 局只有 18 个决胜局 ⇒ 起点自己读出 25~33pt，那是噪声不是判据）；实测 games=' +
+    (mSeat && mSeat.selKeep && mSeat.selKeep.seat && mSeat.selKeep.seat.games));
+  ok(wOf(dir + '/d176seat.js') === wCtl || /改判/.test(String(rSeatStrict.stdout)),
+    '严座位臂要么没换人（则不许印"改判"），要么换人并**明说改判**——两者必须一致');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
