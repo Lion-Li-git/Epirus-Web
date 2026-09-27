@@ -7016,6 +7016,19 @@ t('D169 闭环判据的**分形态版**必须只在"贵卡真出手且余珠不�
   const pfSrc = readFileSync('tools/probe-pool-frontier.mjs', 'utf8');
   ok(!/isClosedShaped/.test(pfSrc), 'probe-pool-frontier **不许**已经改用分形态版：切换要用户点头、并留痕（本门就是那句"留痕"）');
   ok(/isClosed\(m, BEAD, GAINED\)/.test(pfSrc), 'probe-pool-frontier 当前必须仍走 `isClosed`');
+  /* ===== 【本条是"先量再切"的产物】分形态版**被实测反例否掉**，所以不能照那个设计切 =====
+   * 用户裁定"切、用占位阈值"之后，我在**切之前**把两个新读数在真包上量了一遍（5 粒 · 同一把尺 · 40 局账）：
+   *   · 得珠/局：现役 6.8 · 713 2.5 · Ldemo 4.2 · **Lctl(seed31) 10.1** · s111 7.3
+   *   · **过期/局**：现役 0.9 · 713 0.4 · Ldemo 1.6 · **Lctl 9.1** · s111 0.7   ← Lctl 的珠子是**过期烂掉**，不是花掉
+   *   · **贵卡/局**：现役 3.81 · 713 3.55 · Ldemo 4.20 · Lctl 5.58 · s111 4.46  ← 全落在 3.55~5.58 ⇒ **没有判别力**
+   * ⇒ 照分形态版：`Lctl`（花珠率 9.2% · 过期 9.1/局）会被判 **✔** —— 等于把"珠子经济烂掉"的粒**洗白**。
+   * ⇒ 正确读法：这不是"闭环在惩罚正确行为"，而是**两套货币各自崩**（贵卡/大雷花的是 ep；珠子是另一种资源）。
+   * ⇒ 处置：**不切**（保留 `isClosed`），把这条反例钉在这里：以后谁要切，必须先面对这组数。 */
+  const LCTL = { gained: 404, spentRate: 0.092, bigCardPerGame: 5.58, leftoverPerGame: 0.05 };
+  eq(PF_FRONT.isClosed(LCTL, 0.5, 100), false,
+    '【实测反例】Lctl 的珠子经济（花珠率 9.2% · 过期 9.1/局）必须被判 ✘ —— 旧判据在这件事上是对的');
+  ok(/洗白/.test(readFileSync('tools/pool-frontier-lib.mjs', 'utf8')),
+    '`isClosedShaped` 的文档必须**留痕**这条反例（说明它为什么不能被采用）—— 不许后人看不出它被否过');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
