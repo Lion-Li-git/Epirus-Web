@@ -7503,6 +7503,40 @@ t('D180 econ 回执按数值比（v1.5.273 · §E85）：0.10 写法不再被拒
 });
 
 
+/* ===== D182（qoder 09-28 §E102）：`probe-dead-term` 必须**禁止过度声称**，且自己先做到可复现 =====
+ * 这把尺是为"我今晚把『两次产物逐位相同』写成『可证死项』然后被下一个实验推翻"（§E99）而做的，
+ * 所以门判的不是它算得快不快，而是它**会不会再次让人把记忆/稀有当成效应**：
+ * ① 出厂权重为 0 的根（`tgtW`）必须**报恒真**，且"变的行"必须是 0/9 —— 这一条同时钉住预热（不预热时我实测过到 1/9）；
+ * ② `ringW` 必须给出"单位级 0/9 不变 + 阳性对照会变"这对**方向相反**的读数（少了任何一半都会让人误判）；
+ * ③ 认不来的根必须**响亮失败**（不许"探测不到就跳过"）；未知 `--` 参数必须 exit 64；
+ * ④ 输出末尾必须带那句"不支持可以摘某根权重"的限定。 */
+t('D182 死项筛子（v1.5.275 · §E102）：预热可复现 + 恒真必须标 + 阳性对照方向 + 拒绝兜底', function () {
+  const run = (args) => spawnSync(process.execPath, ['tools/probe-dead-term.mjs'].concat(args),
+    { encoding: 'utf8', timeout: 420000 });
+  const z = run(['--key=tgtW', '--games=4', '--rounds=6']);
+  eq(z.status, 0, '① 出厂 0 的根也必须能跑完（它给的是"恒真"警告，不是失败）：' + String(z.stderr || '').slice(0, 140));
+  ok(/出厂就是 0/.test(String(z.stdout)), '① 必须明写"出厂就是 0 ⇒ 恒真"，否则下游会把 0→0 读成"这项没用"');
+  ok(/变的行 0\/9/.test(String(z.stdout)), '① 权重为 0 时"变的行"必须是 0/9 —— 非零就说明**没预热**，把 `pickMix` 的模块级记忆读成了效应');
+  const r = run(['--key=ringW', '--games=6', '--rounds=10']);
+  eq(r.status, 0, '② `ringW` 必须跑完：' + String(r.stderr || '').slice(0, 140));
+  ok(/变的行 0\/9/.test(String(r.stdout)), '② 单位级：九个池内对手上关掉 `ringW` 后 fit 必须全不变（"稀有"那一半）');
+  ok(/阳性对照/.test(String(r.stdout)) && /fit 变 Δ=0\.\d+/.test(String(r.stdout)), '② 阳性对照：必须给出"变"的读数（"但活着"那一半）');
+  ok(/稀有但活着/.test(String(r.stdout)), '② 两层合起来的判读必须是"稀有但活着"，不许让工具自己写成"死项"');
+  ok(/响一次的频率/.test(String(r.stdout)), '② 前置条件必须给"多久响一次"的量级（或明说"这些局里一次都没出现"），不能只印一个 0');
+  ok(/不支持.*可以摘/.test(String(r.stdout)), '④ 末尾必须带"不支持可以摘"的限定');
+  const p = run(['--key=pressW', '--games=4', '--rounds=5']);
+  eq(p.status, 0, '⑤ `pressW` 也必须跑得起来：' + String(p.stderr || '').slice(0, 120));
+  ok(!/变的行 0\/9/.test(String(p.stdout)) && !/稀有但活着/.test(String(p.stdout)),
+    '⑤ 出厂每代都有剂量的那根（`pressW`，§E89 实测 0/61 代零剂量）**不许被判成"稀有/死项"** —— ' +
+    '它若变 0/9，说明这把尺自己坏了（接线、预热或复位出了问题），而不是这根死了');
+  const bad = run(['--key=divW', '--games=4']);
+  ok(bad.status === 7, '③ 没钉 setter/getter 的根必须响亮失败（实得 ' + bad.status + '）—— 不许"探测不到就跳过"');
+  ok(/不许加.*探测不到就跳过/.test(String(bad.stderr) + String(bad.stdout)), '③ 且要说明为什么拒（这条规矩本身就是本仓的形状库）');
+  const fl = run(['--key=ringW', '--bogus=1']);
+  eq(fl.status, 64, '③ 不认识的 `--` 参数必须 exit 64（写错开关名不许当默认值跑）');
+});
+
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
