@@ -587,7 +587,11 @@ v1.5.281 · np **233 条**（D188 新增）· 规则指纹 `ebdbff36` 未变 · 
 | 4 | §E142/§E143（5P 环境矩阵） | 每粒包：`node tools/probe-5p-envfit.mjs --pack=docs/artifacts/kept/<包>.bak --mix=4 [--mix=2] --games=60 --seeds=0,1 --out=docs/artifacts/e142-out/<包>.tsv`；判读 `node tools/analyze-5p-envfit.mjs --dir=…`（加 `--rule=off` 则只算数不判读） | 单粒 **约 10 秒**；15 粒一批 **2 分 20 秒**（≈531 局/秒） | `e142-out/`、`e143-out/` |
 | 5 | §E144 / §E134 / §E135（可分性尺） | `node tools/probe-sig-separable.mjs --n=3`（或 `--n=5`）`--games=40 --ks=3,8,15,20 --json=…` | 3P **约 40 秒**；5P **约 15 秒**（07:19:16 起跑、07:19:30 已出 json） | `e144-out/sig5p.json` |
 | 6 | §E129~§E131（路由上界与可实现值，N=3） | `node tools/probe-regime-identifiability.mjs --matrix=docs/artifacts/e129-out/matrix.json --metric=win --k=8 --exclude=… --dump=…` 然后 `node tools/analyze-routing-gain.mjs <dump.json>` | 单次探针 **约 40 秒**；分析器 <1 秒 | `e131-out/`（本班用它做过回归对拍） |
-| 7 | 四道门禁认证 | `node tools/gate-all.mjs --np`（改一条门时 `node tools/np-test.mjs --only=D1xx`） | **241 条时代**：稳态 362 秒 / 冷 482~535 秒。**245 条本班只测过**：冷 **538.8 秒** 与部分暖缓存 **415.5 秒** ⇒ **245 条的稳态数还没量**，别照抄 362 | 红时 `gate-all` 落 `docs/artifacts/gate-fail-*.txt` |
+| 7 | 四道门禁认证 | `node tools/gate-all.mjs --np`（改一条门时 `node tools/np-test.mjs --only=D1xx`） | **245 条实测**：冷 **538.8 秒**；**稳态 396 秒**（07:27:49→07:34:26→07:41:01 两遍连跑 = 397 / 395 秒，两遍都是 245/245）⇒ 比 241 条时代的 362 秒多约 **34 秒**（就是 D199/D200 那些 spawn 的代价） | 红时 `gate-all` 落 `docs/artifacts/gate-fail-*.txt` |
+
+**⚠ **认证记录本身也要能复跑**：v1.5.297 那条提交写的是「沿用 07:16 那次整轮认证」，而 **07:16 那遍跑完之后我又改了分析器一行**
+   ⇒ 那句话当时并不成立（虽然改的是打印、不是判据）。现已用 **07:34 与 07:41 两遍连跑**（各 np **245/245**）重新覆盖当前 `tools/` 树，
+   快三道 **07:24** 也是绿的。**教训**：「沿用旧认证」这句话要写成「最后一次覆盖这棵树的认证是哪一次」，而不是「我印象里最近跑过」。
 
 **四条复跑时必须守住的口径**（都是本班交过学费的地方）：
 1. `--every=N` 是**确定性格点**抽样 ⇒ 同 seed 各臂同桌子（配对成立），但**绝对水平不代表全池** ⇒ 跨口径引用前先问"是不是同一批桌子"。

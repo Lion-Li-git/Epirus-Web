@@ -113,7 +113,7 @@ Epirus-Web/
 命令行（无需浏览器）：
 
 ```bash
-node tools/gate-all.mjs --np   # ★ 一条命令跑四道门禁（np+spec+smoke+battle）并只印一行总结论；np 约 10 分钟，去掉 --np 约 40 秒
+node tools/gate-all.mjs --np   # ★ 一条命令跑四道门禁（np+spec+smoke+battle）并只印一行总结论；np 冷缓存约 9 分钟 / **稳态约 6.6 分钟（245 条实测 396 秒）**，去掉 --np 约 40 秒
 node tools/spec-run.mjs    # 2 人引擎：52/52
 node tools/np-test.mjs     # 多人引擎 + 门禁：245 条（**末号 D200**）。逐条标题由工具自己印（`node tools/np-test.mjs | grep ✔`），
                            #   改一条门时**不必等整轮**：`node tools/np-test.mjs --only=D193`（10 秒）；
