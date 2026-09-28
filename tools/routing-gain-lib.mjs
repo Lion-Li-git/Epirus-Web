@@ -167,6 +167,60 @@ export function nearestDistinct(v, items, skip, dist) {
   return { env: envs.length === 1 ? envs[0] : null, d: bd, ambiguous: envs.length > 1, tied: envs };
 }
 
+/** 欧氏距离（签名向量的默认尺；§E131/§E134 共用一把，别在探针里另写一份）。 */
+export function euclid(a, b) {
+  let s = 0;
+  for (let i = 0; i < a.length; i++) { const d = (a[i] || 0) - (b[i] || 0); s += d * d; }
+  return Math.sqrt(s);
+}
+export function meanVec(arr) {
+  const d = arr[0].length;
+  const out = new Array(d).fill(0);
+  for (const v of arr) for (let i = 0; i < d; i++) out[i] += (v[i] || 0);
+  return out.map(x => x / arr.length);
+}
+
+/** §E134 的主尺：**可分原型数**（不是"值多少分"，而是"这组特征能不能把原型分开"）。
+ *  `envVecs` = `{环境: [向量,…]}`，`dist` 可注入（默认欧氏）。
+ *  原型 X 算"分开"当且仅当 `min_{Y≠X} dist(质心X,质心Y) > median_{X 内部两两} dist`
+ *    —— "别的环境离我，比我自己的桌子之间的距离还远"。
+ *  同时给：逐样本/逐质心的唯一点数（与 §E131 那个"15 个点"对账用）、歧义率（跨环境逐位并列的样本占比）、LOO 准确率。
+ *  ⚠ 唯一点数**不能当判据**：连续特征下每条样本几乎都独一无二（实测 `U_sample` 逼近样本数），
+ *     那只说明"维度多"，不说明"分得开" ⇒ 判据只看 `U_sep` 与歧义率。 */
+export function separabilityOf(envVecs, dist) {
+  const D = dist || euclid;
+  const envs = Object.keys(envVecs).filter(e => Array.isArray(envVecs[e]) && envVecs[e].length > 0);
+  const samples = [];
+  for (const e of envs) for (const v of envVecs[e]) samples.push({ env: e, v });
+  const cent = {}; for (const e of envs) cent[e] = meanVec(envVecs[e]);
+  let sep = 0; const inseparable = [];
+  for (const x of envs) {
+    const arr = envVecs[x];
+    const within = [];
+    for (let i = 0; i < arr.length; i++) for (let j = i + 1; j < arr.length; j++) within.push(D(arr[i], arr[j]));
+    const w = medianOf(within);
+    let b = Infinity;
+    for (const y of envs) if (y !== x) { const dd = D(cent[x], cent[y]); if (dd < b) b = dd; }
+    if (w !== null && b > w) sep++;
+    else inseparable.push({ env: x, within: w, between: b === Infinity ? null : b, ratio: w ? +(b / w).toFixed(3) : null });
+  }
+  let amb = 0, judged = 0, hit = 0;
+  for (const s of samples) {
+    const nn = nearestDistinct(s.v, samples, s, D);
+    if (!nn || nn.d === null) continue;
+    judged++;
+    if (nn.ambiguous) { amb++; continue; }
+    if (nn.env === s.env) hit++;
+  }
+  const key = (v) => v.map(x => x.toFixed(3)).join('|');
+  return {
+    nEnvs: envs.length, nSamples: samples.length,
+    U_sep: sep, U_centroid: new Set(envs.map(e => key(cent[e]))).size, U_sample: new Set(samples.map(s => key(s.v))).size,
+    ambRate: judged ? amb / judged : null, acc: judged ? hit / judged : null,
+    inseparable: inseparable.sort((a, b2) => (a.ratio === null ? -1 : a.ratio) - (b2.ratio === null ? -1 : b2.ratio)),
+  };
+}
+
 /** 中位数（空数组 ⇒ null，不返回 0 冒充"量到了"） */
 export function medianOf(a) {
   if (!a || !a.length) return null;

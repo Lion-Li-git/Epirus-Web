@@ -8127,6 +8127,80 @@ t('D193 多包路由收益的算式有牙（v1.5.288-289 · §E129/§E130/§E131
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+t('D195 特征可分性这把前置尺有牙（v1.5.290 · §E134）：分得开要能测出来、分不开不许靠"唯一点数多"蒙过去', function () {
+  /* 为什么补这道门：§E134 的全部价值在于"它比验收益便宜一个数量级，而且能提前否证一整条方向"。
+   * 尺子本身如果没牙（比如把"每条样本都独一无二"误当"原型分得开"），那这条便宜路就会变成**新的假绿灯**。 */
+  ok(typeof RGAIN.separabilityOf === 'function', '① routing-gain-lib 必须导出 separabilityOf（判据只许一处定义）');
+  ok(typeof RGAIN.euclid === 'function', '① 与 euclid（§E131/§E134 共用同一把距离）');
+  const V = (a) => a.slice();
+  /* ② 三个离得很远、组内很紧的原型 ⇒ 必须**全部判可分**、歧义率 0、留一准确率 1 */
+  const sep3 = { x: [V([0, 0]), V([0.01, 0]), V([0, 0.01]), V([0.01, 0.01])],
+    y: [V([10, 0]), V([10.01, 0]), V([10, 0.01]), V([10.01, 0.01])],
+    z: [V([0, 10]), V([0.01, 10]), V([0, 10.01]), V([0.01, 10.01])] };
+  const r2 = RGAIN.separabilityOf(sep3);
+  eq(r2.U_sep, 3, '② 明显分得开 ⇒ U_sep 必须等于原型数（实测 ' + r2.U_sep + '）');
+  eq(r2.ambRate, 0, '② 没有跨环境并列 ⇒ 歧义率必须 0');
+  eq(r2.acc, 1, '② 留一最近邻必须全中');
+  /* ③ 两个逐位重合的原型 ⇒ 必须判**一个都分不开**、歧义率 1（这条钉住"并列不许按顺序裁决"） */
+  const same = { p: [V([1, 1]), V([1, 1]), V([1, 1])], q: [V([1, 1]), V([1, 1]), V([1, 1])] };
+  const r3 = RGAIN.separabilityOf(same);
+  eq(r3.U_sep, 0, '③ 质心重合 ⇒ 必须 0 个可分（实测 ' + r3.U_sep + '）');
+  eq(r3.ambRate, 1, '③ 每条样本的最近邻都跨环境并列 ⇒ 歧义率必须 1（不许按遍历顺序编一个答案）');
+  eq(r3.acc, 0, '③ 准确率必须 0');
+  /* ④ **这条最要紧**：组内极散、质心却挨得很近 ⇒ `U_sample` 很大但 `U_sep` 必须小。
+   *    钉住"维度多/样本条条唯一 ≠ 分得开"——这正是我第一节 §E134 差点读错的地方。 */
+  const spread = { a: [V([-5, 0]), V([5, 0]), V([0, -5]), V([0, 5])], b: [V([-4, 1]), V([4, 1]), V([1, -4]), V([-1, 4])] };
+  const r4 = RGAIN.separabilityOf(spread);
+  ok(r4.U_sample >= 7, '④ 前置：这个构造就该"条条样本独一无二"（实测 U_sample=' + r4.U_sample + '）');
+  ok(r4.U_sep <= 1, '④ **唯一点数多不算分得开**：组内比组间还远 ⇒ U_sep 必须 ≤1（实测 ' + r4.U_sep + '，U_sample ' + r4.U_sample + '）');
+  ok(r4.inseparable.length >= 1 && r4.inseparable[0].ratio <= 1, '④ 分不开的原型要**点名列出来**并给 b/w 比值（实测 ' + JSON.stringify(r4.inseparable[0]) + '）');
+  /* ⑤ 只有一条样本的原型：组内没有距离 ⇒ 不许当"可分"（更不许崩） */
+  const solo = { m: [V([0, 0])], n: [V([9, 9])] };
+  const r5 = RGAIN.separabilityOf(solo);
+  eq(r5.U_sep, 0, '⑤ 单样本原型无法算组内距离 ⇒ 判不可分（实测 ' + r5.U_sep + '）');
+  eq(r5.nEnvs, 2, '⑤ 原型数照常报');
+  /* ⑥ 探针必须用这把尺（而不是自己再写一份）；**行为面（K 有没有真截断、判据的线）由 D196 负责**，这里不重复 spawn */
+  const src = readFileSync('tools/probe-sig-separable.mjs', 'utf8');
+  ok(/import \{[^}]*separabilityOf[^}]*\} from '\.\/routing-gain-lib\.mjs'/.test(src), '⑥ 探针必须 import separabilityOf（判据只许一处定义）');
+  ok(!/U_sep: sep/.test(src), '⑥ 探针里不许留第二份 U_sep 的实现');
+});
+
+t('D196 可分性量具的窗口与判据不许自骗（v1.5.290 · §E134）：K 必须真截断、事件没 round 就不能靠事件分回合', function () {
+  /* 这道门只为一个事故存在：§E134 第一版拿 `e.round` 给事件分回合，而 **action 事件根本没有 round 字段**
+   * ⇒ 三档 K 算的是"整局"，读数字父相同、工具不崩、表看着完全合理。现在靠"每回合开局记事件水位"截断，
+   *   并且工具自己把"前 K 回合 vs 整局"印出来 —— 本门判的就是这个印出来的数**必须随 K 变**。 */
+  const argvOf = (K) => ['tools/probe-sig-separable.mjs', '--games=6', '--n=3', '--ks=' + K];
+  const o3 = String(spawnSync(process.execPath, argvOf(3), { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 }).stdout || '');
+  const o15 = String(spawnSync(process.execPath, argvOf(15), { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 }).stdout || '');
+  const m3 = o3.match(/A\/C 实际用的那条 `inWindow` = \*\*前 (\d+) 回合 (\d+) 次出招\*\* ‖ 整局 (\d+) 次/);
+  const m15 = o15.match(/A\/C 实际用的那条 `inWindow` = \*\*前 (\d+) 回合 (\d+) 次出招\*\* ‖ 整局 (\d+) 次/);
+  ok(!!m3 && !!m15, '① 两档都必须印出窗口自检（K=3 有=' + !!m3 + '，K=15 有=' + !!m15 + '）——**自检必须走特征向量用的那条 `inWindow`**，另写一份就等于给自己打勾');
+  if (m3 && m15) {
+    eq(Number(m3[1]), 3, '① 第一档确实按 K=3 算');
+    eq(Number(m15[1]), 15, '① 第二档确实按 K=15 算');
+    ok(Number(m3[2]) < Number(m15[2]), '② **窗口越长按到的出招必须越多**（实测 K=3 得 ' + m3[2] + ' 次 ‖ K=15 得 ' + m15[2] + ' 次）'
+      + ' ⇒ 两档相等就意味着 K 根本没起作用（就是那个事故）');
+    ok(Number(m15[2]) <= Number(m3[3]), '② 长窗口也不许超过整局（' + m15[2] + ' vs ' + m3[3] + '）');
+  }
+  /* ③ 判据的线必须来自跑前定死的常数，且 json 里要带出来 */
+  const jp = join(mkdtempSync(join(tmpdir(), 'd196-')), 'e134.json');
+  const rj = spawnSync(process.execPath, ['tools/probe-sig-separable.mjs', '--games=6', '--n=3', '--ks=8', '--json=' + jp],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  ok(rj.status === 0 && existsSync(jp), '③ 带 --json 必须跑得完并落下产物（status=' + rj.status + '）');
+  const J = JSON.parse(readFileSync(jp, 'utf8'));
+  eq(J.meta.uBar, 25, '③ json 必须把过线的那条 U 线带出来（25，§E134 跑前定死）');
+  eq(J.meta.ambBar, 0.40, '③ 与歧义率那条线（40%）');
+  ok(J.rows.length === 5, '③ 四组特征 + 一条拼接 = 5 行（实测 ' + J.rows.length + '）');
+  ok(J.rows.every(r => r.U_sep <= J.meta.envs), '③ U_sep 不许超过原型数（实测最大 ' + Math.max(...J.rows.map(r => r.U_sep)) + ' / ' + J.meta.envs + '）');
+  ok(J.rows.every(r => r.pass === (r.U_sep >= J.meta.uBar && r.ambRate <= J.meta.ambBar)),
+    '③ "过线"必须由这两条线算出来，不许手写文案');
+  rmSync(jp, { force: true });
+  /* ④ 单一来源：判据住在 lib，探针只负责观测与打印 */
+  const src = readFileSync('tools/probe-sig-separable.mjs', 'utf8');
+  ok(/import \{[^}]*separabilityOf[^}]*\} from '\.\/routing-gain-lib\.mjs'/.test(src), '④ 探针必须 import separabilityOf');
+  ok(!/U_sep: sep/.test(src), '④ 探针里不许留第二份 U_sep 的实现');
+});
+
 t('D194 `--only` 复跑单道门不许伪装成全绿（v1.5.288）：跳过的条数必须响亮印出、打错字要拒绝、注册数守卫要把跳过算进去', function () {
   /* 为什么补这道：本班给 np-test 加了 `--only=`（改门→验门从 9 分钟降到 10 秒）。
    * 这把刀的危险很具体：**跳过 237 道门然后报"通过 1 / 1"**，或者**子串打错 ⇒ 一条没跑也报绿**。
