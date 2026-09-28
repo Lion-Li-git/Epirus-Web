@@ -7872,10 +7872,6 @@ t('D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · �
     '③ 分组键必须是**权重数组本体**的哈希（文件 sha 会因 META 不同而漏掉别名 —— 这正是本次要抓的情形）');
 });
 
-console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
-
-
-process.exit(FAIL ? 1 : 0);
 
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
@@ -8119,4 +8115,18 @@ t('D188 并发批跑器（v1.5.281）：归属不串台 / 失败不吞 / 输入�
   ok(['s1', 's2', 's3'].every(k => r5[k] && r5[k].status === 0), '⑤ max=1 时三支仍都要有结果');
   eq(String(r5.s2.stdout).trim(), '2', '⑤ 串行路径的归属同样不许错');
 });
-
+
+
+const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
+const __nReg = __src.filter(l => /^t\(/.test(l)).length;
+if (__nReg !== PASS + FAIL) {
+  console.error("⛔ 注册的 t() 有 " + __nReg + " 条，但只执行了 " + (PASS + FAIL) + " 条"
+    + " ⇒ 有门落在 process.exit 之后（死代码）或被条件跳过。这不是全绿，是少跑。");
+  process.exit(1);
+}
+
+
+console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
+
+
+process.exit(FAIL ? 1 : 0);
