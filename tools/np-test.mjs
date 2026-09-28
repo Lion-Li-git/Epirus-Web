@@ -18,6 +18,7 @@ import * as PF_FRONT from './pool-frontier-lib.mjs';
  * ⚠️ 只许缓存"断言只用 stdout/status"的子进程（前置要求见 tools/np-cache.mjs 头注）。
  * ⚠️ 门里**不许**把缓存计数器清零（模块里那个清零 API，np-test 一律不许 import）：那会把收尾的"命中/省下多少"抹掉。 */
 import { spawnCached, inputHash, cacheStats } from './np-cache.mjs';
+import { spawnBatch } from './np-parallel.mjs';   // v1.5.281：互相独立的臂并发跑（D176 一道就占全套 49%）
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -7145,7 +7146,9 @@ t('D172 贵卡预算权重 costlyW：默认 0 · 线性形状 · **三处名单�
   const T3 = readFileSync('tools/train-3p.mjs', 'utf8');
   ok(/CLI_ECON_REWARD_KEYS = \[[^\]]*'costlyW'/.test(T3),
     '③ `train-3p` 的 CLI 名单必须有它 —— **缺这一处就被黑键闸拦**（本次实测：缺它时 exit 非 0、报"本入口读不到的旋钮"）');
-  ok(/'costlyW'\];/.test(T3) || /'costlyW',/.test(T3), '（同上的写法检查，防止只加在注释里）');
+  /* v1.5.281 删掉了一条 `/'costlyW'\];|'costlyW',/` 的"写法检查"：它名义上"防止只加在注释里"，
+   * 但实测**注释里出现的 `'costlyW',` 也算命中** ⇒ 它声称的事它没在判；而真正的保证就是上一行那条锚定式。
+   * ⚠ 别再把它加回来当"双保险" —— 那种第二遍抄写正是本仓反复出事的形状。 */
   /* ④ 读回可验：下达 ⇒ 消费点读回同值（仓里所有旋钮的标准姿势） */
   /* ④ 读回可验（下达 ⇒ 消费点读回同值）本门不 spawn：已在提交前手工验证过
    *   `setEconomyReward({costlyW:0.05})` ⇒ `economyReward().costlyW === 0.05`（下达前 0）；
@@ -7162,7 +7165,9 @@ t('D173 贵卡预算的**剂量表**（开火计数）：非零才计数、随�
   ok(/let COSTLY_HITS = 0;/.test(EVO), '剂量计数必须显式声明（第一版瞬态快照就是栽在"裸用未声明标识符"上）');
   ok(/if \(costlyBonus > 0\) COSTLY_HITS\+\+;/.test(EVO), '只在 costlyBonus **非零**时 +1（剂量表的意义就在"有没有非零过"）');
   ok(/costlyHits: COSTLY_HITS,/.test(EVO), '必须随 `economyReward()` 回执给出（读不到 = 没法用）');
-  ok(/COSTLY_HITS\+\+[\s\S]{0,80}(?!fit)/.test(EVO), '（形状检查）计数语句不许夹带 fit 赋值');
+  /* v1.5.281 删掉 `COSTLY_HITS\+\+[\s\S]{0,80}(?!fit)` 这条"形状检查"。变异实测：
+   * 它声称要防的写法 `COSTLY_HITS++; fit += 1;` **照样通过**（贪婪 `[\s\S]{0,80}` 配尾部 lookahead 几乎总能满足）⇒ 名不副实。
+   * 它想防的事其实由上一行**整句锚定** `if (costlyBonus > 0) COSTLY_HITS++;` 覆盖 —— 那条一改成夹带 fit 就红。判据没有少。 */
   const seg = (function () { const i = EVO.indexOf('COSTLY_HITS++'); return EVO.slice(Math.max(0, i - 200), i + 200); })();
   ok(seg.indexOf('gFit') < 0 && seg.indexOf('.fit =') < 0, '【只计数】计数处附近不许改 fit/判定（与 D171 同规矩）');
 });
@@ -7235,16 +7240,20 @@ t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + �
   const dir = mkdtempSync(join(tmpdir(), 'd176-'));
   const SEEDPACK = 'docs/artifacts/eval-out/win-Ldemo.bak';   // 与线上槽权重逐位相同（09-28 实测 d490dc136293）
   ok(existsSync(SEEDPACK), '用例需要一粒"起点包"当参照（缺了就只能造静默通过的假绿）');
-  const arm = (name, extra) => {
-    const r = spawnSync(process.execPath, ['tools/train-3p.mjs', '60'], {
-      encoding: 'utf8', timeout: 420000,
-      env: Object.assign({}, process.env, {
-        EPIRUS_HOTSTART: '1', EPIRUS_SEEDPACK: SEEDPACK, EPIRUS_SEED: '31', EPIRUS_ARM: name,
-        EPIRUS_BAND_DIR: dir + '/band-' + name, EPIRUS_T3P_OUT: dir + '/' + name + '.js'
-      }, extra || {})
-    });
-    return r;
-  };
+  const armEnv = (name, extra) => Object.assign({
+    EPIRUS_HOTSTART: '1', EPIRUS_SEEDPACK: SEEDPACK, EPIRUS_SEED: '31', EPIRUS_ARM: name,
+    EPIRUS_BAND_DIR: dir + '/band-' + name, EPIRUS_T3P_OUT: dir + '/' + name + '.js'
+  }, extra || {});
+  const arm = (name, extra) => spawnSync(process.execPath, ['tools/train-3p.mjs', '60'], {
+    encoding: 'utf8', timeout: 420000, env: Object.assign({}, process.env, armEnv(name, extra))
+  });
+  /* v1.5.281：这几支 60 代臂**互相独立**（各自 EPIRUS_ARM / BAND_DIR / T3P_OUT），串行只是 `spawnSync`
+   * 的写法顺出来的，不是判据要求的 ⇒ 一批并发跑。判据一条没减：下面的"逐位相同 / 换 seed 必须不同 /
+   * 账进产物"全都照旧，而"并发会不会改变产物"由这条门自己的变异对照兜着（`wCtl===wWide` 与 `wOther!==wCtl`）；
+   * 门面另有门 D188 判"归属不串台 / 失败不吞 / 少一个 job 就判红"。 */
+  const armBatch = (specs) => spawnBatch(specs.map(s => ({
+    tag: s[0], argv: ['tools/train-3p.mjs', '60'], env: armEnv(s[0], s[1])
+  })), { max: specs.length, timeout: 900000 });
   const metaOf = f => {
     const s = readFileSync(f, 'utf8'); const i = s.indexOf('EPIRUS_CHAMPION_3P_META = ');
     if (i < 0) return null;
@@ -7262,17 +7271,20 @@ t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + �
   eq(rNoRef.status, 7, '开了 veto 却**没有热启动参照包**必须 exit 7（无参照的"不劣于起点"是恒真判据）');
   const rBadKey = arm('d176badkey', { EPIRUS_SEL_KEEP: '0.5', EPIRUS_SEL_KEEP_KEYS: 'notacard' });
   eq(rBadKey.status, 7, '`SEL_KEEP_KEYS` 里非法卡名必须 exit 7（判不到的维不许当通过）');
-  /* ①② 三臂并排：不设 / 容差 100% / 容差 35%（现役起点 60 代实测会全塌缩） */
-  const rCtl = arm('d176ctl');
-  const rWide = arm('d176wide', { EPIRUS_SEL_KEEP: '1' });
-  const rTight = arm('d176tight', { EPIRUS_SEL_KEEP: '0.35' });
+  /* ①② 三臂并排：不设 / 容差 100% / 容差 35%（现役起点 60 代实测会全塌缩）+ 变异对照（换 seed） */
+  const BB = armBatch([
+    ['d176ctl'],
+    ['d176wide', { EPIRUS_SEL_KEEP: '1' }],
+    ['d176tight', { EPIRUS_SEL_KEEP: '0.35' }],
+    ['d176other', { EPIRUS_SEED: '57' }],
+  ]);
+  const rCtl = BB.d176ctl, rWide = BB.d176wide, rTight = BB.d176tight, rOther = BB.d176other;
   eq(rCtl.status, 0, '对照臂必须成功：' + String(rCtl.stderr || '').slice(0, 140));
   eq(rWide.status, 0, '容差 100% 臂必须成功');
   eq(rTight.status, 0, '容差 35% 臂必须成功（全塌缩也只许响亮报告，不改退出码）');
   const wCtl = wOf(dir + '/d176ctl.js'), wWide = wOf(dir + '/d176wide.js'), wTight = wOf(dir + '/d176tight.js');
   ok(wCtl && wWide && wTight, '三臂产物都要能读出权重本体');
   /* 变异对照：不同 seed 的产物必须不同，否则上面的"逐位相同"是恒真比较器 */
-  const rOther = arm('d176other', { EPIRUS_SEED: '57' });
   eq(rOther.status, 0, '变异对照臂必须成功');
   const wOther = wOf(dir + '/d176other.js');
   ok(wOther && wOther !== wCtl, '【比较器自检】换 seed 必须产出**不同**的权重（相同 = 比较器恒真，D165 建门时踩过同族）');
@@ -7315,8 +7327,11 @@ t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + �
   ok(!((sk && sk.unjudgeable) || []).some(function (x) { return /^charge/.test(x); }),
     'v1.5.266 修的就是这条：`charge` 从前只按落地判 ⇒ 被点名"无法判"（09-28 实测），现在按出手判就不该再出现');
   /* ===== v1.5.267：座位对称性维（第三条尺）—— 起点读 16.7pt(N=3/60 局)，宽容差必须完全不动人 ===== */
-  const rSeatLax = arm('d176seatlax', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '100' });
-  const rSeatStrict = arm('d176seat', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '0' });
+  const BS = armBatch([
+    ['d176seatlax', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '100' }],
+    ['d176seat', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '0' }],
+  ]);
+  const rSeatLax = BS.d176seatlax, rSeatStrict = BS.d176seat;
   const rSeatBad = arm('d176seatbad', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: 'abc' });
   eq(rSeatBad.status, 7, '`SEL_KEEP_SEAT` 非数值必须 exit 7');
   const rSeatBig = arm('d176seatbig', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '999' });
@@ -7685,12 +7700,18 @@ t('D185 起点补进重验池（v1.5.277 · §E114）：默认零行 + 只多候
   };
   const common = { EPIRUS_SEED: '5', EPIRUS_HOTSTART: '1', EPIRUS_ANCHOR: '0', EPIRUS_SEEDPACK: zeroSeed };
   const offOut = join(dir, 'off.js'), onOut = join(dir, 'on.js');
-  const off = arm(['40', '3', '2', '8'], Object.assign({}, common, { EPIRUS_ARM: 'd185-off', EPIRUS_HALL_SEED: '0', EPIRUS_T3P_OUT: offOut }));
+  /* v1.5.281：off/on 两臂互相独立 ⇒ 一批并发（判据不变：下面仍比 `fitsOff.length` / 产物逐位 / 横幅有无） */
+  const B185 = spawnBatch([
+    { tag: 'off', argv: ['tools/train-3p.mjs', '40', '3', '2', '8'],
+      env: Object.assign({}, common, { EPIRUS_ARM: 'd185-off', EPIRUS_HALL_SEED: '0', EPIRUS_T3P_OUT: offOut, EPIRUS_BAND_DIR: join(dir, 'b-off') }) },
+    { tag: 'on', argv: ['tools/train-3p.mjs', '40', '3', '2', '8'],
+      env: Object.assign({}, common, { EPIRUS_ARM: 'd185-on', EPIRUS_HALL_SEED: '1', EPIRUS_T3P_OUT: onOut, EPIRUS_BAND_DIR: join(dir, 'b-on') }) },
+  ], { max: 2, timeout: 900000 });
+  const off = B185.off, on = B185.on;
   eq(off.status, 0, '① 开关关的迷你臂必须跑通（exit=' + off.status + ' ' + String(off.stderr || '').slice(0, 100) + '）');
   ok(!/hall-seed/.test(String(off.stdout) + String(off.stderr)), '① 默认（关）不许出现任何 `[hall-seed]` 行 ⇒ 出厂路径一行都不跑');
   const fitsOff = fitsOf(off.stdout);
   eq(fitsOff.length, 6, '① 前置：关档要读到 6 席重验行（实测 ' + fitsOff.length + ' ⇒ 终局形状变了，本门的比较基准得跟着改）');
-  const on = arm(['40', '3', '2', '8'], Object.assign({}, common, { EPIRUS_ARM: 'd185-on', EPIRUS_HALL_SEED: '1', EPIRUS_T3P_OUT: onOut }));
   eq(on.status, 0, '② 开关开的迷你臂必须跑通（exit=' + on.status + '）');
   ok(/起点已追加为终局重验候选（现在 7 席/.test(String(on.stdout)), '② 必须**真的多了一席候选**（只打横幅不改池子 = 本仓"seam 2"族的老病）');
   const fitsOn = fitsOf(on.stdout);
@@ -7973,6 +7994,39 @@ t('D187 整桌同原型（v1.5.280 · §E124）：关=逐位可逆 / 开=局内�
   const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
   ok(/'EPIRUS_OPP_BLOCK'/.test(t3), '⑥ 键必须登记进 `SELF_ENV_KEYS`（漏一处就被入口黑键闸拦成暗键，D172 那族三处名单）');
   ok(/EPIRUS_OPP_BLOCK=1 读回/.test(t3) || /没生效，退出/.test(t3), '⑥ 下达必须有"读回不等 ⇒ exit 7"的硬拒（静默空转的臂比不跑更坏）');
+});
+
+t('D188 并发批跑器（v1.5.281）：归属不串台 / 失败不吞 / 输入不全就抛 / 真并发 / 退化成串行仍正确', function () {
+  /* 这把尺自己必须有牙：D176 的加速全靠它，"跑得快但把结果记错人"比慢更坏。 */
+  const J = (tag, code) => ({ tag: tag, argv: ['-e', code] });
+  /* ① 归属：4 个微型 job 并发，每个的 stdout 必须只含自己的 tag（串台 = 断言读错臂） */
+  const r1 = spawnBatch([J('tA', 'console.log("tA")'), J('tB', 'console.log("tB")'),
+    J('tC', 'console.log("tC")'), J('tD', 'console.log("tD")')], { max: 4 });
+  for (const t of ['tA', 'tB', 'tC', 'tD']) {
+    eq(String(r1[t].stdout).trim(), t, '① ' + t + ' 的输出必须归属自己（实测 ' + JSON.stringify(String(r1[t].stdout).slice(0, 40)) + '）');
+    eq(r1[t].status, 0, '① ' + t + ' 必须成功退出');
+  }
+  /* ② 失败不吞：非零码与抛错都必须原样带回（吞掉失败 = 假绿） */
+  const r2 = spawnBatch([J('e3', 'process.exit(3)'), J('thr', 'throw new Error("boom")'), J('out', 'console.error("E")')]);
+  eq(r2.e3.status, 3, '② 子进程 exit 3 必须原样带回，实测 ' + r2.e3.status);
+  ok(r2.thr.status !== 0, '② 抛错必须非零，实测 ' + r2.thr.status);
+  ok(/E/.test(r2.out.stderr) && !/E/.test(r2.out.stdout), '② stderr 与 stdout 不许混（读 stderr 的断言会因此瞎掉）');
+  /* ③ 输入不全一律抛：零 job / tag 重复 / 缺 argv —— 都是"少跑了却像过了"的前身 */
+  const throws = (fn) => { try { fn(); return null; } catch (e) { return String(e.message || e); } };
+  ok(throws(() => spawnBatch([])), '③ 零个 job 必须抛（一条都没跑不许当通过）');
+  ok(throws(() => spawnBatch([J('dup', 'console.log(1)'), J('dup', 'console.log(2)')])).indexOf('tag 重复') >= 0,
+    '③ tag 重复必须抛（两支臂盖同一份结果 = 悄悄少跑一支）');
+  ok(throws(() => spawnBatch([{ tag: 'x' }])), '③ 缺 argv 必须抛');
+  /* ④ 真并发：3 个各睡 1 秒的 job，批跑总耗时必须明显小于串跑的 3 秒 */
+  const sleep = (tag) => J(tag, 'const t=Date.now();while(Date.now()-t<1000);console.log("ok")');
+  const t0 = Date.now();
+  spawnBatch([sleep('a'), sleep('b'), sleep('c')], { max: 3 });
+  const ms = Date.now() - t0;
+  ok(ms < 2500, '④ 三支各 1 秒的 job 并发跑完用了 ' + ms + 'ms ⇒ 必须明显小于串跑（3000ms+），否则加速是假的');
+  /* ⑤ 退化成串行也必须给出全部结果（并发只是加速，不许改变"每支都跑"这件事） */
+  const r5 = spawnBatch([J('s1', 'console.log("1")'), J('s2', 'console.log("2")'), J('s3', 'console.log("3")')], { max: 1 });
+  ok(['s1', 's2', 's3'].every(k => r5[k] && r5[k].status === 0), '⑤ max=1 时三支仍都要有结果');
+  eq(String(r5.s2.stdout).trim(), '2', '⑤ 串行路径的归属同样不许错');
 });
 
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
