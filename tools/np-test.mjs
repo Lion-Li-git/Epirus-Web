@@ -7807,6 +7807,19 @@ t('D189 gate-drafts **不许静默吞参数**（认不出 ⇒ exit 64；`.bak` �
   ok(/拒绝静默忽略/.test(r.stderr || r.stdout || ''), '必须印出"拒绝静默忽略"这句话（人能看懂才算响亮）');
 });
 
+t('D190 promote 的阻断计数**不许被重复打印翻倍**（Qoder §F-1 点名 · v1.5.283）', function () {
+  /* 病（Qoder 09-28 §F 交给 DS）：`gate-drafts` 会把同一格 `G4[…]` 印**两遍**（实测：stdout 8 行 / 唯一格名 5 个，
+   * stderr 0 行 ⇒ 是工具自己重复打印，不是 stdout+stderr 拼接）⇒ 旧代码每遇一行就 push 一次 ⇒
+   * 「⛔ 体检未过（N 项阻断）」的 N **翻倍**（判定不受影响，但读数字的人会被误导）。
+   * 本门钉 promote 侧的去重（按格名），并留一条"工具侧待修"的说明。 */
+  const PM = readFileSync('tools/promote-champion.mjs', 'utf8');
+  ok(/if \(gateDrafts\.blocking\.indexOf\(nm\) < 0\)/.test(PM),
+    'G4/G5 阻断必须**按格名去重**后再 push（同一格被印两遍时不许数两遍）');
+  ok(/gateDrafts\.recorded\.indexOf\('FAIL ' \+ nm\) < 0/.test(PM), 'recorded 一族同样要去重');
+  ok(/gate-drafts 自己重复打印/.test(PM),
+    '必须把根因（工具自己重复打印）留档 —— 免得后人以为已修而删掉去重（工具侧那条还没修）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {

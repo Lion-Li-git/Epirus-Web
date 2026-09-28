@@ -1,3 +1,16 @@
+## v1.5.283 — 修 `promote` 的**阻断计数翻倍**（Qoder §F-1 点名交给 DS）+ 门 D190
+
+**病**：`promote --dry` 的「⛔ 体检未过（N 项阻断）」里 **N 不可信**（同一组 G4/G5 被数两遍；判定不受影响）。
+**实测根因**（排除法，不是 `stdout+stderr` 拼接）：`node tools/gate-drafts.mjs <pack> >out 2>err` ⇒
+**stdout 里 `G4[…]` 共 8 行、唯一格名只有 5 个**（每包 long/multi 各出现 **2 次**），**stderr 0 行**
+⇒ 是 **gate-drafts 自己重复打印**（工具侧那条**仍未修**，已在本文件与代码注释里留档）。
+**修法**（promote 侧，最小面）：`blocking` / `recorded` 两族**按格名去重**后再 push。
+**实测**：拿有阻断的 `win-Lctl.bak` 跑真 gate-drafts ⇒ 每个阻断只出现 **1 次**（G4/G5 各 long+multi 共 4 条，`exit 6`）✓。
+**新门 D190**：去重护栏必须在 · `recorded` 同样去重 · **根因说明必须留档**（防后人以为工具侧已修而删掉去重）。
+
+**另据实更正一条 §F**：§F-2「`js/bundled-champion-3p.js` 的 META 不是合法 JSON ⇒ `promote --dry` 对现役包会崩」
+**已不存在**（DS v1.5.256 修了引号 + `Ldemo` 上槽时重写 META）—— 实测**两包都严格解析通过**（44 / 13 键），
+`promote --dry js/bundled-champion-3p.js` **exit 0**。千问那条是旧观察。
 ## v1.5.282 — 修 `gate-drafts` **静默吞参数**（Qoder 09-28 §5-3 点名交给 DS）+ 门 D189 + METHODOLOGY 补 λ 饱和机制
 
 **病**：`tools/gate-drafts.mjs` 的参数过滤器只收 `.bak`（`filter(a => /\.bak$/.test(a))`）⇒

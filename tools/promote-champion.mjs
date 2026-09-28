@@ -423,14 +423,21 @@ if (!process.argv.includes('--skip-gate-drafts')) {
        * **错误结论**传给人 —— 与 v1.5.78 想治的"把没过的当成过了"是同一类错误的反向版本。 */
       const isRef = /^G[3-6]\[(线上包|元测试)/.test(nm);
       if (m[1] === 'FAIL' && !isRef && (/^G4\[/.test(nm) || /^G5\[/.test(nm))) {
-        gateDrafts.blocking.push(nm);
-        fails.push('行为门未过：' + nm);
+        /* v1.5.283（DS · Qoder §F-1 点名交给我）：**同一格会被印两遍** ⇒ 旧代码把阻断**数两遍**，
+         * 于是 "⛔ 体检未过（N 项阻断）" 里的 N 不可信（判定不受影响，但人会被数字误导）。
+         * 实测根因（不是 stdout+stderr 拼接）：`node tools/gate-drafts.mjs <pack> >out 2>err` 下
+         *   stdout 里 `G4[…]` 共 **8 行**、唯一格名 **5 个**（每包 long/multi 各出现 2 次），**stderr 0 行**
+         *   ⇒ 是 **gate-drafts 自己重复打印**（工具侧待修，见 §F-1 的后续；promote 侧先按名字去重，保证计数可信）。 */
+        if (gateDrafts.blocking.indexOf(nm) < 0) {
+          gateDrafts.blocking.push(nm);
+          fails.push('行为门未过：' + nm);
+        }
       } else if (isRef && m[1] === 'FAIL') {
-        gateDrafts.recorded.push('参照(不阻断) FAIL ' + nm);
+        if (gateDrafts.recorded.indexOf('参照(不阻断) FAIL ' + nm) < 0) gateDrafts.recorded.push('参照(不阻断) FAIL ' + nm);
       } else if (/^G6\[/.test(nm)) {
-        gateDrafts.recorded.push(m[1] + ' ' + nm);
+        if (gateDrafts.recorded.indexOf(m[1] + ' ' + nm) < 0) gateDrafts.recorded.push(m[1] + ' ' + nm);
       } else if (m[1] === 'FAIL') {
-        gateDrafts.recorded.push('FAIL ' + nm);
+        if (gateDrafts.recorded.indexOf('FAIL ' + nm) < 0) gateDrafts.recorded.push('FAIL ' + nm);
       }
     }
     /* v1.5.129 §7-3 的自记账修复（qoder-research 0920）：gate() 打印是**两行**
