@@ -19,6 +19,10 @@ import * as PF_FRONT from './pool-frontier-lib.mjs';
  * ⚠️ 门里**不许**把缓存计数器清零（模块里那个清零 API，np-test 一律不许 import）：那会把收尾的"命中/省下多少"抹掉。 */
 import { spawnCached, inputHash, cacheStats } from './np-cache.mjs';
 import { spawnBatch } from './np-parallel.mjs';   // v1.5.281：互相独立的臂并发跑（D176 一道就占全套 49%）
+/* v1.5.288（D193）：多包路由收益的**算式单一来源** —— 门直接喂合成表覆盖六个分支与两类拒绝，
+ * 不靠探针的输出措辞、也不依赖本机产物（同 D149/D161/D164 的路子）；环境名从 opp-pool 现取，不写死。 */
+import * as RGAIN from './routing-gain-lib.mjs';
+import { OPP_SPECS } from '../server/opp-pool.mjs';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -65,7 +69,15 @@ function mulberry32(seed) {
 let PASS = 0, FAIL = 0;
 const __T = [];   /* v1.5.224：按门计时。默认**零成本**（只 push 两个数），NP_TIME=1 时才在收尾印排行榜。
                    * 整轮墙钟用 `process.uptime()`（见收尾），不另记起点 —— 少一个变量就少一处能写错的地方。 */
+/* `--only=<子串>`：**只跑名字匹配的门**（v1.5.288）。
+ * 为什么要它：本文件没有"单门复跑"的口子，改一条门的判据就要等整轮 6~10 分钟 ⇒
+ * 实际发生的是我拿**开发台脚本**在外面复算同一批断言（D193 今天就这么做的），
+ * 而那套外部脚本与门体是分叉的两份代码。有了 `--only`，"改门 → 验门"回到同一把尺上。
+ * ⚠ 这条**不冒充全绿**：跑完会响亮印"跳过 N 条"，收尾的注册数守卫也把跳过数算进去。 */
+const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7) || null;
+let __skipped = 0;
 function t(name, fn) {
+  if (ONLY && name.indexOf(ONLY) < 0) { __skipped++; return; }
   const __t0 = Date.now();
   try { fn(); PASS++; console.log('  ✔ ' + name); }
   catch (e) { FAIL++; console.log('  ✘ ' + name + '  → ' + e.message); }
@@ -7910,6 +7922,175 @@ t('D192 判定读数自带噪声尺（v1.5.287 · DS 清单第 8 条后半）：
   ok(/±\d+\.\dpt\(95%,n=20\)/.test(gout), '⑥ 且带上具体的 n（没有 n 的 ±x 等于没给口径）');
 });
 
+t('D193 多包路由收益的算式有牙（v1.5.288 · §E129）：六个分支全覆盖、绝对阈值不许回来、印出来的分支必须等于用同一批数重算的分支', function () {
+  /* 这条门**不判科学结论**（R 是多少由 §E129 的记录负责），只判三件事：
+   *   ① 判读函数的每条分支都走得到、边界值不许含混；
+   *   ② 我预注册写错的那条**绝对 25% 阈值**不许回来（27 类时 13% 是"有信息"的，旧规则在这里判了"路由不可实现"，
+   *      而同一次运行的 realizable > best_single 说明钱真赚到了 ⇒ 两条判词互相打脸）；
+   *   ③ 矩阵读不出、环境被排空时必须**拒绝出结论**，不许拿空表算上界。
+   * 变异实测（把 `isInformative` 换回旧的绝对阈值）⇒ ② 的两条红；开发台 47 断言全绿后才搬进本文件。 */
+  for (const fn of ['routingReadings', 'bestInByEnv', 'bestSingleOf', 'realizableOf', 'chanceOf', 'isInformative', 'branchOf', 'matrixComplaint']) {
+    ok(typeof RGAIN[fn] === 'function', '① routing-gain-lib 必须导出 ' + fn + '（算式只许这一处）');
+  }
+  const B = RGAIN.BRANCHES;
+  /* ---- ② 合成表：完美路由器的 R 恰好 1；没预测 ⇒ ⑥；全平 ⇒ ⑤ ---- */
+  const E6 = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'];
+  const row = (pack, f) => ({ pack: pack, per: Object.fromEntries(E6.map((e, i) => [e, { fit: f[i] }])) });
+  const ROWS = [
+    row('A', [0.90, 0.30, 0.30, 0.30, 0.30, 0.30]), row('B', [0.20, 0.85, 0.20, 0.20, 0.20, 0.20]),
+    row('C', [0.20, 0.20, 0.80, 0.75, 0.20, 0.20]), row('D', [0.10, 0.10, 0.10, 0.10, 0.10, 0.60]),
+  ];
+  const BI = RGAIN.bestInByEnv(ROWS, E6);
+  eq(BI.e1, 'A', '② 每个环境的最佳包要挑对');
+  const perf = RGAIN.routingReadings({ rows: ROWS, envs: E6, bestIn: BI, picks: Object.fromEntries(E6.map((e) => [e, e])), acc: 0.9, placebo: 0.05 });
+  ok(perf.oracle >= perf.bestSingle, '② oracle 不许低于 best_single（上界是"每环境各挑各的"，一定不差于一招鲜）');
+  eq(perf.R, 1, '② 完美路由器（picks=真环境）的 R 必须恰好 1');
+  eq(perf.branch, B.WORTH, '② R=1 且有分辨力 ⇒ 必须判 ②');
+  eq(RGAIN.routingReadings({ rows: ROWS, envs: E6, bestIn: BI, picks: {}, acc: 0.9, placebo: 0.05 }).branch, B.NO_READING,
+    '② 一个预测都拿不到 ⇒ 必须判"读数不全"，不许当 0 收益（那是 §E121 那族"读不出冒充读数"）');
+  const FLAT = [row('X', [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]), row('Y', [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]), row('Z', [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])];
+  const flat = RGAIN.routingReadings({ rows: FLAT, envs: E6, bestIn: RGAIN.bestInByEnv(FLAT, E6), picks: Object.fromEntries(E6.map((e) => [e, e])), acc: 0.9, placebo: 0 });
+  eq(flat.branch, B.NO_EDGE, '② 上界缺口 < 0.02 ⇒ 必须判 ⑤（不必谈 R）');
+  eq(flat.R, null, '② 判 ⑤ 时 R 必须是 null，不许印 0（0 会被读成"路由赚不到钱"）');
+  /* ---- ③ 分支函数：四个带的上下边界 + 两条优先级 ---- */
+  eq(RGAIN.branchOf({ gap: 0.10, readingsOk: true, informative: true, R: 0.50 }), B.WORTH, '③ R=0.50 在 ② 的界上（含）');
+  eq(RGAIN.branchOf({ gap: 0.10, readingsOk: true, informative: true, R: 0.49 }), B.HALF, '③ R=0.49 掉进 ③');
+  eq(RGAIN.branchOf({ gap: 0.10, readingsOk: true, informative: true, R: 0.20 }), B.HALF, '③ R=0.20 在 ③ 的界上（含）');
+  eq(RGAIN.branchOf({ gap: 0.10, readingsOk: true, informative: true, R: 0.19 }), B.NEEDS_NET, '③ R=0.19 掉进 ④');
+  eq(RGAIN.branchOf({ gap: 0.10, readingsOk: true, informative: false, R: 0.90 }), B.NO_SIGNAL, '③ 签名没分辨力时 R 再大也不许判"值得做"');
+  eq(RGAIN.branchOf({ gap: 0.019, readingsOk: true, informative: true, R: null }), B.NO_EDGE, '③ 缺口太小 ⇒ ⑤ 优先');
+  eq(RGAIN.branchOf({ gap: 0.10, readingsOk: false, informative: true, R: null }), B.NO_READING, '③ 读数不全 ⇒ ⑥ 优先于收益判断');
+  /* ---- ④ 核心那条：§E129 的读数在这把尺下必须是"有信息"，旧的绝对 25% 不许回来 ---- */
+  const CH27 = RGAIN.chanceOf(27);
+  ok(RGAIN.isInformative(0.1267, CH27, 0.0047) === true, '④ §E129 主读数（准确率 12.7% / 随机 3.7% / placebo 0.5%）必须判"有分辨力"');
+  ok(RGAIN.isInformative(0.24, CH27, 0) === true, '④ 准确率 24%（低于旧的 25% 绝对阈值）在 27 类下仍是**有信息** ⇒ 绝对阈值不许回来');
+  ok(RGAIN.isInformative(0.05, CH27, 0.04) === false, '④ 只比随机高一点点（5% vs 3.7%）⇒ 必须判"没有分辨力"');
+  ok(RGAIN.isInformative(NaN, CH27, 0) === false, '④ 准确率没量到 ⇒ 不许判有信息');
+  ok(RGAIN.isInformative(0.20, RGAIN.chanceOf(2), 0.19) === false, '④ 两类问题里 20% 低于随机 50% ⇒ 没信息（placebo 参与取大）');
+  /* ---- ⑤ 矩阵读不出就拒绝 ---- */
+  ok(/不足 3 粒/.test(RGAIN.matrixComplaint(ROWS.slice(0, 2), E6) || ''), '⑤ 只有 2 粒包 ⇒ 拒绝并说清为什么');
+  ok(/包名读不出/.test(RGAIN.matrixComplaint([{ per: {} }, { per: {} }, { pack: '', per: {} }], E6) || ''), '⑤ 有行没名字 ⇒ 拒绝（矩阵改键时不许静默用无名行）');
+  ok(/环境数不足/.test(RGAIN.matrixComplaint(ROWS, ['a', 'b', 'c']) || ''), '⑤ 环境不足 4 ⇒ 拒绝');
+  eq(RGAIN.matrixComplaint(ROWS, E6), null, '⑤ 合格的表必须放行');
+  /* ---- ⑥ 消费点：探针必须用这把尺，且不许留第二份公式 ---- */
+  const probeSrc = readFileSync('tools/probe-regime-identifiability.mjs', 'utf8');
+  ok(/from '\.\/routing-gain-lib\.mjs'/.test(probeSrc), '⑥ 探针必须 import routing-gain-lib');
+  ok(!/R\s*=\s*\(realizable\s*-/.test(probeSrc), '⑥ 探针里不许再抄一份 R 的公式');
+  ok(!/acc\s*<\s*0\.25/.test(probeSrc) && !/改观测面是唯一路/.test(probeSrc), '⑥ 旧的 25% 绝对阈值判词必须已从探针里删干净');
+  /* ---- ⑦ 行为：真跑一次（合成矩阵 + opp-pool 现取的环境名），**印出来的分支必须等于用同一批数重算的分支** ----
+   * 复算用的 R 必须由未取整的 realizable/bestSingle/gap 推出，**不能**用 json 里那个取整过的 `R`：
+   * 取整值恰好压在带边界上（真实 0.49996 → 印 0.5000）会把分支判到隔壁一档 ⇒ **门自己**在正确的代码上假红。
+   * 这条是变异实测撞出来的，不是设想出来的。 */
+  const dir = mkdtempSync(join(tmpdir(), 'd193-'));
+  try {
+    const specs = Array.isArray(OPP_SPECS) ? OPP_SPECS : Object.values(OPP_SPECS);
+    const names = specs.slice(0, 5).map((s) => s.name);
+    const synth = { rows: names.map((nm, i) => ({ label: nm, per: Object.fromEntries(names.map((e, j) => [e, { fit: i === j ? 0.95 : 0.30 }])) })) };
+    const mf = join(dir, 'matrix.json');
+    writeFileSync(mf, JSON.stringify(synth));
+    const run = (extra, out) => spawnSync(process.execPath, ['tools/probe-regime-identifiability.mjs', '--matrix=' + mf, '--games=6', '--k=3'].concat(extra, out ? ['--json=' + out] : []),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 300000, maxBuffer: 1 << 24 });
+    const jf = join(dir, 'out.json');
+    const r1 = run([], jf);
+    const o1 = String(r1.stdout || '');
+    ok(r1.status === 0 && o1.length > 300, '⑦ 前置：探针必须真跑出正文（status=' + r1.status + '，长度 ' + o1.length + '）——没跑完不许把"分支对不上"当结论');
+    const j = JSON.parse(readFileSync(jf, 'utf8'));
+    ok(j.meta.envs >= 4, '⑦ 前置：合成矩阵至少 4 个有效环境（实测 ' + j.meta.envs + '）');
+    ok(j.oracle >= j.bestSingle, '⑦ 实跑也必须满足 oracle ≥ best_single');
+    const Rcalc = (j.realizable - j.bestSingle) / j.gap;
+    eq(j.chance, RGAIN.chanceOf(j.meta.envs), '⑦ json 的随机基线必须等于 1/参与判定环境数');
+    eq(j.informative, RGAIN.isInformative(j.acc, j.chance, j.placebo), '⑦ json 的"有分辨力"必须能由它自己的三个数重算出来');
+    ok(j.gap < 0.02 || Math.abs(j.R - Rcalc) < 1e-3, '⑦ json 印的 R 与复算的 R 必须一致（实测 ' + j.R + ' vs ' + Rcalc + '）');
+    eq(j.branch, RGAIN.branchOf({ gap: j.gap, readingsOk: isFinite(j.realizable) && isFinite(j.acc), informative: j.informative, R: Rcalc }),
+      '⑦ **印出来的分支 = 用同一批数重算的分支**');
+    const vline = o1.split('\n').filter(l => /判读：/.test(l))[0] || '（输出里没有判读行）';
+    ok(new RegExp('^\\s*判读：' + j.branch).test(vline), '⑦ 屏幕上的判读开头必须是 json 里那个分支符（实测：' + vline.trim().slice(0, 60) + '）');
+    const n1 = Number((o1.match(/参与判定环境 (\d+) 个/) || [])[1]);
+    const n2 = Number((String(run(['--exclude=' + names[0]]).stdout || '').match(/参与判定环境 (\d+) 个/) || [])[1]);
+    ok(isFinite(n1) && isFinite(n2) && n2 === n1 - 1, '⑦ --exclude 一个真环境 ⇒ 参与判定环境必须少 1 个（实测 ' + n2 + ' vs ' + n1 + '）');
+    const o3 = String(run(['--exclude=zzz-not-an-env']).stdout || '');
+    const n3 = Number((o3.match(/参与判定环境 (\d+) 个/) || [])[1]);
+    ok(/typo/.test(o3) && n3 === n1, '⑦ 排除一个不存在的名字 ⇒ 必须点名"typo？忽略"，且参与判定环境与不排除时相同（实测 ' + n3 + ' vs ' + n1 + '）');
+    ok(run(['--exclude=' + names.join(',')]).status === 2, '⑦ 把环境全排除 ⇒ 必须 exit 2 拒绝出结论');
+    ok(spawnSync(process.execPath, ['tools/probe-regime-identifiability.mjs', '--games=2'], { cwd: process.cwd(), encoding: 'utf8', timeout: 120000 }).status === 2,
+      '⑦ 不给 --matrix ⇒ 必须 exit 2');
+    /* ---- ⑧ `--metric=` 必须真的换列打分（不是被忽略），拼错的量纲必须响亮拒 ----
+     * 这是 §E130 的整条依据：同一套预测在 `fit` 与 `win` 上读出 R=0.235 与 R=0.14 两个结论。
+     * 若这个参数被静默忽略，两个"口径"其实是同一个数 ⇒ 那条更正就是假的。 */
+    const mf2 = join(dir, 'matrix2.json');
+    /* 这张合成表是**故意设计成有对比度**的（第一版没有，于是一条断言成了装饰 —— 变异实测抓出来的）：
+     * `pack[0]` 两个量纲上都平（fit 0.55 / win 0.20），`pack[i≥1]` 只在自己那一格尖（fit 0.95 / win 0.90）
+     * ⇒ `fit` 的一招鲜 = pack0，而 `win` 的一招鲜 = 某个尖包 ⇒ ⑧ 的"换列必须换数"量得出；
+     * ⇒ 且 per-env 最佳包 ≠ 那一招鲜 ⇒ ⑨ 的"链路均值 = 印出来的均值"也量得出。 */
+    writeFileSync(mf2, JSON.stringify({ rows: names.map((nm, i) => ({
+      label: nm,
+      per: Object.fromEntries(names.map((e, j) => [e,
+        i === 0 ? { fit: 0.55, win: 0.20 }
+          : { fit: j === i ? 0.95 : 0.10, win: j === i ? 0.90 : 0.05 }]))
+    })) }));
+    const run2 = (extra, out) => spawnSync(process.execPath, ['tools/probe-regime-identifiability.mjs', '--matrix=' + mf2, '--games=6', '--k=3'].concat(extra, out ? ['--json=' + out] : []),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 300000, maxBuffer: 1 << 24 });
+    const jfFit = join(dir, 'm-fit.json'), jfWin = join(dir, 'm-win.json');
+    const rFit = run2(['--metric=fit'], jfFit), rWin = run2(['--metric=win'], jfWin);
+    ok(rFit.status === 0 && rWin.status === 0, '⑧ 前置：两个量纲都要跑完（fit status=' + rFit.status + '，win status=' + rWin.status + '）');
+    const jFit = JSON.parse(readFileSync(jfFit, 'utf8')), jWin = JSON.parse(readFileSync(jfWin, 'utf8'));
+    eq(jWin.meta.metric, 'win', '⑧ json 必须记下用的哪个量纲');
+    ok(/打分量纲 = \*\*win\*\*/.test(String(rWin.stdout || '')), '⑧ 屏幕上必须印出量纲（换列打分这件事不许只藏在 json 里）');
+    ok(jWin.bestSinglePack !== jFit.bestSinglePack || Math.abs(jWin.bestSingle - jFit.bestSingle) > 1e-6,
+      '⑧ **同一套预测、换一列打分必须读出不同的数**（实测 fit ' + jFit.bestSinglePack + '/' + jFit.bestSingle + ' vs win ' + jWin.bestSinglePack + '/' + jWin.bestSingle + '）⇒ 一模一样就说明 `--metric` 被忽略了');
+    ok(jFit.realizable !== jWin.realizable, '⑧ realizable 也必须随量纲变（实测 ' + jFit.realizable + ' vs ' + jWin.realizable + '）');
+    const rBad = run2(['--metric=winn']);
+    ok(rBad.status === 2 && /不认识的量纲/.test(String(rBad.stderr || '')),
+      '⑧ 拼错的量纲必须 exit 2 并点名（实测 status=' + rBad.status + '）⇒ 读出一列 undefined 比红危险得多');
+    /* ---- ⑨ `--dump=` 的逐环境链路必须与印出来的均值**是同一笔算术**，且区间量具读得动它 ----
+     * §E130 那句"增益与 0 不可分"全靠这份链路能对上账；对不上就是拿另一套数算的区间。 */
+    const dp = join(dir, 'dump.json'), jdp = join(dir, 'dumpmeta.json');
+    const rd = run2(['--metric=fit', '--dump=' + dp], jdp);
+    ok(rd.status === 0 && existsSync(dp), '⑨ 前置：--dump 必须真写出文件（status=' + rd.status + '）');
+    const DM = JSON.parse(readFileSync(dp, 'utf8')), JD = JSON.parse(readFileSync(jdp, 'utf8'));
+    ok(Array.isArray(DM.perEnv) && DM.perEnv.length === JD.meta.envs,
+      '⑨ 逐环境条数必须等于参与判定环境数（实测 ' + (DM.perEnv || []).length + ' vs ' + JD.meta.envs + '）');
+    const mOf = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+    const got = DM.perEnv.filter(r => typeof r.chosen.fit === 'number').map(r => r.chosen.fit);
+    const inc = DM.perEnv.map(r => r.incumbent.fit);
+    ok(got.length === JD.realizableN, '⑨ 链路里"真拿到包"的环境数必须等于 json 的 realizableN（实测 ' + got.length + ' vs ' + JD.realizableN + '）');
+    ok(Math.abs(mOf(got) - JD.realizable) < 1e-9,
+      '⑨ 链路的 chosen 均值必须等于印出来的 `realizable`（实测 ' + mOf(got) + ' vs ' + JD.realizable + '）⇒ 链路落的数与印出来的数不是同一笔算术，区间就是假的');
+    ok(Math.abs(mOf(inc) - JD.bestSingle) < 1e-9,
+      '⑨ 链路的 incumbent 均值必须等于印出来的 `best_single`（实测 ' + mOf(inc) + ' vs ' + JD.bestSingle + '）');
+    ok(Math.abs(mOf(got) - mOf(inc) - (JD.realizable - JD.bestSingle)) < 1e-9,
+      '⑨ 两者之差（配对均值）必须等于 `realizable − best_single`');
+    ok(DM.perEnv.every(r => r.env && typeof r.acc === 'number'), '⑨ 每条链路要带环境名与该环境命中率（聚类区间要用）');
+    const an = spawnSync(process.execPath, ['tools/analyze-routing-gain.mjs', dp], { cwd: process.cwd(), encoding: 'utf8', timeout: 120000 });
+    ok(an.status === 0 && /95% \[/.test(String(an.stdout || '')) && /变好 \d+ ‖ 变差 \d+/.test(String(an.stdout || '')),
+      '⑨ 区间量具必须读得动这份 dump，并印出 95% 区间与**逐环境好/差分布**（实测 status=' + an.status + '）');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+t('D194 `--only` 复跑单道门不许伪装成全绿（v1.5.288）：跳过的条数必须响亮印出、打错字要拒绝、注册数守卫要把跳过算进去', function () {
+  /* 为什么补这道：本班给 np-test 加了 `--only=`（改门→验门从 9 分钟降到 10 秒）。
+   * 这把刀的危险很具体：**跳过 237 道门然后报"通过 1 / 1"**，或者**子串打错 ⇒ 一条没跑也报绿**。
+   * 所以判据钉在三处可观察的行为上，不是钉在"有这个参数"上。 */
+  const src = readFileSync('tools/np-test.mjs', 'utf8');
+  ok(/const ONLY = \(process\.argv\.find\(a => a\.startsWith\('--only='\)\)/.test(src), '① 入口必须解析 --only');
+  ok(/__nReg !== PASS \+ FAIL \+ __skipped/.test(src),
+    '② "注册数 vs 执行数"那道守卫必须把**被 --only 跳过的**也计进去（否则加了开关就等于把守卫拆了）');
+  const one = spawnSync(process.execPath, ['tools/np-test.mjs', '--only=D193'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+  const o1 = String(one.stdout || '');
+  ok(one.status === 0 && /通过 1 \/ 1/.test(o1), '③ `--only=D193` 应当正好跑 1 道并绿（实测 exit=' + one.status + '，输出尾部 ' + o1.slice(-90).replace(/\n/g, ' ') + '）');
+  const m = o1.match(/只跑了 (\d+) \/ (\d+) 条\*\*（跳过 (\d+) 条）/);
+  ok(!!m, '③ 必须响亮印出"只跑了 N / M 条（跳过 K 条）"——**没有这一行就是静默少跑**');
+  if (m) {
+    eq(Number(m[1]), 1, '③ 实跑条数');
+    ok(Number(m[2]) === Number(m[1]) + Number(m[3]) && Number(m[2]) > 100,
+      '③ 分母必须是**全部注册数**（' + m[2] + ' = 跑的 ' + m[1] + ' + 跳的 ' + m[3] + '）⇒ 分母偷偷变小就等于把守卫拆了');
+    ok(/不许当"四道全绿"引用/.test(o1), '③ 那句"这不是全量门禁"必须跟着印出来');
+  }
+  const typo = spawnSync(process.execPath, ['tools/np-test.mjs', '--only=ZZ-没有这道门'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+  ok(typo.status === 3 && /一个都没匹配到/.test(String(typo.stderr || '')),
+    '④ 子串打错 ⇒ 必须 **exit 3 拒绝**，不许报"通过 0 / 0"当绿（实测 exit=' + typo.status + '）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
@@ -8155,10 +8336,20 @@ t('D188 并发批跑器（v1.5.281）：归属不串台 / 失败不吞 / 输入�
 
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 const __nReg = __src.filter(l => /^t\(/.test(l)).length;
-if (__nReg !== PASS + FAIL) {
+if (__nReg !== PASS + FAIL + __skipped) {
   console.error("⛔ 注册的 t() 有 " + __nReg + " 条，但只执行了 " + (PASS + FAIL) + " 条"
+    + (__skipped ? "（另有 " + __skipped + " 条被 --only 跳过）" : "")
     + " ⇒ 有门落在 process.exit 之后（死代码）或被条件跳过。这不是全绿，是少跑。");
   process.exit(1);
+}
+if (ONLY) {
+  console.log('\n⚠ `--only=' + ONLY + '`：**只跑了 ' + (PASS + FAIL) + ' / ' + __nReg + ' 条**（跳过 ' + __skipped
+    + ' 条）⇒ 这不是全量门禁，**不许当"四道全绿"引用**（`node tools/np-test.mjs` 不带参数才是整轮）。');
+}
+/* `--only` 打错字 ⇒ 一条都不跑却报"通过 0 / 0"，那是最坏的一种绿（看着像跑完且全绿）。响亮拒。 */
+if (ONLY && PASS + FAIL === 0) {
+  console.error('⛔ `--only=' + ONLY + '` 在 ' + __nReg + ' 条注册里**一个都没匹配到** ⇒ 一条没跑，这不是全绿。检查子串拼写。');
+  process.exit(3);
 }
 
 
