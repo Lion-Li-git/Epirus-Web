@@ -2,3 +2,4 @@
 # 那会让 docs/artifacts/kept/MANIFEST.tsv 里的 sha256 账本在下一次 clone 全部作废。
 docs/artifacts/kept/*.bak binary
 docs/artifacts/kept/MANIFEST.tsv -text
+docs/artifacts/kept/*.js binary
