@@ -910,10 +910,12 @@
       renderSeedStatus(); drawChart();
     }).catch(function () { $('tr-remote').textContent = '重置失败：服务未启动？'; });
   }
+  const EVAL_GAMES = 30;   // 局数只写这一处：按钮文案与结果标题都由它生成（两处各写一遍必漂移）
+  $('btn-eval').textContent = '评测冠军(' + EVAL_GAMES + '局/基线)';
   function doEval() {
-    const rows = Champ.quickEval(30, Date.now() % 100000);
+    const rows = Champ.quickEval(EVAL_GAMES, Date.now() % 100000);
     if (!rows) { $('tr-evalbox').innerHTML = '<p style="color:var(--red)">还没有冠军可评测，先训练。</p>'; return; }
-    renderEval(rows, '评测：冠军 vs 8 脚本基准（各 30 局）');
+    renderEval(rows, '评测：冠军 vs 8 脚本基准（各 ' + EVAL_GAMES + ' 局）');
   }
   function renderEval(rows, title) {
     let h = '<h4 style="margin:12px 0 2px">' + title + '</h4><table class="eval"><tr><th>对手</th><th>胜</th><th>平</th><th>负</th><th>胜率</th></tr>';

@@ -31,3 +31,8 @@ docs/artifacts/*-out*/
 docs/artifacts/.*
 docs/artifacts/*.summary
 docs/artifacts/*.marker
+
+# v1.5.279（qoder 0928 下午班）：结论所依赖的对照包必须入库。
+# 全局 `*.bak` 让 2100+ 个臂产物一条都没进 git，§E120 所需的 SQ2-30-* 已从盘上消失
+# ⇒ "可复跑"只在代码层成立。kept/ 是唯一被显式放行的例外，由 tools/keep-artifact.mjs 维护。
+!docs/artifacts/kept/*.bak

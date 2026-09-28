@@ -3,7 +3,7 @@
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）
 重新实现的一整套 **2 人可玩、可自对战训练** 程序。
 
-> **当前版本：v1.5.278** · 2 人对战（v1.0.0 功能冻结）+ **多人 3~5 人（技能齐全 · AI 状态特征 v7，FEAT_S=213）**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`。
+> **当前版本：v1.5.279** · 2 人对战（v1.0.0 功能冻结）+ **多人 3~5 人（技能齐全 · AI 状态特征 v7，FEAT_S=213）**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`。
 > **本版改动（一次规则换代）**：R48「回魂复活回合」原先把**条件**连同**花费**一起免掉了 —— 三处短路（`state.js` 的 `computeCost`/`attemptAction` 与 `play.js` 的 `legalActions`）一次绕过 5 个判据：摄魂的"仅限自己 HP≤3"、电磁炮的"需 1 枚电珠"、激光眼首次"需 1 枚爆珠"、过载炮第 2 次"需 ≥1ジ"与第 3 次"自损 1 血"。原文只说「**一切花费为 0**」⇒ 现在只把 `ep/hp/珠子` 归零，条件照判。
 > **影响范围是量出来的不是估的**：新旧引擎同种子配对复现 6480 局 ⇒ 触发过回魂 13 局、读数不同 4 局、**胜者全同**。两槽全部读数**逐位不变**（2P 99.00%/最差 82.50%；3P 考卷 54.4% + 五道 12.5pt/4.44/3.43/21/35%/0.33）。门 **D126** 六向钉住（含三处短路的反抄静态钉）；np **173/173** · spec **52/52** · smoke OK。
 > ⚠️ **指纹换代 `0f931cb7` → `ebdbff36`**（v1.5.174：长程摄魂窗口 `drainHpMax` 3 → 2，用户裁定；顺带修 `|| 1` 让 0 能真关掉这张卡）：**AI 行为零变化**（新旧同种子配对 400 局：镜像 0 局不同），改的只是人类玩家的可用窗口。两个内置包的 `meta` 已重记新指纹与这段证据（**权重逐字节未动**）。老用户要点页面「用内置冠军」才会换到新包（localStorage 旧包优先，两槽同理：2P=`v7xfer44c13-2p` · 3P=`v7cmin4-31`）。之前每一版的改动与实验结论都记在 [`CHANGELOG.md`](CHANGELOG.md)（**README 只留当前版本**）。
@@ -81,7 +81,7 @@ Epirus-Web/
 │   ├─ eval-3p.mjs             多人冠军评测（1st/top2 + 出招分布）
 │   ├─ smoke.mjs               CDP 真浏览器冒烟测试（2 人）
 │   ├─ spec-run.mjs            Node 桩跑 2 人引擎自测（52/52）
-│   ├─ np-test.mjs             N 人引擎自测（168/168：D1–D121 + N/L 族守门）
+│   ├─ np-test.mjs             N 人引擎自测（231/231：D1–D186 + N/L 族守门）
 │   ├─ np-probe.mjs            CDP 真浏览器多人（3/5 人）探测
 │   ├─ log-behavior.mjs        **真机栏**：从实机对局记录按席位统计行动构成（只读 results/*.txt）
 │   ├─ promote-champion.mjs   换包前体检（含广度**两个模式都判** + G4/G5 + 珠经济闭环）
@@ -89,8 +89,11 @@ Epirus-Web/
 ├─ docs/RULES-2P.md         ★ 2 人规则裁定版（R1..R55 + 子证 R23'/R34'/R19'）
 ├─ docs/RULES-NP.md         ★ 多人（3~5 人）裁定版（N1..N13）
 ├─ docs/METHODOLOGY.md      ★ 方法学（含"打印机必须打印门所判的量"等 40+ 条）
-├─ docs/RESEARCH-LOG-2026-09-21-{ds,qoder}.md  当日研究日志（DS / 千问）
-├─ docs/HANDOFF-FOR-QWEN-2026-09-21.md         给千问的训练侧交接件（当前有效）
+├─ docs/RESEARCH-LOG-<日期>-{ds,qoder}.md  当日研究日志（§E/§数字 编号，预注册→实测→判读）
+├─ docs/HANDOFF-*             班与班的交接件。**归因易读错**：本仓只有三个角色（用户 / DS / Qoder），
+│                             而 "千问"="QWEN"=**Qoder 本尊**，不是第三方 AI。
+│                             `HANDOFF-FOR-QWEN-*` 是 DS 写给 Qoder 的；`HANDOFF-FOR-DS-*` 是 Qoder 写给 DS 的。
+│                             当前有效的一份：`docs/HANDOFF-FOR-DS-2026-09-28-qoder.md`（§17 是合并后全景）。
 ├─ docs/archive/            历史审核/交接文档存档（只读；索引见其 README.md）
 ├─ results/                 用户私人对局记录（**已不进仓库**：.gitignore 整目录忽略）
 └─ tests/spec.html          引擎自测（浏览器打开即可，通过数 = 用例数）
@@ -109,8 +112,11 @@ Epirus-Web/
 命令行（无需浏览器）：
 
 ```bash
-node tools/spec-run.mjs    # 2 人引擎：52/52（含 v1.5.129 的 R61、v1.5.140 的 R62 残局多目标禁用等）
-node tools/np-test.mjs     # 多人引擎 + 门禁：168 条（N 人口径 + 座位均等 + 地雷 AoE N20a~e + 大雷禁用/传导 N21/N22 + 激光眼 N23 + REPRO/REPRO2 + L 族；D 族覆盖模式入口一致性、维度/shapeOf、指纹（两个包）、播种实测、体检门槛、判定与爆头口径、G4/G5 行为门（D67）、择优不回归层（D104）、V4 满桌同包地板（D105）、场A/场B 打印器能工作（D106）、G4 装配单一来源（D107）、座位身份等性价对（D108）、形状适应度（D109）、冠军包解析单一来源（D110）、前台探索三规则（D111，其②③于 09-22 夜升级为序列锁）、广度两模式都判（D112）、chooser 免疫直喂原始包（D113）、跨N混适应度默认关+接线（D114）、序列窗锁（D115）、N6 切片反空转（D116）、多装配行为剖面（D117）、产品代理栏（D118）、热启动反静默（D119）、CLI env 反空转（D120）、当选面退化闸（D121）…**末号 D121**）
+node tools/gate-all.mjs --np   # ★ 一条命令跑四道门禁（np+spec+smoke+battle）并只印一行总结论；np 约 10 分钟，去掉 --np 约 40 秒
+node tools/spec-run.mjs    # 2 人引擎：52/52
+node tools/np-test.mjs     # 多人引擎 + 门禁：231 条（**末号 D186**）。逐条标题由工具自己印（`node tools/np-test.mjs | grep ✔`），
+                           #   本文件不再抄一遍清单 —— 抄过两次就漂了两次（此前这里停在"168 条 / 末号 D121"，落后 63 条）。
+node tools/keep-artifact.mjs --verify   # 结论所依赖的对照包是否在库、哈希是否还对得上（v1.5.279）
 node tools/log-behavior.mjs results/31   # 真机栏：实机日志的行动构成（只读；配合体检的 ε=0 栏 / 浏览器模拟栏 = 三栏验收）
 node tools/probe-g4-anatomy.mjs 60   # G4「只枪」那格的解剖 + 双向反事实（只读；§A 自检须复现 75%/62%）
 node tools/eval-3p.mjs     # 3 人冠军评测：28 对手对 × 座位轮换 → 1st/top2 + 出招分布

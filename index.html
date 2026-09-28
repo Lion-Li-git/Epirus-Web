@@ -10,7 +10,7 @@
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.5.278 （2 人 + 3~5 人）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.5.279 （2 人 + 3~5 人）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
   </header>
 
   <nav class="tabs">
@@ -76,6 +76,8 @@
         </label>
         <label>每代个体数（14 建议）<input type="number" id="tr-pop" value="14" min="6" max="40"></label>
         <label>本次代数 <input type="number" id="tr-remote-gens" value="100" style="width:70px"></label>
+        <!-- 留空 = 按人数自动（2 人 5 局 / 多人 20 局）；填数字才覆盖。ui.js 的 `parseInt(...) || 自动` 依赖空值 -->
+        <label>每人每代局数 <input type="number" id="tr-gpo" min="2" max="60" placeholder="自动" style="width:64px"></label>
         <label>种子数 <input type="number" id="tr-seeds" value="3" min="1" max="8" style="width:60px"></label>
         <label>轮数 <input type="number" id="tr-rounds" value="5" min="1" max="20" style="width:60px"></label>
         <label style="cursor:pointer"><input type="checkbox" id="tr-fresh"> 从头训练（清空旧冠军、随机重开种群，破“冠军蝉联”）</label>
@@ -113,7 +115,7 @@
 
   <footer>
     Epirus（Efficient power in real universe space）· 规则开源 CC BY-NC-SA · 本程序仅供学习娱乐。<br>
-    技术栈：纯 HTML/CSS/JS，零依赖，双击 index.html 即玩。训练与对局都在浏览器本地完成。
+    技术栈：纯 HTML/CSS/JS，零依赖，双击 index.html 即玩。对局在浏览器本地跑；训练要另起本机服务（<code>node server/train-server.mjs</code> 或双击 <code>tools/start-train-server.cmd</code>），不联网、无后端。
   </footer>
 </div>
 
@@ -121,19 +123,19 @@
 <div id="overlay-root" class="overlay hidden"><div class="card" id="overlay-card"></div></div>
 
 <!-- 引擎（加载顺序即依赖顺序） -->
-<script src="js/core/rules.js?v=mujod7ni"></script>
-<script src="js/core/state.js?v=mujod7ni"></script>
-<script src="js/core/resolve.js?v=mujod7ni"></script>
-<script src="js/core/play.js?v=mujod7ni"></script>
-<script src="js/train/bots.js?v=mujod7ni"></script>
-<script src="js/train/policy.js?v=mujod7ni"></script>
-<script src="js/train/evo.js?v=mujod7ni"></script>
-<script src="js/train/trainer.js?v=mujod7ni"></script>
-<script src="js/bundled-champion.js?v=mujod7ni"></script>
-    <script src="js/bundled-champion-3p.js?v=mujod7ni"></script>
-<script src="js/champion-pack.js?v=mujod7ni"></script>
-<script src="js/ui/skill-tip.js?v=mujod7ni"></script>
-<script src="js/ui/bead-choice.js?v=mujod7ni"></script>
-<script src="js/ui/ui.js?v=mujod7ni"></script>
+<script src="js/core/rules.js?v=q0928b"></script>
+<script src="js/core/state.js?v=q0928b"></script>
+<script src="js/core/resolve.js?v=q0928b"></script>
+<script src="js/core/play.js?v=q0928b"></script>
+<script src="js/train/bots.js?v=q0928b"></script>
+<script src="js/train/policy.js?v=q0928b"></script>
+<script src="js/train/evo.js?v=q0928b"></script>
+<script src="js/train/trainer.js?v=q0928b"></script>
+<script src="js/bundled-champion.js?v=q0928b"></script>
+    <script src="js/bundled-champion-3p.js?v=q0928b"></script>
+<script src="js/champion-pack.js?v=q0928b"></script>
+<script src="js/ui/skill-tip.js?v=q0928b"></script>
+<script src="js/ui/bead-choice.js?v=q0928b"></script>
+<script src="js/ui/ui.js?v=q0928b"></script>
 </body>
 </html>
