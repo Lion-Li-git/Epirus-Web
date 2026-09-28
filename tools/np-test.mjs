@@ -7929,7 +7929,7 @@ t('D193 多包路由收益的算式有牙（v1.5.288-289 · §E129/§E130/§E131
    *      而同一次运行的 realizable > best_single 说明钱真赚到了 ⇒ 两条判词互相打脸）；
    *   ③ 矩阵读不出、环境被排空时必须**拒绝出结论**，不许拿空表算上界。
    * 变异实测（把 `isInformative` 换回旧的绝对阈值）⇒ ② 的两条红；开发台 47 断言全绿后才搬进本文件。 */
-  for (const fn of ['routingReadings', 'bestInByEnv', 'bestSingleOf', 'realizableOf', 'chanceOf', 'isInformative', 'branchOf', 'matrixComplaint']) {
+  for (const fn of ['routingReadings', 'bestInByEnv', 'bestSingleOf', 'realizableOf', 'chanceOf', 'isInformative', 'branchOf', 'matrixComplaint', 'pairedDiff']) {
     ok(typeof RGAIN[fn] === 'function', '① routing-gain-lib 必须导出 ' + fn + '（算式只许这一处）');
   }
   const B = RGAIN.BRANCHES;
@@ -8199,6 +8199,179 @@ t('D196 可分性量具的窗口与判据不许自骗（v1.5.290 · §E134）：
   const src = readFileSync('tools/probe-sig-separable.mjs', 'utf8');
   ok(/import \{[^}]*separabilityOf[^}]*\} from '\.\/routing-gain-lib\.mjs'/.test(src), '④ 探针必须 import separabilityOf');
   ok(!/U_sep: sep/.test(src), '④ 探针里不许留第二份 U_sep 的实现');
+});
+
+t('D197 §E136 的换包开关默认必须是关的（v1.5.292）：不写 --swap 逐位不变、写了必须真生效、含糊写法要拒绝', function () {
+  /* 为什么钉这道：§E136 往**产品口径的量具**（eval-5p）里加了一条"第 R 回合换权重"的分支。
+   * 这条一旦悄悄生效，历史上所有 eval-5p 读数就换了尺 —— 所以门的重点是"默认关"而不是"能用"：
+   *   ① 用同一个场跑 三臂：不换 / 换包点写在终局之后 / 换包点写在第 1 回合。
+   *      **第一臂与第二臂必须逐字相同（只有标签不同），第三臂必须不同** ⇒ 一正一负，"没生效"和"总在生效"都跑不掉。
+   *   ② 含糊的写法（没有 @、第 0 回合、路径不存在、和第二粒包与主包同一个、抢主体席的组合）必须 exit 2，
+   *     不许降级成"当没写"。 */
+  const A = 'docs/artifacts/kept/e78-out__G08-71.bak';
+  const B = 'docs/artifacts/kept/eval-out__win-Ldemo.bak';
+  ok(existsSync(A) && existsSync(B), '⓪ 两粒入库包必须在（门要用它们做"换包 vs 不换包"的对照）：A=' +
+    existsSync(A) + ' B=' + existsSync(B));
+  const run = function (extra) {
+    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '4', '5', '77000', A, '--field=mix4'].concat(extra),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
+  };
+  const base = run([]);
+  const far = run(['--swap=' + B + '@9999']);
+  const early = run(['--swap=' + B + '@1']);
+  ok(base.code === 0 && far.code === 0 && early.code === 0, '① 三臂都要跑得完（实测 ' + base.code + '/' + far.code + '/' + early.code + '）');
+  const rate = function (o) { const m = o.match(/\[[^\]]*\] 1st=([0-9.]+)% 严胜=([0-9.]+)%/); return m ? m[1] + '/' + m[2] : null; };
+  /* `耗时 0.1s` 那行本来就随机器抖动 ⇒ 先抹掉它，再要求"其余逐字相同"。
+   * ⚠ 这里**不能只比 1st 那一行**：换包分支若泄漏，最先变的可能是回合数/经济行为，只看胜率会放过它。 */
+  const norm = function (o) { return String(o).replace(/冠军→第 \d+ 回合换 [A-Za-z0-9_.\-]+/g, '冠军').replace(/耗时 [0-9.]+s/g, '耗时 抹掉'); };
+  const firstDiff = function (a, b) {
+    const la = a.split('\n'), lb = b.split('\n');
+    for (let i = 0; i < Math.max(la.length, lb.length); i++) {
+      if (la[i] !== lb[i]) return '第 ' + (i + 1) + ' 行 [' + String(la[i] || '').slice(0, 66) + '] vs [' + String(lb[i] || '').slice(0, 66) + ']';
+    }
+    return null;
+  };
+  const fd = norm(far.out) === norm(base.out) ? null : firstDiff(norm(far.out), norm(base.out));
+  ok(fd === null,
+    '② **不带 --swap 与"换包点在终局之后"必须逐字相同**（实测差异：' + (fd || '') + '）⇒ 产品口径的量具不许多一条会悄悄生效的分支');
+  ok(rate(base.out) != null && rate(early.out) != null && norm(early.out) !== norm(base.out),
+    '②′ 反过来：换包点写在第 1 回合时读数**必须变**（不换=' + rate(base.out) + ' ‖ 第1回合换=' + rate(early.out) +
+    '，输出差异=' + (norm(early.out) === norm(base.out) ? '无' : '有') + '）⇒ 两臂相同就意味着这条分支是死代码');
+  /* ③ 拒绝口径：每一类含糊写法都要 exit 2，不许"当没写"继续出读数 */
+  const bad = [
+    ['--swap=' + B, '没有 @'],
+    ['--swap=' + B + '@0', '第 0 回合'],
+    ['--swap=' + B + '@2.5', '非整数回合'],
+    ['--swap=nope-not-here.bak@5', '路径不存在'],
+    ['--swap=' + A + '@5', '第二粒包与主包同一个文件'],
+    ['--swap=' + B + '@5', '与 --subject 同时给（抢主体席）', '--subject=aggro'],
+  ];
+  for (const c of bad) {
+    const argv = ['tools/eval-5p.mjs', '1', '5', '77000', A].concat([c[0]]).concat(c.slice(2));
+    const r = spawnSync(process.execPath, argv, { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+    ok(r.status === 2, '③ ' + c[1] + ' ⇒ 必须 exit 2 拒绝（实测 exit=' + r.status + '，' + String(r.stderr || '').slice(0, 40).replace(/\n/g, ' ') + '）');
+  }
+  /* ④ 接线：默认那条主体分支必须走 subjectPolicy()（否则上面的"逐字相同"只是没接上） */
+  const src = readFileSync('tools/eval-5p.mjs', 'utf8');
+  ok(/:\s*function \(\) \{ return subjectPolicy\(\); \}\)/.test(src),
+    '④ 主体席的默认分支必须调 `subjectPolicy()`（写死 `T.policyChooserN(params, 0.15)` 就等于把开关焊死在半开）');
+  ok(/function subjectPolicy\(\)[\s\S]{0,320}state\.round >= SWAP_ROUND \? b : a/.test(src),
+    '④ `subjectPolicy` 必须按 `state.round >= SWAP_ROUND` 选 a/b（换成别的判据就不是"按阶段换打法"了）');
+  ok(!/FLAG\.field\s*\)\s*\{[\s\S]{0,120}--swap 只能单独用/.test(src),
+    '④ `--field` 不许进"与 --swap 互斥"的名单：它只换对手场、不抢主体席，而它是唯一能把一臂压到"1 组 × 几局"的便宜口径（本门就靠它）');
+  /* ⑤ --every 采样：默认必须逐位不变，采样后组合数要按 ceil(N/step) 掉、且非法值要拒 */
+  const d1 = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+  const d2 = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--every=1'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+  const d5 = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--every=5'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+  const nOf = function (o) { const m = String(o).match(/全部 (\d+) 组合/); return m ? Number(m[1]) : null; };
+  const n1 = nOf(d1.stdout), n5 = nOf(d5.stdout);
+  ok(norm(d2.stdout) === norm(d1.stdout), '⑤ `--every=1` 与不写必须**逐字相同**（默认口径不许被采样代码动过；实测差异：' +
+    (norm(d2.stdout) === norm(d1.stdout) ? '' : firstDiff(norm(d2.stdout), norm(d1.stdout))) + '）');
+  ok(n1 === 35 && n5 === 7, '⑤ core 池 C(7,4)=35 组 ⇒ `--every=5` 要剩 ceil(35/5)=7 组（实测 默认=' + n1 + ' ‖ every=5 → ' + n5 + '）');
+  for (const v of ['0', '2.5', 'abc', '-3']) {
+    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--every=' + v], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+    ok(r.status === 2, '⑤ --every=' + v + ' ⇒ 必须 exit 2（实测 exit=' + r.status + '）');
+  }
+});
+
+t('D198 §E136 的配对判读有牙（v1.5.292）：配对不成立要拒、三个判读分支都走得到、逐桌子账要与汇总对得上、配对算术只有一份', function () {
+  /* 为什么钉这道：`analyze-swap-gain.mjs` 是"把 8 臂变成一个结论"的那一层 ——
+   * 它若把"配对不成立"当警告、或把判读分支写死成一条，§E136 的结案就是脚本自己编的。
+   * 全部用合成 TSV（tmpdir），一局都不重跑。 */
+  const dir = mkdtempSync(join(tmpdir(), 'd198-'));
+  const NAMES = []; for (let i = 0; i < 24; i++) NAMES.push('n' + i + 'a,n' + i + 'b,n' + i + 'c,n' + i + 'd');
+  const tsv = function (firsts, games) {
+    const L = ['#eval5p-percombo', '#seed=77000', '#games=' + games, '#n=5', '#pool=all', '#every=1', '#field=-', '#file=x', '#swap=-',
+      '#arm\tidx\tnames\tgames\tfirst\tstrict'];
+    firsts.forEach(function (f, i) { L.push('subject\t' + i + '\t' + NAMES[i] + '\t' + games + '\t' + f + '\t' + Math.max(0, f - 1)); });
+    return L.join('\n') + '\n';
+  };
+  const wave = function (base, amp) { const a = []; for (let i = 0; i < 24; i++) a.push(base + (i % 2 ? amp : -amp)); return a; };
+  const put = function (arm, firsts, games, names) {
+    const body = tsv(firsts, games == null ? 10 : games);
+    writeFileSync(join(dir, arm + '.tsv'), names ? body.replace(/n\d+[a-d]/g, function (x) { return 'x' + x; }) : body);
+    writeFileSync(join(dir, arm + '.txt'), '平均回合=31.3  转移事件=0');
+  };
+  const run = function (extra) {
+    const r = spawnSync(process.execPath, ['tools/analyze-swap-gain.mjs', '--dir=' + dir].concat(extra || []),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
+  };
+  /* ②′ 夹具：A→B 越过两个对照，B→A 只越过弱对照 ⇒ 反巧合条款必须把 ① 拦下 */
+  put('AAA', wave(6, 0)); put('BBB', wave(4, 0));
+  put('A2B-at5', wave(8, 0)); put('B2A-at5', wave(5, 0));
+  const p2 = run();
+  ok(p2.code === 0, '⓪ 正常夹具要跑得完（exit=' + p2.code + ' ' + p2.out.slice(0, 90).replace(/\n/g, ' ') + '）');
+  ok(/判读[^\n]*\n\s*②′/.test(p2.out), '① 只有一个方向越过两个对照 ⇒ 必须判 ②′（反巧合拦下），不许出 ①');
+  ok(/◆ 夹在中间/.test(p2.out), '② `B2A-at5`（50%）显著低于 AAA(60%)、显著高于 BBB(40%) ⇒ 必须印成**夹在中间**，不许并进"分不出"');
+  ok(!/— 与某个对照分不出/.test(p2.out), '②′ 这份夹具里没有任何臂该被判"分不出"（印出来就是区间算错）');
+  /* ① 夹具：两个方向都越过两个对照 */
+  put('B2A-at5', wave(9, 0));
+  const p1 = run();
+  ok(/判读[^\n]*\n\s*①/.test(p1.out) && !/②′/.test(p1.out), '③ 两个方向同时越过两个对照 ⇒ 才允许判 ①（实测 ' + (p1.out.match(/\n\s+([①②②′]+)/) || ['', '?'])[1] + '）');
+  /* ② 夹具：两个方向都低于两个对照 */
+  put('A2B-at5', wave(3, 0)); put('B2A-at5', wave(2, 0));
+  const p0 = run();
+  ok(/判读[^\n]*\n\s*② /.test(p0.out), '④ 全部低于对照 ⇒ 必须判 ②（不赚钱），不许因为"有臂高于弱对照"就翻成正');
+  /* ⑤ 配对前提：组合名字列被改动 ⇒ exit 2 拒绝（不是警告） */
+  put('A2B-at5', wave(8, 0), 10, true);
+  const pBad = run();
+  ok(pBad.code === 2 && /配对不成立/.test(pBad.out), '⑥ 组合序列不同就不是同一批桌子 ⇒ 必须 exit 2 拒绝出读数（实测 exit=' + pBad.code + '）');
+  /* ⑥ 每桌局数不同 ⇒ 同样要拒；缺臂 ⇒ 要拒 */
+  put('A2B-at5', wave(8, 0));
+  put('B2A-at5', wave(9, 0));
+  writeFileSync(join(dir, 'B2A-at5.tsv'), tsv(wave(9, 0), 12));
+  const pG = run();
+  ok(pG.code === 2 && /每 .* 局|打了 12 局/.test(pG.out), '⑥′ 每桌局数不一致 ⇒ 也必须 exit 2（实测 exit=' + pG.code + '，' + pG.out.slice(0, 70).replace(/\n/g, ' ') + '）');
+  writeFileSync(join(dir, 'B2A-at5.tsv'), tsv(wave(9, 0), 10));
+  rmSync(join(dir, 'BBB.tsv'), { force: true });
+  const pM = run();
+  ok(pM.code === 2 && /缺臂/.test(pM.out), '⑥″ 缺臂 ⇒ exit 2 点名，不许拿剩下的臂出结论（实测 exit=' + pM.code + '）');
+  /* ⑦ 内部守卫：分位数/累积分布错了就整表区间一起错 */
+  const src = readFileSync('tools/analyze-swap-gain.mjs', 'utf8');
+  ok(/x \/ Math\.SQRT2/.test(src), '⑧ `Φ(x)` 必须按 `erf(x/√2)` 算（少除 √2 会把 z₀.₉₇₅ 从 1.96 算成 1.39）');
+  ok(/内部自检失败[\s\S]{0,200}拒绝出读数/.test(src), '⑧ 必须带那条无条件自测守卫');
+  /* ⑨ 单一来源：配对算术只许住在 lib */
+  const lib = readFileSync('tools/routing-gain-lib.mjs', 'utf8');
+  const ar = readFileSync('tools/analyze-routing-gain.mjs', 'utf8');
+  ok(/export function pairedDiff\(a, b, z\)/.test(lib), '⑨ lib 必须导出 pairedDiff');
+  ok(/const zz = z == null \? 1\.96 : z;/.test(lib), '⑨ 默认 z 必须是 1.96（`analyze-routing-gain` 的历史区间靠这个默认值逐位不变）');
+  ok(/import \{[^}]*pairedDiff[^}]*\} from '\.\/routing-gain-lib\.mjs'/.test(src) &&
+    /import \{[^}]*pairedDiff[^}]*\} from '\.\/routing-gain-lib\.mjs'/.test(ar), '⑨ 两个分析器都必须 import lib 那一份');
+  ok(!/function paired\(a, b\)/.test(ar) && !/const sd = Math\.sqrt/.test(src),
+    '⑨ 分析器里不许留第二份配对 SE 的实现');
+  /* ⑩ lib 自己的算术：d=[2,4,6] ⇒ m=4、sd=2（除以 n−1）、se=2/√3、h=1.96·se */
+  ok(typeof RGAIN.pairedDiff === 'function', '⑩ `pairedDiff` 要能被门禁直接调用（本门下面拿它算夹具）');
+  const pd = RGAIN.pairedDiff([3, 5, 7], [1, 1, 1]);
+  ok(Math.abs(pd.m - 4) < 1e-12 && Math.abs(pd.sd - 2) < 1e-12 && Math.abs(pd.se - 2 / Math.sqrt(3)) < 1e-12,
+    '⑩ m/sd/se 必须等于手算值（实测算得 m=' + pd.m + ' sd=' + pd.sd.toFixed(6) + ' se=' + pd.se.toFixed(6) + '，期望 4 / 2 / 1.154700）');
+  ok(Math.abs(pd.lo - (4 - 1.96 * pd.se)) < 1e-12 && Math.abs(pd.hi - (4 + 1.96 * pd.se)) < 1e-12,
+    '⑩ 区间必须由 `z·se` 双向张开（实测 [' + pd.lo.toFixed(4) + ', ' + pd.hi.toFixed(4) + ']）');
+  eq(pd.n, 3, '⑩ n 是**成对**样本数');
+  eq(pd.better, 3, '⑩ better 计数（变好 3 桌）');
+  ok(RGAIN.pairedDiff([3], [1]) === null, '⑩ n<2 要返回 null（调用方负责"不出结论"，不许把 null 当 0）');
+  const pd2 = RGAIN.pairedDiff([3, 5, NaN], [1, 1, 9]);
+  ok(pd2 && pd2.n === 2 && Math.abs(pd2.m - 3) < 1e-12,
+    '⑩ 非数值项必须**成对**剔除：3 项里剔掉 NaN 那对 ⇒ n=2、m=(2+4)/2=3（实测 n=' + (pd2 ? pd2.n : 'null') + ' m=' + (pd2 ? pd2.m : 'null') + '）');
+  /* ⑪ eval-5p 的逐桌子账必须与它自己印的汇总对得上（否则配对分析建在假账上） */
+  const dp = join(dir, 'per.txt');
+  const rr = spawnSync(process.execPath, ['tools/eval-5p.mjs', '2', '5', '77000', '--field=mix4', '--dump-per=' + dp],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  ok(rr.status === 0 && existsSync(dp), '⑪ 带 --dump-per 要跑得完并落盘（exit=' + rr.status + '）');
+  const txt = String(rr.stdout || '');
+  const printed = txt.match(/\[冠军\] 1st=([0-9.]+)%/);
+  const subj = readFileSync(dp, 'utf8').split('\n').filter(function (l) { return l.indexOf('subject\t') === 0; });
+  const totFirst = subj.reduce(function (a, l) { return a + Number(l.split('\t')[4]); }, 0);
+  const totGames = subj.reduce(function (a, l) { return a + Number(l.split('\t')[3]); }, 0);
+  ok(subj.length === 1 && totGames === 2, '⑪ mix4 只有 1 组 × 2 局 ⇒ 主体席应有 1 行、合计 2 局（实测 ' + subj.length + ' 行 / ' + totGames + ' 局）');
+  ok(printed && Math.abs(totFirst / totGames * 100 - Number(printed[1])) < 0.06,
+    '⑪ 逐桌子求出的 1st 必须与打印的 1st 一致（实测 逐桌子=' + (totFirst / totGames * 100).toFixed(1) + '% ‖ 打印=' + (printed ? printed[1] : '?') + '%）' +
+    ' ⇒ 配对分析的分母就是这张表自己数的局');
+  const noDump = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--field=mix4'],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  ok(!/逐桌子命中数/.test(String(noDump.stdout || '')), '⑪′ 不带 --dump-per 时** stdout 不许多出任何一行**（默认关）');
+  try { rmSync(dir, { recursive: true, force: true }); } catch (e) { /* Windows 偶发占用：tmpdir 里留一个空目录不影响门禁 */ }
 });
 
 t('D194 `--only` 复跑单道门不许伪装成全绿（v1.5.288）：跳过的条数必须响亮印出、打错字要拒绝、注册数守卫要把跳过算进去', function () {

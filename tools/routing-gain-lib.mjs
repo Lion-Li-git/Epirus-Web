@@ -259,3 +259,28 @@ export function matrixComplaint(rows, envs) {
   if (!Array.isArray(envs) || envs.length < 4) return '环境数不足 4（实测 ' + (envs ? envs.length : 0) + '）';
   return null;
 }
+
+/** ===== 配对差（单一来源）=====
+ * 两个分析器都要"同一批观测上逐位相减的均值与区间"：
+ *   · `analyze-routing-gain.mjs` 配的是**逐环境**的读数（§E129/§E130）
+ *   · `analyze-swap-gain.mjs` 配的是**逐桌子**的命中数（§E136）
+ * 口径定死为 §E130 那一份：**样本标准差（除以 n−1）+ 双侧 1.96**（默认 z=1.96 ⇒ 老分析器的数字逐位不变），
+ * 非数值项**成对剔除**（剔除多少由调用方自己核对，别在这里静默改变分母）。
+ * `n<2` 返回 null ⇒ 调用方必须走"不出结论"分支，不许把 null 当 0。 */
+export function pairedDiff(a, b, z) {
+  const zz = z == null ? 1.96 : z;
+  const d = [];
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if (typeof a[i] === 'number' && typeof b[i] === 'number' && isFinite(a[i]) && isFinite(b[i])) d.push(a[i] - b[i]);
+  }
+  const n = d.length;
+  if (n < 2) return null;
+  const m = d.reduce((x, y) => x + y, 0) / n;
+  const s = Math.sqrt(d.reduce((x, y) => x + (y - m) * (y - m), 0) / (n - 1));
+  const h = zz * s / Math.sqrt(n);
+  const sorted = d.slice().sort((x, y) => x - y);
+  return { n: n, m: m, sd: s, se: s / Math.sqrt(n), h: h, lo: m - h, hi: m + h, z: zz,
+    worse: d.filter((x) => x < -1e-9).length, better: d.filter((x) => x > 1e-9).length,
+    tie: d.filter((x) => Math.abs(x) <= 1e-9).length, min: sorted[0], max: sorted[sorted.length - 1],
+    p05: sorted[Math.floor(0.05 * (n - 1))] };
+}

@@ -12,22 +12,14 @@
  * 用法：node tools/analyze-routing-gain.mjs <dump.json> [<dump2.json> …]
  * ==========================================================================*/
 import { readFileSync } from 'node:fs';
+/* 配对差的算术住在 lib（单一来源）：本文件与 `analyze-swap-gain.mjs` 用的是同一把尺，
+ * 只是配的对象不同（这里配**逐环境**，那里配**逐桌子**）。默认 z=1.96 ⇒ §E129/§E130 已印的区间逐位不变。 */
+import { pairedDiff } from './routing-gain-lib.mjs';
 
 const files = process.argv.slice(2).filter(a => !a.startsWith('--'));
 if (!files.length) { console.error('用法：node tools/analyze-routing-gain.mjs <dump.json> …'); process.exit(2); }
 
-function paired(a, b) {
-  const d = [];
-  for (let i = 0; i < a.length; i++) if (typeof a[i] === 'number' && typeof b[i] === 'number') d.push(a[i] - b[i]);
-  const n = d.length;
-  if (n < 2) return null;
-  const m = d.reduce((x, y) => x + y, 0) / n;
-  const s = Math.sqrt(d.reduce((x, y) => x + (y - m) * (y - m), 0) / (n - 1));
-  const h = 1.96 * s / Math.sqrt(n);
-  const sorted = d.slice().sort((x, y) => x - y);
-  return { n, m, h, lo: m - h, hi: m + h, worse: d.filter(x => x < -1e-9).length, better: d.filter(x => x > 1e-9).length,
-    tie: d.filter(x => Math.abs(x) <= 1e-9).length, min: sorted[0], max: sorted[sorted.length - 1], p05: sorted[Math.floor(0.05 * (n - 1))] };
-}
+const paired = pairedDiff;
 const f4 = (x) => (typeof x === 'number' ? (Math.round(x * 10000) / 10000).toFixed(4) : '—');
 const pct = (x) => (typeof x === 'number' ? (100 * x).toFixed(1) + '%' : '—');
 function line(tag, p, asPct) {

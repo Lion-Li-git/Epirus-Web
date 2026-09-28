@@ -13,7 +13,7 @@
  * 并把「含 / 不含深经济对手」的组合**拆开报**，让考卷本身的判别力可被检查。
  * 另附 **pickRandom 对照行**（同一张考卷下的基线），否则百分比无法解释。
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import vm from 'node:vm';
 /* v1.5.71：对手名字→函数的单一来源（见下面 ALL 的构造） */
 import { OPP_SPECS } from '../server/opp-pool.mjs';
@@ -45,6 +45,48 @@ if (!mm) { console.error('未找到 EPIRUS_CHAMPION_3P: ' + FILE); process.exit(
 const metaM = src.match(/window\.EPIRUS_CHAMPION_3P_META\s*=\s*(\{[\s\S]*?\})\s*;/);
 const params = P.unpack(JSON.parse(mm[1]), true);
 if (!params) { console.error('冠军包不兼容: ' + JSON.stringify(P.checkPack(JSON.parse(mm[1])))); process.exit(1); }
+/* ===== §E136：`--swap=<第二粒包>@<回合R>` —— **不识别任何环境，只按"第几回合"换权重** =====
+ * 为什么要这条：§E135 已经量到"桌面早期信息分不开这 33 个原型"（可分原型数最好 14/33，线在 25），
+ * 于是"环境自适应"里剩下的可量版本就是**阶段条件化**。这条把决定权交给回合数，不需要任何识别能力。
+ * ⚠ 默认关：不带 `--swap` 时走的必须还是原来那条 `T.policyChooserN(params, 0.15)`（门 D197 用"换包点写在终局之后
+ *    ⇒ 与不换包**逐位相同**"钉住这件事），产品口径的量具不许被加一条悄悄生效的分支。 */
+const SWAP = FLAG.swap || '';
+let SWAP_FILE = '', SWAP_ROUND = 0, swapParams = null;
+if (SWAP) {
+  const at = SWAP.lastIndexOf('@');
+  SWAP_FILE = at < 0 ? '' : SWAP.slice(0, at);
+  SWAP_ROUND = at < 0 ? NaN : Number(SWAP.slice(at + 1));
+  if (!SWAP_FILE || !existsSync(SWAP_FILE)) {
+    console.error('--swap 要写成 `<第二粒包路径>@<回合R>`，且第二粒包必须存在（实测 `' + SWAP + '`）'); process.exit(2);
+  }
+  if (!isFinite(SWAP_ROUND) || SWAP_ROUND < 1 || Math.floor(SWAP_ROUND) !== SWAP_ROUND) {
+    console.error('--swap 的回合必须是 ≥1 的整数（实测 `' + SWAP + '`）⇒ 拒绝拿"第 0 回合换包"当基线'); process.exit(2);
+  }
+  const src2 = readFileSync(SWAP_FILE, 'utf8');
+  const m2 = /window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src2);
+  if (!m2) { console.error('--swap 的第二粒包里没有冠军外壳：' + SWAP_FILE); process.exit(2); }
+  let p2 = null;
+  try { p2 = P.unpack(JSON.parse(m2[1]), true); } catch (e) { p2 = null; }
+  if (!p2) { console.error('--swap 的第二粒包不兼容（维度/版本）：' + SWAP_FILE); process.exit(2); }
+  if (SWAP_FILE === FILE) { console.error('--swap 的第二粒包与主包是同一个文件 ⇒ 这一臂没有可测之差'); process.exit(2); }
+  swapParams = p2;
+}
+/** 主体席的 chooser：`makeSel()` 每局调一次 ⇒ 这里给的是"这一局用的策略对象" */
+function subjectPolicy() {
+  const a = T.policyChooserN(params, 0.15);
+  if (!swapParams) return a;
+  const b = T.policyChooserN(swapParams, 0.15);
+  return function (state, id, legal) { return (state.round >= SWAP_ROUND ? b : a)(state, id, legal); };
+}
+/* ⚠ `--swap` 只与"纯冠军主体"组合。其余主体改写（`--subject/--payload/--inject/--smart/--combo/--pure/--ban/--plan`）
+ * 会各自接管主体席 ⇒ 若允许同时给，`--swap` 会被**静默忽略**（那比报错危险得多），所以在这里直接拒。
+ * 这些 FLAG 在上面是后定义的 ⇒ 检查只能放在这里，不能挪到解析 `--swap` 的那一段。
+ * ⚠ `--field` **不在**这个名单里：它只改对手场（`combos` 换成一组固定脚本），不碰主体席 ⇒
+ *   与 `--swap` 兼容，而且它是唯一能把一臂压到"1 组 × 几局"的便宜口径（门 D197 靠它）。 */
+if (swapParams && (FLAG.subject || FLAG.payload || FLAG.inject || FLAG.smart || FLAG.combo || FLAG.pure || FLAG.ban || FLAG.plan)) {
+  console.error('--swap 只能单独用（它会与 --subject/--payload/--inject/--smart/--combo/--pure/--ban/--plan 抢主体席，'
+    + '同时给就会被静默忽略）⇒ 拒绝出读数'); process.exit(2);
+}
 
 /* ---------- 对手池 ---------- */
 /* v1.5.71：名字→函数**从训练池的单一来源派生**（`server/opp-pool.mjs` 的 `OPP_SPECS`），
@@ -95,6 +137,23 @@ const combos = [];
   if (cur.length === 4) { combos.push(cur.slice()); return; }
   for (let i = start; i < poolNames.length; i++) { cur.push(poolNames[i]); rec(i + 1, cur); cur.pop(); }
 })(0, []);
+/* `--every=N`（§E136）：**只取每第 N 个组合**，用来把"要跑 8 个臂"的实验压进可接受的时间。
+ * 默认 1 ⇒ 数组逐位不变（不重新洗牌、不抽样偏移），所以老读数的口径不动。
+ * 采样后**组合数会印在表头上**（下面那行 `全部 N 组合`），所以"我少跑了多少"不可能被藏起来。 */
+const EVERY = Number(FLAG.every || 1);
+if (!(EVERY >= 1) || !isFinite(EVERY) || Math.floor(EVERY) !== EVERY) {
+  console.error('--every 必须是 ≥1 的整数（实测 `' + (FLAG.every || '') + '`）⇒ 拒绝拿一个含糊的采样率出结论'); process.exit(2);
+}
+/* 采样是**确定性的**（`i % EVERY === 0` ⇒ 同 seed 同池子内不同臂面对同一批桌子，配对才成立），
+ * 但它**不是无偏的**：桌子按池子名字的字典序枚举，每第 7 张会采出一种**格点**，
+ * 于是子集上的绝对水平可能与全池差 1pt 级别（§E136 实测：同一粒包全池 42.5% ‖ 每第 7 张 41.7%）。
+ * ⇒ 落盘里必须带 `#every`，任何跨口径比较都要先问"是不是同一批桌子"（头部也会响亮印出来）。 */
+if (EVERY > 1) {
+  const kept = [];
+  for (let i = 0; i < combos.length; i++) if (i % EVERY === 0) kept.push(combos[i]);
+  combos.length = 0;
+  for (const c of kept) combos.push(c);
+}
 
 /* ===== --field=<preset>：把对手场换成**能提供前置条件**的场（用户 2026-09-12 提出的问题）=====
  * 动机：转移伤害 / 藤甲 这类卡的价值是**条件性**的 ——
@@ -299,7 +358,11 @@ function runSubject(makeSel, label) {
   /* v1.5.58（第五轮复核 §4-1）：`1st` 走 rankOf ⇒ **并列算第一**（'熬满'场里多打 1 点伤害就第一）。
    * 并报严格口径：严胜 = 引擎判我们赢；并列 = 名次第一但引擎没判我们赢。 */
   let strictFirst = 0, tieOnlyFirst = 0;
+  /* §E136 配对区间要用**逐桌子**的命中数（汇总百分比算不出配对差）。`--dump-per=<file>` 默认关：
+   * 不写这个旗标时下面只做一次 push，不改任何计数、不改 stdout ⇒ 老读数的口径与逐字输出都不动。 */
+  const perCombo = [];
   for (const combo of combos) {
+    let cGames = 0, cFirst = 0, cStrict = 0;
     const hasDeep = combo.some(function (nm) { return !!DEEP[nm]; });
     const hasRefl = combo.some(function (nm) { return !!REFL[nm]; });
     for (let g = 0; g < GAMES; g++) {
@@ -364,8 +427,10 @@ function runSubject(makeSel, label) {
       if (r.winner === 'draw') drawGames++;
       hpEndSum += Math.max(0, r.state.p[seat].hp);
       takenGames++; roundSum += r.rounds;
+      cGames++; if (rank === 1) cFirst++; if (r.winner === seat) cStrict++;
       total++;
     }
+    perCombo.push({ names: combo.join(','), games: cGames, first: cFirst, strict: cStrict });
   }
   const pct = function (x, y) { return y ? (x / y * 100).toFixed(1) + '%' : '-'; };
   return {
@@ -385,6 +450,7 @@ function runSubject(makeSel, label) {
     strictFirst: strictFirst, tieOnlyFirst: tieOnlyFirst,
     top2Rate: total ? (ranks[0] + ranks[1]) / total : 0,
     top3Rate: total ? (ranks[0] + ranks[1] + ranks[2]) / total : 0,
+    perCombo: perCombo,
     pct: pct
   };
 }
@@ -394,6 +460,8 @@ console.log('=== ' + N + ' 人局评测 ===');
 console.log('主体: ' + FILE);
 console.log('meta: ' + (metaM ? metaM[1] : '{}'));
 console.log('对手池(' + poolNames.length + '): ' + poolNames.join(' '));
+if (EVERY > 1) console.log('!! **只取每第 ' + EVERY + ' 个组合**（确定性格点采样 ⇒ 同 seed 各臂同桌子，但**绝对水平不代表全池**' +
+  ' ⇒ 跨口径引用前先问是不是同一批桌子）');
 if (FIELD) console.log('!! 前置条件场 --field=' + FIELD + ' : ' + FIELDS[FIELD].join(' ') + '（允许重复）');
 if (REGEN) console.log('!! 经济补贴 regen=' + REGEN + ' ep/回合（全体，非线上规则）');
 if (MODE) console.log('!! 模式 --mode=' + MODE + ' : ' + R.MODES[MODE].name + '  hp=' + R.MODES[MODE].hp + '  摄魂门槛 HP<=' + ((R.MODES[MODE].drainHpMax) || 1));
@@ -585,14 +653,16 @@ const subjectSel = (PURE && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !
   })()
   : (SUBJECT
     ? function () { return asChooser(FN[SUBJECT]); }
-    : function () { return T.policyChooserN(params, 0.15); });
+    : function () { return subjectPolicy(); });
 const subjectLabel = PAYLOAD ? ('消融·只换弹头 ' + PAYLOAD)
   : (PURE && !INJECT && !SMART && !COMBO && !BAN && !planSubjectSel) ? ('纯招·只出 ' + PURE + ' + ジ')
   : (planSubjectSel && !INJECT && !SMART && !COMBO) ? ('连招·蓄能→电磁炮')
   : (BAN && !INJECT && !SMART && !COMBO) ? ('消融·拿掉 ' + BAN)
   : (COMBO && !INJECT && !SMART) ? (comboLabel + ' 叠' + STACK)
   : (SMART && !INJECT) ? ('正确用法 ' + SMART)
-  : INJECT ? ('边际注入·能用就用 ' + INJECT) : (SUBJECT ? ('脚本 ' + SUBJECT) : '冠军');
+  : INJECT ? ('边际注入·能用就用 ' + INJECT)
+    : (SUBJECT ? ('脚本 ' + SUBJECT)
+      : (SWAP_FILE ? ('冠军→第 ' + SWAP_ROUND + ' 回合换 ' + SWAP_FILE.replace(/^.*[\\/]/, '').replace(/\.bak$/, '')) : '冠军'));
 const champ = runSubject(subjectSel, subjectLabel);
 const ctrl = runSubject(function () { return asChooser(Bots.pickRandom); }, '对照 pickRandom');
 
@@ -673,3 +743,19 @@ for (const k of sorted.slice(0, 12)) {
     '   费用=' + ((c && c.ok) ? c.ep : '?'));
 }
 console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
+
+/* ===== §E136：逐桌子命中数落盘（`--dump-per=<file>`，默认关）=====
+ * 为什么要它：配对 95% 区间的分母是**同一批桌子上的差值**，汇总百分比算不出来（§E137 那种"未配对 SE"只会偏保守）。
+ * 只在旗标给出时写文件，stdout 一字不加 ⇒ 与老口径逐字相同。 */
+if (FLAG['dump-per']) {
+  const lines = ['#eval5p-percombo', '#seed=' + SEED, '#games=' + GAMES, '#n=' + N, '#pool=' + POOL_MODE,
+    '#every=' + EVERY, '#field=' + (FIELD || '-'), '#file=' + FILE,
+    '#swap=' + (SWAP || '-'), '#arm\tidx\tnames\tgames\tfirst\tstrict'];
+  for (const s of [{ arm: 'subject', r: champ }, { arm: 'ctrl', r: ctrl }]) {
+    s.r.perCombo.forEach(function (c, i) {
+      lines.push(s.arm + '\t' + i + '\t' + c.names + '\t' + c.games + '\t' + c.first + '\t' + c.strict);
+    });
+  }
+  writeFileSync(FLAG['dump-per'], lines.join('\n') + '\n');
+  console.log('逐桌子命中数 → ' + FLAG['dump-per'] + '（' + champ.perCombo.length + ' 组 × ' + GAMES + ' 局）');
+}
