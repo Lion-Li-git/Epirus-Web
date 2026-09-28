@@ -9,7 +9,7 @@
 | 分支 | **`qoder-explore-0928`**（从 `main@4ff969a` 切出，**未合回 main**）· 末次 HEAD 以 `git log -1` 为准（本文件与 §E80 一起提交） |
 | 版本 | **v1.5.269**（CHANGELOG / README / index 三处一致） |
 | 规则指纹 | **`ebdbff36`** 未变（`rules/state/resolve/play/policy` 与两槽一字未动） |
-| 门禁 | np **221/221** · spec 52/52 · smoke OK（04:07 末次全量） |
+| 门禁 | np **230/230** · spec 52/52 · smoke OK · battle OK（07:57 末次全量，收工快照 §E115） |
 | 线上槽 | **未动**（仍是 `Ldemo`），全程只跑 `--dry` |
 | 产物 | 臂产物都在 **gitignore 的子目录**：`docs/artifacts/e6x-out/`…`e78-out/`（顶层只新增过 `.bak` 两次，都已在 CHANGELOG 点名） |
 
@@ -66,7 +66,7 @@
 
 ## 7. 关键命令
 ```bash
-node tools/np-test.mjs                     # 221/221（含 D175/D176）
+node tools/np-test.mjs                     # 230/230（含 D183 逐位对账 / D184 产物=起点 / D185 HALL_SEED）
 node tools/probe-econ-reset-audit.mjs      # econ 名单全键审计 + 贵卡剂量与作用点（0.3 秒）
 ABLATE_KEY=railgun node tools/probe-ring-ablate.mjs 600 js/bundled-champion-3p.js   # 载重性消融（任意卡）
 node tools/behavior-profile.mjs --champion=a.bak,b.bak --field=self --gamemode=long --games=60 --eps=0   # 载重读数（veto 的同口径尺）
@@ -77,6 +77,8 @@ EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/eval-out/win-Ldemo.bak EPIRUS_S
 node tools/promote-champion.mjs docs/artifacts/e78-out/G08-71.bak --dry     # 只 --dry
 node tools/probe-human-seat.mjs --packs=a.bak,b.bak --games=200        # v1.5.271：1 席"人" vs 4 席被测（G4 同一份装配）
 node tools/probe-dead-term.mjs --key=ringW --rounds=40                 # v1.5.275：判收益项死活的四层尺（不许据此写"可摘"）
+node tools/probe-pack-identity.mjs a.bak b.bak --self-test       # v1.5.276：权重**逐位**对账（不比文件字节；读不出必须点名 exit 7）
+# v1.5.277 接力配方新选项（默认关）：… EPIRUS_HALL_SEED=1 ⇒ 把起点补进终局重验候选池；产物等于起点时 train-3p 会打 `[产物=起点]` + meta.productIsSeed
 ```
 **账本**：`docs/RESEARCH-LOG-2026-09-28-qoder.md` §E64~§E80（每条都有预注册与现场数据）· CHANGELOG v1.5.263~269 段。
 
@@ -153,3 +155,20 @@ node tools/probe-dead-term.mjs --key=ringW --rounds=40                 # v1.5.27
 - **§E108 操作课**：门红的时候**先现场复跑、再看文件 mtime vs 进程启动时刻**。
   我这次 `D182③` 红是"门禁在跑、我同时改了工具"造成的**半旧状态**，不是 bug（10 秒复跑就证伪）。
   ⇒ 建议把这条并入你那套"标记与进程矛盾一律当事故查"的规矩：**改过被门读取的工具，那一轮门禁结果作废重跑**。
+
+## 12. 08:00 收工前：**两条工具账 + 一条会咬人的读数形状**（今晚最贵的两条都在这里）
+- ⭐ **"产物=起点"必须当成一种独立读数**（我今晚栽的地方）：§E111 两臂（λ0.30 × costlyW0.02 × N=5 × 1200 代）产物与现役
+  **0/5689 维不同**，而日志逐代行、`[band-save] …（当选）`、`已写入` 全都在 ⇒ 我把**起点读回起点**（炮 2.23 / maxEp 93，
+  与我自己的 §E64"起点（现役）"行一字不差）当成了那根旋钮的成绩。机制写在 `train-3p.mjs:825 / :917 / :923`：
+  种子常驻种群 0 号 + 锚定罚对它恰为 0 ⇒ 它照样进名人堂、照样在终局面对面重验里当选。
+  **v1.5.150 的 band-save 注释（`:1260`）六晚前就点名了这件事，但只补了落盘、没补读数。**
+  现在 `train-3p` 自己会喊（stderr + `meta.productIsSeed`/`hallSeedEntries`，门 D184 三向钉：正例喊 / 反例必须能不喊 / 冷启动 `null`）。
+- **给你的一条 METHODOLOGY 候选**（不代你写）：**任何"两臂产物逐位相同"的结论，必须同时报"它是否等于起点"** ——
+  "等于起点"是"相同"的一个特例，而它的作用是把实验**作废**，不是把结论**加强**。今晚我有三处结论形状受影响（§E111 作废；§E109 的 λ 饱和对经复查**不中招**，产物 ≠ 起点）。
+- `EPIRUS_HALL_SEED`（v1.5.277，门 D185，**默认关**）：把起点补进终局重验的候选池。
+  实测依据：**9 支接力臂里 7 支的名人堂一席起点都没有** ⇒ "接力交出的包从没跟现役比过"才是常态。
+  两 seed 都落在"起点在重验里 53.9% 打赢全部六席候选" ⇒ 它是**保险丝不是提升器**；中性做到了真臂尺度
+  （`HS-31-band1..6` 与同配置对照 `B5-05-31-band1..6` **六席逐位全部相同** ⇒ 1200 代轨迹一字未动，只换最后一次选人）。
+  ⚠ **属训练侧配方 ⇒ 等用户裁定**，我没动默认、没换槽、只 `--dry`。
+- 我这夜动过的**共享文件**只有 `tools/audit-lib.mjs`（`loadChamp` 吞绝对路径的假值坑）—— 它影响所有走 `loadChamp` 的工具，
+  所以你那些探针现在也能吃绝对路径了；反向说：若你某处**依赖**"绝对路径会被拼到仓库根后面"的老行为，那是我一处改动，D183⑤ 钉的是新行为。
