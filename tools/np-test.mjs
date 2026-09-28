@@ -978,7 +978,15 @@ t('D4 opponent rotation must not depend on individual index (pairing)', function
   const re = /let oi = ([^;]+);/g;
   let m;
   while ((m = re.exec(src))) all.push(m[1]);
+  /* v1.5.280（§E124）：轮换公式搬进了纯函数 `oppSeatIndex`（整桌同原型要的就是"局内不推进"）
+   * ⇒ 只扫 `let oi` 会只剩 `evalN` 里那个 `let oi = 0`（那是量具游标，不是轮换）⇒ **这条老门失去判据**。
+   * 现在两种形状都认：老式 `let oi = <式>` 与新式 `function oppSeatIndex(...) { return <式>; }`。
+   * ⚠ 这条本身是 v1.3.60 那次"把同代同对手批拆掉 ⇒ 适值不可比"的事故换来的，不许再退化。 */
+  const fn = /function oppSeatIndex\([^)]*\)\s*\{\s*return ([^;]+);/.exec(src);
+  if (fn) all.push(fn[1]);
   ok(all.length >= 1, 'no opponent rotation expression found');
+  ok(fn || all.some(function (e) { return e.indexOf('gen') >= 0; }),
+    '轮换必须在 `let oi` 或 `oppSeatIndex` 里有一处真身（两处都扫不到 = 这条门已被重构架空，判红）');
   for (const e of all) ok(e.indexOf('idx') < 0, 'rotation must not use idx (breaks same-gen pairing): ' + e);
   ok(all.some(function (e) { return e.indexOf('gen') >= 0; }),
     'rotation should advance with gen so a large pool still gets covered: ' + all.join(' | '));
@@ -7920,7 +7928,7 @@ t('D165 尾部聚合适应度开关（v1.5.251 · 夜班 §E49）：默认关要
   }
 });
 
-t('D187 整桌同原型（v1.5.279 · §E124）：关=逐位可逆 / 开=局内恒等且跨局满覆盖 / 量具路不许被配方拖动', function () {
+t('D187 整桌同原型（v1.5.280 · §E124）：关=逐位可逆 / 开=局内恒等且跨局满覆盖 / 量具路不许被配方拖动', function () {
   /* 这根杠杆动的是**训练桌的形状**，不是规则 ⇒ 判据必须落在"索引公式"本体上，
    * 而不是"横幅印了没有"（D174 那族：闸放行 ≠ 线接通）。 */
   const idx = T.oppSeatIndex;

@@ -1,4 +1,8 @@
 ## v1.5.280 — 新训练侧杠杆 `EPIRUS_OPP_BLOCK`（整桌同原型 · 门 D187）＋ §E124/§E125：**桌形与聚合两条路一起否证**，跨环境落差 89~96pt 一动不动
+> 产物点名（D82）：docs/artifacts/e124-out/blk0t00-s31.bak, docs/artifacts/e124-out/blk0t00-s71.bak, docs/artifacts/e124-out/blk0t40-s31.bak, docs/artifacts/e124-out/blk0t40-s71.bak, docs/artifacts/e124-out/blk1t00-s31.bak, docs/artifacts/e124-out/blk1t00-s71.bak, docs/artifacts/e124-out/blk1t40-s31.bak, docs/artifacts/e124-out/blk1t40-s71.bak, docs/artifacts/e124-out/pre_edit.js, docs/artifacts/e124-out/post_off.js
+> （八粒臂的**终局产物**＋逐位可逆那一对证据；八粒的 48 粒 band-save 与三次校准臂的 18 粒 band 已归进同一实验子目录 `docs/artifacts/e124-out/`，
+> 按 HANDOFF §1 的约定"臂产物住在实验子目录"，不再散在 `docs/artifacts/` 顶层。入库副本在 `docs/artifacts/kept/`，共 25 行哈希账。）
+
 用户给的本班头号目标是"**训出在不同环境下使用不同策略的 AI**"。本班先做结构性诊断，再把它变成一次带预注册的 2×2×2seed 实验（8 臂 · 每臂 1200 代）。
 规则指纹 `ebdbff36` **未变**（`js/core/*` 与 `js/train/policy.js` 一字未动）；两槽包与 `results/*` 未动；全部 `--dry`。
 
@@ -25,6 +29,15 @@
   （对手席里最近用反弹/攻击类的**有几个**，按类别做直方图，不做 per-slot 身份）—— 既保住公平性，又让"整桌是什么打法"第一次进网络输入。
   旁证：Q3 oracle 上界 0.078 > 0.05 ⇒ 条件性值钱；Q2 `τ(池内均值, 池外最差) = −0.071`（§E49 之后第二次独立复现）⇒ 现在的选择目标与池外泛化几乎不相关。
 - 证据入库（v1.5.279 的 `keep-artifact` 首次实战）：八粒臂 + §17 引用的 15 粒对照包共 **23 行账**进 `docs/artifacts/kept/`。
+
+- ⛔ **本班自己造成的一处回归（如实记，这是 D82/D4 那族"改了实现没改尺"的第 N 例）**：老门 **D4**（"对手轮换不许依赖个体下标"，
+  v1.3.60 拆掉配对评估那次事故换来的守门人）是用正则扫 `let oi = <式>` 来找那条不变量的**真身**；
+  我把公式搬进 `oppSeatIndex` 之后，顶层只剩 `evalN` 里那个 `let oi = 0`（量具游标，不含 `gen`）⇒ **D4 失去判据、当场红**。
+  修法不是把文件搬回来蒙过去：**D4 现在两种形状都认**（老式 `let oi` 与新式 `function oppSeatIndex(...) { return <式>; }`），
+  并且**两处都扫不到就判红** —— 以后再有人把不变量搬走，这条门会响亮地要求跟着搬，而不是悄悄退化回恒真。
+- ⚠ 记账纪律的一处自我违反（D82 抓到，非尺子的问题）：八粒臂的 48 个 band-save 与三次校准臂的 18 个 band
+  落到了 `docs/artifacts/` **顶层**（我没设 `EPIRUS_BAND_DIR`）⇒ 违反 HANDOFF §1 的"臂产物住在实验子目录"约定、触发 D82。
+  已全部归进 `docs/artifacts/e124-out/`，并按门要求的格式补了上面的 `产物点名（D82）` 账行。
 
 相关：METHODOLOGY 第 62/76 条（同一份定义只准一个真源）、§E48/§E49/§E51/§E53（本条的前案）、`docs/HANDOFF-FOR-DS-2026-09-28-qoder.md` §17-C。
 

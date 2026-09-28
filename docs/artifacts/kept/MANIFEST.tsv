@@ -22,3 +22,5 @@ e124-out__blk1t00-s31.bak	3712eff980ed82eb6d4455630bf7fbbd3242f4409f45024f3d95b0
 e124-out__blk1t00-s71.bak	161d5e293839b6e8ecaaf94c32c328cbd7a645278a13feefb90e418f43a33369	109928	docs/artifacts/e124-out/blk1t00-s71.bak	2026-09-28 16:20(UTC+8)	§E124/§E125 2×2×2seed：桌形×聚合
 e124-out__blk1t40-s31.bak	dd777694443b608c473bd6fa625abe74409612677ed5fa3df718c41d2b2bdb0a	109905	docs/artifacts/e124-out/blk1t40-s31.bak	2026-09-28 16:20(UTC+8)	§E124/§E125 2×2×2seed：桌形×聚合
 e124-out__blk1t40-s71.bak	cbc2eb420f5a0ec9adb1d8ed545959582d21b15f3c4370c316cfc443c4fef8ef	109868	docs/artifacts/e124-out/blk1t40-s71.bak	2026-09-28 16:20(UTC+8)	§E124/§E125 2×2×2seed：桌形×聚合
+e124-out__pre_edit.js	05a8f7139fe0a64fb81a90362d3e2c266db93e1c0023262a55a05a3d8e56517c	114599	docs/artifacts/e124-out/pre_edit.js	2026-09-28 18:37(UTC+8)	§E124/D187 逐位可逆证据（关开关 vs 改前，n=5689 全同）
+e124-out__post_off.js	41e90ba7b19ccdaef7955e36972b95e96b0c5d0c33a4a124795b0285b8199fd2	114630	docs/artifacts/e124-out/post_off.js	2026-09-28 18:37(UTC+8)	§E124/D187 逐位可逆证据（关开关 vs 改前，n=5689 全同）
