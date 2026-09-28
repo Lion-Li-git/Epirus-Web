@@ -7922,7 +7922,7 @@ t('D192 判定读数自带噪声尺（v1.5.287 · DS 清单第 8 条后半）：
   ok(/±\d+\.\dpt\(95%,n=20\)/.test(gout), '⑥ 且带上具体的 n（没有 n 的 ±x 等于没给口径）');
 });
 
-t('D193 多包路由收益的算式有牙（v1.5.288 · §E129）：六个分支全覆盖、绝对阈值不许回来、印出来的分支必须等于用同一批数重算的分支', function () {
+t('D193 多包路由收益的算式有牙（v1.5.288-289 · §E129/§E130/§E131）：分支全覆盖、绝对阈值不许回来、印出来的分支必须等于重算的分支、并列与弃权都不许偷偷改分母', function () {
   /* 这条门**不判科学结论**（R 是多少由 §E129 的记录负责），只判三件事：
    *   ① 判读函数的每条分支都走得到、边界值不许含混；
    *   ② 我预注册写错的那条**绝对 25% 阈值**不许回来（27 类时 13% 是"有信息"的，旧规则在这里判了"路由不可实现"，
@@ -7942,14 +7942,23 @@ t('D193 多包路由收益的算式有牙（v1.5.288 · §E129）：六个分支
   ];
   const BI = RGAIN.bestInByEnv(ROWS, E6);
   eq(BI.e1, 'A', '② 每个环境的最佳包要挑对');
-  const perf = RGAIN.routingReadings({ rows: ROWS, envs: E6, bestIn: BI, picks: Object.fromEntries(E6.map((e) => [e, e])), acc: 0.9, placebo: 0.05 });
+  const perf = RGAIN.routingReadings({ rows: ROWS, envs: E6, bestIn: BI, picks: Object.fromEntries(E6.map((e) => [e, e])), acc: 0.9, placebo: 0.05, fallbackPack: 'A' });
   ok(perf.oracle >= perf.bestSingle, '② oracle 不许低于 best_single（上界是"每环境各挑各的"，一定不差于一招鲜）');
   eq(perf.R, 1, '② 完美路由器（picks=真环境）的 R 必须恰好 1');
   eq(perf.branch, B.WORTH, '② R=1 且有分辨力 ⇒ 必须判 ②');
-  eq(RGAIN.routingReadings({ rows: ROWS, envs: E6, bestIn: BI, picks: {}, acc: 0.9, placebo: 0.05 }).branch, B.NO_READING,
-    '② 一个预测都拿不到 ⇒ 必须判"读数不全"，不许当 0 收益（那是 §E121 那族"读不出冒充读数"）');
+  /* "一个预测都没有"在新口径下**不是**"读数不全"：路由器什么都没换 ⇒ `realizable` 逐位等于 `best_single` ⇒ R=0。
+   * （v1.5.288 的老断言判的是 ⑥，那是彼时"没预测的环境被整条跳过"的口径 —— §E131 量到 R=2.81 才暴露那套均值不可比。） */
+  const none = RGAIN.routingReadings({ rows: ROWS, envs: E6, bestIn: BI, picks: {}, acc: 0.9, placebo: 0.05, fallbackPack: BI.e1 });
+  ok(none.realizable === none.bestSingle, '② 一个预测都没有 ⇒ realizable 必须**逐位等于** best_single（实测 ' + none.realizable + ' vs ' + none.bestSingle + '）');
+  eq(none.R, 0, '② 那台路由器等于什么都没做 ⇒ R 必须是 0，不许是"未量到"（"没做"与"没量到"是两件事）');
+  eq(none.branch, B.NEEDS_NET, '② R=0 且有分辨力 ⇒ 判 ④（钱要靠网络内部条件化），这是**允许**的结论形状');
+  let threw = false;
+  try { RGAIN.realizableOf(ROWS, E6, BI, {}, 'fit'); } catch (e) { threw = /必须有 fallbackPack/.test(e.message); }
+  ok(threw, '② **不给 fallbackPack 必须抛**：没有预测的环境被跳过 ⇒ realizable 与 oracle 就不是同一批环境 ⇒ 这正是 §E131 那次 R=2.81 的成因');
+  const over = RGAIN.routingReadings({ rows: ROWS, envs: E6, bestIn: BI, picks: Object.fromEntries(E6.map((e) => [e, e])), acc: 0.9, placebo: 0.05, fallbackPack: 'A' });
+  ok(over.realizable <= over.oracle + 1e-12, '② 构造保证 realizable ≤ oracle（越线就说明链路又变成两套均值比大小）');
   const FLAT = [row('X', [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]), row('Y', [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]), row('Z', [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])];
-  const flat = RGAIN.routingReadings({ rows: FLAT, envs: E6, bestIn: RGAIN.bestInByEnv(FLAT, E6), picks: Object.fromEntries(E6.map((e) => [e, e])), acc: 0.9, placebo: 0 });
+  const flat = RGAIN.routingReadings({ rows: FLAT, envs: E6, bestIn: RGAIN.bestInByEnv(FLAT, E6), picks: Object.fromEntries(E6.map((e) => [e, e])), acc: 0.9, placebo: 0, fallbackPack: 'X' });
   eq(flat.branch, B.NO_EDGE, '② 上界缺口 < 0.02 ⇒ 必须判 ⑤（不必谈 R）');
   eq(flat.R, null, '② 判 ⑤ 时 R 必须是 null，不许印 0（0 会被读成"路由赚不到钱"）');
   /* ---- ③ 分支函数：四个带的上下边界 + 两条优先级 ---- */
@@ -7977,6 +7986,31 @@ t('D193 多包路由收益的算式有牙（v1.5.288 · §E129）：六个分支
   ok(/from '\.\/routing-gain-lib\.mjs'/.test(probeSrc), '⑥ 探针必须 import routing-gain-lib');
   ok(!/R\s*=\s*\(realizable\s*-/.test(probeSrc), '⑥ 探针里不许再抄一份 R 的公式');
   ok(!/acc\s*<\s*0\.25/.test(probeSrc) && !/改观测面是唯一路/.test(probeSrc), '⑥ 旧的 25% 绝对阈值判词必须已从探针里删干净');
+  ok(/nearestDistinct\(s\.v, pool, s, dist\)/.test(probeSrc),
+    '⑥ 探针的最近邻必须走 `routing-gain-lib.nearestDistinct`（**并列怎么裁决**这件事只许有一处定义）');
+  /* ---- ⑩ 并列裁决与弃权闸（§E131 那两处读数错误的直接补丁，判在纯函数上）---- */
+  const dv = (a, b) => Math.sqrt(a.reduce((s, x, i) => s + (x - b[i]) * (x - b[i]), 0));
+  const P1 = { v: [1, 0], env: 'x' }, P2 = { v: [1, 0], env: 'y' }, P3 = { v: [1, 0], env: 'x' }, P4 = { v: [0, 1], env: 'z' };
+  const nd1 = RGAIN.nearestDistinct(P1.v, [P1, P2, P3, P4], P1, dv);
+  ok(nd1.ambiguous === true && nd1.env === null,
+    '⑩ 并列来自**不同环境** ⇒ 必须判歧义、不给预测（原先按遍历顺序取第一个最小距离 ⇒ §E129 那个 13% 里有一部分是顺序给的假分辨力）');
+  const nd2 = RGAIN.nearestDistinct(P1.v, [P3, P4], P1, dv);
+  ok(nd2.ambiguous === false && nd2.env === 'x', '⑩ 同环境内部的逐位重复**不算歧义**（那正是"同一个原型"，不许把它判成不可辨）');
+  const nd3 = RGAIN.nearestDistinct([0.9, 0.1], [{ v: [1, 0], env: 'a' }, { v: [0, 1], env: 'b' }], null, dv);
+  ok(nd3.ambiguous === false && nd3.env === 'a' && Math.abs(nd3.d - Math.sqrt(0.02)) < 1e-9,
+    '⑩ 明显更近的那个要照单收下（歧义判定不许退化成"一律不给答案"）');
+  eq(RGAIN.branchOf({ gap: 0.1, readingsOk: true, informative: true, R: 0.3, abstainOn: true, nSwitch: 4, minSwitch: 5 }), B.DEGENERATE,
+    '⑩ 弃权版只换 4 个环境 ⇒ ⓪ "没有结论"（§E131 跑前写死的反退化条款）');
+  eq(RGAIN.branchOf({ gap: 0.1, readingsOk: true, informative: true, R: 0.3, abstainOn: true, nSwitch: 5, minSwitch: 5 }), B.HALF,
+    '⑩ 换满 5 个才进入正常判读（边界含）');
+  eq(RGAIN.branchOf({ gap: 0.1, readingsOk: true, informative: true, R: 0.3, abstainOn: false, nSwitch: 0, minSwitch: 5 }), B.HALF,
+    '⑩ 没开弃权闸时 ⓪ 不许介入（§E129/§E130 的读数靠这条保住口径）');
+  eq(RGAIN.medianOf([]), null, '⑩ 空样本的中位数必须是 null（不许印 0 冒充量到）');
+  const sh = RGAIN.shareOf({ a: 30, b: 10 });
+  ok(Math.abs(sh.share - 0.75) < 1e-9 && sh.top === 'a', '⑩ share 算的是众数占比（0.75），不是票数');
+  ok(RGAIN.decideSwitch('dist', { nnMed: 0.001, tau: 0, share: 1 }).canSwitch === false, '⑩ dist：比 τ 远一点就不许换（τ=0 时只有逐位重合才允许）');
+  ok(RGAIN.decideSwitch('share', { nnMed: 0, tau: 0, share: 0.49 }).canSwitch === false, '⑩ share 差一点也不许换（0.49 < 0.5）');
+  ok(RGAIN.decideSwitch('off', { nnMed: 9, tau: 0, share: 0 }).canSwitch === true, '⑩ off 不改任何旧读数（默认口径不许被新闸偷偷挪动）');
   /* ---- ⑦ 行为：真跑一次（合成矩阵 + opp-pool 现取的环境名），**印出来的分支必须等于用同一批数重算的分支** ----
    * 复算用的 R 必须由未取整的 realizable/bestSingle/gap 推出，**不能**用 json 里那个取整过的 `R`：
    * 取整值恰好压在带边界上（真实 0.49996 → 印 0.5000）会把分支判到隔壁一档 ⇒ **门自己**在正确的代码上假红。
@@ -7984,7 +8018,9 @@ t('D193 多包路由收益的算式有牙（v1.5.288 · §E129）：六个分支
   const dir = mkdtempSync(join(tmpdir(), 'd193-'));
   try {
     const specs = Array.isArray(OPP_SPECS) ? OPP_SPECS : Object.values(OPP_SPECS);
-    const names = specs.slice(0, 5).map((s) => s.name);
+    /* 8 个环境（不是 5）：合成表要让**命中率非零**，否则 ⑨″ 那条"链路命中率不许整体塌成 0"
+     * 会在一份全都歧义的表上变成空转（实测 5 个环境时 acc=0 ⇒ 装饰；8 个时 acc≈23% ⇒ 有牙）。 */
+    const names = specs.slice(0, 8).map((s) => s.name);
     const synth = { rows: names.map((nm, i) => ({ label: nm, per: Object.fromEntries(names.map((e, j) => [e, { fit: i === j ? 0.95 : 0.30 }])) })) };
     const mf = join(dir, 'matrix.json');
     writeFileSync(mf, JSON.stringify(synth));
@@ -8061,9 +8097,33 @@ t('D193 多包路由收益的算式有牙（v1.5.288 · §E129）：六个分支
     ok(Math.abs(mOf(got) - mOf(inc) - (JD.realizable - JD.bestSingle)) < 1e-9,
       '⑨ 两者之差（配对均值）必须等于 `realizable − best_single`');
     ok(DM.perEnv.every(r => r.env && typeof r.acc === 'number'), '⑨ 每条链路要带环境名与该环境命中率（聚类区间要用）');
+    /* ⑨″ dump 的逐环境命中率必须与 json 的总命中率**是同一个量**，而且不许整体塌成 0。
+     * 动因（真实事故）：`nearestOther` 从返回字符串改成返回对象之后，链路里的 `nn === s.env` 恒 false
+     * ⇒ **每个环境命中率都成 0**、工具不崩、别的字段全都正常 ⇒ 聚类区间那条读数悄悄废掉。
+     * 只判"字段存在"挡不住这种错（0 也是 number），必须判**它与总量对得上、并且不恒为 0**。 */
+    const wsum = DM.perEnv.reduce((s, r) => s + r.acc * r.n, 0), wtot = DM.perEnv.reduce((s, r) => s + r.n, 0);
+    ok(wtot > 0 && Math.abs(wsum / wtot - JD.acc) < 1e-9,
+      '⑨″ 链路命中率的**样本加权均值**必须等于 json 的总准确率（实测 ' + (wtot ? wsum / wtot : NaN) + ' vs ' + JD.acc + '）');
+    ok(JD.acc === 0 || DM.perEnv.some(r => r.acc > 0),
+      '⑨″ json 说准确率不是 0（实测 ' + JD.acc + '）⇒ 链路里至少要有一个环境的命中率 > 0；两者不一致就是**形状改了之后的死代码**（不是"真的都没认出来"）');
     const an = spawnSync(process.execPath, ['tools/analyze-routing-gain.mjs', dp], { cwd: process.cwd(), encoding: 'utf8', timeout: 120000 });
     ok(an.status === 0 && /95% \[/.test(String(an.stdout || '')) && /变好 \d+ ‖ 变差 \d+/.test(String(an.stdout || '')),
       '⑨ 区间量具必须读得动这份 dump，并印出 95% 区间与**逐环境好/差分布**（实测 status=' + an.status + '）');
+    /* ⑨′ 同一件事在**弃权版**上再验一遍：`门槛过了但没有票` 的环境也必须"实际打一粒包"（落回一招鲜），
+     * 不许留 null —— 留 null 就是把这个环境从均值里悄悄删掉，而 json 的 realizable 却按"落回"算 ⇒ 两笔算术。
+     *（这一条是 §E131 第一次撞到之后补的，形如"dump 与均值不一致"的错在本仓已经出现过三次。）*/
+    const dp2 = join(dir, 'dump-abstain.json'), jdp2 = join(dir, 'dumpmeta-abstain.json');
+    const rd2 = run2(['--metric=win', '--abstain=dist', '--dump=' + dp2], jdp2);
+    ok(rd2.status === 0 && existsSync(dp2), '⑨′ 前置：弃权版也必须跑完并落下 dump（status=' + rd2.status + '，' + String(rd2.stderr || '').slice(0, 90) + '）');
+    const DM2 = JSON.parse(readFileSync(dp2, 'utf8')), JD2 = JSON.parse(readFileSync(jdp2, 'utf8'));
+    ok(DM2.perEnv.every(r => r.chosen && typeof r.chosen.win === 'number' && typeof r.chosen.fit === 'number'),
+      '⑨′ 每个参与打分的环境都要有"**实际打的那一粒**"（弃权 ⇒ 落回一招鲜，不许 null）：实测 null 条数 '
+      + DM2.perEnv.filter(r => !r.chosen || typeof r.chosen.win !== 'number').length);
+    const m2 = DM2.perEnv.map(r => r.chosen[JD2.metric || 'win']);
+    ok(Math.abs(m2.reduce((s, x) => s + x, 0) / m2.length - JD2.realizable) < 1e-9,
+      '⑨′ 弃权版的链路均值必须等于 json 的 realizable（实测 ' + (m2.reduce((s, x) => s + x, 0) / m2.length) + ' vs ' + JD2.realizable + '）');
+    ok(DM2.perEnv.filter(r => r.switched).length === JD2.meta.switched,
+      '⑨′ 链路里 `switched` 的条数必须等于 json 的 meta.switched（实测 ' + DM2.perEnv.filter(r => r.switched).length + ' vs ' + JD2.meta.switched + '）');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 

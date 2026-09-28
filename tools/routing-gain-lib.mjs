@@ -9,7 +9,10 @@
  * ==========================================================================*/
 
 export const BRANCHES = {
-  NO_EDGE: '⑤', NO_READING: '⑥', NO_SIGNAL: '①′', WORTH: '②', HALF: '③', NEEDS_NET: '④',
+  NO_EDGE: '⑤', NO_READING: '⑥', INCONSISTENT: '⑥′', NO_SIGNAL: '①′', WORTH: '②', HALF: '③', NEEDS_NET: '④',
+  /* ⓪ = §E131 的**反退化条款**：开了弃权闸却几乎谁都不换 ⇒ "增益 ≈ 0 且不跨 0"会被读成"路由做成了"，
+   *    那是**同义反复**（弃权版 = 一招鲜），不是结果。这条判"没有结论"。 */
+  DEGENERATE: '⓪',
 };
 
 export const mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN);
@@ -52,18 +55,27 @@ export function bestSingleOf(rows, envs, metric) {
   return { best: best, pack: pack };
 }
 
-/** picks: {env: 预测到的环境名} → 用"预测环境里最好的那粒包"在**真环境**上的读数求均值 */
-export function realizableOf(rows, envs, bestIn, picks, metric) {
+/** picks: {env: 预测到的环境名} → 用"预测环境里最好的那粒包"在**真环境**上的读数求均值。
+ *  `fallbackPack`（§E131 的弃权闸）：某环境**没预测**或**被判定弃权**时，不改用邻居的包，而是**保持这一粒**。
+ *  ⚠ **`fallbackPack` 是必须的**（v1.5.289 修的一处算式错）：早先没有预测的环境被**整条跳过**，
+ *    于是 `realizable` 是"有票的那几个环境"的均值，而 `oracle`/`best_single` 是**全部**环境的均值 ⇒ 分母不是同一批，
+ *    `R` 会冲出 1（§E131 修完并列判歧义之后实测 R=2.81 —— 那不是我算对了，是两套均值在比大小）。
+ *    现在统一成"路由器在**每个**参与打分的环境上实际打的那一粒" ⇒ `realizable ≤ oracle` 由构造保证，R 才有意义。 */
+export function realizableOf(rows, envs, bestIn, picks, metric, fallbackPack) {
   const m = metricOrThrow(metric);
   const find = (p) => rows.find((x) => x.pack === p);
+  if (!fallbackPack) throw new Error('realizableOf 必须有 fallbackPack：没有预测的环境不许被跳过（那会让 realizable 与 oracle 不是同一批环境）');
   const list = [];
+  let switched = 0;
   for (const e of envs) {
     const pe = picks[e];
     const pack = pe ? bestIn[pe] : null;
-    const v = pack ? cellOf(find(pack), e, m) : null;
+    const used = pack || fallbackPack;
+    if (pack && pack !== fallbackPack) switched++;
+    const v = cellOf(find(used), e, m);
     if (v !== null) list.push(v);
   }
-  return { value: mean(list), n: list.length };
+  return { value: mean(list), n: list.length, switched: switched };
 }
 
 export function chanceOf(nEnvs) { return 1 / Math.max(1, nEnvs); }
@@ -75,8 +87,9 @@ export function isInformative(acc, chance, placebo) {
 
 /** 判读分支的**唯一决策函数**（门 D193 拿"屏幕上印出来的那几个数"重算一遍，比它印的分支符）：
  * 只要"印的分支"与"数的分支"不一致就得红 —— 这正是 §E129 那次两条判词互相打脸的形状。 */
-export function branchOf({ gap, readingsOk, informative, R }) {
+export function branchOf({ gap, readingsOk, informative, R, abstainOn, nSwitch, minSwitch }) {
   if (!readingsOk) return BRANCHES.NO_READING;
+  if (abstainOn && (nSwitch || 0) < (minSwitch == null ? 5 : minSwitch)) return BRANCHES.DEGENERATE;
   if (gap < 0.02) return BRANCHES.NO_EDGE;
   if (!informative) return BRANCHES.NO_SIGNAL;
   if (R >= 0.5) return BRANCHES.WORTH;
@@ -90,21 +103,31 @@ export function branchOf({ gap, readingsOk, informative, R }) {
  * `realizable > best_single` 说明钱**真的赚到了**（R=0.24）——两条判词在同一段代码里互相打脸。
  * 根因：fit 面是**平的**（很多环境的最佳包是同一粒）⇒ "认出环境名字"既不是路由赚钱的充分条件、也不是必要条件。
  * ⇒ 现在只用两把尺：`informative`（准确率 ≥ 2×max(随机, placebo)）判签名有没有分辨力，钱按 R 判。 */
-export function routingReadings({ rows, envs, bestIn, picks, acc, placebo, metric }) {
+export function routingReadings({ rows, envs, bestIn, picks, acc, placebo, metric, fallbackPack, abstainOn, nSwitch, minSwitch }) {
   const m = metricOrThrow(metric);
   const oracle = mean(envs.map((e) => (bestIn[e] ? cellOf(rows.find((x) => x.pack === bestIn[e]), e, m) : NaN)));
   const bs = bestSingleOf(rows, envs, m);
-  const rz = realizableOf(rows, envs, bestIn, picks, m);
+  const rz = realizableOf(rows, envs, bestIn, picks, m, fallbackPack);
   const gap = oracle - bs.best;
   const chance = chanceOf(envs.length);
   const informative = isInformative(acc, chance, placebo);
   const readingsOk = isFinite(oracle) && isFinite(bs.best) && isFinite(rz.value) && isFinite(acc) && envs.length > 0;
-  const R = (readingsOk && gap >= 0.02) ? (rz.value - bs.best) / gap : null;
-  const branch = branchOf({ gap, readingsOk, informative, R });
+  /* 自洽性护栏：`realizable` 是"每个环境实际打的那一粒"，任何一粒都不会比该环境的最佳包更好 ⇒ **R 不可能 > 1**。
+   * §E131 一开始量到 R=2.81，就是"没有票的环境被跳过"造成的两套均值比大小 ⇒ 这条护栏当时会直接拦住我。 */
+  const inconsistent = readingsOk && rz.value > oracle + 1e-9;
+  const R = (readingsOk && !inconsistent && gap >= 0.02) ? (rz.value - bs.best) / gap : null;
+  const branch = inconsistent ? BRANCHES.INCONSISTENT
+    : branchOf({ gap, readingsOk, informative, R, abstainOn: !!abstainOn, nSwitch: rz.switched, minSwitch: minSwitch });
   const p = (x) => (100 * x).toFixed(0) + '%';
   let verdict;
-  if (branch === BRANCHES.NO_READING) {
+  if (branch === BRANCHES.INCONSISTENT) {
+    verdict = '⑥′ **链路不自洽**：realizable(' + rz.value.toFixed(3) + ') 比 oracle(' + oracle.toFixed(3)
+      + ') 还高 ⇒ 两个均值不是同一批环境（通常是"没预测的环境被跳过"）⇒ **不出结论**，先修算式';
+  } else if (branch === BRANCHES.NO_READING) {
     verdict = '⑥ 读数不全（oracle/best_single/realizable/准确率 里至少一个没量到）⇒ **不出结论**';
+  } else if (branch === BRANCHES.DEGENERATE) {
+    verdict = '⓪ **反退化条款命中**：开了弃权闸却只换 ' + rz.switched + ' 个环境（< ' + (minSwitch == null ? 5 : minSwitch)
+      + '）⇒ 这一版其实就是"几乎不换包"，它的"增益"是同义反复 ⇒ **判没有结论**（§E131 跑前写死的那条）';
   } else if (branch === BRANCHES.NO_EDGE) {
     verdict = '⑤ oracle 与 best_single 之差 < 0.02 ⇒ **上界本身不存在**，路由无意义（不必谈 R）';
   } else if (branch === BRANCHES.NO_SIGNAL) {
@@ -118,9 +141,61 @@ export function routingReadings({ rows, envs, bestIn, picks, acc, placebo, metri
     verdict = '④ R=' + R.toFixed(2) + ' < 0.2 ⇒ oracle 那笔钱要靠网络内部条件化 ⇒ 支持改观测面';
   }
   return {
-    bestSingle: bs.best, bestSinglePack: bs.pack, realizable: rz.value, realizableN: rz.n,
+    bestSingle: bs.best, bestSinglePack: bs.pack, realizable: rz.value, realizableN: rz.n, switched: rz.switched,
     oracle, gap, R, chance, informative, branch, verdict, metric: m,
   };
+}
+
+/** 留一最近邻（**并列不许按遍历顺序裁决**）。
+ *  `items` = `[{v, env}]`，`skip` = 判谁就排除谁（留一）。返回 `{env, d, ambiguous, tied}`：
+ *  最近距离若被**两个以上不同环境**并列占据 ⇒ `env=null` + `ambiguous=true`（"这桌按定义分不开"），
+ *  同环境内部的并列**不算歧义**（那就是同一个原型，正是我们要认的东西）。
+ *  ⚠ 这条是从 §E131 的一次真实读数错误抽出来的：原先写 `if (d < bd) { bd=d; bn=o.env; }`，
+ *    在签名逐位重复的池子上（K=3 有 94% 的样本如此），"预测到哪个环境"由**样本数组的顺序**决定，
+ *    而准确率因此从 6% 被读成 13%（⇒ 我差点拿一个偶然当成分辨力）。 */
+export function nearestDistinct(v, items, skip, dist) {
+  let bd = Infinity;
+  const tied = new Set();
+  for (const o of items) {
+    if (o === skip) continue;
+    const d = dist(v, o.v);
+    if (d < bd - 1e-12) { bd = d; tied.clear(); tied.add(o.env); }
+    else if (d <= bd + 1e-12) tied.add(o.env);
+  }
+  if (!tied.size) return { env: null, d: null, ambiguous: false, tied: [] };
+  const envs = [...tied];
+  return { env: envs.length === 1 ? envs[0] : null, d: bd, ambiguous: envs.length > 1, tied: envs };
+}
+
+/** 中位数（空数组 ⇒ null，不返回 0 冒充"量到了"） */
+export function medianOf(a) {
+  if (!a || !a.length) return null;
+  const s = a.slice().sort((x, y) => x - y);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+/** 投票占比（§E131 的 `share` 规则要用）。⚠ share 量的是**一致**，不是**对**——
+ *  40 个样本可以齐刷刷投给同一个错误邻居（§E130 里那 23 个 0% 命中率的环境很可能正是这种形状）。 */
+export function shareOf(votes) {
+  const ent = Object.entries(votes || {}).sort((a, b) => b[1] - a[1]);
+  const tot = ent.reduce((s, x) => s + x[1], 0);
+  if (!ent.length || !tot) return { top: null, share: 0 };
+  return { top: ent[0][0], share: ent[0][1] / tot };
+}
+
+/** §E131 的两条弃权规则（跑前定死，都不带可调分位数）。入参是**已经算好的三个统计量**（别让这里重复排序）：
+ *  `dist` ⇒ `nnMed ≤ tau`（`tau` = 同环境两两签名距离的中位数，即"同一个原型的两张桌子之间的典型距离"）
+ *  `share` ⇒ `share ≥ 0.5`（留一投票的众数占比）
+ *  `both`  ⇒ 两条都要过。返回 `{canSwitch, why}`，`why` 只给屏幕看证据用、不参与判定。 */
+export function decideSwitch(mode, { nnMed, tau, share }) {
+  if (!mode || mode === 'off') return { canSwitch: true, why: '未开闸' };
+  const okDist = mode === 'dist' || mode === 'both' ? (nnMed !== null && tau !== null && nnMed <= tau) : true;
+  const sh = share == null ? 0 : share;
+  const okShare = mode === 'share' || mode === 'both' ? (sh >= 0.5) : true;
+  return { canSwitch: okDist && okShare, nnMed: nnMed, tau: tau, share: sh,
+    why: 'nnMed=' + (nnMed === null ? '—' : nnMed.toFixed(3)) + ' τ=' + (tau === null ? '—' : tau.toFixed(3))
+      + ' share=' + (100 * sh).toFixed(0) + '%' };
 }
 
 /** 矩阵能不能用来算上界：读不出包名 / 行数不足 / 环境数不足 ⇒ 返回**错误文本**（调用方负责 exit 2） */
