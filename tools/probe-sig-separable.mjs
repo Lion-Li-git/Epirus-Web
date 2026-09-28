@@ -28,8 +28,8 @@ const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k +
 rejectUnknownFlags(process.argv.slice(2), ['games', 'n', 'ks', 'seed', 'json', 'quiet']);
 const GAMES = Math.max(6, Number(arg('games', 40)) || 40);
 const N = Math.max(3, Number(arg('n', 3)) || 3);
-const KMAX = 15;
-const KS = (arg('ks', '3,8,15') || '3,8,15').split(',').map(x => Number(x)).filter(x => x >= 1 && x <= KMAX);
+const KMAX = 20;                                          // §E135：半局级窗口（§E134 用的是 15）；**不往整局跑**（预注册里写死的限制）
+const KS = (arg('ks', '8,15,20') || '').split(',').map(x => Number(x)).filter(x => x >= 1 && x <= KMAX);
 const SEED0 = Number(arg('seed', 4243)) || 4243;
 const U_BAR = 25, AMB_BAR = 0.40;                       // §E134 跑前定死
 
@@ -75,12 +75,35 @@ function observe(rg) {
         for (let p = 1; p < N; p++) if (st.p && st.p[p]) opps.push(st.p[p]);
         if (opps.length) {
           const meanOf = (f) => opps.reduce((s, p) => s + f(p), 0) / opps.length;
+          /* 架势/状态这些是**公共可见**的（`state.js` 的注释就写着"公共信息；供特征 T 块与 UI"）
+           * ⇒ 路由器理论上能看见；§E135 赌的就是"看得见的状态比看不出的出招类别更能分开原型"。 */
+          const stance = {
+            guard: meanOf(p => ((p.guardNext || p.copiedGuard) ? 1 : 0)),
+            bagua: meanOf(p => (p.baguaExtra ? 1 : 0)),
+            fireWeak: meanOf(p => ((p.fireWeakNow || p.fireWeakNext) ? 1 : 0)),
+            rod: meanOf(p => ((p.rodGuard || 0) > 0 ? 1 : 0)),
+            taunt: meanOf(p => (p.tauntActive ? 1 : 0)),
+            chain: meanOf(p => ((p.chains || []).length > 0 ? 1 : 0)),
+            vamp: meanOf(p => (p.vampire ? 1 : 0)),
+            night: meanOf(p => (p.nightmare ? 1 : 0)),
+            ring: meanOf(p => (p.ringStreak || 0)),
+            cannon: meanOf(p => (p.cannonCount || 0)),
+            mineOn: meanOf(p => (p.mineArmed ? 1 : 0)),
+            mineTurns: meanOf(p => (p.mineTurns || 0)),
+            elec: meanOf(p => (p.elec || 0)), boom: meanOf(p => (p.boom || 0)),
+          };
+          /* 指向性（G 组）：对手席上一手指向谁 ⇒ "集火"与"各打各的"是**类别直方图看不见**的差别 */
+          const tg = opps.map(p => p.lastTarget).filter(x => x != null);
+          const uniq = new Set(tg).size;
+          const shared = tg.length >= 2 && uniq < tg.length ? 1 : 0;
+          const onZero = tg.length ? tg.filter(x => x === 0).length / tg.length : 0;
           snaps.push({
             round: st.round,
             epMean: meanOf(p => p.ep), epMax: Math.max(...opps.map(p => p.ep)),
             beadMean: meanOf(p => (p.elec || 0) + (p.boom || 0)),
             hp0: st.p[0] ? st.p[0].hp : null,
             hpOppMean: meanOf(p => p.hp),
+            stance, tgUniqRatio: tg.length ? uniq / tg.length : 1, shared, onZero,
           });
         }
       }
@@ -135,7 +158,31 @@ function vecD(g, K) {                                     // 压制与伤害：0
   let hit = 0; for (let i = 1; i < s.length; i++) if (s[i].hp0 < s[i - 1].hp0 || s[i].hpOppMean < s[i - 1].hpOppMean) hit++;
   return [d0, dO, hit / (s.length - 1)];
 }
-const GROUPS = { A: vecA, B: vecB, C: vecC, D: vecD };
+function vecE(g, K) {                                     // §E135 E 架势与防御：八种公共可见状态的回合均值（占比形）
+  const s = g.snaps.filter(x => x.round <= K);
+  if (!s.length) return [0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const m = (k) => s.reduce((a, x) => a + x.stance[k], 0) / s.length;
+  const any = s.reduce((a, x) => a + ((x.stance.guard + x.stance.bagua + x.stance.fireWeak + x.stance.rod + x.stance.taunt) > 0 ? 1 : 0), 0) / s.length;
+  return [m('guard'), m('bagua'), m('fireWeak'), m('rod'), m('taunt'), m('chain'), m('vamp'), m('night'), any];
+}
+function vecF(g, K) {                                     // §E135 F 资源存量轨迹：六种存量的"均值 + 峰值"
+  const s = g.snaps.filter(x => x.round <= K);
+  if (!s.length) return new Array(12).fill(0);
+  /* ep 在快照顶层、珠/环/炮/雷在 `stance` 里（两处都查，别哪天搬个字段就静默变 0） */
+  const val = (x, k) => (x.stance && x.stance[k] !== undefined ? x.stance[k] : (x[k] !== undefined ? x[k] : 0));
+  const m = (k) => s.reduce((a, x) => a + val(x, k), 0) / s.length;
+  const mx = (k) => Math.max(...s.map(x => val(x, k)));
+  return [m('epMean'), mx('epMean'), m('elec'), mx('elec'), m('boom'), mx('boom'),
+    m('ring'), mx('ring'), m('cannon'), mx('cannon'), m('mineOn'), m('mineTurns')];
+}
+function vecG(g, K) {                                     // §E135 G 指向性：目标集中度 / 同回合并指 / 指 0 座的比例
+  const s = g.snaps.filter(x => x.round <= K);
+  if (!s.length) return [0, 0, 0];
+  const m = (k) => s.reduce((a, x) => a + x[k], 0) / s.length;
+  return [m('tgUniqRatio'), m('shared'), m('onZero')];
+}
+const GROUPS = { A: vecA, B: vecB, C: vecC, D: vecD, E: vecE, F: vecF, G: vecG };
+const ORDER = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'ALL'];
 function znorm(all) {                                     // 组合组用：每维在**全体样本**上 z 标准化（§E134 澄清里定死的拼接方式）
   const n = all.length, d = all[0].length;
   const mu = new Array(d).fill(0), sd = new Array(d).fill(0);
@@ -153,13 +200,13 @@ for (const K of KS) {
     const ev = {}; for (const e of names) ev[e] = data[e].map(g => GROUPS[gname](g, K));
     perGroup[gname] = ev;
   }
-  const allRaw = []; const idx = [];
+  const allRaw = [];
   for (const e of names) for (let i = 0; i < data[e].length; i++) allRaw.push(
-    [...GROUPS.A(data[e][i], K), ...GROUPS.B(data[e][i], K), ...GROUPS.C(data[e][i], K), ...GROUPS.D(data[e][i], K)]);
+    Object.keys(GROUPS).reduce((acc, gname) => acc.concat(GROUPS[gname](data[e][i], K)), []));
   const z = znorm(allRaw);
   const combo = {}; let p = 0;
   for (const e of names) { combo[e] = []; for (let i = 0; i < data[e].length; i++) combo[e].push(z[p++]); }
-  const labels = { ABCD: combo };
+  const labels = { ALL: combo };
   for (const gname in GROUPS) labels[gname] = perGroup[gname];
   /* 窗口自检：必须**走与特征向量同一条 `inWindow`**。
    * 第一版这里另写了一遍 `g.evs.filter(idx < cutAt(...))` ⇒ 把 `inWindow` 改坏也照样印 ✔
@@ -171,14 +218,16 @@ for (const K of KS) {
   console.log('\n  —— K=' + K + ' —— 窗口自检（' + allGames.length + ' 局取中位数）：A/C 实际用的那条 `inWindow` = **前 ' + K + ' 回合 '
     + inWin + ' 次出招** ‖ 整局 ' + allE + ' 次'
     + (K < KMAX && inWin >= allE ? '  ⛔ **窗口没截断**（这档读数等同于整局，别信）' : '  ✔'));
-  for (const lab of ['A', 'B', 'C', 'D', 'ABCD']) {
+  for (const lab of ORDER) {
     const s = score(labels[lab]);
     const pass = s.U_sep >= U_BAR && s.ambRate !== null && s.ambRate <= AMB_BAR;
     rows.push({ K, group: lab, ...s, pass });
   }
 }
-console.log('# §E134 特征可分性前置检验 · ' + names.length + ' 个原型 × ' + GAMES + ' 局 · N=' + N + ' · seed=' + SEED0 + ' · 过线：U_sep ≥ ' + U_BAR + ' 且 歧义率 ≤ ' + (100 * AMB_BAR) + '%');
-console.log('  组：A 类别直方图 ‖ B 资源轨迹(ep/珠) ‖ C 费列结构 ‖ D 压制与伤害 ‖ ABCD 四组拼接(每维 z 标准化)');
+console.log('# §E134/§E135 特征可分性前置检验 · ' + names.length + ' 个原型 × ' + GAMES + ' 局 · N=' + N + ' · seed=' + SEED0
+  + ' · 窗口 K=' + KS.join('/') + ' · 过线：U_sep ≥ ' + U_BAR + ' 且 歧义率 ≤ ' + (100 * AMB_BAR) + '%（两条线都是跑前定死的）');
+console.log('  组：A 出招类别直方图 ‖ B 资源轨迹(ep/珠) ‖ C 费列结构 ‖ D 压制与伤害'
+  + ' ‖ **E 架势与防御** ‖ **F 资源存量六轨迹** ‖ **G 指向性(集火)** ‖ ALL 七组拼接(每维 z 标准化)');
 console.log('| K | 组 | **U_sep**（/ ' + names.length + '） | 歧义率 | 唯一点(样本 / 质心) | LOO 准确率 | 过线？ |');
 console.log('|---|---|---|---|---|---|---|');
 for (const r of rows) {

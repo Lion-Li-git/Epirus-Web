@@ -8190,7 +8190,7 @@ t('D196 可分性量具的窗口与判据不许自骗（v1.5.290 · §E134）：
   const J = JSON.parse(readFileSync(jp, 'utf8'));
   eq(J.meta.uBar, 25, '③ json 必须把过线的那条 U 线带出来（25，§E134 跑前定死）');
   eq(J.meta.ambBar, 0.40, '③ 与歧义率那条线（40%）');
-  ok(J.rows.length === 5, '③ 四组特征 + 一条拼接 = 5 行（实测 ' + J.rows.length + '）');
+  ok(J.rows.length === 8, '③ 七组特征 + 一条拼接 = 8 行（§E135 起了 E/F/G 三组 ⇒ 这条行数也要跟着动；实测 ' + J.rows.length + '）');
   ok(J.rows.every(r => r.U_sep <= J.meta.envs), '③ U_sep 不许超过原型数（实测最大 ' + Math.max(...J.rows.map(r => r.U_sep)) + ' / ' + J.meta.envs + '）');
   ok(J.rows.every(r => r.pass === (r.U_sep >= J.meta.uBar && r.ambRate <= J.meta.ambBar)),
     '③ "过线"必须由这两条线算出来，不许手写文案');
