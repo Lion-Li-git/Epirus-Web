@@ -93,7 +93,8 @@ Epirus-Web/
 ├─ docs/HANDOFF-*             班与班的交接件。**归因易读错**：本仓只有三个角色（用户 / DS / Qoder），
 │                             而 "千问"="QWEN"=**Qoder 本尊**，不是第三方 AI。
 │                             `HANDOFF-FOR-QWEN-*` 是 DS 写给 Qoder 的；`HANDOFF-FOR-DS-*` 是 Qoder 写给 DS 的。
-│                             当前有效的一份：`docs/HANDOFF-FOR-DS-2026-09-28-qoder.md`（§17 是合并后全景）。
+│                             当前有效的一份：`docs/HANDOFF-FOR-DS-2026-09-28-qoder.md`
+│                             —— §17 夜班合并后全景 · **§18 下午班（头号目标"看环境变策略"被量成一次否证 + 瓶颈在观测面，待裁）· §19 门禁提速与清理**
 ├─ docs/archive/            历史审核/交接文档存档（只读；索引见其 README.md）
 ├─ results/                 用户私人对局记录（**已不进仓库**：.gitignore 整目录忽略）
 └─ tests/spec.html          引擎自测（浏览器打开即可，通过数 = 用例数）
