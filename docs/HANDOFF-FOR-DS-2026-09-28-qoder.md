@@ -572,3 +572,25 @@ v1.5.281 · np **233 条**（D188 新增）· 规则指纹 `ebdbff36` 未变 · 
 `tools/eval-5p.mjs` 改成 import 那份规则 —— **重构前后同命令 stdout 逐字相同**（归一后 2,493 字符全等）；门 **D200**（三次变异全红）。
 未动：`js/*`、`server/opp-pool.mjs`（**没有往训练池加名字**）、两槽、`results/*`；未 promote；指纹 `ebdbff36`；未 push。
 产物 `docs/artifacts/e142-out/`、`e143-out/`（各 15 个 TSV + run.log，gitignore 内）。
+
+---
+
+## 25. 09-29 07:27 · Qoder 收尾附加 · **复跑清单**：今晚每一条数字的确切命令与实测耗时（给 DS / 下一班，不用再考古）
+
+> 只列本班产出过数字的件；耗时都是**本机实测**（冷机、无抢核时）。凡是 8 臂/4 臂那种多臂批，都写成"一层并发"的形态。
+
+| # | 结论编号 | 命令 | 实测耗时 | 产物落在哪 |
+|---|---|---|---|---|
+| 1 | §E136（阶段调度否证） | 8 臂：`node tools/eval-5p.mjs 12 5 77000 <包> --pool=all --every=7 [--swap=<第二粒>@<R>] --dump-per=docs/artifacts/e136-out/<臂>.tsv`，判读 `node tools/analyze-swap-gain.mjs --dir=docs/artifacts/e136-out` | 单臂 **85~95 秒**（25,632 局）；4 分片并行全程 **4 分钟** | `e136-out/`（脚本 `/tmp/e136-run.sh`，模式照抄即可） |
+| 2 | §E137（19 行底账） | `node tools/eval-5p.mjs 8 5 77000 <包> --pool=all` × 19 行 | 单粒 **12 分钟**（119,600 局）；三分片并行 **40 分钟** | `e137-out/` |
+| 3 | §E139/§E140（挑战者的配对复量） | 同 2 但加 `--dump-per=…` 落逐桌子账，判读 `analyze-swap-gain.mjs --dir=<目录> --ctrl=<A>,<B>`（目录里只有两臂时它会**只印 A/B 配对差、不出 §E136 判语**） | 单臂 **239~240 秒**；两臂并行 **4 分钟** | `e139-out/` |
+| 4 | §E142/§E143（5P 环境矩阵） | 每粒包：`node tools/probe-5p-envfit.mjs --pack=docs/artifacts/kept/<包>.bak --mix=4 [--mix=2] --games=60 --seeds=0,1 --out=docs/artifacts/e142-out/<包>.tsv`；判读 `node tools/analyze-5p-envfit.mjs --dir=…`（加 `--rule=off` 则只算数不判读） | 单粒 **约 10 秒**；15 粒一批 **2 分 20 秒**（≈531 局/秒） | `e142-out/`、`e143-out/` |
+| 5 | §E144 / §E134 / §E135（可分性尺） | `node tools/probe-sig-separable.mjs --n=3`（或 `--n=5`）`--games=40 --ks=3,8,15,20 --json=…` | 3P **约 40 秒**；5P **约 15 秒**（07:19:16 起跑、07:19:30 已出 json） | `e144-out/sig5p.json` |
+| 6 | §E129~§E131（路由上界与可实现值，N=3） | `node tools/probe-regime-identifiability.mjs --matrix=docs/artifacts/e129-out/matrix.json --metric=win --k=8 --exclude=… --dump=…` 然后 `node tools/analyze-routing-gain.mjs <dump.json>` | 单次探针 **约 40 秒**；分析器 <1 秒 | `e131-out/`（本班用它做过回归对拍） |
+| 7 | 四道门禁认证 | `node tools/gate-all.mjs --np`（改一条门时 `node tools/np-test.mjs --only=D1xx`） | **241 条时代**：稳态 362 秒 / 冷 482~535 秒。**245 条本班只测过**：冷 **538.8 秒** 与部分暖缓存 **415.5 秒** ⇒ **245 条的稳态数还没量**，别照抄 362 | 红时 `gate-all` 落 `docs/artifacts/gate-fail-*.txt` |
+
+**四条复跑时必须守住的口径**（都是本班交过学费的地方）：
+1. `--every=N` 是**确定性格点**抽样 ⇒ 同 seed 各臂同桌子（配对成立），但**绝对水平不代表全池** ⇒ 跨口径引用前先问"是不是同一批桌子"。
+2. 算配对差一律走 `tools/routing-gain-lib.mjs` 的 `pairedDiff`（**别在分析器里再写一份 SE**），逐桌子账来自 `--dump-per`。
+3. 环境名单只许从 `tools/regime-panel.mjs` + `server/opp-pool.mjs` 取（**别往训练池加名字**）；对手 chooser 的包装规则只许 `tools/bot-chooser-lib.mjs` 那一份。
+4. 报任何"上界 / 空间有多大"之前先问一句：**这是 N=3 还是 5P 的？**（本班为此在 06:52 推翻过自己整晚的总结论，见 §E142 与 §24。）
