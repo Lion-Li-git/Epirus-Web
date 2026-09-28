@@ -8407,6 +8407,84 @@ t('D198 §E136 的配对判读有牙（v1.5.292）：配对不成立要拒、三
   try { rmSync(dir, { recursive: true, force: true }); } catch (e) { /* Windows 偶发占用：tmpdir 里留一个空目录不影响门禁 */ }
 });
 
+t('D199 eval-5p 必须决定论、逐桌子账必须与它自己印的读数对得上（v1.5.295 · §E140 的免费自检升级成门）', function () {
+  /* 为什么钉这道：§E140 之所以能当"新旗标没动口径"的证据，全靠**同 seed 重跑逐字相同**这一件事。
+   * 而这条此前**没有任何门守着** ⇒ 任何一次重构（换随机流消费顺序、把 ε 探索改成共享、把 dump 挪到统计之后）
+   * 都会让今晚所有"同 seed 复现"式的论证一夜之间失效。四段 spawn 各约 1~2 秒，成本可忽略。 */
+  const A = 'docs/artifacts/kept/e78-out__G08-71.bak';
+  const B = 'docs/artifacts/kept/eval-out__win-Ldemo.bak';
+  const dir = mkdtempSync(join(tmpdir(), 'd199-'));
+  /* ⚠ 场子必须选 **farmerwall**（4 席只按ジ的农民）：实测主体 1st=100% 而对照 `pickRandom` 是
+   * `1st=91.7% 严胜=75.0% 并列=16.7%` ⇒ **有并列**，才能把"把 rank 当 winner 写进账里"这类错暴露出来。
+   * 换 ringmix/mix4 那种主体 0% 并列的场，本门的 ③′/③″/③‴ 三条恒等式会**退化成同一条**（变异实测确实红不了过一次）。 */
+  const norm2 = function (o) {
+    return String(o).replace(/耗时 [0-9.]+s/g, '耗时 抹掉')
+      .replace(/逐桌子命中数 → \S+/g, '逐桌子命中数 → 路径');
+  };
+  const runDump = function (tag, extra) {
+    const p = join(dir, tag + '.tsv');
+    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '12', '5', '77000', A, '--field=farmerwall', '--dump-per=' + p].concat(extra),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+    return { code: r.status, out: String(r.stdout || ''), dump: existsSync(p) ? readFileSync(p, 'utf8') : null };
+  };
+  const r1 = runDump('r1', []);
+  const r2 = runDump('r2', []);
+  ok(r1.code === 0 && r2.code === 0 && r1.dump !== null, '① 两次同参数运行都要跑得完并落盘（实测 ' + r1.code + '/' + r2.code + '）');
+  ok(norm2(r1.out) === norm2(r2.out), '② **同 seed 同参数 ⇒ stdout 必须逐字相同**（除耗时）' +
+    ' ⇒ §E140/§E137 那批"同 seed 复现"的论证靠的就是这件事');
+  ok(r1.dump === r2.dump, '②′ **逐桌子账也必须逐字节相同**（不是"总量相同"，是每桌每一个数相同）');
+  /* ③ 账要对得上自己的表头：桌数 = 打印的组合数；Σfirst/Σgames = 打印的 1st；Σfirst = ranks[0] 那一格 */
+  const nCombo = (r1.out.match(/全部 (\d+) 组合/) || ['', '-1'])[1];
+  const subj = r1.dump.split('\n').filter(function (l) { return l.indexOf('subject\t') === 0; });
+  const ctrl = r1.dump.split('\n').filter(function (l) { return l.indexOf('ctrl\t') === 0; });
+  const sum = function (rows, col) { return rows.reduce(function (a, l) { return a + Number(l.split('\t')[col]); }, 0); };
+  const sFirst = sum(subj, 4), sGames = sum(subj, 3), sStrict = sum(subj, 5);
+  ok(subj.length === Number(nCombo) && ctrl.length === Number(nCombo),
+    '③ 落盘桌数必须等于表头打印的组合数（打印 ' + nCombo + ' ‖ 主体 ' + subj.length + ' / 对照 ' + ctrl.length + '）' +
+    ' ⇒ 少写一桌就等于配对分析悄悄少一批桌子');
+  const p1st = (r1.out.match(/\[冠军\] 1st=([0-9.]+)%/) || ['', '-1'])[1];
+  ok(Math.abs(sFirst / sGames * 100 - Number(p1st)) < 0.06,
+    '③′ 逐桌子求出的 1st 必须等于打印的 1st（逐桌子=' + (sFirst / sGames * 100).toFixed(2) + '% ‖ 打印=' + p1st + '%）');
+  const pStrict = (r1.out.match(/严胜=([0-9.]+)%/) || ['', '-1'])[1];
+  const pTie = (r1.out.match(/并列=([0-9.]+)%/) || ['', '-1'])[1];
+  ok(Math.abs(sStrict / sGames * 100 - Number(pStrict)) < 0.06,
+    '③″ `strict` 那一列也必须等于打印的**严胜**（逐桌子=' + (sStrict / sGames * 100).toFixed(2) + '% ‖ 打印=' + pStrict + '%）' +
+    ' ⇒ 两个终点各自对账，才排掉"把 rank 与 winner 混成一列"这种错');
+  ok(Math.abs((sFirst - sStrict) / sGames * 100 - Number(pTie)) < 0.06,
+    '③‴ `Σfirst − Σstrict` 就是**并列第一**（引擎没判赢但名次第一），必须等于打印的 `并列`（实测 ' +
+    ((sFirst - sStrict) / sGames * 100).toFixed(2) + '% ‖ 打印=' + pTie + '%）');
+  const cFirst = sum(ctrl, 4), cGames = sum(ctrl, 3), cStrict = sum(ctrl, 5);
+  const pCtrl = (r1.out.match(/\[对照 pickRandom\] 1st=([0-9.]+)%/) || ['', '-1'])[1];
+  const pCtrlStrict = (r1.out.match(/\[对照 pickRandom\] 1st=[0-9.]+% 严胜=([0-9.]+)%/) || ['', '-1'])[1];
+  const pCtrlTie = (r1.out.match(/\[对照 pickRandom\] 1st=[0-9.]+% 严胜=[0-9.]+% 并列=([0-9.]+)%/) || ['', '-1'])[1];
+  ok(cGames === sGames && Math.abs(cFirst / cGames * 100 - Number(pCtrl)) < 0.06,
+    '④ 对照行的总局数必须与主体相同、且它的逐桌子 1st 也等于打印值（' + cGames + ' vs ' + sGames +
+    ' ‖ 逐桌子=' + (cFirst / cGames * 100).toFixed(2) + '% ‖ 打印=' + pCtrl + '%）⇒ 两行确实是同一批桌子');
+  ok(Math.abs(cStrict / cGames * 100 - Number(pCtrlStrict)) < 0.06 &&
+    Math.abs((cFirst - cStrict) / cGames * 100 - Number(pCtrlTie)) < 0.06,
+    '④′ 对照行的 `strict` 与 `first − strict` 必须分别等于打印的**严胜**与**并列**（逐桌子 ' +
+    (cStrict / cGames * 100).toFixed(2) + '% / ' + ((cFirst - cStrict) / cGames * 100).toFixed(2) +
+    '% ‖ 打印 ' + pCtrlStrict + '% / ' + pCtrlTie + '%）');
+  ok(Number(cFirst - cStrict) > 0,
+    '④″ 这份夹具里对照**必须真的有并列**（实测 `first − strict` = ' + (cFirst - cStrict) + ' 桌）' +
+    ' ⇒ 没有并列时 ③′/③″/③‴ 会退化成同一条恒等式，本门就没有牙了（换场时要重新核对这一条）');
+  /* ⑤ 换包臂的账也要自洽（此前 ⑪ 只查了默认臂；`--swap` 那条分支的 cFirst 走的是另一个 chooser） */
+  const sw = runDump('sw', ['--swap=' + B + '@3']);
+  ok(sw.code === 0 && sw.dump !== null, '⑤ 带 `--swap` 的一臂要跑得完并落盘（exit=' + sw.code + '）');
+  const swSubj = sw.dump.split('\n').filter(function (l) { return l.indexOf('subject\t') === 0; });
+  const swFirst = sum(swSubj, 4), swGames = sum(swSubj, 3);
+  const swP1 = (sw.out.match(/1st=([0-9.]+)%/) || ['', '-1'])[1];
+  ok(Math.abs(swFirst / swGames * 100 - Number(swP1)) < 0.06,
+    '⑤′ 换包臂的逐桌子 1st 也必须等于它打印的 1st（逐桌子=' + (swFirst / swGames * 100).toFixed(2) + '% ‖ 打印=' + swP1 + '%）');
+  ok(swSubj.length === subj.length && sw.dump !== r1.dump,
+    '⑤″ 换包臂桌数不变，但**逐桌子账必须与不换包那臂不同**（相同就等于 `--swap` 在这条分支里根本没生效）');
+  /* ⑥ 头部元信息齐不齐：分析器靠这五个字段判"是不是同一批桌子"（D198 ⑬），所以这里必须钉它们在 */
+  ok(/#seed=77000/.test(r1.dump) && /#games=12/.test(r1.dump) && /#pool=core/.test(r1.dump) &&
+    /#every=1/.test(r1.dump) && /#field=farmerwall/.test(r1.dump),
+    '⑥ 落盘头部必须带 `seed/games/pool/every/field`（缺一个，配对校验就会把不同批桌子放行）');
+  try { rmSync(dir, { recursive: true, force: true }); } catch (e) { /* 同上 */ }
+});
+
 t('D194 `--only` 复跑单道门不许伪装成全绿（v1.5.288）：跳过的条数必须响亮印出、打错字要拒绝、注册数守卫要把跳过算进去', function () {
   /* 为什么补这道：本班给 np-test 加了 `--only=`（改门→验门从 9 分钟降到 10 秒）。
    * 这把刀的危险很具体：**跳过 237 道门然后报"通过 1 / 1"**，或者**子串打错 ⇒ 一条没跑也报绿**。
