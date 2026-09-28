@@ -7704,6 +7704,49 @@ t('D185 起点补进重验池（v1.5.277 · §E114）：默认零行 + 只多候
 });
 
 
+/* ===== D186（qoder 09-28 §E122）：序列机会率探针必须**只读、可复现、有判别力**，且不许把 chooser 的返回重造 =====
+ * 为什么单独钉一道：这把尺是裁 (a) 目标函数缺维 / (b) 课程缺行为 的**唯一依据**，
+ * 而我建它的时候**当场产出过一个假读数** —— 第一版把 `policyChooserN` 的返回值当字符串比（它其实是 `{key,target,target2,bead}`），
+ * 于是现役被读成"兑现率 0.0%"，与独立的 §E121（现役炮 1.45/局）矛盾才被抓出来。
+ * 更坏的是第一版修法：重造 `{key, target:null}` 返回 ⇒ **探针自己吞掉目标选择、改了玩法**（那就不是在测这个包）。
+ * 所以钉：① 源码必须原样交回返回对象；② 不认识的参数 exit 64；③ 包读不出必须点名 exit 7；
+ * ④ 默认自证（复现 + 中性 + 守恒 + 判别力）必须全过且**两档口径都在**；⑤ 同一粒包传两次读数必须逐字相同。 */
+t('D186 序列机会率探针（v1.5.278 · §E122）：原样交回 + 复现/中性/守恒/判别力四自证 + 两档口径', function () {
+  const src = readFileSync('tools/probe-seq-opportunity.mjs', 'utf8');
+  ok(/rejectUnknownFlags\(process\.argv\.slice\(2\), \['packs', 'games', 'n', 'seed', 'self-test', 'json'\]/.test(src),
+    '① 参数守卫必须走 `rejectUnknownFlags`（D160 那条：写错开关名不许当默认值跑）');
+  ok(/const r = base\(st, pid, legal\)/.test(src) && /return r;/.test(src) && /return r2;/.test(src),
+    '① 观察点必须把真 chooser 的返回**原样交回**（重造对象会吞掉 target ⇒ 探针改玩法，测的就不是这个包了）');
+  ok(!/return \{ key:/.test(src), '① 反向哨兵：源码里不许出现"重造返回对象"的写法（我第一版就是这么错的）');
+  ok(/armed !== c\.notOffered \+ c\.notAfford \+ c\.opp/.test(src) && /c\.opp !== c\.taken \+ c\.missed/.test(src),
+    '② 计数守恒必须自己检查（不守恒 = 尺坏了，读数作废）');
+  ok(/runOnce\(params, cal\.mk, GAMES, SEED0, false\)/.test(src), '③ 必须有"摘掉观察者再跑一遍"的中性对照');
+  ok(/firedReal/.test(src), '④ 必须另数**事件里的真开炮**（只信意图计数就是 §E121 那个错的复刻）');
+  ok(/CALIBERS = \[/.test(src) && src.indexOf('0.35, 0.15') > 0 && src.indexOf("0.15, 0.2, 5, 'soft'") > 0,
+    '⑤ 两档口径必须都在（序列窗锁只在 soft 生效 ⇒ 只报一档就是撒谎）');
+
+  const P = function (args) {
+    return spawnSync(process.execPath, ['tools/probe-seq-opportunity.mjs'].concat(args), { encoding: 'utf8', timeout: 600000 });
+  };
+  const bad = P(['--nonsense=1']);
+  eq(bad.status, 64, '② 不认识的 `--` 参数必须 exit 64（实得 ' + bad.status + '）');
+  const miss = P(['--packs=no/such/pack.bak', '--games=40']);
+  eq(miss.status, 7, '③ 包读不出必须 exit 7（"读不到"不许被读成"机会率 0"）：实得 ' + miss.status);
+  ok(/no\/such\/pack\.bak/.test(String(miss.stderr)), '③ 且要点名是哪个包');
+  const okRun = P(['--packs=js/bundled-champion-3p.js', '--games=40']);
+  eq(okRun.status, 0, '④ 现役包（含四道自证）必须跑通（exit=' + okRun.status + ' ' + String(okRun.stderr || '').slice(0, 160) + '）');
+  ok(/判别力自证 @train/.test(String(okRun.stdout)) && /判别力自证 @product/.test(String(okRun.stdout)),
+    '④ 判别力自证必须两档口径都跑（均匀策略对照必须与真包不同 ⇒ "机会率 0"才不是"探针没在看"）');
+  ok(/训练评分口径/.test(String(okRun.stdout)) && /产品口径/.test(String(okRun.stdout)), '⑤ 输出必须同时给两档口径的表');
+  const dup = P(['--packs=js/bundled-champion-3p.js,js/bundled-champion-3p.js', '--games=40']);
+  eq(dup.status, 0, '⑥ 同一粒包传两次必须跑通（这不是"零比较"，是**确定性**自证）：实得 ' + dup.status);
+  const rows = String(dup.stdout).split('\n').filter(function (l) { return /bundled-champion-3p\.js/.test(l); });
+  eq(rows.length, 4, '⑥ 两档口径 × 两行 = 4 行读数（实测 ' + rows.length + ' 行）');
+  eq(rows[0], rows[1], '⑥ 同一粒包同尺同种子 ⇒ 两行读数必须**逐字相同**（不同就说明读数里混了未播种的随机）');
+  eq(rows[2], rows[3], '⑥ 第二档口径同理');
+});
+
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
