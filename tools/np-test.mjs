@@ -7920,6 +7920,53 @@ t('D165 尾部聚合适应度开关（v1.5.251 · 夜班 §E49）：默认关要
   }
 });
 
+t('D187 整桌同原型（v1.5.279 · §E124）：关=逐位可逆 / 开=局内恒等且跨局满覆盖 / 量具路不许被配方拖动', function () {
+  /* 这根杠杆动的是**训练桌的形状**，不是规则 ⇒ 判据必须落在"索引公式"本体上，
+   * 而不是"横幅印了没有"（D174 那族：闸放行 ≠ 线接通）。 */
+  const idx = T.oppSeatIndex;
+  eq(typeof idx, 'function', '① 引擎必须把 `oppSeatIndex` 作为**纯函数**导出来（判在公式上，不判在日志上）');
+  eq(typeof T.setOppTable, 'function', '① 必须有 setter（train-3p 下达走读回，没有 setter 就是空转）');
+  eq(typeof T.oppTable, 'function', '① 必须有 getter（回执与 meta.recipe 都从它取）');
+  /* ② 反"假默认关"：关 ⇒ 必须与**旧公式**逐位相同（旧式独立复算，不 import 新函数） */
+  let legacyMismatch = 0, N = 0;
+  for (const len of [3, 5, 9, 12, 20]) for (let gen = 0; gen < 7; gen++) for (let g = 0; g < 6; g++) for (let k = 0; k < len; k++) {
+    const legacy = (((gen * 3 + g) % len) + k) % len;
+    N++; if (idx(gen, g, k, len, false) !== legacy) legacyMismatch++;
+  }
+  eq(legacyMismatch, 0, '② 关开关时 ' + N + ' 个 (gen,g,k,len) 组合必须与旧累加器逐位相同（不同 ⇒ "默认关"是假的，历史臂不再可复现）');
+  /* ③ 判别力（反恒真）：开 ⇒ 同一局内所有对手席索引必须相同（整桌同一原型） */
+  let spreadBad = 0;
+  for (let gen = 0; gen < 9; gen++) for (let g = 0; g < 9; g++) {
+    const a = idx(gen, g, 0, 12, true), b = idx(gen, g, 3, 12, true);
+    if (a !== b) spreadBad++;
+  }
+  eq(spreadBad, 0, '③ 开开关 ⇒ 局内第 1 席与第 4 对手的索引必须相同（不同 ⇒ 桌形根本没改，那臂是白跑的）');
+  /* ④ 覆盖面不许被牺牲：开 ⇒ 原型仍按 (gen*3+g) 跨局轮换，len 个连续局必须**恰好各出现一次** */
+  for (const len of [9, 12]) {
+    const seen = new Set();
+    for (let g = 0; g < len; g++) seen.add(idx(4, g, 0, len, true));
+    eq(seen.size, len, '④ 开开关时 ' + len + ' 个连续局必须覆盖全部 ' + len + ' 个原型（漏一个 = 那个环境永远练不到）');
+  }
+  /* ⑤ 往返与哨兵：reset 必须抹掉 true，否则后续门活在"整桌同原型"的假世界里（D109 那族事故） */
+  T.setOppTable({ block: true }); eq(T.oppTable().block, true, '⑤ 下达 true 必须读得回（读不回 = §E124 那臂不知道自己开了什么）');
+  T.setOppTable({ reset: true }); eq(T.oppTable().block, false, '⑤ reset 必须把 true 抹回出厂值（哨兵泄漏防线）');
+  const st = T.oppTable();
+  ok(st.blockedGames === 0 && st.styleBlocked === 0, '⑤ reset 顺带清零**开火计数**（不清 ⇒ 下一扇门读到上一扇的剂量）');
+  /* ⑥ 静态钉：`evalN` 是**量具**，不许被训练配方拖动 —— 否则产品口径跟着配方变（§E87 那族"口径决定结论"）。
+   * ⚠ 这里**不能**写 `String(T.evalN || '')`：`evalN` 根本不在导出名单里 ⇒ 空串 ⇒ 判据恒真（本仓最怕的形状）。 */
+  const evoSrc = readFileSync('js/train/evo.js', 'utf8');
+  const from = evoSrc.indexOf('function evalN(');
+  ok(from > 0, '⑥ 要在源码里定位 `evalN`（找不到就说明它被改名/删了 ⇒ 这条钉失效，必须响亮红而不是默默过）');
+  const nextFn = evoSrc.indexOf('\n  function ', from + 20);
+  const evalBody = evoSrc.slice(from, nextFn > 0 ? nextFn : evoSrc.length);
+  ok(evalBody.length > 100, '⑥ `evalN` 函数体必须真取到了（' + evalBody.length + ' 字符 ⇒ 切片失败，判据会假通过）');
+  ok(evalBody.indexOf('oppSeatIndex') === -1, '⑥ `evalN` 体内不许出现 `oppSeatIndex`（评测口径必须与训练桌形无关）');
+  ok((evoSrc.match(/oppSeatIndex\(gen/g) || []).length >= 2, '⑥ 训练侧两条路（主池 + 风格切片）都要真走这个公式（只改一条 ⇒ "环境"只在一半训练里存在）');
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(/'EPIRUS_OPP_BLOCK'/.test(t3), '⑥ 键必须登记进 `SELF_ENV_KEYS`（漏一处就被入口黑键闸拦成暗键，D172 那族三处名单）');
+  ok(/EPIRUS_OPP_BLOCK=1 读回/.test(t3) || /没生效，退出/.test(t3), '⑥ 下达必须有"读回不等 ⇒ exit 7"的硬拒（静默空转的臂比不跑更坏）');
+});
+
 console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
 
 

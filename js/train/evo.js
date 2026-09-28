@@ -1198,6 +1198,37 @@ let WALL_GAMES = 3;
    * 代价：零额外对局 —— 只用**已经跑完的那些局**的分布，不加局数、不加代。
    * `evo.js` 不在 `FINGERPRINT_FILES` 里 ⇒ 这根开关**不改引擎指纹**。 */
   let FIT_TAIL_W = 0, FIT_TAIL_Q = 0.25;
+
+  /* ===== v1.5.279（qoder 0928 下午班 §E124）：**整桌同原型** `EPIRUS_OPP_BLOCK`（默认关）=====
+   * 病（读代码读出来的，不是猜的）：主评分回路 `oi++` 让一局的 N−1 个对手席填**连续不同**的脚本
+   *   ⇒ 训练分布里根本不存在"一局 = 一个环境"这个对象。后果有两层：
+   *   ① 任何"跨环境极差/最差环境"的判据在训练里没有对应物；
+   *   ② `ES_q`（尾部聚合）的下尾取的是"**哪 4 个脚本恰好撞在一起**"的抽样噪声，而不是最差环境
+   *      ⇒ 这是 §E51/§E53 把尾部聚合判负（54 臂）的一个**候选成因**：分母错了，不是聚合错了。
+   * 改法：开关打开时**局内不推进** `oi` ⇒ 整桌同一原型；原型仍按 `(gen*3+g)` 跨局轮换，
+   *   所以**覆盖面、轮换节奏、common random numbers（同代同对手批）一字不动**，只改"一桌的纯度"。
+   * 边界（三条，都是故意的）：
+   *   ① 只作用于**训练评分**的两条路（主池 + 风格切片）；`evalN` 是**量具**，不受本开关影响
+   *      （否则产品口径会跟着训练配方一起变 —— 那是 §E87 那族"口径决定结论"的事故）。
+   *   ② `policy.js` 在规则指纹名单里（`rules-fingerprint.mjs:31`），它的"槽位每决策打乱"**一字未动**
+   *      ⇒ 本开关不试图给网络喂"对手是谁"，只让**整桌行为混合**这个置换不变的量变得有预测力。
+   *   ③ 默认关 ⇒ `oppSeatIndex(...,block=false)` 与旧公式 `((gen*3+g)%len + k)%len` 逐位同，由门 **D187** 钉。 */
+  let OPP_BLOCK = false;
+  const OPP_BLOCK_STAT = { fitGames: 0, blockedGames: 0, styleGames: 0, styleBlocked: 0 };
+  /* 纯函数：第 k 个对手席在该用池子的第几条。关 ⇒ 与旧代码逐字同；开 ⇒ 局内恒等（整桌同原型）。 */
+  function oppSeatIndex(gen, g, k, oppsLen, block) {
+    return (gen * 3 + g + (block ? 0 : k)) % oppsLen;
+  }
+  function setOppTable(o) {
+    if (!o) return oppTable();
+    if (o.reset) { OPP_BLOCK = false; OPP_BLOCK_STAT.fitGames = 0; OPP_BLOCK_STAT.blockedGames = 0; OPP_BLOCK_STAT.styleGames = 0; OPP_BLOCK_STAT.styleBlocked = 0; }
+    if (o.block != null) OPP_BLOCK = !!o.block;
+    return oppTable();
+  }
+  function oppTable() {
+    return { block: OPP_BLOCK, fitGames: OPP_BLOCK_STAT.fitGames, blockedGames: OPP_BLOCK_STAT.blockedGames,
+      styleGames: OPP_BLOCK_STAT.styleGames, styleBlocked: OPP_BLOCK_STAT.styleBlocked };
+  }
   /* v1.5.265（qoder §E65b）：**出厂值快照**，给 `reset` 用。
    * 动因（09-28 实测，名单驱动的全键审计）：`setEconomyReward({reset:true})` 的名单是**手写**的，
    * 于是 `divW/divK/divRoleW(=divCatW)/divForceGens/costlyW` 五个键**从来没被抹掉过** ⇒
@@ -1438,7 +1469,7 @@ let WALL_GAMES = 3;
        * 考卷只到 **21.8% / 23.1%**，而按旧口径训出的 v1.3.58 是 **38.4%**。
        * 正确做法：轮换只跟**代数**走 —— 同代内所有个体仍面对同一批对手（保持配对），
        * 跨代旋转即可覆盖任意大的池子（池子 > games+3 时尾部队手也不会被漏掉）。 */
-      let oi = (gen * 3 + g) % opps.length;
+      let ok = 0;   // v1.5.279：局内第几个对手席（取代旧的 `oi` 累加器）；索引式见 `oppSeatIndex`
       const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
       const commitGame = isCommitGame(g, gen, hGene);   // (c) 承诺局：每 3 局 1 局，h 来自基因（v1.5.186：相位按代旋转，判据单一来源）
       const killSeatPid = killSeatFor(g, gen, seat, n, hGene);   // v1.5.160：本局注收割席在第几席（-1=不注）
@@ -1473,8 +1504,9 @@ let WALL_GAMES = 3;
           KILL_STAT.fired++;
           KILL_STAT.seats[seat] = (KILL_STAT.seats[seat] || 0) + 1;
           KILL_STAT.names.killsecure = (KILL_STAT.names.killsecure || 0) + 1;
-        } else { choosers.push(wrapBotN(opps[oi % opps.length].sel)); oi++; }
+        } else { choosers.push(wrapBotN(opps[oppSeatIndex(gen, g, ok++, opps.length, OPP_BLOCK)].sel)); }
       }
+      OPP_BLOCK_STAT.fitGames++; if (OPP_BLOCK) OPP_BLOCK_STAT.blockedGames++;
       // 每回合回 ep 的对局权重（可选设施，默认 0 = 与线上规则一致）。
       // 实测结论：regen=1 不能解锁聚能环（+1/回合只够每回合放一个 1 ジ技能，
       // 锁死在另一个不动点）；regen=2 确实能让 AI 学会聚能环（连用到 16），
@@ -1774,11 +1806,12 @@ let WALL_GAMES = 3;
       for (let g = 0; g < STYLE_GAMES; g++) {
         const seat = g % n;
         const choosers = [];
-        let oi = (gen * 3 + g) % STYLE_OPPS.length;
+        let ok = 0;   // v1.5.279：风格切片同样受 `EPIRUS_OPP_BLOCK` 管（两条训练路要同形，否则"环境"只在一半训练里存在）
         for (let pid = 0; pid < n; pid++) {
           if (pid === seat) choosers.push(trainChooser(params));
-          else { choosers.push(wrapBotN(STYLE_OPPS[oi % STYLE_OPPS.length].sel)); oi++; }
+          else { choosers.push(wrapBotN(STYLE_OPPS[oppSeatIndex(gen, g, ok++, STYLE_OPPS.length, OPP_BLOCK)].sel)); }
         }
+        OPP_BLOCK_STAT.styleGames++; if (OPP_BLOCK) OPP_BLOCK_STAT.styleBlocked++;
         const sd = seedOfGen(gen, idx, 'style') + g * 7919;
         const r = oneGameN(choosers, sd, n, { regen: 0, mode: TRAIN_MODE });
         styleGames++;
@@ -2863,6 +2896,7 @@ let WALL_GAMES = 3;
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
     setBeadReward, beadReward, countBeadSpent,
     setKillField, killField, countKillSeats, killSeatFor,   // v1.5.160 收割席注入（含**开火计数**，§N12 教训）
+    setOppTable, oppTable, oppSeatIndex,   // v1.5.279 §E124：整桌同原型（默认关；`oppSeatIndex` 是纯函数，门 D187 直接判它）
     setTargetReward, targetReward, countThreatHits, threatKeyList,
     setClearReward, clearReward, countClears,
     blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）
