@@ -33,25 +33,35 @@ function load(arm) {
   const p = DIR + '/' + arm + '.tsv';
   if (!existsSync(p)) { console.error('缺臂: ' + p); process.exit(2); }
   const seq = [], first = [], games = [], strict = [];
-  let meta = null;
+  let meta = {};
   for (const line of readFileSync(p, 'utf8').split('\n')) {
     if (!line) continue;
-    if (line[0] === '#') { if (line.startsWith('#seed=') || line.startsWith('#games=')) (meta = meta || {})[line.slice(1).split('=')[0]] = line.split('=')[1]; continue; }
+    /* 头部所有 `#k=v` 都要收：配对成立与否靠这些字段判，**只数组合名会把"换了 seed"当成同一批桌子**
+     * （组合名由池子+`--every` 决定，与 seed 无关 ⇒ §E140 这种"两个 seed 各两臂"放一个目录时就会踩到）。 */
+    if (line[0] === '#') { const m = /^#([a-z-]+)=(.*)$/.exec(line); if (m) meta[m[1]] = m[2]; continue; }
     const c = line.split('\t');
     if (c[0] !== 'subject') continue;
     seq.push(c[2]); games.push(Number(c[3])); first.push(Number(c[4])); strict.push(Number(c[5]));
   }
-  return { arm: arm, seq: seq, first: first, games: games, strict: strict, meta: meta || {} };
+  return { arm: arm, seq: seq, first: first, games: games, strict: strict, meta: meta };
 }
 
 const L = {};
 for (const a of ARMS) L[a] = load(a);
 
-/* ---- 1) 配对前提硬校验：组合序列与每桌局数必须逐位相同 ---- */
+/* ---- 1) 配对前提硬校验：**跑法五要素**必须相同，其次组合序列与每桌局数逐位相同 ---- */
+const PAIR_KEYS = ['seed', 'games', 'pool', 'every', 'field'];   // `file`/`swap` 本来就每臂不同，不在名单里
 const base = L[CTRL[0]];
 for (const a of ARMS) {
   if (a === CTRL[0]) continue;
   const x = L[a];
+  for (const k of PAIR_KEYS) {
+    if ((base.meta[k] || '-') !== (x.meta[k] || '-')) {
+      console.error('配对不成立：' + a + ' 的 `--' + k + '=' + (x.meta[k] || '—') + '）与 ' + CTRL[0] +
+        ' 的 `' + (base.meta[k] || '—') + '` 不同 ⇒ **换了跑法就不是同一批桌子**（组合名相同也不够，桌子由 seed 决定），拒绝出读数');
+      process.exit(2);
+    }
+  }
   if (x.seq.length !== base.seq.length) {
     console.error('配对不成立：' + a + ' 有 ' + x.seq.length + ' 桌，' + CTRL[0] + ' 有 ' + base.seq.length + ' 桌 ⇒ 组合数不同（--every/--pool 不一致），拒绝出读数');
     process.exit(2);
@@ -103,7 +113,8 @@ const M = agg[CTRL[0]].first >= agg[CTRL[1]].first ? CTRL[0] : CTRL[1];
 const other = M === CTRL[0] ? CTRL[1] : CTRL[0];
 
 console.log('=== §E136 阶段条件化（第 R 回合换包）· 配对读数 ===');
-console.log('桌子 = ' + NT + ' 组 × ' + NG + ' 局 = ' + totGames + ' 局/臂（同 seed 同组合序列 ⇒ 配对成立）');
+console.log('桌子 = ' + NT + ' 组 × ' + NG + ' 局 = ' + totGames + ' 局/臂 ‖ **跑法已逐臂核对相同**：' +
+  PAIR_KEYS.map(function (k) { return k + '=' + (base.meta[k] || '—'); }).join(' ') + '（⇒ 配对成立）');
 console.log('单臂二项 ±1.96SE ≈ ' + (z95 * Math.sqrt(agg[CTRL[0]].first * (1 - agg[CTRL[0]].first) / agg[CTRL[0]].n) * 100).toFixed(2) +
   'pt ‖ **配对** SE 见下表（一般小一个量级）');
 console.log('两个对照: ' + CTRL[0] + '=' + pct(agg[CTRL[0]].first) + '（严胜 ' + pct(agg[CTRL[0]].strict) + '） ‖ ' +

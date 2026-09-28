@@ -8323,7 +8323,8 @@ t('D198 §E136 的配对判读有牙（v1.5.292）：配对不成立要拒、三
   put('B2A-at5', wave(9, 0));
   writeFileSync(join(dir, 'B2A-at5.tsv'), tsv(wave(9, 0), 12));
   const pG = run();
-  ok(pG.code === 2 && /每 .* 局|打了 12 局/.test(pG.out), '⑥′ 每桌局数不一致 ⇒ 也必须 exit 2（实测 exit=' + pG.code + '，' + pG.out.slice(0, 70).replace(/\n/g, ' ') + '）');
+  ok(pG.code === 2 && /配对不成立/.test(pG.out) && /games/.test(pG.out),
+    '⑥′ 每桌局数不一致 ⇒ 也必须 exit 2 并点名是 `games` 这一要素不同（实测 exit=' + pG.code + '，' + pG.out.slice(0, 70).replace(/\n/g, ' ') + '）');
   writeFileSync(join(dir, 'B2A-at5.tsv'), tsv(wave(9, 0), 10));
   rmSync(join(dir, 'BBB.tsv'), { force: true });
   const pM = run();
@@ -8384,6 +8385,25 @@ t('D198 §E136 的配对判读有牙（v1.5.292）：配对不成立要拒、三
   ok(/A\/B 两粒本身的差（配对）: 20\.00pt/.test(oo),
     '⑫″ 对照之间的配对差仍要印出来（60% vs 40% ⇒ 20.00pt）（实测 ' + ((oo.match(/A\/B 两粒本身的差（配对）: [-0-9.]+pt/) || ['?'])[0]) + '）');
   try { rmSync(dir2, { recursive: true, force: true }); } catch (e) { /* 同上：Windows 偶发占用 */ }
+  /* ⑬ 配对校验必须看**跑法**，不能只数组合名：组合由"池子 + --every"决定，**与 seed 无关**
+   * ⇒ 两个 seed 的臂放在同一个目录里（§E140 就是这种用法）时，序列完全一样，只看序列会把两批不同的桌子当成同一批。 */
+  const dir3 = mkdtempSync(join(tmpdir(), 'd198c-'));
+  const tsvSeed = function (firsts, games, seed) { return tsv(firsts, games).replace('#seed=77000', '#seed=' + seed); };
+  writeFileSync(join(dir3, 'AAA.tsv'), tsv(wave(6, 0), 10));
+  writeFileSync(join(dir3, 'BBB.tsv'), tsv(wave(4, 0), 10));
+  writeFileSync(join(dir3, 'A2B-at5.tsv'), tsvSeed(wave(8, 0), 10, 999));
+  const seedRun = spawnSync(process.execPath, ['tools/analyze-swap-gain.mjs', '--dir=' + dir3],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  const se = String(seedRun.stdout || '') + String(seedRun.stderr || '');
+  ok(seedRun.status === 2 && /seed/.test(se) && /配对不成立/.test(se),
+    '⑬ 只有 `#seed` 不同（组合名逐位相同）⇒ 也必须 exit 2 点名跑法不同（实测 exit=' + seedRun.status + '，' + se.slice(0, 60).replace(/\n/g, ' ') + '）');
+  /* ⑬′ 反向：跑法完全相同就**不许**误报（否则上面那条会退化成"永远拒绝"） */
+  writeFileSync(join(dir3, 'A2B-at5.tsv'), tsv(wave(8, 0), 10));
+  const sameRun = spawnSync(process.execPath, ['tools/analyze-swap-gain.mjs', '--dir=' + dir3],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  ok(sameRun.status === 0 && /跑法已逐臂核对相同/.test(String(sameRun.stdout || '')),
+    '⑬′ 跑法一致时必须放行，并把核对过的五要素**印出来**（实测 exit=' + sameRun.status + '）');
+  try { rmSync(dir3, { recursive: true, force: true }); } catch (e) { /* 同上 */ }
   try { rmSync(dir, { recursive: true, force: true }); } catch (e) { /* Windows 偶发占用：tmpdir 里留一个空目录不影响门禁 */ }
 });
 
