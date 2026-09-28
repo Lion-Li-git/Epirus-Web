@@ -88,6 +88,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
+  'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
@@ -739,6 +740,29 @@ if (COUNTER_OPPS.length) {
     ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（fitness 现在能看见"只防御不还手"这一克）');
 }
 
+/* ===== §E127（v1.5.285 · Qoder 通宵班）：把 `ringspam` 放上训练桌（`EPIRUS_RING_OPPS=1`，默认关）=====
+ * 病（DS 清单第 4 条的前提，本班修正过）：`ringspam` 在 `server/opp-pool.mjs:42` 的 `OPP_SPECS` 里，
+ *   但**不在本文件运行时的 9 条 `OPPS` 里** ⇒ 训练桌上没人施放聚能环 ⇒ `ringW`（出厂 0.10，权重量级最大的一根）
+ *   在常见桌上从不发声（§E96/§E104：单位级 0/9 不变、臂级 0/5689 维不同）。
+ * ⚠ 但**"死项"不等于"可摘"**：§E99 已被 N=5 推翻过一次（极罕见，可一发声就重 roll 整条轨迹）。
+ *   ⇒ 所以这里不摘、不改权重，只补一个**第三选项**的证据：让会放环的对手真上桌，然后看 `ringW` 开不开口。
+ * 判法用现成的常驻尺（不新造）：产物跑 `tools/probe-dead-term.mjs --key=ringW` ⇒ 0/9 = 上桌也没梯度；>0 = 梯度回来了。
+ * 纪律与 `EPIRUS_COUNTER_OPPS` 逐字同形：默认关 ⇒ `OPPS` 一字不变 ⇒ 历史臂仍可逐位复现；要的对手不存在 ⇒ `exit 4`（少一个就是一根空枪）。 */
+const RING_OPPS = Number(process.env.EPIRUS_RING_OPPS || 0) > 0 ? [
+  { name: 'cnt:ringSpam', sel: Bots.pickRingSpam },   // 会施放聚能环的对手（训练桌此前没有这一型）
+] : [];
+if (RING_OPPS.length) {
+  for (const o of RING_OPPS) {
+    if (typeof o.sel !== 'function') {
+      console.error('[train-3p] ⛔ EPIRUS_RING_OPPS 要的对手在 EpirusBots 里不存在：' + o.name + ' ⇒ 拒绝静默少放对手');
+      process.exit(4);
+    }
+    OPPS.push(o);
+  }
+  console.log('[ring-ops] 会放环的对手已进训练桌：' + RING_OPPS.map(function (o) { return o.name; }).join(',') +
+    ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（判据：产物跑 probe-dead-term --key=ringW 看 0/9 有没有变）');
+}
+
 /* ===== §E124（v1.5.279 · qoder 0928 下午班）：**整桌同原型** `EPIRUS_OPP_BLOCK` 的下达（默认关）=====
  * 与 `EPIRUS_COUNTER_OPPS` 的区别要说清：那根改的是**名单**（有谁），这根改的是**桌子的形状**
  * （一局的 N−1 席是不是同一个原型）⇒ 后者才让"一局 = 一个环境"第一次成为训练里的对象。
@@ -1355,6 +1379,7 @@ const meta = {
    * 于是事后复盘（和 DS 那边跑对照）只能靠文件名猜。把**下达值 + 开火计数**一起写进 meta，
    * 让每一粒产物能自证"我当时是在什么分布下选出来的"。只加字段，不改任何判定。 */
   recipe: { arm: (process.env.EPIRUS_ARM || null), seed: __SEED, gens: GENS, games: GAMES, pop: POP,
+    ringOpps: (RING_OPPS.length ? { on: true, poolSize: OPPS.length } : null),   // §E127：上桌了才记，没上桌一行都不留
     oppBlock: (typeof T.oppTable === 'function' ? T.oppTable() : null),   // §E124：桌形 + 开火计数（下达值不够，要看真发生了多少局）
     xn2w: XN2W, xn2g: XN2G, selLand: SEL_LAND, selLandGames: SEL_LAND_GAMES, selLandTol: SEL_LAND_TOL,
     selKeep: SEL_KEEP, selKeepKeys: (SEL_KEEP > 0 ? SEL_KEEP_KEYS : null),
