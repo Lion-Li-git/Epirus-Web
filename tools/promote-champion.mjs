@@ -407,11 +407,15 @@ if (!process.argv.includes('--skip-gate-drafts')) {
         const uKind = mu[1] || null, uName = mu[2].trim();
         const uIsRef = /^G[3-6]\[(线上包|元测试)/.test(uName);
         const uD = unrunDisposition(uKind, uIsRef);
-        if (uD.blocking) {
+        /* v1.5.284（Qoder §20-2 点名：DS 的 v1.5.283 只修了 FAIL 分支，UNRUN 这条路漏了）：
+         * `statusOf` 会产出 `UNRUN:缺` 这种**同样可解析**的格式 ⇒ 重复打印时 UNRUN 也会被 push 两遍
+         * ⇒ "⛔ 体检未过（N 项阻断）"在"有阻断型 UNRUN"的候选上依旧翻倍。补成与 FAIL 分支同形。 */
+        if (uD.blocking && gateDrafts.blocking.indexOf(uName) < 0) {
           gateDrafts.blocking.push(uName);
           fails.push('行为门不可判且按判红处置（UNRUN:' + (uKind || '?') + '）：' + uName + ' —— ' + uD.why);
         }
-        gateDrafts.unrun.push((uD.blocking ? '【阻断】' : '【只记录】') + 'UNRUN:' + (uKind || '?') + ' ' + uName + ' —— ' + uD.why);
+        const uLine = (uD.blocking ? '【阻断】' : '【只记录】') + 'UNRUN:' + (uKind || '?') + ' ' + uName + ' —— ' + uD.why;
+        if (gateDrafts.unrun.indexOf(uLine) < 0) gateDrafts.unrun.push(uLine);
         continue;
       }
       const m = /^\s*(PASS|FAIL)\s+(G[3-6][^\n]*)$/.exec(ln);

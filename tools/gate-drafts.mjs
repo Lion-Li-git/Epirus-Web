@@ -439,7 +439,13 @@ function aimRateOnRingField(chooser, G) {
 }
 
 console.log('\n=== 汇总 ===');
-for (const g of out) console.log(`  ${statusOf(g)}  ${g.name}`);
+/* v1.5.284（Qoder §20-1 点名根因）：这一行**原来是重复打印的真凶**。
+ * 旧写法 `  ${statusOf(g)}  ${g.name}` 与 `gate()` 的行内打印**同格式**（两空格状态 + 两空格格名），
+ * 而 promote 是按 `^\s*(PASS|FAIL)\s+(G[3-6]…)$` 逐行扫的 ⇒ **每格被扫到两遍** ⇒ "N 项阻断"翻倍
+ * （UNRUN 分支同病：statusOf 会产出 `UNRUN:缺`）。实测证据：单次运行 stdout 里 G4 标题 8 行 / 唯一 5 个，
+ * 而重复行全部落在 `=== 汇总 ===` 之后。
+ * ⇒ 汇总只给人看，**不许长得像机器可解析的判据行**：加 `汇总│ ` 前缀把格式区别开。 */
+for (const g of out) console.log(`汇总│ ${statusOf(g)}  ${g.name}`);
 const nUnrun = out.filter(function (g) { return g.unrun; }).length;
 if (nUnrun) console.log(`  ⛔ 另有 ${nUnrun} 格是 **UNRUN（跑不了 / 不可判）—— 不得当作通过**`);
 console.log('\n说明（v1.5.78 采用时的分级）：');

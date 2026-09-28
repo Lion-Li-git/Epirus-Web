@@ -7818,6 +7818,26 @@ t('D190 promote 的阻断计数**不许被重复打印翻倍**（Qoder §F-1 点
   ok(/gateDrafts\.recorded\.indexOf\('FAIL ' \+ nm\) < 0/.test(PM), 'recorded 一族同样要去重');
   ok(/gate-drafts 自己重复打印/.test(PM),
     '必须把根因（工具自己重复打印）留档 —— 免得后人以为已修而删掉去重（工具侧那条还没修）');
+  /* ===== v1.5.284（Qoder §20-2/§20-3）：把这条门从"纯文本钉"升级成**行为判据** =====
+   * 上面三条都是 `readFileSync(promote)` 的源码匹配 ⇒ 谁把去重提成 `pushUniq()` helper 就会为**非 bug** 变红，
+   * 而真正的漏口（UNRUN 分支）反而抓不到。这族病本班刚红过一次（D4 被 `oppSeatIndex` 重构架空，见 §E125 补充）。
+   * ① 行为判根因：`gate-drafts` 自己的输出里**每个格名必须恰好出现一次**（汇总段再复述也不许长得像判据行）。
+   *    ⇒ 它按**格式**数，所以 FAIL / UNRUN 两种状态一起覆盖，不靠数状态名。 */
+  const rgd = spawnSync(process.execPath, ['tools/gate-drafts.mjs'], {
+    cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24,
+    env: Object.assign({}, process.env, { GATE3_GAMES: '20', GATE4_GAMES: '20', GATE6_GAMES: '4' })
+  });
+  const gout = String(rgd.stdout || '') + String(rgd.stderr || '');
+  const cellNames = (gout.match(/^\s*(?:PASS|FAIL|UNRUN)\s+(G[3-6][^\n]*)$/gm) || [])
+    .map(s => s.replace(/^\s*(?:PASS|FAIL|UNRUN)\s+/, '').trim());
+  ok(cellNames.length > 0, '① 至少要扫到判据行（扫到 0 行 ⇒ 这条门自己退化成恒真，本仓最怕的形状）');
+  const dupCell = cellNames.filter((v, i) => cellNames.indexOf(v) !== i);
+  eq(dupCell.length, 0, '① 判据行不许重复出现（重复 ⇒ promote 会把同一格数两遍）：实测重复 ' + dupCell.length + ' 处');
+  ok(/汇总│\s/.test(gout), '① 汇总段必须还在、且带**不可解析的前缀** `汇总│ `（删掉汇总 = 丢人的读数；改回旧格式 = 丢这道网）');
+  /* ② 行为判漏口：promote 的 UNRUN 分支也必须去重（DS v1.5.283 只修了 FAIL 那一支） */
+  ok(/if \(uD\.blocking && gateDrafts\.blocking\.indexOf\(uName\) < 0\)/.test(PM),
+    '② UNRUN 分支的阻断 push 必须去重（`statusOf` 会产出 `UNRUN:缺`，同样可解析）');
+  ok(/gateDrafts\.unrun\.indexOf\(uLine\) < 0/.test(PM), '② UNRUN 的账目行同样不许重复记（meta 里翻倍会误导事后复核）');
 });
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
