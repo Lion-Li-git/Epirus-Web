@@ -66,6 +66,40 @@ const opt = (k, d) => { const m = argv.find(a => a.startsWith('--' + k + '=')); 
 const flat = (p) => path.basename(path.dirname(p)) + '__' + path.basename(p);
 const rel = (p) => path.relative(ROOT, p).replace(/\\/g, '/');
 
+/* ===== `--aliases`：按**权重本体**（不是文件字节）给 kept/ 分组，把"同名异包 / 异名同包"点出来 =====
+ * 动因（09-28 凌晨实测）：`e78-out__NOL24-71.bak` 与 `e68-out__V2-71.bak` 权重 **5689 维逐位相同**，
+ *   而交接件把它们当成**两粒不同的活体案例**引用（§17-E-3"方向相反的两批"）⇒ 其中一例是重复计数。
+ *   文件 sha 相同才能靠 `MANIFEST` 看出来；这里权重同、META 不同 ⇒ 文件 sha 不同 ⇒ 必须比 `a` 数组本体。
+ * ⚠ 与 `probe-pack-identity` 同一判据（比数组不比字节），但那是两两比；这把尺是**全池分组**，
+ *   用来防"证据池里其实只有 N-1 粒"这种静默缩水。 */
+if (argv.includes('--aliases')) {
+  const rows = readManifest();
+  const byWeights = new Map();
+  let unreadable = [];
+  for (const r of rows) {
+    const p = path.join(KEEP_DIR, r.file);
+    if (!fs.existsSync(p)) { unreadable.push(r.file); continue; }
+    const src = fs.readFileSync(p, 'utf8');
+    const m = /(?:window\.EPIRUS_CHAMPION_3P|window\.EPIRUS_CHAMPION)\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src);
+    if (!m) { unreadable.push(r.file + '（没有冠军外壳，读不到权重本体）'); continue; }
+    let arr = null;
+    try { arr = JSON.parse(m[1]).a; } catch (e) { unreadable.push(r.file + '（META/外壳解析失败：' + e.message.slice(0, 40) + '）'); }
+    if (!Array.isArray(arr)) { unreadable.push(r.file + '（`.a` 不是数组）'); continue; }
+    const key = crypto.createHash('sha1').update(JSON.stringify(arr)).digest('hex').slice(0, 12);
+    if (!byWeights.has(key)) byWeights.set(key, []);
+    byWeights.get(key).push({ file: r.file, n: arr.length, note: r.note });
+  }
+  const groups = [...byWeights.entries()].filter(([, v]) => v.length > 1);
+  console.log('kept/ 池子：' + rows.length + ' 个文件 · 权重本体不同的 **' + byWeights.size + ' 粒**' +
+    (rows.length - byWeights.size ? ' ⇒ 有 ' + (rows.length - byWeights.size) + ' 个是**别名**' : '（无重复）'));
+  for (const [k, v] of groups) {
+    console.log('  同一粒权重 [' + k + '] · n=' + v[0].n + ' 维 · ' + v.length + ' 个别名：');
+    v.forEach(x => console.log('     ' + x.file + (x.note ? '   ← ' + x.note : '')));
+  }
+  if (unreadable.length) console.log('  ⚠ 读不到权重本体（**不许当"没有重复"的证据**）：' + unreadable.join(' | '));
+  process.exit(unreadable.length ? 7 : 0);
+}
+
 if (argv.includes('--verify')) {
   const rows = readManifest();
   if (!rows.length) { console.error('⛔ MANIFEST 为空 —— 没有可校验的入库包。'); process.exit(7); }
