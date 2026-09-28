@@ -1313,8 +1313,8 @@ band-save 把重复席位标成"（与 bandN 同一粒权重）"。门 **D184** 
 
 ## §E115 08:00 · ⛑ **收工快照**（取代 §E101 那份 06:15 的；夜班到 09:00 的授权还剩 1 小时，我把剩下的时间留给"落账与裁定件"，不再开新臂）
 **DONE（都有 commit / 门禁 / 实测文件为证）**
-- 版本链 `v1.5.270 → v1.5.277`，全部推在分支 `qoder-explore-0928`（HEAD=`f44aa91`）；
-  **np 230/230 · spec 52/52 · smoke OK · battle OK · 指纹仍 `ebdbff36` · 两槽与 `results/*` 一字未动 · 全程只 `--dry`、没换槽**。
+- 版本链 `v1.5.270 → v1.5.278`，全部推在分支 `qoder-explore-0928`；
+  **np 231/231 · spec 52/52 · smoke OK · battle OK · 指纹仍 `ebdbff36` · 两槽与 `results/*` 一字未动 · 全程只 `--dry`、没换槽**。
 - 新落 3 把常驻量具 + 9 道新门：`probe-human-seat`（第五把尺，D177/D178）· `probe-dead-term`（判收益项死活、禁止过度声称，D182）·
   `probe-pack-identity`（权重逐位对账，D183）· `[产物=起点]` 读数（D184）· `EPIRUS_HALL_SEED`（D185）· `DOSE_ON` 整族剂量表（D179）。
 - ⭐ **今晚的主线答案（"别把优点训没了"）**：
