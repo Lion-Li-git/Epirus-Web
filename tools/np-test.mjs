@@ -1,5 +1,5 @@
 /* Epirus N 人（3-5）引擎测试：随机对局 fuzz + 关键裁定点（docs/RULES-NP.md） */
-import { readFileSync, existsSync, readdirSync, statSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -8405,6 +8405,118 @@ t('D198 §E136 的配对判读有牙（v1.5.292）：配对不成立要拒、三
     '⑬′ 跑法一致时必须放行，并把核对过的五要素**印出来**（实测 exit=' + sameRun.status + '）');
   try { rmSync(dir3, { recursive: true, force: true }); } catch (e) { /* 同上 */ }
   try { rmSync(dir, { recursive: true, force: true }); } catch (e) { /* Windows 偶发占用：tmpdir 里留一个空目录不影响门禁 */ }
+});
+
+t('D200 §E142/§E143 的 5P 环境量具有牙（v1.5.296）：构造默认满席、名字与包装规则只许一份真源、桌子不许跟着包漂', function () {
+  /* 为什么钉这道：§E142 是今晚**唯一翻掉总结论**的那条（5P 上界 +12.35pt），它现在直接决定用户"下一班往哪投"。
+   * 一个会翻结论的量具，最贵的三种坏法正好对应下面三组判据：
+   *   ① 名字表/对手包装规则各抄一份 ⇒ "探针里的对手"与"评测里的对手"不是同一种对手（本仓这族事故踩过四次）；
+   *   ② 桌子种子跟着包走 ⇒ `oracle − best_single` 变成两批不同桌子的比较（配对假成立，§E136 前科）；
+   *   ③ 构造（每桌几席原型）不写进产物 ⇒ mix=4 与 mix=2 的产物混在一个目录里也照样算出一个数。 */
+  const A = 'docs/artifacts/kept/e78-out__G08-71.bak';
+  const B = 'docs/artifacts/kept/eval-out__win-Ldemo.bak';
+  const dir = mkdtempSync(join(tmpdir(), 'd200-'));
+  const probe = function (tag, extra) {
+    const out = join(dir, tag + '.tsv');
+    const r = spawnSync(process.execPath, ['tools/probe-5p-envfit.mjs', '--pack=' + A, '--games=2', '--seeds=0', '--out=' + out].concat(extra),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || ''), tsv: existsSync(out) ? readFileSync(out, 'utf8') : null };
+  };
+  const body = function (txt) {
+    return String(txt).replace(/\r\n/g, '\n').split('\n').filter(function (l) { return l && l[0] !== '#' && !/^env\t/.test(l); });
+  };
+  /* ---- ① 单一来源 ---- */
+  const src = readFileSync('tools/probe-5p-envfit.mjs', 'utf8');
+  const ev = readFileSync('tools/eval-5p.mjs', 'utf8');
+  const lib = readFileSync('tools/bot-chooser-lib.mjs', 'utf8');
+  ok(/import \{[^}]*poolFromSpecs[^}]*\} from '\.\/regime-panel\.mjs'/.test(src) && /import \{[^}]*HELDOUT[^}]*\}/.test(src),
+    '① 探针的环境名单必须来自 `regime-panel`（池内取 `OPP_SPECS` 函数引用、池外取 `HELDOUT`），不许自己列名字');
+  ok(!/pickTarget2?N\s*\(/.test(src) && /import \{[^}]*makeAsChooser[^}]*\} from '\.\/bot-chooser-lib\.mjs'/.test(src),
+    '① 对手 chooser 的包装规则必须 import lib 那一份：探针里出现 `pickTargetN/pickTarget2N` 就等于手抄了第二份目标语义');
+  ok(/const asChooser = makeAsChooser/.test(ev) && !/function asChooser\(fn\)/.test(ev),
+    '① `eval-5p` 也必须改成 lib 那一份（它原来自己实现了一遍，这是第二份的来源）');
+  ok(/export function makeAsChooser\(deps\)/.test(lib) && /保留脚本自己选的目标/.test(lib),
+    '① lib 必须导出 `makeAsChooser`，并写明那条规则（保留脚本自己的目标）');
+  /* ---- ② 桌子与包无关（配对的命根子）---- */
+  ok(/const gameSeed = \(salt \^ \(sd \* 1000003\)\) \+ g \* 977;/.test(src),
+    '② 每局种子必须由 `(环境, seed 档, 第几局)` 唯一决定；出现包名/包下标就意味着不同包打的是不同桌子 ⇒ `oracle − best_single` 不是配对比较');
+  const pa = probe('pa', []);
+  const pb = (function () {
+    const out = join(dir, 'pb.tsv');
+    const r = spawnSync(process.execPath, ['tools/probe-5p-envfit.mjs', '--pack=' + B, '--games=2', '--seeds=0', '--out=' + out],
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+    return { code: r.status, tsv: existsSync(out) ? readFileSync(out, 'utf8') : null };
+  })();
+  ok(pa.code === 0 && pb.code === 0 && pa.tsv && pb.tsv, '② 两粒包都要跑得完（实测 ' + pa.code + '/' + pb.code + '）');
+  const envColOf = function (txt) { return body(txt).map(function (l) { return l.split('\t')[0] + '|' + l.split('\t')[1]; }); };
+  ok(envColOf(pa.tsv).join(',') === envColOf(pb.tsv).join(','),
+    '②′ 两粒包的环境×seed 行序必须逐字相同（同一批桌子的可观察证据）');
+  /* ---- ③ 构造：默认满席 + 头部必须带 mix ---- */
+  ok(/#mix=4/.test(pa.tsv), '③ 不写 `--mix` 时必须是 §E142 那份"满席原型"构造，且**把 k 写进产物头部**（`#mix=4`）');
+  const mixFull = probe('mixfull', ['--mix=4']);
+  ok(mixFull.tsv && body(mixFull.tsv).join('\n') === body(pa.tsv).join('\n'),
+    '③′ **默认与显式 `--mix=4` 的数据行必须逐字节相同**（新旗标不许动老构造）');
+  const mix2 = probe('mix2', ['--mix=2']);
+  ok(mix2.code === 0 && /#mix=2/.test(mix2.tsv) && body(mix2.tsv).join('\n') !== body(pa.tsv).join('\n'),
+    '③″ `--mix=2` 要跑得完、头部写 `#mix=2`，且数据必须与满席构造**不同**（相同就意味着这个旗标根本没生效）');
+  for (const bad of ['--mix=0', '--mix=5', '--mix=abc']) {
+    const r = probe('bad-' + bad.replace(/[^a-z0-9]/gi, ''), [bad]);
+    ok(r.code === 2, '③‴ ' + bad + '（n=5 ⇒ 合法是 1~4）必须 exit 2，实测 exit=' + r.code + '');
+  }
+  /* ---- ④ 一个环境都不许静默丢：造一份含假环境的矩阵 ---- */
+  /* ⚠ 必须先满足"环境数 ≥ 10"那道守卫，否则探针会在更早的地方 exit 2，
+   *    于是这条断言测的就变成"分母守卫"而不是"点名缺环境"（本门第一版就是这么假通过的）。 */
+  const REAL_ENVS = Object.keys(JSON.parse(readFileSync('docs/artifacts/e129-out/matrix.json', 'utf8')).rows[0].per);
+  ok(REAL_ENVS.length >= 12, '④ 前置：真矩阵要有 ≥12 个环境可借（实测 ' + REAL_ENVS.length + '）');
+  const perFake = {};
+  REAL_ENVS.slice(0, 12).forEach(function (e) { perFake[e] = { fit: 1 }; });
+  perFake.totallyNotAnArchetype = { fit: 1 };
+  const fake = join(dir, 'fake-matrix.json');
+  writeFileSync(fake, JSON.stringify({ rows: [{ per: perFake }] }));
+  const rFake = spawnSync(process.execPath, ['tools/probe-5p-envfit.mjs', '--pack=' + A, '--games=1', '--seeds=0',
+    '--envs=' + fake, '--out=' + join(dir, 'fake.tsv')], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  ok(rFake.status === 2 && /totallyNotAnArchetype/.test(String(rFake.stderr || '') + String(rFake.stdout || '')),
+    '④ 名单里出现解析不到的环境 ⇒ 必须 exit 2 **点名是哪个**（少一个环境 = 分母变了 = 与 §E129 不可比），实测 exit=' + rFake.status + '');
+  for (const argv of [['--games=0'], ['--games=2.5'], ['--n=2'], ['--n=6']]) {
+    const r = spawnSync(process.execPath, ['tools/probe-5p-envfit.mjs', '--pack=' + A, '--out=' + join(dir, 'x.tsv')].concat(argv),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+    ok(r.status === 2, '④′ ' + JSON.stringify(argv) + ' 这类含糊剂量/人数必须 exit 2（实测 exit=' + r.status + '）');
+  }
+  const noPack = spawnSync(process.execPath, ['tools/probe-5p-envfit.mjs', '--games=1', '--seeds=0'],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  ok(noPack.status === 2 && /--pack/.test(String(noPack.stderr || '')),
+    '④″ 缺 `--pack` 必须 exit 2 并点名它（**不许"默认拿出厂包"混进矩阵**），实测 exit=' + noPack.status + '');
+  /* ---- ⑤ 决定论 ---- */
+  const again = probe('again', []);
+  ok(again.tsv && body(again.tsv).join('\n') === body(pa.tsv).join('\n'), '⑤ 同参数两次运行的数据行必须逐字节相同（量具自己得先可复现）');
+  /* ---- ⑥ 分析器：不许把两种构造合算；判语只许一条规则 ---- */
+  const dA = join(dir, 'an-a'), dB = join(dir, 'an-b');
+  mkdirSync(dA); mkdirSync(dB);
+  const rowsA = body(pa.tsv), rowsB = body(mix2.tsv);
+  const mk = function (p, pack, mix, rows) {
+    writeFileSync(p, ['#probe-5p-envfit', '#pack=' + pack, '#n=5', '#mix=' + mix, '#games=2', '#seeds=0', '#envs=' + rows.length,
+      '#env\tseed\tinPool\tgames\tfirst\tstrict'].concat(rows).join('\n') + '\n');
+  };
+  /* 拿两粒包各自造一份同构造的目录（分析器要 ≥3 粒 ⇒ 第三份复制） */
+  mk(join(dA, 'a.tsv'), 'pa', 4, rowsA);
+  mk(join(dA, 'b.tsv'), 'pb', 4, rowsB.map(function (l) { const c = l.split('\t'); return [c[0], c[1], c[2], c[3], Number(c[4]) - 1 >= 0 ? Number(c[4]) - 1 : 0, c[5]].join('\t'); }));
+  mk(join(dA, 'c.tsv'), 'pc', 4, rowsB.map(function (l) { const c = l.split('\t'); return [c[0], c[1], c[2], c[3], Number(c[4]) + 1 <= Number(c[3]) ? Number(c[4]) + 1 : c[4], c[5]].join('\t'); }));
+  const an = spawnSync(process.execPath, ['tools/analyze-5p-envfit.mjs', '--dir=' + dA, '--rule=off'],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  ok(an.status === 0 && /构造 = 每桌原型 \*\*4\*\*/.test(String(an.stdout || '')), '⑥ 分析器要把构造（`#mix`）**印在表头**（实测 exit=' + an.status + '）');
+  ok(/判读：本工具\*\*不出判语\*\*/.test(String(an.stdout || '')) && !/=== 判读（按 §E142/.test(String(an.stdout || '')),
+    '⑥′ `--rule=off` 时**不许**印 §E142 那条判语（§E143 有自己的三条阈值，一份代码同时印两种判语迟早会有人读错那条）');
+  const an2 = spawnSync(process.execPath, ['tools/analyze-5p-envfit.mjs', '--dir=' + dA],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  ok(an2.status === 0 && /=== 判读（按 §E142 第 2 节写死的规则/.test(String(an2.stdout || '')), '⑥″ 默认必须印 §E142 那条判语（不写旗标时的行为不变）');
+  mk(join(dB, 'a.tsv'), 'pa', 4, rowsA);
+  mk(join(dB, 'b.tsv'), 'pb', 2, rowsB);
+  mk(join(dB, 'c.tsv'), 'pc', 4, rowsA);
+  const anMix = spawnSync(process.execPath, ['tools/analyze-5p-envfit.mjs', '--dir=' + dB],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  ok(anMix.status === 2 && /mix/.test(String(anMix.stderr || '') + String(anMix.stdout || '')),
+    '⑥‴ 目录里混了 `#mix=4` 与 `#mix=2` ⇒ 必须 exit 2 拒绝合算（那是两个实验，不是一个）');
+  try { rmSync(dir, { recursive: true, force: true }); } catch (e) { /* 同上 */ }
 });
 
 t('D199 eval-5p 必须决定论、逐桌子账必须与它自己印的读数对得上（v1.5.295 · §E140 的免费自检升级成门）', function () {

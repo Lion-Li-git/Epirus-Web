@@ -17,6 +17,8 @@ import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import vm from 'node:vm';
 /* v1.5.71：对手名字→函数的单一来源（见下面 ALL 的构造） */
 import { OPP_SPECS } from '../server/opp-pool.mjs';
+/* §E142：脚本 chooser 的包装规则搬进单一来源（见下面 `asChooser`） */
+import { makeAsChooser } from './bot-chooser-lib.mjs';
 
 /* 位置参数：剔除 --flag（否则会被当成局数/人数） */
 const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
@@ -326,18 +328,11 @@ if (FIELD) {
 }
 
 /* 脚本 chooser 包一层：与 evo.wrapBotN 同规则，但**保留脚本自己选的目标**
- * （v1.3.55 修好了 wrapBotN；这里独立实现，避免评测反过来依赖被测代码） */
-function asChooser(fn) {
-  return function (state, pid, legal) {
-    const k = fn(state, pid, legal);
-    const key = (typeof k === 'string') ? k : (k && k.key);
-    if (key == null) return { key: R.SK.JI, target: null, target2: null };
-    const obj = (typeof k === 'object' && k) ? k : null;
-    const t1 = (obj && obj.target != null) ? obj.target : T.pickTargetN(state, pid, key);
-    const t2 = (obj && obj.target2 != null) ? obj.target2 : T.pickTarget2N(state, pid, key, t1);
-    return { key: key, target: t1, target2: t2 };
-  };
-}
+ * （v1.3.55 修好了 wrapBotN；评测原先为了避免反过来依赖被测代码而独立实现了一份，
+ *  §E142 起这份搬进 `tools/bot-chooser-lib.mjs` 当唯一来源 —— 两份同构实现漂移的话，
+ *  "评测里的对手"和"探针里的对手"就不是同一种对手，而 §E142 的 `oracle − best_single` 要求 33 个原型用同一套对手规则。
+ *  行为逐字不变由门 D200 钉（改动前后 stdout 逐字相同）。 */
+const asChooser = makeAsChooser({ T: T, R: R });
 
 function runSubject(makeSel, label) {
   const ranks = new Array(N).fill(0);
