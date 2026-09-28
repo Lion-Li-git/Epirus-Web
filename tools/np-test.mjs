@@ -7828,6 +7828,12 @@ t('D190 promote 的阻断计数**不许被重复打印翻倍**（Qoder §F-1 点
     env: Object.assign({}, process.env, { GATE3_GAMES: '20', GATE4_GAMES: '20', GATE6_GAMES: '4' })
   });
   const gout = String(rgd.stdout || '') + String(rgd.stderr || '');
+  /* ⚠ 归因必须先于判据：这条门曾红过一次，报的是"汇总段前缀没了"，而**真实原因是那次 spawn 没跑到汇总**
+   * （09-29 复跑同一命令 ⇒ 前缀在、重复 0 ⇒ 绿）。把"没跑完"和"格式回退"混报是本仓反复写的
+   * "读不出 ≠ 没接线"同族病 ⇒ 先把 status/长度 断掉，再谈格式。 */
+  ok(!!rgd.stdout && rgd.stdout.length > 800, '① 前置：gate-drafts 必须真跑出正文（stdout 长度 ' +
+    String(rgd.stdout || '').length + '，status=' + rgd.status + '，error=' + (rgd.error ? rgd.error.message : '无') +
+    '）——**没跑完不许被读成"格式回退了"**');
   const cellNames = (gout.match(/^\s*(?:PASS|FAIL|UNRUN)\s+(G[3-6][^\n]*)$/gm) || [])
     .map(s => s.replace(/^\s*(?:PASS|FAIL|UNRUN)\s+/, '').trim());
   ok(cellNames.length > 0, '① 至少要扫到判据行（扫到 0 行 ⇒ 这条门自己退化成恒真，本仓最怕的形状）');
@@ -7839,6 +7845,38 @@ t('D190 promote 的阻断计数**不许被重复打印翻倍**（Qoder §F-1 点
     '② UNRUN 分支的阻断 push 必须去重（`statusOf` 会产出 `UNRUN:缺`，同样可解析）');
   ok(/gateDrafts\.unrun\.indexOf\(uLine\) < 0/.test(PM), '② UNRUN 的账目行同样不许重复记（meta 里翻倍会误导事后复核）');
 });
+
+t('D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · 已知别名必须查到 · 读不出不许当"无重复"', function () {
+  /* 动因（09-28 凌晨实测）：`--aliases` 一跑就发现 kept/ 的 25 个文件其实只有 19 粒不同权重，
+   * 其中 `NOL24-71 ≡ V2-71` 被交接件当成**两个方向的活体案例**引用（§17-E-3）⇒ 一例是重复计数。
+   * 文件 sha 看不出来（权重同、META 不同）⇒ 必须比 `.a` **数组本体**（与 `probe-pack-identity` 同一判据，
+   * 但那是两两比，这把尺是全池分组）。这条门防的是"证据池静默缩水成 N-1 粒"。 */
+  const r = spawnSync(process.execPath, ['tools/keep-artifact.mjs', '--aliases'], { encoding: 'utf8', timeout: 180000 });
+  eq(r.status, 0, '别名检测必须能跑（读不出权重时要 exit 7 点名，实测 ' + r.status + '）：' + String(r.stderr || '').slice(0, 200));
+  const out = String(r.stdout);
+  /* ① 判别力：账本里**已知存在**的一对别名必须被查到（查不到 = 这把尺是瞎的） */
+  const hasPair = /e78-out__G08-71\.bak[\s\S]{0,160}e124-out__blk0t00-s71\.bak|e124-out__blk0t00-s71\.bak[\s\S]{0,160}e78-out__G08-71\.bak/.test(out);
+  ok(hasPair, '① 必须查到已知别名对 G08-71 ≡ blk0t00-s71（同一配方同 seed ⇒ 两个班次跑出的产物逐位相同）⇒ 查不到说明分组没在读权重本体');
+  ok(/权重本体不同的 \*\*\d+ 粒\*\*/.test(out) && /个文件/.test(out),
+    '① 必须同时报"文件数"和"权重本体粒数"（只报一个就看不出缩水）');
+  /* ⚠ 本门第一版在这里红过一次，**不是工具坏了**：真实输出是 `**19 粒**`，而我按 `**19**` 匹配 ⇒
+   * 正则没对上就让门判红。教训同 D183：**门自己也要判别力自证**，正则必须照真实打印格式写。 */
+  const nFiles = Number((/池子：(\d+) 个文件/.exec(out) || [])[1]);
+  const mUniq = /权重本体不同的 \*\*(\d+) 粒\*\*/.exec(out);
+  const nUniq = mUniq ? Number(mUniq[1]) : NaN;
+  ok(nFiles > 15 && nUniq > 10, '② 读数必须在合理量级（池子 ' + nFiles + ' 个 / 独立 ' + nUniq + ' 粒 ⇒ 太小 = 外壳正则没命中，会被当成"无重复"）');
+  ok(!/读不到权重本体/.test(out), '② 本次跑不许有"读不到权重本体"的文件（有就是 exit 7，不许继续报"无重复"）');
+  /* ③ 静态钉：比较的本体必须是 `.a` 数组，不是文件字节（字节会把"同权重不同 META"误判成两粒） */
+  const src = readFileSync('tools/keep-artifact.mjs', 'utf8');
+  ok(/JSON\.parse\(m\[1\]\)\.a/.test(src) && /createHash\('sha1'\)\.update\(JSON\.stringify\(arr\)\)/.test(src),
+    '③ 分组键必须是**权重数组本体**的哈希（文件 sha 会因 META 不同而漏掉别名 —— 这正是本次要抓的情形）');
+});
+
+console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
+
+
+process.exit(FAIL ? 1 : 0);
+
 
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
@@ -8081,31 +8119,4 @@ t('D188 并发批跑器（v1.5.281）：归属不串台 / 失败不吞 / 输入�
   ok(['s1', 's2', 's3'].every(k => r5[k] && r5[k].status === 0), '⑤ max=1 时三支仍都要有结果');
   eq(String(r5.s2.stdout).trim(), '2', '⑤ 串行路径的归属同样不许错');
 });
-
-t('D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · 已知别名必须查到 · 读不出不许当"无重复"', function () {
-  /* 动因（09-28 凌晨实测）：`--aliases` 一跑就发现 kept/ 的 25 个文件其实只有 19 粒不同权重，
-   * 其中 `NOL24-71 ≡ V2-71` 被交接件当成**两个方向的活体案例**引用（§17-E-3）⇒ 一例是重复计数。
-   * 文件 sha 看不出来（权重同、META 不同）⇒ 必须比 `.a` **数组本体**（与 `probe-pack-identity` 同一判据，
-   * 但那是两两比，这把尺是全池分组）。这条门防的是"证据池静默缩水成 N-1 粒"。 */
-  const r = spawnSync(process.execPath, ['tools/keep-artifact.mjs', '--aliases'], { encoding: 'utf8', timeout: 180000 });
-  eq(r.status, 0, '别名检测必须能跑（读不出权重时要 exit 7 点名，实测 ' + r.status + '）：' + String(r.stderr || '').slice(0, 200));
-  const out = String(r.stdout);
-  /* ① 判别力：账本里**已知存在**的一对别名必须被查到（查不到 = 这把尺是瞎的） */
-  const hasPair = /e78-out__G08-71\.bak[\s\S]{0,160}e124-out__blk0t00-s71\.bak|e124-out__blk0t00-s71\.bak[\s\S]{0,160}e78-out__G08-71\.bak/.test(out);
-  ok(hasPair, '① 必须查到已知别名对 G08-71 ≡ blk0t00-s71（同一配方同 seed ⇒ 两个班次跑出的产物逐位相同）⇒ 查不到说明分组没在读权重本体');
-  ok(/权重本体不同的 \*\*\d+\*\*/.test(out) && /个文件/.test(out), '① 必须同时报"文件数"和"权重本体粒数"（只报一个就看不出缩水）');
-  /* ② 反"没读到当没有"：分组用的正则必须真命中，否则 19 粒会被报成 0 组重复 */
-  const nFiles = Number((/kept\/ 池子：(\d+) 个文件/.exec(out) || [])[1]);
-  const nUniq = Number((/权重本体不同的 \*\*(\d+)\*\*/.exec(out) || [])[1]);
-  ok(nFiles > 15 && nUniq > 10, '② 读数必须在合理量级（池子 ' + nFiles + ' 个 / 独立 ' + nUniq + ' 粒 ⇒ 太小 = 外壳正则没命中，会被当成"无重复"）');
-  ok(!/读不到权重本体/.test(out), '② 本次跑不许有"读不到权重本体"的文件（有就是 exit 7，不许继续报"无重复"）');
-  /* ③ 静态钉：比较的本体必须是 `.a` 数组，不是文件字节（字节会把"同权重不同 META"误判成两粒） */
-  const src = readFileSync('tools/keep-artifact.mjs', 'utf8');
-  ok(/JSON\.parse\(m\[1\]\)\.a/.test(src) && /createHash\('sha1'\)\.update\(JSON\.stringify\(arr\)\)/.test(src),
-    '③ 分组键必须是**权重数组本体**的哈希（文件 sha 会因 META 不同而漏掉别名 —— 这正是本次要抓的情形）');
-});
-
-console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
-
-
-process.exit(FAIL ? 1 : 0);
+
