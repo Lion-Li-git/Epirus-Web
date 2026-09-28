@@ -213,10 +213,25 @@ function loadBakParams(f) {
   const r = P.loadAny(j);
   return r && r.params ? r.params : null;
 }
-const EXTRA = process.argv.slice(2).filter(function (a) { return /\.bak$/.test(a); });
-const PACKS = [['线上包', CH]].concat(EXTRA.map(function (f) {
-  return [f.replace(/^.*artifacts\//, '').replace(/\.bak$/, ''), loadBakParams(f)];
-}).filter(function (x) { return !!x[1]; }));
+/* v1.5.282（DS · Qoder 09-28 §5-3 点名）：**参数不许被静默吞掉**。
+ * 病：原来 `EXTRA` 只收 `.bak` ⇒ 传 `js/bundled-champion-3p.js` 这类 bundle 会被**静默丢掉**，
+ *   而工具照样打出全套结论（其实只量了「线上包」那一行）—— **量具自己骗人**，与 §24 那族"静默无效果"同族。
+ * 注：`loadBakParams` 从 v1.5.78 起**本来就两种形状都支持**（`.bak` 产物 + 线上包 bundle）⇒ 这里补的只是"别吞"。
+ * 规矩（与 `audit-lib.rejectUnknownFlags` 同族）：**认不出的参数 ⇒ exit 64 响亮失败**；认得出但读不出权重 ⇒ 一并报出。 */
+const ARGS_IN = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
+const EXTRA = [], BAD = [];
+for (const f of ARGS_IN) {
+  if (!/\.(bak|js|json)$/.test(f)) { BAD.push(f + '（既不是 .bak 也不是 .js/.json）'); continue; }
+  let pr = null;
+  try { pr = loadBakParams(f); } catch (e) { BAD.push(f + '（读取失败：' + ((e && e.message) || e) + '）'); continue; }
+  if (!pr) { BAD.push(f + '（读不出权重：确认是 `.bak` 产物或含 EPIRUS_CHAMPION_3P 的 bundle）'); continue; }
+  EXTRA.push([f.replace(/^.*artifacts\//, '').replace(/\.(bak|js|json)$/, ''), pr]);
+}
+if (BAD.length) {
+  console.error('⛔ gate-drafts：' + BAD.length + ' 个参数读不出 ⇒ **拒绝静默忽略**（被吞掉的话你会以为量了它）：\n   ' + BAD.join('\n   '));
+  process.exit(64);
+}
+const PACKS = [['线上包', CH]].concat(EXTRA);
 /* v1.5.202（实测裁定 · 用户批准）：60 → **300**。
  * 为什么：同一只包（= 参照行／线上包自己）的基线读数在 n=60→300 之间摆动 **7pt**
  *   （long 27%→20%、multi 10%→13%），阈值处标准误从 **5.59pt** 降到 **2.50pt**。

@@ -7787,6 +7787,26 @@ t('D186 序列机会率探针（v1.5.278 · §E122）：原样交回 + 复现/�
 });
 
 
+t('D189 gate-drafts **不许静默吞参数**（认不出 ⇒ exit 64；`.bak` 与 bundle `.js` 都要真量）（v1.5.282 · Qoder §5-3 点名）', function () {
+  /* 病（Qoder 09-28 §5-3 点名交给 DS）：`EXTRA` 原来只收 `.bak` ⇒ 传 `js/bundled-champion-3p.js` 这类 bundle
+   * 会被**静默丢掉**，而工具照样打出全套结论（其实只量了"线上包"那一行）—— **量具自己骗人**，
+   * 与 §24 那族"静默无效果"同族。（我自己此前量"抗克参照"时传过 `.js`，读数对只是**因为那个文件恰好就是线上包**。）
+   * 规矩：认不出的参数 ⇒ exit 64；认得出但读不出 ⇒ 一并报出并 exit 64。 */
+  const GD = readFileSync('tools/gate-drafts.mjs', 'utf8');
+  ok(/\.\(bak\|js\|json\)\$/.test(GD) || /\\.\(bak\|js\|json\)/.test(GD),
+    '参数识别必须接受 `.bak` / `.js` / `.json` 三种（v1.5.78 起 loadBakParams 本来就支持 bundle）');
+  ok(/const EXTRA = \[\], BAD = \[\];/.test(GD), '必须把读不出的参数**收集起来**而不是过滤掉');
+  ok(/if \(BAD\.length\)/.test(GD) && /process\.exit\(64\)/.test(GD),
+    '读不出 ⇒ **exit 64 响亮失败**（不许静默忽略）');
+  ok(!/filter\(function \(a\) \{ return \/\\.bak\$\/\.test\(a\); \}\)/.test(GD),
+    '【反例】不许再出现"只留 `.bak`、其余静默丢"的那种过滤器');
+  /* 行为：传一个不存在的 `.bak` ⇒ 必须 exit 64（在 G1/G2/G3 之后、重活之前就退出） */
+  const r = spawnSync(process.execPath, ['tools/gate-drafts.mjs', 'this-file-does-not-exist-12345.bak'],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 300000, maxBuffer: 1 << 22 });
+  eq(r.status, 64, '传不存在的路径 ⇒ 必须 exit 64 且印出"拒绝静默忽略"（实测 status=' + r.status + '）');
+  ok(/拒绝静默忽略/.test(r.stderr || r.stdout || ''), '必须印出"拒绝静默忽略"这句话（人能看懂才算响亮）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
