@@ -113,6 +113,13 @@ console.log('  A/B 两粒本身的差（配对）: ' + ab.mean.toFixed(2) + 'pt 
   (ab.lo > 0 ? '⇒ 区间不跨 0' : (ab.hi < 0 ? '⇒ 区间不跨 0（反向）' : '⇒ 跨 0，两粒分不出')));
 console.log('  ⇒ 主终点的基线 = max(对照) = ' + M + '（' + pct(agg[M].first) + '）');
 
+/* 只有两个对照、没有 swap 臂时（§E139 就是这种跑法：拿同一把配对尺量"A 粒 vs B 粒"），
+ * 后面的 ①/②/②′ 判语讲的是"换包臂相对对照的位置" ⇒ 没有换包臂还印出来就是误导。 */
+if (!names.length) {
+  console.log('\n⚠ 目录里**只有两个对照、没有 swap 臂** ⇒ 只出上面那行 A/B 配对差，**不判 §E136 的 ①/②/②′**');
+  process.exit(0);
+}
+
 console.log('\n| 臂 | 1st | Δ vs ' + CTRL[0] + ' [95%] | Δ vs ' + CTRL[1] + ' [95%] | 高于两个对照? |');
 console.log('|---|---|---|---|---|');
 const rows = [];

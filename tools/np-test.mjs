@@ -8371,6 +8371,19 @@ t('D198 §E136 的配对判读有牙（v1.5.292）：配对不成立要拒、三
   const noDump = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--field=mix4'],
     { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
   ok(!/逐桌子命中数/.test(String(noDump.stdout || '')), '⑪′ 不带 --dump-per 时** stdout 不许多出任何一行**（默认关）');
+  /* ⑫ 目录里只有对照 ⇒ 不许印 §E136 的判语（§E139 用同一把尺读"A 粒 vs B 粒"，判语留着就是误导） */
+  const dir2 = mkdtempSync(join(tmpdir(), 'd198b-'));
+  writeFileSync(join(dir2, 'AAA.tsv'), tsv(wave(6, 0), 10));
+  writeFileSync(join(dir2, 'BBB.tsv'), tsv(wave(4, 0), 10));
+  const only = spawnSync(process.execPath, ['tools/analyze-swap-gain.mjs', '--dir=' + dir2],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  const oo = String(only.stdout || '') + String(only.stderr || '');
+  ok(only.status === 0 && /只有两个对照、没有 swap 臂/.test(oo),
+    '⑫ 只有对照时要正常退出并点名"这一轮不判 §E136"（实测 exit=' + only.status + '）');
+  ok(!/=== 判读（按/.test(oo), '⑫′ 这种目录里**不许**出现 ①/②/②′ 的判语');
+  ok(/A\/B 两粒本身的差（配对）: 20\.00pt/.test(oo),
+    '⑫″ 对照之间的配对差仍要印出来（60% vs 40% ⇒ 20.00pt）（实测 ' + ((oo.match(/A\/B 两粒本身的差（配对）: [-0-9.]+pt/) || ['?'])[0]) + '）');
+  try { rmSync(dir2, { recursive: true, force: true }); } catch (e) { /* 同上：Windows 偶发占用 */ }
   try { rmSync(dir, { recursive: true, force: true }); } catch (e) { /* Windows 偶发占用：tmpdir 里留一个空目录不影响门禁 */ }
 });
 

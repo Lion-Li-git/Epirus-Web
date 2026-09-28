@@ -358,8 +358,9 @@ function runSubject(makeSel, label) {
   /* v1.5.58（第五轮复核 §4-1）：`1st` 走 rankOf ⇒ **并列算第一**（'熬满'场里多打 1 点伤害就第一）。
    * 并报严格口径：严胜 = 引擎判我们赢；并列 = 名次第一但引擎没判我们赢。 */
   let strictFirst = 0, tieOnlyFirst = 0;
-  /* §E136 配对区间要用**逐桌子**的命中数（汇总百分比算不出配对差）。`--dump-per=<file>` 默认关：
-   * 不写这个旗标时下面只做一次 push，不改任何计数、不改 stdout ⇒ 老读数的口径与逐字输出都不动。 */
+  /* §E136 配对区间要用**逐桌子**的命中数（汇总百分比算不出配对差，§E137 那种"未配对 SE"只能偏保守地板）。
+   * 每桌三个计数器是**无条件**累计的（不改任何判据、不改 stdout），只有给了 `--dump-per=<file>` 才落盘
+   *   ⇒ 不带旗标时逐字输出与老版本完全相同（门 D197 ②/⑤、D198 ⑪′ 钉的就是"逐字"而不是"大致"）。 */
   const perCombo = [];
   for (const combo of combos) {
     let cGames = 0, cFirst = 0, cStrict = 0;
