@@ -34,6 +34,21 @@
 终点与判读**已跑前写死在 §E127**：主 = 产物 `环打/局`；次 A = `ABLATE_KEY=ring` 的 pt 差；次 B = 5P 与炮（仅回归检查）；
 ① 两档产物逐位相同 ⇒ 实验作废；② `productIsSeed` 哨兵；③ 噪声尺用同档两 seed 的离散度；④ 两 seed 同向才算。
 ⚠ **臂一完成先做 ① 接线哨兵**（`probe-pack-identity RG0-31 RG1-31`），再看任何读数。
+✅ **哨兵已过（00:45 实测）**：`RG0-31 vs RG1-31` 不同 **5689/5689 维**（max|Δ|=1.95）、`RG0-71 vs RG1-71` 不同 **5689/5689**（max|Δ|=1.24）；
+四粒 `productIsSeed=false`；`meta.recipe.ringOpps` = `{on:true,poolSize:10}`（RG1 两粒）‖ `null`（RG0 两粒）⇒ **实验有效，可以谈读数**。
+
+**在跑的读数批（00:50 起，都是只读）**
+
+| 批 | 后台 id | 产物 / 判活 |
+|---|---|---|
+| `promote --dry --skip-gate-drafts` 第 1 组（Ldemo‖G08-71‖NOL24-71‖D02-31）| `b7ztuue32` | `docs/artifacts/e128-out/promote.txt`，完成标记 `PMARK.txt` 里 `P1_DONE` |
+| 同上第 2 组（V2-71‖B5-10-71‖N5L-05‖SQ2-15-71）| `b0evdhq08` | `promote2.txt` / `P2_DONE` |
+| §E127 次终点 B：`eval-5p --pool=all` × 4 粒臂 | `b3823jlmb` | `e127-out/eval5p.txt`，尾行 `EVAL5P_DONE` |
+| §E127 次终点 A：`ABLATE_KEY=ring` 600 局 × 4 粒 | ✅ 已完成 | `e127-out/ablate.txt`、`ablate2.txt` |
+
+⚠ **为什么 item-1 的底账走 `promote` 而不是我新写一把尺**：那三处闸（反弹墙 / G / 场B 清场）的 n 与口径归 `feasPlan` 与 `audit-lib` 管，
+另造探针就是"第二把尺"（本仓反复出事的形状）。`champ-audit` 虽同 n 但**没有机器可读输出**，
+我第一版手搓解析表头踩空（把"回合 33.9"读成了 D 列）⇒ **那张错表没有引用**，改走 promote 的原始打印。
 
 **已完成（本轮）**
 - ✅ NEXT-1 做完并提交 `fca99c1`（v1.5.284）：§20 三条门层缺陷全收 —— 根因在 `gate-drafts.mjs:442` 汇总复述（加 `汇总│ ` 前缀）、
