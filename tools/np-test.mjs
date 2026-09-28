@@ -7722,6 +7722,13 @@ t('D186 序列机会率探针（v1.5.278 · §E122）：原样交回 + 复现/�
     '② 计数守恒必须自己检查（不守恒 = 尺坏了，读数作废）');
   ok(/runOnce\(params, cal\.mk, GAMES, SEED0, false\)/.test(src), '③ 必须有"摘掉观察者再跑一遍"的中性对照');
   ok(/firedReal/.test(src), '④ 必须另数**事件里的真开炮**（只信意图计数就是 §E121 那个错的复刻）');
+  /* ⑥ 电珠账目（§E123 新增）：**"按下蓄能"≠"得到珠"** ⇒ 意图计数 `charges` 会把被引擎换掉的那一半也算进去，
+   *   所以必须同时有 `beadGained`（事件 delta>0）与 `refresh`（R9 引注的"已持珠再蓄能只刷新"），并如实打印差额 Δ、
+   *   Δ 过大时拒发账目（但**不拖累** armed/opp/taken 这些直接观测）。 */
+  ok(/beadGained/.test(src) && /refresh/.test(src) && /c\.delta = \(c\.beadGained - c\.refresh\)/.test(src),
+    '⑥ 电珠流必须有"得到/刷新/差额"三项（缺任何一项就会把意图读成结果 —— §E122 我犯的正是这个）');
+  ok(/0\.25 \* Math\.max\(1, c\.beadGained - c\.refresh\)/.test(src),
+    '⑥ Δ 超阈必须拒发账目（差额大到不能当描述用时，不许装作还能引）');
   ok(/CALIBERS = \[/.test(src) && src.indexOf('0.35, 0.15') > 0 && src.indexOf("0.15, 0.2, 5, 'soft'") > 0,
     '⑤ 两档口径必须都在（序列窗锁只在 soft 生效 ⇒ 只报一档就是撒谎）');
 
@@ -7741,9 +7748,13 @@ t('D186 序列机会率探针（v1.5.278 · §E122）：原样交回 + 复现/�
   const dup = P(['--packs=js/bundled-champion-3p.js,js/bundled-champion-3p.js', '--games=40']);
   eq(dup.status, 0, '⑥ 同一粒包传两次必须跑通（这不是"零比较"，是**确定性**自证）：实得 ' + dup.status);
   const rows = String(dup.stdout).split('\n').filter(function (l) { return /bundled-champion-3p\.js/.test(l); });
-  eq(rows.length, 4, '⑥ 两档口径 × 两行 = 4 行读数（实测 ' + rows.length + ' 行）');
-  eq(rows[0], rows[1], '⑥ 同一粒包同尺同种子 ⇒ 两行读数必须**逐字相同**（不同就说明读数里混了未播种的随机）');
-  eq(rows[2], rows[3], '⑥ 第二档口径同理');
+  /* 形状（§E123 之后）：每档口径印**两块**（机会率表 + 电珠流水账）× 两行（同粒包传两次）= 8 行 */
+  eq(rows.length, 8, '⑥ 两档口径 × 两块表 × 两行 = 8 行读数（实测 ' + rows.length + ' 行 ⇒ 表的形状变了，本门的基准要跟着改，别把它改成"只要非空就过"）');
+  eq(rows[0], rows[1], '⑥ 同一粒包同尺同种子 ⇒ 机会率表两行必须**逐字相同**（不同就说明读数里混了未播种的随机）');
+  eq(rows[2], rows[3], '⑥ 电珠流水账两行同理（Δ 也必须相同，否则账目本身依赖运行顺序）');
+  eq(rows[4], rows[5], '⑥ 第二档口径的机会率表同理');
+  eq(rows[6], rows[7], '⑥ 第二档口径的流水账同理');
+  ok(/Δ=/.test(String(dup.stdout)), '⑥ 电珠账目的差额 Δ 必须印出来（不守恒却"看起来平衡"是最坏的形状）');
 });
 
 

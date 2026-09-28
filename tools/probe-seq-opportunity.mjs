@@ -46,7 +46,12 @@ const CALIBERS = [
 ];
 
 function runOnce(params, mk, games, seedBase, observed) {
-  const c = { decisions: 0, armed: 0, notOffered: 0, notAfford: 0, opp: 0, taken: 0, missed: 0, charges: 0, games: 0, expired: 0, firedReal: 0, rank: 0, evSum: 0 };
+  /* `beadGained/beadSpent/beadExpiredUnits/heldAtEnd/chargeWhiff` 是为 §E122 那个**没解释干净的缺口**补的：
+   *   `charges`（按下蓄能）比 `armed`（下一回合真持珠）多出一截 ⇒ 要么珠被"同回合内又过期/没活到决策点"吃掉（**口径伪影**），
+   *   要么根本没充上（**真行为缺口**）。这两种修法完全相反，所以必须守恒地分开。
+   * 守恒律（规则依据：`v1.5.82` 注释说"唯一消费电珠的卡是电磁炮"）：
+   *   **`beadGained = beadSpent + beadExpiredUnits + heldAtEnd`**（一枚电珠只有三种下场）⇒ 不平就是尺坏了。 */
+  const c = { decisions: 0, armed: 0, notOffered: 0, notAfford: 0, opp: 0, taken: 0, missed: 0, charges: 0, chargeWhiff: 0, refresh: 0, delta: 0, games: 0, expired: 0, firedReal: 0, beadGained: 0, beadSpent: 0, heldAtEnd: 0, rank: 0, evSum: 0 };
   /* ⚠ chooser 的返回**不是字符串**，是 `{key,target,target2,bead}`（`evo.js:553`）——
    *   第一版我写成 `k === RG` ⇒ 全表读成"兑现率 0.0%"，而独立那把尺（§E121）说现役炮 1.45/局。
    *   这类"读数自洽但作用点错"的错，只有**与另一把尺对表**才抓得住，所以本探针另外数**事件里的真开炮**（`firedReal`）。 */
@@ -69,7 +74,9 @@ function runOnce(params, mk, games, seedBase, observed) {
           const r = base(st, pid, legal);
           const k = keyOf(r);
           if (k === RG) c.taken++; else c.missed++;
-          if (k === CH) c.charges++;
+          /* R9' 允许"已持电珠再蓄能"= **只刷新不叠加** ⇒ 事件流仍给一条 `bead delta:+1`，但**没有新珠子产生**。
+             这是电珠流的第一种"隐形下场"（不扣掉它就会算成"少了一枚珠"），必须显式记下来。 */
+          if (k === CH) { c.charges++; if (((r && r.bead) || 'elec') === 'elec') c.refresh++; }
           return r;   // ⚠ 原样交回：构造新对象会吞掉 `target`/`bead` ⇒ 探针会**改变玩法**，那就不是在测这个包了
         }
       }
@@ -88,9 +95,22 @@ function runOnce(params, mk, games, seedBase, observed) {
     c.games++;
     c.evSum += (st.events || []).length;
     for (const e of (st.events || [])) {
-      if (e.type === 'beadExpire' && e.kind === 'elec' && e.pid === seat) c.expired += (e.n || 1);
-      if (e.type === 'action' && e.outcome === 'ok' && e.key === RG && e.pid === seat) c.firedReal++;
+      if (e.pid !== seat) continue;
+      if (e.type === 'beadExpire' && e.kind === 'elec') c.expired += (e.n || 1);
+      if (e.type === 'action' && e.outcome === 'ok' && e.key === RG) c.firedReal++;
+      if (e.type === 'bead' && e.kind === 'elec') {
+        if (e.delta > 0) c.beadGained += e.delta; else c.beadSpent += -e.delta;
+      }
+      /* 按下蓄能但**没结算成珠**（禁用/资源不足/同回合已被别的动作挤掉）⇒ 真行为缺口的证据 */
+      if (e.type === 'action' && e.key === CH && e.outcome && e.outcome !== 'ok') c.chargeWhiff++;
     }
+    if (st.p[seat] && (st.p[seat].elec || 0) > 0) c.heldAtEnd++;
+    /* 电珠流对账：**故意不做成硬闸** —— 实测两种方向都出现过失衡（净新增 5 vs 下场 6），
+       说明"得到/过期/打出去"三条事件路径之外还有我没读干净的分支（`resolve.js:980` 那条重复蓄能结算、以及 `beadNew` 被清的时机）。
+       这把尺的**主读数（armed/opp/taken/notAfford）是直接观测**，不依赖这本账 ⇒ 所以账目差额只**如实打印**，
+       并只在"大到连描述性用途都不配"时（|Δ| > 净新增的 25%）才拒发读数。
+       ⚠ 任何引用本表的行为解释都必须建立在直接观测上，**不许**用 Δ 反推"丢了多少珠"。 */
+    c.delta = (c.beadGained - c.refresh) - (c.beadSpent + c.expired + c.heldAtEnd);
     if (T.rankOf(st, seat, seedBase + gi) === 1) c.rank++;
   }
   /* 守恒自检：计数不许凭空出现或消失（"探针看着像在工作其实没接上"是本仓的老病） */
@@ -170,6 +190,21 @@ for (const cal of CALIBERS) {
       '  ' + per(c.armed, c.games).padStart(6) + '  ' + per(c.opp, c.games).padStart(6) + '  ' + per(c.taken, c.games).padStart(6) +
       '  ' + pct(c.taken, c.opp).padStart(7) + '  ' + String(c.firedReal).padStart(9) + '  ' + String(c.notAfford).padStart(6) + '  ' + String(c.missed).padStart(5) +
       '  ' + per(c.charges, c.games).padStart(7) + '  ' + per(c.expired, c.games).padStart(8) + '  ' + pct(c.rank, c.games).padStart(6));
+  }
+  console.log('   —— 电珠流（原始计数；守恒律：**得到 − 刷新 = 打出去 + 过期 + 终局仍持有**；R9 引注的"已持珠再蓄能"只刷新不叠加，不扣就会假失衡）——');
+  for (const r of rows) {
+    const c = r.cal[cal.key];
+    console.log('   ' + (r.pack.length > 34 ? r.pack.slice(-34) : r.pack.padEnd(34)) +
+      '  得到=' + String(c.beadGained).padStart(4) + '  打出=' + String(c.beadSpent).padStart(4) +
+      '  过期=' + String(c.expired).padStart(4) + '  终局持=' + String(c.heldAtEnd).padStart(4) +
+      '  蓄能落空=' + String(c.chargeWhiff).padStart(4) + '  刷新=' + String(c.refresh).padStart(3) +
+      '  持珠决策=' + String(c.armed).padStart(4) + '  Δ=' + String(c.delta).padStart(3));
+    /* Δ 太大就不许把这本账当读数用（**直接观测 armed/opp/taken 不受影响**） */
+    if (Math.abs(c.delta) > 0.25 * Math.max(1, c.beadGained - c.refresh)) {
+      console.error('⛔ ' + r.pack + ' @' + cal.key + ' 电珠账目差额 |Δ|=' + Math.abs(c.delta) +
+        ' 超过净新增的 25% ⇒ 这本账不具描述性（armed/opp/taken 仍可直接引用，Δ 不许用来推"丢了几枚珠"）');
+      process.exit(7);
+    }
   }
 }
 console.log('\n⚠ 读数解释的三条边界：');
