@@ -7874,6 +7874,42 @@ t('D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · �
 
 
 
+t('D192 判定读数自带噪声尺（v1.5.287 · DS 清单第 8 条后半）：区间在边界不塌、n 小就变大、量不出不装 0', function () {
+  /* 单一来源在 audit-lib（gate-drafts 只 import，不另抄公式 —— METHODOLOGY 35）。
+   * 这条门判的是**这把尺自己有没有牙**，不是它印得好看。 */
+  const c = AUDIT.ci95pt, tag = AUDIT.ci95tag;
+  eq(typeof c, 'function', '① audit-lib 必须导出 ci95pt');
+  eq(typeof tag, 'function', '① 与 ci95tag（打印形态只有一处定义）');
+  /* ② 反"边界塌成 ±0.0"：裸 Wald 在 0%/100% 会给 ±0.0 ⇒ 被读成极其精确。add-2 调整不许这样 */
+  ok(c(0, 300) > 0.5, '② 读数 0% 也必须给出非零区间（实测 ' + c(0, 300) + ' ⇒ 裸 Wald 就是 0，那是在装精确）');
+  ok(c(100, 300) > 0.5, '② 读数 100% 同上（实测 ' + c(100, 300) + '）');
+  /* ③ 判别力：n 变小 ⇒ 区间必须变大，且方向单调（否则"噪声尺"不随样本量动 = 装饰） */
+  const s60 = c(62, 60), s300 = c(62, 300), s1000 = c(62, 1000);
+  ok(s60 > s300 && s300 > s1000 && s60 > 2 * s300,
+    '③ 同一读数下 n=60 的区间必须明显大于 n=300 且大于 n=1000（实测 ' + s60 + ' / ' + s300 + ' / ' + s1000 + '）');
+  /* ④ 量不出就说量不出：坏 n / 坏 pct 一律 null，且打印形态不许出现 ±0.0 */
+  eq(c(50, 1), null, '④ n<2 必须 null（单样本没有区间）');
+  eq(c(-3, 300), null, '④ 非法读数必须 null');
+  eq(c('abc', 300), null, '④ 非数值必须 null（不许 NaN 混进打印）');
+  ok(tag(50, 1).indexOf('±?') === 0, '④ 打印形态在量不出时写 `±?…` 而不是 ±0.0');
+  /* ⑤ 消费点必须真在用（只导出不用 = 第二把没人读的尺，本仓 §24 那族） */
+  const gd = readFileSync('tools/gate-drafts.mjs', 'utf8');
+  ok(/import \{ ci95tag, ci95pt \} from '\.\/audit-lib\.mjs'/.test(gd), '⑤ gate-drafts 必须 import 这两个（不许在工具里再抄一遍公式）');
+  ok((gd.match(/ci95tag\(/g) || []).length >= 3, '⑤ G4 最克格 / G4 基线格 / G5 三处读数都要带尺（实测 ' + (gd.match(/ci95tag\(/g) || []).length + ' 处调用）');
+  ok(/阈值 25% 落在 95% 区间内|落在这一格的 95% 区间内/.test(gd),
+    '⑤ **判定线落在区间内时必须明说"红/绿由抽样决定"** —— 只印 ±SE 不点名，读的人还是会当结论');
+  /* ⑥ 行为：真跑一次小 n 的 gate-drafts，输出里必须出现噪声尺（判在输出上，不判在源码上） */
+  const rg = spawnSync(process.execPath, ['tools/gate-drafts.mjs'], {
+    cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24,
+    env: Object.assign({}, process.env, { GATE3_GAMES: '20', GATE4_GAMES: '20', GATE6_GAMES: '4' })
+  });
+  const gout = String(rg.stdout || '');
+  ok(rg.stdout && rg.stdout.length > 800, '⑥ 前置：量具必须真跑出正文（长度 ' + String(rg.stdout || '').length +
+    '，status=' + rg.status + '）——**没跑完不许被读成"尺没印"**');
+  ok(/噪声尺：/.test(gout), '⑥ 实际输出里必须有"噪声尺"');
+  ok(/±\d+\.\dpt\(95%,n=20\)/.test(gout), '⑥ 且带上具体的 n（没有 n 的 ±x 等于没给口径）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {

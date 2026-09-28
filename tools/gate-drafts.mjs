@@ -10,6 +10,9 @@ import { createHash } from 'node:crypto';
 import vm from 'node:vm';
 /* v1.5.133：G4 的「1 席脚本 vs 4 席被测」装配本体在 `tools/v2v4-lib.mjs` 的 `duelAssembly()`（单一来源）。 */
 import { duelAssembly } from './v2v4-lib.mjs';
+/* v1.5.287（DS 清单第 8 条剩下那一半）：判定读数必须自带噪声尺。区间算法走 `audit-lib` 单一来源，
+ * 不在这里再抄一遍正态近似（"清单两处各写一遍必出事"是 METHODOLOGY 第 35 条）。 */
+import { ci95tag, ci95pt } from './audit-lib.mjs';
 
 const REPO = process.cwd() + '/';
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map };
@@ -364,7 +367,13 @@ for (const [nm, p] of PACKS) {
       `   ⇒ 最克它的脚本：「${worst[0]}」${worst[1]}%` +
       (hardFail ? `   ⇒ **红的理由**：这一格 ${worst[1]}% > ${G4_MAX}%` : '') +
       (judgeable && worst[1] <= G4_MAX && worst[1] > G4_IDEAL
-        ? `   ⚠️ 过闸，但**距理想线 ${G4_IDEAL}% 还差 ${worst[1] - G4_IDEAL}pt**（这里不是"已达理想"）` : ''),
+        ? `   ⚠️ 过闸，但**距理想线 ${G4_IDEAL}% 还差 ${worst[1] - G4_IDEAL}pt**（这里不是"已达理想"）` : '') +
+      /* v1.5.287：把噪声尺跟着读数一起印出来。动机（DS 清单第 8 条的后半）：`>60% 即红` 在 n 小的时候
+       * 单格标准误与阈值差同量级 ⇒ 临界包的红/绿其实是抽样决定的；只印一个百分数，读的人分不出
+       * "离线 2pt"和"离线 30pt"。**只加读数，不改任何 PASS/FAIL。** */
+      `   噪声尺：最克格 ${ci95tag(worst[1], N4)} · 基线格 ${ci95tag(base.win, N4)}` +
+      (Math.abs(worst[1] - G4_MAX) < (ci95pt(worst[1], N4) || 0)
+        ? ` ⇒ ⚠️ 判定线 ${G4_MAX}% 落在这一格的 95% 区间内 ⇒ **这一格的红/绿由抽样决定，别当结论**` : ''),
       isUnrun, isUnrun ? unrunKind : null);
   }
 }
@@ -395,7 +404,10 @@ for (const [nm, p] of PACKS) {
     const pct = Math.round(100 * defWin / N4);
     gate(`G5[${nm}/${mode}] 面对"只防御不还手"必须能清场（实测防席夺冠 ${pct}% · 阈值 ≤25%）`, pct <= 25,
       `防席夺冠 ${pct}%  终局血量 ${(defHp / N4).toFixed(1)}  打它的攻击 ${(toDef / N4).toFixed(1)}/局` +
-      `  其中**穿透防御**的 ${(pierceHit / N4).toFixed(1)}/局 ⇒ ${pct > 25 ? '缺"目标免疫普通攻击 ⇒ 换穿透卡"的反射' : '破防反射在'}`);
+      `  其中**穿透防御**的 ${(pierceHit / N4).toFixed(1)}/局 ⇒ ${pct > 25 ? '缺"目标免疫普通攻击 ⇒ 换穿透卡"的反射' : '破防反射在'}` +
+      /* v1.5.287：同 G4 —— 判定读数必须自带噪声尺，且**阈值落在区间内要明说**（DS 清单第 8 条后半） */
+      `  噪声尺：${ci95tag(pct, N4)}` +
+      (Math.abs(pct - 25) < (ci95pt(pct, N4) || 0) ? ' ⇒ ⚠️ 阈值 25% 落在 95% 区间内 ⇒ 红/绿由抽样决定' : ''));
   }
 }
 

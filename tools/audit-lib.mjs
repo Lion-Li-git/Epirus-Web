@@ -537,6 +537,28 @@ export const HOLO_GIFT_MAX = 6;
  * （promote-champion / train-best / champ-audit / train-server）⇒ 改一处就分叉。
  * 规矩：**一个计划、一处默认**；入口要换 n 必须显式传 override，并且**把 n 印在读数旁边**（不印 n 的五道读数视为可疑）。 */
 export const FEAS_N_DEFAULTS = { games: 20, aggr: 40, seat: 100, density: 20, charge: 40 };
+/* ===== v1.5.287（DS 清单第 8 条剩下那一半）：**判定读数必须自带噪声尺** =====
+ * 病：`G4 最克 62% > 60% 即红` 这类判据，在 n=60 时单格标准误就有 ~6pt ⇒ **临界包的红/绿是抽样决定的**，
+ *   而打印出来的只有一个百分数，读的人看不出"离判定线 2pt"和"离判定线 30pt"是两件不同的事。
+ *   （本仓同类教训：§E102"n=1 不下结论"、D164"没量到不许当通过"、§E49 把 0.080 当噪声底来判效应。）
+ * 做法：正态近似的双侧 95% 半宽（百分点），**只加读数、不改任何 PASS/FAIL**。
+ * ⚠ n 太小或不是比例时返回 `null`（= "这把尺量不出区间"），**绝不返回 0 冒充"很精确"**。 */
+export function ci95pt(pct, n) {
+  const raw = Number(pct), m = Number(n);
+  if (!isFinite(raw) || raw < 0 || raw > 100 || !isFinite(m) || m < 2) return null;
+  /* ⚠ 不用裸 Wald：实测 `p=0%` 或 `100%` 时 Wald 半宽 = **±0.0pt**，会被读成"极其精确"，
+   * 而那恰恰是样本最不支持的时刻（本仓的病：读不出必须说成读不出，不许用 0 冒充量到）。
+   * ⇒ 用 add-2 调整（+2 成功 +2 失败，即 Agresti–Coull 的 95% 近似）：边界不塌、只有一条代码路径。 */
+  const x = raw / 100 * m;
+  const pc = (x + 2) / (m + 4);
+  return +(1.96 * Math.sqrt(pc * (1 - pc) / (m + 4)) * 100).toFixed(1);
+}
+/** 打印形态：量不出就写 `量不出`，不写 `±0.0`（0 会被读成"极精确"）。 */
+export function ci95tag(pct, n) {
+  const c = ci95pt(pct, n);
+  return c == null ? '±?(n 太小/不可比)' : '±' + c.toFixed(1) + 'pt(95%,n=' + n + ')';
+}
+
 export function feasPlan(env, over) {
   const e = env || {};
   const pick = function (k, envKey, dft) {
