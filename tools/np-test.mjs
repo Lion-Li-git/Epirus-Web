@@ -8871,7 +8871,58 @@ t('D188 并发批跑器（v1.5.281）：归属不串台 / 失败不吞 / 输入�
 });
 
 
+t('D201 v1.5.299 的 fit 口径旋钮 EPIRUS_FIT_CAL 有牙（补 DS 提交里那条其实不存在的"门 D200"）', function () {
+  /* 为什么有这条（09-29 13:47 复核 c0eb9d4）：DS 的提交说明与 `CHANGELOG.md` 都写"门 D200"、`js/train/evo.js` 的注释写
+   *   "默认关 ⇒ 门 D191 钉 A/A" —— **两条引用都落空**：D200 是 v1.5.296 给 5P 环境量具立的门（构造/名字真源/桌子漂移），
+   *   D191 是 kept/ 别名检测；np-test 在那版实际只多了 1 行（D77 的 `SENT` 里登记 `fitCal: true`，管的是"设得进读得回"，
+   *   不管默认值、不管公式、不管调用点）。⇒ 这个**会换掉全部历史臂的尺**的旋钮当时是"声称有门、其实没门"。
+   *   与本仓同族事故（D199 第一版恒真、D159 正则没算括号、§E108 改了被读文件没复跑）记在同一类里：**记账说门在，门不在**。
+   * ⚠ 本门能钉什么、钉不了什么，写在最后一条注释里，别把它读成"接线已被证明"。 */
+  const EVO = readFileSync('js/train/evo.js', 'utf8');
+  /* 自建沙箱（与 D162 同规矩）：默认值必须在**干净**模块里读，共享 `T` 早被 D77 那类门喂过值 */
+  const sb3 = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
+  sb3.window = sb3; sb3.globalThis = sb3;
+  for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
+    'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) vm.runInNewContext(readFileSync(f, 'utf8'), sb3, { filename: f });
+  const T3 = sb3.window.EpirusTrainer;
+  /* ① 默认关 ⇒ 旧刻度逐位不变（这条是"没换尺"的全部凭据；D77 的往返管不到它） */
+  eq(T3.economyReward().fitCal, false, '① 出厂必须**关**（实测 ' + T3.economyReward().fitCal + '）');
+  eq(T3.rankCredit(2, 1, 5), 0.3, '① 关着时第二名必须还是绝对刻度 0.3（与人数无关的老行为）');
+  eq(T3.rankCredit(1, 1, 3), 1, '① 关着时第一名 1.0');
+  /* ② setter 收口径：布尔/数字/字符串 '0' 都要能判，且回执读得到（D77 只喂 true 一种形态） */
+  eq(T3.setEconomyReward({ fitCal: 1 }).fitCal, true, '② =1 必须开（回执 fitCal）');
+  eq(T3.setEconomyReward({ fitCal: '0' }).fitCal, false, "② 字符串 '0' 必须判成关（env 下达全是字符串，'0' 被当真是本仓反复踩的形状）");
+  eq(T3.setEconomyReward({ fitCal: 0 }).fitCal, false, '② 数字 0 必须判成关');
+  /* ③ 开了之后的形状：1 名 = 1、其余 = 0、**且不许出负数/NaN**（rank=N 时基线 = 1 ⇒ 除零靠 0.99 夹 + clamp≥0 兜）
+     各 N 都试一遍，钉的是"形状与人数无关"这个**设计目的**本身 */
+  T3.setEconomyReward({ fitCal: 1 });
+  for (const N of [2, 3, 4, 5]) {
+    eq(T3.rankCredit(1, 1, N), 1, '③ 开 + N=' + N + '：1 名必须 1.0（对齐后 1 名回到满分）');
+    for (let r = 2; r <= N; r++) {
+      const v = T3.rankCredit(r, 1, N);
+      ok(Number.isFinite(v) && v >= 0, '③ 开 + N=' + N + ' rank=' + r + ' 必须是**有限非负**数（实测 ' + v + '）⇒ 夹住基线上界与 clamp≥0 两道都在');
+      eq(v, 0, '③ 开 + N=' + N + ' rank=' + r + '：低于随机基线 ⇒ 归 0（"只有赢才算"是 DS 写进注释的语义）');
+    }
+  }
+  /* ④ 复位必须真能抹掉（DS 自己栽过的坑：`ECON_DEFAULTS` 是**字面量列表**，漏一个新键 ⇒ `reset` 静默抹不掉，D175 才抓到） */
+  T3.setEconomyReward({ reset: true });
+  eq(T3.economyReward().fitCal, false, '④ reset 后必须回出厂 false（实测 ' + T3.economyReward().fitCal + '）⇒ 新键要同时进 ECON_DEFAULTS 快照');
+  eq(T3.rankCredit(2, 1, 5), 0.3, '④ reset 后刻度必须真的回到旧的 0.3（读回接口 false 但作用点没复位 = 假复位）');
+  /* ⑤ 签名 + **调用点真传人数**：本仓规矩是"只看签名不算接线"（D174 那次 costlyW 通过黑键闸却从没送给引擎） */
+  const sig = /function rankCredit\(rank, aliveEnd, nSeats\)/.exec(EVO);
+  ok(sig, '⑤ `rankCredit` 必须收第三个人数参（实测没找到该签名）');
+  ok(EVO.indexOf('rankCredit(rank, aliveEnd, r.state.p.length)') >= 0,
+    '⑤ 调用点必须把**真实席数**传进去（`r.state.p.length`）—— 接了参数却不传 = 开了也等于没开');
+  ok(!/rankCredit\(rank, aliveEnd\)[^,]/.test(EVO), '⑤ 不许残留两参数的老调用点（漏改一处 = 那一处静默用旧刻度）');
+  /* ⑥ 名单三处（ECON_ENV_KEYS / ECON_REWARD_KEYS / train-3p 的 CLI 名单）由 D77 与 probe-econ-reset-audit 钉，
+     **这里不再抄一份**（仓规：第二遍抄写正是本仓反复出事的形状）。DS 的 A/B 实测已证明它没被黑键闸拦。
+   * ⚠ 本门钉不了什么（写清楚，免得下一个人以为"有门 = 接线已被证明"）：
+   *   对齐后的输出对 N **恒等**（1 名永远 1.0、其余永远 0）⇒ ③ 无法从数值上区分"按人数算"与"写死按 3 人算"；
+   *   那半条只能靠 ⑤ 的调用点静态钉 + DS 的产物级 A/B（末代 bestFit 0.835→0.380）。 */
+});
+
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
+
 const __nReg = __src.filter(l => /^t\(/.test(l)).length;
 if (__nReg !== PASS + FAIL + __skipped) {
   console.error("⛔ 注册的 t() 有 " + __nReg + " 条，但只执行了 " + (PASS + FAIL) + " 条"
