@@ -699,39 +699,40 @@
   function beliefSearchOn() { return BELIEF_SEARCH; }
   /* 签名里**不放**"有无持珠"：§E152d 诊断列量到决策点上每一次持珠（四批累计 1902 次）其上一手都是 `蓄能`
    * ⇒ 那一维被"上一手"完全解释（机制上必然：珠只在蓄能的下一回合存在，`state.js:13` + `resolve.js:1264-1268`）。 */
-  function beliefSig(p) { return [Math.min(5, p.ep >> 1), p.ep >= 5 ? 1 : 0, p.lastSkill || '-'].join('/'); }
-  /* 每局一份、挂在 state 上的**不可枚举**槽位：`S.cloneState` 走 JSON ⇒ 克隆体天然不带它，
-   * 所以搜索内部的推演既读不到、也写不坏外面这份表（这是把"信念"放进引擎侧而不污染重放的关键一步）。 */
-  function beliefScratch(state) {
-    const b = state.__bel;
-    if (b) return b;
-    const fresh = { round: -1, sig: null, seen: 0, tab: new Map(), n: 0, hit: 0 };
-    try { Object.defineProperty(state, '__bel', { value: fresh, enumerable: false, writable: true, configurable: true }); }
-    catch (e) { return null; }
-    return fresh;
-  }
-  function beliefSync(state) {
-    const b = beliefScratch(state); if (!b) return null;
-    if (b.round === state.round) return b;
-    /* 回合号一变，先把**上一回合真发生的**每一手喂进表：键 = 上一回合决策点上的（席位,签名），值 = 那手卡 */
-    if (b.sig) {
-      const ev = state.events;
-      for (let i = b.seen; i < ev.length; i++) {
-        const e = ev[i];
-        if (!e || e.type !== 'action') continue;
-        const k = b.sig[e.pid]; if (k == null) continue;
-        let m = b.tab.get(k); if (!m) { m = {}; b.tab.set(k, m); }
-        m[e.key] = (m[e.key] || 0) + 1;
-      }
+  function beliefSigOf(tier, wealth, lastKey) { return [tier, wealth, lastKey || '-'].join('/'); }
+  /* ===== 历史**只从 `state.events` 重建**，不存在 state 上（§E159 实测过才改成这样的，不是推论）=====
+   * 页面把 AI 的决策喂的是 `preState = S.cloneState(B.state)`（`ui.js:286/542/613`），而 `cloneState` 走
+   *   `JSON.parse(JSON.stringify(s))`（`state.js:236`）⇒ 任何私有槽**每一手都被丢掉**。我第一版把表挂在非枚举槽上，
+   *   于是浏览器里每手从空表开始：**83.25% 塌成 28.25%**，与"空模型 + 同样的搜索"（27.00%）分不开
+   *   （配对差 1.25pt [−4.01, 6.51]）⇒ 开了档跟没开一样。事件流是引擎的公开记录、随克隆一起带走，
+   *   只有它能同时满足仪器形状与页面形状。
+   * ep 反推保真度（§E158 · 25 局 × 每决策 5 席 = 800 个对账点）：**逐位相同 95.88%、钱档（`ep>>1` 截 5）相同 99.00%**
+   *   ⇒ 条件量用的是"档"不是余额 ⇒ 这点误差进不了判据（要精确余额才得把返还/减免全表补进来）。 */
+  function beliefObserve(state) {
+    const N = state.p.length;
+    const ep = new Array(N).fill(0);
+    const last = new Array(N).fill(null);
+    const tab = {};
+    const evs = state.events || [];
+    for (let i = 0; i < evs.length; i++) {
+      const e = evs[i]; if (!e) continue;
+      if (e.type === 'ep' && typeof e.delta === 'number' && e.pid != null) { ep[e.pid] += e.delta; continue; }
+      if (e.type !== 'action' || e.pid == null || e.outcome === 'insufficient' || e.outcome === 'invalid') continue;
+      const kk = e.pid + '@' + beliefSigOf(Math.min(5, ep[e.pid] >> 1), ep[e.pid] >= 5 ? 1 : 0, last[e.pid]);
+      let m = tab[kk]; if (!m) { m = {}; tab[kk] = m; }
+      m[e.key] = (m[e.key] || 0) + 1;
+      last[e.pid] = e.key;
+      const def = R.byKey[e.key];
+      if (def && typeof def.cost === 'number') { ep[e.pid] -= def.cost; if (ep[e.pid] < 0) ep[e.pid] = 0; }
     }
-    b.round = state.round;
-    b.sig = [];
-    for (let i = 0; i < state.p.length; i++) b.sig[i] = i + '@' + beliefSig(state.p[i]);
-    b.seen = state.events.length;
-    return b;
+    /* 预测那一格与训练时**同一套构造**（用走查出来的 `last`，不用 `p.lastSkill`）⇒ 否则"训练条件"与"预测条件"
+       是两个不同的量，表再准也接不上（本仓"分子分母不同构"那一族）。 */
+    const sig = [];
+    for (let i = 0; i < N; i++) sig[i] = i + '@' + beliefSigOf(Math.min(5, ep[i] >> 1), ep[i] >= 5 ? 1 : 0, last[i]);
+    return { tab: tab, sig: sig };
   }
   function beliefPredict(b, pid) {
-    const m = b.tab.get(b.sig[pid]); if (!m) return R.SK.JI;
+    const m = b.tab[b.sig[pid]]; if (!m) return R.SK.JI;
     let best = R.SK.JI, bv = -1;
     for (const k in m) if (m[k] > bv) { bv = m[k]; best = k; }
     return best;
@@ -743,7 +744,7 @@
     return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (n ? sum / n : 0);
   }
   function beliefSearchPick(state, pid, cands, params) {
-    const b = beliefSync(state); if (!b || !cands || !cands.length) return null;
+    const b = beliefObserve(state); if (!b || !cands || !cands.length) return null;
     /* ⚠ 这里**不许抽 `state.rng`**：探索的 ε 由调用方（`greedyOf` 所在的那条支）抽，一次决策只该有一次抽取。
        多抽一次就让开/关两档的随机流错开一格 ⇒ 整局轨迹分叉（门 D204⑧ 就是这么抓到我的）。 */
     const N = state.p.length;
@@ -3060,7 +3061,7 @@ let WALL_GAMES = 3;
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
-    setBeliefSearch, beliefSearchOn, policyChooserBelief,
+    setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve,
     setTrainEps, trainEps, countTrainEps, resetTrainEpsStat   // v1.5.237 E28：训练侧执行口径旋钮（默认关）+ **开火计数**
   };
 })(typeof window !== 'undefined' ? window : globalThis);

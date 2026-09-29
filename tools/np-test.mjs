@@ -9103,7 +9103,7 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
       const sub = T.policyChooserN(params, 0.15, 0.2, 5, 'soft');
       Play.autoGameN(st, [sub, scripted, scripted, scripted, scripted]);
       const row = { winner: st.winner, round: st.round };
-      if (collect) row.bel = st.__bel ? st.__bel.tab.size : -1;      /* 非枚举槽位：JSON 里看不见，同进程引用读得到（⑦ 用它证明"表真的在长") */
+      if (collect) { const bb = T.beliefObserve(st); row.bel = Object.keys(bb.tab).length; row.sig0 = bb.sig[1]; }
       out.push(row);
     }
     return out;
@@ -9124,14 +9124,36 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
   ok(winN >= winO + 3, '③ 方向：12 局里开档夺冠数必须比关档多 ≥3（实测 关=' + winO + ' 开=' + winN + '）⇒ 大样本是 31.50%→74.75%，掉回来就是坏了');
   /* ④ 复位必须真能抹掉：再跑一遍关档，要与 ③ 的关档基线**逐字相同**（"读回接口是关、作用点还开着"= 假复位） */
   eq(sig(batch(false, 12, false)), sig(OFF), '④ 关掉之后必须逐字回到基线（否则 `setBeliefSearch(0)` 没复位干净，历史臂就不可比）');
-  /* ⑤ 信念表确实在长（不是每次都退回默认的 ジ） */
+  /* ⑤ 信念表确实在长（不是每次都退回默认的 ジ），且键里带**席位身份**（无身份 = §E152d 里那个只有 +7.8/+15.5pt 的便宜档） */
   const sizes = ON.map(r => r.bel);
-  ok(sizes.every(function (n) { return n > 0; }), '⑤ 开档的每局都该攒到非空表（实测 ' + sizes.join(',') + '）⇒ 表为空 = 学习信号从没进来');
-  /* ⑥ 泄漏红线：签名只许用**公开信息**（珠的类型、未出手的目标在 v1.5.15 就是当 bug 修的） */
-  const bsig = /function beliefSig\(p\)[\s\S]{0,220}/.exec(EVO);
-  ok(bsig, '⑥ 找不到 `beliefSig`（学习条件量的唯一来源）');
-  ok(!/elec|boom|bead|lastTarget|target/.test(bsig[0]),
-    '⑥ `beliefSig` 里不许出现珠类型/目标这类私有信息（实测 ' + bsig[0].replace(/\s+/g, ' ').slice(0, 120) + '）');
+  ok(sizes.every(function (n) { return n > 3; }), '⑤ 开档的每局都该攒到"多个条件格"（实测 ' + sizes.join(',') + '）⇒ 表太小 = 学习信号没进来，或身份锚没进键');
+  ok(/^1@/.test(ON[0].sig0 || ''), '⑤ 预测格的键必须以席位开头（实测 ' + ON[0].sig0 + '）⇒ §E152d：没有身份锚就只剩 +7.83pt 那一档');
+  /* ⑤b **克隆保真**（§E159 那条页面缺陷的直接替身，比跑一整局便宜）：
+     页面把 AI 喂的是 `cloneState(B.state)` ⇒ 表必须能从"被 JSON 往返过的 state"里原样重建，否则浏览器里开了档等于没开。 */
+  {
+    const W = mkSb(), T = W.EpirusTrainer, S = W.EpirusState, P = W.EpirusPolicy, Play = W.EpirusPlay;
+    const mm3 = readFileSync('js/bundled-champion-3p.js', 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
+    const pp = P.unpack(JSON.parse(mm3[1]), true);
+    const st = S.createState('multi', { next: T.mulberry32(9021) }, 5);
+    if (T.slotSaltFor) st.slotSalt = T.slotSaltFor(9021);
+    const f = T.policyChooserBelief(pp, 0.15, 0.2, 5, 'soft');
+    const others = function (s2, pid2, legal) { const lg = legal.filter(function (l) { return l.affordable; }); return lg.length ? lg[0].key : R.SK.JI; };
+    Play.autoGameN(st, [f, others, others, others, others]);
+    const a = JSON.stringify(T.beliefObserve(st).tab), b2 = JSON.stringify(T.beliefObserve(S.cloneState(st)).tab);
+    ok(a.length > 20, '⑤b 一整局之后表必须真的非空（实测序列化长度 ' + a.length + '）');
+    eq(b2, a, '⑤b **同一局、克隆体重建的表必须与活对象逐字相同**（页面喂的就是克隆；这条红了就等于"浏览器里开了档但没在学"，§E159 实测过那个失败形状：83.25% → 28.25%）');
+  }
+  /* ⑥ 泄漏红线：条件量只许用**公开信息**。扫的是重建函数全体（`beliefObserve` + `beliefSigOf`），
+     键里出现 `elec`/`boom`/`bead`/`lastTarget`/`target` 就等于把"珠的类型"或"未出手的目标"喂给模型（v1.5.15 那条红线）。 */
+  const bsBody = /function beliefObserve\(state\)[\s\S]{0,1600}?\n  \}/.exec(EVO);
+  ok(bsBody, '⑥ 找不到 `beliefObserve`（学习条件的唯一来源）');
+  /* ⚠ 必须先剥注释再扫：我第一版直接扫函数体，结果被我自己写的"不用 `p.lastSkill`"那句注释判红
+     ⇒ 与 D204⑦ 那条 `state.rng` 的坑同族（**钉代码形状，不钉措辞**）。 */
+  const bsCode = bsBody[0].replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+  ok(!/elec|boom|bead|lastTarget|\.target/.test(bsCode),
+    '⑥ `beliefObserve` 的**代码**里不许读珠类型/目标这类私有信息（实测 ' + bsCode.replace(/\s+/g, ' ').slice(0, 140) + '）');
+  ok(!/lastSkill/.test(bsCode),
+    '⑥ 条件量必须走**同一种构造**（代码里出现 `lastSkill` = 训练格用走查值、预测格用引擎字段，两格不同构，表再准也接不上）');
   /* ⑦ 接线：页面侧的旋钮必须真的送到引擎（"闸放行 ≠ 线接通"，DS 今天立的那条） */
   ok(/localStorage\.getItem\('epirus\.beliefSearch'\)/.test(UI) && /Trainer\.setBeliefSearch\(bsOn\)/.test(UI),
     '⑦ `js/ui/ui.js` 必须读 `epirus.beliefSearch` 并调用 `Trainer.setBeliefSearch`（少了后半句 = 键能设但送不到作用点）');
