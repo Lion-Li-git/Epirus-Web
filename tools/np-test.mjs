@@ -23,6 +23,8 @@ import { spawnBatch } from './np-parallel.mjs';   // v1.5.281：互相独立的�
  * 不靠探针的输出措辞、也不依赖本机产物（同 D149/D161/D164 的路子）；环境名从 opp-pool 现取，不写死。 */
 import * as RGAIN from './routing-gain-lib.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
+/* D206 用（DS 清单 B7）：奖励键名单与默认表**从同一来源拿**（不许在门里抄一份键名单——那正是 B7 要防的"第五处"）。 */
+import { ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -9278,6 +9280,56 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
     ok(EVO.indexOf(anchors[0]) >= 0,
       '⑨ `evo.js` 里必须逐字含有这一行签名（被改 = 两道量具的 route ① 静默失配；D161 今晚就是这么红的）');
   }
+});
+
+t('D205 门号纪律（DS 清单 B8 · 09-30 夜班）：D 号不许撞车，且 CHANGELOG 最新一版声称的每个门号必须真在册（钉"记账说门在、门不在"）', function () {
+  /* 为什么有这条：09-29 DS 的插门脚本拿 `indexOf("t('D200")` 当"已经插过了"的判据 ⇒ 撞上在册的 D200 就**静默跳过**，
+     而提交说明与 CHANGELOG 都写了"门 D200"（我复核时抓到）。这类事故靠人核对核不住——今晚我自己就把一段截断的输出读成了"两道红"。
+     ⚠ 本门只管**精确撞车**（同号两次）。另有一条已知但今天不动的形状：`D33` 与 `D33b` 互为**前缀**，
+     所以 `indexOf("t('D33")` 这种写法对它们天然歧义 ⇒ 已写进 HANDOFF 交 DS 裁要不要给带字母后缀的那道换号（半夜单方面改历史门号，风险大于收益）。 */
+  const own = readFileSync(new URL(import.meta.url), 'utf8');
+  const gateIds = [...own.matchAll(/^t\('([A-Za-z]+[0-9]+[a-z]?)/gm)].map(m => m[1]);
+  const dupOf = function (list) { const c = {}; for (const x of list) c[x] = (c[x] || 0) + 1; return Object.keys(c).filter(k => c[k] > 1); };
+  const dOnly = gateIds.filter(x => /^D[0-9]/.test(x));
+  ok(dOnly.length >= 150, '① 反装饰守卫：本文件应扫到 ≥150 道 D 类门（实测 ' + dOnly.length + '）⇒ 抽取式一旦被改空，这条要响亮失败，不许变成"永远通过');
+  ok(dupOf(dOnly).length === 0, '② D 号撞车：' + dupOf(dOnly).join(' ') + ' ⇒ 撞号的那道会被"已插入"判据静默吞掉，记录里却写着有这道门');
+  ok(dupOf(['D204', 'D204', 'D205']).length === 1, '③ 合成正对照：判据函数对明知重复的输入必须响（没响 ⇒ 上面那条是装饰）');
+  /* ④ 只核**最新一版**：老条目里存在"其实不存在的 D200"这类更正用的话，扫全文会把更正本身判红。 */
+  const top = String(readFileSync('CHANGELOG.md', 'utf8').split(/^## /m)[1] || '');
+  const idSet = new Set(gateIds);
+  const claimOf = function (text) { return [...new Set([...text.matchAll(/\bD([0-9]+)(?![0-9])/g)].map(m => 'D' + m[1]))]; };
+  const claims = claimOf(top);
+  ok(claims.length >= 3, '④ 反装饰：最新一版 CHANGELOG 至少该提到 3 个门号（实测 ' + claims.length + '）⇒ 提到 0 个说明抽取式失效');
+  const ghost = claims.filter(c => !idSet.has(c));
+  ok(ghost.length === 0, '⑤ 记账说门在、门不在：最新一版提到 ' + claims.join(' / ') + '，其中 ' + ghost.join(' / ') + ' 在 np-test 里**没有注册**');
+  ok(claimOf('新增门 D99999 与 D204').filter(c => !idSet.has(c)).join() === 'D99999',
+    '⑥ 合成正对照：给判据一段"声称有 D99999"的文本，它必须把 D99999 抓出来（抓不到 ⇒ ⑤ 是假的）');
+});
+
+t('D206 econ 奖励键三处名单自洽（DS 清单 B7 · 09-30 夜班）：默认表 / CLI 名单 / 两处 SENT 夹具 ⇒ 缺任一处就是"通过黑键闸却从没送到引擎"', function () {
+  /* 为什么有这条：v1.5.274 那回 `costlyW` 登记进了 CLI 名单、黑键闸放行，但**引擎侧没人读它** ⇒ "传了等于没传"（METHODOLOGY 第一条硬规矩）。
+     B7 列的"五处"里今天能机械核对的是这三处，就钉这三处；钉不全的诚实印出来当**已知欠账**，不假装覆盖。 */
+  const defaults = readEconEnv({});
+  ok(ECON_REWARD_KEYS.length >= 20, '① 反装饰：`ECON_REWARD_KEYS` 该有 ≥20 个键（实测 ' + ECON_REWARD_KEYS.length + '）⇒ 名单被清空时这条要响');
+  const noDef = ECON_REWARD_KEYS.filter(k => !(k in defaults));
+  ok(noDef.length === 0, '② 名单里的键在 `readEconEnv({})` 默认表里找不到（引擎读到 undefined ⇒ 设了也不生效）：' + noDef.join(' / '));
+  const cliBlock = String(readFileSync('tools/train-3p.mjs', 'utf8').match(/const CLI_ECON_REWARD_KEYS = \[[\s\S]*?\];/)[0]);
+  const cli = [...cliBlock.matchAll(/'([^']+)'/g)].map(m => m[1]);
+  ok(cli.length >= 8, '③ 反装饰：从 `train-3p` 抠到的 CLI 名单只有 ' + cli.length + ' 个键 ⇒ 抽取式大概已失效');
+  const notKnown = cli.filter(k => ECON_REWARD_KEYS.indexOf(k) < 0);
+  ok(notKnown.length === 0, '④ CLI 认得、引擎名单不认得（值被下达后就丢）：' + notKnown.join(' / '));
+  const sentOf = function (f) {
+    const s = readFileSync(f, 'utf8'); const i = s.indexOf('SENT');
+    const seg = s.slice(i, s.indexOf('};', i));
+    return new Set([...seg.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*:/g)].map(m => m[1]));
+  };
+  const sA = sentOf('tools/np-test.mjs'), sB = sentOf('tools/probe-econ-reset-audit.mjs');
+  ok(sA.size >= 15 && sB.size >= 20, '⑤ 反装饰：两处 SENT 解析出的键数 = ' + sA.size + ' / ' + sB.size + ' ⇒ 解析失效就别放行（D199 第一版那个形状）');
+  const unsent = ECON_REWARD_KEYS.filter(k => !sA.has(k) && !sB.has(k));
+  ok(unsent.length === 0, '⑥ 这个键**两处测试夹具都不送**（新登记的键没人验过它真能到达作用点）：' + unsent.join(' / '));
+  const unsentOf = function (keys) { return keys.filter(k => !sA.has(k) && !sB.has(k)); };
+  ok(unsentOf(['zzNotARealRewardKey']).join() === 'zzNotARealRewardKey',
+    '⑦ 合成正对照：凭空造一个没登记的键，判据必须抓到（抓不到 ⇒ ⑥ 是装饰）');
 });
 
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
