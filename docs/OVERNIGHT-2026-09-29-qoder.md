@@ -59,7 +59,7 @@
 本班实际改动集中在 `js/train/evo.js`(+208) / `js/ui/ui.js`(+8) / `tools/np-test.mjs`(+484) / `tools/behavior-profile.mjs`(+121) / 新 `tools/human-pool.mjs`(+120) 与文档（版本号那两处只在 `README.md`/`index.html` 里）。
 np **256** 条（新门 D204 对手模型 / D205 门号纪律 / D206 econ 键名单 / D207 落点集中度手算自证 / D208 可复现性地基 / D209 人类形状池单一来源 / **D210 第 4 剂药有牙 / D211 "屯而不打 vs 没钱打"**），
 **§E169 那批（v1.5.306）已在自己的提交树上整轮四道全绿**：树 **`19daf0d`**，窗口 **05:40:46→05:50:37**，np **256/256 · 552.7 s** ‖ spec 52/52 · 0.3 s ‖ smoke OK · 12.3 s ‖ battle OK · 26.2 s，`rc=0`。
-⚠ 其后只补了 `docs/METHODOLOGY.md` 四条规矩（那份被门读 ⇒ 又重跑一遍整轮，结果与本班**最终取用树**见 05:5x 那一节）。
+⚠ 其后补了 `docs/METHODOLOGY.md` §83~§87（那份被门读 ⇒ 重跑了两遍整轮）⇒ **本班最终取用树 = `b3d43b4`**（np 256/256 · 411.6 s，窗口 06:26:07→06:33:41，四道全绿 `rc=0`），细节见 06:2x 那一节。
 
 
 ## 🔵 DOING（06:2x 快照 · **当前唯一有效**）
@@ -74,7 +74,9 @@ np **256** 条（新门 D204 对手模型 / D205 门号纪律 / D206 econ 键名
 - 顺带把早上那一页 §5 那句机械核对**重算并改写**：`git diff --stat origin/main..HEAD -- js/core js/train/policy.js js/bundled-champion-3p.js js/bundled-champion.js js/champion-pack.js` ⇒ **输出为空**（连版本号那两处都不在这五个路径里）。
 
 **状态**：这批更正改了 `CHANGELOG.md`（v1.5.306 加 §E170 那条 + v1.5.305 两处就地标注）与 `docs/METHODOLOGY.md`（§87）⇒ **两份都被门读取 ⇒ 必须再跑一遍整轮**，结果回填在下面这行。
-**认证回填**：树 **⚠ 待回填**，np **256/256**、spec/smoke/battle，窗口 **待回填**。此前两遍：`19daf0d` 552.7 s 冷（05:40:46→05:50:37）‖ `e3bb477` 407.9 s 热（05:54:35→06:02:03）。
+**认证回填**：树 **`b3d43b4`**（§E170 那批更正：`CHANGELOG.md` + `docs/METHODOLOGY.md` §87 + 四份日志），窗口 **06:26:07 → 06:33:41**，
+np **256/256 · 411.6 s**（这批只动文档 ⇒ 热跑）‖ spec **52/52 · 0.2 s** ‖ smoke **OK · 12.8 s** ‖ battle **OK · 29.8 s**，`rc=0`（日志 `docs/artifacts/cert-b3d43b4.log`）
+⇒ **明早取状态请取 `b3d43b4`**。此前四遍：`51f6005` 407.5 s（253）‖ `65705f9` 554.9 s（254）‖ `19daf0d` 552.7 s（256·冷）‖ `e3bb477` 407.9 s（256·热）。
 `js/core/*`、`js/train/policy.js`、出厂包相对 `origin/main` **字节级未动** ⇒ 指纹 `ebdbff36` 不变；两槽未动、`promote` 只 `--dry`、**本班未 push**。
 
 ---
