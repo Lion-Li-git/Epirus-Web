@@ -31,6 +31,11 @@ const GAMES = Number(flag('games', 60));
 const MIRROR = Number(flag('mirror', 40));
 const CHAMPS = String(flag('champion', 'js/bundled-champion-3p.js')).split(',').filter(Boolean);
 const FIELD = flag('field', 'mixed');       // mixed = 1 冠军 + 4 脚本 · self = 5 席同包（DS §10.2 口径）
+/* v1.5.305（Qoder 09-30 夜）· `--belief=1` ⇒ 开"在线对手模型 + 1-ply 重放搜索"档（默认关 = 今天的行为逐字不变）。
+ * 为什么走**全局 setter** 而不是改这两处 `policyChooserN` 调用点：工具里有**两个**建 chooser 的地方（:68 场型、:112 镜像），
+ *   点名传参就得各改一遍并在两处维持同一形状 ⇒ 正是本仓"两份同构实现必漂移"要防的东西。
+ *   `policyChooserN` 在构造时读 `BELIEF_SEARCH` ⇒ 这里设一次，两个调用点自动同形，且门禁/仪器与工具走的仍是同一条路。 */
+const BELIEF = String(flag('belief', '0'));
 /* v1.5.151（DS 09-22 · 用户追问"ε=0 防御 0% 也不太对"时查出）：**装配是比 ε 更大的口径因素** ——
  * 同一包同一 ε=0，镜像（5 席同包）电磁炮 4.30/局，真桌（1 冠 + 4 脚本）只有 0.10/局（43 倍）。
  * ⇒ 一个口径点必须同时报**装配**，否则读数会被误读成"这个包的能力"。
@@ -43,6 +48,8 @@ const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTra
 const SK = R.SK, byKey = R.byKey;
 const SCRIPTS = [B.pickBalanced, B.pickAggro, B.pickDefend, B.pickMix, B.pickFarmer];
 const isDmg = k => !!(byKey[k] && byKey[k].dmg && byKey[k].dmg.amt);
+/* `--belief=1` 就在这里生效一次（见上面 `BELIEF` 那条注释：设一次，两个 chooser 构造点自动同形） */
+if (typeof T.setBeliefSearch === 'function' && BELIEF !== '0') T.setBeliefSearch(1);
 
 function tally() {
   return { acts: 0, def: 0, atk: 0, ring: 0, ji: 0, tgtActs: 0, focus: 0, voided: 0, endgameMultiOnly: 0, rounds: 0, wins: 0, decisive: 0, keys: {}, maxEp: 0 };
@@ -123,7 +130,8 @@ const RUN_AS_MAIN = process.argv[1] && /behavior-profile\.mjs$/.test(process.arg
 if (RUN_AS_MAIN) for (const file of CHAMPS) {
   const params = loadChamp(W, file, ROOT);
   const name = file.replace(/^.*\//, '').replace(/\.bak$/, '').replace(/\.js$/, '');
-  console.log('== ' + name + '（参数量 ' + params.length + ' · temp=' + TEMP + ' epsK=' + EPSK + ' · ' + GAMES + ' 局/点）==');
+  console.log('== ' + name + '（参数量 ' + params.length + ' · temp=' + TEMP + ' epsK=' + EPSK + ' · ' + GAMES + ' 局/点' +
+    (BELIEF === '0' ? '' : ' · **对手模型搜索档=开**') + '）==');
   for (const mode of EPSMODE) {
     for (const eps of EPS) {
      for (const fld of FIELDS) {
