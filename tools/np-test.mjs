@@ -9013,6 +9013,29 @@ t('D202 §E146 的判读器 `analyze-fitcal-ab.mjs` 有牙（合成夹具，<1 �
   ok(/<10/.test(String(few.out || '')), '⑥ 且要点名是环境数不够：' + String(few.out).slice(0, 160));
 });
 
+t('D203 §E147 的 k 粒组合收益曲线工具：它自带的**手算自证**必须随门禁一起跑（不许只在开发时跑过一次）', function () {
+  /* 为什么这样立：`analyze-kpool-capture.mjs` 的算术（贪心挑子集 + split-half 结算 + 逐环境配对区间）
+   * 一旦算错，报出来的就是"备两粒能多赢 3.5pt"这种会直接影响决策的数。开发期它已经抓到过自己三处错：
+   *   ① 夹具把 first=90/games=10 当 0.9 用（⇒ 算出 9.0）；② 份额的分母用了"两向平均"而分子是单向 ⇒ 吐出 101%（§E131 同族）；
+   *   ③ 标签写死"受限池"，拿 15 粒未受限目录跑也照印 ⇒ 假的池子身份。
+   * ⇒ 把它自带的 `--self-test`（六个手算期望值）**搬进门禁**，成本 <5 秒，但以后谁改算式改坏了，门当场红。 */
+  const src = readFileSync('tools/analyze-kpool-capture.mjs', 'utf8');
+  ok(/import \{ pairedDiff \} from '\.\/routing-gain-lib\.mjs'/.test(src),
+    '① 配对区间必须 import lib 那一份 `pairedDiff`（本仓第三处 SE，见 D193/D198/D202 同族规矩）');
+  ok(!/function pairedDiff|Math\.sqrt/.test(src), '① 反向哨兵：这个工具里不许有第二份 SE/标准差公式');
+  ok(/rejectUnknownFlags\(/.test(src), '② 参数守卫必须在（仓规 v1.5.234：不认识的 `--` 要 exit 64，不许静默走默认目录）');
+  ok(/run\(packs, '池子来自 ' \+ DIR/.test(src),
+    '③ 池子身份必须由目录名推出来（写死过一次：拿 15 粒未受限目录跑，屏幕却印"受限池（过体检闸的几粒）"⇒ 假的池子身份比不印更坏）');
+  const r = spawnSync(process.execPath, ['tools/analyze-kpool-capture.mjs', '--self-test'], { encoding: 'utf8', timeout: 120000 });
+  eq(r.status, 0, '④ 手算自证必须整批绿（exit 0）：\n' + String(r.stdout || '').slice(0, 500) + String(r.stderr || '').slice(0, 200));
+  const ticks = (String(r.stdout || '').match(/^ {2}✔ /gm) || []).length;
+  ok(ticks >= 6, '④ 且六条手算期望必须都过（实测 ' + ticks + ' 条 ✔）—— 只 exit 0 不算，红过的那几条会被 `|| true` 之类的写法吞掉');
+  const bad = spawnSync(process.execPath, ['tools/analyze-kpool-capture.mjs', '--nonsense=1'], { encoding: 'utf8', timeout: 60000 });
+  eq(bad.status, 64, '⑤ 不认识的参数必须 exit 64（实测 ' + bad.status + '）');
+  const noDir = spawnSync(process.execPath, ['tools/analyze-kpool-capture.mjs', '--dir=no/such/dir'], { encoding: 'utf8', timeout: 60000 });
+  ok(noDir.status === 2 || noDir.status === 7, '⑥ 目录读不到必须非零退出（实测 ' + noDir.status + '）⇒ "没读到"不许被读成"收益为 0"');
+});
+
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 
 const __nReg = __src.filter(l => /^t\(/.test(l)).length;
