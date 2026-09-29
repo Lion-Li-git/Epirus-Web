@@ -1122,7 +1122,7 @@ node docs/artifacts/e152b-arms.mjs --tables=40 --games=10 --arms=pack,greedy-non
 **结论方向从 §E156b 起一次没变过**：默认关、要开就按席位开。⇒ 待裁的四件（开几席 / ε / 长程目标立不立项 / `bots.js` 那条既有 bug）都在 `docs/OVERNIGHT-2026-09-29-qoder.md` 早上那一页 §4。
 
 **状态**：本班**最终认证树 = §E169 那一批的提交**（v1.5.306：`js/train/evo.js` 两个默认 0 的档 + `tools/behavior-profile.mjs` 珠计数 + `tools/np-test.mjs` 门 D210/D211 + 新仪器 `e169-beadprice.mjs` + 三份文档 + 版本号三处）；
-np **256** 条；整轮四道认证的秒数与窗口照规矩**只记在** `docs/OVERNIGHT-2026-09-29-qoder.md` 的 05:4x 那一节。
+np **256** 条；整轮四道认证的秒数与窗口照规矩**只记在** `docs/OVERNIGHT-2026-09-29-qoder.md` 的 05:5x 那一节（两遍都全绿：`19daf0d` 552.7 s 冷 ‖ **`e3bb477`（含您那两条 + 我这两条 METHODOLOGY）407.9 s 热，窗口 05:54:35→06:02:03**）⇒ **明早取状态请取 `e3bb477`**。
 `js/core/*`、`js/train/policy.js` 一字未动 ⇒ **规则指纹 `ebdbff36` 不变**；两槽冠军未动、`promote` 只 `--dry`、**本班未 push**。
 `js/core/*`、`js/train/policy.js` 一字未动 ⇒ **规则指纹 `ebdbff36` 不变**；两槽冠军未动、`promote` 只 `--dry`、**本班未 push**。
 
