@@ -208,6 +208,19 @@ function runArm(arm, pick, seedBase) {
         const use = v7.length ? v7 : [{ key: R.SK.JI, affordable: true }];
         const cands = P.candidatesFor(s, pid, use, { lockTarget: false });
         if (arm === 'pack') return sel(s, pid, legal);
+        /* `prod-off` / `prod-on`：**走产品那条路**（`ui.js:489` 同一个 `Trainer.pickChampion`，同一个 ε 斜坡与 epsK/soft），
+           唯一区别是 `opts.belief` ⇒ 这样"开档 vs 关档"比的是**发布路径本身**，不是我在仪器里手搓的那份搜索。
+           （§E152b 的教训第四次用得上：同构实现必漂移 ⇒ 能走现成入口就走现成入口。） */
+        if (arm === 'prod-off' || arm === 'prod-on') {
+          const baseF = legal.filter(l => l.affordable);
+          const legalForAI = baseF.length ? baseF : [{ key: R.SK.JI, affordable: true }];
+          const er = s.round <= 1 ? 0 : (s.round === 2 ? 0.1 : 0.2);
+          /* 关档走 `Trainer.pickChampion`（页面那一行原样）；开档走 `policyChooserBelief`（实例级 ⇒ 同桌另一席可以仍关档）。
+             为什么不给 `policyChooserN` 加第六个形参：`tools/guard-cost-lib.mjs` / `seq-reward-lib.mjs` 拿它的签名行当补丁锚点，
+             门 D161 会红（今晚真的红了 ⇒ 记录在 evo.js 那条注释里）。 */
+          const sel2 = arm === 'prod-on' ? T.policyChooserBelief(params, 0.15, er, 5, 'soft') : null;
+          return sel2 ? sel2(s, pid, legalForAI) : T.pickChampion(s, pid, legalForAI, params, 0.15, er, 5, 'soft');
+        }
         if (arm === 'rand') return norm(cands[ds % cands.length]);
         /* 六种"对手下一手从哪来"（§E152b 拆泄漏 / §E152d 拆部件）：
              greedy          = 当场**问脚本策略**（含珠的类型/目标 ⇒ 游戏故意藏的信息，v1.5.15 就当泄漏修掉了）
@@ -262,7 +275,14 @@ function runArm(arm, pick, seedBase) {
       const scriptSeat = function (name) { return rec(function (s, pid, legal) { return asChooser(FN[name])(s, pid, legal); }); };
       const seatFns = [null, null, null, null, null];
       if (MODE === 'duel') {
-        seatFns[0] = rec(function (s, pid, legal) { return sel(s, pid, legal); });   /* 现役包：它的一手也要进信念表（"对撞"时它就是被测方要建模的对手） */
+        /* 对撞的 0 号位 = **发布档的现役包**（走 `Trainer.pickChampion` + 浏览器那套 ε 斜坡 / epsK=5 / 'soft'），
+           不是训练侧那个 `policyChooserN(params,0.15)` ⇒ 否则"打赢现役"里会掺进"对手被我换成了没探索的版本"。 */
+        seatFns[0] = rec(function (s, pid, legal) {
+          const bf = legal.filter(l => l.affordable);
+          const lfa = bf.length ? bf : [{ key: R.SK.JI, affordable: true }];
+          const er = s.round <= 1 ? 0 : (s.round === 2 ? 0.1 : 0.2);
+          return T.pickChampion(s, pid, lfa, params, 0.15, er, 5, 'soft', null);
+        });
         seatFns[1] = subject;
         seatFns[2] = scriptSeat(pk4[0]); seatFns[3] = scriptSeat(pk4[1]); seatFns[4] = scriptSeat(pk4[2]);
       } else {

@@ -126,6 +126,9 @@ function predict(table, key, dflt) {
 }
 
 const KINDS = ['K1', 'K2', 'K3', 'K4'];
+/* 顺手把**经验分布**导成 JSON（单一真源：这份表就是上面那台解析器产的，别让下一个人再手抄一遍人类行为）
+   ⇒ 下游 `e155-humanpool.mjs` 用它造"像人一样的脚本"，把 §E152d 的建模收益从脚本桌搬到"人类形状"的环境上。 */
+const EMP = { human: {}, ai: {} };
 const acc = {};   /* kind -> {human:{tot,hit}, ai:{tot,hit}} */
 for (const k of KINDS) { acc[k] = { human: { tot: 0, hit: 0 }, ai: { tot: 0, hit: 0 } }; }
 /* 表**跨局不共享**（每局独立在线学 ⇒ 与 §E152d 的 `b-ingame` 同口径；人类/AI 各一张表，避免互相污染） */
@@ -155,6 +158,7 @@ for (const f of files) {
         acc[kind][who].tot++; if (p === pl.card) acc[kind][who].hit++;
         let m = tabs[who].get(who + '|' + key); if (!m) { m = {}; tabs[who].set(who + '|' + key, m); }
         m[pl.card] = (m[pl.card] || 0) + 1;
+        if (kind === 'K4') { const e = EMP[who]; e[key] = e[key] || {}; e[key][pl.card] = (e[key][pl.card] || 0) + 1; }
         hist[i].push({ card: pl.card });
       }
     }
@@ -185,3 +189,12 @@ mkdirSync(REPO + OUT, { recursive: true });
 writeFileSync(REPO + OUT + '/games.tsv', ['file\tmode\tseats\trounds\thpUnmatched\tepViol\tepActs'].concat(
   games.map(x => [x.path, x.mode, x.seats, x.rounds, x.unmatched, x.epViol, x.epActs].join('\t'))).join('\n') + '\n');
 console.log('  逐局清单 → ' + OUT + '/games.tsv');
+/* 导成**入库**的文件（`*-out/` 被 .gitignore 忽略 ⇒ 经验分布必须放在 `docs/artifacts/` 顶层，否则下一班会拿到结论却拿不到数据） */
+writeFileSync(REPO + 'docs/artifacts/human-behavior.json', JSON.stringify({
+  generatedBy: 'docs/artifacts/e152e-human.mjs',
+  note: '键 = S<席>@<钱档 ep>>1 截 5>/<ep>=5>/<上一手显示名>；值 = {卡显示名: 次数}。席号在人类日志里 1=人类、2~5=产品 AI。'
+    + ' ⚠ ep 是从效果行反推的（违反率 ' + (100 * ev / Math.max(1, ea)).toFixed(1) + '%）⇒ 钱档只当**分档**用，别当精确余额。',
+  games: games.length, rounds: games.reduce((s, x) => s + x.rounds, 0),
+  epViolRate: ev / Math.max(1, ea), human: EMP.human, ai: EMP.ai
+}, null, 1));
+console.log('  经验分布 → docs/artifacts/human-behavior.json（人类键 ' + Object.keys(EMP.human).length + ' 个 ‖ AI 键 ' + Object.keys(EMP.ai).length + ' 个）');

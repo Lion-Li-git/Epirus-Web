@@ -542,6 +542,14 @@
   function policyChooserN(params, temp, eps, epsK, epsMode) {
     params = normChampParams(params);
     const legacy = LEGACY(params);
+    /* 实例级开关走 `__pendingBelief`（由 `policyChooserBelief` 在**构造期间**置位），不给这条签名加形参 ——
+       理由见下面那条锚点警告。全局档（页面/训练）仍由 `BELIEF_SEARCH` 控。 */
+    const bsMine = BELIEF_SEARCH === 1 || __pendingBelief === true;
+    /* 信念搜索的开关：**模块级** `BELIEF_SEARCH`（页面/训练整档，用 `setBeliefSearch` 控）。
+     * ⚠ 这一行**不许加第六个形参**：`tools/guard-cost-lib.mjs:94` 与 `tools/seq-reward-lib.mjs:81` 都把
+     *   `  function policyChooserN(params, temp, eps, epsK, epsMode) {` 整行当**补丁锚点**（route ①：打进内部调用点），
+     *   改签名就等于悄悄拆掉两道量具的锚 —— 门 D161 正是这么红给我看的（它抛"锚点没找到"而不是静默不补丁 = 设计意图）。
+     *   要"一席开、一席关"（对撞/评测必需）请走 `policyChooserBelief`，它是**包一层**，不动这条签名。 */
     return function (state, pid, legal) {
       const aff = legal.filter(function (l) { return l.affordable; });
       const base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
@@ -563,6 +571,8 @@
        * ⚠ 启发式而非定律：收入 >1/回合（聚能环第 3 次起 +3、避雷针 +4）时 ep=1 蓄能也可能成立。 */
       const v7base = econBase(state, pid, base);
       const cands = P.candidatesFor(state, pid, v7base, { lockTarget: lastCancelOther(state, pid) });
+      /* v1.5.30x：**默认关**的在线对手模型 + 1-ply 重放搜索（`setBeliefSearch(1)`）。
+         关档时这一行短路都不进 ⇒ 现网行为逐字不变（门 D2xx 钉"默认值 / 关档逐字同结果 / 开档真的改变选择"三段）。 */
       /* ===== v1.5.139（用户 09-21 晨裁定：ε=0.25 全候选太糙，出现"贴贴不引爆/空爆"昏手，要"均匀但随机性小"）=====
        * 探索不再在**全体候选**上均匀采（那样会采到天火空爆、无意义贴贴这类网络几乎不给分的废着），
        * 而是：取网络打分前 K 的**不同技能键**（按各键最好候选的概率排序），在其中均匀采一个键、
@@ -570,7 +580,13 @@
        *   降到 ~30 回合、100% 决胜），又把昏手率压到近零（5 席空爆/局：全候选 0.77 → top5 键 0.07）。
        * `epsK` 默认 5；只在**浏览器运行时**（ui 传 eps>0）生效，训练/评测/门禁 eps=0 ⇒ 读数逐字不变。 */
       let pick;
-      const greedyOf = function () { return P.chooseCandidates(state, pid, cands, params, { temp: temp }); };
+      const greedyOf = function () {
+        /* v1.5.305：开档时**只有"贪心那一支"换成搜索**，探索支一字不动 ⇒ ε 的 rng 消耗与关档逐字相同。
+           （门 D204⑧ 一开始就是为这条而红的：我先前把钩子挂在 ε 之前、又在搜索里自己抽了一次 ε ⇒
+            `policyChooserBelief` 与 `policyChooserN` 的随机流错开一格，整局选择序列完全不同 ⇒ 同构漂移被抓现行。） */
+        if (bsMine) { const bs = beliefSearchPick(state, pid, cands, params); if (bs) return bs; }
+        return P.chooseCandidates(state, pid, cands, params, { temp: temp });
+      };
       if (eps && state.rng.next() < eps && cands.length) {
         /* v1.5.141（#26 · 用户实机"防御偏多、丢了集火和滚环"）：`epsMode='soft'` 时探索**不得覆盖**
          * 贪心已经选定的"防御类型 / 聚能环"两型出手。理由不是审美，是算术：同一包同一装配下，均匀抽 top-K
@@ -663,10 +679,120 @@
       return { key: pick.key, target: pick.target, target2: pickTarget2N(state, pid, pick.key, pick.target), bead: pick.bead };
     };
   }
+  /* ===== v1.5.30x（Qoder 09-30 夜 · **默认关**）· 在线对手模型 + 1-ply 引擎重放搜索 =====
+   * 病名与价签（`docs/RESEARCH-LOG-2026-09-28-qoder.md` §E152d/§E153 ‖ 仪器 `docs/artifacts/e152b-arms.mjs`）：
+   *   ① 只在一局之内、按**席位身份**的在线频次表 + 搜索 ⇒ 打脚本桌 **+44.08pt [34.81,53.36]**（60 桌 × 20 局 · n=1200 局/臂）；
+   *   ② 与现役包**同桌正面对撞** ⇒ **+66.00pt [59.46,72.54]**（同桌的包席从 33~37% 掉到 5.00%）；
+   *   ③ 代价：一次决策 25.9 个候选 × 0.075 ms 重放 = **1.95 ms**，四席一回合约 8 ms（`docs/artifacts/e153-cost.mjs`）；
+   *   ④ 对照：把行为统计塞进网络特征，每席只装得下 1~4 个量 ⇒ 只有 **+7.83 / +15.50pt**，却要付 `FEAT_S` 换代 + 规则指纹真的变。
+   *   ⇒ 所以这条路**不碰 `policy.js`**、不动 `FEAT_S`、不动指纹；关档（`BELIEF_SEARCH === 0`）时下面这些函数一次都不进，
+   *     现网行为逐字不变（门 D2xx 钉"关档 = 直接调 policyChooserN 的逐字同结果"）。
+   * ⚠ 只用**公开信息**：条件量是"决策点上谁都能看见的"（该席 ep 档 / 是否富有 / 上一手），
+   *   学习信号是 `state.events` 里**已经发生**的 `action` 事件（含人类那一手）⇒
+   *   珠的**类型**、未出手的**目标**一概不读（v1.5.15 那条泄漏红线在这里同样成立）。
+   * ⚠ 评估函数是"本回合结算后的血量优势"（**近视**）。把现役包 logit 当评估的混合版**已否证**：
+   *   同批 200 局/臂，`hyb-none` 比现役包还差 **28.00pt**（§E153）⇒ 网络的 logit 是"同一状态内候选之间的偏好"，不是跨状态可比的价值。 */
+  let BELIEF_SEARCH = 0;
+  let __pendingBelief = false;                  /* 只在 `policyChooserBelief` 的**构造期间**为真 ⇒ 实例级开关，不动 `policyChooserN` 的签名 */
+  const BELIEF_BEAM = 48;                       /* 候选数上界（浏览器保护；现役包实测均值 25.9 ⇒ 正常不触发） */
+  function setBeliefSearch(v) { BELIEF_SEARCH = (v && String(v) !== '0' && Number(v) !== 0) ? 1 : 0; }
+  function beliefSearchOn() { return BELIEF_SEARCH; }
+  /* 签名里**不放**"有无持珠"：§E152d 诊断列量到决策点上每一次持珠（四批累计 1902 次）其上一手都是 `蓄能`
+   * ⇒ 那一维被"上一手"完全解释（机制上必然：珠只在蓄能的下一回合存在，`state.js:13` + `resolve.js:1264-1268`）。 */
+  function beliefSig(p) { return [Math.min(5, p.ep >> 1), p.ep >= 5 ? 1 : 0, p.lastSkill || '-'].join('/'); }
+  /* 每局一份、挂在 state 上的**不可枚举**槽位：`S.cloneState` 走 JSON ⇒ 克隆体天然不带它，
+   * 所以搜索内部的推演既读不到、也写不坏外面这份表（这是把"信念"放进引擎侧而不污染重放的关键一步）。 */
+  function beliefScratch(state) {
+    const b = state.__bel;
+    if (b) return b;
+    const fresh = { round: -1, sig: null, seen: 0, tab: new Map(), n: 0, hit: 0 };
+    try { Object.defineProperty(state, '__bel', { value: fresh, enumerable: false, writable: true, configurable: true }); }
+    catch (e) { return null; }
+    return fresh;
+  }
+  function beliefSync(state) {
+    const b = beliefScratch(state); if (!b) return null;
+    if (b.round === state.round) return b;
+    /* 回合号一变，先把**上一回合真发生的**每一手喂进表：键 = 上一回合决策点上的（席位,签名），值 = 那手卡 */
+    if (b.sig) {
+      const ev = state.events;
+      for (let i = b.seen; i < ev.length; i++) {
+        const e = ev[i];
+        if (!e || e.type !== 'action') continue;
+        const k = b.sig[e.pid]; if (k == null) continue;
+        let m = b.tab.get(k); if (!m) { m = {}; b.tab.set(k, m); }
+        m[e.key] = (m[e.key] || 0) + 1;
+      }
+    }
+    b.round = state.round;
+    b.sig = [];
+    for (let i = 0; i < state.p.length; i++) b.sig[i] = i + '@' + beliefSig(state.p[i]);
+    b.seen = state.events.length;
+    return b;
+  }
+  function beliefPredict(b, pid) {
+    const m = b.tab.get(b.sig[pid]); if (!m) return R.SK.JI;
+    let best = R.SK.JI, bv = -1;
+    for (const k in m) if (m[k] > bv) { bv = m[k]; best = k; }
+    return best;
+  }
+  function beliefValue(st, pid) {
+    const me = st.p[pid];
+    let sum = 0, n = 0;
+    for (let i = 0; i < st.p.length; i++) if (i !== pid && st.p[i].hp > 0) { sum += st.p[i].hp; n++; }
+    return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (n ? sum / n : 0);
+  }
+  function beliefSearchPick(state, pid, cands, params) {
+    const b = beliefSync(state); if (!b || !cands || !cands.length) return null;
+    /* ⚠ 这里**不许抽 `state.rng`**：探索的 ε 由调用方（`greedyOf` 所在的那条支）抽，一次决策只该有一次抽取。
+       多抽一次就让开/关两档的随机流错开一格 ⇒ 整局轨迹分叉（门 D204⑧ 就是这么抓到我的）。 */
+    const N = state.p.length;
+    const others = [];
+    for (let i = 0; i < N; i++) {
+      if (i === pid || state.p[i].hp <= 0) continue;
+      let k = beliefPredict(b, i);
+      const lg = Play.legalActions(state, i);
+      const aff = {};
+      for (let j = 0; j < lg.length; j++) if (lg[j].affordable) aff[lg[j].key] = 1;
+      if (!aff[k]) k = R.SK.JI;                     /* 预测那张卡这回合他打不起 ⇒ 退回 1 ジ（公开可算） */
+      others.push({ pid: i, key: k });
+    }
+    /* 候选过多时按网络打分留前 BELIEF_BEAM 个（浏览器上界保护；现役包实测均值 25.9 ⇒ 正常不触发）。
+       `X` 在这里就地取，不放模块顶层：`evo.js` 原来不依赖 `EpirusResolve`，不想为了这一档改加载顺序假设。 */
+    const X = global.EpirusResolve;
+    let pool = cands;
+    if (cands.length > BELIEF_BEAM) {
+      const scored = [];
+      for (let i = 0; i < cands.length; i++) scored.push({ c: cands[i], v: P.value(state, pid, cands[i].key, params, null, cands[i]) });
+      scored.sort(function (a, x) { return x.v - a.v; });
+      pool = scored.slice(0, BELIEF_BEAM).map(function (s) { return s.c; });
+    }
+    let best = null, bv = -1e18;
+    for (let ci = 0; ci < pool.length; ci++) {
+      const q = S.cloneState(state);
+      q.rng = { next: mulberry32((((state.round | 0) + 1) * 2654435761 + pid * 7919 + ci * 104729) >>> 0) };
+      S.attemptAction(q, pid, pool[ci].key, { bead: pool[ci].bead, target: pool[ci].target, target2: pool[ci].target2 });
+      for (let o = 0; o < others.length; o++) S.attemptAction(q, others[o].pid, others[o].key, {});
+      X.resolveActions(q); X.endTurn(q);
+      const v = beliefValue(q, pid);
+      if (v > bv + 1e-9) { bv = v; best = pool[ci]; }
+    }
+    if (!best) return null;
+    return { key: best.key, target: best.target == null ? null : best.target, target2: best.target2 == null ? null : best.target2, bead: best.bead || null };
+  }
+
   /* v7：页面/工具的统一入口（候选感知 + 旧包自动回退）。
    * 返回 {key,target,target2,bead} —— 调用方**整个交给引擎**（play.js 的 normPick 认这个形状）。 */
   function pickChampion(state, pid, legal, params, temp, eps, epsK, epsMode) {
     return policyChooserN(params, temp, eps, epsK, epsMode)(state, pid, legal);
+  }
+  /* 实例级的"开档"入口（对撞/评测用）：**只是给构造过程挂个标记**，候选枚举、ε 探索、退回路径全都还是 `policyChooserN` 那一份。
+   * ⚠ 我第一版在这里自己重写了"affordable → econBase → candidatesFor"三行（本仓"两份同构实现必漂移"的第五次诱惑），
+   *   门 D204⑧ 用"eps=1 必须与 `policyChooserN` 逐字相同"把它判红 ⇒ 现在的形状没有第二份实现可漂。 */
+  function policyChooserBelief(params, temp, eps, epsK, epsMode) {
+    __pendingBelief = true;
+    try { return policyChooserN(params, temp, eps, epsK, epsMode); }
+    finally { __pendingBelief = false; }
   }
 
   /* 脚本 chooser 包一层（补目标），供 N 人局使用 */
@@ -2934,6 +3060,7 @@ let WALL_GAMES = 3;
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
+    setBeliefSearch, beliefSearchOn, policyChooserBelief,
     setTrainEps, trainEps, countTrainEps, resetTrainEpsStat   // v1.5.237 E28：训练侧执行口径旋钮（默认关）+ **开火计数**
   };
 })(typeof window !== 'undefined' ? window : globalThis);

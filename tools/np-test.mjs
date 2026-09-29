@@ -9062,6 +9062,130 @@ t('D203 §E147 的 k 粒组合收益曲线工具：它自带的**手算自证**�
   ok(noDir.status === 2 || noDir.status === 7, '⑥ 目录读不到必须非零退出（实测 ' + noDir.status + '）⇒ "没读到"不许被读成"收益为 0"');
 });
 
+t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `setBeliefSearch(1)` / 页面 `localStorage.epirus.beliefSearch`）有牙', function () {
+  /* 为什么有这条（09-30 夜 §E152d/§E153，Qoder）：五臂分解把现役 AI 的病名定成"**没有对手模型**"，
+   *   而"加几维进网络"只买得到 +7.83 / +15.50pt（每席 1~4 个量，60 桌 × 20 局），大头 +44.08pt [34.81, 53.36]
+   *   要求"席位 → 具体卡名分布"这种表状结构 ⇒ 于是做成**决策时搜索**，不动 `policy.js`/`FEAT_S`/规则指纹。
+   * 发布路径的实测（`docs/artifacts/e152b-arms.mjs` · 40 桌 × 10 局 · 逐桌配对 · 关档走 `pickChampion`、开档走 `policyChooserBelief`）：
+   *   关档 **31.50%** ‖ 开档 **74.75%** ⇒ **+43.25pt [33.54, 52.96]**；同桌对撞（0 号位=发布档现役包）**+66.00pt [59.46, 72.54]**。
+   * ⚠ 本门是**行为门**，不是文本钉（D190 那种"纯静态、零判据"的门本仓已经点过名）：
+   *   四段全部跑真引擎，且关/开用**同一批 seed** ⇒ 配对成立；④ 专门打"假复位"。 */
+  const EVO = readFileSync('js/train/evo.js', 'utf8');
+  const UI = readFileSync('js/ui/ui.js', 'utf8');
+  const mkSb = function () {
+    const s3 = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, decodeURIComponent };
+    s3.window = s3; s3.globalThis = s3;
+    for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
+      'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) vm.runInNewContext(readFileSync(f, 'utf8'), s3, { filename: f });
+    return s3.window;
+  };
+  /* 跑一批固定 seed 的 5 人局：0 号位是候选（开/关两档），其余四席是可学习的固定型脚本
+     ⇒ 脚本必须**有规律**，否则"信念表有没有在工作"这件事根本测不到（§口径陷阱：反事实要先证明扰动进得去） */
+  function batch(on, games, collect) {
+    const W = mkSb(), T = W.EpirusTrainer, S = W.EpirusState, R = W.EpirusRules, P = W.EpirusPolicy, Play = W.EpirusPlay;
+    const mm = readFileSync('js/bundled-champion-3p.js', 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
+    const params = P.unpack(JSON.parse(mm[1]), true);
+    if (!params) throw new Error('夹具读不到出厂 3P 包');
+    T.setBeliefSearch(on ? 1 : 0);
+    const scripted = function (s, pid, legal) {
+      const aff = legal.filter(function (l) { return l.affordable; });
+      let gun = null;
+      for (let i = 0; i < aff.length; i++) if (aff[i].key === R.SK.GUN) { gun = aff[i]; break; }
+      if (!gun) return { key: R.SK.JI, target: null };
+      let tg = (pid + 1) % s.p.length;
+      if (!s.p[tg] || s.p[tg].hp <= 0) tg = pid;
+      return { key: R.SK.GUN, target: tg };
+    };
+    const out = [];
+    for (let g = 0; g < games; g++) {
+      const st = S.createState('multi', { next: T.mulberry32(555 + g * 7919) }, 5);
+      if (T.slotSaltFor) st.slotSalt = T.slotSaltFor(555 + g * 7919);
+      const sub = T.policyChooserN(params, 0.15, 0.2, 5, 'soft');
+      Play.autoGameN(st, [sub, scripted, scripted, scripted, scripted]);
+      const row = { winner: st.winner, round: st.round };
+      if (collect) row.bel = st.__bel ? st.__bel.tab.size : -1;      /* 非枚举槽位：JSON 里看不见，同进程引用读得到（⑦ 用它证明"表真的在长") */
+      out.push(row);
+    }
+    return out;
+  }
+  const sig = function (rows) { return rows.map(function (r) { return r.winner + '/' + r.round; }).join(' '); };
+  /* ① 出厂必须关（干净沙箱里读，别用共享 `T` —— 它早被别的门喂过值） */
+  const W0 = mkSb();
+  eq(W0.EpirusTrainer.beliefSearchOn(), 0, '① 出厂必须是 0（实测 ' + W0.EpirusTrainer.beliefSearchOn() + '）⇒ 开档必须是点名行为，不是默认');
+  ok(/let BELIEF_SEARCH = 0;/.test(EVO), '① 源码里的默认值必须是 `let BELIEF_SEARCH = 0`（被人改成 1 = 悄悄改了线上 AI 的行为）');
+  /* ② setter 的口径：env/CLI 下达全是字符串，`'0'` 被当真是本仓反复踩的形状 */
+  W0.EpirusTrainer.setBeliefSearch('0'); eq(W0.EpirusTrainer.beliefSearchOn(), 0, "② 字符串 '0' 必须判成关");
+  W0.EpirusTrainer.setBeliefSearch(0); eq(W0.EpirusTrainer.beliefSearchOn(), 0, '② 数字 0 必须判成关');
+  W0.EpirusTrainer.setBeliefSearch('1'); eq(W0.EpirusTrainer.beliefSearchOn(), 1, '② 字符串 "1" 必须判成开');
+  /* ③ 开档真的改变了行为（钩子若被注释掉/短路成不返回，这段立刻红）+ 方向必须是"更强" */
+  const OFF = batch(false, 12, false), ON = batch(true, 12, true);
+  ok(sig(OFF) !== sig(ON), '③ 同 seed 下开档必须至少改变一局的结果（关/开逐字相同 = 钩子根本没接上，D174 那一族）');
+  const winO = OFF.filter(r => r.winner === 0).length, winN = ON.filter(r => r.winner === 0).length;
+  ok(winN >= winO + 3, '③ 方向：12 局里开档夺冠数必须比关档多 ≥3（实测 关=' + winO + ' 开=' + winN + '）⇒ 大样本是 31.50%→74.75%，掉回来就是坏了');
+  /* ④ 复位必须真能抹掉：再跑一遍关档，要与 ③ 的关档基线**逐字相同**（"读回接口是关、作用点还开着"= 假复位） */
+  eq(sig(batch(false, 12, false)), sig(OFF), '④ 关掉之后必须逐字回到基线（否则 `setBeliefSearch(0)` 没复位干净，历史臂就不可比）');
+  /* ⑤ 信念表确实在长（不是每次都退回默认的 ジ） */
+  const sizes = ON.map(r => r.bel);
+  ok(sizes.every(function (n) { return n > 0; }), '⑤ 开档的每局都该攒到非空表（实测 ' + sizes.join(',') + '）⇒ 表为空 = 学习信号从没进来');
+  /* ⑥ 泄漏红线：签名只许用**公开信息**（珠的类型、未出手的目标在 v1.5.15 就是当 bug 修的） */
+  const bsig = /function beliefSig\(p\)[\s\S]{0,220}/.exec(EVO);
+  ok(bsig, '⑥ 找不到 `beliefSig`（学习条件量的唯一来源）');
+  ok(!/elec|boom|bead|lastTarget|target/.test(bsig[0]),
+    '⑥ `beliefSig` 里不许出现珠类型/目标这类私有信息（实测 ' + bsig[0].replace(/\s+/g, ' ').slice(0, 120) + '）');
+  /* ⑦ 接线：页面侧的旋钮必须真的送到引擎（"闸放行 ≠ 线接通"，DS 今天立的那条） */
+  ok(/localStorage\.getItem\('epirus\.beliefSearch'\)/.test(UI) && /Trainer\.setBeliefSearch\(bsOn\)/.test(UI),
+    '⑦ `js/ui/ui.js` 必须读 `epirus.beliefSearch` 并调用 `Trainer.setBeliefSearch`（少了后半句 = 键能设但送不到作用点）');
+  ok(/if \(bsMine\) \{ const bs = beliefSearchPick\(state, pid, cands, params\); if \(bs\) return bs; \}/.test(EVO),
+    '⑦ 作用点必须在 `greedyOf` **内部**（只换"贪心那一支"，探索支不许动）——挂在 ε 之前会多抽一次随机数，开/关两档的轨迹就分叉了');
+  ok(!/state\.rng\.next\(/.test(/function beliefSearchPick[\s\S]{0,1200}/.exec(EVO)[0]),
+    '⑦ `beliefSearchPick` 里不许抽 `state.rng`（一次决策只该有一次 ε 抽取；多抽 = 同构漂移的另一半）。' +
+    '⚠ 这条一开始写成"不许出现 state.rng"，结果被我自己的注释（"不许抽 `state.rng`"）判红 ⇒ 钉代码形状，不钉措辞');
+  /* ⑧ 防漂移。这条判据我连写错两次，两次都被自己抓住，如实记下来免得下一个人再错：
+     ✘ 第一版写"eps=1 时两把工厂必须给同样的选择" ⇒ 错：开档本来就该改变软豁免路径下的那一手，选择**应该**不同。
+     ✘ 第二版写"开档不许多抽 `state.rng`" ⇒ 也错：搜索是确定性的，开了就不再走网络采样 ⇒ 抽数**必然变少**（实测 270 → 0）。
+     ✓ 真正必须钉的是两件事：(a) **不许存在第二份候选枚举**（本仓"两份同构实现必漂移"第五次诱惑，我第一版工厂确实自己重写了三行）；
+        (b) 开档必须**可复现**（同 seed 同结果 ⇒ 排除 `Math.random`/对象身份这类隐形输入）。 */
+  {
+    const fac = /function policyChooserBelief\([\s\S]{0,420}?\n  \}/.exec(EVO);
+    ok(fac, '⑧ 找不到 `policyChooserBelief`');
+    ok(fac[0].indexOf('policyChooserN(') >= 0, '⑧ 工厂必须**委派**给 `policyChooserN`（自己枚举一份 = 第二份实现，必漂）');
+    ok(fac[0].indexOf('candidatesFor(') < 0 && fac[0].indexOf('econBase(') < 0,
+      '⑧ 工厂里不许出现 `candidatesFor`/`econBase`（候选口径只许有一份真源；今晚第一版就是在这里漂掉的）');
+    const trace = function () {
+      const W = mkSb(), T = W.EpirusTrainer, S = W.EpirusState, P = W.EpirusPolicy, Play = W.EpirusPlay;
+      const mm2 = readFileSync('js/bundled-champion-3p.js', 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
+      const pp = P.unpack(JSON.parse(mm2[1]), true);
+      const f = T.policyChooserBelief(pp, 0.15, 0);
+      const others = function (s2, pid2, legal) { const lg = legal.filter(function (l) { return l.affordable; }); return lg.length ? lg[0].key : R.SK.JI; };
+      const seen = [];
+      for (let g = 0; g < 3; g++) {
+        const seed = 4242 + g * 977;
+        const st = S.createState('multi', { next: T.mulberry32(seed) }, 5);
+        if (T.slotSaltFor) st.slotSalt = T.slotSaltFor(seed);
+        Play.autoGameN(st, [f, others, others, others, others]);
+        seen.push(st.winner + '/' + st.round);
+      }
+      return seen.join(',');
+    };
+    eq(trace(), trace(), '⑧ 开档必须可复现（同 seed 两次跑出不同结果 = 混进了 `Math.random`/对象身份这类隐形输入，A/B 不可信）');
+    ok(trace() !== 'undefined/0,undefined/0,undefined/0', '⑧ 复现检查不许是"两批空跑"（真的量到了局）');
+  }
+  /* ⑨ 锚点纪律（今晚 D161 真红过一次换来的）：两道量具拿 `policyChooserN` 的**签名整行**当补丁锚点。
+     钉法是"从两个库源码里把锚字符串抠出来，再要求 evo.js 逐字含有它"—— 而不是我再抄一遍那行字
+     （抄第三份 = 制造下一次"改了一处漏两处"，本仓那条老规矩）。 */
+  {
+    const anchors = [];
+    for (const lib of ['tools/guard-cost-lib.mjs', 'tools/seq-reward-lib.mjs']) {
+      const m = /const A = '(  function policyChooserN[^\n]*?)';/.exec(readFileSync(lib, 'utf8'));
+      ok(m, '⑨ ' + lib + ' 里抠不到 `policyChooserN` 的锚字符串（库的形状改了 ⇒ 这条纪律要跟着改写法，不许直接删断言）');
+      anchors.push(m[1]);
+    }
+    eq(anchors[0], anchors[1], '⑨ 两道量具的锚必须是**同一行字**（各自一份就会有一天各改各的）');
+    ok(EVO.indexOf(anchors[0]) >= 0,
+      '⑨ `evo.js` 里必须逐字含有这一行签名（被改 = 两道量具的 route ① 静默失配；D161 今晚就是这么红的）');
+  }
+});
+
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 
 const __nReg = __src.filter(l => /^t\(/.test(l)).length;

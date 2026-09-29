@@ -432,6 +432,14 @@
 
   /* 多人 AI：困难 = 3P 冠军（缺失则回退脚本自适应） */
   function chooseAIMulti(state, pid, legal) {
+    /* ===== v1.5.30x · 页面侧调试旋钮：**在线对手模型 + 1-ply 重放搜索**（默认关）=====
+     * 开法：控制台 `localStorage.setItem('epirus.beliefSearch','1')` ⇒ **下一手就生效**（不必重开一局）。
+     * 为什么每次决策都重读一次 localStorage：这一档是给"实机对比手感"用的，不是发布特性 ⇒
+     *   宁可多花微秒级的一次读，也不要"改了要刷新页面"那种会被误判成"没生效"的形状。
+     * 关掉时 `evo.js` 里那条短路根本不进 ⇒ 现网行为逐字不变（凭据在门 D2xx 的三段式里，不是这句话里）。 */
+    let bsOn = 0;
+    try { bsOn = localStorage.getItem('epirus.beliefSearch') === '1' ? 1 : 0; } catch (e) { bsOn = 0; }
+    if (Trainer.setBeliefSearch) Trainer.setBeliefSearch(bsOn);
     function finish(res) {
       const key = (typeof res === 'string') ? res : (res && res.key);
       const t1 = (res && typeof res === 'object' && res.target != null) ? res.target : pickTargetFor(state, pid, key);
