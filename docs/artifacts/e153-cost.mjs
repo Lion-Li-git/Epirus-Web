@@ -70,14 +70,16 @@ for (let g = 0; g < GAMES; g++) {
     msSearch += Number(process.hrtime.bigint() - t0) / 1e6;
     return norm(best);
   };
-  /* 对照：现役包自己一次决策要多久（它就是产品现在每一格 AI 的真实开销） */
-  const probe = function (s, pid, legal) {
+  /* 对照：现役包自己一次决策要多久（它就是产品现在每一格 AI 的真实开销）。
+     ⚠ 计时要挂在**真的被调到的那条路**上：我第一版另写了一个从没进 `autoGameN` 的 `probe` ⇒ `packCalls=0`、除数是 0、印出 NaN。
+     ⚠ 且复用每局建好的 `sel`，不要把 `policyChooserN(...)` 的**构造**成本算进单次决策（产品是每局建一次）。 */
+  const mk = i => function (s, pid, legal) {
     const t0 = process.hrtime.bigint();
-    const r = sel(s, pid, legal);
+    const lg = legal.filter(l => l.affordable);
+    const c = sel(s, pid, lg.length ? lg : legal);
     msPack += Number(process.hrtime.bigint() - t0) / 1e6; packCalls++;
-    return r;
+    actual[pid] = norm(c); return actual[pid];
   };
-  const mk = i => function (s, pid, legal) { const lg = legal.filter(l => l.affordable); const c = T.policyChooserN(params, 0.15)(s, pid, lg.length ? lg : legal); actual[pid] = norm(c); return actual[pid]; };
   const onTurn = function () {
     for (let i = 1; i < 5; i++) {
       if (!keyAt || !keyAt[i] || !actual[i]) continue;
@@ -90,6 +92,7 @@ for (let g = 0; g < GAMES; g++) {
   rounds += st.round;
 }
 const perDec = msSearch / dec, perResolve = msResolve / cands;
+if (!packCalls) { console.error('⛔ 一次"现役包决策"都没计时到 ⇒ 对照那条路没接上，倍差不存在（别印 NaN 糊过去）'); process.exit(1); }
 console.log('# §E153 算力可行性 ‖ 局=' + GAMES + ' ‖ 被测席决策 ' + dec + ' 次');
 console.log('  每决策候选数（= 重放次数）均值 ' + (cands / dec).toFixed(1));
 console.log('  单次重放 resolve ' + perResolve.toFixed(3) + ' ms   ‖ 一次搜索决策合计 ' + perDec.toFixed(2) + ' ms');
