@@ -1148,6 +1148,8 @@ np **256** 条；整轮四道认证的秒数与窗口照规矩**只记在** `doc
 **状态**：本班**最终认证树 = `b3d43b4`**（§E170 那批更正：`CHANGELOG.md` 两条就地标注 + 新 §E170 条 + `docs/METHODOLOGY.md` §87 + 四份日志），
 整轮四道全绿：窗口 **06:26:07→06:33:41**，np **256/256 · 411.6 s**（只动文档 ⇒ 热跑）‖ spec 52/52 · 0.2 s ‖ smoke OK · 12.8 s ‖ battle OK · 29.8 s，`rc=0` ⇒ **明早取状态请取 `b3d43b4`**。
 `js/core/*`、`js/train/policy.js`、两个出厂包**相对 `origin/main` 字节级一字未动**（06:2x 复算 `git diff --stat` 输出为空）⇒ **规则指纹 `ebdbff36` 不变**；两槽冠军未动、`promote` 只 `--dry`、**本班未 push**。
+⚠ 其后 06:3x 还做了 **§E171 页面级复验**（真 Chrome 加载 `index.html`：出厂默认全 0、`tie/bead/ring` 在页面上存在但没人调、`epirus.beliefSearch` 开关**活且可逆**、页面形状每决策中位 关档 0.20 ms / 开档 0.90 ms、控制台零报错）
+⇒ 那一批**只动不被门读取的日志**（RESEARCH-LOG / OVERNIGHT / HANDOFF）⇒ **认证继续成立，无需重跑**。
 
 
 
