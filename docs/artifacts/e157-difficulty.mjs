@@ -70,6 +70,10 @@ function packSeat(belief) {
 }
 /* 剂量档：`--on=0/1/2/3/4` ⇒ 四席 AI 里有几席开档（其余关档）。默认 4 = 全开对全关。 */
 const ON = Number(arg('on', 4));
+/* §E161d：`--tie=1` ⇒ 开档席的平票交给网络打分（§E161c 那个"零代价但更凶"的档）。默认 0 = §E157 已量过那一版。
+   这条要在裁定"开几席"之前量，因为**要开的是最好的那一版，不是最早的那一版**。 */
+const TIE = Number(arg('tie', 0));
+if (TIE && typeof T.setBeliefTie === 'function') T.setBeliefTie(TIE);
 function run(beliefCount) {
   const rows = [];
   for (let t = 0; t < TABLES; t++) {
@@ -90,7 +94,7 @@ function run(beliefCount) {
   return rows;
 }
 const { pairedDiff } = await import('file://' + REPO + 'tools/routing-gain-lib.mjs');
-console.log('# §E157 玩家侧难度 ‖ 0 号位=人类形状代表 ‖ 1~4 号位=现役包（开档席数=' + ON + '） ‖ 桌=' + TABLES + ' × 局=' + GAMES);
+console.log('# §E157 玩家侧难度 ‖ 0 号位=人类形状代表 ‖ 1~4 号位=现役包（开档席数=' + ON + ' · tie=' + TIE + (TIE ? '，平票交给网络打分' : '，§E157 原形状') + '） ‖ 桌=' + TABLES + ' × 局=' + GAMES);
 const A = run(0), B = run(ON);
 const mean = (x, k) => 100 * x.reduce((s, r) => s + r[k], 0) / x.length;
 console.log('\n  档                     "玩家"夺冠    AI 夺冠     和局     平均回合');

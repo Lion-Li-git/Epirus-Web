@@ -21,6 +21,9 @@ const SEED = Number(arg('seed', 77000));
 const SRC = arg('src', 'human');          /* human | ai ⇒ 用哪一份经验分布造对手 */
 const TGT = arg('tgt', 'next');          /* next = 机械指向下一位 ‖ rand = 活席里随机指（绝对值的对照） */
 const ARMS = arg('arms', 'prod-off,prod-on').split(',');
+/* §E161c：`--tie=1` ⇒ **开档那臂**的平票交给网络自己的打分（关档臂根本不进搜索 ⇒ 不受影响）。
+   默认 0 = §E155 已量过那一版（+8.75 / +14.25pt 那两行）。加这一档是为了回答"产品口径那个数会不会被目标函数的小修推动"。 */
+const TIE = Number(arg('tie', 0));
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, window: {} };
 sb.globalThis = sb;
@@ -30,6 +33,8 @@ const W = sb.window, P = W.EpirusPolicy, S = W.EpirusState, R = W.EpirusRules, T
 const mm = readFileSync(REPO + 'js/bundled-champion-3p.js', 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
 const params = P.unpack(JSON.parse(mm[1]), true);
 if (!params) { console.error('⛔ 出厂包读不到'); process.exit(1); }
+if (TIE) T.setBeliefTie(TIE);
+console.log('装配：对手=' + SRC + ' · 指向=' + TGT + ' · 臂=' + ARMS.join('/') + ' · tie=' + TIE + (TIE ? '（平票交给网络打分）' : '（§E155 原形状）') + ' · ' + TABLES + ' 桌 × ' + GAMES + ' 局 · seed0=' + SEED);
 
 /* 名字表也来自引擎（不手抄） */
 const BY_NAME = {};
