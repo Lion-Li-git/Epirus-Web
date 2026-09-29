@@ -693,6 +693,9 @@
    * ⚠ 评估函数是"本回合结算后的血量优势"（**近视**）。把现役包 logit 当评估的混合版**已否证**：
    *   同批 200 局/臂，`hyb-none` 比现役包还差 **28.00pt**（§E153）⇒ 网络的 logit 是"同一状态内候选之间的偏好"，不是跨状态可比的价值。 */
   let BELIEF_SEARCH = 0;
+  let BELIEF_PLY = 1;                           /* 评估往前推几回合（§E156b 的病：1-ply 看不见"蓄珠→下回合电磁炮""集火滚环"这类跨回合收益） */
+  function setBeliefPly(v) { const n = Math.floor(Number(v)); BELIEF_PLY = (isFinite(n) && n >= 1) ? (n > 3 ? 3 : n) : 1; }
+  function beliefPly() { return BELIEF_PLY; }
   let __pendingBelief = false;                  /* 只在 `policyChooserBelief` 的**构造期间**为真 ⇒ 实例级开关，不动 `policyChooserN` 的签名 */
   const BELIEF_BEAM = 48;                       /* 候选数上界（浏览器保护；现役包实测均值 25.9 ⇒ 正常不触发） */
   function setBeliefSearch(v) { BELIEF_SEARCH = (v && String(v) !== '0' && Number(v) !== 0) ? 1 : 0; }
@@ -743,6 +746,35 @@
     for (let i = 0; i < st.p.length; i++) if (i !== pid && st.p[i].hp > 0) { sum += st.p[i].hp; n++; }
     return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (n ? sum / n : 0);
   }
+  /* §E161 · 把评估往前多推一手：**我自己那一手交给包的贪心**（否则"下一回合我会不会用这颗珠"无从判断 ⇒ 投资仍然看不见），
+     其余席仍走信念表预测。默认 `BELIEF_PLY = 1` ⇒ 这个函数一次都不进（关档/一档都不为它花一次 clone）。 */
+  function beliefAdvance(q, myPid, params) {
+    if (q.over) return;
+    const X = global.EpirusResolve, N = q.p.length;
+    const bb = beliefObserve(q);                        /* 从 q 的事件重建 ⇒ 与页面形状同源（§E159 那条教训） */
+    const picks = new Array(N).fill(null);
+    const lg = Play.legalActions(q, myPid).filter(function (l) { return l.affordable; });
+    const bq = lg.length ? lg : [{ key: R.SK.JI, affordable: true }];
+    const cq = P.candidatesFor(q, myPid, econBase(q, myPid, bq), { lockTarget: false });
+    if (cq.length) {
+      const gp = P.chooseCandidates(q, myPid, cq, params, { temp: 1 });
+      if (gp) picks[myPid] = { key: gp.key, target: gp.target == null ? null : gp.target, target2: gp.target2, bead: gp.bead };
+    }
+    for (let i = 0; i < N; i++) {
+      if (i === myPid || !q.p[i] || q.p[i].hp <= 0) continue;
+      let k = beliefPredict(bb, i);
+      const lg2 = Play.legalActions(q, i);
+      let aff = false;
+      for (let j = 0; j < lg2.length; j++) if (lg2[j].affordable && lg2[j].key === k) { aff = true; break; }
+      if (!aff) k = R.SK.JI;
+      picks[i] = { key: k, target: null, target2: null, bead: null };
+    }
+    for (let i = 0; i < N; i++) {
+      if (!picks[i] || !q.p[i] || q.p[i].hp <= 0) continue;
+      S.attemptAction(q, i, picks[i].key, { bead: picks[i].bead, target: picks[i].target, target2: picks[i].target2 });
+    }
+    X.resolveActions(q); X.endTurn(q);
+  }
   function beliefSearchPick(state, pid, cands, params) {
     const b = beliefObserve(state); if (!b || !cands || !cands.length) return null;
     /* ⚠ 这里**不许抽 `state.rng`**：探索的 ε 由调用方（`greedyOf` 所在的那条支）抽，一次决策只该有一次抽取。
@@ -775,6 +807,7 @@
       S.attemptAction(q, pid, pool[ci].key, { bead: pool[ci].bead, target: pool[ci].target, target2: pool[ci].target2 });
       for (let o = 0; o < others.length; o++) S.attemptAction(q, others[o].pid, others[o].key, {});
       X.resolveActions(q); X.endTurn(q);
+      for (let p2 = 1; p2 < BELIEF_PLY; p2++) beliefAdvance(q, pid, params);   /* 默认 1 层 ⇒ 这行永不执行 */
       const v = beliefValue(q, pid);
       if (v > bv + 1e-9) { bv = v; best = pool[ci]; }
     }
@@ -3061,7 +3094,7 @@ let WALL_GAMES = 3;
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
-    setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve,
+    setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve, setBeliefPly, beliefPly,
     setTrainEps, trainEps, countTrainEps, resetTrainEpsStat   // v1.5.237 E28：训练侧执行口径旋钮（默认关）+ **开火计数**
   };
 })(typeof window !== 'undefined' ? window : globalThis);

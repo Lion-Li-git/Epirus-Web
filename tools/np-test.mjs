@@ -9192,6 +9192,37 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
     eq(trace(), trace(), '⑧ 开档必须可复现（同 seed 两次跑出不同结果 = 混进了 `Math.random`/对象身份这类隐形输入，A/B 不可信）');
     ok(trace() !== 'undefined/0,undefined/0,undefined/0', '⑧ 复现检查不许是"两批空跑"（真的量到了局）');
   }
+  /* ⑪ §E161 的层数旋钮：默认必须是 1（= §E156b 那版行为），且"开档 + ply=2"必须真的不同于 ply=1
+     （否则那三列"电磁炮/蓄能/集火回不回来"根本没在被测的东西上）。
+     ⚠ 本段在文件里排在 ⑨ 之前（只是插入位置，编号仍跟着 ⑩ 之后）；⑩ 及 ⑪ 这两个圈码在别的门里也用过，
+        读时按"本门内部编号"理解，别去别处找同名段。 */
+  {
+    const W = mkSb(), T = W.EpirusTrainer;
+    eq(T.beliefPly(), 1, '⑪ `beliefPly()` 出厂必须是 1（实测 ' + T.beliefPly() + '）⇒ 默认形状必须等于已量过的那版');
+    T.setBeliefPly('3'); eq(T.beliefPly(), 3, '⑪ 字符串 "3" 必须能设进去');
+    T.setBeliefPly(99); eq(T.beliefPly(), 3, '⑪ 上界夹住（99 ⇒ 3）：一次决策要重放 候选^层，不许有人把它当"越深越好"随手调');
+    T.setBeliefPly(0); eq(T.beliefPly(), 1, '⑪ 0 必须回到 1，不许出现"0 层"这种静默退化');
+    T.setBeliefPly('abc'); eq(T.beliefPly(), 1, '⑪ 非数值必须回到 1（NaN 传下去会让整局成 NaN）');
+    const trace = function (ply) {
+      const W2 = mkSb(), T2 = W2.EpirusTrainer, S2 = W2.EpirusState, P2 = W2.EpirusPolicy, Play2 = W2.EpirusPlay, R2 = W2.EpirusRules;
+      const mm4 = readFileSync('js/bundled-champion-3p.js', 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
+      const pp = P2.unpack(JSON.parse(mm4[1]), true);
+      T2.setBeliefSearch(1); T2.setBeliefPly(ply);
+      const f = T2.policyChooserBelief(pp, 0.15, 0.2, 5, 'soft');
+      const others = function (s2, pid2, legal) { const lg = legal.filter(function (l) { return l.affordable; }); return lg.length ? lg[0].key : R2.SK.JI; };
+      const seen = [];
+      for (let g = 0; g < 2; g++) {
+        const sd = 31337 + g * 977;
+        const st = S2.createState('multi', { next: T2.mulberry32(sd) }, 5);
+        if (T2.slotSaltFor) st.slotSalt = T2.slotSaltFor(sd);
+        Play2.autoGameN(st, [f, others, others, others, others]);
+        seen.push(st.winner + '/' + st.round);
+      }
+      return seen.join(',');
+    };
+    const t1 = trace(1), t2 = trace(2);
+    ok(t1 !== t2, '⑪ 开档下 ply=1 与 ply=2 的整局必须不同（实测两批都是 ' + t1 + '）⇒ 相同就说明层数没接到评估里');
+  }
   /* ⑨ 锚点纪律（今晚 D161 真红过一次换来的）：两道量具拿 `policyChooserN` 的**签名整行**当补丁锚点。
      钉法是"从两个库源码里把锚字符串抠出来，再要求 evo.js 逐字含有它"—— 而不是我再抄一遍那行字
      （抄第三份 = 制造下一次"改了一处漏两处"，本仓那条老规矩）。 */

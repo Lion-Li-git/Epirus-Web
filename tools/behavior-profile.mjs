@@ -44,12 +44,23 @@ const FIELDS = FIELD.split(',').map(function (s) { return s.trim(); }).filter(Bo
 const GAMEMODE = flag('gamemode', 'multi'); // multi(3 血) · long(5 血长程) · standard
 
 const W = sandbox(ROOT);
+/* v1.5.305：把这份沙箱导出来给**配对仪器**用（`docs/artifacts/e161-ply.mjs`）。
+   为什么必须导这一个而不是让仪器自己 `sandbox(ROOT)`：`sandbox` 每次都新造一份模块实例，
+   而信念档（`setBeliefSearch`/`setBeliefPly`）是**那份实例内部**的模块级变量 ⇒
+   仪器只有拿到同一个 W，才能在 `fieldProfile` 逐局构造 chooser 之前把档切对；
+   否则就得抄一遍对局循环——本仓的老账是"两份同构实现必漂移"。 */
+export const WIN = W;
 const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, B = W.EpirusBots;
 const SK = R.SK, byKey = R.byKey;
 const SCRIPTS = [B.pickBalanced, B.pickAggro, B.pickDefend, B.pickMix, B.pickFarmer];
 const isDmg = k => !!(byKey[k] && byKey[k].dmg && byKey[k].dmg.amt);
-/* `--belief=1` 就在这里生效一次（见上面 `BELIEF` 那条注释：设一次，两个 chooser 构造点自动同形） */
-if (typeof T.setBeliefSearch === 'function' && BELIEF !== '0') T.setBeliefSearch(1);
+/* `--belief=1` 就在这里生效一次（见上面 `BELIEF` 那条注释：设一次，两个 chooser 构造点自动同形）；
+   `--belief=2/3` 同时开档并把**评估往前多推几手**（§E161：1-ply 看不见"蓄珠→下回合电磁炮"这类跨回合收益，
+   ⇒ 量出来是"胜率涨但电磁炮/蓄能/集火三列全塌"，判据就是这三列回不回来）。 */
+if (typeof T.setBeliefSearch === 'function' && BELIEF !== '0') {
+  T.setBeliefSearch(1);
+  if (typeof T.setBeliefPly === 'function') T.setBeliefPly(Number(BELIEF) || 1);
+}
 
 function tally() {
   return { acts: 0, def: 0, atk: 0, ring: 0, ji: 0, tgtActs: 0, focus: 0, voided: 0, endgameMultiOnly: 0, rounds: 0, wins: 0, decisive: 0, keys: {}, maxEp: 0 };
@@ -131,7 +142,7 @@ if (RUN_AS_MAIN) for (const file of CHAMPS) {
   const params = loadChamp(W, file, ROOT);
   const name = file.replace(/^.*\//, '').replace(/\.bak$/, '').replace(/\.js$/, '');
   console.log('== ' + name + '（参数量 ' + params.length + ' · temp=' + TEMP + ' epsK=' + EPSK + ' · ' + GAMES + ' 局/点' +
-    (BELIEF === '0' ? '' : ' · **对手模型搜索档=开**') + '）==');
+    (BELIEF === '0' ? '' : ' · **对手模型搜索档=开（ply=' + BELIEF + '）**') + '）==');
   for (const mode of EPSMODE) {
     for (const eps of EPS) {
      for (const fld of FIELDS) {
