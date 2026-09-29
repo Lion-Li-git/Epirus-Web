@@ -45,6 +45,7 @@
    ⚠ **玩家看到的行为不受影响**（浏览器 AI 席走冠军包，不用这些脚本）。
 
 **5. 状态**：分支 `qoder/night-2026-09-29-adversary-model`，**本班未 push**（您那句"push 一下"只用到 v1.5.303）；`js/core/*`、`js/train/policy.js` 一字未动 ⇒ **规则指纹 `ebdbff36` 不变**、两槽冠军未动、`promote` 只 `--dry`；
+**"关掉就回到今天"是机械核过的**：`git diff --stat origin/main..HEAD -- js/core js/train/policy.js js/bundled-champion-3p.js js/bundled-champion.js js/champion-pack.js` ⇒ **只剩 `README.md` 与 `index.html` 两处版本号**，规则/网络/两个出厂包**字节级未动**；本班实际改动集中在 `js/train/evo.js`(+190) / `js/ui/ui.js`(+8) / `tools/np-test.mjs`(+333) / `tools/behavior-profile.mjs`(+39) 与文档。
 np **253** 条（新门 D204 对手模型 / D205 门号纪律 / D206 econ 键名单 / D207 落点集中度手算自证 / D208 可复现性地基），**最后一次整轮四道认证在 `51f6005` 全绿**（04:21:01→04:28:33，np 253/253 · 407.5 s）⇒ 明早直接从这棵树取。
 
 
