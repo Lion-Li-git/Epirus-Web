@@ -9431,6 +9431,29 @@ t('D209 人类形状对手池的单一来源（§E168 · 09-30 夜班）：`tool
   const i169 = readFileSync('docs/artifacts/e169-beadprice.mjs', 'utf8');
   ok(i169.indexOf('tools/human-pool.mjs') >= 0 && !/POOL\[cond\]\s*=\s*POOL\[cond\]/.test(i169),
     '⑥ `e169-beadprice.mjs` 必须 import `tools/human-pool.mjs` 且不留本地采样');
+  /* ⑦ §E176：把"单一来源"从**名单式**改成**机械式**。上面那份仪器名单是硬编码的，里面没有比它早生的 `e157`
+     ⇒ 这条门"看得见三台、看不见第四台"，而第四份采样实现就那样并排跑了两个夜班。
+     ⇒ 现在改成"谁读 `human-behavior.json` 谁就必须 import 那份"；要例外必须**点名 + 写理由 + 钉数量**（本仓"点过名却不在场"那族的老规矩）。 */
+  const EXEMPT = {
+    'docs/artifacts/e157-difficulty.mjs': '§E176 未结项：自带一份本地采样器，与单一来源"逐手 pick 相同但每手抽数不同步"⇒ 序列等价性未证；等 (a)/(b) 裁定后收编',
+    'docs/artifacts/e157b-difficulty-pool.mjs': '§E176 已知**接坏的**对照台（主体席每手抽 0 次随机数），只作反面样本留档，不许当读数来源'
+  };
+  const readers = readdirSync('docs/artifacts').filter(function (f) { return /\.mjs$/.test(f); })
+    .map(function (f) { return 'docs/artifacts/' + f; })
+    .filter(function (p) { return readFileSync(p, 'utf8').indexOf('human-behavior.json') >= 0; });
+  /* 生产者例外（**写**这份 json 的那台）单独点名——第一次跑这条门时它把 §E152e 也抓出来了，说明"读没读那份 json"这个谓词
+     比"是不是第二份采样实现"宽，所以两件事要分开记，别混成一个豁免名单。 */
+  const PRODUCER = 'docs/artifacts/e152e-human.mjs';
+  ok(readers.indexOf(PRODUCER) >= 0 && readFileSync(PRODUCER, 'utf8').indexOf('writeFileSync(REPO + \u0027docs/artifacts/human-behavior.json') >= 0,
+    '⑦‴ 生产者那台必须还在、且确实是**写**这份 json 的（它不采样 ⇒ 只许它一个人例外；改成别人了要同步改这条）');
+  ok(Object.keys(EXEMPT).every(function (k) { return readers.indexOf(k) >= 0; }),
+    '⑦ 例外名单里点名的文件已经不再读 `human-behavior.json` ⇒ 名单过期，来清账（别让一条已无对象的豁免继续占位）');
+  eq(Object.keys(EXEMPT).length, 2, '⑦′ 例外只许两条（新增一条欠账要人裁定，别让它悄悄变多）');
+  for (const p of readers) {
+    if (EXEMPT[p] || p === PRODUCER) continue;
+    ok(readFileSync(p, 'utf8').indexOf('tools/human-pool.mjs') >= 0,
+      '⑦″ ' + p + ' 读 `human-behavior.json` 却没 import 单一来源 ⇒ 两份采样实现必漂移（§E174/§E175 的活例）；要例外必须在 `EXEMPT` 里点名并写理由');
+  }
 });
 
 t('D210 §E169 的第 4 剂药有牙（`setBeliefBead` / `setBeliefRingPrice`，**两个默认 0 ⇒ 出厂形状逐字不变**）：旋钮必须真的改判决，且珠的三条去路只许数一份', function () {
