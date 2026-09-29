@@ -702,6 +702,18 @@
   let BELIEF_TIE = 0;                           /* 平票怎么破：0=取枚举顺序第一个（§E154~§E161 已量过那版）· 1=由网络打分裁决（§E161c） */
   function setBeliefTie(v) { const n = Math.floor(Number(v)); BELIEF_TIE = (isFinite(n) && n >= 0) ? (n > 1 ? 1 : n) : 0; }
   function beliefTie() { return BELIEF_TIE; }
+  /* §E169 · **第 4 剂药**：前三剂（深度 / 定价对象 / 平票规则）都没碰"**跨回合资源本身**"，
+     而 §E168 之后立着的两条代价恰好就是它：**珠经济归零**与**滚环消失**。⇒ 直接给这两样东西一个血量价。
+     `BELIEF_BEAD` = 一枚"带进下一回合的珠"值几血（`endTurn` 之后 `elec`/`boom` 只可能是**本回合新蓄**的那枚，R9'）；
+     `BELIEF_RING` = "环链条还活着"值几血（`endTurn` 只在"本回合那手是有效聚能环"时不清零 `ringStreak`，R10 ⇒ 非零就意味着下一手的环**免费且给 `min(streak+1,3)` 能量**）。
+     ⚠ **两个默认都是 0 ⇒ 出厂形状逐字不变**（`beliefValue` 里那两项是 `0 × 量`，整数加法无浮点残差）。
+     ⚠ 这一档**故意只做成研究旋钮**：不接 `ui.js`、不接页面 `localStorage` ⇒ 线上只有 §E153/§E155 已量的 `beliefSearch` 那一层。 */
+  let BELIEF_BEAD = 0;
+  let BELIEF_RING = 0;
+  function setBeliefBead(v) { const n = Math.floor(Number(v)); BELIEF_BEAD = (isFinite(n) && n > 0) ? (n > 12 ? 12 : n) : 0; }
+  function beliefBead() { return BELIEF_BEAD; }
+  function setBeliefRingPrice(v) { const n = Math.floor(Number(v)); BELIEF_RING = (isFinite(n) && n > 0) ? (n > 12 ? 12 : n) : 0; }
+  function beliefRingPrice() { return BELIEF_RING; }
   let __pendingBelief = false;                  /* 只在 `policyChooserBelief` 的**构造期间**为真 ⇒ 实例级开关，不动 `policyChooserN` 的签名 */
   const BELIEF_BEAM = 48;                       /* 候选数上界（浏览器保护；现役包实测均值 25.9 ⇒ 正常不触发） */
   function setBeliefSearch(v) { BELIEF_SEARCH = (v && String(v) !== '0' && Number(v) !== 0) ? 1 : 0; }
@@ -746,6 +758,11 @@
     for (const k in m) if (m[k] > bv) { bv = m[k]; best = k; }
     return best;
   }
+  /* §E169 · 跨回合资源的**手写价**（两档默认 0 ⇒ 下面恒等于 0，出厂形状逐字不变）。
+     珠按"枚"计（同类上限 1，`resolve.js:1261-1268` 的 R9' ⇒ 最多 `elec`+`boom` = 2）；环按"链条活着"计，不随档位放大。 */
+  function beadTerm(me) {
+    return BELIEF_BEAD * ((me.elec ? 1 : 0) + (me.boom ? 1 : 0)) + BELIEF_RING * (me.ringStreak > 0 ? 1 : 0);
+  }
   function beliefValue(st, pid) {
     const me = st.p[pid];
     let sum = 0, n = 0, hi = -1, dead = 0;
@@ -757,9 +774,9 @@
        病在"减**均值**"这一项上 —— 均值把"滚掉一个残血"判成**亏**（他本来就在平均值以下，他一死分母里少一个低项 ⇒ 均值反而涨），
        而 5 人局的胜负是**比名次**：干掉一个人就是往上挪一格。⇒ 1 减"最强的那个活着的人"，2 给每次淘汰一个固定价。
        ⚠ 这三档都是**近视**尺（只看这一回合结算后），§E161 已证"多看一手"不会把它变成远视 ⇒ 要修的是**定价**不是**深度**。 */
-    if (BELIEF_TGT === 1) return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (hi >= 0 ? hi : 0);
-    if (BELIEF_TGT === 2) return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (n ? sum / n : 0) + 6 * dead;
-    return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (n ? sum / n : 0);
+    if (BELIEF_TGT === 1) return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (hi >= 0 ? hi : 0) + beadTerm(me);
+    if (BELIEF_TGT === 2) return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (n ? sum / n : 0) + 6 * dead + beadTerm(me);
+    return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (n ? sum / n : 0) + beadTerm(me);
   }
   /* §E161 · 把评估往前多推一手：**我自己那一手交给包的贪心**（否则"下一回合我会不会用这颗珠"无从判断 ⇒ 投资仍然看不见），
      其余席仍走信念表预测。默认 `BELIEF_PLY = 1` ⇒ 这个函数一次都不进（关档/一档都不为它花一次 clone）。 */
@@ -3122,6 +3139,7 @@ let WALL_GAMES = 3;
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
     setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve, setBeliefPly, beliefPly,
     setBeliefTarget, beliefTarget, setBeliefTie, beliefTie,
+    setBeliefBead, beliefBead, setBeliefRingPrice, beliefRingPrice,
     setTrainEps, trainEps, countTrainEps, resetTrainEpsStat   // v1.5.237 E28：训练侧执行口径旋钮（默认关）+ **开火计数**
   };
 })(typeof window !== 'undefined' ? window : globalThis);

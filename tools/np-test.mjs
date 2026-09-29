@@ -26,7 +26,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 /* D206 用（DS 清单 B7）：奖励键名单与默认表**从同一来源拿**（不许在门里抄一份键名单——那正是 B7 要防的"第五处"）。 */
 import { ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';
 /* D207 用（§E164）：落点集中度的算术**只许住在 behavior-profile 里** ⇒ 门直接 import 它做手算自证（被 import 时不跑 main，那条守卫由 D168 系钉着）。 */
-import { conc, fieldProfile, WIN } from './behavior-profile.mjs';
+import { conc, fieldProfile, tallyPick, WIN } from './behavior-profile.mjs';
 /* D209 用（§E168）：人类形状对手池的单一来源（两台仪器共用它 ⇒ 门来钉"不许再抄第二份"）。 */
 import { loadPool, selfTest } from './human-pool.mjs';
 import vm from 'node:vm';
@@ -9427,6 +9427,123 @@ t('D209 人类形状对手池的单一来源（§E168 · 09-30 夜班）：`tool
   ok(defHits === 1, '⑤′ `behavior-profile` 里 `R.CAT.DEFENSE` 只许出现 1 次（实测 ' + defHits + '）⇒ 出现第二次就是"防御占比"有了两个定义');
   const inst = readFileSync('docs/artifacts/e168-style-human.mjs', 'utf8');
   ok(inst.indexOf('R.CAT.DEFENSE') < 0, '⑤″ §E168 仪器不许自己判类别（读 `fieldProfile` 的 tally 就行）');
+  /* ⑥ §E169 那台仪器同样在人类形状桌上量 ⇒ 一并纳入"单一采样器"的名单（漏一个就会悄悄长出第三份采样） */
+  const i169 = readFileSync('docs/artifacts/e169-beadprice.mjs', 'utf8');
+  ok(i169.indexOf('tools/human-pool.mjs') >= 0 && !/POOL\[cond\]\s*=\s*POOL\[cond\]/.test(i169),
+    '⑥ `e169-beadprice.mjs` 必须 import `tools/human-pool.mjs` 且不留本地采样');
+});
+
+t('D210 §E169 的第 4 剂药有牙（`setBeliefBead` / `setBeliefRingPrice`，**两个默认 0 ⇒ 出厂形状逐字不变**）：旋钮必须真的改判决，且珠的三条去路只许数一份', function () {
+  /* 为什么有这条（本仓"新门不许是装饰"的规矩）：§E169 量的正是"**给跨回合资源手写一个价，能不能买回长程**"。
+     如果那两个旋钮没接进 `beliefValue`，仪器上"蓄能回来了"就只是我把噪声读成了趋势。⇒ 三条都要钉：
+     ① 出厂默认 0 且两价为 0 的开档臂必须与 §E161 那一版（短写 `1:0:0`）**逐字同结果**（证明新增项没渗进默认路径）；
+     ② 每一档必须**把它命名的那一列推动**（`bead`⇒蓄能/珠获得，`ring`⇒环）——同 5 局一批牌、只换一档；
+     ③ 珠的三条去路（获得/消耗/过期）在 `behavior-profile` 里**只许出现在一处**，仪器不许自己扫 `state.events`。 */
+  const src = readFileSync('js/train/evo.js', 'utf8');
+  ok(/let BELIEF_BEAD = 0;/.test(src) && /let BELIEF_RING = 0;/.test(src),
+    '① 源码默认值必须是 `BELIEF_BEAD = 0` / `BELIEF_RING = 0`（出厂 = §E161/§E168 已量过那版）');
+  ok(/BELIEF_BEAD \* \(\(me\.elec/.test(src) && /BELIEF_RING \* \(me\.ringStreak/.test(src),
+    '①′ 两项必须真的进 `beadTerm()`（源码里抠不到乘法形状 ⇒ 说明只加了 setter 没接进评估）');
+  ok(src.indexOf('function beadTerm(me)') >= 0 && src.indexOf('return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (n ? sum / n : 0) + beadTerm(me);') >= 0,
+    '①″ 默认那一路（`BELIEF_TGT === 0`）必须带 `+ beadTerm(me)` ⇒ 否则 `bead` 档在出厂目标函数上是空转的');
+  const ui = readFileSync('js/ui/ui.js', 'utf8');
+  ok(ui.indexOf('setBeliefBead') < 0 && ui.indexOf('setBeliefRingPrice') < 0,
+    '①⁗ 页面**不许**接这两个档（§E169 是研究旋钮；接了就得重开"线上默认值"那条裁定，本门的"出厂形状不变"论证立刻作废）');
+  const T210 = WIN.EpirusTrainer;
+  eq(T210.beliefBead(), 0, '② `beliefBead()` 出厂必须是 0（实测 ' + T210.beliefBead() + '）');
+  eq(T210.beliefRingPrice(), 0, '② `beliefRingPrice()` 出厂必须是 0（实测 ' + T210.beliefRingPrice() + '）');
+  T210.setBeliefBead('6'); eq(T210.beliefBead(), 6, '②′ 字符串必须能设进去');
+  T210.setBeliefBead(99); eq(T210.beliefBead(), 12, '②″ 上界夹住（99 ⇒ 12）');
+  T210.setBeliefBead(-3); eq(T210.beliefBead(), 0, '②‴ 负数必须回 0（负价=反向激励，不许当"另一种档"）');
+  T210.setBeliefBead('abc'); eq(T210.beliefBead(), 0, '②⁗ 非数值必须回 0');
+  T210.setBeliefRingPrice(99); eq(T210.beliefRingPrice(), 12, '②⁵ 环价同样有上界');
+  T210.setBeliefRingPrice(0); eq(T210.beliefRingPrice(), 0, '②⁶ 0 必须能关回去');
+  const SK210 = WIN.EpirusRules.SK;
+  const params210 = AUDIT.loadChamp(WIN, 'js/bundled-champion-3p.js', process.cwd());
+  const arm = function (bead, ringp) {
+    T210.setBeliefSearch(1); T210.setBeliefBead(bead); T210.setBeliefRingPrice(ringp); T210.setBeliefTie(0);
+    fieldProfile(params210, 0.2, 'soft', 5, 4100, 'mixed', 'multi');           /* 暖机（§E164b：换档后第一遍不同，原因未定位） */
+    const t = fieldProfile(params210, 0.2, 'soft', 5, 4100, 'mixed', 'multi');
+    T210.setBeliefSearch(0); T210.setBeliefBead(0); T210.setBeliefRingPrice(0);
+    return t;
+  };
+  const z = arm(0, 0), z2 = arm(0, 0);
+  const keyZ = t => JSON.stringify({ a: t.acts, w: t.wins, r: t.rounds, d: t.decisive, v: t.voided, f: t.focus,
+    bg: t.beadGain, bs: t.beadSpend, bx: t.beadExpire, k: Object.keys(t.keys).sort().map(x => x + ':' + t.keys[x]) });
+  eq(keyZ(z), keyZ(z2), '③ 两价为 0 时同批牌两遍必须逐字相同（搜索不许抽 `state.rng`）');
+  const b4 = arm(4, 0), r4 = arm(0, 4);
+  ok(b4.beadGain > z.beadGain, '④ `bead=4` 必须把**珠获得**推上去（实测 ' + b4.beadGain + ' vs 基线 ' + z.beadGain + '）⇒ 相同就说明这一档没接进评估');
+  ok((b4.keys[SK210.CHARGE] || 0) > (z.keys[SK210.CHARGE] || 0), '④′ 同上，`蓄能` 出手数必须动（实测 ' + (b4.keys[SK210.CHARGE] || 0) + ' vs ' + (z.keys[SK210.CHARGE] || 0) + '）');
+  ok(r4.ring > z.ring, '⑤ `ring=4` 必须把**环**推上去（实测 ' + r4.ring + ' vs 基线 ' + z.ring + '）');
+  ok((r4.keys[SK210.RING] || 0) > (z.keys[SK210.RING] || 0), '⑤′ `聚能环` 出手数必须动（实测 ' + (r4.keys[SK210.RING] || 0) + ' vs ' + (z.keys[SK210.RING] || 0) + '）');
+  /* ⑥ 反证那一列必须有内容：`bead` 档如果只会攒不会花，`beadExpire` 就必须看得见（数不出来的度量是装饰） */
+  ok(b4.beadExpire > 0, '⑥ `bead=4` 那批牌里必须能看到**珠过期**事件被数到（实测 ' + b4.beadExpire + '）⇒ 为 0 说明 `beadExpire` 那条计数没接上，"只攒不打"就永远量不出来');
+  const bp = readFileSync('tools/behavior-profile.mjs', 'utf8');
+  for (const c of ['t.beadGain++', 't.beadSpend++', 't.beadExpire +=']) {
+    const n = (bp.match(new RegExp(c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+    ok(n === 1, '⑦ 珠的三条去路只许数一份：`' + c + '` 应出现 1 次（实测 ' + n + '）');
+  }
+  const i169 = readFileSync('docs/artifacts/e169-beadprice.mjs', 'utf8');
+  ok(i169.indexOf("st.events") < 0, '⑧ §E169 仪器不许自己扫 `st.events`（读 `fieldProfile` 的 tally ⇒ 两份事件计数必漂移）');
+  ok(/\[\s*'script'\s*,\s*'human'\s*\]/.test(i169),
+    "⑨ 第 19 条陷阱的机械形状：这台仪器必须**两张桌**都能起 ⇒ `--table=both` 那一支必须展开成 ['script', 'human']" +
+    "（只要求文件里出现过 'human' 不算——`flag('src','human')` 里也有，那是**池子来源**不是**桌子**；本门的这条判据本身就被这个假绿抓到过一次）");
+});
+
+t('D211 §E169b 把"屯而不打"与"没钱打"分开数的量具有牙（`beadLive/beadBroke/beadHeld`，手算夹具）', function () {
+  /* 为什么有这条（这条门的由来是**一条差点写错的结论**）：§E169 量到"开了珠价之后 珠转化率 0.0%、过期 ×40"，我第一反应用的是
+     "**近视定价 ⇒ 它学会屯珠不打**"。但补了 `峰值ep` 之后看到 **4.2 → 2.5**（配对差 −1.77 [−2.17,−1.38]）⇒
+     电磁炮要 `2 ep + 1 电珠`**同时**成立，而蓄能一手就花 2 ep ⇒ "没开炮"里可能有一块是**蓄能把自己吃穷了**，不是偏好屯。
+     两种机制的**修法完全不同**（改价格 vs 改预算），所以必须当场分开数，不能留到下一班猜。
+     ⚠ 同族纪律：判据是"这一手**买不买得起**"，这是 `legal[i].affordable` 的直接读法——不是"ep 余额 ≥ 2"（那会把免费回合/减免都算错）。 */
+  const bp = readFileSync('tools/behavior-profile.mjs', 'utf8');
+  ok(/beadLive: 0, beadBroke: 0, beadHeld: 0/.test(bp), '① `tally()` 必须初始化那三个计数器');
+  ok(/if \(state\.p\[pid\]\.elec > 0 && legal\)/.test(bp), '② `tallyPick` 必须在**被问到这一刻**判"手里有电珠"（事后从事件流反推不出可付性）');
+  ok(bp.indexOf('tallyPick(t, state, pid, chooser(state, pid, legal), ctx, legal)') >= 0,
+    '③ 调用点必须把 `legal` 传进去（不传 ⇒ 那三个计数器恒 0，整列是装饰）');
+  /* ④ 手算夹具：合成输入 + 四种组合的期望值，全部当场核对（不跑真引擎 ⇒ <1 秒） */
+  const mk = () => ({ acts: 0, def: 0, atk: 0, ring: 0, ji: 0, tgtActs: 0, focus: 0, voided: 0, endgameMultiOnly: 0,
+    rounds: 0, wins: 0, decisive: 0, keys: {}, maxEp: 0, tgtGames: 0, tgtTopSum: 0, tgtKindSum: 0,
+    beadGain: 0, beadSpend: 0, beadExpire: 0, beadLive: 0, beadBroke: 0, beadHeld: 0 });
+  const st = { p: [], length: 5 };
+  for (let i = 0; i < 5; i++) st.p.push({ hp: 20, ep: 4, elec: i === 0 ? 1 : 0, boom: 0, ringStreak: 0 });
+  const ctx = { lastTgt: {}, tgtCnt: {}, seat: 0 };
+  const lgNoGun = [{ key: WIN.EpirusRules.SK.JI, affordable: true }, { key: WIN.EpirusRules.SK.GUN, affordable: true }];
+  const lgGun = lgNoGun.concat([{ key: WIN.EpirusRules.SK.RAILGUN, affordable: true }]);
+  const lgGunPoor = lgNoGun.concat([{ key: WIN.EpirusRules.SK.RAILGUN, affordable: false }]);
+  const A = mk(); tallyPick(A, st, 0, { key: WIN.EpirusRules.SK.JI }, ctx, lgGun);
+  ok(A.beadLive === 1 && A.beadHeld === 1 && A.beadBroke === 0,
+    '④ 有珠 + 买得起 + 打了ジ ⇒ 应为 live=1 / held=1 / broke=0（实测 ' + A.beadLive + '/' + A.beadHeld + '/' + A.beadBroke + '）');
+  const B = mk(); tallyPick(B, st, 0, { key: WIN.EpirusRules.SK.JI }, ctx, lgNoGun);
+  ok(B.beadLive === 1 && B.beadHeld === 0 && B.beadBroke === 1,
+    '④′ 有珠 + 名单里根本没有电磁炮 ⇒ 应为 live=1 / held=0 / broke=1（实测 ' + B.beadLive + '/' + B.beadHeld + '/' + B.beadBroke + '）');
+  const B2 = mk(); tallyPick(B2, st, 0, { key: WIN.EpirusRules.SK.JI }, ctx, lgGunPoor);
+  ok(B2.beadBroke === 1, '④″ 有珠但 `affordable:false` ⇒ 同样算"买不起"（实测 ' + B2.beadLive + '/' + B2.beadHeld + '/' + B2.beadBroke + '）');
+  const D = mk(); tallyPick(D, st, 0, { key: WIN.EpirusRules.SK.RAILGUN, target: 1 }, ctx, lgGun);
+  ok(D.beadLive === 1 && D.beadHeld === 0,
+    '④‴ 有珠、买得起、**确实开了炮** ⇒ live=1 / held=0 / broke=0（实测 ' + D.beadLive + '/' + D.beadHeld + '/' + D.beadBroke + '）');
+  st.p[0].elec = 0;
+  const C = mk(); tallyPick(C, st, 0, { key: WIN.EpirusRules.SK.JI }, ctx, lgGun);
+  ok(C.beadLive === 0 && C.beadHeld === 0 && C.beadBroke === 0, '④⁗ 手里没珠 ⇒ 三个计数器都不许动（实测 ' + C.beadLive + '/' + C.beadHeld + '/' + C.beadBroke + '）');
+  st.p[0].elec = 1;
+  const E = mk(); tallyPick(E, st, 0, { key: WIN.EpirusRules.SK.JI }, ctx, undefined);
+  ok(E.beadLive === 0, '④⁙ 没传 `legal` ⇒ 整条判据跳过（不许把"看不见"当成"买不起"，实测 ' + E.beadLive + '）');
+  /* ⑤ 单一来源：仪器只许读 tally 的比，不许再自己扫一遍 `legal`（两份可付性判断必漂移） */
+  const i169 = readFileSync('docs/artifacts/e169-beadprice.mjs', 'utf8');
+  const code169 = i169.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  ok(!/\.affordable/.test(code169), '⑤ §E169 仪器里不许出现第二份 `.affordable` 判断（可付性只认 `tallyPick` 那一份）');
+  ok(/beadHeld/.test(code169) && /beadBroke/.test(code169) && /beadLive/.test(code169),
+    '⑤′ 仪器必须把三样都读出来（少一样就退化成"看起来像屯"的单边读数）');
+  /* ⑥ 地板：这套计数器**必须真的在真局里有非零读数**，否则前面五条静态钉合起来仍然可能是装饰 */
+  const params6 = AUDIT.loadChamp(WIN, 'js/bundled-champion-3p.js', process.cwd());
+  const T6 = WIN.EpirusTrainer;
+  T6.setBeliefSearch(1); T6.setBeliefBead(2);
+  fieldProfile(params6, 0.2, 'soft', 3, 4100, 'mixed', 'multi');
+  const t6 = fieldProfile(params6, 0.2, 'soft', 10, 4100, 'mixed', 'multi');
+  T6.setBeliefSearch(0); T6.setBeliefBead(0);
+  ok(t6.beadLive > 0 && (t6.beadHeld + t6.beadBroke) > 0,
+    '⑥ 真局地板：`bead=2` 那 10 局里三个计数器必须都活（实测 live=' + t6.beadLive + ' held=' + t6.beadHeld + ' broke=' + t6.beadBroke +
+    '）⇒ 全 0 说明夹具过了但真引擎里接不上（本仓"夹具缺对比度"那一族）');
 });
 
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");

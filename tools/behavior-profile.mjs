@@ -68,7 +68,13 @@ function tally() {
        一个"这一回合打最该死的那个、下一回合改打另一个最该死的"的策略，连段率会很低，但**整局的落点其实仍然集中**。
        ⇒ 为了不自欺，同一批出手再记两量：`tgtTopSum`=每局"最多吃到伤害的那个落点占本席全部带目标伤害的比例"之和、`tgtKindSum`=每局被打击的落点家数之和。
        配 `tgtGames`（有带目标伤害的局数）当分母 ⇒ 集中度 = 平均每局的 top 份额。 */
-    tgtGames: 0, tgtTopSum: 0, tgtKindSum: 0 };
+    tgtGames: 0, tgtTopSum: 0, tgtKindSum: 0,
+    /* §E169（09-30 05:1x）：判"珠经济回来了"还是"只攒不打"，**只看出手数不够**——必须把珠的**三条去路**分开数：
+       获得（蓄成，`resolve.js:730` 的 `{type:'bead',delta:+1}`）· 消耗（打出去，`state.js:222` 的 `delta:-1`）· 过期（`endTurn` 的 R9' 清空，`{type:'beadExpire'}`）。
+       ⇒ **转化率 = 消耗/获得**、**过期率 = 过期/获得**；DS 在 B4 里给的判据"过期率不得上升"量的就是这个比。 */
+    beadGain: 0, beadSpend: 0, beadExpire: 0,
+    /* §E169b：手里有电珠时，电磁炮**买不买得起**、买得起却**开不开**（区分"屯而不打"与"没钱打"，见 `tallyPick` 里那段）。 */
+    beadLive: 0, beadBroke: 0, beadHeld: 0 };
 }
 /* v1.5.142 交接件 P1：这几张是"铺垫/收尾"链上的关键卡，**每局出现率**才是要看的量（占比会把 20 局的稀有事压平）。 */
 const WATCH = [
@@ -84,11 +90,22 @@ export function conc(t) { return t.tgtGames ? { top: 100 * t.tgtTopSum / t.tgtGa
    共用**同一份**计数规则。为什么现在抽：今晚所有"风格代价"的读数都在脚本桌上量，要拿去对人类形状桌复量时，
    如果我在仪器里再写一份 `cat === DEFENSE ? def++`，那正是本仓"两份同构实现必漂移"要防的第五、第六次（而且漂移的方向恰好是我自己最关心的那几列）。
    `ctx` = 每局重置的那三样（`lastTgt` / `tgtCnt` / `seat`），由调用方持有 ⇒ 集中度与连段率的口径也只有一个定义。 */
-export function tallyPick(t, state, pid, pick, ctx) {
+export function tallyPick(t, state, pid, pick, ctx, legal) {
   const k = pick && pick.key;
   t.acts++;
   t.keys[k] = (t.keys[k] || 0) + 1;
   if ((state.p[pid].ep || 0) > t.maxEp) t.maxEp = state.p[pid].ep;
+  /* §E169b · 把"屯而不打"与"没钱打"分开（这一条是被 `峰值ep` 那个读数逼出来的：开了珠价之后**峰值 ep 从 4.2 掉到 2.5**
+     ⇒ 电磁炮要 `2 ep + 1 电珠` 同时成立，"没开炮"里有一块可能是**蓄能把自己吃穷了**，不是它想屯。
+     ⇒ 在**被问到的这一刻**记三样：手里有电珠（`beadLive`）· 有珠但**买不起**炮（`beadBroke`，=B 机制）· 有珠也买得起却**没开**（`beadHeld`，=A 机制）。
+     ⚠ 只数主体席（调用方只对主体席进来），且必须在 `JI` 那条早退**之前**。 */
+  if (state.p[pid].elec > 0 && legal) {
+    t.beadLive++;
+    let afford = false;
+    for (let i = 0; i < legal.length; i++) if (legal[i].key === SK.RAILGUN && legal[i].affordable) { afford = true; break; }
+    if (!afford) t.beadBroke++;
+    else if (k !== SK.RAILGUN) t.beadHeld++;
+  }
   if (k === SK.JI) { t.ji++; return pick; }
   if (k === SK.RING) t.ring++;
   const cat = byKey[k] && byKey[k].cat;
@@ -126,7 +143,7 @@ export function fieldProfile(params, eps, mode, G, seed0, field, gamemode, oppFa
     const ctx = { lastTgt: {}, tgtCnt: {}, seat: seat };   // 每局重置：连段率与集中度的"上一手/上一落点"都是局内量
     const wrapped = function (state, pid, legal) {
       if (field !== 'self' && pid !== seat) return chooser(state, pid, legal);
-      return tallyPick(t, state, pid, chooser(state, pid, legal), ctx);
+      return tallyPick(t, state, pid, chooser(state, pid, legal), ctx, legal);
     };
     const cs = [];
     /* `oppFactory(g, i)` 给了就把"对手席"换成它（§E168 用：对手=人类形状经验分布抽样，量风格代价是不是脚本桌专有）。
@@ -138,8 +155,11 @@ export function fieldProfile(params, eps, mode, G, seed0, field, gamemode, oppFa
        与 `focus`（连段率）配对读：连段率低 + 集中度高 = "换着最该死的打"；连段率低 + 集中度也低 = 真的在撒。 */
     tallyClose(t, ctx);
     for (const e of st.events || []) {
-      if (e.type !== 'voided') continue;
-      if (field === 'self' || e.pid === seat) t.voided++;
+      /* §E169：珠的三条去路（获得/消耗/过期）**只数主体席**，与 `voided` 同一条席位过滤 ⇒ 对手席用不用珠不污染读数。 */
+      if (field !== 'self' && e.pid !== seat) continue;
+      if (e.type === 'voided') t.voided++;
+      else if (e.type === 'bead') { if (e.delta > 0) t.beadGain++; else if (e.delta < 0) t.beadSpend++; }
+      else if (e.type === 'beadExpire') t.beadExpire += (e.n > 0 ? 1 : 0);
     }
     t.rounds += st.round;
     if (field !== 'self' && st.winner === seat) t.wins++;
@@ -182,6 +202,8 @@ if (RUN_AS_MAIN) for (const file of CHAMPS) {
         '  集火 ' + (t.tgtActs ? (100 * t.focus / t.tgtActs).toFixed(1) + '%' : '—') +
         '  集中 ' + (function () { const c = conc(t); return c ? c.top.toFixed(1) + '%／' + c.kinds.toFixed(2) + '家' : '—'; })() +
         '  昏手 ' + share(t, 'voided') + ' 残局 MULTI_ONLY 出手 ' + t.endgameMultiOnly +
+        /* §E169：珠的三条去路（获得/消耗/过期）并排印 ⇒ "蓄能变多了"这一条单独看会骗人（只攒不打也是变多）。 */
+        '  珠 ' + t.beadGain + '得/' + t.beadSpend + '耗/' + t.beadExpire + '过期' +
         '  胜率 ' + (100 * t.wins / GAMES).toFixed(0) + '% 决胜 ' + (100 * t.decisive / GAMES).toFixed(0) + '% 局长 ' + (t.rounds / GAMES).toFixed(1) +
         '  |  镜像破局 ' + (100 * m.dec / m.G).toFixed(0) + '% 局长 ' + (m.rounds / m.G).toFixed(1));
      }
