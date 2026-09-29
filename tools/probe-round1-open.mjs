@@ -52,19 +52,29 @@ if (!(N >= 3 && N <= 5)) { console.error('本探针按 3~5 人局装配（实测
 for (const p of PACKS) if (!existsSync(p)) { console.error('--packs 里有文件不存在: ' + p); process.exit(2); }
 
 /* ---------- 引擎沙箱（与 eval-5p / probe-5p-envfit 同一份文件清单）---------- */
-/* ⚠ `--instrument=1` / `--filterfix=1` 会**改写 evo.js 的源码文本**再灌进沙箱（手法与
+/* ⚠ `--instrument=1` / `--filterge2=1` 会**改写 evo.js 的源码文本**再灌进沙箱（手法与
  *   `tools/probe-layer-caliber.mjs` 一致，门 D150 钉的就是那种"按字面量替换"）。
  *   ⇒ 这两档量的是"改后的那份"，不是仓库里的那份；每处替换都断言命中 1 次，命中数不对直接抛。
  *   ⇒ 进程只 boot 一次，所以两档各跑一个进程，不要在同一进程里混。 */
 const INSTR = arg('instrument', '0') === '1';
-const FILTERFIX = arg('filterfix', '0') === '1';
+/* ===== v1.5.304：方向翻转了，别再用旧旗标名 =====
+ * 仓库默认现在**就是** `nonDef.length >= 1`（用户 09-29 下午委托裁定采纳），所以本探针的对照档
+ * 变成"**把门槛退回 ≥2**"＝复现 v1.5.303 之前那扇门（§E145 量到"凭空防御"的那个根因）。
+ * 旧名 `--filterfix` 已废弃并**响亮拒绝**：它的语义随默认值反了，留着会让人以为自己在测"改动后"，
+ * 而实际上测的是改动前 —— 这是本仓那一族"旗标名与默认值脱钩"的错（同 D202 ⑥ 的字段名病）。 */
+if (process.argv.some(a => a.indexOf('--filterfix') === 0)) {
+  console.error('⛔ `--filterfix` 已废弃：仓库默认自 v1.5.304 起就是 nonDef.length >= 1。' +
+    '要测**旧行为**请用 `--filterge2=1`（把门槛退回 ≥2 做对照）。');
+  process.exit(2);
+}
+const FILTERGE2 = arg('filterge2', '0') === '1';
 const PATCHES = [];
-if (FILTERFIX) {
+if (FILTERGE2) {
   PATCHES.push({
-    find: 'if (nonDef.length >= 2) pool = nonDef;',
-    to: 'if (nonDef.length >= 1) pool = nonDef;',
-    why: '把"剔掉防御键"的门槛从 ≥2 降到 ≥1 ⇒ nonDef 只剩 ジ 一张时探索池={ジ}，ε 退化成空操作，' +
-         '不再"凭空摆一个架势"。（这是 A 段定位到的那扇门的根因档）'
+    find: 'if (nonDef.length >= 1) pool = nonDef;',
+    to: 'if (nonDef.length >= 2) pool = nonDef;',
+    why: '把"剔掉防御键"的门槛从 ≥1 退回 ≥2 ⇒ nonDef 只剩 ジ 一张时剔除**不生效**，探索池里放回防御键，' +
+         'ε 又能"凭空摆一个架势"。（这是 §E145 定位到的那扇门的**旧档**，现在是对照组）'
   });
 }
 if (INSTR) {
@@ -247,12 +257,15 @@ function runGames(params, cfg, games, seedBase, seat0) {
 }
 
 /* =============== M 段：镜像破局（`--mirror=1`）==============
- * 为什么必须补这一段：`--filterfix`（把"探索池剔掉防御键"的门槛从 ≥2 降到 ≥1）能把**所有回合**的
+ * 为什么必须补这一段：`--filterge2` 的反方向（把"探索池剔掉防御键"的门槛从 ≥2 降到 ≥1）能把**所有回合**的
  * 凭空防御一次清干净，看起来比"回合斜坡"更彻底。但 ε 当初被请进来的理由（v1.5.139 用户裁定）不是审美，
  * 是**破对称**：`docs` 记的是"2 席长程镜像 ε=0 ⇒ 104 回合 0% 决胜；ε.4~.5 top5 ⇒ ~30 回合 100%"。
  * 而在 ep=0 的回合里，非防御可付卡只剩 ジ 一张 ⇒ 门槛降到 ≥1 后探索池={ジ}⇒ **ε 退化成空操作**，
- * 那条"靠随机摆个架势把镜像打散"的出路就被一起堵掉了。所以采纳 filterfix 之前必须先把镜像破局重量一遍：
- * 装配 = 2 席同包（谁也不让谁），判据 = 决胜率 + 平均回合数。历史读数（ε=0 ⇒ 不分胜负）是这条的**对照**。 */
+ * 那条"靠随机摆个架势把镜像打散"的出路就被一起堵掉了。⇒ 采纳这一档**之前**先把镜像破局量一遍（本节就是那次）：
+ * 装配 = 2 席同包（谁也不让谁），判据 = 决胜率 + 平均回合数。历史读数（ε=0 ⇒ 不分胜负）是这条的**对照**。
+ * ⚠ **v1.5.304 实测已把这一档付掉的代价记死**（现役包 · 长程镜像 · 300 局）：平均 24.6→**31.3** 回合、僵死 0/300→**2/300**
+ *   ⇒ 门仍留着破对称的能力、只是慢一拍，用户裁定"值"（页面侧换来的是第 3 回合防御 18.57%→8.26%、第 4+ 4.84%→1.29%）。
+ *   现在默认就是 ≥1，所以本段跑的是**仓库档**；要复现旧行为请加 `--filterge2=1`。 */
 function runMirror(params, cfg, games, seedBase, modeKey) {
   const M = { games: 0, rounds: 0, decisive: 0, cap: 0 };
   for (let g = 0; g < games; g++) {
@@ -310,7 +323,7 @@ const rows = [];
 const RES = [];                      // RES[pi][cname] = {a, b} ⇒ 末尾做配对比较
 const t0 = Date.now();
 console.log('# probe-round1-open  n=' + N + '  games=' + GAMES + '  draws=' + DRAWS + '  seed=' + SEED);
-console.log('# variant=' + (FILTERFIX ? 'filterfix(nonDef>=1)' : 'repo(nonDef>=2)') + '  instrument=' + (INSTR ? 'on' : 'off') +
+console.log('# variant=' + (FILTERGE2 ? 'filterge2(旧档 nonDef>=2)' : 'repo(nonDef>=1，v1.5.304 起的默认)') + '  instrument=' + (INSTR ? 'on' : 'off') +
   (PATCHES.length ? '   ⚠ 本进程在沙箱里改写了 evo.js 的源码文本，仓库文件未动' : ''));
 for (const p of PATCHES) console.log('#   补丁：' + p.why);
 console.log('# packs=' + PACKS.join(' , '));
@@ -331,11 +344,14 @@ for (let pi = 0; pi < PACKS.length; pi++) {
     const defSum = Object.keys(a.def).reduce(function (s, k) { return s + a.def[k]; }, 0);
     const order = Object.keys(a.cnt).sort(function (x, y) { return a.cnt[y] - a.cnt[x]; });
     /* 机制预测：首手只有 nKey 张可付卡，探索以 epsK（下限 2）为池宽均匀抽键 ⇒ 防御份额 = eps ×（池内防御键数/池宽）。
-     * 池宽 = min(max(2,epsK), nKey)；池内防御键数：soft 会把防御剔出池，**除非剔完只剩不到 2 张**（`nonDef.length >= 2`）
-     * ⇒ 第 1 回合 nonDef 只有 ジ 一张 ⇒ 剔除失效 ⇒ 池 = 全部键。这是本探针找到的**那扇门**。 */
+     * 池宽 = min(max(2,epsK), nKey)；池内防御键数：soft 会把防御剔出池，**剔完还剩不到 defGate 张才不过滤**。
+     * v1.5.304：defGate 现在是**档位量**（仓库默认 = 1 ⇒ 只有 nonDef 为空时防御才留在池里；
+     * `--filterge2=1` 复现旧行为 = 2 ⇒ 第 1 回合 nonDef 只有 ジ 一张时剔除失效、池 = 全部键，那才是 §E145 找到的那扇门）。
+     * ⚠ 预测式必须跟着档位走：拿旧规则判新行为会把"机制吻合"这一栏读反。 */
     const nKey = legal1.length, nDefKey = legal1.filter(function (l) { return isDef(l.key); }).length;
     const width = Math.min(cfg.epsK == null ? 5 : Math.max(2, cfg.epsK), nKey);
-    const poolHasDef = (nKey - nDefKey) < 2;                       // soft 的"不过滤"分支
+    const defGate = FILTERGE2 ? 2 : 1;                            // soft 的"不过滤"分支门槛（随档位）
+    const poolHasDef = (nKey - nDefKey) < defGate;
     /* 池内防御键数 = min(防御键总数, 池宽 − 1)：贪心/概率最高的那个键（首手=ジ）必占池里一格。 */
     const poolDef = Math.min(nDefKey, width - 1);
     const predDef = (cfg.eps && poolHasDef) ? cfg.eps * (poolDef / width) : 0;
@@ -344,7 +360,7 @@ for (let pi = 0; pi < PACKS.length; pi++) {
     console.log('  [A/' + cname + '] 首手分布：' + order.map(function (k) { return nm(k) + ' ' + pc(a.cnt[k], a.tot); }).join('  ') +
       '   ⇒ 防御合计 ' + pc(defSum, a.tot) + '   众数=' + nm(order[0]) +
       (a.seatMismatch ? '   ⚠座位不同分布 ' + pc(a.seatMismatch, 40) + '（头注 3 的"一次抽样"口径不成立）' : '   座位同分布 ✅'));
-    console.log('        机制预测（只算 **ε 均匀抽 top-K 键**那一路的贡献；首手贪心=ジ，温度另计）：池宽 ' + width + '/可选 ' + nKey + ' 键，池内防御 ' + (poolHasDef ? poolDef : 0) + ' 张' + (poolHasDef ? '（soft 的"剔掉防御键"因 nonDef=' + (nKey - nDefKey) + ' <2 而**没生效**）' : '（已被 soft 剔除）') +
+    console.log('        机制预测（只算 **ε 均匀抽 top-K 键**那一路的贡献；首手贪心=ジ，温度另计）：池宽 ' + width + '/可选 ' + nKey + ' 键，池内防御 ' + (poolHasDef ? poolDef : 0) + ' 张' + (poolHasDef ? '（soft 的"剔掉防御键"因 nonDef=' + (nKey - nDefKey) + ' <' + defGate + ' 而**没生效**）' : '（已被 soft 剔除）') +
       ' ⇒ 预测 ' + (predDef * 100).toFixed(2) + '% ‖ 实测 ' + (100 * defSum / a.tot).toFixed(2) + '% ‖ ±' + (2.5 * predSE * 100).toFixed(2) + '(2.5σ) ⇒ ' +
       (predOk ? '机制吻合' : '⚠机制不吻合，另有来源'));
     rows.push({ pack: label, cfg: cname, metric: 'A_def@r1', val: defSum / a.tot });

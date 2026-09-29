@@ -6100,6 +6100,32 @@ t('D153 产品的两个口径必须钉住（5 人 = temp.15/ε 回合斜坡 0→
   /* 反向钉：代理栏与门的输入必须**仍可分辨**（代理栏用 0.2 soft，门禁输入用 ε=0） */
   const pr = readFileSync('tools/promote-champion.mjs', 'utf8');
   ok(/fieldProfile\(params, 0\.2, 'soft'/.test(pr), 'D118 的产品代理栏必须继续显式带 0.2/soft（它存在的意义就是"另一口径"）');
+  /* ===== v1.5.304（用户 09-29 下午委托裁定）：`evo.js` 那道"剔掉防御键"的门槛 = ≥1 =====
+   * 这条钉的不是 ui.js 的 ε 调度，而是**同一口径的另一半**：`soft` 的探索池里到底能不能出现防御键。
+   * 旧档（≥2）在"非防御只剩 ジ 一张"的回合里整条豁免 ⇒ §E145 仪器直读：ε 注入的防御占第 1 回合 100%、
+   * 第 3 回合 58.56%、第 4+ 74.73% ⇒ 页面上的防御约四分之三是噪声。
+   * ⚠ 两条断言都要**能红**（"夹具缺对比度让新门变装饰"是本仓踩过的坑）：
+   *   仓库档必须 0.00%，而**同一把探针把门槛退回 ≥2 必须照出 ≈15%** ⇒ 缺了后一条，前一条在"探针根本没跑起来"时也会绿。 */
+  const ev = readFileSync('js/train/evo.js', 'utf8');
+  ok(/if \(nonDef\.length >= 1\) pool = nonDef;/.test(ev),
+    '探索池"剔掉防御键"的门槛必须是 `>= 1`（v1.5.304 用户裁定）');
+  ok(!/if \(nonDef\.length >= 2\) pool = nonDef;/.test(ev),
+    '旧门槛 `>= 2` 不许复活：它让"非防御只剩一张"的那些回合整条豁免失效（§E145：那是首手白站防御的唯一来源）');
+  const repoRun = spawnSync(process.execPath, ['tools/probe-round1-open.mjs', '--packs=js/bundled-champion-3p.js',
+    '--games=200', '--configs=ui', '--draws=4000'], { encoding: 'utf8', timeout: 600000 });
+  eq(repoRun.status, 0, '探针（仓库档）要跑得通（stderr=' + String(repoRun.stderr || '').slice(0, 200) + '）');
+  const mRepo = /防御合计 ([0-9.]+)%/.exec(String(repoRun.stdout || ''));
+  ok(mRepo, '探针必须印出"[A/ui] … 防御合计 x%"那一行（格式变了就要同步这里的正则，别让它静默变成"没找到=通过"）');
+  eq(Number(mRepo[1]), 0, '仓库档的第 1 回合防御必须**恰好 0.00%**（≥1 门槛下探索池={ジ}，ε 是空操作）');
+  ok(/机制吻合/.test(String(repoRun.stdout || '')), '探针自带的机制预测必须吻合（预测 0.00% ‖ 实测 0.00%）⇒ 不吻合说明防御另有来源，这条改动没治到病根');
+  const oldRun = spawnSync(process.execPath, ['tools/probe-round1-open.mjs', '--packs=js/bundled-champion-3p.js',
+    '--games=200', '--configs=ui', '--draws=4000', '--filterge2=1'], { encoding: 'utf8', timeout: 600000 });
+  eq(oldRun.status, 0, '探针（旧档对照）要跑得通（stderr=' + String(oldRun.stderr || '').slice(0, 200) + '）');
+  const mOld = /防御合计 ([0-9.]+)%/.exec(String(oldRun.stdout || ''));
+  ok(mOld && Number(mOld[1]) >= 8, '旧档（门槛退回 ≥2）必须照出**非零**的首手防御（实测 ' + (mOld ? mOld[1] + '%' : '读不到') +
+    '，§E145 的历史读数是 14.91%±0.18）⇒ 它为 0 说明 `--filterge2` 那条补丁没生效，上面 0.00% 那条就成了空断言');
+  ok(/剔掉防御键"因 nonDef=1 <2 而\*\*没生效\*\*/.test(String(oldRun.stdout || '')),
+    '旧档那遍必须把"剔除没生效"写在机制预测行里（这半句是"对照真的走到那条分支"的凭据）');
 });
 t('D154 `--pair=1` 必须**一条命令跑两档并自带 placebo 自检**（09-25 E18 那次自我作废换来的）', function () {
   const p = readFileSync('tools/probe-defense-cause.mjs', 'utf8');
