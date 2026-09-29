@@ -2,9 +2,13 @@
  *
  * 背景（为什么要配对而不是各跑各的）：`tools/behavior-profile.mjs` 的绝对读数**每跑一次都换种子带**，
  *   同一档两次跑集火能从 26.5% 摆到 23.4%（09-30 01:3x 实测）⇒ 拿两次的差来判断"有没有修好"是拿噪声当效应。
- *   本仪器让**各臂跑在同一批牌上**：把总局数切成 5 局一块（一块正好轮完 0~4 号位），
- *   块 b 的 `seed0 = seed + b·5·997` ⇒ 块内第 g 局的 rng 种子 = `seed + (5b+g)·997`，
- *   与工具自身 `--games` 那条种子带**逐字同形**（b=0 那五局就是工具的前五局）⇒ "配对"这件事能在纸上证。
+ *   本仪器让**各臂跑在同一批牌上**：把总局数切成 5 局一块（一块正好轮完 0~4 号位），块 b 传 `seed0 = SEED + b·5·997`
+ *   ⇒ 各臂面对的是**逐字相同的 300…600 局**（同一份 seed0 序列、同一套 `fieldProfile`），这才是"配对"成立的东西。
+ * ⚠ **不要误读（§E164b 更正过一次）**：块**不等于**"工具 `--games` 那条带子的前 N 局"。
+ *   `fieldProfile` 里 `rng = mulberry32(seed0 + g·997)` 而 `slotSalt = seed0 + g·2246822519` —— 块起点挪 `5·997` 只对上了 rng，**槽位盐对不上**
+ *   ⇒ 实测 `G=10@4100` 与 `G=5@4100 + G=5@8985` 两批：acts 248‖247、rounds 265‖285（**不是同一批牌**，门 D209③ 钉着不许把这句话写回来）。
+ *   ⇒ 因此：本仪器的读数**不能**当成 `--games=600` 那种跑的复现，只能当"同一批牌上各臂的差"。跨口径引用仍要走"配对差 + 零点"那条规矩。
+
  * 判据（§E156b 定的三条 + §E161 加的一条）：电磁炮/局、蓄能/局、集火（以及 §E164 新加的**落点集中度**）要回到关档量级；
  *   且胜率不得掉回关档以下。
  * ⚠ **所有度量算术都从 `tools/behavior-profile.mjs` 拿**（`fieldProfile` / `share` / `conc` / 它那份 tally 形状）——
@@ -69,6 +73,10 @@ function runArm(spec) {
   const tgt = off ? 0 : Number(p[1] || '0');
   const tie = off ? 0 : Number((p[2] || '0'));
   if (off) { T.setBeliefSearch(0); } else { T.setBeliefSearch(1); T.setBeliefPly(ply); T.setBeliefTarget(tgt); T.setBeliefTie(tie); }
+  /* ⚠ §E164b：同进程里**每次换档之后的第一次调用**与后续不同（实测 acts 54‖47‖47，换档后再 45‖47‖47）。
+     根因没定位（跨进程同命令行三遍逐字相同 ⇒ 不是随机；关档路径同进程两遍相同 ⇒ 只在开档路径）。
+     ⇒ 这里先跑**一块暖机**再开始计数，否则每臂的第 0 块是"冷"的那一遍，混进臂与臂的配对差里。 */
+  fieldProfile(params, EPS, MODE, BLOCK, SEED + 991, FIELD, GAMEMODE);
   const blocks = [];
   const t0 = process.hrtime.bigint();
   for (let b = 0; b < NB; b++) blocks.push(fieldProfile(params, EPS, MODE, BLOCK, SEED + b * BLOCK * 997, FIELD, GAMEMODE));

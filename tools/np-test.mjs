@@ -26,7 +26,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 /* D206 用（DS 清单 B7）：奖励键名单与默认表**从同一来源拿**（不许在门里抄一份键名单——那正是 B7 要防的"第五处"）。 */
 import { ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';
 /* D207 用（§E164）：落点集中度的算术**只许住在 behavior-profile 里** ⇒ 门直接 import 它做手算自证（被 import 时不跑 main，那条守卫由 D168 系钉着）。 */
-import { conc } from './behavior-profile.mjs';
+import { conc, fieldProfile, WIN } from './behavior-profile.mjs';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -9352,6 +9352,47 @@ t('D207 落点集中度 `conc()` 的手算自证（§E164 · 09-30 夜班）：�
   ok(!/tgtTopSum\s*\/\s*tgtGames/.test(inst.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')),
     '⑤′ 仪器源码里（剥掉注释后）**不许出现** `tgtTopSum / tgtGames` 这种第二份算术');
   ok(bp.indexOf("'  集中 '") >= 0, '⑥ 打印行必须带"集中"那一栏（少了它，体检与门禁看到的是同一个被误读的连段率）');
+});
+
+t('D208 开档的可复现性地基（§E164b · 09-30 夜班）：跨进程逐字相同 + 暖机后同进程两遍相同 + 仪器说明里不许再写"与工具种子带逐字同形"', function () {
+  /* 为什么有这条：今晚全部"配对读数"的地基是**同一批牌 + 同一算法 ⇒ 同一个结果**。这句地基话今晚被我错过两次：
+     ① 我在仪器与三份文档里写过"块切法与工具自身 `--games` 那条种子带**逐字同形**（b=0 那五局就是工具默认前五局）" ⇒ **实测错的**：
+        `fieldProfile` 里 `rng = mulberry32(seed0 + g·997)` 而 `slotSalt = seed0 + g·2246822519`（同 seed0、**不同步长**），块起点只挪对 rng、槽位盐对不上
+        ⇒ `G=10@4100` ‖ `G=5@4100 + G=5@8985` 实测 acts 248‖247、rounds 265‖285（**不是同一批牌**）。四处文档已原地更正。
+     ② 我以为"同 seed 两遍相同"是显然的 ⇒ **同进程连跑两遍 `fieldProfile`（开档）第一遍与后面不同**（acts 54‖47‖47‖47），
+        而**跨进程**同命令行连跑三遍**逐字相同**（防御 12.9% / 攻击 36.1% / 集火 29.2% / 集中 50.0% 三遍一致）。
+        ⇒ 根因**今晚没定位到**（怀疑是某处首次调用才建立的缓存/懒初始化；`resolve.js` 与 `play.js` 里 `Math.random` 都是 0 处，`state.js` 1 处不在开档路径上）。
+        ⇒ 所以这条门钉的是**实测成立的那两条**（跨进程相同、暖机后相同），而不是我原先那句错的"逐字同形"；
+          第一遍不同这件事**留在 §E164b 当未结缺陷**，别当成"已经稳了"。 */
+  const TBP = WIN.EpirusTrainer;
+  const params = AUDIT.loadChamp(WIN, 'js/bundled-champion-3p.js', process.cwd());
+  const key = (t) => JSON.stringify({ a: t.acts, w: t.wins, r: t.rounds, d: t.decisive, v: t.voided, f: t.focus, ta: t.tgtActs,
+    tg: t.tgtGames, ts: Number((t.tgtTopSum * 1e6).toFixed(6)), tk: t.tgtKindSum, mx: t.maxEp, k: Object.keys(t.keys).sort().map((x) => x + ':' + t.keys[x]) });
+  for (const mode of ['off', 'on']) {
+    if (mode === 'on') { TBP.setBeliefSearch(1); TBP.setBeliefPly(1); TBP.setBeliefTarget(0); TBP.setBeliefTie(1); }
+    else TBP.setBeliefSearch(0);
+    fieldProfile(params, 0.2, 'soft', 3, 4100, 'mixed', 'multi');            /* 暖机一遍（§E164b：开档第一遍与后续不同，原因未定位） */
+    const one = key(fieldProfile(params, 0.2, 'soft', 3, 4100, 'mixed', 'multi'));
+    const two = key(fieldProfile(params, 0.2, 'soft', 3, 4100, 'mixed', 'multi'));
+    TBP.setBeliefSearch(0); TBP.setBeliefTie(0);
+    ok(one === two, '① ' + mode + ' 档：暖机之后同参数两遍的度量必须逐字相同（实测 ' + one.slice(0, 80) + ' ‖ ' + two.slice(0, 80) + '）');
+    const acts = Number((one.match(/"a":([0-9]+)/) || [0, '0'])[1]);
+    ok(acts > 0, '② ' + mode + ' 档：两遍相同但**跑的是空表**（acts=' + acts + '）⇒ 仪器根本没进游戏，"相同"是假的');
+  }
+  /* ③ 跨进程：这条才是今晚那些表真正依赖的可复现性（每台仪器都是**一个进程跑一个配置**）。 */
+  const outs = [];
+  for (let i = 0; i < 2; i++) {
+    const rr = spawnSync(process.execPath, ['tools/behavior-profile.mjs', '--eps=0.2', '--epsmode=soft', '--games=8', '--mirror=0', '--belief=1'],
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 300000 });
+    ok(rr.status === 0, '③ 跨进程复现：第 ' + (i + 1) + ' 遍没跑成（exit=' + rr.status + '）');
+    outs.push(String(rr.stdout || '').replace(/\r/g, ''));
+  }
+  ok(outs[0] === outs[1], '③ 同一命令行**换进程**必须逐字相同（实测两遍输出不同 ⇒ 今晚的开档读数不可复现，得先修这条再谈引用）');
+  ok(/防御 [0-9.]+%.*昏手 [0-9.]+%/.test(outs[0]), '③′ 输出里必须有那行度量（没有 ⇒ 两遍"相同"可能是因为都在空转）');
+  /* ④ 把今晚更正的那条错话钉住：不许有人再把"块 = 工具前 N 局"写回来。 */
+  const inst = readFileSync('docs/artifacts/e161-ply.mjs', 'utf8');
+  ok(inst.indexOf('逐字同形') < 0,
+    '④ 配对仪器（`docs/artifacts/e161-ply.mjs`）的说明里不许再出现"与工具种子带**逐字同形**"（§E164b 实测不成立：acts 248‖247、rounds 265‖285）');
 });
 
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
