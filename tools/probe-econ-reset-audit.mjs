@@ -32,7 +32,7 @@ const SENT = {
   target: 9, cap: 9, divW: 0.5, divK: 7, divRoleW: 0.5, divCatW: 0.5, divForceGens: 5,
   wallFilter: true, wallGames: 5, hoardOnLeftover: true, convRatio: true, convOffense: true,
   hoardCapMult: 3, stockBonus: 0.5, blockW: 0.5, widthW: 0.5, bigcardW: 0.5, costlyW: 0.5,
-  bigtChainW: 0.5, ringW: 0.5, s4W: 0.5, beadW: 0.5, fitTailW: 0.5, fitTailQ: 0.5
+  bigtChainW: 0.5, ringW: 0.5, s4W: 0.5, beadW: 0.5, fitTailW: 0.5, fitTailQ: 0.5, fitCal: true
 };
 /* 下达名 ≠ 读回名的两处（第一版把这两处误报成"setter 不吃键"，故显式映射并注释） */
 const readKey = k => (k === 'target' ? 'targetOverride' : (k === 'cap' ? 'capOverride' : k));

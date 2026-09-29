@@ -3397,7 +3397,7 @@ t('D77 经济/熵奖励 env 只能有**一个**读取点（server/econ-env.mjs�
    * 旧写法 `evo.slice(indexOf('function setEconomyReward(o)'), +1200).indexOf('o.<键> != null')` 有三个毛病：
    *   ① 保的是**排版**（加一行注释就能把后面的键顶出窗口）；② 窗口会在模式串**中途截断** ⇒ 起点 1194 也会红
    *   （我为它连红四次）；③ 抓不到"读了但没生效"。下面喂值读回：**更强、且与排版无关**。 */
-  const SENT = { target: 7, cap: 33, divW: 0.123, divK: 9, divRoleW: 0.25, divCatW: 0.25, divForceGens: 5, wallFilter: true,
+  const SENT = { target: 7, cap: 33, divW: 0.123, divK: 9, divRoleW: 0.25, divCatW: 0.25, divForceGens: 5, wallFilter: true, fitCal: true,
     wallGames: 4, hoardOnLeftover: true, convRatio: true, convOffense: true, hoardCapMult: 5, stockBonus: 0.11,
     blockW: 0.22, widthW: 0.33, bigcardW: 0.44 };
   const ALIAS = { target: 'targetOverride', cap: 'capOverride' };

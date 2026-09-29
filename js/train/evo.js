@@ -1240,7 +1240,9 @@ let WALL_GAMES = 3;
   function setEconomyReward(o) {
     o = o || {};
     if (!ECON_DEFAULTS && !o.reset) {
-      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W };
+      /* v1.5.299（DS）：**这份快照是字面量列表**（注释里说"不抄字面量"其实不成立）⇒ 加新键必须同时补这里，
+       * 否则 `setEconomyReward({reset:true})` 抹不掉它 —— 我的 `fitCal` 就是这么被 D175 抓到的（门是对的）。 */
+      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W, fitCal: FIT_CAL_EXCESS };
     }
     /* qoder-research 0920（RESEARCH-LOG §5b）：环奖励权重接进 econ-env 单一来源（默认不设 ⇒ RING_W 原样 0.10）。
      * setRingReward 自带 `isFinite && >=0` 校验；调用发生在模块求值之后 ⇒ 无 TDZ 问题（RING_W 声明在 :1955）。 */
@@ -1258,6 +1260,7 @@ let WALL_GAMES = 3;
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
     if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.costlyW != null) COSTLY_W = Math.max(0, Number(o.costlyW)); if (o.bigtChainW != null) BIGT_CHAIN_W = Math.max(0, Number(o.bigtChainW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
     if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover; if (o.convRatio != null) CONV_RATIO = !!o.convRatio; if (o.convOffense != null) CONV_OFFENSE = !!o.convOffense;
+    if (o.fitCal != null) FIT_CAL_EXCESS = !!(o.fitCal && String(o.fitCal) !== '0' && o.fitCal !== 0);
     if (o.hoardCapMult != null) HOARD_CAP_MULT = Number(o.hoardCapMult) || 1; if (o.stockBonus != null) STOCK_BONUS = Number(o.stockBonus) || 0;
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
@@ -1279,6 +1282,7 @@ let WALL_GAMES = 3;
       if (ECON_DEFAULTS) {
         DIV_W = ECON_DEFAULTS.divW; DIV_K = ECON_DEFAULTS.divK; DIV_ROLE_W = ECON_DEFAULTS.divRoleW;
         DIV_FORCE_GENS = ECON_DEFAULTS.divForceGens; COSTLY_W = ECON_DEFAULTS.costlyW;
+        if (ECON_DEFAULTS.fitCal != null) FIT_CAL_EXCESS = !!ECON_DEFAULTS.fitCal;   // v1.5.299：新键也要能复位
       }
     }
     return economyReward();
@@ -1288,7 +1292,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
+      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, fitCal: FIT_CAL_EXCESS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
       fitTailW: FIT_TAIL_W, fitTailQ: FIT_TAIL_Q,   // 09-26 §E49：ECON_REWARD_KEYS 里每个键都要"设得进、读得回"（D77 往返）
       /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
        * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
@@ -1305,6 +1309,14 @@ let WALL_GAMES = 3;
    * 这里给"熬出来的胜利"打折：终局时**还有 ≥2 人活着**（没人被淘汰）⇒ 判为哨声局。
    * 反证（np-test D18）：把 rankCredit 里的哨声判断删掉，D18 立刻红。 */
   let WHISTLE_PEN = 0;      // 0 = 关（默认）；数字 = 显式覆盖（v1.5.12 起不再有"长程自动 0.5"）
+  /* v1.5.299（DS · 用户裁定「fit 可以按你的意思做」）：**胜率项的口径对齐**（默认关 · `EPIRUS_FIT_CAL=1`）。
+   * 病：`rankCredit` 的绝对刻度（1 名 1.0 / 2 名 0.3）**与桌子人数无关**，而随机基线 = rank/N
+   *   （3 人桌 1 名 33%、5 人桌 20%）⇒ 同一个 1.0 在不同桌上含义不同；产品考卷是 5P，
+   *   而本仓已实测「N=3 排序外推到产品口径会翻号」（§E137 那批 −1.9pt）。
+   * 对齐形状：改成**相对随机基线的超额** `(奖励 − rank/N) / (1 − rank/N)`（clamp ≥0）⇒
+   *   ① N 无关（5 人桌 1 名回到 1.0）；② 2 名在两种桌上都低于基线 ⇒ 归 0（"只有赢才算"）。
+   * 默认关 ⇒ 与旧行为**逐位相同**（门 D191 钉 A/A）。 */
+  let FIT_CAL_EXCESS = false;
   let DEAL_W = 0.01;        // 出手奖励权重（原值写死 0.01）
   /* v1.5.14（用户裁定 **选项 A**：训练侧加"先手/首次伤害"激励）：**默认关**，靠
    * `EPIRUS_FIGHT_DEAL` / `EPIRUS_FIGHT_FIRST` 打开 —— 沿用 v1.5.12 的教训：不猜默认值，
@@ -1324,8 +1336,13 @@ let WALL_GAMES = 3;
    * 惩罚真正有用的是**多人 3 血**（上限 60、收缩不触发 ⇒ 哨兵局常见，v1.5.9 实测有效）——
    * 那个场景用 `EPIRUS_FIGHT_WHISTLE` 显式开即可，不要用"按模式猜"的默认值。 */
   function whistlePenNow() { return WHISTLE_PEN; }
-  function rankCredit(rank, aliveEnd) {
-    const base = rank === 1 ? 1.0 : (rank === 2 ? 0.3 : 0.0);
+  function rankCredit(rank, aliveEnd, nSeats) {
+    let base = rank === 1 ? 1.0 : (rank === 2 ? 0.3 : 0.0);
+    if (FIT_CAL_EXCESS) {
+      const NS = Number(nSeats) > 1 ? Number(nSeats) : 3;   // 缺省按现役 3 人桌（只在开了对齐时才用到）
+      const bl = Math.min(0.99, rank / NS);                  // 随机基线：rank/N
+      base = Math.max(0, (base - bl) / (1 - bl));
+    }
     const pen = whistlePenNow();
     return (pen > 0 && aliveEnd >= 2) ? base * (1 - pen) : base;
   }
@@ -1545,7 +1562,7 @@ let WALL_GAMES = 3;
       const rank = rankOf(r.state, seat, seed);
       /* v1.5.8：终局还活着的人数 ⇒ 判断"这局是打出来的还是熬出来的"（≥2 人活着 = 哨声局） */
       const aliveEnd = r.state.p.filter(function (q) { return q.hp > 0; }).length;
-      const base = rankCredit(rank, aliveEnd);   // N19：3 人局里第二名也算输；v1.5.8 起哨声局打折
+      const base = rankCredit(rank, aliveEnd, r.state.p.length);   // N19：3 人局里第二名也算输；v1.5.8 起哨声局打折（v1.5.299 起带上人数：口径对齐要用它）
       const others = r.dmg.reduce(function (a, b) { return a + b; }, 0) - r.dmg[seat];
       const diff = r.dmg[seat] - others / Math.max(1, n - 1);
       // "立刻出手"的权重下调（原来在惩罚攒钱）；腾出的权重给经济两项
