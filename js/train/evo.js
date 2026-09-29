@@ -694,8 +694,14 @@
    *   同批 200 局/臂，`hyb-none` 比现役包还差 **28.00pt**（§E153）⇒ 网络的 logit 是"同一状态内候选之间的偏好"，不是跨状态可比的价值。 */
   let BELIEF_SEARCH = 0;
   let BELIEF_PLY = 1;                           /* 评估往前推几回合（§E156b 的病：1-ply 看不见"蓄珠→下回合电磁炮""集火滚环"这类跨回合收益） */
+  let BELIEF_TGT = 0;                           /* 目标函数档：0=减存活对手血量**均值**（已量过的那版）· 1=减**最强活着的那个** · 2=均值 + 每次淘汰定价（§E161b） */
   function setBeliefPly(v) { const n = Math.floor(Number(v)); BELIEF_PLY = (isFinite(n) && n >= 1) ? (n > 3 ? 3 : n) : 1; }
   function beliefPly() { return BELIEF_PLY; }
+  function setBeliefTarget(v) { const n = Math.floor(Number(v)); BELIEF_TGT = (isFinite(n) && n >= 0) ? (n > 2 ? 2 : n) : 0; }
+  function beliefTarget() { return BELIEF_TGT; }
+  let BELIEF_TIE = 0;                           /* 平票怎么破：0=取枚举顺序第一个（§E154~§E161 已量过那版）· 1=由网络打分裁决（§E161c） */
+  function setBeliefTie(v) { const n = Math.floor(Number(v)); BELIEF_TIE = (isFinite(n) && n >= 0) ? (n > 1 ? 1 : n) : 0; }
+  function beliefTie() { return BELIEF_TIE; }
   let __pendingBelief = false;                  /* 只在 `policyChooserBelief` 的**构造期间**为真 ⇒ 实例级开关，不动 `policyChooserN` 的签名 */
   const BELIEF_BEAM = 48;                       /* 候选数上界（浏览器保护；现役包实测均值 25.9 ⇒ 正常不触发） */
   function setBeliefSearch(v) { BELIEF_SEARCH = (v && String(v) !== '0' && Number(v) !== 0) ? 1 : 0; }
@@ -742,8 +748,17 @@
   }
   function beliefValue(st, pid) {
     const me = st.p[pid];
-    let sum = 0, n = 0;
-    for (let i = 0; i < st.p.length; i++) if (i !== pid && st.p[i].hp > 0) { sum += st.p[i].hp; n++; }
+    let sum = 0, n = 0, hi = -1, dead = 0;
+    for (let i = 0; i < st.p.length; i++) {
+      if (i === pid) continue;
+      if (st.p[i].hp > 0) { sum += st.p[i].hp; n++; if (st.p[i].hp > hi) hi = st.p[i].hp; } else dead++;
+    }
+    /* §E161b · 目标函数的三档（默认 0 = §E156b/§E161 已量过的那把尺，一字不变）：
+       病在"减**均值**"这一项上 —— 均值把"滚掉一个残血"判成**亏**（他本来就在平均值以下，他一死分母里少一个低项 ⇒ 均值反而涨），
+       而 5 人局的胜负是**比名次**：干掉一个人就是往上挪一格。⇒ 1 减"最强的那个活着的人"，2 给每次淘汰一个固定价。
+       ⚠ 这三档都是**近视**尺（只看这一回合结算后），§E161 已证"多看一手"不会把它变成远视 ⇒ 要修的是**定价**不是**深度**。 */
+    if (BELIEF_TGT === 1) return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (hi >= 0 ? hi : 0);
+    if (BELIEF_TGT === 2) return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (n ? sum / n : 0) + 6 * dead;
     return 20 * (me.hp > 0 ? 1 : 0) + me.hp - (n ? sum / n : 0);
   }
   /* §E161 · 把评估往前多推一手：**我自己那一手交给包的贪心**（否则"下一回合我会不会用这颗珠"无从判断 ⇒ 投资仍然看不见），
@@ -800,7 +815,7 @@
       scored.sort(function (a, x) { return x.v - a.v; });
       pool = scored.slice(0, BELIEF_BEAM).map(function (s) { return s.c; });
     }
-    let best = null, bv = -1e18;
+    let best = null, bv = -1e18, bn = -1e18;
     for (let ci = 0; ci < pool.length; ci++) {
       const q = S.cloneState(state);
       q.rng = { next: mulberry32((((state.round | 0) + 1) * 2654435761 + pid * 7919 + ci * 104729) >>> 0) };
@@ -809,7 +824,18 @@
       X.resolveActions(q); X.endTurn(q);
       for (let p2 = 1; p2 < BELIEF_PLY; p2++) beliefAdvance(q, pid, params);   /* 默认 1 层 ⇒ 这行永不执行 */
       const v = beliefValue(q, pid);
-      if (v > bv + 1e-9) { bv = v; best = pool[ci]; }
+      /* §E161c · **并列怎么破**：`beliefValue` 是一把整数血量的尺 ⇒ 大量候选**精确并列**（这一回合什么都不改变的手太多了），
+         而默认形状"`v > bv + 1e-9` ⇒ 取枚举顺序里第一个最优"意味着**并列由候选的枚举顺序裁决**，那不是偏好 ⇒
+         等于把包自己那部分风格（珠经济、连段）在平票时扔掉了。§E156b 看到的"三列塌"里有一部分是这个，不全是目标近视。
+         `BELIEF_TIE = 1` ⇒ 平票改由**网络自己的打分**裁决（`P.value` 只在**同一状态内**可比——§E153 否掉的是拿它跨状态当价值）。
+         ⚠ 默认 0 ⇒ 下面那条 `else if` 永不进，`bn` 从不参与判决 ⇒ 已量过的 §E154~§E161 那一版逐字不变。 */
+      if (v > bv + 1e-9) {
+        bv = v; best = pool[ci];
+        bn = BELIEF_TIE === 1 ? P.value(state, pid, pool[ci].key, params, null, pool[ci]) : -1e18;
+      } else if (BELIEF_TIE === 1 && Math.abs(v - bv) <= 1e-9) {
+        const nn = P.value(state, pid, pool[ci].key, params, null, pool[ci]);
+        if (nn > bn + 1e-12) { bn = nn; best = pool[ci]; }
+      }
     }
     if (!best) return null;
     return { key: best.key, target: best.target == null ? null : best.target, target2: best.target2 == null ? null : best.target2, bead: best.bead || null };
@@ -3095,6 +3121,7 @@ let WALL_GAMES = 3;
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
     setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve, setBeliefPly, beliefPly,
+    setBeliefTarget, beliefTarget, setBeliefTie, beliefTie,
     setTrainEps, trainEps, countTrainEps, resetTrainEpsStat   // v1.5.237 E28：训练侧执行口径旋钮（默认关）+ **开火计数**
   };
 })(typeof window !== 'undefined' ? window : globalThis);

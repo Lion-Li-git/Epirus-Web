@@ -19,7 +19,7 @@ import { fieldProfile, WIN } from '../../tools/behavior-profile.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
-const ARMS = String(flag('arms', '0,1,2')).split(',').map(Number).filter(n => isFinite(n));
+const ARMS = String(flag('arms', '0,1:0,1:1,1:2')).split(',').map(s => s.trim()).filter(s => /^(0|[1-3]:[0-2](:[0-1])?)$/.test(s));
 const EPS = Number(flag('eps', 0.2));
 const MODE = flag('epsmode', 'soft');
 const GAMES = Number(flag('games', 600));
@@ -42,20 +42,27 @@ const M = [
   ['天火/局', 'n:' + SK.FIRESTORM, 'games', 'pg'], ['激光眼/局', 'n:' + SK.LASER_EYE, 'games', 'pg']
 ];
 
-/* 一臂 = 同一批块（同一副牌）上的逐块 tally。 */
-function runArm(arm) {
-  if (arm > 0) { T.setBeliefSearch(1); T.setBeliefPly(arm); } else { T.setBeliefSearch(0); }
+/* 一臂 = 同一批块（同一副牌）上的逐块 tally。
+   臂的形状 `--arms=` 现在是 `p:t` 二元组（ply : tgt），`0` = 关档：
+     `0` 关档基线 · `1:0` §E156b/§E161 量过的那版（1-ply + 减均值）· `1:1` 减最强活着的那个 · `1:2` 均值 + 每次淘汰定价 · `2:2` 再叠一层深度
+   ⇒ 加 `1:0` 这一臂是为了让"目标改档的效果"与"§E161 已知的那版"直接可比，而不是只跟关档比。 */
+function runArm(spec) {
+  const off = spec === '0';
+  const p = spec.split(':');
+  const ply = off ? 1 : Number(p[0] || 1);
+  const tgt = off ? 0 : Number(p[1] || '0');
+  const tie = off ? 0 : Number((p[2] || '0'));
+  if (off) { T.setBeliefSearch(0); } else { T.setBeliefSearch(1); T.setBeliefPly(ply); T.setBeliefTarget(tgt); T.setBeliefTie(tie); }
   const blocks = [];
   const t0 = process.hrtime.bigint();
   for (let b = 0; b < NB; b++) blocks.push(fieldProfile(params, EPS, MODE, BLOCK, SEED + b * BLOCK * 997, FIELD, GAMEMODE));
   const wallMs = Number(process.hrtime.bigint() - t0) / 1e6;
-  T.setBeliefSearch(0);
-  return { arm, blocks, wallMs, acts: blocks.reduce((a, t) => a + t.acts, 0) };
+  T.setBeliefSearch(0); T.setBeliefTarget(0); T.setBeliefPly(1); T.setBeliefTie(0);
+  return { arm: spec, ply: ply, tgt: tgt, tie: tie, off: off, blocks: blocks, wallMs: wallMs, acts: blocks.reduce((a, t) => a + t.acts, 0) };
 }
 function den(t, d) { return d === 'games' ? BLOCK : t[d]; }
 function num(t, k) { return k.indexOf('n:') === 0 ? (t.keys[k.slice(2)] || 0) : t[k]; }
 function stat(blocks, d, k) { let n = 0, e = 0; for (const t of blocks) { n += num(t, k); e += den(t, d); } return e ? n / e : 0; }
-function maxEp(blocks) { let m = 0; for (const t of blocks) if (t.maxEp > m) m = t.maxEp; return m; }
 
 /* 配对自助：各臂共用同一组块下标 ⇒ 抽到的永远是"同一批牌上的两臂"。 */
 function pairedBoot(a, b, d, k) {
@@ -71,14 +78,15 @@ function pairedBoot(a, b, d, k) {
 }
 
 const runs = [];
-for (const arm of ARMS) runs.push(runArm(arm));
-const base = runs.find(r => r.arm === (ARMS[0]));
-console.log('== §E161 配对（' + CHAMP.replace(/^.*\//, '') + ' · ε=' + EPS + ' ' + MODE + ' · ' + FIELD + '/' + GAMEMODE +
+for (const spec of ARMS) runs.push(runArm(spec));
+const base = runs.find(r => r.arm === ARMS[0]);
+console.log('== §E161/§E161b 配对（' + CHAMP.replace(/^.*\//, '') + ' · ε=' + EPS + ' ' + MODE + ' · ' + FIELD + '/' + GAMEMODE +
   ' · ' + (NB * BLOCK) + ' 局 = ' + NB + ' 块 × ' + BLOCK + '（每块轮完 0~4 号位）· seed0=' + SEED + ' · 配对自助 ' + BOOT + ' 次）==');
+console.log('   臂 = `ply:tgt:tie`（tgt 0=减存活对手均值 · 1=减最强活着的那个 · 2=均值+每次淘汰 6 血；tie 0=平票取枚举顺序第一个 · 1=平票交给网络打分；`0`=关档）· 基线 = 第一臂（' + ARMS[0] + '）');
 for (const r of runs) {
-  const tag = 'ply=' + r.arm + (r.arm === 0 ? '（关档基线）' : '');
+  const tag = r.arm === '0' ? '0（关档基线）' : 'ply=' + r.ply + ' tgt=' + r.tgt + ' tie=' + r.tie;
   console.log('  ' + tag.padEnd(18) + ' 每决策 ' + (r.wallMs / Math.max(1, r.acts)).toFixed(2) + ' ms（本机 node，' +
-    r.acts + ' 次搜索决策 / ' + r.wallMs.toFixed(0) + ' ms）  最大ep ' + maxEp(r.blocks));
+    r.acts + ' 次搜索决策 / ' + r.wallMs.toFixed(0) + ' ms）');
   const parts = [];
   for (const [label, k, d, kind] of M) {
     const v = stat(r.blocks, d, k), bv = stat(base.blocks, d, k);

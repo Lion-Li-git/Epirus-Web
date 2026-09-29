@@ -9223,6 +9223,47 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
     const t1 = trace(1), t2 = trace(2);
     ok(t1 !== t2, '⑪ 开档下 ply=1 与 ply=2 的整局必须不同（实测两批都是 ' + t1 + '）⇒ 相同就说明层数没接到评估里');
   }
+  /* ⑫ §E161b/§E161c 的两个新档（目标怎么定价 `setBeliefTarget` / 平票怎么破 `setBeliefTie`）：
+     出厂必须都是 0（= §E154~§E161 已认证的那把尺），且**每一档必须真的改判决**——
+     不然"三列回没回来"是在一把没接到引擎的尺上量的（⑪ 同族的坑：旋钮印在 banner 上不等于进了决策）。 */
+  {
+    const src12 = readFileSync('js/train/evo.js', 'utf8');
+    ok(/let BELIEF_TGT = 0;/.test(src12) && /let BELIEF_TIE = 0;/.test(src12),
+      '⑫ 源码默认值必须是 `BELIEF_TGT = 0` / `BELIEF_TIE = 0`（出厂 = 已量过那版）');
+    ok(src12.indexOf('else if (BELIEF_TIE === 1') >= 0,
+      '⑫ 平票那条支路必须**带 `BELIEF_TIE === 1` 守卫**（tie=0 时一次都不许多算 `P.value` ⇒ 默认形状逐字不变）');
+    const W12 = mkSb(), T12 = W12.EpirusTrainer;
+    eq(T12.beliefTarget(), 0, '⑫ `beliefTarget()` 出厂必须是 0（实测 ' + T12.beliefTarget() + '）');
+    eq(T12.beliefTie(), 0, '⑫ `beliefTie()` 出厂必须是 0（实测 ' + T12.beliefTie() + '）');
+    T12.setBeliefTarget('2'); eq(T12.beliefTarget(), 2, '⑫ 字符串 "2" 必须能设进去');
+    T12.setBeliefTarget(99); eq(T12.beliefTarget(), 2, '⑫ 上界夹住（99 ⇒ 2）');
+    T12.setBeliefTarget(-1); eq(T12.beliefTarget(), 0, '⑫ 负数必须回 0，不许把 -1 当"另一种档"');
+    T12.setBeliefTarget('abc'); eq(T12.beliefTarget(), 0, '⑫ 非数值必须回 0');
+    T12.setBeliefTie(5); eq(T12.beliefTie(), 1, '⑫ 平票档只有两档，5 必须夹成 1');
+    T12.setBeliefTie(0); eq(T12.beliefTie(), 0, '⑫ 0 必须能关回去');
+    const trace12 = function (tgt, tie) {
+      const W2 = mkSb(), T2 = W2.EpirusTrainer, S2 = W2.EpirusState, P2 = W2.EpirusPolicy, Play2 = W2.EpirusPlay, R2 = W2.EpirusRules;
+      const mm4 = readFileSync('js/bundled-champion-3p.js', 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
+      const pp = P2.unpack(JSON.parse(mm4[1]), true);
+      T2.setBeliefSearch(1); T2.setBeliefTarget(tgt); T2.setBeliefTie(tie);
+      const f = T2.policyChooserBelief(pp, 0.15, 0.2, 5, 'soft');
+      const others = function (s2, pid2, legal) { const lg = legal.filter(function (l) { return l.affordable; }); return lg.length ? lg[0].key : R2.SK.JI; };
+      const seen = [];
+      for (let g = 0; g < 6; g++) {
+        const sd = 31337 + g * 977;
+        const st = S2.createState('multi', { next: T2.mulberry32(sd) }, 5);
+        if (T2.slotSaltFor) st.slotSalt = T2.slotSaltFor(sd);
+        Play2.autoGameN(st, [f, others, others, others, others]);
+        seen.push(st.winner + '/' + st.round);
+      }
+      return seen.join(',');
+    };
+    const base12 = trace12(0, 0);
+    ok(trace12(0, 1) !== base12, '⑫ tie=1（平票交给网络打分）必须改判决（实测与基线同为 ' + base12 + '）⇒ 相同就说明这个档没接进搜索');
+    ok(trace12(1, 0) !== base12, '⑫ tgt=1（减最强活着的那个）必须改判决（实测与基线同为 ' + base12 + '）');
+    ok(trace12(2, 0) !== base12, '⑫ tgt=2（每次淘汰定价）必须改判决（实测与基线同为 ' + base12 + '）');
+    eq(trace12(0, 0), base12, '⑫ 同档两次跑必须逐字相同（搜索不许抽 `state.rng`）');
+  }
   /* ⑨ 锚点纪律（今晚 D161 真红过一次换来的）：两道量具拿 `policyChooserN` 的**签名整行**当补丁锚点。
      钉法是"从两个库源码里把锚字符串抠出来，再要求 evo.js 逐字含有它"—— 而不是我再抄一遍那行字
      （抄第三份 = 制造下一次"改了一处漏两处"，本仓那条老规矩）。 */
