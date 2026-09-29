@@ -8921,6 +8921,98 @@ t('D201 v1.5.299 的 fit 口径旋钮 EPIRUS_FIT_CAL 有牙（补 DS 提交里�
    *   那半条只能靠 ⑤ 的调用点静态钉 + DS 的产物级 A/B（末代 bestFit 0.835→0.380）。 */
 });
 
+t('D202 §E146 的判读器 `analyze-fitcal-ab.mjs` 有牙（合成夹具，<1 秒）：配对不成立必须响亮拒、算术要等于手算值', function () {
+  /* 为什么钉这道：这条门产出的数**直接决定用户要不要在目标函数层换手**（决策单 §零 第①件）。
+   * 而这类"读现成 tsv 做算术"的工具，最贵的三种坏法恰好是：
+   *   ① 两臂其实打的不是同一批桌子，却照样算出一个配对差（§E136 的前科）；
+   *   ② 报错走"退出码 0 + 少印一段"，于是**崩在半成品报告中间**、前半截读数被抄走
+   *      （**本门就是为这件事立的**：开发时第一版把 `const mean` 写在 H2 使用点之后 ⇒ ESM TDZ ⇒ H1 全印完才炸）；
+   *   ③ 判据缺对比度还照判（§E146 的极差在真产物上三档全部饱和 100pt ⇒ 门要验"极差算对了"，缺陷本身记在日志里）。
+   * 夹具全是手写字符串 ⇒ 不跑引擎、不进 np 的耗时榜。 */
+  const TOOL = 'tools/analyze-fitcal-ab.mjs';
+  ok(/import \{ pairedDiff \} from '\.\/routing-gain-lib\.mjs'/.test(readFileSync(TOOL, 'utf8')),
+    '① 配对差必须 import lib 那一份（本仓三处 SE 各写一遍的教训；门 D193/D198 同族）');
+  ok(!/Math\.sqrt/.test(readFileSync(TOOL, 'utf8')),
+    '① 反向哨兵：判读器里不许出现第二个标准差/SE 公式（`pairedDiff` 就是唯一那份）');
+  /* ⓪ 参数守卫（仓规 v1.5.234）：`--envdir` 打错会被当"没给"⇒ 静默读默认目录；`--seeds` 打错会退回默认三档
+     ⇒ 报出来的"三 seed 同号"其实不是使用者指定的那三档。真跑一遍，不许只看源码。 */
+  const typo = spawnSync(process.execPath, [TOOL, '--seed=7,31,77', '--nonsense=1'], { encoding: 'utf8', timeout: 60000 });
+  eq(typo.status, 64, '⓪ 不认识的 `--` 参数必须 exit 64（实测 ' + typo.status + '）');
+  ok(/nonsense/.test(String(typo.stderr || '')), '⓪ 且要点名是哪个开关打错了');
+
+  const dir = mkdtempSync(join(tmpdir(), 'd202-'));
+  const envDir = join(dir, 'env'); mkdirSync(envDir, { recursive: true });
+  const HDR = ['#eval5p-percombo', '#seed=77000', '#games=2', '#n=5', '#pool=all', '#every=7', '#field=-', '#swap=-',
+    '#arm\tidx\tnames\tgames\tfirst\tstrict'].join('\n');
+  /* 手算好的两臂：cal0 两张桌子 (1/2, 0/2)、cal1 (2/2, 1/2) ⇒ 逐桌子差 = 0.5, 0.5 ⇒ 均值 0.5、sd 0 ⇒ 区间退化成 [50,50]pt */
+  const perFile = function (file, first0, first1, opts) {
+    const o = opts || {};
+    const names1 = o.badNames ? 'X|B|C|D|E' : 'A|B|C|D|E';
+    const ctrl0 = o.badCtrl ? 1 : 0;
+    return HDR.replace('#swap=-', '#file=' + file + '\n#swap=-') + '\n' +
+      ['subject\t0\tA|B|C|D|E\t2\t' + first0 + '\t' + first0, 'subject\t1\t' + names1 + '\t2\t' + first1 + '\t' + first1,
+        'ctrl\t0\tA|B|C|D|E\t2\t' + ctrl0 + '\t' + ctrl0, 'ctrl\t1\tA|B|C|D|E\t2\t1\t1'].join('\n') + '\n';
+  };
+  const write2 = function (a, b) {
+    writeFileSync(join(dir, 'cal0-s9.tsv'), a); writeFileSync(join(dir, 'cal1-s9.tsv'), b);
+  };
+  const run = function (extra) {
+    const r = spawnSync(process.execPath, [TOOL, '--dir=' + dir, '--envdir=' + envDir, '--seeds=9'].concat(extra || []),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 120000 });
+    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
+  };
+  const num = function (s, label, unit) {
+    const u = unit || 'pt';
+    const m = new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*([-+0-9.]+)' + u).exec(s); return m ? Number(m[1]) : NaN;
+  };
+  /* ---- ② 算术必须等于手算值（不是"跑通了就行"）---- */
+  write2(perFile('packA', 1, 0), perFile('packB', 2, 1));
+  const ok0 = run();
+  eq(ok0.code, 0, '② 合法夹具必须跑通（实测 ' + ok0.code + '）：' + ok0.out.slice(0, 200));
+  eq(num(ok0.out, '配对差'), 50, '② 配对差必须 = 手算的 50.00pt（实测 ' + num(ok0.out, '配对差') + '）');
+  ok(/\[50\.00pt, 50\.00pt\]/.test(ok0.out), '② sd=0 时区间必须退化成 [50,50] 而不是塌成 ±0 或 NaN（实测没匹配到）');
+  ok(/n=2/.test(ok0.out) && /pickRandom 基线 25\.00%/.test(ok0.out),
+    '② 分母 n 与随机基线都要印（基线 = ctrl 的 (0/2,1/2) 均值 = 25%）');
+  /* ---- ③ 四道"配对不成立"必须响亮拒（exit 5），不许静默出一个数 ---- */
+  const refuse = function (label, a, b) {
+    write2(a, b); const r = run();
+    eq(r.code, 5, '③ ' + label + ' 必须 exit 5（实测 ' + r.code + '）⇒ 退出码 0 就等于"照常出判据"');
+    ok(/配对不成立/.test(r.out), '③ ' + label + ' 还要点名为什么不能比：' + r.out.slice(0, 160));
+  };
+  refuse('桌子组合不同', perFile('packA', 1, 0), perFile('packB', 2, 1, { badNames: true }));
+  refuse('pickRandom 对照不一致（§E139 的配对自检）', perFile('packA', 1, 0), perFile('packB', 2, 1, { badCtrl: true }));
+  refuse('两臂 #file 相同（把同一粒包当两臂）', perFile('packA', 1, 0), perFile('packA', 2, 1));
+  refuse('两臂 #every 不同（不是同一批桌子）', perFile('packA', 1, 0).replace('#every=7', '#every=5'), perFile('packB', 2, 1));
+  /* ---- ④ H2 的算术 + "不许崩在 H2"（TDZ 事故的回归位）---- */
+  const envRows = function (rev) {
+    const o = [];
+    for (let i = 0; i < 12; i++) { const f = rev ? (11 - i) : i; o.push('e' + i + '\t0\t1\t10\t' + f + '\t' + f); }
+    return ['#probe-5p-envfit', '#n=5', '#mix=4', '#games=10', '#seeds=0', '#envs=12',
+      '#env\tseed\tinPool\tgames\tfirst\tstrict'].join('\n') + '\n' + o.join('\n') + '\n';
+  };
+  write2(perFile('packA', 1, 0), perFile('packB', 2, 1));
+  writeFileSync(join(envDir, 'cal0-s9.tsv'), envRows(false)); writeFileSync(join(envDir, 'cal1-s9.tsv'), envRows(true));
+  const h2 = run();
+  eq(h2.code, 0, '④ 带环境账时必须整体跑通（第一版在这里 TDZ 崩 ⇒ 崩码非 0 才算抓到）：实测 ' + h2.code);
+  ok(/## H2/.test(h2.out) && /极差之差/.test(h2.out), '④ H2 段必须真的印出来（缺这段就是"报告半成品"）');
+  eq(num(h2.out, 'cal0 均', '%'), 55, '④ 每臂均值必须 = 手算的 55.00%（0..11 除以 10 局再平均）：实测 ' + num(h2.out, 'cal0 均', '%') +
+    '（⚠ 这里第一次跑的是 `pt` 而工具印 `%` ⇒ 门抓到的是**我的正则写窄了**，不是工具算错。这类"断言读不到就 NaN"必须红，不许把 NaN 当 0 放过去）');
+  ok(/极差之差 0\.00pt/.test(h2.out), '④ 极差之差必须 = 手算的 0.00pt（两臂是同一组数的正反序 ⇒ max−min 相等）');
+  /* ---- ⑤ 缺环境账要**降级**而不是崩（我实际用过这条路：H2 未量、H1 照出）---- */
+  const noEnv = spawnSync(process.execPath, [TOOL, '--dir=' + dir, '--envdir=' + join(dir, 'nope'), '--seeds=9'],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 120000 });
+  eq(noEnv.status, 0, '⑤ 缺 H2 账必须 exit 0 并降级（实测 ' + noEnv.status + '）—— 不许把"没量到"报成崩溃，也不许静默少印一段');
+  ok(/降级为"未量"/.test(String(noEnv.stdout || '')), '⑤ 且要在屏幕上明说 H2 没量（否则读者会拿 H1 当两问的答案）');
+  /* ---- ⑥ 环境数不足不许算极差（§E142 的名单是 33 个，读出一小撮就是解析坏了）
+     ⚠ 本条第一版写成 `few.stderr / few.stdout`，而 `run()` 返回的是 `{code, out}` ⇒ 读到的永远是空串。
+        它这次**红**着被抓到（假红比假绿好），但形状与 D199 第一版"恒真断言"是同一族：**门的输入字段名也要有牙**。
+        现在改成 `few.out`，并在消息里带上前 160 字（红的时候能一眼看出是"没匹配"还是"真拒了"）。 ---- */
+  writeFileSync(join(envDir, 'cal0-s9.tsv'), envRows(false).split('\n').slice(0, 6).join('\n') + '\n');
+  const few = run();
+  eq(few.code, 5, '⑥ 只读出 3 个环境时必须 exit 5（实测 ' + few.code + '）⇒ 拿 3 个环境算"极差"是个假数');
+  ok(/<10/.test(String(few.out || '')), '⑥ 且要点名是环境数不够：' + String(few.out).slice(0, 160));
+});
+
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 
 const __nReg = __src.filter(l => /^t\(/.test(l)).length;
