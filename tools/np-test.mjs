@@ -25,6 +25,8 @@ import * as RGAIN from './routing-gain-lib.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 /* D206 用（DS 清单 B7）：奖励键名单与默认表**从同一来源拿**（不许在门里抄一份键名单——那正是 B7 要防的"第五处"）。 */
 import { ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';
+/* D207 用（§E164）：落点集中度的算术**只许住在 behavior-profile 里** ⇒ 门直接 import 它做手算自证（被 import 时不跑 main，那条守卫由 D168 系钉着）。 */
+import { conc } from './behavior-profile.mjs';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -9330,6 +9332,26 @@ t('D206 econ 奖励键三处名单自洽（DS 清单 B7 · 09-30 夜班）：默
   const unsentOf = function (keys) { return keys.filter(k => !sA.has(k) && !sB.has(k)); };
   ok(unsentOf(['zzNotARealRewardKey']).join() === 'zzNotARealRewardKey',
     '⑦ 合成正对照：凭空造一个没登记的键，判据必须抓到（抓不到 ⇒ ⑥ 是装饰）');
+});
+
+t('D207 落点集中度 `conc()` 的手算自证（§E164 · 09-30 夜班）：新度量必须带手算值、分母为零不许 NaN、仪器不许抄第二份算术', function () {
+  /* 为什么有这条（这条门的由来本身就是一次**自我更正**）：§E156b/§E161 我用 `focusRate`（"上一次带目标的伤害打的是谁"，连段率）
+     断言开档"丢了集火"。但连段率低有两种完全不同的原因：**真的在撒**，或者"**这一回合打最该死的那个、下一回合改打另一个最该死的**"。
+     ⇒ 补一把独立的尺：每局"最挨打的那个落点占本席带目标伤害的份额"（top）与"打了几家"（kinds）。
+     ⚠ 度量算在 `tools/behavior-profile.mjs` 的 `conc()` 里（单一来源）；仪器只能 import 它，**不许再写一遍 `Σtop/Σgames`**。 */
+  const bp = readFileSync('tools/behavior-profile.mjs', 'utf8');
+  ok(/export function conc\(t\)/.test(bp), '① `behavior-profile` 必须**导出** `conc`（导不出就只能各抄一份算术）');
+  ok(bp.indexOf('export const WIN = W;') >= 0, '② `behavior-profile` 必须交出它自己那份沙箱 `WIN`（`sandbox()` 每次新造实例 ⇒ 仪器自己 new 一份就活在另一个世界，档位切不到被测那条路）');
+  const c1 = conc({ tgtGames: 3, tgtTopSum: 1.5, tgtKindSum: 7 });
+  ok(c1 && Math.abs(c1.top - 50) < 1e-9 && Math.abs(c1.kinds - 7 / 3) < 1e-9,
+    '③ 手算值必须对上：3 局、top 份额合计 1.5 ⇒ **50.0%**；家数合计 7 ⇒ **2.333**（实测 ' + JSON.stringify(c1) + '）');
+  ok(conc({ tgtGames: 0, tgtTopSum: 0, tgtKindSum: 0 }) === null, '④ 没有带目标伤害的局 ⇒ 必须返回 null（不许 NaN 混进表里当 0%）');
+  const inst = readFileSync('docs/artifacts/e161-ply.mjs', 'utf8');
+  ok(inst.indexOf("from '../../tools/behavior-profile.mjs'") >= 0 && /conc/.test(inst),
+    '⑤ 配对仪器必须**从 behavior-profile import `conc`**（抄第二份算术 = 本仓"两份同构实现必漂移"）');
+  ok(!/tgtTopSum\s*\/\s*tgtGames/.test(inst.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')),
+    '⑤′ 仪器源码里（剥掉注释后）**不许出现** `tgtTopSum / tgtGames` 这种第二份算术');
+  ok(bp.indexOf("'  集中 '") >= 0, '⑥ 打印行必须带"集中"那一栏（少了它，体检与门禁看到的是同一个被误读的连段率）');
 });
 
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");

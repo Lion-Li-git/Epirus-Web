@@ -63,7 +63,12 @@ if (typeof T.setBeliefSearch === 'function' && BELIEF !== '0') {
 }
 
 function tally() {
-  return { acts: 0, def: 0, atk: 0, ring: 0, ji: 0, tgtActs: 0, focus: 0, voided: 0, endgameMultiOnly: 0, rounds: 0, wins: 0, decisive: 0, keys: {}, maxEp: 0 };
+  return { acts: 0, def: 0, atk: 0, ring: 0, ji: 0, tgtActs: 0, focus: 0, voided: 0, endgameMultiOnly: 0, rounds: 0, wins: 0, decisive: 0, keys: {}, maxEp: 0,
+    /* §E164（09-30 03:1x）：`focusRate` 只量"**与上一次同落点**"（连段），它有一个已知盲区——
+       一个"这一回合打最该死的那个、下一回合改打另一个最该死的"的策略，连段率会很低，但**整局的落点其实仍然集中**。
+       ⇒ 为了不自欺，同一批出手再记两量：`tgtTopSum`=每局"最多吃到伤害的那个落点占本席全部带目标伤害的比例"之和、`tgtKindSum`=每局被打击的落点家数之和。
+       配 `tgtGames`（有带目标伤害的局数）当分母 ⇒ 集中度 = 平均每局的 top 份额。 */
+    tgtGames: 0, tgtTopSum: 0, tgtKindSum: 0 };
 }
 /* v1.5.142 交接件 P1：这几张是"铺垫/收尾"链上的关键卡，**每局出现率**才是要看的量（占比会把 20 局的稀有事压平）。 */
 const WATCH = [
@@ -71,6 +76,9 @@ const WATCH = [
   [SK.LASER_EYE, '激光眼'], [SK.CHARGE, '蓄能'], [SK.BIG_T, '大雷']
 ];
 export function share(t, k) { return t.acts ? (100 * t[k] / t.acts).toFixed(1) + '%' : '—'; }
+/* §E164：集中度的**唯一一处算术**（分母 = 有带目标伤害的局数；top = 每局"最挨打的那个落点"占本席带目标伤害的份额）。
+   门 D207 钉它的手算值；仪器 `docs/artifacts/e161-ply.mjs` 必须 import 这一个函数，不许自己再写一遍 `Σtop/Σgames`。 */
+export function conc(t) { return t.tgtGames ? { top: 100 * t.tgtTopSum / t.tgtGames, kinds: t.tgtKindSum / t.tgtGames } : null; }
 
 /* 场型（`--field`）：
  *   mixed = 1 冠军席 + 4 脚本席（人数谱同款装配）—— 看"对脚本的行为"与胜率；
@@ -85,6 +93,7 @@ export function fieldProfile(params, eps, mode, G, seed0, field, gamemode) {
     st.slotSalt = (seed0 + g * 2246822519) >>> 0;
     const chooser = T.policyChooserN(params, TEMP, eps, EPSK, mode);
     const lastTgt = {};                            // 按席位记"上一次带目标的伤害出手打的是谁"
+    const tgtCnt = {};                             // §E164：这一局"每个落点吃到几次本席带目标的伤害"（集中度用）
     const wrapped = function (state, pid, legal) {
       if (field !== 'self' && pid !== seat) return chooser(state, pid, legal);
       const pick = chooser(state, pid, legal);
@@ -104,12 +113,18 @@ export function fieldProfile(params, eps, mode, G, seed0, field, gamemode) {
         t.tgtActs++;
         if (lastTgt[pid] !== undefined && pick.target === lastTgt[pid]) t.focus++;
         lastTgt[pid] = pick.target;
+        tgtCnt[pick.target] = (tgtCnt[pick.target] || 0) + 1;
       }
       return pick;
     };
     const cs = [];
     for (let i = 0; i < N; i++) cs.push(field === 'self' || i === seat ? wrapped : T.wrapBotN(SCRIPTS[(i + g) % SCRIPTS.length]));
     Play.autoGameN(st, cs);
+    /* §E164 集中度：这一局本席带目标的伤害落点里，**最挨打的那个占多大份额**、以及**一共打了几家**。
+       与 `focus`（连段率）配对读：连段率低 + 集中度高 = "换着最该死的打"；连段率低 + 集中度也低 = 真的在撒。 */
+    { let sum = 0, kinds = 0, top = 0;
+      for (const tk in tgtCnt) { sum += tgtCnt[tk]; kinds++; if (tgtCnt[tk] > top) top = tgtCnt[tk]; }
+      if (sum > 0) { t.tgtGames++; t.tgtTopSum += top / sum; t.tgtKindSum += kinds; } }
     for (const e of st.events || []) {
       if (e.type !== 'voided') continue;
       if (field === 'self' || e.pid === seat) t.voided++;
@@ -153,6 +168,7 @@ if (RUN_AS_MAIN) for (const file of CHAMPS) {
         ' 最大ep ' + t.maxEp);
       console.log('        防御 ' + share(t, 'def') + ' 攻击 ' + share(t, 'atk') + ' 环 ' + share(t, 'ring') + ' ジ ' + share(t, 'ji') +
         '  集火 ' + (t.tgtActs ? (100 * t.focus / t.tgtActs).toFixed(1) + '%' : '—') +
+        '  集中 ' + (function () { const c = conc(t); return c ? c.top.toFixed(1) + '%／' + c.kinds.toFixed(2) + '家' : '—'; })() +
         '  昏手 ' + share(t, 'voided') + ' 残局 MULTI_ONLY 出手 ' + t.endgameMultiOnly +
         '  胜率 ' + (100 * t.wins / GAMES).toFixed(0) + '% 决胜 ' + (100 * t.decisive / GAMES).toFixed(0) + '% 局长 ' + (t.rounds / GAMES).toFixed(1) +
         '  |  镜像破局 ' + (100 * m.dec / m.G).toFixed(0) + '% 局长 ' + (m.rounds / m.G).toFixed(1));
