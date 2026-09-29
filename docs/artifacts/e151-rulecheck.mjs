@@ -137,13 +137,19 @@ for (let t = 0; t < TABLES; t++) {
         for (let i = 0; i < stq.p.length; i++) if (i !== pid && stq.p[i].hp > 0) { liv.push(i); if (stq.p[i].hp < mn) mn = stq.p[i].hp; }
         const M = new Set(liv.filter(i => stq.p[i].hp === mn));
         if (!M.has(q2)) return 'na';                       /* 它还不是最脆 ⇒ 这一维不该拉动目标选择，不记分 */
-        /* ⚠ 诊断（本轮要验的假设）：R1/R2 会**互相踩** —— 场上有可打的布雷者时，`pro` 正确地绕开"拿 gun/sword/tank 打它"，
-           于是它**不去打最脆的那一席** ⇒ 被 R2 记成"反向"。那就不是尺不自洽，是两条应然同时生效时没定优先级。
-           ⇒ 把 R2 的判定按"当时是否有活着的布雷者(hp>1)"分桶，看那几百个 wrong 到底落在哪一桶。 */
+        /* ⚠ 第五处修订（这次是**判据自己的**，不是打分的）：R2 不许在"这一席同时布雷中"时判反向。
+           理由：R1 说"别拿 gun/sword/tank 打布雷者"，R2 说"该打最脆的那一席"，两者对同一席同时成立时**没定优先级** ⇒
+           谁被判"反向"取决于我先问哪条，这是尺的问题，不是被测方的问题。
+           ⇒ 处理：q2 布雷中 ⇒ 本条**不记分**（'na'），把"两条应然冲突时该怎么办"留给 §E152 的引擎搜索参考手去定。
+           （`pro` 的 R2 之所以从 37.0% 跳到 100.0%，根因就在这里少了一半——所以这条必须先落到判据上，
+             不能只靠我调打分表，否则包的读数里那部分污染还在。） */
+        if (stq.p[q2].mineArmed) { diagR2['q2布雷中.na'] = (diagR2['q2布雷中.na'] || 0) + 1; return 'na'; }
+        /* 分桶诊断（验"wrong 是不是被 R1 抢走的"）：场上有**活的布雷者(hp>1)** ⇒ pro 可能正确地绕开它 */
         let mineLive = false;
         for (const i of living) if (s.p[i].mineArmed && s.p[i].hp > 1) mineLive = true;
         const v1 = M.has(c.target) ? 'none' : (M.has(p.target) ? 'right' : 'wrong');
-        diagR2[(mineLive ? '有布雷者.' : '无布雷者.') + v1]++;
+        const bk = (mineLive ? '有布雷者.' : '无布雷者.') + v1;
+        diagR2[bk] = (diagR2[bk] || 0) + 1;
         return v1;
       }, ctl, a2);
       const a3 = cf(p => { const anyE = living.some(i => p[i].ep > 0); if (!anyE) return false; for (const i of living) p[i].ep = 0; return true; });
