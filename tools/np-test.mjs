@@ -27,6 +27,8 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';
 /* D207 用（§E164）：落点集中度的算术**只许住在 behavior-profile 里** ⇒ 门直接 import 它做手算自证（被 import 时不跑 main，那条守卫由 D168 系钉着）。 */
 import { conc, fieldProfile, WIN } from './behavior-profile.mjs';
+/* D209 用（§E168）：人类形状对手池的单一来源（两台仪器共用它 ⇒ 门来钉"不许再抄第二份"）。 */
+import { loadPool, selfTest } from './human-pool.mjs';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
@@ -9393,6 +9395,38 @@ t('D208 开档的可复现性地基（§E164b · 09-30 夜班）：跨进程逐�
   const inst = readFileSync('docs/artifacts/e161-ply.mjs', 'utf8');
   ok(inst.indexOf('逐字同形') < 0,
     '④ 配对仪器（`docs/artifacts/e161-ply.mjs`）的说明里不许再出现"与工具种子带**逐字同形**"（§E164b 实测不成立：acts 248‖247、rounds 265‖285）');
+});
+
+t('D209 人类形状对手池的单一来源（§E168 · 09-30 夜班）：`tools/human-pool.mjs` 自证 + 两台仪器不许各自再抄一份采样', function () {
+  /* 为什么有这条：§E168 要把"风格代价"从脚本桌复量到人类形状桌 ⇒ 必须与 §E155 用**同一个**采样器，否则两张桌子的"人类形状"不是同一个东西，
+     而复量出来的差恰好落在我自己最关心的那几列上。提取的动作本身也要钉住——本仓"两份同构实现必漂移"已经应验五次，第六次最可能发生在"重构后忘了删旧的"。 */
+  const errs = selfTest();
+  ok(Array.isArray(errs) && errs.length === 0, '① `selfTest()` 必须零错误（实测 ' + (Array.isArray(errs) ? errs.length : typeof errs) + '：' + JSON.stringify(errs) + '）');
+  const hp = readFileSync('tools/human-pool.mjs', 'utf8');
+  ok(/export function loadPool/.test(hp) && /export function makeMimic/.test(hp) && /export function selfTest/.test(hp),
+    '② 三个导出齐备（少一个就意味着有人把逻辑挪回仪器里）');
+  /* ③ 真池子：数量必须与 §E152e 那台解析器的产物一致（997 手抽样质量 / 56 局）⇒ json 被重新生成或截断时要在这里响 */
+  const pool = loadPool(WIN, 'human');
+  ok(pool.tot === 997 && pool.games === 56 && pool.conds > 20,
+    '③ 人类形状池：抽样质量应为 997 手、56 局、条件键 >20（实测 ' + pool.tot + ' / ' + pool.games + ' / ' + pool.conds + '）⇒ 单一真源 `human-behavior.json` 变了却没人在读这两张桌子');
+  const poolAi = loadPool(WIN, 'ai');
+  ok(poolAi.tot > pool.tot, '③′ AI 形状池（' + poolAi.tot + '）不该比人类池小 ⇒ 两份分布都来自同一份 json，小的那份说明键前缀剥错了');
+  /* ④ 两台仪器必须 import，且**不许**留本地采样实现 */
+  for (const f of ['docs/artifacts/e155-humanpool.mjs', 'docs/artifacts/e168-style-human.mjs']) {
+    const src = readFileSync(f, 'utf8');
+    ok(src.indexOf('tools/human-pool.mjs') >= 0, '④ ' + f + ' 必须 import `tools/human-pool.mjs`（提走之后不许留第二份）');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    ok(!/POOL\[cond\]\s*=\s*POOL\[cond\]/.test(code) && !/function sample\s*\(dist/.test(code),
+      '④′ ' + f + ' 里（剥注释后）还有本地采样实现的形状 ⇒ 两份实现必漂移');
+  }
+  /* ⑤ 风格度量也只许有一份：`behavior-profile` 内部不许出现第二份"按类别计数" */
+  const bp = readFileSync('tools/behavior-profile.mjs', 'utf8');
+  ok(/export function tallyPick/.test(bp) && /export function tallyClose/.test(bp),
+    '⑤ `tallyPick`/`tallyClose` 必须导出（`fieldProfile` 与 §E168 那台复量共用这一份计数规则）');
+  const defHits = (bp.match(/R\.CAT\.DEFENSE/g) || []).length;
+  ok(defHits === 1, '⑤′ `behavior-profile` 里 `R.CAT.DEFENSE` 只许出现 1 次（实测 ' + defHits + '）⇒ 出现第二次就是"防御占比"有了两个定义');
+  const inst = readFileSync('docs/artifacts/e168-style-human.mjs', 'utf8');
+  ok(inst.indexOf('R.CAT.DEFENSE') < 0, '⑤″ §E168 仪器不许自己判类别（读 `fieldProfile` 的 tally 就行）');
 });
 
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");

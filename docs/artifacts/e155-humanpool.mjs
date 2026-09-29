@@ -1,5 +1,9 @@
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+/* §E168：对手池的采样器**提进 `tools/human-pool.mjs` 当单一来源**（这台仪器与 `e168-style-human.mjs`（风格复量）必须用同一份采样，
+ *   否则两张桌子的"人类形状"不是同一个东西 ⇒ 本仓"两份同构实现必漂移"的老账。提完后本节下面重跑一遍，
+ *   +8.75 / +14.25pt 那两行必须逐字复现（复现了才说明提取没动语义）。 */
+import { loadPool, makeMimic } from '../../tools/human-pool.mjs';
 
 /* §E155 · 把"对手模型"的收益从**脚本桌**搬到**人类形状的环境**上。
  * 为什么必须做这一步：§E152d/§E154 的 +43~+50pt 全部是在 26 个脚本 + 现役包身上量的，
@@ -36,60 +40,13 @@ if (!params) { console.error('⛔ 出厂包读不到'); process.exit(1); }
 if (TIE) T.setBeliefTie(TIE);
 console.log('装配：对手=' + SRC + ' · 指向=' + TGT + ' · 臂=' + ARMS.join('/') + ' · tie=' + TIE + (TIE ? '（平票交给网络打分）' : '（§E155 原形状）') + ' · ' + TABLES + ' 桌 × ' + GAMES + ' 局 · seed0=' + SEED);
 
-/* 名字表也来自引擎（不手抄） */
-const BY_NAME = {};
-for (const c of (R.skills || [])) if (c && c.name) BY_NAME[c.name] = c;
-
-/* ---- 经验分布 → 按"条件"索引的采样表（键里剥掉席位，因为我们要的是"人类这种打法"，不是"1 号位那个人"） ---- */
-const HB = JSON.parse(readFileSync(REPO + 'docs/artifacts/human-behavior.json', 'utf8'));
-const POOL = {}; let poolTot = 0;
-for (const k in HB[SRC]) {
-  const cond = k.replace(/^S\d+@/, '');
-  POOL[cond] = POOL[cond] || {};
-  for (const card in HB[SRC][k]) { POOL[cond][card] = (POOL[cond][card] || 0) + HB[SRC][k][card]; poolTot += HB[SRC][k][card]; }
-}
-const MARG = {};
-for (const c in POOL) for (const card in POOL[c]) MARG[card] = (MARG[card] || 0) + POOL[c][card];
-function sample(dist, rnd) {
-  let tot = 0; for (const k in dist) tot += dist[k];
-  if (!tot) return 'ジ';
-  let x = rnd() * tot;
-  for (const k in dist) { x -= dist[k]; if (x <= 0) return k; }
-  return 'ジ';
-}
-/* 经验分布的第三个分量是**显示名**（人类日志里记的就是名字，见 §E152e），引擎侧是 key ⇒ 必须换算，
-   否则键永远对不上、每一手都掉到边际分布上，测出来的"人类形状"是假的。 */
-const KEY2NAME = {};
-for (const c of (R.skills || [])) if (c && c.key) KEY2NAME[c.key] = c.name;
-function humanMimic(s, pid, legal) {
-  const cond = [Math.min(5, s.p[pid].ep >> 1), s.p[pid].ep >= 5 ? 1 : 0, KEY2NAME[s.p[pid].lastSkill] || '-'].join('/');
-  const aff = legal.filter(l => l.affordable);
-  const okKey = {}; for (const l of aff) okKey[l.key] = 1;
-  const dist = POOL[cond] || MARG;
-  for (let tries = 0; tries < 8; tries++) {
-    const card = sample(dist, mimicRng);
-    const def = BY_NAME[card];
-    if (def && okKey[def.key]) {
-      /* `--tgt=next`（默认）= 机械地打"下一位"；`--tgt=rand` = 在活席里随机指。
-         为什么要这一对照：机械指向可能偶然让四席形成"合力打 0 号位"的形状 ⇒ **配对差**不受影响（两臂面对同一串抽样），
-         但两张形状桌上那个"关档只有 7.50%"的**绝对值**必须换一个指向规则复量过才敢当产品结论。 */
-      let tg = null;
-      if (TGT === 'rand') {
-        const alive = [];
-        for (let i = 0; i < s.p.length; i++) if (i !== pid && s.p[i].hp > 0) alive.push(i);
-        tg = alive.length ? alive[Math.floor(mimicRng() * alive.length)] : null;
-      } else {
-        tg = (pid + 1) % s.p.length;
-        if (!s.p[tg] || s.p[tg].hp <= 0) tg = pid;
-      }
-      mimicHit++;
-      return { key: def.key, target: (def.key === R.SK.JI || def.target === 'self' || tg == null) ? null : tg };
-    }
-  }
-  mimicMiss++;
-  return { key: R.SK.JI, target: null };
-}
-let mimicRng = null, mimicHit = 0, mimicMiss = 0;
+/* ---- §E168：采样器搬到 `tools/human-pool.mjs`（与 §E168 那台风格复量共用同一份）----
+   下面这段以前是本地实现（`POOL`/`MARG`/`sample`/`humanMimic` 共 50 行），现在只留一个**流句柄**：
+   每局把 `mimicRng` 换成 `mulberry32(seed*7+13)` ⇒ 四席共用同一个闭包 = 共用同一条流（与提取前逐字同形）。
+   ⚠ 提取后重跑 `--tgt=rand` 那两行必须还是 +8.75 / +14.25pt（复现了才算"提取没动语义"，见 §E168 的记录）。 */
+const pool = loadPool(W, SRC);
+let mimicRng = null;
+const humanMimic = makeMimic(W, pool, TGT, () => mimicRng());
 
 function runArm(arm) {
   const rows = [];
@@ -118,7 +75,7 @@ function runArm(arm) {
   return { rows: rows };
 }
 const { pairedDiff } = await import('file://' + REPO + 'tools/routing-gain-lib.mjs');
-console.log('# §E155 人类形状环境（对手池 = ' + SRC + ' 经验分布，' + Object.keys(POOL).length + ' 个条件、' + poolTot + ' 手抽样质量） ‖ 桌=' + TABLES + ' × 局=' + GAMES);
+console.log('# §E155 人类形状环境（对手池 = ' + SRC + ' 经验分布，' + pool.conds + ' 个条件、' + pool.tot + ' 手抽样质量 · 采样器 = `tools/human-pool.mjs`（§E168 提取，与风格复量共用一份）） ‖ 桌=' + TABLES + ' × 局=' + GAMES);
 const res = {};
 for (const a of ARMS) res[a] = runArm(a);
 const tot = {};
@@ -128,8 +85,8 @@ for (const a of ARMS) {
   const rd = res[a].rows.reduce((x, r) => x + r.rounds, 0) / TABLES;
   console.log('  ' + a.padEnd(14) + tot[a].toFixed(2).padStart(7) + '%' + rd.toFixed(1).padStart(11));
 }
-console.log('  对手池抽样：命中条件分布 ' + mimicHit + ' 次、8 次都没抽到可负担的卡 ⇒ 退回 ジ ' + mimicMiss + ' 次（' +
-  (100 * mimicMiss / Math.max(1, mimicHit + mimicMiss)).toFixed(1) + '%）');
+console.log('  对手池抽样：命中条件分布 ' + humanMimic.stats.hit + ' 次、8 次都没抽到可负担的卡 ⇒ 退回 ジ ' + humanMimic.stats.miss + ' 次（' +
+  (100 * humanMimic.stats.miss / Math.max(1, humanMimic.stats.hit + humanMimic.stats.miss)).toFixed(1) + '%）');
 for (let i = 0; i < ARMS.length; i++) for (let j = i + 1; j < ARMS.length; j++) {
   const d = pairedDiff(res[ARMS[i]].rows.map(r => r.first / r.g), res[ARMS[j]].rows.map(r => r.first / r.g), 1.96);
   console.log('  配对差 ' + ARMS[i] + ' − ' + ARMS[j] + ' = **' + (100 * d.m).toFixed(2) + 'pt [' + (100 * d.lo).toFixed(2) + ', ' + (100 * d.hi).toFixed(2) + ']**（逐桌 n=' + d.n + '）');

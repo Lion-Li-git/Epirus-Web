@@ -80,51 +80,63 @@ export function share(t, k) { return t.acts ? (100 * t[k] / t.acts).toFixed(1) +
    门 D207 钉它的手算值；仪器 `docs/artifacts/e161-ply.mjs` 必须 import 这一个函数，不许自己再写一遍 `Σtop/Σgames`。 */
 export function conc(t) { return t.tgtGames ? { top: 100 * t.tgtTopSum / t.tgtGames, kinds: t.tgtKindSum / t.tgtGames } : null; }
 
+/* §E168：把"数一手出手"的口径**抽出来当导出函数**，让 `fieldProfile` 与别的仪器（`docs/artifacts/e168-style-human.mjs`：人类形状桌上的风格读数）
+   共用**同一份**计数规则。为什么现在抽：今晚所有"风格代价"的读数都在脚本桌上量，要拿去对人类形状桌复量时，
+   如果我在仪器里再写一份 `cat === DEFENSE ? def++`，那正是本仓"两份同构实现必漂移"要防的第五、第六次（而且漂移的方向恰好是我自己最关心的那几列）。
+   `ctx` = 每局重置的那三样（`lastTgt` / `tgtCnt` / `seat`），由调用方持有 ⇒ 集中度与连段率的口径也只有一个定义。 */
+export function tallyPick(t, state, pid, pick, ctx) {
+  const k = pick && pick.key;
+  t.acts++;
+  t.keys[k] = (t.keys[k] || 0) + 1;
+  if ((state.p[pid].ep || 0) > t.maxEp) t.maxEp = state.p[pid].ep;
+  if (k === SK.JI) { t.ji++; return pick; }
+  if (k === SK.RING) t.ring++;
+  const cat = byKey[k] && byKey[k].cat;
+  if (cat === R.CAT.DEFENSE) t.def++;
+  else if (cat === R.CAT.ATTACK) t.atk++;
+  let alive = 0;
+  for (let i = 0; i < state.p.length; i++) if (state.p[i].hp > 0) alive++;
+  if (alive <= 2 && R.MULTI_ONLY.indexOf(k) >= 0) t.endgameMultiOnly++;
+  if (isDmg(k) && pick.target != null) {
+    t.tgtActs++;
+    if (ctx.lastTgt[pid] !== undefined && pick.target === ctx.lastTgt[pid]) t.focus++;
+    ctx.lastTgt[pid] = pick.target;
+    ctx.tgtCnt[pick.target] = (ctx.tgtCnt[pick.target] || 0) + 1;
+  }
+  return pick;
+}
+/* 一局跑完后的"落点集中度"结算，也在这一处（`conc()` 只有这一份算术，见门 D207） */
+export function tallyClose(t, ctx) {
+  let sum = 0, kinds = 0, top = 0;
+  for (const tk in ctx.tgtCnt) { sum += ctx.tgtCnt[tk]; kinds++; if (ctx.tgtCnt[tk] > top) top = ctx.tgtCnt[tk]; }
+  if (sum > 0) { t.tgtGames++; t.tgtTopSum += top / sum; t.tgtKindSum += kinds; }
+}
 /* 场型（`--field`）：
  *   mixed = 1 冠军席 + 4 脚本席（人数谱同款装配）—— 看"对脚本的行为"与胜率；
  *   self  = 5 席同一冠军（DS §10.2 那张表的口径，配合 `--gamemode=long` 复现"贴贴 2.70/局"）—— 看纯行为，胜率无意义。
  * ⚠️ 出手取自 **chooser 的返回值**（引擎不保留逐回合动作历史，`state.actions` 只有当回合），
  * 顺带得到 §9 判据④ 的机械核对量：`endgameMultiOnly` = 存活≤2 时仍提出 MULTI_ONLY 三张的次数（必须为 0）。 */
-export function fieldProfile(params, eps, mode, G, seed0, field, gamemode) {
+export function fieldProfile(params, eps, mode, G, seed0, field, gamemode, oppFactory) {
   const N = 5, t = tally();
   for (let g = 0; g < G; g++) {
     const seat = g % N;
     const st = S.createState(gamemode, { next: mulberry32(seed0 + g * 997) }, N);
     st.slotSalt = (seed0 + g * 2246822519) >>> 0;
     const chooser = T.policyChooserN(params, TEMP, eps, EPSK, mode);
-    const lastTgt = {};                            // 按席位记"上一次带目标的伤害出手打的是谁"
-    const tgtCnt = {};                             // §E164：这一局"每个落点吃到几次本席带目标的伤害"（集中度用）
+    const ctx = { lastTgt: {}, tgtCnt: {}, seat: seat };   // 每局重置：连段率与集中度的"上一手/上一落点"都是局内量
     const wrapped = function (state, pid, legal) {
       if (field !== 'self' && pid !== seat) return chooser(state, pid, legal);
-      const pick = chooser(state, pid, legal);
-      const k = pick && pick.key;
-      t.acts++;
-      t.keys[k] = (t.keys[k] || 0) + 1;
-      if ((state.p[pid].ep || 0) > t.maxEp) t.maxEp = state.p[pid].ep;
-      if (k === SK.JI) { t.ji++; return pick; }
-      if (k === SK.RING) t.ring++;
-      const cat = byKey[k] && byKey[k].cat;
-      if (cat === R.CAT.DEFENSE) t.def++;
-      else if (cat === R.CAT.ATTACK) t.atk++;
-      let alive = 0;
-      for (let i = 0; i < state.p.length; i++) if (state.p[i].hp > 0) alive++;
-      if (alive <= 2 && R.MULTI_ONLY.indexOf(k) >= 0) t.endgameMultiOnly++;
-      if (isDmg(k) && pick.target != null) {
-        t.tgtActs++;
-        if (lastTgt[pid] !== undefined && pick.target === lastTgt[pid]) t.focus++;
-        lastTgt[pid] = pick.target;
-        tgtCnt[pick.target] = (tgtCnt[pick.target] || 0) + 1;
-      }
-      return pick;
+      return tallyPick(t, state, pid, chooser(state, pid, legal), ctx);
     };
     const cs = [];
-    for (let i = 0; i < N; i++) cs.push(field === 'self' || i === seat ? wrapped : T.wrapBotN(SCRIPTS[(i + g) % SCRIPTS.length]));
+    /* `oppFactory(g, i)` 给了就把"对手席"换成它（§E168 用：对手=人类形状经验分布抽样，量风格代价是不是脚本桌专有）。
+       ⚠ 默认 `undefined` ⇒ 走的还是原来那行 `T.wrapBotN(SCRIPTS[...])`，**脚本桌的读数一个字节都不该动**（门 D204 的关档基线同理在这条路上）。 */
+    for (let i = 0; i < N; i++) cs.push(field === 'self' || i === seat ? wrapped
+      : (oppFactory ? oppFactory(g, i) : T.wrapBotN(SCRIPTS[(i + g) % SCRIPTS.length])));
     Play.autoGameN(st, cs);
     /* §E164 集中度：这一局本席带目标的伤害落点里，**最挨打的那个占多大份额**、以及**一共打了几家**。
        与 `focus`（连段率）配对读：连段率低 + 集中度高 = "换着最该死的打"；连段率低 + 集中度也低 = 真的在撒。 */
-    { let sum = 0, kinds = 0, top = 0;
-      for (const tk in tgtCnt) { sum += tgtCnt[tk]; kinds++; if (tgtCnt[tk] > top) top = tgtCnt[tk]; }
-      if (sum > 0) { t.tgtGames++; t.tgtTopSum += top / sum; t.tgtKindSum += kinds; } }
+    tallyClose(t, ctx);
     for (const e of st.events || []) {
       if (e.type !== 'voided') continue;
       if (field === 'self' || e.pid === seat) t.voided++;
