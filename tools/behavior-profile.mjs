@@ -62,7 +62,10 @@ if (typeof T.setBeliefSearch === 'function' && BELIEF !== '0') {
   if (typeof T.setBeliefPly === 'function') T.setBeliefPly(Number(BELIEF) || 1);
 }
 
-function tally() {
+/* 2026-09-30 深夜（Qoder §E190）：改成 export 只为让别的仪器**复用同一份计数器 schema**。
+ *   本仓"两份同构实现必漂移"已栽过四次，而"珠的三条去路 + 有珠时买不买得起炮"这几列是门禁断言的量，
+ *   绝不允许在我的探针里另写一份初始化。函数体一字未动 ⇒ 本文件的既有行为与门禁读数不变。 */
+export function tally() {
   return { acts: 0, def: 0, atk: 0, ring: 0, ji: 0, tgtActs: 0, focus: 0, voided: 0, endgameMultiOnly: 0, rounds: 0, wins: 0, decisive: 0, keys: {}, maxEp: 0,
     /* §E164（09-30 03:1x）：`focusRate` 只量"**与上一次同落点**"（连段），它有一个已知盲区——
        一个"这一回合打最该死的那个、下一回合改打另一个最该死的"的策略，连段率会很低，但**整局的落点其实仍然集中**。

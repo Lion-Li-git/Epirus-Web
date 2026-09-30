@@ -147,7 +147,20 @@ function playOne(armKey, env, g, seedBase, out) {
   const rec = function (state, pid, legal) {
     if (pid !== FOCUS) return base(state, pid, legal);
     const r = base(state, pid, legal);
-    if (r) { out.push({ b: bucketOf(state, pid), l: labelOf(state, pid), a: r.key, e: env.name }); acts++; }
+    if (r) {
+      /* §E189：`k` = 买得起的卡**数**；`s` = 买得起的卡**集合指纹**。
+       *   实测 `k` 在桶内恒定（分裂率 1.00× ⇒ 用"k"做菜单控制是同义反复），但"数量不变"不等于"菜单不变"
+       *   （ep=2 时可能是 ジ+防御，也可能是 剣+坦克）⇒ 真正要控的是**集合**。 */
+      const affList = (legal || []).filter(l => l.affordable).map(l => l.key).sort();
+      const affN = affList.length;
+      /* 指纹**不做截断**：第一版写成 `affN >= 6 ? 'MANY' : join` ⇒ 菜单最肥的状态全被压成同一个 `MANY`，
+       *   而"菜单变大"这件事恰恰只发生在肥菜单上 ⇒ 分裂率会被我自己的封顶抹平成 1.00×（假"没牙"）。
+       *   ⇒ 老老实实拼完整集合，代价只是键长。 */
+      const affSig = affList.join(',');
+      out.push({ b: bucketOf(state, pid), l: labelOf(state, pid), a: r.key, e: env.name,
+        k: affN >= 8 ? '8+' : String(affN), s: affSig });
+      acts++;
+    }
     return r;
   };
   const chs = [];
@@ -304,7 +317,7 @@ for (const band of BANDS) {
  *   关档有 62 个 —— 桶少 ⇒ 每桶样本多 ⇒ 零分布被压低 ⇒ 倍数虚高。这是"比率有看不见的分母"的又一副脸。
  *   做法：取**所有臂都够格（≥2 个标签各 ≥8 手）的桶交集**，在这个同一格子集合上重算每臂的 MI 与置换零分布。
  *   判据不变：只有 `PX`（正对照）应远超全场，而"某枚旋钮是否真抬得动"要看**交集上的 MI**，不是各自分母下的倍数。 */
-const LB8 = 8;
+const LB8 = Math.max(3, Number(arg('mincell', 5)) || 5);   // 交集门槛（默认 5；MI 已由置换零分布扣小样本偏差）
 function bucketEligible(dec, keyFn) {
   const B = {};
   for (const d of dec) { const b0 = keyFn(d); const b = B[b0] = B[b0] || {}; b[d.l] = (b[d.l] || 0) + 1; }
@@ -313,9 +326,22 @@ function bucketEligible(dec, keyFn) {
   return ok;
 }
 /* 两个粒度各跑一遍：**交集太小**是这种"对齐分母"做法的固有代价（严格桶只交得出 4 个桶），
- *   所以同时给一档粗桶（我血 × 我 ep）—— 它对数值的控制松一点，但覆盖够厚、倍数才真的可比。 */
+ *   所以同时给一档粗桶（我血 × 我 ep）—— 它对数值的控制松一点，但覆盖够厚、倍数才真的可比。
+ * §E189 加第三档：**桶 + 可选项数**（`a` = 当下买得起的卡数）⇒ 这一档回答"读到的东西是不是只是菜单变大"。 */
+/* §E189 的教训（先记在这里，免得下一个人以为"控住可选项数没变化"）：
+ *   第一版我只加了「严格桶 + 可选项数」这一档，跑出来**与严格桶逐行几乎相同**（只有 `PX3` 差 0.0002）。
+ *   查出来不是"k 不切桶"，而是**交集自动退到最平凡的格子上**：要 10 个臂在同一桶里都各有 ≥8 手的两个标签，
+ *   剩下来的 4 个桶全是 `e0`（ep=0，本来就只买得起 ジ/防御）⇒ 那里菜单本来就一样大，控不控都一样。
+ *   ⇒ **这是一档没牙的对照，不能读成"E1 的增益不是菜单撑的"**。补法两件：① 加「粗桶 + 可选项数」（粗桶格子厚，k 才有得切）；
+ *      ② 交集门槛 `LB8` 从 8 降到 5 —— MI 已经用**置换零分布**扣过小样本偏差，所以门槛可以低，但要盯覆盖率。 */
 for (const band of BANDS) {
-  for (const [lvl, keyFn, bFn] of [['严格桶（我血×我ep×对手血）', (d) => d.b, getLB], ['粗桶（我血×我ep）', (d) => coarse(d.b), (d) => coarse(d.b)]]) {
+  for (const [lvl, keyFn, bFn] of [['严格桶（我血×我ep×对手血）', (d) => d.b, getLB],
+                                   ['粗桶（我血×我ep）', (d) => coarse(d.b), (d) => coarse(d.b)],
+                                   ['严格桶 + 可选项数', (d) => d.b + '|a' + d.k, (d) => d.b + '|a' + d.k],
+                                   ['粗桶 + 可选项数（这一档才真有牙）', (d) => coarse(d.b) + '|a' + d.k, (d) => coarse(d.b) + '|a' + d.k],
+                                   /* ★ 跨臂可比的**主判据**：粗桶 + 买得起的卡**集合**（`k` 那一档实测分裂率 1.00×=没牙，`s` 是 1.58~2.25×）。
+                                   ④ 只回答"各臂自己的读数里有几成是菜单"（臂内量），E1 vs A0 谁读得多**必须在这一档上重算**才算数。 */
+                                   ['粗桶 + 菜单集合（跨臂主判据）', (d) => coarse(d.b) + '|s' + d.s, (d) => coarse(d.b) + '|s' + d.s]]) {
   let common = null;
   for (const k of ARMWANT) { const e = bucketEligible(RES[band][k].dec, keyFn); common = common === null ? e : new Set([...common].filter(x => e.has(x))); }
   console.log('\n## 带 ' + band + ' ③ 对齐桶集合后的读行为 MI（同一批格子 ⇒ 倍数可比）· 粒度=' + lvl + ' · 交集桶数 **' + common.size + '**');
@@ -339,6 +365,51 @@ for (const band of BANDS) {
   }
   if (!a0 || !isFinite(a0.mi)) console.log('> ⛔ 交集里没有 `A0` 的参照 ⇒ 这一表不可读（把 --games 加大）');
   }
+}
+
+/* ---- ④ **臂内**判"菜单大小能不能解释读数"（§E189 的正确统计量）----
+ *   ③ 那套"跨臂取桶交集"的做法在这里失效了：加了 `k` 之后，E1 的 MI 与手数**一字未动**（0.0950 / 4410），
+ *   而 `D1` 却动了（0.0804→0.0775）⇒ 说明**够格的格子恰好都是 k 恒定的那些**，交集又退到平凡格 ⇒ "没变"不能读成"与菜单无关"。
+ *   ⇒ 换成**臂内对照**：同一只臂、同一批决策，比 `MI(出手;一手|桶)` 与 `MI(出手;一手|桶,菜单)`。
+ *     降得多 ⇒ 那一档"读"里有一块其实是**菜单大小**在替它说话；几乎不降 ⇒ 控住菜单仍然是读。
+ *   这个统计量只在臂内部比，**绕开了跨臂分母问题**（这也是它比 ③ 更适合回答 E1 的原因）。 */
+console.log('\n## ④ 臂内对照：把"当下买得起的卡数"也钉进桶之后，读行为 MI 自己降了多少（§E189 的主判据）');
+/* ⚠ 先量**这一档有没有牙**：如果 `k` 几乎是桶的函数（同一桶里 k 恒定），那"自降 0%"是同义反复，不是结论。
+ *   判据：`分裂率` = 加上 k 之后格子数 / 原来格子数；`k 在桶内的变化度` = 各桶里 k 的不同取值数的平均。
+ *   两者都 ≈1 ⇒ **这一档没牙**，下面的"自降"一列不许当"E1 与菜单无关"的证据（§E189 栽过一次，别再读错第二次）。 */
+console.log('\n### 量程检查（这一档有没有牙）');
+console.log('| 臂 | 桶数 | 桶+卡**数** 格子 | 分裂率(数) | 桶+卡**集合** 格子 | 分裂率(集合) | 桶内集合平均取值数 |');
+console.log('|---|---|---|---|---|---|---|');
+for (const k of ARMWANT) {
+  const dec = RES[BANDS[0]][k].dec;
+  /* 三个 map 各管一件事（第一版把 `b` 与 `b#` 塞进同一个 map ⇒ 桶数被双计成 2×、分裂率假报 0.50×）*/
+  const setK = {}, setS = {}, cK = {}, cS = {};
+  for (const d of dec) {
+    (setK[d.b] = setK[d.b] || new Set()).add(d.k);
+    (setS[d.b] = setS[d.b] || new Set()).add(d.s);
+    cK[d.b + '|a' + d.k] = 1; cS[d.b + '|s' + d.s] = 1;
+  }
+  const nb = Object.keys(setK).length;
+  const kv = Object.values(setK).reduce((a, s) => a + s.size, 0) / Math.max(1, nb);
+  const sv = Object.values(setS).reduce((a, s) => a + s.size, 0) / Math.max(1, nb);
+  console.log('| `' + k + '` | ' + nb + ' | ' + Object.keys(cK).length + ' | ' + (Object.keys(cK).length / nb).toFixed(2) + '× | '
+    + Object.keys(cS).length + ' | **' + (Object.keys(cS).length / nb).toFixed(2) + '×** | ' + kv.toFixed(2) + ' / ' + sv.toFixed(2) + ' |');
+}
+for (const band of BANDS) {
+  console.log('\n### 带 ' + band);
+  console.log('| 臂 | `MI`（桶） | `MI`（桶+菜单**集合**） | **自降** | 零分布（桶+菜单） | p |');
+  console.log('|---|---|---|---|---|---|');
+  for (const k of ARMWANT) {
+    const dec = RES[band][k].dec;
+    const m1 = mi(dec, getLB, getLAB);
+    const m2 = mi(dec, (d) => d.b + '|s' + d.s, getLAB);
+    const n2 = permNull(dec, m2.mi, REPS, (d) => d.b + '|s' + d.s, getLAB);
+    const drop = m1.mi > 1e-9 ? 100 * (1 - m2.mi / m1.mi) : 0;
+    console.log('| `' + k + '` ' + ARMS[k].name + ' | ' + m1.mi.toFixed(4) + ' | ' + m2.mi.toFixed(4) + ' | **'
+      + (drop >= 0 ? '−' : '+') + Math.abs(drop).toFixed(1) + '%** | ' + n2.med.toFixed(4) + ' | ' + n2.p.toFixed(3) + ' |');
+  }
+  /* 判据（预注册，写在跑之前）：`E1` 的自降若 ≥40% ⇒ 菜单解释了一大块 ⇒ A1 前提塌；
+   *   若 <15% 且与 `A0` 的自降同量级 ⇒ 菜单不是解释，A1 前提保住；中间 ⇒ 记"部分解释"。 */
 }
 
 /* ---- 自检：不过就 exit 3（尺要能**同时**认得出"读了"和"没读"，且排序不能反）---- */
