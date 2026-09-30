@@ -30,13 +30,14 @@
  *
  * 只读 `js/**`，不改引擎、不加门、不动冠军槽。
  */
+import { writeFileSync } from 'node:fs';
 import { sandbox, mulberry32, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 import { poolFromSpecs } from './regime-panel.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'selfcheck'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'selfcheck'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -47,6 +48,12 @@ const SEED = Number(arg('seed', 4100)) || 4100;
 const ENV_PICK = String(arg('envs', 'aggro,wall,antidef,tankline,random,mix')).split(',').filter(Boolean);
 const ARMS = String(arg('arm', 'A0,B1,B2')).split(',').filter(x => x === 'A0' || x === 'B1' || x === 'B2');
 const CONT = arg('cont', 'pack');                                              /* rollout 延续席：pack = 三臂同一把尺 */
+/* §E197 用的**导出**：`--dump=<path>` 把"每个采样决策 × 每个候选"的**现有 235 维特征 + 模拟赢率标签**落成 JSONL。
+ *   ⇒ 为什么要在这里导出而不是另写一台采集器：**rollout 的算术只能有一份**（本仓"两份同构实现必漂移"的老病），
+ *     而"上限能不能被一个可学的头拿到"必须用**同一批标签**来问，否则两边的 regret 不可比。
+ *   ⚠ 只在非自检遍里落行（自检遍会把 A0 再跑一遍，行会重复）。 */
+const DUMP = arg('dump', '');
+const ROWS = [];
 
 const W = sandbox(), S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, P = W.EpirusPolicy, B = W.EpirusBots;
 const params = (function () { const p = loadChamp(W, 'js/bundled-champion-3p.js'); return p && p.params ? p.params : p; })();
@@ -123,6 +130,15 @@ function runArm(arm, selfCheck) {
         scored.sort((x, y) => y.v - x.v);
         const pool = scored.slice(0, Math.min(KEEP, scored.length));
         const res = pool.map(s => outcomeOf(s.c, state, rollChos, deep, REP));
+        if (DUMP && !selfCheck) {
+          const xs = P.featuresV7(state, pid);
+          for (let i = 0; i < pool.length; i++) {
+            ROWS.push(JSON.stringify({ seed: SEED, arm: arm.key, env: env.name, g, n, round: state.round,
+              i, key: pool[i].c.key, target: pool[i].c.target == null ? null : pool[i].c.target,
+              net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop, rounds: res[i].rounds,
+              x: xs.concat(P.actionFeatures(state, pid, pool[i].c.key, pool[i].c)).map(v => Math.round(v * 1e4) / 1e4) }));
+          }
+        }
         let bi = 0; for (let i = 1; i < res.length; i++) if (res[i].win > res[bi].win || (res[i].win === res[bi].win && res[i].hpTop > res[bi].hpTop)) bi = i;
         /* ⚠ 对照的"随机挑一手"**不许抽 `state.rng`** —— 被测臂自己的温度/ε 采样也抽同一只流（`policy.js:714`），
            一抽就把整局挪到另一条轨迹上（§E191 同族）。改成 `(g,n)` 的确定性函数：每格仍是候选里等可能的一手，
@@ -192,4 +208,8 @@ console.log('· ②递交的动作被引擎记进当回合动作栏（`state.act
   + (chk.applied === chk.nApplied ? ' ✔' : ' ⇒ ⛔ 有 ' + (chk.nApplied - chk.applied) + ' 次覆盖没被接受，oracle 那手可能根本没打出来'));
 console.log('· ③候选数均值 ' + (rows[0].candSum / Math.max(1, rows[0].decisions)).toFixed(1) + '、采样 ' + rows.reduce((p, q) => p + q.decisions, 0) + ' 个'
   + (rows[0].candSum / Math.max(1, rows[0].decisions) > 1.5 ? ' ✔（有选择余地）' : ' ⇒ ⛔ 没有余地，regret 无从谈起'));
+if (DUMP) {
+  writeFileSync(DUMP, ROWS.join('\n') + '\n');
+  console.log('· 导出 **' + ROWS.length + ' 行**（决策 × 候选）到 `' + DUMP + '` ‖ 每行 x 长度 ' + (ROWS.length ? JSON.parse(ROWS[0]).x.length : 0));
+}
 console.log('rc=0');
