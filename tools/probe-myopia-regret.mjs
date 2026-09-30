@@ -195,7 +195,11 @@ function outcomeOf2(a1, state, pid, contChos, deepFlag, rep) {
 function aggPrefix(rec, r) {
   const mw = rec.sr.map(x => m0(x.win.slice(0, r))), mh = rec.sr.map(x => m0(x.hpTop.slice(0, r)));
   let bi = 0; for (let i = 1; i < mw.length; i++) if (mw[i] > mw[bi] || (mw[i] === mw[bi] && mh[i] > mh[bi])) bi = i;
-  const out = { o1: mw[bi], mine: m0(rec.mineS.win.slice(0, r)), rand: m0(rec.sr[rec.ri].win.slice(0, r)), o2: NaN, o2m: NaN };
+  const out = { o1: mw[bi], mine: m0(rec.mineS.win.slice(0, r)), rand: m0(rec.sr[rec.ri].win.slice(0, r)),
+    /* §E203 附带：`pool[0]` 就是"网络的 top-1"（`scored` 已按 `P.value` 降序），而臂实际交出去的是**抽样**的那一手
+     *   ⇒ `greedy − 臂自己` = "**如果它不抽样、直接取自己打分第一名，能多拿多少**"。这一列**不要一次额外模拟**（数组已在手）。
+     *   ⚠ 它是"在同一批 rollout 上的对照"，不是"整局换贪心策略"的读数（后者要重训/重跑对局，语义不同）。 */
+    greedy: m0(rec.sr[0].win.slice(0, r)), o2: NaN, o2m: NaN };
   if (rec.r2) {
     let b2 = null, b2m = null;
     for (let i = 0; i < rec.r2.length; i++) {
@@ -351,23 +355,29 @@ if (SWEEP.length) {
   for (const r of rows) {
     if (!r.rec.length) continue;
     console.log('\n## §E202 固定样本前缀扫 · 臂 **' + r.arm + '**（**同一批 ' + r.rec.length + ' 个决策**，每列只取前 `r` 条随机流 ‖ 前缀 ' + SWEEP.join('/') + ' ‖ 候选池 ' + KEEP + (DEPTH2 ? ' ‖ 第二手短名单 ' + K2 : '') + '）');
-    console.log('| rep | 臂自己那手 | oracle1 | **regret(oracle1)** | regret(随机挑一手) | 两手都 max | **两手 max − 一手 max** |');
-    console.log('|---|---|---|---|---|---|---|');
-    const ptsReg = [], ptsGap = [], ptsO2 = [];
+    console.log('| rep | 臂自己那手 | oracle1 | **regret(oracle1)** | regret(随机挑一手) | **greedy(top1)−抽样** | 两手都 max | **两手 max − 一手 max** |');
+    console.log('|---|---|---|---|---|---|---|---|');
+    const ptsReg = [], ptsGap = [], ptsO2 = [], ptsGreed = [];
     for (const rr of SWEEP) {
       const ag = r.rec.map(x => aggPrefix(x, rr));
       const reg = ag.map(x => x.o1 - x.mine), rnd = ag.map(x => x.rand - x.mine);
+      const greed = ag.map(x => x.greedy - x.mine);
       const gap = DEPTH2 ? ag.map(x => x.o2 - x.o1) : [];
-      ptsReg.push([rr, 100 * m0(reg)]); ptsGap.push([rr, 100 * m0(gap)]); ptsO2.push([rr, 100 * m0(ag.map(x => x.o2))]);
+      ptsReg.push([rr, 100 * m0(reg)]); ptsGap.push([rr, 100 * m0(gap)]); ptsO2.push([rr, 100 * m0(ag.map(x => x.o2))]); ptsGreed.push([rr, 100 * m0(greed)]);
       console.log('| ' + rr + ' | ' + (100 * m0(ag.map(x => x.mine))).toFixed(1) + '% | ' + (100 * m0(ag.map(x => x.o1))).toFixed(1) + '%'
         + ' | **' + (100 * m0(reg)).toFixed(2) + ' ±' + (1.96 * sd(reg) / Math.sqrt(reg.length) * 100).toFixed(2) + '**'
         + ' | ' + (100 * m0(rnd)).toFixed(2) + ' ±' + (1.96 * sd(rnd) / Math.sqrt(rnd.length) * 100).toFixed(2)
+        + ' | ' + (100 * m0(greed)).toFixed(2) + ' ±' + (1.96 * sd(greed) / Math.sqrt(greed.length) * 100).toFixed(2)
         + (DEPTH2 ? ' | ' + (100 * m0(ag.map(x => x.o2))).toFixed(1) + '% | **' + (100 * m0(gap)).toFixed(2) + ' ±' + (1.96 * sd(gap) / Math.sqrt(gap.length) * 100).toFixed(2) + '**' : '') + ' |');
     }
     const inv = x => 1 / x, sqr = x => 1 / Math.sqrt(x);
     const f1 = lsq2(ptsReg, inv), f2 = lsq2(ptsReg, sqr);
     console.log('· **regret(oracle1) 外推到 `1/r → 0`**：`c + b/r` ⇒ **净上限 c = ' + f1.c.toFixed(2) + 'pt**（b=' + f1.b.toFixed(1) + '，RSS=' + f1.rss.toFixed(2) + '）'
       + ' ‖ `c + b/√r` ⇒ c = ' + f2.c.toFixed(2) + '（RSS=' + f2.rss.toFixed(2) + '）');
+    const g1 = lsq2(ptsGreed, inv), g2 = lsq2(ptsGreed, sqr);
+    console.log('· **抽样 vs 贪心（`greedy(网络 top1) − 臂自己那手`）外推**：`c + b/r` ⇒ c = ' + g1.c.toFixed(2) + 'pt（RSS=' + g1.rss.toFixed(2) + '）'
+      + ' ‖ `c + b/√r` ⇒ c = ' + g2.c.toFixed(2) + '（RSS=' + g2.rss.toFixed(2) + '）'
+      + ' ⇒ 这是"焦点席那 0.15 温度赔掉多少"的读数（⚠ **同一批 rollout 上的对照**，不是"整局换成贪心"的读数 —— 后者会改它对对手的激励，要重跑对局才算）');
     if (DEPTH2) {
       const d1 = lsq2(ptsGap, inv), d2 = lsq2(ptsGap, sqr);
       console.log('· **多规划一手（两手 max − 一手 max）外推**：`c + b/r` ⇒ **Δ = ' + d1.c.toFixed(2) + 'pt**（b=' + d1.b.toFixed(1) + '，RSS=' + d1.rss.toFixed(2) + '）'
