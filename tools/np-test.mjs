@@ -8678,6 +8678,11 @@ t('D212 破平票三件套（explain-champion-decision 第⑤节）：只记录 
     ok(seg.length > 200, '平票那段循环内代码必须在（找不到就是被删了）');
     ok(seg.indexOf('process.exit') < 0 && seg.indexOf('fails.push') < 0, '【只记录】平票那一段不许有 exit / 阻断');
   }
+  /* v1.5.307 追加（我自己踩的坑）：**分母必须是独立的量** —— 第一版把累计的 tie.dec（只在平票分支里 +1）
+   * 当分母印 ⇒ 分母=分子 ⇒ 平票率必然 100%。这一条钉住"率的分母不许用只在分子分支里累加的量"。 */
+  ok(/decAll:\s*0/.test(E), '必须有独立的分母计数器 tie.decAll');
+  ok(/pct\(tie\.n, tie\.decAll\)/.test(E), '平票率的分母必须用 tie.decAll（不是 tie.dec）');
+  ok(!/pct\(tie\.n, tie\.dec\)/.test(E), '【反例】不许再拿 tie.dec 当平票率的分母（分母=分子 ⇒ 恒 100%）');
   /* 行为：真跑一次小档，自检必须打 ✔（这是一条会 spawn 的门，成本约 20~40 秒） */
   const r = spawnSync(process.execPath, ['tools/explain-champion-decision.mjs', '--games=2'],
     { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });

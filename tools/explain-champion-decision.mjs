@@ -280,7 +280,7 @@ const tieSelf = { ok: false };
  *   于是选择退化成"**枚举顺序 + 温度采样**"。这一节把 ①率 ②方向 ③后果 量出来。
  * 机制：scored.sort 是 ES2019 稳定排序 ⇒ 平票保持 cands 原序 ⇒ **第一名 = 枚举里最早的那个**。
  * 反事实（不需要克隆状态）：**把 scored 反转再取 argmax** —— 第一名换人 ⇒ 这一手完全由顺序决定。 */
-const tie = { n: 0, dec: 0, sameAttrs: 0, diffAttrs: 0, tiedTargetN: 0, pickInTied: 0, pickLowestSeat: 0, pickFirstInOrder: 0, orderDecisive: 0, sameKeyIdentical: 0 };
+const tie = { n: 0, dec: 0, decAll: 0, sameAttrs: 0, diffAttrs: 0, tiedTargetN: 0, pickInTied: 0, pickLowestSeat: 0, pickFirstInOrder: 0, orderDecisive: 0, sameKeyIdentical: 0 };
 const tieByRound = { all: 0, 'r1-2': 0, 'r3-5': 0, 'r6+': 0, unknown: 0 };
 const firstTargets = {};
 let decThisGame = 0;
@@ -324,7 +324,7 @@ for (let g = 0; g < GAMES; g++) {
     const picked = sel(state, pid, legal);
     const pickSig = picked ? (picked.key + '@' + (picked.target == null ? '-' : picked.target)) : null;
     /* ── 破平票三件套（v1.5.307 · 只记录）────────────────────────── */
-    decThisGame++;
+    decThisGame++; tie.decAll++;   /* v1.5.307 补：**分母必须是独立的量** —— 第一版拿 tie.dec（只在平票分支 +1）当分母 ⇒ 必然印 100% */
     if (scored.length > 1) {
       const EPS_T = 1e-12, best0 = scored[0].v;
       const tiedSet = scored.filter(function (q) { return Math.abs(q.v - best0) <= EPS_T; });
@@ -467,10 +467,10 @@ console.log('\n（' + games + ' 局汇总：冠军席位存活率 ' + (100 * ali
 /* ===== ⑤ 破平票三件套（v1.5.307 · 只记录）===== */
 {
   const pct = function (a, b2) { return b2 ? (100 * a / b2).toFixed(1) + '%' : '—'; };
-  console.log('\n## ⑤ 破平票：两席属性相同时，这手是谁在破？（分母 ' + tie.dec + ' 个多候选决策）');
+  console.log('\n## ⑤ 破平票：两席属性相同时，这手是谁在破？（分母 ' + tie.decAll + ' 个多候选决策；条件统计的分母单列 = 平票数）');
   console.log('| 量 | 实测 |');
   console.log('|---|---|');
-  console.log('| 平票决策（同分且目标不同） | **' + pct(tie.n, tie.dec) + '**（' + tie.n + '/' + tie.dec + '） |');
+  console.log('| 平票决策（同分且目标不同） | **' + pct(tie.n, tie.decAll) + '**（' + tie.n + '/' + tie.decAll + '） |');
   console.log('| └ 同卡·不同目标·分数逐位相同（=两席属性一样的指纹） | ' + tie.sameKeyIdentical + ' 对 |');
   console.log('| └ 实际出手落在平票集合里 | ' + pct(tie.pickInTied, tie.n) + '（' + tie.pickInTied + '/' + tie.n + '） |');
   console.log('| └ 其中选了**枚举顺序最早**那个 | ' + pct(tie.pickFirstInOrder, tie.n) + ' |');
@@ -480,7 +480,7 @@ console.log('\n（' + games + ' 局汇总：冠军席位存活率 ' + (100 * ali
     const ft = Object.keys(firstTargets).sort(function (a, b2) { return firstTargets[b2] - firstTargets[a]; })
       .map(function (k) { return '席' + k + ' ' + firstTargets[k]; }).join(' · ');
     console.log('| └ 平票目标的属性（读 state 的 hp/ep） | **一样 ' + tie.sameAttrs + '** · 不一样 ' + tie.diffAttrs + ' |');
-  console.log('| └ 平票按回合分桶 | r1-2 ' + tieByRound['r1-2'] + ' · r3-5 ' + tieByRound['r3-5'] + ' · r6+ ' + tieByRound['r6+'] + ' · unknown ' + tieByRound.unknown + '（分母 ' + tieByRound.all + ' = 全体多候选决策） |');
+  console.log('| └ 平票按回合分桶 | r1-2 ' + tieByRound['r1-2'] + ' · r3-5 ' + tieByRound['r3-5'] + ' · r6+ ' + tieByRound['r6+'] + ' · unknown ' + tieByRound.unknown + '（分母 ' + tieByRound.all + ' = **平票数**，不是多候选决策数） |');
   console.log('| 首手目标分布 | ' + (ft || '—') + ' |');
   }
   {
