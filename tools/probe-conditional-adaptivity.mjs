@@ -18,13 +18,13 @@
 import { sandbox, mulberry32, loadChamp } from './audit-lib.mjs';
 import { poolFromSpecs } from './regime-panel.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
+import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(4, Number(arg('games', 15)) || 15);
 const BANDS = arg('band', 'all') === 'all' ? [1, 2] : [Number(arg('band', 1))];
 const SEED = { 1: 4100, 2: 21000 };
-const N = 3;
 const FINE = argv.includes('--fine');                     // 细标签（拼上"在滚环/持珠"）：只在粗标签已有信号时另跑
 const W = sandbox(), R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, B = W.EpirusBots;
 const params = (function () { const p = loadChamp(W, 'js/bundled-champion-3p.js'); return p && p.params ? p.params : p; })();
@@ -117,21 +117,35 @@ const ARMS = {
 };
 const ARMWANT = (arg('arms', '') || Object.keys(ARMS).join(',')).split(',').filter(k => ARMS[k]);
 
-/* ---- 一局：只记录被测席（0 号）的决策三元组 ---- */
+/* ---- 一局：只记录**被测席**的决策三元组 ----
+ * `--n=5` 是产品形状（§E182 的教训：归因读数是装配的函数 ⇒ 同一把尺必须在两种桌上都跑一遍才许引）：
+ *   0 席 = 人类形状代表（`makeMimic`，与收益表/难度表同一份采样器）‖ 1 席 = 被测臂（焦点席）‖
+ *   2、3 席 = 该环境的原型（保住"环境"这个因子）‖ 4 席 = 关档冠军（现役出厂那一只，不动）。
+ *   ⚠ 开档臂在 5 人桌上仍**只开焦点席**：模块档恒关，走实例级工厂（§E183 里我第一版把模块档打开，
+ *     结果"开 1 席"实际四席全开 ⇒ 整列读数量的不是那一臂）。 */
+const TABLE = Number(arg('n', 3)) === 5 ? 5 : 3;
+const HB = TABLE === 5 ? loadPool(W, 'human') : null;
 function playOne(armKey, env, g, seedBase, out) {
   CUR_ENV = env.name;                                              // 只给 `PX3`（量程顶）用
   const rnd = mulberry32(seedBase + g * 7919);
-  const st = S.createState('multi', { next: rnd }, N);
+  const st = S.createState('multi', { next: rnd }, TABLE);
   st.slotSalt = (Math.imul(g + 5, 0x9e3779b1) ^ 0x5f3759df) >>> 0;
   const base = ARMS[armKey].mk();
+  const FOCUS = TABLE === 5 ? 1 : 0;
   let acts = 0;
   const rec = function (state, pid, legal) {
-    if (pid !== 0) return base(state, pid, legal);
+    if (pid !== FOCUS) return base(state, pid, legal);
     const r = base(state, pid, legal);
     if (r) { out.push({ b: bucketOf(state, pid), l: labelOf(state, pid), a: r.key, e: env.name }); acts++; }
     return r;
   };
-  const chs = [rec]; for (let i = 1; i < N; i++) chs.push(env.sel);
+  const chs = [];
+  if (TABLE === 5) {
+    const mimic = makeMimic(W, HB, 'rand', function () { return st.rng.next(); });
+    chs.push(mimic, rec, env.sel, env.sel, T.policyChooserN(params, 0.15));
+  } else {
+    chs.push(rec, env.sel, env.sel);
+  }
   Play.autoGameN(st, chs, undefined, undefined);
   return st;
 }
@@ -217,7 +231,9 @@ const RES = {};for (const band of BANDS) {
 }
 process.stdout.write('\n');
 
-console.log('# §E184 读行为尺 `MI(动作;对手上一手|数字桶)`（桶 = 我血×我ep×最强对手血；血刻度实测 3/2/1）· ' + GAMES + ' 局/环境 × ' + ENVS.length + ' 环境 · 臂 ' + ARMWANT.join('/'));
+console.log('# §E184 读行为尺 `MI(动作;对手上一手|数字桶)`（桶 = 我血×我ep×最强对手血；血刻度实测 3/2/1）· ' + GAMES + ' 局/环境 × ' + ENVS.length + ' 环境 · 臂 ' + ARMWANT.join('/')
+  + '\n#   桌形 = ' + (TABLE === 5 ? '**产品形状 N=5**（0 席人类形状 makeMimic ‖ 1 席被测焦点 ‖ 2/3 席该环境原型 ‖ 4 席关档冠军）' : 'N=3（0 席被测 ‖ 1/2 席该环境原型）')
+  + ' ‖ §E182 的教训：归因读数是装配的函数 ⇒ 同一把尺两种桌都跑过才许并排引');
 /* ⚠ 置换次数决定**可达到的最小 p**：`p_min = 1/(REPS+1)`。第一版默认 15 ⇒ p_min=0.0625，
  *   于是"p ≤ 0.05"这条判据**任何臂都过不了**（把三个真读了行为的臂全判成 ⛔）。
  *   ⇒ 默认拉到 99，并把 p_min 一起印出来，别让下一个人再踩。 */
