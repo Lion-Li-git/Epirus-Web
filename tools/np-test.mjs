@@ -8660,6 +8660,33 @@ t('D194 `--only` 复跑单道门不许伪装成全绿（v1.5.288）：跳过的�
     '④ 子串打错 ⇒ 必须 **exit 3 拒绝**，不许报"通过 0 / 0"当绿（实测 exit=' + typo.status + '）');
 });
 
+t('D212 破平票三件套（explain-champion-decision 第⑤节）：只记录 · 自检有牙 · 反转反事实与属性判别都在（v1.5.307 · 接千问 §E180）', function () {
+  /* 动因：两席属性相同时同卡分数**逐位相同** ⇒ 选择退化成"枚举顺序 + 温度采样"。
+   * 本门钉三件事：① 节在（含自检与两个关键量）② **只记录**（不许拿平票率去阻断/退出）③ 行为验证（真跑一次，
+   * 自检必须打 ✔ —— 这是本仓"门要守行为"的规矩；我 v1.5.299 那次"声称有门其实没有"就是反面教材）。 */
+  const E = readFileSync('tools/explain-champion-decision.mjs', 'utf8');
+  ok(/## ⑤ 破平票/.test(E), '第⑤节必须在（平票率 / 方向 / 反事实 / 属性判别）');
+  ok(/scored\.slice\(\)\.reverse\(\)\[0\]/.test(E), '反转候选列表的反事实必须在（顺序决定的判据）');
+  ok(/sameAttrs/.test(E) && /diffAttrs/.test(E), '必须直接读 state 判"平票目标属性是否一样"（不能只靠猜特征布局）');
+  ok(/tieSelf\.ok/.test(E), '自检必须有牙（tieSelf.ok）');
+  ok(/tieByRound/.test(E), '必须按回合分桶（分辨"开局对称"与"结构性"）');
+  /* 只记录：**只切我自己那段循环内代码**（第一版切到节尾 ⇒ 把文件别处的自检 exit 也包进来 ⇒ 假红） */
+  {
+    const i0 = E.indexOf('破平票三件套（v1.5.307 · 只记录）');
+    const i1 = E.indexOf('firstTargetSeen === false');
+    const seg = (i0 >= 0 && i1 > i0) ? E.slice(i0, i1) : '';
+    ok(seg.length > 200, '平票那段循环内代码必须在（找不到就是被删了）');
+    ok(seg.indexOf('process.exit') < 0 && seg.indexOf('fails.push') < 0, '【只记录】平票那一段不许有 exit / 阻断');
+  }
+  /* 行为：真跑一次小档，自检必须打 ✔（这是一条会 spawn 的门，成本约 20~40 秒） */
+  const r = spawnSync(process.execPath, ['tools/explain-champion-decision.mjs', '--games=2'],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+  const out = String(r.stdout || '') + String(r.stderr || '');
+  eq(r.status, 0, '小档必须 exit 0（实测 ' + r.status + '）');
+  ok(out.indexOf('## ⑤') >= 0, '小档输出里必须有第⑤节');
+  ok(/判别力自检[^\n]*✔ 过/.test(out), '第⑤节的判别力自检必须打 ✔（行为验证，不看静态文本）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {

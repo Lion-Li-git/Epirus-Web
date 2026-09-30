@@ -274,11 +274,23 @@ const dimMag = new Float64Array(FS), dimFire = new Int32Array(FS);
 const traces = []; let traceCount = 0;
 const oppNames = new Set();
 const contrast = { rel: 0, eff: 0, slot: 0, hist: 0 };
+const tieSelf = { ok: false };
+/* ===== v1.5.307（DS · 接千问 §E180「意外之二」）：**破平票三件套**（只记录 · 先证判别力）=====
+ * 动因：两席属性相同时（例如 sword@1 与 sword@2）分数**逐位相同** —— 属性一样，特征里就是同一样本，
+ *   于是选择退化成"**枚举顺序 + 温度采样**"。这一节把 ①率 ②方向 ③后果 量出来。
+ * 机制：scored.sort 是 ES2019 稳定排序 ⇒ 平票保持 cands 原序 ⇒ **第一名 = 枚举里最早的那个**。
+ * 反事实（不需要克隆状态）：**把 scored 反转再取 argmax** —— 第一名换人 ⇒ 这一手完全由顺序决定。 */
+const tie = { n: 0, dec: 0, sameAttrs: 0, diffAttrs: 0, tiedTargetN: 0, pickInTied: 0, pickLowestSeat: 0, pickFirstInOrder: 0, orderDecisive: 0, sameKeyIdentical: 0 };
+const tieByRound = { all: 0, 'r1-2': 0, 'r3-5': 0, 'r6+': 0, unknown: 0 };
+const firstTargets = {};
+let decThisGame = 0;
+let firstTargetSeen = false;
 let games = 0, alive = 0, hpSum = 0, roundsSum = 0, top1Sum = 0, top1N = 0, marginSum = 0;
 const evSig = (st) => st.events.map(e => (e.type + ':' + (e.pid == null ? '-' : e.pid) + ':' + (e.key || '') + ':' + (e.outcome || '') + ':' + (e.to == null ? '' : '>' + e.to) + ':' + (e.amt == null ? '' : e.amt))).join(',');
 let wrapSig = null; const sigGame = GAMES - 1;
 
 for (let g = 0; g < GAMES; g++) {
+  decThisGame = 0; firstTargetSeen = false;
   const st = S.createState('multi', { next: mulberry32(SEED0 + g * 7919) }, N);
   st.slotSalt = (Math.imul(g + 5, 0x9e3779b1) ^ 0x5f3759df) >>> 0;
   const rg = POOL2[g % POOL2.length];
@@ -311,6 +323,42 @@ for (let g = 0; g < GAMES; g++) {
     if (scored.length > 1) { top1Sum += scored[0].v; top1N++; marginSum += (scored[0].v - scored[1].v); }
     const picked = sel(state, pid, legal);
     const pickSig = picked ? (picked.key + '@' + (picked.target == null ? '-' : picked.target)) : null;
+    /* ── 破平票三件套（v1.5.307 · 只记录）────────────────────────── */
+    decThisGame++;
+    if (scored.length > 1) {
+      const EPS_T = 1e-12, best0 = scored[0].v;
+      const tiedSet = scored.filter(function (q) { return Math.abs(q.v - best0) <= EPS_T; });
+      /* (0) 同卡·不同目标·分数逐位相同 = "两席属性一样"的可观测指纹（§E180 的原观察） */
+      for (let i2 = 0; i2 < tiedSet.length; i2++) for (let j2 = i2 + 1; j2 < tiedSet.length; j2++)
+        if (tiedSet[i2].key === tiedSet[j2].key && tiedSet[i2].target !== tiedSet[j2].target) tie.sameKeyIdentical++;
+      const diffTgt = tiedSet.some(function (q) { return q.target !== tiedSet[0].target; });
+      if (tiedSet.length > 1 && diffTgt) {
+        tie.n++; tie.dec++;
+        /* 按回合分桶：区分"结构上不看目标"与"只是开局对称"（我的预测：平票集中在前 1~2 回合） */
+        { const rd = (typeof round !== 'undefined' && round != null) ? Number(round) : (state && state.round != null ? Number(state.round) : -1);
+          const b2 = rd < 0 ? 'unknown' : (rd <= 2 ? 'r1-2' : (rd <= 5 ? 'r3-5' : 'r6+'));
+          tieByRound.all++; tieByRound[b2] = (tieByRound[b2] || 0) + 1; }
+        const tset = {}; for (const q of tiedSet) if (q.target !== '-') tset[String(q.target)] = 1;
+        const tnums = Object.keys(tset).map(Number).sort(function (x2, y2) { return x2 - y2; });
+        tie.tiedTargetN += tnums.length;
+        /* 关键分辨：平票的那些目标席，**属性真的一样吗**（读 state 而不是猜特征布局） */
+        {
+          const attrs = tnums.map(function (pid2) { const q = state.p[pid2]; return q ? (q.hp + '/' + q.ep) : '?'; });
+          const uniq = {}; for (const a of attrs) uniq[a] = 1;
+          if (Object.keys(uniq).length === 1) tie.sameAttrs++; else tie.diffAttrs++;
+        }
+        if (picked) {
+          if (tiedSet.some(function (q) { return q.sig === pickSig; })) {
+            tie.pickInTied++;
+            if (tnums.length && String(picked.target) === String(tnums[0])) tie.pickLowestSeat++;
+            if (pickSig === tiedSet[0].sig) tie.pickFirstInOrder++;
+          }
+        }
+        const revTop = scored.slice().reverse()[0];
+        if (revTop && revTop.sig !== scored[0].sig) tie.orderDecisive++;
+      }
+    }
+    if (picked && picked.target != null && firstTargetSeen === false) { firstTargetSeen = true; firstTargets[String(picked.target)] = (firstTargets[String(picked.target)] || 0) + 1; }
     if (scored.length && picked && pickSig !== scored[0].sig) pipe.notArgmax++;
     const a0 = scored.length ? scored[0].attr : null;
     if (a0) for (let i = 0; i < FS; i++) { dimMag[i] += Math.abs(a0.ci[i]); if (Math.abs(a0.ci[i]) > 1e-6) dimFire[i]++; }
@@ -416,10 +464,38 @@ for (const t of traces) {
   console.log('  实际出手：`' + t.pickSig + '`' + (t.pickSig !== (t.top[0] && t.top[0].sig) ? '  ⚠ ≠ 网络第一（温度/枚举差异）' : ''));
 }
 console.log('\n（' + games + ' 局汇总：冠军席位存活率 ' + (100 * alive / games).toFixed(0) + '% · 平均终局血量 ' + (alive ? hpSum / alive : 0).toFixed(1) + ' · 平均 ' + (roundsSum / games).toFixed(1) + ' 回合）');
-if (arg('json', '')) {
+/* ===== ⑤ 破平票三件套（v1.5.307 · 只记录）===== */
+{
+  const pct = function (a, b2) { return b2 ? (100 * a / b2).toFixed(1) + '%' : '—'; };
+  console.log('\n## ⑤ 破平票：两席属性相同时，这手是谁在破？（分母 ' + tie.dec + ' 个多候选决策）');
+  console.log('| 量 | 实测 |');
+  console.log('|---|---|');
+  console.log('| 平票决策（同分且目标不同） | **' + pct(tie.n, tie.dec) + '**（' + tie.n + '/' + tie.dec + '） |');
+  console.log('| └ 同卡·不同目标·分数逐位相同（=两席属性一样的指纹） | ' + tie.sameKeyIdentical + ' 对 |');
+  console.log('| └ 实际出手落在平票集合里 | ' + pct(tie.pickInTied, tie.n) + '（' + tie.pickInTied + '/' + tie.n + '） |');
+  console.log('| └ 其中选了**枚举顺序最早**那个 | ' + pct(tie.pickFirstInOrder, tie.n) + ' |');
+  console.log('| └ 其中选了**最低席号** | ' + pct(tie.pickLowestSeat, tie.n) + ' |');
+  console.log('| **反转候选列表**后第一名换人（=顺序决定） | **' + pct(tie.orderDecisive, tie.n) + '**（' + tie.orderDecisive + '/' + tie.n + '） |');
+  {
+    const ft = Object.keys(firstTargets).sort(function (a, b2) { return firstTargets[b2] - firstTargets[a]; })
+      .map(function (k) { return '席' + k + ' ' + firstTargets[k]; }).join(' · ');
+    console.log('| └ 平票目标的属性（读 state 的 hp/ep） | **一样 ' + tie.sameAttrs + '** · 不一样 ' + tie.diffAttrs + ' |');
+  console.log('| └ 平票按回合分桶 | r1-2 ' + tieByRound['r1-2'] + ' · r3-5 ' + tieByRound['r3-5'] + ' · r6+ ' + tieByRound['r6+'] + ' · unknown ' + tieByRound.unknown + '（分母 ' + tieByRound.all + ' = 全体多候选决策） |');
+  console.log('| 首手目标分布 | ' + (ft || '—') + ' |');
+  }
+  {
+    const mkL = function (vals, tgs) { return vals.map(function (v, i) { return { v: v, sig: 'x@' + tgs[i], target: String(tgs[i]), key: 'x' }; }); };
+    const topOf = function (arr) { return arr.slice().sort(function (a, b2) { return b2.v - a.v; })[0].sig; };
+    const revOf = function (arr) { return arr.slice().reverse().sort(function (a, b2) { return b2.v - a.v; })[0].sig; };
+    const t1 = mkL([1, 1], [1, 2]), u1 = mkL([1, 0.5], [1, 2]);
+    tieSelf.ok = (topOf(t1) === 'x@1') && (revOf(t1) === 'x@2') && (topOf(u1) === 'x@1') && (revOf(u1) === 'x@1');
+    console.log('| 判别力自检（合成：平票须顺序破且反转翻转 ‖ 差 0.5 分须不翻） | ' + (tieSelf.ok ? '✔ 过' : '⛔ **不过 ⇒ 上面几行不算数**') + ' |');
+  }
+}if (arg('json', '')) {
   writeFileSync(arg('json'), JSON.stringify({ meta: { games, n: N, seed0: SEED0, opp: OPP, opponents: [...oppNames], pack: 'bundled-champion-3p', FS, FA, FN, HID, temp: 0.15, layout: { MAIN, OFF, HK, EF, SLOT, PSLOT } },
     contrast, spots,
-    selfCheck: { bm, ab, fsc }, pipe, margin: top1N ? marginSum / top1N : null, abl: ABL.map(a => ({ name: a.name, dims: a.kind === 'state' ? a.hi - a.lo : FA, flipRate: a.flip / Math.max(1, a.n), mag: a.mag / Math.max(1, a.n) })),
+    selfCheck: { bm, ab, fsc, tie: tieSelf },
+    tie: { n: tie.n, dec: tie.dec, sameKeyIdentical: tie.sameKeyIdentical, pickInTied: tie.pickInTied, pickFirstInOrder: tie.pickFirstInOrder, pickLowestSeat: tie.pickLowestSeat, orderDecisive: tie.orderDecisive, firstTargets: firstTargets, sameAttrs: tie.sameAttrs, diffAttrs: tie.diffAttrs }, pipe, margin: top1N ? marginSum / top1N : null, abl: ABL.map(a => ({ name: a.name, dims: a.kind === 'state' ? a.hi - a.lo : FA, flipRate: a.flip / Math.max(1, a.n), mag: a.mag / Math.max(1, a.n) })),
     topDims: per.slice(0, 20).map(p2 => ({ i: p2.i, name: nameOf(p2.i), m: p2.m, fires: p2.fires })), traces }, null, 1));
   console.log('  json → ' + arg('json'));
 }
