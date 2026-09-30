@@ -27,7 +27,7 @@ import { writeFileSync } from 'node:fs';
 import { sandbox, rejectUnknownFlags, mulberry32, loadChamp } from './audit-lib.mjs';
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(('--' + k + '=').length) : d; };
-rejectUnknownFlags(process.argv.slice(2), ['games', 'seed', 'trace', 'n', 'opp', 'json', 'quiet']);
+rejectUnknownFlags(process.argv.slice(2), ['games', 'seed', 'trace', 'n', 'opp', 'shape', 'json', 'quiet']);
 const GAMES = Math.max(1, Number(arg('games', 12)) || 12);
 const N = Math.max(2, Number(arg('n', 3)) || 3);
 const SEED0 = Number(arg('seed', 77000)) || 77000;
@@ -261,11 +261,45 @@ if (ab.ok) {
  * ⚠ 对手是谁 = 这台仪器的一部分（"夹具必须有对比度"那一族的新型态）：
  *   第一版四个 AI 席**全塞冠军自己** ⇒ 持续效果块 721 个决策里**一列都没亮过**（符咒/八卦/嘲讽这些
  *   只有原型池里的脚本会打），于是"抹掉效果块翻转率 0.0%"看着像发现，其实是**夹具在装死**。
- *   ⇒ 默认对手 = 原型池（与 §E179 同一批），并把"每块的对比度"当心跳印出来。 */
+ *   ⇒ 默认对手 = 原型池（与 §E179 同一批），并把"每块的对比度"当心跳印出来。
+ *
+ * ⚠⚠ **五种座位形状**（v1.5.308 · 用户指出"这台在 n=5 下不能用"—— 症状不是崩溃，是**装配不是产品形状**）：
+ *   `mirror` 冠军坐 0 席、其余 N-1 席 = **同一个**原型            ← §E180 那批读数的形状（N=3 默认，保持可复现）
+ *   `mixed`  冠军坐 0 席、其余 N-1 席 = **各不相同**的原型（N≥4 默认：对比度最高、且真的是"多环境"）
+ *   `product` 冠军坐 **1..N-1 席**、0 席 = 人类形状代表（真页面形状；归因记在每一个冠军席上）
+ *   `pool`   冠军坐 0 席、其余 = 单个原型（`--opp=pool` 的旧名，等价 mirror）
+ *   `champ`  全桌同一只包（旧 `--opp=champ`）
+ *   ⇒ 形状会**改变归因读数**（效果块亮不亮、指向块翻不翻），所以每张表都必须把形状印在标题上。 */
 import { poolFromSpecs } from './regime-panel.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
-const OPP = arg('opp', 'pool');
+import { loadPool, makeMimic } from './human-pool.mjs';
+const SHAPE0 = arg('shape', '');
+const OPP = arg('opp', '');
+const SHAPE = SHAPE0 || (OPP === 'champ' ? 'champ' : OPP === 'pool' ? 'mirror' : (N >= 4 ? 'mixed' : 'mirror'));
+if (['mirror', 'mixed', 'product', 'champ'].indexOf(SHAPE) < 0) { console.error('⛔ 不认识的 --shape=' + SHAPE + '（可用 mirror|mixed|product|champ）'); process.exit(2); }
 const { pool: POOL2 } = poolFromSpecs(B, OPP_SPECS);
+const HB = (SHAPE === 'product') ? loadPool(W, 'human') : null;
+const ME = (pid) => (SHAPE === 'product' ? pid >= 1 : pid === 0);
+/** 装配一张桌：`recorder` 非空时冠军席用它（记录器不抽随机数 ⇒ 见红线"包一层不许改变这一手"）。
+ *  ⚠ 记录器必须**当参数传进来**：它是主循环块里的 `const mine`（块级作用域），
+ *    模块级函数直接引用会拿到 undefined —— 第一次改完就是当场 `ReferenceError` 炸给我看的。 */
+function seatChargers(state, record, g, recorder) {
+  const champ = function (s, pid, legal) { return (record && recorder) ? recorder(s, pid, legal) : sel(s, pid, legal); };
+  const arr = [];
+  if (SHAPE === 'product') {
+    arr.push(makeMimic(W, HB, 'rand', function () { return state.rng.next(); }));
+    for (let i = 1; i < N; i++) arr.push(champ);
+    return arr;
+  }
+  arr.push(champ);
+  if (SHAPE === 'champ') { for (let i = 1; i < N; i++) arr.push(sel); return arr; }
+  const rgList = [];
+  for (let i = 1; i < N; i++) rgList.push(POOL2[(SHAPE === 'mixed' ? (g * 5 + i) : g) % POOL2.length]);
+  for (let i = 1; i < N; i++) arr.push(rgList[i - 1].sel);
+  rgList.forEach(r => oppNames.add(r.name));
+  if (SHAPE === 'champ') oppNames.add('冠军自己');
+  return arr;
+}
 const ABL = BLOCKS.map(b => ({ name: b.name, kind: 'state', lo: b.lo, hi: b.hi, afT: null, n: 0, flip: 0, mag: 0 }));
 ABL.push({ name: '动作段（这张卡自己：身份/费用/威力/目标/珠）', kind: 'action', lo: 0, hi: 0, all: true, afT: null, n: 0, flip: 0, mag: 0 });
 for (const a of ACT_SUB) ABL.push(a);
@@ -274,6 +308,9 @@ const dimMag = new Float64Array(FS), dimFire = new Int32Array(FS);
 const traces = []; let traceCount = 0;
 const oppNames = new Set();
 const contrast = { rel: 0, eff: 0, slot: 0, hist: 0 };
+/* 装配心跳：**对手那一侧到底在不在打牌**。`product` 形状下 0 席是人类形状代表（`tools/human-pool.mjs`）——
+ *  它要是退化成"永远出ジ"，那"5 席产品形状"的归因读数整个是假的（同族：换实现要先看心跳）。 */
+const otherKeys = {}; let otherActs = 0;
 const tieSelf = { ok: false };
 /* ===== v1.5.307（DS · 接千问 §E180「意外之二」）：**破平票三件套**（只记录 · 先证判别力）=====
  * 动因：两席属性相同时（例如 sword@1 与 sword@2）分数**逐位相同** —— 属性一样，特征里就是同一样本，
@@ -293,11 +330,10 @@ for (let g = 0; g < GAMES; g++) {
   decThisGame = 0; firstTargetSeen = false;
   const st = S.createState('multi', { next: mulberry32(SEED0 + g * 7919) }, N);
   st.slotSalt = (Math.imul(g + 5, 0x9e3779b1) ^ 0x5f3759df) >>> 0;
-  const rg = POOL2[g % POOL2.length];
-  const oppSel = OPP === 'champ' ? T.policyChooserN(params, 0.15) : rg.sel;
-  oppNames.add(OPP === 'champ' ? '冠军自己' : rg.name);
   const mine = function (state, pid, legal) {
-    if (pid !== 0) return oppSel(state, pid, legal);
+    /* 只有冠军席会走到这里（`seatChargers` 只在那些席上挂记录器）⇒ 不再按 `pid !== 0` 早退
+     *   ⇒ 这一改就是"n=5 不能用"的正解：`product` 形状下冠军在 1..N-1 席，旧代码把它们的决策全丢掉，
+     *      只剩 0 席（在页面形状里那是**人**坐的位置）在记账。 */
     const aff = (legal || []).filter(l => l.affordable);
     const base = aff.length ? aff : [{ key: (R.SK && R.SK.JI) || 'ji', affordable: true }];
     let eb = base, cands = [];
@@ -391,30 +427,34 @@ for (let g = 0; g < GAMES; g++) {
        （本仓那个"换个包装就整条流错位"的老族）。现在记录与返回同一个对象。 */
     return picked;
   };
-  const chs = [mine]; for (let i = 1; i < N; i++) chs.push(oppSel);
-  Play.autoGameN(st, chs.slice(0, N), undefined, () => {});
+  const chs = seatChargers(st, true, g, mine).slice(0, N);
+  Play.autoGameN(st, chs, undefined, () => {});
+  /* 装配心跳：非冠军席（原型池 or 人类形状代表）到底在不在打牌 ⇒ 它退化成一味出ジ，整桌读数就是假的 */
+  for (const e of st.events) if (e.type === 'action' && e.outcome === 'ok' && e.pid != null && !ME(e.pid)) { otherActs++; otherKeys[e.key] = (otherKeys[e.key] || 0) + 1; }
   if (g === sigGame) wrapSig = evSig(st);
   games++; roundsSum += st.round;
-  const me = st.p[0]; if (me && me.hp > 0) { alive++; hpSum += me.hp; }
+  /* 存活/血量按**冠军席**算（`product` 形状下 0 席是人类 ⇒ 拿 st.p[0] 当"冠军活着吗"会读成人那边）*/
+  { let best = -1, anyAlive = false;
+    for (let p = 0; p < N; p++) if (ME(p) && st.p[p]) { if (st.p[p].hp > 0) anyAlive = true; best = Math.max(best, st.p[p].hp); }
+    if (anyAlive) { alive++; hpSum += best; } }
   if (!QUIET) process.stdout.write('.');
 }
 if (!QUIET) process.stdout.write('\n');
 /* 自检③（红线）：**记这一手不能改变这一手** ⇒ 同一颗种子"包 vs 不包"事件流必须逐字相同
- * ⚠ 对照跑必须用**同一批对手**：主循环第 `sigGame` 局的对手是 `POOL2[sigGame % POOL2.length]`，
- *   这里若偷懒全用冠军自己，比的就是两张不同的桌子（第一版正是这样，于是"红线"自己红了）。 */
+ * ⚠ 对照跑必须与实验跑**同一套装配**（同一批对手、同一个座位形状、0 席同样的形状）：
+ *   第一版这里手写 `[sel, oSel…]`，改了默认对手之后比的就是两张不同的桌 ⇒ 红线自己红了。
+ *   现在直接复用 `seatChargers(st, false, g)` —— 唯一差别是"不挂记录器"，正是要验的那一件事。 */
 {
   const st = S.createState('multi', { next: mulberry32(SEED0 + sigGame * 7919) }, N);
   st.slotSalt = (Math.imul(sigGame + 5, 0x9e3779b1) ^ 0x5f3759df) >>> 0;
-  const rgPlain = POOL2[sigGame % POOL2.length];
-  const oSel = OPP === 'champ' ? T.policyChooserN(params, 0.15) : rgPlain.sel;
-  const pchs = [sel]; for (let i = 1; i < N; i++) pchs.push(oSel);
-  Play.autoGameN(st, pchs.slice(0, N), undefined, () => {});
+  const pchs = seatChargers(st, false, sigGame).slice(0, N);
+  Play.autoGameN(st, pchs, undefined, () => {});
   var driftOk = evSig(st) === wrapSig, driftLen = wrapSig ? wrapSig.length : 0;
 }
 
 const fsc = forwardSelfCheck();
 const spots = semanticSpotCheck(), spotBad = spots.filter(s => !s.ok);
-console.log('# §E180 现役冠军 AI 是怎么决定出手的（包 `bundled-champion-3p.js` · 网络 ' + FN + '→' + HID + '→1 · 温度 0.15 · **信念搜索默认关**）');
+console.log('# §E180 现役冠军 AI 是怎么决定出手的（包 `bundled-champion-3p.js` · 网络 ' + FN + '→' + HID + '→1 · 温度 0.15 · **信念搜索默认关** · N=' + N + ' · 装配 ' + SHAPE + '）');
 console.log('\n## ⓪ 先证明"我读对了这张网络"（四道自检，任一不过 ⇒ **后面一手都不许解释**）');
 console.log('| 自检 | 实测 | 判定 |');
 console.log('|---|---|---|');
@@ -425,11 +465,15 @@ console.log('| 语义点检（灌**一个**字段 ⇒ 只许那一列动） | ' 
 console.log('| 动作段子块（**测出来**不是数源码） | 长 ' + ab.len + '/' + FA + ' ‖ 目标 [' + (ab.target || []).join(',') + '] ‖ 珠 [' + (ab.bead || []).join(',') + '] | ' + (ab.ok ? '✔' : '⛔ 动作段长度对不上') + ' |');
 if (!driftOk || !bm.ok || !fsc.ok || !ab.ok || spotBad.length) { console.log('\n⛔ 自检没过 ⇒ 这台仪器**没有资格**解释任何一手。'); process.exit(3); }
 
-console.log('\n## ① 决策管线（' + games + ' 局 · 冠军坐第 0 席 · ' + pipe.n + ' 个决策 ‖ 对手 = ' + (OPP === 'champ' ? '冠军自己' : '原型池 ' + oppNames.size + ' 个原型') + '）');
+console.log('\n## ① 决策管线（' + games + ' 局 · N=' + N + ' · **装配 = `' + SHAPE + '`** · 冠军席 = ' + (SHAPE === 'product' ? '1…' + (N - 1) : '0') + ' · ' + pipe.n + ' 个冠军席决策 ‖ 其余席 = ' + (SHAPE === 'champ' ? '冠军自己' : (SHAPE === 'product' ? '人类形状代表' : '原型池 ' + oppNames.size + ' 个原型')) + '）');
 console.log('每回合平均：**合法 ' + (pipe.legal / pipe.n).toFixed(1) + ' 张 → 付得起 ' + (pipe.aff / pipe.n).toFixed(1) + ' 张 → `econBase` 剪后 ' + (pipe.econ / pipe.n).toFixed(1) + ' 张 → 展开成候选（技能×目标×珠）' + (pipe.cands / pipe.n).toFixed(1) + ' 个** → 每个过一次网络 → 取最高');
 console.log('只剩 1 个候选（网络无话可说）的决策占 ' + (100 * pipe.solo / pipe.n).toFixed(1) + '%；温度 0.15 下**实际出手 ≠ 网络第一名** ' + (100 * pipe.notArgmax / pipe.n).toFixed(1) + '%');
 console.log('**对比度心跳**（这一块在这批桌子里"亮过"的决策比例）：对手席 ' + (100 * contrast.slot / pipe.n).toFixed(0) + '% ‖ 历史 ' + (100 * contrast.hist / pipe.n).toFixed(0) + '% ‖ 指向 ' + (100 * contrast.rel / pipe.n).toFixed(0) + '% ‖ **持续效果 ' + (100 * contrast.eff / pipe.n).toFixed(0) + '%**'
   + (contrast.eff / pipe.n < 0.05 ? ' ⇒ ⚠ 这一块在这份夹具里几乎从不亮 ⇒ 它那一行"抹掉也不换招"是**夹具的功劳，不是发现**（换 `--opp=pool` 也一样低就是另一回事了）' : ''));
+const otherTop = Object.keys(otherKeys).sort((a, b2) => otherKeys[b2] - otherKeys[a]);
+const otherShare = otherTop.length ? (100 * otherKeys[otherTop[0]] / Math.max(1, otherActs)) : 0;
+console.log('**装配心跳**（非冠军席到底在不在打牌）：出手 ' + otherActs + ' 次 ‖ 不同卡 **' + otherTop.length + ' 张** ‖ 最高频那张占 ' + otherShare.toFixed(0) + '%（' + ((R.byKey[otherTop[0]] || {}).name || otherTop[0] || '—') + '）‖ 平均局长 ' + (roundsSum / games).toFixed(1) + ' 回合 ‖ 冠军席存活 ' + (100 * alive / games).toFixed(0) + '%'
+  + (otherTop.length >= 6 && otherShare < 85 ? ' ✔ 桌是活的' : ' ⛔ 对手席退化成一味出ジ ⇒ 这批桌子的归因读数不可用（换 `--shape=`）'));
 console.log('第一名平均分数 ' + (top1N ? top1Sum / top1N : 0).toFixed(3) + ' ‖ **与第二名的平均差距 ' + (top1N ? marginSum / top1N : 0).toFixed(3) + '**');
 
 console.log('\n## ② 哪一块输入真的在驱动这一手（**抹掉整块 ⇒ 换不换招**）');
@@ -492,7 +536,7 @@ console.log('\n（' + games + ' 局汇总：冠军席位存活率 ' + (100 * ali
     console.log('| 判别力自检（合成：平票须顺序破且反转翻转 ‖ 差 0.5 分须不翻） | ' + (tieSelf.ok ? '✔ 过' : '⛔ **不过 ⇒ 上面几行不算数**') + ' |');
   }
 }if (arg('json', '')) {
-  writeFileSync(arg('json'), JSON.stringify({ meta: { games, n: N, seed0: SEED0, opp: OPP, opponents: [...oppNames], pack: 'bundled-champion-3p', FS, FA, FN, HID, temp: 0.15, layout: { MAIN, OFF, HK, EF, SLOT, PSLOT } },
+  writeFileSync(arg('json'), JSON.stringify({ meta: { games, n: N, seed0: SEED0, shape: SHAPE, opp: OPP, opponents: [...oppNames], pack: 'bundled-champion-3p', FS, FA, FN, HID, temp: 0.15, layout: { MAIN, OFF, HK, EF, SLOT, PSLOT } },
     contrast, spots,
     selfCheck: { bm, ab, fsc, tie: tieSelf },
     tie: { n: tie.n, dec: tie.dec, sameKeyIdentical: tie.sameKeyIdentical, pickInTied: tie.pickInTied, pickFirstInOrder: tie.pickFirstInOrder, pickLowestSeat: tie.pickLowestSeat, orderDecisive: tie.orderDecisive, firstTargets: firstTargets, sameAttrs: tie.sameAttrs, diffAttrs: tie.diffAttrs }, pipe, margin: top1N ? marginSum / top1N : null, abl: ABL.map(a => ({ name: a.name, dims: a.kind === 'state' ? a.hi - a.lo : FA, flipRate: a.flip / Math.max(1, a.n), mag: a.mag / Math.max(1, a.n) })),
