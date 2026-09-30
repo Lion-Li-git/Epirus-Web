@@ -122,7 +122,9 @@ Epirus-Web/
 ├─ docs/RULES-2P.md         ★ 2 人规则裁定版（R1..R55 + 子证 R23'/R34'/R19'）
 ├─ docs/RULES-NP.md         ★ 多人（3~5 人）裁定版（N1..N13）
 ├─ docs/METHODOLOGY.md      ★ 方法学（含"打印机必须打印门所判的量"等 40+ 条）
-├─ docs/RESEARCH-LOG-<日期>-{ds,qoder}.md  当日研究日志（§E/§数字 编号，预注册→实测→判读）
+├─ docs/RESEARCH-LOG-<日期>-{ds,qoder}.md  当日研究日志（§E/§数字 编号，预注册→实测→判读）。**一份只装一天**：
+│                             09-28 那份到 §E180（09-30 上午）为止，09-30 下午起的 §E181~§E184 在
+│                             `docs/RESEARCH-LOG-2026-09-30-qoder.md`（搬运用的是逐行可校验的整块搬家，一字未改）
 ├─ docs/HANDOFF-*             班与班的交接件。**归因易读错**：本仓只有三个角色（用户 / DS / Qoder），
 │                             而 "千问"="QWEN"=**Qoder 本尊**，不是第三方 AI。
 │                             `HANDOFF-FOR-QWEN-*` 是 DS 写给 Qoder 的；`HANDOFF-FOR-DS-*` 是 Qoder 写给 DS 的。

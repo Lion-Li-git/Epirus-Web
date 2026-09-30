@@ -27,6 +27,24 @@
 - `RESEARCH-LOG-2026-09-18-overnight.md` · `RESEARCH-LOG-2026-09-20-qoder.md` —— 早期研究日志。
 - `PROMOTION-CANDIDATE-*` · `PLAN-RING-FEATURE.md` · `FOLLOWUP-for-ds-2026-09-19.md` · `v1.5.71-verify.md` —— 一次性工单/计划。
 
+## 2026-09-30（Qoder 整理 · 用户要求"旧的归档一下，今天下午以来的新内容写到另一个文档里，不要全堆在一起"）
+
+**这次挪进来的 4 份**（判据：`js/ tools/ server/ tests/ index.html CHANGELOG.md README.md docs/{METHODOLOGY,RULES-2P,RULES-NP}.md` 里**零引用** ⇒ 挪走不会打断任何门或代码注释；且都已被更新的一份取代）：
+
+| 归档件 | 被谁取代 / 为什么不再现行 |
+|---|---|
+| `HANDOFF-FOR-QWEN-2026-09-22.md` | 班与班交接；现行那份是 `docs/HANDOFF-FOR-DS-2026-09-28-qoder.md` |
+| `HANDOFF-FOR-QWEN-2026-09-25.md` | 同上 |
+| `HANDOFF-FOR-QWEN-2026-09-27-ds.md` | 同上（DS→千问那一支也已由 09-28 那份接上） |
+| `NEXT-FOR-QWEN-2026-09-29-ds.md` | "下一步"清单；里面每条已被 09-30 的 §E179~§E184 走完或判废 |
+
+**看过但故意没挪的**（点名留档，免得下一个人以为漏了）：`CHAMPION-CANDIDATES.md`（0 引用，但属冠军槽名单 ⇒ DS/用户裁定地盘，不自作主张）、`DECISIONS-2026-09-29.md`（裁定件，当天还要对着读）、`RESEARCH-QUEUE-2026-09-20.md`（本档上面那张表自己写着"仍在使用"）、`HANDOFF-2026-09-19.md`（5 处代码引用）。
+
+**同日另一件事（不是归档，是拆档）**：`docs/RESEARCH-LOG-2026-09-28-qoder.md` 从 09-28 夜班一路长到 5290 行、当天上下午混在一档里读不动 ⇒
+把 **09-30 下午起的 §E181~§E184 整体搬进新档 `docs/RESEARCH-LOG-2026-09-30-qoder.md`**（编号连续、内容一字未改，旧档末尾留了指针）。
+⇒ 今后按本仓既有约定：**一份日志只装一天**（`RESEARCH-LOG-<日期>-{ds,qoder}.md`）；跨夜继续干就新起一份，别往旧档尾巴上堆。
+搬运用的是可校验做法：`余下部分 + 搬走的块 == git HEAD 里那份原文` 逐行成立（0 丢行、0 改写）。
+
 ## 怎么找回全文
 
 ```bash
