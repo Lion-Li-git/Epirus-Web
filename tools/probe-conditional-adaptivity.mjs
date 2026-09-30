@@ -299,6 +299,48 @@ for (const band of BANDS) {
     }).join(' | ') + ' |');
   }
 }
+/* ---- ③ **对齐桶集合**后再比（§E186 留的那条"未结"）----
+ *   各臂的"超出自己零分布几倍"不能直接横着比：`E1` 把桌子打得又快又确定 ⇒ 它够格的桶只有 28 个，
+ *   关档有 62 个 —— 桶少 ⇒ 每桶样本多 ⇒ 零分布被压低 ⇒ 倍数虚高。这是"比率有看不见的分母"的又一副脸。
+ *   做法：取**所有臂都够格（≥2 个标签各 ≥8 手）的桶交集**，在这个同一格子集合上重算每臂的 MI 与置换零分布。
+ *   判据不变：只有 `PX`（正对照）应远超全场，而"某枚旋钮是否真抬得动"要看**交集上的 MI**，不是各自分母下的倍数。 */
+const LB8 = 8;
+function bucketEligible(dec, keyFn) {
+  const B = {};
+  for (const d of dec) { const b0 = keyFn(d); const b = B[b0] = B[b0] || {}; b[d.l] = (b[d.l] || 0) + 1; }
+  const ok = new Set();
+  for (const b in B) if (Object.values(B[b]).filter(n => n >= LB8).length >= 2) ok.add(b);
+  return ok;
+}
+/* 两个粒度各跑一遍：**交集太小**是这种"对齐分母"做法的固有代价（严格桶只交得出 4 个桶），
+ *   所以同时给一档粗桶（我血 × 我 ep）—— 它对数值的控制松一点，但覆盖够厚、倍数才真的可比。 */
+for (const band of BANDS) {
+  for (const [lvl, keyFn, bFn] of [['严格桶（我血×我ep×对手血）', (d) => d.b, getLB], ['粗桶（我血×我ep）', (d) => coarse(d.b), (d) => coarse(d.b)]]) {
+  let common = null;
+  for (const k of ARMWANT) { const e = bucketEligible(RES[band][k].dec, keyFn); common = common === null ? e : new Set([...common].filter(x => e.has(x))); }
+  console.log('\n## 带 ' + band + ' ③ 对齐桶集合后的读行为 MI（同一批格子 ⇒ 倍数可比）· 粒度=' + lvl + ' · 交集桶数 **' + common.size + '**');
+  const rows3 = ARMWANT.map(k => {
+    const dec = RES[band][k].dec.filter(d => common.has(keyFn(d)));
+    const m = mi(dec, bFn, getLAB);
+    const n = permNull(dec, m.mi, REPS, bFn, getLAB);
+    return { k, name: ARMS[k].name, ...m, med: n.med, p: n.p, frac: m.hA > 1e-9 ? m.mi / m.hA : 0 };
+  });
+  const a0 = rows3.find(r => r.k === 'A0');
+  const tot0 = RES[band].A0 ? RES[band].A0.dec.length : 0;
+  console.log('> ⚠ **量程先于结论**：交集 ' + common.size + ' 个桶、覆盖关档的 ' + (a0 ? a0.n : 0) + ' / ' + tot0 + ' 手 = **' + (a0 ? (100 * a0.n / tot0).toFixed(1) : '?') + '%**'
+    + (a0 && a0.n / tot0 < 0.25 ? ' ⇒ 覆盖不足四成，**这张表不许当普适增益引**（只说"这批共同格子里谁读得多"）' : ' ⇒ 覆盖可用'));
+  console.log('| 臂 | MI（交集上） | 占其不确定性 | 零分布 | p | **相对关档（同一格子集合）** | 交集内手数 |');
+  console.log('|---|---|---|---|---|---|---|');
+  for (const r of rows3) {
+    const rel = a0 && a0.mi > 1e-9 ? (r.mi - a0.mi) : NaN;
+    console.log('| `' + r.k + '` ' + r.name + ' | ' + r.mi.toFixed(4) + ' | ' + (100 * r.frac).toFixed(1) + '% | ' + r.med.toFixed(4) + ' | ' + r.p.toFixed(3) + ' | '
+      + (isFinite(rel) ? (rel >= 0 ? '+' : '') + rel.toFixed(4) + ' bit' + (r.k !== 'A0' && a0.mi > 0 ? '（' + (100 * (r.mi / a0.mi - 1)).toFixed(0) + '%）' : '') : '—')
+      + ' | ' + r.n + ' |');
+  }
+  if (!a0 || !isFinite(a0.mi)) console.log('> ⛔ 交集里没有 `A0` 的参照 ⇒ 这一表不可读（把 --games 加大）');
+  }
+}
+
 /* ---- 自检：不过就 exit 3（尺要能**同时**认得出"读了"和"没读"，且排序不能反）---- */
 let bad = [];
 for (const band of BANDS) {
