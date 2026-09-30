@@ -760,8 +760,34 @@
   }
   /* §E169 · 跨回合资源的**手写价**（两档默认 0 ⇒ 下面恒等于 0，出厂形状逐字不变）。
      珠按"枚"计（同类上限 1，`resolve.js:1261-1268` 的 R9' ⇒ 最多 `elec`+`boom` = 2）；环按"链条活着"计，不随档位放大。 */
+  /* §E192 · **第 6 剂，但函数形式不同**：§E190 把珠价的病定位成"**同回合互斥**"——电磁炮要 `2 ep + 1 电珠`，
+     而蓄能一手就花掉 1 ep ⇒ 产品桌上珠价臂**有珠的决策里 100%（两批 100.0/99.6）买不起炮**，
+     且**把 `BELIEF_BEAD` 从 1 抬到 4 整条链一字不变** ⇒ 加钱治不了它（前 5 剂全是"给资源发补贴"这一族）。
+     ⇒ 这一档不定价"珠"，定价"**可兑现的珠**"：只有 `手上有珠 且 ep≥2`（下一手真的开得出炮）才算钱。
+     ⚠ 它仍然是一条手写加项，但**编码的是跨回合的可行性约束**，不是资源偏好 ⇒ 成了就说明方向对，
+        败了就是把"必须有状态价值头"再钉实一次。**默认 0 ⇒ 出厂形状逐字不变**（`0 × 0/1` 整数，无浮点残差）。 */
+  let BELIEF_BEAD_RD = 0;
+  function setBeliefBeadRedeemable(v) { const n = Math.floor(Number(v)); BELIEF_BEAD_RD = (isFinite(n) && n > 0) ? (n > 12 ? 12 : n) : 0; }
+  function beliefBeadRedeemable() { return BELIEF_BEAD_RD; }
+  /* §E193 · **第 7 剂，函数形式又不同：这一枚定价的是"转移"，不是"状态"**。
+     §E192 的读法是：近视尺 + 状态价 ⇒ "**手里有一颗可兑现的珠**"本身就成了被奖励的状态，而开炮恰好销毁它
+     （珠没了、2 点蓄能没了、`ringStreak` 断）⇒ `买不起炮` 从 100% 治成 0%，`买得起却不开` 却涨到 98.9~99.1%。
+     ⇒ 这一枚给"**这一手真的把珠花出去了**"（电磁炮 / 激光眼）发一份固定钱，与状态价同尺度可比。
+     **接在哪儿**：`beliefSearchPick` 的候选循环里（那里 `pool[ci].key` 已知），**不穿进 `beliefValue/beadTerm`**
+     ⇒ `np-test` D210①′/①″ 的两处钉（`beadTerm` 里的乘法形状 + 默认分支那一整行字符串）**一字未动**，门不必改。
+     ⚠ 默认 0 ⇒ 出厂形状逐字不变；且这份钱是**加在动作上**的，双计是明确的取舍（炮的伤害在叶子状态里已经结算过一次）。 */
+  let BELIEF_FIRE = 0;
+  function setBeliefFireSpend(v) { const n = Math.floor(Number(v)); BELIEF_FIRE = (isFinite(n) && n > 0) ? (n > 12 ? 12 : n) : 0; }
+  function beliefFireSpend() { return BELIEF_FIRE; }
   function beadTerm(me) {
-    return BELIEF_BEAD * ((me.elec ? 1 : 0) + (me.boom ? 1 : 0)) + BELIEF_RING * (me.ringStreak > 0 ? 1 : 0);
+    /* ⚠ 这里的写法**整体是被门钉住的**：`np-test` D210①′ 用正则 `BELIEF_BEAD \* \(\(me\.elec` /
+       `BELIEF_RING \* \(me\.ringStreak` 断言"旋钮真的进了评估"，①″ 又**按字符串**钉死默认分支那一整行
+       （`... + beadTerm(me);`）⇒ 不许把它改成带第二参数的形式，也不许提成变量，那会让门假红。
+       ⇒ 所以"动作价"（§E193）**故意不写在这里**：引擎里没有"本手开过炮"的状态字段，而候选卡名在这一层拿不到；
+       它接在调用方 `beliefSearchPick` 的循环里（`pool[ci].key` 就地可得），这样这两处钉一个字都不用动。 */
+    const beads = (me.elec ? 1 : 0) + (me.boom ? 1 : 0);
+    return BELIEF_BEAD * ((me.elec ? 1 : 0) + (me.boom ? 1 : 0)) + BELIEF_RING * (me.ringStreak > 0 ? 1 : 0)
+      + BELIEF_BEAD_RD * (beads > 0 && me.ep >= 2 ? 1 : 0);
   }
   function beliefValue(st, pid) {
     const me = st.p[pid];
@@ -840,7 +866,10 @@
       for (let o = 0; o < others.length; o++) S.attemptAction(q, others[o].pid, others[o].key, {});
       X.resolveActions(q); X.endTurn(q);
       for (let p2 = 1; p2 < BELIEF_PLY; p2++) beliefAdvance(q, pid, params);   /* 默认 1 层 ⇒ 这行永不执行 */
-      const v = beliefValue(q, pid);
+      /* §E193 · **动作价（第 7 枚）接在这一行外面，不穿进 `beliefValue`** —— 这里 `pool[ci].key` 就地可得，
+         而 `beadTerm`/默认分支那两处是被门按字符串钉着的 ⇒ 门不必动。`BELIEF_FIRE` 默认 0 ⇒ 这一句恒等于原样。 */
+      let v = beliefValue(q, pid);
+      if (BELIEF_FIRE > 0 && (pool[ci].key === R.SK.RAILGUN || pool[ci].key === R.SK.LASER_EYE)) v += BELIEF_FIRE;
       /* §E161c · **并列怎么破**：`beliefValue` 是一把整数血量的尺 ⇒ 大量候选**精确并列**（这一回合什么都不改变的手太多了），
          而默认形状"`v > bv + 1e-9` ⇒ 取枚举顺序里第一个最优"意味着**并列由候选的枚举顺序裁决**，那不是偏好 ⇒
          等于把包自己那部分风格（珠经济、连段）在平票时扔掉了。§E156b 看到的"三列塌"里有一部分是这个，不全是目标近视。
@@ -3139,7 +3168,8 @@ let WALL_GAMES = 3;
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
     setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve, setBeliefPly, beliefPly,
     setBeliefTarget, beliefTarget, setBeliefTie, beliefTie,
-    setBeliefBead, beliefBead, setBeliefRingPrice, beliefRingPrice,
+    setBeliefBead, beliefBead, setBeliefRingPrice, beliefRingPrice, setBeliefBeadRedeemable, beliefBeadRedeemable,
+    setBeliefFireSpend, beliefFireSpend,
     setTrainEps, trainEps, countTrainEps, resetTrainEpsStat   // v1.5.237 E28：训练侧执行口径旋钮（默认关）+ **开火计数**
   };
 })(typeof window !== 'undefined' ? window : globalThis);
