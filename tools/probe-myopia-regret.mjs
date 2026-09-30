@@ -37,7 +37,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'depth2', 'k2', 'selfcheck', 'sweep'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -60,6 +60,21 @@ const K2 = Math.max(1, Number(arg('k2', 4)) || 4);
  * ⚠ 默认关：不带 `--sweep` 时聚合与调用顺序逐字照旧（§E195/§E196 的可复现性靠这条保）。 */
 const SWEEP = String(arg('sweep', '')).split(',').map(x => Math.floor(Number(x))).filter(x => x >= 1).sort((a, b) => a - b);
 if (SWEEP.length) REP = Math.max(REP, SWEEP[SWEEP.length - 1]);
+/* §E202 的**机制检验**（`--resetmem`）：`bots.js:50` 的 `__mem` 是模块级共享，rollout 会把它往前推 ⇒ 母局换轨迹。
+ *   若在"每个采样决策的 rollout 批次开头"调一次 `B.resetBotMem()`（**已导出**，`bots.js:965`），
+ *   那么母局在两次采样之间自己的写入不受影响、而"跑了多少条 rollout"不再进入状态 ⇒
+ *   **判据很干脆：`--rep=2` 与 `--rep=4` 的采样决策数应当变成相同。** 相同 ⇒ 病灶确认在 `__mem`；
+ *   仍不同 ⇒ 还有第二处（`__pbMem` 或 `human-pool.mjs` 的 `seq/calls`），本轮先不宣称找到根因。
+ * ⚠ 默认关（开了以后母局轨迹与"零 rollout"的那条**并不相同** —— 它多了中途抹记忆这一步，所以绝对值会漂）。 */
+const RESETMEM = argv.includes('--resetmem');
+/* ===== §E204 · 找到了主犯（`--freshrng`）：mimic 的随机流**捕获的是母局的 `st`**
+ * `runArm` 给 0 号席写的是 `makeMimic(..., function () { return st.rng.next(); })`，而 `human-pool.mjs:50` 的 `rnd` 是个闭包参数
+ *   ⇒ **每条 rollout 里 0 号席每出一次手，就从母局的随机流上抽走一个数** ⇒ 母局后续每个决策都换轨迹，
+ *   且消耗量正比于 `rep × 候选数` ⇒ 这才是 §E202 里"只 reset `__mem` 判据还是红"的原因。
+ * 修法：让 mimic 抽"当前最内层那个 clone 的 rng"（一个栈顶指针，进 rollout 时压、出时恢复）。
+ *   ⚠ 母局自己跑时栈顶是 null ⇒ 照旧抽 `st.rng` ⇒ **默认路径逐字不变**；`--freshrng` 关时也不变。 */
+let RNGCUR = null;
+const FRESHRNG = argv.includes('--freshrng');
 /* §E197 用的**导出**：`--dump=<path>` 把"每个采样决策 × 每个候选"的**现有 235 维特征 + 模拟赢率标签**落成 JSONL。
  *   ⇒ 为什么要在这里导出而不是另写一台采集器：**rollout 的算术只能有一份**（本仓"两份同构实现必漂移"的老病），
  *     而"上限能不能被一个可学的头拿到"必须用**同一批标签**来问，否则两边的 regret 不可比。
@@ -95,6 +110,8 @@ function playRollout(state, seatChos, forced, deepFlag, streamId) {
   q.rng = { next: mulberry32((((state.round | 0) + 1) * 2654435761 + FOCUS * 7919 + streamId * 104729) >>> 0) };
   const prevDeep = deepFlag.v;                          /* ⚠ 必须**恢复**而不是置 false：嵌套 rollout 会把外层标志抹掉 */
   deepFlag.v = true;
+  const prevRng = RNGCUR;                               /* §E204：同一族处理 —— 栈顶换成这只 clone，出去再恢复 */
+  if (FRESHRNG) RNGCUR = q;
   const chs = [];
   for (let i = 0; i < N; i++) {
     if (i !== FOCUS || forced === null) { chs.push(seatChos[i]); continue; }
@@ -109,6 +126,7 @@ function playRollout(state, seatChos, forced, deepFlag, streamId) {
   }
   Play.autoGameN(q, chs);
   deepFlag.v = prevDeep;
+  RNGCUR = prevRng;
   const me = q.p[FOCUS];
   let hpTop = 0;
   if (me && me.hp > 0) { hpTop = 1; for (let i = 0; i < N; i++) if (i !== FOCUS && q.p[i].hp > me.hp) { hpTop = 0; break; } }
@@ -140,6 +158,8 @@ function outcomeOf2(a1, state, pid, contChos, deepFlag, rep) {
   q.rng = { next: mulberry32((((state.round | 0) + 1) * 2654435761 + FOCUS * 7919 + 4243) >>> 0) };
   const prevDeep = deepFlag.v;
   deepFlag.v = true;
+  const prevRng2 = RNGCUR;                              /* §E204：这层自己也是一次"偏离对局" ⇒ 同样压栈 */
+  if (FRESHRNG) RNGCUR = q;
   let turn = 0;
   const chs = [];
   for (let i = 0; i < N; i++) {
@@ -162,6 +182,7 @@ function outcomeOf2(a1, state, pid, contChos, deepFlag, rep) {
   }
   Play.autoGameN(q, chs);
   deepFlag.v = prevDeep;
+  RNGCUR = prevRng2;
   return { win: best === null ? one.win : best, winMean: bestMean === null ? one.win : bestMean, hpTop: one.hpTop, rounds: one.rounds, fellBack: best === null ? 1 : 0, inner };
 }
 /* §E202 · 在**同一条决策**上按前缀 `r` 重算四个统计量（与全 `REP` 那遍只用同一批流的前 `r` 条）。
@@ -204,6 +225,7 @@ function runArm(arm, selfCheck) {
         if (deep.v) return pick;
         n++;
         if (!(state.round <= RMAX && n % EVERY === 0)) return pick;
+        if (RESETMEM) B.resetBotMem();       /* §E202 机制检验：母局这一手已经由 `base()` 决定，抹的是 rollout 要用的那份共享记忆 */
         const cands = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false });
         if (!cands || cands.length < 2) return pick;
         a.decisions++; a.candSum += cands.length;
@@ -264,7 +286,7 @@ function runArm(arm, selfCheck) {
         }
         return pick;
       };
-      const mimic = makeMimic(W, HB, 'rand', function () { return st.rng.next(); });
+      const mimic = makeMimic(W, HB, 'rand', function () { return (FRESHRNG && RNGCUR ? RNGCUR : st).rng.next(); });
       seatChos.push(mimic, focus, env.sel, env.sel, T.policyChooserN(params, 0.15));
       /* **rollout 的延续席**：默认换成关档包（`--cont=pack`）⇒ 三个臂用**同一把后续尺**，
          量到的才是"根决策那一手"的质量差；`--cont=arm` 留给"臂自己打完全局"那个问题（贵得多，ply2 会乘爆）。 */
