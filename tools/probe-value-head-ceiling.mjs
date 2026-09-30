@@ -255,23 +255,28 @@ if (Number(arg('depth', 0)) === 1 || Number(arg('depth', 0)) === 2) {
   const L1 = same ? tr : tr.concat(te);
   const L2 = same ? L2ROWS.slice(0, L2ROWS.length / 2) : L2ROWS;
   if (!L2.length) { console.log('\n⛔ `--depth=1` 需要 `--dump` 里带 `lvl:2` 的行（`probe-myopia-regret --depth2 --dump=`）⇒ 本节没法跑'); process.exit(3); }
-  const byPk = new Map(); for (const r of L1) { const k = r.pk + '#' + r.i; if (!byPk.has(k)) byPk.set(k, r); }
-  const p2 = new Map(); for (const r of L2) { if (!p2.has(r.pk)) p2.set(r.pk, []); p2.get(r.pk).push(r); }
-  const roots = new Map(); for (const r of L1) { if (!roots.has(r.pk)) roots.set(r.pk, []); roots.get(r.pk).push(r); }
-  const games = new Set(); for (const r of L1) games.add(r.env + '#' + r.g);
+  /* ⚠⚠ **键必须带 seed**：dump 里的 `pk` 是 `env#game#第几个决策(#候选序号)`，而 **两个 seed 带的 (env,g,n) 会重号**
+   *   ⇒ 直接把两只文件合起来（合池/跨带那两种用法）会把"4100 那一局"和"21000 那一局"的同一个格子**并成一组**，
+   *   候选与标签互相穿插 —— 症状很好认：合并后根决策数 = 966 而不是 784 + 699 = 1483。
+   *   （§E197 的老路数没这个病，因为它是 train/test **分开** groupify 的。） */
+  const KP = r => r.seed + '#' + r.pk;
+  const byPk = new Map(); for (const r of L1) { const k = KP(r) + '#' + r.i; if (!byPk.has(k)) byPk.set(k, r); }
+  const p2 = new Map(); for (const r of L2) { const k = KP(r); if (!p2.has(k)) p2.set(k, []); p2.get(k).push(r); }   /* ⚠ `lvl:2` 的 `pk` **已经带上了候选序号 i**（根行的 pk 没带）⇒ 这里不能再 `+'#'+r.i` */
+  const roots = new Map(); for (const r of L1) { const k = KP(r); if (!roots.has(k)) roots.set(k, []); roots.get(k).push(r); }
+  const games = new Set(); for (const r of L1) games.add(r.seed + '#' + r.env + '#' + r.g);
   const gl = [...games].sort(); const half = new Set(gl.filter((_, ix) => ix % 2 === 0));
-  const seedOfRoot = new Map(); for (const r of L1) if (!seedOfRoot.has(r.pk)) seedOfRoot.set(r.pk, r.seed);
+  const seedOfRoot = new Map(); for (const r of L1) if (!seedOfRoot.has(KP(r))) seedOfRoot.set(KP(r), r.seed);
   const seedTrain = trRaw.length ? trRaw[0].seed : null;
   /* `--depth=1`：**同一批里按局切两半**（训练/测试同 seed 带，但不同局 ⇒ 检验"会不会学到状态→赢率的映射"，不检验跨带迁移）
    * `--depth=2`：**跨 seed 带迁移**（train=4100 那批、test=21000 那批 ⇒ 与 §E197 同样的"换一批桌子还成不成立"这一问） */
   const XFER = Number(arg('depth', 0)) === 2;
-  const isTrain = k => XFER ? (seedOfRoot.get(k) === seedTrain) : half.has(k.split('#')[0] + '#' + k.split('#')[1]);
-  const usable = [...roots.keys()].filter(k => roots.get(k).every(r1 => p2.has(r1.pk + '#' + r1.i)));
+  const isTrain = k => XFER ? (seedOfRoot.get(k) === seedTrain) : half.has(k.split('#').slice(0, 3).join('#'));
+  const usable = [...roots.keys()].filter(k => roots.get(k).every(r1 => p2.has(KP(r1) + '#' + r1.i)));
   const trPk = usable.filter(isTrain), tePk = usable.filter(k => !isTrain(k));
   const D2 = Number(arg('qhead', 0)) ? 235 : 235 - 22;  /* ⚠ 默认 **状态块 213**：同一 i 的四条 `lvl:2` 行**共享同一个 st2**（那是"该出第二手的那个状态"），
    *   只有动作那 22 维不同 ⇒ 纯状态 V 对四个 j 给出**逐字相同的分** ⇒ "max vs 均值"那个对比是**恒等的**（第一版就中这个招：印出"100% 的组挑到同一手"，
    *   我差一点把它读成"深度对 V 没用" —— 那其实是构造的必然）。⇒ 要让这组对比有意义，必须 `--qhead=1`（用状态 ⊕ 动作 = Q(s,a)）。 */
-  const pool = []; for (const k of trPk) for (const r1 of roots.get(k)) for (const q of p2.get(r1.pk + '#' + r1.i)) pool.push(q);
+  const pool = []; for (const k of trPk) for (const r1 of roots.get(k)) for (const q of p2.get(KP(r1) + '#' + r1.i)) pool.push(q);
   const mu2 = new Array(D2).fill(0), sg2 = new Array(D2).fill(1);
   for (const r of pool) for (let j = 0; j < D2; j++) mu2[j] += r.x[j];
   for (let j = 0; j < D2; j++) mu2[j] /= Math.max(1, pool.length);
@@ -286,9 +291,9 @@ if (Number(arg('depth', 0)) === 1 || Number(arg('depth', 0)) === 2) {
     const out = { win: [], or2: [], netPick: [], pick: [] };
     for (const k of tePk) {
       const rs = roots.get(k);
-      const vOf = rs.map(r1 => { const rows = p2.get(r1.pk + '#' + r1.i).map(V(w));
+      const vOf = rs.map(r1 => { const rows = p2.get(KP(r1) + '#' + r1.i).map(V(w));
         return mode === 'max' ? Math.max.apply(null, rows) : rows.reduce((a, b) => a + b, 0) / rows.length; });
-      const tru = rs.map(r1 => p2.get(r1.pk + '#' + r1.i).reduce((a, b) => Math.max(a, b.win), 0));
+      const tru = rs.map(r1 => p2.get(KP(r1) + '#' + r1.i).reduce((a, b) => Math.max(a, b.win), 0));
       let bi = 0, bo = 0; for (let i2 = 1; i2 < rs.length; i2++) { if (vOf[i2] > vOf[bi]) bi = i2; if (tru[i2] > tru[bo]) bo = i2; }
       out.win.push(rs[bi].win); out.or2.push(rs[bo].win); out.netPick.push(rs[0].win); out.pick.push(rs[bi].i);   /* rs[0] = 网络 top1（§E203 已证 ≈ 臂实际那手） */
     }
