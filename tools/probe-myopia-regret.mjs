@@ -37,7 +37,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'bare'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -75,6 +75,11 @@ const RESETMEM = argv.includes('--resetmem');
  *   ⚠ 母局自己跑时栈顶是 null ⇒ 照旧抽 `st.rng` ⇒ **默认路径逐字不变**；`--freshrng` 关时也不变。 */
 let RNGCUR = null;
 const FRESHRNG = argv.includes('--freshrng');
+/* §E204 留下的那一格（"只证了与 `rep` 无关，没证等于零 rollout 的干净轨迹"）的**闭环工具**：
+ *   `--bare` 只数"哪些决策会被采到"，**一条 rollout 都不跑** ⇒ 它的采样数就是"零扰动轨迹"的那个数。
+ *   ⇒ 判据：`--bare` 的采样数 == `--freshrng` 各 `rep` 档的采样数 ⇒ 那条轨迹真的被还原了；
+ *      不相等 ⇒ 还有残余通道（`__mem` 那一类），并且差值本身量出"残余有多大"。 */
+const BARE = argv.includes('--bare');
 /* §E197 用的**导出**：`--dump=<path>` 把"每个采样决策 × 每个候选"的**现有 235 维特征 + 模拟赢率标签**落成 JSONL。
  *   ⇒ 为什么要在这里导出而不是另写一台采集器：**rollout 的算术只能有一份**（本仓"两份同构实现必漂移"的老病），
  *     而"上限能不能被一个可学的头拿到"必须用**同一批标签**来问，否则两边的 regret 不可比。
@@ -229,6 +234,7 @@ function runArm(arm, selfCheck) {
         const cands = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false });
         if (!cands || cands.length < 2) return pick;
         a.decisions++; a.candSum += cands.length;
+        if (BARE) return pick;                          /* §E204 闭环：只记"这里会采一个决策"，一条 rollout 都不跑 */
         const scored = cands.map(c => ({ c, v: P.value(state, pid, c.key, params, null, c) }));   /* ← 第 6 形参 `cand` 必须传 */
         scored.sort((x, y) => y.v - x.v);
         const pool = scored.slice(0, Math.min(KEEP, scored.length));
