@@ -35,7 +35,7 @@ import { readFileSync } from 'node:fs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['train', 'test', 'lambda', 'inter', 'groups'], 'probe-value-head-ceiling');
+rejectUnknownFlags(argv, ['train', 'test', 'lambda', 'inter', 'groups', 'depth', 'qhead'], 'probe-value-head-ceiling');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const TRAIN = arg('train', 'docs/artifacts/e184-out/e197-rows-4100.jsonl');
 const TEST = arg('test', 'docs/artifacts/e184-out/e197-rows-21000.jsonl');
@@ -44,7 +44,14 @@ const INTER_N = Math.max(0, Number(arg('inter', 6)) || 0);
 const MAXG = Number(arg('groups', 0)) || 0;
 
 function load(p) { return readFileSync(p, 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)); }
-const tr = load(TRAIN), te = load(TEST);
+/* ⚠ `--dump --depth2` 现在会同时落 `lvl:1`（根决策 × 候选）与 `lvl:2`（第二手那一层）两种行。
+ *   主分析是**组内排序**问题，只看根行；`lvl:2` 行没有 `env/g/n` 三字段 ⇒ 若混进来会被 `keyOf` 归成同一个
+ *   "undefined#undefined#undefined" 的巨组、**静默把结果算错**（不是报错）。⇒ 在读入处就按层筛掉。
+ *   旧 dump（没有 `lvl` 字段）全部当 lvl:1 ⇒ §E197/§E198 的复跑逐字不变。 */
+const only1 = a => a.filter(r => (r.lvl == null ? 1 : r.lvl) === 1);
+const trRaw = load(TRAIN), teRaw = load(TEST);
+const L2ROWS = trRaw.concat(teRaw).filter(r => r.lvl === 2);
+const tr = only1(trRaw), te = only1(teRaw);
 const DIM = tr[0].x.length;
 if (te[0].x.length !== DIM) { console.error('⛔ 两批特征维度不一致 ⇒ 不是同一台仪器'); process.exit(2); }
 const FS = DIM - 22;                                    /* 状态块 = `FEAT_S`(213)，动作块 = `FEAT_A`(22) */
@@ -229,4 +236,102 @@ for (const c of [ctlA, ctlB]) {
 const dReal = eFlat.gainG.map((v, i) => v - eFlatS.gainG[i]);
 console.log('· flat 净兑现是否显著于 0：**' + (100 * mean(dReal)).toFixed(2) + ' ±' + (100 * ci(dReal)).toFixed(2) + 'pt**'
   + (Math.abs(mean(dReal)) <= ci(dReal) ? ' ⇒ ⚠ 不显著 ⇒ "线性头学到了东西"这句在本遍**不成立**（两遍合看才是结论）' : ''));
+
+/* ===== §E205 · `--depth=1`：两手上限里那 +7~13pt，**学不学得来** =====
+ * 问的不是"把这一手排得更准"（那是 §E197/§E198，已答"只值一到两成"），而是：**学一个状态价值函数 V(s)，
+ *   让决策时能"往后看一手再估一次"** ⇒ 这才是换代那一格真正要买的零件。
+ * 数据：`probe-myopia-regret --dump --depth2` 落的 `lvl:2` 行 = "焦点席走完 a1、再走 a2 之后那个状态"的 235 维 + 真赢率标签。
+ * ⚠ 这次的评估**不是组内排序**（§E197 的病：状态维在组内恒定 ⇒ 抵消）。这里比较的是**不同状态之间**的 V，
+ *   所以状态块本身就是要学的东西 —— 两问不冲突，是同一台仪器的两个不同估计对象。
+ * 评估口径（关键）：所有候选策略都只用 `lvl:1` 的**根标签**（"打这一手、之后照旧打完"的真赢率）来结算，
+ *   所以四条线是可比的：`现役 top1` / `V 一手(均值版)` / `V 两手(取 max 版)` / `oracle 两手`。
+ *   ⇒ 报的是"这个 chooser 会挑到哪一手，那一手实际值多少"，不是"V 估得准不准"。
+ * ⚠ 划分：按**局**（`env#g`）切两半，不是一行一切 —— 同一局的决策彼此相关（§E163 同族的"分组泄漏"）。
+ * ⚠ 只纳入"该根决策的**每个** a1 都有第二手行"的组（否则 max 与均值不可比）；纳入率会印出来。 */
+if (Number(arg('depth', 0)) === 1 || Number(arg('depth', 0)) === 2) {
+  /* ⚠ 同一只文件当 train 和 test 用（`--depth=1` 那种"按局切两半"的用法）时**不能 concat 两遍**：
+   *   那会把每一行喂给岭回归两次 ⇒ 有效 λ 减半（第一次跑就中了这个，印出来的 "lvl:2 行 26422" 是文件里 13211 行的两倍）。 */
+  const same = TRAIN === TEST;
+  const L1 = same ? tr : tr.concat(te);
+  const L2 = same ? L2ROWS.slice(0, L2ROWS.length / 2) : L2ROWS;
+  if (!L2.length) { console.log('\n⛔ `--depth=1` 需要 `--dump` 里带 `lvl:2` 的行（`probe-myopia-regret --depth2 --dump=`）⇒ 本节没法跑'); process.exit(3); }
+  const byPk = new Map(); for (const r of L1) { const k = r.pk + '#' + r.i; if (!byPk.has(k)) byPk.set(k, r); }
+  const p2 = new Map(); for (const r of L2) { if (!p2.has(r.pk)) p2.set(r.pk, []); p2.get(r.pk).push(r); }
+  const roots = new Map(); for (const r of L1) { if (!roots.has(r.pk)) roots.set(r.pk, []); roots.get(r.pk).push(r); }
+  const games = new Set(); for (const r of L1) games.add(r.env + '#' + r.g);
+  const gl = [...games].sort(); const half = new Set(gl.filter((_, ix) => ix % 2 === 0));
+  const seedOfRoot = new Map(); for (const r of L1) if (!seedOfRoot.has(r.pk)) seedOfRoot.set(r.pk, r.seed);
+  const seedTrain = trRaw.length ? trRaw[0].seed : null;
+  /* `--depth=1`：**同一批里按局切两半**（训练/测试同 seed 带，但不同局 ⇒ 检验"会不会学到状态→赢率的映射"，不检验跨带迁移）
+   * `--depth=2`：**跨 seed 带迁移**（train=4100 那批、test=21000 那批 ⇒ 与 §E197 同样的"换一批桌子还成不成立"这一问） */
+  const XFER = Number(arg('depth', 0)) === 2;
+  const isTrain = k => XFER ? (seedOfRoot.get(k) === seedTrain) : half.has(k.split('#')[0] + '#' + k.split('#')[1]);
+  const usable = [...roots.keys()].filter(k => roots.get(k).every(r1 => p2.has(r1.pk + '#' + r1.i)));
+  const trPk = usable.filter(isTrain), tePk = usable.filter(k => !isTrain(k));
+  const D2 = Number(arg('qhead', 0)) ? 235 : 235 - 22;  /* ⚠ 默认 **状态块 213**：同一 i 的四条 `lvl:2` 行**共享同一个 st2**（那是"该出第二手的那个状态"），
+   *   只有动作那 22 维不同 ⇒ 纯状态 V 对四个 j 给出**逐字相同的分** ⇒ "max vs 均值"那个对比是**恒等的**（第一版就中这个招：印出"100% 的组挑到同一手"，
+   *   我差一点把它读成"深度对 V 没用" —— 那其实是构造的必然）。⇒ 要让这组对比有意义，必须 `--qhead=1`（用状态 ⊕ 动作 = Q(s,a)）。 */
+  const pool = []; for (const k of trPk) for (const r1 of roots.get(k)) for (const q of p2.get(r1.pk + '#' + r1.i)) pool.push(q);
+  const mu2 = new Array(D2).fill(0), sg2 = new Array(D2).fill(1);
+  for (const r of pool) for (let j = 0; j < D2; j++) mu2[j] += r.x[j];
+  for (let j = 0; j < D2; j++) mu2[j] /= Math.max(1, pool.length);
+  for (const r of pool) for (let j = 0; j < D2; j++) sg2[j] += (r.x[j] - mu2[j]) ** 2;
+  for (let j = 0; j < D2; j++) sg2[j] = Math.sqrt(sg2[j] / Math.max(1, pool.length)) || 1;
+  const mkV = r => { const z = new Array(D2 + 1); for (let j = 0; j < D2; j++) z[j] = (r.x[j] - mu2[j]) / sg2[j]; z[D2] = 1; return z; };
+  const yV = pool.map(r => r.win);
+  const wV = solve(pool.map(mkV), yV, D2 + 1, 0);
+  const wVperm = solve(pool.map(mkV), yV, D2 + 1, 20261001);   /* 置换对照交给 `solve` 内部那个 Fisher–Yates（与 §E197 同一条路），别再自己 reverse 一遍 —— 两次打乱会把"控制"变成"另一个随机" */
+  const V = w => q => { const z = mkV(q); let s = 0; for (let i2 = 0; i2 < z.length; i2++) s += z[i2] * w[i2]; return s; };
+  const scoreRoots = (w, mode) => {
+    const out = { win: [], or2: [], netPick: [], pick: [] };
+    for (const k of tePk) {
+      const rs = roots.get(k);
+      const vOf = rs.map(r1 => { const rows = p2.get(r1.pk + '#' + r1.i).map(V(w));
+        return mode === 'max' ? Math.max.apply(null, rows) : rows.reduce((a, b) => a + b, 0) / rows.length; });
+      const tru = rs.map(r1 => p2.get(r1.pk + '#' + r1.i).reduce((a, b) => Math.max(a, b.win), 0));
+      let bi = 0, bo = 0; for (let i2 = 1; i2 < rs.length; i2++) { if (vOf[i2] > vOf[bi]) bi = i2; if (tru[i2] > tru[bo]) bo = i2; }
+      out.win.push(rs[bi].win); out.or2.push(rs[bo].win); out.netPick.push(rs[0].win); out.pick.push(rs[bi].i);   /* rs[0] = 网络 top1（§E203 已证 ≈ 臂实际那手） */
+    }
+    return out;
+  };
+  const sMax = scoreRoots(wV, 'max'), sMean = scoreRoots(wV, 'mean'), sPerm = scoreRoots(wVperm, 'max');
+  const m1 = x => 100 * mean(x), w1 = x => 100 * ci(x);
+  const net = sMax.netPick;
+  console.log('\n## §E205 两手上限里那 +7~13pt，学一个 V(s)' + (Number(arg('qhead', 0)) ? '/Q(s,a)' : '（纯状态 ⇒ **对第二手恒等**，见代码注释）') + ' 能兑现几成（`lvl:2` 行 ' + L2.length + ' ‖ 特征维 ' + D2 + ' ‖ 训练 ' + trPk.length + ' 组 / 测试 ' + tePk.length + ' 组 ‖ **划分方式：' + (XFER ? '跨 seed 带迁移（train=' + seedTrain + '）' : '同带按局切两半') + '**）');
+  console.log('· 可评估覆盖率：' + usable.length + '/' + roots.size + ' 个根决策 = **' + (100 * usable.length / roots.size).toFixed(1) + '%**（要求每个 a1 都有第二手行 ⇒ 覆盖率低会**低估**这条路的可评估范围）');
+  console.log('| 选 a1 的办法 | 实际赢率（根标签） | 与"网络 top1"的配对差 |');
+  const lines = [['网络 top1（≈现役）', net], ['V 一手（对 j 取均值）', sMean.win], ['V 两手（对 j 取 max）', sMax.win],
+    ['oracle 两手（真未来）', sMax.or2], ['置换对照的 V 两手', sPerm.win]];
+  for (const [nm, arr] of lines) {
+    const d = arr.map((v, ix) => v - net[ix]);
+    console.log('| ' + nm + ' | ' + m1(arr).toFixed(2) + '% | ' + (nm.startsWith('网络') ? '—（基线）' : m1(d).toFixed(2) + ' ±' + w1(d).toFixed(2) + 'pt') + ' |');
+  }
+  const gapO = mean(sMax.or2) - mean(net), gapV = mean(sMax.win) - mean(net), gapP = mean(sPerm.win) - mean(net);
+  const gapOCi = ci(sMax.or2.map((v, ix) => v - net[ix]));
+  /* ⚠ 分母要验两件事，缺一条就不许引比例（§E197 那条 383% 的老病的完整版）：
+   *   ① 符号：`oracle − 网络` ≤ 0 ⇒ 两个负数相除是假百分比；
+   *   ② **显著性**：分母 ≤ 它自己的 95% 半宽 ⇒ 比例可以在 0~∞ 之间随便飘（实测第一遍就印出过 175%）。 */
+  if (!(gapO > 0)) {
+    console.log('\n⚠ **本节的比例不许引**：分母 `oracle 两手 − 网络 top1` = ' + (100 * gapO).toFixed(2) + 'pt **≤ 0** ⇒ 这批组里"真未来的两手选择"并没有比"网络的 top1"更好，'
+      + '任何"兑现几成"都是两个负数相除的假数。⇒ 只引上面那张表的**绝对差**，并说明"这批评估组里 oracle 没有正的可兑现空间"（这本身也是一条读数）。');
+  } else if (!(gapO > gapOCi)) {
+    console.log('\n⚠ **兑现率这个比例不许引**：分母 = +' + (100 * gapO).toFixed(2) + 'pt，它自己的 95% 半宽 = ±' + (100 * gapOCi).toFixed(2) + 'pt ⇒ **分母不显著**。');
+    console.log('  ⇒ 但这同时是一条**实质读数**：在"只用根标签结算"的口径里，"按真未来挑第一手"相对"网络 top1"只值 +' + (100 * gapO).toFixed(2) + 'pt（±' + (100 * gapOCi).toFixed(2) + '）。'
+      + '\n  ⇒ 与 §E203 的"两手 oracle 值 +7~13pt"**不矛盾、差得很远**：那里的 Δ 是"**连第二手也替它挑好**"，而这里第二手交回给包 ⇒ **差出来的那一块就是"第二手本身要打好"**，不是"多算一层就白拿"。');
+  } else {
+    console.log('· **兑现率 =（V 两手 − 网络）/（oracle 两手 − 网络）= ' + (100 * gapV / gapO).toFixed(1) + '%**（oracle 那格 = +' + (100 * gapO).toFixed(2) + 'pt，V 那格 = +' + (100 * gapV).toFixed(2) + 'pt）');
+    const denomN = gapO - gapP;
+    console.log('· 置换对照 = +' + (100 * gapP).toFixed(2) + 'pt ⇒ **净兑现 = +' + (100 * (gapV - gapP)).toFixed(2) + 'pt，净兑现率 = ' + (100 * (gapV - gapP) / denomN).toFixed(1) + '%**'
+      + (Math.abs(gapP) > 1.5 * Math.abs(gapV) ? ' ‖ ⚠ 对照比真值还大 ⇒ 这条**先按"没学到"处理**' : '') + '（对照非零时只许引这一行）');
+  }
+  const agree = sMax.pick.filter((v, ix) => v === sMean.pick[ix]).length / Math.max(1, sMax.pick.length);
+  if (!Number(arg('qhead', 0))) {
+    console.log('· （这一行**不是读数**：纯状态 V 对同一 i 的四条第二手行给出逐字相同的分 ⇒ max 与均值恒等，"100% 同手"是构造的必然，**不许读成"深度对 V 没用"**。要测那一问必须 `--qhead=1`。）');
+  } else {
+    console.log('· **同一手的选择**：Q 两手（对 j 取 max）与 Q 一手（对 j 取均值）在 **' + (100 * agree).toFixed(1) + '%** 的组里挑到**同一个 a1**'
+      + (agree > 0.9 ? ' ⇒ **"往后多看一手"几乎完全没有改变根选择** ⇒ 那份增益不来自深度（这条现在**有资格**这样读，因为模型看得见动作维）。' : '（两版选择有明显差别 ⇒ 深度那一层在模型里确实起作用了）'));
+  }
+  console.log('· 只看不两手：V 一手（均值版）= +' + (100 * (mean(sMean.win) - mean(net))).toFixed(2) + 'pt ⇒ 若"两手版"明显高于"一手版"，说明**V 的价值在于它能喂给更深的搜索**，不只是给当前这手换个分。');
+  console.log('  ⚠ 三条边界：① 标签来自**同一把尺的模拟**（关档延续），不是对局真值；② `V` 在这里是**线性状态价值头**（§E198 已证"动作 × 情景"的交互基买不到东西，但那是**组内排序**问题；这里是比较不同状态，是它没测过的面）；③ 只用了一半的局做训练 ⇒ 数据量是 1/2，"没学到"里可能混着"数据不够"。');
+}
 console.log('rc=0');

@@ -58,7 +58,7 @@ const K2 = Math.max(1, Number(arg('k2', 4)) || 4);
  * 修法（本格）：**一遍跑到底、只跑最长的那 `REP` 条流**，然后按**前缀** 2/4/8/16 分别求均值 ⇒
  *   每个 `rep` 点都是同一批决策、同一批流的前缀（嵌套 ⇒ 天然配对），衰减差只剩"估计噪声"这一个来源。
  * ⚠ 默认关：不带 `--sweep` 时聚合与调用顺序逐字照旧（§E195/§E196 的可复现性靠这条保）。 */
-const SWEEP = String(arg('sweep', '')).split(',').map(x => Math.floor(Number(x))).filter(x => x >= 1).sort((a, b) => a - b);
+const SWEEP = [...new Set(String(arg('sweep', '')).split(',').map(x => Math.floor(Number(x))).filter(x => x >= 1))].sort((a, b) => a - b);
 if (SWEEP.length) REP = Math.max(REP, SWEEP[SWEEP.length - 1]);
 /* §E202 的**机制检验**（`--resetmem`）：`bots.js:50` 的 `__mem` 是模块级共享，rollout 会把它往前推 ⇒ 母局换轨迹。
  *   若在"每个采样决策的 rollout 批次开头"调一次 `B.resetBotMem()`（**已导出**，`bots.js:965`），
@@ -155,7 +155,7 @@ function outcomeOf(cand, state, seatChos, deepFlag, rep) {
  *   · **延续仍然是关档包**（`contChos`）⇒ 量的是"连做两手 + 之后照旧"的上限，与 `oracle1` 同一把尺，可直接相减；
  *   · 若这一局在焦点席走出第二手之前就结束（它死了/ game over），`best` 无从产生 ⇒ **退回 `a1` 的一手上限值**，
  *     不是记 0 —— 记 0 会把 `oracle2` 系统性压低，得出"多看一手没用"的假结论（方向性偏差，比噪声更坏）。 */
-function outcomeOf2(a1, state, pid, contChos, deepFlag, rep) {
+function outcomeOf2(a1, state, pid, contChos, deepFlag, rep, SINK) {
   const one = outcomeOf(a1, state, contChos, deepFlag, rep);      /* 一手值（也用作"走不到第二手"的退回值） */
   let best = null, bestMean = null;
   const inner = [];                                               /* §E202：每个第二手候选的**逐流**赢率数组，供前缀聚合 */
@@ -176,8 +176,11 @@ function outcomeOf2(a1, state, pid, contChos, deepFlag, rep) {
         const c2 = P.candidatesFor(st2, id, T.econBase(st2, id, legal), { lockTarget: false });
         if (c2 && c2.length) {
           const sc = c2.map(c => ({ c, v: P.value(st2, id, c.key, params, null, c) })).sort((x, y) => y.v - x.v).slice(0, K2);
+          const xs2 = SINK ? P.featuresV7(st2, id) : null;         /* §E205：第二手那一层的**状态**特征（213 维） */
           let mx = -1, sum = 0;
-          for (const s of sc) { const g = outcomeStreams(s.c, st2, contChos, deepFlag, rep, 699); const v = m0(g.win); inner.push(g.win); sum += v; if (v > mx) mx = v; }
+          for (const s of sc) { const g = outcomeStreams(s.c, st2, contChos, deepFlag, rep, 699); const v = m0(g.win); inner.push(g.win); sum += v; if (v > mx) mx = v;
+            if (SINK) SINK.push({ x: xs2.concat(P.actionFeatures(st2, id, s.c.key, s.c)), win: v, net: s.v, key: s.c.key });
+          }
           best = mx < 0 ? 0 : mx;
           bestMean = sum / sc.length;
         } else { best = one.win; bestMean = one.win; }
@@ -247,7 +250,8 @@ function runArm(arm, selfCheck) {
         if (DUMP && !selfCheck) {
           const xs = P.featuresV7(state, pid);
           for (let i = 0; i < pool.length; i++) {
-            ROWS.push(JSON.stringify({ seed: SEED, arm: arm.key, env: env.name, g, n, round: state.round,
+            ROWS.push(JSON.stringify({ seed: SEED, arm: arm.key, lvl: 1, env: env.name, g, n, round: state.round,
+              pk: env.name + '#' + g + '#' + n,
               i, key: pool[i].c.key, target: pool[i].c.target == null ? null : pool[i].c.target,
               net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop, rounds: res[i].rounds,
               x: xs.concat(P.actionFeatures(state, pid, pool[i].c.key, pool[i].c)).map(v => Math.round(v * 1e4) / 1e4) }));
@@ -264,7 +268,15 @@ function runArm(arm, selfCheck) {
          *   读法只看一个差：`oracle2 − oracle1` = "**多看一手**到底多买回多少上限" —— 它才是"视界/结算"那条路的价签。 */
         let r2 = null;                                            /* §E202：提到外层，供前缀聚合用（**不要在里面再 `const r2`，那会把它遮蔽成 null**） */
         if (DEPTH2) {
-          r2 = pool.map(s => outcomeOf2(s.c, state, pid, rollChos, deep, REP));
+          const sink = DUMP && !selfCheck ? [] : null;             /* §E205：第二手那一层的 (状态×动作) → 真赢率 标签 */
+          r2 = pool.map((s, ii) => {
+            const local = sink ? [] : null;
+            const o = outcomeOf2(s.c, state, pid, rollChos, deep, REP, local);
+            if (sink) for (const row of local) sink.push({ i: ii, row: row, pk: env.name + '#' + g + '#' + n + '#' + ii });
+            return o;
+          });
+          if (sink) for (const s2 of sink) ROWS.push(JSON.stringify({ seed: SEED, arm: arm.key, lvl: 2, pk: s2.pk, i: s2.i,
+            key: s2.row.key, net: s2.row.net, win: s2.row.win, x: s2.row.x.map(v => Math.round(v * 1e4) / 1e4) }));
           let b2 = 0, b2m = 0;
           for (let i = 1; i < r2.length; i++) { if (r2[i].win > r2[b2].win) b2 = i; if (r2[i].winMean > r2[b2m].winMean) b2m = i; }
           /* `oracle2m` = **只在第一手上做 max**（第二手取均值）⇒ 与 `oracle1` 同样只选一次 ⇒ **这一行才是"多看一手"的净价签**；
@@ -371,20 +383,21 @@ if (SWEEP.length) {
         + (DEPTH2 ? ' | ' + (100 * m0(ag.map(x => x.o2))).toFixed(1) + '% | **' + (100 * m0(gap)).toFixed(2) + ' ±' + (1.96 * sd(gap) / Math.sqrt(gap.length) * 100).toFixed(2) + '**' : '') + ' |');
     }
     const inv = x => 1 / x, sqr = x => 1 / Math.sqrt(x);
-    const f1 = lsq2(ptsReg, inv), f2 = lsq2(ptsReg, sqr);
-    console.log('· **regret(oracle1) 外推到 `1/r → 0`**：`c + b/r` ⇒ **净上限 c = ' + f1.c.toFixed(2) + 'pt**（b=' + f1.b.toFixed(1) + '，RSS=' + f1.rss.toFixed(2) + '）'
-      + ' ‖ `c + b/√r` ⇒ c = ' + f2.c.toFixed(2) + '（RSS=' + f2.rss.toFixed(2) + '）');
-    const g1 = lsq2(ptsGreed, inv), g2 = lsq2(ptsGreed, sqr);
-    console.log('· **抽样 vs 贪心（`greedy(网络 top1) − 臂自己那手`）外推**：`c + b/r` ⇒ c = ' + g1.c.toFixed(2) + 'pt（RSS=' + g1.rss.toFixed(2) + '）'
-      + ' ‖ `c + b/√r` ⇒ c = ' + g2.c.toFixed(2) + '（RSS=' + g2.rss.toFixed(2) + '）'
-      + ' ⇒ 这是"焦点席那 0.15 温度赔掉多少"的读数（⚠ **同一批 rollout 上的对照**，不是"整局换成贪心"的读数 —— 后者会改它对对手的激励，要重跑对局才算）');
-    if (DEPTH2) {
-      const d1 = lsq2(ptsGap, inv), d2 = lsq2(ptsGap, sqr);
-      console.log('· **多规划一手（两手 max − 一手 max）外推**：`c + b/r` ⇒ **Δ = ' + d1.c.toFixed(2) + 'pt**（b=' + d1.b.toFixed(1) + '，RSS=' + d1.rss.toFixed(2) + '）'
-        + ' ‖ `c + b/√r` ⇒ Δ = ' + d2.c.toFixed(2) + '（RSS=' + d2.rss.toFixed(2) + '） ‖ 两手上限本身 c(o2) = ' + lsq2(ptsO2, inv).c.toFixed(1) + '%');
-      console.log('  读法：Δ 是"**在同一把延续尺上，把偏离深度从一手加到两手**"多买回的上限 ⇒ 若 Δ 明显小于 `regret(oracle1)`，那"换代"的钱就不在深度里；若 Δ 与之一样大，说明**视界**才是主缺口。');
-    }
-    console.log('  ⚠ 外推前提：膨胀只随 `r` 变。这次五个点是**同一批决策**（§E200 那遍不是），所以曲线只剩估计噪声；但 `keep=' + KEEP + '` 的池子组成仍是同一份 ⇒ 它外推的是"这一批决策上的膨胀"，不是所有配置。');
+    const fit = (pts, nm, extra) => {
+      /* ⚠ 拟合要**至少两个前缀**：`c + b·g(r)` 是两个未知数，单点 ⇒ 正规方程奇异 ⇒ `lsq2` 返回 null
+       *   （这坑是我自己踩的：第一次收标签时只给一个前缀想省时间，结果整遍跑到最后一行崩掉，白跑 30 分钟）。 */
+      if (SWEEP.length < 2) { console.log('· ⚠ `--sweep` 只给了一个前缀 ⇒ 无法拟合膨胀律（要 ≥2 个）；上面那张表仍可引，但**不许外推**。'); return; }
+      const a = lsq2(pts, inv), b = lsq2(pts, sqr);
+      if (!a || !b) { console.log('· ⚠ ' + nm + ' 的拟合奇异（lsq2 返回 null）⇒ 不外推。'); return; }
+      console.log('· **' + nm + ' 外推到 `1/r → 0`**：`c + b/r` ⇒ c = ' + a.c.toFixed(2) + 'pt（b=' + a.b.toFixed(1) + '，RSS=' + a.rss.toFixed(2) + '）'
+        + ' ‖ `c + b/√r` ⇒ c = ' + b.c.toFixed(2) + '（b=' + b.b.toFixed(1) + '，RSS=' + b.rss.toFixed(2) + '）' + (extra || ''));
+    };
+    fit(ptsReg, 'regret(oracle1) ＝ 一手完美根决策的净上限');
+    fit(ptsGreed, '抽样 vs 贪心（greedy(网络 top1) − 臂自己那手）',
+      ' ⇒ 这是"焦点席那 0.15 温度赔掉多少"的读数（⚠ **同一批 rollout 上的对照**，不是"整局换成贪心"的读数 —— 后者会改它对对手的激励，要重跑对局才算）');
+    if (DEPTH2) fit(ptsGap, '多规划一手（两手 max − 一手 max）＝ Δ',
+      ' ‖ 两手上限本身 c(o2) = ' + (lsq2(ptsO2, inv) || { c: NaN }).c.toFixed(1) + '% ⇒ Δ 与"一手上限"同量级就说明**视界**才是主缺口');
+    console.log('  ⚠ 外推前提：膨胀只随 `r` 变。这次各点是**同一批决策**（§E200 那遍不是），所以曲线只剩估计噪声；但 `keep=' + KEEP + '` 的池子组成仍是同一份 ⇒ 它外推的是"这一批决策上的膨胀"，不是所有配置。');
   }
 }
 /* 自检遍只证"强制有牙"，不证精度 ⇒ `--sweep` 时把它压到 3 条流（否则 rep=16 的主遍要再跑一整遍，白付一倍机器时间）。
