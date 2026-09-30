@@ -75,8 +75,19 @@ const coarse = (b) => b.split('|').slice(0, 2).join('|');
 function aff(legal, k) { const l = legal.find(x => x.key === k); return l && l.affordable ? k : null; }
 const ARMS = {
   A0: { name: '关档（现役出厂形状）', mk: () => T.policyChooserN(params, 0.15) },
-  B1: { name: '开 1 席 ply1 tie0', mk: () => { T.setBeliefPly(1); T.setBeliefTarget(0); T.setBeliefTie(0); T.setBeliefBead(0); T.setBeliefRingPrice(0); T.setBeliefSearch(0); return T.policyChooserBelief(params, 0.15); } },
-  B2: { name: '开 1 席 ply2 tie0', mk: () => { T.setBeliefPly(2); T.setBeliefTarget(0); T.setBeliefTie(0); T.setBeliefBead(0); T.setBeliefRingPrice(0); T.setBeliefSearch(0); return T.policyChooserBelief(params, 0.15); } },
+  /* 信念档一律走这个工厂：**五个旋钮每次全部显式赋值**（漏一个就把上一臂的档带进来），
+   *  且模块档 `setBeliefSearch(0)` 恒关 ⇒ 只有焦点席走实例级工厂（§E183 的教训）。 */
+  ...Object.fromEntries([
+    ['B1', [1, 0, 0, 0, 0, '开 1 席 ply1 tie0']],
+    ['B2', [2, 0, 0, 0, 0, '开 1 席 ply2 tie0']],
+    ['C1', [1, 1, 0, 0, 0, 'ply1 · 改目标（减均值→减最强）']],
+    ['D1', [1, 0, 0, 0, 1, 'ply1 · 环价 1（给"链条活着"定价）']],
+    ['E1', [1, 0, 0, 1, 0, 'ply1 · 珠价 1（给"带进下回合的珠"定价）']],
+    ['F1', [1, 1, 0, 0, 1, 'ply1 · 改目标 + 环价 1']],
+  ].map(([k, v]) => [k, { name: v[5], mk: () => {
+    T.setBeliefPly(v[0]); T.setBeliefTarget(v[1]); T.setBeliefTie(v[2]); T.setBeliefBead(v[3]); T.setBeliefRingPrice(v[4]);
+    T.setBeliefSearch(0); return T.policyChooserBelief(params, 0.15);
+  } }])) ,
   /* PX 正对照：只照"对手上一手"出牌（防→坦克破防、攻→防御、滚环→小雷砸、其余→按ジ）*/
   PX: { name: '正对照：只看对手上一手', mk: () => function (state, pid, legal) {
       const L = (legal || []).filter(l => l.affordable); if (!L.length) return null;
