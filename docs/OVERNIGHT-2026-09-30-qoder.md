@@ -840,3 +840,19 @@ const mimic = makeMimic(W, HB, 'rand', function () { return st.rng.next(); });  
 ⇒ **认证（05:50 回填）**：本轮 `tools/**` 改动（`--sweep` / `--depth2` / `--k2` / `--freshrng` / `--resetmem` / `--bare` / `greedy` 列 / 环境清单行）合入 **整轮认证 `bckvwdvwy`（05:39:04→05:48:52）：np 257/257 · 548.3s ‖ spec 52/52 · 0.3s ‖ smoke OK · 12.3s ‖ battle OK · 27.8s，`rc=0` ⇒ 4 道全绿**；np 条数一字未变（没加门）。
 ⇒ 认证树一致性：`tools/probe-myopia-regret.mjs` mtime **05:32:49** ‖ `tools/probe-value-head-ceiling.mjs` **03:33:38** ‖ `js/train/evo.js` **00:36:33** ‖ `js/train/policy.js` **23:26:41**，四者都早于 05:39:04 起跑 ⇒ **§E202~§E205 的数现在都在认证树上**（`bb0wgn0td` 只覆盖更早那版，见 §E199/§E202 的边界说明）。
 ⚠ **一条方法学，值得进手册候选**：**做"随某个实验参数变化"的曲线之前，先证明各档位用的是同一个样本。** 我是靠"每次印一行采样数"这个习惯才发现的 —— 那行本来只是行宽检查（"这一遍有没有真的采到决策"），这次它当了一次哨兵。
+
+---
+
+## §E206（06:05→06:10 · 10-01）· 同一条 bug 的**作用域审计**：要三样东西凑齐才会犯，出厂路径一样都没凑齐
+§E204 那条"闭包捕获活 `state`"会不会已经扩散到别的仪器？逐个查（`grep -rn "makeMimic(" tools/`，六处调用点）：
+| 仪器 | mimic 绑的是谁 | 有没有"用同一批 chooser 去打 clone 出来的整局" | 判定 |
+|---|---|---|---|
+| `probe-myopia-regret.mjs` | `st`（母局 state），而 rollout 打的是 `q = cloneState(st)` | **有** | **中招**（今晚已定位 + 加 `--freshrng`） |
+| `probe-conditional-adaptivity.mjs:168` ‖ `probe-conversion-chain.mjs:107` ‖ `probe-determinism-dosage.mjs:60` | 每局自己 `createState` 出来的 `st`，同一作用域 | 无（这些仪器不插模拟） | **安全**：闭包变量正好就是"正在被决策的那个 state" |
+| `explain-champion-decision.mjs:290` | `seatChargers(state,…)` 的入参 | 无 | **安全**（同上） |
+| `probe-policy-diversity.mjs:86` | **每次调用现场新建** `makeMimic(…, () => state.rng.next())`，用形参 `state` | 无 | **安全**，而且六处里只有它写成了"正确姿势" |
+⇒ **这条 bug 要三样凑齐才会犯**：① 克隆出一个新 state 去打**整局**；② **复用**同一批 chooser 实例；③ 那批 chooser 的随机流是**绑死在旧 state 上的闭包**。缺任何一条都不发作 ⇒ 今晚这台是唯一同时满足的。
+⇒ **出厂侧核过**：`js/train/evo.js:863` 的信念搜索确实 `cloneState` 并另挂新 `rng`，但它只做 `attemptAction` + `resolveActions` + `endTurn` 然后 `beliefValue(q, pid)` —— **不调任何 bot 席的 chooser、也不打整局** ⇒ ①有、②③无 ⇒ **不受这条影响**（这条很重要：**玩家看到的行为与出厂读数都没中**）。
+⇒ ⚠ 但 `evo.js:725` 的既有注释指出**另一条**、而且是**故意的**共享：页面把 AI 决策喂的是 `preState = cloneState(B.state)`（`ui.js:286/542/613`），而 `cloneState` 会丢字段 ⇒ 所以 `bots.js` 才把 `__mem` 做成模块级、靠 `round===1` 重置。⇒ 那正好落在 **DS 的 B7 那一格**：今晚这条不改变他那两问的判据，但给了他一个新事实 —— **"克隆态 + 复用席实例"这个组合在本仓已经真实翻过一次车**，只是翻在研究仪器里。
+### 状态
+纯审计（`grep` + 读码，没跑仪器、没改任何文件）⇒ **不涉及认证**，也不动任何读数。
