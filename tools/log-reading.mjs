@@ -30,14 +30,17 @@ export function loadCardTable() {
   const RUL = sb.window.EpirusRules;
   if (!RUL || !RUL.skills) { console.error('⛔ 从 js/core/rules.js 取不到 skills 表（卡表结构变了？）'); process.exit(3); }
   const keys = Object.keys(RUL.skills);
-  const names = [];
+  const names = [], byKey = {};
   for (const k of keys) { const n = RUL.skills[k].name; if (n && names.indexOf(n) < 0) names.push(n); }
+  /* ⚠ `RUL.skills` 是**数组形状**（对象键是 0..29），真正的技能键在 `.key` 上 ⇒ 这里必须以 `.key` 为键
+     （10-02 我在原型里直接按对象键取，读出 `undefined`；同一族的坑）。 */
+  for (const k of keys) { const s = RUL.skills[k]; if (s && s.key) byKey[s.key] = s.name; }
   const defNames = keys.filter(function (k) { return RUL.skills[k].cat === RUL.CAT.DEFENSE; })
     .map(function (k) { return RUL.skills[k].name; });
   if (!names.length || !defNames.length) {
     console.error('⛔ 从 js/core/rules.js 取不到防御类卡（卡表结构变了？）'); process.exit(3);
   }
-  return { RUL: RUL, names: names, defNames: defNames };
+  return { RUL: RUL, names: names, defNames: defNames, byKey: byKey };
 }
 
 /** 席位：默认 AI = 除真人席之外的 1..5（真人席 = `--human=`，默认 1）。 */

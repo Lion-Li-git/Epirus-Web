@@ -37,7 +37,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'dumpcover', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -117,6 +117,13 @@ if (!argv.includes('--freshrng') && ALLOW_LEAK) FRESHRNG = false;   /* 显式要
  *     而"上限能不能被一个可学的头拿到"必须用**同一批标签**来问，否则两边的 regret 不可比。
  *   ⚠ 只在非自检遍里落行（自检遍会把 A0 再跑一遍，行会重复）。 */
 const DUMP = arg('dump', '');
+/* ===== §E223 的原料：把**教师标签**落盘（`--dumpcover=<path>`，默认不写）=====
+ * 为什么不另写一台采集器：rollout 的算术只能有一份（本仓"两份同构实现必漂移"的老病），而"搜索的偏好能不能被这张脸学到"
+ * 必须用**同一批标签**来问。每行 = 一个采样决策：状态向量存一份 + 每候选一份动作向量 + 该候选的模拟赢率均值 + 逐流 0/1。
+ *   ⇒ 逐流数组留着是为了算**教师自己的分半一致率**（= 可学性的天花板；没有它我会把"教师噪声"误读成"脸不行"）。
+ * ⚠ 只读引擎、不改任何出厂路径；默认关（不带旗标 ⇒ 一行都不写）。 */
+const DUMPCOVER = arg('dumpcover', '');
+const CROWS = [];
 const ROWS = [];
 
 const W = sandbox(), S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, P = W.EpirusPolicy, B = W.EpirusBots;
@@ -361,8 +368,28 @@ function runArm(arm, selfCheck) {
              （§E200/§E203 那一族的"选取膨胀"在这里换了个方向出现）。存了逐流就能**按前缀重算**，
              于是"覆盖率随 `rep` 抬不抬"当场可分：抬 = 主要是标签噪声，不抬 = 主要是入围真漏了。 */
           a.covRec.push({ gid: gid, salt: ((g + 1) * 2654435761 ^ (n + 1) * 40503) >>> 0, n: nAll, trunc: nAll > KEEP ? 1 : 0, ks: [KEEP].concat(COVER_KS),
+            keys: scored.map(x => x.c.key),
+            /* §E219：卡名 + 臂自己那手的赢率一并存下来 ⇒ **不用多跑一条 rollout** 就能问
+               "被网络排在第 7 名之后的那些卡，按模拟赢率到底比它实际打的那一手好多少"（逐决策配对、同一批流）。 */
+            mineKey: (pick && pick.key) || null, mineWin: mine.win, mineHp: mine.hpTop,
             w: sr.map(x => x.win).concat(tail.map(x => x.win)),
             h: sr.map(x => x.hpTop).concat(tail.map(x => x.hpTop)) });
+          if (DUMPCOVER) {
+            /* 状态向量一决策存一份（各候选共用）⇒ 文件从 ~30MB 降到 ~3MB，且不丢任何信息。 */
+            const r4 = v => Math.round(v * 1e4) / 1e4;
+            const xs = P.featuresV7(state, pid);
+            CROWS.push(JSON.stringify({
+              seed: SEED, env: env.name, g: g, n: n, round: state.round, keep: KEEP, rep: REP,
+              s: xs.map(r4),
+              k: scored.map(o => o.c.key),
+              a: scored.map(o => P.actionFeatures(state, pid, o.c.key, o.c).map(r4)),
+              net: scored.map(o => r4(o.v)),
+              /* 逐流 0/1 全存 ⇒ 分析器能算"教师分半一致率"（可学性天花板）与任意 rep 档 */
+              w: sr.map(x => x.win).concat(tail.map(x => x.win)),
+              hp: sr.map(x => x.hpTop).concat(tail.map(x => x.hpTop)),
+              mine: (pick && pick.key) || null, mineWin: r4(mine.win)
+            }));
+          }
         }
         if (MEMISO) B.restoreBotMem(memSnap);          /* §E209b：还原点挪到**离开采样分支之前**（候选轮 + mineS + depth2 + 自检全都围住） */
         return pick;
@@ -488,6 +515,103 @@ for (const r of rows) {
       console.log('       ⚠ "全表 − 前 ' + KEEP + ' 名"那类**绝对抬升含选取膨胀**（池子从 ' + KEEP + ' 名变 ' + mean(set.map(x => x.n)).toFixed(0)
         + ' 名，max 天然更高）⇒ 只能与"随机 ' + KEEP + ' 名 → 全表"同尺寸对照一起读，单看那一列会把噪声当钱（§E200/§E203 同族）。');
     }
+    /* ===== §E219 · 被网络排在门外的**具体是哪几张卡、每张值多少**（同一批流、逐决策配对 ⇒ 零额外 rollout） =====
+     * §E215 只回答"前 6 名整体兜不兜得住真最优"（答：≈随机）。这一档把它**拆到卡**：
+     *   每张卡取"它在这一格里能拿到的最好目标"（该卡所有候选里模拟赢率最高的那个）⇒
+     *   `Δvs臂自己` = 该卡 − 臂实际打的那手 ‖ `Δvs短名单上限` = 该卡 − 前 6 名里的最大者。
+     *   后一列为负 ⇒ **这张卡比它自己短名单里最好的一手还值钱，却被排在门外** ⇒ "窄"是可指认的损失，不是一个笼统的上界。
+     * ⚠ 逐卡 max 也是"从噪声里挑最大"（一卡多目标时挑一次）⇒ 绝对值偏乐观；但 `Δvs短名单上限` 两边同为 max，**方向可比**。
+     * ⚠ 与 §E218b 的混叠呼应：动作向量逐位相同的卡必然同分 ⇒ 它们的"名次"由候选枚举顺序决定，不由网络决定（那一栏要连着看）。 */
+    if (r.covRec.length && r.covRec[0].keys) {
+      const CN = (function () { const m = {}; const R = W.EpirusRules; for (const k of Object.keys(R.skills)) if (!m[k]) m[k] = R.skills[k].name; return m; })();
+      const A = {};
+      const cmp = (rec, v, vh, i, j) => {
+        const key = x => ((rec.salt ^ Math.imul(x + 1, 2654435761)) >>> 0);
+        return v[i] > v[j] || (v[i] === v[j] && (vh[i] > vh[j] || (vh[i] === vh[j] && key(i) < key(j))));
+      };
+      for (const rec of r.covRec) {
+        const v = rec.w.map(a => m0(a)), vh = rec.h.map(a => m0(a));
+        let bAll = 0; for (let i = 1; i < rec.n; i++) if (cmp(rec, v, vh, i, bAll)) bAll = i;
+        let bNet = 0; const nk = Math.min(KEEP, rec.n);
+        for (let i = 1; i < nk; i++) if (cmp(rec, v, vh, i, bNet)) bNet = i;
+        const grp = {};
+        for (let i = 0; i < rec.n; i++) {
+          const k = rec.keys[i];
+          const g = grp[k] || (grp[k] = { best: i, netRank: i, nc: 0 });
+          g.nc++;
+          if (i < g.netRank) g.netRank = i;
+          if (cmp(rec, v, vh, i, g.best)) g.best = i;
+        }
+        for (const k in grp) {
+          const g = grp[k], a = A[k] || (A[k] = { legal: 0, in6: 0, arg: 0, played: 0, dMine: [], dNet: [], rank: [], cand: [], dMineN: [], dNetN: [] });
+          a.legal++; a.in6 += g.best < KEEP ? 1 : 0; a.arg += g.best === bAll ? 1 : 0;
+          if (rec.mineKey === k) a.played++;
+          a.rank.push(g.netRank); a.cand.push(g.nc);
+          a.dMine.push(v[g.best] - rec.mineWin);
+          a.dNet.push(v[g.best] - v[bNet]);
+          /* ⚠ **无偏那一版**：取"该卡按**网络自己**排名最靠前的那个候选"（= 若认真考虑这张卡、按网络选目标会选它），
+             而不是"该卡按模拟赢率最好的目标"（后者是在该卡的若干目标里再取一次 max ⇒ 从噪声里挑最大，系统性偏高，
+             且各卡的候选数不同 ⇒ 卡与卡之间也不可并排）。两列都印，**结论只引无偏那列**。 */
+          a.dMineN.push(v[g.netRank] - rec.mineWin);
+          a.dNetN.push(v[g.netRank] - v[bNet]);
+        }
+      }
+      const rowsK = Object.keys(A).filter(k => A[k].legal >= Math.max(8, 0.15 * r.covRec.length))
+        .sort((x, y) => mean(A[y].dMineN) - mean(A[x].dMineN));
+      const fmt = function (arr) { return (100 * mean(arr) >= 0 ? '+' : '') + (100 * mean(arr)).toFixed(2) + ' ±' + ci95(arr).toFixed(2); };
+      console.log('     · **§E219 门外哪些卡值多少**（' + r.covRec.length + ' 个采样决策 ‖ 只列合法 ≥ ' +
+        Math.max(8, Math.round(0.15 * r.covRec.length)) + ' 次的卡 ‖ 按**无偏那列**降序 ‖ 同一批流、逐决策配对 ⇒ **零额外 rollout**）');
+      console.log('       卡(键)                合法/决策  该卡候选数  入围率   被打率  P(=全表最优)  **Δvs臂自己〔无偏：目标也按网络选〕   Δvs臂自己〔取该卡最好目标，偏高〕   Δvs短名单上限〔无偏〕  平均网络名次');
+      for (const k of rowsK) {
+        const a = A[k];
+        console.log('       ' + ((CN[k] || k) + '(' + k + ')').padEnd(22) +
+          (a.legal / r.covRec.length).toFixed(2).padStart(6) + '      ' + mean(a.cand).toFixed(1).padStart(5) + '    ' +
+          (100 * a.in6 / a.legal).toFixed(1).padStart(5) + '%  ' + (100 * a.played / a.legal).toFixed(1).padStart(6) + '%   ' +
+          (100 * a.arg / a.legal).toFixed(1).padStart(6) + '%   ' +
+          fmt(a.dMineN).padStart(16) + 'pt      ' + fmt(a.dMine).padStart(15) + 'pt      ' + fmt(a.dNetN).padStart(15) + 'pt   ' +
+          mean(a.rank).toFixed(1).padStart(6));
+      }
+      console.log('       ⚠ **只引"无偏"那两列**：`该卡最好目标` 那列是在这张卡的若干目标里**再取一次 max**（从噪声里挑最大 ⇒ 系统性偏高，且各卡目标数不同 ⇒ 卡之间不可并排），印出来只给读者看两列差多少。');
+      console.log('       ⚠ 读法：**`Δvs短名单上限〔无偏〕` ≥ 0 而入围率≈0** 的卡 = "按网络自己的排序就该排在门外，可它的价值不低于自己短名单里最好的一手" ⇒ 这才指得动修法（改入围/改打分），而不是再报一个笼统上界。');
+      /* ===== §E222 · 把上面那张表**按环境**摊开（零额外 rollout：`gid` 里本来就带着环境名）=====
+       * 为什么要摊：§E219 的"平均≈0"抹掉的正是**条件性**，而"不同环境下用不同策略"这句话唯一可测的版本就是它。
+       *   现成例子：`bigT`（真正的落雷）卡面写着"**目标非防御类技能无效**" ⇒ 它天生只该在防御型桌上值钱；
+       *   若它在某一桌上 `Δvs短名单上限 ≥ 0` 且**两个 seed 带同向**，那"平均为负"就不是"这卡没用"，而是"这卡看桌"。
+       * 判据（先写死再跑，防事后找理由）：**入围率 < 5% 的卡**里存在某环境使 `Δ ≥ 0 且 n ≥ 25`，且两带同向 ⇒ 记"条件性价值成立"；
+       *   否则这一格关掉，不再往这个方向花第三个晚上。 */
+      const ENVS_SEEN = [];
+      for (const rec of r.covRec) { const e = String(rec.gid).split('#')[0]; if (ENVS_SEEN.indexOf(e) < 0) ENVS_SEEN.push(e); }
+      const M = {};
+      for (const rec of r.covRec) {
+        const env = String(rec.gid).split('#')[0];
+        const v = rec.w.map(a => m0(a)), vh = rec.h.map(a => m0(a));
+        let bNet = 0; const nk = Math.min(KEEP, rec.n);
+        for (let i = 1; i < nk; i++) if (cmp(rec, v, vh, i, bNet)) bNet = i;
+        const grp = {};
+        for (let i = 0; i < rec.n; i++) {
+          const k = rec.keys[i]; const gg = grp[k] || (grp[k] = { netRank: i });
+          if (i < gg.netRank) gg.netRank = i;
+        }
+        for (const k in grp) {
+          const mm = M[k] || (M[k] = {}), cell = mm[env] || (mm[env] = { dn: [], dm: [], n: 0 });
+          cell.dn.push(v[grp[k].netRank] - v[bNet]); cell.dm.push(v[grp[k].netRank] - rec.mineWin); cell.n++;
+        }
+      }
+      const excluded = Object.keys(A).filter(k => (100 * A[k].in6 / A[k].legal) < 5 && A[k].legal >= Math.max(8, 0.15 * r.covRec.length));
+      if (excluded.length) {
+        console.log('     · **§E222 "门外卡"按环境摊开**（每格 = `Δvs短名单上限〔无偏〕` 均值 pt ‖ 括号内是该格合法决策数 ‖ 只列**入围率 < 5%** 的卡 ‖ 臂 `' + r.arm + '`）');
+        console.log('       卡(键)' + (function () { let s = ''; for (const e of ENVS_SEEN) s += ' ' + e.padStart(16); return s; })() + '          整体');
+        for (const k of excluded.sort((x, y) => mean(A[y].dMineN) - mean(A[x].dMineN))) {
+          let line = '       ' + ((CN[k] || k) + '(' + k + ')').padEnd(20);
+          for (const e of ENVS_SEEN) {
+            const c = M[k] && M[k][e];
+            line += (c && c.n) ? ((100 * mean(c.dn) >= 0 ? '+' : '') + (100 * mean(c.dn)).toFixed(1) + '(' + c.n + ')').padStart(16) : '               ·';
+          }
+          console.log(line + '   ' + (100 * mean(A[k].dNetN) >= 0 ? '+' : '') + (100 * mean(A[k].dNetN)).toFixed(1) + '(' + A[k].legal + ')');
+        }
+        console.log('       ⚠ 正数只表示"**这一桌上该卡不比它自己短名单里最好的一手差**"；**两带同向才算数**（本表只有一带），n<25 的格子一律不引。');
+      }
+    }
   }
 }
 /* ===== §E202 · 固定样本前缀扫的输出 =====
@@ -555,5 +679,11 @@ console.log('· ③候选数均值 ' + (rows[0].candSum / Math.max(1, rows[0].de
 if (DUMP) {
   writeFileSync(DUMP, ROWS.join('\n') + '\n');
   console.log('· 导出 **' + ROWS.length + ' 行**（决策 × 候选）到 `' + DUMP + '` ‖ 每行 x 长度 ' + (ROWS.length ? JSON.parse(ROWS[0]).x.length : 0));
+}
+if (DUMPCOVER) {
+  if (!COVER) { console.error('⛔ `--dumpcover` 必须与 `--cover` 同开（教师标签来自全表 rollout，不开 cover 就没有标签可写）'); process.exit(64); }
+  writeFileSync(DUMPCOVER, CROWS.join('\n') + '\n');
+  console.log('· §E223 教师标签导出 **' + CROWS.length + ' 个决策** 到 `' + DUMPCOVER + '`'
+    + (CROWS.length ? ' ‖ 每行 = 状态 ' + JSON.parse(CROWS[0]).s.length + ' 维 ×1 + 动作 ' + JSON.parse(CROWS[0]).a[0].length + ' 维 ×' + JSON.parse(CROWS[0]).k.length + ' + 逐流赢率 ×' + REP : ''));
 }
 console.log('rc=0');
