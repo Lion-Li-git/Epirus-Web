@@ -373,3 +373,30 @@ grep -ohE 'docs/artifacts/[A-Za-z0-9._/-]+\.bak' -r tools server | sort -u
 
 
 
+
+
+---
+
+## 14. v1.5.310 最终认证读数（已推送）
+
+| 验证 | 读数 | 条件 |
+|---|---|---|
+| 本机工作区四道门 | **np 259/259（450.6s） · spec 52/52 · smoke OK · battle OK → 全绿** | `node tools/gate-all.mjs --np`，2026-10-01 21:58 |
+| **全新 clone** np | **通过 259 / 259（exit 0）**，红门名单为空 | `git clone` 后 `node tools/np-test.mjs`（修前同一条命令 = **250 / 259**） |
+| 全新 clone spec | 52 / 52 | 同一次 |
+| 4 份件字节一致性 | 4/4 sha256 与原仓相同 | clone vs 原仓逐份比对 |
+| 线上 CI（本仓首次） | run `36875035633`：`spec` **success** · `browser` **success** · `np` 仍在跑 | head `24b9f63`，push 触发 |
+
+**"认证树 = 提交树"的证据**：`git diff --stat f39c7be..24b9f63 -- index.html js css server tools` **为空**
+⇒ 被 np/spec/smoke/battle 读的那些输入端，与"干净 clone 实测 259/259"那棵树是逐字节同一份；
+24b9f63 相对它只动了 3 个散文/文档文件（README / CHANGELOG / 本文件），而这两个门真正读的字段
+（D8 的版本行、D82 的账本行）另做了机械自查：D8 三处 = v1.5.310 ✔，D82 两方向 = 无 ✔。
+
+**CI 那两个 runner 的选法，顺带被这次跑验证了**：`browser` 在 `windows-latest` 上 `smoke` + `battle` **都绿** ——
+而 GitHub 把仓库检出到 `D:/a/<repo>/<repo>`，**不是** `D:/code/Epirus-Web`
+⇒ 这正好证明 §10-2 那三处硬编码 URL **不修就连 Windows 上的 CI 都跑不了**。
+
+**仍开着的两件（写明在此，不是遗忘）**：
+1. §10-4 的 `rules.js:2` 过期注释 —— 改它要连指纹 + 考卷一起动；
+2. §13.4 建议的那条门（"凡 tools/server 字面引用的 `.bak` 必须被跟踪"）—— 本轮只补了 43 份料、**没立门**，
+   所以下一批新臂仍可能重演同一类漏。这两件都留给下一班/用户裁。
