@@ -37,7 +37,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'memisolate', 'bare'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -74,7 +74,7 @@ const RESETMEM = argv.includes('--resetmem');
  * 修法：让 mimic 抽"当前最内层那个 clone 的 rng"（一个栈顶指针，进 rollout 时压、出时恢复）。
  *   ⚠ 母局自己跑时栈顶是 null ⇒ 照旧抽 `st.rng` ⇒ **默认路径逐字不变**；`--freshrng` 关时也不变。 */
 let RNGCUR = null;
-const FRESHRNG = argv.includes('--freshrng');
+let FRESHRNG = true;   /* 10-01（DS）：**默认开隔离** —— 见下方 ALLOW_LEAK 那段说明 */
 /* §E209 `--freshseats`：§E204 修掉了"共享 `rng`"这条主通道，但**采样决策数仍比零 rollout 的参照少/多 3 个**（98 ‖ 95）。
  *   剩下的候选通道 = 席选择器本身带的**可变状态**（`makeMimic` 里那份人类形状记忆、`bots.js` 的 `__mem`/`__pbMem`）
  *   ⇒ 打开这一档后，每次 rollout **现造一套席**（mimic 历史从空开始）。若采样数回到 95 ⇒ 第三条通道就是它；
@@ -89,6 +89,17 @@ const MEMISO = argv.includes('--memisolate');
  *   ⇒ 判据：`--bare` 的采样数 == `--freshrng` 各 `rep` 档的采样数 ⇒ 那条轨迹真的被还原了；
  *      不相等 ⇒ 还有残余通道（`__mem` 那一类），并且差值本身量出"残余有多大"。 */
 const BARE = argv.includes('--bare');
+const ALLOW_LEAK = argv.includes('--allowrngleak');
+/* ===== 10-01（DS · 接千问 §E209 的"残余扰动"）：**默认必须开 rng 隔离，否则响亮拒绝** =====
+ * 事实（代码级，我核过）：`js/core/state.js:236` 的 `cloneState` **复用同一个 rng 对象**（`c.rng = s.rng`，为免崩溃）；
+ *   `playRollout`（:125-126）**已经**给 clone 换了一条自己的确定性流，**但**引擎的抽取走**模块级栈顶 `RNGCUR`**，
+ *   而这里**只在 `--freshrng` 打开时**才把栈顶换成那只 clone（:129-130）⇒ **不开时 rollout 从母局那条流里抽**，
+ *   扰动幅度随 `rep` 增长 —— 这正是 §E209 观察到的 366(rep=8) / 355(rep=2) / 356(零 rollout 参照) 的**同一件事**。
+ * ⇒ 本仪器**默认开** `--freshrng`；**要故意不隔离**必须显式 `--allowrngleak`（并会在表头留痕）。
+ *   ⚠️ 只动**研究侧量具**，出厂路径（`js/*`）一行未动。 */
+const FRESHRNG_ORIG = FRESHRNG;
+if (!argv.includes('--freshrng') && ALLOW_LEAK) FRESHRNG = false;   /* 显式要求不隔离才关 */
+
 /* §E197 用的**导出**：`--dump=<path>` 把"每个采样决策 × 每个候选"的**现有 235 维特征 + 模拟赢率标签**落成 JSONL。
  *   ⇒ 为什么要在这里导出而不是另写一台采集器：**rollout 的算术只能有一份**（本仓"两份同构实现必漂移"的老病），
  *     而"上限能不能被一个可学的头拿到"必须用**同一批标签**来问，否则两边的 regret 不可比。

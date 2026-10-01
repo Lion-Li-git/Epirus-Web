@@ -8710,6 +8710,28 @@ t('D213 C8-lite 选择锦标赛（pick-5p）：同尺 · 只记录 · 自检两�
   ok(/自检：✔ 全过/.test(String(r.stdout || '')), '自检必须打 ✔ 全过（行为验证：解析/排序/噪声带两侧都要有牙）');
 });
 
+t('D214 研究侧模拟仪器必须**默认隔离 rng**（`--freshrng` 默认开；要关必须显式 `--allowrngleak` 且表头留痕）（10-01 · 接千问 §E209 残余扰动）', function () {
+  /* 事实（代码级）：`js/core/state.js:236` 的 `cloneState` **复用同一个 rng 对象**；`playRollout` 虽给 clone 换了自己的流，
+   * 但引擎抽取走**模块级栈顶 `RNGCUR`**，而该栈顶**只在 `--freshrng` 打开时**才换成 clone ⇒ 不开时 rollout 从**母局**那条流抽，
+   * 扰动随 `rep` 增长（§E209 实测 366(rep=8) / 355(rep=2) / 356 零 rollout 参照）。
+   * ⇒ 本门钉住：默认必须是隔离；关闭必须有显式逃生阀；表头必须留痕（否则读的人分不出这批数是被扰动的）。 */
+  const P = readFileSync('tools/probe-myopia-regret.mjs', 'utf8');
+  ok(/let FRESHRNG = true;/.test(P), '默认必须是**开隔离**（`let FRESHRNG = true`）');
+  ok(/ALLOW_LEAK/.test(P) && /allowrngleak/.test(P), '必须有显式逃生阀 `--allowrngleak`（并在允许名单里）');
+  ok(/freshrng=/.test(P), '表头必须留痕 `freshrng=`（读的人要能分辨这批数有没有被扰动）');
+  const r1 = spawnSync(process.execPath, ['tools/probe-myopia-regret.mjs', '--rep=1', '--games=1'],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+  const o1 = String(r1.stdout || '') + String(r1.stderr || '');
+  eq(r1.status, 0, '默认档必须能跑（实测 ' + r1.status + '）');
+  ok(/freshrng=ON/.test(o1), '默认档表头必须显示 freshrng=ON（实测输出里没找到）');
+  const r2 = spawnSync(process.execPath, ['tools/probe-myopia-regret.mjs', '--rep=1', '--games=1', '--allowrngleak'],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+  const o2 = String(r2.stdout || '') + String(r2.stderr || '');
+  eq(r2.status, 0, '--allowrngleak 档必须能跑（实测 ' + r2.status + '）');
+  ok(/freshrng=off/.test(o2), '关档表头必须印 `freshrng=off`（该工具既有格式；第一版我自造了一串字样 ⇒ 假红）');
+  ok(!/freshrng=ON/.test(o2), '关档不许再显示 ON（显示 ON 就分不出这批数有没有被扰动）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
