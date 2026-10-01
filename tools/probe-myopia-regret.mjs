@@ -37,7 +37,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -90,6 +90,18 @@ const MEMISO = argv.includes('--memisolate');
  *      不相等 ⇒ 还有残余通道（`__mem` 那一类），并且差值本身量出"残余有多大"。 */
 const BARE = argv.includes('--bare');
 const ALLOW_LEAK = argv.includes('--allowrngleak');
+/* ===== §E215 · 入围覆盖率（任务 #61）=====
+ * 病（我今天的漏）：`oracle` 一直是**网络短名单 `pool`（前 `KEEP` 名）内部**取最大 ⇒ 如果真最优常常压根不在名单里，
+ *   那么"换个更贵的评估器"这条路的钱**一分都拿不到**，而这件事我从来没量过。
+ * `--cover=1` = 对**全部候选**（实测均值 ~23 名）都跑同样 `REP` 条流，问两个数：
+ *   ① P(真最优 ∈ 前 k 名)（k = KEEP / 8 / 12）；② 名单放宽后上限本身抬多少 pt。
+ * ⚠ 两条内置对照，缺一条这两个数都不能引：
+ *   · **随机短名单** `detSet`（确定性、不抽 `state.rng`）同尺寸取 max ⇒ `full − randK` 就是"池子变大本身的选取膨胀"；
+ *     真信号只看 `rise_topK − rise_randK`（= `topK − randK`），绝对 `rise` 一律不引（§E200/§E203 同一族）。
+ *   · **地板** `mean(k/n)`：入围若与真最优无关，覆盖率就该是这个数。
+ * ⚠ 只在**采样分支的最末尾**跑（`mineS`/`depth2`/自检全部算完之后）⇒ 关掉时逐字不变，打开时也不许动旧读数（用采样数复验）。 */
+const COVER = Math.max(0, Number(arg('cover', 0)) || 0) > 0;
+const COVER_KS = [8, 12].filter(k => k > KEEP);
 /* ===== 10-01（DS · 接千问 §E209 的"残余扰动"）：**默认必须开 rng 隔离，否则响亮拒绝** =====
  * 事实（代码级，我核过）：`js/core/state.js:236` 的 `cloneState` **复用同一个 rng 对象**（`c.rng = s.rng`，为免崩溃）；
  *   `playRollout`（:125-126）**已经**给 clone 换了一条自己的确定性流，**但**引擎的抽取走**模块级栈顶 `RNGCUR`**，
@@ -247,7 +259,8 @@ function aggPrefix(rec, r) {
 }
 
 function runArm(arm, selfCheck) {
-  const a = { arm: arm.key, decisions: 0, candSum: 0, regretWin: [], regretTop: [], randWin: [], mineWin: [], oracleWin: [], oracle1Win: [], oracle2Win: [], oracle2mmWin: [], gap21: [], gap2m: [], fellBack: 0, nRows2: 0, byGame: {}, applied: 0, nApplied: 0, live: 0, nLive: 0, rec: [] };
+  const a = { arm: arm.key, decisions: 0, candSum: 0, regretWin: [], regretTop: [], randWin: [], mineWin: [], oracleWin: [], oracle1Win: [], oracle2Win: [], oracle2mmWin: [], gap21: [], gap2m: [], fellBack: 0, nRows2: 0, byGame: {}, applied: 0, nApplied: 0, live: 0, nLive: 0, rec: [],
+    covRec: [] };
   for (const env of ENVS) {
     for (let g = 0; g < GAMES; g++) {
       const deep = { v: false };
@@ -338,6 +351,20 @@ function runArm(arm, selfCheck) {
           const worst = outcomeOf(pool[pool.length - 1].c, state, rollChos, deep, REP);
           a.nLive++; if (worst.win !== mine.win || worst.rounds !== mine.rounds) a.live++;
         }
+        if (COVER && !selfCheck) {
+          /* 放在**整条采样分支的最末尾**：`mineS`、`r2`、自检都已经算完 ⇒ 这一档不可能改动任何旧读数
+             （唯一的例外是 mimic 席的 `__pbMem` 被多喂了几条流；§E209b 已证它按回合自愈，且实测开/关两遍除新行外逐字相同）。 */
+          const nAll = scored.length;
+          const tail = [];
+          for (let i = KEEP; i < nAll; i++) tail.push(outcomeStreams(scored[i].c, state, rollChos, deep, REP, 0));
+          /* ⚠ 存**逐流 0/1 数组**而不是存均值：覆盖率 = 在 n 个带噪估计里挑最大 ⇒ `REP` 越小噪声把它推向名单外推得越狠
+             （§E200/§E203 那一族的"选取膨胀"在这里换了个方向出现）。存了逐流就能**按前缀重算**，
+             于是"覆盖率随 `rep` 抬不抬"当场可分：抬 = 主要是标签噪声，不抬 = 主要是入围真漏了。 */
+          a.covRec.push({ gid: gid, salt: ((g + 1) * 2654435761 ^ (n + 1) * 40503) >>> 0, n: nAll, trunc: nAll > KEEP ? 1 : 0, ks: [KEEP].concat(COVER_KS),
+            w: sr.map(x => x.win).concat(tail.map(x => x.win)),
+            h: sr.map(x => x.hpTop).concat(tail.map(x => x.hpTop)),
+            rk: detSet(nAll, Math.min(KEEP, nAll), g, n) });
+        }
         if (MEMISO) B.restoreBotMem(memSnap);          /* §E209b：还原点挪到**离开采样分支之前**（候选轮 + mineS + depth2 + 自检全都围住） */
         return pick;
       };
@@ -359,12 +386,37 @@ function runArm(arm, selfCheck) {
 const mean = x => x.length ? x.reduce((p, q) => p + q, 0) / x.length : NaN;
 const sd = x => { if (x.length < 2) return NaN; const m = mean(x); return Math.sqrt(x.reduce((p, q) => p + (q - m) * (q - m), 0) / (x.length - 1)); };
 const ci95 = x => 1.96 * sd(x) / Math.sqrt(Math.max(1, x.length)) * 100;
+/* ===== §E215 的一条决策记录 → 三种入围规则各自挑到的那一手（前 `rep` 条流上取 max）=====
+ * ⚠ **平手必须与候选顺序无关**：第一版沿用主口径那条 `>` 扫描（平手时保留先出现的），而"先出现"恰好就是**网络排名第 1**
+ *   ⇒ 覆盖率被"入围顺序"自己虚高（实测 rep=4→8 从 64.3% 掉到 42.9% 就是它：流越多平手越少，虚高退得越多）。
+ *   现在平手用 `(决策盐 × 候选序号)` 的确定性哈希破 —— 与网络排名无关、也不抽 `state.rng`（§E191 同族），并**把平手率印出来**。
+ * ⚠ 这里"前 6 名的 max"可能与主表 `oracle 那手`差一两格（主表用老的"先出现者胜"）⇒ 差值只在本表内部比。 */
+function covRow(rec, rep, keep) {
+  const v = rec.w.map(a => m0(a.slice(0, rep))), vh = rec.h.map(a => m0(a.slice(0, rep)));
+  const key = i => ((rec.salt ^ Math.imul(i + 1, 2654435761)) >>> 0);
+  const best = idxs => { let b = idxs[0];
+    for (let t = 1; t < idxs.length; t++) { const i = idxs[t];
+      if (v[i] > v[b] || (v[i] === v[b] && (vh[i] > vh[b] || (vh[i] === vh[b] && key(i) < key(b))))) b = i; }
+    return b; };
+  const all = rec.w.map((_, i) => i);
+  const bAll = best(all), bNet = best(all.slice(0, Math.min(keep, rec.n))), bRand = best(rec.rk);
+  let tie = 0; for (const i of all) if (v[i] === v[bAll] && vh[i] === vh[bAll]) tie++;
+  return { bAll: bAll, bNet: bNet, bRand: bRand, vNet: v[bNet], vRand: v[bRand], vAll: v[bAll], tie: tie > 1, n: rec.n };
+}
+/* 确定性随机短名单对照：**不抽 `state.rng`**（§E191 同族），按 `(g,n,i)` 的 32 位哈希排序取前 k 名。
+ * 同一格两次调用结果相同 ⇒ 与"网络前 k 名"是同一批候选、同一批流上的配对比较。 */
+function detSet(n, k, g, nn) {
+  const idx = []; for (let i = 0; i < n; i++) idx.push(i);
+  const key = i => (((g + 1) * 2654435761) ^ ((nn + 1) * 40503) ^ ((i + 1) * 2246822519)) >>> 0;
+  idx.sort((a, b) => key(a) - key(b));
+  return idx.slice(0, Math.min(k, n));
+}
 console.log('# §E195 近视的代价上限（产品桌 n=5 ‖ 焦点席 1 号 ‖ ' + ENVS.length + ' 环境 × ' + GAMES + ' 局 ‖ 每 ' + EVERY + ' 手采一个 ‖ 回合 ≤' + RMAX
   + ' ‖ 每格向前模拟 ' + KEEP + ' 个候选 × ' + REP + ' 条随机流 ‖ seed ' + SEED + '）');
 console.log('# 环境清单（§E202 补：这三行以前只印个数，导致 §E195/§E196/§E200 的命令行**无法复原**）：' + ENVS.map(z => z.name).join(',')
   + (SWEEP.length ? ' ‖ **固定样本前缀扫** rep=' + SWEEP.join('/') : '') + (DEPTH2 ? ' ‖ depth2 k2=' + K2 : '') + ' ‖ cont=' + CONT
   + ' ‖ **flags**：freshrng=' + (FRESHRNG ? 'ON' : 'off') + ' freshseats=' + (FRESHSEATS ? 'ON' : 'off') + ' resetmem=' + (RESETMEM ? 'ON' : 'off')
-  + ' memisolate=' + (MEMISO ? 'ON' : 'off') + ' bare=' + (BARE ? 'ON' : 'off'));
+  + ' memisolate=' + (MEMISO ? 'ON' : 'off') + ' bare=' + (BARE ? 'ON' : 'off') + ' cover=' + (COVER ? 'ON' : 'off'));
 console.log('# ⚠ oracle 是 K 个带运气结果里取最大 ⇒ 天然膨胀；**只有 `regret(oracle) − regret(随机)` 是信号**');
 console.log('# ⚠ 这是"一手前瞻 + 现有策略延续"的改进量，**不是**完美价值函数的天花板（限制 1）');
 const rows = ARMS.map(k => runArm(mkArm(k), false));
@@ -387,6 +439,48 @@ for (const r of rows) {
       + ' ‖ `两手 − 臂自己` = ' + (100 * mean(r.gap2m)).toFixed(2) + ' ±' + ci95(r.gap2m).toFixed(2) + 'pt'
       + ' ‖ 选择膨胀（两手都 max − 只第一手 max）= ' + (100 * (mean(r.oracle2mmWin) - mean(r.oracle2Win))).toFixed(2) + 'pt');
     console.log('   ‖ 走不到焦点席第二手而退回一手值的比例 ' + (100 * r.fellBack / Math.max(1, r.nRows2)).toFixed(1) + '%（记 0 会把上限系统性压低，所以退回一手值）');
+  }
+  /* ===== §E215 · 入围覆盖率（任务 #61）：oracle 一直只在"网络前 KEEP 名"里取最大，这一档问"名单本身漏了多少" =====
+   * ⚠ 两条绝对数都**不许单独引**：`全表 − 前 k` 里混着"池子变大 → max 天然更高"的选取膨胀（§E200/§E203 同一族）。
+   *   能引的只有同尺寸的**配对对照**：`前 k 名的 max` vs `随机 k 名的 max`（同一批候选、同一批流）。 */
+  if (COVER && r.covRec.length) {
+    /* ⚠ 这一档问的是"**入围**漏了多少"，与"排序对不对"（§E197）是两件事：`scored` 用的是冠军包的 `P.value`，
+       与臂无关 ⇒ 三个臂的短名单**同一份** ⇒ 默认只需跑 `--arm=A0`（省 3 倍），别把三行读成三个证据。 */
+    const ALL = r.covRec, TR = ALL.filter(x => x.trunc);
+    const L = ALL[0].w[0].length, ks = ALL[0].ks;
+    const PRE = [4, 8, 16, 32].filter(v => v <= L).concat([L]).filter((v, i, a) => a.indexOf(v) === i);
+    console.log('   ‖ **§E215 入围覆盖**：候选数均值 ' + mean(ALL.map(x => x.n)).toFixed(1)
+      + ' ‖ "候选本来就不超过 ' + KEEP + ' 名"（结构上没有名单外 ⇒ 覆盖率恒为 100%）的决策 '
+      + (100 * ALL.filter(x => !x.trunc).length / ALL.length).toFixed(1) + '%（n=' + ALL.length + '）⇒ 合池那档会被这批无外格抬虚，两档都印');
+    for (const seg of [['全部采样决策', ALL], ['只看有名单外的（候选 > ' + KEEP + '）', TR]]) {
+      const tag = seg[0], set = seg[1];
+      if (!set.length) { console.log('     · ' + tag + '：**0 格** ⇒ 不给数'); continue; }
+      console.log('     · **' + tag + '**（n=' + set.length + ' ‖ 候选数均值 ' + mean(set.map(x => x.n)).toFixed(1)
+        + '）‖ 每行只在**前 `rep` 条流**上取 max（同一批决策、嵌套前缀 ⇒ 行与行只差标签噪声）');
+      console.log('       rep │ 平手率 │ P(真最优∈前' + ks.join('/') + ')（无平手那批：k=' + KEEP + '） │ 地板(前 ' + KEEP + ') │ 上限win 前' + KEEP + '/随机' + KEEP + '/全表 │ **配对(网络−随机)**');
+      for (const rep of PRE) {
+        const R = set.map(x => covRow(x, rep, KEEP));
+        const cov = ks.map(k => { const arr = R.map(o => (o.bAll < k ? 1 : 0)); return (100 * mean(arr)).toFixed(1) + '±' + ci95(arr).toFixed(1); });
+        const uniq = R.filter(o => !o.tie);
+        const covU = (100 * mean(uniq.map(o => (o.bAll < KEEP ? 1 : 0)))).toFixed(1);
+        const floorK = 100 * mean(set.map(x => Math.min(KEEP, x.n) / x.n));
+        const pair = R.map(o => o.vNet - o.vRand);
+        console.log('       ' + rep + ' │ ' + (100 * mean(R.map(o => (o.tie ? 1 : 0)))).toFixed(1) + '% │ ' + cov.join(' │ ')
+          + '（' + uniq.length + ' 格：' + covU + '%） │ ' + floorK.toFixed(1) + '% │ '
+          + (100 * mean(R.map(o => o.vNet))).toFixed(1) + '/' + (100 * mean(R.map(o => o.vRand))).toFixed(1) + '/'
+          + (100 * mean(R.map(o => o.vAll))).toFixed(1) + ' │ **' + (100 * mean(pair)).toFixed(2) + ' ±' + ci95(pair).toFixed(2) + 'pt**');
+      }
+      { const rep = PRE[PRE.length - 1];
+        const R = set.map(x => covRow(x, rep, KEEP));
+        const pair = R.map(o => o.vNet - o.vRand);
+        const gk = {}; for (let i = 0; i < set.length; i++) { (gk[set[i].gid] = gk[set[i].gid] || []).push(pair[i]); }
+        const gm = Object.keys(gk).map(k2 => mean(gk[k2]));
+        console.log('       ‖ 同一配对按**局**聚类的区间（' + gm.length + ' 局，每局先取均值）：±'
+          + (1.96 * sd(gm) / Math.sqrt(Math.max(1, gm.length)) * 100).toFixed(2) + 'pt ⇒ 表里那行按决策为独立单元，是**下界精度**');
+      }
+      console.log('       ⚠ "全表 − 前 ' + KEEP + ' 名"那类**绝对抬升含选取膨胀**（池子从 ' + KEEP + ' 名变 ' + mean(set.map(x => x.n)).toFixed(0)
+        + ' 名，max 天然更高）⇒ 只能与"随机 ' + KEEP + ' 名 → 全表"同尺寸对照一起读，单看那一列会把噪声当钱（§E200/§E203 同族）。');
+    }
   }
 }
 /* ===== §E202 · 固定样本前缀扫的输出 =====
