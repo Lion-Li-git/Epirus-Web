@@ -3,3 +3,10 @@
 docs/artifacts/kept/*.bak binary
 docs/artifacts/kept/MANIFEST.tsv -text
 docs/artifacts/kept/*.js binary
+
+# v1.5.310：新入库的 4 份对照件同样**按字节**。理由与上面 kept/ 那段同源：
+# 本机 core.autocrlf=true 会把它们从 LF 改成 CRLF，而 CI 的 Linux 上是 LF
+# ⇒ 同一个 commit 会产出两种字节。功能上也许读得出来，但"可复跑"要的是同一份字节。
+docs/artifacts/*.bak binary
+docs/artifacts/eval-out/win-Ldemo.bak binary
+docs/artifacts/e129-out/matrix.json -text

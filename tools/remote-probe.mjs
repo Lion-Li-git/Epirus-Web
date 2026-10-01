@@ -6,7 +6,8 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /* 位置参数：剔除 --flag（如 --max-ms=N），否则会被当成端口/chrome 路径 */
 const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
@@ -14,7 +15,9 @@ const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); 
 const PORT = Number(ARGV[0] || 8787);
 const GENS = parseInt(ARGV[1] || '6', 10);
 const CHROME = ARGV[2] || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const URL = 'file:///D:/code/Epirus-Web/index.html';
+/* v1.5.310（DS 2026-10-01 复核）：URL 从本文件位置现算（原来硬编码绝对路径 ⇒ 换目录/上 CI 必红）。 */
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const URL = 'file:///' + join(ROOT, 'index.html').replace(/\\/g, '/');
 const CDP_PORT = Number(ARGV[3] || 9349);
 
 const udd = mkdtempSync(join(tmpdir(), 'epirus-remote-'));

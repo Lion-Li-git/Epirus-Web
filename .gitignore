@@ -36,3 +36,62 @@ docs/artifacts/*.marker
 # 全局 `*.bak` 让 2100+ 个臂产物一条都没进 git，§E120 所需的 SQ2-30-* 已从盘上消失
 # ⇒ "可复跑"只在代码层成立。kept/ 是唯一被显式放行的例外，由 tools/keep-artifact.mjs 维护。
 !docs/artifacts/kept/*.bak
+
+# v1.5.310（DS 2026-10-01 复核）：把 9 道门在**干净检出**上要用的 4 份对照件按**原路径**入库。
+# 动因：全新 clone 里 np 是 250/259（本机 259/259）—— 那 9 道读的是被 gitignore 的本机产物，
+# 于是"全绿"成了这台机器的属性。选原路径而不是"再抄一份进 kept/"：消费点直接引用原路径，
+# 改路径要动 4~8 处门/探针代码。kept/ 的哈希账本机制不变（tools/keep-artifact.mjs）。
+!docs/artifacts/v7aim3-93.bak
+!docs/artifacts/cbs1s2-band2.bak
+!docs/artifacts/eval-out/
+docs/artifacts/eval-out/*
+!docs/artifacts/eval-out/win-Ldemo.bak
+!docs/artifacts/e129-out/
+docs/artifacts/e129-out/*
+!docs/artifacts/e129-out/matrix.json
+
+# v1.5.310 续：tools/ 与 server/ 里**字面引用**的那批 .bak 一并入库。
+# 规则：**凡是某个工具写死了路径的对照包，就必须在库里** —— 否则"干净检出跑得完整套门"只是句期望。
+!docs/artifacts/E35-prod-814.bak
+!docs/artifacts/E39-ctl-911.bak
+!docs/artifacts/cbs1s5-band1.bak
+!docs/artifacts/champion-5p-armA9.bak
+!docs/artifacts/champion-5p-armB12f.bak
+!docs/artifacts/champion-5p-hA9.bak
+!docs/artifacts/champion-5p-v1.3.58.bak
+!docs/artifacts/co1s8-band1.bak
+!docs/artifacts/eco-34.bak
+!docs/artifacts/v7blk1-91.bak
+!docs/artifacts/v7cmin3-82.bak
+!docs/artifacts/v7cmin4-82.bak
+!docs/artifacts/v7divK-31.bak
+!docs/artifacts/v7ds1-band4.bak
+!docs/artifacts/v7f2t-82.bak
+!docs/artifacts/v7f35b-94.bak
+!docs/artifacts/v7f35b-95.bak
+!docs/artifacts/v7f35b-96.bak
+!docs/artifacts/v7f35b-97.bak
+!docs/artifacts/v7f35b-98.bak
+!docs/artifacts/v7f35b-99.bak
+!docs/artifacts/v7f35t-82.bak
+!docs/artifacts/v7f5b-94.bak
+!docs/artifacts/v7f5b-95.bak
+!docs/artifacts/v7f5b-96.bak
+!docs/artifacts/v7f5b-97.bak
+!docs/artifacts/v7f5b-98.bak
+!docs/artifacts/v7f5b-99.bak
+!docs/artifacts/v7f5t-31.bak
+!docs/artifacts/v7f5t-92.bak
+!docs/artifacts/v7press3-91.bak
+!docs/artifacts/v7role1-31.bak
+!docs/artifacts/v7role1-82.bak
+!docs/artifacts/v7seat24-31.bak
+!docs/artifacts/v7stock2-31.bak
+!docs/artifacts/v7stock2-93.bak
+!docs/artifacts/v7t1-31.bak
+!docs/artifacts/v7t2-31.bak
+!docs/artifacts/v7t2-93.bak
+!docs/artifacts/v7teach2-31.bak
+!docs/artifacts/v7u1-93.bak
+!docs/artifacts/v7w3c-93.bak
+!docs/artifacts/v9-32.bak

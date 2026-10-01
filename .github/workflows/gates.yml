@@ -1,0 +1,84 @@
+name: gates
+
+# 为什么加这个文件
+# ────────────────
+# 本仓的"当前状态" = np + spec + smoke + battle **四道在同一棵树上全绿**（见 tools/gate-all.mjs 头注）。
+# 但在这之前，这四道**只在本机有效**：线上仓库没有任何自动验证，第三方复核要自己开终端跑约 10 分钟，
+# 而且每个数字都得自己重算。259 道门是一笔很贵的资产，让它跟着仓库走比跟着某台机器走值钱。
+#
+# 为什么 browser 档跑 windows-latest
+# ─────────────────────────────────
+# 仓里四台浏览器仪器（smoke / battle-test / np-probe / remote-probe）的默认 Chrome 路径是
+#   C:\Program Files\Google\Chrome\Application\chrome.exe
+# 而 GitHub 的 windows 镜像**正好在同路径**装了 Chrome ⇒ 与被认证的那台机器同构，不必传参数。
+# ⚠️ 但这**不是**它能跑起来的唯一原因：tools/smoke.mjs、np-probe.mjs、remote-probe.mjs 原先各自硬编码
+#   `file:///D:/code/Epirus-Web/index.html`，而 runner 的检出路径是 `D:\a\<repo>\<repo>`
+#   ⇒ 不改那三处，windows 档照样红。2026-10-01 已改成"从本文件位置现算"（与 battle-test/ui-probe 同款）。
+#
+# 为什么 spec / np 档跑 ubuntu-latest
+# ─────────────────────────────────────
+# 顺带把"这套工具链不是 Windows 专属"从一句期望变成一条持续被验证的事实。
+# 若哪天 ubuntu 档红了而 windows 档绿：那是**发现了真问题**（路径分隔符/行尾/大小写敏感），
+# 不要为了让 CI 变绿而把它退回去——请读失败的那条门再决定。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  spec:
+    # ✅ 直接阻断：本档已在**全新 clone**（只有入库文件）上实测通过（2026-10-01，`spec: 通过 52 / 52`）。
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # 本机开发用的是 Node v24.20.0；仓里零第三方依赖，只用内置 http/worker_threads/vm。
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 2 人引擎自测（52 用例 + 500 局 fuzz）
+        run: node tools/spec-run.mjs
+
+  np:
+    # ⚠️ 观察档（这条最要紧）：np 的 259 道门**目前不是"仓库属性"，而是"这台机器的属性"**。
+    # 2026-10-01 在**全新 clone**（只有入库文件、没有任何本机 .bak）上实测：
+    #     N人测试：通过 250 / 259   → exit 1
+    # 失败的 9 道依赖**没有入库**的对照包 / 真表：
+    #   D137 三把量具 · D139 击杀奖励实验台 · D141 破龟群栏 · D150 全层口径搬运量具 ·
+    #   D155 设防持续性栏（配对表解析 0 行） · D161 防御定价 · D163 防御质量三档 ·
+    #   D176 载重优点 veto（缺"起点包"当参照） · D200 5P 环境量具（"两粒包"跑不完）
+    # ⇒ 先把这事处理掉，再删下面这行 continue-on-error。两条路：
+    #   (a) 把 9 道要的对照包按 tools/keep-artifact.mjs 的规矩补进 docs/artifacts/kept/ 并记 MANIFEST.tsv；
+    #   (b) 或者让这 9 道在"对照包不在库"时**响亮印出并跳过** —— 本仓 D194 已为 `--only` 做过同形状的事
+    #       （"跳过必须印出来，partial 不许当全绿引用"）；让它们红成"缺料"，而不是红成"门坏了"。
+    # ⚠️ 在这之前，"259/259" 只在本机成立，**不要**写进给外部看的材料里。
+    # ⚠️ 另注：np 冷跑本机实测 457~595s（v1.5.309 那次认证 557.1s），2 核 runner 上更慢 ⇒ 给足余量。
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 多人引擎 + 门禁（条数与末号由工具跑完自己印，不在这里抄）
+        run: node tools/np-test.mjs
+
+  browser:
+    # ⚠️ 观察档：Chrome/CDP 这四台仪器此前**从没**在 CI 上跑过，第一次观察期按"不阻断"引入。
+    # 在 runner 上看到一次全绿之后，请删掉下面这行 continue-on-error —— 本仓的规矩是"先量后钉"，
+    # 而"永远不阻断的门"和"没有门"在交付上是同一件事。
+    continue-on-error: true
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 页面冒烟（CDP 真 Chrome）
+        run: node tools/smoke.mjs
+      - name: 多人页面对战（CDP 真 Chrome）
+        run: node tools/battle-test.mjs

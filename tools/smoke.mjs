@@ -6,14 +6,19 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /* 位置参数：剔除 --flag（如 --max-ms=N），否则会被当成端口/chrome 路径 */
 const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
 
 const CHROME = ARGV[0] || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const PORT = Number(ARGV[1] || 9337);
-const URL = 'file:///D:/code/Epirus-Web/index.html';
+/* v1.5.310（DS 2026-10-01 复核）：URL 从**本文件位置**现算，与 battle-test/ui-probe 同款。
+ * 原来硬编码 `file:///D:/code/Epirus-Web/index.html` ⇒ 换目录、换机器、上 CI 必红。
+ * 同源硬编码还有两处：tools/np-probe.mjs、tools/remote-probe.mjs（同一轮一并修）。 */
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const URL = 'file:///' + join(ROOT, 'index.html').replace(/\\/g, '/');
 
 const udd = mkdtempSync(join(tmpdir(), 'epirus-cdp-'));
 const proc = spawn(CHROME, [

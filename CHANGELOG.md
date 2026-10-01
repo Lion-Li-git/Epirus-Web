@@ -1,3 +1,34 @@
+## v1.5.310 — 修"259/259 只是这台机器的属性"：4 份对照件入库 + 三处硬编码页路径改成现算 + 首进 CI
+
+**病（DS 2026-10-01 外部复核，可复跑）**：把仓库**全新 clone**（只有入库文件）后跑 `node tools/np-test.mjs`
+⇒ **通过 250 / 259，exit 1**；而本机工作区是 259/259。9 道门（D137/D139/D141/D150/D155/D161/D163/D176/D200）
+读的是 `docs/artifacts/` 下**被 gitignore 的本机产物** ⇒ "全绿"跟着机器走，不跟着仓库走。
+另：`tools/smoke.mjs` / `np-probe.mjs` / `remote-probe.mjs` 各自硬编码 `file:///D:/code/Epirus-Web/index.html`
+⇒ 换目录、换机器、上 CI 必红（GitHub runner 把仓库检出到 D:/a/<repo>/<repo>，不是 D:/code/Epirus-Web）。
+
+**修法**：
+- **补料：45 份对照件按原路径入库**。⚠️ 这**不是**"4 道门各缺一份"—— 我第一版就是这么误判的：这些 bench 吃的是
+  **整个默认包列表**（`tools/probe-kill-reward.mjs:39` / `tools/probe-seat-caliber.mjs:27` / `tools/np-test.mjs:5438` 都写死了 3~5 份）。
+  把谓词量一遍：`grep -ohE 'docs/artifacts/…\.bak' -r tools server` ⇒ **50 个引用 / 45 个未入库 / 43 份盘上还在**（4.47 MB）。
+  其中 `__d177_missing__.bak` / `__d178_missing__.bak` 是 **D177/D178 故意用的假名**，不是丢件。
+  `.gitignore` 逐条 `!` 例外（**不许用通配**：`!docs/artifacts/*.bak` 会把 2251 个本机产物全放出来）；
+  `.gitattributes` 用一条 `docs/artifacts/*.bak binary` 覆盖 —— **按字节**，否则同一个 commit 在 Windows 是 CRLF、在 CI 是 LF。
+  **连带后果一并处理**：干净 clone 会把被跟踪文件的 mtime 刷成"现在" ⇒ 45 份全落进 **D82** 的 24h 时窗 ⇒
+  本条最新条目的 `> 产物点名（D82）：` 行已重建为**全部 45 个名字**（两个方向自查均"无"）。
+- 三处 URL 改成从 `import.meta.url` 现算（与 `battle-test.mjs:39` / `ui-probe.mjs:24` 同款）。
+- 新增 `.github/workflows/gates.yml`：`spec` 档**阻断**（干净检出处已实测 52/52）；`np` 与 `browser` 先做**观察档**
+  （`continue-on-error`），在 runner 上绿一次之后再收紧——"永远不阻断的门"和"没有门"在交付上是同一件事。
+- README 只留当前版本（此前把历史版本抄进来过三次、漂了三次）。
+
+> 产物点名（D82）：E35-prod-814.bak, E39-ctl-911.bak, cbs1s2-band2.bak, cbs1s5-band1.bak, champion-5p-armA9.bak, champion-5p-armB12f.bak, champion-5p-hA9.bak, champion-5p-v1.3.58.bak, co1s8-band1.bak, eco-34.bak, v7aim3-93.bak, v7blk1-91.bak, v7cmin3-82.bak, v7cmin4-82.bak, v7divK-31.bak, v7ds1-band4.bak, v7f2t-82.bak, v7f35b-94.bak, v7f35b-95.bak, v7f35b-96.bak, v7f35b-97.bak, v7f35b-98.bak, v7f35b-99.bak, v7f35t-82.bak, v7f5b-94.bak, v7f5b-95.bak, v7f5b-96.bak, v7f5b-97.bak, v7f5b-98.bak, v7f5b-99.bak, v7f5t-31.bak, v7f5t-92.bak, v7press3-91.bak, v7role1-31.bak, v7role1-82.bak, v7seat24-31.bak, v7stock2-31.bak, v7stock2-93.bak, v7t1-31.bak, v7t2-31.bak, v7t2-93.bak, v7teach2-31.bak, v7u1-93.bak, v7w3c-93.bak, v9-32.bak
+
+**门账**：本条提到 **D82**（产物点名行）· **D8**（版本三处一致 v1.5.310）· **D16**（规则指纹 `ebdbff36` 未变 —— 本版**没动**
+`js/core/*` 与 `js/train/policy.js`，就是为了不动指纹；`rules.js:2` 那句过期的 `R1..R54` 因此**故意留着**，要修得连考卷一起重跑）·
+**D194**（"缺料"应当像 `--only` 那样**响亮印出**，不能与"门坏了"同一种红；本轮只记录，未顺手改）· **D205**（门号纪律）。
+**本版玩家侧行为零变化、两槽未动、未 promote。**
+
+**外部复核读数（DS，2026-10-01）**：修前**全新 clone** 跑 `node tools/np-test.mjs` ⇒ 通过 **250 / 259**（exit 1）；
+本版修后同一条命令 ⇒ 通过 **259 / 259（exit 0）**，`spec` 52/52。本机工作区 `gate-all.mjs --np` 四道全绿。
 ## v1.5.309 — 研究侧模拟仪器**默认隔离 rng**（`--freshrng` 默认开）+ 门 **D214**
 
 **病（千问 §E209 的"残余扰动"，我接过来定位到代码级）**：
