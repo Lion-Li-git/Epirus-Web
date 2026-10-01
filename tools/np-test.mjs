@@ -8692,6 +8692,24 @@ t('D212 破平票三件套（explain-champion-decision 第⑤节）：只记录 
   ok(/判别力自检[^\n]*✔ 过/.test(out), '第⑤节的判别力自检必须打 ✔（行为验证，不看静态文本）');
 });
 
+t('D213 C8-lite 选择锦标赛（pick-5p）：同尺 · 只记录 · 自检两侧都有牙（10-01 · 千问 §3.5.3 提的形状）', function () {
+  /* 动因：N=3 评分桌排序外推到产品口径会翻号（§E137），但 C8 全量（换评分桌）被量成不值且作废历史臂。
+   * ⇒ 折中 = 训练之后加一段 **5P 产品形状选择**：候选与参照跑**完全相同的 eval-5p 参数**（同 seed/pool/局数），
+   *   只记录、不 promote。本门钉三件事：① 同尺（一次命令里所有候选同参数）② 只记录（不许写包/不许 promote）
+   *   ③ 行为验证（`--self-test` 必须 ✔：解析、排序、噪声带两侧都要有牙）。 */
+  const P = readFileSync('tools/pick-5p.mjs', 'utf8');
+  ok(/spawnSync\(process\.execPath, \['tools\/eval-5p\.mjs', GAMES, '5', SEED, p, '--pool=' \+ POOL\]/.test(P),
+    '必须对**每个候选**都用同一组参数跑 eval-5p（同 seed ⇒ 配对；这是"同尺"的唯一保证）');
+  ok(/1\.96 \* se/.test(P), '必须印噪声带判据（±1.96SE），不能只报一个裸百分比');
+  ok(/top2/.test(P), '必须同时报 top2（1st 与 top2 双读数）');
+  const SRC = P.replace(/^import[^\n]*\n/m, '');   /* 去掉 import 行（writeFileSync 从 node:fs 导入 ⇒ 会误伤） */
+  ok(!/writeFileSync\((?!JSONOUT)/.test(SRC), '【只记录】不许写任何包/权重文件（唯一的写是 --json 那份）');
+  ok(!/spawnSync\([^\n]*promote-champion/.test(P), '【只记录】不许 spawn promote（注释里提到这个词没关系 —— 第一版就是被我自己的注释判红的）');
+  const r = spawnSync(process.execPath, ['tools/pick-5p.mjs', '--self-test'], { cwd: process.cwd(), encoding: 'utf8', timeout: 120000 });
+  eq(r.status, 0, '自检必须 exit 0（实测 ' + r.status + '）');
+  ok(/自检：✔ 全过/.test(String(r.stdout || '')), '自检必须打 ✔ 全过（行为验证：解析/排序/噪声带两侧都要有牙）');
+});
+
 /* ⚠ v1.5.79：汇总**必须在 process.exit 之前**（否则它是死代码、永远不打印 =>
  * 门禁会安静地不报结论）。~~D69 自检守着这个顺序~~ ⇒ **D69 已在 v1.5.128 按审计删掉**
  * （它是自指门：检查 np-test 自己的行序）⇒ **现在没有门守这个顺序，改文件尾部时自己看住**。 */if (process.env.NP_TIME === '1') {
