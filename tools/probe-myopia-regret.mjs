@@ -37,7 +37,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'bare'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'memisolate', 'bare'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -75,6 +75,15 @@ const RESETMEM = argv.includes('--resetmem');
  *   ⚠ 母局自己跑时栈顶是 null ⇒ 照旧抽 `st.rng` ⇒ **默认路径逐字不变**；`--freshrng` 关时也不变。 */
 let RNGCUR = null;
 const FRESHRNG = argv.includes('--freshrng');
+/* §E209 `--freshseats`：§E204 修掉了"共享 `rng`"这条主通道，但**采样决策数仍比零 rollout 的参照少/多 3 个**（98 ‖ 95）。
+ *   剩下的候选通道 = 席选择器本身带的**可变状态**（`makeMimic` 里那份人类形状记忆、`bots.js` 的 `__mem`/`__pbMem`）
+ *   ⇒ 打开这一档后，每次 rollout **现造一套席**（mimic 历史从空开始）。若采样数回到 95 ⇒ 第三条通道就是它；
+ *   若仍停在 98 ⇒ 通道在别处（`env.sel` / 引擎里的模块级缓存），要继续找，不许把"已修"写成"修完了"。*/
+const FRESHSEATS = argv.includes('--freshseats');
+/* §E209 `--memisolate`：主通道（共享 `rng`，§E204）之外还剩一条 = `bots.js:50` 那份**模块级跨回合记忆**。
+ *   rollout 会把**自己的回合号**写进 `lastDefRound`，母局回到第 5 手时看到"19 回合刚防过"⇒ `(5-19)<=2` 成立 ⇒ 判断被别的轨迹污染。
+ *   `--resetmem` 只"抹"不"还原"（连母局自己的真历史一起抹掉），所以它只能部分改善；这一档是**快照 + 恢复**。*/
+const MEMISO = argv.includes('--memisolate');
 /* §E204 留下的那一格（"只证了与 `rep` 无关，没证等于零 rollout 的干净轨迹"）的**闭环工具**：
  *   `--bare` 只数"哪些决策会被采到"，**一条 rollout 都不跑** ⇒ 它的采样数就是"零扰动轨迹"的那个数。
  *   ⇒ 判据：`--bare` 的采样数 == `--freshrng` 各 `rep` 档的采样数 ⇒ 那条轨迹真的被还原了；
@@ -111,6 +120,8 @@ function mkArm(name) {
  *   一个决策的 regret 就只能是 −1/0/+1 ⇒ 要把它当期望差来平均，同一手必须打 `REP` 条流取均值。
  *   同一格的所有候选共用这 `REP` 条流的编号 ⇒ 仍是配对比较。 */
 function playRollout(state, seatChos, forced, deepFlag, streamId) {
+  /* §E209 `--freshseats`：席选择器集合可以是**工厂**（每次 rollout 现造一套 ⇒ mimic 的历史不跨 rollout 串味） */
+  const base = typeof seatChos === 'function' ? seatChos() : seatChos;
   const q = S.cloneState(state);
   q.rng = { next: mulberry32((((state.round | 0) + 1) * 2654435761 + FOCUS * 7919 + streamId * 104729) >>> 0) };
   const prevDeep = deepFlag.v;                          /* ⚠ 必须**恢复**而不是置 false：嵌套 rollout 会把外层标志抹掉 */
@@ -119,10 +130,10 @@ function playRollout(state, seatChos, forced, deepFlag, streamId) {
   if (FRESHRNG) RNGCUR = q;
   const chs = [];
   for (let i = 0; i < N; i++) {
-    if (i !== FOCUS || forced === null) { chs.push(seatChos[i]); continue; }
+    if (i !== FOCUS || forced === null) { chs.push(base[i]); continue; }
     let used = false;
     chs.push(function (st2, pid, legal) {
-      if (used) return seatChos[FOCUS](st2, pid, legal);
+      if (used) return base[FOCUS](st2, pid, legal);
       used = true;
       /* 强制那一手要走的字段照出厂形状（`play.js` 的 normPick 认 {key,target,target2,bead}） */
       return { key: forced.key, target: forced.target == null ? null : forced.target,
@@ -157,6 +168,9 @@ function outcomeOf(cand, state, seatChos, deepFlag, rep) {
  *     不是记 0 —— 记 0 会把 `oracle2` 系统性压低，得出"多看一手没用"的假结论（方向性偏差，比噪声更坏）。 */
 function outcomeOf2(a1, state, pid, contChos, deepFlag, rep, SINK) {
   const one = outcomeOf(a1, state, contChos, deepFlag, rep);      /* 一手值（也用作"走不到第二手"的退回值） */
+  /* §E209 `--freshseats`：`contChos` 可能是工厂。上面那次一手游玩已经用它造过一套；这一层自己要用 `contChos[i]`
+   *   ⇒ **先物化一套**，本层的第二手 rollout 沿用同一套（要"每个内层 rollout 也换一套"就得把工厂传到底，这里不必）。 */
+  if (typeof contChos === 'function') contChos = contChos();
   let best = null, bestMean = null;
   const inner = [];                                               /* §E202：每个第二手候选的**逐流**赢率数组，供前缀聚合 */
   const q = S.cloneState(state);
@@ -245,7 +259,9 @@ function runArm(arm, selfCheck) {
         const scored = cands.map(c => ({ c, v: P.value(state, pid, c.key, params, null, c) }));   /* ← 第 6 形参 `cand` 必须传 */
         scored.sort((x, y) => y.v - x.v);
         const pool = scored.slice(0, Math.min(KEEP, scored.length));
+        const memSnap = MEMISO ? B.snapshotBotMem() : null;   /* §E209：把 rollout 围起来 —— 出来时还原母局那份历史 */
         const sr = pool.map(s => outcomeStreams(s.c, state, rollChos, deep, REP, 0));
+        if (MEMISO) B.restoreBotMem(memSnap);
         const res = sr.map(x => ({ win: m0(x.win), hpTop: m0(x.hpTop), rounds: m0(x.rounds) }));
         if (DUMP && !selfCheck) {
           const xs = P.featuresV7(state, pid);
@@ -254,6 +270,9 @@ function runArm(arm, selfCheck) {
               pk: env.name + '#' + g + '#' + n,
               i, key: pool[i].c.key, target: pool[i].c.target == null ? null : pool[i].c.target,
               net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop, rounds: res[i].rounds,
+              /* §E208：另存**逐流**的 0/1 数组 ⇒ 分析器能做"分半稳定性"检验（同一格的前半流与后半流各挑一次最优，
+               *   两边挑到同一手的比例 = 这份标签到底把"哪手更好"定死了没有）。只加字段，默认分析器不读 ⇒ 旧读数逐字不变。 */
+              winS: sr[i].win,
               x: xs.concat(P.actionFeatures(state, pid, pool[i].c.key, pool[i].c)).map(v => Math.round(v * 1e4) / 1e4) }));
           }
         }
@@ -308,12 +327,15 @@ function runArm(arm, selfCheck) {
         }
         return pick;
       };
-      const mimic = makeMimic(W, HB, 'rand', function () { return (FRESHRNG && RNGCUR ? RNGCUR : st).rng.next(); });
+      const mkMimic = function () { return makeMimic(W, HB, 'rand', function () { return (FRESHRNG && RNGCUR ? RNGCUR : st).rng.next(); }); };
+      const mimic = mkMimic();
       seatChos.push(mimic, focus, env.sel, env.sel, T.policyChooserN(params, 0.15));
       /* **rollout 的延续席**：默认换成关档包（`--cont=pack`）⇒ 三个臂用**同一把后续尺**，
          量到的才是"根决策那一手"的质量差；`--cont=arm` 留给"臂自己打完全局"那个问题（贵得多，ply2 会乘爆）。 */
       const contFocus = CONT === 'arm' ? focus : T.policyChooserN(params, 0.15);
-      const rollChos = seatChos.map(function (c, i) { return i === FOCUS ? contFocus : c; });
+      const rollChos = FRESHSEATS
+        ? function () { const c = seatChos.slice(); c[FOCUS] = contFocus; c[0] = mkMimic(); return c; }
+        : seatChos.map(function (c, i) { return i === FOCUS ? contFocus : c; });
       Play.autoGameN(st, seatChos);
     }
   }
@@ -326,7 +348,9 @@ const ci95 = x => 1.96 * sd(x) / Math.sqrt(Math.max(1, x.length)) * 100;
 console.log('# §E195 近视的代价上限（产品桌 n=5 ‖ 焦点席 1 号 ‖ ' + ENVS.length + ' 环境 × ' + GAMES + ' 局 ‖ 每 ' + EVERY + ' 手采一个 ‖ 回合 ≤' + RMAX
   + ' ‖ 每格向前模拟 ' + KEEP + ' 个候选 × ' + REP + ' 条随机流 ‖ seed ' + SEED + '）');
 console.log('# 环境清单（§E202 补：这三行以前只印个数，导致 §E195/§E196/§E200 的命令行**无法复原**）：' + ENVS.map(z => z.name).join(',')
-  + (SWEEP.length ? ' ‖ **固定样本前缀扫** rep=' + SWEEP.join('/') : '') + (DEPTH2 ? ' ‖ depth2 k2=' + K2 : '') + ' ‖ cont=' + CONT);
+  + (SWEEP.length ? ' ‖ **固定样本前缀扫** rep=' + SWEEP.join('/') : '') + (DEPTH2 ? ' ‖ depth2 k2=' + K2 : '') + ' ‖ cont=' + CONT
+  + ' ‖ **flags**：freshrng=' + (FRESHRNG ? 'ON' : 'off') + ' freshseats=' + (FRESHSEATS ? 'ON' : 'off') + ' resetmem=' + (RESETMEM ? 'ON' : 'off')
+  + ' memisolate=' + (MEMISO ? 'ON' : 'off') + ' bare=' + (BARE ? 'ON' : 'off'));
 console.log('# ⚠ oracle 是 K 个带运气结果里取最大 ⇒ 天然膨胀；**只有 `regret(oracle) − regret(随机)` 是信号**');
 console.log('# ⚠ 这是"一手前瞻 + 现有策略延续"的改进量，**不是**完美价值函数的天花板（限制 1）');
 const rows = ARMS.map(k => runArm(mkArm(k), false));

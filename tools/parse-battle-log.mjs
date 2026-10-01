@@ -9,10 +9,19 @@
  * ⚠ 只读：本工具不写 results/，也不改任何包。样本 n=2 局 ⇒ 用来说"这两局里发生了什么"，别说成概率。
  * 用法：node tools/parse-battle-log.mjs [文件...]（默认 results/ 下最新的两个 .txt）
  */
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs';
 
 const args = process.argv.slice(2);
-let FILES = args;
+/* §E207：`--jsonl=<路径>` 把"逐决策记录"倒出来给分析器用（**解析只这一份**，别再抄第二个 log parser）。
+ *   每行 = 一个席位在一个回合的一次出手：`{file,game,mode,round,seat,isHuman,skill,target,prev,prevOthers,alive}`。
+ *   ⚠ 只给"日志里直接读得到"的字段 —— ep/珠 这类要从效果行反推（`e152e` 那台的老办法，违反率 2.6%），
+ *     这里刻意不推 ⇒ 分析器的条件集只能是"自己上一手 / 别人上一手 / 存活数 / 回合"，别拿它当状态全量。 */
+const JSONL_OUT = (args.find(a => a.startsWith('--jsonl=')) || '').split('=')[1] || '';
+const FILES_ARG = args.filter(a => !a.startsWith('--'));
+/* ⚠ 真人席位 = 1（`ui.js:704/746`：只有 `w === 0` 才印"你赢了"，输了就点名获胜的 AI ⇒ **日志里没有"你"≠ 没有真人，只是你没赢**） */
+let FILES = FILES_ARG;
+let GAME = 0;
+const RECORDS = [];
 if (!FILES.length) {
   const dir = 'results';
   if (!existsSync(dir)) throw new Error('没有 results/ 目录');
@@ -21,6 +30,7 @@ if (!FILES.length) {
 }
 
 for (const file of FILES) {
+  GAME++;
   const raw = readFileSync(file, 'utf8');
   const lines = raw.split(/\r?\n/);
   const mode = (/模式=(\S+)/.exec(raw) || [, '?'])[1];
@@ -29,6 +39,7 @@ for (const file of FILES) {
   const HUMAN = 1;
   const act = {}; const dmgBy = {}, dmgTo = {}, dmgVs = {}; const deaths = {}; const roundsRaw = [];
   let maxSeat = 0, rounds = 0, focusRounds = 0, aiCancelRounds = 0, blockRounds = 0;
+  let prevPicks = {};                                             /* §E207：上一回合各席出手（第一回合是 '-'） */
   const focusDetail = [], cancelDetail = [];
   for (const l of lines) {
     let m = /^第 (\d+) 回合：(.*)$/.exec(l);
@@ -51,6 +62,19 @@ for (const file of FILES) {
         focusDetail.push('第' + m[1] + '回合：' + attackers.join('/') + ' 号席集火 玩家' + t + '（' + attackers.map(a => picks[a].skill).join('+') + '）' + (attackers.every(a => a !== HUMAN) ? '[全 AI]' : '[含真人]') + (Number(t) === HUMAN ? ' → **打真人**' : ' → 打 AI'));
       }
       roundsRaw.push({ n: Number(m[1]), picks });
+      if (JSONL_OUT) {
+        const alive = Object.keys(picks).filter(s => picks[s].skill !== '已淘汰');
+        for (const s of Object.keys(picks)) {
+          const p = picks[s]; if (p.skill === '已淘汰') continue;
+          const others = {};
+          for (const t of Object.keys(prevPicks)) if (t !== s) others['P' + t] = prevPicks[t].skill;
+          RECORDS.push({ file: file.split('/').pop(), game: GAME, mode, round: Number(m[1]), seat: 'P' + s,
+            isHuman: Number(s) === HUMAN, skill: p.skill, target: p.target == null ? null : 'P' + p.target,
+            prev: prevPicks[s] ? prevPicks[s].skill : '-', prevOthers: others, alive: alive.length });
+        }
+      }
+      for (const s of Object.keys(picks)) maxSeat = Math.max(maxSeat, Number(s));
+      prevPicks = picks;
       continue;
     }
     /* 明细行 */
@@ -91,4 +115,10 @@ for (const file of FILES) {
   for (const f of focusDetail) console.log('     · ' + f);
   const died = Object.entries(deaths).map(([k, v]) => label(k) + ' 第' + v + '回合').join(' ， ');
   console.log('  死亡：' + (died || '（无）'));
+}
+
+if (JSONL_OUT && RECORDS.length) {
+  writeFileSync(JSONL_OUT, RECORDS.map(r => JSON.stringify(r)).join('\n') + '\n');
+  console.log('\n[jsonl] 导出 ' + RECORDS.length + ' 条逐决策记录 → ' + JSONL_OUT
+    + '（真人 ' + RECORDS.filter(r => r.isHuman).length + ' ‖ AI ' + RECORDS.filter(r => !r.isHuman).length + '）');
 }

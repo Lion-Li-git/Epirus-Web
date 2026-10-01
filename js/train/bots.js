@@ -49,6 +49,13 @@
    * bots 默认无状态；因 UI 预决策用 cloneState(会丢 state 上的字段)，这里用模块级、每局(round==1)重置。 */
   let __mem = { lastDefRound: -1000, oppMightDefend: false };
   function resetBotMem() { __mem = { lastDefRound: -1000, oppMightDefend: false }; }
+  /* §E209（**只给研究侧仪器用**，默认无人调用 ⇒ 出厂路径逐字不变）：
+   * `__mem` 是模块级、只在 `state.round === 1` 自重置的。任何"在母局中途插入 rollout"的量具都会把
+   * **rollout 的回合号**写进 `lastDefRound`，母局下一手读到的是别的轨迹的历史
+   * （实测：rollout 跑到 20 回合 ⇒ 回到母局第 5 手时 `(5 - 19) <= 2` 成立 ⇒ bot 以为对手刚防过）。
+   * ⇒ 加一对快照/恢复，让仪器能把这段历史**围起来**。`--resetmem`（只抹不还原）不够：它把母局自己的真历史也抹了。 */
+  function snapshotBotMem() { return { lastDefRound: __mem.lastDefRound, oppMightDefend: __mem.oppMightDefend }; }
+  function restoreBotMem(s) { if (s) __mem = { lastDefRound: s.lastDefRound | 0, oppMightDefend: !!s.oppMightDefend }; }
   function noteOpp(state, pid) {
     if (state.round === 1) resetBotMem();
     const you = oppOf(state, pid);
@@ -963,6 +970,7 @@
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
+    snapshotBotMem, restoreBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,
     pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, pickBigTChain, bigtHubTarget, pickKillSecure,
