@@ -270,9 +270,11 @@ function runArm(arm, selfCheck) {
         const scored = cands.map(c => ({ c, v: P.value(state, pid, c.key, params, null, c) }));   /* ← 第 6 形参 `cand` 必须传 */
         scored.sort((x, y) => y.v - x.v);
         const pool = scored.slice(0, Math.min(KEEP, scored.length));
-        const memSnap = MEMISO ? B.snapshotBotMem() : null;   /* §E209：把 rollout 围起来 —— 出来时还原母局那份历史 */
+        /* §E209b：窗口要盖住**整个采样分支里的所有 rollout**，不是只盖候选那一轮。
+         *   原来只在 `pool.map` 外面快照/还原，漏了下面的 `mineS`（母局自己那手也重放 REP 条流，**每个采样决策都跑**）
+         *   与 `--depth2` 的内层 ⇒ 漏出去的污染正比于 REP ⇒ 这正好是"355@rep2 / 366@rep8"那点随 rep 增长的残余。 */
+        const memSnap = MEMISO ? B.snapshotBotMem() : null;
         const sr = pool.map(s => outcomeStreams(s.c, state, rollChos, deep, REP, 0));
-        if (MEMISO) B.restoreBotMem(memSnap);
         const res = sr.map(x => ({ win: m0(x.win), hpTop: m0(x.hpTop), rounds: m0(x.rounds) }));
         if (DUMP && !selfCheck) {
           const xs = P.featuresV7(state, pid);
@@ -336,6 +338,7 @@ function runArm(arm, selfCheck) {
           const worst = outcomeOf(pool[pool.length - 1].c, state, rollChos, deep, REP);
           a.nLive++; if (worst.win !== mine.win || worst.rounds !== mine.rounds) a.live++;
         }
+        if (MEMISO) B.restoreBotMem(memSnap);          /* §E209b：还原点挪到**离开采样分支之前**（候选轮 + mineS + depth2 + 自检全都围住） */
         return pick;
       };
       const mkMimic = function () { return makeMimic(W, HB, 'rand', function () { return (FRESHRNG && RNGCUR ? RNGCUR : st).rng.next(); }); };
