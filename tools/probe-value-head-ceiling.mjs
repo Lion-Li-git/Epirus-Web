@@ -31,17 +31,18 @@
  *
  * 只读 `docs/artifacts/e184-out/*.jsonl`（本机产物，不进 git）与 `js/**`，不改引擎、不加门、不动冠军槽。
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['train', 'test', 'lambda', 'inter', 'groups', 'depth', 'qhead', 'mlp', 'mlp-ep', 'mlp-lr', 'fitprobe'], 'probe-value-head-ceiling');
+rejectUnknownFlags(argv, ['train', 'test', 'lambda', 'inter', 'groups', 'depth', 'qhead', 'mlp', 'mlp-ep', 'mlp-lr', 'fitprobe', 'knn', 'knnsame', 'interact', 'interdumpz', 'sdim'], 'probe-value-head-ceiling');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const TRAIN = arg('train', 'docs/artifacts/e184-out/e197-rows-4100.jsonl');
 const TEST = arg('test', 'docs/artifacts/e184-out/e197-rows-21000.jsonl');
 const LAM = Number(arg('lambda', 1)) || 1;
 const INTER_N = Math.max(0, Number(arg('inter', 6)) || 0);
 const MAXG = Number(arg('groups', 0)) || 0;
+const INTERDUMP = String(arg('interdumpz', ''));    /* §E211：把 4686 项的 z 全表落盘 ⇒ 用于"换向重叠"检验（同一项在两批独立标签上都立得住才算可迁移） */
 
 function load(p) { return readFileSync(p, 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)); }
 /* ⚠ `--dump --depth2` 现在会同时落 `lvl:1`（根决策 × 候选）与 `lvl:2`（第二手那一层）两种行。
@@ -160,7 +161,16 @@ function ci(x) { const m = mean(x); const s = Math.sqrt(x.reduce((p, q) => p + (
 const yWin = tr.map(r => r.win);
 const wFlat = solve(tr.map(mkFlat), yWin, flatDim, 0);
 const wFlatS = solve(tr.map(mkFlat), yWin, flatDim, 20260930);
-const sdim = topStateDims(wFlat, INTER_N);
+/* `--sdim=18,1,64,...`：**显式指定交互基要用哪些状态维**（§E211 的换向检验需要"按交互强度选维"这一档，而 §E198 的默认规则是"按 flat 的 |w| 取前 6"）。
+ *   ⚠ 用这一档时，指定的维度**只能来自训练带自己的统计量**，否则就是拿测试带的标签挑特征（泄漏）。 */
+const SDIM_ARG = String(arg('sdim', '')).split(',').map(x => x.trim()).filter(x => x !== '' && Number.isFinite(Number(x))).map(Number);
+/* ⚠ `--sdim` 的**个数必须等于 `--inter`**，否则基向量长度与 `interDim` 不符 ⇒ 打分器读到 undefined ⇒ 整列 NaN ⇒
+ *   argmax 永远停在第 0 手，印出 `inter 0.00 ±0.00`（今天真就这么废过一遍）。⇒ 响亮失败，不留静默。 */
+if (SDIM_ARG.length && SDIM_ARG.length !== INTER_N) {
+  console.error('⛔ `--sdim` 给了 ' + SDIM_ARG.length + ' 个维度，但 `--inter=' + INTER_N + '` ⇒ 两者必须一致（不一致会让交互基长度与求解维度不符，整列 NaN、读数假成 0.00）。');
+  process.exit(64);
+}
+const sdim = SDIM_ARG.length ? SDIM_ARG : topStateDims(wFlat, INTER_N);
 const mkInter = mkInterOf(sdim);
 const wInt = INTER_N ? solve(tr.map(mkInter), yWin, interDim, 0) : null;
 const wIntS = INTER_N ? solve(tr.map(mkInter), yWin, interDim, 20260930) : null;
@@ -245,11 +255,118 @@ if (MLP_H) {
     + '\n#   两遍（真/置换）从**同一初始化、同一打乱序列、同一超参**出发 ⇒ 唯一自由度 = 标签有没有被打乱。定种子 ⇒ 同 flag 逐字可复现。';
 }
 
+/* ===== §E210 · `--knn=K`：**不给"形状"任何借口的上界 —— 状态那 213 维到底值多少分**
+ * §E208 把"形状"排除了（线性 / 显式二阶 / 隐层都拿不到那八九成）。但"拿不到"有两种：
+ *   **(C1) 现有这 235 维里就没有那个交互信息** ⇒ 换任何头都白搭，要动的是**特征/落点函数**；
+ *   **(C2) 信息在里面，只是这些头的容量/表示没够** ⇒ 动特征之前还欠一次更贵的表示学习。
+ * 分法 = 用一枚**非参数查表头**（K 近邻，对目标函数不加任何平滑/线性假设，样本够就能逼近任意函数）：
+ *   · `knn(all)` = 在**全部 235 维**上量距离 ⇒ 状态块 + 动作块都给它；
+ *   · `knn(act)` = 只在**动作那 22 维**上量距离 ⇒ 状态块等于没有（它就是"无情景先验"的平滑版）；
+ *   · 两遍都各带一条**标签置换对照**（训练标签洗牌、距离不变 ⇒ 抹掉信息只留下"查表这件事本身"的膨胀）。
+ * ⇒ 要引的主数 = `regret(knn_act) − regret(knn_all)` **再减掉两边各自的置换对照**（同组四重配对）
+ *   = "**把状态那 213 维全交给一个无限容量的头，能多买回多少**"。这一格归零 ⇒ (C1) 成立，是实测不是推断。
+ * ⚠ 三条限制：① 近邻数是唯一新旋钮（`--knn`），K 太小 ⇒ 退化成记住自己（膨胀），太大 ⇒ 平滑过头；
+ *   ② 训练/测试是不同 seed 带 ⇒ 跨带的状态分布有差 ⇒ 距离会被"分布漂移"抬高，这会**低估** knn(all) 的收益（保守方向，可接受）；
+ *   ③ 距离用标准化后的欧氏（标准化只在训练带上算，与 §E197 同一份统计量）。*/
+const KNN_K = Math.max(0, Number(arg('knn', 0)) || 0);
+let eKnnAll = null, eKnnAllS = null, eKnnAct = null, eKnnActS = null, knnDiag = '', scKnn = null, knnRange = '';
+if (KNN_K) {
+  const mkMat = (rows, from, to) => {
+    const d = to - from, out = [];
+    for (const r of rows) { const z = new Float64Array(d); for (let j = from; j < to; j++) z[j - from] = nz(r, j); out.push(z); }
+    return out;
+  };
+  const yTr = tr.map(r => r.win);
+  const shuffleY = seed => { const y = yTr.slice(); let s2 = seed >>> 0;
+    const rr = () => { s2 ^= s2 << 13; s2 >>>= 0; s2 ^= s2 << 17; s2 ^= s2 >>> 5; s2 >>>= 0; return s2 / 4294967296; };
+    for (let i = y.length - 1; i > 0; i--) { const j = Math.floor(rr() * (i + 1)); const t = y[i]; y[i] = y[j]; y[j] = t; } return y; };
+  const knnSc = (TR, ys, q, STAT) => {
+    return (r) => {
+      const d = TR[0].length, x = new Float64Array(d);
+      for (let j = 0; j < d; j++) x[j] = nz(r, j + (d === DIM ? 0 : FS));
+      const bi = new Int32Array(KNN_K), bd = new Float64Array(KNN_K).fill(Infinity);
+      let worst = -1;
+      for (let i = 0; i < TR.length; i++) {
+        const t = TR[i]; let acc = 0;
+        for (let j = 0; j < d; j++) { const dd = x[j] - t[j]; acc += dd * dd; }
+        if (acc < bd[worst >= 0 ? worst : 0]) {
+          bi[worst >= 0 ? worst : 0] = i; bd[worst >= 0 ? worst : 0] = acc;
+          worst = 0; for (let w = 1; w < KNN_K; w++) if (bd[w] > bd[worst]) worst = w;
+        }
+      }
+      /* ⚠ 量程检查（这一条决定"没赚到"是**信息不在**还是**根本没有近邻可查**）：记最近邻距离与"几乎同一状态"的计数 */
+      if (STAT) { STAT.n++; STAT.s1 += Math.sqrt(bd[0]); STAT.sK += Math.sqrt(bd[KNN_K - 1] === Infinity ? bd[0] : bd[KNN_K - 1]); if (Math.sqrt(bd[0]) < 0.5) STAT.near++; if (bd[0] === 0) STAT.exact++; }
+      let s = 0, c = 0; for (let w = 0; w < KNN_K; w++) if (bd[w] < Infinity) { s += ys[bi[w]]; c++; }
+      return c ? s / c : 0;
+    };
+  };
+  const ALL = mkMat(tr, 0, DIM), ACT = mkMat(tr, FS, DIM);
+  const yShuf = shuffleY(20260930);
+  const scKA = knnSc(ALL, yTr, DIM), scKAS = knnSc(ALL, yShuf, DIM), scKc = knnSc(ACT, yTr, 22), scKcS = knnSc(ACT, yShuf, 22);
+  eKnnAll = evalSc(scKA); eKnnAllS = evalSc(scKAS);
+  eKnnAct = evalSc(scKc); eKnnActS = evalSc(scKcS);
+  scKnn = { all: scKA, allS: scKAS, act: scKc, actS: scKcS };
+  const STa = { n: 0, s1: 0, sK: 0, near: 0, exact: 0 }, STc = { n: 0, s1: 0, sK: 0, near: 0, exact: 0 };
+  evalSc(knnSc(ALL, yTr, DIM, STa)); evalSc(knnSc(ACT, yTr, 22, STc));
+  knnRange = '**近邻存在性（这一条决定"没赚到"是信息不在、还是没得查）**：'
+    + '全 235 维距离 ⇒ 最近邻均值 **' + (STa.s1 / STa.n).toFixed(2) + '** ‖ 第 K 邻 ' + (STa.sK / STa.n).toFixed(2)
+    + ' ‖ 最近邻 <0.5 的查询 ' + (100 * STa.near / STa.n).toFixed(1) + '% ‖ 逐位相同的 ' + (100 * STa.exact / STa.n).toFixed(1) + '%'
+    + '\n#    只动作 22 维 ⇒ 最近邻均值 ' + (STc.s1 / STc.n).toFixed(2) + ' ‖ 第 K 邻 ' + (STc.sK / STc.n).toFixed(2)
+    + ' ‖ <0.5 的 ' + (100 * STc.near / STc.n).toFixed(1) + '% ‖ 逐位相同 ' + (100 * STc.exact / STc.n).toFixed(1) + '%'
+    + (STa.near / STa.n < 0.10
+      ? '\n#  ⚠ **量程警告**：全 235 维上只有 ' + (100 * STa.near / STa.n).toFixed(1) + '% 的查询找得到"几乎同一个状态"的近邻 ⇒ knn(all) 与 knn(act) 其实查的是**两团不同的东西**，'
+        + '这条"状态块没价值"要降级成"**跨带上根本对不上号**（状态空间太散，查表头的分辨率不够）" ⇒ 不能直接当 (C1)。'
+      : '\n#  ⇒ 近邻是真存在的（' + (100 * STa.near / STa.n).toFixed(0) + '% 的查询命中同一状态）⇒ 这条"状态块收益在噪声内"是**有分辨率的** (C1) 读数。');
+  knnDiag = 'K=' + KNN_K + ' ‖ 训练 ' + tr.length + ' 行 ‖ all=235 维距离 ‖ act=只动作 22 维距离 ‖ 两脸各自同遍带标签置换对照';
+}
+/* ===== §E210b · `--knnsame=K`：**同带留一组**的查表上界（`--knn` 那版被量程否掉之后的正确版本）
+ * `--knn` 的发现：跨带（seed 4100→21000 那种）在 235 维上**几乎找不到近邻**（最近邻均值 7~9.5 个标准差，
+ *   `<0.5` 的只有 2.8~9.8%）⇒ 那一版"查表头"查的是一团随机云，**它给不出上界**（量程警告已把这条拦住）。
+ * ⇒ 正确做法：**池子换成"同一批留出组里、除本组以外的所有行"**（leave-one-group-out）⇒
+ *   状态重复度最高（同一段局、相邻回合），距离有意义；本组自己的行**排除**在外 ⇒ 不漏答案。
+ *   这一版才是"**如果不考虑任何表示限制、只看这 235 维能不能查出该出哪张**"的上界：
+ *     净兑现明显 > 0 ⇒ 信息在面里，是**跨带迁移/估计**的问题（C2）；
+ *     连它都 ≈ 0（且量程警告说近邻真的存在）⇒ **信息不在这 213 维里**（C1，实测而非推断）。 */
+const KNNSAME = Math.max(0, Number(arg('knnsame', 0)) || 0);
+let eKnnSame = null, eKnnSameS = null, knnSameDiag = '', scSame = null, scSameS = null;
+if (KNNSAME) {
+  const teM = te.map(r => { const z = new Float64Array(DIM); for (let j = 0; j < DIM; j++) z[j] = nz(r, j); return { r, z, k: keyOf(r) }; });
+  const zcache = new Map();                                     /* 同一行可能被评多次 ⇒ 标准化向量缓存 */
+  const zOf = r => { const kk = keyOf(r) + '#' + r.i; let v = zcache.get(kk); if (!v) { v = new Float64Array(DIM); for (let j = 0; j < DIM; j++) v[j] = nz(r, j); zcache.set(kk, v); } return v; };
+  const sameSc = (ys, ST) => (r) => {
+    const k = keyOf(r), x = zOf(r);
+    const bi = [], bd = [];
+    for (let i = 0; i < teM.length; i++) {
+      const it = teM[i]; if (it.k === k) continue;               /* ★ 本组自己的行必须排除：否则是"把答案查给自己" */
+      let acc = 0; for (let j = 0; j < DIM; j++) { const diff = x[j] - it.z[j]; acc += diff * diff; }
+      if (bi.length < KNNSAME) { bi.push(i); bd.push(acc); }
+      else { let mx = 0; for (let w = 1; w < KNNSAME; w++) if (bd[w] > bd[mx]) mx = w; if (acc < bd[mx]) { bd[mx] = acc; bi[mx] = i; } }
+    }
+    if (ST) { let m1 = Infinity; for (let w = 0; w < bd.length; w++) if (bd[w] < m1) m1 = bd[w]; ST.n++; ST.s1 += Math.sqrt(m1); if (Math.sqrt(m1) < 0.5) ST.near++; if (m1 === 0) ST.exact++; }
+    let s = 0; for (let w = 0; w < bi.length; w++) s += ys[bi[w]];
+    return bi.length ? s / bi.length : 0;
+  };
+  const ysSame = te.map(r => r.win);
+  const ysPerm = ysSame.slice();
+  { let s2 = 20260930 >>> 0; const rr = () => { s2 ^= s2 << 13; s2 >>>= 0; s2 ^= s2 << 17; s2 ^= s2 >>> 5; s2 >>>= 0; return s2 / 4294967296; };
+    for (let i = ysPerm.length - 1; i > 0; i--) { const j = Math.floor(rr() * (i + 1)); const t = ysPerm[i]; ysPerm[i] = ysPerm[j]; ysPerm[j] = t; } }
+  scSame = sameSc(ysSame, null); scSameS = sameSc(ysPerm, null);
+  eKnnSame = evalSc(scSame); eKnnSameS = evalSc(scSameS);
+  const STs = { n: 0, s1: 0, near: 0, exact: 0 };
+  evalSc(sameSc(ysSame, STs));
+  knnSameDiag = 'K=' + KNNSAME + ' ‖ 池子 = **同一留出带内、除本组以外**的 ' + te.length + ' 行（leave-one-group-out） ‖ 同遍带标签置换对照'
+    + '\n#   量程：最近邻均值 **' + (STs.s1 / Math.max(1, STs.n)).toFixed(2) + '** 个标准差 ‖ 最近邻 <0.5 的查询 **' + (100 * STs.near / Math.max(1, STs.n)).toFixed(1) + '%** ‖ 逐位相同 ' + (100 * STs.exact / Math.max(1, STs.n)).toFixed(1) + '%'
+    + (STs.near / Math.max(1, STs.n) < 0.10 ? '\n#  ⚠ 连同带都找不到近邻 ⇒ 这一版**仍然没有分辨率**，(C1)/(C2) 未判（状态空间本身太散，查表法在这张脸上不适用）'
+      : '\n#  ⇒ 近邻真存在 ⇒ 这一版的净兑现是**有分辨率的上界**');
+}
+
 console.log('# §E197/§E198 价值头能兑现上限的几成（训练 ' + tr.length + ' 行 / ' + trG.length + ' 组 → **留出** ' + te.length + ' 行 / ' + gs.length + ' 组 ‖ λ=' + LAM + ' ‖ 交互基 dim=' + INTER_N + '）');
 console.log('# 特征 = 现役那 ' + DIM + ' 维（状态 ' + FS + ' ‖ 动作 22）‖ 标签 = §E195 同一台仪器模拟出的赢率（一手偏离 + 关档延续）');
 console.log('# capture = (regret(net) − regret(head)) / regret(net)‖分母是被比较基线自己（第一版误用 net−rand，符号为负，报出过 383%）');
 console.log('# ⚠ 状态维在同一决策内对所有候选**相同** ⇒ 组内排序时抵消 ⇒ flat 的组内判别力只可能来自动作那 22 维'
-  + (MLP_H ? '\n# §E208 `--mlp=' + MLP_H + '`：' + mlpDiag : '\n# （`--mlp=0` ⇒ 本节形状照旧 = flat/inter 两档，与 §E197/§E198 出厂读数逐字相同）') + '\n');
+  + (MLP_H ? '\n# §E208 `--mlp=' + MLP_H + '`：' + mlpDiag : '\n# （`--mlp=0` ⇒ 本节形状照旧 = flat/inter 两档，与 §E197/§E198 出厂读数逐字相同）')
+  + (KNN_K ? '\n# §E210 `--knn=' + KNN_K + '`：' + knnDiag + '\n#   ' + knnRange : '')
+  + (KNNSAME ? '\n# §E210b `--knnsame=' + KNNSAME + '`：' + knnSameDiag : '') + '\n');
 console.log('| 模型 | regret(head) | **regret(net) − regret(head)** | 兑现率 | 组内相关 head↔win | 与网络同手 |');
 console.log('|---|---|---|---|---|---|');
 const row = (nm, e, c) => '| ' + nm + ' | ' + (100 * mean(e.headG)).toFixed(2) + ' | **' + (100 * mean(e.gainG)).toFixed(2) + ' ±' + (100 * ci(e.gainG)).toFixed(2) + '** | **'
@@ -263,6 +380,16 @@ if (eInt) {
 if (eMlp) {
   console.log(row('**MLP（同 235 维 ⊕ 一个 tanh 隐层 ' + MLP_H + '）§E208**', eMlp, withinCorr(scMlpR)));
   console.log(row('MLP · **标签置换对照**', eMlpS, withinCorr(scMlpP)));
+}
+if (eKnnAll) {
+  console.log(row('**kNN K=' + KNN_K + ' · 全 235 维距离（§E210 上界）**', eKnnAll, withinCorr(scKnn.all)));
+  console.log(row('kNN(all) · **标签置换对照**', eKnnAllS, withinCorr(scKnn.allS)));
+  console.log(row('**kNN K=' + KNN_K + ' · 只动作 22 维距离**（状态块等于没有）', eKnnAct, withinCorr(scKnn.act)));
+  console.log(row('kNN(act) · **标签置换对照**', eKnnActS, withinCorr(scKnn.actS)));
+}
+if (eKnnSame) {
+  console.log(row('**kNN 同带留一组 K=' + KNNSAME + '（§E210b 上界）**', eKnnSame, withinCorr(scSame)));
+  console.log(row('kNN(同带) · **标签置换对照**', eKnnSameS, withinCorr(scSameS)));
 }
 /* ★ **净兑现 = 同组配对减掉自己那条置换对照**。为什么必须减（换向遍教我的）：
  *   "随机但固定的一支动作权重"本身就能打败现役网络的组内排序 —— 当网络那侧的相关是 −0.009（=0）时，
@@ -304,8 +431,124 @@ console.log('| 完美（oracle） | regret ≡ 0.00 |');
 console.log('| 现役网络 argmax | regret = **' + (100 * capNet).toFixed(2) + ' ±' + (100 * ci(eFlat.netG)).toFixed(2) + '** |');
 console.log('| 随机挑一手（地板） | regret = ' + (100 * capRand).toFixed(2) + ' ‖ 网络比地板好 ' + (100 * (capRand - capNet)).toFixed(2) + ' ±' + (100 * ci(eFlat.randG.map((v, i) => v - eFlat.netG[i]))).toFixed(2) + 'pt |');
 console.log('| 组内相关：网络分 ↔ win | ' + withinCorr(r => r.net).m.toFixed(3) + ' ±' + withinCorr(r => r.net).ci.toFixed(3) + ' |');
+if (eInt) console.log('· inter 用的状态维（' + (SDIM_ARG.length ? '**外部指定 `--sdim`**（§E211：按带内交互强度挑的）' : '按 flat |w| 取前 ' + INTER_N + '，§E198 老规则') + '）：' + sdim.join(' ‖ '));
 
-if (eInt) console.log('· inter 选中的状态维（按 flat |w| 取前 ' + INTER_N + '）：' + sdim.join(' ‖ '));
+if (eKnnAll) {
+  /* ⭐ 本节主数：状态块的非参数价值 = (act − all) 这一差，**两边各自先减掉自己的置换对照**（同组四重配对）。
+   *    符号是反的：regret 越**小**越好 ⇒ "all 比 act 好多少" = regret(act) − regret(all)。 */
+  const netAll = eKnnAll.gainG.map((v, i) => v - eKnnAllS.gainG[i]);
+  const netAct = eKnnAct.gainG.map((v, i) => v - eKnnActS.gainG[i]);
+  const vAll = mean(netAll), vAllCi = ci(netAll), vAct = mean(netAct), vActCi = ci(netAct);
+  const d = netAll.map((v, i) => v - netAct[i]);
+  const dm = mean(d), dci = ci(d);
+  console.log('\n| **§E210 非参数上界（同组四重配对）** | pt |');
+  console.log('|---|---|');
+  console.log('| kNN(all) 净兑现（全 235 维） | **' + (100 * vAll).toFixed(2) + ' ±' + (100 * vAllCi).toFixed(2) + '** |');
+  console.log('| kNN(act) 净兑现（只动作 22 维） | ' + (100 * vAct).toFixed(2) + ' ±' + (100 * vActCi).toFixed(2) + ' |');
+  console.log('| ⭐ **状态块那 213 维的非参数价值** = all − act | **' + (100 * dm).toFixed(2) + ' ±' + (100 * dci).toFixed(2) + '** |');
+  console.log('  读法：' + (dm > dci && dm > 0
+    ? '**状态块确实带信息**（连查表头都能靠它多买回 ' + (100 * dm).toFixed(2) + 'pt）⇒ 那八九成是**表示/容量**问题（C2），不是"面里没有"（C1）'
+    : dm < -dci
+      ? '⚠ all **反而比 act 差** ⇒ 213 个状态维在跨带上主要是**噪声/漂移**（距离被它们主导）⇒ 这一遍读"状态块无用"要打折：先做距离归一（只用动作块 + 少量状态维）再判'
+      : '**状态块的收益在噪声内 ⇒ (C1)**：现有这 213 维里，连无限容量的查表头都挖不出"该出哪张要看局面"的信息 ⇒ 要动的是**特征/落点函数**，不是头'));
+  console.log('  ⚠ 这一格只在 `--knn` 打开时打印；K 是唯一的自由旋钮（K 太小 ⇒ 训练带上"认出自己"⇒ 膨胀，太大 ⇒ 平滑过头）。'
+    + '两脸共用同一个 K 与同一份置换 ⇒ 差值里不含"实现差异"。');
+}
+if (eKnnSame) {
+  /* ⭐ §E210b 主判据：同带留一组的查表头净兑现（减掉它自己的置换对照）—— 这才是"这 235 维里有没有可查的交互信息"的上界 */
+  const netS = eKnnSame.gainG.map((v, i) => v - eKnnSameS.gainG[i]);
+  const ms = mean(netS), cs = ci(netS);
+  const STs2 = { n: 0, s1: 0, near: 0, exact: 0 };
+  evalSc(sameSc(te.map(r => r.win), STs2));
+  const nearFrac = STs2.near / Math.max(1, STs2.n);
+  console.log('\n· ⭐ **§E210b 同带留一组查表头（无限容量、无表示假设）净兑现 = ' + (100 * ms).toFixed(2) + ' ±' + (100 * cs).toFixed(2) + 'pt**'
+    + ' ‖ 同遍的 `regret(net)` = ' + (100 * capNet).toFixed(2) + 'pt ⇒ 占上限 ' + (capNet > cs ? (100 * ms / capNet).toFixed(0) + '%' : '⚠ 分母不显著 ⇒ 不印比例')
+    + ' ‖ 量程：最近邻 <0.5 的查询 = ' + (100 * nearFrac).toFixed(1) + '%');
+  if (nearFrac < 0.10) console.log('  ⛔ **这一版仍然没有分辨率**（连同带都只有 ' + (100 * nearFrac).toFixed(1) + '% 的查询找得到"几乎同一个状态"）'
+    + ' ⇒ **不许据此判 (C1)**：查表法的前提是"同样的局面出现过"，而这 213 个连续维 + 这批 ' + te.length + ' 行根本不复现。'
+    + '\n  ⇒ 两版上界（跨带 `--knn` 与同带 `--knnsame`）**都被自己的量程检查否证**，这本身是一条结论：**这张脸高维到无法用非参数方法验货** ⇒ 要判 (C1)/(C2) 得换手段（下一档：全量二阶交互扫描 `--interact`，它不需要状态复现）。');
+  else console.log('  判读：' + (ms > cs && ms / Math.max(1e-9, capNet) > 0.15
+    ? '**信息确实在这 235 维里，是"跨带迁移 / 有限样本的估计"卡住了（C2）** ⇒ 换头之前先换训练配方'
+    : ms <= cs ? '**(C1) 实测成立**：现有 213 个状态维里没有"该出哪张要看局面"的可查信息'
+      : '信息有一点点、远不够 ⇒ 仍指向 (C1)'));
+  console.log('  ⚠ 这一版的池子是"同一留出带内除本组以外的行"⇒ 它**不是**泛化测试，是**信息存在性**测试。'
+    + '另注：它的**置换对照自己就是 +2.00±1.85pt（显著非零）**⇒ 又一次撞上 §E198 那件事（一个与结局无关的固定方向就能打败现役网络的组内排序）⇒ 只看减掉对照那一列。');
+}
+
+
+/* ===== §E211 · `--interact=1`：**全量二阶交互扫描**（不要求状态复现 ⇒ 量程问题解决后唯一还能用的判据）
+ * 两版查表上界都被"状态在这批数据里从不复现"否证 ⇒ 改问一个**不需要复现**的问题：
+ *   "在这 22×213 = 4686 个 (动作维 × 状态维) 交互项里，有没有任何**一项**能系统地移动'组内哪张卡更好'？"
+ * 估计量 = **组内（固定效应）一元回归**：把标签与交互项都按组去均值 ⇒ 组内比较，天然对齐 regret 的口径。
+ *   t̃ = x_s · (x_a − 组内均值 x_a)，rel = win − 组内均值 win ⇒ b = Σ t̃·rel / Σ t̃²，SE 用**按组聚类**的
+ *   sqrt(Σ_g (Σ_i t̃·rel)²)/den ⇒ z = b/SE。
+ * ⚠ 多重比较：4686 项里挑最大 |z| 必然虚高 ⇒ **同遍跑一条置换对照**（组内将 rel 重新洗牌：保留每组的标签集合与
+ *   动作/状态结构，只切断"哪张卡对应哪个标签"），报"真值 |z|>3 的项数 ‖ 置换 |z|>3 的项数"。
+ * ⇒ 判读：真值项数与置换同量级 ⇒ **现有面上连一个二阶交互都立不住** ⇒ (C1)（信息不在面里，至少 2 阶不在）；
+ *   真值明显多 ⇒ 交互在，是**估计/迁移**问题（C2），并把点名的那几项交给 DS 当特征依据。*/
+if (Number(arg('interact', 0)) === 1) {
+  const R = te.length;
+  /* 组内（固定效应）去均值：`rel` = win − 组内均值；`devA[i][a]` = 该行动作维 a − 组内均值（标准化后）。
+   *   状态维在组内恒定 ⇒ 只标准化、不去均值（去均值会把它抹成 0）。⇒ 项 = x_s · dev_a 正是"这张卡的相对价值随这个状态维怎么动"。 */
+  const gmap = new Map();
+  te.forEach((r, i) => { const k = keyOf(r); if (!gmap.has(k)) gmap.set(k, []); gmap.get(k).push(i); });
+  const GR = [...gmap.values()].filter(a => a.length >= 2);
+  const rel = new Float64Array(R), devA = te.map(() => new Float64Array(22));
+  const ZS = te.map(r => { const v = new Float64Array(FS); for (let s = 0; s < FS; s++) v[s] = (r.x[s] - mu[s]) / sg[s]; return v; });
+  for (const idx of GR) {
+    const n = idx.length; let mw = 0; const ma = new Float64Array(22);
+    for (const i of idx) { mw += te[i].win; for (let a = 0; a < 22; a++) ma[a] += te[i].x[FS + a]; }
+    mw /= n; for (let a = 0; a < 22; a++) ma[a] /= n;
+    for (const i of idx) { rel[i] = te[i].win - mw; for (let a = 0; a < 22; a++) devA[i][a] = (te[i].x[FS + a] - ma[a]) / sg[FS + a]; }
+  }
+  const REL = Array.from(rel);
+  const scan = (rl) => {
+    const out = [];
+    for (let s = 0; s < FS; s++) {
+      for (let a = 0; a < 22; a++) {
+        let den = 0; const perG = [];
+        for (let gi = 0; gi < GR.length; gi++) { const idx = GR[gi]; let num = 0;
+          for (const i of idx) { const t = ZS[i][s] * devA[i][a]; den += t * t; num += t * rl[i]; }
+          perG.push(num); }
+        let num0 = 0; for (const v of perG) num0 += v;
+        let v = 0; for (const q of perG) v += q * q;
+        const d = den > 1e-12 ? den : 1e-12;
+        const se = Math.sqrt(v) / d, bb = num0 / d;
+        out.push({ s, a, z: se > 0 ? bb / se : 0, bb, sdT: Math.sqrt(den / Math.max(1, R)) });
+      }
+    }
+    return out;
+  };
+  const real = scan(REL);
+  const cz0 = []; const ctlMaxList = [];
+  for (let p = 0; p < 3; p++) {
+    const perm = REL.slice();
+    let s3 = (20260930 + p * 7919) >>> 0; const rr3 = () => { s3 ^= s3 << 13; s3 >>>= 0; s3 ^= s3 << 17; s3 ^= s3 >>> 5; s3 >>>= 0; return s3 / 4294967296; };
+    for (const idx of GR) { const vals = idx.map(i => REL[i]); for (let i = vals.length - 1; i > 0; i--) { const j = Math.floor(rr3() * (i + 1)); const t = vals[i]; vals[i] = vals[j]; vals[j] = t; } idx.forEach((id, w) => { perm[id] = vals[w]; }); }
+    const c = scan(perm).map(o => Math.abs(o.z));
+    ctlMaxList.push(Math.max(...c));
+    for (let w = 0; w < c.length; w++) cz0[w] = Math.max(cz0[w] || 0, c[w]);
+  }
+  /* ⚠ 三遍置换取**逐位最大**当零分布上包络 ⇒ "真值超过它"才是真正的超出经验 null（单遍的 0 太乐观，4686 个检验的 max 本身是随机变量） */
+  const az = real.map(o => Math.abs(o.z)), cz = cz0;
+  const thr = 3, nReal = az.filter(x => x > thr).length, nCtl = cz.filter(x => x > thr).length;
+  const top = real.slice().sort((p, q) => Math.abs(q.z) - Math.abs(p.z)).slice(0, 6);
+  if (INTERDUMP) writeFileSync(INTERDUMP, JSON.stringify(real.map(o => [o.s, o.a, +o.z.toFixed(3), +o.bb.toFixed(5), +o.sdT.toFixed(4)])));
+  console.log('\n## §E211 · 全量二阶交互扫描（' + (FS * 22) + ' 项 (动作维 × 状态维)，组内固定效应 + 按组聚类 SE ‖ 留出 ' + R + ' 行 / ' + GR.length + ' 组）');
+  console.log('· max |z|：真值 **' + Math.max(...az).toFixed(2) + ' ‖ 零分布（3 遍组内置换、逐位取最大）' + Math.max(...cz).toFixed(2)
+    + ' ‖ 三遍各自的 max = ' + ctlMaxList.map(x => x.toFixed(2)).join(' ‖ '));
+  console.log('· |z| > ' + thr + ' 的项数：真值 **' + nReal + ' ‖ 零分布上包络 ' + nCtl + '（挑最大必然虚高 ⇒ 只认超出整堆零分布的）');
+  console.log('· 真值 top6：' + top.map(o => '动作维#' + o.a + ' × 状态维#' + o.s + ' z=' + o.z.toFixed(2)).join(' ‖ ')
+    + (INTERDUMP ? ' ‖ z 全表已导出 `' + INTERDUMP.split('/').pop() + '`（换向重叠才是这 ' + nReal + ' 项的生死判据）' : ''));
+  console.log('  判读：' + (nReal > Math.max(3, 2 * nCtl)
+    ? '**有交互项立得住（超出置换对照 ' + nReal + ' vs ' + nCtl + '）** ⇒ 交互确实在现有面上 ⇒ (C2)：换训练配方/表示，先别动特征'
+    : nReal <= nCtl + 2
+      ? '**没有任何一项二阶交互能超出"随机标签也能扫出这么大"的天花板** ⇒ (C1)（至少 2 阶不在面里）⇒ 要动的是**特征/落点函数**'
+      : '介于两者之间 ⇒ 证据不足，加带加局再判'));
+  console.log('  ⚠ 三条折价：① 只扫了**二阶**（动作 × 单个状态维）；三阶以上（如 卡 × 我的钱包 × 目标血量）没测；'
+    + '② 单维扫描会漏掉"只在合取时才有用"的组合（那正是需要隐层的理由，但 §E208 已量过隐层也拿不到）；'
+    + '③ `rel` 的组内去均值把"标签水平"消掉了 ⇒ 这条只回答"谁更好"，不回答"这一手整体多好"。');
+}
 
 /* ===== §E208 · `--fitprobe=1`：把"剩下那八成"拆成**两块可分辨的钱** =====
  * MLP 净增 ≈0 有两种成因，必须分开，否则会把结论写错：
