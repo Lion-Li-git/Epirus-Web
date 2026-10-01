@@ -42,20 +42,19 @@ jobs:
         run: node tools/spec-run.mjs
 
   np:
-    # ⚠️ 观察档（这条最要紧）：np 的 259 道门**目前不是"仓库属性"，而是"这台机器的属性"**。
-    # 2026-10-01 在**全新 clone**（只有入库文件、没有任何本机 .bak）上实测：
-    #     N人测试：通过 250 / 259   → exit 1
-    # 失败的 9 道依赖**没有入库**的对照包 / 真表：
-    #   D137 三把量具 · D139 击杀奖励实验台 · D141 破龟群栏 · D150 全层口径搬运量具 ·
-    #   D155 设防持续性栏（配对表解析 0 行） · D161 防御定价 · D163 防御质量三档 ·
-    #   D176 载重优点 veto（缺"起点包"当参照） · D200 5P 环境量具（"两粒包"跑不完）
-    # ⇒ 先把这事处理掉，再删下面这行 continue-on-error。两条路：
-    #   (a) 把 9 道要的对照包按 tools/keep-artifact.mjs 的规矩补进 docs/artifacts/kept/ 并记 MANIFEST.tsv；
-    #   (b) 或者让这 9 道在"对照包不在库"时**响亮印出并跳过** —— 本仓 D194 已为 `--only` 做过同形状的事
-    #       （"跳过必须印出来，partial 不许当全绿引用"）；让它们红成"缺料"，而不是红成"门坏了"。
-    # ⚠️ 在这之前，"259/259" 只在本机成立，**不要**写进给外部看的材料里。
-    # ⚠️ 另注：np 冷跑本机实测 457~595s（v1.5.309 那次认证 557.1s），2 核 runner 上更慢 ⇒ 给足余量。
-    continue-on-error: true
+    # ✅ 阻断档（2026-10-01 晚转正）。当初为什么只是观察档、以及凭什么转正，都留在这里：
+    #
+    # 【观察档的理由】np 的 259 道门原先是"**这台机器的属性**"，不是"仓库的属性"：
+    #   全新 clone（只有入库文件、没有任何本机 .bak）实测 **250 / 259 exit 1**；9 道门读的是被 gitignore 的本机产物
+    #   （D137 D139 D141 D150 D155 D161 D163 D176 D200）。根因**不是**"每道缺一份"，而是这些 bench 吃的是
+    #   **整个默认包列表**（tools/probe-kill-reward.mjs:39 / tools/probe-seat-caliber.mjs:27 / tools/np-test.mjs:5438 都写死 3~5 份）。
+    #   按谓词量出全部依赖：`grep -ohE docs/artifacts/[A-Za-z0-9._/-]+\.bak -r tools server`
+    #   ⇒ 50 个引用 / 45 个未入库 / 43 份盘上还在；45 份已按原路径入库 ⇒ 干净 clone **259 / 259 exit 0**。
+    #   ⚠️ 连带后果：干净 clone 会把被跟踪文件的 mtime 刷成"现在" ⇒ 45 份全落进 **D82** 的 24h 时窗 ⇒
+    #      最新条目的 `> 产物点名（D82）：` 行必须含全部 45 个名字 —— **入库与记账要一起做**。
+    #
+    # 【转正依据】runner 上实测绿两遍：**12m00s ‖ 16m46s**（2026-10-01，head 24b9f63 ‖ 5184b2b）。
+    #   ⚠️ 单道秒数不可与串行历史直接比（tools/gate-all.mjs 四档并发起跑）；timeout 60 分钟对 12~17 分钟余量足够。
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -67,10 +66,13 @@ jobs:
         run: node tools/np-test.mjs
 
   browser:
-    # ⚠️ 观察档：Chrome/CDP 这四台仪器此前**从没**在 CI 上跑过，第一次观察期按"不阻断"引入。
-    # 在 runner 上看到一次全绿之后，请删掉下面这行 continue-on-error —— 本仓的规矩是"先量后钉"，
-    # 而"永远不阻断的门"和"没有门"在交付上是同一件事。
-    continue-on-error: true
+    # ✅ 阻断档（2026-10-01 晚转正）。当初只是观察档，因为 Chrome/CDP 那四台仪器**从没**在 CI 上跑过。
+    # 【转正依据】runner 上 `smoke` + `battle` 绿两遍（**67s ‖ 70s**，windows-latest）。
+    # 选 windows-latest 的理由：GitHub 的 windows 镜像把 Chrome 装在**与仓库默认路径完全相同**的地方
+    #   （C:\Program Files\Google\Chrome\Application\chrome.exe）⇒ 与被认证的那台机器同构，不必传参数。
+    #   ⚠️ 但它不是"放哪都能跑"：tools/smoke.mjs / np-probe.mjs / remote-probe.mjs 原先各自硬编码
+    #   `file:///D:/code/Epirus-Web/index.html`，而 runner 检出到 `D:/a/<repo>/<repo>` ⇒ v1.5.310 起
+    #   已改成"从本文件位置现算"（与 battle-test/ui-probe 同款）。
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
