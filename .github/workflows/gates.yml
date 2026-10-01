@@ -66,13 +66,17 @@ jobs:
         run: node tools/np-test.mjs
 
   browser:
-    # ✅ 阻断档（2026-10-01 晚转正）。当初只是观察档，因为 Chrome/CDP 那四台仪器**从没**在 CI 上跑过。
-    # 【转正依据】runner 上 `smoke` + `battle` 绿两遍（**67s ‖ 70s**，windows-latest）。
-    # 选 windows-latest 的理由：GitHub 的 windows 镜像把 Chrome 装在**与仓库默认路径完全相同**的地方
-    #   （C:\Program Files\Google\Chrome\Application\chrome.exe）⇒ 与被认证的那台机器同构，不必传参数。
-    #   ⚠️ 但它不是"放哪都能跑"：tools/smoke.mjs / np-probe.mjs / remote-probe.mjs 原先各自硬编码
-    #   `file:///D:/code/Epirus-Web/index.html`，而 runner 检出到 `D:/a/<repo>/<repo>` ⇒ v1.5.310 起
-    #   已改成"从本文件位置现算"（与 battle-test/ui-probe 同款）。
+    # ⚠️ **10-01 深夜退回观察档**（千问复核发现 · 用户点头）：转阻断之后**非确定性**，不是内容问题。
+    #   实测台账（`actions/workflows/gates.yml/runs` + `commits/<sha>/check-runs`，取于 10-01 23:3x）：
+    #     8180c71（就是"转阻断"那一笔）browser=**failure** ‖ cffd8a1 success ‖ **1533a54（当前 HEAD，只动文档）failure**
+    #     ⇒ 转阻断后 3 次里红 **2** 次；两次失败都只跑 **43 秒**（绿的那两遍是 67 ‖ 70 秒）。
+    #   同一台仓库的**本机**连跑 3 遍 smoke/battle 全绿（12.3s ‖ 26~32s，10-01 23:26 实测）⇒ 红的是 runner，不是代码。
+    #   ⛔ 只拿到 annotation 一句"Process completed with exit code 1"——job log 要鉴权，复核时取不到 ⇒ **根因未定**。
+    #      首要嫌疑：`tools/smoke.mjs` 里那一串**固定 sleep**（导航后 1600ms、点击后 650ms、远程页 2500ms、select 后 500ms）
+    #      在慢 1.5~2 倍的 runner 上不够；但这是嫌疑，**没有日志不许当结论**。
+    #   ⇒ 为什么必须退回：一个 2/3 概率红的**阻断**档，会把"红"训练成噪音，下次真红没人看 ——
+    #     与本仓"永绿假守卫"（D199/D205 那一族）是同一种病的两面。**转正判据：连续 5 次绿**（当前计数从这次重新起算）。
+    continue-on-error: true
     runs-on: windows-latest
     timeout-minutes: 30
     steps:

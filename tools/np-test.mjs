@@ -4591,9 +4591,14 @@ t('D117 口径工具（v1.5.151）：防御类必须**从 rules.js 取表**（�
    * ② **装配是比 ε 更大的口径因素**：同一包同一 ε=0，镜像（5 席同包）电磁炮 **4.30/局**，
    *    真桌（1 冠 + 4 脚本）只有 **0.10/局**（43 倍）⇒ 一个口径点必须同时报**装配**，否则读数会被当成"包的能力"。 */
   const lb = readFileSync('tools/log-behavior.mjs', 'utf8');
-  ok(lb.indexOf('js/core/rules.js') >= 0 && lb.indexOf('RUL.CAT.DEFENSE') >= 0,
+  /* v1.5.312：读取实现挪进 `tools/log-reading.mjs`（真机栏与 `log-census.mjs` 共用一份）⇒ 这两枚静态钉跟着挪，
+   *   并且**加严**：`log-behavior` 里不许再留自己的手写能力项表。行为级复验在 **D216**（静态钉会被重构架空，光改钉词不算修好）。 */
+  const lr = readFileSync('tools/log-reading.mjs', 'utf8');
+  ok(lr.indexOf('js/core/rules.js') >= 0 && lr.indexOf('RUL.CAT.DEFENSE') >= 0,
     '防御类必须从规则表取（手写正则漏过真卡名 —— 本仓"同一份名单抄两遍"栽过三次，这是第四个同类隐患）');
-  ok(lb.indexOf('DEF_NAMES') >= 0 && lb.indexOf('取不到防御类卡') >= 0, '取不到必须响（不许静默退化成"数 0 个"）');
+  ok(lr.indexOf('取不到防御类卡') >= 0, '取不到必须响（不许静默退化成"数 0 个"）');
+  ok(lb.indexOf('./log-reading.mjs') >= 0 && lb.indexOf('const CAP = {') < 0,
+    '真机栏必须走那一份读取实现，**不许留自己的手写能力项表**（旧 9 项 `CAP` 漏掉了真机第 3、第 4 名激光剑/聚能环 ⇒ D216 行为级复验）');
   const bp = readFileSync('tools/behavior-profile.mjs', 'utf8');
   ok(bp.indexOf('FIELDS') >= 0 && bp.indexOf('for (const fld of FIELDS)') >= 0,
     '行为剖面必须能一次报多个装配（`--field=self,pool`）⇒ 否则"装配口径"永远缺一栏、读数继续被误读');
@@ -9639,6 +9644,57 @@ t('D211 §E169b 把"屯而不打"与"没钱打"分开数的量具有牙（`beadL
   ok(t6.beadLive > 0 && (t6.beadHeld + t6.beadBroke) > 0,
     '⑥ 真局地板：`bead=2` 那 10 局里三个计数器必须都活（实测 live=' + t6.beadLive + ' held=' + t6.beadHeld + ' broke=' + t6.beadBroke +
     '）⇒ 全 0 说明夹具过了但真引擎里接不上（本仓"夹具缺对比度"那一族）');
+});
+
+/* ===== D216（10-01 深夜 · 千问 · DS 交接件 §3 点名的三处 + 我复核时挖出的第四处）=====
+ * 判**行为**不判字符串：造一份**手算**夹具，跑两个入口，要求逐项计数、四个广度量、分母处理、桶不重叠全部命中手算值，
+ * 并且两入口打印的同一组数**逐字相同** —— "读取实现只有一份"这句话，只有跑出来的相等才算证据
+ * （两份同构实现必漂移是本仓反复栽的老病：D209 的人类采样器、§E178 的三台仪器都是靠"逐位相同"才敢并排读）。
+ * 手算依据：夹具里 AI 席（2..5）共 **12 条**原始计数，其中 **5 条是 `已淘汰`** ⇒ 真出手 **7 手，恰好 7 张不同卡各打一次**
+ *   ⇒ 均匀分布 ⇒ `H = ln 7 = 1.9459`、**G = exp(H) = 7.00**（解析值，不需要信工具的算术）
+ *   ‖ 前 3 = 3/7 = **42.9%** ‖ 防御族只有「八卦阵」= 1/7 = **14.3%** ‖ 卡表共 30 张 ⇒ 未出现 **23 张**。
+ * ⚠ 四条各治一处病：② `已淘汰` 进分母（DS §3.2）③ 两入口同源（DS §3.3）④ 「狙击枪」被 `/枪(?!法)/` 吃进"枪"（千问新查）
+ *   ⑤ 表外 token 不许静默丢（DS §3.1 的根：名单被抄第二遍）。 */
+t('D216 真机栏的读取只许一份实现：手算夹具四个量 + 两入口逐字相同 + `已淘汰` 不进分母 + 桶不重叠', function () {
+  const dir = mkdtempSync(join(tmpdir(), 'd216-'));
+  writeFileSync(join(dir, 'a.txt'),
+    '第 1 回合：玩家1=【ジ】  玩家2=【枪→玩家1】  玩家3=【狙击枪→玩家2】  玩家4=【八卦阵】  玩家5=【已淘汰】\r\n' +
+    '第 2 回合：玩家1=【ジ】  玩家2=【聚能环】  玩家3=【激光剑→玩家4】  玩家4=【已淘汰】  玩家5=【已淘汰】\r\n');
+  writeFileSync(join(dir, 'b.txt'),
+    '第 1 回合：玩家1=【ジ】  玩家2=【ジ】  玩家3=【已淘汰】  玩家4=【已淘汰】  玩家5=【蓄能】\r\n');
+  const run = function (argv) { return spawnSync(process.execPath, argv, { encoding: 'utf8', timeout: 120000 }); };
+  const rj = run(['tools/log-census.mjs', dir, '--json']);
+  eq(rj.status, 0, '① `log-census --json` 必须 exit 0（实测 ' + rj.status + ' ‖ ' + String(rj.stderr).slice(0, 160) + '）');
+  const J = JSON.parse(rj.stdout);
+  eq(J.games, 2, '① 局数');
+  eq(J.raw, 12, '① 原始计数（含 `已淘汰`，这是"剔之前有多少"的那个数）');
+  eq(J.elim, 5, '① `已淘汰` 必须单独计数而不是丢掉');
+  eq(J.hands, 7, '② **分母必须剔掉 `已淘汰`**（该是 7；若等于 raw 就是 DS §3.2 那条病复发）');
+  eq(J.kinds, 7, '① 出现的种数');
+  eq(J.G.toFixed(2), '7.00', '① G=exp(H) 必须等于解析值 7.00（7 项各一次 ⇒ 均匀）');
+  eq(J.top3.toFixed(1), '42.9', '① 前 3 占比 = 3/7');
+  eq(J.defense.share.toFixed(1), '14.3', '① 防御族 = 八卦阵 1 手 / 7（成员表也从规则表现取）');
+  eq(J.cardTableSize, 30, '① 卡表规模（这张表变了 ⇒ 未出现数就得跟着重看）');
+  eq(J.never.length, J.cardTableSize - J.kinds, '① 未出现卡数 = 卡表 − 出现过（两条必须自洽，不许一边手写）');
+  const g = J.dist.filter(function (o) { return o.card === '枪'; })[0];
+  const s = J.dist.filter(function (o) { return o.card === '狙击枪'; })[0];
+  eq(g && g.n, 1, '④ 「枪」只许 1 手（旧 `/枪(?!法)/` 会把「狙击枪」也吃进来 ⇒ 报成 2 = 同一手计两次）');
+  eq(s && s.n, 1, '④ 「狙击枪」独立成桶');
+  eq(Object.keys(J.unknown).length, 0, '⑤ 表外token 必须为 0（不为 0 就是"读不出"，不许静默丢手）');
+  /* ③ 两入口逐字相同：把 `log-behavior` 的文本按同一组量抠出来比 */
+  const rb = run(['tools/log-behavior.mjs', dir]);
+  eq(rb.status, 0, '③ `log-behavior` 必须 exit 0（实测 ' + rb.status + ' ‖ ' + String(rb.stderr).slice(0, 160) + '）');
+  const out = String(rb.stdout);
+  const grab = function (re) { const m = re.exec(out); return m ? m[1] : null; };
+  eq(grab(/有效出手 (\d+)\*\*/), String(J.hands), '③ 两栏的"有效手"必须同一个数');
+  eq(grab(/种类 \*\*(\d+)\*\*/), String(J.kinds), '③ 两栏的"种数"必须同一个数');
+  eq(grab(/前 3 \*\*([\d.]+)%\*\*/), J.top3.toFixed(1), '③ 两栏的"前 3"必须同一个数');
+  eq(grab(/G=exp\(H\) ([\d.]+)/), J.G.toFixed(2), '③ 两栏的 G 必须同一个数');
+  eq(grab(/占有效出手 ([\d.]+)%/), J.defense.share.toFixed(1), '③ 两栏的防御占比必须同一个数');
+  /* ⑥ 打错的开关必须响亮（仓规 v1.5.234：静默走默认席位 = 假读数）*/
+  eq(run(['tools/log-census.mjs', '--seat=2,3,4,5']).status, 64, '⑥ `log-census` 的 `--seat=`（少个 s）必须 exit 64');
+  eq(run(['tools/log-behavior.mjs', '--seat=2,3,4,5']).status, 64, '⑥ `log-behavior` 同样要拒（这两个入口以前根本没守卫）');
+  try { rmSync(dir, { recursive: true, force: true }); } catch (e) { /* 临时目录清不掉不影响判据 */ }
 });
 
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
