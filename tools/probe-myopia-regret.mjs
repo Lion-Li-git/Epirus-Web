@@ -96,7 +96,7 @@ const ALLOW_LEAK = argv.includes('--allowrngleak');
  * `--cover=1` = 对**全部候选**（实测均值 ~23 名）都跑同样 `REP` 条流，问两个数：
  *   ① P(真最优 ∈ 前 k 名)（k = KEEP / 8 / 12）；② 名单放宽后上限本身抬多少 pt。
  * ⚠ 两条内置对照，缺一条这两个数都不能引：
- *   · **随机短名单** `detSet`（确定性、不抽 `state.rng`）同尺寸取 max ⇒ `full − randK` 就是"池子变大本身的选取膨胀"；
+ *   · **随机短名单** `detSalt`（确定性、不抽 `state.rng`）同尺寸取 max ⇒ `full − randK` 就是"池子变大本身的选取膨胀"；
  *     真信号只看 `rise_topK − rise_randK`（= `topK − randK`），绝对 `rise` 一律不引（§E200/§E203 同一族）。
  *   · **地板** `mean(k/n)`：入围若与真最优无关，覆盖率就该是这个数。
  * ⚠ 只在**采样分支的最末尾**跑（`mineS`/`depth2`/自检全部算完之后）⇒ 关掉时逐字不变，打开时也不许动旧读数（用采样数复验）。 */
@@ -362,8 +362,7 @@ function runArm(arm, selfCheck) {
              于是"覆盖率随 `rep` 抬不抬"当场可分：抬 = 主要是标签噪声，不抬 = 主要是入围真漏了。 */
           a.covRec.push({ gid: gid, salt: ((g + 1) * 2654435761 ^ (n + 1) * 40503) >>> 0, n: nAll, trunc: nAll > KEEP ? 1 : 0, ks: [KEEP].concat(COVER_KS),
             w: sr.map(x => x.win).concat(tail.map(x => x.win)),
-            h: sr.map(x => x.hpTop).concat(tail.map(x => x.hpTop)),
-            rk: detSet(nAll, Math.min(KEEP, nAll), g, n) });
+            h: sr.map(x => x.hpTop).concat(tail.map(x => x.hpTop)) });
         }
         if (MEMISO) B.restoreBotMem(memSnap);          /* §E209b：还原点挪到**离开采样分支之前**（候选轮 + mineS + depth2 + 自检全都围住） */
         return pick;
@@ -391,7 +390,7 @@ const ci95 = x => 1.96 * sd(x) / Math.sqrt(Math.max(1, x.length)) * 100;
  *   ⇒ 覆盖率被"入围顺序"自己虚高（实测 rep=4→8 从 64.3% 掉到 42.9% 就是它：流越多平手越少，虚高退得越多）。
  *   现在平手用 `(决策盐 × 候选序号)` 的确定性哈希破 —— 与网络排名无关、也不抽 `state.rng`（§E191 同族），并**把平手率印出来**。
  * ⚠ 这里"前 6 名的 max"可能与主表 `oracle 那手`差一两格（主表用老的"先出现者胜"）⇒ 差值只在本表内部比。 */
-function covRow(rec, rep, keep) {
+function covRow(rec, rep, ks) {
   const v = rec.w.map(a => m0(a.slice(0, rep))), vh = rec.h.map(a => m0(a.slice(0, rep)));
   const key = i => ((rec.salt ^ Math.imul(i + 1, 2654435761)) >>> 0);
   const best = idxs => { let b = idxs[0];
@@ -399,15 +398,23 @@ function covRow(rec, rep, keep) {
       if (v[i] > v[b] || (v[i] === v[b] && (vh[i] > vh[b] || (vh[i] === vh[b] && key(i) < key(b))))) b = i; }
     return b; };
   const all = rec.w.map((_, i) => i);
-  const bAll = best(all), bNet = best(all.slice(0, Math.min(keep, rec.n))), bRand = best(rec.rk);
+  const bAll = best(all);
   let tie = 0; for (const i of all) if (v[i] === v[bAll] && vh[i] === vh[bAll]) tie++;
-  return { bAll: bAll, bNet: bNet, bRand: bRand, vNet: v[bNet], vRand: v[bRand], vAll: v[bAll], tie: tie > 1, n: rec.n };
+  const per = ks.map(k => {
+    const bNet = best(all.slice(0, Math.min(k, rec.n))), bRand = best(detSalt(rec.n, k, rec.salt));
+    return { k: k, vNet: v[bNet], vRand: v[bRand], hit: bAll < k ? 1 : 0, floor: Math.min(k, rec.n) / rec.n };
+  });
+  /* ⚠ `tie` 是"**全表 max 有没有并列**"，所以它只与 `bAll` 有关 ⇒ 上面那句"并列偏向谁"必须与候选顺序无关，
+     否则 `hit` 会被网络排名自己抬高（第一版就是这么虚高的，见 §E215 §4）。 */
+  return { bAll: bAll, per: per, vAll: v[bAll], tie: tie > 1, n: rec.n };
 }
-/* 确定性随机短名单对照：**不抽 `state.rng`**（§E191 同族），按 `(g,n,i)` 的 32 位哈希排序取前 k 名。
- * 同一格两次调用结果相同 ⇒ 与"网络前 k 名"是同一批候选、同一批流上的配对比较。 */
-function detSet(n, k, g, nn) {
+/* 确定性随机短名单对照：**不抽 `state.rng`**（§E191 同族），按 `(决策盐 × 候选序号)` 的 32 位哈希排序取前 k 名。
+ * 同一格两次调用结果相同 ⇒ 与"网络前 k 名"是同一批候选、同一批流上的配对比较。
+ * §E215 补：盐 = `(g+1)*2654435761 ^ (n+1)*40503`（与第一版 `(g,n,i)` 式子**逐位相同**，只是把序号那项留给 `key`）⇒
+ *   k=6/8/12 是**同一个排序的前 k 名**（嵌套）⇒ "名单放宽一档"这件事本身不带新随机。 */
+function detSalt(n, k, salt) {
   const idx = []; for (let i = 0; i < n; i++) idx.push(i);
-  const key = i => (((g + 1) * 2654435761) ^ ((nn + 1) * 40503) ^ ((i + 1) * 2246822519)) >>> 0;
+  const key = i => ((salt ^ ((i + 1) * 2246822519)) >>> 0);
   idx.sort((a, b) => key(a) - key(b));
   return idx.slice(0, Math.min(k, n));
 }
@@ -457,25 +464,25 @@ for (const r of rows) {
       if (!set.length) { console.log('     · ' + tag + '：**0 格** ⇒ 不给数'); continue; }
       console.log('     · **' + tag + '**（n=' + set.length + ' ‖ 候选数均值 ' + mean(set.map(x => x.n)).toFixed(1)
         + '）‖ 每行只在**前 `rep` 条流**上取 max（同一批决策、嵌套前缀 ⇒ 行与行只差标签噪声）');
-      console.log('       rep │ 平手率 │ P(真最优∈前' + ks.join('/') + ')（无平手那批：k=' + KEEP + '） │ 地板(前 ' + KEEP + ') │ 上限win 前' + KEEP + '/随机' + KEEP + '/全表 │ **配对(网络−随机)**');
+      console.log('       rep │ 平手率 │ 上限win 前' + KEEP + '/随机' + KEEP + '/全表 │ 每个 k 一组：**覆盖率 ‖ 该 k 自己的地板 ‖ 同尺寸配对（网络前 k − 随机 k）**');
       for (const rep of PRE) {
-        const R = set.map(x => covRow(x, rep, KEEP));
-        const cov = ks.map(k => { const arr = R.map(o => (o.bAll < k ? 1 : 0)); return (100 * mean(arr)).toFixed(1) + '±' + ci95(arr).toFixed(1); });
-        const uniq = R.filter(o => !o.tie);
-        const covU = (100 * mean(uniq.map(o => (o.bAll < KEEP ? 1 : 0)))).toFixed(1);
-        const floorK = 100 * mean(set.map(x => Math.min(KEEP, x.n) / x.n));
-        const pair = R.map(o => o.vNet - o.vRand);
-        console.log('       ' + rep + ' │ ' + (100 * mean(R.map(o => (o.tie ? 1 : 0)))).toFixed(1) + '% │ ' + cov.join(' │ ')
-          + '（' + uniq.length + ' 格：' + covU + '%） │ ' + floorK.toFixed(1) + '% │ '
-          + (100 * mean(R.map(o => o.vNet))).toFixed(1) + '/' + (100 * mean(R.map(o => o.vRand))).toFixed(1) + '/'
-          + (100 * mean(R.map(o => o.vAll))).toFixed(1) + ' │ **' + (100 * mean(pair)).toFixed(2) + ' ±' + ci95(pair).toFixed(2) + 'pt**');
+        const R = set.map(x => covRow(x, rep, ks));
+        const U = R.filter(o => !o.tie);
+        const cols = ks.map((k, j) => {
+          const hit = R.map(o => o.per[j].hit), fl = R.map(o => o.per[j].floor), pr = R.map(o => o.per[j].vNet - o.per[j].vRand);
+          return 'k=' + k + ' 覆盖 **' + (100 * mean(hit)).toFixed(1) + '±' + ci95(hit).toFixed(1) + '%**（地板 ' + (100 * mean(fl)).toFixed(1)
+            + '%' + (U.length ? ' ‖ 无平手 ' + U.length + ' 格：' + (100 * mean(U.map(o => o.per[j].hit))).toFixed(1) + '%' : '')
+            + '）‖配对 ' + (100 * mean(pr)).toFixed(2) + '±' + ci95(pr).toFixed(2) + 'pt';
+        });
+        console.log('       ' + rep + ' │ ' + (100 * mean(R.map(o => (o.tie ? 1 : 0)))).toFixed(1) + '% │ '
+          + (100 * mean(R.map(o => o.per[0].vNet))).toFixed(1) + '/' + (100 * mean(R.map(o => o.per[0].vRand))).toFixed(1) + '/'
+          + (100 * mean(R.map(o => o.vAll))).toFixed(1) + ' │ ' + cols.join(' ┊ '));
       }
       { const rep = PRE[PRE.length - 1];
-        const R = set.map(x => covRow(x, rep, KEEP));
-        const pair = R.map(o => o.vNet - o.vRand);
-        const gk = {}; for (let i = 0; i < set.length; i++) { (gk[set[i].gid] = gk[set[i].gid] || []).push(pair[i]); }
+        const R = set.map(x => covRow(x, rep, ks));
+        const gk = {}; for (let i = 0; i < set.length; i++) { (gk[set[i].gid] = gk[set[i].gid] || []).push(R[i].per[0].vNet - R[i].per[0].vRand); }
         const gm = Object.keys(gk).map(k2 => mean(gk[k2]));
-        console.log('       ‖ 同一配对按**局**聚类的区间（' + gm.length + ' 局，每局先取均值）：±'
+        console.log('       ‖ 配对(k=' + KEEP + ') 按**局**聚类的区间（' + gm.length + ' 局，每局先取均值）：±'
           + (1.96 * sd(gm) / Math.sqrt(Math.max(1, gm.length)) * 100).toFixed(2) + 'pt ⇒ 表里那行按决策为独立单元，是**下界精度**');
       }
       console.log('       ⚠ "全表 − 前 ' + KEEP + ' 名"那类**绝对抬升含选取膨胀**（池子从 ' + KEEP + ' 名变 ' + mean(set.map(x => x.n)).toFixed(0)
