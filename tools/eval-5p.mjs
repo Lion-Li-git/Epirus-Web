@@ -745,7 +745,10 @@ console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
  * 只在旗标给出时写文件，stdout 一字不加 ⇒ 与老口径逐字相同。 */
 if (FLAG['dump-per']) {
   const lines = ['#eval5p-percombo', '#seed=' + SEED, '#games=' + GAMES, '#n=' + N, '#pool=' + POOL_MODE,
-    '#every=' + EVERY, '#field=' + (FIELD || '-'), '#file=' + FILE,
+    /* v1.5.325 §E246（千问 10-02 夜班撞上来的）：表头**必须能唯一确定装配**。
+     * 原来少了 `#mode` 这一维 ⇒ 把 multi 的落盘和 long 的落装配对，这把尺自己看不见（两边的 seed/桌数一模一样），
+     * 而跨模式的 1st 差好几 pt —— 正是本仓"结果对、理由错"那一族。加一行，旧落盘不受影响（读侧按 key 取）。 */
+    '#mode=' + (MODE || 'multi(默认)'), '#every=' + EVERY, '#field=' + (FIELD || '-'), '#file=' + FILE,
     '#swap=' + (SWAP || '-'), '#arm\tidx\tnames\tgames\tfirst\tstrict'];
   for (const s of [{ arm: 'subject', r: champ }, { arm: 'ctrl', r: ctrl }]) {
     s.r.perCombo.forEach(function (c, i) {

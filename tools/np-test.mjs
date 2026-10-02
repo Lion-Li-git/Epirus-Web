@@ -1105,6 +1105,54 @@ t('D219 「6 珠悬崖」回归护栏（v1.5.318）：现役冠军决策时 ep �
   ok(peak <= 14, '决策时 ep 峰值必须 <= 14（实测 ' + peak + '，基线 12）');
 });
 
+t('D220 深经济对手必须能放上**训练桌**（v1.5.325 · §E237 · DS 交接 (W) 假设的可执行版本）：`EPIRUS_ECON_OPPS` 默认关 + 名字不认识必须响 + 开档产物自证', function () {
+  /* 病（读出来的）：训练时那 9 条 `OPPS` 里没有 `deepsaver` —— `farmer` 只攒不还手、`heavyfire` ep≤2（贵卡分支永不触发），
+   *   而"会攒到 5 珠并且真花出去"的脚本**只活在考卷里**（`eval-5p` 文件头明写池子含 deepsaver）
+   *   ⇒ 训练世界里"攒钱"既没有回报来源也没有威胁来源 ⇒ DS 的 (W)/(R) 分叉以前**根本跑不了**。
+   * 纪律与 D130/§E127 的 `counter-ops`/`ring-ops` 逐字同形：默认关 ⇒ `OPPS` 一字不变；要的对手不存在 ⇒ `exit 4`。 */
+  ok(Bots && typeof Bots.pickDeepSaver === 'function' && typeof Bots.pickDeadlineBurst === 'function' &&
+    typeof Bots.pickEarlyPressure === 'function',
+    '三枚深经济脚本必须真在 `EpirusBots` 里（不在就是 train-3p 引用了不存在的名字）');
+  /* ① 行为：`deepsaver` 值钱就值钱在"**攒得到、并且真兑现**"——把它改成随手花 = 量具自己没了 */
+  const mk = ep => { const s = S.createState('multi', { next: mulberry32(11) }, 5); s.p[0].ep = ep; return s; };
+  const poor = mk(1), poorLegal = Play.legalActions(poor, 0).filter(x => x.affordable);
+  ok(poorLegal.some(x => x.key === R.SK.BIG_T) === false, '构造态：1 珠时大雷必须**不可负担**（否则"攒"这条空转）');
+  const p1 = Bots.pickDeepSaver(poor, 0, poorLegal);
+  ok(p1 && (p1.key === R.SK.JI || p1.key === R.SK.CHARGE), '付不起大雷时必须攒（实测出 ' + (p1 && p1.key) + '）');
+  const rich = mk(9), richLegal = Play.legalActions(rich, 0).filter(x => x.affordable);
+  ok(richLegal.some(x => x.key === R.SK.BIG_T) === true, '构造态：9 珠时大雷必须可负担（否则"兑现"这条空转）');
+  eq(Bots.pickDeepSaver(rich, 0, richLegal).key, R.SK.BIG_T, '付得起就必须放大雷 ⇒ 这才叫"真兑现"的威胁来源');
+  /* ② 接线：默认关 ⇒ 源里走的是空串；开了 ⇒ 真推进 fitness 的对手表，并且**产物自带这臂上了谁** */
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(t3.indexOf("EPIRUS_ECON_OPPS || ''") >= 0, '必须默认空（不设 ⇒ 一个对手都不加，历史臂逐位可复现）');
+  ok(t3.indexOf("'EPIRUS_ECON_OPPS'") >= 0, '必须进 SELF_ENV_KEYS（否则黑键侦测会判它"传了没人读"）');
+  ok(/EPIRUS_ECON_OPPS 里有不认识的名字[\s\S]{0,200}process\.exit\(4\)/.test(t3), '名字不在表里必须 exit 4（少一个 = 一根空枪）');
+  ok(t3.indexOf('for (const o of ECON_OPPS) OPPS.push(o)') >= 0, '开了必须真推进 `OPPS`（推进别处 = 死作用点）');
+  const dir = mkdtempSync(join(tmpdir(), 'd220-')), out = join(dir, 'arm.js');
+  const on = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd220on', EPIRUS_ECON_OPPS: 'deepsaver,deadlineBurst', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: out, EPIRUS_PUBLISH: '' }), encoding: 'utf8', timeout: 300000 });
+  eq(on.status, 0, '开了要跑得通（实测 status=' + on.status + ' · ' + String(on.stdout || '').slice(-160) + '）');
+  ok(/\[econ-ops\] .*已进训练桌：econ:deepSaver,econ:deadlineBurst.*OPPS 从 9 个变 11 个/.test(String(on.stdout || '')),
+    '必须印出进了哪几个、桌变大（不印 = 又一根暗旋钮）');
+  const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(out, 'utf8'));
+  ok(!!jm, '产物要能读出 META（读不出就是这条门自己瞎了）');
+  const mt = JSON.parse(jm[1]);
+  ok(mt.recipe && Array.isArray(mt.recipe.econOpps) && mt.recipe.econOpps.length === 2,
+    '产物要自带"这臂的训练桌上放了哪几个深经济对手"（实测 ' + JSON.stringify(mt.recipe && mt.recipe.econOpps) + '）');
+  /* ③ 反面：写错名字必须**当场响**，不许静默少放一个对手（这正是本仓烧过三臂的那一族） */
+  const bad = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd220bad', EPIRUS_ECON_OPPS: 'deepsaver,nosuchbot', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: out }), encoding: 'utf8', timeout: 120000 });
+  eq(bad.status, 4, '不认识的卡名必须 exit 4（实测 ' + bad.status + '）');
+  /* ④ 关档：不设这个键时**一行都不许印**（"开了没生效"与"没开却在讲话"都是假信号） */
+  const off = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd220off', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: out, EPIRUS_PUBLISH: '' }), encoding: 'utf8', timeout: 300000 });
+  eq(off.status, 0, '关档要跑得通');
+  ok(String(off.stdout || '').indexOf('[econ-ops]') < 0, '关档不许印 econ-ops（印了 = 默认分布被悄悄改了）');
+  const jmOff = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(out, 'utf8'));
+  const mtOff = JSON.parse(jmOff[1]);
+  ok(mtOff.recipe && mtOff.recipe.econOpps === null, '关档产物的 recipe 必须写 null（实测 ' + JSON.stringify(mtOff.recipe && mtOff.recipe.econOpps) + '）');
+});
+
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {
   /* 真实事故（v1.3.48）：一次测试跑把 js/bundled-champion*.js 覆写成测试冠军并被提交。
    * v1.3.54 又发现两个同类缺口，都只在"跑完看 git status"时才显形：

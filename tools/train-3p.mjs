@@ -89,6 +89,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
+  'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
@@ -763,6 +764,41 @@ if (RING_OPPS.length) {
     ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（判据：产物跑 probe-dead-term --key=ringW 看 0/9 有没有变）');
 }
 
+/* ===== §E236（v1.5.325 · qoder 10-02 夜班）：**把"会攒并且真兑现"的对手放上训练桌** `EPIRUS_ECON_OPPS` =====
+ * 病（读出来的，不是猜的）：训练时那 9 条 `OPPS`（上面那份表）里**没有 `deepsaver`**——
+ *   `farmer` 只攒不还手、`heavyfire` 会还手但 ep≤2（贵卡分支永不触发），
+ *   而**能攒到 5 珠并真把它花出去**的脚本只活在**考卷**里（`eval-5p` 的池子明确含 deepsaver，见其文件头）。
+ *   ⇒ 训练世界里"攒钱"从来没有回报来源，也从来没有威胁来源 —— 这正是 DS 交接 §3 那个 (W) 分叉的**可执行版本**：
+ *   要么"攒到 5"在这个分布里本来就不划算（那是对手分布问题，不该拿奖励硬拧），要么划算（那奖励侧才有意义）。
+ * 口径：`EPIRUS_ECON_OPPS=deepsaver` ‖ `=deepsaver,deadlineBurst`（逗号分隔，名字在下面这张表里）；
+ *   ⚠️ **不写死 1/2 档**：档名会把"加了谁"埋进数字里，而今晚要问的正是"是哪一型对手在施压"。
+ * 纪律与 `EPIRUS_COUNTER_OPPS`/`EPIRUS_RING_OPPS` 逐字同形：
+ *   默认关 ⇒ `OPPS` 一字不变（历史臂仍可逐位复现）；名字不在表里 ⇒ **`exit 4` 点名**（少一个就是一根空枪）。 */
+const ECON_OPP_TABLE = {
+  deepsaver: { name: 'econ:deepSaver', sel: Bots.pickDeepSaver },         // 会攒 + 会放大雷（考卷里那枚深经济对手）
+  deadlineBurst: { name: 'econ:deadlineBurst', sel: Bots.pickDeadlineBurst }, // 攒到第 ECON_B(=6) 回合全额兑现
+  earlyPressure: { name: 'econ:earlyPressure', sel: Bots.pickEarlyPressure }   // 从第 1 回合就全额兑现（与上一枚只差"第几回合花"）
+};
+const ECON_OPPS = String(process.env.EPIRUS_ECON_OPPS || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+  .map(function (nm) {
+    const o = ECON_OPP_TABLE[nm];
+    if (!o) {
+      console.error('[train-3p] ⛔ EPIRUS_ECON_OPPS 里有不认识的名字：' + nm +
+        '（合法的是 ' + Object.keys(ECON_OPP_TABLE).join(',') + '）⇒ 拒绝静默少放对手');
+      process.exit(4);
+    }
+    if (typeof o.sel !== 'function') {
+      console.error('[train-3p] ⛔ ' + o.name + ' 在 EpirusBots 里不是一个函数 ⇒ 拒绝静默空转');
+      process.exit(4);
+    }
+    return o;
+  });
+if (ECON_OPPS.length) {
+  for (const o of ECON_OPPS) OPPS.push(o);
+  console.log('[econ-ops] "会攒并且真兑现"的对手已进训练桌：' + ECON_OPPS.map(function (o) { return o.name; }).join(',') +
+    ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（判据：产物的**决策时 ep 均值 / 大雷出手**，见日志 §E236 预注册）');
+}
+
 /* ===== §E124（v1.5.279 · qoder 0928 下午班）：**整桌同原型** `EPIRUS_OPP_BLOCK` 的下达（默认关）=====
  * 与 `EPIRUS_COUNTER_OPPS` 的区别要说清：那根改的是**名单**（有谁），这根改的是**桌子的形状**
  * （一局的 N−1 席是不是同一个原型）⇒ 后者才让"一局 = 一个环境"第一次成为训练里的对象。
@@ -1386,6 +1422,9 @@ const meta = {
     selKeepCastKeys: (SEL_KEEP > 0 ? SEL_KEEP_CAST_KEYS : null),   // v1.5.266：出手口径名单（环/蓄能不打血）
     kill: KILL_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     counterOpps: COUNTER_OPPS.map(function (o) { return o.name; }),   // v1.5.172：这臂的训练桌上放了哪几个判据原型
+    /* v1.5.325 §E237：这臂的训练桌上有没有"会攒并且真兑现"的深经济对手（默认关 ⇒ `null`，产物自证）。
+     * ⚠️ 与 `counterOpps` 分开写是故意的：那三个是**行为门原型**（判"被龟壳打死"），这三个是**经济威胁**（判"攒钱值不值"）。 */
+    econOpps: (ECON_OPPS.length ? ECON_OPPS.map(function (o) { return o.name; }) : null),
     bigtChainW: BIGT_CHAIN_REQ,   // v1.5.187：这臂有没有给"连带"付钱（0 = 出厂口径）
     /* v1.5.194：这臂是**在哪套规则下训的**。写在最显眼处 —— 否则第二天没人知道这粒冠军学过击杀奖励，
      * 拿回现状引擎里一评就成了"冠军莫名变弱"的悬案。 */
