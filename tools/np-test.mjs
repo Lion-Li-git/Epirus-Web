@@ -7434,6 +7434,40 @@ t('D168 包 META 的读取必须扛得住**嵌套**与**线上槽的手改损坏
       f + ' 的 META 必须能被解析出 ≥8 个顶层键（**这两个文件就是当初崩的现场** ⇒ 本门防回归）');
   }
 
+  /* ③b（10-03 夜班 §E261 新增）：**线上槽必须严格可解析**（不走容错），且**一条警告都不许印**。
+   *      为什么加：v1.5.256 把两个包的引号补回来之后，容错路其实只在夹具上走；但旧文本把"源文件是红线包"
+   *      硬写在通用警告里 ⇒ 我把单元测试的 `unit-broken` 念成了"生产缺陷 + 待用户裁定"，还写进了日志。
+   *      这条腿把"线上槽是干净的"钉成事实：**它红了就是真有人手改了包**，不会再是文本错觉。 */
+  const warnSink = [];
+  const realWarn = console.warn;
+  console.warn = function (s) { warnSink.push(String(s)); };
+  try {
+    for (const f of ['js/bundled-champion-3p.js', 'js/bundled-champion.js']) {
+      const src = readFileSync(f, 'utf8');
+      const seg = AUDIT.extractJsonObject(src, 'EPIRUS_CHAMPION_3P_META') || AUDIT.extractJsonObject(src, 'EPIRUS_CHAMPION_META');
+      let strictOk = true;
+      try { JSON.parse(seg); } catch (e) { strictOk = false; }
+      ok(strictOk, f + ' 的 META 必须**严格** JSON.parse 得动（v1.5.256 的修复要站住；红了=有人手改过线上槽，不是"容错路失效"）');
+      AUDIT.parseMetaTolerant(seg, f);
+    }
+    ok(warnSink.length === 0, '读**两个真线上槽**时一条容错警告都不许印（实测印了 ' + warnSink.length + ' 条：'
+      + (warnSink[0] || '').slice(0, 90) + '）');
+  } finally { console.warn = realWarn; }
+
+  /* ⑤ 警告文本必须**按 label 分岔**（合成夹具不许被念成"线上槽损坏"，真线上槽的措辞也不能丢） */
+  const say = [];
+  const rw2 = console.warn;
+  console.warn = function (s) { say.push(String(s)); };
+  try {
+    AUDIT.parseMetaTolerant('{"a":1,broken:"v"}', 'unit-broken');
+    AUDIT.parseMetaTolerant('{"a":1,broken:"v"}', 'js/bundled-champion-3p.js');
+  } finally { console.warn = rw2; }
+  eq(say.length, 2, '两条合成分岔都要各印一条（实测 ' + say.length + '）⇒ 抽取式失效时这条要响，不许静默');
+  ok(say[0].indexOf('红线包') < 0 && say[0].indexOf('不是生产缺陷') >= 0,
+    '⑤a **夹具 label** 的警告不许说"线上槽/红线包损坏"（实测：' + say[0].slice(0, 120) + '）');
+  ok(say[1].indexOf('线上槽文件') >= 0,
+    '⑤b 真的 `js/bundled-champion*` 损坏必须仍响亮指向"由用户裁定"（实测：' + say[1].slice(0, 120) + '）');
+
   /* ④ promote-champion 必须走扫描器：不许再留**读 META 的懒惰正则**，也不许残留旧的 `metaM` 变量 */
   const P = readFileSync('tools/promote-champion.mjs', 'utf8');
   ok(/extractJsonObject\(src, 'window\.EPIRUS_CHAMPION_3P_META'\)/.test(P), 'promote 必须用扫描器定位 META');
