@@ -81,7 +81,20 @@ const REF = {
   defSpam: () => (state, pid, legal) => { const a = aff(legal); if (!a.length) return null;
     const d = a.filter(x => CT.catByKey[x.key] === 'defense'); return d.length ? d[0] : a[0]; },
   atkSpam: () => (state, pid, legal) => { const a = aff(legal); if (!a.length) return null;
-    const k = a.filter(x => CT.catByKey[x.key] === 'attack'); return k.length ? k[0] : a[0]; }
+    const k = a.filter(x => CT.catByKey[x.key] === 'attack'); return k.length ? k[0] : a[0]; },
+  /* 10-02（DS）：**"攒够就去买解"** —— `saver`/`spender` 这一对在这根轴上是**结构性瞎的**：
+   * `saver` 只攒、从不买任何东西；`spender` 只花、从不留珠 ⇒ "**先攒后买解**"这条策略
+   * **在两枚探针里都不存在**，于是 `saver − spender` 测不出经济轴，哪怕它真的存在。
+   * 而"解"里**确实有一件贵货**：`避雷针`（`SK.ROD`，**4 珠**，`CAT.SPECIAL` 但功能是防御 ——
+   * "当回合**雷系技能全部无效**，雷系使用者受 1 电伤并**回馈ジ**；否则 3 回合内免雷"），
+   * 而规则表里有**结构化的雷系族** `LIGHTNING = [RAILGUN, MINI_T, BIG_T]`（`js/core/rules.js:104`），
+   * `deadlineburst` 的爆发正是其中的 `BIG_T`（2 点 `DMG.ELECTRIC`）⇒ **"攒到 4 珠再买硬解"是可测的**。
+   * ⚠️ 它**不在默认 `--refs` 里** ⇒ 默认输出与上一版仍然逐字相同（要用请显式 `--refs=` 带上它）。 */
+  rodHold: () => (state, pid, legal) => { const a = aff(legal); if (!a.length) return null;
+    const rod = a.filter(x => x.key === CT.RUL.SK.ROD);
+    if (rod.length) return rod[0];                                   /* 攒够就买"对雷系硬解" */
+    const ji = a.filter(x => x.key === CT.RUL.SK.JI);
+    return ji.length ? ji[0] : null; }                               /* 否则攒钱 */
 };
 for (const r of REFS) if (!REF[r]) { console.error('⛔ 参照策略 `' + r + '` 不存在（可用：' + Object.keys(REF).join(',') + '）'); process.exit(3); }
 
