@@ -11,7 +11,8 @@
  *   用途：判 `docs/HANDOFF-2026-09-19.md` §2.1 的「场B 清场 ↔ 抗只枪单调互斥」是不是**根本**的。
  * 用法：node tools/probe-aggr.mjs [GAMES=40] 包...（环境变量 AGGR_HOOK=attack|turtle）
  */
-import { sandbox, mulberry32, loadChamp, aggressionProfile } from './audit-lib.mjs';
+import { rejectUnknownFlags, sandbox, mulberry32, loadChamp, aggressionProfile } from './audit-lib.mjs';
+rejectUnknownFlags(process.argv.slice(2), [], 'probe-aggr');   /* v1.5.323 */
 const W = sandbox();
 const R = W.EpirusRules, S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay;
 const OLD = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.DRAIN];

@@ -21,7 +21,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { build } from './probe-layer-caliber.mjs';
-import { landShareOf } from './audit-lib.mjs';
+import { rejectUnknownFlags, landShareOf } from './audit-lib.mjs';
+rejectUnknownFlags(process.argv.slice(2), ['dir', 'games', 'packs', 'reach-games', 'sample'], 'probe-g-collapse');   /* v1.5.323 */
 
 const arg = function (k, d) { const h = process.argv.find(function (a) { return a.indexOf('--' + k + '=') === 0; }); return h ? h.split('=')[1] : d; };
 const GAMES = Number(arg('games', 120));

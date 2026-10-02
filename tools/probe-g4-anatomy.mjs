@@ -30,6 +30,7 @@
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { duelAssembly } from './v2v4-lib.mjs';
+import { rejectUnknownFlags } from './audit-lib.mjs';   /* v1.5.323：输入消毒层（仓规：不认识的 -- 参数必须响亮失败） */
 
 const REPO = process.env.EPIRUS_REPO || './';
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map };
@@ -43,6 +44,7 @@ const R = sb.window.EpirusRules, S = sb.window.EpirusState, Play = sb.window.Epi
 const D = { S: S, Play: Play, T: T, R: R, B: B };
 
 const argv = process.argv.slice(2);
+rejectUnknownFlags(argv, [], 'probe-g4-anatomy');   /* v1.5.323 */
 const GAMES = Number(argv[0] && /^\d+$/.test(argv[0]) ? argv.shift() : 60);
 const FILES = argv.length ? argv : ['js/bundled-champion-3p.js'];
 const SEED0 = Number(process.env.G4_SEED0 || 90210);

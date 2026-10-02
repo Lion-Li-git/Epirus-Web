@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 /* v1.5.132：V1/V2/V4 的装配抽到**单一来源** `tools/v2v4-lib.mjs`（探针与 `np-test D105` 共用一份实现）。 */
 import { ASSEMBLIES, playAssembly, rates } from './v2v4-lib.mjs';
+import { rejectUnknownFlags } from './audit-lib.mjs';   /* v1.5.323：输入消毒层（仓规：不认识的 -- 参数必须响亮失败） */
 const REPO = process.env.EPIRUS_REPO || './';
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map };
 sb.window = sb; sb.globalThis = sb;
@@ -23,6 +24,7 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, Play = sb.window.EpirusPlay,
   T = sb.window.EpirusTrainer, P = sb.window.EpirusPolicy, B = sb.window.EpirusBots, A = R.SK;
 const argv = process.argv.slice(2);
+rejectUnknownFlags(argv, [], 'probe-ring-ablate');   /* v1.5.323 */
 const N = Number(argv[0] && /^\d+$/.test(argv[0]) ? argv.shift() : 120);
 const FILES = argv.length ? argv : ['js/bundled-champion-3p.js'];
 const SEED = Number(process.env.CROWD_SEED || 7777);

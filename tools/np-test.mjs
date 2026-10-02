@@ -971,8 +971,38 @@ t('D218 研究工具的旗标登记结构（v1.5.318）：读了却没登记的�
   const quoted = function (s) { const p = s.split(String.fromCharCode(39)); const out = [];
     for (let i = 1; i < p.length; i += 2) out.push(p[i]); return out; };
   const grab = function (src, needle) { const out = []; const q = String.fromCharCode(39); let i = -1;
-    while ((i = src.indexOf(needle, i + 1)) >= 0) { const j = src.indexOf(q, i + needle.length); const k2 = src.indexOf(q, j + 1);
-      if (j > 0 && k2 > j) out.push(src.slice(j + 1, k2)); } return out; };
+    while ((i = src.indexOf(needle, i + 1)) >= 0) { const j = src.indexOf(q, i + needle.length);   /* v1.5.323 修 off-by-one：针脚自己含开引号 ⇒ 名字从针脚之后起到**下一个引号**止 */
+      if (j > i + needle.length) out.push(src.slice(i + needle.length, j)); } return out; };
+  /* v1.5.323：**名单解析器** —— 按**顶层逗号**取第二个实参，且它必须以 `[` 开头才算「内联名单」。
+   * 为什么必须换成它：上一版用 `indexOf('[', 调用处)` + 「调用处到 `[` 之间不能再有 `)`」当守卫，
+   * 前者在 `FLAGS` 变量形式下会把**后面别的数组**当名单（假违规），
+   * 后者又把 `process.argv.slice(2)` 里那个 `)` 当分界 ⇒ **把所有内联名单也跳过 ⇒ 这条腿又空转**。
+   * 纯 indexOf/charAt 实现，**不出现反斜杠**（沿用本门风格）。 */
+  const flagListSpan = function (src) {
+    const call = 'rejectUnknownFlags(';
+    const i0 = src.indexOf(call);
+    if (i0 < 0) return null;
+    const open = i0 + call.length - 1;
+    let d = 1, comma = -1, end = -1;
+    for (let j = open + 1; j < src.length; j++) {
+      const c = src.charAt(j);
+      if (c === '(' || c === '[' || c === '{') d++;
+      else if (c === ')' || c === ']' || c === '}') { d--; if (d === 0) { end = j; break; } }
+      else if (c === ',' && d === 1 && comma < 0) comma = j;
+    }
+    if (comma < 0 || end < 0) return null;
+    let k0 = comma + 1;
+    while (k0 < end && (src.charCodeAt(k0) === 32 || src.charCodeAt(k0) === 9 || src.charCodeAt(k0) === 13 || src.charCodeAt(k0) === 10)) k0++;
+    if (src.charAt(k0) !== '[') return null;                 /* 变量形式（如 FLAGS）⇒ 不是内联名单 */
+    let d2 = 0, closeIdx = -1;
+    for (let j = k0; j < end; j++) {
+      const c = src.charAt(j);
+      if (c === '[') d2++;
+      else if (c === ']') { d2--; if (d2 === 0) { closeIdx = j; break; } }
+    }
+    if (closeIdx < 0) return null;
+    return { start: k0, end: closeIdx, listed: quoted(src.slice(k0, closeIdx)) };
+  };
   /* 不扫门文件自己：它里面就写着 grab(src, "arg('" ) 这类字面量，会把门自己的源码当读数扫进来（首版就栽在这）。 */
   const files = readdirSync('tools').filter(function (f) { return f.slice(-4) === '.mjs' && f !== 'np-test.mjs'; });
   const offenders = []; let scanned = 0;
@@ -994,6 +1024,62 @@ t('D218 研究工具的旗标登记结构（v1.5.318）：读了却没登记的�
   /* 行为腿：假旗标必须**响亮**失败（exit 64），不许静默按默认档跑完 */
   const rb = spawnSync(process.execPath, ['tools/probe-distill-learnability.mjs', '--绝对不存在的旗标=1'], { encoding: 'utf8' });
   eq(rb.status, 64, '假旗标必须以 exit 64 被拒（实测 status=' + rb.status + '）');
+  /* ══════════ v1.5.323 加强：研究量具**必须有**这道层 ══════════
+   * 原版只扫"**已经有**这道层"的工具（8 台）⇒ 对"**根本没有**消毒层"的工具是**瞎的**。
+   * 实测缺口：`tools/probe-skill-marginal.mjs`（就是产出"摄魂 +22.5"那台）grep `rejectUnknownFlags`
+   * **零命中** ⇒ 拼错的旗标（`--games=80` 打成 `--game=80`）**静默按默认档跑完**、读数照旧出来，
+   * 而人会以为"我控制了这个变量" —— 这正是仓规"静默忽略 = 假读数"要防的那一类（v1.5.234 立）。
+   * 判据升级成两条合取：① 枚举规则内的每一台研究量具都**带**这道层（结构）；
+   *   ② 每一台都**真的**以 exit 64 拒绝假旗标（行为，逐台 spawn）。 */
+  const probes = files.filter(function (f) { return f.indexOf('probe-') === 0; }).sort();
+  const noLayer = [];
+  for (let pi = 0; pi < probes.length; pi++) {
+    if (readFileSync('tools/' + probes[pi], 'utf8').indexOf('rejectUnknownFlags') < 0) noLayer.push(probes[pi]);
+  }
+  ok(probes.length >= 40, '枚举规则内的研究量具至少 40 台（实测 ' + probes.length + ' 台）—— 少了说明枚举被改窄了');
+  eq(noLayer.length, 0, '每一台研究量具都必须带 rejectUnknownFlags（实测缺口：' + (noLayer.join(', ') || '无') + '）');
+  /* 登记一致性**覆盖两种调用形式**：原版只认 `rejectUnknownFlags(argv, [` ⇒
+   * 用 `process.argv.slice(2)` 的那批工具从来没被这条腿扫到过（同一个"名单写两遍"家族）。 */
+  const isFlagName = function (v) {
+    if (v.length < 2 || v.charAt(0) === '-') return false;
+    return v.split('').every(function (c) { const o = c.charCodeAt(0); return (o >= 48 && o <= 57) || (o >= 65 && o <= 90) || (o >= 97 && o <= 122) || o === 95 || o === 45; });
+  };
+  /* 自检（**防这条腿再空转**）：在夹具上抽，必须**恰好**抽到这三个名字。
+   * 为什么必须有它：抽取函数原先有 **off-by-one** —— 针脚 `arg('` 自己就含开引号，名字应从「针脚之后」到
+   * 「下一个引号」；原实现从「下一个引号之后再下一个引号」取 ⇒ 抽到的是 `, ` 这种垃圾，
+   * 再被名字过滤一滤 ⇒ **这条腿自 v1.5.318 起一直在空转**（"永不触发的守卫 = 没有守卫"再犯一次）。
+   * 下面这条自检就是为了让抽取器**再也不能**静默失准。 */
+  const q2 = String.fromCharCode(39);
+  const fxSrc = "const a = arg(" + q2 + "games" + q2 + ", 1); if (x === " + q2 + "--json" + q2 + ") f.startsWith(" + q2 + "--self-test=" + q2 + ");";
+  const fxNames = {};
+  grab(fxSrc, "arg('").concat(grab(fxSrc, "=== '--")).concat(grab(fxSrc, "startsWith('--"))
+    .forEach(function (x) { const v = x.replace('=', ''); if (isFlagName(v)) fxNames[v] = 1; });
+  eq(Object.keys(fxNames).sort().join(','), 'games,json,self-test',
+    '旗标抽取自检：夹具上必须恰好抽到 games,json,self-test（实测 ' + (Object.keys(fxNames).sort().join(',') || '空') + '）—— 抽不到说明这条腿又空转了');
+  const misreg = [];
+  for (let pi = 0; pi < probes.length; pi++) {
+    const src2 = readFileSync('tools/' + probes[pi], 'utf8');
+    const c0 = src2.indexOf('rejectUnknownFlags(');
+    if (c0 < 0) continue;
+    const span2 = flagListSpan(src2);
+    if (!span2) continue;   /* 名单是变量形式（如 FLAGS）⇒ 跳过：宁可跳过也不误报 */
+    const listed2 = {};
+    span2.listed.forEach(function (x) { listed2[x] = 1; });
+    const used2 = {};
+    grab(src2, "arg('").concat(grab(src2, "flag('")).concat(grab(src2, "=== '--"))
+      .concat(grab(src2, "startsWith('--")).concat(grab(src2, "indexOf('--")).concat(grab(src2, "includes('--"))
+      .forEach(function (x) { const v = x.replace('=', ''); if (isFlagName(v)) used2[v] = 1; });
+    const m2 = Object.keys(used2).filter(function (x) { return !listed2[x]; });
+    if (m2.length) misreg.push(probes[pi] + ' -> ' + m2.join(','));
+  }
+  eq(misreg.length, 0, '研究量具读到的旗标必须全部登记（两种调用形式都算；实测违规：' + (misreg.join(' | ') || '无') + '）');
+  /* 行为腿（逐台）：消毒层**真的接上了**的唯一凭据 —— 假旗标必须 exit 64 */
+  const notRejecting = [];
+  for (let pi = 0; pi < probes.length; pi++) {
+    const rr = spawnSync(process.execPath, ['tools/' + probes[pi], '--绝对不存在的旗标=1'], { encoding: 'utf8', timeout: 15000 });
+    if (rr.status !== 64) notRejecting.push(probes[pi] + '(status=' + rr.status + ')');
+  }
+  eq(notRejecting.length, 0, '每一台研究量具都必须以 exit 64 拒绝假旗标（实测不拒：' + (notRejecting.join(', ') || '无') + '）');
 });
 
 t('D219 「6 珠悬崖」回归护栏（v1.5.318）：现役冠军决策时 ep 的暴露面不许越过实测基线', function () {

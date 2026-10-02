@@ -21,7 +21,8 @@
  *
  * 用法：node tools/probe-config-axis.mjs [--games=400] [--seeds=3100,9200] [--champion=js/bundled-champion-3p.js]
  */
-import { sandbox, mulberry32, loadChamp } from './audit-lib.mjs';
+import { rejectUnknownFlags, sandbox, mulberry32, loadChamp } from './audit-lib.mjs';
+rejectUnknownFlags(process.argv.slice(2), ['champion', 'games', 'seeds'], 'probe-config-axis');   /* v1.5.323 */
 
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const GAMES = Math.max(1, Number(flag('games', 400)) || 400);

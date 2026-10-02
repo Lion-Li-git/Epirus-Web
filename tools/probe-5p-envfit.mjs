@@ -22,6 +22,8 @@ import vm from 'node:vm';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { HELDOUT, poolFromSpecs, heldFromNames } from './regime-panel.mjs';
 import { makeAsChooser } from './bot-chooser-lib.mjs';
+import { rejectUnknownFlags } from './audit-lib.mjs';   /* v1.5.323：输入消毒层（仓规：不认识的 -- 参数必须响亮失败） */
+rejectUnknownFlags(process.argv.slice(2), ['envs', 'games', 'mix', 'n', 'out', 'pack', 'seeds'], 'probe-5p-envfit');   /* v1.5.323 */
 
 const arg = function (k, d) { const m = process.argv.find(a => a.startsWith('--' + k + '=')); return m ? m.slice(k.length + 3) : d; };
 const PACK = arg('pack', '');

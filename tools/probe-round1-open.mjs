@@ -28,6 +28,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import vm from 'node:vm';
+import { rejectUnknownFlags } from './audit-lib.mjs';   /* v1.5.323：输入消毒层（仓规：不认识的 -- 参数必须响亮失败） */
+rejectUnknownFlags(process.argv.slice(2), ['configs', 'draws', 'filterfix', 'filterge2', 'games', 'instrument', 'labels', 'mirror', 'mirror-games', 'mmode', 'n', 'out', 'packs', 'seed'], 'probe-round1-open');   /* v1.5.323 */
 
 const arg = function (k, d) { const m = process.argv.find(a => a.startsWith('--' + k + '=')); return m ? m.slice(k.length + 3) : d; };
 const PACKS = String(arg('packs', '')).split(',').filter(Boolean);

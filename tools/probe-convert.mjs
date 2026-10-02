@@ -19,7 +19,8 @@
  * 用法：node tools/probe-convert.mjs [包=线上包] [局数=8] [模式=multi|long] [MC=12]
  * 反证：把分母改成"全部决策点"会立刻把退化包读成"很会用环"—— 这正是这条探针要防的错。
  */
-import { sandbox, loadChamp, mulberry32 } from './audit-lib.mjs';
+import { rejectUnknownFlags, sandbox, loadChamp, mulberry32 } from './audit-lib.mjs';
+rejectUnknownFlags(process.argv.slice(2), [], 'probe-convert');   /* v1.5.323 */
 
 const W = sandbox();
 const T = W.EpirusTrainer, P = W.EpirusPolicy, S = W.EpirusState, Play = W.EpirusPlay, R = W.EpirusRules;

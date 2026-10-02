@@ -17,13 +17,14 @@
  *   ⇒ 两枚合起来把 §E190 那条"读得多、转化 0"的链拆开复查：**卡点会随定价形式在"买不起 ↔ 不开"之间来回平移**。
  *   ⚠ `H1/H3` 是机理判别档：若动作价与状态价**按大小相抵** ⇒ 它是价格；若状态价整块抬不动它 ⇒ 它实际是**破平票的序偏置**（`F1≡F8` 那个红旗）。
  */
-import { sandbox, mulberry32, loadChamp } from './audit-lib.mjs';
+import { rejectUnknownFlags, sandbox, mulberry32, loadChamp } from './audit-lib.mjs';
 import { poolFromSpecs } from './regime-panel.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 import { tally, tallyPick, tallyClose, share } from './behavior-profile.mjs';
 
 const argv = process.argv.slice(2);
+rejectUnknownFlags(argv, ['arms', 'band', 'games'], 'probe-conversion-chain');   /* v1.5.323 */
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(4, Number(arg('games', 16)) || 16);
 const BANDS = arg('band', 'all') === 'all' ? [1, 2] : [Number(arg('band', 1))];

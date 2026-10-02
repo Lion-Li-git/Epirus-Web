@@ -10,7 +10,8 @@
  *
  * ⚠️ 口径限制：`action` 事件不带目标 ⇒ 只能按**伤害事件**归因（`damage.to` + `damage.source`）
  * ⇒ 只统计**命中**的，被挡掉/被无效的尝试不计 ⇒ 靶向率是**下界**。 */
-import { sandbox, loadChamp, sniperField } from './audit-lib.mjs';
+import { rejectUnknownFlags, sandbox, loadChamp, sniperField } from './audit-lib.mjs';
+rejectUnknownFlags(process.argv.slice(2), [], 'probe-sniper');   /* v1.5.323 */
 
 const W = sandbox();
 const file = process.argv[2] || 'js/bundled-champion-3p.js';

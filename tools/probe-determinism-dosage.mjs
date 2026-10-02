@@ -10,12 +10,13 @@
  * 装配与 §E185~§E190 同一张产品桌（0 席人类形状 ‖ 1 席被测 ‖ 2/3 席对手 ‖ 4 席关档冠军），两批 seed 带、同批配对。
  * 只读 `js/**`，不改引擎、不加门、不动冠军包。
  */
-import { sandbox, mulberry32, loadChamp } from './audit-lib.mjs';
+import { rejectUnknownFlags, sandbox, mulberry32, loadChamp } from './audit-lib.mjs';
 import { poolFromSpecs } from './regime-panel.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
+rejectUnknownFlags(argv, ['band', 'games', 'p'], 'probe-determinism-dosage');   /* v1.5.323 */
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(4, Number(arg('games', 14)) || 14);
 const BANDS = arg('band', 'all') === 'all' ? [1, 2] : [Number(arg('band', 1))];

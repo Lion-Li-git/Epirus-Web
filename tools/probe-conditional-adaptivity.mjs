@@ -15,12 +15,13 @@
  *
  * 只读 `js/**`，不改任何东西、不加门、不动冠军包。
  */
-import { sandbox, mulberry32, loadChamp } from './audit-lib.mjs';
+import { rejectUnknownFlags, sandbox, mulberry32, loadChamp } from './audit-lib.mjs';
 import { poolFromSpecs } from './regime-panel.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
+rejectUnknownFlags(argv, ['arms', 'band', 'fine', 'games', 'mincell', 'n', 'perms'], 'probe-conditional-adaptivity');   /* v1.5.323 */
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(4, Number(arg('games', 15)) || 15);
 const BANDS = arg('band', 'all') === 'all' ? [1, 2] : [Number(arg('band', 1))];

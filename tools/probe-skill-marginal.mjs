@@ -26,6 +26,8 @@
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { rejectUnknownFlags } from './audit-lib.mjs';   /* v1.5.323：输入消毒层（仓规：不认识的 -- 参数必须响亮失败） */
+rejectUnknownFlags(process.argv.slice(2), ['eps', 'games', 'json', 'mode', 'n', 'only', 'pack', 'rich', 'seed', 'target-se'], 'probe-skill-marginal');   /* v1.5.323 */
 
 const arg = function (k, d) {
   const h = process.argv.find(function (a) { return a.indexOf('--' + k + '=') === 0; });

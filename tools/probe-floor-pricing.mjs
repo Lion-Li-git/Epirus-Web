@@ -23,7 +23,7 @@ import { buildGuarded, formatGuardCost } from './guard-cost-lib.mjs';
 import { build } from './probe-layer-caliber.mjs';
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(('--' + k + '=').length) : d; };
-rejectUnknownFlags(process.argv.slice(2), ['packs', 'modes', 'cost', 'seeds', 'games', 'gen', 'incumbent'], 'probe-floor-pricing');
+rejectUnknownFlags(process.argv.slice(2), ['packs', 'modes', 'cost', 'seeds', 'games', 'gen', 'incumbent', 'n'], 'probe-floor-pricing');
 
 const MODES = arg('modes', 'off,L1,L2').split(',').map(s => s.trim()).filter(Boolean);
 const COST = Number(arg('cost', 1));
