@@ -41,6 +41,33 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
 }
 const W = sb.window, P = W.EpirusPolicy, S = W.EpirusState, R = W.EpirusRules, T = W.EpirusTrainer, Bots = W.EpirusBots;
 
+/* ===== §E255 费用表反事实：`--bigtcost=<n>`（不设 ⇒ 引擎读到的仍是出厂价，一行都不多跑）=====
+ * 为什么在工具里改而不是在规则里改：`js/core/rules.js` 是指纹五件套，动它 = 规则换代、全部历史基线作废（仓里硬规矩）。
+ * 这里只在**本进程内存里**改 `R.byKey[BIG_T].cost`，仓库文件一字不动 ⇒ 指纹不变；同形先例 `tools/probe-ep-reach.mjs:88`。
+ * ⚠ 语义是"**整个世界**都变便宜了"（脚本对手也读同一张费用表）⇒ **跨世界的绝对电平不可比**，只许引世界内的配对差。 */
+const BIGTCOST = FLAG.bigtcost == null ? null : Number(FLAG.bigtcost);
+let FACTORY_BIGTCOST = null;
+if (FLAG.bigtcost != null) {
+  if (!Number.isInteger(BIGTCOST) || BIGTCOST < 0) {
+    console.error('⛔ --bigtcost 必须是 ≥0 的整数（收到 `' + FLAG.bigtcost + '`）'); process.exit(2);
+  }
+  const def = R && R.byKey && R.SK ? R.byKey[R.SK.BIG_T] : null;
+  if (!def || typeof def.cost !== 'number') {
+    console.error('⛔ 改价反事实接不上：引擎里 `R.byKey[BIG_T].cost` 不是数字（读法大概已变 ⇒ 不许静默按出厂价出读数）'); process.exit(2);
+  }
+  FACTORY_BIGTCOST = def.cost;
+  def.cost = BIGTCOST;
+  /* 接线证据（判作用点，不判配置）：改完必须让**引擎自己**报出新价，否则就是"设了等于没设"（METHODOLOGY 第一条那一族）。 */
+  const probe = S.computeCost(S.createState('multi', { next: T.mulberry32(7) }, N), 0, R.SK.BIG_T);
+  const epSeen = probe && probe.ok !== false ? probe.ep : null;
+  if (epSeen !== BIGTCOST) {
+    console.error('⛔ 改价没生效：`computeCost` 仍报 大雷 ep=' + epSeen + '（要的是 ' + BIGTCOST + '）⇒ 有别的缓存在定价，本实验会量到假世界'); process.exit(2);
+  }
+  console.log('[bigtcost] 费用表反事实生效：大雷单价 **出厂 ' + FACTORY_BIGTCOST + ' → 本世界 ' + BIGTCOST + '**'
+    + '（`computeCost` 回读 ep=' + epSeen + '；只在内存里，`js/core/*` 一字未动）'
+    + ' ⚠ 所有席都在这个改价世界里 ⇒ 只引世界内配对差，不许引跨世界电平');
+}
+
 const src = readFileSync(FILE, 'utf8');
 const mm = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
 if (!mm) { console.error('未找到 EPIRUS_CHAMPION_3P: ' + FILE); process.exit(1); }
@@ -749,6 +776,9 @@ if (FLAG['dump-per']) {
      * 原来少了 `#mode` 这一维 ⇒ 把 multi 的落盘和 long 的落装配对，这把尺自己看不见（两边的 seed/桌数一模一样），
      * 而跨模式的 1st 差好几 pt —— 正是本仓"结果对、理由错"那一族。加一行，旧落盘不受影响（读侧按 key 取）。 */
     '#mode=' + (MODE || 'multi(默认)'), '#every=' + EVERY, '#field=' + (FIELD || '-'), '#file=' + FILE,
+    /* §E255：改价世界必须写进配对身份 —— 否则"世界 4 珠"的落盘与"出厂 5 珠"的落盘会被这把尺当成同世界配对着配对，
+     * 而跨世界的绝对电平本来就不可以比（那正是本节判据 Q3 要防的）。 */
+    '#bigtcost=' + (FLAG.bigtcost == null ? 'factory' : String(BIGTCOST)), '#ban=' + (BAN || '-'),
     '#swap=' + (SWAP || '-'), '#arm\tidx\tnames\tgames\tfirst\tstrict'];
   for (const s of [{ arm: 'subject', r: champ }, { arm: 'ctrl', r: ctrl }]) {
     s.r.perCombo.forEach(function (c, i) {

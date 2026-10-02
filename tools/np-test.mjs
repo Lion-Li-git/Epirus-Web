@@ -1225,6 +1225,64 @@ t('D221 同分带内按"贵卡出手"选人（v1.5.326 · §E249 · 今晚 4 批
   eq(bad.r.status, 7, '不认识的卡名必须 exit 7（实测 ' + bad.r.status + '）');
 });
 
+t('D222 费用表反事实旗标 `--bigtcost=`（v1.5.327 · §E255）：不设 ⇒ 逐字不变 · 出厂价档 ⇒ **零剂量逐字相同** · 生效与否由**引擎回读**判而不是由配置印了没印判 · 假值必须 exit 2 · 落盘表头必须带这一维', function () {
+  /* 为什么钉这道：这是本仓第一次把**规则参数**（大雷单价）做成研究旗标。
+   * 后果两向都坏：静默不生效 ⇒ 我把"出厂世界"当成"4 珠世界"报给用户裁定（那是**错的裁定输入**）；
+   * 静默生效 ⇒ `eval-5p` 历史读数全部换尺（D197 那一族的反面）。
+   * ⚠ 判"生效"不许用 banner 出现与否（那是自我印证），必须用**引擎自己的定价回读**（`computeCost` 报的 ep）。
+   * ⚠ 判"没生效"的对照必须是**同种子同场**的差分（绝对量守卫会杀掉正对照，METHODOLOGY 那一族）。 */
+  const src = readFileSync('tools/eval-5p.mjs', 'utf8');
+  ok(src.indexOf('FLAG.bigtcost') >= 0, '① `eval-5p` 里已经没有 `FLAG.bigtcost` ⇒ 旗标被删了而记账（CHANGELOG §E255）还写着有');
+  ok(src.indexOf('computeCost') >= 0 && src.indexOf('改价没生效') >= 0,
+    '② 缺"由引擎回读新价"那条自检 ⇒ 定价若被别处缓存，工具会印"已生效"而跑的仍是出厂世界');
+
+  const runE = function (extra, tag) {
+    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '6', '5', '77000', '--field=mix4'].concat(extra),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
+  };
+  const base = runE([], 'base');
+  eq(base.code, 0, '⓪ 默认臂必须跑通（否则下面三条差分对照全在比错误输出）：' + base.out.slice(0, 200));
+  ok(base.out.indexOf('bigtcost') < 0, '③ 关档（不设旗标）**一行都不许印** ⇒ 印了就是"看起来像改了价"的噪声');
+
+  /* ④ 零剂量：出厂价档 `--bigtcost=5` 与不设 ⇒ **剥掉 banner 行后逐字相同**（这根键不咬就不许动任何一个读数） */
+  const w5 = runE(['--bigtcost=5'], 'w5');
+  eq(w5.code, 0, '出厂价档不该报错：' + w5.out.slice(0, 200));
+  /* ⚠ 剥掉两类**与判定无关**的行才能比"逐字相同"：banner 本身，和 `eval-5p` 末行的**墙钟**（`耗时 0.0s` ‖ `0.1s` 两次跑就会差）。
+   *    这条门第一次整轮认证就红在腿 ⑥（624s 那一趟），根因正是我没剥墙钟行 —— 小样本两次跑的耗时常常撞在一起 ⇒ 独立复跑看不出来，
+   *    整轮抢核时才暴露（§E257 那条"未归因的红"事后归因到了这里：**是门错，不是抖动**）。 */
+  const strip = function (s) { return s.split('\n').filter(function (l) {
+    return l.indexOf('[bigtcost]') !== 0 && l.indexOf('耗时') !== 0;
+  }).join('\n'); };
+  ok(w5.out.indexOf('[bigtcost]') === 0 || w5.out.split('\n').some(function (l) { return l.indexOf('[bigtcost]') === 0; }),
+    '⑤ 开档必须响亮印一行 banner（不印 ⇒ 我没法从输出判断这一臂在哪个世界）');
+  eq(strip(w5.out), strip(base.out), '⑥ **出厂价档必须零剂量**：`--bigtcost=5` 去掉 banner 后与不设旗标逐字相同（不同 ⇒ 这根键在没有改价时也动了判定）');
+
+  /* ⑦ 生效判据 = 引擎回读的数字，不是 banner 的措辞 */
+  const w1 = runE(['--bigtcost=1'], 'w1'), w99 = runE(['--bigtcost=99'], 'w99');
+  ok(/ep=1\b/.test(w1.out), '⑧ `--bigtcost=1` 的世界必须让 `computeCost` 回读出 **ep=1**（实测没读到 ⇒ 定价被别处缓存，整个反事实是幻觉）');
+  ok(/ep=99\b/.test(w99.out), '⑨ `--bigtcost=99` 的世界必须回读出 ep=99（同上）');
+  /* ⑩ 落盘身份腿：改价与封卡都必须进表头 —— 配对尺只看表头，缺哪一维就会把"世界 4"与"世界 3"当成同世界配对着配（§E246 那一族）。
+   *     ⚠ 这里**不**做"两个世界的读数必须不同"那种绝对量守卫：小样本里真可能一字不差，那会把正对照杀成假红（本仓踩过）。 */
+  const dir = mkdtempSync(join(tmpdir(), 'd222-'));
+  const dump = join(dir, 'h.tsv');
+  const rd = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--pool=core', '--every=17',
+    '--bigtcost=4', '--ban=bigT', '--dump-per=' + dump], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  eq(rd.status, 0, '⑩a 带 `--dump-per` 的改价+封卡臂必须跑通：' + String(rd.stderr || '').slice(0, 200));
+  if (existsSync(dump)) {
+    const headTxt = readFileSync(dump, 'utf8').split('\n').filter(function (l) { return l[0] === '#'; }).join('\n');
+    ok(headTxt.indexOf('#bigtcost=4') >= 0, '⑩b 落盘表头必须带 `#bigtcost=`（跨世界配对必须能被拒）实测=' +
+      (/^#bigtcost=.*$/m.exec(headTxt) || ['(缺)'])[0]);
+    ok(headTxt.indexOf('#ban=bigT') >= 0, '⑩c 落盘表头必须带 `#ban=`（同臂自配与两臂差分的唯一区分处）');
+  } else { console.error('⑩d 没落盘 ⇒ 这条腿退化成装饰，判红'); ok(false, '`--dump-per` 没写出文件'); }
+
+  /* ⑪ 假值必须响亮拒绝，不许降级成"当没写" */
+  for (const badv of ['abc', '-2', '1.5']) {
+    const rb = runE(['--bigtcost=' + badv], 'bad');
+    eq(rb.code, 2, '`--bigtcost=' + badv + '` 必须 exit 2（实测 ' + rb.code + '）⇒ 含糊写法被当出厂价跑完就是假世界');
+  }
+});
+
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {
   /* 真实事故（v1.3.48）：一次测试跑把 js/bundled-champion*.js 覆写成测试冠军并被提交。
    * v1.3.54 又发现两个同类缺口，都只在"跑完看 git status"时才显形：
