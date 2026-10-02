@@ -24,7 +24,9 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 import { loadCardTable } from './log-reading.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'whopicks', 'costbias', 'teacherfloor', 'plusid', 'quiet'], 'probe-distill-learnability');
+rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'whopicks', 'costbias', 'teacherfloor', 'plusid', 'quiet', 'allowmixedcfg', 'dumpagree'], 'probe-distill-learnability');
+/* ⚠ `allowmixedcfg` 必须同时进这张名单：守卫用 `argv.indexOf` 读它、而 `rejectUnknownFlags` 先把不认识的 `--` 打成 exit 64
+   ⇒ 漏了这一项时，"混配置"这个**我亲手建的逃生口**自己会被响亮失败挡死（§E230 跑前才发现）。 */
 const arg = (k, d) => { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); };
 const TRAIN = arg('train', ''), TEST = arg('test', '');
 if (!TRAIN || !TEST) { console.error('⛔ 必须同时给 --train= 与 --test=（留出检验没有"同一批"这个选项）'); process.exit(64); }
@@ -47,6 +49,18 @@ const QUIET = argv.indexOf('--quiet') >= 0;
 
 const load = p => readFileSync(p, 'utf8').trim().split('\n').map(l => JSON.parse(l));
 const TRAIN_ROWS = load(TRAIN), TEST_ROWS = load(TEST);
+/* ⚠ **配置来源守卫（§E230）**：`--config=` 之后 dump 会带 `cfg` 字段 ⇒ 两带的配置不一致时**拒跑**。
+ *   理由：把 `multi/5` 与 `long/5` 的标签混在一列里当"同一种局面"蒸，等于让模型去看一个混合分布，
+ *   而这一节要量的恰恰是"配置之间有什么不同"（§E194 一次对照只能一个自由量 + §E226"绝对电平跨配置不可比"）。
+ *   旧 dump 没有这个字段 ⇒ 按当年的口径记作 `multi/5`。要**故意**混合训练必须显式 `--allowmixedcfg`。 */
+const cfgMix = rows => { const m = {}; for (const d of rows) { const c = d.cfg || 'multi/5(旧 dump 无 cfg)'; m[c] = (m[c] || 0) + 1; } return m; };
+const fmtCfg = m => Object.keys(m).map(k => k + ' ×' + m[k]).join(' ‖ ');
+const TRAIN_CFG = cfgMix(TRAIN_ROWS), TEST_CFG = cfgMix(TEST_ROWS);
+const KEY = k => Object.keys(k).join('/');
+if (KEY(TRAIN_CFG) !== 'multi/5(旧 dump 无 cfg)' && KEY(TEST_CFG) !== KEY(TRAIN_CFG) && argv.indexOf('--allowmixedcfg') < 0) {
+  console.error('⛔ 两带的配置不一致（训练 ' + fmtCfg(TRAIN_CFG) + ' ‖ 留出 ' + fmtCfg(TEST_CFG) + '）⇒ 这不是留出，是混配置。' +
+    '要故意混合请显式加 `--allowmixedcfg`（并在日志里写明这是"一套打天下"的那一套）。'); process.exit(8);
+}
 const mean = x => x.length ? x.reduce((a, b) => a + b, 0) / x.length : NaN;
 const sd = x => { if (x.length < 2) return NaN; const m = mean(x); return Math.sqrt(x.reduce((a, b) => a + (b - m) * (b - m), 0) / (x.length - 1)); };
 const ci = x => 1.96 * sd(x) / Math.sqrt(Math.max(1, x.length)) * 100;
@@ -215,8 +229,13 @@ if (FLOOR > 0) {
 }
 console.log('# 训练带 ' + R1.length + ' 个决策（并列 ' + P1.tiedDec + '） ‖ 留出带 ' + R2.length + ' 个决策（并列 ' + P2.tiedDec + ' ‖ 流数不足 ' + P2.shortRep + '）' +
   ' ‖ 候选数均值 ' + mean(R2.map(r => r.n)).toFixed(1) + ' ‖ 特征 ' + FEAT + ' ‖ rep=' + REP + ' ‖ 隐藏元 ' + HID);
-/* ⚠ 两带必须真的不同（§E205 那次"同文件当 train+test"的教训）*/
-if (TRAIN_ROWS[0].seed === TEST_ROWS[0].seed) { console.log('⛔ 两遍 dump 的 seed 相同 ⇒ 这不是留出，判据作废'); process.exit(7); }
+console.log('# 标签来自的配置：训练 ' + fmtCfg(TRAIN_CFG) + ' ‖ 留出 ' + fmtCfg(TEST_CFG) + (argv.indexOf('--allowmixedcfg') >= 0 ? ' ‖ ⚠ **已显式允许混配置**' : ''));
+/* ⚠ 两带必须真的不同（§E205 那次"同文件当 train+test"的教训）
+   §E230 修正：`--config=` 之后**同一个 seed 在两个配置下是两批完全不同的局** ⇒ "相同"必须连配置一起判，
+   否则 `multi/3100 → long/3100` 这种合法的跨配置留出会被旧写法挡掉（本机实测 `exit 7` 才暴露）。 */
+{ const tag = rows => rows[0].seed + '#' + (rows[0].cfg || 'multi/5(旧 dump 无 cfg)');
+  if (tag(TRAIN_ROWS) === tag(TEST_ROWS)) { console.log('⛔ 两遍 dump 的 **seed 与配置**都相同 ⇒ 这不是留出，判据作废'); process.exit(7); }
+  if (TRAIN === TEST) { console.log('⛔ `--train` 与 `--test` 是同一个文件 ⇒ 这不是留出，判据作废'); process.exit(7); } }
 
 const netPick = r => r.netPick, teacherSelf = r => r.tA;
 const ridgeH = ridge(R1, L2);
@@ -465,6 +484,22 @@ if (argv.indexOf('--whopicks') >= 0) {
   }
   if (nNoCat) console.log('  ⛔ 有 ' + nNoCat + ' 个决策的候选键在规则表里查不到类别 ⇒ 这张表不许引（别把漏数读成偏好）');
 }
+/* `--dumpagree=`：逐决策落"教师那手 / 头那手 / 包那手"，**唯一用途是跨运行配对**（§E230 第二问）。
+ *   为什么要它：单遍留出一致率的半宽实测 ±7.2pt（n=184）⇒ "同配置 vs 跨配置"这种 3pt 量级的差它**判不动**；
+ *   但只要两次运行打的是**同一批测试决策**（同一个 `--test` 文件、同一个 `--rep` ⇒ 过滤后行集逐字相同），
+ *   逐决策 0/1 就能相减配对着读，噪音只剩"头换来源"这一个自由量。
+ *   ⚠ 默认关；写出去的行带身份（`cfg|seed|env|g|round` + 行序），离线 join 前**必须验证两遍身份逐字相同**。 */
+if (arg('dumpagree', '')) {
+  const lines = [];
+  for (let i = 0; i < R2.length; i++) {
+    const r = R2[i], hp = headPickTb(r);
+    lines.push(JSON.stringify({ i: i, seed: r.d.seed, env: r.d.env, g: r.d.g, round: r.d.round, cfg: r.d.cfg || 'multi/5(旧 dump 无 cfg)',
+      n: r.n, tied: r.tied ? 1 : 0, teacher: r.teacher, head: hp, pack: r.netPick }));
+  }
+  writeFileSync(arg('dumpagree', ''), lines.join('\n') + '\n');
+  console.log('· §E230 逐决策落 **' + R2.length + ' 行**（教师/头/包三列下标 + 身份）→ `' + arg('dumpagree', '') + '`' +
+    ' ‖ 配对读法：与另一遍**同 test 文件**的输出按身份 join，比 `head==teacher` 的 0/1');
+}
 /* `--export=` 把线性蒸馏头（h=0 时）导出给 `tools/probe-distill-player.mjs` 当策略用 ⇒ **一致率不是胜率**，
  * 第二步必须在产品桌上配对比。导出的是原始特征上的 β（未中心化），播放器按同一套 `featuresV7 + actionFeatures` 打分。 */
 if (arg('export', '')) {
@@ -473,7 +508,9 @@ if (arg('export', '')) {
   if (!R1.length) { console.error('⛔ 训练带一个决策都没有 ⇒ 没有 β 可导'); process.exit(64); }
   const dimS = R1[0].d.s.length, dimA = R1[0].d.a[0].length, p = dimS + dimA + IDN;
   const betaArr = []; for (let i = 0; i < p; i++) betaArr.push(pol.beta[i]);
-  writeFileSync(arg('export', ''), JSON.stringify({ feat: FEAT, rep: REP, l2: L2, epochs: EPOCHS, lr: LR, dimS: dimS, dimA: dimA, dimId: IDN, plusid: PLUSID, teacherFloor: FLOOR, beta: betaArr,
+  writeFileSync(arg('export', ''), JSON.stringify({ feat: FEAT, rep: REP, l2: L2, epochs: EPOCHS, lr: LR, dimS: dimS, dimA: dimA, dimId: IDN, plusid: PLUSID, teacherFloor: FLOOR,
+    /* §E230：头必须自带"它是谁的标签蒸出来的"⇒ 播放器与后续任何跨配置对照都靠这两个戳筛，不靠文件名。 */
+    trainCfg: KEY(TRAIN_CFG), testCfg: KEY(TEST_CFG), beta: betaArr,
     train: TRAIN, test: TEST, trainSeed: TRAIN_ROWS[0].seed, testSeed: TEST_ROWS[0].seed, nTrain: R1.length, nTest: R2.length,
     heldoutAgree: 100 * mean(last.aPol), packAgree: 100 * mean(last.aPack), ceiling: 100 * mean(agree(NT, teacherSelf)), tierN: NT.length }) + '\n');
   console.log('· 已导出线性蒸馏头 → `' + arg('export', '') + '`（' + p + ' 维 β ‖ **无并列档**留出一致率 ' + (100 * mean(last.aPol)).toFixed(1) + '% vs 现役包 ' +

@@ -45,7 +45,7 @@ import { loadCardTable, breadth, defShare } from './log-reading.mjs';
 import { readFileSync } from 'node:fs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['heads', 'seeds', 'games', 'envs', 'arms', 'chk', 'temp', 'lambdas', 'randctl', 'calib', 'quiet'], 'probe-distill-player');
+rejectUnknownFlags(argv, ['heads', 'seeds', 'games', 'envs', 'arms', 'chk', 'temp', 'lambdas', 'randctl', 'calib', 'config', 'quiet'], 'probe-distill-player');
 const arg = (k, d) => { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); };
 const SEEDS_ARG = arg('seeds', '3100,9200');
 const GAMES = Math.max(1, Number(arg('games', 12)) || 12);
@@ -69,6 +69,15 @@ const QUIET = argv.indexOf('--quiet') >= 0;
 const N = 5, FOCUS = 1;
 
 const W = sandbox(), R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, P = W.EpirusPolicy, B = W.EpirusBots;
+/* ===== `--config=<mode>`（§E230 · 只开模式，不开人数）=====
+ *   为什么只到 mode：这台仪器的席位装配是**照产品桌 n=5 写死的**（`[人类形状, 被测, 原型, 原型, 关档冠军]`）⇒
+ *   要量"人数轴"得先重做装配，而 §E229 刚量过人数是**弱轴**（参照名次 ρ=+0.771）、血量才是真轴（ρ≈+0.09）
+ *   ⇒ 这一档只把**血量模式**换掉（`multi` 3 珠 ‖ `long` 5 珠），装配、种子、席位顺序一律不动。
+ *   ⚠ 默认 `multi` ⇒ 输出与加这一档之前**逐字相同**（只多一行"本遍在 `long` 下跑"的提示，且只在非默认时印）；
+ *   ⚠ 跨配置的**绝对电平与配对差不可互相比**（§E202"绝对电平一律不引"在这一档升级成跨配置），
+ *     可比的只有"同一配置内 `headT − packT`"这个量在两处的取值。 */
+const CFG_MODE = String(arg('config', 'multi'));
+if (!R.MODES || !R.MODES[CFG_MODE]) { console.error('⛔ `--config` 的 mode `' + CFG_MODE + '` 不在 `MODES` 里（可用：' + Object.keys(R.MODES || {}).join(',') + '）'); process.exit(4); }
 const params = (function () { const p = loadChamp(W, 'js/bundled-champion-3p.js'); return p && p.params ? p.params : p; })();
 const { pool: POOL } = poolFromSpecs(B, OPP_SPECS);
 const ENVS = ENV_PICK.map(n => { const q = POOL.find(z => z.name === n); if (!q) { console.error('⛔ 环境 `' + n + '` 不在原型池'); process.exit(2); } return q; });
@@ -83,6 +92,10 @@ const strHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h 
 for (const h of HEADS) {
   if (h.feat !== 'sa') { console.error('⛔ 头 `' + (h.train || '') + '` 是 `feat=' + h.feat + '` ⇒ 状态维在训练时被置零，这里喂的是真状态 ⇒ A/B 多了一个自由量'); process.exit(3); }
   if (!h.trainSeed || !h.testSeed) { console.error('⛔ 头文件缺 trainSeed/testSeed ⇒ 无法保证样本外（请用最新 §E223 第一步重新 --export=）'); process.exit(3); }
+  /* §E230：头自带的标签配置戳 ⇒ 与本遍桌配置不一致时**点名**（跨配置投放正是这一档要量的"处理"，不是事故，
+     但读数必须写明"这张脸是在哪种局的标签上蒸的"，否则下一个人会把它当成同配置的头来读）。旧导出无此戳 ⇒ 不印，保持原样。 */
+  if (h.trainCfg) console.log((h.trainCfg.split('/')[0] === CFG_MODE ? '# 头 `' + (h.train || '').split('/').pop() + '` 的标签配置 = 本遍桌配置（`' + h.trainCfg + '`）⇒ **同配置投放**'
+    : '# ⚠ 头 `' + (h.train || '').split('/').pop() + '` 的标签来自 `' + h.trainCfg + '`，而本遍桌是 `--config=' + CFG_MODE + '` ⇒ 这是**跨配置投放**的读数'));
 }
 
 /* ---------- 混合臂的标定（`--calib=<dump.jsonl>[,...]`）：只取**决策内**的散布 ----------
@@ -242,7 +255,7 @@ function chooser(arm, head, agg, fallback) {
 
 function playOne(arm, head, env, g, seed, agg) {
   const rnd = mulberry32(seed + g * 7919 + env.name.length * 131);         /* 与 §E195/§E223 采标签那一遍同一套局种子 */
-  const st = S.createState('multi', { next: rnd }, N);
+  const st = S.createState(CFG_MODE, { next: rnd }, N);
   st.slotSalt = (Math.imul(g + 5, 0x9e3779b1) ^ 0x5f3759df) >>> 0;
   const mimic = makeMimic(W, HB, 'rand', function () { return st.rng.next(); });
   const champ = T.policyChooserN(params, TEMP);
@@ -282,6 +295,8 @@ if (!QUIET) {
     headFor[s].heldoutAgree.toFixed(1) + '% vs 现役包 ' + headFor[s].packAgree.toFixed(1) + '% ‖ 教师天花板 ' + headFor[s].ceiling.toFixed(1) + '%');
   console.log('# 判据（写死）：① `head − pack` 两带同号且逐局配对 95% 区间不含 0 ② 分歧率 >5% ③ 递交被接受率 ≥99% ④ 复刻概率与 `forwardCands` 逐格差 <1e-9');
   console.log('# ①\' 次级（跑前写死）：`headT − packT` 同规则 ⇒ 那才是"能不能上线"那一问（只差打分器一个自由量）；`a0` 只当参照电平（还差 lockTarget）。');
+  if (CFG_MODE !== 'multi') console.log('# ⚠ 本遍**换了配置**：`--config=' + CFG_MODE + '`（血量 ' + R.MODES[CFG_MODE].hp + ' 珠 ‖ 默认 `multi` = ' + R.MODES.multi.hp + ' 珠）' +
+    ' ⇒ 绝对电平与配对差**只能在配置内部比**；跨配置可比的是"同一量在两处的取值"（`headT − packT` 各自多少）');
   if (LAMS.length) {
     console.log('# λ 族（本轮追加，跑前写死）：`score = P.value + λ·σp·(头分−决策内均值)/σh`，σp/σh 由 `--calib` 的 dump 现算（' +
       (CAL ? 'σp=' + CAL.sigmaP.toFixed(4) + ' ‖ σh=' + HEADS.map(h => h._calSigmaH.toFixed(4)).join('/') + ' ‖ 标定决策数 ' + CAL.n : '**未给 → 会拒跑**') + '）');

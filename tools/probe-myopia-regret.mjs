@@ -37,7 +37,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'seed', 'dump', 'dumpcover', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -131,7 +131,20 @@ const params = (function () { const p = loadChamp(W, 'js/bundled-champion-3p.js'
 const { pool: POOL } = poolFromSpecs(B, OPP_SPECS);
 const ENVS = ENV_PICK.map(n => { const q = POOL.find(z => z.name === n); if (!q) { console.error('⛔ 环境 `' + n + '` 不在原型池'); process.exit(2); } return q; });
 const HB = loadPool(W, 'human');
-const N = 5, FOCUS = 1;
+/* ===== `--config=<mode>/<人数>`（§E230 · 10-02）：**把"环境"从对手身份换成游戏配置** =====
+ *   动因：DS 的 v1.5.315/316 在**配置轴**上量到"血量是一根会重排策略的真轴（ρ≈0.09 vs 人数轴 0.77）、
+ *   但按配置在 6 枚笨探针里挑只值 +0.1pt（样本外）"⇒ **真上界没量过**。要量它必须让这台仪器能在
+ *   `long`（5 珠血量）这类配置下重跑同一套 regret 算术 ⇒ **只动建局那一行 + dump 里存一个 `cfg` 字段**，
+ *   采样分支 / rollout / 选择膨胀的口径**一律不碰**（一次对照只能一个自由量，§E194）。
+ *   ⚠ **默认 `multi/5` 必须与加这一档之前逐字相同**（心跳：小配置下与 `HEAD` 版 `diff` 全空，见 §E230 记录）。
+ *   ⚠ `mode` 必须是 `RUL.MODES` 的键、人数 3–5（产品桌 n=5 装配的席位表就三枚原型/冠军席，截短时按座位切）。 */
+const CFG = String(arg('config', 'multi/5'));
+const CFG_MODE = CFG.split('/')[0] || 'multi';
+const N = Math.max(3, Math.min(5, Number(CFG.split('/')[1]) || 5));
+if (!W.EpirusRules.MODES || !W.EpirusRules.MODES[CFG_MODE]) {
+  console.error('⛔ `--config` 的 mode `' + CFG_MODE + '` 不在 `MODES` 里（可用：' + Object.keys(W.EpirusRules.MODES || {}).join(',') + '）'); process.exit(2);
+}
+const FOCUS = 1;
 
 function mkArm(name) {
   /* `A0` 关档 ‖ `B1` 信念搜索 ply1 ‖ `B2` ply2 ⇒ 三个臂各测"一手完美根决策还剩多少可买"。
@@ -272,7 +285,7 @@ function runArm(arm, selfCheck) {
     for (let g = 0; g < GAMES; g++) {
       const deep = { v: false };
       const rnd = mulberry32(SEED + g * 7919 + env.name.length * 131);
-      const st = S.createState('multi', { next: rnd }, N);
+      const st = S.createState(CFG_MODE, { next: rnd }, N);
       st.slotSalt = (Math.imul(g + 5, 0x9e3779b1) ^ 0x5f3759df) >>> 0;
       const base = arm.mk();
       let n = 0;
@@ -379,7 +392,7 @@ function runArm(arm, selfCheck) {
             const r4 = v => Math.round(v * 1e4) / 1e4;
             const xs = P.featuresV7(state, pid);
             CROWS.push(JSON.stringify({
-              seed: SEED, env: env.name, g: g, n: n, round: state.round, keep: KEEP, rep: REP,
+              seed: SEED, env: env.name, g: g, n: n, round: state.round, keep: KEEP, rep: REP, cfg: CFG,
               s: xs.map(r4),
               k: scored.map(o => o.c.key),
               a: scored.map(o => P.actionFeatures(state, pid, o.c.key, o.c).map(r4)),
@@ -403,7 +416,7 @@ function runArm(arm, selfCheck) {
       const rollChos = FRESHSEATS
         ? function () { const c = seatChos.slice(); c[FOCUS] = contFocus; c[0] = mkMimic(); return c; }
         : seatChos.map(function (c, i) { return i === FOCUS ? contFocus : c; });
-      Play.autoGameN(st, seatChos);
+      Play.autoGameN(st, seatChos.slice(0, N));      /* 默认 N=5 ⇒ 与原来那枚数组逐元素相同（席位顺序不动，焦点席仍是 1 号） */
     }
   }
   return a;
@@ -451,6 +464,13 @@ console.log('# 环境清单（§E202 补：这三行以前只印个数，导致 
   + (SWEEP.length ? ' ‖ **固定样本前缀扫** rep=' + SWEEP.join('/') : '') + (DEPTH2 ? ' ‖ depth2 k2=' + K2 : '') + ' ‖ cont=' + CONT
   + ' ‖ **flags**：freshrng=' + (FRESHRNG ? 'ON' : 'off') + ' freshseats=' + (FRESHSEATS ? 'ON' : 'off') + ' resetmem=' + (RESETMEM ? 'ON' : 'off')
   + ' memisolate=' + (MEMISO ? 'ON' : 'off') + ' bare=' + (BARE ? 'ON' : 'off') + ' cover=' + (COVER ? 'ON' : 'off'));
+/* ⚠ **只在非默认配置时多印这一行** ⇒ 默认 `multi/5` 的输出与加这一档之前**逐字相同**（少印一行也算不等价，所以不能无条件印）。 */
+if (CFG !== 'multi/5') {
+  console.log('# ⚠ 本遍**换了配置**：`--config=' + CFG + '` ‖ mode `' + CFG_MODE + '` 血量 **' + W.EpirusRules.MODES[CFG_MODE].hp + ' 珠** ‖ 席位 ' + N +
+    '（默认 = `multi/5`，血量 ' + W.EpirusRules.MODES.multi.hp + ' 珠）');
+  console.log('#   ⇒ 这一遍的**绝对电平与配对差都只在配置内部可比**（§E202/§E204"绝对电平一律不引"在这一档升级成"跨配置一律不引"）；' +
+    '跨配置可比的只有**同一个量各自的值**（如"该配置下 一手完美净上限"）。');
+}
 console.log('# ⚠ oracle 是 K 个带运气结果里取最大 ⇒ 天然膨胀；**只有 `regret(oracle) − regret(随机)` 是信号**');
 console.log('# ⚠ 这是"一手前瞻 + 现有策略延续"的改进量，**不是**完美价值函数的天花板（限制 1）');
 const rows = ARMS.map(k => runArm(mkArm(k), false));
