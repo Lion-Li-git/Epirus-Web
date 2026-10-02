@@ -24,7 +24,7 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 import { loadCardTable } from './log-reading.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'whopicks', 'costbias', 'teacherfloor', 'plusid', 'quiet', 'allowmixedcfg', 'dumpagree', 'prodfeat', 'epsens'], 'probe-distill-learnability');
+rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'whopicks', 'costbias', 'teacherfloor', 'plusid', 'quiet', 'allowmixedcfg', 'dumpagree', 'prodfeat', 'epsens', 'condgrad'], 'probe-distill-learnability');
 /* ⚠ `allowmixedcfg` 必须同时进这张名单：守卫用 `argv.indexOf` 读它、而 `rejectUnknownFlags` 先把不认识的 `--` 打成 exit 64
    ⇒ 漏了这一项时，"混配置"这个**我亲手建的逃生口**自己会被响亮失败挡死（§E230 跑前才发现）。 */
 const arg = (k, d) => { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); };
@@ -42,7 +42,7 @@ const FEAT = arg('feat', 'sa');            // 'sa' = 状态⊕动作 ‖ 'a' = �
  *   ⇒ 最小的一刀就是补一个真乘积项 `ep × 费用`（其余维、标签、超参一律不碰 ⇒ 单自由度）。
  *   ⚠ 还原 `ep(珠) = 12·dim0 + 6·dim2` 有 **0.3%** 的决策撞上 `clamp(±1)` 上界（§E225 实测）⇒ 那一小撮的乘积值是**下界**，
  *     这一档只读"改不改手/方向"，不读绝对数值 ⇒ 撞界不会把符号读反。 */
-const PRODF = Number(arg('prodfeat', 0)) ? 1 : 0;
+const PRODF = (argv.some(a => a === '--prodfeat') || Number(arg('prodfeat', 0)) > 0) ? 1 : 0;   /* 裸旗标与 `=1` 都算开 */
 const ADIM_MARGIN = 0, ADIM_COST = 2;                    /* 动作块里那两维的下标（唯一定义，`--costbias`/`--teacherfloor`/乘积维共用）*/
 const PRODF_SCALE = 12;                                  /* 与 dim0 同量纲（除以 12）⇒ 不额外引入尺度这个自由量 */
 const epOf = a => 12 * a[ADIM_MARGIN] + 6 * a[ADIM_COST];
@@ -542,6 +542,63 @@ if (EPSENS !== 0) {
   }
   if (skipped1) console.log('  · 跳过 ' + skipped1 + ' 个只有 1 个候选的决策（无从改手）');
   console.log('  ‖ 判据①（跑前写死）：无乘积维 + `dim1` 冻结 ⇒ 改手率**必须 = 0**（否则是我的实现错，不是结果）；乘积维同一版 >0 且"更贵:更便宜"明显偏"更贵" ⇒ 这一维真的把条件性装进了身体。');
+}
+/* ===== §E232 `--condgrad=1`：把"**有多少 ep 条件性**"直接回归出来（零新 rollout ‖ 教师/包/头三条并排）=====
+ *   为什么必须补这一格：§E231 只证到"身体能装、头学不出"，而**"教师本身有没有条件性"我一直是从"头学不出"倒推的**
+ *   ⇒ 这两件事的结论完全不同（前者 = 训练/识别问题，后者 = 目标里没这个东西），必须分开量。
+ *   统计量：**Δ = 挑中的费用 − 同一张菜单费用的均值**，对 **ep（珠）** 做 OLS ⇒ 斜率单位 = **珠/珠**（"富一珠多花几珠"）。
+ *   ⚠ 为什么减**同决策的菜单均值**：候选表恒为可付集（实测 `dim1` 全为 1，零例外）⇒ ep 一变高菜单自己就纳入更多贵卡
+ *     ⇒ **绝对电平里的"贵"大半是组成、不是偏好**；减掉同决策均值才把组成控住（§E187"对齐分母"那一课的同一族）。
+ *   ⚠ 三条限定：① 只读斜率与两两对照，**不读 Δ 的绝对电平**；② ep 用中位还原，`clamp` 上界那 0.3% 决策使 ep 偏低
+ *     ⇒ 只会把正斜率**压小**，不会凭空造出正斜率；③ CI 用 OLS 解析式（不拿 max 型统计量当读数）。 */
+if (argv.some(a => a === '--condgrad' || a.indexOf('--condgrad=') === 0)) {   /* 裸旗标与 `=1` 两种写法都算开（只认裸旗标 = 会静默等效，§E192 那一族）*/
+  const medOf = xs => { const s = xs.map(epOf).sort((p, q) => p - q); return s[Math.floor(s.length / 2)] || 0; };
+  const PTS = [];
+  for (const r of R2) {
+    const ep = medOf(r.d.a), cs = r.d.a.map(costOf), mm = mean(cs);
+    PTS.push({ ep: ep, menu: mm, cs: cs, t: costOf(r.d.a[r.teacher]) - mm, p: costOf(r.d.a[r.netPick]) - mm, h: costOf(r.d.a[headPickTb(r)]) - mm, tied: r.tied });
+  }
+  const ols = pts => {
+    const n = pts.length, mx = mean(pts.map(q => q.x)), my = mean(pts.map(q => q.y));
+    let sxx = 0, sxy = 0, syy = 0;
+    for (const q of pts) { const dx = q.x - mx; sxx += dx * dx; sxy += dx * (q.y - my); syy += (q.y - my) * (q.y - my); }
+    if (sxx <= 0 || n < 4) return null;
+    const b = sxy / sxx, res = syy - b * b * sxx, se = Math.sqrt(Math.max(0, res) / (n - 2) / sxx);
+    return { b: b, half: 1.96 * se, n: n, r2: syy > 0 ? (b * b * sxx) / syy : NaN };
+  };
+  const row = (name, get, rows) => {
+    const o = ols(rows.map(q => ({ x: q.ep, y: get(q) })));
+    if (!o) return '| ' + name + ' | — | 组内 ep 无变化 ⇒ 不拟 |';
+    return '| ' + name + ' | ' + o.n + ' | **' + (o.b >= 0 ? '+' : '') + o.b.toFixed(3) + ' ±' + o.half.toFixed(3) + '** | ' +
+      (o.half > 0 && Math.abs(o.b) > o.half ? (o.b > 0 ? '✅ 显著为正' : '⚠ 显著为负') : '与 0 不可分') + ' | R² ' + (isNaN(o.r2) ? '—' : o.r2.toFixed(3)) + ' |';
+  };
+  const NT2 = PTS.filter(q => !q.tied);
+  console.log('\n## §E232 ep 条件性直接回归（留出带 ' + PTS.length + ' 个决策 ‖ **Δ = 挑中费用 − 同菜单费用均值** ‖ 当前脸：' +
+    (PRODF ? '乘积脸（含 `ep×费用`）' : '现脸（出厂 22 维动作块）') + '）');
+  console.log('| 谁在挑 | n | 斜率（珠/珠，"富一珠多花几珠"） | 判读 | 拟合优度 |');
+  console.log('|---|---|---|---|---|');
+  console.log(row('**教师**（一手搜索的 argmax）', q => q.t, PTS));
+  console.log(row('**教师**（只算无并列 ‖ 判据看这档）', q => q.t, NT2));
+  console.log(row('现役冠军包', q => q.p, PTS));
+  console.log(row('蒸馏头', q => q.h, PTS));
+  /* 配对差（同一决策相减 ⇒ 菜单均值、局、回合全部控掉）：这一行才是"条件性差"的本体，前三行各含一份组成。 */
+  console.log(row('**配对差 师 − 包**（同决策相减，控掉组成）', q => q.t - q.p, PTS));
+  console.log(row('**配对差 师 − 包**（只算无并列）', q => q.t - q.p, NT2));
+  console.log(row('**配对差 师 − 头**（同决策相减）', q => q.t - q.h, PTS));
+  console.log('\n· 形状（**ep 是整数珠 ⇒ 按整数分档**，不切四分位 ‖ 每格 = 该档内 菜单费用均值 与 Δ(师)/Δ(包)/Δ(头) 的均值，单位珠）：');
+  const sgn = v => (v >= 0 ? '+' : '') + v.toFixed(2);
+  for (let k = 0; k <= 5; k++) {
+    const g = PTS.filter(q => k < 5 ? Math.round(q.ep) === k : Math.round(q.ep) >= 5);
+    const lab = k < 5 ? 'ep = ' + k : 'ep ≥ 5';
+    if (g.length < 10) { console.log('  · ' + lab + ' 珠：n=' + g.length + ' ⇒ 太薄，不印'); continue; }
+    console.log('  · ' + lab + ' 珠：n=' + g.length + ' ‖ 菜单均值费用 ' + sgn(mean(g.map(q => q.menu))) + ' ‖ 菜单最大 ' +
+      Math.max.apply(null, g.map(q => Math.max.apply(null, q.cs))) + ' ‖ Δ(师) ' + sgn(mean(g.map(q => q.t))) +
+      ' ‖ Δ(包) ' + sgn(mean(g.map(q => q.p))) + ' ‖ Δ(头) ' + sgn(mean(g.map(q => q.h))) + ' ‖ **师−包 ' + sgn(mean(g.map(q => q.t - q.p))) + '** 珠');
+  }
+  console.log('  ‖ ⚠ 最低那档（`ep` 只够免费卡）里菜单均值 ≈ 0 ⇒ 三个 Δ **结构上都是 0**（不是"穷时不花钱"这种偏好）' +
+    '⇒ 斜率实质由"**有了选择之后，谁去够那张贵卡**"驱动 ⇒ 读这一档请优先看**配对的 师−包**那一行，它同决策相减已经把组成控掉。');
+  console.log('  ‖ 判据（跑前写死，见日志 §E232）：教师无并列档的斜率 **CI 含 0** ⇒ "一手搜索的落点没有 ep 条件性"由**直接测量**立住；' +
+    '若斜率显著 >0（判据取 ≥0.2）而头只有零头 ⇒ 病灶是**识别/数据量**，不是"没东西可学"。');
 }
 /* `--dumpagree=`：逐决策落"教师那手 / 头那手 / 包那手"，**唯一用途是跨运行配对**（§E230 第二问）。
  *   为什么要它：单遍留出一致率的半宽实测 ±7.2pt（n=184）⇒ "同配置 vs 跨配置"这种 3pt 量级的差它**判不动**；

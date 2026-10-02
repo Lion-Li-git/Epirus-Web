@@ -45,7 +45,7 @@ import { loadCardTable, breadth, defShare } from './log-reading.mjs';
 import { readFileSync } from 'node:fs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['heads', 'seeds', 'games', 'envs', 'arms', 'chk', 'temp', 'lambdas', 'randctl', 'calib', 'config', 'quiet'], 'probe-distill-player');
+rejectUnknownFlags(argv, ['heads', 'seeds', 'games', 'envs', 'arms', 'chk', 'temp', 'lambdas', 'randctl', 'calib', 'config', 'theta', 'quiet'], 'probe-distill-player');
 const arg = (k, d) => { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); };
 const SEEDS_ARG = arg('seeds', '3100,9200');
 const GAMES = Math.max(1, Number(arg('games', 12)) || 12);
@@ -57,8 +57,21 @@ const ARMS = String(arg('arms', 'pack,head,packT,headT,a0')).split(',').filter(B
  *   而"头只在包的答案附近微调"是同一张脸、同一个采样器下**唯一还没试过的剂量方向**。 */
 const LAMS = String(arg('lambdas', '')).split(',').filter(x => x !== '').map(Number).filter(x => !isNaN(x));
 const RC = String(arg('randctl', '')).split(',').filter(x => x !== '').map(Number).filter(x => !isNaN(x));
+/* ===== §E233 `--theta=0,0.5,-0.5,1`：**只给"条件性"加剂量，不给水平加剂量** =====
+ *   `score = P.value + θ·σp·(I − Ī)/σI`，其中 **I = ep × 费用 / 12**（与 `probe-distill-learnability --prodfeat` **同一份算式**）、
+ *   Ī = 该决策菜单内 I 的均值 ⇒ **同一决策内 ep 是常数**，所以这一项等价于"按手里珠数缩放的贵卡推力"：
+ *   **ep 越高 ⇒ 贵卡加的分越多；ep=0 ⇒ 这一项恒为 0（结构上不动手）**。
+ *   为什么这一族必须和 λ 分开：λ 混的是**教师的口味**（一份全局排序，§E225 证明它只能当全局旋钮用），
+ *   θ 混的是**§E232 实测到的那个斜率**（师−包 = +0.115 ~ +0.298 珠/珠，六带全绿）⇒ 只改条件性、不改水平。
+ *   ⚠ 单位与 λ 同（σp 的几成 ⇒ 两族的剂量可以直接并排读）；σp/σI 由 `--calib` 的 dump 现算。
+ *   ⚠ **θ=0 必须与 `packT` 逐局相同**（新旋钮第一读 = 与上一档相同，§E192）；正负双侧都要跑 ⇒ **方向相反才叫剂量在动**（§E198 那一族：单侧读数分不清"有效"与"扰动"）。 */
+const TH = String(arg('theta', '')).split(',').filter(x => x !== '').map(Number).filter(x => !isNaN(x));
+if (TH.length && !TH.some(t => t === 0)) TH.unshift(0);        /* θ=0 是这一族的守卫 ⇒ 自动带上，不靠我记得手写 */
+const PRODF_SCALE = 12;                                         /* 与 `probe-distill-learnability` 的 `PRODF_SCALE` 同一个数（两份实现必须逐字对齐，改一处要改两处）*/
+const interOf = a => (12 * a[0] + 6 * a[2]) * (6 * a[2]) / PRODF_SCALE;   /* I = ep × 费用 / 12，ep/费用都从动作块第 0/2 维还原 */
 for (const l of LAMS) ARMS.push('lam' + l);
 for (const r of RC) ARMS.push('rnd' + r);
+for (const t of TH) ARMS.push('th' + t);
 /* 去重（我自己刚踩过：`--arms` 里已经点名 `lam0,lam0.25,...`，`--lambdas` 又追加一遍 ⇒ 同一批局**各跑两遍**、
  *   每个臂的 `perGame` 出现重复块。夺冠率不受影响（分子分母同倍），但逐局配对的区间会**虚降 √2** ⇒ 假精度。 */
 { const seen = new Set(); for (let i = ARMS.length - 1; i >= 0; i--) { if (seen.has(ARMS[i])) ARMS.splice(i, 1); else seen.add(ARMS[i]); } }
@@ -116,10 +129,13 @@ const CAL = (function () {
     return out; };
   const sigmaP = within(rows.map(r => r.net));
   const sigmaOf = b => within(rows.map(r => scored(r, b)));
+  const sigmaI = within(rows.map(r => r.a.map(interOf)));        /* §E233：θ 族的分母 = 同一维 I 的决策内散布 */
   for (const h of HEADS) h._calSigmaH = sigmaOf(h.beta);
-  return { sigmaP: sigmaP, n: rows.length, sigmaOf: sigmaOf, rows: rows, scored: scored };
+  return { sigmaP: sigmaP, sigmaI: sigmaI, n: rows.length, sigmaOf: sigmaOf, rows: rows, scored: scored };
 })();
 if ((LAMS.length || RC.length) && !CAL) { console.error('⛔ `--lambdas`/`--randctl` 需要 `--calib=<§E223 的 dump.jsonl>`（λ 的单位靠决策内标准差换算，没有标定集就没有"几成"这个说法）'); process.exit(3); }
+if (TH.length && !CAL) { console.error('⛔ `--theta` 同样需要 `--calib=`（θ 的单位是"σp 的几成 per 一σI 的交互项"，没有标定集就没有剂量这回事）'); process.exit(3); }
+if (TH.length && !(CAL && CAL.sigmaI > 0)) { console.error('⛔ 标定集里交互项 I 的决策内散布为 0 ⇒ θ 族无法标定（多半是喂错了 dump 文件）'); process.exit(3); }
 /* ===== 随机方向对照（§E215 那条课的第三次应用："加扰动要同幅度随机方向对照"）=====
  * λ=0.25 那一档读出 +1.27pt 时，第一问题不是"是不是真的"，而是**"任何同幅度的扰动是不是都赚"**：
  * 若随机方向的 β 也给差不多的增益 ⇒ 那个钱不是"教师的口味"买的，是"把包的 argmax 稍微打散"买的
@@ -134,8 +150,10 @@ const CTRL = (function () {
   return { beta: b, _calSigmaH: CAL.sigmaOf(b), isControl: true };
 })();
 
-/** 焦点席的公共部分：候选表 + 现役包分 +（给了 β 才算）头分 + 出厂同一套两级概率（用来验复刻忠实）。 */
-function table(state, pid, legal, beta) {
+/** 焦点席的公共部分：候选表 + 现役包分 +（给了 β 才算）头分 + 出厂同一套两级概率（用来验复刻忠实）。
+ *  §E233：`prod` = 头文件自带的 `prodfeat` 戳 ⇒ 动作块后面补**同一维** `ep × 费用 / 12`（算式与 `probe-distill-learnability` 逐字一致），
+ *  这样"乘积脸"可以原样部署；同时每候选都算一份 `tilt`（就是这一维的值），给 `--theta` 那族用。 */
+function table(state, pid, legal, beta, prod) {
   const aff = (legal || []).filter(l => l.affordable);
   const base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
   const cands = P.candidatesFor(state, pid, T.econBase(state, pid, base), { lockTarget: false });
@@ -144,18 +162,21 @@ function table(state, pid, legal, beta) {
   const salt = ((state.round | 0) * 2654435761 ^ (pid + 1) * 40503 ^ cands.length * 22465903) >>> 0;
   const tie = i => ((salt ^ strHash(cands[i].key) ^ Math.imul(i + 1, 2654435761)) >>> 0);
   const packV = [], headV = [];
+  const tilt = [];                                  /* §E233：每候选的 `ep × 费用 / 12`（与训练侧同一份算式，用动作块第 0/2 维还原 ⇒ 与导出时的分布对齐）*/
   for (let i = 0; i < cands.length; i++) {
     const c = cands[i];
     packV.push(P.value(state, pid, c.key, params, null, c));
     const a = P.actionFeatures(state, pid, c.key, c).map(r4);
+    tilt.push(interOf(a));
     if (beta) {
-      if (s.length + a.length !== beta.length) { console.error('⛔ 现算特征 ' + s.length + '+' + a.length + ' 维 ≠ 头的 ' + beta.length + ' 维 ⇒ 头的训练面与这台仪器的面不是同一个（读数作废）'); process.exit(3); }
+      const av = prod ? a.concat([tilt[i]]) : a;              /* §E233：乘积脸的训练面是 23 维动作块 ⇒ 部署面必须补同一维，否则 β 长度检查会挡住或（更糟）静默错位 */
+      if (s.length + av.length !== beta.length) { console.error('⛔ 现算特征 ' + s.length + '+' + av.length + '（prod=' + (prod || 0) + '）维 ≠ 头的 ' + beta.length + ' 维 ⇒ 头的训练面与这台仪器的面不是同一个（读数作废）'); process.exit(3); }
       let z = 0; for (let j = 0; j < s.length; j++) z += beta[j] * s[j];
-      for (let j = 0; j < a.length; j++) z += beta[s.length + j] * a[j];
+      for (let j = 0; j < av.length; j++) z += beta[s.length + j] * av[j];
       headV.push(z);
     } else headV.push(0);
   }
-  return { cands: cands, packV: packV, headV: headV, tie: tie, n: cands.length, state: state, pid: pid,
+  return { cands: cands, packV: packV, headV: headV, tie: tie, n: cands.length, state: state, pid: pid, tilt: tilt,
     affN: aff.length, ep: (state.p && state.p[pid] ? state.p[pid].ep : 0) };
 }
 const argmax = (V, tie) => { let b = 0; for (let i = 1; i < V.length; i++) if (V[i] > V[b] || (V[i] === V[b] && tie(i) < tie(b))) b = i; return b; };
@@ -207,16 +228,23 @@ function chooser(arm, head, agg, fallback) {
   if (arm === 'a0') { const b = T.policyChooserN(params, TEMP); return function (state, pid, legal) { const r = b(state, pid, legal); if (r) { agg.acts++; aggPlay(agg, r.key); } return r; }; }
   const isCtl = arm.indexOf('rnd') === 0;                       /* 随机方向对照臂：同一个 λ、同一套公式，只把 β 换成随机向量 */
   const HH = isCtl ? CTRL : head;
+  const isTilt = arm.indexOf('th') === 0 && arm !== 'head';     /* §E233：θ 族（只推条件性那一项，不碰水平）*/
+  const TH = isTilt ? Number(arm.slice(2)) : null;
   const isHead = arm === 'head' || arm === 'headT' || arm.indexOf('lam') === 0 || isCtl;
-  const isTemp = arm === 'packT' || arm === 'headT' || arm.indexOf('lam') === 0 || isCtl;
+  const isTemp = arm === 'packT' || arm === 'headT' || arm.indexOf('lam') === 0 || arm.indexOf('th') === 0 || isCtl;
   const LAM = (arm.indexOf('lam') === 0 || isCtl) ? Number(arm.slice(3)) : null;
   return function (state, pid, legal) {
-    const t = table(state, pid, legal, isHead ? HH.beta : null);
+    const t = table(state, pid, legal, isHead ? HH.beta : null, isHead ? HH.prodfeat : 0);
     let pick;
     if (!t) { agg.noChoice++; pick = fallback(state, pid, legal); }
     else {
       let V;
-      if (LAM !== null) {
+      if (TH !== null) {
+        /* `packV + θ·σp·(I − Ī)/σI`，I = ep×费用/12 ⇒ **同决策内 ep 是常数**，所以这一项 = "按手里珠数缩放的贵卡推力"：
+           富 ⇒ 加贵卡分，ep=0 ⇒ 整项为 0（结构上不动手）。θ=0 逐字退回 `packV` ⇒ 与 `packT` **必须**给同一串出手。 */
+        const mt = mean(t.tilt), k = TH * (CAL.sigmaP / CAL.sigmaI);
+        V = t.packV.map((v, i) => v + k * (t.tilt[i] - mt));
+      } else if (LAM !== null) {
         /* `packV + λ·σp·(头分去均值)/σh`：去均值 ⇒ 每决策一个常数偏移，被 `twoLevelOf` 里的 `−kmax` 精确抵消；
            λ=0 时逐字退回 `packV` ⇒ 与 `packT` **必须**给同一串出手（表里那一行是这条的凭据）。 */
         const mh = mean(t.headV), k = LAM * (CAL.sigmaP / HH._calSigmaH);
@@ -241,6 +269,7 @@ function chooser(arm, head, agg, fallback) {
       /* 分歧率：**同一个状态**上两臂各取一次 max ⇒ "这一档到底改了决定没有"的直接凭据（§E192 那条：
          新旋钮的第一读 = 与上一档是否逐格相同）。temp 臂这一列是"**打分层**分歧"，与实际抽到哪一手无关。 */
       if (isHead && i !== argmax(t.packV, t.tie)) agg.disagree++;
+      if (isTilt && i !== argmax(t.packV, t.tie)) agg.disagree++;   /* θ 族的"打分层分歧"：θ=0 时必须为 0（= 整族的地基）*/
       if (CHK && (agg.dec % CHK === 0)) {
         const probe = S.cloneState(state);
         S.attemptAction(probe, pid, pick.key, { bead: pick.bead || null, target: pick.target == null ? null : pick.target, target2: pick.target2 == null ? null : pick.target2 });
@@ -287,7 +316,7 @@ for (const b of BANDS) {
   if (c[0].testSeed === b.seed && c[0].trainSeed === b.seed) { console.error('⛔ 带 ' + b.seed + ' 用的是训在同一带的头 ⇒ 这是**样本内**，不许'); process.exit(4); }
   headFor[b.seed] = c[0];
 }
-const NEED = LAMS.length ? ['packT'] : ['pack', 'head'];      /* 只跑 λ 族时不必带贪心两臂（①会自己跳过），但必须有 `packT` 当参照 */
+const NEED = (LAMS.length || TH.length) ? ['packT'] : ['pack', 'head'];      /* 只跑 λ/θ 族时不必带贪心两臂（①会自己跳过），但必须有 `packT` 当参照 */
 for (const req of NEED) if (ARMS.indexOf(req) < 0) { console.error('⛔ 判据要 `' + req + '` 臂 ⇒ --arms 必须含它（当前 --arms=' + ARMS.join(',') + '）'); process.exit(4); }
 if (!QUIET) {
   console.log('# §E223 第二步 · 蒸馏头当策略的产品桌 A/B（n=5 ‖ 焦点席 1 号 ‖ ' + ENVS.length + ' 环境 × ' + GAMES + ' 局/带 × ' + SEEDS.length + ' 带 ‖ ' + (GAMES * ENVS.length * SEEDS.length * ARMS.length) + ' 局 ‖ temp=' + TEMP + '）');
@@ -302,6 +331,12 @@ if (!QUIET) {
       (CAL ? 'σp=' + CAL.sigmaP.toFixed(4) + ' ‖ σh=' + HEADS.map(h => h._calSigmaH.toFixed(4)).join('/') + ' ‖ 标定决策数 ' + CAL.n : '**未给 → 会拒跑**') + '）');
     console.log('#   判据：①λ=0 必须与 `packT` 逐局相同（否则整族作废）②存在 λ>0 两/四带同号为正且合并区间不含 0 ⇒ 混合打分有产品增益；③最好的 λ 落在梯度顶端 ⇒ 曲线被截断，得再延一档。');
     if (RC.length) console.log('# 随机方向对照（`--randctl=' + RC.join(',') + '`）：同一个 λ、同一套公式，只把 β 换成固定种子的随机向量 ⇒ **`口味−扰动@λ`** 那一行才是"钱是不是教师的口味买的"；它≈0 而 λ 为正 ⇒ 钱是"把 argmax 打散一点"买的（§E205 的 temp 那条同族）。');
+  }
+  if (TH.length) {
+    console.log('# §E233 θ 族（本轮追加，跑前写死）：`score = P.value + θ·σp·(I − Ī)/σI`，I = `ep × 费用 / 12`（与训练侧 `--prodfeat` 同一份算式）‖ ' +
+      (CAL ? 'σp=' + CAL.sigmaP.toFixed(4) + ' ‖ σI=' + CAL.sigmaI.toFixed(4) + ' ‖ 标定决策数 ' + CAL.n : '**未给 --calib → 会拒跑**'));
+    console.log('#   这一族**只改条件性、不改水平**：同一决策内 ep 是常数 ⇒ 加的是"按手里珠数缩放的贵卡推力"，ep=0 时整项为 0。');
+    console.log('#   判据：① θ=0 必须与 `packT` 逐局相同 ② 正/负两侧**方向相反**（同向 ⇒ 读成"往打分器加东西就值 pt"，不是条件性）③ 最大正档同号为正且合并区间不含 0 ⇒ "条件性本身值 pt"。');
   }
 }
 
@@ -341,7 +376,7 @@ for (const s of SEEDS) for (const arm of ARMS) {
 }
 /* 逐环境的**配对差**（对 `packT` 比）：判据只看合并量，这张表只用来**点名下一步的假设**。
  * ⚠ 六格多重比较 ⇒ 单格显著不算结论（§E187 那条：分母要对齐；这里另给每格自己的区间）。 */
-const TEMPARMS = ['headT'].concat(LAMS.map(l => 'lam' + l), RC.map(r => 'rnd' + r)).filter(a => has(SEEDS[0] + '|' + a) && has(SEEDS[0] + '|packT'));
+const TEMPARMS = ['headT'].concat(LAMS.map(l => 'lam' + l), RC.map(r => 'rnd' + r), TH.map(t => 'th' + t)).filter(a => has(SEEDS[0] + '|' + a) && has(SEEDS[0] + '|packT'));
 if (TEMPARMS.length) {
   console.log('\n## 分环境的配对差（对 `packT`，pt；每格 = 该环境下所有带的逐局配对）');
   console.log('| 环境 | ' + TEMPARMS.map(a => '`' + a + '`').join(' | ') + ' |');
@@ -387,7 +422,9 @@ const PAIR_SPECS = [['pack', 'head', '①'], ['packT', 'headT', "①'"]]
   .concat(LAMS.map(l => ['packT', 'lam' + l, 'λ=' + l]))
   /* 最要紧的一列：**同一个 λ 上"教师方向 − 随机方向"**（同种子逐局配对）。
      若这一列≈0 而 `λ=… − packT` 为正 ⇒ 赚钱的是"把 argmax 打散一点"，不是"搜索的口味"。 */
-  .concat(RC.filter(r => LAMS.indexOf(r) >= 0).map(r => ['rnd' + r, 'lam' + r, '口味−扰动@λ=' + r]));
+  .concat(RC.filter(r => LAMS.indexOf(r) >= 0).map(r => ['rnd' + r, 'lam' + r, '口味−扰动@λ=' + r]))
+  /* §E233：θ 族每一档都配 `packT` 比 ⇒ 与 λ 族同单位（σp 的几成），两族剂量可并排读 */
+  .concat(TH.map(t => ['packT', 'th' + t, 'θ=' + t]));
 for (const spec of PAIR_SPECS) {
   const [A, B, tag] = spec;
   if (!has(SEEDS[0] + '|' + A) || !has(SEEDS[0] + '|' + B)) continue;
@@ -422,10 +459,49 @@ if (has(SEEDS[0] + '|lam0') && has(SEEDS[0] + '|packT')) {
     console.log('  判据（跑前写死的 λ 版）：存在 λ>0 使两/四带同号为正且合并区间不含 0 ⇒ "混合打分"有产品增益；全为负或含 0 ⇒ λ 这条也关掉。');
   }
 }
-const headAgg = SEEDS.map(s => (['head', 'headT'].some(a => AGG[s + '|' + a]) ? ['head', 'headT'] : ['lam' + LAMS[LAMS.length - 1], 'rnd' + RC[RC.length - 1]])
-  .filter(a => AGG[s + '|' + a]).map(a => wr(s + '|' + a))).flat()
+{
+  /* §E233 θ=0 的**逐字相同**检查（与 λ=0 同族）：证明"θ 族里唯一的自由量就是 θ"，也证明我没偷偷换候选表/采样。 */
+  if (has(SEEDS[0] + '|th0') && has(SEEDS[0] + '|packT')) {
+    let diff = 0, n = 0;
+    for (const s of SEEDS) { const a = wr(s + '|packT'), b = wr(s + '|th0'); n += a.games; for (let i = 0; i < a.perGame.length; i++) if (a.perGame[i].won !== b.perGame[i].won) diff++; }
+    console.log('  θ=0 忠实性：与 `packT` 逐局不同的结果 **' + diff + '/' + n + '**（需要 0 ‖ 大于 0 ⇒ 交互项在 θ=0 就没退回原口径，整族 θ 读数作废）');
+    if (diff) console.log('  ⛔ θ=0 没退回 `packT` ⇒ 这一族的读数全部作废，先修公式');
+  }
+}
+{
+  /* §E233 θ 族读数：**双侧**（正剂量 + 负剂量）必须方向相反，否则不是"条件性有货"，是"任何加在打分器上的动都值 pt"（§E198 那一族）。 */
+  const pos = TH.filter(t => t > 0 && PAIRS['θ=' + t]), neg = TH.filter(t => t < 0 && PAIRS['θ=' + t]);
+  if (pos.length || neg.length) {
+    const fmt = t => { const p = PAIRS['θ=' + t]; const m = 100 * mean(p.all); return 'θ=' + t + ' **' + (m >= 0 ? '+' : '') + m.toFixed(2) + ' ±' + (100 * ci(p.all)).toFixed(2) + '**' + (p.ok ? '（立住为正）' : p.neg ? '（显著为负）' : ''); };
+    console.log('  θ 剂量梯（对 `packT`，合并 pt ‖ 单位与 λ 同：σp 的几成 per 一σI 的 `ep×费用`）：' + neg.concat(pos).sort((a, b) => a - b).map(fmt).join(' ‖ '));
+    if (pos.length && neg.length) {
+      const pm = 100 * mean(PAIRS['θ=' + pos[pos.length - 1]].all), nm = 100 * mean(PAIRS['θ=' + neg[0]].all);
+      console.log('  **方向对照**（最大正档 ‖ 最大负档）：' + (pm >= 0 ? '+' : '') + pm.toFixed(2) + ' ‖ ' + (nm >= 0 ? '+' : '') + nm.toFixed(2) + 'pt ⇒ ' +
+        (Math.sign(pm) === Math.sign(nm) ? '⚠ **同向** ⇒ 不能读成"条件性有货"（那必须是推一个有方向的量）；两侧同向为负就只是"加了东西就赔"'
+          : '✅ **反向** ⇒ 剂量确实在推一个有方向的量'));
+    }
+    const bestPos = pos.map(t => { const p = PAIRS['θ=' + t]; return { t: t, m: 100 * mean(p.all), ok: p.ok }; }).sort((a, b) => b.m - a.m)[0];
+    if (bestPos) {
+      console.log('  判据（跑前写死的 θ 版）：① θ=0 与 `packT` 逐字相同 ② 正负两侧方向相反 ③ 最大正档' +
+        (bestPos.ok ? ' **立住为正** ⇒ 条件性本身在这张桌上值 pt（头号目标的第一颗真钉子）' : ' **没立住** ⇒ "斜率有货但赢不了"，与 §E223 同族'));
+      if (bestPos.ok && bestPos.t === Math.max.apply(null, pos)) console.log('  ⚠ 最好的 θ 恰好是**梯度顶端** ⇒ 曲线被截断，得往大再延一档');
+    }
+  }
+}
+/* ② 的分歧率取"**本轮真跑了的**、且不是恒等臂"的那一族：整张脸换掉的臂 ‖ 最大 λ 档 ‖ 最大正 θ 档 ‖ 随机方向对照。
+ * ⚠ 这一条原先只会往 λ 上退：本轮只跑 θ ⇒ 退化成 `'lam' + undefined` ⇒ 取到空集 ⇒ 印出 **0.0% 的假读数**，
+ *   而同一份日志的臂表里明明写着 10.0% ~ 48.6%。⇒ 通用形：**回退链必须覆盖本轮实际跑的臂族，取不到就响亮印"未测"**
+ *   （与 §E226"未测 ≠ 通过"、§E181"分母混进允许不同的样本"同一族）。 */
+const ALT_ARMS = [].concat(LAMS.length ? ['lam' + Math.max.apply(null, LAMS)] : [], RC.length ? ['rnd' + Math.max.apply(null, RC)] : [],
+  TH.filter(t => t > 0).length ? ['th' + Math.max.apply(null, TH.filter(t => t > 0))] : []);
+const hasAny = (s, names) => names.filter(a => AGG[s + '|' + a]);
+const HEADLIKE = ['head', 'headT'];
+const chosenArms = s => hasAny(s, HEADLIKE).length ? hasAny(s, HEADLIKE) : hasAny(s, ALT_ARMS);
+const headAgg = SEEDS.map(s => chosenArms(s).map(a => wr(s + '|' + a))).flat()
   .reduce((a, x) => ({ disagree: a.disagree + x.disagree, dec: a.dec + x.dec }), { disagree: 0, dec: 0 });
-const headArmNote = (['head', 'headT'].some(a => AGG[SEEDS[0] + '|' + a])) ? '头臂与包臂' : '（本轮没跑整张脸换掉的臂 ⇒ 这一列取**最大 λ 档**的分歧）';
+const headArmNote = hasAny(SEEDS[0], HEADLIKE).length ? '头臂与包臂'
+  : (chosenArms(SEEDS[0]).length ? '（本轮没跑整张脸换掉的臂 ⇒ 这一列取 ' + chosenArms(SEEDS[0]).join('/') + ' 档的分歧）'
+    : '⚠ **本轮没有任何可比臂 ⇒ ② 是"未测"，不是 0.0%，更不算通过**');
 const dis = 100 * headAgg.disagree / Math.max(1, headAgg.dec);
 /* ⚠ 这一条曾经写成 `.filter(...)` 就接 `.flat()`（漏了 `.map(...)`）⇒ 迭代到的是**字符串**，
  *   `x.nChk` = undefined ⇒ `chk.n` = NaN ⇒ 打印"未抽验"，而同一份日志的表格里明明有 394 次抽验。
