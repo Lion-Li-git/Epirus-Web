@@ -52,7 +52,7 @@ for (const [modeKey, n] of CONFIGS) {
   const key = modeKey + '/' + n;
   ROWS[key] = {};
   for (const refName of REFN) {
-    const agg = { games: 0, win: 0, acts: 0, spend: 0, epSum: 0, epMax: 0, ji: 0, def: 0, atk: 0, ring: 0, rounds: 0 };
+    const agg = { games: 0, win: 0, acts: 0, spend: 0, epSum: 0, epMax: 0, ji: 0, def: 0, atk: 0, ring: 0, rounds: 0, bySeed: {} };
     for (const seed of SEEDS) for (let g = 0; g < GAMES; g++) {
       const rnd = mulberry32(seed + g * 7919 + n * 131 + modeKey.length * 17);
       const st = S.createState(modeKey, { next: rnd }, n);
@@ -74,6 +74,8 @@ for (const [modeKey, n] of CONFIGS) {
       Play.autoGameN(st, cs);
       agg.games++; agg.rounds += st.round;
       if (st.winner === 0) agg.win++;
+      const bs = agg.bySeed[seed] = agg.bySeed[seed] || { games: 0, win: 0 };
+      bs.games++; if (st.winner === 0) bs.win++;
     }
     ROWS[key][refName] = agg;
   }
@@ -109,6 +111,27 @@ for (const k of KEYS) {
   console.log('| `' + k + '` | ' + wr(a).toFixed(1) + ' | ' + (a.acts / a.games).toFixed(1) + ' | ' +
     (100 * a.ji / n1).toFixed(1) + ' | ' + (100 * a.def / n1).toFixed(1) + ' | ' + (100 * a.atk / n1).toFixed(1) + ' | ' +
     (100 * a.ring / n1).toFixed(1) + ' | ' + (a.spend / n1).toFixed(2) + ' | ' + (a.epSum / n1).toFixed(2) + ' | ' + a.epMax + ' | ' + (a.rounds / a.games).toFixed(1) + ' |');
+}
+if (SEEDS.length >= 2) {
+  const b1 = SEEDS[0], b2 = SEEDS[1];
+  const rate = (kc, r, band) => { const a = ROWS[kc][r].bySeed[band]; return a ? 100 * a.win / Math.max(1, a.games) : NaN; };
+  const meanOver = f => KEYS.reduce((s, kc) => s + f(kc), 0) / KEYS.length;
+  let shared = null, sv = -Infinity;
+  for (let i2 = 0; i2 < REFN.length; i2++) { const v = meanOver(kc => rate(kc, REFN[i2], b1)); if (v > sv) { sv = v; shared = REFN[i2]; } }
+  const sharedB2 = meanOver(kc => rate(kc, shared, b2));
+  const per = KEYS.map(kc => { let b = null, v = -Infinity;
+    for (let i2 = 0; i2 < REFN.length; i2++) { const x = rate(kc, REFN[i2], b1); if (x > v) { v = x; b = REFN[i2]; } }
+    return { k: kc, ref: b, b1: v, b2: rate(kc, b, b2) }; });
+  const perB2 = per.reduce((s, x) => s + x.b2, 0) / per.length;
+  const champB2 = meanOver(kc => rate(kc, 'packT', b2));
+  console.log('\n## ④ **样本外**的「按配置换策略 vs 一套打天下」（band1=' + b1 + ' 选、band2=' + b2 + ' 评）');
+
+  console.log('  ‖ 一套打天下：band1 上平均最好的是 ' + shared + '（' + sv.toFixed(1) + '%）=> band2 平均 ' + sharedB2.toFixed(1) + '%');
+  console.log('  ‖ 按配置换：' + per.map(x => x.k + '->' + x.ref + '(' + x.b2.toFixed(1) + '%)').join(' · '));
+  console.log('  ‖ => band2 平均 ' + perB2.toFixed(1) + '% ；冠军 packT 同口径 ' + champB2.toFixed(1) + '%');
+  console.log('  ‖ => **条件性价值（探针级下界）= ' + (perB2 - sharedB2 >= 0 ? '+' : '') + (perB2 - sharedB2).toFixed(1) + 'pt** ；取该配置最好的探针相对冠军的总增益 = ' + (perB2 - champB2 >= 0 ? '+' : '') + (perB2 - champB2).toFixed(1) + 'pt');
+  console.log('  ⚠ **这不是 S3 的真上界**：只在 6 枚故意笨的探针里挑，真 oracle 可能高得多 => 只读作「在这些策略之间按配置挑，值不值」。');
+  console.log('  ⚠ 选/评已分离（band1 选、band2 评）=> 不含 §E200 那种「在噪声上取最大」的膨胀；但每格 ' + GAMES + ' 局 => ±7pt。');
 }
 console.log('\n## 复跑命令\n  node tools/probe-config-axis.mjs --games=' + GAMES + ' --seeds=' + SEEDS.join(',') + ' --champion=' + CHAMP);
 console.log('rc=0');
