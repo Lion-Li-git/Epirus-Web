@@ -962,6 +962,63 @@ t('D217 经济轴的两根锚（v1.5.313 · 用户裁定批）：两枚新桌必
     '≥B 时两枚必须选**同一张**牌 ⇒ 唯一区别只剩"第几回合开始花"（否则 §3 那条"分离方向相反"没法解释）');
 });
 
+t('D218 研究工具的旗标登记结构（v1.5.318）：读了却没登记的旗标必须为 0，且假旗标必须 exit 64', function () {
+  /* 为什么：`rejectUnknownFlags` 是研究工具唯一的输入消毒层，漏登记的后果**两向都坏** ——
+   * 要么工具自己读的旗标被它响亮拒掉（§E230 跑前发现的 `allowmixedcfg` 正是这一类：
+   * 亲手建的逃生口被自己的门挡死），要么拼错的旗标**静默被忽略**、读数按默认档跑完而没人知道。
+   * 判据钉的是**结构**（读到的每个旗标都在自己的名单里），不是某几个旗标词 ⇒ 加旗标不用改门，漏登记才红。
+   * 纯 indexOf 实现（本仓踩过 heredoc 把反斜杠折掉、正则变成真换行的坑）⇒ 门里不出现反斜杠。 */
+  const quoted = function (s) { const p = s.split(String.fromCharCode(39)); const out = [];
+    for (let i = 1; i < p.length; i += 2) out.push(p[i]); return out; };
+  const grab = function (src, needle) { const out = []; const q = String.fromCharCode(39); let i = -1;
+    while ((i = src.indexOf(needle, i + 1)) >= 0) { const j = src.indexOf(q, i + needle.length); const k2 = src.indexOf(q, j + 1);
+      if (j > 0 && k2 > j) out.push(src.slice(j + 1, k2)); } return out; };
+  /* 不扫门文件自己：它里面就写着 grab(src, "arg('" ) 这类字面量，会把门自己的源码当读数扫进来（首版就栽在这）。 */
+  const files = readdirSync('tools').filter(function (f) { return f.slice(-4) === '.mjs' && f !== 'np-test.mjs'; });
+  const offenders = []; let scanned = 0;
+  for (let fi = 0; fi < files.length; fi++) {
+    const src = readFileSync('tools/' + files[fi], 'utf8');
+    const a0 = src.indexOf('rejectUnknownFlags(argv, [');
+    if (a0 < 0) continue;
+    scanned++;
+    const a1 = src.indexOf(']', a0);
+    const listed = {}; quoted(src.slice(a0, a1)).forEach(function (x) { listed[x] = 1; });
+    const used = {};
+    grab(src, "arg('").concat(grab(src, "flag('")).concat(grab(src, "=== '--")).concat(grab(src, "startsWith('--"))
+      .forEach(function (x) { const v = x.replace('=', ''); const isName = v.length > 0 && v.split('').every(function (c) { const o = c.charCodeAt(0); return (o >= 48 && o <= 57) || (o >= 65 && o <= 90) || (o >= 97 && o <= 122) || o === 95; }); if (isName) used[v] = 1; });
+    const miss = Object.keys(used).filter(function (x) { return !listed[x]; });
+    if (miss.length) offenders.push(files[fi] + ' -> ' + miss.join(','));
+  }
+  ok(scanned >= 8, '至少要有 8 台工具带 rejectUnknownFlags（实测 ' + scanned + ' 台）—— 少了说明消毒层被人拆了');
+  eq(offenders.length, 0, '读了却没登记的旗标必须为 0（实测违规：' + (offenders.join(' | ') || '无') + '）');
+  /* 行为腿：假旗标必须**响亮**失败（exit 64），不许静默按默认档跑完 */
+  const rb = spawnSync(process.execPath, ['tools/probe-distill-learnability.mjs', '--绝对不存在的旗标=1'], { encoding: 'utf8' });
+  eq(rb.status, 64, '假旗标必须以 exit 64 被拒（实测 status=' + rb.status + '）');
+});
+
+t('D219 「6 珠悬崖」回归护栏（v1.5.318）：现役冠军决策时 ep 的暴露面不许越过实测基线', function () {
+  /* 依据（千问 §16④ / §E232）：夺冠率对手里留多少珠是**一片平台 + 一道悬崖** ——
+   *   0.77~1.81 珠 => 14.9~20.9%（无差异区）；6.5~6.8 珠 => 1.6%；8.2~8.6 珠 => 0.1~0.3%。
+   * => 门禁/进化池要考经济判断，考的应当是会不会越过 6 珠，不是攒不攒。
+   * 这条曲线是**相关性**读数，合法用法只有两条：否证单调性 / 支持 theta=0 是局部最优（§16④ 的限定）。
+   * => 本门是**回归护栏**（别让暴露面变大），不是证明 6 珠以上必输。
+   * 夹具：60 局 multi/5（冠军席 + 4 脚本），固定种子；实测基线 ep>=6 = 1.95%（14/717 次）、峰值 12。 */
+  const ch = AUDIT.loadChamp(sb, 'js/bundled-champion-3p.js');
+  const pr = ch && ch.params ? ch.params : ch;
+  const OPPX = [Bots.pickBalanced, Bots.pickAggro, Bots.pickDefend, Bots.pickMix, Bots.pickFarmer];
+  let n = 0, ge6 = 0, peak = 0;
+  for (let g = 0; g < 60; g++) {
+    const st = S.createState('multi', { next: mulberry32(3100 + g * 7919) }, 5);
+    st.slotSalt = (Math.imul(g + 5, 0x9e3779b1) ^ 0x5f3779b9) >>> 0;
+    const base = T.policyChooserN(pr, 0.15, 0.15, 5);
+    const rec = function (state, pid, legal) { const ep = state.p[pid].ep || 0; n++; if (ep >= 6) ge6++; if (ep > peak) peak = ep; return base(state, pid, legal); };
+    Play.autoGameN(st, [rec, OPPX[0], OPPX[1], OPPX[2], OPPX[3]]);
+  }
+  ok(n >= 500, '夹具必须真的跑出足够决策（实测 ' + n + ' 次）—— 少了说明夹具坏了，不是冠军变好了');
+  ok(100 * ge6 / n <= 4, '决策时 ep>=6 的占比必须 <= 4%（实测 ' + (100 * ge6 / n).toFixed(2) + '%，基线 1.95%）');
+  ok(peak <= 14, '决策时 ep 峰值必须 <= 14（实测 ' + peak + '，基线 12）');
+});
+
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {
   /* 真实事故（v1.3.48）：一次测试跑把 js/bundled-champion*.js 覆写成测试冠军并被提交。
    * v1.3.54 又发现两个同类缺口，都只在"跑完看 git status"时才显形：
