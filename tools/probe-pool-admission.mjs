@@ -171,12 +171,15 @@ const spearman = (x, y) => {
 
 console.log('\n## ① 逐桌体检（参照策略夺冠 %，p=0 ‖ 每格 ' + (GAMES * SEEDS.length) + ' 局）');
 console.log('| 桌 | ' + REFS.join(' | ') + ' | `spread` | `Δ@0.8`（packT） | 与最不像的桌相距 ρ | `dev-ρ`† | 这张桌偏袒谁 | 体检 |');
-console.log('|---|' + Array.from({ length: REFS.length + 6 }, () => '---').join('|') + '|');
+console.log('|---|' + Array.from({ length: REFS.length + 7 }, () => '---').join('|') + '|');
 const rows = [];
 for (const env of ENVS) {
   const v = REFS.map(r => wr(A(env.name, r, 0)));
   const spread = Math.max.apply(null, v) - Math.min.apply(null, v);
   const a0 = A(env.name, 'packT', 0), a8 = A(env.name, 'packT', 0.8);
+  /* ⚠ 没跑 `p=0.8` 这一档时（`--p=0` 之类）**不许抛栈**（我自己踩了一次：`--p=0` 直接 TypeError）。
+     判据 C 在这种情形下是"**未测**"，不是"通过"——未测与通过必须分开印（口径陷阱第 34 条那一族：假绿）。 */
+  if (!a8) { rows.push({ env: env.name, v: v, spread: spread, dm: NaN, dci: NaN, det: null, sigNeg: null, vec: v }); continue; }
   const d = a0.perGame.map((x, i) => a8.perGame[i] - x);
   const dm = mean(d) * 100, dci = ci(d);
   /* ⚠ **判据 C 的实现纠偏（不是改阈值）**：跑前写死的是"Δ **不显著为负**"，显著 = 区间不含 0 ⇒ 应为 `dm + dci < 0`。
@@ -206,21 +209,36 @@ const devRho = rows.map((r, i) => { let best = -2, bw = '';
   for (let k = 0; k < rows.length; k++) { if (k === i) continue; const rr = spearman(devV[i], devV[k]); if (rr > best) { best = rr; bw = rows[k].env; } }
   return { max: best, with: bw }; });
 for (let i = 0; i < rows.length; i++) {
-  const r = rows[i], B_ = rho[r.env].max <= 0.6, A_ = r.spread >= 15, C_ = r.det;
-  console.log('| `' + r.env + '` | ' + r.v.map(x => x.toFixed(1)).join(' | ') + ' | **' + r.spread.toFixed(1) + 'pt** | ' +
-    (r.dm >= 0 ? '+' : '') + r.dm.toFixed(1) + ' ±' + r.dci.toFixed(1) + (r.sigNeg ? ' **（区间不含 0）**' : '（含 0）') + ' | ρ=' + rho[r.env].max.toFixed(2) + '（最像 `' + rho[r.env].with + '`） | ' +
-    '`dev-ρ`=' + devRho[i].max.toFixed(2) + '（`' + devRho[i].with + '`）† | `' + favors[i].ref + '` +' + favors[i].dev.toFixed(1) + 'pt | ' +
-    (A_ && B_ && C_ ? '**✔ 可进池（三条全过）**' : '✘ ' + [!A_ && 'A:区分度不足', !B_ && 'B:与 `' + rho[r.env].with + '` 冗余', !C_ && 'C:Δ 显著为负'].filter(Boolean).join(' ‖ ')) + ' |');
+  const r = rows[i], B_ = rho[r.env].max <= 0.6, A_ = r.spread >= 15;
+  /* `det === null` = **未测**（这一遍没跑 `p=0.8`）⇒ 既不算过也不算不过，且**整行不许标 ✔**（未测 ≠ 通过）。 */
+  const C_ = r.det === true, Cq = r.det === null;
+  const dCell = Cq ? '未测‖' : (r.dm >= 0 ? '+' : '') + r.dm.toFixed(1) + ' ±' + r.dci.toFixed(1) + (r.sigNeg ? ' **（区间不含 0）**' : '（含 0）');
+  console.log('| `' + r.env + '` | ' + r.v.map(x => x.toFixed(1)).join(' | ') + ' | **' + r.spread.toFixed(1) + 'pt** | ' + dCell + ' | ρ=' + rho[r.env].max.toFixed(2) + '（最像 `' + rho[r.env].with + '`） | ' +
+    '`dev-ρ`=' + devRho[i].max.toFixed(2) + '（`' + devRho[i].with + '`）† | `' + favors[i].ref + '` ' + (favors[i].dev >= 0 ? '+' : '') + favors[i].dev.toFixed(1) + 'pt | ' +
+    (A_ && B_ && C_ && rows.length >= 6 ? '**✔ 可进池（三条全过）**' : (A_ && B_ && C_ ? '（A/B/C 形状都对，但**池子只有 ' + rows.length + ' 张桌 ⇒ B 条不可判**）' : '✘ ' + [!A_ && 'A:区分度不足', !B_ && 'B:与 `' + rho[r.env].with + '` 冗余', Cq && 'C:未测（没跑 p=0.8）', !Cq && !C_ && 'C:Δ 显著为负'].filter(Boolean).join(' ‖ '))) + ' |');
 }
 console.log('  ‖ † `dev-ρ` 是**探索列、不进判据**（比的是"偏离自己跨桌平均"的名次，剥掉两枚常量探针造成的假一致）');
 console.log('  ‖ 参照策略的跨桌平均（"偏袒"那一列的基线）：' + REFS.map((n, j) => n + ' ' + refAvg[j].toFixed(1) + '%').join(' ‖ '));
 if (VERDICT) {
-  const ok = rows.filter(r => r.spread >= 15 && rho[r.env].max <= 0.6 && r.det);
+  /* ⛔ **小池子守卫**（10-02 DS 抓出我这份的缺陷，`RESEARCH-LOG-2026-10-02-ds.md` §5.3②）：
+     `ρ / dev-ρ` 是把"每张桌的参照名次"跨桌比出来的 ⇒ 桌上只有 2–4 张时它**必然接近 ±1**（自由度不够），
+     于是 B 条会"全过"= **假绿**（永不触发的守卫那一族）。⇒ 桌数不足时**拒判 B**，只印 A/C。 */
+  if (rows.length < 6) {
+    console.log('\n## ② 判据结论 —— **拒判**：本次只跑了 ' + rows.length + ' 张桌');
+    console.log('  ⛔ B 条（非冗余 `dev-ρ ≤ 0.6`）在 <6 张桌的池子上**没有意义**（名次向量的自由度不够，2 张桌必然 ±1.00）' +
+      ' ⇒ 要判进池**必须 `--envs=all` 全池跑**（本仓现在 ' + POOL.length + ' 张）。本轮只印 A/C 两条形参：');
+    console.log('  ‖ A 区分度不足（spread < 15pt）：' + (rows.filter(r => r.spread < 15).map(r => '`' + r.env + '` ' + r.spread.toFixed(0)).join(' ‖ ') || '（无）'));
+    console.log('  ‖ C 抗确定性不过（Δ 显著为负）：' + (rows.filter(r => r.det === false).map(r => '`' + r.env + '` ' + r.dm.toFixed(1)).join(' ‖ ') || '（无）') +
+      (rows.some(r => r.det === null) ? ' ‖ ⚠ 未测 ' + rows.filter(r => r.det === null).length + ' 张（没跑 p=0.8）' : ''));
+  } else {
+  const ok = rows.filter(r => r.spread >= 15 && rho[r.env].max <= 0.6 && r.det === true);
   console.log('\n## ② 判据结论（合取三条，跑前写死）');
   console.log('  ‖ 过了的桌：' + (ok.length ? ok.map(r => '`' + r.env + '`').join(' ') : '**一张都没有**'));
   console.log('  ‖ 区分度不足（spread < 15pt）：' + rows.filter(r => r.spread < 15).map(r => '`' + r.env + '` ' + r.spread.toFixed(0)).join(' ‖ '));
   console.log('  ‖ 冗余（ρ > 0.6）：' + rows.filter(r => rho[r.env].max > 0.6).map(r => '`' + r.env + '`↔`' + rho[r.env].with + '` ' + rho[r.env].max.toFixed(2)).join(' ‖ '));
-  console.log('  ‖ 抗确定性不过（Δ 显著为负）：' + rows.filter(r => !r.det).map(r => '`' + r.env + '` ' + r.dm.toFixed(1)).join(' ‖ '));
+  console.log('  ‖ 抗确定性不过（Δ 显著为负）：' + (rows.filter(r => r.det === false).map(r => '`' + r.env + '` ' + r.dm.toFixed(1)).join(' ‖ ') || '（无）') +
+    (rows.some(r => r.det === null) ? ' ‖ ⚠ **未测**（这一遍没跑 p=0.8）：' + rows.filter(r => r.det === null).length + ' 张桌 ⇒ C 条对它们**没有结论**，整表不许标 ✔' : ''));
+  }
 }
 console.log('\n## ③ 自检');
 /* 局数与耗时印出来（今天上午我自己就是因为不知道"这桌到底跑了多久"而起了一次假警报：
