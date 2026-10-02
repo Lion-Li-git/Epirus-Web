@@ -7,7 +7,7 @@ import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来�
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
-import { rejectDegenerateWinners, bandPickByLand, rejectNarrowWinners } from './pick-best.mjs';
+import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, rejectNarrowWinners } from './pick-best.mjs';
 import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
 /* v1.5.269（§E77）：载重 veto 的**同口径量具** —— `behavior-profile` 的 `fieldProfile`（ε=0 · temp 0.15 · 5 席同包）。
  * 该模块的主体被 `if (RUN_AS_MAIN)` 守着 ⇒ **import 无副作用**（只会多装载一次引擎，实测 ~0.5 秒）。 */
@@ -90,6 +90,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
+  'EPIRUS_SEL_BIGT', 'EPIRUS_SEL_BIGT_KEYS', 'EPIRUS_SEL_BIGT_GAMES', 'EPIRUS_SEL_BIGT_MODE',   // v1.5.326 §E249：同分带内按贵卡出手选人（默认 0 ⇒ 当选者逐字不变）
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
@@ -204,6 +205,22 @@ const SEL_KEEP_KEYS = String(process.env.EPIRUS_SEL_KEEP_KEYS || 'railgun').spli
  * ⇒ 分成两个名单：`_KEYS` 按**落地**判，`_CAST_KEYS` 按**成功出手**判（`mirrorHealth.castByKey`，v1.5.266 新增字段）。 */
 const SEL_KEEP_CAST_KEYS = String(process.env.EPIRUS_SEL_KEEP_CAST_KEYS || 'ring,charge').split(',')
   .map(function (s) { return s.trim(); }).filter(Boolean);
+/* ===== v1.5.326（qoder 10-03 夜班 §E249 · 默认 0 ⇒ 当选者与今天逐字相同）：**同分带内按"贵卡出手"选人** =====
+ * 动因（今晚 4 批 47 臂实测）：`EPIRUS_COSTLY_W` 能把名人堂里"会打大雷"的粒从**对照 0/6 抬到 6/6**，
+ *   可**当选产物**常常还是 0.000 —— 因为终局重验只按胜负分选人，"会不会打这张卡"不在它看得见之列。
+ *   （`SEL_KEEP` 那次**逐位没换人**是同一族的另一半：veto 只能在保住优点的粒里挑，**造不出**保住优点的粒。）
+ * ⇒ 这一根**不改 `fit`、不改奖励、不改规则**，只在"胜负分相差不到 `SEL_BIGT` pt 的候选里"挑贵卡出手最多的一粒
+ *   —— 也就是**拿 ≤tol pt 的胜负分，换"这粒会打这张卡"**，把"抽签"变成"选人规则"。
+ * 用量口径 = `behavior-profile.fieldProfile`（**ε=0 · soft · 5 席同包 · seed0=77000**），与 `SEL_KEEP_CAL=plain` **同一把尺**，
+ *   只是 n 与模式可另给（`_GAMES` / `_MODE`，默认 60 · `long` —— 大雷要 5 珠，只有长程够得着）。
+ * ⚠ 三条纪律：① 带内**全部用量为 0 ⇒ 不许改判**，并响亮印"带内 0 粒打过 ⇒ 这臂零作用"（防"永不触发的守卫当假绿"）；
+ *   ② 必须印 **改判/未改判 + 胜负分差 pt**（排序键不咬 = 没接线，§N12 的原话）；③ 生效值与结果写进 `meta.recipe.selBigT`。 */
+const SEL_BIGT = Number(process.env.EPIRUS_SEL_BIGT || 0);
+const SEL_BIGT_KEYS = String(process.env.EPIRUS_SEL_BIGT_KEYS || 'bigT,drain').split(',')
+  .map(function (s) { return s.trim(); }).filter(Boolean);
+const SEL_BIGT_GAMES = Number(process.env.EPIRUS_SEL_BIGT_GAMES || 60);
+const SEL_BIGT_MODE = String(process.env.EPIRUS_SEL_BIGT_MODE || 'long');
+let SEL_BIGT_LOG = null;
 /* v1.5.268（§E75）：载重 veto **两模式都判**（默认 `multi,long`）。
  * 起因：只按 multi 镜判"炮还在不在"，与 long 口径的载重读数**反向**（NCV-71 改判后 炮 2.90→0.90、5P 41.3→39.2）。
  * 每多一个模式 = 每名候选多跑一次 `mirrorHealth`（实测 20 局 ≈ 百毫秒级），**不加对局进 fit**、不改判定，只在当选时多筛一道。 */
@@ -1308,6 +1325,61 @@ for (const h of hall) {
     SEL_LAND_LOG = { tol: SEL_LAND_TOL, band: lp.band.length, by: lp.tieBrokenBy,
       landG: sel.best ? sel.best.landG : null, castG: sel.best ? sel.best.castG : null };
   }
+  /* ===== v1.5.326（§E249 · 默认关 ⇒ 这一段一行都不跑）：**同分带内按贵卡出手选人** =====
+   * 与 `SEL_LAND`（同分带内按兑现广度）**同形**，只是排序键换成"这张贵卡打没打过"。
+   * ⚠️ 用量**只在带内量**（不是全池）：预筛已经用硬门槛剔过退化粒，带内通常 2~4 粒 ⇒ 每臂多花 2~4 次 × n 局，可接受。 */
+  if (SEL_BIGT > 0 && sel.clean && sel.clean.length && sel.best) {
+    const RulesB = sb.window.EpirusRules;
+    const badK = SEL_BIGT_KEYS.filter(function (k) { return !(RulesB.byKey && RulesB.byKey[k]); });
+    if (badK.length) {
+      console.error('[贵卡选人] ⛔ EPIRUS_SEL_BIGT_KEYS 里有不认识的卡名：' + badK.join(',') +
+        '（合法的是 `EpirusRules.byKey` 的键）⇒ 拒绝按"判不到的维"选人');
+      process.exit(7);
+    }
+    if (typeof fieldProfile !== 'function') {
+      console.error('[贵卡选人] ⛔ 量具 `fieldProfile` 没接进来 ⇒ 拒绝静默空转');
+      process.exit(7);
+    }
+    const useOf = function (e) {
+      if (e.bigtUse === undefined) {
+        const t = fieldProfile(e.ref.params, 0, 'soft', SEL_BIGT_GAMES, 77000, 'self', SEL_BIGT_MODE);
+        e.bigtUseBy = SEL_BIGT_KEYS.map(function (k) {
+          return k + ' ' + (((t.keys && t.keys[k]) || 0) / SEL_BIGT_GAMES).toFixed(2);
+        }).join('/');
+        e.bigtUse = SEL_BIGT_KEYS.reduce(function (s, k) {
+          return s + ((t.keys && t.keys[k]) || 0) / SEL_BIGT_GAMES;
+        }, 0);
+      }
+      return e.bigtUse;
+    };
+    /* 排序键的算术在 `pick-best.mjs:bandPickByUsage`（纯函数 ⇒ 门能喂合成表直接钉它，见 D221 的夹具）。
+     * ⚠ `sel.best` 正常就在带内（它分数最高），但**不保证**（`SEL_KEEP` 全剔那一支会留下"best 不在 clean 里"的形状）
+     *   ⇒ 先把它单独量一遍，否则下面读 `.__usage` 会 `undefined.toFixed` 当场崩（崩在选完人之后 = 白跑一整臂）。 */
+    useOf(sel.best);
+    const bp = bandPickByUsage(sel.clean, SEL_BIGT, useOf);
+    const band = bp.band, pick = bp.best;
+    const ladder = band.map(function (e) {
+      return e.bigtUseBy + '（胜负分 ' + (e.score * 100).toFixed(1) + (e === sel.best ? '·当选' : '') + '）';
+    }).join(' ‖ ');
+    SEL_BIGT_LOG = { tol: SEL_BIGT, keys: SEL_BIGT_KEYS, mode: SEL_BIGT_MODE, games: SEL_BIGT_GAMES,
+      band: band.length, of: sel.clean.length, usage: band.map(function (e) { return Number(e.bigtUse.toFixed(3)); }),
+      /* `picked` / `wasWinner` 是给门用的：**排序键到底咬没咬到**（"取带内用量最高"这句必须能在产物账里被查一遍）*/
+      picked: Number(pick.bigtUse.toFixed(3)), wasWinner: Number(sel.best.bigtUse.toFixed(3)),
+      by: bp.tieBrokenBy, changedWinner: pick !== sel.best, zeroDose: bp.zeroDose };
+    if (SEL_BIGT_LOG.zeroDose) {
+      console.log('[贵卡选人] tol=' + SEL_BIGT + 'pt · 带内 ' + band.length + '/' + sel.clean.length + ' 粒 ⇒ ' +
+        '**带内一张贵卡都没打过**（' + ladder + '）⇒ 不改判；这一臂按预注册算「这根旋钮**零作用**」，' +
+        '不算"测过且无效"（§N12：判作用点，不判配置）');
+    } else if (pick !== sel.best) {
+      console.log('[贵卡选人] tol=' + SEL_BIGT + 'pt · 带内 ' + band.length + '/' + sel.clean.length + ' · 用量梯：' + ladder +
+        '\n[贵卡选人] **改判（排序键换人）**：拿 ' + ((sel.best.score - pick.score) * 100).toFixed(1) +
+        'pt 胜负分换「贵卡出手 ' + pick.bigtUseBy + '」（原当选者 ' + sel.best.bigtUseBy + '）');
+      sel.best = pick;
+    } else {
+      console.log('[贵卡选人] tol=' + SEL_BIGT + 'pt · 带内 ' + band.length + '/' + sel.clean.length + ' · 用量梯：' + ladder +
+        ' ⇒ **未改判**（原当选者本来就是带内用量最高的）');
+    }
+  }
   if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; }
   else if (hallEntries.length) {
     DEGENERATE_ONLY = true;
@@ -1419,6 +1491,9 @@ const meta = {
     oppBlock: (typeof T.oppTable === 'function' ? T.oppTable() : null),   // §E124：桌形 + 开火计数（下达值不够，要看真发生了多少局）
     xn2w: XN2W, xn2g: XN2G, selLand: SEL_LAND, selLandGames: SEL_LAND_GAMES, selLandTol: SEL_LAND_TOL,
     selKeep: SEL_KEEP, selKeepKeys: (SEL_KEEP > 0 ? SEL_KEEP_KEYS : null),
+    /* v1.5.326 §E249：这根排序键**有没有真的换人**必须写在产物里（`{changedWinner, zeroDose, usage…}`）。
+     * 关档 ⇒ `null`（一行都不跑，与历史臂逐字相同）。`zeroDose:true` 那一臂**不许**被读成"测过且无效"。 */
+    selBigT: SEL_BIGT_LOG,
     selKeepCastKeys: (SEL_KEEP > 0 ? SEL_KEEP_CAST_KEYS : null),   // v1.5.266：出手口径名单（环/蓄能不打血）
     kill: KILL_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     counterOpps: COUNTER_OPPS.map(function (o) { return o.name; }),   // v1.5.172：这臂的训练桌上放了哪几个判据原型

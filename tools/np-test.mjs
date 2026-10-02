@@ -37,7 +37,7 @@ import { makeShapeScorer } from '../server/shape-scorer.mjs';   // P2 形状适�
 /* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
-import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand, rejectNarrowWinners, COLLAPSE_LINE } from './pick-best.mjs';
+import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand, bandPickByUsage, rejectNarrowWinners, COLLAPSE_LINE } from './pick-best.mjs';
 import { readTrainEnv, hasTrainOverride, TRAIN_ENV_KEYS as TEK } from '../server/train-env.mjs';   // v1.5.169 D129：训练旋钮单一来源
 /* v1.5.132：V1/V2/V4「整局」三装配的**单一来源**（D105 与 `probe-ring-ablate.mjs` 共用一份实现）。 */
 import { measureAll } from './v2v4-lib.mjs';
@@ -1151,6 +1151,78 @@ t('D220 深经济对手必须能放上**训练桌**（v1.5.325 · §E237 · DS �
   const jmOff = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(out, 'utf8'));
   const mtOff = JSON.parse(jmOff[1]);
   ok(mtOff.recipe && mtOff.recipe.econOpps === null, '关档产物的 recipe 必须写 null（实测 ' + JSON.stringify(mtOff.recipe && mtOff.recipe.econOpps) + '）');
+});
+
+t('D221 同分带内按"贵卡出手"选人（v1.5.326 · §E249 · 今晚 4 批 47 臂的账：奖励改的是种群，**当选那一步把它又筛掉了**）：默认 0 ⇒ 冠军逐字不变 · **零剂量时不许换人** · 排序键必须真咬到', function () {
+  /* 病（实测，不是猜）：`EPIRUS_COSTLY_W` 把名人堂"会打大雷"的粒从**对照 0/6 抬到 6/6**，可**当选产物**常常还是 0.000
+   *   —— 终局重验只按胜负分选人，"会不会打这张卡"看不见；而 `SEL_KEEP` 的 bigT veto **逐位没换人**
+   *   （它只能在保住优点的粒里挑，**造不出**这样的粒）。⇒ 修法是把"用量"做成**选人排序键**（同 `SEL_LAND` 的先例），
+   *   代价明码标价：只在胜负分相差 ≤ tol pt 的带内换，且**带内零剂量时一律不改判**（否则就是一根在没有证据时也会动判定的键）。 */
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  /* ⓪ **先钉纯函数**（合成候选表，不跑训练）—— 三条各挡一种失效。
+   *    为什么不能只跑真臂：6 代的小训练里"带内"通常只有当选者自己（实测 `band=1`）⇒
+   *    那种断言**永远不会红**（§E198"永绿假守卫"的同族，我 01:2x 用变异实测撞了一次：
+   *    把"零剂量也不换人"故意改成"换"，真臂夹具照样绿）。 */
+  const EU = function (score, usage) { return { score: score, usage: usage }; };
+  const uof = function (e) { return e.usage; };
+  const hiSet = [EU(0.70, 0), EU(0.69, 3), EU(0.50, 9)];            // tol=2pt ⇒ 带内前两粒；分数最高那粒用量 0
+  const ph = bandPickByUsage(hiSet, 2, uof);
+  ok(ph.best === hiSet[1] && ph.tieBrokenBy === 'usage',
+    '带内存在用量差 ⇒ **必须换人**到用量最高那粒（实测换到 usage=' + (ph.best && ph.best.usage) + '，by=' + ph.tieBrokenBy + '）');
+  ok(ph.band.length === 2, '带外那粒（胜负分差 20pt）用量再高也不许进带（实测 band=' + ph.band.length + '）');
+  const zeroSet = [EU(0.60, 0), EU(0.59, 0), EU(0.20, 12)];
+  const pz = bandPickByUsage(zeroSet, 5, uof);
+  ok(pz.zeroDose === true && pz.best === zeroSet[0] && pz.tieBrokenBy === 'score',
+    '带内全部零剂量 ⇒ **一律不换人**（这根键不许在没有证据时动判定；实测 best.usage=' + (pz.best && pz.best.usage) + '）');
+  const tieSet = [EU(0.70, 4), EU(0.70, 4), EU(0.69, 1)];
+  const pt = bandPickByUsage(tieSet, 2, uof);
+  ok(pt.best === tieSet[0], '用量相同 ⇒ 按胜负分取高，且**不许抖**（实测 best.score=' + (pt.best && pt.best.score) + '）');
+  ok(t3.indexOf('bandPickByUsage(sel.clean, SEL_BIGT, useOf)') >= 0,
+    'train-3p 必须调这份纯函数（在调用点重写一遍排序 = 两份实现必漂移）');
+  ok(t3.indexOf('EPIRUS_SEL_BIGT || 0') >= 0, '默认必须 0（关档 ⇒ 当选者与历史臂逐字相同）');
+  ok(t3.indexOf("'EPIRUS_SEL_BIGT'") >= 0, '必须进 SELF_ENV_KEYS（否则黑键闸会判它"传了没人读"）');
+  ok(t3.indexOf('fieldProfile(e.ref.params, 0, ') >= 0,
+    '用量必须走 `behavior-profile.fieldProfile`（与 `SEL_KEEP_CAL=plain` 同一把尺）—— 另写一份逐卡计数 = 两份实现必漂移');
+  ok(/EPIRUS_SEL_BIGT_KEYS 里有不认识的卡名[\s\S]{0,220}process\.exit\(7\)/.test(t3), '卡名不合法必须 exit 7（判不到的维不许当排序键）');
+  ok(t3.indexOf('selBigT: SEL_BIGT_LOG') >= 0, '结果必须写进 `meta.recipe.selBigT`（否则"改没改判"只能靠读日志）');
+  const dir = mkdtempSync(join(tmpdir(), 'd221-'));
+  const run = function (env, tag) {
+    const out = join(dir, tag + '.js');
+    const r = spawnSync(process.execPath, ['tools/train-3p.mjs', '6', '3', '8', '6'], {
+      env: Object.assign({}, process.env, { EPIRUS_SEED: '21', EPIRUS_ARM: 'd221' + tag, EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: out, EPIRUS_PUBLISH: '' }, env || {}),
+      encoding: 'utf8', timeout: 300000
+    });
+    return { r: r, out: out };
+  };
+  const metaOf = function (p) {
+    const m = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(p, 'utf8'));
+    return m ? JSON.parse(m[1]) : null;
+  };
+  const weightsOf = function (p) {
+    const m = /"a":\[([^\]]*)\]/.exec(readFileSync(p, 'utf8'));
+    return m ? m[1] : 'NOPARSE';
+  };
+  /* ① 关档 ⇒ recipe 写 null；② 开档但**带内零剂量**（6 代的小训练里没人够得着 5 珠）⇒ **冠军必须逐字不变** + 响亮印"零作用" */
+  const off = run({}, 'off'), on = run({ EPIRUS_SEL_BIGT: '2' }, 'on');
+  eq(off.r.status, 0, '关档要跑得通（实测 ' + off.r.status + '）');
+  eq(on.r.status, 0, '开档要跑得通（实测 ' + on.r.status + ' · ' + String(on.r.stdout || '').slice(-140) + '）');
+  const mOff = metaOf(off.out), mOn = metaOf(on.out);
+  ok(!!mOff && !!mOn, '两遍都要能读出 META（读不出 = 这条门自己瞎了）');
+  eq(mOff.recipe.selBigT, null, '关档必须写 null（一行都不跑）');
+  const lg = mOn.recipe.selBigT;
+  ok(lg && lg.zeroDose === true, '6 代的小训练里带内应当零剂量 ⇒ 必须报 zeroDose（实测 ' + JSON.stringify(lg) + '）');
+  ok(/带内一张贵卡都没打过/.test(String(on.r.stdout || '')), '零作用必须**响亮印出来**（静默等效比静默报错危险，§E192）');
+  eq(weightsOf(off.out), weightsOf(on.out), '**零剂量时不许换冠军**：换了 = 这根键在没有证据的情况下动了判定');
+  /* ③ 排序键真咬到：把"贵卡"换成 `gun`（枪永远有人打）⇒ 用量必非零，且 `picked` 必须等于带内最大值 */
+  const gun = run({ EPIRUS_SEL_BIGT: '2', EPIRUS_SEL_BIGT_KEYS: 'gun', EPIRUS_SEL_BIGT_MODE: 'multi' }, 'gun');
+  eq(gun.r.status, 0, 'gun 档要跑得通');
+  const gl = metaOf(gun.out).recipe.selBigT;
+  ok(gl && gl.zeroDose === false, 'gun 档必须量到非零用量（否则"取最大"这句没被检验过：' + JSON.stringify(gl) + '）');
+  ok(gl && gl.usage && gl.usage.length && gl.picked === Math.max.apply(null, gl.usage),
+    '`picked` 必须 = 带内用量最大值（实测 picked=' + (gl && gl.picked) + ' usage=' + JSON.stringify(gl && gl.usage) + '）⇒ 否则排序键根本没咬');
+  /* ④ 非法卡名必须响 */
+  const bad = run({ EPIRUS_SEL_BIGT: '2', EPIRUS_SEL_BIGT_KEYS: 'nosuchcard' }, 'bad');
+  eq(bad.r.status, 7, '不认识的卡名必须 exit 7（实测 ' + bad.r.status + '）');
 });
 
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {
