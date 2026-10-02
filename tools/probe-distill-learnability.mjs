@@ -24,7 +24,7 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 import { loadCardTable } from './log-reading.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'whopicks', 'plusid', 'quiet'], 'probe-distill-learnability');
+rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'whopicks', 'costbias', 'plusid', 'quiet'], 'probe-distill-learnability');
 const arg = (k, d) => { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); };
 const TRAIN = arg('train', ''), TEST = arg('test', '');
 if (!TRAIN || !TEST) { console.error('⛔ 必须同时给 --train= 与 --test=（留出检验没有"同一批"这个选项）'); process.exit(64); }
@@ -183,6 +183,16 @@ const ridgeH = ridge(R1, L2);
 const ridgePick = r => { const F = feats(r); let b = 0, bv = -Infinity; for (let i = 0; i < r.n; i++) { let z = ridgeH.ybar; for (let j = 0; j < ridgeH.w.length; j++) z += ridgeH.w[j] * (F[i][j] - ridgeH.mu[j]); if (z > bv) { bv = z; b = i; } } return b; };
 const pol = trainPolicy(R1, HID);
 const polPick = r => { const F = feats(r); let b = 0, bv = -Infinity; for (let i = 0; i < r.n; i++) { const z = pol.score(F[i]); if (z > bv) { bv = z; b = i; } } return b; };
+/* 头那手的挑选（**平票必须与候选顺序无关**）：§E218 说防御族 8 张卡的动作向量逐位相同 ⇒ 头的分数也逐位相同，
+   若按"下标小者胜"，挑到谁完全由枚举顺序决定 ⇒ 凡"读头挑了哪张卡"的档（`--whopicks` ‖ `--costbias`）都必须走这一份实现。
+   ⇒ 用"键 + 该候选动作向量"的 FNV 哈希破平：同一张卡在任何顺序下得到同一个破平值。 */
+const headPickTb = r => {
+  const F = feats(r), tkh = [];
+  for (let i = 0; i < r.n; i++) { let h = 2166136261; const s = r.d.k[i] + '|' + F[i].join(','); for (let q = 0; q < s.length; q++) h = Math.imul(h ^ s.charCodeAt(q), 16777619); tkh.push(h >>> 0); }
+  let b = 0;
+  for (let i = 1; i < r.n; i++) { const z = pol.score(F[i]), zb = pol.score(F[b]); if (z > zb || (z === zb && tkh[i] < tkh[b])) b = i; }
+  return b;
+};
 /* ⚠ 教师有并列（rep=16 时约一半的格并列，§E215 实测 57% ‖ 56%）⇒ **"与教师一致"在那批格上几乎无定义**
    （谁赢由破平哈希决定）。所以整张表必须**同时**给"全部决策"与"只算无并列的决策"两档，判据只看后者。 */
 const block = function (label, rows) {
@@ -266,6 +276,55 @@ if (argv.indexOf('--byenv') >= 0) {
   console.log('  读法：某一环境若**教师−包 ≈0 或为负** ⇒ 标签在那张桌上压根不含增益（是**评估器/延续策略**瞎，不是脸装不下）；');
   console.log('        若**教师−包 明显为正而头−包 为负** ⇒ 是那一张脸装不下（这才轮得到"加身份/加交互"那条路说话）。');
 }
+/* ===== `--costbias`：**"头把 ep 打干"这件事，是标签带来的还是拟合带来的？**（零新 rollout）
+ *   起因（10-02 上午）：§E223 在产品桌上读到 头那臂 决策时 ep 中位 **4 vs 包 23**、可付卡均值 11.5 vs 26.1 ⇒ 判语是
+ *   "一手搜索的口径看不见下一手买不起"。但**这句话的主语应该是标签，不是头**：
+ *   如果教师自己（在同一张候选表上取 argmax）就系统性地挑更贵的那手，那头是**忠实地抄了一个会饿死经济的偏好**，
+ *   要改的是标签结算；如果教师与包在费用上没差别、只有头偏低，那才是**拟合把它推向了贵卡**（那是另一回事）。
+ *   原料：动作块 22 维里第 **0** 维 = `(ep − 费用)/12`（截到 ±1 ⇒ 施展**之后**的余量），第 **1** 维 = 可否正常施展，
+ *   第 **2** 维 = `min(费用,6)/6` ⇒ 费用与余量都能还原成"珠"这个单位（⚠ 费用 >6 或余量 >12 会被截平，逐档印截平率）。
+ *   ⚠ 与 `--whopicks` 同一件事：**头那手用顺序无关的破平**（`headPickTb`），否则"挑了哪张卡"是枚举顺序的函数。 */
+if (argv.indexOf('--costbias') >= 0) {
+  const ciu = x => 1.96 * sd(x) / Math.sqrt(Math.max(1, x.length));
+  const COST = 2, MARGIN = 0;
+  const pick = (r, src) => src === 'teacher' ? r.teacher : src === 'pack' ? r.netPick : src === 'head' ? headPickTb(r) : -1;
+  const SRCS = ['teacher', 'pack', 'head'];
+  const stat = {};
+  for (const s of SRCS) stat[s] = { cost: [], marg: [], clip: 0, n: 0 };
+  let menuCost = [], menuMarg = [];
+  const pair = { 'teacher−pack': [], 'head−pack': [] };
+  const pairMarg = { 'teacher−pack': [], 'head−pack': [] };
+  const by = {};
+  for (const r of R2) {
+    const A = r.d.a;
+    if (A.length !== r.n) { console.error('⛔ dump 里动作块行数 ' + A.length + ' ≠ 候选数 ' + r.n); process.exit(3); }
+    const c = i => 6 * A[i][COST], m = i => 12 * A[i][MARGIN];
+    for (const s of SRCS) { const i = pick(r, s); stat[s].cost.push(c(i)); stat[s].marg.push(m(i)); stat[s].n++; if (Math.abs(A[i][COST]) >= 1 || Math.abs(A[i][MARGIN]) >= 1) stat[s].clip++; }
+    menuCost.push(mean(A.map((_, i) => c(i)))); menuMarg.push(mean(A.map((_, i) => m(i))));
+    const pc = c(r.netPick), pm = m(r.netPick);
+    pair['teacher−pack'].push(c(r.teacher) - pc); pairMarg['teacher−pack'].push(m(r.teacher) - pm);
+    const hi = headPickTb(r); pair['head−pack'].push(c(hi) - pc); pairMarg['head−pack'].push(m(hi) - pm);
+    const e = by[r.d.env] = by[r.d.env] || { n: 0, t: 0, p: 0, h: 0, dt: [], dh: [] };
+    e.n++; e.t += c(r.teacher); e.p += pc; e.h += c(hi); e.dt.push(c(r.teacher) - pc); e.dh.push(c(hi) - pc);
+  }
+  console.log('\n## 费用侧（单位 = 珠 ‖ 留出带 ' + R2.length + ' 个决策、同一批候选表、**逐决策配对** ‖ 头 = 训在另一带的样本外那枚）');
+  console.log('  来源          │   费用均值   │  施展后余量均值  │ 截平率');
+  console.log('  ' + '菜单（整表）'.padEnd(14) + '│ ' + mean(menuCost).toFixed(2) + ' 珠      │ ' + mean(menuMarg).toFixed(2) + ' 珠        │ —');
+  const NAME = { teacher: '教师 argmax', pack: '现役包 argmax', head: '蒸馏头 argmax' };
+  for (const k of SRCS) { const x = stat[k];
+    console.log('  ' + NAME[k].padEnd(14) + '│ ' + mean(x.cost).toFixed(2) + ' 珠      │ ' + mean(x.marg).toFixed(2) + ' 珠        │ ' + (100 * x.clip / x.n).toFixed(1) + '%'); }
+  for (const k of Object.keys(pair)) {
+    console.log('  配对 ' + k.padEnd(12) + '：费用 **' + (mean(pair[k]) >= 0 ? '+' : '') + mean(pair[k]).toFixed(2) + ' ±' + ciu(pair[k]).toFixed(2) + ' 珠**' +
+      ' ‖ 施展后余量 **' + (mean(pairMarg[k]) >= 0 ? '+' : '') + mean(pairMarg[k]).toFixed(2) + ' ±' + ciu(pairMarg[k]).toFixed(2) + ' 珠**' +
+      '（正 = 这一方比包**更费** / 打完**余量更多**）');
+  }
+  console.log('\n  逐环境（费用均值 教师/包/头 ‖ 配对差）');
+  for (const env of Object.keys(by).sort()) { const e = by[env];
+    console.log('    ' + env.padEnd(11) + '│ n=' + String(e.n).padStart(4) + ' │ ' + (e.t / e.n).toFixed(2) + '/' + (e.p / e.n).toFixed(2) + '/' + (e.h / e.n).toFixed(2) +
+      ' │ 师−包 ' + (mean(e.dt) >= 0 ? '+' : '') + mean(e.dt).toFixed(2) + ' ±' + ciu(e.dt).toFixed(2) + ' ‖ 头−包 ' + (mean(e.dh) >= 0 ? '+' : '') + mean(e.dh).toFixed(2) + ' ±' + ciu(e.dh).toFixed(2)); }
+  console.log('  ⇒ 读法：**教师−包 明显为正** ⇒ "饿经济"写在标签里（该改的是结算/标签口径，不是这张脸）；' +
+    '**教师−包 ≈0 而头−包 为正** ⇒ 是拟合把偏好推向贵卡（头自己的外推行为）；两列都要看**逐环境**那几行是否同号，平均数会把反向的两格抹平。');
+}
 /* ===== `--whopicks`：**"这一手该打谁"的偏好是标签带来的还是脸带来的？**（零 rollout，用的就是 dump 里的键与分）
  *   起因（03:1x）：λ=0.25 那一档在产品桌上**把防御类打到 0.0%（八带一个不剩）**、种数 11→8~10，
  *   而同幅随机方向没有这个副作用 ⇒ 如果**教师自己**在有防御可打时也几乎不挑防御，那结论就不是"这张脸不会打防御"，
@@ -278,16 +337,7 @@ if (argv.indexOf('--whopicks') >= 0) {
   const stat = {}; const availDef = { teacher: 0, pack: 0, head: 0, n: 0 };
   const defCards = {};
   let nDec = 0, nNoCat = 0;
-  const headPickOf = r => {
-    /* 平票必须**与候选顺序无关**（第四次同一课，而且这次恰好打在要量的那一类上：§E218 说防御族 8 张卡的动作向量逐位相同
-       ⇒ 头的分数也逐位相同 ⇒ 若按"下标小者胜"，挑到谁完全由枚举顺序决定，而我读的就是"挑到谁"）。
-       ⇒ 用"键 + 该候选的动作向量"的哈希破平：同一张卡在任何顺序下得到同一个破平值。 */
-    const F = feats(r), tkh = [];
-    for (let i = 0; i < r.n; i++) { let h = 2166136261; const s = r.d.k[i] + '|' + F[i].join(','); for (let q = 0; q < s.length; q++) h = Math.imul(h ^ s.charCodeAt(q), 16777619); tkh.push(h >>> 0); }
-    let b = 0;
-    for (let i = 1; i < r.n; i++) { const z = pol.score(F[i]), zb = pol.score(F[b]); if (z > zb || (z === zb && tkh[i] < tkh[b])) b = i; }
-    return b;
-  };
+  const headPickOf = headPickTb;
   for (const r of R2) {
     const keys = r.d.k; if (keys.length !== r.n) { console.error('⛔ dump 里键数 ' + keys.length + ' ≠ 候选数 ' + r.n); process.exit(3); }
     nDec++;
