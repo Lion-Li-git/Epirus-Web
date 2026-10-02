@@ -467,6 +467,8 @@ console.log('  ⇒ ' + (fails.length
     }
   }
 }
-console.log('\n## 复跑命令\n  node tools/probe-distill-player.mjs --heads=' + arg('heads', '') + ' --seeds=' + SEEDS.join(',') + ' --games=' + GAMES + ' --envs=' + ENV_PICK.join(',') + ' --arms=' + ARMS.join(',') +
+/* ⚠ 这一行以前印的是 `SEEDS.join(',')`，**把 `#训练带` 后缀抹掉了** ⇒ 照它复跑会挑到别的头（§E223 那两遍实际用的是
+   `5150#9200` 这种第三带配对，日志里却印成 `5150`）⇒ "复跑命令"印错比不印更坏。现在按 BANDS 原样印。 */
+console.log('\n## 复跑命令\n  node tools/probe-distill-player.mjs --heads=' + arg('heads', '') + ' --seeds=' + BANDS.map(b => b.seed + (b.wantTrain ? '#' + b.wantTrain : '')).join(',') + ' --games=' + GAMES + ' --envs=' + ENV_PICK.join(',') + ' --arms=' + ARMS.join(',') +
   (LAMS.length ? ' --lambdas=' + LAMS.join(',') + ' --calib=' + arg('calib', '') : ''));
 console.log('rc=0');

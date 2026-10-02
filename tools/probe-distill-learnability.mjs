@@ -24,7 +24,7 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 import { loadCardTable } from './log-reading.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'whopicks', 'costbias', 'plusid', 'quiet'], 'probe-distill-learnability');
+rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'whopicks', 'costbias', 'teacherfloor', 'plusid', 'quiet'], 'probe-distill-learnability');
 const arg = (k, d) => { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); };
 const TRAIN = arg('train', ''), TEST = arg('test', '');
 if (!TRAIN || !TEST) { console.error('⛔ 必须同时给 --train= 与 --test=（留出检验没有"同一批"这个选项）'); process.exit(64); }
@@ -52,6 +52,20 @@ const sd = x => { if (x.length < 2) return NaN; const m = mean(x); return Math.s
 const ci = x => 1.96 * sd(x) / Math.sqrt(Math.max(1, x.length)) * 100;
 
 /* ---------- 教师标签（含并列的处理：并列 = 这格不判，印比例） ---------- */
+/* ⚠ 破平必须**与候选顺序无关**（§E215 §4 那条课的第三次应验：`rep` 越小并列越多，若"先出现者胜"，
+   教师与天花板都会偏向网络排名第 1 ⇒ 我会把自己骗成"标签有分辨率"）。
+   上提成模块级（`tieKeysOf` / `argmaxBy`）是因为 `--teacherfloor` 要在**筛过的子集**上重新取 argmax
+   ⇒ 同一套破平只能有一份实现（本仓"两份同构实现必漂移"的老病）。 */
+const tieKeysOf = d => {
+  const salt = ((d.g + 1) * 2654435761 ^ (d.n + 1) * 40503 ^ String(d.env).length * 22465903) >>> 0;
+  return i => ((salt ^ Math.imul(i + 1, 2654435761)) >>> 0);
+};
+const argmaxBy = (V, H, tk, idx) => {
+  const cmp = (i, j) => (V[i] > V[j]) || (V[i] === V[j] && (H[i] > H[j] || (H[i] === H[j] && tk(i) < tk(j))));
+  let b = idx ? idx[0] : 0;
+  for (let i = 1; i < V.length; i++) { if (idx && idx.indexOf(i) < 0) continue; if (cmp(i, b)) b = i; }
+  return b;
+};
 function prep(rows) {
   const out = []; let tiedDec = 0, shortRep = 0;
   for (const d of rows) {
@@ -59,12 +73,8 @@ function prep(rows) {
     if (d.w[0].length < REP) { shortRep++; continue; }
     const v = d.w.map(a => mean(a.slice(0, REP))), h = d.hp.map(a => mean(a.slice(0, REP)));
     const half1 = d.w.map(a => mean(a.slice(0, REP >> 1))), half2 = d.w.map(a => mean(a.slice(REP >> 1, REP)));
-    /* ⚠ 并列必须用**与候选顺序无关**的破平（§E215 §4 那条课的第三次应验：`rep` 越小并列越多，
-       若"先出现者胜"，教师与天花板都会偏向网络排名第 1 ⇒ 我会把自己骗成"标签有分辨率"）。 */
-    const salt = ((d.g + 1) * 2654435761 ^ (d.n + 1) * 40503 ^ String(d.env).length * 22465903) >>> 0;
-    const tk = i => ((salt ^ Math.imul(i + 1, 2654435761)) >>> 0);
-    const cmpArr = (V, H) => (i, j) => (V[i] > V[j]) || (V[i] === V[j] && (H[i] > H[j] || (H[i] === H[j] && tk(i) < tk(j))));
-    const argmax = (V, H) => { const less = cmpArr(V, H); let b = 0; for (let i = 1; i < V.length; i++) if (less(i, b)) b = i; return b; };
+    const tk = tieKeysOf(d);
+    const argmax = (V, H) => argmaxBy(V, H, tk, null);
     const V = v, H = h;
     const top = Math.max.apply(null, V), topH = Math.max.apply(null, H.filter((_, i) => V[i] === top));
     let nTie = 0;
@@ -173,6 +183,36 @@ function report(name, arr, games) {
 if (!QUIET) console.log('# §E223 可学性检验：教师 = 搜索的 argmax（`--dumpcover` 的标签）‖ 留出带 = `--test` 那一遍');
 const P1 = prep(TRAIN_ROWS), P2 = prep(TEST_ROWS);
 const R1 = P1.rows, R2 = P2.rows;
+/* ===== `--teacherfloor=<珠>`：**只改标签的可行集**，其余一字不动（§E225，判据在 §E224 ④/文件头跑前写死）=====
+ *   动因（10-02 上午的两次读数）：① 教师 argmax 本来就比现役包每手多花 +0.46 ‖ +0.39 珠（病在标签，不在这张脸）；
+ *   ② 但**标签分布里 46% 的决策已经在 `ep ≤ 0.49 珠`**（= 头部署后生活的电平）⇒ "**曝光偏差 / 分布漂移**"**不是**病灶
+ *   ⇒ 自洽重标（DAgger）的前提被自己的测量否掉，于是先跑**便宜的离线约束**：
+ *     把教师那手限制在"**施展之后至少还剩 FLOOR 珠**"的候选里重新取 argmax（同一套顺序无关破平、同一批流、同一张表）。
+ *   ⚠ 这是**可行性约束**，不是手写价：没有给珠赋任何价值，只是把"打完就归零"的那些候选从教师的选项里拿掉。
+ *   ⚠ 与 `天花板` 那一列的关系：`tA/tB`（教师分半）保持**不加约束**的原义 ⇒ `floor>0` 时"一致率 vs 天花板"不可直接比，
+ *     本轮的判据是**产品桌胜率**与 `--costbias` 的 师−包 费用差，不是留出一致率。
+ *   ⚠ 还原用 `ep(珠) = 12·dim0 + 6·dim2`（本表所有卡费用 ≤5 ⇒ `min(c,6)` 那层截平**永不**绑定，见 §E225 记录）。 */
+const FLOOR = Number(arg('teacherfloor', 0)) || 0;
+/* 动作块里那两维的下标（**只此一份定义**，`--costbias` 与 `--teacherfloor` 共用）：
+   dim0 = `clamp((ep − 费用)/12, ±1)` ‖ dim2 = `min(费用,6)/6`（本表卡费用 ≤5 ⇒ 这层截平永不绑定）。 */
+const ADIM_MARGIN = 0, ADIM_COST = 2;
+if (FLOOR > 0) {
+  const med = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)] || 0; };
+  let tot = 0, changed = 0, fellBack = 0;
+  for (const rows of [P1.rows, P2.rows]) for (const r of rows) {
+    tot++;
+    const A = r.d.a; if (A.length !== r.n) { console.error('⛔ dump 动作块行数 ≠ 候选数'); process.exit(3); }
+    const ep = med(A.map(x => 12 * x[ADIM_MARGIN] + 6 * x[ADIM_COST]));
+    const allow = []; for (let i = 0; i < A.length; i++) if (6 * A[i][ADIM_COST] <= ep - FLOOR) allow.push(i);
+    if (!allow.length) { fellBack++; continue; }
+    const t2 = argmaxBy(r.v, r.h, tieKeysOf(r.d), allow);
+    if (t2 !== r.teacher) changed++;
+    r.teacher = t2;
+  }
+  console.log('# `--teacherfloor=' + FLOOR + ' 珠`：' + tot + ' 个决策里教师那手**变了 ' + changed + ' 个（' + (100 * changed / tot).toFixed(1) + '%）**' +
+    ' ‖ 无候选通过筛选 ⇒ 退回原 argmax：' + fellBack + ' 个（' + (100 * fellBack / tot).toFixed(1) + '%）' +
+    ' ‖ ⚠ 这一档下"天花板"那一列仍是**无约束**教师的分半 ⇒ 别拿留出一致率去比它');
+}
 console.log('# 训练带 ' + R1.length + ' 个决策（并列 ' + P1.tiedDec + '） ‖ 留出带 ' + R2.length + ' 个决策（并列 ' + P2.tiedDec + ' ‖ 流数不足 ' + P2.shortRep + '）' +
   ' ‖ 候选数均值 ' + mean(R2.map(r => r.n)).toFixed(1) + ' ‖ 特征 ' + FEAT + ' ‖ rep=' + REP + ' ‖ 隐藏元 ' + HID);
 /* ⚠ 两带必须真的不同（§E205 那次"同文件当 train+test"的教训）*/
@@ -277,16 +317,20 @@ if (argv.indexOf('--byenv') >= 0) {
   console.log('        若**教师−包 明显为正而头−包 为负** ⇒ 是那一张脸装不下（这才轮得到"加身份/加交互"那条路说话）。');
 }
 /* ===== `--costbias`：**"头把 ep 打干"这件事，是标签带来的还是拟合带来的？**（零新 rollout）
- *   起因（10-02 上午）：§E223 在产品桌上读到 头那臂 决策时 ep 中位 **4 vs 包 23**、可付卡均值 11.5 vs 26.1 ⇒ 判语是
+ *   起因（10-02 上午）：§E223 在产品桌上读到 头那臂 决策时 **ep 均值 0.49 vs 包 1.81（珠）**、候选数 11.5（中位 4）vs 26.1（中位 23）、每局出手 12 vs 17 ⇒ 判语是
  *   "一手搜索的口径看不见下一手买不起"。但**这句话的主语应该是标签，不是头**：
  *   如果教师自己（在同一张候选表上取 argmax）就系统性地挑更贵的那手，那头是**忠实地抄了一个会饿死经济的偏好**，
  *   要改的是标签结算；如果教师与包在费用上没差别、只有头偏低，那才是**拟合把它推向了贵卡**（那是另一回事）。
  *   原料：动作块 22 维里第 **0** 维 = `(ep − 费用)/12`（截到 ±1 ⇒ 施展**之后**的余量），第 **1** 维 = 可否正常施展，
- *   第 **2** 维 = `min(费用,6)/6` ⇒ 费用与余量都能还原成"珠"这个单位（⚠ 费用 >6 或余量 >12 会被截平，逐档印截平率）。
+ *   第 **2** 维 = `min(费用,6)/6` ⇒ **`ep(珠) = 12·dim0 + 6·dim2`**（⚠ 单位：参照列"决策时 ep 均值"本来就是珠）。
+ *   判据（**跑前写死**，两带各判一次）：**`标签里 ep ≤ 0.49 珠（= 部署态 headT 那一档）的决策占比`**
+ *     · `< 5%` ⇒ 训练分布**没访问过**头实际生活的区域 ⇒ "在现有标签上加费用下限/惩罚"这类**离线**修法判为惰性，下一刀只有自洽重标；
+ *     · `≥ 20%` ⇒ 低 ep 在标签里**有的是** ⇒ "曝光偏差 / 分布漂移"**不是**病灶 ⇒ 先跑便宜的离线费用下限，不付自洽重标的代价；
+ *     · 中间 ⇒ 不 decisively，加带再看，**不许当场改判据**。
  *   ⚠ 与 `--whopicks` 同一件事：**头那手用顺序无关的破平**（`headPickTb`），否则"挑了哪张卡"是枚举顺序的函数。 */
 if (argv.indexOf('--costbias') >= 0) {
   const ciu = x => 1.96 * sd(x) / Math.sqrt(Math.max(1, x.length));
-  const COST = 2, MARGIN = 0;
+  const COST = ADIM_COST, MARGIN = ADIM_MARGIN;
   const pick = (r, src) => src === 'teacher' ? r.teacher : src === 'pack' ? r.netPick : src === 'head' ? headPickTb(r) : -1;
   const SRCS = ['teacher', 'pack', 'head'];
   const stat = {};
@@ -324,6 +368,45 @@ if (argv.indexOf('--costbias') >= 0) {
       ' │ 师−包 ' + (mean(e.dt) >= 0 ? '+' : '') + mean(e.dt).toFixed(2) + ' ±' + ciu(e.dt).toFixed(2) + ' ‖ 头−包 ' + (mean(e.dh) >= 0 ? '+' : '') + mean(e.dh).toFixed(2) + ' ±' + ciu(e.dh).toFixed(2)); }
   console.log('  ⇒ 读法：**教师−包 明显为正** ⇒ "饿经济"写在标签里（该改的是结算/标签口径，不是这张脸）；' +
     '**教师−包 ≈0 而头−包 为正** ⇒ 是拟合把偏好推向贵卡（头自己的外推行为）；两列都要看**逐环境**那几行是否同号，平均数会把反向的两格抹平。');
+  /* ===== 标签分布 vs 部署分布：**头实际生活的低 ep 区，标签里到底有没有？**（零新 rollout）
+   *   为什么问这一问（10-02 上午，决定下一刀走"离线改标签"还是"自洽重标"）：§E223 的产品桌读数里
+   *     部署态 `headT` 的 决策时 ep 均值 = **0.49 ‖ 0.52 ‖ 0.49 ‖ ?**（单位 = ep/12，四带同量级）而 `packT` = **1.81~1.84**，
+   *     候选数 `headT` 11.5（中位 **4**）‖ `packT` 26.1（中位 23）⇒ **头是在"快没钱、菜单只剩几张"的状态里做决定**；
+   *   而标签是在**现役包 trajectory** 上采的（母局由包/搜索臂打），所以标签状态的 ep 大概率是 1.8 那一侧。
+   *   ⇒ 判据（**跑前写死**）：若标签里 `ep/12 ≤ 0.49` 的决策占比 **< 5%** ⇒ **训练分布压根没访问过头生活的区域**
+   *     ⇒ 一切"在现有标签上再加费用下限/惩罚"的离线修法都是**惰性的**（那些状态不在数据里，改不到），
+   *       只有让头自己去访问那些状态（自洽重标 = `--cont=head`）才有标签可学；
+   *     若占比 **≥ 20%** ⇒ 先跑便宜的离线约束（费用下限剂量梯），不必付自洽重标的代价。
+   *   ⚠ 还原式 `ep/12 = dim0 + dim2/2`（dim0 = `(ep−费用)/12` 截到 ±1，dim2 = `min(费用,6)/6`）⇒ 截平只会**低估**富的决策，
+   *     不会高估穷的决策 ⇒ 上面这个判据在截平下**偏保守**（真占比只会更低），这是这一读能用的关键。 */
+  const q = (a, p) => { const s = a.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.max(0, Math.round(p * (s.length - 1))))]; };
+  /* ⚠ **单位自曝（本仓第 34 条同一族的第四次）**：这一档第一次写出来时我把阈值写成了 `ep/12 ≤ 0.49`，
+     而 `0.49 ‖ 1.81` 那两个参照**本来就是"珠"这个原始单位**（`e223-lam-4band.log` 的"决策时 ep 均值"那一列），
+     于是我把判据门槛放大了一整个 ×12 ⇒ 91.6% 那个数是**错的尺**读出来的，作废。下面统一换成"珠"。 */
+  const epEst = [], rich = [];
+  for (const r of R2) {
+    const A = r.d.a;
+    const e = A.map(x => 12 * x[MARGIN] + 6 * x[COST]);          /* ep（珠）= 12·dim0 + 6·dim2；未截平时**精确** */
+    epEst.push(q(e, 0.5));
+    rich.push(q(A.map(x => x[MARGIN]), 0.5) >= 0.999);           /* dim0 撞上界 ⇒ 真实 ep ≥ 12 + 费用（只低估） */
+  }
+  const nArr = R2.map(r => r.n);
+  console.log('\n## 标签分布 vs 部署分布（**头生活的低 ep 区，标签里有没有** ‖ 还原 `ep(珠) = 12·dim0 + 6·dim2`，逐决策取候选中位）');
+  console.log('  标签带 ep（珠）：p10 ' + q(epEst, 0.1).toFixed(2) + ' ‖ p25 ' + q(epEst, 0.25).toFixed(2) + ' ‖ 中位 ' + q(epEst, 0.5).toFixed(2) +
+    ' ‖ p75 ' + q(epEst, 0.75).toFixed(2) + ' ‖ p90 ' + q(epEst, 0.9).toFixed(2) +
+    ' ‖ **撞上界（真实值只更高）的决策 ' + (100 * mean(rich.map(x => x ? 1 : 0))).toFixed(1) + '%**（均值会被这一档抬，所以中位与占比才是主读数）');
+  console.log('  ⚠ 低侧是**精确**的：判 "ep ≤ 0.49 珠" 时 `(ep−费用)/12 ∈ [−0.5, 0.05]` 远在截平范围之外 ⇒ 判据用的那一端没被仪器动过手脚；');
+  console.log('     高侧撞上界 ⇒ "ep 很大"那一侧在这一台里只能当下界，不拿去定符号。');
+  console.log('  占比：ep ≤ **0.49 珠**（部署态 `headT` 的均值，四带 0.49 ‖ 0.52 ‖ 0.49 ‖ 0.52）= **' + (100 * epEst.filter(x => x <= 0.49).length / epEst.length).toFixed(1) + '%**' +
+    ' ‖ ≤ 1.0 珠 = ' + (100 * epEst.filter(x => x <= 1.0).length / epEst.length).toFixed(1) + '%' +
+    ' ‖ ≤ **1.81 珠**（部署态 `packT` 的均值） = ' + (100 * epEst.filter(x => x <= 1.81).length / epEst.length).toFixed(1) + '%');
+  console.log('  候选数：标签带 均值 ' + mean(nArr).toFixed(1) + ' ‖ 中位 ' + q(nArr, 0.5) + ' ‖ ≤4 的决策占比 ' + (100 * nArr.filter(x => x <= 4).length / nArr.length).toFixed(1) +
+    '%    ← 部署参照：headT 11.5（中位 4）‖ packT 26.1（中位 23）‖ 依据 `docs/artifacts/e184-out/e223-lam-4band.log`');
+  const share = 100 * epEst.filter(x => x <= 0.49).length / epEst.length;
+  console.log('  ⇒ 按跑前判据（门槛 = 部署态 headT 的那一档）：这一带（' + TEST + '）低 ep 占比 ' + share.toFixed(1) + '% ⇒ **' +
+    (share < 5 ? '训练分布没访问过头生活的区域 ⇒ 离线改标签那类修法判为惰性，下一刀只有自洽重标'
+      : share >= 20 ? '低 ep 在标签里有的是 ⇒ "曝光偏差/分布漂移"不是病灶，先跑便宜的离线费用下限'
+        : '落在 5~20% 之间 ⇒ 两边都不 decisively，先加带再看（不许当场改判据）') + '**');
 }
 /* ===== `--whopicks`：**"这一手该打谁"的偏好是标签带来的还是脸带来的？**（零 rollout，用的就是 dump 里的键与分）
  *   起因（03:1x）：λ=0.25 那一档在产品桌上**把防御类打到 0.0%（八带一个不剩）**、种数 11→8~10，
@@ -390,7 +473,7 @@ if (arg('export', '')) {
   if (!R1.length) { console.error('⛔ 训练带一个决策都没有 ⇒ 没有 β 可导'); process.exit(64); }
   const dimS = R1[0].d.s.length, dimA = R1[0].d.a[0].length, p = dimS + dimA + IDN;
   const betaArr = []; for (let i = 0; i < p; i++) betaArr.push(pol.beta[i]);
-  writeFileSync(arg('export', ''), JSON.stringify({ feat: FEAT, rep: REP, l2: L2, epochs: EPOCHS, lr: LR, dimS: dimS, dimA: dimA, dimId: IDN, plusid: PLUSID, beta: betaArr,
+  writeFileSync(arg('export', ''), JSON.stringify({ feat: FEAT, rep: REP, l2: L2, epochs: EPOCHS, lr: LR, dimS: dimS, dimA: dimA, dimId: IDN, plusid: PLUSID, teacherFloor: FLOOR, beta: betaArr,
     train: TRAIN, test: TEST, trainSeed: TRAIN_ROWS[0].seed, testSeed: TEST_ROWS[0].seed, nTrain: R1.length, nTest: R2.length,
     heldoutAgree: 100 * mean(last.aPol), packAgree: 100 * mean(last.aPack), ceiling: 100 * mean(agree(NT, teacherSelf)), tierN: NT.length }) + '\n');
   console.log('· 已导出线性蒸馏头 → `' + arg('export', '') + '`（' + p + ' 维 β ‖ **无并列档**留出一致率 ' + (100 * mean(last.aPol)).toFixed(1) + '% vs 现役包 ' +
