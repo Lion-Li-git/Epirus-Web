@@ -1284,7 +1284,7 @@ t('D222 费用表反事实旗标 `--bigtcost=`（v1.5.327 · §E255）：不设 
   }
 });
 
-t('D223 §E262 用户提案"ep≥门槛时把大雷提前并挑该打的人"（v1.5.329）：选点纯函数喂合成表 · 默认关逐字不变 · 生效由**独立 usage 计数**判 · 三种坏输入必须 exit 2 · 落盘带两维', function () {
+t('D223 §E262/§E266 探索提前（大雷 `--bigttgt=` 挑人 ‖ 摄魂 `--pushkey=drain`）（v1.5.329~330）：选点纯函数喂合成表 · 默认关逐字不变 · 生效由**独立 usage 计数**判 · 剂量必须 ≈1/N 且单调 · 坏输入必须 exit 2 · 落盘带四维', function () {
   /* ⓪ **先钉纯函数**（第十九条的教训：只跑真臂的话，"打谁"这件事在小样本里可能一次都不分 ⇒ 永绿装饰）。
    *    今天写第一版时比较号整体写反 ⇒ **四条规则全部选中"最不该打的那个人"**，而返回的是合法座位号，真局里根本看不出来。
    *    合成表就是为这种错准备的（每格都指定期望席位）。 */
@@ -1366,9 +1366,36 @@ t('D223 §E262 用户提案"ep≥门槛时把大雷提前并挑该打的人"（v
   const u1 = useOf(r1.out), u6 = useOf(r6.out);
   ok(isFinite(u1) && isFinite(u6) && u6 < u1, '④j 用量必须随档下降（实测 p=1 占总出手 ' + u1 + '% ‖ p=6 ' + u6 + '%）');
 
+  /* §E264② 同一套形状搬到摄魂指法（`--pushkey=drain`）⇒ 三件必须成立的事：
+   *    ③d **只给卡名、不给剂量**必须逐字等于关档（卡名不许单独动判定）；
+   *    ⑥b 它真能打出这张卡，且**窗口/局 > 0**（S1：这张牌的窗口是"自己残血 ∧ 买得起"，必须先证明窗口开着，不许假设）；
+   *    ⑥d 剂量梯对这张卡同样成立（p=1 ≈100% ⇒ p=3 ≈1/3），否则"偶尔"这个字对摄魂又是一根假轴（自我报告 #9 同一族）。 */
+  const offK = runE(['--bigtpush=0', '--pushkey=drain']);
+  eq(offK.code, 0, '③c `--pushkey=drain --bigtpush=0` 不该报错：' + offK.out.slice(0, 180));
+  eq(strip(offK.out), strip(base.out), '③d 只改卡名不改剂量必须与关档逐字相同（不同 ⇒ `--pushkey` 在零剂量时也进了判定）');
+  const dP = function (push) {
+    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '6', '5', '77000', '--pool=all', '--every=48',
+      '--pushkey=drain', '--pushminep=0', '--bigtpush=' + push],
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
+  };
+  const d1 = dP(1), d3 = dP(3);
+  eq(d1.code, 0, '⑥a 摄魂开档臂必须跑通：' + d1.out.slice(0, 200));
+  const dUsage = /摄魂指法\s+([0-9.]+)%/.exec(d1.out);
+  const dWin = /= ([0-9.]+) 个\/局（/.exec(d1.out);
+  ok(!!dUsage && Number(dUsage[1]) > 0,
+    '⑥b **独立证据**：usage 表里"摄魂指法"必须 >0%（实测 ' + (dUsage ? dUsage[1] + '%' : '没有这一行') + '）⇒ 没有它就说明提前这段代码对这张卡没打到');
+  ok(!!dWin && Number(dWin[1]) > 0,
+    '⑥c **S1 窗口必须 >0 个/局**（实测 ' + (dWin ? dWin[1] : '读不出') + '）⇒ 读不出或为 0 时只能记"没测到东西"，不许记"无效"（§E264 S1）');
+  const dq1 = rateOf(d1.out), dq3 = rateOf(d3.out);
+  ok(isFinite(dq1) && isFinite(dq3) && dq1 > 95 && dq3 > 20 && dq3 < 47 && dq3 < dq1,
+    '⑥d 摄魂的剂量梯必须同样是 1/N 且单调（实测 p=1 ' + dq1 + '% → p=3 ' + dq3 + '%）⇒ 不在就是这张卡的轴也是假的');
+  ok(/探索提前·摄魂指法/.test(d1.out), '⑥e 读数标签必须写明是哪张卡（两张卡的臂可以除卡名外全同 ⇒ 标签含糊就会串臂）');
+
   /* ⑤ 坏输入必须 exit 2，不许降级成"当没写" */
   const bads = [['--bigtpush=7'], ['--bigtpush=0.5'], ['--bigttgt=nonsense'], ['--bigttgt=nonsense', '--bigtpush=0'],
-    ['--pushminep=x'], ['--bigtpush=1', '--ban=bigT'], ['--bigtpush=1', '--inject=bigT']];
+    ['--pushminep=x'], ['--bigtpush=1', '--ban=bigT'], ['--bigtpush=1', '--inject=bigT'],
+    ['--pushkey=nonsense'], ['--pushkey=nonsense', '--bigtpush=0']];
   for (const b of bads) {
     const rb = runE(b);
     eq(rb.code, 2, '`' + b.join(' ') + '` 必须 exit 2（实测 ' + rb.code + '）⇒ 含糊/抢主体席的写法被静默忽略就是假臂');
@@ -1385,7 +1412,24 @@ t('D223 §E262 用户提案"ep≥门槛时把大雷提前并挑该打的人"（v
     const headTxt = readFileSync(dump, 'utf8').split('\n').filter(function (l) { return l[0] === '#'; }).join('\n');
     ok(headTxt.indexOf('#bigtpush=2/5') >= 0, '⑤c 表头必须带 `#bigtpush=<N>/<门槛>`（实测=' + (/^#bigtpush=.*$/m.exec(headTxt) || ['(缺)'])[0] + '）');
     ok(headTxt.indexOf('#bigttgt=lowhp') >= 0, '⑤d 表头必须带 `#bigttgt=`（实测=' + (/^#bigttgt=.*$/m.exec(headTxt) || ['(缺)'])[0] + '）');
+    /* §E264：卡名与摄魂窗口宽度也是**配对身份维** —— 大雷臂与摄魂臂可以除卡名外逐字相同，缺这一维就会配成同臂。 */
+    ok(headTxt.indexOf('#pushkey=bigT') >= 0, '⑤e 表头必须带 `#pushkey=`（实测=' + (/^#pushkey=.*$/m.exec(headTxt) || ['(缺)'])[0] + '）');
+    ok(/^#drainhp=[0-9]+$/m.test(headTxt), '⑤f 表头必须带 `#drainhp=<有效窗口>`（实测=' + (/^#drainhp=.*$/m.exec(headTxt) || ['(缺)'])[0] + '）⇒ `--drainhp=` 放宽窗口的臂就隐身了');
   }
+  const dump2 = join(dir, 'h2.tsv');
+  const rd2 = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--pool=core', '--every=17',
+    '--pushkey=drain', '--pushminep=0', '--bigtpush=1', '--drainHp=2', '--dump-per=' + dump2], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  eq(rd2.status, 0, '⑤g 摄魂臂带 `--dump-per` 必须跑通：' + String(rd2.stderr || '').slice(0, 180));
+  if (existsSync(dump2)) {
+    const h2 = readFileSync(dump2, 'utf8').split('\n').filter(function (l) { return l[0] === '#'; }).join('\n');
+    ok(h2.indexOf('#pushkey=drain') >= 0, '⑤h 表头必须写明提前的是哪张卡（实测=' + (/^#pushkey=.*$/m.exec(h2) || ['(缺)'])[0] + '）');
+    ok(h2.indexOf('#drainhp=2') >= 0, '⑤i 表头必须回显**有效**窗口宽度而不是旗标原值（实测=' + (/^#drainhp=.*$/m.exec(h2) || ['(缺)'])[0] + '）');
+  }
+  /* ⑤j 大小写陷阱（自我报告 #11）：`--drainHp` 才是真键，`--drainhp` 会落进一个没人读的 FLAG 键 ⇒
+   *    今天我把 S3 那两条臂写成小写，跑出来的其实是 p=3 的复制品 —— **静默失效的旗标比报错危险得多**，必须 exit 2。 */
+  const wrongCase = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--pool=core', '--every=17', '--drainhp=3'],
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  eq(wrongCase.status, 2, '`--drainhp=3`（小写 h）必须 exit 2（实测 ' + wrongCase.status + '）⇒ 拼错的旗标被静默忽略 = 假臂');
 });
 
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {

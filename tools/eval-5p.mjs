@@ -310,6 +310,12 @@ const REGEN = Number(FLAG.regen || 0);   // 每回合回 ep（0 = 与线上规�
 /* v1.4.0：--mode=<key>（multi=3血 / long=5血 / …）；--drainHp=N 覆盖摄魂指法的启用血量门槛。 */
 const MODE = FLAG.mode || '';
 const DRAINHP = Number(FLAG.drainHp || 0);
+/* ⚠ 这面旗标的正写是 `--drainHp`（**大写 H**）：解析器按原样保留键名 ⇒ `--drainhp=3` 落进 `FLAG.drainhp`，
+ *   没人读它 ⇒ 那一臂的"放宽窗口"根本不存在，读数却会归因给它（§E265 自我报告 #11：我今天就是这么写的，门 D223 ⑤i 当场判红）。
+ *   含糊拼写一律 exit 2，不许降级成"当没写"。 */
+if (FLAG.drainhp != null) {
+  console.error('⛔ 拼写是 `--drainHp=`（大写 H），收到 `--drainhp=' + FLAG.drainhp + '` ⇒ 这面键不在解析表里、会被静默忽略，拒跑'); process.exit(2);
+}
 if (MODE && !R.MODES[MODE]) { console.error('--mode 未知: ' + MODE + '（可选: ' + Object.keys(R.MODES).join(' ') + '）'); process.exit(1); }
 if (DRAINHP > 0) { R.MODES[MODE || 'multi'].drainHpMax = DRAINHP; }
 const FIELD = FLAG.field || '';
@@ -669,6 +675,10 @@ const PUSH_RAW = FLAG.bigtpush;
 const PUSH = PUSH_RAW == null ? 0 : Number(PUSH_RAW);
 const PUSH_MINEP = FLAG.pushminep == null ? 5 : Number(FLAG.pushminep);
 const PUSHTGT = FLAG.bigttgt || 'net';
+/* §E264②：`--pushkey=` 把这同一套"窗口 + 确定性 1/N 兑现"搬到别的卡上（默认 `bigT` = 逐字不变的老行为）。
+ * 摄魂的窗口与大雷不同形：它的前提是**自己** HP≤`drainHpMax`（在 `state.js:159` 的合法性里，不在这里抄），
+ * 所以配套用 `--pushminep=0` ⇒ 窗口就是"这张牌在菜单里且现在打得出来"的那些决策。 */
+const PUSHKEY = FLAG.pushkey || 'bigT';
 const PUSH_ST = { opp: 0, fired: 0, tgt: {}, tie: 0 };
 /* 旗标**给了就必须合法**（`abc`/`0.5`/`4` 都不许降级成"当没写"——那正是本仓最怕的静默臂）；`0` 是合法的"明确关档"，
  * 留着它才能做门 D223 的零剂量证明：`--bigtpush=0` 与不设旗标必须逐字相同。 */
@@ -683,13 +693,19 @@ if (FLAG.bigttgt != null && ['net', 'threat', 'bead', 'lowhp', 'focus'].indexOf(
 if (FLAG.pushminep != null && (!Number.isInteger(PUSH_MINEP) || PUSH_MINEP < 0)) {
   console.error('⛔ --pushminep 要 ≥0 的整数（收到 `' + FLAG.pushminep + '`）'); process.exit(2);
 }
+/* `--pushkey` 同一条纪律：拼错的卡名不许降级成"当没写"（那臂的读数会归因到一张不存在的卡上）。 */
+const PUSH_SK = PUSHKEY === 'bigT' ? R.SK.BIG_T : PUSHKEY === 'drain' ? R.SK.DRAIN : null;
+if (FLAG.pushkey != null && !PUSH_SK) {
+  console.error('⛔ --pushkey 只认识 bigT | drain（收到 `' + FLAG.pushkey + '`）'); process.exit(2);
+}
+const PUSH_NAME = PUSHKEY === 'drain' ? '摄魂指法' : '大雷';
 if (PUSH) {
   /* 与其他"改写主体席"的旗标同时给就会被静默忽略（比报错危险得多）⇒ 直接拒。 */
   const clash = ['payload', 'inject', 'smart', 'combo', 'ban', 'pure', 'subject'].filter(function (k) { return FLAG[k]; });
   if (clash.length || planSubjectSel || swapParams) {
     console.error('⛔ --bigtpush 不能与 ' + (clash.join('/') || 'plan/swap') + ' 同时给（都抢主体席 ⇒ 会被静默忽略）'); process.exit(2);
   }
-  console.log('[bigtpush] 探索提前已生效：**ep≥' + PUSH_MINEP + ' 且大雷合法可付、且 `round % ' + PUSH + ' === 0` 时打**'
+  console.log('[bigtpush] 探索提前已生效：卡=`' + PUSHKEY + '`（' + PUSH_NAME + '）**ep≥' + PUSH_MINEP + ' 且合法可付、且 `round % ' + PUSH + ' === 0` 时打**'
     + ' · 目标规则 `' + PUSHTGT + '`'
     + '（平手按座位号小者优先，不新增随机流；规则本身是 `bot-chooser-lib.pushTarget` 的纯函数，由门钉）');
 }
@@ -702,7 +718,7 @@ const pushSel = !PUSH ? null : function () {
   return function (state, pid, legal) {
     const ep = (state.p[pid] && state.p[pid].ep) || 0;
     if (ep >= PUSH_MINEP) {
-      const l = legal.find(function (x) { return x && x.key === R.SK.BIG_T; });
+      const l = legal.find(function (x) { return x && x.key === PUSH_SK; });
       /* 可付一律问菜单自带的 `affordable`（与线上同一道闸），不在这里抄一份价钱（§E190 那一族）。 */
       if (l && l.affordable !== false) {
         /* ⚠ 分母必须是"**所有打得出来的决策**"，回合取模只能筛**是否兑现** ——
@@ -722,12 +738,12 @@ const pushSel = !PUSH ? null : function () {
         if ((h % PUSH) === 0) {
           const pool = S.opponentsOf(state, pid);
           const got = pushTarget(pool, state, PUSHTGT);
-          const tgt = (PUSHTGT === 'net' || !got) ? T.pickTargetN(state, pid, R.SK.BIG_T) : got.target;
+          const tgt = (PUSHTGT === 'net' || !got) ? T.pickTargetN(state, pid, PUSH_SK) : got.target;
           if (tgt != null) {
             PUSH_ST.fired++; PUSH_ST.tgt[tgt] = (PUSH_ST.tgt[tgt] || 0) + 1;
             if (got && got.tie > 1) PUSH_ST.tie++;
-            const t2 = T.pickTarget2N ? T.pickTarget2N(state, pid, R.SK.BIG_T, tgt) : null;
-            return { key: R.SK.BIG_T, target: tgt, target2: t2 };
+            const t2 = T.pickTarget2N ? T.pickTarget2N(state, pid, PUSH_SK, tgt) : null;
+            return { key: PUSH_SK, target: tgt, target2: t2 };
           }
         }
       }
@@ -759,7 +775,7 @@ const subjectSel = (PUSH && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !
     ? function () { return asChooser(FN[SUBJECT]); }
     : function () { return subjectPolicy(); });
 const subjectLabel = (PUSH && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !PURE && !SUBJECT)
-  ? ('探索提前·大雷 ep≥' + PUSH_MINEP + ' 且 round%' + PUSH + ' ·目标=' + PUSHTGT)
+  ? ('探索提前·' + PUSH_NAME + ' ep≥' + PUSH_MINEP + ' 且 round%' + PUSH + ' ·目标=' + PUSHTGT)
   : PAYLOAD ? ('消融·只换弹头 ' + PAYLOAD)
   : (PURE && !INJECT && !SMART && !COMBO && !BAN && !planSubjectSel) ? ('纯招·只出 ' + PURE + ' + ジ')
   : (planSubjectSel && !INJECT && !SMART && !COMBO) ? ('连招·蓄能→电磁炮')
@@ -810,10 +826,11 @@ if (PUSH) {
    * 并且**并报兑现率** `fired/opp` —— 门 D223 的"剂量真的分档"腿读的就是这个数（第一版按局内窗口序号数，三档几乎没差，被它抓到）。 */
   const rate = PUSH_ST.opp ? PUSH_ST.fired / PUSH_ST.opp : 0;
   const seatN = Object.keys(PUSH_ST.tgt).length;
-  console.log('[提前自检] 窗口（主体 `ep≥' + PUSH_MINEP + '` 且大雷可付的决策）' + PUSH_ST.opp + ' 个，'
+  console.log('[提前自检] 窗口（主体 `ep≥' + PUSH_MINEP + '` 且' + PUSH_NAME + '可付的决策）' + PUSH_ST.opp + ' 个 = ' +
+    (champ.total ? (PUSH_ST.opp / champ.total).toFixed(3) : '0') + ' 个/局（' + champ.total + ' 局），'
     + '打出去 ' + PUSH_ST.fired + ' 次（兑现率 ' + (rate * 100).toFixed(1) + '% · 口径 = 只在 `round % ' + PUSH + ' === 0` 的回合兑现）' +
     ' · 目标分布 ' + JSON.stringify(PUSH_ST.tgt) + '（' + seatN + ' 个不同席位）· 平手 ' + PUSH_ST.tie + ' 次' +
-    (PUSH_ST.opp === 0 ? '   !!! 窗口从不打开 ⇒ 这一臂没测到任何东西（ep 一辈子到不了 ' + PUSH_MINEP + '），Δ 不可读'
+    (PUSH_ST.opp === 0 ? '   !!! 窗口从不打开 ⇒ 这一臂没测到任何东西（门槛 ep≥' + PUSH_MINEP + ' · 卡=`' + PUSHKEY + '`），Δ 不可读'
       : (PUSH_ST.fired === 0 ? '   !!! 窗口开了却一次没打 ⇒ 计数/可付判定失效' : '   OK 实验有效')));
 }
 if (GRANT) {
@@ -874,6 +891,10 @@ if (FLAG['dump-per']) {
     '#bigtcost=' + (FLAG.bigtcost == null ? 'factory' : String(BIGTCOST)), '#ban=' + (BAN || '-'),
     /* §E262：探索提前这一臂的两个自由量也必须进配对身份（`--bigtpush` 与 `--bigttgt` 任一不同就不是同一臂）。 */
     '#bigtpush=' + (PUSH || 0) + '/' + PUSH_MINEP, '#bigttgt=' + (PUSH ? PUSHTGT : '-'),
+    /* §E264：`--pushkey` 决定"提前的是哪张卡"、`--drainhp` 决定摄魂那扇窗有多宽 ⇒ 两维都进配对身份。
+     * ⚠ 摄魂臂与大雷臂的 seed/桌数/剂量可以完全一样，只有这两维不同 ⇒ 少写一行就会把两张卡的臂配成同世界（§E246 那一族）。 */
+    '#pushkey=' + (PUSH ? PUSHKEY : '-'),
+    '#drainhp=' + ((R.MODES[MODE || 'multi'] || {}).drainHpMax),
     '#swap=' + (SWAP || '-'), '#arm\tidx\tnames\tgames\tfirst\tstrict'];
   for (const s of [{ arm: 'subject', r: champ }, { arm: 'ctrl', r: ctrl }]) {
     s.r.perCombo.forEach(function (c, i) {
