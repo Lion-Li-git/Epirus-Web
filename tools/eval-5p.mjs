@@ -18,7 +18,7 @@ import vm from 'node:vm';
 /* v1.5.71：对手名字→函数的单一来源（见下面 ALL 的构造） */
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 /* §E142：脚本 chooser 的包装规则搬进单一来源（见下面 `asChooser`） */
-import { makeAsChooser } from './bot-chooser-lib.mjs';
+import { makeAsChooser, pushTarget } from './bot-chooser-lib.mjs';
 
 /* 位置参数：剔除 --flag（否则会被当成局数/人数） */
 const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
@@ -656,7 +656,88 @@ const comboSubjectSel = (!COMBO || !comboOk) ? null : buildComboSel();
 const pureSel = !PURE ? null : buildPureSel();     // 必须在 PAY_KEY 声明之后
 const banSel = !BAN ? null : buildBanSel();        // 必须在 PAY_KEY 声明之后
 const smartSel = !SM ? null : buildSmartSel();     // 必须在 PAY_KEY 声明之后
-const subjectSel = (PURE && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !planSubjectSel)
+/* ===== §E262（用户 10-03 指令）：`--bigtpush=<1..6>` = **在"打得出来"的窗口里按 1/N 抽样兑现** + `--bigttgt=<规则>` 挑该打的人 =====
+ * 用户的话：「既然冠军会打环、偶尔能攒到高 ep，那就在 ep 达到 5 之后调高大雷在随机探索中的排名，并指向最有可能发动进攻或被集火的人」。
+ * 与仓里已有的两族**都不相同**，所以值得单独测：
+ *   · `--inject=bigT` = "**能用就用**、不挑时机不挑人"（测的是这张卡的天花板）；
+ *   · `--theta=`（§E233）= 在**打分层**按 ep×费用做线性倾斜（双侧都赔，已关）；
+ *   · 本旗标 = **只在 `ep≥门槛` 那扇窗口里**、按**确定性 1/N 抽样**出手（不新增随机流、不碰 `state.rng`），且**目标由规则给**。
+ * ⚠ 剂量形状被门 D223 的 ④e~④h 钉住（本班自我报告 #9：先按"局内窗口序号"数 ⇒ 1/3 退化成像 1/1；再按 `round % N` ⇒ 非单调）。
+ *   现在 = `hash(每局盐, 回合, 座位) % N === 0` ⇒ 兑现率在统计上就是 1/N，且不依赖桌子顺序。
+ * ⚠ 默认关（不设旗标 ⇒ `PUSH=0`，主体席走的还是原来那条 `subjectPolicy()`，一行都不多跑）。 */
+const PUSH_RAW = FLAG.bigtpush;
+const PUSH = PUSH_RAW == null ? 0 : Number(PUSH_RAW);
+const PUSH_MINEP = FLAG.pushminep == null ? 5 : Number(FLAG.pushminep);
+const PUSHTGT = FLAG.bigttgt || 'net';
+const PUSH_ST = { opp: 0, fired: 0, tgt: {}, tie: 0 };
+/* 旗标**给了就必须合法**（`abc`/`0.5`/`4` 都不许降级成"当没写"——那正是本仓最怕的静默臂）；`0` 是合法的"明确关档"，
+ * 留着它才能做门 D223 的零剂量证明：`--bigtpush=0` 与不设旗标必须逐字相同。 */
+if (PUSH_RAW != null && !(PUSH === 0 || (Number.isInteger(PUSH) && PUSH >= 1 && PUSH <= 6))) {
+  console.error('⛔ --bigtpush 只能是 0 或 1..6（0 = 明确关档；N = 每 N 个回合兑现一次；收到 `' + PUSH_RAW + '`）'); process.exit(2);
+}
+/* ⚠ 这两个旗标的合法性**不挂在 `if (PUSH)` 下面**：拼错目标规则/门槛而忘了开 push，
+ * 会被静默当成"没写" ⇒ 那臂的读数就归因到了不存在的规则上（§E233 那条"回退链取不到要印未测"的同一族）。 */
+if (FLAG.bigttgt != null && ['net', 'threat', 'bead', 'lowhp', 'focus'].indexOf(PUSHTGT) < 0) {
+  console.error('⛔ --bigttgt 不认识的规则：`' + FLAG.bigttgt + '`（可选 net|threat|bead|lowhp|focus）'); process.exit(2);
+}
+if (FLAG.pushminep != null && (!Number.isInteger(PUSH_MINEP) || PUSH_MINEP < 0)) {
+  console.error('⛔ --pushminep 要 ≥0 的整数（收到 `' + FLAG.pushminep + '`）'); process.exit(2);
+}
+if (PUSH) {
+  /* 与其他"改写主体席"的旗标同时给就会被静默忽略（比报错危险得多）⇒ 直接拒。 */
+  const clash = ['payload', 'inject', 'smart', 'combo', 'ban', 'pure', 'subject'].filter(function (k) { return FLAG[k]; });
+  if (clash.length || planSubjectSel || swapParams) {
+    console.error('⛔ --bigtpush 不能与 ' + (clash.join('/') || 'plan/swap') + ' 同时给（都抢主体席 ⇒ 会被静默忽略）'); process.exit(2);
+  }
+  console.log('[bigtpush] 探索提前已生效：**ep≥' + PUSH_MINEP + ' 且大雷合法可付、且 `round % ' + PUSH + ' === 0` 时打**'
+    + ' · 目标规则 `' + PUSHTGT + '`'
+    + '（平手按座位号小者优先，不新增随机流；规则本身是 `bot-chooser-lib.pushTarget` 的纯函数，由门钉）');
+}
+const pushSel = !PUSH ? null : function () {
+  const inner = subjectPolicy();
+  /* ⚠ 剂量**不能按"第几个窗口"数**（我第一版就是这么写的：`ctr` 每局归零 ⇒ 局内窗口数常常只有 1~2 个，
+   *    "1/3" 实际退化成像"1/1"：实测 fired/窗口 = 36314/36314 ‖ 33774/52905 ‖ 30124/60784 ⇒ 三档的用量差不到 1.2 倍，
+   *    于是"剂量响应几乎是平的"是仪器假象，不是结论 —— §E265 自我报告 #9）。
+   * ⇒ 改成**按回合取模**（`state.round % PUSH === 0`）：与"这局有几个窗口"无关，剂量是真的 1/PUSH，且仍是确定性的（不引入随机流）。 */
+  return function (state, pid, legal) {
+    const ep = (state.p[pid] && state.p[pid].ep) || 0;
+    if (ep >= PUSH_MINEP) {
+      const l = legal.find(function (x) { return x && x.key === R.SK.BIG_T; });
+      /* 可付一律问菜单自带的 `affordable`（与线上同一道闸），不在这里抄一份价钱（§E190 那一族）。 */
+      if (l && l.affordable !== false) {
+        /* ⚠ 分母必须是"**所有打得出来的决策**"，回合取模只能筛**是否兑现** ——
+         *    我第一版把取模写进了窗口条件里 ⇒ `opp` 与 `fired` 同增同减、兑现率恒等于 100%，
+         *    门 D223 的 ④f 腿（"p=3 的兑现率必须明显低于 p=1"）当场把它判红（§E265）。 */
+        PUSH_ST.opp++;
+        /* ⚠ 剂量换过三版，前两版都是**假剂量**（门 D223 的 ④e~④h 量出来的，见 §E265 自我报告 #9）：
+         *    ① 按"局内第几个窗口"取模 ⇒ 每局窗口常常只有 1~2 个 ⇒ 1/3 退化成像 1/1（三档出手只差 1.2 倍）；
+         *    ② `round % N` ⇒ **非单调**（p=2 兑现率 100%、p=3 30.4%、p=4 47.8%），因为窗口本身集中在特定回合；
+         *    ③ 加法散列 `slotSalt + round*7919 + pid*104729` 在 `guardwall` 夹具上是干净的（50.0/32.2/15.9%），
+         *      但**真考卷上不干净**（p=2 的出手只比 p=1 少 7%）⇒ 同一局内回合奇偶高度相关，加法没打散。
+         *    ⇒ 现在：异或 + 奇数乘子 + 移位混淆的 avalanche 散列（不碰 `state.rng`、不依赖桌子顺序），
+         *      而且**门的夹具换成真池子**（小样本 `--pool=all --every=64`）—— 第三条的教训就是"夹具形状不像使用场景"。 */
+        let h = ((state.slotSalt | 0) ^ Math.imul(state.round | 0, 0x9E3779B1) ^ Math.imul(pid | 0, 0x85EBCA6B)) >>> 0;
+        h = Math.imul(h ^ (h >>> 15), 0x2C1B3C6D) >>> 0;
+        h = (h ^ (h >>> 12)) >>> 0;
+        if ((h % PUSH) === 0) {
+          const pool = S.opponentsOf(state, pid);
+          const got = pushTarget(pool, state, PUSHTGT);
+          const tgt = (PUSHTGT === 'net' || !got) ? T.pickTargetN(state, pid, R.SK.BIG_T) : got.target;
+          if (tgt != null) {
+            PUSH_ST.fired++; PUSH_ST.tgt[tgt] = (PUSH_ST.tgt[tgt] || 0) + 1;
+            if (got && got.tie > 1) PUSH_ST.tie++;
+            const t2 = T.pickTarget2N ? T.pickTarget2N(state, pid, R.SK.BIG_T, tgt) : null;
+            return { key: R.SK.BIG_T, target: tgt, target2: t2 };
+          }
+        }
+      }
+    }
+    return inner(state, pid, legal);
+  };
+};
+const subjectSel = (PUSH && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !PURE && !SUBJECT && !planSubjectSel && !swapParams)
+  ? pushSel
+  : (PURE && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !planSubjectSel)
   ? pureSel
   : (planSubjectSel && !PAYLOAD && !INJECT && !SMART && !COMBO)
   ? planSubjectSel
@@ -677,7 +758,9 @@ const subjectSel = (PURE && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !
   : (SUBJECT
     ? function () { return asChooser(FN[SUBJECT]); }
     : function () { return subjectPolicy(); });
-const subjectLabel = PAYLOAD ? ('消融·只换弹头 ' + PAYLOAD)
+const subjectLabel = (PUSH && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !PURE && !SUBJECT)
+  ? ('探索提前·大雷 ep≥' + PUSH_MINEP + ' 且 round%' + PUSH + ' ·目标=' + PUSHTGT)
+  : PAYLOAD ? ('消融·只换弹头 ' + PAYLOAD)
   : (PURE && !INJECT && !SMART && !COMBO && !BAN && !planSubjectSel) ? ('纯招·只出 ' + PURE + ' + ジ')
   : (planSubjectSel && !INJECT && !SMART && !COMBO) ? ('连招·蓄能→电磁炮')
   : (BAN && !INJECT && !SMART && !COMBO) ? ('消融·拿掉 ' + BAN)
@@ -722,9 +805,19 @@ if (BAN && !PAYLOAD && !INJECT && !SMART && !COMBO) {
     (BAN_ST.dec ? (BAN_ST.legal / BAN_ST.dec * 100).toFixed(1) : '0') + '%' +
     (BAN_ST.legal === 0 ? '   !!! 该技能从不进 legal ⇒ 消融是空操作，Δ 不可读' : '   OK 消融有效'));
 }
-if (GRANT) {
-  console.log('[补贴自检] --grant=' + GRANT + ' 已生效 ' + GRANT_ST.rounds + ' 个主体回合（主体回合数应≈局数×回合数）');
+if (PUSH) {
+  /* 生效判据落在**行为计数**上（窗口开了多少次 / 真打出去多少次 / 打在谁身上），不落在"旗标读到了"上。
+   * 并且**并报兑现率** `fired/opp` —— 门 D223 的"剂量真的分档"腿读的就是这个数（第一版按局内窗口序号数，三档几乎没差，被它抓到）。 */
+  const rate = PUSH_ST.opp ? PUSH_ST.fired / PUSH_ST.opp : 0;
+  const seatN = Object.keys(PUSH_ST.tgt).length;
+  console.log('[提前自检] 窗口（主体 `ep≥' + PUSH_MINEP + '` 且大雷可付的决策）' + PUSH_ST.opp + ' 个，'
+    + '打出去 ' + PUSH_ST.fired + ' 次（兑现率 ' + (rate * 100).toFixed(1) + '% · 口径 = 只在 `round % ' + PUSH + ' === 0` 的回合兑现）' +
+    ' · 目标分布 ' + JSON.stringify(PUSH_ST.tgt) + '（' + seatN + ' 个不同席位）· 平手 ' + PUSH_ST.tie + ' 次' +
+    (PUSH_ST.opp === 0 ? '   !!! 窗口从不打开 ⇒ 这一臂没测到任何东西（ep 一辈子到不了 ' + PUSH_MINEP + '），Δ 不可读'
+      : (PUSH_ST.fired === 0 ? '   !!! 窗口开了却一次没打 ⇒ 计数/可付判定失效' : '   OK 实验有效')));
 }
+if (GRANT) {
+  console.log('[补贴自检] --grant=' + GRANT + ' 已生效 ' + GRANT_ST.rounds + ' 个主体回合（主体回合数应≈局数×回合数）');}
 if (COMBO && !PAYLOAD && !INJECT && !SMART) {
   console.log('[组合技自检] 叠层=' + STACK + ' 决策 ' + COMBO_ST.dec + ' 次：贴符咒 ' + COMBO_ST.curse + ' 次、攒钱(ジ) ' + COMBO_ST.save + ' 次、天火引爆 ' + COMBO_ST.detonate + ' 次' +
     (COMBO_ST.detonate === 0 ? '   !!! 从未引爆 => 组合从未走通，Δ 不可读' : '   OK 组合跑通了'));
@@ -779,6 +872,8 @@ if (FLAG['dump-per']) {
     /* §E255：改价世界必须写进配对身份 —— 否则"世界 4 珠"的落盘与"出厂 5 珠"的落盘会被这把尺当成同世界配对着配对，
      * 而跨世界的绝对电平本来就不可以比（那正是本节判据 Q3 要防的）。 */
     '#bigtcost=' + (FLAG.bigtcost == null ? 'factory' : String(BIGTCOST)), '#ban=' + (BAN || '-'),
+    /* §E262：探索提前这一臂的两个自由量也必须进配对身份（`--bigtpush` 与 `--bigttgt` 任一不同就不是同一臂）。 */
+    '#bigtpush=' + (PUSH || 0) + '/' + PUSH_MINEP, '#bigttgt=' + (PUSH ? PUSHTGT : '-'),
     '#swap=' + (SWAP || '-'), '#arm\tidx\tnames\tgames\tfirst\tstrict'];
   for (const s of [{ arm: 'subject', r: champ }, { arm: 'ctrl', r: ctrl }]) {
     s.r.perCombo.forEach(function (c, i) {

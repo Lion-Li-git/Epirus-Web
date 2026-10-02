@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { parsePairTable } from './defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
 import { makeGuardCost } from './guard-cost-lib.mjs';   /* D161 用：直接对库做单元级判定（不靠探针的输出措辞） */
+import { pushTarget } from './bot-chooser-lib.mjs';   /* D223 用：选点规则是纯函数 ⇒ 喂合成 state 逐条钉（§E262） */
 import { hardwiredLine } from './probe-layer-caliber.mjs';   /* D149 用：指针行号从源码现算（钉死数字会在别人插一行后变成假行号） */
 /* D163 用：防御质量三档的单一来源（用户 09-26 裁定："出防御的时候完全没人打他就算白防御，被穿透算半有效"） */
 import { classifyDefenseWindow, defenseQuality, formatQuality, parseQuality, formatQualityRecord } from './defense-quality.mjs';
@@ -1280,6 +1281,110 @@ t('D222 费用表反事实旗标 `--bigtcost=`（v1.5.327 · §E255）：不设 
   for (const badv of ['abc', '-2', '1.5']) {
     const rb = runE(['--bigtcost=' + badv], 'bad');
     eq(rb.code, 2, '`--bigtcost=' + badv + '` 必须 exit 2（实测 ' + rb.code + '）⇒ 含糊写法被当出厂价跑完就是假世界');
+  }
+});
+
+t('D223 §E262 用户提案"ep≥门槛时把大雷提前并挑该打的人"（v1.5.329）：选点纯函数喂合成表 · 默认关逐字不变 · 生效由**独立 usage 计数**判 · 三种坏输入必须 exit 2 · 落盘带两维', function () {
+  /* ⓪ **先钉纯函数**（第十九条的教训：只跑真臂的话，"打谁"这件事在小样本里可能一次都不分 ⇒ 永绿装饰）。
+   *    今天写第一版时比较号整体写反 ⇒ **四条规则全部选中"最不该打的那个人"**，而返回的是合法座位号，真局里根本看不出来。
+   *    合成表就是为这种错准备的（每格都指定期望席位）。 */
+  const st = { p: [{ hp: 3, ep: 0 }, { hp: 3, ep: 2, elec: 1 }, { hp: 1, ep: 4 }, { hp: 3, ep: 1 }, { hp: 2, ep: 4 }] };
+  st.p[1].tauntBy = [3]; st.p[2].tauntBy = [3]; st.p[4].tauntBy = [1];
+  const POOL = [1, 2, 3, 4];
+  const pick = function (rule) { const g = pushTarget(POOL, st, rule); return g ? g.target : null; };
+  eq(pick('net'), null, '⓪a `net` 必须返回 null（= 交回引擎默认选点），不许自己造一个');
+  eq(pick('threat'), 2, '⓪b `threat`（ep 最高，平手取血少）⇒ 必须选席位 2（ep4/hp1，压过 4 号 ep4/hp2）');
+  eq(pick('bead'), 1, '⓪c `bead`（有珠的人 = 会打环那位）⇒ 必须选席位 1（唯一 elec=1）');
+  eq(pick('lowhp'), 2, '⓪d `lowhp`（血最少 = 被集火过/最容易减员）⇒ 必须选席位 2（hp1）');
+  eq(pick('focus'), 3, '⓪e `focus`（被最多家 `tauntBy` 盯着）⇒ 必须选席位 3（两家盯它）');
+  /* 平手必须按**座位号小的先**（不做随机、不做遍历序偏向） */
+  const st2 = { p: [{ hp: 3, ep: 0 }, { hp: 2, ep: 2 }, { hp: 2, ep: 2 }] };
+  eq(pushTarget([1, 2], st2, 'threat').target, 1, '⓪f 全判据平手 ⇒ 必须取座位号小的（实测 ' + pushTarget([1, 2], st2, 'threat').target + '）');
+  eq(pushTarget([1, 2], st2, 'threat').tie, 2, '⓪g 平手数必须回显（tie 要能被读数，否则"平手偏向"这条假设看不见）');
+  eq(pushTarget([], st, 'threat'), null, '⓪h 空池 ⇒ null（不许返回 undefined 让调用方拿去当座位号）');
+  let threwRule = false;
+  try { pushTarget(POOL, st, 'nonsense'); } catch (e) { threwRule = true; }
+  ok(threwRule, '⓪i 不认识的规则必须**抛**（静默退回默认选点 = 我给用户的"目标规则"其实是假的）');
+
+  /* ①~③ 真跑：默认关 ⇒ 逐字不变；开档 ⇒ 由**另一条代码路径**（champ.use 的 usage 表）证明它真打了这张卡 */
+  const src = readFileSync('tools/eval-5p.mjs', 'utf8');
+  ok(src.indexOf('FLAG.bigtpush') >= 0 && src.indexOf('pushTarget(') >= 0,
+    '① `eval-5p` 里没有 `FLAG.bigtpush` 或没在用 `pushTarget` ⇒ 旗标被删了而记账还写着有');
+  const strip = function (s) { return s.split('\n').filter(function (l) {
+    return l.indexOf('[bigtpush]') !== 0 && l.indexOf('[提前自检]') !== 0 && l.indexOf('耗时') !== 0;
+  }).join('\n'); };
+  const runE = function (extra) {
+    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '12', '5', '77000', '--field=guardwall'].concat(extra),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
+  };
+  const base = runE([]);
+  eq(base.code, 0, '⓪z 默认臂必须跑通：' + base.out.slice(0, 180));
+  ok(base.out.indexOf('bigtpush') < 0 && base.out.indexOf('提前自检') < 0, '② 关档一行都不许印（印了就是产品口径的量具上多了一条静默分支）');
+
+  /* ③ 零剂量：`--bigtpush=0`（明确关档）与不设旗标 ⇒ 去掉墙钟/banner 后**逐字相同** */
+  const off0 = runE(['--bigtpush=0']);
+  eq(off0.code, 0, '③a `--bigtpush=0` 不该报错：' + off0.out.slice(0, 180));
+  eq(strip(off0.out), strip(base.out), '③b `--bigtpush=0` 必须与不设旗标逐字相同（不同 ⇒ 这根键在关档时也动了判定）');
+
+  /* ④ 真生效（独立证据 = usage 表，由 `champ.use` 从事件里数，不是我印的计数）。
+   *    夹具把门槛/价格一起降到 1 是为了**让窗口必开**（`guardwall` 场里 12 局能不能攒到 5 ep 不由我赌）；
+   *    这不是对真实世界的断言，只是证明"提前 + 选点 + 出手"这条链通。 */
+  const on = runE(['--bigtcost=1', '--pushminep=1', '--bigtpush=1', '--bigttgt=threat']);
+  eq(on.code, 0, '④a 开档臂必须跑通：' + on.out.slice(0, 200));
+  ok(on.out.indexOf('[bigtpush]') >= 0 && on.out.indexOf('[提前自检]') >= 0, '④b 开档必须响亮印 banner + 自检行');
+  const usage = /真正的落雷\s+([0-9.]+)%/.exec(on.out);
+  ok(!!usage && Number(usage[1]) > 0,
+    '④c **独立证据**：usage 表里"真正的落雷"必须 >0%（实测 ' + (usage ? usage[1] + '%' : '没有这一行')
+    + '）⇒ 没有它就说明"提前"这段代码没真打到卡');
+  ok(/OK 实验有效/.test(on.out), '④d 自检行必须报"OK 实验有效"（窗口开了却一次没打 = 计数或可付判定失效）');
+
+  /* ④e~④h **剂量必须真的是 1/N**（这两条腿换来本班自我报告 #9：
+   *      第一版按"局内第几个窗口"数 ⇒ 每局窗口常常只有 1~2 个，1/3 退化成像 1/1，三档用量只差 1.2 倍，我差点把"剂量响应是平的"写成结论；
+   *      第二版改成 `round % N` ⇒ **非单调**（实测 p=2 兑现率 100%、p=3 30.4%、p=4 47.8%），因为窗口本身集中在特定回合上。
+   *      现在是"每局盐 + 回合 + 座位"的确定性 1/N 抽样（不碰 `state.rng`、不依赖臂序）。 */
+  const rateOf = function (txt) { const m = /打出去 (\d+) 次（兑现率 ([0-9.]+)%/.exec(txt); return m ? Number(m[2]) : NaN; };
+  const fx = ['--bigtcost=1', '--pushminep=1', '--bigttgt=net'];
+  /* ⚠ 剂量梯必须在**真池子的小样本**上量，不在 `--field=` 单场上量：本班第三版散列在 guardwall 上测出干净的
+   *    100.0 / 50.0 / 32.2 / 15.9%，可真考卷上 p=2 只比 p=1 少 7% 出手 ⇒ **夹具形状不像使用场景 = 门是假的**（§E265 #9）。 */
+  const runP = function (extra) {
+    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '4', '5', '77000', '--pool=all', '--every=64'].concat(extra),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
+  };
+  const r1 = runP(['--bigtpush=1'].concat(fx)), r2 = runP(['--bigtpush=2'].concat(fx));
+  const r3 = runP(['--bigtpush=3'].concat(fx)), r6 = runP(['--bigtpush=6'].concat(fx));
+  const q1 = rateOf(r1.out), q2 = rateOf(r2.out), q3 = rateOf(r3.out), q6 = rateOf(r6.out);
+  ok([q1, q2, q3, q6].every(function (x) { return isFinite(x); }),
+    '④e 四档都要能读出兑现率（实测 ' + [q1, q2, q3, q6].join(' ‖ ') + '）⇒ 读不出就是自检行格式/跑通性坏了');
+  ok(q1 > 95 && q1 <= 100, '④f `p=1` 的兑现率必须≈100%（实测 ' + q1 + '）⇒ 窗口开了不打就是计数失效');
+  ok(q2 > 33 && q2 < 67, '④g `p=2` 必须落在 1/2 附近（真池样本实测兑现率 ' + q2 + '%）⇒ 不在就是散列没打散（本班踩过两版）');
+  ok(q3 > 20 && q3 < 47 && q6 > 8 && q6 < 32, '④h `p=3`/`p=6` 必须各自落在 1/3、1/6 附近（实测 ' + q3 + '% ‖ ' + q6 + '%）');
+  ok(q6 < q3 && q3 < q2 && q2 < q1, '④i 剂量必须**严格单调**（实测 ' + q1 + ' → ' + q2 + ' → ' + q3 + ' → ' + q6 + '）');
+  /* 出手量也必须随档下降（兑现率是"窗口的比例"，用量才是真剂量） */
+  const useOf = function (txt) { const m = /真正的落雷\s+([0-9.]+)%/.exec(txt); return m ? Number(m[1]) : NaN; };
+  const u1 = useOf(r1.out), u6 = useOf(r6.out);
+  ok(isFinite(u1) && isFinite(u6) && u6 < u1, '④j 用量必须随档下降（实测 p=1 占总出手 ' + u1 + '% ‖ p=6 ' + u6 + '%）');
+
+  /* ⑤ 坏输入必须 exit 2，不许降级成"当没写" */
+  const bads = [['--bigtpush=7'], ['--bigtpush=0.5'], ['--bigttgt=nonsense'], ['--bigttgt=nonsense', '--bigtpush=0'],
+    ['--pushminep=x'], ['--bigtpush=1', '--ban=bigT'], ['--bigtpush=1', '--inject=bigT']];
+  for (const b of bads) {
+    const rb = runE(b);
+    eq(rb.code, 2, '`' + b.join(' ') + '` 必须 exit 2（实测 ' + rb.code + '）⇒ 含糊/抢主体席的写法被静默忽略就是假臂');
+  }
+
+  /* ⑤ 落盘身份两维（配对尺靠表头拒判，缺维就会把"每 1 次一打"与"每 3 次一打"配成同臂） */
+  const dir = mkdtempSync(join(tmpdir(), 'd223-'));
+  const dump = join(dir, 'h.tsv');
+  const rd = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--pool=core', '--every=17',
+    '--bigtpush=2', '--bigttgt=lowhp', '--dump-per=' + dump], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  eq(rd.status, 0, '⑤a 带 `--dump-per` 的提前臂必须跑通：' + String(rd.stderr || '').slice(0, 180));
+  ok(existsSync(dump), '⑤b 必须真的落盘（没落盘 ⇒ 这条腿是装饰）');
+  if (existsSync(dump)) {
+    const headTxt = readFileSync(dump, 'utf8').split('\n').filter(function (l) { return l[0] === '#'; }).join('\n');
+    ok(headTxt.indexOf('#bigtpush=2/5') >= 0, '⑤c 表头必须带 `#bigtpush=<N>/<门槛>`（实测=' + (/^#bigtpush=.*$/m.exec(headTxt) || ['(缺)'])[0] + '）');
+    ok(headTxt.indexOf('#bigttgt=lowhp') >= 0, '⑤d 表头必须带 `#bigttgt=`（实测=' + (/^#bigttgt=.*$/m.exec(headTxt) || ['(缺)'])[0] + '）');
   }
 });
 
