@@ -21,9 +21,10 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
+import { loadCardTable } from './log-reading.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'quiet'], 'probe-distill-learnability');
+rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'whopicks', 'plusid', 'quiet'], 'probe-distill-learnability');
 const arg = (k, d) => { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); };
 const TRAIN = arg('train', ''), TEST = arg('test', '');
 if (!TRAIN || !TEST) { console.error('⛔ 必须同时给 --train= 与 --test=（留出检验没有"同一批"这个选项）'); process.exit(64); }
@@ -33,6 +34,15 @@ const HID = Math.max(0, Number(arg('h', 16)) || 0);
 const EPOCHS = Math.max(1, Number(arg('epochs', 240)) || 240);
 const LR = Number(arg('lr', 0.5));
 const FEAT = arg('feat', 'sa');            // 'sa' = 状态⊕动作 ‖ 'a' = 只看动作（诊断："条件性"到底在不在状态里）
+/* ===== `--plusid=1`：**离线**给动作侧拼上"卡片身份 one-hot"（30 维），其余一字不动 =====
+ *   为什么要这一格（03:2x）：`--whopicks` 读到"教师在防御可打的决策里 **40.8%** 挑防御、special 可打里 **28.6%** 挑 special，
+ *   而蒸馏头两者都是 **0.0%**（160 个 + 60 个决策全部跑偏）"⇒ 必须分清这是
+ *   ①**编码装不下**（当前 22 维动作块里没有卡片身份，§E218 又查出防御族 8 张逐位同向量 ⇒ 头压根看不见"这是哪张卡"），还是
+ *   ②**没训动/容量不够**（MLP 那一档的对照）。
+ *   做法：**不动 `js/train/policy.js`、不动出厂特征**，只在分析器里把 dump 已经存着的候选键 `d.k[i]` 摊成 one-hot 拼到动作块后面
+ *   ⇒ 如果拼上身份之后头**开始**挑得到防御/special，那"换代先给动作侧加卡身份"就不再是猜想，而是**零成本预测试过**的结论。
+ *   ⚠ 这一档读的是"**可表达性**"，不是产品胜率：真要拿到东西还得重训出厂包（那是 DS 的地盘 + 用户裁定）。 */
+const PLUSID = Math.max(0, Math.min(2, Number(arg('plusid', 0)) || 0));    /* 0=关 ‖ 1=卡片 one-hot(30) ‖ 2=类别 one-hot(4) */
 const QUIET = argv.indexOf('--quiet') >= 0;
 
 const load = p => readFileSync(p, 'utf8').trim().split('\n').map(l => JSON.parse(l));
@@ -72,10 +82,22 @@ function prep(rows) {
   return { rows: out, tiedDec: tiedDec, shortRep: shortRep };
 }
 /* ---------- 特征：状态存一份、动作每候选一份 ⇒ 这里拼成每候选一行 ---------- */
-const DIMS = TRAIN_ROWS.length ? TRAIN_ROWS[0].s.length + TRAIN_ROWS[0].a[0].length : 0;
+const DIMS = TRAIN_ROWS.length ? TRAIN_ROWS[0].s.length + TRAIN_ROWS[0].a[0].length : 0;   /* 出厂面（不含身份块）*/
+/* 身份块（见文件头 `--plusid` 那段）：从 dump 里已经存好的**候选键**现算，不碰出厂特征。 */
+const CT = loadCardTable();
+const ID_KEYS = []; { const seen = {}; for (const k in CT.RUL.skills) { const s = CT.RUL.skills[k]; if (s && s.key && !seen[s.key]) { seen[s.key] = 1; ID_KEYS.push(s.key); } } }
+const ID_POS = {}; for (let i = 0; i < ID_KEYS.length; i++) ID_POS[ID_KEYS[i]] = i;
+const CAT_ORDER = ['energy', 'attack', 'defense', 'special'];
+const IDN = PLUSID === 1 ? ID_KEYS.length : PLUSID === 2 ? CAT_ORDER.length : 0;
+function idFeat(key) {
+  if (!IDN) return [];
+  if (PLUSID === 2) { const c = CT.catByKey[key]; if (!c) { console.error('⛔ 卡 `' + key + '` 在规则表里查不到类别'); process.exit(3); } const v = new Array(CAT_ORDER.length).fill(0); v[CAT_ORDER.indexOf(c)] = 1; return v; }
+  if (!(key in ID_POS)) { console.error('⛔ 卡 `' + key + '` 不在规则表的 .key 里 ⇒ 身份块无法构造'); process.exit(3); }
+  const v = new Array(ID_KEYS.length).fill(0); v[ID_POS[key]] = 1; return v;
+}
 function feats(row) {
   const s = FEAT === 'a' ? new Array(TRAIN_ROWS[0].s.length).fill(0) : row.d.s;
-  return row.d.a.map(a => s.concat(a));
+  return row.d.a.map((a, i) => s.concat(a).concat(idFeat(row.d.k[i])));
 }
 /* ---------- ① 价值回归（岭回归，闭式解）—— 与 §E197/§E205 同一族，这里当**对照**用 ---------- */
 function ridge(rows, lam) {
@@ -104,7 +126,7 @@ function ridge(rows, lam) {
 }
 /* ---------- ② 蒸馏头：softmax 交叉熵学"教师会选哪个"（这才是本节的新东西） ---------- */
 function trainPolicy(rows, hidden) {
-  const p = rows[0].d.a[0].length + (FEAT === 'a' ? 0 : rows[0].d.s.length);
+  const p = rows[0].d.a[0].length + (FEAT === 'a' ? 0 : rows[0].d.s.length) + IDN;
   let W1 = null, W2 = null, B1 = null, beta = new Float64Array(p);
   const rnd = (function () { let s = 20261002 >>> 0; return () => { s ^= s << 13; s >>>= 0; s ^= s << 17; s >>>= 0; s ^= s >>> 5; s >>>= 0; return s / 4294967296 - 0.5; }; })();
   if (hidden > 0) {
@@ -244,15 +266,81 @@ if (argv.indexOf('--byenv') >= 0) {
   console.log('  读法：某一环境若**教师−包 ≈0 或为负** ⇒ 标签在那张桌上压根不含增益（是**评估器/延续策略**瞎，不是脸装不下）；');
   console.log('        若**教师−包 明显为正而头−包 为负** ⇒ 是那一张脸装不下（这才轮得到"加身份/加交互"那条路说话）。');
 }
+/* ===== `--whopicks`：**"这一手该打谁"的偏好是标签带来的还是脸带来的？**（零 rollout，用的就是 dump 里的键与分）
+ *   起因（03:1x）：λ=0.25 那一档在产品桌上**把防御类打到 0.0%（八带一个不剩）**、种数 11→8~10，
+ *   而同幅随机方向没有这个副作用 ⇒ 如果**教师自己**在有防御可打时也几乎不挑防御，那结论就不是"这张脸不会打防御"，
+ *   而是"**一手搜索的偏好天生不防御**"⇒ 下一问必须换成"改标签（多看一手 / 把跨回合可行性装进结算）"，而不是"再蒸一遍"。
+ *   读法：`可打比例` = 该类别在这决策的候选表里出现过；`挑了比例` = 在该类别**可打**的决策里，这个来源挑了它的比例。
+ *   ⚠ 头是**样本外**的那一枚（训在另一带、留出=这一带），与一致率那一档同源 ⇒ 三个来源看的是同一批决策。 */
+if (argv.indexOf('--whopicks') >= 0) {
+  const CT = loadCardTable();
+  const CATS = ['energy', 'attack', 'defense', 'special'];
+  const stat = {}; const availDef = { teacher: 0, pack: 0, head: 0, n: 0 };
+  const defCards = {};
+  let nDec = 0, nNoCat = 0;
+  const headPickOf = r => {
+    /* 平票必须**与候选顺序无关**（第四次同一课，而且这次恰好打在要量的那一类上：§E218 说防御族 8 张卡的动作向量逐位相同
+       ⇒ 头的分数也逐位相同 ⇒ 若按"下标小者胜"，挑到谁完全由枚举顺序决定，而我读的就是"挑到谁"）。
+       ⇒ 用"键 + 该候选的动作向量"的哈希破平：同一张卡在任何顺序下得到同一个破平值。 */
+    const F = feats(r), tkh = [];
+    for (let i = 0; i < r.n; i++) { let h = 2166136261; const s = r.d.k[i] + '|' + F[i].join(','); for (let q = 0; q < s.length; q++) h = Math.imul(h ^ s.charCodeAt(q), 16777619); tkh.push(h >>> 0); }
+    let b = 0;
+    for (let i = 1; i < r.n; i++) { const z = pol.score(F[i]), zb = pol.score(F[b]); if (z > zb || (z === zb && tkh[i] < tkh[b])) b = i; }
+    return b;
+  };
+  for (const r of R2) {
+    const keys = r.d.k; if (keys.length !== r.n) { console.error('⛔ dump 里键数 ' + keys.length + ' ≠ 候选数 ' + r.n); process.exit(3); }
+    nDec++;
+    const src = { teacher: r.teacher, pack: r.netPick, head: headPickOf(r) };
+    const cats = keys.map(k => CT.catByKey[k]);
+    if (cats.some(c => c === undefined)) nNoCat++;
+    for (const c of CATS) {
+      const s = stat[c] = stat[c] || { teacher: 0, pack: 0, head: 0, avail: 0 };
+      const anyHere = cats.indexOf(c) >= 0;
+      if (!anyHere) continue;
+      s.avail++;
+      for (const w in src) if (cats[src[w]] === c) { s[w]++; if (c === 'defense') { defCards[keys[src[w]]] = (defCards[keys[src[w]]] || 0) + 1; } }
+      if (c === 'defense') for (const w in src) availDef[w]++;
+    }
+  }
+  console.log('\n## 谁在挑哪一类（留出带 ' + nDec + ' 个决策 ‖ 头 = 训于另一带的样本外那枚 ‖ 分母 = 该类**可打**的决策数）');
+  console.log('  类别        │ 可打决策数 │ 教师挑它 ‖ 现役包挑它 ‖ 蒸馏头挑它（各带 %）');
+  for (const c of CATS) {
+    const s = stat[c] || { avail: 0, teacher: 0, pack: 0, head: 0 };
+    console.log('  ' + c.padEnd(10) + '│ ' + String(s.avail).padStart(8) + ' │ ' +
+      (s.avail ? (100 * s.teacher / s.avail).toFixed(1) + '% ‖ ' + (100 * s.pack / s.avail).toFixed(1) + '% ‖ ' + (100 * s.head / s.avail).toFixed(1) + '%' : '—') +
+      '   （计数 ' + s.teacher + '/' + s.pack + '/' + s.head + '）');
+  }
+  console.log('  ‖ 这一批决策里候选数均值 ' + mean(R2.map(r => r.n)).toFixed(1) + ' ‖ 挑到的防御卡具体是：' +
+    (Object.keys(defCards).length ? Object.keys(defCards).map(k => (CT.byKey[k] || k) + ' ' + defCards[k]).join(' · ') : '（一个都没有）'));
+  console.log('  ⇒ 读法：若**教师挑防御的比例本来就 ≈ 包（或更低）**，那"变窄"是**标签**带来的 ⇒ 病在一手搜索的评估口径（偏差只一手 + 延续用包），不在这张脸；');
+  console.log('    若教师明显在挑而头不挑 ⇒ 才是"脸装不下"，那才轮得到"加卡身份/加交互"那条路说话。');
+  /* 按教师所选类别的**错配矩阵**：头在"教师想要这一类"的那些决策上实际挑了哪一类。
+     上一行只说"头挑防御 0%"，这一行要说清"那 160 个教师挑防御的决策，头拿去干了什么"。 */
+  const conf = {};
+  for (const r of R2) {
+    const cats = r.d.k.map(k => CT.catByKey[k]);
+    const tk = cats[r.teacher], hk = cats[headPickOf(r)];
+    const c = conf[tk] = conf[tk] || { n: 0, same: 0, to: {} };
+    c.n++; if (tk === hk) c.same++; else c.to[hk] = (c.to[hk] || 0) + 1;
+  }
+  console.log('\n  头在"教师想要 X"的那些决策上实际挑了什么（错配矩阵 ‖ 与上表同一批决策）');
+  for (const c of CATS) {
+    const x = conf[c]; if (!x) continue;
+    console.log('    教师要 ' + c.padEnd(8) + '：' + String(x.n).padStart(4) + ' 个决策 ‖ 头也挑同类 **' + (100 * x.same / x.n).toFixed(1) + '%** ‖ 拿去干了 ' +
+      Object.keys(x.to).sort((a, b) => x.to[b] - x.to[a]).map(k2 => k2 + ' ' + x.to[k2]).join(' · '));
+  }
+  if (nNoCat) console.log('  ⛔ 有 ' + nNoCat + ' 个决策的候选键在规则表里查不到类别 ⇒ 这张表不许引（别把漏数读成偏好）');
+}
 /* `--export=` 把线性蒸馏头（h=0 时）导出给 `tools/probe-distill-player.mjs` 当策略用 ⇒ **一致率不是胜率**，
  * 第二步必须在产品桌上配对比。导出的是原始特征上的 β（未中心化），播放器按同一套 `featuresV7 + actionFeatures` 打分。 */
 if (arg('export', '')) {
   if (HID > 0) { console.error('⛔ 只导出线性头（h=0）；MLP 头的导出还没做（本轮实测 MLP 两向都不如线性 ⇒ 没必要）'); process.exit(64); }
   if (FEAT !== 'sa') { console.error('⛔ 只导出 `--feat=sa`：`feat=a` 把状态维置零了，播放器按真状态打分 ⇒ 换了输入分布，A/B 不再单自由度'); process.exit(64); }
   if (!R1.length) { console.error('⛔ 训练带一个决策都没有 ⇒ 没有 β 可导'); process.exit(64); }
-  const dimS = R1[0].d.s.length, dimA = R1[0].d.a[0].length, p = dimS + dimA;
+  const dimS = R1[0].d.s.length, dimA = R1[0].d.a[0].length, p = dimS + dimA + IDN;
   const betaArr = []; for (let i = 0; i < p; i++) betaArr.push(pol.beta[i]);
-  writeFileSync(arg('export', ''), JSON.stringify({ feat: FEAT, rep: REP, l2: L2, epochs: EPOCHS, lr: LR, dimS: dimS, dimA: dimA, beta: betaArr,
+  writeFileSync(arg('export', ''), JSON.stringify({ feat: FEAT, rep: REP, l2: L2, epochs: EPOCHS, lr: LR, dimS: dimS, dimA: dimA, dimId: IDN, plusid: PLUSID, beta: betaArr,
     train: TRAIN, test: TEST, trainSeed: TRAIN_ROWS[0].seed, testSeed: TEST_ROWS[0].seed, nTrain: R1.length, nTest: R2.length,
     heldoutAgree: 100 * mean(last.aPol), packAgree: 100 * mean(last.aPack), ceiling: 100 * mean(agree(NT, teacherSelf)), tierN: NT.length }) + '\n');
   console.log('· 已导出线性蒸馏头 → `' + arg('export', '') + '`（' + p + ' 维 β ‖ **无并列档**留出一致率 ' + (100 * mean(last.aPol)).toFixed(1) + '% vs 现役包 ' +

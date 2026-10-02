@@ -35,12 +35,16 @@ export function loadCardTable() {
   /* ⚠ `RUL.skills` 是**数组形状**（对象键是 0..29），真正的技能键在 `.key` 上 ⇒ 这里必须以 `.key` 为键
      （10-02 我在原型里直接按对象键取，读出 `undefined`；同一族的坑）。 */
   for (const k of keys) { const s = RUL.skills[k]; if (s && s.key) byKey[s.key] = s.name; }
+  /* `catByKey`：技能键 → `CAT.*`。**分析"搜索的口味偏哪一类"必须用规则表的类别**，
+   *   手写第二份名单本仓已栽过四次（D117/D216 那条），所以这里一次给全（10-02 §E223 的 `--whopicks` 就是这么来的）。 */
+  const catByKey = {};
+  for (const k of keys) { const s = RUL.skills[k]; if (s && s.key) catByKey[s.key] = s.cat; }
   const defNames = keys.filter(function (k) { return RUL.skills[k].cat === RUL.CAT.DEFENSE; })
     .map(function (k) { return RUL.skills[k].name; });
   if (!names.length || !defNames.length) {
     console.error('⛔ 从 js/core/rules.js 取不到防御类卡（卡表结构变了？）'); process.exit(3);
   }
-  return { RUL: RUL, names: names, defNames: defNames, byKey: byKey };
+  return { RUL: RUL, names: names, defNames: defNames, byKey: byKey, catByKey: catByKey };
 }
 
 /** 席位：默认 AI = 除真人席之外的 1..5（真人席 = `--human=`，默认 1）。 */
