@@ -31,7 +31,7 @@ import { loadPool, makeMimic } from './human-pool.mjs';
 import { loadCardTable } from './log-reading.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'refs', 'games', 'seeds', 'p', 'temp', 'quiet', 'verdict', 'oppTrace'], 'probe-pool-admission');
+rejectUnknownFlags(argv, ['envs', 'refs', 'games', 'seeds', 'p', 'temp', 'quiet', 'verdict', 'oppTrace', 'econ', 'econB'], 'probe-pool-admission');
 const arg = (k, d) => { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); };
 const GAMES = Math.max(1, Number(arg('games', 100)) || 100);
 const SEEDS = String(arg('seeds', '3100')).split(',').map(Number).filter(Boolean);
@@ -41,11 +41,19 @@ const REFS = String(arg('refs', 'packG,packT,saver,spender,defSpam,atkSpam')).sp
 const QUIET = argv.indexOf('--quiet') >= 0;
 const VERDICT = argv.indexOf('--verdict') >= 0;
 const OPPTRACE = argv.indexOf('--oppTrace') >= 0;      /* 默认关：关着时这台仪器的读数与不打开**逐字相同**（只观察，不消耗随机流、不改返回值） */
+/* 10-02（DS 交接件 §14 的三条跑前修正 · 用户裁定批）：`--econ` 默认关 ⇒ 关着时整台仪器与上一版**逐字相同**。
+ *   · 主判据按 **<GAMES> 局/格**跑（预注册要求 800：200 局时配对 Δ ±10pt 正好等于"≥10pt"这条判据，是 1σ 位置）；
+ *   · `--econB=` 给预注册里那条"**若判 (a) 才补 B∈{4,9} 敏感性**"用（默认走锚点 6，不改代码）；
+ *   · §⑤ 另外印 **`packT` 自己的花费响应**（冠军在不在用这根轴）与**前置**（死线脚本活到 B 了没有、
+ *     它有没有真的兑现过）—— 这两条不满足时**不许把结论写成 (a)**。 */
+const ECON = argv.indexOf('--econ') >= 0;
+const ECONB = Number(arg('econB', 6)) || 6;
 if (PS.indexOf(0) < 0) { console.error('⛔ `--p` 必须含 0 档（Δ 的参照）'); process.exit(4); }
 const N = 5, FOCUS = 1;
 const T0 = Date.now();
 
 const W = sandbox(), S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, B = W.EpirusBots;
+if (ECON && typeof B.setEconB === 'function') B.setEconB(ECONB);
 const params = (function () { const p = loadChamp(W, 'js/bundled-champion-3p.js'); return p && p.params ? p.params : p; })();
 const { pool: POOL } = poolFromSpecs(B, OPP_SPECS);
 const ENV_PICK = String(arg('envs', 'all'));
@@ -100,7 +108,7 @@ function randomize(sel, p, agg, ornd, tr) {
 }
 
 const AGG = {};
-const aggOf = k => (AGG[k] = AGG[k] || { env: '', ref: '', p: 0, games: 0, win: 0, rounds: 0, acts: 0, oppActs: 0, overrode: 0, noChoice: 0, epSum: 0, epN: 0, perGame: [],
+const aggOf = k => (AGG[k] = AGG[k] || { env: '', ref: '', p: 0, games: 0, win: 0, rounds: 0, acts: 0, oppActs: 0, overrode: 0, noChoice: 0, epSum: 0, epN: 0, spendSum: 0, spendN: 0, perGame: [],
   oppSeen: 0, oppBig: 0, oppEpMax: 0, oppEpSum: 0, bigRound: null });
 function playOne(env, refName, p, g, seed, agg) {
   const rnd = mulberry32(seed + g * 7919 + env.name.length * 131);
@@ -113,6 +121,7 @@ function playOne(env, refName, p, g, seed, agg) {
     const r = own(state, pid, legal);
     if (!r) { agg.noChoice++; return null; }
     agg.acts++; agg.epSum += (state.p[pid].ep || 0); agg.epN++;
+    agg.spendSum += (COST[r.key] || 0); agg.spendN++;      /* §⑤ 的"冠军花费响应"：这一手按**卡面费用**花了几珠 */
     return r;
   };
   const wrapped = randomize(env.sel, p, agg, ornd, OPPTRACE ? traceChoice : null);
@@ -236,5 +245,53 @@ if (OPPTRACE) {
   console.log('  ‖ ⚠ `首次 ≥4 的回合` 取的是**每（桌×探针×p）格第一次**出现的那一手，不是每局第一次 ⇒ 只用来横向比"这张桌的脚本多久才舍得花"');
   console.log('  ‖ 这一节改变不了上面任何判据：它只观察，不消耗 `state.rng`、不改返回值（关掉时整台仪器与不打开**逐字相同**）');
 }
-console.log('\n## 复跑命令\n  node tools/probe-pool-admission.mjs --envs=' + (ENV_PICK === 'all' ? 'all' : ENV_PICK) + ' --refs=' + REFS.join(',') + ' --games=' + GAMES + ' --seeds=' + SEEDS.join(',') + ' --p=' + PS.join(',') + (VERDICT ? ' --verdict' : '') + (OPPTRACE ? ' --oppTrace' : ''));
+if (ECON) {
+  const PAIR = ['deadlineburst', 'earlypressure'];
+  const ECON_BV = (typeof B.getEconB === 'function') ? B.getEconB() : 6;
+  console.log('\n## ⑤ 经济轴裁决（`--econ` ‖ 判据**跑前写死**：主判据 = `|saver − spender| ≥ 10pt` **且两桌符号相反**；' +
+    '次判据 = `Δ(p=0.8)` 不显著为负；另有 §① 的 `dev-ρ ≤ 0.6` 与 `packT` 电平 10~40%）');
+  console.log('  ‖ 死线爆发回合 `ECON_B` = **' + ECON_BV + '**（`--econB=` 只给"若判 (a) 才补 B∈{4,9} 敏感性"用；默认走实测锚点 6）');
+  console.log('  ‖ ⚠ 分辨率：每桌 `saver`/`spender` 各 ' + (GAMES * SEEDS.length) + ' 局 ⇒ 配对 Δ ≈ ±' +
+    (98 / Math.sqrt(Math.max(1, GAMES * SEEDS.length))).toFixed(1) + 'pt（配对口径 ≈ `98/√n` pt；**这就是判据 ≥10pt 的分辨率**：'
+    + (GAMES * SEEDS.length < 600 ? '⛔ 不足 600 局 ⇒ 判据正好落在 1σ，**不许据此写结论**（预注册要求 800 局/格）' : '✔ 够') + '）');
+  const sep = {};
+  for (const n of PAIR) {
+    if (!ENVS.some(function (e) { return e.name === n; })) {
+      console.log('  ⛔ `' + n + '` 不在本次 `--envs` 里 ⇒ 该桌无读数（用 `--envs=' + PAIR.join(',') + ',<其它桌>` 带上它）'); continue;
+    }
+    const As = A(n, 'saver', 0), Bs = A(n, 'spender', 0), a0 = A(n, 'packT', 0);
+    const d = As.perGame.map(function (x, i) { return x - Bs.perGame[i]; });
+    const dm = mean(d) * 100, dci = ci(d);
+    sep[n] = { dm: dm, dci: dci, lvl: wr(a0), spend: a0.spendSum / Math.max(1, a0.spendN),
+      rounds: a0.rounds / Math.max(1, a0.games), big: (a0.oppBig || 0) / Math.max(1, a0.oppSeen || 0) };
+    console.log('  · `' + n + '`：`saver` ' + wr(As).toFixed(1) + '% ‖ `spender` ' + wr(Bs).toFixed(1) + '% ⇒ **' +
+      (dm >= 0 ? '+' : '') + dm.toFixed(1) + ' ±' + dci.toFixed(1) + 'pt**（逐局配对 ' + d.length + ' 局）' +
+      ' ‖ `packT` 电平 **' + sep[n].lvl.toFixed(1) + '%**' + (sep[n].lvl >= 10 && sep[n].lvl <= 40 ? ' ✔（10~40%）' : ' ⛔（要 10~40%，否则"考不了"或"没威胁"）'));
+  }
+  const sA = sep[PAIR[0]], sB = sep[PAIR[1]];
+  if (sA && sB) {
+    const big = Math.abs(sA.dm) >= 10 && Math.abs(sB.dm) >= 10;
+    const opp = (sA.dm > 0) !== (sB.dm > 0);
+    console.log('  ⇒ **主判据**：两桌都 ≥10pt（' + (big ? '✔' : '✘') + '）且符号相反（' + (opp ? '✔' : '✘') + '）⇒ ' +
+      (big && opp ? '**轴造出来了**（可进评估池；要不要进进化池另裁）'
+        : (big ? '**分离了但同向 ⇒ 半成品**（按 §3 判伪轴/半成品，只留分离的那张当经济探针桌）'
+          : '**两桌都不分离 ⇒ 结局 (a) 的形状**（⚠️ 但 (a) 是强结论，必须先过下面两条前置 + 预注册里的 B∈{4,9} 敏感性检查）')));
+  }
+  console.log('  ‖ **前置（任一不过 ⇒ 不许写 (a)）**：');
+  for (const n of PAIR) { const s = sep[n]; if (!s) continue;
+    console.log('    · `' + n + '` 平均局长 **' + s.rounds.toFixed(1) + '** 回合 ⇒ ' +
+      (n === 'deadlineburst' ? (s.rounds >= ECON_BV ? '✔ 到得了死线' : '⛔ **到不了死线（<' + ECON_BV + '）⇒ 这根轴在这张桌上"未定义"，不是"不存在"**')
+        : '（早压不需要死线）') +
+      (OPPTRACE ? ' ‖ 该桌原型打出 ≥4 费的比例 **' + (100 * s.big).toFixed(1) + '%** ⇒ ' + (s.big > 0 ? '✔ 兑现源存在' : '⛔ **从未兑现 ⇒ 惩罚源不存在**')
+        : '（要看"兑现源真的存在吗"请加 `--oppTrace`）'));
+  }
+  if (sA && sB) {
+    console.log('  ‖ 冠军自己的**花费响应**（`packT` 每手按卡面花几珠 ‖ 判读也跑前写死：**死线上该省、早压上该花**）：');
+    console.log('    · `deadlineburst` **' + sA.spend.toFixed(2) + '** 珠/手 ‖ `earlypressure` **' + sB.spend.toFixed(2) +
+      '** 珠/手 ⇒ 差 **' + (sB.spend - sA.spend >= 0 ? '+' : '') + (sB.spend - sA.spend).toFixed(2) + '**（正 = 它在死线上确实省了）');
+    console.log('    ⚠ 这一列**不是判据**（判据只有跑前写死的那几条合取）：它把"轴建立了"升级成"**我们现在的冠军在不在用这根轴**"' +
+      ' —— 若两桌花费不随桌变，即使轴造出来，头号目标在这一格上仍然是空的（那就是下一班的第一条读数）。');
+  }
+}
+console.log('\n## 复跑命令\n  node tools/probe-pool-admission.mjs --envs=' + (ENV_PICK === 'all' ? 'all' : ENV_PICK) + ' --refs=' + REFS.join(',') + ' --games=' + GAMES + ' --seeds=' + SEEDS.join(',') + ' --p=' + PS.join(',') + (VERDICT ? ' --verdict' : '') + (OPPTRACE ? ' --oppTrace' : '') + (ECON ? ' --econ --econB=' + ECONB : ''));
 console.log('rc=0');

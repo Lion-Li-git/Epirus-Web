@@ -63,7 +63,17 @@ export const OPP_SPECS = [
    * **预注册预测：很可能不动 G4**（训练局是 1 席候选 vs 4 席对手 ⇒ 枪的目标里只有 ~1/4 是候选；
    * 考卷是 4 席家族 vs 1 席枪手 ⇒ 子弹全落在我家），理由详见 `js/train/bots.js` 里本函数的头注。
    * **默认池不含它**（`OPP_DEFAULT` 取前 9 条 ⇒ 追加在尾部不会改变任何既有协议）。 */
-  { name: 'gunfocus', fn: 'pickGunFocus' }
+  { name: 'gunfocus', fn: 'pickGunFocus' },
+  /* 10-02（用户裁定批 · 千问 `PROPOSAL-2026-10-02-econ-exam-tables.md` §2）：**经济轴的两根反向锚**。
+   * 动机：§E226 体检 32,200 局 ⇒ 23 张桌里 `saver − spender` 在 21 张上是 0.0 vs 0.0，
+   * 考场里**根本没有经济轴**；根因是 20/23 张桌的脚本对手打出 ≥4 费卡的比例≈0（没人攒到值得怕）。
+   *   · `deadlineburst`（T‑死线）：前 `ECON_B=6` 回合只攒珠，第 6 回合起每回合**全额兑现并压领先者**；
+   *   · `earlypressure`（T‑早压）：**从第 1 回合起**每回合全额兑现。
+   * ⚠️ 两枚只差**一个自由量：花费时机**（选牌与目标规则逐字相同，见 `js/train/bots.js` 里这两枚的头注）。
+   * ⚠️ **默认池不含它们**（`OPP_DEFAULT = OPP_SPECS.slice(0, 9)` ⇒ 追加在尾部不改任何既有协议），
+   *   也只是**考场/评估**用的原型；要不要进进化池要等 §3 主判据结果再单独裁。 */
+  { name: 'deadlineburst', fn: 'pickDeadlineBurst' },
+  { name: 'earlypressure', fn: 'pickEarlyPressure' }
 ];
 
 /* 训练池的默认集合（名字数组）。默认**不含**四个 specialist —— 它们只在显式实验里按需加入

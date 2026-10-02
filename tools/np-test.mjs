@@ -901,6 +901,67 @@ t('L6 考卷完整性：深经济对手必须在池子里 + wrapBotN 必须保�
   eq(act.key, R.SK.BIG_T, 'pickDeepSaver 攒够 5 ジ 后必须打出大雷（否则它就不惩罚"不攒钱"了）');
 });
 
+t('D217 经济轴的两根锚（v1.5.313 · 用户裁定批）：两枚新桌必须导出/登记/不进默认池，且**只差一个自由量**', function () {
+  /* 10-02（千问 `PROPOSAL-2026-10-02-econ-exam-tables.md` §2 · 用户裁定"批"）。
+   * 为什么这两枚值得一道门：它们是**考场**（不是能力）的地基 —— §E226 体检 32,200 局实测
+   * `saver − spender` 在 23 张原型桌里的 21 张上是 **0.0 vs 0.0** ⇒ **经济轴在考场里不存在**，
+   * 而"攒 vs 花"正是头号目标（"不同环境用不同策略"）目前唯一还没被否掉的落点。
+   * ⇒ 它俩被静默改掉（改目标 / 改选牌 / 退化成"什么都打"）会让那条结论变成假的，而**没有门会知道**
+   *   —— 与 L6 那条"pickDeepSaver 被静默删除、24 个版本没人发现"是同族。
+   * 判据三层：① 形状（导出 + 登记 + 不进默认池 + 选牌/目标各只有一份实现）
+   *            ② 单决策行为（死线在 B 之前攒、到点全额兑现成最贵的**伤害牌**；早压第 2 回合就花）
+   *            ③ **单自由度**（同一状态下两枚必须选同一张牌 ⇒ 唯一区别只剩"第几回合开始花"）。 */
+  ok(typeof Bots.pickDeadlineBurst === 'function' && typeof Bots.pickEarlyPressure === 'function',
+    '两枚经济锚必须都在 EpirusBots 里（别再被静默删掉）');
+  const poolSrc2 = readFileSync('server/opp-pool.mjs', 'utf8');
+  ok(/\{\s*name:\s*'deadlineburst'/.test(poolSrc2) && /fn:\s*'pickDeadlineBurst'/.test(poolSrc2) &&
+    /\{\s*name:\s*'earlypressure'/.test(poolSrc2) && /fn:\s*'pickEarlyPressure'/.test(poolSrc2),
+    '两枚必须登记进 OPP_SPECS（单一来源；漏登记 = 服务端拿到 undefined）');
+  const DEF9 = OPP_SPECS.slice(0, 9).map(function (o) { return o.name; });
+  ok(DEF9.indexOf('deadlineburst') < 0 && DEF9.indexOf('earlypressure') < 0,
+    '两枚**不许**进默认进化池（它们是考场，不是默认基线；要进进化池必须单独裁）');
+  eq(Bots.getEconB(), 6, '死线的默认爆发回合必须是 6（锚点来自 §E227 实测，不是扫参扫出来的）；要改必须走 `setEconB` 并被记录');
+  eq(Bots.setEconB(4), 4, '`setEconB` 必须真改（预注册里"若判 (a) 才补 B∈{4,9} 敏感性"靠它零改码跑）');
+  eq(Bots.setEconB(6), 6, '必须能改回 6（别把状态泄漏给后面的用例）');
+  const botSrc2 = readFileSync('js/train/bots.js', 'utf8');
+  ok(/function mpEconSpend\(/.test(botSrc2) && /function econTarget\(/.test(botSrc2) &&
+    (botSrc2.match(/mpEconSpend\(legal\)/g) || []).length >= 2 && (botSrc2.match(/econTarget\(state, pid\)/g) || []).length >= 2,
+    '选牌与目标必须各只有**一份**实现（两枚共用）—— 一次对照只能有一个自由量（§E194）');
+
+  const cidx = {};
+  for (const k in R.skills) { const s = R.skills[k]; if (s && s.key) cidx[s.key] = { cost: s.cost || 0, dmg: !!s.dmg, name: s.name }; }
+  const mkEcon = function (ep, round) {
+    const st = S.createState('multi', { next: mulberry32(97) }, 5);
+    for (let i = 0; i < 5; i++) st.p[i].ep = 0;
+    st.p[0].ep = ep; st.round = round; X.startTurn(st);
+    return { st: st, legal: Play.legalActions(st, 0) };
+  };
+  /* ② 死线：B 之前，买得起也不许花 */
+  const pre = mkEcon(5, 3);
+  const affBig2 = pre.legal.filter(function (l) { return l.affordable && (cidx[l.key] || {}).cost >= 4; });
+  ok(affBig2.length > 0, '前置：ep=5 / 第 3 回合必须有 ≥4 费的牌可负担（否则下面那条断言测不到东西）');
+  eq(T.wrapBotN(Bots.pickDeadlineBurst)(pre.st, 0, pre.legal).key, R.SK.JI,
+    'T‑死线在死线（第 6 回合）之前必须只攒（ジ）—— 买得起也不花，这才是"硬死线"的全部意义');
+  /* ②' 死线：到点必须全额兑现成"最贵的那张**伤害牌**" */
+  const at6 = mkEcon(5, 6);
+  const dmgs6 = at6.legal.filter(function (l) { return l.affordable && (cidx[l.key] || {}).dmg; })
+    .sort(function (a, b) { return (cidx[b.key] || {}).cost - (cidx[a.key] || {}).cost; });
+  ok(dmgs6.length > 0, '前置：第 6 回合 ep=5 时必须有可负担的伤害牌');
+  const actD6 = T.wrapBotN(Bots.pickDeadlineBurst)(at6.st, 0, at6.legal);
+  eq(actD6.key, dmgs6[0].key,
+    'T‑死线到点必须打**最贵的那张伤害牌**：用规则表自己的 `dmg` 字段判，**不许**按 `cat === ATTACK` 过滤 —— ' +
+    '真正的落雷/电磁炮/过载炮全是 `CAT.SPECIAL`，按类别过滤会把最贵那一整族排除掉（首版就是这么错的）');
+  ok(actD6.target != null, 'T‑死线必须显式给 target（wrapBotN 不许剥掉瞄准 —— L6 那条的同一族）');
+  /* ②'' 早压：第 2 回合就得花 */
+  const early2 = mkEcon(5, 2);
+  ok(T.wrapBotN(Bots.pickEarlyPressure)(early2.st, 0, early2.legal).key !== R.SK.JI,
+    'T‑早压必须从第 1~2 回合就花光（"先攒后打"的一方在攒的过程中被磨死，靠的就是这条）');
+  /* ③ 单自由度 */
+  eq(T.wrapBotN(Bots.pickEarlyPressure)(mkEcon(5, 7).st, 0, mkEcon(5, 7).legal).key,
+    T.wrapBotN(Bots.pickDeadlineBurst)(mkEcon(5, 7).st, 0, mkEcon(5, 7).legal).key,
+    '≥B 时两枚必须选**同一张**牌 ⇒ 唯一区别只剩"第几回合开始花"（否则 §3 那条"分离方向相反"没法解释）');
+});
+
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {
   /* 真实事故（v1.3.48）：一次测试跑把 js/bundled-champion*.js 覆写成测试冠军并被提交。
    * v1.3.54 又发现两个同类缺口，都只在"跑完看 git status"时才显形：

@@ -932,6 +932,67 @@
     return { key: SK.JI, target: null };                     // 攒钱
   }
 
+  /* ===== 10-02（用户裁定批 · 千问 P-econ-exam §2）：经济轴的**两根反向锚** =====
+   * 动机（§E226 实测，32,200 局）：23 张原型桌里**没有一张能考出"随环境换花费时机"**——
+   * `saver − spender` 在 21/23 张桌上是 0.0 vs 0.0，因为**考场里几乎没人攒到值得怕的程度**
+   * （20/23 张桌的脚本对手打出 ≥4 费卡的比例≈0.0%，见 §E227 的 `--oppTrace`）。
+   * ⇒ 这两枚脚本的目的是**把那根轴造出来**（让它可被机检），不是"把某张桌做得更难"，也不承诺涨胜率。
+   *
+   * ⚠️ 两枚之间**只有一个自由度：第几回合开始花**（这是预注册判据的地基）：
+   *   · 选牌规则**逐字相同**（`mpMostExpensiveAffordable(legal, R.CAT.ATTACK)` = 买得起的最贵**攻击**牌；
+   *     没有攻击牌时退回"买得起的最贵一张" ⇒ 经济照样排空，否则这根轴会塌回"买不买得起"）；
+   *   · 目标规则**逐字相同**（`econTarget`：能一击必杀先杀 → 否则压领先者，同 pickDeepSaver/pickGunFocus 家族口径）；
+   *   · 唯一区别 = `pickDeadlineBurst` **攒到第 `ECON_B` 回合才全额兑现**，`pickEarlyPressure` **从第 1 回合就全额兑现**。
+   *   ⚠️ 千问提案 §2 原文给两枚写了**不同**的目标规则（死线"锁焦点席" ‖ 早压"锁最脆"）⇒ 那是**两个自由量**，
+   *      会把"分离方向必须相反"这条判据的解释搅浑（§E194 那条纪律）⇒ 这里统一成同一套，改动记进交接件。
+   *
+   * ⚠️ **不进默认进化池**：`OPP_DEFAULT = OPP_SPECS.slice(0, 9)` ⇒ 追加在 `OPP_SPECS` **尾部**不动任何既有协议
+   *    （这也是"不许往默认池加键"那道门的本意）。 */
+  let ECON_B = 6;   /* 死线的爆发回合。锚点是**实测的**不是扫出来的：唯一真会兑现的那枚（`pickDeepSaver`）
+                     * 首次打出 ≥4 费卡就在第 6 回合、当时 ep 峰值 5 珠；而 `pickFarmer` 能攒到 32 珠却拖到
+                     * 第 28 回合才花 ⇒ "攒"不缺，缺的是**兑现的纪律**（§E227 的 `--oppTrace`）。
+                     * ⚠️ 只通过下面 `getEconB/setEconB` 读写（**不给 env 旋钮**）：它是"这张桌的参数"，不是
+                     * 训练/出厂旋钮；预注册里那条"若判 (a) 才补 B∈{4,9} 敏感性"就用它跑，不必改代码。 */
+  function getEconB() { return ECON_B; }
+  function setEconB(b) { const v = Number(b); ECON_B = (isFinite(v) && v >= 1) ? Math.round(v) : 6; return ECON_B; }
+  let _ecoIdx = null;
+  function mpEconIdx() {   /* 键 → {cost, cat, dmg}。`R.skills` 是**数组形状**、真键在 `.key` 上
+                            * （这个坑本仓踩过两次）⇒ 惰性建一次，别按对象键取。 */
+    if (_ecoIdx) return _ecoIdx;
+    _ecoIdx = {};
+    for (const k in R.skills) { const s = R.skills[k]; if (s && s.key) _ecoIdx[s.key] = { cost: s.cost || 0, cat: s.cat, dmg: !!s.dmg }; }
+    return _ecoIdx;
+  }
+  function mpEconSpend(legal) {   /* 两枚**共用**的选牌规则（单一来源）。
+     * "伤害牌"用规则表自己声明的 `dmg` 字段判，**不手写第二份名单** —— 本仓为"名单写两遍/漏卡/桶重叠"栽过四次
+     * （D117/D216 那一族）；⚠️ 首版我按 `cat === ATTACK` 过滤，实测把**真正的落雷/电磁炮/过载炮**（都是
+     * `CAT.SPECIAL`）整族排除掉，最贵只打到 cost 3 的双枪射手 ⇒ 当场被单决策冒烟抓住。
+     * 没有伤害牌可负担时退回"买得起的最贵一张" ⇒ 经济照样排空（否则这根轴会塌回"买不买得起"）。 */
+    const idx = mpEconIdx();
+    const pool = legal.filter(function (l) { return l.affordable; });
+    const dmg = pool.filter(function (l) { const e = idx[l.key]; return e && e.dmg; });
+    const use = dmg.length ? dmg : pool;
+    let best = null, bc = -Infinity;
+    for (const l of use) { const c = (idx[l.key] && idx[l.key].cost) || 0; if (c > bc) { bc = c; best = l; } }
+    return best;
+  }
+  function econTarget(state, pid) {          /* 两枚**共用**的目标规则（单一来源） */
+    const k2 = mpKillable(state, pid, 2);
+    if (k2 != null) return k2;
+    return mpLeader(state, pid);
+  }
+  function pickDeadlineBurst(state, pid, legal) {
+    if (state.round < ECON_B) return { key: SK.JI, target: null };   /* 死线之前：只攒，不产生任何威胁 */
+    const pick = mpEconSpend(legal);
+    if (!pick) return { key: SK.JI, target: null };                  /* 真买不起任何一张才攒这一手 */
+    return { key: pick.key, target: econTarget(state, pid) };
+  }
+  function pickEarlyPressure(state, pid, legal) {
+    const pick = mpEconSpend(legal);                                 /* 与死线**同一套选牌/目标**，只差"从第 1 回合就花" */
+    if (!pick) return { key: SK.JI, target: null };
+    return { key: pick.key, target: econTarget(state, pid) };
+  }
+
   /* 多人专用难度档（ui.js chooseAIMulti 用） */
   const DIFFICULTY_N = {
     easy:   { name: '简单',   pick: pickMultiEasy },
@@ -974,6 +1035,7 @@
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,
     pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, pickBigTChain, bigtHubTarget, pickKillSecure,
+    pickDeadlineBurst, pickEarlyPressure, getEconB, setEconB,
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'
