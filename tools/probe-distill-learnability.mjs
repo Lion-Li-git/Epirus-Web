@@ -24,7 +24,7 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 import { loadCardTable } from './log-reading.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'whopicks', 'costbias', 'teacherfloor', 'plusid', 'quiet', 'allowmixedcfg', 'dumpagree'], 'probe-distill-learnability');
+rejectUnknownFlags(argv, ['train', 'test', 'rep', 'l2', 'h', 'feat', 'epochs', 'lr', 'export', 'byenv', 'whopicks', 'costbias', 'teacherfloor', 'plusid', 'quiet', 'allowmixedcfg', 'dumpagree', 'prodfeat', 'epsens'], 'probe-distill-learnability');
 /* ⚠ `allowmixedcfg` 必须同时进这张名单：守卫用 `argv.indexOf` 读它、而 `rejectUnknownFlags` 先把不认识的 `--` 打成 exit 64
    ⇒ 漏了这一项时，"混配置"这个**我亲手建的逃生口**自己会被响亮失败挡死（§E230 跑前才发现）。 */
 const arg = (k, d) => { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); };
@@ -36,6 +36,18 @@ const HID = Math.max(0, Number(arg('h', 16)) || 0);
 const EPOCHS = Math.max(1, Number(arg('epochs', 240)) || 240);
 const LR = Number(arg('lr', 0.5));
 const FEAT = arg('feat', 'sa');            // 'sa' = 状态⊕动作 ‖ 'a' = 只看动作（诊断："条件性"到底在不在状态里）
+/* ===== §E231 `--prodfeat=1`：**只给动作块补一维"状态×动作乘积"**（默认关 ⇒ 输出逐字不变）=====
+ *   动因（§E230 留下的砖）：同一张线性脸在 `long` 标签上能把费用方向拧到**反的**（γ 跨带摆 0.21、三枚里一枚塌成"只打免费卡"），
+ *   而 §E225 已证明原因：`dim0 = (ep − 费用)/12` 里 `ep` 是**加项** ⇒ 组内相减抵消 ⇒ 这张脸**结构上**只能表达"与珠数无关的固定排序"。
+ *   ⇒ 最小的一刀就是补一个真乘积项 `ep × 费用`（其余维、标签、超参一律不碰 ⇒ 单自由度）。
+ *   ⚠ 还原 `ep(珠) = 12·dim0 + 6·dim2` 有 **0.3%** 的决策撞上 `clamp(±1)` 上界（§E225 实测）⇒ 那一小撮的乘积值是**下界**，
+ *     这一档只读"改不改手/方向"，不读绝对数值 ⇒ 撞界不会把符号读反。 */
+const PRODF = Number(arg('prodfeat', 0)) ? 1 : 0;
+const ADIM_MARGIN = 0, ADIM_COST = 2;                    /* 动作块里那两维的下标（唯一定义，`--costbias`/`--teacherfloor`/乘积维共用）*/
+const PRODF_SCALE = 12;                                  /* 与 dim0 同量纲（除以 12）⇒ 不额外引入尺度这个自由量 */
+const epOf = a => 12 * a[ADIM_MARGIN] + 6 * a[ADIM_COST];
+const costOf = a => 6 * a[ADIM_COST];
+const prodDim = a => (epOf(a) * costOf(a)) / PRODF_SCALE;
 /* ===== `--plusid=1`：**离线**给动作侧拼上"卡片身份 one-hot"（30 维），其余一字不动 =====
  *   为什么要这一格（03:2x）：`--whopicks` 读到"教师在防御可打的决策里 **40.8%** 挑防御、special 可打里 **28.6%** 挑 special，
  *   而蒸馏头两者都是 **0.0%**（160 个 + 60 个决策全部跑偏）"⇒ 必须分清这是
@@ -121,7 +133,7 @@ function idFeat(key) {
 }
 function feats(row) {
   const s = FEAT === 'a' ? new Array(TRAIN_ROWS[0].s.length).fill(0) : row.d.s;
-  return row.d.a.map((a, i) => s.concat(a).concat(idFeat(row.d.k[i])));
+  return row.d.a.map((a, i) => s.concat(PRODF ? a.concat([prodDim(a)]) : a).concat(idFeat(row.d.k[i])));
 }
 /* ---------- ① 价值回归（岭回归，闭式解）—— 与 §E197/§E205 同一族，这里当**对照**用 ---------- */
 function ridge(rows, lam) {
@@ -150,7 +162,7 @@ function ridge(rows, lam) {
 }
 /* ---------- ② 蒸馏头：softmax 交叉熵学"教师会选哪个"（这才是本节的新东西） ---------- */
 function trainPolicy(rows, hidden) {
-  const p = rows[0].d.a[0].length + (FEAT === 'a' ? 0 : rows[0].d.s.length) + IDN;
+  const p = rows[0].d.a[0].length + PRODF + (FEAT === 'a' ? 0 : rows[0].d.s.length) + IDN;
   let W1 = null, W2 = null, B1 = null, beta = new Float64Array(p);
   const rnd = (function () { let s = 20261002 >>> 0; return () => { s ^= s << 13; s >>>= 0; s ^= s << 17; s >>>= 0; s ^= s >>> 5; s >>>= 0; return s / 4294967296 - 0.5; }; })();
   if (hidden > 0) {
@@ -207,9 +219,7 @@ const R1 = P1.rows, R2 = P2.rows;
  *     本轮的判据是**产品桌胜率**与 `--costbias` 的 师−包 费用差，不是留出一致率。
  *   ⚠ 还原用 `ep(珠) = 12·dim0 + 6·dim2`（本表所有卡费用 ≤5 ⇒ `min(c,6)` 那层截平**永不**绑定，见 §E225 记录）。 */
 const FLOOR = Number(arg('teacherfloor', 0)) || 0;
-/* 动作块里那两维的下标（**只此一份定义**，`--costbias` 与 `--teacherfloor` 共用）：
-   dim0 = `clamp((ep − 费用)/12, ±1)` ‖ dim2 = `min(费用,6)/6`（本表卡费用 ≤5 ⇒ 这层截平永不绑定）。 */
-const ADIM_MARGIN = 0, ADIM_COST = 2;
+/* （`ADIM_MARGIN/ADIM_COST` 的定义已上移到 `--prodfeat` 那一节 ⇒ 三档共用同一份下标，不再有两份定义）*/
 if (FLOOR > 0) {
   const med = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)] || 0; };
   let tot = 0, changed = 0, fellBack = 0;
@@ -228,7 +238,7 @@ if (FLOOR > 0) {
     ' ‖ ⚠ 这一档下"天花板"那一列仍是**无约束**教师的分半 ⇒ 别拿留出一致率去比它');
 }
 console.log('# 训练带 ' + R1.length + ' 个决策（并列 ' + P1.tiedDec + '） ‖ 留出带 ' + R2.length + ' 个决策（并列 ' + P2.tiedDec + ' ‖ 流数不足 ' + P2.shortRep + '）' +
-  ' ‖ 候选数均值 ' + mean(R2.map(r => r.n)).toFixed(1) + ' ‖ 特征 ' + FEAT + ' ‖ rep=' + REP + ' ‖ 隐藏元 ' + HID);
+  ' ‖ 候选数均值 ' + mean(R2.map(r => r.n)).toFixed(1) + ' ‖ 特征 ' + FEAT + (PRODF ? ' **+ 一维乘积项 `ep×费用/12`（§E231）**' : '') + ' ‖ rep=' + REP + ' ‖ 隐藏元 ' + HID);
 console.log('# 标签来自的配置：训练 ' + fmtCfg(TRAIN_CFG) + ' ‖ 留出 ' + fmtCfg(TEST_CFG) + (argv.indexOf('--allowmixedcfg') >= 0 ? ' ‖ ⚠ **已显式允许混配置**' : ''));
 /* ⚠ 两带必须真的不同（§E205 那次"同文件当 train+test"的教训）
    §E230 修正：`--config=` 之后**同一个 seed 在两个配置下是两批完全不同的局** ⇒ "相同"必须连配置一起判，
@@ -484,6 +494,55 @@ if (argv.indexOf('--whopicks') >= 0) {
   }
   if (nNoCat) console.log('  ⛔ 有 ' + nNoCat + ' 个决策的候选键在规则表里查不到类别 ⇒ 这张表不许引（别把漏数读成偏好）');
 }
+/* ===== §E231 `--epsens=<珠>`：**同菜单的 ep 扰动**（这一档不引入新数据，只问"这张脸的结构里有没有条件性"）=====
+ *   为什么必须做：§E225 的推导说"线性头里 `ep` 是加项 ⇒ 组内相减抵消 ⇒ 它只能表达一套与珠数无关的固定排序"。
+ *   这句话**可以直接用扰动验证**：把某个决策的 ep 整体抬 k 珠（`dim0` 全体同加、乘积维跟着变），
+ *   ① `dim1`（可付旗标）**冻结**那一版 ⇒ 现脸的分差逐项抵消 ⇒ **改手率必须恰为 0**（判据①，不是 0 就是实现错）；
+ *   ② 乘积脸那一版 ⇒ 允许改手，且方向应当是"ep 更高 ⇒ 敢挑更贵的"。
+ *   ③ `dim1` **放开**那一版两枚脸都可能因为"可付集合变了"而改手 ⇒ 只作形状，不进判据。
+ *   ⚠ 行为型读数（"头−包 费用差随 ep 的斜率"）**不能**当这条推导的验证：菜单内容本身就随 ep 变，那不是我预言的东西（跑前改口，见日志 §E231 判据行）。 */
+const EPSENS = Number(arg('epsens', 0)) || 0;
+if (EPSENS !== 0) {
+  const clamp1 = v => v > 1 ? 1 : (v < -1 ? -1 : v);
+  const tbPick = (r, vecs) => {
+    const hs = vecs.map((v, i) => { let h = 2166136261; const t = r.d.k[i] + '|' + v.join(','); for (let q = 0; q < t.length; q++) h = Math.imul(h ^ t.charCodeAt(q), 16777619); return h >>> 0; });
+    let b = 0;
+    for (let i = 1; i < vecs.length; i++) { const z = pol.score(vecs[i]), zb = pol.score(vecs[b]); if (z > zb || (z === zb && hs[i] < hs[b])) b = i; }
+    return b;
+  };
+  const mkVec = (r, i, a) => { const s = FEAT === 'a' ? new Array(r.d.s.length).fill(0) : r.d.s; return s.concat(PRODF ? a.concat([(epOf(a) * costOf(a)) / PRODF_SCALE]) : a).concat(idFeat(r.d.k[i])); };
+  const stat = { frozen: { n: 0, ch: 0, up: 0, dn: 0, d: [] }, open: { n: 0, ch: 0, up: 0, dn: 0, d: [] } };
+  let skipped1 = 0;
+  for (const r of R2) {
+    if (r.n < 2) skipped1++;                      /* 只有一个候选 ⇒ 结构上不可能改手，会稀释比率，单独计数 */
+    const base = r.d.a.map((a, i) => mkVec(r, i, a));
+    const p0 = tbPick(r, base);
+    for (const key of ['frozen', 'open']) {
+      const pert = r.d.a.map((a, i) => {
+        const ep = epOf(a) + EPSENS, c = costOf(a);
+        const a2 = a.slice();
+        a2[ADIM_MARGIN] = clamp1((ep - c) / 12);                     /* 只有余量那一维跟着 ep 平移 */
+        if (key === 'open') a2[1] = (c <= ep ? 1 : 0);               /* 放开版：可付旗标按新 ep 重算 */
+        return mkVec(r, i, a2);
+      });
+      const p1 = tbPick(r, pert);
+      const g = stat[key]; g.n++;
+      const dc = costOf(r.d.a[p1]) - costOf(r.d.a[p0]); g.d.push(dc);
+      if (p1 !== p0) { g.ch++; if (dc > 1e-9) g.up++; else if (dc < -1e-9) g.dn++; }
+    }
+  }
+  const pct = x => (100 * x).toFixed(1) + '%';
+  console.log('\n## §E231 同菜单 ep 扰动 `--epsens=+' + EPSENS + ' 珠`（留出带 ' + R2.length + ' 个决策 ‖ 当前脸：' + (PRODF ? '**有**乘积维 ep×费用' : '**无**乘积维（出厂 22 维动作块）') + '）');
+  console.log('| 版本 | n | **改手率** | 改手里"挑得更贵" : "挑得更便宜" | 挑中费用的配对变化（珠） | 进判据 |');
+  console.log('|---|---|---|---|---|---|');
+  for (const key of ['frozen', 'open']) {
+    const g = stat[key];
+    console.log('| ' + (key === 'frozen' ? '`dim1` **冻结**（只平移 ep）' : '`dim1` 放开（可付集合跟着变）') + ' | ' + g.n + ' | **' + pct(g.ch / Math.max(1, g.n)) + '** | ' +
+      g.up + ' : ' + g.dn + ' | ' + (mean(g.d) >= 0 ? '+' : '') + mean(g.d).toFixed(3) + ' ±' + (ci(g.d) / 100).toFixed(3) + ' | ' + (key === 'frozen' ? '✔' : '✘ 只作形状') + ' |');
+  }
+  if (skipped1) console.log('  · 跳过 ' + skipped1 + ' 个只有 1 个候选的决策（无从改手）');
+  console.log('  ‖ 判据①（跑前写死）：无乘积维 + `dim1` 冻结 ⇒ 改手率**必须 = 0**（否则是我的实现错，不是结果）；乘积维同一版 >0 且"更贵:更便宜"明显偏"更贵" ⇒ 这一维真的把条件性装进了身体。');
+}
 /* `--dumpagree=`：逐决策落"教师那手 / 头那手 / 包那手"，**唯一用途是跨运行配对**（§E230 第二问）。
  *   为什么要它：单遍留出一致率的半宽实测 ±7.2pt（n=184）⇒ "同配置 vs 跨配置"这种 3pt 量级的差它**判不动**；
  *   但只要两次运行打的是**同一批测试决策**（同一个 `--test` 文件、同一个 `--rep` ⇒ 过滤后行集逐字相同），
@@ -506,9 +565,11 @@ if (arg('export', '')) {
   if (HID > 0) { console.error('⛔ 只导出线性头（h=0）；MLP 头的导出还没做（本轮实测 MLP 两向都不如线性 ⇒ 没必要）'); process.exit(64); }
   if (FEAT !== 'sa') { console.error('⛔ 只导出 `--feat=sa`：`feat=a` 把状态维置零了，播放器按真状态打分 ⇒ 换了输入分布，A/B 不再单自由度'); process.exit(64); }
   if (!R1.length) { console.error('⛔ 训练带一个决策都没有 ⇒ 没有 β 可导'); process.exit(64); }
-  const dimS = R1[0].d.s.length, dimA = R1[0].d.a[0].length, p = dimS + dimA + IDN;
+  const dimS = R1[0].d.s.length, dimA = R1[0].d.a[0].length, p = dimS + dimA + PRODF + IDN;
   const betaArr = []; for (let i = 0; i < p; i++) betaArr.push(pol.beta[i]);
+  if (betaArr.length !== p) { console.error('⛔ β 长度 ' + betaArr.length + ' ≠ 布局 dimS+dimA+prodfeat+id = ' + p + ' ⇒ 导出的头无法被重建'); process.exit(9); }
   writeFileSync(arg('export', ''), JSON.stringify({ feat: FEAT, rep: REP, l2: L2, epochs: EPOCHS, lr: LR, dimS: dimS, dimA: dimA, dimId: IDN, plusid: PLUSID, teacherFloor: FLOOR,
+    prodfeat: PRODF, prodScale: PRODF_SCALE,
     /* §E230：头必须自带"它是谁的标签蒸出来的"⇒ 播放器与后续任何跨配置对照都靠这两个戳筛，不靠文件名。 */
     trainCfg: KEY(TRAIN_CFG), testCfg: KEY(TEST_CFG), beta: betaArr,
     train: TRAIN, test: TEST, trainSeed: TRAIN_ROWS[0].seed, testSeed: TEST_ROWS[0].seed, nTrain: R1.length, nTest: R2.length,
