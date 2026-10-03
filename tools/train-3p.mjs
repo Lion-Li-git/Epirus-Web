@@ -90,6 +90,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
+  'EPIRUS_BIGT_PUSH', 'EPIRUS_DRAIN_PUSH',   // §E275（v1.5.334）：**部署档的 CLI 把手**（大雷默认档 / 摄魂探索软提升）；不设 ⇒ 引擎默认一字不动，设了就由引擎回读
   'EPIRUS_SEL_BIGT', 'EPIRUS_SEL_BIGT_KEYS', 'EPIRUS_SEL_BIGT_GAMES', 'EPIRUS_SEL_BIGT_MODE',   // v1.5.326 §E249：同分带内按贵卡出手选人（默认 0 ⇒ 当选者逐字不变）
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
@@ -387,6 +388,29 @@ if (P.setRng && sb.window.EpirusTrainer.mulberry32) P.setRng(sb.window.EpirusTra
 
 const Bots = sb.window.EpirusBots;
 const T = sb.window.EpirusTrainer;
+
+/* ===== §E275（v1.5.334）：**部署档的 CLI 把手**（大雷 `BIGT_PUSH` / 摄魂 `DRAIN_PUSH`）=====
+ * 为什么必须有：v1.5.333 起大雷那档是**引擎默认**，于是"训练桌"也带着它跑 ⇒
+ *   凡是前提为"这一档关着"的量具（门 D135 的"这一项的非零只能来自注入"）都必须能**显式关掉**。
+ * 三条纪律：① 引擎内不读 `process.env`（`evo.js:30` 的 setWrTol 模式）⇒ 读环境是本 CLI 的活；
+ *   ② 下达后**由引擎回读**逐键比对，不一致 ⇒ `exit 7`（v1.5.262 那次"过了黑键闸却从没送给引擎"的同一族病）；
+ *   ③ 不设 ⇒ 一行都不动 ⇒ 现网默认形状逐字不变。 */
+(function applyDeployKnobs() {
+  const KN = [['EPIRUS_BIGT_PUSH', 'setBigTPush', 'bigTPushOn'], ['EPIRUS_DRAIN_PUSH', 'setDrainPush', 'drainPushOn']];
+  for (const [envName, setter, getter] of KN) {
+    const raw = process.env[envName];
+    if (raw == null || raw === '') continue;
+    if (typeof T[setter] !== 'function' || typeof T[getter] !== 'function') {
+      console.error('⛔ ' + envName + ' 下达了，但引擎没有 `' + setter + '`/' + getter + ' ⇒ 这是黑键，拒跑'); process.exit(6);
+    }
+    T[setter](Number(raw));
+    const back = Number(T[getter]());
+    if (back !== Number(raw)) {
+      console.error('⛔ ' + envName + '=' + raw + ' 没生效：引擎回读 ' + back + ' ⇒ 拒静默空转'); process.exit(7);
+    }
+    console.log('[部署档] ' + envName + ' ⇒ ' + setter + '(' + raw + ') 已下达，**消费点读回 ' + back + '**');
+  }
+})();
 
 /* ===== v1.5.262（DS · §24 的根因修复）：**通用 econ 下达**（名单驱动 + 强制逐键回执）=====
  * 病（本班三族实验全部逐字节相同才查出来）：本文件对 econ 旋钮是**逐个键各写一块**下达代码

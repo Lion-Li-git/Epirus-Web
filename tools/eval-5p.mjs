@@ -100,9 +100,20 @@ if (SWAP) {
   if (SWAP_FILE === FILE) { console.error('--swap 的第二粒包与主包是同一个文件 ⇒ 这一臂没有可测之差'); process.exit(2); }
   swapParams = p2;
 }
+/* ===== §E275（v1.5.334）：`--eps=<0..1>` + `--epsk=` + `--eps-mode=` = 把主体席切到**页面口径** =====
+ * 为什么这根旗标是**必须**的而不是可选：用户裁定摄魂那一档「是**仅调整探索时**软提升的窗口」⇒ 它只活在
+ *   `policyChooserN` 的 ε 分支里；而本考卷默认 ε=0（贪心）⇒ 对它是**结构性失明**的，
+ *   跑出来必然是"与关档逐字相同"，如果不印清 ε，就会被记成"这一档没效果"（= 记忆第十八条"门钉了行为 ≠ 考卷真有那个压力"的镜像）。
+ * 缺省 `eps=0` ⇒ 走的还是原来那行 `policyChooserN(params, 0.15)`，既有臂一字不变。 */
+const SHIP_EPS = FLAG.eps == null ? 0 : Number(FLAG.eps);
+if (FLAG.eps != null && !(isFinite(SHIP_EPS) && SHIP_EPS >= 0 && SHIP_EPS <= 1)) {
+  console.error('⛔ --eps 只能是 [0,1] 的数（0 = 考卷原口径·贪心；0.2 = 页面口径）；收到 `' + FLAG.eps + '`'); process.exit(2);
+}
+const SHIP_EPSK = FLAG.epsk == null ? 5 : Number(FLAG.epsk);
+const SHIP_EPMODE = FLAG['eps-mode'] || (SHIP_EPS > 0 ? 'soft' : 'uniform');
 /** 主体席的 chooser：`makeSel()` 每局调一次 ⇒ 这里给的是"这一局用的策略对象" */
 function subjectPolicy() {
-  const a = T.policyChooserN(params, 0.15);
+  const a = SHIP_EPS > 0 ? T.policyChooserN(params, 0.15, SHIP_EPS, SHIP_EPSK, SHIP_EPMODE) : T.policyChooserN(params, 0.15);
   if (!swapParams) return a;
   const b = T.policyChooserN(swapParams, 0.15);
   return function (state, id, legal) { return (state.round >= SWAP_ROUND ? b : a)(state, id, legal); };
@@ -318,13 +329,15 @@ if (FLAG.drainhp != null) {
 }
 /* ===== §E271（v1.5.332 上线复核）：`--shipbigt=<0|1..12>` = 量**页面真正走的那段代码** =====
  * 与 `--bigtpush` 的区别不是措辞：`--bigtpush` 是**本工具在外面包的**一层（目标规则可选、自带窗口计数），
- *   而 `--shipbigt` 直接把 `js/train/evo.js` 里的 `BIGT_PUSH` 开成用户上线的那一档 ⇒ **冠军的出牌路径本身就带着这条规则**。
+ *   而 `--shipbigt` 直接把 `js/train/evo.js` 里的 `BIGT_PUSH` 改成用户上线的那一档 ⇒ **冠军的出牌路径本身就带着这条规则**。
  * ⇒ 上线前的最后一道证据必须是这个口径：用量由**引擎的事件流**数出来（`champ.use`），不是工具的计数器；
- *   价格与 §E270 那张表若不一致，差的就是"工具外挂 vs 现网路径"这道缝（两份实现必漂移的那一族）。 */
+ *   价格与 §E270 那张表若不一致，差的就是"工具外挂 vs 现网路径"这道缝（两份实现必漂移的那一族）。
+ * ⚠ **v1.5.333 起这一档默认就是开的**（默认 `BIGT_PUSH = 8`）⇒ "不设旗标"**不再等于出厂形状**：
+ *   要拿"关掉档"当对照必须显式 `--shipbigt=0`。所以这里读的是**引擎回读到的有效档**，不是旗标原值。 */
 const SHIPBIGT_RAW = FLAG.shipbigt;
 const SHIPBIGT = SHIPBIGT_RAW == null ? null : Number(SHIPBIGT_RAW);
 if (SHIPBIGT_RAW != null && !(SHIPBIGT === 0 || (Number.isInteger(SHIPBIGT) && SHIPBIGT >= 1 && SHIPBIGT <= 12))) {
-  console.error('⛔ --shipbigt 只能是 0 或 1..12（0 = 明确关档，与不设旗标逐字相同；收到 `' + SHIPBIGT_RAW + '`）'); process.exit(2);
+  console.error('⛔ --shipbigt 只能是 0 或 1..12（0 = **显式关掉**；不设旗标 = 引擎默认档，v1.5.333 起默认 = 8 开着；收到 `' + SHIPBIGT_RAW + '`）'); process.exit(2);
 }
 if (SHIPBIGT_RAW != null && FLAG.bigtpush != null) {
   console.error('⛔ --shipbigt 不能与 --bigtpush 同时给（一个是现网路径、一个是工具外挂，同时给就是把两个自由量捆在一起测）'); process.exit(2);
@@ -332,9 +345,46 @@ if (SHIPBIGT_RAW != null && FLAG.bigtpush != null) {
 if (SHIPBIGT_RAW != null) {
   if (typeof T.setBigTPush !== 'function') { console.error('⛔ `EpirusTrainer.setBigTPush` 不存在 ⇒ 旗标没有生效对象，拒跑'); process.exit(2); }
   T.setBigTPush(SHIPBIGT);
-  console.log('[shipbigt] 现网路径已生效：`js/train/evo.js` 的 `BIGT_PUSH = ' + SHIPBIGT + '`（0 = 关）'
+}
+/* **有效档由引擎回读**（记忆第二十条：旗标"生效了没"不许由工具自己印的 banner 判）。
+   ⚠ `let` 而不是 `const`：下面还有一条"研究注入旗标 ⇒ 顶回 0"的规矩会改它（§E273）。 */
+let SHIP_EFFECTIVE = (typeof T.bigTPushOn === 'function') ? T.bigTPushOn() : 0;
+if (SHIPBIGT_RAW != null) {
+  if (SHIP_EFFECTIVE !== SHIPBIGT) {
+    console.error('⛔ `--shipbigt=' + SHIPBIGT + '` 没生效：引擎回读到 `BIGT_PUSH = ' + SHIP_EFFECTIVE + '`'); process.exit(2);
+  }
+  console.log('[shipbigt] 已按旗标改引擎档：`js/train/evo.js` 的 `BIGT_PUSH = ' + SHIP_EFFECTIVE + '`（0 = 关；不设旗标 = 默认 ' + SHIP_EFFECTIVE + '）'
     + ' · 目标 = ep 最高的对手（平手取血少、再取座位号小）· 不消耗 `state.rng`'
     + ' · 用量由引擎事件数（`champ.use`），不是工具自己的计数器');
+} else {
+  console.log('[shipbigt] 未设旗标 ⇒ 走**引擎默认档** `BIGT_PUSH = ' + SHIP_EFFECTIVE + '`'
+    + (SHIP_EFFECTIVE >= 1 ? '（v1.5.333 起默认开着 ⇒ 这一臂**不是**出厂形状，出厂形状要显式 `--shipbigt=0`）' : '（关着）'));
+}
+/* ===== §E275（v1.5.334）：`--shipdrain=<0|1..12>` = 量**摄魂的"残血软提升"档**（现网路径，不是工具外挂）=====
+ * 与大雷那档的区别写死在引擎里（`evo.js` 的 `drainPushWants` + `epsMode==='soft'` 那一支）：
+ *   **不强推落子**，只在探索集里多给它一格；窗口 = **自己 hp≤1 且这张牌此刻可付**（`mode.drainHpMax` 一个字都不改）。
+ * ⚠ 所以它**只在 ε>0（页面口径）时看得见**：ε=0 的考卷臂上这一档结构性不触发 ⇒ 那格读数必须被拒，不许被记成"没效果"。 */
+const SHIPDRAIN_RAW = FLAG.shipdrain;
+const SHIPDRAIN = SHIPDRAIN_RAW == null ? null : Number(SHIPDRAIN_RAW);
+if (SHIPDRAIN_RAW != null && !(SHIPDRAIN === 0 || (Number.isInteger(SHIPDRAIN) && SHIPDRAIN >= 1 && SHIPDRAIN <= 12))) {
+  console.error('⛔ --shipdrain 只能是 0 或 1..12（0 = 关；N = 每 N 个残血窗口软提升一次；收到 `' + SHIPDRAIN_RAW + '`）'); process.exit(2);
+}
+if (SHIPDRAIN_RAW != null) {
+  if (typeof T.setDrainPush !== 'function') { console.error('⛔ 引擎没有 `setDrainPush` ⇒ 旗标没有生效对象，拒跑'); process.exit(2); }
+  T.setDrainPush(SHIPDRAIN);
+  if (T.drainPushOn() !== SHIPDRAIN) {
+    console.error('⛔ `--shipdrain=' + SHIPDRAIN + '` 没生效：引擎回读 `DRAIN_PUSH = ' + T.drainPushOn() + '`'); process.exit(2);
+  }
+}
+const DRAIN_EFFECTIVE = (typeof T.drainPushOn === 'function') ? T.drainPushOn() : 0;
+if (SHIPDRAIN_RAW != null) {
+  console.log('[shipdrain] 引擎档 = ' + DRAIN_EFFECTIVE + '（0 = 关）· 窗口 = 自己 hp≤1 **且这张牌可付**（不改 `drainHpMax` ⇒ 不是改规则）'
+    + '· 机制 = 只在 ε 分支里把这张牌**并入探索集**（软提升，不强推）· 本臂 ε=' + SHIP_EPS + (SHIP_EPMODE ? '/' + SHIP_EPMODE : ''));
+  if (DRAIN_EFFECTIVE >= 1 && !(SHIP_EPS > 0)) {
+    console.error('⛔ `--shipdrain>=1` 但 ε=0 ⇒ 这一档在贪心里**永不触发**，跑出来必然与关档逐字相同（= 一根静默失效的旗标）。'
+      + '要量它就给页面口径：`--eps=0.2 --eps-mode=soft`（对照臂同样要给）。');
+    process.exit(2);
+  }
 }
 if (MODE && !R.MODES[MODE]) { console.error('--mode 未知: ' + MODE + '（可选: ' + Object.keys(R.MODES).join(' ') + '）'); process.exit(1); }
 if (DRAINHP > 0) { R.MODES[MODE || 'multi'].drainHpMax = DRAINHP; }
@@ -801,6 +851,20 @@ if (RANK && !(isFinite(RANK_MARGIN) && RANK_MARGIN >= 0 && RANK_MARGIN <= 1 && i
   console.error('⛔ --pushrank=<margin>[,<bias>] 要 margin∈[0,1]、bias≥0（收到 `' + RANK_RAW + '`）；margin = "一选与二选的概率差"的上限，bias = 目标卡概率的放大倍数'); process.exit(2);
 }
 const RANK_TEMP = 0.15;   /* 与线上同一档（`policyChooserN(params, 0.15)`）⇒ 闸判的是冠军**自己的**决策分布 */
+/* ===== §E273（v1.5.333）：引擎档默认开着 ⇒ **别的注入旗标必须把它顶回 0**，否则一条臂上挂着两个自由量 =====
+ * `--bigtpush` / `--pushrank` / `--pushkey` / `--bigtcost` / `--ban` 任意一个出现、而 `--shipbigt` **没有**显式给 ⇒ 强制 `BIGT_PUSH = 0` 并响亮说明。
+ * 理由：§E262~§E268 那批读数的世界是"引擎档关着 + 只有这一面旗标动"，现在默认开着会把它们悄悄变成"两种注入同时生效"（一次对照只能一个自由度）。
+ * 想连着现网默认档一起量，就显式给 `--shipbigt=<N>`（那时不顶）。 */
+const INJECT_FLAGS = ['bigtpush', 'pushrank', 'pushkey', 'pushminep', 'bigtcost', 'ban'];
+const INJECT_SEEN = INJECT_FLAGS.filter(function (k) { return FLAG[k] != null && FLAG[k] !== ''; });
+if (SHIPBIGT_RAW == null && INJECT_SEEN.length) {
+  if (typeof T.setBigTPush !== 'function') { console.error('⛔ 需要顶掉引擎默认档但没有 `setBigTPush` ⇒ 拒跑（否则会两个注入叠在一起测）'); process.exit(2); }
+  T.setBigTPush(0);
+  SHIP_EFFECTIVE = T.bigTPushOn();
+  console.log('[shipbigt] ⚠ 检测到研究注入旗标 ' + INJECT_SEEN.map(function (k) { return '--' + k; }).join(' / ')
+    + ' ⇒ 已把引擎默认档**顶成 0（关）**，保证这条臂只有一个自由量（§E262~§E268 的读数都是在这个世界上量的）。'
+    + '要连着现网档一起量请显式给 `--shipbigt=N`');
+}
 const RANK_ST = { dec: 0, close: 0, fired: 0, gapSum: 0, moved: 0 };
 /* §E267：自检挂**进程出口** —— 前面两版分别落在 `if (PUSH)` 与 `if (FLAG['dump-per'])` 里，
  * 于是"纯提顺位臂"与"不落盘的跑法"都**一声不响**（同一族病：静默的量具）。出口钩子与作用域无关。 */
@@ -1006,13 +1070,23 @@ console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
 /* §E271：大雷的**用量**要报成用户手里的单位（"每几局一张"），而且数是从引擎事件里来的。
  * ⚠ 两条路径共用这一行（现网 `--shipbigt` / 工具外挂 `--bigtpush`）⇒ 门 D224⑤ 才能拿它比"两份实现漂了没有"；
  *    只有外挂路径才有"窗口/兑现率"可报（那是工具自己数的），所以那两栏按路径分岔，不许假装两边都有。 */
-if ((SHIPBIGT_RAW != null && SHIPBIGT >= 1) || PUSH) {
+if (SHIP_EFFECTIVE >= 1 || PUSH) {
   const casts = (champ.use && champ.use[R.SK.BIG_T]) || 0;
   const perGame = champ.total ? casts / champ.total : 0;
-  console.log('[大雷用量] 路径=' + (SHIPBIGT_RAW != null ? '现网(evo BIGT_PUSH=' + SHIPBIGT + ')' : '工具外挂(--bigtpush=' + PUSH + ')')
+  console.log('[大雷用量] 路径=' + (PUSH ? '工具外挂(--bigtpush=' + PUSH + ')' : '现网(evo BIGT_PUSH=' + SHIP_EFFECTIVE + ')')
     + ' · 真打出 **' + casts + ' 张 / ' + champ.total + ' 局 = 每 ' + (perGame > 0 ? (1 / perGame).toFixed(1) : '∞') + ' 局一张**'
     + '（占主体出手 ' + (tot ? (casts / tot * 100).toFixed(1) : '0') + '%）'
     + (casts === 0 ? '   ← 一次都没打 ⇒ 这一臂没测到东西（档太稀或窗口从没打开），不许记"无效"' : ''));
+}
+
+/* §E275：摄魂的用量单独印一行 —— **口径必须与"软提升"匹配**（只有 ε>0 才谈得上触发）。 */
+if (DRAIN_EFFECTIVE >= 1 && SHIP_EPS > 0) {
+  const dcasts = (champ.use && champ.use[R.SK.DRAIN]) || 0;
+  const dper = champ.total ? dcasts / champ.total : 0;
+  console.log('[摄魂用量] 路径=现网(evo DRAIN_PUSH=' + DRAIN_EFFECTIVE + ' · ε=' + SHIP_EPS + '/' + SHIP_EPMODE + ')'
+    + ' · 真打出 **' + dcasts + ' 张 / ' + champ.total + ' 局 = 每 ' + (dper > 0 ? (1 / dper).toFixed(1) : '∞') + ' 局一张**'
+    + '（占主体出手 ' + (tot ? (dcasts / tot * 100).toFixed(2) : '0') + '%）· 窗口=自己 hp≤1'
+    + (dcasts === 0 ? '   ← 一次都没打 ⇒ 这一臂没测到东西（档太稀、窗口从没开、或这张牌不可付），不许记"无效"' : ''));
 }
 
 /* ===== §E136：逐桌子命中数落盘（`--dump-per=<file>`，默认关）=====
@@ -1037,8 +1111,13 @@ if (FLAG['dump-per']) {
     /* §E266：提顺位这一臂的自由量（margin/bias）也必须进配对身份 —— 少写一行就会把两档配成同世界。 */
     '#pushrank=' + (RANK ? (RANK_MARGIN + '/' + RANK_BIAS + '/' + RANK_GATE + '/' + (RANK_FLOOR == null ? '-' : RANK_FLOOR)) : '-'),
     '#drainhp=' + ((R.MODES[MODE || 'multi'] || {}).drainHpMax),
-    /* §E271：现网路径的档（`--shipbigt`）也是**臂维** —— 它与"工具外挂"的落盘其余各维可以完全一样，缺这一维就会把两条路配成同臂。 */
-    '#shipbigt=' + (SHIPBIGT_RAW == null ? '-' : String(SHIPBIGT)),
+    /* §E271/§E273：现网路径的**有效档**（`--shipbigt` 或引擎默认）也是**臂维** —— 它与"工具外挂"的落盘其余各维可以完全一样，
+       缺这一维就会把两条路配成同臂。⚠ v1.5.333 起写的是**引擎回读到的值**（不设旗标 = 默认 8），不是"旗标有没有出现"。 */
+    '#shipbigt=' + String(SHIP_EFFECTIVE),
+    /* §E275：摄魂档与 **ε 口径**都是臂维 —— 少了 `#eps`，"贪心考卷"与"页面口径"两批落盘会被配成同一世界，
+       而前者对摄魂档结构性失明（读数必然相同）⇒ 那是一副**静默的错配**（记忆：补表头 ≠ 补守卫）。 */
+    '#shipdrain=' + String(DRAIN_EFFECTIVE),
+    '#eps=' + (SHIP_EPS > 0 ? (SHIP_EPS + '-' + SHIP_EPMODE + '-k' + SHIP_EPSK) : '0'),
     '#swap=' + (SWAP || '-'), '#arm\tidx\tnames\tgames\tfirst\tstrict'];
   for (const s of [{ arm: 'subject', r: champ }, { arm: 'ctrl', r: ctrl }]) {
     s.r.perCombo.forEach(function (c, i) {
