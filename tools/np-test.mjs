@@ -1488,6 +1488,86 @@ t('D223 §E262/§E266 探索提前（大雷 `--bigttgt=` 挑人 ‖ 摄魂 `--pu
     '⑦k1 两档 margin 的**搬动量都必须 > 0**（实测 margin=1 ⇒ ' + mvOpen + ' ‖ margin=0.1 ⇒ ' + mvShut + '）⇒ 印了这栏却是 0，就是"抬了名次、没搬概率"的惰性算子（DS 的 v1 实测 63,004 次抬名次、对局逐位相同）');
 });
 
+t('D224 §E271 大雷"每四五局看得见一次"的**上线档**（v1.5.332，js/train/evo.js 的 BIGT_PUSH）：默认关 · 关档逐字不变 · 上线值在册 · 剂量与用量只能实测 · 两条路径必须同意', function () {
+  const evoSrc = readFileSync('js/train/evo.js', 'utf8');
+  const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
+
+  /* ① 默认关 + 结构钉（这一条**不是**装饰：它钉的是"出厂形状由默认值决定"，而不是"有人记得没调 setter"）*/
+  ok(/^\s*let BIGT_PUSH = 0;$/m.test(evoSrc),
+    '①a `evo.js` 里 `BIGT_PUSH` 的**默认必须是 0** ⇒ 训练/评测/门禁走的路径一字不变；线上值只能由 ui.js 显式打开');
+  ok(/if \(BIGT_PUSH >= 1\) \{/.test(evoSrc), '①b 钩子必须在 `BIGT_PUSH >= 1` 的短路后面（关档时**一次都不进**）');
+  ok(/function setBigTPush\(v\)/.test(evoSrc) && /setBigTPush[\s,}]/.test(evoSrc.slice(evoSrc.indexOf('global.EpirusTrainer'))),
+    '①c `setBigTPush` 必须导出到 `EpirusTrainer`（否则页面调不到，"上线"就只剩注释）');
+  const ship = /const EPIRUS_BIGT_PUSH_N = ([0-9]+);/.exec(uiSrc);
+  ok(!!ship, '①d **页面上线值必须在册**（`js/ui/ui.js` 里找不到 `const EPIRUS_BIGT_PUSH_N = N;` ⇒ 引擎里加了机制但线上没人开）');
+  ok(Number(ship[1]) >= 1 && Number(ship[1]) <= 12, '①e 上线值必须落在 1..12（实测 ' + ship[1] + '）');
+  ok(/Trainer\.setBigTPush\(EPIRUS_BIGT_PUSH_N\)/.test(uiSrc), '①f 那个常数必须**真的被传进 setter**（只声明不调用 = 上线没发生）');
+
+  /* ② 坏输入 exit 2（工具侧旗标与引擎侧 setter 都要拒，不许静默降级）*/
+  const runE = function (extra) {
+    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--pool=core', '--every=17'].concat(extra),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
+  };
+  for (const b of [['--shipbigt=13'], ['--shipbigt=0.5'], ['--shipbigt=abc'], ['--shipbigt=8', '--bigtpush=1'], ['--shipbigt=8', '--bigtpush=0']]) {
+    const rb = runE(b);
+    eq(rb.code, 2, '`' + b.join(' ') + '` 必须 exit 2（实测 ' + rb.code + '）⇒ 越界或与"工具外挂"同时给 = 两个自由量捆一起');
+  }
+
+  /* ③ 关档逐字不变：`--shipbigt=0` 与**不设旗标**必须一字不差（剥掉墙钟行；与门 D222/D223 同一套剥法）*/
+  const strip = function (s) { return s.split('\n').filter(function (l) {
+    return l.indexOf('[shipbigt') !== 0 && l.indexOf('耗时') !== 0;
+  }).join('\n'); };
+  const off0 = runE(['--shipbigt=0']), offNone = runE([]);
+  eq(off0.code, 0, '③a `--shipbigt=0` 不该报错：' + off0.out.slice(0, 160));
+  ok(offNone.out.indexOf('shipbigt') < 0, '③b 关档一行都不许印（印了就是产品口径的量具上多了一条静默分支）');
+  eq(strip(off0.out), strip(offNone.out), '③c `--shipbigt=0` 必须与不设旗标逐字相同（不同 ⇒ 这根键在关档时也动了判定）');
+
+  /* ④ 开档真改变行为，且**用量由引擎事件数**（`champ.use`），不是工具自己的计数器 ⇒ 剂量必须落到落点上 */
+  const runP = function (extra) {
+    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '6', '5', '77000', '--pool=all', '--every=48'].concat(extra),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
+  };
+  const useOf = function (txt) {
+    const m = /真打出 \*\*(\d+) 张 \/ (\d+) 局/.exec(txt);
+    return m ? { casts: Number(m[1]), games: Number(m[2]) } : { casts: NaN, games: NaN };
+  };
+  const castOf = function (txt) { return useOf(txt).casts; };
+  const s1 = runP(['--shipbigt=1']), s8 = runP(['--shipbigt=8']);
+  eq(s1.code, 0, '④c `--shipbigt=1` 臂必须跑通：' + s1.out.slice(0, 160));
+  const c1 = castOf(s1.out), c8 = castOf(s8.out);
+  /* ⚠ ④d 原先只判 `c1 > 0`，M4（把剂量短路成"永不命中"）实测**照样绿**——因为出厂冠军自己就偶尔打大雷（全卷 103 ‖ 355 张），
+   *   小样本里 4 张就把它喂饱了。⇒ 改成判**密度**：N=1 时每一扇窗口都该兑现，实测这批夹具（6 局 × pool=all × every=48 = 2562 局）
+   *   给出 **1307 张 / 2562 局 = 0.51 张/局**，地板取 **0.3**（对真值留 1.7×，对 M4 的 0.002 差 250 倍）。
+   *   N=8 在这一批上是 452/2562 = 0.176 张/局 ⇒ 地板**只加在 N=1 那一臂**，别把它当成通用阈值。 */
+  const u1 = useOf(s1.out);
+  ok(isFinite(u1.games) && u1.games > 0 && u1.casts / u1.games >= 0.3,
+    '④d **独立证据**：`--shipbigt=1` 的用量密度必须 ≥ 0.3 张/局（实测 ' + (isFinite(u1.casts) ? (u1.casts / u1.games).toFixed(3) : '读不出这一行')
+    + ' 张/局 = ' + u1.casts + ' 张 / ' + u1.games + ' 局）⇒ 接近 0 就是"钩子没接进真路径"或"剂量永不命中"（本夹具实测 N=1 ⇒ 0.51 张/局）');
+  ok(isFinite(c8) && c8 > 0 && c8 < c1, '④e N=8 的张数必须**严格低于** N=1（实测 ' + c1 + ' ‖ ' + c8 + '）⇒ 不降就是剂量没接上（"提了名次、没打出去"）');
+
+  /* ⑤ 两条路径必须同意：工具外挂 `--bigtpush=8` vs 现网路径 `--shipbigt=8`（同一批桌子、同一目标规则）
+   *    ⚠ 这是"两份实现必漂移"那一族的**验收腿**（§E178 两台采样器、D204⑧ 两 chooser 同构）—— 不测就永远不知道漂了多远。 */
+  const t8 = runP(['--bigtpush=8', '--bigttgt=threat']);
+  const ct8 = castOf(t8.out);
+  ok(isFinite(ct8) && ct8 > 0, '⑤a 工具外挂臂也要能数出用量（实测 ' + (isFinite(ct8) ? ct8 : '读不出') + '）⇒ ⑤ 这一整格没测到东西');
+  const ratio = c8 / ct8;
+  ok(ratio > 0.34 && ratio < 3.0, '⑤b 两条路径的用量比必须落在 [1/3, 3]（实测 ' + ratio.toFixed(2) + '：现网 ' + c8 + ' ‖ 外挂 ' + ct8 + '）'
+    + '⇒ 差一个数量级就说明其中一条没接进同一条窗口/目标判定，§E270 那张价签表就不能横用到上线档');
+
+  /* ⑥ 落盘身份：`#shipbigt=` 必须进表头（配对尺靠它拒跨档配对）*/
+  const dir = mkdtempSync(join(tmpdir(), 'd224-'));
+  const dump = join(dir, 's.tsv');
+  const rd = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--pool=core', '--every=17',
+    '--shipbigt=8', '--dump-per=' + dump], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  eq(rd.status, 0, '⑥a 带 `--dump-per` 的上线档臂必须跑通：' + String(rd.stderr || '').slice(0, 160));
+  if (existsSync(dump)) {
+    const headTxt = readFileSync(dump, 'utf8').split('\n').filter(function (l) { return l[0] === '#'; }).join('\n');
+    ok(headTxt.indexOf('#shipbigt=8') >= 0, '⑥b 表头必须带 `#shipbigt=`（实测=' + (/^#shipbigt=.*$/m.exec(headTxt) || ['(缺)'])[0] + '）⇒ 缺这一维，上线档与出厂落盘会被配成同臂');
+  }
+});
+
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {
   /* 真实事故（v1.3.48）：一次测试跑把 js/bundled-champion*.js 覆写成测试冠军并被提交。
    * v1.3.54 又发现两个同类缺口，都只在"跑完看 git status"时才显形：

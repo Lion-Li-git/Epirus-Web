@@ -539,6 +539,64 @@
     return policyChooserN(params, TRAIN_TEMP == null ? 0.35 : TRAIN_TEMP, TRAIN_EPS, TRAIN_EPS_K, TRAIN_EPS_MODE);
   }
 
+  /* ===== v1.5.332（用户 10-03 下午裁定）：大雷"每四五局看得见一次"的**上线档** =====
+   * 用户的话：「最后大雷只要每四五局有一次就行了，亏损这一点没什么关系」⇒ 这一格从"要不要做"变成"那一档到底几赔"。
+   * 机制（**默认 0 = 关**；页面在 `js/ui/ui.js` 显式开 **8**）：在这张牌现在打得出来的窗口里，按 (每局盐, 回合, 座位)
+   *   的确定性 avalanche 散列取 1/N ⇒ 命中就把这一手交给大雷，目标 = ep 最高的对手（平手取血少，再取座位号小）。
+   * ⚠ 三条形状纪律：
+   *   ① **不消耗 `state.rng`**（散列是纯函数 ⇒ 不新增随机流）；代价是这一手跳过了冠军自己的抽样，
+   *      而"少抽一次"的后果**已经包含在下面那个实测价里** —— 量的就是这同一段代码（`eval-5p --shipbigt=`）。
+   *   ② **剂量不许按 1/N 换算**：窗口密度会随剂量自己漂（N=2 时 0.85 个/局 ‖ N=10 时 1.63 个/局，不打就一直攥着 5 珠）
+   *      ⇒ "每几局一张"只有考卷说了算（§E270 那张表就是这条的实测）。
+   *   ③ 训练/评测/门禁**一律不调 `setBigTPush`** ⇒ `BIGT_PUSH=0` 时那行短路都不进，既有读数逐字不变
+   *      （与 v1.5.139/141 的 eps 纪律同族，由新门 **D224** 钉"默认值 / 关档逐字 / 开档真改选择 / 上线值在册"）。
+   * 实测价（产品考卷 24 局 × 2925 桌 · 与同树出厂卷逐桌配对 · §E270）：
+   *   **N=8 ⇒ 3 血桌每 5.2 局一张、−0.52 ±0.16pt ‖ 5 血桌每 3.3 局一张、−0.40 ±0.13pt**；
+   *   N=6 是每 4.2 局一张、−0.85 ±0.19pt；N=10/12 在 5 血桌已到 −0.17/−0.22pt（贴着 0，再省没有空间）。
+   * ⚠ 这与"改规则"不是一回事：**不动** `BIG_T` 的 5 珠单价与 3 回合封锁（`js/core/*` 一字未动、指纹仍 `ebdbff36`），
+   *    只是给冠军的出牌加一条部署层的抽样；**回退 = `setBigTPush(0)` 一行**。 */
+  let BIGT_PUSH = 0;
+  function setBigTPush(v) {
+    const n = (v == null || v === '') ? 0 : Number(v);
+    if (!(n === 0 || (Number.isInteger(n) && n >= 1 && n <= 12))) {
+      throw new Error('setBigTPush: 只能是 0 或 1..12（0 = 关；N = 每 N 个窗口兑现一次；收到 `' + v + '`）');
+    }
+    BIGT_PUSH = n;
+  }
+  function bigTPushOn() { return BIGT_PUSH; }
+  function bigTPushSalt(state, pid) {
+    /* avalanche 三段（异或 → 奇数乘子 → 移位混淆）。⚠ 加法散列在本仓实测**打不开**（同一局内回合高度相关 ⇒ 剂量非单调，§E265 自我报告 #9）。 */
+    let h = ((((state && state.slotSalt) | 0)) ^ Math.imul((state && state.round) | 0, 0x9E3779B1) ^ Math.imul(pid | 0, 0x85EBCA6B)) >>> 0;
+    h = Math.imul(h ^ (h >>> 15), 0x2C1B3C6D) >>> 0;
+    return (h ^ (h >>> 12)) >>> 0;
+  }
+  /* 目标 = 威胁最大的人：**ep 最高**（下一手最能打出东西）⇒ 平手取**血少**的 ⇒ 再平手取**座位号小**的（不做随机 ⇒ §E215 那一族）。 */
+  function bigTPushTarget(state, pid) {
+    const opps = S.opponentsOf(state, pid);
+    if (!opps || !opps.length) return null;
+    const first = state.p[opps[0]] || {};
+    let best = opps[0], bestEp = first.ep | 0, bestHp = (first.hp == null ? Infinity : first.hp);
+    for (let i = 1; i < opps.length; i++) {
+      const o = opps[i], pl = state.p[o] || {};
+      const ep = pl.ep | 0, hp = (pl.hp == null ? Infinity : pl.hp);
+      if (ep > bestEp || (ep === bestEp && hp < bestHp)) { best = o; bestEp = ep; bestHp = hp; }
+    }
+    return best;
+  }
+  function bigTPushPick(state, pid, cands) {
+    const key = R.SK.BIG_T;
+    let has = false;
+    for (let i = 0; i < cands.length; i++) if (cands[i] && cands[i].key === key) { has = true; break; }
+    if (!has) return null;                     /* 这张牌此刻打不出来 —— 价格/珠/封锁一律问候选枚举，不在这里抄第二份 */
+    if ((bigTPushSalt(state, pid) % BIGT_PUSH) !== 0) return null;
+    const t = bigTPushTarget(state, pid);
+    if (t == null) return null;
+    for (let i = 0; i < cands.length; i++) {
+      if (cands[i] && cands[i].key === key && cands[i].target === t) return cands[i];   /* 优先用枚举里那一格（保留 bead/target2）*/
+    }
+    return { key: key, target: t, target2: null, bead: null };
+  }
+
   function policyChooserN(params, temp, eps, epsK, epsMode) {
     params = normChampParams(params);
     const legacy = LEGACY(params);
@@ -571,6 +629,21 @@
        * ⚠ 启发式而非定律：收入 >1/回合（聚能环第 3 次起 +3、避雷针 +4）时 ep=1 蓄能也可能成立。 */
       const v7base = econBase(state, pid, base);
       const cands = P.candidatesFor(state, pid, v7base, { lockTarget: lastCancelOther(state, pid) });
+      /* ===== v1.5.332（用户 10-03 下午裁定）：大雷的"看得见"上线档 ⇒ **默认 0 = 关**，页面在 ui.js 显式开 8 =====
+       * 用户的话：「最后大雷只要每四五局有一次就行了，亏损这一点没什么关系」⇒ 这一格从"要不要做"变成"那一档到底几赔"。
+       * 机制：在"这张牌现在打得出来"（`cands` 里有它 = 引擎自己判过价格/珠/封锁）的窗口里，按 (每局盐, 回合, 座位)
+       *   的确定性 avalanche 散列取 1/N ⇒ 命中就把这一手交给大雷，目标 = **ep 最高的对手**（平手取血少、再取座位号小）。
+       * ⚠ 三条形状纪律：① **不消耗 `state.rng`**（散列是纯函数 ⇒ 不新增随机流；代价是这一手跳过了冠军自己的抽样，
+       *    而"少抽一次"的后果已经包含在下面的实测价格里，因为量的就是这同一段代码）；
+       *    ② **剂量不许按 1/N 换算**——窗口密度会随剂量自己漂（N=2 时 0.85 个/局 ‖ N=10 时 1.63 个/局，不打就一直攥着 5 珠）
+       *    ⇒ "每几局一张"只有考卷说了算（§E270 就是这条的实测表）；
+       *    ③ 训练/门禁/评测一律不调 `setBigTPush` ⇒ `BIGT_PUSH=0` 时这一行短路都不进，**既有读数逐字不变**（与 v1.5.139/141 的 eps 纪律同族，由门 D224 钉）。
+       * 实测价（产品考卷 24 局 × 2925 桌 · 与同树出厂卷逐桌配对 · §E270）：**N=8 ⇒ 3 血桌每 5.2 局一张、−0.52 ±0.16pt ‖ 5 血桌每 3.3 局一张、−0.40 ±0.13pt**；
+       *   更猛的 N=6 是每 4.2 局一张、−0.85 ±0.19pt；更省的 N=10/12 在 5 血桌已到 −0.17/−0.22pt（贴着 0，没有再降的空间）。 */
+      if (BIGT_PUSH >= 1) {
+        const pushed = bigTPushPick(state, pid, cands);
+        if (pushed) return pushed;
+      }
       /* v1.5.30x：**默认关**的在线对手模型 + 1-ply 重放搜索（`setBeliefSearch(1)`）。
          关档时这一行短路都不进 ⇒ 现网行为逐字不变（门 D2xx 钉"默认值 / 关档逐字同结果 / 开档真的改变选择"三段）。 */
       /* ===== v1.5.139（用户 09-21 晨裁定：ε=0.25 全候选太糙，出现"贴贴不引爆/空爆"昏手，要"均匀但随机性小"）=====
@@ -3166,6 +3239,7 @@ let WALL_GAMES = 3;
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
+    setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认 0=关；页面开 8，门 D224 钉）
     setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve, setBeliefPly, beliefPly,
     setBeliefTarget, beliefTarget, setBeliefTie, beliefTie,
     setBeliefBead, beliefBead, setBeliefRingPrice, beliefRingPrice, setBeliefBeadRedeemable, beliefBeadRedeemable,

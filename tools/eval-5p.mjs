@@ -316,6 +316,26 @@ const DRAINHP = Number(FLAG.drainHp || 0);
 if (FLAG.drainhp != null) {
   console.error('⛔ 拼写是 `--drainHp=`（大写 H），收到 `--drainhp=' + FLAG.drainhp + '` ⇒ 这面键不在解析表里、会被静默忽略，拒跑'); process.exit(2);
 }
+/* ===== §E271（v1.5.332 上线复核）：`--shipbigt=<0|1..12>` = 量**页面真正走的那段代码** =====
+ * 与 `--bigtpush` 的区别不是措辞：`--bigtpush` 是**本工具在外面包的**一层（目标规则可选、自带窗口计数），
+ *   而 `--shipbigt` 直接把 `js/train/evo.js` 里的 `BIGT_PUSH` 开成用户上线的那一档 ⇒ **冠军的出牌路径本身就带着这条规则**。
+ * ⇒ 上线前的最后一道证据必须是这个口径：用量由**引擎的事件流**数出来（`champ.use`），不是工具的计数器；
+ *   价格与 §E270 那张表若不一致，差的就是"工具外挂 vs 现网路径"这道缝（两份实现必漂移的那一族）。 */
+const SHIPBIGT_RAW = FLAG.shipbigt;
+const SHIPBIGT = SHIPBIGT_RAW == null ? null : Number(SHIPBIGT_RAW);
+if (SHIPBIGT_RAW != null && !(SHIPBIGT === 0 || (Number.isInteger(SHIPBIGT) && SHIPBIGT >= 1 && SHIPBIGT <= 12))) {
+  console.error('⛔ --shipbigt 只能是 0 或 1..12（0 = 明确关档，与不设旗标逐字相同；收到 `' + SHIPBIGT_RAW + '`）'); process.exit(2);
+}
+if (SHIPBIGT_RAW != null && FLAG.bigtpush != null) {
+  console.error('⛔ --shipbigt 不能与 --bigtpush 同时给（一个是现网路径、一个是工具外挂，同时给就是把两个自由量捆在一起测）'); process.exit(2);
+}
+if (SHIPBIGT_RAW != null) {
+  if (typeof T.setBigTPush !== 'function') { console.error('⛔ `EpirusTrainer.setBigTPush` 不存在 ⇒ 旗标没有生效对象，拒跑'); process.exit(2); }
+  T.setBigTPush(SHIPBIGT);
+  console.log('[shipbigt] 现网路径已生效：`js/train/evo.js` 的 `BIGT_PUSH = ' + SHIPBIGT + '`（0 = 关）'
+    + ' · 目标 = ep 最高的对手（平手取血少、再取座位号小）· 不消耗 `state.rng`'
+    + ' · 用量由引擎事件数（`champ.use`），不是工具自己的计数器');
+}
 if (MODE && !R.MODES[MODE]) { console.error('--mode 未知: ' + MODE + '（可选: ' + Object.keys(R.MODES).join(' ') + '）'); process.exit(1); }
 if (DRAINHP > 0) { R.MODES[MODE || 'multi'].drainHpMax = DRAINHP; }
 const FIELD = FLAG.field || '';
@@ -983,6 +1003,18 @@ for (const k of sorted.slice(0, 12)) {
 }
 console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
 
+/* §E271：大雷的**用量**要报成用户手里的单位（"每几局一张"），而且数是从引擎事件里来的。
+ * ⚠ 两条路径共用这一行（现网 `--shipbigt` / 工具外挂 `--bigtpush`）⇒ 门 D224⑤ 才能拿它比"两份实现漂了没有"；
+ *    只有外挂路径才有"窗口/兑现率"可报（那是工具自己数的），所以那两栏按路径分岔，不许假装两边都有。 */
+if ((SHIPBIGT_RAW != null && SHIPBIGT >= 1) || PUSH) {
+  const casts = (champ.use && champ.use[R.SK.BIG_T]) || 0;
+  const perGame = champ.total ? casts / champ.total : 0;
+  console.log('[大雷用量] 路径=' + (SHIPBIGT_RAW != null ? '现网(evo BIGT_PUSH=' + SHIPBIGT + ')' : '工具外挂(--bigtpush=' + PUSH + ')')
+    + ' · 真打出 **' + casts + ' 张 / ' + champ.total + ' 局 = 每 ' + (perGame > 0 ? (1 / perGame).toFixed(1) : '∞') + ' 局一张**'
+    + '（占主体出手 ' + (tot ? (casts / tot * 100).toFixed(1) : '0') + '%）'
+    + (casts === 0 ? '   ← 一次都没打 ⇒ 这一臂没测到东西（档太稀或窗口从没打开），不许记"无效"' : ''));
+}
+
 /* ===== §E136：逐桌子命中数落盘（`--dump-per=<file>`，默认关）=====
  * 为什么要它：配对 95% 区间的分母是**同一批桌子上的差值**，汇总百分比算不出来（§E137 那种"未配对 SE"只会偏保守）。
  * 只在旗标给出时写文件，stdout 一字不加 ⇒ 与老口径逐字相同。 */
@@ -1005,6 +1037,8 @@ if (FLAG['dump-per']) {
     /* §E266：提顺位这一臂的自由量（margin/bias）也必须进配对身份 —— 少写一行就会把两档配成同世界。 */
     '#pushrank=' + (RANK ? (RANK_MARGIN + '/' + RANK_BIAS + '/' + RANK_GATE + '/' + (RANK_FLOOR == null ? '-' : RANK_FLOOR)) : '-'),
     '#drainhp=' + ((R.MODES[MODE || 'multi'] || {}).drainHpMax),
+    /* §E271：现网路径的档（`--shipbigt`）也是**臂维** —— 它与"工具外挂"的落盘其余各维可以完全一样，缺这一维就会把两条路配成同臂。 */
+    '#shipbigt=' + (SHIPBIGT_RAW == null ? '-' : String(SHIPBIGT)),
     '#swap=' + (SWAP || '-'), '#arm\tidx\tnames\tgames\tfirst\tstrict'];
   for (const s of [{ arm: 'subject', r: champ }, { arm: 'ctrl', r: ctrl }]) {
     s.r.perCombo.forEach(function (c, i) {
