@@ -114,7 +114,11 @@ const CLI_ECON_REWARD_KEYS = ['bigtChainW', 'fitTailW', 'fitTailQ',
   /* v1.5.274（§E91）：补 `ringW` —— 它在 `ECON_REWARD_KEYS`（引擎）与 `ECON_ENV_KEYS`（env 名单）里都齐，
    * 唯独这个入口的投递名单没有 ⇒ `EPIRUS_RING_W` 被黑键闸拦下（实测：整臂 exit 6，一秒响）。
    * 这正是 D172 立的"三处名单齐全"规矩的第三处；不设这个键时 `readEconEnv` 给 null ⇒ 不进 payload ⇒ 出厂行为逐字不变。 */
-  'ringW'];
+  'ringW',
+  /* v1.6.0（DS · 千问 §1.3 点名的黑键）：补 `divK` —— 它此前在 `ECON_REWARD_KEYS`（引擎）与 env 名单里都齐，
+   * 唯独**不在这个 CLI 白名单**里 ⇒ 从本入口调 `--divK` 会撞「检测到本入口读不到的旋钮 ⇒ exit 6」（千问 10-03 00:2x 实测）。
+   * 照 v1.5.274 补 `ringW` 的同一次做法：补进来，并让 D218 的登记腿跟着扫。 */
+  'divK'];
 (function extendSelfWithCliEcon() {
   for (const k of ECON_ENV_KEYS) {
     /* v1.5.254：**同一个 env 名要试两种取值** —— 数值档喂 `0.5`、布尔档喂 `'1'`。

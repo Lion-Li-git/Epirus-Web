@@ -833,8 +833,10 @@ const pushSel = !PUSH ? null : function () {
  * ⚠ 纯工具侧：用冠军**已导出**的候选 API（`EpirusPolicy.candidatesFor` / `forwardCands`）
  *   ⇒ `js/train/policy.js` 与 `js/core/*` 都不动（指纹不变、不需要换代）。 */
 const RANK_RAW = FLAG.pushrank;
-const RANK = RANK_RAW != null;
-const RANK_SPEC = String(RANK_RAW == null ? '' : RANK_RAW).split(',');
+/* `--pushfloor=` 可以**单独**用（不带 margin/bias）⇒ 那时按'无闸'（margin=1）走 —— 与上面那条曲线同口径。 */
+const RANK_ONLY_FLOOR = (FLAG.pushfloor != null && FLAG.pushfloor !== '' && FLAG.pushrank == null);
+const RANK = (RANK_RAW != null) || RANK_ONLY_FLOOR;
+const RANK_SPEC = String(RANK_RAW == null ? '1,1,top2' : RANK_RAW).split(',');
 const RANK_MARGIN = RANK ? Number(RANK_SPEC[0]) : 0;
 const RANK_BIAS = RANK ? Number(RANK_SPEC[1] == null || RANK_SPEC[1] === '' ? 1 : RANK_SPEC[1]) : 0;
 /** 闸的读法（§E267，用户 10-03 追问"差距不大"指哪一对）：
@@ -844,7 +846,11 @@ const RANK_GATE = RANK ? (RANK_SPEC[2] == null || RANK_SPEC[2] === '' ? 'top2' :
 /* 第四段 = **算子**（§E268）：给 share 就换成「概率下界」——把目标卡的概率抬到至少 share × 一选概率。
  * 为什么不继续用 ×倍数：实测**惰性**（抬了 6 万次、对局逐位相同 ⇒ ×2 个 ≈0 仍是 ≈0）。
  * 缺省不写 ⇒ 仍是旧的 ×(1+bias)（旧臂可复现）；写了 ⇒ 走下界算子。 */
-const RANK_FLOOR = RANK && RANK_SPEC[3] != null && RANK_SPEC[3] !== '' ? Number(RANK_SPEC[3]) : null;
+/* v1.6.0（千问 §5.1 的分名建议）：下界**正名成独立旗标 ` --pushfloor=<share>`**。
+ * 三个名字各管一件事：`--pushkey` 选卡 · `--bigtpush` 强制注入的剂量 · `--pushfloor` 软抬的强度（= 概率下界）。
+ * 第四段仍然兼容（旧臂可复现），两者都给时以 `--pushfloor` 为准。 */
+const RANK_FLOOR = (FLAG.pushfloor != null && FLAG.pushfloor !== '') ? Number(FLAG.pushfloor)
+  : (RANK && RANK_SPEC[3] != null && RANK_SPEC[3] !== '' ? Number(RANK_SPEC[3]) : null);
 if (RANK_FLOOR != null && !(isFinite(RANK_FLOOR) && RANK_FLOOR > 0 && RANK_FLOOR <= 1)) { console.error('⛔ --pushrank 第四段（概率下界的 share）要 ∈(0,1]（收到 `' + RANK_SPEC[3] + '`）'); process.exit(2); }
 if (RANK && ['top2', 'near'].indexOf(RANK_GATE) < 0) { console.error('⛔ --pushrank 第三段（闸的读法）只认识 top2 | near（收到 `' + RANK_GATE + '`）'); process.exit(2); }
 if (RANK && !(isFinite(RANK_MARGIN) && RANK_MARGIN >= 0 && RANK_MARGIN <= 1 && isFinite(RANK_BIAS) && RANK_BIAS >= 0)) {
@@ -1109,7 +1115,7 @@ if (FLAG['dump-per']) {
      * 与"出厂"那一份逐字相同 ⇒ 下一个人从表头读不出这臂动的是哪张卡（"回显生效值"那条）。 */
     '#pushkey=' + ((PUSH || RANK) ? PUSHKEY : '-'),
     /* §E266：提顺位这一臂的自由量（margin/bias）也必须进配对身份 —— 少写一行就会把两档配成同世界。 */
-    '#pushrank=' + (RANK ? (RANK_MARGIN + '/' + RANK_BIAS + '/' + RANK_GATE + '/' + (RANK_FLOOR == null ? '-' : RANK_FLOOR)) : '-'),
+    '#pushfloor=' + (RANK ? (RANK_MARGIN + '/' + RANK_BIAS + '/' + RANK_GATE + '/' + (RANK_FLOOR == null ? '-' : RANK_FLOOR)) : '-'),
     '#drainhp=' + ((R.MODES[MODE || 'multi'] || {}).drainHpMax),
     /* §E271/§E273：现网路径的**有效档**（`--shipbigt` 或引擎默认）也是**臂维** —— 它与"工具外挂"的落盘其余各维可以完全一样，
        缺这一维就会把两条路配成同臂。⚠ v1.5.333 起写的是**引擎回读到的值**（不设旗标 = 默认 8），不是"旗标有没有出现"。 */
