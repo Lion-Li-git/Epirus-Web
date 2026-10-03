@@ -404,7 +404,8 @@ if (SHIPDRAIN_RAW != null) {
     console.error('⛔ `--shipdrain=' + SHIPDRAIN + '` 没生效：引擎回读 `DRAIN_PUSH = ' + T.drainPushOn() + '`'); process.exit(2);
   }
 }
-const DRAIN_EFFECTIVE = (typeof T.drainPushOn === 'function') ? T.drainPushOn() : 0;
+const DRAIN_EFFECTIVE0 = (typeof T.drainPushOn === 'function') ? T.drainPushOn() : 0;
+let DRAIN_EFFECTIVE = DRAIN_EFFECTIVE0;
 if (SHIPDRAIN_RAW != null) {
   console.log('[shipdrain] 引擎档 = ' + DRAIN_EFFECTIVE + '（0 = 关）· 窗口 = 自己 hp≤1 **且这张牌可付**（不改 `drainHpMax` ⇒ 不是改规则）'
     + '· 机制 = 只在 ε 分支里把这张牌**并入探索集**（软提升，不强推）· 本臂 ε=' + SHIP_EPS + (SHIP_EPMODE ? '/' + SHIP_EPMODE : ''));
@@ -911,6 +912,27 @@ if (SHIPBIGT_RAW == null && INJECT_SEEN.length) {
     + '要连着现网档一起量请显式给 `--shipbigt=N`');
 }
 const RANK_ST = { dec: 0, close: 0, fired: 0, gapSum: 0, moved: 0 };
+/* ===== §E284（v1.6.4）：`DRAIN_PUSH` 默认开了 ⇒ **摄魂侧要同一条纪律**（与上面 `--shipbigt` 那条同源：一条臂只留一个自由量）
+ * 哪些名字算"摄魂侧的注入"：`--pushkey`（提前的是哪张卡）、`--pushminep`（它的门槛）、`--drainHp`（**直接把窗口改宽 = 新世界**）、
+ *   `--pushrank` / `--pushfloor`（软抬，作用在 `--pushkey` 那张卡上）。给了这些而**没有**显式 `--shipdrain` ⇒ 把引擎默认档顶成 0 并响亮印一行。
+ * ⚠ 与大雷那条的区别要写清：这一档在 `eps=0` 下**结构上不触发**（钩子埋在 `epsMode === 'soft'` 的探索支里）⇒ 顶不顶对贪心考卷逐字无差；
+ *   真正会被它污染的是**页面口径（ε>0）**的臂 —— 那时"软提升"和"提顺位/强制"会同时动同一张卡，读出来分不清是哪一样。 */
+const DRAIN_INJECT_FLAGS = ['pushkey', 'pushminep', 'drainHp', 'pushrank', 'pushfloor'];
+const DRAIN_INJECT_SEEN = DRAIN_INJECT_FLAGS.filter(function (k) { return FLAG[k] != null && FLAG[k] !== ''; });
+if (SHIPDRAIN_RAW == null && DRAIN_INJECT_SEEN.length) {
+  if (typeof T.setDrainPush !== 'function') { console.error('⛔ 需要顶掉摄魂的引擎默认档但没有 `setDrainPush` ⇒ 拒跑（否则同一张卡上叠了两个自由量）'); process.exit(2); }
+  T.setDrainPush(0);
+  DRAIN_EFFECTIVE = T.drainPushOn();
+  console.log('[shipdrain] ⚠ 检测到摄魂侧研究注入旗标 ' + DRAIN_INJECT_SEEN.map(function (k) { return '--' + k; }).join(' / ')
+    + ' ⇒ 已把引擎默认档**顶成 0（关）**（v1.6.4 起 `DRAIN_PUSH` 默认开着 ⇒ 不顶就是"软提升 + 这一面旗标"同时在动那张卡）。'
+    + '要连着现网默认档一起量请显式给 `--shipdrain=N`');
+}
+/* ⚠ 这一档**只在 ε>0 时存在** ⇒ 默认开着之后，贪心臂必须**自己说出来**"我看不见它"，否则下一个人会把"逐字相同"读成"测过没效果"
+ *   （显式给 `--shipdrain>=1` 且 ε=0 仍然是 `exit 2`，见上面那段；这里只管"默认档捎带开着"的情况）。 */
+if (DRAIN_EFFECTIVE >= 1 && !(SHIP_EPS > 0)) {
+  console.log('[shipdrain] ⚠ 引擎默认档 = ' + DRAIN_EFFECTIVE + '，但本臂 ε=0 ⇒ 这一档**永不触发**（钩子在 soft 探索支里）⇒ 与关档逐字相同。'
+    + '要量它必须带页面口径 `--eps=0.2 --eps-mode=soft`（§E283：3 血桌上每 4.3 局一张 ‖ 关档 0 张/200 局）。');
+}
 /* §E267：自检挂**进程出口** —— 前面两版分别落在 `if (PUSH)` 与 `if (FLAG['dump-per'])` 里，
  * 于是"纯提顺位臂"与"不落盘的跑法"都**一声不响**（同一族病：静默的量具）。出口钩子与作用域无关。 */
 if (RANK) process.on('exit', function () {

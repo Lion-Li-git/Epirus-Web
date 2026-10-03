@@ -1256,7 +1256,7 @@ t('D222 费用表反事实旗标 `--bigtcost=`（v1.5.327 · §E255）：不设 
    *    这条门第一次整轮认证就红在腿 ⑥（624s 那一趟），根因正是我没剥墙钟行 —— 小样本两次跑的耗时常常撞在一起 ⇒ 独立复跑看不出来，
    *    整轮抢核时才暴露（§E257 那条"未归因的红"事后归因到了这里：**是门错，不是抖动**）。 */
   const strip = function (s) { return s.split('\n').filter(function (l) {
-    return l.indexOf('[bigtcost]') !== 0 && l.indexOf('[shipbigt]') !== 0 && l.indexOf('耗时') !== 0;
+    return l.indexOf('[bigtcost]') !== 0 && l.indexOf('[shipbigt]') !== 0 && l.indexOf('[shipdrain') !== 0 && l.indexOf('耗时') !== 0;
   }).join('\n'); };
   ok(w5.out.indexOf('[bigtcost]') === 0 || w5.out.split('\n').some(function (l) { return l.indexOf('[bigtcost]') === 0; }),
     '⑤ 开档必须响亮印一行 banner（不印 ⇒ 我没法从输出判断这一臂在哪个世界）');
@@ -1313,9 +1313,11 @@ t('D223 §E262/§E266 探索提前（大雷 `--bigttgt=` 挑人 ‖ 摄魂 `--pu
   const src = readFileSync('tools/eval-5p.mjs', 'utf8');
   ok(src.indexOf('FLAG.bigtpush') >= 0 && src.indexOf('pushTarget(') >= 0,
     '① `eval-5p` 里没有 `FLAG.bigtpush` 或没在用 `pushTarget` ⇒ 旗标被删了而记账还写着有');
-  /* §E275：多剥一族 banner —— `[shipbigt]` 现在每臂都印（默认档也要回读打印），不剥就会把"两种关法"的差当成判定之差。 */
+  /* §E275：多剥一族 banner —— `[shipbigt]` 现在每臂都印（默认档也要回读打印），不剥就会把"两种关法"的差当成判定之差。
+   * §E284：再多剥 `[shipdrain` 一族 —— v1.6.4 起摄魂档默认开着 ⇒ **贪心臂会自述一行"这一档在 ε=0 下永不触发"**，
+   *   那是横幅不是判定（正因为它是横幅，"两种关法逐字相同"这条 ③d 才仍成立；不剥就等于让一句解释性文本去改变门的结果）。 */
   const strip = function (s) { return s.split('\n').filter(function (l) {
-    return l.indexOf('[bigtpush]') !== 0 && l.indexOf('[提前自检]') !== 0 && l.indexOf('[shipbigt') !== 0 && l.indexOf('耗时') !== 0;
+    return l.indexOf('[bigtpush]') !== 0 && l.indexOf('[提前自检]') !== 0 && l.indexOf('[shipbigt') !== 0 && l.indexOf('[shipdrain') !== 0 && l.indexOf('耗时') !== 0;
   }).join('\n'); };
   const runE = function (extra) {
     const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '12', '5', '77000', '--field=guardwall'].concat(extra),
@@ -1602,7 +1604,11 @@ t('D224 §E271/§E273/§E274 大雷"每几局看得见一次"的档（v1.5.333 �
     '⑧b **新名字也必须顶掉引擎默认档**（实测没印 ⇒ 这条臂同时挂着出厂的 12 与软抬档，两个自由量；而 §E262~§E268 那批读数都是"引擎档关着"的世界）');
   const pfShip = runE(['--pushfloor=0.6', '--shipbigt=8']);
   eq(pfShip.code, 0, '⑧c `--pushfloor` 与显式 `--shipbigt` 同时给不该报错：' + pfShip.out.slice(0, 160));
-  ok(pfShip.out.indexOf('顶成') < 0, '⑧d 显式给了 `--shipbigt` 时**不许**顶（"旗标优先"是这条纪律的另一半，缺了它就没法连着现网档量）');
+  /* ⚠ 同 ⑧f/⑨h 那一族：`--pushfloor` 也是**摄魂侧**的注入旗标 ⇒ 这一臂会正当地印 `[shipdrain] … 顶成 0（关）`，
+   *   所以"不许顶"只能钉在 `[shipbigt]` 自己那几行上，不能扫全 stdout（否则正确的行为会被判成我的失败）。 */
+  const btLines = pfShip.out.split('\n').filter(function (l) { return l.indexOf('[shipbigt') === 0; }).join('\n');
+  ok(btLines.indexOf('顶成') < 0, '⑧d 显式给了 `--shipbigt` 时**大雷那一行**不许说"顶"（实测含=' + (btLines.indexOf('顶成') >= 0) + '）'
+    + '⇒ "旗标优先"是这条纪律的另一半，缺了它就没法连着现网档量');
   const pfBad = runE(['--pushfloor=2']);
   eq(pfBad.code, 2, '⑧e `--pushfloor=2`（越界）必须 exit 2，不许降级成"当没写"：实测 ' + pfBad.code);
   const pfBadLine = (/^.*⛔.*$/m.exec(pfBad.out) || ['(没有 ⛔ 行)'])[0];
@@ -1710,15 +1716,16 @@ t('D224 §E271/§E273/§E274 大雷"每几局看得见一次"的档（v1.5.333 �
     '⑫m **工具侧一次都不许用**（实测含=' + (toolSrc.indexOf('wrapBigTPush') >= 0) + '）⇒ 考卷/门禁里的脚本对手必须逐字不变，否则今晚之前所有配对读数全部作废');
 });
 
-t('D225 §E275 摄魂指法的"残血只在**探索里**软提升"档（v1.5.334，evo.js 的 DRAIN_PUSH）：默认关 · 不改规则可证 · 只在 ε>0 的 soft 分支生效 · 窗口与剂量用纯函数直读 · ε=0 的臂必须拒跑而不是读成"没效果" · 落盘带两维', function () {
+t('D225 §E275/§E284 摄魂指法的"残血只在**探索里**软提升"档（evo.js 的 DRAIN_PUSH · v1.6.4 起**默认 1=开**）：默认值在册 · 不改规则可证 · 只在 ε>0 的 soft 分支生效 · 窗口与剂量用纯函数直读 · 贪心臂不许把"看不见"读成"没效果" · 与大雷对称的顶档纪律 · 落盘带两维', function () {
   const evoSrc = readFileSync('js/train/evo.js', 'utf8');
   const coreState = readFileSync('js/core/state.js', 'utf8');
   const coreRules = readFileSync('js/core/rules.js', 'utf8');
   const evSrc = readFileSync('tools/eval-5p.mjs', 'utf8');
 
   /* ① 结构钉：默认关 + 钩子的**作用面**（探索分支内，不是决策入口） */
-  ok(/^\s*let DRAIN_PUSH = 0;$/m.test(evoSrc),
-    '①a `DRAIN_PUSH` 的默认必须是 **0（关）** ⇒ 这一档还没在页面口径下量出价值，不许顺手变成默认行为（大雷那一档是先测后开，见 D224①b）');
+  ok(/^\s*let DRAIN_PUSH = 1;$/m.test(evoSrc),
+    '①a `DRAIN_PUSH` 的默认必须是 **1（开）** ⇒ 用户 10-03 夜依 §E283 的**实机**读数裁定开（3 血桌上每 4.3 局一张 ‖ 关档 0 张/200 局 ‖ 代价 +0.08±0.09 ‖ +0.07±0.07pt 噪声内）。'
+    + '⚠ 形状翻转的安全性说明同 D224①b：只改这一格而忘了改下面的横幅/顶档腿，会红在 ⑨ 而不是静默放过');
   ok(/function setDrainPush\(v\)/.test(evoSrc) && /setDrainPush[\s,}]/.test(evoSrc.slice(evoSrc.indexOf('global.EpirusTrainer'))),
     '①b `setDrainPush` 必须导出到 `EpirusTrainer`（否则评测无法下达、"实装"就只剩注释）');
   const hookAt = evoSrc.indexOf('if (drainPushWants(state, pid)) forced.push(R.SK.DRAIN);');
@@ -1835,6 +1842,35 @@ t('D225 §E275 摄魂指法的"残血只在**探索里**软提升"档（v1.5.334
     if (rg.code !== 0) goodSpell.push(g + '(实测 ' + rg.code + '：' + rg.out.slice(0, 90) + ')');
   }
   eq(goodSpell.length, 0, '⑧f 正写必须放行（被挡=' + (goodSpell.join(' | ') || '无') + '）⇒ 名单里写的必须是读侧的实际拼写');
+
+  /* ===== ⑨ §E284（v1.6.4）：默认档从 0 翻成 1 ⇒ 大雷那两条纪律必须**对称地**搬到摄魂侧 =====
+   * ① 研究注入旗标（`--pushkey` / `--pushminep` / `--drainHp` / `--pushrank` / `--pushfloor`）出现而没显式 `--shipdrain` ⇒ 顶成 0，
+   *    否则页面口径的臂上"软提升"和"提顺位/强制"会同时在动**同一张卡**（一次对照只能一个自由度）。
+   * ② 默认开着之后，**贪心臂必须自己说出来"我看不见这一档"**（ε=0 下钩子走不到 ⇒ 输出与关档逐字相同）——
+   *    否则下一个人会把这份"逐字相同"记成"测过、没效果"（这正是 §E266 那条口径缺陷的复发形状）。 */
+  const dnPlain = runE([]);
+  eq(dnPlain.code, 0, '⑨a 不设任何旗标的默认臂必须跑通：' + dnPlain.out.slice(0, 160));
+  /* ⚠ 三条 ⑨ 腿全部**只看 `[shipdrain` 自己那几行**：`--pushkey` 之类同时是两面的注入旗标，大雷那行也会印"顶成 0（关）"；
+   *    拿全 stdout 找共同词 = 假绿（这条是被"关掉顶档"那一刀变异抓出来的，不是想出来的）。 */
+  const dnOf = function (txt) { return txt.split('\n').filter(function (l) { return l.indexOf('[shipdrain') === 0; }).join('\n'); };
+  ok(/DRAIN_PUSH = 1|引擎默认档 = 1/.test(dnOf(dnPlain.out)),
+    '⑨b 默认档必须由**引擎回读**印在 `[shipdrain]` 自己那行里（实测该行=' + (dnOf(dnPlain.out).split('\n')[0] || '(没有 shipdrain 行)').slice(0, 110) + '）');
+  ok(dnOf(dnPlain.out).indexOf('永不触发') >= 0,
+    '⑨c 贪心臂（ε=0）必须**自己声明**这一档永不触发（实测没印 ⇒ 默认开着时的"逐字相同"会被读成"测过没效果"）');
+  const dnInj = runE(['--pushkey=drain', '--pushminep=0']);
+  eq(dnInj.code, 0, '⑨d 摄魂侧注入臂不该报错：' + dnInj.out.slice(0, 160));
+  ok(dnOf(dnInj.out).indexOf('顶成 0（关）') >= 0,
+    '⑨e 出现摄魂侧注入旗标时，**`[shipdrain]` 那一行**必须说顶掉了引擎默认档（实测=' + (dnOf(dnInj.out).split('\n')[0] || '(没有 shipdrain 行)').slice(0, 110) + '）'
+    + '⇒ 不顶就是"软提升 + 这一面旗标"同时在动 `drain` 这张卡（两个自由量）');
+  ok(dnOf(dnInj.out).indexOf('永不触发') < 0,
+    '⑨f 已经顶成 0 之后**不许再印**"默认档=1 但永不触发"（实测含=' + (dnOf(dnInj.out).indexOf('永不触发') >= 0) + '）⇒ 两行互相矛盾等于没有回读');
+  const dnBoth = runE(['--pushkey=drain', '--shipdrain=1', '--eps=0.2', '--eps-mode=soft']);
+  eq(dnBoth.code, 0, '⑨g 显式 `--shipdrain` + 注入旗标同时给不该报错：' + dnBoth.out.slice(0, 160));
+  /* ⚠ 判据只许看**自己那一面旗标的行**：`--pushkey` 同时是"大雷侧的注入旗标" ⇒ 这一臂必然还印着 `[shipbigt] … 顶成 0（关）`，
+   *   拿全 stdout 找"顶成"会把那条正确的行判成我这一条的失败（=记忆第二十六条②"窄化/宽化的告警比真守卫更误导"的镜像形状：键集合要钉在同一个名单上）。 */
+  const dnLines = dnBoth.out.split('\n').filter(function (l) { return l.indexOf('[shipdrain') === 0; }).join('\n');
+  ok(dnLines.indexOf('顶成') < 0, '⑨h **显式给了就不许顶**（实测 `[shipdrain]` 行里含顶档=' + (dnLines.indexOf('顶成') >= 0) + '）⇒ "旗标优先"是这条纪律的另一半');
+  ok(/引擎档 = 1/.test(dnLines), '⑨i 显式档也要由引擎回读后印在**它自己那行**里（实测该行=' + (dnLines.split('\n')[0] || '(没有 shipdrain 行)').slice(0, 90) + '）');
 });
 
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {
