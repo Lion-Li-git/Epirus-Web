@@ -751,7 +751,64 @@ const pushSel = !PUSH ? null : function () {
     return inner(state, pid, legal);
   };
 };
-const subjectSel = (PUSH && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !PURE && !SUBJECT && !planSubjectSel && !swapParams)
+/* ===== §E266（用户 10-03 更正机制）：**提顺位**，不是强制替换 =====
+ * 用户原话：「提高在随机探索时的**顺位**，而不是强制注入。冠军也可以选原本要做的事情，
+ *   只是在本来**一选和二选差距不大、有随机性**的地方加上。」（大雷与摄魂都是这个意思）
+ * ⚠ 与 `--bigtpush` 的差别是根本性的：`--bigtpush` 命中时**直接 return 那张卡、从不问冠军**（强制替换）；
+ *   本档**不动冠军的采样器**，只在"这一手本来就不确定"时把目标卡的**概率抬高**，冠军仍可能选回原来那一手。
+ * ⚠ 纯工具侧：用冠军**已导出**的候选 API（`EpirusPolicy.candidatesFor` / `forwardCands`）
+ *   ⇒ `js/train/policy.js` 与 `js/core/*` 都不动（指纹不变、不需要换代）。 */
+const RANK_RAW = FLAG.pushrank;
+const RANK = RANK_RAW != null;
+const RANK_SPEC = String(RANK_RAW == null ? '' : RANK_RAW).split(',');
+const RANK_MARGIN = RANK ? Number(RANK_SPEC[0]) : 0;
+const RANK_BIAS = RANK ? Number(RANK_SPEC[1] == null || RANK_SPEC[1] === '' ? 1 : RANK_SPEC[1]) : 0;
+if (RANK && !(isFinite(RANK_MARGIN) && RANK_MARGIN >= 0 && RANK_MARGIN <= 1 && isFinite(RANK_BIAS) && RANK_BIAS >= 0)) {
+  console.error('⛔ --pushrank=<margin>[,<bias>] 要 margin∈[0,1]、bias≥0（收到 `' + RANK_RAW + '`）；margin = "一选与二选的概率差"的上限，bias = 目标卡概率的放大倍数'); process.exit(2);
+}
+const RANK_TEMP = 0.15;   /* 与线上同一档（`policyChooserN(params, 0.15)`）⇒ 闸判的是冠军**自己的**决策分布 */
+const RANK_ST = { dec: 0, close: 0, fired: 0 };
+if (RANK) {
+  console.log('[pushrank] 提顺位已生效：卡=`' + PUSHKEY + '`（' + PUSH_NAME + '）**ep≥' + PUSH_MINEP + ' 且合法可付、且"一选与二选概率差 ≤ '
+    + RANK_MARGIN + '"**时把它的概率 ×(1+' + RANK_BIAS + ')，随后**仍用冠军那套按概率抽**（冠军可以选回原来那一手）'
+    + ' · 工具侧实现，不动 policy.js');
+}
+const rankSel = !RANK ? null : function () {
+  const inner = subjectPolicy();
+  return function (state, pid, legal) {
+    const ep = (state.p[pid] && state.p[pid].ep) || 0;
+    if (ep >= PUSH_MINEP) {
+      const cands = P.candidatesFor(state, pid, legal);        /* 纯枚举、不抽 rng */
+      const f = P.forwardCands(state, pid, cands, params, { temp: RANK_TEMP });   /* 纯打分、不抽 rng */
+      RANK_ST.dec++;
+      let p1 = -1, p2 = -1;
+      for (let i = 0; i < f.probs.length; i++) { const v = f.probs[i]; if (v > p1) { p2 = p1; p1 = v; } else if (v > p2) p2 = v; }
+      /* ← 用户要的那条闸："本来一选和二选差距不大、有随机性的地方"才动 */
+      if (f.probs.length > 1 && (p1 - p2) <= RANK_MARGIN) {
+        RANK_ST.close++;
+        let hit = -1;
+        for (let i = 0; i < cands.length; i++) if (cands[i].key === PUSH_SK) { hit = i; break; }
+        const l = legal.find(function (x) { return x && x.key === PUSH_SK; });
+        if (hit >= 0 && l && l.affordable !== false) {
+          RANK_ST.fired++;
+          let tot = 0; const w = new Float64Array(cands.length);
+          for (let i = 0; i < cands.length; i++) { w[i] = f.probs[i] * (i === hit ? (1 + RANK_BIAS) : 1); tot += w[i]; }
+          if (tot > 0) {
+            /* 一次 `state.rng.next()`（与"原样交给冠军"那条路消耗**同样多**的随机流 ⇒ 两支可比） */
+            const r = state.rng.next(); let acc = 0;
+            for (let i = 0; i < cands.length; i++) { acc += w[i] / tot; if (r < acc) return cands[i]; }
+            return cands[cands.length - 1];
+          }
+        }
+      }
+    }
+    return inner(state, pid, legal);
+  };
+};
+
+const subjectSel = (RANK && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !PURE && !SUBJECT && !planSubjectSel && !swapParams)
+  ? rankSel
+  : (PUSH && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !PURE && !SUBJECT && !planSubjectSel && !swapParams)
   ? pushSel
   : (PURE && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !planSubjectSel)
   ? pureSel
@@ -832,6 +889,7 @@ if (PUSH) {
     ' · 目标分布 ' + JSON.stringify(PUSH_ST.tgt) + '（' + seatN + ' 个不同席位）· 平手 ' + PUSH_ST.tie + ' 次' +
     (PUSH_ST.opp === 0 ? '   !!! 窗口从不打开 ⇒ 这一臂没测到任何东西（门槛 ep≥' + PUSH_MINEP + ' · 卡=`' + PUSHKEY + '`），Δ 不可读'
       : (PUSH_ST.fired === 0 ? '   !!! 窗口开了却一次没打 ⇒ 计数/可付判定失效' : '   OK 实验有效')));
+if (RANK) console.log('[pushrank 自检] 决策 ' + RANK_ST.dec + ' 个 · 落在"一选二选差距≤' + RANK_MARGIN + '"的 ' + RANK_ST.close + ' 个（' + (100*RANK_ST.close/Math.max(1,RANK_ST.dec)).toFixed(1) + '%） · 真抬高 ' + RANK_ST.fired + ' 次（兑现率 ' + (100*RANK_ST.fired/Math.max(1,RANK_ST.close)).toFixed(1) + '%）');
 }
 if (GRANT) {
   console.log('[补贴自检] --grant=' + GRANT + ' 已生效 ' + GRANT_ST.rounds + ' 个主体回合（主体回合数应≈局数×回合数）');}
@@ -894,6 +952,8 @@ if (FLAG['dump-per']) {
     /* §E264：`--pushkey` 决定"提前的是哪张卡"、`--drainhp` 决定摄魂那扇窗有多宽 ⇒ 两维都进配对身份。
      * ⚠ 摄魂臂与大雷臂的 seed/桌数/剂量可以完全一样，只有这两维不同 ⇒ 少写一行就会把两张卡的臂配成同世界（§E246 那一族）。 */
     '#pushkey=' + (PUSH ? PUSHKEY : '-'),
+    /* §E266：提顺位这一臂的自由量（margin/bias）也必须进配对身份 —— 少写一行就会把两档配成同世界。 */
+    '#pushrank=' + (RANK ? (RANK_MARGIN + '/' + RANK_BIAS) : '-'),
     '#drainhp=' + ((R.MODES[MODE || 'multi'] || {}).drainHpMax),
     '#swap=' + (SWAP || '-'), '#arm\tidx\tnames\tgames\tfirst\tstrict'];
   for (const s of [{ arm: 'subject', r: champ }, { arm: 'ctrl', r: ctrl }]) {
