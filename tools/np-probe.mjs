@@ -100,8 +100,20 @@ async function main() {
   check('3 人：对手面板 2 个', panels === 2, 'mpanel=' + panels);
   const names = await evalJS(`Array.from(document.querySelectorAll('#side-0 h3,#side-1 .mpanel h3')).map(function(h){return h.textContent.trim();}).join('|')`);
   check('3 人：玩家名渲染', /玩家1/.test(names) && /玩家2/.test(names) && /玩家3/.test(names), names);
-  const modeDisabled = await evalJS(`document.getElementById('sel-mode').disabled`);
-  check('3 人：模式下拉被禁用（强制多人模式）', modeDisabled === true);
+  /* v1.6.5：页面不再有「模式」下拉（原来这条判的是"3 人时模式下拉被禁用"）。
+   * 现在人数与血量是两根独立轴 ⇒ 改判**建出来的局**：3 人必须落在多人族模式里，
+   * 而且三张多人专用卡**不该**再被标成"多人模式"（那是 2 人局的屏蔽标记）。 */
+  const probeMode = await evalJS(`(function(){
+    var g = window.EpirusUI.B.state, R = window.EpirusRules;
+    var nm = R.MULTI_ONLY.map(function (k) { return R.byKey[k].name; });
+    var ct = {};
+    document.querySelectorAll('#skillgrid button').forEach(function (b) {
+      var x = b.querySelector('.nm'); if (x && nm.indexOf(x.textContent) >= 0) ct[x.textContent] = (b.querySelector('.ct') || {}).textContent;
+    });
+    return { mode: g.modeKey, hp: g.mode.hp, n: g.p.length, blocked: nm.map(function (k) { return ct[k] === '多人模式' ? 1 : 0; }).join('') };
+  })()`);
+  check('3 人：建出的局确实是多人族模式', /^(multi|multi4|long)$/.test(String(probeMode.mode)), JSON.stringify(probeMode));
+  check('3 人：三张多人专用卡都没被标成「多人模式」（正对照）', probeMode.blocked === '000', JSON.stringify(probeMode));
   const multiSkills = await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button'));return b.filter(function(x){return !x.disabled;}).length;})()`);
   check('3 人：可用技能按钮 > 0', multiSkills > 0, '可用=' + multiSkills);
 

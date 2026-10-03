@@ -10,7 +10,7 @@
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.6.4 （2 人 + 3~5 人）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.6.5 （2~5 人 × 3/4/5 血）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
   </header>
 
   <nav class="tabs">
@@ -23,19 +23,22 @@
     <div class="side" id="side-0"></div>
     <div class="mid">
       <div class="toolbar">
-        <label>模式
-          <select id="sel-mode">
-            <option value="standard" selected>标准（2人·全技能）</option>
-            <option value="multi">多人（3-5人）</option>
-            <option value="long">长程（3-5人·5血）</option>
-          </select>
-        </label>
         <label>人数
           <select id="sel-players">
             <option value="2" selected>2 人</option>
             <option value="3">3 人</option>
             <option value="4">4 人</option>
             <option value="5">5 人</option>
+          </select>
+        </label>
+        <!-- v1.6.5（用户 10-03 夜裁定「把 2 人合并进多人，变成选人数 × 3血/5血正交，4 血也可以上」）：
+             原来那根「模式」下拉把**人数**和**血量**两件事捆在一根轴上（standard=2人3血 / multi=3-5人3血 / long=3-5人5血），
+             于是"2 人 · 5 血""4 血"这类组合根本点不出来。现在两根轴各自一个下拉，模式键由 `ui.js` 的查表算出来。 -->
+        <label>血量
+          <select id="sel-hp">
+            <option value="3" selected>3 血</option>
+            <option value="4">4 血</option>
+            <option value="5">5 血（长程）</option>
           </select>
         </label>
         <label>难度
@@ -47,7 +50,7 @@
         </label>
         <button class="ctl primary" id="btn-newgame">新对局</button>
         <button class="ctl" id="btn-champ-reset" title="清除本机自训/导入的冠军，改回内置冠军（页面原本优先用本机保存的那个）">用内置冠军</button>
-        <label title="终局收缩：从第 N 回合起，每回合末全员扣血（不可格挡、不计战功）。0 = 关闭。standard/multi 上限是 60 ⇒ 实际只在长程模式触发。">终局收缩
+        <label title="终局收缩：从第 N 回合起，每回合末全员扣血（不可格挡、不计战功）。0 = 关闭。&#10;⚠ 这里填的值会**覆盖**所选模式自带的起点：多人/4 血的模式自己写的是 45，长程走全局 100。缺省 100 ⇒ 页面上几乎看不到收缩（60 回合上限先响），而考卷用的是模式自己的 45。">终局收缩
           <input type="number" id="inp-sd" min="0" max="500" step="10" value="100" style="width:58px">
           <input type="number" id="inp-sd-dmg" min="1" max="5" step="1" value="1" style="width:42px">血/回合
         </label>
@@ -123,19 +126,19 @@
 <div id="overlay-root" class="overlay hidden"><div class="card" id="overlay-card"></div></div>
 
 <!-- 引擎（加载顺序即依赖顺序） -->
-<script src="js/core/rules.js?v=q0929b"></script>
-<script src="js/core/state.js?v=q0929b"></script>
-<script src="js/core/resolve.js?v=q0929b"></script>
-<script src="js/core/play.js?v=q0929b"></script>
-<script src="js/train/bots.js?v=q0929b"></script>
-<script src="js/train/policy.js?v=q0929b"></script>
-<script src="js/train/evo.js?v=q0929b"></script>
-<script src="js/train/trainer.js?v=q0929b"></script>
-<script src="js/bundled-champion.js?v=q0929b"></script>
-    <script src="js/bundled-champion-3p.js?v=q0929b"></script>
-<script src="js/champion-pack.js?v=q0929b"></script>
-<script src="js/ui/skill-tip.js?v=q0929b"></script>
-<script src="js/ui/bead-choice.js?v=q0929b"></script>
-<script src="js/ui/ui.js?v=q0929b"></script>
+<script src="js/core/rules.js?v=q1004a"></script>
+<script src="js/core/state.js?v=q1004a"></script>
+<script src="js/core/resolve.js?v=q1004a"></script>
+<script src="js/core/play.js?v=q1004a"></script>
+<script src="js/train/bots.js?v=q1004a"></script>
+<script src="js/train/policy.js?v=q1004a"></script>
+<script src="js/train/evo.js?v=q1004a"></script>
+<script src="js/train/trainer.js?v=q1004a"></script>
+<script src="js/bundled-champion.js?v=q1004a"></script>
+    <script src="js/bundled-champion-3p.js?v=q1004a"></script>
+<script src="js/champion-pack.js?v=q1004a"></script>
+<script src="js/ui/skill-tip.js?v=q1004a"></script>
+<script src="js/ui/bead-choice.js?v=q1004a"></script>
+<script src="js/ui/ui.js?v=q1004a"></script>
 </body>
 </html>

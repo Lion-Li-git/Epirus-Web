@@ -121,8 +121,10 @@ async function main() {
 
   await evalJS('(function(){var s=document.getElementById("sel-players"); s.value="5"; s.dispatchEvent(new Event("change"));})()');
   await sleep(300);
-  await evalJS('(function(){var s=document.getElementById("sel-mode"); var o=[].slice.call(s.options).filter(function(x){return x.value==="multi"||x.value==="long";})[0]; if(o){s.value=o.value; s.dispatchEvent(new Event("change"));}})()');
+  /* v1.6.5：页面没有「模式」下拉了 —— 人数与血量是两根正交轴，这里显式选 3 血并回读真建出来的模式键 */
+  await evalJS('(function(){var s=document.getElementById("sel-hp"); if(s){s.value="3"; s.dispatchEvent(new Event("change"));} return 1;})()');
   await sleep(400);
+  console.log('  5 人 · 3 血 → 模式键 =', await evalJS('(function(){var g=window.EpirusUI.B.state; return g.modeKey + "(hp" + g.mode.hp + ",n" + g.p.length + ")";})()'));
   await evalJS('(function(){var s=document.getElementById("sel-diff"); s.value="champ"; s.dispatchEvent(new Event("change"));})()');
   await sleep(200);
   await evalJS('document.getElementById("btn-newgame").click()');

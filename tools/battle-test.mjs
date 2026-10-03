@@ -127,17 +127,20 @@ async function main() {
   const lsAfter = await evalJS(`(()=>{try{return localStorage.getItem('epirus.champion3p')?'有':'无'}catch(e){return 'ERR'}})()`);
   check('已清掉 localStorage 里的旧冠军包（否则测的不是上线包）', lsAfter === '无', '清前=' + lsBefore + ' 清后=' + lsAfter);
 
-  /* ── 起局：5 人 + 难度=冠军（抽成函数，因为"用内置冠军"那段要起两次局）── */
+  /* ── 起局：5 人 + 难度=冠军（抽成函数，因为"用内置冠军"那段要起两次局）──
+   * v1.6.5：页面不再有「模式」下拉 —— 人数与血量是两根正交轴，模式键由 `ui.js` 查表算出来。
+   * 所以这里**回读真建出来的局**（`B.state.modeKey` / `mode.hp` / 座位数），而不是下拉写了什么。 */
   const setupBattle = async function () {
     await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='${PLAYERS}'; s.dispatchEvent(new Event('change'));})()`);
     await sleep(400);
-    const ms = await evalJS(`(()=>{const s=document.getElementById('sel-mode'); if(!s) return 'no-sel'; const o=[...s.options].find(x=>x.value==='multi'||x.value==='long'); if(!o) return 'no-opt'; s.value=o.value; s.dispatchEvent(new Event('change')); return o.value;})()`);
+    const st = await evalJS(`(()=>{const s=document.getElementById('sel-hp'); if(!s) return {fatal:'no-sel-hp'}; s.value='3'; s.dispatchEvent(new Event('change'));
+      const g=window.EpirusUI.B.state; return {mode:g.modeKey, hp:g.mode.hp, n:g.p.length};})()`);
     await sleep(500);
     const ds = await evalJS(`(()=>{const s=document.getElementById('sel-diff'); s.value='champ'; s.dispatchEvent(new Event('change')); return s.value;})()`);
     await sleep(300);
     await evalJS(`document.getElementById('btn-newgame').click()`);
     await sleep(900);
-    return { mode: ms, diff: ds };
+    return { mode: st.mode, hp: st.hp, n: st.n, diff: ds };
   };
   const aiSource = async function () {
     const t = await logText();
@@ -210,7 +213,9 @@ async function main() {
   const setup = await setupBattle();
   const modeSet = setup.mode, diffSet = setup.diff;
 
-  check('模式可设为多人/long', modeSet === 'multi' || modeSet === 'long', 'mode=' + modeSet);
+  check('两根轴查出的模式是多人族（3~5 人 · 3 血 ⇒ multi）', modeSet === 'multi', 'mode=' + modeSet + ' hp=' + setup.hp + ' n=' + setup.n);
+  check('血量轴真落到建局（选 3 血就是 3 血）', setup.hp === 3, 'mode.hp=' + setup.hp);
+  check('人数轴真落到座位数（PLAYERS=' + PLAYERS + '）', setup.n === PLAYERS, 'n=' + setup.n);
   check('难度可设为 champ（线上冠军当对手）', diffSet === 'champ', 'diff=' + diffSet);
   check('冠军包已加载（页面侧 EPIRUS_CHAMPION_3P 存在）', await evalJS('typeof window.EPIRUS_CHAMPION_3P !== "undefined"'));
   /* v1.5.11：终局收缩参数入口（起扣回合 / 每回合扣血）—— 存在、可改、会持久化 */
@@ -269,40 +274,47 @@ async function main() {
   console.log('  （参考）聚能环出现 ' + ringHits + ' 次；盾 ' + holoHits + ' 次；伤害 ' + dmgHits + ' 次');
   check('全程无 JS 错误', errors.length === 0, errors.length ? errors.slice(0, 3).join(' | ') : '0');
 
-  /* ── 第二段：长程模式（5 血）也要过一遍 ──
-   * 为什么：同一个 bundle 同时服务 multi 与 long，而 long 的回合上限高得多（140）——
+  /* ── 第二段：长程（5 血）**与本版新增的 4 血格**也要真打若干回合 ──
+   * 为什么：同一个 bundle 同时服务 multi/multi4/long，而 long 的回合上限高得多（140）——
    * 摆烂型冠军在长程里更难看（long-33 在 long 口径 57% 全是"熬"）。这里只做**有界**验证：
-   * 跑固定回合数，断言"真的有人受伤 + 没有套盾 spam + 无 JS 错误"，不强求跑到终局。 */
+   * 跑固定回合数，断言"真的有人受伤 + 没有套盾 spam + 无 JS 错误"，不强求跑到终局。
+   * v1.6.5：血量现在是一根独立的轴（`#sel-hp`），所以这一段的循环体就是"选档 → 回读建局 → 打几回合"。 */
   await evalJS(`document.getElementById('tab-battle').click()`);
   await sleep(250);
   await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='3'; s.dispatchEvent(new Event('change'));})()`);
   await sleep(400);
-  const m2 = await evalJS(`(()=>{const s=document.getElementById('sel-mode'); const o=[...s.options].find(x=>x.value==='long'); if(!o) return 'no-long'; s.value='long'; s.dispatchEvent(new Event('change')); return s.value;})()`);
-  await sleep(400);
   await evalJS(`(()=>{const s=document.getElementById('sel-diff'); s.value='champ'; s.dispatchEvent(new Event('change'));})()`);
-  await evalJS(`document.getElementById('btn-newgame').click()`);
-  await sleep(800);
-  check('长程模式可选并起局', m2 === 'long', 'mode=' + m2);
-  check('长程局 HP=5', await evalJS(`[...document.querySelectorAll('.statbar .stat')].some(s=>s.textContent.includes('HP')&&s.textContent.includes('5'))`));
-  const errBefore = errors.length;
-  for (let i = 0; i < 25 && !(await over()); i++) {
-    let acted = false;
-    for (const nm of ATK) {
-      if (!(await click(nm))) continue;
-      await sleep(150);
-      await evalJS(`(()=>{const r=document.getElementById('modal-root'); if(r && !r.classList.contains('hidden')){const b=document.querySelector('#modal-card #mbtn'); if(b) b.click();}})()`);
-      acted = true; break;
+  const playSomeRounds = async function (label, shotName) {
+    const errBefore = errors.length;
+    for (let i = 0; i < 25 && !(await over()); i++) {
+      let acted = false;
+      for (const nm of ATK) {
+        if (!(await click(nm))) continue;
+        await sleep(150);
+        await evalJS(`(()=>{const r=document.getElementById('modal-root'); if(r && !r.classList.contains('hidden')){const b=document.querySelector('#modal-card #mbtn'); if(b) b.click();}})()`);
+        acted = true; break;
+      }
+      if (!acted) { if (!(await click('蓄能'))) await click('ジ'); }
+      await sleep(200);
     }
-    if (!acted) { if (!(await click('蓄能'))) await click('ジ'); }
-    await sleep(200);
+    const t = await logText();
+    const dmg = (t.match(/伤害/g) || []).length;
+    const holo = (t.match(/全息屏障/g) || []).length;
+    await shot(join(OUT, shotName));
+    check(label + '：有真实伤害', dmg >= 3, '「伤害」' + dmg + ' 次');
+    check(label + '：没有套盾 spam', holo <= 12, '全息屏障 ' + holo + ' 次');
+    check(label + '：无新增 JS 错误', errors.length === errBefore, (errors.length - errBefore) + ' 个新错误');
+  };
+  for (const wantHp of [5, 4]) {
+    const m2 = await evalJS(`(()=>{const s=document.getElementById('sel-hp'); if(!s) return {fatal:'no-sel-hp'}; s.value='${wantHp}'; s.dispatchEvent(new Event('change'));
+      const g=window.EpirusUI.B.state; return {mode:g.modeKey, hp:g.mode.hp, n:g.p.length, seats:g.p.map(x=>x.hp).join('/')};})()`);
+    await evalJS(`document.getElementById('btn-newgame').click()`);
+    await sleep(800);
+    check(wantHp + ' 血那一格能选、能起局', m2 && m2.hp === wantHp && m2.mode === (wantHp === 5 ? 'long' : 'multi4'), JSON.stringify(m2));
+    check(wantHp + ' 血局每个座位初始血都真等于 ' + wantHp, m2 && m2.seats === new Array(m2.n).fill(wantHp).join('/'), m2 && m2.seats);
+    check(wantHp + ' 血局 HP 显示正确', await evalJS(`[...document.querySelectorAll('.statbar .stat')].some(s=>s.textContent.includes('HP')&&s.textContent.includes('${wantHp}'))`));
+    await playSomeRounds(wantHp + ' 血格（' + (wantHp === 5 ? 'long' : 'multi4') + '）', 'battle-04-' + (wantHp === 5 ? 'long' : 'multi4') + '.png');
   }
-  const txtL = await logText();
-  const dmgL = (txtL.match(/伤害/g) || []).length;
-  const holoL = (txtL.match(/全息屏障/g) || []).length;
-  await shot(join(OUT, 'battle-04-long.png'));
-  check('长程局里有真实伤害', dmgL >= 3, '「伤害」' + dmgL + ' 次');
-  check('长程局没有套盾 spam', holoL <= 12, '全息屏障 ' + holoL + ' 次');
-  check('长程局无新增 JS 错误', errors.length === errBefore, errors.length - errBefore + ' 个新错误');
 
   console.log('\n=== 日志尾部（供人工核对）===');
   console.log(txt.slice(-1200));

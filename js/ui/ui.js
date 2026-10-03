@@ -11,10 +11,24 @@
   const NAME = ['你', '电脑'];
   const CAT_NM = { energy: '能量', attack: '攻击', defense: '防御', special: '特殊' };
   /* v1.5.18：删掉 `fast` / `lucky` 两个标签 —— 它们对应的模式已从 `MODES` 里删除（用户裁定）。 */
-  const MODE_NM = { standard: '标准', multi: '多人', long: '长程(5血)' };
-  /* v1.4.0：多人族模式（3-5 人可用）。加长程模式时必须同时登记在这里，
-   * 否则 newGame / 人数切换会把用户选的模式悄悄改回 multi。 */
-  const MULTI_MODES = ['multi', 'long'];
+  const MODE_NM = { standard: '标准(2人·3血)', multi: '多人(3血)', multi4: '4 血', long: '长程(5血)' };
+  /* ===== v1.6.5（用户 10-03 夜裁定「把 2 人合并进多人，变成选人数 × 3血/5血正交，4 血也可以上，实现连续性」）=====
+   * 原来页面有一根「模式」下拉，它其实**同时**决定了人数与血量（standard=2人3血 / multi=3~5人3血 / long=3~5人5血），
+   * 于是「2 人 · 5 血」「任意人数 · 4 血」这类组合在页面上点不出来。现在两根轴各自一个下拉（`#sel-players` / `#sel-hp`），
+   * **模式键由这两根轴查出来** —— 下面这张表是唯一的映射来源：
+   *   · 门 D28（本版重写）钉"这张表 + 2 人 3 血那一格的像必须恰好等于 `R.MODES` 的全部 key"：
+   *     漏一个 = 有模式没有入口（D28 当年就是这么抓到 `fast`/`lucky` 的），多一个 = 幽灵选项。
+   *   · 血量 4 是本版新增的一格规则（`R.MODES.multi4`），其余字段照 `multi` ⇒ "4 血 = 3 血那套 + 多一格血"，
+   *     不是第四套规则。
+   * ⚠ `standard` 只在 **2 人 · 3 血** 那一格命中：它是 v1.0.0 功能冻结的那套（含"收缩起点 100 > 回合上限 60 ⇒ 一局里永不触发"
+   *   这条历史形状）。2 人 + 4/5 血走 multi4/long，那里收缩/回合上限是真的会起作用 —— 这是**规则差异**，不是 bug。 */
+  const HP_MODE = { 3: 'multi', 4: 'multi4', 5: 'long' };
+  const HP_MODE_2P = 'standard';
+  function modeFor(hp, players) {
+    const h = parseInt(hp, 10) || 3;
+    if ((parseInt(players, 10) || 2) === 2 && h === 3) return HP_MODE_2P;
+    return HP_MODE[h] || HP_MODE[3];
+  }
 
   /* ---------- 小工具 ---------- */
   function skillName(key) { return R.byKey[key] ? R.byKey[key].name : key; }
@@ -23,7 +37,7 @@
 
   /* ---------- 对局状态 ---------- */
   const B = {
-    state: null, modeKey: 'standard', diff: 'medium', players: 2, multi: false,
+    state: null, modeKey: 'standard', diff: 'medium', players: 2, hp: 3, multi: false,
     roundStarted: false, locked: false, snap: null, aiKey: null,
     evCursor: 0, transcript: [], aiHistory: [],
     roundStartSnapshot: null, warnedChampNoTrain: false, undoUsed: false
@@ -62,10 +76,10 @@
    *   ③ **回退 = 把 `evo.js` 里那个常数改成 0**（一行）。 */
 
   function newGame() {
+    applyAxes();   // v1.6.5：人数 × 血量 → 模式键（旧版这根叫 `syncModeOptions`，它按人数把"标准"置灰）
     const n = B.players || 2;
     B.multi = n > 2;
     if (typeof syncDiffOptions === 'function') syncDiffOptions();
-    syncModeOptions();   // v1.4.0：按人数校验模式（原来无条件改回 'multi'，会吃掉用户选的长程模式）
     B.state = S.createState(B.modeKey, null, n, sdOpts());
     /* v1.5.66：**每局一个槽位/顺序盐** —— 让目标枚举顺序与结算相位在页面上也不再有身份
      * （训练与评测早就带盐；此前只有页面缺省 0 ⇒ 页面走确定性顺序）。 */
@@ -76,7 +90,8 @@
     closeOverlay();
     buildSkillGrid();
     renderSide(0); renderSide(1);
-    logClear('新对局：' + (B.multi ? n + ' 人 · ' + (MODE_NM[B.modeKey] || '多人') : MODE_NM[B.modeKey] + '模式') + ' · 难度=' + diffName(B.diff) +
+    /* v1.6.5：这行不再分"多人/标准"两种写法 —— 人数与血量是两根明写的轴，模式名只是它们的查表结果。 */
+    logClear('新对局：' + n + ' 人 · ' + (MODE_NM[B.modeKey] || B.modeKey) + ' · 难度=' + diffName(B.diff) +
       ' · 对手AI=' + aiInfo().source + ' · 每人初始 ' + B.state.mode.hp + ' 血');
     hint('请选择技能出招 —— 双方同时出手，按优先级结算。');
   }
@@ -663,8 +678,10 @@
     }, 160 + Math.random() * 120);
   }
 
-  /* 测试钩子（tools/np-probe.mjs 用）：只暴露对象引用，不改变游戏逻辑 */
-  if (typeof window !== 'undefined') window.EpirusUI = { B: B, newGame: newGame, aiInfo: aiInfo, showRecap: showRecap, refresh: function () { buildSkillGrid(); renderSide(0); renderSide(1); } };
+  /* 测试钩子（tools/np-probe.mjs 用）：只暴露对象引用，不改变游戏逻辑
+   * v1.6.5：加 `modeFor` ⇒ smoke 可以**在真页面里**把 12 种（人数 × 血量）组合全过一遍，
+   * 断言"映射的像恰好 = R.MODES 的全部 key"（这是行为断言，不是扫文本 —— 静态钉会被重构架空，本仓记过账）。 */
+  if (typeof window !== 'undefined') window.EpirusUI = { B: B, newGame: newGame, aiInfo: aiInfo, showRecap: showRecap, modeFor: modeFor, refresh: function () { buildSkillGrid(); renderSide(0); renderSide(1); } };
 
   function chooseAI(state, legal) {
     const d = B.diff;
@@ -1297,35 +1314,26 @@
     ]);
   }
 
-  /* v1.4.0：人数 ↔ 可用模式的一致性。
-   * 2 人：只能用 standard；3-5 人：只能用 multi(3血) / long(5血)。
-   * 用 option.disabled 而不是整体禁掉下拉 —— 否则 3 人局永远只能 3 血。 */
-  function syncModeOptions() {
-    const sel = $('sel-mode');
-    if (!sel) return;
-    const multi = (B.players || 2) > 2;
-    for (let i = 0; i < sel.options.length; i++) {
-      const isMulti = MULTI_MODES.indexOf(sel.options[i].value) >= 0;
-      sel.options[i].disabled = multi ? !isMulti : isMulti;
-    }
-    if (multi && MULTI_MODES.indexOf(B.modeKey) < 0) B.modeKey = 'multi';
-    if (!multi && MULTI_MODES.indexOf(B.modeKey) >= 0) B.modeKey = 'standard';
-    sel.value = B.modeKey;
+  /* v1.6.5：人数 × 血量 → 模式键（`modeFor` 那张表是唯一来源）。
+   * 旧版这根叫 `syncModeOptions`，方向是反的：先选模式、再把"与人数不符"的选项置灰 ⇒
+   * 「2 人 · 5 血」「任意人数 · 4 血」在界面上根本不存在。现在两根下拉都可点，模式只是查表结果。 */
+  function applyAxes() {
+    const pl = $('sel-players'), hp = $('sel-hp');
+    if (pl) B.players = parseInt(pl.value, 10) || 2;
+    B.hp = hp ? (parseInt(hp.value, 10) || 3) : 3;
+    B.modeKey = modeFor(B.hp, B.players);
+    if (hp && hp.value !== String(B.hp)) hp.value = String(B.hp);   // 非法值回落后写回，界面与实际建的模式不许分叉
   }
 
   /* ---------- 事件绑定 ---------- */
   function bind() {
     $('tab-battle').onclick = function () { showTab('battle'); };
     $('tab-train').onclick = function () { showTab('train'); };
-    $('sel-mode').onchange = function () { B.modeKey = $('sel-mode').value; newGame(); };
-    syncModeOptions();   // 首屏同步一次
+    applyAxes();   // 首屏同步一次（人数/血量 → 模式键）
     $('btn-lastlog').onclick = showLastBattle;
-    $('sel-players').onchange = function () {
-      B.players = parseInt($('sel-players').value, 10) || 2;
-      syncModeOptions();   // v1.4.0：3-5 人时把"标准"置灰、放开 multi/long 的选择
-      syncDiffOptions();
-      newGame();
-    };
+    /* v1.6.5：两根轴各自的重开逻辑一样（换局），差别只在 `newGame` 里查出来的 modeKey 不同。 */
+    $('sel-players').onchange = function () { newGame(); };
+    $('sel-hp').onchange = function () { newGame(); };
     $('sel-diff').onchange = function () { B.diff = $('sel-diff').value; hint('难度已切换：' + diffName(B.diff) + '（对局中即时生效）'); };
     $('btn-newgame').onclick = newGame;
     /* v1.5.10（用户要求）：清掉本机冠军、改回内置冠军 */

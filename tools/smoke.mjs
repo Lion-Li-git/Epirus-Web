@@ -129,19 +129,58 @@ async function main() {
   await shot(join(tmpdir(), 'screenshot-train.png'));
   console.log('screenshot-train saved');
 
-  // --- v1.4.0: long mode (5 hp) must be selectable and startable in the real UI ---
+  /* --- v1.6.5\uff08\u7528\u6237\u88c1\u5b9a\u300c\u628a 2 \u4eba\u5408\u5e76\u8fdb\u591a\u4eba\uff0c\u53d8\u6210\u9009\u4eba\u6570 \u00d7 3\u8840/5\u8840\u6b63\u4ea4\uff1b4 \u8840\u4e5f\u53ef\u4ee5\u4e0a\u300d\uff09\uff1a
+   * \u628a **12 \u79cd\u7ec4\u5408**\u5728\u771f\u9875\u9762\u91cc\u5168\u8fc7\u4e00\u904d\uff0c\u5224\u7684\u662f\u884c\u4e3a\u800c\u4e0d\u662f\u6587\u672c
+   * \uff08\u9759\u6001\u90a3\u534a\u5728 `np-test` D28/D226\uff0c\u4f1a\u88ab\u91cd\u6784\u67b6\u7a7a\uff1b\u8fd9\u4e00\u534a\u8981\u771f\u8d77\u6d4f\u89c8\u5668\u624d\u80fd\u8bc1\u660e"\u9009 4 \u8840\u5efa\u51fa\u6765\u7684\u5c40\u771f\u7684\u662f 4 \u8840"\uff09\u3002
+   * \u26a0 \u7528\u6237\u70b9\u540d\u8981\u590d\u6d4b\u7684\u90a3\u6761 = **\u4eba\u6570\u5230 2 \u65f6\u4e09\u5f20\u591a\u4eba\u4e13\u7528\u6280\u80fd\u81ea\u52a8\u5c4f\u853d**\uff1a\u65e7\u7248\u5b83\u7531 `standard` \u7684\u5361\u8868\u6321\u7740\uff0c
+   *   \u73b0\u5728 2 \u4eba\u4e5f\u80fd\u5f00 4/5 \u8840\uff08\u90a3\u91cc\u7684\u5361\u8868\u662f AVAILABLE_MULTI\uff09\uff0c\u552f\u4e00\u8fd8\u6321\u7740\u5b83\u7684\u662f `canUseSkillInMode` \u91cc"\u5b58\u6d3b\u4eba\u6570 \u22642"\u90a3\u4e00\u652f
+   *   \u21d2 \u5fc5\u987b\u9010\u8840\u91cf\u5224\uff0c\u5e76\u4e14**3~5 \u4eba\u90a3 9 \u683c\u8981\u5f53\u6b63\u5bf9\u7167**\uff08\u5426\u5219\u8fd9\u6761\u5224\u636e\u5728"\u6c38\u8fdc\u8bf4\u591a\u4eba\u6a21\u5f0f"\u7684\u574f\u5b9e\u73b0\u4e0a\u4e5f\u7eff\uff09\u3002 */
   await evalJS(`document.getElementById('tab-battle').click()`);
   await sleep(250);
-  check('mode select has long', await evalJS(`[...document.querySelectorAll('#sel-mode option')].some(o=>o.value==='long')`));
-  await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='3'; s.dispatchEvent(new Event('change'));})()`);
-  await sleep(500);
-  check('standard disabled at 3 players', await evalJS(`(()=>{const o=[...document.querySelectorAll('#sel-mode option')].find(x=>x.value==='standard'); return !!o && o.disabled;})()`));
-  check('long enabled at 3 players', await evalJS(`(()=>{const o=[...document.querySelectorAll('#sel-mode option')].find(x=>x.value==='long'); return !!o && !o.disabled;})()`));
-  check('mode select itself not disabled (else only 3hp)', await evalJS(`!document.getElementById('sel-mode').disabled`));
-  await evalJS(`(()=>{const s=document.getElementById('sel-mode'); s.value='long'; s.dispatchEvent(new Event('change'));})()`);
-  await sleep(700);
-  check('long game log says 5 hp', await evalJS(`document.getElementById('logbox').textContent.includes('\u4e94 \u8840') || document.getElementById('logbox').textContent.includes('5 \u8840')`));
-  check('long game shows HP 5', await evalJS(`[...document.querySelectorAll('.statbar .stat')].some(s=>s.textContent.includes('HP')&&s.textContent.includes('5'))`));
+  const sweep = await evalJS(`(function(){
+    const R = window.EpirusRules, U = window.EpirusUI;
+    const pl = document.getElementById('sel-players'), hpSel = document.getElementById('sel-hp');
+    if (!pl || !hpSel || !U || !U.B) return { fatal: 'missing #sel-players / #sel-hp / EpirusUI' };
+    const names = R.MULTI_ONLY.map(function (k) { return R.byKey[k].name; });
+    const rows = [];
+    for (const p of [2, 3, 4, 5]) for (const h of [3, 4, 5]) {
+      pl.value = String(p); pl.dispatchEvent(new Event('change'));
+      hpSel.value = String(h); hpSel.dispatchEvent(new Event('change'));
+      const st = U.B.state;
+      const ct = {};
+      document.querySelectorAll('#skillgrid button').forEach(function (b) {
+        const nm = b.querySelector('.nm');
+        if (nm && names.indexOf(nm.textContent) >= 0) ct[nm.textContent] = { c: (b.querySelector('.ct') || {}).textContent, d: !!b.disabled };
+      });
+      rows.push({
+        p: p, h: h, modeKey: st.modeKey, modeHp: st.mode.hp, n: st.p.length,
+        initHp: st.p.map(function (x) { return x.hp; }).join('/'),
+        cardCt: names.map(function (x) { return ct[x] ? ct[x].c : '(\u7f3a\u5361)'; }).join('|'),
+        cardDis: names.map(function (x) { return ct[x] ? (ct[x].d ? 1 : 0) : 'x'; }).join('')
+      });
+    }
+    return { rows: rows, modeKeys: Object.keys(R.MODES), blockedText: '\u591a\u4eba\u6a21\u5f0f|\u591a\u4eba\u6a21\u5f0f|\u591a\u4eba\u6a21\u5f0f' };
+  })()`);
+  if (sweep.fatal) {
+    check('12 \u683c\u7ec4\u5408\u626b\u63cf\u53ef\u8dd1', false);
+    console.log('  sweep fatal =', sweep.fatal);
+  } else {
+    const rows = sweep.rows;
+    check('12 \u79cd\uff08\u4eba\u6570 \u00d7 \u8840\u91cf\uff09\u7ec4\u5408\u5168\u90e8\u5efa\u5f97\u51fa\u5c40', rows.length === 12);
+    check('\u6bcf\u683c\u7684\u4eba\u6570\u771f\u843d\u5230\u5ea7\u4f4d\u6570', rows.every(r => r.n === r.p));
+    check('\u6bcf\u683c\u7684\u8840\u91cf\u771f\u843d\u5230 mode.hp \u4e0e\u6bcf\u4e2a\u5ea7\u4f4d\u7684\u521d\u59cb\u8840', rows.every(r => r.modeHp === r.h && r.initHp === new Array(r.p).fill(r.h).join('/')));
+    const seen = {};
+    rows.forEach(r => { seen[r.modeKey] = 1; });
+    check('\uff08\u4eba\u6570 \u00d7 \u8840\u91cf\uff09\u6620\u5c04\u7684\u50cf\u6070\u597d\u76d6\u4f4f MODES \u5168\u90e8 key\uff08\u65e0\u5e7d\u7075\u3001\u65e0\u6ca1\u5165\u53e3\u7684\u6a21\u5f0f\uff09',
+      sweep.modeKeys.every(k => seen[k]) && Object.keys(seen).length === sweep.modeKeys.length);
+    check('2 \u4eba\u5c40\uff1a\u4e09\u5f20\u591a\u4eba\u4e13\u7528\u5361\u5168\u90e8\u6807\u6ce8\u4e3a\u300c\u591a\u4eba\u6a21\u5f0f\u300d\uff08\u7528\u6237\u70b9\u540d\u7684\u56de\u5f52\uff0c\u9010\u8840\u91cf\u5224\uff09',
+      rows.filter(r => r.p === 2).every(r => r.cardCt === sweep.blockedText));
+    check('\u6b63\u5bf9\u7167\uff1a3~5 \u4eba\u5c40\u90a3\u4e09\u5f20\u4e0d\u8bb8\u88ab\u5f53\u300c\u591a\u4eba\u4e13\u7528\u300d\u6321\u6389',
+      rows.filter(r => r.p > 2).every(r => r.cardCt !== sweep.blockedText));
+    console.log('  sweep 4 \u8840\u683c =', JSON.stringify(rows.filter(r => r.h === 4).map(r => r.p + '\u4eba\u2192' + r.modeKey + '(hp' + r.modeHp + ')')));
+    console.log('  sweep 2 \u4eba\u683c =', JSON.stringify(rows.filter(r => r.p === 2).map(r => r.h + '\u8840\u2192' + r.modeKey + ' \u5361=' + r.cardCt)));
+    await shot(join(tmpdir(), 'screenshot-multi4.png'));
+  }
   await shot(join(tmpdir(), 'screenshot-long.png'));
   console.log('screenshot-long saved');
 

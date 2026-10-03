@@ -121,8 +121,22 @@
   const AVAILABLE_MULTI = skills;
 
   const MODES = {
+    /* ===== v1.6.5（用户 10-03 夜裁定「把 2 人合并进多人，变成选人数 × 3血/5血正交；4 血也可以上，实现连续性」）=====
+     * ① **新增 `multi4`** = `multi` 那一套，只把血量 3 → 4（5 珠价、3 回合封锁、摄魂窗口 HP≤1、收缩起点 45、回合上限走全局 60 全照抄）
+     *   ⇒ 它是"多一格血"，**不是第四套规则**。加它进规则表而不是在页面里改初始血量的理由：血量是引擎读的真值
+     *   （`state.js:61` 建局取 `mode.hp`、`js/train/policy.js:195/406` 的血量特征按 `state.mode.hp` 归一）⇒
+     *   页面自己改 state 会造出"表上写 3、局里是 4"的第二份真源，而且工具侧无法复现这一档（`--mode=multi4` 才量得到）。
+     * ② **`minPlayers` / `maxPlayers` 两个字段删掉**：v1.6.5 实测**全库零消费者**（只剩 `np-test` 自建夹具里的一行字面量，不读 MODES），
+     *   真拦人数的从来是页面下拉 + 旧 `syncModeOptions` 的置灰。本版把人数变成页面上独立的一根轴之后，
+     *   `long` 也可能只开 2 人（`#sel-players`=2 × `#sel-hp`=5）⇒ 这个字段就从"没人读的死装饰"变成**会说谎的字段**。
+     *   人数的边界现在只有一个来源：`index.html` 的 `#sel-players`（2~5）。
+     * ⚠ 这一条是**规则表换代**：`rules.js` 是指纹五件套之一 ⇒ 指纹变、门 **D16** 会红。处理按 v1.5.166 的先例：
+     *   先证明既有三个模式的读数**逐位不变**（同种子配对复跑、落盘字节比对，见 CHANGELOG v1.6.5），
+     *   再把新指纹 + 这段证据写进两个 bundle 的 `meta.rulesFingerprint`/`fingerprintRefresh`
+     *   —— **权重字节不动、不 promote、不换包**，所以老用户拿到的还是同一颗冠军。 */
     standard: { name: '标准模式', hp: 3, skills: AVAILABLE_2P, rule: '' },
-    multi: { name: '多人模式(3-5人)', hp: 3, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 1, suddenDeath: 45 },   // v1.5.65：见下
+    multi: { name: '多人模式(3-5人)', hp: 3, skills: AVAILABLE_MULTI, rule: '', drainHpMax: 1, suddenDeath: 45 },   // v1.5.65：见下
+    multi4: { name: '多人模式(4血·2-5人)', hp: 4, skills: AVAILABLE_MULTI, rule: '', drainHpMax: 1, suddenDeath: 45 },   // v1.6.5：= multi 那一套 + 一格血
     /* v1.4.0 长程模式（5 血）—— 用户 2026-09-12 提出：线下靠多人混乱达成平衡，
      * 程序里 3 血让最优线"太明显"。算术上确实如此：v1.3.60 实测 ep 收入只有 +1/回合
      * （resolve.js:501 只有 ジ 给），所以任何 ≥2 ジ 的卡都要 2+ 回合攒钱，而任何多回合轨迹
@@ -149,7 +163,7 @@
      *   ⚠️ 同时记下我这次自抓的假效应：在 `temp=0.15` 随机场里三档"自然态"差到 −3.8pt 且"超 2SE"，但主体出手 = 0
      *      ⇒ 那只能是 `legal` 集合变长扰动 softmax 分母的抽样噪声，**不许当强度证据**（官方考卷逐位相同正好反证）。
      * ⇒ 用户裁定取 ≤2。行为变化范围见 CHANGELOG v1.5.174（新旧引擎同种子配对复现，不是估计）。 */
-    long: { name: '长程模式(5血·3-5人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', minPlayers: 3, maxPlayers: 5, drainHpMax: 2, maxRounds: 140 }
+    long: { name: '长程模式(5血·2-5人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', drainHpMax: 2, maxRounds: 140 }
     /* v1.5.65（第五轮复核 §4-2，第四轮就提过）：**multi 的终局收缩必须落进回合上限内**。
      * 病：multi 不设 `suddenDeath` ⇒ 走全局 `SUDDEN_DEATH = 100`，而回合上限是 `MAX_ROUNDS = 60`
      * ⇒ **收缩在多人局永不触发** ⇒ "不打"零代价（守到哨声就行），场 B 的严格胜率上限恒为 0（实测 60 回合 100% 平局）。
@@ -157,10 +171,13 @@
      * 只惩罚"拖到 45 回合还不清场"）。收缩后血多者活得更久 ⇒ **任何伤害都会转化为胜负**（而非平局）。
      * 反证：本版守门 D57 会在"4 席全被动"场里要求出现分出胜负的局（修前必然 0/红）。 */
     /* v1.5.18（用户裁定）：**删除** `fast`（快速模式）与 `lucky`（欧皇模式）。
-     * 起因（第三方复核 §3-2）：这两个模式**没有入口**（`index.html` 的 `#sel-mode` 只有 standard/multi/long）、
+     * 起因（第三方复核 §3-2）：这两个模式**没有入口**（当时 `index.html` 的 `#sel-mode` 只有 standard/multi/long；
+     *   ⚠ v1.6.5 起这根下拉已删，入口变成「人数 × 血量」两根轴 ⇒ 判据在门 D28/D226）、
      * 没有工具/服务端引用，但 `MODES` 里还留着 `fast`、连带 `guardLimit: 2` 这个**纯死字段**
      * （全库零消费者）与 `state.js`/`play.js` 里两条 `state.modeKey === 'fast'` 分支，
      * 而 `tests/spec.js` 的 R52 用例**还在跑** ⇒ 守的是一条不可达的路径。
+     * ⚠ 同一个"纯死字段"的形状在 v1.6.5 又出现一次（`minPlayers`/`maxPlayers` 零消费者，而人数变成了页面的一根轴）
+     *   ⇒ 处理方式照这次：删字段 + 门 D226⑥ 钉它不许回来，而不是留着让它说假话。
      * 现状"有实现、有测试、无入口"是最容易骗过自己的形态（作者本人都以为删了）——
      * 用户裁定"快速和欧皇模式去掉"，所以这里删干净（连 `guardStreak` 一起）。
      * 原始规则里的这两个模式（含**吸血鬼模式**）登记为"本程序不做"，见 `docs/RULES-2P.md` 的模式表。

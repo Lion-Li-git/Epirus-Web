@@ -1871,6 +1871,149 @@ t('D225 §E275/§E284 摄魂指法的"残血只在**探索里**软提升"档（e
   const dnLines = dnBoth.out.split('\n').filter(function (l) { return l.indexOf('[shipdrain') === 0; }).join('\n');
   ok(dnLines.indexOf('顶成') < 0, '⑨h **显式给了就不许顶**（实测 `[shipdrain]` 行里含顶档=' + (dnLines.indexOf('顶成') >= 0) + '）⇒ "旗标优先"是这条纪律的另一半');
   ok(/引擎档 = 1/.test(dnLines), '⑨i 显式档也要由引擎回读后印在**它自己那行**里（实测该行=' + (dnLines.split('\n')[0] || '(没有 shipdrain 行)').slice(0, 90) + '）');
+
+  /* ===== ⑩ 文档里"默认"两个字必须跟**引擎回读**一致（v1.6.4 刚踩的那颗）=====
+   * 起因：这一档翻成默认开之后，README 里那一节（v1.6.0 写的"③ …默认留 0=关"）**没人回去改** ⇒
+   * 下一个人照 README 会去关一个已经是开的开关，或者更糟：把"默认关"当成事实写进新的裁定里。
+   * 这正是门 D224⑩ 那条腿的反方向形状（那条钉"文档不许指一个已删的旋钮"，这条钉"文档不许说反现在的默认值"），
+   * 而且它比静态钉更严：**判据里的默认值是从 `evo.js` 现读的**，翻档时两边一起动，文档不动就红。
+   * ⚠ 只判 README 与 CHANGELOG 的**当前版条目**（第一个 `## v` 到第二个之间）——
+   *   历史条目写"当时默认 0=关"是**正确的记录**，不许被今天的默认值判红（本仓的账是逐版冻结的）。 */
+  const dnDefault = Number((/let DRAIN_PUSH = (\d+);/.exec(evoSrc) || [])[1]);
+  ok(dnDefault === 0 || dnDefault >= 1, '⑩a 能从 `evo.js` 读出 `DRAIN_PUSH` 的默认整数（读不到 = 这条腿变成装饰）');
+  const onNow = dnDefault >= 1;
+  const OFF_WORDS = ['默认 0=关', '默认留 0', '默认 0 ⇒', '默认值是 0', '默认关'];
+  const ON_WORDS = ['默认 1=开', '默认 1（开）', '默认开', '起**默认 1=开**'];
+  const badWords = onNow ? OFF_WORDS : ON_WORDS;
+  const scanDocs = function (label, text) {
+    const hits = [];
+    text.split('\n').forEach(function (l, i) {
+      if (l.indexOf('DRAIN_PUSH') < 0) return;
+      for (const w of badWords) if (l.indexOf(w) >= 0) hits.push(label + ':' + (i + 1) + '「' + w + '」');
+    });
+    return hits;
+  };
+  const readmeSrc = readFileSync('README.md', 'utf8');
+  const cgSrc = readFileSync('CHANGELOG.md', 'utf8');
+  const cgCur = cgSrc.slice(cgSrc.indexOf('## v'), cgSrc.indexOf('## v', cgSrc.indexOf('## v') + 5));
+  ok(cgCur.length > 40 && /^## v/.test(cgCur), '⑩b CHANGELOG 当前版条目切得出来（切不出 = ⑩d 恒真好绿，记忆第二十五条）');
+  ok(readmeSrc.indexOf('DRAIN_PUSH') >= 0,
+    '⑩c README 必须仍在册描述这一档（README 的规矩是"只留当前版本"⇒ 默认档是玩家可见事实，掉了登记就是漂移起点）');
+  const docHits = scanDocs('README', readmeSrc).concat(scanDocs('CHANGELOG(当前版)', cgCur));
+  eq(docHits.length, 0,
+    '⑩d 文档里凡提到 `DRAIN_PUSH` 的那一行，都不许写着**与当前默认相反**的说法（引擎现读 = ' + dnDefault + (onNow ? '=开' : '=关') + '）：'
+    + docHits.join(' ‖ ') + ' ⇒ 翻档要连文档一起翻，否则下一个人按文档去关一个已经开着的开关');
+});
+
+t('D226 §E285 人数 × 血量正交（v1.6.5 · 用户裁定「把 2 人合并进多人，变成选人数 × 3血/5血正交；4 血也可以上，实现连续性」）：`multi4` = `multi` 那一套 + 一格血 · 页面那张映射表的像必须恰好盖住 MODES 全部 key · **2 人时三张多人专用卡在 4/5 血格上也要自动屏蔽**（用户点名要复测的那条）· 第三根「模式」轴与零消费者的 minPlayers 都不许复活', function () {
+  const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
+  const html = readFileSync('index.html', 'utf8');
+  const rulesSrc = readFileSync('js/core/rules.js', 'utf8');
+
+  /* ===== ① 4 血是"多一格血"，不是第四套规则 ⇒ 除 hp/name 外**逐字段**与 multi 同值 =====
+   * 这条钉的是我这一版的设计决定：以后谁想给 4 血配一套新门槛/新上限，必须**同时改这条腿**，
+   * 也就是必须过一次用户裁定级（`BIG_T` 的价、摄魂窗口、收缩起点都是裁定过的数）。 */
+  const m4 = R.MODES.multi4, m3 = R.MODES.multi;
+  ok(!!m4 && !!m3, '①a `R.MODES.multi4` 与 `R.MODES.multi` 都必须在册');
+  eq(m4.hp, 4, '①b `multi4.hp` = 4');
+  eq(m4.drainHpMax, m3.drainHpMax, '①c 摄魂窗口与 `multi` 同值（不同就是第四套规则了）');
+  eq(m4.suddenDeath, m3.suddenDeath, '①d 终局收缩起点与 `multi` 同值');
+  eq(m4.maxRounds, m3.maxRounds, '①e 回合上限与 `multi` 同值（两边都不设 ⇒ 都走全局 60）');
+  eq(m4.skills.length, m3.skills.length, '①f 卡表与 `multi` 同长（都是 AVAILABLE_MULTI，含三张多人专用）');
+  eq(R.MODES.standard.hp, 3, '①g `standard` 仍是 3 血 —— 2 人 · 3 血那一格走的是 v1.0.0 冻结档，本版没动它');
+
+  /* ===== ② 建局真取到 4 血（`state.mode.hp` 与每个座位的初始血一起判，缺一半就是"表上写 4、局里是 3"） ===== */
+  for (let n = 2; n <= 5; n++) {
+    const st = S.createState('multi4', { next: mulberry32(4000 + n) }, n);
+    eq(st.mode.hp, 4, '② n=' + n + ' 的 multi4 局 `mode.hp` 必须是 4');
+    eq(st.p.length, n, '② n=' + n + ' 的座位数必须真等于 n（页面那根人数轴要能落到 2~5 的每一格）');
+    for (let i = 0; i < n; i++) eq(st.p[i].hp, 4, '② n=' + n + ' 席 ' + i + ' 的初始血必须是 4');
+  }
+
+  /* ===== ③ 映射只有一份来源，且它的**像**恰好 = MODES 的全部 key =====
+   * 静态钉的是"表在不在、值对不对"；真跑 `modeFor` 的行为版在 `tools/smoke.mjs`（浏览器里把 12 种组合全过一遍）。
+   * 两遍都要：静态会被重构架空（本仓记过账），行为版需要起浏览器、进不了 np 的快速路径。 */
+  const tbl = /const HP_MODE = \{([^}]*)\}/.exec(uiSrc);
+  ok(!!tbl, '③a `ui.js` 里那张 (血量 → 模式键) 表必须还在，且是这个字面形状（映射不许有第二份来源）');
+  const hpMap = {};
+  String(tbl ? tbl[1] : '').split(',').forEach(function (kv) {
+    const p = kv.split(':');
+    if (p.length === 2) hpMap[p[0].trim()] = p[1].trim().replace(/['" ]/g, '');
+  });
+  const twoPm = /const HP_MODE_2P = '([A-Za-z0-9_]+)'/.exec(uiSrc);
+  ok(!!twoPm, '③b 2 人 · 3 血那一格（`HP_MODE_2P`）必须也在表里 —— 它不在 MODES 之外凭空建局');
+  const modeKeys = Object.keys(R.MODES);
+  const unknown = modeKeys.concat(['x']).filter(function (k) { return k !== 'x' && !hpMap[k]; });
+  const vals = Object.keys(hpMap).map(function (k) { return hpMap[k]; }).concat(twoPm ? [twoPm[1]] : []);
+  const ghosts = vals.filter(function (v) { return modeKeys.indexOf(v) < 0; });
+  eq(ghosts.length, 0, '③c 映射表里有 MODES 中不存在的模式键（幽灵入口，D28 同族）：' + ghosts.join(', '));
+  const uncovered = modeKeys.filter(function (k) { return vals.indexOf(k) < 0; });
+  eq(uncovered.length, 0, '③d MODES 里有页面查不到的模式（**没有入口的模式**就是 D28 当年抓到的 `fast`/`lucky` 那种"有实现、有测试、无入口"）：' + uncovered.join(', '));
+  /* 血量下拉的每一档都必须被表接住（否则选 6 血会静默回落到 3 血） */
+  const hpOpts = [];
+  const hpSel = /<select id="sel-hp">([\s\S]*?)<\/select>/.exec(html);
+  ok(!!hpSel, '③e `index.html` 里必须有 `#sel-hp`（血量是玩家可见的一根轴）');
+  const reH = /<option value="(\d+)"/g; let mh;
+  while ((mh = reH.exec(hpSel ? hpSel[1] : ''))) hpOpts.push(mh[1]);
+  eq(hpOpts.length, Object.keys(hpMap).length, '③f 血量下拉的档数必须等于映射表的行数（实测下拉 ' + hpOpts.length + ' 档 ‖ 表 ' + Object.keys(hpMap).length + ' 行）⇒ 多出来的那一档会静默回落到默认血量');
+  for (const h of hpOpts) ok(!!hpMap[h], '③g 下拉里的 ' + h + ' 血在表里查得到');
+
+  /* ===== ④ 用户点名的回归：2 人局里那三张多人专用卡必须屏蔽（**新开的 4/5 血格尤其要判**）=====
+   * 旧版这条由 `standard` 的卡表（AVAILABLE_2P）挡着；现在 2 人也能开 `multi4`/`long`，
+   * 那里的卡表是 AVAILABLE_MULTI ⇒ 唯一还挡着它的是 `canUseSkillInMode` 里"当前存活人数 ≤2"那一支（v1.5.140 用户裁定）。
+   * 所以这一格必须**逐血量**判，不能只判 standard。 */
+  for (const mk of ['standard', 'multi4', 'long']) {
+    const st = S.createState(mk, { next: mulberry32(5150) }, 2);
+    st.p[0].ep = 30;
+    for (const sk of R.MULTI_ONLY) {
+      ok(!S.canUseSkillInMode(st, sk), '④ ' + mk + ' · 2 人局里【' + (R.byKey[sk] || {}).name + '】必须不可用（人数=2 自动屏蔽这条不能只在新模式里失效）');
+      ok(!Play.legalActions(st, 0).some(function (x) { return x.key === sk; }),
+        '④ ' + mk + ' · 2 人局的**合法表**里也不许出现【' + (R.byKey[sk] || {}).name + '】（UI 亮着而引擎拒 = D131 那类分裂）');
+    }
+    /* 正对照（记忆第二十五条：没有对比度的守卫是假绿）：同一张牌在 5 人局必须真能亮 */
+    const st5 = S.createState(mk === 'standard' ? 'multi4' : mk, { next: mulberry32(5150) }, 5);
+    st5.p[0].ep = 30;
+    let canAny = 0;
+    for (const sk of R.MULTI_ONLY) { if (S.canUseSkillInMode(st5, sk)) canAny++; }
+    ok(canAny === R.MULTI_ONLY.length, '④+ 正对照：5 人局里三张都必须可用（实测 ' + canAny + '/' + R.MULTI_ONLY.length + '）⇒ 数不到就说明这条屏蔽判的是别的量');
+  }
+
+  /* ===== ⑤⑥ 反漂移：第三根轴与那两个死字段都不许回来 ===== */
+  ok(html.indexOf('sel-mode') < 0,
+    '⑤a `index.html` 里不许再有 `#sel-mode`（人数与血量已经是两根独立的轴；把"模式"下拉加回来 = 两根轴重新被焊成一根）');
+  ok(html.indexOf('id="sel-players"') >= 0, '⑤b 人数下拉必须在册');
+  /* ⚠ 判"还在不在"要看**调用形状**：`applyAxes` 的注释里写了"旧版这根叫 syncModeOptions"，
+   *   用裸 `indexOf('syncModeOptions')` 会被自己的解释文本绊红（D224①e 同族）。 */
+  ok(!/syncModeOptions\s*\(/.test(uiSrc), '⑤c 旧那根反方向的 `syncModeOptions`（先选模式、再按人数置灰）不许复活成函数或调用点');
+  ok(!/minPlayers\s*:/.test(rulesSrc) && !/maxPlayers\s*:/.test(rulesSrc),
+    '⑥ `minPlayers`/`maxPlayers` 不许回到 MODES（v1.6.5 实测全库零消费者 ⇒ 留着就是"会说谎的字段"：2 人现在也能开 5 血长程）');
+
+  /* ===== ⑦ 两个线上槽必须**真能解析并加载**（本轮真浏览器探针抓到的门洞）=====
+   * 我往 2P bundle 的 `meta.fingerprintRefresh` 里塞了一对**英文双引号**（`含"收缩起点…"那条`）⇒ 整个文件语法坏、
+   * 页面里 `window.EPIRUS_CHAMPION` 变成 `undefined`，而 **D16 全绿** —— 因为它只 regex 刮 meta 字符串和"槽那一行还在不在"，
+   * 刮得动的文件未必解析得了。这是记忆第二十条（"生效了没不许由自己印的 banner 判"）的又一形状：**文本级判据判不出"这文件在 JS 里跑不起来"**。
+   * ⇒ 这条把三件事变成断言：① `vm.Script` 解析得过 ‖ ② 真跑一遍，权重全局必须挂到 `window` 上 ‖ ③ meta 必须是**合法 JSON、不需要修补**。 */
+  const slots = [['js/bundled-champion.js', 'EPIRUS_CHAMPION'], ['js/bundled-champion-3p.js', 'EPIRUS_CHAMPION_3P']];
+  for (const pair of slots) {
+    const f = pair[0], gvar = pair[1];
+    const src = readFileSync(f, 'utf8');
+    let perr = '';
+    try { new vm.Script(src, { filename: f }); } catch (e) { perr = String((e && e.message) || e); }
+    ok(perr === '', '⑦a ' + f + ' 必须解析得了（实测 ' + (perr || 'OK') + '）⇒ D16 刮文本刮得过，玩家浏览器却加载不到冠军');
+    const ctx = { window: {}, console: { log: function () { }, warn: function () { }, error: function () { } } };
+    vm.createContext(ctx);
+    let rerr = '';
+    try { vm.runInContext(src, ctx, { filename: f }); } catch (e) { rerr = String((e && e.message) || e); }
+    ok(rerr === '' && ctx.window[gvar] != null,
+      '⑦b ' + f + ' 真跑一遍必须把权重挂到 `window.' + gvar + '`（实测 报错=' + (rerr || '无') + ' ‖ 挂上=' + (ctx.window[gvar] != null) + '）');
+    const metaJson = AUDIT.extractJsonObject(src, gvar + '_META');
+    ok(!!metaJson, '⑦c ' + f + ' 的 `' + gvar + '_META` 必须抽得出（抽不出 = 页面/体检都读不到构建时成绩）');
+    let pm = null, jerr = '';
+    try { pm = AUDIT.parseMetaTolerant(String(metaJson), gvar); } catch (e) { jerr = String((e && e.message) || e); }
+    ok(jerr === '', '⑦d ' + f + ' 的 meta 必须是合法 JSON（实测 ' + (jerr || 'OK') + '）');
+    ok(jerr === '' && pm && (!pm.repaired || pm.repaired.length === 0),
+      '⑦e meta 不许靠"修补"才能 parse（修补表 ' + (pm && pm.repaired ? pm.repaired.length : '?') + ' 条）⇒ 需要修补就说明写进去的文本已经带裸引号');
+  }
 });
 
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {
@@ -3524,24 +3667,49 @@ t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不
   }
 });
 
-t('D28 模式入口一致性：MODES 的每个 key 都必须能在页面选到（且页面不许有幽灵选项）', function () {
+t('D28 模式入口一致性：两根轴都在页面上、每档下拉都被映射表接住（v1.6.5 起「模式」下拉已删，入口 = 人数 × 血量）', function () {
   /* 第三方复核 §3-2(d) 的建议。起因是实测：`MODES.lucky` 无入口无测试、`MODES.fast` 无入口
    * 但引擎分支还在、`tests/spec.js` 的 R52 用例**还在跑**（守一条不可达路径）——
    * 作者本人都以为删了。这条把"入口/实现/文档三者一致"变成机械检查，与 D8（版本号三方一致）同族。
-   * 反证：给 MODES 加一个不在 index.html 里的 key ⇒ 立即红；把 index.html 的某个 option 拼错也红。 */
+   * ===== v1.6.5 的形状变化 =====
+   * 原来那根「模式」下拉同时焊死了**人数**与**血量**（standard=2人3血 / multi=3~5人3血 / long=3~5人5血），
+   * 用户裁定"把 2 人合并进多人，变成选人数 × 3血/5血正交"之后入口变成两根轴（`#sel-players` × `#sel-hp`），
+   * 模式键由 `js/ui/ui.js` 的表查出来。于是本条改判**页面结构**：两根轴都在、取值合法、旧下拉删净。
+   * ⚠ 分工（避免三份实现）：映射表的**集合运算**在 D226③，12 种组合的**真行为**在 `tools/smoke.mjs`（要起浏览器）。
+   *   本条抓的是另一类半截改动：有人给下拉加了一档（如 6 血）却忘了给映射表加行 ⇒ 那一档静默回落成默认血量。
+   * 反证：给 `#sel-hp` 加一档 6 血 ⇒ ①c 与 ③ 红；给 MODES 加一个不在映射表里的 key ⇒ D226③d 红；把 option 拼错 ⇒ ①a 红。 */
   const html = readFileSync('index.html', 'utf8');
-  const sel = /<select id="sel-mode">([\s\S]*?)<\/select>/.exec(html);
-  ok(sel, 'index.html 里找不到 #sel-mode');
-  const opts = [];
-  const re = /<option value="([^"]+)"/g; let m3;
-  while ((m3 = re.exec(sel[1]))) opts.push(m3[1]);
-  ok(opts.length >= 3, '#sel-mode 至少要有三个选项（现有 ' + opts.length + ' 个）');
+  const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
+  const optVals = function (id) {
+    const sel = new RegExp('<select id="' + id + '">([\\s\\S]*?)</select>').exec(html);
+    if (!sel) return null;
+    const out = []; const re2 = /<option value="([^"]+)"/g; let m3;
+    while ((m3 = re2.exec(sel[1]))) out.push(m3[1]);
+    return out;
+  };
+  const pl = optVals('sel-players'), hp = optVals('sel-hp');
+  ok(pl !== null && pl.join(',') === '2,3,4,5', '①a 人数下拉必须在、且恰好 2/3/4/5 四档（实测 ' + JSON.stringify(pl) + '）');
+  ok(hp !== null && hp.length >= 3, '①b 血量下拉 `#sel-hp` 必须在（v1.6.5：人数与血量是两根正交轴）');
+  /* ①c 每一档血量都必须被 `ui.js` 的映射表接住（表里的行形状是 `3: 'multi'` ⇒ 判 `\b<值>:`） */
+  for (const h of (hp || [])) ok(new RegExp('\\b' + h + ':').test(uiSrc), '①c 血量档 ' + h + ' 血在 `ui.js` 的映射表里必须有行（没行 = 选了它却静默建出默认血量的局）');
+  ok(html.indexOf('id="sel-mode"') < 0, '①d 旧那根「模式」下拉必须删净（留着就是第三根轴，会把两根轴的查表结果盖掉）');
 
   const modes = Object.keys(R.MODES);
-  const missing = modes.filter(function (k) { return opts.indexOf(k) < 0; });
-  eq(missing.length, 0, 'MODES 里有页面选不到的模式（要么补 index.html 的 <option>，要么删掉它）：' + missing.join(', '));
-  const ghost = opts.filter(function (k) { return modes.indexOf(k) < 0; });
-  eq(ghost.length, 0, 'index.html 里有 MODES 中不存在的模式选项：' + ghost.join(', '));
+  /* ② MODES 里每个 key 都必须真出现在映射表的**值**侧（不是名字侧的注释里）⇒ 防"有实现、有测试、无入口"这种原始形状。
+   * ⚠ 这里只判"值在不在 ui.js 里"；**像的集合运算**（哪一格查出哪个键）在 D226③ ⇒ 同一件事不写三份判据。 */
+  for (const k of modes) {
+    ok(new RegExp("'" + k + "'").test(uiSrc), '② MODES.' + k + ' 必须在 `js/ui/ui.js` 的映射里出现（不然这个模式页面永远查不到 = 幽灵模式，D28 当年抓的 `fast`/`lucky` 就是这种）');
+  }
+  /* ③ 反方向：映射表里有行、下拉里却没那一档 ⇒ 那行是死代码（玩家选不到），也要响亮红 */
+  const tblBlock = (/const HP_MODE = \{([\s\S]*?)\}/.exec(uiSrc) || [, ''])[1];
+  const tblHps = [];
+  tblBlock.split(',').forEach(function (pair) {
+    const k = (pair.split(':')[0] || '').trim();
+    if (/^\d+$/.test(k)) tblHps.push(k);
+  });
+  ok(tblHps.length >= 3, '③a 从 `ui.js` 的映射表切出的血量档必须 ≥3（实测 ' + tblHps.length + '）⇒ 切不到就是表的形状变了，下面那条双向比会变成装饰（记忆第二十五条）');
+  const ghost = hp === null ? [] : tblHps.filter(function (h) { return hp.indexOf(h) < 0; });
+  eq(ghost.length, 0, '映射表里有血量档而 `#sel-hp` 没有（选了也到不了 = 第二份定义的漂移起点）：' + ghost.join(', '));
 
   /* 原始规则里有、本程序**明确不做**的模式必须显式登记（v1.5.18 用户裁定：快速/欧皇删掉）。 */
   for (const k of ['fast', 'lucky', 'vampire']) {
@@ -6117,7 +6285,7 @@ t('D131 卡面提示必须说真话（v1.5.173 · 用户实测"摄魂 bug 没解
   /* 成因（`results/摄魂.txt`）：引擎按 `state.mode.drainHpMax` 放行（长程 3），而 `rules.js` 的 `desc` 写死"仅限 HP≤1"
    * ⇒ 长程 HP 2 时格子**该亮**也确实亮，提示却说"≤1" ⇒ 玩家读成"血回上去了还能用 = 没修"。**引擎没错，文案过期。**
    * 所以这条门两半：① 判**引擎**逐档（防真闩锁回来）；② 判**提示跟着模式变数字**（防这次这种"说的≠做的"）。 */
-  const caps = { long: 2, multi: 1, standard: 1 };   // v1.5.174：长程窗口 3 → 2（用户裁定）
+  const caps = { long: 2, multi: 1, multi4: 1, standard: 1 };   // v1.5.174：长程窗口 3 → 2（用户裁定）‖ v1.6.5：4 血那一格照 multi 的 ≤1（D226①c 钉"4 血 = 多一格血，不是第四套规则"）
   for (const mode in caps) {
     const cap = (R.MODES[mode].hp) || 3, lim = caps[mode];
     for (let hp = cap; hp >= 1; hp--) {
