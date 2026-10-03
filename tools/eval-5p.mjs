@@ -763,14 +763,27 @@ const RANK = RANK_RAW != null;
 const RANK_SPEC = String(RANK_RAW == null ? '' : RANK_RAW).split(',');
 const RANK_MARGIN = RANK ? Number(RANK_SPEC[0]) : 0;
 const RANK_BIAS = RANK ? Number(RANK_SPEC[1] == null || RANK_SPEC[1] === '' ? 1 : RANK_SPEC[1]) : 0;
+/** 闸的读法（§E267，用户 10-03 追问"差距不大"指哪一对）：
+ *   · `top2`（默认）= **一选与二选**的概率差（"这一手本来就不确定"）
+ *   · `near`       = **目标卡自己最好的条目**与一选的概率差（"这张卡离一选不远"） */
+const RANK_GATE = RANK ? (RANK_SPEC[2] == null || RANK_SPEC[2] === '' ? 'top2' : String(RANK_SPEC[2])) : 'top2';
+if (RANK && ['top2', 'near'].indexOf(RANK_GATE) < 0) { console.error('⛔ --pushrank 第三段（闸的读法）只认识 top2 | near（收到 `' + RANK_GATE + '`）'); process.exit(2); }
 if (RANK && !(isFinite(RANK_MARGIN) && RANK_MARGIN >= 0 && RANK_MARGIN <= 1 && isFinite(RANK_BIAS) && RANK_BIAS >= 0)) {
   console.error('⛔ --pushrank=<margin>[,<bias>] 要 margin∈[0,1]、bias≥0（收到 `' + RANK_RAW + '`）；margin = "一选与二选的概率差"的上限，bias = 目标卡概率的放大倍数'); process.exit(2);
 }
 const RANK_TEMP = 0.15;   /* 与线上同一档（`policyChooserN(params, 0.15)`）⇒ 闸判的是冠军**自己的**决策分布 */
-const RANK_ST = { dec: 0, close: 0, fired: 0 };
+const RANK_ST = { dec: 0, close: 0, fired: 0, gapSum: 0 };
+/* §E267：自检挂**进程出口** —— 前面两版分别落在 `if (PUSH)` 与 `if (FLAG['dump-per'])` 里，
+ * 于是"纯提顺位臂"与"不落盘的跑法"都**一声不响**（同一族病：静默的量具）。出口钩子与作用域无关。 */
+if (RANK) process.on('exit', function () {
+  console.log('[pushrank 自检] 闸读法=' + RANK_GATE + ' · margin=' + RANK_MARGIN + ' bias=' + RANK_BIAS
+    + ' · 决策 ' + RANK_ST.dec + ' 个（平均 gap=' + (RANK_ST.gapSum / Math.max(1, RANK_ST.dec)).toFixed(4) + '）'
+    + ' · 落在闸内的 ' + RANK_ST.close + ' 个（' + (100 * RANK_ST.close / Math.max(1, RANK_ST.dec)).toFixed(1) + '%）'
+    + ' · 真抬高 ' + RANK_ST.fired + ' 次（兑现率 ' + (100 * RANK_ST.fired / Math.max(1, RANK_ST.close)).toFixed(1) + '%）');
+});
 if (RANK) {
   console.log('[pushrank] 提顺位已生效：卡=`' + PUSHKEY + '`（' + PUSH_NAME + '）**ep≥' + PUSH_MINEP + ' 且合法可付、且"一选与二选概率差 ≤ '
-    + RANK_MARGIN + '"**时把它的概率 ×(1+' + RANK_BIAS + ')，随后**仍用冠军那套按概率抽**（冠军可以选回原来那一手）'
+    + RANK_MARGIN + '"（闸读法 `' + RANK_GATE + '`）**时把它的概率 ×(1+' + RANK_BIAS + ')，随后**仍用冠军那套按概率抽**（冠军可以选回原来那一手）'
     + ' · 工具侧实现，不动 policy.js');
 }
 const rankSel = !RANK ? null : function () {
@@ -784,7 +797,14 @@ const rankSel = !RANK ? null : function () {
       let p1 = -1, p2 = -1;
       for (let i = 0; i < f.probs.length; i++) { const v = f.probs[i]; if (v > p1) { p2 = p1; p1 = v; } else if (v > p2) p2 = v; }
       /* ← 用户要的那条闸："本来一选和二选差距不大、有随机性的地方"才动 */
-      if (f.probs.length > 1 && (p1 - p2) <= RANK_MARGIN) {
+      let gap = 2;
+      if (RANK_GATE === 'near') {
+        let pt = -1;
+        for (let i = 0; i < cands.length; i++) if (cands[i].key === PUSH_SK && f.probs[i] > pt) pt = f.probs[i];
+        if (pt >= 0) gap = p1 - pt;                      /* 目标卡不在菜单里 ⇒ gap=2 ⇒ 不动手 */
+      } else gap = p1 - p2;
+      RANK_ST.gapSum += gap;
+      if (f.probs.length > 1 && gap <= RANK_MARGIN) {
         RANK_ST.close++;
         let hit = -1;
         for (let i = 0; i < cands.length; i++) if (cands[i].key === PUSH_SK) { hit = i; break; }
@@ -889,7 +909,6 @@ if (PUSH) {
     ' · 目标分布 ' + JSON.stringify(PUSH_ST.tgt) + '（' + seatN + ' 个不同席位）· 平手 ' + PUSH_ST.tie + ' 次' +
     (PUSH_ST.opp === 0 ? '   !!! 窗口从不打开 ⇒ 这一臂没测到任何东西（门槛 ep≥' + PUSH_MINEP + ' · 卡=`' + PUSHKEY + '`），Δ 不可读'
       : (PUSH_ST.fired === 0 ? '   !!! 窗口开了却一次没打 ⇒ 计数/可付判定失效' : '   OK 实验有效')));
-if (RANK) console.log('[pushrank 自检] 决策 ' + RANK_ST.dec + ' 个 · 落在"一选二选差距≤' + RANK_MARGIN + '"的 ' + RANK_ST.close + ' 个（' + (100*RANK_ST.close/Math.max(1,RANK_ST.dec)).toFixed(1) + '%） · 真抬高 ' + RANK_ST.fired + ' 次（兑现率 ' + (100*RANK_ST.fired/Math.max(1,RANK_ST.close)).toFixed(1) + '%）');
 }
 if (GRANT) {
   console.log('[补贴自检] --grant=' + GRANT + ' 已生效 ' + GRANT_ST.rounds + ' 个主体回合（主体回合数应≈局数×回合数）');}
@@ -951,9 +970,11 @@ if (FLAG['dump-per']) {
     '#bigtpush=' + (PUSH || 0) + '/' + PUSH_MINEP, '#bigttgt=' + (PUSH ? PUSHTGT : '-'),
     /* §E264：`--pushkey` 决定"提前的是哪张卡"、`--drainhp` 决定摄魂那扇窗有多宽 ⇒ 两维都进配对身份。
      * ⚠ 摄魂臂与大雷臂的 seed/桌数/剂量可以完全一样，只有这两维不同 ⇒ 少写一行就会把两张卡的臂配成同世界（§E246 那一族）。 */
-    '#pushkey=' + (PUSH ? PUSHKEY : '-'),
+    /* §E267：**提顺位臂的卡名也必须落盘** —— 否则这一臂的落盘里 `#pushkey=-`，
+     * 与"出厂"那一份逐字相同 ⇒ 下一个人从表头读不出这臂动的是哪张卡（"回显生效值"那条）。 */
+    '#pushkey=' + ((PUSH || RANK) ? PUSHKEY : '-'),
     /* §E266：提顺位这一臂的自由量（margin/bias）也必须进配对身份 —— 少写一行就会把两档配成同世界。 */
-    '#pushrank=' + (RANK ? (RANK_MARGIN + '/' + RANK_BIAS) : '-'),
+    '#pushrank=' + (RANK ? (RANK_MARGIN + '/' + RANK_BIAS + '/' + RANK_GATE) : '-'),
     '#drainhp=' + ((R.MODES[MODE || 'multi'] || {}).drainHpMax),
     '#swap=' + (SWAP || '-'), '#arm\tidx\tnames\tgames\tfirst\tstrict'];
   for (const s of [{ arm: 'subject', r: champ }, { arm: 'ctrl', r: ctrl }]) {
@@ -962,5 +983,7 @@ if (FLAG['dump-per']) {
     });
   }
   writeFileSync(FLAG['dump-per'], lines.join('\n') + '\n');
-  console.log('逐桌子命中数 → ' + FLAG['dump-per'] + '（' + champ.perCombo.length + ' 组 × ' + GAMES + ' 局）');
+  /* §E267：**自检必须在顶层无条件印** —— 我第一版把它挂在 `[提前自检]` 后面，
+ * 而那一行在 `if (PUSH)` 里 ⇒ 纯提顺位臂（不设 `--bigtpush`）**一声不响**（本条正是这一族病：静默的量具）。 */
+console.log('逐桌子命中数 → ' + FLAG['dump-per'] + '（' + champ.perCombo.length + ' 组 × ' + GAMES + ' 局）');
 }
