@@ -767,19 +767,26 @@ const RANK_BIAS = RANK ? Number(RANK_SPEC[1] == null || RANK_SPEC[1] === '' ? 1 
  *   · `top2`（默认）= **一选与二选**的概率差（"这一手本来就不确定"）
  *   · `near`       = **目标卡自己最好的条目**与一选的概率差（"这张卡离一选不远"） */
 const RANK_GATE = RANK ? (RANK_SPEC[2] == null || RANK_SPEC[2] === '' ? 'top2' : String(RANK_SPEC[2])) : 'top2';
+/* 第四段 = **算子**（§E268）：给 share 就换成「概率下界」——把目标卡的概率抬到至少 share × 一选概率。
+ * 为什么不继续用 ×倍数：实测**惰性**（抬了 6 万次、对局逐位相同 ⇒ ×2 个 ≈0 仍是 ≈0）。
+ * 缺省不写 ⇒ 仍是旧的 ×(1+bias)（旧臂可复现）；写了 ⇒ 走下界算子。 */
+const RANK_FLOOR = RANK && RANK_SPEC[3] != null && RANK_SPEC[3] !== '' ? Number(RANK_SPEC[3]) : null;
+if (RANK_FLOOR != null && !(isFinite(RANK_FLOOR) && RANK_FLOOR > 0 && RANK_FLOOR <= 1)) { console.error('⛔ --pushrank 第四段（概率下界的 share）要 ∈(0,1]（收到 `' + RANK_SPEC[3] + '`）'); process.exit(2); }
 if (RANK && ['top2', 'near'].indexOf(RANK_GATE) < 0) { console.error('⛔ --pushrank 第三段（闸的读法）只认识 top2 | near（收到 `' + RANK_GATE + '`）'); process.exit(2); }
 if (RANK && !(isFinite(RANK_MARGIN) && RANK_MARGIN >= 0 && RANK_MARGIN <= 1 && isFinite(RANK_BIAS) && RANK_BIAS >= 0)) {
   console.error('⛔ --pushrank=<margin>[,<bias>] 要 margin∈[0,1]、bias≥0（收到 `' + RANK_RAW + '`）；margin = "一选与二选的概率差"的上限，bias = 目标卡概率的放大倍数'); process.exit(2);
 }
 const RANK_TEMP = 0.15;   /* 与线上同一档（`policyChooserN(params, 0.15)`）⇒ 闸判的是冠军**自己的**决策分布 */
-const RANK_ST = { dec: 0, close: 0, fired: 0, gapSum: 0 };
+const RANK_ST = { dec: 0, close: 0, fired: 0, gapSum: 0, moved: 0 };
 /* §E267：自检挂**进程出口** —— 前面两版分别落在 `if (PUSH)` 与 `if (FLAG['dump-per'])` 里，
  * 于是"纯提顺位臂"与"不落盘的跑法"都**一声不响**（同一族病：静默的量具）。出口钩子与作用域无关。 */
 if (RANK) process.on('exit', function () {
   console.log('[pushrank 自检] 闸读法=' + RANK_GATE + ' · margin=' + RANK_MARGIN + ' bias=' + RANK_BIAS
     + ' · 决策 ' + RANK_ST.dec + ' 个（平均 gap=' + (RANK_ST.gapSum / Math.max(1, RANK_ST.dec)).toFixed(4) + '）'
     + ' · 落在闸内的 ' + RANK_ST.close + ' 个（' + (100 * RANK_ST.close / Math.max(1, RANK_ST.dec)).toFixed(1) + '%）'
-    + ' · 真抬高 ' + RANK_ST.fired + ' 次（兑现率 ' + (100 * RANK_ST.fired / Math.max(1, RANK_ST.close)).toFixed(1) + '%）');
+    + ' · 真抬高 ' + RANK_ST.fired + ' 次（兑现率 ' + (100 * RANK_ST.fired / Math.max(1, RANK_ST.close)).toFixed(1) + '%）'
+    + ' · 真搬动的概率质量 ' + RANK_ST.moved.toFixed(4) + '（0 ⇒ 算子惰性）'
+    + (RANK_FLOOR == null ? '' : (' · 算子=概率下界 ' + RANK_FLOOR + '×一选')));
 });
 if (RANK) {
   console.log('[pushrank] 提顺位已生效：卡=`' + PUSHKEY + '`（' + PUSH_NAME + '）**ep≥' + PUSH_MINEP + ' 且合法可付、且"一选与二选概率差 ≤ '
@@ -812,7 +819,13 @@ const rankSel = !RANK ? null : function () {
         if (hit >= 0 && l && l.affordable !== false) {
           RANK_ST.fired++;
           let tot = 0; const w = new Float64Array(cands.length);
-          for (let i = 0; i < cands.length; i++) { w[i] = f.probs[i] * (i === hit ? (1 + RANK_BIAS) : 1); tot += w[i]; }
+          const pFloor = (RANK_FLOOR == null) ? -1 : RANK_FLOOR * p1;
+          for (let i = 0; i < cands.length; i++) {
+            w[i] = f.probs[i];
+            if (i === hit) w[i] = (RANK_FLOOR == null) ? (f.probs[i] * (1 + RANK_BIAS)) : Math.max(f.probs[i], pFloor);
+            tot += w[i];
+          }
+          RANK_ST.moved += Math.max(0, w[hit] - f.probs[hit]);
           if (tot > 0) {
             /* 一次 `state.rng.next()`（与"原样交给冠军"那条路消耗**同样多**的随机流 ⇒ 两支可比） */
             const r = state.rng.next(); let acc = 0;
@@ -974,7 +987,7 @@ if (FLAG['dump-per']) {
      * 与"出厂"那一份逐字相同 ⇒ 下一个人从表头读不出这臂动的是哪张卡（"回显生效值"那条）。 */
     '#pushkey=' + ((PUSH || RANK) ? PUSHKEY : '-'),
     /* §E266：提顺位这一臂的自由量（margin/bias）也必须进配对身份 —— 少写一行就会把两档配成同世界。 */
-    '#pushrank=' + (RANK ? (RANK_MARGIN + '/' + RANK_BIAS + '/' + RANK_GATE) : '-'),
+    '#pushrank=' + (RANK ? (RANK_MARGIN + '/' + RANK_BIAS + '/' + RANK_GATE + '/' + (RANK_FLOOR == null ? '-' : RANK_FLOOR)) : '-'),
     '#drainhp=' + ((R.MODES[MODE || 'multi'] || {}).drainHpMax),
     '#swap=' + (SWAP || '-'), '#arm\tidx\tnames\tgames\tfirst\tstrict'];
   for (const s of [{ arm: 'subject', r: champ }, { arm: 'ctrl', r: ctrl }]) {
