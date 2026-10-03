@@ -993,12 +993,11 @@
     return { key: pick.key, target: econTarget(state, pid) };
   }
 
-  /* 多人专用难度档（ui.js chooseAIMulti 用） */
-  const DIFFICULTY_N = {
-    easy:   { name: '简单',   pick: pickMultiEasy },
-    medium: { name: '中等',   pick: pickMultiMed },
-    hard:   { name: '困难·脚本兜底', pick: pickMultiStrong }
-  };
+  /* v1.6.6 删除 `DIFFICULTY_N`（多人那三档 easy/medium/hard）：它唯一的"消费者"是 `ui.js` 里那行 `DN.hard.pick(...)`，
+   * 而 `const DN = Bots.DIFFICULTY_N` 早在 v1.3.22（3462abf）就被删掉了 ⇒ 这张表**从未被读到**，
+   * 页面走进那条分支只会 `ReferenceError`（修复与实测见 `ui.js` 的 `fallbackPickFor`，门 D153 兜底那条腿钉）。
+   * 全库复查零使用（`grep -rn DIFFICULTY_N js tools server docs`）⇒ 按"没有消费者的表就是腐烂的表"直接删。
+   * 兜底现在点名到函数：≥3 人 = `pickMultiStrong`，2 人 = `pickAdaptive`（历史上 2 人困难档就是它）。 */
 
   /* ===== 玩家可选对手风格（乙方案：风格即档位）=====
    * 从 23 个训练对手里按**实测审计**（`tools/bot-audit.mjs`）选出 5 个"有可玩性"的：
@@ -1010,27 +1009,71 @@
    * 目标选择不在这里做：ui.js 统一走 `pickTargetN`（= 击杀优先 → 打领先者），
    * 而实测「打领先者」比「打残血」高 10.2pt，是多人局最大的单一杠杆。 */
   const STYLES = [
-    /* **按实测强度升序排列**（3 人 60 局，对手轮换）——风格即档位，玩家从上到下就是由易到难。
-     * 数值来自 tools/bot-audit.mjs 的同口径复测，已写进 note 供玩家判断。 */
-    { id: 'st:reflectmix',   name: '节奏型',   pick: pickReflectMix,   note: '固定节奏：反弹→枪→坦克，可被识破（最易，约 17%）' },
-    { id: 'st:breakdef',     name: '憋大招',   pick: pickBreakDef,     note: '86% ジ 攒钱，等真正的落雷一发定胜负（约 28%）' },
-    { id: 'st:mix',          name: '全能型',   pick: pickMix,          note: '什么都用一点，出招最杂（有效技能数 4.38，约 30%）' },
-    { id: 'st:aggro',        name: '激进快攻', pick: pickAggro,        note: '一有机会就开枪，逼你打快棋（约 55%，均 27 回合）' },
-    { id: 'st:combocounter', name: '读招反制', pick: pickComboCounter, note: '读你最近 5 次出招来反制，最难缠（约 55%，均 15 回合）' }
+    /* ⚠⚠ **v1.6.6 起"风格即档位"这句话作废**（用户 10-03 夜裁定「原本的简单普通就不能用了，
+     *   你可以自由考虑新的脚本用难度分层还是风格化」⇒ 难度改由下面的 `DIFF_TIERS` 说话，风格只是"口味"）。
+     * 直接原因（§E286，`tools/probe-diff-ladder.mjs`，1500 局/格，同一批种子跨格配对）：**风格的强度是桌形的函数，不是它的属性**——
+     *   同一把尺（1 席人类形状替身 vs N-1 席同一档）下，"激进快攻"在 5 人桌上是**最硬**的一格（替身夺冠 9.1%），
+     *   搬到 3 人桌就掉到中游（17.7%，而与"读招反制"差 11.2 ±2.9pt ⇒ 不是噪声）；"憋大招"在 5 人桌最软（53.6%）而在 3 人桌与高剂量档齐平（32.1%）。
+     *   ⇒ 旧 note 里那串"约 17% → 约 55%"是 `tools/bot-audit.mjs` 的**另一种桌形**（3 人 60 局、对手轮换、且量的是"这个 bot 自己夺冠率"）
+     *     被当成页面的难度排序用了 —— 第 45 条口径陷阱（"多久一次/多强"必须带装配名）在这里的代价是一整个功能。
+     * 现在每条 note 只描述**打法**，强度一律去 `DIFF_TIERS` 查（那里每条带五个装配的实测数）。 */
+    { id: 'st:reflectmix',   name: '节奏型',   pick: pickReflectMix,   note: '固定节奏：反弹→枪→坦克，可被识破' },
+    { id: 'st:breakdef',     name: '憋大招',   pick: pickBreakDef,     note: '86% ジ 攒钱，等真正的落雷一发定胜负（大雷密度极高，但整桌最软的一档）' },
+    { id: 'st:mix',          name: '全能型',   pick: pickMix,          note: '什么都用一点，出招最杂（有效技能数 4.38）' },
+    { id: 'st:aggro',        name: '激进快攻', pick: pickAggro,        note: '一有机会就开枪，逼你打快棋（均 27 回合）' },
+    { id: 'st:combocounter', name: '读招反制', pick: pickComboCounter, note: '读你最近 5 次出招来反制 —— 五个装配里都比"困难"更硬，所以它被收进 `DIFF_TIERS` 当成最高档' }
   ];
 
+  /* ===== v1.6.6 难度阶梯（用户 10-03 夜指令 2：「重新研究脚本难度…比如可以设计成冠军作为底层但脚本探索概率很高的版本」）=====
+   *
+   * 形状：**同一颗冠军包**（人数=2 用 2P 那颗、≥3 用 3P 那颗，理由见下面 ③），难度 = **探索剂量**
+   *   （`eps` = 有多少比例的手不取网络最优、`epsK` = 允许它在网络看好的前 K 张里乱抽、`epsMode` = soft 时探索不许覆盖防御/聚能环）。
+   *   机制早就在（`evo.js` 的 `policyChooserN(params, temp, eps, epsK, epsMode)`，v1.5.139/141 就是它），
+   *   这一版只是**把它做成玩家可选的档**，而不是页面里写死的一个数。
+   *
+   * 三条实测依据（`tools/probe-diff-ladder.mjs` · **1500 局/格 · 同批种子跨档逐局配对** · 替身夺冠率 %，越低=这一档越强；
+   * 五个装配 = 5人3血 ‖ 3人3血 ‖ 5人5血 ‖ 5人4血 ‖ 2人3血(用 2P 那颗包)）
+   *   ① **剂量梯在五个装配里全都单调、次序一致**（ε=1/uniform → .5 → .2(斜坡) → 0）：
+   *      简单 60.9 ‖ 78.0 ‖ 72.7 ‖ 63.0 ‖ 90.1 → 入门 17.5 ‖ 28.4 ‖ 23.5 ‖ 22.4 ‖ 24.1
+   *      → 普通 13.4 ‖ 23.4 ‖ 19.1 ‖ 16.9 ‖ 20.1 → 困难 11.9 ‖ 21.4 ‖ 14.5 ‖ 13.3 ‖ 15.5
+   *      （与"普通"的配对差：入门 +4.0~+5.5pt、简单 +46.1~+70.1pt ⇒ 这两步**同号且远**；
+   *        困难 −1.53±2.36 ‖ −2.00±2.77 ‖ −4.60±2.70 ‖ −3.53±2.48 ‖ −4.60±2.02pt ⇒ **只有"普通→困难"那一步在 5 人 3 血桌上分不开**，
+   *        门 D227④ 因此把**这一对点名**放行成"不许翻序"（≥0），其余相邻档要求 ≥2pt —— 例外写死在名单里，不许悄悄放宽。）
+   *   ② **最高一档给脚本**：读招反制在五个装配里全都比"困难"硬（−3.87±2.29 ‖ −16.93±2.43 ‖ −11.20±2.41 ‖ −8.40±2.36 ‖ −9.80±2.44pt）
+   *      ⇒ 想要比贪心冠军更难，目前只有这一条路（剂量再往下加没有意义：ε=0 就是"完全不探索"的下界）。
+   *   ③ **2 人那一格必须换包**：3P 那颗包在 1v1 上是**分布外**的（贪心档替身夺冠 27.5%，比 2P 颗的 15.5% 软 12pt），
+   *      而且 3P 包在 2 人桌上剂量梯**反号**（ε=0 27.5 竟比 ε=.5 的 19.4 软 ⇒ 贪心策略在 1v1 里本来就不是最优）。
+   *      ⇒ 用 2P 那颗（v1.0 为 1v1 训的）之后剂量梯恢复单调（15.5 / 20.1 / 24.1 / 90.1）。
+   *      附带好处：「训练场」练出来的 2P 冠军重新有地方可玩（v1.6.6 之前页面把它挤到只剩"困难"一个槽，之后是"2 人桌的底层"）。
+   *   ④ **最高档那一格用 `uniform` 而不是 `soft`**：同一剂量 ε=1/k40 在 soft 下只软到 24.6~39.3%，uniform 才软到 60.9~90.1%。
+   *      机制是 soft 那条"探索不许覆盖防御/聚能环"的豁免（`evo.js`，v1.5.304 定它为 ≥1 门槛）在 ε=1 时仍然把整桌钉在防御线上 ——
+   *      替身夺冠 24.6% 那一格不是"简单的对手"，是"很会站防的随机手"。所以最软一档必须连这层豁免一起放开。
+   *
+   * ⚠ 这些数是**人类形状替身**（`tools/human-pool.mjs`，56 局真人日志的条件分布）做的代理，不是真人；
+   *   它衡量的是"一桌同档 AI 给一个会按人类分布出牌的玩家多大压力"，与"AI 互打的强度"不是一回事。
+   * ⚠ 上线档的大雷/摄魂注入**在这些数里**（`BIGT_PUSH=12` ‖ `DRAIN_PUSH=1`，走的是页面同一份 chooser）⇒ 别把 note 再当成"裸包"的读数。
+   * ⚠ 剂量还会改**局长**：简单档 5 人桌平均 45.1 回合、普通档 16.8 ⇒ "看得见的节奏"也是难度的一部分。 */
+  const DIFF_TIERS = [
+    { id: 'lv:sparring', name: '简单 · 陪练', kind: 'champ', eps: 1, epsK: 40, epsMode: 'uniform', ramp: false,
+      note: '冠军的牌，但每一手都在"网络看好的前 40 张"里**均匀**乱抽：看得懂局面，抓不住机会（替身夺冠 60.9~90.1%，五格同向软 46~70pt；局长也跟着变长，5 人桌 45 回合 vs 普通档 17）' },
+    { id: 'lv:novice', name: '入门', kind: 'champ', eps: 0.5, epsK: 5, epsMode: 'soft', ramp: false,
+      note: '两手里有一手乱抽（替身夺冠 17.5~28.4%，比默认档软 4.0~5.5pt；这一步五格全同号）' },
+    { id: 'lv:regular', name: '普通（默认）', kind: 'champ', eps: 0.2, epsK: 5, epsMode: 'soft', ramp: true,
+      note: '★ 默认档 = v1.5.141 以来页面一直在跑的那条口径（前 3 回合逐步放开 0→0.1→0.2）。替身夺冠 13.4~23.4%' },
+    { id: 'lv:hard', name: '困难 · 冠军', kind: 'champ', eps: 0, epsK: 5, epsMode: 'soft', ramp: false,
+      note: '冠军本体：每手都取网络最优（替身夺冠 11.9~21.4%）。⚠ 与"普通"实测只差 1.5~4.6pt，**5 人 3 血那一格（−1.53±2.36pt）落在噪声里** —— 次序对、幅度小，已如实标；门 D227④ 只点名放行这一对"不许翻序"，其余相邻档仍要 ≥2pt' },
+    { id: 'lv:hunter', name: '极限 · 读招', kind: 'style', style: 'st:combocounter',
+      note: '读招反制整桌上：会读你最近 5 次出招来反制（替身夺冠 6.5~10.3%，五格都比"困难"硬 3.9~16.9pt）⇒ 想比贪心冠军更难，目前只有脚本这一条路（ε=0 已是"完全不探索"的下界）' }
+  ];
+  const DIFF_DEFAULT = 'lv:regular';
 
-
-  const DIFFICULTY = {
-    easy: { name: '简单', pick: function (st, pid, lg) { return rnd(st) < 0.6 ? pickRandom(st, pid, lg) : pickBalanced(st, pid, lg); } },
-    medium: { name: '中等', pick: pickBalanced },
-    hard: { name: '困难·自适应', pick: function () { throw new Error('hard 由 pickAdaptive 接管'); } }
-  };
+  /* v1.6.6 删除 `DIFFICULTY`（2 人那三档 简单/中等/困难）：页面的 2 人分支已并进 `DIFF_TIERS`，
+   * 全库再无消费者（实测：只剩 ui.js 那一行 `Bots.DIFFICULTY.easy.pick`）。旧档名"简单/普通"按用户裁定不再保留。 */
 
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
-    pickReflectMix, pickReflectTank, pickDefReflectGun, DIFFICULTY, DIFFICULTY_N, STYLES, resetBotMem,
+    pickReflectMix, pickReflectTank, pickDefReflectGun, STYLES, DIFF_TIERS, DIFF_DEFAULT, resetBotMem,
     snapshotBotMem, restoreBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,

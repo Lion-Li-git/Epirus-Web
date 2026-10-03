@@ -184,6 +184,66 @@ async function main() {
   await shot(join(tmpdir(), 'screenshot-long.png'));
   console.log('screenshot-long saved');
 
+  /* --- v1.6.6 难度阶梯（用户指令 2「重新研究脚本难度…冠军作为底层但探索概率很高」）：
+   * 判的是**下拉里点得到的东西，页面真的换得动**，不是表里写了什么（静态那半在 D227）。
+   * 三件事只有真浏览器能证：① 每个档 id 都能选中且 `B.diff` 跟着变；② 换档时 `aiInfo()` 报的
+   *   champ/style/兜底 身份与表一致（"档是假的"= 选了它却走了别的路）；
+   *   ③ **人数=2 与人数=5 的档位列表一模一样**（阶梯不许按人数被裁短 —— 这正是"把 2 人并进多人"那一步的行为定义），
+   *   而 `aiInfo()` 报的**包**必须一个 2P 一个 3P（§E286 的换包裁定要能在页面上看见）。 */
+  const lad = await evalJS(`(function(){
+    const U = window.EpirusUI, Bots = window.EpirusBots;
+    if (!U || !Bots || !Bots.DIFF_TIERS) return { fatal: 'missing EpirusUI / EpirusBots.DIFF_TIERS' };
+    const sel = document.getElementById('sel-diff'), pl = document.getElementById('sel-players');
+    const ng = document.getElementById('btn-newgame');
+    if (!sel || !pl || !ng) return { fatal: 'missing #sel-diff / #sel-players / #btn-newgame' };
+    const tiers = Bots.DIFF_TIERS.map(function (t) { return { id: t.id, kind: t.kind }; });
+    const rows = [];
+    for (const t of tiers) {
+      sel.value = t.id; sel.dispatchEvent(new Event('change'));
+      ng.click();
+      const info = U.aiInfo();
+      rows.push({ id: t.id, kind: t.kind, picked: U.B.diff, tierId: (U.tierOf(U.B.diff) || {}).id || null,
+        src2: String(info.source).slice(0, 2), champ: !!info.champ, fallback: !!info.fallback, tier: info.tier || null });
+    }
+    const optsAt = function (n) {
+      sel.value = Bots.DIFF_DEFAULT; sel.dispatchEvent(new Event('change'));   // 必须先回到冠军档：风格档的 aiInfo 不报包（它不吃包）
+      pl.value = String(n); pl.dispatchEvent(new Event('change')); ng.click();
+      return { list: Array.prototype.map.call(sel.options, function (o) { return o.value; }),
+        pack2: String(U.aiInfo().source).slice(0, 2), tier: U.B.diff };
+    };
+    const at2 = optsAt(2), at5 = optsAt(5);
+    const claimed = (Bots.STYLES || []).filter(function (s) {
+      return (Bots.DIFF_TIERS || []).some(function (t) { return t.kind === 'style' && t.style === s.id; });
+    }).length;
+    return { fatal: null, rows: rows, at2: at2, at5: at5, tierIds: tiers.map(function (t) { return t.id; }),
+      def: Bots.DIFF_DEFAULT, styleN: (Bots.STYLES || []).length, claimed: claimed };
+  })()`);
+  if (lad.fatal) {
+    check('难度阶梯扫描可跑', false);
+    console.log('  ladder fatal =', lad.fatal);
+  } else {
+    check('每个难度档都点得动，且 B.diff / tierOf 跟着变成那一档',
+      lad.rows.every(r => r.picked === r.id && r.tierId === r.id));
+    check('冠军档报"是冠军"、风格档报"不是冠军"，且都不许落到兜底格（兜底=包没解开的信号）',
+      lad.rows.every(r => r.fallback === false && r.champ === (r.kind === 'champ') && r.tier === r.id));
+    check('档位列表不随人数被裁短（2 人 = 5 人，这就是"2 人并进同一条阶梯"的行为定义）',
+      JSON.stringify(lad.at2.list) === JSON.stringify(lad.at5.list));
+    check('表里每一档都在下拉里（少一档 = 页面把表裁了）',
+      lad.tierIds.every(id => lad.at5.list.indexOf(id) >= 0));
+    check('默认档在册且是 lv:regular（改默认档 = 改所有老用户的手感，属产品裁定）',
+      lad.def === 'lv:regular' && lad.at5.list.indexOf(lad.def) >= 0);
+    check('包随人数换：2 人那一格 aiInfo 报 2P、5 人那一格报 3P（§E286 的换包裁定在页面上看得见）',
+      lad.at2.pack2 === '2P' && lad.at5.pack2 === '3P');
+    /* 第一版这里真红过：去重比的是映射后的 `{v,t}` 列表（`.style` 恒 undefined）⇒
+     *   「极限 · 读招」和「风格 · 读招反制」**同时**在册，玩家点是同一个脚本、以为选了两档。 */
+    check('下拉里没有"同一个脚本占两格"（被阶梯认领的风格不许再以"风格"重复出现）',
+      new Set(lad.at5.list).size === lad.at5.list.length &&
+      lad.at5.list.length === lad.tierIds.length + lad.styleN - lad.claimed);
+    console.log('  ladder rows =', JSON.stringify(lad.rows.map(r => r.id + ':' + (r.champ ? 'champ' : 'style') + ':' + r.src2)));
+    console.log('  ladder 2人 =', JSON.stringify(lad.at2), ' 5人 =', JSON.stringify(lad.at5));
+    await shot(join(tmpdir(), 'screenshot-ladder.png'));
+  }
+
   console.log('\nJS errors:', errors.length ? errors : '(none)');
   console.log('SUMMARY:', checks.every(c => c[1]) && errors.length === 0 ? 'SMOKE OK' : 'SMOKE FAILED');
   process.exitCode = checks.every(c => c[1]) && errors.length === 0 ? 0 : 1;

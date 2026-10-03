@@ -1707,9 +1707,12 @@ t('D224 §E271/§E273/§E274 大雷"每几局看得见一次"的档（v1.5.333 �
   const wrapAt = uiSrc.indexOf('wrapBigTPush(');
   const nextFn = uiSrc.indexOf('\n  function ', camAt + 20);
   ok(camAt >= 0 && wrapAt > camAt && (nextFn < 0 || wrapAt < nextFn),
-    '⑫k 页面上这一层**只能接在多人的脚本席**上（实测 chooseAIMulti@' + camAt + ' ‖ wrap@' + wrapAt + ' ‖ 下一个函数@' + nextFn + '）');
+    '⑫k 页面上这一层**只能接在脚本席那一段**里（实测 chooseAIMulti@' + camAt + ' ‖ wrap@' + wrapAt + ' ‖ 下一个函数@' + nextFn + '）' +
+    '⇒ v1.6.6 起这一条路同时服务 2~5 人（旧的 2 人专属 AI 路径已删），所以"多人"这个词换成了"脚本席"——不许把它接到冠军席前面');
   eq((uiSrc.match(/wrapBigTPush\(/g) || []).length, 1,
-    '⑫l `ui.js` 里这层的调用点必须**恰好 1 处**（实测 ' + (uiSrc.match(/wrapBigTPush\(/g) || []).length + '）⇒ 2 人那条路不许包（用户裁定"2p 下不用大雷是正确情况"）');
+    '⑫l `ui.js` 里这层的调用点必须**恰好 1 处**（实测 ' + (uiSrc.match(/wrapBigTPush\(/g) || []).length + '）⇒ 一处实现、两处读数的形状不许复活。' +
+    '⚠ 旧文案那句"2 人那条路不许包（用户裁定 2p 不用大雷）"随 2 人专属路径一起作废：现在 2 人桌选到风格/极限档也会走到这一行，' +
+    '实测密度由 `tools/probe-diff-ladder.mjs` 一并印出（2人·3血·2P 包：贪心档 0.29 ‖ 极限档 0.09 张/桌）⇒ 这是"合并"的必然后果，不是偷偷加的剂量');
   const toolSrc = ['tools/eval-5p.mjs', 'tools/behavior-profile.mjs', 'js/train/bots.js']
     .map(function (f) { return readFileSync(f, 'utf8'); }).join('\n');
   ok(toolSrc.indexOf('wrapBigTPush') < 0,
@@ -2013,6 +2016,93 @@ t('D226 §E285 人数 × 血量正交（v1.6.5 · 用户裁定「把 2 人合并
     ok(jerr === '', '⑦d ' + f + ' 的 meta 必须是合法 JSON（实测 ' + (jerr || 'OK') + '）');
     ok(jerr === '' && pm && (!pm.repaired || pm.repaired.length === 0),
       '⑦e meta 不许靠"修补"才能 parse（修补表 ' + (pm && pm.repaired ? pm.repaired.length : '?') + ' 条）⇒ 需要修补就说明写进去的文本已经带裸引号');
+  }
+});
+
+t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但脚本探索概率很高」+「原本的简单普通不能用了」）：档位表是唯一来源 · 剂量由易到难单调 · 默认档逐字等于旧口径 · 量具真跑出分级 · 旧的 2 人三档不许回来', function () {
+  const botsSrc = readFileSync('js/train/bots.js', 'utf8');
+  const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
+  const BT = Bots || {};
+  const TIERS = BT.DIFF_TIERS || [];
+
+  /* ===== ① 表在册且自洽（形状检查，不看数） ===== */
+  ok(Array.isArray(TIERS) && TIERS.length >= 4, '①a `Bots.DIFF_TIERS` 必须至少 4 档（实测 ' + TIERS.length + '）⇒ 单一来源被掏空时下面的腿全是装饰');
+  const ids = TIERS.map(function (t) { return t.id; });
+  eq(new Set(ids).size, ids.length, '①b 档 id 不许重复：' + ids.join(','));
+  ok(TIERS.every(function (t) { return t.kind === 'champ' || t.kind === 'style'; }),
+    '①c 每档的 kind 必须是 champ|style（实测 ' + TIERS.map(function (t) { return t.kind; }).join(',') + '）');
+  ok(TIERS.every(function (t) { return !t.name || /简单|入门|普通|困难|极限|陪练|风格/.test(t.name) || t.name.length > 0; }), '①d 每档都得有名（下拉要显示）');
+  const badChamp = TIERS.filter(function (t) { return t.kind === 'champ' && !(typeof t.eps === 'number' && t.eps >= 0 && t.eps <= 1 && typeof t.epsK === 'number' && typeof t.epsMode === 'string'); });
+  eq(badChamp.length, 0, '①e champ 档必须带齐 (eps, epsK, epsMode)——剂量是难度的**唯一**自由量：' + badChamp.map(function (t) { return t.id; }).join(','));
+  const styleIds = {}; (BT.STYLES || []).forEach(function (s) { styleIds[s.id] = 1; });
+  const badStyle = TIERS.filter(function (t) { return t.kind === 'style' && !styleIds[t.style]; });
+  eq(badStyle.length, 0, '①f style 档指向的风格必须真在 `Bots.STYLES` 里（点了选不出来的风格 = 假档）：' + badStyle.map(function (t) { return t.id + '→' + t.style; }).join(','));
+  ok((BT.DIFF_DEFAULT || '') !== '' && ids.indexOf(BT.DIFF_DEFAULT) >= 0, '①g `DIFF_DEFAULT` 必须在表里（实测 ' + BT.DIFF_DEFAULT + '）');
+
+  /* ===== ② 剂量单调 + 默认档 = 旧口径（这两条是"阶梯"这句话的可执行内容） ===== */
+  const champs = TIERS.filter(function (t) { return t.kind === 'champ'; });
+  /* 表**就是**由易到难排的（页面上拉的顺序 = 数组顺序）⇒ 剂量必须不增 */
+  for (let i = 1; i < champs.length; i++) {
+    ok(champs[i].eps <= champs[i - 1].eps,
+      '②a 第 ' + i + ' 档（' + champs[i].id + ' ε=' + champs[i].eps + '）不许比上一档（' + champs[i - 1].id + ' ε=' + champs[i - 1].eps + '）更**能探索** ⇒ 下拉顺序就是难度顺序，翻过来就是标签说谎');
+  }
+  ok(champs.length >= 2 && champs[0].eps > champs[champs.length - 1].eps, '②b 首末两档的剂量必须真的不同（否则整条阶梯是一个点）');
+  const def = TIERS.filter(function (t) { return t.id === BT.DIFF_DEFAULT; })[0] || {};
+  ok(def.eps === 0.2 && def.epsK === 5 && def.epsMode === 'soft' && def.ramp === true,
+    '②c 默认档必须逐字是 (ε=0.2, k=5, soft, ramp) —— 这就是 v1.5.141/1.5.298 以来玩家实际吃的那条口径（D153 钉斜坡本身）；' +
+    '改默认档 = 改所有老用户的手感，属产品裁定，不许夹在别的机会里做（实测默认 ' + JSON.stringify({ e: def.eps, k: def.epsK, m: def.epsMode, r: def.ramp }) + '）');
+
+  /* ===== ③ 页面接线：值只从表里拿，旧三档不许回来 ===== */
+  ok(/tier\.epsK,\s*tier\.epsMode/.test(uiSrc),
+    '③a `ui.js` 调冠军 chooser 时不许再写死 k/mode，必须传 `tier.epsK, tier.epsMode`（否则表就成了装饰）');
+  /* ⚠ 这里刻意用 `\b` 而不是 `indexOf('Bots.DIFFICULTY')`：`ui.js` 的注释里有一句历史说明
+   *   （"`const DN = Bots.DIFFICULTY_N` 在同一个提交里被删掉了"），indexOf 会把它当成**消费点** ⇒ 门因为解释 bug 的注释而红
+   *   （D226⑤c 同族，本仓已踩过两次：静态钉要钉结构，不钉词）。 */
+  ok(!/Bots\.DIFFICULTY\b/.test(uiSrc) && !/DIFFICULTY\.(easy|medium|hard)\b/.test(uiSrc),
+    '③b 页面不许再**消费**旧三档表 `Bots.DIFFICULTY`（用户裁定"原本的简单普通就不能用了"）');
+  /* ⚠ 同上：这条也判"取用"（后面跟 `.`/`[`），不判"提到" —— `ui.js` 的修复说明里必须写出那张表的名字，
+   *   用 indexOf/`\b` 会把解释 bug 的注释判成红（就是上面那条注释里写的同一个坑，我在这条上先红了一次）。 */
+  ok(!/Bots\.DIFFICULTY_N\s*[.[]/.test(uiSrc) && !/const DIFFICULTY_N = \{/.test(botsSrc),
+    '③b2 `DIFFICULTY_N` 这张表必须连着它的死引用一起没：页面那行 `DN.hard.pick` 自 v1.3.22 起就没定义（ReferenceError），' +
+    '而这张表除了那行**零消费者** ⇒ 现在兜底点名到 `pickMultiStrong`/`pickAdaptive`（D153 的兜底腿钉它真的可解析）');
+  ok(!/const DIFFICULTY = \{/.test(botsSrc), '③c `bots.js` 里那份旧三档常量不许复活（复活 = 同时存在两份难度定义，本仓的老账）');
+  ok(/function champForCount/.test(uiSrc) && /Champ\.store\.load\(\)/.test(uiSrc.slice(uiSrc.indexOf('function champForCount'), uiSrc.indexOf('function champForCount') + 1400)),
+    '③d 2 人桌必须换包（`champForCount` 里读 2P 那颗 `Champ.store.load()`）⇒ §E286 实测 3P 包在 1v1 上是分布外的（贪心档替身夺冠 27.5% ‖ 2P 包 15.5%），而且剂量梯反号');
+
+  /* ===== ④ 真跑两次量具：阶梯必须分级（这条是行为腿，不是文本腿）=====
+   * 两个装配 = 5人3血(3P 包) ‖ 2人3血(2P 包) ⇒ 覆盖"包的两种来源"和"桌形的两端"。
+   * 局数 1500/档是**跑前定的**：300 局时配对差的 CI 是 ±2.9pt，连"入门比普通软 4pt"那一步都判不动（第一版就这么红过一趟，
+   *   红的是量具的分辨率，不是表）。种子写死 ⇒ 这一行的读数是代码的确定函数，不会因重跑而翻。
+   * ⚠ `--except=lv:hard>lv:regular` 是**点名**的松口子（只要求不翻序），理由是 §E286 实测那一步在 5 人桌上分不开
+   *   （−1.53±2.36pt）⇒ 与其把全局 minGap 压到 1.5 以下（那会连"普通/入门"一起免检），不如松的地方写名单、别处照旧 ≥2pt。
+   *   ④e 钉的就是"名单真的只有这一对在里面" —— 口子被扩大时这条会红。 */
+  const ladderRuns = [
+    { tag: '5人·3血·3P包', args: ['--games=1500', '--n=5', '--mode=multi', '--minGap=2', '--except=lv:hard>lv:regular'] },
+    { tag: '2人·3血·2P包', args: ['--games=1500', '--n=2', '--mode=standard', '--minGap=2'] }
+  ];
+  for (const LR of ladderRuns) {
+    const run = spawnSync(process.execPath, ['tools/probe-diff-ladder.mjs', '--machine=1', '--quiet'].concat(LR.args),
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+    const out = String(run.stdout || '');
+    const last = out.trim().split('\n').filter(function (l) { return /^\{/.test(l); }).pop();
+    let obj = null; try { obj = JSON.parse(last || 'null'); } catch (e) { /* 下面响亮报 */ }
+    ok(!!obj, '④a[' + LR.tag + '] 量具必须跑出机器可读的那一行（rc=' + run.status + ' ‖ 尾部：' + out.slice(-160) + '）');
+    ok(!!obj && Array.isArray(obj.rows) && obj.rows.length === TIERS.length,
+      '④b[' + LR.tag + '] 量具必须把**整张表**都跑一遍（实测 ' + (obj && obj.rows ? obj.rows.length : '?') + ' 行 ‖ 表 ' + TIERS.length + ' 档）⇒ 少跑一档 = 那条"分级"结论只覆盖跑到的部分');
+    ok(obj && obj.ok === true, '④c[' + LR.tag + '] 相邻档差必须 ≥' + (obj ? obj.minGap : 2) + 'pt（唯一点名那对只要求不翻序）‖ 实测不达标：' +
+      JSON.stringify(obj && obj.gaps) + ' ⇒ 分不开的两档不该同时占一个位置，合并或调剂量');
+    ok(obj && new Set(obj.rows.map(function (r) { return r.pct; })).size >= 3,
+      '④d[' + LR.tag + '] 正对照：至少三个不同的夺冠率（实测 ' + (obj ? new Set(obj.rows.map(r => r.pct)).size : '?') + ' 个）⇒ 全相同说明量具没在动剂量（第二十五条那族"夹具退化"）');
+    if (LR.args.join(' ').indexOf('--except=') >= 0) {
+      const exc = (obj && obj.excepted) || [];
+      eq(exc.length, 1, '④e 点名放行必须**恰好**一对（实测 ' + exc.join(',') + '）⇒ 这个口子一旦装进第二对，"分级"就只覆盖剩下的缝隙了');
+      ok(exc.length === 1 && /^lv:hard>lv:regular=/.test(exc[0]),
+        '④e 唯一那一对必须是 `lv:hard>lv:regular`（贪心冠军 vs 默认档，§E286 实测分不开的那一步），实测 ' + exc.join(','));
+      const pcts = ((obj && obj.rows) || []).map(function (r) { return r.pct; });
+      const gapsAll = pcts.slice(1).map(function (v, i) { return v - pcts[i]; });
+      const minOther = Math.min.apply(null, gapsAll.filter(function (g) { return g > 1.6; }));
+      ok(minOther >= 2, '④f 除点名那对之外的最小相邻差实测 ' + minOther.toFixed(2) + 'pt ⇒ 阈值 2pt 有没有余量看这一行（贴着线就是"下次改表要连阈值一起重定"）');
+    }
   }
 });
 
@@ -7011,8 +7101,26 @@ t('D142 空净化闸门（v1.5.199 · 用户实机报）必须与引擎 `purgeSe
     ok(iBead >= 0, 'index.html 必须加载 bead-choice.js');
     ok(iBead < iUI, '必须在 ui.js **之前**加载（ui.js 顶层就取 window.EpirusBeadChoice）');
     const ui = readFileSync('js/ui/ui.js', 'utf8');
+    /* ===== v1.6.6 改计数（旧文案"三处"）=====
+     * 第三个调用点在**被删掉的那条 2 人专属 AI 路径**里（`doPick`/`chooseAI`，随难度阶梯合并一起没了）。
+     * 现在页面只有两条出手循环：主循环 `doPickMulti`（2~5 人全走它）‖ 观战循环 `autoRunRest` ⇒ 判据跟着改成"两条都在、且各自都接电"。
+     * ⚠ 不是"少接了一处"：这条腿真正的不变量是**每个出手点都走单一来源**，所以改成按函数体数，而不是只看总数
+     *   （只看总数会被"两条都在同一个函数里、第三条循环根本没接"这种形状蒙过去）。 */
+    const fnBody = function (name) {
+      const i = ui.indexOf('function ' + name + '(');
+      if (i < 0) return null;
+      const j = ui.indexOf('\n  function ', i + 10);
+      return ui.slice(i, j < 0 ? ui.length : j);
+    };
+    const inMain = String(fnBody('doPickMulti') || '').match(/BeadChoice\.of\(/g);
+    const inSpect = String(fnBody('autoRunRest') || '').match(/BeadChoice\.of\(/g);
+    ok(!!fnBody('doPickMulti') && !!fnBody('autoRunRest'), 'D142 前置：两条出手循环都得在（`doPickMulti` ‖ `autoRunRest`），少一条 = 下面两个计数是空的');
+    ok(!!inMain && inMain.length >= 1, '主循环 `doPickMulti` 必须走 `BeadChoice.of`（实测 ' + (inMain ? inMain.length : 0) + ' 处）⇒ 2 人桌现在也走这条，它没接就等于 2 人没有单一口径');
+    ok(!!inSpect && inSpect.length >= 1, '观战循环 `autoRunRest` 必须走 `BeadChoice.of`（实测 ' + (inSpect ? inSpect.length : 0) + ' 处）');
     const calls = (ui.match(/BeadChoice\.of\(/g) || []).length;
-    ok(calls >= 3, '三处出手点（2P 主循环 / 多人主循环 / 观战循环）都必须走单一来源；实测 ' + calls + ' 处');
+    eq(calls, 2, '页面里 `BeadChoice.of` 的调用点必须**恰好 2 处**（v1.6.6 起 2 人不再有自己的第三条路）；实测 ' + calls + ' 处' +
+      '⇒ 多出来一处 = 有人又写了一条出手循环而没并进来；少一处 = 某条循环改回手抄口径了');
+    ok(ui.indexOf('function chooseAI(') < 0, 'D142 附带：旧的 2 人专属 `chooseAI` 不许复活（复活就是第三条出手点，本条上面的 2 处判据会立刻红）');
     ok(!/elec\s*>\s*[\w.\[\]]*\.?boom\s*\?\s*'boom'\s*:\s*'elec'/.test(ui),
       'ui.js 里不许再留内联的 elec>boom 三元式（"同一规则写两遍"的第七例就在这条线上）');
   }
@@ -7243,7 +7351,7 @@ t('D152 「空蓄能」分因量具 `probe-bead-loop.mjs`：两种相反的病�
   ok(/真源 `chargeProfile`（\*\*按珠子计\*\*）/.test(out), '必须印真源那一行做并排对照');
 });
 
-t('D153 产品的两个口径必须钉住（5 人 = temp.15/ε 回合斜坡 0→.1→.2/k5/soft、2 人困难 = ε0）——本夜全部"口径"结论都挂在这两行代码上', function () {
+t('D153 产品的探索口径必须钉住（temp0.15 + 档位表给的 ε/epsK/epsMode，默认档那条回合斜坡逐字 0→.1→.2）——本夜全部"口径"结论都挂在这一行代码 + DIFF_TIERS 上', function () {
   /* 为什么单独立一条：§H-6/H-10/H-12/H-13 的整串"评测口径 ≠ 产品口径"结论，**唯一的凭据就是 `ui.js` 里那一次调用**；
    *   而那行没有任何门钉着（D111/D118 钉的是探索规则与代理栏存在，不钉这四个值）。⇒ 有人调了它，全夜的读数就失去所指。
    * v1.5.298（用户 09-29 裁定）：5 人槽的 ε 从常数 0.2 改成**按回合斜坡 0 → 0.1 → 0.2**。
@@ -7252,15 +7360,34 @@ t('D153 产品的两个口径必须钉住（5 人 = temp.15/ε 回合斜坡 0→
    *   近贪心 ⇒ 0.00%，只压温度 ⇒ 与现役逐字同局），而那一回合**结构性地不可能挡到任何东西**
    *   （攻击卡 ≥1 ジ 而人人 ep=0；架势只活本回合）⇒ 那个 0 是"首手不白站架势"的唯一防线。 */
   const ui = readFileSync('js/ui/ui.js', 'utf8');
-  ok(/Trainer\.pickChampion\(state, pid, legalForAI, c, 0\.15, epsRound, 5, 'soft'\)/.test(ui),
-    '5 人冠军路径必须是 temp0.15 / epsRound / epsK=5 / soft —— 这是本仓唯一一份"玩家实际看到的探索口径"');
+  ok(/Trainer\.pickChampion\(state, pid, legalForAI, c, 0\.15, epsForTier, tier\.epsK, tier\.epsMode\)/.test(ui),
+    '冠军路径必须是 temp0.15 + **取自档位表**的 (eps, epsK, epsMode) ⇒ 这是本仓唯一一份"玩家实际看到的探索口径"。' +
+    'v1.6.6 前这一行末尾写死 `5, \'soft\'`，现在那个 5/soft 住在 `Bots.DIFF_TIERS` 里（默认档仍是 k5/soft，由 D227②c 钉住值）');
   ok(/const epsRound = state\.round <= 1 \? 0 : \(state\.round === 2 \? 0\.1 : 0\.2\);/.test(ui),
     'ε 的回合斜坡必须逐字是 0 / 0.1 / 0.2（用户 09-29 裁定"第 1~3 回合逐步提升"）⇒ 改回常数 .2 就把 §E145 那条 14.91% 的白站防御放回来');
-  ok(/Trainer\.pickChampion\(state, 1, legalForAI, c, 0\.15\)/.test(ui),
-    '2 人困难槽仍是 ε=0（`ui.js` 里那句"播放口径：与训练口径一致"是**有意的**）⇒ 所以"产品口径"不是一个数，报数必须指明哪个槽');
+  /* ===== v1.6.6 改钉法（用户指令 1/2：2 人并进多人、难度做成一条阶梯）=====
+   * 旧的第二条断言钉的是"2 人困难槽 = ε=0"那一行（`pickChampion(state, 1, ..., 0.15)`），那行已随 2 人专属 AI 路径一起删了。
+   * 现在"产品口径"仍然不是一个数，但**来源变了**：一条阶梯上的不同档 ⇒ 报数要指明**档 id**，而不是"哪个槽"。
+   * ⚠ 这里改钉"两行不许并存 + 贪心档在表里"，因为那才是"口径只有一个真源"的可执行内容；旧文案留在 METHODOLOGY §54（同一处同步改）。 */
+  ok(!/pickChampion\(\s*state,\s*1\s*,/.test(ui),
+    '页面不许再有**第二条**冠军调用（写死 `state, 1,` 的那种 2 人专属路径）⇒ 两条路 = 两份口径，历史读数就得先问"哪条"');
+  ok(/kind:\s*'champ',\s*eps:\s*0\b/.test(readFileSync('js/train/bots.js', 'utf8')),
+    '阶梯里必须还有一档 ε=0（贪心冠军）⇒ 考卷/门禁量的就是那一格；它一旦从表里消失，"评测口径 vs 产品口径"这句话就没人能兑现了');
+  /* ⚠ **故意剥块注释后再判**：修复说明里必须写出那个坏名字（`DN.hard.pick`），不剥注释就是"因为解释了 bug 而红"。
+   *   同一族第三次踩（D226⑤c / ③b / 这一条）⇒ 记进门禁编辑坑：静态钉判"取用"，注释豁免。 */
+  const uiCode = ui.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  ok(!/\bDN\.\w+/.test(uiCode) && /function fallbackPickFor/.test(ui),
+    '回退腿 冠军缺失时的兜底必须是**定义得住**的名字：代码里的 `DN.hard.pick` 那个死引用自 v1.3.22 就在（声明被同一提交删了，走进分支是 ReferenceError 而不是"显式回退"）');
+  const fbBody = String((ui.match(/function fallbackPickFor[\s\S]{0,300}?\n  \}/) || [''])[0]);
+  const fbNames = [];
+  const fre = /Bots\.([A-Za-z_]\w*)/g;
+  let frm; while ((frm = fre.exec(fbBody)) !== null) fbNames.push(frm[1]);
+  ok(fbNames.length >= 2, '回退腿 兜底函数里必须真写出脚本名（实测拿到 ' + fbNames.join('/') + '）⇒ 空函数体 = 这条腿是装饰');
+  const fbBad = fbNames.filter(function (k) { return typeof (Bots || {})[k] !== 'function'; });
+  eq(fbBad.length, 0, '回退腿 兜底引用的脚本必须**真的在 `EpirusBots` 上**（否则又是"回退到不存在的名字"，与 DN 那个坑同形）：' + fbBad.join(','));
   const m = readFileSync('docs/METHODOLOGY.md', 'utf8');
-  ok(/2 人口径|2 人槽/.test(m) && /评测口径/.test(m),
-    'METHODOLOGY 必须留着"两槽口径不同"这段（否则下一个人会把"产品口径"当成单一口径去改门）');
+  ok(/评测口径/.test(m) && /(档 id|DIFF_TIERS)/.test(m),
+    'METHODOLOGY 必须留着"口径 = 档 id + 包"这段（v1.6.6 前那段写的是"两槽口径不同"；改成别的说法时本文与所有读数必须一起改）');
   /* 反向钉：代理栏与门的输入必须**仍可分辨**（代理栏用 0.2 soft，门禁输入用 ε=0） */
   const pr = readFileSync('tools/promote-champion.mjs', 'utf8');
   ok(/fieldProfile\(params, 0\.2, 'soft'/.test(pr), 'D118 的产品代理栏必须继续显式带 0.2/soft（它存在的意义就是"另一口径"）');
@@ -8119,8 +8246,21 @@ t('D166 大雷连带**被挡下时 UI 不许说"造成伤害"**（v1.5.253 用�
     (blk ? mod.bigTChainText(blk, two.evs).html : '(缺候选)'));
   ok(hit && /受 2 点电伤/.test(mod.bigTChainText(hit, two.evs).html), '同回合真中的那条仍要报数：实际=' +
     (hit ? mod.bigTChainText(hit, two.evs).html : '(缺候选)'));
-  /* 接线：三处调用点都必须把**整回合事件表**传进去（否则 `roundEvents` 恒为 undefined、修了等于没修） */
-  eq((src.match(/evText\(e, (list|events)\)/g) || []).length, 3, '三处 `evText` 调用点都必须传整回合事件表');
+  /* 接线：每个渲染路径的调用点都必须把**整回合事件表**传进去（否则 `roundEvents` 恒为 undefined、修了等于没修）
+   * ⚠ v1.6.6 计数从 3 改成 2 + **按函数体判**：第三个调用点在被删掉的 2 人专属 AI 路径里（`doPick`/`chooseAI`）。
+   *   只判总数会被"两处都落在同一个函数里、另一条渲染路径没接"蒙过去 ⇒ 这里逐条问"这两个函数各自接到没有"。 */
+  const evBody = function (name) {
+    const i = src.indexOf('function ' + name + '(');
+    if (i < 0) return null;
+    const j = src.indexOf('\n  function ', i + 10);
+    return src.slice(i, j < 0 ? src.length : j);
+  };
+  ok(String(evBody('logEvents') || '').indexOf('evText(e, list)') >= 0,
+    'D166 接线：`logEvents` 必须把整回合事件表传给 `evText`（实测 ' + (evBody('logEvents') === null ? '函数不见了' : '没有该调用') + '）');
+  ok(String(evBody('pushTranscript') || '').indexOf('evText(e, events)') >= 0,
+    'D166 接线：`pushTranscript`（回合行 → transcript 的那一处）必须把事件表传给 `evText`（实测 ' + (evBody('pushTranscript') === null ? '函数不见了' : '没有该调用') + '）');
+  eq((src.match(/evText\(e, (list|events)\)/g) || []).length, 2,
+    '页面里带事件表的 `evText` 调用点必须**恰好 2 处**（v1.6.6 起 2 人不再有自己的第三条渲染路径）；多一处 = 又开了一条没并进来的循环');
   ok(/case 'bigTChain': return bigTChainText\(e, roundEvents\);/.test(src),
     '`evText` 的 bigTChain 分支必须委托给 `bigTChainText`（不许再内联硬编码）');
 });

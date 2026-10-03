@@ -118,7 +118,7 @@ async function main() {
   check('3 人：可用技能按钮 > 0', multiSkills > 0, '可用=' + multiSkills);
 
   // 多人困难档：切到困难（用 3P 冠军）跑 3 回合，无 JS 异常
-  await evalJS(`(function(){var s=document.getElementById('sel-diff');s.value='hard';s.dispatchEvent(new Event('change'));return 1;})()`);
+  await evalJS(`(function(){var s=document.getElementById('sel-diff');s.value='lv:hard';s.dispatchEvent(new Event('change'));return 1;})()`);
   const aiInfoRaw = await evalJS(`(function(){ try { return JSON.stringify(window.EpirusUI.aiInfo()); } catch (e) { return 'ERR:' + e.message; } })()`);
   check('3 人：困难档实际使用 3P 冠军', /"champ":true/.test(String(aiInfoRaw)), String(aiInfoRaw));
   for (let r = 0; r < 3; r++) {

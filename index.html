@@ -10,7 +10,7 @@
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.6.5 （2~5 人 × 3/4/5 血）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.6.6 （2~5 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
   </header>
 
   <nav class="tabs">
@@ -42,10 +42,21 @@
           </select>
         </label>
         <label>难度
+          <!-- v1.6.6（用户 10-03 夜指令 2「重新研究脚本难度…可以设计成冠军作为底层但脚本探索概率很高的版本」）：
+               全人数**共用一条阶梯**，难度 = 同一颗冠军包上的**探索剂量**（ε / epsK / epsMode），最高一档换成会读招的脚本。
+               旧的两条路（2 人「简单/中等/困难」+ 多人「五个风格 + 冠军」）按用户裁定作废；
+               风格没删，退成阶梯下面那组"人格"（不排强度 —— §E286 实测四个风格在 5 人桌上统计上并列）。
+               这里的静态列表只是首屏，真列表由 `ui.js:syncDiffOptions()` 从 `bots.js` 的 `DIFF_TIERS` 重建（单一来源，门 D227 钉）。 -->
           <select id="sel-diff">
-            <option value="easy">简单</option>
-            <option value="medium" selected>中等</option>
-            <option value="hard">困难（最新高水平AI）</option>
+            <option value="lv:sparring">简单 · 陪练</option>
+            <option value="lv:novice">入门</option>
+            <option value="lv:regular" selected>普通（默认）</option>
+            <option value="lv:hard">困难 · 冠军</option>
+            <option value="lv:hunter">极限 · 读招</option>
+            <option value="st:breakdef">风格 · 憋大招</option>
+            <option value="st:reflectmix">风格 · 节奏型</option>
+            <option value="st:mix">风格 · 全能型</option>
+            <option value="st:aggro">风格 · 激进快攻</option>
           </select>
         </label>
         <button class="ctl primary" id="btn-newgame">新对局</button>
@@ -126,19 +137,19 @@
 <div id="overlay-root" class="overlay hidden"><div class="card" id="overlay-card"></div></div>
 
 <!-- 引擎（加载顺序即依赖顺序） -->
-<script src="js/core/rules.js?v=q1004a"></script>
-<script src="js/core/state.js?v=q1004a"></script>
-<script src="js/core/resolve.js?v=q1004a"></script>
-<script src="js/core/play.js?v=q1004a"></script>
-<script src="js/train/bots.js?v=q1004a"></script>
-<script src="js/train/policy.js?v=q1004a"></script>
-<script src="js/train/evo.js?v=q1004a"></script>
-<script src="js/train/trainer.js?v=q1004a"></script>
-<script src="js/bundled-champion.js?v=q1004a"></script>
-    <script src="js/bundled-champion-3p.js?v=q1004a"></script>
-<script src="js/champion-pack.js?v=q1004a"></script>
-<script src="js/ui/skill-tip.js?v=q1004a"></script>
-<script src="js/ui/bead-choice.js?v=q1004a"></script>
-<script src="js/ui/ui.js?v=q1004a"></script>
+<script src="js/core/rules.js?v=q1004b"></script>
+<script src="js/core/state.js?v=q1004b"></script>
+<script src="js/core/resolve.js?v=q1004b"></script>
+<script src="js/core/play.js?v=q1004b"></script>
+<script src="js/train/bots.js?v=q1004b"></script>
+<script src="js/train/policy.js?v=q1004b"></script>
+<script src="js/train/evo.js?v=q1004b"></script>
+<script src="js/train/trainer.js?v=q1004b"></script>
+<script src="js/bundled-champion.js?v=q1004b"></script>
+    <script src="js/bundled-champion-3p.js?v=q1004b"></script>
+<script src="js/champion-pack.js?v=q1004b"></script>
+<script src="js/ui/skill-tip.js?v=q1004b"></script>
+<script src="js/ui/bead-choice.js?v=q1004b"></script>
+<script src="js/ui/ui.js?v=q1004b"></script>
 </body>
 </html>

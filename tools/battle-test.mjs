@@ -136,7 +136,7 @@ async function main() {
     const st = await evalJS(`(()=>{const s=document.getElementById('sel-hp'); if(!s) return {fatal:'no-sel-hp'}; s.value='3'; s.dispatchEvent(new Event('change'));
       const g=window.EpirusUI.B.state; return {mode:g.modeKey, hp:g.mode.hp, n:g.p.length};})()`);
     await sleep(500);
-    const ds = await evalJS(`(()=>{const s=document.getElementById('sel-diff'); s.value='champ'; s.dispatchEvent(new Event('change')); return s.value;})()`);
+    const ds = await evalJS(`(()=>{const s=document.getElementById('sel-diff'); s.value='lv:hard'; s.dispatchEvent(new Event('change')); return s.value;})()`);
     await sleep(300);
     await evalJS(`document.getElementById('btn-newgame').click()`);
     await sleep(900);
@@ -179,11 +179,12 @@ async function main() {
   await sleep(1600);
   check('能写入 2P 本机冠军（模拟本地训过冠军的老用户）',
     await evalJS(`(()=>{try{return !!localStorage.getItem('epirus.champion.v3');}catch(e){return false;}})()`));
-  /* 2P 起局：人数=2（模式互斥逻辑会把它切回 standard）、难度=困难（= 走冠军包那条路） */
+  /* 2 人起局：人数=2（血量=3 那一格命中 `standard` = v1.0.0 冻结档）、难度=「困难 · 冠军」
+   *   ⇒ v1.6.6 起 2 人桌也走**同一条阶梯**，底层包按人数选（2 人 = 2P 那颗 `Champ.store`，见 `champForCount`）。 */
   const setupBattle2P = async function () {
     await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='2'; s.dispatchEvent(new Event('change'));})()`);
     await sleep(400);
-    await evalJS(`(()=>{const s=document.getElementById('sel-diff'); if(!s) return; const o=[...s.options].find(x=>x.value==='hard'); if(o){s.value='hard'; s.dispatchEvent(new Event('change'));}})()`);
+    await evalJS(`(()=>{const s=document.getElementById('sel-diff'); if(!s) return; const o=[...s.options].find(x=>x.value==='lv:hard'); if(o){s.value='lv:hard'; s.dispatchEvent(new Event('change'));}})()`);
     await sleep(300);
     await evalJS(`document.getElementById('btn-newgame').click()`);
     await sleep(700);
@@ -216,7 +217,7 @@ async function main() {
   check('两根轴查出的模式是多人族（3~5 人 · 3 血 ⇒ multi）', modeSet === 'multi', 'mode=' + modeSet + ' hp=' + setup.hp + ' n=' + setup.n);
   check('血量轴真落到建局（选 3 血就是 3 血）', setup.hp === 3, 'mode.hp=' + setup.hp);
   check('人数轴真落到座位数（PLAYERS=' + PLAYERS + '）', setup.n === PLAYERS, 'n=' + setup.n);
-  check('难度可设为 champ（线上冠军当对手）', diffSet === 'champ', 'diff=' + diffSet);
+  check('难度可设为「困难 · 冠军」（线上冠军当对手）', diffSet === 'lv:hard', 'diff=' + diffSet);
   check('冠军包已加载（页面侧 EPIRUS_CHAMPION_3P 存在）', await evalJS('typeof window.EPIRUS_CHAMPION_3P !== "undefined"'));
   /* v1.5.11：终局收缩参数入口（起扣回合 / 每回合扣血）—— 存在、可改、会持久化 */
   const sd = await evalJS(`(()=>{const a=document.getElementById('inp-sd'), b=document.getElementById('inp-sd-dmg'); return {a:!!a, b:!!b, v:a?a.value:null, d:b?b.value:null};})()`);
@@ -283,7 +284,7 @@ async function main() {
   await sleep(250);
   await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='3'; s.dispatchEvent(new Event('change'));})()`);
   await sleep(400);
-  await evalJS(`(()=>{const s=document.getElementById('sel-diff'); s.value='champ'; s.dispatchEvent(new Event('change'));})()`);
+  await evalJS(`(()=>{const s=document.getElementById('sel-diff'); s.value='lv:hard'; s.dispatchEvent(new Event('change'));})()`);
   const playSomeRounds = async function (label, shotName) {
     const errBefore = errors.length;
     for (let i = 0; i < 25 && !(await over()); i++) {

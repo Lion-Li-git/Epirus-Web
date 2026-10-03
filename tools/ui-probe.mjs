@@ -125,7 +125,7 @@ async function main() {
   await evalJS('(function(){var s=document.getElementById("sel-hp"); if(s){s.value="3"; s.dispatchEvent(new Event("change"));} return 1;})()');
   await sleep(400);
   console.log('  5 人 · 3 血 → 模式键 =', await evalJS('(function(){var g=window.EpirusUI.B.state; return g.modeKey + "(hp" + g.mode.hp + ",n" + g.p.length + ")";})()'));
-  await evalJS('(function(){var s=document.getElementById("sel-diff"); s.value="champ"; s.dispatchEvent(new Event("change"));})()');
+  await evalJS('(function(){var s=document.getElementById("sel-diff"); s.value="lv:hard"; s.dispatchEvent(new Event("change"));})()');
   await sleep(200);
   await evalJS('document.getElementById("btn-newgame").click()');
   await sleep(900);

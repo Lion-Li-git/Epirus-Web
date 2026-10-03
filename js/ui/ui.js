@@ -37,7 +37,7 @@
 
   /* ---------- 对局状态 ---------- */
   const B = {
-    state: null, modeKey: 'standard', diff: 'medium', players: 2, hp: 3, multi: false,
+    state: null, modeKey: 'standard', diff: 'lv:regular', players: 2, hp: 3, multi: false,
     roundStarted: false, locked: false, snap: null, aiKey: null,
     evCursor: 0, transcript: [], aiHistory: [],
     roundStartSnapshot: null, warnedChampNoTrain: false, undoUsed: false
@@ -78,6 +78,9 @@
   function newGame() {
     applyAxes();   // v1.6.5：人数 × 血量 → 模式键（旧版这根叫 `syncModeOptions`，它按人数把"标准"置灰）
     const n = B.players || 2;
+    /* v1.6.6：这根旗标**只管版式**（2 人 = 左右两块面板；3~5 人 = 右栏堆叠），不再决定"走哪条 AI 路"
+     * —— 以前它还兼管"2 人用 `doPick`/`chooseAI`、多人用 `doPickMulti`/`chooseAIMulti`"，那两条已合成一条。
+     * ⇒ 读代码的人注意：`B.multi === false` **不表示**"这局用的是 v1.0 那套 AI"，只表示座位是 2 个。 */
     B.multi = n > 2;
     if (typeof syncDiffOptions === 'function') syncDiffOptions();
     B.state = S.createState(B.modeKey, null, n, sdOpts());
@@ -97,10 +100,12 @@
   }
 
   function diffName(d) {
-    if (d === 'champ') return '冠军（最强）';
+    /* v1.6.6：档名一律取自 `DIFF_TIERS`（查不到才退回风格名）—— 原来这里自己写了一遍"简单/中等/困难"，
+     *   那是 2 人旧三档的残留，按用户裁定已作废。 */
+    const t = tierOf(d);
+    if (t) return t.name;
     const st = styleOf(d);
-    if (st) return st.name;
-    return d === 'easy' ? '简单' : d === 'medium' ? '中等' : '困难（最新高水平AI）';
+    return st ? st.name : String(d);
   }
 
   /* ---------- 侧栏渲染 ---------- */
@@ -286,71 +291,25 @@
     if (key === R.SK.CHARGE) {
       B.picking = { key: key, bead: null };
       openModal('<h3>蓄能：存哪种能量珠？</h3>', [
-        { label: '⚡ 电能（电磁炮用）', fn: function () { B.picking = null; closeModal(); doPick(key, 'elec'); } },
-        { label: '💥 爆破能（激光眼用）', fn: function () { B.picking = null; closeModal(); doPick(key, 'boom'); } },
+        { label: '⚡ 电能（电磁炮用）', fn: function () { B.picking = null; closeModal(); doPickMulti(key, 'elec'); } },
+        { label: '💥 爆破能（激光眼用）', fn: function () { B.picking = null; closeModal(); doPickMulti(key, 'boom'); } },
         { label: '↩ 取消', fn: function () { cancelPick(); } }
       ]);
       hint('请选择要存的能量珠种类（Esc 或「取消」可放弃）。');
       return;
     }
-    doPick(key, null);
+    doPickMulti(key, null);
   }
 
-  function doPick(key, bead, target) {
-    if (B.multi) return doPickMulti(key, bead, target);
-    if (B.locked) return;
-    B.locked = true;
-    // 悔一步基准：回合开始前（startTurn 前）快照，撤销可回退到本回合开始
-    if (!B.roundStarted) B.roundStartSnapshot = S.cloneState(B.state);
-    ensureRound();
-    if (B.state.over) { B.locked = false; return; }
-    const idx0 = B.state.events.length;
-    // 同时行动：AI 基于“行动前状态”决策，看不到玩家本回合动作/效果
-    const preState = S.cloneState(B.state);
-    const preLegal = Play.legalActions(preState, 1);
-    const aiPick0 = Play.normPick(chooseAI(preState, preLegal));   // v7：冠军可能返回 {key,target,bead}
-    // 玩家出招
-    S.attemptAction(B.state, 0, key, bead ? { bead: bead } : null);
-    const humanPick = key;
-    hint('你选择了【' + skillName(key) + '】，电脑思考中…');
-    setTimeout(function () {
-      // 电脑出招（用先决策好的 aiKey）
-      S.attemptAction(B.state, 1, aiPick0.key, { bead: BeadChoice.of(B.state.p[1], aiPick0.bead), target: aiPick0.target, target2: aiPick0.target2 });
-      const aiPick = aiPick0.key;
-      // 结算
-      X.resolveActions(B.state);
-      X.endTurn(B.state);
-      // 回合日志
-      const events = B.state.events.slice(idx0);
-      const a0 = B.state.actions[0], a1 = B.state.actions[1];
-      const mark = function (a) {
-        if (!a || a.outcome === 'ok') return '';
-        return a.outcome === 'insufficient' ? '（ジ不足·未发动）' : a.outcome === 'banned' ? '（禁用无效）' : '（无效）';
-      };
-      addLog('div', 'rnd', '第 ' + B.state.round + ' 回合：你=【' + skillName(humanPick) + '】' + mark(a0) + ' 电脑=【' + skillName(aiPick) + '】' + mark(a1));
-      logEvents(events);
-      // 记录 transcript（纯文本，供导出复查）
-      const lines = events.map(function (e) {
-        const t = evText(e, events);
-        return t ? t.html.replace(/<[^>]+>/g, '') : null;
-      }).filter(Boolean);
-      B.transcript.push({
-        round: B.state.round,
-        human: skillName(humanPick) + mark(a0),
-        ai: skillName(aiPick) + mark(a1),
-        lines: lines
-      });
-      persistBattle();
-      B.evCursor = B.state.events.length;
-      // 每回合结算后重建技能网格：ジ/珠子变化后，原本不可用的技能要即时解锁（或反之变灰）
-      buildSkillGrid(); renderSide(0); renderSide(1);
-      B.locked = false;
-      B.roundStarted = false;
-      if (B.state.over) { finish(); return; }
-      hint('第 ' + (B.state.round + 1) + ' 回合准备 —— 请出招（出招前可“悔一步”）。');
-    }, 160 + Math.random() * 120);
-  }
-
+  /* ===== v1.6.6：2 人那一套独立的出招/结算分支已删除 =====
+   * 原来这里是 `doPick`（2 人版：只问一个 AI、日志自己拼一行、transcript 自己写一份），
+   * 与下面的 `doPickMulti`（N 人版）是**同一件事的两份实现** —— 而 v1.5.21 已经把"拼回合行 + 写 transcript"
+   * 抽成单一来源（`roundLineParts` / `pushTranscript`）给多人那条路用，2 人这条路一直在自己抄一份。
+   * 现在难度阶梯要跨人数统一（`DIFF_TIERS`），两路并存就意味着"阶梯的行为要测两遍、门要钉两遍"，
+   * 而 2 人版的日志格式还漏掉多人版后来修的每一项（死亡席不占位、目标显示、观战回合也进 transcript）。
+   * ⇒ 2 人走 N 人那条路：`doPickMulti` 在"只有一个对手"时不弹目标框（`opps.length > 1` 才弹），
+   *   座位名仍是 `你/电脑`（`state.js:defaultNames(2)`），回合行由 `roundLineParts` 打出 `你=【…】 电脑=【…】`。
+   * 反证：这条合并的可玩性不是靠"我看代码觉得等价"，是 smoke 的 12 格扫描 + battle 真打（2 人 × 三档血量各起一局）。 */
   /* ---------- 多人（3-5）对局 ---------- */
   /* 3P 冠军包（多人自对战训练产物）：不兼容/缺失返回 null */
   let multiChampCache, multiChampFrom;   // v1.5.10：multiChampFrom ∈ 'local'（本机自训/导入）| 'builtin'（内置包）
@@ -369,6 +328,33 @@
       multiChampFrom = multiChampCache ? 'builtin' : null;
     }
     return multiChampCache;
+  }
+  /* ===== v1.6.6：2 人桌的底层包 = 2P 那颗（v1.0 为 1v1 训的），≥3 人 = 3P 那颗 =====
+   * 理由不是"历来如此"，是 §E286 的实测：3P 那颗在 1v1 上是**分布外**的
+   *   （同一把尺、贪心档：3P 包让替身夺冠 27.5% ‖ 2P 包只让 15.5%），
+   *   而且剂量梯在 2 人桌上**反号**（3P 包 ε=0 的 27.5% 竟比 ε=.5 的 19.4% 还软）⇒ 用它当"困难"档是假档。
+   * 换成 2P 那颗之后同一串剂量重新单调（15.5 → 20.1 → 24.1 → 24.5，见 `DIFF_TIERS` 的 note）。
+   * 附带好处：「训练场」练出来的 2P 冠军重新有地方可玩（v1.6.6 之前页面只有"困难"一个槽用它，而那个槽已被剂量阶梯取代）。
+   * ⚠ 两槽的"本机优先"语义保持一致：2P 走 `Champ.store.load()`（键 `epirus.champion.v3`，来源由它自己回传）。 */
+  function champForCount(n) {
+    if ((n || 2) > 2) {
+      const p = loadMultiChamp();
+      return { params: p || null, from: p ? multiChampFrom : null };
+    }
+    const c = Champ.store.load();
+    if (c) return { params: c, from: Champ.store.lastSource };
+    const p3 = loadMultiChamp();   // 2P 那颗也没有 ⇒ 回退 3P 并**明说**（不许静默换包）
+    return { params: p3 || null, from: p3 ? multiChampFrom + '·回退(2P 槽空)' : null };
+  }
+  /* ===== v1.6.6 兜底脚本（冠军包拿不到时）=====
+   * 这里必须是个**定义得住**的函数：`chooseAIMulti` 那行历史上引用过 `DN.hard.pick`，而 `DN` 的声明在 v1.3.22
+   * 就删了 ⇒ 那条"显式回退"其实是 ReferenceError（门 D227③e 钉这一处不许再出现未定义的名字）。
+   * 桌形决定用哪只：≥3 人 = 多人强档脚本，2 人 = 自适应（历史上 2 人困难档就是 `pickAdaptive`）。 */
+  function fallbackPickFor(n) {
+    return (n || 2) > 2 ? Bots.pickMultiStrong : Bots.pickAdaptive;
+  }
+  function fallbackNameFor(n) {
+    return ((n || 2) > 2 ? '脚本·多人强档' : '脚本·自适应（2 人）') + '（冠军包缺失/不兼容，已回退）';
   }
   /* v1.5.10（用户要求）：把本机自训/导入的冠军清掉、改回**内置冠军**。
    * 为什么需要：页面优先读 `localStorage['epirus.champion3p']` ⇒ 换 bundle 对老用户无效
@@ -393,7 +379,7 @@
      * （v1.5.10 第一版写反了，被 tools/battle-test.mjs 的 "提示告知已改回内置冠军" 抓到）。 */
     /* v1.5.131：2P 侧也要重开一局（原先只判 `B.multi`）。2P 的 chooser **每次决策都重读**
      * `Champ.store.load()`（`chooseAI:574`）⇒ 清键下次决策即生效；重开只是让这一局从干净状态开始。 */
-    if (B.multi ? B.diff === 'champ' : (B.diff === 'hard' && had2)) newGame();
+    if (tierIsChamp(B.diff)) newGame();   // v1.6.6：2 人/多人同一条路 ⇒ 不再分"只有 hard 槽才重开"
     renderChampState();   // 训练场「当前冠军」必须立刻反映"已改回内置"
     hint(had3 || had2
       ? ('已清除本机冠军（' + [(had3 ? '多人' : ''), (had2 ? '2 人' : '')].filter(Boolean).join(' + ') +
@@ -401,47 +387,55 @@
       : '本机没有自训/导入的冠军，本来就在用内置冠军');
     return { had: had3, had2: had2, loaded: !!loaded, from: multiChampFrom || null };
   }
-  /* 当前多人对局实际用的是哪个 AI（供 UI 显示与探针断言） */
+  /* 当前对局实际用的是哪个 AI（供 UI 显示与探针断言） */
   function styleOf(id) {
     const list = (Bots.STYLES || []);
     for (let i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
     return null;
   }
-  /* 模式切换时重建难度下拉：
-   * 多人 = 5 个具名风格 + 冠军；2 人 = 原来的 简单/中等/困难（v1.0 口径不变）。 */
+  /* 难度档的**唯一**查询口（表在 `js/train/bots.js` 的 `DIFF_TIERS` ⇒ 工具与门读同一张表，不抄第二份）。 */
+  function tierOf(id) {
+    const list = (Bots.DIFF_TIERS || []);
+    for (let i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
+  function tierIsChamp(id) { const t = tierOf(id); return !!t && t.kind === 'champ'; }
+  /* 难度下拉：**全人数同一张阶梯**（v1.6.6 起不再按人数换列表；旧"简单/中等/困难"三档按用户裁定作废）。
+   * 组一 = 剂量档（含"极限·猎队"那一档脚本）；组二 = 其余风格，明确标"强度随桌形漂，不是难度档"。 */
   function syncDiffOptions() {
     const sel = $('sel-diff'); if (!sel) return;
-    const want = B.multi
-      ? (Bots.STYLES || []).map(function (x) { return { v: x.id, t: x.name }; }).concat([{ v: 'champ', t: '冠军（最强）' }])
-      : [{ v: 'easy', t: '简单' }, { v: 'medium', t: '中等' }, { v: 'hard', t: '困难（最新高水平AI）' }];
+    const raw = Bots.DIFF_TIERS || [];
+    const want = raw.map(function (x) { return { v: x.id, t: x.name }; });
+    /* ⚠ 去重必须拿**原始档位对象**比（第一版在这里比的是已经映射成 `{v,t}` 的列表，`.style` 恒 undefined ⇒
+     *   「极限 · 读招」和「风格 · 读招反制」同时出现 = 同一个脚本占两个格子，玩家以为是两档）。 */
+    const claimed = {};
+    raw.forEach(function (t) { if (t.kind === 'style' && t.style) claimed[t.style] = 1; });
+    (Bots.STYLES || []).forEach(function (s) {
+      if (!claimed[s.id]) want.push({ v: s.id, t: '风格 · ' + s.name });
+    });
     const valid = want.some(function (o) { return o.v === B.diff; });
+    if (!valid) B.diff = Bots.DIFF_DEFAULT || (want[0] && want[0].v) || 'lv:regular';
     sel.innerHTML = want.map(function (o) { return '<option value="' + o.v + '">' + o.t + '</option>'; }).join('');
-    if (!valid) B.diff = B.multi ? 'st:combocounter' : (B.diff === 'champ' ? 'hard' : 'medium');
-    if (B.diff === 'champ') B.diff = 'champ';
     sel.value = B.diff;
-    if (!sel.value) { sel.value = want[0].v; B.diff = want[0].v; }
+    if (!sel.value && want.length) { sel.value = want[0].v; B.diff = want[0].v; }
   }
-
   function aiInfo() {
-    /* v1.5.131：2P 侧原先只写"2人冠军" ⇒ 用户**看不出**自己面对的是本机旧包还是内置包
-     * （handoff §4-10 的第 3 个症状；3P 侧早就有 `multiChampFrom` 这个标注，两边对齐）。
-     * 来源由 `Champ.store.load()` 自己回传（单一来源在 `trainer.js`，不在这里重判一次）。 */
-    if (!B.multi) {
-      if (B.diff !== 'hard') return { source: '脚本', champ: false };
-      const c = Champ.store.load();
-      const from = Champ.store.lastSource;
-      return {
-        source: '2人冠军（' + (from === 'local' ? '本机自训/导入' : from === 'builtin' ? '内置' : '缺失/不兼容') + '）',
-        champ: !!c, from: from
-      };
+    /* v1.6.6：一条阶梯、一种写法。原来这里是两分支（2 人看 `Champ.store`、多人看 `multiChampFrom`），
+     * 因为页面有两条 AI 路；现在路只有一条，"用的是哪颗包"当场问 `champForCount()`（它才是判定处，这里只回显）。 */
+    const tier = tierOf(B.diff);
+    if (!tier) { const st = styleOf(B.diff); return { source: '风格·' + (st ? st.name : B.diff), champ: false }; }
+    if (tier.kind === 'style') {
+      const st = styleOf(tier.style);
+      return { source: '风格·' + (st ? st.name : tier.style) + '（' + tier.name + '）', champ: false, tier: tier.id };
     }
-    if (B.diff === 'champ') {
-      return loadMultiChamp()
-        ? { source: '3P 冠军（' + (multiChampFrom === 'local' ? '本机自训/导入' : '内置') + '）', champ: true, from: multiChampFrom }
-        : { source: '脚本·多人强档（冠军包缺失/不兼容，已回退）', champ: false, fallback: true };
-    }
-    const st = styleOf(B.diff);
-    return { source: '风格·' + (st ? st.name : B.diff), champ: false };
+    const cf = champForCount(B.players || 2);
+    const packLabel = (B.players || 2) > 2 ? '3P' : '2P';
+    if (!cf.params) return { source: fallbackNameFor(B.players || 2), champ: false, fallback: true, tier: tier.id };
+    const from = cf.from === 'local' ? '本机自训/导入' : cf.from === 'builtin' ? '内置' : String(cf.from);
+    return {
+      source: packLabel + ' 冠军（' + from + '）· ' + tier.name + ' ε=' + tier.eps + '/k' + tier.epsK + '/' + tier.epsMode + (tier.ramp ? '·斜坡' : ''),
+      champ: true, from: cf.from, tier: tier.id, eps: tier.eps, epsK: tier.epsK, epsMode: tier.epsMode, ramp: !!tier.ramp
+    };
   }
 
   /* 目标启发：用训练器的 v2 口径（反锁 + 必杀优先 + 打领先者），避免互相抵消死循环 */
@@ -475,8 +469,13 @@
       }
       return { key: key, target: t1, target2: t2, bead: (res && typeof res === 'object' && (res.bead === 'elec' || res.bead === 'boom')) ? res.bead : null };
     }
-    if (B.diff === 'champ') {
-      const c = loadMultiChamp();
+    /* ===== v1.6.6：难度档由 `bots.js` 的 `DIFF_TIERS` 说话（用户指令 2「冠军作为底层但脚本探索概率很高」）=====
+     * `kind:'style'` 的档（含最高一档"极限·猎队"）走脚本；`kind:'champ'` 的档 = **同一颗冠军包 + 一组探索剂量**。
+     * 剂量 = (eps, epsK, epsMode, ramp) 四个值 ⇒ 它们**只在这一处**被消费，`tools/probe-diff-ladder.mjs` 量的也是这四个值。 */
+    const tier = tierOf(B.diff);
+    if (tier && tier.kind === 'champ') {
+      const cf = champForCount(state.p.length);
+      const c = cf.params;
       if (c) {
         B.aiFallback = false;
         const base = legal.filter(function (l) { return l.affordable; });
@@ -518,21 +517,32 @@
          *   （**变短**）；"四席里有人夺冠" −1.00pt [−1.77,−0.23] ‖ −0.43pt [−1.23,+0.37] —— 两粒包符号不一致，
          *   这条尺量的是**四张同名包互相蚕食**（人人多 1 ジ ⇒ 内耗更快 ⇒ 异席的脚本替身更容易捡漏），不是包的强度，别当胜负读；
          *   长程镜像 300 局僵死 0/300（24.6→26.1 回合）⇒ 没有把 v1.5.139 请 ε 进来的那条用途堵回去。 */
+        /* 剂量取值：`tier.ramp` 为真 ⇒ 用下面这条**逐字**的回合斜坡（v1.5.298 用户裁定"第 1~3 回合逐步提升"，
+         *   门 D153 钉这条字面形状，改动会把 §E145 那 14.91% 的"首手白站防御"放回来）；
+         *   其余档 = 常数 ε。**这两个形状不许在别处再写一遍**（`probe-diff-ladder.mjs` 读的就是这张表）。 */
         const epsRound = state.round <= 1 ? 0 : (state.round === 2 ? 0.1 : 0.2);
-        return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15, epsRound, 5, 'soft'));
+        const epsForTier = tier.ramp ? epsRound : tier.eps;
+        return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15, epsForTier, tier.epsK, tier.epsMode));
       }
       B.aiFallback = true;                                  // 冠军缺失 → 显式回退，不静默
-      return finish(DN.hard.pick(state, pid, legal));
+      /* v1.6.6 修的一处**自 v1.3.22 起就存在的死引用**：这一行历史上写的是 `DN.hard.pick(...)`，
+       * 而 `const DN = Bots.DIFFICULTY_N` 在同一个提交（3462abf「对手风格即难度档」）里被删掉了 ⇒
+       * 走进这条分支不是"回退"，是当场 `ReferenceError: DN is not defined`。
+       * 触发条件不罕见：本机训练包损坏/版本不兼容 **且**内置包也解不开（我 10-04 把 2P bundle 的 meta 写成
+       *   ASCII 引号那次正是这个形状 —— 页面 `EPIRUS_CHAMPION` 变 undefined，但因为没人点过这条分支所以没炸）。
+       * 现在的回退按桌形选脚本（≥3 人用多人强档、2 人用自适应），与 `aiInfo()` 里那句标签同源（`fallbackNameFor`）。 */
+      return finish(fallbackPickFor(state.p.length)(state, pid, legal));
     }
     B.aiFallback = false;
-    const st = styleOf(B.diff);
+    const st = styleOf(tier ? tier.style : B.diff) || styleOf(B.diff);
     /* v1.6.3（用户 10-03 夜裁定：「接到风格 bot 席，默认难度也看得见」）：这一行以前直接把脚本席交给 `st.pick`
      *   ⇒ 大雷那一档只路过冠军的 chooser（`pickChampion` 内部），而多人**默认难度是「读招反制」**（`syncDiffOptions`），
      *   实测五个具名难度各 40 局 = **0 张 / 200 局**（§E281）：用户要的"每四五局看得见"在默认玩法里一次都没发生。
      * ⇒ 现在用 `EpirusTrainer.wrapBigTPush` 包一层：**散列、目标、"打不出来就原样返回"全在那一份实现里**（这里不抄第二份），
      *   所以页面这一档和考卷/门禁量的是同一段代码；`BIGT_PUSH = 0` 时这层是纯透传（门 D224⑫c 钉）。
-     * ⚠ 只包**多人的脚本席**：2 人模式（`ui.js` 的 673 行那条路）不包 ⇒ 用户裁定过"2p 不用大雷是正确情况"（门 D224⑫h 钉这条不许漂）。
-     * ⚠ 考卷/门禁里的脚本对手走 `bots.js` 的原始 pick，**不经这一行** ⇒ 历史读数逐字不变。 */
+     * ⚠ v1.6.6 的形状变化：2 人桌现在**也**走这一行（页面只剩这一条 AI 路，见上面"doPick 已删除"那段）
+     *   ⇒ 旧说法"2 人那条路不许包"（D224⑫h）已随之改写：钩子在同一处，但**2 人桌上这扇窗基本开不了**
+     *   （要攒满 5 珠，而 1v1 里双方互相打，实测密度由 `probe-diff-ladder` 一并印出，不是"接了就一定看得见"）。 */
     return finish(Trainer.wrapBigTPush(st ? st.pick : Bots.pickBalanced)(state, pid, legal));
   }
 
@@ -681,26 +691,12 @@
   /* 测试钩子（tools/np-probe.mjs 用）：只暴露对象引用，不改变游戏逻辑
    * v1.6.5：加 `modeFor` ⇒ smoke 可以**在真页面里**把 12 种（人数 × 血量）组合全过一遍，
    * 断言"映射的像恰好 = R.MODES 的全部 key"（这是行为断言，不是扫文本 —— 静态钉会被重构架空，本仓记过账）。 */
-  if (typeof window !== 'undefined') window.EpirusUI = { B: B, newGame: newGame, aiInfo: aiInfo, showRecap: showRecap, modeFor: modeFor, refresh: function () { buildSkillGrid(); renderSide(0); renderSide(1); } };
+  if (typeof window !== 'undefined') window.EpirusUI = { B: B, newGame: newGame, aiInfo: aiInfo, showRecap: showRecap, modeFor: modeFor, tierOf: tierOf, refresh: function () { buildSkillGrid(); renderSide(0); renderSide(1); } };
 
-  function chooseAI(state, legal) {
-    const d = B.diff;
-    if (d === 'hard') {
-      // 困难 = 最新高水平AI：优先用（本地或内置）自对战冠军；无冠军则退回“困难·自适应”
-      const c = Champ.store.load();
-      if (c) {
-        // 只在“可负担”技能里选：AI 绝不主动贷款自爆
-        const base = legal.filter(l => l.affordable);
-        const legalForAI = base.length ? base : [{ key: R.SK.JI, affordable: true }];
-        // 播放口径：与训练口径一致（temp0.15，纯策略）。
-        // 不再用运行时"连招防护"——改为训练时加入"连招反制"对手，让 AI 自己学会别被看穿。
-        return Trainer.pickChampion(state, 1, legalForAI, c, 0.15);
-      }
-      return Bots.pickAdaptive(state, 1, legal);
-    }
-    if (d === 'easy') return Bots.DIFFICULTY.easy.pick(state, 1, legal);
-    return Bots.pickBalanced(state, 1, legal);
-  }
+  /* v1.6.6：`chooseAI`（2 人专用那条 AI 路）已删除 —— 难度阶梯现在全人数共用一条路（`chooseAIMulti` + `DIFF_TIERS`）。
+   * 它原来的三档（简单 = 60% 随机 + 中等、中等 = `pickBalanced`、困难 = 2P 冠军 ε=0）由阶梯接住：
+   *   2 人桌上"困难"≈ 新的"困难·冠军"档（同一颗 2P 包、同样 ε=0），"中等"≈"普通/入门"之间，"简单"≈"简单·陪练"。
+   * 按用户裁定「原本的简单普通就不能用了」，旧档名不再保留。 */
 
   /* 悔一步：回到本回合出招前快照 */
   function rebuildLog() {
