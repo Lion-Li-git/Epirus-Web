@@ -511,7 +511,14 @@
     }
     B.aiFallback = false;
     const st = styleOf(B.diff);
-    return finish((st ? st.pick : Bots.pickBalanced)(state, pid, legal));
+    /* v1.6.3（用户 10-03 夜裁定：「接到风格 bot 席，默认难度也看得见」）：这一行以前直接把脚本席交给 `st.pick`
+     *   ⇒ 大雷那一档只路过冠军的 chooser（`pickChampion` 内部），而多人**默认难度是「读招反制」**（`syncDiffOptions`），
+     *   实测五个具名难度各 40 局 = **0 张 / 200 局**（§E281）：用户要的"每四五局看得见"在默认玩法里一次都没发生。
+     * ⇒ 现在用 `EpirusTrainer.wrapBigTPush` 包一层：**散列、目标、"打不出来就原样返回"全在那一份实现里**（这里不抄第二份），
+     *   所以页面这一档和考卷/门禁量的是同一段代码；`BIGT_PUSH = 0` 时这层是纯透传（门 D224⑫c 钉）。
+     * ⚠ 只包**多人的脚本席**：2 人模式（`ui.js` 的 673 行那条路）不包 ⇒ 用户裁定过"2p 不用大雷是正确情况"（门 D224⑫h 钉这条不许漂）。
+     * ⚠ 考卷/门禁里的脚本对手走 `bots.js` 的原始 pick，**不经这一行** ⇒ 历史读数逐字不变。 */
+    return finish(Trainer.wrapBigTPush(st ? st.pick : Bots.pickBalanced)(state, pid, legal));
   }
 
   /* ===== v1.5.21：回合行与 transcript 的**单一真源** =====

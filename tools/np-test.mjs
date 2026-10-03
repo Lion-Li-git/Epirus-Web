@@ -1629,6 +1629,85 @@ t('D224 §E271/§E273/§E274 大雷"每几局看得见一次"的档（v1.5.333 �
   ok(!knobInPage, '⑩b **代码侧**：`js/ui/ui.js` 里不许有这个页面级旋钮（实测含=' + knobInPage + '）⇒ 这一条与 ①e 同源，但 ①e 钉的是"不许调用 setter"，这里钉的是"常数本身也不许回来"');
   ok(v16zone.indexOf('EPIRUS_BIGT_PUSH_N') < 0,
     '⑩c **文档侧**：v1.6.x 的条目里不许把它当成可调项写给用户（实测含=' + (v16zone.indexOf('EPIRUS_BIGT_PUSH_N') >= 0) + '）⇒ 代码里没有、文档里说有，比"文档少写一句"贵（用户会去页面找那个不存在的开关）');
+
+  /* ===== ⑫ §E282（v1.6.3 · 用户 10-03 夜裁定「接到风格 bot 席，默认难度也看得见」）=====
+   * 起因：这一档原本只路过 `policyChooserN` ⇒ 只有难度=「冠军（最强）」的席位才在用这颗包，其余五个具名难度实测 **0 张/200 局**（§E281）。
+   * 修法是把外壳 `wrapBigTPush` 包在脚本席的 pick 外面。⚠ 这一族最贵的风险是"抄第二份散列"与"作用面悄悄扩大"，
+   *   所以这里既钉**行为**（关档透传 / 命中才动 / 不问意愿问牌 / 不吃随机流 / 剂量单调），也钉**接线与边界**（只有一个调用点、且只在多人；工具侧一次都不许用）。 */
+  const sb12 = sandbox(process.cwd());
+  const TE12 = sb12.EpirusTrainer, R12 = sb12.EpirusRules, S12 = sb12.EpirusState;
+  ok(typeof TE12.wrapBigTPush === 'function' && typeof TE12.bigTPushSalt === 'function',
+    '⑫a 外壳与散列都必须是**导出的**（否则门只能钉字符串，"只有一份实现"这句话钉不住）');
+  ok(/const hit = bigTPushPick\(state, pid, aff\);/.test(evoSrc) && (evoSrc.match(/% BIGT_PUSH/g) || []).length === 1,
+    '⑫b 全仓 `evo.js` 里**只许有一处** `% BIGT_PUSH`（实测 ' + (evoSrc.match(/% BIGT_PUSH/g) || []).length + ' 处）'
+    + '⇒ 散列/档位一旦被抄第二份，就会"页面这档生效、考卷那档没生效"（§E274 的 G5 盲区换个位置复发）');
+  const botPick = { key: R12.SK.JI, target: 1, target2: null, bead: null };
+  const bot = function () { return botPick; };
+  const mkSt = function (round, salt) {
+    let calls = 0;
+    const st = S12.createState('multi', { next: function () { calls++; return 0.5; } }, 5);
+    st.round = round; st.slotSalt = salt >>> 0;
+    for (let i = 0; i < 5; i++) st.p[i].ep = i === 0 ? 8 : 0;
+    return { st: st, calls: function () { return calls; } };
+  };
+  const LEGAL = [{ key: R12.SK.JI, affordable: true }, { key: R12.SK.BIG_T, affordable: true }];
+  const LEGAL_NOBT = [{ key: R12.SK.JI, affordable: true }];
+  const LEGAL_UNAFF = [{ key: R12.SK.JI, affordable: true }, { key: R12.SK.BIG_T, affordable: false }];
+  TE12.setBigTPush(0);
+  let offAllSame = true;
+  for (let r = 1; r <= 24 && offAllSame; r++) {
+    const m = mkSt(r, 4242 + r * 7);
+    if (TE12.wrapBigTPush(bot)(m.st, 0, LEGAL) !== botPick) offAllSame = false;
+  }
+  ok(offAllSame, '⑫c **关档必须是纯透传**（24 个回合逐一验：返回值就是 bot 自己那一手，同一个对象）⇒ 否则"默认值 0 = 关掉"是纸面的');
+  TE12.setBigTPush(12);
+  let hitRound = -1, missRound = -1;
+  for (let r = 1; r <= 60 && (hitRound < 0 || missRound < 0); r++) {
+    const m = mkSt(r, 90210);
+    const h = (TE12.bigTPushSalt(m.st, 0) % 12) === 0;
+    if (h && hitRound < 0) hitRound = r;
+    if (!h && missRound < 0) missRound = r;
+  }
+  ok(hitRound > 0 && missRound > 0, '⑫d 夹具里必须同时找得到"命中"与"不命中"的回合（实测 ' + hitRound + ' ‖ ' + missRound + '）⇒ 找不到就是散列没落地');
+  const mh = mkSt(hitRound, 90210), ms = mkSt(missRound, 90210);
+  const ph = TE12.wrapBigTPush(bot)(mh.st, 0, LEGAL);
+  ok(ph && ph.key === R12.SK.BIG_T && typeof ph.target === 'number',
+    '⑫e 命中 + 这张牌打得出来 ⇒ 必须交出这一手并**带上目标**（实测 key=' + (ph && ph.key) + ' target=' + (ph && ph.target) + '）');
+  const pm = TE12.wrapBigTPush(bot)(ms.st, 0, LEGAL);
+  ok(pm === botPick, '⑫f **没命中就必须逐字不动**（实测换了=' + (pm !== botPick) + '）⇒ 命中判错一个方向，整档就变成"每回合都打大雷"');
+  const pn = TE12.wrapBigTPush(bot)(mh.st, 0, LEGAL_NOBT);
+  ok(pn === botPick, '⑫g 命中但**手上没这张牌** ⇒ 不许动（实测换了=' + (pn !== botPick) + '）⇒ 窗口问的是牌，不是意愿');
+  const pa = TE12.wrapBigTPush(bot)(mh.st, 0, LEGAL_UNAFF);
+  ok(pa === botPick, '⑫h 命中但**不可付**（5 珠/封锁由引擎判）⇒ 不许动 ⇒ 这一层绝不能自己判价格，否则规则一改就漂');
+  const rngA = mh.calls(); TE12.wrapBigTPush(bot)(mh.st, 0, LEGAL); const rngB = mh.calls();
+  ok(rngB === rngA, '⑫i 外壳**一次都不许碰 `state.rng`**（实测调用前后随机流抽了 ' + (rngB - rngA) + ' 次）⇒ 新增随机流会让同种子的两臂漂向不同轨迹');
+  /* ⚠ 夹具形状：这里**必须像真桌那样变**（一局一个盐，变的是"回合 × 座位"）。
+   *   我第一版写的是 `slotSalt = r * 2654435761`（盐跟着回合号线性走）⇒ 240 组**全部命中**（N=12 也 240/240），
+   *   那条腿当时是**永绿的装饰**（记忆第十九条"夹具必须用真池子"、第二十三条"先证明各档位是同一份样本"）。 */
+  let n1 = 0, n4 = 0, n12 = 0;
+  for (let r = 1; r <= 48; r++) {
+    for (let pid = 0; pid < 5; pid++) {
+      const m = mkSt(r, 90210);
+      const v = TE12.bigTPushSalt(m.st, pid);
+      if (v % 1 === 0) n1++;
+      if (v % 4 === 0) n4++;
+      if (v % 12 === 0) n12++;
+    }
+  }
+  ok(n1 === 240 && n4 >= 40 && n4 <= 110 && n12 >= 8 && n12 <= 50 && n12 < n4,
+    '⑫j 剂量必须**真的按 1/N 落地**（240 组"回合 × 座位"：N=1 ⇒ ' + n1 + ' ‖ N=4 ⇒ ' + n4 + '（期望 ~60）‖ N=12 ⇒ ' + n12 + '（期望 ~20））'
+    + '⇒ 三个档位的命中数必须**分层**，全命中 = 散列退化成恒真（实测已见过：盐跟着回合号线性生成时 240/240 全命中）');
+  const camAt = uiSrc.indexOf('function chooseAIMulti');
+  const wrapAt = uiSrc.indexOf('wrapBigTPush(');
+  const nextFn = uiSrc.indexOf('\n  function ', camAt + 20);
+  ok(camAt >= 0 && wrapAt > camAt && (nextFn < 0 || wrapAt < nextFn),
+    '⑫k 页面上这一层**只能接在多人的脚本席**上（实测 chooseAIMulti@' + camAt + ' ‖ wrap@' + wrapAt + ' ‖ 下一个函数@' + nextFn + '）');
+  eq((uiSrc.match(/wrapBigTPush\(/g) || []).length, 1,
+    '⑫l `ui.js` 里这层的调用点必须**恰好 1 处**（实测 ' + (uiSrc.match(/wrapBigTPush\(/g) || []).length + '）⇒ 2 人那条路不许包（用户裁定"2p 下不用大雷是正确情况"）');
+  const toolSrc = ['tools/eval-5p.mjs', 'tools/behavior-profile.mjs', 'js/train/bots.js']
+    .map(function (f) { return readFileSync(f, 'utf8'); }).join('\n');
+  ok(toolSrc.indexOf('wrapBigTPush') < 0,
+    '⑫m **工具侧一次都不许用**（实测含=' + (toolSrc.indexOf('wrapBigTPush') >= 0) + '）⇒ 考卷/门禁里的脚本对手必须逐字不变，否则今晚之前所有配对读数全部作废');
 });
 
 t('D225 §E275 摄魂指法的"残血只在**探索里**软提升"档（v1.5.334，evo.js 的 DRAIN_PUSH）：默认关 · 不改规则可证 · 只在 ε>0 的 soft 分支生效 · 窗口与剂量用纯函数直读 · ε=0 的臂必须拒跑而不是读成"没效果" · 落盘带两维', function () {

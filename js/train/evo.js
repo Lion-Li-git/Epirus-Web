@@ -635,6 +635,26 @@
     return { key: key, target: t, target2: null, bead: null };
   }
 
+  /* ===== v1.6.3（用户 10-03 夜裁定：「接到风格 bot 席，默认难度也看得见」）：把上面那一档**包在任何 chooser 外面** =====
+   * 为什么要这一层：`BIGT_PUSH` 的散列原本只路过 `policyChooserN` ⇒ 页面上**只有难度=「冠军（最强）」的席位**才用这颗包，
+   *   其余五个具名难度走脚本启发式（`ui.js:512-513`），实测 **0 张 / 200 局**（§E281）⇒ 用户要的"看得见"在默认玩法里根本不发生。
+   * ⚠ 三条形状纪律（都是本仓的老账）：
+   *   ① **不许在这里抄第二份散列/目标/合法性判定** —— 全部复用 `bigTPushPick`（散列、档位、`null` 语义、挑目标一律走同一条路），
+   *      否则"页面这档生效、考卷那档没生效"就是 §E274 的 G5 盲区换个位置复发（门不加载 `ui.js`，只能靠"实现只有一份"来保）。
+   *   ② 传进去的"可选项"是脚本席手上的 `legal`（引擎已经按规则算过 `affordable` ⇒ 5 珠价与 3 回合封锁照旧由 `js/core` 判，这里不重算），
+   *      它比冠军那条路少一层 `lockTarget`（"上一次被打断"的策略过滤）⇒ **作用面略宽，这是有意的**，且写死在下面门腿 ⑫f 的语义里。
+   *   ③ **打不出来就原样返回 bot 自己的那一手**（`null` ⇒ 不动任何行为），并且**不消耗 `state.rng`**（散列是纯函数）
+   *      ⇒ 关档时 `wrapBigTPush(f)` 与 `f` 必须逐字相同（门腿 ⑫c 钉这一条）。
+   * 谁在用：只有 `js/ui/ui.js` 的**多人脚本席**调用 ⇒ 考卷/门禁里的脚本对手**一个字节都没变**（历史读数继续可比），
+   *   2 人模式也不在这条路上（门腿 ⑫h 钉"2 人调用点不许包这一层"，因为用户裁定过"2p 不用大雷是正确情况"）。 */
+  function wrapBigTPush(pickFn) {
+    return function (state, pid, legal) {
+      const aff = (legal || []).filter(function (l) { return l && l.affordable; });
+      const hit = bigTPushPick(state, pid, aff);
+      return hit || pickFn(state, pid, legal);
+    };
+  }
+
   function policyChooserN(params, temp, eps, epsK, epsMode) {
     params = normChampParams(params);
     const legacy = LEGACY(params);
@@ -3285,7 +3305,7 @@ let WALL_GAMES = 3;
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
-    setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认值只由上面那个常数表达，门 D224 钉）
+    setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt, wrapBigTPush,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认值只由上面那个常数表达，门 D224 钉）· v1.6.3 §E282：外面那层给脚本席用
     setDrainPush, drainPushOn, drainPushWants, drainPushSalt,              // v1.5.334 §E275：摄魂"残血只在探索里软提升"（默认 0=关，门 D225 钉）
     setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve, setBeliefPly, beliefPly,
     setBeliefTarget, beliefTarget, setBeliefTie, beliefTie,
