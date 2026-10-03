@@ -662,7 +662,7 @@ const comboSubjectSel = (!COMBO || !comboOk) ? null : buildComboSel();
 const pureSel = !PURE ? null : buildPureSel();     // 必须在 PAY_KEY 声明之后
 const banSel = !BAN ? null : buildBanSel();        // 必须在 PAY_KEY 声明之后
 const smartSel = !SM ? null : buildSmartSel();     // 必须在 PAY_KEY 声明之后
-/* ===== §E262（用户 10-03 指令）：`--bigtpush=<1..6>` = **在"打得出来"的窗口里按 1/N 抽样兑现** + `--bigttgt=<规则>` 挑该打的人 =====
+/* ===== §E262（用户 10-03 指令）：`--bigtpush=<0|1..12>` = **在"打得出来"的窗口里按 1/N 抽样兑现** + `--bigttgt=<规则>` 挑该打的人 =====
  * 用户的话：「既然冠军会打环、偶尔能攒到高 ep，那就在 ep 达到 5 之后调高大雷在随机探索中的排名，并指向最有可能发动进攻或被集火的人」。
  * 与仓里已有的两族**都不相同**，所以值得单独测：
  *   · `--inject=bigT` = "**能用就用**、不挑时机不挑人"（测的是这张卡的天花板）；
@@ -682,8 +682,12 @@ const PUSHKEY = FLAG.pushkey || 'bigT';
 const PUSH_ST = { opp: 0, fired: 0, tgt: {}, tie: 0 };
 /* 旗标**给了就必须合法**（`abc`/`0.5`/`4` 都不许降级成"当没写"——那正是本仓最怕的静默臂）；`0` 是合法的"明确关档"，
  * 留着它才能做门 D223 的零剂量证明：`--bigtpush=0` 与不设旗标必须逐字相同。 */
-if (PUSH_RAW != null && !(PUSH === 0 || (Number.isInteger(PUSH) && PUSH >= 1 && PUSH <= 6))) {
-  console.error('⛔ --bigtpush 只能是 0 或 1..6（0 = 明确关档；N = 每 N 个回合兑现一次；收到 `' + PUSH_RAW + '`）'); process.exit(2);
+/* 剂量上界从 6 抬到 **12**（用户 10-03 下午的口径：「大雷只要每四五局有一次就行，亏损无所谓」⇒ 要问的是"那一档几赔"）。
+ * 为什么必须抬：两模式的**窗口密度差一倍**（multi 的 ep≥5 且可付 ≈0.53 个/局 ‖ long ≈1.07 个/局），
+ *   同一个 p=6 在 multi 是每 4.1 局一张、在 long 只到每 2.6 局 ⇒ 想把"每 4~5 局"在 long 也夹住要 p=8~12。
+ * ⚠ 上界也是量具的一部分：门 D223 的 ⑤ 那一圈原来拿 `--bigtpush=7` 当"必须 exit 2 的坏值"，扩界后要换成 13（否则门会红在正对照上）。 */
+if (PUSH_RAW != null && !(PUSH === 0 || (Number.isInteger(PUSH) && PUSH >= 1 && PUSH <= 12))) {
+  console.error('⛔ --bigtpush 只能是 0 或 1..12（0 = 明确关档；N = 每 N 个回合兑现一次；收到 `' + PUSH_RAW + '`）'); process.exit(2);
 }
 /* ⚠ 这两个旗标的合法性**不挂在 `if (PUSH)` 下面**：拼错目标规则/门槛而忘了开 push，
  * 会被静默当成"没写" ⇒ 那臂的读数就归因到了不存在的规则上（§E233 那条"回退链取不到要印未测"的同一族）。 */
@@ -790,8 +794,15 @@ if (RANK) process.on('exit', function () {
 });
 if (RANK) {
   console.log('[pushrank] 提顺位已生效：卡=`' + PUSHKEY + '`（' + PUSH_NAME + '）**ep≥' + PUSH_MINEP + ' 且合法可付、且"一选与二选概率差 ≤ '
-    + RANK_MARGIN + '"（闸读法 `' + RANK_GATE + '`）**时把它的概率 ×(1+' + RANK_BIAS + ')，随后**仍用冠军那套按概率抽**（冠军可以选回原来那一手）'
+    + RANK_MARGIN + '"（闸读法 `' + RANK_GATE + '`）**时把它的概率'
+    + (RANK_FLOOR == null ? ('×(1+' + RANK_BIAS + ')') : ('**抬到不低于一选的 ' + (RANK_FLOOR * 100).toFixed(0) + '%**'))
+    + '，随后**仍用冠军那套按概率抽**（冠军可以选回原来那一手）'
     + ' · 工具侧实现，不动 policy.js');
+  /* ⚠ 千问 10-03 复核补的响亮警告：`margin` 比的是两个**概率**之差，定义域就是 [0,1] ⇒ `margin=1` 不是"闸开得宽"，而是**根本没有闸**。
+   *   DS 那批剂量曲线用的正是 `--pushrank=1,1,top2,<share>`（他的自检自己印了"落在闸内的 3,102,882 个（100.0%）"）⇒
+   *   读的人若把那条曲线当成用户更正原话里的"只在一二选差距不大、有随机性的地方加"，就会把一个**无闸**的数引成**有闸**的数。 */
+  if (RANK_MARGIN >= 1) console.log('[pushrank] ⚠⚠ **margin=' + RANK_MARGIN + ' ⇒ 闸永远开**（概率差的上界就是 1）⇒ 这一档实际是"凡是这张牌可付就抬"，'
+    + '**不是**"只在一二选接近时才抬"。要测后者取 margin<1（本轮实测：margin=0.1 ⇒ 闸内只剩 11% 决策、真搬动的概率质量只剩 1/18）。');
 }
 const rankSel = !RANK ? null : function () {
   const inner = subjectPolicy();
@@ -864,7 +875,12 @@ const subjectSel = (RANK && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !
   : (SUBJECT
     ? function () { return asChooser(FN[SUBJECT]); }
     : function () { return subjectPolicy(); });
-const subjectLabel = (PUSH && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !PURE && !SUBJECT)
+const subjectLabel = (RANK && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !PURE && !SUBJECT)
+  /* ⚠ 千问 10-03 复核补：`--pushrank` 这一臂原先**没有自己的标签**，stdout 上顶着"冠军"两字 ⇒
+   *   读日志的人会把"提顺位后的 38.9%"当成出厂读数（门腿 ⑥e 对 push 臂钉过这一点，DS 那批漏了）。 */
+  ? ('提顺位·' + PUSH_NAME + ' ep≥' + PUSH_MINEP + ' 闸(' + RANK_GATE + ' margin≤' + RANK_MARGIN + ') '
+    + (RANK_FLOOR == null ? ('×(1+' + RANK_BIAS + ')') : ('下界=' + RANK_FLOOR + '×一选')))
+  : (PUSH && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN && !PURE && !SUBJECT)
   ? ('探索提前·' + PUSH_NAME + ' ep≥' + PUSH_MINEP + ' 且 round%' + PUSH + ' ·目标=' + PUSHTGT)
   : PAYLOAD ? ('消融·只换弹头 ' + PAYLOAD)
   : (PURE && !INJECT && !SMART && !COMBO && !BAN && !planSubjectSel) ? ('纯招·只出 ' + PURE + ' + ジ')

@@ -1393,13 +1393,19 @@ t('D223 §E262/§E266 探索提前（大雷 `--bigttgt=` 挑人 ‖ 摄魂 `--pu
   ok(/探索提前·摄魂指法/.test(d1.out), '⑥e 读数标签必须写明是哪张卡（两张卡的臂可以除卡名外全同 ⇒ 标签含糊就会串臂）');
 
   /* ⑤ 坏输入必须 exit 2，不许降级成"当没写" */
-  const bads = [['--bigtpush=7'], ['--bigtpush=0.5'], ['--bigttgt=nonsense'], ['--bigttgt=nonsense', '--bigtpush=0'],
+  const bads = [['--bigtpush=13'], ['--bigtpush=0.5'], ['--bigttgt=nonsense'], ['--bigttgt=nonsense', '--bigtpush=0'],
     ['--pushminep=x'], ['--bigtpush=1', '--ban=bigT'], ['--bigtpush=1', '--inject=bigT'],
     ['--pushkey=nonsense'], ['--pushkey=nonsense', '--bigtpush=0']];
   for (const b of bads) {
     const rb = runE(b);
     eq(rb.code, 2, '`' + b.join(' ') + '` 必须 exit 2（实测 ' + rb.code + '）⇒ 含糊/抢主体席的写法被静默忽略就是假臂');
   }
+  /* ⑤m 边界的**另一侧**也要钉（千问 10-03 下午）：剂量上界从 6 抬到 12（用户要把"每 4~5 局一张大雷"那一档的价量出来，
+   *    而 long 的窗口密度是 multi 的两倍 ⇒ 同一个 p=6 在 multi 是每 4.1 局、在 long 只到每 2.6 局）。
+   *    ⇒ 原来拿 `--bigtpush=7` 当"必须拒"的正对照现在必须放行；而**只测"坏值被拒"的门会把合法区间一起杀掉还自称有牙**（§E190 那一族）。 */
+  const okTop = runE(['--bigtpush=12']);
+  eq(okTop.code, 0, '`--bigtpush=12`（新上界）必须放行（实测 exit ' + okTop.code + '）⇒ 拒掉合法档 = 这把尺根本量不到用户要的那一档');
+  ok(/窗口（主体 `ep≥5`/.test(okTop.out), '⑤n `--bigtpush=12` 必须真的走到自检那一行（没走到 = 剂量被静默吞掉）');
 
   /* ⑤ 落盘身份两维（配对尺靠表头拒判，缺维就会把"每 1 次一打"与"每 3 次一打"配成同臂） */
   const dir = mkdtempSync(join(tmpdir(), 'd223-'));
@@ -1430,10 +1436,12 @@ t('D223 §E262/§E266 探索提前（大雷 `--bigttgt=` 挑人 ‖ 摄魂 `--pu
   const wrongCase = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--pool=core', '--every=17', '--drainhp=3'],
     { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
   eq(wrongCase.status, 2, '`--drainhp=3`（小写 h）必须 exit 2（实测 ' + wrongCase.status + '）⇒ 拼错的旗标被静默忽略 = 假臂');
-});
-
 
   /* ===== ⑦ §E268（DS 2026-10-03）：`--pushrank` 的**惰性守卫**（这条腿是本条的真正目的） =====
+   * ⚠️ 千问 10-03 复核时修的位置：DS 原来把这 13 行插在 D223 的收尾 `});` **外面** ⇒ 它们成了**模块顶层语句**，
+   *    一旦某条不满足就是"未捕获异常直接掀掉整趟 np"（他报的"变异后输出为空、原因未定"就是这个），
+   *    而 `--only=` 的过滤器也管不到它们 ⇒ 这六条**既不点名、也不受控**（本仓第一条"外挂在门外的门腿"）。
+   *     now 移进 D223 体内：红了会点名是哪条腿，且与 `--only=D223` 一起跑。
    * 为什么必须有它：DS 第一版算子是"概率 ×倍数"，实测**抬高 63,004 次却一次都没改落点**
    * （dm=0.00±0.00、0/2925 张桌子有差、两份日志除墙钟外一字不差）——因为这张卡在菜单里但策略下概率≈0。
    * 没有这条腿，"提顺位"可以永远绿着却什么都不做（与 D218 登记腿空转、D221 永绿装饰同一族）。 */
@@ -1446,6 +1454,39 @@ t('D223 §E262/§E266 探索提前（大雷 `--bigttgt=` 挑人 ‖ 摄魂 `--pu
   ok(/'#pushkey=' \+ \(\(PUSH \|\| RANK\) \? PUSHKEY : '-'\)/.test(evSrc),
     '⑦e 提顺位臂的**卡名也必须落盘**（`(PUSH||RANK)`）⇒ 否则它与出厂那份落盘逐字相同，下一个人读不出这臂动的是哪张卡');
   ok(evSrc.indexOf("'#pushrank=' + (RANK ?") >= 0, '⑦f `#pushrank` 必须进落盘身份（配对尺的抽取式已同步加，写侧读侧一起改）');
+
+  /* ===== ⑦g/⑦h 千问 10-03 复核时补的**行为面**腿（⑦a~⑦f 全是静态钉钉，会被"换个写法"绕过；更要紧的是它们钉不到"闸其实没关"）=====
+   * 起因：DS 那批剂量曲线用的是 `--pushrank=1,1,top2,<share>`，而 margin 比的是"一选与二选的**概率差**"（上界就是 1）
+   *   ⇒ **margin=1 = 闸永远开**（他的自检自己印出来了："落在闸内的 3,102,882 个（100.0%）"）
+   *   ⇒ 所以那条曲线量的是"凡这张牌可付就把概率下限抬到一选的 X%"，**用户更正的后半句"只在一二选差距不大、有随机性的地方加"没被测到**。
+   *   这两条腿把"闸会关"变成可执行的断言，并把"margin=1 就是没有闸"这件事写进判据里，下一个人不会再看错。 */
+  const rkRun = function (margin) {
+    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '2', '5', '77000', '--pool=all', '--every=64',
+      '--pushkey=drain', '--pushminep=0', '--pushrank=' + margin + ',1,top2,0.6'],
+      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
+    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
+  };
+  const ratioOf = function (txt) { const m = /落在闸内的 \d+ 个（([0-9.]+)%）/.exec(txt); return m ? Number(m[1]) : NaN; };
+  const raisedOf = function (txt) { const m = /真抬高 (\d+) 次/.exec(txt); return m ? Number(m[1]) : NaN; };
+  const rkOpen = rkRun(1), rkShut = rkRun(0.1);
+  eq(rkOpen.code, 0, '⑦g0 `margin=1` 臂必须跑通：' + rkOpen.out.slice(0, 160));
+  eq(rkShut.code, 0, '⑦g1 `margin=0.1` 臂必须跑通：' + rkShut.out.slice(0, 160));
+  const o1 = ratioOf(rkOpen.out), o2 = ratioOf(rkShut.out);
+  ok(isFinite(o1) && isFinite(o2), '⑦g2 自检必须印"落在闸内的比例"（实测 ' + o1 + ' ‖ ' + o2 + '）⇒ 读不出这一栏，"闸"就没有可验证的口径');
+  ok(o1 > 99.5, '⑦g3 **写进判据的事实**：`margin=1` 时闸必须显示为"几乎永远开"（实测 ' + o1 + '%）⇒ 谁把 `--pushrank=1,…` 读成"有闸的软提顺位"，这条会先替他红');
+  ok(o2 < o1 - 20, '⑦g4 收紧 margin 必须**真的关掉闸**（margin=1 ⇒ ' + o1 + '% ‖ margin=0.1 ⇒ ' + o2 + '%）⇒ 关不掉就是闸没接进判定（永绿装饰，与 D218/D221 同族）');
+  ok(raisedOf(rkShut.out) > 0, '⑦g5 关掉大半闸之后仍必须抬得动（实测真抬高 ' + raisedOf(rkShut.out) + ' 次）⇒ 0 = 这一档在真闸下是空操作，读数不可引');
+  ok(/提顺位·摄魂指法/.test(rkShut.out),
+    '⑦h stdout 必须写明这是**提顺位臂 + 哪张卡**（实测标签=' + (/^\[([^\]]*1st=)/m.exec(rkShut.out) || ['(无)'])[0] + '）⇒ 顶着"冠军"两字会让人把处理臂当出厂读数');
+  /* ⑦k 千问 10-03 复核补的**数值腿**（⑦c 只钉了"这一栏存在"，而存在≠非零）：
+   *   把 `pFloor` 悄悄乘个 0，算子就退回惰性，但 ⑦a/⑦b/⑦c 三条静态钉**全部照绿**（字符串还在、fired 还在计数）。
+   *   ⇒ 惰性守卫必须钉"真搬动的概率质量 > 0"这个**数**，否则它守的是代码的形状，不是代码的作用。 */
+  const movedOf = function (txt) { const m = /真搬动的概率质量 ([0-9.]+)/.exec(txt); return m ? Number(m[1]) : NaN; };
+  const mvOpen = movedOf(rkOpen.out), mvShut = movedOf(rkShut.out);
+  ok(isFinite(mvOpen) && isFinite(mvShut), '⑦k0 自检必须印"真搬动的概率质量"这个**数**（实测 ' + mvOpen + ' ‖ ' + mvShut + '）');
+  ok(mvOpen > 0 && mvShut > 0,
+    '⑦k1 两档 margin 的**搬动量都必须 > 0**（实测 margin=1 ⇒ ' + mvOpen + ' ‖ margin=0.1 ⇒ ' + mvShut + '）⇒ 印了这栏却是 0，就是"抬了名次、没搬概率"的惰性算子（DS 的 v1 实测 63,004 次抬名次、对局逐位相同）');
+});
 
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {
   /* 真实事故（v1.3.48）：一次测试跑把 js/bundled-champion*.js 覆写成测试冠军并被提交。
