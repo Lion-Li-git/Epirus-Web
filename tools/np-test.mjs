@@ -1432,6 +1432,21 @@ t('D223 §E262/§E266 探索提前（大雷 `--bigttgt=` 挑人 ‖ 摄魂 `--pu
   eq(wrongCase.status, 2, '`--drainhp=3`（小写 h）必须 exit 2（实测 ' + wrongCase.status + '）⇒ 拼错的旗标被静默忽略 = 假臂');
 });
 
+
+  /* ===== ⑦ §E268（DS 2026-10-03）：`--pushrank` 的**惰性守卫**（这条腿是本条的真正目的） =====
+   * 为什么必须有它：DS 第一版算子是"概率 ×倍数"，实测**抬高 63,004 次却一次都没改落点**
+   * （dm=0.00±0.00、0/2925 张桌子有差、两份日志除墙钟外一字不差）——因为这张卡在菜单里但策略下概率≈0。
+   * 没有这条腿，"提顺位"可以永远绿着却什么都不做（与 D218 登记腿空转、D221 永绿装饰同一族）。 */
+  const evSrc = readFileSync('tools/eval-5p.mjs', 'utf8');
+  ok(/const rankSel = !RANK \? null :/.test(evSrc), '⑦a 关档必须**不构造**包装器（`!RANK ? null :`）⇒ 结构上保证关档不动任何行为（行为面的逐字等价由 §E268 的剥墙钟 diff 实测：同一份输入新旧两树输出逐字相同）');
+  ok(evSrc.indexOf('Math.max(f.probs[i], pFloor)') >= 0, '⑦b 算子必须是**概率下界**（`Math.max(f.probs[i], pFloor)`）—— `×倍数` 是可证明惰性的（×2 个 ≈0 仍是 ≈0）');
+  ok(evSrc.indexOf('真搬动的概率质量') >= 0, '⑦c 自检必须印**真搬动的概率质量**（0 = 算子惰性）⇒ 没有这一栏，惰性算子查不出来（实测已印：14.6K/25.6K/39.3K）');
+  ok(evSrc.indexOf("process.on('exit'") >= 0 && evSrc.indexOf('[pushrank 自检]') >= 0,
+    '⑦d 自检必须**无条件**印 ⇒ 走 process 出口钩子（DS 第一版被 `if (PUSH)` 吞掉、第二版被 `if (FLAG["dump-per"])` 吞掉，两次都是"静默的量具"）');
+  ok(/'#pushkey=' \+ \(\(PUSH \|\| RANK\) \? PUSHKEY : '-'\)/.test(evSrc),
+    '⑦e 提顺位臂的**卡名也必须落盘**（`(PUSH||RANK)`）⇒ 否则它与出厂那份落盘逐字相同，下一个人读不出这臂动的是哪张卡');
+  ok(evSrc.indexOf("'#pushrank=' + (RANK ?") >= 0, '⑦f `#pushrank` 必须进落盘身份（配对尺的抽取式已同步加，写侧读侧一起改）');
+
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {
   /* 真实事故（v1.3.48）：一次测试跑把 js/bundled-champion*.js 覆写成测试冠军并被提交。
    * v1.3.54 又发现两个同类缺口，都只在"跑完看 git status"时才显形：
