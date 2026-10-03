@@ -539,6 +539,102 @@
     return policyChooserN(params, TRAIN_TEMP == null ? 0.35 : TRAIN_TEMP, TRAIN_EPS, TRAIN_EPS_K, TRAIN_EPS_MODE);
   }
 
+  /* ===== v1.5.334（用户 10-03 晚：「你把 p=8 默认开吧」→ 量出 G5 被击穿后改口「那换 p=12 吧」）：大雷的"看得见"档 **默认就是 12** =====
+   * 沿革：v1.5.332 先做成"引擎默认 0=关 + 页面 `ui.js` 显式开 8"，用户看完读数后把它提成**默认行为**
+   *   ⇒ 现在**唯一的来源就是下面这个常数**（页面不再调 setter，避免"两处开关必漂移"这一族的老账）；
+   *   ⇒ 连带后果（是**有意的**）：**训练 / 评测 / 门禁现在也带着这一档跑** ⇒
+   *      以后要"出厂 vs 处理"的配对，**必须显式 `--shipbigt=0`**，"不设旗标"已经等于"开着"。
+   * 用户的话：「最后大雷只要每四五局有一次就行了，亏损这一点没什么关系」+「按 p=8 准备上线」+「p=8 默认开」。
+   * 机制：在这张牌现在打得出来的窗口里（= 引擎自己的候选枚举判过价格/珠/封锁，不在这里抄第二份费用表），
+   *   按 (每局盐, 回合, 座位) 的确定性 avalanche 散列取 1/N ⇒ 命中就把这一手交给大雷，目标 = ep 最高的对手（平手取血少，再取座位号小）。
+   * ⚠ 三条形状纪律：
+   *   ① **不消耗 `state.rng`**（散列是纯函数 ⇒ 不新增随机流）；代价是这一手跳过了冠军自己的抽样，
+   *      而"少抽一次"的后果**已经包含在下面那个实测价里** —— 量的就是这同一段代码（`eval-5p --shipbigt=`）。
+   *   ② **剂量不许按 1/N 换算**：窗口密度会随剂量自己漂（N=2 时 0.85 个/局 ‖ N=10 时 1.63 个/局，不打就一直攥着 5 珠）
+   *      ⇒ "每几局一张"只有考卷说了算（§E270 那张表就是这条的实测）。
+   *   ③ **"多久出现一次"是分装配的**（§E272 实测于 N=8）：3~5 人每 5.2 ‖ 3.2 局一张，2 人镜像每 2.9 局一张（**N=12 的 2 人镜像未测**），
+   *      而 **2 人真桌（冠军 + 脚本）每 250 局 ≈ 看不见**（那张牌在 2 人桌上开不了窗口）⇒ 用户裁定「**2p 下不用大雷是正确的情况**」，所以不为 2 人做任何补偿。
+   *   ④ **这一档会挤压破防能力**（§E274 实测，G5 防席夺冠）：关掉档 12% ‖ 18% → N=8 41% ‖ 30% → **N=12 36% ‖ 27%**。
+   *      ⇒ 用户裁定「G5 稍微差一点问题不大」⇒ `gate-drafts` 改成**两行分开判**：`G5[...]` 仍按关掉档判 ≤25%（判别力不降），
+   *        `G5带档[...]` 按现网形状判 ≤40%。**换成 8 会更糟（41%/30%）⇒ 12 是"看得见"与"还清得了场"之间用户选的那一点。**
+   * 实测价（产品考卷 24 局 × 2925 桌 · 与同树**关掉档**逐桌配对 · §E270/§E271/§E274）：
+   *   **默认 N=12 ⇒ 3 血每 7.0 局一张、−0.34 ±0.12pt ‖ 5 血每 4.6 局一张、−0.22 ±0.11pt**；
+   *   更猛的 N=8 是每 5.2 ‖ 3.2 局一张、−0.52 ‖ −0.40pt；N=6 每 4.2 局一张、−0.85 ±0.19pt。
+   * ⚠ 这与"改规则"不是一回事：**不动** `BIG_T` 的 5 珠单价与 3 回合封锁（`js/core/*` 一字未动、指纹仍 `ebdbff36`），
+   *    只是给冠军的出牌加一条部署层的抽样；**回退 = 把下面这个常数改成 0**（门 **D224** 钉"默认值在册 / 关掉要显式 / 开档真改落点 / 两条路径必须同意"）。 */
+  let BIGT_PUSH = 12;
+  function setBigTPush(v) {
+    const n = (v == null || v === '') ? 0 : Number(v);
+    if (!(n === 0 || (Number.isInteger(n) && n >= 1 && n <= 12))) {
+      throw new Error('setBigTPush: 只能是 0 或 1..12（0 = 关；N = 每 N 个窗口兑现一次；收到 `' + v + '`）');
+    }
+    BIGT_PUSH = n;
+  }
+  function bigTPushOn() { return BIGT_PUSH; }
+  /* ===== §E275（v1.5.334 · 用户 10-03 晚：「你把摄魂的给做一下」+「HP=1 是**仅调整探索时软提升的窗口**，不是调整实际规则」）=====
+   * 与大雷那档的**根本区别**：这条**不强行落子**，只在**探索那一支**里把"摄魂指法"并入探索集（= 软提升，
+   *   与 v1.5.142 给电磁炮/激光眼/天火开的 `forced` 口子同一形状、同一作用面）。
+   * ⇒ 三条后果都是用户要的那句话的直接推论，不是借口：
+   *   ① **不改规则**：这张牌的合法性照旧由 `js/core/state.js` 按 `mode.drainHpMax` 判（长程仍是 ≤2），我们一行都不碰；
+   *   ② **只影响浏览器口径**：训练/评测/门禁一律 `eps=0` ⇒ 走不到探索那一支 ⇒ 既有读数逐字不变（G4/G5 也不受影响）；
+   *   ③ 窗口条件 `自己 hp ≤ 1` 是**加在提升上的门槛**，不是加在牌上的门槛 ⇒ 长程桌里 HP=2 的自己照样不会被提。
+   * 默认 **0 = 关**：这一档要等"页面口径（ε=0.2 soft）"的配对读数出来才决定开不开（考卷 ε=0 那档根本看不见它 ⇒ 别拿考卷数当它的价）。 */
+  let DRAIN_PUSH = 0;
+  function setDrainPush(v) {
+    const n = (v == null || v === '') ? 0 : Number(v);
+    if (!(n === 0 || (Number.isInteger(n) && n >= 1 && n <= 12))) {
+      throw new Error('setDrainPush: 只能是 0 或 1..12（0 = 关；N = 每 N 个窗口软提升一次；收到 `' + v + '`）');
+    }
+    DRAIN_PUSH = n;
+  }
+  function drainPushOn() { return DRAIN_PUSH; }
+  /* 纯函数：**这一手该不该把摄魂并进探索集**。拆开是为了让门能喂合成表直读（记忆第十九条：
+   * 排序键/名单式的门在 `band=1` 那种短夹具上是永绿装饰 ⇒ 必须能在一次调用里判形状）。 */
+  function drainPushWants(state, pid) {
+    if (!(DRAIN_PUSH >= 1)) return false;
+    const me = (state && state.p && state.p[pid]) ? state.p[pid] : null;
+    if (!me) return false;
+    if (!(me.hp > 0 && me.hp <= 1)) return false;              // 用户裁定的窗口：**自己**残血（不是把牌的门槛改掉）
+    return (drainPushSalt(state, pid) % DRAIN_PUSH) === 0;      // 剂量：与大雷同一族 avalanche 散列，不消耗 state.rng
+  }
+  function drainPushSalt(state, pid) {
+    let h = ((((state && state.slotSalt) | 0)) ^ Math.imul((state && state.round) | 0, 0x5F356495) ^ Math.imul(pid | 0, 0x2E4B5C91)) >>> 0;
+    h = Math.imul(h ^ (h >>> 13), 0x9E3779B1) >>> 0;
+    return (h ^ (h >>> 11)) >>> 0;
+  }
+  function bigTPushSalt(state, pid) {
+    /* avalanche 三段（异或 → 奇数乘子 → 移位混淆）。⚠ 加法散列在本仓实测**打不开**（同一局内回合高度相关 ⇒ 剂量非单调，§E265 自我报告 #9）。 */
+    let h = ((((state && state.slotSalt) | 0)) ^ Math.imul((state && state.round) | 0, 0x9E3779B1) ^ Math.imul(pid | 0, 0x85EBCA6B)) >>> 0;
+    h = Math.imul(h ^ (h >>> 15), 0x2C1B3C6D) >>> 0;
+    return (h ^ (h >>> 12)) >>> 0;
+  }
+  /* 目标 = 威胁最大的人：**ep 最高**（下一手最能打出东西）⇒ 平手取**血少**的 ⇒ 再平手取**座位号小**的（不做随机 ⇒ §E215 那一族）。 */
+  function bigTPushTarget(state, pid) {
+    const opps = S.opponentsOf(state, pid);
+    if (!opps || !opps.length) return null;
+    const first = state.p[opps[0]] || {};
+    let best = opps[0], bestEp = first.ep | 0, bestHp = (first.hp == null ? Infinity : first.hp);
+    for (let i = 1; i < opps.length; i++) {
+      const o = opps[i], pl = state.p[o] || {};
+      const ep = pl.ep | 0, hp = (pl.hp == null ? Infinity : pl.hp);
+      if (ep > bestEp || (ep === bestEp && hp < bestHp)) { best = o; bestEp = ep; bestHp = hp; }
+    }
+    return best;
+  }
+  function bigTPushPick(state, pid, cands) {
+    const key = R.SK.BIG_T;
+    let has = false;
+    for (let i = 0; i < cands.length; i++) if (cands[i] && cands[i].key === key) { has = true; break; }
+    if (!has) return null;                     /* 这张牌此刻打不出来 —— 价格/珠/封锁一律问候选枚举，不在这里抄第二份 */
+    if ((bigTPushSalt(state, pid) % BIGT_PUSH) !== 0) return null;
+    const t = bigTPushTarget(state, pid);
+    if (t == null) return null;
+    for (let i = 0; i < cands.length; i++) {
+      if (cands[i] && cands[i].key === key && cands[i].target === t) return cands[i];   /* 优先用枚举里那一格（保留 bead/target2）*/
+    }
+    return { key: key, target: t, target2: null, bead: null };
+  }
+
   function policyChooserN(params, temp, eps, epsK, epsMode) {
     params = normChampParams(params);
     const legacy = LEGACY(params);
@@ -571,6 +667,23 @@
        * ⚠ 启发式而非定律：收入 >1/回合（聚能环第 3 次起 +3、避雷针 +4）时 ep=1 蓄能也可能成立。 */
       const v7base = econBase(state, pid, base);
       const cands = P.candidatesFor(state, pid, v7base, { lockTarget: lastCancelOther(state, pid) });
+      /* ===== v1.5.332（用户 10-03 下午裁定）：大雷的"看得见"上线档 ⇒ **默认 0 = 关**，页面在 ui.js 显式开 8 =====
+       * 用户的话：「最后大雷只要每四五局有一次就行了，亏损这一点没什么关系」⇒ 这一格从"要不要做"变成"那一档到底几赔"。
+       * 机制：在"这张牌现在打得出来"（`cands` 里有它 = 引擎自己判过价格/珠/封锁）的窗口里，按 (每局盐, 回合, 座位)
+       *   的确定性 avalanche 散列取 1/N ⇒ 命中就把这一手交给大雷，目标 = **ep 最高的对手**（平手取血少、再取座位号小）。
+       * ⚠ 三条形状纪律：① **不消耗 `state.rng`**（散列是纯函数 ⇒ 不新增随机流；代价是这一手跳过了冠军自己的抽样，
+       *    而"少抽一次"的后果已经包含在下面的实测价格里，因为量的就是这同一段代码）；
+       *    ② **剂量不许按 1/N 换算**——窗口密度会随剂量自己漂（N=2 时 0.85 个/局 ‖ N=10 时 1.63 个/局，不打就一直攥着 5 珠）
+       *    ⇒ "每几局一张"只有考卷说了算（§E270 就是这条的实测表）；
+       *    ③ v1.5.333 起这一档**默认开着**（唯一来源 = 上面那个 `BIGT_PUSH` 常数）⇒ **训练/评测/门禁现在也带着它跑**；
+       *       要拿"关掉档"当对照必须显式 `setBigTPush(0)`（评测侧 = `eval-5p --shipbigt=0`）⇒ "不设旗标"已经等于"开着"。
+       *       ⇒ 本版之前那些"不设旗标 = 出厂形状"的历史读数，今后引用要么重跑、要么按 §E271 的价签（+0.52 ‖ +0.40pt）换算。
+       * 实测价（产品考卷 24 局 × 2925 桌 · 与同树出厂卷逐桌配对 · §E270）：**N=8 ⇒ 3 血桌每 5.2 局一张、−0.52 ±0.16pt ‖ 5 血桌每 3.3 局一张、−0.40 ±0.13pt**；
+       *   更猛的 N=6 是每 4.2 局一张、−0.85 ±0.19pt；更省的 N=10/12 在 5 血桌已到 −0.17/−0.22pt（贴着 0，没有再降的空间）。 */
+      if (BIGT_PUSH >= 1) {
+        const pushed = bigTPushPick(state, pid, cands);
+        if (pushed) return pushed;
+      }
       /* v1.5.30x：**默认关**的在线对手模型 + 1-ply 重放搜索（`setBeliefSearch(1)`）。
          关档时这一行短路都不进 ⇒ 现网行为逐字不变（门 D2xx 钉"默认值 / 关档逐字同结果 / 开档真的改变选择"三段）。 */
       /* ===== v1.5.139（用户 09-21 晨裁定：ε=0.25 全候选太糙，出现"贴贴不引爆/空爆"昏手，要"均匀但随机性小"）=====
@@ -665,6 +778,12 @@
             const forced = [];
             if (held) { forced.push(R.SK.RAILGUN); forced.push(R.SK.LASER_EYE); }
             if (cursing) { forced.push(R.SK.FIRESTORM); forced.push(R.SK.CURSE); }
+            /* ===== §E275（v1.5.334）：摄魂指法的"残血软提升"（用户 10-03 晚：「你把摄魂的给做一下」+「HP=1 是仅调整
+             * 探索时软提升的窗口，而不是调整实际规则」）=====
+             * 走的正是上面那个 `forced` 口子（v1.5.142 给电磁炮/激光眼/天火开的那一个）⇒ **不强行落子**，只把它并进探索集；
+             *   窗口与剂量都在 `drainPushWants` 里（自己 hp≤1 + avalanche % N），而"这张牌此刻可不可付"照旧由引擎判
+             *   （下面那行要求 `keys.indexOf(...) >= 0` ⇒ 长程桌的 `drainHpMax=2` 一个字都没改）。 */
+            if (drainPushWants(state, pid)) forced.push(R.SK.DRAIN);
             for (let fi = 0; fi < forced.length; fi++) {
               /* 只在**可负担**（= 真在 keys 里）时并入；已在集里的不重复。 */
               if (keys.indexOf(forced[fi]) >= 0 && smart.indexOf(forced[fi]) < 0) smart.push(forced[fi]);
@@ -3166,6 +3285,8 @@ let WALL_GAMES = 3;
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
+    setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（v1.5.333 起默认 8→12，门 D224 钉）
+    setDrainPush, drainPushOn, drainPushWants, drainPushSalt,              // v1.5.334 §E275：摄魂"残血只在探索里软提升"（默认 0=关，门 D225 钉）
     setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve, setBeliefPly, beliefPly,
     setBeliefTarget, beliefTarget, setBeliefTie, beliefTie,
     setBeliefBead, beliefBead, setBeliefRingPrice, beliefRingPrice, setBeliefBeadRedeemable, beliefBeadRedeemable,

@@ -173,7 +173,44 @@ export function pickBestByExam(cands, opts) {
  * 入参：`entries[i] = { score, landG }`（`score` = 该候选的胜负分；`landG` = `mirrorHealth.effSkillsLand`）。
  * 规则：① 取最高分 top；② 带 = `score ≥ top − tol`；③ 带内按 `landG` 取大、再同则按 `score`；
  * ④ **带外者永不参与**（广度不许用来救一个胜率更差的包）；缺 `landG` 记 0（= 不参与"广"的竞争，而不是当它满格）。 */
+/* ===== v1.5.326（qoder 10-03 夜班 §E249）：**同分带内按"某几张卡的出手量"选人**（`EPIRUS_SEL_BIGT` 的排序键）=====
+ * 动因（今晚 4 批 47 臂实测）：`EPIRUS_COSTLY_W` 把名人堂里"会打大雷"的粒从**对照 0/6 抬到 6/6**，
+ *   可**当选产物**常常还是 0.000 —— 终局重验只按胜负分选人，"会不会打这张卡"看不见。
+ *   ⇒ 与其继续加大奖励（今晚证明"当选层种子压过剂量"），不如把用量做成**选人排序键**。
+ * 与 `bandPickByLand` 同一形状，只差排序键；两条纪律**写在这份纯函数里**（不散在调用点，防"名单写两遍"那一族）：
+ *   ① **带内全部用量为 0 ⇒ 一律不换人**（`zeroDose:true` + 返回分数最高那粒）——
+ *      否则这根键会在没有任何证据的情况下动判定，而下游只看得到"这臂跑过了"（= 永绿假守卫，§E198 同族）；
+ *   ② 换人必须被记下来（`tieBrokenBy:'usage'`），门才钉得住"排序键真咬到"。
+ * `usageOf(e)` 由调用点给（train-3p 用 `behavior-profile.fieldProfile`，与 `SEL_KEEP_CAL=plain` 同一把尺）。 */
+export function bandPickByUsage(entries, tolPt, usageOf) {
+  const list = (entries || []).filter(function (e) { return !!e; });
+  if (!list.length) return { best: null, band: [], top: 0, zeroDose: true, pickedUsage: 0, tieBrokenBy: 'none' };
+  const u = function (e) {
+    const v = Number(usageOf ? usageOf(e) : e.usage) || 0;
+    e.__usage = v;
+    return v;
+  };
+  const top = list.reduce(function (m, e) { return Math.max(m, Number(e.score) || 0); }, 0);
+  const band = list.filter(function (e) { return (Number(e.score) || 0) >= top - (Number(tolPt) || 0) / 100; });
+  const byScore = band.slice().sort(function (a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); });
+  const zeroDose = band.every(function (e) { return u(e) === 0; });
+  let best = byScore[0] || null;
+  if (!zeroDose) {
+    const byUse = band.slice().sort(function (a, b) {
+      if (u(b) !== u(a)) return u(b) - u(a);
+      return (Number(b.score) || 0) - (Number(a.score) || 0);
+    });
+    best = byUse[0] || best;
+  }
+  return {
+    best: best, band: band, top: top, zeroDose: zeroDose,
+    pickedUsage: best ? u(best) : 0, usage: band.map(function (e) { return u(e); }),
+    tieBrokenBy: (best && byScore[0] && best !== byScore[0]) ? 'usage' : 'score'
+  };
+}
+
 export function bandPickByLand(entries, tol) {
+
   const list = (entries || []).filter(function (e) { return !!e; });
   if (!list.length) return { best: null, band: [], top: 0, dropped: 0, tieBrokenBy: 'none' };
   const T = (tol != null ? tol : 0.03);

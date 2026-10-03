@@ -28,6 +28,17 @@ const R = sb.window.EpirusRules, S = sb.window.EpirusState, Play = sb.window.Epi
 const B = sb.window.EpirusBots;
 const CH = P.unpack(sb.window.EPIRUS_CHAMPION_3P);
 
+/* §E274（v1.5.333）：`--shipbigt=<0|1..12>` 覆盖**引擎默认档** ⇒ 用来量"G4/G5 行为门随大雷剂量"的曲线。
+ * 为什么这个工具必须能覆盖：v1.5.333 起 `BIGT_PUSH` 是默认行为，而 G4/G5 是**阻断级**行为门 ⇒
+ *   若门只能测默认那一格，就答不出"哪一档仍然清得了场"（也就没法在"看得见"与"好用"之间做取舍）。
+ * 生效与否由**引擎回读**判（不许看旗标在不在），并把有效值印在第一行。 */
+const SB_RAW = (process.argv.find(function (a) { return a.indexOf('--shipbigt=') === 0; }) || '').split('=')[1];
+if (SB_RAW != null && SB_RAW !== '') {
+  if (typeof T.setBigTPush !== 'function') { console.error('⛔ 这棵树没有 `setBigTPush` ⇒ 旗标没有生效对象，拒跑'); process.exit(2); }
+  T.setBigTPush(SB_RAW);
+  console.log('[gate-drafts] 大雷上线档 = ' + T.bigTPushOn() + '（由 `--shipbigt=' + SB_RAW + '` 覆盖 · 引擎回读）');
+}
+
 function mulberry32(seed) {
   let a = seed >>> 0;
   return function () {
@@ -378,37 +389,50 @@ for (const [nm, p] of PACKS) {
   }
 }
 
-console.log('\n=== G5 破防反射（1 席只防御 + 4 席被测：防席夺冠必须 ≤25%）===');
+/* ===== §E274（v1.5.333）：G5 现在印**两行**，因为"包自己的能力"与"玩家实际遇到的形状"是两件事 =====
+ * 病（实测，不是推测）：大雷那档自 v1.5.332 起开在页面上，而本门不加载 `ui.js` ⇒ 连续两版门禁量的都是"关档"的形状，
+ *   玩家手里的形状从来没被这道阻断门量过（`--shipbigt` 旗标出现后一测：p=8 时防席夺冠 multi 30% / long 41%，两模式都红）。
+ * 处理（用户 10-03 裁定：「G5 稍微差一点问题不大」）：
+ *   · `G5[包/模式]` = **关掉上线档**（= 包自己的破防能力），阈值仍是 **≤25%** ⇒ 判别力不降级（v1.5.78 的采用理由：坏包在 65~75%）；
+ *   · `G5带档[包/模式]` = **开着默认档**（= 玩家实际遇到的），阈值放宽到 **≤40%**，写成常量并在这里标明是谁、哪一天、为哪一句裁定放的。
+ * ⚠ 放宽只作用于"带档"那一行；原来那一行不动 ⇒ 以后要是"关档"也红了，就是包的破防能力真的坏了，不会被这档遮掩。 */
+const G5_MAX = 25, G5_MAX_DEPLOY = 40;
+console.log('\n=== G5 破防反射（1 席只防御 + 4 席被测：包自己 ≤' + G5_MAX + '%；带上线档 ≤' + G5_MAX_DEPLOY + '%）===');
 for (const [nm, p] of PACKS) {
-  const ch = T.policyChooserN(p, 0.15);
-  for (const mode of ['long', 'multi']) {
-    let defWin = 0, pierceHit = 0, toDef = 0, defHp = 0;
-    for (let g = 0; g < N4; g++) {
-      const seat = g % 5;
-      const st = S.createState(mode, { next: mulberry32(7000 + g * 997) }, 5);
-      st.slotSalt = h32(7000 + g * 2246822519);
-      const def = function (s2, pid, legal) { return aff(legal, R.SK.GUARD) ? { key: R.SK.GUARD, target: null } : { key: R.SK.JI, target: null }; };
-      const cs = []; for (let i = 0; i < 5; i++) cs.push(i === seat ? def : ch);
-      Play.autoGameN(st, cs.map(function (c, idx) { return function (s2, pid, legal) {
-        const r = c(s2, pid, legal); const k = typeof r === 'string' ? { key: r, target: T.pickTargetN(s2, pid, r) } : r;
-        if (idx !== seat && R.ATK_EFFECT.indexOf(k.key) >= 0 && k.target === seat) {
-          toDef++;
-          const card = R.byKey[k.key];
-          if (card && card.pierce && card.pierce.defense) pierceHit++;
-        }
-        return k;
-      }; }));
-      defHp += Math.max(0, st.p[seat].hp);
-      if (st.winner === seat) defWin++;
+  const savedPush = (typeof T.bigTPushOn === 'function') ? T.bigTPushOn() : 0;
+  for (const PASS of [{ tag: '', dose: 0, max: G5_MAX }, { tag: '带档', dose: savedPush, max: G5_MAX_DEPLOY }]) {
+    if (typeof T.setBigTPush === 'function') T.setBigTPush(PASS.dose);
+    const ch = T.policyChooserN(p, 0.15);
+    for (const mode of ['long', 'multi']) {
+      let defWin = 0, pierceHit = 0, toDef = 0, defHp = 0;
+      for (let g = 0; g < N4; g++) {
+        const seat = g % 5;
+        const st = S.createState(mode, { next: mulberry32(7000 + g * 997) }, 5);
+        st.slotSalt = h32(7000 + g * 2246822519);
+        const def = function (s2, pid, legal) { return aff(legal, R.SK.GUARD) ? { key: R.SK.GUARD, target: null } : { key: R.SK.JI, target: null }; };
+        const cs = []; for (let i = 0; i < 5; i++) cs.push(i === seat ? def : ch);
+        Play.autoGameN(st, cs.map(function (c, idx) { return function (s2, pid, legal) {
+          const r = c(s2, pid, legal); const k = typeof r === 'string' ? { key: r, target: T.pickTargetN(s2, pid, r) } : r;
+          if (idx !== seat && R.ATK_EFFECT.indexOf(k.key) >= 0 && k.target === seat) {
+            toDef++;
+            const card = R.byKey[k.key];
+            if (card && card.pierce && card.pierce.defense) pierceHit++;
+          }
+          return k;
+        }; }));
+        defHp += Math.max(0, st.p[seat].hp);
+        if (st.winner === seat) defWin++;
+      }
+      const pct = Math.round(100 * defWin / N4);
+      gate(`G5${PASS.tag}[${nm}/${mode}] 面对"只防御不还手"必须能清场（实测防席夺冠 ${pct}% · 阈值 ≤${PASS.max}%${PASS.tag ? ' · 带上线档 N=' + PASS.dose : ' · 关掉上线档'}）`, pct <= PASS.max,
+        `防席夺冠 ${pct}%  终局血量 ${(defHp / N4).toFixed(1)}  打它的攻击 ${(toDef / N4).toFixed(1)}/局` +
+        `  其中**穿透防御**的 ${(pierceHit / N4).toFixed(1)}/局 ⇒ ${pct > PASS.max ? '缺"目标免疫普通攻击 ⇒ 换穿透卡"的反射' : '破防反射在'}` +
+        /* v1.5.287：同 G4 —— 判定读数必须自带噪声尺，且**阈值落在区间内要明说**（DS 清单第 8 条后半） */
+        `  噪声尺：${ci95tag(pct, N4)}` +
+        (Math.abs(pct - PASS.max) < (ci95pt(pct, N4) || 0) ? ' ⇒ ⚠️ 阈值 ' + PASS.max + '% 落在 95% 区间内' : ''));
     }
-    const pct = Math.round(100 * defWin / N4);
-    gate(`G5[${nm}/${mode}] 面对"只防御不还手"必须能清场（实测防席夺冠 ${pct}% · 阈值 ≤25%）`, pct <= 25,
-      `防席夺冠 ${pct}%  终局血量 ${(defHp / N4).toFixed(1)}  打它的攻击 ${(toDef / N4).toFixed(1)}/局` +
-      `  其中**穿透防御**的 ${(pierceHit / N4).toFixed(1)}/局 ⇒ ${pct > 25 ? '缺"目标免疫普通攻击 ⇒ 换穿透卡"的反射' : '破防反射在'}` +
-      /* v1.5.287：同 G4 —— 判定读数必须自带噪声尺，且**阈值落在区间内要明说**（DS 清单第 8 条后半） */
-      `  噪声尺：${ci95tag(pct, N4)}` +
-      (Math.abs(pct - 25) < (ci95pt(pct, N4) || 0) ? ' ⇒ ⚠️ 阈值 25% 落在 95% 区间内 ⇒ 红/绿由抽样决定' : ''));
   }
+  if (typeof T.setBigTPush === 'function') T.setBigTPush(savedPush);
 }
 
 console.log('\n=== G6 靶向率（先证明量具有判别力，再量冠军；≥40% 才叫会瞄威胁）===');

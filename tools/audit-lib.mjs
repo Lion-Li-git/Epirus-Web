@@ -98,9 +98,16 @@ export function parseMetaTolerant(json, label) {
     if (!bad.length) throw e;                          // 不是这个已知缺陷 ⇒ 原样抛（不许瞎修）
     let out;
     try { out = JSON.parse(fixed); } catch (e2) { throw e; }   // 修不好 ⇒ 抛**原来的**错（别用第二个错盖住第一个）
+    /* ⚠ v1.5.288 之后这里加过一条教训，10-03 夜班又被同一句话绊到（§E261）：**警告文本不许硬说"源文件是红线包"** ——
+     * 门 D168 拿 `{"a":1,broken:"v"}` 这种**合成夹具**调用本函数时也会走到这一行，
+     * 于是整轮认证的输出里出现"红线包损坏 ⇒ 请用户裁定"这种**不存在**的生产缺陷。
+     * ⇒ 现在按 label 分岔：只有真的 `js/bundled-champion*` 才念那句；其余一律说清"这是测试/中间产物，不是线上槽"。 */
+    const isShipped = /^js[\/\\]bundled-champion/.test(String(label || ''));
     console.warn('⚠ ' + (label || 'META') + ' 的 JSON **损坏**：' + bad.join(', ') + ' 缺起始引号 ⇒ 本工具已按'
-      + '「只补引号」修复后继续。⚠️ 源文件是**红线包**（`js/bundled-champion*.js`）⇒ 是否修正由用户裁定；'
-      + '不修的话，每个读 META 的工具都要走这条容错路。');
+      + '「只补引号」修复后继续。'
+      + (isShipped
+        ? '⚠️ **线上槽文件**损坏（`js/bundled-champion*.js`）⇒ 是否修文件由用户裁定（v1.5.256 已修过一次 ⇒ 若再现说明有人手改过包）。'
+        : '（调用者不是线上槽文件 ⇒ 这是测试夹具或中间产物，不是生产缺陷；两个真线上槽由门 D168 的 ③ 腿直接读并核过。）'));
     return { meta: out, repaired: bad };
   }
 }
