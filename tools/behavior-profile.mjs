@@ -198,7 +198,12 @@ if (RUN_AS_MAIN) for (const file of CHAMPS) {
      for (const fld of FIELDS) {
       const t = fieldProfile(params, eps, mode, GAMES, 4100, fld, GAMEMODE);
       const m = mirrorProfile(params, eps, mode, MIRROR, 880);
-      console.log('  ε=' + eps + ' ' + mode.padEnd(8) + '[' + fld + '/' + GAMEMODE + '] ' +
+      /* §E279（我 10-03 夜差点把两列并排读错，所以把分母印进标签，而不是只在注释里写）：
+       *   `fieldProfile` 的计数只在 `field === 'self'` 时覆盖**全部 5 席**，其它装配只数**冠军那一席**
+       *   ⇒ 同一栏 `/局` 的**分母差 5 倍**，而"装配差 43 倍"（D117 记的那条）本来就叠在上面。
+       *   数字含义一律不动（历史行仍与自己的旧行可比），只加这一枚范围标签。 */
+      const scope = fld === 'self' ? '5席合计' : '仅冠军席';
+      console.log('  ε=' + eps + ' ' + mode.padEnd(8) + '[' + fld + '/' + GAMEMODE + '·' + scope + '] ' +
         WATCH.map(function (w) { return w[1] + ' ' + ((t.keys[w[0]] || 0) / GAMES).toFixed(2) + '/局'; }).join(' ') +
         ' 最大ep ' + t.maxEp);
       console.log('        防御 ' + share(t, 'def') + ' 攻击 ' + share(t, 'atk') + ' 环 ' + share(t, 'ring') + ' ジ ' + share(t, 'ji') +
