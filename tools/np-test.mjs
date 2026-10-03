@@ -1591,6 +1591,44 @@ t('D224 §E271/§E273/§E274 大雷"每几局看得见一次"的档（v1.5.333 �
     const headTxt = readFileSync(dump, 'utf8').split('\n').filter(function (l) { return l[0] === '#'; }).join('\n');
     ok(headTxt.indexOf('#shipbigt=8') >= 0, '⑥b 表头必须带 `#shipbigt=`（实测=' + (/^#shipbigt=.*$/m.exec(headTxt) || ['(缺)'])[0] + '）⇒ 缺这一维，上线档与出厂落盘会被配成同臂');
   }
+
+  /* ⑧ §E278（我复核 DS 的 v1.6.0 补的）：`--pushfloor` 是 `--pushrank` 第四段**正名出来的新旗标**，
+   *   DS 把写侧读侧的改名做了半边（落盘维 `#pushfloor=` 改了、配对尺的**比较式**还在读 `pushrank` ⇒ 那条"两个剂量不许互配"的守卫静默失效，
+   *   实测：只差 `#pushfloor` 一维（0.6 ‖ 0.0001）的两份落盘被配成"同一臂、dm=0.00"），
+   *   而⑦ 那条"注入旗标 ⇒ 顶掉引擎默认档"的纪律**根本没搬过来**。两件事都在这一格里变成可执行断言。 */
+  const pf = runE(['--pushfloor=0.6']);
+  eq(pf.code, 0, '⑧a `--pushfloor=0.6`（DS 的新写法，单独用）不该报错：' + pf.out.slice(0, 160));
+  ok(pf.out.indexOf('顶成 0（关）') >= 0,
+    '⑧b **新名字也必须顶掉引擎默认档**（实测没印 ⇒ 这条臂同时挂着出厂的 12 与软抬档，两个自由量；而 §E262~§E268 那批读数都是"引擎档关着"的世界）');
+  const pfShip = runE(['--pushfloor=0.6', '--shipbigt=8']);
+  eq(pfShip.code, 0, '⑧c `--pushfloor` 与显式 `--shipbigt` 同时给不该报错：' + pfShip.out.slice(0, 160));
+  ok(pfShip.out.indexOf('顶成') < 0, '⑧d 显式给了 `--shipbigt` 时**不许**顶（"旗标优先"是这条纪律的另一半，缺了它就没法连着现网档量）');
+  const pfBad = runE(['--pushfloor=2']);
+  eq(pfBad.code, 2, '⑧e `--pushfloor=2`（越界）必须 exit 2，不许降级成"当没写"：实测 ' + pfBad.code);
+  const pfBadLine = (/^.*⛔.*$/m.exec(pfBad.out) || ['(没有 ⛔ 行)'])[0];
+  ok(pfBadLine.indexOf('--pushfloor') >= 0 && pfBadLine.indexOf('收到 `2`') >= 0,
+    '⑧f 告警必须说**实际写的那个旗标**并回显**实际收到的值**（实测=' + pfBadLine.trim().slice(0, 120) + '）'
+    + '⇒ DS 那版印的是"--pushrank 第四段…收到 `undefined`"：名字报错、值丢掉，读的人只会去找一个他根本没写的旗标（记忆第二十六条②）');
+
+  /* ⑨ banner 不许把"旗标值"说成"引擎默认"（原来那句 `不设旗标 = 默认 <SHIP_EFFECTIVE>` 在 `--shipbigt=3` 的跑法里宣称默认是 3）*/
+  const d3 = runE(['--shipbigt=3']);
+  eq(d3.code, 0, '⑨a `--shipbigt=3` 不该报错：' + d3.out.slice(0, 160));
+  const banner3 = (/^\[shipbigt\].*$/m.exec(d3.out) || ['(没有 banner 行)'])[0];
+  ok(banner3.indexOf('默认档回读为 12') >= 0,
+    '⑨b banner 必须报**引擎自己回读的默认档**（实测=' + banner3.slice(0, 150) + '）⇒ 把旗标值说成默认值，等于在日志里伪造"出厂形状"');
+  ok(banner3.indexOf('= 默认 3') < 0, '⑨c 不许出现"默认 3"这种由旗标值反推的说法（实测含=' + (banner3.indexOf('= 默认 3') >= 0) + '）');
+
+  /* ⑩ §E278（文档与代码必须同侧）：DS 的 v1.6.0 条目原文写着"`js/ui/ui.js` 的 `EPIRUS_BIGT_PUSH_N` 可调"，
+   *   而那个页面级旋钮在 **v1.5.333 就被撤掉了**（①e 正是钉它不许回来）⇒ 照着 CHANGELOG 去页面找开关的人必然扑空。
+   *   D8 只核版本号三处一致、D205 只核门号在册，**都管不到"文档指向一个已经不存在的旋钮"**这一类。 */
+  const cl = readFileSync('CHANGELOG.md', 'utf8');
+  const clCut = cl.indexOf('\n## v1.5.');
+  ok(clCut > 400, '⑩a 抽取的"v1.6.x 区段"必须**非空且真的到 v1.5 为止**（实测边界 ' + clCut + '）⇒ 区段取空（或整个文件都在区段外）这条腿就是永绿装饰');
+  const v16zone = cl.slice(0, clCut);
+  const knobInPage = uiSrc.indexOf('EPIRUS_BIGT_PUSH_N') >= 0;
+  ok(!knobInPage, '⑩b **代码侧**：`js/ui/ui.js` 里不许有这个页面级旋钮（实测含=' + knobInPage + '）⇒ 这一条与 ①e 同源，但 ①e 钉的是"不许调用 setter"，这里钉的是"常数本身也不许回来"');
+  ok(v16zone.indexOf('EPIRUS_BIGT_PUSH_N') < 0,
+    '⑩c **文档侧**：v1.6.x 的条目里不许把它当成可调项写给用户（实测含=' + (v16zone.indexOf('EPIRUS_BIGT_PUSH_N') >= 0) + '）⇒ 代码里没有、文档里说有，比"文档少写一句"贵（用户会去页面找那个不存在的开关）');
 });
 
 t('D225 §E275 摄魂指法的"残血只在**探索里**软提升"档（v1.5.334，evo.js 的 DRAIN_PUSH）：默认关 · 不改规则可证 · 只在 ε>0 的 soft 分支生效 · 窗口与剂量用纯函数直读 · ε=0 的臂必须拒跑而不是读成"没效果" · 落盘带两维', function () {
@@ -1687,6 +1725,37 @@ t('D225 §E275 摄魂指法的"残血只在**探索里**软提升"档（v1.5.334
   const noDeploy = gdSrc.replace(/G5_MAX_DEPLOY/g, 'G5_MAX');
   ok(!/tag: '带档', dose: savedPush, max: G5_MAX_DEPLOY/.test(noDeploy),
     '⑦d 合成正对照：把带档阈值改回 G5_MAX 时，⑦b 那条抽取式必须失配（不失配 ⇒ 它其实什么都没钉）');
+
+  /* ===== ⑧ §E278：旗标**写法**（大小写与连字符）也是量具的一部分 =====
+   * 复发过程很干净：§E266 那次是 `--drainHp` vs `--drainhp`，修法=让含糊拼写 exit 2 —— 但那条修复**只钉了那一面旗标**。
+   * v1.6.0 把第四段正名成 `--pushfloor` 之后，`--pushFloor=0.6`（大写 F）又回到"落进一个没人读的键、整条臂静默等于上一档"的状态
+   *   （实测 exit 0、一声不响 ⇒ 两臂读数会被配成"剂量没差别"）。⇒ 这次把纪律做成**一张名单 + 一道通用守卫**，不再一枚一枚补。 */
+  const idListM = /const IDENTITY_FLAGS = \[([\s\S]*?)\];/.exec(evSrc);
+  ok(!!idListM, '⑧a 守卫必须有**一张具名名单**（`IDENTITY_FLAGS`）⇒ 散在各处的"这一枚我记得校验"就是 §E266 复发的原因');
+  const idList = (idListM ? idListM[1] : '').split(',')
+    .map(function (s) { return s.trim().replace(/^['"]|['"]$/g, ''); }).filter(Boolean);
+  ok(idList.length >= 18, '⑧b 名单枚数必须 ≥18（实测 ' + idList.length + '）⇒ 名单式纪律要钉数量，删一枚就得响（记忆第十六条）');
+  const idUnread = idList.filter(function (k) {
+    return !(new RegExp('FLAG\\.' + k + '\\b').test(evSrc) || new RegExp("FLAG\\['" + k + "'\\]").test(evSrc));
+  });
+  eq(idUnread.length, 0, '⑧c 名单里每一枚都必须**真有读点**（读不到=' + idUnread.join(',') + '）'
+    + '⇒ 把死键写进名单 = 守卫守着一个没人用的名字，而正写的旗标反倒没人管（我写这一格的第一版就把 `drainHp` 误登记成 `drainhp`，被这条抓回）');
+  const idNorm = idList.map(function (k) { return k.toLowerCase().replace(/-/g, ''); });
+  eq(new Set(idNorm).size, idNorm.length, '⑧d 抹掉大小写与 `-` 之后不许撞名（实测 ' + idNorm.length + ' 枚只剩 ' + new Set(idNorm).size + ' 个）'
+    + '⇒ 撞了就会对**正确写法**报"正确写法是另一个"，那是一道永远红的假守卫');
+  const badSpell = [];
+  for (const b of ['--pushFloor=0.6', '--shipBigT=8', '--epsMode=soft', '--drainhp=3', '--push-key=drain']) {
+    const rb = runE([b]);
+    if (rb.code !== 2) badSpell.push(b + '(实测 ' + rb.code + ')');
+  }
+  eq(badSpell.length, 0, '⑧e 含糊拼写必须**全部** exit 2（漏网=' + (badSpell.join(' ') || '无') + '）⇒ 静默忽略一个拼错的臂，比报错贵得多');
+  /* 反面对手：正确写法**不许**被这道守卫挡（否则它会变成第二道 D221 那种"永红"装饰）。 */
+  const goodSpell = [];
+  for (const g of ['--pushfloor=0.6', '--shipbigt=8', '--eps-mode=soft', '--drainHp=3', '--pushkey=drain', '--epsk=6']) {
+    const rg = runE([g]);
+    if (rg.code !== 0) goodSpell.push(g + '(实测 ' + rg.code + '：' + rg.out.slice(0, 90) + ')');
+  }
+  eq(goodSpell.length, 0, '⑧f 正写必须放行（被挡=' + (goodSpell.join(' | ') || '无') + '）⇒ 名单里写的必须是读侧的实际拼写');
 });
 
 t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）', function () {

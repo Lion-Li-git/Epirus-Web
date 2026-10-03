@@ -27,6 +27,31 @@ for (const a of process.argv.slice(2)) {
   const m = /^--([a-z0-9-]+)=?(.*)$/i.exec(a);
   if (m) FLAG[m[1]] = m[2] === '' ? '1' : m[2];
 }
+/* §E278（我复核 DS 的 v1.6.0 时补）：**臂身份旗标的大小写也是量具的一部分**。
+ * 上面那条抽取式带 `/i` ⇒ `--pushFloor=0.6` 会被"收下"，但键名留着大写 F，而读侧写的是 `FLAG.pushfloor`
+ * ⇒ 整条臂静默变成"这一档没开"的那一份复制品（实测 exit 0、一声不响；与 §E266 的 `--drainHp` 同一族，
+ *   那一族当时只在 `--drainhp` 上钉了，正名出新名字 `--pushfloor` 时没人把纪律搬过去）。
+ * ⇒ 凡是"去掉大小写就撞上名单里某个旗标"的写法一律 exit 2；不在名单里的名字不在这儿管（那是另一条路）。 */
+/* ⚠ 名单里写的必须是**读侧的实际拼写**，不是"我以为的小写"：`--drainHp` 的正写带大写 H（读的是 `FLAG.drainHp`），
+ *   `--eps-mode` 用连字符 ⇒ 若这里写成 `drainhp`/`epsmode`，这道守卫就会在**正确用法**上 exit 2（我第一版就这么错了，实测抓回）。
+ *   `file` 不在名单里：落盘的 `#file=` 来自位置参数，不是旗标。 */
+const IDENTITY_FLAGS = ['shipbigt', 'shipdrain', 'eps', 'epsk', 'eps-mode', 'bigtpush', 'bigttgt',
+  'pushrank', 'pushfloor', 'pushkey', 'pushminep', 'bigtcost', 'ban', 'drainHp', 'mode', 'swap', 'pool', 'every'];
+const IDENTITY_BY_LOWER = {};
+for (const k of IDENTITY_FLAGS) IDENTITY_BY_LOWER[k.toLowerCase()] = k;
+/* 连字符也算量具的一部分（`--epsMode` / `--epsmode` 都读不到 `FLAG['eps-mode']`）⇒ 比对前先抹掉大小写与 `-`。
+ * 名单里抹掉 `-` 之后没有两个键同名（由 D225⑧b 钉住这条"归一化不歧义"的前提）。 */
+const IDENTITY_BY_NORM = {};
+for (const k of IDENTITY_FLAGS) IDENTITY_BY_NORM[k.toLowerCase().replace(/-/g, '')] = k;
+for (const a of process.argv.slice(2)) {
+  const mm = /^--([A-Za-z0-9-]+)/.exec(a);
+  if (!mm) continue;
+  const want = IDENTITY_BY_LOWER[mm[1].toLowerCase()] || IDENTITY_BY_NORM[mm[1].toLowerCase().replace(/-/g, '')];
+  if (want && mm[1] !== want) {
+    console.error('⛔ 旗标 `--' + mm[1] + '` 写法不对（大小写或连字符）⇒ 正确写法是 `--' + want + '`（含糊拼写会落进一个**没人读**的键 ⇒ 整条臂静默等于上一档的复制品，拒跑）。');
+    process.exit(2);
+  }
+}
 const GAMES = Number(ARGV[0] || 12);
 const N = Number(ARGV[1] || 5);
 const SEED = Number(ARGV[2] || 77000);
@@ -332,16 +357,19 @@ if (FLAG.drainhp != null) {
  *   而 `--shipbigt` 直接把 `js/train/evo.js` 里的 `BIGT_PUSH` 改成用户上线的那一档 ⇒ **冠军的出牌路径本身就带着这条规则**。
  * ⇒ 上线前的最后一道证据必须是这个口径：用量由**引擎的事件流**数出来（`champ.use`），不是工具的计数器；
  *   价格与 §E270 那张表若不一致，差的就是"工具外挂 vs 现网路径"这道缝（两份实现必漂移的那一族）。
- * ⚠ **v1.5.333 起这一档默认就是开的**（默认 `BIGT_PUSH = 8`）⇒ "不设旗标"**不再等于出厂形状**：
+ * ⚠ **v1.5.333 起这一档默认就是开的**（`evo.js` 的 `BIGT_PUSH` 非 0 ⇒ 引擎自己就开，数值以那里为准、这里不复制）⇒ "不设旗标"**不再等于出厂形状**：
  *   要拿"关掉档"当对照必须显式 `--shipbigt=0`。所以这里读的是**引擎回读到的有效档**，不是旗标原值。 */
 const SHIPBIGT_RAW = FLAG.shipbigt;
 const SHIPBIGT = SHIPBIGT_RAW == null ? null : Number(SHIPBIGT_RAW);
 if (SHIPBIGT_RAW != null && !(SHIPBIGT === 0 || (Number.isInteger(SHIPBIGT) && SHIPBIGT >= 1 && SHIPBIGT <= 12))) {
-  console.error('⛔ --shipbigt 只能是 0 或 1..12（0 = **显式关掉**；不设旗标 = 引擎默认档，v1.5.333 起默认 = 8 开着；收到 `' + SHIPBIGT_RAW + '`）'); process.exit(2);
+  console.error('⛔ --shipbigt 只能是 0 或 1..12（0 = **显式关掉**；不设旗标 = 引擎默认档，数值只在 `evo.js` 里写一次 ⇒ 这里不复制；收到 `' + SHIPBIGT_RAW + '`）'); process.exit(2);
 }
 if (SHIPBIGT_RAW != null && FLAG.bigtpush != null) {
   console.error('⛔ --shipbigt 不能与 --bigtpush 同时给（一个是现网路径、一个是工具外挂，同时给就是把两个自由量捆在一起测）'); process.exit(2);
 }
+/* §E278：**引擎自己的默认档必须在 setter 之前回读**。原来那行告警写的是"不设旗标 = 默认 <旗标值>"，
+ *   于是在 `--shipbigt=3` 的跑法里它宣称默认是 3（真默认 12）⇒ 印得像结论的错话比沉默更坏（记忆第二十六条②）。 */
+const SHIP_DEFAULT = (typeof T.bigTPushOn === 'function') ? T.bigTPushOn() : null;
 if (SHIPBIGT_RAW != null) {
   if (typeof T.setBigTPush !== 'function') { console.error('⛔ `EpirusTrainer.setBigTPush` 不存在 ⇒ 旗标没有生效对象，拒跑'); process.exit(2); }
   T.setBigTPush(SHIPBIGT);
@@ -353,7 +381,7 @@ if (SHIPBIGT_RAW != null) {
   if (SHIP_EFFECTIVE !== SHIPBIGT) {
     console.error('⛔ `--shipbigt=' + SHIPBIGT + '` 没生效：引擎回读到 `BIGT_PUSH = ' + SHIP_EFFECTIVE + '`'); process.exit(2);
   }
-  console.log('[shipbigt] 已按旗标改引擎档：`js/train/evo.js` 的 `BIGT_PUSH = ' + SHIP_EFFECTIVE + '`（0 = 关；不设旗标 = 默认 ' + SHIP_EFFECTIVE + '）'
+  console.log('[shipbigt] 已按旗标改引擎档：`js/train/evo.js` 的 `BIGT_PUSH = ' + SHIP_EFFECTIVE + '`（0 = 关 · 引擎自己的默认档回读为 ' + SHIP_DEFAULT + '，不设旗标就是它）'
     + ' · 目标 = ep 最高的对手（平手取血少、再取座位号小）· 不消耗 `state.rng`'
     + ' · 用量由引擎事件数（`champ.use`），不是工具自己的计数器');
 } else {
@@ -851,17 +879,28 @@ const RANK_GATE = RANK ? (RANK_SPEC[2] == null || RANK_SPEC[2] === '' ? 'top2' :
  * 第四段仍然兼容（旧臂可复现），两者都给时以 `--pushfloor` 为准。 */
 const RANK_FLOOR = (FLAG.pushfloor != null && FLAG.pushfloor !== '') ? Number(FLAG.pushfloor)
   : (RANK && RANK_SPEC[3] != null && RANK_SPEC[3] !== '' ? Number(RANK_SPEC[3]) : null);
-if (RANK_FLOOR != null && !(isFinite(RANK_FLOOR) && RANK_FLOOR > 0 && RANK_FLOOR <= 1)) { console.error('⛔ --pushrank 第四段（概率下界的 share）要 ∈(0,1]（收到 `' + RANK_SPEC[3] + '`）'); process.exit(2); }
+/* §E278：这条告警原来只报"--pushrank 第四段"并回显 `RANK_SPEC[3]` ⇒ 用新旗标 `--pushfloor=2` 时它印
+ *   「--pushrank 第四段…收到 `undefined`」——名字报错、值也丢掉（读的人只会去找一个他根本没写的旗标）。
+ *   ⇒ 告警必须说**实际写的那个旗标**、并回显**实际收到的值**（记忆 §22 同一族：告警印得像结论就会误导）。 */
+if (RANK_FLOOR != null && !(isFinite(RANK_FLOOR) && RANK_FLOOR > 0 && RANK_FLOOR <= 1)) {
+  const floorSrc = (FLAG.pushfloor != null && FLAG.pushfloor !== '') ? '--pushfloor' : '--pushrank 第四段';
+  const floorGot = (FLAG.pushfloor != null && FLAG.pushfloor !== '') ? FLAG.pushfloor : RANK_SPEC[3];
+  console.error('⛔ ' + floorSrc + '（概率下界的 share）要 ∈(0,1]（收到 `' + floorGot + '`）'); process.exit(2);
+}
 if (RANK && ['top2', 'near'].indexOf(RANK_GATE) < 0) { console.error('⛔ --pushrank 第三段（闸的读法）只认识 top2 | near（收到 `' + RANK_GATE + '`）'); process.exit(2); }
 if (RANK && !(isFinite(RANK_MARGIN) && RANK_MARGIN >= 0 && RANK_MARGIN <= 1 && isFinite(RANK_BIAS) && RANK_BIAS >= 0)) {
   console.error('⛔ --pushrank=<margin>[,<bias>] 要 margin∈[0,1]、bias≥0（收到 `' + RANK_RAW + '`）；margin = "一选与二选的概率差"的上限，bias = 目标卡概率的放大倍数'); process.exit(2);
 }
 const RANK_TEMP = 0.15;   /* 与线上同一档（`policyChooserN(params, 0.15)`）⇒ 闸判的是冠军**自己的**决策分布 */
 /* ===== §E273（v1.5.333）：引擎档默认开着 ⇒ **别的注入旗标必须把它顶回 0**，否则一条臂上挂着两个自由量 =====
- * `--bigtpush` / `--pushrank` / `--pushkey` / `--bigtcost` / `--ban` 任意一个出现、而 `--shipbigt` **没有**显式给 ⇒ 强制 `BIGT_PUSH = 0` 并响亮说明。
+ * `--bigtpush` / `--pushrank` / `--pushfloor` / `--pushkey` / `--bigtcost` / `--ban` 任意一个出现、而 `--shipbigt` **没有**显式给 ⇒ 强制 `BIGT_PUSH = 0` 并响亮说明。
  * 理由：§E262~§E268 那批读数的世界是"引擎档关着 + 只有这一面旗标动"，现在默认开着会把它们悄悄变成"两种注入同时生效"（一次对照只能一个自由度）。
  * 想连着现网默认档一起量，就显式给 `--shipbigt=<N>`（那时不顶）。 */
-const INJECT_FLAGS = ['bigtpush', 'pushrank', 'pushkey', 'pushminep', 'bigtcost', 'ban'];
+/* §E278：DS 的 v1.6.0 把"第四段"正名成独立旗标 `--pushfloor`，但**这条纪律没跟着搬过去**
+ *   ⇒ 只给 `--pushfloor=0.6`（不带 `--pushkey`）时引擎档仍是出厂的 12 ⇒ 同一条臂上叠了两个大雷自由量，
+ *     而 §E262~§E268 那批读数的世界是"引擎档关着"（实测两句话：新旗标那趟印"走引擎默认档 12"、旧写法那趟印"顶成 0（关）"）。
+ * ⇒ 新名字必须进名单，否则"两个名字各管一件事"这句话是假的。 */
+const INJECT_FLAGS = ['bigtpush', 'pushrank', 'pushfloor', 'pushkey', 'pushminep', 'bigtcost', 'ban'];
 const INJECT_SEEN = INJECT_FLAGS.filter(function (k) { return FLAG[k] != null && FLAG[k] !== ''; });
 if (SHIPBIGT_RAW == null && INJECT_SEEN.length) {
   if (typeof T.setBigTPush !== 'function') { console.error('⛔ 需要顶掉引擎默认档但没有 `setBigTPush` ⇒ 拒跑（否则会两个注入叠在一起测）'); process.exit(2); }
@@ -1118,7 +1157,8 @@ if (FLAG['dump-per']) {
     '#pushfloor=' + (RANK ? (RANK_MARGIN + '/' + RANK_BIAS + '/' + RANK_GATE + '/' + (RANK_FLOOR == null ? '-' : RANK_FLOOR)) : '-'),
     '#drainhp=' + ((R.MODES[MODE || 'multi'] || {}).drainHpMax),
     /* §E271/§E273：现网路径的**有效档**（`--shipbigt` 或引擎默认）也是**臂维** —— 它与"工具外挂"的落盘其余各维可以完全一样，
-       缺这一维就会把两条路配成同臂。⚠ v1.5.333 起写的是**引擎回读到的值**（不设旗标 = 默认 8），不是"旗标有没有出现"。 */
+       缺这一维就会把两条路配成同臂。⚠ v1.5.333 起写的是**引擎回读到的值**（不设旗标也写默认档），不是"旗标有没有出现"。
+       ⇒ 所以这一维**不许在这里硬写默认值是几**：调 `evo.js` 的常数时这里自己会跟着变（§E278 记的教训：写过"默认 8"，p 改 12 后这行就成了假口径）。 */
     '#shipbigt=' + String(SHIP_EFFECTIVE),
     /* §E275：摄魂档与 **ε 口径**都是臂维 —— 少了 `#eps`，"贪心考卷"与"页面口径"两批落盘会被配成同一世界，
        而前者对摄魂档结构性失明（读数必然相同）⇒ 那是一副**静默的错配**（记忆：补表头 ≠ 补守卫）。 */
