@@ -121,7 +121,9 @@ if (FEAS_FILES.length) {
     const L = readFileSync(join(HERE, f), 'utf8').trim().split('\n');
     const hd = L[0].split('\t'), iId = hd.indexOf('id'), iOk = hd.indexOf('ok'), iF = hd.indexOf('fails');
     for (const l of L.slice(1)) { const c = l.split('\t'); const id = c[iId]; if (!id) continue;
-      if (c[iOk] === '0' || c[iOk] === '1') OKM[id] = { ok: c[iOk] === '1', fails: String(c[iF] || '').slice(0, 160) }; }
+      /* §E307 顺手把 G(long) 也带进来：它是闸卡住前沿的那条腿（前 30 名里 16 枚未过线，多数栽在这儿），
+       *   图上原本完全看不见 ⇒ 多一个着色口径就能当场指出"该往哪儿训"。 */
+      if (c[iOk] === '0' || c[iOk] === '1') OKM[id] = { ok: c[iOk] === '1', fails: String(c[iF] || '').slice(0, 160), g2: Number(c[hd.indexOf('G2')]) }; }
   }
   POK = Object.keys(OKM).length; OKSRC = '现跑同一道闸（feasibilityOf · n=20/aggr40/seat100）';
 } else if (existsSync(panelP)) {
@@ -141,6 +143,7 @@ const DATA = rows.map(r => ({
   fam: LIN[r.id] ? +LIN[r.id].fam : 0, ms: LIN[r.id] ? LIN[r.id].metaSeed : '',
   ts: LIN[r.id] ? LIN[r.id].ts : '', par: LIN[r.id] ? LIN[r.id].parent : '', pof: LIN[r.id] ? LIN[r.id].parentOf : '',
   ok: OKM && (r.id in OKM) ? (OKM[r.id].ok ? 1 : 0) : null,
+  gl: OKM && (r.id in OKM) && isFinite(OKM[r.id].g2) ? OKM[r.id].g2 : null,
   why: OKM && (r.id in OKM) ? OKM[r.id].fails : '',
   dmg: +r.dmg, heavy: +r.heavy, holo: +r.holo, rounds: +r.rounds, draw: +r.drawRate, zero: +r.zeroRate,
   seat: +r.seatSpread, keys: +r.distinctKeys, chg: +r.charges, waste: +r.waste, stance: +r.noThreatStance, atk: +r.fieldAAtk, rw: +r.rwDmg
@@ -194,7 +197,12 @@ function buildGroups() { var cnt = {}, keys = [];
   GRP = { keys: keys, cnt: cnt, col: col }; }
 buildGroups();
 function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GRP.col[gk(d)] || '#9aa8bd';
+  if (st.color === 'gl') { var g = d.gl === null || d.gl === undefined ? -1 : d.gl;
+    return g < 0 ? '#5a6478' : ramp(Math.max(0, Math.min(1, (g - GLR[0]) / (GLR[1] - GLR[0] || 1)))); }
   return ramp((Fv(d) - fr[0]) / (fr[1] - fr[0] || 1)); }
+/* G(long) 的显示区间取全库 p02..p98（不用 0..8：那会把对比度全压在低段）*/
+var GLR = (function () { var a = P.map(function (d) { return d.gl; }).filter(function (v) { return v !== null && v !== undefined && isFinite(v); }).sort(function (x, y) { return x - y; });
+  return a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [0, 8]; })();
 function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   if (!n) return 1; return st.hi[gk(d)] ? 1 : 0.10; }
 /* 家族短标：只取"改了什么"那一段并截断（长说明留给悬停），否则一个按钮吃掉整条图例栏。*/
@@ -210,6 +218,7 @@ function tip(d, fr) {
     (d.ok === 0 && d.why ? '\\n　栽在：' + d.why : '') +
     '\\n名次 ' + d.rk + '/' + N + '（出厂 T 下）· 按当前 T 重排见一维视图' +
     '\\nH 考卷夺1率 = ' + d.H.toFixed(1) + '%   S = ln G_eff = ' + d.S.toFixed(2) + '（G_eff ' + d.Ge.toFixed(2) + '）' +
+    (d.gl === null || d.gl === undefined ? '' : '\\n长程广度 G(long) = ' + (+d.gl).toFixed(2) + (d.gl < 3 ? '  ← 低于闸要求的 3（这条腿最常卡前沿）' : '')) +
     '\\nF = H + T·S = ' + Fv(d).toFixed(3) + '   高于地板 = F − F_min = ' + (Fv(d) - fr[0]).toFixed(3) +
     '\\n伤害/局 ' + d.dmg.toFixed(1) + ' · 重击 ' + d.heavy.toFixed(1) + ' · 盾 ' + d.holo.toFixed(1) +
     ' · 回合 ' + d.rounds.toFixed(1) + ' · 平局 ' + (d.draw * 100).toFixed(0) + '%' +
@@ -803,7 +812,7 @@ function drawBody() {
   paintLegend(fr);
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   document.getElementById('stat').textContent = N + ' 枚 · 历代冠军 ' + P.filter(function (d) { return d.lin; }).length +
-    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : '训练方法家族') +
+    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : '训练方法家族') +
     (st.mode === 'map' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') + (n ? ' · 高亮 ' + n + ' 个家族' : '');
 }
 /* ⑥ 所有重绘走 rAF 合并：一帧最多画一次（拖动/滑杆连续事件下这是"卡死"的第二条来源）*/
@@ -816,8 +825,8 @@ function paintLegend(fr) {
   c.style.width = '18px'; c.style.height = '150px'; var cg = c.getContext('2d');
   for (var i = 0; i < 150 * devicePixelRatio; i++) { var rgb = rampRGB(1 - i / (150 * devicePixelRatio));
     cg.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')'; cg.fillRect(0, i, 18 * devicePixelRatio, 1); }
-  var s1 = document.createElement('div'); s1.textContent = 'F 高 ' + fr[1].toFixed(2) + (st.goodTop ? '（最好 · 顶）' : '（最好 · 地板）');
-  var s2 = document.createElement('div'); s2.textContent = 'F 低 ' + fr[0].toFixed(2) + (st.goodTop ? '（最差 · 地板）' : '（最差 · 顶）');
+  var s1 = document.createElement('div'); s1.textContent = st.color === 'gl' ? ('G(long) 高 ' + GLR[1].toFixed(1) + '（红）') : ('F 高 ' + fr[1].toFixed(2) + (st.goodTop ? '（最好 · 顶）' : '（最好 · 地板）'));
+  var s2 = document.createElement('div'); s2.textContent = st.color === 'gl' ? ('G(long) 低 ' + GLR[0].toFixed(1) + '（蓝）· 闸要求 ≥3') : ('F 低 ' + fr[0].toFixed(2) + (st.goodTop ? '（最差 · 地板）' : '（最差 · 顶）'));
   lg.appendChild(s1); lg.appendChild(c); lg.appendChild(s2);
   if (OKL.length) {
     var s3 = document.createElement('div'); s3.style.marginTop = '6px'; s3.style.color = '#39d98a';
@@ -1026,7 +1035,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button id="reset">复位视图</button>' +
 '<button id="fitt">投影判据 ⓘ</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
-'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（势）</option></select></label>' +
+'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（势）</option><option value="gl">长程广度 G(long)</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
 '<label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label>' +
 '<label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label>' +
