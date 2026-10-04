@@ -1,0 +1,32 @@
+id	verdict	blocks	g4worst	g5worst	holoOther
+incumbent-forpromote	pass	—			0
+SHIPPED-Ldemo	pass	—			0
+v7bead1-31	pass	—			4.3
+v7bead100-82	pass	—			0.3
+v7beadseed-93	pass	—			0.8
+v7f5div3-91	pass	—			0
+v7s5-82	pass	—			0
+v7t1-82	pass	—			3.95
+v7t2-93	pass	—			1.7
+v7u1-93	pass	—			0.35
+v12-91	block	G4/long 被一行脚本打穿 93% · G4/multi 被一行脚本打穿 90% · G5/multi 清不了防席（它夺冠 40%）	93	40	0
+v7aim1-93	block	G4/long 被一行脚本打穿 83% · G4/multi 被一行脚本打穿 73% · G5/long 清不了防席（它夺冠 26%） · G5/multi 清不了防席（它夺冠 33%）	83	33	0
+v7bead2-82	block	G4/long 被一行脚本打穿 61%	61		4
+v7bead25-82	block	G4/long 被一行脚本打穿 65%	65		0.55
+v7bead25-93	block	G 有效技能数 2.95 < 3（打法坍缩到两三张卡）			0
+v7beadseed-82	block	送盾 17.3/局 > 6（不可 --force）			17.3
+v7press3-31	block	G4/long 被一行脚本打穿 76% · G4/multi 被一行脚本打穿 91% · G5/long 清不了防席（它夺冠 78%） · G5/multi 清不了防席（它夺冠 91%）	91	91	9.95
+v7press3-81	block	G4/long 被一行脚本打穿 89% · G4/multi 被一行脚本打穿 64% · G5/long 清不了防席（它夺冠 63%） · G5/multi 清不了防席（它夺冠 44%）	89	63	1.65
+v7press3-82	block	G4/long 被一行脚本打穿 61% · G5/long 清不了防席（它夺冠 32%）	61	32	0.05
+v7press3-91	block	G4/long 被一行脚本打穿 69% · G4/multi 被一行脚本打穿 63%	69		0.4
+v7r3-45	block	F 被集火还手率 20% < 20%（被 4 席猛攻时不还手）			0
+v7s8-82	block	G5/long 清不了防席（它夺冠 27%）		27	0
+v7s9-82	block	G5/long 清不了防席（它夺冠 38%） · G5/multi 清不了防席（它夺冠 28%）		38	3.4
+v7seat24-82	block	G4/long 被一行脚本打穿 99% · G4/multi 被一行脚本打穿 82% · G5/long 清不了防席（它夺冠 55%） · G5/multi 清不了防席（它夺冠 60%）	99	60	0.1
+v7sub1-92	block	G 有效技能数 2.63 < 3（打法坍缩到两三张卡） · G4/multi 被一行脚本打穿 69% · G5/long 清不了防席（它夺冠 42%） · G5/multi 清不了防席（它夺冠 59%）	69	59	0
+v7tgt4-63	block	F 被集火还手率 15% < 20%（被 4 席猛攻时不还手） · G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 98% · G5/long 清不了防席（它夺冠 82%） · G5/multi 清不了防席（它夺冠 77%）	100	82	0
+v7tgt5-62	block	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 97% · G5/long 清不了防席（它夺冠 73%） · G5/multi 清不了防席（它夺冠 47%）	100	73	0.8
+v7ws1-31	block	G4/long 被一行脚本打穿 76% · G4/multi 被一行脚本打穿 91% · G5/long 清不了防席（它夺冠 78%） · G5/multi 清不了防席（它夺冠 91%）	91	91	9.95
+v7ws1-82	block	G4/long 被一行脚本打穿 61% · G5/long 清不了防席（它夺冠 32%）	61	32	0.05
+v7ws1-91	block	G4/long 被一行脚本打穿 69% · G4/multi 被一行脚本打穿 63%	69		0.4
+v7ws2-31	block	F 被集火还手率 17% < 20%（被 4 席猛攻时不还手） · G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 100% · G5/long 清不了防席（它夺冠 31%）	100	31	0
