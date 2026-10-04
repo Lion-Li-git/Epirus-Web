@@ -985,8 +985,20 @@ document.getElementById('b3dt').onclick = toggle3d;
 var ISO3 = ['关', '半透壳', '只描边'];
 function syncIso() { var b = document.getElementById('bisos');
   b.textContent = '过线曲面：' + ISO3[st.iso]; b.classList.toggle('on', st.iso > 0);
-  b.style.display = (st.mode === '3db') ? '' : 'none'; }
+  var on3 = (st.mode === '3db');
+  b.style.display = on3 ? '' : 'none';
+  /* 阈值滑杆只在"曲面开着 + 三维行为轴"时占位 ⇒ 默认状态下一行都不多挤（§E304 那次数条撑出滚动条的教训）*/
+  var r = document.getElementById('isorow'); if (r) r.style.display = (on3 && st.iso > 0) ? '' : 'none';
+  /* 滑杆位置也由这里统一刷 ⇒ 深链 #isot= 才能既改状态又改旋钮（放在初始化 IIFE 里会早于 hash 解析 ⇒ 显示 50%、实际 25%）
+     ⚠ 这段在 const JS 那段模板字符串**里面** ⇒ 注释里绝不能出现反引号，出现一次就把整段字符串截断（本仓第 2 次踩，第二次就踩在这句警告上）*/
+  var s = document.getElementById('isot'), v = document.getElementById('isotv');
+  if (s) s.value = String(st.isoT); if (v) v.textContent = Math.round(st.isoT * 100) + '%'; }
 document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) % 3; syncIso(); req(); };
+(function () { var s = document.getElementById('isot'), v = document.getElementById('isotv');
+  if (!s) return;
+  s.value = String(st.isoT); if (v) v.textContent = Math.round(st.isoT * 100) + '%';
+  s.addEventListener('input', function () { st.isoT = +this.value; if (v) v.textContent = Math.round(st.isoT * 100) + '%'; req(); });
+})();
 function syncHdir() { document.getElementById('bh').textContent = st.goodTop ? '好在上 ⇅' : '好在下 ⇅'; }
 document.getElementById('bh').onclick = function () { st.goodTop = !st.goodTop; syncHdir(); req(); };
 document.getElementById('reset').onclick = function () {
@@ -1064,6 +1076,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button data-m="tree">谱系（时间 × 家族）</button>' +
 '<button data-m="3db">三维行为轴</button>' +
 '<button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button>' +
+'<label id="isorow" style="display:none" title="壳的判据 = 该处**局部过线占比**。往下调壳会连成片（过线枚本来就稀，113/718），往上调退回孤立小壳。默认 50% 时是几座孤立壳 ⇒ 这就是「过线枚不连片」的形状本身">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.05" value="0.5"><span id="isotv">50%</span></label>' +
 '<button id="reset">复位视图</button>' +
 '<button id="fitt">投影判据 ⓘ</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +

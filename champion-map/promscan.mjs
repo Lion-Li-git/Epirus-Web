@@ -5,24 +5,28 @@
  * —— G4（不许被一行脚本打穿 >60%）、G5（面对"只防御不还手"必须清场 ≤25%）、送盾硬门槛（不可 --force）。
  * §E305/§E307 一枚一枚数出来的教训就是：前沿死在这几条腿上，而它们在图上完全隐形。
  *
- * 输入：docs/artifacts/e30{7,8}-out/dry-*.txt（`promote-champion.mjs <bak> --dry` 的原样输出）
+ * 输入：docs/artifacts/e3xx-out/dry-*.txt（`promote-champion.mjs <bak> --dry` 的原样输出）+ holo.tsv（送盾实测值）
  * 输出：champion-map/promote.tsv = id  verdict  blocks  g4worst  g5worst  holoOther
  *   verdict = pass | block；worst = 该腿的最坏格（换包判据看的正是最坏格，不是平均）
  *
  * 解析口径：只认 ⛔ 段落里逐条列出的 `   · ` 行（那是裁决的原文），不去猜中间过程的 ✅/✗。
  * 用法：node champion-map/promscan.mjs
  */
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
+/* 所有 e3xx-out 臂目录都收（新增一批日志不用改这里）*/
+const DIRS = readdirSync(join(ROOT, 'docs', 'artifacts')).filter((d) => /^e3\d{2}-out$/.test(d)).map((d) => 'docs/artifacts/' + d);
 const files = [];
-for (const d of ['docs/artifacts/e307-out', 'docs/artifacts/e308-out']) {
+for (const d of DIRS) {
   const p = join(ROOT, d);
   if (existsSync(p)) for (const f of readdirSync(p)) if (/^dry-.+\.txt$/.test(f)) files.push([join(p, f), f.slice(4, -4)]);
 }
+/* 同一枚可能在两个臂目录里各有一份日志 ⇒ 按 mtime 从旧到新读，**新的那份覆盖旧的**（去重在下面）*/
+files.sort((a, b) => statSync(a[0]).mtimeMs - statSync(b[0]).mtimeMs);
 if (!files.length) { console.error('没找到任何 dry 日志 ⇒ 先跑 promote-champion.mjs --dry'); process.exit(1); }
 
 /* 送盾的本体数值来自 §E305 的全量探针（holoprobe.mjs ⇒ holo.tsv 第 6 列），日志只负责"栽没栽桩" */
@@ -59,8 +63,12 @@ for (const [p, id] of files) {
   /* 送盾取 holo.tsv 的实测值（全 718 枚都有，日志里那行只在部分装配下才印）*/
   rows.push([id, pass ? 'pass' : 'block', blocks.join(' · ') || '—', g4 || '', g5 || '', HOLO[id] === undefined ? '' : HOLO[id]]);
 }
-rows.sort((a, b) => (a[1] === b[1] ? a[0].localeCompare(b[0]) : a[1] === 'pass' ? -1 : 1));
-writeFileSync(join(HERE, 'promote.tsv'),
+/* 去重：同 id 取**后读到**的那份（上面已按 mtime 升序 ⇒ 新的那份赢），别把两次裁决并成一行 */
+const BYID = {};
+for (const r of rows) BYID[r[0]] = r;
+rows.length = 0;
+for (const k in BYID) rows.push(BYID[k]);
+rows.sort((a, b) => (a[1] === b[1] ? a[0].localeCompare(b[0]) : a[1] === 'pass' ? -1 : 1));writeFileSync(join(HERE, 'promote.tsv'),
   ['id\tverdict\tblocks\tg4worst\tg5worst\tholoOther'].concat(rows.map((r) => r.join('\t'))).join('\n') + '\n');
 
 const np = rows.filter((r) => r[1] === 'pass').length;
