@@ -166,6 +166,24 @@ if (existsSync(duelP)) {
     Object.values(DUEL).filter(x => x.s === 'same').length + ' ‖ 符号翻 ' +
     Object.values(DUEL).filter(x => x.s === 'flip').length + '）');
 } else console.log('提示：没有 duel.tsv ⇒ "对现役决斗"着色口径不可用（跑 node champion-map/duelscan.mjs 生成）');
+/* §E313 部署口径表（`eps-scan.mjs` 跑 + `epsread.mjs` 汇成 `epsagg.tsv`）= 图上第 5 条腿："页面开着 ε=0.2 soft 还值多少"。
+ *   为什么这一格非补不可：图上那把头号尺 H = `eval-5p` 的**考卷口径（ε=0 贪心）**，而真页面每手有 20% 概率
+ *   在短名单里软采样（§E275 才把这条口径接进工具）⇒ 两把尺一直没并排量过。
+ *   实测（121 枚 × 2 eval seed × 2 口径 = 484 遍 · 50.8 万局）：两口径的**排名**几乎同构（Spearman 0.912），
+ *   但**电平**不同构 —— 线上包 53.65 → 49.10（**Δε 4.55pt = 过线组第 94 百分位**），而历代冠军的 Δε 中位 2.25
+ *   是非冠军 1.20 的 1.9 倍 ⇒ **当选过程在挑"最贴贪心 argmax"的包，页面恰好在扰动那个 argmax**（过拟合到评估器口径）。
+ *   字段：`hp` = 页面口径夺1率 ‖ `de` = Δε（考卷 − 页面，正 = 开探索就掉）。*/
+const epsP = join(HERE, 'epsagg.tsv');
+let EPS = {};
+if (existsSync(epsP)) {
+  const el = readFileSync(epsP, 'utf8').trim().split('\n'); const eh = el[0].split('\t');
+  const iId = eh.indexOf('id'), iE = eh.indexOf('exam'), iP = eh.indexOf('page'), iD = eh.indexOf('de');
+  for (const l of el.slice(1)) { const c = l.split('\t'); if (!c[iId]) continue;
+    EPS[c[iId]] = { h: +c[iP], e: +c[iE], d: +c[iD] }; }
+  console.log('部署口径实测 ' + Object.keys(EPS).length + ' 枚（页面比考卷强的 ' +
+    Object.values(EPS).filter(x => x.d < 0).length + ' ‖ Δε ≥ 3.41pt 的 ' +
+    Object.values(EPS).filter(x => x.d >= 3.41).length + '）');
+} else console.log('提示：没有 epsagg.tsv ⇒ "部署口径/脆弱性"着色不可用（跑 node champion-map/eps-scan.mjs && node champion-map/epsread.mjs）');
 const DATA = rows.map(r => ({
   id: r.id, lin: r.lineage || '', seed: r.seed || '', H: +r.H, S: +r.S, Ge: +r.Geff, rk: +r.rank,
   x2: +r.x2, y2: +r.y2, x3: +r.x3, y3: +r.y3, z3: +r.z3,
@@ -178,6 +196,8 @@ const DATA = rows.map(r => ({
   pv: r.id in PROM ? (PROM[r.id].pass ? 1 : 0) : null, pb: r.id in PROM ? PROM[r.id].b : '',
   dm: r.id in DUEL ? DUEL[r.id].m : null, ds: r.id in DUEL ? DUEL[r.id].s : '',
   da: r.id in DUEL ? DUEL[r.id].a : '', db: r.id in DUEL ? DUEL[r.id].b : '',
+  /* §E313 部署口径：`hp` = 页面（ε=0.2 soft）夺1率 ‖ `de` = Δε = 考卷 − 页面（正 = 开探索就掉）*/
+  hp: r.id in EPS ? EPS[r.id].h : null, he: r.id in EPS ? EPS[r.id].e : null, de: r.id in EPS ? EPS[r.id].d : null,
   why: OKM && (r.id in OKM) ? OKM[r.id].fails : '',
   dmg: +r.dmg, heavy: +r.heavy, holo: +r.holo, rounds: +r.rounds, draw: +r.drawRate, zero: +r.zeroRate,
   seat: +r.seatSpread, keys: +r.distinctKeys, chg: +r.charges, waste: +r.waste, stance: +r.noThreatStance, atk: +r.fieldAAtk, rw: +r.rwDmg
@@ -206,6 +226,11 @@ var NPRM = 0, NPPASS = 0;
 var NDUEL = 0, NWIN = 0, NFLIP = 0;
 (function () { for (var i = 0; i < N; i++) { if (!P[i].ds) continue; NDUEL++;
   if (P[i].ds === 'flip') NFLIP++; else if (P[i].dm > 0) NWIN++; } })();
+/* §E313 部署口径实测数：NEPS = 两 seed 齐的枚数；NBRIT = Δε ≥ 3.41pt 的"脆"枚数
+ *   （3.41 = 线上包 Δε 4.55 的 0.75 倍，判据 (b) 跑前写死的那个"同量级"线）*/
+var NEPS = 0, NBRIT = 0, NSTRONG = 0;
+(function () { for (var i = 0; i < N; i++) { if (P[i].de === null) continue; NEPS++;
+  if (P[i].de >= 3.41) NBRIT++; if (P[i].de < 0) NSTRONG++; } })();
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
   iso: 0, isoT: 0.30,   /* §E306 过线曲面：0=关 1=半透壳 2=只描边；isoT = 局部占比阈值。
                             §E312 默认从 0.5 降到 0.35：实测收缩后场的峰值只有 40%，50% 是"正确地什么都不画"，
@@ -259,13 +284,30 @@ function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GR
   /* §E310 第 4 条腿：对现役的配对决斗 A−B。绿 = 两批种子都赢，红 = 两批都输，黄 = 符号翻（判不动），灰 = 没测 */
   if (st.color === 'duel') { if (d.ds === 'same') return d.dm > 0 ? '#39d98a' : '#ff6b6b';
     return d.ds === 'flip' ? '#e0b13c' : '#5a6478'; }
+  /* §E313 第 5 条腿：页面口径（ε=0.2 soft）的夺1率 —— 这才是玩家真正拿到的那个数。
+   *   渐变沿用 ramp（与 F 同一条色标），但**分母换成实测到的那批的 p02..p98**，不用 0..100：
+   *   全库页面 1st 落在 20~60%，用 0..100 会把所有点压成同一个蓝。*/
+  if (st.color === 'hp') { if (d.hp === null) return '#5a6478';
+    return ramp(Math.max(0, Math.min(1, (d.hp - EPR[0]) / (EPR[1] - EPR[0] || 1)))); }
+  /* Δε = 考卷 − 页面：**发散色标，0 在正中**（红 = 开探索就掉 = 脆；蓝 = 开了反而强 = 吃探索）。
+   *   不许用单向 ramp：单向色标会把"掉 1pt"和"掉 8pt"画成同色附近，而这条腿要读的正是符号。*/
+  if (st.color === 'de') { if (d.de === null) return '#5a6478';
+    var t = Math.max(-1, Math.min(1, d.de / 6)); return t >= 0 ? mix('#dce6f5', '#ff6b6b', t) : mix('#dce6f5', '#57a6ff', -t); }
   return ramp((Fv(d) - fr[0]) / (fr[1] - fr[0] || 1)); }
+/* §E313 页面口径 1st 的显示区间（实测枚数的 p02..p98，同 GLR 的取法）*/
+var EPR = (function () { var a = P.map(function (d) { return d.hp; }).filter(function (v) { return v !== null && isFinite(v); }).sort(function (x, y) { return x - y; });
+  return a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [20, 60]; })();
+function mix(c1, c2, t) {   /* 十六进制线性插值，t∈[0,1] */
+  var p = function (c) { return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; };
+  var A = p(c1), B = p(c2);
+  return 'rgb(' + A.map(function (v, i) { return Math.round(v + (B[i] - v) * t); }).join(',') + ')'; }
 /* G(long) 的显示区间取全库 p02..p98（不用 0..8：那会把对比度全压在低段）*/
 var GLR = (function () { var a = P.map(function (d) { return d.gl; }).filter(function (v) { return v !== null && v !== undefined && isFinite(v); }).sort(function (x, y) { return x - y; });
   return a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [0, 8]; })();
 function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   /* §E308 上槽体检口径下 705/718 枚是"没测过"⇒ 不压暗就找不到那 13 枚（灰压到 0.16，实测过的照旧）*/
-  if ((st.color === 'pm' && (d.pv === null || d.pv === undefined)) || (st.color === 'duel' && !d.ds)) return 0.16;
+  if ((st.color === 'pm' && (d.pv === null || d.pv === undefined)) || (st.color === 'duel' && !d.ds) ||
+      (st.color === 'de' && d.de === null) || (st.color === 'hp' && d.hp === null)) return 0.16;
   if (!n) return 1; return st.hi[gk(d)] ? 1 : 0.10; }
 /* 家族短标：只取"改了什么"那一段并截断（长说明留给悬停），否则一个按钮吃掉整条图例栏。*/
 function famLab(d) { return FAMLAB[d.fam] || ''; }
@@ -284,6 +326,12 @@ function tip(d, fr) {
     (d.pv === null || d.pv === undefined ? '' : '\\n上槽体检（promote --dry 实测）：' + (d.pv === 1 ? '✅ 三条腿全过 —— 这枚真能换包' : '⛔ ' + d.pb)) +
     (d.ds ? '\\n对现役配对决斗 A−B = ' + d.da + ' ‖ ' + d.db + ' pt（' +
       (d.ds === 'flip' ? '两批种子符号翻 ⇒ 判不动，别引均值' : d.dm > 0 ? '两批都赢现役' : '两批都输给现役') + '）' : '') +
+    /* §E313 部署口径那一行：H 是**考卷（ε=0 贪心）**的数，这一行给**页面（ε=0.2 soft）**的数 —— 玩家拿到的是后者。
+     *   同时把"同包两 eval seed 极差 p50 = 1.5pt / p90 = 3.7pt"写进来，否则读者会把 1pt 的差当成差别。*/
+    (d.de === null ? '' : '\\n部署口径（ε=0.2 soft · 两 eval seed 均值）= ' + d.hp.toFixed(1) + '%  vs 考卷 ' + d.he.toFixed(1) +
+      '% ⇒ Δε = ' + (d.de >= 0 ? '+' : '') + d.de.toFixed(1) + 'pt（' +
+      (d.de >= 3.41 ? '脆：开探索就掉，过线组第 94 百分位那一档' : d.de < 0 ? '吃探索：开了反而强' : '对探索口径不敏感') +
+      '）‖ 噪声尺：同包两 seed 极差 p50 1.5 ‖ p90 3.7pt') +
     '\\nF = H + T·S = ' + Fv(d).toFixed(3) + '   高于地板 = F − F_min = ' + (Fv(d) - fr[0]).toFixed(3) +
     '\\n伤害/局 ' + d.dmg.toFixed(1) + ' · 重击 ' + d.heavy.toFixed(1) + ' · 盾 ' + d.holo.toFixed(1) +
     ' · 回合 ' + d.rounds.toFixed(1) + ' · 平局 ' + (d.draw * 100).toFixed(0) + '%' +
@@ -963,7 +1011,7 @@ function drawBody() {
   paintLegend(fr);
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   document.getElementById('stat').textContent = N + ' 枚 · 历代冠军 ' + P.filter(function (d) { return d.lin; }).length +
-    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : '训练方法家族') +
     (st.mode === 'map' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') + (n ? ' · 高亮 ' + n + ' 个家族' : '');
 }
 /* ⑥ 所有重绘走 rAF 合并：一帧最多画一次（拖动/滑杆连续事件下这是"卡死"的第二条来源）*/
@@ -983,13 +1031,24 @@ function paintLegend(fr) {
     cg.fillStyle = '#39d98a'; cg.fillRect(0, 0, 18 * devicePixelRatio, 70 * devicePixelRatio);
     cg.fillStyle = '#e0b13c'; cg.fillRect(0, 70 * devicePixelRatio, 18 * devicePixelRatio, 20 * devicePixelRatio);
     cg.fillStyle = '#ff6b6b'; cg.fillRect(0, 90 * devicePixelRatio, 18 * devicePixelRatio, 60 * devicePixelRatio); }
+  if (st.color === 'hp') { /* 页面口径是渐变，但**两端要重标**（色标区间换成实测 p02..p98，不是 F 的区间）*/
+    for (var hi = 0; hi < 150 * devicePixelRatio; hi++) { var hrgb = rampRGB(1 - hi / (150 * devicePixelRatio));
+      cg.fillStyle = 'rgb(' + hrgb[0] + ',' + hrgb[1] + ',' + hrgb[2] + ')'; cg.fillRect(0, hi, 18 * devicePixelRatio, 1); } }
+  if (st.color === 'de') { /* Δε 用**发散**色标：白 = 0（口径不敏感），红 = 开探索就掉，蓝 = 开了反而强 */
+    for (var di = 0; di < 150 * devicePixelRatio; di++) { var t = 1 - di / (150 * devicePixelRatio);   /* 顶 = +6，底 = −6 */
+      cg.fillStyle = t >= 0 ? mix('#dce6f5', '#ff6b6b', t) : mix('#dce6f5', '#57a6ff', -t);
+      cg.fillRect(0, di, 18 * devicePixelRatio, 1); } }
   var s1 = document.createElement('div'); s1.textContent = st.color === 'gl' ? ('G(long) 高 ' + GLR[1].toFixed(1) + '（红）')
     : st.color === 'pm' ? ('✅ 可上槽 ' + NPPASS + ' 枚（绿）')
     : st.color === 'duel' ? ('✅ 两批种子都赢现役 ' + NWIN + ' 枚（绿）')
+    : st.color === 'hp' ? ('页面 1st 高 ' + EPR[1].toFixed(1) + '%（红）')
+    : st.color === 'de' ? ('Δε +' + 6 + 'pt（红 = 脆）')
     : ('F 高 ' + fr[1].toFixed(2) + (st.goodTop ? '（最好 · 顶）' : '（最好 · 地板）'));
   var s2 = document.createElement('div'); s2.textContent = st.color === 'gl' ? ('G(long) 低 ' + GLR[0].toFixed(1) + '（蓝）· 闸要求 ≥3')
     : st.color === 'pm' ? ('⛔ 栽桩 ' + (NPRM - NPPASS) + ' 枚（红）· 灰 = 未测（' + (N - NPRM) + ' 枚）')
     : st.color === 'duel' ? ('⛔ 两批都输 ' + (NDUEL - NWIN - NFLIP) + ' 枚（红）· 黄 = 符号翻 ' + NFLIP + ' 枚 · 灰 = 未测（' + (N - NDUEL) + '）')
+    : st.color === 'hp' ? ('页面 1st 低 ' + EPR[0].toFixed(1) + '%（蓝）· 灰 = 未测（' + (N - NEPS) + ' 枚）')
+    : st.color === 'de' ? ('Δε −6pt（蓝 = 开了探索反而强）· 白 = 不敏感 · 灰 = 未测（' + (N - NEPS) + '）‖ 脆（≥3.41）' + NBRIT + ' 枚 ‖ 吃探索（<0）' + NSTRONG + ' 枚')
     : ('F 低 ' + fr[0].toFixed(2) + (st.goodTop ? '（最差 · 地板）' : '（最差 · 顶）'));
   lg.appendChild(s1); lg.appendChild(c); lg.appendChild(s2);
   if (OKL.length) {
@@ -1251,7 +1310,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button id="reset">复位视图</button>' +
 '<button id="fitt">投影判据 ⓘ</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
-'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（势）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option></select></label>' +
+'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（势）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
 '<label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label>' +
 '<label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label>' +
