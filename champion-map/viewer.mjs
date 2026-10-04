@@ -163,6 +163,7 @@ var OKL = [], POKJ = 0, PV = null;
   for (var i = 0; i < N; i++) { xa.push(P[i].x2); ya.push(P[i].y2); if (P[i].ok !== null && P[i].ok !== undefined) { POKJ++; if (P[i].ok) OKL.push([P[i].x2, P[i].y2]); } }
   PV = { x0: pct(xa, .005), x1: pct(xa, .995), y0: pct(ya, .005), y1: pct(ya, .995) }; })();
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
+  iso: 0, isoT: 0.5,   /* §E306 过线曲面：0=关 1=半透壳 2=只描边；isoT = 局部过线占比阈值 */
   ox: 0, oy: 0, k: 1, yaw: -Math.PI / 2, pit: Math.PI / 2, elev: 0, goodTop: true,
   ox3: 0, oy3: 0, zoom3: 1, hi: {}, bg: '#0f1522', ink: '#dce6f5', dim: '#9fb0cc' };
 var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三维行为轴与谱系图只能用颜色表示势 */
@@ -590,6 +591,140 @@ function pt3(x, y, z, cx, cy, base, w, h, cb, zBase, zspan) {
  *   用户看到的"旋转/缩放中心不对"和"一维被裁掉一块"都是它；而无头截图 dpr=1 恰恰看不出来。 */
 function clear(w, h) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = st.bg; g.fillRect(0, 0, w, h); }
 
+/* ===== §E306 三维行为轴里的"过线闭合曲面"（可开关）=====
+ * 用户：「研究一下能否在三维行为轴的图里面整出通过连贯的一些闭合曲面圈出过线的冠军（当然要可开关，不然会挡的很严重）」
+ *
+ * 场：每个网格点取 **高斯加权的局部过线占比** f = Σ_{过线} G(d) / (Σ_{全体} G(d) + ε)，G(d)=exp(−d²/2σ²)。
+ *   ⇒ f∈[0,1]、天生平滑，等值面 f=t 就是"这一片里过线的占多数"的边界。
+ *   σ 用**显示度量**（第 12 近邻中位）⇒ 曲面在屏幕上是圆的，不会被轴的比例尺拉扁（§E296 那条教训的三维版）。
+ * 抽面：**surface nets / dual contouring**，不用 marching cubes 的 256 项查表：
+ *   ① 符号混合的格里，把 12 条"跨阈值"的棱按线性插值取交点、平均 ⇒ 该格一个顶点（顶点天然贴着等值面）；
+ *   ② 每条网格棱的**四个相邻格**若都有顶点 ⇒ 连成一个四边形。
+ *   ⇒ 出来的面**闭合、连贯、朝向连续**，且顶点数远小于 marching cubes。
+ * 关键性质：网格建在 (a,b,c) 空间（= 三轴各乘自己的屏幕尺度）⇒ **与相机无关**，建一次缓存，旋转/缩放每帧只重投影。*/
+function isoBuild(sig, thr) {
+  var i, j, k, a = [], b = [], c = [];
+  for (i = 0; i < N; i++) { a.push(P[i].ax); b.push(P[i].by); c.push(P[i].cz); }
+  var loA = Math.min.apply(null, a), hiA = Math.max.apply(null, a);
+  var loB = Math.min.apply(null, b), hiB = Math.max.apply(null, b);
+  var loC = Math.min.apply(null, c), hiC = Math.max.apply(null, c);
+  var R = 2.6 * sig, GN = 52;   /* 网格沿最长轴 52 格：34 格时壳只有 73 片、看得出明显棱面（实测），52 格平滑一档 */
+  var ext = Math.max(hiA - loA, hiB - loB, hiC - loC) + 2 * R;
+  var dims = [Math.max(8, Math.round(GN * (hiA - loA + 2 * R) / ext)),
+              Math.max(8, Math.round(GN * (hiB - loB + 2 * R) / ext)),
+              Math.max(8, Math.round(GN * (hiC - loC + 2 * R) / ext))];
+  loA -= R; hiA += R; loB -= R; hiB += R; loC -= R; hiC += R;
+  var dA = (hiA - loA) / (dims[0] - 1), dB = (hiB - loB) / (dims[1] - 1), dC = (hiC - loC) / (dims[2] - 1);
+  /* 粗哈希：格心 → 附近点桶，桶边 = R ⇒ 每格只扫 27 个桶（直接 718×34³ = 2800 万次 exp 会卡死）*/
+  var BK = R, nb = [Math.ceil((hiA - loA) / BK) + 1, Math.ceil((hiB - loB) / BK) + 1, Math.ceil((hiC - loC) / BK) + 1];
+  var buckets = {};
+  for (i = 0; i < N; i++) {
+    var bi = Math.floor((a[i] - loA) / BK), bj = Math.floor((b[i] - loB) / BK), bk = Math.floor((c[i] - loC) / BK);
+    var key = bi + ',' + bj + ',' + bk; (buckets[key] || (buckets[key] = [])).push(i);
+  }
+  var F = new Float32Array(dims[0] * dims[1] * dims[2]);
+  var s2 = 2 * sig * sig;
+  for (k = 0; k < dims[2]; k++) for (j = 0; j < dims[1]; j++) for (i = 0; i < dims[0]; i++) {
+    var X = loA + i * dA, Y = loB + j * dB, Z = loC + k * dC;
+    var bi0 = Math.floor((X - loA) / BK), bj0 = Math.floor((Y - loB) / BK), bk0 = Math.floor((Z - loC) / BK);
+    var num = 0, den = 0;
+    for (var di = -1; di <= 1; di++) for (var dj = -1; dj <= 1; dj++) for (var dk = -1; dk <= 1; dk++) {
+      var arr = buckets[(bi0 + di) + ',' + (bj0 + dj) + ',' + (bk0 + dk)]; if (!arr) continue;
+      for (var q = 0; q < arr.length; q++) { var m = arr[q];
+        var ex = X - a[m], ey = Y - b[m], ez = Z - c[m], dd = ex * ex + ey * ey + ez * ez;
+        if (dd > R * R) continue;
+        var gv = Math.exp(-dd / s2); den += gv; if (P[m].ok === 1) num += gv; }
+    }
+    F[(k * dims[1] + j) * dims[0] + i] = den > 1e-6 ? num / den : 0;
+  }
+  /* ① 每格一个顶点：12 条棱上"跨阈值"的交点取平均 */
+  var vx = new Float32Array(F.length), vy = new Float32Array(F.length), vz = new Float32Array(F.length);
+  var has = new Uint8Array(F.length);
+  for (k = 0; k < dims[2] - 1; k++) for (j = 0; j < dims[1] - 1; j++) for (i = 0; i < dims[0] - 1; i++) {
+    var cnt = 0, ax = 0, ay = 0, az = 0;
+    for (var e = 0; e < 3; e++) for (var o1 = 0; o1 < 2; o1++) for (var o2 = 0; o2 < 2; o2++) {
+      /* 12 条棱显式枚举端点格索引（在位运算里绕容易错，这里宁可直白）*/
+      var A, B;
+      if (e === 0) { A = [i, j + o1, k + o2]; B = [i + 1, j + o1, k + o2]; }
+      else if (e === 1) { A = [i + o1, j, k + o2]; B = [i + o1, j + 1, k + o2]; }
+      else { A = [i + o1, j + o2, k]; B = [i + o1, j + o2, k + 1]; }
+      var fa = F[(A[2] * dims[1] + A[1]) * dims[0] + A[0]], fb = F[(B[2] * dims[1] + B[1]) * dims[0] + B[0]];
+      if ((fa >= thr) === (fb >= thr)) continue;
+      var u = (thr - fa) / (fb - fa || 1e-9); u = Math.max(0, Math.min(1, u));
+      ax += loA + (A[0] + (B[0] - A[0]) * u) * dA; ay += loB + (A[1] + (B[1] - A[1]) * u) * dB; az += loC + (A[2] + (B[2] - A[2]) * u) * dC;
+      cnt++;
+    }
+    if (!cnt) continue;
+    var id = (k * dims[1] + j) * dims[0] + i;
+    has[id] = 1; vx[id] = ax / cnt; vy[id] = ay / cnt; vz[id] = az / cnt;
+  }
+  /* ② 每条网格棱的四个相邻格 → 一个四边形 */
+  var quads = [];
+  for (k = 0; k < dims[2]; k++) for (j = 0; j < dims[1]; j++) for (i = 0; i < dims[0]; i++) {
+    for (var ax2 = 0; ax2 < 3; ax2++) {
+      var t1 = (ax2 + 1) % 3, t2 = (ax2 + 2) % 3, o = [], bad = 0;
+      for (var s1 = 0; s1 < 2 && !bad; s1++) for (var s2b = 0; s2b < 2 && !bad; s2b++) {
+        var q = [i, j, k];
+        q[t1] += s1 - 1; q[t2] += s2b - 1;
+        /* 越界 / 该格没顶点 ⇒ 这条棱不产面。用 bad 标志一次退出两层，
+         *   别把 o 置 null 再 break —— 外层会继续跑，下一圈就在 null 上 push（第一版就是这么抛的）。*/
+        if (q[0] < 0 || q[1] < 0 || q[2] < 0 || q[0] >= dims[0] - 1 || q[1] >= dims[1] - 1 || q[2] >= dims[2] - 1) { bad = 1; break; }
+        var id2 = (q[2] * dims[1] + q[1]) * dims[0] + q[0];
+        if (!has[id2]) { bad = 1; break; }
+        o.push([vx[id2], vy[id2], vz[id2]]);
+      }
+      if (!bad && o.length === 4) quads.push(o);
+    }
+  }
+  return { quads: quads, dims: dims, sig: sig, thr: thr, nCell: F.length };
+}
+/* σ = 第 12 近邻距离的中位，**按显示度量**（三轴各自换算成同一屏幕单位之后）⇒ 曲面在屏幕上是圆的。
+ *   用数据单位算就是 §E296 那个病的三维版：三轴比例尺不同 ⇒ 球被拉成椭球。*/
+var ISO = null;
+function isoSigma() {
+  var nn = [];
+  for (var i = 0; i < N; i++) {
+    var heap = [];
+    for (var j = 0; j < N; j++) { if (j === i) continue;
+      var dx = P[i].ax - P[j].ax, dy = P[i].by - P[j].by, dz = P[i].cz - P[j].cz;
+      var dd = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (heap.length < 12) { heap.push(dd); heap.sort(function (a, b) { return a - b; }); }
+      else if (dd < heap[11]) { heap[11] = dd; heap.sort(function (a, b) { return a - b; }); } }
+    nn.push(heap[11] || heap[0] || 1);
+  }
+  return pct(nn, .5) || 1;
+}
+function isoEnsure() {
+  var sg = isoSigma();
+  if (ISO && ISO.sig === sg && ISO.thr === st.isoT) return ISO;
+  var t0 = performance.now(); ISO = isoBuild(sg, st.isoT); ISO.ms = performance.now() - t0;
+  return ISO;
+}
+/* 画序：**先画壳、后画点** ⇒ 点永远浮在曲面上，不会被挡（用户担心的正是这个）。
+ *   壳内部再按深度背面先画，看起来才是一个立体壳而不是一片绿糊。*/
+function drawIso(cx, cy, base, w, h, cb, shell) {
+  var m = isoEnsure(); if (!m.quads.length) return m;
+  var prj = function (X, Y, Z) { var a = X - cx, b = Y - cy, c = Z;
+    return [w / 2 + (a * cb.r[0] + b * cb.r[1] + c * cb.r[2]) * base + st.ox3,
+      h / 2 + 0.06 * h - (a * cb.u[0] + b * cb.u[1] + c * cb.u[2]) * base + st.oy3,
+      a * cb.f[0] + b * cb.f[1] + c * cb.f[2]]; };
+  var q = [];
+  for (var i = 0; i < m.quads.length; i++) {
+    var v = m.quads[i], p = [];
+    for (var k = 0; k < 4; k++) p.push(prj(v[k][0], v[k][1], v[k][2]));
+    q.push({ p: p, d: (p[0][2] + p[1][2] + p[2][2] + p[3][2]) / 4 });
+  }
+  q.sort(function (a, b) { return b.d - a.d; });
+  for (i = 0; i < q.length; i++) {
+    g.beginPath(); g.moveTo(q[i].p[0][0], q[i].p[0][1]);
+    for (k = 1; k < 4; k++) g.lineTo(q[i].p[k][0], q[i].p[k][1]);
+    g.closePath();
+    if (!shell) { g.fillStyle = 'rgba(57,217,138,.085)'; g.fill(); }
+    g.strokeStyle = shell ? 'rgba(57,217,138,.55)' : 'rgba(57,217,138,.22)';
+    g.lineWidth = 1 * devicePixelRatio; g.stroke();
+  }
+  return m;
+}
 /* ④ 三维行为轴：x3/y3/z3 全是行为轴，**势只能靠点的颜色**（用户原话） */
 function draw3b(fr) {
   var w = cv.width, h = cv.height, i;
@@ -614,6 +749,12 @@ function draw3b(fr) {
     var b1 = pt3(lo, yl + (yh - yl) * i / FN, 0, cx, cy, base, w, h, cb, zBase, zspan);
     var b2 = pt3(hi, yl + (yh - yl) * i / FN, 0, cx, cy, base, w, h, cb, zBase, zspan);
     g.beginPath(); g.moveTo(b1[0], b1[1]); g.lineTo(b2[0], b2[1]); g.stroke();
+  }
+  /* §E306 过线闭合曲面（可开关）：先算好这个空间里的坐标，再画壳 ⇒ 后面的点全部浮在壳上，不会被挡 */
+  var isoInfo = null;
+  if (st.iso) {
+    for (i = 0; i < N; i++) { P[i].ax = P[i].x3; P[i].by = P[i].y3; P[i].cz = (P[i].z3 - zmin) / zspan * zBase; }
+    isoInfo = drawIso(cx, cy, base, w, h, cb, st.iso === 2);
   }
   var pr = [];
   for (i = 0; i < N; i++) {
@@ -645,7 +786,8 @@ function draw3b(fr) {
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
     putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-  g.fillText('三维行为轴（x3/y3/z3）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 颜色 = F（势）⇒ 第三轴是行为不是深度',
+  g.fillText('三维行为轴（x3/y3/z3）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 颜色 = F（势）⇒ 第三轴是行为不是深度' +
+    (isoInfo ? ' ‖ 过线曲面：阈值 ' + Math.round(st.isoT * 100) + '% 局部过线占比 · ' + isoInfo.quads.length + ' 片四边形 · 建壳 ' + isoInfo.ms.toFixed(0) + 'ms（与相机无关，只建一次）' : ''),
     14 * devicePixelRatio, h - 12 * devicePixelRatio);
 }
 
@@ -794,9 +936,16 @@ function setMode(m) {
   document.getElementById('b3dt').style.display = (m === 'map') ? '' : 'none';
   if (m === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit; }
   else if (m === '3db') { st.yaw = 0.62; st.pit = 0.40; }
+  syncIso();
   req();
 }
 document.getElementById('b3dt').onclick = toggle3d;
+/* §E306 曲面开关：三态循环（关 → 半透壳 → 只描边）。只在三维行为轴里出现。*/
+var ISO3 = ['关', '半透壳', '只描边'];
+function syncIso() { var b = document.getElementById('bisos');
+  b.textContent = '过线曲面：' + ISO3[st.iso]; b.classList.toggle('on', st.iso > 0);
+  b.style.display = (st.mode === '3db') ? '' : 'none'; }
+document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) % 3; syncIso(); req(); };
 function syncHdir() { document.getElementById('bh').textContent = st.goodTop ? '好在上 ⇅' : '好在下 ⇅'; }
 document.getElementById('bh').onclick = function () { st.goodTop = !st.goodTop; syncHdir(); req(); };
 document.getElementById('reset').onclick = function () {
@@ -834,6 +983,8 @@ var HCL = null;
     if (kv[0] === 'labels') { st.labels = kv[1]; document.getElementById('labels').value = kv[1]; }
     if (kv[0] === 'color') { st.color = kv[1]; HCL = kv[1]; document.getElementById('color').value = kv[1]; }
     if (kv[0] === 'hi') { var a = kv[1].split(','); for (var j = 0; j < a.length; j++) st.hi[a[j]] = true; }
+    if (kv[0] === 'iso') st.iso = Math.max(0, Math.min(2, +kv[1]));   /* §E306 无头复核要用 */
+    if (kv[0] === 'isot') st.isoT = Math.max(0.15, Math.min(0.9, +kv[1]));
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } }
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit;
     document.getElementById('b3dt').textContent = st.elev < 0.5 ? '立体' : '平面'; } })();
@@ -871,6 +1022,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button>' +
 '<button data-m="tree">谱系（时间 × 家族）</button>' +
 '<button data-m="3db">三维行为轴</button>' +
+'<button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button>' +
 '<button id="reset">复位视图</button>' +
 '<button id="fitt">投影判据 ⓘ</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
