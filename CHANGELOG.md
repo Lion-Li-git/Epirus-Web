@@ -136,6 +136,12 @@ headless 侧门 **D226④** 逐模式判 `canUseSkillInMode` 与 `Play.legalActi
 本行是收口后回填的 docs-only 改动 ⇒ 按本仓先例（认证 33/34 那两节），回填后又单腿重跑 **D8 / D205 / D82**。
 **smoke 这一趟里第一次跑的是"12 种（人数 × 血量）组合"的行为扫描**（不是文本判据），battle 这一趟第一次**真打了 5 血与 4 血两格各 25 回合**。
 
+> 证据锚（DS 补 · 10-04）：本次换代 `ebdbff36 → 2c061b15` 的"既有模式读数逐位不变"**是跑出来的，不是断言** ——
+> 种子 **77000** · 产品考卷 **2925 桌 × 6 局 = 17,550 局/模式**，改动前后各跑一遍，`multi` ‖ `long` 的落盘 **sha1 相同**：
+> **`eef8c572…` ‖ `805b61b6…`**。（⚠️ 日志只留了**前 8 位**：**完整 40 位待补**，补时请连命令与种子一起写进本条。）
+> 复跑：`node tools/eval-5p.mjs 6 5 77000 --pool=all --every=7 --mode=<multi|long> --dump-per=<f>.tsv`，再对两份 `.tsv` 取 sha1 —— **取哈希前必须先剥掉表头里的墙钟与文件名**，否则哈希不稳定（本仓踩过）。
+> ⇒ 两个 bundle 只重记 meta（`js/bundled-champion-3p.js` / `js/bundled-champion.js` 的 `rulesFingerprint` + `fingerprintRefresh`），**权重字节未动、没换包、没 promote**；核指纹门 **D16** 实测通过。
+
 ## v1.6.4 — 用户裁定「开一下摄魂软注入」⇒ `DRAIN_PUSH` 默认 **0 → 1** · 顶档纪律与大雷对称 · 门 D225 加 ⑨a~⑨i（np 仍 269）
 
 **玩家侧唯一变化**：AI 手里现在会出现**摄魂指法**（只在残血时、且只是把它**并进探索集**，不强行落子、不碰 `js/core`、不改 `drainHpMax`）。
