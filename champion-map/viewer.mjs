@@ -104,6 +104,16 @@ const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [
  *   ⇒ §E287 实测"只换 opps 池过线率 45.7%→6.4%"，混在一起画就是假范围）。 */
 const FEAS_FILES = ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv', 'feas.tsv'].filter(f => existsSync(join(HERE, f)));
 const panelP = join(HERE, 'panel.tsv');
+/* §E304 家族表（`lineage.mjs` 生成）：**家族 = 训练方法/目标配置的等价类**，不是 seed。
+ *   为什么必须换：coords 的 seed 列只有 14 个取值（31~36 / 81~96），它就是包名尾部那个数 = META.seed
+ *   ⇒ 同一个 seed 被几十上百枚毫不相干的臂复用 ⇒ 标的是 RNG、不是血统（用户 10-05 的怀疑成立）。
+ *   META.seed 其实有 84 个取值 ⇒ 连"这一列是不是 seed"都要分清楚，别把名字后缀当元数据。*/
+const linP = join(HERE, 'lineage.tsv');
+let LIN = {};
+if (existsSync(linP)) {
+  const ll = readFileSync(linP, 'utf8').trim().split('\n'); const lh = ll[0].split('\t');
+  for (const l of ll.slice(1)) { const c = l.split('\t'); const o = {}; lh.forEach((k, i) => { o[k] = c[i]; }); LIN[o.id] = o; }
+} else console.log('⚠ 没有 lineage.tsv ⇒ 家族退回按 seed 上色（跑 node champion-map/lineage.mjs 生成）');
 let OKM = null, POK = 0, OKSRC = '';
 if (FEAS_FILES.length) {
   OKM = {};
@@ -126,6 +136,10 @@ if (FEAS_FILES.length) {
 const DATA = rows.map(r => ({
   id: r.id, lin: r.lineage || '', seed: r.seed || '', H: +r.H, S: +r.S, Ge: +r.Geff, rk: +r.rank,
   x2: +r.x2, y2: +r.y2, x3: +r.x3, y3: +r.y3, z3: +r.z3,
+  /* §E304 家族：`fam` = 方法/目标等价类编号（按最早 ts 排 ⇒ 号大 = 训得晚）；`ms` = META 里真正的 RNG seed
+   *   （和包名后缀那个数**不是一回事**，实测 META.seed 有 84 个取值、名字后缀只有 14 个）。*/
+  fam: LIN[r.id] ? +LIN[r.id].fam : 0, ms: LIN[r.id] ? LIN[r.id].metaSeed : '',
+  ts: LIN[r.id] ? LIN[r.id].ts : '', par: LIN[r.id] ? LIN[r.id].parent : '', pof: LIN[r.id] ? LIN[r.id].parentOf : '',
   ok: OKM && (r.id in OKM) ? (OKM[r.id].ok ? 1 : 0) : null,
   why: OKM && (r.id in OKM) ? OKM[r.id].fails : '',
   dmg: +r.dmg, heavy: +r.heavy, holo: +r.holo, rounds: +r.rounds, draw: +r.drawRate, zero: +r.zeroRate,
@@ -133,6 +147,10 @@ const DATA = rows.map(r => ({
 }));
 const ship = DATA.find(d => d.id === 'SHIPPED-Ldemo');
 console.log('内联 ' + DATA.length + ' 枚（历代冠军 ' + DATA.filter(d => d.lin).length + ' 枚 ‖ 线上 ' + (ship ? '有' : '缺') + '）');
+/* 家族标签**去重**：22 条长文本 × 718 枚 = 86 KB 的重复 ⇒ 表只发一份，枚上只留编号。*/
+const FAMLAB = {};
+for (const r of DATA) if (r.fam && LIN[r.id]) FAMLAB[r.fam] = LIN[r.id].famLabel;
+console.log('家族 ' + Object.keys(FAMLAB).length + ' 个（来自 lineage.tsv）‖ 无家族号 ' + DATA.filter(d => !d.fam).length + ' 枚');
 console.log('过线判定源 = ' + (OKSRC || '无 ⇒ 不标绿环') + ' ‖ 有判定 ' + POK + ' 枚 ‖ 判为过线 ' + DATA.filter(d => d.ok === 1).length +
   ' 枚 ‖ 无判定 ' + DATA.filter(d => d.ok === null).length + ' 枚');
 
@@ -147,7 +165,7 @@ var OKL = [], POKJ = 0, PV = null;
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
   ox: 0, oy: 0, k: 1, yaw: -Math.PI / 2, pit: Math.PI / 2, elev: 0, goodTop: true,
   ox3: 0, oy3: 0, zoom3: 1, hi: {}, bg: '#0f1522', ink: '#dce6f5', dim: '#9fb0cc' };
-var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F' };   /* 三维行为轴只能用颜色表示势 */
+var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三维行为轴与谱系图只能用颜色表示势 */
 /* 地图模式的两个相机预设：**同一个方位角**（yaw 都是 −π/2），只差俯仰 —— 平面态 = 正俯视（pitch π/2，
  *   投影恰好退化为旧二维地图：x→右、y→上、各向异性缩放全保留）；立体态 = 同方位角下俯 0.40。
  *   §E296 之前 SOLID.yaw=0.62 ⇒ 切换时相机在"立起来"的同时绕竖轴转了 ~56°，整张图边立边转 ——
@@ -163,17 +181,30 @@ var LUT = (function () { var o = []; for (var i = 0; i < 256; i++) { var t = i /
   o.push([Math.round(24 + 214 * t), Math.round(150 - 96 * t), Math.round(196 - 140 * t)]); } return o; })();
 function rampRGB(tt) { var i = Math.max(0, Math.min(255, Math.round(tt * 255))); return LUT[i]; }
 function ramp(tt) { var c = rampRGB(tt); return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
-var FAML = [], FAMC = {};
-(function () { var c = {}; for (var i = 0; i < N; i++) c[P[i].seed] = (c[P[i].seed] || 0) + 1;
-  var pal = ['#f2c94c', '#6fc7ea', '#f28c6b', '#b28df2', '#5fd6a4', '#f78fb3', '#8fd0f2', '#e0e46a', '#c48ef0', '#7ce0c0', '#f2a8d0', '#a8c4f0'];
-  FAML = Object.keys(c).sort(function (x, y) { return c[y] - c[x] || (+x) - (+y); });
-  for (var j = 0; j < FAML.length; j++) FAMC[FAML[j]] = pal[j % pal.length]; })();
-function colOf(d, fr) { if (st.color === 'fam') return FAMC[d.seed] || '#9aa8bd';
+/* §E304 两套分组并存：'fam' = **训练方法/目标家族**（默认），'seed' = RNG 种子（旧口径，留着当对照）。
+ *   颜色按黄金角铺 HSL ⇒ 22 个家族也不撞色，不用手写调色板（12 色那套一超过 12 家就开始重复）。*/
+function hueAt(i) { return 'hsl(' + Math.round((i * 137.508) % 360) + ',' + (60 + (i % 3) * 10) + '%,' + (56 + (i % 2) * 12) + '%)'; }
+function gk(d) { return String(st.color === 'seed' ? (d.seed || '?') : (d.fam || '?')); }
+var GRP = { keys: [], cnt: {}, col: {} };
+function buildGroups() { var cnt = {}, keys = [];
+  for (var i = 0; i < N; i++) { var k = gk(P[i]); if (!(k in cnt)) { cnt[k] = 0; keys.push(k); } cnt[k]++; }
+  keys.sort(function (x, y) { return cnt[y] - cnt[x] || ((+x) - (+y)); });
+  var col = {}; for (var j = 0; j < keys.length; j++) col[keys[j]] = hueAt(j);
+  GRP = { keys: keys, cnt: cnt, col: col }; }
+buildGroups();
+function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GRP.col[gk(d)] || '#9aa8bd';
   return ramp((Fv(d) - fr[0]) / (fr[1] - fr[0] || 1)); }
 function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
-  if (!n) return 1; return st.hi[d.seed] ? 1 : 0.10; }
+  if (!n) return 1; return st.hi[gk(d)] ? 1 : 0.10; }
+/* 家族短标：只取"改了什么"那一段并截断（长说明留给悬停），否则一个按钮吃掉整条图例栏。*/
+function famLab(d) { return FAMLAB[d.fam] || ''; }
+function famShort(d, n) { var s = String(famLab(d)).split(' ‖ ')[0] || ('家族 ' + d.fam);
+  return s.length > (n || 26) ? s.slice(0, n || 26) + '…' : s; }
 function tip(d, fr) {
-  return d.id + (d.lin ? ' 【' + d.lin + '】' : '') + '  家族 seed ' + d.seed +
+  return d.id + (d.lin ? ' 【' + d.lin + '】' : '') +
+    '\\n家族 ' + d.fam + '（按训练方法/目标分）：' + (famLab(d) || '—') +
+    '\\n　RNG seed 名字后缀=' + d.seed + ' ‖ META.seed=' + (d.ms || '—') + ' ‖ 训出 ' + (d.ts || '—') +
+    '\\n　热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof : '（盘上查无该权重）') +
     (d.ok === 1 ? '  · 过线 ✓' : (d.ok === 0 ? '  · 未过线' : '')) +
     (d.ok === 0 && d.why ? '\\n　栽在：' + d.why : '') +
     '\\n名次 ' + d.rk + '/' + N + '（出厂 T 下）· 按当前 T 重排见一维视图' +
@@ -323,7 +354,7 @@ function putLabel(txt, x, y, force, rot) {
 }
 function wantLabel(d) {
   if (st.labels === 'off') return false;
-  if (st.hi[d.seed]) return true;
+  if (st.hi[gk(d)]) return true;
   if (st.q && d.id.indexOf(st.q) >= 0) return true;
   if (st.labels === 'all') return true;
   return !!d.lin || d.rk <= 12 || d.rk > N - 6;
@@ -355,7 +386,7 @@ function draw1(fr) {
     var al = alphaOf(d);
     /* 718 根柱子挤在 1500px 里会糊成一整块（第一版就是这样）⇒ 只给冠军/被点选的家族画茎，其余留点。
        注意别写成 al > 0.5：没高亮时 al 恒为 1，那个条件等于"全都画"。 */
-    if (d.lin || st.hi[d.seed]) {
+    if (d.lin || st.hi[gk(d)]) {
       g.globalAlpha = al * 0.55;
       g.strokeStyle = colOf(d, fr); g.lineWidth = (d.lin ? 1.6 : 0.8) * devicePixelRatio;
       g.beginPath(); g.moveTo(x, base); g.lineTo(x, y); g.stroke();
@@ -379,6 +410,76 @@ function draw1(fr) {
   g.fillText('一维：位置 = F 名次（下方蓝条 = H，黄条 = T·S）· 悬停看明细 · 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
 }
 
+/* ⑤ §E304 谱系图：**行 = 家族（按最早 ts 排，所以从上往下就是时间推进）**，横轴 = 训练时刻。
+ *   为什么需要它：二维/三维那张图回答"这枚长什么样"，回答不了"哪一次方法改动把 F 抬上去了"——
+ *   后者要的是 (家族 × 时间) 的排布，而且必须能看见**热启动父**这条血统边。
+ *   颜色恒为 F（行已经把家族表达了，再按家族上色就是重复编码）；绿环 = 过线，墨环 = 历代冠军。
+ *   ⚠ 血统边只有 133/717 枚能连上：「hotstartFrom」是**权重哈希** —— 这段注释里不能出现反引号：本文件的整段 JS
+ *     注释里出现反引号会把字符串截断（第一版就是这么崩的 SyntaxError）⇒ 这段以后统一用「」而不是反引号。
+ *     父往往是"当时的现役冠军"、那一枚后来被覆写没留档 ⇒ 81% 的包共用同一个查无此人的祖先 d13d3c85（这条本身就是个结论）。*/
+function drawTree(fr) {
+  var w = cv.width, h = cv.height, i;
+  clear(w, h);
+  var fams = [], fset = {};
+  for (i = 0; i < N; i++) if (P[i].fam && !fset[P[i].fam]) { fset[P[i].fam] = 1; fams.push(P[i].fam); }
+  fams.sort(function (a, b) { return a - b; });
+  var tmin = Infinity, tmax = -Infinity;
+  for (i = 0; i < N; i++) { var tv = Date.parse(P[i].ts); if (isFinite(tv)) { if (tv < tmin) tmin = tv; if (tv > tmax) tmax = tv; } }
+  if (!(tmax > tmin)) { g.fillStyle = st.dim; g.fillText('没有可用的 ts ⇒ 谱系图画不了（要 lineage.tsv）', 30 * devicePixelRatio, 60); return; }
+  var padL = 340 * devicePixelRatio, padR = 26 * devicePixelRatio, padT = 40 * devicePixelRatio, padB = 46 * devicePixelRatio;
+  var rowH = (h - padT - padB) / fams.length, X = function (tv) { return padL + (tv - tmin) / (tmax - tmin) * (w - padL - padR); };
+  var Y = function (f) { return padT + (fams.indexOf(f) + 0.5) * rowH; };
+  g.font = (11 * devicePixelRatio) + 'px system-ui,sans-serif';
+  for (i = 0; i < fams.length; i++) {
+    var f = fams[i], mem = P.filter(function (d) { return d.fam === f; });
+    var nOk = mem.filter(function (d) { return d.ok === 1; }).length, nCh = mem.filter(function (d) { return d.lin; }).length;
+    var best = Math.min.apply(null, mem.map(function (d) { return d.rk; }));
+    g.fillStyle = i % 2 ? 'rgba(255,255,255,.028)' : 'rgba(255,255,255,.0)';
+    g.fillRect(padL - 6, padT + i * rowH, w - padL - padR + 12, rowH);
+    g.fillStyle = st.ink; g.textAlign = 'right';
+    /* 统计并入左栏、上下两行：右侧留给点，图例浮在右上会压掉任何画在那里的数字；
+     *   同一行放两段字实测会互相咬住（家族名长短不定，没法预留固定偏移）。*/
+    g.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.46);
+    g.fillStyle = st.dim; g.font = (10 * devicePixelRatio) + 'px system-ui,sans-serif';
+    g.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.88);
+    g.font = (11 * devicePixelRatio) + 'px system-ui,sans-serif';
+  }
+  g.textAlign = 'left';
+  /* 时间刻度：按天打竖线 */
+  var day = 86400000;
+  for (var t = Math.ceil(tmin / day) * day; t <= tmax; t += day) {
+    var xx = X(t); g.strokeStyle = 'rgba(159,176,204,.16)'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(xx, padT); g.lineTo(xx, h - padB); g.stroke();
+    g.fillStyle = st.dim; g.font = (10 * devicePixelRatio) + 'px system-ui,sans-serif';
+    g.fillText(new Date(t).toISOString().slice(5, 10), xx + 3, h - padB + 16 * devicePixelRatio);
+  }
+  /* 血统边（画在点底下，免得盖住点）*/
+  var pos = {};
+  for (i = 0; i < N; i++) { var t2 = Date.parse(P[i].ts); if (!isFinite(t2)) continue;
+    var jit = ((i * 2654435761) % 1000) / 1000 - 0.5;
+    pos[P[i].id] = [X(t2), Y(P[i].fam) + jit * rowH * 0.66]; }
+  g.strokeStyle = 'rgba(120,200,255,.30)'; g.lineWidth = 1 * devicePixelRatio;
+  for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
+    var a = pos[dd.pof], b = pos[dd.id];
+    g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - rowH * 0.5, b[0], b[1]); g.stroke(); }
+  scr = new Array(N);
+  for (i = 0; i < N; i++) { var d = P[i], p = pos[d.id]; if (!p) continue; scr[i] = p;
+    var al = alphaOf(d); g.globalAlpha = al;
+    g.beginPath(); g.arc(p[0], p[1], (d.lin ? 5 : 2.8) * st.size, 0, 6.284);
+    g.fillStyle = ramp((Fv(d) - fr[0]) / (fr[1] - fr[0] || 1)); g.fill();
+    if (d.lin && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.4; g.stroke(); }
+    if (d.ok === 1 && al > 0.3) { g.globalAlpha = al * 0.72; g.strokeStyle = '#39d98a'; g.lineWidth = 1.15 * devicePixelRatio;
+      g.beginPath(); g.arc(p[0], p[1], (d.lin ? 5 : 2.8) * st.size + 2.2 * st.size, 0, 6.284); g.stroke(); }
+    g.globalAlpha = 1;
+  }
+  labelReset();
+  var ls = labelSet();
+  for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
+    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false); }
+  g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
+  g.fillText('行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = F（蓝低 → 红高）· 绿环 = 过线 · 淡蓝曲线 = 能解析到的热启动父边',
+    padL, h - 14 * devicePixelRatio);
+}
 /* 「卡住缩放上界 + 背景不要割裂」：缩放的下界 = 场恰好铺满视口（再小就露出虚空）；平移卡到"场始终盖住整个视口"。
  *   由 kmin 的定义可证两个平移区间非空，所以 clamp 不会打架。*/
 function clampView(w, h, nb, bx, byy, cxp, cyp) {
@@ -439,7 +540,7 @@ function drawMap(fr) {
   for (i = 0; i < pr.length; i++) {
     var d = P[pr[i].i], isC = !!d.lin, al = alphaOf(d);
     var foot = ptw(d.x2, d.y2, 0);
-    if (st.elev > 0.02 && (isC || st.hi[d.seed])) {
+    if (st.elev > 0.02 && (isC || st.hi[gk(d)])) {
       g.globalAlpha = al * 0.6 * st.elev;
       g.strokeStyle = isC ? st.ink : st.dim; g.lineWidth = (isC ? 1.7 : 1) * devicePixelRatio;
       g.beginPath(); g.moveTo(foot[0], foot[1]); g.lineTo(pr[i].x, pr[i].y); g.stroke();
@@ -527,7 +628,7 @@ function draw3b(fr) {
   for (i = 0; i < pr.length; i++) {
     var d = P[pr[i][6]], al = alphaOf(d);
     /* 只给冠军/被点选家族画茎：718 根全画就是一片"头发"，第三轴反而读不出来了 */
-    if (d.lin || st.hi[d.seed]) {
+    if (d.lin || st.hi[gk(d)]) {
       g.globalAlpha = al * 0.5;
       g.strokeStyle = st.dim; g.lineWidth = 1.2 * devicePixelRatio;
       g.beginPath(); g.moveTo(pr[i][3], pr[i][4]); g.lineTo(pr[i][0], pr[i][1]); g.stroke();
@@ -556,11 +657,11 @@ function draw() { try { drawBody(); } catch (e) {
 var scr = [];
 function drawBody() {
   var fr = fRange();
-  if (st.mode === '1d') draw1(fr); else if (st.mode === 'map') drawMap(fr); else draw3b(fr);
+  if (st.mode === '1d') draw1(fr); else if (st.mode === 'map') drawMap(fr); else if (st.mode === 'tree') drawTree(fr); else draw3b(fr);
   paintLegend(fr);
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   document.getElementById('stat').textContent = N + ' 枚 · 历代冠军 ' + P.filter(function (d) { return d.lin; }).length +
-    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（势）' : '家族 seed') +
+    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : '训练方法家族') +
     (st.mode === 'map' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') + (n ? ' · 高亮 ' + n + ' 个家族' : '');
 }
 /* ⑥ 所有重绘走 rAF 合并：一帧最多画一次（拖动/滑杆连续事件下这是"卡死"的第二条来源）*/
@@ -582,23 +683,27 @@ function paintLegend(fr) {
     var s4 = document.createElement('div'); s4.style.color = 'var(--dim)'; s4.style.maxWidth = '190px'; s4.style.lineHeight = '1.35';
     s4.textContent = '判据：' + (typeof OKSRCJ === 'string' && OKSRCJ ? OKSRCJ : '—'); lg.appendChild(s3); lg.appendChild(s4); }
 }
-/* ③ 家族图例 = 可点按钮（按成员数从多到少），点一个只留这些家族 */
+/* ③ 家族图例 = 可点按钮（按成员数从多到少），点一个只留这些家族。
+ *   §E304：默认按**方法家族**列（22 家，按钮上直接写"改了什么"），切到 RNG seed 才列 seed。*/
 function buildFamBar() {
   var el = document.getElementById('fam'); el.innerHTML = '';
-  var cnt = {}; for (var i = 0; i < N; i++) cnt[P[i].seed] = (cnt[P[i].seed] || 0) + 1;
-  for (var j = 0; j < FAML.length; j++) {
-    (function (seed) {
+  var byFam = {};
+  if (st.color !== 'seed') for (var i = 0; i < N; i++) if (P[i].fam) byFam[P[i].fam] = famLab(P[i]);
+  for (var j = 0; j < GRP.keys.length; j++) {
+    (function (k) {
       var b = document.createElement('button'); b.className = 'fam';
-      b.innerHTML = '<i style="background:' + FAMC[seed] + '"></i>seed ' + seed + '<b>' + cnt[seed] + '</b>';
-      b.onclick = function () { st.hi[seed] = !st.hi[seed]; b.classList.toggle('on', !!st.hi[seed]); req(); };
+      var lab = st.color === 'seed' ? ('seed ' + k) : ('家族 ' + k + ' · ' + famShort({ fam: k }, 24));
+      b.innerHTML = '<i style="background:' + GRP.col[k] + '"></i>' + lab + '<b>' + GRP.cnt[k] + '</b>';
+      b.title = st.color === 'seed' ? '这一档 RNG 种子被多少枚复用（旧口径，只说明"哪几枚同种子"）' : (byFam[k] || '');
+      b.onclick = function () { st.hi[k] = !st.hi[k]; b.classList.toggle('on', !!st.hi[k]); req(); };
       el.appendChild(b);
-    })(FAML[j]);
+    })(GRP.keys[j]);
   }
   var r = document.createElement('button'); r.id = 'clearhi'; r.textContent = '清除高亮';
   r.onclick = function () { st.hi = {}; Array.prototype.forEach.call(el.querySelectorAll('.fam'), function (x) { x.classList.remove('on'); }); req(); };
   el.appendChild(r);
   var tipEl = document.createElement('span'); tipEl.className = 'famtip';
-  tipEl.textContent = '家族（训练 seed）· 点选可高亮，可多选';
+  tipEl.textContent = (st.color === 'seed' ? 'RNG seed（旧口径）' : '家族（训练方法 / 目标大改）') + ' · 点选可高亮，可多选';
   el.insertBefore(tipEl, el.firstChild);
 }
 /* ⑤ 底色模块：预设 + 取色器，按亮度翻墨色（亮底必须深字，否则对比度就是用户说的那个问题）*/
@@ -682,9 +787,10 @@ function tick() {
 }
 function setMode(m) {
   st.mode = m; st.color = DEF_COLOR[m] || 'fam';
+  buildGroups();   /* 分组的键随颜色口径变 ⇒ 每次换模式都要重建，否则上一口径的颜色表会串色 */
   var cs = document.getElementById('color'); if (cs) cs.value = st.color;
   Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-m]'), function (b) { b.classList.toggle('on', b.getAttribute('data-m') === m); });
-  document.getElementById('colorrow').style.opacity = (m === '3db') ? '0.4' : '1';
+  document.getElementById('colorrow').style.opacity = (m === '3db' || m === 'tree') ? '0.4' : '1';
   document.getElementById('b3dt').style.display = (m === 'map') ? '' : 'none';
   if (m === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit; }
   else if (m === '3db') { st.yaw = 0.62; st.pit = 0.40; }
@@ -702,7 +808,9 @@ document.getElementById('fitt').onclick = function () { var el = document.getEle
   var on = el.style.display === 'none'; el.style.display = on ? 'block' : 'none'; this.classList.toggle('on', on); };
 var Tt = document.getElementById('T');
 Tt.addEventListener('input', function () { st.T = +Tt.value; document.getElementById('Tv').textContent = (+Tt.value).toFixed(2); req(); });
-document.getElementById('color').addEventListener('change', function () { st.color = this.value; req(); });
+document.getElementById('color').addEventListener('change', function () { st.color = this.value;
+  /* 换分组口径 ⇒ 高亮键的**含义**变了（家族号 vs seed），留着会把两回事混成一次高亮 ⇒ 必须清 */
+  st.hi = {}; buildGroups(); buildFamBar(); req(); });
 document.getElementById('labels').addEventListener('change', function () { st.labels = this.value; req(); });
 document.getElementById('size').addEventListener('input', function () { st.size = +this.value; req(); });
 document.getElementById('q').addEventListener('input', function () { st.q = this.value.trim(); req(); });
@@ -718,7 +826,7 @@ var HCL = null;
     if (kv[0] === 'mode') {
       if (kv[1] === '3dw') { st.mode = 'map'; st.elev = 1; }
       else if (kv[1] === '2d' || kv[1] === 'map') { st.mode = 'map'; st.elev = 0; }
-      else if (kv[1] === '3db' || kv[1] === '1d') st.mode = kv[1];
+      else if (kv[1] === '3db' || kv[1] === '1d' || kv[1] === 'tree') st.mode = kv[1];
     }
     if (kv[0] === '3d') st.elev = +kv[1] ? 1 : 0;
     if (kv[0] === 'dir') st.goodTop = kv[1] !== 'bottom';
@@ -761,11 +869,12 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button data-m="map" class="on">地图（缩放/平移）</button>' +
 '<button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button>' +
 '<button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button>' +
+'<button data-m="tree">谱系（时间 × 家族）</button>' +
 '<button data-m="3db">三维行为轴</button>' +
 '<button id="reset">复位视图</button>' +
 '<button id="fitt">投影判据 ⓘ</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
-'<label id="colorrow">颜色 <select id="color"><option value="fam">训练 seed 家族</option><option value="F">F（势）</option></select></label>' +
+'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（势）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
 '<label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label>' +
 '<label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label>' +
@@ -780,6 +889,6 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<div id="fam"></div>\n' +
 '<div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>\n' +
 '<div id="tip"></div>\n' +
-'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + ';\n' + JS + '</script></body></html>';
+'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
 writeFileSync(join(HERE, OUT), html);
 console.log('已写 ' + join(HERE, OUT) + '（' + (html.length / 1024).toFixed(0) + ' KB，自包含、无外部依赖）');
