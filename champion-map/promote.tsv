@@ -1,31 +1,130 @@
 id	verdict	blocks	g4worst	g5worst	holoOther
 incumbent-forpromote	pass	—			0
 SHIPPED-Ldemo	pass	—			0
+v12-95	pass	—			0.3
+v15-123	pass	—			0
 v7bead1-31	pass	—			4.3
+v7bead1-82	pass	—			0.1
+v7bead1-93	pass	—			0.3
+v7bead100-31	pass	—			0.4
 v7bead100-82	pass	—			0.3
+v7bead100-93	pass	—			0
+v7bead15-31	pass	—			2.25
+v7bead2-31	pass	—			0.55
+v7bead2-93	pass	—			0.4
+v7bead25-31	pass	—			3
+v7bead3-31	pass	—			1.2
+v7bead3-82	pass	—			0.6
+v7beadseed-31	pass	—			0
 v7beadseed-93	pass	—			0.8
+v7cmin3-31	pass	—			3.3
+v7cmin3-93	pass	—			0.9
+v7cmin4-31	pass	—			0
+v7divK2b-82	pass	—			0
 v7f5div3-91	pass	—			0
+v7f5div3-93	pass	—			1
+v7force-34	pass	—			0
+v7iso1-81	pass	—			0
+v7l2c-101	pass	—			0.15
+v7l2h-93	pass	—			0.9
+v7n1-93	pass	—			0.85
+v7new5_005-81	pass	—			0
+v7ringB1-81	pass	—			1.25
+v7ringB1-93	pass	—			0
+v7role1-91	pass	—			0
 v7s5-82	pass	—			0
+v7salt-31	pass	—			5.55
+v7t1-31	pass	—			0
 v7t1-82	pass	—			3.95
+v7t1-93	pass	—			1.1
+v7t2-31	pass	—			0.6
+v7t2-82	pass	—			0.85
 v7t2-93	pass	—			1.7
+v7u1-82	pass	—			0.1
 v7u1-93	pass	—			0.35
+arm-tail0	block	G4/long 被一行脚本打穿 74% · G5/long 清不了防席（它夺冠 82%） · G5/multi 清不了防席（它夺冠 52%）	74	82	
+arm-tail0.3	block	G 有效技能数 1.85 < 3（打法坍缩到两三张卡）			
+arm-tail0.6	block	G4/long 被一行脚本打穿 98% · G4/multi 被一行脚本打穿 72% · G5/long 清不了防席（它夺冠 92%） · G5/multi 清不了防席（它夺冠 65%）	98	92	
+eco2-34	block	G5/long 清不了防席（它夺冠 41%）		41	2.25
+eco2-35	block	G4/long 被一行脚本打穿 96% · G4/multi 被一行脚本打穿 66% · G5/long 清不了防席（它夺冠 94%） · G5/multi 清不了防席（它夺冠 67%）	96	94	0
+fgtB-32	block	G4/long 被一行脚本打穿 94% · G4/multi 被一行脚本打穿 77% · G5/long 清不了防席（它夺冠 95%） · G5/multi 清不了防席（它夺冠 81%）	94	95	0
+fgtB-34	block	G4/long 被一行脚本打穿 97% · G4/multi 被一行脚本打穿 87% · G5/long 清不了防席（它夺冠 81%） · G5/multi 清不了防席（它夺冠 64%）	97	81	0
+r61fix-91	block	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 100% · G5/long 清不了防席（它夺冠 58%） · G5/multi 清不了防席（它夺冠 62%）	100	62	0
+rwd0-36	block	G5/long 清不了防席（它夺冠 30%） · G5/multi 清不了防席（它夺冠 28%）		30	0
 v12-91	block	G4/long 被一行脚本打穿 93% · G4/multi 被一行脚本打穿 90% · G5/multi 清不了防席（它夺冠 40%）	93	40	0
+v13-101	block	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 100% · G5/long 清不了防席（它夺冠 47%）	100	47	0
+v14-111	block	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 97% · G5/long 清不了防席（它夺冠 100%） · G5/multi 清不了防席（它夺冠 96%）	100	100	0
+v14-114	block	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 95% · G5/long 清不了防席（它夺冠 89%） · G5/multi 清不了防席（它夺冠 86%）	100	89	0
 v7aim1-93	block	G4/long 被一行脚本打穿 83% · G4/multi 被一行脚本打穿 73% · G5/long 清不了防席（它夺冠 26%） · G5/multi 清不了防席（它夺冠 33%）	83	33	0
+v7aim2-31	block	G 有效技能数 2.86 < 3（打法坍缩到两三张卡）			0
+v7aim2-93	block	F 被集火还手率 13% < 20%（被 4 席猛攻时不还手） · G 有效技能数 1.90 < 3（打法坍缩到两三张卡）			0
+v7aim3-93	block	G4/long 被一行脚本打穿 64%	64		0
+v7b-45	block	G4/long 被一行脚本打穿 95% · G4/multi 被一行脚本打穿 77% · G5/long 清不了防席（它夺冠 80%） · G5/multi 清不了防席（它夺冠 68%）	95	80	0
 v7bead2-82	block	G4/long 被一行脚本打穿 61%	61		4
 v7bead25-82	block	G4/long 被一行脚本打穿 65%	65		0.55
 v7bead25-93	block	G 有效技能数 2.95 < 3（打法坍缩到两三张卡）			0
 v7beadseed-82	block	送盾 17.3/局 > 6（不可 --force）			17.3
+v7blk1-31	block	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 98% · G5/long 清不了防席（它夺冠 100%） · G5/multi 清不了防席（它夺冠 96%）	100	100	0
+v7clear2-81	block	G4/long 被一行脚本打穿 76%	76		1.35
+v7cmin4-82	block	G4/long 被一行脚本打穿 89% · G4/multi 被一行脚本打穿 93%	93		0
+v7cur2-82	block	G4/long 被一行脚本打穿 99% · G4/multi 被一行脚本打穿 71%	99		0
+v7cur3-31	block	G4/long 被一行脚本打穿 88% · G5/long 清不了防席（它夺冠 30%） · G5/multi 清不了防席（它夺冠 28%）	88	30	0.05
+v7cur3-82	block	G4/long 被一行脚本打穿 93% · G5/long 清不了防席（它夺冠 32%）	93	32	0
+v7cur3-93	block	G4/long 被一行脚本打穿 80%	80		0
+v7divK2-81	block	G4/long 被一行脚本打穿 85% · G4/multi 被一行脚本打穿 63% · G5/long 清不了防席（它夺冠 42%） · G5/multi 清不了防席（它夺冠 32%）	85	42	0
+v7f2b-31	block	G4/long 被一行脚本打穿 73% · G4/multi 被一行脚本打穿 62% · G5/long 清不了防席（它夺冠 77%） · G5/multi 清不了防席（它夺冠 52%）	73	77	0
+v7f2t-92	block	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 96% · G5/long 清不了防席（它夺冠 99%） · G5/multi 清不了防席（它夺冠 98%）	100	99	0
+v7f3-94	block	G4/long 被一行脚本打穿 67% · G4/multi 被一行脚本打穿 69%	69		0
+v7f35b-94	block	G4/long 被一行脚本打穿 82%	82		0
+v7f5b-96	block	G4/long 被一行脚本打穿 87% · G4/multi 被一行脚本打穿 84% · G5/long 清不了防席（它夺冠 86%） · G5/multi 清不了防席（它夺冠 81%）	87	86	0
+v7f5div3-81	block	G4/long 被一行脚本打穿 99% · G4/multi 被一行脚本打穿 100% · G5/long 清不了防席（它夺冠 100%） · G5/multi 清不了防席（它夺冠 100%）	100	100	0
+v7fix1-82	block	G4/long 被一行脚本打穿 88% · G5/long 清不了防席（它夺冠 45%） · G5/multi 清不了防席（它夺冠 40%）	88	45	0
+v7force2-35	block	G4/long 被一行脚本打穿 95% · G4/multi 被一行脚本打穿 85% · G5/long 清不了防席（它夺冠 98%） · G5/multi 清不了防席（它夺冠 88%）	95	98	0
+v7gf1-91	block	G4/long 被一行脚本打穿 94% · G4/multi 被一行脚本打穿 78% · G5/long 清不了防席（它夺冠 59%） · G5/multi 清不了防席（它夺冠 32%）	94	59	0.05
+v7gf1-93	block	G4/long 被一行脚本打穿 76%	76		0
+v7l2c-114	block	G4/long 被一行脚本打穿 80% · G5/long 清不了防席（它夺冠 40%） · G5/multi 清不了防席（它夺冠 56%）	80	56	0
+v7l2c-143	block	G4/long 被一行脚本打穿 80% · G4/multi 被一行脚本打穿 73% · G5/long 清不了防席（它夺冠 70%） · G5/multi 清不了防席（它夺冠 42%）	80	70	0.05
+v7l2c-82	block	G4/long 被一行脚本打穿 99% · G4/multi 被一行脚本打穿 83% · G5/long 清不了防席（它夺冠 64%） · G5/multi 清不了防席（它夺冠 83%）	99	83	0
+v7l2f-141	block	G5/long 清不了防席（它夺冠 48%） · G5/multi 清不了防席（它夺冠 34%）		48	0.1
+v7l2o-91	block	G5/multi 清不了防席（它夺冠 31%）		31	0.15
+v7l2o-93	block	G4/long 被一行脚本打穿 97% · G4/multi 被一行脚本打穿 74%	97		0
+v7l2s-91	block	G4/long 被一行脚本打穿 67% · G5/long 清不了防席（它夺冠 26%）	67	26	0
+v7l2s-93	block	G4/long 被一行脚本打穿 87% · G5/long 清不了防席（它夺冠 88%） · G5/multi 清不了防席（它夺冠 36%）	87	88	0.1
+v7m2_noEffects-31	block	G5/long 清不了防席（它夺冠 46%） · G5/multi 清不了防席（它夺冠 50%）		50	0.05
+v7m2_noEffects-32	block	G5/long 清不了防席（它夺冠 46%） · G5/multi 清不了防席（它夺冠 50%）		50	0.05
+v7m2_noTarget-36	block	G5/long 清不了防席（它夺冠 46%） · G5/multi 清不了防席（它夺冠 50%）		50	0.05
+v7new1-31	block	G4/long 被一行脚本打穿 97% · G4/multi 被一行脚本打穿 94% · G5/long 清不了防席（它夺冠 76%） · G5/multi 清不了防席（它夺冠 51%）	97	76	0
+v7new2-93	block	G4/long 被一行脚本打穿 68% · G5/long 清不了防席（它夺冠 56%） · G5/multi 清不了防席（它夺冠 30%）	68	56	2
+v7new3-93	block	G4/long 被一行脚本打穿 68% · G5/long 清不了防席（它夺冠 56%） · G5/multi 清不了防席（它夺冠 30%）	68	56	2
+v7new5_01-81	block	G4/long 被一行脚本打穿 96% · G4/multi 被一行脚本打穿 87%	96		0
+v7new5_01-92	block	G4/long 被一行脚本打穿 96% · G4/multi 被一行脚本打穿 71% · G5/multi 清不了防席（它夺冠 29%）	96	29	0
+v7new5_01-93	block	G4/long 被一行脚本打穿 99% · G4/multi 被一行脚本打穿 97% · G5/long 清不了防席（它夺冠 99%） · G5/multi 清不了防席（它夺冠 96%）	99	99	0
+v7new6-94	block	G5/long 清不了防席（它夺冠 40%）		40	0
 v7press3-31	block	G4/long 被一行脚本打穿 76% · G4/multi 被一行脚本打穿 91% · G5/long 清不了防席（它夺冠 78%） · G5/multi 清不了防席（它夺冠 91%）	91	91	9.95
 v7press3-81	block	G4/long 被一行脚本打穿 89% · G4/multi 被一行脚本打穿 64% · G5/long 清不了防席（它夺冠 63%） · G5/multi 清不了防席（它夺冠 44%）	89	63	1.65
 v7press3-82	block	G4/long 被一行脚本打穿 61% · G5/long 清不了防席（它夺冠 32%）	61	32	0.05
 v7press3-91	block	G4/long 被一行脚本打穿 69% · G4/multi 被一行脚本打穿 63%	69		0.4
+v7protoE-82	block	G4/long 被一行脚本打穿 88% · G4/multi 被一行脚本打穿 90% · G5/long 清不了防席（它夺冠 31%） · G5/multi 清不了防席（它夺冠 51%）	90	51	0
+v7r2-35	block	G4/long 被一行脚本打穿 95% · G4/multi 被一行脚本打穿 85% · G5/long 清不了防席（它夺冠 98%） · G5/multi 清不了防席（它夺冠 88%）	95	98	0
 v7r3-45	block	F 被集火还手率 20% < 20%（被 4 席猛攻时不还手）			0
+v7rand-32	block	G5/long 清不了防席（它夺冠 31%）		31	1.65
+v7role1-81	block	G4/long 被一行脚本打穿 89% · G4/multi 被一行脚本打穿 74% · G5/long 清不了防席（它夺冠 90%） · G5/multi 清不了防席（它夺冠 75%）	89	90	0
+v7role1w-91	block	G4/long 被一行脚本打穿 88% · G4/multi 被一行脚本打穿 77%	88		0.5
+v7s8-31	block	G4/long 被一行脚本打穿 92% · G4/multi 被一行脚本打穿 74% · G5/long 清不了防席（它夺冠 93%） · G5/multi 清不了防席（它夺冠 78%）	92	93	0
 v7s8-82	block	G5/long 清不了防席（它夺冠 27%）		27	0
 v7s9-82	block	G5/long 清不了防席（它夺冠 38%） · G5/multi 清不了防席（它夺冠 28%）		38	3.4
+v7s9-93	block	G4/long 被一行脚本打穿 71%	71		0.15
 v7seat24-82	block	G4/long 被一行脚本打穿 99% · G4/multi 被一行脚本打穿 82% · G5/long 清不了防席（它夺冠 55%） · G5/multi 清不了防席（它夺冠 60%）	99	60	0.1
+v7stock1-92	block	G4/long 被一行脚本打穿 69% · G5/long 清不了防席（它夺冠 48%） · G5/multi 清不了防席（它夺冠 48%）	69	48	0.1
+v7sub1-81	block	G4/long 被一行脚本打穿 87% · G4/multi 被一行脚本打穿 83% · G5/long 清不了防席（它夺冠 77%） · G5/multi 清不了防席（它夺冠 79%）	87	79	2.45
+v7sub1-82	block	G4/long 被一行脚本打穿 83% · G4/multi 被一行脚本打穿 96% · G5/long 清不了防席（它夺冠 44%）	96	44	0.15
 v7sub1-92	block	G 有效技能数 2.63 < 3（打法坍缩到两三张卡） · G4/multi 被一行脚本打穿 69% · G5/long 清不了防席（它夺冠 42%） · G5/multi 清不了防席（它夺冠 59%）	69	59	0
+v7tgt2-52	block	G4/long 被一行脚本打穿 66%	66		6.15
+v7tgt4-62	block	G4/long 被一行脚本打穿 89% · G5/long 清不了防席（它夺冠 57%） · G5/multi 清不了防席（它夺冠 33%）	89	57	0
 v7tgt4-63	block	F 被集火还手率 15% < 20%（被 4 席猛攻时不还手） · G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 98% · G5/long 清不了防席（它夺冠 82%） · G5/multi 清不了防席（它夺冠 77%）	100	82	0
+v7tgt4-66	block	G4/long 被一行脚本打穿 90% · G4/multi 被一行脚本打穿 73% · G5/long 清不了防席（它夺冠 87%） · G5/multi 清不了防席（它夺冠 79%）	90	87	0.05
 v7tgt5-62	block	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 97% · G5/long 清不了防席（它夺冠 73%） · G5/multi 清不了防席（它夺冠 47%）	100	73	0.8
+v7w3r1-82	block	G4/long 被一行脚本打穿 96% · G4/multi 被一行脚本打穿 90%	96		0.55
 v7ws1-31	block	G4/long 被一行脚本打穿 76% · G4/multi 被一行脚本打穿 91% · G5/long 清不了防席（它夺冠 78%） · G5/multi 清不了防席（它夺冠 91%）	91	91	9.95
 v7ws1-82	block	G4/long 被一行脚本打穿 61% · G5/long 清不了防席（它夺冠 32%）	61	32	0.05
 v7ws1-91	block	G4/long 被一行脚本打穿 69% · G4/multi 被一行脚本打穿 63%	69		0.4
