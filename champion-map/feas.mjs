@@ -16,20 +16,22 @@
  *
  * 成本：每枚 ≈ 200 局（不含考卷），实测 ~1.3s/枚 ⇒ 三片并发约 5 分钟。**不测考卷 H**（那是 §E290 的尺，已有）。
  * 可续跑 + 可分片 + 空跑必红（`--shard` 写错时曾差点把"一枚没量"当跑完发出去）。
- * 用法：node docs/artifacts/e287-out/e287-feas.mjs [--shard=1/3] [--out=e287-feas-s1.tsv] [--limit=0] [--ids=a,b]
+ * 用法：node champion-map/feas.mjs [--shard=1/3] [--out=feas-s1.tsv] [--limit=0] [--ids=a,b]
  */
 import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, selfPlay, reflectWall, seatSymmetry, aggressionProfile, densityProfile,
-  chargeProfile, feasibilityOf, feasPlan, extractJsonObject } from '../../../tools/audit-lib.mjs';
+  chargeProfile, feasibilityOf, feasPlan, extractJsonObject } from '../tools/audit-lib.mjs';
 
+/* §E303 本目录从 docs/artifacts/e287-out/ 挪到仓库根 ⇒ 深度少两级，ROOT 与上面的 import 一起换。 */
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..', '..', '..');
+const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
-const OUT = arg('out', 'e287-feas.tsv'), LIMIT = Number(arg('limit', 0));
+const OUT = arg('out', 'feas.tsv'), LIMIT = Number(arg('limit', 0));
 /* --out 带斜杠就按调用者的路径解释，不带才落在本脚本旁边 —— 否则 'docs/.../x.tsv' 会被拼成
  *   docs/artifacts/e287-out/docs/artifacts/e287-out/x.tsv，writeFileSync 直接 ENOENT（第一版就崩在这）。*/
+/* §E303：裸文件名落在**本目录**（挪到仓库根之后 ROOT 与 HERE 只差一层，原来那套 join(ROOT) 会写到仓库根去）。*/
 const OUTARG = OUT.indexOf('/') >= 0 || OUT.indexOf('\\') >= 0 ? OUT : join(HERE, OUT);
 const SH = String(arg('shard', '1/1')).split('/').map(Number);
 const FEAS_N = feasPlan(process.env, null);
@@ -38,7 +40,7 @@ const COLS = ['id', 'ok', 'nFail', 'fails', 'G', 'G2', 'wallDmg', 'fieldA', 'fie
   'seatVerdict', 'seatSpread', 'zeroAtkRate', 'recOk', 'recFails', 'oppsN'];
 
 /* ---- 名单：直接读坐标表 ⇒ "判了几枚"与"画了几枚"永远是同一批 ---- */
-const ct = readFileSync(join(HERE, 'e287-coords.tsv'), 'utf8').trim().split('\n');
+const ct = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n');
 const ch = ct[0].split('\t'), ci = ch.indexOf('id');
 let list = ct.slice(1).map(l => {
   const id = l.split('\t')[ci];

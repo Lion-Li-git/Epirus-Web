@@ -16,8 +16,8 @@
  *      所有重绘经 requestAnimationFrame 合并，一帧最多画一次。
  *
  * 自包含：数据内联进 HTML、纯原生 JS + Canvas，**不引任何 CDN**（离线可开）。
- * 坐标来自 `e287-coords.tsv`（由 `e287-figs.mjs` 写）⇒ 交互页与静态图共用同一批坐标，不重算不漂移。
- * 用法：node docs/artifacts/e287-out/e287-viewer.mjs [--out=e287-viewer.html]
+ * 坐标来自 `coords.tsv`（由 `docs/artifacts/e287-out/e287-figs.mjs` 算好后拷进来）⇒ 交互页与静态图共用同一批坐标，不重算不漂移。
+ * 用法：node champion-map/viewer.mjs [--out=index.html]
  *
  * §E294 追加（用户 10-04 第二轮：「旋转和缩放中心出问题了，一维也因此被裁掉了一块。
  *   二维的背景图能不能直接扩散到所有点的范围并且卡住缩放上界，不要看起来背景图很割裂」）：
@@ -88,19 +88,22 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
-const OUT = arg('out', 'e287-viewer.html');
-const CF = join(HERE, 'e287-coords.tsv');
-if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 e287-figs.mjs'); process.exit(2); }
+/* §E303 从 `docs/artifacts/e287-out/` 挪到仓库根的 `champion-map/`（用户：「不要放在很深的文件夹里面」）。
+ *   文件名一律去掉 `e287-` 前缀；**输入表是拷进来的**：`coords.tsv` 由 `docs/artifacts/e287-out/e287-figs.mjs`
+ *   算出来（它吃 `results/`〔用户私有〕+ gitignored 的臂产物 ⇒ 换机不能重算），重算后要手工拷到本目录。*/
+const OUT = arg('out', 'index.html');
+const CF = join(HERE, 'coords.tsv');
+if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 docs/artifacts/e287-out/e287-figs.mjs，再把落盘拷成 coords.tsv'); process.exit(2); }
 const t = readFileSync(CF, 'utf8').trim().split('\n'), head = t[0].split('\t');
 const rows = t.slice(1).map(l => { const c = l.split('\t'); const o = {}; head.forEach((k, i) => { o[k] = c[i]; }); return o; });
 if (rows.length < 50) { console.error('⛔ 坐标表只有 ' + rows.length + ' 行'); process.exit(2); }
-const fitP = join(HERE, 'e287-fit.tsv');
+const fitP = join(HERE, 'fit.tsv');
 const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [];
-/* 过线来源（§E298）：**优先**用现跑的同一道闸 `e287-feas-s*.tsv`（覆盖全 718 枚、样本量统一 n=20/aggr40/seat100）；
- *   没有才退回包自己 META 里的历史 feasibility.ok（`e287-panel.tsv` 只有 94 枚，且那 482 枚有值的还跨 6 个 opps 层
+/* 过线来源（§E298）：**优先**用现跑的同一道闸 `feas-s*.tsv`（覆盖全 718 枚、样本量统一 n=20/aggr40/seat100）；
+ *   没有才退回包自己 META 里的历史 feasibility.ok（`panel.tsv` 只有 94 枚，且那 482 枚有值的还跨 6 个 opps 层
  *   ⇒ §E287 实测"只换 opps 池过线率 45.7%→6.4%"，混在一起画就是假范围）。 */
-const FEAS_FILES = ['e287-feas-s1.tsv', 'e287-feas-s2.tsv', 'e287-feas-s3.tsv', 'e287-feas.tsv'].filter(f => existsSync(join(HERE, f)));
-const panelP = join(HERE, 'e287-panel.tsv');
+const FEAS_FILES = ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv', 'feas.tsv'].filter(f => existsSync(join(HERE, f)));
+const panelP = join(HERE, 'panel.tsv');
 let OKM = null, POK = 0, OKSRC = '';
 if (FEAS_FILES.length) {
   OKM = {};
@@ -772,7 +775,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<input type="color" id="bgc" value="#0f1522" title="自定义底色"><span id="bgn" style="color:var(--dim);font-size:11px"></span>' +
 '</div>\n' +
 '<div id="wrap"><canvas id="cv"></canvas><div id="stat"></div><div id="legend"></div>' +
-'<div id="fit" style="display:none">' + (fit.length ? '本图坐标与判据（' + 'e287-fit.mjs' + ' 实测，随机排点当地板）：<br>' +
+'<div id="fit" style="display:none">' + (fit.length ? '本图坐标与判据（' + 'fit.tsv ← e287-fit.mjs' + ' 实测，随机排点当地板）：<br>' +
   fit.map(l => l.split('\t').join(' · ')).join('<br>').replace(/</g, '&lt;') : '') + '</div></div>\n' +
 '<div id="fam"></div>\n' +
 '<div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>\n' +
