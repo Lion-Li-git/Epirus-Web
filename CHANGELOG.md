@@ -139,6 +139,11 @@ headless 侧门 **D226④** 逐模式判 `canUseSkillInMode` 与 `Play.legalActi
 > 证据锚（DS 补 · 10-04）：本次换代 `ebdbff36 → 2c061b15` 的"既有模式读数逐位不变"**是跑出来的，不是断言** ——
 > 种子 **77000** · 产品考卷 **2925 桌 × 6 局 = 17,550 局/模式**，改动前后各跑一遍，`multi` ‖ `long` 的落盘 **sha1 相同**：
 > **`eef8c572…` ‖ `805b61b6…`**。（⚠️ 日志只留了**前 8 位**：**完整 40 位待补**，补时请连命令与种子一起写进本条。）
+> **完整 40 位（qoder 补 · 10-04 午，文件仍在 `docs/artifacts/e285-out/`）**：
+>   `multi` = **`eef8c572800244df83fdd6edb4cb1c82df59f21c`** ‖ `long` = **`805b61b655c53b6717fbaaaf863800141ea029ac`**
+>   ⇒ `sha1sum before-{multi,long}.tsv after-{multi,long}.tsv final-{multi,long}.tsv` 六份**整文件逐字节相同**（比"剥表头后正文相同"更强，所以这三份之间不存在表头差异）。
+>   ⚠ **下一句话里那条"先剥表头"的警告在这组数上是不必要的，而且照它做会得到另一个哈希**：剥掉全部 `#` 行后的正文 sha1 是
+>   `1755141a…`（multi = `1755141a1b988a1c6a0a2527ec91476e1c10d6ff`）‖ `3017924…`（long = `301792474c0588f1df9ca881a2d4a061f9791356`）—— 两个口径别混着引。剥表头那条是本仓**别处**落盘带墙钟时的通用预防，这里当作"复现前先确认表头是否也逐字相同"的提醒读。
 > 复跑：`node tools/eval-5p.mjs 6 5 77000 --pool=all --every=7 --mode=<multi|long> --dump-per=<f>.tsv`，再对两份 `.tsv` 取 sha1 —— **取哈希前必须先剥掉表头里的墙钟与文件名**，否则哈希不稳定（本仓踩过）。
 > ⇒ 两个 bundle 只重记 meta（`js/bundled-champion-3p.js` / `js/bundled-champion.js` 的 `rulesFingerprint` + `fingerprintRefresh`），**权重字节未动、没换包、没 promote**；核指纹门 **D16** 实测通过。
 
