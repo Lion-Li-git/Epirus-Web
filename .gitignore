@@ -95,3 +95,19 @@ docs/artifacts/e129-out/*
 !docs/artifacts/v7u1-93.bak
 !docs/artifacts/v7w3c-93.bak
 !docs/artifacts/v9-32.bak
+
+# §E302（用户 10-04 夜：「把这个东西入库并且合并 main」）：冠军进化查看器**这一条链**入库。
+#   只要 9 个文件 = 生成器 + 它读的输入 + 生成出来的页面；截图、DS 的 .ds-bak、中间产物一律留在本机。
+#   ⚠ 只到"页面可复现"这一层：`e287-coords.tsv` 自己是 `e287-figs.mjs` 吃 `results/`（用户私有）+ gitignored 臂产物算出来的，
+#      换机不能重算，只能带着这份 TSV 走 —— 所以把 TSV 本身纳进来，而不是把脚本链全纳进来。
+!docs/artifacts/e287-out/
+docs/artifacts/e287-out/*
+!docs/artifacts/e287-out/e287-viewer.mjs
+!docs/artifacts/e287-out/e287-viewer.html
+!docs/artifacts/e287-out/e287-coords.tsv
+!docs/artifacts/e287-out/e287-fit.tsv
+!docs/artifacts/e287-out/e287-feas.mjs
+!docs/artifacts/e287-out/e287-feas-s1.tsv
+!docs/artifacts/e287-out/e287-feas-s2.tsv
+!docs/artifacts/e287-out/e287-feas-s3.tsv
+!docs/artifacts/e287-out/e287-panel.tsv
