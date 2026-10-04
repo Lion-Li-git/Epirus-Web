@@ -151,6 +151,21 @@ if (existsSync(promP)) {
     Object.values(PROM).filter(function (x) { return x.pass; }).length + ' ‖  ' +
     Object.values(PROM).filter(function (x) { return !x.pass; }).length + '）');
 } else console.log('提示：没有 promote.tsv ⇒ "上槽体检"着色口径不可用（跑 node champion-map/promscan.mjs 生成）');
+/* §E310 决斗表（§E289 那台配对决斗的汇总，`duelscan.mjs` 生成）= 图上第 4 条腿："这枚打赢现役没有"。
+ *   为什么非画不可：§E308 ① 我拿"考卷 H 高 5.2pt"当"更强的冠军"写进头条，被这台仪器当场推翻
+ *   （v7t1-82 两批种子都输）⇒ 这个仓库里"更强"有专门的尺，图上却只有 F/H/S。
+ *   口径：A−B = （我做异类时夺1率）−（现役做异类时夺1率），**两批种子同向才给颜色**，符号翻的画黄（判不动）。*/
+const duelP = join(HERE, 'duel.tsv');
+let DUEL = {};
+if (existsSync(duelP)) {
+  const dl = readFileSync(duelP, 'utf8').trim().split('\n'); const dh = dl[0].split('\t');
+  const iId = dh.indexOf('id'), iM = dh.indexOf('mean'), iS = dh.indexOf('sign'), i7 = dh.indexOf('s77000'), i8 = dh.indexOf('s88000');
+  for (const l of dl.slice(1)) { const c = l.split('\t'); if (!c[iId]) continue;
+    DUEL[c[iId]] = { m: +c[iM], s: c[iS], a: c[i7], b: c[i8] }; }
+  console.log('决斗实测 ' + Object.keys(DUEL).length + ' 枚（两批同向 ' +
+    Object.values(DUEL).filter(x => x.s === 'same').length + ' ‖ 符号翻 ' +
+    Object.values(DUEL).filter(x => x.s === 'flip').length + '）');
+} else console.log('提示：没有 duel.tsv ⇒ "对现役决斗"着色口径不可用（跑 node champion-map/duelscan.mjs 生成）');
 const DATA = rows.map(r => ({
   id: r.id, lin: r.lineage || '', seed: r.seed || '', H: +r.H, S: +r.S, Ge: +r.Geff, rk: +r.rank,
   x2: +r.x2, y2: +r.y2, x3: +r.x3, y3: +r.y3, z3: +r.z3,
@@ -161,6 +176,8 @@ const DATA = rows.map(r => ({
   ok: OKM && (r.id in OKM) ? (OKM[r.id].ok ? 1 : 0) : null,
   gl: OKM && (r.id in OKM) && isFinite(OKM[r.id].g2) ? OKM[r.id].g2 : null,
   pv: r.id in PROM ? (PROM[r.id].pass ? 1 : 0) : null, pb: r.id in PROM ? PROM[r.id].b : '',
+  dm: r.id in DUEL ? DUEL[r.id].m : null, ds: r.id in DUEL ? DUEL[r.id].s : '',
+  da: r.id in DUEL ? DUEL[r.id].a : '', db: r.id in DUEL ? DUEL[r.id].b : '',
   why: OKM && (r.id in OKM) ? OKM[r.id].fails : '',
   dmg: +r.dmg, heavy: +r.heavy, holo: +r.holo, rounds: +r.rounds, draw: +r.drawRate, zero: +r.zeroRate,
   seat: +r.seatSpread, keys: +r.distinctKeys, chg: +r.charges, waste: +r.waste, stance: +r.noThreatStance, atk: +r.fieldAAtk, rw: +r.rwDmg
@@ -185,6 +202,10 @@ var OKL = [], POKJ = 0, PV = null;
 /* §E308 实测过上槽体检的枚数（分母只算实测过的，别把"没测"说成"没过"）*/
 var NPRM = 0, NPPASS = 0;
 (function () { for (var i = 0; i < N; i++) { if (P[i].pv === 1) { NPRM++; NPPASS++; } else if (P[i].pv === 0) NPRM++; } })();
+/* §E310 决斗实测数（同向上的"赢"才算，符号翻的单列）*/
+var NDUEL = 0, NWIN = 0, NFLIP = 0;
+(function () { for (var i = 0; i < N; i++) { if (!P[i].ds) continue; NDUEL++;
+  if (P[i].ds === 'flip') NFLIP++; else if (P[i].dm > 0) NWIN++; } })();
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
   iso: 0, isoT: 0.5,   /* §E306 过线曲面：0=关 1=半透壳 2=只描边；isoT = 局部过线占比阈值 */
   ox: 0, oy: 0, k: 1, yaw: -Math.PI / 2, pit: Math.PI / 2, elev: 0, goodTop: true,
@@ -221,13 +242,16 @@ function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GR
     return g < 0 ? '#5a6478' : ramp(Math.max(0, Math.min(1, (g - GLR[0]) / (GLR[1] - GLR[0] || 1)))); }
   /* §E308 三档离色（不是渐变）：绿 = 实测能上槽，红 = 实测栽桩，灰 = 没测过（**不等于**没过）*/
   if (st.color === 'pm') { var v = d.pv; return v === 1 ? '#39d98a' : (v === 0 ? '#ff6b6b' : '#5a6478'); }
+  /* §E310 第 4 条腿：对现役的配对决斗 A−B。绿 = 两批种子都赢，红 = 两批都输，黄 = 符号翻（判不动），灰 = 没测 */
+  if (st.color === 'duel') { if (d.ds === 'same') return d.dm > 0 ? '#39d98a' : '#ff6b6b';
+    return d.ds === 'flip' ? '#e0b13c' : '#5a6478'; }
   return ramp((Fv(d) - fr[0]) / (fr[1] - fr[0] || 1)); }
 /* G(long) 的显示区间取全库 p02..p98（不用 0..8：那会把对比度全压在低段）*/
 var GLR = (function () { var a = P.map(function (d) { return d.gl; }).filter(function (v) { return v !== null && v !== undefined && isFinite(v); }).sort(function (x, y) { return x - y; });
   return a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [0, 8]; })();
 function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   /* §E308 上槽体检口径下 705/718 枚是"没测过"⇒ 不压暗就找不到那 13 枚（灰压到 0.16，实测过的照旧）*/
-  if (st.color === 'pm' && (d.pv === null || d.pv === undefined)) return 0.16;
+  if ((st.color === 'pm' && (d.pv === null || d.pv === undefined)) || (st.color === 'duel' && !d.ds)) return 0.16;
   if (!n) return 1; return st.hi[gk(d)] ? 1 : 0.10; }
 /* 家族短标：只取"改了什么"那一段并截断（长说明留给悬停），否则一个按钮吃掉整条图例栏。*/
 function famLab(d) { return FAMLAB[d.fam] || ''; }
@@ -244,6 +268,8 @@ function tip(d, fr) {
     '\\nH 考卷夺1率 = ' + d.H.toFixed(1) + '%   S = ln G_eff = ' + d.S.toFixed(2) + '（G_eff ' + d.Ge.toFixed(2) + '）' +
     (d.gl === null || d.gl === undefined ? '' : '\\n长程广度 G(long) = ' + (+d.gl).toFixed(2) + (d.gl < 3 ? '  ← 低于闸要求的 3（这条腿最常卡前沿）' : '')) +
     (d.pv === null || d.pv === undefined ? '' : '\\n上槽体检（promote --dry 实测）：' + (d.pv === 1 ? '✅ 三条腿全过 —— 这枚真能换包' : '⛔ ' + d.pb)) +
+    (d.ds ? '\\n对现役配对决斗 A−B = ' + d.da + ' ‖ ' + d.db + ' pt（' +
+      (d.ds === 'flip' ? '两批种子符号翻 ⇒ 判不动，别引均值' : d.dm > 0 ? '两批都赢现役' : '两批都输给现役') + '）' : '') +
     '\\nF = H + T·S = ' + Fv(d).toFixed(3) + '   高于地板 = F − F_min = ' + (Fv(d) - fr[0]).toFixed(3) +
     '\\n伤害/局 ' + d.dmg.toFixed(1) + ' · 重击 ' + d.heavy.toFixed(1) + ' · 盾 ' + d.holo.toFixed(1) +
     ' · 回合 ' + d.rounds.toFixed(1) + ' · 平局 ' + (d.draw * 100).toFixed(0) + '%' +
@@ -837,7 +863,7 @@ function drawBody() {
   paintLegend(fr);
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   document.getElementById('stat').textContent = N + ' 枚 · 历代冠军 ' + P.filter(function (d) { return d.lin; }).length +
-    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : '训练方法家族') +
+    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') + (n ? ' · 高亮 ' + n + ' 个家族' : '');
 }
 /* ⑥ 所有重绘走 rAF 合并：一帧最多画一次（拖动/滑杆连续事件下这是"卡死"的第二条来源）*/
@@ -853,11 +879,17 @@ function paintLegend(fr) {
   if (st.color === 'pm') { /* 三档离色 ⇒ 渐变条会骗人，这里改涂两块实心 */
     cg.fillStyle = '#39d98a'; cg.fillRect(0, 0, 18 * devicePixelRatio, 75 * devicePixelRatio);
     cg.fillStyle = '#ff6b6b'; cg.fillRect(0, 75 * devicePixelRatio, 18 * devicePixelRatio, 75 * devicePixelRatio); }
+  if (st.color === 'duel') { /* 四档：绿=两批都赢 · 黄=符号翻 · 红=两批都输（灰在下方文案里说明）*/
+    cg.fillStyle = '#39d98a'; cg.fillRect(0, 0, 18 * devicePixelRatio, 70 * devicePixelRatio);
+    cg.fillStyle = '#e0b13c'; cg.fillRect(0, 70 * devicePixelRatio, 18 * devicePixelRatio, 20 * devicePixelRatio);
+    cg.fillStyle = '#ff6b6b'; cg.fillRect(0, 90 * devicePixelRatio, 18 * devicePixelRatio, 60 * devicePixelRatio); }
   var s1 = document.createElement('div'); s1.textContent = st.color === 'gl' ? ('G(long) 高 ' + GLR[1].toFixed(1) + '（红）')
     : st.color === 'pm' ? ('✅ 可上槽 ' + NPPASS + ' 枚（绿）')
+    : st.color === 'duel' ? ('✅ 两批种子都赢现役 ' + NWIN + ' 枚（绿）')
     : ('F 高 ' + fr[1].toFixed(2) + (st.goodTop ? '（最好 · 顶）' : '（最好 · 地板）'));
   var s2 = document.createElement('div'); s2.textContent = st.color === 'gl' ? ('G(long) 低 ' + GLR[0].toFixed(1) + '（蓝）· 闸要求 ≥3')
     : st.color === 'pm' ? ('⛔ 栽桩 ' + (NPRM - NPPASS) + ' 枚（红）· 灰 = 未测（' + (N - NPRM) + ' 枚）')
+    : st.color === 'duel' ? ('⛔ 两批都输 ' + (NDUEL - NWIN - NFLIP) + ' 枚（红）· 黄 = 符号翻 ' + NFLIP + ' 枚 · 灰 = 未测（' + (N - NDUEL) + '）')
     : ('F 低 ' + fr[0].toFixed(2) + (st.goodTop ? '（最差 · 地板）' : '（最差 · 顶）'));
   lg.appendChild(s1); lg.appendChild(c); lg.appendChild(s2);
   if (OKL.length) {
@@ -1080,7 +1112,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button id="reset">复位视图</button>' +
 '<button id="fitt">投影判据 ⓘ</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
-'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（势）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option></select></label>' +
+'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（势）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
 '<label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label>' +
 '<label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label>' +
