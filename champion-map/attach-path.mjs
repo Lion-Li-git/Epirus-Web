@@ -23,10 +23,14 @@ const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 
 const PATHOF = {};
+/* ⚠ 一律先把 CRLF 归一成 LF 再按行切：本仓工作树是 CRLF（autocrlf），而 `split('\n')` 会把每行**最后一列**
+ *   留成一个带裸 \r 的字符串 ⇒ 末列叫 "path\r" ⇒ `indexOf('path')` 返回 −1。
+ *   实测踩过：本班第一次跑通之后 `git checkout` 兜了一圈回来，path 恰好就是末列，下游全瞎。*/
+const rd = f => readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
 const rts = String(arg('ruler', 'e328-ruler-s1.tsv,e328-ruler-s2.tsv,e328-ruler-s3.tsv')).split(',').filter(Boolean);
 for (const f of rts) {
   const p = f.indexOf('/') < 0 ? join(HERE, f) : join(ROOT, f);
-  const L = readFileSync(p, 'utf8').trim().split('\n'), hd = L[0].split('\t');
+  const L = rd(p).trim().split('\n'), hd = L[0].split('\t');
   const iId = hd.indexOf('id'), iPath = hd.indexOf('path');
   if (iId < 0 || iPath < 0) { console.error('⛔ ' + f + ' 没有 id/path 两列，这张表不能当路径来源'); process.exit(2); }
   for (const l of L.slice(1)) { const c = l.split('\t'); if (c[iId] && c[iPath] && !PATHOF[c[iId]]) PATHOF[c[iId]] = c[iPath]; }
@@ -34,7 +38,7 @@ for (const f of rts) {
 console.log('路径来源 ' + rts.join(',') + ' ‖ 解出 ' + Object.keys(PATHOF).length + ' 条');
 
 const CF = join(HERE, 'coords.tsv');
-const L = readFileSync(CF, 'utf8').trim().split('\n');
+const L = rd(CF).trim().split('\n');
 const hd = L[0].split('\t');
 const iId = hd.indexOf('id'), iKin = hd.indexOf('kin');
 if (iId < 0) { console.error('⛔ coords.tsv 没有 id 列'); process.exit(2); }
@@ -60,6 +64,15 @@ const nSubKin = rows.filter(r => (r[iKin] && r[iKin] !== '-') && r[iP].indexOf('
 if (nSub !== nSubKin) { console.error('⛔ 从现测尺拿到子目录路径的 ' + nSub + ' 枚 ≠ kin 非空且在子目录的 ' + nSubKin +
   ' 枚 ⇒ 新增那批的路径与"续训现役/父链"标记没对上，说明贴错了行'); process.exit(2); }
 
-writeFileSync(CF, [L[0]].concat(rows.map(r => r.join('\t'))).join('\n') + '\n');
+/* 落盘按本仓工作树的约定写 CRLF，并且**写完立刻读回来验一遍** ——
+ *   第一版就是"写完当时是对的、git checkout 兜一圈回来末列变成 path\r"，只在自己那次跑里看不出来。*/
+writeFileSync(CF, [L[0]].concat(rows.map(r => r.join('\t'))).join('\r\n') + '\r\n');
+{ const B = rd(CF).trim().split('\n'), bh = B[0].split('\t');
+  const jI = bh.indexOf('id'), jP = bh.indexOf('path');
+  if (jP < 0 || jP !== bh.length - 1) { console.error('⛔ 回读：表里找不到干净的 path 列（末列 = ' + JSON.stringify(bh[bh.length - 1]) + '）'); process.exit(2); }
+  const br = B.slice(1).map(l => l.split('\t'));
+  const bad = br.filter(r => !r[jP] || /\r/.test(r[jP])).length;
+  if (bad || br.length !== rows.length) { console.error('⛔ 回读：' + br.length + ' 行 / 空或脏 path ' + bad + ' 枚（应为 ' + rows.length + ' / 0）'); process.exit(2); }
+  console.log('回读守卫 ✅ ' + br.length + ' 行 × ' + bh.length + ' 列，path 列无脏尾'); }
 console.log('已写 ' + CF + '：' + rows.length + ' 枚全部有 path ‖ 其中按现测尺贴的子目录件 ' + nSub +
   ' 枚（kin 非空的 ' + nKin + ' 枚）‖ 显式来源 ' + nPath + ' 枚 ‖ 走顶层 <id>.bak 约定 ' + nConv + ' 枚');

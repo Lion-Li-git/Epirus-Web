@@ -86,6 +86,9 @@ var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
   ox3: 0, oy3: 0, zoom3: 1, hi: {}, bg: '#0f1522', ink: '#dce6f5', dim: '#9fb0cc',
   tKx: 1, tKy: 1, tX: 0, tY: 0,   /* §E312/§E314 谱系图那台相机（只影响 tree 视图；默认 1/1/0/0 = 与加相机之前逐像素相同）
                                      §E314 拆成横纵两把：滚轮管 tKx（时间），Shift+滚轮管 tKy（家族行）*/
+  tTilt: 0, tShear: 0,            /* §E333 谱系图立体 = **不透视地板**的"原地上升"（用户否掉了压扁版）：
+                                     tTilt = 把行方向按 cos 压扁（右键上下），tShear = 顺带一点横向错切（右键左右）。
+                                     两者默认 0 ⇒ 立体态就是"同一张 2D 版式 + 点沿屏幕纵轴抬起"。*/
   isoGN: 72 };           /* §E312 壳的网格分辨率（沿最长轴的格数）：52 = 旧默认（棱面明显）‖ 72 ‖ 96 */
 var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三维行为轴与谱系图只能用颜色表示势 */
 /* 地图模式的两个相机预设：**同一个方位角**（yaw 都是 −π/2），只差俯仰 —— 平面态 = 正俯视（pitch π/2，
@@ -93,10 +96,8 @@ var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三
  *   §E296 之前 SOLID.yaw=0.62 ⇒ 切换时相机在"立起来"的同时绕竖轴转了 ~56°，整张图边立边转 ——
  *   用户点名"应该默认原地立起来"。现在平面→立体只压 pitch（yaw 不动）；立体→平面要回正 yaw（平面图必须北朝上）。*/
 var FLAT = { yaw: -Math.PI / 2, pit: Math.PI / 2 }, SOLID = { yaw: -Math.PI / 2, pit: 0.40 };
-/* §E332 谱系图的立体预设：yaw 同 FLAT（原地立起），但俯角比地图**浅**（0.72 vs 0.40）。
- *   理由是底图上有字：地图的地板是连续场，压到 sin(0.40)=0.39 看不出；谱系图的地板是"家族名 + 统计"两行字，
- *   压到 39% 就读不出了 ⇒ sin(0.72)=0.66 是"立体感还在、字还认得"的那个折中。*/
-var TSOLID = { yaw: -Math.PI / 2, pit: 0.72 };
+/* §E333 谱系图**不用**这两个预设：它的"立体"是"原地上升 + 可选压扁/错切"，见 st.tTilt/st.tShear 与 drawTree 里的 PL。
+ *   （§E332 那一版借 SOLID 的 pit 把地板压到 0.66 高 ⇒ 24 行塌成一条横带，被用户拿截图否掉了。）*/
 
 /* §E314 势 = **线上口径**的 H + T·S（用户裁定把整张图换成玩家真正拿到的那个数）。
  *   旧写法是 d.H / 100（考卷口径 · ε=0 贪心）。两口径的**排名**同构（Spearman 0.912 / 全库 718 枚），
@@ -355,6 +356,34 @@ function ensureField(key, bx, byy) {
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
 var boxes = [];
 function labelReset() { boxes = []; }
+function drawText(txt, x, ybase, rot) {
+  /* §E333 逐枚挑字色：底图换成按分位铺色之后，红/蓝块上盖统一字色就读不出来了（用户点名）。
+   *   候选就是主题自己那两色（st.ink / st.bg）⇒ 取标签那块**底片**的平均亮度，谁对比大用谁，
+   *   再补一圈**反色细描边**（halo）—— 因为一块字经常横跨"红块 + 黑底"，只挑一色还是会糊。
+   *   ⚠ 必须在**变换之前**取色：getImageData 读的是设备像素，旋转时边界框是错的（那一支改用当前主题字色）。*/
+  var ink = st.ink, halo = st.bg;
+  if (!rot && !LUMQ.off) {
+    var L = patchLum(x, ybase, g.measureText(txt).width, 13 * devicePixelRatio);
+    if (L !== null) { if (L < 0.5) { ink = st.ink; halo = st.bg; } else { ink = st.bg; halo = st.ink; } }
+  }
+  g.fillStyle = ink; g.lineJoin = 'round'; g.lineWidth = 2.6 * devicePixelRatio; g.strokeStyle = halo;
+  if (rot) { g.save(); g.translate(x, ybase); g.rotate(-Math.PI / 2);
+    g.strokeText(txt, 0, 0); g.fillText(txt, 0, 0); g.restore(); return; }
+  g.strokeText(txt, x, ybase); g.fillText(txt, x, ybase);
+}
+/* 底片平均亮度（0..1）。每帧只算一次、按 12px 网格取整缓存：拖一次 ~60 个标签 × getImageData 是看得出来的开销。*/
+var LUMQ = { off: false, box: {}, frame: -1 };
+function patchLum(x, y, w2, h2) {
+  var bx = Math.max(0, Math.round(x / 12) * 12), by = Math.max(0, Math.round((y - h2) / 12) * 12);
+  var bw = Math.max(12, Math.round(w2 / 12) * 12), bh = Math.max(12, Math.round(h2 / 12) * 12);
+  if (bx + bw > cv.width || by + bh > cv.height) return null;
+  var k = bx + ',' + by + ',' + bw + ',' + bh, hit = LUMQ.box[k];
+  if (hit && hit.f === LUMQ.frame) return hit.v;
+  var d; try { d = g.getImageData(bx, by, bw, bh).data; } catch (e) { LUMQ.off = true; return null; }
+  var s = 0, n = 0;
+  for (var i = 0; i < d.length; i += 4 * 5) { s += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; n++; }
+  var v = n ? s / n : null; LUMQ.box[k] = { f: LUMQ.frame, v: v }; return v;
+}
 function putLabel(txt, x, y, force, rot) {
   g.font = (11 * devicePixelRatio) + 'px system-ui,sans-serif';
   var bw = g.measureText(txt).width, bh = 13 * devicePixelRatio;
@@ -368,8 +397,7 @@ function putLabel(txt, x, y, force, rot) {
       for (var b = 0; b < boxes.length; b++) if (r[0] < boxes[b][0] + boxes[b][2] && r[0] + r[2] > boxes[b][0] &&
         r[1] < boxes[b][1] + boxes[b][3] && r[1] + r[3] > boxes[b][1]) { hit = true; break; }
       if (!hit || c === cand.length - 1) {
-        if (!hit || force) { boxes.push(r); g.save(); g.translate(r[0], r[1] + bh); g.rotate(-Math.PI / 2);
-          g.fillText(txt, 0, 0); g.restore(); return true; }
+        if (!hit || force) { boxes.push(r); drawText(txt, r[0], r[1] + bh, true); return true; }
       }
     }
     return false;
@@ -380,7 +408,7 @@ function putLabel(txt, x, y, force, rot) {
     by < boxes[b2][1] + boxes[b2][3] && by + bh > boxes[b2][1]) { hit2 = true; break; }
   if (hit2 && !force) return false;
   if (hit2) by += bh;
-  boxes.push([bx, by, bw, bh]); g.fillText(txt, bx, by + bh - 3); return true;
+  boxes.push([bx, by, bw, bh]); drawText(txt, bx, by + bh - 3, false); return true;
 }
 function wantLabel(d) {
   if (st.labels === 'off') return false;
@@ -509,50 +537,46 @@ function drawTree(fr) {
   if (!(tmax > tmin)) { g.fillStyle = st.dim; g.fillText('没有可用的 ts ⇒ 谱系图画不了（要 lineage.tsv）', 30 * devicePixelRatio, 60); return; }
   var padL = 340 * devicePixelRatio, padR = 26 * devicePixelRatio, padT = 40 * devicePixelRatio, padB = 66 * devicePixelRatio;
   var rowH = (h - padT - padB) / fams.length, X = function (tv) { return padL + (tv - tmin) / (tmax - tmin) * (w - padL - padR); };
+  /* §E333 立体要**上面留一条抬升带**：不然最上面几家的点一抬就顶出画布（它们本来就在顶上）。
+   *   做法 = 把整张地板往下挤 LIFT·T3，行距按剩下的空间重排 ⇒ 行仍然全在画布内，
+   *   而"原地上升"有了去处。挤完 padT/rowH 就是立体版的那张版式，底图与点共用同一套 ⇒ 不会错位。*/
+  var LIFT = (h - padT - padB) * 0.22;
+  if (st.elev > 1e-4) { padT += LIFT * st.elev; rowH = (h - padT - padB) / fams.length; }
   var KS = 1;   /* §E314 点半径不跟缩放（经典统计图约定）—— 保留这个名字是因为下面两处按它算半径 */
   /* ===== §E332 底图 = 一张离屏画布（车道带 + 左栏家族名/统计 + 分界 + 日期竖线与刻度）=====
    *   用户裁定：「把这个网格和标签当做地图模式的底图，然后仿照地图的模式做渲染，这样对应也好」。
    *   所以立体态不再自己造一套斜切：整张版式**烘一次** ⇒ 平面按恒等贴、立体按倾斜仿射贴
    *   （与 drawMap 贴 FL.c 同一条路径），点用**同一个投影**抬起来 ⇒ 点与它那一行的名字必然对齐，
    *   因为两者出自同一张图、同一个矩阵 —— 前一版"只有右边的点进了 3D、左边标签还在原地"就是两套坐标各画各的。*/
-  var ck = [w, h, TKX.toFixed(4), TKY.toFixed(4), TPX.toFixed(1), TPY.toFixed(1), fams.join(','), tmin, tmax, st.ink, st.dim, devicePixelRatio].join('|');
+  var ck = [w, h, TKX.toFixed(4), TKY.toFixed(4), TPX.toFixed(1), TPY.toFixed(1), fams.join(','), tmin, tmax, st.ink, st.dim, devicePixelRatio,
+    st.elev.toFixed(3), st.tTilt.toFixed(3)].join('|');   /* §E333 抬升带会挤行距 ⇒ 立体度/倾角进缓存键，否则切 3D 用的还是平面那张底图 */
   if (!CHM || CHM.k !== ck) CHM = { k: ck, c: treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, ff) };
-  var T3 = st.elev, cb = cam(), voff = 0.06 * h * T3, uc = w / 2, vc = h / 2;
-  /* 平面坐标 (u,v)（就是恒等态的屏幕位置）+ 抬升 z（屏幕 px）→ 屏幕。
-   *   b 取 vc − v：FLAT（yaw −π/2 ‖ pit π/2）时 r=[1,0,0]、u=[0,1,0] ⇒ 不翻 v 的话整张底图上下颠倒
-   *   （地图那套数据 y 是"向上"的，谱系图的行号是"向下"的 —— 同一个相机，两种 y 向）。
-   *   再按 T3 与恒等混合 ⇒ 0 逐字等于旧二维，1 是全 3D，中间就是躺下去的过程。*/
-  function PL(u, v, z) {
-    if (!(T3 > 1e-4)) return [u, v];
-    var a = u - uc, b = vc - v, c = z || 0;
-    /* ⚠ 这里**不接 st.ox/st.oy**（地图那套相机平移）：谱系图的平移走 tX/tY，它烘进底图里 ⇒ 两个视图各拿一份
-     *   平移量。共用一份的后果是"在地图上拖过一下，再开谱系图立体就整张歪在旁边"。*/
-    var x3 = w / 2 + (a * cb.r[0] + b * cb.r[1]);
-    var y3 = h / 2 + voff - (a * cb.u[0] + b * cb.u[1] + c * cb.u[2]);
-    return [u + (x3 - u) * T3, v + (y3 - v) * T3];
-  }
+  var T3 = st.elev, TH = st.tTilt * T3, SH = st.tShear * T3, uc = w / 2, vc = h / 2;
+  /* §E333 立体 = **原地上升**，不是把地板压扁。用户两张截图点名的病：上一版借地图那台相机（pit 0.72 ⇒ 行方向
+   *   只剩 cos = 0.66 的高度），24 行被挤成一条横带，格内抖动又被我挪去横方向 ⇒ 比二维更挤。
+   *   现在：地板按二维那张版式贴（行方向最多按 tTilt 轻微压扁），点沿**屏幕纵轴**抬起，每枚留一根立柱接回自己那一格。
+   *   T3=0 ⇒ cos(0)=1、错切 0、抬升 0 ⇒ 逐字等于二维；TH/SH 只由右键拖动给，默认 0。*/
+  function PL(u, v, z) { return [u + (v - vc) * SH, vc + (v - vc) * Math.cos(TH) - (z || 0)]; }
   var q0 = PL(0, 0, 0), qX = PL(w, 0, 0), qY = PL(0, h, 0);
   g.save();
   g.setTransform((qX[0] - q0[0]) / w, (qX[1] - q0[1]) / w, (qY[0] - q0[0]) / h, (qY[1] - q0[1]) / h, q0[0], q0[1]);
   g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
   g.drawImage(CHM.c, 0, 0);
   g.restore(); g.setTransform(1, 0, 0, 1, 0, 0);
-  var LIFT = (h - padT - padB) * 0.30;   /* 抬升满量程 = 绘图区高度的 30%（与 TKY 无关：这是第三个维度，不是把行拉开）*/
   var FR3 = fRange();
   g.save();
   if (T3 < 0.02) { g.beginPath(); g.rect(padL - 5, 0, w - padL + 5, h); g.clip(); }   /* 平面态：数据层不许进左栏（立体态标签已在底图里，让点浮在上面）*/
   /* 血统边（画在点底下，免得盖住点）*/
-  /* 每枚的落点 = 底图上那一格 (u,v) + 按 F 抬起来的 z。
-   *   高度用**线性** min-max，不用 §E330 那套按秩铺色 —— 秩是"颜色要能分开"的读法，几何要的是量的比较
-   *   （与地图的高度场同一取舍）。**不画势场底图**（用户点名"这里不需要底图"）—— 底图就是版式本身。
-   *   ⚠ 行内抖动（同一秒训出的一撮）在立体态挪到**横方向**：竖方向已经被 F 占了，
-   *     再拿它当抖动位就会把"抖出来的"误读成"F 低的"。*/
+  /* 每枚的落点 = 底图上那一格 (u,v)（**与二维逐字同一套坐标**，含格内纵向抖动）+ 按 F 抬起来的 z。
+   *   高度用**线性** min-max，不用 §E330 那套按秩铺色 —— 秩是"颜色要能分开"的读法，几何要的是量的比较。
+   *   ⚠ 格内抖动（同一秒训出的一撮）**两态都留在纵方向**：上一版把它挪去横方向，正逢地板被压扁 ⇒ 一撮点全叠成一条横线。
+   *   立体态反而要它：同一格里纵向散开一点才好观察（用户点名）。*/
   var pos = {}, base = {};
   function PT(i) {
     var d = P[i], tv = Date.parse(d.ts); if (!isFinite(tv)) return null;
     var ri = fams.indexOf(d.fam); if (ri < 0) return null;
-    var jit = ((i * 2654435761) % 1000) / 1000 - 0.5, jpx = jit * rowH * 0.66 * TKY;
-    var u = WX(X(tv)) + (T3 > 0.02 ? jpx : 0), v = WY(padT + (ri + 0.5) * rowH) + (T3 > 0.02 ? 0 : jpx);
+    var jit = ((i * 2654435761) % 1000) / 1000 - 0.5;
+    var u = WX(X(tv)), v = WY(padT + (ri + 0.5) * rowH) + jit * rowH * 0.66 * TKY;
     var uf = Math.max(0, Math.min(1, (Fv(d) - FR3[0]) / ((FR3[1] - FR3[0]) || 1)));
     return [PL(u, v, uf * LIFT * T3), PL(u, v, 0)];
   }
@@ -592,10 +616,12 @@ function drawTree(fr) {
     (st.color === 'sc' ? '（绿=强 ‖ 红=落后 ‖ 橙=判不动 ‖ 灰=未测）'
       : st.color === 'de' ? '（红=脆 ‖ 蓝=吃探索 ‖ 白=不敏感）' : '（蓝低 → 红高）') +
     ' · 淡蓝曲线 = 热启动父边' +
-    /* §E331 立体态必须自己在页脚说清"高度是哪把尺"：颜色已经改成按秩铺了，几何仍是线性 —— 不写出来就会被当成同一件事。
-       （画布不认 markdown，星号会原样印出来 ⇒ 这句里不许带 *）*/
-    (T3 > 0.5 ? ' · 立体 = 高度按 F 线性（与颜色的按秩铺色不同尺）· 细竖线 = 回到底图那一格 · 右键拖动 = 旋转' : '') +
-    ' · 滚轮 = 横轴（时间）· Shift+滚轮 = 纵轴（家族行）· 拖动 = 平移 · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2);
+    /* §E333 页脚是单行 fillText（画布不折行），所以两态**各说各的手势**而不是把两段接起来：
+       立体态把"滚轮/Shift+滚轮/拖动"换成"右键压扁错切"—— 那三件在二维态已经说过，长度也就不会顶出右缘。
+       （§E331 立体态必须自己说清"高度是哪把尺"：颜色按秩铺、几何仍是线性，不写就会被当成同一件事。画布不认 markdown ⇒ 这句里不许带 *）*/
+    (T3 > 0.5 ? ' · 立体 = 原地按 F 抬起（与颜色的按秩铺色不同尺）· 立柱 = 回本行那一格 · 右键拖动 = 压扁/错切'
+              : ' · 滚轮 = 横轴（时间）· Shift+滚轮 = 纵轴（家族行）· 拖动 = 平移') +
+    ' · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2);
   var fw = g.measureText(foot).width / devicePixelRatio;
   if (fw > (w - padL) / devicePixelRatio - 8) g.font = Math.round(12 * devicePixelRatio * (w - padL) / devicePixelRatio / fw) + 'px system-ui,sans-serif';
   g.fillText(foot, padL, h - 14 * devicePixelRatio);
@@ -1003,6 +1029,9 @@ function draw() { try { drawBody(); } catch (e) {
   throw e; } }
 var scr = [];
 function drawBody() {
+  /* §E333 逐枚取底片亮度的缓存按帧作废（拖一次 60 个标签 × getImageData 是看得出来的开销）；
+     表本身按 400 帧清一次，免得长时间挂着越积越大。*/
+  LUMQ.frame++; if (LUMQ.frame % 400 === 0) LUMQ.box = {};
   var fr = fRange();
   if (st.mode === '1d') draw1(fr); else if (st.mode === 'map') drawMap(fr); else if (st.mode === 'tree') drawTree(fr); else draw3b(fr);
   paintLegend(fr);
@@ -1117,7 +1146,7 @@ function shade(c, amt) { var r = Math.min(255, parseInt(c.slice(1, 3), 16) + amt
 var drag = null;
 cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 cv.addEventListener('mousedown', function (e) {
-  drag = [e.clientX, e.clientY, st.ox, st.oy, st.yaw, st.pit, st.ox3, st.oy3, e.button, st.tX, st.tY]; });
+  drag = [e.clientX, e.clientY, st.ox, st.oy, st.yaw, st.pit, st.ox3, st.oy3, e.button, st.tX, st.tY, st.tTilt, st.tShear]; });
 window.addEventListener('mouseup', function () { drag = null; });
 window.addEventListener('mousemove', function (e) {
   var r = cv.getBoundingClientRect();
@@ -1130,10 +1159,15 @@ window.addEventListener('mousemove', function (e) {
       if (drag[8] === 2) { st.yaw = drag[4] - cdx / 160; st.pit = Math.max(0.06, Math.min(1.5, drag[5] + cdy / 200)); }
       else { st.ox3 = drag[6] + cdx * devicePixelRatio; st.oy3 = drag[7] + cdy * devicePixelRatio; }
     } else if (st.mode === 'tree') {
-      /* §E332 立体态与地图同一套手势：右键 = 转相机（"只有一个角度"就是这条没接）‖ 左键 = 平移那台相机。
-       *   平面态右键仍然不绑 —— 时间轴上没有"旋转"这个动作。*/
-      if (drag[8] === 2) { if (st.elev > 0.05) { st.yaw = drag[4] - cdx / 160; st.pit = Math.max(0.10, Math.min(1.55, drag[5] + cdy / 200)); } }
-      else { st.tX = drag[9] + cdx * devicePixelRatio; st.tY = drag[10] + cdy * devicePixelRatio; }
+      /* §E333 立体态右键 = 转视角：**上下 = 把行方向压扁（tTilt）**、**左右 = 一点横向错切（tShear）**。
+       *   刻意不做地图那套 yaw/pit 全旋转 —— 谱系图的地板是"行 × 时间"的表，转到侧面就塌成一条线（用户点名的病）。
+       *   平面态右键仍然不绑：二维表没有"旋转"这个动作。*/
+      if (drag[8] === 2) {
+        if (st.elev > 0.05) {
+          st.tTilt = Math.max(0, Math.min(1.15, drag[11] + cdy / 260));
+          st.tShear = Math.max(-0.55, Math.min(0.55, drag[12] - cdx / 420));
+        }
+      } else { st.tX = drag[9] + cdx * devicePixelRatio; st.tY = drag[10] + cdy * devicePixelRatio; }
     }
     req(); return;
   }
@@ -1172,9 +1206,12 @@ cv.addEventListener('wheel', function (e) { e.preventDefault();
  *   立起方向不碰 yaw（原地立起）；放平方向才把 yaw 插回 FLAT（平面图必须北朝上）。*/
 var tw = null;
 function toggle3d() {
-  var to3d = st.elev < 0.5, solid = st.mode === 'tree' ? TSOLID : SOLID;
+  var to3d = st.elev < 0.5, tree = st.mode === 'tree';
+  /* §E333 谱系图的"立体"只动抬升（st.elev），**不借地图那台相机**：它的视角由 tTilt/tShear 管，
+   *   而 yaw/pit 会把地板真的转到侧视 ⇒ 24 行塌成一条线（用户点名的病）。地图那侧维持原行为。*/
   tw = { t0: performance.now(), dur: 520, from: { e: st.elev, y: st.yaw, p: st.pit },
-    to: to3d ? { e: 1, y: null, p: solid.pit } : { e: 0, y: FLAT.yaw, p: FLAT.pit } };
+    to: tree ? { e: to3d ? 1 : 0, y: st.yaw, p: st.pit }
+      : (to3d ? { e: 1, y: null, p: SOLID.pit } : { e: 0, y: FLAT.yaw, p: FLAT.pit }) };
   document.getElementById('b3dt').textContent = to3d ? '平面' : '立体';
   tick();
 }
@@ -1197,10 +1234,11 @@ function setMode(m) {
   /* §E331 谱系图共用这同一个"立体"档（st.elev）：地图是"相机躺/立 + 柱高"，谱系图是"行躺平 / 高度=F"。
    *   共用一个开关是刻意的：用户在两个视图间来回看时，"立体"不该是两个各记一份的状态（否则一边立着一边躺着）。*/
   document.getElementById('b3dt').style.display = (m === 'map' || m === 'tree') ? '' : 'none';
-  document.getElementById('b3dt').title = m === 'tree' ? '同一张谱系图，行躺平 / 立起来用高度表示 F（不画底图）' : '同一张底，平面/立体无缝切换';
+  document.getElementById('b3dt').title = m === 'tree' ? '同一张谱系图：点一下让每枚点沿纵轴**原地升起**到它自己的 F 高度（地板不动，右键可压扁/错切）' : '同一张底，平面/立体无缝切换';
   if (m === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit; }
-  else if (m === 'tree') { var tp = st.elev < 0.5 ? FLAT : TSOLID; st.yaw = tp.yaw; st.pit = tp.pit; }
   else if (m === '3db') { st.yaw = 0.62; st.pit = 0.40; }
+  /* §E333 tree 不碰 yaw/pit（那是地图相机的状态，切个视图就把它改掉会两头串色）；
+     它自己的视角是 tTilt/tShear，**跨视图保留**（用户摆好的角度不该因为点了一下别的页就丢）。*/
   syncIso();
   req();
 }
@@ -1246,7 +1284,7 @@ document.getElementById('bh').onclick = function () { st.goodTop = !st.goodTop; 
 document.getElementById('reset').onclick = function () {
   st.ox = st.oy = 0; st.k = 1; st.ox3 = st.oy3 = 0; st.zoom3 = 1; st.tKx = 1; st.tKy = 1; st.tX = 0; st.tY = 0;
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit; }
-  else if (st.mode === 'tree') { var tp = st.elev < 0.5 ? FLAT : TSOLID; st.yaw = tp.yaw; st.pit = tp.pit; }
+  else if (st.mode === 'tree') { st.tTilt = 0; st.tShear = 0; }   /* §E333 谱系图的"复位"复的是它自己那两台（两轴缩放 + 视角）*/
   else { st.yaw = 0.62; st.pit = 0.40; }
   req(); };
 document.getElementById('fitt').onclick = function () { var el = document.getElementById('fit');
@@ -1288,6 +1326,9 @@ var HCL = null, HT_SEEN = 0;
     if (kv[0] === 'tky') st.tKy = Math.max(0.4, Math.min(12, +kv[1] || 1));
     if (kv[0] === 'tk') { st.tKx = Math.max(0.4, Math.min(12, +kv[1] || 1)); st.tKy = st.tKx; }   /* 旧深链（单轴）= 两轴一起，兼容 §E312 那批截图 */
     if (kv[0] === 'tx') st.tX = +kv[1] || 0;
+    /* §E333 谱系图立体视角也走深链 ⇒ 无头复核能钉住"压扁/错切"这两档（默认 0 = 原地上升）*/
+    if (kv[0] === 'tilt') st.tTilt = Math.max(0, Math.min(1.15, +kv[1] || 0));
+    if (kv[0] === 'shear') st.tShear = Math.max(-0.55, Math.min(0.55, +kv[1] || 0));
     if (kv[0] === 'ty') st.tY = +kv[1] || 0;
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } }
   /* §E312 两场各有各的刻度 ⇒ 深链只给 isof 不给 isot 时，必须把阈值换成**那场自己的**默认值
