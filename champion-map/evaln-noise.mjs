@@ -43,7 +43,10 @@ const N = Number(FLAG.n || 5);
 const GAMES = Number(FLAG.games || 20);
 const SBSEED = Number(FLAG.sbseed || 1);
 const BASES = String(FLAG.bases || '987654,987655,987656,987657,987658').split(',').map(Number);
-if (BASES.length < 3) { console.error('⛔ --bases 至少要 3 粒，否则"种子噪声"无从谈起（只有一粒就是现状本身）'); process.exit(2); }
+if (BASES.length < 3 && !FLAG.against) {
+  console.error('⛔ --bases 至少要 3 粒，否则"种子噪声"无从谈起（只有一粒就是现状本身）；只做了锚点核对时才可以 1 粒');
+  process.exit(2);
+}
 
 /* ===== 沙箱：逐字照 tools/train-3p.mjs 的启动（见文件头的口径纪律） ===== */
 const sb = {
@@ -131,6 +134,27 @@ if (FLAG.expect) {
   console.log('# 守卫: ' + packs[0].name + ' @' + BASES[0] + ' ⇒ 1st=' + (g.first * 100).toFixed(4) + '% top2=' + (g.top2 * 100).toFixed(4) +
     '% ‖ 真臂日志 ' + e[0] + '/' + e[1] + ' ⇒ ' + (okFirst && okTop2 ? '✅ 同一把尺（落在打印位的同一格里）' : '⛔ 不是同一台仪器，读数作废'));
   if (!(okFirst && okTop2)) process.exit(3);
+}
+
+/* ⚑ 对应性守卫二：`--against=<包名>=<1st%>[,<sc%>]` —— 按**包名**锚定，不看传参顺序
+ * （`--expect` 那条只锚"第 1 枚 + 第 1 粒 seedBase"，一旦我把参照挪个位置它就会静默放行）。
+ * 用途：拿已知的 evalN 电平当锚（例：现役 @987654 的 firstRate = 54.4444%，见 `_e318-all15.tsv`）。 */
+if (FLAG.against) {
+  let bad = 0;
+  for (const spec of String(FLAG.against).split(';')) {
+    const m = /^([^=]+)=([\d.]+)(?:,([\d.]+))?$/.exec(spec);
+    if (!m) { console.error('⛔ --against 写法应为 `包名=1st%[,sc%]`，收到 ' + spec); process.exit(2); }
+    const pk = packs.filter(function (p) { return p.name === m[1]; })[0];
+    if (!pk) { console.error('⛔ --against 点了不存在的包名 ' + m[1] + '（现有：' + packs.map(function (p) { return p.name; }).join(', ') + '）'); process.exit(2); }
+    const o = pk.sc[0];
+    const d1 = Math.abs(o.first * 100 - Number(m[2]));
+    const d2 = m[3] ? Math.abs(o.s * 100 - Number(m[3])) : 0;
+    const ok = d1 <= 0.05 && d2 <= 0.05;
+    console.log('# 锚点(按名) ' + pk.name + ' @' + BASES[0] + ' ⇒ firstRate=' + (o.first * 100).toFixed(4) + '% sc=' + (o.s * 100).toFixed(4) +
+      '% ‖ 锚 ' + m[2] + (m[3] ? '/' + m[3] : '') + ' ⇒ ' + (ok ? '✅ 同一把尺' : '⛔ 偏离 >0.05pt ⇒ 不是同一台仪器，读数作废'));
+    if (!ok) bad++;
+  }
+  if (bad) process.exit(3);
 }
 
 function pct(arr, p) { const a = arr.slice().sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(p * a.length))]; }
