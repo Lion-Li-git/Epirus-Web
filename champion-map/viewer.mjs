@@ -189,7 +189,7 @@ const DATA = rows.map(r => ({
    *   `Hp` = 同一台 `eval-5p`、同一批 35 组合 × 30 局、同 seed，只是主体席按页面那样开 ε=0.2 soft；
    *   `H`  保留 = 考卷口径（ε=0 贪心）—— 历史文档里大量读数写的是它，覆盖掉就把名字偷走了（attach-hp.mjs 头注有账）。
    *   `De` = Δε = H − Hp（正 = 开探索就掉）。*/
-  id: r.id, lin: r.lineage || '', seed: r.seed || '', H: +r.H, Hp: +r.Hp, De: +r.De, S: +r.S, Ge: +r.Geff, rk: +r.rank,
+  id: r.id, lin: r.lineage || '', kin: r.kin || '', seed: r.seed || '', H: +r.H, Hp: +r.Hp, De: +r.De, S: +r.S, Ge: +r.Geff, rk: +r.rank,
   /* §E321 当选键那条腿（`attach-sc.mjs` 贴进去的四列）：
    *   Sc  = 8 粒 seedBase 的 sc 均值 ‖ Scd = 逐 seedBase 与现役的配对差均值 ‖ Scs = 同号计数 ‖ Sch = 主场（@987654）那一粒。
    *   ⚠ 空串必须是 null，不许当 0 —— "没测过"与"和现役一样"是两件事（§E308 那条灰≠红的教训）。*/
@@ -227,6 +227,10 @@ const JS = `
 var P = DATA, N = P.length;
 var cv = document.getElementById('cv'), g = cv.getContext('2d');
 var KF = 12;
+var KEXP = 2.5;   /* §E330 IDW 核的指数：1/d^KEXP。**淡出的覆盖度也用它**（见 buildBitmap），所以提成常数 ——
+                     两处各写一份字面量时，改一处会让"晕有多远"和"核有多硬"悄悄脱钩。*/
+var EDGEK = 8;    /* §E331 位图外沿收口的格数。必须**小于**网格边距折算出来的格数（边距 10% ⇒ 约 19 格），
+                     否则会把点云自己的晕切掉一刀 —— 那是"为了藏边而砍数据"。*/
 var OKL = [], POKJ = 0, PV = null;
 (function () { var xa = [], ya = [];
   for (var i = 0; i < N; i++) { xa.push(P[i].x2); ya.push(P[i].y2); if (P[i].ok !== null && P[i].ok !== undefined) { POKJ++; if (P[i].ok) OKL.push([P[i].x2, P[i].y2]); } }
@@ -285,6 +289,10 @@ var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三
  *   §E296 之前 SOLID.yaw=0.62 ⇒ 切换时相机在"立起来"的同时绕竖轴转了 ~56°，整张图边立边转 ——
  *   用户点名"应该默认原地立起来"。现在平面→立体只压 pitch（yaw 不动）；立体→平面要回正 yaw（平面图必须北朝上）。*/
 var FLAT = { yaw: -Math.PI / 2, pit: Math.PI / 2 }, SOLID = { yaw: -Math.PI / 2, pit: 0.40 };
+/* §E332 谱系图的立体预设：yaw 同 FLAT（原地立起），但俯角比地图**浅**（0.72 vs 0.40）。
+ *   理由是底图上有字：地图的地板是连续场，压到 sin(0.40)=0.39 看不出；谱系图的地板是"家族名 + 统计"两行字，
+ *   压到 39% 就读不出了 ⇒ sin(0.72)=0.66 是"立体感还在、字还认得"的那个折中。*/
+var TSOLID = { yaw: -Math.PI / 2, pit: 0.72 };
 
 /* §E314 势 = **线上口径**的 H + T·S（用户裁定把整张图换成玩家真正拿到的那个数）。
  *   旧写法是 d.H / 100（考卷口径 · ε=0 贪心）。两口径的**排名**同构（Spearman 0.912 / 全库 718 枚），
@@ -299,10 +307,33 @@ function fRange() { var a = Infinity, b = -Infinity; for (var i = 0; i < N; i++)
 /* §E297：顶/底由用户选。**只翻高度方向，不翻颜色**（颜色恒为"红 = F 高"，与点色同向）：
  *   goodTop=true  ⇒ 高度 = F（能量高的在上，冠军在峰顶）；false ⇒ 高度 = F_max − F（冠军在阱底）。*/
 function u01(F, fr) { var rng = (fr[1] - fr[0]) || 1; return st.goodTop ? (F - fr[0]) / rng : (fr[1] - F) / rng; }
-var LUT = (function () { var o = []; for (var i = 0; i < 256; i++) { var t = i / 255;
-  o.push([Math.round(24 + 214 * t), Math.round(150 - 96 * t), Math.round(196 - 140 * t)]); } return o; })();
+/* §E330 色带：**两端拉满、正中放中性灰**。旧表是青蓝 (24,150,196) → 紫灰 (131,102,126) → 红 (238,54,56)
+ *   的单段线性插值，中段那个"偏紫的脏灰"正是用户点名"堆在灰色偏红、看不清"的底色之一。*/
+var LUT = (function () { var o = [],
+  S = [[0, [23, 96, 214]], [0.28, [66, 172, 236]], [0.5, [152, 160, 174]], [0.72, [240, 138, 58]], [1, [233, 36, 36]]];
+  for (var i = 0; i < 256; i++) { var t = i / 255, k = 0;
+    while (k < S.length - 2 && t > S[k + 1][0]) k++;
+    var A = S[k], B = S[k + 1], f = (t - A[0]) / (B[0] - A[0]);
+    o.push([Math.round(A[1][0] + (B[1][0] - A[1][0]) * f), Math.round(A[1][1] + (B[1][1] - A[1][1]) * f),
+      Math.round(A[1][2] + (B[1][2] - A[1][2]) * f)]); }
+  return o; })();
 function rampRGB(tt) { var i = Math.max(0, Math.min(255, Math.round(tt * 255))); return LUT[i]; }
 function ramp(tt) { var c = rampRGB(tt); return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
+/* §E330 F 的色归一化换成**分位（秩）**，不用 min-max 线性。实测（901 枚 · 出厂 T）：
+ *   F 的 min 0.169 ‖ p05 0.366 ‖ **中位 0.589** ‖ p95 0.704 ‖ max 0.795 ⇒ 线性带下中位归一化到 **0.671**，
+ *   等于"一多半点全挤在带的红半边并且挤在一起"，而带的蓝半边几乎空着 —— 用户看到的两极失衡是这条归一化
+ *   造成的，不是数据造成的。按秩铺色 = 每档塞同样多的点，中位数正好落在带的正中（中性灰）。
+ *   ⚠ **只改颜色，不改几何**：u01()/高度/势场仍是线性 min-max —— 阱的深浅是**量的**比较，
+ *     把高度也换成秩会把"差 0.02"和"差 0.2"画成同样高，那是另一种骗人。
+ *   秩按 st.T 缓存（F = Hp/100 + T·S 跟着 T 变，排序也变）。*/
+var FSRT = { tv: null, a: null };
+function fSortedVals() { if (FSRT.tv !== st.T) { FSRT.a = P.map(function (d) { return Fv(d); }).sort(function (x, y) { return x - y; });
+  FSRT.tv = st.T; } return FSRT.a; }
+function bnd(a, v, inc) { var lo = 0, hi = a.length;   /* inc=false → 第一个 ≥v；inc=true → 第一个 >v */
+  while (lo < hi) { var m = (lo + hi) >> 1; if ((inc ? a[m] <= v : a[m] < v)) lo = m + 1; else hi = m; } return lo; }
+function fCol(F) { var a = fSortedVals(), n = a.length; if (n < 2) return 0.5;
+  return Math.max(0, Math.min(1, ((bnd(a, F, false) + bnd(a, F, true)) / 2) / (n - 1))); }
+function fMed() { var a = fSortedVals(); return a.length ? a[Math.floor(a.length / 2)] : 0; }
 /* §E304 两套分组并存：'fam' = **训练方法/目标家族**（默认），'seed' = RNG 种子（旧口径，留着当对照）。
  *   颜色按黄金角铺 HSL ⇒ 22 个家族也不撞色，不用手写调色板（12 色那套一超过 12 家就开始重复）。*/
 function hueAt(i) { return 'hsl(' + Math.round((i * 137.508) % 360) + ',' + (60 + (i % 3) * 10) + '%,' + (56 + (i % 2) * 12) + '%)'; }
@@ -338,7 +369,7 @@ function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GR
     var ts = Math.max(-1, Math.min(1, d.scd / 8));
     var sc = ts >= 0 ? mix('#dce6f5', '#39d98a', ts) : mix('#dce6f5', '#ff6b6b', -ts);
     return (d.scs && d.scs.indexOf('+') > 0 && parseInt(d.scs, 10) < 6) ? '#e0b13c' : sc; }
-  return ramp((Fv(d) - fr[0]) / (fr[1] - fr[0] || 1)); }
+  return ramp(fCol(Fv(d))); }
 /* §E313 页面口径 1st 的显示区间（实测枚数的 p02..p98，同 GLR 的取法）*/
 var EPR = (function () { var a = P.map(function (d) { return d.hp; }).filter(function (v) { return v !== null && isFinite(v); }).sort(function (x, y) { return x - y; });
   return a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [20, 60]; })();
@@ -360,7 +391,7 @@ function famLab(d) { return FAMLAB[d.fam] || ''; }
 function famShort(d, n) { var s = String(famLab(d)).split(' ‖ ')[0] || ('家族 ' + d.fam);
   return s.length > (n || 26) ? s.slice(0, n || 26) + '…' : s; }
 function tip(d, fr) {
-  return d.id + (d.lin ? ' 【' + d.lin + '】' : '') +
+  return d.id + (d.lin ? ' 【' + d.lin + '】' : '') + (d.kin ? ' 〔' + d.kin + '〕' : '') +
     '\\n家族 ' + d.fam + '（按训练方法/目标分）：' + (famLab(d) || '—') +
     '\\n　RNG seed 名字后缀=' + d.seed + ' ‖ META.seed=' + (d.ms || '—') + ' ‖ 训出 ' + (d.ts || '—') +
     '\\n　热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof : (d.pnm ? '\\n　　' + d.pnm : '（父指针未落档）')) +
@@ -413,7 +444,10 @@ function buildNB(key, bx, byy) {
   var px0 = pct(xa, .005), px1 = pct(xa, .995), py0 = pct(ya, .005), py1 = pct(ya, .995);
   var x0 = Math.min.apply(null, xa), x1 = Math.max.apply(null, xa);
   var y0 = Math.min.apply(null, ya), y1 = Math.max.apply(null, ya);
-  var mgx = (x1 - x0) * 0.03, mgy = (y1 - y0) * 0.03; x0 -= mgx; x1 += mgx; y0 -= mgy; y1 += mgy;
+  /* §E331 网格边距 3% → 10%：位图铺到"最外一圈点的晕**淡尽**"之外，而不是贴着点云切一刀。
+   *   平面态看不出问题（晕外就是底色），立体态那块底板是一整块平行四边形 ⇒ 边缘直接割裂（用户截图）。
+   *   底色 = 晕尽处的颜色 ⇒ 板的边界在视觉上不存在了。*/
+  var mgx = (x1 - x0) * 0.10, mgy = (y1 - y0) * 0.10; x0 -= mgx; x1 += mgx; y0 -= mgy; y1 += mgy;
   for (i = 0; i < N; i++) { xs[i] = P[i][ax]; ys[i] = P[i][by]; }
   var nn = [], d12 = [];
   for (i = 0; i < N; i++) {
@@ -431,18 +465,18 @@ function buildNB(key, bx, byy) {
   }
   var nmed = pct(nn, .5) || 1, d12m = pct(d12, .5) || nmed;
   /* 网格按屏幕显示跨度分配 ⇒ 显示空间里格子是正方形（26k 格左右），势晕才不会被栅格化成扁的 */
-  var dispX = (x1 - x0) * bx, dispY = (y1 - y0) * byy, TOT = 26000;
+  var dispX = (x1 - x0) * bx, dispY = (y1 - y0) * byy, TOT = 40000;   /* §E331 26000 → 40000：晕半径缩了一档，格子必须跟着密，
+                                                                         否则 9px/格 上画 29px 的晕会看出台阶 */
   var gx = Math.max(40, Math.min(320, Math.round(Math.sqrt(TOT * dispX / (dispY || 1)) || 40)));
   var gy = Math.max(40, Math.min(320, Math.round(Math.sqrt(TOT * dispY / (dispX || 1)) || 40)));
   var idx = new Int16Array(gx * gy * KF), dst = new Float32Array(gx * gy * KF);
-  var SW = new Float32Array(gx * gy), SH = new Float32Array(gx * gy), SS = new Float32Array(gx * gy), DM = new Float32Array(gx * gy);
+  var SW = new Float32Array(gx * gy), SH = new Float32Array(gx * gy), SS = new Float32Array(gx * gy);
   for (var gj = 0; gj < gy; gj++) for (var gi = 0; gi < gx; gi++) {
     var X = x0 + (x1 - x0) * gi / (gx - 1), Y = y0 + (y1 - y0) * gj / (gy - 1);
-    var ci = gj * gx + gi, base = ci * KF, best = 1e18;
+    var ci = gj * gx + gi, base = ci * KF;
     for (var q = 0; q < KF; q++) { idx[base + q] = -1; dst[base + q] = 1e18; }
     for (var c2 = 0; c2 < N; c2++) {
       var ex2 = (xs[c2] - X) * bx, ey2 = (ys[c2] - Y) * byy, d2 = Math.sqrt(ex2 * ex2 + ey2 * ey2);
-      if (d2 < best) best = d2;
       if (d2 < dst[base + KF - 1]) {
         var pos = KF - 1;
         while (pos > 0 && dst[base + pos - 1] > d2) { dst[base + pos] = dst[base + pos - 1]; idx[base + pos] = idx[base + pos - 1]; pos--; }
@@ -451,8 +485,8 @@ function buildNB(key, bx, byy) {
     }
     var wsum = 0, hsum = 0, ssum = 0;
     for (var u = 0; u < KF; u++) { var pi = idx[base + u]; if (pi < 0) break;
-      var w = 1 / Math.pow(Math.max(dst[base + u], 1e-6), 2.5); wsum += w; hsum += w * (P[pi].H / 100); ssum += w * P[pi].S; }
-    SW[ci] = wsum; SH[ci] = hsum; SS[ci] = ssum; DM[ci] = best;
+      var w = 1 / Math.pow(Math.max(dst[base + u], 1e-6), KEXP); wsum += w; hsum += w * (P[pi].H / 100); ssum += w * P[pi].S; }
+    SW[ci] = wsum; SH[ci] = hsum; SS[ci] = ssum;
   }
   /* 守卫：坐标列名取错时 pct 会**静默**返回 undefined ⇒ 距离全是 NaN ⇒ 一格邻居都没有 ⇒ 整页画空。
    *   这一版 2D 就是这么"什么都没画"的（by 拼成 '2' 而不是 'y2'）。空画布比红字坏得多 ⇒ 必须抛出来。*/
@@ -466,26 +500,38 @@ function buildNB(key, bx, byy) {
    *   所以"过线点固定半径盘并"任何半径都是二选一的假范围（r=1.2×nmed ⇒ 圈住过线 113 + 未过线 100 = 纯度 53.1%）；
    *   我换的"局部过线率场 + 插值等值线"能把纯度做到 88%，但代价是绿区糊在底图上、且只圈到两成过线枚。
    *   ⇒ 过线只按**逐枚真值**标（drawMap 里的绿环），悬停明细给"栽在哪条腿"。*/
-  NBK[key] = { idx: idx, dst: dst, SW: SW, SH: SH, SS: SS, DM: DM, x0: x0, x1: x1, y0: y0, y1: y1,
+  NBK[key] = { idx: idx, dst: dst, SW: SW, SH: SH, SS: SS, x0: x0, x1: x1, y0: y0, y1: y1,
     px0: px0, px1: px1, py0: py0, py1: py1, nmed: nmed, d12m: d12m, ax: ax, by: by, gx: gx, gy: gy };
 }
 /* 每格只需 (SH + T·SS)/SW ⇒ 换 T 不碰邻域。
  * 位图**不透明**：每格把势色按覆盖度合成到底色上（远格 = 纯底色）⇒
  *   平面态没有"雾蒙蒙"的半透明晕，立体态没有透明边的割裂/接缝（位图边界之外就是底色）。*/
 function buildBitmap(key) {
-  var nb = NBK[key], fr = fRange(), rng = (fr[1] - fr[0]) || 1;
-  var fscale = Math.max(2.2 * nb.d12m, 16);   /* 淡出尺度 2.2× 第12近邻中位（≈43px）；4 次幂让边缘干净落回底色 */
+  var nb = NBK[key];
+  var fscale = Math.max(1.5 * nb.d12m, 14);   /* §E331 淡出尺度 2.2× → 1.5× 第12近邻中位（≈29px）：
+                                                 单点的"实心"范围缩一档 ⇒ 立体态不再糊成一整块熔岩。
+                                                 **中间不会因此裂开** —— 覆盖度是各点核权重相加（见下面 fade），
+                                                 邻域只要有两三枚，权重和照样过阈 ⇒ 裂开的正是旧版按"最近点距离"才会有的病。*/
+  var kcov = 1 / Math.pow(fscale, KEXP);      /* = 单点在 fscale 处的核权重：覆盖度在半径 fscale 处正好落一半 */
   var bR = parseInt(st.bg.slice(1, 3), 16), bG = parseInt(st.bg.slice(3, 5), 16), bB = parseInt(st.bg.slice(5, 7), 16);
   var c = document.createElement('canvas'); c.width = nb.gx; c.height = nb.gy;
   var cg = c.getContext('2d'), img = cg.createImageData(nb.gx, nb.gy), dta = img.data;
   for (var i = 0; i < nb.gx * nb.gy; i++) {
     var wsum = nb.SW[i]; if (!(wsum > 0)) continue;
+    /* §E331 覆盖度换成**核权重和**，不用「到最近点的距离」。旧写法 1/(1+(DM/fscale)^4) 在两枚点中间
+     *   必然下凹（DM 在 Voronoi 脊线上取局部极大）⇒ 底图上那一片"凹陷的接缝"就是脊线本身，跟数据无关，
+     *   是度量的形状病。SW = Σ1/d^KEXP 是各点晕的**相加**，靠近谁都不减 ⇒ 相邻晕平滑搭接。
+     *   ⚠ 但 cov 永远 > 0（每格都取得到 12 个邻居）⇒ 板的**外沿**是一圈"差一点点"的颜色，
+     *     平面态看不出来，立体态那块平行四边形的边就被这条 17/255 的台阶画出来了（实测 edgeDev 顶 17 ‖ 底 14 ‖ 左 13 ‖ 右 8）。
+     *     所以再乘一个**贴边收口**：最外 EDGEK 格线性拉到 0 ⇒ 板的边界与底色逐像素相同，边缘不存在。
+     *     10% 的网格边距（buildNB）保证这 EDGEK 格全在点云之外的空裙里，不会把晕切一刀。*/
+    var gi = i % nb.gx, gj = (i / nb.gx) | 0;
+    var fade = wsum / (wsum + kcov) * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
     var Fav = (nb.SH[i] + st.T * nb.SS[i]) / wsum;
-    var tt = Math.max(0, Math.min(1, (Fav - fr[0]) / rng));   /* 红 = F 高 = 最好，蓝 = F 低 = 最差（与点色/图例同向）*/
+    var tt = fCol(Fav);                            /* 红 = F 高 = 最好，蓝 = F 低 = 最差（与点色/图例同向）*/
     var rgb = rampRGB(tt);
-    var fade = 1 / (1 + Math.pow(nb.DM[i] / fscale, 4));
     var a = (0.92 - 0.5 * tt) * fade;
     var o = i * 4;
     dta[o] = Math.round(bR + (rgb[0] - bR) * a);
@@ -495,7 +541,7 @@ function buildBitmap(key) {
   }
   cg.putImageData(img, 0, 0);
   FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, x0: nb.x0, x1: nb.x1, y0: nb.y0, y1: nb.y1,
-    fr: fr, nmed: nb.nmed, ax: nb.ax, by: nb.by, gx: nb.gx, gy: nb.gy };
+    nmed: nb.nmed, ax: nb.ax, by: nb.by, gx: nb.gx, gy: nb.gy };
 }
 function ensureField(key, bx, byy) {
   var k2 = key + '@' + Math.round(bx) + ',' + Math.round(byy);   /* 比例尺进缓存键：窗口尺寸变了才重建 */
@@ -537,11 +583,13 @@ function wantLabel(d) {
   if (st.hi[gk(d)]) return true;
   if (st.q && d.id.indexOf(st.q) >= 0) return true;
   if (st.labels === 'all') return true;
-  return !!d.lin || d.rk <= 12 || d.rk > N - 6;
+  /* §E330 父链那几枚必须常驻：它们不是冠军、名次也不显眼（E51-t8-713 排 61），落在"零散实验"那一行里
+   *   ⇒ 不点名就找不到，而用户问的正是"现役的祖先在图上哪去了"。 */
+  return !!d.lin || d.kin === '父链' || d.rk <= 12 || d.rk > N - 6;
 }
 function labelSet() {
   var out = [];
-  for (var i = 0; i < N; i++) if (wantLabel(P[i])) out.push({ i: i, pri: P[i].lin ? 0 : (P[i].rk <= 12 ? 1 : 2) });
+  for (var i = 0; i < N; i++) if (wantLabel(P[i])) out.push({ i: i, pri: (P[i].lin || P[i].kin === '父链') ? 0 : (P[i].rk <= 12 ? 1 : 2) });
   out.sort(function (a, b) { return a.pri - b.pri || P[a.i].rk - P[b.i].rk; });
   return out;
 }
@@ -592,6 +640,44 @@ function draw1(fr) {
   g.fillText('一维：位置 = F 名次（下方蓝条 = Hp 线上口径夺1率，黄条 = T·S）· 悬停看明细 · 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
 }
 
+/* §E332 把谱系图的**版式**（车道带 + 左栏家族名/统计 + 左右分界 + 日期竖线与刻度）烘成一张离屏画布。
+ *   为什么要烘：立体态要把整张版式当**底图**贴到倾斜平面上（用户："把这个网格和标签当做地图模式的底图，
+ *   然后仿照地图的模式做渲染，这样对应也好"）。前一版只把点抬起来、标签留在原地 ⇒ "右边的点进了 3D、
+ *   左边的字还在 2D"，读不出谁属于谁。烘一次之后平面/立体共用同一张图、同一个矩阵 ⇒ 错位这件事在结构上不可能。
+ *   ⚠ 页脚说明与 RUNNER-BASE 那条注**不进底图** —— 它们是轴饰，跟着相机转就没人读得了（§E314 同一个理由）。*/
+var CHM = null;
+function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, ff) {
+  var c = document.createElement('canvas'); c.width = w; c.height = h;
+  var t = c.getContext('2d'), i, TKY = st.tKy;
+  t.font = ff(11);
+  for (i = 0; i < fams.length; i++) {
+    var f = fams[i], mem = P.filter(function (d) { return d.fam === f; });
+    var nOk = mem.filter(function (d) { return d.ok === 1; }).length, nCh = mem.filter(function (d) { return d.lin; }).length;
+    var best = Math.min.apply(null, mem.map(function (d) { return d.rk; }));
+    t.fillStyle = i % 2 ? 'rgba(255,255,255,.028)' : 'rgba(255,255,255,.0)';
+    /* §E314 行带 = 整幅宽、不跟横轴走；家族名/统计两行钉在左栏（只跟纵轴）*/
+    t.fillRect(0, WY(padT + i * rowH), w, rowH * TKY);
+    t.fillStyle = st.ink; t.textAlign = 'right';
+    t.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.46));
+    t.fillStyle = st.dim; t.font = ff(10);
+    t.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.88));
+    t.font = ff(11);
+  }
+  t.textAlign = 'left';
+  t.strokeStyle = 'rgba(159,176,204,.22)'; t.lineWidth = 1;
+  t.beginPath(); t.moveTo(padL - 6, 0); t.lineTo(padL - 6, h); t.stroke();
+  var day = 86400000;
+  for (var tt2 = Math.ceil(tmin / day) * day; tt2 <= tmax; tt2 += day) {
+    var xx = WX(X(tt2)); t.strokeStyle = 'rgba(159,176,204,.16)'; t.lineWidth = 1;
+    var gy0 = Math.max(0, WY(padT)), gy1 = Math.min(h, WY(h - padB));
+    if (xx > padL - 60 && xx < w + 60 && gy1 > gy0) {
+      t.beginPath(); t.moveTo(xx, gy0); t.lineTo(xx, gy1); t.stroke();
+      t.fillStyle = st.dim; t.font = (10 * devicePixelRatio) + 'px system-ui,sans-serif';
+      t.fillText(new Date(tt2).toISOString().slice(5, 10), xx + 3, h - padB + 16 * devicePixelRatio);
+    } }
+  return c;
+}
+
 /* ⑤ §E304 谱系图：**行 = 家族（按最早 ts 排，所以从上往下就是时间推进）**，横轴 = 训练时刻。
  *   为什么需要它：二维/三维那张图回答"这枚长什么样"，回答不了"哪一次方法改动把 F 抬上去了"——
  *   后者要的是 (家族 × 时间) 的排布，而且必须能看见**热启动父**这条血统边。
@@ -617,49 +703,61 @@ function drawTree(fr) {
   var tmin = Infinity, tmax = -Infinity;
   for (i = 0; i < N; i++) { var tv = Date.parse(P[i].ts); if (isFinite(tv)) { if (tv < tmin) tmin = tv; if (tv > tmax) tmax = tv; } }
   if (!(tmax > tmin)) { g.fillStyle = st.dim; g.fillText('没有可用的 ts ⇒ 谱系图画不了（要 lineage.tsv）', 30 * devicePixelRatio, 60); return; }
-  var padL = 340 * devicePixelRatio, padR = 26 * devicePixelRatio, padT = 40 * devicePixelRatio, padB = 46 * devicePixelRatio;
+  var padL = 340 * devicePixelRatio, padR = 26 * devicePixelRatio, padT = 40 * devicePixelRatio, padB = 66 * devicePixelRatio;
   var rowH = (h - padT - padB) / fams.length, X = function (tv) { return padL + (tv - tmin) / (tmax - tmin) * (w - padL - padR); };
-  var Y = function (f) { return padT + (fams.indexOf(f) + 0.5) * rowH; };
   var KS = 1;   /* §E314 点半径不跟缩放（经典统计图约定）—— 保留这个名字是因为下面两处按它算半径 */
-  g.font = ff(11);
-  for (i = 0; i < fams.length; i++) {
-    var f = fams[i], mem = P.filter(function (d) { return d.fam === f; });
-    var nOk = mem.filter(function (d) { return d.ok === 1; }).length, nCh = mem.filter(function (d) { return d.lin; }).length;
-    var best = Math.min.apply(null, mem.map(function (d) { return d.rk; }));
-    g.fillStyle = i % 2 ? 'rgba(255,255,255,.028)' : 'rgba(255,255,255,.0)';
-    /* §E314 行带 = 整幅宽、**不跟横轴走**；家族名/统计两行同理钉在左栏（只跟纵轴）
-     *   ⇒ 这就是经典统计图的"y 轴标签常驻"：把时间轴放大 3 倍或拖到 09-21，左边那一列名字仍在原地，
-     *     否则横轴一动标签就被拖出画布（第一版实测就是"家族 1"整行消失、只剩"·风格权重…"半截）。*/
-    g.fillRect(0, WY(padT + i * rowH), w, rowH * TKY);
-    g.fillStyle = st.ink; g.textAlign = 'right';
-    /* 统计并入左栏、上下两行：右侧留给点，图例浮在右上会压掉任何画在那里的数字；
-     *   同一行放两段字实测会互相咬住（家族名长短不定，没法预留固定偏移）。*/
-    g.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.46));
-    g.fillStyle = st.dim; g.font = ff(10);
-    g.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.88));
-    g.font = ff(11);
+  /* ===== §E332 底图 = 一张离屏画布（车道带 + 左栏家族名/统计 + 分界 + 日期竖线与刻度）=====
+   *   用户裁定：「把这个网格和标签当做地图模式的底图，然后仿照地图的模式做渲染，这样对应也好」。
+   *   所以立体态不再自己造一套斜切：整张版式**烘一次** ⇒ 平面按恒等贴、立体按倾斜仿射贴
+   *   （与 drawMap 贴 FL.c 同一条路径），点用**同一个投影**抬起来 ⇒ 点与它那一行的名字必然对齐，
+   *   因为两者出自同一张图、同一个矩阵 —— 前一版"只有右边的点进了 3D、左边标签还在原地"就是两套坐标各画各的。*/
+  var ck = [w, h, TKX.toFixed(4), TKY.toFixed(4), TPX.toFixed(1), TPY.toFixed(1), fams.join(','), tmin, tmax, st.ink, st.dim, devicePixelRatio].join('|');
+  if (!CHM || CHM.k !== ck) CHM = { k: ck, c: treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, ff) };
+  var T3 = st.elev, cb = cam(), voff = 0.06 * h * T3, uc = w / 2, vc = h / 2;
+  /* 平面坐标 (u,v)（就是恒等态的屏幕位置）+ 抬升 z（屏幕 px）→ 屏幕。
+   *   b 取 vc − v：FLAT（yaw −π/2 ‖ pit π/2）时 r=[1,0,0]、u=[0,1,0] ⇒ 不翻 v 的话整张底图上下颠倒
+   *   （地图那套数据 y 是"向上"的，谱系图的行号是"向下"的 —— 同一个相机，两种 y 向）。
+   *   再按 T3 与恒等混合 ⇒ 0 逐字等于旧二维，1 是全 3D，中间就是躺下去的过程。*/
+  function PL(u, v, z) {
+    if (!(T3 > 1e-4)) return [u, v];
+    var a = u - uc, b = vc - v, c = z || 0;
+    /* ⚠ 这里**不接 st.ox/st.oy**（地图那套相机平移）：谱系图的平移走 tX/tY，它烘进底图里 ⇒ 两个视图各拿一份
+     *   平移量。共用一份的后果是"在地图上拖过一下，再开谱系图立体就整张歪在旁边"。*/
+    var x3 = w / 2 + (a * cb.r[0] + b * cb.r[1]);
+    var y3 = h / 2 + voff - (a * cb.u[0] + b * cb.u[1] + c * cb.u[2]);
+    return [u + (x3 - u) * T3, v + (y3 - v) * T3];
   }
-  g.textAlign = 'left';
-  /* §E314 左栏与绘图区分界：钉住的标签列与会平移的点之间要有条边，否则放大后点会滑进标签里读成"某家族的第 N 枚" */
-  g.strokeStyle = 'rgba(159,176,204,.22)'; g.lineWidth = 1;
-  g.beginPath(); g.moveTo(padL - 6, 0); g.lineTo(padL - 6, h); g.stroke();
-  g.save(); g.beginPath(); g.rect(padL - 5, 0, w - padL + 5, h); g.clip();   /* 数据层（竖线/父边/点）不许进左栏 */
-  /* 时间刻度：按天打竖线。**线跟相机走、日期字不跟** —— 刻度标签是 x 轴的轴饰，
-   *   缩放时该横向散开，但纵向必须钉在图底；一起变换的话放大 2.4 倍就把字甩到画布外（第一版实测如此）。*/
-  var day = 86400000;
-  for (var t = Math.ceil(tmin / day) * day; t <= tmax; t += day) {
-    var xx = WX(X(t)); g.strokeStyle = 'rgba(159,176,204,.16)'; g.lineWidth = 1;
-    var gy0 = Math.max(0, WY(padT)), gy1 = Math.min(h, WY(h - padB));
-    if (xx > padL - 60 && xx < w + 60 && gy1 > gy0) {
-      g.beginPath(); g.moveTo(xx, gy0); g.lineTo(xx, gy1); g.stroke();
-      g.fillStyle = st.dim; g.font = (10 * devicePixelRatio) + 'px system-ui,sans-serif';
-      g.fillText(new Date(t).toISOString().slice(5, 10), xx + 3, h - padB + 16 * devicePixelRatio);
-    } }
+  var q0 = PL(0, 0, 0), qX = PL(w, 0, 0), qY = PL(0, h, 0);
+  g.save();
+  g.setTransform((qX[0] - q0[0]) / w, (qX[1] - q0[1]) / w, (qY[0] - q0[0]) / h, (qY[1] - q0[1]) / h, q0[0], q0[1]);
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  g.drawImage(CHM.c, 0, 0);
+  g.restore(); g.setTransform(1, 0, 0, 1, 0, 0);
+  var LIFT = (h - padT - padB) * 0.30;   /* 抬升满量程 = 绘图区高度的 30%（与 TKY 无关：这是第三个维度，不是把行拉开）*/
+  var FR3 = fRange();
+  g.save();
+  if (T3 < 0.02) { g.beginPath(); g.rect(padL - 5, 0, w - padL + 5, h); g.clip(); }   /* 平面态：数据层不许进左栏（立体态标签已在底图里，让点浮在上面）*/
   /* 血统边（画在点底下，免得盖住点）*/
-  var pos = {};
-  for (i = 0; i < N; i++) { var t2 = Date.parse(P[i].ts); if (!isFinite(t2)) continue;
-    var jit = ((i * 2654435761) % 1000) / 1000 - 0.5;
-    pos[P[i].id] = [WX(X(t2)), WY(Y(P[i].fam) + jit * rowH * 0.66)]; }
+  /* 每枚的落点 = 底图上那一格 (u,v) + 按 F 抬起来的 z。
+   *   高度用**线性** min-max，不用 §E330 那套按秩铺色 —— 秩是"颜色要能分开"的读法，几何要的是量的比较
+   *   （与地图的高度场同一取舍）。**不画势场底图**（用户点名"这里不需要底图"）—— 底图就是版式本身。
+   *   ⚠ 行内抖动（同一秒训出的一撮）在立体态挪到**横方向**：竖方向已经被 F 占了，
+   *     再拿它当抖动位就会把"抖出来的"误读成"F 低的"。*/
+  var pos = {}, base = {};
+  function PT(i) {
+    var d = P[i], tv = Date.parse(d.ts); if (!isFinite(tv)) return null;
+    var ri = fams.indexOf(d.fam); if (ri < 0) return null;
+    var jit = ((i * 2654435761) % 1000) / 1000 - 0.5, jpx = jit * rowH * 0.66 * TKY;
+    var u = WX(X(tv)) + (T3 > 0.02 ? jpx : 0), v = WY(padT + (ri + 0.5) * rowH) + (T3 > 0.02 ? 0 : jpx);
+    var uf = Math.max(0, Math.min(1, (Fv(d) - FR3[0]) / ((FR3[1] - FR3[0]) || 1)));
+    return [PL(u, v, uf * LIFT * T3), PL(u, v, 0)];
+  }
+  for (i = 0; i < N; i++) { var q = PT(i); if (!q) continue; pos[P[i].id] = q[0]; base[P[i].id] = q[1]; }
+  if (T3 > 0.02) {   /* 立柱：把"浮在多高"接回底图上那一格，否则立体里读不出它属于哪一行 */
+    g.strokeStyle = 'rgba(159,176,204,.20)'; g.lineWidth = 1;
+    for (i = 0; i < N; i++) { var pb = pos[P[i].id], gb = base[P[i].id];
+      if (!pb || !gb || Math.abs(pb[1] - gb[1]) < 1.5) continue;
+      g.beginPath(); g.moveTo(gb[0], gb[1]); g.lineTo(pb[0], pb[1]); g.stroke(); } }
   g.strokeStyle = 'rgba(120,200,255,.30)'; g.lineWidth = 1 * devicePixelRatio;
   for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
     var a = pos[dd.pof], b = pos[dd.id];
@@ -668,7 +766,7 @@ function drawTree(fr) {
   for (i = 0; i < N; i++) { var d = P[i], p = pos[d.id]; if (!p) continue; scr[i] = p;
     var al = alphaOf(d); g.globalAlpha = al;
     g.beginPath(); g.arc(p[0], p[1], (d.lin ? 5 : 2.8) * st.size * KS, 0, 6.284);
-    g.fillStyle = ramp((Fv(d) - fr[0]) / (fr[1] - fr[0] || 1)); g.fill();
+    g.fillStyle = ramp(fCol(Fv(d))); g.fill();
     if (d.lin && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.4; g.stroke(); }
     if (d.ok === 1 && al > 0.3) { g.globalAlpha = al * 0.72; g.strokeStyle = '#39d98a'; g.lineWidth = 1.15 * devicePixelRatio;
       g.beginPath(); g.arc(p[0], p[1], ((d.lin ? 5 : 2.8) + 2.2 * st.size) * st.size * KS, 0, 6.284); g.stroke(); }
@@ -680,20 +778,31 @@ function drawTree(fr) {
     putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false); }
   g.restore();   /* §E314 数据层的裁剪到这里收口（点与点标签都不许滑进左栏）*/
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-  /* 页脚 = 轴饰，不进相机（同上：跟着放大 2.4 倍会直接掉出画布，"缩放 ×" 那个数也就永远看不到了）*/
-  g.fillText('行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : st.color === 'sc' ? '当选键 sc − 现役' : 'F（线上口径势）') +
+  /* 页脚 = 轴饰，不进相机（同上：跟着放大 2.4 倍会直接掉出画布，"缩放 ×" 那个数也就永远看不到了）。
+   *   §E331 这条串必须**量过宽度**再上屏：它是单行 fillText，画布不折行，超长就从右缘直接截掉 ——
+   *   1600px 窗口实测被截在"左键拖动 = 平移"之前，交互提示整段看不见。所以只留别处没有的信息：
+   *   颜色口径/绿环在右上图例里，这里不重复。*/
+  var foot = '行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : st.color === 'sc' ? '当选键 sc − 现役' : 'F（线上口径势）') +
     /* 色标方向必须跟着口径走：写死"蓝低 → 红高"会在 Δε 那档说反（那档是**红 = 脆**），
        在当选键这档更是彻底错（这档是**绿 = 比现役强、红 = 落后**）—— 图上画的与页脚说的不能是两件事。 */
-    (st.color === 'sc' ? '（绿 = 比现役强 ‖ 红 = 落后 ‖ 白 = 打平 ‖ 橙 = 判不动 ‖ 灰 = 未测）'
-      : st.color === 'de' ? '（红 = 开探索就掉 ‖ 蓝 = 开了反而强 ‖ 白 = 不敏感）' : '（蓝低 → 红高）') +
-    ' · 绿环 = 过线 · 淡蓝曲线 = 能解析到的热启动父边 · 滚轮 = 缩放横轴（时间）· Shift+滚轮 = 缩放纵轴（家族行）· 左键拖动 = 平移 · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2),
-    padL, h - 14 * devicePixelRatio);
+    (st.color === 'sc' ? '（绿=强 ‖ 红=落后 ‖ 橙=判不动 ‖ 灰=未测）'
+      : st.color === 'de' ? '（红=脆 ‖ 蓝=吃探索 ‖ 白=不敏感）' : '（蓝低 → 红高）') +
+    ' · 淡蓝曲线 = 热启动父边' +
+    /* §E331 立体态必须自己在页脚说清"高度是哪把尺"：颜色已经改成按秩铺了，几何仍是线性 —— 不写出来就会被当成同一件事。
+       （画布不认 markdown，星号会原样印出来 ⇒ 这句里不许带 *）*/
+    (T3 > 0.5 ? ' · 立体 = 高度按 F 线性（与颜色的按秩铺色不同尺）· 细竖线 = 回到底图那一格 · 右键拖动 = 旋转' : '') +
+    ' · 滚轮 = 横轴（时间）· Shift+滚轮 = 纵轴（家族行）· 拖动 = 平移 · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2);
+  var fw = g.measureText(foot).width / devicePixelRatio;
+  if (fw > (w - padL) / devicePixelRatio - 8) g.font = Math.round(12 * devicePixelRatio * (w - padL) / devicePixelRatio / fw) + 'px system-ui,sans-serif';
+  g.fillText(foot, padL, h - 14 * devicePixelRatio);
   /* §E314 那根星形中心必须自己在图上说一句"我不是血统"，否则 81% 共父会被读成"演化收敛"。
      ⚠ 只能另起一次 fillText：canvas 的 fillText **不认 \n**（第一版把它拼在同一串里 ⇒ 两段挤成一行、右缘被截，
         而且 markdown 的 ** 在画布上是原样字符）。*/
+  /* §E331 图底三条字必须各占一行：日期刻度在 h − padB + 16（= h−50·dpr），这条 RUNNER-BASE 注在 h−32·dpr，
+   *   页脚说明在 h−14·dpr。旧版 padB=46 ⇒ 日期与这条注**同一个 y**（h−30·dpr），两段字直接叠成一坨（用户截图）。 */
   if (NRBASE) { g.fillStyle = '#e0b13c';
     g.fillText('另有 ' + NRBASE + ' 枚（' + Math.round(NRBASE * 100 / N) + '%）的父 = RUNNER-BASE d13d3c85…（runner 恒拷 EPIRUS_BUNDLE_IN 的产物 · 不是血统）⇒ 这条边图上不画',
-      padL, h - 30 * devicePixelRatio); }
+      padL, h - 32 * devicePixelRatio); }
 }
 /* 「卡住缩放上界 + 背景不要割裂」：缩放的下界 = 场恰好铺满视口（再小就露出虚空）；平移卡到"场始终盖住整个视口"。
  *   由 kmin 的定义可证两个平移区间非空，所以 clamp 不会打架。*/
@@ -1093,9 +1202,10 @@ function drawBody() {
   if (st.mode === '1d') draw1(fr); else if (st.mode === 'map') drawMap(fr); else if (st.mode === 'tree') drawTree(fr); else draw3b(fr);
   paintLegend(fr);
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
-  document.getElementById('stat').textContent = N + ' 枚 · 历代冠军 ' + P.filter(function (d) { return d.lin; }).length +
-    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键 sc − 现役（实测 ' + NSEL + ' 枚 · 判据内赢 ' + NSELUP + ' · 判不动 ' + NSELSOFT + '）') : '训练方法家族') +
-    (st.mode === 'map' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') + (n ? ' · 高亮 ' + n + ' 个家族' : '');
+  document.getElementById('stat').textContent = N + ' 枚候选 · 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
+    ' 枚 · 现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键 sc − 现役（实测 ' + NSEL + ' 枚 · 判据内赢 ' + NSELUP + ' · 判不动 ' + NSELSOFT + '）') : '训练方法家族') +
+    (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') + (n ? ' · 高亮 ' + n + ' 个家族' : '');
 }
 /* ⑥ 所有重绘走 rAF 合并：一帧最多画一次（拖动/滑杆连续事件下这是"卡死"的第二条来源）*/
 var queued = false;
@@ -1143,6 +1253,10 @@ function paintLegend(fr) {
     : st.color === 'sc' ? ('当选键 −8pt（红 = 落后现役）· 白 = 打平 · 橙 = 偏正但同号 <6/8（判不动 ' + NSELSOFT + ' 枚）· 灰 = 未测（' + (N - NSEL) + '）‖ 明显落后（≤−2）' + NSELDOWN + ' 枚')
     : ('F 低 ' + fr[0].toFixed(2) + (st.goodTop ? '（最差 · 地板）' : '（最差 · 顶）'));
   lg.appendChild(s1); lg.appendChild(c); lg.appendChild(s2);
+  /* §E330 F 腿的色标是**按秩**铺的 ⇒ 带的正中不是 (min+max)/2 而是中位数。不印这一行，
+   *   读图的人会把"中性灰"当成"不好不坏的绝对电平"，而它真正的意思是"库里第 50% 名"。*/
+  if (st.color === 'F') { var sm = document.createElement('div'); sm.style.color = 'var(--dim)';
+    sm.textContent = '灰 = 中位 F ' + fMed().toFixed(3) + '（按分位铺色，每档同样多的点）'; lg.appendChild(sm); }
   if (OKL.length) {
     var s3 = document.createElement('div'); s3.style.marginTop = '6px'; s3.style.color = '#39d98a';
     s3.textContent = '绿环 = 逐枚过线判定（' + OKL.length + '/' + POKJ + ' 枚）· 二维不画范围';
@@ -1211,8 +1325,10 @@ window.addEventListener('mousemove', function (e) {
       if (drag[8] === 2) { st.yaw = drag[4] - cdx / 160; st.pit = Math.max(0.06, Math.min(1.5, drag[5] + cdy / 200)); }
       else { st.ox3 = drag[6] + cdx * devicePixelRatio; st.oy3 = drag[7] + cdy * devicePixelRatio; }
     } else if (st.mode === 'tree') {
-      /* §E312 谱系图拖动 = 平移那台相机（右键不绑：时间轴上没有"旋转"这个动作）*/
-      st.tX = drag[9] + cdx * devicePixelRatio; st.tY = drag[10] + cdy * devicePixelRatio;
+      /* §E332 立体态与地图同一套手势：右键 = 转相机（"只有一个角度"就是这条没接）‖ 左键 = 平移那台相机。
+       *   平面态右键仍然不绑 —— 时间轴上没有"旋转"这个动作。*/
+      if (drag[8] === 2) { if (st.elev > 0.05) { st.yaw = drag[4] - cdx / 160; st.pit = Math.max(0.10, Math.min(1.55, drag[5] + cdy / 200)); } }
+      else { st.tX = drag[9] + cdx * devicePixelRatio; st.tY = drag[10] + cdy * devicePixelRatio; }
     }
     req(); return;
   }
@@ -1251,9 +1367,9 @@ cv.addEventListener('wheel', function (e) { e.preventDefault();
  *   立起方向不碰 yaw（原地立起）；放平方向才把 yaw 插回 FLAT（平面图必须北朝上）。*/
 var tw = null;
 function toggle3d() {
-  var to3d = st.elev < 0.5;
+  var to3d = st.elev < 0.5, solid = st.mode === 'tree' ? TSOLID : SOLID;
   tw = { t0: performance.now(), dur: 520, from: { e: st.elev, y: st.yaw, p: st.pit },
-    to: to3d ? { e: 1, y: null, p: SOLID.pit } : { e: 0, y: FLAT.yaw, p: FLAT.pit } };
+    to: to3d ? { e: 1, y: null, p: solid.pit } : { e: 0, y: FLAT.yaw, p: FLAT.pit } };
   document.getElementById('b3dt').textContent = to3d ? '平面' : '立体';
   tick();
 }
@@ -1273,8 +1389,12 @@ function setMode(m) {
   var cs = document.getElementById('color'); if (cs) cs.value = st.color;
   Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-m]'), function (b) { b.classList.toggle('on', b.getAttribute('data-m') === m); });
   document.getElementById('colorrow').style.opacity = (m === '3db' || m === 'tree') ? '0.4' : '1';
-  document.getElementById('b3dt').style.display = (m === 'map') ? '' : 'none';
+  /* §E331 谱系图共用这同一个"立体"档（st.elev）：地图是"相机躺/立 + 柱高"，谱系图是"行躺平 / 高度=F"。
+   *   共用一个开关是刻意的：用户在两个视图间来回看时，"立体"不该是两个各记一份的状态（否则一边立着一边躺着）。*/
+  document.getElementById('b3dt').style.display = (m === 'map' || m === 'tree') ? '' : 'none';
+  document.getElementById('b3dt').title = m === 'tree' ? '同一张谱系图，行躺平 / 立起来用高度表示 F（不画底图）' : '同一张底，平面/立体无缝切换';
   if (m === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit; }
+  else if (m === 'tree') { var tp = st.elev < 0.5 ? FLAT : TSOLID; st.yaw = tp.yaw; st.pit = tp.pit; }
   else if (m === '3db') { st.yaw = 0.62; st.pit = 0.40; }
   syncIso();
   req();
@@ -1321,6 +1441,7 @@ document.getElementById('bh').onclick = function () { st.goodTop = !st.goodTop; 
 document.getElementById('reset').onclick = function () {
   st.ox = st.oy = 0; st.k = 1; st.ox3 = st.oy3 = 0; st.zoom3 = 1; st.tKx = 1; st.tKy = 1; st.tX = 0; st.tY = 0;
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit; }
+  else if (st.mode === 'tree') { var tp = st.elev < 0.5 ? FLAT : TSOLID; st.yaw = tp.yaw; st.pit = tp.pit; }
   else { st.yaw = 0.62; st.pit = 0.40; }
   req(); };
 document.getElementById('fitt').onclick = function () { var el = document.getElementById('fit');

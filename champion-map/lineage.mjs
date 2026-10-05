@@ -23,23 +23,41 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ART = join(HERE, '..', 'docs', 'artifacts');
+const ROOT = join(HERE, '..');
+const ART = join(ROOT, 'docs', 'artifacts');
 const SURVEY = process.argv.includes('--survey');
 
 const ids = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n').slice(1).map(l => l.split('\t')[0]);
 
 /* `braceObj` / `parseMeta` / `widOf` 住在 `./pack-id.mjs`（§E328 起）—— 那份注释也在那里。 */
+/* §E330：**同一个 id 在盘上可以有两份不同的包**，而血统表过去只按 `docs/artifacts/<id>.bak` 找 ⇒ 读错了文件。
+ *   实测后果：`M05-111` / `D4a` / `E20-71` 这些"续训现役"的臂产品，真身在 `docs/artifacts/e234-out/…`（ts = 10-02），
+ *   而顶层另有一份同名的旧拷贝（ts = 现役那颗的 `2026-09-27T08:55:34`）⇒ 谱系图上 **181 枚子代全叠在同一秒**
+ *   （用户 10-05 21:0x：「由现役继续训练的一堆点全重合了」）。
+ *   修法不是猜：`coords.tsv` 的 `path` 列（由 `attach-path.mjs` 从现测尺表贴进来）就是量它时真用的文件 ⇒
+ *   名单和路径同表同序，下游（本文件、`feas.mjs`）不再各自拼约定路径。 */
+const PATHOF = {};
+{
+  const CL = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n');
+  const ch = CL[0].split('\t'), iId = ch.indexOf('id'), iPath = ch.indexOf('path');
+  if (iPath < 0) { console.error('⛔ coords.tsv 没有 path 列 ⇒ 先跑 node champion-map/attach-path.mjs'); process.exit(2); }
+  for (const l of CL.slice(1)) { const c = l.split('\t'); if (c[iId] && c[iPath]) PATHOF[c[iId]] = c[iPath]; }
+  console.log('路径表（coords.tsv 的 path 列）：' + Object.keys(PATHOF).length + ' 条');
+}
 const REC = [];
-let nmiss = 0;
+let nmiss = 0, nByPath = 0;
 for (const id of ids) {
-  const p = join(ART, id + '.bak');
-  let m = null, wid = null;
+  const rel = PATHOF[id];
+  const p = rel ? join(ROOT, rel) : join(ART, id + '.bak');
+  if (rel) nByPath++;
+  let m = null, wid = null, used = rel || '';
   if (existsSync(p)) { const txt = readFileSync(p, 'utf8'); m = parseMeta(txt); wid = widOf(txt); }
   else { const alt = join(HERE, '..', 'js', 'bundled-champion-3p.js');
-    if (existsSync(alt)) { const txt = readFileSync(alt, 'utf8'); m = parseMeta(txt); wid = widOf(txt); } }
-  if (!m) { nmiss++; REC.push({ id, m: null, wid }); continue; }
-  REC.push({ id, m, wid });
+    if (existsSync(alt)) { const txt = readFileSync(alt, 'utf8'); m = parseMeta(txt); wid = widOf(txt); used = 'js/bundled-champion-3p.js'; } }
+  if (!m) { nmiss++; REC.push({ id, m: null, wid, rel: used }); continue; }
+  REC.push({ id, m, wid, rel: used });
 }
+console.log('按 coords.tsv 的 path 列解析 ' + nByPath + ' 枚 ‖ 其余按 docs/artifacts/<id>.bak 兜底');
 console.log('读到 META ' + REC.filter(r => r.m).length + ' / ' + ids.length + ' 枚（缺 ' + nmiss + '）‖ 算出权重身份 ' +
   REC.filter(r => r.wid).length + ' 枚');
 
@@ -100,7 +118,45 @@ for (const f of allBak) { try {
   const id = f.slice(0, -4); if (!BYWID[w]) BYWID[w] = id;
 } catch (e) { /* 单枚读不动不影响全表 */ } }
 for (const r of REC) if (r.wid && !BYWID[r.wid]) BYWID[r.wid] = r.id;
+/* §E330 哈希之外还有第二条父指针：`recipe.env.EPIRUS_SEEDPACK` 记的是**文件路径**。
+ *   现役那枚（js/bundled-champion-3p.js）走的正是这一条 —— 它**没有** hotstartFrom，实测
+ *   `EPIRUS_SEEDPACK = docs/artifacts/E51-t8-713.bak` ⇒ 只按哈希解析时"当前线上"那个点没有父边，
+ *   用户因此看不到现役的祖先。而它下面那 182 支臂的产物同样只写了这一条
+ *   （`EPIRUS_SEEDPACK = js/bundled-champion-3p.js`）⇒ 图上"子代一堆点没有连线"也是这同一个洞。
+ *   ⚠ 路径的**文件名 ≠ 图上的 id**：现役在图上叫 `SHIPPED-Ldemo`，文件却叫 `bundled-champion-3p.js`
+ *   ⇒ 退路必须按"这枚在图上是从哪个文件读进来的"反查（`BYBASE`），不能拿文件名当 id 用。
+ *   认不出的一律留空 —— 不许凭一条路径凭空造节点（chain-scan 同一套判据）。*/
+const WIDOF = {}; for (const r of REC) if (r.wid) WIDOF[r.id] = r.wid;
+const IDSET = new Set(REC.map(r => r.id));
+const BYBASE = {};
+for (const r of REC) { const k = String(r.rel || r.id).replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, '');
+  if (k && !BYBASE[k]) BYBASE[k] = r.id; if (r.id && !BYBASE[r.id]) BYBASE[r.id] = r.id;
+  const a = r.id.replace(/^SHIPPED-/, ''); if (a !== r.id && !BYBASE[a]) BYBASE[a] = r.id; }   /* 链上节点叫 Ldemo、图上叫 SHIPPED-Ldemo */
+function seedpackOf(m) { const e = m.recipe && m.recipe.env; const p = e && e.EPIRUS_SEEDPACK;
+  if (typeof p !== 'string' || !p) return '';
+  const k = p.replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, '');
+  return BYBASE[k] || ''; }
+/* 第三级退路 = **臂级**父指针（`chain-scan --emit=` 落的那张表）。为什么需要：一支臂留 7 个文件
+ *   （1 枚产物 + 6 枚带内候选），实测**产物那份常常不带指针、带内候选那份带** ⇒ 只看产物就漏。
+ *   臂级证据"这支臂是从 X 起步的"对产物同样成立，所以按 productRel 反查图上的那一枚。
+ *   ⚠ 只认**面板上已有的父**（IDSET），表里没有的臂一律不接。*/
+const ARMPAR = {};
+{ const AP = join(HERE, '_e330-armparent.tsv');
+  if (existsSync(AP)) {
+    const A = readFileSync(AP, 'utf8').trim().split('\n'), ah = A[0].split('\t');
+    const iRel = ah.indexOf('productRel'), iPar = ah.indexOf('armParent');
+    const REL2ID = {}; for (const r of REC) if (r.rel) REL2ID[r.rel] = r.id;
+    for (const l of A.slice(1)) { const c = l.split('\t'); if (iPar < 0 || !c[iRel] || !c[iPar]) continue;
+      const id = REL2ID[c[iRel]], par = BYBASE[c[iPar]] || c[iPar];
+      if (id && par !== id && IDSET.has(par)) ARMPAR[id] = par; }
+    console.log('臂级父指针表（chain-scan --emit）：' + Object.keys(ARMPAR).length + ' 支臂的产物能反查到图上已有的父');
+  } else console.log('提示：没有 _e330-armparent.tsv ⇒ 臂级父指针这一级退路不生效（跑 node champion-map/chain-scan.mjs --emit=_e330-armparent.tsv）'); }
+let nSpk = 0, nArm = 0;
 for (const r of REC) { const m = r.m || {};
+  const byHash = (m.hotstartFrom && BYWID[m.hotstartFrom]) || '';
+  const byPath = byHash ? '' : seedpackOf(m);
+  const byArm = (byHash || byPath) ? '' : (ARMPAR[r.id] || '');
+  if (byPath) nSpk++; if (byArm) nArm++;
   const eco = (m.ecoEffective && typeof m.ecoEffective === 'object') ? m.ecoEffective : {};
   const fig = (m.fightEffective && typeof m.fightEffective === 'object') ? m.fightEffective : {};
   const cfg = { divW: norm(eco.divW), divK: norm(eco.divK), divRoleW: norm(eco.divRoleW), divCatW: norm(eco.divCatW),
@@ -108,13 +164,14 @@ for (const r of REC) { const m = r.m || {};
     dealW: norm(fig.dealW), firstW: norm(fig.firstW), whistlePen: norm(fig.whistlePen), styleW: norm(m.styleW),
     oppsN: norm(Array.isArray(m.opps) ? m.opps.length : (typeof m.opps === 'string' && m.opps ? m.opps.split(',').filter(Boolean).length : '')),
     seedEmb: norm(m.seedEmbeddedFrom), gens: norm(m.gens), mode: norm(m.mode), rulesFp: norm(m.rulesFingerprint),
-    parent: norm(m.hotstartFrom) };
+    parent: norm(m.hotstartFrom || WIDOF[byPath || byArm] || '') };
   ROWS.push({ id: r.id, ts: m.ts || '', seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
-    parentOf: (m.hotstartFrom && BYWID[m.hotstartFrom]) || '', wid: r.wid || '',
+    parentOf: byHash || byPath || byArm, wid: r.wid || '',
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
 const nres = ROWS.filter(r => r.parentOf).length, np = ROWS.filter(r => r.cfg.parent !== '-').length;
 console.log('父指针：' + np + ' 枚记了 hotstartFrom ‖ 其中 ' + nres + ' 枚能解析到**具体哪一枚**（' +
   (np ? Math.round(nres / np * 100) : 0) + '%）‖ 解析不出的多是"父是当时的现役冠军、后来被覆写没留档"');
+console.log('　§E330 退路解析出的：SEEDPACK 路径 ' + nSpk + ' 枚 ‖ 臂级（同臂带内候选留的指针）' + nArm + ' 枚（这些的产物自己不带任何指针）');
 const bySig = new Map();
 for (const r of ROWS) { if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push(r); }
 const groups = [...bySig.entries()].map(([sig, rs]) => ({ sig, rs,

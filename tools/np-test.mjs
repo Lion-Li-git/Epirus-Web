@@ -3,7 +3,20 @@ import { readFileSync, existsSync, readdirSync, statSync, mkdtempSync, mkdirSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { spawnSync as _spawnSync } from 'node:child_process';
+/* §E324：门里那些"真跑一臂"的腿只需要证明**旋钮接上了**，不需要证明当选质量 ⇒ 对 `train-3p` 钉单粒 seedBase。
+ * 为什么包在这一处、而不是在顶部写 `process.env.EPIRUS_SEL_EVAL_SEEDS='1'`：
+ *   第一版就是那么写的，结果**泄漏给同一次跑里的 `train-best` / `train-fast` 腿** ⇒ 那些入口的黑键闸当场 `exit 6`
+ *   ⇒ D124/D125 红（认证 40 实测：np 270/272）。**那个红是对的** —— "传了没人读"正是这些闸要拦的事，
+ *   所以钉值必须只落在真读它的入口上，而不是整棵环境里。 */
+const T3P_ENTRY = 'tools/train-3p.mjs';
+function spawnSync(cmd, args, opts) {
+  if (!Array.isArray(args) || args[0] !== T3P_ENTRY) return _spawnSync(cmd, args, opts);
+  const o = opts || {}, env = Object.assign({}, o.env || process.env);
+  /* 腿自己显式给了粒数就**尊重它**（D228 ⑦ 要跑 `=3` 那一档；包装不许把它压回 1，否则那条腿永远测默认档以外的那条路） */
+  if (env.EPIRUS_SEL_EVAL_SEEDS === undefined) env.EPIRUS_SEL_EVAL_SEEDS = '1';
+  return _spawnSync(cmd, args, Object.assign({}, o, { env }));
+}
 import { parsePairTable } from './defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
 import { makeGuardCost } from './guard-cost-lib.mjs';   /* D161 用：直接对库做单元级判定（不靠探针的输出措辞） */
 import { pushTarget } from './bot-chooser-lib.mjs';   /* D223 用：选点规则是纯函数 ⇒ 喂合成 state 逐条钉（§E262） */
@@ -93,6 +106,17 @@ function t(name, fn) {
 }
 function ok(c, m) { if (!c) throw new Error(m || 'assert failed'); }
 function eq(a, b, m) { if (a !== b) throw new Error((m || '') + ' got=' + a + ' want=' + b); }
+
+/* ===== §E324：门里的真臂钉在**单粒 seedBase** —— 钉法在文件头那个 `spawnSync` 包装里，不在这里 =====
+ * v1.6.7（§E322）把当选键默认改成 4 粒取均值之后，整轮 np 从 570.7s 涨到 **1238.6s**（认证 39）——
+ *   因为本文件里有 **28 处 `spawnSync train-3p`**（不是我以为的 5 处），它们的**终局重验**每枚候选都从 1×720 局变成 4×720 局。
+ * 为什么该钉而不是"认了"：这些腿判的是**旋钮有没有接上 / 黑键有没有响 / 带内候选有没有落盘 / 产物自不自证**，
+ *   跟"当选质量"无关；让认证时长由一次产品默认值的改动**顺带**抬高 2 倍，是把仪器账混进了判据账（§E214 那条"认证提速"的同类）。
+ * ⛔ 但**不许写成 `process.env.EPIRUS_SEL_EVAL_SEEDS = '1'`**（第一版就是这么写的）：那会泄漏给同一次跑里的
+ *   `train-best` / `train-fast` 腿，而那些入口的黑键闸（D143）认不得这个键 ⇒ 当场 `exit 6`、D124/D125 红（认证 40 实测 np 270/272）。
+ *   **那个红是对的** —— "传了没人读"正是这些闸要拦的事。所以钉值只能落在真读它的入口上 ⇒ 用包装，别用全局环境。
+ * ⚠ 反面也钉住：默认那 4 粒这条路**不能没有门跟着** ⇒ D228 ⑦ 单开一腿真跑一臂（`EPIRUS_SEL_EVAL_SEEDS=3`）并要求日志印出粒数与分差行。 */
+const SEL_PIN = "env.EPIRUS_SEL_EVAL_SEEDS = '1'";
 
 /* 随机 chooser：可负担里随机挑，随机挑一个存活对手 */
 function randChooser(state, pid, legal) {
@@ -11096,6 +11120,49 @@ t('D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 b
     '⑥ 终局改判必须直接比 `ev.sc`（均值已在 `scoreRuns` 里算过；这里再拿两个均值拼一遍 = 第二个口径，日后必分叉）');
   ok(readFileSync('server/train-env.mjs', 'utf8').indexOf('EPIRUS_SEL_EVAL_SEEDS') >= 0,
     '⑥ server 侧也要登记（`enforceKnobs` 的读集里没它 ⇒ 页面训练场会把它当黑键拒掉）');
+
+  /* ===== ⑦ 默认那"多粒"的路**必须有一腿真跑**（不然 np 全绿却从没走过上线那条路 = 改门禁账本第 27 条） =====
+   * 下面 ⑧ 把整份门钉在单粒上（认证时长的账），所以这一腿反过来显式要 3 粒，并**逐字核对粒数、base 序列与分差行**。 */
+  {
+    const dir7 = mkdtempSync(join(tmpdir(), 'd228-')), out7 = join(dir7, 'arm.js');
+    const r7 = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
+      { env: Object.assign({}, process.env, { EPIRUS_SEL_EVAL_SEEDS: '3', EPIRUS_SEED: '5', EPIRUS_ARM: 'd228multi',
+        EPIRUS_BAND_DIR: dir7, EPIRUS_T3P_OUT: out7, EPIRUS_PUBLISH: '' }), encoding: 'utf8', timeout: 300000 });
+    eq(r7.status, 0, '⑦ 3 粒那一档要跑得通（status=' + r7.status + ' ' + String(r7.stderr || '').slice(-140) + '）');
+    const so7 = String(r7.stdout || '');
+    ok(so7.indexOf('每粒候选重验 3 粒 seedBase（987654 ‖ 1087654 ‖ 1187654）') >= 0,
+      '⑦ 必须把**粒数与 base 序列**一起印出来（只印"重验 3 粒"不印 base = 没人能核对步长真的生效）');
+    ok(/\[当选键\] 第 1 与第 2 名分差 [0-9.]+pt/.test(so7), '⑦ 当选现场必须印出"分差 vs 噪声"那行（§E318 的病就是这句从来没印过）');
+    ok(/（n=3 粒 seedBase ‖ 自身极差 [0-9.]+pt）/.test(so7), '⑦ n≥2 时每枚要印实测极差（n=1 那一档才改印"无从估"）');
+    const jm7 = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(out7, 'utf8'));
+    const mt7 = JSON.parse(jm7[1]);
+    eq(mt7.selSeeds, 3, '⑦ 产物要自证用了 3 粒（不写 = 事后只能信日志）');
+    eq(mt7.selSeedBases.length, 3, '⑦ 三粒 base 都要落进 meta');
+    ok(mt7.selSeedBases[1] - mt7.selSeedBases[0] === SEL_STRIDE, '⑦ meta 里相邻两粒的差必须就是 SEL_STRIDE（落盘写了别的数 = 步长被动过）');
+  }
+
+  /* ===== ⑧ 认证时长也是判据，但**钉值必须只落在真读它的入口上** ===== */
+  const npSrc = readFileSync(new URL(import.meta.url), 'utf8');
+  /* ⚠ 这一组判的是"源码形状"，必须**只看代码**：禁令要讲清楚就得把反例原样写进注释（`process.env.X = '1'`
+   *   那种全局钉法为什么不行），而整份源码 indexOf 会把**注释里的反例**判成违规 ⇒ 实测第一版就这样红在
+   *   自己身上（np 271/272，红的正是这条"不许退回全局钉法"的守卫）。守卫判的是有没有人这么**写**，不是有没有人这么**说**。
+   * ⚠ 而且**检索式自己也不能含那个字面量**：`indexOf("process.env.EPIRUS_SEL_EVAL_SEEDS = '1'")` 这一行就是代码行，
+   *   剥完注释照样命中自己 ⇒ 第二版红在这里。拼起来，源码里就永远没有那串连续字符。*/
+  const npCode = npSrc.split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+  const BAD_PIN = 'process.env.' + 'EPIRUS_SEL_EVAL_SEEDS' + " = '1'";
+  const pinAt = npCode.indexOf(SEL_PIN);                       // 包装里那句"缺省才钉"
+  ok(pinAt > 0, '⑧ np 必须把 train-3p 的臂钉在单粒 seedBase（§E324：默认 4 粒让 np 从 570.7s 涨到 1238.6s）');
+  ok(npCode.indexOf(BAD_PIN) < 0,
+    '⑧ ⛔ 不许退回"写全局 process.env"那种钉法 —— 认证 40 就是那样写的，结果泄漏给 `train-best` 的腿、'
+    + '被它自己的黑键闸 `exit 6` 拦掉（D124/D125 红，np 270/272）。那个红是对的：传了没人读 = 黑键。');
+  const firstSpawn = npCode.indexOf("spawnSync(process.execPath, ['tools/train-3p.mjs'");
+  ok(firstSpawn > 0 && pinAt < firstSpawn, '⑧ 包装必须定义在**第一处 spawn 之前**（写在后面 = 前面那几处已经按 4 粒跑完了）');
+  ok(npCode.indexOf('function spawnSync(') < firstSpawn, '⑧ 包装本体要在第一处 spawn 之前（否则那些调用拿到的是原始 import）');
+  const nSpawn = (npCode.match(/spawnSync\(process\.execPath, \['tools\/train-3p\.mjs'/g) || []).length;
+  ok(nSpawn >= 20, '⑧ 本文件里 `spawn train-3p` 的处数（实测 ' + nSpawn + '）——这条是给"处数"那句注释兜底的：'
+    + '我一度以为是 5 处、实为 28 处，靠单点改动去提速会漏掉大半 ⇒ 有人加腿/删腿时这里要响，别让人凭印象写注释');
+  /* 包装"显式给了就尊重"这条也得有牙，否则 ⑦ 会被静默压回 1 粒、而 ⑦ 看起来还是绿的 */
+  ok(/env\.EPIRUS_SEL_EVAL_SEEDS === undefined/.test(npCode), '⑧ 包装必须**只补缺省**（腿自己写了粒数就得听腿的，不然 ⑦ 永远测不到 3 粒那一档）');
 });
 
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");

@@ -141,14 +141,19 @@ for (let d = 0; d < UP; d++) {
  *   同一枚包在盘上/仓里/图上可能同时叫 `win-Ldemo` ‖ `bundled-champion-3p` ‖ `SHIPPED-Ldemo` ‖ `Ldemo`）。 */
 const CHAIN_RELS = new Set(chain.map(c => c.rel));
 const CHAIN_KEYS = new Set();
+/* §E330 别名 → 链上节点 id。臂级父指针最后要落到"图上的哪一枚"，而链上节点在图上的名字可能换过
+ *   （现役在链上叫 `Ldemo`、在图上叫 `SHIPPED-Ldemo`、文件叫 `bundled-champion-3p.js`）⇒ 只存一个名字会接不上。*/
+const KEY2ID = {};
 for (const c of chain) {
-  CHAIN_KEYS.add(c.id);
-  CHAIN_KEYS.add(String(c.rel).replace(/^.*\//, '').replace(/\.(bak|js)$/, ''));
-  if (c.rec && c.rec.name) CHAIN_KEYS.add(c.rec.name);
-  if (c.rec && c.rec.m && c.rec.m.shippedAs) { const mm = /docs\/artifacts\/([^\s"']+)/.exec(String(c.rec.m.shippedAs)); if (mm) CHAIN_KEYS.add(mm[1].replace(/\.bak$/, '')); }
+  const add = function (k) { if (k) { CHAIN_KEYS.add(k); if (!KEY2ID[k]) KEY2ID[k] = c.id; } };
+  add(c.id);
+  add(String(c.rel).replace(/^.*\//, '').replace(/\.(bak|js)$/, ''));
+  if (c.rec && c.rec.name) add(c.rec.name);
+  if (c.rec && c.rec.m && c.rec.m.shippedAs) { const mm = /docs\/artifacts\/([^\s"']+)/.exec(String(c.rec.m.shippedAs)); if (mm) add(mm[1].replace(/\.bak$/, '')); }
 }
-CHAIN_KEYS.add(basename(PACK).replace(/\.(bak|js)$/, ''));
-for (const k of Array.from(CHAIN_KEYS)) if (k) CHAIN_KEYS.add('SHIPPED-' + k);   // §E313 那层图上别名
+const rootKey = basename(PACK).replace(/\.(bak|js)$/, '');
+CHAIN_KEYS.add(rootKey); if (!KEY2ID[rootKey]) KEY2ID[rootKey] = chain[0].id;
+for (const k of Array.from(CHAIN_KEYS)) if (k && !CHAIN_KEYS.has('SHIPPED-' + k)) { CHAIN_KEYS.add('SHIPPED-' + k); KEY2ID['SHIPPED-' + k] = KEY2ID[k]; }
 const chainWids = new Map([[ROOTWID, chain[0].id]]);
 const chainWidOf = new Map([[chain[0].id, ROOTWID]]);
 for (const c of chain) { try { const w = widOf(readFileSync(join(ROOT, c.rel), 'utf8')); if (w) { chainWids.set(w, c.id); chainWidOf.set(c.id, w); } }
@@ -159,7 +164,8 @@ for (const r of REC) {
   const byHash = (r.parent && chainWids.get(r.parent)) || (r.emb && chainWids.get(r.emb));
   let byPath = '';
   if (r.seedpack) { const low = String(r.seedpack); for (const k of CHAIN_KEYS) { if (k && low.indexOf(k) >= 0) { byPath = k; break; } } }
-  if (byHash || byPath) kids.push({ r, parent: byHash || byPath, via: byHash ? 'hotstartFrom/seedEmb(哈希)' : 'EPIRUS_SEEDPACK(路径)' });
+  if (byHash || byPath) kids.push({ r, parent: byHash || byPath, parentId: byHash || KEY2ID[byPath] || '',
+    via: byHash ? 'hotstartFrom/seedEmb(哈希)' : 'EPIRUS_SEEDPACK(路径)' });
 }
 
 console.log('== 锚点：' + PACK + ' ‖ 权重身份 ' + ROOTWID + ' ‖ META.arm=' + (RM && RM.arm ? RM.arm : '(无)') +
@@ -180,8 +186,9 @@ const byArm = new Map();
 for (const k of kids) {
   const r = k.r;
   const arm = (r.m && r.m.arm) || (r.name && r.name.replace(/-band\d+$/, '')) || r.id.replace(/-band\d+$/, '');
-  if (!byArm.has(arm)) byArm.set(arm, { arm, files: [], product: null, via: k.parent, ts: r.ts, gens: r.gens, exam: null });
+  if (!byArm.has(arm)) byArm.set(arm, { arm, files: [], product: null, via: k.parent, parentId: '', ts: r.ts, gens: r.gens, exam: null });
   const g = byArm.get(arm);
+  if (!g.parentId && k.parentId) g.parentId = k.parentId;   /* §E330 臂级父指针：产物自己没留指针时，同臂的带内候选留了 */
   g.files.push(r);
   const isBand = /-band\d+$/.test(r.id);
   if (!isBand && (!g.product || r.rel.split('/').length < g.product.rel.split('/').length)) g.product = r;
@@ -206,11 +213,12 @@ console.log('⚠ "在册考卷"是**各臂自己那棵树**训完时记的数（
 const uniq = new Map();
 for (const g of ARMLIST) { if (g.product) uniq.set(g.product.rel, g); }
 if (EMIT) {
-  const lines = ['arm\tts\tfiles\tproductRel\tproductWid\tgens\tmode\tfp\tseedpack\texamRecorded\tonMap'];
+  const lines = ['arm\tts\tfiles\tproductRel\tproductWid\tgens\tmode\tfp\tseedpack\texamRecorded\tonMap\tarmParent'];
   for (const g of ARMLIST) { const p = g.product || { id: '', rel: '', ts: g.ts, gens: g.gens, mode: '', fp: '', seedpack: '', exam: null };
     let w = ''; if (p.rel) { try { w = widOf(readFileSync(join(ROOT, p.rel), 'utf8')); } catch (e) { w = ''; } }
     lines.push([g.arm, g.ts, g.files.length, p.rel, w, p.gens, p.mode || '', p.fp || '', p.seedpack || '',
-      (p.exam === null || p.exam === undefined) ? '' : p.exam, p.id ? (onMap(p.id) ? 'yes' : 'no') : 'no-product'].join('\t')); }
+      (p.exam === null || p.exam === undefined) ? '' : p.exam, p.id ? (onMap(p.id) ? 'yes' : 'no') : 'no-product',
+      g.parentId || ''].join('\t')); }
   writeFileSync(join(HERE, EMIT), lines.join('\n') + '\n');
   console.log('已落 ' + EMIT + '（' + ARMLIST.length + ' 行 = 每支臂一行）');
 }

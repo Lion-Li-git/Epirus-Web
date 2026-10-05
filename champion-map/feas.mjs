@@ -41,11 +41,16 @@ const COLS = ['id', 'ok', 'nFail', 'fails', 'G', 'G2', 'wallDmg', 'fieldA', 'fie
 
 /* ---- 名单：直接读坐标表 ⇒ "判了几枚"与"画了几枚"永远是同一批 ---- */
 const ct = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n');
-const ch = ct[0].split('\t'), ci = ch.indexOf('id');
-let list = ct.slice(1).map(l => {
-  const id = l.split('\t')[ci];
-  return { id: id, path: id === 'SHIPPED-Ldemo' ? 'js/bundled-champion-3p.js' : 'docs/artifacts/' + id + '.bak' };
-}).filter(e => existsSync(join(ROOT, e.path)));
+const ch = ct[0].split('\t'), ci = ch.indexOf('id'), cpi = ch.indexOf('path');
+if (cpi < 0) { console.error('⛔ coords.tsv 没有 path 列 ⇒ 先跑 node champion-map/attach-path.mjs'); process.exit(2); }
+/* §E330：以前这里按 `docs/artifacts/<id>.bak` **猜**路径，猜不到就静默筛掉 ⇒ 那 183 枚臂产物
+ *   真身在 `docs/artifacts/e234-out/…`，于是从来没被这道闸判过（图上整片"无判定"）。
+ *   现在读表里那一列，并且**筛掉几枚就印几枚** —— 名单少一批不能是无声的。*/
+const all = ct.slice(1).map(l => { const c = l.split('\t'); return { id: c[ci], path: c[cpi] }; });
+let list = all.filter(e => e.path && existsSync(join(ROOT, e.path)));
+const drop = all.filter(e => !e.path || !existsSync(join(ROOT, e.path))).map(e => e.id || '(空 path)');
+if (drop.length) console.error('⛔ ' + drop.length + ' 枚在名单里但文件不存在（前 10：' + drop.slice(0, 10).join(' ') + '）');
+if (drop.length > all.length * 0.02) process.exit(2);
 const only = String(arg('ids', '')).split(',').map(s => s.trim()).filter(Boolean);
 if (only.length) list = list.filter(e => only.indexOf(e.id) >= 0);
 if (LIMIT > 0) list = list.slice(0, LIMIT);
