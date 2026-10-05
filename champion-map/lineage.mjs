@@ -177,11 +177,28 @@ for (const d of defs) { const c = d.g.rs[0].cfg;
     ' ‖ ' + String(d.g.rs.length) + ' 枚 ‖ ' + String(d.g.t0).slice(5, 10) + '→' + String(d.g.t1).slice(5, 10) +
     ' ‖ 父 ' + br.join(',');
   prev = c; }
-const COLS = ['id', 'fam', 'famLabel', 'ts', 'metaSeed', 'nameSeed', 'parent', 'parentOf', 'wid', 'rulesFp', 'divW', 'divK', 'divRoleW', 'divCatW',
+/* §E314 解析不出的父指针**不许再留成空白**（DS 的收口建议 + 他给的定性）：
+ *   585 枚（81%）共用一个父 `d13d3c85…`，而那不是"丢了的血统"—— CHANGELOG.md:6402 已定性：
+ *   `tools/ring2-run.mjs:95` **无条件覆写** `EPIRUS_BUNDLE_IN` ⇒ 近期全部臂恒拷同一个 v1.3.58 BASE。
+ *   ⇒ 那根星形中心是 **runner 覆写的指纹，不是血统**。今天又把它可能藏身的地方穷尽扫了一遍
+ *     （盘上 1461 个 .bak + 全历史可达 blob 593 个 + 整个对象库 4190 个 blob，逐枚算权重指纹）⇒ **无实体**。
+ *   所以这里给它一个有名有姓的**合成节点**，而不是让图上继续写"盘上查无该权重"（那句话会让人以为还能找回来）。*/
+const SYNTH_NAME = {};
+{ const tally = {};
+  for (const r of ROWS) { const p = r.cfg.parent; if (p && p !== '-' && !r.parentOf) tally[p] = (tally[p] || 0) + 1; }
+  for (const p of Object.keys(tally)) {
+    SYNTH_NAME[p] = tally[p] >= 50
+      ? 'RUNNER-BASE ' + p.slice(0, 8) + '…（v1.3.58 BASE · runner 恒拷 EPIRUS_BUNDLE_IN 的产物 · ' + tally[p] + ' 枚共指 · **非血统**）'
+      : '父未落档 ' + p.slice(0, 8) + '…（' + tally[p] + ' 枚）'; } }
+for (const r of ROWS) r.parentName = r.parentOf ? r.parentOf : (SYNTH_NAME[r.cfg.parent] || '');
+const nSynth = ROWS.filter(r => r.parentName && !r.parentOf).length;
+console.log('合成父节点：' + Object.keys(SYNTH_NAME).length + ' 个指纹 ‖ 落到 ' + nSynth + ' 枚身上（其中 ' +
+  ROWS.filter(r => SYNTH_NAME[r.cfg.parent] && SYNTH_NAME[r.cfg.parent].indexOf('RUNNER-BASE') === 0).length + ' 枚是 runner 覆写那一格）');
+const COLS = ['id', 'fam', 'famLabel', 'ts', 'metaSeed', 'nameSeed', 'parent', 'parentOf', 'parentName', 'wid', 'rulesFp', 'divW', 'divK', 'divRoleW', 'divCatW',
   'oppsN', 'stockBonus', 'hoardPen', 'dealW', 'firstW', 'whistlePen', 'styleW', 'eTarget', 'eCap', 'gens', 'mode', 'seedEmb'];
 const out = [COLS.join('\t')];
 for (const r of ROWS) { const d = FAM[r.id]; if (!d) continue; const c = r.cfg;
-  out.push([r.id, d.n, d.label, (r.ts || '').slice(0, 19), r.seed, r.id.replace(/^.*-/, ''), c.parent.slice(0, 8), r.parentOf, r.wid, c.rulesFp, c.divW, c.divK, c.divRoleW, c.divCatW, c.oppsN,
+  out.push([r.id, d.n, d.label, (r.ts || '').slice(0, 19), r.seed, r.id.replace(/^.*-/, ''), c.parent.slice(0, 8), r.parentOf, r.parentName, r.wid, c.rulesFp, c.divW, c.divK, c.divRoleW, c.divCatW, c.oppsN,
     c.stockBonus, c.hoardPen, c.dealW, c.firstW, c.whistlePen, c.styleW, c.eTarget, c.eCap, c.gens, c.mode, c.seedEmb].join('\t')); }
 writeFileSync(join(HERE, 'lineage.tsv'), out.join('\n') + '\n');
 console.log('已写 lineage.tsv（' + (out.length - 1) + ' 行 ‖ ' + defs.length + ' 个家族）');

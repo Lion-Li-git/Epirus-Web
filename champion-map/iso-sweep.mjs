@@ -8,10 +8,10 @@
  * 与查看器逐字同口径的地方（改了这边要改那边）：
  *   ax = x3 ‖ by = y3 ‖ cz = (z3 − zmin)/(zmax − zmin) × zBase，**三处 min/max 都是 0.5%/99.5% 截尾分位**，
  *   zBase = 0.26 × span（span = 截尾后的 max(x 跨, y 跨)）—— 见 viewer.mjs:880~903
- *   σ = 第 6 近邻距离的中位（按显示度量）；核 = 高斯，支撑 R = 2.6σ
+ *   **F = Hp/100 + T·S（§E314 起是线上口径）**；σ = 第 6 近邻距离的中位（按显示度量）；核 = 高斯，支撑 R = 2.6σ
  *   场 = (ESS·p̂ + M0·p0)/(ESS + M0)，ESS = (Σw)²/Σw²，p0 = 全库过线率
  *
- * 用法：node champion-map/iso-sweep.mjs [--zfrac=0.26]
+ * 用法：node champion-map/iso-sweep.mjs [--zfrac=0.26] [--T=0.10]
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -108,7 +108,12 @@ console.log('默认阈值要挑在**留一那一列还有东西**的最高档，
  *            ⇒ 阈值 45% **低于均值**，于是"壳内 712/718 枚、纯度 = 底率"= 圈了个寂寞（截图里就是这个）。
  * 所以 pot 场的默认线必须落在 [均值, 峰值] 这一段里，而这一段只有 0.59~0.69 这么窄 ⇒ 拿表定，别拿眼睛定。
  * 副产物：圈进多少枚 = 这层壳的作用面；纯度 = 它比底率(15.7%)富集了多少倍。*/
-const FP = rows.map((r) => +r[ch.F]);
+/* §E314：势的定义换了尺 ⇒ 这里必须跟着换（用户裁定把整张图换成线上口径 ⇒ 查看器 Fv 从 H/100 改成 Hp/100）。
+ *   不跟着改就又是 §E312 那条病的第二次：表与页面不是同一台仪器，挑出来的默认值白挑。
+ *   实测换尺后 pot 场先验 59% → 63%、峰值 68% → 70% ⇒ 旧默认 64% 离均值只剩 1pt，壳圈进 338 枚、纯度 31%→23%。
+ *   与查看器同式：F = Hp/100 + T·S，T = 出厂默认（= 查看器 st.T 的初值，这里不另存常数副本）。*/
+const Tv = Number(arg('T', 0.10));
+const FP = rows.map((r) => (+r[ch.Hp]) / 100 + Tv * (+r[ch.S]));
 const fmin = Math.min(...FP), fmax = Math.max(...FP), fspan = fmax - fmin;
 const V2 = FP.map((f) => (f - fmin) / fspan);
 const p0b = V2.reduce((s, v) => s + v, 0) / N;
@@ -129,7 +134,7 @@ const w2 = [], l2 = [];
 for (let i = 0; i < N; i++) { w2.push(shrink2(atV(A[i], B[i], C[i], -1), 5)); l2.push(shrink2(atV(A[i], B[i], C[i], i), 5)); }
 console.log('\npot 场（M0=5）：均值(=先验) ' + (100 * p0b).toFixed(0) + '% ‖ 峰值(含自己) ' + (100 * Math.max(...w2)).toFixed(0) +
   '% ‖ 留一峰值 ' + (100 * Math.max(...l2)).toFixed(0) + '%');
-for (const t of [0.60, 0.61, 0.62, 0.63, 0.64, 0.65, 0.66, 0.67]) {
+for (const t of [0.63, 0.64, 0.65, 0.655, 0.66, 0.67, 0.68]) {
   let ins = 0, cov = 0, insL = 0, covL = 0;
   for (let i = 0; i < N; i++) { if (V[i] !== 0 && V[i] !== 1) continue;
     if (w2[i] >= t) { ins++; if (V[i] === 1) cov++; }

@@ -185,12 +185,18 @@ if (existsSync(epsP)) {
     Object.values(EPS).filter(x => x.d >= 3.41).length + '）');
 } else console.log('提示：没有 epsagg.tsv ⇒ "部署口径/脆弱性"着色不可用（跑 node champion-map/eps-scan.mjs && node champion-map/epsread.mjs）');
 const DATA = rows.map(r => ({
-  id: r.id, lin: r.lineage || '', seed: r.seed || '', H: +r.H, S: +r.S, Ge: +r.Geff, rk: +r.rank,
+  /* §E314 **头号尺换成线上口径**（用户："把冠军演化全部改成线上口径吧"）。
+   *   `Hp` = 同一台 `eval-5p`、同一批 35 组合 × 30 局、同 seed，只是主体席按页面那样开 ε=0.2 soft；
+   *   `H`  保留 = 考卷口径（ε=0 贪心）—— 历史文档里大量读数写的是它，覆盖掉就把名字偷走了（attach-hp.mjs 头注有账）。
+   *   `De` = Δε = H − Hp（正 = 开探索就掉）。*/
+  id: r.id, lin: r.lineage || '', seed: r.seed || '', H: +r.H, Hp: +r.Hp, De: +r.De, S: +r.S, Ge: +r.Geff, rk: +r.rank,
   x2: +r.x2, y2: +r.y2, x3: +r.x3, y3: +r.y3, z3: +r.z3,
   /* §E304 家族：`fam` = 方法/目标等价类编号（按最早 ts 排 ⇒ 号大 = 训得晚）；`ms` = META 里真正的 RNG seed
    *   （和包名后缀那个数**不是一回事**，实测 META.seed 有 84 个取值、名字后缀只有 14 个）。*/
   fam: LIN[r.id] ? +LIN[r.id].fam : 0, ms: LIN[r.id] ? LIN[r.id].metaSeed : '',
   ts: LIN[r.id] ? LIN[r.id].ts : '', par: LIN[r.id] ? LIN[r.id].parent : '', pof: LIN[r.id] ? LIN[r.id].parentOf : '',
+  /* §E314 解析不到实体时不再写"盘上查无该权重"（那句话暗示"还能找回来"）—— 换成有名有姓的合成节点 */
+  pnm: LIN[r.id] ? (LIN[r.id].parentName || '') : '',
   ok: OKM && (r.id in OKM) ? (OKM[r.id].ok ? 1 : 0) : null,
   gl: OKM && (r.id in OKM) && isFinite(OKM[r.id].g2) ? OKM[r.id].g2 : null,
   pv: r.id in PROM ? (PROM[r.id].pass ? 1 : 0) : null, pb: r.id in PROM ? PROM[r.id].b : '',
@@ -221,6 +227,12 @@ var OKL = [], POKJ = 0, PV = null;
   PV = { x0: pct(xa, .005), x1: pct(xa, .995), y0: pct(ya, .005), y1: pct(ya, .995) }; })();
 /* §E308 实测过上槽体检的枚数（分母只算实测过的，别把"没测"说成"没过"）*/
 var NPRM = 0, NPPASS = 0;
+/* §E314 谱系中心的真相要写在图上：584 枚（81%）的父指针解析不到实体，而那不是"丢了"——
+ *   CHANGELOG.md:6402 已定性 = tools/ring2-run.mjs:95 无条件覆写 EPIRUS_BUNDLE_IN ⇒ 全部臂恒拷同一个 v1.3.58 BASE。
+ *   今天又把它可能藏身的地方穷尽扫完（盘上 1461 个 .bak + 全历史可达 blob 593 + 整个对象库 4190，逐枚算权重指纹）⇒ 无实体。
+ *   ⇒ 图上不画这条边（没有节点可画），但**必须把这句话印出来**，否则下一个人会把它读成"81% 同源 = 演化收敛"。*/
+var NRBASE = 0;
+(function () { for (var i = 0; i < N; i++) if (P[i].pnm && P[i].pnm.indexOf('RUNNER-BASE') === 0) NRBASE++; })();
 (function () { for (var i = 0; i < N; i++) { if (P[i].pv === 1) { NPRM++; NPPASS++; } else if (P[i].pv === 0) NPRM++; } })();
 /* §E310 决斗实测数（同向上的"赢"才算，符号翻的单列）*/
 var NDUEL = 0, NWIN = 0, NFLIP = 0;
@@ -236,14 +248,14 @@ var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
                             §E312 默认从 0.5 降到 0.35：实测收缩后场的峰值只有 40%，50% 是"正确地什么都不画"，
                             默认值必须落在有东西可画的那一段，否则用户第一次开壳就看到空图。*/
   isoField: 'ok',       /* §E312 'ok' = 局部过线概率 ‖ 'pot' = 势（F）归一化 —— 同一个壳引擎换场 */
-  isoTok: 0.30, isoTpot: 0.64,
-                        /* §E312 阈值**按场各存一份**：两场的量纲不是一回事（iso-sweep.mjs 实测 pot 场
-                           先验 59%、峰值 68% ⇒ 拿 ok 场的 30% 去切它等于"低于均值"，圈进 712/718 枚、
-                           纯度 = 底率 = 什么都没圈）。各场默认值取自那张表（M0=5 那一行，σ/截尾比例与页面同式）：
+  isoTok: 0.30, isoTpot: 0.67,
+                        /* §E312 阈值**按场各存一份**：两场的量纲不是一回事。§E314 头号尺换成线上口径之后，
+                           势场整条分布都挪了（先验 59%→63%、峰值 68%→70%）⇒ 旧默认 64% 离均值只剩 1pt，
+                           壳圈进 338 枚、纯度 31%→23% = 又变成"什么都没圈"。新默认由 iso-sweep.mjs（已同步换尺）定：
                              ok 0.30 ⇒ 壳内 38 枚、纯度 66%（底率 16%）‖ 留一 27 枚里 3 枚 = 11%
-                             pot 0.64 ⇒ 壳内 68 枚、纯度 31% ‖ 留一 65 枚里 15 枚 = 23%
+                             pot 0.67 ⇒ 壳内 122 枚、纯度 28% ‖ 留一 117 枚里 25 枚 = 21%（这条规则挑出来的最高档）
                            ⇒ 反过来：**唯一"留一还站得住"的是势场那层**，过线场给的是形状、不是证据。
-                           M0 从 3 抬到 5 就是为了削掉边缘的孤点岛：单枚过线点最多抬到 (1+5·0.157)/6 = 0.298 < 0.30
+                           M0=5 是为了削掉边缘的孤点岛：单枚过线点最多抬到 (1+5·0.157)/6 = 0.298 < 0.30
                            ⇒ 一座壳至少要"几个过线的挤在一起"才长得出，用户看到的"只圈到边缘"那批岛就没了。*/
   ox: 0, oy: 0, k: 1, yaw: -Math.PI / 2, pit: Math.PI / 2, elev: 0, goodTop: true,
   ox3: 0, oy3: 0, zoom3: 1, hi: {}, bg: '#0f1522', ink: '#dce6f5', dim: '#9fb0cc',
@@ -257,7 +269,15 @@ var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三
  *   用户点名"应该默认原地立起来"。现在平面→立体只压 pitch（yaw 不动）；立体→平面要回正 yaw（平面图必须北朝上）。*/
 var FLAT = { yaw: -Math.PI / 2, pit: Math.PI / 2 }, SOLID = { yaw: -Math.PI / 2, pit: 0.40 };
 
-function Fv(d) { return d.H / 100 + st.T * d.S; }
+/* §E314 势 = **线上口径**的 H + T·S（用户裁定把整张图换成玩家真正拿到的那个数）。
+ *   旧写法是 d.H / 100（考卷口径 · ε=0 贪心）。两口径的**排名**同构（Spearman 0.912 / 全库 718 枚），
+ *   但**电平不同构**：全库 Δε 中位只有 0.20pt，而现役是 8.10pt（第 99.6 百分位）⇒ 换尺主要改的是"谁吃亏"，
+ *   不是"整体挪一挪"。考卷那个数仍在 d.H 里，悬停与 pm/duel 两种口径都还能读。*/
+function Fv(d) { return d.Hp / 100 + st.T * d.S; }
+/* 名次必须跟着尺重算：coords.tsv 的 rank 列是**考卷口径 + 出厂 T** 下算的，沿用就会把"第 N 名"读成旧尺。
+ *   这段在装载时跑，而装载时 st.T 还没被人动过 ⇒ 它本身就是出厂 T，不再另存一份常数（§E278：注释/代码里不许复制数值）。*/
+(function () { var o = DATA.map(function (d, i) { return i; }).sort(function (a, b) { return Fv(DATA[b]) - Fv(DATA[a]); });
+  for (var k = 0; k < o.length; k++) { DATA[o[k]].rkExam = DATA[o[k]].rk; DATA[o[k]].rk = k + 1; } })();
 function fRange() { var a = Infinity, b = -Infinity; for (var i = 0; i < N; i++) { var v = Fv(P[i]); if (v < a) a = v; if (v > b) b = v; } return [a, b]; }
 /* §E297：顶/底由用户选。**只翻高度方向，不翻颜色**（颜色恒为"红 = F 高"，与点色同向）：
  *   goodTop=true  ⇒ 高度 = F（能量高的在上，冠军在峰顶）；false ⇒ 高度 = F_max − F（冠军在阱底）。*/
@@ -318,11 +338,13 @@ function tip(d, fr) {
   return d.id + (d.lin ? ' 【' + d.lin + '】' : '') +
     '\\n家族 ' + d.fam + '（按训练方法/目标分）：' + (famLab(d) || '—') +
     '\\n　RNG seed 名字后缀=' + d.seed + ' ‖ META.seed=' + (d.ms || '—') + ' ‖ 训出 ' + (d.ts || '—') +
-    '\\n　热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof : '（盘上查无该权重）') +
+    '\\n　热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof : (d.pnm ? '\\n　　' + d.pnm : '（父指针未落档）')) +
     (d.ok === 1 ? '  · 过线 ✓' : (d.ok === 0 ? '  · 未过线' : '')) +
     (d.ok === 0 && d.why ? '\\n　栽在：' + d.why : '') +
-    '\\n名次 ' + d.rk + '/' + N + '（出厂 T 下）· 按当前 T 重排见一维视图' +
-    '\\nH 考卷夺1率 = ' + d.H.toFixed(1) + '%   S = ln G_eff = ' + d.S.toFixed(2) + '（G_eff ' + d.Ge.toFixed(2) + '）' +
+    '\\n名次 ' + d.rk + '/' + N + '（**线上口径** · 出厂 T 下重算；旧考卷口径是第 ' + d.rkExam + ' 名）· 按当前 T 重排见一维视图' +
+    '\\nHp **线上口径**夺1率 = ' + d.Hp.toFixed(1) + '%（ε=0.2 soft · 图上的尺就是它）   H 考卷口径 = ' + d.H.toFixed(1) +
+      '%（ε=0 贪心 · 旧尺，历史文档里的数）   Δε = ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1) + 'pt' +
+      '\\n   S = ln G_eff = ' + d.S.toFixed(2) + '（G_eff ' + d.Ge.toFixed(2) + '）' +
     (d.gl === null || d.gl === undefined ? '' : '\\n长程广度 G(long) = ' + (+d.gl).toFixed(2) + (d.gl < 3 ? '  ← 低于闸要求的 3（这条腿最常卡前沿）' : '')) +
     (d.pv === null || d.pv === undefined ? '' : '\\n上槽体检（promote --dry 实测）：' + (d.pv === 1 ? '✅ 三条腿全过 —— 这枚真能换包' : '⛔ ' + d.pb)) +
     (d.ds ? '\\n对现役配对决斗 A−B = ' + d.da + ' ‖ ' + d.db + ' pt（' +
@@ -333,7 +355,7 @@ function tip(d, fr) {
       '% ⇒ Δε = ' + (d.de >= 0 ? '+' : '') + d.de.toFixed(1) + 'pt（' +
       (d.de >= 3.41 ? '脆：开探索就掉，过线组第 94 百分位那一档' : d.de < 0 ? '吃探索：开了反而强' : '对探索口径不敏感') +
       '）‖ 噪声尺：同包两 seed 极差 p50 1.5 ‖ p90 3.7pt') +
-    '\\nF = H + T·S = ' + Fv(d).toFixed(3) + '   高于地板 = F − F_min = ' + (Fv(d) - fr[0]).toFixed(3) +
+    '\\nF = Hp + T·S = ' + Fv(d).toFixed(3) + '（**线上口径**）   高于地板 = F − F_min = ' + (Fv(d) - fr[0]).toFixed(3) +
     '\\n伤害/局 ' + d.dmg.toFixed(1) + ' · 重击 ' + d.heavy.toFixed(1) + ' · 盾 ' + d.holo.toFixed(1) +
     ' · 回合 ' + d.rounds.toFixed(1) + ' · 平局 ' + (d.draw * 100).toFixed(0) + '%' +
     '\\n座位极差 ' + d.seat.toFixed(0) + 'pt · 技能种类 ' + d.keys + ' · 蓄能/局 ' + d.chg.toFixed(1) +
@@ -501,7 +523,7 @@ function draw1(fr) {
   g.beginPath(); g.moveTo(pad, base); g.lineTo(w - pad, base); g.stroke();
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText('名次（按当前 T 重排）→', pad, base + 46 * devicePixelRatio);
-  g.fillText('纵轴 = F = H + T·S（F 越高越好）：' + (st.goodTop ? '越高 = 越好，贴基线 = 最差' : '贴基线 = 最好（冠军在底），越高 = 越差'), w * 0.34, band - 10 * devicePixelRatio);
+  g.fillText('纵轴 = F = Hp + T·S（**线上口径** · F 越高越好）：' + (st.goodTop ? '越高 = 越好，贴基线 = 最差' : '贴基线 = 最好（冠军在底），越高 = 越差'), w * 0.34, band - 10 * devicePixelRatio);
   scr = new Array(N);
   var dx = (w - 2 * pad) / (N - 1);
   for (i = 0; i < N; i++) {
@@ -623,8 +645,14 @@ function drawTree(fr) {
   g.restore();   /* §E314 数据层的裁剪到这里收口（点与点标签都不许滑进左栏）*/
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   /* 页脚 = 轴饰，不进相机（同上：跟着放大 2.4 倍会直接掉出画布，"缩放 ×" 那个数也就永远看不到了）*/
-  g.fillText('行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : 'F（势）') + '（蓝低 → 红高）· 绿环 = 过线 · 淡蓝曲线 = 能解析到的热启动父边 · 滚轮 = 缩放横轴（时间）· Shift+滚轮 = 缩放纵轴（家族行）· 左键拖动 = 平移 · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2),
+  g.fillText('行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : 'F（线上口径势）') + '（蓝低 → 红高）· 绿环 = 过线 · 淡蓝曲线 = 能解析到的热启动父边 · 滚轮 = 缩放横轴（时间）· Shift+滚轮 = 缩放纵轴（家族行）· 左键拖动 = 平移 · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2),
     padL, h - 14 * devicePixelRatio);
+  /* §E314 那根星形中心必须自己在图上说一句"我不是血统"，否则 81% 共父会被读成"演化收敛"。
+     ⚠ 只能另起一次 fillText：canvas 的 fillText **不认 \n**（第一版把它拼在同一串里 ⇒ 两段挤成一行、右缘被截，
+        而且 markdown 的 ** 在画布上是原样字符）。*/
+  if (NRBASE) { g.fillStyle = '#e0b13c';
+    g.fillText('另有 ' + NRBASE + ' 枚（' + Math.round(NRBASE * 100 / N) + '%）的父 = RUNNER-BASE d13d3c85…（runner 恒拷 EPIRUS_BUNDLE_IN 的产物 · 不是血统）⇒ 这条边图上不画',
+      padL, h - 30 * devicePixelRatio); }
 }
 /* 「卡住缩放上界 + 背景不要割裂」：缩放的下界 = 场恰好铺满视口（再小就露出虚空）；平移卡到"场始终盖住整个视口"。
  *   由 kmin 的定义可证两个平移区间非空，所以 clamp 不会打架。*/
@@ -781,7 +809,8 @@ function isoBuild(sig, thr, GN, field) {
    *   所以阈值 50% 时壳内 0 枚 —— "没有壳"是数据的正确回答，不是 bug。降到 30% 才有 38 枚里 25 枚过线（66%），
    *   但那一步留一复核只剩 27 枚里 3 枚（11% < 底率 16%）⇒ **这层壳是"点把自己照亮"，不是局部富集**。
    *   既然'ok'场能给的诚实信息就这么多，再给一个不会空的场：同一套壳画在**势**上，回答"该往哪片形状继续训"。
-   *   势场阈值 64% ⇒ 壳内 68 枚、纯度 31%，而**留一还有 23%**（底率 15.7%）⇒ 全场唯一"过了留一复核还站得住"的壳。*/
+   *   势场阈值 67% ⇒ 壳内 122 枚、纯度 28%，而**留一还有 21%**（底率 15.7%）⇒ 全场唯一"过了留一复核还站得住"的壳。
+   *   ⚠ §E314 换尺后这一组数全部重扫过（旧势场是 64% / 68 枚 / 31% / 23%）—— 场的定义一动，默认值就必须重定。*/
   var fr2 = fRange(), fspan = (fr2[1] - fr2[0]) || 1;
   /* 没判定的枚一律 NaN ⇒ 不进核、不进分母（旧写法 null 会被 isFinite 放进来当 0，是个静默偏置）*/
   function vAt(m) { return field === 'pot' ? (Fv(P[m]) - fr2[0]) / fspan : (P[m].ok === 1 ? 1 : (P[m].ok === 0 ? 0 : NaN)); }
@@ -999,7 +1028,7 @@ function draw3b(fr) {
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
     putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-  g.fillText('三维行为轴（x3/y3/z3）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 颜色 = F（势）⇒ 第三轴是行为不是深度' +
+  g.fillText('三维行为轴（x3/y3/z3）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 颜色 = F（线上口径势 = Hp + T·S）⇒ 第三轴是行为不是深度' +
     /* §E312 壳好不好必须当场给数，而且**两列一起给**：含自己那列与画出来的壳同口径但循环，留一那列才是"不是靠自己被圈进来"。
      *   只报一列就会被骗（iso-sweep.mjs 实测两列差一倍）⇒ 这也回答"壳到底有没有用"：留一塌到 0 就说明这层壳是自我照亮。*/
     (isoInfo ? ' ‖ 壳[' + (isoInfo.field === 'pot' ? '势' : '过线概率') + '] 阈值 ' + Math.round(st.isoT * 100) +
@@ -1024,7 +1053,7 @@ function drawBody() {
   paintLegend(fr);
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   document.getElementById('stat').textContent = N + ' 枚 · 历代冠军 ' + P.filter(function (d) { return d.lin; }).length +
-    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : '训练方法家族') +
+    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : '训练方法家族') +
     (st.mode === 'map' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') + (n ? ' · 高亮 ' + n + ' 个家族' : '');
 }
 /* ⑥ 所有重绘走 rAF 合并：一帧最多画一次（拖动/滑杆连续事件下这是"卡死"的第二条来源）*/
@@ -1218,7 +1247,7 @@ function syncIso() { var b = document.getElementById('bisos');
   if (s) s.value = String(st.isoT); if (v) v.textContent = Math.round(st.isoT * 100) + '%';
   var tr = document.getElementById('isorow');   /* 阈值行的提示跟着场走：两场刻度不同，说明必须分开写 */
   if (tr) tr.title = (st.isoField === 'pot'
-    ? '壳的判据 = 该处**局部势 F**（0..1 归一）。这条线只能落在 59%（全库均值）到 68%（场峰值）那一小段里：低于 59% 就把整片云圈进去、纯度退回底率 = 什么都没圈。默认 64% ⇒ 壳内约 68 枚、过线纯度 31%（底率 16%），留一复核还有 23% ⇒ 这一层是全场唯一"过了留一还站得住"的壳。'
+    ? '壳的判据 = 该处**局部势 F**（F = 线上口径 Hp + T·S，归一化到 0..1）。这条线只能落在 63%（全库均值）到 70%（场峰值）那一小段里：低于均值就把整片云圈进去、纯度退回底率 = 什么都没圈。默认 67% ⇒ 壳内约 122 枚、过线纯度 28%（底率 16%），留一复核还有 21% ⇒ 这一层是全场唯一"过了留一还站得住"的壳。'
     : '壳的判据 = 该处**局部过线概率**（往全库过线率 16% 收缩后的）。收缩后场的峰值实测只有 42% ⇒ 阈值拖过它必然空壳（50% 时"没有壳"是正确回答，不是坏了）。默认 30% ⇒ 壳内约 38 枚、纯度 66%；但留一复核只剩 11% ⇒ 这层壳是每枚点把自己那格照亮，看形状可以，别当证据。'); }
 document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) % 3; syncIso(); req(); };
 (function () { var s = document.getElementById('isot'), v = document.getElementById('isotv');
@@ -1328,11 +1357,11 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button data-m="3db">三维行为轴</button>' +
 '<button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button>' +
 '<label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label>' +
-'<label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 64%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 59% 与峰值 68% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label>' +
+'<label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label>' +
 '<button id="reset">复位视图</button>' +
 '<button id="fitt">投影判据 ⓘ</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
-'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（势）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option></select></label>' +
+'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
 '<label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label>' +
 '<label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label>' +

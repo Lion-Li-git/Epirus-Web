@@ -4,6 +4,14 @@
  *   而这里有个真坑：`EPIRUS_CHAMPION_3P` 同时是 `EPIRUS_CHAMPION_3P_META` 的前缀，且 .bak 里 META 那行在前面
  *   ⇒ 直接 indexOf 会拿到 META 对象（它没有 .a）⇒ 全部静默返回 null。只认"名字后面紧跟 ="的那一处。
  * 口径与 server/train-server.mjs:100 的 weightsId(params) 一致（只哈希权重数组，不含决策期常数 ⇒ "同指纹"≠"同行为"）。
+ *
+ * ⚠ 两条搜索纪律（§E314，DS 找 d13d3c85 时两条都踩过，写在这里因为**身份判据错了会让整个负结果作废**）：
+ *   ① **字符串命中 ≠ 身份**。`d13d3c85` 会作为**子代自己的 META 字段**出现在别的 .bak 里
+ *      （实测 `r61fix-31.bak` 就是这么被误判成"找到了"的 —— 它的权重其实是 69be43a139a4956b，
+ *      那句 `d13d3c85` 只说明"它的父是那个 BASE"）。⇒ 定身份只能逐枚算权重，不许 grep 文本。
+ *   ② **别跳过点文件**。第一版候选过滤器写了 `basename.startswith('.') ⇒ skip`，
+ *      而 `docs/artifacts/.training-in-3p.js`（那个被恒拷的实体）**正好是点文件** ⇒ 一整类候选被静默排除。
+ *      按扩展名筛、不按名字首字符筛（`champion-map/widhunt.mjs` 里注释着这条）。
  */
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
