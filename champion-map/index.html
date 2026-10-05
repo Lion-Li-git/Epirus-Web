@@ -63,7 +63,8 @@ var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
                            ⇒ 一座壳至少要"几个过线的挤在一起"才长得出，用户看到的"只圈到边缘"那批岛就没了。*/
   ox: 0, oy: 0, k: 1, yaw: -Math.PI / 2, pit: Math.PI / 2, elev: 0, goodTop: true,
   ox3: 0, oy3: 0, zoom3: 1, hi: {}, bg: '#0f1522', ink: '#dce6f5', dim: '#9fb0cc',
-  tK: 1, tX: 0, tY: 0,   /* §E312 谱系图那台相机（只影响 tree 视图；默认 1/0/0 = 与加相机之前逐像素相同）*/
+  tKx: 1, tKy: 1, tX: 0, tY: 0,   /* §E312/§E314 谱系图那台相机（只影响 tree 视图；默认 1/1/0/0 = 与加相机之前逐像素相同）
+                                     §E314 拆成横纵两把：滚轮管 tKx（时间），Shift+滚轮管 tKy（家族行）*/
   isoGN: 72 };           /* §E312 壳的网格分辨率（沿最长轴的格数）：52 = 旧默认（棱面明显）‖ 72 ‖ 96 */
 var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三维行为轴与谱系图只能用颜色表示势 */
 /* 地图模式的两个相机预设：**同一个方位角**（yaw 都是 −π/2），只差俯仰 —— 平面态 = 正俯视（pitch π/2，
@@ -359,11 +360,15 @@ function draw1(fr) {
 function drawTree(fr) {
   var w = cv.width, h = cv.height, i;
   clear(w, h);
-  /* §E312 谱系图相机：screen = world·k + p（与地图那台同形）。默认 k=1 ⇒ 画面与加相机之前逐像素相同。
-   *   字号跟着 k 缩放（夹在 0.8~2.4 倍）⇒ 放大能真的把左栏那堆家族名读清楚，而不只是把点拉开。*/
-  var TK = st.tK, TPX = st.tX, TPY = st.tY;
-  var WX = function (x) { return x * TK + TPX; }, WY = function (y) { return y * TK + TPY; };
-  var ff = function (n) { return (n * devicePixelRatio * Math.max(0.8, Math.min(2.4, TK))) + 'px system-ui,sans-serif'; };
+  /* §E312/§E314 谱系图相机 = **横纵分开**（用户："改成横纵轴分别缩放的版本，类似经典统计图缩放"）
+   *   滚轮 = 横轴（时间）‖ Shift+滚轮 = 纵轴（家族行）‖ 各自以光标为锚。
+   *   两轴独立之后，"把 22 行拉开好读"和"把某一天那批点拉开看散度"是两件事，不必再互相绑架
+   *   （旧版单一 tK 下想把行拉开就会把时间轴也吹出画布，反之亦然）。
+   *   ⚠ 点半径**不跟缩放**（经典统计图就是这个约定：放大是为了分开位置，不是为了把点吹大）；
+   *     只有左栏家族名跟纵轴长（行高了，字不跟着长就读不出那是同一行）。*/
+  var TKX = st.tKx, TKY = st.tKy, TPX = st.tX, TPY = st.tY;
+  var WX = function (x) { return x * TKX + TPX; }, WY = function (y) { return y * TKY + TPY; };
+  var ff = function (n) { return (n * devicePixelRatio * Math.max(0.8, Math.min(2.4, TKY))) + 'px system-ui,sans-serif'; };
   var fams = [], fset = {};
   for (i = 0; i < N; i++) if (P[i].fam && !fset[P[i].fam]) { fset[P[i].fam] = 1; fams.push(P[i].fam); }
   fams.sort(function (a, b) { return a - b; });
@@ -373,23 +378,30 @@ function drawTree(fr) {
   var padL = 340 * devicePixelRatio, padR = 26 * devicePixelRatio, padT = 40 * devicePixelRatio, padB = 46 * devicePixelRatio;
   var rowH = (h - padT - padB) / fams.length, X = function (tv) { return padL + (tv - tmin) / (tmax - tmin) * (w - padL - padR); };
   var Y = function (f) { return padT + (fams.indexOf(f) + 0.5) * rowH; };
-  var KS = Math.max(0.8, Math.min(2, TK));
+  var KS = 1;   /* §E314 点半径不跟缩放（经典统计图约定）—— 保留这个名字是因为下面两处按它算半径 */
   g.font = ff(11);
   for (i = 0; i < fams.length; i++) {
     var f = fams[i], mem = P.filter(function (d) { return d.fam === f; });
     var nOk = mem.filter(function (d) { return d.ok === 1; }).length, nCh = mem.filter(function (d) { return d.lin; }).length;
     var best = Math.min.apply(null, mem.map(function (d) { return d.rk; }));
     g.fillStyle = i % 2 ? 'rgba(255,255,255,.028)' : 'rgba(255,255,255,.0)';
-    g.fillRect(WX(padL - 6), WY(padT + i * rowH), (w - padL - padR + 12) * TK, rowH * TK);
+    /* §E314 行带 = 整幅宽、**不跟横轴走**；家族名/统计两行同理钉在左栏（只跟纵轴）
+     *   ⇒ 这就是经典统计图的"y 轴标签常驻"：把时间轴放大 3 倍或拖到 09-21，左边那一列名字仍在原地，
+     *     否则横轴一动标签就被拖出画布（第一版实测就是"家族 1"整行消失、只剩"·风格权重…"半截）。*/
+    g.fillRect(0, WY(padT + i * rowH), w, rowH * TKY);
     g.fillStyle = st.ink; g.textAlign = 'right';
     /* 统计并入左栏、上下两行：右侧留给点，图例浮在右上会压掉任何画在那里的数字；
      *   同一行放两段字实测会互相咬住（家族名长短不定，没法预留固定偏移）。*/
-    g.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), WX(padL - 12 * devicePixelRatio), WY(padT + i * rowH + rowH * 0.46));
+    g.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.46));
     g.fillStyle = st.dim; g.font = ff(10);
-    g.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, WX(padL - 12 * devicePixelRatio), WY(padT + i * rowH + rowH * 0.88));
+    g.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.88));
     g.font = ff(11);
   }
   g.textAlign = 'left';
+  /* §E314 左栏与绘图区分界：钉住的标签列与会平移的点之间要有条边，否则放大后点会滑进标签里读成"某家族的第 N 枚" */
+  g.strokeStyle = 'rgba(159,176,204,.22)'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(padL - 6, 0); g.lineTo(padL - 6, h); g.stroke();
+  g.save(); g.beginPath(); g.rect(padL - 5, 0, w - padL + 5, h); g.clip();   /* 数据层（竖线/父边/点）不许进左栏 */
   /* 时间刻度：按天打竖线。**线跟相机走、日期字不跟** —— 刻度标签是 x 轴的轴饰，
    *   缩放时该横向散开，但纵向必须钉在图底；一起变换的话放大 2.4 倍就把字甩到画布外（第一版实测如此）。*/
   var day = 86400000;
@@ -409,7 +421,7 @@ function drawTree(fr) {
   g.strokeStyle = 'rgba(120,200,255,.30)'; g.lineWidth = 1 * devicePixelRatio;
   for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
     var a = pos[dd.pof], b = pos[dd.id];
-    g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - rowH * 0.5 * TK, b[0], b[1]); g.stroke(); }
+    g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - rowH * 0.5 * TKY, b[0], b[1]); g.stroke(); }
   scr = new Array(N);
   for (i = 0; i < N; i++) { var d = P[i], p = pos[d.id]; if (!p) continue; scr[i] = p;
     var al = alphaOf(d); g.globalAlpha = al;
@@ -424,9 +436,10 @@ function drawTree(fr) {
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
     putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false); }
+  g.restore();   /* §E314 数据层的裁剪到这里收口（点与点标签都不许滑进左栏）*/
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   /* 页脚 = 轴饰，不进相机（同上：跟着放大 2.4 倍会直接掉出画布，"缩放 ×" 那个数也就永远看不到了）*/
-  g.fillText('行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = F（蓝低 → 红高）· 绿环 = 过线 · 淡蓝曲线 = 能解析到的热启动父边 · 滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 缩放 ×' + TK.toFixed(2),
+  g.fillText('行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : 'F（势）') + '（蓝低 → 红高）· 绿环 = 过线 · 淡蓝曲线 = 能解析到的热启动父边 · 滚轮 = 缩放横轴（时间）· Shift+滚轮 = 缩放纵轴（家族行）· 左键拖动 = 平移 · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2),
     padL, h - 14 * devicePixelRatio);
 }
 /* 「卡住缩放上界 + 背景不要割裂」：缩放的下界 = 场恰好铺满视口（再小就露出虚空）；平移卡到"场始终盖住整个视口"。
@@ -960,8 +973,15 @@ cv.addEventListener('wheel', function (e) { e.preventDefault();
   else if (st.mode === 'tree') {
     /* 光标下的内容不动：screen = world·k + p ⇒ p' = m − f·(m − p)。夹在 0.4~12 倍（再小字糊成一团，再大只剩几个点）*/
     var rt = cv.getBoundingClientRect(), mt = (e.clientX - rt.left) * devicePixelRatio, nt = (e.clientY - rt.top) * devicePixelRatio;
-    var k2 = Math.max(0.4, Math.min(12, st.tK * f)); f = k2 / st.tK; st.tK = k2;
-    st.tX = mt - (mt - st.tX) * f; st.tY = nt - (nt - st.tY) * f;
+    /* §E314 横纵分开：滚轮 = 横轴（时间）‖ Shift+滚轮 = 纵轴（家族行）。被改的那一轴以光标为锚，另一轴原地不动。 */
+    var rt = cv.getBoundingClientRect(), mt = (e.clientX - rt.left) * devicePixelRatio, nt = (e.clientY - rt.top) * devicePixelRatio;
+    if (e.shiftKey) {
+      var ky = Math.max(0.4, Math.min(12, st.tKy * f)); f = ky / st.tKy; st.tKy = ky;
+      st.tY = nt - (nt - st.tY) * f;
+    } else {
+      var kx = Math.max(0.4, Math.min(12, st.tKx * f)); f = kx / st.tKx; st.tKx = kx;
+      st.tX = mt - (mt - st.tX) * f;
+    }
   }
   req(); }, { passive: false });
 /* 平面 ⇄ 立体：同一台相机躺下/起来 + 柱高 0⇄U，520ms 缓动 —— 不是跳页面。
@@ -1036,7 +1056,7 @@ document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) %
 function syncHdir() { document.getElementById('bh').textContent = st.goodTop ? '好在上 ⇅' : '好在下 ⇅'; }
 document.getElementById('bh').onclick = function () { st.goodTop = !st.goodTop; syncHdir(); req(); };
 document.getElementById('reset').onclick = function () {
-  st.ox = st.oy = 0; st.k = 1; st.ox3 = st.oy3 = 0; st.zoom3 = 1; st.tK = 1; st.tX = 0; st.tY = 0;
+  st.ox = st.oy = 0; st.k = 1; st.ox3 = st.oy3 = 0; st.zoom3 = 1; st.tKx = 1; st.tKy = 1; st.tX = 0; st.tY = 0;
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit; }
   else { st.yaw = 0.62; st.pit = 0.40; }
   req(); };
@@ -1075,7 +1095,9 @@ var HCL = null, HT_SEEN = 0;
     /* §E312 壳分辨率 + 谱系图相机也走深链 ⇒ 无头复核能钉住这两个状态 */
     if (kv[0] === 'isogn') st.isoGN = Math.max(24, Math.min(128, +kv[1] || 72));
     if (kv[0] === 'isof') st.isoField = (kv[1] === 'pot' ? 'pot' : 'ok');
-    if (kv[0] === 'tk') st.tK = Math.max(0.4, Math.min(12, +kv[1] || 1));
+    if (kv[0] === 'tkx') st.tKx = Math.max(0.4, Math.min(12, +kv[1] || 1));
+    if (kv[0] === 'tky') st.tKy = Math.max(0.4, Math.min(12, +kv[1] || 1));
+    if (kv[0] === 'tk') { st.tKx = Math.max(0.4, Math.min(12, +kv[1] || 1)); st.tKy = st.tKx; }   /* 旧深链（单轴）= 两轴一起，兼容 §E312 那批截图 */
     if (kv[0] === 'tx') st.tX = +kv[1] || 0;
     if (kv[0] === 'ty') st.tY = +kv[1] || 0;
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } }
