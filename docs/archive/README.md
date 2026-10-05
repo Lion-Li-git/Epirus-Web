@@ -81,6 +81,30 @@
 **同日的另一件清理（不是归档）**：`README.md` 头部那面"每版堆一行"的墙（46 行、v1.5.316~v1.5.331 全摞在第一章上面）压回 **16 行、只留当前版本**，
 历史逐版结论指回 `CHANGELOG.md` ⇒ 这条规矩本来就写在 README 自己那句"README 不是账本"里，这次是照自己立的规矩做一遍。
 
+## 2026-10-06（qoder 夜班 · 用户：「整理一下 docs，没用的东西移出去」）
+
+判据这次**收紧回 09-30 那条硬的**，没有再放宽：先跑一遍引用面审计
+（`docs/artifacts/e337-out/docref-audit.mjs`，把 `js/ tools/ server/ tests/ index.html README.md .gitignore` + 门读的三份 docs 算"硬面"，
+`CHANGELOG.md` 与其余 docs 算"软面"，逐份数命中），**硬面非零的一份都不挪**。
+`git mv`、内容一字未改。
+
+| 归档件 | 为什么不再现行（硬面引用数全为 0） |
+|---|---|
+| `REVIEW-2026-09-24-criteria-measurement.md` · `-gate-layer-audit.md` · `-metrology-audit.md` | 09-24 那轮三方复核；结论已落进 `CHANGELOG` 与门（同批的 `-killreward-ds` 有 README 指针 ⇒ **留在顶层**） |
+| `HANDOFF-FOR-QWEN-2026-10-03-drain-verdict-ds.md` · `-drain-window-ds.md` · `HANDOFF-FOR-QWEN-2026-10-04-well-rescale.md` · `-well-rounds.md` · `HANDOFF-FOR-DS-2026-10-04-well-v3-qoder.md` | 班与班的交接；现行那支是 `docs/HANDOFF-FOR-DS-2026-10-05-gate-vs-objective-qoder.md` → `HANDOFF-FOR-DS-2026-10-06-overnight-qoder.md` |
+| `PROPOSAL-2026-09-30-adversary-model.md` · `PROPOSAL-2026-10-02-config-axis-ds.md` | 两份都已判完：对手模型那支落进 §E148~§E156；配置轴那支 §E230 **判否收摊**。⚠ 同名的 `-econ-exam-tables` 有 `np-test.mjs` + `server/opp-pool.mjs` 硬引用 ⇒ 留在顶层 |
+| `l2-eval-matrix-120.tsv` · `-engine-1391c094.tsv` · `-engine-61a7711c.tsv` | 09-19 那批 L2 矩阵读数，规则指纹已换三代（`1391c094`/`61a7711c` 就是当时那两个），现在的尺读不出可比读数 |
+| `skill-report-3p.html` · `-5p.html` · `-5p.png` | 09-11/09-12 的技能报告页；现行的是 `-2p` / `-cmp-3p` / `skill-report.html`（后者有 `tools/skill-report.mjs` 硬引用 ⇒ 留） |
+
+**同日另一件事（不是归档，是挪日志）**：19 份 `RESEARCH-LOG-*` / `OVERNIGHT-*` 进了 **`docs/logs/`**，
+判据与"为什么不用重认证"写在 `docs/logs/README.md`。那两份 README 互相是对照表，别只读一份。
+
+**看过但故意没挪的**（点名留档，免得下一个人以为漏了）：
+`CHAMPION-CANDIDATES.md`（0 硬引用，但按 09-30 那节记的"DS/用户裁定地盘"，本次仍不动）·
+`DECISIONS-2026-09-29.md`（裁定件）· `RESEARCH-QUEUE-2026-09-20.md`（本档上面那张表自己写着"仍在使用"）·
+`HANDOFF-2026-09-19.md` · `PARAMS-PLAN.md` · `OPTIMIZATION-ep-cliff.md` · `REVIEW-3P.md` · `REVIEW-QODER-2026-09-19.md` ·
+`AUDIT-RESPONSE-v1.5.85.md` · `METHODOLOGY.md` · `RULES-2P.md` · `RULES-NP.md` ⇒ **全部有硬面引用**（`js/`、`tools/` 或门本身），挪了会打断代码注释里的锚。
+
 ## 怎么找回全文
 
 ```bash
