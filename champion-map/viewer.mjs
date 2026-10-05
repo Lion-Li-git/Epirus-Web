@@ -341,8 +341,8 @@ function tip(d, fr) {
     '\\n　热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof : (d.pnm ? '\\n　　' + d.pnm : '（父指针未落档）')) +
     (d.ok === 1 ? '  · 过线 ✓' : (d.ok === 0 ? '  · 未过线' : '')) +
     (d.ok === 0 && d.why ? '\\n　栽在：' + d.why : '') +
-    '\\n名次 ' + d.rk + '/' + N + '（**线上口径** · 出厂 T 下重算；旧考卷口径是第 ' + d.rkExam + ' 名）· 按当前 T 重排见一维视图' +
-    '\\nHp **线上口径**夺1率 = ' + d.Hp.toFixed(1) + '%（ε=0.2 soft · 图上的尺就是它）   H 考卷口径 = ' + d.H.toFixed(1) +
+    '\\n名次 ' + d.rk + '/' + N + '（线上口径 · 出厂 T 下重算；旧考卷口径是第 ' + d.rkExam + ' 名）· 按当前 T 重排见一维视图' +
+    '\\nHp 线上口径夺1率 = ' + d.Hp.toFixed(1) + '%（ε=0.2 soft · 图上的尺就是它）   H 考卷口径 = ' + d.H.toFixed(1) +
       '%（ε=0 贪心 · 旧尺，历史文档里的数）   Δε = ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1) + 'pt' +
       '\\n   S = ln G_eff = ' + d.S.toFixed(2) + '（G_eff ' + d.Ge.toFixed(2) + '）' +
     (d.gl === null || d.gl === undefined ? '' : '\\n长程广度 G(long) = ' + (+d.gl).toFixed(2) + (d.gl < 3 ? '  ← 低于闸要求的 3（这条腿最常卡前沿）' : '')) +
@@ -355,7 +355,7 @@ function tip(d, fr) {
       '% ⇒ Δε = ' + (d.de >= 0 ? '+' : '') + d.de.toFixed(1) + 'pt（' +
       (d.de >= 3.41 ? '脆：开探索就掉，过线组第 94 百分位那一档' : d.de < 0 ? '吃探索：开了反而强' : '对探索口径不敏感') +
       '）‖ 噪声尺：同包两 seed 极差 p50 1.5 ‖ p90 3.7pt') +
-    '\\nF = Hp + T·S = ' + Fv(d).toFixed(3) + '（**线上口径**）   高于地板 = F − F_min = ' + (Fv(d) - fr[0]).toFixed(3) +
+    '\\nF = Hp + T·S = ' + Fv(d).toFixed(3) + '（线上口径）   高于地板 = F − F_min = ' + (Fv(d) - fr[0]).toFixed(3) +
     '\\n伤害/局 ' + d.dmg.toFixed(1) + ' · 重击 ' + d.heavy.toFixed(1) + ' · 盾 ' + d.holo.toFixed(1) +
     ' · 回合 ' + d.rounds.toFixed(1) + ' · 平局 ' + (d.draw * 100).toFixed(0) + '%' +
     '\\n座位极差 ' + d.seat.toFixed(0) + 'pt · 技能种类 ' + d.keys + ' · 蓄能/局 ' + d.chg.toFixed(1) +
@@ -523,7 +523,7 @@ function draw1(fr) {
   g.beginPath(); g.moveTo(pad, base); g.lineTo(w - pad, base); g.stroke();
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText('名次（按当前 T 重排）→', pad, base + 46 * devicePixelRatio);
-  g.fillText('纵轴 = F = Hp + T·S（**线上口径** · F 越高越好）：' + (st.goodTop ? '越高 = 越好，贴基线 = 最差' : '贴基线 = 最好（冠军在底），越高 = 越差'), w * 0.34, band - 10 * devicePixelRatio);
+  g.fillText('纵轴 = F = Hp + T·S（Hp = 线上口径夺1率 · F 越高越好）：' + (st.goodTop ? '越高 = 越好，贴基线 = 最差' : '贴基线 = 最好（冠军在底），越高 = 越差'), w * 0.34, band - 10 * devicePixelRatio);
   scr = new Array(N);
   var dx = (w - 2 * pad) / (N - 1);
   for (i = 0; i < N; i++) {
@@ -540,8 +540,10 @@ function draw1(fr) {
     g.globalAlpha = al;
     g.beginPath(); g.arc(x, y, (d.lin ? 5 : 2.6) * st.size, 0, 6.284); g.fillStyle = colOf(d, fr); g.fill();
     if (d.lin && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.4; g.stroke(); }
-    /* 分解条：蓝 = H（夺1率），黄 = T·S（广度）。谁靠哪一头站在这上面一眼可见。 */
-    var hh = (d.H / 100), ss = st.T * d.S, tot = hh + Math.abs(ss) || 1;
+    /* 分解条：蓝 = Hp（线上口径夺1率），黄 = T·S（广度）。谁靠哪一头站在这上面一眼可见。
+       §E314：必须用 Hp 而不是 H —— 纵轴位置已经是 Hp + T·S，蓝条若还画 H 就变成"位置与分解两个口径"，
+       那正是本仓反复踩的"图上画一个数、旁边一行另一个口径的数"。*/
+    var hh = (d.Hp / 100), ss = st.T * d.S, tot = hh + Math.abs(ss) || 1;
     var bh = 9 * devicePixelRatio;
     g.globalAlpha = al * 0.9;
     g.fillStyle = '#4c9ff5'; g.fillRect(x - dx * 0.42, base + 8 * devicePixelRatio, Math.max(1, dx * 0.84 * hh / tot), bh);
@@ -553,7 +555,7 @@ function draw1(fr) {
   for (i = 0; i < ls.length; i++) { var p = scr[ls[i].i]; if (!p) continue;
     putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, p[0], p[1], !!P[ls[i].i].lin, true); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-  g.fillText('一维：位置 = F 名次（下方蓝条 = H，黄条 = T·S）· 悬停看明细 · 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
+  g.fillText('一维：位置 = F 名次（下方蓝条 = Hp 线上口径夺1率，黄条 = T·S）· 悬停看明细 · 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
 }
 
 /* ⑤ §E304 谱系图：**行 = 家族（按最早 ts 排，所以从上往下就是时间推进）**，横轴 = 训练时刻。
@@ -1247,8 +1249,8 @@ function syncIso() { var b = document.getElementById('bisos');
   if (s) s.value = String(st.isoT); if (v) v.textContent = Math.round(st.isoT * 100) + '%';
   var tr = document.getElementById('isorow');   /* 阈值行的提示跟着场走：两场刻度不同，说明必须分开写 */
   if (tr) tr.title = (st.isoField === 'pot'
-    ? '壳的判据 = 该处**局部势 F**（F = 线上口径 Hp + T·S，归一化到 0..1）。这条线只能落在 63%（全库均值）到 70%（场峰值）那一小段里：低于均值就把整片云圈进去、纯度退回底率 = 什么都没圈。默认 67% ⇒ 壳内约 122 枚、过线纯度 28%（底率 16%），留一复核还有 21% ⇒ 这一层是全场唯一"过了留一还站得住"的壳。'
-    : '壳的判据 = 该处**局部过线概率**（往全库过线率 16% 收缩后的）。收缩后场的峰值实测只有 42% ⇒ 阈值拖过它必然空壳（50% 时"没有壳"是正确回答，不是坏了）。默认 30% ⇒ 壳内约 38 枚、纯度 66%；但留一复核只剩 11% ⇒ 这层壳是每枚点把自己那格照亮，看形状可以，别当证据。'); }
+    ? '壳的判据 = 该处局部势 F（F = 线上口径 Hp + T·S，归一化到 0..1）。这条线只能落在 63%（全库均值）到 70%（场峰值）那一小段里：低于均值就把整片云圈进去、纯度退回底率 = 什么都没圈。默认 67% ⇒ 壳内约 122 枚、过线纯度 28%（底率 16%），留一复核还有 21% ⇒ 这一层是全场唯一"过了留一还站得住"的壳。'
+    : '壳的判据 = 该处局部过线概率（往全库过线率 16% 收缩后的）。收缩后场的峰值实测只有 42% ⇒ 阈值拖过它必然空壳（50% 时"没有壳"是正确回答，不是坏了）。默认 30% ⇒ 壳内约 38 枚、纯度 66%；但留一复核只剩 11% ⇒ 这层壳是每枚点把自己那格照亮，看形状可以，别当证据。'); }
 document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) % 3; syncIso(); req(); };
 (function () { var s = document.getElementById('isot'), v = document.getElementById('isotv');
   if (!s) return;
