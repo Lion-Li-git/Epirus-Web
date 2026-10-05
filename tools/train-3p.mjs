@@ -7,7 +7,8 @@ import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来�
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
-import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, rejectNarrowWinners } from './pick-best.mjs';
+import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, rejectNarrowWinners,
+  parseSelSeeds, selBases, scoreRuns, selNote, selGapNote } from './pick-best.mjs';
 import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
 /* v1.5.269（§E77）：载重 veto 的**同口径量具** —— `behavior-profile` 的 `fieldProfile`（ε=0 · temp 0.15 · 5 席同包）。
  * 该模块的主体被 `if (RUN_AS_MAIN)` 守着 ⇒ **import 无副作用**（只会多装载一次引擎，实测 ~0.5 秒）。 */
@@ -83,6 +84,7 @@ const POP = Number(process.argv[5] || 12);
  *   （与 D119/D120 的"要了开关不许静默"同一条规矩）。有意为之的情形用 `EPIRUS_ALLOW_DARK=1` 放行。 */
 const SELF_ENV_KEYS = [
   'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
+  'EPIRUS_SEL_EVAL_SEEDS',   // §E322（v1.6.7）：当选键重验用几粒 seedBase 取均值（默认 4；=1 逐字回到旧行为）
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
   'EPIRUS_HALL_SEED',   // v1.5.277 §E114：把起点补进终局重验的候选池（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
@@ -1127,7 +1129,7 @@ const POOL = [Bots.pickRandom, Bots.pickAggro, Bots.pickDefend, Bots.pickBalance
 const ALL_PAIRS = [];
 for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) ALL_PAIRS.push([POOL[a], POOL[b]]);
 
-// 名人堂逐个用全部 28 对手对验证（新种子），取 1st 最高者作为最终冠军
+// 名人堂逐个用全部对手对（`ALL_PAIRS.length` 对）× 多粒 seedBase 验证，取 `sc` 最高者作为最终冠军
 let finalParams = bestParams, ev = null;
 let DEGENERATE_ONLY = false;   // §N9：名人堂全退化时置真并写进 meta
 console.log('=== 名人堂验证（' + ALL_PAIRS.length + ' 对 x 20 局）===');
@@ -1148,16 +1150,24 @@ if (HALL_SEED > 0 && seedParams) {
   }
 }
 const hallEntries = [];
+/* §E322（v1.6.7）：当选键**不再只吃一粒 seedBase**。默认 4 粒取均值（`EPIRUS_SEL_EVAL_SEEDS=1` 逐字回到旧行为）。
+ * 病与量的证据在 `pick-best.mjs` 的 §E322 头注里（单枚换种子摆 5.4~9.1pt，而同分带只有 3.0pt）。 */
+const SEL = parseSelSeeds(process.env.EPIRUS_SEL_EVAL_SEEDS);
+if (SEL.bad) console.warn('[当选键] ⚠ EPIRUS_SEL_EVAL_SEEDS=' + SEL.bad + ' 不是 1..8 的整数 ⇒ 回落 ' + SEL.k + ' 粒（不静默：这一格直接改当选结果）');
+const SEL_BASES = selBases(SEL.k);
+console.log('[当选键] 每粒候选重验 ' + SEL.k + ' 粒 seedBase（' + SEL_BASES.join(' ‖ ') + '）取均值 ‖ 来源=' + SEL.from);
 for (const h of hall) {
-  const v = T.evalN(h.params, ALL_PAIRS, 20, N, 987654);
-  const sc = v.firstRate + 0.5 * v.top2Rate;
+  const runs = SEL_BASES.map(function (b) { return T.evalN(h.params, ALL_PAIRS, 20, N, b); });
+  const v = scoreRuns(runs);
+  const sc = v.sc;
   const zr = densityProfile(sb, h.params, 'multi', 12).zeroAtkRate;
   console.log('  trainFit=' + (typeof h.fit === 'number' ? h.fit.toFixed(3) : '起点') + ' -> 1st=' + (v.firstRate * 100).toFixed(1) +
-    '% top2=' + (v.top2Rate * 100).toFixed(1) + '% 零攻击局=' + (zr * 100).toFixed(0) + '%');
+    '% top2=' + (v.top2Rate * 100).toFixed(1) + '% 零攻击局=' + (zr * 100).toFixed(0) + '% ' + selNote(v));
   hallEntries.push({ ref: h, score: sc, zeroAtkRate: zr, ev: v });
-  if (!ev || sc > (ev.firstRate + 0.5 * ev.top2Rate)) { finalParams = h.params; ev = v; }
+  if (!ev || sc > ev.sc) { finalParams = h.params; ev = v; }
 }
 {
+  console.log(selGapNote(hallEntries));
   const sel = rejectDegenerateWinners(hallEntries);
   if (sel.dropped) console.log('[退化闸] 剔除 ' + sel.dropped + ' 粒零攻击≥90% 的名人堂成员（与 promote/2P 同判据）');
   /* v1.5.170（§N29）：两把"兑现"口径的闸共用一次 `mirrorHealth`（同一量具测两遍 = 白跑一遍）。
@@ -1502,7 +1512,7 @@ try {
       (bmeta.selected ? '（当选）' : (dupWinner ? '（与 band' + bmeta.dupOfBand + ' 同一粒权重）' : '')));
   }
 } catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
-console.log('\n=== ' + N + ' 人实测（最终冠军，28 对 × 20 局，座位轮换，temp0.15）===');
+console.log('\n=== ' + N + ' 人实测（最终冠军，' + ALL_PAIRS.length + ' 对 × 20 局 × ' + SEL.k + ' 粒 seedBase，座位轮换，temp0.15）===');
 console.log('1st=' + (ev.firstRate * 100).toFixed(1) + '%  top2=' + (ev.top2Rate * 100).toFixed(1) +
   '%   (1st/2nd/3rd = ' + ev.first + '/' + ev.second + '/' + ev.third + ' of ' + ev.games + ')');
 console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
@@ -1541,6 +1551,9 @@ const meta = {
   productIsSeed: PRODUCT_IS_SEED, hallSeedEntries: HALL_SEED_ENTRIES,   // v1.5.277 §E113：产物=起点逐位 ⇒ 本臂零改包
   hallSeedReq: HALL_SEED, hallSeedAppended: HALL_SEED_APPENDED,   // v1.5.277 §E114：重验池有没有被补进起点
   source: 'tools/train-3p.mjs', n: N, gens: GENS, games: GAMES, pop: POP,
+  /* §E322：把"当选键用了几粒 seedBase + 那几粒之间的极差"记进 meta。
+   * 理由（§E318 实测）：链上从不印"分差 vs 噪声"的关系，于是 0.49pt 的分差被当判断用。 */
+  selSeeds: SEL.k, selSeedBases: SEL_BASES, selSpreadPt: Number(ev.spreadPt ? ev.spreadPt.toFixed(2) : 0),
   ts: new Date().toISOString(), firstRate: ev.firstRate, top2Rate: ev.top2Rate
 };
 writeFileSync(OUT_PATH,

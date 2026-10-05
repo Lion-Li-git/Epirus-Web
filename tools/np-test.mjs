@@ -38,7 +38,8 @@ import { makeShapeScorer } from '../server/shape-scorer.mjs';   // P2 形状适�
 /* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
-import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand, bandPickByUsage, rejectNarrowWinners, COLLAPSE_LINE } from './pick-best.mjs';
+import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand, bandPickByUsage, rejectNarrowWinners, COLLAPSE_LINE,
+  SEL_BASE0, SEL_STRIDE, SEL_SEEDS_DEFAULT, parseSelSeeds, selBase, selBases, scoreRuns, selNote, selGapNote } from './pick-best.mjs';
 import { readTrainEnv, hasTrainOverride, TRAIN_ENV_KEYS as TEK } from '../server/train-env.mjs';   // v1.5.169 D129：训练旋钮单一来源
 /* v1.5.132：V1/V2/V4「整局」三装配的**单一来源**（D105 与 `probe-ring-ablate.mjs` 共用一份实现）。 */
 import { measureAll } from './v2v4-lib.mjs';
@@ -11022,6 +11023,79 @@ t('D216 真机栏的读取只许一份实现：手算夹具四个量 + 两入口
   eq(run(['tools/log-census.mjs', '--seat=2,3,4,5']).status, 64, '⑥ `log-census` 的 `--seat=`（少个 s）必须 exit 64');
   eq(run(['tools/log-behavior.mjs', '--seat=2,3,4,5']).status, 64, '⑥ `log-behavior` 同样要拒（这两个入口以前根本没守卫）');
   try { rmSync(dir, { recursive: true, force: true }); } catch (e) { /* 临时目录清不掉不影响判据 */ }
+});
+
+t('D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 base 的局 seed 重叠 · 单粒必须逐字等于旧算式 · 非法粒数要响亮 · 分差 vs 噪声必须印出来（而 `=1` 那一档不许自证清白）· 两条入口都真在用它', function () {
+  /* ===== ① seedBase 的取法本身是量具的一部分 =====
+   * `evalN` 内部每局 seed = `seedBase + g*977 + total`（g < 20、total < 720）⇒ 一粒 base 占掉约 20,260 个整数。
+   * 步长小于这个跨度 ⇒ 两粒 base 会**共用局 seed**，"多打几枪"就退化成"同一枪多印几遍"（噪声不会降）。 */
+  eq(selBases(1)[0], 987654, '① 第 1 粒必须就是现状那一粒 987654（否则 `=1` 不是"回到旧行为"而是换了台仪器）');
+  eq(SEL_BASE0, 987654, '① 常量本身也必须还是 987654（上面那条才不是自证）');
+  eq(selBase(2), 1187654, '① 第 3 粒 = 987654 + 2×100000');
+  const span = 19 * 977 + 719;                       // evalN 单粒 base 实际占用的 seed 跨度上界
+  ok(SEL_STRIDE > span, '① 步长 ' + SEL_STRIDE + ' 必须 > 单粒 seed 跨度 ' + span + ' ⇒ 否则两粒 base 的局集合会重叠');
+  eq(selBases(4).join(','), [0, 1, 2, 3].map(i => 987654 + i * SEL_STRIDE).join(','), '① 四粒 base 的序列');
+  eq(new Set(selBases(8)).size, 8, '① 八粒必须互不相同');
+
+  /* ===== ② 单粒必须逐字等于旧算式（这是"默认改了、但退路是真的"的唯一凭据） ===== */
+  const one = { firstRate: 0.4, top2Rate: 0.7, first: 40, second: 30, third: 30, games: 100 };
+  const s1 = scoreRuns([one]);
+  eq(s1.sc, one.firstRate + 0.5 * one.top2Rate, '② n=1 时 sc 必须等于旧算式 firstRate + 0.5·top2Rate');
+  eq(s1.spreadPt, 0, '② 单粒的自身极差必须是 0（不是 undefined，日志要印它）');
+  eq(s1.games, 100, '② 计数要透传（报告行 "1st/2nd/3rd = a/b/c of N" 的分母必须与均值同源）');
+
+  /* ===== ③ 均值与极差：喂一张已知答案的合成表 ===== */
+  const runs = [
+    { firstRate: 0.50, top2Rate: 0.70, first: 50, second: 20, third: 30, games: 100 },   // sc = 0.85
+    { firstRate: 0.40, top2Rate: 0.70, first: 40, second: 30, third: 30, games: 100 },   // sc = 0.75
+    { firstRate: 0.55, top2Rate: 0.70, first: 55, second: 20, third: 25, games: 100 }    // sc = 0.90
+  ];
+  const s3 = scoreRuns(runs);
+  eq(Math.round(s3.sc * 1e6), Math.round(((0.85 + 0.75 + 0.90) / 3) * 1e6), '③ 三粒均值 sc');
+  eq(Math.round(s3.spreadPt * 1e6), 15000000, '③ 极差必须按 sc 算且**已经乘过 100**（0.90−0.75 = 15pt，不是 0.15；日志里印的就是 pt）');
+  eq(s3.games, 300, '③ 局数要累计');
+  eq(scoreRuns([]).n, 0, '③ 空表 ⇒ n=0 且不炸（旧写法在这里会 Math.max.apply(null,[]) = −Infinity）');
+  ok(isFinite(scoreRuns([one, null]).sc), '③ runs 里混进 null 必须被滤掉，不许把 sc 变成 NaN');
+
+  /* ===== ④ 非法粒数要响亮，不许静默回落成"看起来像默认" ===== */
+  eq(parseSelSeeds('0').bad, '0', '④ 0 粒必须报非法（它是"什么都不测"，不是"最省的一档"）');
+  eq(parseSelSeeds('9').bad, '9', '④ 超过 8 粒必须报非法（默认档的代价是按 4 粒算的，翻倍就是翻倍时间）');
+  eq(parseSelSeeds('2.5').bad, '2.5', '④ 非整数必须报非法');
+  eq(parseSelSeeds('3').k, 3, '④ 合法值照收');
+  eq(parseSelSeeds(undefined).k, SEL_SEEDS_DEFAULT, '④ 不设 ⇒ 默认 ' + SEL_SEEDS_DEFAULT + ' 粒');
+  eq(parseSelSeeds(undefined).bad, null, '④ 默认路径不算"回落"（回落必须只属于"你给了个坏值"）');
+
+  /* ===== ⑤ 分差 vs 噪声：这条是 §E318 的直接修法（链上从不印这个关系） ===== */
+  const mk = function (sc, spread, n) { return { score: sc, ev: { spreadPt: spread, n: n === undefined ? 4 : n } }; };
+  ok(/同分带内|抽签/.test(selGapNote([mk(0.90, 8), mk(0.89, 7)])), '⑤ 分差 1pt ≤ 同分带 3pt ⇒ 必须判"基本是抽签"');
+  ok(/幅度判不动/.test(selGapNote([mk(0.90, 9), mk(0.86, 8)])), '⑤ 分差 4pt ≤ 自身极差 9pt ⇒ 必须判"方向可信、幅度判不动"');
+  ok(/判得动/.test(selGapNote([mk(0.90, 2), mk(0.70, 2)])), '⑤ 分差 20pt ≫ 极差 ⇒ 才许判"判得动"');
+  ok(/不足 2 粒/.test(selGapNote([mk(0.9, 1)])), '⑤ 只有一粒候选时不许编造分差');
+  /* 退路那一档（`=1`）最容易说谎：一粒种子时极差**恒等于 0**，那是"没量过"而不是"噪声是 0"。
+   * 拿 0 去比分差会印出"判得动" ⇒ 用一把从没量过的尺自证清白（口径陷阱第 57 条的同族）。 */
+  const n1 = selGapNote([mk(0.90, 0, 1), mk(0.70, 0, 1)]);
+  ok(/没有任何噪声估计/.test(n1), '⑤ n=1 ⇒ 必须明说"没有任何噪声估计"（不能只印个 0 就当噪声）');
+  ok(!/判得动/.test(n1), '⑤ n=1 ⇒ **绝不许**判"判得动"（极差 0 是没量过，比分差再大也不构成证据）');
+  ok(/极差 无从估|极差无从估/.test(selNote({ n: 1, spreadPt: 0 })), '⑤ 每枚读数也一样：n=1 不许印成"极差 0.0pt"（会被读成"这枚很稳"）');
+  ok(/极差 9\.4pt/.test(selNote({ n: 4, spreadPt: 9.4 })), '⑤ n≥2 照旧印实测极差');
+
+  /* ===== ⑥ 接线：两条入口都必须真的在用（门绿着但没看你要上线的东西 = 改门禁账本第 27 条那条病） ===== */
+  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  const sv = readFileSync('server/train-server.mjs', 'utf8');
+  ok(t3.indexOf('scoreRuns(') >= 0 && t3.indexOf('selBases(') >= 0 && t3.indexOf('selGapNote(') >= 0,
+    '⑥ `train-3p` 必须真用这三个（接了不看结果 = 死作用点）');
+  ok(sv.indexOf('scoreRuns(') >= 0 && sv.indexOf('selBases(') >= 0, '⑥ `train-server`（页面训练场那条路）同样必须用');
+  ok(t3.indexOf('T.evalN(h.params, ALL_PAIRS, 20, N, 987654)') < 0,
+    '⑥ 旧的"单粒 987654"调用必须从 CLI 入口消失（还留着就是两条路并存，没人知道自己跑在哪条上）');
+  ok(sv.indexOf('T.evalN(h.params, PAIRS, 20, n, 987654)') < 0, '⑥ 旧的单粒调用必须从 server 入口消失');
+  ok(t3.indexOf("EPIRUS_SEL_EVAL_SEEDS") >= 0 && t3.indexOf("'EPIRUS_SEL_EVAL_SEEDS'") >= 0,
+    '⑥ 新键必须登记进 CLI 的已知 env 闭集（否则暗键侦测会把活键报成黑键 ⇒ exit 6）');
+  ok(t3.indexOf('28 对') < 0,
+    '⑥ 对手对数必须从 `ALL_PAIRS.length` 插值，不许硬写（POOL 是 9 个脚本 ⇒ C(9,2)=36 对；曾硬写 28 把 §E316 的锚读歪过一次）');
+  ok(t3.indexOf('sc > (ev.firstRate + 0.5 * ev.top2Rate)') < 0,
+    '⑥ 终局改判必须直接比 `ev.sc`（均值已在 `scoreRuns` 里算过；这里再拿两个均值拼一遍 = 第二个口径，日后必分叉）');
+  ok(readFileSync('server/train-env.mjs', 'utf8').indexOf('EPIRUS_SEL_EVAL_SEEDS') >= 0,
+    '⑥ server 侧也要登记（`enforceKnobs` 的读集里没它 ⇒ 页面训练场会把它当黑键拒掉）');
 });
 
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");

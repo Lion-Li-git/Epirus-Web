@@ -14,7 +14,10 @@
  */
 
 /** env 键名清单（与 econ-env/fight-env 同规矩：单一来源，别处不许再抄一份） */
-export const TRAIN_ENV_KEYS = ['EPIRUS_KILL_FIELD', 'EPIRUS_TRAIN_MODE'];
+export const TRAIN_ENV_KEYS = ['EPIRUS_KILL_FIELD', 'EPIRUS_TRAIN_MODE',
+  /* §E322（v1.6.7）：当选键重验用几粒 seedBase 取均值（默认 4；=1 逐字回到旧行为）。
+   * 必须登记在这里，否则 `enforceKnobs` 会把它报成黑键 —— 而它是 `train-server.mjs` 真读的活键。 */
+  'EPIRUS_SEL_EVAL_SEEDS'];
 
 /** 旋钮字段名清单（下发对象里允许出现的键；给"空枪检测"与回显用） */
 export const TRAIN_KNOB_KEYS = ['kill', 'mode'];

@@ -23,6 +23,84 @@
 
 export const INCUMBENT_TAG = '现有冠军';
 
+/* ===== §E322（v1.6.7）：当选键的**多评估种子**单一来源 =====
+ * 病（实测，`champion-map/evaln-noise.mjs` ‖ `docs/OVERNIGHT-2026-10-05-qoder.md` §E316）：
+ *   终局当选键原先是 `evalN(params, ALL_PAIRS, 20, n, **987654**)` 的 `firstRate + 0.5·top2Rate`
+ *   —— **只有一粒 seedBase、每粒候选 720 局**。在它自己口径上量的种子噪声：
+ *     单枚包换 seedBase ⇒ `sc` 摆 **p50 5.42 ‖ 8.54 ‖ 9.10pt（max 9.65pt）**，而同分带容差只有 **3.0pt**
+ *     ⇒ **这把尺的噪声比它自己的同分带粗 2~3 倍**；三批真名人堂里 **2 批的当选者随 seedBase 换人**
+ *       （`epsX-201` 是 band1 ‖ band6 = **4:4**，两者分差 0.49pt）⇒ "谁当冠军"里有一部分是抽签。
+ *   修法不涉及任何口径之争：**同一批候选多打几粒 seedBase 取均值**（4 粒 ⇒ 每粒候选 2880 局，SE 约减半）。
+ *     代价实测 ≈ **+25 秒/臂**（6 粒 × 8 粒 = 34,560 局只要 100 秒）。
+ *
+ * ⚠ `SEL_STRIDE` 必须 > `evalN` 内部的 seed 跨度：`oneGameN` 的 seed = `seedBase + g*977 + total`，
+ *   g < 20、total < 720 ⇒ 单粒 base 占掉约 20,260 个整数 ⇒ 步长取 100,000 才能保证**两粒 base 的局 seed 集合不重叠**。
+ *   （§E316 那台量具用步长 1 是**故意**的：它要的是"另一条随机流"，不是"不交的样本集"；两处目的不同，别抄成同一个数。）
+ *
+ * 抽成纯函数的理由与本文件其它部分一样：门可以**喂合成 runs** 直接验行为，不必跑一条真臂（§E249 那条"短训练 band=1 ⇒ 永绿装饰"）。 */
+export const SEL_BASE0 = 987654;        // 现状那一粒 = 现役冠军当初被选上台的那一粒
+export const SEL_STRIDE = 100000;
+export const SEL_SEEDS_DEFAULT = 4;
+/** 把 `EPIRUS_SEL_EVAL_SEEDS` 解析成粒数。**只认 1..8 的整数**；非法值不静默回落，返回 `bad` 让调用方响亮。 */
+export function parseSelSeeds(raw) {
+  if (raw === undefined || raw === null || raw === '') return { k: SEL_SEEDS_DEFAULT, bad: null, from: '默认' };
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 8) return { k: SEL_SEEDS_DEFAULT, bad: String(raw), from: '回落默认' };
+  return { k: n, bad: null, from: 'env' };
+}
+/** 第 i 粒 seedBase（i 从 0 起）。 */
+export function selBase(i) { return SEL_BASE0 + i * SEL_STRIDE; }
+export function selBases(k) { const a = []; for (let i = 0; i < k; i++) a.push(selBase(i)); return a; }
+/** runs = `evalN` 的返回数组 ⇒ 给出**均值口径的 sc**、各自的 first/top2 均值、以及 sc 的种子极差（pt）。
+ *  极差必须一路印到日志与 meta 里 —— §E318 的结论是"链上从不印分差与噪声的关系"，这条先把噪声印出来。 */
+export function scoreRuns(runs) {
+  const list = (runs || []).filter(function (v) { return v && typeof v.firstRate === 'number'; });
+  if (!list.length) return { sc: 0, firstRate: 0, top2Rate: 0, spreadPt: 0, n: 0, first: 0, second: 0, third: 0, games: 0 };
+  const scs = list.map(function (v) { return v.firstRate + 0.5 * v.top2Rate; });
+  const mean = function (a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; };
+  const sum = function (k) { return list.reduce(function (x, v) { return x + (Number(v[k]) || 0); }, 0); };
+  return {
+    sc: mean(scs),
+    firstRate: mean(list.map(function (v) { return v.firstRate; })),
+    top2Rate: mean(list.map(function (v) { return v.top2Rate; })),
+    spreadPt: (Math.max.apply(null, scs) - Math.min.apply(null, scs)) * 100,
+    n: list.length,
+    /* 计数也一并聚合：报告行 `1st/2nd/3rd = a/b/c of N` 的 N 必须与上面那个均值**同一段对局**，
+     * 否则印出来的分母是 720 而读数其实来自 4×720 ⇒ 又是一处"图上两个口径"。 */
+    first: sum('first'), second: sum('second'), third: sum('third'), games: sum('games')
+  };
+}
+/** 一行给日志看的"这枚候选自己被量得多稳"。
+ *  ⚠ 这里**不下"判不动"的结论** —— 单枚自身的极差只说明它的读数有多抖，
+ *    "能不能判"要看**第 1 与第 2 名的分差**（那是 `selGapNote` 的活）。把两件事混起来印，
+ *    就是 §E318 那条"链上从不印分差与噪声的关系"的另一种犯法。 */
+export function selNote(s) {
+  // n=1 时极差恒 0 ⇒ 印成 "0.0pt" 会被读成"这枚很稳"，而它其实是"没量过"
+  return '（n=' + s.n + ' 粒 seedBase ‖ 自身极差 ' + (s.n < 2 ? '无从估' : s.spreadPt.toFixed(1) + 'pt') + '）';
+}
+/** 当选现场的"分差 vs 噪声"判决行：拿排序后的前两名胜者分作差，与两者各自的种子极差里较大的那个比。
+ *  entries = `hallEntries`（有 `score` 与 `ev.spreadPt`、`ev.n`）。返回一行可直接 console.log 的字符串。
+ *  ⚠ `EPIRUS_SEL_EVAL_SEEDS=1` 时每枚的"自身极差"恒为 0 —— 那是**没有噪声估计**，不是"噪声为零"。
+ *    拿 0 去比分差会印出"判得动"，等于用一把从没量过的尺自证清白（口径陷阱第 57 条的同族）。 */
+export function selGapNote(entries) {
+  const list = (entries || []).filter(function (e) { return e && typeof e.score === 'number'; })
+    .slice().sort(function (a, b) { return b.score - a.score; });
+  if (list.length < 2) return '[当选键] 候选不足 2 粒 ⇒ 无从谈分差';
+  const gapPt = (list[0].score - list[1].score) * 100;
+  const ns = [list[0].ev, list[1].ev].map(function (e) { return e && typeof e.n === 'number' ? e.n : null; });
+  if (ns.indexOf(null) >= 0 || Math.min(ns[0], ns[1]) < 2) {
+    return '[当选键] 第 1 与第 2 名分差 ' + gapPt.toFixed(2) + 'pt ‖ **只有一粒 seedBase ⇒ 这一格没有任何噪声估计**' +
+      '（极差恒 0 是"没量过"，不是"量出来是 0"）⇒ 分差与噪声不可比，要判就得加 seedBase';
+  }
+  const noisePt = Math.max(list[0].ev.spreadPt || 0, list[1].ev.spreadPt || 0);
+  const tol = 3.0;   // 同分带容差（WR_TOL / SEL_LAND_TOL 的默认 0.03，换算到 ×100 的读数上就是 3.0pt）
+  return '[当选键] 第 1 与第 2 名分差 ' + gapPt.toFixed(2) + 'pt ‖ 两者自身极差较大者 ' + noisePt.toFixed(1) + 'pt ‖ 同分带 ' + tol.toFixed(1) + 'pt（各 n=' + ns[0] + ' 粒） ⇒ ' +
+    (gapPt <= tol ? '**分差落在同分带内 ⇒ 这一格基本是抽签**（要判就得加 seedBase 或换键）'
+      : gapPt <= noisePt ? '**分差小于自身噪声 ⇒ 方向可信、幅度判不动**'
+        : '分差大于自身噪声 ⇒ 这一格判得动');
+}
+
+
 /* 候选把冠军已过的基准打回去的条数（>0 = 有回归，不许当选） */
 export function regressionsOf(cand, incumbent) {
   if (!incumbent || !cand || !cand.ev || !cand.ev.per) return 0;

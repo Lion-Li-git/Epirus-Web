@@ -22,6 +22,8 @@ import { readEconEnv, hasEconOverride, ECON_ENV_KEYS } from './econ-env.mjs';
 /* N3（qoder-research 0920 · RESEARCH-QUEUE 09-20）：产物 meta 记**落盘时的规则指纹** ——
  * 09-20 语义变更（policy.js !tid 修）之后，677 个 .bak 里哪些是旧语义训的没有任何机械手段可分辨。 */
 import { rulesFingerprint } from '../tools/rules-fingerprint.mjs';
+/* §E322：当选键的"多评估种子"算术与 CLI 训练器**共用一份实现**（两处各写一遍 = 本仓老毛病）。 */
+import { parseSelSeeds, selBases, scoreRuns } from '../tools/pick-best.mjs';
 import { makeShapeScorer } from './shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
 /* v1.5.200：① 读不到的旋钮不许静默（页面「训练场」走的就是这条路 —— `EPIRUS_KILL_REWARD` 在这里
  *   被静默忽略过：与不带它那次 pack sha1 相同）；② 墙上时钟上限的语义收进单一来源。 */
@@ -627,9 +629,15 @@ async function runTrainN(gens, cfg) {
   const SUBSIDY_MIN = Number(process.env.EPIRUS_SUBSIDY_MIN || 0);
   if (SUBSIDY_MIN > 0) console.log('[multiObj] 补贴门槛已启用: 补贴局夺1率 >= ' + SUBSIDY_MIN + ' (h=' + SUBSIDY_H + ' startEp=' + SUBSIDY_START_EP + ')');
   const candsN = [];
+  /* §E322（v1.6.7）：与 `tools/train-3p.mjs` 同一套当选键（同一个 `pick-best.mjs` 实现，不抄第二遍）。
+   * 原先这里也只吃一粒 seedBase 987654 ⇒ 页面「训练场」选出来的冠军同样在一粒种子上抽签。 */
+  const SEL = parseSelSeeds(process.env.EPIRUS_SEL_EVAL_SEEDS);
+  if (SEL.bad) console.warn('[当选键] ⚠ EPIRUS_SEL_EVAL_SEEDS=' + SEL.bad + ' 不是 1..8 的整数 ⇒ 回落 ' + SEL.k + ' 粒');
+  const SEL_BASES = selBases(SEL.k);
+  console.log('[当选键] 每粒候选重验 ' + SEL.k + ' 粒 seedBase（' + SEL_BASES.join(' ‖ ') + '）取均值');
   for (const h of hall) {
-    const v = T.evalN(h.params, PAIRS, 20, n, 987654);
-    for (const c of clients) sse(c, { type: 'seedEval', n: n, trainFit: h.fit, firstRate: v.firstRate, top2Rate: v.top2Rate });
+    const v = scoreRuns(SEL_BASES.map(function (b) { return T.evalN(h.params, PAIRS, 20, n, b); }));
+    for (const c of clients) sse(c, { type: 'seedEval', n: n, trainFit: h.fit, firstRate: v.firstRate, top2Rate: v.top2Rate, selSeeds: v.n, selSpreadPt: Number(v.spreadPt.toFixed(2)) });
     /* Q3：按类别取最差。类别①=脚本对手对（名次分），类别②=深经济探针（只打分贵技能用没用对）。
      * 探针**必须进选择**——只作诊断就会复现"切片再多也没用"的老问题。 */
     /* 修正 2（v1.3.18）：**探针是门槛，不是分数**。
