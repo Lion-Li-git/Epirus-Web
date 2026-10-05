@@ -219,5 +219,27 @@ const swaps = (function () {
   for (let a = 0; a < o.length; a++) for (let b = a + 1; b < o.length; b++) if (posM[o[a].i] > posM[o[b].i]) s++;
   return s;
 })();
-console.log('   相邻序对翻转 ' + swaps + ' / ' + (packs.length * (packs.length - 1) / 2) + ' 对（这是"换种子会不会换榜"的直接计数）');
+console.log('   序对逆序（榜换了几个前后次序）' + swaps + ' / ' + (packs.length * (packs.length - 1) / 2) + ' 对（这是"换种子会不会换榜"的直接计数）');
+
+/* ⑤ 逐 seedBase 配对差（各枚 − 参照，参照 = 第 1 枚传进来的那颗）。
+ * ⚠ 这是**同种子配对**，不是同轨迹配对：同一粒 seedBase 下每局的 seed 与对手对序列都相同，
+ * 但两枚包一旦做出不同的决策，后面的轨迹就分叉 ⇒ 配对能消掉"这一局本来有多难"那部分，
+ * **消不掉轨迹分叉** ⇒ 它的增益弱于 §E230/§E232 那种"同决策配对差"，只能算半个配对口径，
+ * 报数时配对 SE 与单枚极差**两样都要摆**，不许只报好看得那个。 */
+if (packs.length >= 2) {
+  console.log('\n⑤ 逐 seedBase 配对差（各枚 − 参照「' + packs[0].name + '」，单位 pt；+ = 比参照强）:');
+  for (let i = 1; i < packs.length; i++) {
+    const ds = packs[i].sc.map(function (o, k) { return (o.s - packs[0].sc[k].s) * 100; });
+    const mean = ds.reduce(function (a, b) { return a + b; }, 0) / ds.length;
+    const sd = Math.sqrt(ds.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / Math.max(1, ds.length - 1));
+    const se = sd / Math.sqrt(ds.length);
+    const pos = ds.filter(function (d) { return d > 0; }).length, neg = ds.filter(function (d) { return d < 0; }).length;
+    console.log('   ' + packs[i].name.padEnd(22) + ds.map(function (d) { return (d >= 0 ? '+' : '') + d.toFixed(1).padStart(6); }).join('') +
+      '   均值 ' + (mean >= 0 ? '+' : '') + mean.toFixed(2) + ' ‖ 同号 ' + pos + '+' + neg + '−' +
+      ' ‖ SE ' + se.toFixed(2) + ' ‖ 均值/SE ' + (mean / se).toFixed(2));
+  }
+  console.log('   ⚠ 判读规矩：均值要出 **配对 SE**（不是单枚极差）才算幅度；均值/SE < 2 ⇒ 只报"方向一致、幅度判不动"。' +
+    '  参照那枚如果是"用它自己的 home seedBase 选上台的"，务必看第一列（= 主场那一粒）与均值的差。');
+}
+
 console.log('\n耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
