@@ -97,8 +97,50 @@ const __T = [];   /* v1.5.224：按门计时。默认**零成本**（只 push �
  * ⚠ 这条**不冒充全绿**：跑完会响亮印"跳过 N 条"，收尾的注册数守卫也把跳过数算进去。 */
 const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7) || null;
 let __skipped = 0;
+/* ===== §E335 分组：以后不必每次全跑一遍（用户 10-06 点名）=====
+ * 为什么这样切：整轮里最慢的 15 道全是 train/ship（D176 一道 107.5s），而"只改了 champion-map/ 或 docs/"
+ *   那一类工作，实测**没有任何一道门读那两个目录**
+ *   （`grep -c champion-map tools/np-test.mjs tools/spec-run.mjs tools/smoke.mjs tools/battle-test.mjs` 全 0）
+ *   ⇒ 那种班次真正该跑的只有"仓库纪律"那 15 道（读 CHANGELOG/README/门号/源码形状），是**秒级**的。
+ * 分组键 = 门名第一个空格前那段（D###/N##/L#/REPRO…）。269 个键盖住 272 条门；有 3 个键被多条门共用
+ *   （N2/N3/N4 那几族）⇒ **同键必须同组**，启动时撞组直接红。
+ * ⚠ 三条不许糊：① `--group` 与 `--only` 一样**不冒充全绿**（跳过多少条响亮印出来）；
+ *   ② **整轮（不带 --group）额外要求"每条门都归了组"** ⇒ 新加门忘了归类当场判红，
+ *      否则表会悄悄漏掉后加的腿，那正是本仓最怕的"门绿着但它没在看你要上线的那个东西"；
+ *   ③ 归组判据是"这道门读哪一层的输入"，不是"它属于哪个 §E 编号" —— 后者会把改引擎的门留在窄组里。*/
+const GRP = {
+  meta: 'REPRO L1 L2 L3 L7 L6 L5 D218 D8 D82 D189 D191 D194 D205 D206',   // 仓库纪律：只读源码/CHANGELOG/README/门号
+  ui: 'D37 D38 D28 D70 D131 D111 D166',                                    // 页面与前端契约
+  ship: 'D219 D55 D16 D35 D27 D49 D60 D61 D62 D67 D73 D78 D79 D103 D105 D116 D118 D124 D125 D141 D153 D155 D163 D107 D110 D121 D145 D146 D147 D168 D169 D170 D190 D197 D210 D228',   // 出厂面：可行性闸 / 当选 / promote / 线上槽
+  train: 'REPRO2 L4 D217 D220 D221 D222 D223 D224 D225 D226 D227 D5 D7 D9 D10 D11 D12 D13 D15 D56 D58 D59 D17 D24 D25 D26 D33b D33 D36 D39 D40 D41 D42 D43 D44 D45 D47 D48 D65 D66 D68 D72 D74 D75 D76 D77 D80 D81 D84 D85 D86 D87 D89 D90 D104 D97 D99 D100 D101 D108 D109 D112 D113 D114 D119 D122 D123 D127 D128 D129 D130 D132 D134 D135 D136 D139 D140 D115 D162 D120 D143 D144 D157 D159 D167 D172 D173 D174 D175 D176 D179 D181 D180 D182 D184 D185 D213 D164 D165 D187 D188 D201 D204',   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
+  probe: 'D34 D64 D83 D88 D137 D138 D148 D149 D150 D151 D152 D154 D160 D161 D106 D158 D177 D178 D183 D186 D192 D193 D195 D196 D198 D200 D199 D212 D214 D202 D203 D207 D208 D209 D211 D216',   // 研究量具自身的牙
+  engine: 'N1 N2 目标：attemptAction N3 N3b N10 N10b N10c N8 N14 N14b N15 N16 N17 N18 N19 N4 N4b N4c N12 N12b N6 N6b 目标反锁：上回合与某对手互为目标而相抵 目标选择：能一击必杀先杀；否则打血量最高的领先者 fuzz：3/4/5 autoGame N20a N20b N20c N20d N20e N21 N22 N22b N22c N23 D1 D2 D3 D4 D6 D51 D52 D53 D54 D57 D18 D19 D20 D21 D22 D14 D23 D29 D30 D31 D46 D50 D63 D91 D102 D92 D93 D94 D95 D96 D98 D71 D117 D126 D142',   // 引擎与规则语义（改这里 ⇒ 只能全跑）
+};
+/* 累计依赖：跑一个组 = 跑它自己 + 它所依赖的更浅的组。engine 是"全部"。 */
+const CUM = { meta: ['meta'], ship: ['ship', 'meta'], ui: ['ui', 'train', 'ship', 'meta'],
+  train: ['train', 'ship', 'meta'], probe: ['probe', 'train', 'ship', 'meta'], engine: null };
+const KEY2G = {}; const __CLASH = [];
+for (const g in GRP) for (const k of GRP[g].split(' ')) {
+  if (KEY2G[k] && KEY2G[k] !== g) __CLASH.push(k + '（' + KEY2G[k] + ' / ' + g + '）');
+  KEY2G[k] = g; }
+if (__CLASH.length) { console.error('⛔ §E335 分组表撞组（同一个键落进两个组 ⇒ 同键的多条门必须同组）：' + __CLASH.join(' ')); process.exit(2); }
+const gateKey = n => String(n).trim().split(/[ \u3000]/)[0];
+const __KEYS = [];
+if (process.argv.includes('--list-groups')) {
+  for (const g in GRP) console.log('  ' + g.padEnd(7) + GRP[g].split(' ').length + ' 个键');
+  console.log('  合计   ' + Object.keys(KEY2G).length + ' 个键（= 272 条门；N2/N3/N4 各有同前缀的多条）');
+  console.log('  累计   ' + Object.keys(CUM).map(g => g + (CUM[g] ? '=' + (CUM[g].reduce((s, x) => s + GRP[x].split(' ').length, 0)) + '条' : '=全部')).join(' ‖ '));
+  process.exit(0);
+}
+const GROUP = (process.argv.find(a => a.startsWith('--group=')) || '').slice(8) || null;
+if (GROUP && !(GROUP in CUM)) {
+  console.error('⛔ `--group=' + GROUP + '` 不认识（可选：' + Object.keys(CUM).join('/') + '）。含糊拼写不许当"没写"。');
+  process.exit(2); }
+const RUNSET = GROUP ? new Set(CUM[GROUP].reduce((a, g) => a.concat(g === 'engine' ? Object.keys(GRP).flatMap(x => GRP[x].split(' ')) : GRP[g].split(' ')), [])) : null;
 function t(name, fn) {
+  const __k = gateKey(name); __KEYS.push(__k);
   if (ONLY && name.indexOf(ONLY) < 0) { __skipped++; return; }
+  if (RUNSET && !RUNSET.has(__k)) { __skipped++; return; }
   const __t0 = Date.now();
   try { fn(); PASS++; console.log('  ✔ ' + name); }
   catch (e) { FAIL++; console.log('  ✘ ' + name + '  → ' + e.message); }
@@ -11177,6 +11219,27 @@ if (__nReg !== PASS + FAIL + __skipped) {
 if (ONLY) {
   console.log('\n⚠ `--only=' + ONLY + '`：**只跑了 ' + (PASS + FAIL) + ' / ' + __nReg + ' 条**（跳过 ' + __skipped
     + ' 条）⇒ 这不是全量门禁，**不许当"四道全绿"引用**（`node tools/np-test.mjs` 不带参数才是整轮）。');
+}
+/* §E335 `--group` 与 `--only` 同罪：少跑了就是少跑了，必须自己喊出来。 */
+if (GROUP) {
+  console.log('\n⚠ `--group=' + GROUP + '`：**只跑了 ' + (PASS + FAIL) + ' / ' + __nReg + ' 条**（跳过 ' + __skipped
+    + ' 条；累计含 ' + (CUM[GROUP] ? CUM[GROUP].join('+') : '全部') + '）⇒ 这不是全量门禁，**不许当"四道全绿"引用**。');
+}
+if (GROUP && PASS + FAIL === 0) {
+  console.error('⛔ `--group=' + GROUP + '` 一条都没跑（' + __nReg + ' 条注册全被筛掉）⇒ 分组表或累计关系写错了，这不是全绿。');
+  process.exit(3);
+}
+/* §E335 整轮才查"每条门都归了组"：新加的门忘了归类 ⇒ 判红。
+   不这么钉的话，表会在某次加门之后**悄悄**漏掉那条腿，而窄组照样绿 —— 本仓最怕的"门绿着但它没在看你要上线的东西"。*/
+if (!GROUP && !ONLY) {
+  const un = []; const seenU = {};
+  for (const k of __KEYS) if (!KEY2G[k] && !seenU[k]) { seenU[k] = 1; un.push(k); }
+  if (un.length) {
+    console.error('⛔ §E335 分组表漏了 ' + un.length + ' 条门（新加门要在 GRP 里归组）：' + un.slice(0, 12).join(' ')
+      + (un.length > 12 ? ' …' : ''));
+    process.exit(4);
+  }
+  console.log('§E335 分组在册 ✅ ' + __KEYS.length + ' 条门全部归组（' + Object.keys(KEY2G).length + ' 个键）');
 }
 /* `--only` 打错字 ⇒ 一条都不跑却报"通过 0 / 0"，那是最坏的一种绿（看着像跑完且全绿）。响亮拒。 */
 if (ONLY && PASS + FAIL === 0) {

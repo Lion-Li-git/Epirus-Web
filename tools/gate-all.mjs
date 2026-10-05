@@ -7,7 +7,9 @@
  *
  *   node tools/gate-all.mjs          # spec + smoke + battle（约 1 分钟），不跑 np
  *   node tools/gate-all.mjs --np     # 加跑 np-test（约 10 分钟）
+ *   node tools/gate-all.mjs --np --group=meta    # §E335 只跑那一组（np 侧 15 条 ≈ 9 秒）
  * 退出码：0 全绿；7 有任意一道红（点名是哪道）。
+ * ⚠ 带 `--group=` 的那一遍**不是认证**：np 只跑了分组里的门，总结论行会显式标出来（同 `--only` 的规矩）。
  */
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
@@ -20,8 +22,10 @@ const jobs = [
   { name: 'smoke', argv: ['node', 'tools/smoke.mjs'], want: /SMOKE OK/ },
   { name: 'battle', argv: ['node', 'tools/battle-test.mjs'], want: /BATTLE OK/ },
 ];
+const GRPA = (process.argv.find(a => a.startsWith('--group=')) || '').slice(8);
 if (process.argv.includes('--np')) {
-  jobs.unshift({ name: 'np', argv: ['node', 'tools/np-test.mjs'], want: /通过 (\d+) \/ (\d+)/ });
+  jobs.unshift({ name: GRPA ? 'np/' + GRPA : 'np', argv: ['node', 'tools/np-test.mjs'].concat(GRPA ? ['--group=' + GRPA] : []),
+    want: /通过 (\d+) \/ (\d+)/ });
 }
 
 /* ===== 10-01 19:3x（千问 §E214）：四道**并发起跑**，判词与顺序一字不改 =====
@@ -88,7 +92,8 @@ function localStamp() {
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
 console.log('门禁：' + out.map(o => o.name + ' ' + o.reading + '（' + o.sec + 's）').join(' · ') +
-  (bad.length ? '' : '（同一棵树 ' + localStamp() + ' 本机时刻）'));
+  (bad.length ? '' : '（同一棵树 ' + localStamp() + ' 本机时刻' + (GRPA ? '‖ §E335 分组 ' + GRPA + '：**不是整轮认证**）' : '）')));
 console.log(bad.length ? '⛔ 结论：**不是全绿** —— ' + bad.map(b => b.name).join('/') + ' 红'
-  : '✔ 结论：**' + out.length + ' 道全绿**' + (out.length < 4 ? '（np 未跑，加 --np）' : ''));
+  : '✔ 结论：**' + out.length + ' 道全绿**' + (out.length < 4 ? '（np 未跑，加 --np）' : '')
+    + (GRPA ? ' ‖ 但 np 只跑了 `--group=' + GRPA + '` 那一组 ⇒ 这一遍**不许当认证引用**（认证 = 不带 --group 的整轮）。' : ''));
 process.exit(bad.length ? 7 : 0);
