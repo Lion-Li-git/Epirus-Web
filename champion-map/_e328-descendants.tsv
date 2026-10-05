@@ -1,0 +1,193 @@
+arm	ts	files	productRel	productWid	gens	mode	fp	seedpack	examRecorded	onMap
+seed80	2026-09-25T14:18:31.234Z	1	docs/artifacts/eval-out/sel80.bak	c99b5c2d3cea3722	120			js/bundled-champion-3p.js		no
+seed81	2026-09-25T14:18:59.781Z	1	docs/artifacts/eval-out/sel81.bak	25df919c7dc61ddf	120			js/bundled-champion-3p.js		no
+e35prod807	2026-09-26T06:37:08.547Z	1	docs/artifacts/E35-prod-807.bak	ed5aa28dfbad4ab2	800			js/bundled-champion-3p.js	0.5291666666666667	no
+e35prod814	2026-09-26T06:49:27.050Z	1	docs/artifacts/E35-prod-814.bak	c8289566e7fee1b7	800			js/bundled-champion-3p.js	0.4666666666666667	no
+e39ctl911	2026-09-26T08:08:20.125Z	1	docs/artifacts/E39-ctl-911.bak	df1158023af3b4bf	800			js/bundled-champion-3p.js	0.5152777777777777	no
+e45trt906	2026-09-26T09:35:38.343Z	6			800					no-product
+e45ctl906	2026-09-26T09:36:10.248Z	6			800					no-product
+e45ctl903	2026-09-26T09:36:25.497Z	6			800					no-product
+e45ctl901	2026-09-26T09:36:34.281Z	6			800					no-product
+e45trt903	2026-09-26T09:36:40.488Z	6			800					no-product
+e45trt901	2026-09-26T09:38:15.000Z	6			800					no-product
+e45trt905	2026-09-26T09:39:00.340Z	6			800					no-product
+e45ctl902	2026-09-26T09:39:54.447Z	6			800					no-product
+e45trt902	2026-09-26T09:41:29.654Z	6			800					no-product
+e45ctl904	2026-09-26T09:43:30.103Z	6			800					no-product
+cal-ctl	2026-09-27T06:19:34.545Z	7	docs/artifacts/e59-out/cal-ctl.js	76ffdf712ff394a8	50			docs/artifacts/E51-t8-713.bak	0.6027777777777777	no
+seq20	2026-09-27T06:20:49.679Z	7	docs/artifacts/e59-out/seq20.js	76ffdf712ff394a8	20			docs/artifacts/E51-t8-713.bak	0.6027777777777777	no
+land20	2026-09-27T06:20:49.970Z	7	docs/artifacts/e59-out/land20.js	76ffdf712ff394a8	20			docs/artifacts/E51-t8-713.bak	0.6027777777777777	no
+E59-land-902	2026-09-27T06:23:09.600Z	9	docs/artifacts/E59-land-902.bak	6ae53731631a0eba	400			docs/artifacts/E51-t8-713.bak	0.5958333333333333	no
+E59-seq-902	2026-09-27T06:23:09.641Z	8	docs/artifacts/e59-out/E59-seq-902.bak	3530cd6543fe1e63	400			docs/artifacts/E51-t8-713.bak	0.6388888888888888	no
+E59-ctl-902	2026-09-27T06:23:10.264Z	8	docs/artifacts/e59-out/E59-ctl-902.bak	3530cd6543fe1e63	400			docs/artifacts/E51-t8-713.bak	0.6388888888888888	no
+E59-ctl-901	2026-09-27T06:23:12.585Z	8	docs/artifacts/e59-out/E59-ctl-901.bak	f5665be87da55022	400			docs/artifacts/E51-t8-713.bak	0.5722222222222222	no
+E59-seq-901	2026-09-27T06:23:14.479Z	8	docs/artifacts/e59-out/E59-seq-901.bak	f5665be87da55022	400			docs/artifacts/E51-t8-713.bak	0.5722222222222222	no
+E59-land-901	2026-09-27T06:23:14.504Z	8	docs/artifacts/e59-out/E59-land-901.bak	f5665be87da55022	400			docs/artifacts/E51-t8-713.bak	0.5722222222222222	no
+E59-land-903	2026-09-27T06:23:19.608Z	8	docs/artifacts/e59-out/E59-land-903.bak	77f542bf149eda81	400			docs/artifacts/E51-t8-713.bak	0.6375	no
+E59-ctl-903	2026-09-27T06:23:21.054Z	8	docs/artifacts/e59-out/E59-ctl-903.bak	77f542bf149eda81	400			docs/artifacts/E51-t8-713.bak	0.6375	no
+E59-seq-903	2026-09-27T06:23:21.234Z	8	docs/artifacts/e59-out/E59-seq-903.bak	77f542bf149eda81	400			docs/artifacts/E51-t8-713.bak	0.6375	no
+Ldemo	2026-09-27T08:55:34.724Z	3	docs/artifacts/e316-out/SHIPPED-3P.bak	d490dc136293cfc4	1200		2c061b15	docs/artifacts/E51-t8-713.bak	0.499	no
+Lspend	2026-09-27T08:56:07.191Z	1	docs/artifacts/eval-out/win-Lspend.bak	78e57d8ba0438e5d	1200			docs/artifacts/E51-t8-713.bak		no
+Lctl	2026-09-27T08:56:50.481Z	1	docs/artifacts/eval-out/win-Lctl.bak	dfae5c38af537bb7	1200			docs/artifacts/E51-t8-713.bak		no
+L71	2026-09-27T09:06:58.434Z	1	docs/artifacts/eval-out/win-L71.bak	3290e99c09f2ac76	1200			docs/artifacts/E51-t8-713.bak		no
+L151	2026-09-27T09:07:10.204Z	1	docs/artifacts/eval-out/win-L151.bak	83e0e8eda550bded	1200			docs/artifacts/E51-t8-713.bak		no
+L111	2026-09-27T09:07:21.959Z	1	docs/artifacts/eval-out/win-L111.bak	bbe12fe3dfeaee00	1200			docs/artifacts/E51-t8-713.bak		no
+L191	2026-09-27T09:07:29.270Z	1	docs/artifacts/eval-out/win-L191.bak	f6a59e850aa7f954	1200			docs/artifacts/E51-t8-713.bak		no
+R351	2026-09-27T12:01:22.046Z	1	docs/artifacts/eval-out/win-R351.bak	df22f23903e14339	1200			docs/artifacts/E51-t8-713.bak		no
+R431	2026-09-27T12:01:27.406Z	1	docs/artifacts/eval-out/win-R431.bak	8e3b1f1ab18ba7f7	1200			docs/artifacts/E51-t8-713.bak		no
+R311	2026-09-27T12:01:32.544Z	1	docs/artifacts/eval-out/win-R311.bak	ccc41e51a11947ce	1200			docs/artifacts/E51-t8-713.bak		no
+R271	2026-09-27T12:01:35.361Z	1	docs/artifacts/eval-out/win-R271.bak	1a9212dd40284382	1200			docs/artifacts/E51-t8-713.bak		no
+R231	2026-09-27T12:01:38.213Z	1	docs/artifacts/eval-out/win-R231.bak	3afd512a5c385dc6	1200			docs/artifacts/E51-t8-713.bak		no
+R391	2026-09-27T12:02:51.855Z	1	docs/artifacts/eval-out/win-R391.bak	3c4b3db7bd8cf585	1200			docs/artifacts/E51-t8-713.bak		no
+C2s71	2026-09-27T15:00:45.907Z	1	docs/artifacts/eval-out/win-C2s71.bak	3290e99c09f2ac76	1200			docs/artifacts/E51-t8-713.bak		no
+C0s71	2026-09-27T15:00:45.984Z	1	docs/artifacts/eval-out/win-C0s71.bak	3290e99c09f2ac76	1200			docs/artifacts/E51-t8-713.bak		no
+C1s71	2026-09-27T15:00:48.522Z	1	docs/artifacts/eval-out/win-C1s71.bak	3290e99c09f2ac76	1200			docs/artifacts/E51-t8-713.bak		no
+C2s31	2026-09-27T15:00:57.311Z	1	docs/artifacts/eval-out/win-C2s31.bak	dfae5c38af537bb7	1200			docs/artifacts/E51-t8-713.bak		no
+C0s31	2026-09-27T15:00:58.212Z	1	docs/artifacts/eval-out/win-C0s31.bak	dfae5c38af537bb7	1200			docs/artifacts/E51-t8-713.bak		no
+C1s31	2026-09-27T15:00:58.329Z	1	docs/artifacts/eval-out/win-C1s31.bak	dfae5c38af537bb7	1200			docs/artifacts/E51-t8-713.bak		no
+EL0	2026-09-27T15:09:11.449Z	1	docs/artifacts/eval-out/win-EL0.bak	afd8f1dcf70edc36	1200			docs/artifacts/E51-t8-713.bak	0.46111111111111114	no
+EL2	2026-09-27T15:09:11.596Z	1	docs/artifacts/eval-out/win-EL2.bak	afd8f1dcf70edc36	1200			docs/artifacts/E51-t8-713.bak	0.46111111111111114	no
+B0-111	2026-09-27T17:03:35.371Z	2	docs/artifacts/e66-out/B0-111.bak	4d3222c3449e0916	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.46111111111111114	no
+B0-31	2026-09-27T17:03:38.760Z	2	docs/artifacts/e66-out/B0-31.bak	5724843a1c1e1832	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.65	no
+B0-71	2026-09-27T17:04:19.852Z	2	docs/artifacts/e66-out/B0-71.bak	5727b5d25afffe2a	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6263888888888889	no
+B0L-31	2026-09-27T17:06:21.580Z	2	docs/artifacts/e66-out/B0L-31.bak	81e6fdfb65a48614	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5541666666666667	no
+B0L-71	2026-09-27T17:06:52.139Z	2	docs/artifacts/e66-out/B0L-71.bak	5e7411aa8c77ff8e	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.49583333333333335	no
+V0-31	2026-09-27T17:28:59.408Z	2	docs/artifacts/e68-out/V0-31.bak	5724843a1c1e1832	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.65	no
+V2-31	2026-09-27T17:29:02.868Z	2	docs/artifacts/e68-out/V2-31.bak	75019bc522e9cbae	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6125	no
+V2-71	2026-09-27T17:29:38.947Z	3	docs/artifacts/e68-out/V2-71.bak	5727b5d25afffe2a	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6263888888888889	no
+V1-71	2026-09-27T17:34:01.766Z	2	docs/artifacts/e68-out/V1-71.bak	bb026cb9daa01c17	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.2763888888888889	no
+V3-71	2026-09-27T17:34:01.925Z	2	docs/artifacts/e68-out/V3-71.bak	bb026cb9daa01c17	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.2763888888888889	no
+V1-31	2026-09-27T17:34:59.545Z	2	docs/artifacts/e68-out/V1-31.bak	6108503fb15cdbbd	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.2847222222222222	no
+V3-31	2026-09-27T17:35:08.837Z	2	docs/artifacts/e68-out/V3-31.bak	6108503fb15cdbbd	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.2847222222222222	no
+D05-71	2026-09-27T17:52:22.117Z	2	docs/artifacts/e70-out/D05-71.bak	4b10dc8dcbe6b07e	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5625	no
+D02-71	2026-09-27T17:52:37.050Z	2	docs/artifacts/e70-out/D02-71.bak	2f3e611ab93c1b81	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5902777777777778	no
+D005-31	2026-09-27T17:53:09.240Z	2	docs/artifacts/e70-out/D005-31.bak	45cc969d1700f2fb	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6138888888888889	no
+D005-71	2026-09-27T17:53:15.256Z	2	docs/artifacts/e70-out/D005-71.bak	de127ffeccaa1172	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5138888888888888	no
+D02-31	2026-09-27T17:53:55.083Z	3	docs/artifacts/e70-out/D02-31.bak	1d4b687da27187b7	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5347222222222222	no
+D05-31	2026-09-27T17:58:42.269Z	2	docs/artifacts/e70-out/D05-31.bak	7da3de5f7d4e2d96	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.4125	no
+L05-71	2026-09-27T18:05:49.983Z	2	docs/artifacts/e71-out/L05-71.bak	e6081e595ce59963	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6513888888888889	no
+L05K-71	2026-09-27T18:05:52.793Z	2	docs/artifacts/e71-out/L05K-71.bak	e6081e595ce59963	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6513888888888889	no
+L02-71	2026-09-27T18:06:20.599Z	2	docs/artifacts/e71-out/L02-71.bak	25de693cebbf6c3c	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6513888888888889	no
+L05-31	2026-09-27T18:06:46.786Z	2	docs/artifacts/e71-out/L05-31.bak	f19bb211a8cb32cb	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6138888888888889	no
+L05K-31	2026-09-27T18:06:48.355Z	2	docs/artifacts/e71-out/L05K-31.bak	f19bb211a8cb32cb	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6138888888888889	no
+L02-31	2026-09-27T18:08:27.198Z	2	docs/artifacts/e71-out/L02-31.bak	2393db832be26434	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5319444444444444	no
+M05C02-111	2026-09-27T18:20:14.598Z	2	docs/artifacts/e73-out/M05C02-111.bak	e80f1c495d345b95	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5625	no
+M05-191	2026-09-27T18:20:21.066Z	2	docs/artifacts/e73-out/M05-191.bak	a7bd104351490406	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6152777777777778	no
+M05-151	2026-09-27T18:20:30.640Z	2	docs/artifacts/e73-out/M05-151.bak	67037531f976b632	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6347222222222222	no
+M05C02-151	2026-09-27T18:20:41.645Z	2	docs/artifacts/e73-out/M05C02-151.bak	f9993dbb46ffd6d7	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6194444444444445	no
+M05C02-31	2026-09-27T18:20:42.487Z	2	docs/artifacts/e73-out/M05C02-31.bak	6c1a6b23e88512dd	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6083333333333333	no
+M05-231	2026-09-27T18:20:53.169Z	2	docs/artifacts/e73-out/M05-231.bak	35b8b9129b15f6e9	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6027777777777777	no
+M05C02-71	2026-09-27T18:21:02.614Z	2	docs/artifacts/e73-out/M05C02-71.bak	19fbdb8a6a12e5c0	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6138888888888889	no
+M05-111	2026-09-27T18:21:43.001Z	2	docs/artifacts/e73-out/M05-111.bak	e2b0b2d5bdb58c16	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5625	no
+NCV-111	2026-09-27T19:04:00.779Z	2	docs/artifacts/e75-out/NCV-111.bak	e80f1c495d345b95	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5625	no
+NC-301	2026-09-27T19:04:02.975Z	2	docs/artifacts/e75-out/NC-301.bak	6d3b04dcfe536292	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5972222222222222	no
+NCV-31	2026-09-27T19:04:23.976Z	2	docs/artifacts/e75-out/NCV-31.bak	6c1a6b23e88512dd	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6083333333333333	no
+NCV-151	2026-09-27T19:04:25.682Z	2	docs/artifacts/e75-out/NCV-151.bak	f9993dbb46ffd6d7	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6194444444444445	no
+NC-231	2026-09-27T19:04:38.564Z	2	docs/artifacts/e75-out/NC-231.bak	6cdf465f4558981d	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6388888888888888	no
+NCV-71	2026-09-27T19:04:44.579Z	2	docs/artifacts/e75-out/NCV-71.bak	392bc3dbd46f4605	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6111111111111112	no
+NC-191	2026-09-27T19:04:49.090Z	2	docs/artifacts/e75-out/NC-191.bak	3d2fa5c3f7725711	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6375	no
+NC-341	2026-09-27T19:05:15.201Z	2	docs/artifacts/e75-out/NC-341.bak	ae165f1517022dca	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5972222222222222	no
+SM71	2026-09-27T19:24:55.902Z	1	docs/artifacts/e76-out/SM71.bak	392bc3dbd46f4605	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6111111111111112	no
+DM71	2026-09-27T19:24:57.218Z	1	docs/artifacts/e76-out/DM71.bak	392bc3dbd46f4605	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6111111111111112	no
+PL31	2026-09-27T19:48:54.505Z	1	docs/artifacts/e77-out/PL31.bak	6c1a6b23e88512dd	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6083333333333333	no
+PL71	2026-09-27T19:49:20.710Z	1	docs/artifacts/e77-out/PL71.bak	f8bd1419522c6773	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6	no
+G08-31	2026-09-27T20:13:46.206Z	2	docs/artifacts/e78-out/G08-31.bak	f19bb211a8cb32cb	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6138888888888889	no
+G15-71	2026-09-27T20:13:51.794Z	1	docs/artifacts/e78-out/G15-71.bak	fbc3926b144ee593	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6180555555555556	no
+G15-31	2026-09-27T20:13:58.026Z	1	docs/artifacts/e78-out/G15-31.bak	f19bb211a8cb32cb	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6138888888888889	no
+G08-71	2026-09-27T20:14:09.156Z	2	docs/artifacts/e78-out/G08-71.bak	fbc3926b144ee593	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6180555555555556	no
+G03-71	2026-09-27T20:14:33.038Z	1	docs/artifacts/e78-out/G03-71.bak	049a2875a79c6477	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6180555555555556	no
+G03-31	2026-09-27T20:14:58.071Z	1	docs/artifacts/e78-out/G03-31.bak	b88b593b910ae4be	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6319444444444444	no
+H24-71	2026-09-27T20:17:29.933Z	1	docs/artifacts/e78-out/H24-71.bak	e6081e595ce59963	2400			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6513888888888889	no
+NOL24-31	2026-09-27T20:17:58.950Z	1	docs/artifacts/e78-out/NOL24-31.bak	5724843a1c1e1832	2400			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.65	no
+NOL24-71	2026-09-27T20:19:04.373Z	2	docs/artifacts/e78-out/NOL24-71.bak	5727b5d25afffe2a	2400			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6263888888888889	no
+H24-31	2026-09-27T20:19:05.593Z	1	docs/artifacts/e78-out/H24-31.bak	f19bb211a8cb32cb	2400			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6138888888888889	no
+E00-31	2026-09-27T21:13:15.012Z	1	docs/artifacts/e85-out/E00-31.bak	9f99c0090d7c758b	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5722222222222222	no
+E00-71	2026-09-27T21:14:24.584Z	1	docs/artifacts/e85-out/E00-71.bak	293a114058436bd0	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5680555555555555	no
+E20-31	2026-09-27T21:16:27.623Z	1	docs/artifacts/e85-out/E20-31.bak	7a867b44634295ec	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6	no
+E10-31	2026-09-27T21:16:33.969Z	2	docs/artifacts/e85-out/E10-31.bak	c8b41c7d6d8e443b	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5944444444444444	no
+E10-71	2026-09-27T21:16:49.603Z	1	docs/artifacts/e85-out/E10-71.bak	19fbdb8a6a12e5c0	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6138888888888889	no
+E20-71	2026-09-27T21:17:01.981Z	1	docs/artifacts/e85-out/E20-71.bak	798d04cd40cb9d3c	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6222222222222222	no
+R00-31	2026-09-27T21:46:24.312Z	1	docs/artifacts/e91-out/R00-31.bak	f19bb211a8cb32cb	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6138888888888889	no
+R00-71	2026-09-27T21:46:39.773Z	1	docs/artifacts/e91-out/R00-71.bak	fbc3926b144ee593	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.6180555555555556	no
+N5-0	2026-09-27T22:08:34.699Z	1	docs/artifacts/e95-out/N5-0.bak	403144a22c14873a	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5	no
+N5-1	2026-09-27T22:08:36.485Z	1	docs/artifacts/e95-out/N5-1.bak	215aa0bee4b6898d	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.4625	no
+B5-05-31	2026-09-27T22:23:50.109Z	2	docs/artifacts/e100-out/B5-05-31.bak	215aa0bee4b6898d	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.4625	no
+B5-10-71	2026-09-27T22:25:27.732Z	2	docs/artifacts/e100-out/B5-10-71.bak	8473e6d53a92ad36	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5166666666666667	no
+B5-10-31	2026-09-27T22:25:59.674Z	1	docs/artifacts/e100-out/B5-10-31.bak	ce3c6b4a3c527952	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.48194444444444445	no
+B5-05-71	2026-09-27T22:26:17.522Z	1	docs/artifacts/e100-out/B5-05-71.bak	27cdfccc9cdef574	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5166666666666667	no
+N5L-05	2026-09-27T22:37:05.923Z	3	docs/artifacts/e106-out/N5L-05.bak	ee82e7694b6eb4be	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.4986111111111111	no
+N5L-15	2026-09-27T22:37:53.354Z	1	docs/artifacts/e106-out/N5L-15.bak	612eb0386aabd4c2	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5083333333333333	no
+N5L-30	2026-09-27T22:42:39.056Z	1	docs/artifacts/e106-out/N5L-30.bak	2b5da24e1770b24a	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5069444444444444	no
+C5-02-71	2026-09-27T22:54:18.490Z	1	docs/artifacts/e111-out/C5-02-71.bak	d490dc136293cfc4	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5388888888888889	no
+C5-02-31	2026-09-27T22:57:08.145Z	1	docs/artifacts/e111-out/C5-02-31.bak	d490dc136293cfc4	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5388888888888889	no
+HF-191	2026-09-28T00:12:51.734Z	1	docs/artifacts/e116-out/HF-191.bak	3df992a9e40c1533	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5458333333333333	no
+SQ2-15-71	2026-09-28T03:03:42.613Z	2	docs/artifacts/e120-out/SQ2-15-71.bak	dc8abe9f8f5c3d76	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.5638888888888889	no
+SQ2-15-31	2026-09-28T03:04:58.884Z	2	docs/artifacts/e120-out/SQ2-15-31.bak	ee82e7694b6eb4be	1200			D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak	0.4986111111111111	no
+blk0t00-s31	2026-09-28T08:13:21.624Z	8	docs/artifacts/e124-out/blk0t00-s31.bak	f19bb211a8cb32cb	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.6138888888888889	no
+blk0t40-s71	2026-09-28T08:13:39.666Z	8	docs/artifacts/e124-out/blk0t40-s71.bak	5b2018e13c97dc85	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.5555555555555556	no
+blk0t00-s71	2026-09-28T08:13:47.582Z	8	docs/artifacts/e124-out/blk0t00-s71.bak	fbc3926b144ee593	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.6180555555555556	no
+blk1t40-s71	2026-09-28T08:13:55.105Z	8	docs/artifacts/e124-out/blk1t40-s71.bak	772194200f18d2c2	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.6430555555555556	no
+blk0t40-s31	2026-09-28T08:13:57.340Z	8	docs/artifacts/e124-out/blk0t40-s31.bak	f279ffdfc6cbf1ff	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.5361111111111111	no
+blk1t00-s71	2026-09-28T08:14:34.511Z	8	docs/artifacts/e124-out/blk1t00-s71.bak	cdc004e1484c9921	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.5666666666666667	no
+blk1t00-s31	2026-09-28T08:14:36.155Z	8	docs/artifacts/e124-out/blk1t00-s31.bak	96871b153862ab15	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.5583333333333333	no
+blk1t40-s31	2026-09-28T08:15:56.877Z	8	docs/artifacts/e124-out/blk1t40-s31.bak	89825f22b4dd03e5	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.6125	no
+RG0-31	2026-09-28T15:44:34.546Z	7	docs/artifacts/e127-out/RG0-31.bak	f19bb211a8cb32cb	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.6138888888888889	no
+RG1-31	2026-09-28T15:44:35.069Z	7	docs/artifacts/e127-out/RG1-31.bak	f7302d3c1db7889e	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.5972222222222222	no
+RG1-71	2026-09-28T15:44:56.931Z	7	docs/artifacts/e127-out/RG1-71.bak	e4e121bd8cac395f	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.5819444444444445	no
+RG0-71	2026-09-28T15:44:58.278Z	7	docs/artifacts/e127-out/RG0-71.bak	fbc3926b144ee593	1200			docs/artifacts/eval-out/win-Ldemo.bak	0.6180555555555556	no
+D3a	2026-10-02T15:37:21.345Z	7	docs/artifacts/e234-out/D3a.js	59d6f6efd8296692	1200			js/bundled-champion-3p.js	0.6125	no
+D2a	2026-10-02T15:38:00.200Z	7	docs/artifacts/e234-out/D2a.js	ffee118971691716	1200			js/bundled-champion-3p.js	0.5902777777777778	no
+D0a	2026-10-02T15:38:09.419Z	7	docs/artifacts/e234-out/D0a.js	5724843a1c1e1832	1200			js/bundled-champion-3p.js	0.65	no
+D4a	2026-10-02T15:39:29.792Z	7	docs/artifacts/e234-out/D4a.js	5a60c8489990e8b6	1200			js/bundled-champion-3p.js	0.6152777777777778	no
+D5a	2026-10-02T15:41:52.134Z	7	docs/artifacts/e234-out/D5a.js	81e6fdfb65a48614	1200			js/bundled-champion-3p.js	0.5541666666666667	no
+D8a	2026-10-02T15:42:23.439Z	7	docs/artifacts/e234-out/D8a.js	0860ace5bd1b59ee	1200			js/bundled-champion-3p.js	0.4625	no
+D6a	2026-10-02T15:42:56.505Z	7	docs/artifacts/e234-out/D6a.js	f9e9a5208b834332	1200			js/bundled-champion-3p.js	0.5222222222222223	no
+D7a	2026-10-02T15:42:59.609Z	7	docs/artifacts/e234-out/D7a.js	8f3ab886dd15a398	1200			js/bundled-champion-3p.js	0.5638888888888889	no
+D1a	2026-10-02T15:45:21.405Z	7	docs/artifacts/e234-out/D1a.js	6108503fb15cdbbd	1200			js/bundled-champion-3p.js	0.2847222222222222	no
+K6	2026-10-02T15:54:53.477Z	7	docs/artifacts/e234-out/K6.js	4b10dc8dcbe6b07e	1200			js/bundled-champion-3p.js	0.5625	no
+E3	2026-10-02T15:55:27.040Z	7	docs/artifacts/e234-out/E3.js	827c47f91419af05	1200			js/bundled-champion-3p.js	0.46944444444444444	no
+E1	2026-10-02T15:55:43.924Z	7	docs/artifacts/e234-out/E1.js	01eec764b18ec983	1200			js/bundled-champion-3p.js	0.6486111111111111	no
+B1	2026-10-02T15:55:57.660Z	7	docs/artifacts/e234-out/B1.js	38af0d4bce6fa357	1200			js/bundled-champion-3p.js	0.6236111111111111	no
+K4	2026-10-02T15:56:32.333Z	7	docs/artifacts/e234-out/K4.js	982736367633babb	1200			js/bundled-champion-3p.js	0.5347222222222222	no
+B2	2026-10-02T15:56:38.289Z	7	docs/artifacts/e234-out/B2.js	f660c89d51e3d589	1200			js/bundled-champion-3p.js	0.4708333333333333	no
+C0b	2026-10-02T15:56:43.442Z	7	docs/artifacts/e234-out/C0b.js	5727b5d25afffe2a	1200			js/bundled-champion-3p.js	0.6263888888888889	no
+K1	2026-10-02T15:56:57.523Z	7	docs/artifacts/e234-out/K1.js	ced8c61b2047da58	1200			js/bundled-champion-3p.js	0.49722222222222223	no
+K2	2026-10-02T15:57:07.181Z	7	docs/artifacts/e234-out/K2.js	1d4b687da27187b7	1200			js/bundled-champion-3p.js	0.5347222222222222	no
+E2	2026-10-02T15:57:17.461Z	7	docs/artifacts/e234-out/E2.js	b3c6be11febc11f9	1200			js/bundled-champion-3p.js	0.5875	no
+R1	2026-10-02T15:59:43.893Z	7	docs/artifacts/e234-out/R1.js	9efeb11918173745	1200			js/bundled-champion-3p.js	0.5597222222222222	no
+K5	2026-10-02T16:01:32.507Z	7	docs/artifacts/e234-out/K5.js	bb026cb9daa01c17	1200			js/bundled-champion-3p.js	0.2763888888888889	no
+K3	2026-10-02T16:01:35.010Z	7	docs/artifacts/e234-out/K3.js	7da3de5f7d4e2d96	1200			js/bundled-champion-3p.js	0.4125	no
+X1	2026-10-02T16:04:33.659Z	7	docs/artifacts/e234-out/X1.js	97e5a93f1704d2ad	1200			js/bundled-champion-3p.js	0.6083333333333333	no
+Q191	2026-10-02T16:14:05.941Z	7	docs/artifacts/e234-out/Q191.js	8c5612555da9ead6	1200			js/bundled-champion-3p.js	0.5375	no
+Q151	2026-10-02T16:14:24.962Z	7	docs/artifacts/e234-out/Q151.js	60ebf6632d3f43a8	1200			js/bundled-champion-3p.js	0.5694444444444444	no
+P191	2026-10-02T16:14:52.808Z	7	docs/artifacts/e234-out/P191.js	5f4840f292bb4b68	1200			js/bundled-champion-3p.js	0.6097222222222223	no
+P111	2026-10-02T16:14:54.627Z	7	docs/artifacts/e234-out/P111.js	4bcca6ff7d235ebb	1200			js/bundled-champion-3p.js	0.5611111111111111	no
+Q111	2026-10-02T16:15:05.558Z	7	docs/artifacts/e234-out/Q111.js	4d3222c3449e0916	1200			js/bundled-champion-3p.js	0.46111111111111114	no
+P151	2026-10-02T16:16:02.248Z	7	docs/artifacts/e234-out/P151.js	6c57a4ec5bb836ef	1200			js/bundled-champion-3p.js	0.6097222222222223	no
+T111	2026-10-02T16:21:11.091Z	7	docs/artifacts/e234-out/T111.js	bf116be8b4cb6831	1200			js/bundled-champion-3p.js	0.49444444444444446	no
+T71	2026-10-02T16:21:21.278Z	7	docs/artifacts/e234-out/T71.js	2f3e611ab93c1b81	1200			js/bundled-champion-3p.js	0.5902777777777778	no
+P231	2026-10-02T16:21:35.374Z	7	docs/artifacts/e234-out/P231.js	df878bc2ce8e2cf6	1200			js/bundled-champion-3p.js	0.6194444444444445	no
+U2	2026-10-02T16:22:09.719Z	7	docs/artifacts/e234-out/U2.js	394c969e4a8ba702	1200			js/bundled-champion-3p.js	0.5097222222222222	no
+Q231	2026-10-02T16:22:39.054Z	7	docs/artifacts/e234-out/Q231.js	66b52ef0d0cbf252	1200			js/bundled-champion-3p.js	0.6222222222222222	no
+U1	2026-10-02T16:29:32.552Z	7	docs/artifacts/e234-out/U1.js	2eeb989eaf102a32	1200			js/bundled-champion-3p.js	0.37083333333333335	no
+V111	2026-10-02T16:32:52.346Z	7	docs/artifacts/e234-out/V111.js	1ff96e47fd6b4cea	1200			js/bundled-champion-3p.js	0.3736111111111111	no
+V71	2026-10-02T16:32:56.762Z	7	docs/artifacts/e234-out/V71.js	acf9a0177a4bc94c	1200			js/bundled-champion-3p.js	0.37916666666666665	no
+V151	2026-10-02T16:33:04.530Z	7	docs/artifacts/e234-out/V151.js	9557410e780569cb	1200			js/bundled-champion-3p.js	0.4444444444444444	no
+W31	2026-10-02T16:33:26.488Z	7	docs/artifacts/e234-out/W31.js	e283fe1a741c5a15	1200			js/bundled-champion-3p.js	0.5666666666666667	no
+W71	2026-10-02T16:33:38.913Z	7	docs/artifacts/e234-out/W71.js	da029c426248ce6d	1200			js/bundled-champion-3p.js	0.6125	no
+V191	2026-10-02T16:34:18.461Z	7	docs/artifacts/e234-out/V191.js	1e31ce63f5f78acc	1200			js/bundled-champion-3p.js	0.5347222222222222	no
+BIG0	2026-10-02T17:26:20.112Z	7	docs/artifacts/e234-out/BIG0.js	b2263a30f5911655	400			js/bundled-champion-3p.js	0.3819444444444444	no
+BIG1	2026-10-02T17:29:09.585Z	7	docs/artifacts/e234-out/BIG1.js	b2263a30f5911655	400			js/bundled-champion-3p.js	0.3819444444444444	no
+BIG1R	2026-10-02T17:36:39.030Z	7	docs/artifacts/e234-out/BIG1R.js	b2263a30f5911655	400			js/bundled-champion-3p.js	0.3819444444444444	no
+M191	2026-10-02T17:54:07.675Z	7	docs/artifacts/e234-out/M191.js	8c5612555da9ead6	1200			js/bundled-champion-3p.js	0.5375	no
+S71	2026-10-02T17:54:08.846Z	7	docs/artifacts/e234-out/S71.js	0d858d46c4227e1a	1200			js/bundled-champion-3p.js	0.5152777777777777	no
+M151	2026-10-02T17:54:25.268Z	7	docs/artifacts/e234-out/M151.js	60ebf6632d3f43a8	1200			js/bundled-champion-3p.js	0.5694444444444444	no
+M111	2026-10-02T17:54:51.600Z	7	docs/artifacts/e234-out/M111.js	4d3222c3449e0916	1200			js/bundled-champion-3p.js	0.46111111111111114	no
+S111	2026-10-02T17:54:54.763Z	7	docs/artifacts/e234-out/S111.js	4bcca6ff7d235ebb	1200			js/bundled-champion-3p.js	0.5611111111111111	no
+S191	2026-10-02T17:54:56.397Z	7	docs/artifacts/e234-out/S191.js	5f4840f292bb4b68	1200			js/bundled-champion-3p.js	0.6097222222222223	no
+M31	2026-10-02T17:54:57.256Z	7	docs/artifacts/e234-out/M31.js	5724843a1c1e1832	1200			js/bundled-champion-3p.js	0.65	no
+S231	2026-10-02T17:55:23.262Z	7	docs/artifacts/e234-out/S231.js	df878bc2ce8e2cf6	1200			js/bundled-champion-3p.js	0.6194444444444445	no
+S151	2026-10-02T17:55:36.895Z	7	docs/artifacts/e234-out/S151.js	6c57a4ec5bb836ef	1200			js/bundled-champion-3p.js	0.6097222222222223	no
+M71	2026-10-02T17:55:39.118Z	7	docs/artifacts/e234-out/M71.js	5727b5d25afffe2a	1200			js/bundled-champion-3p.js	0.6263888888888889	no
+M231	2026-10-02T17:55:59.312Z	7	docs/artifacts/e234-out/M231.js	66b52ef0d0cbf252	1200			js/bundled-champion-3p.js	0.6222222222222222	no
+S31	2026-10-02T18:01:28.124Z	7	docs/artifacts/e234-out/S31.js	7da3de5f7d4e2d96	1200			js/bundled-champion-3p.js	0.4125	no
