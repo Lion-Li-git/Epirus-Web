@@ -6,8 +6,13 @@
  * 然后问两句：
  *   ① 有没有格的预测 F 高于全库实测最好值？（"图上说还有更好的"）
  *   ② 那些高地格离**已发货的冠军**有多远、方向是什么（把方向翻译成行为列的差，才算"可训练方向"）。
- * 用法：node champion-map/gapscan.mjs
- */
+ * 用法：node champion-map/gapscan.mjs [--T=0.1] [--ruler=Hp|H]
+ * ⚠ §E314 之后页面与等值面用的是**线上口径 `Hp`**，而这台脚本 §E307 当年是按 `H` 跑的。
+ *   ⇒ 默认换成 `Hp`（与页面同一台仪器，§E312 的规矩）；要复刻 §E307 那条"0 个预测更高"的历史读数，
+ *     显式加 `--ruler=H`。**两把尺的结果都要印出来**，因为它们回答的是两个不同的问题：
+ *     "按玩家真正拿到的口径还有没有高地" ‖ "按考卷口径当年还有没有"。 */
+const RULER = (process.argv.find(a => a.startsWith('--ruler=')) || '--ruler=Hp').slice(8);
+if (RULER !== 'Hp' && RULER !== 'H') { console.error('⛔ --ruler 只认 Hp|H，收到 ' + RULER); process.exit(2); }
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +23,8 @@ function tsv(f) { const L = readFileSync(join(HERE, f), 'utf8').trim().split('\n
   return L.slice(1).map(l => { const c = l.split('\t'); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; }); }
 const co = tsv('coords.tsv'), lin = tsv('lineage.tsv'), LB = {};
 for (const r of lin) LB[r.id] = r;
-const P = co.map(r => ({ id: r.id, x: +r.x2, y: +r.y2, F: +r.H / 100 + T * (+r.S), H: +r.H, S: +r.S, rk: +r.rank,
+/* 名次不许读 coords.tsv 的 `rank` 列 —— 那一列是换尺前算的（viewer 在加载时重算，直接读 TSV 的人不会） */
+const P = co.map(r => ({ id: r.id, x: +r.x2, y: +r.y2, F: +r[RULER] / 100 + T * (+r.S), H: +r.H, Hp: +r.Hp, S: +r.S,
   lin: r.lineage || '', fam: (LB[r.id] || {}).fam, beh: r }));
 const N = P.length;
 

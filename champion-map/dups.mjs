@@ -47,8 +47,14 @@ console.log('== ① 覆盖率 ==');
 console.log('718 枚 → 唯一权重 ' + G.size + ' 副 ⇒ ' + dup.length + ' 组重复、吃掉 ' +
   dup.reduce((a, x) => a + n(x[1]), 0) + ' 枚（' + (100 * (1 - G.size / 718)).toFixed(1) + '% 的点是别人的副本）');
 
-/* 名次污染：按 coords 的 rank 看前 30 名里有几枚是副本 */
-const rk = (id) => (CO_BY_ID[id] ? +CO_BY_ID[id][CH.rank] : 9e9);
+/* 名次污染：按**线上口径现算的名次**看前 30 名里有几枚是副本。
+ * ⚠ 不许读 `coords.tsv` 的 `rank` 列 —— 那一列是 §E314 换尺前算的（§E319：现役旧名次 15 / 新尺 106，差 7 倍）。 */
+const rk = (function () {
+  const Fv = (r) => (+r[CH.Hp]) / 100 + 0.10 * (+r[CH.S]);
+  const o = CR.slice().sort((a, b) => Fv(b) - Fv(a));
+  const m = {}; o.forEach((r, i) => { m[r[CH.id]] = i + 1; });
+  return (id) => (m[id] || 9e9);
+})();
 const Hb = (id) => (CO_BY_ID[id] ? +CO_BY_ID[id][CH.H] : NaN);
 const top = [];
 for (const [w, v] of G) { const s = v.slice().sort((a, b) => rk(a[LH.id]) - rk(b[LH.id])); top.push([w, s[0], v.length]); }

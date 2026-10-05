@@ -22,6 +22,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const TOPN = Number(arg('top', 20));
 const T = Number(arg('T', 0.10));
+/* ⚠ §E314 之后页面/等值面用的是**线上口径 `Hp`**，这台脚本 §E307 当年按 `H` 跑 ⇒ 默认换到 `Hp` 与页面同仪器
+ *   （§E312 的规矩：喂决策的离线工具必须先证明它是同一台仪器）。要复刻 §E307 的历史表就显式加 `--ruler=H`。
+ *   名次也一样：**不许读 `coords.tsv` 的 `rank` 列**（那是换尺前算的），改成**在本尺上现算**。 */
+const RULER = arg('ruler', 'Hp');
+if (RULER !== 'Hp' && RULER !== 'H') { console.error('⛔ --ruler 只认 Hp|H，收到 ' + RULER); process.exit(2); }
+if (RULER !== 'Hp' && RULER !== 'H') { console.error('⛔ --ruler 只认 Hp|H，收到 ' + RULER); process.exit(2); }
 
 function tsv(f) { const L = readFileSync(join(HERE, f), 'utf8').trim().split('\n'), h = L[0].split('\t');
   return L.slice(1).map(l => { const c = l.split('\t'); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; }); }
@@ -31,7 +37,7 @@ const OKM = {};
 for (const f of ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv']) { try { for (const r of tsv(f)) OKM[r.id] = r.ok; } catch (e) { } }
 const HOL = {}; for (const r of tsv('holo.tsv')) HOL[r.id] = r;
 
-const R = co.map(r => ({ id: r.id, H: +r.H, S: +r.S, Ge: +r.Geff, rk: +r.rank, F: +r.H / 100 + T * (+r.S),
+const R = co.map(r => ({ id: r.id, H: +r.H, Hp: +r.Hp, S: +r.S, Ge: +r.Geff, rk: 0, F: +r[RULER] / 100 + T * (+r.S),
   fam: LB[r.id] ? +LB[r.id].fam : 0, fl: LB[r.id] ? LB[r.id].famLabel : '', ts: LB[r.id] ? LB[r.id].ts : '',
   ok: OKM[r.id] === '1' ? 1 : (OKM[r.id] === '0' ? 0 : null),
   holo: HOL[r.id] && HOL[r.id].holoOther !== '' ? +HOL[r.id].holoOther : null,
@@ -39,6 +45,10 @@ const R = co.map(r => ({ id: r.id, H: +r.H, S: +r.S, Ge: +r.Geff, rk: +r.rank, F
   beh: { dmg: +r.dmg, heavy: +r.heavy, holo: +r.holo, rounds: +r.rounds, draw: +r.drawRate, zero: +r.zeroRate,
     seat: +r.seatSpread, keys: +r.distinctKeys, chg: +r.charges, waste: +r.waste, stance: +r.noThreatStance,
     fA: +r.fieldAAtk, rw: +r.rwDmg } }));
+/* 名次**在本尺上现算** —— 直接读 `coords.tsv` 的 `rank` 列会把旧尺名次当新尺结论用（viewer 会重算，离线脚本不会） */
+(function () { const o = R.map((r, i) => i).sort((a, b) => R[b].F - R[a].F);
+  for (let k = 0; k < o.length; k++) R[o[k]].rk = k + 1; })();
+console.log('量具: --ruler=' + RULER + ' ‖ T=' + T + ' ‖ 名次 = 本尺现算（不读 coords 的 rank 列）‖ n=' + R.length);
 const med = a => { const s = a.filter(Number.isFinite).sort((x, y) => x - y); return s.length ? s[s.length >> 1] : NaN; };
 const pct = (a, p) => { const s = a.filter(Number.isFinite).sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(p * s.length))] : NaN; };
 function spear(x, y) { const n = x.length; if (n < 4) return NaN;
@@ -48,7 +58,7 @@ function spear(x, y) { const n = x.length; if (n < 4) return NaN;
   return sxy / Math.sqrt(sa * sb); }
 
 /* ===== A 家族级自然实验 ===== */
-console.log('=== A. 22 次方法/目标改动 = 一组已跑完的自然实验（尺 = §E290 统一卷 · T=' + T + '）===');
+console.log('=== A. 22 次方法/目标改动 = 一组已跑完的自然实验（尺 = §E290 统一卷上的 ' + RULER + ' · T=' + T + '）===');
 console.log('家 枚数 最好名次 中位名次 过线率 送盾中位 冠军  改了什么（相对上一家）');
 const fams = {};
 for (const r of R) if (r.fam) (fams[r.fam] || (fams[r.fam] = [])).push(r);
