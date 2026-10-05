@@ -26,7 +26,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX, extractJsonObject, parseMetaTolerant } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX, extractJsonObject, parseMetaTolerant, packHoloMode, applyHoloMode } from './audit-lib.mjs';
 /* v1.5.152（DS 09-22 · 用户裁定"把真桌 ε=0.2 接进体检，只记录不阻断"）：
  * **产品代理栏** —— 单一来源：借 `behavior-profile.mjs` 的 `fieldProfile`（不抄第二份实现；该模块被 import 时不跑 main）。
  * 依据（`docs/RESEARCH-LOG-2026-09-22-ds.md` §7）：同一包同一 ε=0，**镜像**装配电磁炮 4.30 每局、
@@ -82,6 +82,26 @@ try {
 if (!/^\{/.test(String(metaJson).trim())) { console.error('⛔ META 不是对象字面量'); process.exit(4); }
 
 console.log('== 换前体检：' + SRC + ' ==');
+/* §E342（用户裁定 10-06）：全息屏障→原型制御 的映射档**跟着包走**。
+ *   优先级：CLI `--holo2proto=` > 包自带 `META.holo2proto` > 'off'。
+ *   CLI 那一档存在的理由：`v7beadseed-82` 这类**历史产物**的 META 里没有声明（它比这一档早出生），
+ *   要按映射后的行为体检就得能显式声明一次；声明之后由本工具**写进新 META**，从此包自己带着走。
+ *   ⚠ 解析只经 `audit-lib.packHoloMode` 一处（非法值抛 ⇒ 不静默退回 off）。 */
+let HOLO_WANT = 'off';
+{
+  const cliH = flag('holo2proto', '');
+  try {
+    HOLO_WANT = cliH !== '' ? packHoloMode({ holo2proto: cliH }) : packHoloMode(meta);
+  } catch (e) { console.error('⛔ ' + e.message); process.exit(2); }
+  console.log('   映射档 holo2proto = ' + HOLO_WANT +
+    (cliH !== '' ? '（CLI 声明 ⇒ 将写进 META）' : (meta && meta.holo2proto ? '（包自带声明）' : '（无声明 ⇒ off，出厂行为不变）')) +
+    (HOLO_WANT === 'off' ? '' : ' ‖ 送盾率门槛 HOLO_GIFT_MAX=' + HOLO_GIFT_MAX + ' 将按**映射后**的行为判'));
+  /* §E342：把本次判定的这一档**也写给子进程**（考卷 `eval-5p` 与下面三栏 spawn 出去的探针都在**另一个进程**里，
+   *   它们各自的沙箱读不到父进程这份模块级变量）。
+   *   ⚠ 这里**无条件**写（连 'off' 也写），不是只在开了的时候写 —— 否则调用方环境里残留的一根
+   *     `EPIRUS_HOLO2PROTO=proto` 会让"父进程按 off 判、子进程按 proto 跑"，那比两边都按 off 更坏。 */
+  process.env.EPIRUS_HOLO2PROTO = HOLO_WANT;
+}
 /* --exam-first=<百分数>：跳过内部 spawn（沙箱里 Node 的子进程管道可能被拦），
  * 由调用方先单独跑 `node tools/eval-5p.mjs <局数> 5 77000 <包>` 再把 1st% 传进来。
  * 这时 meta 里会记 examSource:'cli' 以示区分（内部跑的记 'spawn'）。 */
@@ -108,6 +128,10 @@ console.log('   ⚠ A 考卷**只作诊断**：连续两轮它与稳健性反相
  * （罕见技能还没出现 ⇒ 熵被低估）。用 n=10 去卡 `G<3` 等于把噪声当结论（本项目"阈值是刀锋"的第 N 次）。
  * B/C/E/F 几列在 n=10 与 n=20 下读数接近（伤害/局 13.60 → 13.50），所以统一用 20 不影响历史可比性。 */
 const W = sandbox();
+/* §E342：本工具后面所有量具（selfPlay / reflectWall / feasibilityOf / G4/G5 …）都在这个沙箱里跑
+ *   ⇒ 映射档必须在**它们之前**下达，并且回读确认（applyHoloMode 不一致就抛）。
+ *   考卷那一列是 spawn 出去的 `eval-5p`，它自己从包 META 读同一份声明 ⇒ 两边同源，不会出现"体检按 proto、考卷按 off"。 */
+applyHoloMode(W, { holo2proto: HOLO_WANT }, 'promote-champion');
 /* v1.5.63：**必须原生读取**（`unpack(json, true)`）。历史包是 v5/v6 形状，`unpack(json)`（默认嵌入 v7）
  * 对它们返回 **null** ⇒ 体检直接崩（实测 eco-34.bak：unpack(j)=null / unpack(j,true)=3337 位）。
  * 规矩见 `audit-lib.loadChamp` 的注释："测量工具必须能读历史形状 —— 保持原生形状读取，不要嵌入"。 */
@@ -516,6 +540,10 @@ meta.examScoreAtBuild = first ? Number(first) / 100 : null;
 meta.examMode = 'multi'; meta.examGames = EXG; meta.examSeed = 77000; meta.examAt = new Date().toISOString().slice(0, 10);
 meta.examSource = examSource;                 // 'spawn' = 本工具内部复跑；'cli' = 由 --exam-first 传入
 meta.rulesFingerprint = fp;
+/* §E342：映射档**写进包**（不写就等于"体检按 proto、上线按 off"）。
+ *   'off' 时**删键**而不是写 'off' ⇒ 没有映射的包保持与历史逐字同形（少一维就少一处可漂的地方），
+ *   也让 D229 那条"无声明 ⇒ off"的零剂量腿真的能测到"无声明"这个状态。 */
+if (HOLO_WANT === 'off') delete meta.holo2proto; else meta.holo2proto = HOLO_WANT;
 meta.selfPlayDmgPerGame = Number(dpg.toFixed(2));
 meta.selfPlayDrawRate = Number(drawRate.toFixed(3));
 /* v1.5.18：把新增/新启用的门槛项也记进 meta（否则"这个包当年是怎么过门的"又变成不可查）。 */

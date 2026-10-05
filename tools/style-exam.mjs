@@ -24,6 +24,8 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { OPP_FN } from '../server/opp-pool.mjs';
 import { makeOppSelResolver, loadChampParams, champOppAbs } from '../server/opp-champs.mjs';
+/* §E342：映射档的解析/下达口只从 audit-lib 拿（与 promote-champion、eval-5p 同一份 ⇒ 一处改档、三处一致）。 */
+import { extractJsonObject, parseMetaTolerant, packHoloMode, applyHoloMode } from './audit-lib.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -69,6 +71,40 @@ const W = sb.window, R = W.EpirusRules, T = W.EpirusTrainer, P = W.EpirusPolicy,
  * 而 server/worker 的沙箱没有 window、模块挂在 sb 自身上。解析器只要求"传进来的对象能拿到
  * EpirusPolicy/EpirusTrainer"，所以两边各自传对的那个。 */
 const resolveOpp = makeOppSelResolver(W, root, OPP_FN, B, TEMP);
+/* §E340/§E342 全息屏障→原型制御 的映射档（`off|proto|drop`，**默认 off ⇒ 两处都不设时与旧版逐字相同**）。
+ *   §E342（用户裁定 10-06）把优先级定成与 `promote-champion` **同一条**：
+ *     显式覆盖（环境变量 `EPIRUS_HOLO2PROTO`）> 包自带声明（`META.holo2proto`）> `off`。
+ *   为什么包声明要压过"没设环境变量"：这份考卷常被拿去比"这枚包好不好"，而包上线后跑的是**它声明的那一档**
+ *     ⇒ 读数若按 off 计，就是在给一枚永远不会以 off 上线的包记 off 的成绩（两本账）。
+ *   ⚠ 下达必须在**受试包解出来之后**（见下面 `subjHoloApply` 的调用点）：包还没读到就先下达 = 拿错档打分。
+ *   含糊值必须响亮拒（本仓规矩：含糊拼写不许被当成"没写"，否则一次拼错就是一份静默的假读数）。 */
+const ENV_HOLO = (process.env.EPIRUS_HOLO2PROTO == null || String(process.env.EPIRUS_HOLO2PROTO).trim() === '')
+  ? null : String(process.env.EPIRUS_HOLO2PROTO).trim();
+if (ENV_HOLO != null) {
+  try { packHoloMode({ holo2proto: ENV_HOLO }); }
+  catch (e) { console.error('⛔ EPIRUS_HOLO2PROTO：' + e.message); process.exit(2); }
+}
+/* 只给 `holo2proto` 这一件事用 audit-lib 的健壮解析口；上面 `subjectMeta` 那条懒惰正则**原样留着**读其它字段
+ *   ⇒ 历史读数零变动（换成健壮解析会让嵌套 META 的包突然多读出 `meta.mode`，那是另一笔换尺）。 */
+let HOLO_APPLIED = 'off';
+function subjHoloApply(src, file, label) {
+  let dm = {};
+  const mj = src ? extractJsonObject(src, 'window.EPIRUS_CHAMPION_3P_META') : null;
+  if (mj) {
+    try { dm = parseMetaTolerant(mj, file).meta || {}; }
+    catch (e) { console.error('⛔ ' + file + ' 的 META 解析不出 ⇒ 映射档无从判定（不许静默当 off）：' + e.message); process.exit(2); }
+  }
+  const declared = packHoloMode(dm);
+  const mode = ENV_HOLO != null ? ENV_HOLO : declared;
+  try { applyHoloMode({ EpirusPolicy: P }, { holo2proto: mode }, 'style-exam'); }
+  catch (e) { console.error('⛔ ' + e.message); process.exit(2); }
+  HOLO_APPLIED = mode;
+  if (mode !== 'off') console.log('#holo2proto=' + mode + '（来自' + (ENV_HOLO != null ? '环境变量' : '包声明') + '）');
+  if (src && ENV_HOLO != null && ENV_HOLO !== declared) {
+    console.log('⚠ ' + label + ' 的包声明是 "' + declared + '"，本次被环境变量改成 "' + ENV_HOLO + '"'
+      + ' ⇒ 这份读数**不是**该包上线后的行为，跨档比较时不许混用。');
+  }
+}
 
 /* ===== 受试者：冠军文件 或 脚本名 ===== */
 function subjectMeta(src, file) {
@@ -76,6 +112,7 @@ function subjectMeta(src, file) {
   try { return m ? JSON.parse(m[1]) : null; } catch (e) { return null; }
 }
 let subjParams = null, subjLabel = SUBJECT, subjMode = FLAG.mode || 'multi';
+let subjSrc = null, subjFile = null;
 if (OPP_FN[SUBJECT]) {
   subjLabel = '脚本:' + SUBJECT;
   subjMode = FLAG.mode || 'multi';
@@ -91,7 +128,11 @@ if (OPP_FN[SUBJECT]) {
   if (!FLAG.mode && meta && meta.mode) subjMode = meta.mode;
   subjLabel = rel + (meta && meta.firstRate != null ? '（自评=' + (meta.firstRate * 100).toFixed(1) + '%）' : '');
   if (meta && meta.mode) subjLabel += ' [训练模式=' + meta.mode + ']';
+  subjSrc = src; subjFile = file;
 }
+/* §E342：映射档在这里下达 —— **包已读到、但一局都还没跑**。
+ *   放在 unpack 之后：拿一枚不兼容/不存在的包来定档，应当在报错之后就停，而不是先按某档跑完一场。 */
+subjHoloApply(subjSrc, subjFile, subjLabel);
 if (!R.MODES[subjMode]) { console.error('--mode 未知: ' + subjMode); process.exit(1); }
 
 /* 每个 chooser **每局新建**（与 eval-5p 的 makeSel()/局 一致；chooser 可能带状态）。
@@ -115,6 +156,24 @@ function styleSel(nm) {
 for (const nm of STYLES.concat(MIXSTYLES)) {
   if (OPP_FN[nm]) continue;
   resolveOpp(nm);   // 解析器内部含缓存与清晰报错
+}
+/* §E342 口径边界（**明写不猜**）：映射档在引擎里是**进程级**的一个值（`policy.js` 的 `H2P`），
+ *   而这张考卷把受试者和 4 个风格对手装进**同一个沙箱** ⇒ 一下达就是全场同一档。
+ *   所以风格包若自带声明、且与本次 applied 档不一致，那些对手**并不是以它自己上线后的行为在打**。
+ *   第一版在这里只做响亮报告、不做分席下达（分席要改 `chooseCandidates` 的签名 = 动引擎面，等用户裁定）。 */
+{
+  const seen = {}, off = [];
+  for (const nm of STYLES.concat(MIXSTYLES)) {
+    if (OPP_FN[nm] || seen[nm]) continue;
+    seen[nm] = 1;
+    const mj = extractJsonObject(readFileSync(champOppAbs(nm, root), 'utf8'), 'window.EPIRUS_CHAMPION_3P_META');
+    let dm = {};
+    if (mj) { try { dm = parseMetaTolerant(mj, nm).meta || {}; } catch (e) { dm = {}; } }
+    const d = packHoloMode(dm);
+    if (d !== HOLO_APPLIED) off.push(nm + '（声明 ' + d + '）');
+  }
+  if (off.length) console.log('⚠ 风格对手自带映射档、与本次全场档 "' + HOLO_APPLIED + '" 不一致：'
+    + off.join(' ‖ ') + ' ⇒ 这些对手是以**本次档**在打，不是它们上线后的行为（档是进程级，做不到一席一档）。');
 }
 
 /* ===== 一个场 ===== */

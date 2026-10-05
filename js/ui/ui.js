@@ -6,6 +6,9 @@
   const BeadChoice = window.EpirusBeadChoice;   // v1.5.199：「这一手蓄能攒哪种珠」的单一来源（`js/ui/bead-choice.js`，门 D142 钉加载顺序与三处调用）
   const Play = window.EpirusPlay, Bots = window.EpirusBots;
   const P = window.EpirusPolicy, Trainer = window.EpirusTrainer, Champ = window.EpirusChampion;
+  /* §E342：页面侧"上一次下达的映射档"缓存（见 `chooseAIMulti` 里那段）。
+   * 只在**值变了**的时候才下达 ⇒ 每决策成本是一次 localStorage 读（与 `epirus.beliefSearch` 同一形状）。 */
+  let HOLO_PAGE = null;
 
   const $ = function (id) { return document.getElementById(id); };
   const NAME = ['你', '电脑'];
@@ -459,6 +462,29 @@
     let bsOn = 0;
     try { bsOn = localStorage.getItem('epirus.beliefSearch') === '1' ? 1 : 0; } catch (e) { bsOn = 0; }
     if (Trainer.setBeliefSearch) Trainer.setBeliefSearch(bsOn);
+    /* ===== §E342（用户裁定 10-06）：全息屏障→原型制御 的映射档 = **包自带的声明** =====
+     * 真源是 `window.EPIRUS_CHAMPION_3P_META.holo2proto`（由 `tools/promote-champion.mjs` 在换冠军时写入），
+     * 所以"体检判过的那一档"和"页面此刻跑的这一档"读的是同一个字符串 ⇒ 不会出现门绿着、页面却在跑另一档。
+     * `epirus.holo2proto`（`off|proto|drop`）是**实机对比手感**用的覆盖档，优先级与工具侧一致：覆盖 > 包声明 > off。
+     * ⚠ 两个必须写下来的边界：
+     *   ① 这一档在 `policy.js` 里是**模块级**的（一个变量），所以覆盖一旦下达就对**所有 AI 席**生效，不是逐席位；
+     *   ② 训练完成后页面会把新包热替换进 `EPIRUS_CHAMPION_3P`（见 `done` 分支），但那句话**不带 META**
+     *      ⇒ 此时读到的声明仍属于上一枚包。要按新包上线后的行为打，**刷新页面**（这也是为什么默认必须是 off）。
+     * 非法值由 `setHolo2Proto` 自己抛（宁可不映射，也不要"以为上线了映射、其实没有"）。 */
+    if (P.setHolo2Proto) {
+      let hv = 'off';
+      try { const o = localStorage.getItem('epirus.holo2proto'); if (o != null && String(o).trim() !== '') hv = String(o).trim(); } catch (e) { /* 读不到 = 没覆盖 */ }
+      if (hv === 'off') {
+        const md = (window.EPIRUS_CHAMPION_3P_META || {}).holo2proto;
+        if (md != null && String(md).trim() !== '') hv = String(md).trim();
+      }
+      if (hv !== HOLO_PAGE) {
+        HOLO_PAGE = hv;
+        try { P.setHolo2Proto(hv); }
+        catch (e) { HOLO_PAGE = 'off'; P.setHolo2Proto('off');
+          console.error('⛔ holo2proto：' + e.message + ' ⇒ 钉回 off，本次对局**没有**映射。'); }
+      }
+    }
     function finish(res) {
       const key = (typeof res === 'string') ? res : (res && res.key);
       const t1 = (res && typeof res === 'object' && res.target != null) ? res.target : pickTargetFor(state, pid, key);

@@ -14,7 +14,7 @@
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { seatSymmetry, reflectWall, fieldRate, densityProfile, chargeProfile, aggressionProfile, feasibilityOf, FEAS_N_DEFAULTS as FN, rejectUnknownFlags } from './audit-lib.mjs';
+import { seatSymmetry, reflectWall, fieldRate, densityProfile, chargeProfile, aggressionProfile, feasibilityOf, FEAS_N_DEFAULTS as FN, rejectUnknownFlags, applyHoloEnv } from './audit-lib.mjs';
 
 const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
 const PACKS = arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/cbs1s2-band2.bak,docs/artifacts/cbs1s5-band1.bak,docs/artifacts/co1s8-band1.bak').split(',');
@@ -70,6 +70,10 @@ export function build(caliber) {
     vm.runInNewContext(src, sb, { filename: f });
   }
   if (caliber.inject) sb.__INJ = caliber.inject;
+  /* §E342：`promote-champion` 的"设防持续性 / 出手形状 / 防御质量"三栏是 `spawnSync` 出去的子进程，
+   *   父进程沙箱里那个模块级的映射档**传不过来** ⇒ 由 `EPIRUS_HOLO2PROTO` 带下来、在这里统一下达（一份 build 覆盖三个探针）。
+   *   没设这个环境变量 ⇒ `applyHoloEnv` 直接返回 'off' 且**一个字节都不多跑** ⇒ 所有历史臂与门禁逐字不变。 */
+  applyHoloEnv(sb, 'probe-layer-caliber');
   if (caliber.on) {
     /* ② audit-lib 走的这条路：它只传 `(params, 0.15)` ⇒ 在属性层把后三个参数补上（忽略它传的温度，与产品一致） */
     const T = sb.EpirusTrainer, orig = T.policyChooserN;

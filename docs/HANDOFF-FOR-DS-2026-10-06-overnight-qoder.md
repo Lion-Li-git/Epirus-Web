@@ -71,3 +71,37 @@
 `docs/GATE-SHIFTS.md`（新）+ `node tools/gate-all.mjs --auto`（新默认命令：读 `git status` 自己判该跑哪一组，认不出来就升到整轮）。
 刻意没写进 `METHODOLOGY.md` —— 那份在门的读取面上，加一段就要重跑一整轮，而这是操作性表格不是方法学规矩。
 
+
+## 六、03:5x 追加：用户裁了"promote 的门槛按 proto 档判"⇒ v1.6.9 把这一档搬进包，**规则指纹换代了**
+
+**要你知道的四件事，按优先级排：**
+
+1. **`2c061b15 → b98985bf`**。`js/train/policy.js` 是指纹五件套之一，§E340/§E342 往它里面加了映射档。
+   两个线上槽的 `meta.rulesFingerprint` 我**已经按 v1.5.157 的先例重记**（只改这两个字符串区间，权重块逐字节相同：
+   3P `6d341f34672b0917` ‖ 2P `c67521d82ff32d2a`，手术脚本当场复验），
+   并且"读数没变"是**两枚独立实测**而不是断言（同种子产品考卷 1400 局跨树 sha1 两边 `53d6165be8b2` ‖
+   `mirrorHealth` 在 long/multi4/multi 三档两边 `d18715547fbb`）。细节在 `docs/logs/OVERNIGHT-2026-10-06-qoder.md` §E345。
+   ⇒ **不要**再为这条重跑 promote，也不要把它当成"换包"。
+
+2. **这一档现在是包自带的声明 `META.holo2proto`（`off|proto|drop`，无声明=off）**，四个入口同一个真源：
+   `promote-champion`（`--holo2proto=` > 包声明 > off；判完把这一档**写进新 META**，`off` 时**删键**）‖
+   `eval-5p` ‖ `style-exam` ‖ 页面 `js/ui/ui.js`。
+   ⇒ `HOLO_GIFT_MAX = 6` 那条硬门槛**没有动**（动的是"被判的那个行为"，不是阈值）。
+
+3. ⚠ **如果你要引用今晚 `v7beadseed-82` 的映射读数，必须带上第三处接线**：
+   体检的阻断栏在父进程沙箱里，而考卷与"设防持续性/出手形状/防御质量"三栏是 `spawnSync` 子进程、
+   "产品代理栏"是 `behavior-profile` 自己 import 时的**另一份引擎实例** ⇒ 第一版只下达给父进程那份，
+   那四栏与关档臂**逐字相同**（差点被读成"映射不改变风格"）。
+   现在的接法：`promote` **无条件**写 `process.env.EPIRUS_HOLO2PROTO`（连 off 也写）+ `fieldProfile` 与
+   `probe-layer-caliber.build()` 各一次 `applyHoloEnv`。**由 D229⑭ 钉住**。
+   ⇒ 同族隐患登记：`tools/` 里还有别的"父进程下达、子进程/另一份实例读数"的形状吗？我这边只查了 promote 用到的这些。
+
+4. **`eval-5p --mode=` 是一根空旗（只报，未修）**：`:558` 的 `oneGameN` 不传模式 ⇒ 对局恒 multi 3 血，
+   但 `:614` 会印"5血"、`:1186` 会把 `#mode=long` 写进**配对身份行**；
+   连带 `--drainhp=<n>` 配 `--mode=long` 时改的是 `R.MODES.long.drainHpMax`（这张考卷没人用那张表）⇒ 整条臂静默等于关档。
+   实测：带与不带 `--mode=long`，逐桌明细 sha1 **完全相同**。
+   **没修的理由**是裁定面：真接进去 = 历史上所有带 `--mode=` 的臂换尺，而 `#mode=` 是配对身份的一维。
+   ⇒ 要么按"删掉这根空旗 + 响亮拒"处理（我认为这是安全的一侧），要么真接线并重读旧臂 —— **等你或用户定**。
+
+**待裁的一格（我不自己动）**：出厂面现在**没有任何包带声明** ⇒ 线上行为逐字不变。
+要让映射真的生效，需要一次**不带 `--dry`** 的 `promote --holo2proto=proto`，那是换冠军，按规矩等你点头。
