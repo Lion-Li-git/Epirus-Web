@@ -16,7 +16,7 @@
  * 用法：node champion-map/duel-run.mjs [--ids=a,b | --top=8] [--games=60] [--seed=77000] [--out=duel-e334-s77000.tsv]
  *        [--ref=SHIPPED-Ldemo]
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,7 +46,12 @@ const refRow = ALL.concat([{ id: REF, path: REF === 'SHIPPED-Ldemo' ? 'js/bundle
 if (!refRow || !refRow.path || !existsSync(join(ROOT, refRow.path))) { console.error('⛔ 参照枚 ' + REF + ' 找不到文件'); process.exit(2); }
 
 function exam(subject, fieldOpp, tag) {
-  const j = join(HERE, 'duel-' + tag + '.json');
+  /* 中间产物落 gitignored 的 docs/artifacts/ 下，**不进 champion-map/**：那 28 份 .A/.B.json 是每次跑都会重写的
+   *   临时件，留在图目录下会把仓库刷成一堆 1KB 噪声（本班第一版就顺手 commit 进去了）。
+   *   记录只有 TSV 那一份 —— 它才是"这批决斗跑过什么"的凭证。*/
+  const SCRATCH = join(ROOT, 'docs', 'artifacts', 'e334-out');
+  if (!existsSync(SCRATCH)) mkdirSync(SCRATCH, { recursive: true });
+  const j = join(SCRATCH, 'duel-' + tag + '.json');
   const cmd = ['tools/style-exam.mjs', subject, String(GAMES), '--n=5', '--seed=' + SEED, '--mode=' + MODE,
     '--styles=champ:' + fieldOpp, '--json=' + j];
   const r = spawnSync(process.execPath, cmd, { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 << 20 });
