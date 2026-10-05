@@ -8,7 +8,7 @@
  * 为什么要这一台仪器（§E315 ⑧ 的后续）：
  * 终局当选键不是 `trainFit`，而是 `tools/train-3p.mjs:1154` 的
  *   `sc = evalN(params, ALL_PAIRS, 20, N, 987654).firstRate + 0.5 * top2Rate`
- * —— 28 个脚本对手对 × 每对 20 局、**seedBase 只有这一粒**。
+ * —— **36** 个脚本对手对（C(9,2)，`POOL` 9 枚）× 每对 20 局、**seedBase 只有这一粒**。
  * §E314 量过"同枚包只换评估种子"的噪声（eval-5p 口径，p50 1.50 ‖ p90 3.70pt），
  * 但那是**另一台仪器**（5 人混席、每档更多局）。当选键的样本量只有 560 局，
  * 它的噪声必须**在它自己的口径上**量 —— 这正是 §E312 那条坑（离线扫描器 ≠ 页面）的反面教材用法。
@@ -20,13 +20,13 @@
  * 口径纪律（跑前写死，不是事后挑读数）：
  *   - 沙箱启动**逐字照 `tools/train-3p.mjs`**：同一份 7 文件加载顺序、`sb.window = sb`、
  *     `__seedSandbox(sb, sbseed)`、`P.setRng(mulberry32(sbseed*7919+13))`；
- *     `ALL_PAIRS` 也是 train-3p:368 那 9 个 bot 的两两组合（28 对）。
+ *     `ALL_PAIRS` 也是 train-3p:368 那 9 个 bot 的两两组合（**36 对** —— 不是我初稿写的 28，见下面 POOL 处的更正）。
  *   - ⚑ **对应性守卫**：`--expect=<1st>,<top2>` 给定真臂日志里的名人堂读数，
  *     只有**第一个包在 seedBase 987654 上的两个百分数与之逐字相等**才继续。
  *     对不上 ⇒ 这台脚本不是同一把尺，所有读数作废（§E312）。
  *   - 只读：不改 `tools/`、不改 `js/`、不 promote、不落盘任何 .bak。
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const argv = process.argv.slice(2);
@@ -57,28 +57,37 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
 }
 const P = sb.window.EpirusPolicy, T = sb.window.EpirusTrainer, Bots = sb.window.EpirusBots;
 
-/* train-3p 的 __seedSandbox：把沙箱里的 Math 换成可复现的 mulberry32 流。
- * 这里照搬，因为 evalN 之下的对局会吃到它 —— 不搬就等于换了第二台仪器。 */
-(function seedSandbox(sbox, seed) {
-  let s = seed >>> 0;
-  const rnd = function () {
-    s |= 0; s = s + 0x6D2B79F5 | 0;
-    let t = Math.imul(s ^ s >>> 15, 1 | s);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+/* train-3p:291 的 `__seedSandbox` **逐字搬过来**（不是"等价重写"）：
+ * 它用 `Object.create(Math)` 保留 `imul` 等等，而我第一版自己列了一张名单 ⇒ 立刻在
+ * `evo.js:63 slotSaltFor` 的 `Math.imul` 上抛 TypeError —— 又一次 §E312：复刻仪器要搬代码，别照记忆重写。 */
+function __seedSandbox(sbox, seed) {
+  if (!seed) return;
+  const M = Object.create(Math);
+  let s = (seed >>> 0) || 1;
+  M.random = function () {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-  const M = { random: rnd };
-  for (const k of ['abs', 'floor', 'ceil', 'round', 'min', 'max', 'pow', 'sqrt', 'log', 'exp', 'sin', 'cos', 'tan', 'atan2', 'E', 'PI', 'hypot']) M[k] = Math[k];
   sbox.Math = M;
-})(sb, SBSEED);
+}
+__seedSandbox(sb, SBSEED);
 if (P.setRng && T.mulberry32) P.setRng(T.mulberry32(SBSEED * 7919 + 13));
 
-/* train-3p:368 的 POOL（9 个 bot ⇒ C(9,2)=28 对，顺序也必须一致：pair 索引决定谁坐哪席） */
+/* train-3p:368 的 POOL（9 个 bot，顺序也必须一致：pair 索引决定谁坐哪席） */
 const POOL = [Bots.pickRandom, Bots.pickAggro, Bots.pickDefend, Bots.pickBalanced,
               Bots.pickAntiDef, Bots.pickBreakDef, Bots.pickWall, Bots.pickMix, Bots.pickFarmer];
 const ALL_PAIRS = [];
 for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) ALL_PAIRS.push([POOL[a], POOL[b]]);
-if (ALL_PAIRS.length !== 28) { console.error('⛔ 对手对数 = ' + ALL_PAIRS.length + '，train-3p 是 28 ⇒ 台子搭错了'); process.exit(2); }
+/* ⚠ 9 个 bot ⇒ C(9,2) = **36** 对，而 `tools/train-3p.mjs:1130` 的注释与 `:1505` 的 banner 都写着"28 对"
+ * （`:1505` 那个是**硬写进字符串的字面量**，不是从数组取的 ⇒ 它在给自己印一个错分母）。
+ * 真臂日志印的是 `=== 名人堂验证（36 对 x 20 局）===`（2026-10-05 14:0x 实测 anchor.log），以**代码算出来的 36** 为准。 */
+const WANT_PAIRS = Number(FLAG.pairs || 36);
+if (ALL_PAIRS.length !== WANT_PAIRS) {
+  console.error('⛔ 对手对数 = ' + ALL_PAIRS.length + '，与 --pairs=' + WANT_PAIRS + ' 不符 ⇒ 池子或组合方式变了，台子搭错');
+  process.exit(2);
+}
 
 function loadParams(file) {
   const src = readFileSync(file, 'utf8');
@@ -101,8 +110,8 @@ const packs = FILES.map(function (f) {
   if (dup.length) { console.error('⛔ 有同名候选（' + dup.join(', ') + '）⇒ 榜会静默合流，把路径改名或只传一份'); process.exit(2); }
 })();
 
-console.log('# 当选键种子噪声 · evalN(28 对 × ' + GAMES + ' 局 × n=' + N + ') · seedBase ×' + BASES.length +
-  ' ‖ 包 ×' + packs.length + ' ‖ 沙箱种子=' + SBSEED + ' ‖ 共 ' + (28 * GAMES * BASES.length * packs.length) + ' 局');
+console.log('# 当选键种子噪声 · evalN(' + ALL_PAIRS.length + ' 对 × ' + GAMES + ' 局 × n=' + N + ') · seedBase ×' + BASES.length +
+  ' ‖ 包 ×' + packs.length + ' ‖ 沙箱种子=' + SBSEED + ' ‖ 共 ' + (ALL_PAIRS.length * GAMES * BASES.length * packs.length) + ' 局');
 
 const t0 = Date.now();
 for (const pk of packs) {
@@ -112,17 +121,30 @@ for (const pk of packs) {
   }
 }
 
-/* ⚑ 对应性守卫：与真臂日志里的名人堂那一行逐字比 */
+/* ⚑ 对应性守卫：与真臂日志里的名人堂那一行比。
+ * 日志那两个数是 `toFixed(1)` 印出来的 ⇒ 判据取"四舍五入到同一位后相等"（±0.05pt），
+ * 不是假装精：720 局的仪器若不同，摆的是 1~6pt 这个量级，0.05pt 的窗口它逃不进。 */
 if (FLAG.expect) {
   const e = String(FLAG.expect).split(',').map(Number);
   const g = packs[0].sc[0];
-  const okFirst = Math.abs(g.first * 100 - e[0]) < 1e-9, okTop2 = Math.abs(g.top2 * 100 - e[1]) < 1e-9;
-  console.log('# 守卫: ' + packs[0].name + ' @' + BASES[0] + ' ⇒ 1st=' + (g.first * 100).toFixed(1) + '% top2=' + (g.top2 * 100).toFixed(1) +
-    '% ‖ 期望 ' + e[0] + '/' + e[1] + ' ⇒ ' + (okFirst && okTop2 ? '✅ 同一把尺' : '⛔ 不是同一台仪器，读数作废'));
+  const okFirst = Math.abs(g.first * 100 - e[0]) <= 0.05, okTop2 = Math.abs(g.top2 * 100 - e[1]) <= 0.05;
+  console.log('# 守卫: ' + packs[0].name + ' @' + BASES[0] + ' ⇒ 1st=' + (g.first * 100).toFixed(4) + '% top2=' + (g.top2 * 100).toFixed(4) +
+    '% ‖ 真臂日志 ' + e[0] + '/' + e[1] + ' ⇒ ' + (okFirst && okTop2 ? '✅ 同一把尺（落在打印位的同一格里）' : '⛔ 不是同一台仪器，读数作废'));
   if (!(okFirst && okTop2)) process.exit(3);
 }
 
 function pct(arr, p) { const a = arr.slice().sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(p * a.length))]; }
+
+/* 原始读数落盘（`--dump=<路径>`）：docs/artifacts 被 gitignore ⇒ 建议直接写 champion-map/ 里，
+ * 否则明天的复核只能重跑一遍这台仪器（§E313 那批就是这么栽过一次，才补了 `_e315-*.txt`）。 */
+if (FLAG.dump) {
+  const lines = ['pack\tbase\tfirst\ttop2\tsc'];
+  for (const pk of packs) for (const o of pk.sc) {
+    lines.push([pk.name, o.base, (o.first * 100).toFixed(4), (o.top2 * 100).toFixed(4), (o.s * 100).toFixed(4)].join('\t'));
+  }
+  writeFileSync(FLAG.dump, lines.join('\n') + '\n');
+  console.log('# 原始读数已落盘: ' + FLAG.dump + '（' + (lines.length - 1) + ' 行）');
+}
 
 console.log('\n包'.padEnd(22) + BASES.map(function (b) { return String(b).slice(-4).padStart(7); }).join('') + '   极差(pt)  sc均值');
 for (const pk of packs) {
@@ -135,7 +157,7 @@ const ranges = packs.map(function (pk) {
   const ss = pk.sc.map(function (o) { return o.s; });
   return (Math.max.apply(null, ss) - Math.min.apply(null, ss)) * 100;
 });
-console.log('\n⭐ sc 的种子极差（' + packs.length + ' 枚 · 每人 ' + (28 * GAMES) + ' 局）: p50 ' + pct(ranges, 0.5).toFixed(2) +
+console.log('\n⭐ sc 的种子极差（' + packs.length + ' 枚 · 每枚每粒 ' + (ALL_PAIRS.length * GAMES) + ' 局）: p50 ' + pct(ranges, 0.5).toFixed(2) +
   ' ‖ p90 ' + pct(ranges, 0.9).toFixed(2) + ' ‖ max ' + Math.max.apply(null, ranges).toFixed(2) + 'pt');
 const medGap = (function () {
   const means = packs.map(function (pk) { return pk.sc.reduce(function (a, b) { return a + b.s; }, 0) / pk.sc.length; }).sort(function (a, b) { return b - a; });
@@ -165,6 +187,14 @@ function rankOf(idxs) {
 }
 const ro = rankOf(oddIdx), re = rankOf(evenIdx);
 const diffs = packs.map(function (pk) { return Math.abs(ro[pk.name] - re[pk.name]); });
+/* 两半各自的榜要能并排看见，否则"0.00 位"这种结果无法复核（口径陷阱：多列表格取数必须带列名） */
+function orderOf(idxs) {
+  return packs.map(function (pk, i) { return { n: pk.name, v: meanSc(i, idxs) }; })
+    .sort(function (a, b) { return b.v - a.v; })
+    .map(function (o) { return o.n.replace(/^(e316anchor|eps[XPU]?)-?/, '') + '(' + o.v.toFixed(1) + ')'; }).join(' > ');
+}
+console.log('   奇数粒榜: ' + orderOf(oddIdx));
+console.log('   偶数粒榜: ' + orderOf(evenIdx));
 console.log('\n③ 拆半（' + oddIdx.length + ' 粒 vs ' + evenIdx.length + ' 粒）名次平均差 = ' +
   (diffs.reduce(function (a, b) { return a + b; }, 0) / diffs.length).toFixed(2) + ' 位（满榜 ' + packs.length + ' 位 ⇒ 随机水平约 ' + (packs.length / 3).toFixed(1) + ' 位）');
 
