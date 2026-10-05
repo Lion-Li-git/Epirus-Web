@@ -404,10 +404,14 @@ function rampRGBF(tt) { return LUTF[Math.max(0, Math.min(255, Math.round(tt * 25
  *   ⚠ 只改颜色，不改几何：u01()/高度/势场仍是线性 min-max（把高度也换成秩会把"差 0.02"和"差 0.2"画成一样高）。
  *   ⚠ 缓存键必须含批次：切批次 = 换分位总体，两侧各自的秩会整体挪动，键少了会拿旧铺色画新的人群。*/
 var FSRT = { key: '', up: null, dn: null, iv: 0 };
-function splitSets() { var key = st.T.toFixed(4) + '|' + st.batch + '|' + NVIS;
+function splitSets() { var key = st.T.toFixed(4);
   if (FSRT.key === key) return FSRT;
   var iv = Fv(INC), up = [], dn = [];
-  for (var i = 0; i < N; i++) { if (!VIS[i]) continue; var v = Fv(P[i]); if (v >= iv) up.push(v); else dn.push(v); }
+  /* ⚠ 分位的**分母永远是全库**，不是"当前看见的那些"（第一版我按 VIS 过滤，是个口径错）：
+   *   切批次时颜色会整片挪位 ⇒ 同一格绿在第一批里是"库内前 5%"、在第二批里是"该批前 5%"，
+   *   而用户切批次的动机正是**跨批比较**。⇒ 批次只该决定"画哪些点"，不该决定"颜色什么含义"。
+   *   现役永远在图上（recomputeVIS 钉着），所以"分界 = 现役那一档"这句话在任何批次下都成立。*/
+  for (var i = 0; i < N; i++) { var v = Fv(P[i]); if (v >= iv) up.push(v); else dn.push(v); }
   up.sort(function (x, y) { return x - y; }); dn.sort(function (x, y) { return x - y; });
   FSRT = { key: key, up: up, dn: dn, iv: iv }; return FSRT; }
 function bnd(a, v, inc) { var lo = 0, hi = a.length;   /* inc=false → 第一个 ≥v；inc=true → 第一个 >v */
@@ -746,10 +750,14 @@ function draw1(fr) {
       g.beginPath(); g.moveTo(x, base); g.lineTo(x, y); g.stroke();
     }
     g.globalAlpha = al;
-    g.beginPath(); g.arc(x, y, dotR(d, 1), 0, 6.284); g.fillStyle = colOf(d, fr); g.fill();
+    /* ⚠ 一维这条带**故意不跟"半径 = 名次"**（与地图/谱系/三维不同）：这里横轴已经是名次本身，
+     *   901 枚挤在 1500px（间距 1.7px）⇒ 再按名次放大到 5.6px 会把整条带糊成一块，
+     *   而"名次"这件事在这张图上已经由横轴表达了，重复编码只会损失可读性。*/
+    var rr1 = (d.lin ? 5 : 2.6) * st.size;
+    g.beginPath(); g.arc(x, y, rr1, 0, 6.284); g.fillStyle = colOf(d, fr); g.fill();
     if (d.lin && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.4; g.stroke(); }
     if (d.id === st.sel) { g.globalAlpha = 1; g.strokeStyle = '#ffd166'; g.lineWidth = 2 * devicePixelRatio;
-      g.beginPath(); g.arc(x, y, dotR(d, 1) + 5 * devicePixelRatio, 0, 6.284); g.stroke(); }
+      g.beginPath(); g.arc(x, y, rr1 + 5 * devicePixelRatio, 0, 6.284); g.stroke(); }
     /* 分解条：蓝 = Hp（线上口径夺1率），黄 = T·S（广度）。谁靠哪一头站在这上面一眼可见。
        §E314：必须用 Hp 而不是 H —— 纵轴位置已经是 Hp + T·S，蓝条若还画 H 就变成"位置与分解两个口径"，
        那正是本仓反复踩的"图上画一个数、旁边一行另一个口径的数"。*/
@@ -765,7 +773,7 @@ function draw1(fr) {
   for (i = 0; i < ls.length; i++) { var p = scr[ls[i].i]; if (!p) continue;
     putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, p[0], p[1], !!P[ls[i].i].lin, true, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-  g.fillText('一维：位置 = F 名次（下方蓝条 = Hp 线上口径夺1率，黄条 = T·S）· 悬停看明细 · 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
+  g.fillText('一维：位置 = F 名次（下方蓝条 = Hp 线上口径夺1率，黄条 = T·S）· 悬停看明细 · 点一枚 = 选中（点空白取消）· 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
 }
 
 /* §E332 把谱系图的**版式**（车道带 + 左栏家族名/统计 + 左右分界 + 日期竖线与刻度）烘成一张离屏画布。
@@ -1038,7 +1046,7 @@ function drawMap(fr) {
     g.beginPath(); g.arc(scr[i][0], scr[i][1], 11 * st.size, 0, 6.284); g.strokeStyle = st.ink; g.lineWidth = 2; g.stroke(); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText(st.elev < 0.5
-    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（蓝 = 低 = 差 → 红 = 高 = 好）· 绿环 = 该枚过线 · 缩放 ×' + st.k.toFixed(2)
+    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（§E338 分界 = 现役：绿 = 比现役强 → 红 = 不如）· 绿环 = 该枚过线 · 点一枚 = 选中 · 缩放 ×' + st.k.toFixed(2)
     : '左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 柱高 = ' + (st.goodTop ? 'F − F_min（越高越好）' : 'F_max − F（越低越好 = 冠军在阱底）') + ' · 绿环 = 该枚过线',
     14 * devicePixelRatio, h - 12 * devicePixelRatio);
 }
@@ -1820,9 +1828,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     else { nbad++; out.push('FAIL ' + name + (got === undefined || got === null ? '' : ' ‖ 实测 ' + got)); } }
   fit0(); draw();
   /* ① 批次过滤真的减人 */
-  var all = NVIS; st.batch = BATCH.length ? BATCH[BATCH.length - 1].k : 'all'; recomputeVIS(); draw();
+  var all = NVIS, probeV = Fv(P[0]), cBefore = fCol(probeV);
+  st.batch = BATCH.length ? BATCH[BATCH.length - 1].k : 'all'; recomputeVIS(); draw();
   T('批次过滤：切一批要少点', NVIS < all && NVIS > 0, NVIS + ' / ' + all);
   T('批次过滤：冠军永远保留（分界参照物不能被切没）', P.every(function (d) { return !d.lin || VIS[nOf(d.id)] ? true : false; }));
+  /* 切批次只该决定"画哪些点"，不该决定"颜色什么含义"（第一版按可见集算分位 = 跨批不可比，是个口径错）*/
+  T('颜色：切批次不许挪分位（同一枚的色值必须一字不变）', fCol(probeV) === cBefore, cBefore.toFixed(3) + ' → ' + fCol(probeV).toFixed(3));
   st.batch = 'all'; recomputeVIS(); draw();
   /* ② 命中：指着**标签**必须读到那一枚自己（这条就是用户说的"悬停显示上一个冠军的信息"）。
    *    两条标签本来就可能重叠（force 那几枚允许避让失败照样画）⇒ 判据换成"命中者的框必须真的盖住这个点"，

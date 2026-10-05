@@ -46,4 +46,28 @@
 **没有任何门读 `OVERNIGHT-*` / `RESEARCH-LOG-*` 的路径**（`grep -nE "readFileSync\([^)]*docs/" tools/np-test.mjs` 只有 `RULES-2P.md`/`METHODOLOGY.md`/`artifacts/*` 那几份），
 所以移动它们属 docs-only、不需要重认证；但 `CHANGELOG.md` 与旧日志里那些"见 docs/OVERNIGHT-…"的指针会指到旧位置，
 我按 `docs/archive/README.md` 的既有做法**给一张 old→new 对照表，不改历史文字**。
-你若按旧路径找某夜的账，先看那张表。
+你若按旧路径找某夜的账，先看那张表（`docs/logs/README.md` 与 `docs/archive/README.md` 互为对照，别只读一份）。
+## 四、02:5x 追加：用户点名的"全息屏障→原型制御"做完了，数在你手上
+
+新档 `EPIRUS_HOLO2PROTO=off|proto|drop`（**默认 off**）落在 `js/train/policy.js` 的决策层（包是 5689 长的扁平权重向量，没有卡表字段可换 ⇒ 改包那条路走不通）。
+读数在 `champion-map/holo2proto.tsv`，四条形同守卫的自检在 `champion-map/holo2proto.mjs`：
+
+| 包 | off 送盾/局 | proto 送盾 | proto 自盾 | 配对差 off → proto（同种子 77000） |
+|---|---|---|---|---|
+| v7beadseed-82（统一尺第 1，被那条硬门槛挡死） | **15.97** | 0.00 | 20.82/局 | +1.7 → +3.3pt |
+| v7s9-82（§E336 三批都赢现役那枚） | 3.83 | 0.00 | 7.15/局 | +11.7 → +8.3pt |
+| SHIPPED-Ldemo（现役，本来不用 holo） | 0.00 | 0.00 | 0.00 | 三档逐字相同 = **零剂量负对照** |
+
+⇒ **给 DS 的三个问题**：
+1. 这一档**不进 promote**（D229⑧ 钉着"promote 侧不许读它"）⇒ 现在"能不能上槽"仍然只有一条答案。
+   如果你认为"映射后的榜首应该按映射后的行为过闸"，那是**改门槛语义**，得你或用户裁，不是我实现层的事。
+2. D229 我归进了 `train` 组。若你判定它属于 `ship`（它钉了 `HOLO_GIFT_MAX` 与 promote 的读取面），改 `GRP` 一处即可，
+   但**别忘了整轮的"每条门都归了组"守卫**（漏归 ⇒ 整轮 `exit 4`）。
+3. 本版 bump 到 **v1.6.8**（三处同步 + CHANGELOG 新节插在最前）。CHANGELOG 那条我按 D205 的规矩点了 D229/D228/D8/D82/D205/D194 六个门号；
+   若你要把它并成你的版本号序列，注意 `js/core/` 我没动 ⇒ **规则指纹不变**。
+
+## 五、02:5x 追加：门禁班次表
+
+`docs/GATE-SHIFTS.md`（新）+ `node tools/gate-all.mjs --auto`（新默认命令：读 `git status` 自己判该跑哪一组，认不出来就升到整轮）。
+刻意没写进 `METHODOLOGY.md` —— 那份在门的读取面上，加一段就要重跑一整轮，而这是操作性表格不是方法学规矩。
+
