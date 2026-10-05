@@ -190,6 +190,12 @@ const DATA = rows.map(r => ({
    *   `H`  保留 = 考卷口径（ε=0 贪心）—— 历史文档里大量读数写的是它，覆盖掉就把名字偷走了（attach-hp.mjs 头注有账）。
    *   `De` = Δε = H − Hp（正 = 开探索就掉）。*/
   id: r.id, lin: r.lineage || '', seed: r.seed || '', H: +r.H, Hp: +r.Hp, De: +r.De, S: +r.S, Ge: +r.Geff, rk: +r.rank,
+  /* §E321 当选键那条腿（`attach-sc.mjs` 贴进去的四列）：
+   *   Sc  = 8 粒 seedBase 的 sc 均值 ‖ Scd = 逐 seedBase 与现役的配对差均值 ‖ Scs = 同号计数 ‖ Sch = 主场（@987654）那一粒。
+   *   ⚠ 空串必须是 null，不许当 0 —— "没测过"与"和现役一样"是两件事（§E308 那条灰≠红的教训）。*/
+  sc: r.Sc === '' || r.Sc === undefined ? null : +r.Sc,
+  scd: r.Scd === '' || r.Scd === undefined ? null : +r.Scd,
+  scs: r.Scs || '', sch: r.Sch === '' || r.Sch === undefined ? null : +r.Sch,
   x2: +r.x2, y2: +r.y2, x3: +r.x3, y3: +r.y3, z3: +r.z3,
   /* §E304 家族：`fam` = 方法/目标等价类编号（按最早 ts 排 ⇒ 号大 = 训得晚）；`ms` = META 里真正的 RNG seed
    *   （和包名后缀那个数**不是一回事**，实测 META.seed 有 84 个取值、名字后缀只有 14 个）。*/
@@ -241,8 +247,19 @@ var NDUEL = 0, NWIN = 0, NFLIP = 0;
 /* §E313 部署口径实测数：NEPS = 两 seed 齐的枚数；NBRIT = Δε ≥ 3.41pt 的"脆"枚数
  *   （3.41 = 线上包 Δε 4.55 的 0.75 倍，判据 (b) 跑前写死的那个"同量级"线）*/
 var NEPS = 0, NBRIT = 0, NSTRONG = 0;
+/* §E321 当选键那条腿的计数：NSEL = 有读数的枚数 ‖ NSELUP = 配对差 ≥ +2pt 的枚数 ‖ NSELSOFT = 同号数 < 6/8 的枚数
+ *   （判据跑前定死：幅度 ≥2pt 且 ≥6/8 同号才算"在这把尺上赢现役"，§E318 的那套）*/
+var NSEL = 0, NSELUP = 0, NSELSOFT = 0, NSELDOWN = 0;
 (function () { for (var i = 0; i < N; i++) { if (P[i].de === null) continue; NEPS++;
   if (P[i].de >= 3.41) NBRIT++; if (P[i].de < 0) NSTRONG++; } })();
+/* §E321 当选键计数：只算**有读数**的枚（留空 = 这台仪器没测过，绝不当 0）。
+ *   NSELUP 用的判据与 §E318 跑前写死那条一字相同：配对差均值 ≥ +2pt 且 ≥6/8 粒 seedBase 同号。*/
+(function () { for (var i = 0; i < N; i++) {
+  if (P[i].scd === null || P[i].scs === 'ref') continue; NSEL++;
+  var pos = parseInt(P[i].scs, 10) || 0;
+  if (P[i].scd >= 2 && pos >= 6) NSELUP++;
+  else if (P[i].scd > 0 && pos < 6) NSELSOFT++;
+  if (P[i].scd <= -2) NSELDOWN++; } })();
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
   iso: 0, isoT: 0.30,   /* §E306 过线曲面：0=关 1=半透壳 2=只描边；isoT = 局部占比阈值。
                             §E312 默认从 0.5 降到 0.35：实测收缩后场的峰值只有 40%，50% 是"正确地什么都不画"，
@@ -314,6 +331,13 @@ function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GR
    *   不许用单向 ramp：单向色标会把"掉 1pt"和"掉 8pt"画成同色附近，而这条腿要读的正是符号。*/
   if (st.color === 'de') { if (d.de === null) return '#5a6478';
     var t = Math.max(-1, Math.min(1, d.de / 6)); return t >= 0 ? mix('#dce6f5', '#ff6b6b', t) : mix('#dce6f5', '#57a6ff', -t); }
+  /* §E321 第 6 条腿：当选键（evalN · vs 脚本对 · 出厂 ε=0）上比现役强多少 —— 发散色标，0 在正中。
+   *   读的是 Scd = 8 粒 seedBase 的**逐种子配对差**均值，不是主场那一粒（§E316：那把尺单枚就摆 5~9pt）。
+   *   橙 = 同号数不到 6/8 ⇒ "方向一致但幅度判不动"，**不许并进赢**（与 duel 的黄色同一规矩）。*/
+  if (st.color === 'sc') { if (d.scd === null) return '#5a6478';
+    var ts = Math.max(-1, Math.min(1, d.scd / 8));
+    var sc = ts >= 0 ? mix('#dce6f5', '#39d98a', ts) : mix('#dce6f5', '#ff6b6b', -ts);
+    return (d.scs && d.scs.indexOf('+') > 0 && parseInt(d.scs, 10) < 6) ? '#e0b13c' : sc; }
   return ramp((Fv(d) - fr[0]) / (fr[1] - fr[0] || 1)); }
 /* §E313 页面口径 1st 的显示区间（实测枚数的 p02..p98，同 GLR 的取法）*/
 var EPR = (function () { var a = P.map(function (d) { return d.hp; }).filter(function (v) { return v !== null && isFinite(v); }).sort(function (x, y) { return x - y; });
@@ -328,7 +352,8 @@ var GLR = (function () { var a = P.map(function (d) { return d.gl; }).filter(fun
 function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   /* §E308 上槽体检口径下 705/718 枚是"没测过"⇒ 不压暗就找不到那 13 枚（灰压到 0.16，实测过的照旧）*/
   if ((st.color === 'pm' && (d.pv === null || d.pv === undefined)) || (st.color === 'duel' && !d.ds) ||
-      (st.color === 'de' && d.de === null) || (st.color === 'hp' && d.hp === null)) return 0.16;
+      (st.color === 'de' && d.de === null) || (st.color === 'hp' && d.hp === null) ||
+      (st.color === 'sc' && (d.scd === null || d.scd === undefined))) return 0.16;
   if (!n) return 1; return st.hi[gk(d)] ? 1 : 0.10; }
 /* 家族短标：只取"改了什么"那一段并截断（长说明留给悬停），否则一个按钮吃掉整条图例栏。*/
 function famLab(d) { return FAMLAB[d.fam] || ''; }
@@ -355,6 +380,15 @@ function tip(d, fr) {
       '% ⇒ Δε = ' + (d.de >= 0 ? '+' : '') + d.de.toFixed(1) + 'pt（' +
       (d.de >= 3.41 ? '脆：开探索就掉，过线组第 94 百分位那一档' : d.de < 0 ? '吃探索：开了反而强' : '对探索口径不敏感') +
       '）‖ 噪声尺：同包两 seed 极差 p50 1.5 ‖ p90 3.7pt') +
+    /* §E321 当选键那条腿：读的是 Scd（8 粒 seedBase 逐种子的**配对差**均值），不是主场那一粒。
+     *   两个数一起印，正是因为 §E316 量到"主场值与均值可以差 2~3pt" —— 只印一个就会把读者送回抽签里。*/
+    (d.scd === null ? '' : '\\n当选键 evalN（对脚本对手 · 出厂 ε=0 · 这枚 = ' + d.sc.toFixed(1) + '）：' +
+      (d.id === 'SHIPPED-Ldemo' ? '★ 现役 = 参照本身' :
+        '比现役 ' + (d.scd >= 0 ? '+' : '') + d.scd.toFixed(2) + 'pt ‖ 同号 ' + d.scs +
+        '（' + (d.scd >= 2 && parseInt(d.scs, 10) >= 6 ? '在这把尺上赢现役' :
+          d.scd > 0 ? '方向偏正但同号数不到 6/8 ⇒ 判不动' : '在这把尺上落后') + '）') +
+      ' ‖ 主场那一粒(@987654) = ' + (d.sch === null ? '—' : d.sch.toFixed(1)) +
+      '   ⚠ 这台仪器单枚换 seedBase 就摆 5~9pt（§E316），所以只比配对差、不比电平') +
     '\\nF = Hp + T·S = ' + Fv(d).toFixed(3) + '（线上口径）   高于地板 = F − F_min = ' + (Fv(d) - fr[0]).toFixed(3) +
     '\\n伤害/局 ' + d.dmg.toFixed(1) + ' · 重击 ' + d.heavy.toFixed(1) + ' · 盾 ' + d.holo.toFixed(1) +
     ' · 回合 ' + d.rounds.toFixed(1) + ' · 平局 ' + (d.draw * 100).toFixed(0) + '%' +
@@ -647,7 +681,12 @@ function drawTree(fr) {
   g.restore();   /* §E314 数据层的裁剪到这里收口（点与点标签都不许滑进左栏）*/
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   /* 页脚 = 轴饰，不进相机（同上：跟着放大 2.4 倍会直接掉出画布，"缩放 ×" 那个数也就永远看不到了）*/
-  g.fillText('行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : 'F（线上口径势）') + '（蓝低 → 红高）· 绿环 = 过线 · 淡蓝曲线 = 能解析到的热启动父边 · 滚轮 = 缩放横轴（时间）· Shift+滚轮 = 缩放纵轴（家族行）· 左键拖动 = 平移 · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2),
+  g.fillText('行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : st.color === 'sc' ? '当选键 sc − 现役' : 'F（线上口径势）') +
+    /* 色标方向必须跟着口径走：写死"蓝低 → 红高"会在 Δε 那档说反（那档是**红 = 脆**），
+       在当选键这档更是彻底错（这档是**绿 = 比现役强、红 = 落后**）—— 图上画的与页脚说的不能是两件事。 */
+    (st.color === 'sc' ? '（绿 = 比现役强 ‖ 红 = 落后 ‖ 白 = 打平 ‖ 橙 = 判不动 ‖ 灰 = 未测）'
+      : st.color === 'de' ? '（红 = 开探索就掉 ‖ 蓝 = 开了反而强 ‖ 白 = 不敏感）' : '（蓝低 → 红高）') +
+    ' · 绿环 = 过线 · 淡蓝曲线 = 能解析到的热启动父边 · 滚轮 = 缩放横轴（时间）· Shift+滚轮 = 缩放纵轴（家族行）· 左键拖动 = 平移 · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2),
     padL, h - 14 * devicePixelRatio);
   /* §E314 那根星形中心必须自己在图上说一句"我不是血统"，否则 81% 共父会被读成"演化收敛"。
      ⚠ 只能另起一次 fillText：canvas 的 fillText **不认 \n**（第一版把它拼在同一串里 ⇒ 两段挤成一行、右缘被截，
@@ -1055,7 +1094,7 @@ function drawBody() {
   paintLegend(fr);
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   document.getElementById('stat').textContent = N + ' 枚 · 历代冠军 ' + P.filter(function (d) { return d.lin; }).length +
-    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : '训练方法家族') +
+    ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键 sc − 现役（实测 ' + NSEL + ' 枚 · 判据内赢 ' + NSELUP + ' · 判不动 ' + NSELSOFT + '）') : '训练方法家族') +
     (st.mode === 'map' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') + (n ? ' · 高亮 ' + n + ' 个家族' : '');
 }
 /* ⑥ 所有重绘走 rAF 合并：一帧最多画一次（拖动/滑杆连续事件下这是"卡死"的第二条来源）*/
@@ -1082,17 +1121,26 @@ function paintLegend(fr) {
     for (var di = 0; di < 150 * devicePixelRatio; di++) { var t = 1 - di / (150 * devicePixelRatio);   /* 顶 = +6，底 = −6 */
       cg.fillStyle = t >= 0 ? mix('#dce6f5', '#ff6b6b', t) : mix('#dce6f5', '#57a6ff', -t);
       cg.fillRect(0, di, 18 * devicePixelRatio, 1); } }
+  /* §E321 当选键：绿 = 比现役强、红 = 落后、白 = 打平；**橙带 = 方向偏正但同号数不到 6/8（判不动）**，
+   *   不许并进绿里（duel 那条腿的同一规矩，§E310）。色标两端 ±8pt = §E316 量到的种子极差量级。*/
+  if (st.color === 'sc') {
+    for (var si = 0; si < 150 * devicePixelRatio; si++) { var ts2 = 1 - si / (150 * devicePixelRatio);
+      cg.fillStyle = ts2 >= 0 ? mix('#dce6f5', '#39d98a', ts2) : mix('#dce6f5', '#ff6b6b', -ts2);
+      cg.fillRect(0, si, 18 * devicePixelRatio, 1); }
+    cg.fillStyle = '#e0b13c'; cg.fillRect(0, 62 * devicePixelRatio, 18 * devicePixelRatio, 8 * devicePixelRatio); }
   var s1 = document.createElement('div'); s1.textContent = st.color === 'gl' ? ('G(long) 高 ' + GLR[1].toFixed(1) + '（红）')
     : st.color === 'pm' ? ('✅ 可上槽 ' + NPPASS + ' 枚（绿）')
     : st.color === 'duel' ? ('✅ 两批种子都赢现役 ' + NWIN + ' 枚（绿）')
     : st.color === 'hp' ? ('页面 1st 高 ' + EPR[1].toFixed(1) + '%（红）')
     : st.color === 'de' ? ('Δε +' + 6 + 'pt（红 = 脆）')
+    : st.color === 'sc' ? ('当选键 +8pt（绿 = 比现役强 · 实测 ' + NSEL + ' 枚 ‖ 判据内赢 ' + NSELUP + '）')
     : ('F 高 ' + fr[1].toFixed(2) + (st.goodTop ? '（最好 · 顶）' : '（最好 · 地板）'));
   var s2 = document.createElement('div'); s2.textContent = st.color === 'gl' ? ('G(long) 低 ' + GLR[0].toFixed(1) + '（蓝）· 闸要求 ≥3')
     : st.color === 'pm' ? ('⛔ 栽桩 ' + (NPRM - NPPASS) + ' 枚（红）· 灰 = 未测（' + (N - NPRM) + ' 枚）')
     : st.color === 'duel' ? ('⛔ 两批都输 ' + (NDUEL - NWIN - NFLIP) + ' 枚（红）· 黄 = 符号翻 ' + NFLIP + ' 枚 · 灰 = 未测（' + (N - NDUEL) + '）')
     : st.color === 'hp' ? ('页面 1st 低 ' + EPR[0].toFixed(1) + '%（蓝）· 灰 = 未测（' + (N - NEPS) + ' 枚）')
     : st.color === 'de' ? ('Δε −6pt（蓝 = 开了探索反而强）· 白 = 不敏感 · 灰 = 未测（' + (N - NEPS) + '）‖ 脆（≥3.41）' + NBRIT + ' 枚 ‖ 吃探索（<0）' + NSTRONG + ' 枚')
+    : st.color === 'sc' ? ('当选键 −8pt（红 = 落后现役）· 白 = 打平 · 橙 = 偏正但同号 <6/8（判不动 ' + NSELSOFT + ' 枚）· 灰 = 未测（' + (N - NSEL) + '）‖ 明显落后（≤−2）' + NSELDOWN + ' 枚')
     : ('F 低 ' + fr[0].toFixed(2) + (st.goodTop ? '（最差 · 地板）' : '（最差 · 顶）'));
   lg.appendChild(s1); lg.appendChild(c); lg.appendChild(s2);
   if (OKL.length) {
@@ -1363,7 +1411,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button id="reset">复位视图</button>' +
 '<button id="fitt">投影判据 ⓘ</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
-'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option></select></label>' +
+'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键 sc − 现役（实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
 '<label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label>' +
 '<label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label>' +
