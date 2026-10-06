@@ -71,18 +71,25 @@ if (EXTRA) {
   if (!existsSync(ep)) { console.error('⛔ --extra= 指向的文件不存在：' + ep); process.exit(2); }
   const lines = readFileSync(ep, 'utf8').trim().split(/\r?\n/);
   const head = lines[0].split('\t');
-  const iP = head.indexOf('productRel'), iA = head.indexOf('arm');
+  const iP = head.indexOf('productRel'), iA = head.indexOf('arm'), iL = head.indexOf('lineage');
   let add = 0, skipNoFile = 0, skipOnMap = 0;
-  for (const l of lines.slice(head.includes('\t') ? 1 : 0)) {
+  const miss = [];
+  /* ⚠ 判"有没有表头"要看**那一行字符串**含不含制表符：`head` 是 split 之后的**数组**，
+   *   `head.includes('\t')` 问的是"有没有哪一列正好等于制表符"，永远 false ⇒ 表头被当成一枚包送去查文件
+   *   （实测：每次跑都多报一条"盘上查无 1"，数字对不上但结果没错，属于会误导人的假账）。 */
+  for (const l of lines.slice(lines[0].includes('\t') ? 1 : 0)) {
     const c = l.split('\t');
     const rel = (iP >= 0 ? c[iP] : c[0]) || '';
     const id = (iA >= 0 ? c[iA] : rel.replace(/^.*\//, '').replace(/\.(bak|js)$/, '')) || '';
     if (!rel || !id) continue;
     if (want.has(rel)) { skipOnMap++; continue; }
-    if (!existsSync(join(ROOT, rel))) { skipNoFile++; continue; }
-    want.set(rel, { id, lineage: '续训现役' }); add++;
+    if (!existsSync(join(ROOT, rel))) { skipNoFile++; miss.push(rel); continue; }
+    /* §E375：`lineage` 原来写死 '续训现役'（那是 §E328 拉子代那一批的身份）。
+     *   现在 extra 表可以自带这一列 —— 旧槽位冠军不是现役的子代，贴错标签会把"血统"读成"续训"。 */
+    want.set(rel, { id, lineage: (iL >= 0 && c[iL]) ? c[iL] : '续训现役' }); add++;
   }
-  console.log('--extra 拉进 ' + add + ' 枚（名单里已有 ' + skipOnMap + ' ‖ 盘上查无 ' + skipNoFile + '）');
+  console.log('--extra 拉进 ' + add + ' 枚（名单里已有 ' + skipOnMap + ' ‖ 盘上查无 ' + skipNoFile + '）'
+    + (miss.length ? '\n  ⚠ 盘上查无的是：' + miss.join(' ‖ ') : ''));
 }
 const only = String(arg('ids', '')).split(',').map(s => s.trim()).filter(Boolean);
 let list = [...want.entries()].map(([path, v]) => ({ path, ...v }));
