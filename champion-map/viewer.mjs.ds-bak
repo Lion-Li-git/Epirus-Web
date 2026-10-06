@@ -342,7 +342,7 @@ recomputeVIS();
  *   再乘 st.size（那根滑杆）与**缩放因子**（用户 ④：放大时间距变大而点不变 ⇒ 观感差）。
  *   缩放取 sqrt 并夹在 1~3.2：线性跟 k 会在放大 8 倍时把点吹成饼，完全不跟又回到用户否掉的那个样子。 */
 function dotR(d, zk) { var t = (d.rk - 1) / Math.max(1, N - 1);
-  return (d.sh ? 5.8 : 2.6) * st.size * Math.max(1, Math.min(3.2, Math.pow(zk || 1, 0.5))); }   /* E349 DS: 按「是否上线」两档（上过线 4.6 / 没上过 2.0）；名次只留在悬停明细 */
+  return (1.7 + 3.9 * Math.pow(t, 0.72)) * st.size * Math.max(1, Math.min(3.2, Math.pow(zk || 1, 0.5))); }
 /* 命中半径：按这枚**自己**的半径判（±2px 容差），不再全场一个 14px ⇒ 小点不再"一划就中别人的卡" */
 function hitR(d, zk) { return dotR(d, zk) + 2.5 * devicePixelRatio; }
 /* 地图模式的两个相机预设：**同一个方位角**（yaw 都是 −π/2），只差俯仰 —— 平面态 = 正俯视（pitch π/2，
@@ -425,17 +425,7 @@ function bnd(a, v, inc) { var lo = 0, hi = a.length;   /* inc=false → 第一�
 function qr(a, v) { var n = a.length; if (n < 2) return 0.5;
   return Math.max(0, Math.min(1, ((bnd(a, v, false) + bnd(a, v, true)) / 2) / (n - 1))); }
 /* 底图与「F」档用的：全库分位（= §E338 之前那个读法） */
-/* §E349 DS（用户 10-06：「纯按分位映射就看不出绝对差距了；中位尽量放灰，但两边要反映数值差距」）：
- *   原来这里是 qr() = **全库分位（秩）**：每档塞同样多的点 ⇒ 等数值差 ≠ 等色差（差 0.02 与差 0.2 同色）。
- *   改成以**中位**为心的绝对线性带：t = 0.5 + (F − 中位) / (2·span)，span = max(p95−中位, 中位−p05)（下限 0.02）。
- *   ⇒ 中位仍落 t=0.5（中性灰，图例那根针的位置不用动）；两端**按数值差线性铺**。
- *   ⚠ 代价如实说：p05…p95 之外的点会顶到色端（那是真实分布，不是归一化造的）。几何一律不动。 */
-function fCol(F) { var a = splitSets().all, n = a.length;
-  if (n < 2) return 0.5;
-  var med = (a[(n - 1) >> 1] + a[n >> 1]) / 2;
-  var lo = a[Math.min(n - 1, Math.round(0.05 * (n - 1)))], hi = a[Math.min(n - 1, Math.round(0.95 * (n - 1)))];
-  var span = Math.max(0.02, Math.max(hi - med, med - lo));
-  return Math.max(0, Math.min(1, 0.5 + (F - med) / (2 * span))); }
+function fCol(F) { return qr(splitSets().all, F); }
 /* 「rel」档用的：离现役多远（两侧各按该侧 p90 距归一，绿=强 ‖ 红=不如 ‖ 灰=现役那一档） */
 function fColRel(F) { var s = splitSets();
   return F >= s.iv ? 0.5 + 0.5 * Math.min(1, (F - s.iv) / s.sU) : 0.5 - 0.5 * Math.min(1, (s.iv - F) / s.sD); }
@@ -1405,10 +1395,7 @@ function req() { if (queued) return; queued = true; requestAnimationFrame(functi
 
 function paintLegend(fr) {
   var lg = document.getElementById('legend'); lg.innerHTML = '';
-  /* §E349 DS（用户 10-06：「文字标记横着占了一大串，适当搞几个换行」）：容器收窄 + 允许换行，长句自己折成几行；色标条保持原尺寸（用户的蓝端曾被截掉过一回，已回滚）。 */
-  /* §E349 DS：不要自动换行（用户否掉）—— 改成一行一句、按含义自己断行，能删的就删。 */
-  lg.style.maxWidth = '260px'; lg.style.lineHeight = '1.35';
-  var c = document.createElement('canvas'); c.width = 18 * devicePixelRatio; c.height = 150 * devicePixelRatio;   /* E349 DS: 误缩过一版（把蓝端截掉了）⇒ 回滚到 150 */
+  var c = document.createElement('canvas'); c.width = 18 * devicePixelRatio; c.height = 150 * devicePixelRatio;
   c.style.width = '18px'; c.style.height = '150px'; var cg = c.getContext('2d');
   for (var i = 0; i < 150 * devicePixelRatio; i++) { var ltt = 1 - i / (150 * devicePixelRatio);
     /* §E347：「F」档（含默认的家族着色 + 底图）用回 LUT（蓝 = 地板 → 灰 = 库内中位 → 红 = 好），
@@ -1460,7 +1447,7 @@ function paintLegend(fr) {
     : st.color === 'hp' ? ('页面 1st 低 ' + EPR[0].toFixed(1) + '%（蓝）· 灰 = 未测（' + (N - NEPS) + ' 枚）')
     : st.color === 'de' ? ('Δε −6pt（蓝 = 开了探索反而强）· 白 = 不敏感 · 灰 = 未测（' + (N - NEPS) + '）‖ 脆（≥3.41）' + NBRIT + ' 枚 ‖ 吃探索（<0）' + NSTRONG + ' 枚')
     : st.color === 'sc' ? ('当选键 −8pt（红 = 落后现役）· 白 = 打平 · 橙 = 偏正但同号 <6/8（判不动 ' + NSELSOFT + ' 枚）· 灰 = 未测（' + (N - NSEL) + '）‖ 明显落后（≤−2）' + NSELDOWN + ' 枚')
-    : (st.color === 'fam' || st.color === 'seed') ? ('（底图色标：下 = 地板 ‖ 上 = 好 ‖ 黄针 = 现役）')
+    : (st.color === 'fam' || st.color === 'seed') ? ('（这条带就是底图的色标：下 = 地板（蓝）‖ 上 = 好（红）‖ 黄针 = 现役那一档）')
     : st.color === 'rel' ? ('红 = 不如现役（F 底 ' + fr[0].toFixed(2) + '）')
     : ('蓝 = 地板（F 底 ' + fr[0].toFixed(2) + ' ‖ 灰 = 库内中位）');
   lg.appendChild(s1); lg.appendChild(c); lg.appendChild(s2);
@@ -1468,15 +1455,15 @@ function paintLegend(fr) {
    *   而 F 档的灰其实是"库里第 50% 名"、rel 档的灰才是"就是现役那一档"。两档共用一个 18px 的条，说法完全不同。*/
   if (st.color === 'F' || st.color === 'rel') { var sm = document.createElement('div'); sm.style.color = 'var(--dim)';
     sm.textContent = st.color === 'F'
-      ? '针 = 现役 Ldemo（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 红 = 好 ‖ 蓝 = 地板 · 深浅 = 离中位的绝对差（±p05/p95，超出即钉两端））· 名次看点大小'
+      ? '针 = 现役 Ldemo（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 蓝 = 地板 → 红 = 好 · 深浅 = 库内分位（每档同样多的点）· 名次看点大小'
       : '针 = 现役那一档（灰）· 绿 = 比现役强 ‖ 红 = 不如 · 深浅 = 离现役多远（两侧各按该侧 p90 距归一：绿侧 '
         + splitSets().sU.toFixed(3) + ' ‖ 红侧 ' + splitSets().sD.toFixed(3) + '，超出即钉在两端）';
     lg.appendChild(sm); }
   if (OKL.length) {
     var s3 = document.createElement('div'); s3.style.marginTop = '6px'; s3.style.color = '#39d98a';
-    s3.textContent = '绿环 = 逐枚过线 ' + OKL.length + '/' + POKJ;
+    s3.textContent = '绿环 = 逐枚过线判定（' + OKL.length + '/' + POKJ + ' 枚）· 二维不画范围';
     var s4 = document.createElement('div'); s4.style.color = 'var(--dim)'; s4.style.maxWidth = '190px'; s4.style.lineHeight = '1.35';
-    s4.textContent = '（现跑同一道闸：' + (typeof OKSRCJ === 'string' && OKSRCJ ? OKSRCJ.replace(/^现跑同一道闸（feasibilityOf · /,'').replace(/）$/,'') : '—') + '）'; lg.appendChild(s3); lg.appendChild(s4); }
+    s4.textContent = '判据：' + (typeof OKSRCJ === 'string' && OKSRCJ ? OKSRCJ : '—'); lg.appendChild(s3); lg.appendChild(s4); }
 }
 /* ③ 家族图例 = 可点按钮（按成员数从多到少），点一个只留这些家族。
  *   §E304：默认按**方法家族**列（22 家，按钮上直接写"改了什么"），切到 RNG seed 才列 seed。*/
@@ -1637,9 +1624,7 @@ window.addEventListener('mousemove', function (e) {
     var cdx = e.clientX - drag[0], cdy = e.clientY - drag[1];
     if (Math.abs(cdx) + Math.abs(cdy) > dragMoved) dragMoved = Math.abs(cdx) + Math.abs(cdy);
     if (st.mode === 'map') {
-      /* §E349 DS（用户 10-06：「3D 模式又变得旋转受限」）：原来这里套了一道 st.elev > 0.05 闸 ⇒ elev 一落到 0 就完全转不动。
-     *   撤掉那道闸；pitch 仍夹在 [0.06, 1.62]（不许翻到地板下、不许越过天顶），yaw 不限。 */
-      if (drag[8] === 2) { st.yaw = drag[4] - cdx / 160; st.pit = Math.max(0.06, Math.min(1.62, drag[5] + cdy / 200)); }
+      if (drag[8] === 2) { if (st.elev > 0.05) { st.yaw = drag[4] - cdx / 160; st.pit = Math.max(0.06, Math.min(1.62, drag[5] + cdy / 200)); } }
       else { st.ox = drag[2] + cdx * devicePixelRatio; st.oy = drag[3] + cdy * devicePixelRatio; }
     } else if (st.mode === '3db') {
       if (drag[8] === 2) { st.yaw = drag[4] - cdx / 160; st.pit = Math.max(0.06, Math.min(1.5, drag[5] + cdy / 200)); }
