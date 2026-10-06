@@ -758,7 +758,7 @@ function drawTree(fr) {
     (st.color === 'sc' ? '（绿=强 ‖ 红=落后 ‖ 橙=判不动 ‖ 灰=未测）'
       : st.color === 'de' ? '（红=脆 ‖ 蓝=吃探索 ‖ 白=不敏感）'
       /* §E347：F 档回到"地形"读法（蓝低 → 红高），"相对现役"那件事交给第 6 档 rel ⇒ 页脚/图例按当前档现说，不许各讲一套。*/
-        : st.color === 'F' ? '（蓝 = 低 = 地板 → 红 = 高 = 好 ‖ 针 = 现役那一档 = 库内第 ' + Math.round(incPct()) + ' 百分位）'
+        : st.color === 'F' ? '（蓝 = 低 = 地板 → 红 = 高 = 好 ‖ 针 = 现役那一档 ‖ 它在库内第 ' + Math.round(incPct()) + ' 百分位）'
         : st.color === 'rel' ? '（绿 = 比现役强 ‖ 灰 = 就是现役那一档 ‖ 红 = 不如现役）'
         : (st.color === 'fam' || st.color === 'seed' ? '（点色 = ' + (st.color === 'fam' ? '训练方法家族' : 'RNG seed') + '，底图 = F 地形（蓝低 → 红高））' : '（蓝低 → 红高）')) +
     ' · 淡蓝曲线 = 热启动父边' +
@@ -874,7 +874,7 @@ function drawMap(fr) {
     g.beginPath(); g.arc(scr[i][0], scr[i][1], 11 * st.size, 0, 6.284); g.strokeStyle = st.ink; g.lineWidth = 2; g.stroke(); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText(st.elev < 0.5
-    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（蓝 = 低 → 红 = 高 · 针 = 现役 = 库内第 ' + Math.round(incPct()) + ' 百分位）· 绿环 = 该枚过线 · 点一枚 = 选中 · 缩放 ×' + st.k.toFixed(2)
+    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（蓝 = 低 → 红 = 高 · 针 = 现役那一档，它在库内第 ' + Math.round(incPct()) + ' 百分位）· 绿环 = 该枚过线 · 点一枚 = 选中 · 缩放 ×' + st.k.toFixed(2)
     : '左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 柱高 = ' + (st.goodTop ? 'F − F_min（越高越好）' : 'F_max − F（越低越好 = 冠军在阱底）') + ' · 绿环 = 该枚过线',
     14 * devicePixelRatio, h - 12 * devicePixelRatio);
 }
@@ -1218,7 +1218,10 @@ function paintLegend(fr) {
      *   否则就是"图例说一套、图画另一套"（§E338 那版还额外用一行"这一档不参与着色"把矛盾糊掉了）。*/
     var rgb = st.color === 'rel' ? rampRGBF(ltt) : rampRGB(ltt);
     cg.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')'; cg.fillRect(0, i, 18 * devicePixelRatio, 1); }
-  if (st.color === 'F' || st.color === 'rel') {
+  /* §E353：只要这条带画的是**底图那条 LUT**（fam / seed / F / rel 四种），针就该在。
+   *   原来只在 F / rel 两档画，而 fam/seed 的图例与页脚都写着"黄针 = 现役那一档" ⇒ **文案承诺、图上没有**
+   *   （这条是写页内自检时抓出来的：断言去数黄像素，数到 0 个）。*/
+  if (st.color === 'F' || st.color === 'rel' || st.color === 'fam' || st.color === 'seed') {
     /* 现役那根针：不画出来，"现役在哪"这句话在 18px 宽的条上找不到位置。
      *   ⚠ 位置**按当前档现算**，不许写死 73/150 —— 那是"分界在正中"的假设，而 F 档的分界在库内第 82 百分位。*/
     var npos = st.color === 'rel' ? 0.5 : fCol(Fv(INC));
@@ -1698,10 +1701,19 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('命中：标签中心不许命中一张盖不住这个点的卡（phantom）', phantom === 0 && tested > 0, phantom + ' phantom / ' + tested + ' 个标签');
   T('命中：重叠标签按"谁盖在上面"说话（这是对的，只记账不判红）', true, overlapped + ' 枚与别人重叠');
   T('命中：空白处不许命中任何东西', pickAt(3, 3) < 0 && pickAt(cv.width - 3, cv.height - 3) < 0);
-  /* ③ 点大小 = 名次（第 1 名最小），且跟着缩放走 */
+  /* ③ 点大小 = **按是否上线两档**（E349 DS 撤回的）。
+   *   原来这里判的是"名次越高越小"，而那条要求出自一份**被压缩摘要伪造的"用户 ②"**（见 §E348 损失清单）⇒
+   *   DS 把行为改回两档之后，这条断言就变成了"判一件没人要过的事"。判据跟着换成实际规则：**名次不许进入半径**。*/
   var byRk = P.slice().sort(function (a, b) { return a.rk - b.rk; });
-  T('点大小：第 1 名比最差那枚小', dotR(byRk[0], 1) < dotR(byRk[byRk.length - 1], 1),
-    dotR(byRk[0], 1).toFixed(2) + ' vs ' + dotR(byRk[byRk.length - 1], 1).toFixed(2));
+  var shA = null, nsA = null, rSet = {};
+  for (var qi = 0; qi < N; qi++) {
+    if (P[qi].sh && !shA) shA = P[qi]; if (!P[qi].sh && !nsA) nsA = P[qi];
+    if (!P[qi].sh) rSet[dotR(P[qi], 1).toFixed(3)] = 1; }
+  T('点大小：上过线那一档必须明显大于未上过线那一档（E349 的两档规则）',
+    !!shA && !!nsA && dotR(shA, 1) > dotR(nsA, 1) * 1.5,
+    shA && nsA ? dotR(shA, 1).toFixed(2) + ' vs ' + dotR(nsA, 1).toFixed(2) : '样本不足');
+  T('点大小：名次不许进入半径（未上线那一档内部只能有一个值）',
+    Object.keys(rSet).length === 1, Object.keys(rSet).slice(0, 4).join(' / '));
   T('滚轮放大：点要跟着变大（用户 ④）', dotR(byRk[3], 8) > dotR(byRk[3], 1) * 1.5,
     dotR(byRk[3], 1).toFixed(2) + ' → ' + dotR(byRk[3], 8).toFixed(2));
   /* ④ 两档色标各自的语义（§E347 把它们分开：F = 地形，rel = 判决） */
@@ -1727,9 +1739,41 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var mdF = (function () { var a = P.map(function (d) { return Fv(d); }).sort(function (x, y) { return x - y; }); return a[a.length >> 1]; })();
   T('底图（F 档）：库内中位那枚必须落在中性灰（离 0.5 不超 0.06）',
     Math.abs(fCol(mdF) - 0.5) <= 0.06, '实测 ' + fCol(mdF).toFixed(3));
-  T('底图（F 档）：图例那根针必须落在现役自己的分位上（带与底图同一条 LUT）',
-    Math.abs(fCol(Fv(INC)) - incPct() / 100) < 0.012 && fCol(Fv(INC)) > 0.7,
-    '针 ' + fCol(Fv(INC)).toFixed(3) + ' ‖ 现役分位 ' + (incPct() / 100).toFixed(3));
+  /* 图例那条带与底图必须是**同一条映射**（§E347 那次坏在"带画 LUT、图涂绿红"，我当时还拿一行"这一档不参与着色"糊过去）。
+   *   ⚠ 这条原来判的是"针落在现役的**库内分位**上" —— E349 DS 把 fCol 换成"以中位为心的绝对线性带"之后那句话就不成立了
+   *   （分位 0.818 ≠ 色带位置 0.671）。⇒ 判据换成端到端的像素核对，它不依赖 fCol 用哪种归一化：
+   *     ① 带在针上方 8px 那一行的颜色 == 那条带在该位置应有的颜色（带是连续映射，不是随手涂的）；
+   *     ② 针那一行真的画在 fCol(现役) 算出来的位置上。*/
+  T('图例：那条带与底图同一条映射，且针真画在现役那一档的位置上', (function () {
+    if (st.color !== 'fam' && st.color !== 'seed' && st.color !== 'F') return true;   /* 其余档这条带不是底图的（gl/pm/duel/…），或 rel 的针固定在正中 */
+    var cn = document.querySelector('#legend canvas'); if (!cn || !cn.height) return false;
+    var H = cn.height, npos = fCol(Fv(INC));
+    var ny = Math.round((1 - npos) * H);
+    var col = cn.getContext('2d').getImageData(Math.round(cn.width / 2), 0, 1, H).data;
+    var sy = Math.max(0, Math.min(H - 1, ny - Math.round(8 * devicePixelRatio)));
+    var want = rampRGB(1 - sy / H), o = sy * 4;
+    var okBar = Math.abs(col[o] - want[0]) <= 8 && Math.abs(col[o + 1] - want[1]) <= 8 && Math.abs(col[o + 2] - want[2]) <= 8;
+    /* 针 = 4px 暗槽（#0d1420）+ 上面 1.5px 黄线 ⇒ 黄线只有 1.5px 会被抗锯齿混成 (194,162,84) 这类值，
+     *   按"纯黄"数会数到 0 个（我第一版就这么误判过一次）。判**暗槽**才稳，而且槽的起点就是 ny − 2dpr。
+     *   实测槽只有 2 行落在"纯暗"阈值内（第 3、4 行被黄线与带的颜色混掉了）⇒ 判据取 ≥2 行 + 位置对上。*/
+    var dk = 0, first = -1, lo = ny - Math.round(4 * devicePixelRatio), hi = ny + Math.round(4 * devicePixelRatio);
+    for (var yy = Math.max(0, lo); yy <= Math.min(H - 1, hi); yy++) {
+      var q = yy * 4; if (col[q] < 60 && col[q + 1] < 60 && col[q + 2] < 80) { dk++; if (first < 0) first = yy; } }
+    return okBar && dk >= 2 && Math.abs(first - (ny - Math.round(2 * devicePixelRatio))) <= 2;
+  })(), (function () {
+    var cn = document.querySelector('#legend canvas');
+    if (!cn) return '图例里没有 canvas';
+    var H = cn.height, ny = Math.round((1 - fCol(Fv(INC))) * H);
+    var col = cn.getContext('2d').getImageData(Math.round(cn.width / 2), 0, 1, H).data;
+    var dk = 0, first = -1;
+    for (var yy = 0; yy < H; yy++) { var q = yy * 4;
+      if (col[q] < 60 && col[q + 1] < 60 && col[q + 2] < 80) { dk++; if (first < 0) first = yy; } }
+    var sy = Math.max(0, Math.min(H - 1, ny - Math.round(8 * devicePixelRatio))), o = sy * 4;
+    var w = rampRGB(1 - sy / H);
+    return 'H=' + H + ' ‖ 针行 ' + ny + ' ‖ 暗槽 ' + dk + ' 行（起点第 ' + first + ' 行，应在 '
+      + (ny - Math.round(2 * devicePixelRatio)) + '±2）‖ 采样行 ' + sy + ' 实际 [' + col[o] + ',' + col[o + 1] + ','
+      + col[o + 2] + '] 应为 [' + w[0] + ',' + w[1] + ',' + w[2] + ']';
+  })());
   /* ⑤ 点家族图例不许把整张图压黑（用户 ④「点选中框会全部变暗」） */
   st.hi = {}; buildGroups(); var k0 = GRP.keys[0]; st.hi[k0] = true;
   var mn = 1; for (var hi2 = 0; hi2 < N; hi2++) { var a2 = alphaOf(P[hi2]); if (a2 < mn) mn = a2; }
