@@ -227,6 +227,9 @@ const DATA = rows.map(r => ({
    *   （和包名后缀那个数**不是一回事**，实测 META.seed 有 84 个取值、名字后缀只有 14 个）。*/
   fam: LIN[r.id] ? +LIN[r.id].fam : 0, ms: LIN[r.id] ? LIN[r.id].metaSeed : '',
   ts: LIN[r.id] ? LIN[r.id].ts : '', par: LIN[r.id] ? LIN[r.id].parent : '', pof: LIN[r.id] ? LIN[r.id].parentOf : '',
+  /* §E363：wid = 这枚自己的**权重哈希** ⇒ 用来证"倒挂的那条边确实连的是同一份权重"（页内自检里判），
+   *   没有它就只能拿 ts 说话，而"ts 倒挂"这件事本身有两种相反的解释（槽位时刻 vs 数据错）。*/
+  wid: LIN[r.id] ? (LIN[r.id].wid || '') : '',
   /* §E314 解析不到实体时不再写"盘上查无该权重"（那句话暗示"还能找回来"）—— 换成有名有姓的合成节点 */
   pnm: LIN[r.id] ? (LIN[r.id].parentName || '') : '',
   ok: OKM && (r.id in OKM) ? (OKM[r.id].ok ? 1 : 0) : null,
@@ -272,6 +275,17 @@ var NPRM = 0, NPPASS = 0;
  *   ⇒ 图上不画这条边（没有节点可画），但**必须把这句话印出来**，否则下一个人会把它读成"81% 同源 = 演化收敛"。*/
 var NRBASE = 0;
 (function () { for (var i = 0; i < N; i++) if (P[i].pnm && P[i].pnm.indexOf('RUNNER-BASE') === 0) NRBASE++; })();
+/* ===== §E363 倒挂的血统边（用户 10-06 点名：e35prod807 比现役还早，父却写着现役）=====
+ *   数据本身没错：那枚的 hotstartFrom 权重哈希 d490dc13 **就是**现在槽里那枚的权重，
+ *   但"SHIPPED-Ldemo"这个节点的 ts 是它**进槽的时刻**（09-27），而那份权重早在 09-25/26 就被拿去当种子了
+ *   ⇒ 按 ts 排的时间轴上，父节点落在子节点**右边**，实线边看着像"现役生了它"。
+ *   修法不改数据、不删边：这类边画成**虚线 + 琥珀色**，页脚与明细各自说清"连的是权重，不是槽位"。 */
+var TSBY = {};
+(function () { for (var i = 0; i < N; i++) TSBY[P[i].id] = P[i].ts || ''; })();
+function backOf(d) {   /* 返回"父节点的 ts"，当且仅当它晚于本枚（空串 = 正常边 / 父不在图上）*/
+  if (!d.pof || !d.ts) return '';
+  var pt = TSBY[d.pof];
+  return (pt && pt > d.ts) ? pt : ''; }
 (function () { for (var i = 0; i < N; i++) { if (P[i].pv === 1) { NPRM++; NPPASS++; } else if (P[i].pv === 0) NPRM++; } })();
 /* §E310 决斗实测数（同向上的"赢"才算，符号翻的单列）*/
 var NDUEL = 0, NWIN = 0, NFLIP = 0;
@@ -510,6 +524,9 @@ function tip(d, fr) {
     '\\n家族 ' + d.fam + '（按训练方法/目标分）：' + (famLab(d) || '—') +
     '\\n　RNG seed 名字后缀=' + d.seed + ' ‖ META.seed=' + (d.ms || '—') + ' ‖ 训出 ' + (d.ts || '—') +
     '\\n　热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof : (d.pnm ? '\\n　　' + d.pnm : '（父指针未落档）')) +
+    /* §E363：父那枚的时间晚于本枚 ⇒ 明说这条边连的是**权重**，不是槽位（否则图上读出来是"现役生了它"）*/
+    (backOf(d) ? '\\n⚠ 父节点 ' + d.pof + ' 的 ts（' + backOf(d) + '）晚于本枚 ⇒ 这条边连的是那份权重：'
+        + '槽位节点的 ts 是它进槽的时刻，而它那份权重更早就被拿去热启动了 ⇒ 图上画成虚线' : '') +
     (d.ok === 1 ? '  · 过线 ✓' : (d.ok === 0 ? '  · 未过线' : '')) +
     (d.ok === 0 && d.why ? '\\n　栽在：' + d.why : '') +
     '\\n名次 ' + d.rk + '/' + N + '（线上口径 · 出厂 T 下重算；旧考卷口径是第 ' + d.rkExam + ' 名）· 按当前 T 重排见一维视图' +
@@ -933,9 +950,15 @@ function drawTree(fr) {
       if (!pb || !gb || Math.abs(pb[1] - gb[1]) < 1.5) continue;
       g.beginPath(); g.moveTo(gb[0], gb[1]); g.lineTo(pb[0], pb[1]); g.stroke(); } }
   g.strokeStyle = 'rgba(120,200,255,.30)'; g.lineWidth = 1 * devicePixelRatio;
+  var NBACK = 0;
   for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
     var a = pos[dd.pof], b = pos[dd.id];
-    g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - rowH * 0.5 * TKY, b[0], b[1]); g.stroke(); }
+    /* §E363 倒挂边（父的 ts 晚于子）走虚线 + 琥珀色：它连的是权重，不是"谁生了谁"的时间顺序 */
+    var bk = backOf(dd);
+    if (bk) { NBACK++; g.save(); g.setLineDash([4 * devicePixelRatio, 4 * devicePixelRatio]);
+      g.strokeStyle = 'rgba(224,177,60,.62)'; }
+    g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - rowH * 0.5 * TKY, b[0], b[1]); g.stroke();
+    if (bk) { g.restore(); g.strokeStyle = 'rgba(120,200,255,.30)'; } }
   scr = new Array(N);
   for (i = 0; i < N; i++) { var d = P[i], p = pos[d.id]; if (!p) continue; scr[i] = p;
     var al = alphaOf(d); g.globalAlpha = al;
@@ -978,7 +1001,9 @@ function drawTree(fr) {
        （§E331 立体态必须自己说清"高度是哪把尺"：颜色按秩铺、几何仍是线性，不写就会被当成同一件事。画布不认 markdown ⇒ 这句里不许带 *）*/
     (T3 > 0.5 ? ' · 立体 = 原地按 F 抬起（与颜色的按秩铺色不同尺）· 立柱 = 回本行那一格 · 右键拖动 = 压扁/错切'
               : ' · 滚轮 = 横轴（时间）· Shift+滚轮 = 纵轴（家族行）· 拖动 = 平移') +
-    ' · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2);
+    ' · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2) +
+    /* §E363：倒挂边的条数必须在图上自己说清，否则读图的人只会看到"现役生了两星期前的包" */
+    (NBACK ? ' · 虚线血统边 ' + NBACK + ' 条 = 父那枚的 ts 是它进槽的时刻、晚于子代（边连的是权重，不是槽位）' : '');
   var fw = g.measureText(foot).width / devicePixelRatio;
   if (fw > (w - padL) / devicePixelRatio - 8) g.font = Math.round(12 * devicePixelRatio * (w - padL) / devicePixelRatio / fw) + 'px system-ui,sans-serif';
   g.fillText(foot, padL, h - 14 * devicePixelRatio);
@@ -2059,6 +2084,20 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   st.tX = SNAP.tx; st.tY = SNAP.ty; st.tTilt = SNAP.tl; st.tShear = SNAP.sh; st.color = SNAP.col;
   buildGroups();
   document.getElementById('b3dt').textContent = SNAP.lab;
+  /* ===== §E363 倒挂血统边（用户点名 e35prod807）：三条判据 =====
+   *   关键不在于"识别出几条"，而在于**证明"ts 倒挂"这一族的解释是槽位时刻、不是数据错** ⇒
+   *   第三条拿权重哈希对（父哈希必须 = 父节点 wid 的前缀），它红了就说明真有一条边连的不是同一份权重。 */
+  var BK = P.filter(function (d) { return backOf(d); });
+  var _e7 = P.filter(function (d) { return d.id === 'e35prod807'; })[0];
+  T('倒挂边：用户点名的 e35prod807 必须被识别（它的父节点 ts 晚于自己）',
+    !!_e7 && backOf(_e7) !== '', _e7 ? ('本枚 ts=' + _e7.ts + ' ‖ 父 ' + _e7.pof + ' ts=' + backOf(_e7)) : '图上查无此枚');
+  T('倒挂边：现役自己不许被判成倒挂（它是这批边的父端，不是子端）', backOf(INC) === '', '现役 ts=' + (INC.ts || '—'));
+  T('倒挂边：每一条都必须真是同一份权重（父哈希 = 父节点 wid 前 8 位）⇒ 否则那不是槽位时刻、是数据错',
+    (function () { if (!BK.length) return false;
+      for (var q = 0; q < BK.length; q++) { var pd = null;
+        for (var z = 0; z < N; z++) if (P[z].id === BK[q].pof) { pd = P[z]; break; }
+        if (!pd || !pd.wid || String(BK[q].par).slice(0, 8) !== String(pd.wid).slice(0, 8)) return false; }
+      return true; })(), BK.length + ' 条倒挂边（全部逐条对过权重哈希）');
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\\n' + out.join('\\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\\n已经跑到：\\n' + out.join('\\n'); nbad++; }

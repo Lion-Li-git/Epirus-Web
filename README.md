@@ -3,10 +3,10 @@
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）
 重新实现的一整套 **2 人可玩、可自对战训练** 程序。
 
-> **当前版本：v1.6.13** · **人数 2~5 × 血量 3/4/5 两根正交轴**（2 人那一档规则仍冻结在 v1.0.0）+ **全人数共用一条难度阶梯** + **技能齐全 · AI 状态特征 v7，FEAT_S=213**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`（血量轴见 NP 的 **N26**，难度阶梯见 **N27**）。
+> **当前版本：v1.6.14** · **人数 2~5 × 血量 3/4/5 两根正交轴**（2 人那一档规则仍冻结在 v1.0.0）+ **全人数共用一条难度阶梯** + **技能齐全 · AI 状态特征 v7，FEAT_S=213**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`（血量轴见 NP 的 **N26**，难度阶梯见 **N27**）。
 >
-> **版本沿革 v1.6.0 → v1.6.13**（逐版改动、实测数字与门号**只记在** [CHANGELOG.md](CHANGELOG.md)）：
-> v1.6.13 冠军演化页两个 bug：谱系图 3D→2D 不复位（§E352 换了投影、没换那三处"回平面"的路径）‖ 平面模式还能被拖成立体（§E349 撤闸撤过头）⇒ 页内自检 17 → 22 条，五条新判据全部变异点名
+> **版本沿革 v1.6.0 → v1.6.14**（逐版改动、实测数字与门号**只记在** [CHANGELOG.md](CHANGELOG.md)）：
+> v1.6.14 演化页第三处 bug：**父节点比子节点还晚**的倒挂血统边改画虚线并自证（§E363）‖ `duel-run --ref=` 此前只能吃默认值（§E364）‖ **演化页页内自检从此进门禁 = gate-all 第五道 + CI 的 browser job**（§E365）‖ 两枚"实战赢家"复核结案：都被 G5 与穿透卡零命中挡住、逐卡实测不蓄能 ⇒ 不换（§E366）—— 紧接 v1.6.13 那两个 3D/平面 bug（同一页）
 > v1.6.12 按 `docs/METHODOLOGY.md` 第 89 条**删掉"某句话必须在"那类门腿**（七道门八处，一条门没删）‖ README 目录树改成真的三层 + 「已知限制」分段 ‖ v1.6.11 CI 改成"整轮兜底"（GitHub 每笔跑不带分组的 np 全量）+ `docs/` 分两层（索引在 `docs/README.md`）+ 新门 **D230** 钉"文档指针不许落空"
 > v1.6.10 撤回 v1.6.9 那一步（用户裁定 (b)）：全息屏障→原型制御 回到**纯研究旋钮**，promote / 考卷 / 页面读不到它；同版删掉"钉文档措辞"的那类门腿（判据见 `docs/METHODOLOGY.md` 第 89 条）
 > v1.6.9 指纹换代 `2c061b15 → b98985bf`（`policy.js` 里新增那一档）+ 抓到 `eval-5p --mode=` 是根空旗 · v1.6.8 该档建档（默认关 ⇒ 出厂零剂量）
@@ -91,7 +91,7 @@ Epirus-Web/
 │   ├─ train-worker.mjs            单 worker 评估入口
 │   └─ opp-pool.mjs / opp-champs.mjs   对手池 + "名字→包"的唯一入口
 ├─ tools/                        量具与门禁（一百多个 .mjs，每个都自带头注；这里只列入口）
-│   ├─ gate-all.mjs                ★ 一条命令跑完四道门禁（np+spec 并发，页面那两道排在它们之后 —— §E355b）‖ `--group=` 只跑一组 ‖ `--no-browser` 是 CI 阻断档的形状
+│   ├─ gate-all.mjs                ★ 一条命令跑完五道门禁（np+spec 并发，浏览器那三道排在它们之后 —— §E355b/§E365）‖ `--group=` 只跑一组 ‖ `--no-browser` 是 CI 阻断档的形状
 │   ├─ np-test.mjs                 ★ N 人引擎 + 门禁（**条数与末号由它跑完自己印**，别处不抄）
 │   ├─ spec-run.mjs                2 人引擎自测（52 用例 + 500 局 fuzz）
 │   ├─ smoke.mjs / battle-test.mjs / np-probe.mjs    CDP 真 Chrome 的三台页面仪器（冒烟 / 多人对战 / 多人探测）
@@ -137,7 +137,7 @@ Epirus-Web/
 ```bash
 node tools/gate-all.mjs --auto  # ★ **本机默认用这条**：读 git status 自己判这班次该跑哪几组（§E341）；只改图/改文档 ⇒ np 侧十几道、约 10 秒
 node tools/gate-all.mjs --np --group=train   # 手工指定一组（§E335 六组：meta / ui / ship / train / probe / engine，带累计依赖）
-node tools/gate-all.mjs --np   # ★ 四道全量（np+spec+smoke+battle，并发起跑）= **本机认证那一遍**，收工前必须跑；np 冷跑约 8~15 分钟（准确秒数由它自己印）
+node tools/gate-all.mjs --np   # ★ 五道全量（np+spec+smoke+battle+演化页自检，分两波起）= **本机认证那一遍**，收工前必须跑；np 冷跑约 8~15 分钟（准确秒数由它自己印）
                                  #   ⚠ 带 `--group=` / `--only=` 的那一遍**都不算认证**（工具会在总结论里明写"不是整轮认证"，门 D194 钉这条）
                                  #   ⚠ 为什么分组跑还兜得住：**GitHub 每笔 push / PR 都跑一遍不带分组的 np 整轮**（`.github/workflows/gates.yml`，§E355）。
                                  #     这不是洁癖 —— D225⑩c 曾在"只跑 meta"的口径下红了五笔提交、约 11 小时没人看见。

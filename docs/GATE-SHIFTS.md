@@ -35,7 +35,8 @@
 ## 三、三条不许越过的线
 
 1. **分组跑出来的不是认证。** `--group=` 与 `--only=` 同罪：总结论行会自己印「§E335 分组 xxx：**不是整轮认证**」。
-   要引用"四道全绿"，只有不带 `--group` 的整轮算（D194 钉这条，D205 钉门号）。
+   要引用"整轮全绿"，只有不带 `--group` 的整轮算（D194 钉这条，D205 钉门号）。
+   ⚠ §E365 起这一句的措辞从"四道全绿"改成"整轮全绿"—— 把**道数**写进判词，加一道门就会让所有旧判词过期（那是第 89 条说的那类"钉数字的措辞"）。
 2. **认证树必须等于提交树，范围限定在"被门读取的那些文件"。** 整轮跑起来之后再动 `tools/`、`js/`、
    `CHANGELOG.md`、`README.md`、`.gitignore`、`docs/METHODOLOGY.md`、`docs/RULES-2P.md`、
    `docs/artifacts/e129-out/matrix.json`、`train-3p-out.js`、`e161-ply.mjs`、`e168-style-human.mjs`、
@@ -58,8 +59,8 @@
 | 谁 | 跑什么 | 阻断吗 | 覆盖到哪 |
 |---|---|---|---|
 | **GitHub（每笔 push / PR）** | `node tools/gate-all.mjs --np --no-browser` | ✅ 阻断 | np **整轮**（不带 `--group`，全部门）+ spec |
-| **GitHub 的 browser job** | `smoke.mjs` + `battle-test.mjs`（windows runner） | ⚠️ `continue-on-error` | 只有浏览器两道；10-01 起是观察档（转阻断后 3 跑 2 红、根因未定，**转正判据 = 连续 5 次绿**） |
-| **本机收工前** | `node tools/gate-all.mjs --np` | —— | 四道全绿 = **认证那一遍**（CI 覆盖不到浏览器两档的判定，所以"认证"这句话仍然只能说本机那一遍） |
+| **GitHub 的 browser job** | `smoke.mjs` + `battle-test.mjs` + `champion-map/shot.mjs --check`（windows runner） | ⚠️ `continue-on-error` | 浏览器三道（§E365 起含演化页）；10-01 起是观察档（转阻断后 3 跑 2 红、根因未定，**转正判据 = 连续 5 次绿**） |
+| **本机收工前** | `node tools/gate-all.mjs --np` | —— | 五道全绿 = **认证那一遍**（CI 覆盖不到浏览器那三道的判定，所以"认证"这句话仍然只能说本机那一遍） |
 
 ⇒ 于是"本班只跑了 meta 那 15 道"这件事不再等于"红可能潜伏到下一班"：**潜伏窗口从"下一次有人想起来跑整轮"缩短到"这一笔提交的 CI"**。
 ⇒ 起因就是今天的一条实测：D225⑩c 从 `c9c382b`（README 排版整理）起红了**五笔提交、约 11 小时**，

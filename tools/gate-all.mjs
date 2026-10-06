@@ -1,18 +1,18 @@
 #!/usr/bin/env node
-/* gate-all.mjs —— 四道门禁一次跑完，只给一行总结论。
+/* gate-all.mjs —— 五道门禁一次跑完，只给一行总结论。
  *
- * 为什么要它：本仓的"当前状态"= np + spec + smoke + battle **四道在同一棵树上全绿**，
- * 而四条命令要分别手敲、而且 np 一条就 9.5 分钟 —— 于是实际发生的是"只跑了其中一两道，
+ * 为什么要它：本仓的"当前状态"= np + spec + smoke + battle + 演化页自检 **五道在同一棵树上全绿**，
+ * 而五条命令要分别手敲、而且 np 一条就 9.5 分钟 —— 于是实际发生的是"只跑了其中一两道，
  * 然后引用全绿的口径"。这里把顺序与判词固定下来，并且明写耗时预算。
  *
- *   node tools/gate-all.mjs          # spec + smoke + battle（约 1 分钟），不跑 np
- *   node tools/gate-all.mjs --np     # 加跑 np-test（约 10 分钟）= **认证那一遍**（四道全绿才算）
- *   node tools/gate-all.mjs --np --group=meta    # §E335 只跑那一组（np 侧 15 条 ≈ 9 秒）
- *   node tools/gate-all.mjs --np --no-browser    # §E355 **CI 阻断档的形状**：np 整轮 + spec，摘掉浏览器那两道
+ *   node tools/gate-all.mjs          # spec + smoke + battle + map（约 1 分钟），不跑 np
+ *   node tools/gate-all.mjs --np     # 加跑 np-test（约 10 分钟）= **认证那一遍**（五道全绿才算）
+ *   node tools/gate-all.mjs --np --group=meta    # §E335 只跑那一组（np 侧 16 条 ≈ 10 秒）
+ *   node tools/gate-all.mjs --np --no-browser    # §E355 **CI 阻断档的形状**：np 整轮 + spec，摘掉浏览器那三道
  * 退出码：0 全绿；7 有任意一道红（点名是哪道）。
  * ⚠ 带 `--group=` 的那一遍**不是认证**：np 只跑了分组里的门，总结论行会显式标出来（同 `--only` 的规矩）。
- * ⚠ 带 `--no-browser` 的那遍**也不是"四道全绿"**：总结论会点名"本轮缺 smoke/battle"。
- *   它存在的理由 = 那两道要在 **CI 里跑**（本机每班次都跑，因为只要 45 秒），
+ * ⚠ 带 `--no-browser` 的那遍**也不是"全绿"**：总结论会点名"本轮缺哪几道"。
+ *   它存在的理由 = 那三道要在 **CI 里跑**（本机每班次都跑，因为只要 45 秒），
  *   而 GitHub 的 runner 上它们是观察档（10-01 转阻断后 3 跑 2 红、根因未定 ⇒ 红不能阻断提交）。
  */
 import { spawn } from 'node:child_process';
@@ -25,11 +25,17 @@ const ALL_JOBS = [
   { name: 'spec', argv: ['node', 'tools/spec-run.mjs'], want: /通过 (\d+) \/ (\d+)/ },
   { name: 'smoke', argv: ['node', 'tools/smoke.mjs'], want: /SMOKE OK/ },
   { name: 'battle', argv: ['node', 'tools/battle-test.mjs'], want: /BATTLE OK/ },
+  /* §E365 演化页（champion-map）的页内自检从此**在册**：它此前不在任何一道门禁的读取面上
+   *   （grep -c champion-map 在 np-test / spec-run / smoke / battle 四个仪器里都是 0）⇒ 页面整个坏了 CI 与本机都不响。
+   *   判据 = 页内自检的总结论行（PASS 条数会变，"0 FAIL"不会）；它要真 Chrome ⇒ 与 smoke/battle 同属浏览器那一波。 */
+  { name: 'map', argv: ['node', 'champion-map/shot.mjs', '--hash=mode=tree&check=1', '--dump'], want: /断言：\d+ PASS ‖ 0 FAIL/ },
 ];
 /* §E355：`--no-browser` ⇒ 只留能在 ubuntu runner 上稳定判的那两道（spec + np）。
- * 判据用**名字**过滤而不是下标：jobs 以后加一道不会静默少摘/多摘。 */
+ * §E365：浏览器那一族从两道变三道（加 champion-map 的页内自检）⇒ 判据改成**一张名单**，
+ *   不再把名字硬写在两个地方（原来 --no-browser 与分波各写一遍 smoke/battle，加一道就会漏一处）。 */
+const BROWSER_GATES = ['smoke', 'battle', 'map'];
 const NO_BROWSER = process.argv.includes('--no-browser');
-const jobs = NO_BROWSER ? ALL_JOBS.filter(function (j) { return j.name !== 'smoke' && j.name !== 'battle'; }) : ALL_JOBS.slice();
+const jobs = NO_BROWSER ? ALL_JOBS.filter(function (j) { return BROWSER_GATES.indexOf(j.name) < 0; }) : ALL_JOBS.slice();
 const GRPA0 = (process.argv.find(a => a.startsWith('--group=')) || '').slice(8);
 let GRPA = GRPA0;
 /* ===== §E341 `--auto`：按"这棵树改了什么"推断该跑哪一组（用户 ⑥「门禁重新规划一下」）=====
@@ -113,13 +119,14 @@ function launch(j) {
  * ⇒ 分两波：`spec + np`（都不依赖真实时间，随便抢核）并发起，跑完再起 `smoke/battle`；
  *   代价 = 整轮多约 45 秒（np 本来就 8~16 分钟），换来的是"四道全绿"这句话**可复现**。
  * ⚠ 这不修 CI 的 windows 观察档（那里只跑这两道、本来就没有抢核），也不改变任何一道门的判词。 */
-const isBrowserGate = function (j) { return j.name === 'smoke' || j.name === 'battle'; };
+const isBrowserGate = function (j) { return BROWSER_GATES.indexOf(j.name) >= 0; };
 const heavy = jobs.filter(function (j) { return !isBrowserGate(j); });
 const light = jobs.filter(isBrowserGate);
 const byName = new Map();
 for (const r of await Promise.all(heavy.map(launch))) byName.set(r.j.name, r);
 if (light.length) {
-  console.log('‖ 页面那两道（smoke/battle）等重活跑完再起 —— §E355b：它们的时间判据扛不住 np 抢核');
+  console.log('‖ 浏览器那几道（' + light.map(function (j) { return j.name; }).join('/') +
+    '）等重活跑完再起 —— §E355b：它们的时间判据扛不住 np 抢核');
   for (const r of await Promise.all(light.map(launch))) byName.set(r.j.name, r);
 }
 const running = jobs.map(function (j) { return byName.get(j.name); });
@@ -159,9 +166,11 @@ const bad = out.filter(o => !o.pass);
  *   （加了 `--no-browser` 之后"少的那道"完全可能不是 np —— 一个数字撑不起一句判词）。
  *   np 那道在分组时名字是 `np/<组>`，取斜杠前那一段再比。 */
 const ranNames = out.map(function (o) { return o.name.split('/')[0]; });
-const MISSING = ['np', 'spec', 'smoke', 'battle'].filter(function (n) { return ranNames.indexOf(n) < 0; });
-const missNote = MISSING.length ? '（本轮缺：' + MISSING.join(' ') + ' ⇒ **不是四道全绿**'
-  + (MISSING.indexOf('np') >= 0 ? '，加 --np' : '') + (NO_BROWSER && MISSING.indexOf('smoke') >= 0 ? '，--no-browser 摘掉的浏览器两档见 CI 观察档' : '') + '）' : '';
+/* §E365 名单从 ALL_JOBS 现算，不再抄第二份"np+spec+smoke+battle"（加一道就漏一处 = 总结论会说谎）*/
+const ALL_NAMES = ['np'].concat(ALL_JOBS.map(function (j) { return j.name; }));
+const MISSING = ALL_NAMES.filter(function (n) { return ranNames.indexOf(n) < 0; });
+const missNote = MISSING.length ? '（本轮缺：' + MISSING.join(' ') + ' ⇒ **不是整轮全绿**'
+  + (MISSING.indexOf('np') >= 0 ? '，加 --np' : '') + (NO_BROWSER && MISSING.indexOf('smoke') >= 0 ? '，--no-browser 摘掉的浏览器那几档见 CI 观察档' : '') + '）' : '';
 /* 时刻一律取本机时钟并明写时区偏移 —— 本仓已四次把 UTC/推测时刻当成本地实测时刻。 */
 function localStamp() {
   const d = new Date(), p = (n) => String(n).padStart(2, '0');

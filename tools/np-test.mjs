@@ -10024,7 +10024,10 @@ t('D194 `--only` 复跑单道门不许伪装成全绿（v1.5.288）：跳过的�
     eq(Number(m[1]), 1, '③ 实跑条数');
     ok(Number(m[2]) === Number(m[1]) + Number(m[3]) && Number(m[2]) > 100,
       '③ 分母必须是**全部注册数**（' + m[2] + ' = 跑的 ' + m[1] + ' + 跳的 ' + m[3] + '）⇒ 分母偷偷变小就等于把守卫拆了');
-    ok(/不许当"四道全绿"引用/.test(o1), '③ 那句"这不是全量门禁"必须跟着印出来');
+    /* （原来这条钉的是整句『不许当"四道全绿"引用』—— 那是**措辞在册**，而且把"四"这个数写死进了判据：
+     *   §E365 给 gate-all 加了第五道（演化页自检）之后，那句话本身就该过期，而门会替我"守住一个旧数字"。
+     *   换成钉**语义核心**：这一行必须说"这不是全量门禁"，并且分母必须还是全部注册数（上面那条已经钉了）。） */
+    ok(/这不是全量门禁/.test(o1), '③ 那句"这不是全量门禁"必须跟着印出来（钉语义，不钉"四道"这个数）');
   }
   const typo = spawnSync(process.execPath, ['tools/np-test.mjs', '--only=ZZ-没有这道门'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
   ok(typo.status === 3 && /一个都没匹配到/.test(String(typo.stderr || '')),
@@ -11314,12 +11317,12 @@ if (__nReg !== PASS + FAIL + __skipped) {
 }
 if (ONLY) {
   console.log('\n⚠ `--only=' + ONLY + '`：**只跑了 ' + (PASS + FAIL) + ' / ' + __nReg + ' 条**（跳过 ' + __skipped
-    + ' 条）⇒ 这不是全量门禁，**不许当"四道全绿"引用**（`node tools/np-test.mjs` 不带参数才是整轮）。');
+    + ' 条）⇒ 这不是全量门禁，**不许当整轮全绿引用**（`node tools/np-test.mjs` 不带参数才是整轮）。');
 }
 /* §E335 `--group` 与 `--only` 同罪：少跑了就是少跑了，必须自己喊出来。 */
 if (GROUP) {
   console.log('\n⚠ `--group=' + GROUP + '`：**只跑了 ' + (PASS + FAIL) + ' / ' + __nReg + ' 条**（跳过 ' + __skipped
-    + ' 条；累计含 ' + (CUM[GROUP] ? CUM[GROUP].join('+') : '全部') + '）⇒ 这不是全量门禁，**不许当"四道全绿"引用**。');
+    + ' 条；累计含 ' + (CUM[GROUP] ? CUM[GROUP].join('+') : '全部') + '）⇒ 这不是全量门禁，**不许当整轮全绿引用**。');
 }
 if (GROUP && PASS + FAIL === 0) {
   console.error('⛔ `--group=' + GROUP + '` 一条都没跑（' + __nReg + ' 条注册全被筛掉）⇒ 分组表或累计关系写错了，这不是全绿。');

@@ -34,15 +34,18 @@ const REF = arg('ref', 'SHIPPED-Ldemo');
 const CL = rd(join(HERE, 'coords.tsv')).trim().split('\n'), ch = CL[0].split('\t');
 const iId = ch.indexOf('id'), iPath = ch.indexOf('path'), iF = ch.indexOf('F'), iR = ch.indexOf('rank');
 if (iPath < 0) { console.error('⛔ coords.tsv 没有 path 列 ⇒ 先跑 node champion-map/attach-path.mjs'); process.exit(2); }
-const ALL = CL.slice(1).map(l => { const c = l.split('\t');
+const RAW = CL.slice(1).map(l => { const c = l.split('\t');
   return { id: c[iId], path: c[iPath], F: Number(c[iF]), rank: Number(c[iR]) }; })
-  .filter(r => r.id && r.path && r.id !== REF).sort((a, b) => a.rank - b.rank);
+  .filter(r => r.id && r.path);
+/* §E364 这里原来把"剔除参照枚"和"取全量"写在同一个 filter 里，而下面的 refRow 又是从这个**已剔除 REF**
+ *   的列表里找 ⇒ 用法头虽然写着支持 --ref=，实际只有默认值能跑（拿 --ref=v7beadseed-82 会报
+ *   "参照枚找不到文件"，而那个 .bak 明明在盘上）。⇒ 全量留一份 RAW 专门给参照枚查。 */
+const ALL = RAW.filter(r => r.id !== REF).sort((a, b) => a.rank - b.rank);
 const only = String(arg('ids', '')).split(',').map(s => s.trim()).filter(Boolean);
 const cands = only.length ? ALL.filter(r => only.indexOf(r.id) >= 0) : ALL.slice(0, Number(arg('top', 8)) || 8);
 const missing = only.filter(id => !ALL.some(r => r.id === id));
 if (missing.length) { console.error('⛔ --ids 里这些枚不在名单上（拼错或没进过面板）：' + missing.join(' ')); process.exit(2); }
-const refRow = ALL.concat([{ id: REF, path: REF === 'SHIPPED-Ldemo' ? 'js/bundled-champion-3p.js' : '', rank: 0, F: 0 }])
-  .find(r => r.id === REF);
+const refRow = RAW.find(r => r.id === REF);
 if (!refRow || !refRow.path || !existsSync(join(ROOT, refRow.path))) { console.error('⛔ 参照枚 ' + REF + ' 找不到文件'); process.exit(2); }
 
 function exam(subject, fieldOpp, tag) {
@@ -62,8 +65,8 @@ function exam(subject, fieldOpp, tag) {
 }
 const out = [];
 function duel(aId, bId, tag) {
-  const pa = ALL.concat([{ id: REF, path: refRow.path }]).find(r => r.id === aId);
-  const pb = ALL.concat([{ id: REF, path: refRow.path }]).find(r => r.id === bId);
+  const pa = RAW.find(r => r.id === aId);
+  const pb = RAW.find(r => r.id === bId);
   if (!pa || !pb) { console.log('⛔ 名单里查不到：' + aId + ' / ' + bId); return; }
   if (!existsSync(join(ROOT, pa.path)) || !existsSync(join(ROOT, pb.path))) { console.log('⛔ 缺包：' + pa.path + ' / ' + pb.path); return; }
   const t0 = Date.now();
