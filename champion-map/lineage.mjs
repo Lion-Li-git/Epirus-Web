@@ -154,11 +154,49 @@ const ARMPAR = {};
       if (id && par !== id && IDSET.has(par)) ARMPAR[id] = par; }
     console.log('臂级父指针表（chain-scan --emit）：' + Object.keys(ARMPAR).length + ' 支臂的产物能反查到图上已有的父');
   } else console.log('提示：没有 _e330-armparent.tsv ⇒ 臂级父指针这一级退路不生效（跑 node champion-map/chain-scan.mjs --emit=_e330-armparent.tsv）'); }
+/* §E368 **槽位时间轴**（用户 10-06 23:0x 给的办法：「通过出厂日期 + CHANGELOG 里的记录可以推出当时槽上是谁」）。
+ *   `ship-times.tsv` 是 §E338 那台 ship-scan 的产物 —— 它逐提交把 `js/bundled-champion-3p.js` 的内容取出来算权重指纹，
+ *   某个 wid **第一次出现**的那条提交 = 那枚真正上槽的时刻 ⇒ 这张表本身就是"槽位由谁住过"的时间轴，不用另建。
+ *   ⚠ 时区：表里的 shipWhen 是**提交时间的本地格式（+08）**，而包 META 的 ts 是 **UTC（Z）** ⇒ 显式补 +08:00 再比，
+ *     不许拿字符串大小直接比（本仓已四次把 UTC/本地混着当）。 */
+const SLOT_TL = [];
+{ const sp = join(HERE, 'ship-times.tsv');
+  if (existsSync(sp)) { const S = rd(sp).trim().split('\n'), sh = S[0].split('\t');
+    const ii = sh.indexOf('id'), iw = sh.indexOf('wid'), iwh = sh.indexOf('shipWhen');
+    for (const l of S.slice(1)) { const c = l.split('\t'); if (!c[iw] || !c[iwh]) continue;
+      const t = Date.parse(c[iwh].replace(' ', 'T') + '+08:00');
+      if (isFinite(t)) SLOT_TL.push({ id: c[ii], wid: c[iw], t: t }); }
+    SLOT_TL.sort((a, b) => a.t - b.t); } }
+function slotAt(tsStr) { const t = Date.parse(tsStr); if (!isFinite(t) || !SLOT_TL.length) return '';
+  let hit = ''; for (const s of SLOT_TL) { if (s.t <= t) hit = s.id; else break; } return hit; }
+console.log('槽位时间轴（§E368）：' + SLOT_TL.length + ' 段（最早 ' + (SLOT_TL[0] ? SLOT_TL[0].id : '—')
+  + ' ‖ 最晚一段起于 ' + (SLOT_TL.length ? new Date(SLOT_TL[SLOT_TL.length - 1].t).toISOString() : '—') + '）');
 let nSpk = 0, nArm = 0;
+/* §E367（用户 10-06 22:4x：「e35prod807 比父节点的父节点还要早，太离谱了」）
+ *   查出来的真相：**那五条边是假的**。`_e330-armparent.tsv` 里 seed80/seed81/e35prod807/e35prod814/e39ctl911
+ *   的 `seedpack` 一律是 **路径** `js/bundled-champion-3p.js`，而 byPath/byArm 这两级退路是拿"这个路径**今天**住的是谁"
+ *   反查图上的节点的 ⇒ 于是"当时槽里那份权重（已被覆写、没留档）"被解析成了**现在的槽主 Ldemo**。
+ *   实测对不上：现役那份权重 d490dc13 自己 META.ts = 09-27T08:55Z、最早可证的 git 实体 = 提交 3c17e23 @09-27T10:42Z，
+ *   而 e35prod807 的 ts = 09-26T06:37Z ⇒ 它不可能热启动自一份**26 小时之后**才产出的权重。
+ *   ⇒ 判据（只否**推断级**，不动实录）：父是按路径/臂名推出来的、而那个节点的 ts **晚于**子代 ⇒ 退回"父不可考"，
+ *     并且**连那个哈希也不许留**（它是"今天槽主"的哈希，不是当时那份的）。
+ *   ⚠ byHash 一级永远不否：那是包自己 META.hotstartFrom 里记的哈希，是实录；那种情况该怀疑的是 ts，不是边。*/
+const IDTS = {}; for (const r of REC) IDTS[r.id] = (r.m && r.m.ts) || '';
+let nBack = 0;
 for (const r of REC) { const m = r.m || {};
   const byHash = (m.hotstartFrom && BYWID[m.hotstartFrom]) || '';
-  const byPath = byHash ? '' : seedpackOf(m);
-  const byArm = (byHash || byPath) ? '' : (ARMPAR[r.id] || '');
+  let byPath = byHash ? '' : seedpackOf(m);
+  let byArm = (byHash || byPath) ? '' : (ARMPAR[r.id] || '');
+  const parId = byHash || byPath || byArm;
+  const parTs = parId ? (IDTS[parId] || '') : '';
+  let demoted = '', bySlot = '';
+  if (parId && !byHash && parTs && m.ts && parTs > m.ts) {
+    /* §E368：这种倒挂几乎一定是"父指针记的是**槽位路径**"被按今天的槽主解析了 ⇒
+     *   先按时间轴问一句"它跑的那一刻槽里是谁"，接得回来就接（那才是真父），接不回来才退回不可考。*/
+    const alt = slotAt(m.ts);
+    if (alt && alt !== parId && IDTS[alt] && IDTS[alt] <= m.ts) bySlot = alt;
+    else { demoted = parId; nBack++; }
+    byPath = ''; byArm = ''; }
   if (byPath) nSpk++; if (byArm) nArm++;
   const eco = (m.ecoEffective && typeof m.ecoEffective === 'object') ? m.ecoEffective : {};
   const fig = (m.fightEffective && typeof m.fightEffective === 'object') ? m.fightEffective : {};
@@ -167,11 +205,19 @@ for (const r of REC) { const m = r.m || {};
     dealW: norm(fig.dealW), firstW: norm(fig.firstW), whistlePen: norm(fig.whistlePen), styleW: norm(m.styleW),
     oppsN: norm(Array.isArray(m.opps) ? m.opps.length : (typeof m.opps === 'string' && m.opps ? m.opps.split(',').filter(Boolean).length : '')),
     seedEmb: norm(m.seedEmbeddedFrom), gens: norm(m.gens), mode: norm(m.mode), rulesFp: norm(m.rulesFingerprint),
-    parent: norm(m.hotstartFrom || WIDOF[byPath || byArm] || '') };
+    parent: norm(m.hotstartFrom || WIDOF[byPath || byArm || bySlot] || '') };
   ROWS.push({ id: r.id, ts: m.ts || '', seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
-    parentOf: byHash || byPath || byArm, wid: r.wid || '',
+    parentOf: byHash || byPath || byArm || bySlot, wid: r.wid || '',
+    psrc: byHash ? 'hash' : (byPath ? 'seedpack' : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (demoted ? 'demoted' : '')))),
+    demoted: demoted,
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
 const nres = ROWS.filter(r => r.parentOf).length, np = ROWS.filter(r => r.cfg.parent !== '-').length;
+/* §E367 + §E368：被"路径今天住的是谁"骗出来的父边，逐枚点名它**改接到了谁**（不点名就等于悄悄改了数据）*/
+console.log('⭐ §E367/§E368 时间倒挂的**推断级**父指针：按槽位时间轴改接 '
+  + ROWS.filter(r => r.psrc === 'slot-at-time').length + ' 枚 ‖ 接不回来、退回"不可考" ' + ROWS.filter(r => r.demoted).length + ' 枚');
+for (const r of ROWS) if (r.psrc === 'slot-at-time' || r.demoted)
+  console.log('   ' + r.id + ' @' + r.ts + '  原解析=' + (r.demoted || '(见下行)') + ' ⇒ 现父=' + (r.parentOf || '不可考')
+    + '（其 ts=' + (IDTS[r.parentOf] || '—') + '）');
 console.log('父指针：' + np + ' 枚记了 hotstartFrom ‖ 其中 ' + nres + ' 枚能解析到**具体哪一枚**（' +
   (np ? Math.round(nres / np * 100) : 0) + '%）‖ 解析不出的多是"父是当时的现役冠军、后来被覆写没留档"');
 console.log('　§E330 退路解析出的：SEEDPACK 路径 ' + nSpk + ' 枚 ‖ 臂级（同臂带内候选留的指针）' + nArm + ' 枚（这些的产物自己不带任何指针）');
@@ -218,16 +264,21 @@ const SYNTH_NAME = {};
     SYNTH_NAME[p] = tally[p] >= 50
       ? 'RUNNER-BASE ' + p.slice(0, 8) + '…（v1.3.58 BASE · runner 恒拷 EPIRUS_BUNDLE_IN 的产物 · ' + tally[p] + ' 枚共指 · **非血统**）'
       : '父未落档 ' + p.slice(0, 8) + '…（' + tally[p] + ' 枚）'; } }
-for (const r of ROWS) r.parentName = r.parentOf ? r.parentOf : (SYNTH_NAME[r.cfg.parent] || '');
+for (const r of ROWS) r.parentName = r.parentOf ? r.parentOf
+  : (r.demoted ? '父不可考（父指针记的是**路径** js/bundled-champion-3p.js ⇒ 反查只能查到**今天的槽主**；'
+      + '当时的槽主已被覆写没留档。§E367 之前这里被误接成 ' + r.demoted + '）'
+      : (SYNTH_NAME[r.cfg.parent] || ''));
 const nSynth = ROWS.filter(r => r.parentName && !r.parentOf).length;
 console.log('合成父节点：' + Object.keys(SYNTH_NAME).length + ' 个指纹 ‖ 落到 ' + nSynth + ' 枚身上（其中 ' +
   ROWS.filter(r => SYNTH_NAME[r.cfg.parent] && SYNTH_NAME[r.cfg.parent].indexOf('RUNNER-BASE') === 0).length + ' 枚是 runner 覆写那一格）');
 const COLS = ['id', 'fam', 'famLabel', 'ts', 'metaSeed', 'nameSeed', 'parent', 'parentOf', 'parentName', 'wid', 'rulesFp', 'divW', 'divK', 'divRoleW', 'divCatW',
-  'oppsN', 'stockBonus', 'hoardPen', 'dealW', 'firstW', 'whistlePen', 'styleW', 'eTarget', 'eCap', 'gens', 'mode', 'seedEmb'];
+  /* §E367 parentSrc 追加在**最后一列**：现有消费者（chain-scan / dups / directions / gapscan / viewer）都按表头取列，
+   *   但插到中间会让任何按下标取数的写法静默错位 ⇒ 新列一律往后放。*/
+  'oppsN', 'stockBonus', 'hoardPen', 'dealW', 'firstW', 'whistlePen', 'styleW', 'eTarget', 'eCap', 'gens', 'mode', 'seedEmb', 'parentSrc'];
 const out = [COLS.join('\t')];
 for (const r of ROWS) { const d = FAM[r.id]; if (!d) continue; const c = r.cfg;
   out.push([r.id, d.n, d.label, (r.ts || '').slice(0, 19), r.seed, r.id.replace(/^.*-/, ''), c.parent.slice(0, 8), r.parentOf, r.parentName, r.wid, c.rulesFp, c.divW, c.divK, c.divRoleW, c.divCatW, c.oppsN,
-    c.stockBonus, c.hoardPen, c.dealW, c.firstW, c.whistlePen, c.styleW, c.eTarget, c.eCap, c.gens, c.mode, c.seedEmb].join('\t')); }
+    c.stockBonus, c.hoardPen, c.dealW, c.firstW, c.whistlePen, c.styleW, c.eTarget, c.eCap, c.gens, c.mode, c.seedEmb, r.psrc || ''].join('\t')); }
 writeFileSync(join(HERE, 'lineage.tsv'), out.join('\n') + '\n');
 console.log('已写 lineage.tsv（' + (out.length - 1) + ' 行 ‖ ' + defs.length + ' 个家族）');
 for (const d of defs) console.log('  家族 ' + String(d.n).padStart(2) + '  ' + String(d.g.rs.length).padStart(4) + ' 枚  ' + d.label);
