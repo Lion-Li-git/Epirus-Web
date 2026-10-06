@@ -609,14 +609,16 @@ function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, f
     /* §E314 行带 = 整幅宽、不跟横轴走；家族名/统计两行钉在左栏（只跟纵轴）*/
     t.fillRect(0, WY(padT + i * rowH), w, rowH * TKY);
     t.fillStyle = st.ink; t.textAlign = 'right';
-    t.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.46));
+    /* §E351 DS（用户 10-06 第三版：「左侧会跟着上下平移但不左右平移」）：左栏标签的 x 也走 WX
+     *   ⇒ 与表格/网格同一套映射。纵向本来就是 WY，横向原来写死 padL-12dpr。 */
+    t.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), WX(padL - 12 * devicePixelRatio), WY(padT + i * rowH + rowH * 0.46));
     t.fillStyle = st.dim; t.font = ff(10);
-    t.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.88));
+    t.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, WX(padL - 12 * devicePixelRatio), WY(padT + i * rowH + rowH * 0.88));
     t.font = ff(11);
   }
   t.textAlign = 'left';
   t.strokeStyle = 'rgba(159,176,204,.22)'; t.lineWidth = 1;
-  t.beginPath(); t.moveTo(padL - 6, 0); t.lineTo(padL - 6, h); t.stroke();
+  t.beginPath(); t.moveTo(WX(padL - 6), 0); t.lineTo(WX(padL - 6), h); t.stroke();
   var day = 86400000;
   for (var tt2 = Math.ceil(tmin / day) * day; tt2 <= tmax; tt2 += day) {
     var xx = WX(X(tt2)); t.strokeStyle = 'rgba(159,176,204,.16)'; t.lineWidth = 1;
@@ -624,7 +626,8 @@ function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, f
     if (xx > padL - 60 && xx < w + 60 && gy1 > gy0) {
       t.beginPath(); t.moveTo(xx, gy0); t.lineTo(xx, gy1); t.stroke();
       t.fillStyle = st.dim; t.font = (10 * devicePixelRatio) + 'px system-ui,sans-serif';
-      t.fillText(new Date(tt2).toISOString().slice(5, 10), xx + 3, h - padB + 16 * devicePixelRatio);
+      /* §E351 DS：日期刻度的 **y 也要走 WY**（原来用裸常量 ⇒ 纵向平移时它不跟着走，与左侧行标签不一致）。 */
+      t.fillText(new Date(tt2).toISOString().slice(5, 10), xx + 3, WY(h - padB + 16 * devicePixelRatio));
     } }
   return c;
 }
@@ -673,12 +676,21 @@ function drawTree(fr) {
   var ck = [w, h, TKX.toFixed(4), TKY.toFixed(4), TPX.toFixed(1), TPY.toFixed(1), fams.join(','), tmin, tmax, st.ink, st.dim, devicePixelRatio,
     st.elev.toFixed(3), st.tTilt.toFixed(3), st.batch, NVIS].join('|');   /* §E333 抬升带会挤行距 ⇒ 立体度/倾角进缓存键；§E338 批次改了行表与每行枚数 ⇒ 批次与可见数也要进，否则切批次用的还是上一批那张底图 */
   if (!CHM || CHM.k !== ck) CHM = { k: ck, c: treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, ff) };
-  var T3 = st.elev, TH = st.tTilt * T3, SH = st.tShear * T3, uc = w / 2, vc = h / 2;
+  var T3 = st.elev, uc = w / 2, vc = h / 2, cb = cam();   /* E352 DS: 相机基 cb（与地图同一套） */
   /* §E333 立体 = **原地上升**，不是把地板压扁。用户两张截图点名的病：上一版借地图那台相机（pit 0.72 ⇒ 行方向
    *   只剩 cos = 0.66 的高度），24 行被挤成一条横带，格内抖动又被我挪去横方向 ⇒ 比二维更挤。
    *   现在：地板按二维那张版式贴（行方向最多按 tTilt 轻微压扁），点沿**屏幕纵轴**抬起，每枚留一根立柱接回自己那一格。
    *   T3=0 ⇒ cos(0)=1、错切 0、抬升 0 ⇒ 逐字等于二维；TH/SH 只由右键拖动给，默认 0。*/
-  function PL(u, v, z) { return [u + (v - vc) * SH, vc + (v - vc) * Math.cos(TH) - (z || 0)]; }
+  /* E352 DS：PL 原来只做 tTilt/tShear 仿射 ⇒ 谱系图没有旋转。换成正交相机投影（与地图同一套 cam()）。
+   *   默认 th=-pi/2, ph=pi/2 ⇒ r=[1,0,0]、u=[0,1,0] ⇒ 退化成 [u, v-z]，与旧版逐像素相同。
+   *   树里所有几何（地板四角/棋子/立柱/标签/scr[] 命中表）都经过 PL ⇒ 换它即全部同步。 */
+  function PL(u, v, z) {
+    var a = u - uc, bb = v - vc;
+    return [uc + a * cb.r[0] + bb * cb.r[1], vc + a * cb.u[0] + bb * cb.u[1] - (z || 0)]; }
+  /* §E351 DS（用户 10-06：「平移的时候坐标轴并不跟着动」）：地板（轴文字烘在 CHM.c 里）原样贴 (0,0)-(w,h)，**没走 WX/WY**；而棋子的落点走的是 WX(X(tv))（含 tKx/tKy/tX/tY）⇒ 棋子跟着平移、地板和轴不走。
+   *   修法：地板角点也走同一套映射（分母仍是 w/h，因为源画布就是 w×h）⇒ 地板/轴与棋子**永远同一套变换**。 */
+  /* §E351 更正（DS 10-06 第二版）：地板角点**回到裸画布坐标** —— treeChrome 里 x 已经走过 WX（见日期刻度的 xx），
+   *   这里再走一遍 WX/WY 等于把平移用了两次 ⇒ 日期刻度 2×、表格 1× ⇒ 错位（用户实测）。真正的绑定见 treeChrome 里日期刻度那一行。 */
   var q0 = PL(0, 0, 0), qX = PL(w, 0, 0), qY = PL(0, h, 0);
   g.save();
   g.setTransform((qX[0] - q0[0]) / w, (qX[1] - q0[1]) / w, (qY[0] - q0[0]) / h, (qY[1] - q0[1]) / h, q0[0], q0[1]);
@@ -1440,8 +1452,10 @@ window.addEventListener('mousemove', function (e) {
        *   平面态右键仍然不绑：二维表没有"旋转"这个动作。*/
       if (drag[8] === 2) {
         if (st.elev > 0.05) {
-          st.tTilt = Math.max(0, Math.min(1.15, drag[11] + cdy / 260));
-          st.tShear = Math.max(-0.55, Math.min(0.55, drag[12] - cdx / 420));
+          st.yaw = drag[4] + cdx / 160;   /* E352 DS: 谱系图右键 = 完整 yaw。
+         *   ⚠ 符号是 **+**（地图那边是 −）：因为树里 PL 的纵向是 vc + (a·u0 + b·u1)，
+         *   而地图 ptw 是 h/2 − (…) —— 纵向符号相反 ⇒ 手性镜像 ⇒ 同一套鼠标公式在树上方向会反。 */
+          st.pit = Math.max(0.06, Math.min(1.62, drag[5] + cdy / 200));   /* E352 DS: pitch 仍夹在 [0.06,1.62] */
         }
       } else { st.tX = drag[9] + cdx * devicePixelRatio; st.tY = drag[10] + cdy * devicePixelRatio; }
     }
