@@ -32,6 +32,10 @@ docs/artifacts/.*
 docs/artifacts/*.summary
 docs/artifacts/*.marker
 
+# §E335：gate-all 只在**红**的时候落 `docs/artifacts/gate-fail-<job>.txt`（绿的时候不留全量输出）。
+# 那是失败取证的临时件、每次红都会覆写 ⇒ 不得入库，否则 `git add -A` 会把某一轮的红日志当成果提交。
+docs/artifacts/gate-fail-*.txt
+
 # v1.5.279（qoder 0928 下午班）：结论所依赖的对照包必须入库。
 # 全局 `*.bak` 让 2100+ 个臂产物一条都没进 git，§E120 所需的 SQ2-30-* 已从盘上消失
 # ⇒ "可复跑"只在代码层成立。kept/ 是唯一被显式放行的例外，由 tools/keep-artifact.mjs 维护。

@@ -39,8 +39,9 @@ const G = FEAS_N.games;
 const COLS = ['id', 'ok', 'nFail', 'fails', 'G', 'G2', 'wallDmg', 'fieldA', 'fieldBClears',
   'seatVerdict', 'seatSpread', 'zeroAtkRate', 'recOk', 'recFails', 'oppsN'];
 
-/* ---- 名单：直接读坐标表 ⇒ "判了几枚"与"画了几枚"永远是同一批 ---- */
-const ct = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n');
+/* ---- 名单：直接读坐标表 ⇒ "判了几枚"与"画了几枚"永远是同一批 ----
+ *   ⚠ 先归一 CRLF：coords.tsv 的**末列**就是 path，用 split('\n') 会把它读成 "path\r" ⇒ indexOf 拿 −1。*/
+const ct = readFileSync(join(HERE, 'coords.tsv'), 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
 const ch = ct[0].split('\t'), ci = ch.indexOf('id'), cpi = ch.indexOf('path');
 if (cpi < 0) { console.error('⛔ coords.tsv 没有 path 列 ⇒ 先跑 node champion-map/attach-path.mjs'); process.exit(2); }
 /* §E330：以前这里按 `docs/artifacts/<id>.bak` **猜**路径，猜不到就静默筛掉 ⇒ 那 183 枚臂产物

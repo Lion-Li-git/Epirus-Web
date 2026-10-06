@@ -7,7 +7,9 @@
  *
  *   node tools/gate-all.mjs          # spec + smoke + battle（约 1 分钟），不跑 np
  *   node tools/gate-all.mjs --np     # 加跑 np-test（约 10 分钟）
+ *   node tools/gate-all.mjs --np --group=meta    # §E335 只跑那一组（np 侧 15 条 ≈ 9 秒）
  * 退出码：0 全绿；7 有任意一道红（点名是哪道）。
+ * ⚠ 带 `--group=` 的那一遍**不是认证**：np 只跑了分组里的门，总结论行会显式标出来（同 `--only` 的规矩）。
  */
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
@@ -20,8 +22,54 @@ const jobs = [
   { name: 'smoke', argv: ['node', 'tools/smoke.mjs'], want: /SMOKE OK/ },
   { name: 'battle', argv: ['node', 'tools/battle-test.mjs'], want: /BATTLE OK/ },
 ];
-if (process.argv.includes('--np')) {
-  jobs.unshift({ name: 'np', argv: ['node', 'tools/np-test.mjs'], want: /通过 (\d+) \/ (\d+)/ });
+const GRPA0 = (process.argv.find(a => a.startsWith('--group=')) || '').slice(8);
+let GRPA = GRPA0;
+/* ===== §E341 `--auto`：按"这棵树改了什么"推断该跑哪一组（用户 ⑥「门禁重新规划一下」）=====
+ * 三条设计：
+ *   ① **保守**：认不出来的路径一律算 engine（= 整轮）⇒ 它只会多跑，不会少跑；
+ *   ② 推断出来的是**分组** ⇒ 总结论照样标"不是整轮认证"，`--auto` 不能拿来冒充认证；
+ *   ③ 打印每张票的来路（哪个文件被判成哪一组），不然"为什么只跑 15 道"会变成下一次考古。 */
+if (process.argv.includes('--auto')) {
+  const RANK = { meta: 1, ship: 2, train: 3, ui: 4, probe: 4, engine: 5 };
+  const cls = (p) => {
+    if (/^(tools\/(np-test|gate-all|np-cache|spec-run)\.mjs$|tests\/|js\/core\/|server\/|index\.html$)/.test(p)) return 'engine';
+    if (/^(js\/ui\/|tools\/(smoke|battle-test)\.mjs$)/.test(p)) return 'ui';
+    if (/^js\/train\/|^js\/bundled|^tools\/(train-3p|train-best|eval-5p|style-exam|promote-champion|ring2-run|human-pool|pool-frontier-lib|probe-|analyze-|keep-artifact)/.test(p)) return 'train';
+    if (/^docs\/(METHODOLOGY|RULES-2P|RULES-NP)\.md$|^docs\/artifacts\/(e129-out\/matrix\.json|train-3p-out\.js|e161-ply\.mjs|e168-style-human\.mjs|e169-beadprice\.mjs|\.training-live\.sha1)$/.test(p)) return 'ship';
+    return 'meta';   // docs/ 其余、champion-map/、results/ 等：门的读取面上没有 ⇒ 只跑仓库纪律那一组
+  };
+  const changed = new Set();
+  for (const a of ['status --porcelain', 'diff --name-only HEAD']) {
+    let o = '';
+    try {
+      const { execSync } = await import('node:child_process');
+      o = execSync('git ' + a, { cwd: ROOT, encoding: 'utf8', maxBuffer: 32 << 20 });
+    } catch (e) { console.error('⛔ --auto 认不出改动面（git ' + a + ' 跑不动：' + e.message.split('\n')[0] + '）⇒ 不猜，请手给 --group= 或整轮'); process.exit(2); }
+    for (const line of o.split('\n')) {
+      if (!line.trim()) continue;
+      let p = line.length > 3 ? line.slice(3) : line;
+      const ar = p.indexOf(' -> '); if (ar >= 0) p = p.slice(ar + 4);          // R  旧 -> 新
+      p = p.trim().replace(/^"|"$/g, '');
+      if (p) changed.add(rel(p));
+    }
+  }
+  if (!changed.size) { console.log('--auto：工作区干净 ⇒ 无改动可判，按 meta 跑一遍仓库纪律'); GRPA = GRPA || 'meta'; }
+  else {
+    const by = {};
+    for (const p of changed) { const g = cls(p); (by[g] = by[g] || []).push(p); }
+    let top = 'meta';
+    for (const g of Object.keys(by)) if (RANK[g] > RANK[top]) top = g;
+    console.log('--auto 判据（改动 ' + changed.size + ' 个路径）：');
+    for (const g of Object.keys(by).sort((x, y) => RANK[y] - RANK[x]))
+      console.log('  ' + g.padEnd(7) + by[g].length + ' 个 ‖ ' + by[g].slice(0, 4).join(' ') + (by[g].length > 4 ? ' …' : ''));
+    GRPA = top === 'engine' ? '' : top;
+    console.log('--auto ⇒ np 跑 ' + (GRPA ? '--group=' + GRPA : '**整轮**（engine 面 ⇒ 不分组）') +
+      '；⚠ 分组那一遍**不是认证**');
+  }
+}
+if (process.argv.includes('--np') || process.argv.includes('--auto')) {
+  jobs.unshift({ name: GRPA ? 'np/' + GRPA : 'np', argv: ['node', 'tools/np-test.mjs'].concat(GRPA ? ['--group=' + GRPA] : []),
+    want: /通过 (\d+) \/ (\d+)/ });
 }
 
 /* ===== 10-01 19:3x（千问 §E214）：四道**并发起跑**，判词与顺序一字不改 =====
@@ -88,7 +136,8 @@ function localStamp() {
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
 console.log('门禁：' + out.map(o => o.name + ' ' + o.reading + '（' + o.sec + 's）').join(' · ') +
-  (bad.length ? '' : '（同一棵树 ' + localStamp() + ' 本机时刻）'));
+  (bad.length ? '' : '（同一棵树 ' + localStamp() + ' 本机时刻' + (GRPA ? '‖ §E335 分组 ' + GRPA + '：**不是整轮认证**）' : '）')));
 console.log(bad.length ? '⛔ 结论：**不是全绿** —— ' + bad.map(b => b.name).join('/') + ' 红'
-  : '✔ 结论：**' + out.length + ' 道全绿**' + (out.length < 4 ? '（np 未跑，加 --np）' : ''));
+  : '✔ 结论：**' + out.length + ' 道全绿**' + (out.length < 4 ? '（np 未跑，加 --np）' : '')
+    + (GRPA ? ' ‖ 但 np 只跑了 `--group=' + GRPA + '` 那一组 ⇒ 这一遍**不许当认证引用**（认证 = 不带 --group 的整轮）。' : ''));
 process.exit(bad.length ? 7 : 0);

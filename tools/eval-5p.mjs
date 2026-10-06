@@ -19,6 +19,9 @@ import vm from 'node:vm';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 /* §E142：脚本 chooser 的包装规则搬进单一来源（见下面 `asChooser`） */
 import { makeAsChooser, pushTarget } from './bot-chooser-lib.mjs';
+/* §E342：META 的读取口与映射档的应用口都只从 audit-lib 拿（promote 用的是同一个）。
+ * 不在这里再写一份正则/一份解析 ⇒ "体检按 proto 判、考卷按 off 记分"那种两本账。 */
+import { extractJsonObject, parseMetaTolerant, packHoloMode, applyHoloMode } from './audit-lib.mjs';
 
 /* 位置参数：剔除 --flag（否则会被当成局数/人数） */
 const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
@@ -97,6 +100,33 @@ const src = readFileSync(FILE, 'utf8');
 const mm = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
 if (!mm) { console.error('未找到 EPIRUS_CHAMPION_3P: ' + FILE); process.exit(1); }
 const metaM = src.match(/window\.EPIRUS_CHAMPION_3P_META\s*=\s*(\{[\s\S]*?\})\s*;/);
+/* §E342（用户裁定 10-06）：全息屏障→原型制御 的映射档**跟着包走** ⇒ 考卷与体检读同一份声明，
+ *   否则会出现"promote 按 proto 判过门槛、考卷按 off 记成绩"这种两本账。
+ *   优先级与 `promote-champion` / `style-exam` **同一条**：环境变量 `EPIRUS_HOLO2PROTO` > 包自带 `META.holo2proto` > off。
+ *   为什么考卷也要认环境变量：promote 的 `--holo2proto=` 是给人**体检历史产物**用的（那批 .bak 的 META 比这一档早出生、
+ *     里面没有声明），它在 spawn 考卷时把这档传下来 ⇒ 否则同一枚包在一份体检里有两个答案。
+ *   ⚠ 刻意**不用**上面那条懒惰正则解析 META：它在嵌套 META 上会截断（v1.5.226 给 META 加 recipe.env 之后
+ *   那个形状真实存在），所以走 audit-lib 的两个"单一来源"读取口（与 promote 同一个）。 */
+{
+  const envH = (process.env.EPIRUS_HOLO2PROTO == null || String(process.env.EPIRUS_HOLO2PROTO).trim() === '')
+    ? null : String(process.env.EPIRUS_HOLO2PROTO).trim();
+  const mj = extractJsonObject(src, 'window.EPIRUS_CHAMPION_3P_META');
+  let mt = {};
+  if (mj) {
+    try { mt = parseMetaTolerant(mj, FILE).meta || {}; }
+    catch (e) { console.error('⛔ ' + FILE + ' 的 META 解析不出 ⇒ 映射档无从判定（不许静默当 off）：' + e.message); process.exit(2); }
+  }
+  let HOLO, declared;
+  try {
+    declared = packHoloMode(mt);
+    HOLO = envH != null ? packHoloMode({ holo2proto: envH }) : declared;
+    if (HOLO !== 'off' || envH != null) applyHoloMode({ EpirusPolicy: P }, { holo2proto: HOLO }, 'eval-5p');
+  } catch (e) { console.error('⛔ ' + e.message); process.exit(2); }
+  if (HOLO !== 'off') console.log('[holo2proto] ' + FILE + ' 按 "' + HOLO + '" 计（来自' + (envH != null ? '环境变量' : '包声明') + '，下达后已回读确认）'
+    + ' ⇒ 本次全部读数含考卷那几列都是**映射后的行为**');
+  if (envH != null && envH !== declared) console.log('⚠ ' + FILE + ' 自带的声明是 "' + declared + '"，被环境变量改成 "' + envH + '"'
+    + ' ⇒ 这份读数不是该包上线后的行为（上线后跑的是它自己那句声明）。');
+}
 const params = P.unpack(JSON.parse(mm[1]), true);
 if (!params) { console.error('冠军包不兼容: ' + JSON.stringify(P.checkPack(JSON.parse(mm[1])))); process.exit(1); }
 /* ===== §E136：`--swap=<第二粒包>@<回合R>` —— **不识别任何环境，只按"第几回合"换权重** =====

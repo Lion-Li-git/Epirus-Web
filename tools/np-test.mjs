@@ -97,8 +97,50 @@ const __T = [];   /* v1.5.224：按门计时。默认**零成本**（只 push �
  * ⚠ 这条**不冒充全绿**：跑完会响亮印"跳过 N 条"，收尾的注册数守卫也把跳过数算进去。 */
 const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7) || null;
 let __skipped = 0;
+/* ===== §E335 分组：以后不必每次全跑一遍（用户 10-06 点名）=====
+ * 为什么这样切：整轮里最慢的 15 道全是 train/ship（D176 一道 107.5s），而"只改了 champion-map/ 或 docs/"
+ *   那一类工作，实测**没有任何一道门读那两个目录**
+ *   （`grep -c champion-map tools/np-test.mjs tools/spec-run.mjs tools/smoke.mjs tools/battle-test.mjs` 全 0）
+ *   ⇒ 那种班次真正该跑的只有"仓库纪律"那 15 道（读 CHANGELOG/README/门号/源码形状），是**秒级**的。
+ * 分组键 = 门名第一个空格前那段（D###/N##/L#/REPRO…）。269 个键盖住 272 条门；有 3 个键被多条门共用
+ *   （N2/N3/N4 那几族）⇒ **同键必须同组**，启动时撞组直接红。
+ * ⚠ 三条不许糊：① `--group` 与 `--only` 一样**不冒充全绿**（跳过多少条响亮印出来）；
+ *   ② **整轮（不带 --group）额外要求"每条门都归了组"** ⇒ 新加门忘了归类当场判红，
+ *      否则表会悄悄漏掉后加的腿，那正是本仓最怕的"门绿着但它没在看你要上线的那个东西"；
+ *   ③ 归组判据是"这道门读哪一层的输入"，不是"它属于哪个 §E 编号" —— 后者会把改引擎的门留在窄组里。*/
+const GRP = {
+  meta: 'REPRO L1 L2 L3 L7 L6 L5 D218 D8 D82 D189 D191 D194 D205 D206',   // 仓库纪律：只读源码/CHANGELOG/README/门号
+  ui: 'D37 D38 D28 D70 D131 D111 D166',                                    // 页面与前端契约
+  ship: 'D219 D55 D16 D35 D27 D49 D60 D61 D62 D67 D73 D78 D79 D103 D105 D116 D118 D124 D125 D141 D153 D155 D163 D107 D110 D121 D145 D146 D147 D168 D169 D170 D190 D197 D210 D228',   // 出厂面：可行性闸 / 当选 / promote / 线上槽
+  train: 'REPRO2 L4 D217 D220 D221 D222 D223 D224 D225 D226 D227 D229 D5 D7 D9 D10 D11 D12 D13 D15 D56 D58 D59 D17 D24 D25 D26 D33b D33 D36 D39 D40 D41 D42 D43 D44 D45 D47 D48 D65 D66 D68 D72 D74 D75 D76 D77 D80 D81 D84 D85 D86 D87 D89 D90 D104 D97 D99 D100 D101 D108 D109 D112 D113 D114 D119 D122 D123 D127 D128 D129 D130 D132 D134 D135 D136 D139 D140 D115 D162 D120 D143 D144 D157 D159 D167 D172 D173 D174 D175 D176 D179 D181 D180 D182 D184 D185 D213 D164 D165 D187 D188 D201 D204',   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
+  probe: 'D34 D64 D83 D88 D137 D138 D148 D149 D150 D151 D152 D154 D160 D161 D106 D158 D177 D178 D183 D186 D192 D193 D195 D196 D198 D200 D199 D212 D214 D202 D203 D207 D208 D209 D211 D216',   // 研究量具自身的牙
+  engine: 'N1 N2 目标：attemptAction N3 N3b N10 N10b N10c N8 N14 N14b N15 N16 N17 N18 N19 N4 N4b N4c N12 N12b N6 N6b 目标反锁：上回合与某对手互为目标而相抵 目标选择：能一击必杀先杀；否则打血量最高的领先者 fuzz：3/4/5 autoGame N20a N20b N20c N20d N20e N21 N22 N22b N22c N23 D1 D2 D3 D4 D6 D51 D52 D53 D54 D57 D18 D19 D20 D21 D22 D14 D23 D29 D30 D31 D46 D50 D63 D91 D102 D92 D93 D94 D95 D96 D98 D71 D117 D126 D142',   // 引擎与规则语义（改这里 ⇒ 只能全跑）
+};
+/* 累计依赖：跑一个组 = 跑它自己 + 它所依赖的更浅的组。engine 是"全部"。 */
+const CUM = { meta: ['meta'], ship: ['ship', 'meta'], ui: ['ui', 'train', 'ship', 'meta'],
+  train: ['train', 'ship', 'meta'], probe: ['probe', 'train', 'ship', 'meta'], engine: null };
+const KEY2G = {}; const __CLASH = [];
+for (const g in GRP) for (const k of GRP[g].split(' ')) {
+  if (KEY2G[k] && KEY2G[k] !== g) __CLASH.push(k + '（' + KEY2G[k] + ' / ' + g + '）');
+  KEY2G[k] = g; }
+if (__CLASH.length) { console.error('⛔ §E335 分组表撞组（同一个键落进两个组 ⇒ 同键的多条门必须同组）：' + __CLASH.join(' ')); process.exit(2); }
+const gateKey = n => String(n).trim().split(/[ \u3000]/)[0];
+const __KEYS = [];
+if (process.argv.includes('--list-groups')) {
+  for (const g in GRP) console.log('  ' + g.padEnd(7) + GRP[g].split(' ').length + ' 个键');
+  console.log('  合计   ' + Object.keys(KEY2G).length + ' 个键（= 272 条门；N2/N3/N4 各有同前缀的多条）');
+  console.log('  累计   ' + Object.keys(CUM).map(g => g + (CUM[g] ? '=' + (CUM[g].reduce((s, x) => s + GRP[x].split(' ').length, 0)) + '条' : '=全部')).join(' ‖ '));
+  process.exit(0);
+}
+const GROUP = (process.argv.find(a => a.startsWith('--group=')) || '').slice(8) || null;
+if (GROUP && !(GROUP in CUM)) {
+  console.error('⛔ `--group=' + GROUP + '` 不认识（可选：' + Object.keys(CUM).join('/') + '）。含糊拼写不许当"没写"。');
+  process.exit(2); }
+const RUNSET = GROUP ? new Set(CUM[GROUP].reduce((a, g) => a.concat(g === 'engine' ? Object.keys(GRP).flatMap(x => GRP[x].split(' ')) : GRP[g].split(' ')), [])) : null;
 function t(name, fn) {
+  const __k = gateKey(name); __KEYS.push(__k);
   if (ONLY && name.indexOf(ONLY) < 0) { __skipped++; return; }
+  if (RUNSET && !RUNSET.has(__k)) { __skipped++; return; }
   const __t0 = Date.now();
   try { fn(); PASS++; console.log('  ✔ ' + name); }
   catch (e) { FAIL++; console.log('  ✘ ' + name + '  → ' + e.message); }
@@ -11165,6 +11207,116 @@ t('D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 b
   ok(/env\.EPIRUS_SEL_EVAL_SEEDS === undefined/.test(npCode), '⑧ 包装必须**只补缺省**（腿自己写了粒数就得听腿的，不然 ⑦ 永远测不到 3 粒那一档）');
 });
 
+/* ===== §E340（用户 ⑦）全息屏障 → 原型制御 的映射档 ===== */
+t('D229 §E340/§E342 全息屏障→原型制御 的映射档（v1.6.8 建档 · v1.6.9 升为包自带声明）：默认 off（出厂零剂量）· 三档语义各有一条牙 · 含糊值响亮拒 · 结构性无解不许假装禁掉 · 三个入口只经同一个口', function () {
+  const R = sb.window.EpirusRules, P = Pol;
+  /* ① 出厂面：新沙箱默认必须是 off。这一条不是装饰 —— 这一档改的是**决策**，
+   *    默认没关就等于把"榜首为什么被挡"那条已裁过的门槛悄悄挪了位置。 */
+  eq(P.holo2Proto(), 'off', '① 默认必须是 off ⇒ 否则研究档改掉了出厂形状');
+  let threw = false;
+  try { P.setHolo2Proto('Prot0'); } catch (e) { threw = true; }
+  ok(threw, '② 非法值必须抛（含糊拼写不许被当成"没写"，否则一次拼错 = 一份静默假读数）');
+  eq(P.holo2Proto(), 'off', '② 抛过之后档不能被改脏（半套状态比直接红更难查）');
+
+  /* ③~⑥ 三档语义：用**真状态 + 真候选**（手搓的 {key,target} 会绕过 candidatesFor 的目标展开，
+   *    而那正是 v1.5.37 那条"幻影选项"出问题的地方）*/
+  const st = S.createState('multi', { next: mulberry32(7) }, 4);
+  const pack = P.unpack(sb.window.EPIRUS_CHAMPION_3P, true);
+  const cands = P.candidatesFor(st, 0, [{ key: R.SK.HOLO }, { key: R.SK.PROTO }, { key: R.SK.GUARD }], { allowUnaffordable: true });
+  const holo = cands.filter(c => c.key === R.SK.HOLO)[0];
+  ok(!!holo, '③ 夹具必须真能造出 holo 候选（造不出来后面全是空判）');
+  const proto = cands.filter(c => c.key === R.SK.PROTO)[0];
+
+  P.setHolo2Proto('off');
+  eq(P.remapHolo(st, 0, cands, pack, holo).key, R.SK.HOLO, '③ off 档必须**原样返回**（零剂量）');
+  P.setHolo2Proto('proto');
+  if (proto) eq(P.remapHolo(st, 0, cands, pack, holo).key, R.SK.PROTO, '④ proto 档：要送盾这一次必须换成给自己上原型制御');
+  eq(P.remapHolo(st, 0, cands, pack, cands[cands.length - 1]).key, cands[cands.length - 1].key,
+    '④ 非 holo 的那一次出手不许被顺手改掉（映射只针对"送盾"这一个动作）');
+  const onlyHolo = cands.filter(c => c.key === R.SK.HOLO);
+  eq(P.remapHolo(st, 0, onlyHolo, pack, holo).key, R.SK.HOLO,
+    '⑤ 池子里只有 holo ⇒ 原样返回。**结构性无解必须能在读数里看见**，不许假装禁掉了');
+  P.setHolo2Proto('drop');
+  const d = P.remapHolo(st, 0, cands, pack, holo);
+  ok(d && d.key !== R.SK.HOLO, '⑥ drop 档（对照档）必须真的不再送盾，实测回到 ' + (d && d.key));
+  P.setHolo2Proto('off');
+
+  /* ⑦ 端到端零剂量：出厂冠军本来就不用 holo ⇒ 开 proto 之后整局读数必须**逐字相同**。
+   *    这条是"默认关 = 没改任何东西"的最强形式：不是看代码里有没有 if，而是看跑出来一样不一样。 */
+  const a = T.mirrorHealth(pack, 8, 5, 'multi');
+  P.setHolo2Proto('proto');
+  const b = T.mirrorHealth(pack, 8, 5, 'multi');
+  P.setHolo2Proto('off');
+  eq([a.holoOtherPerGame, a.dmgPerGame, a.rounds, a.effSkills].map(x => x.toFixed(3)).join('|'),
+    [b.holoOtherPerGame, b.dmgPerGame, b.rounds, b.effSkills].map(x => x.toFixed(3)).join('|'),
+    '⑦ 对不用 holo 的出厂冠军，这一档必须零剂量（送盾/伤害/回合/有效技能逐字相同）');
+  /* ⑧ 门槛常量本身不许被这一档顺手改掉（改门槛是裁定，不是实现细节）。
+   *    §E342 改判（用户裁定 10-06「promote 的门槛可以改成 proto 档」）：
+   *    原来这一条的另一半钉的是"promote 侧不许读这一档"，理由是"一个默认关的研究档不该让同一枚包有两个答案"。
+   *    裁定把这一档从**研究档**升成了**包的属性** ⇒ 判据必须换形：不再是"别读"，而是**只能从一个口读、且三处同一个口**。
+   *    否则"体检判 A 档 / 考卷记 B 档 / 页面跑 C 档"就是本仓最怕的"门绿着，但它没在看你要上线的那个东西"。 */
+  const AL = readFileSync('tools/audit-lib.mjs', 'utf8').replace(/\r\n/g, '\n');
+  ok(/HOLO_GIFT_MAX\s*=\s*6\b/.test(AL),
+    '⑧ 硬门槛常量不许被这一档顺手改掉（改门槛是裁定，不是实现细节）');
+  /* ⑨ 名单有两份是**必须的**（`policy.js` 在浏览器里、`audit-lib` 在 Node 里，互相 import 不了）
+   *    ⇒ 那就把"必须一字不差"钉住，而不是假装只有一份。 */
+  const POL = readFileSync('js/train/policy.js', 'utf8').replace(/\r\n/g, '\n');
+  const mmodes = /export const HOLO_MODES\s*=\s*(\[[^\]]*\])/.exec(AL);
+  const mkeys = /const H2P_KEYS\s*=\s*(\[[^\]]*\])/.exec(POL);
+  ok(!!mmodes && !!mkeys, '⑨ 两份档名单都必须存在且能被本条读到（读不到 = 有人改了变量名而这条腿会空判）');
+  eq(String(mmodes && mmodes[1]).replace(/\s+/g, ''), String(mkeys && mkeys[1]).replace(/\s+/g, ''),
+    '⑨ audit-lib 与 policy.js 的档名单必须逐字相同 ⇒ 否则"工具合法 / 引擎抛"这种半套状态会出现');
+  /* ⑩ 三个入口（换冠军 / 考卷 / 风格考卷）都必须经 audit-lib 的**同一个**下达口，且不许自己调引擎旋钮
+   *    （`applyHoloMode` 带"下达后回读"，直接 `setHolo2Proto` 就丢了回读 = v1.5.262 econ 键那一族）。 */
+  const promo = readFileSync('tools/promote-champion.mjs', 'utf8').replace(/\r\n/g, '\n');
+  const ev5 = readFileSync('tools/eval-5p.mjs', 'utf8').replace(/\r\n/g, '\n');
+  const sx = readFileSync('tools/style-exam.mjs', 'utf8').replace(/\r\n/g, '\n');
+  ok(promo.indexOf('applyHoloMode') >= 0 && ev5.indexOf('applyHoloMode') >= 0 && sx.indexOf('applyHoloMode') >= 0,
+    '⑩ promote / eval-5p / style-exam 必须都走 applyHoloMode（少一个就是那一处按默认档在打分）');
+  for (const [nm, src] of [['promote-champion', promo], ['eval-5p', ev5], ['style-exam', sx]]) {
+    ok(src.indexOf('setHolo2Proto') < 0, '⑩ ' + nm + ' 不许绕过 applyHoloMode 直接下达（丢了"下达后回读"）');
+    ok(/from '\.\/audit-lib\.mjs'/.test(src), '⑩ ' + nm + ' 必须从 audit-lib import 这一档的口');
+  }
+  /* ⑪ 无声明 ⇒ off，并且**不落一个 'off' 键**（保持无映射的包与历史逐字同形，也才测得到"无声明"这个状态） */
+  ok(/if \(HOLO_WANT === 'off'\) delete meta\.holo2proto;/.test(promo),
+    '⑪ promote 在 off 档必须删键（写一个 off 键会让"无声明"这个状态在读数里消失）');
+  /* ⑫ 页面侧：真源是包自带的 META，默认必须是 off（覆盖键只用于实机对比手感） */
+  const UIf = readFileSync('js/ui/ui.js', 'utf8').replace(/\r\n/g, '\n');
+  ok(UIf.indexOf('EPIRUS_CHAMPION_3P_META') >= 0 && /let hv = 'off'/.test(UIf),
+    '⑫ 页面必须从 `EPIRUS_CHAMPION_3P_META.holo2proto` 取档、且解析不出时默认 off（否则出厂形状被页面改掉了）');
+  /* ⑬ 语义腿（真函数，不是读源码）：无声明三种写法 ⇒ off；含糊值 ⇒ 抛；沙箱缺旋钮 / 下达后被谎报 ⇒ 抛 */
+  const sem = spawnSync(process.execPath, ['-e', [
+    "import('./tools/audit-lib.mjs').then(function (m) {",
+    "  var bad = [];",
+    "  if (![undefined, null, ''].every(function (v) { return m.packHoloMode({ holo2proto: v }) === 'off'; })) bad.push('无声明没落到 off');",
+    "  if (m.packHoloMode(null) !== 'off') bad.push('空 meta 没落到 off');",
+    "  ['PROTO', 'prot', 'of', 'ture', '1'].forEach(function (v) {",
+    "    try { m.packHoloMode({ holo2proto: v }); bad.push('含糊值 ' + v + ' 被静默接受'); } catch (e) { /* 期望抛 */ }",
+    "  });",
+    "  try { m.applyHoloMode({}, { holo2proto: 'proto' }, 'x'); bad.push('沙箱没有旋钮却被当成成功'); } catch (e) { }",
+    "  var liar = { cur: 'off', setHolo2Proto: function (v) { if (v !== 'off') throw new Error('模拟引擎拒绝'); }, holo2Proto: function () { return this.cur; } };",
+    "  try { m.applyHoloMode({ EpirusPolicy: liar }, { holo2proto: 'proto' }, 'x'); bad.push('回读不一致却被当成成功'); } catch (e) { }",
+    "  var okp = { cur: 'off', setHolo2Proto: function (v) { this.cur = v; }, holo2Proto: function () { return this.cur; } };",
+    "  if (m.applyHoloMode({ EpirusPolicy: okp }, {}, 'x') !== 'off') bad.push('正常路径没返回 off');",
+    "  if (m.applyHoloMode({ EpirusPolicy: okp }, { holo2proto: 'drop' }, 'x') !== 'drop') bad.push('正常路径没落到 drop');",
+    "  process.exit(bad.length ? 1 : 0);",
+    "}, function (e) { console.error(String(e && e.message)); process.exit(9); });"
+  ].join('\n')], { encoding: 'utf8' });
+  eq(sem.status, 0, '⑬ packHoloMode/applyHoloMode 的语义（无声明⇒off ‖ 含糊⇒抛 ‖ 缺旋钮⇒抛 ‖ 谎报⇒抛 ‖ 正常⇒回读一致）'
+    + (sem.status !== 0 ? '：' + String(sem.stderr || '').trim() : ''));
+  /* ⑭ 全链一致性：体检的**阻断栏**在父进程沙箱里，而考卷与三栏记录是**子进程**、产品代理栏是**另一份模块实例**
+   *    ⇒ 少接一处就是"父进程按 A 档判能不能上槽、子进程按 B 档记分"（这一条是本版最容易做歪的地方，实测过：
+   *    接上之前 `--holo2proto=proto` 那一臂的四栏读数与 off 臂**逐字相同**）。 */
+  ok(/process\.env\.EPIRUS_HOLO2PROTO = HOLO_WANT;/.test(promo),
+    '⑭ promote 必须**无条件**把本次档写进 process.env（连 off 也写）⇒ 否则外面残留一根环境变量就是两个答案');
+  const BP = readFileSync('tools/behavior-profile.mjs', 'utf8').replace(/\r\n/g, '\n');
+  const PL = readFileSync('tools/probe-layer-caliber.mjs', 'utf8').replace(/\r\n/g, '\n');
+  ok(/export function fieldProfile[\s\S]{0,400}applyHoloEnv\(W/.test(BP),
+    '⑭ `fieldProfile`（产品代理栏那份独立沙箱）必须下达这一档，否则那一栏永远按未映射行为计');
+  ok(/applyHoloEnv\(sb, 'probe-layer-caliber'\)/.test(PL),
+    '⑭ spawn 型探针共用的 `build()` 必须下达这一档（一处覆盖三个探针）');
+});
+
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 
 const __nReg = __src.filter(l => /^t\(/.test(l)).length;
@@ -11177,6 +11329,27 @@ if (__nReg !== PASS + FAIL + __skipped) {
 if (ONLY) {
   console.log('\n⚠ `--only=' + ONLY + '`：**只跑了 ' + (PASS + FAIL) + ' / ' + __nReg + ' 条**（跳过 ' + __skipped
     + ' 条）⇒ 这不是全量门禁，**不许当"四道全绿"引用**（`node tools/np-test.mjs` 不带参数才是整轮）。');
+}
+/* §E335 `--group` 与 `--only` 同罪：少跑了就是少跑了，必须自己喊出来。 */
+if (GROUP) {
+  console.log('\n⚠ `--group=' + GROUP + '`：**只跑了 ' + (PASS + FAIL) + ' / ' + __nReg + ' 条**（跳过 ' + __skipped
+    + ' 条；累计含 ' + (CUM[GROUP] ? CUM[GROUP].join('+') : '全部') + '）⇒ 这不是全量门禁，**不许当"四道全绿"引用**。');
+}
+if (GROUP && PASS + FAIL === 0) {
+  console.error('⛔ `--group=' + GROUP + '` 一条都没跑（' + __nReg + ' 条注册全被筛掉）⇒ 分组表或累计关系写错了，这不是全绿。');
+  process.exit(3);
+}
+/* §E335 整轮才查"每条门都归了组"：新加的门忘了归类 ⇒ 判红。
+   不这么钉的话，表会在某次加门之后**悄悄**漏掉那条腿，而窄组照样绿 —— 本仓最怕的"门绿着但它没在看你要上线的东西"。*/
+if (!GROUP && !ONLY) {
+  const un = []; const seenU = {};
+  for (const k of __KEYS) if (!KEY2G[k] && !seenU[k]) { seenU[k] = 1; un.push(k); }
+  if (un.length) {
+    console.error('⛔ §E335 分组表漏了 ' + un.length + ' 条门（新加门要在 GRP 里归组）：' + un.slice(0, 12).join(' ')
+      + (un.length > 12 ? ' …' : ''));
+    process.exit(4);
+  }
+  console.log('§E335 分组在册 ✅ ' + __KEYS.length + ' 条门全部归组（' + Object.keys(KEY2G).length + ' 个键）');
 }
 /* `--only` 打错字 ⇒ 一条都不跑却报"通过 0 / 0"，那是最坏的一种绿（看着像跑完且全绿）。响亮拒。 */
 if (ONLY && PASS + FAIL === 0) {

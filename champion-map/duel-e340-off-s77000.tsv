@@ -1,0 +1,4 @@
+a	b	aPath	bPath	aFirst%	bFirst%	diff_pt	approxSE	aTop2%	bTop2%	aRanks	secs
+v7beadseed-82	SHIPPED-Ldemo	docs/artifacts/v7beadseed-82.bak	js/bundled-champion-3p.js	8.33	6.67	1.67	4.81	31.67	26.67	0/5/14/17/14/10	2
+v7tgt4-63	SHIPPED-Ldemo	docs/artifacts/v7tgt4-63.bak	js/bundled-champion-3p.js	6.67	28.33	-21.67	6.65	28.33	58.33	0/4/13/11/20/12	2
+v7s9-82	SHIPPED-Ldemo	docs/artifacts/v7s9-82.bak	js/bundled-champion-3p.js	13.33	1.67	11.67	4.69	46.67	20.00	0/8/20/18/8/6	2

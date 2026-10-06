@@ -80,6 +80,29 @@
   }
   function featMask() { return Object.assign({}, MASK); }
 
+  /* ===== §E340（用户 ⑦）全息屏障 → 原型制御 的映射档（**默认关 ⇒ 出厂形状逐字不变**）=====
+   * 卡面事实（`js/core/rules.js` 里 `mk(SK.HOLO, '全息屏障', …, 'other', {desc:'给目标施加一回合"原型制御"'})`）：
+   *   `holo` 的作用**就是**"给别人上一回合原型制御"，而且它 `target:'other'`、**不能给自己**
+   *   （v1.5.37 那条已把"给自己"这个幻影选项删掉：自保用的是 `proto` 那张卡）。
+   *   ⇒ 选 holo 在结构上等于"把原型制御白送对手"。promote 侧那条硬门槛（`HOLO_GIFT_MAX = 6`）判的正是它，
+   *     而统一尺上恒为第 1 的 `v7beadseed-82` 实测 17.3 次/局被这条挡死、从没上过槽（§E305）。
+   * 三档：
+   *   'off'   默认，一字不改；
+   *   'proto' 这一次要送盾 ⇒ 换成**给自己上原型制御**（`proto` 在本次候选里就有）；换不到就按 'drop' 走；
+   *   'drop'  只禁不换（对照档）：分不清增益来自"不送盾"还是"来自自盾"时看它。
+   * ⚠ 这是**决策期**的改写：不动包、不动卡面、不动网络形状 ⇒ 同一份权重在两档下是同一枚包的两个玩法，
+   *   所以两档读数必须成对给，不许拿 'proto' 的读数去冒充出厂读数。 */
+  let H2P = 'off';
+  const H2P_KEYS = ['off', 'proto', 'drop'];
+  function setHolo2Proto(v) {
+    const s = (v == null || String(v).trim() === '') ? 'off' : String(v).trim();
+    if (H2P_KEYS.indexOf(s) < 0) {
+      throw new Error('EPIRUS_HOLO2PROTO 只认 off|proto|drop，收到 "' + v + '" ⇒ 含糊值不许当"没写"');
+    }
+    H2P = s; return H2P;
+  }
+  function holo2Proto() { return H2P; }
+
   function catOf(key) { return key ? (CAT3[R.byKey[key].cat] + 1) / 4 : 0; }
   function priOf(key) { return key ? (R.byKey[key].pri || 3) / 5 : 0; }
   function idxOf(key) { return key ? R.skills.findIndex(function (s) { return s.key === key; }) / R.skills.length : 0; }
@@ -710,11 +733,27 @@
     opts = opts || {};
     if (!cands || !cands.length) return { key: SK.JI, target: null, target2: null, bead: null };
     const f = forwardCands(state, pid, cands, params, { temp: opts.temp == null ? 0.5 : opts.temp });
-    if (opts.greedy) return f.cand;
+    /* §E340 三条出口**都要过映射**（greedy / ε 命中 / ε 兜底），漏一条就是"有时候映射没生效"那种最难查的形状 */
+    if (opts.greedy) return remapHolo(state, pid, cands, params, f.cand);
     const r = state.rng.next();
     let acc = 0;
-    for (let i = 0; i < cands.length; i++) { acc += f.probs[i]; if (r < acc) return cands[i]; }
-    return f.cand;
+    for (let i = 0; i < cands.length; i++) { acc += f.probs[i]; if (r < acc) return remapHolo(state, pid, cands, params, cands[i]); }
+    return remapHolo(state, pid, cands, params, f.cand);
+  }
+  /* §E340 把"这一次要送盾"改写成"给自己上盾"（或按对照档禁掉）。
+   *   'drop' 与"手上没有 proto"走同一条：在**非 holo** 的池子里重取 argmax（不再走 ε ⇒
+   *   否则"禁一张卡"会把探索预算撒到别处，读数就不是同一枚包的另一玩法，而是另一枚包了）。
+   *   池子里只有 holo 时原样返回：结构性无解，不假装禁掉了（这条要能在读数里看见）。 */
+  function remapHolo(state, pid, cands, params, pick) {
+    if (H2P === 'off' || !pick || pick.key !== SK.HOLO) return pick;
+    if (H2P === 'proto') {
+      for (let i = 0; i < cands.length; i++) if (cands[i].key === SK.PROTO) return cands[i];
+    }
+    const rest = [];
+    for (let i = 0; i < cands.length; i++) if (cands[i].key !== SK.HOLO) rest.push(cands[i]);
+    if (!rest.length) return pick;
+    const g = forwardCands(state, pid, rest, params, { temp: 0.5 });
+    return g.cand || rest[0];
   }
 
   const PACK_VERSION = 7;   // v7：候选(技能,目标,珠类型) + 关系块 T(15) + 效果快照块 B(70) + 动作侧 +8
@@ -813,6 +852,8 @@
     isLegacyChooser, embedLegacy, pack, unpack, loadAny, checkPack, paramCount,
     /* v7 新增对外面：候选体系 + 实验掩码 + 形状表 + 旧包等价嵌入（守门/训练/工具用） */
     candidatesFor, forwardCands, chooseCandidates, setFeatMask, featMask,
+    /* §E340 全息屏障→原型制御 的映射档（默认 off）：量具/评测用它成对读同一枚包的两个玩法 */
+    setHolo2Proto, holo2Proto, remapHolo,
     EFFECTS, PLAYER_SLOTS, VER_SHAPES, paramsOf, embedLegacy, loadAny,
     paramCount, makePolicy, mutatePolicy, crossover, pack, unpack, checkPack
   };

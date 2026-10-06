@@ -27,7 +27,10 @@ const ROOT = join(HERE, '..');
 const ART = join(ROOT, 'docs', 'artifacts');
 const SURVEY = process.argv.includes('--survey');
 
-const ids = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n').slice(1).map(l => l.split('\t')[0]);
+/* ⚠ 读表一律先把 CRLF 归一成 LF：本仓工作树是 CRLF，`split('\n')` 会把**末列**留成带裸 \r 的串
+ *   ⇒ `indexOf('path')` 返回 −1（path 恰好就是 coords.tsv 的末列，实测被 git checkout 兜一圈后就是这样）。*/
+const rd = f => readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
+const ids = rd(join(HERE, 'coords.tsv')).trim().split('\n').slice(1).map(l => l.split('\t')[0]);
 
 /* `braceObj` / `parseMeta` / `widOf` 住在 `./pack-id.mjs`（§E328 起）—— 那份注释也在那里。 */
 /* §E330：**同一个 id 在盘上可以有两份不同的包**，而血统表过去只按 `docs/artifacts/<id>.bak` 找 ⇒ 读错了文件。
@@ -38,7 +41,7 @@ const ids = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n').sl
  *   名单和路径同表同序，下游（本文件、`feas.mjs`）不再各自拼约定路径。 */
 const PATHOF = {};
 {
-  const CL = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n');
+  const CL = rd(join(HERE, 'coords.tsv')).trim().split('\n');
   const ch = CL[0].split('\t'), iId = ch.indexOf('id'), iPath = ch.indexOf('path');
   if (iPath < 0) { console.error('⛔ coords.tsv 没有 path 列 ⇒ 先跑 node champion-map/attach-path.mjs'); process.exit(2); }
   for (const l of CL.slice(1)) { const c = l.split('\t'); if (c[iId] && c[iPath]) PATHOF[c[iId]] = c[iPath]; }
@@ -143,7 +146,7 @@ function seedpackOf(m) { const e = m.recipe && m.recipe.env; const p = e && e.EP
 const ARMPAR = {};
 { const AP = join(HERE, '_e330-armparent.tsv');
   if (existsSync(AP)) {
-    const A = readFileSync(AP, 'utf8').trim().split('\n'), ah = A[0].split('\t');
+    const A = rd(AP).trim().split('\n'), ah = A[0].split('\t');
     const iRel = ah.indexOf('productRel'), iPar = ah.indexOf('armParent');
     const REL2ID = {}; for (const r of REC) if (r.rel) REL2ID[r.rel] = r.id;
     for (const l of A.slice(1)) { const c = l.split('\t'); if (iPar < 0 || !c[iRel] || !c[iPar]) continue;
