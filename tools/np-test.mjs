@@ -109,7 +109,7 @@ let __skipped = 0;
  *      否则表会悄悄漏掉后加的腿，那正是本仓最怕的"门绿着但它没在看你要上线的那个东西"；
  *   ③ 归组判据是"这道门读哪一层的输入"，不是"它属于哪个 §E 编号" —— 后者会把改引擎的门留在窄组里。*/
 const GRP = {
-  meta: 'REPRO L1 L2 L3 L7 L6 L5 D218 D8 D82 D189 D191 D194 D205 D206',   // 仓库纪律：只读源码/CHANGELOG/README/门号
+  meta: 'REPRO L1 L2 L3 L7 L6 L5 D218 D8 D82 D189 D191 D194 D205 D206 D230',   // 仓库纪律：只读源码/CHANGELOG/README/门号
   ui: 'D37 D38 D28 D70 D131 D111 D166',                                    // 页面与前端契约
   ship: 'D219 D55 D16 D35 D27 D49 D60 D61 D62 D67 D73 D78 D79 D103 D105 D116 D118 D124 D125 D141 D153 D155 D163 D107 D110 D121 D145 D146 D147 D168 D169 D170 D190 D197 D210 D228',   // 出厂面：可行性闸 / 当选 / promote / 线上槽
   train: 'REPRO2 L4 D217 D220 D221 D222 D223 D224 D225 D226 D227 D229 D5 D7 D9 D10 D11 D12 D13 D15 D56 D58 D59 D17 D24 D25 D26 D33b D33 D36 D39 D40 D41 D42 D43 D44 D45 D47 D48 D65 D66 D68 D72 D74 D75 D76 D77 D80 D81 D84 D85 D86 D87 D89 D90 D104 D97 D99 D100 D101 D108 D109 D112 D113 D114 D119 D122 D123 D127 D128 D129 D130 D132 D134 D135 D136 D139 D140 D115 D162 D120 D143 D144 D157 D159 D167 D172 D173 D174 D175 D176 D179 D181 D180 D182 D184 D185 D213 D164 D165 D187 D188 D201 D204',   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
@@ -634,7 +634,7 @@ t('REPRO 训练路径不得出现裸 Math.random / Date.now（白名单见下）
     'T.mulberry32 ? T.mulberry32', // 播种流不可用时的显式兜底
     'Date.now() - t0 > cap',       // ⚠️ 理由已更正：它**参与决策**（在生成循环内，到点直接 return
     //   ⇒ 机器负载不同 ⇒ 跑到的代数不同 ⇒ 冠军不同）。暂列白名单只为让断言可用，
-    //   正解是改成按代数上限（docs/REVIEW-3P.md P3#2）
+    //   正解是改成按代数上限（docs/research/reviews/REVIEW-3P.md P3#2）
     'Date.now() % ',               // 仅允许作为"已废弃写法"的检测目标，不应出现在有效代码
   ];
   /* 扩面（千问复核指出）：原先只扫 server/*.mjs —— **恰好只保护了刚修好的那条路**，
@@ -3351,7 +3351,7 @@ t('D25 播种必须**真的**可复现：同 seed 两遍逐字节相同、换 se
 });
 
 t('D26 网络形状必须被钉住（FEAT_S/FEAT_A/paramCount）+ v5 裁剪规则精确（shapeOf 守门）', function () {
-  /* 第三方复核 §5-7：`docs/PARAMS-PLAN.md` 承诺过一条"shapeOf 守门"，但**它并不存在** ——
+  /* 第三方复核 §5-7：`docs/research/reviews/PARAMS-PLAN.md` 承诺过一条"shapeOf 守门"，但**它并不存在** ——
    * np-test 全文没有 shapeOf，也没有任何断言钉住 FEAT_S=123 / paramCount=3337。
    * 后果：静默改维度不会被任何用例发现，而那正是"升 v6 时 7 个 v5 存档当场变砖"的成因。
    * 这条把常量、反推、以及**v5 裁剪规则**一起钉住：维度一变立刻红，逼你同步 PACK_VERSION 与裁剪规则。 */
@@ -5158,7 +5158,7 @@ t('D91 被无效化的聚能环不得续计（v1.5.105：出招即计次 + 复�
 });
 
 t('D102 R61 被无效化的一手不写 lastSkill（第三方复核 §2-1：与 R10 同族 · 打断不再白送激光眼连用）', function () {
-  /* 病（`docs/REVIEW-QODER-2026-09-19.md` §2-1）：`setVoid` 只置 `voided`、**不动** `outcome`，
+  /* 病（`docs/research/reviews/REVIEW-QODER-2026-09-19.md` §2-1）：`setVoid` 只置 `voided`、**不动** `outcome`，
    * 而 `endTurn` 的 `p.lastSkill = ...` 只看 `outcome === 'ok'`（`js/core/resolve.js:1179`）
    * ⇒ "被雷击之枪废掉的那一手"照样成为 `lastSkill`，喂给两个真实下游：
    *   ① **R32 激光眼连用**（`state.js:118-123`：连用只收 2 ジ**且免爆珠**）⇒ 打断方反而送出一次免珠连用；
@@ -5799,7 +5799,7 @@ t('D114 §N6 跨 N 混适应度：默认关（行为逐字）+ 接线三钉（�
 });
 
 t('D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（对多人池 ⇒ 常数 ⇒ 空枪）+ 参照读不出必须响 + 带内候选落盘', function () {
-  /* 病（DS 09-22 实测 · `docs/RESEARCH-LOG-2026-09-22-ds.md` §2）：切片原来拿多人池 `OPPS` 当 2P 对手，
+  /* 病（DS 09-22 实测 · `docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §2）：切片原来拿多人池 `OPPS` 当 2P 对手，
    * 而现役包对池子脚本在 2P 里**0% 胜率** ⇒ 人人 ≈0 分 ⇒ 该切片是常数 ⇒ 加常数不改变排序
    * ⇒ 第一臂 `v7xn1-31.bak` 与热启动**逐字节相同**（空枪，白跑）。 */
   const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
@@ -7845,7 +7845,7 @@ t('D110 冠军包解析单一来源：吃得下产物 .bak 外壳 / 纯 JSON / �
 });
 
 t('D111 前台探索三条规则（v1.5.142 · ②③ 于 09-22 夜升级为序列窗锁）：铺垫卡 ep 门槛 + 链上回合整锁', function () {
-  /* 病（docs/RESEARCH-LOG-2026-09-21-ds.md §10，DS 实测）：贴贴/蓄能只在 ε>0 时出现（ε=0 ⇒ 0.00/局、
+  /* 病（docs/research/logs/RESEARCH-LOG-2026-09-21-ds.md §10，DS 实测）：贴贴/蓄能只在 ε>0 时出现（ε=0 ⇒ 0.00/局、
      前台 ε.2 ⇒ 2.7/局），而**天火两档都是 0.00/局** ⇒ 探索只付铺垫成本、结构性地拿不到收尾。
      用户三条裁定 → 落在 `policyChooserN` 的 `epsMode==='soft'` 分支里。本门**行为式**验证。 */
   const evoSrc = readFileSync('js/train/evo.js', 'utf8');
@@ -7985,7 +7985,7 @@ t('D144 墙上时钟上限：`EPIRUS_WALL_MS=0` 必须是**关闭**（v1.5.200�
 });
 
 t('D145 座位极差线必须随 n 标定（v1.5.202）：固定 30pt 线在 n=400 会**放走**真偏置包（26.6pt）—— 而座位事故在本仓真实发生过', function () {
-  /* 历史实测（np-test D59 注释的收敛表 + `docs/REVIEW-3P.md:29`）：
+  /* 历史实测（np-test D59 注释的收敛表 + `docs/research/reviews/REVIEW-3P.md:29`）：
    *   `v7new5_005-31`（v1.5.114 用 --force 换掉的那只）在 n=60 读 **43.2pt**、n=400 读 **26.6pt**；
    *   另一只破防脚本三座 1st 率 **73.5 / 14.5 / 0.0**（极差 73.5pt）。
    * 而 v1.5.69 修的正是"**座位惩罚从未触发**（我自己的错）"⇒ 这条线**复发过**，用户明确要求保留。
@@ -10750,6 +10750,72 @@ t('D205 门号纪律（DS 清单 B8 · 09-30 夜班）：D 号不许撞车，且
   ok(ghost.length === 0, '⑤ 记账说门在、门不在：最新一版提到 ' + claims.join(' / ') + '，其中 ' + ghost.join(' / ') + ' 在 np-test 里**没有注册**');
   ok(claimOf('新增门 D99999 与 D204').filter(c => !idSet.has(c)).join() === 'D99999',
     '⑥ 合成正对照：给判据一段"声称有 D99999"的文本，它必须把 D99999 抓出来（抓不到 ⇒ ⑤ 是假的）');
+});
+
+/* ===== §E357（10-06 用户「重新整理一下仓库」那批的第三件）：文档指针不许落空 =====
+ * 病（这次是真的量到过，不是设想）：docs 里的按天日志 10-05 搬过一次顶层（§E339）、10-06 又搬进 `docs/research/` 两层，
+ *   而**代码注释与 README 里的旧锚没人改** ⇒ 我数出来活引用面上有 **35 处**指向已不存在的文件，
+ *   其中 17 处已经落空两天以上（`--only`/`--group` 都看不见，因为没有任何门读这件事）。
+ *   本仓对"引用会落空"这一族已经栽过至少四次（门号 / 行号 / 产物 / 文档路径），而前三族各有牙（D205 / D82 / L5），**只有文档路径这一族没有**。
+ * ⇒ 判据形状按 `docs/METHODOLOGY.md` 第 89 条：**钉存在性（指针必须落得到盘上），不钉措辞**。
+ *   历史文本（`CHANGELOG.md` 与 `docs/research/**`）**不在扫描范围** —— 那里的旧锚是当时的账，逐条改写等于篡改历史；
+ *   换读法靠 `docs/README.md` 第四节的 old→new 对照表。 */
+t('D230 §E357 活引用面里的 `docs/**.md` 指针必须真在盘上（docs 两层化之后，搬目录漏改引用当场红）', function () {
+  const LIVE_DIRS = ['tools', 'server', 'js', 'champion-map', 'tests', '.github'];
+  const files = ['README.md'];
+  for (const d of LIVE_DIRS) {
+    const stack = [d];
+    while (stack.length) {
+      const cur = stack.pop();
+      let ents;
+      try { ents = readdirSync(cur, { withFileTypes: true }); } catch (e) { continue; }
+      for (const en of ents) {
+        const p = cur + '/' + en.name;
+        if (en.isDirectory()) { if (en.name !== 'node_modules' && en.name !== 'artifacts') stack.push(p); continue; }
+        if (/\.(mjs|js|html|cmd|yml)$/.test(en.name)) files.push(p);
+      }
+    }
+  }
+  const RE = /docs\/[A-Za-z0-9._\/-]+\.md/g;
+  /* 三处**故意留着**的旧锚：它们在规则指纹五件套里，改一个字符就要换代指纹 + 重记两个线上槽的 meta，
+   *   而代价只是"注释里的锚要多跳一次" ⇒ 由 docs/README.md 第四节的对照表兜。豁免的是**这一条锚**，不是整个文件，
+   *   所以这三个文件里新出现的落空指针照样红。
+   * ⚠ 下面每条旧锚都**拆成两段拼接**：本文件自己在活引用面里 ⇒ 写成连着的字面量会被这条门扫成"落空指针"
+   *   （第一版就是这么红的：D230 抓到的第一个文件是它自己）。谁把这些字符串拼回去，门会当场红 —— 那不是 bug，是它在提醒别把豁免写成正文。 */
+  const OLD_REVIEW_QODER = 'docs/' + 'REVIEW-QODER-2026-09-19.md';
+  const OLD_PARAMS_PLAN = 'docs/' + 'PARAMS-PLAN.md';
+  const KNOWN_OLD_ANCHORS = {
+    'js/core/resolve.js': [OLD_REVIEW_QODER],
+    'js/core/state.js': [OLD_PARAMS_PLAN],
+    'js/train/policy.js': [OLD_PARAMS_PLAN]
+  };
+  /* 正对照用的假锚（同样拆开写，免得它自己变成一条被扫到的落空引用）。 */
+  const FAKE_ANCHOR = 'docs/research/logs/' + '__D230_FAKE_ANCHOR__.md';
+  const isDead = function (f, ref) {
+    if (/[<>*{}]/.test(ref)) return false;                    // `docs/OVERNIGHT-<日期>-qoder.md` 这种是**写法**，不是路径
+    if (ref.indexOf('docs/artifacts/') === 0) return false;   // 产物面归 D82（那里有它自己的两套检索范围）
+    if (existsSync(ref)) return false;
+    return (KNOWN_OLD_ANCHORS[f] || []).indexOf(ref) < 0;
+  };
+  const dead = [];
+  let scanned = 0;
+  for (const f of files) {
+    let src = '';
+    try { src = readFileSync(f, 'utf8'); } catch (e) { continue; }
+    const hits = src.match(RE) || [];
+    scanned += hits.length;
+    for (const ref of hits) { if (isDead(f, ref)) dead.push(f + ' → ' + ref); }
+  }
+  ok(scanned >= 40, '① 反装饰守卫：本次从活引用面扫到 ' + scanned + ' 个 `docs/**.md` 指针 ⇒ 少于 40 说明抽取式或目录名单被改空，'
+    + '这条门就退化成"恒真"（本仓的 D82①/D205④ 是同族守卫，理由都在各自注释里）');
+  eq(dead.length, 0, '② 指针落空（搬了目录/改了文件名却没改引用；换读法见 docs/README.md 第四节）：'
+    + dead.slice(0, 12).join(' ‖ ') + (dead.length > 12 ? ' …共 ' + dead.length + ' 处' : ''));
+  ok(isDead('tools/x.mjs', FAKE_ANCHOR),
+    '③ 合成正对照：明知不在盘上的指针必须判**死**（判不死 ⇒ ② 是恒真好绿）');
+  ok(!isDead('tools/x.mjs', 'docs/README.md'),
+    '③b 反向对照：真在盘上的必须判**活**（判活反了 ⇒ 整条门会因为路径分隔符/大小写假红）');
+  ok(!isDead('js/core/state.js', OLD_PARAMS_PLAN) && isDead('js/core/state.js', FAKE_ANCHOR),
+    '③c 豁免名单必须**只管那三条锚**、不是放过整个文件（文件级豁免 = 三个指纹文件从此永远查不出来）');
 });
 
 t('D206 econ 奖励键三处名单自洽（DS 清单 B7 · 09-30 夜班）：默认表 / CLI 名单 / 两处 SENT 夹具 ⇒ 缺任一处就是"通过黑键闸却从没送到引擎"', function () {

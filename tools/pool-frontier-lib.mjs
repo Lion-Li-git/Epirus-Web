@@ -35,7 +35,7 @@ export function isClosed(m, beadLine, gainedLine) {
     m.spentRate >= beadLine && m.gained >= gainedLine;
 }
 
-/** v1.5.256（DS · 证据见 `docs/RESEARCH-LOG-2026-09-27-ds.md` §15）：闭环判据的**分形态版**。
+/** v1.5.256（DS · 证据见 `docs/research/logs/RESEARCH-LOG-2026-09-27-ds.md` §15）：闭环判据的**分形态版**。
  *
  * 病（5 种子实测）：`isClosed`（`得珠 ≥100 且 花珠率 ≥0.5`）把**两种不同病因**判成同一个 ✗：
  *   ① **攒着不花**（seed31：得珠 **402**、花珠率 **9.2%**）—— 而这一形态恰恰是"为 5ep 的大雷攒钱"；

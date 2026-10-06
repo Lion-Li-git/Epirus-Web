@@ -22,6 +22,12 @@ docs/artifacts/ui-out/
 # 只动索引、不动磁盘：清缓存用 `git rm -r --cached results/`。
 results/
 
+# §E357（10-06）：根目录 `d180-bands/` 是 D180 那批臂的本机落点（里面是 `.bak`）。
+# ⚠ 它**不在 `docs/artifacts/` 下面 ⇒ D82 的 24h 时窗扫不到它**（D82 只 readdirSync('docs/artifacts')），
+#   而 `git add -A` 会把它吞进仓库 —— 两者都是"残留通道"那一族（门 L5 的原始事故形状）。
+#   先按"忽略"处理（可重跑得到、不需要入库）；若要它变成账，得先把它挪进 docs/artifacts/ 再谈点名。
+d180-bands/
+
 # v1.5.145（DS 整理）：训练/探针的**运行日志**（*.out）与成批输出目录不进仓库（可重跑得到）。
 *.out
 docs/artifacts/*-out*/

@@ -8,7 +8,7 @@
  *
  * AGGR_HOOK=attack|turtle ⇒ 只改**冠军席**的一个决策规则做反事实（默认关闭；见 `aggressionProfile` 的 opts）：
  *   attack：买得起枪却选ジ → 改判开枪；turtle：任何非ジ输出 → 改判ジ。
- *   用途：判 `docs/HANDOFF-2026-09-19.md` §2.1 的「场B 清场 ↔ 抗只枪单调互斥」是不是**根本**的。
+ *   用途：判 `docs/research/handoff/HANDOFF-2026-09-19.md` §2.1 的「场B 清场 ↔ 抗只枪单调互斥」是不是**根本**的。
  * 用法：node tools/probe-aggr.mjs [GAMES=40] 包...（环境变量 AGGR_HOOK=attack|turtle）
  */
 import { rejectUnknownFlags, sandbox, mulberry32, loadChamp, aggressionProfile } from './audit-lib.mjs';

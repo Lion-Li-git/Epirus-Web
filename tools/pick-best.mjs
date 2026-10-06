@@ -24,7 +24,7 @@
 export const INCUMBENT_TAG = '现有冠军';
 
 /* ===== §E322（v1.6.7）：当选键的**多评估种子**单一来源 =====
- * 病（实测，`champion-map/evaln-noise.mjs` ‖ `docs/OVERNIGHT-2026-10-05-qoder.md` §E316）：
+ * 病（实测，`champion-map/evaln-noise.mjs` ‖ `docs/research/logs/OVERNIGHT-2026-10-05-qoder.md` §E316）：
  *   终局当选键原先是 `evalN(params, ALL_PAIRS, 20, n, **987654**)` 的 `firstRate + 0.5·top2Rate`
  *   —— **只有一粒 seedBase、每粒候选 720 局**。在它自己口径上量的种子噪声：
  *     单枚包换 seedBase ⇒ `sc` 摆 **p50 5.42 ‖ 8.54 ‖ 9.10pt（max 9.65pt）**，而同分带容差只有 **3.0pt**

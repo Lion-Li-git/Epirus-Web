@@ -775,7 +775,7 @@
           }
           const top = pool.sort(function (a, b) { return bestOf[b] - bestOf[a]; }).slice(0, Math.max(2, epsK || 5));
           /* ===== v1.5.142（用户 09-21 裁定）：修"探索只付铺垫成本、永远拿不到收益" =====
-           * 病（DS 实测，`docs/RESEARCH-LOG-2026-09-21-ds.md` §10）：贴贴/蓄能**只在 ε>0 时出现**（ε=0 ⇒ 0.00/局；
+           * 病（DS 实测，`docs/research/logs/RESEARCH-LOG-2026-09-21-ds.md` §10）：贴贴/蓄能**只在 ε>0 时出现**（ε=0 ⇒ 0.00/局；
            *   前台 ε.2 ⇒ 2.7/局），而**天火在两档都是 0.00/局** —— 因为探索只在"网络打分 top-K 键"里挑，
            *   天火从没被训练过、分低到进不了 top-K ⇒ **探索抽得到铺垫卡、结构性地抽不到收尾卡** ⇒
            *   每次探索出贴贴 = 净亏 1 ep 且必然不引爆。用户三条裁定（原话）：
@@ -825,7 +825,7 @@
     };
   }
   /* ===== v1.5.30x（Qoder 09-30 夜 · **默认关**）· 在线对手模型 + 1-ply 引擎重放搜索 =====
-   * 病名与价签（`docs/RESEARCH-LOG-2026-09-28-qoder.md` §E152d/§E153 ‖ 仪器 `docs/artifacts/e152b-arms.mjs`）：
+   * 病名与价签（`docs/research/logs/RESEARCH-LOG-2026-09-28-qoder.md` §E152d/§E153 ‖ 仪器 `docs/artifacts/e152b-arms.mjs`）：
    *   ① 只在一局之内、按**席位身份**的在线频次表 + 搜索 ⇒ 打脚本桌 **+44.08pt [34.81,53.36]**（60 桌 × 20 局 · n=1200 局/臂）；
    *   ② 与现役包**同桌正面对撞** ⇒ **+66.00pt [59.46,72.54]**（同桌的包席从 33~37% 掉到 5.00%）；
    *   ③ 代价：一次决策 25.9 个候选 × 0.075 ms 重放 = **1.95 ms**，四席一回合约 8 ms（`docs/artifacts/e153-cost.mjs`）；
@@ -1446,7 +1446,7 @@
   let STOCK_BONUS = 0.05;
   const HOARD_PEN = 0.12;    // 囤积惩罚上限（到 cap×HOARD_CAP_MULT 满额）
   /* ===== v1.5.116（第十二轮复核 L2′）：把经济 shaping 的"阶梯"换回"斜率"，**默认全关 ⇒ 出厂行为一字不变** =====
-   * 复核实测（docs/OPTIMIZATION-ep-cliff.md §3/§5）：
+   * 复核实测（docs/research/reviews/OPTIMIZATION-ep-cliff.md §3/§5）：
    *   · 惩罚挂在 `maxEp` ⇒ 对照（峰 ep 39.9·胜 8.3%）与环×8（峰 21.3·胜 27.1%）**同为 −0.070**，分不开好坏；
    *   · 2C 处 `min(1,·)` 夹住 ⇒ 环线的目标区间（ep 20~100）**整个在夹住之后**，攒 43 与攒 99 同一个分；
    *   · `conv` 只数到 2 次 cost≥2 ⇒ 实测各臂"累计出手"1.2 → 5.5 横跨 4 倍，奖励只体现在前 2 次。
@@ -1567,7 +1567,7 @@ let WALL_GAMES = 3;
    * Q3 的理由仍成立（熵与"见过那个状态"是两回事、光加熵会推向乱打），所以权重**给得很小**（DIV_W），
    * 只当"别把自己塔成一招"的弱先验 —— 与"奖惩不用给太多"的要求一致。 */
   /* v1.5.116 新增五个旋钮（L2′ 去阶梯化 + 攒/花两侧的斜率），全部**默认关闭/默认旧值** ⇒ 不设 env 时
-   * 出厂行为逐位不变。三个提案的语义、实测依据与判据见 docs/OPTIMIZATION-ep-cliff.md §5 L2′。
+   * 出厂行为逐位不变。三个提案的语义、实测依据与判据见 docs/research/reviews/OPTIMIZATION-ep-cliff.md §5 L2′。
    * ⚠ 这五个 `if (o.X != null)` 必须留在 setter 的**开头 1200 字符内** —— 门禁 D77 是用
    *   `setter.slice(i0, i0+1200).indexOf('o.'+key+' != null')` 查"econ-env 返回的键有没有被认"，
    *   写在后面会被判"未接受"（我第一版就栽在这里，注释把长度顶出了窗口）。
@@ -2659,7 +2659,7 @@ let WALL_GAMES = 3;
   /* v1.5.99：`IMIT_SUB_ONLY` —— 见 `makeEconChooser` 里的长注释（只对设了 only 的示范生效）。 */
   let IMIT_SUB_ONLY = false;
   function setImitSubOnly(on) { IMIT_SUB_ONLY = !!on; return IMIT_SUB_ONLY; }
-  /* ===== v1.5.141（DS 研究 · `docs/RESEARCH-LOG-2026-09-21-ds.md` §5）：**补贴局里连"珠"一起补**（默认关）=====
+  /* ===== v1.5.141（DS 研究 · `docs/research/logs/RESEARCH-LOG-2026-09-21-ds.md` §5）：**补贴局里连"珠"一起补**（默认关）=====
    * 病（本日实测，臂 `v7bead1`）：v1.5.99 的补贴局补贴的是 **ep**（白来的 ep），而"电磁炮"还需要 `elec:1`
    * ⇒ 它在补贴局里**仍然不可负担** ⇒ v1.5.96 那条"只在教师动作**确实可负担**时才覆盖"的示范
    * **永远示范不到"放炮"** —— 93 粒的读数（蓄能 5 次、得珠 5 颗、全过期、放炮 **0**）正是这条机制的形状。

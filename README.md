@@ -3,18 +3,17 @@
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）
 重新实现的一整套 **2 人可玩、可自对战训练** 程序。
 
-> **当前版本：v1.6.10** · **人数 2~5 × 血量 3/4/5 两根正交轴**（2 人那一档规则仍冻结在 v1.0.0）+ **全人数共用一条难度阶梯** + **技能齐全 · AI 状态特征 v7，FEAT_S=213**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`（血量轴见 NP 的 **N26**，难度阶梯见 **N27**）。
+> **当前版本：v1.6.11** · **人数 2~5 × 血量 3/4/5 两根正交轴**（2 人那一档规则仍冻结在 v1.0.0）+ **全人数共用一条难度阶梯** + **技能齐全 · AI 状态特征 v7，FEAT_S=213**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`（血量轴见 NP 的 **N26**，难度阶梯见 **N27**）。
 >
-> **版本沿革 v1.6.0 → v1.6.10**（逐版改动、实测数字与门号**只记在** [CHANGELOG.md](CHANGELOG.md)）：
-> v1.6.10 撤回 v1.6.9 那一步（用户裁定 (b)）：全息屏障→原型制御 回到**纯研究旋钮**，promote / 考卷 / 页面读不到它
+> **版本沿革 v1.6.0 → v1.6.11**（逐版改动、实测数字与门号**只记在** [CHANGELOG.md](CHANGELOG.md)）：
+> v1.6.11 CI 改成"整轮兜底"（GitHub 每笔跑不带分组的 np 全量，本机因此可以只跑对应模块）+ `docs/` 分两层（长期文档 ‖ 研究流水，索引在 `docs/README.md`）+ 新门 **D230** 钉"文档指针不许落空"
+> v1.6.10 撤回 v1.6.9 那一步（用户裁定 (b)）：全息屏障→原型制御 回到**纯研究旋钮**，promote / 考卷 / 页面读不到它；同版删掉"钉文档措辞"的那类门腿（判据见 `docs/METHODOLOGY.md` 第 89 条）
 > v1.6.9 指纹换代 `2c061b15 → b98985bf`（`policy.js` 里新增那一档）+ 抓到 `eval-5p --mode=` 是根空旗 · v1.6.8 该档建档（默认关 ⇒ 出厂零剂量）
 > v1.6.7 当选键不再只吃一粒 `seedBase`（默认 4 粒取均值）· v1.6.6 难度重做成一条阶梯：冠军包当底层、"探索剂量"当难度
 > v1.6.5 对局区改成**人数 × 血量**两根正交轴（2 人那档规则仍冻结在 v1.0.0）· v1.6.4 摄魂软注入翻成默认开（玩家可见事实，见下面「已知限制」那一节）· v1.6.3 大雷档接上多人的风格 bot 席
 > v1.6.2 用页面口径复量大雷档（玩家侧零变化）· v1.6.1 复核 v1.6.0 的四处读侧/纪律侧洞（`js/` 只改注释）· v1.6.0 大雷"每四五局一次"进引擎默认
-> ⚠️ 本文件**只留当前版本**；此前抄过四次、漂过四次（最长那次落后 63 条）——**README 不是账本**。
+> ⚠️ 本文件**只留当前版本**：逐版改动、实测数字与门号**只记在** [`CHANGELOG.md`](CHANGELOG.md)（README 不是账本 —— 这里此前抄过四次、漂过四次，最长那次落后 63 条门）。
 > ⚠️ **老用户要点页面「用内置冠军」才会换到新包**（localStorage 旧包优先，两槽同理：2P=`v7xfer44c13-2p` · 3P=`v7cmin4-31`）。
-> 历史每一版的改动与实验结论**只记在** [`CHANGELOG.md`](CHANGELOG.md) —— 本文件**只留当前版本**
-> （此前抄过三次、漂了三次：最久那次停在"168 条 / 末号 D121"，落后 63 条。README 不是账本）。
 
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩，不需要装任何东西、不需要联网。
 - **训练部分可选**：另起一个 Node 服务（只用内置模块 `http` / `worker_threads` / `vm`），用于练出"冠军 AI"。
@@ -60,55 +59,61 @@
 
 ## 目录结构
 
+**统一成一种写法：每行 = 一个路径 + 一句"它是干什么的"。** 细节（逐版改动、实测数字、门号）一律在 `CHANGELOG.md` 与 `docs/`，
+本文件不抄第二遍 —— 这一节此前抄过两遍就漂过两遍（最长一次落后 63 条门）。
+
 ```
 Epirus-Web/
-├─ index.html               ← 双击即玩
-├─ css/style.css
-├─ js/core/                 ← 规则引擎（与规则文档一一对应；**改这里 = 改规则 ⇒ 只能由用户裁定**）
-│   ├─ rules.js               技能 / 分类 / 模式数据
-│   ├─ state.js               状态结构与出招（费用 / 禁用 / 条件；无贷款）
-│   ├─ resolve.js             回合结算引擎（优先级管线 / 防御矩阵 / 地雷 / 转移 / 隐藏技能）
-│   └─ play.js                对局驱动（自动对局 / 合法出招 / 空放兜底）
-├─ js/train/
-│   ├─ bots.js                脚本基准 AI（含人类式打法 / 永久架势 / 连招反制 / 原型墙 / 空放型）
-│   ├─ policy.js              轻量 MLP 策略 + 状态特征（FEAT_S=213 / v7：候选=(技能,目标,珠类型) + 关系块 + 效果快照块）
-│   ├─ evo.js                 对抗进化训练器 + **冠军出牌口径**（`policyChooserN` / `pickChampion`；大雷的"看得见"档 `BIGT_PUSH` 在这里，**v1.5.333 起默认 8 = 开着**）
-│   └─ trainer.js             冠军存取（localStorage / 导入导出）+ 训练 CSV
-├─ js/ui/ui.js              界面与交互（v1.5.333 起这里**不再有**大雷开关 —— 值只在 `evo.js` 的 `BIGT_PUSH`）
-├─ js/bundled-champion.js   内置冠军（由训练器生成；多人版 `js/bundled-champion-3p.js`）
-├─ server/
-│   ├─ train-server.mjs     Node 训练服务（SSE 实时进度：/train /champion /reset）
-│   ├─ paralleltrain.mjs    worker_threads 多核并行评估池
-│   └─ train-worker.mjs     单 worker 评估入口
-├─ tools/
-│   ├─ start-train-server.cmd  双击启动训练服务
-│   ├─ train-fast.mjs          命令行快速训练
-│   ├─ train-best.mjs          2 人多种子择优训练（推荐）
-│   ├─ train-3p.mjs            多人（3~5 人）自对战训练 → bundled-champion-3p.js
-│   ├─ gate-all.mjs            ★ 一条命令跑四道门禁（np+spec+smoke+battle），四道**并发起跑**
-│   ├─ eval-5p.mjs             ★ **产品考卷**（2925 桌 × 24 局 · `--pool=all --every=7` · 逐桌落盘 `--dump-per=` · 研究旗标一堆）
-│   ├─ eval-3p.mjs             多人冠军评测（1st/top2 + 出招分布）
-│   ├─ smoke.mjs               CDP 真浏览器冒烟测试（2 人）
-│   ├─ spec-run.mjs            Node 桩跑 2 人引擎自测（52/52）
-│   ├─ np-test.mjs             N 人引擎自测 + 门禁（条数见下面「命令行」一节，别处不再抄第二遍）
-│   ├─ np-probe.mjs            CDP 真浏览器多人（3/5 人）探测
-│   ├─ log-behavior.mjs        **真机栏**：从实机对局记录按席位统计行动构成（只读 results/*.txt）
-│   ├─ promote-champion.mjs   换包前体检（含广度**两个模式都判** + G4/G5 + 珠经济闭环；`--dry` 只体检不写盘）
-│   └─ diag.mjs / remote-probe.mjs  诊断脚本
-├─ docs/RULES-2P.md         ★ 2 人规则裁定版（R1..R60 + 子证 R23'/R34'/R19'）
-├─ docs/RULES-NP.md         ★ 多人（3~5 人）裁定版（N1..N13）
-├─ docs/METHODOLOGY.md      ★ 方法学（含"打印机必须打印门所判的量"等 40+ 条）
-├─ docs/OVERNIGHT-<日期>-qoder.md   值班日志（DONE/DOING/NEXT + 预注册判据 + 自我报告；**一份只装一天**，收工后整块搬进 `docs/archive/`）
-├─ docs/RESEARCH-LOG-<日期>-{ds,qoder}.md  当日研究日志（§E/§数字 编号，预注册→实测→判读，同样一份只装一天）
-├─ docs/HANDOFF-*             班与班的交接件。**归因易读错**：本仓只有三个角色（用户 / DS / Qoder），
-│                             而 "千问"="QWEN"=**Qoder 本尊**，不是第三方 AI。
-│                             `HANDOFF-FOR-QWEN-*` 是 DS 写给 Qoder 的；`HANDOFF-FOR-DS-*` 是 Qoder 写给 DS 的。
-│                             当前有效的两份：`docs/HANDOFF-FOR-DS-2026-10-03-qoder.md`（Qoder→DS · 贵卡十一条便宜路 + 费用表 + 交接旗标）
-│                             与 `docs/HANDOFF-FOR-QWEN-2026-10-03-pushrank-ds.md`（DS→Qoder · 软提顺位的复核请求）
-├─ docs/archive/            历史审核 / 交接 / 值班日志存档（只读；`README.md` 里有"什么留在顶层"与**搬动对照表**）
-├─ results/                 用户私人对局记录（**已不进仓库**：.gitignore 整目录忽略）
-└─ tests/spec.html          引擎自测（浏览器打开即可，通过数 = 用例数）
+├─ index.html                    ← 双击即玩（唯一入口；游戏部分零依赖、纯静态，不需要联网）
+├─ css/style.css                 样式
+├─ js/core/                      规则引擎（与 docs/RULES-2P.md / RULES-NP.md 一一对应）—— **改这里 = 改规则 ⇒ 只能由用户裁定**
+│   ├─ rules.js                    技能 / 分类 / 模式数据
+│   ├─ state.js                    状态结构与出招（费用 / 禁用 / 条件；无贷款）
+│   ├─ resolve.js                  回合结算引擎（优先级管线 / 防御矩阵 / 地雷 / 转移 / 隐藏技能）
+│   └─ play.js                     对局驱动（自动对局 / 合法出招 / 空放兜底）
+├─ js/train/                     AI 与训练器
+│   ├─ policy.js                   策略网络 + 状态特征（FEAT_S=213 / v7）；**规则指纹五件套之一**
+│   ├─ evo.js                      对抗进化 + 冠军出牌口径（`policyChooserN` / `pickChampion`；两张贵卡的注入档 `BIGT_PUSH` ‖ `DRAIN_PUSH` 在这里）
+│   ├─ bots.js                     脚本基准 AI 与**难度阶梯**（`DIFF_TIERS` 是档位表的唯一来源）
+│   └─ trainer.js                  冠军存取（localStorage / 导入导出）+ 训练 CSV
+├─ js/ui/ui.js                   界面与交互（人数 × 血量两根轴、逐回合 ε 调度）
+├─ js/bundled-champion.js        2 人内置冠军 ‖ 多人版 `js/bundled-champion-3p.js`（META 里带规则指纹与体检读数）
+├─ server/                       可选的训练服务（Node，只用内置 http / worker_threads / vm）
+│   ├─ train-server.mjs            SSE 实时进度：/train /champion /reset
+│   ├─ paralleltrain.mjs           worker_threads 多核并行评估池
+│   ├─ train-worker.mjs            单 worker 评估入口
+│   └─ opp-pool.mjs / opp-champs.mjs   对手池 + "名字→包"的唯一入口
+├─ tools/                        量具与门禁（一百多个 .mjs，每个都自带头注；这里只列入口）
+│   ├─ gate-all.mjs                ★ 一条命令跑完四道门禁（np+spec 并发，页面那两道排在它们之后 —— §E355b）‖ `--group=` 只跑一组 ‖ `--no-browser` 是 CI 阻断档的形状
+│   ├─ np-test.mjs                 ★ N 人引擎 + 门禁（**条数与末号由它跑完自己印**，别处不抄）
+│   ├─ spec-run.mjs                2 人引擎自测（52 用例 + 500 局 fuzz）
+│   ├─ smoke.mjs / battle-test.mjs / np-probe.mjs    CDP 真 Chrome 的三台页面仪器（冒烟 / 多人对战 / 多人探测）
+│   ├─ train-3p.mjs / train-best.mjs / train-fast.mjs   训练入口（多人 / 2 人多种子择优 / 快速）
+│   ├─ eval-5p.mjs                 ★ **产品考卷**（默认 5 人 · 逐桌落盘 · 研究旗标一堆；⚠ `--mode=` 在这台卷里是空旗，见 CHANGELOG §E344）
+│   ├─ eval-3p.mjs                 3 人冠军评测（1st/top2 + 出招分布）
+│   ├─ promote-champion.mjs        换包前体检（可行性闸 + G4/G5 + 珠经济闭环；`--dry` 只体检不写盘）
+│   ├─ style-exam.mjs              风格反制考卷（能不能打"成体系的风格"，不只是脚本人格）
+│   ├─ behavior-profile.mjs        行为剖面（引擎装配那一侧）
+│   ├─ log-behavior.mjs            **真机栏**：从实机对局记录按席位统计行动构成（只读 `results/*.txt`）
+│   └─ start-train-server.cmd      双击启动训练服务
+├─ champion-map/                 冠军演化图 / 谱系图（`viewer.mjs` 构建出 `index.html`）+ 这几张图自己的量具与中间产物
+├─ tests/spec.html               引擎自测（浏览器打开即可，通过数 = 用例数）
+├─ docs/                         **给人看的长期文档** + 研究流水（两层的规矩见 `docs/README.md`）
+│   ├─ RULES-2P.md / RULES-NP.md     ★ 规则裁定版（R1..R60 + 子证 ‖ N1..N27）—— **要改规则先改这里**
+│   ├─ METHODOLOGY.md                ★ 方法学与口径陷阱（编号逐条累积，第 89 条管"门该不该钉文档措辞"）
+│   ├─ GATE-SHIFTS.md                ★ 班次 → 该跑哪几组门禁（本机口径）
+│   ├─ CHAMPION-CANDIDATES.md        够格当"第三包"的候选登记（页面「导入冠军包」吃得下）
+│   ├─ skill-report*.html            几代冠军 × 实机口径的技能分布报表
+│   └─ research/                     **研究流水**：`logs/`（按天日志）‖ `handoff/`（班与班交接）‖ `reviews/`（复核·提案·决策单）‖ `archive/`（过期流水）
+├─ results/                      用户私人对局记录（**不进仓库**：.gitignore 整目录忽略）
+└─ .github/workflows/gates.yml   CI：每笔 push / 每个 PR 跑一遍**不带分组的整轮**（np 全量 + spec 阻断；浏览器两档在观察档）
 ```
+
+`docs/` 分成两层：**顶层 = 长期文档**（给人看的、可以直接引用的），**`docs/research/` = 研究流水**（按天的日志、交接、复核、归档 —— 那是账，不是文档）。
+"什么进哪一层"与 **old→new 搬动对照表**写在 `docs/README.md`；流水里的 `§E<编号>` 是引用锚，**不重编**（历史引用靠对照表兜）。
+
+⚠️ **归因容易读错**：本仓只有三个角色 —— 用户 / DS / Qoder，而**"千问" = "QWEN" = Qoder 本尊**，不是第三方 AI。
+所以 `docs/research/handoff/HANDOFF-FOR-QWEN-*` 是 **DS 写给 Qoder** 的，`HANDOFF-FOR-DS-*` 是 **Qoder 写给 DS** 的。
 
 ## 规则裁定说明
 
@@ -123,7 +128,12 @@ Epirus-Web/
 命令行（无需浏览器）：
 
 ```bash
-node tools/gate-all.mjs --np   # ★ 一条命令跑四道门禁（np+spec+smoke+battle）并只印一行总结论；np **冷跑约 8~10 分钟**（准确秒数由它自己印，本文件不抄），去掉 --np 约 40 秒
+node tools/gate-all.mjs --auto  # ★ **本机默认用这条**：读 git status 自己判这班次该跑哪几组（§E341）；只改图/改文档 ⇒ np 侧十几道、约 10 秒
+node tools/gate-all.mjs --np --group=train   # 手工指定一组（§E335 六组：meta / ui / ship / train / probe / engine，带累计依赖）
+node tools/gate-all.mjs --np   # ★ 四道全量（np+spec+smoke+battle，并发起跑）= **本机认证那一遍**，收工前必须跑；np 冷跑约 8~15 分钟（准确秒数由它自己印）
+                                 #   ⚠ 带 `--group=` / `--only=` 的那一遍**都不算认证**（工具会在总结论里明写"不是整轮认证"，门 D194 钉这条）
+                                 #   ⚠ 为什么分组跑还兜得住：**GitHub 每笔 push / PR 都跑一遍不带分组的 np 整轮**（`.github/workflows/gates.yml`，§E355）。
+                                 #     这不是洁癖 —— D225⑩c 曾在"只跑 meta"的口径下红了五笔提交、约 11 小时没人看见。
 node tools/spec-run.mjs    # 2 人引擎：52/52
 node tools/np-test.mjs     # 多人引擎 + 门禁：**条数与末号由工具跑完自己印**（本文件不抄）。逐条标题由工具自己印（`node tools/np-test.mjs | grep ✔`），
                            #   改一条门时**不必等整轮**：`node tools/np-test.mjs --only=D193`（10 秒）；
@@ -135,7 +145,8 @@ node tools/np-test.mjs     # 多人引擎 + 门禁：**条数与末号由工具�
 node tools/keep-artifact.mjs --verify   # 结论所依赖的对照包是否在库、哈希是否还对得上（v1.5.279）
 node tools/log-behavior.mjs results/31   # 真机栏：实机日志的行动构成（只读；配合体检的 ε=0 栏 / 浏览器模拟栏 = 三栏验收）
 node tools/probe-g4-anatomy.mjs 60   # G4「只枪」那格的解剖 + 双向反事实（只读；§A 自检须复现 75%/62%）
-node tools/eval-5p.mjs 24 5 77000 --pool=all --every=7   # ★ 产品考卷（multi；加 --mode=long 跑 5 血档）
+node tools/eval-5p.mjs 24 5 77000 --pool=all --every=7   # ★ 产品考卷（**对局恒 multi 3 血**：`--mode=` 在这台卷里是空旗，见 CHANGELOG §E344）
+node tools/probe-layer-caliber.mjs ...   # 血量档要按模式**直接调引擎**量（`mirrorHealth(pack, G, N, mode)`），别用 --mode=
 node tools/eval-3p.mjs     # 3 人冠军评测：28 对手对 × 座位轮换 → 1st/top2 + 出招分布
 node tools/smoke.mjs       # 2 人页面冒烟（CDP 真 Chrome）
 node tools/np-probe.mjs    # 多人页面探测（3 人 + 5 人，CDP 真 Chrome）
@@ -166,11 +177,11 @@ node tools/train-best.mjs 4 600        # 4 个候选择优（推荐，约 8~10 �
   `results/test` **12 局 / 194 回合 / 666 手** ⇒ ジ **62.0%** · 枪 **13.2%** · 激光剑 **11.0%** · **聚能环 6.8%** ·
   狙击枪 **3.3%** · 蓄能 **1.7%** · **电磁炮 1.4%** · 八卦阵 0.5% · 地雷 0.3%（前 3 张 ≈ **86%**，出现 **9 种**技能，**真机 G ≈ 3.6**；
   满值参考：2 人 27 / 多人 30）。⇒ **冠军会自己开聚能环、也会用电磁炮**。
-  复跑：`node tools/log-behavior.mjs results/test`（能力项）· 完整分布与口径推导见 `docs/REVIEW-2026-10-01-dsh-current-state.md` §15。
+  复跑：`node tools/log-behavior.mjs results/test`（能力项）· 完整分布与口径推导见 `docs/research/reviews/REVIEW-2026-10-01-dsh-current-state.md` §15。
   **同一批 666 手里从未出现**的：转移伤害 · 真正的落雷 · 摄魂指法 · 贴贴 · 天火 · 激光眼 · 挑衅 · 净化 · 过载炮 · 坦克 · 避雷针 · 藤甲 · 金刚盾 · 无极变速 · 原型制御。
   ⚠️ **本条此前那组数（ジ 59%/枪 20%/狙击枪 13% ≈92% · 电磁炮与激光眼 0% · 自对局 G=3.03）出处已不可考**：
   全仓没有任何文档记下它的口径与样本，而它既复现不出 09-21 的 `results/31`（同口径剔除 `已淘汰` 后那批 **G=5.94**），也复现不出上表的 `results/test`；
-  `docs/REVIEW-2026-09-24-killreward-ds.md` §P2-9 **在 09-24 就报过一次"数字已漂"**（当时实测电磁炮 1.3%、激光剑 0.3%）却没回填。**以本条的实测为准。**
+  `docs/research/reviews/REVIEW-2026-09-24-killreward-ds.md` §P2-9 **在 09-24 就报过一次"数字已漂"**（当时实测电磁炮 1.3%、激光剑 0.3%）却没回填。**以本条的实测为准。**
   ⚠ **自 v1.5.332 起本节会开始过期**：页面冠军带上"每 8 个窗口一张大雷"的上线档（实测每 5.2 ‖ 每 3.2 局一张）⇒ 新日志里"真正的落雷"不再是 0。
      上表是**改动之前**的实机统计，留着当对照，别再当"冠军从不打贵卡"的证据。
 - **贵卡这一格的边界现在写在数据上，不写在感觉上**（10-02 夜到 10-03 午的账，逐条见 CHANGELOG 的 v1.5.32x~v1.5.33x）：
@@ -178,7 +189,7 @@ node tools/train-best.mjs 4 600        # 4 个候选择优（推荐，约 8~10 �
   **大雷在任何剂量、任何机制下都不赚钱**（最温和的软档仍 −1.0 ~ −1.6pt）；**摄魂只在"自己 `HP≤1` 且 3 血桌"这一格为正**（+1.39 ±0.26，换一批桌子 +1.26）；
   "要不要为这 +1.4pt 换代（动 `js/train/policy.js` ⇒ 规则指纹 + 两槽重测）"当前的答案是**不值**（天花板已实测：概率下界从 0.6 抬到 1.0 只多 +0.18/+0.05pt）。
   ⚠ **v1.5.332 那半 pt 的亏损是用户买下来的，不是这格翻正了**：判据是"看得见"（每四五局一张），不是"更赢"（实测仍 −0.52 ‖ −0.40pt）⇒ 上面那句"不赚钱"没有被本版推翻。
-  ⚠️ **这两张卡的注入档在「默认难度」下剂量是 0**（10-04 实测，见 `docs/logs/OVERNIGHT-2026-10-02-qoder.md` §E283）：
+  ⚠️ **这两张卡的注入档在「默认难度」下剂量是 0**（10-04 实测，见 `docs/research/logs/OVERNIGHT-2026-10-02-qoder.md` §E283）：
      **v1.6.5 及以前**的默认难度对手席走**脚本 bot**，它们**残血时从不留 3 珠**（`hp≤1 ∧ 可付 = 0.00 次/席·局`）—— 与大雷"从不攒到 5 珠"**是同一个经济墙**。
      ⇒ **"引擎默认开着" ≠ "玩家会看见"**：只有**该席位在用冠军包**时注入档才咬得动（真浏览器 · 5 席同包 ⇒ **桌上每 4.3 局一张摄魂 · 每 1.6 局一张大雷**）。
      这两档的**现值只有一个来源**，在 `js/train/evo.js`：大雷 `BIGT_PUSH = 12`（v1.5.334 起是引擎默认）、摄魂 `DRAIN_PUSH = 1`（**v1.6.4 起默认开**，用户裁定；`0` = 关）

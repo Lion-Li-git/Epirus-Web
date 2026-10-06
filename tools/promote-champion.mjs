@@ -29,7 +29,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX, extractJsonObject, parseMetaTolerant } from './audit-lib.mjs';
 /* v1.5.152（DS 09-22 · 用户裁定"把真桌 ε=0.2 接进体检，只记录不阻断"）：
  * **产品代理栏** —— 单一来源：借 `behavior-profile.mjs` 的 `fieldProfile`（不抄第二份实现；该模块被 import 时不跑 main）。
- * 依据（`docs/RESEARCH-LOG-2026-09-22-ds.md` §7）：同一包同一 ε=0，**镜像**装配电磁炮 4.30 每局、
+ * 依据（`docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §7）：同一包同一 ε=0，**镜像**装配电磁炮 4.30 每局、
  * **真桌**（1 冠军 + 4 脚本）只有 0.10 每局（**43 倍**）⇒ 门禁/体检里的贵卡数字是**镜像局特有**的；
  * 而"真桌 + ε=0.2"与**真机**几乎重合（电磁炮 0.20 对 0.20、蓄能 0.30 对 0.40）⇒ 它才是最接近产品的模拟。 */
 import { fieldProfile, share as bpShare } from './behavior-profile.mjs';
@@ -255,7 +255,7 @@ if (process.env.EPIRUS_NO_PROXY !== '1') {
     '电磁炮 ' + per(SK.RAILGUN) + '/局 · 蓄能 ' + per(SK.CHARGE) + '/局 · 防御类 ' + bpShare(proxy, 'def') +
     ' · 集火 ' + (proxy.tgtActs ? (100 * proxy.focus / proxy.tgtActs).toFixed(1) + '%' : '—') +
     ' · 最大ep ' + proxy.maxEp + ' · 局长 ' + (proxy.rounds / PROXY_N).toFixed(1) +
-    ' ⇒ 与真机对照见 `docs/RESEARCH-LOG-2026-09-22-ds.md` §7');
+    ' ⇒ 与真机对照见 `docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §7');
 }
 
 /* v1.5.90（第八轮复核 §6 / §8-3）：**输出密度** —— 把"冠军输给一行最便宜的枪"变成两个可比的数：

@@ -4,7 +4,7 @@
  *
  * 它回答一个具体到能被裁定问完的问题：**"宽 + 珠经济闭环 + 抗克制"三样同时成立的包，
  * 在这个池子里到底有几粒？**（09-26 手工跑过：档案 881 类 → 宽 94 → 宽∩闭环里 G4 不劣于现役的 0 粒，
- * 见 `docs/RESEARCH-LOG-2026-09-26-qoder-night.md` §E42~E46）
+ * 见 `docs/research/logs/RESEARCH-LOG-2026-09-26-qoder-night.md` §E42~E46）
  *
  * 三级（全部走真源量具，本工具自己不复算任何一维）：
  *   ① 宽   = `audit-lib.selfPlay` 的两模式 `effSkills`（线的单一来源 = `pick-best.COLLAPSE`… 不，线的数值在本工具参数里，

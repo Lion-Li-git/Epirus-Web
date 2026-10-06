@@ -123,7 +123,7 @@ export function readEconEnv(env) {
     /* P2（qoder-research 0920）：形状适应度权重（不设 ⇒ null ⇒ S4_W 原样 0 ⇒ 严格不加项）。 */
     s4W: nv(e.EPIRUS_S4_W),
     /* v1.5.141（DS 研究）：**珠奖励的标度**（`BEAD_W`，出厂 0.05）。动因见
-     * `docs/RESEARCH-LOG-2026-09-21-ds.md` §7：花珠本来就有奖励（0.05），但它是 0.0x 微扰，
+     * `docs/research/logs/RESEARCH-LOG-2026-09-21-ds.md` §7：花珠本来就有奖励（0.05），但它是 0.0x 微扰，
      * 压不过 `base`（名次 0~1 量级）⇒ 要判"是钱不够还是结构不允许"，就得能扫这个标度。
      * 不设 ⇒ null ⇒ evo 原样 0.05（出厂行为逐字不变）。 */
     beadW: nv(e.EPIRUS_BEAD_W),

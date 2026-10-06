@@ -611,7 +611,7 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
     }
   }
   /* ===== v1.5.237（E28）：训练侧**执行口径**旋钮 `EPIRUS_TRAIN_EPS` 的下达与自证 =====
-   * 为什么值得开这一格（实测在 `docs/RESEARCH-LOG-2026-09-26-qoder-night.md` §E28a）：适应度与五道门全在 ε=0，
+   * 为什么值得开这一格（实测在 `docs/research/logs/RESEARCH-LOG-2026-09-26-qoder-night.md` §E28a）：适应度与五道门全在 ε=0，
    *   产品跑 ε=0.2 soft，而"按 `dmg/局` 排的 Spearman ρ(0 vs 0.2) = 0.480、随剂量单调" ⇒ **口径在换答案**。
    * 为什么这一段必须长这样（同 `KILL_FIELD`/示范族那一族的教训：横幅读回证明不了作用点发生）：
    *   "env 传进去没生效"是最容易犯的错（setter 名打错、eps 被 `|| 0` 吞、只接了 CLI 没接服务端……）
@@ -867,7 +867,7 @@ if (OPP_BLOCK_WANT) {
 }
 
 /* ===== §N6 修正（v1.5.150 · DS 09-22）：**2P 切片的对手必须是 2P 强参照，不能是多人池** =====
- * 病（实测，`docs/RESEARCH-LOG-2026-09-22-ds.md` §2）：原实现让每个个体对**多人池**打 2P，而现役包对
+ * 病（实测，`docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §2）：原实现让每个个体对**多人池**打 2P，而现役包对
  *   `pickBalanced`/`pickGunSpam`/`pickAggro` 在 2P 里**全是 0% 胜率** ⇒ 人人 ≈0 分 ⇒ 该切片是**常数**
  *   ⇒ `fit'=(fit_main+W·fit₂)/(1+W)` 加常数**不改变排序** ⇒ 选择完全由 3P 侧驱动
  *   ⇒ 第一臂（`v7xn1-31.bak`）与热启动**逐字节相同**（空枪）。
@@ -1042,7 +1042,7 @@ for (let gen = 0; gen < GENS; gen++) {
       r = Object.assign({}, r, { fit: (r.fit + XN2W * r2.fit) / (1 + XN2W), xn2fit: r2.fit });
     }
     /* ===== 锚定正则（v1.5.153 · DS 09-22 · "冻结/分区"立项的最小可测形式）=====
-     * 依据（`docs/RESEARCH-LOG-2026-09-22-ds.md` §9/§10）：跨 N 两轴的失败机理是**遗忘** ——
+     * 依据（`docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §9/§10）：跨 N 两轴的失败机理是**遗忘** ——
      *   每阶段都牺牲上一场（练会 2P 忘 3P、找回 3P 又忘 2P），且**排练（4→16 局）也治不了**（零和）。
      * 机制可选的最小实现：向量化进化没有梯度 ⇒ "冻结"用**适应度锚定**表达：
      *   fit' = fit − λ · mean((θ−θ_seed)²)
