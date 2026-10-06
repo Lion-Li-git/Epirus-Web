@@ -31,7 +31,7 @@ label{color:var(--dim);display:flex;gap:6px;align-items:center}
 #side th{color:var(--dim);font-weight:400;text-align:left}
 #selftest{display:none;position:fixed;left:14px;top:40%;background:#101a2c;border:1px solid #6f83a8;color:#dce6f5;padding:8px 10px;border-radius:6px;font-size:11px;white-space:pre;z-index:30}
 </style></head><body>
-<div id="bar"><button data-m="1d">一维（F 排序带）</button><button data-m="map" class="on">地图（缩放/平移）</button><button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button><button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button><button data-m="tree">谱系（时间 × 家族）</button><button data-m="3db">三维行为轴</button><button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button><label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label><label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label><button id="reset">复位视图</button><button id="fitt">投影判据 ⓘ</button><label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label><label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键 sc − 现役（实测）</option></select></label><label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label><label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">批次 <select id="batch"></select></label><button id="bside" title="历代冠军按**上线时刻**排的一列（上线时刻由 ship-scan.mjs 逐提交算槽文件权重指纹抽出，不是按提交标题点名）。点一枚加入对比">冠军序列 ⇄</button><label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label><label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label><span style="color:var(--dim)">底色</span><button data-bg="#0f1522">深蓝</button><button data-bg="#05070d">纯黑</button><button data-bg="#212a3b">石板</button><button data-bg="#e6ebf5">浅底</button><input type="color" id="bgc" value="#0f1522" title="自定义底色"><span id="bgn" style="color:var(--dim);font-size:11px"></span></div>
+<div id="bar"><button data-m="1d">一维（F 排序带）</button><button data-m="map" class="on">地图（缩放/平移）</button><button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button><button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button><button data-m="tree">谱系（时间 × 家族）</button><button data-m="3db">三维行为轴</button><button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button><label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label><label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label><button id="reset">复位视图</button><button id="fitt">投影判据 ⓘ</button><label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label><label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="rel" title="底图默认是地形：蓝=低 → 红=高，中性灰在库内中位。&#10;这一档换成判决：以现役为分界，绿=比现役强 ‖ 红=不如 ‖ 灰=现役那一档。&#10;为什么不当默认：现役落在库内第 82 百分位，拿它当中性灰会把 82% 的图涂成一片红，底图就没地形了。">相对现役（绿=强 / 红=不如）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键 sc − 现役（实测）</option></select></label><label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label><label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">批次 <select id="batch"></select></label><button id="bside" title="历代冠军按**上线时刻**排的一列（上线时刻由 ship-scan.mjs 逐提交算槽文件权重指纹抽出，不是按提交标题点名）。点一枚加入对比">冠军序列 ⇄</button><label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label><label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label><span style="color:var(--dim)">底色</span><button data-bg="#0f1522">深蓝</button><button data-bg="#05070d">纯黑</button><button data-bg="#212a3b">石板</button><button data-bg="#e6ebf5">浅底</button><input type="color" id="bgc" value="#0f1522" title="自定义底色"><span id="bgn" style="color:var(--dim);font-size:11px"></span></div>
 <div id="wrap"><canvas id="cv"></canvas><div id="stat"></div><div id="legend"></div><div id="card"></div><div id="side"></div><div id="fit" style="display:none">本图坐标与判据（fit.tsv ← e287-fit.mjs 实测，随机排点当地板）：<br>dims · method · Spearman · recall@k · r2_mean_raw · excess_r2_mean · excess_cols_gt0.1 · excess_r2_H · excess_r2_S&lt;br>2 · rand · -0.0256 · 1.96 · 0.0475 ·  · 0 ·  · &lt;br>2 · pca · 0.6582 · 11.70 · 0.1208 · 0.0733 · 5 · 0.1227 · 0.1281&lt;br>2 · pls · 0.2968 · 7.51 · -0.0160 · -0.0635 · 0 · 0.0422 · -0.0360&lt;br>2 · smacof · 0.6981 · 11.37 · 0.1241 · 0.0766 · 5 · 0.1014 · 0.1814&lt;br>2 · force · 0.7008 · 16.33 · 0.1698 · 0.1223 · 5 · 0.1067 · 0.3062&lt;br>3 · rand · 0.0090 · 1.95 · 0.0810 ·  · 0 ·  · &lt;br>3 · pca · 0.7537 · 16.95 · 0.2254 · 0.1444 · 10 · 0.1528 · 0.1788&lt;br>3 · pls · 0.2968 · 7.51 · -0.0159 · -0.0969 · 0 · 0.0516 · -0.0739&lt;br>3 · smacof · 0.7767 · 17.18 · 0.2213 · 0.1403 · 10 · 0.1560 · 0.1858&lt;br>3 · force · 0.7683 · 29.15 · 0.3381 · 0.2571 · 10 · 0.2255 · 0.4177</div></div>
 <div id="fam"></div>
 <div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>
@@ -187,29 +187,40 @@ function rampRGBF(tt) { return LUTF[Math.max(0, Math.min(255, Math.round(tt * 25
  *   ⚠ **只改颜色，不改几何**：u01()/高度/势场仍是线性 min-max —— 阱的深浅是**量的**比较，
  *     把高度也换成秩会把"差 0.02"和"差 0.2"画成同样高，那是另一种骗人。
  *   秩按 st.T 缓存（F = Hp/100 + T·S 跟着 T 变，排序也变）。*/
-/* §E338 分位铺色这条**保留**（§E330 那条教训没变：线性带会把一多半点挤成同一色），
- *   但**分母换成"以现役为界、两侧各自铺"**：上半边（比现役强的那些）铺满绿段，下半边铺满红段。
- *   ⇒ 同一根色带现在同时回答两件事：离分界多远（色相）+ 在自己那一侧排第几（饱和度深浅）。
+/* §E347（用户 10-06 上午点名"地图背景这是搞什么鬼"）：**§E338 把底图换成"以现役为界、两侧各自铺满"是一次改坏了的改动，撤回。**
+ *   为什么必然难看（实测，不是观感问题）：现役 F 落在**库内第 82 百分位**（901 枚里只有 164 枚在它之上）⇒
+ *   ① 中性灰被压成分界那一条**测度为零的线**（图上没有"平"的地方了）；
+ *   ② 底图是 IDW **平均**，平均完正好落在"那一侧的中位秩"上 ⇒ 82% 的图一律深红（而红端 alpha 是 0.92，几乎不透明）；
+ *   ③ 场只要抖一点就在 0.5 两侧来回翻 ⇒ 用户看到的那种**大块硬边绿斑**；
+ *   ④ 右侧那条渐变带画的是 LUT（蓝→灰→红），与图上的绿红**根本对不上** —— 我当时是用一行"这一档不参与着色"糊过去的，那是错的。
+ *   ⇒ 底图回到 §E338 之前的读法：「fCol」= 全库分位（秩），色带 = LUT（蓝 = 地板 ‖ 中性灰 = 库内中位 ‖ 红 = 好）。
+ *   ⇒ "离现役多远 / 绿=比现役强"这个读法没丢，它降到颜色下拉第 6 档「rel」（fColRel + LUTF）：
+ *     那是**判决**（能不能换掉现役），底图那件事是**地形**（谁高谁低）—— 两件事共用一根 18px 的条必然打架。
  *   ⚠ 只改颜色，不改几何：u01()/高度/势场仍是线性 min-max（把高度也换成秩会把"差 0.02"和"差 0.2"画成一样高）。
- *   ⚠ 缓存键必须含批次：切批次 = 换分位总体，两侧各自的秩会整体挪动，键少了会拿旧铺色画新的人群。*/
-var FSRT = { key: '', up: null, dn: null, iv: 0 };
+ *   ⚠ 分位的分母永远是**全库**（不是当前可见那些）⇒ 缓存键只需要 T，批次不参与（切批次只改"画哪些点"）。*/
+var FSRT = { key: '', all: null, up: null, dn: null, iv: 0, sU: 0.05, sD: 0.05 };
+function p90(a) { var n = a.length; if (n < 2) return 0; return a[Math.min(n - 1, Math.round(0.9 * (n - 1)))]; }
 function splitSets() { var key = st.T.toFixed(4);
   if (FSRT.key === key) return FSRT;
-  var iv = Fv(INC), up = [], dn = [];
-  /* ⚠ 分位的**分母永远是全库**，不是"当前看见的那些"（第一版我按 VIS 过滤，是个口径错）：
-   *   切批次时颜色会整片挪位 ⇒ 同一格绿在第一批里是"库内前 5%"、在第二批里是"该批前 5%"，
-   *   而用户切批次的动机正是**跨批比较**。⇒ 批次只该决定"画哪些点"，不该决定"颜色什么含义"。
-   *   现役永远在图上（recomputeVIS 钉着），所以"分界 = 现役那一档"这句话在任何批次下都成立。*/
-  for (var i = 0; i < N; i++) { var v = Fv(P[i]); if (v >= iv) up.push(v); else dn.push(v); }
-  up.sort(function (x, y) { return x - y; }); dn.sort(function (x, y) { return x - y; });
-  FSRT = { key: key, up: up, dn: dn, iv: iv }; return FSRT; }
+  var iv = Fv(INC), all = [], up = [], dn = [];
+  for (var i = 0; i < N; i++) { var v = Fv(P[i]); all.push(v); if (v >= iv) up.push(v - iv); else dn.push(iv - v); }
+  all.sort(function (x, y) { return x - y; }); up.sort(function (x, y) { return x - y; }); dn.sort(function (x, y) { return x - y; });
+  FSRT = { key: key, all: all, up: up, dn: dn, iv: iv,
+    /* 下限 0.02：某一侧只剩几枚时 p90 会趋零 ⇒ 整条色带被那一两枚点决定（0.5 一侧全饱和）。 */
+    sU: Math.max(0.02, p90(up)), sD: Math.max(0.02, p90(dn)) };
+  return FSRT; }
 function bnd(a, v, inc) { var lo = 0, hi = a.length;   /* inc=false → 第一个 ≥v；inc=true → 第一个 >v */
   while (lo < hi) { var m = (lo + hi) >> 1; if ((inc ? a[m] <= v : a[m] < v)) lo = m + 1; else hi = m; } return lo; }
 function qr(a, v) { var n = a.length; if (n < 2) return 0.5;
   return Math.max(0, Math.min(1, ((bnd(a, v, false) + bnd(a, v, true)) / 2) / (n - 1))); }
-function fCol(F) { var s = splitSets();
-  return F >= s.iv ? 0.5 + 0.5 * qr(s.up, F) : 0.5 * qr(s.dn, F); }
-function fMed() { return splitSets().iv; }        /* 色带的中点现在是**现役那一档**，不是全库中位数 */
+/* 底图与「F」档用的：全库分位（= §E338 之前那个读法） */
+function fCol(F) { return qr(splitSets().all, F); }
+/* 「rel」档用的：离现役多远（两侧各按该侧 p90 距归一，绿=强 ‖ 红=不如 ‖ 灰=现役那一档） */
+function fColRel(F) { var s = splitSets();
+  return F >= s.iv ? 0.5 + 0.5 * Math.min(1, (F - s.iv) / s.sU) : 0.5 - 0.5 * Math.min(1, (s.iv - F) / s.sD); }
+function fMed() { var a = splitSets().all; return a.length ? a[Math.floor(a.length / 2)] : 0; }
+/* 现役在库内的百分位（= 底图色带上那根针的位置；也是"为什么不能拿现役当中性灰"的那个证据） */
+function incPct() { var s = splitSets(); return s.all.length ? 100 * s.dn.length / s.all.length : 0; }
 /* §E304 两套分组并存：'fam' = **训练方法/目标家族**（默认），'seed' = RNG 种子（旧口径，留着当对照）。
  *   颜色按黄金角铺 HSL ⇒ 22 个家族也不撞色，不用手写调色板（12 色那套一超过 12 家就开始重复）。*/
 function hueAt(i) { return 'hsl(' + Math.round((i * 137.508) % 360) + ',' + (60 + (i % 3) * 10) + '%,' + (56 + (i % 2) * 12) + '%)'; }
@@ -245,7 +256,9 @@ function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GR
     var ts = Math.max(-1, Math.min(1, d.scd / 8));
     var sc = ts >= 0 ? mix('#dce6f5', '#39d98a', ts) : mix('#dce6f5', '#ff6b6b', -ts);
     return (d.scs && d.scs.indexOf('+') > 0 && parseInt(d.scs, 10) < 6) ? '#e0b13c' : sc; }
-  return rampF(fCol(Fv(d))); }
+  /* §E347 第 6 档「rel」：相对现役的发散带（绿 = 比现役强 ‖ 红 = 不如 ‖ 灰 = 现役那一档），底图同向。*/
+  if (st.color === 'rel') return rampF(fColRel(Fv(d)));
+  return ramp(fCol(Fv(d))); }   /* 「F」档回到蓝→灰→红（§E338 之前那样），不再拿现役当中性灰 */
 /* §E313 页面口径 1st 的显示区间（实测枚数的 p02..p98，同 GLR 的取法）*/
 var EPR = (function () { var a = P.map(function (d) { return d.hp; }).filter(function (v) { return v !== null && isFinite(v); }).sort(function (x, y) { return x - y; });
   return a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [20, 60]; })();
@@ -411,9 +424,11 @@ function buildBitmap(key) {
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
     var Fav = (nb.SH[i] + st.T * nb.SS[i]) / wsum;
-    var tt = fCol(Fav);                            /* §E338 分界 = 现役：绿 = 比现役强，红 = 不如（与点色/图例同向）*/
-    var rgb = rampRGBF(tt);
-    var a = (0.92 - 0.5 * tt) * fade;
+    /* §E347：底图默认 = **全库分位 + 蓝→灰→红**（回到 §E338 之前那个读法）；只有切到第 6 档「rel」才用发散带 + 淡入。*/
+    var REL = st.color === 'rel';
+    var tt = REL ? fColRel(Fav) : fCol(Fav);
+    var rgb = REL ? rampRGBF(tt) : rampRGB(tt);
+    var a = (REL ? Math.min(0.50, 0.95 * Math.abs(tt - 0.5) * 2) : (0.92 - 0.5 * tt)) * fade;
     var o = i * 4;
     dta[o] = Math.round(bR + (rgb[0] - bR) * a);
     dta[o + 1] = Math.round(bG + (rgb[1] - bG) * a);
@@ -421,13 +436,14 @@ function buildBitmap(key) {
     dta[o + 3] = 255;
   }
   cg.putImageData(img, 0, 0);
-  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, x0: nb.x0, x1: nb.x1, y0: nb.y0, y1: nb.y1,
+  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color, x0: nb.x0, x1: nb.x1, y0: nb.y0, y1: nb.y1,
     nmed: nb.nmed, ax: nb.ax, by: nb.by, gx: nb.gx, gy: nb.gy };
 }
 function ensureField(key, bx, byy) {
   var k2 = key + '@' + Math.round(bx) + ',' + Math.round(byy);   /* 比例尺进缓存键：窗口尺寸变了才重建 */
   if (!NBK[k2]) buildNB(k2, bx, byy);
-  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg) buildBitmap(k2);
+  /* §E347：位图**内容**现在跟着色标档变（rel 与否是两条 LUT）⇒ 判据必须带 st.color，漏了就是切档拿旧位图 */
+  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color) buildBitmap(k2);
 }
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
 var boxes = [];
@@ -694,7 +710,7 @@ function drawTree(fr) {
      *   冠军那圈墨环与"最优"绿环都改成**跟着半径走**，否则小点会被环吞掉。 */
     var rr = dotR(d, TKX);
     g.beginPath(); g.arc(p[0], p[1], rr, 0, 6.284);
-    g.fillStyle = rampF(fCol(Fv(d))); g.fill();
+    g.fillStyle = colOf(d); g.fill();   /* §E347：这里原来硬写 rampF(fCol(...))，等于**绕过颜色下拉**（切到「家族」也画成 F 色）⇒ 改走 colOf */
     if (d.lin && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.4; g.stroke(); }
     if (d.ok === 1 && al > 0.3) { g.globalAlpha = al * 0.72; g.strokeStyle = '#39d98a'; g.lineWidth = 1.15 * devicePixelRatio;
       g.beginPath(); g.arc(p[0], p[1], rr + 2.2 * st.size, 0, 6.284); g.stroke(); }
@@ -719,10 +735,10 @@ function drawTree(fr) {
        在当选键这档更是彻底错（这档是**绿 = 比现役强、红 = 落后**）—— 图上画的与页脚说的不能是两件事。 */
     (st.color === 'sc' ? '（绿=强 ‖ 红=落后 ‖ 橙=判不动 ‖ 灰=未测）'
       : st.color === 'de' ? '（红=脆 ‖ 蓝=吃探索 ‖ 白=不敏感）'
-      /* §E338 分界改成现役之后，"蓝低 → 红高"这句在 F 档是**反的**（现在绿 = 比现役强）。
-       *   页脚与图例不能各说一套 ⇒ 按当前口径现说。*/
-        : st.color === 'F' ? '（绿 = 比现役强 ‖ 针 = 现役那一档 ‖ 红 = 不如现役）'
-        : (st.color === 'fam' || st.color === 'seed' ? '（点色 = ' + (st.color === 'fam' ? '训练方法家族' : 'RNG seed') + '，底图仍是 F 相对现役）' : '（蓝低 → 红高）')) +
+      /* §E347：F 档回到"地形"读法（蓝低 → 红高），"相对现役"那件事交给第 6 档 rel ⇒ 页脚/图例按当前档现说，不许各讲一套。*/
+        : st.color === 'F' ? '（蓝 = 低 = 地板 → 红 = 高 = 好 ‖ 针 = 现役那一档 = 库内第 ' + Math.round(incPct()) + ' 百分位）'
+        : st.color === 'rel' ? '（绿 = 比现役强 ‖ 灰 = 就是现役那一档 ‖ 红 = 不如现役）'
+        : (st.color === 'fam' || st.color === 'seed' ? '（点色 = ' + (st.color === 'fam' ? '训练方法家族' : 'RNG seed') + '，底图 = F 地形（蓝低 → 红高））' : '（蓝低 → 红高）')) +
     ' · 淡蓝曲线 = 热启动父边' +
     /* §E333 页脚是单行 fillText（画布不折行），所以两态**各说各的手势**而不是把两段接起来：
        立体态把"滚轮/Shift+滚轮/拖动"换成"右键压扁错切"—— 那三件在二维态已经说过，长度也就不会顶出右缘。
@@ -836,7 +852,7 @@ function drawMap(fr) {
     g.beginPath(); g.arc(scr[i][0], scr[i][1], 11 * st.size, 0, 6.284); g.strokeStyle = st.ink; g.lineWidth = 2; g.stroke(); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText(st.elev < 0.5
-    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（§E338 分界 = 现役：绿 = 比现役强 → 红 = 不如）· 绿环 = 该枚过线 · 点一枚 = 选中 · 缩放 ×' + st.k.toFixed(2)
+    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（蓝 = 低 → 红 = 高 · 针 = 现役 = 库内第 ' + Math.round(incPct()) + ' 百分位）· 绿环 = 该枚过线 · 点一枚 = 选中 · 缩放 ×' + st.k.toFixed(2)
     : '左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 柱高 = ' + (st.goodTop ? 'F − F_min（越高越好）' : 'F_max − F（越低越好 = 冠军在阱底）') + ' · 绿环 = 该枚过线',
     14 * devicePixelRatio, h - 12 * devicePixelRatio);
 }
@@ -1172,12 +1188,18 @@ function paintLegend(fr) {
   var c = document.createElement('canvas'); c.width = 18 * devicePixelRatio; c.height = 150 * devicePixelRatio;
   c.style.width = '18px'; c.style.height = '150px'; var cg = c.getContext('2d');
   for (var i = 0; i < 150 * devicePixelRatio; i++) { var ltt = 1 - i / (150 * devicePixelRatio);
-    /* §E338 用户 ③：F 那一档的色标换成**以现役为分界**的发散带（红 = 不如现役 ‖ 针 = 现役那一档 ‖ 绿 = 比现役强）*/
-    var rgb = st.color === 'F' ? rampRGBF(ltt) : rampRGB(ltt);
+    /* §E347：「F」档（含默认的家族着色 + 底图）用回 LUT（蓝 = 地板 → 灰 = 库内中位 → 红 = 好），
+     *   只有「rel」档才换成分散带 LUTF。原来这里写死"F 用发散带"，而底图与这条带必须同一条 LUT，
+     *   否则就是"图例说一套、图画另一套"（§E338 那版还额外用一行"这一档不参与着色"把矛盾糊掉了）。*/
+    var rgb = st.color === 'rel' ? rampRGBF(ltt) : rampRGB(ltt);
     cg.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')'; cg.fillRect(0, i, 18 * devicePixelRatio, 1); }
-  if (st.color === 'F') {   /* 分界那根针：不画出来，"绿红以现役为界"这句话在 18px 宽的条上根本找不到位置 */
-    cg.fillStyle = '#0d1420'; cg.fillRect(0, 73 * devicePixelRatio, 18 * devicePixelRatio, 4 * devicePixelRatio);
-    cg.fillStyle = '#ffd166'; cg.fillRect(0, 74.5 * devicePixelRatio, 18 * devicePixelRatio, 1.5 * devicePixelRatio); }
+  if (st.color === 'F' || st.color === 'rel') {
+    /* 现役那根针：不画出来，"现役在哪"这句话在 18px 宽的条上找不到位置。
+     *   ⚠ 位置**按当前档现算**，不许写死 73/150 —— 那是"分界在正中"的假设，而 F 档的分界在库内第 82 百分位。*/
+    var npos = st.color === 'rel' ? 0.5 : fCol(Fv(INC));
+    var ny = Math.round((1 - npos) * 150 * devicePixelRatio);
+    cg.fillStyle = '#0d1420'; cg.fillRect(0, ny - 2 * devicePixelRatio, 18 * devicePixelRatio, 4 * devicePixelRatio);
+    cg.fillStyle = '#ffd166'; cg.fillRect(0, ny - 0.75 * devicePixelRatio, 18 * devicePixelRatio, 1.5 * devicePixelRatio); }
   if (st.color === 'pm') { /* 三档离色 ⇒ 渐变条会骗人，这里改涂两块实心 */
     cg.fillStyle = '#39d98a'; cg.fillRect(0, 0, 18 * devicePixelRatio, 75 * devicePixelRatio);
     cg.fillStyle = '#ff6b6b'; cg.fillRect(0, 75 * devicePixelRatio, 18 * devicePixelRatio, 75 * devicePixelRatio); }
@@ -1205,21 +1227,28 @@ function paintLegend(fr) {
     : st.color === 'hp' ? ('页面 1st 高 ' + EPR[1].toFixed(1) + '%（红）')
     : st.color === 'de' ? ('Δε +' + 6 + 'pt（红 = 脆）')
     : st.color === 'sc' ? ('当选键 +8pt（绿 = 比现役强 · 实测 ' + NSEL + ' 枚 ‖ 判据内赢 ' + NSELUP + '）')
-    : (st.color === 'fam' || st.color === 'seed') ? ('（点色 = ' + (st.color === 'fam' ? '家族' : 'RNG seed') + ' ‖ 底图仍是 F 相对现役）')
-    : ('绿 = 比现役强（F 顶 ' + fr[1].toFixed(2) + '）');
+    : (st.color === 'fam' || st.color === 'seed') ? ('（点色 = ' + (st.color === 'fam' ? '家族' : 'RNG seed')
+      + ' ‖ 底图 = F 地形（蓝 = 低 → 红 = 高）· 现役 = 库内第 ' + Math.round(incPct()) + ' 百分位（' + splitSets().up.length + ' 枚在它之上）')
+    : st.color === 'rel' ? ('绿 = 比现役强（F 顶 ' + fr[1].toFixed(2) + '）')
+    : ('红 = 好（F 顶 ' + fr[1].toFixed(2) + ' ‖ 针 = 现役）');
   var s2 = document.createElement('div'); s2.textContent = st.color === 'gl' ? ('G(long) 低 ' + GLR[0].toFixed(1) + '（蓝）· 闸要求 ≥3')
     : st.color === 'pm' ? ('⛔ 栽桩 ' + (NPRM - NPPASS) + ' 枚（红）· 灰 = 未测（' + (N - NPRM) + ' 枚）')
     : st.color === 'duel' ? ('⛔ 两批都输 ' + (NDUEL - NWIN - NFLIP) + ' 枚（红）· 黄 = 符号翻 ' + NFLIP + ' 枚 · 灰 = 未测（' + (N - NDUEL) + '）')
     : st.color === 'hp' ? ('页面 1st 低 ' + EPR[0].toFixed(1) + '%（蓝）· 灰 = 未测（' + (N - NEPS) + ' 枚）')
     : st.color === 'de' ? ('Δε −6pt（蓝 = 开了探索反而强）· 白 = 不敏感 · 灰 = 未测（' + (N - NEPS) + '）‖ 脆（≥3.41）' + NBRIT + ' 枚 ‖ 吃探索（<0）' + NSTRONG + ' 枚')
     : st.color === 'sc' ? ('当选键 −8pt（红 = 落后现役）· 白 = 打平 · 橙 = 偏正但同号 <6/8（判不动 ' + NSELSOFT + ' 枚）· 灰 = 未测（' + (N - NSEL) + '）‖ 明显落后（≤−2）' + NSELDOWN + ' 枚')
-    : (st.color === 'fam' || st.color === 'seed') ? ('（上面那条渐变带在这一档不参与着色）')
-    : ('红 = 不如现役（F 底 ' + fr[0].toFixed(2) + '）');
+    : (st.color === 'fam' || st.color === 'seed') ? ('（这条带就是底图的色标：下 = 地板（蓝）‖ 上 = 好（红）‖ 黄针 = 现役那一档）')
+    : st.color === 'rel' ? ('红 = 不如现役（F 底 ' + fr[0].toFixed(2) + '）')
+    : ('蓝 = 地板（F 底 ' + fr[0].toFixed(2) + ' ‖ 灰 = 库内中位）');
   lg.appendChild(s1); lg.appendChild(c); lg.appendChild(s2);
-  /* §E330 F 腿的色标是**按秩**铺的 ⇒ 带的正中不是 (min+max)/2 而是中位数。不印这一行，
-   *   读图的人会把"中性灰"当成"不好不坏的绝对电平"，而它真正的意思是"库里第 50% 名"。*/
-  if (st.color === 'F') { var sm = document.createElement('div'); sm.style.color = 'var(--dim)';
-    sm.textContent = '针 = 现役 Ldemo 那一档（F ' + fMed().toFixed(3) + '）· 绿 = 比现役强 ‖ 红 = 不如 · 两侧各按分位铺色（每档同样多的点）'; lg.appendChild(sm); }
+  /* §E330/§E347：这根带**到底在量什么**必须印出来 —— 不印，读图的人会把"中性灰"当成"不好不坏的绝对电平"，
+   *   而 F 档的灰其实是"库里第 50% 名"、rel 档的灰才是"就是现役那一档"。两档共用一个 18px 的条，说法完全不同。*/
+  if (st.color === 'F' || st.color === 'rel') { var sm = document.createElement('div'); sm.style.color = 'var(--dim)';
+    sm.textContent = st.color === 'F'
+      ? '针 = 现役 Ldemo（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 蓝 = 地板 → 红 = 好 · 深浅 = 库内分位（每档同样多的点）· 名次看点大小'
+      : '针 = 现役那一档（灰）· 绿 = 比现役强 ‖ 红 = 不如 · 深浅 = 离现役多远（两侧各按该侧 p90 距归一：绿侧 '
+        + splitSets().sU.toFixed(3) + ' ‖ 红侧 ' + splitSets().sD.toFixed(3) + '，超出即钉在两端）';
+    lg.appendChild(sm); }
   if (OKL.length) {
     var s3 = document.createElement('div'); s3.style.marginTop = '6px'; s3.style.color = '#39d98a';
     s3.textContent = '绿环 = 逐枚过线判定（' + OKL.length + '/' + POKJ + ' 枚）· 二维不画范围';
@@ -1646,18 +1675,32 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     dotR(byRk[0], 1).toFixed(2) + ' vs ' + dotR(byRk[byRk.length - 1], 1).toFixed(2));
   T('滚轮放大：点要跟着变大（用户 ④）', dotR(byRk[3], 8) > dotR(byRk[3], 1) * 1.5,
     dotR(byRk[3], 1).toFixed(2) + ' → ' + dotR(byRk[3], 8).toFixed(2));
-  /* ④ 颜色分界 = 现役 */
-  T('颜色：现役那一档正好在分界 0.5', Math.abs(fCol(Fv(INC)) - 0.5) < 0.02, fCol(Fv(INC)).toFixed(3));
+  /* ④ 两档色标各自的语义（§E347 把它们分开：F = 地形，rel = 判决） */
+  var s7 = splitSets();
+  T('rel 档：现役那一档正好在分界 0.5', Math.abs(fColRel(Fv(INC)) - 0.5) < 0.02, fColRel(Fv(INC)).toFixed(3));
   var up = 0, dn = 0, tie = 0;
   for (var ci = 0; ci < N; ci++) { if (!VIS[ci] || P[ci].id === INC.id) continue;
     var gap = Fv(P[ci]) - Fv(INC);
     /* 与现役**逐位相等**的那些不是"分错侧"，是同一份权重的另一行（§E334 实测 4 行都是现役：
      *   SHIPPED-Ldemo ‖ Ldemo ‖ C5-02-31 ‖ C5-02-71）⇒ 它们注定落在分界上，单独计数不判红。*/
-    if (Math.abs(gap) < 1e-12) { tie++; if (Math.abs(fCol(Fv(P[ci])) - 0.5) > 0.02) dn++; continue; }
-    if (gap > 0) { up++; if (fCol(Fv(P[ci])) <= 0.5) dn++; }
-    else if (fCol(Fv(P[ci])) >= 0.5) dn++; }
-  T('颜色：比现役强的全在绿半边、弱的全在红半边（同权重的并列行单列）', up > 0 && dn === 0,
+    if (Math.abs(gap) < 1e-12) { tie++; if (Math.abs(fColRel(Fv(P[ci])) - 0.5) > 0.02) dn++; continue; }
+    if (gap > 0) { up++; if (fColRel(Fv(P[ci])) <= 0.5) dn++; }
+    else if (fColRel(Fv(P[ci])) >= 0.5) dn++; }
+  T('rel 档：比现役强的全在绿半边、弱的全在红半边（同权重的并列行单列）', up > 0 && dn === 0,
     dn + ' 枚反了 / 强于现役 ' + up + ' 枚 ‖ 与现役同权重并列 ' + tie + ' 枚');
+  T('rel 档：半侧 p90 距 = 半程 0.25（色深 = 离现役多远，不是排第几）',
+    Math.abs(fColRel(s7.iv + 0.5 * s7.sU) - 0.75) < 0.01 && Math.abs(fColRel(s7.iv - 0.5 * s7.sD) - 0.25) < 0.01,
+    '绿侧 ' + fColRel(s7.iv + 0.5 * s7.sU).toFixed(3) + '（要 0.750） ‖ 红侧 ' + fColRel(s7.iv - 0.5 * s7.sD).toFixed(3) + '（要 0.250）');
+  /* ⭐§E347：用户点名"地图背景这是搞什么鬼"的根因钉在这里 ——
+   *   §E338 把**底图**也换成"以现役为界、两侧各自按秩铺满"，而现役落在库内第 82 百分位
+   *   ⇒ 中性灰被压成分界那一条线、82% 的图一律深红、少数 pockets 荧光绿（用户看到的大块硬边斑）。
+   *   ⇒ 底图必须回到全库分位：库内中位那枚要落在中性灰上。这两条在 §E338 那一版都会红。*/
+  var mdF = (function () { var a = P.map(function (d) { return Fv(d); }).sort(function (x, y) { return x - y; }); return a[a.length >> 1]; })();
+  T('底图（F 档）：库内中位那枚必须落在中性灰（离 0.5 不超 0.06）',
+    Math.abs(fCol(mdF) - 0.5) <= 0.06, '实测 ' + fCol(mdF).toFixed(3));
+  T('底图（F 档）：图例那根针必须落在现役自己的分位上（带与底图同一条 LUT）',
+    Math.abs(fCol(Fv(INC)) - incPct() / 100) < 0.012 && fCol(Fv(INC)) > 0.7,
+    '针 ' + fCol(Fv(INC)).toFixed(3) + ' ‖ 现役分位 ' + (incPct() / 100).toFixed(3));
   /* ⑤ 点家族图例不许把整张图压黑（用户 ④「点选中框会全部变暗」） */
   st.hi = {}; buildGroups(); var k0 = GRP.keys[0]; st.hi[k0] = true;
   var mn = 1; for (var hi2 = 0; hi2 < N; hi2++) { var a2 = alphaOf(P[hi2]); if (a2 < mn) mn = a2; }
