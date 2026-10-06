@@ -3843,8 +3843,8 @@ t('D28 模式入口一致性：两根轴都在页面上、每档下拉都被映�
   for (const k of ['fast', 'lucky', 'vampire']) {
     ok(modes.indexOf(k) < 0, 'MODES 不应再有 ' + k + '（不做的模式只登记在文档里，不留在代码里）');
   }
-  const r2p = readFileSync('docs/RULES-2P.md', 'utf8');
-  ok(r2p.indexOf('本程序不做') >= 0, 'RULES-2P.md 必须显式登记"本程序不做"的模式（快速/欧皇/吸血鬼）');
+  /* （原来这里还钉"RULES-2P 里必须出现『本程序不做』这四个字" —— v1.6.12 删除 ⇒ 上面那三条**代码侧**的钉
+   *   （MODES 里不许再有 fast/lucky/vampire）才是真牙；文档那半边交给 D230 管"指针不许落空"，措辞不管。） */
 });
 
 t('D29 "只有指纹在响"的规则数据必须有**行为**断言（判定 p / 爆头 3 轮 / 小雷豁免名单 / 费用 / 雷系集合）', function () {
@@ -5150,8 +5150,8 @@ t('D91 被无效化的聚能环不得续计（v1.5.105：出招即计次 + 复�
     'endTurn 的连击复位必须与 actionOf 同口径（加 `!a.voided`）');
   ok(rs.indexOf("if (!(a && a.outcome === 'ok' && a.key === SK.RING)) p.ringStreak = 0;") < 0,
     '旧的"只看 outcome"复位**不得**回来 —— 那是本 bug 的成因');
-    ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('**被无效化的聚能环不续计**') >= 0,
-    'RULES-2P 的 R10 条款必须同步（旧措辞"不再连续（计数已+1）"自相矛盾，是 bug 的温床）');
+  /* （原判据里的"R10 条款必须同步"= 钉 RULES-2P 里那句整话，已于 v1.6.12 删除 ⇒ 见 METHODOLOGY 第 89 条）
+   *   上面两条钉的是**代码结构**（`!a.voided` 在 / 旧写法不许回来），那才是这条门真正的牙。 */
   /* 边界：**过载炮**的"出招即计次"是 R43 的**用户裁定明文** ⇒ 不许被这次修复顺手波及。 */
   ok(readFileSync('js/core/state.js', 'utf8').indexOf('if (key === R.SK.CANNON) p.cannonCount++;') >= 0,
     '过载炮 R43（被无效化仍计次）不得被顺手改掉 —— 它与环是**两条不同的明文**');
@@ -5451,8 +5451,8 @@ t('D96 R60 净化清除"自身全部持续状态"（含增益）+ 写入点只�
   ok(rs.indexOf('me.stickers = []; me.nightmare = false; me.tauntPending = false;') < 0,
     '旧的"两处各写一遍"写法不得回来');
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('**R60**') >= 0, 'RULES-2P 必须记下 R60');
-  ok(readFileSync('js/core/rules.js', 'utf8').indexOf('清除自身**全部持续状态**') >= 0,
-    '卡面描述必须同步（否则玩家看到的是旧的"只清负面"）');
+  /* （原来还钉"rules.js 的卡面描述必须写着『清除自身全部持续状态』"那句整话 —— v1.6.12 删除：
+   *   那是**措辞在册**，改一次文案就红，而真正防得住的是上面那条"两处各写一遍不得回来"的结构钉。） */
   });
 
 t('D97 环的**段长口径**（复核 §4）：必须按"用成了"数段（被无效化=断链）+ 不许只报"上环率"', function () {
@@ -5464,7 +5464,8 @@ t('D97 环的**段长口径**（复核 §4）：必须按"用成了"数段（被
   ok(pc.indexOf("e.key !== R.SK.RING) close(e.pid)") >= 0, '非环出手必须终止当前段（出手侧口径）');
   ok(pc.indexOf("e.type === 'voided'") >= 0 && pc.indexOf('close(e.pid);                                                // R10') >= 0,
     '被无效化必须终止当前段 —— 这是 R10 之后的真口径（所以必须读**事件**而不是选择序列）');
-  ok(pc.indexOf('会被单按刷高') >= 0, '必须写明旧口径"上环率"的失效方式（会被单按刷高）');
+  /* （原来这里还钉"探针源码里必须写明旧口径会被单按刷高"那句注释 —— v1.6.12 删除 ⇒ 同族第 89 条。
+   *   这条门真正的牙是上面那两条（段长两档必须在 + 被无效化必须断段）与下面那条（调用点必须在）。） */
   ok(pc.indexOf('extractRingRuns(st.events)') >= 0,
     '**调用点必须在**（v1.5.111 我第一版只写了定义、漏了调用 ⇒ 读数全是 0 —— 与 D28"接线在文件里≠在跑的那条路径上"同族）');
   });
@@ -5514,9 +5515,9 @@ t('D99 两处修正：原型制御 ≥3 转移（R24）+ 目标架势特征不�
     '**死特征**不得回来 —— `guardOf` 在决策时刻恒为 null（旧写法读的是本回合 actions）');
   ok(poCode.indexOf('(t.guardNext || t.baguaExtra || t.copiedGuard) ? 1 : 0') >= 0,
     '目标架势特征必须用**决策时刻真的存在**的信号（guardNext / baguaExtra / copiedGuard）');
-  ok(po.indexOf('无根据的突然集火') >= 0, 'policy.js 必须写下这条根因（否则下一个人又会以为它读得到）');
-      ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('三个人各用枪打') >= 0,
-    'RULES-2P 必须写下用户口径的三个例子（三枪各反 1 / 大雷+天火 / 单发只挡）');
+  /* （另有两条"整句在册"钉 —— policy.js 注释里必须写『无根据的突然集火』 ‖ RULES-2P 必须写『三个人各用枪打』那个例子 ——
+   *   已于 v1.6.12 删除，理由见 METHODOLOGY 第 89 条。根因说明该不该写是文档纪律，不是能 grep 的判据；
+   *   上面两条结构钉（死特征不得回来 + 必须用决策时刻存在的信号）才是这条门真正的牙。） */
 });
 
 t('D100 E4：挡下伤害奖励（env 单一来源 · 只认真的挡下 · 标度按实测 · 必须进 gFit）', function () {
@@ -7338,8 +7339,9 @@ t('D151 「攒钱→防御」量具：ep 必须**决策时实读**，因果必�
   /* 因果那一问：单档里 ep 与回合号是同一条轴 ⇒ 必须有两档才能配对判 */
   ok(/arg\('saver', 'hold'\)/.test(p) && /SAVER === 'cycle'/.test(p) && /CYCLE_AT = Number\(arg\('cycle-at', 4\)\)/.test(p),
     '必须提供 `hold`（钱一路堆）与 `cycle`（堆到 `--cycle-at` 就花掉）两档替身 —— 单档答不了"是不是因为对方有钱"');
-  ok(/按回合号的曲线/.test(p) && /同一回合号/.test(p),
-    '必须印"按回合号的曲线"并写明"同一回合号跨两档配对"才是因果判据（否则读者会拿单档的负相关当因果结论）');
+  /* （原来这里还钉"工具源码里必须出现『按回合号的曲线』与『同一回合号』两句话" —— v1.6.12 删除：
+   *   那是对**打印文案**的措辞钉。它想保的东西（"单档答不了因果、必须两档同回合号配对"）由上面那条结构钉守着：
+   *   `hold` 与 `cycle` 两档替身必须都在。⇒ 文案改了会红而判据没了也会红，前者是噪音、后者才是牙。） */
   ok(/该桶平均回合/.test(p), '每个 ep 桶必须并排印该桶平均回合 ⇒ 让"ep 轴 = 回合轴"这个混淆在读数里就看得见');
   ok(/玩家侧代价/.test(p) && /攒钱者夺冠/.test(p),
     '必须把代价落到玩家侧（局长中位/p90、平局率、攒钱者夺冠率）——只有设防率的报告会被读成"AI 变弱了"，而实际是它开始奖励龟缩');
@@ -7423,9 +7425,8 @@ t('D153 产品的探索口径必须钉住（temp0.15 + 档位表给的 ε/epsK/e
   ok(fbNames.length >= 2, '回退腿 兜底函数里必须真写出脚本名（实测拿到 ' + fbNames.join('/') + '）⇒ 空函数体 = 这条腿是装饰');
   const fbBad = fbNames.filter(function (k) { return typeof (Bots || {})[k] !== 'function'; });
   eq(fbBad.length, 0, '回退腿 兜底引用的脚本必须**真的在 `EpirusBots` 上**（否则又是"回退到不存在的名字"，与 DN 那个坑同形）：' + fbBad.join(','));
-  const m = readFileSync('docs/METHODOLOGY.md', 'utf8');
-  ok(/评测口径/.test(m) && /(档 id|DIFF_TIERS)/.test(m),
-    'METHODOLOGY 必须留着"口径 = 档 id + 包"这段（v1.6.6 前那段写的是"两槽口径不同"；改成别的说法时本文与所有读数必须一起改）');
+  /* （原来还钉 METHODOLOGY 里"评测口径 + 档 id/DIFF_TIERS"那一段必须在 —— v1.6.12 删除，理由见第 89 条。
+   *   口径这件事的真凭据在下面两条：代理栏与门禁输入必须**仍可分辨**（0.2 soft ‖ ε=0）。） */
   /* 反向钉：代理栏与门的输入必须**仍可分辨**（代理栏用 0.2 soft，门禁输入用 ε=0） */
   const pr = readFileSync('tools/promote-champion.mjs', 'utf8');
   ok(/fieldProfile\(params, 0\.2, 'soft'/.test(pr), 'D118 的产品代理栏必须继续显式带 0.2/soft（它存在的意义就是"另一口径"）');
