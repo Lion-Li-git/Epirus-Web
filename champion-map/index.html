@@ -19,6 +19,8 @@ canvas#cv{width:100%;height:100%;display:block;cursor:grab}
 #legend canvas{border:1px solid #8ea2c0;margin:3px 0}
 #stat{position:absolute;left:14px;top:10px;color:var(--dim);font-size:12px}
 label{color:var(--dim);display:flex;gap:6px;align-items:center}
+#winrow input[type=range]{width:84px}
+#winrow span{min-width:132px;font-variant-numeric:tabular-nums}
 #fit{position:absolute;left:14px;bottom:14px;color:var(--dim);font-size:11px;max-width:640px;line-height:1.5}
 #card{position:absolute;left:14px;bottom:34px;max-width:400px;max-height:42%;overflow:auto;background:rgba(19,26,41,.94);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.5;white-space:pre;display:none;z-index:7}
 #side{position:absolute;right:14px;top:172px;width:236px;max-height:calc(100% - 200px);overflow:auto;background:rgba(19,26,41,.94);border:1px solid var(--line);border-radius:6px;padding:8px 9px;font-size:11px;line-height:1.45;display:none;z-index:7}
@@ -31,7 +33,7 @@ label{color:var(--dim);display:flex;gap:6px;align-items:center}
 #side th{color:var(--dim);font-weight:400;text-align:left}
 #selftest{display:none;position:fixed;left:14px;top:40%;background:#101a2c;border:1px solid #6f83a8;color:#dce6f5;padding:8px 10px;border-radius:6px;font-size:11px;white-space:pre;z-index:30}
 </style></head><body>
-<div id="bar"><button data-m="1d">一维（F 排序带）</button><button data-m="map" class="on">地图（缩放/平移）</button><button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button><button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button><button data-m="tree">谱系（时间 × 家族）</button><button data-m="3db">三维行为轴</button><button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button><label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label><label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label><button id="reset">复位视图</button><button id="fitt">投影判据 ⓘ</button><label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label><label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="rel" title="底图默认是地形：蓝=低 → 红=高，中性灰在库内中位。&#10;这一档换成判决：以现役为分界，绿=比现役强 ‖ 红=不如 ‖ 灰=现役那一档。&#10;为什么不当默认：现役落在库内第 82 百分位，拿它当中性灰会把 82% 的图涂成一片红，底图就没地形了。">相对现役（绿=强 / 红=不如）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键 sc − 现役（实测）</option></select></label><label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label><label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">批次 <select id="batch"></select></label><button id="bside" title="历代冠军按**上线时刻**排的一列（上线时刻由 ship-scan.mjs 逐提交算槽文件权重指纹抽出，不是按提交标题点名）。点一枚加入对比">冠军序列 ⇄</button><label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label><label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label><span style="color:var(--dim)">底色</span><button data-bg="#0f1522">深蓝</button><button data-bg="#05070d">纯黑</button><button data-bg="#212a3b">石板</button><button data-bg="#e6ebf5">浅底</button><input type="color" id="bgc" value="#0f1522" title="自定义底色"><span id="bgn" style="color:var(--dim);font-size:11px"></span></div>
+<div id="bar"><button data-m="1d">一维（F 排序带）</button><button data-m="map" class="on">地图（缩放/平移）</button><button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button><button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button><button data-m="tree">谱系（时间 × 家族）</button><button data-m="3db">三维行为轴</button><button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button><label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label><label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label><button id="reset">复位视图</button><button id="fitt">投影判据 ⓘ</button><label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label><label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="rel" title="底图默认是地形：蓝=低 → 红=高，中性灰在库内中位。&#10;这一档换成判决：以现役为分界，绿=比现役强 ‖ 红=不如 ‖ 灰=现役那一档。&#10;为什么不当默认：现役落在库内第 82 百分位，拿它当中性灰会把 82% 的图涂成一片红，底图就没地形了。">相对现役（绿=强 / 红=不如）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键 sc − 现役（实测）</option></select></label><label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label><label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">批次 <select id="batch"></select></label><label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」—— 两根滑杆 = 全库 F 值域里的两个位置。&#10;窗口内：色带按**这一段**重新铺满（中位落中性灰，两端顶到色端）。&#10;窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时绿红分界看不见，页脚会响亮说一句。">F窗口 <input type="range" id="wlo" min="0" max="1" step="0.005" value="0"><input type="range" id="whi" min="0" max="1" step="0.005" value="1"><span id="wv">全范围</span></label><button id="wreset" title="把两端推回全库 F 的最小/最大（= 出厂态）">全范围</button><button id="bside" title="历代冠军按**上线时刻**排的一列（上线时刻由 ship-scan.mjs 逐提交算槽文件权重指纹抽出，不是按提交标题点名）。点一枚加入对比">冠军序列 ⇄</button><label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label><label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label><span style="color:var(--dim)">底色</span><button data-bg="#0f1522">深蓝</button><button data-bg="#05070d">纯黑</button><button data-bg="#212a3b">石板</button><button data-bg="#e6ebf5">浅底</button><input type="color" id="bgc" value="#0f1522" title="自定义底色"><span id="bgn" style="color:var(--dim);font-size:11px"></span></div>
 <div id="wrap"><canvas id="cv"></canvas><div id="stat"></div><div id="legend"></div><div id="card"></div><div id="side"></div><div id="fit" style="display:none">本图坐标与判据（fit.tsv ← e287-fit.mjs 实测，随机排点当地板）：<br>dims · method · Spearman · recall@k · r2_mean_raw · excess_r2_mean · excess_cols_gt0.1 · excess_r2_H · excess_r2_S&lt;br>2 · rand · -0.0256 · 1.96 · 0.0475 ·  · 0 ·  · &lt;br>2 · pca · 0.6582 · 11.70 · 0.1208 · 0.0733 · 5 · 0.1227 · 0.1281&lt;br>2 · pls · 0.2968 · 7.51 · -0.0160 · -0.0635 · 0 · 0.0422 · -0.0360&lt;br>2 · smacof · 0.6981 · 11.37 · 0.1241 · 0.0766 · 5 · 0.1014 · 0.1814&lt;br>2 · force · 0.7008 · 16.33 · 0.1698 · 0.1223 · 5 · 0.1067 · 0.3062&lt;br>3 · rand · 0.0090 · 1.95 · 0.0810 ·  · 0 ·  · &lt;br>3 · pca · 0.7537 · 16.95 · 0.2254 · 0.1444 · 10 · 0.1528 · 0.1788&lt;br>3 · pls · 0.2968 · 7.51 · -0.0159 · -0.0969 · 0 · 0.0516 · -0.0739&lt;br>3 · smacof · 0.7767 · 17.18 · 0.2213 · 0.1403 · 10 · 0.1560 · 0.1858&lt;br>3 · force · 0.7683 · 29.15 · 0.3381 · 0.2571 · 10 · 0.2255 · 0.4177</div></div>
 <div id="fam"></div>
 <div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>
@@ -97,6 +99,7 @@ var NSEL = 0, NSELUP = 0, NSELSOFT = 0, NSELDOWN = 0;
   else if (P[i].scd > 0 && pos < 6) NSELSOFT++;
   if (P[i].scd <= -2) NSELDOWN++; } })();
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
+  flo: 0, fhi: 1,       /* §E371 强度窗口的两端，存成"占全库 F 值域的比例"⇒ 出厂 (0,1) 就是全范围 */
   iso: 0, isoT: 0.30,   /* §E306 过线曲面：0=关 1=半透壳 2=只描边；isoT = 局部占比阈值。
                             §E312 默认从 0.5 降到 0.35：实测收缩后场的峰值只有 40%，50% 是"正确地什么都不画"，
                             默认值必须落在有东西可画的那一段，否则用户第一次开壳就看到空图。*/
@@ -134,11 +137,29 @@ var BATCH = [];                                    /* [{k:'2026-09-13', n:枚数
 (function () { var m = {}; for (var i = 0; i < N; i++) { var k = batchOf(P[i]); if (!k) continue; m[k] = (m[k] || 0) + 1; }
   Object.keys(m).sort().forEach(function (k, ix) { BATCH.push({ k: k, n: m[k], no: ix + 1 }); }); })();
 var VIS = new Uint8Array(N), NVIS = N;
+/* ===== §E371 强度窗口（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，
+ *   用满色域渲染中间的点而超出范围的不显示」）=====
+ *   切的是**头号尺 F**（= Hp/100 + T·S），不是"当前颜色那一档" —— 标签上就写 F窗口，
+ *   因为切到 Δε / 当选键那些档时"强度"仍然是 F，混着讲就会有两套读法。
+ *   两端存成**占全库 F 值域的比例**（0..1）⇒ 出厂态 (0,1) 天然就是"全范围"，
+ *   而且拖 T 那根滑杆（值域本身会跟着挪）时窗口不会莫名漂移。
+ *   ⚠ 与批次过滤有一条**故意的**差别：批次永远留着冠军（分界参照物不能被切没），
+ *     窗口一律不例外 —— 它表达的就是"我只看这一段"，留一个越界点在图上就是没听话。
+ *     代价（现役被切掉时绿红分界看不见）由页脚那句响亮的话兜。 */
+var _FR = { k: '', v: [0, 1] };
+function FR() { var k = st.T.toFixed(4); if (_FR.k === k) return _FR.v; _FR.k = k;
+  var a = Infinity, b = -Infinity; for (var i = 0; i < N; i++) { var v = Fv(P[i]); if (v < a) a = v; if (v > b) b = v; }
+  _FR.v = [a, b]; return _FR.v; }
+function winLo() { var r = FR(); return r[0] + st.flo * (r[1] - r[0]); }
+function winHi() { var r = FR(); return r[0] + st.fhi * (r[1] - r[0]); }
+function winFull() { return st.flo <= 1e-9 && st.fhi >= 1 - 1e-9; }
+function inWin(d) { if (winFull()) return true; var v = Fv(d); return v >= winLo() && v <= winHi(); }
 function recomputeVIS() { NVIS = 0;
   for (var i = 0; i < N; i++) { var d = P[i];
     /* 冠军与"加进对比的那几枚"**永远钉在图上**：切批次不能把参照物一起切没，
      *   否则绿红分界（= 现役那一档）与对比表会各自读到不同的分母。 */
     var keep = st.batch === 'all' || batchOf(d) === st.batch || !!d.lin || st.cmp.indexOf(d.id) >= 0;
+    if (keep && !inWin(d)) keep = false;   /* §E371 窗口：越界一律不画，冠军也不例外 */
     VIS[i] = keep ? 1 : 0; if (keep) NVIS++; } }
 recomputeVIS();
 /* 点大小 = 名次：第 1 名最小（1.7px 基准），最差那档最大（5.6px）—— 用户 ② 点名"名次越高，点越小"。
@@ -212,14 +233,15 @@ function rampRGBF(tt) { return LUTF[Math.max(0, Math.min(255, Math.round(tt * 25
  *     那是**判决**（能不能换掉现役），底图那件事是**地形**（谁高谁低）—— 两件事共用一根 18px 的条必然打架。
  *   ⚠ 只改颜色，不改几何：u01()/高度/势场仍是线性 min-max（把高度也换成秩会把"差 0.02"和"差 0.2"画成一样高）。
  *   ⚠ 分位的分母永远是**全库**（不是当前可见那些）⇒ 缓存键只需要 T，批次不参与（切批次只改"画哪些点"）。*/
-var FSRT = { key: '', all: null, up: null, dn: null, iv: 0, sU: 0.05, sD: 0.05 };
+var FSRT = { key: '', all: null, up: null, dn: null, win: null, iv: 0, sU: 0.05, sD: 0.05 };
 function p90(a) { var n = a.length; if (n < 2) return 0; return a[Math.min(n - 1, Math.round(0.9 * (n - 1)))]; }
-function splitSets() { var key = st.T.toFixed(4);
+function splitSets() { var key = st.T.toFixed(4) + '@' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
   if (FSRT.key === key) return FSRT;
-  var iv = Fv(INC), all = [], up = [], dn = [];
-  for (var i = 0; i < N; i++) { var v = Fv(P[i]); all.push(v); if (v >= iv) up.push(v - iv); else dn.push(iv - v); }
+  var iv = Fv(INC), all = [], up = [], dn = [], win = [];
+  for (var i = 0; i < N; i++) { var v = Fv(P[i]); all.push(v); if (inWin(P[i])) win.push(v); if (v >= iv) up.push(v - iv); else dn.push(iv - v); }
   all.sort(function (x, y) { return x - y; }); up.sort(function (x, y) { return x - y; }); dn.sort(function (x, y) { return x - y; });
-  FSRT = { key: key, all: all, up: up, dn: dn, iv: iv,
+  win.sort(function (x, y) { return x - y; });
+  FSRT = { key: key, all: all, up: up, dn: dn, win: win, iv: iv,
     /* 下限 0.02：某一侧只剩几枚时 p90 会趋零 ⇒ 整条色带被那一两枚点决定（0.5 一侧全饱和）。 */
     sU: Math.max(0.02, p90(up)), sD: Math.max(0.02, p90(dn)) };
   return FSRT; }
@@ -233,7 +255,11 @@ function qr(a, v) { var n = a.length; if (n < 2) return 0.5;
  *   改成以**中位**为心的绝对线性带：t = 0.5 + (F − 中位) / (2·span)，span = max(p95−中位, 中位−p05)（下限 0.02）。
  *   ⇒ 中位仍落 t=0.5（中性灰，图例那根针的位置不用动）；两端**按数值差线性铺**。
  *   ⚠ 代价如实说：p05…p95 之外的点会顶到色端（那是真实分布，不是归一化造的）。几何一律不动。 */
-function fCol(F) { var a = splitSets().all, n = a.length;
+/* §E371：窗口拉起来之后，色带的**中位与两端都换成窗口内那一段**（= 用户要的"用满色域渲染中间的点"）。
+ *   窗口是全范围时 win ≡ all ⇒ 与改之前逐字同形，不动任何已验收过的读数。
+ *   ⚠ 只有"地形"这一档（F / 底图）随窗口重铺；incPct()（现役在**库内**第几百分位）仍按全库算 ——
+ *     那句话的主语是"库"，把它悄悄换成"窗口"就是另一件事了。 */
+function fCol(F) { var s = splitSets(); var a = winFull() ? s.all : s.win, n = a.length;
   if (n < 2) return 0.5;
   var med = (a[(n - 1) >> 1] + a[n >> 1]) / 2;
   var lo = a[Math.min(n - 1, Math.round(0.05 * (n - 1)))], hi = a[Math.min(n - 1, Math.round(0.95 * (n - 1)))];
@@ -268,7 +294,7 @@ function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GR
    *   渐变沿用 ramp（与 F 同一条色标），但**分母换成实测到的那批的 p02..p98**，不用 0..100：
    *   全库页面 1st 落在 20~60%，用 0..100 会把所有点压成同一个蓝。*/
   if (st.color === 'hp') { if (d.hp === null) return '#5a6478';
-    return ramp(Math.max(0, Math.min(1, (d.hp - EPR[0]) / (EPR[1] - EPR[0] || 1)))); }
+    var epr = EPR(); return ramp(Math.max(0, Math.min(1, (d.hp - epr[0]) / (epr[1] - epr[0] || 1)))); }
   /* Δε = 考卷 − 页面：**发散色标，0 在正中**（红 = 开探索就掉 = 脆；蓝 = 开了反而强 = 吃探索）。
    *   不许用单向 ramp：单向色标会把"掉 1pt"和"掉 8pt"画成同色附近，而这条腿要读的正是符号。*/
   if (st.color === 'de') { if (d.de === null) return '#5a6478';
@@ -283,9 +309,17 @@ function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GR
   /* §E347 第 6 档「rel」：相对现役的发散带（绿 = 比现役强 ‖ 红 = 不如 ‖ 灰 = 现役那一档），底图同向。*/
   if (st.color === 'rel') return rampF(fColRel(Fv(d)));
   return ramp(fCol(Fv(d))); }   /* 「F」档回到蓝→灰→红（§E338 之前那样），不再拿现役当中性灰 */
-/* §E313 页面口径 1st 的显示区间（实测枚数的 p02..p98，同 GLR 的取法）*/
-var EPR = (function () { var a = P.map(function (d) { return d.hp; }).filter(function (v) { return v !== null && isFinite(v); }).sort(function (x, y) { return x - y; });
-  return a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [20, 60]; })();
+/* §E313 页面口径 1st 的显示区间（实测枚数的 p02..p98，同 GLR 的取法）。
+ *   §E371 分母换成**窗口内实测到的那一段** ⇒ 拉窗口时这条色标跟着用满
+ *   （"把旧包画进来，低端把整条色标拉塌"正是用户点名要能切掉的那种情况）。
+ *   窗口是全范围时逐字等于原来那一份。缓存键 = T + 窗口（与 FSRT 同一族）。 */
+var _EPR = { k: '', v: [20, 60] };
+function EPR() { var k = st.T.toFixed(4) + '@' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
+  if (_EPR.k === k) return _EPR.v; _EPR.k = k;
+  var a = P.filter(function (d) { return inWin(d); }).map(function (d) { return d.hp; })
+    .filter(function (v) { return v !== null && isFinite(v); }).sort(function (x, y) { return x - y; });
+  _EPR.v = a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [20, 60];
+  return _EPR.v; }
 function mix(c1, c2, t) {   /* 十六进制线性插值，t∈[0,1] */
   var p = function (c) { return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; };
   var A = p(c1), B = p(c2);
@@ -466,14 +500,19 @@ function buildBitmap(key) {
     dta[o + 3] = 255;
   }
   cg.putImageData(img, 0, 0);
-  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color, x0: nb.x0, x1: nb.x1, y0: nb.y0, y1: nb.y1,
+  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color, win: st.flo.toFixed(3) + ',' + st.fhi.toFixed(3),
+    x0: nb.x0, x1: nb.x1, y0: nb.y0, y1: nb.y1,
     nmed: nb.nmed, ax: nb.ax, by: nb.by, gx: nb.gx, gy: nb.gy };
 }
 function ensureField(key, bx, byy) {
   var k2 = key + '@' + Math.round(bx) + ',' + Math.round(byy);   /* 比例尺进缓存键：窗口尺寸变了才重建 */
   if (!NBK[k2]) buildNB(k2, bx, byy);
-  /* §E347：位图**内容**现在跟着色标档变（rel 与否是两条 LUT）⇒ 判据必须带 st.color，漏了就是切档拿旧位图 */
-  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color) buildBitmap(k2);
+  /* §E347：位图**内容**现在跟着色标档变（rel 与否是两条 LUT）⇒ 判据必须带 st.color，漏了就是切档拿旧位图
+   * §E371：同理还要带**强度窗口** —— 它重铺的是同一条色带，漏了就是"拉了滑杆、地形一点没变"。
+   *   ⚠ 邻居核 NBK 不进窗口：底图形状是**全库**那条 F 地形，窗口改的是"怎么上色 + 画哪些点"，
+   *   不是"地形本身长什么样"（每拉一次窗口就重算一次 IDW，读图人会以为库变了）。 */
+  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color ||
+    FL.win !== st.flo.toFixed(3) + ',' + st.fhi.toFixed(3)) buildBitmap(k2);
 }
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
 var boxes = [];
@@ -694,7 +733,7 @@ function drawTree(fr) {
    *   （与 drawMap 贴 FL.c 同一条路径），点用**同一个投影**抬起来 ⇒ 点与它那一行的名字必然对齐，
    *   因为两者出自同一张图、同一个矩阵 —— 前一版"只有右边的点进了 3D、左边标签还在原地"就是两套坐标各画各的。*/
   var ck = [w, h, TKX.toFixed(4), TKY.toFixed(4), TPX.toFixed(1), TPY.toFixed(1), fams.join(','), tmin, tmax, st.ink, st.dim, devicePixelRatio,
-    st.elev.toFixed(3), st.tTilt.toFixed(3), st.batch, NVIS].join('|');   /* §E333 抬升带会挤行距 ⇒ 立体度/倾角进缓存键；§E338 批次改了行表与每行枚数 ⇒ 批次与可见数也要进，否则切批次用的还是上一批那张底图 */
+    st.elev.toFixed(3), st.tTilt.toFixed(3), st.batch, NVIS, st.flo.toFixed(3) + ',' + st.fhi.toFixed(3)].join('|');   /* §E333 抬升带会挤行距 ⇒ 立体度/倾角进缓存键；§E338 批次改了行表与每行枚数 ⇒ 批次与可见数也要进，否则切批次用的还是上一批那张底图；§E371 窗口会重铺色带 ⇒ 两端必须进，否则拉窗口底图不变色 */
   if (!CHM || CHM.k !== ck) CHM = { k: ck, c: treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, ff) };
   var T3 = st.elev, uc = w / 2, vc = h / 2, cb = cam();   /* E352 DS: 相机基 cb（与地图同一套） */
   /* ===== §E369 渲染空间 = **整个窗口**（用户 10-06 深夜：「平面下某条纵轴往左的地方都不显示，立体下上下左三个方向都有截断」）=====
@@ -1248,7 +1287,12 @@ function drawBody() {
   document.getElementById('stat').textContent = N + ' 枚候选（按权重身份去重 = ' + NDUP + ' 种打法）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
     ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键 sc − 现役（实测 ' + NSEL + ' 枚 · 判据内赢 ' + NSELUP + ' · 判不动 ' + NSELSOFT + '）') : '训练方法家族') +
-    (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') + (n ? ' · 高亮 ' + n + ' 个家族' : '');
+    (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
+    /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
+     *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
+    (winFull() ? '' : ' · ⚠ F窗口 ' + winLo().toFixed(3) + '…' + winHi().toFixed(3) + ' ⇒ 只画 ' + nWin() + '/' + N + ' 枚'
+      + (inWin(INC) ? '' : ' ‖ **现役在窗外（已隐藏）**')) +
+    (n ? ' · 高亮 ' + n + ' 个家族' : '');
 }
 /* ⑥ 所有重绘走 rAF 合并：一帧最多画一次（拖动/滑杆连续事件下这是"卡死"的第二条来源）*/
 var queued = false;
@@ -1301,7 +1345,7 @@ function paintLegend(fr) {
   var s1 = document.createElement('div'); s1.textContent = st.color === 'gl' ? ('G(long) 高 ' + GLR[1].toFixed(1) + '（红）')
     : st.color === 'pm' ? ('✅ 可上槽 ' + NPPASS + ' 枚（绿）')
     : st.color === 'duel' ? ('✅ 两批种子都赢现役 ' + NWIN + ' 枚（绿）')
-    : st.color === 'hp' ? ('页面 1st 高 ' + EPR[1].toFixed(1) + '%（红）')
+    : st.color === 'hp' ? ('页面 1st 高 ' + EPR()[1].toFixed(1) + '%（红）')
     : st.color === 'de' ? ('Δε +' + 6 + 'pt（红 = 脆）')
     : st.color === 'sc' ? ('当选键 +8pt（绿 = 比现役强 · 实测 ' + NSEL + ' 枚 ‖ 判据内赢 ' + NSELUP + '）')
     : (st.color === 'fam' || st.color === 'seed') ? ('（点色 = ' + (st.color === 'fam' ? '家族' : 'RNG seed')
@@ -1311,7 +1355,7 @@ function paintLegend(fr) {
   var s2 = document.createElement('div'); s2.textContent = st.color === 'gl' ? ('G(long) 低 ' + GLR[0].toFixed(1) + '（蓝）· 闸要求 ≥3')
     : st.color === 'pm' ? ('⛔ 栽桩 ' + (NPRM - NPPASS) + ' 枚（红）· 灰 = 未测（' + (N - NPRM) + ' 枚）')
     : st.color === 'duel' ? ('⛔ 两批都输 ' + (NDUEL - NWIN - NFLIP) + ' 枚（红）· 黄 = 符号翻 ' + NFLIP + ' 枚 · 灰 = 未测（' + (N - NDUEL) + '）')
-    : st.color === 'hp' ? ('页面 1st 低 ' + EPR[0].toFixed(1) + '%（蓝）· 灰 = 未测（' + (N - NEPS) + ' 枚）')
+    : st.color === 'hp' ? ('页面 1st 低 ' + EPR()[0].toFixed(1) + '%（蓝）· 灰 = 未测（' + (N - NEPS) + ' 枚）')
     : st.color === 'de' ? ('Δε −6pt（蓝 = 开了探索反而强）· 白 = 不敏感 · 灰 = 未测（' + (N - NEPS) + '）‖ 脆（≥3.41）' + NBRIT + ' 枚 ‖ 吃探索（<0）' + NSTRONG + ' 枚')
     : st.color === 'sc' ? ('当选键 −8pt（红 = 落后现役）· 白 = 打平 · 橙 = 偏正但同号 <6/8（判不动 ' + NSELSOFT + ' 枚）· 灰 = 未测（' + (N - NSEL) + '）‖ 明显落后（≤−2）' + NSELDOWN + ' 枚')
     : (st.color === 'fam' || st.color === 'seed') ? ('（底图色标：下 = 地板 ‖ 上 = 好 ‖ 黄针 = 现役）')
@@ -1455,6 +1499,27 @@ function paintSide() {
 }
 document.getElementById('batch').addEventListener('change', function () { st.batch = this.value; recomputeVIS();
   buildFamBar(); paintSide(); req(); });
+/* ===== §E371 强度窗口（用户："默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示"）=====
+ *   两根滑杆各管一端，**不许交叉**（交叉就顶住对方留 0.005 的最小缝 ⇒ 图上永远有东西可看，
+ *   不会出现"拉到看不见还以为是数据没了"那种空图）。窗口存在的是比例，所以换 T 之后不漂移。 */
+function nWin() { var n = 0; for (var i = 0; i < N; i++) if (inWin(P[i])) n++; return n; }
+function paintWin() {
+  var el = document.getElementById('wv'); if (!el) return;
+  var lo = document.getElementById('wlo'), hi = document.getElementById('whi');
+  if (lo && +lo.value !== st.flo) lo.value = st.flo;
+  if (hi && +hi.value !== st.fhi) hi.value = st.fhi;
+  el.textContent = winFull() ? '全范围（' + N + ' 枚）'
+    : winLo().toFixed(3) + ' … ' + winHi().toFixed(3) + ' ‖ ' + nWin() + '/' + N + ' 枚在窗内';
+  el.style.color = (!winFull() && !inWin(INC)) ? '#ffb454' : 'var(--dim)';
+}
+function setWin(a, b) {
+  st.flo = Math.max(0, Math.min(0.995, a)); st.fhi = Math.min(1, Math.max(st.flo + 0.005, b));
+  recomputeVIS(); buildFamBar(); paintSide(); paintWin(); req();
+}
+document.getElementById('wlo').addEventListener('input', function () { setWin(+this.value, st.fhi); });
+document.getElementById('whi').addEventListener('input', function () { setWin(st.flo, +this.value); });
+document.getElementById('wreset').onclick = function () { setWin(0, 1); };
+paintWin();
 document.getElementById('bside').onclick = function () { st.side = !st.side; this.classList.toggle('on', !!st.side); paintSide(); };
 buildBatchSel();
 /* ⑤ 底色模块：预设 + 取色器，按亮度翻墨色（亮底必须深字，否则对比度就是用户说的那个问题）*/
@@ -1675,7 +1740,10 @@ document.getElementById('reset').onclick = function () {
 document.getElementById('fitt').onclick = function () { var el = document.getElementById('fit');
   var on = el.style.display === 'none'; el.style.display = on ? 'block' : 'none'; this.classList.toggle('on', on); };
 var Tt = document.getElementById('T');
-Tt.addEventListener('input', function () { st.T = +Tt.value; document.getElementById('Tv').textContent = (+Tt.value).toFixed(2); req(); });
+Tt.addEventListener('input', function () { st.T = +Tt.value; document.getElementById('Tv').textContent = (+Tt.value).toFixed(2);
+  /* §E371 窗口存的是"占全库 F 值域的比例"，而 T 一动 F 值域本身就在挪 ⇒ 必须重算可见集，
+   *   否则"窗口没动、点却该进该出"这件事会停在旧的一次判定上（图上表现为拖 T 时点数不变）。 */
+  recomputeVIS(); paintWin(); req(); });
 document.getElementById('color').addEventListener('change', function () { st.color = this.value;
   /* 换分组口径 ⇒ 高亮键的**含义**变了（家族号 vs seed），留着会把两回事混成一次高亮 ⇒ 必须清 */
   st.hi = {}; buildGroups(); buildFamBar(); req(); });
@@ -1688,7 +1756,7 @@ Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-bg]'), 
 document.getElementById('bgc').addEventListener('input', function () { setBg(this.value); });
 window.addEventListener('resize', function () { fit0(); NBK = {}; FL = null; req(); });   /* 比例尺变了 ⇒ 场要按新度量重建 */
 /* 深链：#mode=map&3d=1&T=0.2&labels=all&color=fam&hi=31,82&bg=%23e6ebf5（mode=2d/3dw 是旧链兼容，也方便无头截图复核）*/
-var HCL = null, HT_SEEN = 0;
+var HCL = null, HT_SEEN = 0, WSEEN = 0;
 (function () { var hs = (location.hash || '').replace(/^#/, '').split('&');
   for (var i = 0; i < hs.length; i++) { var kv = hs[i].split('='); if (kv.length !== 2) continue;
     if (kv[0] === 'mode') {
@@ -1715,10 +1783,15 @@ var HCL = null, HT_SEEN = 0;
     if (kv[0] === 'tilt') st.tTilt = Math.max(0, Math.min(1.15, +kv[1] || 0));
     if (kv[0] === 'shear') st.tShear = Math.max(-0.55, Math.min(0.55, +kv[1] || 0));
     if (kv[0] === 'ty') st.tY = +kv[1] || 0;
+    /* §E371 强度窗口两端也走深链 ⇒ 无头复核能钉住"只画某一段强度"那张图（不钉就没法复验色带重铺对不对）*/
+    if (kv[0] === 'flo') { st.flo = Math.max(0, Math.min(0.995, +kv[1] || 0)); WSEEN = 1; }
+    if (kv[0] === 'fhi') { st.fhi = Math.max(st.flo + 0.005, Math.min(1, +kv[1] || 1)); WSEEN = 1; }
     /* §E338 无头复验要能钉住"选中那枚"和"冠军序列开着"这两个状态（不点开就永远截不到新面板）*/
     if (kv[0] === 'side') st.side = +kv[1] ? true : false;
     if (kv[0] === 'sel') st.sel = decodeURIComponent(kv[1]);
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } }
+  /* 装载时那一次 recomputeVIS 跑在深链之前 ⇒ 不补这一句，#flo=/#fhi= 只会重铺色带、不会真的少画点。 */
+  if (WSEEN) recomputeVIS();
   /* §E312 两场各有各的刻度 ⇒ 深链只给 isof 不给 isot 时，必须把阈值换成**那场自己的**默认值
    *   （#isof=pot 若沿用 ok 场的 30%，会把整片云圈进去、纯度退回底率 = 一张什么都没圈的壳）。
    *   两个都给时按字面 honored，并把这条线记进那一场的格子，回来切场不会丢。*/
@@ -1727,6 +1800,9 @@ var HCL = null, HT_SEEN = 0;
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit;
     document.getElementById('b3dt').textContent = st.elev < 0.5 ? '立体' : '平面'; } })();
 fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide();
+/* §E371 深链 #flo=/#fhi= 是在上面那个解析循环里写进 st 的 ⇒ 那两根滑杆与读数必须在这里回压一次，
+ *   否则页面按窗口画、工具栏却写着"全范围"（实测截图抓到过：图里 134 枚，栏上 901 枚）。 */
+paintWin();
 if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) _cs.value = HCL; }   /* setMode 会把颜色重置成默认 ⇒ 深链的颜色最后再压回去（下拉框也要跟着压，否则"显示家族、画的是别的"）*/
 /* ===== §E338 页内自检（深链 #check=1 ⇒ 由 champion-map/shot.mjs --dump 跑）=====
  *   为什么要它：这批改动全是**交互**（命中/选中/高亮/批次/缩放跟点），而交互在截图里看不出来；
@@ -1746,7 +1822,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var all = NVIS, probeV = Fv(P[0]), cBefore = fCol(probeV);
   st.batch = BATCH.length ? BATCH[BATCH.length - 1].k : 'all'; recomputeVIS(); draw();
   T('批次过滤：切一批要少点', NVIS < all && NVIS > 0, NVIS + ' / ' + all);
-  T('批次过滤：冠军永远保留（分界参照物不能被切没）', P.every(function (d) { return !d.lin || VIS[nOf(d.id)] ? true : false; }));
+  /* §E371：这条只管**批次**不许切没冠军。窗口切它是另一件事（窗口的定义就是"越界一律不画"），
+   *   所以判据带上 inWin ⇒ 拿 #flo= 跑 check 时这条不会假红。 */
+  T('批次过滤：冠军永远保留（分界参照物不能被批次切没 ‖ 窗口切它不算这条）',
+    P.every(function (d) { return !d.lin || !inWin(d) || VIS[nOf(d.id)] === 1; }),
+    '冠军 ' + P.filter(function (d) { return d.lin; }).length + ' 枚 ‖ 在窗内的都还在图上');
   /* 切批次只该决定"画哪些点"，不该决定"颜色什么含义"（第一版按可见集算分位 = 跨批不可比，是个口径错）*/
   T('颜色：切批次不许挪分位（同一枚的色值必须一字不变）', fCol(probeV) === cBefore, cBefore.toFixed(3) + ' → ' + fCol(probeV).toFixed(3));
   st.batch = 'all'; recomputeVIS(); draw();
@@ -1801,8 +1881,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   ⇒ 中性灰被压成分界那一条线、82% 的图一律深红、少数 pockets 荧光绿（用户看到的大块硬边斑）。
    *   ⇒ 底图必须回到全库分位：库内中位那枚要落在中性灰上。这两条在 §E338 那一版都会红。*/
   var mdF = (function () { var a = P.map(function (d) { return Fv(d); }).sort(function (x, y) { return x - y; }); return a[a.length >> 1]; })();
-  T('底图（F 档）：库内中位那枚必须落在中性灰（离 0.5 不超 0.06）',
+  /* §E371：这条说的是**全库那一条色带**的中位 ⇒ 判之前先把窗口推回全范围，
+   *   否则拿 #flo=0.8 跑 check 时锚已经换到窗内中位上了（那是下面那条新判据管的事，不是这条）。 */
+  var SWIN = { flo: st.flo, fhi: st.fhi }; st.flo = 0; st.fhi = 1; recomputeVIS();
+  T('底图（F 档 ‖ 全范围态）：库内中位那枚必须落在中性灰（离 0.5 不超 0.06）',
     Math.abs(fCol(mdF) - 0.5) <= 0.06, '实测 ' + fCol(mdF).toFixed(3));
+  st.flo = SWIN.flo; st.fhi = SWIN.fhi; recomputeVIS();
   /* 图例那条带与底图必须是**同一条映射**（§E347 那次坏在"带画 LUT、图涂绿红"，我当时还拿一行"这一档不参与着色"糊过去）。
    *   ⚠ 这条原来判的是"针落在现役的**库内分位**上" —— E349 DS 把 fCol 换成"以中位为心的绝对线性带"之后那句话就不成立了
    *   （分位 0.818 ≠ 色带位置 0.671）。⇒ 判据换成端到端的像素核对，它不依赖 fCol 用哪种归一化：
@@ -1954,6 +2038,48 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     '落进旧剪裁区的点 ' + nProbe + ' 枚 ‖ 中心确实与四周不同的 ' + nPaint + ' 枚（要 ≥ 60%）‖ 画布宽 ' + cv.width + (missEx ? ' ‖ 例：' + missEx : ''));
   st.mode = SNAP2.mode; st.elev = SNAP2.e; st.yaw = SNAP2.y; st.pit = SNAP2.p;
   st.tX = SNAP2.tx; st.tY = SNAP2.ty; st.tKx = SNAP2.kx; st.tKy = SNAP2.ky;
+  /* ===== §E371 强度窗口（用户："默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示"）=====
+   *   四条各钉一句话：默认态什么都不切 ‖ 窗外一律不画（冠军也不例外）‖ 色带真的按窗内重铺（不是恒等于全库那一条）‖
+   *   现役被切掉时页面上必须有一句响亮的话（否则读图人不知道绿红分界指向一个不在图上的东西）。 */
+  var SNAPW = { flo: st.flo, fhi: st.fhi, batch: st.batch };
+  /* 装载一致性：深链 #flo= 写的是 st，而滑杆与读数写的是 HTML 默认值 ⇒ 初始化不回压一次，
+   *   页面就会"按窗口画、却写着全范围"（这张图我拿截图抓到过一次）。跑 check 时带 flo= 才会真的量到这一条。 */
+  var _wl = document.getElementById('wlo'), _wh = document.getElementById('whi');
+  T('强度窗口：装载后工具栏必须与 st 一致（带 #flo=/#fhi= 跑 check 时才真的量这一条）',
+    !!_wl && !!_wh && +_wl.value === st.flo && +_wh.value === st.fhi,
+    '滑杆 ' + (_wl ? _wl.value : '无') + '/' + (_wh ? _wh.value : '无') + ' ‖ st ' + st.flo + '/' + st.fhi);
+  var HASWIN = (location.hash || '').indexOf('flo=') >= 0 || (location.hash || '').indexOf('fhi=') >= 0;
+  T('强度窗口：不带深链时出厂态就是全范围，且一枚都不切（带 flo= 跑时这一条不适用，明细会说明）',
+    HASWIN || (winFull() && nWin() === N),
+    HASWIN ? '本次 hash 带了窗口 ⇒ 出厂态这一条不适用（下面三条才是本次要量的）'
+      : 'flo=' + st.flo + ' fhi=' + st.fhi + ' ‖ 窗内 ' + nWin() + ' / 全库 ' + N);
+  st.flo = 0.8; st.fhi = 1; recomputeVIS(); draw();
+  var outN = 0, wVs = [];
+  for (var q5 = 0; q5 < N; q5++) { var v5 = Fv(P[q5]);
+    if (VIS[q5]) { if (v5 < winLo() - 1e-12 || v5 > winHi() + 1e-12) outN++; wVs.push(v5); } }
+  T('强度窗口：画出来的每一枚都必须在窗内，而冠军也不例外（越界的一律不画）',
+    outN === 0 && NVIS < N && NVIS > 0 && inWin(INC) === (VIS[nOf(INC.id)] === 1),
+    '越界还在画的 ' + outN + ' 枚 ‖ 窗内 ' + NVIS + '/' + N + ' ‖ 现役在窗内=' + inWin(INC) + ' 而它在图上=' + (VIS[nOf(INC.id)] === 1));
+  /* ⚠ 这里**不判**"窗内两端顶到色带两端"。§E349 已经把色带定成"以中位为心的线性绝对带"
+   *   （用户点名"纯按分位映射就看不出绝对差距了"），而窗内那一段的分布是**下密上疏**：
+   *   实测低端 t=0.341 而不是 0 —— 那不是 bug，那是"差 0.02 与差 0.2 不许同色"这条规矩的必然结果。
+   *   窗口该负责的是**重新定锚**：同一枚的色值必须挪开、窗内中位必须正好是中性灰。 */
+  wVs.sort(function (x, y) { return x - y; });
+  var wMed = (wVs[(wVs.length - 1) >> 1] + wVs[wVs.length >> 1]) / 2;
+  var tLoW = fCol(wVs[0]), tHiW = fCol(wVs[wVs.length - 1]), tMedW = fCol(wMed);
+  st.flo = 0; st.fhi = 1; recomputeVIS();
+  var tLoAll = fCol(wVs[0]);
+  T('强度窗口：色带必须按窗内那一段重新定锚（同一枚挪开 ≥ 0.15，而窗内中位正好落中性灰）',
+    Math.abs(tLoAll - tLoW) >= 0.15 && Math.abs(tMedW - 0.5) <= 0.02 && tHiW >= 0.98,
+    '低端 全库 t=' + tLoAll.toFixed(3) + ' → 窗内 t=' + tLoW.toFixed(3) + '（位移要 ≥ 0.15）‖ 窗内中位 t=' + tMedW.toFixed(3)
+      + '（要 = 0.5）‖ 高端 t=' + tHiW.toFixed(3));
+  st.flo = 0.8; st.fhi = 1; recomputeVIS(); draw();
+  var stTxt = document.getElementById('stat').textContent;
+  /* ⚠ 这里不用正则：模板字符串会先把 d 吃成 d、/ 吃成 / ⇒ 页面里那条正则当场断掉（构建期的自解析会红，
+   *   但错误信息只说 "Unexpected token '.'"，很费时间）。所以这段一律用 indexOf。 */
+  T('强度窗口：现役被切掉时页面必须响亮说一句（不许静默画一张看不见分界的图）',
+    stTxt.indexOf('现役在窗外') >= 0 && stTxt.indexOf('只画 ') >= 0 && stTxt.indexOf(' 枚') >= 0, stTxt.slice(0, 170));
+  st.flo = SNAPW.flo; st.fhi = SNAPW.fhi; st.batch = SNAPW.batch; recomputeVIS(); draw(); paintWin();
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\n' + out.join('\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\n已经跑到：\n' + out.join('\n'); nbad++; }
