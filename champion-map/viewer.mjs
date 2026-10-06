@@ -287,6 +287,8 @@ var NRBASE = 0;
  *   ⇒ 修在生成器（lineage.mjs §E367：推断级 + 时间倒挂 ⇒ 退回 parentSrc=demoted、parentOf 留空、图上无边），
  *     这里保留一份**运行期守卫**：万一还有别的来路漏网，画虚线 + 页脚点名 + 自检判红，不许画成实线冒充血统。 */
 var TSBY = {};
+/* §E373 这一帧真的画了几条父边 —— 连线开关的判据要能读到它（页内自检拿它 + 像素差一起判，见 §E338 末尾）*/
+var NEDG = 0;
 (function () { for (var i = 0; i < N; i++) TSBY[P[i].id] = P[i].ts || ''; })();
 function backOf(d) {   /* 返回"父节点的 ts"，当且仅当它晚于本枚（空串 = 正常边 / 父不在图上）*/
   if (!d.pof || !d.ts) return '';
@@ -315,6 +317,7 @@ var NSEL = 0, NSELUP = 0, NSELSOFT = 0, NSELDOWN = 0;
   if (P[i].scd <= -2) NSELDOWN++; } })();
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
   flo: 0, fhi: 1,       /* §E371 强度窗口的两端，存成"占全库 F 值域的比例"⇒ 出厂 (0,1) 就是全范围 */
+  edges: 'all',         /* §E373 谱系图父边：'all' 全开 ‖ 'hash' 只画实录级 ‖ 'off' 一条不画（默认全开 = 已验收的那张图） */
   iso: 0, isoT: 0.30,   /* §E306 过线曲面：0=关 1=半透壳 2=只描边；isoT = 局部占比阈值。
                             §E312 默认从 0.5 降到 0.35：实测收缩后场的峰值只有 40%，50% 是"正确地什么都不画"，
                             默认值必须落在有东西可画的那一段，否则用户第一次开壳就看到空图。*/
@@ -474,12 +477,23 @@ function qr(a, v) { var n = a.length; if (n < 2) return 0.5;
  *   窗口是全范围时 win ≡ all ⇒ 与改之前逐字同形，不动任何已验收过的读数。
  *   ⚠ 只有"地形"这一档（F / 底图）随窗口重铺；incPct()（现役在**库内**第几百分位）仍按全库算 ——
  *     那句话的主语是"库"，把它悄悄换成"窗口"就是另一件事了。 */
-function fCol(F) { var s = splitSets(); var a = winFull() ? s.all : s.win, n = a.length;
-  if (n < 2) return 0.5;
-  var med = (a[(n - 1) >> 1] + a[n >> 1]) / 2;
-  var lo = a[Math.min(n - 1, Math.round(0.05 * (n - 1)))], hi = a[Math.min(n - 1, Math.round(0.95 * (n - 1)))];
-  var span = Math.max(0.02, Math.max(hi - med, med - lo));
-  return Math.max(0, Math.min(1, 0.5 + (F - med) / (2 * span))); }
+/* §E373 色带 = **一条线性映射**，两端由当前状态决定（用户 10-07 澄清："顶到色带端点的意思是重新做一下映射的
+ *   缩放罢了，目标是提高显示点的区分度"）：
+ *   全范围态 ⇒ 两端 = 中位 ± span，span = max(p95−中位, 中位−p05) —— 与 §E349 逐字同一条（换写法没换数学：
+ *     (F − (med−span)) / (2·span) ≡ 0.5 + (F − med)/(2·span)，所以已验收过的读数一枚都不会变）。
+ *   窗口态 ⇒ 两端 = **窗内那一段的最低/最高 F**，线性铺满 ⇒ 区分度拉满，而"等数值差 = 等色差"仍然成立
+ *     （这正是 §E349 当初否掉"纯按秩铺色"时要保的那条，窗口没理由破坏它）。
+ *   图例那两端的数字与"深浅怎么读"那句话都改读这一份，不许图上是一套、文字是另一套。 */
+function colBand() { var s = splitSets();
+  if (!winFull()) { var a = s.win; if (a.length < 2) return null;
+    return { lo: a[0], hi: a[a.length - 1], mode: 'win' }; }
+  var b = s.all, n = b.length; if (n < 2) return null;
+  var med = (b[(n - 1) >> 1] + b[n >> 1]) / 2;
+  var l5 = b[Math.min(n - 1, Math.round(0.05 * (n - 1)))], h95 = b[Math.min(n - 1, Math.round(0.95 * (n - 1)))];
+  var span = Math.max(0.02, Math.max(h95 - med, med - l5));
+  return { lo: med - span, hi: med + span, med: med, mode: 'lib' }; }
+function fCol(F) { var bd = colBand(); if (!bd) return 0.5;
+  return Math.max(0, Math.min(1, (F - bd.lo) / ((bd.hi - bd.lo) || 1))); }
 /* 「rel」档用的：离现役多远（两侧各按该侧 p90 距归一，绿=强 ‖ 红=不如 ‖ 灰=现役那一档） */
 function fColRel(F) { var s = splitSets();
   return F >= s.iv ? 0.5 + 0.5 * Math.min(1, (F - s.iv) / s.sU) : 0.5 - 0.5 * Math.min(1, (s.iv - F) / s.sD); }
@@ -1017,8 +1031,13 @@ function drawTree(fr) {
       if (!pb || !gb || Math.abs(pb[1] - gb[1]) < 1.5) continue;
       g.beginPath(); g.moveTo(gb[0], gb[1]); g.lineTo(pb[0], pb[1]); g.stroke(); } }
   g.strokeStyle = 'rgba(120,200,255,.30)'; g.lineWidth = 1 * devicePixelRatio;
-  var NBACK = 0;
+  var NBACK = 0; NEDG = 0;
   for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
+    /* §E373 连线开关（用户："给一个连线开关不然可能会太多挡住了"）：
+     *   'off' 一条不画；'hash' 只画包自己记下的那份权重哈希（§E367 之后最硬的一级来路）。 */
+    if (st.edges === 'off') break;
+    if (st.edges === 'hash' && dd.psrc !== 'hash') continue;
+    NEDG++;
     var a = pos[dd.pof], b = pos[dd.id];
     /* §E363 倒挂边（父的 ts 晚于子）走虚线 + 琥珀色：它连的是权重，不是"谁生了谁"的时间顺序 */
     var bk = backOf(dd);
@@ -1062,7 +1081,8 @@ function drawTree(fr) {
         : st.color === 'F' ? '（蓝 = 低 = 地板 → 红 = 高 = 好 ‖ 针 = 现役那一档 ‖ 它在库内第 ' + Math.round(incPct()) + ' 百分位）'
         : st.color === 'rel' ? '（绿 = 比现役强 ‖ 灰 = 就是现役那一档 ‖ 红 = 不如现役）'
         : (st.color === 'fam' || st.color === 'seed' ? '（点色 = ' + (st.color === 'fam' ? '训练方法家族' : 'RNG seed') + '，底图 = F 地形（蓝低 → 红高））' : '（蓝低 → 红高）')) +
-    ' · 淡蓝曲线 = 热启动父边' +
+    ' · ' + (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝曲线 = 热启动父边（画了 ' + NEDG + ' 条'
+      + (st.edges === 'hash' ? ' ‖ 只实录级' : '') + '）') +
     /* §E333 页脚是单行 fillText（画布不折行），所以两态**各说各的手势**而不是把两段接起来：
        立体态把"滚轮/Shift+滚轮/拖动"换成"右键压扁错切"—— 那三件在二维态已经说过，长度也就不会顶出右缘。
        （§E331 立体态必须自己说清"高度是哪把尺"：颜色按秩铺、几何仍是线性，不写就会被当成同一件事。画布不认 markdown ⇒ 这句里不许带 *）*/
@@ -1514,6 +1534,9 @@ function req() { if (queued) return; queued = true; requestAnimationFrame(functi
 
 function paintLegend(fr) {
   var lg = document.getElementById('legend'); lg.innerHTML = '';
+  /* §E373 色标两端的**值**由 colBand 说了算（窗口态 = 窗内两端）⇒ 图例必须读同一份，
+   *   否则就是"图上铺一套色、旁边写着另一套数"（这条本仓已经吃过几次，见 §E347 的教训）。 */
+  var CB = colBand() || { lo: fr[0], hi: fr[1], mode: 'lib' };
   /* §E349 DS（用户 10-06：「文字标记横着占了一大串，适当搞几个换行」）：容器收窄 + 允许换行，长句自己折成几行；色标条保持原尺寸（用户的蓝端曾被截掉过一回，已回滚）。 */
   /* §E349 DS：不要自动换行（用户否掉）—— 改成一行一句、按含义自己断行，能删的就删。 */
   lg.style.maxWidth = '260px'; lg.style.lineHeight = '1.35';
@@ -1565,7 +1588,7 @@ function paintLegend(fr) {
     : (st.color === 'fam' || st.color === 'seed') ? ('（点色 = ' + (st.color === 'fam' ? '家族' : 'RNG seed')
       + ' ‖ 底图 = F 地形（蓝 = 低 → 红 = 高）· 现役 = 库内第 ' + Math.round(incPct()) + ' 百分位（' + splitSets().up.length + ' 枚在它之上）')
     : st.color === 'rel' ? ('绿 = 比现役强（F 顶 ' + fr[1].toFixed(2) + '）')
-    : ('红 = 好（F 顶 ' + fr[1].toFixed(2) + ' ‖ 针 = 现役）');
+    : ('红 = 好（F 顶 ' + CB.hi.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最高' : '') + ' ‖ 针 = 现役）');
   var s2 = document.createElement('div'); s2.textContent = st.color === 'gl' ? ('G(long) 低 ' + GLR[0].toFixed(1) + '（蓝）· 闸要求 ≥3')
     : st.color === 'pm' ? ('⛔ 栽桩 ' + (NPRM - NPPASS) + ' 枚（红）· 灰 = 未测（' + (N - NPRM) + ' 枚）')
     : st.color === 'duel' ? ('⛔ 两批都输 ' + (NDUEL - NWIN - NFLIP) + ' 枚（红）· 黄 = 符号翻 ' + NFLIP + ' 枚 · 灰 = 未测（' + (N - NDUEL) + '）')
@@ -1574,13 +1597,15 @@ function paintLegend(fr) {
     : st.color === 'sc' ? ('当选键 −8pt（红 = 落后现役）· 白 = 打平 · 橙 = 偏正但同号 <6/8（判不动 ' + NSELSOFT + ' 枚）· 灰 = 未测（' + (N - NSEL) + '）‖ 明显落后（≤−2）' + NSELDOWN + ' 枚')
     : (st.color === 'fam' || st.color === 'seed') ? ('（底图色标：下 = 地板 ‖ 上 = 好 ‖ 黄针 = 现役）')
     : st.color === 'rel' ? ('红 = 不如现役（F 底 ' + fr[0].toFixed(2) + '）')
-    : ('蓝 = 地板（F 底 ' + fr[0].toFixed(2) + ' ‖ 灰 = 库内中位）');
+    : ('蓝 = 地板（F 底 ' + CB.lo.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最低' : ' ‖ 灰 = 库内中位') + '）');
   lg.appendChild(s1); lg.appendChild(c); lg.appendChild(s2);
   /* §E330/§E347：这根带**到底在量什么**必须印出来 —— 不印，读图的人会把"中性灰"当成"不好不坏的绝对电平"，
    *   而 F 档的灰其实是"库里第 50% 名"、rel 档的灰才是"就是现役那一档"。两档共用一个 18px 的条，说法完全不同。*/
   if (st.color === 'F' || st.color === 'rel') { var sm = document.createElement('div'); sm.style.color = 'var(--dim)';
     sm.textContent = st.color === 'F'
-      ? '针 = 现役 Ldemo（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 红 = 好 ‖ 蓝 = 地板 · 深浅 = 离中位的绝对差（±p05/p95，超出即钉两端））· 名次看点大小'
+      ? ('针 = 现役 Ldemo（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 红 = 好 ‖ 蓝 = 地板 · 深浅 = '
+        + (CB.mode === 'win' ? '窗内两端线性铺满（' + CB.lo.toFixed(3) + ' → ' + CB.hi.toFixed(3) + ' ‖ 等数值差 = 等色差）'
+          : '离中位的绝对差（±p05/p95，超出即钉两端）') + ' · 名次看点大小')
       : '针 = 现役那一档（灰）· 绿 = 比现役强 ‖ 红 = 不如 · 深浅 = 离现役多远（两侧各按该侧 p90 距归一：绿侧 '
         + splitSets().sU.toFixed(3) + ' ‖ 红侧 ' + splitSets().sD.toFixed(3) + '，超出即钉在两端）';
     lg.appendChild(sm); }
@@ -1725,6 +1750,7 @@ function paintWin() {
   el.textContent = winFull() ? '全范围（' + N + ' 枚）'
     : winLo().toFixed(3) + ' … ' + winHi().toFixed(3) + ' ‖ ' + nWin() + '/' + N + ' 枚在窗内';
   el.style.color = (!winFull() && !inWin(INC)) ? '#ffb454' : 'var(--dim)';
+  markWinPre();   /* 手拖过滑杆之后，档位按钮的高亮必须跟着掉（否则"看着还停在现役±10pt"其实是另一段） */
 }
 function setWin(a, b) {
   st.flo = Math.max(0, Math.min(0.995, a)); st.fhi = Math.min(1, Math.max(st.flo + 0.005, b));
@@ -1732,9 +1758,42 @@ function setWin(a, b) {
 }
 document.getElementById('wlo').addEventListener('input', function () { setWin(+this.value, st.fhi); });
 document.getElementById('whi').addEventListener('input', function () { setWin(st.flo, +this.value); });
-document.getElementById('wreset').onclick = function () { setWin(0, 1); };
+/* ===== §E373 默认档位（用户："你其实可以给几个默认的缩放档位（比如当前不加旧包就可以当做一个档位）"）=====
+ *   每个档位给一组 [flo, fhi]（仍是"占全库 F 值域的比例"），点一下就把两端推过去；手拖滑杆后高亮自动跟。
+ *   need:1 的两档**只在旧冠军真的被画进图里时出现**（要不要画 = 待裁），所以现在这张图上只会有两档 ——
+ *   这不是省事，是"库里没有的东西不许做成按钮"（点了没反应的那种控件比没有控件更坏）。 */
+function frOf(list) { var a = Infinity, b = -Infinity;
+  for (var i = 0; i < list.length; i++) { var v = Fv(list[i]); if (v < a) a = v; if (v > b) b = v; }
+  return [a, b]; }
+function noOld() { var a = []; for (var i = 0; i < N; i++) if (!P[i].old) a.push(P[i]); return a; }
+function onlyOld() { var a = []; for (var i = 0; i < N; i++) if (P[i].old) a.push(P[i]); return a; }
+function toFrac(lo, hi) { var r = FR(), w = (r[1] - r[0]) || 1; return [(lo - r[0]) / w, (hi - r[0]) / w]; }
+var WINPRE = [
+  { n: '全范围', t: '把两端推回全库 F 的最小/最大（= 出厂态）', f: function () { return [0, 1]; } },
+  { n: '不加旧包', need: 1, t: '只看今天这批候选（旧冠军不在这个视野里）= §E373 之前那张图的读法',
+    f: function () { var q = frOf(noOld()); return toFrac(q[0], q[1]); } },
+  { n: '现役±10pt', t: '以现役那一档为中心开 20pt 的窗 —— 读"谁真能换掉现役"用的就是这一段',
+    f: function () { var c = Fv(INC); return toFrac(c - 0.10, c + 0.10); } },
+  { n: '旧冠军段', need: 1, t: '只看曾在 3P 槽里住过的那批旧冠军（Hp 10.8~26.2 那一段）',
+    f: function () { var q = frOf(onlyOld()); return toFrac(q[0], q[1]); } },
+];
+function markWinPre() { var el = document.getElementById('winpre'); if (!el) return;
+  var bs = el.querySelectorAll('button');
+  for (var i = 0; i < bs.length; i++) { var w = WINPRE[+bs[i].getAttribute('data-i')]; if (!w) continue;
+    var r = w.f(); bs[i].classList.toggle('on', Math.abs(r[0] - st.flo) < 0.002 && Math.abs(r[1] - st.fhi) < 0.002); } }
+function buildWinPre() { var el = document.getElementById('winpre'); if (!el) return;
+  el.innerHTML = '';
+  var lab = document.createElement('span'); lab.textContent = '档位'; el.appendChild(lab);
+  var hasOld = false; for (var j = 0; j < N; j++) if (P[j].old) { hasOld = true; break; }
+  for (var i = 0; i < WINPRE.length; i++) { var w = WINPRE[i]; if (w.need && !hasOld) continue;
+    var b = document.createElement('button'); b.textContent = w.n; b.title = w.t; b.setAttribute('data-i', i);
+    b.onclick = function () { var r = WINPRE[+this.getAttribute('data-i')].f(); setWin(r[0], r[1]); };
+    el.appendChild(b); }
+  markWinPre(); }
+buildWinPre();
 paintWin();
 document.getElementById('bside').onclick = function () { st.side = !st.side; this.classList.toggle('on', !!st.side); paintSide(); };
+document.getElementById('edges').addEventListener('change', function () { st.edges = this.value; req(); });
 buildBatchSel();
 /* ⑤ 底色模块：预设 + 取色器，按亮度翻墨色（亮底必须深字，否则对比度就是用户说的那个问题）*/
 function lum(c) { var r = parseInt(c.slice(1, 3), 16) / 255, gg = parseInt(c.slice(3, 5), 16) / 255, b = parseInt(c.slice(5, 7), 16) / 255;
@@ -1758,6 +1817,15 @@ function setBg(c) {
 function shade(c, amt) { var r = Math.min(255, parseInt(c.slice(1, 3), 16) + amt), gg = Math.min(255, parseInt(c.slice(3, 5), 16) + amt),
   b = Math.min(255, parseInt(c.slice(5, 7), 16) + amt); return 'rgb(' + r + ',' + gg + ',' + b + ')'; }
 
+/* ===== §E372 指针 → 位图：一律按**实际 CSS 盒**换算，不再假设"1 CSS px = devicePixelRatio 位图像素" =====
+ *   那个假设只在 cv.width == rect.width·dpr 时成立，而装载序列 fit0(); buildFamBar(); … 会让盒子在 fit0 之后
+ *   再变一次（家族条 / 工具栏折行都会吃掉画布高度）⇒ 位图被 CSS 纵向压扁，而换算按 dpr 算
+ *   ⇒ **越靠下偏得越多**，正是用户 10-06 说的"光标要在偏下的地方才能选中当前点"（实测 1600×900：位图 597 高、盒子 581 高）。
+ *   另一半修法在下面那条 ResizeObserver：它让位图尺寸跟着盒子走 ⇒ 图不糊、比例也对。 */
+function ptrXY(clientX, clientY) { var r = cv.getBoundingClientRect();
+  return [(clientX - r.left) * (r.width > 0 ? cv.width / r.width : 1),
+    (clientY - r.top) * (r.height > 0 ? cv.height / r.height : 1)]; }
+
 /* ---- 交互：地图/三维 = 左键拖动平移、右键拖动旋转（用户 10-04 第三轮）；平面态滚轮以光标为中心 ---- */
 var drag = null, dragMoved = 0;
 cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
@@ -1765,7 +1833,6 @@ cv.addEventListener('mousedown', function (e) { dragMoved = 0;
   drag = [e.clientX, e.clientY, st.ox, st.oy, st.yaw, st.pit, st.ox3, st.oy3, e.button, st.tX, st.tY, st.tTilt, st.tShear]; });
 window.addEventListener('mouseup', function () { drag = null; });
 window.addEventListener('mousemove', function (e) {
-  var r = cv.getBoundingClientRect();
   if (drag) {
     var cdx = e.clientX - drag[0], cdy = e.clientY - drag[1];
     if (Math.abs(cdx) + Math.abs(cdy) > dragMoved) dragMoved = Math.abs(cdx) + Math.abs(cdy);
@@ -1797,7 +1864,7 @@ window.addEventListener('mousemove', function (e) {
     req(); return;
   }
   if (e.target !== cv) return;
-  var mx = (e.clientX - r.left) * devicePixelRatio, my = (e.clientY - r.top) * devicePixelRatio;
+  var mm = ptrXY(e.clientX, e.clientY), mx = mm[0], my = mm[1];
   var hit = pickAt(mx, my);
   var t2 = document.getElementById('tip');
   if (hit >= 0) { t2.style.display = 'block'; t2.style.left = (e.clientX + 14) + 'px'; t2.style.top = (e.clientY + 10) + 'px';
@@ -1824,8 +1891,7 @@ function pickAt(mx, my) {
  *   不加位移门就会"拖一下把选中清掉"。位移阈值按 CSS 像素算（4px），与 devicePixelRatio 无关。 */
 cv.addEventListener('click', function (e) {
   if (e.button !== 0) return;
-  var rr = cv.getBoundingClientRect();
-  var mx = (e.clientX - rr.left) * devicePixelRatio, my = (e.clientY - rr.top) * devicePixelRatio;
+  var cm = ptrXY(e.clientX, e.clientY), mx = cm[0], my = cm[1];
   if (dragMoved > 4) return;
   var hit = pickAt(mx, my);
   st.sel = hit >= 0 ? (st.sel === P[hit].id ? null : P[hit].id) : null;
@@ -1835,17 +1901,17 @@ cv.addEventListener('wheel', function (e) { e.preventDefault();
   var f = e.deltaY < 0 ? 1.12 : 1 / 1.12;
   if (st.mode === 'map') {
     if (st.elev < 0.5) {
-      var r = cv.getBoundingClientRect(), mx = (e.clientX - r.left) * devicePixelRatio, my = (e.clientY - r.top) * devicePixelRatio;
+      var wm = ptrXY(e.clientX, e.clientY), mx = wm[0], my = wm[1];
       /* 光标下数据点必须不动：u = mx − w/2 ⇒ ox' = u − f·(u − ox)（锚点在画布中心，不在原点）*/
       var u = mx - cv.width / 2, v = my - cv.height / 2;
       st.ox = u - (u - st.ox) * f; st.oy = v - (v - st.oy) * f; st.k *= f;
     } else { st.k = Math.max(0.2, Math.min(60, st.k * f)); st.ox *= f; st.oy *= f; }
   } else if (st.mode === '3db') st.zoom3 *= f;
   else if (st.mode === 'tree') {
-    /* 光标下的内容不动：screen = world·k + p ⇒ p' = m − f·(m − p)。夹在 0.4~12 倍（再小字糊成一团，再大只剩几个点）*/
-    var rt = cv.getBoundingClientRect(), mt = (e.clientX - rt.left) * devicePixelRatio, nt = (e.clientY - rt.top) * devicePixelRatio;
-    /* §E314 横纵分开：滚轮 = 横轴（时间）‖ Shift+滚轮 = 纵轴（家族行）。被改的那一轴以光标为锚，另一轴原地不动。 */
-    var rt = cv.getBoundingClientRect(), mt = (e.clientX - rt.left) * devicePixelRatio, nt = (e.clientY - rt.top) * devicePixelRatio;
+    /* 光标下的内容不动：screen = world·k + p ⇒ p' = m − f·(m − p)。夹在 0.4~12 倍（再小字糊成一团，再大只剩几个点）
+     *   §E314 横纵分开：滚轮 = 横轴（时间）‖ Shift+滚轮 = 纵轴（家族行）。被改的那一轴以光标为锚，另一轴原地不动。
+     *   ⚠ 这里原来把同一句 "var rt = …, mt = …, nt = …" **抄了两遍**（改动时插在新注释上面没删旧的）。 */
+    var wm2 = ptrXY(e.clientX, e.clientY), mt = wm2[0], nt = wm2[1];
     if (e.shiftKey) {
       var ky = Math.max(0.4, Math.min(12, st.tKy * f)); f = ky / st.tKy; st.tKy = ky;
       st.tY = nt - (nt - st.tY) * f;
@@ -1968,7 +2034,16 @@ Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-m]'), f
 Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-bg]'), function (b) { b.onclick = function () { var c = b.getAttribute('data-bg');
   document.getElementById('bgc').value = c; setBg(c); }; });
 document.getElementById('bgc').addEventListener('input', function () { setBg(this.value); });
+/* §E372 位图必须跟着 CSS 盒走。fit0() 原来只在装载与 window resize 时跑，而**盒子还会因为别的理由变**
+ *   （工具栏折行、家族条出现、侧栏展开）⇒ 位图留在旧尺寸 = 图被纵向压扁 = 点击越靠下越偏（用户 10-07 点名的病）。
+ *   ResizeObserver 盯的是盒子本身 ⇒ 这些理由一个都不漏。guard 判"差 > 1.5px 才动"：
+ *   fit0 改的是位图尺寸、不改盒子（CSS 是 100%×100%），本来就不回环，这一句挡的是 dpr 抖动时的连续重算。 */
+function refit() { var r = cv.getBoundingClientRect();
+  if (r.width < 2 || r.height < 2) return;
+  if (Math.abs(cv.width - r.width * devicePixelRatio) <= 1.5 && Math.abs(cv.height - r.height * devicePixelRatio) <= 1.5) return;
+  fit0(); NBK = {}; FL = null; req(); }
 window.addEventListener('resize', function () { fit0(); NBK = {}; FL = null; req(); });   /* 比例尺变了 ⇒ 场要按新度量重建 */
+if (typeof ResizeObserver !== 'undefined') { try { new ResizeObserver(refit).observe(cv); } catch (E) {} }
 /* 深链：#mode=map&3d=1&T=0.2&labels=all&color=fam&hi=31,82&bg=%23e6ebf5（mode=2d/3dw 是旧链兼容，也方便无头截图复核）*/
 var HCL = null, HT_SEEN = 0, WSEEN = 0;
 (function () { var hs = (location.hash || '').replace(/^#/, '').split('&');
@@ -2017,6 +2092,9 @@ fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); 
 /* §E371 深链 #flo=/#fhi= 是在上面那个解析循环里写进 st 的 ⇒ 那两根滑杆与读数必须在这里回压一次，
  *   否则页面按窗口画、工具栏却写着"全范围"（实测截图抓到过：图里 134 枚，栏上 901 枚）。 */
 paintWin();
+/* §E372 这一串里 fit0() 排在最前，而 buildFamBar()/paintSide() 会把画布盒子改一次（家族条出现、工具栏折行）
+ *   ⇒ 首帧之前必须再对一次尺寸。RO 是异步的，救不了第一帧。 */
+refit();
 if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) _cs.value = HCL; }   /* setMode 会把颜色重置成默认 ⇒ 深链的颜色最后再压回去（下拉框也要跟着压，否则"显示家族、画的是别的"）*/
 /* ===== §E338 页内自检（深链 #check=1 ⇒ 由 champion-map/shot.mjs --dump 跑）=====
  *   为什么要它：这批改动全是**交互**（命中/选中/高亮/批次/缩放跟点），而交互在截图里看不出来；
@@ -2031,6 +2109,19 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   try {
   function T(name, cond, got) { if (cond) { nok++; out.push('PASS ' + name); }
     else { nbad++; out.push('FAIL ' + name + (got === undefined || got === null ? '' : ' ‖ 实测 ' + got)); } }
+  /* ===== §E372 装载完成时的"位图 vs CSS 盒"（用户 10-07：「3d 下点的位置与光标选定的坐标似乎有偏移，
+   *   光标要在偏下的地方才能选中当前点；三维行为轴开过线曲面时也是」）=====
+   *   ⚠ 这条必须跑在下面那句 fit0() **之前** —— fit0 会把位图重新对齐到当前盒子，跑在它后面永远量不到装载时的错位。
+   *   错位来源候选：装载序列是 fit0(); buildFamBar(); … ⇒ 家族条/侧栏把画布盒子撑改之后位图没跟着重算
+   *   ⇒ CSS 把位图纵向压扁，而鼠标换算按 devicePixelRatio 算 ⇒ 越靠下偏得越多，方向正是"要点下面一点才中"。
+   *   受控标签常常没有视口（实测 canvas 1×1）⇒ 那种环境下不适用，明写出来而不是假绿。 */
+  var _rr0 = cv.getBoundingClientRect();
+  T('指针换算：装载完成时位图尺寸必须等于 CSS 盒 × dpr（不等 ⇒ 越靠下点得越偏）',
+    _rr0.width < 2 || _rr0.height < 2 ||
+    (Math.abs(cv.width - _rr0.width * devicePixelRatio) <= 1.5 && Math.abs(cv.height - _rr0.height * devicePixelRatio) <= 1.5),
+    _rr0.width < 2 ? '无视口 ⇒ 本条不适用（位图 ' + cv.width + '×' + cv.height + '）'
+      : '位图 ' + cv.width + '×' + cv.height + ' ‖ CSS ' + Math.round(_rr0.width) + '×' + Math.round(_rr0.height)
+        + ' × dpr ' + devicePixelRatio + ' ⇒ 纵向比 ' + (cv.height / (_rr0.height * devicePixelRatio)).toFixed(3));
   fit0(); draw();
   /* ① 批次过滤真的减人 */
   var all = NVIS, probeV = Fv(P[0]), cBefore = fCol(probeV);
@@ -2274,26 +2365,114 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('强度窗口：画出来的每一枚都必须在窗内，而冠军也不例外（越界的一律不画）',
     outN === 0 && NVIS < N && NVIS > 0 && inWin(INC) === (VIS[nOf(INC.id)] === 1),
     '越界还在画的 ' + outN + ' 枚 ‖ 窗内 ' + NVIS + '/' + N + ' ‖ 现役在窗内=' + inWin(INC) + ' 而它在图上=' + (VIS[nOf(INC.id)] === 1));
-  /* ⚠ 这里**不判**"窗内两端顶到色带两端"。§E349 已经把色带定成"以中位为心的线性绝对带"
-   *   （用户点名"纯按分位映射就看不出绝对差距了"），而窗内那一段的分布是**下密上疏**：
-   *   实测低端 t=0.341 而不是 0 —— 那不是 bug，那是"差 0.02 与差 0.2 不许同色"这条规矩的必然结果。
-   *   窗口该负责的是**重新定锚**：同一枚的色值必须挪开、窗内中位必须正好是中性灰。 */
+  /* §E373（用户澄清："顶到色带端点的意思是重新做一下映射的缩放罢了，目标是提高显示点的区分度"）：
+   *   窗口态判四件事 —— 两端真的顶到色带端点、**仍是线性**（等数值差 = 等色差，§E349 那条不许破）、
+   *   中点与四分之一处必须正好落在 0.5 / 0.25（这两条合起来才排掉"随便贴两端"），
+   *   而同一枚在全库态下不许也贴地板（那才叫"重做了缩放"而不是恒贴两端）。 */
   wVs.sort(function (x, y) { return x - y; });
-  var wMed = (wVs[(wVs.length - 1) >> 1] + wVs[wVs.length >> 1]) / 2;
-  var tLoW = fCol(wVs[0]), tHiW = fCol(wVs[wVs.length - 1]), tMedW = fCol(wMed);
+  var q1 = wVs[0], q3 = wVs[wVs.length - 1], qm = (q1 + q3) / 2, qq = q1 + (q3 - q1) / 4;
+  var tLoW = fCol(q1), tHiW = fCol(q3), tMedW = fCol(qm), tQW = fCol(qq);
   st.flo = 0; st.fhi = 1; recomputeVIS();
-  var tLoAll = fCol(wVs[0]);
-  T('强度窗口：色带必须按窗内那一段重新定锚（同一枚挪开 ≥ 0.15，而窗内中位正好落中性灰）',
-    Math.abs(tLoAll - tLoW) >= 0.15 && Math.abs(tMedW - 0.5) <= 0.02 && tHiW >= 0.98,
-    '低端 全库 t=' + tLoAll.toFixed(3) + ' → 窗内 t=' + tLoW.toFixed(3) + '（位移要 ≥ 0.15）‖ 窗内中位 t=' + tMedW.toFixed(3)
-      + '（要 = 0.5）‖ 高端 t=' + tHiW.toFixed(3));
+  var tLoAll = fCol(q1);
+  T('强度窗口：两端顶到色带端点、中间仍是线性（等数值差 = 等色差），而同一枚在全库态不许也贴地板',
+    tLoW <= 0.001 && tHiW >= 0.999 && Math.abs(tMedW - 0.5) <= 0.001 && Math.abs(tQW - 0.25) <= 0.001 && tLoAll > 0.5,
+    '低端 t=' + tLoW.toFixed(3) + ' 高端 t=' + tHiW.toFixed(3) + ' 中点 t=' + tMedW.toFixed(3) + ' 四分之一 t=' + tQW.toFixed(3)
+      + ' ‖ 同一枚（全库态）t=' + tLoAll.toFixed(3) + '（要 > 0.5）');
   st.flo = 0.8; st.fhi = 1; recomputeVIS(); draw();
   var stTxt = document.getElementById('stat').textContent;
   /* ⚠ 这里不用正则：模板字符串会先把 \d 吃成 d、\/ 吃成 / ⇒ 页面里那条正则当场断掉（构建期的自解析会红，
    *   但错误信息只说 "Unexpected token '.'"，很费时间）。所以这段一律用 indexOf。 */
   T('强度窗口：现役被切掉时页面必须响亮说一句（不许静默画一张看不见分界的图）',
     stTxt.indexOf('现役在窗外') >= 0 && stTxt.indexOf('只画 ') >= 0 && stTxt.indexOf(' 枚') >= 0, stTxt.slice(0, 170));
+  /* 档位：按钮不能只是"写着好看"，点下去必须真的把两端推到它自己说的那一段（含夹取后的值）。 */
+  var _bps = document.getElementById('winpre').querySelectorAll('button'), preBad = [], hasOld = false;
+  for (var oi = 0; oi < N; oi++) if (P[oi].old) { hasOld = true; break; }
+  for (var pi = 0; pi < _bps.length; pi++) {
+    var w = WINPRE[+_bps[pi].getAttribute('data-i')], r = w.f();
+    var ef = Math.max(0, Math.min(0.995, r[0])), eh = Math.min(1, Math.max(ef + 0.005, r[1]));
+    var bk = { a: st.flo, b: st.fhi };
+    _bps[pi].click();
+    if (Math.abs(st.flo - ef) > 0.002 || Math.abs(st.fhi - eh) > 0.002) preBad.push(w.n + '→(' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3) + ') 应为 (' + ef.toFixed(3) + ',' + eh.toFixed(3) + ')');
+    setWin(bk.a, bk.b); }
+  T('强度窗口：档位按钮点下去要真的推到它自己说的那一段，且库里没有旧包时不许出现"旧包"那两档',
+    preBad.length === 0 && _bps.length === (hasOld ? 4 : 2),
+    '按钮 ' + _bps.length + ' 个（库里有旧包=' + hasOld + ' ⇒ 应有 ' + (hasOld ? 4 : 2) + '）' + (preBad.length ? ' ‖ 不接电的：' + preBad.join(' ‖ ') : ''));
   st.flo = SNAPW.flo; st.fhi = SNAPW.fhi; st.batch = SNAPW.batch; recomputeVIS(); draw(); paintWin();
+  /* ===== §E373 连线开关（用户："给一个连线开关不然可能会太多挡住了"）=====
+   *   两件套：① 帧计数器（这一帧真走了几条边的绘制）② 像素差（关掉之后画面**真的**少了东西）。
+   *   只读 ① 就是"信代码自己的说法"——那只说明循环走没走，不说明画面上有没有线（第 91 条同一族）。 */
+  var SNAPM2 = { mode: st.mode, edges: st.edges };
+  st.mode = 'tree'; st.elev = 0; st.edges = 'all'; draw();
+  var eAll = NEDG, pxAll = null;
+  try { pxAll = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E1) {}
+  st.edges = 'off'; draw(); var eOff = NEDG, diffOff = -1;
+  if (pxAll) { var now2 = g.getImageData(0, 0, cv.width, cv.height).data; diffOff = 0;
+    for (var qe = 0; qe + 2 < now2.length; qe += 28)
+      if (now2[qe] !== pxAll[qe] || now2[qe + 1] !== pxAll[qe + 1] || now2[qe + 2] !== pxAll[qe + 2]) diffOff++; }
+  st.edges = 'hash'; draw(); var eHash = NEDG;
+  T('连线开关：全开 / 只实录 / 关掉 三态各画多少条要说得出，且关掉之后画面真的少了东西',
+    eAll > 0 && eOff === 0 && eHash >= 1 && eHash < eAll && diffOff > 200,
+    '全开 ' + eAll + ' 条 ‖ 只实录 ' + eHash + ' 条 ‖ 关掉 ' + eOff + ' 条 ‖ 关掉与全开的采样像素差 ' + diffOff);
+  st.mode = SNAPM2.mode; st.edges = SNAPM2.edges; draw();
+  /* ===== §E372 真往返（用户点名的偏移病）：派发一次真点击，位置取这枚**画出来的地方** ⇒ 选中的必须是它自己。
+   *   两层都不许信：① 不读 pickAt（那条只量"命中表与几何一致"，而用户报的是指针 → 位图那一步：rect、dpr、
+   *      CSS 把位图压扁全在里面）；② **也不拿 scr 当"点在哪"** —— 第一版就是拿 scr 反算 clientX/Y，
+   *      结果把命中表改成记"脚下"仍然 35/0 全绿（变异实测），因为它点哪儿就按哪儿判。
+   *   现在改成找**选中环的像素**（#ffd166 全画布只有这一枚用，图例那根针画在另一张 canvas 上）的包围盒中心。
+   *   两枚都要过：**最靠下**放大指针换算的比例误差（错位随 y 线性增长 = 用户报的方向），
+   *   **最靠上**放大"命中记脚下、画的是抬起来那点"的分离（立体态最高点抬得最多）。
+   *   ⚠ 只测最下面那枚是错的：它的抬升量 ≈ 0 ⇒ 上面那个变异根本测不出来（第一版就这么漏过去的）。 */
+  function drawnCentre(id) {
+    var i = nOf(id); if (i < 0 || !scr[i]) return null;
+    st.sel = id; draw();
+    var d = null; try { d = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E) { return null; }
+    var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, n = 0;
+    for (var y = 0; y < cv.height; y++) { var row = y * cv.width;
+      for (var x = 0; x < cv.width; x++) { var o = (row + x) * 4;
+        if (d[o] > 235 && d[o + 1] > 185 && d[o + 1] < 225 && d[o + 2] > 75 && d[o + 2] < 125) {
+          n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } } }
+    st.sel = null; draw();
+    return n > 24 ? [(x0 + x1) / 2, (y0 + y1) / 2, n] : null;
+  }
+  function roundTrip(setup) {
+    var bak = { mode: st.mode, e: st.elev, z: st.zoom3, k: st.k, iso: st.iso };
+    setup();
+    var rr = cv.getBoundingClientRect(), lo = -1, hi = -1, loY = -12, hiY = 1e9, fails = [], n = 0, dd = [];
+    var fmax = -1, fmin = 2;   /* 抬升量最大的两枚：u01 是 F 的单调映射 ⇒ F 最高与最低里必有一头贴着色带顶（抬得最高） */
+    if (rr.width < 2) fails.push('无视口 ⇒ 本条不适用');
+    else {
+      for (var i = 0; i < N; i++) { var s = scr[i]; if (!s || !VIS[i]) continue;
+        if (s[0] < 8 || s[0] > cv.width - 8 || s[1] < 8 || s[1] > cv.height - 8) continue;
+        if (s[1] > loY) { loY = s[1]; lo = i; }
+        if (s[1] < hiY) { hiY = s[1]; hi = i; }
+        var fv = Fv(P[i]); if (fv > fmax) { fmax = fv; } if (fv < fmin) { fmin = fv; } }
+      var pick = [], seen = {};
+      for (var i2 = 0; i2 < N; i2++) { if (!VIS[i2] || !scr[i2]) continue;
+        var s2 = scr[i2]; if (s2[0] < 8 || s2[0] > cv.width - 8 || s2[1] < 8 || s2[1] > cv.height - 8) continue;
+        var fv2 = Fv(P[i2]);
+        if (i2 === lo || i2 === hi || fv2 === fmax || fv2 === fmin) { if (!seen[i2]) { seen[i2] = 1; pick.push(i2); } } }
+      for (var q = 0; q < pick.length; q++) {
+        var t = pick[q], id = P[t].id, dc = drawnCentre(id); n++;
+        if (!dc) { fails.push(id + '(画布上找不到它的选中环)'); continue; }
+        dd.push(id.slice(0, 6) + ':' + Math.round(dc[1] - scr[t][1]));
+        var cx = rr.left + dc[0] / devicePixelRatio, cy = rr.top + dc[1] / devicePixelRatio;
+        st.sel = null;
+        cv.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: cx, clientY: cy }));
+        cv.dispatchEvent(new MouseEvent('click', { button: 0, clientX: cx, clientY: cy }));
+        var got = st.sel || '(没选中任何东西)';
+        if (got !== id) fails.push(id + ' 环心(' + Math.round(dc[0]) + ',' + Math.round(dc[1]) + ') 却选中 '
+          + got + ' ‖ scr=(' + Math.round(scr[t][0]) + ',' + Math.round(scr[t][1]) + ')');
+      }
+    }
+    st.sel = null; st.mode = bak.mode; st.elev = bak.e; st.zoom3 = bak.z; st.k = bak.k; st.iso = bak.iso;
+    recomputeVIS(); draw();
+    return { ok: fails.length === 0 && n >= 2,
+      msg: fails.join(' ‖ ') || (n + ' 枚全对（屏幕上下两端 + F 两端）‖ 环心与 scr 的纵向差 ' + dd.join('/') + 'px') };
+  }
+  var rt1 = roundTrip(function () { st.mode = 'map'; st.elev = 1; draw(); });
+  T('指针往返（立体地图 · 最上与最下两枚）：按**画出来的环**派发真点击，选中的必须是它自己', rt1.ok, rt1.msg);
+  var rt2 = roundTrip(function () { st.mode = '3db'; st.iso = 1; draw(); });
+  T('指针往返（三维行为轴 + 过线曲面开着）：同一条，开壳不许把命中挪走', rt2.ok, rt2.msg);
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\\n' + out.join('\\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\\n已经跑到：\\n' + out.join('\\n'); nbad++; }
@@ -2359,7 +2538,8 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
 '<label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">批次 <select id="batch"></select></label>' +
 '<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」—— 两根滑杆 = 全库 F 值域里的两个位置。&#10;窗口内：色带按**这一段**重新铺满（中位落中性灰，两端顶到色端）。&#10;窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时绿红分界看不见，页脚会响亮说一句。">F窗口 <input type="range" id="wlo" min="0" max="1" step="0.005" value="0"><input type="range" id="whi" min="0" max="1" step="0.005" value="1"><span id="wv">全范围</span></label>' +
-'<button id="wreset" title="把两端推回全库 F 的最小/最大（= 出厂态）">全范围</button>' +
+'<span id="winpre" style="display:flex;gap:4px;align-items:center"></span>' +
+'<label id="edgerow" title="§E373（用户 10-07：「给一个连线开关不然可能会太多挡住了」）&#10;谱系图的热启动父边：全开 = 四种来路都画（hash/seedpack/arm/slot-at-time）；&#10;只实录 = 只画包自己记下的权重哈希那一级（§E367 之后最硬的一级）；&#10;关掉 = 一条都不画，点云本身不受影响。&#10;默认仍是全开：这一版的图就是按全开验收过的，改默认等于偷偷换读法。">连线 <select id="edges"><option value="all">全开</option><option value="hash">只实录</option><option value="off">关掉</option></select></label>' +
 '<button id="bside" title="历代冠军按**上线时刻**排的一列（上线时刻由 ship-scan.mjs 逐提交算槽文件权重指纹抽出，不是按提交标题点名）。点一枚加入对比">冠军序列 ⇄</button>' +
 '<label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label>' +
 '<label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label>' +
