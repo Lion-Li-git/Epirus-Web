@@ -1942,37 +1942,8 @@ t('D225 §E275/§E284 摄魂指法的"残血只在**探索里**软提升"档（e
   ok(dnLines.indexOf('顶成') < 0, '⑨h **显式给了就不许顶**（实测 `[shipdrain]` 行里含顶档=' + (dnLines.indexOf('顶成') >= 0) + '）⇒ "旗标优先"是这条纪律的另一半');
   ok(/引擎档 = 1/.test(dnLines), '⑨i 显式档也要由引擎回读后印在**它自己那行**里（实测该行=' + (dnLines.split('\n')[0] || '(没有 shipdrain 行)').slice(0, 90) + '）');
 
-  /* ===== ⑩ 文档里"默认"两个字必须跟**引擎回读**一致（v1.6.4 刚踩的那颗）=====
-   * 起因：这一档翻成默认开之后，README 里那一节（v1.6.0 写的"③ …默认留 0=关"）**没人回去改** ⇒
-   * 下一个人照 README 会去关一个已经是开的开关，或者更糟：把"默认关"当成事实写进新的裁定里。
-   * 这正是门 D224⑩ 那条腿的反方向形状（那条钉"文档不许指一个已删的旋钮"，这条钉"文档不许说反现在的默认值"），
-   * 而且它比静态钉更严：**判据里的默认值是从 `evo.js` 现读的**，翻档时两边一起动，文档不动就红。
-   * ⚠ 只判 README 与 CHANGELOG 的**当前版条目**（第一个 `## v` 到第二个之间）——
-   *   历史条目写"当时默认 0=关"是**正确的记录**，不许被今天的默认值判红（本仓的账是逐版冻结的）。 */
-  const dnDefault = Number((/let DRAIN_PUSH = (\d+);/.exec(evoSrc) || [])[1]);
-  ok(dnDefault === 0 || dnDefault >= 1, '⑩a 能从 `evo.js` 读出 `DRAIN_PUSH` 的默认整数（读不到 = 这条腿变成装饰）');
-  const onNow = dnDefault >= 1;
-  const OFF_WORDS = ['默认 0=关', '默认留 0', '默认 0 ⇒', '默认值是 0', '默认关'];
-  const ON_WORDS = ['默认 1=开', '默认 1（开）', '默认开', '起**默认 1=开**'];
-  const badWords = onNow ? OFF_WORDS : ON_WORDS;
-  const scanDocs = function (label, text) {
-    const hits = [];
-    text.split('\n').forEach(function (l, i) {
-      if (l.indexOf('DRAIN_PUSH') < 0) return;
-      for (const w of badWords) if (l.indexOf(w) >= 0) hits.push(label + ':' + (i + 1) + '「' + w + '」');
-    });
-    return hits;
-  };
-  const readmeSrc = readFileSync('README.md', 'utf8');
-  const cgSrc = readFileSync('CHANGELOG.md', 'utf8');
-  const cgCur = cgSrc.slice(cgSrc.indexOf('## v'), cgSrc.indexOf('## v', cgSrc.indexOf('## v') + 5));
-  ok(cgCur.length > 40 && /^## v/.test(cgCur), '⑩b CHANGELOG 当前版条目切得出来（切不出 = ⑩d 恒真好绿，记忆第二十五条）');
-  ok(readmeSrc.indexOf('DRAIN_PUSH') >= 0,
-    '⑩c README 必须仍在册描述这一档（README 的规矩是"只留当前版本"⇒ 默认档是玩家可见事实，掉了登记就是漂移起点）');
-  const docHits = scanDocs('README', readmeSrc).concat(scanDocs('CHANGELOG(当前版)', cgCur));
-  eq(docHits.length, 0,
-    '⑩d 文档里凡提到 `DRAIN_PUSH` 的那一行，都不许写着**与当前默认相反**的说法（引擎现读 = ' + dnDefault + (onNow ? '=开' : '=关') + '）：'
-    + docHits.join(' ‖ ') + ' ⇒ 翻档要连文档一起翻，否则下一个人按文档去关一个已经开着的开关');
+  /* ⑩（v1.6.4 加的"文档措辞"三条腿：README 必须出现 `DRAIN_PUSH` / 提到它的那一行不许写与默认相反的词）
+   *   已于 v1.6.10 **整段删除** —— 判据见 CHANGELOG v1.6.10 与 `docs/METHODOLOGY.md` 第 89 条。 */
 });
 
 t('D226 §E285 人数 × 血量正交（v1.6.5 · 用户裁定「把 2 人合并进多人，变成选人数 × 3血/5血正交；4 血也可以上，实现连续性」）：`multi4` = `multi` 那一套 + 一格血 · 页面那张映射表的像必须恰好盖住 MODES 全部 key · **2 人时三张多人专用卡在 4/5 血格上也要自动屏蔽**（用户点名要复测的那条）· 第三根「模式」轴与零消费者的 minPlayers 都不许复活', function () {
@@ -11208,7 +11179,7 @@ t('D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 b
 });
 
 /* ===== §E340（用户 ⑦）全息屏障 → 原型制御 的映射档 ===== */
-t('D229 §E340/§E342 全息屏障→原型制御 的映射档（v1.6.8 建档 · v1.6.9 升为包自带声明）：默认 off（出厂零剂量）· 三档语义各有一条牙 · 含糊值响亮拒 · 结构性无解不许假装禁掉 · 三个入口只经同一个口', function () {
+t('D229 §E340 全息屏障→原型制御 的映射档（v1.6.8）：默认 off（出厂零剂量）· 三档语义各有一条牙 · 含糊值响亮拒 · 结构性无解不许假装禁掉 · 出厂面四个入口都读不到它', function () {
   const R = sb.window.EpirusRules, P = Pol;
   /* ① 出厂面：新沙箱默认必须是 off。这一条不是装饰 —— 这一档改的是**决策**，
    *    默认没关就等于把"榜首为什么被挡"那条已裁过的门槛悄悄挪了位置。 */
@@ -11250,71 +11221,19 @@ t('D229 §E340/§E342 全息屏障→原型制御 的映射档（v1.6.8 建档 �
   eq([a.holoOtherPerGame, a.dmgPerGame, a.rounds, a.effSkills].map(x => x.toFixed(3)).join('|'),
     [b.holoOtherPerGame, b.dmgPerGame, b.rounds, b.effSkills].map(x => x.toFixed(3)).join('|'),
     '⑦ 对不用 holo 的出厂冠军，这一档必须零剂量（送盾/伤害/回合/有效技能逐字相同）');
-  /* ⑧ 门槛常量本身不许被这一档顺手改掉（改门槛是裁定，不是实现细节）。
-   *    §E342 改判（用户裁定 10-06「promote 的门槛可以改成 proto 档」）：
-   *    原来这一条的另一半钉的是"promote 侧不许读这一档"，理由是"一个默认关的研究档不该让同一枚包有两个答案"。
-   *    裁定把这一档从**研究档**升成了**包的属性** ⇒ 判据必须换形：不再是"别读"，而是**只能从一个口读、且三处同一个口**。
-   *    否则"体检判 A 档 / 考卷记 B 档 / 页面跑 C 档"就是本仓最怕的"门绿着，但它没在看你要上线的那个东西"。 */
+  /* ⑧ 出厂面读不到这一档。§E342 曾把它升成"包自带的声明"并接进 promote / 考卷 / 页面，
+   *    10-06 由用户撤回 ⇒ 判据回到"别读"（而不是"只能从一个口读"）。
+   *    为什么是"别读"：这一档是**进程级研究旋钮**，不属于任何一枚包 ⇒ promote 一旦读它，
+   *    同一枚包就有了两个"能不能上槽"的答案，而第二个答案并不来自包自己。
+   *    要按映射后的行为上槽，前提是用户裁定"这一档成为包的属性"；在那之前门槛只看未映射的线上行为。
+   *    另一半：硬门槛常量本身不许被这一档顺手改掉（改门槛是裁定，不是实现细节）。 */
   const AL = readFileSync('tools/audit-lib.mjs', 'utf8').replace(/\r\n/g, '\n');
   ok(/HOLO_GIFT_MAX\s*=\s*6\b/.test(AL),
     '⑧ 硬门槛常量不许被这一档顺手改掉（改门槛是裁定，不是实现细节）');
-  /* ⑨ 名单有两份是**必须的**（`policy.js` 在浏览器里、`audit-lib` 在 Node 里，互相 import 不了）
-   *    ⇒ 那就把"必须一字不差"钉住，而不是假装只有一份。 */
-  const POL = readFileSync('js/train/policy.js', 'utf8').replace(/\r\n/g, '\n');
-  const mmodes = /export const HOLO_MODES\s*=\s*(\[[^\]]*\])/.exec(AL);
-  const mkeys = /const H2P_KEYS\s*=\s*(\[[^\]]*\])/.exec(POL);
-  ok(!!mmodes && !!mkeys, '⑨ 两份档名单都必须存在且能被本条读到（读不到 = 有人改了变量名而这条腿会空判）');
-  eq(String(mmodes && mmodes[1]).replace(/\s+/g, ''), String(mkeys && mkeys[1]).replace(/\s+/g, ''),
-    '⑨ audit-lib 与 policy.js 的档名单必须逐字相同 ⇒ 否则"工具合法 / 引擎抛"这种半套状态会出现');
-  /* ⑩ 三个入口（换冠军 / 考卷 / 风格考卷）都必须经 audit-lib 的**同一个**下达口，且不许自己调引擎旋钮
-   *    （`applyHoloMode` 带"下达后回读"，直接 `setHolo2Proto` 就丢了回读 = v1.5.262 econ 键那一族）。 */
-  const promo = readFileSync('tools/promote-champion.mjs', 'utf8').replace(/\r\n/g, '\n');
-  const ev5 = readFileSync('tools/eval-5p.mjs', 'utf8').replace(/\r\n/g, '\n');
-  const sx = readFileSync('tools/style-exam.mjs', 'utf8').replace(/\r\n/g, '\n');
-  ok(promo.indexOf('applyHoloMode') >= 0 && ev5.indexOf('applyHoloMode') >= 0 && sx.indexOf('applyHoloMode') >= 0,
-    '⑩ promote / eval-5p / style-exam 必须都走 applyHoloMode（少一个就是那一处按默认档在打分）');
-  for (const [nm, src] of [['promote-champion', promo], ['eval-5p', ev5], ['style-exam', sx]]) {
-    ok(src.indexOf('setHolo2Proto') < 0, '⑩ ' + nm + ' 不许绕过 applyHoloMode 直接下达（丢了"下达后回读"）');
-    ok(/from '\.\/audit-lib\.mjs'/.test(src), '⑩ ' + nm + ' 必须从 audit-lib import 这一档的口');
+  for (const f of ['tools/promote-champion.mjs', 'tools/eval-5p.mjs', 'tools/style-exam.mjs', 'js/ui/ui.js']) {
+    ok(readFileSync(f, 'utf8').toLowerCase().indexOf('holo2proto') < 0,
+      '⑧ ' + f + ' 不许读这一档（含 `EPIRUS_HOLO2PROTO` 与 `META.holo2proto`）⇒ 出厂面只按未映射行为判分');
   }
-  /* ⑪ 无声明 ⇒ off，并且**不落一个 'off' 键**（保持无映射的包与历史逐字同形，也才测得到"无声明"这个状态） */
-  ok(/if \(HOLO_WANT === 'off'\) delete meta\.holo2proto;/.test(promo),
-    '⑪ promote 在 off 档必须删键（写一个 off 键会让"无声明"这个状态在读数里消失）');
-  /* ⑫ 页面侧：真源是包自带的 META，默认必须是 off（覆盖键只用于实机对比手感） */
-  const UIf = readFileSync('js/ui/ui.js', 'utf8').replace(/\r\n/g, '\n');
-  ok(UIf.indexOf('EPIRUS_CHAMPION_3P_META') >= 0 && /let hv = 'off'/.test(UIf),
-    '⑫ 页面必须从 `EPIRUS_CHAMPION_3P_META.holo2proto` 取档、且解析不出时默认 off（否则出厂形状被页面改掉了）');
-  /* ⑬ 语义腿（真函数，不是读源码）：无声明三种写法 ⇒ off；含糊值 ⇒ 抛；沙箱缺旋钮 / 下达后被谎报 ⇒ 抛 */
-  const sem = spawnSync(process.execPath, ['-e', [
-    "import('./tools/audit-lib.mjs').then(function (m) {",
-    "  var bad = [];",
-    "  if (![undefined, null, ''].every(function (v) { return m.packHoloMode({ holo2proto: v }) === 'off'; })) bad.push('无声明没落到 off');",
-    "  if (m.packHoloMode(null) !== 'off') bad.push('空 meta 没落到 off');",
-    "  ['PROTO', 'prot', 'of', 'ture', '1'].forEach(function (v) {",
-    "    try { m.packHoloMode({ holo2proto: v }); bad.push('含糊值 ' + v + ' 被静默接受'); } catch (e) { /* 期望抛 */ }",
-    "  });",
-    "  try { m.applyHoloMode({}, { holo2proto: 'proto' }, 'x'); bad.push('沙箱没有旋钮却被当成成功'); } catch (e) { }",
-    "  var liar = { cur: 'off', setHolo2Proto: function (v) { if (v !== 'off') throw new Error('模拟引擎拒绝'); }, holo2Proto: function () { return this.cur; } };",
-    "  try { m.applyHoloMode({ EpirusPolicy: liar }, { holo2proto: 'proto' }, 'x'); bad.push('回读不一致却被当成成功'); } catch (e) { }",
-    "  var okp = { cur: 'off', setHolo2Proto: function (v) { this.cur = v; }, holo2Proto: function () { return this.cur; } };",
-    "  if (m.applyHoloMode({ EpirusPolicy: okp }, {}, 'x') !== 'off') bad.push('正常路径没返回 off');",
-    "  if (m.applyHoloMode({ EpirusPolicy: okp }, { holo2proto: 'drop' }, 'x') !== 'drop') bad.push('正常路径没落到 drop');",
-    "  process.exit(bad.length ? 1 : 0);",
-    "}, function (e) { console.error(String(e && e.message)); process.exit(9); });"
-  ].join('\n')], { encoding: 'utf8' });
-  eq(sem.status, 0, '⑬ packHoloMode/applyHoloMode 的语义（无声明⇒off ‖ 含糊⇒抛 ‖ 缺旋钮⇒抛 ‖ 谎报⇒抛 ‖ 正常⇒回读一致）'
-    + (sem.status !== 0 ? '：' + String(sem.stderr || '').trim() : ''));
-  /* ⑭ 全链一致性：体检的**阻断栏**在父进程沙箱里，而考卷与三栏记录是**子进程**、产品代理栏是**另一份模块实例**
-   *    ⇒ 少接一处就是"父进程按 A 档判能不能上槽、子进程按 B 档记分"（这一条是本版最容易做歪的地方，实测过：
-   *    接上之前 `--holo2proto=proto` 那一臂的四栏读数与 off 臂**逐字相同**）。 */
-  ok(/process\.env\.EPIRUS_HOLO2PROTO = HOLO_WANT;/.test(promo),
-    '⑭ promote 必须**无条件**把本次档写进 process.env（连 off 也写）⇒ 否则外面残留一根环境变量就是两个答案');
-  const BP = readFileSync('tools/behavior-profile.mjs', 'utf8').replace(/\r\n/g, '\n');
-  const PL = readFileSync('tools/probe-layer-caliber.mjs', 'utf8').replace(/\r\n/g, '\n');
-  ok(/export function fieldProfile[\s\S]{0,400}applyHoloEnv\(W/.test(BP),
-    '⑭ `fieldProfile`（产品代理栏那份独立沙箱）必须下达这一档，否则那一栏永远按未映射行为计');
-  ok(/applyHoloEnv\(sb, 'probe-layer-caliber'\)/.test(PL),
-    '⑭ spawn 型探针共用的 `build()` 必须下达这一档（一处覆盖三个探针）');
 });
 
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");

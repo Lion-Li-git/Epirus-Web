@@ -535,47 +535,6 @@ export const DENSITY_BLOCK = false;
  * 而它在 `promote-champion` 里原本是一个字面量 —— 两处各写一个 6 = 本仓栽过四次的那类漂移。 */
 export const HOLO_GIFT_MAX = 6;
 
-/* ===== §E342（用户裁定 10-06 02:4x）全息屏障→原型制御 的映射档 = **包自带的声明** =====
- * 裁定原文：「promote 的门槛可以改成 proto 档」。但**只**改 promote 会造成本仓最怕的形状：
- *   体检量的是映射后的行为（送盾 0），线上跑的却是没映射的行为（送盾 15.97/局）
- *   ⇒ **门绿着，但它没在看你要上线的那个东西**。
- * ⇒ 所以这一档必须跟着包走：`META.holo2proto` 是**唯一真源**，
- *   凡是"拿这枚包去打分 / 去体检 / 去上线"的入口都从这里取，且**只经这一个 helper**（不许各自解析一份）。
- * 默认（无声明）= `off` ⇒ 现役那颗包与它名下所有历史读数逐字不变（这条零剂量由 D229 实测钉，不靠代码推断）。 */
-export const HOLO_MODES = ['off', 'proto', 'drop'];
-export function packHoloMode(meta) {
-  if (!meta || meta.holo2proto === undefined || meta.holo2proto === null || meta.holo2proto === '') return 'off';
-  const s = String(meta.holo2proto).trim();
-  if (HOLO_MODES.indexOf(s) < 0) {
-    throw new Error('包声明的 holo2proto="' + meta.holo2proto + '" 不合法 ⇒ 只认 off|proto|drop。'
-      + '含糊值静默退回 off 会变成"以为上线了映射、其实没有"，那是最难查的一类。');
-  }
-  return s;
-}
-/* 应用到某个沙箱的策略模块上，并**把生效后的档位回读回来**（回读不等于 ⇒ 红）：
- * 本仓一族事故都是"下达了但没到"（v1.5.262 的 econ 键、v1.5.329 的 pushfloor 同一族）。 */
-export function applyHoloMode(W, meta, where) {
-  const want = packHoloMode(meta);
-  const P = W && (W.EpirusPolicy || (W.window && W.window.EpirusPolicy));
-  if (!P || typeof P.setHolo2Proto !== 'function') {
-    throw new Error((where || 'applyHoloMode') + '：沙箱里没有 EpirusPolicy.setHolo2Proto ⇒ 拒绝静默跳过（宁可不跑）');
-  }
-  P.setHolo2Proto(want);
-  const got = P.holo2Proto();
-  if (got !== want) throw new Error((where || 'applyHoloMode') + '：映射档下达后回读不一致（要 ' + want + '，读到 ' + got + '）');
-  return got;
-}
-/* 从**进程环境变量** `EPIRUS_HOLO2PROTO` 取档并下达（没设 ⇒ 'off'，一行都不多跑）。
- * 为什么要有这一个口：`promote-champion` 的三栏（设防持续性 / 出手形状 / 防御质量）是 `spawnSync` 出去的子进程，
- *   父进程沙箱里的那个模块级档位传不过去 ⇒ 唯一不带参数的通路就是 env。
- * ⚠ env 与"包自带声明"是**两件事**：env 说的是"这次运行按哪一档量"，包声明说的是"这枚包上线后按哪一档跑"。
- *   所以只给**子进程**用 env；考卷与体检的主路径仍然读包声明（`eval-5p` 里 env>声明，并且覆盖时响亮报告）。 */
-export function applyHoloEnv(W, where) {
-  const v = process.env.EPIRUS_HOLO2PROTO;
-  if (v == null || String(v).trim() === '') return 'off';
-  return applyHoloMode(W, { holo2proto: String(v).trim() }, where || 'applyHoloEnv');
-}
-
 /* ===== v1.5.162（qoder §N17）：可行性五道的**样本量计划 = 单一来源** =====
  * 病（§N16 实测，不是猜）：同一个候选在两个入口读出不一样 ——
  *   `promote-champion` 的 `selfPlay`/`reflectWall` 吃 `--games`（默认 **20**），而 `train-best` 的 3P 栏把

@@ -19,7 +19,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sandbox, loadChamp, mulberry32, applyHoloEnv } from './audit-lib.mjs';
+import { sandbox, loadChamp, mulberry32 } from './audit-lib.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
@@ -137,10 +137,6 @@ export function tallyClose(t, ctx) {
  * ⚠️ 出手取自 **chooser 的返回值**（引擎不保留逐回合动作历史，`state.actions` 只有当回合），
  * 顺带得到 §9 判据④ 的机械核对量：`endgameMultiOnly` = 存活≤2 时仍提出 MULTI_ONLY 三张的次数（必须为 0）。 */
 export function fieldProfile(params, eps, mode, G, seed0, field, gamemode, oppFactory) {
-  /* §E342：本模块在 import 时就 `sandbox(ROOT)` 出了一份**自己的**引擎实例，
-   *   调用方（`promote-champion`）在它自己那份上下达的映射档传不过来 ⇒ 在这里按 env 再下一次。
-   *   没设 `EPIRUS_HOLO2PROTO` ⇒ `applyHoloEnv` 直接返回 'off' 并且不调任何 setter ⇒ 历史读数逐字不变。 */
-  applyHoloEnv(W, 'behavior-profile:fieldProfile');
   const N = 5, t = tally();
   for (let g = 0; g < G; g++) {
     const seat = g % N;
