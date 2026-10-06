@@ -697,16 +697,35 @@ function drawTree(fr) {
     st.elev.toFixed(3), st.tTilt.toFixed(3), st.batch, NVIS].join('|');   /* §E333 抬升带会挤行距 ⇒ 立体度/倾角进缓存键；§E338 批次改了行表与每行枚数 ⇒ 批次与可见数也要进，否则切批次用的还是上一批那张底图 */
   if (!CHM || CHM.k !== ck) CHM = { k: ck, c: treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, ff) };
   var T3 = st.elev, uc = w / 2, vc = h / 2, cb = cam();   /* E352 DS: 相机基 cb（与地图同一套） */
+  /* ===== §E369 渲染空间 = **整个窗口**（用户 10-06 深夜：「平面下某条纵轴往左的地方都不显示，立体下上下左三个方向都有截断」）=====
+   *   两处成因、两处修：
+   *   ① 平面态原来有一道 clip(padL-5 …) —— 目的是"点不许盖住左栏家族名"。但默认视图下数据本来就起于 padL，
+   *      这道闸实际只在一个场景起作用：**用户往左平移/旋转之后**，它把左半边整条裁掉 ⇒ 撤掉。
+   *   ② 立体态 §E352 之后真的能转（PL 读 cam()），一转投影四边形就超出画布 ⇒ 上下左三面截断。
+   *      补一个**拟合**：把地板四角 + 抬升带的投影包围盒等比缩放进画布（只缩不放，避免把烘好的底图糊开），并居中。
+   *      相机在 FLAT（正俯视）时包围盒 == 画布 ⇒ fit 恒等于 1，二维那张图逐像素不变。 */
+  var FIT = { s: 1, ox: 0, oy: 0 };
+  function PLr(u, v, z) {
+    var a = u - uc, bb = v - vc;
+    return [uc + a * cb.r[0] + bb * cb.r[1], vc + a * cb.u[0] + bb * cb.u[1] - (z || 0)]; }
+  (function () {
+    var pts = [PLr(0, 0, 0), PLr(w, 0, 0), PLr(0, h, 0), PLr(w, h, 0), PLr(0, 0, LIFT), PLr(w, 0, LIFT), PLr(0, h, LIFT), PLr(w, h, LIFT)];
+    var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (var q = 0; q < pts.length; q++) { x0 = Math.min(x0, pts[q][0]); x1 = Math.max(x1, pts[q][0]);
+      y0 = Math.min(y0, pts[q][1]); y1 = Math.max(y1, pts[q][1]); }
+    var bw = Math.max(1, x1 - x0), bh = Math.max(1, y1 - y0), mg = 6 * devicePixelRatio;
+    var s = Math.min(1, (w - 2 * mg) / bw, (h - 2 * mg) / bh);
+    FIT.s = s; FIT.ox = (w - bw * s) / 2 - x0 * s; FIT.oy = (h - bh * s) / 2 - y0 * s; })();
+  function PL(u, v, z) { var p = PLr(u, v, z); return [p[0] * FIT.s + FIT.ox, p[1] * FIT.s + FIT.oy]; }
   /* §E333 立体 = **原地上升**，不是把地板压扁。用户两张截图点名的病：上一版借地图那台相机（pit 0.72 ⇒ 行方向
    *   只剩 cos = 0.66 的高度），24 行被挤成一条横带，格内抖动又被我挪去横方向 ⇒ 比二维更挤。
    *   现在：地板按二维那张版式贴（行方向最多按 tTilt 轻微压扁），点沿**屏幕纵轴**抬起，每枚留一根立柱接回自己那一格。
    *   T3=0 ⇒ cos(0)=1、错切 0、抬升 0 ⇒ 逐字等于二维；TH/SH 只由右键拖动给，默认 0。*/
   /* E352 DS：PL 原来只做 tTilt/tShear 仿射 ⇒ 谱系图没有旋转。换成正交相机投影（与地图同一套 cam()）。
    *   默认 th=-pi/2, ph=pi/2 ⇒ r=[1,0,0]、u=[0,1,0] ⇒ 退化成 [u, v-z]，与旧版逐像素相同。
-   *   树里所有几何（地板四角/棋子/立柱/标签/scr[] 命中表）都经过 PL ⇒ 换它即全部同步。 */
-  function PL(u, v, z) {
-    var a = u - uc, bb = v - vc;
-    return [uc + a * cb.r[0] + bb * cb.r[1], vc + a * cb.u[0] + bb * cb.u[1] - (z || 0)]; }
+   *   树里所有几何（地板四角/棋子/立柱/标签/scr[] 命中表）都经过 PL ⇒ 换它即全部同步。
+   *   §E369：PL 的定义挪到上面去了（拟合要先算包围盒），并且外面多包了一层 fit —— **这里不要再声明一遍**
+   *   （函数声明会提升，重复声明的那一份会**静默覆盖**前一份 ⇒ 拟合白做）。 */
   /* §E351 DS（用户 10-06：「平移的时候坐标轴并不跟着动」）：地板（轴文字烘在 CHM.c 里）原样贴 (0,0)-(w,h)，**没走 WX/WY**；而棋子的落点走的是 WX(X(tv))（含 tKx/tKy/tX/tY）⇒ 棋子跟着平移、地板和轴不走。
    *   修法：地板角点也走同一套映射（分母仍是 w/h，因为源画布就是 w×h）⇒ 地板/轴与棋子**永远同一套变换**。 */
   /* §E351 更正（DS 10-06 第二版）：地板角点**回到裸画布坐标** —— treeChrome 里 x 已经走过 WX（见日期刻度的 xx），
@@ -719,7 +738,9 @@ function drawTree(fr) {
   g.restore(); g.setTransform(1, 0, 0, 1, 0, 0);
   var FR3 = fRange();
   g.save();
-  if (T3 < 0.02) { g.beginPath(); g.rect(padL - 5, 0, w - padL + 5, h); g.clip(); }   /* 平面态：数据层不许进左栏（立体态标签已在底图里，让点浮在上面）*/
+  /* §E369（用户："平面下某条纵轴往左的地方都不显示"）：这里原来有一道 clip(padL-5 …)，
+   *   本意是"点不许盖住左栏家族名"，但默认视图下数据本来就起于 padL ⇒ 它实际只裁到**用户往左平移之后**的内容，
+   *   左半边整条消失。撤掉；左栏与点的层序本来就是底图在下、点在上，重叠时读图人自己平移即可。 */
   /* 血统边（画在点底下，免得盖住点）*/
   /* 每枚的落点 = 底图上那一格 (u,v)（**与二维逐字同一套坐标**，含格内纵向抖动）+ 按 F 抬起来的 z。
    *   高度用**线性** min-max，不用 §E330 那套按秩铺色 —— 秩是"颜色要能分开"的读法，几何要的是量的比较。
@@ -1896,6 +1917,43 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       return P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length >= 1; })(),
     '按时间轴改接 ' + P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length + ' 枚 ‖ 退回不可考 ' + DM.length + ' 枚 ‖ 有父边 '
       + P.filter(function (d) { return d.pof; }).length + ' 枚');
+  /* ===== §E369 渲染空间 = 整个窗口（用户："平面下某条纵轴往左的地方都不显示，立体下上下左三个方向都有截断"）=====
+   *   两条都要**真画一遍再看结果**，不是读源码：① 旋转到几个刁钻角度后，所有可见点必须仍在画布内（拟合生效）；
+   *   ② 平面态往左平移一大段后，旧剪裁区那一片必须真被画上东西 —— 这一条读的是像素（原因见那段里写的变异实测）。 */
+  var SNAP2 = { mode: st.mode, e: st.elev, y: st.yaw, p: st.pit, tx: st.tX, ty: st.tY, kx: st.tKx, ky: st.tKy };
+  st.mode = 'tree'; st.elev = 1; st.tKx = 1; st.tKy = 1; st.tX = 0; st.tY = 0;
+  var fitBad = '', fitAngles = [[-1.2, 0.35], [-2.4, 1.1], [-0.4, 1.55], [-Math.PI / 2, Math.PI / 2], [-2.9, 0.1]];
+  for (var ai = 0; ai < fitAngles.length; ai++) {
+    st.yaw = fitAngles[ai][0]; st.pit = fitAngles[ai][1]; draw();
+    for (var q2 = 0; q2 < N; q2++) { var sp = scr[q2]; if (!sp || !VIS[q2]) continue;
+      if (sp[0] < -1 || sp[0] > cv.width + 1 || sp[1] < -1 || sp[1] > cv.height + 1) {
+        fitBad = '角度 yaw=' + fitAngles[ai][0].toFixed(2) + '/pit=' + fitAngles[ai][1].toFixed(2)
+          + ' 时 ' + P[q2].id + ' 落在 (' + Math.round(sp[0]) + ',' + Math.round(sp[1]) + ')，画布 ' + cv.width + '×' + cv.height; break; } }
+    if (fitBad) break; }
+  T('立体态旋转到刁钻角度：所有可见点必须仍在画布内（拟合生效 ⇒ 不许上下左截断）', fitBad === '', fitBad || (fitAngles.length + ' 个角度全通过'));
+  st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.elev = 0; st.tX = -900 * devicePixelRatio; draw();
+  /* ② 的判据必须读**像素**，不能读命中表：scr[] 是几何落点，剪裁只决定"画没画出来"，
+   *   所以拿 scr 写的那一版**撤掉剪裁与留着剪裁都会 PASS**（§E369 变异实测：把 clip 加回去 ⇒ 27/0 全绿 ⇒ 那条是假的）。
+   *   现在逐枚取样：中心像素必须与"自己半径之外"四个方向都不像同一个颜色，才叫真被画出来了；
+   *   有 clip 时左栏那一片只剩底图 ⇒ 中心与旁边是同一块背景，一条也过不了。 */
+  function samplePx(x, y) { var q = g.getImageData(Math.round(x), Math.round(y), 1, 1).data; return [q[0], q[1], q[2]]; }
+  function pxDist(a, b) { return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]); }
+  var pLG = 340 * devicePixelRatio, nProbe = 0, nPaint = 0, missEx = '';
+  for (var q3 = 0; q3 < N; q3++) { var sp3 = scr[q3]; if (!sp3 || !VIS[q3]) continue;
+    if (alphaOf(P[q3]) < 0.5) continue;
+    var rr3 = dotR(P[q3], st.tKx) + 8 * devicePixelRatio;
+    var cX = sp3[0], cY = sp3[1];
+    if (cX < rr3 + 6 || cX > pLG - 8 || cY < rr3 + 6 || cY > cv.height - rr3 - 6) continue;
+    nProbe++;
+    var mid3 = samplePx(cX, cY);
+    var marg = Math.min(pxDist(mid3, samplePx(cX - rr3, cY)), pxDist(mid3, samplePx(cX + rr3, cY)),
+      pxDist(mid3, samplePx(cX, cY - rr3)), pxDist(mid3, samplePx(cX, cY + rr3)));
+    if (marg > 36) nPaint++; else if (!missEx) missEx = P[q3].id + ' 中心 (' + Math.round(cX) + ',' + Math.round(cY) + ') 与四周只差 ' + Math.round(marg); }
+  T('平面态往左平移：左栏那一片必须真的被画上东西（padL 那道剪裁已撤 ‖ 判据=像素，不是命中表）',
+    nProbe >= 12 && nPaint >= Math.ceil(nProbe * 0.6),
+    '落进旧剪裁区的点 ' + nProbe + ' 枚 ‖ 中心确实与四周不同的 ' + nPaint + ' 枚（要 ≥ 60%）‖ 画布宽 ' + cv.width + (missEx ? ' ‖ 例：' + missEx : ''));
+  st.mode = SNAP2.mode; st.elev = SNAP2.e; st.yaw = SNAP2.y; st.pit = SNAP2.p;
+  st.tX = SNAP2.tx; st.tY = SNAP2.ty; st.tKx = SNAP2.kx; st.tKy = SNAP2.ky;
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\n' + out.join('\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\n已经跑到：\n' + out.join('\n'); nbad++; }
