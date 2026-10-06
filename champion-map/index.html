@@ -1442,9 +1442,13 @@ window.addEventListener('mousemove', function (e) {
     var cdx = e.clientX - drag[0], cdy = e.clientY - drag[1];
     if (Math.abs(cdx) + Math.abs(cdy) > dragMoved) dragMoved = Math.abs(cdx) + Math.abs(cdy);
     if (st.mode === 'map') {
-      /* §E349 DS（用户 10-06：「3D 模式又变得旋转受限」）：原来这里套了一道 st.elev > 0.05 闸 ⇒ elev 一落到 0 就完全转不动。
-     *   撤掉那道闸；pitch 仍夹在 [0.06, 1.62]（不许翻到地板下、不许越过天顶），yaw 不限。 */
-      if (drag[8] === 2) { st.yaw = drag[4] - cdx / 160; st.pit = Math.max(0.06, Math.min(1.62, drag[5] + cdy / 200)); }
+      /* §E349 DS（用户 10-06 上午：「3D 模式又变得旋转受限」）把这道 elev > 0.05 闸整条撤了 ⇒ 撤过头了：
+       *   平面态也能一拖上下就把 pitch 拖离正俯视（用户 10-06 晚：「切换成平面模式时仍然可以直接旋转拉成立体的，
+       *   平面模式失效了」）。现在按"平面 = 正俯视"各让一半：**pitch 锁在 FLAT**（要倾角必须先点"立体"），
+       *   **yaw 照转** —— pit=π/2 时它是在屏幕平面内转，仍然是平面，所以 §E349 那句"转不动"不会回来。
+       *   立体态两轴都自由 = §E349 的原样。 */
+      if (drag[8] === 2) { st.yaw = drag[4] - cdx / 160;
+        if (st.elev > 0.05) st.pit = Math.max(0.06, Math.min(1.62, drag[5] + cdy / 200)); }
       else { st.ox = drag[2] + cdx * devicePixelRatio; st.oy = drag[3] + cdy * devicePixelRatio; }
     } else if (st.mode === '3db') {
       if (drag[8] === 2) { st.yaw = drag[4] - cdx / 160; st.pit = Math.max(0.06, Math.min(1.5, drag[5] + cdy / 200)); }
@@ -1531,8 +1535,12 @@ function toggle3d() {
   /* §E333 谱系图的"立体"只动抬升（st.elev），**不借地图那台相机**：它的视角由 tTilt/tShear 管，
    *   而 yaw/pit 会把地板真的转到侧视 ⇒ 24 行塌成一条线（用户点名的病）。地图那侧维持原行为。*/
   tw = { t0: performance.now(), dur: 520, from: { e: st.elev, y: st.yaw, p: st.pit },
-    to: tree ? { e: to3d ? 1 : 0, y: st.yaw, p: st.pit }
-      : (to3d ? { e: 1, y: null, p: SOLID.pit } : { e: 0, y: FLAT.yaw, p: FLAT.pit }) };
+    /* §E362（用户 10-06 晚：「谱系图从 3d 切回 2d 之后没有复位」）：§E352 把谱系图的投影换成读这台相机之后，
+     *   旧写法（tree 那一支把 to.y/to.p 设成 st.yaw/st.pit）就变成了"把 yaw/pit 插回它们自己" ⇒ elev 归零只是不留高度，
+     *   地板还歪着。现在两个模式的"放平"是同一件事：相机回 FLAT。立起方向仍不碰 yaw（§E296 的"原地立起"）。*/
+    to: (to3d && !tree) ? { e: 1, y: null, p: SOLID.pit }
+      : to3d ? { e: 1, y: null, p: st.pit }
+        : { e: 0, y: FLAT.yaw, p: FLAT.pit } };
   document.getElementById('b3dt').textContent = to3d ? '平面' : '立体';
   tick();
 }
@@ -1558,8 +1566,11 @@ function setMode(m) {
   document.getElementById('b3dt').title = m === 'tree' ? '同一张谱系图：点一下让每枚点沿纵轴**原地升起**到它自己的 F 高度（地板不动，右键可压扁/错切）' : '同一张底，平面/立体无缝切换';
   if (m === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit; }
   else if (m === '3db') { st.yaw = 0.62; st.pit = 0.40; }
-  /* §E333 tree 不碰 yaw/pit（那是地图相机的状态，切个视图就把它改掉会两头串色）；
-     它自己的视角是 tTilt/tShear，**跨视图保留**（用户摆好的角度不该因为点了一下别的页就丢）。*/
+  /* §E362：谱系图的地板自 §E352 起**真的**由这台相机转 ⇒ 平面态切进来必须先回正，
+     否则从 3db 或立体态转出来的角度会被带进一张"号称平面"的图里（歪的）。
+     立体态仍**跨视图保留**（§E333：用户摆好的角度不该因为点了一下别的页就丢）。
+     ⚠ 旧的"tree 什么都不碰"是 §E333 时代的决定 —— 那时谱系图视角由 tTilt/tShear 管，与相机无关；那个前提已经没了。*/
+  else if (m === 'tree' && st.elev < 0.5) { st.yaw = FLAT.yaw; st.pit = FLAT.pit; }
   syncIso();
   req();
 }
@@ -1605,7 +1616,11 @@ document.getElementById('bh').onclick = function () { st.goodTop = !st.goodTop; 
 document.getElementById('reset').onclick = function () {
   st.ox = st.oy = 0; st.k = 1; st.ox3 = st.oy3 = 0; st.zoom3 = 1; st.tKx = 1; st.tKy = 1; st.tX = 0; st.tY = 0;
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit; }
-  else if (st.mode === 'tree') { st.tTilt = 0; st.tShear = 0; }   /* §E333 谱系图的"复位"复的是它自己那两台（两轴缩放 + 视角）*/
+  else if (st.mode === 'tree') { st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.tTilt = 0; st.tShear = 0; }
+    /* §E362（用户：「复位按钮只会平移，结果歪掉了」）：§E352 之后谱系图能转的就是这台相机，
+       而旧复位只清 §E333 那对 tTilt/tShear（已经不再参与投影）⇒ 它复的是"没在用的那两个量"。
+       树里的立体感来自抬升（elev · LIFT）不来自倾角 ⇒ 正视图在两个模式下都是 FLAT 相机。
+       tTilt/tShear 仍顺手清一次，是因为深链 tilt=/shear= 还会写它们。*/
   else { st.yaw = 0.62; st.pit = 0.40; }
   req(); };
 document.getElementById('fitt').onclick = function () { var el = document.getElementById('fit');
@@ -1786,6 +1801,54 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('冠军序列：有上线时刻的那些按时间正序', prevS !== '⛔ 乱序');
   T('冠军序列：抽不到上线时刻的必须显式标（实测 v7new6-94/96 从没进过槽）',
     P.filter(function (d) { return d.lin && !d.sh; }).length <= 4, P.filter(function (d) { return d.lin && !d.sh; }).length + ' 枚未上槽');
+  /* ===== §E362（用户 10-06 晚点名的两个 bug）平面 ⇄ 立体与复位：四页内自检 =====
+   *   病一：谱系图从立体切回平面**不复位**，而"复位"按钮只平移 ⇒ 画面是歪的。根因是 §E352 把谱系图的投影
+   *         换成读地图那台相机（PL 用 cam()）之后，toggle3d 的树分支还在把 yaw/pit "插回它们自己"，
+   *         而 reset 清的是 §E333 那一对早已不参与投影的 tTilt/tShear。
+   *   病二：平面模式下右键还能把图拉成立体。根因是 §E349 为了修"3D 里转不动"把 elev 闸**整条撤了** ⇒ 过度修正。
+   *   ⇒ 判据形状：这四条都是**真按一次按钮/真发一次鼠标事件再看状态**，不是读源码里的字符串。 */
+  var SNAP = { mode: st.mode, e: st.elev, y: st.yaw, p: st.pit, ox: st.ox, oy: st.oy, k: st.k,
+    ox3: st.ox3, oy3: st.oy3, z3: st.zoom3, tkx: st.tKx, tky: st.tKy, tx: st.tX, ty: st.tY,
+    tl: st.tTilt, sh: st.tShear, col: st.color, lab: document.getElementById('b3dt').textContent };
+  function mdown(b, x, y) { cv.dispatchEvent(new MouseEvent('mousedown', { button: b, clientX: x, clientY: y })); }
+  function mmove(x, y) { window.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y })); }
+  function mup() { window.dispatchEvent(new MouseEvent('mouseup', {})); }
+  /* ① 平面态右键上下拖：pitch 必须一动不动（这就是"拉成立体"的那一条），而 yaw 照转（§E349 不许回归）*/
+  tw = null; st.mode = 'map'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
+  mdown(2, 300, 300); mmove(340, 360); mup();
+  T('平面态右键拖拽：pitch 不许离开正俯视（而 yaw 必须仍然跟手）',
+    st.pit === FLAT.pit && Math.abs(st.yaw - (FLAT.yaw - 40 / 160)) < 1e-9,
+    '实测 pit=' + st.pit.toFixed(4) + '（FLAT=' + FLAT.pit.toFixed(4) + '）‖ yaw 动了 '
+      + (st.yaw - FLAT.yaw).toFixed(4) + '（应为 -0.2500）');
+  /* ② 立体态右键上下拖：pitch 必须仍然跟手 —— 这一条是 §E349 的原判据，本次修复不许把它退回去 */
+  st.elev = 1; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
+  mdown(2, 300, 300); mmove(340, 360); mup();
+  T('立体态右键拖拽：pitch 必须仍然跟手（夹在 0.06~1.62 内）',
+    Math.abs(st.pit - Math.min(1.62, FLAT.pit + 60 / 200)) < 1e-9, '实测 pit=' + st.pit.toFixed(4));
+  /* ③ 谱系图"立体 → 平面"那一步：缓动的**目标**必须是 FLAT 相机（旧写法的目标是"自己"，所以永远回不去）*/
+  st.mode = 'tree'; st.elev = 1; st.yaw = -2.0; st.pit = 0.7;
+  toggle3d();
+  T('谱系图切回平面：缓动目标必须把 yaw/pit 插回 FLAT',
+    !!tw && tw.to.e === 0 && tw.to.y === FLAT.yaw && tw.to.p === FLAT.pit,
+    tw ? ('to.e=' + tw.to.e + ' ‖ to.y=' + tw.to.y + ' ‖ to.p=' + tw.to.p) : 'tw 没建（按钮没反应？）');
+  tw = null;
+  /* ④ 复位按钮：谱系图里必须连相机一起清（旧实现清的是 tTilt/tShear = 已经不在用的两个量）*/
+  st.yaw = -2.0; st.pit = 0.7; st.tTilt = 0.4; st.tShear = 0.3; st.tX = 77; st.tKx = 3;
+  document.getElementById('reset').onclick();
+  T('谱系图按复位：相机 + 两轴缩放 + 平移必须一起回正',
+    st.yaw === FLAT.yaw && st.pit === FLAT.pit && st.tTilt === 0 && st.tShear === 0
+      && st.tX === 0 && st.tKx === 1,
+    '实测 yaw=' + st.yaw.toFixed(4) + ' pit=' + st.pit.toFixed(4) + ' tilt=' + st.tTilt
+      + ' shear=' + st.tShear + ' tX=' + st.tX + ' tKx=' + st.tKx);
+  /* 附带一条：平面态切视图也不许把别处转出来的斜角带进谱系图 */
+  st.elev = 0; st.yaw = -2.0; st.pit = 0.7; setMode('tree');
+  T('平面态切进谱系图：必须先回正相机（否则是一张"号称平面"的斜图）',
+    st.yaw === FLAT.yaw && st.pit === FLAT.pit, '实测 yaw=' + st.yaw.toFixed(4) + ' pit=' + st.pit.toFixed(4));
+  st.mode = SNAP.mode; st.elev = SNAP.e; st.yaw = SNAP.y; st.pit = SNAP.p; st.ox = SNAP.ox; st.oy = SNAP.oy;
+  st.k = SNAP.k; st.ox3 = SNAP.ox3; st.oy3 = SNAP.oy3; st.zoom3 = SNAP.z3; st.tKx = SNAP.tkx; st.tKy = SNAP.tky;
+  st.tX = SNAP.tx; st.tY = SNAP.ty; st.tTilt = SNAP.tl; st.tShear = SNAP.sh; st.color = SNAP.col;
+  buildGroups();
+  document.getElementById('b3dt').textContent = SNAP.lab;
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\n' + out.join('\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\n已经跑到：\n' + out.join('\n'); nbad++; }
