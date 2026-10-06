@@ -20,7 +20,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const rd = f => readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
 const CF = join(HERE, 'coords.tsv');
-const L = rd(CF).trim().split('\n'), hd = L[0].split('\t');
+const L = rd(CF).replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), hd = L[0].split('\t');
 const iId = hd.indexOf('id'), iPath = hd.indexOf('path');
 if (iId < 0) { console.error('⛔ coords.tsv 没有 id 列'); process.exit(2); }
 if (iPath < 0) { console.error('⛔ 先跑 attach-path.mjs（权重身份要按**真用的那个文件**算，猜路径会把同名旧拷贝当成本体）'); process.exit(2); }
@@ -45,7 +45,7 @@ for (let i = 0; i < rows.length; i++) {
 const dup = Object.values(WID).filter(v => v.length > 1);
 const nDupRows = dup.reduce((s, v) => s + v.length, 0);
 writeFileSync(CF, [L[0]].concat(rows.map(r => r.join('\t'))).join('\r\n') + '\r\n');
-{ const B = rd(CF).trim().split('\n'), bh = B[0].split('\t'), br = B.slice(1).map(l => l.split('\t'));
+{ const B = rd(CF).replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), bh = B[0].split('\t'), br = B.slice(1).map(l => l.split('\t'));
   const jN = bh.indexOf('dupN'), jO = bh.indexOf('dupOf');
   if (jN < 0 || jO < 0) { console.error('⛔ 回读：dup 两列没落上（表头末两列 = ' + bh.slice(-2).join('/') + '）'); process.exit(2); }
   if (br.length !== rows.length) { console.error('⛔ 回读：行数 ' + br.length + ' ≠ ' + rows.length); process.exit(2); }

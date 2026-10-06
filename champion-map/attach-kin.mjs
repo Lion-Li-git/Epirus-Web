@@ -14,18 +14,29 @@
  *
  * 用法：node champion-map/attach-kin.mjs --from=<改动前的 coords.tsv> --list=<_e328-extra.tsv> [--check]
  */
-import { readFileSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const FROM = arg('from', ''), LIST = arg('list', '_e328-extra.tsv');
 if (!FROM) { console.error('⛔ 必须给 --from=<改动前的 coords.tsv>：没有它就无法把 Sc 四列原样搬回来'); process.exit(2); }
+/* --from 原来只按**本目录**解 ⇒ 传仓库根相对路径（docs/artifacts/…）会拼成 champion-map/docs/… 而 ENOENT，
+ *   传绝对路径又会被 join 吃掉前缀。这台是整条 coords 链的一环，路径解析必须和 attach-path/ruler-figs 一样：
+ *   带斜杠的先按仓库根试，再按本目录试；裸名先本目录。 */
+const resolve = p => { if (isAbsolute(p) && existsSync(p)) return p;
+  if (p.indexOf('/') >= 0) { const a = join(ROOT, p); if (existsSync(a)) return a; }
+  const b = join(HERE, p); if (existsSync(b)) return b;
+  const c = p.indexOf('/') >= 0 ? join(ROOT, p) : p;
+  console.error('⛔ 读不到 ' + p + '（试过 ' + b + ' ‖ ' + c + '）'); process.exit(2); };
 
-const read = p => readFileSync(p, 'utf8').trim().split('\n').map(l => l.split('\t'));
+/* 读表不许 `.trim()` 整个文件（§E375：coords.tsv 的末行常是最后加进来的那批，后列空着 ⇒ trim 会连着制表符
+ *   把行尾那几个空单元格一起削掉，本行就少 5 列，往后 append 的列全部错位。只剥行尾换行，不剥空白。）*/
+const read = p => readFileSync(p, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
 const CO = read(join(HERE, 'coords.tsv')), H0 = CO[0], ROWS = CO.slice(1);
-const OLD = read(join(HERE, FROM)), OH = OLD[0], OR = OLD.slice(1);
+const OLD = read(resolve(FROM)), OH = OLD[0], OR = OLD.slice(1);
 const idx = h => { const o = {}; h.forEach((k, i) => { o[k] = i; }); return o; };
 const ch = idx(H0), oh = idx(OH);
 for (const need of ['id', 'lineage', 'H', 'S']) if (ch[need] === undefined || oh[need] === undefined) {
@@ -68,14 +79,29 @@ for (const r of ROWS) {
 const dupSc = OUT_H.filter(x => x === 'Sc').length;
 if (dupSc > 1) { console.error('⛔ 表头里出现两列 Sc ⇒ 这一步与新表的列序不匹配，别写文件'); process.exit(2); }
 
+/* 判据挪到**写之前**：旧版是 writeFileSync 之后才判 ⇒ 一红就已经把 coords.tsv 换掉了，
+ *   下一次跑还"从坏的那份接着修"，得靠人手工复原（本仓踩过同族的：空跑必须响亮失败，且不许留下半成品）。 */
+const body = out.slice(1).map(l => l.split('\t'));
+const OUT_LIN = OUT_H.indexOf('lineage'), OUT_KIN = OUT_H.indexOf('kin');
+const nChamp = body.filter(r => r[OUT_LIN]).length, nKin = body.filter(r => r[OUT_KIN]).length;
+/* 冠军枚数不靠"看着像"判。原先写的是 `> 20 就停` —— 那是拿今天 15 枚的规模猜的一个魔数，
+ *   §E375 往里加 16 枚**真**旧槽位冠军就会把它撞红，而红的原因根本不是"那 183 枚假冠军回来了"。
+ *   ⇒ 改成结构式对账：旧表里的真冠军数（那批人已经核过）+ 本轮新打上"旧槽位冠军"这一类的行数，两者必须逐枚对上。
+ *   牙口验过：给 --list 换成一份不覆盖那 183 枚的名单 ⇒ 假冠军活下来，报"214 ≠ 15 + 16"EXIT=2。 */
+const oldChamp = OR.filter(r => r[oh.lineage]).length;
+const newSlot = ROWS.filter(r => r[ch.lineage] === '旧槽位冠军').length;
+if (nChamp !== oldChamp + newSlot) {
+  console.error('⛔ 冠军枚数 ' + nChamp + ' ≠ 旧表真冠军 ' + oldChamp + ' + 本轮旧槽位冠军 ' + newSlot
+    + ' ⇒ 要么 ' + LIST + ' 那批没被清掉，要么新加的类没打上 lineage（差值 ' + (nChamp - oldChamp - newSlot) + '）'); process.exit(2); }
+console.log('守卫 ✅ 冠军 ' + nChamp + ' = 旧表 ' + oldChamp + ' + 旧槽位冠军 ' + newSlot);
+if (nKin !== Object.keys(KIN).length) console.warn('⚠ kin 非空 ' + nKin + ' ‖ 名单 ' + Object.keys(KIN).length + ' —— 差的那几枚在面板里没有行');
+
 if (process.argv.includes('--check')) {
-  console.log('--check：会写 ' + out.length + ' 行；清掉假冠军 ' + cleared + ' ‖ 保留真冠军 ' + keptChamp + ' ‖ 搬 Sc 四列 ' + carried + ' 枚');
+  console.log('--check：会写 ' + body.length + ' 行；清掉假冠军 ' + cleared + ' ‖ 保留真冠军 ' + keptChamp + ' ‖ 搬 Sc 四列 ' + carried + ' 枚');
   process.exit(0);
 }
 writeFileSync(join(HERE, 'coords.tsv'), out.join('\n') + '\n');
 const CH = read(join(HERE, 'coords.tsv'));
-const chh = idx(CH[0]);
-const nChamp = CH.slice(1).filter(r => r[chh.lineage]).length, nKin = CH.slice(1).filter(r => r[chh.kin]).length;
 console.log('已写 coords.tsv：' + (CH.length - 1) + ' 枚 ‖ lineage 非空（真冠军）' + nChamp + ' ‖ kin 非空 ' + nKin);
-if (nChamp > 20) { console.error('⛔ 冠军枚数 ' + nChamp + ' 明显不对 ⇒ ' + LIST + ' 那批没被清掉？'); process.exit(2); }
-if (nKin !== Object.keys(KIN).length) console.warn('⚠ kin 非空 ' + nKin + ' ‖ 名单 ' + Object.keys(KIN).length + ' —— 差的那几枚在面板里没有行');
+if (CH.length - 1 !== body.length) { console.error('⛔ 回读 ' + (CH.length - 1) + ' 行 ≠ 内存 ' + body.length + ' 行'); process.exit(2); }
+

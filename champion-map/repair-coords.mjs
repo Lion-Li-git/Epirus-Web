@@ -24,7 +24,7 @@ const CHECK = process.argv.includes('--check');
 const BEH = ['dmg', 'heavy', 'holo', 'rounds', 'drawRate', 'zeroRate', 'seatSpread', 'distinctKeys', 'charges',
   'waste', 'noThreatStance', 'fieldAAtk', 'rwDmg'];
 
-function tsv(p) { const L = readFileSync(p, 'utf8').trim().split('\n'), h = L[0].split('\t');
+function tsv(p) { const L = readFileSync(p, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), h = L[0].split('\t');
   return { h, rows: L.slice(1).map(l => { const c = l.split('\t'); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; }) }; }
 
 /* 量具三片按 id 合并（同 id 取第一片有的值 —— 尺是同一把，分片只是并行）*/

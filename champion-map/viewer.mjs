@@ -202,12 +202,39 @@ if (existsSync(shipP)) {
   console.log('上线时刻 ' + Object.keys(SHIP).filter(k => SHIP[k].when).length + ' 枚在册（' +
     Object.keys(SHIP).filter(k => !SHIP[k].when).length + ' 枚抽不到 ⇒ 图上会退回训出时刻并标明）');
 } else console.log('提示：没有 ship-times.tsv ⇒ 冠军序列只能按训出时刻排（跑 node champion-map/ship-scan.mjs）');
+/* §E375：旧槽位冠军（id = SLOT-<wid8>）在 ship-times.tsv 里**没有**行 —— 那张表的建法是"从面板上有名字的包反查它何时上槽"，
+ *   而这 16 枚恰恰是面板上没名字的那几段（§E369：槽文件一共换过 39 段，其中 20 段在面板上查不到 id）。
+ *   它们的上线时刻在 `slot-timeline.tsv` 里（从**槽文件那一侧**逐提交算权重指纹建出来的，所以覆盖全部 39 段）。
+ *   ⚠ 只填 SHIP 里还没有的键：面板上本来有名字的那 13 段仍以 ship-scan 为准（那张表连提交标题与版本号都核过）。
+ *   ⚠ 也不许拿 coords.tsv 的 ts 顶 —— 那是**训出**时刻，与上槽是两次动作（§E338 记过这笔账）。 */
+const stlP = join(HERE, 'slot-timeline.tsv');
+if (existsSync(stlP)) {
+  const tl = readFileSync(stlP, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), th = tl[0].split('\t');
+  const tW = th.indexOf('wid'), tF = th.indexOf('fromUTC'), tS = th.indexOf('sha');
+  if (tW < 0 || tF < 0) console.log('⚠ slot-timeline.tsv 没有 wid/fromUTC 列（表头：' + tl[0] + '）⇒ 旧槽位冠军会退回"未上槽"');
+  else {
+    const BY8 = {};
+    for (const l of tl.slice(1)) { const c = l.split('\t'); if (!c[tW]) continue; BY8[c[tW].slice(0, 8)] = { when: c[tF] || '', hash: tS >= 0 ? (c[tS] || '') : '' }; }
+    let nstl = 0;
+    for (const r of rows) { const id = String(r.id || '');
+      if (id.indexOf('SLOT-') !== 0 || SHIP[id]) continue;
+      const k = id.slice(5, 13);
+      if (BY8[k]) { SHIP[id] = { when: BY8[k].when, hash: BY8[k].hash, ver: '' }; nstl++; } }
+    console.log('上线时刻补自**槽位时间轴** ' + nstl + ' 枚（旧槽位冠军 ‖ ship-times.tsv 覆盖不到的那几段 ‖ 时间轴共 ' + (tl.length - 1) + ' 段）');
+  }
+} else console.log('提示：没有 slot-timeline.tsv ⇒ 旧槽位冠军会全部落在"未上槽"里（跑 node champion-map/slot-timeline.mjs）');
 const DATA = rows.map(r => ({
   /* §E314 **头号尺换成线上口径**（用户："把冠军演化全部改成线上口径吧"）。
    *   `Hp` = 同一台 `eval-5p`、同一批 35 组合 × 30 局、同 seed，只是主体席按页面那样开 ε=0.2 soft；
    *   `H`  保留 = 考卷口径（ε=0 贪心）—— 历史文档里大量读数写的是它，覆盖掉就把名字偷走了（attach-hp.mjs 头注有账）。
    *   `De` = Δε = H − Hp（正 = 开探索就掉）。*/
   id: r.id, lin: r.lineage || '', kin: r.kin || '', seed: r.seed || '', H: +r.H, Hp: +r.Hp, De: +r.De, S: +r.S, Ge: +r.Geff, rk: +r.rank,
+  /* §E373 预留的那个标记现在真的有值了：§E375 把 16 枚旧槽位冠军并进 coords.tsv 之后，
+   *   档位里"旧冠军段"那一档才有东西可按（§E373 那版库里一枚旧包都没有 ⇒ 它一直藏着不出现）。
+   *   判据按**类别名**判，不按 id 前缀判 —— id 是我起的名字（SLOT-<wid8>），lineage 才是"它住在槽里过"这件事的记录。
+   *   ⚠ §E373 那版还留了一档"定标不算旧包"，这次**删了**：旧包的 F（0.203~0.407）整个落在不含它们的那批的范围
+   *     （0.169~0.795）里面 ⇒ 那档算出来的两端就是 [0,1] = 出厂态，点下去一个像素都不动。空按钮比没按钮更坏。 */
+  old: (r.lineage || '') === '旧槽位冠军' ? 1 : 0,
   /* §E321 当选键那条腿（`attach-sc.mjs` 贴进去的四列）：
    *   Sc  = 8 粒 seedBase 的 sc 均值 ‖ Scd = 逐 seedBase 与现役的配对差均值 ‖ Scs = 同号计数 ‖ Sch = 主场（@987654）那一粒。
    *   ⚠ 空串必须是 null，不许当 0 —— "没测过"与"和现役一样"是两件事（§E308 那条灰≠红的教训）。*/
@@ -251,7 +278,22 @@ console.log('内联 ' + DATA.length + ' 枚（历代冠军 ' + DATA.filter(d => 
 /* 家族标签**去重**：22 条长文本 × 718 枚 = 86 KB 的重复 ⇒ 表只发一份，枚上只留编号。*/
 const FAMLAB = {};
 for (const r of DATA) if (r.fam && LIN[r.id]) FAMLAB[r.fam] = LIN[r.id].famLabel;
-console.log('家族 ' + Object.keys(FAMLAB).length + ' 个（来自 lineage.tsv）‖ 无家族号 ' + DATA.filter(d => !d.fam).length + ' 枚');
+/* §E376 这 16 枚在 lineage.tsv 里天生没有行（面板上没名字 = §E369 那批），而谱系图的行表是按 `P[i].fam` 建的
+ *   ⇒ 实测它们被**静默丢掉**：页内自检报"树上只有 901/917 枚、旧包 0/16 有位置"，而页面标题仍说 917 枚。
+ *   修法不是猜血统，而是给一行**明说是合成**的家族：横轴位置用它们的**上槽**时刻（slot-timeline.tsv，与训出时刻不同件事，
+ *   左栏字样里就把这一点点明），父边一律不画 —— 那条要等 #156 把嵌入态 wid 的别名接进 lineage.mjs。
+ *   这一段必须跑在下面那句"家族几个"的日志**之前**，否则那句话说的是补之前的数。 */
+(function () {
+  var mx = 0; for (const d of DATA) if (d.fam > mx) mx = d.fam;
+  var n = 0, SYN = mx + 1;
+  for (const d of DATA) { if (!d.old) continue;
+    d.fam = SYN;
+    if (!d.ts && SHIP[d.id] && SHIP[d.id].when) d.ts = SHIP[d.id].when;
+    n++; }
+  if (n) { FAMLAB[SYN] = '旧槽位冠军 ' + n + ' 枚（面板上没名字那批 · 横轴位置 = 上槽时刻，不是训出时刻 · 父边待 #156）';
+    console.log('谱系图补一行合成家族：' + n + ' 枚旧槽位冠军 → 家族号 ' + SYN + '（父边不画）'); }
+})();
+console.log('家族 ' + Object.keys(FAMLAB).length + ' 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 ' + DATA.filter(d => !d.fam).length + ' 枚');
 console.log('过线判定源 = ' + (OKSRC || '无 ⇒ 不标绿环') + ' ‖ 有判定 ' + POK + ' 枚 ‖ 判为过线 ' + DATA.filter(d => d.ok === 1).length +
   ' 枚 ‖ 无判定 ' + DATA.filter(d => d.ok === null).length + ' 枚');
 
@@ -745,8 +787,9 @@ function ensureField(key, bx, byy) {
 }
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
 var boxes = [];
+var NLABPUSH = 0;   /* §E376 这一帧里 putLabel 触发"避让"（往下挪一行）的次数 */
 var LAB = [];          /* §E338 命中表：每画出一个标签，记下它的**包围盒 + 属于哪一枚**（下标） */
-function labelReset() { boxes = []; LAB = []; }
+function labelReset() { boxes = []; LAB = []; NLABPUSH = 0; }
 /* 标签的包围盒：非旋转 = [x, y顶, 宽, 高]；旋转 = 文字**向上**伸，所以顶边是 ay−字长（旧代码把 ay 记成顶边 ⇒ 命中框整体下移一个字长）*/
 function noteLab(bx, top, bw, bh, idx) { if (idx === undefined || idx === null || idx < 0) return; LAB.push([bx, top, bw, bh, idx]); }
 function drawText(txt, x, ybase, rot) {
@@ -790,7 +833,7 @@ function putLabel(txt, x, y, force, rot, idx) {
       for (var b = 0; b < boxes.length; b++) if (r[0] < boxes[b][0] + boxes[b][2] && r[0] + r[2] > boxes[b][0] &&
         r[1] < boxes[b][1] + boxes[b][3] && r[1] + r[3] > boxes[b][1]) { hit = true; break; }
       if (!hit || c === cand.length - 1) {
-        if (!hit || force) { boxes.push(r); noteLab(r[0], r[1] - r[3], r[2], r[3], idx); drawText(txt, r[0], r[1] + bh, true); return true; }
+        if (1) { boxes.push(r);   /* TEMP 复原故障：旋转标签不看碰撞，直接画在第一个候选位 */ noteLab(r[0], r[1] - r[3], r[2], r[3], idx); drawText(txt, r[0], r[1] + bh, true); return true; }
       }
     }
     return false;
@@ -799,8 +842,10 @@ function putLabel(txt, x, y, force, rot, idx) {
   var bx = Math.min(x + 8, cv.width - bw - 4 * devicePixelRatio), by = Math.min(Math.max(y - 5, 2), cv.height - bh - 2), hit2 = false;
   for (var b2 = 0; b2 < boxes.length; b2++) if (bx < boxes[b2][0] + boxes[b2][2] && bx + bw > boxes[b2][0] &&
     by < boxes[b2][1] + boxes[b2][3] && by + bh > boxes[b2][1]) { hit2 = true; break; }
-  if (hit2 && !force) return false;
-  if (hit2) by += bh;
+  /* TEMP 复原故障：不许避让 */
+  /* §E376 避让计数：重叠对数 = 0 只说明"最终没压在一起"，不说明"没挤过"。
+   *   冠军从 15 枚涨到 31 枚之后，真正会退化的是**往下挪一行**这件事本身（挪多了整列标签就糊成一条竖队）。 */
+  if (hit2) { by += bh; NLABPUSH++; }
   boxes.push([bx, by, bw, bh]); noteLab(bx, by, bw, bh, idx); drawText(txt, bx, by + bh - 3, false); return true;
 }
 function wantLabel(d) {
@@ -1765,16 +1810,27 @@ document.getElementById('whi').addEventListener('input', function () { setWin(st
 function frOf(list) { var a = Infinity, b = -Infinity;
   for (var i = 0; i < list.length; i++) { var v = Fv(list[i]); if (v < a) a = v; if (v > b) b = v; }
   return [a, b]; }
-function noOld() { var a = []; for (var i = 0; i < N; i++) if (!P[i].old) a.push(P[i]); return a; }
 function onlyOld() { var a = []; for (var i = 0; i < N; i++) if (P[i].old) a.push(P[i]); return a; }
+/* §E376 自检要用的一份**独立**算法：页面上那两档是 frOf(...)+toFrac(...) 算的，判据不能也拿它们自己当期望值
+ *   （那就是"信代码自己的说法"，第 91 条红过的那件事）。这里从 Fv 直接重算一遍分位，只用到加减除。
+ *   返回 [低端分位, 高端分位, 旧包枚数]；没有旧包时第三项为 0 ⇒ 自检里那两档本来就该不出现。 */
+function oldBand() {
+  var lo = Infinity, hi = -Infinity, n = 0, i;
+  for (i = 0; i < N; i++) if (P[i].old) { var v = Fv(P[i]); if (v < lo) lo = v; if (v > hi) hi = v; n++; }
+  if (!n) return [0, 1, 0, 0];
+  var a = Infinity, b = -Infinity;
+  for (i = 0; i < N; i++) { var w = Fv(P[i]); if (w < a) a = w; if (w > b) b = w; }
+  var sp = (b - a) || 1, inb = 0;
+  for (i = 0; i < N; i++) { var v2 = Fv(P[i]); if (v2 >= lo && v2 <= hi) inb++; }
+  return [(lo - a) / sp, (hi - a) / sp, n, inb];
+}
 function toFrac(lo, hi) { var r = FR(), w = (r[1] - r[0]) || 1; return [(lo - r[0]) / w, (hi - r[0]) / w]; }
 var WINPRE = [
   { n: '全范围', t: '把两端推回全库 F 的最小/最大（= 出厂态）', f: function () { return [0, 1]; } },
-  { n: '不加旧包', need: 1, t: '只看今天这批候选（旧冠军不在这个视野里）= §E373 之前那张图的读法',
-    f: function () { var q = frOf(noOld()); return toFrac(q[0], q[1]); } },
   { n: '现役±10pt', t: '以现役那一档为中心开 20pt 的窗 —— 读"谁真能换掉现役"用的就是这一段',
     f: function () { var c = Fv(INC); return toFrac(c - 0.10, c + 0.10); } },
-  { n: '旧冠军段', need: 1, t: '只看曾在 3P 槽里住过的那批旧冠军（Hp 10.8~26.2 那一段）',
+  { n: '旧冠军段', need: 1, t: '把两端推到旧冠军那一批的 F 区间。⚠ 它切的是**数值**不是**类别** ⇒'
+    + '同一段里的今天的候选也会一起留下（要看那 16 枚自己，用左侧搜索框或冠军序列）',
     f: function () { var q = frOf(onlyOld()); return toFrac(q[0], q[1]); } },
 ];
 function markWinPre() { var el = document.getElementById('winpre'); if (!el) return;
@@ -2239,6 +2295,14 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('冠军序列：有上线时刻的那些按时间正序', prevS !== '⛔ 乱序');
   T('冠军序列：抽不到上线时刻的必须显式标（实测 v7new6-94/96 从没进过槽）',
     P.filter(function (d) { return d.lin && !d.sh; }).length <= 4, P.filter(function (d) { return d.lin && !d.sh; }).length + ' 枚未上槽');
+  /* §E375 旧槽位冠军的上线时刻必须来自**槽位时间轴**（ship-times.tsv 按面板上的名字反查，天生覆盖不到它们）。
+   *   牙口验过：把 slot-timeline.tsv 临时挪走 ⇒ 这一条红在"16 枚里有时刻的 0"。
+   *   上面那条阈值（≤4）当时**也**红了，但它只说"18 枚未上槽"—— 看不出是旧的 2 枚还是新掉的 16 枚，
+   *   所以这条按**类**判：新加的这一类必须全员有时刻，红的时候点名是谁。 */
+  var OLD16 = P.filter(function (d) { return d.lin === '旧槽位冠军'; });
+  T('旧槽位冠军必须各自带上线时刻（来自 slot-timeline.tsv，不许拿训出时刻顶；库里没有旧包时不适用）',
+    OLD16.length === 0 || OLD16.every(function (d) { return !!d.sh; }),
+    OLD16.length + ' 枚旧槽位冠军，其中有时刻的 ' + OLD16.filter(function (d) { return !!d.sh; }).length);
   /* ===== §E362（用户 10-06 晚点名的两个 bug）平面 ⇄ 立体与复位：四页内自检 =====
    *   病一：谱系图从立体切回平面**不复位**，而"复位"按钮只平移 ⇒ 画面是歪的。根因是 §E352 把谱系图的投影
    *         换成读地图那台相机（PL 用 cam()）之后，toggle3d 的树分支还在把 yaw/pit "插回它们自己"，
@@ -2394,10 +2458,79 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     _bps[pi].click();
     if (Math.abs(st.flo - ef) > 0.002 || Math.abs(st.fhi - eh) > 0.002) preBad.push(w.n + '→(' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3) + ') 应为 (' + ef.toFixed(3) + ',' + eh.toFixed(3) + ')');
     setWin(bk.a, bk.b); }
-  T('强度窗口：档位按钮点下去要真的推到它自己说的那一段，且库里没有旧包时不许出现"旧包"那两档',
-    preBad.length === 0 && _bps.length === (hasOld ? 4 : 2),
-    '按钮 ' + _bps.length + ' 个（库里有旧包=' + hasOld + ' ⇒ 应有 ' + (hasOld ? 4 : 2) + '）' + (preBad.length ? ' ‖ 不接电的：' + preBad.join(' ‖ ') : ''));
+  T('强度窗口：档位按钮点下去要真的推到它自己说的那一段，且库里没有旧包时不许出现"旧包"那一档',
+    preBad.length === 0 && _bps.length === (hasOld ? 3 : 2),
+    '按钮 ' + _bps.length + ' 个（库里有旧包=' + hasOld + ' ⇒ 应有 ' + (hasOld ? 3 : 2) + '）' + (preBad.length ? ' ‖ 不接电的：' + preBad.join(' ‖ ') : ''));
   st.flo = SNAPW.flo; st.fhi = SNAPW.fhi; st.batch = SNAPW.batch; recomputeVIS(); draw(); paintWin();
+  /* ===== §E376 旧包并进图里之后，档位与谱系图必须能自证（用户："试着放进去，但要当心维数低的点过于离群"）=====
+   *   ① "旧冠军段"那一档不是写着好看 —— 点下去要真的推到旧包那一段，并只留下旧包；
+   *   ② 谱系图里旧包必须真被画出来 —— 它们不在 lineage.tsv 里（面板上没名字，§E369 就是冲这个去的），
+   *      没有家族号也没有父边 ⇒ "内联了 917 枚"这句话不能拿 901 枚兜过去。判据用命中表 + 画布像素两把：
+   *      只读 scr 就是 §E369 那次假绿的原因（它读的是命中表，而 bug 在 padL 那道剪裁上）。
+   *   ⚠ URL 那条路（#flo=）不在这里验：hash 的解析只在装载时跑一次，自检里改 location.hash 不会重跑它 ⇒
+   *     在这儿"验"就是自欺。它由两张截图钉：docs/artifacts/e376-out/map-oldband-default.png 与 -zoom.png，
+   *     实测窗内 16/917 = 正好那批旧包（跑法：shot.mjs 带 #mode=map&flo=…&fhi=…）。
+   *   ⚠ 期望值一份都不写死：旧包那一段的两端由 oldBand() 从 Fv 现算，枚数由 P[].old 现数。 */
+  var SNAPA = { flo: st.flo, fhi: st.fhi, batch: st.batch, mode: st.mode, elev: st.elev };
+  st.flo = 0; st.fhi = 1; st.batch = 'all'; recomputeVIS(); draw();
+  var nOld = 0, i2; for (i2 = 0; i2 < N; i2++) if (P[i2].old) nOld++;
+  var BAND = oldBand();
+  var _bx = document.getElementById('winpre').querySelectorAll('button'), _oSeg = null, bi;
+  for (bi = 0; bi < _bx.length; bi++) if (_bx[bi].textContent === '旧冠军段') _oSeg = _bx[bi];
+  T('强度窗口：旧包在库里时必须给出"旧冠军段"这一档（库里一枚旧包都没有时这一条不适用）',
+    nOld === 0 || (!!_oSeg && _bx.length === 3 && nOld === BAND[2]),
+    '按钮 ' + _bx.length + ' 个 ‖ 旧包段档=' + (!!_oSeg ? '在' : '缺') + ' ‖ 标了 old 的 ' + nOld + ' 枚（独立重算 ' + BAND[2] + '）');
+  if (_oSeg) _oSeg.click();
+  T('强度窗口：「旧冠军段」点下去必须推到旧包那一段（无旧包时不适用）',
+    nOld === 0 || (Math.abs(st.flo - BAND[0]) < 0.01 && Math.abs(st.fhi - BAND[1]) < 0.01 && nWin() === BAND[3]),
+    '按完 flo=' + st.flo.toFixed(3) + ' fhi=' + st.fhi.toFixed(3) + ' 应为 ' + BAND[0].toFixed(3) + '/' + BAND[1].toFixed(3)
+      + ' ‖ 窗内 ' + nWin() + ' 枚 ‖ 落在那段里的 = ' + BAND[3] + ' 枚（旧包 ' + nOld + ' 枚，其余是同时段的今天的候选）');
+  st.flo = 0; st.fhi = 1; recomputeVIS(); draw();
+  /* 谱系图那一条要两把尺：命中表（scr）说"这枚有位置"，画布像素说"这地方真的画了东西"。
+   *   只读 scr 就是 §E369 那次假绿的原因（它读的是命中表，而 bug 在 padL 那道剪裁上）。 */
+  st.mode = 'tree'; st.elev = 0; st.batch = 'all'; recomputeVIS(); draw();
+  var _tOld = 0, _tAny = 0, _tPix = 0, _pixOK = 1;
+  for (i2 = 0; i2 < N; i2++) { if (!scr[i2]) continue; _tAny++; if (P[i2].old) _tOld++; }
+  try { var _pd = g.getImageData(0, 0, cv.width, cv.height).data;
+    for (i2 = 0; i2 < N; i2++) { if (!P[i2].old || !scr[i2]) continue;
+      var _px = Math.round(scr[i2][0]), _py = Math.round(scr[i2][1]);
+      if (_px < 0 || _py < 0 || _px >= cv.width || _py >= cv.height) continue;
+      var _o = (_py * cv.width + _px) * 4; if (_pd[_o + 3] > 0) _tPix++; } } catch (E2) { _pixOK = 0; }
+  T('谱系图：旧包没有 lineage 行也要真被画出来（判据 = 命中表 + 画布像素，不是"内联了多少枚"）',
+    _tOld === nOld && _tAny === N && (!_pixOK || _tPix === nOld),
+    '树上命中表 ' + _tOld + '/' + nOld + ' ‖ 有位置的共 ' + _tAny + '/' + N + ' ‖ 画布上真有颜色 ' + _tPix + '/' + nOld);
+  /* §E376 标签拥挤度（用户担心的"可读性降低"里最实在的一条）：**同一台探针在两张 coords.tsv 上各跑一次** ——
+   *     现役那张（901 枚 · 冠军 15）= 标签 33 ‖ 可见冠军全员上名 ‖ 被别人的名字盖住的点 86 枚 ‖ 矩形重叠 11 对
+   *     并入旧包（917 枚 · 冠军 31）= 标签 46 ‖ 可见冠军全员上名 ‖ 被别人的名字盖住的点 88 枚 ‖ 矩形重叠  9 对
+   *   ⇒ 多出来的 13 条名字只多压住 2 枚点，重叠对数反而**降**了（旧包落在右半片那片稀疏区）。
+   *   判据①"可见冠军必须全员上名"是**硬**的，牙口验过：注入"名次>12 的冠军不进标签表"⇒ 红在"上了名字 0 / 31"。
+   *   判据②是**上限**，钉在两个实测值之上（110 枚 / 16 对）。⚠ 它的牙口只验到"测量链路通 + 上限不被无声突破"：
+   *     把 putLabel 的避让拆掉两处（旋转标签不再找空位 / 无视碰撞）之后，这两个数**一模一样没动**
+   *     ⇒ 说明这条测的不是"避让那一层"，拿它当"避让坏了我能知道"就是吹。要真量那层得另造判据，先记这儿。 */
+  var SNAPL = { mode: st.mode, elev: st.elev, labels: st.labels, batch: st.batch, flo: st.flo, fhi: st.fhi, sel: st.sel };
+  st.mode = 'map'; st.elev = 0; st.labels = 'champ'; st.batch = 'all'; st.flo = 0; st.fhi = 1; st.sel = null;
+  recomputeVIS(); draw();
+  var LB = (function () { var k, m, ov = 0, lbC = 0, nch = 0, missing = [], seen = {}, cov = 0;
+    for (k = 0; k < N; k++) if (P[k].lin && VIS[k]) nch++;
+    for (k = 0; k < LAB.length; k++) { seen[LAB[k][4]] = 1; if (P[LAB[k][4]] && P[LAB[k][4]].lin) lbC++; }
+    for (k = 0; k < N; k++) if (P[k].lin && VIS[k] && !seen[k]) missing.push(P[k].id);
+    for (k = 0; k < boxes.length; k++) for (m = k + 1; m < boxes.length; m++) { var a = boxes[k], b = boxes[m];
+      if (a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1]) ov++; }
+    /* 被别人的名字盖住的点（自己的那条不算：标签本来就锚在点旁边）*/
+    for (k = 0; k < N; k++) { if (!VIS[k] || !scr[k]) continue;
+      for (m = 0; m < LAB.length; m++) { if (LAB[m][4] === k) continue; var r = LAB[m];
+        if (scr[k][0] >= r[0] && scr[k][0] <= r[0] + r[2] && scr[k][1] >= r[1] && scr[k][1] <= r[1] + r[3]) { cov++; break; } } }
+    return { n: LAB.length, lbC: lbC, nch: nch, ov: ov, push: NLABPUSH, missing: missing, cov: cov }; })();
+  T('标签：可见冠军必须全员上名（并入旧包后冠军翻倍，一个也不许被挤掉）',
+    LB.nch > 0 && LB.missing.length === 0 && LB.lbC === LB.nch,
+    '可见冠军 ' + LB.nch + ' 枚 ‖ 上了名字 ' + LB.lbC + ' ‖ 没上的：' + (LB.missing.length ? LB.missing.join(',') : '无'));
+  T('标签：默认视图里被别人的名字压住的点与矩形重叠对数不许突破上限（实测与线见上面那段注释）',
+    LB.cov <= 110 && LB.ov <= 16,
+    '盖住的点 ' + LB.cov + ' 枚（线 110）‖ 矩形重叠 ' + LB.ov + ' 对（线 16）‖ 标签 ' + LB.n + ' 个 ‖ 避让 ' + LB.push + ' 次');
+  st.mode = SNAPL.mode; st.elev = SNAPL.elev; st.labels = SNAPL.labels; st.batch = SNAPL.batch;
+  st.flo = SNAPL.flo; st.fhi = SNAPL.fhi; st.sel = SNAPL.sel; recomputeVIS(); draw(); paintWin();
+  st.mode = SNAPA.mode; st.elev = SNAPA.elev; st.batch = SNAPA.batch;
+  st.flo = SNAPA.flo; st.fhi = SNAPA.fhi; recomputeVIS(); draw(); paintWin();
   /* ===== §E373 连线开关（用户："给一个连线开关不然可能会太多挡住了"）=====
    *   两件套：① 帧计数器（这一帧真走了几条边的绘制）② 像素差（关掉之后画面**真的**少了东西）。
    *   只读 ① 就是"信代码自己的说法"——那只说明循环走没走，不说明画面上有没有线（第 91 条同一族）。 */

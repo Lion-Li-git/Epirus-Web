@@ -20,7 +20,11 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 const HERE = dirname(fileURLToPath(import.meta.url));
-const rd = (f) => readFileSync(join(HERE, f), 'utf8').trim().split('\n').map((l) => l.split('\t'));
+/* ⚠ 读表不许 `.trim()` 整个文件：本仓工作树里 coords.tsv 的**末行常常正好是最后加进来的那批**（§E375 的 16 枚旧槽位冠军），
+ *   而它们的当选键/kin 等后列是空的 ⇒ trim 会把行尾那几个空单元格连着制表符一起削掉（实测 31 列变 26 列）。
+ *   接着这一台往尾部 append Hp/De 时，那一行的 Hp 就落进 Sc 的位置 —— 只错一行、无声无息，属于 §E307 同族。
+ *   ⇒ 只许剥掉行尾的**换行**，不许剥掉空白。 */
+const rd = (f) => readFileSync(join(HERE, f), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map((l) => l.split('\t'));
 
 const CO = rd('coords.tsv'), ch = Object.fromEntries(CO[0].map((h, i) => [h, i]));
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
@@ -53,10 +57,20 @@ for (const r of CO.slice(1)) { const id = r[ch.id]; if (!id) continue; if (id in
 console.log('覆盖 ' + filled + '/' + (CO.length - 1) + (blank.length ? ' ‖ 缺 ' + blank.slice(0, 8).join(' ') + '…' : ''));
 if (filled < 700) { console.error('⛔ 覆盖不足 700 ⇒ 按跑前判据不许换尺（缺太多会让图上混两种口径）'); process.exit(2); }
 
-const H = CO[0].concat(['Hp', 'De']);
+/* ⚠ 幂等：这一步重跑过就会在表尾**多一对** Hp/De（实测连跑三次 → 40 列里 3 对同名列，
+ *   下游按表头查列的人拿到的是第一对，而最后一对才是新读的数 ⇒ 静默读到旧尺）。
+ *   表头已有这两列时**原位覆盖**，不再追加。 */
+const H0 = CO[0], iHp = H0.indexOf('Hp'), iDe = H0.indexOf('De');
+const app = iHp < 0 && iDe < 0;
+if ((iHp < 0) !== (iDe < 0)) { console.error('⛔ 表头里只有 Hp 或只有 De（' + H0.join('\t') + '）⇒ 这份表被别的步骤改坏了，别接着写'); process.exit(2); }
+const H = app ? H0.concat(['Hp', 'De']) : H0.slice();
 const out = [H.join('\t')];
 for (const r of CO.slice(1)) { const id = r[ch.id];
-  out.push(r.concat(id in HP ? [HP[id].toFixed(2), DE[id].toFixed(2)] : ['', '']).join('\t')); }
+  const hp = id in HP ? HP[id].toFixed(2) : '', de = id in HP ? DE[id].toFixed(2) : '';
+  if (app) out.push(r.concat([hp, de]).join('\t'));
+  else { const row = r.slice(); while (row.length < H.length) row.push(''); row[iHp] = hp; row[iDe] = de; out.push(row.join('\t')); } }
+{ const badW = out.slice(1).filter(l => l.split('\t').length !== H.length).length;
+  if (badW) { console.error('⛔ ' + badW + ' 行的宽度 ≠ 表头 ' + H.length + ' 列 ⇒ 不写文件（列错位是静默病，修好上游再来）'); process.exit(2); } }
 if (process.argv.includes('--check')) { console.log('--check：未写文件'); process.exit(0); }
 writeFileSync(join(HERE, 'coords.tsv'), out.join('\n') + '\n');
 console.log('已写 coords.tsv（新增两列：Hp = 线上口径夺1率 ‖ De = Δε = 考卷 − 页面；原 26 列一字未动）');

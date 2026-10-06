@@ -35,7 +35,11 @@ const files = String(arg('ruler', 'e287-ruler-s1.tsv,e287-ruler-s2.tsv,e287-rule
 if (!files.length) { console.error('⛔ 现测尺一张都没读到 ⇒ 先跑 ruler-measure.mjs（--ruler= 收到：' + arg('ruler', '') + '）'); process.exit(2); }
 console.error('现测尺 ' + files.length + ' 张：' + files.map(f => f.slice(ROOT.length + 1).replace(/\\/g, '/')).join(' ‖ '));
 const seen = new Set(), raw = [];
-for (const p of files) { const t = readFileSync(p, 'utf8').trim().split('\n'), h = t[0].split('\t');
+/* ⚠ 两处都不能省：① CRLF 归一 —— 原来直接 split，末列的**表头键**会带上 `\r`（'lineage\r'），
+ *   于是 `o.lineage` 恒为 undefined，"历代上槽冠军 15 枚"那句其实是把 183 枚读成了没身份（今天靠 attach-kin
+ *   再清一次才凑对，两件坏事撞成同一个结果 = 侥幸）；② 不许 `.trim()` 整份文件 —— 末行的行尾空单元格会被
+ *   连着制表符一起削掉，那一行就少几列（§E375 加进来的 16 枚正好排在末尾）。只剥行尾换行。 */
+for (const p of files) { const t = readFileSync(p, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), h = t[0].split('\t');
   for (const l of t.slice(1)) { const c = l.split('\t'); const o = {}; h.forEach((k, i) => { o[k] = c[i]; }); if (!o.id || seen.has(o.id)) continue; seen.add(o.id); raw.push(o); } }
 const COORD = ['dmg', 'heavy', 'holo', 'zeroRate', 'drawRate', 'rounds', 'distinctKeys', 'seatSpread', 'rwDmg', 'charges',
   'waste', 'noThreatStance', 'fieldAAtk', 'fieldARounds'];

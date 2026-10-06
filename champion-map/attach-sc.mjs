@@ -27,7 +27,7 @@ const INCP = arg('incumbent', 'SHIPPED-3P');
 const DRY = process.argv.indexOf('--dry') >= 0;
 
 function tsv(f) {
-  const L = readFileSync(join(HERE, f), 'utf8').trim().split('\n'), h = L[0].split('\t');
+  const L = readFileSync(join(HERE, f), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), h = L[0].split('\t');
   return L.slice(1).map(l => { const c = l.split('\t'); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; });
 }
 const jobs = ['_e321-job1.tsv', '_e321-job2.tsv'].map(tsv);
