@@ -603,6 +603,7 @@ function THRLBL() { if (BASEP < 0) { var a1 = 0, b1 = 0;
   return Math.round(st.isoT * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '%）'; }
 var FRMS = 0, FRMA = [];
 var PERFON = 0;
+var GLPROBE = 0;
 var GLPATH = 0;     /* E413: 0=not-yet 1=GL-used 2=GL-unavailable */
 var GLDREW = 0;     /* E413：走 GL 路的帧数 */
 var GLSIG = '';     /* E405：GL 几何缓存键（相机/网格/画布任一变化才重算重传）*/
@@ -1553,6 +1554,7 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
    *     原因：大 Path2D 的 fill 要算并集/绕数、stroke 要整条 tessellate ⇒ Canvas 对超大 path 的代价远高于逐个小面。
    *     ⇒ 默认走逐面（BATCHISO=0）。要省 CPU 只能换后端（WebGL2 一次上传 VBO、逐帧只换矩阵），不是"合并 path"。 */
   /* E404 DS：GL 分支 —— 面一次性上传，逐帧只改 uniform（把光栅化从 CPU 挪走）。失败即回落 2D 路。 */
+  if (!GLPROBE) { GLPROBE = 1; console.log('PROBE drawIso GLISO=' + GLISO + ' GLMon=' + GLM.on() + ' quads=' + m.quads.length); }
   if (GLISO) {
     if (!GLM.on() && !GLM.init(cv)) { GLPATH = 2; GLISO = 0;
       console.log('GL 起不来（webgl2 上下文/着色器失败）⇒ 本帧走 2D 老路'); }
@@ -2376,7 +2378,7 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     if (kv[0] === 'sel') st.sel = decodeURIComponent(kv[1]);
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
-    if (kv[0] === 'gl') GLISO = (+kv[1] === 1 ? 1 : 0);
+    if (kv[0] === 'gl') { GLISO = (+kv[1] === 1 ? 1 : 0); console.log('PROBE parse gl kv=' + kv[1] + ' => GLISO=' + GLISO); }
     if (kv[0] === 'batch') BATCHISO = (+kv[1] === 0 ? 0 : 1);
     if (kv[0] === 'perf') PERFON = (+kv[1] || 0);   /* 2 = 跑一次性基准（原来写成 ===1 ? 1 : 0 ⇒ #perf=2 被吞成 0）*/
     if (kv[0] === 'sort') st.sortBy = (kv[1] === 'time' ? 'time' : 'F');
