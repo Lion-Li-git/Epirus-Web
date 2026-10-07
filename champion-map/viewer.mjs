@@ -1423,7 +1423,7 @@ function drawTree(fr) {
   var fw = g.measureText(foot).width / devicePixelRatio;
   if (fw > (w - padL) / devicePixelRatio - 8) g.font = Math.round(12 * devicePixelRatio * (w - padL) / devicePixelRatio / fw) + 'px system-ui,sans-serif';
   /* §E431 用户 10-08：底部这两行小字改从**页面最左侧**起、字号加大一档（原来跟着 padL 缩进、只有 12px）。 */
-  g.font = (13 * devicePixelRatio) + 'px system-ui,sans-serif';
+  g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';   /* §E436 用户 10-08：13px 偏大 ⇒ 12px */
   g.fillText(foot, 10 * devicePixelRatio, h - 14 * devicePixelRatio);
   /* §E314 那根星形中心必须自己在图上说一句"我不是血统"，否则 81% 共父会被读成"演化收敛"。
      ⚠ 只能另起一次 fillText：canvas 的 fillText **不认 \n**（第一版把它拼在同一串里 ⇒ 两段挤成一行、右缘被截，
@@ -1432,8 +1432,8 @@ function drawTree(fr) {
    *   页脚说明在 h−14·dpr。旧版 padB=46 ⇒ 日期与这条注**同一个 y**（h−30·dpr），两段字直接叠成一坨（用户截图）。 */
   if (NRBASE) { g.fillStyle = '#e0b13c';
       /* §E431：同样从最左起、字号加大 */
-      g.font = (13 * devicePixelRatio) + 'px system-ui,sans-serif';
-      g.fillText('另有 ' + NRBASE + ' 枚（' + Math.round(NRBASE * 100 / N) + '%）的父 = RUNNER-BASE d13d3c85…（runner 恒拷 EPIRUS_BUNDLE_IN 的产物 · 不是血统）⇒ 这条边上不画',
+      g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
+      g.fillText('另有 ' + NRBASE + ' 枚（' + Math.round(NRBASE * 100 / N) + '%）的父 = RUNNER-BASE（runner 覆写产物 · 不是血统）⇒ 这条边上不画',
         10 * devicePixelRatio, h - 32 * devicePixelRatio); }
 }
 /* 「卡住缩放上界 + 背景不要割裂」：缩放的下界 = 场恰好铺满视口（再小就露出虚空）；平移卡到"场始终盖住整个视口"。
@@ -2132,6 +2132,13 @@ function paintLegend(fr) {
      *   ⇒ 恢复简短版（不写点色 = 家族，那是选项框的事），正好填掉左上那块空白。 */
     s1.textContent = '底图 = F（Hp + T·S）· 蓝 = 低 → 红 = 高';
   }
+  /* §E436 DS（用户 10-08：「你把两个·隔开的地方都直接改成换行好了」/「谱系图这里的图例怎么没有跟着改成新的」）：
+   *   上一版我只在 fam/seed 那一档写死换行，而谱系图用的是 F/rel 那几档（走别的分支）⇒ 没跟上。
+   *   这里改成**通用收尾**：所有档位统一把「 · 」分隔处换成换行 ⇒ 一处生效、各档一致。
+   *   （用 split/join 而不是正则：模板字面量会吃反斜杠，本仓已有教训。） */
+  [s1, s2].forEach(function (el) {
+    if (el && el.textContent && el.textContent.indexOf(' · ') >= 0) el.innerHTML = el.textContent.split(' · ').join('<br>');
+  });
 }
 /* ③ 家族图例 = 可点按钮（按成员数从多到少），点一个只留这些家族。
  *   §E304：默认按**方法家族**列（22 家，按钮上直接写"改了什么"），切到 RNG seed 才列 seed。*/
