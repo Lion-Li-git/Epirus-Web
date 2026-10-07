@@ -1122,7 +1122,7 @@ function labelSet() {
 function draw1(fr) {
   var w = cv.width, h = cv.height, i;
   clear(w, h);
-  var pad = 26 * devicePixelRatio, band = h * 0.16, base = h * 0.78;   /* §E431 用户 10-08：整幅往下挪（底下本来空着）*/
+  var pad = 26 * devicePixelRatio, band = h * 0.16, base = h * 0.86;   /* §E432 用户 10-08：仍然遮挡 ⇒ 继续下移（0.78 → 0.86）*/   /* §E431 用户 10-08：整幅往下挪（底下本来空着）*/
   /* E399 DS（用户 10-08：「现在拉范围只会硬切，你直接改成随时顶满两头就行」+「加一个根据时间排序的选项」）：
    *   ① 排位只在**当前画得出来的那批**（VIS）里做 ⇒ 范围一拉就**顶满两头**，不再留一串空位（硬切）。
    *   ② sortBy='time' 时按**训出时刻**排（与 F 名次并存的一个开关）。 */
@@ -2073,6 +2073,9 @@ function paintLegend(fr) {
       + ' ‖ 底图 = F 地形（蓝 = 低 → 红 = 高）· 现役 = 库内第 ' + Math.round(incPct()) + ' 百分位（' + splitSets().up.length + ' 枚在它之上）')
     : st.color === 'rel' ? ('绿 = 比现役强（F 顶 ' + fr[1].toFixed(2) + '）')
     : ('红 = 好（F 顶 ' + CB.hi.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最高' : '') + ' ‖ 针 = 现役）');
+  /* §E432 DS（用户 10-08）：删掉 s1 那行「点色 = … ‖ 底图 = F 地形（蓝 = 低 → 红 = 高）· 现役 = 库内第 82 百分位…」——
+   *   ① 顶部本来就有颜色选项框，这行是重复说明；② 它是图例**最宽**的一行（块宽内容驱动）⇒ 删了整块才会真的变窄、不再压一维图。 */
+  if (st.color === 'fam' || st.color === 'seed') s1.textContent = '';
   var s2 = document.createElement('div'); s2.textContent = st.color === 'gl' ? ('G(long) 低 ' + GLR[0].toFixed(1) + '（蓝）· 闸要求 ≥3')
     : st.color === 'pm' ? ('⛔ 栽桩 ' + (NPRM - NPPASS) + ' 枚（红）· 灰 = 未测（' + (N - NPRM) + ' 枚）')
     : st.color === 'duel' ? ('⛔ 两批都输 ' + (NDUEL - NWIN - NFLIP) + ' 枚（红）· 黄 = 符号翻 ' + NFLIP + ' 枚 · 灰 = 未测（' + (N - NDUEL) + '）')
@@ -2086,6 +2089,7 @@ function paintLegend(fr) {
    *   为什么是**并排另一根轴**而不是把柄画在这条带上：这条带的两端在窗口态读的是**窗内两端**（§E373），
    *   柄画上去就永远贴在顶和底 —— 那条带说的是"色怎么铺"，这根轴说的是"窗在库里的哪一段"，两件事不能合成一根。*/
   var wr = document.createElement('div'); wr.style.display = 'flex'; wr.style.alignItems = 'flex-start'; wr.style.gap = '6px';
+  wr.style.justifyContent = 'flex-end';   /* §E432 用户 10-08：色条与 F 轴要**右对齐**（原来在 flex 行里是左对齐）*/
   /* 这张 canvas **只造一次**，之后每帧只是搬个位置：图例是每帧重建的（paintLegend 里 innerHTML=''），
    *   跟着重建就会把绑在它上面的双击/按下监听一起扔掉（§E378 第一版"每次只能拖一格"的另一半）。*/
   if (!WINAX) { WINAX = document.createElement('canvas'); WINAX.id = 'winax';
