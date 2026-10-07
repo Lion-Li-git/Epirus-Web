@@ -202,6 +202,9 @@ var NRBASE = 0;
 var TSBY = {};
 /* §E373 这一帧真的画了几条父边 —— 连线开关的判据要能读到它（页内自检拿它 + 像素差一起判，见 §E338 末尾）*/
 var NEDG = 0;
+var NOPTS = 0;   /* §E451 只给页内自检用的"只画底、不画点"开关：谱系图那条"左栏真被画上东西"要一张**只有底图的帧**做参照，
+                  *   而不是拿"中心与四邻不同"当代理（那个代理在名字上、在同族密集处都会看错，§E447 自己就记了污染）。
+                  *   出厂恒为 0；判据用完必须还原，否则下一帧就没有点了。 */
 var NCHAIN = 0;   /* §E378 这一帧画了几条**接替边**（页脚与页内自检都读它，不许各自数一份）*/
 var LASTFAMS = [];   /* §E448 上一帧谱系图的行表（fams 原样）—— 页内那条"家族 0 排最上面"在窗口把整行切没时读这个 */
 (function () { for (var i = 0; i < N; i++) TSBY[P[i].id] = P[i].ts || ''; })();
@@ -315,14 +318,14 @@ var FLAT = { yaw: -Math.PI / 2, pit: Math.PI / 2 }, SOLID = { yaw: -Math.PI / 2,
 /* §E377 谱系图版式的**支点**（左栏宽 / 上边距 · 设备像素）。单独摆出来是因为滚轮"以光标为锚"那道算法
  *   要减掉支点再乘缩放比 —— 不放在模块级就得在事件里重算一遍立体态那套挤行距的逻辑（会算错）。 */
 /* E396 DS（用户 10-08）：左栏 340 → 520 —— 家族名搬到坐标轴这一侧显示完整（底部高亮选项改成只显示家族号，把位置让出来）。
- * ⚠ §E449 量出一条账但**没有改**（数字留着，等用户裁）：E396 那一步定在 E397 的"总结式标签"**之前**，
- *   量的是当时那种一整列权重哈希的长标签；总结式上线之后 25 行家族名实测最宽 348px（家族 22）‖ 次宽 317/291/266/266/260
- *   ‖ 中位 186 ⇒ 520 里有 ~172px 是死空（临时判据"栏宽 ≤ 最宽标签 + 60"量的）。
- *   试过收到 392：画面没问题，但 §E447 那条"左栏必须真被画上东西"的**像素代理**失效 ——
- *   它靠"中心与四邻不同"判"画没画上"，只在**裸底**上成立：带子收成分界左 8px 时带内 74 枚有 64 枚被名字压住（样本掉到 10），
- *   带子放宽到当年剪裁线 515 又伸进数据区，同族密集处"四邻也是同色点"⇒ 通过率从 ≥60% 掉到 44%。
- *   ⇒ 真要收栏，得先把那条代理换成"与只画 chrome 的那一帧逐点比对"（CHM 位图现成就是那一帧）。 */
-var TPAD = { l: 520 * devicePixelRatio, t: 40 * devicePixelRatio };
+ * §E451 520 → 392：E396 那一步定在 E397 的"总结式标签"**之前**，量的是当时那种一整列权重哈希的长标签。
+ *   总结式之后实测（页内那条"左栏与它承载的家族名相称"量的，无头 1600×900）：
+ *   25 行家族名最宽 348px（家族 22）‖ 次宽 317/291/266/266/260 ‖ 中位 186 ⇒ 520 里有 ~172px 是死空。
+ *   392 = 348 + 12（文字右端离分界的间距）+ 24（maxW 的余量）+ 8（分界线）⇒ 最宽那行仍然单行装得下，
+ *   数据区在 1100px 窗口下宽 12.7%、1600px 下宽 8.75%。
+ *   ⚠ 上一班试过这一步，被 §E447 那条像素代理挡住（"中心与四邻不同"在名字上、同族密集处都会看错，带子一挪通过率从 ≥60% 掉到 44%）
+ *     ⇒ 这次先把那条代理换成"与一枚点都不画的那一帧逐点比差"（NOPTS），换完实测通过率 101/102 = 99%，栏宽这件事才做得下去。 */
+var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
 
 /* §E314 势 = **线上口径**的 H + T·S（用户裁定把整张图换成玩家真正拿到的那个数）。
  *   旧写法是 d.H / 100（考卷口径 · ε=0 贪心）。两口径的**排名**同构（Spearman 0.912 / 全库 718 枚），
@@ -1216,6 +1219,7 @@ function drawTree(fr) {
       g.restore(); } }
   scr = new Array(N);
   for (i = 0; i < N; i++) { var d = P[i], p = pos[d.id]; if (!p) continue; scr[i] = p;
+    if (NOPTS) continue;   /* §E451 落点表照记（判据要按位置取样），只跳过"画"这一步 */
     var al = alphaOf(d); g.globalAlpha = al;
     /* §E338 半径 = 名次（第 1 名最小）× 点大小滑杆 × 缩放因子（用户 ②④）；
      *   冠军那圈墨环与"最优"绿环都改成**跟着半径走**，否则小点会被环吞掉。 */
@@ -2700,7 +2704,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       if (B[4] === hit && px >= B[0] && px <= B[0] + B[2] && py >= B[1] && py <= B[1] + B[3]) { HL = 1; break; } }
     if (HL) overlapped++; else phantom++; }
   wrong = phantom;
-  T('命中：标签中心不许命中一张盖不住这个点的卡（phantom）', phantom === 0 && tested > 0, phantom + ' phantom / ' + tested + ' 个标签');
+  /* §E452 标签关掉时这条**没有可测的对象**（LAB 本来就是空的），不是"标签层坏了"：
+   *   原来写成 tested > 0 ⇒ 从 #labels=off 深链进来恒红，而红的是"这条此刻不适用"。
+   *   ⚠ 只放过 st.labels === 'off' 这一种零标签；开着标签却一枚都没画出来仍然红（那才是真病）。 */
+  T('命中：标签中心不许命中一张盖不住这个点的卡（phantom ‖ labels=off 时本条不适用）',
+    phantom === 0 && (tested > 0 || st.labels === 'off'),
+    phantom + ' phantom / ' + tested + ' 个标签'
+      + (tested === 0 && st.labels === 'off' ? ' ‖ 标签开关在「不标」⇒ 没有可测对象，本条不适用（开着标签却零标签仍判红）' : ''));
   T('命中：重叠标签按"谁盖在上面"说话（这是对的，只记账不判红）', true, overlapped + ' 枚与别人重叠');
   T('命中：空白处不许命中任何东西', pickAt(3, 3) < 0 && pickAt(cv.width - 3, cv.height - 3) < 0);
   /* ③ 点大小 = **按是否上线两档**（E349 DS 撤回的）。
@@ -3174,8 +3184,6 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   所以拿 scr 写的那一版**撤掉剪裁与留着剪裁都会 PASS**（§E369 变异实测：把 clip 加回去 ⇒ 27/0 全绿 ⇒ 那条是假的）。
    *   现在逐枚取样：中心像素必须与"自己半径之外"四个方向都不像同一个颜色，才叫真被画出来了；
    *   有 clip 时左栏那一片只剩底图 ⇒ 中心与旁边是同一块背景，一条也过不了。 */
-  function samplePx(x, y) { var q = g.getImageData(Math.round(x), Math.round(y), 1, 1).data; return [q[0], q[1], q[2]]; }
-  function pxDist(a, b) { return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]); }
   /* §E447 这个像素代理有一个已知污染：**标签是画在点之后的**（drawTree 里 label 晚于点），
    *   所以"中心与四周不像同一个颜色"量的可能是**文字与它的描边**，不是那一枚点被画出来了没有。
    *   实测：labels 出厂档（只标冠军+首尾）时 229 枚全过；切到 labels=all 之后一批中心被标签压住 ⇒ 只剩 59.8%，
@@ -3187,22 +3195,39 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     for (var lb = 0; lb < LAB.length; lb++) { var B = LAB[lb];
       if (x >= B[0] && x <= B[0] + B[2] && y >= B[1] && y <= B[1] + B[3]) return true; }
     return false; }
-  var pLG = 340 * devicePixelRatio, nProbe = 0, nPaint = 0, nCov = 0, missEx = '';
+  /* §E451 探针带 = **当年那道剪裁线**（旧 padL=520 时代的 padL-5 = 515），不是"当下的分界"：
+   *   这条要防的病是"有人在数据区左缘把剪裁加回去"，那条线历史上就在 515。
+   *   原来写死 340 是"分界左边一条"的旧校值 —— 栏宽一改就只剩分界左 52px 一条，带内 74 枚里 64 枚被名字压住，样本掉到 10；
+   *   取 515 之后带子同时盖住左栏与紧挨分界那一条数据区，加回剪裁时两边都会空 ⇒ 牙口比原来强，样本也大得多。 */
+  var pLG = Math.round(515 * devicePixelRatio), nProbe = 0, nPaint = 0, nCov = 0, missEx = '';
+  /* §E451 参照帧换成"同一帧但一枚点都不画"（NOPTS 那个开关）⇒ "画没画上"从代理变成直测：
+   *   两帧只在"这点自己画的那几笔"上不同 ⇒ 中心处不同 = 这点真被画上去了。
+   *   原来那四个"四周取样点"能看错的来源（家族名文字、同族密集处四邻同色、底图深浅）一次全部去掉 ——
+   *   上面那段 §E447 自己记的"已知污染"就是这个代理的，不是画面的。
+   *   ⚠ 自己的标签仍然盖在中心上（标签晚于点）⇒ 那种中心两帧仍然相同，照旧按 LAB 跳过并单独计数。 */
+  var cand3 = [];
   for (var q3 = 0; q3 < N; q3++) { var sp3 = scr[q3]; if (!sp3 || !VIS[q3]) continue;
     if (alphaOf(P[q3]) < 0.5) continue;
     var rr3 = dotR(P[q3], st.tKx) + 8 * devicePixelRatio;
     var cX = sp3[0], cY = sp3[1];
     if (cX < rr3 + 6 || cX > pLG - 8 || cY < rr3 + 6 || cY > cv.height - rr3 - 6) continue;
     if (underLabel(cX, cY)) { nCov++; continue; }
-    nProbe++;
-    var mid3 = samplePx(cX, cY);
-    var marg = Math.min(pxDist(mid3, samplePx(cX - rr3, cY)), pxDist(mid3, samplePx(cX + rr3, cY)),
-      pxDist(mid3, samplePx(cX, cY - rr3)), pxDist(mid3, samplePx(cX, cY + rr3)));
-    if (marg > 36) nPaint++; else if (!missEx) missEx = P[q3].id + ' 中心 (' + Math.round(cX) + ',' + Math.round(cY) + ') 与四周只差 ' + Math.round(marg); }
-  T('平面态往左平移：左栏那一片必须真的被画上东西（padL 那道剪裁已撤 ‖ 判据=像素，不是命中表）',
-    nProbe >= 12 && nPaint >= Math.ceil(nProbe * 0.6),
-    '落进旧剪裁区的点 ' + nProbe + ' 枚 ‖ 中心确实与四周不同的 ' + nPaint + ' 枚（要 ≥ 60%）‖ 中心被标签压住而不参与这条的 ' + nCov +
-      ' 枚 ‖ 画布宽 ' + cv.width + (missEx ? ' ‖ 例：' + missEx : ''));
+    cand3.push([q3, cX, cY]); }
+  var dA3 = null, dB3 = null;
+  try { dA3 = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E9) {}
+  NOPTS = 1; draw(); NOPTS = 0;
+  try { dB3 = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E9b) {}
+  draw();   /* ⚠ 立刻画回有点的那一帧：后面还有读像素的判据，不许看到一张"没有点"的画布（§E448 那条"钉→画→判→还原→再画"） */
+  nProbe = cand3.length;
+  if (dA3 && dB3) for (var z3 = 0; z3 < cand3.length; z3++) {
+    var o3 = (Math.round(cand3[z3][2]) * cv.width + Math.round(cand3[z3][1])) * 4;
+    if (dA3[o3] !== dB3[o3] || dA3[o3 + 1] !== dB3[o3 + 1] || dA3[o3 + 2] !== dB3[o3 + 2]) nPaint++;
+    else if (!missEx) missEx = P[cand3[z3][0]].id + ' 中心 (' + Math.round(cand3[z3][1]) + ',' + Math.round(cand3[z3][2])
+      + ') 两帧一字不差 = 这一枚根本没画上'; }
+  T('平面态往左平移：左栏那一片必须真的被画上东西（padL 那道剪裁已撤 ‖ 判据=两帧之差，不是四周代理）',
+    !!dA3 && !!dB3 && nProbe >= 12 && nPaint >= Math.ceil(nProbe * 0.6),
+    '落进旧剪裁区的点 ' + nProbe + ' 枚 ‖ 中心处两帧不同（= 真画上）的 ' + nPaint + ' 枚（要 ≥ 60%）‖ 中心被标签压住而不参与这条的 ' + nCov +
+      ' 枚 ‖ 画布宽 ' + cv.width + (missEx ? ' ‖ 例：' + missEx : (dA3 && dB3 ? '' : ' ‖ 取不到两帧像素')));
   st.mode = SNAP2.mode; st.elev = SNAP2.e; st.yaw = SNAP2.y; st.pit = SNAP2.p; st.color = BAKCOL;
   st.flo = BAKWIN.flo; st.fhi = BAKWIN.fhi; recomputeVIS(); draw();   /* ⚠ 还原之后必须补一帧：
    *   不补的话轴上的两个柄还停在"全范围"那一帧的位置上，后面那条读像素的判据会拿到"画的是 0~1、st 要 0.169~0.541"这种假不一致 */
@@ -3309,12 +3334,20 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     '低端 ' + tLoW.toFixed(3) + ' ‖ 中位 ' + tMedW.toFixed(3) + '（值 ' + BDW.med.toFixed(3) + '）‖ 上端 ' + tHiW.toFixed(3) +
       ' ‖ 下半段中点 ' + tHalfLo.toFixed(3) + '（要 0.25）‖ 上半段中点 ' + tHalfHi.toFixed(3) + '（要 0.75）' +
       ' ‖ 同一枚（全库态）' + tLoAll.toFixed(3) + '（要 > 0.5）');
-  st.flo = 0.8; st.fhi = 1; recomputeVIS(); draw();
+  /* §E452 这一条原来写死 st.flo = 0.8，而 **st.flo 是"占全库 F 值域的比例"，不是 F 本身**（winLo = FR[0] + flo·(FR[1]-FR[0])）
+   *   ⇒ 出厂 T=0.10 下 0.8 恰好推到 F 0.670，把现役（F 0.665）切在窗外 0.005；而 #T=0.2 深链进来换了 F 分布
+   *   （页面自己报的是 F窗口 0.826…0.988），现役落进窗内 ⇒ 那句"现役在窗外"本来就不该出现，红的是判据的前提，不是画面。
+   *   现在窗口按**现役自己的 F 现算**（推到它上面 0.02 再换算成比例），任何 T / 任何进入路径下
+   *   "现役在窗外"都是被保证的前提；顺带把这条的适用面从"出厂 T 那一档"扩到全 T（比原来更强，不是放水）。 */
+  var FRw = FR(), floW = Math.max(0, Math.min(0.995, (Fv(INC) + 0.02 - FRw[0]) / ((FRw[1] - FRw[0]) || 1)));
+  st.flo = floW; st.fhi = 1; recomputeVIS(); draw();
   var stTxt = document.getElementById('stat').textContent;
   /* ⚠ 这里不用正则：模板字符串会先把 d 吃成 d、/ 吃成 / ⇒ 页面里那条正则当场断掉（构建期的自解析会红，
    *   但错误信息只说 "Unexpected token '.'"，很费时间）。所以这段一律用 indexOf。 */
   T('强度窗口：现役被切掉时页面必须响亮说一句（不许静默画一张看不见分界的图）',
-    stTxt.indexOf('现役在窗外') >= 0 && stTxt.indexOf('只画 ') >= 0 && stTxt.indexOf(' 枚') >= 0, stTxt.slice(0, 170));
+    stTxt.indexOf('现役在窗外') >= 0 && stTxt.indexOf('只画 ') >= 0 && stTxt.indexOf(' 枚') >= 0,
+    '窗 = 比例 ' + floW.toFixed(3) + '…1.000 = F ' + winLo().toFixed(3) + '…' + winHi().toFixed(3)
+      + ' ‖ 现役 F = ' + Fv(INC).toFixed(3) + '（T ' + st.T.toFixed(2) + '）‖ ' + stTxt.slice(0, 170));
   /* 档位：按钮不能只是"写着好看"，点下去必须真的把两端推到它自己说的那一段（含夹取后的值）。 */
   var _bps = document.getElementById('winpre').querySelectorAll('button'), preBad = [], hasOld = false;
   for (var oi = 0; oi < N; oi++) if (P[oi].old) { hasOld = true; break; }
@@ -3419,6 +3452,19 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     '全开 ' + eAll + ' 条 ‖ 只实录 ' + eHash + ' 条 ‖ 关掉 ' + eOff + ' 条 ‖ 关掉与全开的采样像素差 ' + diffOff);
   st.mode = SNAPM2.mode; st.edges = SNAPM2.edges;
   st.flo = SNAPM2.flo; st.fhi = SNAPM2.fhi; recomputeVIS(); draw();
+  (function () {   /* §E451 左栏宽度必须由它承载的文字定，不能由"当年谁拍的数"定 */
+    var ws = []; g.font = (9 * devicePixelRatio) + 'px system-ui,sans-serif';
+    for (var z = 0; z < LASTFAMS.length; z++) {
+      var fu = famSummary(famLab({ fam: LASTFAMS[z] })) || ('家族 ' + LASTFAMS[z]);
+      ws.push([g.measureText('家族 ' + LASTFAMS[z] + ' · ' + fu).width / devicePixelRatio, LASTFAMS[z]]); }
+    ws.sort(function (a, b) { return b[0] - a[0]; });
+    var wi = ws.length ? ws[0][0] : 0, padL = TPAD.l / devicePixelRatio, maxW = padL - 24;
+    T('谱系图左栏必须与它承载的家族名相称（栏宽 ≤ 最宽标签 +60 ⇒ 不留死空 ‖ 最宽标签 ≤ 两行装得下 ⇒ 不截名）',
+      ws.length > 0 && wi <= maxW * 2 + 0.5 && padL <= wi + 60,
+      '最宽 ' + (ws.length ? ws[0][1] : '—') + ' 号 = ' + Math.round(wi) + 'px ‖ 次宽 '
+        + ws.slice(1, 4).map(function (x) { return Math.round(x[0]); }).join('/') + ' ‖ 中位 '
+        + (ws.length ? Math.round(ws[Math.floor(ws.length / 2)][0]) : 0) + 'px ‖ 行数 ' + ws.length
+        + ' ‖ padL=' + Math.round(padL) + '（线 = 最宽 +60 = ' + Math.round(wi + 60) + '）‖ 单行预算 maxW=' + Math.round(maxW)); })();
   /* ===== §E372 真往返（用户点名的偏移病）：派发一次真点击，位置取这枚**画出来的地方** ⇒ 选中的必须是它自己。
    *   两层都不许信：① 不读 pickAt（那条只量"命中表与几何一致"，而用户报的是指针 → 位图那一步：rect、dpr、
    *      CSS 把位图压扁全在里面）；② **也不拿 scr 当"点在哪"** —— 第一版就是拿 scr 反算 clientX/Y，
@@ -3428,7 +3474,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   两枚都要过：**最靠下**放大指针换算的比例误差（错位随 y 线性增长 = 用户报的方向），
    *   **最靠上**放大"命中记脚下、画的是抬起来那点"的分离（立体态最高点抬得最多）。
    *   ⚠ 只测最下面那枚是错的：它的抬升量 ≈ 0 ⇒ 上面那个变异根本测不出来（第一版就这么漏过去的）。 */
-  var DCN = 0, DCY = 0, DCD = -1;   /* 上一次 drawnCentre：差分多出来的颗数 / 其中环色那一族的颗数 / 百分比 */
+  var DCN = 0, DCY = 0, DCD = -1, nSETTLE = 0;   /* 上一次 drawnCentre：差分颗数 / 环色颗数 / 占比 / 这一轮为"位图≠CSS 盒"重配了几次 */
   function drawnCentre(id) {
     /* §E449 改成**两帧差分 + 环色占比**两道一起：原来只在整张画布上按颜色扫 #ffd166，那条量的其实是
      *   "这一族色出没出现过"，不是"环画在哪儿"。两个方向都会错：阈值收紧（R>235 且 G 185..225 且 B 75..125）
@@ -3441,6 +3487,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
      *     —— 线怎么划、实测两侧读数见下面 return 前那段。
      *   ⚠ 先把 tw（平面⇄立体那条 520ms 补间）掐了再取两帧：补间在跑时两次 draw 本身就不同，差分会把动画当环。 */
     var i = nOf(id); if (i < 0 || !scr[i]) return null;
+    /* §E452 先让"位图 = CSS 盒 × dpr"这条不变量成立再取样：这一串判据中间的 draw() 会让图例 / 家族带改高度，
+     *   而页面上负责重配的 refit 挂在 ResizeObserver 上、要等一帧才跑 ⇒ 同步循环里位图还是旧尺寸、CSS 盒已经变了。
+     *   实测 color=seed 档差 68px（环心在设备 y=260，处理器按新盒换算派到 y=328）⇒ 报"点不到"，
+     *   而用户真点的时候浏览器用的是活盒 + 已重配的位图，所以这个病从来不在画面上 —— 红的是仪器。 */
+    var r0 = cv.getBoundingClientRect();
+    if (Math.abs(cv.width - r0.width * devicePixelRatio) > 1.5 || Math.abs(cv.height - r0.height * devicePixelRatio) > 1.5) {
+      fit0(); draw(); nSETTLE++; }
     tw = null;
     st.sel = id; draw();
     var dA; try { dA = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E) { st.sel = null; draw(); return null; }
@@ -3498,7 +3551,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         var t = pick[q], id = P[t].id, dc = drawnCentre(id); n++; if (P[t].lin) nLinp++;
         if (!dc) { fails.push(id + (P[t].lin ? '[冠]' : '') + '(选中环 ‖ 差分 ' + DCN + ' 颗 ‖ 环色 ' + DCY + ' 颗=' + DCD + '%)'); continue; }
         dd.push(id.slice(0, 6) + ':' + Math.round(dc[1] - scr[t][1]));
-        var cx = rr.left + dc[0] / devicePixelRatio, cy = rr.top + dc[1] / devicePixelRatio;
+        /* §E452 派发之前**重新量一次 rect**：rr 是这条开头量的，而中间那几次 draw 会让图例与家族带改高度
+         *   ⇒ 画布整体上下挪过（实测 color=seed 档挪了 68px：环心在设备 y=260，按旧 rect 换算处理器算成 y=328）。
+         *   用户真点的时候浏览器用的是**活** rect，所以这个"点不到"从来不在画面上 —— 红的一直是仪器。
+         *   （原来这条只在 color=seed / labels=off / T=0.2 这类"会让版式改高度"的档里现形，出厂态 rect 恰好没动。） */
+        var rr2 = cv.getBoundingClientRect();
+        var cx = rr2.left + dc[0] / devicePixelRatio, cy = rr2.top + dc[1] / devicePixelRatio;
         st.sel = null;
         cv.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: cx, clientY: cy }));
         cv.dispatchEvent(new MouseEvent('click', { button: 0, clientX: cx, clientY: cy }));
@@ -3527,7 +3585,8 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       msg: (fails.length ? fails.join(' ‖ ')
         : n + ' 枚全对（屏幕上下两端 + F 两端 + 最靠下的那枚冠军）')
         + ' ‖ 标签钉成不标（上面 §E449 那段）‖ 环心与 scr 的纵向差 ' + dd.join('/') + 'px ‖ 靶子里冠军 ' + nLinp
-        + ' 枚（环色那道只对冠军有效，要 ≥1）‖ 中心被邻枚的盘压住、按"选中者落点落在它自己命中盘里"判过的 ' + nOcc + ' 枚' };
+        + ' 枚（环色那道只对冠军有效，要 ≥1）‖ 中心被邻枚的盘压住、按"选中者落点落在它自己命中盘里"判过的 ' + nOcc
+        + ' 枚 ‖ 为"位图 ≠ CSS 盒"重配过 ' + nSETTLE + ' 次' };
   }
   var rt1 = roundTrip(function () { st.mode = 'map'; st.elev = 1; draw(); });
   T('指针往返（立体地图 · 屏幕上下端 + F 两端 + 一枚冠军）：按**画出来的环**派发真点击，选中的必须是它自己', rt1.ok, rt1.msg);
