@@ -505,7 +505,8 @@ var FLAT = { yaw: -Math.PI / 2, pit: Math.PI / 2 }, SOLID = { yaw: -Math.PI / 2,
  *     平面态就是 FLAT 这一档（立体态由 st.elev 抬升，不借 SOLID 的 pit）。 */
 /* §E377 谱系图版式的**支点**（左栏宽 / 上边距 · 设备像素）。单独摆出来是因为滚轮"以光标为锚"那道算法
  *   要减掉支点再乘缩放比 —— 不放在模块级就得在事件里重算一遍立体态那套挤行距的逻辑（会算错）。 */
-var TPAD = { l: 340 * devicePixelRatio, t: 40 * devicePixelRatio };
+/* E396 DS（用户 10-08）：左栏 340 → 520 —— 家族名搬到坐标轴这一侧显示完整（底部高亮选项改成只显示家族号，把位置让出来）。 */
+var TPAD = { l: 520 * devicePixelRatio, t: 40 * devicePixelRatio };
 
 /* §E314 势 = **线上口径**的 H + T·S（用户裁定把整张图换成玩家真正拿到的那个数）。
  *   旧写法是 d.H / 100（考卷口径 · ε=0 贪心）。两口径的**排名**同构（Spearman 0.912 / 全库 718 枚），
@@ -688,6 +689,17 @@ function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
    *   又保住上下文（这张图的价值恰恰在"被选中的那家相对别人在哪"）。*/
 /* 家族短标：只取"改了什么"那一段并截断（长说明留给悬停），否则一个按钮吃掉整条图例栏。*/
 function famLab(d) { return FAMLAB[d.fam] || ''; }
+/* E396 DS：把家族名按「 · 」装箱成最多 max 行（超出的部分不进图，完整串在悬停提示里）。 */
+function wrapLabel(t, s, maxW, max) {
+  var parts = String(s).split(' · '), lines = [], cur = '';
+  for (var i = 0; i < parts.length; i++) {
+    var cand = cur ? (cur + ' · ' + parts[i]) : parts[i];
+    if (!cur || t.measureText(cand).width <= maxW) cur = cand;
+    else { lines.push(cur); if (lines.length >= max) return lines; cur = parts[i]; }
+  }
+  if (cur) lines.push(cur);
+  return lines.slice(0, max);
+}
 function famShort(d, n) { var s = String(famLab(d)).split(' ‖ ')[0] || ('家族 ' + d.fam);
   return s.length > (n || 26) ? s.slice(0, n || 26) + '…' : s; }
 function tip(d, fr) {
@@ -1116,10 +1128,16 @@ function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, d
     var best = Math.min.apply(null, mem.map(function (d) { return d.rk; }));
     t.fillStyle = i % 2 ? 'rgba(255,255,255,.028)' : 'rgba(255,255,255,.0)';
     t.fillRect(0, padT + i * rowH, w, rowH);
-    t.fillStyle = st.ink; t.textAlign = 'right';
-    t.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.46);
-    t.fillStyle = st.dim; t.font = ff(10);
-    t.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.88);
+    /* E396 DS：名字优先（最多 2 行），装得下才在第二行带计数 —— 不硬塞、不溢出。 */
+    var maxW = padL - 24 * devicePixelRatio;
+    var full = String(famLab({ fam: f }) || '').split(' ‖ ')[0] || ('家族 ' + f);
+    t.fillStyle = st.ink; t.textAlign = 'right'; t.font = ff(9);
+    var ls = wrapLabel(t, '家族 ' + f + ' · ' + full, maxW, 2);
+    t.fillText(ls[0], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.36);
+    var cnt = mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best;
+    t.fillStyle = st.dim; t.font = ff(9);
+    if (ls[1]) t.fillText(ls[1], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.82);
+    else if (t.measureText(cnt).width <= maxW) t.fillText(cnt, padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.82);
     t.font = ff(11);
   }
   t.textAlign = 'left';
@@ -1881,9 +1899,11 @@ function buildFamBar() {
   for (var j = 0; j < GRP.keys.length; j++) {
     (function (k) {
       var b = document.createElement('button'); b.className = 'fam';
-      var lab = st.color === 'seed' ? ('seed ' + k) : ('家族 ' + k + ' · ' + famShort({ fam: k }, 24));
-      b.innerHTML = '<i style="background:' + GRP.col[k] + '"></i>' + lab + '<b>' + GRP.cnt[k] + '</b>';
-      b.title = st.color === 'seed' ? '这一档 RNG 种子被多少枚复用（旧口径，只说明"哪几枚同种子"）' : (byFam[k] || '');
+      /* E396 DS（用户 10-08）：底部高亮选项**只显示家族号**（描述文字挪到坐标轴那一侧去，见 paintChrome）。 */
+      var lab = st.color === 'seed' ? ('seed ' + k) : ('家族 ' + k);
+      /* E396 DS（用户 10-08）：**只留家族号**（描述与枚数都挪走；枚数进悬停提示，信息不丢）。 */
+      b.innerHTML = '<i style="background:' + GRP.col[k] + '"></i>' + lab;
+      b.title = (st.color === 'seed' ? '这一档 RNG 种子被多少枚复用（旧口径）' : (byFam[k] || '')) + ' · ' + GRP.cnt[k] + ' 枚';
       b.onclick = function () { st.hi[k] = !st.hi[k]; b.classList.toggle('on', !!st.hi[k]); req(); };
       el.appendChild(b);
     })(GRP.keys[j]);
@@ -1925,7 +1945,7 @@ function paintCard() {
   /* 家族标签用**截断版**：famLab 全串里带一整列"父"权重哈希（实测 20 个 ≈ 700 字符），
    *   直接拼进来这张卡会横贯整个画布，把下面的页脚与投影判据全盖住（第一版截图就是这样）。*/
   var body = [head,
-    '家族 ' + d.fam + '（' + (famShort(d, 34) || '—') + '）· 批次 ' + (batchOf(d) || '无日期') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
+    '家族 ' + d.fam + '（' + (String(famLab(d) || '').split(' ‖ ')[0] || '—') + '）· 批次 ' + (batchOf(d) || '无日期') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
     'F = ' + Fv(d).toFixed(3) + '（现役 ' + Fv(INC).toFixed(3) + '）· Hp = ' + d.Hp.toFixed(1) + ' · H考卷 = ' + d.H.toFixed(1) + ' · S = ' + d.S.toFixed(2),
     '上槽体检：' + (d.pv === 1 ? '✅ 三条腿全过（真能换包）' : (d.pv === 0 ? '⛔ ' + String(d.pb).slice(0, 90) : '未测')) +
     ' ‖ 过线判定：' + (d.ok === 1 ? '是' : (d.ok === 0 ? '否' : '未测')) + (d.why ? '（栽在 ' + String(d.why).slice(0, 60) + '）' : '')
