@@ -36,6 +36,9 @@ const FEAT = ['dmg', 'heavy', 'holo', 'rounds', 'drawRate', 'zeroRate', 'seatSpr
   'charges', 'waste', 'noThreatStance', 'fieldAAtk'];
 
 const raw = readFileSync(CF, 'utf8').replace(/\r\n/g, '\n');
+/* E393 DS：**保留原行尾**。原来无条件写 CRLF ⇒ 把整份 coords.tsv 从 LF 翻成 CRLF（实测 918 行全变），
+ *   5 列新增被行尾噪音淹没。 */
+const EOL = readFileSync(CF, 'utf8').indexOf(String.fromCharCode(13)) >= 0 ? String.fromCharCode(13, 10) : String.fromCharCode(10);
 const lines = raw.split('\n').filter(l => l.length);
 const H = lines[0].split('\t').map(s => s.replace(/^#/, '').trim());
 const miss = FEAT.filter(k => H.indexOf(k) < 0);
@@ -178,6 +181,6 @@ if (WRITE) {
     fill(r, hx3, scale(T3.slice(0, N))[i].toFixed(6)); fill(r, hy3, scale(T3.slice(N, 2 * N))[i].toFixed(6)); fill(r, hz3, scale(T3.slice(2 * N, 3 * N))[i].toFixed(6));
   }
   const head = H.concat(add);
-  writeFileSync(CF, [head.join('\t')].concat(rows.map(r => r.join('\t'))).join('\r\n') + '\r\n');
+  writeFileSync(CF, [head.join('\t')].concat(rows.map(r => r.join('\t'))).join(EOL) + EOL);
   console.log('  已写 ' + CF + '（新增/覆盖列 ' + head.map((h, i) => (add.indexOf(h) >= 0 || ['xt', 'yt', 'xt3', 'yt3', 'zt3'].indexOf(h) >= 0) ? h : null).filter(Boolean).join(' ') + '）');
 }
