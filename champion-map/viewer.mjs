@@ -1749,7 +1749,10 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
     if (!GLM.on() && !GLM.init(cv)) GLISO = 0;
     if (GLISO && GLM.on()) {
       var _dpr = devicePixelRatio || 1;
-      GLM.resize(w / _dpr, h / _dpr);
+      /* E409 DS：**用画布自己的尺寸**。drawIso 收到的 w/h 不是画布尺寸（是板的像素尺度，实测 756x125
+       *   ⇒ 视口比画布矮 85px ⇒ 壳大半画到视口外，这才是"看不见"的真根因）。 */
+      var CW = cv.width, CH = cv.height;
+      GLM.resize(CW, CH, CW / _dpr, CH / _dpr);
       /* E405 DS：**几何缓存**。原来每帧都重建 5k 个投影点 + 三个类型数组 ⇒ 这部分 CPU 成本顶掉了换后端
        *   的收益（E404 实测 GL 25.76 vs 2D 26.18 ms/帧）。相机/网格/画布任一变了才重算重传；否则逐帧只 drawElements。 */
       var _sig = [cb.r[0], cb.r[1], cb.r[2], cb.u[0], cb.u[1], cb.u[2], cb.f[0], cb.f[1], cb.f[2],
@@ -1761,7 +1764,7 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
         var gq = m.quads[gi];
         for (var gk = 0; gk < 4; gk++) {
           var gp = prj(gq[gk][0], gq[gk][1], gq[gk][2]);
-          vv[gi * 8 + gk * 2] = gp[0]; vv[gi * 8 + gk * 2 + 1] = h - gp[1];
+          vv[gi * 8 + gk * 2] = gp[0]; vv[gi * 8 + gk * 2 + 1] = CH - gp[1];   /* E409：按画布高翻转 */
         }
         var b0 = gi * 4;
         tri[gi * 6] = b0; tri[gi * 6 + 1] = b0 + 1; tri[gi * 6 + 2] = b0 + 2;

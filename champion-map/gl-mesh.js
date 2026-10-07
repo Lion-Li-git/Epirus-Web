@@ -63,11 +63,14 @@ var GLM = (function () {
   }
 
   /* CSS 尺寸 → 绘制缓冲（dpr）；返回是否可用 */
-  function resize(w, h) {
+  /* E408 DS：**像素口径必须与查看器一致**。原来这里乘 window.devicePixelRatio，而查看器用的是它自己那个
+   *   devicePixelRatio，两者不是同一个值（实测 210 → 125）⇒ 视口比几何矮 85px ⇒ 壳大半画到视口外 ⇒ "看不见"。
+   *   现在：W/H 就是**缓冲区像素**（调用方给 w/h，即主画布的 cv.width/height），CSS 尺寸单独给。 */
+  function resize(W, H, cssW, cssH) {
     if (!ok) return false;
-    var dpr = window.devicePixelRatio || 1;
-    var W = Math.max(1, Math.round(w * dpr)), H = Math.max(1, Math.round(h * dpr));
+    W = Math.max(1, Math.round(W)); H = Math.max(1, Math.round(H));
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    if (cssW) { cv.style.width = cssW + 'px'; cv.style.height = cssH + 'px'; }
     gl.viewport(0, 0, W, H);
     return true;
   }
