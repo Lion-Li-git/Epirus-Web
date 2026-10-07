@@ -28,7 +28,7 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 #whint{color:var(--dim);font-size:11px;min-width:0}
 #winax{border:1px solid var(--line);border-radius:3px;touch-action:none}
 #fit{position:absolute;left:14px;bottom:14px;color:var(--dim);font-size:11px;max-width:640px;line-height:1.5}
-#card{position:absolute;left:14px;bottom:34px;max-width:400px;max-height:42%;overflow:auto;background:rgba(19,26,41,.94);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.5;white-space:pre;display:none;z-index:7}
+#card{position:absolute;left:14px;bottom:34px;max-width:400px;max-height:42%;overflow:auto;background:rgba(19,26,41,.94);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;display:none;z-index:7}
 #side{position:absolute;right:14px;top:172px;width:236px;max-height:calc(100% - 200px);overflow:auto;background:rgba(19,26,41,.94);border:1px solid var(--line);border-radius:6px;padding:8px 9px;font-size:11px;line-height:1.45;display:none;z-index:7}
 #side h4{margin:0 0 6px;color:var(--dim);font-size:11px;font-weight:600}
 #side button{display:block;width:100%;text-align:left;margin:0 0 4px;padding:4px 6px;font-size:11px;border-radius:4px;line-height:1.35}
@@ -314,7 +314,14 @@ var FLAT = { yaw: -Math.PI / 2, pit: Math.PI / 2 }, SOLID = { yaw: -Math.PI / 2,
  *     平面态就是 FLAT 这一档（立体态由 st.elev 抬升，不借 SOLID 的 pit）。 */
 /* §E377 谱系图版式的**支点**（左栏宽 / 上边距 · 设备像素）。单独摆出来是因为滚轮"以光标为锚"那道算法
  *   要减掉支点再乘缩放比 —— 不放在模块级就得在事件里重算一遍立体态那套挤行距的逻辑（会算错）。 */
-/* E396 DS（用户 10-08）：左栏 340 → 520 —— 家族名搬到坐标轴这一侧显示完整（底部高亮选项改成只显示家族号，把位置让出来）。 */
+/* E396 DS（用户 10-08）：左栏 340 → 520 —— 家族名搬到坐标轴这一侧显示完整（底部高亮选项改成只显示家族号，把位置让出来）。
+ * ⚠ §E449 量出一条账但**没有改**（数字留着，等用户裁）：E396 那一步定在 E397 的"总结式标签"**之前**，
+ *   量的是当时那种一整列权重哈希的长标签；总结式上线之后 25 行家族名实测最宽 348px（家族 22）‖ 次宽 317/291/266/266/260
+ *   ‖ 中位 186 ⇒ 520 里有 ~172px 是死空（临时判据"栏宽 ≤ 最宽标签 + 60"量的）。
+ *   试过收到 392：画面没问题，但 §E447 那条"左栏必须真被画上东西"的**像素代理**失效 ——
+ *   它靠"中心与四邻不同"判"画没画上"，只在**裸底**上成立：带子收成分界左 8px 时带内 74 枚有 64 枚被名字压住（样本掉到 10），
+ *   带子放宽到当年剪裁线 515 又伸进数据区，同族密集处"四邻也是同色点"⇒ 通过率从 ≥60% 掉到 44%。
+ *   ⇒ 真要收栏，得先把那条代理换成"与只画 chrome 的那一帧逐点比对"（CHM 位图现成就是那一帧）。 */
 var TPAD = { l: 520 * devicePixelRatio, t: 40 * devicePixelRatio };
 
 /* §E314 势 = **线上口径**的 H + T·S（用户裁定把整张图换成玩家真正拿到的那个数）。
@@ -2073,12 +2080,18 @@ function paintCard() {
   var d = P[i];
   var head = (d.id === 'SHIPPED-Ldemo' ? '★ ' : '') + d.id + (d.lin ? ' 【' + d.lin + '】' : '') + (d.kin ? ' 〔' + d.kin + '〕' : '');
   /* 家族标签用**截断版**：famLab 全串里带一整列"父"权重哈希（实测 20 个 ≈ 700 字符），
-   *   直接拼进来这张卡会横贯整个画布，把下面的页脚与投影判据全盖住（第一版截图就是这样）。*/
+   *   直接拼进来这张卡会横贯整个画布，把下面的页脚与投影判据全盖住（第一版截图就是这样）。
+   *   §E449 之后卡会自己折行 ⇒ "撑宽"这件事已经不会发生，但 700 字符折出来是二十行，所以总结式照用。*/
   var body = [head,
     '家族 ' + d.fam + '（' + (famSummary(famLab(d)) || '—') + '）· 批次 ' + (batchOf(d) || '无日期') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
     'F = ' + Fv(d).toFixed(3) + '（现役 ' + Fv(INC).toFixed(3) + '）· Hp = ' + d.Hp.toFixed(1) + ' · H考卷 = ' + d.H.toFixed(1) + ' · S = ' + d.S.toFixed(2),
-    '上槽体检：' + (d.pv === 1 ? '✅ 三条腿全过（真能换包）' : (d.pv === 0 ? '⛔ ' + String(d.pb).slice(0, 90) : '未测')) +
-    ' ‖ 过线判定：' + (d.ok === 1 ? '是' : (d.ok === 0 ? '否' : '未测')) + (d.why ? '（栽在 ' + String(d.why).slice(0, 60) + '）' : '')
+    /* §E449 这两处原来写 slice(0, 90) / slice(0, 60)：卡是 white-space:pre（不折行），长句会把卡撑到横贯画布，
+     *   当时拿截断挡住那件事。现在卡改成 pre-wrap（400px 内自己折行、超高滚），截断就只剩坏处了：
+     *   实测全库 why 最长 131 字符（R391）‖ pb 最长 128（v7tgt4-63）⇒ 折行后最多 4 行，装得下；
+     *   而不截的话 v7seat24-31 那条本来读得出"四条腿各差多少"，截 60 就断成"场B 清场 0.20 < "（阈值那半句没了）。
+     *   这张卡是"为什么这枚不能上槽"的唯一自证位，半句等于没写。*/
+    '上槽体检：' + (d.pv === 1 ? '✅ 三条腿全过（真能换包）' : (d.pv === 0 ? '⛔ ' + String(d.pb) : '未测')) +
+    ' ‖ 过线判定：' + (d.ok === 1 ? '是' : (d.ok === 0 ? '否' : '未测')) + (d.why ? '（栽在 ' + String(d.why) + '）' : '')
   ].concat(relLines(d)).concat(d.dn > 1 ? ['⚠ 同一份权重占 ' + d.dn + ' 行：' + String(d.dups).split(',').slice(0, 4).join(' ‖ ') + (d.dn > 4 ? ' 等 ' + d.dn + ' 行' : '')] : []);
   el.style.display = 'block'; el.textContent = body.join('\n');
 }
@@ -2561,6 +2574,11 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     /* §E338 无头复验要能钉住"选中那枚"和"冠军序列开着"这两个状态（不点开就永远截不到新面板）*/
     if (kv[0] === 'side') st.side = +kv[1] ? true : false;
     if (kv[0] === 'sel') st.sel = decodeURIComponent(kv[1]);
+    /* §E449 补 edges：§E442 那节记过一条"edges= 不是 hash 参数 ⇒ 无头复验没法深链到'只实录'那一档，
+     *   只能靠代码路径的守卫"——  RUNNER-BASE 那条雾边到底在 'hash' 档不画、在 'all' 档画，之前只有页内断言能证，
+     *   截不到图给人看。三档都收，认不出的值不动（默认是 all）。*/
+    if (kv[0] === 'edges' && (kv[1] === 'all' || kv[1] === 'hash' || kv[1] === 'off')) {
+      st.edges = kv[1]; document.getElementById('edges').value = kv[1]; }
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
     if (kv[0] === 'gl') { GLISO = (+kv[1] === 1 ? 1 : 0); console.log('PROBE parse gl kv=' + kv[1] + ' => GLISO=' + GLISO); }
