@@ -361,6 +361,8 @@ console.log('家族 ' + Object.keys(FAMLAB).length + ' 个（来自 lineage.tsv�
 console.log('过线判定源 = ' + (OKSRC || '无 ⇒ 不标绿环') + ' ‖ 有判定 ' + POK + ' 枚 ‖ 判为过线 ' + DATA.filter(d => d.ok === 1).length +
   ' 枚 ‖ 无判定 ' + DATA.filter(d => d.ok === null).length + ' 枚');
 
+/* E404 DS（D-3）：壳的 WebGL2 后端放在独立文件里，生成时内联（避开模板字面量的转义坑）。 */
+const GLJS = readFileSync(join(HERE, 'gl-mesh.js'), 'utf8');
 const JS = `
 var P = DATA, N = P.length;
 /* §E334 "多少枚候选"与"几种打法"是两件事：同一份权重在面板上可以占好几行（实测 901 行 = 713 个权重，
@@ -796,6 +798,7 @@ function THRLBL() { if (BASEP < 0) { var a1 = 0, b1 = 0;
   return Math.round(st.isoT * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '%）'; }
 var FRMS = 0, FRMA = [];
 var PERFON = 0;
+var GLISO = 0;      /* E404：壳走 WebGL2（1）还是 2D 逐面（0，默认）。#gl=1 打开。 */
 var BATCHISO = 0;   /* E403：壳合并成一个 path 画（1）还是逐面画（0）。**默认 0 —— 实测合并更慢**：
  *   96 格 4868 面：合并 102.78 ms/帧 vs 逐面 23.54 ms/帧（52 格：25.12 vs 18.06）。
  *   原因：Path2D 里 4868 个子路径 ⇒ fill 要算并集/绕数、stroke 要整条 tessellate ⇒ 远贵于逐个小面。
@@ -1740,6 +1743,32 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
    *   ★ **实测结论：合并这条路是错的**（E403）：96 格 4868 面 **合并 102.78 ms/帧 vs 逐面 23.54 ms/帧**（52 格 25.12 vs 18.06）。
    *     原因：大 Path2D 的 fill 要算并集/绕数、stroke 要整条 tessellate ⇒ Canvas 对超大 path 的代价远高于逐个小面。
    *     ⇒ 默认走逐面（BATCHISO=0）。要省 CPU 只能换后端（WebGL2 一次上传 VBO、逐帧只换矩阵），不是"合并 path"。 */
+  /* E404 DS：GL 分支 —— 面一次性上传，逐帧只改 uniform（把光栅化从 CPU 挪走）。失败即回落 2D 路。 */
+  if (GLISO) {
+    if (!GLM.on() && !GLM.init(cv)) GLISO = 0;
+    if (GLISO && GLM.on()) {
+      var _dpr = devicePixelRatio || 1;
+      GLM.resize(w / _dpr, h / _dpr);
+      var nq = m.quads.length, vv = new Float32Array(nq * 8), tri = new Uint32Array(nq * 6), lin = new Uint32Array(nq * 8);
+      for (var gi = 0; gi < nq; gi++) {
+        var gq = m.quads[gi];
+        for (var gk = 0; gk < 4; gk++) {
+          var gp = prj(gq[gk][0], gq[gk][1], gq[gk][2]);
+          vv[gi * 8 + gk * 2] = gp[0]; vv[gi * 8 + gk * 2 + 1] = h - gp[1];
+        }
+        var b0 = gi * 4;
+        tri[gi * 6] = b0; tri[gi * 6 + 1] = b0 + 1; tri[gi * 6 + 2] = b0 + 2;
+        tri[gi * 6 + 3] = b0; tri[gi * 6 + 4] = b0 + 2; tri[gi * 6 + 5] = b0 + 3;
+        for (var g4 = 0; g4 < 4; g4++) { lin[gi * 8 + g4 * 2] = b0 + g4; lin[gi * 8 + g4 * 2 + 1] = b0 + ((g4 + 1) % 4); }
+      }
+      GLM.upload(vv, tri, lin);
+      var fRG = pot ? [0.878, 0.694, 0.235, 0.10] : [0.224, 0.851, 0.541, 0.11];
+      var lRG = shell ? (pot ? [0.878, 0.694, 0.235, 0.55] : [0.224, 0.851, 0.541, 0.5])
+                      : (pot ? [0.878, 0.694, 0.235, 0.22] : [0.224, 0.851, 0.541, 0.2]);
+      GLM.draw(fRG, lRG);
+      return m;
+    }
+  } else if (GLM.on()) { GLM.clear(); }
   if (!BATCHISO) {
     var q = [];
     for (var i0 = 0; i0 < m.quads.length; i0++) {
@@ -2519,6 +2548,7 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     if (kv[0] === 'sel') st.sel = decodeURIComponent(kv[1]);
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
+    if (kv[0] === 'gl') GLISO = (+kv[1] === 1 ? 1 : 0);
     if (kv[0] === 'batch') BATCHISO = (+kv[1] === 0 ? 0 : 1);
     if (kv[0] === 'perf') PERFON = (+kv[1] || 0);   /* 2 = 跑一次性基准（原来写成 ===1 ? 1 : 0 ⇒ #perf=2 被吞成 0）*/
     if (kv[0] === 'sort') st.sortBy = (kv[1] === 'time' ? 'time' : 'F');
@@ -3406,7 +3436,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>\n' +
 '<div id="tip"></div>\n' +
 '<div id="selftest"></div>\n' +
-'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + '; var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
+'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
 /* §E338 落盘之后**必须把内联脚本再解析一遍**（"写完不回读"这一族的第三种形态）：
  *   模板里写 '\n' 会被 Node 先吃成**真换行** ⇒ 写进页面就成了一条未闭合的字符串 ⇒ **整页脚本一条都不执行**，
  *   而构建照样打印"已写 xxx KB"、截图照样是一张画布（地板是 canvas 之外没画 ⇒ 看着像空的但没人报错）。
