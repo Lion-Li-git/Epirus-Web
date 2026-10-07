@@ -1751,6 +1751,7 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
   if (!GLPROBE) { GLPROBE = 1; console.log('PROBE drawIso GLISO=' + GLISO + ' GLMon=' + GLM.on() + ' quads=' + m.quads.length); }
   if (GLISO) {
     if (!GLM.on() && !GLM.init(cv)) { GLPATH = 2; GLISO = 0;
+      (function () { var _n = document.getElementById('perfru'); if (_n && _n.dataset) _n.dataset.path = 'glfail'; })();
       console.log('GL 起不来（webgl2 上下文/着色器失败）⇒ 本帧走 2D 老路'); }
     if (GLISO && GLM.on()) {
       var _dpr = devicePixelRatio || 1;
@@ -1785,7 +1786,8 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
       var fRG = pot ? [0.878, 0.694, 0.235, 0.10] : [0.224, 0.851, 0.541, 0.11];
       var lRG = shell ? (pot ? [0.878, 0.694, 0.235, 0.55] : [0.224, 0.851, 0.541, 0.5])
                       : (pot ? [0.878, 0.694, 0.235, 0.22] : [0.224, 0.851, 0.541, 0.2]);
-      GLDREW++; GLPATH = 1;   /* E413：证明这一帧真的走了 GL 路（用来校验仪表，别再拿"对不上"的数下结论） */
+      GLDREW++; GLPATH = 1;
+      (function () { var _n = document.getElementById('perfru'); if (_n && _n.dataset) _n.dataset.path = 'gl'; })();   /* E413：证明这一帧真的走了 GL 路（用来校验仪表，别再拿"对不上"的数下结论） */
       GLM.draw(fRG, lRG);
       /* E411 DS：**一次贴图**进主画布 ⇒ 壳落在 2D 绘制序列里（先壳后点，顺序天然正确），
        *   层叠/z-index/命中测试全都不涉及；每帧那 ~29k 次调用（壳占 70%）变成这 1 次 drawImage。 */
@@ -1912,6 +1914,7 @@ function draw() { try { var _ft0 = performance.now(); drawBody();
     _pe.textContent = 'FRMS=' + FRMS.toFixed(2) + ' AVG=' + _av.toFixed(2) + ' N=' + FRMA.length + ' MODE=' + st.mode
       + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW
       + ' **OPSF=' + _o1 + '** ' + _ok2;
+    _pe.dataset.path = _pe.dataset.path || '2d';
     for (var _k3 in OPC) OPC[_k3] = 0;   /* 每帧清零 ⇒ OPSF = 这一帧真实画了多少次 */
   }
   } catch (e) {
@@ -2594,6 +2597,14 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     document.getElementById('b3dt').textContent = st.elev < 0.5 ? '立体' : '平面'; } })();
 (function () { var b = document.getElementById('sortb'); if (b) b.textContent = '排序：' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次'); })();   /* E399：放到深链解析之后，否则 #sort=time 时标签是假的 */
 fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide();
+/* E417 DS（缺口 A）：计数器**在 #perf>=1 就挂**（原来只在 #perf=2 的基准里挂 ⇒ #perf=1 下 OPSF 恒为 0）。 */
+if (PERFON >= 1) {
+  var _ops = ['beginPath', 'fill', 'stroke', 'arc', 'fillText', 'strokeText', 'fillRect', 'drawImage', 'closePath', 'moveTo', 'lineTo'];
+  for (var _oi2 = 0; _oi2 < _ops.length; _oi2++) { (function (m2) {
+    var _f2 = g[m2]; if (typeof _f2 !== 'function') return;
+    g[m2] = function () { OPC[m2] = (OPC[m2] || 0) + 1; return _f2.apply(g, arguments); }; })(_ops[_oi2]); }
+}
+
 /* E402 DS（D-3 量度）：#perf=2 ⇒ 一次性基准：连画 6 次，**丢掉第一帧**（那一帧含建壳），报稳态均值。
  *   为什么必须这样量：headless 只画一帧 ⇒ 帧时读数会把"建壳 0.3s"和"逐帧光栅化"混在一起，量出来的不是卡的那部分。 */
 /* E406 DS（用户 10-08：卡，但任务管理器里 CPU 只有 9% ⇒ 不是吞吐不够，是**串行在主线程**）：
