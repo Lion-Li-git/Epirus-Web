@@ -479,6 +479,8 @@ function THRLBL() { if (BASEP < 0) { var a1 = 0, b1 = 0;
   for (var q = 0; q < P.length; q++) { var o1 = P[q].ok; if (o1 === 1 || o1 === 0) { b1++; if (o1 === 1) a1++; } }
   BASEP = b1 ? a1 / b1 : 0.15; }
   return Math.round(st.isoT * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '%）'; }
+var FRMS = 0, FRMA = [];
+var PERFON = 0;   /* E402：#perf=1 打开按需仪表 */   /* E402 DS（D-3 前置）：最近一帧的绘制耗时与滑动均值（用来把「卡在哪」量出来，而不是凭感觉）*/
 var ATDEN = 0;          /* E400：at() 最近一次的核质量（密度门用）*/
 var DGATE = 1, DM0 = 2;  /* E400：密度门开关（1 开 / 0 关）与收缩强度 M0（旧值 5）。#dgate=0&m0=5 可回旧行为做 A/B。 */   /* E395 DS：谱系图底图走矢量直画（1）还是旧位图烘焙（0）。#chrome=bmp 切回旧路。 */
 var VK = null;   /* E388 DS: 可见点 k-NN 表缓存（键 = 位图键 + 可见名单签名）*/
@@ -1503,11 +1505,21 @@ function draw3b(fr) {
       ' ‖ 壳内 ' + isoInfo.ins + ' 枚（含自己 ' + isoInfo.cov + ' 枚真过线 = ' + (isoInfo.ins ? (100 * isoInfo.cov / isoInfo.ins).toFixed(0) : '—') +
       '%）‖ 留一复核 ' + isoInfo.insL + ' 枚里 ' + isoInfo.covL + ' 枚（' + (isoInfo.insL ? (100 * isoInfo.covL / isoInfo.insL).toFixed(0) : '—') +
       '%）· 全库过线率 ' + (100 * isoInfo.base).toFixed(0) + '% · 场先验 ' + (100 * isoInfo.p0).toFixed(0) +
+      ' · 帧 ' + FRMS.toFixed(1) + 'ms（均值 ' + (FRMA.length ? (FRMA.reduce(function (x, y) { return x + y; }, 0) / FRMA.length).toFixed(1) : '-') +
+      'ms / ' + isoInfo.quads.length + ' 片 = ' + (isoInfo.quads.length ? (1000 * FRMS / isoInfo.quads.length).toFixed(1) : '-') + 'µs/片）' +
       '% · 场峰值 ' + (100 * isoInfo.maxF).toFixed(0) + '% ⇒ 阈值拖过这个数必然空壳' : ''),
     14 * devicePixelRatio, h - 12 * devicePixelRatio);
 }
 
-function draw() { try { drawBody(); } catch (e) {
+function draw() { try { var _ft0 = performance.now(); drawBody();
+  FRMS = performance.now() - _ft0; FRMA.push(FRMS); if (FRMA.length > 20) FRMA.shift();
+  /* E402 DS：**按需**的机器可读仪表（#perf=1 才建，display:none ⇒ 不给用户添浮字）。
+   *   为什么必须有：帧时那条读数画在画布上，无头复核读不到 DOM ⇒ 量不了就只剩猜。 */
+  if (PERFON) { var _pe = document.getElementById('perfru');
+    if (!_pe) { _pe = document.createElement('pre'); _pe.id = 'perfru'; _pe.style.display = 'none'; document.body.appendChild(_pe); }
+    var _av = FRMA.length ? (FRMA.reduce(function (x, y) { return x + y; }, 0) / FRMA.length) : 0;
+    _pe.textContent = 'FRMS=' + FRMS.toFixed(2) + ' AVG=' + _av.toFixed(2) + ' N=' + FRMA.length + ' MODE=' + st.mode + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN; }
+  } catch (e) {
   /* 静默空跑比红字更坏（v1 的 3D 就是抛异常后画了个全空画布，看不出来）⇒ 异常必须显形 */
   var el = document.getElementById('err');
   if (el) { el.style.display = 'block'; el.textContent = '⛔ 渲染抛错：' + ((e && e.message) || e); }
@@ -2170,6 +2182,7 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     if (kv[0] === 'sel') st.sel = decodeURIComponent(kv[1]);
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
+    if (kv[0] === 'perf') PERFON = (+kv[1] || 0);   /* 2 = 跑一次性基准（原来写成 ===1 ? 1 : 0 ⇒ #perf=2 被吞成 0）*/
     if (kv[0] === 'sort') st.sortBy = (kv[1] === 'time' ? 'time' : 'F');
     if (kv[0] === 'dgate') DGATE = (+kv[1] === 0 ? 0 : 1);
     if (kv[0] === 'm0') DM0 = Math.max(0, Math.min(20, +kv[1] || 0)); }
@@ -2184,6 +2197,17 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     document.getElementById('b3dt').textContent = st.elev < 0.5 ? '立体' : '平面'; } })();
 (function () { var b = document.getElementById('sortb'); if (b) b.textContent = '排序：' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次'); })();   /* E399：放到深链解析之后，否则 #sort=time 时标签是假的 */
 fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide();
+/* E402 DS（D-3 量度）：#perf=2 ⇒ 一次性基准：连画 6 次，**丢掉第一帧**（那一帧含建壳），报稳态均值。
+ *   为什么必须这样量：headless 只画一帧 ⇒ 帧时读数会把"建壳 0.3s"和"逐帧光栅化"混在一起，量出来的不是卡的那部分。 */
+if (PERFON === 2) { (function () {
+  var tt = [], q;
+  try { for (q = 0; q < 6; q++) { var _b0 = performance.now(); draw(); tt.push(performance.now() - _b0); } }
+  catch (e2) { console.log('基准跑不了: ' + e2.message); }   /* drawBody 是 draw 内的闭包 ⇒ 从外面只能调 draw()（顶层）*/
+  var rest = tt.slice(1), av = rest.reduce(function (x, y) { return x + y; }, 0) / (rest.length || 1);
+  var pe = document.createElement('pre'); pe.id = 'bench'; pe.style.display = 'none';
+  pe.textContent = 'BENCH first=' + tt[0].toFixed(1) + ' avg=' + av.toFixed(2) + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN;
+  document.body.appendChild(pe); })(); }
+
 
 /* §E371 深链 #flo=/#fhi= 是在上面那个解析循环里写进 st 的 ⇒ 那两根滑杆与读数必须在这里回压一次，
  *   否则页面按窗口画、工具栏却写着"全范围"（实测截图抓到过：图里 134 枚，栏上 901 枚）。 */
