@@ -524,7 +524,14 @@ function buildBitmap(key) {
    *   ⇒ 摘掉一个点，它照过的地方由**其余可见点的晕**接上，无损。
    *   截断半径 6·fscale（那里 w ≈ kcov/88 ⇒ 覆盖度贡献 ~1%，看不出边界）⇒ 每点只碰 ~(2giR+1)² 格。
    *   实测开销：288 枚 × ~361 格 ≈ 10 万次乘加（旧写法 40000 格 × 12 = 48 万次，还漏接）。 */
-  var SW2 = new Float32Array(nb.gx * nb.gy), SH2 = new Float32Array(SW2.length), SS2 = new Float32Array(SW2.length);
+  var SW2 = null, SH2 = null, SS2 = null;
+  if (nShown < N) {
+    /* §E382 只在**真有点被摘掉**时才走泼溅：全都在场时用下面 USEOLD 那条路（= §E381 之前那份缓存好的
+     *   每格最近 12 名加权和），这样已验收过的那张图一个像素都不动。 */
+    /* ⚠ 累加必须用 **float64**：上一版用 Float32Array，几百个邻居的权重相加会攒出 ~1e-7 的相对误差，
+     *   而判据问的是"场的取值不许跑出可见点的 F 区间"—— 那点误差恰好让 288 格**擦边越界**，看着像 bug 其实是精度。
+     *   放宽判据的容差是"喂字符串过关"，把累加升回 double 才是修因。 */
+    SW2 = new Float64Array(nb.gx * nb.gy); SH2 = new Float64Array(SW2.length); SS2 = new Float64Array(SW2.length);
   var csx = (nb.x1 - nb.x0) * nb.bx / (nb.gx - 1), csy = (nb.y1 - nb.y0) * nb.byy / (nb.gy - 1);
   var RR = 6 * fscale, giR = Math.ceil(RR / csx), gjR = Math.ceil(RR / csy);
   for (var pi9 = 0; pi9 < N; pi9++) { if (!SHOWN[pi9]) continue;
@@ -537,9 +544,13 @@ function buildBitmap(key) {
       for (var gi9 = iA; gi9 <= iB; gi9++) { var dxD = (gi9 - ox9) * csx, dd = Math.sqrt(dxD * dxD + dyD * dyD);
         if (dd > RR) continue;
         var w9 = 1 / Math.pow(Math.max(dd, 1e-6), KEXP), ci9 = gj9 * nb.gx + gi9;
-        SW2[ci9] += w9; SH2[ci9] += w9 * hv9; SS2[ci9] += w9 * sv9; } } }
+        SW2[ci9] += w9; SH2[ci9] += w9 * hv9; SS2[ci9] += w9 * sv9; } } } }
+  var PMASK = new Uint8Array(nb.gx * nb.gy);
   for (var i = 0; i < nb.gx * nb.gy; i++) {
-    var wsum = SW2[i]; if (!(wsum > 0)) continue;
+    /* §E382 两条路共用后面的上色：USEOLD = 没有点被摘掉 ⇒ 直接吃 buildNB 缓存好的全库 12 近邻加权和
+     *   （那是已验收过的那张图的原始数学，**一个像素都不许动**）；否则吃上面那份只含可见点的泼溅。 */
+    var wsum = SW2 ? SW2[i] : nb.SW[i]; if (!(wsum > 0)) continue;
+    var hsumX = SW2 ? SH2[i] : nb.SH[i], ssumX = SW2 ? SS2[i] : nb.SS[i];
     /* §E331 覆盖度换成**核权重和**，不用「到最近点的距离」。旧写法 1/(1+(DM/fscale)^4) 在两枚点中间
      *   必然下凹（DM 在 Voronoi 脊线上取局部极大）⇒ 底图上那一片"凹陷的接缝"就是脊线本身，跟数据无关，
      *   是度量的形状病。SW = Σ1/d^KEXP 是各点晕的**相加**，靠近谁都不减 ⇒ 相邻晕平滑搭接。
@@ -551,13 +562,13 @@ function buildBitmap(key) {
     var fade = wsum / (wsum + kcov) * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
-    var Fav = (SH2[i] + st.T * SS2[i]) / wsum;
+    var Fav = (hsumX + st.T * ssumX) / wsum;
     /* §E347：底图默认 = **全库分位 + 蓝→灰→红**（回到 §E338 之前那个读法）；只有切到第 6 档「rel」才用发散带 + 淡入。*/
     var REL = st.color === 'rel';
     var tt = REL ? fColRel(Fav) : fCol(Fav);
     var rgb = REL ? rampRGBF(tt) : rampRGB(tt);
     var a = (REL ? Math.min(0.50, 0.95 * Math.abs(tt - 0.5) * 2) : (0.92 - 0.5 * tt)) * fade;
-    nPainted++;
+    nPainted++; PMASK[i] = 1;
     if (BND9 && (Fav < BND9.lo - 1e-9 || Fav > BND9.hi + 1e-9)) nOob++;
     var o = i * 4;
     dta[o] = Math.round(bR + (rgb[0] - bR) * a);
@@ -570,7 +581,13 @@ function buildBitmap(key) {
     vis: NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3),
     /* §E381 自检要读的两个数：地板被涂了几格 ‖ 有几格的场值跑到"可见点的 F 区间"之外（应当恒为 0）。
      *   带外 = 0 这一条同时排掉两种病：钳位（一大片纯色）与淡出（黑洞）—— 因为加权平均不可能跑到被平均的那些点之外。*/
-    painted: nPainted, oob: nOob, nShown: nShown, cells: nb.gx * nb.gy,
+    painted: nPainted, oob: nOob, nShown: nShown, cells: nb.gx * nb.gy, pmask: PMASK,
+    /* §E382 判据要用"哪一格被涂到了"反查每一枚可见点脚下那格 —— 换算必须与 buildNB 的格子映射一字相同，
+     *   所以把它随位图一起交出去，而不是在判据里另算一份（另算 = 两份映射可以各自错）。 */
+    cellOf: function (d) {
+      var gi = Math.round((d[nb.ax] - nb.x0) / (nb.x1 - nb.x0) * (nb.gx - 1));
+      var gj = Math.round((d[nb.by] - nb.y0) / (nb.y1 - nb.y0) * (nb.gy - 1));
+      return (gi < 0 || gj < 0 || gi >= nb.gx || gj >= nb.gy) ? -1 : gj * nb.gx + gi; },
     x0: nb.x0, x1: nb.x1, y0: nb.y0, y1: nb.y1,
     nmed: nb.nmed, ax: nb.ax, by: nb.by, gx: nb.gx, gy: nb.gy };
 }
@@ -2158,12 +2175,21 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   加权平均在数学上不可能跑出被平均的那些点的范围 ⇒ 只要 IDW 只吃可见点，oob 必然 = 0。
    *   上一版的错恰好是反的（场吃全库、带按可见点 ⇒ 带外一大片 ⇒ 我拿"淡出"收尾 = 用户截图里的黑窟窿）。
    *   红测：把加权那一步的「if (!SHOWN[pi9]) continue;」去掉（= 场又吃进被摘出去的点）⇒ 带外格数从 0 跳到数千，红。 */
-  T('地板的场值必须全在"可见点的 F 区间"之内（带外 = 0 ⇒ 既不钳成纯色也不会淡成黑洞）‖ 且地板真的被涂出来',
-    !FL || (FL.oob === 0 && FL.painted > FL.cells * 0.55),
+  /* §E382 判据换了主语。**原来那句「painted > cells × 55%」是我拍的数**（没有出处），而它把两种相反的病混在一起：
+   *   涂得少可能是"有洞"，也可能只是"网格铺在点云之外"（点云本来就只占网格一块，百分比不该固定）。
+   *   换成一条有主语的话：**每一枚画得出来的点，它脚下那一格必须被涂到** —— 这正是用户要的"附近点要接上、不许挖空"，
+   *   且与网格大小、点云形状无关。红测：把某枚可见点脚下那一格从 pmask 里抹掉 ⇒ 当场点名是谁。 */
+  var UNPAINT = [];
+  if (FL && FL.cellOf) for (var up = 0; up < N; up++) {
+    if (!(VIS[up] && inWin(P[up]))) continue;
+    var ciU = FL.cellOf(P[up]); if (ciU < 0 || FL.pmask[ciU]) continue;
+    UNPAINT.push(P[up].id); }
+  T('每一枚画得出来的点，脚下那一格必须被地板涂到（摘出点之后附近的晕要接上，不许挖空）‖ 带外格数必须为 0',
+    !FL || (UNPAINT.length === 0 && FL.oob === 0),
     /* ⚠ 明细也必须挡 null：**地板位图只在地图模式建**，谱系模式下 FL 还没出生 ⇒ 上一版这里直接读 FL.painted
-     *   把整条自检打断（实测「自检中途抛错：Cannot read properties of null」⇒ 后面 39 条一条没跑）。
-     *   判据不成立时宁可说"不适用"，不许把跑不掉当成红。 */
-    FL ? ('涂了 ' + (FL.painted * 100 / (FL.cells || 1)).toFixed(1) + '% 格 ‖ 带外 ' + FL.oob + ' 格 ‖ 参与铺色的点 ' +
+     *   把整条自检打断（实测「自检中途抛错：Cannot read properties of null」⇒ 后面 39 条一条没跑）。 */
+    FL ? ('没被涂到的可见点 ' + UNPAINT.length + ' 枚' + (UNPAINT.length ? '：' + UNPAINT.slice(0, 4).join(' ‖ ') : '') +
+      ' ‖ 带外 ' + FL.oob + ' 格 ‖ 涂了 ' + (FL.painted * 100 / (FL.cells || 1)).toFixed(1) + '% 格 ‖ 铺色的点 ' +
       FL.nShown + '/' + N) : '本页没有地板位图（谱系图/一维/三维模式）⇒ 这一条不适用');
   /* 图例那条带与底图必须是**同一条映射**（§E347 那次坏在"带画 LUT、图涂绿红"，我当时还拿一行"这一档不参与着色"糊过去）。
    *   ⚠ 这条原来判的是"针落在现役的**库内分位**上" —— E349 DS 把 fCol 换成"以中位为心的绝对线性带"之后那句话就不成立了
