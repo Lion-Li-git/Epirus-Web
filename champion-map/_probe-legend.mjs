@@ -63,7 +63,15 @@ const READ = `(function(){
   return {w:Math.round(r.width), h:Math.round(r.height), usedH:Math.round(maxB), usedW:Math.round(maxR),
     cs:{maxWidth:getComputedStyle(lg).maxWidth, lineH:getComputedStyle(lg).lineHeight,
         disp:getComputedStyle(lg).display, flex:getComputedStyle(lg).flexDirection},
-    color:st.color, kids:kids};
+    color:st.color, kids:kids,
+    /* §E441 顺带查**溢出**：家族那条按钮带如果一行摆不下又被 overflow 裁掉，最后几枚按钮就点不到 ——
+       量 scrollWidth 与 clientWidth 的差，比看截图可靠（截图上它只是"看起来还好"）。 */
+    fam:(function(){ var f=document.getElementById('fam'); if(!f) return null;
+      var cs=getComputedStyle(f), kids2=f.children.length, lastRight=0;
+      for(var q=0;q<f.children.length;q++){ var b2=f.children[q].getBoundingClientRect();
+        if(b2.right>f.getBoundingClientRect().left && b2.right>lastRight) lastRight=b2.right; }
+      return {n:kids2, sw:f.scrollWidth, cw:f.clientWidth, over:f.scrollWidth-f.clientWidth,
+        wrap:cs.flexWrap, ovf:cs.overflowX, lastVisible:Math.round(lastRight-f.getBoundingClientRect().left)}; })()};
 })()`;
 async function main() {
   await waitJson(`http://127.0.0.1:${PORT}/json/version`);
@@ -89,6 +97,9 @@ async function main() {
     console.log(m.padEnd(7) + (a.w + '×' + a.h).padEnd(12) + String(a.usedH).padEnd(12) +
       String(a.h - a.usedH).padEnd(9) + String(a.w - a.usedW).padEnd(9) +
       a.kids.map(k => k.tag + '@' + k.t + ' h' + k.h + '/内容' + k.content + '{' + k.kidsStr + '}' + (k.txt ? ' "' + k.txt + '"' : '')).join(' ‖ '));
+    if (a.fam) console.log('        └ 家族带 #fam：' + a.fam.n + ' 个按钮 ‖ 内容宽 ' + a.fam.sw + ' vs 可视 ' + a.fam.cw +
+      ' ⇒ 溢出 ' + a.fam.over + (a.fam.over > 0 ? ' ⚠ 最后几个点不到' : '（没溢出）') +
+      ' ‖ flex-wrap=' + a.fam.wrap + ' overflow-x=' + a.fam.ovf);
   }
   killTree(); ws.close();
 }

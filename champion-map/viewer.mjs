@@ -3624,7 +3624,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 'button:hover{border-color:#6f83a8}\n' +
 '#wrap{position:relative;flex:1 1 auto;min-height:0}\n' +
 'canvas#cv{width:100%;height:100%;display:block;cursor:grab}\n' +
-'#fam{flex:0 0 auto;background:var(--panel);border-top:1px solid var(--line);padding:7px 14px;display:flex;gap:7px;align-items:center;overflow-x:auto;white-space:nowrap;z-index:6}\n' +
+'#fam{flex:0 0 auto;background:var(--panel);border-top:1px solid var(--line);padding:7px 14px;display:flex;gap:7px;row-gap:5px;align-items:center;flex-wrap:wrap;z-index:6}\n' +
 '#fam button.fam{padding:3px 7px;border-radius:14px;font-size:12px;display:flex;gap:5px;align-items:center}\n' +
 '#fam button.fam i{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid rgba(255,255,255,.35)}\n' +
 '#fam button.fam b{color:var(--dim);font-weight:400}\n' +
