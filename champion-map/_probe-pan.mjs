@@ -189,6 +189,18 @@ async function main() {
   if (b.under.length) console.log('  样本（前 8 枚）: ' + b.under.slice(0, 8).map(u => u.id + '@' + u.x + ',' + u.y + ' d=' + u.d + (u.shown ? ' 看得见' : ' ✗看不见')).join('\n                  '));
   if (z) console.log('【读数 6 缩小到 tKx=' + z.tKx.toFixed(2) + '】数据横跨度 ' + z.minx + '…' + z.maxx +
     '（画布宽 ' + z.W + '，分界 ' + z.padL + '）‖ 右侧空出 ' + (z.W - z.maxx) + ' px ‖ 滑进左栏的点 ' + z.ptsUnderLeft + ' 枚');
+  /* ---- 附加读数 7：把某根原生滑杆推到端点，截图给人看"两端的空隙"（用户 10-07 那张 T 的截图）----
+   *   --slider=T:0 与 --slider=T:0.3 各跑一次，两张图对看就知道轨道画到哪儿、滑块走到哪儿。 */
+  const SL = arg('slider', '');
+  if (SL) { const sid = SL.split(':')[0], sval = SL.split(':')[1];
+    const geo = await evalJS(`(function(){var e=document.getElementById(${JSON.stringify(sid)});
+      e.value=${Number(sval)}; e.dispatchEvent(new Event('input',{bubbles:true}));
+      var r=e.getBoundingClientRect(); return {min:+e.min,max:+e.max,step:+e.step,val:+e.value,
+        cssW:+r.width.toFixed(1),cssH:+r.height.toFixed(1),
+        cs:getComputedStyle(e).paddingLeft+' / '+getComputedStyle(e).paddingRight};})()`);
+    console.log('【读数 7 滑杆 ' + sid + '】' + JSON.stringify(geo));
+    if (SHOTS) await shot(join(ROOT, 'docs', 'artifacts', 'e378-out', 'slider-' + sid + '-' + sval + '.png'));
+  }
   killTree(); ws.close();
 }
 main().catch(e => { console.error('⛔ ' + e.message); killTree(); process.exit(2); });

@@ -594,9 +594,14 @@ function colBand() { var s = splitSets();
     return { lo: a[0], hi: a[a.length - 1], mode: 'win' }; }
   var b = s.all, n = b.length; if (n < 2) return null;
   var med = (b[(n - 1) >> 1] + b[n >> 1]) / 2;
-  var l5 = b[Math.min(n - 1, Math.round(0.05 * (n - 1)))], h95 = b[Math.min(n - 1, Math.round(0.95 * (n - 1)))];
-  var span = Math.max(0.02, Math.max(h95 - med, med - l5));
-  return { lo: med - span, hi: med + span, med: med, mode: 'lib' }; }
+  /* §E379（用户 10-07：「填满色域 = **地图上的最红和最蓝始终是色轴上的最红和最蓝**，
+   *   相当于根据当前显示的点重新做色彩映射」）：全范围态的两端从"中位 ± p05/p95 那一段"换成
+   *   **这批参与铺色的点的最低/最高 F** ⇒ 点顶到两端，地板（IDW 是加权平均，极值落在点的极值之内）
+   *   也第一次逼近两端，色轴不再有一头是空的。
+   *   ⚠ 代价照实说：§E349 那半句"中位**尽量**放灰"在这里保不住了 —— 中位落在哪一格由分布形状决定。
+   *     硬的那半句"等数值差 = 等色差"完整保留（仍是线性，不是按秩）。
+   *   ⚠ 分母取"这批点的极差"而不是分位差 ⇒ "切批次不许挪分位"那条不变量不受影响（all/win 两份名单都不按批次筛）。 */
+  return { lo: b[0], hi: b[n - 1], med: med, mode: 'lib' }; }
 function fCol(F) { var bd = colBand(); if (!bd) return 0.5;
   return Math.max(0, Math.min(1, (F - bd.lo) / ((bd.hi - bd.lo) || 1))); }
 /* 「rel」档用的：离现役多远（两侧各按该侧 p90 距归一，绿=强 ‖ 红=不如 ‖ 灰=现役那一档） */
@@ -993,45 +998,43 @@ function draw1(fr) {
  *   左边的字还在 2D"，读不出谁属于谁。烘一次之后平面/立体共用同一张图、同一个矩阵 ⇒ 错位这件事在结构上不可能。
  *   ⚠ 页脚说明与 RUNNER-BASE 那条注**不进底图** —— 它们是轴饰，跟着相机转就没人读得了（§E314 同一个理由）。*/
 var CHM = null;
-function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, ff) {
-  var c = document.createElement('canvas'); c.width = w; c.height = h;
-  var t = c.getContext('2d'), i, TKY = st.tKy;
+/* ===== §E379 底图 = **一张纸**：这张函数里不许出现任何视图变换（WX/WY/TKX/TKY/TPX/TPY/PL 一律不进）=====
+ *   为什么重写：原来这张纸是**带着当前缩放与平移烘出来的**，而纸里每个元素各自决定参不参与那套变换
+ *   （日期线参与、家族名不参与、行带只参与纵向……）⇒ 用户要的"整张底图一起平移缩放"这句话在这套结构里
+ *   根本写不出来，于是 §E351/§E369/§E377 每修一次都是在重投一次票，投错一个就是下一个 bug。
+ *   现在：纸面坐标一次画完，视图变换只在**贴这张纸**与**算点的屏幕位置**两处施加，两者读同一个 PS ⇒ 结构上不可能各走各的。
+ *   日期步长是唯一的例外：它按当前横轴倍率现算（字不能糊成一坨），但**只有步长真的变了才重烘**（步长进缓存键，倍率不进）。 */
+function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep, SS) {
+  /* SS = 烘这张纸时多付的倍率（§E379）：纸现在会被放大贴，1× 烘出来在 TKX=2 那一档字是糊的。
+   *   代价按 SS² 走（内存与烘一次的时间），所以上限 2 ⇒ 放大到 2 倍以内都清晰，再往上就让它糊。*/
+  var c = document.createElement('canvas'); c.width = Math.round(w * SS); c.height = Math.round(h * SS);
+  var t = c.getContext('2d'), i;
+  t.setTransform(SS, 0, 0, SS, 0, 0);
   t.font = ff(11);
   for (i = 0; i < fams.length; i++) {
     var f = fams[i], mem = P.filter(function (d, mi) { return d.fam === f && VIS[mi]; });
     var nOk = mem.filter(function (d) { return d.ok === 1; }).length, nCh = mem.filter(function (d) { return d.lin; }).length;
     var best = Math.min.apply(null, mem.map(function (d) { return d.rk; }));
     t.fillStyle = i % 2 ? 'rgba(255,255,255,.028)' : 'rgba(255,255,255,.0)';
-    /* §E314 行带 = 整幅宽、不跟横轴走；家族名/统计两行钉在左栏（只跟纵轴）*/
-    t.fillRect(0, WY(padT + i * rowH), w, rowH * TKY);
+    t.fillRect(0, padT + i * rowH, w, rowH);
     t.fillStyle = st.ink; t.textAlign = 'right';
-    /* §E377 左栏的 x **不跟横轴走**（纵向仍然走 WY）。§E351 当时把 x 也接进 WX，理由是"与表格同一套映射"，
-     *   但用户那句原话是「左侧会跟着上下平移但**不左右平移**」⇒ 接 WX 恰好接反了：
-     *   横轴一放大/一平移，(padL-12)*TKX+TPX 就跑到画布左边外面，而名字是**右对齐**的 ⇒ 整条家族名被推到屏外，
-     *   看起来就是"左栏不渲染了"（用户 10-07 截图：只剩「手池」「欠839」这种尾巴）。
-     *   数据区照旧跟着横轴走；左栏与数据区之间那条分界线也不跟。 */
-    t.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.46));
+    t.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.46);
     t.fillStyle = st.dim; t.font = ff(10);
-    t.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.88));
+    t.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.88);
     t.font = ff(11);
   }
   t.textAlign = 'left';
   t.strokeStyle = 'rgba(159,176,204,.22)'; t.lineWidth = 1;
   t.beginPath(); t.moveTo(padL - 6, 0); t.lineTo(padL - 6, h); t.stroke();
-  var day = 86400000;
-  for (var tt2 = Math.ceil(tmin / day) * day; tt2 <= tmax; tt2 += day) {
-    var xx = WX(X(tt2)); t.strokeStyle = 'rgba(159,176,204,.16)'; t.lineWidth = 1;
-    var gy0 = Math.max(0, WY(padT)), gy1 = Math.min(h, WY(h - padB));
-    /* §E377 这一条原来是「xx > padL - 60」⇒ 横轴往左缩小/平移之后，**靠左那一段日期整条消失**
-     *   （用户截图：09-14 往左的分度全没了 ⇒ 图上那批 09-09~09-13 的旧冠军看起来"没渲染"）。
-     *   分度与刻度线是两件事：线仍然只画在数据区里（画进左栏就是脏），**字只要还在画布里就必须画**。 */
-    if (xx < 1 || xx > w + 50) continue;
-    if (xx >= padL - 6 && gy1 > gy0) {
-      t.beginPath(); t.moveTo(xx, gy0); t.lineTo(xx, gy1); t.stroke();
-    }
+  for (var tt2 = Math.ceil(tmin / dayStep) * dayStep; tt2 <= tmax; tt2 += dayStep) {
+    var xx = X(tt2);
+    t.strokeStyle = 'rgba(159,176,204,.16)'; t.lineWidth = 1;
+    /* 线仍然只画在数据区里（画进左栏就是脏），**字只要在这张纸上就必须画** ——
+     *   §E377 那句"9/14 往左的分度消失"根因不在这道门上，在"门读的是屏幕坐标而平移是屏幕空间的"那一层：
+     *   纸与数据现在同进同退，这道门就变回它本来的意思（纸内的版式规则）。 */
+    if (xx >= padL - 6) { t.beginPath(); t.moveTo(xx, padT); t.lineTo(xx, h - padB); t.stroke(); }
     t.fillStyle = st.dim; t.font = (10 * devicePixelRatio) + 'px system-ui,sans-serif';
-    /* §E351 DS：日期刻度的 **y 也要走 WY**（原来用裸常量 ⇒ 纵向平移时它不跟着走，与左侧行标签不一致）。 */
-    t.fillText(new Date(tt2).toISOString().slice(5, 10), xx + 3, WY(h - padB + 16 * devicePixelRatio));
+    t.fillText(new Date(tt2).toISOString().slice(5, 10), xx + 3, h - padB + 16 * devicePixelRatio);
   }
   return c;
 }
@@ -1064,29 +1067,33 @@ function drawTree(fr) {
   if (!(tmax > tmin)) { g.fillStyle = st.dim; g.fillText('没有可用的 ts ⇒ 谱系图画不了（要 lineage.tsv）', 30 * devicePixelRatio, 60); return; }
   var padL = TPAD.l, padR = 26 * devicePixelRatio, padT = TPAD.t, padB = 66 * devicePixelRatio;
   var rowH = (h - padT - padB) / fams.length, X = function (tv) { return padL + (tv - tmin) / (tmax - tmin) * (w - padL - padR); };
-  /* §E377 缩放**以数据区左上角为支点**，不是以画布原点：WX/WY 原来直接乘 x、y，而 x 里含着 padL ⇒
-   *   横轴缩到 0.55 时整张数据区（连日期刻度）被拉到左栏底下，实测刻度文字压在家族名上（用户那张"渲染范围"
-   *   截图的另一半）。改成减掉支点再乘，TKX=TKY=1 时逐字等于旧式 ⇒ 默认帧与平面态那张图不变。
-   *   ⚠ 支点读的是**当前** padT（下面那行抬升带会挤它）⇒ 底图与点共用同一个支点，不会错位。 */
+  /* §E377 缩放**以数据区左上角为支点**（不是画布原点）‖ §E379 这套 WX/WY 从此**只在两个地方用**：
+   *   贴那张纸的仿射、以及算每枚点的屏幕位置 —— 纸本身不带它（原来纸是带着它烘的，于是"哪些元素参与"
+   *   变成逐元素的投票，这就是修一个坏一个的根）。支点用**挤行之前的** TPAD.t：
+   *   下面那行抬升带会就地加 padT，若拿它当支点，同一档 tKy 在平面/立体下会锚到两个地方。 */
   var TKX = st.tKx, TKY = st.tKy, TPX = st.tX, TPY = st.tY;
   var WX = function (x) { return TPAD.l + (x - TPAD.l) * TKX + TPX; },
-      WY = function (y) { return TPAD.t + (y - TPAD.t) * TKY + TPY; };   /* 支点用**挤行之前的** TPAD.t：
-        *   下面那行抬升带会就地加 padT，若拿它当支点，同一档 tKy 在平面/立体下会锚到两个地方。 */
-  var ff = function (n) { return (n * devicePixelRatio * Math.max(0.8, Math.min(2.4, TKY))) + 'px system-ui,sans-serif'; };
+      WY = function (y) { return TPAD.t + (y - TPAD.t) * TKY + TPY; };
+  var ff = function (n) { return (n * devicePixelRatio) + 'px system-ui,sans-serif'; };   /* §E379 纸面字号不乘 TKY：放大由贴纸那一步负责 */
   /* §E333 立体要**上面留一条抬升带**：不然最上面几家的点一抬就顶出画布（它们本来就在顶上）。
    *   做法 = 把整张地板往下挤 LIFT·T3，行距按剩下的空间重排 ⇒ 行仍然全在画布内，
    *   而"原地上升"有了去处。挤完 padT/rowH 就是立体版的那张版式，底图与点共用同一套 ⇒ 不会错位。*/
   var LIFT = (h - padT - padB) * 0.22;
   if (st.elev > 1e-4) { padT += LIFT * st.elev; rowH = (h - padT - padB) / fams.length; }
   var KS = 1;   /* §E314 点半径不跟缩放（经典统计图约定）—— 保留这个名字是因为下面两处按它算半径 */
-  /* ===== §E332 底图 = 一张离屏画布（车道带 + 左栏家族名/统计 + 分界 + 日期竖线与刻度）=====
-   *   用户裁定：「把这个网格和标签当做地图模式的底图，然后仿照地图的模式做渲染，这样对应也好」。
-   *   所以立体态不再自己造一套斜切：整张版式**烘一次** ⇒ 平面按恒等贴、立体按倾斜仿射贴
-   *   （与 drawMap 贴 FL.c 同一条路径），点用**同一个投影**抬起来 ⇒ 点与它那一行的名字必然对齐，
-   *   因为两者出自同一张图、同一个矩阵 —— 前一版"只有右边的点进了 3D、左边标签还在原地"就是两套坐标各画各的。*/
-  var ck = [w, h, TKX.toFixed(4), TKY.toFixed(4), TPX.toFixed(1), TPY.toFixed(1), fams.join(','), tmin, tmax, st.ink, st.dim, devicePixelRatio,
-    st.elev.toFixed(3), st.tTilt.toFixed(3), st.batch, NVIS, st.flo.toFixed(3) + ',' + st.fhi.toFixed(3)].join('|');   /* §E333 抬升带会挤行距 ⇒ 立体度/倾角进缓存键；§E338 批次改了行表与每行枚数 ⇒ 批次与可见数也要进，否则切批次用的还是上一批那张底图；§E371 窗口会重铺色带 ⇒ 两端必须进，否则拉窗口底图不变色 */
-  if (!CHM || CHM.k !== ck) CHM = { k: ck, c: treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, ff) };
+  /* §E379 日期步长按**当前横轴倍率**现算：恒为 1 天时缩到 0.57 实测 13px 一格压 34px 宽的字 ⇒ 糊成一坨。
+   *   目标是屏幕上至少隔 46 CSS px 一根 ⇒ 倍率越小步长越大（1 → 2 → 5 → 7 天）。
+   *   ⚠ 只有**步长真的变了**才重烘那张纸（步长进缓存键，倍率不进）⇒ 拖动与连续缩放不会每帧重画版式。 */
+  var DAY = 86400000, pxD = (w - padL - padR) / ((tmax - tmin) / DAY) * TKX;
+  var dayStep = DAY * (pxD >= 46 * devicePixelRatio ? 1 : pxD >= 23 * devicePixelRatio ? 2 : pxD >= 12 * devicePixelRatio ? 5 : 7);
+  /* ===== §E332 → §E379 底图 = 一张**纸面坐标**的离屏画布（车道带 + 左栏家族名/统计 + 分界 + 日期竖线与刻度）=====
+   *   用户裁定：「把这个网格和标签当做地图模式的底图，然后仿照地图的模式做渲染」+ 10-07「网格当做底图整体进行平移缩放」。
+   *   平面按仿射贴、立体按同一台相机贴，点用**同一个 PS** ⇒ 点与它那一行的名字必然对齐，
+   *   因为两者出自同一张纸、同一个矩阵。 */
+  var SS = Math.max(1, Math.min(2, TKX));
+  var ck = [w, h, fams.join(','), tmin, tmax, st.ink, st.dim, devicePixelRatio,
+    st.elev.toFixed(3), st.batch, NVIS, st.flo.toFixed(3) + ',' + st.fhi.toFixed(3), Math.round(dayStep / DAY), SS.toFixed(2)].join('|');
+  if (!CHM || CHM.k !== ck) CHM = { k: ck, c: treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep, SS) };
   var T3 = st.elev, uc = w / 2, vc = h / 2, cb = cam();   /* E352 DS: 相机基 cb（与地图同一套） */
   /* ===== §E369 → §E377 立体态**不再有任何形式的"把整张图塞进窗口"**（用户："看的很难受，把这个东西去掉"）=====
    *   §E369 为消掉"上下左三面截断"加了一层"包围盒等比缩小 + 居中"。缩小被点名撤掉之后，**居中也必须一起撤**：
@@ -1111,19 +1118,22 @@ function drawTree(fr) {
    *   修法：地板角点也走同一套映射（分母仍是 w/h，因为源画布就是 w×h）⇒ 地板/轴与棋子**永远同一套变换**。 */
   /* §E351 更正（DS 10-06 第二版）：地板角点**回到裸画布坐标** —— treeChrome 里 x 已经走过 WX（见日期刻度的 xx），
    *   这里再走一遍 WX/WY 等于把平移用了两次 ⇒ 日期刻度 2×、表格 1× ⇒ 错位（用户实测）。真正的绑定见 treeChrome 里日期刻度那一行。 */
-  var q0 = PL(0, 0, 0), qX = PL(w, 0, 0), qY = PL(0, h, 0);
+  /* §E379 **一个矩阵两处用**：PS(纸面坐标) = 相机投影 ∘ 视图变换。
+   *   地板用它贴（下面那三个角点），点/立柱/血统边/标签也用同一个 PS ⇒ "整张底图跟着一起平移缩放"
+   *   这句话现在是结构事实，不是每次改动要逐元素重新投票的口头承诺。 */
+  function PS(x, y, z) { return PL(WX(x), WY(y), z || 0); }
+  var q0 = PS(0, 0), qX = PS(w, 0), qY = PS(0, h);
   g.save();
   g.setTransform((qX[0] - q0[0]) / w, (qX[1] - q0[1]) / w, (qY[0] - q0[0]) / h, (qY[1] - q0[1]) / h, q0[0], q0[1]);
   g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-  g.drawImage(CHM.c, 0, 0);
+  g.drawImage(CHM.c, 0, 0, CHM.c.width, CHM.c.height, 0, 0, w, h);
   g.restore(); g.setTransform(1, 0, 0, 1, 0, 0);
   var FR3 = fRange();
   g.save();
-  /* §E369（用户："平面下某条纵轴往左的地方都不显示"）：这里原来有一道 clip(padL-5 …)，
-   *   本意是"点不许盖住左栏家族名"，但默认视图下数据本来就起于 padL ⇒ 它实际只裁到**用户往左平移之后**的内容，
-   *   左半边整条消失。撤掉；左栏与点的层序本来就是底图在下、点在上，重叠时读图人自己平移即可。 */
+  /* §E369 那道 clip(padL-5) 已撤；§E379 连"画完数据再回贴左栏"那一步也一起撤了 ——
+   *   左栏现在是纸的一部分，与数据同进同退，不存在"点滑进左栏把名字糊住"这一说（要糊一起糊）。 */
   /* 血统边（画在点底下，免得盖住点）*/
-  /* 每枚的落点 = 底图上那一格 (u,v)（**与二维逐字同一套坐标**，含格内纵向抖动）+ 按 F 抬起来的 z。
+  /* 每枚的落点 = 纸上那一格 (x,y)（**与底图逐字同一套坐标**，含格内纵向抖动）+ 按 F 抬起来的 z。
    *   高度用**线性** min-max，不用 §E330 那套按秩铺色 —— 秩是"颜色要能分开"的读法，几何要的是量的比较。
    *   ⚠ 格内抖动（同一秒训出的一撮）**两态都留在纵方向**：上一版把它挪去横方向，正逢地板被压扁 ⇒ 一撮点全叠成一条横线。
    *   立体态反而要它：同一格里纵向散开一点才好观察（用户点名）。*/
@@ -1133,9 +1143,9 @@ function drawTree(fr) {
     if (!VIS[i]) return null;      /* §E338 批次过滤：不在当前批次 ⇒ 不落格、不连线、不进命中表 */
     var ri = fams.indexOf(d.fam); if (ri < 0) return null;
     var jit = ((i * 2654435761) % 1000) / 1000 - 0.5;
-    var u = WX(X(tv)), v = WY(padT + (ri + 0.5) * rowH) + jit * rowH * 0.66 * TKY;
+    var px = X(tv), py = padT + (ri + 0.5) * rowH + jit * rowH * 0.66;   /* **纸面坐标**（§E379：与底图同一套，视图变换交给 PS） */
     var uf = Math.max(0, Math.min(1, (Fv(d) - FR3[0]) / ((FR3[1] - FR3[0]) || 1)));
-    return [PL(u, v, uf * LIFT * T3), PL(u, v, 0)];
+    return [PS(px, py, uf * LIFT * T3), PS(px, py, 0)];
   }
   for (i = 0; i < N; i++) { var q = PT(i); if (!q) continue; pos[P[i].id] = q[0]; base[P[i].id] = q[1]; }
   if (T3 > 0.02) {   /* 立柱：把"浮在多高"接回底图上那一格，否则立体里读不出它属于哪一行 */
@@ -1184,14 +1194,9 @@ function drawTree(fr) {
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
     putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
   g.restore();   /* §E314 数据层的裁剪到这里收口（点与点标签都不许滑进左栏）*/
-  /* §E377 左栏是**轴**不是数据 ⇒ 数据画完之后，按同一个矩阵把左栏那一条再压一遍。
-   *   为什么要压第二遍：横轴一放大，点的落点会跑进左栏区，把家族名糊成一团（用户 10-06 截图就是这个）。
-   *   原来这件事靠一道 clip（"点不许进左栏"）做，而那道 clip 在 §E369 被撤 —— 它连正常数据一起裁掉。
-   *   换成"轴盖数据"：点滑到左栏底下就被挡住（读起来正是"滚出左边界"），家族名永远不会被糊掉。 */
-  g.save();
-  g.setTransform((qX[0] - q0[0]) / w, (qX[1] - q0[1]) / w, (qY[0] - q0[0]) / h, (qY[1] - q0[1]) / h, q0[0], q0[1]);
-  g.drawImage(CHM.c, 0, 0, padL - 5, h, 0, 0, padL - 5, h);
-  g.restore(); g.setTransform(1, 0, 0, 1, 0, 0);
+  /* §E379 这里原来是"数据画完之后按同一仿射把左栏那一条回贴一遍"（§E377 加的，为了让点糊不住家族名）。
+   *   撤掉：左栏现在是纸上的墨，与点同进同退，"糊住"这件事只能靠层序（纸在下、点在上）表达，
+   *   而回贴做的事恰好相反 —— 它把纸的一条**盖回点上面**，于是往左平移时那一条看起来完全不动（用户 10-07 报的病）。 */
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   /* 页脚 = 轴饰，不进相机（同上：跟着放大 2.4 倍会直接掉出画布，"缩放 ×" 那个数也就永远看不到了）。
    *   §E331 这条串必须**量过宽度**再上屏：它是单行 fillText，画布不折行，超长就从右缘直接截掉 ——
@@ -1730,11 +1735,12 @@ function paintLegend(fr) {
    *   为什么是**并排另一根轴**而不是把柄画在这条带上：这条带的两端在窗口态读的是**窗内两端**（§E373），
    *   柄画上去就永远贴在顶和底 —— 那条带说的是"色怎么铺"，这根轴说的是"窗在库里的哪一段"，两件事不能合成一根。*/
   var wr = document.createElement('div'); wr.style.display = 'flex'; wr.style.alignItems = 'flex-start'; wr.style.gap = '6px';
-  var wa = document.createElement('canvas'); wa.id = 'winax';
-  wa.width = AXW * devicePixelRatio; wa.height = AXH * devicePixelRatio;
-  wa.style.width = AXW + 'px'; wa.style.height = AXH + 'px';
-  WINAX = wa; winaxBind(wa);
-  wr.appendChild(c); wr.appendChild(wa);
+  /* 这张 canvas **只造一次**，之后每帧只是搬个位置：图例是每帧重建的（paintLegend 里 innerHTML=''），
+   *   跟着重建就会把绑在它上面的双击/按下监听一起扔掉（§E378 第一版"每次只能拖一格"的另一半）。*/
+  if (!WINAX) { WINAX = document.createElement('canvas'); WINAX.id = 'winax';
+    WINAX.width = AXW * devicePixelRatio; WINAX.height = AXH * devicePixelRatio;
+    WINAX.style.width = AXW + 'px'; WINAX.style.height = AXH + 'px'; winaxBind(WINAX); }
+  wr.appendChild(c); wr.appendChild(WINAX);
   lg.appendChild(s1); lg.appendChild(wr); lg.appendChild(s2);
   winaxDraw();
   /* §E330/§E347：这根带**到底在量什么**必须印出来 —— 不印，读图的人会把"中性灰"当成"不好不坏的绝对电平"，
@@ -1743,7 +1749,7 @@ function paintLegend(fr) {
     sm.textContent = st.color === 'F'
       ? ('针 = 现役 Ldemo（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 红 = 好 ‖ 蓝 = 地板 · 深浅 = '
         + (CB.mode === 'win' ? '窗内两端线性铺满（' + CB.lo.toFixed(3) + ' → ' + CB.hi.toFixed(3) + ' ‖ 等数值差 = 等色差）'
-          : '离中位的绝对差（±p05/p95，超出即钉两端）') + ' · 名次看点大小')
+          : '当前这批点的两端线性铺满（' + CB.lo.toFixed(3) + ' → ' + CB.hi.toFixed(3) + ' ‖ 等数值差 = 等色差 ‖ 中位在 ' + (CB.med !== undefined ? fCol(CB.med).toFixed(2) : '—') + ' 那一格）') + ' · 名次看点大小')
       : '针 = 现役那一档（灰）· 绿 = 比现役强 ‖ 红 = 不如 · 深浅 = 离现役多远（两侧各按该侧 p90 距归一：绿侧 '
         + splitSets().sU.toFixed(3) + ' ‖ 红侧 ' + splitSets().sD.toFixed(3) + '，超出即钉在两端）';
     lg.appendChild(sm); }
@@ -1899,18 +1905,26 @@ function winaxDraw() {
   a.fillRect(0, axY(st.fhi, H) - 2.5 * d, W, 5 * d);
   a.fillRect(0, axY(st.flo, H) - 2.5 * d, W, 5 * d);
 }
-function winaxFrac(e, c) { var r = c.getBoundingClientRect();
-  return Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / (r.height || 1))); }
+function winaxFrac(e, box) {   /* box = 按下那一刻量好的 CSS 盒（不在拖动中途重量：那一帧图例可能正被重建，
+                                 *   拿到的会是 0×0 ⇒ 端点会跳一下。§E372 同一族：换算只许按实际盒子。*/
+  return Math.max(0, Math.min(1, 1 - (e.clientY - box.top) / (box.height || 1))); }
 function winaxBind(c) {
-  var hold = null; c.style.cursor = 'ns-resize';
-  c.addEventListener('pointerdown', function (e) { var f = winaxFrac(e, c), H = c.height;
-    hold = Math.abs(axY(st.flo, H) - (1 - f) * H) <= Math.abs(axY(st.fhi, H) - (1 - f) * H) ? 'lo' : 'hi';
-    try { c.setPointerCapture(e.pointerId); } catch (E) { }
-    e.preventDefault(); });
-  c.addEventListener('pointermove', function (e) { if (!hold) return; var f = winaxFrac(e, c);
-    if (hold === 'lo') setWin(f, st.fhi); else setWin(st.flo, f); });
-  c.addEventListener('pointerup', function () { hold = null; });
-  c.addEventListener('pointercancel', function () { hold = null; });
+  c.style.cursor = 'ns-resize';
+  c.addEventListener('pointerdown', function (e) {
+    var box = c.getBoundingClientRect(), H = c.height || 1;
+    var f0 = winaxFrac(e, box);
+    /* 按下时先判抓哪一端：出厂态两柄一个在顶一个在底，中点等距 ⇒ 拿到的是下沿（判据里明写着这条） */
+    var hold = Math.abs(axY(st.flo, H) - (1 - f0) * H) <= Math.abs(axY(st.fhi, H) - (1 - f0) * H) ? 'lo' : 'hi';
+    /* 拖动中的监听挂 **window** 而不是这张 canvas：drawBody() 每帧调 paintLegend() 重建图例，
+     *   绑在 canvas 上的 move 会随节点一起被换掉 ⇒ 用户报的"每次只能动一格"就是这么来的（实测：一次按下只吃一次 move）。*/
+    var mv = function (ev) { var f = winaxFrac(ev, box);
+      if (hold === 'lo') setWinLight(f, st.fhi); else setWinLight(st.flo, f); };
+    var up = function () { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      setWin(st.flo, st.fhi); };   /* 收尾走一次全量：家族条与侧栏的计数要跟着窗口掉 */
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    e.preventDefault();
+  });
   c.addEventListener('dblclick', function () { setWin(0, 1); });
 }
 function paintWin() {
@@ -1921,10 +1935,13 @@ function paintWin() {
   winaxDraw();
   markWinPre();   /* 手拖过轴之后，档位按钮的高亮必须跟着掉（否则"看着还停在现役±10pt"其实是另一段） */
 }
-function setWin(a, b) {
+function applyWin(a, b) {
   st.flo = Math.max(0, Math.min(0.995, a)); st.fhi = Math.min(1, Math.max(st.flo + 0.005, b));
-  recomputeVIS(); buildFamBar(); paintSide(); paintWin(); req();
 }
+function setWin(a, b) { applyWin(a, b); recomputeVIS(); buildFamBar(); paintSide(); paintWin(); req(); }
+/* 拖动途中只走这一条：家族条与侧栏每帧重建一次会吃掉整帧预算（§E293 ⑥ 那句"卡死"的同一个来源），
+ *   而它们读的是"窗内有几枚"，拖完由 setWin 补一次全量就够。 */
+function setWinLight(a, b) { applyWin(a, b); recomputeVIS(); paintWin(); req(); }
 /* ===== §E373 默认档位（用户："你其实可以给几个默认的缩放档位（比如当前不加旧包就可以当做一个档位）"）=====
  *   每个档位给一组 [flo, fhi]（仍是"占全库 F 值域的比例"），点一下就把两端推过去；手拖滑杆后高亮自动跟。
  *   need:1 的两档**只在旧冠军真的被画进图里时出现**（要不要画 = 待裁），所以现在这张图上只会有两档 ——
@@ -2037,7 +2054,17 @@ window.addEventListener('mousemove', function (e) {
          *   而地图 ptw 是 h/2 − (…) —— 纵向符号相反 ⇒ 手性镜像 ⇒ 同一套鼠标公式在树上方向会反。 */
           st.pit = Math.max(0.06, Math.min(1.62, drag[5] + cdy / 200));   /* E352 DS: pitch 仍夹在 [0.06,1.62] */
         }
-      } else { st.tX = drag[9] + cdx * devicePixelRatio; st.tY = drag[10] + cdy * devicePixelRatio; }
+      } else {
+        /* §E379 平移必须**跟着光标走**，而不是"读鼠标在屏幕上的坐标加到纸的轴上"（用户 10-07 点名）。
+         *   tX/tY 加的是**相机之前**的量，而鼠标给的是屏幕位移 ⇒ 立体态下直接把 cdx 加进 tX，
+         *   画面会沿着纸的横轴跑（屏幕上就是斜的、也不等于手移了多少）。
+         *   解法：把屏幕位移用相机基的**逆**换回纸面量 —— M = [[r0,u0],[r1,u1]]（PL 里 r 管屏幕横、u 管屏幕纵）。
+         *   FLAT 相机下 r=[1,0]、u=[0,1] ⇒ det=1、Δa=sx、Δb=sy ⇒ 平面态与旧写法逐字相同（已验收的图不动）。 */
+        var cbn = cam(), det = cbn.r[0] * cbn.u[1] - cbn.u[0] * cbn.r[1];
+        var sx = cdx * devicePixelRatio, sy = cdy * devicePixelRatio;
+        if (!isFinite(det) || Math.abs(det) < 1e-6) { st.tX = drag[9] + sx; st.tY = drag[10] + sy; }
+        else { st.tX = drag[9] + (cbn.u[1] * sx - cbn.u[0] * sy) / det;
+          st.tY = drag[10] + (cbn.r[0] * sy - cbn.r[1] * sx) / det; } }
     }
     req(); return;
   }
@@ -2365,12 +2392,23 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   §E338 把**底图**也换成"以现役为界、两侧各自按秩铺满"，而现役落在库内第 82 百分位
    *   ⇒ 中性灰被压成分界那一条线、82% 的图一律深红、少数 pockets 荧光绿（用户看到的大块硬边斑）。
    *   ⇒ 底图必须回到全库分位：库内中位那枚要落在中性灰上。这两条在 §E338 那一版都会红。*/
-  var mdF = (function () { var a = P.map(function (d) { return Fv(d); }).sort(function (x, y) { return x - y; }); return a[a.length >> 1]; })();
-  /* §E371：这条说的是**全库那一条色带**的中位 ⇒ 判之前先把窗口推回全范围，
-   *   否则拿 #flo=0.8 跑 check 时锚已经换到窗内中位上了（那是下面那条新判据管的事，不是这条）。 */
+  var MDS = (function () { var a = P.map(function (d) { return Fv(d); }).sort(function (x, y) { return x - y; });
+    return { lo: a[0], med: a[a.length >> 1], hi: a[a.length - 1] }; })();
+  /* §E371：这条说的是**全库那一条色带** ⇒ 判之前先把窗口推回全范围，
+   *   否则拿 #flo=0.8 跑 check 时锚已经换到窗内两端上了（那是下面那条新判据管的事，不是这条）。
+   * ⚠ §E379 把这条的**期望**换掉了：原来钉"中位落在中性灰（±0.06）"，那是 §E349 的读法；
+   *   用户 10-07 要的是"最红最蓝必须到头"⇒ 现在钉**两端顶满**，中位落在哪一格只如实报、不判红。
+   *   保留的一条硬的是"不许塌"（中位仍在带内），换锚换错了它会红。 */
   var SWIN = { flo: st.flo, fhi: st.fhi }; st.flo = 0; st.fhi = 1; recomputeVIS();
-  T('底图（F 档 ‖ 全范围态）：库内中位那枚必须落在中性灰（离 0.5 不超 0.06）',
-    Math.abs(fCol(mdF) - 0.5) <= 0.06, '实测 ' + fCol(mdF).toFixed(3));
+  T('底图（F 档 ‖ 全范围态）：色轴两端必须被"刚好用到"——最低那枚 = 0 ‖ 最高那枚 = 1 ‖ 被钉在两端的不许超过 3%',
+    (function () {
+      var pin = 0; for (var z = 0; z < N; z++) { var t9 = fCol(Fv(P[z])); if (t9 <= 1e-6 || t9 >= 1 - 1e-6) pin++; }
+      return Math.abs(fCol(MDS.lo)) <= 1e-6 && Math.abs(fCol(MDS.hi) - 1) <= 1e-6 && pin <= Math.max(2, Math.round(N * 0.03)); })(),
+    (function () {
+      var pin = 0; for (var z = 0; z < N; z++) { var t9 = fCol(Fv(P[z])); if (t9 <= 1e-6) pin++; else if (t9 >= 1 - 1e-6) pin++; }
+      return '钉在两端 ' + pin + '/' + N + '（' + (100 * pin / N).toFixed(1) + '%）‖ 最低 ' + fCol(MDS.lo).toFixed(3) +
+        ' ‖ 最高 ' + fCol(MDS.hi).toFixed(3) + ' ‖ 中位 ' + fCol(MDS.med).toFixed(3) +
+        '（§E349 的"中位放灰"让位给"两端顶满"； 单看"最低=0"是**假判据** —— fCol 会钳位，窄带照样满足）'; })());
   st.flo = SWIN.flo; st.fhi = SWIN.fhi; recomputeVIS();
   /* 图例那条带与底图必须是**同一条映射**（§E347 那次坏在"带画 LUT、图涂绿红"，我当时还拿一行"这一档不参与着色"糊过去）。
    *   ⚠ 这条原来判的是"针落在现役的**库内分位**上" —— E349 DS 把 fCol 换成"以中位为心的绝对线性带"之后那句话就不成立了
@@ -2599,22 +2637,42 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('旧槽位冠军那一行必须排在最上面（家族 0），不是最下面',
     yOld.length > 0 && yInc > 0 && medOld >= 0 && medOld < yInc - 100 * devicePixelRatio,
     '旧包行 y 中位 ' + Math.round(medOld) + ' ‖ 现役那一行 y ' + Math.round(yInc) + ' ‖ 画布高 ' + cv.height);
-  /* §E377 左栏是**轴**：横轴怎么缩放/平移，左栏那条名字都必须还在原位、还读得出来。
-   *   读的是底图位图（CHM.c）左栏区的**文字像素数**，不读代码里的 padL —— 上一版的病恰恰是"代码算得对，
-   *   但 x 被 WX 推到了画布外"，只有像素能区分这两种。文字 alpha 高、行带 alpha 只有 .028 ⇒ 按 alpha 切。 */
-  function gutInk() {
-    if (!CHM || !CHM.c) return -1;
-    var t = CHM.c.getContext('2d'), gw = Math.round(300 * devicePixelRatio), gh = cv.height;
-    var d; try { d = t.getImageData(0, 0, gw, gh).data; } catch (E9) { return -2; }
-    var n = 0; for (var z = 0; z < d.length; z += 4) if (d[z + 3] > 128) n++;
-    return n; }
-  var gBase = gutInk(), gA = -1, gB = -1;
-  st.tKx = 2.2; st.tX = -700 * devicePixelRatio; draw(); gA = gutInk();
-  st.tKx = 0.55; st.tX = 300 * devicePixelRatio; draw(); gB = gutInk();
-  T('左栏不许跟着横轴走：横轴放大 / 缩小 / 平移之后，左栏的文字像素必须还是同一批（名字不被推出画布也不被点糊掉）',
-    gBase > 400 && gA > 400 && gB > 400 &&
-    Math.abs(gA - gBase) / gBase < 0.05 && Math.abs(gB - gBase) / gBase < 0.05,
-    '默认 ' + gBase + ' ‖ tkx=2.2 平移后 ' + gA + ' ‖ tkx=0.55 平移后 ' + gB + '（左栏 300·dpr 宽区域内的文字像素数）');
+  /* §E379 这条判据**方向反了**，而且是故意的：§E377 钉的是"左栏不许跟着横轴走"（把左栏当屏幕上的框），
+   *   而用户 10-07 的口径从头到尾是「网格当做底图整体进行平移缩放」⇒ 那一半恰恰是"修一个坏一个"的来源
+   *   （纸带着视图变换烘出来，于是每个元素各自决定参不参与，每修一次重投一次票）。
+   *   现在钉的是**同矩阵**：平移 80px 之后，左栏最靠左那枚文字的 x 与数据点的中位 x 都必须正好走 80px（±3）。
+   *   ⚠ 读的是**最终画布**的像素。读 CHM.c 就是拿那张纸自己当期望值 —— 纸现在与视图无关，永远绿 = 假判据（第 91 条）。
+   *   ⚠ 只在 tkx=1 与 0.55 两档量：2.2 档名字被放大 2.2 倍、最左那一枚会顶出左边缘，检测会读到"没有墨"而不是"走少了"。
+   *   名字被推出画布这件事没有失去保护 —— 它现在由"每枚都拖得回来"与上面那条"左栏与数据同矩阵"合起来兜。 */
+  function inkLeft(x1, y0, y1) {
+    var d; try { d = g.getImageData(0, y0, x1, y1 - y0).data; } catch (E9) { return -2; }
+    for (var x = 0; x < x1; x++) for (var y = 0; y < y1 - y0; y++) { var q = (y * x1 + x) * 4;
+      if (d[q] + d[q + 1] + d[q + 2] > 430) return x; }   /* 家族名 = st.ink、统计行 = st.dim，两档亮度都合；行带 alpha .028 上不去 */
+    return -1; }
+  function medPX() { var xs = []; for (var z = 0; z < N; z++) if (scr[z] && VIS[z]) xs.push(scr[z][0]);
+    xs.sort(function (a, b) { return a - b; }); return xs.length ? xs[xs.length >> 1] : -1; }
+  var SNAPV9 = { kx: st.tKx, ky: st.tKy, tx: st.tX, ty: st.tY, e: st.elev, y: st.yaw, p: st.pit };
+  st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.tKy = 1; st.tY = 0;
+  var PAN9 = 80 * devicePixelRatio, pivBad9 = '', pivEx9 = [];
+  for (var zi9 = 0; zi9 < 2; zi9++) {
+    var zK9 = [1, 0.55][zi9];
+    st.tKx = zK9; st.tX = 0; draw();
+    var c0 = inkLeft(Math.round(TPAD.l - 20 * devicePixelRatio), Math.round(TPAD.t), cv.height - 70), p0 = medPX();
+    st.tX = PAN9; draw();
+    var c1 = inkLeft(Math.round(TPAD.l - 20 * devicePixelRatio), Math.round(TPAD.t), cv.height - 70), p1 = medPX();
+    pivEx9.push('tkx=' + zK9 + ' 名字 ' + c0 + '→' + c1 + ' ‖ 点 ' + Math.round(p0) + '→' + Math.round(p1));
+    if (c0 < 0 || c1 < 0) { pivBad9 = 'tkx=' + zK9 + ' 那一档左栏读不到墨（' + c0 + '/' + c1 + '）⇒ 无从比对'; break; }
+    if (Math.abs((c1 - c0) - PAN9) > 3) { pivBad9 = 'tkx=' + zK9 + ' 拖 80px 之后左栏文字只走了 ' + (c1 - c0) + 'px'; break; }
+    if (Math.abs((p1 - p0) - PAN9) > 3) { pivBad9 = 'tkx=' + zK9 + ' 拖 80px 之后数据点走了 ' + Math.round(p1 - p0) + 'px（与左栏不同速）'; break; } }
+  T('左栏与数据必须走同一个矩阵：拖 80px 之后，左栏文字的位移与数据点的位移都得是 80px（±3）',
+    pivBad9 === '', pivBad9 || pivEx9.join(' ‖ '));
+  st.tKx = SNAPV9.kx; st.tKy = SNAPV9.ky; st.tX = SNAPV9.tx; st.tY = SNAPV9.ty;
+  st.elev = SNAPV9.e; st.yaw = SNAPV9.y; st.pit = SNAPV9.p; draw();
+  /* §E377 缩放支点：WX/WY 原来直接乘 x、y（支点 = 画布原点），而 x 里含着 padL ⇒ tkx<1 时整张数据区连日期
+   *   刻度一起朝左栏压过去（tkx=0.55 那张实测：刻度文字压在家族名上）。改成绕数据区左上角缩放，这一条钉住：
+   *   **平移归零时，任何一档横轴缩放下最左那枚都必须在分界线右侧**（红测实测：支点改回 0 ⇒ tkx=0.4 时最左那枚
+   *   在 x=136 而分界在 340，红）。
+   * ⚠ 这一条只读几何（scr 的最小 x），不读滚轮 —— 滚轮那道锚点算法由紧跟着的那一条管，两处的病不一样。 */
   /* §E377 缩放支点：WX/WY 原来直接乘 x、y（支点 = 画布原点），而 x 里含着 padL ⇒ tkx<1 时整张数据区连日期
    *   刻度一起朝左栏压过去（tkx=0.55 那张实测：刻度文字压在家族名上）。改成绕数据区左上角缩放，这一条钉住：
    *   **平移归零时，任何一档横轴缩放下最左那枚都必须在分界线右侧**（红测实测：支点改回 0 ⇒ tkx=0.4 时最左那枚
@@ -2708,17 +2766,37 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       Math.abs(AG[1] - axY(st.flo, AXH2)) <= 2.5 * devicePixelRatio,
     AR ? ('柄的像素行 ' + AG.map(function (v) { return Math.round(v); }).join(' / ') + ' ‖ st 要 ' +
       Math.round(axY(st.fhi, AXH2)) + ' / ' + Math.round(axY(st.flo, AXH2)) + ' ‖ 轴高 ' + AXH2) : '图例里没有那根轴');
-  /* 拖它必须真的改窗口：派**真 PointerEvent**（直接调 setWin 只证明函数会改数，不证明这根轴接得上）*/
+  /* 拖它必须真的改窗口：派**真 PointerEvent**（直接调 setWin 只证明函数会改数，不证明这根轴接得上）。
+   *   ⚠ 必须**一次按下 + 连续三次移动**，不能只测一次移动：第一版把 move/up 绑在这张 canvas 上，
+   *   而 drawBody() 每帧调 paintLegend() 重建图例 ⇒ 节点被换掉、监听跟着没了，用户看到的就是"每次只能动一格"。
+   *   只测一步的话那一版照样全绿 —— 判据要照**症状的形状**写（连续），不是照"能不能动一次"写。 */
+  /* 先钉**因**：图例是每帧重建的（drawBody → paintLegend → innerHTML=''），而那根轴必须**跨重建活着**。
+   *   换了节点 ⇒ 绑在节点上的拖动状态与指针捕获一起没了 ⇒ 用户看到的正是"每次只能动一格"。
+   *   下面那条只判"三步都要动"（症状），这一条判"节点没被换掉"（形状）—— 两条都要，因为把监听改挂到 window
+   *   也能让症状判据变绿（实测：M1 复原成"绑在 canvas 上"时症状判据照样 51 全绿），只有这条能逼住根因。 */
+  var ax1 = document.getElementById('winax'); draw();
+  T('F窗口轴：图例重建一次之后，那根轴必须还是同一个节点（换节点 = 拖动状态随节点一起没）',
+    !!ax1 && document.getElementById('winax') === ax1,
+    ax1 ? (document.getElementById('winax') === ax1 ? '重建后取回的是同一张 canvas' : '重建后换了一张 ⇒ 绑定全丢') : '图例里没有那根轴');
   var SNAPW2 = { flo: st.flo, fhi: st.fhi };
   var AX2 = document.getElementById('winax'), rr2 = AX2 && AX2.getBoundingClientRect();
-  if (rr2) { var pev = function (t, cy) { AX2.dispatchEvent(new PointerEvent(t,
+  var seq = [];
+  if (rr2) { var pev = function (nd, t, cy) { nd.dispatchEvent(new PointerEvent(t,
       { pointerId: 7, clientX: rr2.left + rr2.width / 2, clientY: cy, bubbles: true, cancelable: true })); };
+    pev(document.getElementById('winax'), 'pointerdown', rr2.top + rr2.height * 0.5);
     /* 顶 = 高 F、底 = 低 F ⇒ 从中间按下（出厂态两柄一个在顶一个在底，中点等距 ⇒ 拿到的就是下沿），
-     *   再拖到**离底 25%** 那一档 ⇒ 下沿应当变成 0.25。 */
-    pev('pointerdown', rr2.top + rr2.height * 0.5); pev('pointermove', rr2.top + rr2.height * 0.75); pev('pointerup', rr2.top + rr2.height * 0.75); }
-  T('F窗口轴：拖下端那个柄必须真的把窗口下沿推过去（派真 PointerEvent ‖ 上沿不许被带着走）',
-    !!rr2 && Math.abs(st.flo - 0.25) <= 0.01 && st.fhi === SNAPW2.fhi,
-    '把下沿拖到离底 25% 之后 flo=' + st.flo.toFixed(3) + ' ‖ fhi=' + st.fhi.toFixed(3) + '（拖之前 ' + SNAPW2.flo.toFixed(3) + '/' + SNAPW2.fhi.toFixed(3) + '）');
+     *   再往下沿**靠近顶部**的方向分三段拖 ⇒ flo 应当一段一段**变大**（0.20 → 0.32 → 0.48）。
+     *   ⚠ 每段之前先 draw() 一次并**重新取节点**：真实拖动里图例每帧都在重建，浏览器把 move 交给的是
+     *   当下屏幕上那个节点。原来那版判据在同一个节点对象上连发三步 ⇒ 绑在 canvas 上的写法照样全绿（弱判据）。 */
+    [0.80, 0.68, 0.52].forEach(function (frac) {
+      draw();
+      pev(document.getElementById('winax'), 'pointermove', rr2.top + rr2.height * frac);
+      seq.push(+st.flo.toFixed(4)); });
+    pev(document.getElementById('winax'), 'pointerup', rr2.top + rr2.height * 0.52); }
+  var nStep = new Set(seq).size, mono = seq.every(function (v, i) { return i === 0 || v > seq[i - 1] + 1e-9; });
+  T('F窗口轴：按下之后连续拖三段，窗口下沿必须**一段一段跟着走**（一次按下只吃一格 = 用户报的不流畅）',
+    !!rr2 && nStep === 3 && mono && Math.abs(seq[2] - 0.48) <= 0.02 && st.fhi === SNAPW2.fhi,
+    '三段之后 flo 依次 ' + seq.join(' → ') + ' ‖ 不同的值 ' + nStep + ' 个 ‖ 上沿 ' + st.fhi.toFixed(3) + '（拖之前 ' + SNAPW2.fhi.toFixed(3) + '）');
   setWin(SNAPW2.flo, SNAPW2.fhi);
   var HASWIN = (location.hash || '').indexOf('flo=') >= 0 || (location.hash || '').indexOf('fhi=') >= 0;
   T('强度窗口：不带深链时出厂态就是全范围，且一枚都不切（带 flo= 跑时这一条不适用，明细会说明）',
@@ -2938,6 +3016,18 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '#stat{position:absolute;left:14px;top:10px;color:var(--dim);font-size:12px}\n' +
 'label{color:var(--dim);display:flex;gap:6px;align-items:center}\n' +
 /* §E371 强度窗口那两根：默认宽度（约 128px）会把工具栏挤到多一行，而这两根本来就是"拉个区间"的细活 ⇒ 收窄。 */
+/* §E379 原生滑杆"两端各空出来一点"（用户那张 T 的截图）：根因是两条叠在一起的 ——
+ *   ① `button,select,input{…padding:5px 9px…}` 这条通用规则把 9px 塞进了滑杆两侧，白道子本身就比控件窄一截；
+ *   ② Chrome 的原生轨道把滑块**中心**的行程卡在 [半滑块, 宽 − 半滑块]，两端各留半个滑块。
+ *   修法不是去挪滑块（挪不动），是**把画出来的轨道缩到滑块中心真正走得到的那一段** ⇒ 拖到头 = 看上去到头。
+ *   轨道色用 --dim：深浅两套底色下都看得见（用 --line 在深蓝底上几乎与面板同色，等于没有轨道）。 */
+'input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;border:none;padding:0;height:16px;cursor:pointer;min-width:60px}\n' +
+'input[type=range]::-webkit-slider-runnable-track{height:16px;background:linear-gradient(var(--dim),var(--dim)) no-repeat;' +
+'background-size:calc(100% - 14px) 4px;background-position:7px center;border-radius:2px}\n' +
+'input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;' +
+'background:#4f9cff;border:1px solid var(--ink);margin-top:1px}\n' +
+'input[type=range]::-moz-range-track{height:4px;background:var(--dim);border-radius:2px;margin:0 7px}\n' +
+'input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#4f9cff;border:1px solid var(--ink)}\n' +
 '#winrow span{min-width:132px;font-variant-numeric:tabular-nums}\n' +
 /* §E378 两根横滑杆换成图例旁一根竖轴 ⇒ 那行只剩读数 + 一句"去哪儿拖"；滑杆那条宽度规则一起撤。 */
 '#whint{color:var(--dim);font-size:11px;min-width:0}\n' +
