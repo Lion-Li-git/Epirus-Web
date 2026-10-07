@@ -604,6 +604,7 @@ function THRLBL() { if (BASEP < 0) { var a1 = 0, b1 = 0;
 var FRMS = 0, FRMA = [];
 var PERFON = 0;
 var GLPROBE = 0;
+var GLFAILS = 0;
 var GLPATH = 0;     /* E413: 0=not-yet 1=GL-used 2=GL-unavailable */
 var GLDREW = 0;     /* E413：走 GL 路的帧数 */
 var GLSIG = '';     /* E405：GL 几何缓存键（相机/网格/画布任一变化才重算重传）*/
@@ -1556,7 +1557,7 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
   /* E404 DS：GL 分支 —— 面一次性上传，逐帧只改 uniform（把光栅化从 CPU 挪走）。失败即回落 2D 路。 */
   if (!GLPROBE) { GLPROBE = 1; console.log('PROBE drawIso GLISO=' + GLISO + ' GLMon=' + GLM.on() + ' quads=' + m.quads.length); }
   if (GLISO) {
-    if (!GLM.on() && !GLM.init(cv)) { GLPATH = 2; GLISO = 0;
+    if (!GLM.on() && !GLM.init(cv)) { GLPATH = 2; GLFAILS++;   /* E417b：失败只记数、本帧回落 2D，下一帧继续试（原来这里写 GLISO = 0 ⇒ 首帧一旦失败就永久走老路）*/
       (function () { var _n = document.getElementById('perfru'); if (_n && _n.dataset) _n.dataset.path = 'glfail'; })();
       console.log('GL 起不来（webgl2 上下文/着色器失败）⇒ 本帧走 2D 老路'); }
     if (GLISO && GLM.on()) {
