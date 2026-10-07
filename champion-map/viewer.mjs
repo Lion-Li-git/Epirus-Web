@@ -423,6 +423,7 @@ var NSEL = 0, NSELUP = 0, NSELSOFT = 0, NSELDOWN = 0;
   else if (P[i].scd > 0 && pos < 6) NSELSOFT++;
   if (P[i].scd <= -2) NSELDOWN++; } })();
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
+  sortBy: 'F',          /* E399 DS：一维图的排序轴 —— 'F' = F 名次（默认）‖ 'time' = 训出时刻。 */
   flo: 0, fhi: 1,       /* §E371 强度窗口的两端，存成"占全库 F 值域的比例"⇒ 出厂 (0,1) 就是全范围 */
   edges: 'all',         /* §E373 谱系图父边：'all' 全开 ‖ 'hash' 只画实录级 ‖ 'off' 一条不画（默认全开 = 已验收的那张图） */
   iso: 0, isoT: 0.30,   /* §E306 过线曲面：0=关 1=半透壳 2=只描边；isoT = 局部占比阈值。
@@ -1088,21 +1089,25 @@ function draw1(fr) {
   var w = cv.width, h = cv.height, i;
   clear(w, h);
   var pad = 26 * devicePixelRatio, band = h * 0.16, base = h * 0.70;
+  /* E399 DS（用户 10-08：「现在拉范围只会硬切，你直接改成随时顶满两头就行」+「加一个根据时间排序的选项」）：
+   *   ① 排位只在**当前画得出来的那批**（VIS）里做 ⇒ 范围一拉就**顶满两头**，不再留一串空位（硬切）。
+   *   ② sortBy='time' 时按**训出时刻**排（与 F 名次并存的一个开关）。 */
   var ord = []; for (i = 0; i < N; i++) ord.push(i);
-  ord.sort(function (a, b) { return Fv(P[b]) - Fv(P[a]); });
+  if (st.sortBy === 'time') ord.sort(function (a, b) { var ta = P[a].ts || '', tb = P[b].ts || ''; return ta < tb ? -1 : (ta > tb ? 1 : 0); });
+  else ord.sort(function (a, b) { return Fv(P[b]) - Fv(P[a]); });
+  var ordV = ord.filter(function (k) { return VIS[k]; });
   g.strokeStyle = st.dim; g.lineWidth = 1;
   g.beginPath(); g.moveTo(pad, base); g.lineTo(w - pad, base); g.stroke();
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-  g.fillText('名次（按当前 T 重排）→', pad, base + 46 * devicePixelRatio);
+  g.fillText(st.sortBy === 'time' ? '训出时刻（旧 → 新）→' : '名次（当前可见集内 · 已顶满两头）→', pad, base + 46 * devicePixelRatio);
   g.fillText('纵轴 = F = Hp + T·S（Hp = 线上口径夺1率 · F 越高越好）：' + (st.goodTop ? '越高 = 越好，贴基线 = 最差' : '贴基线 = 最好（冠军在底），越高 = 越差'), w * 0.34, band - 10 * devicePixelRatio);
   scr = new Array(N);
-  var dx = (w - 2 * pad) / (N - 1);
-  for (i = 0; i < N; i++) {
-    var d = P[ord[i]], x = pad + i * dx, y = base - u01(Fv(d), fr) * (base - band);
+  var dx = (w - 2 * pad) / Math.max(1, ordV.length - 1);
+  for (i = 0; i < ordV.length; i++) {
+    var d = P[ordV[i]], x = pad + i * dx, y = base - u01(Fv(d), fr) * (base - band);
     /* §E338 批次过滤：横轴是**名次**（不是时间），所以隐藏某一批会在这条带上留下空位 ——
      *   这是对的：空位本身就说"这些名次被那一批占着"。scr 仍按名次下标落，命中表不会错位。 */
-    if (!VIS[ord[i]]) continue;
-    scr[ord[i]] = [x, y];
+    scr[ordV[i]] = [x, y];
     var al = alphaOf(d);
     /* 718 根柱子挤在 1500px 里会糊成一整块（第一版就是这样）⇒ 只给冠军/被点选的家族画茎，其余留点。
        注意别写成 al > 0.5：没高亮时 al 恒为 1，那个条件等于"全都画"。 */
@@ -1135,7 +1140,7 @@ function draw1(fr) {
   for (i = 0; i < ls.length; i++) { var p = scr[ls[i].i]; if (!p) continue;
     putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, p[0], p[1], !!P[ls[i].i].lin, true, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-  g.fillText('一维：位置 = F 名次（下方蓝条 = Hp 线上口径夺1率，黄条 = T·S）· 悬停看明细 · 点一枚 = 选中（点空白取消）· 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
+  g.fillText('一维：位置 = ' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次') + '（下方蓝条 = Hp 线上口径夺1率，黄条 = T·S）· 悬停看明细 · 点一枚 = 选中（点空白取消）· 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
 }
 
 /* §E332 把谱系图的**版式**（车道带 + 左栏家族名/统计 + 左右分界 + 日期竖线与刻度）烘成一张离屏画布。
@@ -2378,6 +2383,10 @@ document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) %
 })();
 function syncHdir() { document.getElementById('bh').textContent = st.goodTop ? '好在上 ⇅' : '好在下 ⇅'; }
 document.getElementById('bh').onclick = function () { st.goodTop = !st.goodTop; syncHdir(); req(); };
+document.getElementById('sortb').onclick = function () {
+  st.sortBy = (st.sortBy === 'time' ? 'F' : 'time');
+  this.textContent = '排序：' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次');
+  recomputeVIS(); req(); };
 document.getElementById('reset').onclick = function () {
   st.ox = st.oy = 0; st.k = 1; st.ox3 = st.oy3 = 0; st.zoom3 = 1; st.tKx = 1; st.tKy = 1; st.tX = 0; st.tY = 0;
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit; }
@@ -2450,7 +2459,8 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     if (kv[0] === 'side') st.side = +kv[1] ? true : false;
     if (kv[0] === 'sel') st.sel = decodeURIComponent(kv[1]);
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
-    if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1; }
+    if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
+    if (kv[0] === 'sort') st.sortBy = (kv[1] === 'time' ? 'time' : 'F'); }
   /* 装载时那一次 recomputeVIS 跑在深链之前 ⇒ 不补这一句，#flo=/#fhi= 只会重铺色带、不会真的少画点。 */
   if (WSEEN) recomputeVIS();
   /* §E312 两场各有各的刻度 ⇒ 深链只给 isof 不给 isot 时，必须把阈值换成**那场自己的**默认值
@@ -2460,6 +2470,7 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
   else st.isoT = (st.isoField === 'pot' ? st.isoTpot : st.isoTok);
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit;
     document.getElementById('b3dt').textContent = st.elev < 0.5 ? '立体' : '平面'; } })();
+(function () { var b = document.getElementById('sortb'); if (b) b.textContent = '排序：' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次'); })();   /* E399：放到深链解析之后，否则 #sort=time 时标签是假的 */
 fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide();
 
 /* §E371 深链 #flo=/#fhi= 是在上面那个解析循环里写进 st 的 ⇒ 那两根滑杆与读数必须在这里回压一次，
@@ -3295,6 +3306,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button>' +
 '<label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label>' +
 '<label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label>' +
+'<button id="sortb">排序：F 名次</button>' +
 '<button id="reset">复位视图</button>' +
 '<button id="fitt">投影判据 ⓘ</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
