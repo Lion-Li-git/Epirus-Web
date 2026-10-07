@@ -3721,6 +3721,75 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('工具栏三个按钮：排序要真的换 1d 的顺序、冠军序列要真的出现、底色两档必须连字色一起翻（浅底深字 / 深底亮字）',
     btnBad.length === 0, btnBad.join(' ‖ ') || ('排序：最左 ' + idOf(leftA) + ' → ' + idOf(leftB)
       + ' ‖ 侧栏开合两态都对 ‖ 字色 浅底 ' + inkLite + ' / 深蓝 ' + inkDark + ' ‖ 已还原到 ' + st.bg));
+  /* ④ 剩下那几个能点的东西：平面⇄立体（那条 520ms 缓动要**一步推到底**才看得到落点，同一条 tick() 路径）、
+   *    投影判据、底色取色器、地板四粒（开关 / 阈值 / 网格 / 场）、好在上⇅。
+   *    判的还是两件事：st 跟上 ‖ 有个可观察的东西跟着动（按钮文案 / 面板显隐 / 夹取后的值）。 */
+  var SN2 = { iso: st.iso, isoT: st.isoT, isoGN: st.isoGN, isoField: st.isoField, goodTop: st.goodTop,
+    bg: st.bg, elev: st.elev, yaw: st.yaw, pit: st.pit, fitOn: document.getElementById('fit').style.display };
+  var c2Bad = [];
+  var wb3 = document.getElementById('b3dt'), e0 = st.elev, t0b3 = wb3.textContent;
+  wb3.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (tw) { tw.t0 = performance.now() - (tw.dur + 80); tick(); }   /* 把缓动一步推到终点（走的是同一套 tick，不是替它写结论） */
+  var e1 = st.elev, t1b3 = wb3.textContent;
+  if (Math.abs(e1 - e0) < 0.4) c2Bad.push('点平面⇄立体之后 st.elev 只从 ' + e0.toFixed(2) + ' 走到 ' + e1.toFixed(2));
+  /* 文案不跟"进入时那一眼"比，跟**当下 elev 该有的那一句**比：前面好几条判据都会临时把 elev 放平再还原，
+   *   而它们改的是 st 不是按钮 ⇒ 进入这条时那句文案可能已经是陈的（实测 #mode=map&3d=1 就这样）。
+   *   拿"变没变"判就是判错了对象；这条不变量（elev>=0.5 该写「平面」，否则该写「立体」）比原来更强。 */
+  var want1 = e1 >= 0.5 ? '平面' : '立体';
+  if (t1b3 !== want1) c2Bad.push('点完这一粒 elev = ' + e1.toFixed(2) + '，按钮该写「' + want1 + '」而它写着「' + t1b3 + '」');
+  wb3.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (tw) { tw.t0 = performance.now() - (tw.dur + 80); tick(); }
+  if (Math.abs(st.elev - SN2.elev) > 0.05) c2Bad.push('点回去之后没落在进入时那一档（' + SN2.elev.toFixed(2) + ' → ' + st.elev.toFixed(2) + '）');
+  var wf = document.getElementById('fitt'), df0 = document.getElementById('fit').style.display;
+  wf.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  var df1 = document.getElementById('fit').style.display;
+  if (df1 === df0) c2Bad.push('投影判据按钮点下去 #fit 显隐没变（' + df0 + '）');
+  if (!wf.classList.contains('on') === (df1 !== 'none')) c2Bad.push('#fit 开着而按钮没高亮（或反过来）：' + df1 + ' / on=' + wf.classList.contains('on'));
+  wf.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  var wbgc = document.getElementById('bgc'), bgBk = wbgc.value;
+  wbgc.value = '#212a3b'; fireEv(wbgc, 'input');
+  if (String(st.bg).toLowerCase() !== '#212a3b') c2Bad.push('底色取色器填 #212a3b 而 st.bg = ' + st.bg);
+  wbgc.value = bgBk; fireEv(wbgc, 'input');
+  var isoBk = st.iso, isoSeen = {};
+  for (var iz = 0; iz < 3; iz++) { isoSeen[st.iso] = 1;
+    document.getElementById('bisos').dispatchEvent(new MouseEvent('click', { bubbles: true })); }
+  if (!(isoSeen[0] && isoSeen[1] && isoSeen[2])) c2Bad.push('地板开关点三圈没有轮完三档（见到的是 ' + Object.keys(isoSeen).join('/') + '）');
+  if (st.iso !== isoBk) c2Bad.push('地板开关点三圈没回到原来那档（' + isoBk + ' → ' + st.iso + '）');
+  /* 阈值这根滑杆是 **E426 故意做的防抖**："槽位先跟手、st.isoT 停手 160ms 之后才动"（isoBuild 一次 1175ms，
+   *   每个 tick 都改 st.isoT 就是拖一下卡一秒）。同步自检里那个 setTimeout 永远不会跑，
+   *   所以这条只许测**槽位与标签跟没跟手** —— 拿 st.isoT 判就是判错了对象。 */
+  var wit = document.getElementById('isot'), witBk = wit.value, slotBk = (st.isoField === 'pot' ? st.isoTpot : st.isoTok);
+  wit.value = '0.9'; fireEv(wit, 'input');
+  var slotNow = (st.isoField === 'pot' ? st.isoTpot : st.isoTok);
+  if (Math.abs(slotNow - 0.9) > 1e-9) c2Bad.push('阈值滑杆拖到 0.9 而当下场那一格槽位 = ' + slotNow.toFixed(3) + '（槽位必须先跟手）');
+  var lblT = document.getElementById('isotv').textContent;
+  if (lblT.indexOf('90%') < 0) c2Bad.push('阈值数值跟手了而标签没跟（读数是「' + lblT + '」）');
+  wit.value = witBk; fireEv(wit, 'input');
+  if (st.isoField === 'pot') st.isoTpot = slotBk; else st.isoTok = slotBk;
+  /* 网格与场是两个 select：它们听的是 change（不是 input），而且填一个没有的选项会被浏览器清成空串 ⇒ 用真的档位测 */
+  var wig = document.getElementById('isogn'), wigBk = wig.value;
+  wig.value = '128'; fireEv(wig, 'change');
+  if (st.isoGN !== 128) c2Bad.push('壳网格选 128 而 st.isoGN = ' + st.isoGN);
+  wig.value = wigBk; fireEv(wig, 'change');
+  if (st.isoGN !== +wigBk) c2Bad.push('壳网格没还原（' + st.isoGN + ' ≠ ' + wigBk + '）');
+  var wif = document.getElementById('isof'), wifBk = wif.value;
+  wif.value = 'pot'; fireEv(wif, 'change');
+  if (st.isoField !== 'pot') c2Bad.push('场选 pot 而 st.isoField = ' + st.isoField);
+  wif.value = wifBk; fireEv(wif, 'change');
+  if (st.isoField !== wifBk) c2Bad.push('场没还原（' + st.isoField + ' ≠ ' + wifBk + '）');
+  var wbh = document.getElementById('bh'), gt0 = st.goodTop, tx0 = wbh.textContent;
+  wbh.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (st.goodTop === gt0) c2Bad.push('好在上⇅ 点下去 st.goodTop 没翻');
+  if (wbh.textContent === tx0) c2Bad.push('好在上⇅ 翻了状态没翻文案（还是「' + tx0 + '」）');
+  wbh.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (st.goodTop !== gt0) c2Bad.push('好在上⇅ 点两下没回到原档');
+  T('工具栏剩下的都能点：平面⇄立体（缓动推到底）、投影判据、底色取色器、曲面三档与阈值/网格/场、好在上⇅',
+    c2Bad.length === 0, c2Bad.join(' ‖ ') || ('st.elev ' + e0.toFixed(2) + ' → ' + e1.toFixed(2) + ' → 回到 ' + st.elev.toFixed(2)
+      + ' ‖ #fit 显隐两态都对 ‖ 底色取色器接上 ‖ 曲面轮完三档并回到 ' + isoBk + ' ‖ 阈值槽位与标签跟手（st.isoT 由 E426 防抖，不在这里判）‖ 网格/场两个下拉走 change'));
+  st.iso = SN2.iso; st.isoT = SN2.isoT; st.isoGN = SN2.isoGN; st.isoField = SN2.isoField;
+  st.goodTop = SN2.goodTop; st.bg = SN2.bg; st.elev = SN2.elev; st.yaw = SN2.yaw; st.pit = SN2.pit;
+  document.getElementById('fit').style.display = SN2.fitOn;
+  syncIso(); syncHdir(); setBg(SN2.bg); document.getElementById('bgc').value = SN2.bg;
   st.mode = SNAPI.mode; st.elev = SNAPI.e; st.labels = SNAPI.labels; st.color = SNAPI.color; st.edges = SNAPI.edges;
   st.batch = SNAPI.batch; st.T = SNAPI.T; st.size = SNAPI.size; st.q = SNAPI.q; st.side = SNAPI.side;
   st.sortBy = SNAPI.sortBy; st.bg = SNAPI.bg; st.flo = SNAPI.flo; st.fhi = SNAPI.fhi;
