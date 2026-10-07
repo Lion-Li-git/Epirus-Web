@@ -1714,7 +1714,12 @@ function draw() { try { var _ft0 = performance.now(); drawBody();
   if (PERFON) { var _pe = document.getElementById('perfru');
     if (!_pe) { _pe = document.createElement('pre'); _pe.id = 'perfru'; _pe.style.display = 'none'; document.body.appendChild(_pe); }
     var _av = FRMA.length ? (FRMA.reduce(function (x, y) { return x + y; }, 0) / FRMA.length) : 0;
-    _pe.textContent = 'FRMS=' + FRMS.toFixed(2) + ' AVG=' + _av.toFixed(2) + ' N=' + FRMA.length + ' MODE=' + st.mode + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN; }
+    var _o1 = 0, _ok2 = ''; for (var _k2 in OPC) { _o1 += OPC[_k2]; _ok2 += _k2 + '=' + OPC[_k2] + ' '; }
+    _pe.textContent = 'FRMS=' + FRMS.toFixed(2) + ' AVG=' + _av.toFixed(2) + ' N=' + FRMA.length + ' MODE=' + st.mode
+      + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW
+      + ' **OPSF=' + _o1 + '** ' + _ok2;
+    for (var _k3 in OPC) OPC[_k3] = 0;   /* 每帧清零 ⇒ OPSF = 这一帧真实画了多少次 */
+  }
   } catch (e) {
   /* 静默空跑比红字更坏（v1 的 3D 就是抛异常后画了个全空画布，看不出来）⇒ 异常必须显形 */
   var el = document.getElementById('err');
@@ -2400,7 +2405,11 @@ fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); 
 /* E406 DS（用户 10-08：卡，但任务管理器里 CPU 只有 9% ⇒ 不是吞吐不够，是**串行在主线程**）：
  *   把每帧的**画布调用数**与缓冲区规模量出来，才能说清"低 CPU + 卡"是怎么来的。 */
 var OPC = {};
-if (PERFON === 2) setTimeout(function () { (function () {
+if (PERFON === 2) { var _btry = 0; (function _bwait() {
+  /* E416 DS：**等首帧真实绘制之后再量**。原来跑在装载序列里（或固定延时）⇒ 那时模式/场未就绪 ⇒
+   *   drawIso 不被调到 ⇒ 基准必然读到 GLPATH=0，而真实帧发生在它之后（我已被这个假数误导两次）。 */
+  if ((!ISO || !ISO.quads || !ISO.quads.length) && (++_btry) < 120) { requestAnimationFrame(_bwait); return; }
+  (function () {
   var _ops = ['beginPath', 'fill', 'stroke', 'arc', 'fillText', 'strokeText', 'fillRect', 'drawImage', 'closePath', 'moveTo', 'lineTo'];
   for (var _oi = 0; _oi < _ops.length; _oi++) { (function (m) {
     var _f = g[m]; if (typeof _f !== 'function') return;
@@ -2413,7 +2422,7 @@ if (PERFON === 2) setTimeout(function () { (function () {
   var _tot = 0, _kv = ''; for (var _k in OPC) { _tot += OPC[_k]; _kv += _k + '=' + OPC[_k] + ' '; }
   pe.textContent = 'BENCH first=' + tt[0].toFixed(1) + ' avg=' + av.toFixed(2) + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN
     + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW + ' FRAMES=6 OPS6=' + _tot + ' OPS1=' + Math.round(_tot / 6) + ' PX=' + cv.width + 'x' + cv.height + ' DPR=' + (devicePixelRatio || 1) + ' ' + _kv;
-  document.body.appendChild(pe); })(); }, 60);   /* E415：**挪到装载之后** —— 原来跑在装载序列里，那时模式/场没就绪，drawIso 根本不会被调到，基准必然读到 GLPATH=0（我上一笔就是被这个假数误导的）*/
+  document.body.appendChild(pe); })(); })(); }   /* E416：等 ISO 就绪再量，读数与路标同帧取 */
 
 
 /* §E371 深链 #flo=/#fhi= 是在上面那个解析循环里写进 st 的 ⇒ 那两根滑杆与读数必须在这里回压一次，
