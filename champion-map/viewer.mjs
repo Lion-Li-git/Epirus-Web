@@ -800,6 +800,8 @@ var FRMS = 0, FRMA = [];
 var PERFON = 0;
 var GLPROBE = 0;
 var GLFAILS = 0;
+var FRN = 0;
+var GLERR = '';   /* E418：GL 分支抛出的异常文本（揪出静默中断）*/   /* E418：帧序（判"只画了哪一帧"）*/
 var GLPATH = 0;     /* E413: 0=not-yet 1=GL-used 2=GL-unavailable */
 var GLDREW = 0;     /* E413：走 GL 路的帧数 */
 var GLSIG = '';     /* E405：GL 几何缓存键（相机/网格/画布任一变化才重算重传）*/
@@ -1750,7 +1752,8 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
    *     ⇒ 默认走逐面（BATCHISO=0）。要省 CPU 只能换后端（WebGL2 一次上传 VBO、逐帧只换矩阵），不是"合并 path"。 */
   /* E404 DS：GL 分支 —— 面一次性上传，逐帧只改 uniform（把光栅化从 CPU 挪走）。失败即回落 2D 路。 */
   if (!GLPROBE) { GLPROBE = 1; console.log('PROBE drawIso GLISO=' + GLISO + ' GLMon=' + GLM.on() + ' quads=' + m.quads.length); }
-  if (GLISO) {
+  if (GLISO) { try {   /* E418：**把被 draw() 的 catch 吞掉的异常揪出来** —— 探针已证明 GLISO=1 进了分支，
+                          *   却三个出口都没留痕 ⇒ 只能是这里抛异常、当场中断、被静默吞掉。 */
     if (!GLM.on() && !GLM.init(cv)) { GLPATH = 2; GLFAILS++;   /* E417b：失败只记数、本帧回落 2D，下一帧继续试（原来这里写 GLISO = 0 ⇒ 首帧一旦失败就永久走老路）*/
       (function () { var _n = document.getElementById('perfru'); if (_n && _n.dataset) _n.dataset.path = 'glfail'; })();
       console.log('GL 起不来（webgl2 上下文/着色器失败）⇒ 本帧走 2D 老路'); }
@@ -1795,6 +1798,8 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
       g.drawImage(GLM.canvas(), 0, 0);
       return m;
     }
+  } catch (eGL) { GLPATH = 3; GLERR = String(eGL && eGL.message || eGL);
+    console.log('GL 分支抛异常（原来被 draw() 静默吞掉）：' + GLERR); }
   } else if (GLM.on()) { GLM.clear(); }
   if (!BATCHISO) {
     var q = [];
@@ -1911,6 +1916,7 @@ function draw() { try { var _ft0 = performance.now(); drawBody();
   if (PERFON) { var _pe = document.getElementById('perfru');
     if (!_pe) { _pe = document.createElement('pre'); _pe.id = 'perfru'; _pe.style.display = 'none'; document.body.appendChild(_pe); }
     var _av = FRMA.length ? (FRMA.reduce(function (x, y) { return x + y; }, 0) / FRMA.length) : 0;
+    FRN++; _pe.dataset.gliso = String(GLISO); _pe.dataset.frn = String(FRN);
     var _o1 = 0, _ok2 = ''; for (var _k2 in OPC) { _o1 += OPC[_k2]; _ok2 += _k2 + '=' + OPC[_k2] + ' '; }
     _pe.textContent = 'FRMS=' + FRMS.toFixed(2) + ' AVG=' + _av.toFixed(2) + ' N=' + FRMA.length + ' MODE=' + st.mode
       + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW
