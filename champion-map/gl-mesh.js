@@ -14,7 +14,7 @@
  */
 var GLM = (function () {
   var cv = null, gl = null, prog = null, vbo = null, ibo = null, iboLine = null;
-  var nIdx = 0, nLine = 0, capV = 0, ok = false, fillLoc = null, alphaU = null;
+  var nIdx = 0, nLine = 0, capV = 0, ok = false, fillLoc = null, alphaU = null, DRAWN = 0, V0 = new Float32Array(2);
 
   function sh(type, src) {
     var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
@@ -33,12 +33,15 @@ var GLM = (function () {
     try {
       cv = document.createElement('canvas');
       cv.id = 'glmesh';
-      cv.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3';
+      cv.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9';
       var host = mainCv && mainCv.parentNode ? mainCv.parentNode : document.body;
       var pos = host.style && host.style.position;
       if (!pos || pos === 'static') host.style.position = 'relative';
       host.appendChild(cv);
-      gl = cv.getContext('webgl2', { alpha: true, premultipliedAlpha: false, antialias: true, depth: false });
+      /* E407 DS：**去掉 premultipliedAlpha:false** —— Chrome 合成器默认按预乘 alpha 处理，
+       *   声明非预乘会再乘一次 ⇒ 半透明内容淡到看不见（这正是 #gl=1 什么都不显示的头号嫌疑）。
+       *   于是这里用默认（预乘），颜色在 draw() 里按 alpha 预乘。 */
+      gl = cv.getContext('webgl2', { alpha: true, antialias: true, depth: false });
       if (!gl) { console.log('GL 不可用（webgl2 起不来）⇒ 回落 2D 老路'); return false; }
       var v = sh(gl.VERTEX_SHADER, VS), f = sh(gl.FRAGMENT_SHADER, FS);
       if (!v || !f) return false;
@@ -53,6 +56,8 @@ var GLM = (function () {
       gl.vertexAttribPointer(al, 2, gl.FLOAT, false, 0, 0);
       gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       ok = true;
+      /* E407 DS：**一次性自述**（无头/真机都能读）：尺寸、层叠、错误码 —— 下次"不显示"就不用猜。 */
+      /* E407 DS：自述挪到**第一次 draw 之后**（放在 init 里报的是 300x150 的默认尺寸，等于没说）。 */
       return true;
     } catch (e) { console.log('GL 初始化异常：' + e.message); ok = false; return false; }
   }
@@ -70,6 +75,7 @@ var GLM = (function () {
   /* verts = 屏幕坐标（CSS px）的 Float32Array 平铺；tris/lines = 索引数组 */
   function upload(verts, tris, lines) {
     if (!ok) return false;
+    if (verts.length >= 2) { V0[0] = verts[0]; V0[1] = verts[1]; }
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
     if (verts.length > capV) { gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW); capV = verts.length; }
     else gl.bufferSubData(gl.ARRAY_BUFFER, 0, verts);
@@ -88,16 +94,22 @@ var GLM = (function () {
     var W = cv.width, H = cv.height;
     /* 屏幕 y 向下、GL 的 y 向上 ⇒ 在顶点里就已经翻好（见查看器），这里不再翻转 */
     gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    /* 预乘 alpha（画布声明为预乘 ⇒ 颜色必须乘好）*/
+    function pm(c4) { return [c4[0] * c4[3], c4[1] * c4[3], c4[2] * c4[3], c4[3]]; }
     if (nIdx) {
-      gl.uniform4f(alphaU, fill[0], fill[1], fill[2], fill[3]);
+      var f4 = pm(fill); gl.uniform4f(alphaU, f4[0], f4[1], f4[2], f4[3]);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
       gl.drawElements(gl.TRIANGLES, nIdx, gl.UNSIGNED_INT, 0);
     }
     if (nLine) {
-      gl.uniform4f(alphaU, line1[0], line1[1], line1[2], line1[3]);
+      var l4 = pm(line1); gl.uniform4f(alphaU, l4[0], l4[1], l4[2], l4[3]);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iboLine);
       gl.drawElements(gl.LINES, nLine, gl.UNSIGNED_INT, 0);
     }
+    if (!DRAWN) { DRAWN = 1;
+      console.log('GL 首帧：canvas ' + cv.width + 'x' + cv.height + ' · viewport ' + gl.drawingBufferWidth + 'x' + gl.drawingBufferHeight +
+        ' · nIdx ' + nIdx + ' nLine ' + nLine + ' · err ' + gl.getError() +
+        ' · v0 ' + (V0[0] || 0).toFixed(1) + ',' + (V0[1] || 0).toFixed(1)); }
     return true;
   }
   function clear() { if (ok) { gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); } }
