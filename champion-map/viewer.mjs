@@ -806,7 +806,7 @@ var SIGMS = 0, BUILDMS = 0;
 var GEOBUILD = 0, GLRESIZE = 0;
 /* E428 DS：GL 的填充/线框 alpha。2D 路是**逐面填、重叠处 alpha 累积**（偏亮），GL 是**并集填一次**（偏淡）
  *   ⇒ 这里把 alpha 提上来折中；两个值都可用深链微调：#gfa=0.30 #gla=0.62。 */
-var GFA = 0.30, GLA = 0.62;
+var GFA = 0.40, GLA = 0.75;   /* E428 定稿（用户 10-08：「#gfa=0.40&gla=0.75 够了」）*/
 var MISSWHY = '';   /* E423：上一次重建的原因（sig/thr/gn/field/noISO）*/   /* E422：isoEnsure 里两件事分开计时 */
 var ISOMS = 0, GLBUILD = 0, GLDRAW = 0, GLBLIT = 0;   /* E420：把 1.2s/帧拆开定位 */
 var GLERR = '';   /* E418：GL 分支抛出的异常文本（揪出静默中断）*/   /* E418：帧序（判"只画了哪一帧"）*/
