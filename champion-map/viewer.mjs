@@ -802,6 +802,7 @@ var GLPROBE = 0;
 var GLFAILS = 0;
 var FRN = 0;
 var ISOBUILDS = 0;
+var SIGMS = 0, BUILDMS = 0;   /* E422：isoEnsure 里两件事分开计时 */
 var ISOMS = 0, GLBUILD = 0, GLDRAW = 0, GLBLIT = 0;   /* E420：把 1.2s/帧拆开定位 */
 var GLERR = '';   /* E418：GL 分支抛出的异常文本（揪出静默中断）*/   /* E418：帧序（判"只画了哪一帧"）*/
 var GLPATH = 0;     /* E413: 0=not-yet 1=GL-used 2=GL-unavailable */
@@ -1733,11 +1734,14 @@ function isoSigma() {
   return SIGVAL;
 }
 function isoEnsure() {
+  var _tS = performance.now();
   var sg = isoSigma();
+  SIGMS = performance.now() - _tS;   /* E422：算签名花了多少 */
   if (ISO && ISO.sig === sg && ISO.thr === st.isoT && ISO.gn === st.isoGN && ISO.field === st.isoField) return ISO;
   ISOBUILDS++;   /* E419 DS：建壳次数 —— 用户真机实测 1.2s/帧、而每帧只有 3073 次画布调用(≈1.5ms)
                   *   ⇒ 1.2 秒必然花在"每帧重算"上；头号嫌疑就是这里被反复重建（GN=128 建一次 ~0.6~1.5s，量级吻合）。 */
   var t0 = performance.now(); ISO = isoBuild(sg, st.isoT, st.isoGN, st.isoField); ISO.ms = performance.now() - t0;
+  BUILDMS = ISO.ms;   /* E422：真重建花了多少 */
   return ISO;
 }
 /* 画序：**先画壳、后画点** ⇒ 点永远浮在曲面上，不会被挡（用户担心的正是这个）。
@@ -1938,7 +1942,7 @@ function draw() { try { var _ft0 = performance.now(); drawBody();
     FRN++; _pe.dataset.gliso = String(GLISO); _pe.dataset.frn = String(FRN);
     var _o1 = 0, _ok2 = ''; for (var _k2 in OPC) { _o1 += OPC[_k2]; _ok2 += _k2 + '=' + OPC[_k2] + ' '; }
     _pe.textContent = 'FRMS=' + FRMS.toFixed(2) + ' AVG=' + _av.toFixed(2) + ' N=' + FRMA.length + ' MODE=' + st.mode
-      + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN + ' ISOBUILDS=' + ISOBUILDS + ' ISOMS=' + ISOMS.toFixed(1) + ' GLBUILD=' + GLBUILD.toFixed(1) + ' GLDRAW=' + GLDRAW.toFixed(1) + ' GLBLIT=' + GLBLIT.toFixed(1) + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW
+      + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN + ' ISOBUILDS=' + ISOBUILDS + ' SIGMS=' + SIGMS.toFixed(1) + ' BUILDMS=' + BUILDMS.toFixed(1) + ' ISOMS=' + ISOMS.toFixed(1) + ' GLBUILD=' + GLBUILD.toFixed(1) + ' GLDRAW=' + GLDRAW.toFixed(1) + ' GLBLIT=' + GLBLIT.toFixed(1) + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW
       + ' **OPSF=' + _o1 + '** ' + _ok2;
     _pe.dataset.path = _pe.dataset.path || '2d';
     for (var _k3 in OPC) OPC[_k3] = 0;   /* 每帧清零 ⇒ OPSF = 这一帧真实画了多少次 */
