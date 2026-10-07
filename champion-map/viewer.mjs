@@ -1712,7 +1712,13 @@ function isoBuild(sig, thr, GN, field) {
  *   §E312：从 12 近邻改成 6 近邻 —— "样本不够"这件事已经交给收缩项兜了，核就该只管"局部有多近"；
  *   核不变小的话，稠密区永远被邻居里的未过线点稀释，壳仍然只在边缘长。*/
 var ISO = null;
+/* E421 DS（真机实测 1.2s/帧的真身）：isoSigma() 是 **O(N²)**（917² ≈ 84 万次距离 + 内层 heap.sort），
+ *   而它**每帧**都被 isoEnsure() 调一次 ⇒ 一帧白烧 ~1.2 秒（GL 三段计时全 0、ISOBUILDS 只有 7 ⇒ 与此吻合）。
+ *   它只依赖装载时算好的静态显示坐标（P[i].ax/by/cz）⇒ **本该只算一次**，这里加会话级 memo。 */
+var SIGCNT = 0, SIGVAL = 0;
 function isoSigma() {
+  var _stamp = N + '|' + (P[0] ? P[0].ax : 0) + '|' + (P[N - 1] ? P[N - 1].cz : 0);
+  if (SIGVAL && SIGCNT === _stamp) return SIGVAL;
   var nn = [];
   for (var i = 0; i < N; i++) {
     var heap = [];
@@ -1723,7 +1729,8 @@ function isoSigma() {
       else if (dd < heap[5]) { heap[5] = dd; heap.sort(function (a, b) { return a - b; }); } }
     nn.push(heap[5] || heap[0] || 1);
   }
-  return pct(nn, .5) || 1;
+  SIGCNT = _stamp; SIGVAL = pct(nn, .5) || 1;
+  return SIGVAL;
 }
 function isoEnsure() {
   var sg = isoSigma();
