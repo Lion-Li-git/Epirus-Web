@@ -3800,6 +3800,48 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   dQ.value = SNAPI.q; wT.value = SNAPI.T; wS.value = SNAPI.size;
   document.getElementById('Tv').textContent = (+SNAPI.T).toFixed(2);
   recomputeVIS(); buildGroups(); buildFamBar(); paintSide(); paintWin(); draw();
+  /* ===== §E455 浮层面板压住多少数据：按**最坏情况**量，不量"自检跑到这儿时恰好开着什么" =====
+   *   三块浮层（图例 / 选中卡 / 冠军序列）都是 DOM 盖在画布上 ⇒ 被它们压住的点既看不见也点不着（点击落在面板上）。
+   *   原来这这件事只有"标签中心不许命中一张盖不住这个点的卡"那条管到卡与自己那枚点的关系，没人量过总量。
+   *   取样状态钉死：平面地图 + 全范围窗口 + 卡开着（选库里 why 最长的那一枚 ⇒ 卡最高的一种）+ 侧栏开着。
+   *   实测（1600×900）：画布内 729 枚 ‖ 被压住 65 枚 = 9%（卡 39 ‖ 侧栏 26）‖ 其中冠军 12 ‖ **现役 0**；
+   *   只开图例的几种态：谱系图 0 枚、一维 0 枚、三维行为轴 3 枚、立体地图 16 枚。
+   *   ⇒ 硬判据一条："现役不许被压住"（它是全图唯一的分界参照物，被压住就等于图上没有基准）；
+   *     再加一条总量界 ≤ 80（实测最坏 65 之上留 15 枚余量，挡的是"某块面板无声变大"）。 */
+  (function () {
+    var SN5 = { mode: st.mode, e: st.elev, sel: st.sel, side: st.side, flo: st.flo, fhi: st.fhi, labels: st.labels };
+    var worst = -1, worstId = '';
+    for (var wi5 = 0; wi5 < N; wi5++) { var wl = String(P[wi5].why || '').length + String(P[wi5].pb || '').length;
+      if (P[wi5].ok === 0 && wl > worst) { worst = wl; worstId = P[wi5].id; } }
+    st.mode = 'map'; st.elev = 0; st.flo = 0; st.fhi = 1; st.labels = 'champ'; st.side = true;
+    st.sel = worstId; recomputeVIS(); paintCard(); paintSide(); draw();
+    var cvr = cv.getBoundingClientRect(), PAN = [];
+    function addP(id) { var e = document.getElementById(id); if (!e) return;
+      var cs = window.getComputedStyle(e);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return;
+      var r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return;
+      PAN.push([id, (r.left - cvr.left) * devicePixelRatio, (r.top - cvr.top) * devicePixelRatio,
+        r.width * devicePixelRatio, r.height * devicePixelRatio]); }
+    addP('legend'); addP('card'); addP('side');
+    var hid = 0, hidCh = 0, tot = 0, hidBy = {}, exCh = '', hidInc = 0;
+    for (var oi = 0; oi < N; oi++) { var so = scr[oi]; if (!so || !VIS[oi]) continue; tot++;
+      for (var pi = 0; pi < PAN.length; pi++) { var B = PAN[pi];
+        if (so[0] >= B[1] && so[0] <= B[1] + B[3] && so[1] >= B[2] && so[1] <= B[2] + B[4]) {
+          hid++; hidBy[B[0]] = (hidBy[B[0]] || 0) + 1;
+          if (P[oi].id === 'SHIPPED-Ldemo') hidInc++;
+          if (P[oi].lin) { hidCh++; if (!exCh) exCh = P[oi].id; }
+          break; } } }
+    var parts = []; for (var kk in hidBy) parts.push(kk + ' ' + hidBy[kk]);
+    T('浮层面板不许把现役压住（它是全图唯一的分界参照）‖ 最坏情况下被压住的点总量有界',
+      PAN.length >= 2 && tot > 0 && hidInc === 0 && hid <= 80,
+      '钉的态：平面地图 + 卡开着（选 why 最长那枚 ' + worstId + '，明细 ' + worst + ' 字符）+ 侧栏开着'
+        + ' ‖ 画布内 ' + tot + ' 枚 ‖ 被压住 ' + hid + ' 枚（线 80）‖ 分块 ' + (parts.join(' ‖ ') || '无')
+        + ' ‖ 其中冠军 ' + hidCh + (exCh ? '（例 ' + exCh + '）' : '') + ' ‖ 现役 ' + hidInc + '（要 0）'
+        + ' ‖ 面板 ' + PAN.map(function (x) { return x[0] + ' ' + Math.round(x[3] / devicePixelRatio) + '×' + Math.round(x[4] / devicePixelRatio); }).join(' / '));
+    st.mode = SN5.mode; st.elev = SN5.e; st.sel = SN5.sel; st.side = SN5.side;
+    st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
+    recomputeVIS(); paintCard(); paintSide(); draw();
+  })();
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\n' + out.join('\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\n已经跑到：\n' + out.join('\n'); nbad++; }
