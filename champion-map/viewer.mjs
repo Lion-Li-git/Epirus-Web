@@ -743,6 +743,7 @@ function pct(a, q) { var b = a.slice().sort(function (x, y) { return x - y; }); 
  *   按屏幕度量 ⇒ 势晕是正圆且互相搭接。比例尺取**不含缩放**的基础值（缩放对两轴均匀，
  *   位图随仿射一起放大即可，不必重烘）；窗口尺寸变了才重建（resize 时清 NBK）。*/
 var NBK = {}, FL = null;
+var CHROMEVEC = 1;   /* E395 DS：谱系图底图走矢量直画（1）还是旧位图烘焙（0）。#chrome=bmp 切回旧路。 */
 var VK = null;   /* E388 DS: 可见点 k-NN 表缓存（键 = 位图键 + 可见名单签名）*/
 function buildNB(key, bx, byy) {
   var ax = key.slice(0, 2), by = key.slice(2, 4);
@@ -1106,12 +1107,8 @@ var CHM = null;
  *   根本写不出来，于是 §E351/§E369/§E377 每修一次都是在重投一次票，投错一个就是下一个 bug。
  *   现在：纸面坐标一次画完，视图变换只在**贴这张纸**与**算点的屏幕位置**两处施加，两者读同一个 PS ⇒ 结构上不可能各走各的。
  *   日期步长是唯一的例外：它按当前横轴倍率现算（字不能糊成一坨），但**只有步长真的变了才重烘**（步长进缓存键，倍率不进）。 */
-function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep, SS) {
-  /* SS = 烘这张纸时多付的倍率（§E379）：纸现在会被放大贴，1× 烘出来在 TKX=2 那一档字是糊的。
-   *   代价按 SS² 走（内存与烘一次的时间），所以上限 2 ⇒ 放大到 2 倍以内都清晰，再往上就让它糊。*/
-  var c = document.createElement('canvas'); c.width = Math.round(w * SS); c.height = Math.round(h * SS);
-  var t = c.getContext('2d'), i;
-  t.setTransform(SS, 0, 0, SS, 0, 0);
+/* E395 DS（谱系图去位图 · 步1）：绘制体独立出来，位图/矢量两条路共用同一份代码（「不要修完又变坏」的结构保证）。 */
+function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep) {
   t.font = ff(11);
   for (i = 0; i < fams.length; i++) {
     var f = fams[i], mem = P.filter(function (d, mi) { return d.fam === f && VIS[mi]; });
@@ -1138,6 +1135,11 @@ function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, daySt
     t.fillStyle = st.dim; t.font = (10 * devicePixelRatio) + 'px system-ui,sans-serif';
     t.fillText(new Date(tt2).toISOString().slice(5, 10), xx + 3, h - padB + 16 * devicePixelRatio);
   }
+}
+function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep, SS) {
+  var c = document.createElement('canvas'); c.width = Math.round(w * SS); c.height = Math.round(h * SS);
+  var t = c.getContext('2d'); t.setTransform(SS, 0, 0, SS, 0, 0);
+  paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep);
   return c;
 }
 
@@ -1195,7 +1197,7 @@ function drawTree(fr) {
   var SS = Math.max(1, Math.min(2, TKX));
   var ck = [w, h, fams.join(','), tmin, tmax, st.ink, st.dim, devicePixelRatio,
     st.elev.toFixed(3), st.batch, NVIS, st.flo.toFixed(3) + ',' + st.fhi.toFixed(3), Math.round(dayStep / DAY), SS.toFixed(2)].join('|');
-  if (!CHM || CHM.k !== ck) CHM = { k: ck, c: treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep, SS) };
+  if (!CHROMEVEC && (!CHM || CHM.k !== ck)) CHM = { k: ck, c: treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep, SS) };
   var T3 = st.elev, uc = w / 2, vc = h / 2, cb = cam();   /* E352 DS: 相机基 cb（与地图同一套） */
   /* ===== §E369 → §E377 立体态**不再有任何形式的"把整张图塞进窗口"**（用户："看的很难受，把这个东西去掉"）=====
    *   §E369 为消掉"上下左三面截断"加了一层"包围盒等比缩小 + 居中"。缩小被点名撤掉之后，**居中也必须一起撤**：
@@ -1227,8 +1229,12 @@ function drawTree(fr) {
   var q0 = PS(0, 0), qX = PS(w, 0), qY = PS(0, h);
   g.save();
   g.setTransform((qX[0] - q0[0]) / w, (qX[1] - q0[1]) / w, (qY[0] - q0[0]) / h, (qY[1] - q0[1]) / h, q0[0], q0[1]);
-  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-  g.drawImage(CHM.c, 0, 0, CHM.c.width, CHM.c.height, 0, 0, w, h);
+  /* E395 DS（用户 10-08）：网格修好了但改成位图 ⇒ 缩放发虚、字被糊扭。改成矢量直画：
+   *   这里上下文已设好「纸面 → 屏幕」仿射，paintChrome 就在纸面坐标里画 ⇒ 字与线在最终分辨率上栅格化。
+   *   两条路共用 paintChrome ⇒ 不会变成两套版式；旧路径留在 #chrome=bmp。 */
+  if (CHROMEVEC) { g.save(); paintChrome(g, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep); g.restore(); }
+  else { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    g.drawImage(CHM.c, 0, 0, CHM.c.width, CHM.c.height, 0, 0, w, h); }
   g.restore(); g.setTransform(1, 0, 0, 1, 0, 0);
   var FR3 = fRange();
   g.save();
@@ -2392,7 +2398,8 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     /* §E338 无头复验要能钉住"选中那枚"和"冠军序列开着"这两个状态（不点开就永远截不到新面板）*/
     if (kv[0] === 'side') st.side = +kv[1] ? true : false;
     if (kv[0] === 'sel') st.sel = decodeURIComponent(kv[1]);
-    if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } }
+    if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
+    if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1; }
   /* 装载时那一次 recomputeVIS 跑在深链之前 ⇒ 不补这一句，#flo=/#fhi= 只会重铺色带、不会真的少画点。 */
   if (WSEEN) recomputeVIS();
   /* §E312 两场各有各的刻度 ⇒ 深链只给 isof 不给 isot 时，必须把阈值换成**那场自己的**默认值
