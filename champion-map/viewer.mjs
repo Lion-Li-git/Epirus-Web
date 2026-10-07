@@ -3334,6 +3334,39 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
     if (ln) { const ls = src.split('\n'); console.error('   >>> ' + String(ls[Number(ln) - 1] || '').trim().slice(0, 160)); }
     process.exit(3); }
   console.log('内联脚本解析自证 ✅ ' + src.split('\n').length + ' 行 JS 能被引擎收下'); }
+/* E398 DS：**模板转义门**。浏览器那段 JS 住在 `const JS = <反引号>…<反引号>` 模板字面量里，
+ *   模板字面量会把「反斜杠 + 字符」变成那个字符（反斜杠 s 变 s、反斜杠 d 变 d、反斜杠 n 变真换行）
+ *   ⇒ **正则/字符串静默失效**（§E397b 家族标签就是这么坏的：源里 \s+[\d.] 产物里变成 s+[d.]，
+ *     内联自证用 new Function 只查语法、查不出语义失效）。
+ *   门：**代码与字符串**里不许出现「反斜杠 + 字母」，除双反斜杠（产物里是一个）与反斜杠 u / x（合法 unicode/hex）。
+ *   ⚠ **注释跳过**：注释里写这些是为了记录这个坑（现有 4 处都是注释）⇒ 不能因此红。
+ *   要写正则里的反斜杠 s，就得在源里写**两个反斜杠**。 */
+{
+  const self = readFileSync(fileURLToPath(import.meta.url), 'utf8');
+  const BT = String.fromCharCode(96), BS = String.fromCharCode(92), NL = String.fromCharCode(10);
+  const head = 'const JS = ' + BT;
+  const a0 = self.indexOf(head), b0 = a0 < 0 ? -1 : self.indexOf(BT, a0 + head.length);
+  if (a0 < 0 || b0 < 0) { console.error('⛔ 找不到 JS 模板区 ⇒ 转义门失效（拒绝落盘）'); process.exit(3); }
+  const tpl = self.slice(a0 + head.length, b0), bad = [];
+  let inBlk = false, inLine = false, q = '';
+  for (let i = 0; i < tpl.length; i++) {
+    const c = tpl[i], n = tpl[i + 1] || '';
+    if (inBlk) { if (c === '*' && n === '/') { inBlk = false; i++; } continue; }
+    if (inLine) { if (c === NL) inLine = false; continue; }
+    if (q) { if (c === BS) { const m = tpl[i + 2] || ''; if (m !== BS && m !== 'u' && m !== 'x' && /[A-Za-z]/.test(n)) bad.push('第 ' + (tpl.slice(0, i).split(NL).length + 1) + ' 行（字符串内）：反斜杠 ' + n); i++; continue; } if (c === q) q = ''; continue; }
+    if (c === '/' && n === '*') { inBlk = true; i++; continue; }
+    if (c === '/' && n === '/') { inLine = true; i++; continue; }
+    if (c === String.fromCharCode(39) || c === String.fromCharCode(34)) { q = c; continue; }
+    if (c === BS) { const m = n; if (m === BS) { i++; continue; } if (m === 'u' || m === 'x') continue; if (/[A-Za-z]/.test(m)) bad.push('第 ' + (tpl.slice(0, i).split(NL).length + 1) + ' 行：反斜杠 ' + m + ' ⇒ 产物里会变成 ' + m); }
+  }
+  if (bad.length) {
+    console.error('⛔ 模板区（代码/字符串）里有会被模板字面量吃掉的转义 —— 在源里写**双反斜杠**即可：');
+    console.error('  ' + bad.slice(0, 12).join(NL + '  '));
+    process.exit(3);
+  }
+  console.log('模板转义自证 ✅ 代码/字符串里没有被吃掉的「反斜杠+字母」（注释不计）');
+}
+
 /* E391 DS：先自证、后落盘。原来是反的（先写坏文件、再自证失败 exit 3）⇒ 产物已经坏了，而我下一句没看退出码就截图。顺序一换，写坏文件这一步根本不会发生。 */
 writeFileSync(join(HERE, OUT), html);
 console.log('已写 ' + join(HERE, OUT) + '（' + (html.length / 1024).toFixed(0) + ' KB，自包含、无外部依赖）');
