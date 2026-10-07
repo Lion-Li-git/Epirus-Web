@@ -13,7 +13,7 @@
  *   ⚠ 已知取舍（要看图确认）：GL 层在主画布**之上** ⇒ 壳会盖在点上面（旧路是"先画壳后画点、点浮在上面"）。
  */
 var GLM = (function () {
-  var cv = null, gl = null, prog = null, vbo = null, ibo = null, iboLine = null;
+  var cv = null, gl = null, prog = null, vbo = null, ibo = null, iboLine = null, MCV = null;
   var nIdx = 0, nLine = 0, capV = 0, ok = false, fillLoc = null, alphaU = null, DRAWN = 0, V0 = new Float32Array(2);
 
   function sh(type, src) {
@@ -34,10 +34,15 @@ var GLM = (function () {
       cv = document.createElement('canvas');
       cv.id = 'glmesh';
       cv.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9';
+      MCV = mainCv;
       var host = mainCv && mainCv.parentNode ? mainCv.parentNode : document.body;
       var pos = host.style && host.style.position;
       if (!pos || pos === 'static') host.style.position = 'relative';
       host.appendChild(cv);
+      /* E410 DS：**别跟主画布比谁的 z-index 大** —— 实测 GL 画布设 9 仍被 #cv 盖住（elementsFromPoint 在中心
+       *   返回的是 CANVAS#cv）⇒ 所以读主画布自己的计算 z-index，取它 +1（没有就按 0 算 +1）。 */
+      var _mz = parseInt(getComputedStyle(mainCv).zIndex, 10);
+      cv.style.zIndex = String((isFinite(_mz) ? _mz : 0) + 1);
       /* E407 DS：**去掉 premultipliedAlpha:false** —— Chrome 合成器默认按预乘 alpha 处理，
        *   声明非预乘会再乘一次 ⇒ 半透明内容淡到看不见（这正是 #gl=1 什么都不显示的头号嫌疑）。
        *   于是这里用默认（预乘），颜色在 draw() 里按 alpha 预乘。 */
@@ -110,9 +115,16 @@ var GLM = (function () {
       gl.drawElements(gl.LINES, nLine, gl.UNSIGNED_INT, 0);
     }
     if (!DRAWN) { DRAWN = 1;
-      console.log('GL 首帧：canvas ' + cv.width + 'x' + cv.height + ' · viewport ' + gl.drawingBufferWidth + 'x' + gl.drawingBufferHeight +
-        ' · nIdx ' + nIdx + ' nLine ' + nLine + ' · err ' + gl.getError() +
-        ' · v0 ' + (V0[0] || 0).toFixed(1) + ',' + (V0[1] || 0).toFixed(1)); }
+      var _t = function (el) { if (!el) return 'null'; var r = el.getBoundingClientRect();
+        return Math.round(r.width) + 'x' + Math.round(r.height) + '@' + Math.round(r.left) + ',' + Math.round(r.top); };
+      var r0 = cv.getBoundingClientRect();
+      var top = document.elementsFromPoint(r0.left + r0.width / 2, r0.top + r0.height / 2).slice(0, 3)
+        .map(function (e) { return e.tagName + (e.id ? '#' + e.id : ''); }).join('>');
+      console.log('GL 定案：主画布 ' + (MCV ? (MCV.width + 'x' + MCV.height + ' 盒 ' + _t(MCV)) : 'null') +
+        ' ‖ GL 画布 ' + cv.width + 'x' + cv.height + ' 盒 ' + _t(cv) + ' 视口 ' + gl.drawingBufferWidth + 'x' + gl.drawingBufferHeight +
+        ' ‖ nIdx ' + nIdx + ' nLine ' + nLine + ' err ' + gl.getError() + ' ‖ 中心最上面 ' + top +
+        ' ‖ GL 计算样式 ' + getComputedStyle(cv).position + '/' + getComputedStyle(cv).zIndex +
+        ' ‖ 主画布 zIndex ' + getComputedStyle(MCV).zIndex); }
     return true;
   }
   function clear() { if (ok) { gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); } }
