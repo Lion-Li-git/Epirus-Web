@@ -798,6 +798,8 @@ function THRLBL() { if (BASEP < 0) { var a1 = 0, b1 = 0;
   return Math.round(st.isoT * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '%）'; }
 var FRMS = 0, FRMA = [];
 var PERFON = 0;
+var GLPATH = 0;     /* E413: 0=not-yet 1=GL-used 2=GL-unavailable */
+var GLDREW = 0;     /* E413：走 GL 路的帧数 */
 var GLSIG = '';     /* E405：GL 几何缓存键（相机/网格/画布任一变化才重算重传）*/
 var GLISO = 0;      /* E404：壳走 WebGL2（1）还是 2D 逐面（0，默认）。#gl=1 打开。 */
 var BATCHISO = 0;   /* E403：壳合并成一个 path 画（1）还是逐面画（0）。**默认 0 —— 实测合并更慢**：
@@ -1746,7 +1748,8 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
    *     ⇒ 默认走逐面（BATCHISO=0）。要省 CPU 只能换后端（WebGL2 一次上传 VBO、逐帧只换矩阵），不是"合并 path"。 */
   /* E404 DS：GL 分支 —— 面一次性上传，逐帧只改 uniform（把光栅化从 CPU 挪走）。失败即回落 2D 路。 */
   if (GLISO) {
-    if (!GLM.on() && !GLM.init(cv)) GLISO = 0;
+    if (!GLM.on() && !GLM.init(cv)) { GLPATH = 2; GLISO = 0;
+      console.log('GL 起不来（webgl2 上下文/着色器失败）⇒ 本帧走 2D 老路'); }
     if (GLISO && GLM.on()) {
       var _dpr = devicePixelRatio || 1;
       /* E409 DS：**用画布自己的尺寸**。drawIso 收到的 w/h 不是画布尺寸（是板的像素尺度，实测 756x125
@@ -1780,6 +1783,7 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
       var fRG = pot ? [0.878, 0.694, 0.235, 0.10] : [0.224, 0.851, 0.541, 0.11];
       var lRG = shell ? (pot ? [0.878, 0.694, 0.235, 0.55] : [0.224, 0.851, 0.541, 0.5])
                       : (pot ? [0.878, 0.694, 0.235, 0.22] : [0.224, 0.851, 0.541, 0.2]);
+      GLDREW++; GLPATH = 1;   /* E413：证明这一帧真的走了 GL 路（用来校验仪表，别再拿"对不上"的数下结论） */
       GLM.draw(fRG, lRG);
       /* E411 DS：**一次贴图**进主画布 ⇒ 壳落在 2D 绘制序列里（先壳后点，顺序天然正确），
        *   层叠/z-index/命中测试全都不涉及；每帧那 ~29k 次调用（壳占 70%）变成这 1 次 drawImage。 */
@@ -2600,7 +2604,7 @@ if (PERFON === 2) { (function () {
   var pe = document.createElement('pre'); pe.id = 'bench'; pe.style.display = 'none';
   var _tot = 0, _kv = ''; for (var _k in OPC) { _tot += OPC[_k]; _kv += _k + '=' + OPC[_k] + ' '; }
   pe.textContent = 'BENCH first=' + tt[0].toFixed(1) + ' avg=' + av.toFixed(2) + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN
-    + ' FRAMES=6 OPS6=' + _tot + ' OPS1=' + Math.round(_tot / 6) + ' PX=' + cv.width + 'x' + cv.height + ' DPR=' + (devicePixelRatio || 1) + ' ' + _kv;
+    + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW + ' FRAMES=6 OPS6=' + _tot + ' OPS1=' + Math.round(_tot / 6) + ' PX=' + cv.width + 'x' + cv.height + ' DPR=' + (devicePixelRatio || 1) + ' ' + _kv;
   document.body.appendChild(pe); })(); }
 
 
