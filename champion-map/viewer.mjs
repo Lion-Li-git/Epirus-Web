@@ -282,18 +282,22 @@ for (const r of DATA) if (r.fam && LIN[r.id]) FAMLAB[r.fam] = LIN[r.id].famLabel
  *   ⇒ 实测它们被**静默丢掉**：页内自检报"树上只有 901/917 枚、旧包 0/16 有位置"，而页面标题仍说 917 枚。
  *   修法不是猜血统，而是给一行**明说是合成**的家族：横轴位置用它们的**上槽**时刻（slot-timeline.tsv，与训出时刻不同件事，
  *   左栏字样里就把这一点点明），父边一律不画 —— 那条要等 #156 把嵌入态 wid 的别名接进 lineage.mjs。
- *   这一段必须跑在下面那句"家族几个"的日志**之前**，否则那句话说的是补之前的数。 */
+ *   这一段必须跑在下面那句"家族几个"的日志**之前**，否则那句话说的是补之前的数。
+ * §E377 行号从"最大号 + 1"改成 **0 放最上面**（用户："旧冠军应该按家族0放在最上面而不是最下面"）。
+ *   行表本来就是 `fams.sort(a-b)` ⇒ 号小在上，而"号大 = 训得晚"这条规则说的是**训练家族**之间的序；
+ *   旧槽位冠军是"更早的一批"，排在最下面等于把它们读成"最新"。
+ *   ⚠ `fam = 0` 在 JS 里是 falsy，而行表与几处判据都写的是 `if (P[i].fam …)` ⇒ 必须另带一个 `famTop` 标记，
+ *     并把那几处改成"有家族号 **或** 是这一行"。 */
 (function () {
-  var mx = 0; for (const d of DATA) if (d.fam > mx) mx = d.fam;
-  var n = 0, SYN = mx + 1;
+  var n = 0;
   for (const d of DATA) { if (!d.old) continue;
-    d.fam = SYN;
+    d.fam = 0; d.famTop = 1;
     if (!d.ts && SHIP[d.id] && SHIP[d.id].when) d.ts = SHIP[d.id].when;
     n++; }
-  if (n) { FAMLAB[SYN] = '旧槽位冠军 ' + n + ' 枚（面板上没名字那批 · 横轴位置 = 上槽时刻，不是训出时刻 · 父边待 #156）';
-    console.log('谱系图补一行合成家族：' + n + ' 枚旧槽位冠军 → 家族号 ' + SYN + '（父边不画）'); }
+  if (n) { FAMLAB[0] = '旧槽位冠军 ' + n + ' 枚（面板上没名字那批 · 横轴位置 = 上槽时刻，不是训出时刻 · 父边待 #156）';
+    console.log('谱系图补一行合成家族：' + n + ' 枚旧槽位冠军 → 家族 0（排在最上面；父边不画）'); }
 })();
-console.log('家族 ' + Object.keys(FAMLAB).length + ' 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 ' + DATA.filter(d => !d.fam).length + ' 枚');
+console.log('家族 ' + Object.keys(FAMLAB).length + ' 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 ' + DATA.filter(d => !d.fam && !d.famTop).length + ' 枚');
 console.log('过线判定源 = ' + (OKSRC || '无 ⇒ 不标绿环') + ' ‖ 有判定 ' + POK + ' 枚 ‖ 判为过线 ' + DATA.filter(d => d.ok === 1).length +
   ' 枚 ‖ 无判定 ' + DATA.filter(d => d.ok === null).length + ' 枚');
 
@@ -434,8 +438,13 @@ function hitR(d, zk) { return dotR(d, zk) + 2.5 * devicePixelRatio; }
  *   §E296 之前 SOLID.yaw=0.62 ⇒ 切换时相机在"立起来"的同时绕竖轴转了 ~56°，整张图边立边转 ——
  *   用户点名"应该默认原地立起来"。现在平面→立体只压 pitch（yaw 不动）；立体→平面要回正 yaw（平面图必须北朝上）。*/
 var FLAT = { yaw: -Math.PI / 2, pit: Math.PI / 2 }, SOLID = { yaw: -Math.PI / 2, pit: 0.40 };
-/* §E333 谱系图**不用**这两个预设：它的"立体"是"原地上升 + 可选压扁/错切"，见 st.tTilt/st.tShear 与 drawTree 里的 PL。
- *   （§E332 那一版借 SOLID 的 pit 把地板压到 0.66 高 ⇒ 24 行塌成一条横带，被用户拿截图否掉了。）*/
+/* §E333 谱系图的"立体"是"原地上升 + 可选压扁/错切"，见 st.tTilt/st.tShear 与 drawTree 里的 PL。
+ *   （§E332 那一版借 SOLID 的 pit 把地板压到 0.66 高 ⇒ 24 行塌成一条横带，被用户拿截图否掉了。）
+ *   ⚠ 这句原来还写着"谱系图**不用**这两个预设"—— §E352 之后已经不成立：树的投影换成了与地图同一台 cam()，
+ *     平面态就是 FLAT 这一档（立体态由 st.elev 抬升，不借 SOLID 的 pit）。 */
+/* §E377 谱系图版式的**支点**（左栏宽 / 上边距 · 设备像素）。单独摆出来是因为滚轮"以光标为锚"那道算法
+ *   要减掉支点再乘缩放比 —— 不放在模块级就得在事件里重算一遍立体态那套挤行距的逻辑（会算错）。 */
+var TPAD = { l: 340 * devicePixelRatio, t: 40 * devicePixelRatio };
 
 /* §E314 势 = **线上口径**的 H + T·S（用户裁定把整张图换成玩家真正拿到的那个数）。
  *   旧写法是 d.H / 100（考卷口径 · ε=0 贪心）。两口径的**排名**同构（Spearman 0.912 / 全库 718 枚），
@@ -545,7 +554,7 @@ function incPct() { var s = splitSets(); return s.all.length ? 100 * s.dn.length
 /* §E304 两套分组并存：'fam' = **训练方法/目标家族**（默认），'seed' = RNG 种子（旧口径，留着当对照）。
  *   颜色按黄金角铺 HSL ⇒ 22 个家族也不撞色，不用手写调色板（12 色那套一超过 12 家就开始重复）。*/
 function hueAt(i) { return 'hsl(' + Math.round((i * 137.508) % 360) + ',' + (60 + (i % 3) * 10) + '%,' + (56 + (i % 2) * 12) + '%)'; }
-function gk(d) { return String(st.color === 'seed' ? (d.seed || '?') : (d.fam || '?')); }
+function gk(d) { return String(st.color === 'seed' ? (d.seed || '?') : (d.famTop ? 0 : (d.fam || '?'))); }
 var GRP = { keys: [], cnt: {}, col: {} };
 function buildGroups() { var cnt = {}, keys = [];
   for (var i = 0; i < N; i++) { var k = gk(P[i]); if (!(k in cnt)) { cnt[k] = 0; keys.push(k); } cnt[k]++; }
@@ -942,26 +951,34 @@ function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, f
     /* §E314 行带 = 整幅宽、不跟横轴走；家族名/统计两行钉在左栏（只跟纵轴）*/
     t.fillRect(0, WY(padT + i * rowH), w, rowH * TKY);
     t.fillStyle = st.ink; t.textAlign = 'right';
-    /* §E351 DS（用户 10-06 第三版：「左侧会跟着上下平移但不左右平移」）：左栏标签的 x 也走 WX
-     *   ⇒ 与表格/网格同一套映射。纵向本来就是 WY，横向原来写死 padL-12dpr。 */
-    t.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), WX(padL - 12 * devicePixelRatio), WY(padT + i * rowH + rowH * 0.46));
+    /* §E377 左栏的 x **不跟横轴走**（纵向仍然走 WY）。§E351 当时把 x 也接进 WX，理由是"与表格同一套映射"，
+     *   但用户那句原话是「左侧会跟着上下平移但**不左右平移**」⇒ 接 WX 恰好接反了：
+     *   横轴一放大/一平移，(padL-12)*TKX+TPX 就跑到画布左边外面，而名字是**右对齐**的 ⇒ 整条家族名被推到屏外，
+     *   看起来就是"左栏不渲染了"（用户 10-07 截图：只剩「手池」「欠839」这种尾巴）。
+     *   数据区照旧跟着横轴走；左栏与数据区之间那条分界线也不跟。 */
+    t.fillText(('家族 ' + f + ' · ' + famShort({ fam: f }, 15)), padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.46));
     t.fillStyle = st.dim; t.font = ff(10);
-    t.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, WX(padL - 12 * devicePixelRatio), WY(padT + i * rowH + rowH * 0.88));
+    t.fillText(mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best, padL - 12 * devicePixelRatio, WY(padT + i * rowH + rowH * 0.88));
     t.font = ff(11);
   }
   t.textAlign = 'left';
   t.strokeStyle = 'rgba(159,176,204,.22)'; t.lineWidth = 1;
-  t.beginPath(); t.moveTo(WX(padL - 6), 0); t.lineTo(WX(padL - 6), h); t.stroke();
+  t.beginPath(); t.moveTo(padL - 6, 0); t.lineTo(padL - 6, h); t.stroke();
   var day = 86400000;
   for (var tt2 = Math.ceil(tmin / day) * day; tt2 <= tmax; tt2 += day) {
     var xx = WX(X(tt2)); t.strokeStyle = 'rgba(159,176,204,.16)'; t.lineWidth = 1;
     var gy0 = Math.max(0, WY(padT)), gy1 = Math.min(h, WY(h - padB));
-    if (xx > padL - 60 && xx < w + 60 && gy1 > gy0) {
+    /* §E377 这一条原来是「xx > padL - 60」⇒ 横轴往左缩小/平移之后，**靠左那一段日期整条消失**
+     *   （用户截图：09-14 往左的分度全没了 ⇒ 图上那批 09-09~09-13 的旧冠军看起来"没渲染"）。
+     *   分度与刻度线是两件事：线仍然只画在数据区里（画进左栏就是脏），**字只要还在画布里就必须画**。 */
+    if (xx < 1 || xx > w + 50) continue;
+    if (xx >= padL - 6 && gy1 > gy0) {
       t.beginPath(); t.moveTo(xx, gy0); t.lineTo(xx, gy1); t.stroke();
-      t.fillStyle = st.dim; t.font = (10 * devicePixelRatio) + 'px system-ui,sans-serif';
-      /* §E351 DS：日期刻度的 **y 也要走 WY**（原来用裸常量 ⇒ 纵向平移时它不跟着走，与左侧行标签不一致）。 */
-      t.fillText(new Date(tt2).toISOString().slice(5, 10), xx + 3, WY(h - padB + 16 * devicePixelRatio));
-    } }
+    }
+    t.fillStyle = st.dim; t.font = (10 * devicePixelRatio) + 'px system-ui,sans-serif';
+    /* §E351 DS：日期刻度的 **y 也要走 WY**（原来用裸常量 ⇒ 纵向平移时它不跟着走，与左侧行标签不一致）。 */
+    t.fillText(new Date(tt2).toISOString().slice(5, 10), xx + 3, WY(h - padB + 16 * devicePixelRatio));
+  }
   return c;
 }
 
@@ -981,20 +998,26 @@ function drawTree(fr) {
    *   （旧版单一 tK 下想把行拉开就会把时间轴也吹出画布，反之亦然）。
    *   ⚠ 点半径**不跟缩放**（经典统计图就是这个约定：放大是为了分开位置，不是为了把点吹大）；
    *     只有左栏家族名跟纵轴长（行高了，字不跟着长就读不出那是同一行）。*/
-  var TKX = st.tKx, TKY = st.tKy, TPX = st.tX, TPY = st.tY;
-  var WX = function (x) { return x * TKX + TPX; }, WY = function (y) { return y * TKY + TPY; };
-  var ff = function (n) { return (n * devicePixelRatio * Math.max(0.8, Math.min(2.4, TKY))) + 'px system-ui,sans-serif'; };
   var fams = [], fset = {};
   /* §E338 用户 ①「家族太多了，加一个按钮只展示当前批次」：行表**按当前批次现算**，
    *   切到一批就只剩这一批碰过的家族（实测 09-28 那批 6 行 vs 全库 24 行 ⇒ 行带从 29px 涨回 100+px，
    *   左栏那两行字不再互相压）。冠军行永远保留（分界参照物不能被批次切没）。 */
-  for (i = 0; i < N; i++) if (P[i].fam && VIS[i] && !fset[P[i].fam]) { fset[P[i].fam] = 1; fams.push(P[i].fam); }
+  for (i = 0; i < N; i++) if ((P[i].fam || P[i].famTop) && VIS[i] && !fset[P[i].fam]) { fset[P[i].fam] = 1; fams.push(P[i].fam); }
   fams.sort(function (a, b) { return a - b; });
   var tmin = Infinity, tmax = -Infinity;
   for (i = 0; i < N; i++) { if (!VIS[i]) continue; var tv = Date.parse(P[i].ts); if (isFinite(tv)) { if (tv < tmin) tmin = tv; if (tv > tmax) tmax = tv; } }
   if (!(tmax > tmin)) { g.fillStyle = st.dim; g.fillText('没有可用的 ts ⇒ 谱系图画不了（要 lineage.tsv）', 30 * devicePixelRatio, 60); return; }
-  var padL = 340 * devicePixelRatio, padR = 26 * devicePixelRatio, padT = 40 * devicePixelRatio, padB = 66 * devicePixelRatio;
+  var padL = TPAD.l, padR = 26 * devicePixelRatio, padT = TPAD.t, padB = 66 * devicePixelRatio;
   var rowH = (h - padT - padB) / fams.length, X = function (tv) { return padL + (tv - tmin) / (tmax - tmin) * (w - padL - padR); };
+  /* §E377 缩放**以数据区左上角为支点**，不是以画布原点：WX/WY 原来直接乘 x、y，而 x 里含着 padL ⇒
+   *   横轴缩到 0.55 时整张数据区（连日期刻度）被拉到左栏底下，实测刻度文字压在家族名上（用户那张"渲染范围"
+   *   截图的另一半）。改成减掉支点再乘，TKX=TKY=1 时逐字等于旧式 ⇒ 默认帧与平面态那张图不变。
+   *   ⚠ 支点读的是**当前** padT（下面那行抬升带会挤它）⇒ 底图与点共用同一个支点，不会错位。 */
+  var TKX = st.tKx, TKY = st.tKy, TPX = st.tX, TPY = st.tY;
+  var WX = function (x) { return TPAD.l + (x - TPAD.l) * TKX + TPX; },
+      WY = function (y) { return TPAD.t + (y - TPAD.t) * TKY + TPY; };   /* 支点用**挤行之前的** TPAD.t：
+        *   下面那行抬升带会就地加 padT，若拿它当支点，同一档 tKy 在平面/立体下会锚到两个地方。 */
+  var ff = function (n) { return (n * devicePixelRatio * Math.max(0.8, Math.min(2.4, TKY))) + 'px system-ui,sans-serif'; };
   /* §E333 立体要**上面留一条抬升带**：不然最上面几家的点一抬就顶出画布（它们本来就在顶上）。
    *   做法 = 把整张地板往下挤 LIFT·T3，行距按剩下的空间重排 ⇒ 行仍然全在画布内，
    *   而"原地上升"有了去处。挤完 padT/rowH 就是立体版的那张版式，底图与点共用同一套 ⇒ 不会错位。*/
@@ -1010,26 +1033,16 @@ function drawTree(fr) {
     st.elev.toFixed(3), st.tTilt.toFixed(3), st.batch, NVIS, st.flo.toFixed(3) + ',' + st.fhi.toFixed(3)].join('|');   /* §E333 抬升带会挤行距 ⇒ 立体度/倾角进缓存键；§E338 批次改了行表与每行枚数 ⇒ 批次与可见数也要进，否则切批次用的还是上一批那张底图；§E371 窗口会重铺色带 ⇒ 两端必须进，否则拉窗口底图不变色 */
   if (!CHM || CHM.k !== ck) CHM = { k: ck, c: treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, ff) };
   var T3 = st.elev, uc = w / 2, vc = h / 2, cb = cam();   /* E352 DS: 相机基 cb（与地图同一套） */
-  /* ===== §E369 渲染空间 = **整个窗口**（用户 10-06 深夜：「平面下某条纵轴往左的地方都不显示，立体下上下左三个方向都有截断」）=====
-   *   两处成因、两处修：
-   *   ① 平面态原来有一道 clip(padL-5 …) —— 目的是"点不许盖住左栏家族名"。但默认视图下数据本来就起于 padL，
-   *      这道闸实际只在一个场景起作用：**用户往左平移/旋转之后**，它把左半边整条裁掉 ⇒ 撤掉。
-   *   ② 立体态 §E352 之后真的能转（PL 读 cam()），一转投影四边形就超出画布 ⇒ 上下左三面截断。
-   *      补一个**拟合**：把地板四角 + 抬升带的投影包围盒等比缩放进画布（只缩不放，避免把烘好的底图糊开），并居中。
-   *      相机在 FLAT（正俯视）时包围盒 == 画布 ⇒ fit 恒等于 1，二维那张图逐像素不变。 */
-  var FIT = { s: 1, ox: 0, oy: 0 };
-  function PLr(u, v, z) {
+  /* ===== §E369 → §E377 立体态**不再有任何形式的"把整张图塞进窗口"**（用户："看的很难受，把这个东西去掉"）=====
+   *   §E369 为消掉"上下左三面截断"加了一层"包围盒等比缩小 + 居中"。缩小被点名撤掉之后，**居中也必须一起撤**：
+   *     ox = (w - bw)/2 - x0 里的 x0 随平移线性移动 ⇒ 居中公式把平移量**原样抵消**，
+   *     立体态下左键拖动整个不起作用（"拉不回来"就是这么来的，比截断更难受）。
+   *   现在 PL 就是相机投影本身：转到刁钻角度真的会溢出画布，但那是可操作的（平移能拉回来，判据②钉着），
+   *   而默认立体视角（SOLID）由判据①保证"一打开就是完整的图"。
+   *   §E369 的另一半仍然成立：平面态那道 clip 已撤；FLAT 相机下投影 == 恒等 ⇒ 二维那张图逐像素不变。 */
+  function PL(u, v, z) {
     var a = u - uc, bb = v - vc;
     return [uc + a * cb.r[0] + bb * cb.r[1], vc + a * cb.u[0] + bb * cb.u[1] - (z || 0)]; }
-  (function () {
-    var pts = [PLr(0, 0, 0), PLr(w, 0, 0), PLr(0, h, 0), PLr(w, h, 0), PLr(0, 0, LIFT), PLr(w, 0, LIFT), PLr(0, h, LIFT), PLr(w, h, LIFT)];
-    var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
-    for (var q = 0; q < pts.length; q++) { x0 = Math.min(x0, pts[q][0]); x1 = Math.max(x1, pts[q][0]);
-      y0 = Math.min(y0, pts[q][1]); y1 = Math.max(y1, pts[q][1]); }
-    var bw = Math.max(1, x1 - x0), bh = Math.max(1, y1 - y0), mg = 6 * devicePixelRatio;
-    var s = Math.min(1, (w - 2 * mg) / bw, (h - 2 * mg) / bh);
-    FIT.s = s; FIT.ox = (w - bw * s) / 2 - x0 * s; FIT.oy = (h - bh * s) / 2 - y0 * s; })();
-  function PL(u, v, z) { var p = PLr(u, v, z); return [p[0] * FIT.s + FIT.ox, p[1] * FIT.s + FIT.oy]; }
   /* §E333 立体 = **原地上升**，不是把地板压扁。用户两张截图点名的病：上一版借地图那台相机（pit 0.72 ⇒ 行方向
    *   只剩 cos = 0.66 的高度），24 行被挤成一条横带，格内抖动又被我挪去横方向 ⇒ 比二维更挤。
    *   现在：地板按二维那张版式贴（行方向最多按 tTilt 轻微压扁），点沿**屏幕纵轴**抬起，每枚留一根立柱接回自己那一格。
@@ -1112,6 +1125,14 @@ function drawTree(fr) {
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
     putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
   g.restore();   /* §E314 数据层的裁剪到这里收口（点与点标签都不许滑进左栏）*/
+  /* §E377 左栏是**轴**不是数据 ⇒ 数据画完之后，按同一个矩阵把左栏那一条再压一遍。
+   *   为什么要压第二遍：横轴一放大，点的落点会跑进左栏区，把家族名糊成一团（用户 10-06 截图就是这个）。
+   *   原来这件事靠一道 clip（"点不许进左栏"）做，而那道 clip 在 §E369 被撤 —— 它连正常数据一起裁掉。
+   *   换成"轴盖数据"：点滑到左栏底下就被挡住（读起来正是"滚出左边界"），家族名永远不会被糊掉。 */
+  g.save();
+  g.setTransform((qX[0] - q0[0]) / w, (qX[1] - q0[1]) / w, (qY[0] - q0[0]) / h, (qY[1] - q0[1]) / h, q0[0], q0[1]);
+  g.drawImage(CHM.c, 0, 0, padL - 5, h, 0, 0, padL - 5, h);
+  g.restore(); g.setTransform(1, 0, 0, 1, 0, 0);
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   /* 页脚 = 轴饰，不进相机（同上：跟着放大 2.4 倍会直接掉出画布，"缩放 ×" 那个数也就永远看不到了）。
    *   §E331 这条串必须**量过宽度**再上屏：它是单行 fillText，画布不折行，超长就从右缘直接截掉 ——
@@ -1665,7 +1686,9 @@ function paintLegend(fr) {
 function buildFamBar() {
   var el = document.getElementById('fam'); el.innerHTML = '';
   var byFam = {};
-  if (st.color !== 'seed') for (var i = 0; i < N; i++) if (P[i].fam) byFam[P[i].fam] = famLab(P[i]);
+  /* §E377 「fam = 0」在 JS 里是 falsy ⇒ 旧槽位冠军那一行原来在图例里查不到说明（按钮本身由 gk() 建，是好的）。
+     判据统一走 famTop，别再依赖 fam 的真值。 */
+  if (st.color !== 'seed') for (var i = 0; i < N; i++) if (P[i].fam || P[i].famTop) byFam[P[i].fam] = famLab(P[i]);
   for (var j = 0; j < GRP.keys.length; j++) {
     (function (k) {
       var b = document.createElement('button'); b.className = 'fam';
@@ -1964,16 +1987,18 @@ cv.addEventListener('wheel', function (e) { e.preventDefault();
     } else { st.k = Math.max(0.2, Math.min(60, st.k * f)); st.ox *= f; st.oy *= f; }
   } else if (st.mode === '3db') st.zoom3 *= f;
   else if (st.mode === 'tree') {
-    /* 光标下的内容不动：screen = world·k + p ⇒ p' = m − f·(m − p)。夹在 0.4~12 倍（再小字糊成一团，再大只剩几个点）
+    /* 光标下的内容不动：screen = 支点 + (world − 支点)·k + p ⇒ p' = (m − 支点) − f·((m − 支点) − p)。
+     *   §E377：支点必须一起减掉 —— 缩放改成绕数据区左上角（TPAD）之后还按旧式算，光标对不准它下面那枚，
+     *   而且横轴一缩小整张图会朝左栏挤过去（用户"渲染范围"那张截图的一半）。夹在 0.4~12 倍。
      *   §E314 横纵分开：滚轮 = 横轴（时间）‖ Shift+滚轮 = 纵轴（家族行）。被改的那一轴以光标为锚，另一轴原地不动。
      *   ⚠ 这里原来把同一句 "var rt = …, mt = …, nt = …" **抄了两遍**（改动时插在新注释上面没删旧的）。 */
     var wm2 = ptrXY(e.clientX, e.clientY), mt = wm2[0], nt = wm2[1];
     if (e.shiftKey) {
       var ky = Math.max(0.4, Math.min(12, st.tKy * f)); f = ky / st.tKy; st.tKy = ky;
-      st.tY = nt - (nt - st.tY) * f;
+      var ay = nt - TPAD.t; st.tY = ay - (ay - st.tY) * f;
     } else {
       var kx = Math.max(0.4, Math.min(12, st.tKx * f)); f = kx / st.tKx; st.tKx = kx;
-      st.tX = mt - (mt - st.tX) * f;
+      var ax = mt - TPAD.l; st.tX = ax - (ax - st.tX) * f;
     }
   }
   req(); }, { passive: false });
@@ -2370,20 +2395,143 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       return P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length >= 1; })(),
     '按时间轴改接 ' + P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length + ' 枚 ‖ 退回不可考 ' + DM.length + ' 枚 ‖ 有父边 '
       + P.filter(function (d) { return d.pof; }).length + ' 枚');
-  /* ===== §E369 渲染空间 = 整个窗口（用户："平面下某条纵轴往左的地方都不显示，立体下上下左三个方向都有截断"）=====
-   *   两条都要**真画一遍再看结果**，不是读源码：① 旋转到几个刁钻角度后，所有可见点必须仍在画布内（拟合生效）；
-   *   ② 平面态往左平移一大段后，旧剪裁区那一片必须真被画上东西 —— 这一条读的是像素（原因见那段里写的变异实测）。 */
+  /* ===== §E369 → §E377 渲染空间：立体态**不再有任何形式的"把整张图塞进窗口"**（用户："看的很难受，把这个东西去掉"）=====
+   *   这一条原来钉的是"旋转到刁钻角度后所有可见点必须仍在画布内（拟合生效）"。拟合撤掉之后这句话不再成立，
+   *   但**不能因此删了判据**（那就变成"改了行为还留着旧承诺的门"）。换成三句各自可反证的话：
+   *     ① 默认那两帧 —— 二维、以及点「立体」之后实际到的那一帧（树的立体只动 st.elev，相机仍 FLAT）——
+   *        必须**打开就是完整的**。截断不许靠「你自己平移」解决。
+   *        ⚠ 红测记在两处**没红**上（别把这两句当证据）：删掉「padT += LIFT * st.elev」（抬升不留带）没红 ——
+   *        当前批次里最高 F 的那几枚不在最上面几行，抬升够不着顶边；把居中的 s 改回 <1 也不会红 —— 缩小本来就装得下。
+   *        真让它红的是「默认帧真的少一片」：把 PL 里 z 的减号写成加号（抬升方向翻反）⇒ 实测 27 枚在画布外，红。
+   *     ② 平移必须**真的作用在内容上**。§E369 那层居中 ox = (w-bw)/2 - x0 里的 x0 跟着平移线性走 ⇒ 拖动被
+   *        原样抵消 ⇒ 立体态左键整个失灵（用户那句"拉不回来"就是这么来的）。
+   *        红测（实测）：把 WX/WY 里的平移项去掉（等价于"拖了不动"）⇒ 要求屏幕 (40,30)、实测 (0,0)，红。
+   *        ②同时校验"拖回来的算法"本身：正交投影的 2×2 基有 r/u 谁当行谁当列这一层，写反了拖的方向就是歪的
+   *        （第一版就在这里红：要求屏幕 (40,30)，实测 (-46.8,42.8)）。
+   *     ③ 转出画布不算病，**永久看不到**才算病 ⇒ 每个角度取"离画布最远的那一枚"，按相机基解出把它拖回画面中心的
+   *        平移量，拖完它必须在里面。**不承诺"一次拖回全部"**：红测（实测）把判据退回"拖包围盒 + 全员回画布"那一版，
+   *        在**当前正确的代码**上就红 —— yaw=-2.40/pit=1.10 拖完仍剩 462 枚在外（投影包围盒 737×990 ‖ 画布 1576×569），
+   *        因为转近侧视时投影高度本来就超过窗口。写"平移装得下全部"是假话（第一版就是这么骗自己的）。
+   *   三条都读几何命中表 scr[]，不读像素：这里要证的是"没有哪一枚被永久裁掉"，"真画出来了"由下面那条像素判据管。 */
   var SNAP2 = { mode: st.mode, e: st.elev, y: st.yaw, p: st.pit, tx: st.tX, ty: st.tY, kx: st.tKx, ky: st.tKy };
-  st.mode = 'tree'; st.elev = 1; st.tKx = 1; st.tKy = 1; st.tX = 0; st.tY = 0;
-  var fitBad = '', fitAngles = [[-1.2, 0.35], [-2.4, 1.1], [-0.4, 1.55], [-Math.PI / 2, Math.PI / 2], [-2.9, 0.1]];
-  for (var ai = 0; ai < fitAngles.length; ai++) {
-    st.yaw = fitAngles[ai][0]; st.pit = fitAngles[ai][1]; draw();
-    for (var q2 = 0; q2 < N; q2++) { var sp = scr[q2]; if (!sp || !VIS[q2]) continue;
-      if (sp[0] < -1 || sp[0] > cv.width + 1 || sp[1] < -1 || sp[1] > cv.height + 1) {
-        fitBad = '角度 yaw=' + fitAngles[ai][0].toFixed(2) + '/pit=' + fitAngles[ai][1].toFixed(2)
-          + ' 时 ' + P[q2].id + ' 落在 (' + Math.round(sp[0]) + ',' + Math.round(sp[1]) + ')，画布 ' + cv.width + '×' + cv.height; break; } }
-    if (fitBad) break; }
-  T('立体态旋转到刁钻角度：所有可见点必须仍在画布内（拟合生效 ⇒ 不许上下左截断）', fitBad === '', fitBad || (fitAngles.length + ' 个角度全通过'));
+  st.mode = 'tree'; st.tKx = 1; st.tKy = 1; st.tX = 0; st.tY = 0;
+  var dfltBad = '', panBad = '', reachBad = '', outAvg = 0;
+  function panBy(dx, dy) {   /* 要屏幕位移 (dx,dy) ⇒ 解 (tX,tY) 增量。
+    *   这台相机的约定是 **r 管屏幕横轴、u 管屏幕纵轴**（与 pt3 同一套：screenX = a·r[0] + b·r[1]、
+    *   screenY = a·u[0] + b·u[1]）⇒ 基矩阵是 [[r0,r1],[u0,u1]]。把 r/u 当**列**写就会解错，
+    *   而这条判据（②）正是这么把它抓出来的：要 (40,30)、实测 (-46.8,42.8)。z 项逐枚常量，不参与平移。*/
+    var cb2 = cam(), det = cb2.r[0] * cb2.u[1] - cb2.r[1] * cb2.u[0];
+    if (Math.abs(det) < 1e-9) det = det < 0 ? -1e-9 : 1e-9;
+    st.tX += (cb2.u[1] * dx - cb2.r[1] * dy) / det; st.tY += (-cb2.u[0] * dx + cb2.r[0] * dy) / det; }
+  function outCount() { var n = 0; for (var a = 0; a < N; a++) { var sp = scr[a]; if (!sp || !VIS[a]) continue;
+    if (sp[0] < -1 || sp[0] > cv.width + 1 || sp[1] < -1 || sp[1] > cv.height + 1) n++; } return n; }
+  /* ① 默认两帧必须完整 */
+  for (var di = 0; di < 2; di++) {
+    st.elev = di; st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.tX = 0; st.tY = 0; draw();
+    var nOut0 = outCount();
+    if (nOut0 > 0) { dfltBad = (di ? '点「立体」后默认那一帧（相机 FLAT + 抬升 1）' : '二维默认帧')
+      + ' 有 ' + nOut0 + ' 枚在画布外 ⇒ 用户打开就少一片，这个病不许留给手动平移（画布 '
+      + cv.width + '×' + cv.height + '）'; break; } }
+  /* ② 拖动不是空操作 */
+  var REF = { yaw: -2.2, pit: 0.5 }, DX = 40 * devicePixelRatio, DY = 30 * devicePixelRatio;
+  st.elev = 1; st.yaw = REF.yaw; st.pit = REF.pit; st.tX = 0; st.tY = 0; draw();
+  var refI = -1; for (var ri2 = 0; ri2 < N; ri2++) if (scr[ri2] && VIS[ri2]) { refI = ri2; break; }
+  if (refI < 0) panBad = '树模式一帧都落不出点';
+  else { var ax0 = scr[refI][0], ay0 = scr[refI][1]; panBy(DX, DY); draw();
+    var mvx = scr[refI][0] - ax0, mvy = scr[refI][1] - ay0;
+    if (Math.abs(mvx - DX) > 1 || Math.abs(mvy - DY) > 1) panBad = 'yaw=-2.20/pit=0.50 下要求把 ' + P[refI].id
+      + ' 走屏幕 (' + Math.round(DX) + ',' + Math.round(DY) + ')，实测 (' + mvx.toFixed(1) + ',' + mvy.toFixed(1)
+      + ') ⇒ 要么平移被抵消（§E369 那层居中的病），要么基的逆解错'; }
+  /* ③ 每个角度最远那枚都拖得回来 */
+  var angs = [[-1.2, 0.35], [-2.4, 1.1], [-0.4, 1.55], [-2.9, 0.1], [-Math.PI / 2, 0.40]];
+  for (var ai = 0; ai < angs.length; ai++) {
+    st.yaw = angs[ai][0]; st.pit = angs[ai][1]; st.tX = 0; st.tY = 0; draw();
+    var wI = -1, wE = 0, q2;
+    for (q2 = 0; q2 < N; q2++) { var spx = scr[q2]; if (!spx || !VIS[q2]) continue;
+      var ee = Math.max(-spx[0], spx[0] - cv.width, -spx[1], spx[1] - cv.height); if (ee > wE) { wE = ee; wI = q2; } }
+    outAvg += outCount();
+    if (wI < 0) continue;
+    panBy(cv.width / 2 - scr[wI][0], cv.height / 2 - scr[wI][1]); draw();
+    var sp2 = scr[wI];
+    if (sp2[0] < 0 || sp2[0] > cv.width || sp2[1] < 0 || sp2[1] > cv.height) {
+      reachBad = '角度 yaw=' + angs[ai][0].toFixed(2) + '/pit=' + angs[ai][1].toFixed(2) + ' 把最远的 '
+        + P[wI].id + ' 拖向画面中心之后它仍在 (' + Math.round(sp2[0]) + ',' + Math.round(sp2[1]) + ') ⇒ 这一枚永久看不到';
+      break; } }
+  T('立体态：默认两帧必须完整，平移必须真生效，转出画布的每一枚都拖得回来（整张图强制缩放已撤）',
+    dfltBad === '' && panBad === '' && reachBad === '', dfltBad || panBad || reachBad
+      || ('默认两帧 0 枚在外 ‖ 平移实测逐字跟手 ‖ ' + angs.length + ' 个角度各拖回最远那枚全成 ‖ 平均每角转出 '
+        + Math.round(outAvg / angs.length) + ' 枚（转出不是病，拖不回才是）'));
+  st.tX = SNAP2.tx; st.tY = SNAP2.ty; st.yaw = SNAP2.y; st.pit = SNAP2.p; st.elev = SNAP2.e;
+  /* §E377 旧冠军那一行必须排在**最上面**（用户："应该按家族0放在最上面而不是最下面"）。
+   *   判据读几何不读 fams 数组：数组自己算自己 = 永远绿，而真正的病是"这一行有没有排在现役上面、有没有被丢掉"。 */
+  var SNAPT = { kx: st.tKx, ky: st.tKy, tx: st.tX, ty: st.tY, e: st.elev, y: st.yaw, p: st.pit };
+  st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.tKx = 1; st.tKy = 1; st.tX = 0; st.tY = 0; draw();
+  var yOld = [], yInc = -1, oi;
+  for (oi = 0; oi < N; oi++) { if (!VIS[oi] || !scr[oi]) continue;
+    if (P[oi].famTop) yOld.push(scr[oi][1]);
+    if (P[oi].id === 'SHIPPED-Ldemo') yInc = scr[oi][1]; }
+  yOld.sort(function (a, b) { return a - b; });
+  var medOld = yOld.length ? yOld[Math.floor(yOld.length / 2)] : -1;
+  T('旧槽位冠军那一行必须排在最上面（家族 0），不是最下面',
+    yOld.length > 0 && yInc > 0 && medOld >= 0 && medOld < yInc - 100 * devicePixelRatio,
+    '旧包行 y 中位 ' + Math.round(medOld) + ' ‖ 现役那一行 y ' + Math.round(yInc) + ' ‖ 画布高 ' + cv.height);
+  /* §E377 左栏是**轴**：横轴怎么缩放/平移，左栏那条名字都必须还在原位、还读得出来。
+   *   读的是底图位图（CHM.c）左栏区的**文字像素数**，不读代码里的 padL —— 上一版的病恰恰是"代码算得对，
+   *   但 x 被 WX 推到了画布外"，只有像素能区分这两种。文字 alpha 高、行带 alpha 只有 .028 ⇒ 按 alpha 切。 */
+  function gutInk() {
+    if (!CHM || !CHM.c) return -1;
+    var t = CHM.c.getContext('2d'), gw = Math.round(300 * devicePixelRatio), gh = cv.height;
+    var d; try { d = t.getImageData(0, 0, gw, gh).data; } catch (E9) { return -2; }
+    var n = 0; for (var z = 0; z < d.length; z += 4) if (d[z + 3] > 128) n++;
+    return n; }
+  var gBase = gutInk(), gA = -1, gB = -1;
+  st.tKx = 2.2; st.tX = -700 * devicePixelRatio; draw(); gA = gutInk();
+  st.tKx = 0.55; st.tX = 300 * devicePixelRatio; draw(); gB = gutInk();
+  T('左栏不许跟着横轴走：横轴放大 / 缩小 / 平移之后，左栏的文字像素必须还是同一批（名字不被推出画布也不被点糊掉）',
+    gBase > 400 && gA > 400 && gB > 400 &&
+    Math.abs(gA - gBase) / gBase < 0.05 && Math.abs(gB - gBase) / gBase < 0.05,
+    '默认 ' + gBase + ' ‖ tkx=2.2 平移后 ' + gA + ' ‖ tkx=0.55 平移后 ' + gB + '（左栏 300·dpr 宽区域内的文字像素数）');
+  /* §E377 缩放支点：WX/WY 原来直接乘 x、y（支点 = 画布原点），而 x 里含着 padL ⇒ tkx<1 时整张数据区连日期
+   *   刻度一起朝左栏压过去（tkx=0.55 那张实测：刻度文字压在家族名上）。改成绕数据区左上角缩放，这一条钉住：
+   *   **平移归零时，任何一档横轴缩放下最左那枚都必须在分界线右侧**（红测实测：支点改回 0 ⇒ tkx=0.4 时最左那枚
+   *   在 x=136 而分界在 340，红）。
+   * ⚠ 这一条只读几何（scr 的最小 x），不读滚轮 —— 滚轮那道锚点算法由紧跟着的那一条管，两处的病不一样。 */
+  var pivBad = '', pivEx = [];
+  for (var zi = 0; zi < 5; zi++) {
+    var zK = [0.4, 0.55, 1, 2.2, 12][zi];
+    st.tKx = zK; st.tX = 0; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit; draw();
+    var zMin = 1e9;
+    for (var z2 = 0; z2 < N; z2++) { var spz = scr[z2]; if (!spz || !VIS[z2]) continue; if (spz[0] < zMin) zMin = spz[0]; }
+    pivEx.push(zK + '→' + Math.round(zMin));
+    if (zMin < TPAD.l - 1 && !pivBad) pivBad = 'tkx=' + zK + ' 时最左那枚在 x=' + Math.round(zMin)
+      + '，而左栏分界在 ' + Math.round(TPAD.l) + ' ⇒ 数据（连日期刻度）挤进左栏了'; }
+  T('横轴缩放不许把数据挤进左栏（缩放支点在数据区左上角，不在画布原点）',
+    pivBad === '', pivBad || ('各档最左那枚的 x：' + pivEx.join(' ‖ ') + ' ‖ 分界 ' + Math.round(TPAD.l)));
+  /* §E377 滚轮"以光标为锚"必须跟着支点一起改：p' = (m − 支点) − f·((m − 支点) − p)。
+   *   这一条**派真事件**（WheelEvent），因为要证的正是事件处理里那三行；改 st.tKx 自己算自己 = 永远绿。
+   *   红测（实测）：锚点退回旧式（不减支点）⇒ tkx 1.00→1.12 时光标下那枚横漂 41px，红；
+   *   只把支点改回 0 而锚点留新的 ⇒ 同样漂 41px（反方向），而且上面那条一起红 —— 这两处必须一起动。
+   *   ⚠ 第一版在这里踩到一件事：上一段刚把 tKx 顶到钳位上限 12，再滚就夹住不动 ⇒ 判据当时报的是
+   *     "事件没接到这条腿上"（那条守卫救了我一次）。所以锚点测试前必须把 tKx 归 1 再重画。 */
+  var ancBad = '', wI2 = -1, wBest = 1e9;
+  st.tKx = 1; st.tX = 0; st.tKy = 1; st.tY = 0; draw();   /* 必须从 1 起跳：上一段刚把 tKx 顶到 12，而 12 是上限 ⇒ 再滚就夹住不动，测的是钳位不是锚点 */
+  for (var w2 = 0; w2 < N; w2++) { var spw = scr[w2]; if (!spw || !VIS[w2]) continue;
+    var wd = Math.abs(spw[0] - cv.width * 0.62) + Math.abs(spw[1] - cv.height * 0.5);
+    if (wd < wBest) { wBest = wd; wI2 = w2; } }
+  if (wI2 < 0) ancBad = '找不到可当锚点的可见枚';
+  else {
+    var rect = cv.getBoundingClientRect(), sxc = rect.width / cv.width, syc = rect.height / cv.height;
+    var tgtX = scr[wI2][0], tgtY = scr[wI2][1], kBefore = st.tKx;
+    cv.dispatchEvent(new WheelEvent('wheel', { clientX: rect.left + tgtX * sxc, clientY: rect.top + tgtY * syc,
+      deltaY: -100, bubbles: true, cancelable: true }));
+    draw();
+    if (st.tKx === kBefore) ancBad = '派了 wheel 而 tKx 没动（' + kBefore + '）⇒ 事件没接到这条腿上，这条判据是空的';
+    else { var drift = Math.abs(scr[wI2][0] - tgtX);
+      if (drift > 2 * devicePixelRatio) ancBad = 'tkx ' + kBefore.toFixed(2) + '→' + st.tKx.toFixed(2)
+        + ' 之后光标下那枚 ' + P[wI2].id + ' 从 x=' + Math.round(tgtX) + ' 漂到 ' + Math.round(scr[wI2][0])
+        + '（漂 ' + Math.round(drift) + 'px，容差 ' + Math.round(2 * devicePixelRatio) + '）⇒ 锚点没跟着支点走'; } }
+  T('滚轮缩放：光标下那一枚必须还在光标下（支点改了，锚点公式必须一起改）', ancBad === '', ancBad || '一次滚轮 ×1.12，锚点未漂');
+  st.tKx = SNAPT.kx; st.tKy = SNAPT.ky; st.tX = SNAPT.tx; st.tY = SNAPT.ty; st.elev = SNAPT.e; st.yaw = SNAPT.y; st.pit = SNAPT.p;
   st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.elev = 0; st.tX = -900 * devicePixelRatio; draw();
   /* ② 的判据必须读**像素**，不能读命中表：scr[] 是几何落点，剪裁只决定"画没画出来"，
    *   所以拿 scr 写的那一版**撤掉剪裁与留着剪裁都会 PASS**（§E369 变异实测：把 clip 加回去 ⇒ 27/0 全绿 ⇒ 那条是假的）。
