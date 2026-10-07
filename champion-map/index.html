@@ -1377,11 +1377,23 @@ function isoBuild(sig, thr, GN, field) {
   var dA = (hiA - loA) / (dims[0] - 1), dB = (hiB - loB) / (dims[1] - 1), dC = (hiC - loC) / (dims[2] - 1);
   /* 粗哈希：格心 → 附近点桶，桶边 = R ⇒ 每格只扫 27 个桶（直接 718×34³ = 2800 万次 exp 会卡死）*/
   var BK = R, nb = [Math.ceil((hiA - loA) / BK) + 1, Math.ceil((hiB - loB) / BK) + 1, Math.ceil((hiC - loC) / BK) + 1];
-  var buckets = {};
+  /* E427 DS（乙·用户批准）：**字符串键桶 → 扁平 CSR 网格 + 预取场值**。
+   *   原来每个格点要拼 27 个字符串键做哈希查找（128 格 ⇒ 2.1M × 27 = 5600 万次拼接），真机实测单次重建 1175ms，
+   *   这是主因之一。数学**逐字不变**：仍是同 27 个桶、同一个 exp 核、同一点序与累加顺序（⇒ 结果应当逐字节相同）。 */
+  var nbc = nb[0] * nb[1] * nb[2];
+  var cellStart = new Int32Array(nbc + 1), cellItem = new Int32Array(N), bidx = new Int32Array(N);
   for (i = 0; i < N; i++) {
-    var bi = Math.floor((a[i] - loA) / BK), bj = Math.floor((b[i] - loB) / BK), bk = Math.floor((c[i] - loC) / BK);
-    var key = bi + ',' + bj + ',' + bk; (buckets[key] || (buckets[key] = [])).push(i);
+    var b0 = Math.floor((a[i] - loA) / BK), b1 = Math.floor((b[i] - loB) / BK), b2 = Math.floor((c[i] - loC) / BK);
+    if (b0 < 0) b0 = 0; else if (b0 >= nb[0]) b0 = nb[0] - 1;
+    if (b1 < 0) b1 = 0; else if (b1 >= nb[1]) b1 = nb[1] - 1;
+    if (b2 < 0) b2 = 0; else if (b2 >= nb[2]) b2 = nb[2] - 1;
+    bidx[i] = (b0 * nb[1] + b1) * nb[2] + b2; cellStart[bidx[i] + 1]++;
   }
+  for (i = 0; i < nbc; i++) cellStart[i + 1] += cellStart[i];
+  var _cf = new Int32Array(nbc);
+  for (i = 0; i < N; i++) { cellItem[cellStart[bidx[i]] + _cf[bidx[i]]++] = i; }
+  var VF = new Float64Array(N);
+  for (i = 0; i < N; i++) VF[i] = vAt(i);   /* 内层不再重复调 vAt 闭包 */
   var F = new Float32Array(dims[0] * dims[1] * dims[2]);
   var s2 = 2 * sig * sig;
   /* §E312 场 = **往全局先验收缩的局部比值**。旧写法是裸比值 num/den ⇒
@@ -1419,14 +1431,16 @@ function isoBuild(sig, thr, GN, field) {
   function at(X, Y, Z, self) {
     var bi0 = Math.floor((X - loA) / BK), bj0 = Math.floor((Y - loB) / BK), bk0 = Math.floor((Z - loC) / BK);
     var num = 0, den = 0, den2 = 0;
-    for (var di = -1; di <= 1; di++) for (var dj = -1; dj <= 1; dj++) for (var dk = -1; dk <= 1; dk++) {
-      var arr = buckets[(bi0 + di) + ',' + (bj0 + dj) + ',' + (bk0 + dk)]; if (!arr) continue;
-      for (var q = 0; q < arr.length; q++) { var m = arr[q];
+    for (var di = -1; di <= 1; di++) { var _ii = bi0 + di; if (_ii < 0 || _ii >= nb[0]) continue;
+      for (var dj = -1; dj <= 1; dj++) { var _jj = bj0 + dj; if (_jj < 0 || _jj >= nb[1]) continue;
+        for (var dk = -1; dk <= 1; dk++) { var _kk = bk0 + dk; if (_kk < 0 || _kk >= nb[2]) continue;
+      var _ci = (_ii * nb[1] + _jj) * nb[2] + _kk, _s = cellStart[_ci], _e = cellStart[_ci + 1];
+      for (var q = _s; q < _e; q++) { var m = cellItem[q];
         if (m === self) continue;
-        var vm = vAt(m); if (!isFinite(vm)) continue;
+        var vm = VF[m]; if (!isFinite(vm)) continue;
         var ex = X - a[m], ey = Y - b[m], ez = Z - c[m], dd = ex * ex + ey * ey + ez * ez;
         if (dd > R * R) continue;
-        var gv = Math.exp(-dd / s2); den += gv; den2 += gv * gv; num += gv * vm; } }
+        var gv = Math.exp(-dd / s2); den += gv; den2 += gv * gv; num += gv * vm; } } } }
     ATDEN = den;   /* E400 DS：把这次的核质量带出来 ⇒ 密度门用（不改 at 的签名，调用点零改动）*/
     /* E401 DS（A 结构修法）：**没证据 ⇒ 0**，不再回落到 p0。
      *   旧式子把虚空钉在 p0 = 全库过线率（今天 20.5%）⇒ 阈值一旦 ≤ p0，整片虚空也算壳内 ⇒
