@@ -2063,24 +2063,28 @@ function paintLegend(fr) {
   /* §E349 DS（用户 10-06：「文字标记横着占了一大串，适当搞几个换行」）：容器收窄 + 允许换行，长句自己折成几行；色标条保持原尺寸（用户的蓝端曾被截掉过一回，已回滚）。 */
   /* §E349 DS：不要自动换行（用户否掉）—— 改成一行一句、按含义自己断行，能删的就删。 */
   lg.style.maxWidth = '260px'; lg.style.lineHeight = '1.35';
-  var c = document.createElement('canvas'); c.width = 18 * devicePixelRatio; c.height = 150 * devicePixelRatio;   /* E349 DS: 误缩过一版（把蓝端截掉了）⇒ 回滚到 150 */
-  c.style.width = '18px'; c.style.height = '150px'; var cg = c.getContext('2d');
-  for (var i = 0; i < 150 * devicePixelRatio; i++) { var ltt = 1 - i / (150 * devicePixelRatio);
-    /* §E347：「F」档（含默认的家族着色 + 底图）用回 LUT（蓝 = 地板 → 灰 = 库内中位 → 红 = 好），
-     *   只有「rel」档才换成分散带 LUTF。原来这里写死"F 用发散带"，而底图与这条带必须同一条 LUT，
-     *   否则就是"图例说一套、图画另一套"（§E338 那版还额外用一行"这一档不参与着色"把矛盾糊掉了）。*/
-    var rgb = st.color === 'rel' ? rampRGBF(ltt) : rampRGB(ltt);
-    cg.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')'; cg.fillRect(0, i, 18 * devicePixelRatio, 1); }
-  /* §E353：只要这条带画的是**底图那条 LUT**（fam / seed / F / rel 四种），针就该在。
-   *   原来只在 F / rel 两档画，而 fam/seed 的图例与页脚都写着"黄针 = 现役那一档" ⇒ **文案承诺、图上没有**
-   *   （这条是写页内自检时抓出来的：断言去数黄像素，数到 0 个）。*/
-  if (st.color === 'F' || st.color === 'rel' || st.color === 'fam' || st.color === 'seed') {
-    /* 现役那根针：不画出来，"现役在哪"这句话在 18px 宽的条上找不到位置。
-     *   ⚠ 位置**按当前档现算**，不许写死 73/150 —— 那是"分界在正中"的假设，而 F 档的分界在库内第 82 百分位。*/
-    var npos = st.color === 'rel' ? 0.5 : fCol(Fv(INC));
-    var ny = Math.round((1 - npos) * 150 * devicePixelRatio);
-    cg.fillStyle = '#0d1420'; cg.fillRect(0, ny - 2 * devicePixelRatio, 18 * devicePixelRatio, 4 * devicePixelRatio);
-    cg.fillStyle = '#ffd166'; cg.fillRect(0, ny - 0.75 * devicePixelRatio, 18 * devicePixelRatio, 1.5 * devicePixelRatio); }
+  var BARH = 150;   /* 出厂高度；§E441 在排版完成之后按文字列高收（见本函数末尾），所以画条这件事抽成函数好重画 */
+  var c = document.createElement('canvas'); c.style.width = '18px'; c.style.height = BARH + 'px'; var cg = c.getContext('2d');
+  function barDraw(Hcss) {
+    c.width = 18 * devicePixelRatio; c.height = Hcss * devicePixelRatio;
+    for (var i = 0; i < Hcss * devicePixelRatio; i++) { var ltt = 1 - i / (Hcss * devicePixelRatio);
+      /* §E347：「F」档（含默认的家族着色 + 底图）用回 LUT（蓝 = 地板 → 灰 = 库内中位 → 红 = 好），
+       *   只有「rel」档才换成分散带 LUTF。原来这里写死"F 用发散带"，而底图与这条带必须同一条 LUT，
+       *   否则就是"图例说一套、图画另一套"（§E338 那版还额外用一行"这一档不参与着色"把矛盾糊掉了）。*/
+      var rgb = st.color === 'rel' ? rampRGBF(ltt) : rampRGB(ltt);
+      cg.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')'; cg.fillRect(0, i, 18 * devicePixelRatio, 1); }
+    /* §E353：只要这条带画的是**底图那条 LUT**（fam / seed / F / rel 四种），针就该在。
+     *   原来只在 F / rel 两档画，而 fam/seed 的图例与页脚都写着"黄针 = 现役那一档" ⇒ **文案承诺、图上没有**
+     *   （这条是写页内自检时抓出来的：断言去数黄像素，数到 0 个）。*/
+    if (st.color === 'F' || st.color === 'rel' || st.color === 'fam' || st.color === 'seed') {
+      /* 现役那根针：不画出来，"现役在哪"这句话在 18px 宽的条上找不到位置。
+       *   ⚠ 位置**按当前档现算**，不许写死 73/150 —— 那是"分界在正中"的假设，而 F 档的分界在库内第 82 百分位。*/
+      var npos = st.color === 'rel' ? 0.5 : fCol(Fv(INC));
+      var ny = Math.round((1 - npos) * Hcss * devicePixelRatio);
+      cg.fillStyle = '#0d1420'; cg.fillRect(0, ny - 2 * devicePixelRatio, 18 * devicePixelRatio, 4 * devicePixelRatio);
+      cg.fillStyle = '#ffd166'; cg.fillRect(0, ny - 0.75 * devicePixelRatio, 18 * devicePixelRatio, 1.5 * devicePixelRatio); }
+  }
+  barDraw(BARH);
   if (st.color === 'pm') { /* 三档离色 ⇒ 渐变条会骗人，这里改涂两块实心 */
     cg.fillStyle = '#39d98a'; cg.fillRect(0, 0, 18 * devicePixelRatio, 75 * devicePixelRatio);
     cg.fillStyle = '#ff6b6b'; cg.fillRect(0, 75 * devicePixelRatio, 18 * devicePixelRatio, 75 * devicePixelRatio); }
@@ -2183,6 +2187,23 @@ function paintLegend(fr) {
      *  用 innerHTML 而不是 textContent ⇒ 能保留调用方已写好的 <br>（见下面绿环那句）。 */
     if (el && el.innerHTML && el.innerHTML.indexOf('· ') >= 0) el.innerHTML = el.innerHTML.split(' · ').join('<br>').split('· ').join('<br>');
   });
+  /* ===== §E441 竖杠按**文字实际高度**收（图例排版普查抓出来的共因）=====
+   *   探针 _probe-legend.mjs 逐档量到的死空（条固定 158px 高 ‖ 文字列实际只有）：
+   *     fam 74 ‖ seed 74 ‖ F 59(+第二块 59) ‖ rel 30(+45) ‖ gl 45 ‖ pm 45 ‖ duel 74 ‖ hp 45 ‖ de 104 ‖ sc 134 ‖ champ 59
+   *   ⇒ 每一档都死 24~113 像素，rel 最狠（30px 文字挨着 158px 的条）。DS §E433–§E437 修的是**横着**的五块/两列，
+   *     竖着这一条没人管 —— 因为它是"条有多高"决定的，不是"文字排几行"决定的。
+   *   ⚠ 这一步必须排在**所有文字改动之后**：s2 的绿环那句与「·」→ 换行 都在下面才写，量早了是折行前的高度。
+   *   ⚠ 下限 72px：条旁边挂着 F 窗口那根轴（两个可拖柄），再矮就抓不住；AXH 是活的，改了要连着改元素与重画。 */
+  var _th = _col.getBoundingClientRect().height;
+  if (lg.children.length > 1) _th += lg.children[1].getBoundingClientRect().height;
+  var want = Math.max(72, Math.min(150, Math.round(_th)));
+  /* 每次都算并**一定落一遍尺寸**（不写"只在变矮时才改"：那条会留在上一档的高度，切回文字长的档就变成
+   *   "条 150 ‖ 轴 72"两把尺）。WINAX 是常驻节点，改的是它自己的 width/height 与 AXH，不重建 ⇒ §E380 那条
+   *   "图例重建之后必须还是同一个节点"不受影响。 */
+  AXH = want;
+  c.style.height = want + 'px'; barDraw(want);
+  if (WINAX) { WINAX.width = AXW * devicePixelRatio; WINAX.height = AXH * devicePixelRatio;
+    WINAX.style.width = AXW + 'px'; WINAX.style.height = AXH + 'px'; winaxDraw(); }
 }
 /* ③ 家族图例 = 可点按钮（按成员数从多到少），点一个只留这些家族。
  *   §E304：默认按**方法家族**列（22 家，按钮上直接写"改了什么"），切到 RNG seed 才列 seed。*/
