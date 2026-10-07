@@ -2188,6 +2188,10 @@ function paintLegend(fr) {
   winaxDraw();
   /* §E330/§E347：这根带**到底在量什么**必须印出来 —— 不印，读图的人会把"中性灰"当成"不好不坏的绝对电平"，
    *   而 F 档的灰其实是"库里第 50% 名"、rel 档的灰才是"就是现役那一档"。两档共用一个 18px 的条，说法完全不同。*/
+  /* §E445 这条 sm **故意不进** §E436 那个「·」→换行的统一收尾（那个 forEach 只管 s1/s2）：
+   *   sm 是"F/rel 两档那条解释性长句"，按每个「 · 」断开会变成 6~7 行短句 ⇒ 图例框反而**长回去**
+   *   （§E441 刚把竖条从 158px 收到文字实际高，F 档现在整框 202px）。
+   *   留在这里说明，免得下一个人把它当"漏改"补上、再把省下来的空间吃回去。 */
   if (st.color === 'F' || st.color === 'rel') { var sm = document.createElement('div'); sm.style.color = 'var(--dim)';
     sm.textContent = st.color === 'F'
       ? ('针 = 现役 Ldemo（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 红 = 好 ‖ 蓝 = 地板 · 深浅 = '
