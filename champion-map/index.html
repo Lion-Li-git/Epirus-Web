@@ -609,13 +609,18 @@ var FRN = 0;
 var ISOBUILDS = 0;
 var SIGMS = 0, BUILDMS = 0;
 var GEOBUILD = 0, GLRESIZE = 0;
+/* E428 DS：GL 的填充/线框 alpha。2D 路是**逐面填、重叠处 alpha 累积**（偏亮），GL 是**并集填一次**（偏淡）
+ *   ⇒ 这里把 alpha 提上来折中；两个值都可用深链微调：#gfa=0.30 #gla=0.62。 */
+var GFA = 0.30, GLA = 0.62;
 var MISSWHY = '';   /* E423：上一次重建的原因（sig/thr/gn/field/noISO）*/   /* E422：isoEnsure 里两件事分开计时 */
 var ISOMS = 0, GLBUILD = 0, GLDRAW = 0, GLBLIT = 0;   /* E420：把 1.2s/帧拆开定位 */
 var GLERR = '';   /* E418：GL 分支抛出的异常文本（揪出静默中断）*/   /* E418：帧序（判"只画了哪一帧"）*/
 var GLPATH = 0;     /* E413: 0=not-yet 1=GL-used 2=GL-unavailable */
 var GLDREW = 0;     /* E413：走 GL 路的帧数 */
 var GLSIG = '';     /* E405：GL 几何缓存键（相机/网格/画布任一变化才重算重传）*/
-var GLISO = 0;      /* E404：壳走 WebGL2（1）还是 2D 逐面（0，默认）。#gl=1 打开。 */
+var GLISO = 1;      /* E428 DS（用户 10-08 裁定）：**GL 转默认** —— 阈值不变时旋转/平移，2D 路每帧要重画
+                     *   1.2 万个四边形（卡），GL 路只重发命令（顺滑）⇒ GL 该是默认。#gl=0 可切回 2D 逐面。
+                     *   起不来时 §E417b 会自动回落 2D 并留痕（GLPATH=2 / data-path=glfail）。 */
 var BATCHISO = 0;   /* E403：壳合并成一个 path 画（1）还是逐面画（0）。**默认 0 —— 实测合并更慢**：
  *   96 格 4868 面：合并 102.78 ms/帧 vs 逐面 23.54 ms/帧（52 格：25.12 vs 18.06）。
  *   原因：Path2D 里 4868 个子路径 ⇒ fill 要算并集/绕数、stroke 要整条 tessellate ⇒ 远贵于逐个小面。
@@ -1634,9 +1639,9 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
       GLM.upload(vv, tri, lin);
       GLBUILD = performance.now() - _tU;
       }   /* E405：/几何缓存 */
-      var fRG = pot ? [0.878, 0.694, 0.235, 0.10] : [0.224, 0.851, 0.541, 0.11];
-      var lRG = shell ? (pot ? [0.878, 0.694, 0.235, 0.55] : [0.224, 0.851, 0.541, 0.5])
-                      : (pot ? [0.878, 0.694, 0.235, 0.22] : [0.224, 0.851, 0.541, 0.2]);
+      var fRG = pot ? [0.878, 0.694, 0.235, GFA] : [0.224, 0.851, 0.541, GFA];   /* E428：alpha 走旋钮（GL 无重叠累积 ⇒ 要比 2D 的 .085 更高） */
+      var lRG = shell ? (pot ? [0.878, 0.694, 0.235, GLA] : [0.224, 0.851, 0.541, GLA])
+                      : (pot ? [0.878, 0.694, 0.235, GLA * 0.44] : [0.224, 0.851, 0.541, GLA * 0.4]);
       GLDREW++; GLPATH = 1;
       (function () { var _n = document.getElementById('perfru'); if (_n && _n.dataset) _n.dataset.path = 'gl'; })();   /* E413：证明这一帧真的走了 GL 路（用来校验仪表，别再拿"对不上"的数下结论） */
       var _tD = performance.now();
@@ -2453,6 +2458,8 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
     if (kv[0] === 'gl') { GLISO = (+kv[1] === 1 ? 1 : 0); console.log('PROBE parse gl kv=' + kv[1] + ' => GLISO=' + GLISO); }
+    if (kv[0] === 'gfa') GFA = Math.max(0, Math.min(1, +kv[1]));
+    if (kv[0] === 'gla') GLA = Math.max(0, Math.min(1, +kv[1]));
     if (kv[0] === 'batch') BATCHISO = (+kv[1] === 0 ? 0 : 1);
     if (kv[0] === 'perf') PERFON = (+kv[1] || 0);   /* 2 = 跑一次性基准（原来写成 ===1 ? 1 : 0 ⇒ #perf=2 被吞成 0）*/
     if (kv[0] === 'sort') st.sortBy = (kv[1] === 'time' ? 'time' : 'F');
