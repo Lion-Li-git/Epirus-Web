@@ -494,6 +494,8 @@ function buildNB(key, bx, byy) {
    *   我换的"局部过线率场 + 插值等值线"能把纯度做到 88%，但代价是绿区糊在底图上、且只圈到两成过线枚。
    *   ⇒ 过线只按**逐枚真值**标（drawMap 里的绿环），悬停明细给"栽在哪条腿"。*/
   NBK[key] = { idx: idx, dst: dst, SW: SW, SH: SH, SS: SS, x0: x0, x1: x1, y0: y0, y1: y1,
+    /* §E382 泼溅要按"显示像素"量半径（核 w = 1/d^KEXP 里的 d 与 fscale 都是显示像素）⇒ 比例尺必须跟着缓存走 */
+    bx: bx, byy: byy,
     px0: px0, px1: px1, py0: py0, py1: py1, nmed: nmed, d12m: d12m, ax: ax, by: by, gx: gx, gy: gy };
 }
 /* 每格只需 (SH + T·SS)/SW ⇒ 换 T 不碰邻域。
@@ -513,19 +515,31 @@ function buildBitmap(key) {
   var nPainted = 0, nOob = 0;   /* §E381 见下面 FL.painted / FL.oob */
   var SHOWN = new Uint8Array(N), nShown = 0;
   for (var s9 = 0; s9 < N; s9++) { SHOWN[s9] = (VIS[s9] && inWin(P[s9])) ? 1 : 0; nShown += SHOWN[s9]; }
+  /* ===== §E382 地板换成**点-major 泼溅**（用户给的模型，她是对的）=====
+   *   「我原本以为这个渲染机制是每个点拥有一个数值和对应不透明度范围，地图上对应位置把所有扩散到这里的数加权平均，
+   *    所以摘出点是无损的……但是看起来现在摘出点后附近的点并没有扩散过来所以黑洞仍然出现了」
+   *   §E381 只修了一半：候选池仍是"**每格最近 12 名，按全库算**"⇒ 摘掉大半之后那 12 个里剩下的可见点太少，
+   *   晕接不上 ⇒ 范围一收窄超过 1/3 就冒黑块（她这张截图 288/917 在窗内，正是这个比例）。
+   *   现在照她那句原话直接算：每个**可见**点把自己的核 w = 1/d^KEXP 泼到它覆盖到的格子上，每格 = Σw·F / Σw
+   *   ⇒ 摘掉一个点，它照过的地方由**其余可见点的晕**接上，无损。
+   *   截断半径 6·fscale（那里 w ≈ kcov/88 ⇒ 覆盖度贡献 ~1%，看不出边界）⇒ 每点只碰 ~(2giR+1)² 格。
+   *   实测开销：288 枚 × ~361 格 ≈ 10 万次乘加（旧写法 40000 格 × 12 = 48 万次，还漏接）。 */
+  var SW2 = new Float32Array(nb.gx * nb.gy), SH2 = new Float32Array(SW2.length), SS2 = new Float32Array(SW2.length);
+  var csx = (nb.x1 - nb.x0) * nb.bx / (nb.gx - 1), csy = (nb.y1 - nb.y0) * nb.byy / (nb.gy - 1);
+  var RR = 6 * fscale, giR = Math.ceil(RR / csx), gjR = Math.ceil(RR / csy);
+  for (var pi9 = 0; pi9 < N; pi9++) { if (!SHOWN[pi9]) continue;
+    var ox9 = (P[pi9][nb.ax] - nb.x0) / (nb.x1 - nb.x0) * (nb.gx - 1);
+    var oy9 = (P[pi9][nb.by] - nb.y0) / (nb.y1 - nb.y0) * (nb.gy - 1);
+    var iA = Math.max(0, Math.ceil(ox9 - giR)), iB = Math.min(nb.gx - 1, Math.floor(ox9 + giR));
+    var jA = Math.max(0, Math.ceil(oy9 - gjR)), jB = Math.min(nb.gy - 1, Math.floor(oy9 + gjR));
+    var hv9 = P[pi9].H / 100, sv9 = P[pi9].S;
+    for (var gj9 = jA; gj9 <= jB; gj9++) { var dyD = (gj9 - oy9) * csy;
+      for (var gi9 = iA; gi9 <= iB; gi9++) { var dxD = (gi9 - ox9) * csx, dd = Math.sqrt(dxD * dxD + dyD * dyD);
+        if (dd > RR) continue;
+        var w9 = 1 / Math.pow(Math.max(dd, 1e-6), KEXP), ci9 = gj9 * nb.gx + gi9;
+        SW2[ci9] += w9; SH2[ci9] += w9 * hv9; SS2[ci9] += w9 * sv9; } } }
   for (var i = 0; i < nb.gx * nb.gy; i++) {
-    /* §E381（用户 10-07：「不渲染的点摘出去**但别的附近点要正常渲染覆盖对应区域**，而不是直接挖空变成黑色。
-     *   何况现在有的点还没摘出去周围就变成黑的了」）：地板的 IDW **只吃当下画出来的那批点**。
-     *   做法是把两件事拆开：**邻域表**（每格最近 12 名）仍按全库算一次并缓存 —— 那是几何，与"谁被画"无关；
-     *   **加权**这一遍按可见名单过滤（40000 格 × 12 = 48 万次，比整张邻域重算便宜两个数量级，实测每帧可跑）。
-     *   ⇒ 场的取值必然落在可见点的 F 区间之内（加权平均的性质）⇒ 既不钳位、也没有黑洞。
-     *   ⚠ 我上一版的错正是反过来的：场含被摘出去的点、色带按可见点定标 ⇒ 带外一大片 ⇒ 那个"淡出"把那片涂成底色 = 黑洞。
-     *   ⚠ 一格 12 个邻居全被摘掉 ⇒ wsum = 0 ⇒ 那一格留空。那不是洞，是"这块地方没有画得出来的点"。 */
-    var bs9 = i * KF, wsum = 0, hsum9 = 0, ssum9 = 0;
-    for (var u9 = 0; u9 < KF; u9++) { var pi9 = nb.idx[bs9 + u9]; if (pi9 < 0) break; if (!SHOWN[pi9]) continue;
-      var w9 = 1 / Math.pow(Math.max(nb.dst[bs9 + u9], 1e-6), KEXP);
-      wsum += w9; hsum9 += w9 * (P[pi9].H / 100); ssum9 += w9 * P[pi9].S; }
-    if (!(wsum > 0)) continue;
+    var wsum = SW2[i]; if (!(wsum > 0)) continue;
     /* §E331 覆盖度换成**核权重和**，不用「到最近点的距离」。旧写法 1/(1+(DM/fscale)^4) 在两枚点中间
      *   必然下凹（DM 在 Voronoi 脊线上取局部极大）⇒ 底图上那一片"凹陷的接缝"就是脊线本身，跟数据无关，
      *   是度量的形状病。SW = Σ1/d^KEXP 是各点晕的**相加**，靠近谁都不减 ⇒ 相邻晕平滑搭接。
@@ -537,7 +551,7 @@ function buildBitmap(key) {
     var fade = wsum / (wsum + kcov) * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
-    var Fav = (hsum9 + st.T * ssum9) / wsum;
+    var Fav = (SH2[i] + st.T * SS2[i]) / wsum;
     /* §E347：底图默认 = **全库分位 + 蓝→灰→红**（回到 §E338 之前那个读法）；只有切到第 6 档「rel」才用发散带 + 淡入。*/
     var REL = st.color === 'rel';
     var tt = REL ? fColRel(Fav) : fCol(Fav);
