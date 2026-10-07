@@ -2594,7 +2594,7 @@ fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); 
 /* E406 DS（用户 10-08：卡，但任务管理器里 CPU 只有 9% ⇒ 不是吞吐不够，是**串行在主线程**）：
  *   把每帧的**画布调用数**与缓冲区规模量出来，才能说清"低 CPU + 卡"是怎么来的。 */
 var OPC = {};
-if (PERFON === 2) { (function () {
+if (PERFON === 2) setTimeout(function () { (function () {
   var _ops = ['beginPath', 'fill', 'stroke', 'arc', 'fillText', 'strokeText', 'fillRect', 'drawImage', 'closePath', 'moveTo', 'lineTo'];
   for (var _oi = 0; _oi < _ops.length; _oi++) { (function (m) {
     var _f = g[m]; if (typeof _f !== 'function') return;
@@ -2607,7 +2607,7 @@ if (PERFON === 2) { (function () {
   var _tot = 0, _kv = ''; for (var _k in OPC) { _tot += OPC[_k]; _kv += _k + '=' + OPC[_k] + ' '; }
   pe.textContent = 'BENCH first=' + tt[0].toFixed(1) + ' avg=' + av.toFixed(2) + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN
     + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW + ' FRAMES=6 OPS6=' + _tot + ' OPS1=' + Math.round(_tot / 6) + ' PX=' + cv.width + 'x' + cv.height + ' DPR=' + (devicePixelRatio || 1) + ' ' + _kv;
-  document.body.appendChild(pe); })(); }
+  document.body.appendChild(pe); })(); }, 60);   /* E415：**挪到装载之后** —— 原来跑在装载序列里，那时模式/场没就绪，drawIso 根本不会被调到，基准必然读到 GLPATH=0（我上一笔就是被这个假数误导的）*/
 
 
 /* §E371 深链 #flo=/#fhi= 是在上面那个解析循环里写进 st 的 ⇒ 那两根滑杆与读数必须在这里回压一次，
