@@ -73,6 +73,21 @@ const READ = `(function(){
       return {n:kids2, sw:f.scrollWidth, cw:f.clientWidth, over:f.scrollWidth-f.clientWidth,
         wrap:cs.flexWrap, ovf:cs.overflowX, lastVisible:Math.round(lastRight-f.getBoundingClientRect().left)}; })()};
 })()`;
+/* §E441 顺带一条**全页溢出普查**：家族带那条（27 个按钮溢出 782px 被 overflow-x:auto 藏着）证明
+ *   "看不见的浪费"和"看不见的内容"是同一件事 —— 截图上它俩都长得像"还好"。
+ *   这里对 body 里每个元素量 scrollWidth vs clientWidth，凡是"内容比可视区宽"又**没有横向滚动条可见**的都点名。 */
+const OVERFLOW = `(function(){
+  var out=[], all=document.querySelectorAll('body *');
+  for(var i=0;i<all.length;i++){ var el=all[i];
+    var ow=el.scrollWidth-el.clientWidth, oh=el.scrollHeight-el.clientHeight;
+    if(ow<=4 && oh<=4) continue;
+    var cs=getComputedStyle(el);
+    var id=el.id?'#'+el.id:(el.className&&typeof el.className==='string'?'.'+el.className.split(' ')[0]:el.tagName.toLowerCase());
+    out.push({id:id, ow:ow, oh:oh, cw:el.clientWidth, sw:el.scrollWidth, ovfX:cs.overflowX, wrap:cs.flexWrap||'—', ws:cs.whiteSpace}); }
+  out.sort(function(a,b){ return (b.ow+b.oh)-(a.ow+a.oh); });
+  return out.slice(0,14);
+})()`;
+
 async function main() {
   await waitJson(`http://127.0.0.1:${PORT}/json/version`);
   const tabs = await waitJson(`http://127.0.0.1:${PORT}/json/list`);
@@ -101,6 +116,10 @@ async function main() {
       ' ⇒ 溢出 ' + a.fam.over + (a.fam.over > 0 ? ' ⚠ 最后几个点不到' : '（没溢出）') +
       ' ‖ flex-wrap=' + a.fam.wrap + ' overflow-x=' + a.fam.ovf);
   }
+  const ov = await evalJS(OVERFLOW);
+  console.log('\n【全页溢出普查】内容宽 > 可视宽（或高）的元素 —— 前 ' + ov.length + ' 条，按溢出量排');
+  for (const o of ov) console.log('  ' + (o.id + '                    ').slice(0, 20) + '横向 +' + o.ow + 'px（内容 ' + o.sw + ' / 可视 ' + o.cw +
+    '）‖ 纵向 +' + o.oh + 'px ‖ overflow-x=' + o.ovfX + ' ‖ flex-wrap=' + o.wrap + ' ‖ white-space=' + o.ws);
   killTree(); ws.close();
 }
 main().catch(e => { console.error('⛔ ' + e.message); killTree(); process.exit(2); });
