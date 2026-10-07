@@ -357,17 +357,56 @@ for (const r of DATA) if (r.fam && LIN[r.id]) FAMLAB[r.fam] = LIN[r.id].famLabel
   console.log('§E378 接线：接替边 ' + nchain + ' 条（' + olds.length + ' 枚旧槽位冠军的链，按训出时刻排）‖ 悬空血统边接回 SLOT-e379c62c ' +
     nfix + ' 条 ‖ 被时间/身份守卫退回 ' + held + ' 条');
 })();
+let NRAW = 0;   /* §E440 去重**之前**的面板行数（= 原始 tsv 行数），给页内那句"729 种打法（面板原始 917 行）"用 */
+/* ===== §E440 权重去重：同一份权重在图上只留一枚（用户 10-08：「去掉这些重复的权重再重新渲染一下」）=====
+ *   §E334 那版只做了**标注**（悬停里印"同一份权重在面板上占 17 行"），图上照旧 917 枚 ⇒ 一撮拷贝挤在同一个位置，
+ *   数点会多数，而"917 枚"与"729 种打法"这两个数永远对不上。现在直接从 DATA 里把重复行摘掉。
+ *   留哪一枚必须确定，而且不许把"现役"摘掉（INC 是按 id 找 SHIPPED-Ldemo 的）：
+ *     ① 组内有 SHIPPED-Ldemo ⇒ 留它；② 否则留有血统记录的那枚（d.lin 非空 ⇒ 它身上才有 ts/fam/par 这些信息）；
+ *     ③ 否则留 dupOf 里排最前的那枚（dupOf 是 attach-dup 按**文件权重哈希**算出来的组内全集，顺序稳定）。
+ *   摘掉的那枚不丢：id 记在保留那枚的 dups 上（悬停从"警告"改口成"本枚代表 N 份同名拷贝"），
+ *   而**所有指向被摘那枚的父边一律改指保留那枚** —— 同一份权重 ⇒ 改指不改变这条边的意思（与 §E378 的别名接回同一种做法）。
+ *   ⚠ 兜底还是页内那条「不许有任何父边指向图上不存在的枚」：漏改一条边它就红。 */
+(function () {
+  const groups = {};
+  NRAW = DATA.length;
+  for (const d of DATA) { if (!(d.dn > 1) || !d.dups) continue; (groups[d.dups] = groups[d.dups] || []).push(d); }
+  const byId = {}; for (const d of DATA) byId[d.id] = d;
+  const keeperOf = {}, drop = [];
+  for (const key in groups) {
+    const mem = groups[key];
+    const order = key.split(' ').filter(Boolean);
+    let k = mem.find(d => d.id === 'SHIPPED-Ldemo') || mem.find(d => d.lin) ||
+      mem.slice().sort((a, b) => { const ia = order.indexOf(a.id), ib = order.indexOf(b.id);
+        return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib); })[0];
+    keeperOf[k.id] = k.id;
+    for (const d of mem) if (d !== k) { keeperOf[d.id] = k.id; drop.push(d.id); }
+  }
+  const before = DATA.length;
+  /* ⚠ 只摘"**在某个重复组里且不是保留那枚**"的行：不在任何组里的行 keeperOf[id] 是 undefined，
+   *   写成 `!== id` 会把全部独苗一起删掉（第一版实测 917 → 97 枚，就是这个条件漏了"没登记"这一支）。 */
+  for (let i = DATA.length - 1; i >= 0; i--) { const kd = keeperOf[DATA[i].id]; if (kd && kd !== DATA[i].id) DATA.splice(i, 1); }
+  /* 父边改指：pof 指向被摘那枚的，一律换成保留那枚（同一份权重） */
+  let nrep = 0;
+  for (const d of DATA) { if (d.pof && keeperOf[d.pof] && keeperOf[d.pof] !== d.pof) { d.pof = keeperOf[d.pof]; nrep++; } }
+  /* 保留那枚的 dn 必须重算成"它代表几份"（原来那列是**全组行数**，摘完之后图上的语义才是"几份拷贝合成一枚"）*/
+  for (const d of DATA) if (d.dn > 1) d.dn = 1 + drop.filter(x => keeperOf[x] === d.id).length;
+  console.log('§E440 权重去重：' + before + ' 行 → ' + DATA.length + ' 枚（' + Object.keys(groups).length + ' 组共摘 ' + drop.length +
+    ' 行）‖ 父边改指 ' + nrep + ' 条 ‖ 现役在图上=' + (DATA.some(d => d.id === 'SHIPPED-Ldemo') ? '是' : '⛔没了') );
+})();
 console.log('家族 ' + Object.keys(FAMLAB).length + ' 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 ' + DATA.filter(d => !d.fam && !d.famTop).length + ' 枚');
-console.log('过线判定源 = ' + (OKSRC || '无 ⇒ 不标绿环') + ' ‖ 有判定 ' + POK + ' 枚 ‖ 判为过线 ' + DATA.filter(d => d.ok === 1).length +
+/* §E440：这一行的三个数必须**同源**（都从去重之后的 DATA 数），不能再印 POK = OKM 的键数 ——
+ *   那是"判定表里有 901 个 id"，与图上有几枚无关，混在一行里就是两条尺。 */
+console.log('过线判定源 = ' + (OKSRC || '无 ⇒ 不标绿环') + ' ‖ 判定表里有 ' + POK + ' 个 id ‖ 图上（去重后）有判定 ' + DATA.filter(d => d.ok !== null).length + ' 枚 ‖ 判为过线 ' + DATA.filter(d => d.ok === 1).length +
   ' 枚 ‖ 无判定 ' + DATA.filter(d => d.ok === null).length + ' 枚');
 
 /* E404 DS（D-3）：壳的 WebGL2 后端放在独立文件里，生成时内联（避开模板字面量的转义坑）。 */
 const GLJS = readFileSync(join(HERE, 'gl-mesh.js'), 'utf8');
 const JS = `
 var P = DATA, N = P.length;
-/* §E334 "多少枚候选"与"几种打法"是两件事：同一份权重在面板上可以占好几行（实测 901 行 = 713 个权重，
- *   其中 4 行都是现役本身）⇒ 统计条上两个数一起印，别让人把行数当打法数。*/
-var NDUP = Math.round(P.reduce(function (s, d) { return s + 1 / (d.dn > 0 ? d.dn : 1); }, 0));
+/* §E440 权重去重挪到**生成侧**做了（图上 729 枚 = 729 种打法，一枚一档），所以原来那个"Σ1/dn 数出几种打法"的
+ *   NDUP 删掉 —— 去重之后再套它会把每组只算 1/k 份，反而**少算**（原来它数 917 行 = 713 种；现在 N 本身就是种数）。
+ *   NRAW = 去重前的面板行数，留着是因为"面板上有几行"与"图上有几枚"仍然是两件事，得说得出数。 */
 var cv = document.getElementById('cv'), g = cv.getContext('2d');
 var KF = 12;   /* E387 DS：换回 §E382b 场区时它引用的顶层常量（§E385 曾把它改名 KFK 挪进函数内部 ⇒ 换回后 KF 未定义 ⇒ 整页黑）*/
 var KEXP = 2.5;   /* §E330 IDW 核的指数：1/d^KEXP。**淡出的覆盖度也用它**（见 buildBitmap），所以提成常数 ——
@@ -739,7 +778,7 @@ function famShort(d, n) { var s = String(famLab(d)).split(' ‖ ')[0] || ('家�
 function tip(d, fr) {
   return d.id + (d.lin ? ' 【' + d.lin + '】' : '') + (d.kin ? ' 〔' + d.kin + '〕' : '') +
     /* §E334 同一份权重占了几行必须自己在明细里说：否则"这枚 F 名次 8"和"那枚名次 10"可能是**同一个包**。 */
-    (d.dn > 1 ? '\\n⚠ 同一份权重在面板上占 ' + d.dn + ' 行：' + d.dups + '（它们不是几种打法，是一个包的几份拷贝）' : '') +
+    (d.dn > 1 ? '\\n本枚代表 ' + d.dn + ' 份**同一份权重**的拷贝（面板上原本占 ' + d.dn + ' 行，§E440 起图上只画这一枚）：' + d.dups : '') +
     '\\n家族 ' + d.fam + '（按训练方法/目标分）：' + (famLab(d) || '—') +
     '\\n　RNG seed 名字后缀=' + d.seed + ' ‖ META.seed=' + (d.ms || '—') + ' ‖ 训出 ' + (d.ts || '—') +
     '\\n　热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof : (d.pnm ? '\\n　　' + d.pnm : '（父指针未落档）')) +
@@ -2002,7 +2041,7 @@ function drawBody() {
   if (st.side) { var _sp = document.getElementById('side'), _lg = document.getElementById('legend');
     if (_sp && _lg && _sp.style.display !== 'none') _sp.style.top = (_lg.offsetTop + _lg.offsetHeight + 10) + 'px'; }
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
-  document.getElementById('stat').textContent = N + ' 枚候选（按权重身份去重 = ' + NDUP + ' 种打法）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
+  document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
     ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键 sc − 现役（实测 ' + NSEL + ' 枚 · 判据内赢 ' + NSELUP + ' · 判不动 ' + NSELSOFT + '）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
@@ -3602,7 +3641,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>\n' +
 '<div id="tip"></div>\n' +
 '<div id="selftest"></div>\n' +
-'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
+'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var NRAW = ' + NRAW + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
 /* §E338 落盘之后**必须把内联脚本再解析一遍**（"写完不回读"这一族的第三种形态）：
  *   模板里写 '\n' 会被 Node 先吃成**真换行** ⇒ 写进页面就成了一条未闭合的字符串 ⇒ **整页脚本一条都不执行**，
  *   而构建照样打印"已写 xxx KB"、截图照样是一张画布（地板是 canvas 之外没画 ⇒ 看着像空的但没人报错）。
