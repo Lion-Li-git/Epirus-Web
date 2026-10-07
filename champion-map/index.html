@@ -472,7 +472,9 @@ function pct(a, q) { var b = a.slice().sort(function (x, y) { return x - y; }); 
  *   按屏幕度量 ⇒ 势晕是正圆且互相搭接。比例尺取**不含缩放**的基础值（缩放对两轴均匀，
  *   位图随仿射一起放大即可，不必重烘）；窗口尺寸变了才重建（resize 时清 NBK）。*/
 var NBK = {}, FL = null;
-var CHROMEVEC = 1;   /* E395 DS：谱系图底图走矢量直画（1）还是旧位图烘焙（0）。#chrome=bmp 切回旧路。 */
+var CHROMEVEC = 1;
+var ATDEN = 0;          /* E400：at() 最近一次的核质量（密度门用）*/
+var DGATE = 1, DM0 = 2;  /* E400：密度门开关（1 开 / 0 关）与收缩强度 M0（旧值 5）。#dgate=0&m0=5 可回旧行为做 A/B。 */   /* E395 DS：谱系图底图走矢量直画（1）还是旧位图烘焙（0）。#chrome=bmp 切回旧路。 */
 var VK = null;   /* E388 DS: 可见点 k-NN 表缓存（键 = 位图键 + 可见名单签名）*/
 function buildNB(key, bx, byy) {
   var ax = key.slice(0, 2), by = key.slice(2, 4);
@@ -1258,7 +1260,14 @@ function isoBuild(sig, thr, GN, field) {
     if (isFinite(v0)) { nV++; sumV += v0; } }
   /* base = 全库过线率，**与场无关**：壳内纯度要跟它比才知道壳是不是白画的。
    *   'pot' 场的 p0 是"平均势"（59%），拿它当"底率"印出去会把人带沟里（截图第一版就印成 59%）。*/
-  var p0 = nV ? sumV / nV : 0.15, base = nHas ? nOk / nHas : 0.15, M0 = 5, maxF = 0;
+  var p0 = nV ? sumV / nV : 0.15, base = nHas ? nOk / nHas : 0.15, M0 = DM0, maxF = 0;
+  /* E400 DS（用户 10-08：曲面经常过大、甚至整个在没有点的地方；而点很多的地方反被未过线点干扰保不住）：
+   *   病根是这两行：① 空处 den→0 时直接 return p0（全库均值）⇒ 虚空里照样有值；
+   *   ② M0=5 的收缩让「一小簇过线点」被拉向全库均值 ⇒ 局部证据被摊薄。
+   *   修法：**平滑密度门** —— v' = p0 + (v − p0)·min(1,(den/dref)²)。den 是这一格附近真实的核质量，
+   *   dref 取「典型点自己那儿的核质量」的 0.6 倍 ⇒ 真簇 ⇒ 门≈1（原值不动）；孤立一枚 ⇒ 门≈0 ⇒ 值回 p0
+   *   （'ok' 场 p0≈底率 < 阈值 ⇒ 虚空不再成壳；'pot' 场 p0=平均势 ⇒ 同理）。**平滑**门不会像硬截断那样凭空生出一道墙。 */
+  var DMED = 0;
   /* self 传索引 = 把自己剔掉（leave-one-out）⇒ 读覆盖/纯度不吹；传 -1 = 普通格点 */
   function at(X, Y, Z, self) {
     var bi0 = Math.floor((X - loA) / BK), bj0 = Math.floor((Y - loB) / BK), bk0 = Math.floor((Z - loC) / BK);
@@ -1271,12 +1280,18 @@ function isoBuild(sig, thr, GN, field) {
         var ex = X - a[m], ey = Y - b[m], ez = Z - c[m], dd = ex * ex + ey * ey + ez * ez;
         if (dd > R * R) continue;
         var gv = Math.exp(-dd / s2); den += gv; den2 += gv * gv; num += gv * vm; } }
+    ATDEN = den;   /* E400 DS：把这次的核质量带出来 ⇒ 密度门用（不改 at 的签名，调用点零改动）*/
     if (den <= 1e-6) return p0;
     var ess = den * den / (den2 || 1e-9);
     return (ess * (num / den) + M0 * p0) / (ess + M0);
   }
+  /* 预扫（只 917 次，便宜）：每枚自己那儿的核质量 ⇒ 取中位数当 dref 的基准 */
+  var _d = []; for (i = 0; i < N; i++) { at(a[i], b[i], c[i], i); if (ATDEN > 0) _d.push(ATDEN); }
+  _d.sort(function (x, y) { return x - y; }); DMED = _d.length ? _d[_d.length >> 1] : 1;
+  var DREF = 0.6 * DMED * DGATE;
   for (k = 0; k < dims[2]; k++) for (j = 0; j < dims[1]; j++) for (i = 0; i < dims[0]; i++) {
     var fv = at(loA + i * dA, loB + j * dB, loC + k * dC, -1);
+    var _dt = DREF > 0 ? ATDEN / DREF : 1; if (_dt < 1) { _dt *= _dt; } if (_dt < 1) fv = p0 + (fv - p0) * _dt;
     F[(k * dims[1] + j) * dims[0] + i] = fv; if (fv > maxF) maxF = fv; }
   /* 壳画得对不对，当场给数（不许只靠眼睛）：在每枚自己位置上估一次，数"被壳包住"的枚数。
    *   两遍都要：含自己 = 与画出来的壳同一口径（但循环 —— 一枚会把自己那格抬上去）；
@@ -2146,7 +2161,9 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     if (kv[0] === 'sel') st.sel = decodeURIComponent(kv[1]);
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
-    if (kv[0] === 'sort') st.sortBy = (kv[1] === 'time' ? 'time' : 'F'); }
+    if (kv[0] === 'sort') st.sortBy = (kv[1] === 'time' ? 'time' : 'F');
+    if (kv[0] === 'dgate') DGATE = (+kv[1] === 0 ? 0 : 1);
+    if (kv[0] === 'm0') DM0 = Math.max(0, Math.min(20, +kv[1] || 0)); }
   /* 装载时那一次 recomputeVIS 跑在深链之前 ⇒ 不补这一句，#flo=/#fhi= 只会重铺色带、不会真的少画点。 */
   if (WSEEN) recomputeVIS();
   /* §E312 两场各有各的刻度 ⇒ 深链只给 isof 不给 isot 时，必须把阈值换成**那场自己的**默认值
