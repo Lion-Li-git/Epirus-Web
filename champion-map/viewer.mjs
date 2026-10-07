@@ -1950,12 +1950,14 @@ function draw() { try { var _ft0 = performance.now(); drawBody();
     if (!_pe) { _pe = document.createElement('pre'); _pe.id = 'perfru'; _pe.style.display = 'none'; document.body.appendChild(_pe); }
     var _av = FRMA.length ? (FRMA.reduce(function (x, y) { return x + y; }, 0) / FRMA.length) : 0;
     FRN++; _pe.dataset.gliso = String(GLISO); _pe.dataset.frn = String(FRN);
-    if (FRN > 1) { SIGMS = 0; BUILDMS = 0; GEOBUILD = 0; GLRESIZE = 0; }   /* 两个计时按帧只反映**当帧**（上一版拿陈旧值判读，坑了一次）*/
     var _o1 = 0, _ok2 = ''; for (var _k2 in OPC) { _o1 += OPC[_k2]; _ok2 += _k2 + '=' + OPC[_k2] + ' '; }
     _pe.textContent = 'FRMS=' + FRMS.toFixed(2) + ' AVG=' + _av.toFixed(2) + ' N=' + FRMA.length + ' MODE=' + st.mode
       + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN + ' ISOBUILDS=' + ISOBUILDS + ' MISSWHY=' + MISSWHY + ' GEOBUILD=' + GEOBUILD.toFixed(1) + ' GLRESIZE=' + GLRESIZE.toFixed(1) + ' SIGMS=' + SIGMS.toFixed(1) + ' BUILDMS=' + BUILDMS.toFixed(1) + ' ISOMS=' + ISOMS.toFixed(1) + ' GLBUILD=' + GLBUILD.toFixed(1) + ' GLDRAW=' + GLDRAW.toFixed(1) + ' GLBLIT=' + GLBLIT.toFixed(1) + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW
       + ' **OPSF=' + _o1 + '** ' + _ok2;
     _pe.dataset.path = _pe.dataset.path || '2d';
+    /* E425 DS：**清零必须在打印之后** —— 我上一版把它写在 textContent 之前，
+     *   结果"量到的值先被清零、再被打印" ⇒ 读数全是 0.0（连续两轮被这个假数误导）。 */
+    if (FRN > 1) { SIGMS = 0; BUILDMS = 0; GEOBUILD = 0; GLRESIZE = 0; }
     for (var _k3 in OPC) OPC[_k3] = 0;   /* 每帧清零 ⇒ OPSF = 这一帧真实画了多少次 */
   }
   } catch (e) {
