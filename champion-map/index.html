@@ -1914,11 +1914,15 @@ function paintLegend(fr) {
       : '针 = 现役那一档（灰）· 绿 = 比现役强 ‖ 红 = 不如 · 深浅 = 离现役多远（两侧各按该侧 p90 距归一：绿侧 '
         + splitSets().sU.toFixed(3) + ' ‖ 红侧 ' + splitSets().sD.toFixed(3) + '，超出即钉在两端）';
     lg.appendChild(sm); }
-  if (OKL.length) {
-    var s3 = document.createElement('div'); s3.style.marginTop = '6px'; s3.style.color = '#39d98a';
-    s3.textContent = '绿环 = 逐枚过线 ' + OKL.length + '/' + POKJ;
-    var s4 = document.createElement('div'); s4.style.color = 'var(--dim)'; s4.style.maxWidth = '190px'; s4.style.lineHeight = '1.35';
-    s4.textContent = '（现跑同一道闸：' + (typeof OKSRCJ === 'string' && OKSRCJ ? OKSRCJ.replace(/^现跑同一道闸（feasibilityOf · /,'').replace(/）$/,'') : '—') + '）'; lg.appendChild(s3); lg.appendChild(s4); }
+  /* §E433 DS（用户 10-08：「图例下方那两行字纹丝不动…要怎么排版比较合适可以省图例空间」）：
+   *   原图例 **五块竖堆**：s1(点色行,§E432 已空) → wr(色条+F轴) → s2(黄针=现役) → s3(绿环…) → s4(现跑同一道闸…)
+   *   ⇒ 这里把 s3/s4 **并进 s2 一行**、闸门那句移进 hover 提示（信息不丢）⇒ **五块变两块**。
+   *   三次踩坑都记下：① 插在 paintLegend 函数外 ⇒ s2 不在该作用域 ⇒ 整块被跳过；② 替换区间吃掉函数收尾大括号 ⇒ 解析失败；
+   *   ③ 上一版其实已经生效，却因为我校验时只截了 420 字符的 DOM 窗口而**误判为未生效**并把它撤掉了（校验方式本身有坑）。 */
+  if (OKL.length && (st.color === 'fam' || st.color === 'seed')) {
+    s2.textContent = '黄针 = 现役 · 绿环 = 逐枚过线 ' + OKL.length + '/' + POKJ;
+    s2.title = '现跑同一道闸：feasibilityOf · n=20/aggr40/seat100';
+  }
 }
 /* ③ 家族图例 = 可点按钮（按成员数从多到少），点一个只留这些家族。
  *   §E304：默认按**方法家族**列（22 家，按钮上直接写"改了什么"），切到 RNG seed 才列 seed。*/
