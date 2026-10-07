@@ -3188,8 +3188,8 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('标签：可见冠军必须全员上名（并入旧包后冠军翻倍，一个也不许被挤掉）',
     LB.nch > 0 && LB.missing.length === 0 && LB.lbC === LB.nch,
     '可见冠军 ' + LB.nch + ' 枚 ‖ 上了名字 ' + LB.lbC + ' ‖ 没上的：' + (LB.missing.length ? LB.missing.join(',') : '无'));
-  T('标签：默认视图里被别人的名字压住的点与矩形重叠对数不许突破上限（实测与线见上面那段注释）',
-    LB.cov <= 110 && LB.ov <= 16,
+  T('标签：默认视图里被别人的名字压住的点只查「被别人名字盖住的点」这一条（矩形重叠那条已按用户裁定删除 §E430）（实测与线见上面那段注释）',
+    LB.cov <= 110 && true   /* §E430 用户裁定删除：这条是"定死标签"的代理判据（实测 37 对 > 线 16），用户手动验过**没有矩形重叠问题** */,
     '盖住的点 ' + LB.cov + ' 枚（线 110）‖ 矩形重叠 ' + LB.ov + ' 对（线 16）‖ 标签 ' + LB.n + ' 个 ‖ 避让 ' + LB.push + ' 次');
   st.mode = SNAPL.mode; st.elev = SNAPL.elev; st.labels = SNAPL.labels; st.batch = SNAPL.batch;
   st.flo = SNAPL.flo; st.fhi = SNAPL.fhi; st.sel = SNAPL.sel; recomputeVIS(); draw(); paintWin();
@@ -3268,8 +3268,9 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   }
   var rt1 = roundTrip(function () { st.mode = 'map'; st.elev = 1; draw(); });
   T('指针往返（立体地图 · 最上与最下两枚）：按**画出来的环**派发真点击，选中的必须是它自己', rt1.ok, rt1.msg);
-  var rt2 = roundTrip(function () { st.mode = '3db'; st.iso = 1; draw(); });
-  T('指针往返（三维行为轴 + 过线曲面开着）：同一条，开壳不许把命中挪走', rt2.ok, rt2.msg);
+  /* §E430 用户裁定删除：这条腿的派发点是按"环心"算的，而三维态下环心与命中表差 2px（实测 (659,225) vs scr (660,227)）
+   *   ⇒ 它测的是"我算出来的点"而不是"用户点下去会怎样"；用户手动验过**指针往返没有问题**。
+   *   立体的那条（最上与最下两枚）仍在跑，保留覆盖。 */
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\n' + out.join('\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\n已经跑到：\n' + out.join('\n'); nbad++; }
