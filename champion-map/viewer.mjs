@@ -795,7 +795,11 @@ function THRLBL() { if (BASEP < 0) { var a1 = 0, b1 = 0;
   BASEP = b1 ? a1 / b1 : 0.15; }
   return Math.round(st.isoT * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '%）'; }
 var FRMS = 0, FRMA = [];
-var PERFON = 0;   /* E402：#perf=1 打开按需仪表 */   /* E402 DS（D-3 前置）：最近一帧的绘制耗时与滑动均值（用来把「卡在哪」量出来，而不是凭感觉）*/
+var PERFON = 0;
+var BATCHISO = 0;   /* E403：壳合并成一个 path 画（1）还是逐面画（0）。**默认 0 —— 实测合并更慢**：
+ *   96 格 4868 面：合并 102.78 ms/帧 vs 逐面 23.54 ms/帧（52 格：25.12 vs 18.06）。
+ *   原因：Path2D 里 4868 个子路径 ⇒ fill 要算并集/绕数、stroke 要整条 tessellate ⇒ 远贵于逐个小面。
+ *   留这个开关是为了**别再有人试第二遍**（要试先看这两个数）。#batch=1 可复现。 */   /* E402：#perf=1 打开按需仪表 */   /* E402 DS（D-3 前置）：最近一帧的绘制耗时与滑动均值（用来把「卡在哪」量出来，而不是凭感觉）*/
 var ATDEN = 0;          /* E400：at() 最近一次的核质量（密度门用）*/
 var DGATE = 1, DM0 = 2;  /* E400：密度门开关（1 开 / 0 关）与收缩强度 M0（旧值 5）。#dgate=0&m0=5 可回旧行为做 A/B。 */   /* E395 DS：谱系图底图走矢量直画（1）还是旧位图烘焙（0）。#chrome=bmp 切回旧路。 */
 var VK = null;   /* E388 DS: 可见点 k-NN 表缓存（键 = 位图键 + 可见名单签名）*/
@@ -1723,26 +1727,45 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
     return [w / 2 + (a * cb.r[0] + b * cb.r[1] + c * cb.r[2]) * base + st.ox3,
       h / 2 + 0.06 * h - (a * cb.u[0] + b * cb.u[1] + c * cb.u[2]) * base + st.oy3,
       a * cb.f[0] + b * cb.f[1] + c * cb.f[2]]; };
-  var q = [];
   /* §E312 壳的配色跟着场走：绿 = 过线概率场，琥珀 = 势场。
    *   两种场共用一套壳代码，但"绿"在这个页面上已经被绿环定义成"过线" ⇒ 势场再画绿就是撒谎。*/
   var pot = m.field === 'pot';
   var fillC = pot ? 'rgba(224,177,60,.075)' : 'rgba(57,217,138,.085)';
   var lineC = shell ? (pot ? 'rgba(224,177,60,.6)' : 'rgba(57,217,138,.55)') : (pot ? 'rgba(224,177,60,.24)' : 'rgba(57,217,138,.22)');
-  for (var i = 0; i < m.quads.length; i++) {
-    var v = m.quads[i], p = [];
-    for (var k = 0; k < 4; k++) p.push(prj(v[k][0], v[k][1], v[k][2]));
-    q.push({ p: p, d: (p[0][2] + p[1][2] + p[2][2] + p[3][2]) / 4 });
+  /* E403 DS（D-3 的第一刀，量出来的）：原来**逐面** beginPath→fill→stroke ⇒ 96 格 4868 面 = 上万次画布调用/帧
+   *   （E402 实测稳态 23.5ms/帧，且开不开 GPU 一样 ⇒ 成本全在这条 CPU path 填充上）。
+   *   线框颜色是**统一**的 ⇒ 整张壳合并成**一个 Path2D**，fill/stroke 各一次即可；线框与绘制顺序无关
+   *   ⇒ 连那道 4868 元素的深度排序与每面一个对象分配都可以省掉。
+   *   ⚠ 半透壳的**填充**在旧路里靠重叠累积 alpha（有层次感），合并成一个 path 后是"并集填一次"⇒ 会变淡一点。
+   *   ★ **实测结论：合并这条路是错的**（E403）：96 格 4868 面 **合并 102.78 ms/帧 vs 逐面 23.54 ms/帧**（52 格 25.12 vs 18.06）。
+   *     原因：大 Path2D 的 fill 要算并集/绕数、stroke 要整条 tessellate ⇒ Canvas 对超大 path 的代价远高于逐个小面。
+   *     ⇒ 默认走逐面（BATCHISO=0）。要省 CPU 只能换后端（WebGL2 一次上传 VBO、逐帧只换矩阵），不是"合并 path"。 */
+  if (!BATCHISO) {
+    var q = [];
+    for (var i0 = 0; i0 < m.quads.length; i0++) {
+      var v0 = m.quads[i0], p0 = [];
+      for (var k0 = 0; k0 < 4; k0++) p0.push(prj(v0[k0][0], v0[k0][1], v0[k0][2]));
+      q.push({ p: p0, d: (p0[0][2] + p0[1][2] + p0[2][2] + p0[3][2]) / 4 });
+    }
+    q.sort(function (a, b) { return b.d - a.d; });
+    for (var i1 = 0; i1 < q.length; i1++) {
+      g.beginPath(); g.moveTo(q[i1].p[0][0], q[i1].p[0][1]);
+      for (var k1 = 1; k1 < 4; k1++) g.lineTo(q[i1].p[k1][0], q[i1].p[k1][1]);
+      g.closePath();
+      if (!shell) { g.fillStyle = fillC; g.fill(); }
+      g.strokeStyle = lineC; g.lineWidth = 1 * devicePixelRatio; g.stroke();
+    }
+    return m;
   }
-  q.sort(function (a, b) { return b.d - a.d; });
-  for (i = 0; i < q.length; i++) {
-    g.beginPath(); g.moveTo(q[i].p[0][0], q[i].p[0][1]);
-    for (k = 1; k < 4; k++) g.lineTo(q[i].p[k][0], q[i].p[k][1]);
-    g.closePath();
-    if (!shell) { g.fillStyle = fillC; g.fill(); }
-    g.strokeStyle = lineC;
-    g.lineWidth = 1 * devicePixelRatio; g.stroke();
+  var pth = new Path2D();
+  for (var ii = 0; ii < m.quads.length; ii++) {
+    var vq = m.quads[ii];
+    for (var kk = 0; kk < 4; kk++) { var P3 = prj(vq[kk][0], vq[kk][1], vq[kk][2]);
+      if (kk === 0) pth.moveTo(P3[0], P3[1]); else pth.lineTo(P3[0], P3[1]); }
+    pth.closePath();
   }
+  if (!shell) { g.fillStyle = fillC; g.fill(pth); }
+  g.strokeStyle = lineC; g.lineWidth = 1 * devicePixelRatio; g.stroke(pth);
   return m;
 }
 /* ④ 三维行为轴：x3/y3/z3 全是行为轴，**势只能靠点的颜色**（用户原话） */
@@ -2496,6 +2519,7 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     if (kv[0] === 'sel') st.sel = decodeURIComponent(kv[1]);
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
+    if (kv[0] === 'batch') BATCHISO = (+kv[1] === 0 ? 0 : 1);
     if (kv[0] === 'perf') PERFON = (+kv[1] || 0);   /* 2 = 跑一次性基准（原来写成 ===1 ? 1 : 0 ⇒ #perf=2 被吞成 0）*/
     if (kv[0] === 'sort') st.sortBy = (kv[1] === 'time' ? 'time' : 'F');
     if (kv[0] === 'dgate') DGATE = (+kv[1] === 0 ? 0 : 1);
