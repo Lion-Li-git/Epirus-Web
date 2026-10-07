@@ -79,21 +79,8 @@ var GLM = (function () {
   function init(mainCv) {
     if (ok) return true;
     try {
-      cv = document.createElement('canvas');
-      cv.id = 'glmesh';
-      cv.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9';
-      MCV = mainCv;
-      var host = mainCv && mainCv.parentNode ? mainCv.parentNode : document.body;
-      var pos = host.style && host.style.position;
-      if (!pos || pos === 'static') host.style.position = 'relative';
-      host.appendChild(cv);
-      /* E410 DS：**别跟主画布比谁的 z-index 大** —— 实测 GL 画布设 9 仍被 #cv 盖住（elementsFromPoint 在中心
-       *   返回的是 CANVAS#cv）⇒ 所以读主画布自己的计算 z-index，取它 +1（没有就按 0 算 +1）。 */
-      var _mz = parseInt(getComputedStyle(mainCv).zIndex, 10);
-      cv.style.zIndex = String((isFinite(_mz) ? _mz : 0) + 1);
-      /* E407 DS：**去掉 premultipliedAlpha:false** —— Chrome 合成器默认按预乘 alpha 处理，
-       *   声明非预乘会再乘一次 ⇒ 半透明内容淡到看不见（这正是 #gl=1 什么都不显示的头号嫌疑）。
-       *   于是这里用默认（预乘），颜色在 draw() 里按 alpha 预乘。 */
+      cv = document.createElement('canvas');   /* E411 DS：**离屏** —— 不进 DOM（层叠/尺寸/命中测试全都绕开），
+                                                       *   画完由调用方 g.drawImage 贴进主画布。 */
       gl = cv.getContext('webgl2', { alpha: true, antialias: true, depth: false });
       if (!gl) { console.log('GL 不可用（webgl2 起不来）⇒ 回落 2D 老路'); return false; }
       var v = sh(gl.VERTEX_SHADER, VS), f = sh(gl.FRAGMENT_SHADER, FS);
@@ -123,7 +110,6 @@ var GLM = (function () {
     if (!ok) return false;
     W = Math.max(1, Math.round(W)); H = Math.max(1, Math.round(H));
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
-    if (cssW) { cv.style.width = cssW + 'px'; cv.style.height = cssH + 'px'; }
     gl.viewport(0, 0, W, H);
     return true;
   }
@@ -163,16 +149,9 @@ var GLM = (function () {
       gl.drawElements(gl.LINES, nLine, gl.UNSIGNED_INT, 0);
     }
     if (!DRAWN) { DRAWN = 1;
-      var _t = function (el) { if (!el) return 'null'; var r = el.getBoundingClientRect();
-        return Math.round(r.width) + 'x' + Math.round(r.height) + '@' + Math.round(r.left) + ',' + Math.round(r.top); };
-      var r0 = cv.getBoundingClientRect();
-      var top = document.elementsFromPoint(r0.left + r0.width / 2, r0.top + r0.height / 2).slice(0, 3)
-        .map(function (e) { return e.tagName + (e.id ? '#' + e.id : ''); }).join('>');
-      console.log('GL 定案：主画布 ' + (MCV ? (MCV.width + 'x' + MCV.height + ' 盒 ' + _t(MCV)) : 'null') +
-        ' ‖ GL 画布 ' + cv.width + 'x' + cv.height + ' 盒 ' + _t(cv) + ' 视口 ' + gl.drawingBufferWidth + 'x' + gl.drawingBufferHeight +
-        ' ‖ nIdx ' + nIdx + ' nLine ' + nLine + ' err ' + gl.getError() + ' ‖ 中心最上面 ' + top +
-        ' ‖ GL 计算样式 ' + getComputedStyle(cv).position + '/' + getComputedStyle(cv).zIndex +
-        ' ‖ 主画布 zIndex ' + getComputedStyle(MCV).zIndex); }
+      console.log('GL 离屏首帧：canvas ' + cv.width + 'x' + cv.height + ' · 视口 ' + gl.drawingBufferWidth + 'x' + gl.drawingBufferHeight +
+        ' · nIdx ' + nIdx + ' nLine ' + nLine + ' · err ' + gl.getError() + ' · 在 DOM 里=' + (cv.parentNode ? '是' : '否')); }
+
     return true;
   }
   function clear() { if (ok) { gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); } }
@@ -1597,6 +1576,9 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
       var lRG = shell ? (pot ? [0.878, 0.694, 0.235, 0.55] : [0.224, 0.851, 0.541, 0.5])
                       : (pot ? [0.878, 0.694, 0.235, 0.22] : [0.224, 0.851, 0.541, 0.2]);
       GLM.draw(fRG, lRG);
+      /* E411 DS：**一次贴图**进主画布 ⇒ 壳落在 2D 绘制序列里（先壳后点，顺序天然正确），
+       *   层叠/z-index/命中测试全都不涉及；每帧那 ~29k 次调用（壳占 70%）变成这 1 次 drawImage。 */
+      g.drawImage(GLM.canvas(), 0, 0);
       return m;
     }
   } else if (GLM.on()) { GLM.clear(); }

@@ -1777,6 +1777,9 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
       var lRG = shell ? (pot ? [0.878, 0.694, 0.235, 0.55] : [0.224, 0.851, 0.541, 0.5])
                       : (pot ? [0.878, 0.694, 0.235, 0.22] : [0.224, 0.851, 0.541, 0.2]);
       GLM.draw(fRG, lRG);
+      /* E411 DS：**一次贴图**进主画布 ⇒ 壳落在 2D 绘制序列里（先壳后点，顺序天然正确），
+       *   层叠/z-index/命中测试全都不涉及；每帧那 ~29k 次调用（壳占 70%）变成这 1 次 drawImage。 */
+      g.drawImage(GLM.canvas(), 0, 0);
       return m;
     }
   } else if (GLM.on()) { GLM.clear(); }
