@@ -4,7 +4,7 @@
 
 ### 投影：kNN→t-SNE（保住率的硬指标）
 
-`--proj=tsne` 走 `tools/proj-tsne.mjs`（零依赖实现：**kNN@10 的对称化 + 早期夸大**），把 `x2/y2` 重算进 `champion-map/coords.tsv` 的 `xt2/yt2`。
+`--proj=tsne`（`champion-map/viewer.mjs` 的生成侧开关，默认就是 t-SNE，`--proj=old` 回旧布局）走 **`champion-map/proj-tsne.mjs`**（零依赖实现：**kNN@10 的对称化 + 早期夸大**），把 `x2/y2` 重算进 `champion-map/coords.tsv` 的 **`xt`/`yt`** 两列（三维那套是 `xt3/yt3/zt3`）。
 判据不是"看着像"，而是**局部邻域保住率**：kNN@10 = **0.08 → 0.52**（这正是"二维装得下这朵点云"的量化说法）。
 同时接上 3D 行为轴：§E393 把 `xt3/yt3/zt3` 接好，3D 态 0 报错、点云有界铺开。
 
