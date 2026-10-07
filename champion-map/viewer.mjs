@@ -1407,6 +1407,33 @@ function drawTree(fr) {
     else if (ch) { g.setLineDash([1.5 * devicePixelRatio, 3.5 * devicePixelRatio]); g.strokeStyle = 'rgba(159,176,204,.62)'; }
     g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - rowH * 0.5 * TKY, b[0], b[1]); g.stroke();
     g.restore(); g.strokeStyle = 'rgba(120,200,255,.30)'; }
+  /* ===== §E442 RUNNER-BASE 那批边接上（用户 10-08：「1.3.58 的线可以连上了，那谱系图底下第一行就可以删掉」）=====
+   *   靶包在盘上取不到（§E314 的 widhunt 扫过 2904 个包类 blob + 70 个 bundle 历史版本无命中；今晚再核一粒：
+   *   「docs/artifacts/.training-in-3p.js」的 wid = a92a45d7 ≠ d13d3c85）⇒ **不往 P 里造假点** ——
+   *   造了就要摊进枚数 / 家族行 / 过线判定 / 命中表 / 标签避让，任何一处没接就是新的"图上有一枚不存在的东西"。
+   *   改成：锚画在**时间轴最左 + 行块竖直中心**（语义 = 这些枚的父比图上所有点都早，且不属于任何家族），
+   *   边从各枚收到锚。alpha 压到 .13：467 条硬线会糊成一块板，而这条关系的读法是"一大片都从这儿来"，要的是雾。
+   *   ⚠ 只在 'all' 档画：'hash' 是"只画包自己记的实录级"，这条恰恰是 runner 覆写、不是血统；'off' 一条不画。 */
+  var RBX = null, NRB = 0;
+  if (st.edges === 'all' && NRBASE && fams.length) {
+    var axp = X(tmin), ayp = padT + fams.length * rowH * 0.5;
+    RBX = PS(axp, ayp, 0);
+    g.save(); g.strokeStyle = 'rgba(159,176,204,.13)'; g.lineWidth = 1 * devicePixelRatio;
+    for (i = 0; i < N; i++) { var dr = P[i];
+      if (!dr.pnm || String(dr.pnm).indexOf('RUNNER-BASE') !== 0 || !pos[dr.id]) continue;
+      var bp = pos[dr.id];
+      g.beginPath(); g.moveTo(RBX[0], RBX[1]);
+      g.quadraticCurveTo((RBX[0] + bp[0]) / 2, (RBX[1] + bp[1]) / 2 - rowH * 0.3 * TKY, bp[0], bp[1]); g.stroke(); NRB++; }
+    g.restore();
+    /* 锚本体：菱形 + 一句"我不是血统"（§E314 那笔账：81% 共父不自己说清楚就会被读成"演化收敛"）*/
+    if (NRB) { var ra = 5.5 * devicePixelRatio;
+      g.save(); g.fillStyle = 'rgba(159,176,204,.85)'; g.beginPath();
+      g.moveTo(RBX[0], RBX[1] - ra); g.lineTo(RBX[0] + ra, RBX[1]); g.lineTo(RBX[0], RBX[1] + ra); g.lineTo(RBX[0] - ra, RBX[1]);
+      g.closePath(); g.fill();
+      g.font = (10.5 * devicePixelRatio) + 'px system-ui,sans-serif'; g.textAlign = 'left';
+      g.fillStyle = 'rgba(159,176,204,.95)';
+      g.fillText('RUNNER-BASE d13d3c85（v1.3.58 覆写 · 盘上无此包 · 非血统）', RBX[0] + 9 * devicePixelRatio, RBX[1] - 7 * devicePixelRatio);
+      g.restore(); } }
   scr = new Array(N);
   for (i = 0; i < N; i++) { var d = P[i], p = pos[d.id]; if (!p) continue; scr[i] = p;
     var al = alphaOf(d); g.globalAlpha = al;
@@ -1437,7 +1464,7 @@ function drawTree(fr) {
    *   §E331 这条串必须**量过宽度**再上屏：它是单行 fillText，画布不折行，超长就从右缘直接截掉 ——
    *   1600px 窗口实测被截在"左键拖动 = 平移"之前，交互提示整段看不见。所以只留别处没有的信息：
    *   颜色口径/绿环在右上图例里，这里不重复。*/
-  var foot = '行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : st.color === 'sc' ? '当选键 sc − 现役' : 'F（线上口径势）') +
+  var foot1 = '行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : st.color === 'sc' ? '当选键 sc − 现役' : 'F（线上口径势）') +
     /* 色标方向必须跟着口径走：写死"蓝低 → 红高"会在 Δε 那档说反（那档是**红 = 脆**），
        在当选键这档更是彻底错（这档是**绿 = 比现役强、红 = 落后**）—— 图上画的与页脚说的不能是两件事。 */
     (st.color === 'sc' ? '（绿=强 ‖ 红=落后 ‖ 橙=判不动 ‖ 灰=未测）'
@@ -1445,12 +1472,18 @@ function drawTree(fr) {
       /* §E347：F 档回到"地形"读法（蓝低 → 红高），"相对现役"那件事交给第 6 档 rel ⇒ 页脚/图例按当前档现说，不许各讲一套。*/
         : st.color === 'F' ? '（蓝 = 低 = 地板 → 红 = 高 = 好 ‖ 针 = 现役那一档 ‖ 它在库内第 ' + Math.round(incPct()) + ' 百分位）'
         : st.color === 'rel' ? '（绿 = 比现役强 ‖ 灰 = 就是现役那一档 ‖ 红 = 不如现役）'
-        : (st.color === 'fam' || st.color === 'seed' ? '（点色 = ' + (st.color === 'fam' ? '训练方法家族' : 'RNG seed') + '，底图 = F 地形（蓝低 → 红高））' : '（蓝低 → 红高）')) +
-    ' · ' + (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝曲线 = 热启动父边（画了 ' + NEDG + ' 条'
+        : (st.color === 'fam' || st.color === 'seed' ? '（点色 = ' + (st.color === 'fam' ? '训练方法家族' : 'RNG seed') + '，底图 = F 地形（蓝低 → 红高））' : '（蓝低 → 红高）'));
+  /* §E442 页脚拆**两行**（用户 10-08：「超级长的第二行就可以分成两行显示」）：第一行 = 这张图怎么读（行/轴/颜色口径），
+   *   第二行 = 边与手势。⚠ 原来那个"量宽缩字"是**死代码**：先 measureText 算出该缩到几号，紧接着下一句又把字体写回 12px
+   *   ⇒ 缩字从未生效，超长那行是被画布右缘**截掉**的（她截图里"· 滚轮 = 横轴"整段看不见就是这件事）。 */
+  var foot2 = (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝曲线 = 热启动父边（画了 ' + NEDG + ' 条'
       + (st.edges === 'hash' ? ' ‖ 只实录级' : '') + '）') +
     /* §E378 接替边必须自己在图上说一句它是什么：它和血统边画在同一片地方，而两者的意思完全不同
        （'hash' 那一档不画它，所以那句计数跟着 NCHAIN 走，为 0 就整段不出现）*/
     (NCHAIN ? ' ‖ 灰点线 = 槽位接替边 ' + NCHAIN + ' 条（谁在这枚之前住过那个槽，不是血统）' : '') +
+    /* §E442：RUNNER-BASE 那批边现在**画得出来了**（收到时间轴最左那颗灰菱形），所以这句话从原来的"这条边上不画"
+       改成说清它连的是什么。'hash'/'off' 两档不画 ⇒ 计数为 0 就整段不出现，不许承诺图上没有的东西。 */
+    (NRB ? ' ‖ 灰雾 = RUNNER-BASE 覆写边 ' + NRB + ' 条（父 = v1.3.58 的 runner 覆写产物，盘上取不到那枚包 ⇒ 只当锚，不是血统）' : '') +
     /* §E333 页脚是单行 fillText（画布不折行），所以两态**各说各的手势**而不是把两段接起来：
        立体态把"滚轮/Shift+滚轮/拖动"换成"右键压扁错切"—— 那三件在二维态已经说过，长度也就不会顶出右缘。
        （§E331 立体态必须自己说清"高度是哪把尺"：颜色按秩铺、几何仍是线性，不写就会被当成同一件事。画布不认 markdown ⇒ 这句里不许带 *）*/
@@ -1459,21 +1492,18 @@ function drawTree(fr) {
     ' · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2) +
     /* §E363：倒挂边的条数必须在图上自己说清，否则读图的人只会看到"现役生了两星期前的包" */
     (NBACK ? ' · ⛔ 时间倒挂的父边 ' + NBACK + ' 条 = 按路径反查"今天的槽主"造出来的假血统（lineage.mjs §E367 应已退回，出现即守卫漏了来路）' : '');
-  var fw = g.measureText(foot).width / devicePixelRatio;
-  if (fw > (w - padL) / devicePixelRatio - 8) g.font = Math.round(12 * devicePixelRatio * (w - padL) / devicePixelRatio / fw) + 'px system-ui,sans-serif';
-  /* §E431 用户 10-08：底部这两行小字改从**页面最左侧**起、字号加大一档（原来跟着 padL 缩进、只有 12px）。 */
-  g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';   /* §E436 用户 10-08：13px 偏大 ⇒ 12px */
-  g.fillText(foot, 10 * devicePixelRatio, h - 14 * devicePixelRatio);
-  /* §E314 那根星形中心必须自己在图上说一句"我不是血统"，否则 81% 共父会被读成"演化收敛"。
-     ⚠ 只能另起一次 fillText：canvas 的 fillText **不认 \n**（第一版把它拼在同一串里 ⇒ 两段挤成一行、右缘被截，
-        而且 markdown 的 ** 在画布上是原样字符）。*/
-  /* §E331 图底三条字必须各占一行：日期刻度在 h − padB + 16（= h−50·dpr），这条 RUNNER-BASE 注在 h−32·dpr，
-   *   页脚说明在 h−14·dpr。旧版 padB=46 ⇒ 日期与这条注**同一个 y**（h−30·dpr），两段字直接叠成一坨（用户截图）。 */
-  if (NRBASE) { g.fillStyle = '#e0b13c';
-      /* §E431：同样从最左起、字号加大 */
-      g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-      g.fillText('另有 ' + NRBASE + ' 枚（' + Math.round(NRBASE * 100 / N) + '%）的父 = RUNNER-BASE（runner 覆写产物 · 不是血统）⇒ 这条边上不画',
-        10 * devicePixelRatio, h - 32 * devicePixelRatio); }
+  /* §E431：底部小字从**页面最左侧**起（原来跟着 padL 缩进）‖ §E436：13px 偏大 ⇒ 12px。
+   *   每行各自量宽：短了按 12px，长了才缩（缩到 9px 为止），不再出现"算完缩又写回原字号"那种死自适应。 */
+  function footLine(txt, y) {
+    g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
+    var fw = g.measureText(txt).width / devicePixelRatio, avail = (w - 20) / devicePixelRatio;
+    if (fw > avail) g.font = Math.max(9, Math.round(12 * avail / fw) * devicePixelRatio) + 'px system-ui,sans-serif';
+    g.fillText(txt, 10 * devicePixelRatio, y); }
+  /* §E331 图底三条字必须各占一行：日期刻度在 h − padB + 16（= h−50·dpr），页脚两行在 h−32 / h−14·dpr。
+   *   §E442 删掉了原来那条琥珀色的「另有 N 枚的父 = RUNNER-BASE ⇒ 这条边上不画」—— 那批边现在画得出来了，
+   *   它的话已经并进第二行（"灰雾 = RUNNER-BASE 覆写边 N 条…"），留两条反而逼着日期刻度与注挤在同一 y。 */
+  footLine(foot1, h - 32 * devicePixelRatio);
+  footLine(foot2, h - 14 * devicePixelRatio);
 }
 /* 「卡住缩放上界 + 背景不要割裂」：缩放的下界 = 场恰好铺满视口（再小就露出虚空）；平移卡到"场始终盖住整个视口"。
  *   由 kmin 的定义可证两个平移区间非空，所以 clamp 不会打架。*/
