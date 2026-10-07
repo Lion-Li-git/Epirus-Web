@@ -1896,6 +1896,10 @@ function paintLegend(fr) {
    *   柄画上去就永远贴在顶和底 —— 那条带说的是"色怎么铺"，这根轴说的是"窗在库里的哪一段"，两件事不能合成一根。*/
   var wr = document.createElement('div'); wr.style.display = 'flex'; wr.style.alignItems = 'flex-start'; wr.style.gap = '6px';
   wr.style.justifyContent = 'flex-end';   /* §E432 用户 10-08：色条与 F 轴要**右对齐**（原来在 flex 行里是左对齐）*/
+  /* §E434 DS（用户 10-08：「图例确实缩小了，但是还是很拉胯，左上空一大块」）：
+   *   这一行是 block 级 flex，会被容器宽度（由最长文字行撑到 ~260px）拉满 ⇒ 两个小 canvas 贴右、左边空出两百多像素。
+   *   做法：width 设 max-content 让它缩到内容宽，margin-left 设 auto 再把它贴到右缘 ⇒ 空白消失。 */
+  wr.style.width = 'max-content'; wr.style.marginLeft = 'auto';
   /* 这张 canvas **只造一次**，之后每帧只是搬个位置：图例是每帧重建的（paintLegend 里 innerHTML=''），
    *   跟着重建就会把绑在它上面的双击/按下监听一起扔掉（§E378 第一版"每次只能拖一格"的另一半）。*/
   if (!WINAX) { WINAX = document.createElement('canvas'); WINAX.id = 'winax';
@@ -1922,6 +1926,10 @@ function paintLegend(fr) {
   if (OKL.length && (st.color === 'fam' || st.color === 'seed')) {
     s2.textContent = '黄针 = 现役 · 绿环 = 逐枚过线 ' + OKL.length + '/' + POKJ;
     s2.title = '现跑同一道闸：feasibilityOf · n=20/aggr40/seat100';
+    /* §E434 DS：§E432 那笔把 s1 整行清空了（用户当时说顶部有选项框、这行是重复），但**颜色的含义**也跟着没了 ——
+     *   用户 10-08：「你刚才删的太多，现在图例颜色是啥没掉了，至少要保留这玩意是 F = Hp + T·S」。
+     *   ⇒ 恢复简短版（不写点色 = 家族，那是选项框的事），正好填掉左上那块空白。 */
+    s1.textContent = '底图 = F（Hp + T·S）· 蓝 = 低 → 红 = 高';
   }
 }
 /* ③ 家族图例 = 可点按钮（按成员数从多到少），点一个只留这些家族。
