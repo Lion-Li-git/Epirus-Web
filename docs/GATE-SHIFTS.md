@@ -10,7 +10,7 @@
 
 | 组 | 条数 | 管什么 | 跑它也等于跑 |
 |---|---|---|---|
-| `meta` | 15 | 仓库纪律：CHANGELOG/README/版本三处、门号、落盘残留、可复现性 | — |
+| `meta` | 16 | 仓库纪律：CHANGELOG/README/版本三处、门号、落盘残留、可复现性 | — |
 | `ship` | 36 | 出厂面：可行性闸、当选、promote、线上槽、METHODOLOGY/RULES-2P 的读面 | meta |
 | `train` | 104 | 训练侧：`js/train/`、chooser、特征、env 旋钮、并发跑器 | ship + meta |
 | `ui` | 7 | 页面与前端契约 | train + ship + meta |

@@ -194,8 +194,11 @@ if (existsSync(epsP)) {
  *   表由 `ship-scan.mjs` 从 git 里**逐提交算槽文件权重指纹**抽出来（不是按提交标题点名，那条会造假账）。 */
 const shipP = join(HERE, 'ship-times.tsv');
 let SHIP = {};
+/* §E378 旧槽位冠军的两把钟（§E376 只留了一把）：`SLOT_FIRST` = **第一次**进槽的时刻，
+ *   `SLOT_META` = 那枚包自己 META 里的写盘时刻（= 训出）。横轴用的是后者，理由见 §E378 那一节。 */
+let SLOT_FIRST = {}, SLOT_META = {};
 if (existsSync(shipP)) {
-  const sl = readFileSync(shipP, 'utf8').trim().split('\n'), sh = sl[0].split('\t');
+  const sl = readFileSync(shipP, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), sh = sl[0].split('\t');
   const sId = sh.indexOf('id'), sW = sh.indexOf('shipWhen'), sH = sh.indexOf('hash'), sV = sh.indexOf('version');
   for (const l of sl.slice(1)) { const c = l.split('\t'); if (!c[sId]) continue;
     SHIP[c[sId]] = { when: c[sW] || '', hash: c[sH] || '', ver: c[sV] || '' }; }
@@ -210,17 +213,25 @@ if (existsSync(shipP)) {
 const stlP = join(HERE, 'slot-timeline.tsv');
 if (existsSync(stlP)) {
   const tl = readFileSync(stlP, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), th = tl[0].split('\t');
-  const tW = th.indexOf('wid'), tF = th.indexOf('fromUTC'), tS = th.indexOf('sha');
+  const tW = th.indexOf('wid'), tF = th.indexOf('fromUTC'), tS = th.indexOf('sha'), tM = th.indexOf('metaTs');
   if (tW < 0 || tF < 0) console.log('⚠ slot-timeline.tsv 没有 wid/fromUTC 列（表头：' + tl[0] + '）⇒ 旧槽位冠军会退回"未上槽"');
   else {
     const BY8 = {};
-    for (const l of tl.slice(1)) { const c = l.split('\t'); if (!c[tW]) continue; BY8[c[tW].slice(0, 8)] = { when: c[tF] || '', hash: tS >= 0 ? (c[tS] || '') : '' }; }
+    for (const l of tl.slice(1)) { const c = l.split('\t'); if (!c[tW]) continue;
+      const w8 = c[tW].slice(0, 8);
+      /* §E378：这张表 39 段里只有 **32 个不同权重**（同一枚回槽过多次：实测 cc573172 两次、037b2f71 三次、
+       *   e379c62c 两次）。原来这份 BY8 是"后一行覆盖前一行"⇒ 记下来的是**最后一次**进槽的时刻，
+       *   而"上线"这件事的第一次才是它（也是 §E378 那条接替链不出现倒挂的前提）。改成只留第一次。 */
+      if (!(w8 in BY8)) { BY8[w8] = { when: c[tF] || '', hash: tS >= 0 ? (c[tS] || '') : '' };
+        SLOT_FIRST[w8] = c[tF] || ''; SLOT_META[w8] = tM >= 0 ? (c[tM] || '') : ''; } }
     let nstl = 0;
     for (const r of rows) { const id = String(r.id || '');
       if (id.indexOf('SLOT-') !== 0 || SHIP[id]) continue;
       const k = id.slice(5, 13);
       if (BY8[k]) { SHIP[id] = { when: BY8[k].when, hash: BY8[k].hash, ver: '' }; nstl++; } }
-    console.log('上线时刻补自**槽位时间轴** ' + nstl + ' 枚（旧槽位冠军 ‖ ship-times.tsv 覆盖不到的那几段 ‖ 时间轴共 ' + (tl.length - 1) + ' 段）');
+    console.log('上线时刻补自**槽位时间轴** ' + nstl + ' 枚（旧槽位冠军 ‖ ship-times.tsv 覆盖不到的那几段 ‖ 时间轴共 ' + (tl.length - 1) +
+      ' 段 / ' + Object.keys(SLOT_FIRST).length + ' 个不同权重 ‖ 横轴取 META 写盘时刻，有该时刻的 ' +
+      Object.keys(SLOT_META).filter(k => SLOT_META[k]).length + ' 个）');
   }
 } else console.log('提示：没有 slot-timeline.tsv ⇒ 旧槽位冠军会全部落在"未上槽"里（跑 node champion-map/slot-timeline.mjs）');
 const DATA = rows.map(r => ({
@@ -289,13 +300,55 @@ for (const r of DATA) if (r.fam && LIN[r.id]) FAMLAB[r.fam] = LIN[r.id].famLabel
  *   ⚠ `fam = 0` 在 JS 里是 falsy，而行表与几处判据都写的是 `if (P[i].fam …)` ⇒ 必须另带一个 `famTop` 标记，
  *     并把那几处改成"有家族号 **或** 是这一行"。 */
 (function () {
-  var n = 0;
+  var n = 0, nmeta = 0;
   for (const d of DATA) { if (!d.old) continue;
     d.fam = 0; d.famTop = 1;
-    if (!d.ts && SHIP[d.id] && SHIP[d.id].when) d.ts = SHIP[d.id].when;
+    /* §E378 横轴改取**训出/写盘**时刻（slot-timeline 的 metaTs），不再拿上槽时刻顶。
+     *   理由不是"哪个更正"，是**同一根轴上不能有两把钟**：其余 901 枚的 ts 全部出自 lineage.tsv（训出），
+     *   而 §E376 给这 16 枚填的是上槽时刻 ⇒ 一接血统边就出现"父比子晚"（实测 57 条里有 4 条这样倒挂，
+     *   而那 4 条是真的从这份权重热启动出来的）。上槽时刻仍然留着，但它是 `d.sh`（冠军序列那一列读它）。
+     *   ⚠ metaTs 抽不到就**留空**：留空 ⇒ 这一枚不落格 ⇒ 页内自检「旧包必须真被画出来」当场红，
+     *     比悄悄换一把钟好（第 92 条：两个时代的读数不许并成一句话）。 */
+    const w8 = String(d.id).slice(5, 13);
+    if (SLOT_META[w8]) { d.ts = SLOT_META[w8]; nmeta++; }
     n++; }
-  if (n) { FAMLAB[0] = '旧槽位冠军 ' + n + ' 枚（面板上没名字那批 · 横轴位置 = 上槽时刻，不是训出时刻 · 父边待 #156）';
-    console.log('谱系图补一行合成家族：' + n + ' 枚旧槽位冠军 → 家族 0（排在最上面；父边不画）'); }
+  if (n) { FAMLAB[0] = '旧槽位冠军 ' + n + ' 枚（面板上没名字那批 · 横轴 = 训出时刻 ‖ 上槽时刻在冠军序列那一列 · 点线 = 接替边）';
+    console.log('谱系图补一行合成家族：' + n + ' 枚旧槽位冠军 → 家族 0（排在最上面 ‖ 横轴取 metaTs 的 ' + nmeta + ' 枚）'); }
+})();
+/* ===== §E378（#156）旧冠军的连线：15 条**槽位接替边** + 把悬空的实录血统边接回它的父 =====
+ *   用户 10-07：「连线做一下吧……连线说的是旧冠军相关的连线」。两批边的**来路不同**，所以线型不同、页脚分开说：
+ *   ① 接替边（灰点线）：说的是"上一次住在那个槽里的是谁"，**不是**"谁生了谁"。这 16 枚在 lineage.tsv 里天生没有行，
+ *      真正的训练父一枚都没留下证据（实测：14/16 连 META 里都没有 hotstartFrom；e379c62c 记的 f6788d9c… 在盘上
+ *      1503 份产物与 634 个可达 git blob 里都查无 ⇒ 那条只能继续空着）。
+ *      ⚠ 链必须按**首次进槽**去重之后再连：那张表 39 段只有 32 个不同权重，按行直连会造出自边与环
+ *        （实测出现 e379c62c ← e379c62c，且 037b2f71 同时被三段当父）。
+ *   ② 悬空的血统边（淡蓝曲线，与其余血统边同型）：lineage.tsv 里 parent='e379c62c' 而 parentOf 写的是**文件名**
+ *      「champion-5p-ab2-base」⇒ §E376 之前图上没有这个节点，**57 条实录边（parentSrc=hash，最硬的一级来路）静默不画**。
+ *      §E374 已证到底：那份文件的权重与 SLOT-e379c62c 是同一枚 ⇒ 别名成立。
+ *      ⚠ 为什么别名做在这一层而不是回 lineage.mjs 改表：SLOT-* 这批节点是本文件合成的，lineage.tsv 里没有它们的行
+ *        ⇒ 生成器看不见靶节点，接不了。别名在这里解，就必须在这里自证（页内那条判据按 wid 前缀核身份，第 92 条①）。
+ *      ⚠ 57 条里只接 **56**：long-33 训出于 09-12 13:26，而 e379c62c 的 META 写盘是 14:15 ⇒ 接上就是一条
+ *        "父比子晚"的边，而图上那个琥珀虚线的意思恰恰是"假血统"（§E367）。宁可少画一条，并把它记在判据里。
+ *   ③ 584 枚共父 d13d3c85 仍然不画（页脚那条 RUNNER-BASE 注就是它）：机械上它们确实从"当时的现役"热启动，
+ *      但 runner 对每一枚候选都拷同一份 ⇒ 这条边不带方法信息，画出来是 584 根收在一个点的扇形。 */
+(function () {
+  const byId = {}; for (const d of DATA) byId[d.id] = d;
+  const olds = DATA.filter(d => d.old && d.ts);
+  const ord = olds.slice().sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
+  let nchain = 0;
+  for (let i = 1; i < ord.length; i++) { const c = ord[i], p = ord[i - 1];
+    if (c.pof || p.id === c.id) continue;
+    c.par = String(p.id).slice(5, 13); c.pof = p.id; c.psrc = 'slot-chain'; nchain++; }
+  const tgt = byId['SLOT-e379c62c'];
+  let nfix = 0, held = 0;
+  if (tgt) for (const d of DATA) { if (d.pof !== 'champion-5p-ab2-base') continue;
+    /* 身份守卫先于接线：父哈希必须真的是这枚节点的权重（不是"名字看着像"） */
+    if (String(d.par).slice(0, 8) === String(tgt.id).slice(5, 13) && Date.parse(d.ts) > Date.parse(tgt.ts)) { d.pof = tgt.id; nfix++; continue; }
+    /* 挡下来的必须**显式退回**，不许留着那个图上没有的文件名 —— 留着就是"静默少画"（§E378 之前 57 条就是这么没的）。
+     *   走的是本仓已有的 demoted 形状（lineage.mjs §E367：不可信的父 ⇒ 退回不可考 + 标来路）。 */
+    d.pof = ''; d.psrc = 'demoted-time'; held++; }
+  console.log('§E378 接线：接替边 ' + nchain + ' 条（' + olds.length + ' 枚旧槽位冠军的链，按训出时刻排）‖ 悬空血统边接回 SLOT-e379c62c ' +
+    nfix + ' 条 ‖ 被时间/身份守卫退回 ' + held + ' 条');
 })();
 console.log('家族 ' + Object.keys(FAMLAB).length + ' 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 ' + DATA.filter(d => !d.fam && !d.famTop).length + ' 枚');
 console.log('过线判定源 = ' + (OKSRC || '无 ⇒ 不标绿环') + ' ‖ 有判定 ' + POK + ' 枚 ‖ 判为过线 ' + DATA.filter(d => d.ok === 1).length +
@@ -335,6 +388,7 @@ var NRBASE = 0;
 var TSBY = {};
 /* §E373 这一帧真的画了几条父边 —— 连线开关的判据要能读到它（页内自检拿它 + 像素差一起判，见 §E338 末尾）*/
 var NEDG = 0;
+var NCHAIN = 0;   /* §E378 这一帧画了几条**接替边**（页脚与页内自检都读它，不许各自数一份）*/
 (function () { for (var i = 0; i < N; i++) TSBY[P[i].id] = P[i].ts || ''; })();
 function backOf(d) {   /* 返回"父节点的 ts"，当且仅当它晚于本枚（空串 = 正常边 / 父不在图上）*/
   if (!d.pof || !d.ts) return '';
@@ -983,6 +1037,7 @@ function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, WX, WY, f
 }
 
 /* ⑤ §E304 谱系图：**行 = 家族（按最早 ts 排，所以从上往下就是时间推进）**，横轴 = 训练时刻。
+/* ⑤ §E304 谱系图：**行 = 家族（按最早 ts 排，所以从上往下就是时间推进）**，横轴 = 训练时刻。
  *   为什么需要它：二维/三维那张图回答"这枚长什么样"，回答不了"哪一次方法改动把 F 抬上去了"——
  *   后者要的是 (家族 × 时间) 的排布，而且必须能看见**热启动父**这条血统边。
  *   颜色恒为 F（行已经把家族表达了，再按家族上色就是重复编码）；绿环 = 过线，墨环 = 历代冠军。
@@ -1089,20 +1144,24 @@ function drawTree(fr) {
       if (!pb || !gb || Math.abs(pb[1] - gb[1]) < 1.5) continue;
       g.beginPath(); g.moveTo(gb[0], gb[1]); g.lineTo(pb[0], pb[1]); g.stroke(); } }
   g.strokeStyle = 'rgba(120,200,255,.30)'; g.lineWidth = 1 * devicePixelRatio;
-  var NBACK = 0; NEDG = 0;
+  var NBACK = 0; NEDG = 0; NCHAIN = 0;
   for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
     /* §E373 连线开关（用户："给一个连线开关不然可能会太多挡住了"）：
-     *   'off' 一条不画；'hash' 只画包自己记下的那份权重哈希（§E367 之后最硬的一级来路）。 */
+     *   'off' 一条不画；'hash' 只画包自己记下的那份权重哈希（§E367 之后最硬的一级来路）。
+     *   §E378 的接替边 psrc='slot-chain' ⇒ 在 'hash' 档**不画**（它不是血统，不该混进"只画实录"那一档）。 */
     if (st.edges === 'off') break;
     if (st.edges === 'hash' && dd.psrc !== 'hash') continue;
     NEDG++;
     var a = pos[dd.pof], b = pos[dd.id];
-    /* §E363 倒挂边（父的 ts 晚于子）走虚线 + 琥珀色：它连的是权重，不是"谁生了谁"的时间顺序 */
-    var bk = backOf(dd);
-    if (bk) { NBACK++; g.save(); g.setLineDash([4 * devicePixelRatio, 4 * devicePixelRatio]);
-      g.strokeStyle = 'rgba(224,177,60,.62)'; }
+    /* §E363 倒挂边（父的 ts 晚于子）走虚线 + 琥珀色：它连的是权重，不是"谁生了谁"的时间顺序
+     *   §E378 接替边走**点线 + 灰**：它连的是"谁在谁之前住过那个槽"，与血统、与假血统都不是一回事。 */
+    var bk = backOf(dd), ch = dd.psrc === 'slot-chain';
+    if (ch) NCHAIN++;
+    g.save();
+    if (bk) { NBACK++; g.setLineDash([4 * devicePixelRatio, 4 * devicePixelRatio]); g.strokeStyle = 'rgba(224,177,60,.62)'; }
+    else if (ch) { g.setLineDash([1.5 * devicePixelRatio, 3.5 * devicePixelRatio]); g.strokeStyle = 'rgba(159,176,204,.62)'; }
     g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - rowH * 0.5 * TKY, b[0], b[1]); g.stroke();
-    if (bk) { g.restore(); g.strokeStyle = 'rgba(120,200,255,.30)'; } }
+    g.restore(); g.strokeStyle = 'rgba(120,200,255,.30)'; }
   scr = new Array(N);
   for (i = 0; i < N; i++) { var d = P[i], p = pos[d.id]; if (!p) continue; scr[i] = p;
     var al = alphaOf(d); g.globalAlpha = al;
@@ -1149,6 +1208,9 @@ function drawTree(fr) {
         : (st.color === 'fam' || st.color === 'seed' ? '（点色 = ' + (st.color === 'fam' ? '训练方法家族' : 'RNG seed') + '，底图 = F 地形（蓝低 → 红高））' : '（蓝低 → 红高）')) +
     ' · ' + (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝曲线 = 热启动父边（画了 ' + NEDG + ' 条'
       + (st.edges === 'hash' ? ' ‖ 只实录级' : '') + '）') +
+    /* §E378 接替边必须自己在图上说一句它是什么：它和血统边画在同一片地方，而两者的意思完全不同
+       （'hash' 那一档不画它，所以那句计数跟着 NCHAIN 走，为 0 就整段不出现）*/
+    (NCHAIN ? ' ‖ 灰点线 = 槽位接替边 ' + NCHAIN + ' 条（谁在这枚之前住过那个槽，不是血统）' : '') +
     /* §E333 页脚是单行 fillText（画布不折行），所以两态**各说各的手势**而不是把两段接起来：
        立体态把"滚轮/Shift+滚轮/拖动"换成"右键压扁错切"—— 那三件在二维态已经说过，长度也就不会顶出右缘。
        （§E331 立体态必须自己说清"高度是哪把尺"：颜色按秩铺、几何仍是线性，不写就会被当成同一件事。画布不认 markdown ⇒ 这句里不许带 *）*/
@@ -1664,7 +1726,17 @@ function paintLegend(fr) {
     : (st.color === 'fam' || st.color === 'seed') ? ('（底图色标：下 = 地板 ‖ 上 = 好 ‖ 黄针 = 现役）')
     : st.color === 'rel' ? ('红 = 不如现役（F 底 ' + fr[0].toFixed(2) + '）')
     : ('蓝 = 地板（F 底 ' + CB.lo.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最低' : ' ‖ 灰 = 库内中位') + '）');
-  lg.appendChild(s1); lg.appendChild(c); lg.appendChild(s2);
+  /* §E378 强度窗口的控制轴就贴在这条色带旁边（用户 10-07：「做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）。
+   *   为什么是**并排另一根轴**而不是把柄画在这条带上：这条带的两端在窗口态读的是**窗内两端**（§E373），
+   *   柄画上去就永远贴在顶和底 —— 那条带说的是"色怎么铺"，这根轴说的是"窗在库里的哪一段"，两件事不能合成一根。*/
+  var wr = document.createElement('div'); wr.style.display = 'flex'; wr.style.alignItems = 'flex-start'; wr.style.gap = '6px';
+  var wa = document.createElement('canvas'); wa.id = 'winax';
+  wa.width = AXW * devicePixelRatio; wa.height = AXH * devicePixelRatio;
+  wa.style.width = AXW + 'px'; wa.style.height = AXH + 'px';
+  WINAX = wa; winaxBind(wa);
+  wr.appendChild(c); wr.appendChild(wa);
+  lg.appendChild(s1); lg.appendChild(wr); lg.appendChild(s2);
+  winaxDraw();
   /* §E330/§E347：这根带**到底在量什么**必须印出来 —— 不印，读图的人会把"中性灰"当成"不好不坏的绝对电平"，
    *   而 F 档的灰其实是"库里第 50% 名"、rel 档的灰才是"就是现役那一档"。两档共用一个 18px 的条，说法完全不同。*/
   if (st.color === 'F' || st.color === 'rel') { var sm = document.createElement('div'); sm.style.color = 'var(--dim)';
@@ -1806,26 +1878,53 @@ function paintSide() {
 }
 document.getElementById('batch').addEventListener('change', function () { st.batch = this.value; recomputeVIS();
   buildFamBar(); paintSide(); req(); });
-/* ===== §E371 强度窗口（用户："默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示"）=====
- *   两根滑杆各管一端，**不许交叉**（交叉就顶住对方留 0.005 的最小缝 ⇒ 图上永远有东西可看，
- *   不会出现"拉到看不见还以为是数据没了"那种空图）。窗口存在的是比例，所以换 T 之后不漂移。 */
+/* ===== §E371 强度窗口（用户："默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示"）
+ *   §E378 换成一根竖轴（用户 10-07：「F窗口用两个独立的轴调很奇怪，你直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）
+ *   整根 = 全库 F 值域的比例 [0,1]（顶 = 高 F）‖ 亮段 = 当前窗口 ‖ 两个黄柄 = 窗口的两端，可拖、双击回全范围。
+ *   两端不许交叉（交叉就顶住对方留最小缝 ⇒ 图上永远有东西可看，不会出现"拉到看不见还以为是数据没了"的空图），
+ *   但**各自必须能拉到 0 与 1** —— 窗口存的是比例，所以换 T 之后不漂移。 */
 function nWin() { var n = 0; for (var i = 0; i < N; i++) if (inWin(P[i])) n++; return n; }
+var WINAX = null;                       /* 图例里那根轴的 canvas（paintLegend 每次重建图例 ⇒ 这里跟着换一份）*/
+var AXW = 26, AXH = 150;                /* CSS 尺寸；位图按 dpr（§E372 的教训：指针换算必须按实际盒子，不是按 dpr 反推）*/
+function axY(f, H) { return (1 - f) * H; }
+function winaxDraw() {
+  var c = WINAX; if (!c) return;
+  var a = c.getContext('2d'), W = c.width, H = c.height, d = devicePixelRatio, x = Math.round(W / 2);
+  a.clearRect(0, 0, W, H);
+  a.strokeStyle = 'rgba(159,176,204,.55)'; a.lineWidth = Math.max(1, d);
+  a.beginPath(); a.moveTo(x, axY(1, H)); a.lineTo(x, axY(0, H)); a.stroke();          /* 整根 = 全库值域 */
+  a.strokeStyle = '#7fd1ff'; a.lineWidth = 3 * d;
+  a.beginPath(); a.moveTo(x, axY(st.fhi, H)); a.lineTo(x, axY(st.flo, H)); a.stroke(); /* 亮段 = 窗口内 */
+  a.fillStyle = '#ffd166';
+  a.fillRect(0, axY(st.fhi, H) - 2.5 * d, W, 5 * d);
+  a.fillRect(0, axY(st.flo, H) - 2.5 * d, W, 5 * d);
+}
+function winaxFrac(e, c) { var r = c.getBoundingClientRect();
+  return Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / (r.height || 1))); }
+function winaxBind(c) {
+  var hold = null; c.style.cursor = 'ns-resize';
+  c.addEventListener('pointerdown', function (e) { var f = winaxFrac(e, c), H = c.height;
+    hold = Math.abs(axY(st.flo, H) - (1 - f) * H) <= Math.abs(axY(st.fhi, H) - (1 - f) * H) ? 'lo' : 'hi';
+    try { c.setPointerCapture(e.pointerId); } catch (E) { }
+    e.preventDefault(); });
+  c.addEventListener('pointermove', function (e) { if (!hold) return; var f = winaxFrac(e, c);
+    if (hold === 'lo') setWin(f, st.fhi); else setWin(st.flo, f); });
+  c.addEventListener('pointerup', function () { hold = null; });
+  c.addEventListener('pointercancel', function () { hold = null; });
+  c.addEventListener('dblclick', function () { setWin(0, 1); });
+}
 function paintWin() {
   var el = document.getElementById('wv'); if (!el) return;
-  var lo = document.getElementById('wlo'), hi = document.getElementById('whi');
-  if (lo && +lo.value !== st.flo) lo.value = st.flo;
-  if (hi && +hi.value !== st.fhi) hi.value = st.fhi;
   el.textContent = winFull() ? '全范围（' + N + ' 枚）'
     : winLo().toFixed(3) + ' … ' + winHi().toFixed(3) + ' ‖ ' + nWin() + '/' + N + ' 枚在窗内';
   el.style.color = (!winFull() && !inWin(INC)) ? '#ffb454' : 'var(--dim)';
-  markWinPre();   /* 手拖过滑杆之后，档位按钮的高亮必须跟着掉（否则"看着还停在现役±10pt"其实是另一段） */
+  winaxDraw();
+  markWinPre();   /* 手拖过轴之后，档位按钮的高亮必须跟着掉（否则"看着还停在现役±10pt"其实是另一段） */
 }
 function setWin(a, b) {
   st.flo = Math.max(0, Math.min(0.995, a)); st.fhi = Math.min(1, Math.max(st.flo + 0.005, b));
   recomputeVIS(); buildFamBar(); paintSide(); paintWin(); req();
 }
-document.getElementById('wlo').addEventListener('input', function () { setWin(+this.value, st.fhi); });
-document.getElementById('whi').addEventListener('input', function () { setWin(st.flo, +this.value); });
 /* ===== §E373 默认档位（用户："你其实可以给几个默认的缩放档位（比如当前不加旧包就可以当做一个档位）"）=====
  *   每个档位给一组 [flo, fhi]（仍是"占全库 F 值域的比例"），点一下就把两端推过去；手拖滑杆后高亮自动跟。
  *   need:1 的两档**只在旧冠军真的被画进图里时出现**（要不要画 = 待裁），所以现在这张图上只会有两档 ——
@@ -2387,14 +2486,39 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     _e7 ? ('psrc=' + (_e7.psrc || '(空)') + ' ‖ parentOf=' + (_e7.pof || '(空)') + ' ‖ 其 ts=' + (TSBY[_e7.pof] || '—') + '（本枚 ' + _e7.ts + '）') : '图上查无此枚');
   T('全库不许有任何时间倒挂的父边（0 条 ⇒ 有就是守卫漏了来路，图上会拿假血统画实线）',
     BK.length === 0, BK.length + ' 条：' + BK.slice(0, 4).map(function (d) { return d.id + '→' + d.pof; }).join(' ‖ '));
-  T('父边来路必须标全：有父边的只能来自 hash/seedpack/arm/slot-at-time，标 demoted 的一律不许还有父边',
+  T('父边来路必须标全：有父边的只能来自 hash/seedpack/arm/slot-at-time/slot-chain，标 demoted 的一律不许还有父边',
     (function () {
       for (var q = 0; q < N; q++) { var d = P[q];
-        if (d.pof && ['hash', 'seedpack', 'arm', 'slot-at-time'].indexOf(d.psrc) < 0) return false;
-        if (d.psrc === 'demoted' && d.pof) return false; }
+        if (d.pof && ['hash', 'seedpack', 'arm', 'slot-at-time', 'slot-chain'].indexOf(d.psrc) < 0) return false;
+        if ((d.psrc === 'demoted' || d.psrc === 'demoted-time') && d.pof) return false; }
       return P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length >= 1; })(),
     '按时间轴改接 ' + P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length + ' 枚 ‖ 退回不可考 ' + DM.length + ' 枚 ‖ 有父边 '
       + P.filter(function (d) { return d.pof; }).length + ' 枚');
+  /* ===== §E378 旧冠军的连线：三条判据（悬空边 / 接替链的形状 / 横轴那把钟）=====
+   *   第一条是**这次真正的收获**：§E376 之前有 57 条 parentOf 指向一个图上没有的节点（写的是文件名），
+   *   边就静默没了 —— 画了多少条没人对账。所以这条判据不判"接回几条"（那个数会变），
+   *   判的是**不许再有指向空气的父边**。牙口：把 §E378 那段接线注掉 ⇒ 它必须红在"57 条指向没有节点的枚"。 */
+  var IDSET = {}; for (var qz = 0; qz < N; qz++) IDSET[P[qz].id] = 1;
+  var DANGL = P.filter(function (d) { return d.pof && !IDSET[d.pof]; });
+  T('不许有任何父边指向图上不存在的枚（§E378 那 57 条静默丢失就是这么来的）',
+    DANGL.length === 0, DANGL.length + ' 条：' + DANGL.slice(0, 4).map(function (d) { return d.id + '→' + d.pof; }).join(' ‖ '));
+  /* 接替链：结构式判据（不写死 15 这个数 —— 库里旧包增减它就漂，正是第 89 条说的那类钉措辞的腿） */
+  var OLDS = P.filter(function (d) { return d.old; });
+  var CHN = OLDS.filter(function (d) { return d.psrc === 'slot-chain'; });
+  var CHHEAD = OLDS.filter(function (d) { return d.psrc !== 'slot-chain'; });
+  T('接替链必须是一条链：除链头那一枚（最早进槽的）之外全员有接替父，且父也只能是这一批里的、不许自边、不许倒挂',
+    OLDS.length === 0 || (CHHEAD.length === 1 && CHN.length === OLDS.length - 1 &&
+      CHN.every(function (d) { return d.pof !== d.id && P.some(function (e) { return e.id === d.pof && e.old; }) && !backOf(d); })),
+    OLDS.length + ' 枚旧包 ‖ 有接替父 ' + CHN.length + ' ‖ 链头 ' + CHHEAD.map(function (d) { return d.id; }).join(' ') +
+      ' ‖ 倒挂 ' + CHN.filter(function (d) { return backOf(d); }).length);
+  /* 横轴那把钟：这 16 枚的 ts 必须来自 META 写盘（训出），不是上槽时刻 —— 两者差 14 分钟到几天不等，
+   *   而同一根轴上混两把钟会让真血统边看起来"父比子晚"（实测拿上槽时刻填 ts 时 57 条里倒挂 4 条）。
+   *   判据按"两列必须不同源"判，不按某枚的具体时间判 ⇒ 谁把 ts 换回 sh，这一条当场红。 */
+  T('旧槽位冠军的横轴必须是训出时刻（ts 与上槽时刻 sh 不同源；同一根轴上不许有两把钟）',
+    OLDS.length === 0 || (OLDS.every(function (d) { return !!d.ts; }) && OLDS.filter(function (d) { return d.ts === d.sh; }).length === 0 &&
+      OLDS.every(function (d) { return Date.parse(d.ts) <= Date.parse(d.sh); })),
+    'ts 空的 ' + OLDS.filter(function (d) { return !d.ts; }).length + ' ‖ ts 与 sh 同值的 ' + OLDS.filter(function (d) { return d.ts === d.sh; }).length +
+      ' ‖ ts 晚于 sh 的 ' + OLDS.filter(function (d) { return Date.parse(d.ts) > Date.parse(d.sh); }).length);
   /* ===== §E369 → §E377 渲染空间：立体态**不再有任何形式的"把整张图塞进窗口"**（用户："看的很难受，把这个东西去掉"）=====
    *   这一条原来钉的是"旋转到刁钻角度后所有可见点必须仍在画布内（拟合生效）"。拟合撤掉之后这句话不再成立，
    *   但**不能因此删了判据**（那就变成"改了行为还留着旧承诺的门"）。换成三句各自可反证的话：
@@ -2561,10 +2685,41 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var SNAPW = { flo: st.flo, fhi: st.fhi, batch: st.batch };
   /* 装载一致性：深链 #flo= 写的是 st，而滑杆与读数写的是 HTML 默认值 ⇒ 初始化不回压一次，
    *   页面就会"按窗口画、却写着全范围"（这张图我拿截图抓到过一次）。跑 check 时带 flo= 才会真的量到这一条。 */
-  var _wl = document.getElementById('wlo'), _wh = document.getElementById('whi');
-  T('强度窗口：装载后工具栏必须与 st 一致（带 #flo=/#fhi= 跑 check 时才真的量这一条）',
-    !!_wl && !!_wh && +_wl.value === st.flo && +_wh.value === st.fhi,
-    '滑杆 ' + (_wl ? _wl.value : '无') + '/' + (_wh ? _wh.value : '无') + ' ‖ st ' + st.flo + '/' + st.fhi);
+  /* 装载一致性（§E378 换了形状：两根横滑杆 → 图例旁一根竖轴）：**轴上画出来的两个柄**必须落在 st 的两端。
+   *   判据读像素，不回头读 st（读 st 就是"信代码自己的说法"，第 91 条红过的那件事）。
+   *   原来那一条读的是 #wlo/#whi 的 value，而滑杆与 st 各有一份默认值 ⇒ 深链 #flo= 时"按窗口画、却写着全范围"
+   *   就是这么来的；换成像素之后这一条顺带把"轴根本没画出来"也判红（明细会点名"图例里没有那根轴"）。 */
+  function axHandleRows() { var c2 = document.getElementById('winax'); if (!c2) return null;
+    var a2 = c2.getContext('2d'), img, out = [];
+    try { img = a2.getImageData(0, 0, c2.width, c2.height).data; } catch (E) { return null; }
+    for (var y = 0; y < c2.height; y++) { var n = 0;
+      for (var x = 0; x < c2.width; x++) { var q = (y * c2.width + x) * 4;
+        if (img[q] > 200 && img[q + 1] > 170 && img[q + 2] < 140) n++; }   /* 柄 = #ffd166 */
+      if (n > c2.width * 0.6) out.push(y); }
+    return out; }
+  function grpMid(rows) { var out = [], cur = [];
+    for (var i = 0; i < rows.length; i++) { if (cur.length && rows[i] - cur[cur.length - 1] > 2) { out.push(cur); cur = []; } cur.push(rows[i]); }
+    if (cur.length) out.push(cur);
+    return out.map(function (z) { var s = 0; for (var j = 0; j < z.length; j++) s += z[j]; return s / z.length; }); }
+  var AXH2 = (document.getElementById('winax') || { height: 0 }).height;
+  var AR = axHandleRows(), AG = AR ? grpMid(AR) : [];
+  T('F窗口轴：轴上画出来的两个柄必须与 st 的两端一致（读像素 ‖ 出厂态 = 顶与底）',
+    !!AR && AG.length === 2 && Math.abs(AG[0] - axY(st.fhi, AXH2)) <= 2.5 * devicePixelRatio &&
+      Math.abs(AG[1] - axY(st.flo, AXH2)) <= 2.5 * devicePixelRatio,
+    AR ? ('柄的像素行 ' + AG.map(function (v) { return Math.round(v); }).join(' / ') + ' ‖ st 要 ' +
+      Math.round(axY(st.fhi, AXH2)) + ' / ' + Math.round(axY(st.flo, AXH2)) + ' ‖ 轴高 ' + AXH2) : '图例里没有那根轴');
+  /* 拖它必须真的改窗口：派**真 PointerEvent**（直接调 setWin 只证明函数会改数，不证明这根轴接得上）*/
+  var SNAPW2 = { flo: st.flo, fhi: st.fhi };
+  var AX2 = document.getElementById('winax'), rr2 = AX2 && AX2.getBoundingClientRect();
+  if (rr2) { var pev = function (t, cy) { AX2.dispatchEvent(new PointerEvent(t,
+      { pointerId: 7, clientX: rr2.left + rr2.width / 2, clientY: cy, bubbles: true, cancelable: true })); };
+    /* 顶 = 高 F、底 = 低 F ⇒ 从中间按下（出厂态两柄一个在顶一个在底，中点等距 ⇒ 拿到的就是下沿），
+     *   再拖到**离底 25%** 那一档 ⇒ 下沿应当变成 0.25。 */
+    pev('pointerdown', rr2.top + rr2.height * 0.5); pev('pointermove', rr2.top + rr2.height * 0.75); pev('pointerup', rr2.top + rr2.height * 0.75); }
+  T('F窗口轴：拖下端那个柄必须真的把窗口下沿推过去（派真 PointerEvent ‖ 上沿不许被带着走）',
+    !!rr2 && Math.abs(st.flo - 0.25) <= 0.01 && st.fhi === SNAPW2.fhi,
+    '把下沿拖到离底 25% 之后 flo=' + st.flo.toFixed(3) + ' ‖ fhi=' + st.fhi.toFixed(3) + '（拖之前 ' + SNAPW2.flo.toFixed(3) + '/' + SNAPW2.fhi.toFixed(3) + '）');
+  setWin(SNAPW2.flo, SNAPW2.fhi);
   var HASWIN = (location.hash || '').indexOf('flo=') >= 0 || (location.hash || '').indexOf('fhi=') >= 0;
   T('强度窗口：不带深链时出厂态就是全范围，且一枚都不切（带 flo= 跑时这一条不适用，明细会说明）',
     HASWIN || (winFull() && nWin() === N),
@@ -2783,8 +2938,10 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '#stat{position:absolute;left:14px;top:10px;color:var(--dim);font-size:12px}\n' +
 'label{color:var(--dim);display:flex;gap:6px;align-items:center}\n' +
 /* §E371 强度窗口那两根：默认宽度（约 128px）会把工具栏挤到多一行，而这两根本来就是"拉个区间"的细活 ⇒ 收窄。 */
-'#winrow input[type=range]{width:84px}\n' +
 '#winrow span{min-width:132px;font-variant-numeric:tabular-nums}\n' +
+/* §E378 两根横滑杆换成图例旁一根竖轴 ⇒ 那行只剩读数 + 一句"去哪儿拖"；滑杆那条宽度规则一起撤。 */
+'#whint{color:var(--dim);font-size:11px;min-width:0}\n' +
+'#winax{border:1px solid var(--line);border-radius:3px;touch-action:none}\n' +
 '#fit{position:absolute;left:14px;bottom:14px;color:var(--dim);font-size:11px;max-width:640px;line-height:1.5}\n' +
 /* §E338 三块新面板（用户 ②③⑤）：
  *   #card   = 选中那枚的"冠军卡"（含**相对现役**的位置，这是 ③ 后半句要的）
@@ -2818,7 +2975,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="rel" title="底图默认是地形：蓝=低 → 红=高，中性灰在库内中位。&#10;这一档换成判决：以现役为分界，绿=比现役强 ‖ 红=不如 ‖ 灰=现役那一档。&#10;为什么不当默认：现役落在库内第 82 百分位，拿它当中性灰会把 82% 的图涂成一片红，底图就没地形了。">相对现役（绿=强 / 红=不如）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="duel">对现役决斗（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键 sc − 现役（实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
 '<label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">批次 <select id="batch"></select></label>' +
-'<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」—— 两根滑杆 = 全库 F 值域里的两个位置。&#10;窗口内：色带按**这一段**重新铺满（中位落中性灰，两端顶到色端）。&#10;窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时绿红分界看不见，页脚会响亮说一句。">F窗口 <input type="range" id="wlo" min="0" max="1" step="0.005" value="0"><input type="range" id="whi" min="0" max="1" step="0.005" value="1"><span id="wv">全范围</span></label>' +
+'<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label>' +
 '<span id="winpre" style="display:flex;gap:4px;align-items:center"></span>' +
 '<label id="edgerow" title="§E373（用户 10-07：「给一个连线开关不然可能会太多挡住了」）&#10;谱系图的热启动父边：全开 = 四种来路都画（hash/seedpack/arm/slot-at-time）；&#10;只实录 = 只画包自己记下的权重哈希那一级（§E367 之后最硬的一级）；&#10;关掉 = 一条都不画，点云本身不受影响。&#10;默认仍是全开：这一版的图就是按全开验收过的，改默认等于偷偷换读法。">连线 <select id="edges"><option value="all">全开</option><option value="hash">只实录</option><option value="off">关掉</option></select></label>' +
 '<button id="bside" title="历代冠军按**上线时刻**排的一列（上线时刻由 ship-scan.mjs 逐提交算槽文件权重指纹抽出，不是按提交标题点名）。点一枚加入对比">冠军序列 ⇄</button>' +
