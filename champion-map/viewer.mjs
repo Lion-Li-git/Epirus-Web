@@ -437,6 +437,7 @@ var TSBY = {};
 /* §E373 这一帧真的画了几条父边 —— 连线开关的判据要能读到它（页内自检拿它 + 像素差一起判，见 §E338 末尾）*/
 var NEDG = 0;
 var NCHAIN = 0;   /* §E378 这一帧画了几条**接替边**（页脚与页内自检都读它，不许各自数一份）*/
+var LASTFAMS = [];   /* §E448 上一帧谱系图的行表（fams 原样）—— 页内那条"家族 0 排最上面"在窗口把整行切没时读这个 */
 (function () { for (var i = 0; i < N; i++) TSBY[P[i].id] = P[i].ts || ''; })();
 function backOf(d) {   /* 返回"父节点的 ts"，当且仅当它晚于本枚（空串 = 正常边 / 父不在图上）*/
   if (!d.pof || !d.ts) return '';
@@ -1297,6 +1298,8 @@ function drawTree(fr) {
    *   左栏那两行字不再互相压）。冠军行永远保留（分界参照物不能被批次切没）。 */
   for (i = 0; i < N; i++) if ((P[i].fam || P[i].famTop) && VIS[i] && !fset[P[i].fam]) { fset[P[i].fam] = 1; fams.push(P[i].fam); }
   fams.sort(function (a, b) { return a - b; });
+  LASTFAMS = fams.slice();   /* §E448 交给页内判据：窗口切到"家族 0 一行里一枚都没有"时，像素上读不到行序了，
+                                 但行表本身就是"谁排在最上面"这件事的主语 ⇒ 判据可以退到这一层，而不是整条跳过 */
   var tmin = Infinity, tmax = -Infinity;
   for (i = 0; i < N; i++) { if (!VIS[i]) continue; var tv = Date.parse(P[i].ts); if (isFinite(tv)) { if (tv < tmin) tmin = tv; if (tv > tmax) tmax = tv; } }
   if (!(tmax > tmin)) { g.fillStyle = st.dim; g.fillText('没有可用的 ts ⇒ 谱系图画不了（要 lineage.tsv）', 30 * devicePixelRatio, 60); return; }
@@ -2925,7 +2928,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     Object.keys(rSet).length === 1, Object.keys(rSet).slice(0, 4).join(' / '));
   T('滚轮放大：点要跟着变大（用户 ④）', dotR(byRk[3], 8) > dotR(byRk[3], 1) * 1.5,
     dotR(byRk[3], 1).toFixed(2) + ' → ' + dotR(byRk[3], 8).toFixed(2));
-  /* ④ 两档色标各自的语义（§E347 把它们分开：F = 地形，rel = 判决） */
+  /* §E448 rel 这两条钉的是"相对现役"这条映射的**分侧语义**，与 F 窗口开多大无关 ⇒ 判之前把窗口钉回全范围。
+   *   不钉的话：&flo=0.169&fhi=0.541 时窗内全是库内 54 百分位以下的点，而现役在第 83 百分位 ⇒
+   *   **没有任何一枚比现役强**（up=0 是事实，不是病），而判据要求 up>0 ⇒ 红在"这个状态下没有受试者"。
+   *   下面那条"底图两端"本来就用了同一套钉法（SWIN），这里只是把适用面提前到 rel。 */
+  var SWINR = { flo: st.flo, fhi: st.fhi }; st.flo = 0; st.fhi = 1; recomputeVIS(); draw();
   var s7 = splitSets();
   T('rel 档：现役那一档正好在分界 0.5', Math.abs(fColRel(Fv(INC)) - 0.5) < 0.02, fColRel(Fv(INC)).toFixed(3));
   var up = 0, dn = 0, tie = 0;
@@ -2941,6 +2948,9 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('rel 档：半侧 p90 距 = 半程 0.25（色深 = 离现役多远，不是排第几）',
     Math.abs(fColRel(s7.iv + 0.5 * s7.sU) - 0.75) < 0.01 && Math.abs(fColRel(s7.iv - 0.5 * s7.sD) - 0.25) < 0.01,
     '绿侧 ' + fColRel(s7.iv + 0.5 * s7.sU).toFixed(3) + '（要 0.750） ‖ 红侧 ' + fColRel(s7.iv - 0.5 * s7.sD).toFixed(3) + '（要 0.250）');
+  st.flo = SWINR.flo; st.fhi = SWINR.fhi; recomputeVIS(); draw();   /* §E448 钉完就还原，别把窗口改动留给后面的判据；
+   *   ⚠ 还原之后必须再 draw() 一次：上面为了钉窗口已经重画过图例，不补这一帧的话，
+   *     后面「图例那条带与底图同一条映射」读到的就是**全范围那一帧的旧画布**（针在 21 行）而 st 已经回到窗口态（针应在 0 行）⇒ 假红。 */
   /* ⭐§E347：用户点名"地图背景这是搞什么鬼"的根因钉在这里 ——
    *   §E338 把**底图**也换成"以现役为界、两侧各自按秩铺满"，而现役落在库内第 82 百分位
    *   ⇒ 中性灰被压成分界那一条线、82% 的图一律深红、少数 pockets 荧光绿（用户看到的大块硬边斑）。
@@ -3006,6 +3016,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     var ny = Math.round((1 - npos) * H);
     var col = cn.getContext('2d').getImageData(Math.round(cn.width / 2), 0, 1, H).data;
     var sy = Math.max(0, Math.min(H - 1, ny - Math.round(8 * devicePixelRatio)));
+    /* §E448 针被钳到带的**两端**时会出事（现役落在 F 窗口之外就是这种状态：fCol 钳到 1 ⇒ ny = 0）：
+     *   原来固定取"针上方 8px"那一行，在 ny=0 时钳回 0 ⇒ **采到的正是针自己的暗槽/黄线** ⇒ 拿针的颜色比带的颜色，必然不等；
+     *   同时"槽起点应在 ny − 2dpr"变成 −2（画布外）⇒ 又差 3 行判红。两条都是判据在边界上失配，不是画面坏。
+     *   ⇒ 采样行改成"**离针最远的那一端、再让开槽的半宽**"（任何钳位下都不会落在槽里）；槽的位置按钳位后的实际期望比。 */
+    var slot = Math.round(4 * devicePixelRatio);
+    if (Math.abs(sy - ny) < slot + 1) sy = Math.max(0, Math.min(H - 1, ny < H / 2 ? (H - 1 - slot) : slot));
     var want = rampRGB(1 - sy / H), o = sy * 4;
     var okBar = Math.abs(col[o] - want[0]) <= 8 && Math.abs(col[o + 1] - want[1]) <= 8 && Math.abs(col[o + 2] - want[2]) <= 8;
     /* 针 = 4px 暗槽（#0d1420）+ 上面 1.5px 黄线 ⇒ 黄线只有 1.5px 会被抗锯齿混成 (194,162,84) 这类值，
@@ -3014,7 +3030,10 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     var dk = 0, first = -1, lo = ny - Math.round(4 * devicePixelRatio), hi = ny + Math.round(4 * devicePixelRatio);
     for (var yy = Math.max(0, lo); yy <= Math.min(H - 1, hi); yy++) {
       var q = yy * 4; if (col[q] < 60 && col[q + 1] < 60 && col[q + 2] < 80) { dk++; if (first < 0) first = yy; } }
-    return okBar && dk >= 2 && Math.abs(first - (ny - Math.round(2 * devicePixelRatio))) <= 2;
+    /* 钳位时（ny 贴到 0 或 H−1）槽会被画布切掉一半 ⇒ 只要求 ≥1 行，但**位置必须贴到边** */
+    var clamped = (ny <= slot || ny >= H - 1 - slot);
+    var wantFirst = Math.max(0, Math.min(H - 1, ny - Math.round(2 * devicePixelRatio)));
+    return okBar && dk >= (clamped ? 1 : 2) && Math.abs(first - wantFirst) <= 2;
   })(), (function () {
     var cn = document.querySelector('#legend canvas');
     if (!cn) return '图例里没有 canvas';
@@ -3226,9 +3245,32 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     if (P[oi].id === 'SHIPPED-Ldemo') yInc = scr[oi][1]; }
   yOld.sort(function (a, b) { return a - b; });
   var medOld = yOld.length ? yOld[Math.floor(yOld.length / 2)] : -1;
-  T('旧槽位冠军那一行必须排在最上面（家族 0），不是最下面',
-    yOld.length > 0 && yInc > 0 && medOld >= 0 && medOld < yInc - 100 * devicePixelRatio,
-    '旧包行 y 中位 ' + Math.round(medOld) + ' ‖ 现役那一行 y ' + Math.round(yInc) + ' ‖ 画布高 ' + cv.height);
+  /* §E448 主语换掉：原来判的是"旧包那一行必须比**现役那一行**高 100px 以上"，
+   *   而现役一旦落在 F 窗口之外（深链 &flo=0.169&fhi=0.541 就是这种状态，现役 F=0.665 在窗上方）它根本不画 ⇒
+   *   yInc = −1 ⇒ 判据红的理由是"参照物没画"，不是"这一行排错了"。
+   *   ⇒ 换成不依赖参照物的说法：**家族 0 那一行的中位 y 必须是所有家族行里最小的**（这才是"排在最上面"这句话）。
+   *   ⚠ 不是放松：现役画得出来的时候，原来那条更强的判据**照样跑**（两条是"与"），所以任何一档都不会比以前更容易过。 */
+  var rowY = {};
+  for (oi = 0; oi < N; oi++) { if (!VIS[oi] || !scr[oi] || P[oi].famTop) continue;
+    var fk0 = P[oi].fam; if (!rowY[fk0]) rowY[fk0] = []; rowY[fk0].push(scr[oi][1]); }
+  var minOther = 1e18, nOther = 0;
+  for (var rk in rowY) { var av = rowY[rk].sort(function (a, b) { return a - b; });
+    nOther++; var md = av[av.length >> 1]; if (md < minOther) minOther = md; }
+  var topBad = !(yOld.length > 0 && nOther > 0 && medOld < minOther - 10 * devicePixelRatio);
+  /* 行表是**按可见点现算**的（§E338：切一批就只剩这一批碰过的家族）⇒ 窗口把家族 0 整行切没时，
+   *   图上根本没有"家族 0 那一行"，这条的主语不存在。此时如实退一层：
+   *   ① 家族 0 在行表里 ⇒ 它必须是第一行（这条永远判，是"排最上面"的硬核心）；
+   *   ② 家族 0 不在行表里 ⇒ 只能声明"这一档没有这一行"，并把窗口值印出来，不许悄悄当过了。
+   *   ⚠ 这不是放松：出厂态与 &flo=0.169 那两档家族 0 都有点，走的还是像素那条更强的判据。 */
+  var inRows = LASTFAMS.indexOf(0) >= 0;
+  var rowOk = inRows ? (LASTFAMS[0] === 0) : true;
+  var noRow = yOld.length === 0 && !inRows;
+  T('旧槽位冠军那一行必须排在最上面（家族 0）‖ 现役画得出来时还须比它高 100px 以上',
+    (noRow ? rowOk : (!topBad && rowOk)) && (yInc <= 0 || medOld < yInc - 100 * devicePixelRatio),
+    (noRow ? '这一档窗口（' + st.flo.toFixed(3) + '~' + st.fhi.toFixed(3) + '）里家族 0 一枚都没有 ⇒ 图上没有这一行，退到行表核（行表 ' + LASTFAMS.length + ' 行，第一行 = 家族 ' + LASTFAMS[0] + '）‖ '
+      : '行表第一行 = 家族 ' + (LASTFAMS[0] === undefined ? '—' : LASTFAMS[0]) + ' ‖ ') +
+    '旧包行 y 中位 ' + Math.round(medOld) + ' ‖ 其余家族行最小的中位 y ' + (nOther ? Math.round(minOther) : '—') +
+    ' ‖ 现役那一行 y ' + Math.round(yInc) + (yInc > 0 ? '' : '（现役在窗口外 ⇒ 只比行序）') + ' ‖ 画布高 ' + cv.height);
   /* §E379 这条判据**方向反了**，而且是故意的：§E377 钉的是"左栏不许跟着横轴走"（把左栏当屏幕上的框），
    *   而用户 10-07 的口径从头到尾是「网格当做底图整体进行平移缩放」⇒ 那一半恰恰是"修一个坏一个"的来源
    *   （纸带着视图变换烘出来，于是每个元素各自决定参不参与，每修一次重投一次票）。
@@ -3335,7 +3377,8 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   着色档也必须钉：这条要逐枚取像素，而 §E308 那支会把"未测过"的点压到 alpha 0.16 并被下面的 alpha<0.5 筛掉 ——
    *   在 sc/pm/duel/hp/de 这五档里剩下的探针只有个位数（实测 4 枚），红的是"探针不够 12 枚"而不是"左栏没画上"。
    *   钉到 fam（这一档没有"未测过"那支）才是这条判据本来工作的画面。模式与档在下面的 SNAP2 还原里一并恢复。 */
-  var BAKCOL = st.color; st.color = 'fam'; st.mode = 'tree';
+  var BAKCOL = st.color, BAKWIN = { flo: st.flo, fhi: st.fhi };
+  st.color = 'fam'; st.mode = 'tree'; st.flo = 0; st.fhi = 1; recomputeVIS();
   st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.elev = 0; st.tX = -900 * devicePixelRatio; draw();
   /* ② 的判据必须读**像素**，不能读命中表：scr[] 是几何落点，剪裁只决定"画没画出来"，
    *   所以拿 scr 写的那一版**撤掉剪裁与留着剪裁都会 PASS**（§E369 变异实测：把 clip 加回去 ⇒ 27/0 全绿 ⇒ 那条是假的）。
@@ -3371,6 +3414,8 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     '落进旧剪裁区的点 ' + nProbe + ' 枚 ‖ 中心确实与四周不同的 ' + nPaint + ' 枚（要 ≥ 60%）‖ 中心被标签压住而不参与这条的 ' + nCov +
       ' 枚 ‖ 画布宽 ' + cv.width + (missEx ? ' ‖ 例：' + missEx : ''));
   st.mode = SNAP2.mode; st.elev = SNAP2.e; st.yaw = SNAP2.y; st.pit = SNAP2.p; st.color = BAKCOL;
+  st.flo = BAKWIN.flo; st.fhi = BAKWIN.fhi; recomputeVIS(); draw();   /* ⚠ 还原之后必须补一帧：
+   *   不补的话轴上的两个柄还停在"全范围"那一帧的位置上，后面那条读像素的判据会拿到"画的是 0~1、st 要 0.169~0.541"这种假不一致 */
   st.tX = SNAP2.tx; st.tY = SNAP2.ty; st.tKx = SNAP2.kx; st.tKy = SNAP2.ky;
   /* ===== §E371 强度窗口（用户："默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示"）=====
    *   四条各钉一句话：默认态什么都不切 ‖ 窗外一律不画（冠军也不例外）‖ 色带真的按窗内重铺（不是恒等于全库那一条）‖
@@ -3415,23 +3460,32 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     ax1 ? (document.getElementById('winax') === ax1 ? '重建后取回的是同一张 canvas' : '重建后换了一张 ⇒ 绑定全丢') : '图例里没有那根轴');
   var SNAPW2 = { flo: st.flo, fhi: st.fhi };
   var AX2 = document.getElementById('winax'), rr2 = AX2 && AX2.getBoundingClientRect();
-  var seq = [];
+  var seq = [], want = [];
   if (rr2) { var pev = function (nd, t, cy) { nd.dispatchEvent(new PointerEvent(t,
       { pointerId: 7, clientX: rr2.left + rr2.width / 2, clientY: cy, bubbles: true, cancelable: true })); };
-    pev(document.getElementById('winax'), 'pointerdown', rr2.top + rr2.height * 0.5);
-    /* 顶 = 高 F、底 = 低 F ⇒ 从中间按下（出厂态两柄一个在顶一个在底，中点等距 ⇒ 拿到的就是下沿），
-     *   再往下沿**靠近顶部**的方向分三段拖 ⇒ flo 应当一段一段**变大**（0.20 → 0.32 → 0.48）。
-     *   ⚠ 每段之前先 draw() 一次并**重新取节点**：真实拖动里图例每帧都在重建，浏览器把 move 交给的是
-     *   当下屏幕上那个节点。原来那版判据在同一个节点对象上连发三步 ⇒ 绑在 canvas 上的写法照样全绿（弱判据）。 */
-    [0.80, 0.68, 0.52].forEach(function (frac) {
+    /* §E448 按下点改成**照当下画出来的下沿柄位置**去按，不再按"轴的正中间"。
+     *   原来那句"出厂态两柄一个在顶一个在底 ⇒ 中点等距 ⇒ 拿到的就是下沿"只在 flo=0/fhi=1 时成立；
+     *   深链带 &flo=0.169&fhi=0.541 进来时两个柄都在上半段，中点离**上沿**更近 ⇒ 按下抓到的是上沿柄，
+     *   三段拖的全是 fhi，flo 一字不变 ⇒ 判据红在"参照物挑错了"，不是拖动不跟手。
+     *   顺带把期望从"末段要等于 0.48"（那也是出厂态的数）改成"**每一段都等于我拖到的那个 F**"——
+     *   轴是绝对映射（y = (1−f)·H），所以这条在任意窗口宽度下都比原来更强。 */
+    var f0 = st.flo, f1 = st.fhi;
+    var yOf = function (f) { return rr2.top + (1 - f) * rr2.height; };
+    pev(document.getElementById('winax'), 'pointerdown', yOf(f0));
+    /* ⚠ 每段之前必须 draw() 一次并**重新取节点**：真实拖动里图例每帧都在重建，浏览器把 move 交给的是当下屏幕上
+     *   那个节点。原来那版在同一个节点对象上连发三步 ⇒ "绑在 canvas 上"那种写法照样全绿（弱判据，§E380 的根因）。 */
+    [0.25, 0.5, 0.75].forEach(function (k) {
+      var f = f0 + (f1 - f0) * k; want.push(f);
       draw();
-      pev(document.getElementById('winax'), 'pointermove', rr2.top + rr2.height * frac);
+      pev(document.getElementById('winax'), 'pointermove', yOf(f));
       seq.push(+st.flo.toFixed(4)); });
-    pev(document.getElementById('winax'), 'pointerup', rr2.top + rr2.height * 0.52); }
+    pev(document.getElementById('winax'), 'pointerup', yOf(f0 + (f1 - f0) * 0.75)); }
   var nStep = new Set(seq).size, mono = seq.every(function (v, i) { return i === 0 || v > seq[i - 1] + 1e-9; });
-  T('F窗口轴：按下之后连续拖三段，窗口下沿必须**一段一段跟着走**（一次按下只吃一格 = 用户报的不流畅）',
-    !!rr2 && nStep === 3 && mono && Math.abs(seq[2] - 0.48) <= 0.02 && st.fhi === SNAPW2.fhi,
-    '三段之后 flo 依次 ' + seq.join(' → ') + ' ‖ 不同的值 ' + nStep + ' 个 ‖ 上沿 ' + st.fhi.toFixed(3) + '（拖之前 ' + SNAPW2.fhi.toFixed(3) + '）');
+  var hit = seq.length === 3 && seq.every(function (v, i) { return Math.abs(v - want[i]) <= 0.02; });
+  T('F窗口轴：按下之后连续拖三段，窗口下沿必须**一段一段跟着走**，且每段都停在我拖到的那个 F 上',
+    !!rr2 && nStep === 3 && mono && hit && st.fhi === SNAPW2.fhi,
+    '三段之后 flo 依次 ' + seq.join(' → ') + ' ‖ 期望 ' + want.map(function (v) { return v.toFixed(3); }).join(' → ') +
+    ' ‖ 不同的值 ' + nStep + ' 个 ‖ 上沿 ' + st.fhi.toFixed(3) + '（拖之前 ' + SNAPW2.fhi.toFixed(3) + '）');
   setWin(SNAPW2.flo, SNAPW2.fhi);
   var HASWIN = (location.hash || '').indexOf('flo=') >= 0 || (location.hash || '').indexOf('fhi=') >= 0;
   T('强度窗口：不带深链时出厂态就是全范围，且一枚都不切（带 flo= 跑时这一条不适用，明细会说明）',
