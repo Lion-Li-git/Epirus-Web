@@ -788,6 +788,12 @@ function pct(a, q) { var b = a.slice().sort(function (x, y) { return x - y; }); 
  *   位图随仿射一起放大即可，不必重烘）；窗口尺寸变了才重建（resize 时清 NBK）。*/
 var NBK = {}, FL = null;
 var CHROMEVEC = 1;
+/* E401 DS（B 界面修法）：阈值标签把**底率**一起写出来 —— 用户不该自己猜这条线该定在哪。 */
+var BASEP = -1;
+function THRLBL() { if (BASEP < 0) { var a1 = 0, b1 = 0;
+  for (var q = 0; q < P.length; q++) { var o1 = P[q].ok; if (o1 === 1 || o1 === 0) { b1++; if (o1 === 1) a1++; } }
+  BASEP = b1 ? a1 / b1 : 0.15; }
+  return Math.round(st.isoT * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '%）'; }
 var ATDEN = 0;          /* E400：at() 最近一次的核质量（密度门用）*/
 var DGATE = 1, DM0 = 2;  /* E400：密度门开关（1 开 / 0 关）与收缩强度 M0（旧值 5）。#dgate=0&m0=5 可回旧行为做 A/B。 */   /* E395 DS：谱系图底图走矢量直画（1）还是旧位图烘焙（0）。#chrome=bmp 切回旧路。 */
 var VK = null;   /* E388 DS: 可见点 k-NN 表缓存（键 = 位图键 + 可见名单签名）*/
@@ -1595,9 +1601,12 @@ function isoBuild(sig, thr, GN, field) {
         if (dd > R * R) continue;
         var gv = Math.exp(-dd / s2); den += gv; den2 += gv * gv; num += gv * vm; } }
     ATDEN = den;   /* E400 DS：把这次的核质量带出来 ⇒ 密度门用（不改 at 的签名，调用点零改动）*/
-    if (den <= 1e-6) return p0;
+    /* E401 DS（A 结构修法）：**没证据 ⇒ 0**，不再回落到 p0。
+     *   旧式子把虚空钉在 p0 = 全库过线率（今天 20.5%）⇒ 阈值一旦 ≤ p0，整片虚空也算壳内 ⇒
+     *   21%→20% 那一跳就是这么来的（用户 10-08 实测）。基准归 0 后，任何 >0 的阈值都不会把虚空算进去。 */
+    if (den <= 1e-6) return 0;
     var ess = den * den / (den2 || 1e-9);
-    return (ess * (num / den) + M0 * p0) / (ess + M0);
+    return (ess * (num / den)) / (ess + M0);   /* E401：向 0 收缩（没证据 = 0），不再向底率收缩 */
   }
   /* 预扫（只 917 次，便宜）：每枚自己那儿的核质量 ⇒ 取中位数当 dref 的基准 */
   var _d = []; for (i = 0; i < N; i++) { at(a[i], b[i], c[i], i); if (ATDEN > 0) _d.push(ATDEN); }
@@ -1605,7 +1614,7 @@ function isoBuild(sig, thr, GN, field) {
   var DREF = 0.6 * DMED * DGATE;
   for (k = 0; k < dims[2]; k++) for (j = 0; j < dims[1]; j++) for (i = 0; i < dims[0]; i++) {
     var fv = at(loA + i * dA, loB + j * dB, loC + k * dC, -1);
-    var _dt = DREF > 0 ? ATDEN / DREF : 1; if (_dt < 1) { _dt *= _dt; } if (_dt < 1) fv = p0 + (fv - p0) * _dt;
+    var _dt = DREF > 0 ? ATDEN / DREF : 1; if (_dt < 1) { _dt *= _dt; } if (_dt < 1) fv = fv * _dt;   /* E401：门 = 纯衰减（基线已是 0）*/
     F[(k * dims[1] + j) * dims[0] + i] = fv; if (fv > maxF) maxF = fv; }
   /* 壳画得对不对，当场给数（不许只靠眼睛）：在每枚自己位置上估一次，数"被壳包住"的枚数。
    *   两遍都要：含自己 = 与画出来的壳同一口径（但循环 —— 一枚会把自己那格抬上去）；
@@ -2374,7 +2383,7 @@ function syncIso() { var b = document.getElementById('bisos');
   /* 滑杆位置也由这里统一刷 ⇒ 深链 #isot= 才能既改状态又改旋钮（放在初始化 IIFE 里会早于 hash 解析 ⇒ 显示 50%、实际 25%）
      ⚠ 这段在 const JS 那段模板字符串**里面** ⇒ 注释里绝不能出现反引号，出现一次就把整段字符串截断（本仓第 2 次踩，第二次就踩在这句警告上）*/
   var s = document.getElementById('isot'), v = document.getElementById('isotv');
-  if (s) s.value = String(st.isoT); if (v) v.textContent = Math.round(st.isoT * 100) + '%';
+  if (s) s.value = String(st.isoT); if (v) v.textContent = THRLBL();
   var tr = document.getElementById('isorow');   /* 阈值行的提示跟着场走：两场刻度不同，说明必须分开写 */
   if (tr) tr.title = (st.isoField === 'pot'
     ? '壳的判据 = 该处局部势 F（F = 线上口径 Hp + T·S，归一化到 0..1）。这条线只能落在 63%（全库均值）到 70%（场峰值）那一小段里：低于均值就把整片云圈进去、纯度退回底率 = 什么都没圈。默认 67% ⇒ 壳内约 122 枚、过线纯度 28%（底率 16%），留一复核还有 21% ⇒ 这一层是全场唯一"过了留一还站得住"的壳。'
@@ -2382,11 +2391,11 @@ function syncIso() { var b = document.getElementById('bisos');
 document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) % 3; syncIso(); req(); };
 (function () { var s = document.getElementById('isot'), v = document.getElementById('isotv');
   if (!s) return;
-  s.value = String(st.isoT); if (v) v.textContent = Math.round(st.isoT * 100) + '%';
+  s.value = String(st.isoT); if (v) v.textContent = THRLBL();
   /* 滑杆写进"当前场"那一格 ⇒ 来回切场不会把对方调好的线冲掉 */
   s.addEventListener('input', function () { st.isoT = +this.value;
     if (st.isoField === 'pot') st.isoTpot = st.isoT; else st.isoTok = st.isoT;
-    if (v) v.textContent = Math.round(st.isoT * 100) + '%'; req(); });
+    if (v) v.textContent = THRLBL(); req(); });
 })();
 (function () { var g2 = document.getElementById('isogn'), g3 = document.getElementById('isof');
   if (g2) { g2.value = String(st.isoGN);

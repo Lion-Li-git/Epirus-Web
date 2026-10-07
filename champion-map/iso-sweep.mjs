@@ -76,7 +76,8 @@ function at(X, Y, Z, self) {
       if (dd > R * R) continue; const gv = Math.exp(-dd / s2); den += gv; den2 += gv * gv; num += gv * v; } }
   return { den, num, den2 };
 }
-function shrink(o, M0) { if (o.den <= 1e-6) return p0; const ess = o.den * o.den / (o.den2 || 1e-9); return (ess * (o.num / o.den) + M0 * p0) / (ess + M0); }
+function shrink(o, M0) { /* E401：与页面同步 —— 没证据 = 0，向 0 收缩（旧版向 p0 收缩 ⇒ 阈值 ≤ p0 时整片虚空变壳内）*/
+  if (o.den <= 1e-6) return 0; const ess = o.den * o.den / (o.den2 || 1e-9); return (ess * (o.num / o.den)) / (ess + M0); }
 
 /* 每枚的"含自己"与"留一"场值先算一次（阈值扫描只是在同一批值上换比较线）*/
 const withSelf = [], loo = [];
