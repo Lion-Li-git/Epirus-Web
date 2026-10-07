@@ -201,6 +201,31 @@ async function main() {
     console.log('【读数 7 滑杆 ' + sid + '】' + JSON.stringify(geo));
     if (SHOTS) await shot(join(ROOT, 'docs', 'artifacts', 'e378-out', 'slider-' + sid + '-' + sval + '.png'));
   }
+  /* ---- 附加读数 8：把图转到指定 yaw（度）再拖，量"画面走的向量"对不对得上"鼠标走的向量" ----
+   *   用户 10-07：「平移实际上在 0 和 180 度的情况下是正常的，但除此之外就有问题，如果 90 度就是完全有问题」
+   *   ⇒ 这正是"解相机基逆时把 r/u 当成列"的形状：只有 r1 = u0 = 0 的角度（0/180）两种写法同值。
+   *   这一条按**向量**报，不按标量：90 度下若写反了，鼠标横拖而画面竖走（Δx ≈ 0 ‖ |Δy| ≈ 拖距）。 */
+  const YAW = arg('yaw', '');
+  if (YAW !== '') {
+    await evalJS(`(function(){st.mode='tree';st.elev=1;st.yaw=${Number(YAW) * Math.PI / 180};st.pit=FLAT.pit;st.tKx=1;st.tKy=1;st.tX=0;st.tY=0;draw();return 1;})()`);
+    await sleep(300);
+    const y0v = await evalJS(READ);
+    const rr = await evalJS('JSON.stringify(cv.getBoundingClientRect())').then(s => JSON.parse(s));
+    const cx = Math.round(rr.left + rr.width * 0.6), cyv = Math.round(rr.top + rr.height * 0.5);
+    await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: cx, y: cyv, button: 'left', clickCount: 1 });
+    for (let s = 1; s <= 6; s++) await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: cx + Math.round(120 * s / 6), y: cyv, button: 'left' });
+    await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: cx + 120, y: cyv, button: 'left' });
+    await sleep(400);
+    const y1v = await evalJS(READ);
+    const m2 = new Map(y1v.pts.map(p => [p[0], p]));
+    let dx = [], dy = [];
+    for (const p of y0v.pts) { const q = m2.get(p[0]); if (q) { dx.push(q[1] - p[1]); dy.push(q[2] - p[2]); } }
+    const md = a => { a = a.slice().sort((x, y) => x - y); return a.length ? a[a.length >> 1] : NaN; };
+    const want = 120 * (y1v.W / (rr.width || y1v.W));   /* CSS px → 设备 px（dpr=1 时就是 120）*/
+    console.log('【读数 8 yaw=' + YAW + '° 立体态】鼠标横拖 ' + Math.round(want) + 'px ⇒ 画面走了 Δx=' + Math.round(md(dx)) +
+      ' ‖ Δy=' + Math.round(md(dy)) + ' ‖ 跟手=' + (Math.abs(md(dx) - want) <= 4 && Math.abs(md(dy)) <= 4 ? '✅' : '❌'));
+    if (SHOTS) await shot(join(ROOT, 'docs', 'artifacts', 'e378-out', 'pan-yaw' + YAW + '.png'));
+  }
   killTree(); ws.close();
 }
 main().catch(e => { console.error('⛔ ' + e.message); killTree(); process.exit(2); });

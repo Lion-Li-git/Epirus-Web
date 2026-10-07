@@ -558,13 +558,16 @@ function rampRGBF(tt) { return LUTF[Math.max(0, Math.min(255, Math.round(tt * 25
  *   ⚠ 分位的分母永远是**全库**（不是当前可见那些）⇒ 缓存键只需要 T，批次不参与（切批次只改"画哪些点"）。*/
 var FSRT = { key: '', all: null, up: null, dn: null, win: null, iv: 0, sU: 0.05, sD: 0.05 };
 function p90(a) { var n = a.length; if (n < 2) return 0; return a[Math.min(n - 1, Math.round(0.9 * (n - 1)))]; }
-function splitSets() { var key = st.T.toFixed(4) + '@' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
+function splitSets() { var key = st.T.toFixed(4) + '@' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3) + '@' + st.batch;
   if (FSRT.key === key) return FSRT;
-  var iv = Fv(INC), all = [], up = [], dn = [], win = [];
-  for (var i = 0; i < N; i++) { var v = Fv(P[i]); all.push(v); if (inWin(P[i])) win.push(v); if (v >= iv) up.push(v - iv); else dn.push(iv - v); }
+  var iv = Fv(INC), all = [], up = [], dn = [], win = [], vis = [];
+  for (var i = 0; i < N; i++) { var v = Fv(P[i]); all.push(v); if (inWin(P[i])) win.push(v); if (v >= iv) up.push(v - iv); else dn.push(iv - v);
+    /* §E379（用户 10-07 第三遍口径）：**色带读的是"当下真画出来的那批点"** —— 批次筛掉的与被窗口切掉的都算"摘出去"，
+     *   它们不许参与定标（否则拉一下范围就把一批点钉到纯色，用户看到的"红/蓝占比变多"就是这么来的）。 */
+    if (VIS[i] && inWin(P[i])) vis.push(v); }
   all.sort(function (x, y) { return x - y; }); up.sort(function (x, y) { return x - y; }); dn.sort(function (x, y) { return x - y; });
-  win.sort(function (x, y) { return x - y; });
-  FSRT = { key: key, all: all, up: up, dn: dn, win: win, iv: iv,
+  win.sort(function (x, y) { return x - y; }); vis.sort(function (x, y) { return x - y; });
+  FSRT = { key: key, all: all, up: up, dn: dn, win: win, vis: vis, iv: iv,
     /* 下限 0.02：某一侧只剩几枚时 p90 会趋零 ⇒ 整条色带被那一两枚点决定（0.5 一侧全饱和）。 */
     sU: Math.max(0.02, p90(up)), sD: Math.max(0.02, p90(dn)) };
   return FSRT; }
@@ -589,21 +592,22 @@ function qr(a, v) { var n = a.length; if (n < 2) return 0.5;
  *   窗口态 ⇒ 两端 = **窗内那一段的最低/最高 F**，线性铺满 ⇒ 区分度拉满，而"等数值差 = 等色差"仍然成立
  *     （这正是 §E349 当初否掉"纯按秩铺色"时要保的那条，窗口没理由破坏它）。
  *   图例那两端的数字与"深浅怎么读"那句话都改读这一份，不许图上是一套、文字是另一套。 */
-function colBand() { var s = splitSets();
-  if (!winFull()) { var a = s.win; if (a.length < 2) return null;
-    return { lo: a[0], hi: a[a.length - 1], mode: 'win' }; }
-  var b = s.all, n = b.length; if (n < 2) return null;
-  var med = (b[(n - 1) >> 1] + b[n >> 1]) / 2;
-  /* §E379（用户 10-07：「填满色域 = **地图上的最红和最蓝始终是色轴上的最红和最蓝**，
-   *   相当于根据当前显示的点重新做色彩映射」）：全范围态的两端从"中位 ± p05/p95 那一段"换成
-   *   **这批参与铺色的点的最低/最高 F** ⇒ 点顶到两端，地板（IDW 是加权平均，极值落在点的极值之内）
-   *   也第一次逼近两端，色轴不再有一头是空的。
-   *   ⚠ 代价照实说：§E349 那半句"中位**尽量**放灰"在这里保不住了 —— 中位落在哪一格由分布形状决定。
-   *     硬的那半句"等数值差 = 等色差"完整保留（仍是线性，不是按秩）。
-   *   ⚠ 分母取"这批点的极差"而不是分位差 ⇒ "切批次不许挪分位"那条不变量不受影响（all/win 两份名单都不按批次筛）。 */
-  return { lo: b[0], hi: b[n - 1], med: med, mode: 'lib' }; }
+/* §E379（用户 10-07 第三遍口径，这次把话说明白了）：
+ *   「对于任意的范围，**最红的是范围内所有点中 F 最大的，灰色是范围中位数，最蓝的是范围中 F 最小的**，
+ *    中间的斜率突变你可以做一个简单的小过渡但不是最重要的。**而不渲染的点直接从图中摘出去，不影响范围内点的渲染。**」
+ *   ⇒ 定标名单 = **当下真画出来的那批点**（批次筛掉的 + 窗口切掉的都算摘出去）；
+ *     映射 = 两段线性（min→med 铺 [0,0.5] ‖ med→max 铺 [0.5,1]）⇒ 中位回到中性灰、两端必然顶满。
+ *   ⚠ 代价照实记：跨中位有一次斜率折（上下两段"等数值差 = 等色差"的比例不同）。用户明说这条不重要，
+ *     要平滑也只是"小过渡"，本班没做 —— 做了就要牺牲她更看重的"中位正好落灰"。
+ *   ⚠ 这条**覆盖** §E349 的"全库分位定标"与 §E373 的"窗内两端"，也**反向**推掉了旧判据
+ *     「颜色：切批次不许挪分位」—— 那条钉的正是"批次不参与定标"，而现在的口径是批次参与（它就是"摘出去"）。 */
+function colBand() { var b = splitSets().vis, n = b.length;
+  if (n < 2) return null;
+  return { lo: b[0], hi: b[n - 1], med: (b[(n - 1) >> 1] + b[n >> 1]) / 2, n: n, mode: winFull() ? 'lib' : 'win' }; }
 function fCol(F) { var bd = colBand(); if (!bd) return 0.5;
-  return Math.max(0, Math.min(1, (F - bd.lo) / ((bd.hi - bd.lo) || 1))); }
+  var t = F <= bd.med ? (F - bd.lo) / ((bd.med - bd.lo) || 1e-9) * 0.5
+    : 0.5 + (F - bd.med) / ((bd.hi - bd.med) || 1e-9) * 0.5;
+  return Math.max(0, Math.min(1, t)); }
 /* 「rel」档用的：离现役多远（两侧各按该侧 p90 距归一，绿=强 ‖ 红=不如 ‖ 灰=现役那一档） */
 function fColRel(F) { var s = splitSets();
   return F >= s.iv ? 0.5 + 0.5 * Math.min(1, (F - s.iv) / s.sU) : 0.5 - 0.5 * Math.min(1, (s.iv - F) / s.sD); }
@@ -813,6 +817,7 @@ function buildBitmap(key) {
   var bR = parseInt(st.bg.slice(1, 3), 16), bG = parseInt(st.bg.slice(3, 5), 16), bB = parseInt(st.bg.slice(5, 7), 16);
   var c = document.createElement('canvas'); c.width = nb.gx; c.height = nb.gy;
   var cg = c.getContext('2d'), img = cg.createImageData(nb.gx, nb.gy), dta = img.data;
+  var BND9 = (st.color === 'rel') ? null : colBand();   /* §E379 带外淡出用的那一条带（rel 档走自己的发散带，不参与）*/
   for (var i = 0; i < nb.gx * nb.gy; i++) {
     var wsum = nb.SW[i]; if (!(wsum > 0)) continue;
     /* §E331 覆盖度换成**核权重和**，不用「到最近点的距离」。旧写法 1/(1+(DM/fscale)^4) 在两枚点中间
@@ -827,11 +832,21 @@ function buildBitmap(key) {
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
     var Fav = (nb.SH[i] + st.T * nb.SS[i]) / wsum;
+    /* §E379（用户："**不渲染的点直接从图中摘出去，不影响范围内点的渲染**"）：地板原来把带外的 Fav 交给 fCol **钳位**
+     *   ⇒ 一拉窗口就冒出一大片纯红/纯蓝（她截图里那几块就是这个），因为那是"被摘出去的点的地形"顶到了色端。
+     *   现在带外的格子按一个窄边距线性淡到 0 ⇒ 地形只在画得出来的那批点附近存在，摘出去的点不再参与铺色。
+     *   ⚠ 没有改 IDW 本身：那要按窗口重算邻域（实测 40000 格 × 917 枚 = 3670 万次内圈，一次 1~2 秒，拖不动）。
+     *   淡出把同一件事在**上色**这一步解决了，代价是"带外多远的地方"读不出地形高低 —— 那句话本来也不归地板管。 */
+    var fade2 = fade;
+    if (BND9 && (Fav < BND9.lo || Fav > BND9.hi)) {
+      var mg9 = Math.max(1e-6, (BND9.hi - BND9.lo) * 0.06);
+      fade2 *= Math.max(0, 1 - (Fav < BND9.lo ? (BND9.lo - Fav) : (Fav - BND9.hi)) / mg9);
+    }
     /* §E347：底图默认 = **全库分位 + 蓝→灰→红**（回到 §E338 之前那个读法）；只有切到第 6 档「rel」才用发散带 + 淡入。*/
     var REL = st.color === 'rel';
     var tt = REL ? fColRel(Fav) : fCol(Fav);
     var rgb = REL ? rampRGBF(tt) : rampRGB(tt);
-    var a = (REL ? Math.min(0.50, 0.95 * Math.abs(tt - 0.5) * 2) : (0.92 - 0.5 * tt)) * fade;
+    var a = (REL ? Math.min(0.50, 0.95 * Math.abs(tt - 0.5) * 2) : (0.92 - 0.5 * tt)) * fade2;
     var o = i * 4;
     dta[o] = Math.round(bR + (rgb[0] - bR) * a);
     dta[o + 1] = Math.round(bG + (rgb[1] - bG) * a);
@@ -2055,16 +2070,18 @@ window.addEventListener('mousemove', function (e) {
           st.pit = Math.max(0.06, Math.min(1.62, drag[5] + cdy / 200));   /* E352 DS: pitch 仍夹在 [0.06,1.62] */
         }
       } else {
-        /* §E379 平移必须**跟着光标走**，而不是"读鼠标在屏幕上的坐标加到纸的轴上"（用户 10-07 点名）。
-         *   tX/tY 加的是**相机之前**的量，而鼠标给的是屏幕位移 ⇒ 立体态下直接把 cdx 加进 tX，
-         *   画面会沿着纸的横轴跑（屏幕上就是斜的、也不等于手移了多少）。
-         *   解法：把屏幕位移用相机基的**逆**换回纸面量 —— M = [[r0,u0],[r1,u1]]（PL 里 r 管屏幕横、u 管屏幕纵）。
-         *   FLAT 相机下 r=[1,0]、u=[0,1] ⇒ det=1、Δa=sx、Δb=sy ⇒ 平面态与旧写法逐字相同（已验收的图不动）。 */
-        var cbn = cam(), det = cbn.r[0] * cbn.u[1] - cbn.u[0] * cbn.r[1];
+        /* §E379 平移必须**跟着光标走**（用户 10-07：「平移时读鼠标在屏幕上的坐标而不是直接拖动」）。
+         *   tX/tY 加的是**相机之前**的量，而鼠标给的是屏幕位移 ⇒ 立体态下画面会沿纸的轴跑。
+         *   PL 写的是 sx = a·r0 + b·r1 ‖ sy = a·u0 + b·u1（r 那一**行**管屏幕横、u 那一行管屏幕纵）
+         *   ⇒ M = [[r0,r1],[u0,u1]]，det = r0·u1 − r1·u0，Δa = (u1·sx − r1·sy)/det，Δb = (r0·sy − u0·sx)/det。
+         *   ⚠ 上一版按 [[r0,u0],[r1,u1]] 解（把 r/u 当成列）—— det 恰好同值，所以**只在 r1=u0=0 的角度上对**，
+         *     正是用户实测的那句「0 度和 180 度正常，90 度完全不对」（那两角上 r1、u0 都是 0 ⇒ 两种写法同值）。
+         *   FLAT 相机（r=[1,0]、u=[0,1]）下 det=1、Δa=sx、Δb=sy ⇒ 平面态与旧写法逐字相同，已验收的二维图不动。 */
+        var cbn = cam(), det = cbn.r[0] * cbn.u[1] - cbn.r[1] * cbn.u[0];
         var sx = cdx * devicePixelRatio, sy = cdy * devicePixelRatio;
         if (!isFinite(det) || Math.abs(det) < 1e-6) { st.tX = drag[9] + sx; st.tY = drag[10] + sy; }
-        else { st.tX = drag[9] + (cbn.u[1] * sx - cbn.u[0] * sy) / det;
-          st.tY = drag[10] + (cbn.r[0] * sy - cbn.r[1] * sx) / det; } }
+        else { st.tX = drag[9] + (cbn.u[1] * sx - cbn.r[1] * sy) / det;
+          st.tY = drag[10] + (cbn.r[0] * sy - cbn.u[0] * sx) / det; } }
     }
     req(); return;
   }
@@ -2339,8 +2356,17 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('批次过滤：冠军永远保留（分界参照物不能被批次切没 ‖ 窗口切它不算这条）',
     P.every(function (d) { return !d.lin || !inWin(d) || VIS[nOf(d.id)] === 1; }),
     '冠军 ' + P.filter(function (d) { return d.lin; }).length + ' 枚 ‖ 在窗内的都还在图上');
-  /* 切批次只该决定"画哪些点"，不该决定"颜色什么含义"（第一版按可见集算分位 = 跨批不可比，是个口径错）*/
-  T('颜色：切批次不许挪分位（同一枚的色值必须一字不变）', fCol(probeV) === cBefore, cBefore.toFixed(3) + ' → ' + fCol(probeV).toFixed(3));
+  /* 「颜色：切批次不许挪分位」这一条**删掉了**（用户 10-07：「需要重构的时候就把没用的门禁删了」+ 新口径
+   *   「不渲染的点直接从图中摘出去，不影响范围内点的渲染」）—— 它钉的正是"批次不参与定标"，
+   *   与新口径正面冲突，留着只会替一个已经作废的读法作证。换成钉新口径的那三条（下面这条）。 */
+  T('颜色定标按**当下画出来的那批点**：最蓝 = 其中 F 最小 ‖ 灰 = 其中位 ‖ 最红 = 其中 F 最大（±0.02）',
+    (function () { var bd = colBand(); if (!bd) return false;
+      return Math.abs(fCol(bd.lo)) <= 0.02 && Math.abs(fCol(bd.med) - 0.5) <= 0.02 && Math.abs(fCol(bd.hi) - 1) <= 0.02
+        && bd.n > 1 && bd.n <= nWin() && bd.n <= NVIS; })(),
+    (function () { var bd = colBand(); if (!bd) return '定标名单不足 2 枚';
+      return '定标名单 ' + bd.n + ' 枚（画出来的 ' + NVIS + ' ‖ 窗内 ' + nWin() + '）‖ min/中位/max = ' +
+        bd.lo.toFixed(3) + '/' + bd.med.toFixed(3) + '/' + bd.hi.toFixed(3) + ' → 色值 ' +
+        fCol(bd.lo).toFixed(3) + '/' + fCol(bd.med).toFixed(3) + '/' + fCol(bd.hi).toFixed(3); })());
   st.batch = 'all'; recomputeVIS(); draw();
   /* ② 命中：指着**标签**必须读到那一枚自己（这条就是用户说的"悬停显示上一个冠军的信息"）。
    *    两条标签本来就可能重叠（force 那几枚允许避让失败照样画）⇒ 判据换成"命中者的框必须真的盖住这个点"，
@@ -2668,6 +2694,29 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     pivBad9 === '', pivBad9 || pivEx9.join(' ‖ '));
   st.tKx = SNAPV9.kx; st.tKy = SNAPV9.ky; st.tX = SNAPV9.tx; st.tY = SNAPV9.ty;
   st.elev = SNAPV9.e; st.yaw = SNAPV9.y; st.pit = SNAPV9.p; draw();
+  /* §E379 立体态平移**必须跟着光标**：把图转到"离正俯视 45°"那一档（默认 yaw = FLAT.yaw = −π/2，
+   *   所以取 FLAT.yaw + π/4 —— 用户报的"转 90 度就完全不对"就是这类非轴对齐角度），派一次真左键拖动，
+   *   要求画面走的**向量**等于鼠标走的向量（±4px）。
+   *   ⚠ 为什么必须挑非轴对齐的角度：解相机基逆时把 r/u 当成列（我第一版的错）在 r1=u0=0 的角度上同值，
+   *     也就是只有 ±90°（默认那一档与转 180°）看着正常 —— 拿默认角度测这条 = 永远绿。
+   *   实测复原（写反那一版，探针）：横拖 120px ⇒ 画面走 Δx=0 ‖ Δy=120（整个转了 90°），红。 */
+  var SNAPV3 = { m: st.mode, e: st.elev, y: st.yaw, p: st.pit, kx: st.tKx, ky: st.tKy, tx: st.tX, ty: st.tY };
+  st.mode = 'tree'; st.elev = 1; st.yaw = FLAT.yaw + Math.PI / 4; st.pit = FLAT.pit;
+  st.tKx = 1; st.tKy = 1; st.tX = 0; st.tY = 0; draw();
+  function medXY() { var xs = [], ys = []; for (var z = 0; z < N; z++) if (scr[z] && VIS[z]) { xs.push(scr[z][0]); ys.push(scr[z][1]); }
+    xs.sort(function (a, b) { return a - b; }); ys.sort(function (a, b) { return a - b; });
+    return [xs[xs.length >> 1] || 0, ys[ys.length >> 1] || 0]; }
+  var p3a = medXY(), cr3 = cv.getBoundingClientRect();
+  mdown(0, cr3.left + cr3.width * 0.6, cr3.top + cr3.height * 0.5);
+  mmove(cr3.left + cr3.width * 0.6 + 120, cr3.top + cr3.height * 0.5 + 70); mup();
+  draw();   /* 拖动只改 st 并重绘经 rAF 合并 ⇒ 不先同步画一次，scr[] 还是拖之前的（实测那样读到 Δ=0） */
+  var p3b = medXY();
+  T('立体态平移跟手：转到离正俯视 45° 那一档，鼠标走 (120,70) 画面也必须走 (120,70)（±4px）',
+    Math.abs((p3b[0] - p3a[0]) - 120 * devicePixelRatio) <= 4 && Math.abs((p3b[1] - p3a[1]) - 70 * devicePixelRatio) <= 4,
+    '画面实际走了 Δx=' + Math.round(p3b[0] - p3a[0]) + ' ‖ Δy=' + Math.round(p3b[1] - p3a[1]) +
+      '（yaw 取 FLAT.yaw + 45°：轴对齐的角度上"写反了"也看不出来）');
+  st.mode = SNAPV3.m; st.elev = SNAPV3.e; st.yaw = SNAPV3.y; st.pit = SNAPV3.p;
+  st.tKx = SNAPV3.kx; st.tKy = SNAPV3.ky; st.tX = SNAPV3.tx; st.tY = SNAPV3.ty; draw();
   /* §E377 缩放支点：WX/WY 原来直接乘 x、y（支点 = 画布原点），而 x 里含着 padL ⇒ tkx<1 时整张数据区连日期
    *   刻度一起朝左栏压过去（tkx=0.55 那张实测：刻度文字压在家族名上）。改成绕数据区左上角缩放，这一条钉住：
    *   **平移归零时，任何一档横轴缩放下最左那枚都必须在分界线右侧**（红测实测：支点改回 0 ⇒ tkx=0.4 时最左那枚
@@ -2814,15 +2863,22 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   窗口态判四件事 —— 两端真的顶到色带端点、**仍是线性**（等数值差 = 等色差，§E349 那条不许破）、
    *   中点与四分之一处必须正好落在 0.5 / 0.25（这两条合起来才排掉"随便贴两端"），
    *   而同一枚在全库态下不许也贴地板（那才叫"重做了缩放"而不是恒贴两端）。 */
+  /* §E373 → §E379 改判：原来这条钉的是"整条带一条线性 ⇒ 数值中点必须落 0.5"。
+   *   用户 10-07 的新口径是「灰色是范围中位数」⇒ 映射变成**两段线性**（min→med→max 铺 0→0.5→1），
+   *   数值中点不再等于 0.5（实测 0.699）—— 那不是 bug，是"中位落灰"换掉了"全局等差"。
+   *   所以这里改判**每段内部**仍然线性（段内等数值差 = 等色差），跨中位的折只如实报、不判红。 */
   wVs.sort(function (x, y) { return x - y; });
-  var q1 = wVs[0], q3 = wVs[wVs.length - 1], qm = (q1 + q3) / 2, qq = q1 + (q3 - q1) / 4;
-  var tLoW = fCol(q1), tHiW = fCol(q3), tMedW = fCol(qm), tQW = fCol(qq);
+  var q1 = wVs[0], q3 = wVs[wVs.length - 1], BDW = colBand() || { med: (q1 + q3) / 2 };
+  var tLoW = fCol(q1), tHiW = fCol(q3);
+  var tHalfLo = fCol((q1 + BDW.med) / 2), tHalfHi = fCol((BDW.med + q3) / 2), tMedW = fCol(BDW.med);
   st.flo = 0; st.fhi = 1; recomputeVIS();
   var tLoAll = fCol(q1);
-  T('强度窗口：两端顶到色带端点、中间仍是线性（等数值差 = 等色差），而同一枚在全库态不许也贴地板',
-    tLoW <= 0.001 && tHiW >= 0.999 && Math.abs(tMedW - 0.5) <= 0.001 && Math.abs(tQW - 0.25) <= 0.001 && tLoAll > 0.5,
-    '低端 t=' + tLoW.toFixed(3) + ' 高端 t=' + tHiW.toFixed(3) + ' 中点 t=' + tMedW.toFixed(3) + ' 四分之一 t=' + tQW.toFixed(3)
-      + ' ‖ 同一枚（全库态）t=' + tLoAll.toFixed(3) + '（要 > 0.5）');
+  T('强度窗口：两端顶到色端 ‖ 中位落灰 ‖ **两段各自线性**（段内等数值差 = 等色差），跨中位的折只报不判',
+    tLoW <= 0.001 && tHiW >= 0.999 && Math.abs(tMedW - 0.5) <= 0.02 &&
+    Math.abs(tHalfLo - 0.25) <= 0.02 && Math.abs(tHalfHi - 0.75) <= 0.02 && tLoAll > 0.5,
+    '低端 ' + tLoW.toFixed(3) + ' ‖ 中位 ' + tMedW.toFixed(3) + '（值 ' + BDW.med.toFixed(3) + '）‖ 上端 ' + tHiW.toFixed(3) +
+      ' ‖ 下半段中点 ' + tHalfLo.toFixed(3) + '（要 0.25）‖ 上半段中点 ' + tHalfHi.toFixed(3) + '（要 0.75）' +
+      ' ‖ 同一枚（全库态）' + tLoAll.toFixed(3) + '（要 > 0.5）');
   st.flo = 0.8; st.fhi = 1; recomputeVIS(); draw();
   var stTxt = document.getElementById('stat').textContent;
   /* ⚠ 这里不用正则：模板字符串会先把 \d 吃成 d、\/ 吃成 / ⇒ 页面里那条正则当场断掉（构建期的自解析会红，
