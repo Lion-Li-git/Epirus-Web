@@ -374,6 +374,28 @@ function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
    *   又保住上下文（这张图的价值恰恰在"被选中的那家相对别人在哪"）。*/
 /* 家族短标：只取"改了什么"那一段并截断（长说明留给悬停），否则一个按钮吃掉整条图例栏。*/
 function famLab(d) { return FAMLAB[d.fam] || ''; }
+/* E397 DS（用户 10-08：一大堆调整数字被截掉在这里也看不清楚，尤其家族 5 / 22 这种超长标签）：
+ *   上游那条 recipe 是**一长串「名 a→b」**，其中大多数是「-→v」（从默认打开）或「v→-」（关掉回默认）。
+ *   按方向归类成**总结式**：开/关**只留名字**（超过 5 个就只列前 4 个 + 项数），真正改了数值的才带 before→after。
+ *   例：家族 5 ⇒「开 7 项（珠价 divW/囤珠奖励/囤珠惩罚/输出权重…）· 对手池 15→12」。 */
+function famSummary(s) {
+  var items = String(s || '').split(' ‖ ')[0].split(' · ').filter(function (x) { return x; });
+  var on = [], off = [], num = [], i;
+  for (i = 0; i < items.length; i++) {
+    var m = /^(.*?)s+(-|[d.]+)→(-|[d.]+)$/.exec(items[i].trim());
+    if (!m) { num.push(items[i].trim()); continue; }
+    if (m[2] === '-') on.push(m[1]);
+    else if (m[3] === '-') off.push(m[1]);
+    else num.push(m[1] + ' ' + m[2] + '→' + m[3]);
+  }
+  function grp(t, arr) { if (!arr.length) return '';
+    return t + (arr.length > 5 ? (' ' + arr.length + ' 项（' + arr.slice(0, 4).join('/') + '…）') : ('：' + arr.join('/'))); }
+  var out = [];
+  if (on.length) out.push(grp('开', on));
+  if (off.length) out.push(grp('关', off));
+  if (num.length) out.push(num.join(' · '));
+  return out.join(' · ') || items.join(' · ');
+}
 /* E396 DS：把家族名按「 · 」装箱成最多 max 行（超出的部分不进图，完整串在悬停提示里）。 */
 function wrapLabel(t, s, maxW, max) {
   var parts = String(s).split(' · '), lines = [], cur = '';
@@ -815,7 +837,7 @@ function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, d
     t.fillRect(0, padT + i * rowH, w, rowH);
     /* E396 DS：名字优先（最多 2 行），装得下才在第二行带计数 —— 不硬塞、不溢出。 */
     var maxW = padL - 24 * devicePixelRatio;
-    var full = String(famLab({ fam: f }) || '').split(' ‖ ')[0] || ('家族 ' + f);
+    var full = famSummary(famLab({ fam: f })) || ('家族 ' + f);
     t.fillStyle = st.ink; t.textAlign = 'right'; t.font = ff(9);
     var ls = wrapLabel(t, '家族 ' + f + ' · ' + full, maxW, 2);
     t.fillText(ls[0], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.36);
@@ -1631,7 +1653,7 @@ function paintCard() {
   /* 家族标签用**截断版**：famLab 全串里带一整列"父"权重哈希（实测 20 个 ≈ 700 字符），
    *   直接拼进来这张卡会横贯整个画布，把下面的页脚与投影判据全盖住（第一版截图就是这样）。*/
   var body = [head,
-    '家族 ' + d.fam + '（' + (String(famLab(d) || '').split(' ‖ ')[0] || '—') + '）· 批次 ' + (batchOf(d) || '无日期') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
+    '家族 ' + d.fam + '（' + (famSummary(famLab(d)) || '—') + '）· 批次 ' + (batchOf(d) || '无日期') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
     'F = ' + Fv(d).toFixed(3) + '（现役 ' + Fv(INC).toFixed(3) + '）· Hp = ' + d.Hp.toFixed(1) + ' · H考卷 = ' + d.H.toFixed(1) + ' · S = ' + d.S.toFixed(2),
     '上槽体检：' + (d.pv === 1 ? '✅ 三条腿全过（真能换包）' : (d.pv === 0 ? '⛔ ' + String(d.pb).slice(0, 90) : '未测')) +
     ' ‖ 过线判定：' + (d.ok === 1 ? '是' : (d.ok === 0 ? '否' : '未测')) + (d.why ? '（栽在 ' + String(d.why).slice(0, 60) + '）' : '')
