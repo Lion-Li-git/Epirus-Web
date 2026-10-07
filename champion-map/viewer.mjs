@@ -96,6 +96,9 @@ const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=
  *   文件名一律去掉 `e287-` 前缀；**输入表是拷进来的**：`coords.tsv` 由 `docs/artifacts/e287-out/e287-figs.mjs`
  *   算出来（它吃 `results/`〔用户私有〕+ gitignored 的臂产物 ⇒ 换机不能重算），重算后要手工拷到本目录。*/
 const OUT = arg('out', 'index.html');
+/* E393 DS（丙·投影）：生成侧选定坐标（默认 t-SNE，--proj=old 回旧布局）。
+ *   ⚠ 必须在生成侧：浏览器取景范围 PV 是装载时按坐标算的，装载后再换 ⇒ 视口对不上（实测画到右下角）。 */
+const PROJTSNE = arg('proj', 'tsne') !== 'old';
 const CF = join(HERE, 'coords.tsv');
 if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 docs/artifacts/e287-out/e287-figs.mjs，再把落盘拷成 coords.tsv'); process.exit(2); }
 const t = readFileSync(CF, 'utf8').trim().split('\n'), head = t[0].split('\t');
@@ -252,7 +255,11 @@ const DATA = rows.map(r => ({
   sc: r.Sc === '' || r.Sc === undefined ? null : +r.Sc,
   scd: r.Scd === '' || r.Scd === undefined ? null : +r.Scd,
   scs: r.Scs || '', sch: r.Sch === '' || r.Sch === undefined ? null : +r.Sch,
-  x2: +r.x2, y2: +r.y2, x3: +r.x3, y3: +r.y3, z3: +r.z3,
+  /* E393 DS（丙·投影）：坐标由 --proj 选（t-SNE 列 xt/yt/xt3/yt3/zt3 由 proj-tsne.mjs 写进 coords.tsv）。
+   *   判据 kNN@10 保住率：旧力导向布局 0.08 → t-SNE 0.52（同一个 12 维招法空间；用户：不用死磕实际意义）。 */
+  x2: (PROJTSNE && r.xt) ? +r.xt : +r.x2, y2: (PROJTSNE && r.yt) ? +r.yt : +r.y2,
+  x3: (PROJTSNE && r.xt3) ? +r.xt3 : +r.x3, y3: (PROJTSNE && r.yt3) ? +r.yt3 : +r.y3,
+  z3: (PROJTSNE && r.zt3) ? +r.zt3 : +r.z3,
   /* §E334 权重身份去重（`attach-dup.mjs`）：`dn` = 同一份权重在面板上有几行 ‖ `dups` = 那几行的 id。
    *   不标就会把"901 行"读成"901 种打法"：实测只有 **713 个不同权重**，而最刺眼的一组是 **4 行都是现役本身**
    *   （SHIPPED-Ldemo ‖ Ldemo  C5-02-31 ‖ C5-02-71）⇒ 对局仪器反过来自证：那三枚打现役配对差恰好 0.0pt。*/
@@ -2386,6 +2393,12 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit;
     document.getElementById('b3dt').textContent = st.elev < 0.5 ? '立体' : '平面'; } })();
 fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide();
+/* E393 DS（丙）：投影说明放装载之后（放之前会干扰取景）。 */
+(function () { var pe = document.createElement('pre'); pe.id = 'projinfo';
+  pe.style.cssText = 'position:fixed;left:8px;top:22px;z-index:8;color:#e8e8e8;background:#000c;font:12px monospace;padding:4px 6px;border-radius:4px;max-width:900px';
+  pe.textContent = PROJTSNE ? '投影 = t-SNE(perplexity 30) · kNN@10 保住 0.52（旧布局 0.08）· 轴无固定含义'
+    : '投影 = 旧布局（力导向）· kNN@10 保住 0.08';
+  document.body.appendChild(pe); })();
 /* §E371 深链 #flo=/#fhi= 是在上面那个解析循环里写进 st 的 ⇒ 那两根滑杆与读数必须在这里回压一次，
  *   否则页面按窗口画、工具栏却写着"全范围"（实测截图抓到过：图里 134 枚，栏上 901 枚）。 */
 paintWin();
@@ -3244,7 +3257,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>\n' +
 '<div id="tip"></div>\n' +
 '<div id="selftest"></div>\n' +
-'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
+'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + '; var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
 /* §E338 落盘之后**必须把内联脚本再解析一遍**（"写完不回读"这一族的第三种形态）：
  *   模板里写 '\n' 会被 Node 先吃成**真换行** ⇒ 写进页面就成了一条未闭合的字符串 ⇒ **整页脚本一条都不执行**，
  *   而构建照样打印"已写 xxx KB"、截图照样是一张画布（地板是 canvas 之外没画 ⇒ 看着像空的但没人报错）。
