@@ -694,14 +694,23 @@ function famLab(d) { return FAMLAB[d.fam] || ''; }
  *   按方向归类成**总结式**：开/关**只留名字**（超过 5 个就只列前 4 个 + 项数），真正改了数值的才带 before→after。
  *   例：家族 5 ⇒「开 7 项（珠价 divW/囤珠奖励/囤珠惩罚/输出权重…）· 对手池 15→12」。 */
 function famSummary(s) {
-  var items = String(s || '').split(' ‖ ')[0].split(' · ').filter(function (x) { return x; });
-  var on = [], off = [], num = [], i;
+  /* E397b DS：**不用正则**（生成器内联时会把反斜杠吃掉：\s ⇒ s、\d ⇒ d ⇒ 正则静默失效）。
+   *   纯字符串运算分类：按「 · 」切段，每段再按箭头 → 切成「名 / 左值 / 右值」。
+   *   左值是 '-' ⇒ 从默认打开（开）；右值是 '-' ⇒ 关掉回默认（关）；两边都是数才带 before→after。 */
+  var items = String(s || '').split(' ‖ ')[0].split(' · ').filter(function (x) { return x.trim(); });
+  var on = [], off = [], num = [], i, ARROW = String.fromCharCode(8594);
+  function isNum(v) { if (!v || v === '-') return false; for (var q = 0; q < v.length; q++) {
+    var ch = v.charCodeAt(q); if (!((ch >= 48 && ch <= 57) || ch === 46)) return false; } return true; }
   for (i = 0; i < items.length; i++) {
-    var m = /^(.*?)\s+(-|[\d.]+)→(-|[\d.]+)$/.exec(items[i].trim());
-    if (!m) { num.push(items[i].trim()); continue; }
-    if (m[2] === '-') on.push(m[1]);
-    else if (m[3] === '-') off.push(m[1]);
-    else num.push(m[1] + ' ' + m[2] + '→' + m[3]);
+    var it = items[i].trim(), k = it.lastIndexOf(ARROW);
+    if (k < 0) { num.push(it); continue; }
+    var lhs = it.slice(0, k), rhs = it.slice(k + 1).trim();
+    var sp = lhs.lastIndexOf(' ');
+    var nm = (sp > 0 ? lhs.slice(0, sp) : lhs).trim(), a = (sp > 0 ? lhs.slice(sp + 1) : '').trim();
+    if (a === '-') on.push(nm);
+    else if (rhs === '-') off.push(nm);
+    else if (isNum(a) && isNum(rhs)) num.push(nm + ' ' + a + ARROW + rhs);
+    else num.push(it);
   }
   function grp(t, arr) { if (!arr.length) return '';
     return t + (arr.length > 5 ? (' ' + arr.length + ' 项（' + arr.slice(0, 4).join('/') + '…）') : ('：' + arr.join('/'))); }
