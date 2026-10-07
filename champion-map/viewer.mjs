@@ -1122,7 +1122,7 @@ function labelSet() {
 function draw1(fr) {
   var w = cv.width, h = cv.height, i;
   clear(w, h);
-  var pad = 26 * devicePixelRatio, band = h * 0.16, base = h * 0.70;
+  var pad = 26 * devicePixelRatio, band = h * 0.16, base = h * 0.78;   /* §E431 用户 10-08：整幅往下挪（底下本来空着）*/
   /* E399 DS（用户 10-08：「现在拉范围只会硬切，你直接改成随时顶满两头就行」+「加一个根据时间排序的选项」）：
    *   ① 排位只在**当前画得出来的那批**（VIS）里做 ⇒ 范围一拉就**顶满两头**，不再留一串空位（硬切）。
    *   ② sortBy='time' 时按**训出时刻**排（与 F 名次并存的一个开关）。 */
@@ -1422,15 +1422,19 @@ function drawTree(fr) {
     (NBACK ? ' · ⛔ 时间倒挂的父边 ' + NBACK + ' 条 = 按路径反查"今天的槽主"造出来的假血统（lineage.mjs §E367 应已退回，出现即守卫漏了来路）' : '');
   var fw = g.measureText(foot).width / devicePixelRatio;
   if (fw > (w - padL) / devicePixelRatio - 8) g.font = Math.round(12 * devicePixelRatio * (w - padL) / devicePixelRatio / fw) + 'px system-ui,sans-serif';
-  g.fillText(foot, padL, h - 14 * devicePixelRatio);
+  /* §E431 用户 10-08：底部这两行小字改从**页面最左侧**起、字号加大一档（原来跟着 padL 缩进、只有 12px）。 */
+  g.font = (13 * devicePixelRatio) + 'px system-ui,sans-serif';
+  g.fillText(foot, 10 * devicePixelRatio, h - 14 * devicePixelRatio);
   /* §E314 那根星形中心必须自己在图上说一句"我不是血统"，否则 81% 共父会被读成"演化收敛"。
      ⚠ 只能另起一次 fillText：canvas 的 fillText **不认 \n**（第一版把它拼在同一串里 ⇒ 两段挤成一行、右缘被截，
         而且 markdown 的 ** 在画布上是原样字符）。*/
   /* §E331 图底三条字必须各占一行：日期刻度在 h − padB + 16（= h−50·dpr），这条 RUNNER-BASE 注在 h−32·dpr，
    *   页脚说明在 h−14·dpr。旧版 padB=46 ⇒ 日期与这条注**同一个 y**（h−30·dpr），两段字直接叠成一坨（用户截图）。 */
   if (NRBASE) { g.fillStyle = '#e0b13c';
-    g.fillText('另有 ' + NRBASE + ' 枚（' + Math.round(NRBASE * 100 / N) + '%）的父 = RUNNER-BASE d13d3c85…（runner 恒拷 EPIRUS_BUNDLE_IN 的产物 · 不是血统）⇒ 这条边图上不画',
-      padL, h - 32 * devicePixelRatio); }
+      /* §E431：同样从最左起、字号加大 */
+      g.font = (13 * devicePixelRatio) + 'px system-ui,sans-serif';
+      g.fillText('另有 ' + NRBASE + ' 枚（' + Math.round(NRBASE * 100 / N) + '%）的父 = RUNNER-BASE d13d3c85…（runner 恒拷 EPIRUS_BUNDLE_IN 的产物 · 不是血统）⇒ 这条边上不画',
+        10 * devicePixelRatio, h - 32 * devicePixelRatio); }
 }
 /* 「卡住缩放上界 + 背景不要割裂」：缩放的下界 = 场恰好铺满视口（再小就露出虚空）；平移卡到"场始终盖住整个视口"。
  *   由 kmin 的定义可证两个平移区间非空，所以 clamp 不会打架。*/
@@ -2075,7 +2079,7 @@ function paintLegend(fr) {
     : st.color === 'hp' ? ('页面 1st 低 ' + EPR()[0].toFixed(1) + '%（蓝）· 灰 = 未测（' + (N - NEPS) + ' 枚）')
     : st.color === 'de' ? ('Δε −6pt（蓝 = 开了探索反而强）· 白 = 不敏感 · 灰 = 未测（' + (N - NEPS) + '）‖ 脆（≥3.41）' + NBRIT + ' 枚 ‖ 吃探索（<0）' + NSTRONG + ' 枚')
     : st.color === 'sc' ? ('当选键 −8pt（红 = 落后现役）· 白 = 打平 · 橙 = 偏正但同号 <6/8（判不动 ' + NSELSOFT + ' 枚）· 灰 = 未测（' + (N - NSEL) + '）‖ 明显落后（≤−2）' + NSELDOWN + ' 枚')
-    : (st.color === 'fam' || st.color === 'seed') ? ('（底图色标：下 = 地板 ‖ 上 = 好 ‖ 黄针 = 现役）')
+    : (st.color === 'fam' || st.color === 'seed') ? ('（黄针 = 现役）')   /* §E431 用户 10-08：删掉「下 = 地板 ‖ 上 = 好」这种没用的说明，只留黄针 = 现役（顺带让整块变窄）*/
     : st.color === 'rel' ? ('红 = 不如现役（F 底 ' + fr[0].toFixed(2) + '）')
     : ('蓝 = 地板（F 底 ' + CB.lo.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最低' : ' ‖ 灰 = 库内中位') + '）');
   /* §E378 强度窗口的控制轴就贴在这条色带旁边（用户 10-07：「做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）。
@@ -3489,7 +3493,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '#fam button.fam b{color:var(--dim);font-weight:400}\n' +
 '#fam .famtip{color:var(--dim);font-size:12px;padding-right:6px}\n' +
 '#tip{position:fixed;display:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre;font-size:12px;line-height:1.5;pointer-events:none;z-index:9;box-shadow:0 6px 22px rgba(0,0,0,.55);color:var(--ink)}\n' +
-'#legend{position:absolute;right:14px;top:12px;font-size:11px;color:var(--ink);text-align:left;padding:7px 9px;border:1px solid var(--line);border-radius:6px}\n' +
+'#legend{position:absolute;right:6px;top:12px;   /* §E431 用户 10-08：整块往右缩（贴右缘），别压到一维图 */font-size:11px;color:var(--ink);text-align:left;padding:7px 9px;border:1px solid var(--line);border-radius:6px}\n' +
 '#legend canvas{border:1px solid #8ea2c0;margin:3px 0}\n' +
 '#stat{position:absolute;left:14px;top:10px;color:var(--dim);font-size:12px}\n' +
 'label{color:var(--dim);display:flex;gap:6px;align-items:center}\n' +
