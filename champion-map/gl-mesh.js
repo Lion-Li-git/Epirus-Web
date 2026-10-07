@@ -85,6 +85,13 @@ var GLM = (function () {
   /* 半透填充 + 线框；颜色用与 2D 路同一套 rgba 字符串的数值 */
   function draw(fill, line1) {
     if (!ok) return false;
+    /* E412 DS：两条**开关式判据**（bisect 用，默认不影响任何行为）：
+     *   #gltest=2 ⇒ 把离屏画布整片清成红：若主画布上出现红块 ⇒ 「离屏 GL + drawImage」这条路是通的
+     *                （不通 ⇒ 问题在贴图/画布生命周期，与几何无关）；
+     *   #gltest=1 ⇒ 用**不透明红**画壳（跳过 alpha/预乘链）：若壳出现 ⇒ 几何链是通的，问题在颜色/混合。 */
+    var _h = location.hash || '';
+    if (_h.indexOf('gltest=2') >= 0) { gl.clearColor(1, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT); return true; }
+    if (_h.indexOf('gltest=1') >= 0) { fill = [1, 0, 0, 1]; line1 = [1, 0, 0, 1]; }
     var W = cv.width, H = cv.height;
     /* 屏幕 y 向下、GL 的 y 向上 ⇒ 在顶点里就已经翻好（见查看器），这里不再翻转 */
     gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);

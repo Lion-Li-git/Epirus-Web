@@ -1764,7 +1764,11 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
         var gq = m.quads[gi];
         for (var gk = 0; gk < 4; gk++) {
           var gp = prj(gq[gk][0], gq[gk][1], gq[gk][2]);
-          vv[gi * 8 + gk * 2] = gp[0]; vv[gi * 8 + gk * 2 + 1] = CH - gp[1];   /* E409：按画布高翻转 */
+          /* E412 DS：**转到裁剪空间（NDC [-1,1]）** —— 着色器就是 gl_Position = vec4(p, 0, 1)，
+           *   原来直接塞像素坐标（如 389,78）⇒ 全在视锥外 ⇒ 一个像素都没画出来（bisect 的 gltest=1
+           *   用不透明红画壳也无变化，证明问题不在颜色而在几何）。 */
+          vv[gi * 8 + gk * 2] = gp[0] / CW * 2 - 1;
+          vv[gi * 8 + gk * 2 + 1] = (CH - gp[1]) / CH * 2 - 1;
         }
         var b0 = gi * 4;
         tri[gi * 6] = b0; tri[gi * 6 + 1] = b0 + 1; tri[gi * 6 + 2] = b0 + 2;
