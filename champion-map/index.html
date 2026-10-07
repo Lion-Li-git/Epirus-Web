@@ -509,9 +509,23 @@ function buildBitmap(key) {
   var bR = parseInt(st.bg.slice(1, 3), 16), bG = parseInt(st.bg.slice(3, 5), 16), bB = parseInt(st.bg.slice(5, 7), 16);
   var c = document.createElement('canvas'); c.width = nb.gx; c.height = nb.gy;
   var cg = c.getContext('2d'), img = cg.createImageData(nb.gx, nb.gy), dta = img.data;
-  var BND9 = (st.color === 'rel') ? null : colBand();   /* §E379 带外淡出用的那一条带（rel 档走自己的发散带，不参与）*/
+  var BND9 = (st.color === 'rel') ? null : colBand();
+  var nPainted = 0, nOob = 0;   /* §E381 见下面 FL.painted / FL.oob */
+  var SHOWN = new Uint8Array(N), nShown = 0;
+  for (var s9 = 0; s9 < N; s9++) { SHOWN[s9] = (VIS[s9] && inWin(P[s9])) ? 1 : 0; nShown += SHOWN[s9]; }
   for (var i = 0; i < nb.gx * nb.gy; i++) {
-    var wsum = nb.SW[i]; if (!(wsum > 0)) continue;
+    /* §E381（用户 10-07：「不渲染的点摘出去**但别的附近点要正常渲染覆盖对应区域**，而不是直接挖空变成黑色。
+     *   何况现在有的点还没摘出去周围就变成黑的了」）：地板的 IDW **只吃当下画出来的那批点**。
+     *   做法是把两件事拆开：**邻域表**（每格最近 12 名）仍按全库算一次并缓存 —— 那是几何，与"谁被画"无关；
+     *   **加权**这一遍按可见名单过滤（40000 格 × 12 = 48 万次，比整张邻域重算便宜两个数量级，实测每帧可跑）。
+     *   ⇒ 场的取值必然落在可见点的 F 区间之内（加权平均的性质）⇒ 既不钳位、也没有黑洞。
+     *   ⚠ 我上一版的错正是反过来的：场含被摘出去的点、色带按可见点定标 ⇒ 带外一大片 ⇒ 那个"淡出"把那片涂成底色 = 黑洞。
+     *   ⚠ 一格 12 个邻居全被摘掉 ⇒ wsum = 0 ⇒ 那一格留空。那不是洞，是"这块地方没有画得出来的点"。 */
+    var bs9 = i * KF, wsum = 0, hsum9 = 0, ssum9 = 0;
+    for (var u9 = 0; u9 < KF; u9++) { var pi9 = nb.idx[bs9 + u9]; if (pi9 < 0) break; if (!SHOWN[pi9]) continue;
+      var w9 = 1 / Math.pow(Math.max(nb.dst[bs9 + u9], 1e-6), KEXP);
+      wsum += w9; hsum9 += w9 * (P[pi9].H / 100); ssum9 += w9 * P[pi9].S; }
+    if (!(wsum > 0)) continue;
     /* §E331 覆盖度换成**核权重和**，不用「到最近点的距离」。旧写法 1/(1+(DM/fscale)^4) 在两枚点中间
      *   必然下凹（DM 在 Voronoi 脊线上取局部极大）⇒ 底图上那一片"凹陷的接缝"就是脊线本身，跟数据无关，
      *   是度量的形状病。SW = Σ1/d^KEXP 是各点晕的**相加**，靠近谁都不减 ⇒ 相邻晕平滑搭接。
@@ -523,22 +537,14 @@ function buildBitmap(key) {
     var fade = wsum / (wsum + kcov) * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
-    var Fav = (nb.SH[i] + st.T * nb.SS[i]) / wsum;
-    /* §E379（用户："**不渲染的点直接从图中摘出去，不影响范围内点的渲染**"）：地板原来把带外的 Fav 交给 fCol **钳位**
-     *   ⇒ 一拉窗口就冒出一大片纯红/纯蓝（她截图里那几块就是这个），因为那是"被摘出去的点的地形"顶到了色端。
-     *   现在带外的格子按一个窄边距线性淡到 0 ⇒ 地形只在画得出来的那批点附近存在，摘出去的点不再参与铺色。
-     *   ⚠ 没有改 IDW 本身：那要按窗口重算邻域（实测 40000 格 × 917 枚 = 3670 万次内圈，一次 1~2 秒，拖不动）。
-     *   淡出把同一件事在**上色**这一步解决了，代价是"带外多远的地方"读不出地形高低 —— 那句话本来也不归地板管。 */
-    var fade2 = fade;
-    if (BND9 && (Fav < BND9.lo || Fav > BND9.hi)) {
-      var mg9 = Math.max(1e-6, (BND9.hi - BND9.lo) * 0.06);
-      fade2 *= Math.max(0, 1 - (Fav < BND9.lo ? (BND9.lo - Fav) : (Fav - BND9.hi)) / mg9);
-    }
+    var Fav = (hsum9 + st.T * ssum9) / wsum;
     /* §E347：底图默认 = **全库分位 + 蓝→灰→红**（回到 §E338 之前那个读法）；只有切到第 6 档「rel」才用发散带 + 淡入。*/
     var REL = st.color === 'rel';
     var tt = REL ? fColRel(Fav) : fCol(Fav);
     var rgb = REL ? rampRGBF(tt) : rampRGB(tt);
-    var a = (REL ? Math.min(0.50, 0.95 * Math.abs(tt - 0.5) * 2) : (0.92 - 0.5 * tt)) * fade2;
+    var a = (REL ? Math.min(0.50, 0.95 * Math.abs(tt - 0.5) * 2) : (0.92 - 0.5 * tt)) * fade;
+    nPainted++;
+    if (BND9 && (Fav < BND9.lo - 1e-9 || Fav > BND9.hi + 1e-9)) nOob++;
     var o = i * 4;
     dta[o] = Math.round(bR + (rgb[0] - bR) * a);
     dta[o + 1] = Math.round(bG + (rgb[1] - bG) * a);
@@ -546,7 +552,11 @@ function buildBitmap(key) {
     dta[o + 3] = 255;
   }
   cg.putImageData(img, 0, 0);
-  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color, win: st.flo.toFixed(3) + ',' + st.fhi.toFixed(3),
+  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color,
+    vis: NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3),
+    /* §E381 自检要读的两个数：地板被涂了几格 ‖ 有几格的场值跑到"可见点的 F 区间"之外（应当恒为 0）。
+     *   带外 = 0 这一条同时排掉两种病：钳位（一大片纯色）与淡出（黑洞）—— 因为加权平均不可能跑到被平均的那些点之外。*/
+    painted: nPainted, oob: nOob, nShown: nShown, cells: nb.gx * nb.gy,
     x0: nb.x0, x1: nb.x1, y0: nb.y0, y1: nb.y1,
     nmed: nb.nmed, ax: nb.ax, by: nb.by, gx: nb.gx, gy: nb.gy };
 }
@@ -554,11 +564,12 @@ function ensureField(key, bx, byy) {
   var k2 = key + '@' + Math.round(bx) + ',' + Math.round(byy);   /* 比例尺进缓存键：窗口尺寸变了才重建 */
   if (!NBK[k2]) buildNB(k2, bx, byy);
   /* §E347：位图**内容**现在跟着色标档变（rel 与否是两条 LUT）⇒ 判据必须带 st.color，漏了就是切档拿旧位图
-   * §E371：同理还要带**强度窗口** —— 它重铺的是同一条色带，漏了就是"拉了滑杆、地形一点没变"。
-   *   ⚠ 邻居核 NBK 不进窗口：底图形状是**全库**那条 F 地形，窗口改的是"怎么上色 + 画哪些点"，
-   *   不是"地形本身长什么样"（每拉一次窗口就重算一次 IDW，读图人会以为库变了）。 */
-  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color ||
-    FL.win !== st.flo.toFixed(3) + ',' + st.fhi.toFixed(3)) buildBitmap(k2);
+   * §E371：同理还要带**强度窗口** —— 它重铺的是同一条色带。
+   * §E381 改口径：**地板的 IDW 现在按"当下画出来的那批点"加权**（用户："不渲染的点摘出去，附近点要正常覆盖那块区域"）
+   *   ⇒ 缓存键必须带**可见名单**（批次 + 窗口 + 可见枚数），漏了就是"切了批次、地形还是上一批的形状"。
+   *   ⚠ 邻域表 NBK 仍然不进这些：那是几何（每格最近 12 名，按全库算一次），过滤发生在**加权**那一步 ⇒ 每帧只多 48 万次乘加。 */
+  var visSig = NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
+  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.vis !== visSig) buildBitmap(k2);
 }
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
 var boxes = [];
@@ -2129,6 +2140,17 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         ' ‖ 最高 ' + fCol(MDS.hi).toFixed(3) + ' ‖ 中位 ' + fCol(MDS.med).toFixed(3) +
         '（§E349 的"中位放灰"让位给"两端顶满"； 单看"最低=0"是**假判据** —— fCol 会钳位，窄带照样满足）'; })());
   st.flo = SWIN.flo; st.fhi = SWIN.fhi; recomputeVIS();
+  /* §E381 地板这一条钉的是"黑洞 / 纯色"两种病共同的根：**场的取值必须落在可见点那批的 F 区间之内**。
+   *   加权平均在数学上不可能跑出被平均的那些点的范围 ⇒ 只要 IDW 只吃可见点，oob 必然 = 0。
+   *   上一版的错恰好是反的（场吃全库、带按可见点 ⇒ 带外一大片 ⇒ 我拿"淡出"收尾 = 用户截图里的黑窟窿）。
+   *   红测：把加权那一步的「if (!SHOWN[pi9]) continue;」去掉（= 场又吃进被摘出去的点）⇒ 带外格数从 0 跳到数千，红。 */
+  T('地板的场值必须全在"可见点的 F 区间"之内（带外 = 0 ⇒ 既不钳成纯色也不会淡成黑洞）‖ 且地板真的被涂出来',
+    !FL || (FL.oob === 0 && FL.painted > FL.cells * 0.55),
+    /* ⚠ 明细也必须挡 null：**地板位图只在地图模式建**，谱系模式下 FL 还没出生 ⇒ 上一版这里直接读 FL.painted
+     *   把整条自检打断（实测「自检中途抛错：Cannot read properties of null」⇒ 后面 39 条一条没跑）。
+     *   判据不成立时宁可说"不适用"，不许把跑不掉当成红。 */
+    FL ? ('涂了 ' + (FL.painted * 100 / (FL.cells || 1)).toFixed(1) + '% 格 ‖ 带外 ' + FL.oob + ' 格 ‖ 参与铺色的点 ' +
+      FL.nShown + '/' + N) : '本页没有地板位图（谱系图/一维/三维模式）⇒ 这一条不适用');
   /* 图例那条带与底图必须是**同一条映射**（§E347 那次坏在"带画 LUT、图涂绿红"，我当时还拿一行"这一档不参与着色"糊过去）。
    *   ⚠ 这条原来判的是"针落在现役的**库内分位**上" —— E349 DS 把 fCol 换成"以中位为心的绝对线性带"之后那句话就不成立了
    *   （分位 0.818 ≠ 色带位置 0.671）。⇒ 判据换成端到端的像素核对，它不依赖 fCol 用哪种归一化：
