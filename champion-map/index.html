@@ -2368,13 +2368,22 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
 fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide();
 /* E402 DS（D-3 量度）：#perf=2 ⇒ 一次性基准：连画 6 次，**丢掉第一帧**（那一帧含建壳），报稳态均值。
  *   为什么必须这样量：headless 只画一帧 ⇒ 帧时读数会把"建壳 0.3s"和"逐帧光栅化"混在一起，量出来的不是卡的那部分。 */
+/* E406 DS（用户 10-08：卡，但任务管理器里 CPU 只有 9% ⇒ 不是吞吐不够，是**串行在主线程**）：
+ *   把每帧的**画布调用数**与缓冲区规模量出来，才能说清"低 CPU + 卡"是怎么来的。 */
+var OPC = {};
 if (PERFON === 2) { (function () {
+  var _ops = ['beginPath', 'fill', 'stroke', 'arc', 'fillText', 'strokeText', 'fillRect', 'drawImage', 'closePath', 'moveTo', 'lineTo'];
+  for (var _oi = 0; _oi < _ops.length; _oi++) { (function (m) {
+    var _f = g[m]; if (typeof _f !== 'function') return;
+    g[m] = function () { OPC[m] = (OPC[m] || 0) + 1; return _f.apply(g, arguments); }; })(_ops[_oi]); }
   var tt = [], q;
   try { for (q = 0; q < 6; q++) { var _b0 = performance.now(); draw(); tt.push(performance.now() - _b0); } }
   catch (e2) { console.log('基准跑不了: ' + e2.message); }   /* drawBody 是 draw 内的闭包 ⇒ 从外面只能调 draw()（顶层）*/
   var rest = tt.slice(1), av = rest.reduce(function (x, y) { return x + y; }, 0) / (rest.length || 1);
   var pe = document.createElement('pre'); pe.id = 'bench'; pe.style.display = 'none';
-  pe.textContent = 'BENCH first=' + tt[0].toFixed(1) + ' avg=' + av.toFixed(2) + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN;
+  var _tot = 0, _kv = ''; for (var _k in OPC) { _tot += OPC[_k]; _kv += _k + '=' + OPC[_k] + ' '; }
+  pe.textContent = 'BENCH first=' + tt[0].toFixed(1) + ' avg=' + av.toFixed(2) + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN
+    + ' FRAMES=6 OPS6=' + _tot + ' OPS1=' + Math.round(_tot / 6) + ' PX=' + cv.width + 'x' + cv.height + ' DPR=' + (devicePixelRatio || 1) + ' ' + _kv;
   document.body.appendChild(pe); })(); }
 
 
