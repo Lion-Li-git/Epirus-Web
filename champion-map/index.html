@@ -524,33 +524,59 @@ function buildBitmap(key) {
    *   ⇒ 摘掉一个点，它照过的地方由**其余可见点的晕**接上，无损。
    *   截断半径 6·fscale（那里 w ≈ kcov/88 ⇒ 覆盖度贡献 ~1%，看不出边界）⇒ 每点只碰 ~(2giR+1)² 格。
    *   实测开销：288 枚 × ~361 格 ≈ 10 万次乘加（旧写法 40000 格 × 12 = 48 万次，还漏接）。 */
-  var SW2 = null, SH2 = null, SS2 = null;
-  if (nShown < N) {
-    /* §E382 只在**真有点被摘掉**时才走泼溅：全都在场时用下面 USEOLD 那条路（= §E381 之前那份缓存好的
-     *   每格最近 12 名加权和），这样已验收过的那张图一个像素都不动。 */
-    /* ⚠ 累加必须用 **float64**：上一版用 Float32Array，几百个邻居的权重相加会攒出 ~1e-7 的相对误差，
-     *   而判据问的是"场的取值不许跑出可见点的 F 区间"—— 那点误差恰好让 288 格**擦边越界**，看着像 bug 其实是精度。
-     *   放宽判据的容差是"喂字符串过关"，把累加升回 double 才是修因。 */
-    SW2 = new Float64Array(nb.gx * nb.gy); SH2 = new Float64Array(SW2.length); SS2 = new Float64Array(SW2.length);
-  var csx = (nb.x1 - nb.x0) * nb.bx / (nb.gx - 1), csy = (nb.y1 - nb.y0) * nb.byy / (nb.gy - 1);
-  var RR = 6 * fscale, giR = Math.ceil(RR / csx), gjR = Math.ceil(RR / csy);
+  /* ===== §E383 只剩**一条**算法：动态「可见点 k-NN」+ 空间桶加速（用户转述 Gemini 的方案，我同意）=====
+   *   原来那条 12 近邻路在视觉上是**对的**（每格只看离它最近的几枚 ⇒ 局部、锐、不糊），唯一的缺陷是那张表
+   *   按全库**静态**存 ⇒ 过滤后可见邻居不够用 = 洞。
+   *   §E382 我先换成「点泼溅」（每格吃半径内**所有**点）⇒ 把唯一的好性质也扔了：密集区一格摊到上百枚，灰、糊、有圆盘边界；
+   *   再退一步「全范围走原路 / 摘点才走泼溅」两条路并存 ⇒ 就是她说的「缩小一点就有突变，还要同时维护两种地图」。
+   *   现在：把**可见点**装进约 32×32 的粗桶（每次过滤后重装，成本 = 可见枚数），渲染 40000 格时每格只扫
+   *   自己邻域的桶（先 3×3，候选不足 k 枚就扩到 5×5、7×7），在候选里取**最近 k 枚**做 IDW。
+   *   ⇒ 每格的邻居集合永远是「当下画得出来的那批点里最近的 k 枚」：摘点无损、不糊、没有第二个实现、不会突变。
+   *   开销：40000 格 × 每格约 20~40 个候选 ≈ 百万次距离运算。
+   *   ⚠ 地板的值改用 **Hp（页面口径）**：它以前吃 H（考卷口径），而色带 / 点 / 图例读的都是 Fv = Hp/100 + T·S
+   *     ⇒ 两条尺，一收窄场的值就跑出可见点的 F 区间（实测带外 288 格，与浮点精度无关：Float32→Float64 一格没少）。
+   *     用户 10-07 裁：地板跟 Hp。 */
+  var KFK = 12, KB = 32;
+  var bstepX = Math.max(1, Math.ceil(nb.gx / KB)), bstepY = Math.max(1, Math.ceil(nb.gy / KB));
+  var nbx = Math.ceil(nb.gx / bstepX), nby = Math.ceil(nb.gy / bstepY);
+  var bkt = new Array(nbx * nby);
+  for (var bi0 = 0; bi0 < nbx * nby; bi0++) bkt[bi0] = [];
+  var OX = new Float64Array(N), OY = new Float64Array(N);
   for (var pi9 = 0; pi9 < N; pi9++) { if (!SHOWN[pi9]) continue;
     var ox9 = (P[pi9][nb.ax] - nb.x0) / (nb.x1 - nb.x0) * (nb.gx - 1);
     var oy9 = (P[pi9][nb.by] - nb.y0) / (nb.y1 - nb.y0) * (nb.gy - 1);
-    var iA = Math.max(0, Math.ceil(ox9 - giR)), iB = Math.min(nb.gx - 1, Math.floor(ox9 + giR));
-    var jA = Math.max(0, Math.ceil(oy9 - gjR)), jB = Math.min(nb.gy - 1, Math.floor(oy9 + gjR));
-    var hv9 = P[pi9].H / 100, sv9 = P[pi9].S;
-    for (var gj9 = jA; gj9 <= jB; gj9++) { var dyD = (gj9 - oy9) * csy;
-      for (var gi9 = iA; gi9 <= iB; gi9++) { var dxD = (gi9 - ox9) * csx, dd = Math.sqrt(dxD * dxD + dyD * dyD);
-        if (dd > RR) continue;
-        var w9 = 1 / Math.pow(Math.max(dd, 1e-6), KEXP), ci9 = gj9 * nb.gx + gi9;
-        SW2[ci9] += w9; SH2[ci9] += w9 * hv9; SS2[ci9] += w9 * sv9; } } } }
+    OX[pi9] = ox9; OY[pi9] = oy9;
+    var bxi = Math.min(nbx - 1, Math.max(0, Math.floor(ox9 / bstepX)));
+    var byi = Math.min(nby - 1, Math.max(0, Math.floor(oy9 / bstepY)));
+    bkt[byi * nbx + bxi].push(pi9); }
+  var csx = (nb.x1 - nb.x0) * nb.bx / (nb.gx - 1), csy = (nb.y1 - nb.y0) * nb.byy / (nb.gy - 1);
+  var cd = new Float64Array(KFK), cin = new Int32Array(KFK);
   var PMASK = new Uint8Array(nb.gx * nb.gy);
   for (var i = 0; i < nb.gx * nb.gy; i++) {
-    /* §E382 两条路共用后面的上色：USEOLD = 没有点被摘掉 ⇒ 直接吃 buildNB 缓存好的全库 12 近邻加权和
-     *   （那是已验收过的那张图的原始数学，**一个像素都不许动**）；否则吃上面那份只含可见点的泼溅。 */
-    var wsum = SW2 ? SW2[i] : nb.SW[i]; if (!(wsum > 0)) continue;
-    var hsumX = SW2 ? SH2[i] : nb.SH[i], ssumX = SW2 ? SS2[i] : nb.SS[i];
+    var gi = i % nb.gx, gj = (i / nb.gx) | 0;
+    var bxc = Math.floor(gi / bstepX), byc = Math.floor(gj / bstepY), ncand = 0;
+    var cxp = gi + 0.5, cyp = gj + 0.5;
+    for (var ring = 1; ring <= 3; ring++) {
+      ncand = 0;
+      for (var qy = byc - ring; qy <= byc + ring; qy++) { if (qy < 0 || qy >= nby) continue;
+        for (var qx = bxc - ring; qx <= bxc + ring; qx++) { if (qx < 0 || qx >= nbx) continue;
+          var arr = bkt[qy * nbx + qx];
+          for (var t0 = 0; t0 < arr.length; t0++) { var pj = arr[t0];
+            var ddx = (OX[pj] - cxp) * csx, ddy = (OY[pj] - cyp) * csy;
+            var dd = Math.sqrt(ddx * ddx + ddy * ddy);
+            if (ncand < KFK) { var p0 = ncand++;
+              while (p0 > 0 && cd[p0 - 1] > dd) { cd[p0] = cd[p0 - 1]; cin[p0] = cin[p0 - 1]; p0--; }
+              cd[p0] = dd; cin[p0] = pj;
+            } else if (dd < cd[KFK - 1]) { var p1 = KFK - 1;
+              while (p1 > 0 && cd[p1 - 1] > dd) { cd[p1] = cd[p1 - 1]; cin[p1] = cin[p1 - 1]; p1--; }
+              cd[p1] = dd; cin[p1] = pj; } } } }
+      if (ncand >= KFK) break; }
+    if (!ncand) continue;
+    var wsum = 0, hsumX = 0, ssumX = 0;
+    for (var u9 = 0; u9 < ncand; u9++) { var pj9 = cin[u9];
+      var w9 = 1 / Math.pow(Math.max(cd[u9], 1e-6), KEXP);
+      wsum += w9; hsumX += w9 * (P[pj9].Hp / 100); ssumX += w9 * P[pj9].S; }
+    if (!(wsum > 0)) continue;
     /* §E331 覆盖度换成**核权重和**，不用「到最近点的距离」。旧写法 1/(1+(DM/fscale)^4) 在两枚点中间
      *   必然下凹（DM 在 Voronoi 脊线上取局部极大）⇒ 底图上那一片"凹陷的接缝"就是脊线本身，跟数据无关，
      *   是度量的形状病。SW = Σ1/d^KEXP 是各点晕的**相加**，靠近谁都不减 ⇒ 相邻晕平滑搭接。
