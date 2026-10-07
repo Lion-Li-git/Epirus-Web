@@ -802,6 +802,7 @@ var GLPROBE = 0;
 var GLFAILS = 0;
 var FRN = 0;
 var ISOBUILDS = 0;
+var ISOMS = 0, GLBUILD = 0, GLDRAW = 0, GLBLIT = 0;   /* E420：把 1.2s/帧拆开定位 */
 var GLERR = '';   /* E418：GL 分支抛出的异常文本（揪出静默中断）*/   /* E418：帧序（判"只画了哪一帧"）*/
 var GLPATH = 0;     /* E413: 0=not-yet 1=GL-used 2=GL-unavailable */
 var GLDREW = 0;     /* E413：走 GL 路的帧数 */
@@ -1788,17 +1789,23 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
         tri[gi * 6 + 3] = b0; tri[gi * 6 + 4] = b0 + 2; tri[gi * 6 + 5] = b0 + 3;
         for (var g4 = 0; g4 < 4; g4++) { lin[gi * 8 + g4 * 2] = b0 + g4; lin[gi * 8 + g4 * 2 + 1] = b0 + ((g4 + 1) % 4); }
       }
+      var _tU = performance.now();
       GLM.upload(vv, tri, lin);
+      GLBUILD = performance.now() - _tU;
       }   /* E405：/几何缓存 */
       var fRG = pot ? [0.878, 0.694, 0.235, 0.10] : [0.224, 0.851, 0.541, 0.11];
       var lRG = shell ? (pot ? [0.878, 0.694, 0.235, 0.55] : [0.224, 0.851, 0.541, 0.5])
                       : (pot ? [0.878, 0.694, 0.235, 0.22] : [0.224, 0.851, 0.541, 0.2]);
       GLDREW++; GLPATH = 1;
       (function () { var _n = document.getElementById('perfru'); if (_n && _n.dataset) _n.dataset.path = 'gl'; })();   /* E413：证明这一帧真的走了 GL 路（用来校验仪表，别再拿"对不上"的数下结论） */
+      var _tD = performance.now();
       GLM.draw(fRG, lRG);
+      GLDRAW = performance.now() - _tD;
       /* E411 DS：**一次贴图**进主画布 ⇒ 壳落在 2D 绘制序列里（先壳后点，顺序天然正确），
        *   层叠/z-index/命中测试全都不涉及；每帧那 ~29k 次调用（壳占 70%）变成这 1 次 drawImage。 */
+      var _tB = performance.now();
       g.drawImage(GLM.canvas(), 0, 0);
+      GLBLIT = performance.now() - _tB;
       return m;
     }
   } catch (eGL) { GLPATH = 3; GLERR = String(eGL && eGL.message || eGL);
@@ -1861,7 +1868,9 @@ function draw3b(fr) {
   var isoInfo = null;
   if (st.iso) {
     for (i = 0; i < N; i++) { P[i].ax = P[i].x3; P[i].by = P[i].y3; P[i].cz = (P[i].z3 - zmin) / zspan * zBase; }
+    var _tIso = performance.now();
     isoInfo = drawIso(cx, cy, base, w, h, cb, st.iso === 2);
+    ISOMS = performance.now() - _tIso;   /* E420：drawIso 总耗时 */
   }
   var pr = [];
   for (i = 0; i < N; i++) {
@@ -1922,7 +1931,7 @@ function draw() { try { var _ft0 = performance.now(); drawBody();
     FRN++; _pe.dataset.gliso = String(GLISO); _pe.dataset.frn = String(FRN);
     var _o1 = 0, _ok2 = ''; for (var _k2 in OPC) { _o1 += OPC[_k2]; _ok2 += _k2 + '=' + OPC[_k2] + ' '; }
     _pe.textContent = 'FRMS=' + FRMS.toFixed(2) + ' AVG=' + _av.toFixed(2) + ' N=' + FRMA.length + ' MODE=' + st.mode
-      + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN + ' ISOBUILDS=' + ISOBUILDS + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW
+      + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN + ' ISOBUILDS=' + ISOBUILDS + ' ISOMS=' + ISOMS.toFixed(1) + ' GLBUILD=' + GLBUILD.toFixed(1) + ' GLDRAW=' + GLDRAW.toFixed(1) + ' GLBLIT=' + GLBLIT.toFixed(1) + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW
       + ' **OPSF=' + _o1 + '** ' + _ok2;
     _pe.dataset.path = _pe.dataset.path || '2d';
     for (var _k3 in OPC) OPC[_k3] = 0;   /* 每帧清零 ⇒ OPSF = 这一帧真实画了多少次 */
