@@ -1154,7 +1154,7 @@ function putLabel(txt, x, y, force, rot, idx) {
 function wantLabel(d) {
   if (st.labels === 'off') return false;
   if (st.hi[gk(d)]) return true;
-  if (st.q && d.id.indexOf(st.q) >= 0) return true;
+  if (st.q && String(d.id).toLowerCase().indexOf(st.q) >= 0) return true;   /* §E453 搜索改成不分大小写：包名里有 v7FGta / SLOT-AB12 这种混写，按原样比会「打了却搜不到」 */
   if (st.labels === 'all') return true;
   /* §E330 父链那几枚必须常驻：它们不是冠军、名次也不显眼（E51-t8-713 排 61），落在"零散实验"那一行里
    *   ⇒ 不点名就找不到，而用户问的正是"现役的祖先在图上哪去了"。 */
@@ -1621,7 +1621,7 @@ function drawMap(fr) {
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
     putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
-  if (st.q) for (i = 0; i < N; i++) if (P[i].id.indexOf(st.q) >= 0 && scr[i]) {
+  if (st.q) for (i = 0; i < N; i++) if (String(P[i].id).toLowerCase().indexOf(st.q) >= 0 && scr[i]) {   /* §E453 与 labelSet 那一处必须同一条规则 */
     g.beginPath(); g.arc(scr[i][0], scr[i][1], 11 * st.size, 0, 6.284); g.strokeStyle = st.ink; g.lineWidth = 2; g.stroke(); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText(st.elev < 0.5
@@ -2763,7 +2763,7 @@ document.getElementById('color').addEventListener('change', function () { st.col
   st.hi = {}; buildGroups(); buildFamBar(); req(); });
 document.getElementById('labels').addEventListener('change', function () { st.labels = this.value; req(); });
 document.getElementById('size').addEventListener('input', function () { st.size = +this.value; req(); });
-document.getElementById('q').addEventListener('input', function () { st.q = this.value.trim(); req(); });
+document.getElementById('q').addEventListener('input', function () { st.q = this.value.trim().toLowerCase(); req(); });   /* §E453 归一下大小写，匹配两处都按小写比 */
 Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-m]'), function (b) { b.onclick = function () { setMode(b.getAttribute('data-m')); }; });
 Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-bg]'), function (b) { b.onclick = function () { var c = b.getAttribute('data-bg');
   document.getElementById('bgc').value = c; setBg(c); }; });
@@ -3312,10 +3312,18 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   ⚠ 读的是**最终画布**的像素。读 CHM.c 就是拿那张纸自己当期望值 —— 纸现在与视图无关，永远绿 = 假判据（第 91 条）。
    *   ⚠ 只在 tkx=1 与 0.55 两档量：2.2 档名字被放大 2.2 倍、最左那一枚会顶出左边缘，检测会读到"没有墨"而不是"走少了"。
    *   名字被推出画布这件事没有失去保护 —— 它现在由"每枚都拖得回来"与上面那条"左栏与数据同矩阵"合起来兜。 */
+  function hexSum(h) { h = String(h || ''); if (h.charAt(0) === '#') h = h.slice(1);
+    if (h.length === 3) h = h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2);
+    if (h.length < 6) return -1;
+    return parseInt(h.slice(0, 2), 16) + parseInt(h.slice(2, 4), 16) + parseInt(h.slice(4, 6), 16); }
   function inkLeft(x1, y0, y1) {
-    var d; try { d = g.getImageData(0, y0, x1, y1 - y0).data; } catch (E9) { return -2; }
+    /* §E453 判据原来写死"三通道之和 > 430"（= 深底上的亮字）⇒ 从 #bg=%23e6ebf5（浅底 · 字是 #0d1420）深链进来
+     *   一个字都数不到 ⇒ 报"左栏文字只走了 0px"，红的是仪器假设了深色主题。
+     *   改成"与**当下底色**差得够远"：浅底深字、深底亮字都合，行带那 .028 的白抬不动 150 这一档。 */
+    var BGS = hexSum(st.bg), d;
+    try { d = g.getImageData(0, y0, x1, y1 - y0).data; } catch (E9) { return -2; }
     for (var x = 0; x < x1; x++) for (var y = 0; y < y1 - y0; y++) { var q = (y * x1 + x) * 4;
-      if (d[q] + d[q + 1] + d[q + 2] > 430) return x; }   /* 家族名 = st.ink、统计行 = st.dim，两档亮度都合；行带 alpha .028 上不去 */
+      if (Math.abs(d[q] + d[q + 1] + d[q + 2] - BGS) > 150) return x; }   /* 家族名 = st.ink、统计行 = st.dim，两档与底色都合；行带 alpha .028 上不去 */
     return -1; }
   function medPX() { var xs = []; for (var z = 0; z < N; z++) if (scr[z] && VIS[z]) xs.push(scr[z][0]);
     xs.sort(function (a, b) { return a - b; }); return xs.length ? xs[xs.length >> 1] : -1; }
@@ -3827,6 +3835,136 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   /* §E430 用户裁定删除：这条腿的派发点是按"环心"算的，而三维态下环心与命中表差 2px（实测 (659,225) vs scr (660,227)）
    *   ⇒ 它测的是"我算出来的点"而不是"用户点下去会怎样"；用户手动验过**指针往返没有问题**。
    *   立体的那条仍在跑（§E449 改名成"屏幕上下端 + F 两端 + 一枚冠军"），保留覆盖。 */
+  /* ===== §E453 工具栏那几个控件：以前每一条判据都是"直接写 st 再画"，没有一条从**控件本身**走起 =====
+   *   这笔账是 §E452 逼出来的：那条门写死 st.flo = 0.8，而 T 滑杆一动 F 分布就动 ——
+   *   "滑杆 → st → 分布"这条链从来没被走过一遍，所以它断在哪儿都没人知道。
+   *   下面三条按**真事件**点控件（dispatchEvent，不写 st），点完核两件事：st 跟上了 ‖ 画面/分布真的跟着变了。
+   *   ⚠ 全部点完要把 st 与 DOM 两侧一起还原：只还原 st 的话用户回头看到的下拉会停在被点过的档位上
+   *     （"控件写着 seed 而图是 fam"就是 §E371 那类两本账）。 */
+  var SNAPI = { mode: st.mode, e: st.elev, labels: st.labels, color: st.color, edges: st.edges, batch: st.batch,
+    T: st.T, size: st.size, q: st.q, side: st.side, sortBy: st.sortBy, bg: st.bg, flo: st.flo, fhi: st.fhi };
+  var HIBK = {}; for (var hik in st.hi) HIBK[hik] = st.hi[hik];
+  function fireEv(el, typ) { el.dispatchEvent(new Event(typ, { bubbles: true })); }
+  var wireBad = [];
+  var WSEL = [['color', 'seed'], ['labels', 'all'], ['batch', 'all'], ['edges', 'hash']];
+  for (var wi = 0; wi < WSEL.length; wi++) { var wid = WSEL[wi][0], wnt = WSEL[wi][1];
+    var wel = document.getElementById(wid), wbk = wel.value;
+    wel.value = wnt; fireEv(wel, 'change');
+    if (st[wid] !== wnt) wireBad.push(wid + ' 选到「' + wnt + '」而 st.' + wid + ' = ' + st[wid]);
+    wel.value = wbk; fireEv(wel, 'change');
+    if (st[wid] !== wbk) wireBad.push(wid + ' 还原失败（st 是 ' + st[wid] + '，控件是 ' + wbk + '）'); }
+  var loT0 = winLo(), r0 = dotR(P[0], 1), wT = document.getElementById('T'), bkT = wT.value;
+  wT.value = '0.25'; fireEv(wT, 'input');
+  if (Math.abs(st.T - 0.25) > 1e-9) wireBad.push('T 滑杆拖到 0.25 而 st.T = ' + st.T);
+  if (Math.abs(winLo() - loT0) < 1e-6) wireBad.push('st.T 动了但 F 值域一点没动（winLo 还是 ' + loT0.toFixed(3)
+    + ' ⇒ F = Hp/100 + T·S 与这根滑杆脱钩了）');
+  var wS = document.getElementById('size'), bkS = wS.value;
+  wS.value = '2'; fireEv(wS, 'input');
+  if (Math.abs(st.size - 2) > 1e-9) wireBad.push('点大小滑杆拖到 2 而 st.size = ' + st.size);
+  var r1 = dotR(P[0], 1);
+  if (!(r1 > r0 * 1.5)) wireBad.push('st.size 翻倍而 dotR 没跟着长（' + r0.toFixed(2) + ' → ' + r1.toFixed(2) + '）');
+  wS.value = bkS; fireEv(wS, 'input'); wT.value = bkT; fireEv(wT, 'input');
+  T('工具栏接线：四个下拉与两根滑杆点下去必须真的改 st，且 T / 点大小要真的改动到画面',
+    wireBad.length === 0, wireBad.join(' ‖ ') || ('下拉 ' + WSEL.length + ' 个 + 滑杆 2 根都接上了 ‖ 动 T 之前 winLo = '
+      + loT0.toFixed(3) + '，动完已变 ‖ dotR ' + r0.toFixed(2) + ' → ' + r1.toFixed(2)));
+  /* ② 搜索框：它的可观察效果只有两样 —— 匹配那几枚**上名字** + 在它们外面描一圈墨环（drawMap 里 11·st.size 那一圈）。
+   *    所以判据也得读这两样，不能只信 st.q 变了。 */
+  /* 片段从**当下看得见的那批点**里现找（4 字一段，优先命中 2~6 枚的那一段），不写死：
+   *   上一版写死 ['bead','ring','new5',…]，§E440 去重之后命中数掉到 1 ⇒ 这条自己变成"没测到东西"；
+   *   改成全库现找之后又在 #flo=0.60&fhi=0.70 下红一次 —— 那段「eco2」全库命中 6 枚，可当下窗内一枚都不在，
+   *   于是"可见的匹配 0 枚"。这条测的是"搜索框把**图上看得见**的那几枚标出来"，取样就必须从看得见的里面取。 */
+  var SNAPQ = { mode: st.mode, e: st.elev, labels: st.labels };
+  st.mode = 'map'; st.elev = 0; st.labels = 'champ'; st.q = ''; recomputeVIS(); draw();
+  var qFrag = '', qN = 0, QCH = 'abcdefghijklmnopqrstuvwxyz0123456789', QCNT = {}, QORD = [];
+  for (var qi0 = 0; qi0 < N; qi0++) { if (!VIS[qi0] || !scr[qi0]) continue;
+    var pid = String(P[qi0].id).toLowerCase();
+    for (var po = 0; po + 4 <= pid.length; po++) { var pk = pid.slice(po, po + 4), okk = true;
+      for (var pz = 0; pz < 4; pz++) if (QCH.indexOf(pk.charAt(pz)) < 0) { okk = false; break; }
+      if (!okk) continue;
+      if (QCNT[pk] === undefined) { QCNT[pk] = 0; QORD.push(pk); } QCNT[pk]++; } }
+  for (var qo = 0; qo < QORD.length; qo++) { var ck = QCNT[QORD[qo]];
+    if (ck >= 2 && ck <= 6 && ck > qN) { qN = ck; qFrag = QORD[qo]; } }
+  if (qFrag === '') for (var qo2 = 0; qo2 < QORD.length; qo2++) if (QCNT[QORD[qo2]] === 1) { qN = 1; qFrag = QORD[qo2]; break; }
+  var dQ0 = null, qBad = [];
+  try { dQ0 = g.getImageData(0, 0, cv.width, cv.height).data; } catch (Eq) {}
+  var wq = document.getElementById('q'); wq.value = qFrag; fireEv(wq, 'input'); draw();
+  var dQ1 = null; try { dQ1 = g.getImageData(0, 0, cv.width, cv.height).data; } catch (Eq2) {}
+  if (st.q !== qFrag) qBad.push('搜索框打了「' + qFrag + '」而 st.q = ' + JSON.stringify(st.q));
+  var nLab = 0, nRing = 0, qVis = 0, rrq = 11 * st.size;
+  for (var qi3 = 0; qi3 < N; qi3++) { var d3 = P[qi3]; if (String(d3.id).toLowerCase().indexOf(qFrag) < 0 || !scr[qi3] || !VIS[qi3]) continue;
+    qVis++;
+    var got3 = false;
+    for (var lb3 = 0; lb3 < LAB.length; lb3++) if (LAB[lb3][4] === qi3) got3 = true;
+    if (got3) nLab++;
+    if (dQ0 && dQ1) { var cx3 = Math.round(scr[qi3][0]), cy3 = Math.round(scr[qi3][1]), nd = 0;
+      for (var ax = -rrq - 3; ax <= rrq + 3; ax++) for (var ay = -rrq - 3; ay <= rrq + 3; ay++) {
+        var rr2q = Math.sqrt(ax * ax + ay * ay); if (rr2q < rrq - 2 || rr2q > rrq + 2) continue;
+        var oq = ((cy3 + ay) * cv.width + (cx3 + ax)) * 4; if (oq < 0) continue;
+        if (dQ0[oq] !== dQ1[oq] || dQ0[oq + 1] !== dQ1[oq + 1] || dQ0[oq + 2] !== dQ1[oq + 2]) nd++; }
+      if (nd >= 8) nRing++; } }
+  if (qFrag === '' || qVis < 1) qBad.push('片段「' + qFrag + '」在当下这张图上数到 ' + qVis + ' 枚可见的匹配 ⇒ 这条没测到东西');
+  else if (nLab < qVis) qBad.push('可见的匹配 ' + qVis + ' 枚只上了名字 ' + nLab + ' 枚（搜索框的作用就是把这几枚标出来）');
+  if (dQ0 && dQ1 && qVis >= 1 && nRing < qVis) qBad.push('可见的匹配 ' + qVis + ' 枚里只有 ' + nRing + ' 枚周围真多出一圈墨环');
+  if (!dQ0 || !dQ1) qBad.push('取不到两帧像素');
+  wq.value = ''; fireEv(wq, 'input');
+  st.mode = SNAPQ.mode; st.elev = SNAPQ.e; st.labels = SNAPQ.labels;
+  T('搜索框：打一个包名片段，匹配那几枚必须真的被标出来（上名字 + 描一圈环，两帧之差为证）',
+    qFrag !== '' && qBad.length === 0,
+    (qFrag === '' ? 'id 堆里找不到命中 2~6 枚的 4 字片段 ⇒ 这条没测到东西' : '片段「' + qFrag + '」全库命中 ' + qN + ' 枚 ‖ 当下可见 ' + qVis + ' 枚 ‖ 上名字 ' + nLab + ' ‖ 描环 ' + nRing)
+      + (qBad.length ? ' ‖ ' + qBad.join(' ‖ ') : ''));
+  /* ③ 三个按钮：排序（1d 那张的横轴顺序真的换）、冠军序列（面板出现）、底色（连字色一起翻，深浅底上白字会看不见）*/
+  var btnBad = [], wsort = document.getElementById('sortb'), sbk = st.sortBy;
+  function idOf(i) { return (i >= 0 && P[i]) ? P[i].id : '(一枚都没有)'; }
+  st.mode = '1d'; recomputeVIS(); draw();
+  var leftA = -1, leftAx = 1e9;
+  for (var li2 = 0; li2 < N; li2++) if (scr[li2] && VIS[li2] && scr[li2][0] < leftAx) { leftAx = scr[li2][0]; leftA = li2; }
+  wsort.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (st.sortBy === sbk) btnBad.push('排序按钮点下去 st.sortBy 没翻（还是 ' + st.sortBy + '）');
+  if (wsort.textContent.indexOf(st.sortBy === 'F' ? 'F 名次' : '训出时刻') < 0) btnBad.push('按钮文案没跟着改：' + wsort.textContent);
+  recomputeVIS(); draw();
+  var leftB = -1, leftBx = 1e9;
+  for (var li3 = 0; li3 < N; li3++) if (scr[li3] && VIS[li3] && scr[li3][0] < leftBx) { leftBx = scr[li3][0]; leftB = li3; }
+  if (leftA < 0 || leftB < 0) btnBad.push('两种排序下都找不到可比的落点（' + leftA + '/' + leftB + '）');
+  else if (leftA === leftB) btnBad.push('两种排序下最左那枚是同一枚（' + idOf(leftA) + '）⇒ 这根按钮换了个文案没换图');
+  wsort.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  var wbs = document.getElementById('bside'), sdk = st.side;
+  wbs.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (st.side === sdk) btnBad.push('冠军序列按钮点下去 st.side 没翻');
+  var sdv = document.getElementById('side').style.display;
+  if (st.side && sdv === 'none') btnBad.push('st.side 开了但 #side 还藏着');
+  if (!st.side && sdv !== 'none') btnBad.push('st.side 关了而 #side 还占着画面');
+  wbs.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  /* 底色：这条不能拿"进入时的字色"当参照（深链 #bg=%23e6ebf5 进来时字色已经是浅底那份了），
+   *   改成**两档各点一次互相比**，并且把语义也判掉：浅底上字必须比底暗、深蓝上字必须比底亮（否则就是"看不见字"）。 */
+  var wbg = document.querySelectorAll('#bar button[data-bg]'), wLite = null, wDark = null;
+  for (var bi = 0; bi < wbg.length; bi++) { var bv = String(wbg[bi].getAttribute('data-bg')).toLowerCase();
+    if (bv === '#e6ebf5') wLite = wbg[bi]; if (bv === '#0f1522') wDark = wbg[bi]; }
+  var inkLite = '', inkDark = '';
+  if (wLite) { wLite.dispatchEvent(new MouseEvent('click', { bubbles: true })); inkLite = st.ink; }
+  if (wDark) { wDark.dispatchEvent(new MouseEvent('click', { bubbles: true })); inkDark = st.ink; }
+  if (!wLite || !wDark) btnBad.push('底色按钮里找不到「浅底」或「深蓝」那两粒（找到 ' + wbg.length + ' 粒）');
+  else {
+    if (inkLite === inkDark) btnBad.push('浅底与深蓝两档字色一模一样（' + inkLite + '）⇒ 换底色没换字色');
+    if (hexSum(inkLite) >= hexSum('#e6ebf5')) btnBad.push('浅底上字比底还亮或同亮（ink ' + inkLite + '）⇒ 那一档等于看不见字');
+    if (hexSum(inkDark) <= hexSum('#0f1522')) btnBad.push('深蓝上字比底还暗或同暗（ink ' + inkDark + '）⇒ 这一档等于看不见字'); }
+  var wBack = null;
+  for (var bi2 = 0; bi2 < wbg.length; bi2++)
+    if (String(wbg[bi2].getAttribute('data-bg')).toLowerCase() === String(SNAPI.bg).toLowerCase()) wBack = wbg[bi2];
+  if (wBack) wBack.dispatchEvent(new MouseEvent('click', { bubbles: true })); else setBg(SNAPI.bg);
+  if (String(st.bg).toLowerCase() !== String(SNAPI.bg).toLowerCase()) btnBad.push('底色没还原成进来时那档（' + st.bg + ' ≠ ' + SNAPI.bg + '）');
+  T('工具栏三个按钮：排序要真的换 1d 的顺序、冠军序列要真的出现、底色两档必须连字色一起翻（浅底深字 / 深底亮字）',
+    btnBad.length === 0, btnBad.join(' ‖ ') || ('排序：最左 ' + idOf(leftA) + ' → ' + idOf(leftB)
+      + ' ‖ 侧栏开合两态都对 ‖ 字色 浅底 ' + inkLite + ' / 深蓝 ' + inkDark + ' ‖ 已还原到 ' + st.bg));
+  st.mode = SNAPI.mode; st.elev = SNAPI.e; st.labels = SNAPI.labels; st.color = SNAPI.color; st.edges = SNAPI.edges;
+  st.batch = SNAPI.batch; st.T = SNAPI.T; st.size = SNAPI.size; st.q = SNAPI.q; st.side = SNAPI.side;
+  st.sortBy = SNAPI.sortBy; st.bg = SNAPI.bg; st.flo = SNAPI.flo; st.fhi = SNAPI.fhi;
+  st.hi = {}; for (var hk2 in HIBK) st.hi[hk2] = HIBK[hk2];
+  var dColor = document.getElementById('color'), dLab = document.getElementById('labels');
+  var dBatch = document.getElementById('batch'), dEdges = document.getElementById('edges'), dQ = document.getElementById('q');
+  dColor.value = SNAPI.color; dLab.value = SNAPI.labels; dBatch.value = SNAPI.batch; dEdges.value = SNAPI.edges;
+  dQ.value = SNAPI.q; wT.value = SNAPI.T; wS.value = SNAPI.size;
+  document.getElementById('Tv').textContent = (+SNAPI.T).toFixed(2);
+  recomputeVIS(); buildGroups(); buildFamBar(); paintSide(); paintWin(); draw();
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\\n' + out.join('\\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\\n已经跑到：\\n' + out.join('\\n'); nbad++; }
