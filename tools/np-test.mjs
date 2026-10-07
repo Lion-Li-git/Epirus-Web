@@ -10744,14 +10744,24 @@ t('D205 门号纪律（DS 清单 B8 · 09-30 夜班）：D 号不许撞车，且
   ok(dOnly.length >= 150, '① 反装饰守卫：本文件应扫到 ≥150 道 D 类门（实测 ' + dOnly.length + '）⇒ 抽取式一旦被改空，这条要响亮失败，不许变成"永远通过');
   ok(dupOf(dOnly).length === 0, '② D 号撞车：' + dupOf(dOnly).join(' ') + ' ⇒ 撞号的那道会被"已插入"判据静默吞掉，记录里却写着有这道门');
   ok(dupOf(['D204', 'D204', 'D205']).length === 1, '③ 合成正对照：判据函数对明知重复的输入必须响（没响 ⇒ 上面那条是装饰）');
-  /* ④ 只核**最新一版**：老条目里存在"其实不存在的 D200"这类更正用的话，扫全文会把更正本身判红。 */
+  /* ④ 改判（§E443，用户 10-08 裁：「不要为了过门禁而过，现在的版本是好的，你可以反思一下红的门禁是不是写的有什么问题」）
+   *   原来这条判的是「最新一版条目至少提到 3 个门号」，而它自己的说明写的是「提到 0 个说明抽取式失效」⇒ **主语错位**：
+   *   抽取式坏没坏量的是抽取式，不是作者引了几次门号。两处实测后果：
+   *     · 抓不到真病 —— 往条目里粘三个在册 D 号它就绿（本仓 §E430 刚按用户裁定删掉两条同族病：定死标签、不看效果）；
+   *     · 会冤枉好账 —— v1.6.25 那版**真的动了门**（§E430 删了两条门腿）却没写一个 D 号 ⇒ 判红，而它记的内容一字不差。
+   *   现在改成量它本来要量的那件事：**抽取式对整段 v1.6.x 必须还数得出门号**（数不出 = 正则或区段边界被改坏，
+   *   那时 ⑤ 会跟着变成假绿）。"每一版都点名自己动了哪些门"这条习惯保留 —— 但它写进条目正文由人核，不由数 token 的门代管。 */
   const top = String(readFileSync('CHANGELOG.md', 'utf8').split(/^## /m)[1] || '');
+  const zone = String(readFileSync('CHANGELOG.md', 'utf8').split('\n## v1.5.')[0] || '');
   const idSet = new Set(gateIds);
   const claimOf = function (text) { return [...new Set([...text.matchAll(/\bD([0-9]+)(?![0-9])/g)].map(m => 'D' + m[1]))]; };
   const claims = claimOf(top);
-  ok(claims.length >= 3, '④ 反装饰：最新一版 CHANGELOG 至少该提到 3 个门号（实测 ' + claims.length + '）⇒ 提到 0 个说明抽取式失效');
+  ok(claimOf(zone).length >= 10, '④ 抽取式自证：整段 v1.6.x 至少该数出 10 个不同门号（实测 ' + claimOf(zone).length +
+    ' ‖ 区段长 ' + zone.length + ' 字符）⇒ 数到 0 就是正则或"到 v1.5 为止"那道边界被改坏，下面 ⑤ 会跟着假绿');
   const ghost = claims.filter(c => !idSet.has(c));
-  ok(ghost.length === 0, '⑤ 记账说门在、门不在：最新一版提到 ' + claims.join(' / ') + '，其中 ' + ghost.join(' / ') + ' 在 np-test 里**没有注册**');
+  ok(ghost.length === 0, '⑤ 记账说门在、门不在：最新一版提到 ' + claims.length + ' 道门' +
+    (claims.length ? '（' + claims.join(' / ') + '）' : '（本版一个门号都没提 ⇒ ⑤ 无可判，按上面 ④ 的说明这是**允许**的）') +
+    (ghost.length ? '，其中 ' + ghost.join(' / ') + ' 在 np-test 里**没有注册**' : ''));
   ok(claimOf('新增门 D99999 与 D204').filter(c => !idSet.has(c)).join() === 'D99999',
     '⑥ 合成正对照：给判据一段"声称有 D99999"的文本，它必须把 D99999 抓出来（抓不到 ⇒ ⑤ 是假的）');
 });

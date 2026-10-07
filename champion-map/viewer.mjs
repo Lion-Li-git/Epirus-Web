@@ -720,11 +720,15 @@ function mix(c1, c2, t) {   /* 十六进制线性插值，t∈[0,1] */
 /* G(long) 的显示区间取全库 p02..p98（不用 0..8：那会把对比度全压在低段）*/
 var GLR = (function () { var a = P.map(function (d) { return d.gl; }).filter(function (v) { return v !== null && v !== undefined && isFinite(v); }).sort(function (x, y) { return x - y; });
   return a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [0, 8]; })();
+/* §E308「没测过的灰压到 0.16」那一支抽成函数：页内那条「高亮不许压黑」必须能把它**单独摘出来**再量。
+ *   不抽的话那条判据在 pm/duel/de/hp/sc 五档**恒红**（实测 0.16），而红的原因是"两条都对的规矩打架"，
+ *   不是画面坏了 —— 用户 10-08 裁：「不要为了过门禁而过…反思红的门禁是不是写的有什么问题」。*/
+function unmeasuredGray(d) { return (st.color === 'pm' && (d.pv === null || d.pv === undefined)) ||
+    (st.color === 'duel' && !d.ds) || (st.color === 'de' && d.de === null) || (st.color === 'hp' && d.hp === null) ||
+    (st.color === 'sc' && (d.scd === null || d.scd === undefined)); }
 function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   /* §E308 上槽体检口径下 705/718 枚是"没测过"⇒ 不压暗就找不到那 13 枚（灰压到 0.16，实测过的照旧）*/
-  if ((st.color === 'pm' && (d.pv === null || d.pv === undefined)) || (st.color === 'duel' && !d.ds) ||
-      (st.color === 'de' && d.de === null) || (st.color === 'hp' && d.hp === null) ||
-      (st.color === 'sc' && (d.scd === null || d.scd === undefined))) return 0.16;
+  if (unmeasuredGray(d)) return 0.16;
   if (!n) return 1; return st.hi[gk(d)] ? 1 : 0.34; }
   /* §E338 用户 ④「点选中框会全部变暗」：非高亮那批原来压到 0.10 —— 24 个家族里点一家，
    *   其余 742/901 枚直接糊成背景噪点，图例点下去之后整张图读不动。压到 0.34 既留住"谁被选中"的对比，
@@ -3021,10 +3025,18 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       + (ny - Math.round(2 * devicePixelRatio)) + '±2）‖ 采样行 ' + sy + ' 实际 [' + col[o] + ',' + col[o + 1] + ','
       + col[o + 2] + '] 应为 [' + w[0] + ',' + w[1] + ',' + w[2] + ']';
   })());
-  /* ⑤ 点家族图例不许把整张图压黑（用户 ④「点选中框会全部变暗」） */
+  /* ⑤ 点家族图例不许把整张图压黑（用户 ④「点选中框会全部变暗」）
+   *   §E443 改判：原来这条取"全图最低 alpha"，于是把 §E308 那支**故意**压到 0.16 的"未测过灰"也算进来了 ⇒
+   *   在 pm/duel/de/hp/sc 五档恒红（实测 0.16），红得没有信息量。现在两支分开量：
+   *   高亮那支仍要 ≥ 0.2（这条测的是"点一家之后别人还在不在"），未测过那支单独钉住"确实是 0.16、且不许变成 0"。 */
   st.hi = {}; buildGroups(); var k0 = GRP.keys[0]; st.hi[k0] = true;
-  var mn = 1; for (var hi2 = 0; hi2 < N; hi2++) { var a2 = alphaOf(P[hi2]); if (a2 < mn) mn = a2; }
-  T('高亮：非选中那批不许压到 0.2 以下（留上下文）', mn >= 0.2, mn.toFixed(2));
+  var mn = 1, nGray = 0, mnGray = 1;
+  for (var hi2 = 0; hi2 < N; hi2++) { var ag = alphaOf(P[hi2]);
+    if (unmeasuredGray(P[hi2])) { nGray++; if (ag < mnGray) mnGray = ag; continue; }
+    if (ag < mn) mn = ag; }
+  T('高亮：非选中那批不许压到 0.2 以下（留上下文）‖ 未测过那一支单独量（§E308 = 0.16，不许掉到 0）',
+    mn >= 0.2 && (nGray === 0 || mnGray >= 0.15),
+    '非选中最低 ' + mn.toFixed(2) + '（' + (mn >= 0.2 ? '✅' : '✗') + '）‖ 未测过 ' + nGray + ' 枚 ‖ 其最低 ' + (nGray ? mnGray.toFixed(2) : '—'));
   st.hi = {};
   /* ⑥ 冠军序列按上线时刻排，抽不到的**必须标出来**（不许拿训出时刻冒充上线时刻） */
   var CH = champList(), prevS = '';
