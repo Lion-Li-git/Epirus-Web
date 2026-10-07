@@ -1906,7 +1906,14 @@ function paintLegend(fr) {
     WINAX.width = AXW * devicePixelRatio; WINAX.height = AXH * devicePixelRatio;
     WINAX.style.width = AXW + 'px'; WINAX.style.height = AXH + 'px'; winaxBind(WINAX); }
   wr.appendChild(c); wr.appendChild(WINAX);
-  lg.appendChild(s1); lg.appendChild(wr); lg.appendChild(s2);
+  /* §E435 DS（用户 10-08：「两个竖杠始终得占一定高度，然后你还把文字给上下排，肯定中间得浪费一大块。
+   *   不如直接把文字做成一整块排在两个竖杠左侧，并且多换行」）⇒ 改成**两列**：左列文字（限制宽度 ⇒ 自动多换行、
+   *   高度与竖杠齐平），右列两个竖杠。原来 s1/wr/s2 竖着堆 ⇒ 文字只占一两行、竖杠占满高 ⇒ 中间必空一块。 */
+  var _col = document.createElement('div'); _col.style.maxWidth = '150px'; _col.style.flex = '0 0 auto';
+  _col.appendChild(s1); _col.appendChild(s2);
+  var _row = document.createElement('div'); _row.style.display = 'flex'; _row.style.gap = '8px'; _row.style.alignItems = 'flex-start';
+  _row.appendChild(_col); _row.appendChild(wr);
+  lg.appendChild(_row);
   winaxDraw();
   /* §E330/§E347：这根带**到底在量什么**必须印出来 —— 不印，读图的人会把"中性灰"当成"不好不坏的绝对电平"，
    *   而 F 档的灰其实是"库里第 50% 名"、rel 档的灰才是"就是现役那一档"。两档共用一个 18px 的条，说法完全不同。*/
