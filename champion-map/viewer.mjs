@@ -2182,6 +2182,12 @@ function paintLegend(fr) {
     : (st.color === 'fam' || st.color === 'seed') ? ('（黄针 = 现役）')   /* §E431 用户 10-08：删掉「下 = 地板 ‖ 上 = 好」这种没用的说明，只留黄针 = 现役（顺带让整块变窄）*/
     : st.color === 'rel' ? ('红 = 不如现役（F 底 ' + fr[0].toFixed(2) + '）')
     : ('蓝 = 地板（F 底 ' + CB.lo.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最低' : ' ‖ 灰 = 库内中位') + '）');
+  /* §E458：Hp 这一档每枚都是**单批**读数（30 组 × 5 人 · ε=0.2 soft）。今晚换一批 RNG 重量，同一枚包摆 2.3~5.7pt
+   *   （现役自己 47.3 → 53.0，v7bead2-93 与它的差直接翻负号），而**配对决斗**（同座位表同批种子）三批方向一条没翻。
+   *   ⇒ 这句提醒必须写在"读这个数的地方"，不能只躺在 CHANGELOG 里：颜色当水位看，要排序请切「对现役决斗」那一档。 */
+  var s3h = null;
+  if (st.color === 'hp') { s3h = document.createElement('div');
+    s3h.textContent = '⚠ 每枚都是单批读数 ‖ 同一枚换一批实测摆 2.3~5.7pt ⇒ 颜色看水位，排序请用「对现役决斗」那档'; }
   /* §E378 强度窗口的控制轴就贴在这条色带旁边（用户 10-07：「做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）。
    *   为什么是**并排另一根轴**而不是把柄画在这条带上：这条带的两端在窗口态读的是**窗内两端**（§E373），
    *   柄画上去就永远贴在顶和底 —— 那条带说的是"色怎么铺"，这根轴说的是"窗在库里的哪一段"，两件事不能合成一根。*/
@@ -2201,7 +2207,7 @@ function paintLegend(fr) {
    *   不如直接把文字做成一整块排在两个竖杠左侧，并且多换行」）⇒ 改成**两列**：左列文字（限制宽度 ⇒ 自动多换行、
    *   高度与竖杠齐平），右列两个竖杠。原来 s1/wr/s2 竖着堆 ⇒ 文字只占一两行、竖杠占满高 ⇒ 中间必空一块。 */
   var _col = document.createElement('div'); _col.style.maxWidth = '150px'; _col.style.flex = '0 0 auto';
-  _col.appendChild(s1); _col.appendChild(s2);
+  _col.appendChild(s1); _col.appendChild(s2); if (s3h) _col.appendChild(s3h);   /* §E458 只有 hp 档多这一行（单批读数的噪声必须写在读数的地方）*/
   var _row = document.createElement('div'); _row.style.display = 'flex'; _row.style.gap = '8px'; _row.style.alignItems = 'flex-start';
   _row.appendChild(_col); _row.appendChild(wr);
   lg.appendChild(_row);
