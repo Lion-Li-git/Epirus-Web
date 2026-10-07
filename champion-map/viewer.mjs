@@ -1589,7 +1589,13 @@ function drawMap(fr) {
       g.beginPath(); g.arc(pr[i].x, pr[i].y, rr + 5 * devicePixelRatio, 0, 6.284); g.stroke(); }
     else if (st.cmp.indexOf(d.id) >= 0) { g.globalAlpha = 1; g.strokeStyle = '#7fd1ff'; g.lineWidth = 1.6 * devicePixelRatio;
       g.beginPath(); g.arc(pr[i].x, pr[i].y, rr + 3.4 * devicePixelRatio, 0, 6.284); g.stroke(); }
-    if (isC && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.5; g.stroke(); }
+    /* §E449 这里必须**重新起一条路径**再描墨环：上面选中环 / 对比环各自 beginPath 过，当前路径已经变成
+     *   半径 rr+5 的那一圈，直接 stroke 等于**把黄色选中环用墨色重描一遍** ⇒
+     *   立体态里选中一枚冠军，画布上只剩墨环、没有黄环（页内那条「指针往返」扫整张画布数到 0 颗环色像素，
+     *   就是这件事：它报的不是"判据坏"，是**用户点中冠军之后看不见选中反馈**）。
+     *   顺带原来那圈点边也被挪到了 rr+5 上（选中的冠军比没选中的多一圈外移的墨边）。 */
+    if (isC && al > 0.5) { g.beginPath(); g.arc(pr[i].x, pr[i].y, rr, 0, 6.284);
+      g.strokeStyle = st.ink; g.lineWidth = 1.5; g.stroke(); }
     /* §E302 过线**只**按逐枚真值标：绿环 = 这枚自己过了今天那道闸（113/718）。
      *   二维的"过线范围"已删（用户：绿区会把底图盖掉），为什么不该再画回去的理由写在 buildNB 末尾。*/
     if (d.ok === 1 && al > 0.3) {
@@ -3611,8 +3617,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   /* ===== §E373 连线开关（用户："给一个连线开关不然可能会太多挡住了"）=====
    *   两件套：① 帧计数器（这一帧真走了几条边的绘制）② 像素差（关掉之后画面**真的**少了东西）。
    *   只读 ① 就是"信代码自己的说法"——那只说明循环走没走，不说明画面上有没有线（第 91 条同一族）。 */
-  var SNAPM2 = { mode: st.mode, edges: st.edges };
-  st.mode = 'tree'; st.elev = 0; st.edges = 'all'; draw();
+  var SNAPM2 = { mode: st.mode, edges: st.edges, flo: st.flo, fhi: st.fhi };
+  /* §E449 强度窗口也要钉成全范围：这条比的是 all 与 hash 两种档**各多画哪几类边**，而两边都只画可见点之间的边。
+   *   从 #flo=0.60&fhi=0.70 这类深链进来时可见点只剩几十枚 ⇒ 两档都只剩 3 条，3 < 3 不成立就红 ——
+   *   红了的是"窗口把样本切没了"，不是"开关坏了"（实测 全开 3 ‖ 只实录 3 ‖ 关掉 0，像素差照样 4754 说明开关本身是活的）。
+   *   窗口本身该由「强度窗口」那几条量，不许记到这条账上。 */
+  st.mode = 'tree'; st.elev = 0; st.flo = 0; st.fhi = 1; recomputeVIS(); st.edges = 'all'; draw();
   var eAll = NEDG, pxAll = null;
   try { pxAll = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E1) {}
   st.edges = 'off'; draw(); var eOff = NEDG, diffOff = -1;
@@ -3623,31 +3633,66 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('连线开关：全开 / 只实录 / 关掉 三态各画多少条要说得出，且关掉之后画面真的少了东西',
     eAll > 0 && eOff === 0 && eHash >= 1 && eHash < eAll && diffOff > 200,
     '全开 ' + eAll + ' 条 ‖ 只实录 ' + eHash + ' 条 ‖ 关掉 ' + eOff + ' 条 ‖ 关掉与全开的采样像素差 ' + diffOff);
-  st.mode = SNAPM2.mode; st.edges = SNAPM2.edges; draw();
+  st.mode = SNAPM2.mode; st.edges = SNAPM2.edges;
+  st.flo = SNAPM2.flo; st.fhi = SNAPM2.fhi; recomputeVIS(); draw();
   /* ===== §E372 真往返（用户点名的偏移病）：派发一次真点击，位置取这枚**画出来的地方** ⇒ 选中的必须是它自己。
    *   两层都不许信：① 不读 pickAt（那条只量"命中表与几何一致"，而用户报的是指针 → 位图那一步：rect、dpr、
    *      CSS 把位图压扁全在里面）；② **也不拿 scr 当"点在哪"** —— 第一版就是拿 scr 反算 clientX/Y，
    *      结果把命中表改成记"脚下"仍然 35/0 全绿（变异实测），因为它点哪儿就按哪儿判。
-   *   现在改成找**选中环的像素**（#ffd166 全画布只有这一枚用，图例那根针画在另一张 canvas 上）的包围盒中心。
+   *   现在改成找**选中环的像素**（§E449 用两帧差分找，不按颜色猜：#ffd166 在主画布上确实只有这一圈用，
+   *   但"按颜色数"这件事在 dpr=1 下只剩十几颗像素，中心不再是环心；见上面 drawnCentre）的质心。
    *   两枚都要过：**最靠下**放大指针换算的比例误差（错位随 y 线性增长 = 用户报的方向），
    *   **最靠上**放大"命中记脚下、画的是抬起来那点"的分离（立体态最高点抬得最多）。
    *   ⚠ 只测最下面那枚是错的：它的抬升量 ≈ 0 ⇒ 上面那个变异根本测不出来（第一版就这么漏过去的）。 */
+  var DCN = 0, DCY = 0, DCD = -1;   /* 上一次 drawnCentre：差分多出来的颗数 / 其中环色那一族的颗数 / 百分比 */
   function drawnCentre(id) {
+    /* §E449 改成**两帧差分 + 环色占比**两道一起：原来只在整张画布上按颜色扫 #ffd166，那条量的其实是
+     *   "这一族色出没出现过"，不是"环画在哪儿"。两个方向都会错：阈值收紧（R>235 且 G 185..225 且 B 75..125）
+     *   在 dpr=1 下被抗锯齿挡住 ⇒ 整圈只剩 12~17 颗，包围盒中心不再等于环心；阈值放宽又会串进同方向色 ——
+     *   色带 LUT 的黄端、duel 档的 flip 黄(#e0b13c)都是这一族。
+     *   差分不需要猜颜色：选中只多画这一圈（alphaOf 的压暗走 st.hi 家族高亮、不走 st.sel），
+     *   两帧除环之外逐像素相同 ⇒ 有差异的像素**就是**环，中心就是环心，邻居多密集都不参与。
+     *   ⚠ 但只看差分就丢了 §E449 那颗牙：那处的病是"黄环画出来又被墨色重描一遍"，差分照样数得到（那圈像素确实
+     *     只在选中帧出现）。所以再加一道"这些差分的颗里还得有够多是环色"，红的才是**画上去的颜色**不对
+     *     —— 线怎么划、实测两侧读数见下面 return 前那段。
+     *   ⚠ 先把 tw（平面⇄立体那条 520ms 补间）掐了再取两帧：补间在跑时两次 draw 本身就不同，差分会把动画当环。 */
     var i = nOf(id); if (i < 0 || !scr[i]) return null;
+    tw = null;
     st.sel = id; draw();
-    var d = null; try { d = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E) { return null; }
-    var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, n = 0;
-    for (var y = 0; y < cv.height; y++) { var row = y * cv.width;
-      for (var x = 0; x < cv.width; x++) { var o = (row + x) * 4;
-        if (d[o] > 235 && d[o + 1] > 185 && d[o + 1] < 225 && d[o + 2] > 75 && d[o + 2] < 125) {
-          n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } } }
+    var dA; try { dA = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E) { st.sel = null; draw(); return null; }
     st.sel = null; draw();
-    return n > 24 ? [(x0 + x1) / 2, (y0 + y1) / 2, n] : null;
+    var dB; try { dB = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E) { return null; }
+    var rad = Math.max(dotR(P[i], curZoom()), 10) + 12 * devicePixelRatio;   /* 只圈这一枚附近：全画布逐像素比对没必要，慢 */
+    var x0 = Math.max(0, Math.floor(scr[i][0] - rad)), x1 = Math.min(cv.width - 1, Math.ceil(scr[i][0] + rad));
+    var y0 = Math.max(0, Math.floor(scr[i][1] - rad)), y1 = Math.min(cv.height - 1, Math.ceil(scr[i][1] + rad));
+    var sx = 0, sy = 0, n = 0, ny = 0;
+    for (var y = y0; y <= y1; y++) { var row = y * cv.width;
+      for (var x = x0; x <= x1; x++) { var o = (row + x) * 4;
+        if (dA[o] !== dB[o] || dA[o + 1] !== dB[o + 1] || dA[o + 2] !== dB[o + 2]) {
+          n++; sx += x; sy += y;
+          if (dA[o] > 150 && dA[o] - dA[o + 2] > 40) ny++;
+        } } }
+    DCN = n; DCY = ny; DCD = n ? Math.round(ny * 100 / n) : -1;
+    /* 判"颜色对不对"用的是**环色颗数占比**，而且分冠军/非冠军两条线（实测 mode=map&3d=1、&flo=0.60 深链、默认态三组）：
+     *   冠军：改对的版本 146 / 152 / 175 颗（68% / 70% / 81%）‖ 漏 beginPath 的坏版本 38 / 37 / 84 颗（17% / 16% / 36%）
+     *   非冠军：两个版本一字不差（该病只发生在冠军身上 —— 只有冠军会在选中环之后再描一道墨边）
+     *   ⇒ 冠军这条线划 50%，两侧各留 18 与 14 个百分点；非冠军只留一道 20% 的粗闸（防"环色整个换掉了"这种全局病）。
+     *   ⚠ 不能用 B 通道均值判：环混的是底下那块地，密度高的地方同一个环能读出 B=76 也能读出 B=131，线没法划。
+     *   ⚠ 也不能判"过半"：dpr=1 一圈 2px 描边被抗锯齿切掉一半以上是常态（实测改对的版本也只有 53%~81%）。 */
+    var isCh = !!P[i].lin;
+    return n >= 6 && DCD >= (isCh ? 50 : 20) ? [sx / n, sy / n, n] : null;
   }
   function roundTrip(setup) {
-    var bak = { mode: st.mode, e: st.elev, z: st.zoom3, k: st.k, iso: st.iso };
+    var bak = { mode: st.mode, e: st.elev, z: st.zoom3, k: st.k, iso: st.iso, labels: st.labels };
+    /* §E449 标签钉成"不标"：这条的派发点是从**选中环的像素**反算出来的，而 labels=all 时近处点的名字会把选中环糊掉半圈
+     *   ⇒ 可见弧的质心不再等于点心（实测三枚全错位，环心与 scr 差 +7/+5/-7px，按质心点下去选中了邻居）。
+     *   这个病是真的，但它归"被别人的名字压住的点"那条量（上一段，出厂档实测 cov），不归指针换算这条：
+     *   本条要证的是 rect / dpr / CSS 压扁这一层换算对不对，把两件事记进同一本账，红了不知道该修哪个。 */
+    st.labels = 'off';
     setup();
     var rr = cv.getBoundingClientRect(), lo = -1, hi = -1, loY = -12, hiY = 1e9, fails = [], n = 0, dd = [];
+    var loC = -1, loCY = -12;   /* 最靠下的那枚冠军（专门给它留一个名额，见下面 §E449 那段） */
+    var nLinp = 0, nOcc = 0;   /* 靶子里有几枚冠军（环色那道只对冠军有效）/ 有几枚按"邻枚遮住了中心"这一条判过的 */
     var fmax = -1, fmin = 2;   /* 抬升量最大的两枚：u01 是 F 的单调映射 ⇒ F 最高与最低里必有一头贴着色带顶（抬得最高） */
     if (rr.width < 2) fails.push('无视口 ⇒ 本条不适用');
     else {
@@ -3655,35 +3700,56 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         if (s[0] < 8 || s[0] > cv.width - 8 || s[1] < 8 || s[1] > cv.height - 8) continue;
         if (s[1] > loY) { loY = s[1]; lo = i; }
         if (s[1] < hiY) { hiY = s[1]; hi = i; }
+        /* §E449 必须**专门取一枚冠军**：环色这一道要防的病（选中环被墨环重描）只在冠军身上会发生
+         *   —— 只有冠军才在选中环之后再描一道墨边（drawMap 里 isC 那一支）。
+         *   实测：只按"屏幕上下端 + F 两端"挑，挑到的三枚都不是冠军，坏版本 B=76/131/76 全在环色那一档 ⇒ 抓不到。 */
+        if (P[i].lin && s[1] > loCY) { loCY = s[1]; loC = i; }
         var fv = Fv(P[i]); if (fv > fmax) { fmax = fv; } if (fv < fmin) { fmin = fv; } }
       var pick = [], seen = {};
       for (var i2 = 0; i2 < N; i2++) { if (!VIS[i2] || !scr[i2]) continue;
         var s2 = scr[i2]; if (s2[0] < 8 || s2[0] > cv.width - 8 || s2[1] < 8 || s2[1] > cv.height - 8) continue;
         var fv2 = Fv(P[i2]);
-        if (i2 === lo || i2 === hi || fv2 === fmax || fv2 === fmin) { if (!seen[i2]) { seen[i2] = 1; pick.push(i2); } } }
+        if (i2 === lo || i2 === hi || i2 === loC || fv2 === fmax || fv2 === fmin) { if (!seen[i2]) { seen[i2] = 1; pick.push(i2); } } }
       for (var q = 0; q < pick.length; q++) {
-        var t = pick[q], id = P[t].id, dc = drawnCentre(id); n++;
-        if (!dc) { fails.push(id + '(画布上找不到它的选中环)'); continue; }
+        var t = pick[q], id = P[t].id, dc = drawnCentre(id); n++; if (P[t].lin) nLinp++;
+        if (!dc) { fails.push(id + (P[t].lin ? '[冠]' : '') + '(选中环 ‖ 差分 ' + DCN + ' 颗 ‖ 环色 ' + DCY + ' 颗=' + DCD + '%)'); continue; }
         dd.push(id.slice(0, 6) + ':' + Math.round(dc[1] - scr[t][1]));
         var cx = rr.left + dc[0] / devicePixelRatio, cy = rr.top + dc[1] / devicePixelRatio;
         st.sel = null;
         cv.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: cx, clientY: cy }));
         cv.dispatchEvent(new MouseEvent('click', { button: 0, clientX: cx, clientY: cy }));
         var got = st.sel || '(没选中任何东西)';
-        if (got !== id) fails.push(id + ' 环心(' + Math.round(dc[0]) + ',' + Math.round(dc[1]) + ') 却选中 '
-          + got + ' ‖ scr=(' + Math.round(scr[t][0]) + ',' + Math.round(scr[t][1]) + ')');
+        var gi = got === id ? t : nOf(got);
+        var gap = gi >= 0 && scr[gi] ? Math.round(Math.sqrt(
+          Math.pow(scr[gi][0] - dc[0], 2) + Math.pow(scr[gi][1] - dc[1], 2)) * 10) / 10 : -1;
+        /* §E449 got !== id 分两种，只有后一种是病：
+         *   ① 邻枚的命中盘把本枚的中心盖住了（立体态本来就会互相遮）⇒ 选中的那一枚**自己的落点确实就在这一下点击上**。
+         *      实测这种 gap 只有 0.7px（SLOT-bb5c0e8e 与 SLOT-6ed47e18 落在同一处）。这类分离用户裁过不算病
+         *      （§E430 正是为它把三维那一条整条删掉的）。
+         *   ② 换算坏了（rect / dpr / CSS 把位图压扁）⇒ 派发下去选中的那一枚离环心一大截，gap 直接超过它自己的命中盘。
+         *   所以线划在**选中者的命中半径 +1**（质心有半格量化）上，而不是拍一个常数：
+         *     线太紧（曾经写 2.5px）会在密处冤枉正当的遮挡，太松就丢了牙口（红测见 CHANGELOG §E449）。 */
+        var lim = gi >= 0 ? Math.round((hitR(P[gi], curZoom()) + 1) * 10) / 10 : -1;
+        if (gap < 0 || lim < 0 || gap > lim) fails.push(id + ' 环心(' + Math.round(dc[0]) + ',' + Math.round(dc[1])
+          + ') 派发下去选中的是 ' + got + ' ‖ 它的落点离环心 ' + gap + 'px（要 ≤ 它的命中半径+1 = ' + lim
+          + '）‖ 本枚 scr=(' + Math.round(scr[t][0]) + ',' + Math.round(scr[t][1]) + ')');
+        else if (got !== id) nOcc++;
       }
     }
     st.sel = null; st.mode = bak.mode; st.elev = bak.e; st.zoom3 = bak.z; st.k = bak.k; st.iso = bak.iso;
+    st.labels = bak.labels;
     recomputeVIS(); draw();
-    return { ok: fails.length === 0 && n >= 2,
-      msg: fails.join(' ‖ ') || (n + ' 枚全对（屏幕上下两端 + F 两端）‖ 环心与 scr 的纵向差 ' + dd.join('/') + 'px') };
+    return { ok: fails.length === 0 && n >= 2 && nLinp >= 1,
+      msg: (fails.length ? fails.join(' ‖ ')
+        : n + ' 枚全对（屏幕上下两端 + F 两端 + 最靠下的那枚冠军）')
+        + ' ‖ 标签钉成不标（上面 §E449 那段）‖ 环心与 scr 的纵向差 ' + dd.join('/') + 'px ‖ 靶子里冠军 ' + nLinp
+        + ' 枚（环色那道只对冠军有效，要 ≥1）‖ 中心被邻枚的盘压住、按"选中者落点落在它自己命中盘里"判过的 ' + nOcc + ' 枚' };
   }
   var rt1 = roundTrip(function () { st.mode = 'map'; st.elev = 1; draw(); });
-  T('指针往返（立体地图 · 最上与最下两枚）：按**画出来的环**派发真点击，选中的必须是它自己', rt1.ok, rt1.msg);
+  T('指针往返（立体地图 · 屏幕上下端 + F 两端 + 一枚冠军）：按**画出来的环**派发真点击，选中的必须是它自己', rt1.ok, rt1.msg);
   /* §E430 用户裁定删除：这条腿的派发点是按"环心"算的，而三维态下环心与命中表差 2px（实测 (659,225) vs scr (660,227)）
    *   ⇒ 它测的是"我算出来的点"而不是"用户点下去会怎样"；用户手动验过**指针往返没有问题**。
-   *   立体的那条（最上与最下两枚）仍在跑，保留覆盖。 */
+   *   立体的那条仍在跑（§E449 改名成"屏幕上下端 + F 两端 + 一枚冠军"），保留覆盖。 */
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\\n' + out.join('\\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\\n已经跑到：\\n' + out.join('\\n'); nbad++; }
