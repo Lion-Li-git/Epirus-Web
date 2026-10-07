@@ -3329,6 +3329,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         + '（漂 ' + Math.round(drift) + 'px，容差 ' + Math.round(2 * devicePixelRatio) + '）⇒ 锚点没跟着支点走'; } }
   T('滚轮缩放：光标下那一枚必须还在光标下（支点改了，锚点公式必须一起改）', ancBad === '', ancBad || '一次滚轮 ×1.12，锚点未漂');
   st.tKx = SNAPT.kx; st.tKy = SNAPT.ky; st.tX = SNAPT.tx; st.tY = SNAPT.ty; st.elev = SNAPT.e; st.yaw = SNAPT.y; st.pit = SNAPT.p;
+  /* §E447 这条量的是**谱系图平面态**的左栏，所以必须把模式钉住再量：原来只钉了 yaw/pit/elev，没钉 st.mode
+   *   ⇒ 从 mode=1d 深链进来时它在**一维那张画布**上找"左栏那一片"，量到的东西与判据毫无关系
+   *   （实测：同一版产物，出厂态 PASS、「mode=1d&color=sc」却 FAIL —— 两种结果都不是谱系图给的）。
+   *   着色档也必须钉：这条要逐枚取像素，而 §E308 那支会把"未测过"的点压到 alpha 0.16 并被下面的 alpha<0.5 筛掉 ——
+   *   在 sc/pm/duel/hp/de 这五档里剩下的探针只有个位数（实测 4 枚），红的是"探针不够 12 枚"而不是"左栏没画上"。
+   *   钉到 fam（这一档没有"未测过"那支）才是这条判据本来工作的画面。模式与档在下面的 SNAP2 还原里一并恢复。 */
+  var BAKCOL = st.color; st.color = 'fam'; st.mode = 'tree';
   st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.elev = 0; st.tX = -900 * devicePixelRatio; draw();
   /* ② 的判据必须读**像素**，不能读命中表：scr[] 是几何落点，剪裁只决定"画没画出来"，
    *   所以拿 scr 写的那一版**撤掉剪裁与留着剪裁都会 PASS**（§E369 变异实测：把 clip 加回去 ⇒ 27/0 全绿 ⇒ 那条是假的）。
@@ -3336,12 +3343,24 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   有 clip 时左栏那一片只剩底图 ⇒ 中心与旁边是同一块背景，一条也过不了。 */
   function samplePx(x, y) { var q = g.getImageData(Math.round(x), Math.round(y), 1, 1).data; return [q[0], q[1], q[2]]; }
   function pxDist(a, b) { return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]); }
-  var pLG = 340 * devicePixelRatio, nProbe = 0, nPaint = 0, missEx = '';
+  /* §E447 这个像素代理有一个已知污染：**标签是画在点之后的**（drawTree 里 label 晚于点），
+   *   所以"中心与四周不像同一个颜色"量的可能是**文字与它的描边**，不是那一枚点被画出来了没有。
+   *   实测：labels 出厂档（只标冠军+首尾）时 229 枚全过；切到 labels=all 之后一批中心被标签压住 ⇒ 只剩 59.8%，
+   *   差 0.2 个百分点就红 —— 而画面本身没有任何"没画上"的地方（§E440 去重之后可排的标签变多，才把这条压过线）。
+   *   ⇒ 用现成的 LAB（每画一个标签记下它的包围盒）把"中心落在某个标签框里"的那几枚**跳过并单独计数**：
+   *     代理对它们无效，不是它们不合格。⚠ 杀伤力必须复验：把当年那道 clip 加回去，剩下的（没被盖住的）那些
+   *     全是裸背景 ⇒ 照样一条过不了（红测见 CHANGELOG §E447）。 */
+  function underLabel(x, y) {
+    for (var lb = 0; lb < LAB.length; lb++) { var B = LAB[lb];
+      if (x >= B[0] && x <= B[0] + B[2] && y >= B[1] && y <= B[1] + B[3]) return true; }
+    return false; }
+  var pLG = 340 * devicePixelRatio, nProbe = 0, nPaint = 0, nCov = 0, missEx = '';
   for (var q3 = 0; q3 < N; q3++) { var sp3 = scr[q3]; if (!sp3 || !VIS[q3]) continue;
     if (alphaOf(P[q3]) < 0.5) continue;
     var rr3 = dotR(P[q3], st.tKx) + 8 * devicePixelRatio;
     var cX = sp3[0], cY = sp3[1];
     if (cX < rr3 + 6 || cX > pLG - 8 || cY < rr3 + 6 || cY > cv.height - rr3 - 6) continue;
+    if (underLabel(cX, cY)) { nCov++; continue; }
     nProbe++;
     var mid3 = samplePx(cX, cY);
     var marg = Math.min(pxDist(mid3, samplePx(cX - rr3, cY)), pxDist(mid3, samplePx(cX + rr3, cY)),
@@ -3349,8 +3368,9 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     if (marg > 36) nPaint++; else if (!missEx) missEx = P[q3].id + ' 中心 (' + Math.round(cX) + ',' + Math.round(cY) + ') 与四周只差 ' + Math.round(marg); }
   T('平面态往左平移：左栏那一片必须真的被画上东西（padL 那道剪裁已撤 ‖ 判据=像素，不是命中表）',
     nProbe >= 12 && nPaint >= Math.ceil(nProbe * 0.6),
-    '落进旧剪裁区的点 ' + nProbe + ' 枚 ‖ 中心确实与四周不同的 ' + nPaint + ' 枚（要 ≥ 60%）‖ 画布宽 ' + cv.width + (missEx ? ' ‖ 例：' + missEx : ''));
-  st.mode = SNAP2.mode; st.elev = SNAP2.e; st.yaw = SNAP2.y; st.pit = SNAP2.p;
+    '落进旧剪裁区的点 ' + nProbe + ' 枚 ‖ 中心确实与四周不同的 ' + nPaint + ' 枚（要 ≥ 60%）‖ 中心被标签压住而不参与这条的 ' + nCov +
+      ' 枚 ‖ 画布宽 ' + cv.width + (missEx ? ' ‖ 例：' + missEx : ''));
+  st.mode = SNAP2.mode; st.elev = SNAP2.e; st.yaw = SNAP2.y; st.pit = SNAP2.p; st.color = BAKCOL;
   st.tX = SNAP2.tx; st.tY = SNAP2.ty; st.tKx = SNAP2.kx; st.tKy = SNAP2.ky;
   /* ===== §E371 强度窗口（用户："默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示"）=====
    *   四条各钉一句话：默认态什么都不切 ‖ 窗外一律不画（冠军也不例外）‖ 色带真的按窗内重铺（不是恒等于全库那一条）‖
