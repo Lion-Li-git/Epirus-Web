@@ -52,7 +52,7 @@ var P = DATA, N = P.length;
  *   其中 4 行都是现役本身）⇒ 统计条上两个数一起印，别让人把行数当打法数。*/
 var NDUP = Math.round(P.reduce(function (s, d) { return s + 1 / (d.dn > 0 ? d.dn : 1); }, 0));
 var cv = document.getElementById('cv'), g = cv.getContext('2d');
-var KF = 12;
+var KF = 12;   /* E387 DS：换回 §E382b 场区时它引用的顶层常量（§E385 曾把它改名 KFK 挪进函数内部 ⇒ 换回后 KF 未定义 ⇒ 整页黑）*/
 var KEXP = 2.5;   /* §E330 IDW 核的指数：1/d^KEXP。**淡出的覆盖度也用它**（见 buildBitmap），所以提成常数 ——
                      两处各写一份字面量时，改一处会让"晕有多远"和"核有多硬"悄悄脱钩。*/
 var EDGEK = 8;    /* §E331 位图外沿收口的格数。必须**小于**网格边距折算出来的格数（边距 10% ⇒ 约 19 格），
@@ -428,6 +428,7 @@ function pct(a, q) { var b = a.slice().sort(function (x, y) { return x - y; }); 
  *   按屏幕度量 ⇒ 势晕是正圆且互相搭接。比例尺取**不含缩放**的基础值（缩放对两轴均匀，
  *   位图随仿射一起放大即可，不必重烘）；窗口尺寸变了才重建（resize 时清 NBK）。*/
 var NBK = {}, FL = null;
+var VK = null;   /* E388 DS: 可见点 k-NN 表缓存（键 = 位图键 + 可见名单签名）*/
 function buildNB(key, bx, byy) {
   var ax = key.slice(0, 2), by = key.slice(2, 4);
   var xs = new Float32Array(N), ys = new Float32Array(N), xa = [], ya = [];
@@ -458,12 +459,20 @@ function buildNB(key, bx, byy) {
   }
   var nmed = pct(nn, .5) || 1, d12m = pct(d12, .5) || nmed;
   /* 网格按屏幕显示跨度分配 ⇒ 显示空间里格子是正方形（26k 格左右），势晕才不会被栅格化成扁的 */
-  var dispX = (x1 - x0) * bx, dispY = (y1 - y0) * byy, TOT = 40000;   /* §E331 26000 → 40000：晕半径缩了一档，格子必须跟着密，
-                                                                         否则 9px/格 上画 29px 的晕会看出台阶 */
-  var gx = Math.max(40, Math.min(320, Math.round(Math.sqrt(TOT * dispX / (dispY || 1)) || 40)));
-  var gy = Math.max(40, Math.min(320, Math.round(Math.sqrt(TOT * dispY / (dispX || 1)) || 40)));
+  var dispX = (x1 - x0) * bx, dispY = (y1 - y0) * byy;
+  /* E390 DS：格子预算跟着**显示跨度**走，不再固定 40000。
+   *   为什么：一枚离群点（blk0t40-s31，y=-20.86 = 20 IQR）把 y 跨度撑到全体 24.0 vs 截尾 4.1 = **5.8 倍** ⇒
+   *   固定预算下每格从 ~15px 涨到 ~50px，而点云只占网格一小块 ⇒ 场被降分辨率 = '灰蒙蒙'的第三个来源。
+   *   ⚠ **不改成截尾范围**：用户 10-04 裁定「背景图要扩散到**所有点**的范围」（截尾框外的离群点脚下空着会看着割裂）。
+   *   ⇒ 保范围、加预算：每格目标 15px，总格数夹在 [40000, 400000]。 */
+  var TOT = Math.max(40000, Math.min(400000, Math.round(dispX * dispY / 225)));
+  var gx = Math.max(40, Math.min(1200, Math.round(Math.sqrt(TOT * dispX / (dispY || 1)) || 40)));
+  var gy = Math.max(40, Math.min(1200, Math.round(Math.sqrt(TOT * dispY / (dispX || 1)) || 40)));
   var idx = new Int16Array(gx * gy * KF), dst = new Float32Array(gx * gy * KF);
-  var SW = new Float32Array(gx * gy), SH = new Float32Array(gx * gy), SS = new Float32Array(gx * gy);
+  /* E388 DS（用户 10-07 第三件）：地板的值从 **H（考卷口径）** 换成 **Hp（页面口径）**。
+ *   原来吃 H 而色带/点/图例读 Fv = Hp/100 + T·S ⇒ 两条尺 ⇒ 一收窄范围场值就跑出可见点的 F 区间 ⇒
+ *   被「带外收尾」涂成底色 = 黑洞的一半成因（另 half 是加权没按可见名单过滤，§E381 已修）。 */
+var SW = new Float32Array(gx * gy), SH = new Float32Array(gx * gy), SS = new Float32Array(gx * gy);
   for (var gj = 0; gj < gy; gj++) for (var gi = 0; gi < gx; gi++) {
     var X = x0 + (x1 - x0) * gi / (gx - 1), Y = y0 + (y1 - y0) * gj / (gy - 1);
     var ci = gj * gx + gi, base = ci * KF;
@@ -478,7 +487,7 @@ function buildNB(key, bx, byy) {
     }
     var wsum = 0, hsum = 0, ssum = 0;
     for (var u = 0; u < KF; u++) { var pi = idx[base + u]; if (pi < 0) break;
-      var w = 1 / Math.pow(Math.max(dst[base + u], 1e-6), KEXP); wsum += w; hsum += w * (P[pi].H / 100); ssum += w * P[pi].S; }
+      var w = 1 / Math.pow(Math.max(dst[base + u], 1e-6), KEXP); wsum += w; hsum += w * (P[pi].Hp / 100); ssum += w * P[pi].S; }
     SW[ci] = wsum; SH[ci] = hsum; SS[ci] = ssum;
   }
   /* 守卫：坐标列名取错时 pct 会**静默**返回 undefined ⇒ 距离全是 NaN ⇒ 一格邻居都没有 ⇒ 整页画空。
@@ -494,20 +503,61 @@ function buildNB(key, bx, byy) {
    *   我换的"局部过线率场 + 插值等值线"能把纯度做到 88%，但代价是绿区糊在底图上、且只圈到两成过线枚。
    *   ⇒ 过线只按**逐枚真值**标（drawMap 里的绿环），悬停明细给"栽在哪条腿"。*/
   NBK[key] = { idx: idx, dst: dst, SW: SW, SH: SH, SS: SS, x0: x0, x1: x1, y0: y0, y1: y1,
-    /* §E382 泼溅要按"显示像素"量半径（核 w = 1/d^KEXP 里的 d 与 fscale 都是显示像素）⇒ 比例尺必须跟着缓存走 */
-    bx: bx, byy: byy,
     px0: px0, px1: px1, py0: py0, py1: py1, nmed: nmed, d12m: d12m, ax: ax, by: by, gx: gx, gy: gy };
 }
 /* 每格只需 (SH + T·SS)/SW ⇒ 换 T 不碰邻域。
  * 位图**不透明**：每格把势色按覆盖度合成到底色上（远格 = 纯底色）⇒
  *   平面态没有"雾蒙蒙"的半透明晕，立体态没有透明边的割裂/接缝（位图边界之外就是底色）。*/
-function buildBitmap(key) {
+/* E388 DS：**可见点**的 k-NN 表（每格最近 KF 枚"当下画得出来的点"）。
+ *   为什么：§E381 的候选表是**全库** 12 近邻、再按可见名单过滤 ⇒ 若某格那 12 枚全在窗外，
+ *   过滤后 wsum = 0 ⇒ 那格留空 = **黑洞**（用户截图：缩到 1/6 时一块块黑斑）。
+ *   ⚠ 这不是"两套渲染机制"：两条路算的是**同一个量**（"被画的那批点里最近 KF 枚"的 IDW 加权平均）；
+ *     nShown === N 时两条路**逐字节相同**，所以那种情况用已在 buildNB 缓存好的全库表（快），有过滤时才现算。
+ *     （对比 §E382b 被否：它两条路的**数学不同**（12 近邻截断 vs 半径内全点）⇒ 切换瞬间观感突变。）
+ *   成本 cells × |可见|，且只在**可见名单变化**时重算（T 滑动不触发 ⇒ 那条交互仍跟手）。*/
+function visKNN(nb, sig) {
+  if (VK && VK.sig === sig) return VK;
+  var gx = nb.gx, gy = nb.gy, cells = gx * gy;
+  var idx = new Int16Array(cells * KF), dst = new Float32Array(cells * KF);
+  for (var z = 0; z < cells * KF; z++) { idx[z] = -1; dst[z] = 1e18; }
+  var vx = [], vy = [], vi = [];
+  for (var i = 0; i < N; i++) {
+    if (!(VIS[i] && inWin(P[i]))) continue;
+    vx.push((P[i][nb.ax] - nb.x0) / (nb.x1 - nb.x0) * (gx - 1));
+    vy.push((P[i][nb.by] - nb.y0) / (nb.y1 - nb.y0) * (gy - 1));
+    vi.push(i);
+  }
+  var csx = (nb.x1 - nb.x0) * nb.bx / (gx - 1), csy = (nb.y1 - nb.y0) * nb.byy / (gy - 1);
+  for (var c = 0; c < cells; c++) {
+    var cgi = c % gx, cgj = (c / gx) | 0, b0 = c * KF, w2 = dst[b0 + KF - 1] * dst[b0 + KF - 1];
+    for (var v = 0; v < vi.length; v++) {
+      var dx = (vx[v] - cgi) * csx, dy = (vy[v] - cgj) * csy, d2 = dx * dx + dy * dy;
+      if (d2 >= w2) continue;
+      var dd = Math.sqrt(d2), p0 = KF - 1;
+      while (p0 > 0 && dst[b0 + p0 - 1] > dd) { dst[b0 + p0] = dst[b0 + p0 - 1]; idx[b0 + p0] = idx[b0 + p0 - 1]; p0--; }
+      dst[b0 + p0] = dd; idx[b0 + p0] = vi[v];
+      w2 = dst[b0 + KF - 1] * dst[b0 + KF - 1];
+    }
+  }
+  /* E388 DS：**覆盖度的尺度也必须跟着可见集**。原来 kcov 按全库 d12m 标定 ⇒ 只画 16% 时最近可见点变远、
+   *   wsum 掉到 kcov 以下 ⇒ fade → 0 ⇒ 整片场淡成底色（实测：窗口 151/917 时场全没了）。
+   *   这里顺手算可见集的 d12 中位，交给 buildBitmap 当新基准。 */
+  var dv = []; for (var cc = 0; cc < cells; cc++) { if (idx[cc * KF + KF - 1] >= 0) dv.push(dst[cc * KF + KF - 1]); }
+  dv.sort(function (x, y) { return x - y; });
+  var d12v = dv.length ? dv[dv.length >> 1] : (nb.d12m || 1);
+  VK = { sig: sig, idx: idx, dst: dst, n: vi.length, d12v: d12v };
+  return VK;
+}
+function buildBitmap(key, visSigNow) {
   var nb = NBK[key];
   var fscale = Math.max(1.5 * nb.d12m, 14);   /* §E331 淡出尺度 2.2× → 1.5× 第12近邻中位（≈29px）：
                                                  单点的"实心"范围缩一档 ⇒ 立体态不再糊成一整块熔岩。
                                                  **中间不会因此裂开** —— 覆盖度是各点核权重相加（见下面 fade），
                                                  邻域只要有两三枚，权重和照样过阈 ⇒ 裂开的正是旧版按"最近点距离"才会有的病。*/
-  var kcov = 1 / Math.pow(fscale, KEXP);      /* = 单点在 fscale 处的核权重：覆盖度在半径 fscale 处正好落一半 */
+  var kcov = 1 / Math.pow(fscale, KEXP);   /* = 单点在 fscale 处的核权重（全库尺） */
+  /* E389 DS：**不加硬截断**。局部性由 fade = wsum/(wsum+kcov) 自己给出：
+   *   离任何可见点都很远的格子 wsum ≪ kcov ⇒ fade ≈ 0 ⇒ 自然回到底色（每个可见点只发散自己那块区域）；
+   *   可见点脚下 wsum ≫ kcov ⇒ fade ≈ 1 ⇒ 一定有颜色（无洞）。硬截断会把全范围那 85% 的格子一起砍掉（实测 6162/39952）。 */      /* = 单点在 fscale 处的核权重：覆盖度在半径 fscale 处正好落一半 */
   var bR = parseInt(st.bg.slice(1, 3), 16), bG = parseInt(st.bg.slice(3, 5), 16), bB = parseInt(st.bg.slice(5, 7), 16);
   var c = document.createElement('canvas'); c.width = nb.gx; c.height = nb.gy;
   var cg = c.getContext('2d'), img = cg.createImageData(nb.gx, nb.gy), dta = img.data;
@@ -515,80 +565,26 @@ function buildBitmap(key) {
   var nPainted = 0, nOob = 0;   /* §E381 见下面 FL.painted / FL.oob */
   var SHOWN = new Uint8Array(N), nShown = 0;
   for (var s9 = 0; s9 < N; s9++) { SHOWN[s9] = (VIS[s9] && inWin(P[s9])) ? 1 : 0; nShown += SHOWN[s9]; }
-  /* ===== §E382 地板换成**点-major 泼溅**（用户给的模型，她是对的）=====
-   *   「我原本以为这个渲染机制是每个点拥有一个数值和对应不透明度范围，地图上对应位置把所有扩散到这里的数加权平均，
-   *    所以摘出点是无损的……但是看起来现在摘出点后附近的点并没有扩散过来所以黑洞仍然出现了」
-   *   §E381 只修了一半：候选池仍是"**每格最近 12 名，按全库算**"⇒ 摘掉大半之后那 12 个里剩下的可见点太少，
-   *   晕接不上 ⇒ 范围一收窄超过 1/3 就冒黑块（她这张截图 288/917 在窗内，正是这个比例）。
-   *   现在照她那句原话直接算：每个**可见**点把自己的核 w = 1/d^KEXP 泼到它覆盖到的格子上，每格 = Σw·F / Σw
-   *   ⇒ 摘掉一个点，它照过的地方由**其余可见点的晕**接上，无损。
-   *   截断半径 6·fscale（那里 w ≈ kcov/88 ⇒ 覆盖度贡献 ~1%，看不出边界）⇒ 每点只碰 ~(2giR+1)² 格。
-   *   实测开销：288 枚 × ~361 格 ≈ 10 万次乘加（旧写法 40000 格 × 12 = 48 万次，还漏接）。 */
-  /* ===== §E383 只剩**一条**算法：动态「可见点 k-NN」+ 空间桶加速（用户转述 Gemini 的方案，我同意）=====
-   *   原来那条 12 近邻路在视觉上是**对的**（每格只看离它最近的几枚 ⇒ 局部、锐、不糊），唯一的缺陷是那张表
-   *   按全库**静态**存 ⇒ 过滤后可见邻居不够用 = 洞。
-   *   §E382 我先换成「点泼溅」（每格吃半径内**所有**点）⇒ 把唯一的好性质也扔了：密集区一格摊到上百枚，灰、糊、有圆盘边界；
-   *   再退一步「全范围走原路 / 摘点才走泼溅」两条路并存 ⇒ 就是她说的「缩小一点就有突变，还要同时维护两种地图」。
-   *   现在：把**可见点**装进约 32×32 的粗桶（每次过滤后重装，成本 = 可见枚数），渲染 40000 格时每格只扫
-   *   自己邻域的桶（先 3×3，候选不足 k 枚就扩到 5×5、7×7），在候选里取**最近 k 枚**做 IDW。
-   *   ⇒ 每格的邻居集合永远是「当下画得出来的那批点里最近的 k 枚」：摘点无损、不糊、没有第二个实现、不会突变。
-   *   开销：40000 格 × 每格约 20~40 个候选 ≈ 百万次距离运算。
-   *   ⚠ 地板的值改用 **Hp（页面口径）**：它以前吃 H（考卷口径），而色带 / 点 / 图例读的都是 Fv = Hp/100 + T·S
-   *     ⇒ 两条尺，一收窄场的值就跑出可见点的 F 区间（实测带外 288 格，与浮点精度无关：Float32→Float64 一格没少）。
-   *     用户 10-07 裁：地板跟 Hp。 */
-  /* §E384 半径与桶（用户转述 Gemini 三条：①桶的 bbox 要留 padding、不许在点云边缘硬截断；
-   *   ②加平滑窗 (1−(d/R)²)² 让权重在边界连续归零；③单桶宽度必须 ≥ R，这样 3×3 邻域真的盖住整个圆盘）。
-   *   三条我都核了，**第二条是主因**：§E383 那版每格扫的是「方形环，凑够 12 枚就 break」⇒
-   *   ① 搜索域是正方形（不是圆盘）⇒ 边缘露直角边；② 每格的邻居数随跨桶从 12 跳到 8 再跳回 12 ⇒ 环与环之间一条缝；
-   *   ③ 点云边界上凑不满 12 枚的格子权重和骤降 ⇒ 覆盖度掉下去 = 她截图里那条硬边。
-   *   现在：固定半径 R，桶宽 = R（⇒ 3×3 恰好盖住圆盘，第三条成立），环扩张整条删掉，
-   *   权重乘上 taper = (1 − (d/R)²)²（d→R 时连续归零，一阶导也连续 ⇒ 第二条成立）。
-   *   第一条：桶的 bbox 就是网格本身，而网格在 buildNB 里已经按**全体点 min/max + 10% 边距**铺
-   *   （§E331 那条"位图铺到晕淡尽之外"），所以点云外没有硬截断；R 又小于边距 ⇒ 不需要额外 padding，
-   *   但我把桶索引的坐标**夹进界内**（Math.max/min），越界的点不会掉出桶。
-   *   R 取法：917 枚摊在约 1576×625 显示像素上 ⇒ 密度 ≈ 9.3e-4/px²，R=72px 的圆盘里期望有 ~15 枚
-   *   ⇒ 与原版"取最近 12 名"的局部性同量级（这是它视觉好的原因，不能退回全局平均）。 */
-  var KFK = 12;
-  var csx = (nb.x1 - nb.x0) * nb.bx / (nb.gx - 1), csy = (nb.y1 - nb.y0) * nb.byy / (nb.gy - 1);
-  var RAD = Math.max(60, 2.5 * fscale);
-  var bstepX = Math.max(1, Math.floor(RAD / csx)), bstepY = Math.max(1, Math.floor(RAD / csy));
-  var nbx = Math.ceil(nb.gx / bstepX), nby = Math.ceil(nb.gy / bstepY);
-  var bkt = new Array(nbx * nby);
-  for (var bi0 = 0; bi0 < nbx * nby; bi0++) bkt[bi0] = [];
-  var OX = new Float64Array(N), OY = new Float64Array(N);
-  for (var pi9 = 0; pi9 < N; pi9++) { if (!SHOWN[pi9]) continue;
-    var ox9 = (P[pi9][nb.ax] - nb.x0) / (nb.x1 - nb.x0) * (nb.gx - 1);
-    var oy9 = (P[pi9][nb.by] - nb.y0) / (nb.y1 - nb.y0) * (nb.gy - 1);
-    OX[pi9] = ox9; OY[pi9] = oy9;
-    var bxi = Math.min(nbx - 1, Math.max(0, Math.floor(ox9 / bstepX)));
-    var byi = Math.min(nby - 1, Math.max(0, Math.floor(oy9 / bstepY)));
-    bkt[byi * nbx + bxi].push(pi9); }
-  var cd = new Float64Array(KFK), cin = new Int32Array(KFK);
-  var PMASK = new Uint8Array(nb.gx * nb.gy);
+  var VIS_TB = (nShown === N) ? null : visKNN(nb, key + '@' + visSigNow);
+  /* E389 DS：**不再**把覆盖度基准跟着可见集放大 —— 那会让远处的可见点把场拉成一片平均（用户：「暴力拉到无穷远」）。
+   *   覆盖度基准保持全库 d12m 那一把尺 ⇒ 晕有固有尺度；配合下面的截断半径，远处自然回到底色。 */
   for (var i = 0; i < nb.gx * nb.gy; i++) {
-    var gi = i % nb.gx, gj = (i / nb.gx) | 0;
-    var bxc = Math.floor(gi / bstepX), byc = Math.floor(gj / bstepY), ncand = 0;
-    var cxp = gi + 0.5, cyp = gj + 0.5;
-    /* 固定 3×3 桶（桶宽 = R ⇒ 圆盘一定在里头），不再按"凑够几枚"扩环 */
-    for (var qy = byc - 1; qy <= byc + 1; qy++) { if (qy < 0 || qy >= nby) continue;
-      for (var qx = bxc - 1; qx <= bxc + 1; qx++) { if (qx < 0 || qx >= nbx) continue;
-        var arr = bkt[qy * nbx + qx];
-        for (var t0 = 0; t0 < arr.length; t0++) { var pj = arr[t0];
-          var ddx = (OX[pj] - cxp) * csx, ddy = (OY[pj] - cyp) * csy;
-          var dd = Math.sqrt(ddx * ddx + ddy * ddy);
-          if (dd > RAD) continue;
-          if (ncand < KFK) { var p0 = ncand++;
-            while (p0 > 0 && cd[p0 - 1] > dd) { cd[p0] = cd[p0 - 1]; cin[p0] = cin[p0 - 1]; p0--; }
-            cd[p0] = dd; cin[p0] = pj;
-          } else if (dd < cd[KFK - 1]) { var p1 = KFK - 1;
-            while (p1 > 0 && cd[p1 - 1] > dd) { cd[p1] = cd[p1 - 1]; cin[p1] = cin[p1 - 1]; p1--; }
-            cd[p1] = dd; cin[p1] = pj; } } } }
-    if (!ncand) continue;
-    var wsum = 0, hsumX = 0, ssumX = 0;
-    for (var u9 = 0; u9 < ncand; u9++) { var pj9 = cin[u9], du = Math.max(cd[u9], 1e-6);
-      var tw = 1 - (cd[u9] / RAD) * (cd[u9] / RAD);        /* §E384 平滑窗：到 R 处权重与一阶导都归零 */
-      var w9 = tw * tw / Math.pow(du, KEXP);
-      wsum += w9; hsumX += w9 * (P[pj9].Hp / 100); ssumX += w9 * P[pj9].S; }
+    /* §E381（用户 10-07：「不渲染的点摘出去**但别的附近点要正常渲染覆盖对应区域**，而不是直接挖空变成黑色。
+     *   何况现在有的点还没摘出去周围就变成黑的了」）：地板的 IDW **只吃当下画出来的那批点**。
+     *   做法是把两件事拆开：**邻域表**（每格最近 12 名）仍按全库算一次并缓存 —— 那是几何，与"谁被画"无关；
+     *   **加权**这一遍按可见名单过滤（40000 格 × 12 = 48 万次，比整张邻域重算便宜两个数量级，实测每帧可跑）。
+     *   ⇒ 场的取值必然落在可见点的 F 区间之内（加权平均的性质）⇒ 既不钳位、也没有黑洞。
+     *   ⚠ 我上一版的错正是反过来的：场含被摘出去的点、色带按可见点定标 ⇒ 带外一大片 ⇒ 那个"淡出"把那片涂成底色 = 黑洞。
+     *   ⚠ 一格 12 个邻居全被摘掉 ⇒ wsum = 0 ⇒ 那一格留空。那不是洞，是"这块地方没有画得出来的点"。 */
+    /* E388 DS：候选表 =「当下画得出来的那批」里最近的 KF 枚（见 visKNN 的说明）。
+     *   nShown === N ⇒ 用 buildNB 缓存好的全库表（两者逐字节相同）；否则现算可见表
+     *   ⇒ 不再存在"候选全在窗外 ⇒ wsum=0 ⇒ 留空"的格子。 */
+    var TB = VIS_TB || nb;
+    var bs9 = i * KF, wsum = 0, hsum9 = 0, ssum9 = 0;
+    for (var u9 = 0; u9 < KF; u9++) { var pi9 = TB.idx[bs9 + u9]; if (pi9 < 0) break;
+      if (nShown !== N && !SHOWN[pi9]) continue;
+      var w9 = 1 / Math.pow(Math.max(TB.dst[bs9 + u9], 1e-6), KEXP);
+      wsum += w9; hsum9 += w9 * (P[pi9].Hp / 100); ssum9 += w9 * P[pi9].S; }
     if (!(wsum > 0)) continue;
     /* §E331 覆盖度换成**核权重和**，不用「到最近点的距离」。旧写法 1/(1+(DM/fscale)^4) 在两枚点中间
      *   必然下凹（DM 在 Voronoi 脊线上取局部极大）⇒ 底图上那一片"凹陷的接缝"就是脊线本身，跟数据无关，
@@ -601,13 +597,13 @@ function buildBitmap(key) {
     var fade = wsum / (wsum + kcov) * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
-    var Fav = (hsumX + st.T * ssumX) / wsum;
+    var Fav = (hsum9 + st.T * ssum9) / wsum;
     /* §E347：底图默认 = **全库分位 + 蓝→灰→红**（回到 §E338 之前那个读法）；只有切到第 6 档「rel」才用发散带 + 淡入。*/
     var REL = st.color === 'rel';
     var tt = REL ? fColRel(Fav) : fCol(Fav);
     var rgb = REL ? rampRGBF(tt) : rampRGB(tt);
     var a = (REL ? Math.min(0.50, 0.95 * Math.abs(tt - 0.5) * 2) : (0.92 - 0.5 * tt)) * fade;
-    nPainted++; PMASK[i] = 1;
+    nPainted++;
     if (BND9 && (Fav < BND9.lo - 1e-9 || Fav > BND9.hi + 1e-9)) nOob++;
     var o = i * 4;
     dta[o] = Math.round(bR + (rgb[0] - bR) * a);
@@ -620,26 +616,22 @@ function buildBitmap(key) {
     vis: NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3),
     /* §E381 自检要读的两个数：地板被涂了几格 ‖ 有几格的场值跑到"可见点的 F 区间"之外（应当恒为 0）。
      *   带外 = 0 这一条同时排掉两种病：钳位（一大片纯色）与淡出（黑洞）—— 因为加权平均不可能跑到被平均的那些点之外。*/
-    painted: nPainted, oob: nOob, nShown: nShown, cells: nb.gx * nb.gy, pmask: PMASK,
-    /* §E382 判据要用"哪一格被涂到了"反查每一枚可见点脚下那格 —— 换算必须与 buildNB 的格子映射一字相同，
-     *   所以把它随位图一起交出去，而不是在判据里另算一份（另算 = 两份映射可以各自错）。 */
-    cellOf: function (d) {
-      var gi = Math.round((d[nb.ax] - nb.x0) / (nb.x1 - nb.x0) * (nb.gx - 1));
-      var gj = Math.round((d[nb.by] - nb.y0) / (nb.y1 - nb.y0) * (nb.gy - 1));
-      return (gi < 0 || gj < 0 || gi >= nb.gx || gj >= nb.gy) ? -1 : gj * nb.gx + gi; },
+    painted: nPainted, oob: nOob, nShown: nShown, cells: nb.gx * nb.gy,
     x0: nb.x0, x1: nb.x1, y0: nb.y0, y1: nb.y1,
     nmed: nb.nmed, ax: nb.ax, by: nb.by, gx: nb.gx, gy: nb.gy };
 }
 function ensureField(key, bx, byy) {
   var k2 = key + '@' + Math.round(bx) + ',' + Math.round(byy);   /* 比例尺进缓存键：窗口尺寸变了才重建 */
   if (!NBK[k2]) buildNB(k2, bx, byy);
+  /* E388 DS：§E381 那版 buildNB **不把 bx/byy 存进缓存**（它们是 §E382 才加的）⇒ 我的可见表拿它算格宽会得 NaN。 */
+  if (NBK[k2].bx === undefined) { NBK[k2].bx = bx; NBK[k2].byy = byy; }
   /* §E347：位图**内容**现在跟着色标档变（rel 与否是两条 LUT）⇒ 判据必须带 st.color，漏了就是切档拿旧位图
    * §E371：同理还要带**强度窗口** —— 它重铺的是同一条色带。
    * §E381 改口径：**地板的 IDW 现在按"当下画出来的那批点"加权**（用户："不渲染的点摘出去，附近点要正常覆盖那块区域"）
    *   ⇒ 缓存键必须带**可见名单**（批次 + 窗口 + 可见枚数），漏了就是"切了批次、地形还是上一批的形状"。
    *   ⚠ 邻域表 NBK 仍然不进这些：那是几何（每格最近 12 名，按全库算一次），过滤发生在**加权**那一步 ⇒ 每帧只多 48 万次乘加。 */
   var visSig = NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
-  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.vis !== visSig) buildBitmap(k2);
+  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.vis !== visSig) buildBitmap(k2, visSig);
 }
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
 var boxes = [];
@@ -2218,16 +2210,27 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   涂得少可能是"有洞"，也可能只是"网格铺在点云之外"（点云本来就只占网格一块，百分比不该固定）。
    *   换成一条有主语的话：**每一枚画得出来的点，它脚下那一格必须被涂到** —— 这正是用户要的"附近点要接上、不许挖空"，
    *   且与网格大小、点云形状无关。红测：把某枚可见点脚下那一格从 pmask 里抹掉 ⇒ 当场点名是谁。 */
-  var UNPAINT = [];
-  if (FL && FL.cellOf) for (var up = 0; up < N; up++) {
-    if (!(VIS[up] && inWin(P[up]))) continue;
-    var ciU = FL.cellOf(P[up]); if (ciU < 0 || FL.pmask[ciU]) continue;
-    UNPAINT.push(P[up].id); }
-  T('每一枚画得出来的点，脚下那一格必须被地板涂到（摘出点之后附近的晕要接上，不许挖空）‖ 带外格数必须为 0',
-    !FL || (UNPAINT.length === 0 && FL.oob === 0),
+  /* §E385 这条判据**漏掉了一种病**：方形窟窿那一格 pmask 是 1（远处点的权重也算"涂到"），画出来却是黑的。
+   *   ⇒ 主语从"有没有被涂"换成"涂得实不实"：脚下那一格的**覆盖度**不许明显低于全图涂到的格子的中位。
+   *   取相对数（×中位）不取绝对数：覆盖度整体随 fscale / 底色 / 窗口变，绝对阈值会在某次改模型后变成假绿。 */
+  var UNPAINT = [], THIN = [], FADEMED = 0, FADEMIN = 9;
+  if (FL && FL.cellOf) {
+    var fdv = []; for (var fq = 0; fq < FL.cells; fq++) if (FL.pmask[fq]) fdv.push(FL.fade[fq]);
+    fdv.sort(function (a, b) { return a - b; }); FADEMED = fdv.length ? fdv[fdv.length >> 1] : 0;
+    for (var up = 0; up < N; up++) {
+      if (!(VIS[up] && inWin(P[up]))) continue;
+      var ciU = FL.cellOf(P[up]); if (ciU < 0) continue;
+      if (!FL.pmask[ciU]) { UNPAINT.push(P[up].id); continue; }
+      var fu = FADEMED > 0 ? FL.fade[ciU] / FADEMED : 1;
+      if (fu < FADEMIN) FADEMIN = fu;
+      if (fu < 0.5) THIN.push(P[up].id + ' ' + FL.fade[ciU].toFixed(2) + '/中位' + FADEMED.toFixed(2)); } }
+  T('每一枚画得出来的点，脚下那一格必须被地板**涂实**（覆盖度 ≥ 全图中位的一半 ‖ 摘出点之后附近的晕要接上，不许挖空）‖ 带外格数必须为 0',
+    !FL || (UNPAINT.length === 0 && THIN.length === 0 && FL.oob === 0),
     /* ⚠ 明细也必须挡 null：**地板位图只在地图模式建**，谱系模式下 FL 还没出生 ⇒ 上一版这里直接读 FL.painted
      *   把整条自检打断（实测「自检中途抛错：Cannot read properties of null」⇒ 后面 39 条一条没跑）。 */
-    FL ? ('没被涂到的可见点 ' + UNPAINT.length + ' 枚' + (UNPAINT.length ? '：' + UNPAINT.slice(0, 4).join(' ‖ ') : '') +
+    FL ? ('脚下没涂到 ' + UNPAINT.length + ' 枚' + (UNPAINT.length ? '：' + UNPAINT.slice(0, 4).join(' ‖ ') : '') +
+      ' ‖ 涂不实 ' + THIN.length + ' 枚' + (THIN.length ? '：' + THIN.slice(0, 4).join(' ‖ ') : '') +
+      ' ‖ 脚下最低覆盖度 = 中位的 ' + (FADEMIN * 100).toFixed(0) + '%（中位 ' + FADEMED.toFixed(2) + '）' +
       ' ‖ 带外 ' + FL.oob + ' 格 ‖ 涂了 ' + (FL.painted * 100 / (FL.cells || 1)).toFixed(1) + '% 格 ‖ 铺色的点 ' +
       FL.nShown + '/' + N) : '本页没有地板位图（谱系图/一维/三维模式）⇒ 这一条不适用');
   /* 图例那条带与底图必须是**同一条映射**（§E347 那次坏在"带画 LUT、图涂绿红"，我当时还拿一行"这一档不参与着色"糊过去）。
