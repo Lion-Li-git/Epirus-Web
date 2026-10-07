@@ -1352,7 +1352,10 @@ function drawMap(fr) {
   clear(w, h);
   /* 视野按**截尾范围**拟合（默认视图不被离群点压扁），场位图按**全幅范围**铺 ⇒ 每枚点脚下都有地。
    *   基础比例尺（不含 st.k）先于建场算好：场的距离/淡出半径都按这套屏幕度量定义。*/
-  var bx0 = w / (PV.x1 - PV.x0) * 0.90, by0 = h / (PV.y1 - PV.y0) * 0.86;
+  /* E393 DS：取景留出边距（0.90/0.86 → 0.74/0.70）。原来贴着点云裁 ⇒ 场那圈 10% 边距与边缘淡出
+   *   被裁在画布之外 ⇒ 看着像铺到无穷远（用户 10-08：你忘了做范围限定了，现在渲染范围又到了无穷大）。
+   *   留出边距后，板的淡出边界落在画布内 ⇒ 一眼看得出范围是有界的。 */
+  var bx0 = w / (PV.x1 - PV.x0) * 0.74, by0 = h / (PV.y1 - PV.y0) * 0.70;
   ensureField('x2y2', bx0, by0);
   var nb = NBK[FL.key], cb = cam();
   var bx = bx0, byy = by0;
@@ -1746,7 +1749,7 @@ function drawBody() {
   if (st.side) { var _sp = document.getElementById('side'), _lg = document.getElementById('legend');
     if (_sp && _lg && _sp.style.display !== 'none') _sp.style.top = (_lg.offsetTop + _lg.offsetHeight + 10) + 'px'; }
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
-  document.getElementById('stat').textContent = N + ' 枚候选（按权重身份去重 = ' + NDUP + ' 种打法）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
+  document.getElementById('stat').textContent = N + ' 枚候选（按权重身份去重 = ' + NDUP + ' 种打法）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
     ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键 sc − 现役（实测 ' + NSEL + ' 枚 · 判据内赢 ' + NSELUP + ' · 判不动 ' + NSELSOFT + '）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
@@ -2393,12 +2396,7 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit;
     document.getElementById('b3dt').textContent = st.elev < 0.5 ? '立体' : '平面'; } })();
 fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide();
-/* E393 DS（丙）：投影说明放装载之后（放之前会干扰取景）。 */
-(function () { var pe = document.createElement('pre'); pe.id = 'projinfo';
-  pe.style.cssText = 'position:fixed;left:8px;top:22px;z-index:8;color:#e8e8e8;background:#000c;font:12px monospace;padding:4px 6px;border-radius:4px;max-width:900px';
-  pe.textContent = PROJTSNE ? '投影 = t-SNE(perplexity 30) · kNN@10 保住 0.52（旧布局 0.08）· 轴无固定含义'
-    : '投影 = 旧布局（力导向）· kNN@10 保住 0.08';
-  document.body.appendChild(pe); })();
+
 /* §E371 深链 #flo=/#fhi= 是在上面那个解析循环里写进 st 的 ⇒ 那两根滑杆与读数必须在这里回压一次，
  *   否则页面按窗口画、工具栏却写着"全范围"（实测截图抓到过：图里 134 枚，栏上 901 枚）。 */
 paintWin();
