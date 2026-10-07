@@ -590,6 +590,7 @@ function THRLBL() { if (BASEP < 0) { var a1 = 0, b1 = 0;
   return Math.round(st.isoT * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '%）'; }
 var FRMS = 0, FRMA = [];
 var PERFON = 0;
+var GLSIG = '';     /* E405：GL 几何缓存键（相机/网格/画布任一变化才重算重传）*/
 var GLISO = 0;      /* E404：壳走 WebGL2（1）还是 2D 逐面（0，默认）。#gl=1 打开。 */
 var BATCHISO = 0;   /* E403：壳合并成一个 path 画（1）还是逐面画（0）。**默认 0 —— 实测合并更慢**：
  *   96 格 4868 面：合并 102.78 ms/帧 vs 逐面 23.54 ms/帧（52 格：25.12 vs 18.06）。
@@ -1542,6 +1543,12 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
     if (GLISO && GLM.on()) {
       var _dpr = devicePixelRatio || 1;
       GLM.resize(w / _dpr, h / _dpr);
+      /* E405 DS：**几何缓存**。原来每帧都重建 5k 个投影点 + 三个类型数组 ⇒ 这部分 CPU 成本顶掉了换后端
+       *   的收益（E404 实测 GL 25.76 vs 2D 26.18 ms/帧）。相机/网格/画布任一变了才重算重传；否则逐帧只 drawElements。 */
+      var _sig = [cb.r[0], cb.r[1], cb.r[2], cb.u[0], cb.u[1], cb.u[2], cb.f[0], cb.f[1], cb.f[2],
+        st.ox3, st.oy3, base, w, h, m.quads.length, m.gn, m.thr, m.field].join('|');
+      if (_sig !== GLSIG) {
+      GLSIG = _sig;
       var nq = m.quads.length, vv = new Float32Array(nq * 8), tri = new Uint32Array(nq * 6), lin = new Uint32Array(nq * 8);
       for (var gi = 0; gi < nq; gi++) {
         var gq = m.quads[gi];
@@ -1555,6 +1562,7 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
         for (var g4 = 0; g4 < 4; g4++) { lin[gi * 8 + g4 * 2] = b0 + g4; lin[gi * 8 + g4 * 2 + 1] = b0 + ((g4 + 1) % 4); }
       }
       GLM.upload(vv, tri, lin);
+      }   /* E405：/几何缓存 */
       var fRG = pot ? [0.878, 0.694, 0.235, 0.10] : [0.224, 0.851, 0.541, 0.11];
       var lRG = shell ? (pot ? [0.878, 0.694, 0.235, 0.55] : [0.224, 0.851, 0.541, 0.5])
                       : (pot ? [0.878, 0.694, 0.235, 0.22] : [0.224, 0.851, 0.541, 0.2]);
