@@ -2338,9 +2338,18 @@ document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) %
   if (!s) return;
   s.value = String(st.isoT); if (v) v.textContent = THRLBL();
   /* 滑杆写进"当前场"那一格 ⇒ 来回切场不会把对方调好的线冲掉 */
-  s.addEventListener('input', function () { st.isoT = +this.value;
-    if (st.isoField === 'pot') st.isoTpot = st.isoT; else st.isoTok = st.isoT;
-    if (v) v.textContent = THRLBL(); req(); });
+  /* E426 DS：**拖动阈值不再每个 tick 都重建壳**。真机实测：isoBuild 一次 **1175ms**（GN=128 ⇒ 200 万格、
+   *   每格扫邻域），而 MISSWHY=|thr 说明重建就是被阈值变化触发的 ⇒ 原来 input 每次都改 st.isoT，
+   *   下一次 draw 立刻重建 ⇒ 拖一下卡一秒多（ISOBUILDS=5 就是这么攒出来的）。
+   *   现在：数值与标签**先跟手**（廉价），网格等**停手 160ms** 再重建。 */
+  var _isoTimer = 0;
+  s.addEventListener('input', function () {
+    var val = +this.value;
+    if (st.isoField === 'pot') st.isoTpot = val; else st.isoTok = val;   /* 记住但**不动 st.isoT** ⇒ 不触发重建 */
+    if (v) v.textContent = Math.round(val * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '%）';
+    clearTimeout(_isoTimer);
+    _isoTimer = setTimeout(function () { st.isoT = val; if (v) v.textContent = THRLBL(); req(); }, 160);
+  });
 })();
 (function () { var g2 = document.getElementById('isogn'), g3 = document.getElementById('isof');
   if (g2) { g2.value = String(st.isoGN);
