@@ -608,6 +608,7 @@ var GLFAILS = 0;
 var FRN = 0;
 var ISOBUILDS = 0;
 var SIGMS = 0, BUILDMS = 0;
+var GEOBUILD = 0, GLRESIZE = 0;
 var MISSWHY = '';   /* E423：上一次重建的原因（sig/thr/gn/field/noISO）*/   /* E422：isoEnsure 里两件事分开计时 */
 var ISOMS = 0, GLBUILD = 0, GLDRAW = 0, GLBLIT = 0;   /* E420：把 1.2s/帧拆开定位 */
 var GLERR = '';   /* E418：GL 分支抛出的异常文本（揪出静默中断）*/   /* E418：帧序（判"只画了哪一帧"）*/
@@ -1588,13 +1589,16 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
       /* E409 DS：**用画布自己的尺寸**。drawIso 收到的 w/h 不是画布尺寸（是板的像素尺度，实测 756x125
        *   ⇒ 视口比画布矮 85px ⇒ 壳大半画到视口外，这才是"看不见"的真根因）。 */
       var CW = cv.width, CH = cv.height;
+      var _tR = performance.now();
       GLM.resize(CW, CH, CW / _dpr, CH / _dpr);
+      GLRESIZE = performance.now() - _tR;
       /* E405 DS：**几何缓存**。原来每帧都重建 5k 个投影点 + 三个类型数组 ⇒ 这部分 CPU 成本顶掉了换后端
        *   的收益（E404 实测 GL 25.76 vs 2D 26.18 ms/帧）。相机/网格/画布任一变了才重算重传；否则逐帧只 drawElements。 */
       var _sig = [cb.r[0], cb.r[1], cb.r[2], cb.u[0], cb.u[1], cb.u[2], cb.f[0], cb.f[1], cb.f[2],
         st.ox3, st.oy3, base, w, h, m.quads.length, m.gn, m.thr, m.field].join('|');
       if (_sig !== GLSIG) {
       GLSIG = _sig;
+      var _tG = performance.now();
       var nq = m.quads.length, vv = new Float32Array(nq * 8), tri = new Uint32Array(nq * 6), lin = new Uint32Array(nq * 8);
       for (var gi = 0; gi < nq; gi++) {
         var gq = m.quads[gi];
@@ -1612,6 +1616,7 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
         for (var g4 = 0; g4 < 4; g4++) { lin[gi * 8 + g4 * 2] = b0 + g4; lin[gi * 8 + g4 * 2 + 1] = b0 + ((g4 + 1) % 4); }
       }
       var _tU = performance.now();
+      GEOBUILD = performance.now() - _tG;
       GLM.upload(vv, tri, lin);
       GLBUILD = performance.now() - _tU;
       }   /* E405：/几何缓存 */
@@ -1751,10 +1756,10 @@ function draw() { try { var _ft0 = performance.now(); drawBody();
     if (!_pe) { _pe = document.createElement('pre'); _pe.id = 'perfru'; _pe.style.display = 'none'; document.body.appendChild(_pe); }
     var _av = FRMA.length ? (FRMA.reduce(function (x, y) { return x + y; }, 0) / FRMA.length) : 0;
     FRN++; _pe.dataset.gliso = String(GLISO); _pe.dataset.frn = String(FRN);
-    if (FRN > 1) { SIGMS = 0; BUILDMS = 0; }   /* 两个计时按帧只反映**当帧**（上一版拿陈旧值判读，坑了一次）*/
+    if (FRN > 1) { SIGMS = 0; BUILDMS = 0; GEOBUILD = 0; GLRESIZE = 0; }   /* 两个计时按帧只反映**当帧**（上一版拿陈旧值判读，坑了一次）*/
     var _o1 = 0, _ok2 = ''; for (var _k2 in OPC) { _o1 += OPC[_k2]; _ok2 += _k2 + '=' + OPC[_k2] + ' '; }
     _pe.textContent = 'FRMS=' + FRMS.toFixed(2) + ' AVG=' + _av.toFixed(2) + ' N=' + FRMA.length + ' MODE=' + st.mode
-      + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN + ' ISOBUILDS=' + ISOBUILDS + ' MISSWHY=' + MISSWHY + ' SIGMS=' + SIGMS.toFixed(1) + ' BUILDMS=' + BUILDMS.toFixed(1) + ' ISOMS=' + ISOMS.toFixed(1) + ' GLBUILD=' + GLBUILD.toFixed(1) + ' GLDRAW=' + GLDRAW.toFixed(1) + ' GLBLIT=' + GLBLIT.toFixed(1) + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW
+      + ' FACES=' + (ISO && ISO.quads ? ISO.quads.length : 0) + ' GN=' + st.isoGN + ' ISOBUILDS=' + ISOBUILDS + ' MISSWHY=' + MISSWHY + ' GEOBUILD=' + GEOBUILD.toFixed(1) + ' GLRESIZE=' + GLRESIZE.toFixed(1) + ' SIGMS=' + SIGMS.toFixed(1) + ' BUILDMS=' + BUILDMS.toFixed(1) + ' ISOMS=' + ISOMS.toFixed(1) + ' GLBUILD=' + GLBUILD.toFixed(1) + ' GLDRAW=' + GLDRAW.toFixed(1) + ' GLBLIT=' + GLBLIT.toFixed(1) + ' GLISO=' + GLISO + ' GLPATH=' + GLPATH + ' GLDREW=' + GLDREW
       + ' **OPSF=' + _o1 + '** ' + _ok2;
     _pe.dataset.path = _pe.dataset.path || '2d';
     for (var _k3 in OPC) OPC[_k3] = 0;   /* 每帧清零 ⇒ OPSF = 这一帧真实画了多少次 */
