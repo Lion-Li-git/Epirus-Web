@@ -1523,7 +1523,11 @@ function drawTree(fr) {
        *   ⚠ 计数挪到 kind **定完之后**，而且数的是 kind 本身：原来写的是「if (sq) NSOUP1++」，
        *     那量的是"这枚的来路是融合"，不是"这条边真被画成红色" ⇒ 把 kind 改回 0 它照样 +1，
        *     页内那条腿就变成一台只会回显条件的假仪器（本仓"回显生效值"那条老规矩；牙口实测过这一层）。 */
-      var kind = bq ? 1 : (cq ? 2 : (sq ? 3 : 0));
+      /* §2026-10-08 DS（用户转 Claude 复核：「实线 = 有哈希为证的血缘，虚线 = 从路径推断出来的」）：
+       *   kind 0 原来没有区分来源 ⇒ 把"实线"收紧为**只有 hash / hash-emb**（有哈希为证）；
+       *   其余来源（seedpack / arm / slot-at-time）与倒挂假边一样走**长虚线**（kind 1 的既有样式）。 */
+      var _hashBacked = (dd.psrc === 'hash' || dd.psrc === 'hash-emb');
+      var kind = bq ? 1 : (cq ? 2 : (sq ? 3 : (_hashBacked ? 0 : 1)));
       if (bq) NBACK++; if (cq) NCHAIN++; if (kind === 3) { NSOUP++; NSOUP1++; }
       var pa = pos[dd.pof], pb2 = pos[dd.id];
       /* §E469 每条边同时带**纸面坐标**（papA/papB）：密度网格建在那一层上，而不是建在投影后的屏幕上。
@@ -2384,7 +2388,14 @@ function paintLegend(fr) {
    *   不如直接把文字做成一整块排在两个竖杠左侧，并且多换行」）⇒ 改成**两列**：左列文字（限制宽度 ⇒ 自动多换行、
    *   高度与竖杠齐平），右列两个竖杠。原来 s1/wr/s2 竖着堆 ⇒ 文字只占一两行、竖杠占满高 ⇒ 中间必空一块。 */
   var _col = document.createElement('div'); _col.style.maxWidth = '150px'; _col.style.flex = '0 0 auto';
-  _col.appendChild(s1); _col.appendChild(s2); if (s3h) _col.appendChild(s3h);   /* §E458 只有 hp 档多这一行（单批读数的噪声必须写在读数的地方）*/
+  _col.appendChild(s1); _col.appendChild(s2);
+  /* §2026-10-08 DS：补两处口径说明 —— ① 底色/壳是**空处插值**（只在有点的地方有意义）；
+   *   ② 壳建在三维行为轴 (x3/y3/z3) 上，不是投影坐标；③ 谱系图实线 = 哈希为证、虚线 = 路径推断或倒挂。 */
+  var _cav = document.createElement('div'); _cav.style.marginTop = '4px'; _cav.style.color = 'var(--dim)'; _cav.style.maxWidth = '150px';
+  _cav.textContent = (st.mode === 'tree')
+    ? '实线 = 哈希为证<br>虚线 = 路径推断或倒挂'
+    : '底色/壳只在有点的地方有意义（空处 = 插值）<br>壳建在三维行为轴上，不是投影坐标';
+  _col.appendChild(_cav); if (s3h) _col.appendChild(s3h);   /* §E458 只有 hp 档多这一行（单批读数的噪声必须写在读数的地方）*/
   var _row = document.createElement('div'); _row.style.display = 'flex'; _row.style.gap = '8px';
   /* §E461 文字列与竖杠**垂直居中对齐**（原来 flex-start ⇒ 文字比条短时那条差全堆在底下，看着就是"图例下面空一块"；
    *   而 §E441 为了消这块空去砍条高，把两端刻度挤没了 —— 用户否掉）。现在条高固定 150，短了的文字上下各让一半，
