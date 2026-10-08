@@ -117,3 +117,6 @@ champion-map/duel-*.tsv
 champion-map/e4[0-9][0-9]-*.tsv
 champion-map/e49[0-9]-*.tsv
 champion-map/e49[0-9]-*.txt
+
+# §E504（10-09 通宵班）：续 DS 的 e4xx 规矩 —— 一次性臂产物不进库（e5xx 同判）
+champion-map/e5[0-9][0-9]-*.tsv

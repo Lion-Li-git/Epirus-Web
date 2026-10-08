@@ -50,6 +50,12 @@ const PATHOF = {};
 }
 const REC = [];
 let nmiss = 0, nByPath = 0;
+/* §E503：**声明**是融合粒的枚（包 meta 里写了 `soup.sources`）—— 与"这张表里解析出父边的枚"分开数。
+ *   为什么必须分开：融合粒的父多半住在 gitignored 的 `docs/artifacts/…`（本机才有），
+ *   干净克隆里 `wid → 节点` 全解不开 ⇒ `psrc` 不再是 'soup' ⇒ **第二父边从 6 条静默塌成 0 条**，
+ *   而 `lineage.mjs` 照样退出码 0、页面自测照样绿（它读的是已生成好的表）。这条声明数就是那把"应当有几条"的尺。 */
+let nSoupDeclared = 0;
+const SOUPDECL = [];
 for (const id of ids) {
   const rel = PATHOF[id];
   const p = rel ? join(ROOT, rel) : join(ART, id + '.bak');
@@ -241,6 +247,7 @@ for (const r of REC) { const m = r.m || {};
    *   并且吃同一条 §E367 时间闸：父的 ts 晚于子 ⇒ 这条边不许画（融合粒正常总是后生的，红了就说明表错了）。*/
   let sP1 = '', sP2 = '';
   { const src = (m.soup && Array.isArray(m.soup.sources)) ? m.soup.sources : null;
+    if (src && src.length) { nSoupDeclared++; SOUPDECL.push(r.id); }
     if (src) { const ids = src.map(s => (s && s.wid && (BYWID[s.wid] || BYWID_EMB[s.wid])) || '');
       sP1 = ids[0] || ''; sP2 = ids.slice(1).find(x => x && x !== sP1) || '';
       const bad = [];
@@ -387,6 +394,30 @@ const COLS = ['id', 'fam', 'famLabel', 'ts', 'metaSeed', 'nameSeed', 'parent', '
   /* §E487 融合粒的第二父：三条新列一律追加在**表尾**（同 §E367 的规矩 —— 插中间会让按下标取数的写法静默错位）*/
   'parentOf2', 'parentName2', 'parentSrc2'];
 const SLOTDEF = { n: 0, label: '旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）' };
+/* ===== §E503 薄图守卫：包 meta 声明"我是两粒父的平均"，而这张表一条父边都没解出来 ⇒ 拒绝 =====
+ * 实测的洞（10-08 深夜，我拿 `git archive HEAD` 解出来的干净克隆跑的）：本机 **6 条**第二父边 ‖ 干净克隆 **0 条**，
+ *   而 K2 从家族 23（159 枚 · "代数 400→1200"）塌进家族 1 的 868 枚兜底类 ⇒ 融合家族整块没了。
+ *   生成器照样 exit 0、页内照样 71 PASS ⇒ **图变薄是静默的**，与 §E489（投影整列写丢）‖ §E491（Hp 空洞冒充 0%）
+ *   同族：门测的是"表在不在"，不是"这张图还是不是那张图"。
+ * 判据只钉**可控量**：声明数 > 0 而解析数 == 0（"应当有几条"对"实际解出几条"），不钉具体枚数。
+ * `--soup-thin-ok` = 承认自己就是要一张薄图（例如只有入库子集的新机器）⇒ 继续跑，但**响亮印出来**，
+ *   绝不静默：这是"灰而不判死"和"假装没事"的分界。 */
+{ const nSoupRes = ROWS.filter(r => r.psrc === 'soup').length;
+  const thin = SOUPDECL.filter(id => !ROWS.some(r => r.id === id && r.psrc === 'soup'));
+  if (thin.length && !process.argv.includes('--soup-thin-ok')) {
+    console.error('⛔ §E503 融合血统塌了：包 meta 声明 ' + nSoupDeclared + ' 枚是权重平均的产物，' +
+      '而本表只解出 ' + nSoupRes + ' 枚的父边（缺的 ' + thin.length + ' 枚：' + thin.slice(0, 8).join(' ‖ ') +
+      (thin.length > 8 ? ' …' : '') + '）\n' +
+      '   病：融合粒的**父**住在 gitignored 的 `docs/artifacts/…`，这台机器上没有 ⇒ `wid → 节点` 解不开，' +
+      '图上就没有紫/红父边（这一笔一旦落盘就把"少了几条边"写进历史，后面再也分不清是数据错还是机器新）。\n' +
+      '   要么把父粒 `.bak` 放回 `docs/artifacts/` 再跑本脚本（本机默认就是这样）；\n' +
+      '   要么确实要在只有入库子集的机器上出一张薄图：加 `--soup-thin-ok`（会照常印一行警告，不静默）。');
+    process.exit(2);
+  }
+  if (thin.length) console.log('⚠ §E503 薄图模式（`--soup-thin-ok`）：' + thin.length + ' 枚融合粒的父边解不开 ⇒ 图上这几条**不画**（' +
+    thin.slice(0, 6).join(' ‖ ') + (thin.length > 6 ? ' …' : '') + '）');
+  else console.log('融合血统口径 ✅ ' + nSoupDeclared + ' 枚声明是权重平均的粒，父边全部解析（第二父边 ' +
+    ROWS.filter(r => r.pof2).length + ' 条）'); }
 const out = [COLS.join('\t')];
 for (const r of ROWS) { const d = FAM[r.id] || (SLOTID[r.id] ? SLOTDEF : null); if (!d) continue; const c = r.cfg;
   out.push([r.id, d.n, d.label, (r.ts || '').slice(0, 19), r.seed, r.id.replace(/^.*-/, ''), c.parent.slice(0, 8), r.parentOf, r.parentName, r.wid, c.rulesFp, c.divW, c.divK, c.divRoleW, c.divCatW, c.oppsN,

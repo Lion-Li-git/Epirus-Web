@@ -113,7 +113,7 @@ const GRP = {
   ui: 'D37 D38 D28 D70 D131 D111 D166',                                    // 页面与前端契约
   ship: 'D219 D55 D16 D35 D27 D49 D60 D61 D62 D67 D73 D78 D79 D103 D105 D116 D118 D124 D125 D141 D153 D155 D163 D107 D110 D121 D145 D146 D147 D168 D169 D170 D190 D197 D210 D228',   // 出厂面：可行性闸 / 当选 / promote / 线上槽
   train: 'REPRO2 L4 D217 D220 D221 D222 D223 D224 D225 D226 D227 D229 D5 D7 D9 D10 D11 D12 D13 D15 D56 D58 D59 D17 D24 D25 D26 D33b D33 D36 D39 D40 D41 D42 D43 D44 D45 D47 D48 D65 D66 D68 D72 D74 D75 D76 D77 D80 D81 D84 D85 D86 D87 D89 D90 D104 D97 D99 D100 D101 D108 D109 D112 D113 D114 D119 D122 D123 D127 D128 D129 D130 D132 D134 D135 D136 D139 D140 D115 D162 D120 D143 D144 D157 D159 D167 D172 D173 D174 D175 D176 D179 D181 D180 D182 D184 D185 D213 D164 D165 D187 D188 D201 D204 D231 D232',   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
-  probe: 'D34 D64 D83 D88 D137 D138 D148 D149 D150 D151 D152 D154 D160 D161 D106 D158 D177 D178 D183 D186 D192 D193 D195 D196 D198 D200 D199 D212 D214 D202 D203 D207 D208 D209 D211 D216',   // 研究量具自身的牙
+  probe: 'D34 D64 D83 D88 D137 D138 D148 D149 D150 D151 D152 D154 D160 D161 D106 D158 D177 D178 D183 D186 D192 D193 D195 D196 D198 D200 D199 D212 D214 D202 D203 D207 D208 D209 D211 D216 D233',   // 研究量具自身的牙
   engine: 'N1 N2 目标：attemptAction N3 N3b N10 N10b N10c N8 N14 N14b N15 N16 N17 N18 N19 N4 N4b N4c N12 N12b N6 N6b 目标反锁：上回合与某对手互为目标而相抵 目标选择：能一击必杀先杀；否则打血量最高的领先者 fuzz：3/4/5 autoGame N20a N20b N20c N20d N20e N21 N22 N22b N22c N23 D1 D2 D3 D4 D6 D51 D52 D53 D54 D57 D18 D19 D20 D21 D22 D14 D23 D29 D30 D31 D46 D50 D63 D91 D102 D92 D93 D94 D95 D96 D98 D71 D117 D126 D142',   // 引擎与规则语义（改这里 ⇒ 只能全跑）
 };
 /* 累计依赖：跑一个组 = 跑它自己 + 它所依赖的更浅的组。engine 是"全部"。 */
@@ -6390,22 +6390,41 @@ t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a
   ok(atk.length > 0, '构造态里必须**有**可出的攻击卡（否则"不还手"是白测）');
   const noRet = atk.every(function (k) { return Bots.pickGuardSpam(stG, 0, lgG) !== k; });
   ok(noRet, '手里有攻击卡也不许出 ⇒ 这才叫"不还手"原型');
-  /* ② 接线：默认关 ⇒ `OPPS` 逐字不变；开了 ⇒ 三个都进桌且**产物自证** */
+  /* ② 接线：默认关 ⇒ `OPPS` 逐字不变；开了 ⇒ 进桌且**产物自证** */
   const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
-  ok(t3.indexOf("EPIRUS_COUNTER_OPPS || 0") >= 0, 'EPIRUS_COUNTER_OPPS 必须默认 0');
+  ok(/EPIRUS_COUNTER_OPPS \|\| ''/.test(t3), '默认必须是**空 ⇒ 关**（§E500 起这根是名字表，不再默认三个）');
   ok(t3.indexOf('OPPS.push(o)') >= 0, '开了必须真推进 fitness 的对手表（推进别处 = 死作用点）');
   ok(t3.indexOf("'EPIRUS_COUNTER_OPPS'") >= 0, '必须进 SELF_ENV_KEYS（否则黑键侦测会判它"传了没人读"）');
-  ok(/typeof o\.sel !== 'function'[\s\S]{0,160}process\.exit\(4\)/.test(t3), '缺一个对手必须 exit 4（少一个 = 一根空枪，不许静默少放）');
+  ok(/typeof o\.sel !== 'function'[\s\S]{0,200}process\.exit\(4\)/.test(t3), '缺一个对手必须 exit 4（少一个 = 一根空枪，不许静默少放）');
   const dir = mkdtempSync(join(tmpdir(), 'd130-'));
+  const metaOf = function () {
+    const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync('docs/artifacts/train-3p-out.js', 'utf8'));
+    return JSON.parse(jm[1]);
+  };
   const on = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130on', EPIRUS_COUNTER_OPPS: '1', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
-  eq(on.status, 0, '开了要跑得通');
+  eq(on.status, 0, '老口径 `=1` 要跑得通（历史臂逐位复现不能坏）');
   ok(/\[counter-ops\] 判据原型已进训练桌：cnt:guardSpam,cnt:gunSpam,cnt:snipeSpam/.test(String(on.stdout || '')),
     '必须印出进了哪三个（不印 = 又一根暗旋钮）');
-  const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync('docs/artifacts/train-3p-out.js', 'utf8'));
-  const mt = JSON.parse(jm[1]);
-  ok(mt.recipe && Array.isArray(mt.recipe.counterOpps) && mt.recipe.counterOpps.length === 3,
-    '产物要自带"这臂的训练桌上放了哪几个判据原型"（实测 ' + JSON.stringify(mt.recipe && mt.recipe.counterOpps) + '）');
+  ok(/老口径[^\n]*不能[^\n]*归因|不能归因到某一型对手/.test(String(on.stdout || '')),
+    '三个一起上时**日志必须自认"归因不到某一型"**（§E500 的病：一根 boolean 改三个自由度却读起来像单自由度）');
+  const mt1 = metaOf();
+  ok(mt1.recipe && Array.isArray(mt1.recipe.counterOpps) && mt1.recipe.counterOpps.length === 3,
+    '产物要自带"这臂的训练桌上放了哪几个判据原型"（实测 ' + JSON.stringify(mt1.recipe && mt1.recipe.counterOpps) + '）');
+  /* ③ §E500 的新牙口：名字表 ⇒ **单自由度**必须表达得出来（今晚 R1 的对照臂就靠这一格） */
+  const one = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130one', EPIRUS_COUNTER_OPPS: 'snipeSpam', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
+  eq(one.status, 0, '只上狙击场要跑得通');
+  ok(/\[counter-ops\][^\n]*cnt:snipeSpam[^\n]*OPPS 从 9 个变 10 个/.test(String(one.stdout || '')),
+    '只上 `snipeSpam` ⇒ 必须**恰好进一个**（9→10；印成 9→12 = 名字表没接住，三个又被一把塞）');
+  ok(/单自由度/.test(String(one.stdout || '')), '单自由度那一臂要把"单自由度"印出来（读日志的人要能分辨这臂归因得动）');
+  const mtOne = metaOf();
+  ok(mtOne.recipe && mtOne.recipe.counterOpps.length === 1 && mtOne.recipe.counterOpps[0] === 'cnt:snipeSpam',
+    '产物 meta 要落生效值（实测 ' + JSON.stringify(mtOne.recipe && mtOne.recipe.counterOpps) + '）');
+  const bad = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130bad', EPIRUS_COUNTER_OPPS: 'snipeSpam2', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
+  eq(bad.status, 4, '写错名字必须 exit 4 点名（打错一个字母就"少放一个对手还照跑" = 空枪臂）');
+  ok(/不认识的名字/.test(String(bad.stderr || '')), '要点名"不认识的名字"并列出合法的三个');
 });
 
 t('D132 补贴率旋钮 `EPIRUS_REGEN_SLICE`（v1.5.177 · 双侧实验的前置）：默认 0.08 逐位不变 + 下达必须读回 + 拒静默空转', function () {
@@ -11455,6 +11474,44 @@ t('D232 §E497 按卡出手谱 `tools/usage-probe.mjs`：三格手算自检必�
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融合粒 vs 真解出父边"守卫必须在，且默认判红', function () {
+  /* 病（实测复现，不是推测）：10-08 深夜我拿 `git archive HEAD` 解出一棵**干净克隆**跑 `lineage.mjs` ⇒
+   *   第二父边 **6 条 → 0 条**，K2 从家族 23（159 枚 · 标签"代数 400→1200"）塌进家族 1 的 868 枚兜底类，
+   *   而**退出码 0、页面自测 71 PASS 全绿**（页面读的是已生成好的表）⇒ 图变薄是静默的。
+   *   根因：融合粒的**父**住在 gitignored 的 `docs/artifacts/…`，新机器上根本没有那些 `.bak`。
+   * 同族账：§E489（重建链漏第⑥步 ⇒ 投影整列写丢）‖ §E491（`Hp` 空洞 ⇒ `+'' = 0` 把"未测"当"0%"画成库内倒数）。
+   *   三条的共同点：**门测的是"表在不在"，不是"这张图还是不是那张图"**。
+   * ⚠ 红路牙口怎么验的：不在这里造 fixture（那要搬 js/core + champion-map + tools 三套），而是在**干净克隆**里复原一次
+   *   —— 改守卫前那棵克隆 exit 0 且第二父边 0 条，改完同一棵 **exit 2** 并点名缺的 5 枚（记录见 §E503）。 */
+  const SRC = 'champion-map/lineage.mjs';
+  const src = readFileSync(SRC, 'utf8');
+  /* ① 声明数必须来自包自己的 meta（`soup.sources`），不许从"这张表今天解不解得开"倒推 —— 那样洞就自灭了 */
+  ok(/m\.soup && Array\.isArray\(m\.soup\.sources\)/.test(src) && /nSoupDeclared\+\+/.test(src),
+    '① 必须按 meta.soup.sources 数"声明是融合粒"的枚数（换成按解析结果数 = 把尺子和被测物焊在一起）');
+  ok(/SOUPDECL\.push\(r\.id\)/.test(src), '② 要按**枚**留名（只留计数就无法在报错里指出是哪几粒塌了）');
+  /* ③ 默认必须拒：thin 非空且没给 `--soup-thin-ok` ⇒ exit 2；给了也要**打印**，不许静默 */
+  ok(/if \(thin\.length && !process\.argv\.includes\('--soup-thin-ok'\)\)[\s\S]{0,1200}process\.exit\(2\)/.test(src),
+    '③ 默认路径必须 exit 2（"薄图"要显式承认才能出）');
+  ok(/console\.log\('⚠ §E503 薄图模式/.test(src),
+    '④ `--soup-thin-ok` 那一支必须响亮印警告（灰而不判死 ≠ 假装没事）');
+  /* ⑤ 行为：本机有父粒 ⇒ 守卫必须绿着过，并把条数报出来（只 exit 0 不算，被吞掉的断言照样绿） */
+  const r = spawnSync(process.execPath, [SRC], { encoding: 'utf8', timeout: 300000 });
+  eq(r.status, 0, '⑤ 本机跑 `lineage.mjs` 必须成功：\n' + String(r.stderr || r.stdout || '').slice(-400));
+  const m1 = /融合血统口径 ✅ (\d+) 枚声明是权重平均的粒，父边全部解析（第二父边 (\d+) 条）/.exec(String(r.stdout || ''));
+  ok(!!m1, '⑤ 必须印出"融合血统口径"那一行（没印 = 守卫被条件跳过或措辞被改，正是 §E489 那一族）');
+  if (m1) ok(Number(m1[1]) >= 1 && Number(m1[2]) === Number(m1[1]),
+    '⑤ 声明数与第二父边条数必须**相等且非零**（实测声明 ' + m1[1] + ' ‖ 边 ' + m1[2] + '）');
+  /* ⑥ 新列不许被删：删掉 `parentOf2` 就等于把"融合粒有两个父"这件事从数据面上抹掉（比薄图更彻底） */
+  const LT = readFileSync('champion-map/lineage.tsv', 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
+  const hd = LT[0].split('\t');
+  ok(['parentOf2', 'parentName2', 'parentSrc2'].every(c => hd.indexOf(c) >= 0), '⑥ lineage.tsv 表尾三条融合列必须还在');
+  ok(hd.indexOf('parentOf2') > hd.indexOf('parentSrc'), '⑥ 新列必须在表尾（插在中间会让按下标取数的下游静默错位 —— §E367 的规矩）');
+  const i2 = hd.indexOf('parentOf2');
+  const nDisk = LT.slice(1).filter(l => (l.split('\t')[i2] || '').trim() !== '').length;
+  ok(!m1 || nDisk === Number(m1[2]), '⑦ 落盘的第二父边行数必须等于守卫报的条数（实测表 ' + nDisk +
+    (m1 ? ' ‖ 守卫 ' + m1[2] : '') + '）—— 不一致就是守卫数内存、表写另一套');
 });
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 

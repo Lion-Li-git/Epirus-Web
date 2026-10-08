@@ -772,29 +772,51 @@ const OPPS = [
   { name: 'farmer', sel: Bots.pickFarmer }
 ];
 
-/* ===== v1.5.172（qoder §N35）：把**判它的那张桌子**搬进训练（`EPIRUS_COUNTER_OPPS=1`，默认关）=====
+/* ===== v1.5.172（qoder §N35）：把**判它的那张桌子**搬进训练（`EPIRUS_COUNTER_OPPS`，默认关）=====
  * 病（`v7xn22a` 实测，不是猜）：那条 400 代大配方终于长出了"兑现广度"（各格净 `G(落地) 3.5~3.9`、4 种真卡打上血，
  * 现役只有 2.2~2.7），结果 `promote --dry` 把它砍在**行为门**上 ——
  * `G4 无一行脚本能以 >60% 击败它`：最克它的就是「只防御(不还手)」（85%）与「只枪 1ジ压制」（82%）。
  * 而这两个原型**根本不在训练桌上**：`OPPS` 里最接近的 `defend` 是"会还手的防御"，`guardSpam`（纯不还手）
  * 在 `EpirusBots` 里早就有、只是没人用它当对手 ⇒ **判它的对手从不出现，适应力当然学不出来**。
  * 与 `EPIRUS_XN2REF=exam`（v1.5.150）同一条设计：**对着产品判据本身训 ⇒ 目标与验收一致**。
- * 默认关 ⇒ `OPPS` 逐字不变 ⇒ 历史臂仍可逐位复现。 */
-const COUNTER_OPPS = Number(process.env.EPIRUS_COUNTER_OPPS || 0) > 0 ? [
-  { name: 'cnt:guardSpam', sel: Bots.pickGuardSpam },     // = gate-drafts 的「只防御(不还手)」
-  { name: 'cnt:gunSpam', sel: Bots.pickGunSpam },         // ≈「只枪(1ジ压制)」
-  { name: 'cnt:snipeSpam', sel: Bots.pickSnipeSpam }      // ≈「只狙击」
-] : [];
-if (COUNTER_OPPS.length) {
-  for (const o of COUNTER_OPPS) {
-    if (typeof o.sel !== 'function') {
-      console.error('[train-3p] ⛔ EPIRUS_COUNTER_OPPS 要的对手在 EpirusBots 里不存在：' + o.name + ' ⇒ 拒绝静默少放对手（少一个就是一根空枪）');
-      process.exit(4);
-    }
-    OPPS.push(o);
+ * 默认关 ⇒ `OPPS` 逐字不变 ⇒ 历史臂仍可逐位复现。
+ *
+ * §E500（v1.6.35 · 10-09 通宵班）改成**名字表驱动**，因为原来的 boolean 一根改三个自由度：
+ *   `=1`（或 `all`）⇒ 三个全上，**与 v1.5.172 起的历史臂逐位相同**（老口径不失效）；
+ *   `=snipeSpam` ⇒ **只上狙击场** ⇒ 今晚要问的"是哪一型对手在施压"第一次成为单自由度问题。
+ *   ⚠ 为什么要这个：§E499 之后 DS 提的 R1 写的是"对照臂只去掉狙击场"，而这根旋钮当时**表达不出那个对照**
+ *   （去掉就是三个全去掉）⇒ 照原样跑完会得出"赢了但不知道谁在施压"的臂（§N12 那一族：读回 ≠ 作用点，而这里更糟，是作用点本身不唯一）。
+ * 纪律与 `EPIRUS_ECON_OPPS` 同形：默认关 ⇒ `OPPS` 一字不变；名字不在表里 ⇒ **`exit 4` 点名**（少一个就是一根空枪）。 */
+const COUNTER_OPP_TABLE = {
+  guardSpam: { name: 'cnt:guardSpam', sel: Bots.pickGuardSpam },   // = gate-drafts 的「只防御(不还手)」
+  gunSpam: { name: 'cnt:gunSpam', sel: Bots.pickGunSpam },         // ≈「只枪(1ジ压制)」
+  snipeSpam: { name: 'cnt:snipeSpam', sel: Bots.pickSnipeSpam }    // ≈「只狙击」
+};
+const COUNTER_RAW = String(process.env.EPIRUS_COUNTER_OPPS || '').trim();
+/* `1` / `2` 这类纯数字 = 老口径"全都要"；其余按名字表逐个点名。 */
+const COUNTER_WANT = !COUNTER_RAW || COUNTER_RAW === '0' ? []
+  : (/^\d+$/.test(COUNTER_RAW) || COUNTER_RAW === 'all' || COUNTER_RAW === '*')
+    ? Object.keys(COUNTER_OPP_TABLE)
+    : COUNTER_RAW.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+const COUNTER_OPPS = COUNTER_WANT.map(function (nm) {
+  const o = COUNTER_OPP_TABLE[nm];
+  if (!o) {
+    console.error('[train-3p] ⛔ EPIRUS_COUNTER_OPPS 里有不认识的名字：' + JSON.stringify(nm) +
+      '（合法的是 ' + Object.keys(COUNTER_OPP_TABLE).join(',') + ' ‖ 或数字/`all` = 三个全上，与历史臂同形）⇒ 拒绝静默少放对手');
+    process.exit(4);
   }
+  if (typeof o.sel !== 'function') {
+    console.error('[train-3p] ⛔ EPIRUS_COUNTER_OPPS 要的对手在 EpirusBots 里不存在：' + o.name + ' ⇒ 拒绝静默少放对手（少一个就是一根空枪）');
+    process.exit(4);
+  }
+  return o;
+});
+if (COUNTER_OPPS.length) {
+  for (const o of COUNTER_OPPS) OPPS.push(o);
   console.log('[counter-ops] 判据原型已进训练桌：' + COUNTER_OPPS.map(function (o) { return o.name; }).join(',') +
-    ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（fitness 现在能看见"只防御不还手"这一克）');
+    ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个' +
+    (COUNTER_OPPS.length === 1 ? '（**单自由度**：这一臂只改了一型对手，读得动"是谁在施压"）'
+      : '（老口径：' + COUNTER_OPPS.length + ' 个一起上 ⇒ 本臂**不能**归因到某一型对手）'));
 }
 
 /* ===== §E127（v1.5.285 · Qoder 通宵班）：把 `ringspam` 放上训练桌（`EPIRUS_RING_OPPS=1`，默认关）=====
