@@ -18,7 +18,8 @@
  *      node champion-map/lineage.mjs
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
-import { braceObj, parseMeta, widOf } from './pack-id.mjs';   // §E328：身份三件套搬进单一来源（函数体逐字搬，本文件行为不变）
+import { braceObj, parseMeta, widOf, packArr, widOfArr } from './pack-id.mjs';
+import { sandbox } from '../tools/audit-lib.mjs';   /* §E464 只为拿 embedLegacy：同一枚包的两个身份要按同一条嵌入规则算，不留第二份 */   // §E328：身份三件套搬进单一来源（函数体逐字搬，本文件行为不变）
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -55,7 +56,11 @@ for (const id of ids) {
   if (rel) nByPath++;
   let m = null, wid = null, used = rel || '';
   if (existsSync(p)) { const txt = readFileSync(p, 'utf8'); m = parseMeta(txt); wid = widOf(txt); }
-  else { const alt = join(HERE, '..', 'js', 'bundled-champion-3p.js');
+  else if (/bundled-champion-3p\.js$/.test(String(rel || ''))) { const alt = join(HERE, '..', 'js', 'bundled-champion-3p.js');
+    /* §E464 这条兜底**只服务"这一行就是现役那颗"**（SHIPPED-Ldemo 的 path 正是这个文件，只是 ROOT 拼法可能落空）。
+     *   原来它挂在"任何文件读不到"的分支上：实测把 e370-out（未入库那批 v7 导出）挪走模拟换台机器 ⇒
+     *   16 枚旧槽位冠军全部走进这一支，META/wid 被写成**现役那颗**的（d490dc13…）⇒ 谱系表 711 行的家族签名跟着变。
+     *   "读不到"就该是读不到，不许拿别人的身份顶上（同一套判据见 §E330「不许凭一条路径凭空造节点」）。*/
     if (existsSync(alt)) { const txt = readFileSync(alt, 'utf8'); m = parseMeta(txt); wid = widOf(txt); used = 'js/bundled-champion-3p.js'; } }
   if (!m) { nmiss++; REC.push({ id, m: null, wid, rel: used }); continue; }
   REC.push({ id, m, wid, rel: used });
@@ -114,10 +119,18 @@ function norm(v) { if (v === undefined || v === null || v === '' || v === '∅')
 const ROWS = [];
 /* 权重身份表要扫**全部** .bak（1461 个），不能只扫本图的 718 枚 —— 父指针指向的是"当时的现役冠军"，
  *   而那一枚未必进了 §E287 那批面板。实测只扫 718 枚时解析率 11%，扫全库后（下一行打印）才看得清谱系。*/
+let nSlotEmb = 0;
 const BYWID = {};
+const BYWID_EMB = {};   /* §E464 嵌入成 v7 之后的指纹 → 图上的 id */
+let POL = null;
+function embOf(arr) { try {
+  if (!POL) POL = sandbox().EpirusPolicy;
+  const r = POL.embedLegacy(arr); return r ? widOfArr(r) : null;
+} catch (e) { return null; } }
 const allBak = existsSync(ART) ? readdirSync(ART).filter(f => f.endsWith('.bak')) : [];
 for (const f of allBak) { try {
-  const w = widOf(readFileSync(join(ART, f), 'utf8')); if (!w) continue;
+  const txt = readFileSync(join(ART, f), 'utf8'); const arr = packArr(txt);
+  const w = widOfArr(arr); if (!w) continue;
   const id = f.slice(0, -4); if (!BYWID[w]) BYWID[w] = id;
 } catch (e) { /* 单枚读不动不影响全表 */ } }
 for (const r of REC) if (r.wid && !BYWID[r.wid]) BYWID[r.wid] = r.id;
@@ -139,6 +152,27 @@ function seedpackOf(m) { const e = m.recipe && m.recipe.env; const p = e && e.EP
   if (typeof p !== 'string' || !p) return '';
   const k = p.replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, '');
   return BYBASE[k] || ''; }
+/* ===== §E464 pre-v7 包的「第二身份」登记 =====
+ * 训练服务记热启动父走的是 `weightsId(loadAny(种子).params)`，也就是**嵌入成 v7 之后**那份数组的指纹
+ *   （FEAT_S 123 → 213 ⇒ 数组 3337 → 5689 ⇒ 哈希必变）⇒ 只索引「文件里那份数组」的哈希时，
+ *   所有 pre-v7 包对父指针检索都是隐身的，§E314 因此把 585 枚共用的那个父判成「盘上无实体」。
+ * 真相 = v1.3.57/58 那枚 = SLOT-e379c62c。但**登记目标必须是面板上真有的那一枚**，两条通道：
+ *   ① 文件名能反查到图上节点（BYBASE，含"文件名 ≠ 图上 id"的那些）；
+ *   ② 旧槽位冠军行（id = SLOT-<wid8>）：coords.tsv 把那几行的 path 指向 e370-out 的 v7 导出，而那批文件
+ *      **没入库**（git ls-files = 0）⇒ 换台机器 clone 下来 BYWID 就没有这一项，584 条父边又会解不出来。
+ *      这里改从**已入库的 v6 文件**推：某 .bak 的原始 wid 前 8 位 = 某个 SLOT 行的后缀 ⇒ 它的嵌入后 wid 登记给那一行。
+ *      实测链路：champion-5p-v1.3.58.bak（tracked，commit 24b9f63）原始 e379c62ccd2648fa → 嵌入 d13d3c856c6cff62。
+ * ⚠ 原来这条登记写在 .bak 扫描循环里、且不筛面板 ⇒ 它把 `d13d3c85…` 先记成了文件名 `champion-5p-v1.3.58`
+ *   （图上没有这一枚），SLOT 规则随后一条也登记不到。不闸门上的结果就是"解析出一个不存在的父"。 */
+{ const SLOTBY8 = {};
+  for (const r of REC) { const m2 = /^SLOT-([0-9a-f]{8})$/.exec(String(r.id || '')); if (m2) SLOTBY8[m2[1]] = r.id; }
+  for (const f of allBak) { try {
+    const txt = readFileSync(join(ART, f), 'utf8'); const arr = packArr(txt);
+    const w = widOfArr(arr); if (!w) continue;
+    const rid = BYBASE[f.slice(0, -4)] || SLOTBY8[w.slice(0, 8)]; if (!rid) continue;
+    const e = embOf(arr); if (e && e !== w && !BYWID_EMB[e]) { BYWID_EMB[e] = rid; nSlotEmb++; }
+  } catch (err) { /* 单枚读不动不影响全表 */ } }
+  console.log('§E464 pre-v7 包的第二身份登记：' + nSlotEmb + ' 条（目标一律是面板上真有的节点；SLOT 行走已入库的 v6 文件，不依赖 e370-out 那批未跟踪的 v7 导出）'); }
 /* 第三级退路 = **臂级**父指针（`chain-scan --emit=` 落的那张表）。为什么需要：一支臂留 7 个文件
  *   （1 枚产物 + 6 枚带内候选），实测**产物那份常常不带指针、带内候选那份带** ⇒ 只看产物就漏。
  *   臂级证据"这支臂是从 X 起步的"对产物同样成立，所以按 productRel 反查图上的那一枚。
@@ -182,9 +216,11 @@ let nSpk = 0, nArm = 0;
  *     并且**连那个哈希也不许留**（它是"今天槽主"的哈希，不是当时那份的）。
  *   ⚠ byHash 一级永远不否：那是包自己 META.hotstartFrom 里记的哈希，是实录；那种情况该怀疑的是 ts，不是边。*/
 const IDTS = {}; for (const r of REC) IDTS[r.id] = (r.m && r.m.ts) || '';
-let nBack = 0;
+let nBack = 0, nEmb = 0;
 for (const r of REC) { const m = r.m || {};
-  const byHash = (m.hotstartFrom && BYWID[m.hotstartFrom]) || '';
+  const byHash = (m.hotstartFrom && (BYWID[m.hotstartFrom] || BYWID_EMB[m.hotstartFrom])) || '';
+  /* §E464 靠「嵌入后那个身份」才对上的单独记一笔（pSrc = hash-emb），不许混在 hash 里看不出来 */
+  const byHashEmb = byHash && !BYWID[m.hotstartFrom] ? 1 : 0; if (byHashEmb) nEmb++;
   let byPath = byHash ? '' : seedpackOf(m);
   let byArm = (byHash || byPath) ? '' : (ARMPAR[r.id] || '');
   const parId = byHash || byPath || byArm;
@@ -208,10 +244,25 @@ for (const r of REC) { const m = r.m || {};
     parent: norm(m.hotstartFrom || WIDOF[byPath || byArm || bySlot] || '') };
   ROWS.push({ id: r.id, ts: m.ts || '', seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
     parentOf: byHash || byPath || byArm || bySlot, wid: r.wid || '',
-    psrc: byHash ? 'hash' : (byPath ? 'seedpack' : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (demoted ? 'demoted' : '')))),
+    psrc: byHash ? (byHashEmb ? 'hash-emb' : 'hash') : (byPath ? 'seedpack' : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (demoted ? 'demoted' : '')))),
     demoted: demoted,
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
 const nres = ROWS.filter(r => r.parentOf).length, np = ROWS.filter(r => r.cfg.parent !== '-').length;
+/* ===== §E464 钉子：第二身份必须**真的登记成功**，不能只看"今天这张表解得开" =====
+ *   为什么不能只验结果：BYWID 优先级高于 BYWID_EMB，而本机恰好有 e370-out 那批**未入库**的 v7 导出 ⇒
+ *   两条路同时在，表看不出区别。实测就是这么漏的：`embedLegacy()` 返回 Float64Array、`widOfArr` 当时只收 Array ⇒
+ *   第二身份登记 0 条、整条 durable 路自写下就空转过（页面自测照样绿，因为它读的是已生成好的表）。
+ *   ⇒ 判据钉的是"durable 那条路本身通不通"：凡是被当父用的旧槽位冠军，都要能从**已入库的 v6 文件**推出第二身份。*/
+{ const useSlot = {}, embTo = {};
+  for (const r of ROWS) if (/^SLOT-/.test(r.parentOf || '')) useSlot[r.parentOf] = (useSlot[r.parentOf] || 0) + 1;
+  for (const k in BYWID_EMB) embTo[BYWID_EMB[k]] = (embTo[BYWID_EMB[k]] || 0) + 1;
+  const bad = Object.keys(useSlot).filter(id => !embTo[id]);
+  console.log('§E464 钉：被当父用的旧槽位冠军 ' + Object.keys(useSlot).length + ' 枚（合计 '
+    + Object.keys(useSlot).reduce((a, k) => a + useSlot[k], 0) + ' 条父边）‖ 第二身份能从已入库文件推出的 '
+    + (Object.keys(useSlot).length - bad.length) + ' 枚 ‖ 全靠嵌入解开的边 ' + nEmb + ' 条');
+  if (bad.length) { console.error('⛔ §E464 这些旧槽位冠军只剩「未入库的 v7 导出」一条路 ⇒ 换台机器 clone 下来这些父边会全断：'
+    + bad.map(id => id + '(' + useSlot[id] + ' 条边)').join(' ') + '\n   先查 embedLegacy 的返回值是不是 array-like、widOfArr 收不收');
+    process.exit(2); } }
 /* §E367 + §E368：被"路径今天住的是谁"骗出来的父边，逐枚点名它**改接到了谁**（不点名就等于悄悄改了数据）*/
 console.log('⭐ §E367/§E368 时间倒挂的**推断级**父指针：按槽位时间轴改接 '
   + ROWS.filter(r => r.psrc === 'slot-at-time').length + ' 枚 ‖ 接不回来、退回"不可考" ' + ROWS.filter(r => r.demoted).length + ' 枚');
@@ -251,12 +302,15 @@ for (const d of defs) { const c = d.g.rs[0].cfg;
     ' ‖ ' + String(d.g.rs.length) + ' 枚 ‖ ' + String(d.g.t0).slice(5, 10) + '→' + String(d.g.t1).slice(5, 10) +
     ' ‖ 父 ' + br.join(',');
   prev = c; }
-/* §E314 解析不出的父指针**不许再留成空白**（DS 的收口建议 + 他给的定性）：
- *   585 枚（81%）共用一个父 `d13d3c85…`，而那不是"丢了的血统"—— CHANGELOG.md:6402 已定性：
- *   `tools/ring2-run.mjs:95` **无条件覆写** `EPIRUS_BUNDLE_IN` ⇒ 近期全部臂恒拷同一个 v1.3.58 BASE。
- *   ⇒ 那根星形中心是 **runner 覆写的指纹，不是血统**。今天又把它可能藏身的地方穷尽扫了一遍
- *     （盘上 1461 个 .bak + 全历史可达 blob 593 个 + 整个对象库 4190 个 blob，逐枚算权重指纹）⇒ **无实体**。
- *   所以这里给它一个有名有姓的**合成节点**，而不是让图上继续写"盘上查无该权重"（那句话会让人以为还能找回来）。*/
+/* §E314 → §E464 更正：这里原来写的「无实体」是**错的**，错的是一台仪器的口径。
+ *   §E314 那遍穷尽扫过盘上 1461 个 .bak + 593 个可达 blob + 4190 个对象库 blob，逐枚算权重指纹 ⇒ 没找到 `d13d3c85…`。
+ *   但它算的是「文件里那份数组」的哈希，而训练服务记父走的是 `weightsId(loadAny(种子).params)`
+ *   = **嵌入成 v7 之后**那份数组的指纹（FEAT_S 123→213 ⇒ 3337→5689 ⇒ sha1 必变）⇒ 差的这一层没人补。
+ *   补上之后（见上面 BYWID_EMB）：584 枚的父解析到 **SLOT-e379c62c**（v1.3.57，图上一枚真节点，
+ *   实体在 `docs/artifacts/champion-5p-v1.3.58.bak`，git 里 4162e86 / 7859c34 两版槽文件都是它）。
+ *   仍然成立的那半句：`tools/ring2-run.mjs` 历史上**无条件**把 EPIRUS_BUNDLE_IN 覆写成这一份 BASE
+ *   ⇒ 81% 共父不是"演化收敛"，是 runner 每次都拷同一枚。所以这条边要画，但页脚必须说清它是恒拷。
+ *   合成节点这套逻辑保留，只服务**真的**解析不到的那几枚（现在剩 17 行）。*/
 const SYNTH_NAME = {};
 { const tally = {};
   for (const r of ROWS) { const p = r.cfg.parent; if (p && p !== '-' && !r.parentOf) tally[p] = (tally[p] || 0) + 1; }

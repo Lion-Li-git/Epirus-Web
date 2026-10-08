@@ -347,8 +347,11 @@ for (const r of DATA) if (r.fam && LIN[r.id]) FAMLAB[r.fam] = LIN[r.id].famLabel
  *        ⇒ 生成器看不见靶节点，接不了。别名在这里解，就必须在这里自证（页内那条判据按 wid 前缀核身份，第 92 条①）。
  *      ⚠ 57 条里只接 **56**：long-33 训出于 09-12 13:26，而 e379c62c 的 META 写盘是 14:15 ⇒ 接上就是一条
  *        "父比子晚"的边，而图上那个琥珀虚线的意思恰恰是"假血统"（§E367）。宁可少画一条，并把它记在判据里。
- *   ③ 584 枚共父 d13d3c85 仍然不画（页脚那条 RUNNER-BASE 注就是它）：机械上它们确实从"当时的现役"热启动，
- *      但 runner 对每一枚候选都拷同一份 ⇒ 这条边不带方法信息，画出来是 584 根收在一个点的扇形。 */
+ *   ③ §E464 改：584 枚共父 d13d3c85 **现在画得出来，而且是真边** —— 那个哈希不是"查无实体"，它是 SLOT-e379c62c
+ *      （v1.3.57）那枚包**嵌入成 v7 之后**的指纹：训练服务记父走 weightsId(loadAny(种子).params)，
+ *      而旧版这里与 §E314 都只按"文件里那份数组"的哈希去找 ⇒ 永远差一层嵌入。
+ *      仍然要记住的读法警告：runner 对每一枚候选都拷同一份 BASE ⇒ 这条边不带方法信息，
+ *      画出来是 500+ 根收在一个点的扇形（页脚第二行说这句），别读成"演化收敛"。 */
 (function () {
   const byId = {}; for (const d of DATA) byId[d.id] = d;
   const olds = DATA.filter(d => d.old && d.ts);
@@ -434,7 +437,7 @@ var NPRM = 0, NPPASS = 0;
  *   CHANGELOG.md:6402 已定性 = tools/ring2-run.mjs:95 无条件覆写 EPIRUS_BUNDLE_IN ⇒ 全部臂恒拷同一个 v1.3.58 BASE。
  *   今天又把它可能藏身的地方穷尽扫完（盘上 1461 个 .bak + 全历史可达 blob 593 + 整个对象库 4190，逐枚算权重指纹）⇒ 无实体。
  *   ⇒ 图上不画这条边（没有节点可画），但**必须把这句话印出来**，否则下一个人会把它读成"81% 同源 = 演化收敛"。*/
-var NRBASE = 0;
+var NRBASE = 0;   /* §E464 父指针仍然解析不到图上任何一枚的枚数（原来是 584 枚共用一个"查无实体"的锚，现在只剩零星） */
 (function () { for (var i = 0; i < N; i++) if (P[i].pnm && P[i].pnm.indexOf('RUNNER-BASE') === 0) NRBASE++; })();
 /* ===== §E363 / §E367 时间倒挂的父边（用户 10-06 点名：e35prod807 比现役还早，父却写着现役）=====
  *   §E363 当时我给的诊断是"槽位节点的 ts 是进槽时刻，边是真的" —— **那个诊断是错的**，§E367 查翻了：
@@ -1440,33 +1443,12 @@ function drawTree(fr) {
     else if (ch) { g.setLineDash([1.5 * devicePixelRatio, 3.5 * devicePixelRatio]); g.strokeStyle = 'rgba(159,176,204,.62)'; }
     g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - rowH * 0.5 * TKY, b[0], b[1]); g.stroke();
     g.restore(); g.strokeStyle = 'rgba(120,200,255,.30)'; }
-  /* ===== §E442 RUNNER-BASE 那批边接上（用户 10-08：「1.3.58 的线可以连上了，那谱系图底下第一行就可以删掉」）=====
-   *   靶包在盘上取不到（§E314 的 widhunt 扫过 2904 个包类 blob + 70 个 bundle 历史版本无命中；今晚再核一粒：
-   *   「docs/artifacts/.training-in-3p.js」的 wid = a92a45d7 ≠ d13d3c85）⇒ **不往 P 里造假点** ——
-   *   造了就要摊进枚数 / 家族行 / 过线判定 / 命中表 / 标签避让，任何一处没接就是新的"图上有一枚不存在的东西"。
-   *   改成：锚画在**时间轴最左 + 行块竖直中心**（语义 = 这些枚的父比图上所有点都早，且不属于任何家族），
-   *   边从各枚收到锚。alpha 压到 .13：467 条硬线会糊成一块板，而这条关系的读法是"一大片都从这儿来"，要的是雾。
-   *   ⚠ 只在 'all' 档画：'hash' 是"只画包自己记的实录级"，这条恰恰是 runner 覆写、不是血统；'off' 一条不画。 */
-  var RBX = null, NRB = 0;
-  if (st.edges === 'all' && NRBASE && fams.length) {
-    var axp = X(tmin), ayp = padT + fams.length * rowH * 0.5;
-    RBX = PS(axp, ayp, 0);
-    g.save(); g.strokeStyle = 'rgba(159,176,204,.13)'; g.lineWidth = 1 * devicePixelRatio;
-    for (i = 0; i < N; i++) { var dr = P[i];
-      if (!dr.pnm || String(dr.pnm).indexOf('RUNNER-BASE') !== 0 || !pos[dr.id]) continue;
-      var bp = pos[dr.id];
-      g.beginPath(); g.moveTo(RBX[0], RBX[1]);
-      g.quadraticCurveTo((RBX[0] + bp[0]) / 2, (RBX[1] + bp[1]) / 2 - rowH * 0.3 * TKY, bp[0], bp[1]); g.stroke(); NRB++; }
-    g.restore();
-    /* 锚本体：菱形 + 一句"我不是血统"（§E314 那笔账：81% 共父不自己说清楚就会被读成"演化收敛"）*/
-    if (NRB) { var ra = 5.5 * devicePixelRatio;
-      g.save(); g.fillStyle = 'rgba(159,176,204,.85)'; g.beginPath();
-      g.moveTo(RBX[0], RBX[1] - ra); g.lineTo(RBX[0] + ra, RBX[1]); g.lineTo(RBX[0], RBX[1] + ra); g.lineTo(RBX[0] - ra, RBX[1]);
-      g.closePath(); g.fill();
-      g.font = (10.5 * devicePixelRatio) + 'px system-ui,sans-serif'; g.textAlign = 'left';
-      g.fillStyle = 'rgba(159,176,204,.95)';
-      g.fillText('RUNNER-BASE d13d3c85（v1.3.58 覆写 · 盘上无此包 · 非血统）', RBX[0] + 9 * devicePixelRatio, RBX[1] - 7 * devicePixelRatio);
-      g.restore(); } }
+  /* §E464 这里原来是 §E442 那台「RUNNER-BASE 锚 + 467 条灰雾边」—— 它建在 §E314 的一条**错判**上：
+   *   那遍 hunt 只按「文件里那份数组」的哈希找 d13d3c85，而训练服务记父时用的是**嵌入成 v7 之后**那份数组的
+   *   指纹（FEAT_S 123→213 ⇒ 3337→5689 ⇒ 哈希必变）⇒ 找不着就判成「盘上无此包」。
+   *   现在 lineage.mjs 一枚包同时索引两个身份，584 枚的父直接解析到图上的真节点 SLOT-e379c62c（标签 = v1.3.57），
+   *   边走普通热启动父边 ⇒ 锚、灰雾、那句「盘上无此包 · 非血统」全部删掉（留着就是一段永不执行的代码 + 一句假话）。
+   *   ⚠ "runner 恒拷同一份 BASE ⇒ 81% 共父不是演化收敛"这条读法警告仍然成立，它挪到页脚第二行去说。 */
   scr = new Array(N);
   for (i = 0; i < N; i++) { var d = P[i], p = pos[d.id]; if (!p) continue; scr[i] = p;
     if (NOPTS) continue;   /* §E451 落点表照记（判据要按位置取样），只跳过"画"这一步 */
@@ -1517,7 +1499,7 @@ function drawTree(fr) {
     (NCHAIN ? ' ‖ 灰点线 = 槽位接替边 ' + NCHAIN + ' 条（谁在这枚之前住过那个槽，不是血统）' : '') +
     /* §E442：RUNNER-BASE 那批边现在**画得出来了**（收到时间轴最左那颗灰菱形），所以这句话从原来的"这条边上不画"
        改成说清它连的是什么。'hash'/'off' 两档不画 ⇒ 计数为 0 就整段不出现，不许承诺图上没有的东西。 */
-    (NRB ? ' ‖ 灰雾 = RUNNER-BASE 覆写边 ' + NRB + ' 条（父 = v1.3.58 的 runner 覆写产物，盘上取不到那枚包 ⇒ 只当锚，不是血统）' : '') +
+    (NRBASE ? ' ‖ 另有 ' + NRBASE + ' 枚的父指针解析不到图上任何一枚（见页内那条血统边判据）' : '') +
     /* §E333 页脚是单行 fillText（画布不折行），所以两态**各说各的手势**而不是把两段接起来：
        立体态把"滚轮/Shift+滚轮/拖动"换成"右键压扁错切"—— 那三件在二维态已经说过，长度也就不会顶出右缘。
        （§E331 立体态必须自己说清"高度是哪把尺"：颜色按秩铺、几何仍是线性，不写就会被当成同一件事。画布不认 markdown ⇒ 这句里不许带 *）*/
@@ -3927,6 +3909,18 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   /* §E430 用户裁定删除：这条腿的派发点是按"环心"算的，而三维态下环心与命中表差 2px（实测 (659,225) vs scr (660,227)）
    *   ⇒ 它测的是"我算出来的点"而不是"用户点下去会怎样"；用户手动验过**指针往返没有问题**。
    *   立体的那条仍在跑（§E449 改名成"屏幕上下端 + F 两端 + 一枚冠军"），保留覆盖。 */
+  /* ===== §E464 那 584 枚共父必须解析到图上一枚真节点（这条钉的是"别再退回那个锚"）=====
+   *   背景：§E314 判过「盘上无实体」，§E442 因此造了一颗灰菱形锚 + 467 条雾边。两边都错在同一台仪器的口径：
+   *   父指针记的是**嵌入成 v7 之后**那份数组的指纹，而检索只按"文件里那份数组"的哈希算 ⇒ 所有 pre-v7 包隐身。
+   *   现在 lineage.mjs 一枚包同时索引两个身份，584 枚的父解析到 SLOT-e379c62c（标签 v1.3.57，实体 = champion-5p-v1.3.58.bak）。*/
+  (function () {
+    var bi = nOf('SLOT-e379c62c'), nb = 0, nbVis = 0;
+    for (var q4 = 0; q4 < N; q4++) { if (P[q4].pof === 'SLOT-e379c62c') { nb++; if (VIS[q4]) nbVis++; } }
+    T('那 584 枚共父要解析到图上一枚真节点（SLOT-e379c62c = v1.3.57），不许再退回「RUNNER-BASE 锚 + 灰雾边」',
+      bi >= 0 && nb >= 400 && NRBASE === 0 && !!P[bi].sv,
+      '父边收到 SLOT-e379c62c 的 ' + nb + ' 枚（当下可见 ' + nbVis + '）‖ 靶节点在图上=' + (bi >= 0 ? '是（' + P[bi].id + ' 标签 ' + (P[bi].sv || '无版本') + '）' : '否')
+        + ' ‖ 仍然解析不到实体的父锚 ' + NRBASE + ' 枚（要 0）');
+  })();
   /* ===== §E462 拖动手本身要有判据 =====
    *   三块浮层各拖一次：① 真的落在拖到的地方（不是"看着动了"）；② 拖不出画面（夹取）；③ 双击回得到出厂位；
    *   ④ 图例拖过之后，图例里那根窗口轴的两个柄**还抓得住** —— 两者都听 pointerdown，这是最容易互相抢的一处。*/
