@@ -2182,12 +2182,25 @@ function paintLegend(fr) {
     : (st.color === 'fam' || st.color === 'seed') ? ('（黄针 = 现役）')   /* §E431 用户 10-08：删掉「下 = 地板 ‖ 上 = 好」这种没用的说明，只留黄针 = 现役（顺带让整块变窄）*/
     : st.color === 'rel' ? ('红 = 不如现役（F 底 ' + fr[0].toFixed(2) + '）')
     : ('蓝 = 地板（F 底 ' + CB.lo.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最低' : ' ‖ 灰 = 库内中位') + '）');
-  /* §E458：Hp 这一档每枚都是**单批**读数（30 组 × 5 人 · ε=0.2 soft）。今晚换一批 RNG 重量，同一枚包摆 2.3~5.7pt
-   *   （现役自己 47.3 → 53.0，v7bead2-93 与它的差直接翻负号），而**配对决斗**（同座位表同批种子）三批方向一条没翻。
-   *   ⇒ 这句提醒必须写在"读这个数的地方"，不能只躺在 CHANGELOG 里：颜色当水位看，要排序请切「对现役决斗」那一档。 */
+  /* §E460/§E461 轴高恢复成固定 150 之后，死空**只许用文字排版去消**（用户原话：「只换字排版」）。
+   *   补的每一句都是"这个数是怎么量出来的"—— 原来只写在 CHANGELOG 与代码注释里，读图人在页面上看不到，
+   *   正好填进文字列：既消死空，也不注水。⚠ 只有 hp 那句是 §E458 今晚实测出来的（换批复量摆 2.3~5.7pt）。 */
   var s3h = null;
-  if (st.color === 'hp') { s3h = document.createElement('div');
-    s3h.textContent = '⚠ 每枚都是单批读数 ‖ 同一枚换一批实测摆 2.3~5.7pt ⇒ 颜色看水位，排序请用「对现役决斗」那档'; }
+  var LEG_NOTE = {
+    fam: '底图与这条带是同一条 LUT（蓝 = 低 → 灰 = 库内中位 → 红 = 好）‖ 黄针 = 现役那一档 · 名次看点大小',
+    seed: '点色换成 RNG seed，带仍是底图那条 LUT ‖ 黄针 = 现役',
+    F: '针的位置按**当下窗口**里现役的铺位比算 ‖ 灰 = 库内中位，不是"不好不坏"的绝对电平',
+    rel: '只有这一档把带换成分散色标：0 = 现役那一档（灰），两侧各按本侧 p90 距归一 ⇒ 超出即钉在两端',
+    gl: 'G(long) = 长程自对局的技能广度，与过线判定同一道闸现跑（n=20）‖ 线 ≥3，低于 3 直接不过线',
+    pm: '上槽体检 = 三条腿一起现跑（n=20 ‖ aggr40 ‖ seat100）‖ 灰 = 没测过，**不等于**没过',
+    duel: '配对差 A−B：同座位表、同批种子、两批各 60 局 ‖ 黄 = 两批符号翻 ⇒ 判不动，不许并进赢',
+    hp: '每枚都是单批读数 ‖ 同一枚换一批实测摆 2.3~5.7pt ⇒ 颜色看水位，排序请用「对现役决斗」那档',
+    de: 'Δε = 考卷（ε=0）− 页面（ε=0.2 soft）‖ 发散带 0 在正中：红 = 一开探索就掉，蓝 = 开了反而强',
+    sc: 'Scd = 8 粒 seedBase 的逐种子配对差均值（不是主场那一粒）‖ 橙 = 同号但 <6/8 ⇒ 判不动',
+    champ: '这一档只标历代上槽那几枚 ‖ 针 = 现役 · 绿环 = 该枚过线'
+  };
+  var _nt = LEG_NOTE[st.color];
+  if (_nt) { s3h = document.createElement('div'); s3h.style.color = 'var(--dim)'; s3h.textContent = _nt; }
   /* §E378 强度窗口的控制轴就贴在这条色带旁边（用户 10-07：「做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）。
    *   为什么是**并排另一根轴**而不是把柄画在这条带上：这条带的两端在窗口态读的是**窗内两端**（§E373），
    *   柄画上去就永远贴在顶和底 —— 那条带说的是"色怎么铺"，这根轴说的是"窗在库里的哪一段"，两件事不能合成一根。*/
@@ -2208,7 +2221,11 @@ function paintLegend(fr) {
    *   高度与竖杠齐平），右列两个竖杠。原来 s1/wr/s2 竖着堆 ⇒ 文字只占一两行、竖杠占满高 ⇒ 中间必空一块。 */
   var _col = document.createElement('div'); _col.style.maxWidth = '150px'; _col.style.flex = '0 0 auto';
   _col.appendChild(s1); _col.appendChild(s2); if (s3h) _col.appendChild(s3h);   /* §E458 只有 hp 档多这一行（单批读数的噪声必须写在读数的地方）*/
-  var _row = document.createElement('div'); _row.style.display = 'flex'; _row.style.gap = '8px'; _row.style.alignItems = 'flex-start';
+  var _row = document.createElement('div'); _row.style.display = 'flex'; _row.style.gap = '8px';
+  /* §E461 文字列与竖杠**垂直居中对齐**（原来 flex-start ⇒ 文字比条短时那条差全堆在底下，看着就是"图例下面空一块"；
+   *   而 §E441 为了消这块空去砍条高，把两端刻度挤没了 —— 用户否掉）。现在条高固定 150，短了的文字上下各让一半，
+   *   长的（sc / de 那两档）自然把块撑高，条仍是 150 ⇒ 纯排版，不动任何高度。 */
+  _row.style.alignItems = 'center';
   _row.appendChild(_col); _row.appendChild(wr);
   lg.appendChild(_row);
   winaxDraw();
@@ -2251,21 +2268,15 @@ function paintLegend(fr) {
      *  用 innerHTML 而不是 textContent ⇒ 能保留调用方已写好的 <br>（见下面绿环那句）。 */
     if (el && el.innerHTML && el.innerHTML.indexOf('· ') >= 0) el.innerHTML = el.innerHTML.split(' · ').join('<br>').split('· ').join('<br>');
   });
-  /* ===== §E441 竖杠按**文字实际高度**收（图例排版普查抓出来的共因）=====
-   *   探针 _probe-legend.mjs 逐档量到的死空（条固定 158px 高 ‖ 文字列实际只有）：
-   *     fam 74 ‖ seed 74 ‖ F 59(+第二块 59) ‖ rel 30(+45) ‖ gl 45 ‖ pm 45 ‖ duel 74 ‖ hp 45 ‖ de 104 ‖ sc 134 ‖ champ 59
-   *   ⇒ 每一档都死 24~113 像素，rel 最狠（30px 文字挨着 158px 的条）。DS §E433–§E437 修的是**横着**的五块/两列，
-   *     竖着这一条没人管 —— 因为它是"条有多高"决定的，不是"文字排几行"决定的。
-   *   ⚠ 这一步必须排在**所有文字改动之后**：s2 的绿环那句与「·」→ 换行 都在下面才写，量早了是折行前的高度。
-   *   ⚠ 下限 72px：条旁边挂着 F 窗口那根轴（两个可拖柄），再矮就抓不住；AXH 是活的，改了要连着改元素与重画。 */
-  var _th = _col.getBoundingClientRect().height;
-  if (lg.children.length > 1) _th += lg.children[1].getBoundingClientRect().height;
-  var want = Math.max(72, Math.min(150, Math.round(_th)));
-  /* 每次都算并**一定落一遍尺寸**（不写"只在变矮时才改"：那条会留在上一档的高度，切回文字长的档就变成
-   *   "条 150 ‖ 轴 72"两把尺）。WINAX 是常驻节点，改的是它自己的 width/height 与 AXH，不重建 ⇒ §E380 那条
-   *   "图例重建之后必须还是同一个节点"不受影响。 */
-  AXH = want;
-  c.style.height = want + 'px'; barDraw(want);
+  /* ===== §E460 轴高**恢复成固定 150**（用户 10-08 早：「你现在把普通版图例压的太矮了，红绿轴同样被压矮了但字排版没换，
+   *   而 F 值图例却没改。先把图例的轴高都恢复一下，然后你再去优化那些尚未优化的图例版本。只换字排版」）=====
+   *   §E441 那一步把"条有多高"改成跟文字列高走（72~150），死空是消掉了，代价是色条本身可读性变差：
+   *   18×72 的渐变带上"绿侧 0.074 / 红侧 0.294 各按本侧 p90 距归一"这种两段刻度根本摆不开（用户截图里那两块）。
+   *   ⇒ 方向反过来：**高度是恒量，死空用换行/措辞去消**（见下面 §E461 那段逐档文字排版）。
+   *   ⚠ 色条与那根窗口轴必须同一个高度：原来 §E441 就是为了让两者别变成"条 150 ‖ 轴 72"两把尺才一起收的，
+   *     现在一起恢复成 BARH，WINAX 的尺寸与 AXH 同步落一遍（§E380 要求它是常驻节点，不重建）。 */
+  AXH = BARH;
+  c.style.height = BARH + 'px'; barDraw(BARH);
   if (WINAX) { WINAX.width = AXW * devicePixelRatio; WINAX.height = AXH * devicePixelRatio;
     WINAX.style.width = AXW + 'px'; WINAX.style.height = AXH + 'px'; winaxDraw(); }
 }
