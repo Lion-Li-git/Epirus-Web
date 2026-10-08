@@ -621,7 +621,7 @@ export function feasibilityOf(o) {
       else if (Number(g2.effSkills) < 3) fails.push('G(' + g2n + ') ' + Number(g2.effSkills).toFixed(2) + ' < 3');
     }
     if (Number(w.dmgPerGame) <= 0.5) fails.push('反弹墙伤害 ' + Number(w.dmgPerGame).toFixed(2) + ' ≤ 0.5/局');
-    if (Number(fA.atk) < 0.20) fails.push('场A 还手 ' + (100 * Number(fA.atk)).toFixed(0) + '% < 20%');
+    if (Number(fA.atk) < 0.20) fails.push('场A 还手 ' + (100 * Number(fA.atk)).toFixed(1) + '% < 20%');
     if (Number(fB.clearedPerGame) < 0.3) fails.push('场B 清场 ' + Number(fB.clearedPerGame).toFixed(2) + ' < 0.3/局');
   }
   /* ===== v1.5.90（第八轮复核 §8-3/§8-4）：第 6 道判据 = **输出密度 / 经济出口** =====
