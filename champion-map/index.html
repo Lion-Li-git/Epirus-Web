@@ -1105,6 +1105,10 @@ function drawTree(fr) {
    *   做法 = 把整张地板往下挤 LIFT·T3，行距按剩下的空间重排 ⇒ 行仍然全在画布内，
    *   而"原地上升"有了去处。挤完 padT/rowH 就是立体版的那张版式，底图与点共用同一套 ⇒ 不会错位。*/
   var LIFT = (h - padT - padB) * 0.22;
+  /* §E469 记下**挤行之前**的布局：边的密度网格要建在这一层上（只随数据/窗口/批次变，不随相机变）。
+   *   拿挤行之后的 padT/rowH 去建网格 ⇒ 转视角时行被压缩、格子整体换档，一条线的 alpha 会跳
+   *   （实测偏航 +0.05rad 跳 0.207，def-31 从 0.300 掉到 0.093）= 用户点的"旋转时抽搐"。 */
+  var padT0 = padT, rowH0 = rowH;
   if (st.elev > 1e-4) { padT += LIFT * st.elev; rowH = (h - padT - padB) / fams.length; }
   var KS = 1;   /* §E314 点半径不跟缩放（经典统计图约定）—— 保留这个名字是因为下面两处按它算半径 */
   /* §E379 日期步长按**当前横轴倍率**现算：恒为 1 天时缩到 0.57 实测 13px 一格压 34px 宽的字 ⇒ 糊成一坨。
@@ -1167,7 +1171,7 @@ function drawTree(fr) {
    *   高度用**线性** min-max，不用 §E330 那套按秩铺色 —— 秩是"颜色要能分开"的读法，几何要的是量的比较。
    *   ⚠ 格内抖动（同一秒训出的一撮）**两态都留在纵方向**：上一版把它挪去横方向，正逢地板被压扁 ⇒ 一撮点全叠成一条横线。
    *   立体态反而要它：同一格里纵向散开一点才好观察（用户点名）。*/
-  var pos = {}, base = {};
+  var pos = {}, base = {}, pap = {};
   function PT(i) {
     var d = P[i], tv = Date.parse(d.ts); if (!isFinite(tv)) return null;
     if (!VIS[i]) return null;      /* §E338 批次过滤：不在当前批次 ⇒ 不落格、不连线、不进命中表 */
@@ -1175,9 +1179,10 @@ function drawTree(fr) {
     var jit = ((i * 2654435761) % 1000) / 1000 - 0.5;
     var px = X(tv), py = padT + (ri + 0.5) * rowH + jit * rowH * 0.66;   /* **纸面坐标**（§E379：与底图同一套，视图变换交给 PS） */
     var uf = Math.max(0, Math.min(1, (Fv(d) - FR3[0]) / ((FR3[1] - FR3[0]) || 1)));
-    return [PS(px, py, uf * LIFT * T3), PS(px, py, 0)];
+    return [PS(px, py, uf * LIFT * T3), PS(px, py, 0),
+            [px, padT0 + (ri + 0.5) * rowH0 + jit * rowH0 * 0.66]];   /* 第三项 = 挤行之前的纸面点（§E469 密度建在那一层）*/
   }
-  for (i = 0; i < N; i++) { var q = PT(i); if (!q) continue; pos[P[i].id] = q[0]; base[P[i].id] = q[1]; }
+  for (i = 0; i < N; i++) { var q = PT(i); if (!q) continue; pos[P[i].id] = q[0]; base[P[i].id] = q[1]; pap[P[i].id] = q[2]; }
   if (T3 > 0.02) {   /* 立柱：把"浮在多高"接回底图上那一格，否则立体里读不出它属于哪一行 */
     g.strokeStyle = 'rgba(159,176,204,.20)'; g.lineWidth = 1;
     for (i = 0; i < N; i++) { var pb = pos[P[i].id], gb = base[P[i].id];
@@ -1213,19 +1218,30 @@ function drawTree(fr) {
       if (bq) NBACK++; if (cq) NCHAIN++;
       var pa = pos[dd.pof], pb2 = pos[dd.id];
       var kind = bq ? 1 : (cq ? 2 : 0);
+      /* §E469 每条边同时带**纸面坐标**（papA/papB）：密度网格建在那一层上，而不是建在投影后的屏幕上。
+       *   屏幕空间网格 = 平移 1px 就可能整体换格 ⇒ 一条线的 alpha 离散跳档（实测偏航 0.05rad 跳 0.27，
+       *   0.030→0.300 差十倍）= 用户点的"平移旋转时抽搐"。纸面网格只随布局（窗口/尺寸）变，不随视图变。 */
+      var ua = pap[dd.pof], ub = pap[dd.id];
       EL.push([pa, pb2, [(pa[0] + pb2[0]) / 2, (pa[1] + pb2[1]) / 2 - rowH * 0.5 * TKY],
-        kind ? 0.62 : EA0, kind, dd.id]); }
+        kind ? 0.62 : EA0, kind, dd.id, ua, ub,
+        ua && ub ? [(ua[0] + ub[0]) / 2, (ua[1] + ub[1]) / 2 - rowH0 * 0.5 * TKY] : null]); }
     NEDG = EL.length; EDGR.n = NEDG;
-    var GW = Math.max(1, Math.ceil(cv.width / EGRID)), GH = Math.max(1, Math.ceil(cv.height / EGRID));
+    /* 网格尺寸按**纸面**范围算：纸面 = 未经 PS 投影的那一层（X() 与行高都在 device px 上），
+     *   所以范围就是 w×h，格子仍是 22 CSS px 一档 —— 只是原点不跟着平移走。 */
+    var GW = Math.max(1, Math.ceil(w / EGRID)), GH = Math.max(1, Math.ceil(h / EGRID));
     var GC = new Int16Array(GW * GH);
-    for (var e = 0; e < EL.length; e++) { var A0 = EL[e][0], B0 = EL[e][1], C0 = EL[e][2], sn = {};
+    function PCIX(px, py) {   /* 纸面坐标 → 格子（越界一律夹到边上，与旧版屏幕网格同一套处理）*/
+      return Math.min(GH - 1, Math.max(0, Math.floor(py / EGRID))) * GW + Math.min(GW - 1, Math.max(0, Math.floor(px / EGRID))); }
+    for (var e = 0; e < EL.length; e++) {
+      var A0 = EL[e][6] || EL[e][0], B0 = EL[e][7] || EL[e][1], C0 = EL[e][8] || EL[e][2], sn = {};
       for (var s = 0; s <= 8; s++) { var tt = s / 8, it = 1 - tt;
         var qx = it * it * A0[0] + 2 * it * tt * C0[0] + tt * tt * B0[0];
         var qy = it * it * A0[1] + 2 * it * tt * C0[1] + tt * tt * B0[1];
-        var ci = Math.min(GH - 1, Math.max(0, Math.floor(qy / EGRID))) * GW + Math.min(GW - 1, Math.max(0, Math.floor(qx / EGRID)));
+        var ci = PCIX(qx, qy);
         if (!sn[ci]) { sn[ci] = 1; GC[ci]++; } } }
     var hi = 0; for (var c2 = 0; c2 < GC.length; c2++) if (GC[c2] > GC[hi]) hi = c2;
-    EDGR.hubn = GC[hi]; EDGR.hub = [(hi % GW + 0.5) * EGRID, (Math.floor(hi / GW) + 0.5) * EGRID];
+    EDGR.hubn = GC[hi];
+    EDGR.hub = PS((hi % GW + 0.5) * EGRID, (Math.floor(hi / GW) + 0.5) * EGRID, 0);   /* 交回屏幕坐标，判据要按像素开窗 */
     /* ⚠ 一条边**一次 stroke**（§E467a：上一版把每条边切成 8 段、按段的密度分桶批量 stroke ⇒
      *   同一条线在不同桶里以不同 alpha 落笔，桶又按 alpha 升序画 ⇒ 亮段压在暗段上面，
      *   重合处出现肉眼可见的**断口**（用户 10-08 10:5x 直接否掉：「这版不行，现在线条重合的部分反而出现了中断」）。
@@ -1237,11 +1253,12 @@ function drawTree(fr) {
        *   「这一版密集处确实好了，但是单根线看不见了」）。均值这件事在"根密尾疏"的边上必然冤枉尾段。
        *   渐变仍是**一次落笔** ⇒ 不会有 §E467a 那种分桶断口；密处压到地板、疏处回到全 alpha。 */
       var ST5 = [0, 0.25, 0.5, 0.75, 1], AL5 = [], col3 = kd === 2 ? '159,176,204' : (kd === 1 ? '224,177,60' : '120,200,255');
+      var PA2 = EL[e2][6] || A2, PB2 = EL[e2][7] || B2, PC2 = EL[e2][8] || C2;
       for (var s2 = 0; s2 < 5; s2++) {
         var t0 = ST5[s2], i0 = 1 - t0;
-        var mx = i0 * i0 * A2[0] + 2 * i0 * t0 * C2[0] + t0 * t0 * B2[0];
-        var my = i0 * i0 * A2[1] + 2 * i0 * t0 * C2[1] + t0 * t0 * B2[1];
-        var mi = Math.min(GH - 1, Math.max(0, Math.floor(my / EGRID))) * GW + Math.min(GW - 1, Math.max(0, Math.floor(mx / EGRID)));
+        var mx = i0 * i0 * PA2[0] + 2 * i0 * t0 * PC2[0] + t0 * t0 * PB2[0];
+        var my = i0 * i0 * PA2[1] + 2 * i0 * t0 * PC2[1] + t0 * t0 * PB2[1];
+        var mi = PCIX(mx, my);
         var dn = GC[mi] > 1 ? GC[mi] : 1;
         var al2 = ELOG ? bs * Math.min(1, ED0 / dn) : bs;
         if (al2 < EMIN) al2 = EMIN;   /* 地板只管"埋在堆里的那一段"；疏处的 alpha 由自己那一格的密度决定 */
@@ -1255,9 +1272,11 @@ function drawTree(fr) {
         for (var u = 0; u <= 39; u++) { var tu = u / 39, iu = 1 - tu;
           var ux = iu * iu * A2[0] + 2 * iu * tu * C2[0] + tu * tu * B2[0];
           var uy = iu * iu * A2[1] + 2 * iu * tu * C2[1] + tu * tu * B2[1];
-          var ui = Math.min(GH - 1, Math.max(0, Math.floor(uy / EGRID))) * GW + Math.min(GW - 1, Math.max(0, Math.floor(ux / EGRID)));
-          pp.push(ux, uy, GC[ui]); }
-        EDGR.probe.push({ pts: pp, al: AL5[2], id: EL[e2][5] }); }
+          /* 像素读在屏幕上取，密度问的是**同一个参数 t 上的纸面点**（法律用的就是这一层的格子）*/
+          var vx = iu * iu * PA2[0] + 2 * iu * tu * PC2[0] + tu * tu * PB2[0];
+          var vy = iu * iu * PA2[1] + 2 * iu * tu * PC2[1] + tu * tu * PB2[1];
+          pp.push(ux, uy, GC[PCIX(vx, vy)]); }
+        EDGR.probe.push({ pts: pp, al: AL5[2], al5: AL5.slice(), id: EL[e2][5] }); }
       var gr = g.createLinearGradient(A2[0], A2[1], B2[0], B2[1]);
       for (var s3 = 0; s3 < 5; s3++) gr.addColorStop(ST5[s3], 'rgba(' + col3 + ',' + AL5[s3].toFixed(3) + ')');
       /* §E363 倒挂边（父的 ts 晚于子）虚线 + 琥珀；§E378 接替边点线 + 灰：连的都是"槽位接替"，不是谁生了谁 */
@@ -3853,8 +3872,36 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     var m1 = med(spInk), m23 = med(spInk2);
     T('空地上的单根线必须看得见（探针里"所在格子只压着 ≤8 条线"那些采样点，中位墨要 ≥30 = 满量程 221 的 14%）',
       !!dOn && !!dOff && spInk.length >= 12 && m1 >= 30,
-      'd≤8 的采样点 ' + spInk.length + ' 个 ‖ 中位墨 ' + m1 + ' ‖ 参考 d=9~32 的 ' + spInk2.length + ' 个中位墨 ' + m23 + ' ‖ d>32 的 ' + spInk3.length + ' 个中位墨 ' + med(spInk3)
-        + ' ‖ 全组 alpha ' + amax2.toFixed(3) + '~' + amin2.toFixed(3));
+      'd≤8 的采样点 ' + spInk.length + ' 个 ‖ 中位墨 ' + m1 + ' ‖ 参考 d=9~32 的 ' + spInk2.length + ' 个中位墨 ' + m23 + ' ‖ d>32 的 ' + spInk3.length + ' 个中位墨 ' + med(spInk3));
+  })();
+  /* ===== §E469 平移/旋转时，一条线的 alpha 不许变（用户 10-08 11:3x：「这个版本整体不错，不过在平移旋转时会有抽搐」）=====
+   *   根因是我自己那套法律的形式：密度格子按**画布坐标**取整（floor(y/EGRID)），平移 1px 就可能整体换格 ⇒
+   *   同一条线的 alpha 离散跳档（实测中位跳幅见下面这条的读数），肉眼就是抽搐。旋转同理，而且更凶。
+   *   判据读的是"同一条边在两个视图下的 alpha 差"，不读像素（像素上还有别的线压着，量不出这一条自己跳了多少）。
+   *   ⚠ 这条现在**是红的**，它钉的是还没做的事：把"压暗"从"每条线的属性"搬到"像素累加之后"
+   *     （离屏累加 + Reinhard/对数色调映射，用户转的 gemini 方案）⇒ 每条线的属性绝对静态，抽搐从根上消失。 */
+  (function () {
+    var SN3 = { elev: st.elev, yaw: st.yaw, pit: st.pit, tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy,
+      edges: st.edges, color: st.color, labels: st.labels, mode: st.mode };
+    st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
+    st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; st.edges = 'all'; st.color = 'fam'; st.labels = 'off';
+    NOPTS = 1; ELOG = 1; EPROBE = Math.max(1, Math.round(EDGR.n / 24));
+    draw(); var A0p = EDGR.probe.slice();
+    st.tX = -3 * devicePixelRatio; draw(); var A1p = EDGR.probe.slice();
+    st.tKx = 1.03; draw(); var A2p = EDGR.probe.slice();
+    st.elev = 1; st.yaw = FLAT.yaw + 0.05; draw(); var A3p = EDGR.probe.slice();
+    for (var kk3 in SN3) st[kk3] = SN3[kk3];
+    EPROBE = 0; NOPTS = 0; recomputeVIS(); draw();
+    function dmax(P0, P1) { var m = 0, ex = '';
+      for (var q = 0; q < Math.min(P0.length, P1.length); q++) { var a5 = P0[q].al5, b5 = P1[q].al5;
+        for (var w = 0; w < 5; w++) { var dv = Math.abs(a5[w] - b5[w]); if (dv > m) { m = dv; ex = P0[q].id + ' ' + a5[w].toFixed(3) + '→' + b5[w].toFixed(3); } } }
+      return [m, ex]; }
+    var dP = dmax(A0p, A1p), dZ = dmax(A0p, A2p), dR = dmax(A0p, A3p);
+    T('平移/缩放/旋转一条线的 alpha 不许变（§E469 抽搐的根因 = 密度取在屏幕空间网格里 ⇒ 换格就跳档；这条现在该红）',
+      A0p.length >= 6 && dP[0] <= 0.02 && dZ[0] <= 0.02 && dR[0] <= 0.02,
+      '探针 ' + A0p.length + ' 条边 × 5 个位置 ‖ 平移 3px 最大跳幅 ' + dP[0].toFixed(3) + (dP[1] ? '（' + dP[1] + '）' : '')
+        + ' ‖ 缩放 ×1.03 ' + dZ[0].toFixed(3) + (dZ[1] ? '（' + dZ[1] + '）' : '')
+        + ' ‖ 立体偏航 +0.05rad ' + dR[0].toFixed(3) + (dR[1] ? '（' + dR[1] + '）' : '') + '（三条都要 ≤0.02）');
   })();
   /* ===== §E466 家族行序必须与"这一行真显示的那些枚"的训练时刻同向 =====
    *   用户 10-08：「怎么有几个后期的点飞到家族 1 去了，是不是哪里写错了」—— 写错的地方在 lineage.mjs 的聚类：
