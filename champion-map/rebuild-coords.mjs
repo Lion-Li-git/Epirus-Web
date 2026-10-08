@@ -57,8 +57,18 @@ for (const f of ['e287-ladder.svg', 'e287-map2.svg', 'e287-map3.svg', 'e287-figs
   const p = join(HERE, f); if (ex(p)) renameSync(p, join(ROOT, 'docs/artifacts/e375-out/rc-static-' + f)); }
 run('attach-kin.mjs', ['--from=' + FROM], '② attach-kin 搬当选键 + 打 kin');
 run('attach-hp.mjs', ['--more=e328-epsfull.tsv' + (EXTRA ? ',e370-epsfull.tsv' : '')], '③ attach-hp 头号尺');
-run('attach-path.mjs', ['--ruler=ruler-all.tsv' + (EXTRA ? ',e370-ruler.tsv' : '')], '④ attach-path 真用的文件');
+/* §E488：这一步原来把 `e370-ruler.tsv` **写死**在 --ruler 里，而不是转发 `--extra=` 的那一串
+ *   ⇒ 正是本文件头注自己列的第 ② 条病（"attach-path 的 --ruler 不给全 ⇒ 没覆盖到的枚退回顶层猜路径"）：
+ *   本轮加三枚融合粒时，它们的 path 变成"按 <id>.bak 猜"，attach-path 自己的守卫当场拒绝（那是对的）。
+ *   改成从 EXTRA 派生（attach-path 按本目录解析，所以取 basename）。*/
+run('attach-path.mjs', ['--ruler=ruler-all.tsv' + (EXTRA ? ',' + String(EXTRA).split(',').map(s => s.replace(/^.*[\\/]/, '')).join(',') : '')], '④ attach-path 真用的文件');
 run('attach-dup.mjs', [], '⑤ attach-dup 权重身份去重');
+/* §E489 第六步是**必需的**，原来链子里没有它 ⇒ 谁跑一遍重建，页面就**静默退回旧投影**：
+ *   ① ruler-figs 只落 36 列（xt/yt/xt3/yt3/zt3 不在它名单里），投影是 proj-tsne 事后**追加**的；
+ *   viewer.mjs 那边走的是 `(PROJTSNE && r.xt) ? r.xt : r.x2` 这种**逐行**退路 ⇒ 列整列没了它也不喊，
+ *   只是把 920 枚全画回力导向那一版（kNN@10 保住率 0.52 → 0.08）。
+ *   实测踩过：本轮加 3 枚融合粒跑完五步，用户当场看出"投影变回很早的版本、区分度很低"。 */
+run('proj-tsne.mjs', [], '⑥ proj-tsne 重算投影（xt/yt/xt3/yt3/zt3）');
 
 /* 收尾核验：列名不许重复、每行宽度一致、lineage/kin 两列的类必须还是那几类 */
 const L = rd(CO), h = L[0].split('\t'), rows = L.slice(1).map(l => l.split('\t'));
@@ -70,4 +80,13 @@ if (badW.length) { console.error('⛔ ' + badW.length + ' 行宽度不等于表�
 const iLin = h.indexOf('lineage'), iKin = h.indexOf('kin');
 const cls = {}; rows.forEach(r => { const k = (r[iLin] || r[iKin] || '层内'); cls[k] = (cls[k] || 0) + 1; });
 console.log('身份分布 ' + Object.entries(cls).map(([k, v]) => k + ' ' + v).join(' ‖ '));
-console.log('✅ 五步跑完且产物自洽（列名唯一、行宽一致）');
+/* §E489 投影五列必须在、且每行都是数：少一列或空一半，页面就会**悄悄**画成旧布局（症状见上面第⑥步那段）。
+ *   这条核验放在链子的**最后**而不是第⑥步里 —— 判的是"产物能不能被下游用"，不是"某一步跑没跑"。 */
+{ const miss = ['xt', 'yt', 'xt3', 'yt3', 'zt3'].filter(c => h.indexOf(c) < 0);
+  if (miss.length) { console.error('⛔ 投影列缺失：' + miss.join(',') + ' ⇒ 第⑥步没跑成（viewer 会逐行退回 x2/y2 那套旧力导向坐标 ‖ kNN@10 从 0.52 掉回 0.08）'); process.exit(2); }
+  const badNum = [];
+  for (const c of ['xt', 'yt', 'xt3', 'yt3', 'zt3']) { const i = h.indexOf(c);
+    const n = rows.filter(r => !isFinite(parseFloat(r[i]))).length; if (n) badNum.push(c + ' ' + n + ' 行不是数'); }
+  if (badNum.length) { console.error('⛔ 投影列有非数：' + badNum.join(' ‖ ')); process.exit(2); }
+  console.log('投影自证 ✅ xt/yt/xt3/yt3/zt3 五列齐全，' + rows.length + ' 行全是数（旧力导向那套 x2/y2 仍在表里，只是不再被页面取用）'); }
+console.log('✅ 六步跑完且产物自洽（列名唯一、行宽一致、投影五列齐全）');

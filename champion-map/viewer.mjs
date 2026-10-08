@@ -104,6 +104,24 @@ if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 docs/arti
 const t = readFileSync(CF, 'utf8').trim().split('\n'), head = t[0].split('\t');
 const rows = t.slice(1).map(l => { const c = l.split('\t'); const o = {}; head.forEach((k, i) => { o[k] = c[i]; }); return o; });
 if (rows.length < 50) { console.error('⛔ 坐标表只有 ' + rows.length + ' 行'); process.exit(2); }
+/* ===== §E489 投影列不齐就是**装错货**，不许静默逐行退回到旧力导向 =====
+ *   第 271 行那句 `(PROJTSNE && r.xt) ? r.xt : r.x2` 是"某枚**单独**没测过投影"时的退路，
+ *   它挡不住"整列没了"（那种情况下每一枚都走退路 ⇒ 920 枚全画回旧布局，一个字的警告都没有）。
+ *   实测踩过：跑完五步重建链（那时链子里还没有第⑥步 proj-tsne）⇒ 表从 41 列变 36 列，
+ *   用户第一眼看的是「投影一下子变回很早的版本、区分度变得很低」，而产物自检 69 条**全绿**。
+ *   ⇒ 判据放在**生成侧**：缺列 / 空过半 ⇒ 拒绝出图，除非明说 --proj=old。 */
+if (PROJTSNE) {
+  const noCol = ['xt', 'yt'].filter(c => head.indexOf(c) < 0);
+  if (noCol.length) { console.error('⛔ coords.tsv 没有投影列 ' + noCol.join('/') + '（表头 ' + head.length + ' 列）' +
+    '\n       ⇒ 页面会**悄悄**把每一枚都画成旧力导向坐标（kNN@10 保住率 0.52 → 0.08 = 用户说的"区分度很低"）。' +
+    '\n         补投影：node champion-map/proj-tsne.mjs（重建链第⑥步）‖ 确实要旧投影：--proj=old'); process.exit(2); }
+  const empty = rows.filter(r => !(r.xt && r.yt));
+  if (empty.length > rows.length * 0.02) { console.error('⛔ 投影列在，但 ' + empty.length + '/' + rows.length + ' 行是空的' +
+    '\n       ⇒ 这些枚会退回旧坐标，与其余的**不在同一套投影里**（同一张图上混两套坐标 = 距离没有意义）。' +
+    '\n         空的前 8 枚：' + empty.slice(0, 8).map(r => r.id).join(' ') + '\n         补投影：node champion-map/proj-tsne.mjs'); process.exit(2); }
+  console.log('投影口径 ✅ ' + (rows.length - empty.length) + '/' + rows.length + ' 枚用 t-SNE 列 xt/yt' +
+    (empty.length ? '（' + empty.length + ' 枚没有 ⇒ 逐行退旧坐标，见上面那条 2% 的界）' : ''));
+}
 const fitP = join(HERE, 'fit.tsv');
 const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [];
 /* 过线来源（§E298）：**优先**用现跑的同一道闸 `feas-s*.tsv`（覆盖全 718 枚、样本量统一 n=20/aggr40/seat100）；
@@ -291,6 +309,9 @@ const DATA = rows.map(r => ({
   /* §E367：父指针的**来路** —— hash = 包自己 META 里记的（实录）；seedpack/arm = 生成器按路径或臂名推的（推断）；
    *   demoted = 推出来的是"今天的槽主"而时间对不上 ⇒ 生成器已把它退回"父不可考"，图上不许再有这条边。*/
   psrc: LIN[r.id] ? (LIN[r.id].parentSrc || '') : '',
+  /* §E487 融合粒有**两个父**：第一父走 pof（正常血统边），第二父走 pof2，画成另一种颜色的线。
+   *   来源是 tools/soup-pack.mjs 写进包 meta 的实录（每粒来源的 wid），由 lineage.mjs 反查成图上的节点。*/
+  pof2: LIN[r.id] ? (LIN[r.id].parentOf2 || '') : '', psrc2: LIN[r.id] ? (LIN[r.id].parentSrc2 || '') : '',
   ok: OKM && (r.id in OKM) ? (OKM[r.id].ok ? 1 : 0) : null,
   gl: OKM && (r.id in OKM) && isFinite(OKM[r.id].g2) ? OKM[r.id].g2 : null,
   pv: r.id in PROM ? (PROM[r.id].pass ? 1 : 0) : null, pb: r.id in PROM ? PROM[r.id].b : '',
@@ -461,6 +482,7 @@ var NOPTS = 0;   /* §E451 只给页内自检用的"只画底、不画点"开关
                   *   而不是拿"中心与四邻不同"当代理（那个代理在名字上、在同族密集处都会看错，§E447 自己就记了污染）。
                   *   出厂恒为 0；判据用完必须还原，否则下一帧就没有点了。 */
 var NCHAIN = 0;   /* §E378 这一帧画了几条**接替边**（页脚与页内自检都读它，不许各自数一份）*/
+var NSOUP = 0;    /* §E487 这一帧画了几条**融合的第二父边**（同上：页脚与自检读同一个数）*/
 var LASTFAMS = [];   /* §E448 上一帧谱系图的行表（fams 原样）—— 页内那条"家族 0 排最上面"在窗口把整行切没时读这个 */
 (function () { for (var i = 0; i < N; i++) TSBY[P[i].id] = P[i].ts || ''; })();
 function backOf(d) {   /* 返回"父节点的 ts"，当且仅当它晚于本枚（空串 = 正常边 / 父不在图上）*/
@@ -823,6 +845,8 @@ function tip(d, fr) {
     '\\n家族 ' + d.fam + '（按训练方法/目标分）：' + (famLab(d) || '—') +
     '\\n　RNG seed 名字后缀=' + d.seed + ' ‖ META.seed=' + (d.ms || '—') + ' ‖ 训出 ' + (d.ts || '—') +
     '\\n　热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof : (d.pnm ? '\\n　　' + d.pnm : '（父指针未落档）')) +
+    /* §E487 融合粒：把"它是哪两枚的平均"直读出来（来源与权重在包 meta 里，这里只印第二父的节点名）*/
+    (d.pof2 ? '\\n　融合的另一粒父 ' + d.pof2 + '（图上走紫线）' : '') +
     /* §E363 + §E367 更正：这条边"父比子晚"**不是**槽位时刻的语义问题，而是**假边** ——
        父指针记的是**路径**（js/bundled-champion-3p.js），生成器按"这条路径今天住的是谁"反查 ⇒ 接到现在的槽主身上。
        lineage.mjs 现在会把这种推断级父边退回"父不可考"（parentSrc=demoted），所以**正常情况下这条不该出现**；
@@ -1454,7 +1478,7 @@ function drawTree(fr) {
    *   ⚠ 网格每帧重算（平移/缩放会改密度）；代价 = 726×5 次算术 + 726 次 stroke + 3630 次 addColorStop（与改动前同量级）。
    *     ELOG=0 是页内那两条判据自己用的对照组（固定 alpha），不是给用户的开关。 */
   var EA0 = 0.30, ED0 = 25, EMIN = 0.03, EGRID = Math.max(10, Math.round(22 * devicePixelRatio));
-  var NBACK = 0; NEDG = 0; NCHAIN = 0;
+  var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0;
   EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [] };
   if (st.edges !== 'off') {
     var EL = [];
@@ -1473,6 +1497,18 @@ function drawTree(fr) {
       EL.push([pa, pb2, [(pa[0] + pb2[0]) / 2, (pa[1] + pb2[1]) / 2 - rowH * 0.5 * TKY],
         kind ? 0.62 : EA0, kind, dd.id, ua, ub,
         ua && ub ? [(ua[0] + ub[0]) / 2, (ua[1] + ub[1]) / 2 - rowH0 * 0.5 * TKY] : null]); }
+    /* ===== §E487 融合粒的**第二父边**（kind=3，画成另一种颜色）=====
+     *   融合粒天生有两个父（tools/soup-pack.mjs 把每粒来源的 wid 写进包 meta，lineage.mjs 反查成节点），
+     *   一条边只够表达"热启动自谁"，所以第二条单独一种颜色 —— 不是把两条都画成血统色：
+     *   那会让人读成"这枚有两个热启动父"，而事实是"它是两枚的权重平均"。
+     *   'hash' 档不画它（这一档只画包自己 hotstartFrom 里那份哈希；第二父同样不是哈希级来路）。 */
+    for (i = 0; i < N; i++) { var d2 = P[i]; if (!d2.pof2 || !pos[d2.id] || !pos[d2.pof2]) continue;
+      if (st.edges === 'hash') continue;
+      var q2a = pos[d2.pof2], q2b = pos[d2.id], v2a = pap[d2.pof2], v2b = pap[d2.id];
+      NSOUP++;
+      EL.push([q2a, q2b, [(q2a[0] + q2b[0]) / 2, (q2a[1] + q2b[1]) / 2 - rowH * 0.5 * TKY],
+        0.62, 3, d2.id, v2a, v2b,
+        v2a && v2b ? [(v2a[0] + v2b[0]) / 2, (v2a[1] + v2b[1]) / 2 - rowH0 * 0.5 * TKY] : null]); }
     NEDG = EL.length; EDGR.n = NEDG;
     /* 网格尺寸按**纸面**范围算：纸面 = 未经 PS 投影的那一层（X() 与行高都在 device px 上），
      *   所以范围就是 w×h，格子仍是 22 CSS px 一档 —— 只是原点不跟着平移走。 */
@@ -1500,7 +1536,7 @@ function drawTree(fr) {
        *   上一版把整条边取一个均值 ⇒ 一条长线只要蹭到扇根那一格，整条被拉到地板（用户 10-08 11:0x：
        *   「这一版密集处确实好了，但是单根线看不见了」）。均值这件事在"根密尾疏"的边上必然冤枉尾段。
        *   渐变仍是**一次落笔** ⇒ 不会有 §E467a 那种分桶断口；密处压到地板、疏处回到全 alpha。 */
-      var ST5 = [0, 0.25, 0.5, 0.75, 1], AL5 = [], col3 = kd === 2 ? '159,176,204' : (kd === 1 ? '224,177,60' : '120,200,255');
+      var ST5 = [0, 0.25, 0.5, 0.75, 1], AL5 = [], col3 = kd === 2 ? '159,176,204' : (kd === 3 ? '206,136,255' : (kd === 1 ? '224,177,60' : '120,200,255'));
       var PA2 = EL[e2][6] || A2, PB2 = EL[e2][7] || B2, PC2 = EL[e2][8] || C2;
       for (var s2 = 0; s2 < 5; s2++) {
         var t0 = ST5[s2], i0 = 1 - t0;
@@ -1527,9 +1563,11 @@ function drawTree(fr) {
         EDGR.probe.push({ pts: pp, al: AL5[2], al5: AL5.slice(), id: EL[e2][5] }); }
       var gr = g.createLinearGradient(A2[0], A2[1], B2[0], B2[1]);
       for (var s3 = 0; s3 < 5; s3++) gr.addColorStop(ST5[s3], 'rgba(' + col3 + ',' + AL5[s3].toFixed(3) + ')');
-      /* §E363 倒挂边（父的 ts 晚于子）虚线 + 琥珀；§E378 接替边点线 + 灰：连的都是"槽位接替"，不是谁生了谁 */
+      /* §E363 倒挂边（父的 ts 晚于子）虚线 + 琥珀；§E378 接替边点线 + 灰：连的都是"槽位接替"，不是谁生了谁。
+       *   §E487 融合的第二父边（kd=3，紫）**走实线**：它是一条真血统（这枚确实是那两枚的平均），
+       *   只是"不是热启动" —— 用颜色分辨就够了，再加虚线会让人读成"这条更不可信"。 */
       g.save();
-      if (kd) g.setLineDash(kd === 2 ? [1.5 * devicePixelRatio, 3.5 * devicePixelRatio] : [4 * devicePixelRatio, 4 * devicePixelRatio]);
+      if (kd && kd !== 3) g.setLineDash(kd === 2 ? [1.5 * devicePixelRatio, 3.5 * devicePixelRatio] : [4 * devicePixelRatio, 4 * devicePixelRatio]);
       g.strokeStyle = gr;
       g.beginPath(); g.moveTo(A2[0], A2[1]); g.quadraticCurveTo(C2[0], C2[1], B2[0], B2[1]); g.stroke();
       g.restore(); }
@@ -1588,6 +1626,8 @@ function drawTree(fr) {
     /* §E378 接替边必须自己在图上说一句它是什么：它和血统边画在同一片地方，而两者的意思完全不同
        （'hash' 那一档不画它，所以那句计数跟着 NCHAIN 走，为 0 就整段不出现）*/
     (NCHAIN ? ' ‖ 灰点线 = 槽位接替边 ' + NCHAIN + ' 条（谁在这枚之前住过那个槽，不是血统）' : '') +
+    /* §E487：融合粒的第二父走紫色实线 —— 它是"两枚的权重平均"里的那一条，不是热启动 */
+    (NSOUP ? ' ‖ 紫线 = 融合的第二父边 ' + NSOUP + ' 条（这枚是两枚的权重平均，不是热启动）' : '') +
     /* §E442：RUNNER-BASE 那批边现在**画得出来了**（收到时间轴最左那颗灰菱形），所以这句话从原来的"这条边上不画"
        改成说清它连的是什么。'hash'/'off' 两档不画 ⇒ 计数为 0 就整段不出现，不许承诺图上没有的东西。 */
     (NRBASE ? ' ‖ 另有 ' + NRBASE + ' 枚的父指针解析不到图上任何一枚（见页内那条血统边判据）' : '') +
@@ -3334,14 +3374,19 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     _e7 ? ('psrc=' + (_e7.psrc || '(空)') + ' ‖ parentOf=' + (_e7.pof || '(空)') + ' ‖ 其 ts=' + (TSBY[_e7.pof] || '—') + '（本枚 ' + _e7.ts + '）') : '图上查无此枚');
   T('全库不许有任何时间倒挂的父边（0 条 ⇒ 有就是守卫漏了来路，图上会拿假血统画实线）',
     BK.length === 0, BK.length + ' 条：' + BK.slice(0, 4).map(function (d) { return d.id + '→' + d.pof; }).join(' ‖ '));
-  T('父边来路必须标全：有父边的只能来自 hash/seedpack/arm/slot-at-time/slot-chain，标 demoted 的一律不许还有父边',
+  /* §E487 'soup' = 这一枚的父是**权重平均的另一粒**（tools/soup-pack.mjs 写进包 meta 的来源 wid），
+   *   与热启动的五个来路并列放在这里：它同样是一条"真边"，只是语义不是"续训自谁"。
+   *   融合格式：'soup' 档的**第一父**进 pof，**第二父**进 pof2（下面那条 §E487 腿管它）。 */
+  T('父边来路必须标全：有父边的只能来自 hash/seedpack/arm/slot-at-time/slot-chain/soup，标 demoted 的一律不许还有父边',
     (function () {
       for (var q = 0; q < N; q++) { var d = P[q];
-        if (d.pof && ['hash', 'seedpack', 'arm', 'slot-at-time', 'slot-chain'].indexOf(d.psrc) < 0) return false;
+        if (d.pof && ['hash', 'seedpack', 'arm', 'slot-at-time', 'slot-chain', 'soup'].indexOf(d.psrc) < 0) return false;
+        if (d.pof2 && d.psrc2 !== 'soup') return false;      /* §E487 第二父只有融合格一种来路 */
         if ((d.psrc === 'demoted' || d.psrc === 'demoted-time') && d.pof) return false; }
       return P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length >= 1; })(),
     '按时间轴改接 ' + P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length + ' 枚 ‖ 退回不可考 ' + DM.length + ' 枚 ‖ 有父边 '
-      + P.filter(function (d) { return d.pof; }).length + ' 枚');
+      + P.filter(function (d) { return d.pof; }).length + ' 枚 ‖ 融合第一父 '
+      + P.filter(function (d) { return d.psrc === 'soup'; }).length + ' 枚');
   /* ===== §E378 旧冠军的连线：三条判据（悬空边 / 接替链的形状 / 横轴那把钟）=====
    *   第一条是**这次真正的收获**：§E376 之前有 57 条 parentOf 指向一个图上没有的节点（写的是文件名），
    *   边就静默没了 —— 画了多少条没人对账。所以这条判据不判"接回几条"（那个数会变），
@@ -3350,6 +3395,24 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var DANGL = P.filter(function (d) { return d.pof && !IDSET[d.pof]; });
   T('不许有任何父边指向图上不存在的枚（§E378 那 57 条静默丢失就是这么来的）',
     DANGL.length === 0, DANGL.length + ' 条：' + DANGL.slice(0, 4).map(function (d) { return d.id + '→' + d.pof; }).join(' ‖ '));
+  /* ===== §E489 投影口径：旗标 + **每一枚的实际坐标**两道一起钉 =====
+   *   为什么把这条钉在这儿：五步重建链跑完（那时链子里还没有第⑥步 proj-tsne）⇒ coords.tsv 从 41 列掉到 36 列，
+   *   第 271 行那句**逐行**退路把 920 枚全画回旧力导向坐标，页内 69 条判据一条没红，
+   *   先看见的是用户：「投影结果一下子变回很早的版本了，区分度变得很低」。
+   *   生成侧现在会拒绝出图（viewer.mjs 顶部 §E489 那段），这条腿是产物侧的第二道 ——
+   *   而且它**不信旗标**：只判 PROJTSNE===1 的话，"列在、但某些行是空的"那一种照样绿。
+   *   实测两套坐标的量纲不同，所以能分开：t-SNE（proj-tsne 自己归一）xt/yt ∈ [−1.05, 1.02]，
+   *   力导向那套 x2/y2 ∈ [−3.32, 3.45] × [−4.92, 17.71] ⇒ 界放 ±2.0，两边都有余量。 */
+  var _YO = 0, _XW = 0, _YW = 0, _XWM = -Infinity, _YWM = -Infinity, _XWP = Infinity, _YWP = Infinity;
+  for (var xq = 0; xq < N; xq++) { var _x = P[xq].x2, _y = P[xq].y2;
+    if (!isFinite(_x) || !isFinite(_y)) { _YO++; continue; }
+    if (Math.abs(_x) > 2 || Math.abs(_y) > 2) _XW++;
+    _XWM = Math.max(_XWM, _x); _YWM = Math.max(_YWM, _y); _XWP = Math.min(_XWP, _x); _YWP = Math.min(_YWP, _y); }
+  T('图上的坐标必须真的来自 t-SNE 那一套（§E489 ‖ 整列 xt 没了会静默退回旧力导向，kNN@10 从 0.52 掉回 0.08 = "区分度很低"）',
+    PROJTSNE === 0 || (_YO === 0 && _XW === 0),
+    'PROJTSNE=' + PROJTSNE + '（0 = 这份是 --proj=old 特意出的旧投影，本条不适用）‖ 图上 ' + N + ' 枚' +
+      ' ‖ 越出 ±2 的 ' + _XW + ' 枚 ‖ 非数的 ' + _YO + ' 枚 ‖ 实际范围 x [' + _XWP.toFixed(2) + ', ' + _XWM.toFixed(2) +
+      '] · y [' + _YWP.toFixed(2) + ', ' + _YWM.toFixed(2) + ']（t-SNE 实测 ±1.05 ‖ 旧力导向是 x ±3.4 / y −4.9~17.7）');
   /* 接替链：结构式判据（不写死 15 这个数 —— 库里旧包增减它就漂，正是第 89 条说的那类钉措辞的腿） */
   var OLDS = P.filter(function (d) { return d.old; });
   var CHN = OLDS.filter(function (d) { return d.psrc === 'slot-chain'; });
@@ -3871,6 +3934,47 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     '全开 ' + eAll + ' 条 ‖ 只实录 ' + eHash + ' 条 ‖ 关掉 ' + eOff + ' 条 ‖ 关掉与全开的采样像素差 ' + diffOff);
   st.mode = SNAPM2.mode; st.edges = SNAPM2.edges;
   st.flo = SNAPM2.flo; st.fhi = SNAPM2.fhi; recomputeVIS(); draw();
+  (function () {   /* ===== §E487 融合粒的第二父边（紫线）=====
+     *   融合粒天生两个父：pof 那一头是「平均里权重最大的一粒」（图上按血统色画），
+     *   pof2 那一头是「另一粒」⇒ 单开一种颜色。不并成两条同色是因为那会读成"有两个热启动父"，
+     *   而事实是"它是两枚的权重平均"（tools/soup-pack.mjs，§E477）。
+     *   四句各自可反证，且**不钉条数**（融合粒随批次进出会变 = 第 89 条说的那类死读数）：
+     *     ① 第二父不许指向图上没有的枚 —— §E378 那 57 条静默丢失的同一族病。
+     *     ② 第二父不许是本枚自己、也不许与第一父同枚（否则画出一条看不见的线）。
+     *     ③ 这一帧真画的紫线条数必须**等于数据里该画的条数**（两边都按同一批可见点算）。
+     *     ④ 'hash' 与 'off' 两档必须一条不画 —— 第二父不是包自己 hotstartFrom 里那份哈希。
+     *   牙口（四条都实测过，读数照抄）：
+     *     ③ 删掉第二父循环里的「NSOUP++」（边照样 push，只是不计数）⇒ 红在「紫线 0 条 ‖ 该画 3 条」。
+     *     ④ 删掉「if (st.edges === 'hash') continue;」⇒ 红在「全开 3 ‖ 只实录 3 ‖ 关掉 0」。
+     *     ① 把 SOUP-K2E20-80 的第二父 K2 改成图上没有的 GHOST-487 ⇒ 红在「指向没有的枚 1」。
+     *        ⚠ 这一步 ③ **不红**（紫线 2 条 = 该画 2 条，want 也按"图上有没有这枚"算）⇒ 两条不打架、各有分工：
+     *        ① 管"指向空气"，③ 管"真画了几条"。
+     *     ② 自边/与第一父同枚那条没有独立的变异可造（生成器那侧由 lineage.mjs 的倒挂守卫挡），
+     *        它和 ① 共用一次红：GHOST 那条改不成自边，所以这条按"结构上不许出现"判，读数会点名几枚。 */
+    var SNAPM3 = { mode: st.mode, edges: st.edges, flo: st.flo, fhi: st.fhi, batch: st.batch, elev: st.elev };
+    var ID3 = {}, IX3 = {}; for (var q3 = 0; q3 < N; q3++) { ID3[P[q3].id] = 1; IX3[P[q3].id] = q3; }
+    var S2 = P.filter(function (d) { return d.pof2; });
+    var DG3 = S2.filter(function (d) { return !ID3[d.pof2]; });
+    var BAD3 = S2.filter(function (d) { return d.pof2 === d.id || d.pof2 === d.pof; });
+    var BK3 = S2.filter(function (d) { var pt = TSBY[d.pof2]; return pt && d.ts && pt > d.ts; });
+    /* 批次放开到 'all' + 窗口放满：这条比的是"边画没画全"，不该被批次切走样本（§E449 同一件事）*/
+    st.mode = 'tree'; st.elev = 0; st.flo = 0; st.fhi = 1; st.batch = 'all'; recomputeVIS();
+    st.edges = 'all'; draw(); var sAll = NSOUP;
+    var want = S2.filter(function (d) { return ID3[d.pof2] && VIS[IX3[d.id]] && VIS[IX3[d.pof2]]; }).length;
+    st.edges = 'hash'; draw(); var sHash = NSOUP;
+    st.edges = 'off'; draw(); var sOff = NSOUP;
+    T('融合粒的第二父不许指向空气、不许是本枚自己或与第一父同枚、不许时间倒挂（§E487）',
+      DG3.length === 0 && BAD3.length === 0 && BK3.length === 0,
+      S2.length + ' 枚带第二父 ‖ 指向没有的枚 ' + DG3.length + (DG3.length ? '：' + DG3.slice(0, 3).map(function (d) { return d.id + '→' + d.pof2; }).join(' ‖ ') : '') +
+        ' ‖ 同枚/自边 ' + BAD3.length + (BAD3.length ? '：' + BAD3.slice(0, 3).map(function (d) { return d.id + '→' + d.pof2; }).join(' ‖ ') : '') +
+        ' ‖ 倒挂 ' + BK3.length + (BK3.length ? '：' + BK3.slice(0, 3).map(function (d) { return d.id + '（父 ' + TSBY[d.pof2] + ' > 本枚 ' + d.ts + '）'; }).join(' ‖ ') : ''));
+    T('融合边：紫线必须真画出来，且这一帧画的条数 = 数据里该画的条数（画少 = 边静默没了 ‖ 画 0 = 紫线整段没生效）',
+      sAll > 0 && sAll === want, '紫线 ' + sAll + ' 条 ‖ 该画 ' + want + ' 条（带第二父 ' + S2.length + ' 枚）');
+    T('融合边在「只实录哈希」与「关掉连线」两档必须一条不画（第二父不是热启动来路）',
+      sHash === 0 && sOff === 0, '全开 ' + sAll + ' ‖ 只实录 ' + sHash + ' ‖ 关掉 ' + sOff);
+    st.mode = SNAPM3.mode; st.edges = SNAPM3.edges; st.elev = SNAPM3.elev; st.batch = SNAPM3.batch;
+    st.flo = SNAPM3.flo; st.fhi = SNAPM3.fhi; recomputeVIS(); draw(); paintWin();
+  })();
   (function () {   /* §E451 左栏宽度必须由它承载的文字定，不能由"当年谁拍的数"定 */
     var ws = []; g.font = (9 * devicePixelRatio) + 'px system-ui,sans-serif';
     for (var z = 0; z < LASTFAMS.length; z++) {
@@ -4444,7 +4548,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   实测（1600×900）：画布内 729 枚 ‖ 被压住 65 枚 = 9%（卡 39 ‖ 侧栏 26）‖ 其中冠军 12 ‖ **现役 0**；
    *   只开图例的几种态：谱系图 0 枚、一维 0 枚、三维行为轴 3 枚、立体地图 16 枚。
    *   ⇒ 硬判据一条："现役不许被压住"（它是全图唯一的分界参照物，被压住就等于图上没有基准）；
-   *     再加一条总量界 ≤ 80（实测最坏 65 之上留 15 枚余量，挡的是"某块面板无声变大"）。 */
+   *     再加一条总量界（原来 80 枚，§E488 改成"面板面积 + 相对比例"两条 —— 那 15 枚余量赌的是落点骰子）。 */
   (function () {
     var SN5 = { mode: st.mode, e: st.elev, sel: st.sel, side: st.side, flo: st.flo, fhi: st.fhi, labels: st.labels,
       lgPos: st.lgPos, cardPos: st.cardPos, sidePos: st.sidePos };
@@ -4473,12 +4577,39 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
           if (P[oi].lin) { hidCh++; if (!exCh) exCh = P[oi].id; }
           break; } } }
     var parts = []; for (var kk in hidBy) parts.push(kk + ' ' + hidBy[kk]);
-    T('浮层面板不许把现役压住（它是全图唯一的分界参照）‖ 最坏情况下被压住的点总量有界',
-      PAN.length >= 2 && tot > 0 && hidInc === 0 && hid <= 80,
+    /* ===== §E488 这条的总量界原来钉的是「hid <= 80」（注释写的是"实测最坏 65 之上留 15 枚余量"），
+     *   可它挡的病是「某块面板无声变大」，而 hid 数的是**点恰好落在画布哪一块**。
+     *   这两件事不是一回事：x2/y2 是每次重建按**当下节点集**重算的力导向布局 ——
+     *   实测这一次只往 coords.tsv 加了 3 枚融合粒（917→920 行 ‖ H/S/F 一字未动 ‖ 尺没有重测），
+     *   917 行的 x2/y2 却全部变了（平均 0.75px / 0.75px，最大 5.61 / 38.57px）⇒ 被压数从 64 跳到 88。
+     *   红的是"这一下骰子掷到哪"，不是面板变大 ⇒ 按第 89 条（不许钉死读数）与"门红了先问它该不该红"改钉两件可控的：
+     *     ① 面板**面积**：单块 ≤ 画布 15% ‖ 三块合计 ≤ 40%。出厂态实测（画布 1576×543 CSS）
+     *        图例 7.6% ‖ 选中卡 422×216 = 10.7% ‖ 侧栏 256×361 = 10.8% ‖ 合计 29.1%
+     *        ⇒ 界放在"哪一块要无声长大四成才红"的位置。这个比是 dpr 无关的（分子分母同乘 devicePixelRatio）。
+     *        这才是那句"无声变大"，且与坐标完全无关，任何重建都判得到。
+     *     ② 相对总量界 hid ≤ tot 的 20%（实测 64/729 = 8.8% ‖ 88/732 = 12.0%）：布局重算确实会把点挪到面板底下，
+     *        这条只挡"面板盖掉大半个画面"那种真病，不赌某一次的落点。
+     *   现役 hidInc === 0 原样硬判（分界参照物被压住 = 图上没有基准）。
+     *   牙口（两条都实测过，读数照抄）：
+     *     ⚠ 第一版写的牙口是**假的**：把卡的 max-width 400 → 660 之后**没红**（卡的高度由内容驱动，
+     *        加宽就换行变矮 ⇒ 面积几乎不变，实测仍 10.7%，点也没多被压）。这条判据量的是面积，
+     *        本来就不该被那个变异骗到 —— 是我挑错了变异：第 15 条要的"把 bug 复原一次"对**判据自己的牙口**同样适用。
+     *     ✅ 真变异 = 把卡的 font-size 12px → 18px（同一份明细占更大一块地方）：实测红在 ② ——
+     *        被压 88 → 175 枚 = 23.9%（线 20%）。当时面积只到 12.1%（高度被 max-height 42% 夹住）⇒ 没红在 ①。
+     *        两条各管一件事：① 管"形状失控"，② 管"真吃掉多少点"，缺一条就有一类病漏过去。
+     *   删掉「NSOUP++」是另一条腿（§E487）的事，这条不该动。 */
+    var AR = PAN.map(function (x) { return x[3] * x[4]; });
+    var aMax = Math.max.apply(null, AR), aSum = 0; for (var ai = 0; ai < AR.length; ai++) aSum += AR[ai];
+    var aCv = Math.max(1, cv.width * cv.height);
+    var pMax = 100 * aMax / aCv, pSum = 100 * aSum / aCv;
+    T('浮层面板不许把现役压住（它是全图唯一的分界参照）‖ 面板面积不许失控 ‖ 被压住的点按当下样本有相对界',
+      PAN.length >= 2 && tot > 0 && hidInc === 0 && pMax <= 15 && pSum <= 40 && hid <= tot * 0.20,
       '钉的态：平面地图 + 卡开着（选 why 最长那枚 ' + worstId + '，明细 ' + worst + ' 字符）+ 侧栏开着'
-        + ' ‖ 画布内 ' + tot + ' 枚 ‖ 被压住 ' + hid + ' 枚（线 80）‖ 分块 ' + (parts.join(' ‖ ') || '无')
+        + ' ‖ 画布内 ' + tot + ' 枚 ‖ 被压住 ' + hid + ' 枚 = ' + (100 * hid / Math.max(1, tot)).toFixed(1) + '%（线 20%）‖ 分块 ' + (parts.join(' ‖ ') || '无')
         + ' ‖ 其中冠军 ' + hidCh + (exCh ? '（例 ' + exCh + '）' : '') + ' ‖ 现役 ' + hidInc + '（要 0）'
-        + ' ‖ 面板 ' + PAN.map(function (x) { return x[0] + ' ' + Math.round(x[3] / devicePixelRatio) + '×' + Math.round(x[4] / devicePixelRatio); }).join(' / '));
+        + ' ‖ 画布 ' + Math.round(cv.width / devicePixelRatio) + '×' + Math.round(cv.height / devicePixelRatio) + ' CSS'
+        + ' ‖ 面板 ' + PAN.map(function (x) { return x[0] + ' ' + Math.round(x[3] / devicePixelRatio) + '×' + Math.round(x[4] / devicePixelRatio) +
+            '（' + (100 * x[3] * x[4] / aCv).toFixed(1) + '%）'; }).join(' / ') + ' ‖ 最大 ' + pMax.toFixed(1) + '%（线 15）‖ 合计 ' + pSum.toFixed(1) + '%（线 40）');
     st.mode = SN5.mode; st.elev = SN5.e; st.sel = SN5.sel; st.side = SN5.side;
 st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
     st.lgPos = SN5.lgPos; st.cardPos = SN5.cardPos; st.sidePos = SN5.sidePos;   /* §E462 位置也要还原：自检不许把用户拖好的布局改掉 */

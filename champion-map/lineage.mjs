@@ -234,6 +234,21 @@ for (const r of REC) { const m = r.m || {};
     else { demoted = parId; nBack++; }
     byPath = ''; byArm = ''; }
   if (byPath) nSpk++; if (byArm) nArm++;
+  /* ===== §E487 融合粒（`tools/soup-pack.mjs` 的产物）：它**天生有两个父** =====
+   *   `meta.soup.sources` 是工具自己写进去的实录（每粒来源的 路径 + wid + ts），不是推断 ⇒
+   *   第一父走正常的 `parentOf`，第二父走新列 `parentOf2`，图上用**另一种颜色的边**画第二条。
+   *   解析只走 wid → 图上节点（`BYWID` / 第二身份 `BYWID_EMB`），**不猜路径、不猜臂名**；
+   *   并且吃同一条 §E367 时间闸：父的 ts 晚于子 ⇒ 这条边不许画（融合粒正常总是后生的，红了就说明表错了）。*/
+  let sP1 = '', sP2 = '';
+  { const src = (m.soup && Array.isArray(m.soup.sources)) ? m.soup.sources : null;
+    if (src) { const ids = src.map(s => (s && s.wid && (BYWID[s.wid] || BYWID_EMB[s.wid])) || '');
+      sP1 = ids[0] || ''; sP2 = ids.slice(1).find(x => x && x !== sP1) || '';
+      const bad = [];
+      if (sP1 && IDTS[sP1] && m.ts && Date.parse(IDTS[sP1]) > Date.parse(m.ts)) bad.push(sP1);
+      if (sP2 && IDTS[sP2] && m.ts && Date.parse(IDTS[sP2]) > Date.parse(m.ts)) bad.push(sP2);
+      if (bad.length) { console.error('⛔ §E487 融合粒 ' + r.id + ' 的父边时间倒挂（' + bad.join(' ‖ ') +
+          ' 的 ts 晚于本枚 ' + m.ts + '）⇒ 融合表或 wid 注册错了，不许画成血统'); process.exit(2); }
+      if (sP1 && !sP2) console.log('⚠ §E487 ' + r.id + ' 只解析出 1 个父（' + sP1 + '）⇒ 另一粒来源不在图上（融合面板里没登记？）'); } }
   const eco = (m.ecoEffective && typeof m.ecoEffective === 'object') ? m.ecoEffective : {};
   const fig = (m.fightEffective && typeof m.fightEffective === 'object') ? m.fightEffective : {};
   const cfg = { divW: norm(eco.divW), divK: norm(eco.divK), divRoleW: norm(eco.divRoleW), divCatW: norm(eco.divCatW),
@@ -243,8 +258,9 @@ for (const r of REC) { const m = r.m || {};
     seedEmb: norm(m.seedEmbeddedFrom), gens: norm(m.gens), mode: norm(m.mode), rulesFp: norm(m.rulesFingerprint),
     parent: norm(m.hotstartFrom || WIDOF[byPath || byArm || bySlot] || '') };
   ROWS.push({ id: r.id, ts: m.ts || '', seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
-    parentOf: byHash || byPath || byArm || bySlot, wid: r.wid || '',
-    psrc: byHash ? (byHashEmb ? 'hash-emb' : 'hash') : (byPath ? 'seedpack' : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (demoted ? 'demoted' : '')))),
+    parentOf: byHash || byPath || byArm || bySlot || sP1, wid: r.wid || '',
+    psrc: byHash ? (byHashEmb ? 'hash-emb' : 'hash') : (byPath ? 'seedpack' : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (sP1 ? 'soup' : (demoted ? 'demoted' : ''))))),
+    pof2: sP2, psrc2: sP2 ? 'soup' : '',
     demoted: demoted,
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
 const nres = ROWS.filter(r => r.parentOf).length, np = ROWS.filter(r => r.cfg.parent !== '-').length;
@@ -338,13 +354,17 @@ console.log('合成父节点：' + Object.keys(SYNTH_NAME).length + ' 个指纹 
 const COLS = ['id', 'fam', 'famLabel', 'ts', 'metaSeed', 'nameSeed', 'parent', 'parentOf', 'parentName', 'wid', 'rulesFp', 'divW', 'divK', 'divRoleW', 'divCatW',
   /* §E367 parentSrc 追加在**最后一列**：现有消费者（chain-scan / dups / directions / gapscan / viewer）都按表头取列，
    *   但插到中间会让任何按下标取数的写法静默错位 ⇒ 新列一律往后放。*/
-  'oppsN', 'stockBonus', 'hoardPen', 'dealW', 'firstW', 'whistlePen', 'styleW', 'eTarget', 'eCap', 'gens', 'mode', 'seedEmb', 'parentSrc'];
+  'oppsN', 'stockBonus', 'hoardPen', 'dealW', 'firstW', 'whistlePen', 'styleW', 'eTarget', 'eCap', 'gens', 'mode', 'seedEmb', 'parentSrc',
+  /* §E487 融合粒的第二父：三条新列一律追加在**表尾**（同 §E367 的规矩 —— 插中间会让按下标取数的写法静默错位）*/
+  'parentOf2', 'parentName2', 'parentSrc2'];
 const SLOTDEF = { n: 0, label: '旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）' };
 const out = [COLS.join('\t')];
 for (const r of ROWS) { const d = FAM[r.id] || (SLOTID[r.id] ? SLOTDEF : null); if (!d) continue; const c = r.cfg;
   out.push([r.id, d.n, d.label, (r.ts || '').slice(0, 19), r.seed, r.id.replace(/^.*-/, ''), c.parent.slice(0, 8), r.parentOf, r.parentName, r.wid, c.rulesFp, c.divW, c.divK, c.divRoleW, c.divCatW, c.oppsN,
-    c.stockBonus, c.hoardPen, c.dealW, c.firstW, c.whistlePen, c.styleW, c.eTarget, c.eCap, c.gens, c.mode, c.seedEmb, r.psrc || ''].join('\t')); }
+    c.stockBonus, c.hoardPen, c.dealW, c.firstW, c.whistlePen, c.styleW, c.eTarget, c.eCap, c.gens, c.mode, c.seedEmb, r.psrc || '',
+    r.pof2 || '', r.pof2 || '', r.psrc2 || ''].join('\t')); }
 writeFileSync(join(HERE, 'lineage.tsv'), out.join('\n') + '\n');
-console.log('已写 lineage.tsv（' + (out.length - 1) + ' 行 ‖ ' + defs.length + ' 个家族）');
+console.log('已写 lineage.tsv（' + (out.length - 1) + ' 行 ‖ ' + defs.length + ' 个家族 ‖ 双父的融合粒 ' +
+  ROWS.filter(r => r.pof2).length + ' 枚，第二父边 ' + ROWS.filter(r => r.pof2).length + ' 条）');
 for (const d of defs) console.log('  家族 ' + String(d.n).padStart(2) + '  ' + String(d.g.rs.length).padStart(4) + ' 枚  ' + d.label);
 

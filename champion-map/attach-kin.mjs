@@ -59,13 +59,23 @@ const OUT_H = H0.concat(NEED_SC ? SC : []).concat(['kin']);
 const ROWLEN = OUT_H.length;
 const out = [OUT_H.join('\t')];
 let cleared = 0, carried = 0, keptChamp = 0;
+/* §E488：`lineage` 这一列在图上/查看器里都是"**当过线上冠军**"的意思，所以它只许吃这三类。
+ *   原来"清不清"只看"在不在 chain-scan 的名单里" ⇒ 任何**新批次**自带一个没见过的 lineage 值，
+ *   就会既不被清、又被算进冠军数（本轮加三枚融合粒时踩到：它们带的 '融合（权重平均）' 不是冠军身份）。
+ *   ⇒ 改成白名单：不在名单里但类别不认识 ⇒ 清成空并计数，类别一律不许自己长出来。*/
+const CH_CLASSES = { '历代上槽': 1, '当前线上': 1, '旧槽位冠军': 1 };
+const unknownCls = {};
+for (const r of ROWS) { const c = r[ch.lineage]; if (c && !CH_CLASSES[c]) unknownCls[c] = (unknownCls[c] || 0) + 1; }
+if (Object.keys(unknownCls).length) console.log('⚠ §E488 这批表里带了**不是冠军身份**的 lineage 类别，按白名单清成空：' +
+  Object.entries(unknownCls).map(([k, v]) => k + ' ' + v + ' 枚').join(' ‖ '));
 for (const r of ROWS) {
   const id = r[ch.id];
   const row = r.slice();
   while (row.length < H0.length) row.push('');
   const kin = KIN[id] || '';
-  if (kin) { if (row[ch.lineage]) cleared++; row[ch.lineage] = ''; }
-  else if (row[ch.lineage]) keptChamp++;
+  const cls = row[ch.lineage];
+  if (kin || (cls && !CH_CLASSES[cls])) { if (cls) cleared++; row[ch.lineage] = ''; }
+  else if (cls) keptChamp++;
   /* Sc 四列：新表（ruler-figs 重画时不带这四列）以旧表为准，量过的原样搬，没量过的**留空**（不许当 0） */
   if (NEED_SC) for (const k of SC) row.push(OLDROW[id] ? (OLDROW[id][oh[k]] || '') : '');
   if (OLDROW[id]) carried++;
@@ -90,10 +100,17 @@ const nChamp = body.filter(r => r[OUT_LIN]).length, nKin = body.filter(r => r[OU
  *   牙口验过：给 --list 换成一份不覆盖那 183 枚的名单 ⇒ 假冠军活下来，报"214 ≠ 15 + 16"EXIT=2。 */
 const oldChamp = OR.filter(r => r[oh.lineage]).length;
 const newSlot = ROWS.filter(r => r[ch.lineage] === '旧槽位冠军').length;
-if (nChamp !== oldChamp + newSlot) {
-  console.error('⛔ 冠军枚数 ' + nChamp + ' ≠ 旧表真冠军 ' + oldChamp + ' + 本轮旧槽位冠军 ' + newSlot
-    + ' ⇒ 要么 ' + LIST + ' 那批没被清掉，要么新加的类没打上 lineage（差值 ' + (nChamp - oldChamp - newSlot) + '）'); process.exit(2); }
-console.log('守卫 ✅ 冠军 ' + nChamp + ' = 旧表 ' + oldChamp + ' + 旧槽位冠军 ' + newSlot);
+/* §E488：这一条守卫原来算的是 `旧表非空 lineage 数 + 新表"旧槽位冠军"数`，而**旧表那 31 行里已经含那 16 枚**
+ *   ⇒ 它是拿"增量"的算式去核"全量"的数据：§E375 那一次能过，是因为那一轮真的把 16 枚从 0 加到 16；
+ *   之后任何一次重跑都会报 `34 ≠ 31 + 16`（实测：本轮加三枚融合粒时撞红，差值 -13 完全由这个双计造成）。
+ *   ⇒ 改成只算**本轮新增**的旧槽位冠军：`expected = 旧表非空 + (新表该类 − 旧表该类)`。
+ *   牙口没削：把 183 枚假冠军放回来仍然会报（nChamp 214 vs expected 31），因为增量算式不会替它们开门。*/
+const oldSlot = OR.filter(r => r[oh.lineage] === '旧槽位冠军').length;
+const expect = oldChamp + (newSlot - oldSlot);
+if (nChamp !== expect) {
+  console.error('⛔ 冠军枚数 ' + nChamp + ' ≠ 旧表真冠军 ' + oldChamp + ' + 本轮**新增**的旧槽位冠军 ' + (newSlot - oldSlot) +
+    '（新表该类 ' + newSlot + ' ‖ 旧表该类 ' + oldSlot + '）⇒ 要么 ' + LIST + ' 那批没被清掉，要么新加的类没打上 lineage（差值 ' + (nChamp - expect) + '）'); process.exit(2); }
+console.log('守卫 ✅ 冠军 ' + nChamp + ' = 旧表 ' + oldChamp + ' + 本轮新增旧槽位冠军 ' + (newSlot - oldSlot) + '（旧表该类 ' + oldSlot + '）');
 if (nKin !== Object.keys(KIN).length) console.warn('⚠ kin 非空 ' + nKin + ' ‖ 名单 ' + Object.keys(KIN).length + ' —— 差的那几枚在面板里没有行');
 
 if (process.argv.includes('--check')) {
