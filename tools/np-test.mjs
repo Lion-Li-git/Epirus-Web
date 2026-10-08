@@ -112,7 +112,7 @@ const GRP = {
   meta: 'REPRO L1 L2 L3 L7 L6 L5 D218 D8 D82 D189 D191 D194 D205 D206 D230',   // 仓库纪律：只读源码/CHANGELOG/README/门号
   ui: 'D37 D38 D28 D70 D131 D111 D166',                                    // 页面与前端契约
   ship: 'D219 D55 D16 D35 D27 D49 D60 D61 D62 D67 D73 D78 D79 D103 D105 D116 D118 D124 D125 D141 D153 D155 D163 D107 D110 D121 D145 D146 D147 D168 D169 D170 D190 D197 D210 D228',   // 出厂面：可行性闸 / 当选 / promote / 线上槽
-  train: 'REPRO2 L4 D217 D220 D221 D222 D223 D224 D225 D226 D227 D229 D5 D7 D9 D10 D11 D12 D13 D15 D56 D58 D59 D17 D24 D25 D26 D33b D33 D36 D39 D40 D41 D42 D43 D44 D45 D47 D48 D65 D66 D68 D72 D74 D75 D76 D77 D80 D81 D84 D85 D86 D87 D89 D90 D104 D97 D99 D100 D101 D108 D109 D112 D113 D114 D119 D122 D123 D127 D128 D129 D130 D132 D134 D135 D136 D139 D140 D115 D162 D120 D143 D144 D157 D159 D167 D172 D173 D174 D175 D176 D179 D181 D180 D182 D184 D185 D213 D164 D165 D187 D188 D201 D204 D231',   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
+  train: 'REPRO2 L4 D217 D220 D221 D222 D223 D224 D225 D226 D227 D229 D5 D7 D9 D10 D11 D12 D13 D15 D56 D58 D59 D17 D24 D25 D26 D33b D33 D36 D39 D40 D41 D42 D43 D44 D45 D47 D48 D65 D66 D68 D72 D74 D75 D76 D77 D80 D81 D84 D85 D86 D87 D89 D90 D104 D97 D99 D100 D101 D108 D109 D112 D113 D114 D119 D122 D123 D127 D128 D129 D130 D132 D134 D135 D136 D139 D140 D115 D162 D120 D143 D144 D157 D159 D167 D172 D173 D174 D175 D176 D179 D181 D180 D182 D184 D185 D213 D164 D165 D187 D188 D201 D204 D231 D232',   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
   probe: 'D34 D64 D83 D88 D137 D138 D148 D149 D150 D151 D152 D154 D160 D161 D106 D158 D177 D178 D183 D186 D192 D193 D195 D196 D198 D200 D199 D212 D214 D202 D203 D207 D208 D209 D211 D216',   // 研究量具自身的牙
   engine: 'N1 N2 目标：attemptAction N3 N3b N10 N10b N10c N8 N14 N14b N15 N16 N17 N18 N19 N4 N4b N4c N12 N12b N6 N6b 目标反锁：上回合与某对手互为目标而相抵 目标选择：能一击必杀先杀；否则打血量最高的领先者 fuzz：3/4/5 autoGame N20a N20b N20c N20d N20e N21 N22 N22b N22c N23 D1 D2 D3 D4 D6 D51 D52 D53 D54 D57 D18 D19 D20 D21 D22 D14 D23 D29 D30 D31 D46 D50 D63 D91 D102 D92 D93 D94 D95 D96 D98 D71 D117 D126 D142',   // 引擎与规则语义（改这里 ⇒ 只能全跑）
 };
@@ -11387,6 +11387,42 @@ t('D231 §E477 权重融合入口 `tools/soup-pack.mjs`：自证必须绿 · 四
   }
 });
 
+t('D232 §E497 按卡出手谱 `tools/usage-probe.mjs`：三格手算自检必须绿 · 空名单与怪参数必须响 · 真包必须数得出东西 · 不许写 js/**', function () {
+  /* 为什么值得一条门（METHODOLOGY 第 15 条）：这把尺是**为了回答一个具体问题现造的**
+   *   （用户问"融合为什么让盾变多"，而 coords.tsv 里没有"狙击"也没有"防御类整体"，那问题在旧表上根本没法算）。
+   *   新量具最坏的两件事：① 计数器接错事件 ⇒ 读数自洽但量的是别的东西；② 装配与训练侧不一致 ⇒ 跨枚比较没意义。
+   *   所以自检钉的是"三格手算得出的极端口"（只ジ / 只防御 / 只狙击），不是"某枚包读数是几"。
+   * ⚠ 开发期它已经红过一次，而且红的是判据自己：`row()` 提前 .toFixed() 成字符串 ⇒ `snipe === 0` 永远不成立，
+   *    三格里两格 FAIL。那一红恰好证明这三格接的是生效值 —— 把这份自证搬进门禁。 */
+  const SRC = 'tools/usage-probe.mjs';
+  const src = readFileSync(SRC, 'utf8');
+  const dir = mkdtempSync(join(tmpdir(), 'e497-usage-'));
+  try {
+    const r = spawnSync(process.execPath, [SRC, '--self-test'], { encoding: 'utf8', timeout: 300000 });
+    eq(r.status, 0, '① `--self-test` 必须整批绿（exit 0）：\n' + String(r.stdout || '').slice(0, 500) + String(r.stderr || '').slice(0, 300));
+    const ticks = (String(r.stdout || '').match(/^ {2}ok {3}/gm) || []).length;
+    ok(ticks >= 3, '① 三格手算期望都要过（实测 ' + ticks + ' 条）—— 只 exit 0 不算，被吞掉的断言照样绿');
+    const b1 = spawnSync(process.execPath, [SRC, '--nonsense=1'], { encoding: 'utf8', timeout: 60000 });
+    eq(b1.status, 64, '② 不认识的参数必须 64（仓规 v1.5.234），实测 ' + b1.status);
+    const b2 = spawnSync(process.execPath, [SRC, '--ids=__查无此枚__'], { encoding: 'utf8', timeout: 120000 });
+    eq(b2.status, 2, '③ 名单空到一枚都没有 ⇒ 必须 2（"空跑要响亮失败"），实测 ' + b2.status);
+    /* ④ 真包必须数得出东西：接错事件的那一种坏法是三格自检看不见的（脚本 chooser 与策略 chooser 走的路径不同）*/
+    const outF = join(dir, 'u.tsv');
+    const rr = spawnSync(process.execPath, [SRC, '--ids=SHIPPED-Ldemo', '--games=10', '--out=' + outF], { encoding: 'utf8', timeout: 300000 });
+    eq(rr.status, 0, '④ 跑一枚真包必须成功：\n' + String(rr.stderr || rr.stdout).slice(-400));
+    const lines = existsSync(outF) ? readFileSync(outF, 'utf8').trim().split('\n') : [];
+    ok(lines.length >= 2, '④ 落盘必须有一行读数（实测 ' + lines.length + ' 行）');
+    const hd = lines[0].split('\t'), rowv = Object.fromEntries(hd.map((c, i) => [c, lines[1].split('\t')[i]]));
+    ok(Number(rowv.acts) > 0 && Number(rowv.rounds) > 0, '④ 出手数与回合数都必须 > 0（=0 ⇒ 计数器没接到 action 事件，这台尺是死的）');
+    ok(isFinite(Number(rowv.snipe)) && isFinite(Number(rowv.defense)) && Number(rowv.defense) >= 0,
+      '④ 狙击/防御类两栏都必须是有限非负数（实测 snipe=' + rowv.snipe + ' defense=' + rowv.defense + '）');
+    ok(!/writeFileSync\([\s\S]{0,40}'js\//.test(src), '⑤ 不许往 js/** 写');
+    ok(/from '\.\/audit-lib\.mjs'/.test(src) && /loadChamp/.test(src),
+      '⑥ 读包/装配必须走 audit-lib 这一份（不许自己再写一套引擎装载 —— 那就会与训练侧口径分叉）');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 
 const __nReg = __src.filter(l => /^t\(/.test(l)).length;

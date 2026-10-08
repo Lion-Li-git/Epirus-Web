@@ -1,4 +1,4 @@
-id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN
-SOUP-KE-l60	0	1	场A 还手 19.8% < 20%	8.33	7.39	8.35	0.198	1.52	ok	12.9	0			0
-SOUP-Y-l65	1	0		8.63	8.38	9.05	0.206	1.3	ok	8.4	0			0
-SOUP-Y-KE6k2	1	0		8.59	7.16	8	0.206	1.13	ok	9.7	0			0
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag
+SOUP-s9-82XD4a	1	0		6.61	6.56	1.8	0.267	4	ok	5	0			0	n=20/aggr100/seat100
+SOUP-stock1XK2-l35	0	1	反弹墙伤害 0.00 ≤ 0.5/局	6.48	4.26	0	0.286	3.43	ok	2	0			0	n=20/aggr100/seat100
+SOUP-sub1-92XD4a	0	2	G(long) 1.98 < 3；场B 清场 0.07 < 0.3/局	3.33	1.98	1	0.214	0.07	ok	11.1	0			0	n=20/aggr100/seat100
