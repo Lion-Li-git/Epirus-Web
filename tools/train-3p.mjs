@@ -705,8 +705,17 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
       console.log('[train-3p] 示范窗口已下达：EPIRUS_IMIT_FRAC=' + frac + ' ⇒ imitUntil=' + imitGens +
         ' 代 · **行为式读回** β(gen0)=' + beta0);
     }
-    /* v1.5.189：退火窗口没开 ⇒ β≡0 ⇒ 覆盖永不触发（DS §N12 那个"空枪臂"的形状）⇒ 归因也就无从谈起。 */
-    if (IMIT_ON && typeof T.imitBetaForGen === 'function' && !(Number(T.imitBetaForGen(0)) > 0)) IMIT_ON = false;
+    /* v1.5.189：退火窗口没开 ⇒ β≡0 ⇒ 覆盖永不触发（DS §N12 那个"空枪臂"的形状）⇒ 归因也就无从谈起。
+     * §E499 收口：这里原来只是**静默**把 IMIT_ON 关掉 ⇒ 一臂"要了示范"却与无示范臂逐字节相同，
+     *   而退出前的开火统计写的是 `tries=0` —— 那条守卫只挡 `tries>0 && fired===0`，**0 次尝试就这么溜过去了**。
+     *   实测踩过：`EPIRUS_IMIT_OVERRIDE=1 + IMIT_ONLY=snipe + TEACHER=pickSnipeSpam` 三行横幅都"读回 true"，
+     *   跑完与对照臂 **0/5689 位不同**。⇒ 现在按同一族的老规矩：没有 β 就是用法错，`exit 7` 并指名补哪个旋钮。 */
+    if (IMIT_ON && typeof T.imitBetaForGen === 'function' && !(Number(T.imitBetaForGen(0)) > 0)) {
+      console.error('[train-3p] ⛔ 示范族已下达（OVERRIDE/ONLY/TEACHER 都读回成功）但 **β(gen0)=' + T.imitBetaForGen(0) +
+        '** ⇒ 覆盖一次都不会触发，这一臂会与"无示范"臂逐字节相同（§N12 的空枪臂形状）。' +
+        '\n       补上退火窗口再跑：EPIRUS_IMIT_FRAC=0.5（前 50% 代注入示范，之后退火到纯自策略）');
+      process.exit(7);
+    }
   }
   /* ===== v1.5.169（§N28）：训练**模式**下达（`EPIRUS_TRAIN_MODE=long` ⇒ 5 血长程考卷）=====
    * 动因（用户 09-22 的原话目标）："理想情况下应该炼一个 5 血长程能通吃其他模式" —— 而 `TRAIN_MODE` 一直是写死的 `'multi'`，
