@@ -543,7 +543,14 @@ export const HOLO_GIFT_MAX = 6;
  * 而 `EPIRUS_SEAT_GAMES`/`EPIRUS_AGGR_GAMES`/`EPIRUS_DENSITY_GAMES`/`EPIRUS_CHARGE_GAMES` 的默认值当时**抄在四个文件里**
  * （promote-champion / train-best / champ-audit / train-server）⇒ 改一处就分叉。
  * 规矩：**一个计划、一处默认**；入口要换 n 必须显式传 override，并且**把 n 印在读数旁边**（不印 n 的五道读数视为可疑）。 */
-export const FEAS_N_DEFAULTS = { games: 20, aggr: 40, seat: 100, density: 20, charge: 40 };
+/* §E492 场A（被集火）探针 40 → **100 局**（用户 10-08 裁定：「那你把场A加到100吧」）。
+ *   为什么要动：这一栏量的"还手率"阈值就压在 20% 上，而 p=0.2 时 1.96SE = 1.96·√(0.2·0.8/n)·100
+ *     n=40 ⇒ **±12.4pt**（20% 这条线根本判不动）‖ n=100 ⇒ ±7.8pt ‖ 要判 ±2pt 得 n≈1536。
+ *   实测代价：库内 916 枚有 fieldA 读数，其中 **47 枚落在 0.18~0.22**、227 枚落在 0.14~0.26 ⇒
+ *   按老样本量，这两批"过/没过线"多数是掷硬币（§E481 就是这么把 SOUP-KE-l60 卡在 19.8% 的）。
+ *   ⚠ 改了这里 = 改了**所有**读这道闸的产物（promote / feas.mjs / 图上"上槽体检"那一档），
+ *     所以 `feas.tsv` 必须整表重跑，且表里现在带 `tag` 列把样本量随行记录（viewer 拒绝混两套样本量画一张图）。 */
+export const FEAS_N_DEFAULTS = { games: 20, aggr: 100, seat: 100, density: 20, charge: 40 };
 /* ===== v1.5.287（DS 清单第 8 条剩下那一半）：**判定读数必须自带噪声尺** =====
  * 病：`G4 最克 62% > 60% 即红` 这类判据，在 n=60 时单格标准误就有 ~6pt ⇒ **临界包的红/绿是抽样决定的**，
  *   而打印出来的只有一个百分数，读的人看不出"离判定线 2pt"和"离判定线 30pt"是两件不同的事。

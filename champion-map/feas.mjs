@@ -37,7 +37,11 @@ const SH = String(arg('shard', '1/1')).split('/').map(Number);
 const FEAS_N = feasPlan(process.env, null);
 const G = FEAS_N.games;
 const COLS = ['id', 'ok', 'nFail', 'fails', 'G', 'G2', 'wallDmg', 'fieldA', 'fieldBClears',
-  'seatVerdict', 'seatSpread', 'zeroAtkRate', 'recOk', 'recFails', 'oppsN'];
+  'seatVerdict', 'seatSpread', 'zeroAtkRate', 'recOk', 'recFails', 'oppsN',
+  /* §E492 样本量必须**随行**记录：这张表原来不写 n，于是"aggr40 那批"与"aggr100 那批"混进同一条
+   *   `fieldA` 列时**没有任何一行能自证是哪批**（而 viewer 是按"后写的覆盖先写的"合并四张表的）。
+   *   下游 `viewer.mjs` 现在读这一列：见到两种 tag 就拒绝出图。 */
+  'tag'];
 
 /* ---- 名单：直接读坐标表 ⇒ "判了几枚"与"画了几枚"永远是同一批 ----
  *   ⚠ 先归一 CRLF：coords.tsv 的**末列**就是 path，用 split('\n') 会把它读成 "path\r" ⇒ indexOf 拿 −1。*/
@@ -103,6 +107,7 @@ todo.forEach((e, i) => {
     rec.fails = 'ERR ' + String(err.message || err).split('\n')[0].slice(0, 100).replace(/[\t\n]/g, ' ');
     if (i < 3 || i % 50 === 0) console.log('  ⚠ ' + e.id + ' 判定失败：' + rec.fails.slice(0, 90));
   }
+  rec.tag = FEAS_N.tag;   /* §E492 出错行也要带 tag（否则"没判定"会被读成"这一批的样本量不明"）*/
   appendFileSync(OUTP, COLS.map(c => rec[c] === undefined ? '' : rec[c]).join('\t') + '\n');
   if (i % 25 === 0 || i === todo.length - 1) {
     const el = (Date.now() - t0) / 1000, per = el / (i + 1);

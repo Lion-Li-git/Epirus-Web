@@ -154,18 +154,30 @@ if (existsSync(linP)) {
   const ll = readFileSync(linP, 'utf8').trim().split('\n'); const lh = ll[0].split('\t');
   for (const l of ll.slice(1)) { const c = l.split('\t'); const o = {}; lh.forEach((k, i) => { o[k] = c[i]; }); LIN[o.id] = o; }
 } else console.log('⚠ 没有 lineage.tsv ⇒ 家族退回按 seed 上色（跑 node champion-map/lineage.mjs 生成）');
-let OKM = null, POK = 0, OKSRC = '';
+let OKM = null, POK = 0, OKSRC = '', OKTAG = '';
 if (FEAS_FILES.length) {
-  OKM = {};
+  OKM = {}; const TAGS = {};
   for (const f of FEAS_FILES) {
     const L = readFileSync(join(HERE, f), 'utf8').trim().split('\n');
-    const hd = L[0].split('\t'), iId = hd.indexOf('id'), iOk = hd.indexOf('ok'), iF = hd.indexOf('fails');
+    const hd = L[0].split('\t'), iId = hd.indexOf('id'), iOk = hd.indexOf('ok'), iF = hd.indexOf('fails'), iT = hd.indexOf('tag');
     for (const l of L.slice(1)) { const c = l.split('\t'); const id = c[iId]; if (!id) continue;
       /* §E307 顺手把 G(long) 也带进来：它是闸卡住前沿的那条腿（前 30 名里 16 枚未过线，多数栽在这儿），
        *   图上原本完全看不见 ⇒ 多一个着色口径就能当场指出"该往哪儿训"。 */
-      if (c[iOk] === '0' || c[iOk] === '1') OKM[id] = { ok: c[iOk] === '1', fails: String(c[iF] || '').slice(0, 160), g2: Number(c[hd.indexOf('G2')]) }; }
+      if (c[iOk] === '0' || c[iOk] === '1') {
+        OKM[id] = { ok: c[iOk] === '1', fails: String(c[iF] || '').slice(0, 160), g2: Number(c[hd.indexOf('G2')]) };
+        /* §E492 样本量随行读进来并**对账**：`fieldA` 那一栏的分辨率直接由 n 决定（n=40 ⇒ ±12.4pt，n=100 ⇒ ±7.8pt），
+         *   而这张表是四张文件按"后写覆盖先写"合并的 ⇒ 混两套样本量就等于把同一列画成两把尺，
+         *   且事后**从数据里看不出哪一行是哪把**。缺 tag 列的老表按 'n=20/aggr40/seat100' 记（那批就是这么跑的）。 */
+        const tg = iT >= 0 ? String(c[iT] || '').trim() : '';
+        TAGS[tg || 'n=20/aggr40/seat100（老表，无 tag 列）'] = (TAGS[tg || 'n=20/aggr40/seat100（老表，无 tag 列）'] || 0) + 1; } }
   }
-  POK = Object.keys(OKM).length; OKSRC = '现跑同一道闸（feasibilityOf · n=20/aggr40/seat100）';
+  const tk = Object.keys(TAGS);
+  if (tk.length > 1) { console.error('⛔ 过线判定表里混了 ' + tk.length + ' 种样本量：' +
+    tk.map(x => x + ' × ' + TAGS[x]).join(' ‖ ') +
+    '\n       ⇒ 同一列 `fieldA` 被两把尺量过，而"20% 那条线判不判得动"直接由 n 决定（n=40 ±12.4pt ‖ n=100 ±7.8pt）。' +
+    '\n         要么全库重跑到同一个 n：node champion-map/feas.mjs --shard=k/N --out=feas-sK.tsv（改 n 请改 audit-lib 的 FEAS_N_DEFAULTS）'); process.exit(2); }
+  OKTAG = tk[0] || '';
+  POK = Object.keys(OKM).length; OKSRC = '现跑同一道闸（feasibilityOf · ' + (OKTAG || '表里没写样本量') + '）';
 } else if (existsSync(panelP)) {
   const pl = readFileSync(panelP, 'utf8').trim().split('\n');
   const ph = pl[0].split('\t');
@@ -2344,7 +2356,7 @@ function paintLegend(fr) {
     F: '针的位置按**当下窗口**里现役的铺位比算 ‖ 灰 = 库内中位，不是"不好不坏"的绝对电平',
     rel: '只有这一档把带换成分散色标：0 = 现役那一档（灰），两侧各按本侧 p90 距归一 ⇒ 超出即钉在两端',
     gl: 'G(long) = 长程自对局的技能广度，与过线判定同一道闸现跑（n=20）‖ 线 ≥3，低于 3 直接不过线',
-    pm: '上槽体检 = 三条腿一起现跑（n=20 ‖ aggr40 ‖ seat100）‖ 灰 = 没测过，**不等于**没过',
+    pm: '上槽体检 = ' + OKSRCJ + ' ‖ 灰 = 没测过，**不等于**没过',   /* §E492 样本量从表里派生，不许把数字抄在文案里 */
     duel: '配对差 A−B：同座位表、同批种子、两批各 60 局 ‖ 黄 = 两批符号翻 ⇒ 判不动，不许并进赢',
     hp: '每枚都是单批读数 ‖ 同一枚换一批实测摆 2.3~5.7pt ⇒ 颜色看水位，排序请用「对现役决斗」那档',
     de: 'Δε = 考卷（ε=0）− 页面（ε=0.2 soft）‖ 发散带 0 在正中：红 = 一开探索就掉，蓝 = 开了反而强',
@@ -2403,7 +2415,7 @@ function paintLegend(fr) {
   if (OKL.length && (st.color === 'fam' || st.color === 'seed')) {
     /* §E437：用户要求「逐枚过线」后面也换行再接 185/901 */
     s2.innerHTML = '黄针 = 现役 · 绿环 = 逐枚过线<br>' + OKL.length + '/' + POKJ;
-    s2.title = '现跑同一道闸：feasibilityOf · n=20/aggr40/seat100';
+    s2.title = OKSRCJ || '包自己 META 里的历史 feasibility.ok（没有现跑的判定表）';   /* §E492 同上：口径由数据说 */
     /* §E434 DS：§E432 那笔把 s1 整行清空了（用户当时说顶部有选项框、这行是重复），但**颜色的含义**也跟着没了 ——
      *   用户 10-08：「你刚才删的太多，现在图例颜色是啥没掉了，至少要保留这玩意是 F = Hp + T·S」。
      *   ⇒ 恢复简短版（不写点色 = 家族，那是选项框的事），正好填掉左上那块空白。 */

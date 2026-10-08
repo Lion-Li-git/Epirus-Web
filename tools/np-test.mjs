@@ -6121,7 +6121,10 @@ t('D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测
   eq(FEAS_N_DEFAULTS.games, 20, '体检默认 n 仍是 20（改了 = 历史读数口径变了，得走裁定）');
   eq(FEAS_N_DEFAULTS.seat, 100, '座位探针默认 100（champ-audit 注释：≥100 才有判别力）');
   let p = feasPlan({});
-  eq(p.games, 20, '空 env ⇒ 默认'); eq(p.aggr, 40, 'aggr 默认'); eq(p.seat, 100, 'seat 默认');
+  /* §E492 这三个数原来抄死成 `20/40/100` ⇒ 把"某年拍的样本量"钉成了判据：改 n 就必须来改这里，
+   *   而这条门真正判的是「`feasPlan` 空 env 时读的是不是**同一个单一来源**」（门体标题那件事：同一包两条路径读出不同的尺）。
+   *   所以期望值改成从 `FEAS_N_DEFAULTS` 取 —— 门照样能抓"feasPlan 自己硬编码了一个数"，但不再钉死具体值。 */
+  eq(p.games, FEAS_N_DEFAULTS.games, 'games 默认'); eq(p.aggr, FEAS_N_DEFAULTS.aggr, 'aggr 默认'); eq(p.seat, FEAS_N_DEFAULTS.seat, 'seat 默认');
   p = feasPlan({ EPIRUS_FEAS_GAMES: '120' });
   eq(p.games, 120, 'EPIRUS_FEAS_GAMES 必须能整体换尺');
   p = feasPlan({ EPIRUS_FEAS_GAMES: '120' }, { games: 40 });
@@ -6169,8 +6172,13 @@ t('D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测
     encoding: 'utf8', timeout: 600000,
   });
   const so = String(r.stdout || '');
-  ok(/\[3P栏 n=20\/aggr40\/seat100\]/.test(so),
-    '不设 EPIRUS_TB3P_GAMES 时 3P 栏必须与体检同尺（实测打印的是：' + ((so.match(/\[3P栏[^\]]*\]/) || ['（没跑这一栏）'])[0]) + '）');
+  /* §E492 这一行原来写死 `/\[3P栏 n=20\/aggr40\/seat100\]/` ⇒ 把"当年拍的样本量"钉成了判据。
+   *   这条腿真正判的是**3P 栏必须与体检同一把尺**（同一个 `feasPlan`），所以期望值必须从
+   *   `FEAS_N_DEFAULTS` 派生 —— 否则改 n 就要来改这里，而"改一处忘一处"正是这条规矩要防的东西。
+   *   用 indexOf 而不是正则：tag 里带斜杠，转义只是给下一次漏改留坑。 */
+  const WANT3P = '[3P栏 n=' + FEAS_N_DEFAULTS.games + '/aggr' + FEAS_N_DEFAULTS.aggr + '/seat' + FEAS_N_DEFAULTS.seat + ']';
+  ok(so.indexOf(WANT3P) >= 0,
+    '不设 EPIRUS_TB3P_GAMES 时 3P 栏必须与体检同尺（期望 ' + WANT3P + ' ‖ 实测打印的是：' + ((so.match(/\[3P栏[^\]]*\]/) || ['（没跑这一栏）'])[0]) + '）');
   ok(r.status === 0 || r.status === 9, '迷你臂只许 0/9 收场（实测 ' + r.status + '）');
 });
 
