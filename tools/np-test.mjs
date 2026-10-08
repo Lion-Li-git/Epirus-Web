@@ -11382,6 +11382,30 @@ t('D231 §E477 权重融合入口 `tools/soup-pack.mjs`：自证必须绿 · 四
     /* ⑨ 静态哨兵：这个入口不许把产物写到线上槽（训练侧栽过一次"打错的帮助页改脏门禁基线"） */
     ok(!/writeFileSync\(\s*['"]js\/bundled-champion/.test(src), '⑨ 源码里不许出现往 `js/bundled-champion*` 写的路径');
     ok(/不写 `js\/\*\*`|只写 `--out=`/.test(src), '⑨ 且头注里那条"不写 js/**"的规矩要留字（谁改这段注释得说明为什么）');
+    /* ===== §E498 外科复制模式（`--copy-cols=`）的三条 ===== */
+    const cp = join(dir, 'copy.js');
+    const r2 = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/e234-out/K2.js,docs/artifacts/v17-146.bak',
+      '--copy-cols=4', '--out=' + cp], { encoding: 'utf8', timeout: 300000 });
+    eq(r2.status, 0, '⑩ 真跑一次"只复制防御向那一列"必须成功：\n' + String(r2.stderr || r2.stdout).split('\n').slice(-5).join('\n'));
+    const csrc = readFileSync(cp, 'utf8');
+    const cobj = JSON.parse((csrc.match(/window\.EPIRUS_CHAMPION_3P = (\{[\s\S]*?\});/) || [])[1]);
+    const sb = sandbox(process.cwd());
+    const cpk = sb.EpirusPolicy.checkPack(cobj);   // 引擎自己那份严格校验（不是工具侧放宽版）
+    ok(cpk && cpk.ok !== false, '⑩ 产物必须被**引擎自己**收下（checkPack 不 ok ⇒ 这枚包在页面上就是一堆乱码）：' + JSON.stringify(cpk));
+    /* 改动格数必须**正好**等于 HID × 列数：多一格就是"复制时顺手做了平均"，少一格就是行主序算错 */
+    const pb = sb.EpirusPolicy.unpack(JSON.parse((readFileSync('docs/artifacts/e234-out/K2.js', 'utf8')
+      .match(/window\.EPIRUS_CHAMPION_3P = (\{[\s\S]*?\});/) || [])[1]), true);
+    let diff = 0; const q = sb.EpirusPolicy.unpack(cobj, true);
+    for (let i = 0; i < pb.length; i++) if (pb[i] !== q[i]) diff++;
+    eq(diff, 24, '⑪ 复制 1 列必须改**恰好 24 格**（HID=24 个隐单元 × 1 列；实测 ' + diff + '）');
+    ok(/"mode":"copy-cols"/.test(csrc) && /"cols":\[4\]/.test(csrc),
+      '⑫ 产物 meta 必须写明"这是外科复制、复制了哪几列"（否则日后有人拿它当平均产物去复算）');
+    const r3 = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/e234-out/K2.js,docs/artifacts/v17-146.bak',
+      '--copy-cols=99', '--out=' + join(dir, 'bad.js')], { encoding: 'utf8', timeout: 120000 });
+    eq(r3.status, 3, '⑬ 列号越界（99 ≥ FEAT_A=22）必须拒（exit 3），实测 ' + r3.status);
+    const r4 = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/e234-out/K2.js,docs/artifacts/v17-146.bak',
+      '--copy-cols=4', '--w=0.5,0.5', '--out=' + join(dir, 'bad2.js')], { encoding: 'utf8', timeout: 120000 });
+    eq(r4.status, 64, '⑭ `--copy-cols` 与 `--w` 同时给必须 64（两种语义不许混），实测 ' + r4.status);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

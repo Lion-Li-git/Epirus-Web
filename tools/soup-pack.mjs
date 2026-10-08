@@ -33,7 +33,7 @@ import { sandbox, extractJsonObject, parseMetaTolerant } from '../tools/audit-li
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
-const KNOWN = ['packs', 'w', 'out', 'force-fp', 'self-test'];
+const KNOWN = ['packs', 'w', 'out', 'force-fp', 'copy-cols', 'self-test'];
 const bad = process.argv.slice(2).filter(a => a.startsWith('--') && !KNOWN.some(k => a.startsWith('--' + k + '=') || a === '--' + k));
 if (bad.length) { console.error('[soup] ⛔ 不认识的参数：' + bad.join(' ') + '（认的只有 ' + KNOWN.join('/') + '）'); process.exit(64); }
 
@@ -53,6 +53,32 @@ export function mix(arrays, ws) {
   const out = new Float64Array(L);
   for (let i = 0; i < L; i++) { let v = 0; for (let k = 0; k < n; k++) v += w[k] * arrays[k][i]; out[i] = v; }
   return { params: out, w };
+}
+
+/* ===== §E498 外科复制：**只换动作段里指定的那几列**，其余保持 base 原样（不做平均） =====
+ * 为什么要有这一条（用户问"融合为什么让盾变多"，查出来的机理）：
+ *   v7 的动作**不是"每张卡一个头"** —— `policy.js:actionFeatures` 把动作编码成 22 个**语义列**
+ *   （0 可负担余量 · 1 可施展 · **2 相对费用** · **3 攻击向** · **4 防御向** · 5 雷系 · **6 期望伤害** ·
+ *    7 穿防 · 8 穿反 · 9 穿转移 · 10 类别 · 11 目标=敌 · 12 目标=己 · 13 持续 · 14/15 珠型 · 16..21 目标特征）。
+ *   ⇒ 平均两个父母时，这些列是**整族一起动**的：`防御向=1` 那一列一改，所有防御卡一起被抬/被压，
+ *     而防御卡 0~1 ジ、几乎永远合法 ⇒ 平手期它先赢 ⇒ 这就是"融合出防御吸引子"的通道（§E497 实测八粒防御全部上升）。
+ *   所以能"外科"的对象是**列**，不是卡。复制列 = 把 donor 对这一族语义的取舍整块搬进 base，不产生新的中间值。
+ * 布局（`policy.js:value`）：W1 从 0 起、行主序 `HID × FEAT_N`，第 j 个隐单元的第 i 个动作列在 `j*FEAT_N + FEAT_S + i`。 */
+export function copyCols(base, donor, cols, sh) {
+  const HID = sh.HID, FS = sh.FEAT_S, FN = sh.FEAT_N, FA = sh.FEAT_A;
+  const need = HID * FN + HID + HID + 1;
+  if (base.length !== need || donor.length !== need) throw new Error('copyCols: 长度不是这份形状（' + base.length + '/' + donor.length + ' 需 ' + need + '）');
+  const cs = Array.from(new Set(cols.map(Number)));
+  if (!cs.length) throw new Error('copyCols: 没给列号');
+  if (cs.some(c => !Number.isInteger(c) || c < 0 || c >= FA)) throw new Error('copyCols: 列号必须是 0..' + (FA - 1) + ' 的整数，收到 ' + cs.join(','));
+  const out = new Float64Array(base);
+  let changed = 0;
+  for (let j = 0; j < HID; j++) for (const c of cs) {
+    const at = j * FN + FS + c;
+    if (out[at] !== donor[at]) changed++;
+    out[at] = donor[at];
+  }
+  return { params: out, cols: cs, changed };
 }
 
 /* ============================ self-test（合成数据，秒级） ============================ */
@@ -77,6 +103,25 @@ if (process.argv.indexOf('--self-test') >= 0) {
   try { mix([A, B], [0, 0]); } catch (e) { threw++; }
   const eqN = (name, got, want) => { const ok = got === want; if (!ok) fails++; console.log((ok ? '  ok   ' : '  FAIL ') + name + (ok ? '' : '  got=' + got + ' want=' + want)); };
   eqN('长度不符/负权/零权 都抛错（3 条）', threw, 3);
+  /* ===== §E498 copyCols 的手算期望（合成一份小形状：HID=2 · FEAT_S=3 · FEAT_A=2 ⇒ FEAT_N=5 · len=15） =====
+   *   布局 `j*FEAT_N + FEAT_S + c` ⇒ 列 0 落在 3 与 8；列 1 落在 4 与 9。其余（状态段 0..2、偏置、W2、B2）必须**一个都不动**。 */
+  const SH = { HID: 2, FEAT_S: 3, FEAT_A: 2, FEAT_N: 5 };
+  const Z = new Array(15).fill(0), S7 = new Array(15).fill(7);
+  const c0 = copyCols(Z, S7, [0], SH);
+  eq('copyCols 只动指定列（列 0 ⇒ 位置 3 与 8）', c0.params.slice(), [0, 0, 0, 7, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0]);
+  eqN('copyCols 报"改了几格"（2 个隐单元 × 1 列 = 2）', c0.changed, 2);
+  const c2 = copyCols(Z, S7, [0, 1], SH);
+  eqN('两列 ⇒ 4 格', c2.changed, 4);
+  eq('列 1 落在位置 4 与 9', [c2.params[4], c2.params[9]], [7, 7]);
+  let ct = 0;
+  try { copyCols(Z, S7, [2], SH); } catch (e) { ct++; }                 // FEAT_A=2 ⇒ 列号上限是 1
+  try { copyCols(Z, S7, [-1], SH); } catch (e) { ct++; }
+  try { copyCols(Z, S7, [], SH); } catch (e) { ct++; }
+  try { copyCols(Z, S7.slice(0, 9), [0], SH); } catch (e) { ct++; }     // 长度不是这份形状
+  eqN('越界/负数/空列/长度不符 都抛错（4 条）', ct, 4);
+  /* 幂等：同一批列复制两次，结果必须与一次相同（这条挡的是"复制时顺手做了平均"）*/
+  const c1b = copyCols(c0.params, S7, [0], SH);
+  eq('重复复制同一批列必须幂等', c1b.params.slice(), c0.params.slice());
   console.log(fails ? '⛔ self-test ' + fails + ' 条红' : '✔ self-test 全绿');
   process.exit(fails ? 1 : 0);
 }
@@ -149,11 +194,27 @@ if (FP_PRESENT.length > 1) {
 }
 
 /* ============================ 融合 + 落盘 ============================ */
-const { params, w } = mix(src.map(s => s.params), WS);
+/* §E498 两种模式：默认是**加权平均**；给了 `--copy-cols=` 就是**外科复制**（base = 第一粒，donor = 第二粒，
+ *   只把指定的动作语义列从 donor 搬进 base，其余逐位保持 base）⇒ 与 --w 互斥，且只接受两粒。 */
+const COPY = arg('copy-cols', '') ? String(arg('copy-cols')).split(',').map(s => s.trim()).filter(x => x !== '').map(Number) : null;
+const sh0 = { HID: src[0].pack.h, FEAT_S: src[0].pack.f, FEAT_A: src[0].pack.fa, FEAT_N: src[0].pack.f + src[0].pack.fa };
+let params, w, MODE, changed = 0;
+if (COPY) {
+  if (src.length !== 2) { console.error('[soup] ⛔ --copy-cols 只吃两粒（第一粒 = base，第二粒 = donor），实测 ' + src.length + ' 粒'); process.exit(64); }
+  if (WS) { console.error('[soup] ⛔ --copy-cols 与 --w 互斥：复制不做平均（混着给会两头都不像，且没人能复算）'); process.exit(64); }
+  let r; try { r = copyCols(src[0].params, src[1].params, COPY, sh0); }
+  catch (e) { console.error('[soup] ⛔ copyCols 拒了：' + (e && e.message) + '（这份形状 HID=' + sh0.HID + ' FEAT_S=' + sh0.FEAT_S + ' FEAT_A=' + sh0.FEAT_A + '）'); process.exit(3); }
+  params = r.params; w = [1, 0]; MODE = 'copy-cols'; changed = r.changed;
+  console.log('[soup] 外科复制模式 ‖ base=' + src[0].file + ' ‖ donor=' + src[1].file + ' ‖ 列 ' + r.cols.join(',') +
+    ' ‖ 改了 ' + changed + ' 格（= ' + sh0.HID + ' 个隐单元 × ' + r.cols.length + ' 列 的上限内）');
+} else {
+  const m = mix(src.map(s => s.params), WS); params = m.params; w = m.w; MODE = 'mean';
+}
 const pack = P.pack(params);
 const meta = {
   generatedBy: 'tools/soup-pack.mjs',
   soup: {
+    mode: MODE, cols: MODE === 'copy-cols' ? COPY.filter((x, i) => COPY.indexOf(x) === i) : null, changed,
     weights: w.map(x => Number(x.toFixed(6))),
     sources: src.map(s => ({ file: s.file, wid: s.wid, ts: s.meta.ts || null, arm: s.meta.arm || s.meta.nameSeed || null, rulesFingerprint: s.meta.rulesFingerprint || null })),
     forceFp: fpForced,
@@ -181,7 +242,7 @@ writeFileSync(outAbs,
   'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
   'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(pack) + ';\n');
 
-console.log('[soup] 来源 ' + src.length + ' 粒 · 权重 ' + w.map(x => x.toFixed(3)).join(' : '));
+console.log('[soup] ' + (MODE === 'copy-cols' ? '模式 = 外科复制列（不是平均）' : '来源 ' + src.length + ' 粒 · 权重 ' + w.map(x => x.toFixed(3)).join(' : ')));
 src.forEach((s, i) => console.log('   w=' + w[i].toFixed(3) + '  ' + s.wid + '  ' + s.file + (s.meta.arm ? '  arm=' + s.meta.arm : '')));
 console.log('[soup] 与每粒来源的逐位相对距离：' + meta.soup.l2ToSource.join('  '));
 console.log('[soup] ✔ 已写 ' + outAbs + '   （形状 v' + pack.v + ' · len=' + pack.a.length + ' · f=' + pack.f + ' · fa=' + pack.fa + ' · h=' + pack.h + '）');
