@@ -216,7 +216,17 @@ if (existsSync(shipP)) {
 const stlP = join(HERE, 'slot-timeline.tsv');
 if (existsSync(stlP)) {
   const tl = readFileSync(stlP, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), th = tl[0].split('\t');
-  const tW = th.indexOf('wid'), tF = th.indexOf('fromUTC'), tS = th.indexOf('sha'), tM = th.indexOf('metaTs');
+  const tW = th.indexOf('wid'), tF = th.indexOf('fromUTC'), tS = th.indexOf('sha'), tM = th.indexOf('metaTs'), tU = th.indexOf('subject');
+  /* §E463 旧槽位冠军在图上的标签原来是 SLOT-<8位哈希>（16 枚全是），用户 10-08：「太长了也让人看不明白，你把标签改成对应版本号」。
+     版本号不用新数据：这张时间轴的 subject 就是引入它的那条提交标题，本仓换包一律把版本写在标题里
+     （实测形如 "v1.3.0：多人（3 人）自对战训练…" ‖ "v1.3.4 训练场支持…" ‖ "feat(pack) v1.5.257 上槽 Ldemo"）。
+     ⚠ 这里不用正则（模板转义那台自证会连累别处，且正则里要写 \d）：手扫第一个 'v' + 数字 + 至少一个点号。 */
+  function verOf(sub) { const t = String(sub || '');
+    for (let k = 0; k + 4 < t.length; k++) { if (t.charAt(k) !== 'v') continue;
+      let e = k + 1, dig = 0, dot = 0; const NUM = '0123456789.';
+      while (e < t.length && NUM.indexOf(t.charAt(e)) >= 0) { if (t.charAt(e) === '.') dot++; else dig++; e++; }
+      if (dig >= 2 && dot >= 1) return t.slice(k, e); }
+    return ''; }
   if (tW < 0 || tF < 0) console.log('⚠ slot-timeline.tsv 没有 wid/fromUTC 列（表头：' + tl[0] + '）⇒ 旧槽位冠军会退回"未上槽"');
   else {
     const BY8 = {};
@@ -225,14 +235,15 @@ if (existsSync(stlP)) {
       /* §E378：这张表 39 段里只有 **32 个不同权重**（同一枚回槽过多次：实测 cc573172 两次、037b2f71 三次、
        *   e379c62c 两次）。原来这份 BY8 是"后一行覆盖前一行"⇒ 记下来的是**最后一次**进槽的时刻，
        *   而"上线"这件事的第一次才是它（也是 §E378 那条接替链不出现倒挂的前提）。改成只留第一次。 */
-      if (!(w8 in BY8)) { BY8[w8] = { when: c[tF] || '', hash: tS >= 0 ? (c[tS] || '') : '' };
+      if (!(w8 in BY8)) { BY8[w8] = { when: c[tF] || '', hash: tS >= 0 ? (c[tS] || '') : '', ver: tU >= 0 ? verOf(c[tU]) : '' };
         SLOT_FIRST[w8] = c[tF] || ''; SLOT_META[w8] = tM >= 0 ? (c[tM] || '') : ''; } }
     let nstl = 0;
     for (const r of rows) { const id = String(r.id || '');
       if (id.indexOf('SLOT-') !== 0 || SHIP[id]) continue;
       const k = id.slice(5, 13);
-      if (BY8[k]) { SHIP[id] = { when: BY8[k].when, hash: BY8[k].hash, ver: '' }; nstl++; } }
-    console.log('上线时刻补自**槽位时间轴** ' + nstl + ' 枚（旧槽位冠军 ‖ ship-times.tsv 覆盖不到的那几段 ‖ 时间轴共 ' + (tl.length - 1) +
+      if (BY8[k]) { SHIP[id] = { when: BY8[k].when, hash: BY8[k].hash, ver: BY8[k].ver || '' }; nstl++; } }
+    console.log('上线时刻补自**槽位时间轴** ' + nstl + ' 枚（其中版本号从提交标题认回 '
+      + Object.keys(SHIP).filter(k => SHIP[k] && SHIP[k].ver).length + ' 枚 ‖ 旧槽位冠军 ‖ ship-times.tsv 覆盖不到的那几段 ‖ 时间轴共 ' + (tl.length - 1) +
       ' 段 / ' + Object.keys(SLOT_FIRST).length + ' 个不同权重 ‖ 横轴取 META 写盘时刻，有该时刻的 ' +
       Object.keys(SLOT_META).filter(k => SLOT_META[k]).length + ' 个）');
   }
@@ -746,6 +757,10 @@ function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
    *   其余 742/901 枚直接糊成背景噪点，图例点下去之后整张图读不动。压到 0.34 既留住"谁被选中"的对比，
    *   又保住上下文（这张图的价值恰恰在"被选中的那家相对别人在哪"）。*/
 /* 家族短标：只取"改了什么"那一段并截断（长说明留给悬停），否则一个按钮吃掉整条图例栏。*/
+/* §E463 图上那 16 枚旧槽位冠军的 id 是 SLOT-<8位权重哈希>，用户 10-08：「太长了也让人看不明白，你把标签改成对应版本号」
+ *   ⇒ 有版本号（sv，从引入它的那条提交标题认回，见构建侧 verOf）就标版本号，没有仍回落到 id —— 不许编一个。
+ *   悬停与选中卡上仍然给全 id + 哈希，身份这件事不能因为好读就丢掉。*/
+function labOf(d) { return (d && d.sv && String(d.id).indexOf('SLOT-') === 0) ? d.sv : (d ? d.id : ''); }
 function famLab(d) { return FAMLAB[d.fam] || ''; }
 /* E397 DS（用户 10-08：一大堆调整数字被截掉在这里也看不清楚，尤其家族 5 / 22 这种超长标签）：
  *   上游那条 recipe 是**一长串「名 a→b」**，其中大多数是「-→v」（从默认打开）或「v→-」（关掉回默认）。
@@ -1227,7 +1242,7 @@ function draw1(fr) {
   labelReset(); g.fillStyle = st.ink;
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var p = scr[ls[i].i]; if (!p) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, p[0], p[1], !!P[ls[i].i].lin, true, ls[i].i); }
+    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), p[0], p[1], !!P[ls[i].i].lin, true, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText('一维：位置 = ' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次') + '（下方蓝条 = Hp 线上口径夺1率，黄条 = T·S）· 悬停看明细 · 点一枚 = 选中（点空白取消）· 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
 }
@@ -1473,7 +1488,7 @@ function drawTree(fr) {
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
   g.restore();   /* §E314 数据层的裁剪到这里收口（点与点标签都不许滑进左栏）*/
   /* §E379 这里原来是"数据画完之后按同一仿射把左栏那一条回贴一遍"（§E377 加的，为了让点糊不住家族名）。
    *   撤掉：左栏现在是纸上的墨，与点同进同退，"糊住"这件事只能靠层序（纸在下、点在上）表达，
@@ -1621,7 +1636,7 @@ function drawMap(fr) {
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
   if (st.q) for (i = 0; i < N; i++) if (String(P[i].id).toLowerCase().indexOf(st.q) >= 0 && scr[i]) {   /* §E453 与 labelSet 那一处必须同一条规则 */
     g.beginPath(); g.arc(scr[i][0], scr[i][1], 11 * st.size, 0, 6.284); g.strokeStyle = st.ink; g.lineWidth = 2; g.stroke(); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
@@ -2042,7 +2057,7 @@ function draw3b(fr) {
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText('三维行为轴（x3/y3/z3）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 颜色 = F（线上口径势 = Hp + T·S）⇒ 第三轴是行为不是深度' +
     /* §E312 壳好不好必须当场给数，而且**两列一起给**：含自己那列与画出来的壳同口径但循环，留一那列才是"不是靠自己被圈进来"。
@@ -2335,7 +2350,8 @@ function paintCard() {
   var i = st.sel === null ? -1 : nOf(st.sel);
   if (i < 0 || !P[i]) { el.style.display = 'none'; el.textContent = ''; return; }
   var d = P[i];
-  var head = (d.id === 'SHIPPED-Ldemo' ? '★ ' : '') + d.id + (d.lin ? ' 【' + d.lin + '】' : '') + (d.kin ? ' 〔' + d.kin + '〕' : '');
+  var head = (d.id === 'SHIPPED-Ldemo' ? '★ ' : '') + d.id + (d.lin ? ' 【' + d.lin + '】' : '') + (d.kin ? ' 〔' + d.kin + '〕' : '')
+    + (d.sv && String(d.id).indexOf('SLOT-') === 0 ? '（版本号 ' + d.sv + ' ‖ 标签上写的就是它）' : '');   /* §E463 卡上给全身份 */
   /* 家族标签用**截断版**：famLab 全串里带一整列"父"权重哈希（实测 20 个 ≈ 700 字符），
    *   直接拼进来这张卡会横贯整个画布，把下面的页脚与投影判据全盖住（第一版截图就是这样）。
    *   §E449 之后卡会自己折行 ⇒ "撑宽"这件事已经不会发生，但 700 字符折出来是二十行，所以总结式照用。*/
@@ -2379,10 +2395,11 @@ function paintSide() {
   for (var j = 0; j < CH.length; j++) { (function (i) { var d = P[i];
     var b = document.createElement('button');
     b.className = (st.cmp.indexOf(d.id) >= 0 ? 'on ' : '') + (d.id === 'SHIPPED-Ldemo' ? 'cur' : '');
-    b.textContent = (d.sh ? '' : '⚠') + (d.id === 'SHIPPED-Ldemo' ? '★ ' : '') + d.id +
-      ' ‖ ' + (d.sv || (d.sh ? '' : '未上槽')) + ' ‖ ' + (d.sh ? d.sh.slice(5, 10) : (d.ts || '').slice(5, 10)) +
+    b.textContent = (d.sh ? '' : '⚠') + (d.id === 'SHIPPED-Ldemo' ? '★ ' : '') + labOf(d) +   /* §E463 序列里也标版本号（原来 16 枚全是 SLOT-8位哈希，读不懂）*/
+      /* §E463 标签已经换成版本号的那几枚，第二栏就别再把同一个版本号抄一遍 ⇒ 让位给全 id（身份还在，只是排在可读名后面）*/
+      ' ‖ ' + (labOf(d) === d.sv ? d.id : (d.sv || (d.sh ? '' : '未上槽'))) + ' ‖ ' + (d.sh ? d.sh.slice(5, 10) : (d.ts || '').slice(5, 10)) +
       ' ‖ F ' + Fv(d).toFixed(3) + ' ‖ Hp ' + d.Hp.toFixed(1);
-    b.title = (d.sh ? '上线 ' + d.sh : 'git 里没找到上槽提交 ⇒ 按训出时刻 ' + (d.ts || '—') + ' 排（这枚从没真进过槽）') +
+    b.title = ('id ' + d.id + (d.wid ? ' ‖ 权重 ' + d.wid : '') + '\\n' + (d.sh ? '上线 ' + d.sh : 'git 里没找到上槽提交 ⇒ 按训出时刻 ' + (d.ts || '—') + ' 排（这枚从没真进过槽）')) +
       '\\n名次 第 ' + d.rk + ' ‖ H考卷 ' + d.H.toFixed(1) + ' ‖ S ' + d.S.toFixed(2) + ' ‖ Δε ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1);
     b.onclick = function () { var k = st.cmp.indexOf(d.id);
       if (k >= 0) st.cmp.splice(k, 1); else { if (st.cmp.length >= 7) { st.cmp.shift(); } st.cmp.push(d.id); }
