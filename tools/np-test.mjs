@@ -112,7 +112,7 @@ const GRP = {
   meta: 'REPRO L1 L2 L3 L7 L6 L5 D218 D8 D82 D189 D191 D194 D205 D206 D230',   // 仓库纪律：只读源码/CHANGELOG/README/门号
   ui: 'D37 D38 D28 D70 D131 D111 D166',                                    // 页面与前端契约
   ship: 'D219 D55 D16 D35 D27 D49 D60 D61 D62 D67 D73 D78 D79 D103 D105 D116 D118 D124 D125 D141 D153 D155 D163 D107 D110 D121 D145 D146 D147 D168 D169 D170 D190 D197 D210 D228',   // 出厂面：可行性闸 / 当选 / promote / 线上槽
-  train: 'REPRO2 L4 D217 D220 D221 D222 D223 D224 D225 D226 D227 D229 D5 D7 D9 D10 D11 D12 D13 D15 D56 D58 D59 D17 D24 D25 D26 D33b D33 D36 D39 D40 D41 D42 D43 D44 D45 D47 D48 D65 D66 D68 D72 D74 D75 D76 D77 D80 D81 D84 D85 D86 D87 D89 D90 D104 D97 D99 D100 D101 D108 D109 D112 D113 D114 D119 D122 D123 D127 D128 D129 D130 D132 D134 D135 D136 D139 D140 D115 D162 D120 D143 D144 D157 D159 D167 D172 D173 D174 D175 D176 D179 D181 D180 D182 D184 D185 D213 D164 D165 D187 D188 D201 D204',   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
+  train: 'REPRO2 L4 D217 D220 D221 D222 D223 D224 D225 D226 D227 D229 D5 D7 D9 D10 D11 D12 D13 D15 D56 D58 D59 D17 D24 D25 D26 D33b D33 D36 D39 D40 D41 D42 D43 D44 D45 D47 D48 D65 D66 D68 D72 D74 D75 D76 D77 D80 D81 D84 D85 D86 D87 D89 D90 D104 D97 D99 D100 D101 D108 D109 D112 D113 D114 D119 D122 D123 D127 D128 D129 D130 D132 D134 D135 D136 D139 D140 D115 D162 D120 D143 D144 D157 D159 D167 D172 D173 D174 D175 D176 D179 D181 D180 D182 D184 D185 D213 D164 D165 D187 D188 D201 D204 D231',   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
   probe: 'D34 D64 D83 D88 D137 D138 D148 D149 D150 D151 D152 D154 D160 D161 D106 D158 D177 D178 D183 D186 D192 D193 D195 D196 D198 D200 D199 D212 D214 D202 D203 D207 D208 D209 D211 D216',   // 研究量具自身的牙
   engine: 'N1 N2 目标：attemptAction N3 N3b N10 N10b N10c N8 N14 N14b N15 N16 N17 N18 N19 N4 N4b N4c N12 N12b N6 N6b 目标反锁：上回合与某对手互为目标而相抵 目标选择：能一击必杀先杀；否则打血量最高的领先者 fuzz：3/4/5 autoGame N20a N20b N20c N20d N20e N21 N22 N22b N22c N23 D1 D2 D3 D4 D6 D51 D52 D53 D54 D57 D18 D19 D20 D21 D22 D14 D23 D29 D30 D31 D46 D50 D63 D91 D102 D92 D93 D94 D95 D96 D98 D71 D117 D126 D142',   // 引擎与规则语义（改这里 ⇒ 只能全跑）
 };
@@ -11313,6 +11313,69 @@ t('D229 §E340 全息屏障→原型制御 的映射档（v1.6.8）：默认 off
   for (const f of ['tools/promote-champion.mjs', 'tools/eval-5p.mjs', 'tools/style-exam.mjs', 'js/ui/ui.js']) {
     ok(readFileSync(f, 'utf8').toLowerCase().indexOf('holo2proto') < 0,
       '⑧ ' + f + ' 不许读这一档（含 `EPIRUS_HOLO2PROTO` 与 `META.holo2proto`）⇒ 出厂面只按未映射行为判分');
+  }
+});
+
+t('D231 §E477 权重融合入口 `tools/soup-pack.mjs`：自证必须绿 · 四道守卫都要真咬 · 融合结果必须能被引擎解开 · 不许碰线上槽', function () {
+  /* 为什么值得一条门（METHODOLOGY 第 15 条："交付清单里的每个文件都得有一条会失败的用例点名"）：
+   * 这个工具产出的东西**看起来就是一枚冠军包**（同外壳、同长度、能被页面导入），但它不是任何一次训练的结果。
+   * 一旦"平均错了"（形状错位 / 权重没归一 / 把 2P 包拌进 3P 包），产出的仍然是一枚能跑、会给出数、
+   * 但语义根本不成立的包 —— 那是本仓最怕的"结果对、理由错"的最坏形状。
+   * ⚠ 开发期它已经红过三次（typed array 序列化、浮点结合顺序、`extractJsonObject` 返回字符串不是对象），
+   *    三条都是 self-test 抓的 ⇒ 把那份自证搬进门禁，而不是让它只在开发时跑过一次。 */
+  const SRC = 'tools/soup-pack.mjs';
+  const src = readFileSync(SRC, 'utf8');
+  const dir = mkdtempSync(join(tmpdir(), 'e477-soup-'));
+  try {
+    const r = spawnSync(process.execPath, [SRC, '--self-test'], { encoding: 'utf8', timeout: 120000 });
+    eq(r.status, 0, '① `--self-test` 必须整批绿（exit 0）：\n' + String(r.stdout || '').slice(0, 400) + String(r.stderr || '').slice(0, 200));
+    const ticks = (String(r.stdout || '').match(/^ {2}ok {3}/gm) || []).length;
+    ok(ticks >= 6, '① 且六条手算期望都要过（实测 ' + ticks + ' 条）—— 只 exit 0 不算，红掉的断言会被 `|| true` 之类吞掉');
+    const bad = spawnSync(process.execPath, [SRC, '--typo-flag=1'], { encoding: 'utf8', timeout: 60000 });
+    eq(bad.status, 64, '② 不认识的参数必须 exit 64（仓规 v1.5.234，实测 ' + bad.status + '）');
+    const one = spawnSync(process.execPath, [SRC, '--packs=js/bundled-champion-3p.js'], { encoding: 'utf8', timeout: 60000 });
+    eq(one.status, 64, '③ 只给一粒包不算融合，必须响亮拒（实测 ' + one.status + '）');
+    const p2 = spawnSync(process.execPath, [SRC, '--packs=js/bundled-champion.js,js/bundled-champion-3p.js', '--out=' + join(dir, 'x.js')], { encoding: 'utf8', timeout: 60000 });
+    eq(p2.status, 2, '④ 2P 包混进多人桌必须 exit 2（两颗包不同桌，实测 ' + p2.status + '）');
+    /* ⑤⑥ 合成两粒包：形状不同 ⇒ exit 3；形状同但规则指纹不同 ⇒ exit 4，且 `--force-fp=1` 必须真放行 */
+    const packTxt = (len, fp) => 'window.EPIRUS_CHAMPION_3P_META = {"rulesFingerprint":"' + fp + '"};\n' +
+      'window.EPIRUS_CHAMPION_3P = {"v":7,"a":[' + Array.from({ length: len }, (_, i) => (i % 7) / 7).join(',') + '],"f":213,"fa":22,"h":24};\n';
+    writeFileSync(join(dir, 'a.js'), packTxt(5689, 'aaaa1111'));
+    writeFileSync(join(dir, 'b.js'), packTxt(1633, 'aaaa1111'));   /* v5 时代的长度 ⇒ 形状不同 */
+    writeFileSync(join(dir, 'c.js'), packTxt(5689, 'bbbb2222'));   /* 同形状、不同规则世界 */
+    const shape = spawnSync(process.execPath, [SRC, '--packs=' + join(dir, 'a.js') + ',' + join(dir, 'b.js'), '--out=' + join(dir, 'o1.js')], { encoding: 'utf8', timeout: 60000 });
+    eq(shape.status, 3, '⑤ 长度/维度不一致必须 exit 3（"逐位平均"在这条输入上没有意义，实测 ' + shape.status + '）');
+    const fp = spawnSync(process.execPath, [SRC, '--packs=' + join(dir, 'a.js') + ',' + join(dir, 'c.js'), '--out=' + join(dir, 'o2.js')], { encoding: 'utf8', timeout: 60000 });
+    ok(fp.status === 4 || fp.status === 64, '⑥ 规则指纹不一致必须拒（exit 4；拼参数顺序错了也算响亮失败），实测 ' + fp.status);
+    const forced = spawnSync(process.execPath, [SRC, '--packs=' + join(dir, 'a.js') + ',' + join(dir, 'c.js'), '--force-fp=1', '--out=' + join(dir, 'o3.js')], { encoding: 'utf8', timeout: 60000 });
+    eq(forced.status, 0, '⑥ 但 `--force-fp=1` 必须真放行（实测 ' + forced.status + '）⇒ 守卫不是"一律不许"，是"不许静默"');
+    ok(/"forceFp":true/.test(readFileSync(join(dir, 'o3.js'), 'utf8')), '⑥ 放行这件事必须写进产物 meta（否则第二天没人知道这粒跨了规则世界）');
+    /* ⑦ 确定性：同一对输入、两种权重写法 ⇒ wid 逐位相同（权重会归一化） */
+    const mk = (w, out) => spawnSync(process.execPath, [SRC, '--packs=' + join(dir, 'a.js') + ',' + join(dir, 'c.js'), '--force-fp=1', '--w=' + w, '--out=' + out], { encoding: 'utf8', timeout: 60000 });
+    const A = join(dir, 's1.js'), B = join(dir, 's2.js');
+    mk('1,1', A); mk('0.5,0.5', B);
+    const sha = f => createHash('sha1').update(readFileSync(f, 'utf8').split('\n').slice(2).join('\n')).digest('hex').slice(0, 12);
+    eq(sha(A), sha(B), '⑦ 权重归一化必须与写法无关（`1,1` 与 `0.5,0.5` 要产出逐位相同的包）');
+    /* ⑧ 真包融合完必须能被引擎解开（防"平均出 NaN / 形状坏 / 页面导入失败"） */
+    const real = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/e234-out/K2.js,docs/artifacts/e85-out/E20-71.bak', '--out=' + join(dir, 'ke.js')], { encoding: 'utf8', timeout: 120000 });
+    eq(real.status, 0, '⑧ 真包融合必须成功（K2 + E20-71，实测 ' + real.status + '）：\n' + String(real.stderr || '').slice(0, 200));
+    const s3 = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Float64Array };
+    s3.window = s3; s3.globalThis = s3;
+    for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
+      'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) vm.runInNewContext(readFileSync(f, 'utf8'), s3, { filename: f });
+    const PW = s3.window;
+    const raw = readFileSync(join(dir, 'ke.js'), 'utf8');
+    const body = JSON.parse(/window\.EPIRUS_CHAMPION_3P = (\{[\s\S]*?\});?\n*$/.exec(raw)[1]);
+    const ck = PW.EpirusPolicy.checkPack(body);
+    ok(ck.ok, '⑧ 融合产物必须过 `checkPack`（页面导入与对局读包走的就是这一道，实测 reason=' + (ck.reason || '?') + '）');
+    const up = PW.EpirusPolicy.unpack(body, true);
+    ok(!!up && up.length === 5689 && Array.from(up).every(x => isFinite(x)),
+      '⑧ 解出来的权重必须有限、长度 5689（NaN/Inf 会伪装成"能跑"，直到第一手棋才炸）');
+    /* ⑨ 静态哨兵：这个入口不许把产物写到线上槽（训练侧栽过一次"打错的帮助页改脏门禁基线"） */
+    ok(!/writeFileSync\(\s*['"]js\/bundled-champion/.test(src), '⑨ 源码里不许出现往 `js/bundled-champion*` 写的路径');
+    ok(/不写 `js\/\*\*`|只写 `--out=`/.test(src), '⑨ 且头注里那条"不写 js/**"的规矩要留字（谁改这段注释得说明为什么）');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 
