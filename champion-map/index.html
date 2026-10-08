@@ -15,7 +15,7 @@ canvas#cv{width:100%;height:100%;display:block;cursor:grab}
 #fam button.fam b{color:var(--dim);font-weight:400}
 #fam .famtip{color:var(--dim);font-size:12px;padding-right:6px}
 #tip{position:fixed;display:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre;font-size:12px;line-height:1.5;pointer-events:none;z-index:9;box-shadow:0 6px 22px rgba(0,0,0,.55);color:var(--ink)}
-#legend{position:absolute;right:6px;top:12px;   /* §E431 用户 10-08：整块往右缩（贴右缘），别压到一维图 */font-size:11px;color:var(--ink);text-align:left;padding:7px 9px;border:1px solid var(--line);border-radius:6px}
+#legend{position:absolute;right:6px;top:12px;cursor:move;user-select:none;touch-action:none;   /* §E431 用户 10-08：整块往右缩（贴右缘），别压到一维图 */font-size:11px;color:var(--ink);text-align:left;padding:7px 9px;border:1px solid var(--line);border-radius:6px}
 #legend canvas{border:1px solid #8ea2c0;margin:3px 0}
 #stat{position:absolute;left:14px;top:10px;color:var(--dim);font-size:12px}
 label{color:var(--dim);display:flex;gap:6px;align-items:center}
@@ -234,6 +234,7 @@ var NSEL = 0, NSELUP = 0, NSELSOFT = 0, NSELDOWN = 0;
   else if (P[i].scd > 0 && pos < 6) NSELSOFT++;
   if (P[i].scd <= -2) NSELDOWN++; } })();
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
+  lgPos: null,        /* §E462 图例被拖到哪儿（相对 #wrap 的 CSS px）；null = 出厂那角 */
   sortBy: 'F',          /* E399 DS：一维图的排序轴 —— 'F' = F 名次（默认）‖ 'time' = 训出时刻。 */
   flo: 0, fhi: 1,       /* §E371 强度窗口的两端，存成"占全库 F 值域的比例"⇒ 出厂 (0,1) 就是全范围 */
   edges: 'all',         /* §E373 谱系图父边：'all' 全开 ‖ 'hash' 只画实录级 ‖ 'off' 一条不画（默认全开 = 已验收的那张图） */
@@ -2045,6 +2046,7 @@ function paintLegend(fr) {
   c.style.height = BARH + 'px'; barDraw(BARH);
   if (WINAX) { WINAX.width = AXW * devicePixelRatio; WINAX.height = AXH * devicePixelRatio;
     WINAX.style.width = AXW + 'px'; WINAX.style.height = AXH + 'px'; winaxDraw(); }
+  floatApply(lg, 'lgPos');   /* §E462 图例每帧重建 children，但 #legend 本身是常驻节点 ⇒ 拖过的位置在这儿落回去 */
 }
 /* ③ 家族图例 = 可点按钮（按成员数从多到少），点一个只留这些家族。
  *   §E304：默认按**方法家族**列（22 家，按钮上直接写"改了什么"），切到 RNG seed 才列 seed。*/
@@ -2115,6 +2117,7 @@ function paintCard() {
     ' ‖ 过线判定：' + (d.ok === 1 ? '是' : (d.ok === 0 ? '否' : '未测')) + (d.why ? '（栽在 ' + String(d.why) + '）' : '')
   ].concat(relLines(d)).concat(d.dn > 1 ? ['⚠ 同一份权重占 ' + d.dn + ' 行：' + String(d.dups).split(',').slice(0, 4).join(' ‖ ') + (d.dn > 4 ? ' 等 ' + d.dn + ' 行' : '')] : []);
   el.style.display = 'block'; el.textContent = body.join('\n');
+  floatApply(el, 'cardPos');   /* §E462 卡是盖住数据最多的那块（实测 39 枚，含 12 枚历代冠军）⇒ 也要能拖走 */
 }
 /* 冠军序列 + 对比表。⚠ 排序键是**上线时刻**（ship-scan 从 git 逐提交算槽文件权重指纹抽的），
  *   抽不到的（实测 v7new6-94/96：coords.tsv 的 lineage 列把它们标成"历代上槽"，git 里那两条只是 v1.5.114
@@ -2130,10 +2133,11 @@ function paintSide() {
   var el = document.getElementById('side'); if (!el) return;
   if (!st.side) { el.style.display = 'none'; return; }
   el.style.display = 'block'; el.innerHTML = '';
+  floatApply(el, 'sidePos');   /* §E462 */
   /* 让开图例：图例的高度随口径变（F 档三行、pm 档两行…），写死 top 一定会盖住它 —— 第一版截图就是
    *   把"加测过（F 底 0.17）"那行压在冠军序列底下。按图例实际底边算，两块永远各占各的。 */
   var lg = document.getElementById('legend');
-  el.style.top = (lg && lg.offsetHeight ? lg.offsetTop + lg.offsetHeight + 10 : 172) + 'px';
+  if (!st.sidePos) el.style.top = (lg && lg.offsetHeight ? lg.offsetTop + lg.offsetHeight + 10 : 172) + 'px';   /* §E462 拖过就不再跟图例 */
   var h = document.createElement('h4');
   h.textContent = '冠军序列（按上线时刻 · ' + champList().length + ' 枚）· 点一下加入对比';
   el.appendChild(h);
@@ -2222,6 +2226,57 @@ function winaxBind(c) {
   });
   c.addEventListener('dblclick', function () { setWin(0, 1); });
 }
+/* ===== §E462 浮层做成可拖动件（用户 10-08：「你干脆可以把这个图例整体做成可动件试试，
+ *   让他可以在页面上拖动，这样就永远不会遮挡了」）=====
+ *   §E455 量出来的账：图例只压住 0~16 枚点，真正盖住数据的是选中卡（39 枚，含 12 枚历代冠军）与冠军序列（26 枚）
+ *   ⇒ 所以**三块一起**能拖（图例 / 选中卡 / 冠军序列），只拖图例解决不了她指的那个问题。
+ *   位置存在 st 里（切模式、换色档、重建图例都不跳回原位），双击复位。
+ *   ⚠ 三条不能碰坏的：① 图例里那根窗口轴自己听 pointerdown（拖两个柄）⇒ 拖动必须让开它和图例里的按钮；
+ *     ② paintLegend 每帧重建 children ⇒ 监听只能绑在常驻节点上（绑到子元素每帧就没，§E378 同一族）；
+ *     ③ 卡与侧栏自己有 overflow:auto 滚动 ⇒ 只有"按下没移动"才算单击，移动过就别抢滚动。 */
+function floatClamp(el, x, y) {
+  var wr = document.getElementById('wrap'); if (!wr || !el) return [0, 0];
+  return [Math.max(0, Math.min(Math.max(0, wr.clientWidth - el.offsetWidth), x)),
+          Math.max(0, Math.min(Math.max(0, wr.clientHeight - el.offsetHeight), y))]; }
+function floatApply(el, key) {
+  if (!el) return;
+  var d = FLOAT_DEF[key];
+  if (!st[key]) { el.style.left = d.left; el.style.right = d.right; el.style.top = d.top; el.style.bottom = d.bottom; return; }
+  var p = floatClamp(el, st[key][0], st[key][1]); st[key] = p;
+  el.style.right = 'auto'; el.style.bottom = 'auto'; el.style.left = p[0] + 'px'; el.style.top = p[1] + 'px';
+  if (key === 'lgPos') { var sd = document.getElementById('side');   /* 侧栏本来贴在图例下面 ⇒ 图例拖走它跟着走 */
+    if (sd && st.side && !st.sidePos) sd.style.top = (p[1] + el.offsetHeight + 10) + 'px'; } }
+var FLOAT_DEF = { lgPos: { left: 'auto', right: '6px', top: '12px', bottom: 'auto' },
+  cardPos: { left: '14px', right: 'auto', top: 'auto', bottom: '34px' },
+  sidePos: { left: 'auto', right: '14px', top: '172px', bottom: 'auto' } };
+function floatBind(el, key) {
+  if (!el || el._fBound) return; el._fBound = 1;
+  el.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0) return;
+    var t = e.target;
+    while (t && t !== el) { if (t.id === 'winax' || t.tagName === 'BUTTON' || t.tagName === 'A' || t.tagName === 'SELECT') return;
+      t = t.parentNode; }
+    var wr = document.getElementById('wrap'), wrr = wr.getBoundingClientRect(), r = el.getBoundingClientRect();
+    var ox = e.clientX - r.left, oy = e.clientY - r.top;
+    if (!st[key]) st[key] = [r.left - wrr.left, r.top - wrr.top];
+    var p0 = st[key].slice(), moved = 0;
+    var mv = function (ev) { var nx = ev.clientX - wrr.left - ox, ny = ev.clientY - wrr.top - oy;
+      if (Math.abs(nx - p0[0]) + Math.abs(ny - p0[1]) > 2) moved = 1;
+      st[key] = [nx, ny]; floatApply(el, key); };
+    var up = function () { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      if (moved && key === 'lgPos') { var sd = document.getElementById('side'); if (sd && st.side) sd.style.top = el.style.top; }
+      if (!moved) el._fTap = 1; };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    e.preventDefault();
+  });
+  el.addEventListener('dblclick', function () { st[key] = null; floatApply(el, key); if (key === 'lgPos') paintSide(); });
+}
+function floatBindAll() {
+  floatBind(document.getElementById('legend'), 'lgPos');
+  floatBind(document.getElementById('card'), 'cardPos');
+  floatBind(document.getElementById('side'), 'sidePos');
+  floatApply(document.getElementById('legend'), 'lgPos'); }
 function paintWin() {
   var el = document.getElementById('wv'); if (!el) return;
   el.textContent = winFull() ? '全范围（' + N + ' 枚）'
@@ -2598,6 +2653,9 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     /* §E449 补 edges：§E442 那节记过一条"edges= 不是 hash 参数 ⇒ 无头复验没法深链到'只实录'那一档，
      *   只能靠代码路径的守卫"——  RUNNER-BASE 那条雾边到底在 'hash' 档不画、在 'all' 档画，之前只有页内断言能证，
      *   截不到图给人看。三档都收，认不出的值不动（默认是 all）。*/
+    /* §E462 浮层位置也走深链 ⇒ 无头复验能钉住「图例被拖到 (x,y) 之后画面与判据都对」这一态（认不出就不动）*/
+    if (kv[0] === 'lgpos' || kv[0] === 'cardpos' || kv[0] === 'sidepos') { var lp = kv[1].split(',');
+      if (lp.length === 2 && isFinite(+lp[0]) && isFinite(+lp[1])) st[kv[0] === 'lgpos' ? 'lgPos' : kv[0] === 'cardpos' ? 'cardPos' : 'sidePos'] = [+lp[0], +lp[1]]; }
     if (kv[0] === 'edges' && (kv[1] === 'all' || kv[1] === 'hash' || kv[1] === 'off')) {
       st.edges = kv[1]; document.getElementById('edges').value = kv[1]; }
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
@@ -2620,7 +2678,7 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit;
     document.getElementById('b3dt').textContent = st.elev < 0.5 ? '立体' : '平面'; } })();
 (function () { var b = document.getElementById('sortb'); if (b) b.textContent = '排序：' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次'); })();   /* E399：放到深链解析之后，否则 #sort=time 时标签是假的 */
-fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide();
+fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide(); floatBindAll();   /* §E462 三块浮层的拖动只绑一次（它们是常驻节点）*/
 /* E417 DS（缺口 A）：计数器**在 #perf>=1 就挂**（原来只在 #perf=2 的基准里挂 ⇒ #perf=1 下 OPSF 恒为 0）。 */
 if (PERFON >= 1) {
   var _ops = ['beginPath', 'fill', 'stroke', 'arc', 'fillText', 'strokeText', 'fillRect', 'drawImage', 'closePath', 'moveTo', 'lineTo'];
@@ -3618,6 +3676,67 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   /* §E430 用户裁定删除：这条腿的派发点是按"环心"算的，而三维态下环心与命中表差 2px（实测 (659,225) vs scr (660,227)）
    *   ⇒ 它测的是"我算出来的点"而不是"用户点下去会怎样"；用户手动验过**指针往返没有问题**。
    *   立体的那条仍在跑（§E449 改名成"屏幕上下端 + F 两端 + 一枚冠军"），保留覆盖。 */
+  /* ===== §E462 拖动手本身要有判据 =====
+   *   三块浮层各拖一次：① 真的落在拖到的地方（不是"看着动了"）；② 拖不出画面（夹取）；③ 双击回得到出厂位；
+   *   ④ 图例拖过之后，图例里那根窗口轴的两个柄**还抓得住** —— 两者都听 pointerdown，这是最容易互相抢的一处。*/
+  (function () {
+    var SNF = { lgPos: st.lgPos, cardPos: st.cardPos, sidePos: st.sidePos };
+    var wr = document.getElementById('wrap'), dBad = [];
+    function relOf(el) { var a = el.getBoundingClientRect(), b = wr.getBoundingClientRect(); return [a.left - b.left, a.top - b.top]; }
+    function dragTo(el, x, y) { var b = wr.getBoundingClientRect(), r = el.getBoundingClientRect();
+      /* 按下点取元素左上角往里 5px（避开边缘），所以 move 的目标要**加上这 5px**，
+       *   否则"拖到 (x,y)"实际落在 (x-5,y-5) —— 第一版就是这么量出 -65/+115 这种 5px 系统差的。 */
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: r.left + 5, clientY: r.top + 5 }));
+      window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: b.left + x + 5, clientY: b.top + y + 5 }));
+      window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: b.left + x + 5, clientY: b.top + y + 5 })); }
+    /* §E462 这条要钉住**默认布局**再拖：从 #lgpos=40,300 这类深链进来时，图例已经贴到左缘，
+     *   再往左拖 60px 会被夹取挡住 ⇒ 量出来的是夹取，不是拖动（实测 delta -40 而不是 -60）。
+     *   夹取本身由下面那一发 99999 单独判，两件事分开记。*/
+    st.lgPos = st.cardPos = st.sidePos = null;
+    floatApply(document.getElementById('legend'), 'lgPos'); floatApply(document.getElementById('card'), 'cardPos');
+    floatApply(document.getElementById('side'), 'sidePos');
+    var LG = document.getElementById('legend'), CD = document.getElementById('card'), SD = document.getElementById('side');
+    st.side = true; paintSide(); st.sel = st.sel || P[0].id; paintCard();
+    var L0 = relOf(LG);
+    dragTo(LG, L0[0] - 60, L0[1] + 80);
+    var L1 = relOf(LG);
+    if (Math.abs((L1[0] - L0[0]) + 60) > 4 || Math.abs((L1[1] - L0[1]) - 80) > 4)
+      dBad.push('图例拖 (-60,+80) 之后实际走了 (' + Math.round(L1[0] - L0[0]) + ',' + Math.round(L1[1] - L0[1]) + ')');
+    dragTo(LG, 99999, 99999);
+    var L2 = relOf(LG);
+    if (L2[0] + LG.offsetWidth > wr.clientWidth + 2 || L2[1] + LG.offsetHeight > wr.clientHeight + 2)
+      dBad.push('往死里拖没夹住：落在 (' + Math.round(L2[0]) + ',' + Math.round(L2[1]) + ')，块 ' + LG.offsetWidth + '×' + LG.offsetHeight
+        + '，画面 ' + wr.clientWidth + '×' + wr.clientHeight);
+    /* 拖完轴还得能用：按**画出来的下沿柄**按下去拖一格，st.flo 必须动 */
+    var AX = document.getElementById('winax');
+    if (!AX) dBad.push('拖过图例之后窗口轴不见了');
+    else { var lgBefore = relOf(LG), ar = AX.getBoundingClientRect(), f0 = st.flo, yOf = function (f) { return ar.top + (1 - f) * ar.height; };
+      AX.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: ar.left + ar.width / 2, clientY: yOf(f0) }));
+      window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: ar.left + ar.width / 2, clientY: yOf(Math.min(0.99, f0 + 0.12)) }));
+      window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      if (Math.abs(st.flo - (f0 + 0.12)) > 0.03) dBad.push('图例拖过之后轴柄不接了：flo ' + f0.toFixed(3) + ' → ' + st.flo.toFixed(3) + '（该到 ' + (f0 + 0.12).toFixed(3) + '）');
+      /* ⚠ 只判「轴还接得住」没有牙（红测实测：把让开轴那句拆掉，轴照样能用，症状是拖柄时整块图例跟着跑）。
+        所以这一条必须判图例没动 —— 那才是用户会看见的坏法。*/
+      var lgAfter = relOf(LG);
+      if (Math.abs(lgAfter[0] - lgBefore[0]) + Math.abs(lgAfter[1] - lgBefore[1]) > 1)
+        dBad.push('拖窗口轴的柄把整块图例也拖走了 (' + Math.round(lgBefore[0]) + ',' + Math.round(lgBefore[1])
+          + ') → (' + Math.round(lgAfter[0]) + ',' + Math.round(lgAfter[1]) + ') ⇒ 轴那一下没让开');
+      setWin(SNF.flo === undefined ? 0 : 0, 1); }
+    /* 卡与侧栏也各拖一次（它们才是盖住数据最多的两块） */
+    var C0 = relOf(CD); dragTo(CD, C0[0] + 120, Math.max(8, C0[1] - 90)); var C1 = relOf(CD);
+    if (Math.abs((C1[0] - C0[0]) - 120) > 4) dBad.push('选中卡拖 +120 实际走 ' + Math.round(C1[0] - C0[0]));
+    var S0 = relOf(SD); dragTo(SD, Math.max(8, S0[0] - 200), S0[1] + 40); var S1 = relOf(SD);
+    if (Math.abs((S1[0] - S0[0]) + 200) > 4) dBad.push('冠军序列拖 -200 实际走 ' + Math.round(S1[0] - S0[0]));
+    /* 双击复位 */
+    LG.dispatchEvent(new PointerEvent('dblclick', { bubbles: true }));
+    if (st.lgPos !== null) dBad.push('双击图例没复位（st.lgPos 还是 ' + JSON.stringify(st.lgPos) + '）');
+    CD.dispatchEvent(new PointerEvent('dblclick', { bubbles: true })); SD.dispatchEvent(new PointerEvent('dblclick', { bubbles: true }));
+    st.lgPos = SNF.lgPos; st.cardPos = SNF.cardPos; st.sidePos = SNF.sidePos;
+    floatApply(LG, 'lgPos'); floatApply(CD, 'cardPos'); floatApply(SD, 'sidePos');
+    st.side = SNF.sidePos === undefined && SNF.lgPos === undefined ? st.side : st.side;
+    T('浮层可拖动：图例 / 选中卡 / 冠军序列各拖一次要真跟着走、拖不出画面、双击回出厂位，且图例拖过之后窗口轴那两个柄还接得住',
+      dBad.length === 0, dBad.join(' ‖ ') || '三块都跟着走 ‖ 夹取生效 ‖ 双击复位 ‖ 轴柄仍接得住');
+  })();
   /* ===== §E453 工具栏那几个控件：以前每一条判据都是"直接写 st 再画"，没有一条从**控件本身**走起 =====
    *   这笔账是 §E452 逼出来的：那条门写死 st.flo = 0.8，而 T 滑杆一动 F 分布就动 ——
    *   "滑杆 → st → 分布"这条链从来没被走过一遍，所以它断在哪儿都没人知道。
@@ -3826,7 +3945,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   ⇒ 硬判据一条："现役不许被压住"（它是全图唯一的分界参照物，被压住就等于图上没有基准）；
    *     再加一条总量界 ≤ 80（实测最坏 65 之上留 15 枚余量，挡的是"某块面板无声变大"）。 */
   (function () {
-    var SN5 = { mode: st.mode, e: st.elev, sel: st.sel, side: st.side, flo: st.flo, fhi: st.fhi, labels: st.labels };
+    var SN5 = { mode: st.mode, e: st.elev, sel: st.sel, side: st.side, flo: st.flo, fhi: st.fhi, labels: st.labels,
+      lgPos: st.lgPos, cardPos: st.cardPos, sidePos: st.sidePos };
+    /* §E462 浮层能拖之后，这条必须钉住**默认布局**再量：它判的是「出厂那套位置不许把现役盖住」，
+     *   不是「用户把它拖到现役上面也不许」。拖到哪是用户选的，不该由判据管（量完照旧还原）。*/
+    st.lgPos = st.cardPos = st.sidePos = null;
     var worst = -1, worstId = '';
     for (var wi5 = 0; wi5 < N; wi5++) { var wl = String(P[wi5].why || '').length + String(P[wi5].pb || '').length;
       if (P[wi5].ok === 0 && wl > worst) { worst = wl; worstId = P[wi5].id; } }
@@ -3856,7 +3979,8 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         + ' ‖ 其中冠军 ' + hidCh + (exCh ? '（例 ' + exCh + '）' : '') + ' ‖ 现役 ' + hidInc + '（要 0）'
         + ' ‖ 面板 ' + PAN.map(function (x) { return x[0] + ' ' + Math.round(x[3] / devicePixelRatio) + '×' + Math.round(x[4] / devicePixelRatio); }).join(' / '));
     st.mode = SN5.mode; st.elev = SN5.e; st.sel = SN5.sel; st.side = SN5.side;
-    st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
+st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
+    st.lgPos = SN5.lgPos; st.cardPos = SN5.cardPos; st.sidePos = SN5.sidePos;   /* §E462 位置也要还原：自检不许把用户拖好的布局改掉 */
     recomputeVIS(); paintCard(); paintSide(); draw();
   })();
   var el = document.getElementById('selftest');
