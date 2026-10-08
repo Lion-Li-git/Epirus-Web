@@ -482,7 +482,9 @@ var NOPTS = 0;   /* §E451 只给页内自检用的"只画底、不画点"开关
                   *   而不是拿"中心与四邻不同"当代理（那个代理在名字上、在同族密集处都会看错，§E447 自己就记了污染）。
                   *   出厂恒为 0；判据用完必须还原，否则下一帧就没有点了。 */
 var NCHAIN = 0;   /* §E378 这一帧画了几条**接替边**（页脚与页内自检都读它，不许各自数一份）*/
-var NSOUP = 0;    /* §E487 这一帧画了几条**融合的第二父边**（同上：页脚与自检读同一个数）*/
+var NSOUP = 0;    /* §E487/§E490 这一帧画了几条**融合父边**（第一父 + 第二父都算，同色 ⇒ 同一个数；页脚与自检读它）*/
+var NSOUP1 = 0, NSOUP2 = 0;   /* §E490 拆成两根边各自计数：第一父那条走的是"血统边循环里认 psrc=soup"的分支，
+                               *   第二父那条走的是专门的循环 ⇒ 两条分开数才判得出"谁没同色"（见页内那条腿）*/
 var LASTFAMS = [];   /* §E448 上一帧谱系图的行表（fams 原样）—— 页内那条"家族 0 排最上面"在窗口把整行切没时读这个 */
 (function () { for (var i = 0; i < N; i++) TSBY[P[i].id] = P[i].ts || ''; })();
 function backOf(d) {   /* 返回"父节点的 ts"，当且仅当它晚于本枚（空串 = 正常边 / 父不在图上）*/
@@ -846,7 +848,7 @@ function tip(d, fr) {
     '\\n　RNG seed 名字后缀=' + d.seed + ' ‖ META.seed=' + (d.ms || '—') + ' ‖ 训出 ' + (d.ts || '—') +
     '\\n　热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof : (d.pnm ? '\\n　　' + d.pnm : '（父指针未落档）')) +
     /* §E487 融合粒：把"它是哪两枚的平均"直读出来（来源与权重在包 meta 里，这里只印第二父的节点名）*/
-    (d.pof2 ? '\\n　融合的另一粒父 ' + d.pof2 + '（图上走紫线）' : '') +
+    (d.pof2 ? '\\n　融合的另一粒父 ' + d.pof2 + '（图上走红线 ‖ 这枚 = 两粒的权重平均）' : '') +
     /* §E363 + §E367 更正：这条边"父比子晚"**不是**槽位时刻的语义问题，而是**假边** ——
        父指针记的是**路径**（js/bundled-champion-3p.js），生成器按"这条路径今天住的是谁"反查 ⇒ 接到现在的槽主身上。
        lineage.mjs 现在会把这种推断级父边退回"父不可考"（parentSrc=demoted），所以**正常情况下这条不该出现**；
@@ -1478,7 +1480,7 @@ function drawTree(fr) {
    *   ⚠ 网格每帧重算（平移/缩放会改密度）；代价 = 726×5 次算术 + 726 次 stroke + 3630 次 addColorStop（与改动前同量级）。
    *     ELOG=0 是页内那两条判据自己用的对照组（固定 alpha），不是给用户的开关。 */
   var EA0 = 0.30, ED0 = 25, EMIN = 0.03, EGRID = Math.max(10, Math.round(22 * devicePixelRatio));
-  var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0;
+  var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
   EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [] };
   if (st.edges !== 'off') {
     var EL = [];
@@ -1486,10 +1488,17 @@ function drawTree(fr) {
       /* §E373 连线开关：'off' 一条不画；'hash' 只画包自己记下的那份权重哈希（最硬的一级来路）。
        *   §E378 的接替边 psrc='slot-chain' 在 'hash' 档**不画**（它不是血统）。 */
       if (st.edges === 'hash' && dd.psrc !== 'hash') continue;
-      var bq = backOf(dd), cq = dd.psrc === 'slot-chain';
-      if (bq) NBACK++; if (cq) NCHAIN++;
+      var bq = backOf(dd), cq = dd.psrc === 'slot-chain', sq = dd.psrc === 'soup';
+      /* §E490 融合粒的**两根父边同色**（用户 10-08：「让两根融合线都用同一个颜色。可以用红色的和蓝色区分开」）：
+       *   原来第一父走普通淡蓝、只有第二父是紫 ⇒ 读起来像"一枚热启动 + 一枚额外说明"，
+       *   而事实是这两条边**是同一种关系**（这枚 = 这两粒的权重平均）。所以两条一起换红、一起实线。
+       *   优先级仍是 倒挂 > 接替 > 融合 > 普通：倒挂那条是"守卫漏了来路"的报警色，不能被融合盖掉。
+       *   ⚠ 计数挪到 kind **定完之后**，而且数的是 kind 本身：原来写的是「if (sq) NSOUP1++」，
+       *     那量的是"这枚的来路是融合"，不是"这条边真被画成红色" ⇒ 把 kind 改回 0 它照样 +1，
+       *     页内那条腿就变成一台只会回显条件的假仪器（本仓"回显生效值"那条老规矩；牙口实测过这一层）。 */
+      var kind = bq ? 1 : (cq ? 2 : (sq ? 3 : 0));
+      if (bq) NBACK++; if (cq) NCHAIN++; if (kind === 3) { NSOUP++; NSOUP1++; }
       var pa = pos[dd.pof], pb2 = pos[dd.id];
-      var kind = bq ? 1 : (cq ? 2 : 0);
       /* §E469 每条边同时带**纸面坐标**（papA/papB）：密度网格建在那一层上，而不是建在投影后的屏幕上。
        *   屏幕空间网格 = 平移 1px 就可能整体换格 ⇒ 一条线的 alpha 离散跳档（实测偏航 0.05rad 跳 0.27，
        *   0.030→0.300 差十倍）= 用户点的"平移旋转时抽搐"。纸面网格只随布局（窗口/尺寸）变，不随视图变。 */
@@ -1497,15 +1506,14 @@ function drawTree(fr) {
       EL.push([pa, pb2, [(pa[0] + pb2[0]) / 2, (pa[1] + pb2[1]) / 2 - rowH * 0.5 * TKY],
         kind ? 0.62 : EA0, kind, dd.id, ua, ub,
         ua && ub ? [(ua[0] + ub[0]) / 2, (ua[1] + ub[1]) / 2 - rowH0 * 0.5 * TKY] : null]); }
-    /* ===== §E487 融合粒的**第二父边**（kind=3，画成另一种颜色）=====
+    /* ===== §E487/§E490 融合粒的**第二父边**（kind=3，与第一父同色同线型：红、实线）=====
      *   融合粒天生有两个父（tools/soup-pack.mjs 把每粒来源的 wid 写进包 meta，lineage.mjs 反查成节点），
-     *   一条边只够表达"热启动自谁"，所以第二条单独一种颜色 —— 不是把两条都画成血统色：
-     *   那会让人读成"这枚有两个热启动父"，而事实是"它是两枚的权重平均"。
-     *   'hash' 档不画它（这一档只画包自己 hotstartFrom 里那份哈希；第二父同样不是哈希级来路）。 */
+     *   两条边是同一种关系 ⇒ 同色（用户 10-08：「让两根融合线都用同一个颜色。可以用红色的和蓝色区分开」）。
+     *   'hash' 档不画它（这一档只画包自己 hotstartFrom 里那份哈希；融合父不是哈希级来路）。 */
     for (i = 0; i < N; i++) { var d2 = P[i]; if (!d2.pof2 || !pos[d2.id] || !pos[d2.pof2]) continue;
       if (st.edges === 'hash') continue;
       var q2a = pos[d2.pof2], q2b = pos[d2.id], v2a = pap[d2.pof2], v2b = pap[d2.id];
-      NSOUP++;
+      NSOUP++; NSOUP2++;
       EL.push([q2a, q2b, [(q2a[0] + q2b[0]) / 2, (q2a[1] + q2b[1]) / 2 - rowH * 0.5 * TKY],
         0.62, 3, d2.id, v2a, v2b,
         v2a && v2b ? [(v2a[0] + v2b[0]) / 2, (v2a[1] + v2b[1]) / 2 - rowH0 * 0.5 * TKY] : null]); }
@@ -1536,7 +1544,7 @@ function drawTree(fr) {
        *   上一版把整条边取一个均值 ⇒ 一条长线只要蹭到扇根那一格，整条被拉到地板（用户 10-08 11:0x：
        *   「这一版密集处确实好了，但是单根线看不见了」）。均值这件事在"根密尾疏"的边上必然冤枉尾段。
        *   渐变仍是**一次落笔** ⇒ 不会有 §E467a 那种分桶断口；密处压到地板、疏处回到全 alpha。 */
-      var ST5 = [0, 0.25, 0.5, 0.75, 1], AL5 = [], col3 = kd === 2 ? '159,176,204' : (kd === 3 ? '206,136,255' : (kd === 1 ? '224,177,60' : '120,200,255'));
+      var ST5 = [0, 0.25, 0.5, 0.75, 1], AL5 = [], col3 = kd === 2 ? '159,176,204' : (kd === 3 ? '248,81,73' : (kd === 1 ? '224,177,60' : '120,200,255'));
       var PA2 = EL[e2][6] || A2, PB2 = EL[e2][7] || B2, PC2 = EL[e2][8] || C2;
       for (var s2 = 0; s2 < 5; s2++) {
         var t0 = ST5[s2], i0 = 1 - t0;
@@ -1627,7 +1635,7 @@ function drawTree(fr) {
        （'hash' 那一档不画它，所以那句计数跟着 NCHAIN 走，为 0 就整段不出现）*/
     (NCHAIN ? ' ‖ 灰点线 = 槽位接替边 ' + NCHAIN + ' 条（谁在这枚之前住过那个槽，不是血统）' : '') +
     /* §E487：融合粒的第二父走紫色实线 —— 它是"两枚的权重平均"里的那一条，不是热启动 */
-    (NSOUP ? ' ‖ 紫线 = 融合的第二父边 ' + NSOUP + ' 条（这枚是两枚的权重平均，不是热启动）' : '') +
+    (NSOUP ? ' ‖ 红线 = 融合父边 ' + NSOUP + ' 条（这枚 = 两粒的权重平均 ‖ 两条红边各自连一个父，不是热启动）' : '') +
     /* §E442：RUNNER-BASE 那批边现在**画得出来了**（收到时间轴最左那颗灰菱形），所以这句话从原来的"这条边上不画"
        改成说清它连的是什么。'hash'/'off' 两档不画 ⇒ 计数为 0 就整段不出现，不许承诺图上没有的东西。 */
     (NRBASE ? ' ‖ 另有 ' + NRBASE + ' 枚的父指针解析不到图上任何一枚（见页内那条血统边判据）' : '') +
@@ -3934,33 +3942,41 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     '全开 ' + eAll + ' 条 ‖ 只实录 ' + eHash + ' 条 ‖ 关掉 ' + eOff + ' 条 ‖ 关掉与全开的采样像素差 ' + diffOff);
   st.mode = SNAPM2.mode; st.edges = SNAPM2.edges;
   st.flo = SNAPM2.flo; st.fhi = SNAPM2.fhi; recomputeVIS(); draw();
-  (function () {   /* ===== §E487 融合粒的第二父边（紫线）=====
-     *   融合粒天生两个父：pof 那一头是「平均里权重最大的一粒」（图上按血统色画），
-     *   pof2 那一头是「另一粒」⇒ 单开一种颜色。不并成两条同色是因为那会读成"有两个热启动父"，
-     *   而事实是"它是两枚的权重平均"（tools/soup-pack.mjs，§E477）。
-     *   四句各自可反证，且**不钉条数**（融合粒随批次进出会变 = 第 89 条说的那类死读数）：
+  (function () {   /* ===== §E487/§E490 融合父边（红线，两根同色）=====
+     *   融合粒天生两个父（tools/soup-pack.mjs 把每粒来源的 wid 写进包 meta，lineage.mjs 反查成节点）。
+     *   §E487 第一版只把**第二父**画成另一种颜色、第一父仍走淡蓝血统色 ⇒ 读起来像"一枚热启动 + 一条补充说明"，
+     *   而这两条边是**同一种关系**。用户 10-08 裁定：「让两根融合线都用同一个颜色。可以用红色的和蓝色区分开」
+     *   ⇒ 现在两条一起走 kind=3（红、实线），淡蓝只剩真正的热启动边。
+     *   五句各自可反证，且**不钉条数**（融合粒随批次进出会变 = 第 89 条说的那类死读数）：
      *     ① 第二父不许指向图上没有的枚 —— §E378 那 57 条静默丢失的同一族病。
      *     ② 第二父不许是本枚自己、也不许与第一父同枚（否则画出一条看不见的线）。
-     *     ③ 这一帧真画的紫线条数必须**等于数据里该画的条数**（两边都按同一批可见点算）。
-     *     ④ 'hash' 与 'off' 两档必须一条不画 —— 第二父不是包自己 hotstartFrom 里那份哈希。
-     *   牙口（四条都实测过，读数照抄）：
-     *     ③ 删掉第二父循环里的「NSOUP++」（边照样 push，只是不计数）⇒ 红在「紫线 0 条 ‖ 该画 3 条」。
-     *     ④ 删掉「if (st.edges === 'hash') continue;」⇒ 红在「全开 3 ‖ 只实录 3 ‖ 关掉 0」。
-     *     ① 把 SOUP-K2E20-80 的第二父 K2 改成图上没有的 GHOST-487 ⇒ 红在「指向没有的枚 1」。
-     *        ⚠ 这一步 ③ **不红**（紫线 2 条 = 该画 2 条，want 也按"图上有没有这枚"算）⇒ 两条不打架、各有分工：
-     *        ① 管"指向空气"，③ 管"真画了几条"。
-     *     ② 自边/与第一父同枚那条没有独立的变异可造（生成器那侧由 lineage.mjs 的倒挂守卫挡），
-     *        它和 ① 共用一次红：GHOST 那条改不成自边，所以这条按"结构上不许出现"判，读数会点名几枚。 */
+     *     ③ 这一帧真画的红边条数 = 数据里该画的条数（第一父 + 第二父两条都算，按同一批可见点算）。
+     *     ④ 'hash' 与 'off' 两档必须一条不画 —— 融合父不是包自己 hotstartFrom 里那份哈希。
+     *     ⑤ **两根必须同色**：这条只能结构式判 —— 第一父那条是在"血统边循环"里认「psrc === soup」才拿到 kind=3 的，
+     *        所以「NSOUP1 = 数据里该有红第一父边的枚数」成立 ⇔ 那个分支没被改回普通蓝边。
+     *        （谁把「sq ? 3 : 0」改回「0」，NSOUP1 就掉到 0 ⇒ 这条当场红。）
+     *   牙口（都实测过，读数照抄）：
+     *     ③ 删掉第二父循环里的「NSOUP++」⇒ 红在「红边 3 条 ‖ 该画 6 条」；
+     *     ④ 删掉「if (st.edges === 'hash') continue;」⇒ 红在「全开 6 ‖ 只实录 3 ‖ 关掉 0」；
+     *     ① 把第二父改成图上没有的 GHOST ⇒ 红在「指向没有的枚 1」；这一步 ③ **不红**
+     *        （want 也按"图上有没有这枚"算 ⇒ 两条不打架：① 管指向空气，③ 管真画了几条）；
+     *     ⑤ 把第一父那条的 kind 从 3 改回 0 ⇒ 两条一起红：③「红边 3 条 ‖ 该画 6 条」+ ⑤「第一父红边 0 / 该画 3」。
+     *        ⚠ 这条腿**第一版是台假仪器**：那时 NSOUP1 是「if (sq)」加的一（数的是"这枚来路是融合"这个条件），
+     *        同一个变异跑下去 71 条全绿 —— 是牙口测试把它抓出来的。现在数的是 kind === 3（生效值）。
+     *        ⇒ 记进 METHODOLOGY：**计数器一律数"落到画面上的那个值"，不数"进没进那个分支"**。 */
     var SNAPM3 = { mode: st.mode, edges: st.edges, flo: st.flo, fhi: st.fhi, batch: st.batch, elev: st.elev };
     var ID3 = {}, IX3 = {}; for (var q3 = 0; q3 < N; q3++) { ID3[P[q3].id] = 1; IX3[P[q3].id] = q3; }
     var S2 = P.filter(function (d) { return d.pof2; });
+    var S1 = P.filter(function (d) { return d.psrc === 'soup' && d.pof; });
     var DG3 = S2.filter(function (d) { return !ID3[d.pof2]; });
     var BAD3 = S2.filter(function (d) { return d.pof2 === d.id || d.pof2 === d.pof; });
     var BK3 = S2.filter(function (d) { var pt = TSBY[d.pof2]; return pt && d.ts && pt > d.ts; });
     /* 批次放开到 'all' + 窗口放满：这条比的是"边画没画全"，不该被批次切走样本（§E449 同一件事）*/
     st.mode = 'tree'; st.elev = 0; st.flo = 0; st.fhi = 1; st.batch = 'all'; recomputeVIS();
-    st.edges = 'all'; draw(); var sAll = NSOUP;
-    var want = S2.filter(function (d) { return ID3[d.pof2] && VIS[IX3[d.id]] && VIS[IX3[d.pof2]]; }).length;
+    st.edges = 'all'; draw(); var sAll = NSOUP, s1 = NSOUP1, s2 = NSOUP2;
+    var want1 = S1.filter(function (d) { return ID3[d.pof] && VIS[IX3[d.id]] && VIS[IX3[d.pof]]; }).length;
+    var want2 = S2.filter(function (d) { return ID3[d.pof2] && VIS[IX3[d.id]] && VIS[IX3[d.pof2]]; }).length;
+    var want = want1 + want2;
     st.edges = 'hash'; draw(); var sHash = NSOUP;
     st.edges = 'off'; draw(); var sOff = NSOUP;
     T('融合粒的第二父不许指向空气、不许是本枚自己或与第一父同枚、不许时间倒挂（§E487）',
@@ -3968,9 +3984,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       S2.length + ' 枚带第二父 ‖ 指向没有的枚 ' + DG3.length + (DG3.length ? '：' + DG3.slice(0, 3).map(function (d) { return d.id + '→' + d.pof2; }).join(' ‖ ') : '') +
         ' ‖ 同枚/自边 ' + BAD3.length + (BAD3.length ? '：' + BAD3.slice(0, 3).map(function (d) { return d.id + '→' + d.pof2; }).join(' ‖ ') : '') +
         ' ‖ 倒挂 ' + BK3.length + (BK3.length ? '：' + BK3.slice(0, 3).map(function (d) { return d.id + '（父 ' + TSBY[d.pof2] + ' > 本枚 ' + d.ts + '）'; }).join(' ‖ ') : ''));
-    T('融合边：紫线必须真画出来，且这一帧画的条数 = 数据里该画的条数（画少 = 边静默没了 ‖ 画 0 = 紫线整段没生效）',
-      sAll > 0 && sAll === want, '紫线 ' + sAll + ' 条 ‖ 该画 ' + want + ' 条（带第二父 ' + S2.length + ' 枚）');
-    T('融合边在「只实录哈希」与「关掉连线」两档必须一条不画（第二父不是热启动来路）',
+    T('融合边：红线必须真画出来，且这一帧画的条数 = 数据里该画的条数（第一父 + 第二父两条都算 ‖ 画少 = 边静默没了）',
+      sAll > 0 && sAll === want, '红边 ' + sAll + ' 条 ‖ 该画 ' + want + ' 条（第一父 ' + want1 + ' + 第二父 ' + want2 + ' ‖ 带第二父 ' + S2.length + ' 枚）');
+    T('融合的两根父边必须**同色**（§E490 ‖ 第一父不许走回淡蓝血统色：那会被读成"一枚热启动 + 一条补充"，而两条是同一种关系）',
+      s1 === want1 && s2 === want2 && sAll === s1 + s2,
+      '第一父红边 ' + s1 + ' / 该画 ' + want1 + ' ‖ 第二父红边 ' + s2 + ' / 该画 ' + want2 + ' ‖ 合计 ' + sAll +
+      '（若第一父掉成 0 = 那条分支又改回普通蓝边了）');
+    T('融合边在「只实录哈希」与「关掉连线」两档必须一条不画（融合父不是热启动来路）',
       sHash === 0 && sOff === 0, '全开 ' + sAll + ' ‖ 只实录 ' + sHash + ' ‖ 关掉 ' + sOff);
     st.mode = SNAPM3.mode; st.edges = SNAPM3.edges; st.elev = SNAPM3.elev; st.batch = SNAPM3.batch;
     st.flo = SNAPM3.flo; st.fhi = SNAPM3.fhi; recomputeVIS(); draw(); paintWin();

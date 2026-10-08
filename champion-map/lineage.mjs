@@ -298,7 +298,22 @@ const bySig = new Map();
  *   ⇒ 家族号只描述训练家族。这 16 枚**仍然写进表**（584 条父边要以它们为靶），但 fam 一律给 0，
  *      显示交给 viewer 那一行合成家族（§E376 补行 / §E377 放最上面）。 */
 const SLOTID = {}; for (const r of ROWS) if (/^SLOT-/.test(r.id)) SLOTID[r.id] = 1;
-for (const r of ROWS) { if (SLOTID[r.id]) continue; if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push(r); }
+/* ===== §E490 融合家族单开一行（用户 10-08 17:0x：「融合以及融合后训练单独开一个家族吧」）=====
+ *   原来这三枚被并进「零散实验（<6 枚的类合并）」，而那一行是给"训练配置各不相同的散枚"兜底的 ——
+ *   融合粒**没有训练配置**（它是两枚的权重平均，meta 里 `mode/n/pop/games` 天生是空的），
+ *   并进去等于让图上把"方法根本不同"读成"方法一样"。
+ *   成员规则两条，一起算完再**从训练聚类里摘出去**（不是事后改 fam —— 那会让「零散实验」的枚数说谎）：
+ *     ① `psrc === 'soup'`：融合粒自己（父是从包 meta 的 `soup.sources[].wid` 反查出来的）；
+ *     ② 沿 `parentOf` 链能走到融合粒的：从融合粒续训出来的产物。
+ *   ② 必须一起挪：续训那一步的配置签名会和它热启动的那一族一样，留在训练家族里就把"同一条研究线"切成两家。 */
+const SOUPSET = {}; for (const r of ROWS) if (r.psrc === 'soup') SOUPSET[r.id] = 1;
+const BYID = {}; for (const r of ROWS) BYID[r.id] = r;
+function fromSoup(id) { for (let g = BYID[id], n = 0; g && n < 40; g = BYID[g.parentOf], n++) if (SOUPSET[g.id]) return true; return false; }
+const FUS = ROWS.filter(r => !SLOTID[r.id] && (SOUPSET[r.id] || fromSoup(r.id)));
+const FUSID = {}; for (const r of FUS) FUSID[r.id] = 1;
+if (FUS.length) console.log('§E490 融合家族摘出来 ' + FUS.length + ' 枚（融合粒 ' + Object.keys(SOUPSET).length +
+  ' ‖ 从它续训的 ' + (FUS.length - Object.keys(SOUPSET).length) + '）：' + FUS.map(r => r.id).join(' '));
+for (const r of ROWS) { if (SLOTID[r.id] || FUSID[r.id]) continue; if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push(r); }
 const groups = [...bySig.entries()].map(([sig, rs]) => ({ sig, rs,
   t0: rs.map(x => x.ts).sort()[0] || '', t1: rs.map(x => x.ts).sort().slice(-1)[0] || '' }))
   .sort((a, b) => (a.t0 < b.t0 ? -1 : a.t0 > b.t0 ? 1 : b.rs.length - a.rs.length));
@@ -328,6 +343,20 @@ for (const d of defs) { const c = d.g.rs[0].cfg;
     ' ‖ ' + String(d.g.rs.length) + ' 枚 ‖ ' + String(d.g.t0).slice(5, 10) + '→' + String(d.g.t1).slice(5, 10) +
     ' ‖ 父 ' + br.join(',');
   prev = c; }
+/* §E490 融合那一行**追加在 defs 末尾**（家族号 = 现有最大 +1）：它的成员不是"某次训练的等价类"，
+ *   通用标签那套（拿 16 个轴与上一家做差）对它没有意义 ⇒ 标签自己写，且明说"这不是训练家族"。
+ *   放在末尾而不是像旧槽位冠军那样放家族 0：那一行是"横轴换一把钟"的特例，而这一行的横轴与其它行**同一把钟**
+ *   （ts = 写盘时刻），只是方法不同 ⇒ 按"上→下即时间推进"的既有读法，最新的这条研究线就该在最下面。 */
+if (FUS.length) {
+  const n = Math.max.apply(null, defs.map(x => x.n).concat([0])) + 1;
+  const t0 = FUS.map(r => (r.ts || '').slice(0, 10)).sort()[0] || '';
+  const t1 = FUS.map(r => (r.ts || '').slice(0, 10)).sort().slice(-1)[0] || '';
+  const pr = [...new Set(FUS.map(r => [r.parentOf, r.pof2].filter(Boolean).join('+')).filter(Boolean))];
+  const d = { n, g: { sig: 'soup', rs: FUS, t0, t1 },
+    label: '融合（权重平均）与它的续训 ‖ ' + FUS.length + ' 枚 ‖ ' + t0.slice(5) + '→' + t1.slice(5) +
+      ' ‖ 父 ' + (pr.join(' · ') || '不可考') + ' ‖ 不是训练家族：两粒父的权重平均（tools/soup-pack.mjs）' };
+  defs.push(d); for (const r of FUS) FAM[r.id] = d;
+  console.log('§E490 已开融合家族 号=' + n + '（' + FUS.length + ' 枚 ‖ 标签「' + d.label + '」）'); }
 /* §E314 → §E464 更正：这里原来写的「无实体」是**错的**，错的是一台仪器的口径。
  *   §E314 那遍穷尽扫过盘上 1461 个 .bak + 593 个可达 blob + 4190 个对象库 blob，逐枚算权重指纹 ⇒ 没找到 `d13d3c85…`。
  *   但它算的是「文件里那份数组」的哈希，而训练服务记父走的是 `weightsId(loadAny(种子).params)`
