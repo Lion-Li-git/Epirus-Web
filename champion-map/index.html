@@ -1211,7 +1211,8 @@ function drawTree(fr) {
    *   ⚠ 网格每帧重算（平移/缩放会改密度）；代价 = 726×5 次算术 + 726 次 stroke + 3630 次 addColorStop（与改动前同量级）。
    *     ELOG=0 是页内那两条判据自己用的对照组（固定 alpha），不是给用户的开关。 */
   var EA0 = 0.30, ED0 = 25, EMIN = 0.03, EGRID = Math.max(10, Math.round(22 * devicePixelRatio));
-  var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
+  var NINF = 0   /* §DS②：路径推断来源的父边条数（与槽位接替/倒挂同型）*/
+var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
   EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [] };
   if (st.edges !== 'off') {
     var EL = [];
@@ -1231,7 +1232,11 @@ function drawTree(fr) {
        *   kind 0 原来没有区分来源 ⇒ 把"实线"收紧为**只有 hash / hash-emb**（有哈希为证）；
        *   其余来源（seedpack / arm / slot-at-time）与倒挂假边一样走**长虚线**（kind 1 的既有样式）。 */
       var _hashBacked = (dd.psrc === 'hash' || dd.psrc === 'hash-emb');
-      var kind = bq ? 1 : (cq ? 2 : (sq ? 3 : (_hashBacked ? 0 : 1)));
+      /* §2026-10-08 DS②（用户：「黄虚线比蓝线还显眼…灰点线又太虚…既然这两个都是不能完全确定的类型，
+       *   你就统一成一种线，能见度跟蓝线差不多或略低」）：**三类不确定合一个 kind** ——
+       *   倒挂假边(bq) / 槽位接替边(cq) / 路径推断(seedpack·arm·slot-at-time) 全部 = kind 1（淡蓝虚线）。 */
+      if (!_hashBacked && !cq && !bq && !sq) NINF++;   /* §DS②②：路径推断来源（seedpack/arm/slot-at-time）—— 别把槽位接替也算进来 */
+      var kind = (sq ? 3 : (_hashBacked ? 0 : 1));
       if (bq) NBACK++; if (cq) NCHAIN++; if (kind === 3) { NSOUP++; NSOUP1++; }
       var pa = pos[dd.pof], pb2 = pos[dd.id];
       /* §E469 每条边同时带**纸面坐标**（papA/papB）：密度网格建在那一层上，而不是建在投影后的屏幕上。
@@ -1279,7 +1284,7 @@ function drawTree(fr) {
        *   上一版把整条边取一个均值 ⇒ 一条长线只要蹭到扇根那一格，整条被拉到地板（用户 10-08 11:0x：
        *   「这一版密集处确实好了，但是单根线看不见了」）。均值这件事在"根密尾疏"的边上必然冤枉尾段。
        *   渐变仍是**一次落笔** ⇒ 不会有 §E467a 那种分桶断口；密处压到地板、疏处回到全 alpha。 */
-      var ST5 = [0, 0.25, 0.5, 0.75, 1], AL5 = [], col3 = kd === 2 ? '159,176,204' : (kd === 3 ? '248,81,73' : (kd === 1 ? '224,177,60' : '120,200,255'));
+      var ST5 = [0, 0.25, 0.5, 0.75, 1], AL5 = [], col3 = kd === 3 ? '248,81,73' : (kd === 1 ? '104,168,214' : '120,200,255');
       var PA2 = EL[e2][6] || A2, PB2 = EL[e2][7] || B2, PC2 = EL[e2][8] || C2;
       for (var s2 = 0; s2 < 5; s2++) {
         var t0 = ST5[s2], i0 = 1 - t0;
@@ -1310,7 +1315,7 @@ function drawTree(fr) {
        *   §E487 融合的第二父边（kd=3，紫）**走实线**：它是一条真血统（这枚确实是那两枚的平均），
        *   只是"不是热启动" —— 用颜色分辨就够了，再加虚线会让人读成"这条更不可信"。 */
       g.save();
-      if (kd && kd !== 3) g.setLineDash(kd === 2 ? [1.5 * devicePixelRatio, 3.5 * devicePixelRatio] : [4 * devicePixelRatio, 4 * devicePixelRatio]);
+      if (kd && kd !== 3) g.setLineDash([4 * devicePixelRatio, 4 * devicePixelRatio]);   /* §DS②：只留一种虚线 */
       g.strokeStyle = gr;
       g.beginPath(); g.moveTo(A2[0], A2[1]); g.quadraticCurveTo(C2[0], C2[1], B2[0], B2[1]); g.stroke();
       g.restore(); }
@@ -1364,11 +1369,11 @@ function drawTree(fr) {
   /* §E442 页脚拆**两行**（用户 10-08：「超级长的第二行就可以分成两行显示」）：第一行 = 这张图怎么读（行/轴/颜色口径），
    *   第二行 = 边与手势。⚠ 原来那个"量宽缩字"是**死代码**：先 measureText 算出该缩到几号，紧接着下一句又把字体写回 12px
    *   ⇒ 缩字从未生效，超长那行是被画布右缘**截掉**的（她截图里"· 滚轮 = 横轴"整段看不见就是这件事）。 */
-  var foot2 = (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝曲线 = 热启动父边（画了 ' + NEDG + ' 条'
+  var foot2 = (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝实线 = 有哈希为证 · 淡蓝虚线 = 不确定来源（共画了 ' + NEDG + ' 条父边'
       + (st.edges === 'hash' ? ' ‖ 只实录级' : '') + '）') +
     /* §E378 接替边必须自己在图上说一句它是什么：它和血统边画在同一片地方，而两者的意思完全不同
        （'hash' 那一档不画它，所以那句计数跟着 NCHAIN 走，为 0 就整段不出现）*/
-    (NCHAIN ? ' ‖ 灰点线 = 槽位接替边 ' + NCHAIN + ' 条（谁在这枚之前住过那个槽，不是血统）' : '') +
+    (NCHAIN ? ' ‖ 淡蓝虚线 = 不确定来源（路径推断 ' + NINF + ' + 槽位接替 ' + NCHAIN + ' + 倒挂 ' + NBACK + '），不是有哈希为证的血统' : '') +
     /* §E487：融合粒的第二父走紫色实线 —— 它是"两枚的权重平均"里的那一条，不是热启动 */
     (NSOUP ? ' ‖ 红线 = 融合父边 ' + NSOUP + ' 条（这枚 = 两粒的权重平均 ‖ 两条红边各自连一个父，不是热启动）' : '') +
     /* §E442：RUNNER-BASE 那批边现在**画得出来了**（收到时间轴最左那颗灰菱形），所以这句话从原来的"这条边上不画"
@@ -2096,7 +2101,7 @@ function paintLegend(fr) {
   /* §2026-10-08 DS：补两处口径说明 —— ① 底色/壳是**空处插值**（只在有点的地方有意义）；
    *   ② 壳建在三维行为轴 (x3/y3/z3) 上，不是投影坐标；③ 谱系图实线 = 哈希为证、虚线 = 路径推断或倒挂。 */
   var _cav = document.createElement('div'); _cav.style.marginTop = '4px'; _cav.style.color = 'var(--dim)'; _cav.style.maxWidth = '150px';
-  _cav.textContent = (st.mode === 'tree')
+  _cav.innerHTML = (st.mode === 'tree')
     ? '实线 = 哈希为证<br>虚线 = 路径推断或倒挂'
     : '底色/壳只在有点的地方有意义（空处 = 插值）<br>壳建在三维行为轴上，不是投影坐标';
   _col.appendChild(_cav); if (s3h) _col.appendChild(s3h);   /* §E458 只有 hp 档多这一行（单批读数的噪声必须写在读数的地方）*/
