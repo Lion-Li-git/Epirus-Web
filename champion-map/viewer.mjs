@@ -216,7 +216,17 @@ if (existsSync(shipP)) {
 const stlP = join(HERE, 'slot-timeline.tsv');
 if (existsSync(stlP)) {
   const tl = readFileSync(stlP, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), th = tl[0].split('\t');
-  const tW = th.indexOf('wid'), tF = th.indexOf('fromUTC'), tS = th.indexOf('sha'), tM = th.indexOf('metaTs');
+  const tW = th.indexOf('wid'), tF = th.indexOf('fromUTC'), tS = th.indexOf('sha'), tM = th.indexOf('metaTs'), tU = th.indexOf('subject');
+  /* §E463 旧槽位冠军在图上的标签原来是 SLOT-<8位哈希>（16 枚全是），用户 10-08：「太长了也让人看不明白，你把标签改成对应版本号」。
+     版本号不用新数据：这张时间轴的 subject 就是引入它的那条提交标题，本仓换包一律把版本写在标题里
+     （实测形如 "v1.3.0：多人（3 人）自对战训练…" ‖ "v1.3.4 训练场支持…" ‖ "feat(pack) v1.5.257 上槽 Ldemo"）。
+     ⚠ 这里不用正则（模板转义那台自证会连累别处，且正则里要写 \d）：手扫第一个 'v' + 数字 + 至少一个点号。 */
+  function verOf(sub) { const t = String(sub || '');
+    for (let k = 0; k + 4 < t.length; k++) { if (t.charAt(k) !== 'v') continue;
+      let e = k + 1, dig = 0, dot = 0; const NUM = '0123456789.';
+      while (e < t.length && NUM.indexOf(t.charAt(e)) >= 0) { if (t.charAt(e) === '.') dot++; else dig++; e++; }
+      if (dig >= 2 && dot >= 1) return t.slice(k, e); }
+    return ''; }
   if (tW < 0 || tF < 0) console.log('⚠ slot-timeline.tsv 没有 wid/fromUTC 列（表头：' + tl[0] + '）⇒ 旧槽位冠军会退回"未上槽"');
   else {
     const BY8 = {};
@@ -225,14 +235,15 @@ if (existsSync(stlP)) {
       /* §E378：这张表 39 段里只有 **32 个不同权重**（同一枚回槽过多次：实测 cc573172 两次、037b2f71 三次、
        *   e379c62c 两次）。原来这份 BY8 是"后一行覆盖前一行"⇒ 记下来的是**最后一次**进槽的时刻，
        *   而"上线"这件事的第一次才是它（也是 §E378 那条接替链不出现倒挂的前提）。改成只留第一次。 */
-      if (!(w8 in BY8)) { BY8[w8] = { when: c[tF] || '', hash: tS >= 0 ? (c[tS] || '') : '' };
+      if (!(w8 in BY8)) { BY8[w8] = { when: c[tF] || '', hash: tS >= 0 ? (c[tS] || '') : '', ver: tU >= 0 ? verOf(c[tU]) : '' };
         SLOT_FIRST[w8] = c[tF] || ''; SLOT_META[w8] = tM >= 0 ? (c[tM] || '') : ''; } }
     let nstl = 0;
     for (const r of rows) { const id = String(r.id || '');
       if (id.indexOf('SLOT-') !== 0 || SHIP[id]) continue;
       const k = id.slice(5, 13);
-      if (BY8[k]) { SHIP[id] = { when: BY8[k].when, hash: BY8[k].hash, ver: '' }; nstl++; } }
-    console.log('上线时刻补自**槽位时间轴** ' + nstl + ' 枚（旧槽位冠军 ‖ ship-times.tsv 覆盖不到的那几段 ‖ 时间轴共 ' + (tl.length - 1) +
+      if (BY8[k]) { SHIP[id] = { when: BY8[k].when, hash: BY8[k].hash, ver: BY8[k].ver || '' }; nstl++; } }
+    console.log('上线时刻补自**槽位时间轴** ' + nstl + ' 枚（其中版本号从提交标题认回 '
+      + Object.keys(SHIP).filter(k => SHIP[k] && SHIP[k].ver).length + ' 枚 ‖ 旧槽位冠军 ‖ ship-times.tsv 覆盖不到的那几段 ‖ 时间轴共 ' + (tl.length - 1) +
       ' 段 / ' + Object.keys(SLOT_FIRST).length + ' 个不同权重 ‖ 横轴取 META 写盘时刻，有该时刻的 ' +
       Object.keys(SLOT_META).filter(k => SLOT_META[k]).length + ' 个）');
   }
@@ -336,8 +347,11 @@ for (const r of DATA) if (r.fam && LIN[r.id]) FAMLAB[r.fam] = LIN[r.id].famLabel
  *        ⇒ 生成器看不见靶节点，接不了。别名在这里解，就必须在这里自证（页内那条判据按 wid 前缀核身份，第 92 条①）。
  *      ⚠ 57 条里只接 **56**：long-33 训出于 09-12 13:26，而 e379c62c 的 META 写盘是 14:15 ⇒ 接上就是一条
  *        "父比子晚"的边，而图上那个琥珀虚线的意思恰恰是"假血统"（§E367）。宁可少画一条，并把它记在判据里。
- *   ③ 584 枚共父 d13d3c85 仍然不画（页脚那条 RUNNER-BASE 注就是它）：机械上它们确实从"当时的现役"热启动，
- *      但 runner 对每一枚候选都拷同一份 ⇒ 这条边不带方法信息，画出来是 584 根收在一个点的扇形。 */
+ *   ③ §E464 改：584 枚共父 d13d3c85 **现在画得出来，而且是真边** —— 那个哈希不是"查无实体"，它是 SLOT-e379c62c
+ *      （v1.3.57）那枚包**嵌入成 v7 之后**的指纹：训练服务记父走 weightsId(loadAny(种子).params)，
+ *      而旧版这里与 §E314 都只按"文件里那份数组"的哈希去找 ⇒ 永远差一层嵌入。
+ *      仍然要记住的读法警告：runner 对每一枚候选都拷同一份 BASE ⇒ 这条边不带方法信息，
+ *      画出来是 500+ 根收在一个点的扇形（页脚第二行说这句），别读成"演化收敛"。 */
 (function () {
   const byId = {}; for (const d of DATA) byId[d.id] = d;
   const olds = DATA.filter(d => d.old && d.ts);
@@ -357,17 +371,56 @@ for (const r of DATA) if (r.fam && LIN[r.id]) FAMLAB[r.fam] = LIN[r.id].famLabel
   console.log('§E378 接线：接替边 ' + nchain + ' 条（' + olds.length + ' 枚旧槽位冠军的链，按训出时刻排）‖ 悬空血统边接回 SLOT-e379c62c ' +
     nfix + ' 条 ‖ 被时间/身份守卫退回 ' + held + ' 条');
 })();
+let NRAW = 0;   /* §E440 去重**之前**的面板行数（= 原始 tsv 行数），给页内那句"729 种打法（面板原始 917 行）"用 */
+/* ===== §E440 权重去重：同一份权重在图上只留一枚（用户 10-08：「去掉这些重复的权重再重新渲染一下」）=====
+ *   §E334 那版只做了**标注**（悬停里印"同一份权重在面板上占 17 行"），图上照旧 917 枚 ⇒ 一撮拷贝挤在同一个位置，
+ *   数点会多数，而"917 枚"与"729 种打法"这两个数永远对不上。现在直接从 DATA 里把重复行摘掉。
+ *   留哪一枚必须确定，而且不许把"现役"摘掉（INC 是按 id 找 SHIPPED-Ldemo 的）：
+ *     ① 组内有 SHIPPED-Ldemo ⇒ 留它；② 否则留有血统记录的那枚（d.lin 非空 ⇒ 它身上才有 ts/fam/par 这些信息）；
+ *     ③ 否则留 dupOf 里排最前的那枚（dupOf 是 attach-dup 按**文件权重哈希**算出来的组内全集，顺序稳定）。
+ *   摘掉的那枚不丢：id 记在保留那枚的 dups 上（悬停从"警告"改口成"本枚代表 N 份同名拷贝"），
+ *   而**所有指向被摘那枚的父边一律改指保留那枚** —— 同一份权重 ⇒ 改指不改变这条边的意思（与 §E378 的别名接回同一种做法）。
+ *   ⚠ 兜底还是页内那条「不许有任何父边指向图上不存在的枚」：漏改一条边它就红。 */
+(function () {
+  const groups = {};
+  NRAW = DATA.length;
+  for (const d of DATA) { if (!(d.dn > 1) || !d.dups) continue; (groups[d.dups] = groups[d.dups] || []).push(d); }
+  const byId = {}; for (const d of DATA) byId[d.id] = d;
+  const keeperOf = {}, drop = [];
+  for (const key in groups) {
+    const mem = groups[key];
+    const order = key.split(' ').filter(Boolean);
+    let k = mem.find(d => d.id === 'SHIPPED-Ldemo') || mem.find(d => d.lin) ||
+      mem.slice().sort((a, b) => { const ia = order.indexOf(a.id), ib = order.indexOf(b.id);
+        return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib); })[0];
+    keeperOf[k.id] = k.id;
+    for (const d of mem) if (d !== k) { keeperOf[d.id] = k.id; drop.push(d.id); }
+  }
+  const before = DATA.length;
+  /* ⚠ 只摘"**在某个重复组里且不是保留那枚**"的行：不在任何组里的行 keeperOf[id] 是 undefined，
+   *   写成 `!== id` 会把全部独苗一起删掉（第一版实测 917 → 97 枚，就是这个条件漏了"没登记"这一支）。 */
+  for (let i = DATA.length - 1; i >= 0; i--) { const kd = keeperOf[DATA[i].id]; if (kd && kd !== DATA[i].id) DATA.splice(i, 1); }
+  /* 父边改指：pof 指向被摘那枚的，一律换成保留那枚（同一份权重） */
+  let nrep = 0;
+  for (const d of DATA) { if (d.pof && keeperOf[d.pof] && keeperOf[d.pof] !== d.pof) { d.pof = keeperOf[d.pof]; nrep++; } }
+  /* 保留那枚的 dn 必须重算成"它代表几份"（原来那列是**全组行数**，摘完之后图上的语义才是"几份拷贝合成一枚"）*/
+  for (const d of DATA) if (d.dn > 1) d.dn = 1 + drop.filter(x => keeperOf[x] === d.id).length;
+  console.log('§E440 权重去重：' + before + ' 行 → ' + DATA.length + ' 枚（' + Object.keys(groups).length + ' 组共摘 ' + drop.length +
+    ' 行）‖ 父边改指 ' + nrep + ' 条 ‖ 现役在图上=' + (DATA.some(d => d.id === 'SHIPPED-Ldemo') ? '是' : '⛔没了') );
+})();
 console.log('家族 ' + Object.keys(FAMLAB).length + ' 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 ' + DATA.filter(d => !d.fam && !d.famTop).length + ' 枚');
-console.log('过线判定源 = ' + (OKSRC || '无 ⇒ 不标绿环') + ' ‖ 有判定 ' + POK + ' 枚 ‖ 判为过线 ' + DATA.filter(d => d.ok === 1).length +
+/* §E440：这一行的三个数必须**同源**（都从去重之后的 DATA 数），不能再印 POK = OKM 的键数 ——
+ *   那是"判定表里有 901 个 id"，与图上有几枚无关，混在一行里就是两条尺。 */
+console.log('过线判定源 = ' + (OKSRC || '无 ⇒ 不标绿环') + ' ‖ 判定表里有 ' + POK + ' 个 id ‖ 图上（去重后）有判定 ' + DATA.filter(d => d.ok !== null).length + ' 枚 ‖ 判为过线 ' + DATA.filter(d => d.ok === 1).length +
   ' 枚 ‖ 无判定 ' + DATA.filter(d => d.ok === null).length + ' 枚');
 
 /* E404 DS（D-3）：壳的 WebGL2 后端放在独立文件里，生成时内联（避开模板字面量的转义坑）。 */
 const GLJS = readFileSync(join(HERE, 'gl-mesh.js'), 'utf8');
 const JS = `
 var P = DATA, N = P.length;
-/* §E334 "多少枚候选"与"几种打法"是两件事：同一份权重在面板上可以占好几行（实测 901 行 = 713 个权重，
- *   其中 4 行都是现役本身）⇒ 统计条上两个数一起印，别让人把行数当打法数。*/
-var NDUP = Math.round(P.reduce(function (s, d) { return s + 1 / (d.dn > 0 ? d.dn : 1); }, 0));
+/* §E440 权重去重挪到**生成侧**做了（图上 729 枚 = 729 种打法，一枚一档），所以原来那个"Σ1/dn 数出几种打法"的
+ *   NDUP 删掉 —— 去重之后再套它会把每组只算 1/k 份，反而**少算**（原来它数 917 行 = 713 种；现在 N 本身就是种数）。
+ *   NRAW = 去重前的面板行数，留着是因为"面板上有几行"与"图上有几枚"仍然是两件事，得说得出数。 */
 var cv = document.getElementById('cv'), g = cv.getContext('2d');
 var KF = 12;   /* E387 DS：换回 §E382b 场区时它引用的顶层常量（§E385 曾把它改名 KFK 挪进函数内部 ⇒ 换回后 KF 未定义 ⇒ 整页黑）*/
 var KEXP = 2.5;   /* §E330 IDW 核的指数：1/d^KEXP。**淡出的覆盖度也用它**（见 buildBitmap），所以提成常数 ——
@@ -380,12 +433,19 @@ var OKL = [], POKJ = 0, PV = null;
   PV = { x0: pct(xa, .005), x1: pct(xa, .995), y0: pct(ya, .005), y1: pct(ya, .995) }; })();
 /* §E308 实测过上槽体检的枚数（分母只算实测过的，别把"没测"说成"没过"）*/
 var NPRM = 0, NPPASS = 0;
-/* §E314 谱系中心的真相要写在图上：584 枚（81%）的父指针解析不到实体，而那不是"丢了"——
- *   CHANGELOG.md:6402 已定性 = tools/ring2-run.mjs:95 无条件覆写 EPIRUS_BUNDLE_IN ⇒ 全部臂恒拷同一个 v1.3.58 BASE。
- *   今天又把它可能藏身的地方穷尽扫完（盘上 1461 个 .bak + 全历史可达 blob 593 + 整个对象库 4190，逐枚算权重指纹）⇒ 无实体。
- *   ⇒ 图上不画这条边（没有节点可画），但**必须把这句话印出来**，否则下一个人会把它读成"81% 同源 = 演化收敛"。*/
-var NRBASE = 0;
+/* §E314 → §E464 更正：这里原来写「584 枚的父指针解析不到实体 · 无实体」—— **那句是错的**，错在检索口径：
+ *   §E314 那遍穷尽扫过盘上 1461 个 .bak + 593 个可达 blob + 4190 个对象库 blob，但逐枚算的是「文件里那份数组」的哈希，
+ *   而训练服务记父走的是 weightsId(loadAny(种子).params) = **嵌入成 v7 之后**那份数组的指纹 ⇒ 差的这一层没人补。
+ *   补上之后 d13d3c85 = SLOT-e379c62c（v1.3.57，实体 = 已入库的 champion-5p-v1.3.58.bak）⇒ 这 584 条边是真边，画在图上。
+ *   仍然成立的那半句：tools/ring2-run.mjs:95 历史上**无条件**把 EPIRUS_BUNDLE_IN 覆写成这一份 BASE
+ *   ⇒ 81% 共父不是"演化收敛"而是 runner 恒拷。这条读法警告现在写在页脚第二行（NRBASE 只数真的还解析不到的零星几枚）。*/
+var NRBASE = 0;   /* §E464 父指针仍然解析不到图上任何一枚的枚数（原来是 584 枚共用一个"查无实体"的锚，现在只剩零星） */
 (function () { for (var i = 0; i < N; i++) if (P[i].pnm && P[i].pnm.indexOf('RUNNER-BASE') === 0) NRBASE++; })();
+/* §E467 边密度压透明度那台仪器的读数（drawTree 每帧填一次）：
+ *   ELOG = 0 只有一条判据会用（拿固定 alpha 当对照组做 A/B），不是用户开关。 */
+var ELOG = 1;
+var EPROBE = 0;   /* §E467b 页内判据设成"每 N 条留一条"的步长；0 = 不收集探针 */
+var EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [] };
 /* ===== §E363 / §E367 时间倒挂的父边（用户 10-06 点名：e35prod807 比现役还早，父却写着现役）=====
  *   §E363 当时我给的诊断是"槽位节点的 ts 是进槽时刻，边是真的" —— **那个诊断是错的**，§E367 查翻了：
  *   现役那份权重（d490dc13）自己 META.ts = 09-27T08:55Z，最早可证的 git 实体是提交 3c17e23 @09-27T10:42Z，
@@ -397,7 +457,11 @@ var NRBASE = 0;
 var TSBY = {};
 /* §E373 这一帧真的画了几条父边 —— 连线开关的判据要能读到它（页内自检拿它 + 像素差一起判，见 §E338 末尾）*/
 var NEDG = 0;
+var NOPTS = 0;   /* §E451 只给页内自检用的"只画底、不画点"开关：谱系图那条"左栏真被画上东西"要一张**只有底图的帧**做参照，
+                  *   而不是拿"中心与四邻不同"当代理（那个代理在名字上、在同族密集处都会看错，§E447 自己就记了污染）。
+                  *   出厂恒为 0；判据用完必须还原，否则下一帧就没有点了。 */
 var NCHAIN = 0;   /* §E378 这一帧画了几条**接替边**（页脚与页内自检都读它，不许各自数一份）*/
+var LASTFAMS = [];   /* §E448 上一帧谱系图的行表（fams 原样）—— 页内那条"家族 0 排最上面"在窗口把整行切没时读这个 */
 (function () { for (var i = 0; i < N; i++) TSBY[P[i].id] = P[i].ts || ''; })();
 function backOf(d) {   /* 返回"父节点的 ts"，当且仅当它晚于本枚（空串 = 正常边 / 父不在图上）*/
   if (!d.pof || !d.ts) return '';
@@ -425,6 +489,7 @@ var NSEL = 0, NSELUP = 0, NSELSOFT = 0, NSELDOWN = 0;
   else if (P[i].scd > 0 && pos < 6) NSELSOFT++;
   if (P[i].scd <= -2) NSELDOWN++; } })();
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
+  lgPos: null,        /* §E462 图例被拖到哪儿（相对 #wrap 的 CSS px）；null = 出厂那角 */
   sortBy: 'F',          /* E399 DS：一维图的排序轴 —— 'F' = F 名次（默认）‖ 'time' = 训出时刻。 */
   flo: 0, fhi: 1,       /* §E371 强度窗口的两端，存成"占全库 F 值域的比例"⇒ 出厂 (0,1) 就是全范围 */
   edges: 'all',         /* §E373 谱系图父边：'all' 全开 ‖ 'hash' 只画实录级 ‖ 'off' 一条不画（默认全开 = 已验收的那张图） */
@@ -508,8 +573,15 @@ var FLAT = { yaw: -Math.PI / 2, pit: Math.PI / 2 }, SOLID = { yaw: -Math.PI / 2,
  *     平面态就是 FLAT 这一档（立体态由 st.elev 抬升，不借 SOLID 的 pit）。 */
 /* §E377 谱系图版式的**支点**（左栏宽 / 上边距 · 设备像素）。单独摆出来是因为滚轮"以光标为锚"那道算法
  *   要减掉支点再乘缩放比 —— 不放在模块级就得在事件里重算一遍立体态那套挤行距的逻辑（会算错）。 */
-/* E396 DS（用户 10-08）：左栏 340 → 520 —— 家族名搬到坐标轴这一侧显示完整（底部高亮选项改成只显示家族号，把位置让出来）。 */
-var TPAD = { l: 520 * devicePixelRatio, t: 40 * devicePixelRatio };
+/* E396 DS（用户 10-08）：左栏 340 → 520 —— 家族名搬到坐标轴这一侧显示完整（底部高亮选项改成只显示家族号，把位置让出来）。
+ * §E451 520 → 392：E396 那一步定在 E397 的"总结式标签"**之前**，量的是当时那种一整列权重哈希的长标签。
+ *   总结式之后实测（页内那条"左栏与它承载的家族名相称"量的，无头 1600×900）：
+ *   25 行家族名最宽 348px（家族 22）‖ 次宽 317/291/266/266/260 ‖ 中位 186 ⇒ 520 里有 ~172px 是死空。
+ *   392 = 348 + 12（文字右端离分界的间距）+ 24（maxW 的余量）+ 8（分界线）⇒ 最宽那行仍然单行装得下，
+ *   数据区在 1100px 窗口下宽 12.7%、1600px 下宽 8.75%。
+ *   ⚠ 上一班试过这一步，被 §E447 那条像素代理挡住（"中心与四邻不同"在名字上、同族密集处都会看错，带子一挪通过率从 ≥60% 掉到 44%）
+ *     ⇒ 这次先把那条代理换成"与一枚点都不画的那一帧逐点比差"（NOPTS），换完实测通过率 101/102 = 99%，栏宽这件事才做得下去。 */
+var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
 
 /* §E314 势 = **线上口径**的 H + T·S（用户裁定把整张图换成玩家真正拿到的那个数）。
  *   旧写法是 d.H / 100（考卷口径 · ε=0 贪心）。两口径的**排名**同构（Spearman 0.912 / 全库 718 枚），
@@ -681,16 +753,24 @@ function mix(c1, c2, t) {   /* 十六进制线性插值，t∈[0,1] */
 /* G(long) 的显示区间取全库 p02..p98（不用 0..8：那会把对比度全压在低段）*/
 var GLR = (function () { var a = P.map(function (d) { return d.gl; }).filter(function (v) { return v !== null && v !== undefined && isFinite(v); }).sort(function (x, y) { return x - y; });
   return a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [0, 8]; })();
+/* §E308「没测过的灰压到 0.16」那一支抽成函数：页内那条「高亮不许压黑」必须能把它**单独摘出来**再量。
+ *   不抽的话那条判据在 pm/duel/de/hp/sc 五档**恒红**（实测 0.16），而红的原因是"两条都对的规矩打架"，
+ *   不是画面坏了 —— 用户 10-08 裁：「不要为了过门禁而过…反思红的门禁是不是写的有什么问题」。*/
+function unmeasuredGray(d) { return (st.color === 'pm' && (d.pv === null || d.pv === undefined)) ||
+    (st.color === 'duel' && !d.ds) || (st.color === 'de' && d.de === null) || (st.color === 'hp' && d.hp === null) ||
+    (st.color === 'sc' && (d.scd === null || d.scd === undefined)); }
 function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   /* §E308 上槽体检口径下 705/718 枚是"没测过"⇒ 不压暗就找不到那 13 枚（灰压到 0.16，实测过的照旧）*/
-  if ((st.color === 'pm' && (d.pv === null || d.pv === undefined)) || (st.color === 'duel' && !d.ds) ||
-      (st.color === 'de' && d.de === null) || (st.color === 'hp' && d.hp === null) ||
-      (st.color === 'sc' && (d.scd === null || d.scd === undefined))) return 0.16;
+  if (unmeasuredGray(d)) return 0.16;
   if (!n) return 1; return st.hi[gk(d)] ? 1 : 0.34; }
   /* §E338 用户 ④「点选中框会全部变暗」：非高亮那批原来压到 0.10 —— 24 个家族里点一家，
    *   其余 742/901 枚直接糊成背景噪点，图例点下去之后整张图读不动。压到 0.34 既留住"谁被选中"的对比，
    *   又保住上下文（这张图的价值恰恰在"被选中的那家相对别人在哪"）。*/
 /* 家族短标：只取"改了什么"那一段并截断（长说明留给悬停），否则一个按钮吃掉整条图例栏。*/
+/* §E463 图上那 16 枚旧槽位冠军的 id 是 SLOT-<8位权重哈希>，用户 10-08：「太长了也让人看不明白，你把标签改成对应版本号」
+ *   ⇒ 有版本号（sv，从引入它的那条提交标题认回，见构建侧 verOf）就标版本号，没有仍回落到 id —— 不许编一个。
+ *   悬停与选中卡上仍然给全 id + 哈希，身份这件事不能因为好读就丢掉。*/
+function labOf(d) { return (d && d.sv && String(d.id).indexOf('SLOT-') === 0) ? d.sv : (d ? d.id : ''); }
 function famLab(d) { return FAMLAB[d.fam] || ''; }
 /* E397 DS（用户 10-08：一大堆调整数字被截掉在这里也看不清楚，尤其家族 5 / 22 这种超长标签）：
  *   上游那条 recipe 是**一长串「名 a→b」**，其中大多数是「-→v」（从默认打开）或「v→-」（关掉回默认）。
@@ -739,7 +819,7 @@ function famShort(d, n) { var s = String(famLab(d)).split(' ‖ ')[0] || ('家�
 function tip(d, fr) {
   return d.id + (d.lin ? ' 【' + d.lin + '】' : '') + (d.kin ? ' 〔' + d.kin + '〕' : '') +
     /* §E334 同一份权重占了几行必须自己在明细里说：否则"这枚 F 名次 8"和"那枚名次 10"可能是**同一个包**。 */
-    (d.dn > 1 ? '\\n⚠ 同一份权重在面板上占 ' + d.dn + ' 行：' + d.dups + '（它们不是几种打法，是一个包的几份拷贝）' : '') +
+    (d.dn > 1 ? '\\n本枚代表 ' + d.dn + ' 份**同一份权重**的拷贝（面板上原本占 ' + d.dn + ' 行，§E440 起图上只画这一枚）：' + d.dups : '') +
     '\\n家族 ' + d.fam + '（按训练方法/目标分）：' + (famLab(d) || '—') +
     '\\n　RNG seed 名字后缀=' + d.seed + ' ‖ META.seed=' + (d.ms || '—') + ' ‖ 训出 ' + (d.ts || '—') +
     '\\n　热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof : (d.pnm ? '\\n　　' + d.pnm : '（父指针未落档）')) +
@@ -1100,7 +1180,7 @@ function putLabel(txt, x, y, force, rot, idx) {
 function wantLabel(d) {
   if (st.labels === 'off') return false;
   if (st.hi[gk(d)]) return true;
-  if (st.q && d.id.indexOf(st.q) >= 0) return true;
+  if (st.q && String(d.id).toLowerCase().indexOf(st.q) >= 0) return true;   /* §E453 搜索改成不分大小写：包名里有 v7FGta / SLOT-AB12 这种混写，按原样比会「打了却搜不到」 */
   if (st.labels === 'all') return true;
   /* §E330 父链那几枚必须常驻：它们不是冠军、名次也不显眼（E51-t8-713 排 61），落在"零散实验"那一行里
    *   ⇒ 不点名就找不到，而用户问的正是"现役的祖先在图上哪去了"。 */
@@ -1172,7 +1252,7 @@ function draw1(fr) {
   labelReset(); g.fillStyle = st.ink;
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var p = scr[ls[i].i]; if (!p) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, p[0], p[1], !!P[ls[i].i].lin, true, ls[i].i); }
+    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), p[0], p[1], !!P[ls[i].i].lin, true, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText('一维：位置 = ' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次') + '（下方蓝条 = Hp 线上口径夺1率，黄条 = T·S）· 悬停看明细 · 点一枚 = 选中（点空白取消）· 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
 }
@@ -1254,6 +1334,8 @@ function drawTree(fr) {
    *   左栏那两行字不再互相压）。冠军行永远保留（分界参照物不能被批次切没）。 */
   for (i = 0; i < N; i++) if ((P[i].fam || P[i].famTop) && VIS[i] && !fset[P[i].fam]) { fset[P[i].fam] = 1; fams.push(P[i].fam); }
   fams.sort(function (a, b) { return a - b; });
+  LASTFAMS = fams.slice();   /* §E448 交给页内判据：窗口切到"家族 0 一行里一枚都没有"时，像素上读不到行序了，
+                                 但行表本身就是"谁排在最上面"这件事的主语 ⇒ 判据可以退到这一层，而不是整条跳过 */
   var tmin = Infinity, tmax = -Infinity;
   for (i = 0; i < N; i++) { if (!VIS[i]) continue; var tv = Date.parse(P[i].ts); if (isFinite(tv)) { if (tv < tmin) tmin = tv; if (tv > tmax) tmax = tv; } }
   if (!(tmax > tmin)) { g.fillStyle = st.dim; g.fillText('没有可用的 ts ⇒ 谱系图画不了（要 lineage.tsv）', 30 * devicePixelRatio, 60); return; }
@@ -1271,6 +1353,10 @@ function drawTree(fr) {
    *   做法 = 把整张地板往下挤 LIFT·T3，行距按剩下的空间重排 ⇒ 行仍然全在画布内，
    *   而"原地上升"有了去处。挤完 padT/rowH 就是立体版的那张版式，底图与点共用同一套 ⇒ 不会错位。*/
   var LIFT = (h - padT - padB) * 0.22;
+  /* §E469 记下**挤行之前**的布局：边的密度网格要建在这一层上（只随数据/窗口/批次变，不随相机变）。
+   *   拿挤行之后的 padT/rowH 去建网格 ⇒ 转视角时行被压缩、格子整体换档，一条线的 alpha 会跳
+   *   （实测偏航 +0.05rad 跳 0.207，def-31 从 0.300 掉到 0.093）= 用户点的"旋转时抽搐"。 */
+  var padT0 = padT, rowH0 = rowH;
   if (st.elev > 1e-4) { padT += LIFT * st.elev; rowH = (h - padT - padB) / fams.length; }
   var KS = 1;   /* §E314 点半径不跟缩放（经典统计图约定）—— 保留这个名字是因为下面两处按它算半径 */
   /* §E379 日期步长按**当前横轴倍率**现算：恒为 1 天时缩到 0.57 实测 13px 一格压 34px 宽的字 ⇒ 糊成一坨。
@@ -1333,7 +1419,7 @@ function drawTree(fr) {
    *   高度用**线性** min-max，不用 §E330 那套按秩铺色 —— 秩是"颜色要能分开"的读法，几何要的是量的比较。
    *   ⚠ 格内抖动（同一秒训出的一撮）**两态都留在纵方向**：上一版把它挪去横方向，正逢地板被压扁 ⇒ 一撮点全叠成一条横线。
    *   立体态反而要它：同一格里纵向散开一点才好观察（用户点名）。*/
-  var pos = {}, base = {};
+  var pos = {}, base = {}, pap = {};
   function PT(i) {
     var d = P[i], tv = Date.parse(d.ts); if (!isFinite(tv)) return null;
     if (!VIS[i]) return null;      /* §E338 批次过滤：不在当前批次 ⇒ 不落格、不连线、不进命中表 */
@@ -1341,35 +1427,122 @@ function drawTree(fr) {
     var jit = ((i * 2654435761) % 1000) / 1000 - 0.5;
     var px = X(tv), py = padT + (ri + 0.5) * rowH + jit * rowH * 0.66;   /* **纸面坐标**（§E379：与底图同一套，视图变换交给 PS） */
     var uf = Math.max(0, Math.min(1, (Fv(d) - FR3[0]) / ((FR3[1] - FR3[0]) || 1)));
-    return [PS(px, py, uf * LIFT * T3), PS(px, py, 0)];
+    return [PS(px, py, uf * LIFT * T3), PS(px, py, 0),
+            [px, padT0 + (ri + 0.5) * rowH0 + jit * rowH0 * 0.66]];   /* 第三项 = 挤行之前的纸面点（§E469 密度建在那一层）*/
   }
-  for (i = 0; i < N; i++) { var q = PT(i); if (!q) continue; pos[P[i].id] = q[0]; base[P[i].id] = q[1]; }
+  for (i = 0; i < N; i++) { var q = PT(i); if (!q) continue; pos[P[i].id] = q[0]; base[P[i].id] = q[1]; pap[P[i].id] = q[2]; }
   if (T3 > 0.02) {   /* 立柱：把"浮在多高"接回底图上那一格，否则立体里读不出它属于哪一行 */
     g.strokeStyle = 'rgba(159,176,204,.20)'; g.lineWidth = 1;
     for (i = 0; i < N; i++) { var pb = pos[P[i].id], gb = base[P[i].id];
       if (!pb || !gb || Math.abs(pb[1] - gb[1]) < 1.5) continue;
       g.beginPath(); g.moveTo(gb[0], gb[1]); g.lineTo(pb[0], pb[1]); g.stroke(); } }
-  g.strokeStyle = 'rgba(120,200,255,.30)'; g.lineWidth = 1 * devicePixelRatio;
+  /* ===== §E467 边的透明度按**局部密度**压（用户 10-08：「线连太多了之后还是有点太糊了，调整一下透明度或者考虑一下连线透明度叠加时使用对数叠加」）=====
+   *   固定 .30 在 726 条上必然糊：n 条重叠的等效不透明度是 1-(1-.3)^n，10 条就 0.97 ⇒ 扇根与主带整块成板。
+   *   而"板"没有信息量 —— 它只说"这里很多"，读者要的是"能数出几条、各自往哪儿去"。
+   *   现在的法律：**拐点 + 反比归一** —— 先把"哪些边经过哪个格子"栅格进一张粗网格（格 = 22 CSS px），
+   *   每条边沿曲线取 5 个位置的格子线数 d，alpha = 基准 × min(1, ED0 / d)（地板 EMIN），**一条边一次 stroke**（渐变 strokeStyle）。
+   *   为什么不是字面的"对数相加"：量过，它压不住这块板。按 基准/(1+ln d)^1.5 时最密那一格（523 条）单段只到 .041，
+   *   而一个像素上仍压着 ~40 段 ⇒ 1-(1-.041)^40 = 81% 照样到顶；更要紧的是对数律把**中等密度**（一格 9~32 条）也一并压暗
+   *   （实测那一段的中位墨从 131 掉到 67），这就是用户接着说的"单根线看不见了"。拐点律在 d ≤ 25 时**一字不改全 alpha**，
+   *   只在真堆里按 1/d 收，使那格的总墨量有界。
+   * §E467a 中间一版被当场否掉（「现在线条重合的部分反而出现了中断」）：那条边切 8 段、按段密度**分桶批量 stroke** ⇒
+   *   同一条线在不同桶里以不同 alpha 落笔、桶又按 alpha 升序画 ⇒ 亮段压在暗段上 = 肉眼可见的断口。
+   *   教训：分桶是省 stroke 的手段，**不能拿它改单条线的连续性**；连续性现在由 §E467b 那条判据钉住。
+   *   三个常数是量出来的（判据自己报的读数，窗 = 最密那一格 ±40px，那一格压着 523 条线）：
+   *     ED0=8 ⇒ 到顶 436→20、有墨 790→754、d=9~32 那档中位墨 67（太暗）‖ **ED0=25 ⇒ 到顶 436→26（6%）、有墨 765（97%）、d=9~32 中位墨 131**
+   *     地板 .03 只管"埋在堆里那一段"：一条 1px 线满量程墨 ≈ 221，alpha 低于 .03 就落到 6.6 墨以下 = 肉眼与判据同时看不见。
+   *   ⚠ 网格每帧重算（平移/缩放会改密度）；代价 = 726×5 次算术 + 726 次 stroke + 3630 次 addColorStop（与改动前同量级）。
+   *     ELOG=0 是页内那两条判据自己用的对照组（固定 alpha），不是给用户的开关。 */
+  var EA0 = 0.30, ED0 = 25, EMIN = 0.03, EGRID = Math.max(10, Math.round(22 * devicePixelRatio));
   var NBACK = 0; NEDG = 0; NCHAIN = 0;
-  for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
-    /* §E373 连线开关（用户："给一个连线开关不然可能会太多挡住了"）：
-     *   'off' 一条不画；'hash' 只画包自己记下的那份权重哈希（§E367 之后最硬的一级来路）。
-     *   §E378 的接替边 psrc='slot-chain' ⇒ 在 'hash' 档**不画**（它不是血统，不该混进"只画实录"那一档）。 */
-    if (st.edges === 'off') break;
-    if (st.edges === 'hash' && dd.psrc !== 'hash') continue;
-    NEDG++;
-    var a = pos[dd.pof], b = pos[dd.id];
-    /* §E363 倒挂边（父的 ts 晚于子）走虚线 + 琥珀色：它连的是权重，不是"谁生了谁"的时间顺序
-     *   §E378 接替边走**点线 + 灰**：它连的是"谁在谁之前住过那个槽"，与血统、与假血统都不是一回事。 */
-    var bk = backOf(dd), ch = dd.psrc === 'slot-chain';
-    if (ch) NCHAIN++;
-    g.save();
-    if (bk) { NBACK++; g.setLineDash([4 * devicePixelRatio, 4 * devicePixelRatio]); g.strokeStyle = 'rgba(224,177,60,.62)'; }
-    else if (ch) { g.setLineDash([1.5 * devicePixelRatio, 3.5 * devicePixelRatio]); g.strokeStyle = 'rgba(159,176,204,.62)'; }
-    g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - rowH * 0.5 * TKY, b[0], b[1]); g.stroke();
-    g.restore(); g.strokeStyle = 'rgba(120,200,255,.30)'; }
+  EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [] };
+  if (st.edges !== 'off') {
+    var EL = [];
+    for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
+      /* §E373 连线开关：'off' 一条不画；'hash' 只画包自己记下的那份权重哈希（最硬的一级来路）。
+       *   §E378 的接替边 psrc='slot-chain' 在 'hash' 档**不画**（它不是血统）。 */
+      if (st.edges === 'hash' && dd.psrc !== 'hash') continue;
+      var bq = backOf(dd), cq = dd.psrc === 'slot-chain';
+      if (bq) NBACK++; if (cq) NCHAIN++;
+      var pa = pos[dd.pof], pb2 = pos[dd.id];
+      var kind = bq ? 1 : (cq ? 2 : 0);
+      /* §E469 每条边同时带**纸面坐标**（papA/papB）：密度网格建在那一层上，而不是建在投影后的屏幕上。
+       *   屏幕空间网格 = 平移 1px 就可能整体换格 ⇒ 一条线的 alpha 离散跳档（实测偏航 0.05rad 跳 0.27，
+       *   0.030→0.300 差十倍）= 用户点的"平移旋转时抽搐"。纸面网格只随布局（窗口/尺寸）变，不随视图变。 */
+      var ua = pap[dd.pof], ub = pap[dd.id];
+      EL.push([pa, pb2, [(pa[0] + pb2[0]) / 2, (pa[1] + pb2[1]) / 2 - rowH * 0.5 * TKY],
+        kind ? 0.62 : EA0, kind, dd.id, ua, ub,
+        ua && ub ? [(ua[0] + ub[0]) / 2, (ua[1] + ub[1]) / 2 - rowH0 * 0.5 * TKY] : null]); }
+    NEDG = EL.length; EDGR.n = NEDG;
+    /* 网格尺寸按**纸面**范围算：纸面 = 未经 PS 投影的那一层（X() 与行高都在 device px 上），
+     *   所以范围就是 w×h，格子仍是 22 CSS px 一档 —— 只是原点不跟着平移走。 */
+    var GW = Math.max(1, Math.ceil(w / EGRID)), GH = Math.max(1, Math.ceil(h / EGRID));
+    var GC = new Int16Array(GW * GH);
+    function PCIX(px, py) {   /* 纸面坐标 → 格子（越界一律夹到边上，与旧版屏幕网格同一套处理）*/
+      return Math.min(GH - 1, Math.max(0, Math.floor(py / EGRID))) * GW + Math.min(GW - 1, Math.max(0, Math.floor(px / EGRID))); }
+    for (var e = 0; e < EL.length; e++) {
+      var A0 = EL[e][6] || EL[e][0], B0 = EL[e][7] || EL[e][1], C0 = EL[e][8] || EL[e][2], sn = {};
+      for (var s = 0; s <= 8; s++) { var tt = s / 8, it = 1 - tt;
+        var qx = it * it * A0[0] + 2 * it * tt * C0[0] + tt * tt * B0[0];
+        var qy = it * it * A0[1] + 2 * it * tt * C0[1] + tt * tt * B0[1];
+        var ci = PCIX(qx, qy);
+        if (!sn[ci]) { sn[ci] = 1; GC[ci]++; } } }
+    var hi = 0; for (var c2 = 0; c2 < GC.length; c2++) if (GC[c2] > GC[hi]) hi = c2;
+    EDGR.hubn = GC[hi];
+    EDGR.hub = PS((hi % GW + 0.5) * EGRID, (Math.floor(hi / GW) + 0.5) * EGRID, 0);   /* 交回屏幕坐标，判据要按像素开窗 */
+    /* ⚠ 一条边**一次 stroke**（§E467a：上一版把每条边切成 8 段、按段的密度分桶批量 stroke ⇒
+     *   同一条线在不同桶里以不同 alpha 落笔，桶又按 alpha 升序画 ⇒ 亮段压在暗段上面，
+     *   重合处出现肉眼可见的**断口**（用户 10-08 10:5x 直接否掉：「这版不行，现在线条重合的部分反而出现了中断」）。
+     *   分桶是省 stroke 的手段，不能拿它去改单条线的连续性 —— 连续性优先，回到 726 次 stroke。 */
+    g.lineWidth = 1 * devicePixelRatio;
+    for (var e2 = 0; e2 < EL.length; e2++) { var A2 = EL[e2][0], B2 = EL[e2][1], C2 = EL[e2][2], bs = EL[e2][3], kd = EL[e2][4];
+      /* §E467c 密度取在**曲线沿线的五个位置**上，一次 stroke 画完（渐变 strokeStyle）：
+       *   上一版把整条边取一个均值 ⇒ 一条长线只要蹭到扇根那一格，整条被拉到地板（用户 10-08 11:0x：
+       *   「这一版密集处确实好了，但是单根线看不见了」）。均值这件事在"根密尾疏"的边上必然冤枉尾段。
+       *   渐变仍是**一次落笔** ⇒ 不会有 §E467a 那种分桶断口；密处压到地板、疏处回到全 alpha。 */
+      var ST5 = [0, 0.25, 0.5, 0.75, 1], AL5 = [], col3 = kd === 2 ? '159,176,204' : (kd === 1 ? '224,177,60' : '120,200,255');
+      var PA2 = EL[e2][6] || A2, PB2 = EL[e2][7] || B2, PC2 = EL[e2][8] || C2;
+      for (var s2 = 0; s2 < 5; s2++) {
+        var t0 = ST5[s2], i0 = 1 - t0;
+        var mx = i0 * i0 * PA2[0] + 2 * i0 * t0 * PC2[0] + t0 * t0 * PB2[0];
+        var my = i0 * i0 * PA2[1] + 2 * i0 * t0 * PC2[1] + t0 * t0 * PB2[1];
+        var mi = PCIX(mx, my);
+        var dn = GC[mi] > 1 ? GC[mi] : 1;
+        var al2 = ELOG ? bs * Math.min(1, ED0 / dn) : bs;
+        if (al2 < EMIN) al2 = EMIN;   /* 地板只管"埋在堆里的那一段"；疏处的 alpha 由自己那一格的密度决定 */
+        if (al2 < EDGR.amin) EDGR.amin = al2; if (al2 > EDGR.amax) EDGR.amax = al2;
+        AL5.push(al2); }
+      EDGR.segs++;
+      /* §E467b 探针：EPROBE 是"每几条留一条"的步长（页内两条判据设的，平时 0 = 不收）。
+       *   沿同一条曲线取 40 个点，每个点带上"它自己那一格压了几条线" ⇒ 判据能分清
+       *   "埋在堆里所以淡"与"在空地上还看不见"（后者才是用户点的病）。 */
+      if (EPROBE && e2 % EPROBE === 0 && EDGR.probe.length < 24) { var pp = [];
+        for (var u = 0; u <= 39; u++) { var tu = u / 39, iu = 1 - tu;
+          var ux = iu * iu * A2[0] + 2 * iu * tu * C2[0] + tu * tu * B2[0];
+          var uy = iu * iu * A2[1] + 2 * iu * tu * C2[1] + tu * tu * B2[1];
+          /* 像素读在屏幕上取，密度问的是**同一个参数 t 上的纸面点**（法律用的就是这一层的格子）*/
+          var vx = iu * iu * PA2[0] + 2 * iu * tu * PC2[0] + tu * tu * PB2[0];
+          var vy = iu * iu * PA2[1] + 2 * iu * tu * PC2[1] + tu * tu * PB2[1];
+          pp.push(ux, uy, GC[PCIX(vx, vy)]); }
+        EDGR.probe.push({ pts: pp, al: AL5[2], al5: AL5.slice(), id: EL[e2][5] }); }
+      var gr = g.createLinearGradient(A2[0], A2[1], B2[0], B2[1]);
+      for (var s3 = 0; s3 < 5; s3++) gr.addColorStop(ST5[s3], 'rgba(' + col3 + ',' + AL5[s3].toFixed(3) + ')');
+      /* §E363 倒挂边（父的 ts 晚于子）虚线 + 琥珀；§E378 接替边点线 + 灰：连的都是"槽位接替"，不是谁生了谁 */
+      g.save();
+      if (kd) g.setLineDash(kd === 2 ? [1.5 * devicePixelRatio, 3.5 * devicePixelRatio] : [4 * devicePixelRatio, 4 * devicePixelRatio]);
+      g.strokeStyle = gr;
+      g.beginPath(); g.moveTo(A2[0], A2[1]); g.quadraticCurveTo(C2[0], C2[1], B2[0], B2[1]); g.stroke();
+      g.restore(); }
+    g.strokeStyle = 'rgba(120,200,255,' + EA0.toFixed(2) + ')'; }
+  /* §E464 这里原来是 §E442 那台「RUNNER-BASE 锚 + 467 条灰雾边」—— 它建在 §E314 的一条**错判**上：
+   *   那遍 hunt 只按「文件里那份数组」的哈希找 d13d3c85，而训练服务记父时用的是**嵌入成 v7 之后**那份数组的
+   *   指纹（FEAT_S 123→213 ⇒ 3337→5689 ⇒ 哈希必变）⇒ 找不着就判成「盘上无此包」。
+   *   现在 lineage.mjs 一枚包同时索引两个身份，584 枚的父直接解析到图上的真节点 SLOT-e379c62c（标签 = v1.3.57），
+   *   边走普通热启动父边 ⇒ 锚、灰雾、那句「盘上无此包 · 非血统」全部删掉（留着就是一段永不执行的代码 + 一句假话）。
+   *   ⚠ "runner 恒拷同一份 BASE ⇒ 81% 共父不是演化收敛"这条读法警告仍然成立，它挪到页脚第二行去说。 */
   scr = new Array(N);
   for (i = 0; i < N; i++) { var d = P[i], p = pos[d.id]; if (!p) continue; scr[i] = p;
+    if (NOPTS) continue;   /* §E451 落点表照记（判据要按位置取样），只跳过"画"这一步 */
     var al = alphaOf(d); g.globalAlpha = al;
     /* §E338 半径 = 名次（第 1 名最小）× 点大小滑杆 × 缩放因子（用户 ②④）；
      *   冠军那圈墨环与"最优"绿环都改成**跟着半径走**，否则小点会被环吞掉。 */
@@ -1388,7 +1561,7 @@ function drawTree(fr) {
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
   g.restore();   /* §E314 数据层的裁剪到这里收口（点与点标签都不许滑进左栏）*/
   /* §E379 这里原来是"数据画完之后按同一仿射把左栏那一条回贴一遍"（§E377 加的，为了让点糊不住家族名）。
    *   撤掉：左栏现在是纸上的墨，与点同进同退，"糊住"这件事只能靠层序（纸在下、点在上）表达，
@@ -1398,7 +1571,7 @@ function drawTree(fr) {
    *   §E331 这条串必须**量过宽度**再上屏：它是单行 fillText，画布不折行，超长就从右缘直接截掉 ——
    *   1600px 窗口实测被截在"左键拖动 = 平移"之前，交互提示整段看不见。所以只留别处没有的信息：
    *   颜色口径/绿环在右上图例里，这里不重复。*/
-  var foot = '行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : st.color === 'sc' ? '当选键 sc − 现役' : 'F（线上口径势）') +
+  var foot1 = '行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : st.color === 'sc' ? '当选键 sc − 现役' : 'F（线上口径势）') +
     /* 色标方向必须跟着口径走：写死"蓝低 → 红高"会在 Δε 那档说反（那档是**红 = 脆**），
        在当选键这档更是彻底错（这档是**绿 = 比现役强、红 = 落后**）—— 图上画的与页脚说的不能是两件事。 */
     (st.color === 'sc' ? '（绿=强 ‖ 红=落后 ‖ 橙=判不动 ‖ 灰=未测）'
@@ -1406,12 +1579,18 @@ function drawTree(fr) {
       /* §E347：F 档回到"地形"读法（蓝低 → 红高），"相对现役"那件事交给第 6 档 rel ⇒ 页脚/图例按当前档现说，不许各讲一套。*/
         : st.color === 'F' ? '（蓝 = 低 = 地板 → 红 = 高 = 好 ‖ 针 = 现役那一档 ‖ 它在库内第 ' + Math.round(incPct()) + ' 百分位）'
         : st.color === 'rel' ? '（绿 = 比现役强 ‖ 灰 = 就是现役那一档 ‖ 红 = 不如现役）'
-        : (st.color === 'fam' || st.color === 'seed' ? '（点色 = ' + (st.color === 'fam' ? '训练方法家族' : 'RNG seed') + '，底图 = F 地形（蓝低 → 红高））' : '（蓝低 → 红高）')) +
-    ' · ' + (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝曲线 = 热启动父边（画了 ' + NEDG + ' 条'
+        : (st.color === 'fam' || st.color === 'seed' ? '（点色 = ' + (st.color === 'fam' ? '训练方法家族' : 'RNG seed') + '，底图 = F 地形（蓝低 → 红高））' : '（蓝低 → 红高）'));
+  /* §E442 页脚拆**两行**（用户 10-08：「超级长的第二行就可以分成两行显示」）：第一行 = 这张图怎么读（行/轴/颜色口径），
+   *   第二行 = 边与手势。⚠ 原来那个"量宽缩字"是**死代码**：先 measureText 算出该缩到几号，紧接着下一句又把字体写回 12px
+   *   ⇒ 缩字从未生效，超长那行是被画布右缘**截掉**的（她截图里"· 滚轮 = 横轴"整段看不见就是这件事）。 */
+  var foot2 = (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝曲线 = 热启动父边（画了 ' + NEDG + ' 条'
       + (st.edges === 'hash' ? ' ‖ 只实录级' : '') + '）') +
     /* §E378 接替边必须自己在图上说一句它是什么：它和血统边画在同一片地方，而两者的意思完全不同
        （'hash' 那一档不画它，所以那句计数跟着 NCHAIN 走，为 0 就整段不出现）*/
     (NCHAIN ? ' ‖ 灰点线 = 槽位接替边 ' + NCHAIN + ' 条（谁在这枚之前住过那个槽，不是血统）' : '') +
+    /* §E442：RUNNER-BASE 那批边现在**画得出来了**（收到时间轴最左那颗灰菱形），所以这句话从原来的"这条边上不画"
+       改成说清它连的是什么。'hash'/'off' 两档不画 ⇒ 计数为 0 就整段不出现，不许承诺图上没有的东西。 */
+    (NRBASE ? ' ‖ 另有 ' + NRBASE + ' 枚的父指针解析不到图上任何一枚（见页内那条血统边判据）' : '') +
     /* §E333 页脚是单行 fillText（画布不折行），所以两态**各说各的手势**而不是把两段接起来：
        立体态把"滚轮/Shift+滚轮/拖动"换成"右键压扁错切"—— 那三件在二维态已经说过，长度也就不会顶出右缘。
        （§E331 立体态必须自己说清"高度是哪把尺"：颜色按秩铺、几何仍是线性，不写就会被当成同一件事。画布不认 markdown ⇒ 这句里不许带 *）*/
@@ -1420,21 +1599,18 @@ function drawTree(fr) {
     ' · 缩放 ×' + TKX.toFixed(2) + ' ‖ ×' + TKY.toFixed(2) +
     /* §E363：倒挂边的条数必须在图上自己说清，否则读图的人只会看到"现役生了两星期前的包" */
     (NBACK ? ' · ⛔ 时间倒挂的父边 ' + NBACK + ' 条 = 按路径反查"今天的槽主"造出来的假血统（lineage.mjs §E367 应已退回，出现即守卫漏了来路）' : '');
-  var fw = g.measureText(foot).width / devicePixelRatio;
-  if (fw > (w - padL) / devicePixelRatio - 8) g.font = Math.round(12 * devicePixelRatio * (w - padL) / devicePixelRatio / fw) + 'px system-ui,sans-serif';
-  /* §E431 用户 10-08：底部这两行小字改从**页面最左侧**起、字号加大一档（原来跟着 padL 缩进、只有 12px）。 */
-  g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';   /* §E436 用户 10-08：13px 偏大 ⇒ 12px */
-  g.fillText(foot, 10 * devicePixelRatio, h - 14 * devicePixelRatio);
-  /* §E314 那根星形中心必须自己在图上说一句"我不是血统"，否则 81% 共父会被读成"演化收敛"。
-     ⚠ 只能另起一次 fillText：canvas 的 fillText **不认 \n**（第一版把它拼在同一串里 ⇒ 两段挤成一行、右缘被截，
-        而且 markdown 的 ** 在画布上是原样字符）。*/
-  /* §E331 图底三条字必须各占一行：日期刻度在 h − padB + 16（= h−50·dpr），这条 RUNNER-BASE 注在 h−32·dpr，
-   *   页脚说明在 h−14·dpr。旧版 padB=46 ⇒ 日期与这条注**同一个 y**（h−30·dpr），两段字直接叠成一坨（用户截图）。 */
-  if (NRBASE) { g.fillStyle = '#e0b13c';
-      /* §E431：同样从最左起、字号加大 */
-      g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-      g.fillText('另有 ' + NRBASE + ' 枚（' + Math.round(NRBASE * 100 / N) + '%）的父 = RUNNER-BASE（runner 覆写产物 · 不是血统）⇒ 这条边上不画',
-        10 * devicePixelRatio, h - 32 * devicePixelRatio); }
+  /* §E431：底部小字从**页面最左侧**起（原来跟着 padL 缩进）‖ §E436：13px 偏大 ⇒ 12px。
+   *   每行各自量宽：短了按 12px，长了才缩（缩到 9px 为止），不再出现"算完缩又写回原字号"那种死自适应。 */
+  function footLine(txt, y) {
+    g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
+    var fw = g.measureText(txt).width / devicePixelRatio, avail = (w - 20) / devicePixelRatio;
+    if (fw > avail) g.font = Math.max(9, Math.round(12 * avail / fw) * devicePixelRatio) + 'px system-ui,sans-serif';
+    g.fillText(txt, 10 * devicePixelRatio, y); }
+  /* §E331 图底三条字必须各占一行：日期刻度在 h − padB + 16（= h−50·dpr），页脚两行在 h−32 / h−14·dpr。
+   *   §E442 删掉了原来那条琥珀色的「另有 N 枚的父 = RUNNER-BASE ⇒ 这条边上不画」—— 那批边现在画得出来了，
+   *   它的话已经并进第二行（"灰雾 = RUNNER-BASE 覆写边 N 条…"），留两条反而逼着日期刻度与注挤在同一 y。 */
+  footLine(foot1, h - 32 * devicePixelRatio);
+  footLine(foot2, h - 14 * devicePixelRatio);
 }
 /* 「卡住缩放上界 + 背景不要割裂」：缩放的下界 = 场恰好铺满视口（再小就露出虚空）；平移卡到"场始终盖住整个视口"。
  *   由 kmin 的定义可证两个平移区间非空，所以 clamp 不会打架。*/
@@ -1513,7 +1689,13 @@ function drawMap(fr) {
       g.beginPath(); g.arc(pr[i].x, pr[i].y, rr + 5 * devicePixelRatio, 0, 6.284); g.stroke(); }
     else if (st.cmp.indexOf(d.id) >= 0) { g.globalAlpha = 1; g.strokeStyle = '#7fd1ff'; g.lineWidth = 1.6 * devicePixelRatio;
       g.beginPath(); g.arc(pr[i].x, pr[i].y, rr + 3.4 * devicePixelRatio, 0, 6.284); g.stroke(); }
-    if (isC && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.5; g.stroke(); }
+    /* §E449 这里必须**重新起一条路径**再描墨环：上面选中环 / 对比环各自 beginPath 过，当前路径已经变成
+     *   半径 rr+5 的那一圈，直接 stroke 等于**把黄色选中环用墨色重描一遍** ⇒
+     *   立体态里选中一枚冠军，画布上只剩墨环、没有黄环（页内那条「指针往返」扫整张画布数到 0 颗环色像素，
+     *   就是这件事：它报的不是"判据坏"，是**用户点中冠军之后看不见选中反馈**）。
+     *   顺带原来那圈点边也被挪到了 rr+5 上（选中的冠军比没选中的多一圈外移的墨边）。 */
+    if (isC && al > 0.5) { g.beginPath(); g.arc(pr[i].x, pr[i].y, rr, 0, 6.284);
+      g.strokeStyle = st.ink; g.lineWidth = 1.5; g.stroke(); }
     /* §E302 过线**只**按逐枚真值标：绿环 = 这枚自己过了今天那道闸（113/718）。
      *   二维的"过线范围"已删（用户：绿区会把底图盖掉），为什么不该再画回去的理由写在 buildNB 末尾。*/
     if (d.ok === 1 && al > 0.3) {
@@ -1527,8 +1709,8 @@ function drawMap(fr) {
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
-  if (st.q) for (i = 0; i < N; i++) if (P[i].id.indexOf(st.q) >= 0 && scr[i]) {
+    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+  if (st.q) for (i = 0; i < N; i++) if (String(P[i].id).toLowerCase().indexOf(st.q) >= 0 && scr[i]) {   /* §E453 与 labelSet 那一处必须同一条规则 */
     g.beginPath(); g.arc(scr[i][0], scr[i][1], 11 * st.size, 0, 6.284); g.strokeStyle = st.ink; g.lineWidth = 2; g.stroke(); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText(st.elev < 0.5
@@ -1948,7 +2130,7 @@ function draw3b(fr) {
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + P[ls[i].i].id, pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText('三维行为轴（x3/y3/z3）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 颜色 = F（线上口径势 = Hp + T·S）⇒ 第三轴是行为不是深度' +
     /* §E312 壳好不好必须当场给数，而且**两列一起给**：含自己那列与画出来的壳同口径但循环，留一那列才是"不是靠自己被圈进来"。
@@ -2002,7 +2184,7 @@ function drawBody() {
   if (st.side) { var _sp = document.getElementById('side'), _lg = document.getElementById('legend');
     if (_sp && _lg && _sp.style.display !== 'none') _sp.style.top = (_lg.offsetTop + _lg.offsetHeight + 10) + 'px'; }
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
-  document.getElementById('stat').textContent = N + ' 枚候选（按权重身份去重 = ' + NDUP + ' 种打法）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
+  document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
     ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'duel' ? ('对现役决斗（实测 ' + NDUEL + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键 sc − 现役（实测 ' + NSEL + ' 枚 · 判据内赢 ' + NSELUP + ' · 判不动 ' + NSELSOFT + '）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
@@ -2024,24 +2206,28 @@ function paintLegend(fr) {
   /* §E349 DS（用户 10-06：「文字标记横着占了一大串，适当搞几个换行」）：容器收窄 + 允许换行，长句自己折成几行；色标条保持原尺寸（用户的蓝端曾被截掉过一回，已回滚）。 */
   /* §E349 DS：不要自动换行（用户否掉）—— 改成一行一句、按含义自己断行，能删的就删。 */
   lg.style.maxWidth = '260px'; lg.style.lineHeight = '1.35';
-  var c = document.createElement('canvas'); c.width = 18 * devicePixelRatio; c.height = 150 * devicePixelRatio;   /* E349 DS: 误缩过一版（把蓝端截掉了）⇒ 回滚到 150 */
-  c.style.width = '18px'; c.style.height = '150px'; var cg = c.getContext('2d');
-  for (var i = 0; i < 150 * devicePixelRatio; i++) { var ltt = 1 - i / (150 * devicePixelRatio);
-    /* §E347：「F」档（含默认的家族着色 + 底图）用回 LUT（蓝 = 地板 → 灰 = 库内中位 → 红 = 好），
-     *   只有「rel」档才换成分散带 LUTF。原来这里写死"F 用发散带"，而底图与这条带必须同一条 LUT，
-     *   否则就是"图例说一套、图画另一套"（§E338 那版还额外用一行"这一档不参与着色"把矛盾糊掉了）。*/
-    var rgb = st.color === 'rel' ? rampRGBF(ltt) : rampRGB(ltt);
-    cg.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')'; cg.fillRect(0, i, 18 * devicePixelRatio, 1); }
-  /* §E353：只要这条带画的是**底图那条 LUT**（fam / seed / F / rel 四种），针就该在。
-   *   原来只在 F / rel 两档画，而 fam/seed 的图例与页脚都写着"黄针 = 现役那一档" ⇒ **文案承诺、图上没有**
-   *   （这条是写页内自检时抓出来的：断言去数黄像素，数到 0 个）。*/
-  if (st.color === 'F' || st.color === 'rel' || st.color === 'fam' || st.color === 'seed') {
-    /* 现役那根针：不画出来，"现役在哪"这句话在 18px 宽的条上找不到位置。
-     *   ⚠ 位置**按当前档现算**，不许写死 73/150 —— 那是"分界在正中"的假设，而 F 档的分界在库内第 82 百分位。*/
-    var npos = st.color === 'rel' ? 0.5 : fCol(Fv(INC));
-    var ny = Math.round((1 - npos) * 150 * devicePixelRatio);
-    cg.fillStyle = '#0d1420'; cg.fillRect(0, ny - 2 * devicePixelRatio, 18 * devicePixelRatio, 4 * devicePixelRatio);
-    cg.fillStyle = '#ffd166'; cg.fillRect(0, ny - 0.75 * devicePixelRatio, 18 * devicePixelRatio, 1.5 * devicePixelRatio); }
+  var BARH = 150;   /* 出厂高度；§E441 在排版完成之后按文字列高收（见本函数末尾），所以画条这件事抽成函数好重画 */
+  var c = document.createElement('canvas'); c.style.width = '18px'; c.style.height = BARH + 'px'; var cg = c.getContext('2d');
+  function barDraw(Hcss) {
+    c.width = 18 * devicePixelRatio; c.height = Hcss * devicePixelRatio;
+    for (var i = 0; i < Hcss * devicePixelRatio; i++) { var ltt = 1 - i / (Hcss * devicePixelRatio);
+      /* §E347：「F」档（含默认的家族着色 + 底图）用回 LUT（蓝 = 地板 → 灰 = 库内中位 → 红 = 好），
+       *   只有「rel」档才换成分散带 LUTF。原来这里写死"F 用发散带"，而底图与这条带必须同一条 LUT，
+       *   否则就是"图例说一套、图画另一套"（§E338 那版还额外用一行"这一档不参与着色"把矛盾糊掉了）。*/
+      var rgb = st.color === 'rel' ? rampRGBF(ltt) : rampRGB(ltt);
+      cg.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')'; cg.fillRect(0, i, 18 * devicePixelRatio, 1); }
+    /* §E353：只要这条带画的是**底图那条 LUT**（fam / seed / F / rel 四种），针就该在。
+     *   原来只在 F / rel 两档画，而 fam/seed 的图例与页脚都写着"黄针 = 现役那一档" ⇒ **文案承诺、图上没有**
+     *   （这条是写页内自检时抓出来的：断言去数黄像素，数到 0 个）。*/
+    if (st.color === 'F' || st.color === 'rel' || st.color === 'fam' || st.color === 'seed') {
+      /* 现役那根针：不画出来，"现役在哪"这句话在 18px 宽的条上找不到位置。
+       *   ⚠ 位置**按当前档现算**，不许写死 73/150 —— 那是"分界在正中"的假设，而 F 档的分界在库内第 82 百分位。*/
+      var npos = st.color === 'rel' ? 0.5 : fCol(Fv(INC));
+      var ny = Math.round((1 - npos) * Hcss * devicePixelRatio);
+      cg.fillStyle = '#0d1420'; cg.fillRect(0, ny - 2 * devicePixelRatio, 18 * devicePixelRatio, 4 * devicePixelRatio);
+      cg.fillStyle = '#ffd166'; cg.fillRect(0, ny - 0.75 * devicePixelRatio, 18 * devicePixelRatio, 1.5 * devicePixelRatio); }
+  }
+  barDraw(BARH);
   if (st.color === 'pm') { /* 三档离色 ⇒ 渐变条会骗人，这里改涂两块实心 */
     cg.fillStyle = '#39d98a'; cg.fillRect(0, 0, 18 * devicePixelRatio, 75 * devicePixelRatio);
     cg.fillStyle = '#ff6b6b'; cg.fillRect(0, 75 * devicePixelRatio, 18 * devicePixelRatio, 75 * devicePixelRatio); }
@@ -2085,6 +2271,25 @@ function paintLegend(fr) {
     : (st.color === 'fam' || st.color === 'seed') ? ('（黄针 = 现役）')   /* §E431 用户 10-08：删掉「下 = 地板 ‖ 上 = 好」这种没用的说明，只留黄针 = 现役（顺带让整块变窄）*/
     : st.color === 'rel' ? ('红 = 不如现役（F 底 ' + fr[0].toFixed(2) + '）')
     : ('蓝 = 地板（F 底 ' + CB.lo.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最低' : ' ‖ 灰 = 库内中位') + '）');
+  /* §E460/§E461 轴高恢复成固定 150 之后，死空**只许用文字排版去消**（用户原话：「只换字排版」）。
+   *   补的每一句都是"这个数是怎么量出来的"—— 原来只写在 CHANGELOG 与代码注释里，读图人在页面上看不到，
+   *   正好填进文字列：既消死空，也不注水。⚠ 只有 hp 那句是 §E458 今晚实测出来的（换批复量摆 2.3~5.7pt）。 */
+  var s3h = null;
+  var LEG_NOTE = {
+    fam: '底图与这条带是同一条 LUT（蓝 = 低 → 灰 = 库内中位 → 红 = 好）‖ 黄针 = 现役那一档 · 名次看点大小',
+    seed: '点色换成 RNG seed，带仍是底图那条 LUT ‖ 黄针 = 现役',
+    F: '针的位置按**当下窗口**里现役的铺位比算 ‖ 灰 = 库内中位，不是"不好不坏"的绝对电平',
+    rel: '只有这一档把带换成分散色标：0 = 现役那一档（灰），两侧各按本侧 p90 距归一 ⇒ 超出即钉在两端',
+    gl: 'G(long) = 长程自对局的技能广度，与过线判定同一道闸现跑（n=20）‖ 线 ≥3，低于 3 直接不过线',
+    pm: '上槽体检 = 三条腿一起现跑（n=20 ‖ aggr40 ‖ seat100）‖ 灰 = 没测过，**不等于**没过',
+    duel: '配对差 A−B：同座位表、同批种子、两批各 60 局 ‖ 黄 = 两批符号翻 ⇒ 判不动，不许并进赢',
+    hp: '每枚都是单批读数 ‖ 同一枚换一批实测摆 2.3~5.7pt ⇒ 颜色看水位，排序请用「对现役决斗」那档',
+    de: 'Δε = 考卷（ε=0）− 页面（ε=0.2 soft）‖ 发散带 0 在正中：红 = 一开探索就掉，蓝 = 开了反而强',
+    sc: 'Scd = 8 粒 seedBase 的逐种子配对差均值（不是主场那一粒）‖ 橙 = 同号但 <6/8 ⇒ 判不动',
+    champ: '这一档只标历代上槽那几枚 ‖ 针 = 现役 · 绿环 = 该枚过线'
+  };
+  var _nt = LEG_NOTE[st.color];
+  if (_nt) { s3h = document.createElement('div'); s3h.style.color = 'var(--dim)'; s3h.textContent = _nt; }
   /* §E378 强度窗口的控制轴就贴在这条色带旁边（用户 10-07：「做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）。
    *   为什么是**并排另一根轴**而不是把柄画在这条带上：这条带的两端在窗口态读的是**窗内两端**（§E373），
    *   柄画上去就永远贴在顶和底 —— 那条带说的是"色怎么铺"，这根轴说的是"窗在库里的哪一段"，两件事不能合成一根。*/
@@ -2104,13 +2309,21 @@ function paintLegend(fr) {
    *   不如直接把文字做成一整块排在两个竖杠左侧，并且多换行」）⇒ 改成**两列**：左列文字（限制宽度 ⇒ 自动多换行、
    *   高度与竖杠齐平），右列两个竖杠。原来 s1/wr/s2 竖着堆 ⇒ 文字只占一两行、竖杠占满高 ⇒ 中间必空一块。 */
   var _col = document.createElement('div'); _col.style.maxWidth = '150px'; _col.style.flex = '0 0 auto';
-  _col.appendChild(s1); _col.appendChild(s2);
-  var _row = document.createElement('div'); _row.style.display = 'flex'; _row.style.gap = '8px'; _row.style.alignItems = 'flex-start';
+  _col.appendChild(s1); _col.appendChild(s2); if (s3h) _col.appendChild(s3h);   /* §E458 只有 hp 档多这一行（单批读数的噪声必须写在读数的地方）*/
+  var _row = document.createElement('div'); _row.style.display = 'flex'; _row.style.gap = '8px';
+  /* §E461 文字列与竖杠**垂直居中对齐**（原来 flex-start ⇒ 文字比条短时那条差全堆在底下，看着就是"图例下面空一块"；
+   *   而 §E441 为了消这块空去砍条高，把两端刻度挤没了 —— 用户否掉）。现在条高固定 150，短了的文字上下各让一半，
+   *   长的（sc / de 那两档）自然把块撑高，条仍是 150 ⇒ 纯排版，不动任何高度。 */
+  _row.style.alignItems = 'center';
   _row.appendChild(_col); _row.appendChild(wr);
   lg.appendChild(_row);
   winaxDraw();
   /* §E330/§E347：这根带**到底在量什么**必须印出来 —— 不印，读图的人会把"中性灰"当成"不好不坏的绝对电平"，
    *   而 F 档的灰其实是"库里第 50% 名"、rel 档的灰才是"就是现役那一档"。两档共用一个 18px 的条，说法完全不同。*/
+  /* §E445 这条 sm **故意不进** §E436 那个「·」→换行的统一收尾（那个 forEach 只管 s1/s2）：
+   *   sm 是"F/rel 两档那条解释性长句"，按每个「 · 」断开会变成 6~7 行短句 ⇒ 图例框反而**长回去**
+   *   （§E441 刚把竖条从 158px 收到文字实际高，F 档现在整框 202px）。
+   *   留在这里说明，免得下一个人把它当"漏改"补上、再把省下来的空间吃回去。 */
   if (st.color === 'F' || st.color === 'rel') { var sm = document.createElement('div'); sm.style.color = 'var(--dim)';
     sm.textContent = st.color === 'F'
       ? ('针 = 现役 Ldemo（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 红 = 好 ‖ 蓝 = 地板 · 深浅 = '
@@ -2144,6 +2357,18 @@ function paintLegend(fr) {
      *  用 innerHTML 而不是 textContent ⇒ 能保留调用方已写好的 <br>（见下面绿环那句）。 */
     if (el && el.innerHTML && el.innerHTML.indexOf('· ') >= 0) el.innerHTML = el.innerHTML.split(' · ').join('<br>').split('· ').join('<br>');
   });
+  /* ===== §E460 轴高**恢复成固定 150**（用户 10-08 早：「你现在把普通版图例压的太矮了，红绿轴同样被压矮了但字排版没换，
+   *   而 F 值图例却没改。先把图例的轴高都恢复一下，然后你再去优化那些尚未优化的图例版本。只换字排版」）=====
+   *   §E441 那一步把"条有多高"改成跟文字列高走（72~150），死空是消掉了，代价是色条本身可读性变差：
+   *   18×72 的渐变带上"绿侧 0.074 / 红侧 0.294 各按本侧 p90 距归一"这种两段刻度根本摆不开（用户截图里那两块）。
+   *   ⇒ 方向反过来：**高度是恒量，死空用换行/措辞去消**（见下面 §E461 那段逐档文字排版）。
+   *   ⚠ 色条与那根窗口轴必须同一个高度：原来 §E441 就是为了让两者别变成"条 150 ‖ 轴 72"两把尺才一起收的，
+   *     现在一起恢复成 BARH，WINAX 的尺寸与 AXH 同步落一遍（§E380 要求它是常驻节点，不重建）。 */
+  AXH = BARH;
+  c.style.height = BARH + 'px'; barDraw(BARH);
+  if (WINAX) { WINAX.width = AXW * devicePixelRatio; WINAX.height = AXH * devicePixelRatio;
+    WINAX.style.width = AXW + 'px'; WINAX.style.height = AXH + 'px'; winaxDraw(); }
+  floatApply(lg, 'lgPos');   /* §E462 图例每帧重建 children，但 #legend 本身是常驻节点 ⇒ 拖过的位置在这儿落回去 */
 }
 /* ③ 家族图例 = 可点按钮（按成员数从多到少），点一个只留这些家族。
  *   §E304：默认按**方法家族**列（22 家，按钮上直接写"改了什么"），切到 RNG seed 才列 seed。*/
@@ -2198,16 +2423,24 @@ function paintCard() {
   var i = st.sel === null ? -1 : nOf(st.sel);
   if (i < 0 || !P[i]) { el.style.display = 'none'; el.textContent = ''; return; }
   var d = P[i];
-  var head = (d.id === 'SHIPPED-Ldemo' ? '★ ' : '') + d.id + (d.lin ? ' 【' + d.lin + '】' : '') + (d.kin ? ' 〔' + d.kin + '〕' : '');
+  var head = (d.id === 'SHIPPED-Ldemo' ? '★ ' : '') + d.id + (d.lin ? ' 【' + d.lin + '】' : '') + (d.kin ? ' 〔' + d.kin + '〕' : '')
+    + (d.sv && String(d.id).indexOf('SLOT-') === 0 ? '（版本号 ' + d.sv + ' ‖ 标签上写的就是它）' : '');   /* §E463 卡上给全身份 */
   /* 家族标签用**截断版**：famLab 全串里带一整列"父"权重哈希（实测 20 个 ≈ 700 字符），
-   *   直接拼进来这张卡会横贯整个画布，把下面的页脚与投影判据全盖住（第一版截图就是这样）。*/
+   *   直接拼进来这张卡会横贯整个画布，把下面的页脚与投影判据全盖住（第一版截图就是这样）。
+   *   §E449 之后卡会自己折行 ⇒ "撑宽"这件事已经不会发生，但 700 字符折出来是二十行，所以总结式照用。*/
   var body = [head,
     '家族 ' + d.fam + '（' + (famSummary(famLab(d)) || '—') + '）· 批次 ' + (batchOf(d) || '无日期') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
     'F = ' + Fv(d).toFixed(3) + '（现役 ' + Fv(INC).toFixed(3) + '）· Hp = ' + d.Hp.toFixed(1) + ' · H考卷 = ' + d.H.toFixed(1) + ' · S = ' + d.S.toFixed(2),
-    '上槽体检：' + (d.pv === 1 ? '✅ 三条腿全过（真能换包）' : (d.pv === 0 ? '⛔ ' + String(d.pb).slice(0, 90) : '未测')) +
-    ' ‖ 过线判定：' + (d.ok === 1 ? '是' : (d.ok === 0 ? '否' : '未测')) + (d.why ? '（栽在 ' + String(d.why).slice(0, 60) + '）' : '')
+    /* §E449 这两处原来写 slice(0, 90) / slice(0, 60)：卡是 white-space:pre（不折行），长句会把卡撑到横贯画布，
+     *   当时拿截断挡住那件事。现在卡改成 pre-wrap（400px 内自己折行、超高滚），截断就只剩坏处了：
+     *   实测全库 why 最长 131 字符（R391）‖ pb 最长 128（v7tgt4-63）⇒ 折行后最多 4 行，装得下；
+     *   而不截的话 v7seat24-31 那条本来读得出"四条腿各差多少"，截 60 就断成"场B 清场 0.20 < "（阈值那半句没了）。
+     *   这张卡是"为什么这枚不能上槽"的唯一自证位，半句等于没写。*/
+    '上槽体检：' + (d.pv === 1 ? '✅ 三条腿全过（真能换包）' : (d.pv === 0 ? '⛔ ' + String(d.pb) : '未测')) +
+    ' ‖ 过线判定：' + (d.ok === 1 ? '是' : (d.ok === 0 ? '否' : '未测')) + (d.why ? '（栽在 ' + String(d.why) + '）' : '')
   ].concat(relLines(d)).concat(d.dn > 1 ? ['⚠ 同一份权重占 ' + d.dn + ' 行：' + String(d.dups).split(',').slice(0, 4).join(' ‖ ') + (d.dn > 4 ? ' 等 ' + d.dn + ' 行' : '')] : []);
   el.style.display = 'block'; el.textContent = body.join('\\n');
+  floatApply(el, 'cardPos');   /* §E462 卡是盖住数据最多的那块（实测 39 枚，含 12 枚历代冠军）⇒ 也要能拖走 */
 }
 /* 冠军序列 + 对比表。⚠ 排序键是**上线时刻**（ship-scan 从 git 逐提交算槽文件权重指纹抽的），
  *   抽不到的（实测 v7new6-94/96：coords.tsv 的 lineage 列把它们标成"历代上槽"，git 里那两条只是 v1.5.114
@@ -2223,10 +2456,11 @@ function paintSide() {
   var el = document.getElementById('side'); if (!el) return;
   if (!st.side) { el.style.display = 'none'; return; }
   el.style.display = 'block'; el.innerHTML = '';
+  floatApply(el, 'sidePos');   /* §E462 */
   /* 让开图例：图例的高度随口径变（F 档三行、pm 档两行…），写死 top 一定会盖住它 —— 第一版截图就是
    *   把"加测过（F 底 0.17）"那行压在冠军序列底下。按图例实际底边算，两块永远各占各的。 */
   var lg = document.getElementById('legend');
-  el.style.top = (lg && lg.offsetHeight ? lg.offsetTop + lg.offsetHeight + 10 : 172) + 'px';
+  if (!st.sidePos) el.style.top = (lg && lg.offsetHeight ? lg.offsetTop + lg.offsetHeight + 10 : 172) + 'px';   /* §E462 拖过就不再跟图例 */
   var h = document.createElement('h4');
   h.textContent = '冠军序列（按上线时刻 · ' + champList().length + ' 枚）· 点一下加入对比';
   el.appendChild(h);
@@ -2234,10 +2468,11 @@ function paintSide() {
   for (var j = 0; j < CH.length; j++) { (function (i) { var d = P[i];
     var b = document.createElement('button');
     b.className = (st.cmp.indexOf(d.id) >= 0 ? 'on ' : '') + (d.id === 'SHIPPED-Ldemo' ? 'cur' : '');
-    b.textContent = (d.sh ? '' : '⚠') + (d.id === 'SHIPPED-Ldemo' ? '★ ' : '') + d.id +
-      ' ‖ ' + (d.sv || (d.sh ? '' : '未上槽')) + ' ‖ ' + (d.sh ? d.sh.slice(5, 10) : (d.ts || '').slice(5, 10)) +
+    b.textContent = (d.sh ? '' : '⚠') + (d.id === 'SHIPPED-Ldemo' ? '★ ' : '') + labOf(d) +   /* §E463 序列里也标版本号（原来 16 枚全是 SLOT-8位哈希，读不懂）*/
+      /* §E463 标签已经换成版本号的那几枚，第二栏就别再把同一个版本号抄一遍 ⇒ 让位给全 id（身份还在，只是排在可读名后面）*/
+      ' ‖ ' + (labOf(d) === d.sv ? d.id : (d.sv || (d.sh ? '' : '未上槽'))) + ' ‖ ' + (d.sh ? d.sh.slice(5, 10) : (d.ts || '').slice(5, 10)) +
       ' ‖ F ' + Fv(d).toFixed(3) + ' ‖ Hp ' + d.Hp.toFixed(1);
-    b.title = (d.sh ? '上线 ' + d.sh : 'git 里没找到上槽提交 ⇒ 按训出时刻 ' + (d.ts || '—') + ' 排（这枚从没真进过槽）') +
+    b.title = ('id ' + d.id + (d.wid ? ' ‖ 权重 ' + d.wid : '') + '\\n' + (d.sh ? '上线 ' + d.sh : 'git 里没找到上槽提交 ⇒ 按训出时刻 ' + (d.ts || '—') + ' 排（这枚从没真进过槽）')) +
       '\\n名次 第 ' + d.rk + ' ‖ H考卷 ' + d.H.toFixed(1) + ' ‖ S ' + d.S.toFixed(2) + ' ‖ Δε ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1);
     b.onclick = function () { var k = st.cmp.indexOf(d.id);
       if (k >= 0) st.cmp.splice(k, 1); else { if (st.cmp.length >= 7) { st.cmp.shift(); } st.cmp.push(d.id); }
@@ -2315,6 +2550,57 @@ function winaxBind(c) {
   });
   c.addEventListener('dblclick', function () { setWin(0, 1); });
 }
+/* ===== §E462 浮层做成可拖动件（用户 10-08：「你干脆可以把这个图例整体做成可动件试试，
+ *   让他可以在页面上拖动，这样就永远不会遮挡了」）=====
+ *   §E455 量出来的账：图例只压住 0~16 枚点，真正盖住数据的是选中卡（39 枚，含 12 枚历代冠军）与冠军序列（26 枚）
+ *   ⇒ 所以**三块一起**能拖（图例 / 选中卡 / 冠军序列），只拖图例解决不了她指的那个问题。
+ *   位置存在 st 里（切模式、换色档、重建图例都不跳回原位），双击复位。
+ *   ⚠ 三条不能碰坏的：① 图例里那根窗口轴自己听 pointerdown（拖两个柄）⇒ 拖动必须让开它和图例里的按钮；
+ *     ② paintLegend 每帧重建 children ⇒ 监听只能绑在常驻节点上（绑到子元素每帧就没，§E378 同一族）；
+ *     ③ 卡与侧栏自己有 overflow:auto 滚动 ⇒ 只有"按下没移动"才算单击，移动过就别抢滚动。 */
+function floatClamp(el, x, y) {
+  var wr = document.getElementById('wrap'); if (!wr || !el) return [0, 0];
+  return [Math.max(0, Math.min(Math.max(0, wr.clientWidth - el.offsetWidth), x)),
+          Math.max(0, Math.min(Math.max(0, wr.clientHeight - el.offsetHeight), y))]; }
+function floatApply(el, key) {
+  if (!el) return;
+  var d = FLOAT_DEF[key];
+  if (!st[key]) { el.style.left = d.left; el.style.right = d.right; el.style.top = d.top; el.style.bottom = d.bottom; return; }
+  var p = floatClamp(el, st[key][0], st[key][1]); st[key] = p;
+  el.style.right = 'auto'; el.style.bottom = 'auto'; el.style.left = p[0] + 'px'; el.style.top = p[1] + 'px';
+  if (key === 'lgPos') { var sd = document.getElementById('side');   /* 侧栏本来贴在图例下面 ⇒ 图例拖走它跟着走 */
+    if (sd && st.side && !st.sidePos) sd.style.top = (p[1] + el.offsetHeight + 10) + 'px'; } }
+var FLOAT_DEF = { lgPos: { left: 'auto', right: '6px', top: '12px', bottom: 'auto' },
+  cardPos: { left: '14px', right: 'auto', top: 'auto', bottom: '34px' },
+  sidePos: { left: 'auto', right: '14px', top: '172px', bottom: 'auto' } };
+function floatBind(el, key) {
+  if (!el || el._fBound) return; el._fBound = 1;
+  el.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0) return;
+    var t = e.target;
+    while (t && t !== el) { if (t.id === 'winax' || t.tagName === 'BUTTON' || t.tagName === 'A' || t.tagName === 'SELECT') return;
+      t = t.parentNode; }
+    var wr = document.getElementById('wrap'), wrr = wr.getBoundingClientRect(), r = el.getBoundingClientRect();
+    var ox = e.clientX - r.left, oy = e.clientY - r.top;
+    if (!st[key]) st[key] = [r.left - wrr.left, r.top - wrr.top];
+    var p0 = st[key].slice(), moved = 0;
+    var mv = function (ev) { var nx = ev.clientX - wrr.left - ox, ny = ev.clientY - wrr.top - oy;
+      if (Math.abs(nx - p0[0]) + Math.abs(ny - p0[1]) > 2) moved = 1;
+      st[key] = [nx, ny]; floatApply(el, key); };
+    var up = function () { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      if (moved && key === 'lgPos') { var sd = document.getElementById('side'); if (sd && st.side) sd.style.top = el.style.top; }
+      if (!moved) el._fTap = 1; };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    e.preventDefault();
+  });
+  el.addEventListener('dblclick', function () { st[key] = null; floatApply(el, key); if (key === 'lgPos') paintSide(); });
+}
+function floatBindAll() {
+  floatBind(document.getElementById('legend'), 'lgPos');
+  floatBind(document.getElementById('card'), 'cardPos');
+  floatBind(document.getElementById('side'), 'sidePos');
+  floatApply(document.getElementById('legend'), 'lgPos'); }
 function paintWin() {
   var el = document.getElementById('wv'); if (!el) return;
   el.textContent = winFull() ? '全范围（' + N + ' 枚）'
@@ -2639,7 +2925,7 @@ document.getElementById('color').addEventListener('change', function () { st.col
   st.hi = {}; buildGroups(); buildFamBar(); req(); });
 document.getElementById('labels').addEventListener('change', function () { st.labels = this.value; req(); });
 document.getElementById('size').addEventListener('input', function () { st.size = +this.value; req(); });
-document.getElementById('q').addEventListener('input', function () { st.q = this.value.trim(); req(); });
+document.getElementById('q').addEventListener('input', function () { st.q = this.value.trim().toLowerCase(); req(); });   /* §E453 归一下大小写，匹配两处都按小写比 */
 Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-m]'), function (b) { b.onclick = function () { setMode(b.getAttribute('data-m')); }; });
 Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-bg]'), function (b) { b.onclick = function () { var c = b.getAttribute('data-bg');
   document.getElementById('bgc').value = c; setBg(c); }; });
@@ -2688,6 +2974,14 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
     /* §E338 无头复验要能钉住"选中那枚"和"冠军序列开着"这两个状态（不点开就永远截不到新面板）*/
     if (kv[0] === 'side') st.side = +kv[1] ? true : false;
     if (kv[0] === 'sel') st.sel = decodeURIComponent(kv[1]);
+    /* §E449 补 edges：§E442 那节记过一条"edges= 不是 hash 参数 ⇒ 无头复验没法深链到'只实录'那一档，
+     *   只能靠代码路径的守卫"——  RUNNER-BASE 那条雾边到底在 'hash' 档不画、在 'all' 档画，之前只有页内断言能证，
+     *   截不到图给人看。三档都收，认不出的值不动（默认是 all）。*/
+    /* §E462 浮层位置也走深链 ⇒ 无头复验能钉住「图例被拖到 (x,y) 之后画面与判据都对」这一态（认不出就不动）*/
+    if (kv[0] === 'lgpos' || kv[0] === 'cardpos' || kv[0] === 'sidepos') { var lp = kv[1].split(',');
+      if (lp.length === 2 && isFinite(+lp[0]) && isFinite(+lp[1])) st[kv[0] === 'lgpos' ? 'lgPos' : kv[0] === 'cardpos' ? 'cardPos' : 'sidePos'] = [+lp[0], +lp[1]]; }
+    if (kv[0] === 'edges' && (kv[1] === 'all' || kv[1] === 'hash' || kv[1] === 'off')) {
+      st.edges = kv[1]; document.getElementById('edges').value = kv[1]; }
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
     if (kv[0] === 'gl') { GLISO = (+kv[1] === 1 ? 1 : 0); console.log('PROBE parse gl kv=' + kv[1] + ' => GLISO=' + GLISO); }
@@ -2708,7 +3002,7 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit;
     document.getElementById('b3dt').textContent = st.elev < 0.5 ? '立体' : '平面'; } })();
 (function () { var b = document.getElementById('sortb'); if (b) b.textContent = '排序：' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次'); })();   /* E399：放到深链解析之后，否则 #sort=time 时标签是假的 */
-fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide();
+fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide(); floatBindAll();   /* §E462 三块浮层的拖动只绑一次（它们是常驻节点）*/
 /* E417 DS（缺口 A）：计数器**在 #perf>=1 就挂**（原来只在 #perf=2 的基准里挂 ⇒ #perf=1 下 OPSF 恒为 0）。 */
 if (PERFON >= 1) {
   var _ops = ['beginPath', 'fill', 'stroke', 'arc', 'fillText', 'strokeText', 'fillRect', 'drawImage', 'closePath', 'moveTo', 'lineTo'];
@@ -2809,7 +3103,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       if (B[4] === hit && px >= B[0] && px <= B[0] + B[2] && py >= B[1] && py <= B[1] + B[3]) { HL = 1; break; } }
     if (HL) overlapped++; else phantom++; }
   wrong = phantom;
-  T('命中：标签中心不许命中一张盖不住这个点的卡（phantom）', phantom === 0 && tested > 0, phantom + ' phantom / ' + tested + ' 个标签');
+  /* §E452 标签关掉时这条**没有可测的对象**（LAB 本来就是空的），不是"标签层坏了"：
+   *   原来写成 tested > 0 ⇒ 从 #labels=off 深链进来恒红，而红的是"这条此刻不适用"。
+   *   ⚠ 只放过 st.labels === 'off' 这一种零标签；开着标签却一枚都没画出来仍然红（那才是真病）。 */
+  T('命中：标签中心不许命中一张盖不住这个点的卡（phantom ‖ labels=off 时本条不适用）',
+    phantom === 0 && (tested > 0 || st.labels === 'off'),
+    phantom + ' phantom / ' + tested + ' 个标签'
+      + (tested === 0 && st.labels === 'off' ? ' ‖ 标签开关在「不标」⇒ 没有可测对象，本条不适用（开着标签却零标签仍判红）' : ''));
   T('命中：重叠标签按"谁盖在上面"说话（这是对的，只记账不判红）', true, overlapped + ' 枚与别人重叠');
   T('命中：空白处不许命中任何东西', pickAt(3, 3) < 0 && pickAt(cv.width - 3, cv.height - 3) < 0);
   /* ③ 点大小 = **按是否上线两档**（E349 DS 撤回的）。
@@ -2827,7 +3127,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     Object.keys(rSet).length === 1, Object.keys(rSet).slice(0, 4).join(' / '));
   T('滚轮放大：点要跟着变大（用户 ④）', dotR(byRk[3], 8) > dotR(byRk[3], 1) * 1.5,
     dotR(byRk[3], 1).toFixed(2) + ' → ' + dotR(byRk[3], 8).toFixed(2));
-  /* ④ 两档色标各自的语义（§E347 把它们分开：F = 地形，rel = 判决） */
+  /* §E448 rel 这两条钉的是"相对现役"这条映射的**分侧语义**，与 F 窗口开多大无关 ⇒ 判之前把窗口钉回全范围。
+   *   不钉的话：&flo=0.169&fhi=0.541 时窗内全是库内 54 百分位以下的点，而现役在第 83 百分位 ⇒
+   *   **没有任何一枚比现役强**（up=0 是事实，不是病），而判据要求 up>0 ⇒ 红在"这个状态下没有受试者"。
+   *   下面那条"底图两端"本来就用了同一套钉法（SWIN），这里只是把适用面提前到 rel。 */
+  var SWINR = { flo: st.flo, fhi: st.fhi }; st.flo = 0; st.fhi = 1; recomputeVIS(); draw();
   var s7 = splitSets();
   T('rel 档：现役那一档正好在分界 0.5', Math.abs(fColRel(Fv(INC)) - 0.5) < 0.02, fColRel(Fv(INC)).toFixed(3));
   var up = 0, dn = 0, tie = 0;
@@ -2843,6 +3147,9 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('rel 档：半侧 p90 距 = 半程 0.25（色深 = 离现役多远，不是排第几）',
     Math.abs(fColRel(s7.iv + 0.5 * s7.sU) - 0.75) < 0.01 && Math.abs(fColRel(s7.iv - 0.5 * s7.sD) - 0.25) < 0.01,
     '绿侧 ' + fColRel(s7.iv + 0.5 * s7.sU).toFixed(3) + '（要 0.750） ‖ 红侧 ' + fColRel(s7.iv - 0.5 * s7.sD).toFixed(3) + '（要 0.250）');
+  st.flo = SWINR.flo; st.fhi = SWINR.fhi; recomputeVIS(); draw();   /* §E448 钉完就还原，别把窗口改动留给后面的判据；
+   *   ⚠ 还原之后必须再 draw() 一次：上面为了钉窗口已经重画过图例，不补这一帧的话，
+   *     后面「图例那条带与底图同一条映射」读到的就是**全范围那一帧的旧画布**（针在 21 行）而 st 已经回到窗口态（针应在 0 行）⇒ 假红。 */
   /* ⭐§E347：用户点名"地图背景这是搞什么鬼"的根因钉在这里 ——
    *   §E338 把**底图**也换成"以现役为界、两侧各自按秩铺满"，而现役落在库内第 82 百分位
    *   ⇒ 中性灰被压成分界那一条线、82% 的图一律深红、少数 pockets 荧光绿（用户看到的大块硬边斑）。
@@ -2908,6 +3215,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     var ny = Math.round((1 - npos) * H);
     var col = cn.getContext('2d').getImageData(Math.round(cn.width / 2), 0, 1, H).data;
     var sy = Math.max(0, Math.min(H - 1, ny - Math.round(8 * devicePixelRatio)));
+    /* §E448 针被钳到带的**两端**时会出事（现役落在 F 窗口之外就是这种状态：fCol 钳到 1 ⇒ ny = 0）：
+     *   原来固定取"针上方 8px"那一行，在 ny=0 时钳回 0 ⇒ **采到的正是针自己的暗槽/黄线** ⇒ 拿针的颜色比带的颜色，必然不等；
+     *   同时"槽起点应在 ny − 2dpr"变成 −2（画布外）⇒ 又差 3 行判红。两条都是判据在边界上失配，不是画面坏。
+     *   ⇒ 采样行改成"**离针最远的那一端、再让开槽的半宽**"（任何钳位下都不会落在槽里）；槽的位置按钳位后的实际期望比。 */
+    var slot = Math.round(4 * devicePixelRatio);
+    if (Math.abs(sy - ny) < slot + 1) sy = Math.max(0, Math.min(H - 1, ny < H / 2 ? (H - 1 - slot) : slot));
     var want = rampRGB(1 - sy / H), o = sy * 4;
     var okBar = Math.abs(col[o] - want[0]) <= 8 && Math.abs(col[o + 1] - want[1]) <= 8 && Math.abs(col[o + 2] - want[2]) <= 8;
     /* 针 = 4px 暗槽（#0d1420）+ 上面 1.5px 黄线 ⇒ 黄线只有 1.5px 会被抗锯齿混成 (194,162,84) 这类值，
@@ -2916,7 +3229,10 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     var dk = 0, first = -1, lo = ny - Math.round(4 * devicePixelRatio), hi = ny + Math.round(4 * devicePixelRatio);
     for (var yy = Math.max(0, lo); yy <= Math.min(H - 1, hi); yy++) {
       var q = yy * 4; if (col[q] < 60 && col[q + 1] < 60 && col[q + 2] < 80) { dk++; if (first < 0) first = yy; } }
-    return okBar && dk >= 2 && Math.abs(first - (ny - Math.round(2 * devicePixelRatio))) <= 2;
+    /* 钳位时（ny 贴到 0 或 H−1）槽会被画布切掉一半 ⇒ 只要求 ≥1 行，但**位置必须贴到边** */
+    var clamped = (ny <= slot || ny >= H - 1 - slot);
+    var wantFirst = Math.max(0, Math.min(H - 1, ny - Math.round(2 * devicePixelRatio)));
+    return okBar && dk >= (clamped ? 1 : 2) && Math.abs(first - wantFirst) <= 2;
   })(), (function () {
     var cn = document.querySelector('#legend canvas');
     if (!cn) return '图例里没有 canvas';
@@ -2931,10 +3247,18 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       + (ny - Math.round(2 * devicePixelRatio)) + '±2）‖ 采样行 ' + sy + ' 实际 [' + col[o] + ',' + col[o + 1] + ','
       + col[o + 2] + '] 应为 [' + w[0] + ',' + w[1] + ',' + w[2] + ']';
   })());
-  /* ⑤ 点家族图例不许把整张图压黑（用户 ④「点选中框会全部变暗」） */
+  /* ⑤ 点家族图例不许把整张图压黑（用户 ④「点选中框会全部变暗」）
+   *   §E443 改判：原来这条取"全图最低 alpha"，于是把 §E308 那支**故意**压到 0.16 的"未测过灰"也算进来了 ⇒
+   *   在 pm/duel/de/hp/sc 五档恒红（实测 0.16），红得没有信息量。现在两支分开量：
+   *   高亮那支仍要 ≥ 0.2（这条测的是"点一家之后别人还在不在"），未测过那支单独钉住"确实是 0.16、且不许变成 0"。 */
   st.hi = {}; buildGroups(); var k0 = GRP.keys[0]; st.hi[k0] = true;
-  var mn = 1; for (var hi2 = 0; hi2 < N; hi2++) { var a2 = alphaOf(P[hi2]); if (a2 < mn) mn = a2; }
-  T('高亮：非选中那批不许压到 0.2 以下（留上下文）', mn >= 0.2, mn.toFixed(2));
+  var mn = 1, nGray = 0, mnGray = 1;
+  for (var hi2 = 0; hi2 < N; hi2++) { var ag = alphaOf(P[hi2]);
+    if (unmeasuredGray(P[hi2])) { nGray++; if (ag < mnGray) mnGray = ag; continue; }
+    if (ag < mn) mn = ag; }
+  T('高亮：非选中那批不许压到 0.2 以下（留上下文）‖ 未测过那一支单独量（§E308 = 0.16，不许掉到 0）',
+    mn >= 0.2 && (nGray === 0 || mnGray >= 0.15),
+    '非选中最低 ' + mn.toFixed(2) + '（' + (mn >= 0.2 ? '✅' : '✗') + '）‖ 未测过 ' + nGray + ' 枚 ‖ 其最低 ' + (nGray ? mnGray.toFixed(2) : '—'));
   st.hi = {};
   /* ⑥ 冠军序列按上线时刻排，抽不到的**必须标出来**（不许拿训出时刻冒充上线时刻） */
   var CH = champList(), prevS = '';
@@ -3120,9 +3444,32 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     if (P[oi].id === 'SHIPPED-Ldemo') yInc = scr[oi][1]; }
   yOld.sort(function (a, b) { return a - b; });
   var medOld = yOld.length ? yOld[Math.floor(yOld.length / 2)] : -1;
-  T('旧槽位冠军那一行必须排在最上面（家族 0），不是最下面',
-    yOld.length > 0 && yInc > 0 && medOld >= 0 && medOld < yInc - 100 * devicePixelRatio,
-    '旧包行 y 中位 ' + Math.round(medOld) + ' ‖ 现役那一行 y ' + Math.round(yInc) + ' ‖ 画布高 ' + cv.height);
+  /* §E448 主语换掉：原来判的是"旧包那一行必须比**现役那一行**高 100px 以上"，
+   *   而现役一旦落在 F 窗口之外（深链 &flo=0.169&fhi=0.541 就是这种状态，现役 F=0.665 在窗上方）它根本不画 ⇒
+   *   yInc = −1 ⇒ 判据红的理由是"参照物没画"，不是"这一行排错了"。
+   *   ⇒ 换成不依赖参照物的说法：**家族 0 那一行的中位 y 必须是所有家族行里最小的**（这才是"排在最上面"这句话）。
+   *   ⚠ 不是放松：现役画得出来的时候，原来那条更强的判据**照样跑**（两条是"与"），所以任何一档都不会比以前更容易过。 */
+  var rowY = {};
+  for (oi = 0; oi < N; oi++) { if (!VIS[oi] || !scr[oi] || P[oi].famTop) continue;
+    var fk0 = P[oi].fam; if (!rowY[fk0]) rowY[fk0] = []; rowY[fk0].push(scr[oi][1]); }
+  var minOther = 1e18, nOther = 0;
+  for (var rk in rowY) { var av = rowY[rk].sort(function (a, b) { return a - b; });
+    nOther++; var md = av[av.length >> 1]; if (md < minOther) minOther = md; }
+  var topBad = !(yOld.length > 0 && nOther > 0 && medOld < minOther - 10 * devicePixelRatio);
+  /* 行表是**按可见点现算**的（§E338：切一批就只剩这一批碰过的家族）⇒ 窗口把家族 0 整行切没时，
+   *   图上根本没有"家族 0 那一行"，这条的主语不存在。此时如实退一层：
+   *   ① 家族 0 在行表里 ⇒ 它必须是第一行（这条永远判，是"排最上面"的硬核心）；
+   *   ② 家族 0 不在行表里 ⇒ 只能声明"这一档没有这一行"，并把窗口值印出来，不许悄悄当过了。
+   *   ⚠ 这不是放松：出厂态与 &flo=0.169 那两档家族 0 都有点，走的还是像素那条更强的判据。 */
+  var inRows = LASTFAMS.indexOf(0) >= 0;
+  var rowOk = inRows ? (LASTFAMS[0] === 0) : true;
+  var noRow = yOld.length === 0 && !inRows;
+  T('旧槽位冠军那一行必须排在最上面（家族 0）‖ 现役画得出来时还须比它高 100px 以上',
+    (noRow ? rowOk : (!topBad && rowOk)) && (yInc <= 0 || medOld < yInc - 100 * devicePixelRatio),
+    (noRow ? '这一档窗口（' + st.flo.toFixed(3) + '~' + st.fhi.toFixed(3) + '）里家族 0 一枚都没有 ⇒ 图上没有这一行，退到行表核（行表 ' + LASTFAMS.length + ' 行，第一行 = 家族 ' + LASTFAMS[0] + '）‖ '
+      : '行表第一行 = 家族 ' + (LASTFAMS[0] === undefined ? '—' : LASTFAMS[0]) + ' ‖ ') +
+    '旧包行 y 中位 ' + Math.round(medOld) + ' ‖ 其余家族行最小的中位 y ' + (nOther ? Math.round(minOther) : '—') +
+    ' ‖ 现役那一行 y ' + Math.round(yInc) + (yInc > 0 ? '' : '（现役在窗口外 ⇒ 只比行序）') + ' ‖ 画布高 ' + cv.height);
   /* §E379 这条判据**方向反了**，而且是故意的：§E377 钉的是"左栏不许跟着横轴走"（把左栏当屏幕上的框），
    *   而用户 10-07 的口径从头到尾是「网格当做底图整体进行平移缩放」⇒ 那一半恰恰是"修一个坏一个"的来源
    *   （纸带着视图变换烘出来，于是每个元素各自决定参不参与，每修一次重投一次票）。
@@ -3130,10 +3477,18 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   ⚠ 读的是**最终画布**的像素。读 CHM.c 就是拿那张纸自己当期望值 —— 纸现在与视图无关，永远绿 = 假判据（第 91 条）。
    *   ⚠ 只在 tkx=1 与 0.55 两档量：2.2 档名字被放大 2.2 倍、最左那一枚会顶出左边缘，检测会读到"没有墨"而不是"走少了"。
    *   名字被推出画布这件事没有失去保护 —— 它现在由"每枚都拖得回来"与上面那条"左栏与数据同矩阵"合起来兜。 */
+  function hexSum(h) { h = String(h || ''); if (h.charAt(0) === '#') h = h.slice(1);
+    if (h.length === 3) h = h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2);
+    if (h.length < 6) return -1;
+    return parseInt(h.slice(0, 2), 16) + parseInt(h.slice(2, 4), 16) + parseInt(h.slice(4, 6), 16); }
   function inkLeft(x1, y0, y1) {
-    var d; try { d = g.getImageData(0, y0, x1, y1 - y0).data; } catch (E9) { return -2; }
+    /* §E453 判据原来写死"三通道之和 > 430"（= 深底上的亮字）⇒ 从 #bg=%23e6ebf5（浅底 · 字是 #0d1420）深链进来
+     *   一个字都数不到 ⇒ 报"左栏文字只走了 0px"，红的是仪器假设了深色主题。
+     *   改成"与**当下底色**差得够远"：浅底深字、深底亮字都合，行带那 .028 的白抬不动 150 这一档。 */
+    var BGS = hexSum(st.bg), d;
+    try { d = g.getImageData(0, y0, x1, y1 - y0).data; } catch (E9) { return -2; }
     for (var x = 0; x < x1; x++) for (var y = 0; y < y1 - y0; y++) { var q = (y * x1 + x) * 4;
-      if (d[q] + d[q + 1] + d[q + 2] > 430) return x; }   /* 家族名 = st.ink、统计行 = st.dim，两档亮度都合；行带 alpha .028 上不去 */
+      if (Math.abs(d[q] + d[q + 1] + d[q + 2] - BGS) > 150) return x; }   /* 家族名 = st.ink、统计行 = st.dim，两档与底色都合；行带 alpha .028 上不去 */
     return -1; }
   function medPX() { var xs = []; for (var z = 0; z < N; z++) if (scr[z] && VIS[z]) xs.push(scr[z][0]);
     xs.sort(function (a, b) { return a - b; }); return xs.length ? xs[xs.length >> 1] : -1; }
@@ -3223,28 +3578,71 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         + '（漂 ' + Math.round(drift) + 'px，容差 ' + Math.round(2 * devicePixelRatio) + '）⇒ 锚点没跟着支点走'; } }
   T('滚轮缩放：光标下那一枚必须还在光标下（支点改了，锚点公式必须一起改）', ancBad === '', ancBad || '一次滚轮 ×1.12，锚点未漂');
   st.tKx = SNAPT.kx; st.tKy = SNAPT.ky; st.tX = SNAPT.tx; st.tY = SNAPT.ty; st.elev = SNAPT.e; st.yaw = SNAPT.y; st.pit = SNAPT.p;
-  st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.elev = 0; st.tX = -900 * devicePixelRatio; draw();
+  /* §E447 这条量的是**谱系图平面态**的左栏，所以必须把模式钉住再量：原来只钉了 yaw/pit/elev，没钉 st.mode
+   *   ⇒ 从 mode=1d 深链进来时它在**一维那张画布**上找"左栏那一片"，量到的东西与判据毫无关系
+   *   （实测：同一版产物，出厂态 PASS、「mode=1d&color=sc」却 FAIL —— 两种结果都不是谱系图给的）。
+   *   着色档也必须钉：这条要逐枚取像素，而 §E308 那支会把"未测过"的点压到 alpha 0.16 并被下面的 alpha<0.5 筛掉 ——
+   *   在 sc/pm/duel/hp/de 这五档里剩下的探针只有个位数（实测 4 枚），红的是"探针不够 12 枚"而不是"左栏没画上"。
+   *   钉到 fam（这一档没有"未测过"那支）才是这条判据本来工作的画面。模式与档在下面的 SNAP2 还原里一并恢复。 */
+  var BAKCOL = st.color, BAKWIN = { flo: st.flo, fhi: st.fhi };
+  st.color = 'fam'; st.mode = 'tree'; st.flo = 0; st.fhi = 1; recomputeVIS();
+  st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.elev = 0; st.tX = -900 * devicePixelRatio;
+  /* §E468 这条原来只钉了 tX（要平移 900 把左栏那片推到取样区），**tY 与两轴缩放跟着深链走** ⇒
+   *   从 #ty=300 进来时取样带里只剩 4 枚（要 ≥12），从 #kx=2.2 进来时一枚都没有 —— 红的是"样本不够"，
+   *   不是"左栏没画上"（HEAD 产物在 #ty=300 上同样红，实测 4 枚 / 4 枚画上 = 100%）。
+   *   取样用的那条线是**屏幕坐标**上的 515，所以视图必须钉成确定的；下面的 SNAP2 还原负责把三个都还回去。 */
+  st.tY = 0; st.tKx = 1; st.tKy = 1; draw();
   /* ② 的判据必须读**像素**，不能读命中表：scr[] 是几何落点，剪裁只决定"画没画出来"，
    *   所以拿 scr 写的那一版**撤掉剪裁与留着剪裁都会 PASS**（§E369 变异实测：把 clip 加回去 ⇒ 27/0 全绿 ⇒ 那条是假的）。
    *   现在逐枚取样：中心像素必须与"自己半径之外"四个方向都不像同一个颜色，才叫真被画出来了；
    *   有 clip 时左栏那一片只剩底图 ⇒ 中心与旁边是同一块背景，一条也过不了。 */
-  function samplePx(x, y) { var q = g.getImageData(Math.round(x), Math.round(y), 1, 1).data; return [q[0], q[1], q[2]]; }
-  function pxDist(a, b) { return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]); }
-  var pLG = 340 * devicePixelRatio, nProbe = 0, nPaint = 0, missEx = '';
+  /* §E447 这个像素代理有一个已知污染：**标签是画在点之后的**（drawTree 里 label 晚于点），
+   *   所以"中心与四周不像同一个颜色"量的可能是**文字与它的描边**，不是那一枚点被画出来了没有。
+   *   实测：labels 出厂档（只标冠军+首尾）时 229 枚全过；切到 labels=all 之后一批中心被标签压住 ⇒ 只剩 59.8%，
+   *   差 0.2 个百分点就红 —— 而画面本身没有任何"没画上"的地方（§E440 去重之后可排的标签变多，才把这条压过线）。
+   *   ⇒ 用现成的 LAB（每画一个标签记下它的包围盒）把"中心落在某个标签框里"的那几枚**跳过并单独计数**：
+   *     代理对它们无效，不是它们不合格。⚠ 杀伤力必须复验：把当年那道 clip 加回去，剩下的（没被盖住的）那些
+   *     全是裸背景 ⇒ 照样一条过不了（红测见 CHANGELOG §E447）。 */
+  function underLabel(x, y) {
+    for (var lb = 0; lb < LAB.length; lb++) { var B = LAB[lb];
+      if (x >= B[0] && x <= B[0] + B[2] && y >= B[1] && y <= B[1] + B[3]) return true; }
+    return false; }
+  /* §E451 探针带 = **当年那道剪裁线**（旧 padL=520 时代的 padL-5 = 515），不是"当下的分界"：
+   *   这条要防的病是"有人在数据区左缘把剪裁加回去"，那条线历史上就在 515。
+   *   原来写死 340 是"分界左边一条"的旧校值 —— 栏宽一改就只剩分界左 52px 一条，带内 74 枚里 64 枚被名字压住，样本掉到 10；
+   *   取 515 之后带子同时盖住左栏与紧挨分界那一条数据区，加回剪裁时两边都会空 ⇒ 牙口比原来强，样本也大得多。 */
+  var pLG = Math.round(515 * devicePixelRatio), nProbe = 0, nPaint = 0, nCov = 0, missEx = '';
+  /* §E451 参照帧换成"同一帧但一枚点都不画"（NOPTS 那个开关）⇒ "画没画上"从代理变成直测：
+   *   两帧只在"这点自己画的那几笔"上不同 ⇒ 中心处不同 = 这点真被画上去了。
+   *   原来那四个"四周取样点"能看错的来源（家族名文字、同族密集处四邻同色、底图深浅）一次全部去掉 ——
+   *   上面那段 §E447 自己记的"已知污染"就是这个代理的，不是画面的。
+   *   ⚠ 自己的标签仍然盖在中心上（标签晚于点）⇒ 那种中心两帧仍然相同，照旧按 LAB 跳过并单独计数。 */
+  var cand3 = [];
   for (var q3 = 0; q3 < N; q3++) { var sp3 = scr[q3]; if (!sp3 || !VIS[q3]) continue;
     if (alphaOf(P[q3]) < 0.5) continue;
     var rr3 = dotR(P[q3], st.tKx) + 8 * devicePixelRatio;
     var cX = sp3[0], cY = sp3[1];
     if (cX < rr3 + 6 || cX > pLG - 8 || cY < rr3 + 6 || cY > cv.height - rr3 - 6) continue;
-    nProbe++;
-    var mid3 = samplePx(cX, cY);
-    var marg = Math.min(pxDist(mid3, samplePx(cX - rr3, cY)), pxDist(mid3, samplePx(cX + rr3, cY)),
-      pxDist(mid3, samplePx(cX, cY - rr3)), pxDist(mid3, samplePx(cX, cY + rr3)));
-    if (marg > 36) nPaint++; else if (!missEx) missEx = P[q3].id + ' 中心 (' + Math.round(cX) + ',' + Math.round(cY) + ') 与四周只差 ' + Math.round(marg); }
-  T('平面态往左平移：左栏那一片必须真的被画上东西（padL 那道剪裁已撤 ‖ 判据=像素，不是命中表）',
-    nProbe >= 12 && nPaint >= Math.ceil(nProbe * 0.6),
-    '落进旧剪裁区的点 ' + nProbe + ' 枚 ‖ 中心确实与四周不同的 ' + nPaint + ' 枚（要 ≥ 60%）‖ 画布宽 ' + cv.width + (missEx ? ' ‖ 例：' + missEx : ''));
-  st.mode = SNAP2.mode; st.elev = SNAP2.e; st.yaw = SNAP2.y; st.pit = SNAP2.p;
+    if (underLabel(cX, cY)) { nCov++; continue; }
+    cand3.push([q3, cX, cY]); }
+  var dA3 = null, dB3 = null;
+  try { dA3 = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E9) {}
+  NOPTS = 1; draw(); NOPTS = 0;
+  try { dB3 = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E9b) {}
+  draw();   /* ⚠ 立刻画回有点的那一帧：后面还有读像素的判据，不许看到一张"没有点"的画布（§E448 那条"钉→画→判→还原→再画"） */
+  nProbe = cand3.length;
+  if (dA3 && dB3) for (var z3 = 0; z3 < cand3.length; z3++) {
+    var o3 = (Math.round(cand3[z3][2]) * cv.width + Math.round(cand3[z3][1])) * 4;
+    if (dA3[o3] !== dB3[o3] || dA3[o3 + 1] !== dB3[o3 + 1] || dA3[o3 + 2] !== dB3[o3 + 2]) nPaint++;
+    else if (!missEx) missEx = P[cand3[z3][0]].id + ' 中心 (' + Math.round(cand3[z3][1]) + ',' + Math.round(cand3[z3][2])
+      + ') 两帧一字不差 = 这一枚根本没画上'; }
+  T('平面态往左平移：左栏那一片必须真的被画上东西（padL 那道剪裁已撤 ‖ 判据=两帧之差，不是四周代理）',
+    !!dA3 && !!dB3 && nProbe >= 12 && nPaint >= Math.ceil(nProbe * 0.6),
+    '落进旧剪裁区的点 ' + nProbe + ' 枚 ‖ 中心处两帧不同（= 真画上）的 ' + nPaint + ' 枚（要 ≥ 60%）‖ 中心被标签压住而不参与这条的 ' + nCov +
+      ' 枚 ‖ 画布宽 ' + cv.width + (missEx ? ' ‖ 例：' + missEx : (dA3 && dB3 ? '' : ' ‖ 取不到两帧像素')));
+  st.mode = SNAP2.mode; st.elev = SNAP2.e; st.yaw = SNAP2.y; st.pit = SNAP2.p; st.color = BAKCOL;
+  st.flo = BAKWIN.flo; st.fhi = BAKWIN.fhi; recomputeVIS(); draw();   /* ⚠ 还原之后必须补一帧：
+   *   不补的话轴上的两个柄还停在"全范围"那一帧的位置上，后面那条读像素的判据会拿到"画的是 0~1、st 要 0.169~0.541"这种假不一致 */
   st.tX = SNAP2.tx; st.tY = SNAP2.ty; st.tKx = SNAP2.kx; st.tKy = SNAP2.ky;
   /* ===== §E371 强度窗口（用户："默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示"）=====
    *   四条各钉一句话：默认态什么都不切 ‖ 窗外一律不画（冠军也不例外）‖ 色带真的按窗内重铺（不是恒等于全库那一条）‖
@@ -3289,23 +3687,32 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     ax1 ? (document.getElementById('winax') === ax1 ? '重建后取回的是同一张 canvas' : '重建后换了一张 ⇒ 绑定全丢') : '图例里没有那根轴');
   var SNAPW2 = { flo: st.flo, fhi: st.fhi };
   var AX2 = document.getElementById('winax'), rr2 = AX2 && AX2.getBoundingClientRect();
-  var seq = [];
+  var seq = [], want = [];
   if (rr2) { var pev = function (nd, t, cy) { nd.dispatchEvent(new PointerEvent(t,
       { pointerId: 7, clientX: rr2.left + rr2.width / 2, clientY: cy, bubbles: true, cancelable: true })); };
-    pev(document.getElementById('winax'), 'pointerdown', rr2.top + rr2.height * 0.5);
-    /* 顶 = 高 F、底 = 低 F ⇒ 从中间按下（出厂态两柄一个在顶一个在底，中点等距 ⇒ 拿到的就是下沿），
-     *   再往下沿**靠近顶部**的方向分三段拖 ⇒ flo 应当一段一段**变大**（0.20 → 0.32 → 0.48）。
-     *   ⚠ 每段之前先 draw() 一次并**重新取节点**：真实拖动里图例每帧都在重建，浏览器把 move 交给的是
-     *   当下屏幕上那个节点。原来那版判据在同一个节点对象上连发三步 ⇒ 绑在 canvas 上的写法照样全绿（弱判据）。 */
-    [0.80, 0.68, 0.52].forEach(function (frac) {
+    /* §E448 按下点改成**照当下画出来的下沿柄位置**去按，不再按"轴的正中间"。
+     *   原来那句"出厂态两柄一个在顶一个在底 ⇒ 中点等距 ⇒ 拿到的就是下沿"只在 flo=0/fhi=1 时成立；
+     *   深链带 &flo=0.169&fhi=0.541 进来时两个柄都在上半段，中点离**上沿**更近 ⇒ 按下抓到的是上沿柄，
+     *   三段拖的全是 fhi，flo 一字不变 ⇒ 判据红在"参照物挑错了"，不是拖动不跟手。
+     *   顺带把期望从"末段要等于 0.48"（那也是出厂态的数）改成"**每一段都等于我拖到的那个 F**"——
+     *   轴是绝对映射（y = (1−f)·H），所以这条在任意窗口宽度下都比原来更强。 */
+    var f0 = st.flo, f1 = st.fhi;
+    var yOf = function (f) { return rr2.top + (1 - f) * rr2.height; };
+    pev(document.getElementById('winax'), 'pointerdown', yOf(f0));
+    /* ⚠ 每段之前必须 draw() 一次并**重新取节点**：真实拖动里图例每帧都在重建，浏览器把 move 交给的是当下屏幕上
+     *   那个节点。原来那版在同一个节点对象上连发三步 ⇒ "绑在 canvas 上"那种写法照样全绿（弱判据，§E380 的根因）。 */
+    [0.25, 0.5, 0.75].forEach(function (k) {
+      var f = f0 + (f1 - f0) * k; want.push(f);
       draw();
-      pev(document.getElementById('winax'), 'pointermove', rr2.top + rr2.height * frac);
+      pev(document.getElementById('winax'), 'pointermove', yOf(f));
       seq.push(+st.flo.toFixed(4)); });
-    pev(document.getElementById('winax'), 'pointerup', rr2.top + rr2.height * 0.52); }
+    pev(document.getElementById('winax'), 'pointerup', yOf(f0 + (f1 - f0) * 0.75)); }
   var nStep = new Set(seq).size, mono = seq.every(function (v, i) { return i === 0 || v > seq[i - 1] + 1e-9; });
-  T('F窗口轴：按下之后连续拖三段，窗口下沿必须**一段一段跟着走**（一次按下只吃一格 = 用户报的不流畅）',
-    !!rr2 && nStep === 3 && mono && Math.abs(seq[2] - 0.48) <= 0.02 && st.fhi === SNAPW2.fhi,
-    '三段之后 flo 依次 ' + seq.join(' → ') + ' ‖ 不同的值 ' + nStep + ' 个 ‖ 上沿 ' + st.fhi.toFixed(3) + '（拖之前 ' + SNAPW2.fhi.toFixed(3) + '）');
+  var hit = seq.length === 3 && seq.every(function (v, i) { return Math.abs(v - want[i]) <= 0.02; });
+  T('F窗口轴：按下之后连续拖三段，窗口下沿必须**一段一段跟着走**，且每段都停在我拖到的那个 F 上',
+    !!rr2 && nStep === 3 && mono && hit && st.fhi === SNAPW2.fhi,
+    '三段之后 flo 依次 ' + seq.join(' → ') + ' ‖ 期望 ' + want.map(function (v) { return v.toFixed(3); }).join(' → ') +
+    ' ‖ 不同的值 ' + nStep + ' 个 ‖ 上沿 ' + st.fhi.toFixed(3) + '（拖之前 ' + SNAPW2.fhi.toFixed(3) + '）');
   setWin(SNAPW2.flo, SNAPW2.fhi);
   var HASWIN = (location.hash || '').indexOf('flo=') >= 0 || (location.hash || '').indexOf('fhi=') >= 0;
   T('强度窗口：不带深链时出厂态就是全范围，且一枚都不切（带 flo= 跑时这一条不适用，明细会说明）',
@@ -3339,12 +3746,20 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     '低端 ' + tLoW.toFixed(3) + ' ‖ 中位 ' + tMedW.toFixed(3) + '（值 ' + BDW.med.toFixed(3) + '）‖ 上端 ' + tHiW.toFixed(3) +
       ' ‖ 下半段中点 ' + tHalfLo.toFixed(3) + '（要 0.25）‖ 上半段中点 ' + tHalfHi.toFixed(3) + '（要 0.75）' +
       ' ‖ 同一枚（全库态）' + tLoAll.toFixed(3) + '（要 > 0.5）');
-  st.flo = 0.8; st.fhi = 1; recomputeVIS(); draw();
+  /* §E452 这一条原来写死 st.flo = 0.8，而 **st.flo 是"占全库 F 值域的比例"，不是 F 本身**（winLo = FR[0] + flo·(FR[1]-FR[0])）
+   *   ⇒ 出厂 T=0.10 下 0.8 恰好推到 F 0.670，把现役（F 0.665）切在窗外 0.005；而 #T=0.2 深链进来换了 F 分布
+   *   （页面自己报的是 F窗口 0.826…0.988），现役落进窗内 ⇒ 那句"现役在窗外"本来就不该出现，红的是判据的前提，不是画面。
+   *   现在窗口按**现役自己的 F 现算**（推到它上面 0.02 再换算成比例），任何 T / 任何进入路径下
+   *   "现役在窗外"都是被保证的前提；顺带把这条的适用面从"出厂 T 那一档"扩到全 T（比原来更强，不是放水）。 */
+  var FRw = FR(), floW = Math.max(0, Math.min(0.995, (Fv(INC) + 0.02 - FRw[0]) / ((FRw[1] - FRw[0]) || 1)));
+  st.flo = floW; st.fhi = 1; recomputeVIS(); draw();
   var stTxt = document.getElementById('stat').textContent;
   /* ⚠ 这里不用正则：模板字符串会先把 \d 吃成 d、\/ 吃成 / ⇒ 页面里那条正则当场断掉（构建期的自解析会红，
    *   但错误信息只说 "Unexpected token '.'"，很费时间）。所以这段一律用 indexOf。 */
   T('强度窗口：现役被切掉时页面必须响亮说一句（不许静默画一张看不见分界的图）',
-    stTxt.indexOf('现役在窗外') >= 0 && stTxt.indexOf('只画 ') >= 0 && stTxt.indexOf(' 枚') >= 0, stTxt.slice(0, 170));
+    stTxt.indexOf('现役在窗外') >= 0 && stTxt.indexOf('只画 ') >= 0 && stTxt.indexOf(' 枚') >= 0,
+    '窗 = 比例 ' + floW.toFixed(3) + '…1.000 = F ' + winLo().toFixed(3) + '…' + winHi().toFixed(3)
+      + ' ‖ 现役 F = ' + Fv(INC).toFixed(3) + '（T ' + st.T.toFixed(2) + '）‖ ' + stTxt.slice(0, 170));
   /* 档位：按钮不能只是"写着好看"，点下去必须真的把两端推到它自己说的那一段（含夹取后的值）。 */
   var _bps = document.getElementById('winpre').querySelectorAll('button'), preBad = [], hasOld = false;
   for (var oi = 0; oi < N; oi++) if (P[oi].old) { hasOld = true; break; }
@@ -3384,8 +3799,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       + ' ‖ 窗内 ' + nWin() + ' 枚 ‖ 落在那段里的 = ' + BAND[3] + ' 枚（旧包 ' + nOld + ' 枚，其余是同时段的今天的候选）');
   st.flo = 0; st.fhi = 1; recomputeVIS(); draw();
   /* 谱系图那一条要两把尺：命中表（scr）说"这枚有位置"，画布像素说"这地方真的画了东西"。
-   *   只读 scr 就是 §E369 那次假绿的原因（它读的是命中表，而 bug 在 padL 那道剪裁上）。 */
-  st.mode = 'tree'; st.elev = 0; st.batch = 'all'; recomputeVIS(); draw();
+   *   只读 scr 就是 §E369 那次假绿的原因（它读的是命中表，而 bug 在 padL 那道剪裁上）。
+   * §E468 这条**必须钉住默认视图**再量：它原来只钉 mode/elev/batch，没钉平移缩放 ⇒
+   *   从 #kx=2.2&tx=-500 这类深链进来时，16 枚旧包有 6 枚被推出画面，量出来是"10/16 没画上"的假红
+   *   （实测 HEAD 产物同一状态一字不差地红着 = 既存问题，不是 §E466/§E467 带来的）。
+   *   同族的另外两条（§E455 浮层、§E462 拖拽）都是靠"先钉默认布局"才站得住的。 */
+  var SNAPV = { tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy };
+  st.mode = 'tree'; st.elev = 0; st.batch = 'all'; st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; recomputeVIS(); draw();
   var _tOld = 0, _tAny = 0, _tPix = 0, _pixOK = 1;
   for (i2 = 0; i2 < N; i2++) { if (!scr[i2]) continue; _tAny++; if (P[i2].old) _tOld++; }
   try { var _pd = g.getImageData(0, 0, cv.width, cv.height).data;
@@ -3393,9 +3813,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       var _px = Math.round(scr[i2][0]), _py = Math.round(scr[i2][1]);
       if (_px < 0 || _py < 0 || _px >= cv.width || _py >= cv.height) continue;
       var _o = (_py * cv.width + _px) * 4; if (_pd[_o + 3] > 0) _tPix++; } } catch (E2) { _pixOK = 0; }
-  T('谱系图：旧包没有 lineage 行也要真被画出来（判据 = 命中表 + 画布像素，不是"内联了多少枚"）',
+  T('谱系图：旧包没有 lineage 行也要真被画出来（判据 = 命中表 + 画布像素 ‖ 量之前先钉默认视图，§E468）',
     _tOld === nOld && _tAny === N && (!_pixOK || _tPix === nOld),
-    '树上命中表 ' + _tOld + '/' + nOld + ' ‖ 有位置的共 ' + _tAny + '/' + N + ' ‖ 画布上真有颜色 ' + _tPix + '/' + nOld);
+    '树上命中表 ' + _tOld + '/' + nOld + ' ‖ 有位置的共 ' + _tAny + '/' + N + ' ‖ 画布上真有颜色 ' + _tPix + '/' + nOld
+      + ' ‖ 量的时候视图 = 出厂（tx/ty=0 ‖ kx/ky=1）');
+  st.tX = SNAPV.tX; st.tY = SNAPV.tY; st.tKx = SNAPV.tKx; st.tKy = SNAPV.tKy; draw();   /* 还原 + 补一帧 */
   /* §E376 标签拥挤度（用户担心的"可读性降低"里最实在的一条）：**同一台探针在两张 coords.tsv 上各跑一次** ——
    *     现役那张（901 枚 · 冠军 15）= 标签 33 ‖ 可见冠军全员上名 ‖ 被别人的名字盖住的点 86 枚 ‖ 矩形重叠 11 对
    *     并入旧包（917 枚 · 冠军 31）= 标签 46 ‖ 可见冠军全员上名 ‖ 被别人的名字盖住的点 88 枚 ‖ 矩形重叠  9 对
@@ -3431,8 +3853,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   /* ===== §E373 连线开关（用户："给一个连线开关不然可能会太多挡住了"）=====
    *   两件套：① 帧计数器（这一帧真走了几条边的绘制）② 像素差（关掉之后画面**真的**少了东西）。
    *   只读 ① 就是"信代码自己的说法"——那只说明循环走没走，不说明画面上有没有线（第 91 条同一族）。 */
-  var SNAPM2 = { mode: st.mode, edges: st.edges };
-  st.mode = 'tree'; st.elev = 0; st.edges = 'all'; draw();
+  var SNAPM2 = { mode: st.mode, edges: st.edges, flo: st.flo, fhi: st.fhi };
+  /* §E449 强度窗口也要钉成全范围：这条比的是 all 与 hash 两种档**各多画哪几类边**，而两边都只画可见点之间的边。
+   *   从 #flo=0.60&fhi=0.70 这类深链进来时可见点只剩几十枚 ⇒ 两档都只剩 3 条，3 < 3 不成立就红 ——
+   *   红了的是"窗口把样本切没了"，不是"开关坏了"（实测 全开 3 ‖ 只实录 3 ‖ 关掉 0，像素差照样 4754 说明开关本身是活的）。
+   *   窗口本身该由「强度窗口」那几条量，不许记到这条账上。 */
+  st.mode = 'tree'; st.elev = 0; st.flo = 0; st.fhi = 1; recomputeVIS(); st.edges = 'all'; draw();
   var eAll = NEDG, pxAll = null;
   try { pxAll = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E1) {}
   st.edges = 'off'; draw(); var eOff = NEDG, diffOff = -1;
@@ -3443,31 +3869,86 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('连线开关：全开 / 只实录 / 关掉 三态各画多少条要说得出，且关掉之后画面真的少了东西',
     eAll > 0 && eOff === 0 && eHash >= 1 && eHash < eAll && diffOff > 200,
     '全开 ' + eAll + ' 条 ‖ 只实录 ' + eHash + ' 条 ‖ 关掉 ' + eOff + ' 条 ‖ 关掉与全开的采样像素差 ' + diffOff);
-  st.mode = SNAPM2.mode; st.edges = SNAPM2.edges; draw();
+  st.mode = SNAPM2.mode; st.edges = SNAPM2.edges;
+  st.flo = SNAPM2.flo; st.fhi = SNAPM2.fhi; recomputeVIS(); draw();
+  (function () {   /* §E451 左栏宽度必须由它承载的文字定，不能由"当年谁拍的数"定 */
+    var ws = []; g.font = (9 * devicePixelRatio) + 'px system-ui,sans-serif';
+    for (var z = 0; z < LASTFAMS.length; z++) {
+      var fu = famSummary(famLab({ fam: LASTFAMS[z] })) || ('家族 ' + LASTFAMS[z]);
+      ws.push([g.measureText('家族 ' + LASTFAMS[z] + ' · ' + fu).width / devicePixelRatio, LASTFAMS[z]]); }
+    ws.sort(function (a, b) { return b[0] - a[0]; });
+    var wi = ws.length ? ws[0][0] : 0, padL = TPAD.l / devicePixelRatio, maxW = padL - 24;
+    T('谱系图左栏必须与它承载的家族名相称（栏宽 ≤ 最宽标签 +60 ⇒ 不留死空 ‖ 最宽标签 ≤ 两行装得下 ⇒ 不截名）',
+      ws.length > 0 && wi <= maxW * 2 + 0.5 && padL <= wi + 60,
+      '最宽 ' + (ws.length ? ws[0][1] : '—') + ' 号 = ' + Math.round(wi) + 'px ‖ 次宽 '
+        + ws.slice(1, 4).map(function (x) { return Math.round(x[0]); }).join('/') + ' ‖ 中位 '
+        + (ws.length ? Math.round(ws[Math.floor(ws.length / 2)][0]) : 0) + 'px ‖ 行数 ' + ws.length
+        + ' ‖ padL=' + Math.round(padL) + '（线 = 最宽 +60 = ' + Math.round(wi + 60) + '）‖ 单行预算 maxW=' + Math.round(maxW)); })();
   /* ===== §E372 真往返（用户点名的偏移病）：派发一次真点击，位置取这枚**画出来的地方** ⇒ 选中的必须是它自己。
    *   两层都不许信：① 不读 pickAt（那条只量"命中表与几何一致"，而用户报的是指针 → 位图那一步：rect、dpr、
    *      CSS 把位图压扁全在里面）；② **也不拿 scr 当"点在哪"** —— 第一版就是拿 scr 反算 clientX/Y，
    *      结果把命中表改成记"脚下"仍然 35/0 全绿（变异实测），因为它点哪儿就按哪儿判。
-   *   现在改成找**选中环的像素**（#ffd166 全画布只有这一枚用，图例那根针画在另一张 canvas 上）的包围盒中心。
+   *   现在改成找**选中环的像素**（§E449 用两帧差分找，不按颜色猜：#ffd166 在主画布上确实只有这一圈用，
+   *   但"按颜色数"这件事在 dpr=1 下只剩十几颗像素，中心不再是环心；见上面 drawnCentre）的质心。
    *   两枚都要过：**最靠下**放大指针换算的比例误差（错位随 y 线性增长 = 用户报的方向），
    *   **最靠上**放大"命中记脚下、画的是抬起来那点"的分离（立体态最高点抬得最多）。
    *   ⚠ 只测最下面那枚是错的：它的抬升量 ≈ 0 ⇒ 上面那个变异根本测不出来（第一版就这么漏过去的）。 */
+  var DCN = 0, DCY = 0, DCD = -1, nSETTLE = 0;   /* 上一次 drawnCentre：差分颗数 / 环色颗数 / 占比 / 这一轮为"位图≠CSS 盒"重配了几次 */
   function drawnCentre(id) {
+    /* §E449 改成**两帧差分 + 环色占比**两道一起：原来只在整张画布上按颜色扫 #ffd166，那条量的其实是
+     *   "这一族色出没出现过"，不是"环画在哪儿"。两个方向都会错：阈值收紧（R>235 且 G 185..225 且 B 75..125）
+     *   在 dpr=1 下被抗锯齿挡住 ⇒ 整圈只剩 12~17 颗，包围盒中心不再等于环心；阈值放宽又会串进同方向色 ——
+     *   色带 LUT 的黄端、duel 档的 flip 黄(#e0b13c)都是这一族。
+     *   差分不需要猜颜色：选中只多画这一圈（alphaOf 的压暗走 st.hi 家族高亮、不走 st.sel），
+     *   两帧除环之外逐像素相同 ⇒ 有差异的像素**就是**环，中心就是环心，邻居多密集都不参与。
+     *   ⚠ 但只看差分就丢了 §E449 那颗牙：那处的病是"黄环画出来又被墨色重描一遍"，差分照样数得到（那圈像素确实
+     *     只在选中帧出现）。所以再加一道"这些差分的颗里还得有够多是环色"，红的才是**画上去的颜色**不对
+     *     —— 线怎么划、实测两侧读数见下面 return 前那段。
+     *   ⚠ 先把 tw（平面⇄立体那条 520ms 补间）掐了再取两帧：补间在跑时两次 draw 本身就不同，差分会把动画当环。 */
     var i = nOf(id); if (i < 0 || !scr[i]) return null;
+    /* §E452 先让"位图 = CSS 盒 × dpr"这条不变量成立再取样：这一串判据中间的 draw() 会让图例 / 家族带改高度，
+     *   而页面上负责重配的 refit 挂在 ResizeObserver 上、要等一帧才跑 ⇒ 同步循环里位图还是旧尺寸、CSS 盒已经变了。
+     *   实测 color=seed 档差 68px（环心在设备 y=260，处理器按新盒换算派到 y=328）⇒ 报"点不到"，
+     *   而用户真点的时候浏览器用的是活盒 + 已重配的位图，所以这个病从来不在画面上 —— 红的是仪器。 */
+    var r0 = cv.getBoundingClientRect();
+    if (Math.abs(cv.width - r0.width * devicePixelRatio) > 1.5 || Math.abs(cv.height - r0.height * devicePixelRatio) > 1.5) {
+      fit0(); draw(); nSETTLE++; }
+    tw = null;
     st.sel = id; draw();
-    var d = null; try { d = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E) { return null; }
-    var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, n = 0;
-    for (var y = 0; y < cv.height; y++) { var row = y * cv.width;
-      for (var x = 0; x < cv.width; x++) { var o = (row + x) * 4;
-        if (d[o] > 235 && d[o + 1] > 185 && d[o + 1] < 225 && d[o + 2] > 75 && d[o + 2] < 125) {
-          n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } } }
+    var dA; try { dA = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E) { st.sel = null; draw(); return null; }
     st.sel = null; draw();
-    return n > 24 ? [(x0 + x1) / 2, (y0 + y1) / 2, n] : null;
+    var dB; try { dB = g.getImageData(0, 0, cv.width, cv.height).data; } catch (E) { return null; }
+    var rad = Math.max(dotR(P[i], curZoom()), 10) + 12 * devicePixelRatio;   /* 只圈这一枚附近：全画布逐像素比对没必要，慢 */
+    var x0 = Math.max(0, Math.floor(scr[i][0] - rad)), x1 = Math.min(cv.width - 1, Math.ceil(scr[i][0] + rad));
+    var y0 = Math.max(0, Math.floor(scr[i][1] - rad)), y1 = Math.min(cv.height - 1, Math.ceil(scr[i][1] + rad));
+    var sx = 0, sy = 0, n = 0, ny = 0;
+    for (var y = y0; y <= y1; y++) { var row = y * cv.width;
+      for (var x = x0; x <= x1; x++) { var o = (row + x) * 4;
+        if (dA[o] !== dB[o] || dA[o + 1] !== dB[o + 1] || dA[o + 2] !== dB[o + 2]) {
+          n++; sx += x; sy += y;
+          if (dA[o] > 150 && dA[o] - dA[o + 2] > 40) ny++;
+        } } }
+    DCN = n; DCY = ny; DCD = n ? Math.round(ny * 100 / n) : -1;
+    /* 判"颜色对不对"用的是**环色颗数占比**，而且分冠军/非冠军两条线（实测 mode=map&3d=1、&flo=0.60 深链、默认态三组）：
+     *   冠军：改对的版本 146 / 152 / 175 颗（68% / 70% / 81%）‖ 漏 beginPath 的坏版本 38 / 37 / 84 颗（17% / 16% / 36%）
+     *   非冠军：两个版本一字不差（该病只发生在冠军身上 —— 只有冠军会在选中环之后再描一道墨边）
+     *   ⇒ 冠军这条线划 50%，两侧各留 18 与 14 个百分点；非冠军只留一道 20% 的粗闸（防"环色整个换掉了"这种全局病）。
+     *   ⚠ 不能用 B 通道均值判：环混的是底下那块地，密度高的地方同一个环能读出 B=76 也能读出 B=131，线没法划。
+     *   ⚠ 也不能判"过半"：dpr=1 一圈 2px 描边被抗锯齿切掉一半以上是常态（实测改对的版本也只有 53%~81%）。 */
+    var isCh = !!P[i].lin;
+    return n >= 6 && DCD >= (isCh ? 50 : 20) ? [sx / n, sy / n, n] : null;
   }
   function roundTrip(setup) {
-    var bak = { mode: st.mode, e: st.elev, z: st.zoom3, k: st.k, iso: st.iso };
+    var bak = { mode: st.mode, e: st.elev, z: st.zoom3, k: st.k, iso: st.iso, labels: st.labels };
+    /* §E449 标签钉成"不标"：这条的派发点是从**选中环的像素**反算出来的，而 labels=all 时近处点的名字会把选中环糊掉半圈
+     *   ⇒ 可见弧的质心不再等于点心（实测三枚全错位，环心与 scr 差 +7/+5/-7px，按质心点下去选中了邻居）。
+     *   这个病是真的，但它归"被别人的名字压住的点"那条量（上一段，出厂档实测 cov），不归指针换算这条：
+     *   本条要证的是 rect / dpr / CSS 压扁这一层换算对不对，把两件事记进同一本账，红了不知道该修哪个。 */
+    st.labels = 'off';
     setup();
     var rr = cv.getBoundingClientRect(), lo = -1, hi = -1, loY = -12, hiY = 1e9, fails = [], n = 0, dd = [];
+    var loC = -1, loCY = -12;   /* 最靠下的那枚冠军（专门给它留一个名额，见下面 §E449 那段） */
+    var nLinp = 0, nOcc = 0;   /* 靶子里有几枚冠军（环色那道只对冠军有效）/ 有几枚按"邻枚遮住了中心"这一条判过的 */
     var fmax = -1, fmin = 2;   /* 抬升量最大的两枚：u01 是 F 的单调映射 ⇒ F 最高与最低里必有一头贴着色带顶（抬得最高） */
     if (rr.width < 2) fails.push('无视口 ⇒ 本条不适用');
     else {
@@ -3475,35 +3956,534 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         if (s[0] < 8 || s[0] > cv.width - 8 || s[1] < 8 || s[1] > cv.height - 8) continue;
         if (s[1] > loY) { loY = s[1]; lo = i; }
         if (s[1] < hiY) { hiY = s[1]; hi = i; }
+        /* §E449 必须**专门取一枚冠军**：环色这一道要防的病（选中环被墨环重描）只在冠军身上会发生
+         *   —— 只有冠军才在选中环之后再描一道墨边（drawMap 里 isC 那一支）。
+         *   实测：只按"屏幕上下端 + F 两端"挑，挑到的三枚都不是冠军，坏版本 B=76/131/76 全在环色那一档 ⇒ 抓不到。 */
+        if (P[i].lin && s[1] > loCY) { loCY = s[1]; loC = i; }
         var fv = Fv(P[i]); if (fv > fmax) { fmax = fv; } if (fv < fmin) { fmin = fv; } }
       var pick = [], seen = {};
       for (var i2 = 0; i2 < N; i2++) { if (!VIS[i2] || !scr[i2]) continue;
         var s2 = scr[i2]; if (s2[0] < 8 || s2[0] > cv.width - 8 || s2[1] < 8 || s2[1] > cv.height - 8) continue;
         var fv2 = Fv(P[i2]);
-        if (i2 === lo || i2 === hi || fv2 === fmax || fv2 === fmin) { if (!seen[i2]) { seen[i2] = 1; pick.push(i2); } } }
+        if (i2 === lo || i2 === hi || i2 === loC || fv2 === fmax || fv2 === fmin) { if (!seen[i2]) { seen[i2] = 1; pick.push(i2); } } }
       for (var q = 0; q < pick.length; q++) {
-        var t = pick[q], id = P[t].id, dc = drawnCentre(id); n++;
-        if (!dc) { fails.push(id + '(画布上找不到它的选中环)'); continue; }
+        var t = pick[q], id = P[t].id, dc = drawnCentre(id); n++; if (P[t].lin) nLinp++;
+        if (!dc) { fails.push(id + (P[t].lin ? '[冠]' : '') + '(选中环 ‖ 差分 ' + DCN + ' 颗 ‖ 环色 ' + DCY + ' 颗=' + DCD + '%)'); continue; }
         dd.push(id.slice(0, 6) + ':' + Math.round(dc[1] - scr[t][1]));
-        var cx = rr.left + dc[0] / devicePixelRatio, cy = rr.top + dc[1] / devicePixelRatio;
+        /* §E452 派发之前**重新量一次 rect**：rr 是这条开头量的，而中间那几次 draw 会让图例与家族带改高度
+         *   ⇒ 画布整体上下挪过（实测 color=seed 档挪了 68px：环心在设备 y=260，按旧 rect 换算处理器算成 y=328）。
+         *   用户真点的时候浏览器用的是**活** rect，所以这个"点不到"从来不在画面上 —— 红的一直是仪器。
+         *   （原来这条只在 color=seed / labels=off / T=0.2 这类"会让版式改高度"的档里现形，出厂态 rect 恰好没动。） */
+        var rr2 = cv.getBoundingClientRect();
+        var cx = rr2.left + dc[0] / devicePixelRatio, cy = rr2.top + dc[1] / devicePixelRatio;
         st.sel = null;
         cv.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: cx, clientY: cy }));
         cv.dispatchEvent(new MouseEvent('click', { button: 0, clientX: cx, clientY: cy }));
         var got = st.sel || '(没选中任何东西)';
-        if (got !== id) fails.push(id + ' 环心(' + Math.round(dc[0]) + ',' + Math.round(dc[1]) + ') 却选中 '
-          + got + ' ‖ scr=(' + Math.round(scr[t][0]) + ',' + Math.round(scr[t][1]) + ')');
+        var gi = got === id ? t : nOf(got);
+        var gap = gi >= 0 && scr[gi] ? Math.round(Math.sqrt(
+          Math.pow(scr[gi][0] - dc[0], 2) + Math.pow(scr[gi][1] - dc[1], 2)) * 10) / 10 : -1;
+        /* §E449 got !== id 分两种，只有后一种是病：
+         *   ① 邻枚的命中盘把本枚的中心盖住了（立体态本来就会互相遮）⇒ 选中的那一枚**自己的落点确实就在这一下点击上**。
+         *      实测这种 gap 只有 0.7px（SLOT-bb5c0e8e 与 SLOT-6ed47e18 落在同一处）。这类分离用户裁过不算病
+         *      （§E430 正是为它把三维那一条整条删掉的）。
+         *   ② 换算坏了（rect / dpr / CSS 把位图压扁）⇒ 派发下去选中的那一枚离环心一大截，gap 直接超过它自己的命中盘。
+         *   所以线划在**选中者的命中半径 +1**（质心有半格量化）上，而不是拍一个常数：
+         *     线太紧（曾经写 2.5px）会在密处冤枉正当的遮挡，太松就丢了牙口（红测见 CHANGELOG §E449）。 */
+        var lim = gi >= 0 ? Math.round((hitR(P[gi], curZoom()) + 1) * 10) / 10 : -1;
+        if (gap < 0 || lim < 0 || gap > lim) fails.push(id + ' 环心(' + Math.round(dc[0]) + ',' + Math.round(dc[1])
+          + ') 派发下去选中的是 ' + got + ' ‖ 它的落点离环心 ' + gap + 'px（要 ≤ 它的命中半径+1 = ' + lim
+          + '）‖ 本枚 scr=(' + Math.round(scr[t][0]) + ',' + Math.round(scr[t][1]) + ')');
+        else if (got !== id) nOcc++;
       }
     }
     st.sel = null; st.mode = bak.mode; st.elev = bak.e; st.zoom3 = bak.z; st.k = bak.k; st.iso = bak.iso;
+    st.labels = bak.labels;
     recomputeVIS(); draw();
-    return { ok: fails.length === 0 && n >= 2,
-      msg: fails.join(' ‖ ') || (n + ' 枚全对（屏幕上下两端 + F 两端）‖ 环心与 scr 的纵向差 ' + dd.join('/') + 'px') };
+    return { ok: fails.length === 0 && n >= 2 && nLinp >= 1,
+      msg: (fails.length ? fails.join(' ‖ ')
+        : n + ' 枚全对（屏幕上下两端 + F 两端 + 最靠下的那枚冠军）')
+        + ' ‖ 标签钉成不标（上面 §E449 那段）‖ 环心与 scr 的纵向差 ' + dd.join('/') + 'px ‖ 靶子里冠军 ' + nLinp
+        + ' 枚（环色那道只对冠军有效，要 ≥1）‖ 中心被邻枚的盘压住、按"选中者落点落在它自己命中盘里"判过的 ' + nOcc
+        + ' 枚 ‖ 为"位图 ≠ CSS 盒"重配过 ' + nSETTLE + ' 次' };
   }
   var rt1 = roundTrip(function () { st.mode = 'map'; st.elev = 1; draw(); });
-  T('指针往返（立体地图 · 最上与最下两枚）：按**画出来的环**派发真点击，选中的必须是它自己', rt1.ok, rt1.msg);
+  T('指针往返（立体地图 · 屏幕上下端 + F 两端 + 一枚冠军）：按**画出来的环**派发真点击，选中的必须是它自己', rt1.ok, rt1.msg);
   /* §E430 用户裁定删除：这条腿的派发点是按"环心"算的，而三维态下环心与命中表差 2px（实测 (659,225) vs scr (660,227)）
    *   ⇒ 它测的是"我算出来的点"而不是"用户点下去会怎样"；用户手动验过**指针往返没有问题**。
-   *   立体的那条（最上与最下两枚）仍在跑，保留覆盖。 */
+   *   立体的那条仍在跑（§E449 改名成"屏幕上下端 + F 两端 + 一枚冠军"），保留覆盖。 */
+  /* ===== §E464 那 584 枚共父必须解析到图上一枚真节点（这条钉的是"别再退回那个锚"）=====
+   *   背景：§E314 判过「盘上无实体」，§E442 因此造了一颗灰菱形锚 + 467 条雾边。两边都错在同一台仪器的口径：
+   *   父指针记的是**嵌入成 v7 之后**那份数组的指纹，而检索只按"文件里那份数组"的哈希算 ⇒ 所有 pre-v7 包隐身。
+   *   现在 lineage.mjs 一枚包同时索引两个身份，584 枚的父解析到 SLOT-e379c62c（标签 v1.3.57，实体 = champion-5p-v1.3.58.bak）。*/
+  (function () {
+    var bi = nOf('SLOT-e379c62c'), nb = 0, nbVis = 0;
+    for (var q4 = 0; q4 < N; q4++) { if (P[q4].pof === 'SLOT-e379c62c') { nb++; if (VIS[q4]) nbVis++; } }
+    T('那 584 枚共父要解析到图上一枚真节点（SLOT-e379c62c = v1.3.57），不许再退回「RUNNER-BASE 锚 + 灰雾边」',
+      bi >= 0 && nb >= 400 && NRBASE === 0 && !!P[bi].sv,
+      '父边收到 SLOT-e379c62c 的 ' + nb + ' 枚（当下可见 ' + nbVis + '）‖ 靶节点在图上=' + (bi >= 0 ? '是（' + P[bi].id + ' 标签 ' + (P[bi].sv || '无版本') + '）' : '否')
+        + ' ‖ 仍然解析不到实体的父锚 ' + NRBASE + ' 枚（要 0）');
+  })();
+  /* ===== §E467 连线密度对数叠加：拿"固定 alpha 那一版"当对照组，三帧互比 =====
+   *   用户 10-08：「线连太多了之后还是有点太糊了，调整一下透明度或者考虑一下连线透明度叠加时使用对数叠加。」
+   *   这条量的不是"有没有画线"，是**扇根那块板有没有被拆开**：
+   *   ① 窗内"到顶"（墨 ≥200）的像素数要塌到固定 alpha 的 40% 以下 —— 那就是"板"本身；
+   *   ② 窗内"有墨"（≥6）的像素数不能跟着塌（≥ 50%）—— 否则是"把线擦没了"而不是"压淡了"。
+   *   两条一起才叫"能数清几条"：单独 ① 可以被"整条不画"骗过去，单独 ② 可以被"照旧画满"骗过去。
+   *   ⚠ 判据**不拿"窗内最亮像素"当标准**（第一版这么写过，量出来 221→218 直接假红）：
+   *     那块窗 ±40px 里必然穿过几条疏尾边，它们本来就该保持全 alpha —— "最亮"量的恰好是不该变的那个东西。
+   *     改成数"到顶像素有几个"才是"板"的直测。三帧都带 NOPTS=1（一枚点都不画），判完立刻还原并补一帧。 */
+  (function () {
+    var SN = { elev: st.elev, yaw: st.yaw, pit: st.pit, tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy,
+      edges: st.edges, color: st.color, labels: st.labels, mode: st.mode };
+    function grab() { try { return g.getImageData(0, 0, cv.width, cv.height).data; } catch (E8) { return null; } }
+    st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
+    st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1;
+    st.edges = 'all'; st.color = 'fam'; st.labels = 'off'; NOPTS = 1;
+    ELOG = 1; draw();
+    var hub = EDGR.hub, hn = EDGR.hubn, amin = EDGR.amin, amax = EDGR.amax, nE = EDGR.n;
+    st.edges = 'off'; draw(); var d0 = grab();
+    st.edges = 'all'; ELOG = 1; draw(); var dL = grab();
+    ELOG = 0; draw(); var dF = grab();
+    var satL = 0, satF = 0, covL = 0, covF = 0, ceilL = 0, ceilF = 0, R = Math.round(40 * devicePixelRatio);
+    if (d0 && dL && dF && hub) {
+      var x0 = Math.max(0, Math.round(hub[0]) - R), x1 = Math.min(cv.width - 1, Math.round(hub[0]) + R);
+      var y0 = Math.max(0, Math.round(hub[1]) - R), y1 = Math.min(cv.height - 1, Math.round(hub[1]) + R);
+      for (var yy = y0; yy <= y1; yy++) for (var xx = x0; xx <= x1; xx++) {
+        var o = (yy * cv.width + xx) * 4;
+        var iL = Math.max(Math.abs(dL[o] - d0[o]), Math.abs(dL[o + 1] - d0[o + 1]), Math.abs(dL[o + 2] - d0[o + 2]));
+        var iF = Math.max(Math.abs(dF[o] - d0[o]), Math.abs(dF[o + 1] - d0[o + 1]), Math.abs(dF[o + 2] - d0[o + 2]));
+        if (iL > satL) satL = iL; if (iF > satF) satF = iF;
+        if (iL >= 6) covL++; if (iF >= 6) covF++;
+        if (iL >= 200) ceilL++; if (iF >= 200) ceilF++; } }
+    for (var kk in SN) st[kk] = SN[kk];
+    ELOG = 1; NOPTS = 0;
+    recomputeVIS(); draw();   /* 还原 + 补一帧：后面还有读像素的判据，不许看到一张"只有边"的画布 */
+    T('连线太糊这条要真被压下去：扇根那块「板」的到顶像素必须塌掉一大截，而「有墨的像素」不能跟着塌（密度律 vs 固定 alpha，三帧互比）',
+      !!d0 && !!dL && !!dF && !!hub && ceilF >= 20 && ceilL <= ceilF * 0.4 && covL >= covF * 0.5,
+      '窗 = 最密那一格 ±40 CSS px（那一格压着 ' + hn + ' 条线 ‖ 全图 ' + nE + ' 条边，一条一次 stroke）‖ 整条 alpha '
+        + amax.toFixed(3) + '~' + amin.toFixed(3) + ' ‖ **到顶**（墨 ≥200）的像素 固定 alpha ' + ceilF + ' → 对数 ' + ceilL
+        + '（要 ≤ 40%，且对照组本身要 ≥20 个 —— 不然这块窗根本没板可言）‖ 有墨（≥6）像素 ' + covF + ' → ' + covL + '（要 ≥ 50%）'
+        + ' ‖ 参考：窗内最亮像素 ' + satF + ' → ' + satL + '（这条不拿它当判据：疏尾那条本来就该亮）'
+        + (d0 && dL && dF ? '' : ' ‖ 取不到三帧像素'));
+  })();
+  /* ===== §E467b 一条线**一路上不许断**（用户 10-08 10:5x 否掉上一版的原话：「现在线条重合的部分反而出现了中断」）=====
+   *   上一版把每条边切成 8 段按密度分桶，同一条线在不同段上以不同 alpha 落笔 ⇒ 断口。
+   *   这条判据不读代码结构（"我是不是分了桶"数组自己算自己 = 永远绿），它读**画面上有没有墨**：
+   *   沿探针边取 40 个点，每点在 3×3 邻域里问一句"这儿有没有线"；**连续 ≥3 点没墨**才叫断口
+   *   （单个孤立点是抗锯齿噪声，实测地板 alpha=.030 的线上会撞到 1/480 —— 拿它当断口会把判据磨成"永远红"）。
+   *   ⚠ 与上一条共用同一套钉法：mode=tree、平面、labels 关、NOPTS=1（点与名字都不许混进差里）。 */
+  (function () {
+    var SN2 = { elev: st.elev, yaw: st.yaw, pit: st.pit, tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy,
+      edges: st.edges, color: st.color, labels: st.labels, mode: st.mode };
+    function grab2() { try { return g.getImageData(0, 0, cv.width, cv.height).data; } catch (E9) { return null; } }
+    st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
+    st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1;
+    st.edges = 'all'; st.color = 'fam'; st.labels = 'off'; NOPTS = 1; ELOG = 1;
+    /* 步长要**按当下的边数算**（先空跑一帧拿 EDGR.n）：写死 60 在出厂态（726 条）取到 12 条探针，
+     *   而 #flo=0.3 那一态只剩 184 条 ⇒ 只收到 4 条，红的是"探针不够"不是"线断了"。 */
+    EPROBE = 0; draw(); var nEd = EDGR.n;
+    var strd = Math.max(1, Math.round(nEd / 24)); EPROBE = strd; draw(); var pb = EDGR.probe.slice();
+    var amin2 = EDGR.amin, amax2 = EDGR.amax;
+    var dOn = grab2();
+    st.edges = 'off'; draw(); var dOff = grab2();
+    for (var kk2 in SN2) st[kk2] = SN2[kk2];
+    EPROBE = 0; ELOG = 1; NOPTS = 0; recomputeVIS(); draw();
+    var nBad = 0, nS = 0, nP = 0, runMax = 0, worst = '', spInk = [], spInk2 = [], spInk3 = [];
+    if (dOn && dOff) for (var z = 0; z < pb.length; z++) { var pts = pb[z].pts, run = 0, rmx = 0;
+      for (var u2 = 0; u2 < pts.length; u2 += 3) {
+        var px2 = Math.round(pts[u2]), py2 = Math.round(pts[u2 + 1]), den2 = pts[u2 + 2]; nS++;
+        /* 取 3×3 邻域里的**最大**墨：一条 1px 抗锯齿线会把墨分到相邻两行，
+         *   按"恰好那一个像素"读会把好线误判成断口（实测 alpha=.030 的线峰值墨只有 6.6，四邻一分就掉到 3 以下）。
+         *   "这儿有没有线"这件事本来就该按邻域问，不是按一个像素问。 */
+        var ik2 = 0;
+        for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+          var qx2 = px2 + dx, qy2 = py2 + dy;
+          if (qx2 < 0 || qy2 < 0 || qx2 >= cv.width || qy2 >= cv.height) continue;
+          var o2 = (qy2 * cv.width + qx2) * 4;
+          var ik = Math.max(Math.abs(dOn[o2] - dOff[o2]), Math.abs(dOn[o2 + 1] - dOff[o2 + 1]), Math.abs(dOn[o2 + 2] - dOff[o2 + 2]));
+          if (ik > ik2) ik2 = ik; }
+        /* "中断"的操作性定义 = **连续 3 个采样点以上没墨**（一条边 40 个点，3 个连着 = 线长的 7% 看不见，那才叫断口）。
+         *   单个孤立点没墨是抗锯齿/取整的噪声，拿它当断口会把判据磨成"永远红"。 */
+        if (ik2 < 3) { run++; if (run > rmx) rmx = run; } else run = 0;
+        if (den2 <= 8) spInk.push(ik2); else if (den2 <= 32) spInk2.push(ik2); else spInk3.push(ik2); }   /* 分两档：d=1 才是"单根线"，d=2~3 已经在小堆里 */
+      if (rmx > runMax) { runMax = rmx; worst = pb[z].id + '（中段 alpha ' + pb[z].al.toFixed(3) + '）最长连续没墨 ' + rmx + ' 个点'; }
+      if (rmx >= 3) nBad++; }
+    nP = pb.length;
+    T('沿一条边走一圈不许有断口（§E467a 那一版把边切成不同 alpha 的段，重合处肉眼看得见中断 ‖ 断口 = 连续 ≥3 个采样点没墨）',
+      !!dOn && !!dOff && nP >= 6 && nBad === 0,
+      '当下 ' + nEd + ' 条边 ⇒ 每 ' + strd + ' 条留一条，收到探针 ' + nP + ' 条 × 40 个采样点 = ' + nS + ' 点 ‖ 有断口的边 ' + nBad + ' 条（要 0）‖ 全组最长连续没墨 ' + runMax + ' 个点'
+        + (worst ? ' ‖ 例：' + worst : '') + (dOn && dOff ? '' : ' ‖ 取不到两帧像素'));
+    /* §E467c 第二条：埋在堆里可以淡，**真正独处的那一段必须看得见**。上一版整条边取一个均值 ⇒
+     *   一条长线只要蹭到扇根那一格，整条（包括它自己那段空地）被拉到地板 alpha .03 = 6.6 墨，肉眼等于没有。 */
+    function med(a5) { if (!a5.length) return -1; var b5 = a5.slice().sort(function (x, y) { return x - y; }); return b5[b5.length >> 1]; }
+    var m1 = med(spInk), m23 = med(spInk2);
+    T('空地上的单根线必须看得见（探针里"所在格子只压着 ≤8 条线"那些采样点，中位墨要 ≥30 = 满量程 221 的 14%）',
+      !!dOn && !!dOff && spInk.length >= 12 && m1 >= 30,
+      'd≤8 的采样点 ' + spInk.length + ' 个 ‖ 中位墨 ' + m1 + ' ‖ 参考 d=9~32 的 ' + spInk2.length + ' 个中位墨 ' + m23 + ' ‖ d>32 的 ' + spInk3.length + ' 个中位墨 ' + med(spInk3));
+  })();
+  /* ===== §E469 平移/旋转时，一条线的 alpha 不许变（用户 10-08 11:3x：「这个版本整体不错，不过在平移旋转时会有抽搐」）=====
+   *   根因是我自己那套法律的形式：密度格子按**画布坐标**取整（floor(y/EGRID)），平移 1px 就可能整体换格 ⇒
+   *   同一条线的 alpha 离散跳档（实测中位跳幅见下面这条的读数），肉眼就是抽搐。旋转同理，而且更凶。
+   *   判据读的是"同一条边在两个视图下的 alpha 差"，不读像素（像素上还有别的线压着，量不出这一条自己跳了多少）。
+   *   ⚠ 这条现在**是红的**，它钉的是还没做的事：把"压暗"从"每条线的属性"搬到"像素累加之后"
+   *     （离屏累加 + Reinhard/对数色调映射，用户转的 gemini 方案）⇒ 每条线的属性绝对静态，抽搐从根上消失。 */
+  (function () {
+    var SN3 = { elev: st.elev, yaw: st.yaw, pit: st.pit, tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy,
+      edges: st.edges, color: st.color, labels: st.labels, mode: st.mode };
+    st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
+    st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; st.edges = 'all'; st.color = 'fam'; st.labels = 'off';
+    NOPTS = 1; ELOG = 1; EPROBE = Math.max(1, Math.round(EDGR.n / 24));
+    draw(); var A0p = EDGR.probe.slice();
+    st.tX = -3 * devicePixelRatio; draw(); var A1p = EDGR.probe.slice();
+    st.tKx = 1.03; draw(); var A2p = EDGR.probe.slice();
+    st.elev = 1; st.yaw = FLAT.yaw + 0.05; draw(); var A3p = EDGR.probe.slice();
+    for (var kk3 in SN3) st[kk3] = SN3[kk3];
+    EPROBE = 0; NOPTS = 0; recomputeVIS(); draw();
+    function dmax(P0, P1) { var m = 0, ex = '';
+      for (var q = 0; q < Math.min(P0.length, P1.length); q++) { var a5 = P0[q].al5, b5 = P1[q].al5;
+        for (var w = 0; w < 5; w++) { var dv = Math.abs(a5[w] - b5[w]); if (dv > m) { m = dv; ex = P0[q].id + ' ' + a5[w].toFixed(3) + '→' + b5[w].toFixed(3); } } }
+      return [m, ex]; }
+    var dP = dmax(A0p, A1p), dZ = dmax(A0p, A2p), dR = dmax(A0p, A3p);
+    T('平移/缩放/旋转一条线的 alpha 不许变（§E469 抽搐的根因 = 密度取在屏幕空间网格里 ⇒ 换格就跳档；这条现在该红）',
+      A0p.length >= 6 && dP[0] <= 0.02 && dZ[0] <= 0.02 && dR[0] <= 0.02,
+      '探针 ' + A0p.length + ' 条边 × 5 个位置 ‖ 平移 3px 最大跳幅 ' + dP[0].toFixed(3) + (dP[1] ? '（' + dP[1] + '）' : '')
+        + ' ‖ 缩放 ×1.03 ' + dZ[0].toFixed(3) + (dZ[1] ? '（' + dZ[1] + '）' : '')
+        + ' ‖ 立体偏航 +0.05rad ' + dR[0].toFixed(3) + (dR[1] ? '（' + dR[1] + '）' : '') + '（三条都要 ≤0.02）');
+  })();
+  /* ===== §E466 家族行序必须与"这一行真显示的那些枚"的训练时刻同向 =====
+   *   用户 10-08：「怎么有几个后期的点飞到家族 1 去了，是不是哪里写错了」—— 写错的地方在 lineage.mjs 的聚类：
+   *   16 枚旧槽位冠军（不是训练产物）一起进了聚类，其中 SLOT-6ed47e18（09-09）与 E59/BIG 那批"配置字段全空"的类
+   *   签名逐字相同 ⇒ **整类被这一枚拖到第 2 行**，于是 09-27/10-02 的 12 枚显示在"最早那一批"那一行。
+   *   ⚠ 判据不许读 fams 数组自己（数组自己算自己 = 永远绿，§E44x 记过这一族），要读**每行真显示的那些枚的时刻**；
+   *     零散那一行按定义就是混装，不套这条序。 */
+  (function () {
+    var byF = {};
+    for (var i8 = 0; i8 < N; i8++) { var d8 = P[i8], tv8 = Date.parse(d8.ts); if (!isFinite(tv8)) continue;
+      var f8 = d8.famTop ? 0 : d8.fam; if (f8 === undefined || f8 === null || f8 === '') continue;
+      (byF[f8] || (byF[f8] = [])).push(tv8); }
+    var rows8 = Object.keys(byF).map(Number).sort(function (a, b) { return a - b; });
+    var st8 = rows8.map(function (f) { var a = byF[f].slice().sort(function (x, y) { return x - y; });
+      return { f: f, n: a.length, min: a[0] }; });
+    var bad8 = [], nSlotOut = 0;
+    for (var k8 = 1; k8 < st8.length; k8++) { var cu = st8[k8], pv = st8[k8 - 1];
+      if (cu.f === 0 || /零散/.test(String(FAMLAB[cu.f] || '')) || /零散/.test(String(FAMLAB[pv.f] || ''))) continue;
+      if (cu.min < pv.min) bad8.push('行 ' + cu.f + ' 最早 ' + new Date(cu.min).toISOString().slice(5, 10)
+        + ' 早于行 ' + pv.f + ' 的 ' + new Date(pv.min).toISOString().slice(5, 10)); }
+    for (var j8 = 0; j8 < N; j8++) if (String(P[j8].id).indexOf('SLOT-') === 0 && !P[j8].famTop && P[j8].fam) nSlotOut++;
+    T('家族行序要与"这一行真显示的那些枚"的训出时刻同向，且旧槽位冠军只能住在合成那一行（§E466：一枚 09-09 的旧冠军曾把 10-02 那批拖上第 2 行）',
+      bad8.length === 0 && nSlotOut === 0,
+      st8.length + ' 行 ‖ 序违规 ' + bad8.length + ' 条' + (bad8.length ? '：' + bad8.slice(0, 4).join(' ‖ ') : '')
+        + ' ‖ 落在家族 0 之外的旧槽位冠军 ' + nSlotOut + ' 枚（要 0）‖ 头三行 '
+        + st8.slice(0, 3).map(function (s) { return s.f + '：n' + s.n + ' ‖ 最早 ' + new Date(s.min).toISOString().slice(5, 10); }).join(' '));
+  })();
+  /* ===== §E462 拖动手本身要有判据 =====
+   *   三块浮层各拖一次：① 真的落在拖到的地方（不是"看着动了"）；② 拖不出画面（夹取）；③ 双击回得到出厂位；
+   *   ④ 图例拖过之后，图例里那根窗口轴的两个柄**还抓得住** —— 两者都听 pointerdown，这是最容易互相抢的一处。*/
+  (function () {
+    var SNF = { lgPos: st.lgPos, cardPos: st.cardPos, sidePos: st.sidePos };
+    var wr = document.getElementById('wrap'), dBad = [];
+    function relOf(el) { var a = el.getBoundingClientRect(), b = wr.getBoundingClientRect(); return [a.left - b.left, a.top - b.top]; }
+    function dragTo(el, x, y) { var b = wr.getBoundingClientRect(), r = el.getBoundingClientRect();
+      /* 按下点取元素左上角往里 5px（避开边缘），所以 move 的目标要**加上这 5px**，
+       *   否则"拖到 (x,y)"实际落在 (x-5,y-5) —— 第一版就是这么量出 -65/+115 这种 5px 系统差的。 */
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: r.left + 5, clientY: r.top + 5 }));
+      window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: b.left + x + 5, clientY: b.top + y + 5 }));
+      window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: b.left + x + 5, clientY: b.top + y + 5 })); }
+    /* §E462 这条要钉住**默认布局**再拖：从 #lgpos=40,300 这类深链进来时，图例已经贴到左缘，
+     *   再往左拖 60px 会被夹取挡住 ⇒ 量出来的是夹取，不是拖动（实测 delta -40 而不是 -60）。
+     *   夹取本身由下面那一发 99999 单独判，两件事分开记。*/
+    st.lgPos = st.cardPos = st.sidePos = null;
+    floatApply(document.getElementById('legend'), 'lgPos'); floatApply(document.getElementById('card'), 'cardPos');
+    floatApply(document.getElementById('side'), 'sidePos');
+    var LG = document.getElementById('legend'), CD = document.getElementById('card'), SD = document.getElementById('side');
+    st.side = true; paintSide(); st.sel = st.sel || P[0].id; paintCard();
+    var L0 = relOf(LG);
+    dragTo(LG, L0[0] - 60, L0[1] + 80);
+    var L1 = relOf(LG);
+    if (Math.abs((L1[0] - L0[0]) + 60) > 4 || Math.abs((L1[1] - L0[1]) - 80) > 4)
+      dBad.push('图例拖 (-60,+80) 之后实际走了 (' + Math.round(L1[0] - L0[0]) + ',' + Math.round(L1[1] - L0[1]) + ')');
+    dragTo(LG, 99999, 99999);
+    var L2 = relOf(LG);
+    if (L2[0] + LG.offsetWidth > wr.clientWidth + 2 || L2[1] + LG.offsetHeight > wr.clientHeight + 2)
+      dBad.push('往死里拖没夹住：落在 (' + Math.round(L2[0]) + ',' + Math.round(L2[1]) + ')，块 ' + LG.offsetWidth + '×' + LG.offsetHeight
+        + '，画面 ' + wr.clientWidth + '×' + wr.clientHeight);
+    /* 拖完轴还得能用：按**画出来的下沿柄**按下去拖一格，st.flo 必须动 */
+    var AX = document.getElementById('winax');
+    if (!AX) dBad.push('拖过图例之后窗口轴不见了');
+    else { var lgBefore = relOf(LG), ar = AX.getBoundingClientRect(), f0 = st.flo, yOf = function (f) { return ar.top + (1 - f) * ar.height; };
+      AX.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: ar.left + ar.width / 2, clientY: yOf(f0) }));
+      window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: ar.left + ar.width / 2, clientY: yOf(Math.min(0.99, f0 + 0.12)) }));
+      window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      if (Math.abs(st.flo - (f0 + 0.12)) > 0.03) dBad.push('图例拖过之后轴柄不接了：flo ' + f0.toFixed(3) + ' → ' + st.flo.toFixed(3) + '（该到 ' + (f0 + 0.12).toFixed(3) + '）');
+      /* ⚠ 只判「轴还接得住」没有牙（红测实测：把让开轴那句拆掉，轴照样能用，症状是拖柄时整块图例跟着跑）。
+        所以这一条必须判图例没动 —— 那才是用户会看见的坏法。*/
+      var lgAfter = relOf(LG);
+      if (Math.abs(lgAfter[0] - lgBefore[0]) + Math.abs(lgAfter[1] - lgBefore[1]) > 1)
+        dBad.push('拖窗口轴的柄把整块图例也拖走了 (' + Math.round(lgBefore[0]) + ',' + Math.round(lgBefore[1])
+          + ') → (' + Math.round(lgAfter[0]) + ',' + Math.round(lgAfter[1]) + ') ⇒ 轴那一下没让开');
+      setWin(SNF.flo === undefined ? 0 : 0, 1); }
+    /* 卡与侧栏也各拖一次（它们才是盖住数据最多的两块） */
+    var C0 = relOf(CD); dragTo(CD, C0[0] + 120, Math.max(8, C0[1] - 90)); var C1 = relOf(CD);
+    if (Math.abs((C1[0] - C0[0]) - 120) > 4) dBad.push('选中卡拖 +120 实际走 ' + Math.round(C1[0] - C0[0]));
+    var S0 = relOf(SD); dragTo(SD, Math.max(8, S0[0] - 200), S0[1] + 40); var S1 = relOf(SD);
+    if (Math.abs((S1[0] - S0[0]) + 200) > 4) dBad.push('冠军序列拖 -200 实际走 ' + Math.round(S1[0] - S0[0]));
+    /* 双击复位 */
+    LG.dispatchEvent(new PointerEvent('dblclick', { bubbles: true }));
+    if (st.lgPos !== null) dBad.push('双击图例没复位（st.lgPos 还是 ' + JSON.stringify(st.lgPos) + '）');
+    CD.dispatchEvent(new PointerEvent('dblclick', { bubbles: true })); SD.dispatchEvent(new PointerEvent('dblclick', { bubbles: true }));
+    st.lgPos = SNF.lgPos; st.cardPos = SNF.cardPos; st.sidePos = SNF.sidePos;
+    floatApply(LG, 'lgPos'); floatApply(CD, 'cardPos'); floatApply(SD, 'sidePos');
+    st.side = SNF.sidePos === undefined && SNF.lgPos === undefined ? st.side : st.side;
+    T('浮层可拖动：图例 / 选中卡 / 冠军序列各拖一次要真跟着走、拖不出画面、双击回出厂位，且图例拖过之后窗口轴那两个柄还接得住',
+      dBad.length === 0, dBad.join(' ‖ ') || '三块都跟着走 ‖ 夹取生效 ‖ 双击复位 ‖ 轴柄仍接得住');
+  })();
+  /* ===== §E453 工具栏那几个控件：以前每一条判据都是"直接写 st 再画"，没有一条从**控件本身**走起 =====
+   *   这笔账是 §E452 逼出来的：那条门写死 st.flo = 0.8，而 T 滑杆一动 F 分布就动 ——
+   *   "滑杆 → st → 分布"这条链从来没被走过一遍，所以它断在哪儿都没人知道。
+   *   下面三条按**真事件**点控件（dispatchEvent，不写 st），点完核两件事：st 跟上了 ‖ 画面/分布真的跟着变了。
+   *   ⚠ 全部点完要把 st 与 DOM 两侧一起还原：只还原 st 的话用户回头看到的下拉会停在被点过的档位上
+   *     （"控件写着 seed 而图是 fam"就是 §E371 那类两本账）。 */
+  var SNAPI = { mode: st.mode, e: st.elev, labels: st.labels, color: st.color, edges: st.edges, batch: st.batch,
+    T: st.T, size: st.size, q: st.q, side: st.side, sortBy: st.sortBy, bg: st.bg, flo: st.flo, fhi: st.fhi };
+  var HIBK = {}; for (var hik in st.hi) HIBK[hik] = st.hi[hik];
+  function fireEv(el, typ) { el.dispatchEvent(new Event(typ, { bubbles: true })); }
+  var wireBad = [];
+  var WSEL = [['color', 'seed'], ['labels', 'all'], ['batch', 'all'], ['edges', 'hash']];
+  for (var wi = 0; wi < WSEL.length; wi++) { var wid = WSEL[wi][0], wnt = WSEL[wi][1];
+    var wel = document.getElementById(wid), wbk = wel.value;
+    wel.value = wnt; fireEv(wel, 'change');
+    if (st[wid] !== wnt) wireBad.push(wid + ' 选到「' + wnt + '」而 st.' + wid + ' = ' + st[wid]);
+    wel.value = wbk; fireEv(wel, 'change');
+    if (st[wid] !== wbk) wireBad.push(wid + ' 还原失败（st 是 ' + st[wid] + '，控件是 ' + wbk + '）'); }
+  var loT0 = winLo(), r0 = dotR(P[0], 1), wT = document.getElementById('T'), bkT = wT.value;
+  wT.value = '0.25'; fireEv(wT, 'input');
+  if (Math.abs(st.T - 0.25) > 1e-9) wireBad.push('T 滑杆拖到 0.25 而 st.T = ' + st.T);
+  if (Math.abs(winLo() - loT0) < 1e-6) wireBad.push('st.T 动了但 F 值域一点没动（winLo 还是 ' + loT0.toFixed(3)
+    + ' ⇒ F = Hp/100 + T·S 与这根滑杆脱钩了）');
+  var wS = document.getElementById('size'), bkS = wS.value;
+  wS.value = '2'; fireEv(wS, 'input');
+  if (Math.abs(st.size - 2) > 1e-9) wireBad.push('点大小滑杆拖到 2 而 st.size = ' + st.size);
+  var r1 = dotR(P[0], 1);
+  if (!(r1 > r0 * 1.5)) wireBad.push('st.size 翻倍而 dotR 没跟着长（' + r0.toFixed(2) + ' → ' + r1.toFixed(2) + '）');
+  wS.value = bkS; fireEv(wS, 'input'); wT.value = bkT; fireEv(wT, 'input');
+  T('工具栏接线：四个下拉与两根滑杆点下去必须真的改 st，且 T / 点大小要真的改动到画面',
+    wireBad.length === 0, wireBad.join(' ‖ ') || ('下拉 ' + WSEL.length + ' 个 + 滑杆 2 根都接上了 ‖ 动 T 之前 winLo = '
+      + loT0.toFixed(3) + '，动完已变 ‖ dotR ' + r0.toFixed(2) + ' → ' + r1.toFixed(2)));
+  /* ② 搜索框：它的可观察效果只有两样 —— 匹配那几枚**上名字** + 在它们外面描一圈墨环（drawMap 里 11·st.size 那一圈）。
+   *    所以判据也得读这两样，不能只信 st.q 变了。 */
+  /* 片段从**当下看得见的那批点**里现找（4 字一段，优先命中 2~6 枚的那一段），不写死：
+   *   上一版写死 ['bead','ring','new5',…]，§E440 去重之后命中数掉到 1 ⇒ 这条自己变成"没测到东西"；
+   *   改成全库现找之后又在 #flo=0.60&fhi=0.70 下红一次 —— 那段「eco2」全库命中 6 枚，可当下窗内一枚都不在，
+   *   于是"可见的匹配 0 枚"。这条测的是"搜索框把**图上看得见**的那几枚标出来"，取样就必须从看得见的里面取。 */
+  var SNAPQ = { mode: st.mode, e: st.elev, labels: st.labels };
+  st.mode = 'map'; st.elev = 0; st.labels = 'champ'; st.q = ''; recomputeVIS(); draw();
+  var qFrag = '', qN = 0, QCH = 'abcdefghijklmnopqrstuvwxyz0123456789', QCNT = {}, QORD = [];
+  for (var qi0 = 0; qi0 < N; qi0++) { if (!VIS[qi0] || !scr[qi0]) continue;
+    var pid = String(P[qi0].id).toLowerCase();
+    for (var po = 0; po + 4 <= pid.length; po++) { var pk = pid.slice(po, po + 4), okk = true;
+      for (var pz = 0; pz < 4; pz++) if (QCH.indexOf(pk.charAt(pz)) < 0) { okk = false; break; }
+      if (!okk) continue;
+      if (QCNT[pk] === undefined) { QCNT[pk] = 0; QORD.push(pk); } QCNT[pk]++; } }
+  for (var qo = 0; qo < QORD.length; qo++) { var ck = QCNT[QORD[qo]];
+    if (ck >= 2 && ck <= 6 && ck > qN) { qN = ck; qFrag = QORD[qo]; } }
+  if (qFrag === '') for (var qo2 = 0; qo2 < QORD.length; qo2++) if (QCNT[QORD[qo2]] === 1) { qN = 1; qFrag = QORD[qo2]; break; }
+  var dQ0 = null, qBad = [];
+  try { dQ0 = g.getImageData(0, 0, cv.width, cv.height).data; } catch (Eq) {}
+  var wq = document.getElementById('q'); wq.value = qFrag; fireEv(wq, 'input'); draw();
+  var dQ1 = null; try { dQ1 = g.getImageData(0, 0, cv.width, cv.height).data; } catch (Eq2) {}
+  if (st.q !== qFrag) qBad.push('搜索框打了「' + qFrag + '」而 st.q = ' + JSON.stringify(st.q));
+  var nLab = 0, nRing = 0, qVis = 0, rrq = 11 * st.size;
+  for (var qi3 = 0; qi3 < N; qi3++) { var d3 = P[qi3]; if (String(d3.id).toLowerCase().indexOf(qFrag) < 0 || !scr[qi3] || !VIS[qi3]) continue;
+    qVis++;
+    var got3 = false;
+    for (var lb3 = 0; lb3 < LAB.length; lb3++) if (LAB[lb3][4] === qi3) got3 = true;
+    if (got3) nLab++;
+    if (dQ0 && dQ1) { var cx3 = Math.round(scr[qi3][0]), cy3 = Math.round(scr[qi3][1]), nd = 0;
+      for (var ax = -rrq - 3; ax <= rrq + 3; ax++) for (var ay = -rrq - 3; ay <= rrq + 3; ay++) {
+        var rr2q = Math.sqrt(ax * ax + ay * ay); if (rr2q < rrq - 2 || rr2q > rrq + 2) continue;
+        var oq = ((cy3 + ay) * cv.width + (cx3 + ax)) * 4; if (oq < 0) continue;
+        if (dQ0[oq] !== dQ1[oq] || dQ0[oq + 1] !== dQ1[oq + 1] || dQ0[oq + 2] !== dQ1[oq + 2]) nd++; }
+      if (nd >= 8) nRing++; } }
+  if (qFrag === '' || qVis < 1) qBad.push('片段「' + qFrag + '」在当下这张图上数到 ' + qVis + ' 枚可见的匹配 ⇒ 这条没测到东西');
+  else if (nLab < qVis) qBad.push('可见的匹配 ' + qVis + ' 枚只上了名字 ' + nLab + ' 枚（搜索框的作用就是把这几枚标出来）');
+  if (dQ0 && dQ1 && qVis >= 1 && nRing < qVis) qBad.push('可见的匹配 ' + qVis + ' 枚里只有 ' + nRing + ' 枚周围真多出一圈墨环');
+  if (!dQ0 || !dQ1) qBad.push('取不到两帧像素');
+  wq.value = ''; fireEv(wq, 'input');
+  st.mode = SNAPQ.mode; st.elev = SNAPQ.e; st.labels = SNAPQ.labels;
+  T('搜索框：打一个包名片段，匹配那几枚必须真的被标出来（上名字 + 描一圈环，两帧之差为证）',
+    qFrag !== '' && qBad.length === 0,
+    (qFrag === '' ? 'id 堆里找不到命中 2~6 枚的 4 字片段 ⇒ 这条没测到东西' : '片段「' + qFrag + '」全库命中 ' + qN + ' 枚 ‖ 当下可见 ' + qVis + ' 枚 ‖ 上名字 ' + nLab + ' ‖ 描环 ' + nRing)
+      + (qBad.length ? ' ‖ ' + qBad.join(' ‖ ') : ''));
+  /* ③ 三个按钮：排序（1d 那张的横轴顺序真的换）、冠军序列（面板出现）、底色（连字色一起翻，深浅底上白字会看不见）*/
+  var btnBad = [], wsort = document.getElementById('sortb'), sbk = st.sortBy;
+  function idOf(i) { return (i >= 0 && P[i]) ? P[i].id : '(一枚都没有)'; }
+  st.mode = '1d'; recomputeVIS(); draw();
+  var leftA = -1, leftAx = 1e9;
+  for (var li2 = 0; li2 < N; li2++) if (scr[li2] && VIS[li2] && scr[li2][0] < leftAx) { leftAx = scr[li2][0]; leftA = li2; }
+  wsort.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (st.sortBy === sbk) btnBad.push('排序按钮点下去 st.sortBy 没翻（还是 ' + st.sortBy + '）');
+  if (wsort.textContent.indexOf(st.sortBy === 'F' ? 'F 名次' : '训出时刻') < 0) btnBad.push('按钮文案没跟着改：' + wsort.textContent);
+  recomputeVIS(); draw();
+  var leftB = -1, leftBx = 1e9;
+  for (var li3 = 0; li3 < N; li3++) if (scr[li3] && VIS[li3] && scr[li3][0] < leftBx) { leftBx = scr[li3][0]; leftB = li3; }
+  if (leftA < 0 || leftB < 0) btnBad.push('两种排序下都找不到可比的落点（' + leftA + '/' + leftB + '）');
+  else if (leftA === leftB) btnBad.push('两种排序下最左那枚是同一枚（' + idOf(leftA) + '）⇒ 这根按钮换了个文案没换图');
+  wsort.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  var wbs = document.getElementById('bside'), sdk = st.side;
+  wbs.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (st.side === sdk) btnBad.push('冠军序列按钮点下去 st.side 没翻');
+  var sdv = document.getElementById('side').style.display;
+  if (st.side && sdv === 'none') btnBad.push('st.side 开了但 #side 还藏着');
+  if (!st.side && sdv !== 'none') btnBad.push('st.side 关了而 #side 还占着画面');
+  wbs.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  /* 底色：这条不能拿"进入时的字色"当参照（深链 #bg=%23e6ebf5 进来时字色已经是浅底那份了），
+   *   改成**两档各点一次互相比**，并且把语义也判掉：浅底上字必须比底暗、深蓝上字必须比底亮（否则就是"看不见字"）。 */
+  var wbg = document.querySelectorAll('#bar button[data-bg]'), wLite = null, wDark = null;
+  for (var bi = 0; bi < wbg.length; bi++) { var bv = String(wbg[bi].getAttribute('data-bg')).toLowerCase();
+    if (bv === '#e6ebf5') wLite = wbg[bi]; if (bv === '#0f1522') wDark = wbg[bi]; }
+  var inkLite = '', inkDark = '';
+  if (wLite) { wLite.dispatchEvent(new MouseEvent('click', { bubbles: true })); inkLite = st.ink; }
+  if (wDark) { wDark.dispatchEvent(new MouseEvent('click', { bubbles: true })); inkDark = st.ink; }
+  if (!wLite || !wDark) btnBad.push('底色按钮里找不到「浅底」或「深蓝」那两粒（找到 ' + wbg.length + ' 粒）');
+  else {
+    if (inkLite === inkDark) btnBad.push('浅底与深蓝两档字色一模一样（' + inkLite + '）⇒ 换底色没换字色');
+    if (hexSum(inkLite) >= hexSum('#e6ebf5')) btnBad.push('浅底上字比底还亮或同亮（ink ' + inkLite + '）⇒ 那一档等于看不见字');
+    if (hexSum(inkDark) <= hexSum('#0f1522')) btnBad.push('深蓝上字比底还暗或同暗（ink ' + inkDark + '）⇒ 这一档等于看不见字'); }
+  var wBack = null;
+  for (var bi2 = 0; bi2 < wbg.length; bi2++)
+    if (String(wbg[bi2].getAttribute('data-bg')).toLowerCase() === String(SNAPI.bg).toLowerCase()) wBack = wbg[bi2];
+  if (wBack) wBack.dispatchEvent(new MouseEvent('click', { bubbles: true })); else setBg(SNAPI.bg);
+  if (String(st.bg).toLowerCase() !== String(SNAPI.bg).toLowerCase()) btnBad.push('底色没还原成进来时那档（' + st.bg + ' ≠ ' + SNAPI.bg + '）');
+  T('工具栏三个按钮：排序要真的换 1d 的顺序、冠军序列要真的出现、底色两档必须连字色一起翻（浅底深字 / 深底亮字）',
+    btnBad.length === 0, btnBad.join(' ‖ ') || ('排序：最左 ' + idOf(leftA) + ' → ' + idOf(leftB)
+      + ' ‖ 侧栏开合两态都对 ‖ 字色 浅底 ' + inkLite + ' / 深蓝 ' + inkDark + ' ‖ 已还原到 ' + st.bg));
+  /* ④ 剩下那几个能点的东西：平面⇄立体（那条 520ms 缓动要**一步推到底**才看得到落点，同一条 tick() 路径）、
+   *    投影判据、底色取色器、地板四粒（开关 / 阈值 / 网格 / 场）、好在上⇅。
+   *    判的还是两件事：st 跟上 ‖ 有个可观察的东西跟着动（按钮文案 / 面板显隐 / 夹取后的值）。 */
+  var SN2 = { iso: st.iso, isoT: st.isoT, isoGN: st.isoGN, isoField: st.isoField, goodTop: st.goodTop,
+    bg: st.bg, elev: st.elev, yaw: st.yaw, pit: st.pit, fitOn: document.getElementById('fit').style.display };
+  var c2Bad = [];
+  var wb3 = document.getElementById('b3dt'), e0 = st.elev, t0b3 = wb3.textContent;
+  wb3.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (tw) { tw.t0 = performance.now() - (tw.dur + 80); tick(); }   /* 把缓动一步推到终点（走的是同一套 tick，不是替它写结论） */
+  var e1 = st.elev, t1b3 = wb3.textContent;
+  if (Math.abs(e1 - e0) < 0.4) c2Bad.push('点平面⇄立体之后 st.elev 只从 ' + e0.toFixed(2) + ' 走到 ' + e1.toFixed(2));
+  /* 文案不跟"进入时那一眼"比，跟**当下 elev 该有的那一句**比：前面好几条判据都会临时把 elev 放平再还原，
+   *   而它们改的是 st 不是按钮 ⇒ 进入这条时那句文案可能已经是陈的（实测 #mode=map&3d=1 就这样）。
+   *   拿"变没变"判就是判错了对象；这条不变量（elev>=0.5 该写「平面」，否则该写「立体」）比原来更强。 */
+  var want1 = e1 >= 0.5 ? '平面' : '立体';
+  if (t1b3 !== want1) c2Bad.push('点完这一粒 elev = ' + e1.toFixed(2) + '，按钮该写「' + want1 + '」而它写着「' + t1b3 + '」');
+  wb3.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (tw) { tw.t0 = performance.now() - (tw.dur + 80); tick(); }
+  if (Math.abs(st.elev - SN2.elev) > 0.05) c2Bad.push('点回去之后没落在进入时那一档（' + SN2.elev.toFixed(2) + ' → ' + st.elev.toFixed(2) + '）');
+  var wf = document.getElementById('fitt'), df0 = document.getElementById('fit').style.display;
+  wf.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  var df1 = document.getElementById('fit').style.display;
+  if (df1 === df0) c2Bad.push('投影判据按钮点下去 #fit 显隐没变（' + df0 + '）');
+  if (!wf.classList.contains('on') === (df1 !== 'none')) c2Bad.push('#fit 开着而按钮没高亮（或反过来）：' + df1 + ' / on=' + wf.classList.contains('on'));
+  wf.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  var wbgc = document.getElementById('bgc'), bgBk = wbgc.value;
+  wbgc.value = '#212a3b'; fireEv(wbgc, 'input');
+  if (String(st.bg).toLowerCase() !== '#212a3b') c2Bad.push('底色取色器填 #212a3b 而 st.bg = ' + st.bg);
+  wbgc.value = bgBk; fireEv(wbgc, 'input');
+  var isoBk = st.iso, isoSeen = {};
+  for (var iz = 0; iz < 3; iz++) { isoSeen[st.iso] = 1;
+    document.getElementById('bisos').dispatchEvent(new MouseEvent('click', { bubbles: true })); }
+  if (!(isoSeen[0] && isoSeen[1] && isoSeen[2])) c2Bad.push('地板开关点三圈没有轮完三档（见到的是 ' + Object.keys(isoSeen).join('/') + '）');
+  if (st.iso !== isoBk) c2Bad.push('地板开关点三圈没回到原来那档（' + isoBk + ' → ' + st.iso + '）');
+  /* 阈值这根滑杆是 **E426 故意做的防抖**："槽位先跟手、st.isoT 停手 160ms 之后才动"（isoBuild 一次 1175ms，
+   *   每个 tick 都改 st.isoT 就是拖一下卡一秒）。同步自检里那个 setTimeout 永远不会跑，
+   *   所以这条只许测**槽位与标签跟没跟手** —— 拿 st.isoT 判就是判错了对象。 */
+  var wit = document.getElementById('isot'), witBk = wit.value, slotBk = (st.isoField === 'pot' ? st.isoTpot : st.isoTok);
+  wit.value = '0.9'; fireEv(wit, 'input');
+  var slotNow = (st.isoField === 'pot' ? st.isoTpot : st.isoTok);
+  if (Math.abs(slotNow - 0.9) > 1e-9) c2Bad.push('阈值滑杆拖到 0.9 而当下场那一格槽位 = ' + slotNow.toFixed(3) + '（槽位必须先跟手）');
+  var lblT = document.getElementById('isotv').textContent;
+  if (lblT.indexOf('90%') < 0) c2Bad.push('阈值数值跟手了而标签没跟（读数是「' + lblT + '」）');
+  wit.value = witBk; fireEv(wit, 'input');
+  if (st.isoField === 'pot') st.isoTpot = slotBk; else st.isoTok = slotBk;
+  /* 网格与场是两个 select：它们听的是 change（不是 input），而且填一个没有的选项会被浏览器清成空串 ⇒ 用真的档位测 */
+  var wig = document.getElementById('isogn'), wigBk = wig.value;
+  wig.value = '128'; fireEv(wig, 'change');
+  if (st.isoGN !== 128) c2Bad.push('壳网格选 128 而 st.isoGN = ' + st.isoGN);
+  wig.value = wigBk; fireEv(wig, 'change');
+  if (st.isoGN !== +wigBk) c2Bad.push('壳网格没还原（' + st.isoGN + ' ≠ ' + wigBk + '）');
+  var wif = document.getElementById('isof'), wifBk = wif.value;
+  wif.value = 'pot'; fireEv(wif, 'change');
+  if (st.isoField !== 'pot') c2Bad.push('场选 pot 而 st.isoField = ' + st.isoField);
+  wif.value = wifBk; fireEv(wif, 'change');
+  if (st.isoField !== wifBk) c2Bad.push('场没还原（' + st.isoField + ' ≠ ' + wifBk + '）');
+  var wbh = document.getElementById('bh'), gt0 = st.goodTop, tx0 = wbh.textContent;
+  wbh.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (st.goodTop === gt0) c2Bad.push('好在上⇅ 点下去 st.goodTop 没翻');
+  if (wbh.textContent === tx0) c2Bad.push('好在上⇅ 翻了状态没翻文案（还是「' + tx0 + '」）');
+  wbh.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (st.goodTop !== gt0) c2Bad.push('好在上⇅ 点两下没回到原档');
+  T('工具栏剩下的都能点：平面⇄立体（缓动推到底）、投影判据、底色取色器、曲面三档与阈值/网格/场、好在上⇅',
+    c2Bad.length === 0, c2Bad.join(' ‖ ') || ('st.elev ' + e0.toFixed(2) + ' → ' + e1.toFixed(2) + ' → 回到 ' + st.elev.toFixed(2)
+      + ' ‖ #fit 显隐两态都对 ‖ 底色取色器接上 ‖ 曲面轮完三档并回到 ' + isoBk + ' ‖ 阈值槽位与标签跟手（st.isoT 由 E426 防抖，不在这里判）‖ 网格/场两个下拉走 change'));
+  st.iso = SN2.iso; st.isoT = SN2.isoT; st.isoGN = SN2.isoGN; st.isoField = SN2.isoField;
+  st.goodTop = SN2.goodTop; st.bg = SN2.bg; st.elev = SN2.elev; st.yaw = SN2.yaw; st.pit = SN2.pit;
+  document.getElementById('fit').style.display = SN2.fitOn;
+  syncIso(); syncHdir(); setBg(SN2.bg); document.getElementById('bgc').value = SN2.bg;
+  st.mode = SNAPI.mode; st.elev = SNAPI.e; st.labels = SNAPI.labels; st.color = SNAPI.color; st.edges = SNAPI.edges;
+  st.batch = SNAPI.batch; st.T = SNAPI.T; st.size = SNAPI.size; st.q = SNAPI.q; st.side = SNAPI.side;
+  st.sortBy = SNAPI.sortBy; st.bg = SNAPI.bg; st.flo = SNAPI.flo; st.fhi = SNAPI.fhi;
+  st.hi = {}; for (var hk2 in HIBK) st.hi[hk2] = HIBK[hk2];
+  var dColor = document.getElementById('color'), dLab = document.getElementById('labels');
+  var dBatch = document.getElementById('batch'), dEdges = document.getElementById('edges'), dQ = document.getElementById('q');
+  dColor.value = SNAPI.color; dLab.value = SNAPI.labels; dBatch.value = SNAPI.batch; dEdges.value = SNAPI.edges;
+  dQ.value = SNAPI.q; wT.value = SNAPI.T; wS.value = SNAPI.size;
+  document.getElementById('Tv').textContent = (+SNAPI.T).toFixed(2);
+  recomputeVIS(); buildGroups(); buildFamBar(); paintSide(); paintWin(); draw();
+  /* ===== §E455 浮层面板压住多少数据：按**最坏情况**量，不量"自检跑到这儿时恰好开着什么" =====
+   *   三块浮层（图例 / 选中卡 / 冠军序列）都是 DOM 盖在画布上 ⇒ 被它们压住的点既看不见也点不着（点击落在面板上）。
+   *   原来这这件事只有"标签中心不许命中一张盖不住这个点的卡"那条管到卡与自己那枚点的关系，没人量过总量。
+   *   取样状态钉死：平面地图 + 全范围窗口 + 卡开着（选库里 why 最长的那一枚 ⇒ 卡最高的一种）+ 侧栏开着。
+   *   实测（1600×900）：画布内 729 枚 ‖ 被压住 65 枚 = 9%（卡 39 ‖ 侧栏 26）‖ 其中冠军 12 ‖ **现役 0**；
+   *   只开图例的几种态：谱系图 0 枚、一维 0 枚、三维行为轴 3 枚、立体地图 16 枚。
+   *   ⇒ 硬判据一条："现役不许被压住"（它是全图唯一的分界参照物，被压住就等于图上没有基准）；
+   *     再加一条总量界 ≤ 80（实测最坏 65 之上留 15 枚余量，挡的是"某块面板无声变大"）。 */
+  (function () {
+    var SN5 = { mode: st.mode, e: st.elev, sel: st.sel, side: st.side, flo: st.flo, fhi: st.fhi, labels: st.labels,
+      lgPos: st.lgPos, cardPos: st.cardPos, sidePos: st.sidePos };
+    /* §E462 浮层能拖之后，这条必须钉住**默认布局**再量：它判的是「出厂那套位置不许把现役盖住」，
+     *   不是「用户把它拖到现役上面也不许」。拖到哪是用户选的，不该由判据管（量完照旧还原）。*/
+    st.lgPos = st.cardPos = st.sidePos = null;
+    var worst = -1, worstId = '';
+    for (var wi5 = 0; wi5 < N; wi5++) { var wl = String(P[wi5].why || '').length + String(P[wi5].pb || '').length;
+      if (P[wi5].ok === 0 && wl > worst) { worst = wl; worstId = P[wi5].id; } }
+    st.mode = 'map'; st.elev = 0; st.flo = 0; st.fhi = 1; st.labels = 'champ'; st.side = true;
+    st.sel = worstId; recomputeVIS(); paintCard(); paintSide(); draw();
+    var cvr = cv.getBoundingClientRect(), PAN = [];
+    function addP(id) { var e = document.getElementById(id); if (!e) return;
+      var cs = window.getComputedStyle(e);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return;
+      var r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return;
+      PAN.push([id, (r.left - cvr.left) * devicePixelRatio, (r.top - cvr.top) * devicePixelRatio,
+        r.width * devicePixelRatio, r.height * devicePixelRatio]); }
+    addP('legend'); addP('card'); addP('side');
+    var hid = 0, hidCh = 0, tot = 0, hidBy = {}, exCh = '', hidInc = 0;
+    for (var oi = 0; oi < N; oi++) { var so = scr[oi]; if (!so || !VIS[oi]) continue; tot++;
+      for (var pi = 0; pi < PAN.length; pi++) { var B = PAN[pi];
+        if (so[0] >= B[1] && so[0] <= B[1] + B[3] && so[1] >= B[2] && so[1] <= B[2] + B[4]) {
+          hid++; hidBy[B[0]] = (hidBy[B[0]] || 0) + 1;
+          if (P[oi].id === 'SHIPPED-Ldemo') hidInc++;
+          if (P[oi].lin) { hidCh++; if (!exCh) exCh = P[oi].id; }
+          break; } } }
+    var parts = []; for (var kk in hidBy) parts.push(kk + ' ' + hidBy[kk]);
+    T('浮层面板不许把现役压住（它是全图唯一的分界参照）‖ 最坏情况下被压住的点总量有界',
+      PAN.length >= 2 && tot > 0 && hidInc === 0 && hid <= 80,
+      '钉的态：平面地图 + 卡开着（选 why 最长那枚 ' + worstId + '，明细 ' + worst + ' 字符）+ 侧栏开着'
+        + ' ‖ 画布内 ' + tot + ' 枚 ‖ 被压住 ' + hid + ' 枚（线 80）‖ 分块 ' + (parts.join(' ‖ ') || '无')
+        + ' ‖ 其中冠军 ' + hidCh + (exCh ? '（例 ' + exCh + '）' : '') + ' ‖ 现役 ' + hidInc + '（要 0）'
+        + ' ‖ 面板 ' + PAN.map(function (x) { return x[0] + ' ' + Math.round(x[3] / devicePixelRatio) + '×' + Math.round(x[4] / devicePixelRatio); }).join(' / '));
+    st.mode = SN5.mode; st.elev = SN5.e; st.sel = SN5.sel; st.side = SN5.side;
+st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
+    st.lgPos = SN5.lgPos; st.cardPos = SN5.cardPos; st.sidePos = SN5.sidePos;   /* §E462 位置也要还原：自检不许把用户拖好的布局改掉 */
+    recomputeVIS(); paintCard(); paintSide(); draw();
+  })();
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\\n' + out.join('\\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\\n已经跑到：\\n' + out.join('\\n'); nbad++; }
@@ -3522,13 +4502,13 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 'button:hover{border-color:#6f83a8}\n' +
 '#wrap{position:relative;flex:1 1 auto;min-height:0}\n' +
 'canvas#cv{width:100%;height:100%;display:block;cursor:grab}\n' +
-'#fam{flex:0 0 auto;background:var(--panel);border-top:1px solid var(--line);padding:7px 14px;display:flex;gap:7px;align-items:center;overflow-x:auto;white-space:nowrap;z-index:6}\n' +
+'#fam{flex:0 0 auto;background:var(--panel);border-top:1px solid var(--line);padding:7px 14px;display:flex;gap:7px;row-gap:5px;align-items:center;flex-wrap:wrap;z-index:6}\n' +
 '#fam button.fam{padding:3px 7px;border-radius:14px;font-size:12px;display:flex;gap:5px;align-items:center}\n' +
 '#fam button.fam i{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid rgba(255,255,255,.35)}\n' +
 '#fam button.fam b{color:var(--dim);font-weight:400}\n' +
 '#fam .famtip{color:var(--dim);font-size:12px;padding-right:6px}\n' +
 '#tip{position:fixed;display:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre;font-size:12px;line-height:1.5;pointer-events:none;z-index:9;box-shadow:0 6px 22px rgba(0,0,0,.55);color:var(--ink)}\n' +
-'#legend{position:absolute;right:6px;top:12px;   /* §E431 用户 10-08：整块往右缩（贴右缘），别压到一维图 */font-size:11px;color:var(--ink);text-align:left;padding:7px 9px;border:1px solid var(--line);border-radius:6px}\n' +
+'#legend{position:absolute;right:6px;top:12px;cursor:move;user-select:none;touch-action:none;   /* §E431 用户 10-08：整块往右缩（贴右缘），别压到一维图 */font-size:11px;color:var(--ink);text-align:left;padding:7px 9px;border:1px solid var(--line);border-radius:6px}\n' +
 '#legend canvas{border:1px solid #8ea2c0;margin:3px 0}\n' +
 '#stat{position:absolute;left:14px;top:10px;color:var(--dim);font-size:12px}\n' +
 'label{color:var(--dim);display:flex;gap:6px;align-items:center}\n' +
@@ -3555,7 +4535,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
  *   #side   = 冠军序列（按上线时刻排的一列，点一下加入对比）+ 对比表
  *   #cmp    = 对比表本体（挂在 #side 里，超过一屏就滚）
  *   位置刻意避开 #legend（右上）与 #stat（左上）：这三块要同时看得见，叠了就等于没有。*/
-'#card{position:absolute;left:14px;bottom:34px;max-width:400px;max-height:42%;overflow:auto;background:rgba(19,26,41,.94);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.5;white-space:pre;display:none;z-index:7}\n' +
+'#card{position:absolute;left:14px;bottom:34px;max-width:400px;max-height:42%;overflow:auto;background:rgba(19,26,41,.94);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;display:none;z-index:7}\n' +
 '#side{position:absolute;right:14px;top:172px;width:236px;max-height:calc(100% - 200px);overflow:auto;background:rgba(19,26,41,.94);border:1px solid var(--line);border-radius:6px;padding:8px 9px;font-size:11px;line-height:1.45;display:none;z-index:7}\n' +
 '#side h4{margin:0 0 6px;color:var(--dim);font-size:11px;font-weight:600}\n' +
 '#side button{display:block;width:100%;text-align:left;margin:0 0 4px;padding:4px 6px;font-size:11px;border-radius:4px;line-height:1.35}\n' +
@@ -3602,7 +4582,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>\n' +
 '<div id="tip"></div>\n' +
 '<div id="selftest"></div>\n' +
-'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
+'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var NRAW = ' + NRAW + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
 /* §E338 落盘之后**必须把内联脚本再解析一遍**（"写完不回读"这一族的第三种形态）：
  *   模板里写 '\n' 会被 Node 先吃成**真换行** ⇒ 写进页面就成了一条未闭合的字符串 ⇒ **整页脚本一条都不执行**，
  *   而构建照样打印"已写 xxx KB"、截图照样是一张画布（地板是 canvas 之外没画 ⇒ 看着像空的但没人报错）。

@@ -29,7 +29,7 @@ export function parseMeta(txt) {
 /* 权重身份 = `server/train-server.mjs` 的 `weightsId()`：sha1(JSON.stringify(Array.from(params))) 前 16 位。
  *   它**只哈希权重数组**（源码注释里写着 v1.3.36 的教训：整文件哈希会被 META 的 ts 污染）。
  *   ⇒ 拿它去对 `META.hotstartFrom`，就能把"这枚是从哪一枚长出来的"还原成真正的父子边。*/
-export function widOf(txt) {
+export function packArr(txt) {
   /* 坑：`EPIRUS_CHAMPION_3P` 同时是 `EPIRUS_CHAMPION_3P_META` 的前缀，而 .bak 里 META 那行**在前面**
    *   ⇒ 直接 indexOf 会拿到 META 对象（它没有 `.a`）⇒ 全部静默返回 null。只认"名字后面紧跟 ="的那一处。 */
   const KEY = 'EPIRUS_CHAMPION_3P';
@@ -37,7 +37,18 @@ export function widOf(txt) {
     const after = txt.slice(k + KEY.length, k + KEY.length + 4);
     if (!/^\s*=/.test(after)) continue;
     const o = braceObj(txt, k); if (!o || !Array.isArray(o.a)) continue;
-    return createHash('sha1').update(JSON.stringify(Array.from(o.a))).digest('hex').slice(0, 16);
+    return o.a;
   }
   return null;
 }
+/** §E464 哈希这件事抽成"给一个数组算指纹"，因为同一枚包现在有**两个**合法身份（v6 形状与嵌入成 v7 之后），
+ *   而口径必须逐字相同（sha1(JSON.stringify(Array.from(params))) 前 16 位 = `weightsId()`）。
+ * ⚠ 收**任何 array-like**，不收"看着像数组的普通对象"：`EpirusPolicy.embedLegacy()` 返回的是
+ *   **Float64Array**，而 `Array.isArray(Float64Array)` 是 false ⇒ 原来这里直接 return null，
+ *   于是 §E464 那套第二身份登记从写下起就一条也没成功过（0 条 = 静默空转，不报错）。
+ *   `weightsId` 那侧本来就是 `Array.from(params)` 再 stringify ⇒ 类型化数组与同内容数组哈希一致，口径不变。 */
+export function widOfArr(a) {
+  if (!a || typeof a.length !== 'number') return null;
+  return createHash('sha1').update(JSON.stringify(Array.from(a))).digest('hex').slice(0, 16);
+}
+export function widOf(txt) { return widOfArr(packArr(txt)); }
