@@ -109,3 +109,11 @@ docs/artifacts/e129-out/*
 # §E303：冠军演化查看器**挪到仓库根的 `champion-map/`**（用户：「不要放在很深的文件夹里面」）
 #   ⇒ 上一轮给 `docs/artifacts/e287-out/` 开的那条 9 文件白名单作废、整目录重新回到"只在本机"。
 #   新目录本来就不在任何屏蔽规则里，不需要白名单。
+
+# §2026-10-08 一次性中间产物（无人引用 ⇒ 不再进库；文件仍在盘上）
+champion-map/_*.tsv
+champion-map/_*.txt
+champion-map/duel-*.tsv
+champion-map/e4[0-9][0-9]-*.tsv
+champion-map/e49[0-9]-*.tsv
+champion-map/e49[0-9]-*.txt
