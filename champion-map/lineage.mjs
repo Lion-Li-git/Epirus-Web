@@ -273,12 +273,22 @@ console.log('父指针：' + np + ' 枚记了 hotstartFrom ‖ 其中 ' + nres +
   (np ? Math.round(nres / np * 100) : 0) + '%）‖ 解析不出的多是"父是当时的现役冠军、后来被覆写没留档"');
 console.log('　§E330 退路解析出的：SEEDPACK 路径 ' + nSpk + ' 枚 ‖ 臂级（同臂带内候选留的指针）' + nArm + ' 枚（这些的产物自己不带任何指针）');
 const bySig = new Map();
-for (const r of ROWS) { if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push(r); }
+/* ===== §E466 旧槽位冠军**不参与家族聚类**（用户 10-08 指着图问"怎么有几个后期的点飞到家族 1 去了"）=====
+ *   它们不是一次训练产物，是"当时上槽的那枚权重"（16 行的 META 来自 e370-out 的导出，配置字段多半是空的）。
+ *   实测混进来的两处代价：
+ *   ① SLOT-6ed47e18（ts 09-09）的 16 轴签名与 E59 那批和 BIG 三枚"配置字段全空"的类**逐字相同** ⇒ 被并成一类，
+ *      而这一类的 t0 被它拖到 09-09 ⇒ 按 t0 排序时整类排到第 2 行 ⇒ 09-27 / 10-02 的 12 枚显示在"最早那一批"那一行。
+ *   ② 另外 15 枚并进"零散实验"，那一行的枚数里有 15 枚根本不是训练产物。
+ *   ⇒ 家族号只描述训练家族。这 16 枚**仍然写进表**（584 条父边要以它们为靶），但 fam 一律给 0，
+ *      显示交给 viewer 那一行合成家族（§E376 补行 / §E377 放最上面）。 */
+const SLOTID = {}; for (const r of ROWS) if (/^SLOT-/.test(r.id)) SLOTID[r.id] = 1;
+for (const r of ROWS) { if (SLOTID[r.id]) continue; if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push(r); }
 const groups = [...bySig.entries()].map(([sig, rs]) => ({ sig, rs,
   t0: rs.map(x => x.ts).sort()[0] || '', t1: rs.map(x => x.ts).sort().slice(-1)[0] || '' }))
   .sort((a, b) => (a.t0 < b.t0 ? -1 : a.t0 > b.t0 ? 1 : b.rs.length - a.rs.length));
 console.log('方法/目标配置等价类 = ' + groups.length + ' 个（成员数中位 ' +
-  groups.map(g => g.rs.length).sort((a, b) => a - b)[groups.length >> 1] + '，最大 ' + groups[0].rs.length + '）');
+  groups.map(g => g.rs.length).sort((a, b) => a - b)[groups.length >> 1] + '，最大 ' +
+  Math.max.apply(null, groups.map(g => g.rs.length)) + '）');   /* 最大要按成员数取，groups 是按 t0 排的 */
 /* 类太多就没法上色：按"成员数 ≥ 6 才独立成家，其余并进『零散实验』"收成可画的规模。*/
 const BIG = groups.filter(g => g.rs.length >= 6), SMALL = groups.filter(g => g.rs.length < 6);
 console.log('成员 ≥6 的类 ' + BIG.length + ' 个（覆盖 ' + BIG.reduce((s, g) => s + g.rs.length, 0) + ' 枚）‖ 并进零散的 ' + SMALL.length + ' 类 / ' + SMALL.reduce((s, g) => s + g.rs.length, 0) + ' 枚');
@@ -329,8 +339,9 @@ const COLS = ['id', 'fam', 'famLabel', 'ts', 'metaSeed', 'nameSeed', 'parent', '
   /* §E367 parentSrc 追加在**最后一列**：现有消费者（chain-scan / dups / directions / gapscan / viewer）都按表头取列，
    *   但插到中间会让任何按下标取数的写法静默错位 ⇒ 新列一律往后放。*/
   'oppsN', 'stockBonus', 'hoardPen', 'dealW', 'firstW', 'whistlePen', 'styleW', 'eTarget', 'eCap', 'gens', 'mode', 'seedEmb', 'parentSrc'];
+const SLOTDEF = { n: 0, label: '旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）' };
 const out = [COLS.join('\t')];
-for (const r of ROWS) { const d = FAM[r.id]; if (!d) continue; const c = r.cfg;
+for (const r of ROWS) { const d = FAM[r.id] || (SLOTID[r.id] ? SLOTDEF : null); if (!d) continue; const c = r.cfg;
   out.push([r.id, d.n, d.label, (r.ts || '').slice(0, 19), r.seed, r.id.replace(/^.*-/, ''), c.parent.slice(0, 8), r.parentOf, r.parentName, r.wid, c.rulesFp, c.divW, c.divK, c.divRoleW, c.divCatW, c.oppsN,
     c.stockBonus, c.hoardPen, c.dealW, c.firstW, c.whistlePen, c.styleW, c.eTarget, c.eCap, c.gens, c.mode, c.seedEmb, r.psrc || ''].join('\t')); }
 writeFileSync(join(HERE, 'lineage.tsv'), out.join('\n') + '\n');

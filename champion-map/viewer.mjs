@@ -433,12 +433,19 @@ var OKL = [], POKJ = 0, PV = null;
   PV = { x0: pct(xa, .005), x1: pct(xa, .995), y0: pct(ya, .005), y1: pct(ya, .995) }; })();
 /* §E308 实测过上槽体检的枚数（分母只算实测过的，别把"没测"说成"没过"）*/
 var NPRM = 0, NPPASS = 0;
-/* §E314 谱系中心的真相要写在图上：584 枚（81%）的父指针解析不到实体，而那不是"丢了"——
- *   CHANGELOG.md:6402 已定性 = tools/ring2-run.mjs:95 无条件覆写 EPIRUS_BUNDLE_IN ⇒ 全部臂恒拷同一个 v1.3.58 BASE。
- *   今天又把它可能藏身的地方穷尽扫完（盘上 1461 个 .bak + 全历史可达 blob 593 + 整个对象库 4190，逐枚算权重指纹）⇒ 无实体。
- *   ⇒ 图上不画这条边（没有节点可画），但**必须把这句话印出来**，否则下一个人会把它读成"81% 同源 = 演化收敛"。*/
+/* §E314 → §E464 更正：这里原来写「584 枚的父指针解析不到实体 · 无实体」—— **那句是错的**，错在检索口径：
+ *   §E314 那遍穷尽扫过盘上 1461 个 .bak + 593 个可达 blob + 4190 个对象库 blob，但逐枚算的是「文件里那份数组」的哈希，
+ *   而训练服务记父走的是 weightsId(loadAny(种子).params) = **嵌入成 v7 之后**那份数组的指纹 ⇒ 差的这一层没人补。
+ *   补上之后 d13d3c85 = SLOT-e379c62c（v1.3.57，实体 = 已入库的 champion-5p-v1.3.58.bak）⇒ 这 584 条边是真边，画在图上。
+ *   仍然成立的那半句：tools/ring2-run.mjs:95 历史上**无条件**把 EPIRUS_BUNDLE_IN 覆写成这一份 BASE
+ *   ⇒ 81% 共父不是"演化收敛"而是 runner 恒拷。这条读法警告现在写在页脚第二行（NRBASE 只数真的还解析不到的零星几枚）。*/
 var NRBASE = 0;   /* §E464 父指针仍然解析不到图上任何一枚的枚数（原来是 584 枚共用一个"查无实体"的锚，现在只剩零星） */
 (function () { for (var i = 0; i < N; i++) if (P[i].pnm && P[i].pnm.indexOf('RUNNER-BASE') === 0) NRBASE++; })();
+/* §E467 边密度压透明度那台仪器的读数（drawTree 每帧填一次）：
+ *   ELOG = 0 只有一条判据会用（拿固定 alpha 当对照组做 A/B），不是用户开关。 */
+var ELOG = 1;
+var EPROBE = 0;   /* §E467b 页内判据设成"每 N 条留一条"的步长；0 = 不收集探针 */
+var EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [] };
 /* ===== §E363 / §E367 时间倒挂的父边（用户 10-06 点名：e35prod807 比现役还早，父却写着现役）=====
  *   §E363 当时我给的诊断是"槽位节点的 ts 是进槽时刻，边是真的" —— **那个诊断是错的**，§E367 查翻了：
  *   现役那份权重（d490dc13）自己 META.ts = 09-27T08:55Z，最早可证的 git 实体是提交 3c17e23 @09-27T10:42Z，
@@ -1424,25 +1431,90 @@ function drawTree(fr) {
     for (i = 0; i < N; i++) { var pb = pos[P[i].id], gb = base[P[i].id];
       if (!pb || !gb || Math.abs(pb[1] - gb[1]) < 1.5) continue;
       g.beginPath(); g.moveTo(gb[0], gb[1]); g.lineTo(pb[0], pb[1]); g.stroke(); } }
-  g.strokeStyle = 'rgba(120,200,255,.30)'; g.lineWidth = 1 * devicePixelRatio;
+  /* ===== §E467 边的透明度按**局部密度**压（用户 10-08：「线连太多了之后还是有点太糊了，调整一下透明度或者考虑一下连线透明度叠加时使用对数叠加」）=====
+   *   固定 .30 在 726 条上必然糊：n 条重叠的等效不透明度是 1-(1-.3)^n，10 条就 0.97 ⇒ 扇根与主带整块成板。
+   *   而"板"没有信息量 —— 它只说"这里很多"，读者要的是"能数出几条、各自往哪儿去"。
+   *   现在的法律：**拐点 + 反比归一** —— 先把"哪些边经过哪个格子"栅格进一张粗网格（格 = 22 CSS px），
+   *   每条边沿曲线取 5 个位置的格子线数 d，alpha = 基准 × min(1, ED0 / d)（地板 EMIN），**一条边一次 stroke**（渐变 strokeStyle）。
+   *   为什么不是字面的"对数相加"：量过，它压不住这块板。按 基准/(1+ln d)^1.5 时最密那一格（523 条）单段只到 .041，
+   *   而一个像素上仍压着 ~40 段 ⇒ 1-(1-.041)^40 = 81% 照样到顶；更要紧的是对数律把**中等密度**（一格 9~32 条）也一并压暗
+   *   （实测那一段的中位墨从 131 掉到 67），这就是用户接着说的"单根线看不见了"。拐点律在 d ≤ 25 时**一字不改全 alpha**，
+   *   只在真堆里按 1/d 收，使那格的总墨量有界。
+   * §E467a 中间一版被当场否掉（「现在线条重合的部分反而出现了中断」）：那条边切 8 段、按段密度**分桶批量 stroke** ⇒
+   *   同一条线在不同桶里以不同 alpha 落笔、桶又按 alpha 升序画 ⇒ 亮段压在暗段上 = 肉眼可见的断口。
+   *   教训：分桶是省 stroke 的手段，**不能拿它改单条线的连续性**；连续性现在由 §E467b 那条判据钉住。
+   *   三个常数是量出来的（判据自己报的读数，窗 = 最密那一格 ±40px，那一格压着 523 条线）：
+   *     ED0=8 ⇒ 到顶 436→20、有墨 790→754、d=9~32 那档中位墨 67（太暗）‖ **ED0=25 ⇒ 到顶 436→26（6%）、有墨 765（97%）、d=9~32 中位墨 131**
+   *     地板 .03 只管"埋在堆里那一段"：一条 1px 线满量程墨 ≈ 221，alpha 低于 .03 就落到 6.6 墨以下 = 肉眼与判据同时看不见。
+   *   ⚠ 网格每帧重算（平移/缩放会改密度）；代价 = 726×5 次算术 + 726 次 stroke + 3630 次 addColorStop（与改动前同量级）。
+   *     ELOG=0 是页内那两条判据自己用的对照组（固定 alpha），不是给用户的开关。 */
+  var EA0 = 0.30, ED0 = 25, EMIN = 0.03, EGRID = Math.max(10, Math.round(22 * devicePixelRatio));
   var NBACK = 0; NEDG = 0; NCHAIN = 0;
-  for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
-    /* §E373 连线开关（用户："给一个连线开关不然可能会太多挡住了"）：
-     *   'off' 一条不画；'hash' 只画包自己记下的那份权重哈希（§E367 之后最硬的一级来路）。
-     *   §E378 的接替边 psrc='slot-chain' ⇒ 在 'hash' 档**不画**（它不是血统，不该混进"只画实录"那一档）。 */
-    if (st.edges === 'off') break;
-    if (st.edges === 'hash' && dd.psrc !== 'hash') continue;
-    NEDG++;
-    var a = pos[dd.pof], b = pos[dd.id];
-    /* §E363 倒挂边（父的 ts 晚于子）走虚线 + 琥珀色：它连的是权重，不是"谁生了谁"的时间顺序
-     *   §E378 接替边走**点线 + 灰**：它连的是"谁在谁之前住过那个槽"，与血统、与假血统都不是一回事。 */
-    var bk = backOf(dd), ch = dd.psrc === 'slot-chain';
-    if (ch) NCHAIN++;
-    g.save();
-    if (bk) { NBACK++; g.setLineDash([4 * devicePixelRatio, 4 * devicePixelRatio]); g.strokeStyle = 'rgba(224,177,60,.62)'; }
-    else if (ch) { g.setLineDash([1.5 * devicePixelRatio, 3.5 * devicePixelRatio]); g.strokeStyle = 'rgba(159,176,204,.62)'; }
-    g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - rowH * 0.5 * TKY, b[0], b[1]); g.stroke();
-    g.restore(); g.strokeStyle = 'rgba(120,200,255,.30)'; }
+  EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [] };
+  if (st.edges !== 'off') {
+    var EL = [];
+    for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
+      /* §E373 连线开关：'off' 一条不画；'hash' 只画包自己记下的那份权重哈希（最硬的一级来路）。
+       *   §E378 的接替边 psrc='slot-chain' 在 'hash' 档**不画**（它不是血统）。 */
+      if (st.edges === 'hash' && dd.psrc !== 'hash') continue;
+      var bq = backOf(dd), cq = dd.psrc === 'slot-chain';
+      if (bq) NBACK++; if (cq) NCHAIN++;
+      var pa = pos[dd.pof], pb2 = pos[dd.id];
+      var kind = bq ? 1 : (cq ? 2 : 0);
+      EL.push([pa, pb2, [(pa[0] + pb2[0]) / 2, (pa[1] + pb2[1]) / 2 - rowH * 0.5 * TKY],
+        kind ? 0.62 : EA0, kind, dd.id]); }
+    NEDG = EL.length; EDGR.n = NEDG;
+    var GW = Math.max(1, Math.ceil(cv.width / EGRID)), GH = Math.max(1, Math.ceil(cv.height / EGRID));
+    var GC = new Int16Array(GW * GH);
+    for (var e = 0; e < EL.length; e++) { var A0 = EL[e][0], B0 = EL[e][1], C0 = EL[e][2], sn = {};
+      for (var s = 0; s <= 8; s++) { var tt = s / 8, it = 1 - tt;
+        var qx = it * it * A0[0] + 2 * it * tt * C0[0] + tt * tt * B0[0];
+        var qy = it * it * A0[1] + 2 * it * tt * C0[1] + tt * tt * B0[1];
+        var ci = Math.min(GH - 1, Math.max(0, Math.floor(qy / EGRID))) * GW + Math.min(GW - 1, Math.max(0, Math.floor(qx / EGRID)));
+        if (!sn[ci]) { sn[ci] = 1; GC[ci]++; } } }
+    var hi = 0; for (var c2 = 0; c2 < GC.length; c2++) if (GC[c2] > GC[hi]) hi = c2;
+    EDGR.hubn = GC[hi]; EDGR.hub = [(hi % GW + 0.5) * EGRID, (Math.floor(hi / GW) + 0.5) * EGRID];
+    /* ⚠ 一条边**一次 stroke**（§E467a：上一版把每条边切成 8 段、按段的密度分桶批量 stroke ⇒
+     *   同一条线在不同桶里以不同 alpha 落笔，桶又按 alpha 升序画 ⇒ 亮段压在暗段上面，
+     *   重合处出现肉眼可见的**断口**（用户 10-08 10:5x 直接否掉：「这版不行，现在线条重合的部分反而出现了中断」）。
+     *   分桶是省 stroke 的手段，不能拿它去改单条线的连续性 —— 连续性优先，回到 726 次 stroke。 */
+    g.lineWidth = 1 * devicePixelRatio;
+    for (var e2 = 0; e2 < EL.length; e2++) { var A2 = EL[e2][0], B2 = EL[e2][1], C2 = EL[e2][2], bs = EL[e2][3], kd = EL[e2][4];
+      /* §E467c 密度取在**曲线沿线的五个位置**上，一次 stroke 画完（渐变 strokeStyle）：
+       *   上一版把整条边取一个均值 ⇒ 一条长线只要蹭到扇根那一格，整条被拉到地板（用户 10-08 11:0x：
+       *   「这一版密集处确实好了，但是单根线看不见了」）。均值这件事在"根密尾疏"的边上必然冤枉尾段。
+       *   渐变仍是**一次落笔** ⇒ 不会有 §E467a 那种分桶断口；密处压到地板、疏处回到全 alpha。 */
+      var ST5 = [0, 0.25, 0.5, 0.75, 1], AL5 = [], col3 = kd === 2 ? '159,176,204' : (kd === 1 ? '224,177,60' : '120,200,255');
+      for (var s2 = 0; s2 < 5; s2++) {
+        var t0 = ST5[s2], i0 = 1 - t0;
+        var mx = i0 * i0 * A2[0] + 2 * i0 * t0 * C2[0] + t0 * t0 * B2[0];
+        var my = i0 * i0 * A2[1] + 2 * i0 * t0 * C2[1] + t0 * t0 * B2[1];
+        var mi = Math.min(GH - 1, Math.max(0, Math.floor(my / EGRID))) * GW + Math.min(GW - 1, Math.max(0, Math.floor(mx / EGRID)));
+        var dn = GC[mi] > 1 ? GC[mi] : 1;
+        var al2 = ELOG ? bs * Math.min(1, ED0 / dn) : bs;
+        if (al2 < EMIN) al2 = EMIN;   /* 地板只管"埋在堆里的那一段"；疏处的 alpha 由自己那一格的密度决定 */
+        if (al2 < EDGR.amin) EDGR.amin = al2; if (al2 > EDGR.amax) EDGR.amax = al2;
+        AL5.push(al2); }
+      EDGR.segs++;
+      /* §E467b 探针：EPROBE 是"每几条留一条"的步长（页内两条判据设的，平时 0 = 不收）。
+       *   沿同一条曲线取 40 个点，每个点带上"它自己那一格压了几条线" ⇒ 判据能分清
+       *   "埋在堆里所以淡"与"在空地上还看不见"（后者才是用户点的病）。 */
+      if (EPROBE && e2 % EPROBE === 0 && EDGR.probe.length < 24) { var pp = [];
+        for (var u = 0; u <= 39; u++) { var tu = u / 39, iu = 1 - tu;
+          var ux = iu * iu * A2[0] + 2 * iu * tu * C2[0] + tu * tu * B2[0];
+          var uy = iu * iu * A2[1] + 2 * iu * tu * C2[1] + tu * tu * B2[1];
+          var ui = Math.min(GH - 1, Math.max(0, Math.floor(uy / EGRID))) * GW + Math.min(GW - 1, Math.max(0, Math.floor(ux / EGRID)));
+          pp.push(ux, uy, GC[ui]); }
+        EDGR.probe.push({ pts: pp, al: AL5[2], id: EL[e2][5] }); }
+      var gr = g.createLinearGradient(A2[0], A2[1], B2[0], B2[1]);
+      for (var s3 = 0; s3 < 5; s3++) gr.addColorStop(ST5[s3], 'rgba(' + col3 + ',' + AL5[s3].toFixed(3) + ')');
+      /* §E363 倒挂边（父的 ts 晚于子）虚线 + 琥珀；§E378 接替边点线 + 灰：连的都是"槽位接替"，不是谁生了谁 */
+      g.save();
+      if (kd) g.setLineDash(kd === 2 ? [1.5 * devicePixelRatio, 3.5 * devicePixelRatio] : [4 * devicePixelRatio, 4 * devicePixelRatio]);
+      g.strokeStyle = gr;
+      g.beginPath(); g.moveTo(A2[0], A2[1]); g.quadraticCurveTo(C2[0], C2[1], B2[0], B2[1]); g.stroke();
+      g.restore(); }
+    g.strokeStyle = 'rgba(120,200,255,' + EA0.toFixed(2) + ')'; }
   /* §E464 这里原来是 §E442 那台「RUNNER-BASE 锚 + 467 条灰雾边」—— 它建在 §E314 的一条**错判**上：
    *   那遍 hunt 只按「文件里那份数组」的哈希找 d13d3c85，而训练服务记父时用的是**嵌入成 v7 之后**那份数组的
    *   指纹（FEAT_S 123→213 ⇒ 3337→5689 ⇒ 哈希必变）⇒ 找不着就判成「盘上无此包」。
@@ -3495,7 +3567,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   钉到 fam（这一档没有"未测过"那支）才是这条判据本来工作的画面。模式与档在下面的 SNAP2 还原里一并恢复。 */
   var BAKCOL = st.color, BAKWIN = { flo: st.flo, fhi: st.fhi };
   st.color = 'fam'; st.mode = 'tree'; st.flo = 0; st.fhi = 1; recomputeVIS();
-  st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.elev = 0; st.tX = -900 * devicePixelRatio; draw();
+  st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.elev = 0; st.tX = -900 * devicePixelRatio;
+  /* §E468 这条原来只钉了 tX（要平移 900 把左栏那片推到取样区），**tY 与两轴缩放跟着深链走** ⇒
+   *   从 #ty=300 进来时取样带里只剩 4 枚（要 ≥12），从 #kx=2.2 进来时一枚都没有 —— 红的是"样本不够"，
+   *   不是"左栏没画上"（HEAD 产物在 #ty=300 上同样红，实测 4 枚 / 4 枚画上 = 100%）。
+   *   取样用的那条线是**屏幕坐标**上的 515，所以视图必须钉成确定的；下面的 SNAP2 还原负责把三个都还回去。 */
+  st.tY = 0; st.tKx = 1; st.tKy = 1; draw();
   /* ② 的判据必须读**像素**，不能读命中表：scr[] 是几何落点，剪裁只决定"画没画出来"，
    *   所以拿 scr 写的那一版**撤掉剪裁与留着剪裁都会 PASS**（§E369 变异实测：把 clip 加回去 ⇒ 27/0 全绿 ⇒ 那条是假的）。
    *   现在逐枚取样：中心像素必须与"自己半径之外"四个方向都不像同一个颜色，才叫真被画出来了；
@@ -3703,8 +3780,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       + ' ‖ 窗内 ' + nWin() + ' 枚 ‖ 落在那段里的 = ' + BAND[3] + ' 枚（旧包 ' + nOld + ' 枚，其余是同时段的今天的候选）');
   st.flo = 0; st.fhi = 1; recomputeVIS(); draw();
   /* 谱系图那一条要两把尺：命中表（scr）说"这枚有位置"，画布像素说"这地方真的画了东西"。
-   *   只读 scr 就是 §E369 那次假绿的原因（它读的是命中表，而 bug 在 padL 那道剪裁上）。 */
-  st.mode = 'tree'; st.elev = 0; st.batch = 'all'; recomputeVIS(); draw();
+   *   只读 scr 就是 §E369 那次假绿的原因（它读的是命中表，而 bug 在 padL 那道剪裁上）。
+   * §E468 这条**必须钉住默认视图**再量：它原来只钉 mode/elev/batch，没钉平移缩放 ⇒
+   *   从 #kx=2.2&tx=-500 这类深链进来时，16 枚旧包有 6 枚被推出画面，量出来是"10/16 没画上"的假红
+   *   （实测 HEAD 产物同一状态一字不差地红着 = 既存问题，不是 §E466/§E467 带来的）。
+   *   同族的另外两条（§E455 浮层、§E462 拖拽）都是靠"先钉默认布局"才站得住的。 */
+  var SNAPV = { tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy };
+  st.mode = 'tree'; st.elev = 0; st.batch = 'all'; st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; recomputeVIS(); draw();
   var _tOld = 0, _tAny = 0, _tPix = 0, _pixOK = 1;
   for (i2 = 0; i2 < N; i2++) { if (!scr[i2]) continue; _tAny++; if (P[i2].old) _tOld++; }
   try { var _pd = g.getImageData(0, 0, cv.width, cv.height).data;
@@ -3712,9 +3794,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       var _px = Math.round(scr[i2][0]), _py = Math.round(scr[i2][1]);
       if (_px < 0 || _py < 0 || _px >= cv.width || _py >= cv.height) continue;
       var _o = (_py * cv.width + _px) * 4; if (_pd[_o + 3] > 0) _tPix++; } } catch (E2) { _pixOK = 0; }
-  T('谱系图：旧包没有 lineage 行也要真被画出来（判据 = 命中表 + 画布像素，不是"内联了多少枚"）',
+  T('谱系图：旧包没有 lineage 行也要真被画出来（判据 = 命中表 + 画布像素 ‖ 量之前先钉默认视图，§E468）',
     _tOld === nOld && _tAny === N && (!_pixOK || _tPix === nOld),
-    '树上命中表 ' + _tOld + '/' + nOld + ' ‖ 有位置的共 ' + _tAny + '/' + N + ' ‖ 画布上真有颜色 ' + _tPix + '/' + nOld);
+    '树上命中表 ' + _tOld + '/' + nOld + ' ‖ 有位置的共 ' + _tAny + '/' + N + ' ‖ 画布上真有颜色 ' + _tPix + '/' + nOld
+      + ' ‖ 量的时候视图 = 出厂（tx/ty=0 ‖ kx/ky=1）');
+  st.tX = SNAPV.tX; st.tY = SNAPV.tY; st.tKx = SNAPV.tKx; st.tKy = SNAPV.tKy; draw();   /* 还原 + 补一帧 */
   /* §E376 标签拥挤度（用户担心的"可读性降低"里最实在的一条）：**同一台探针在两张 coords.tsv 上各跑一次** ——
    *     现役那张（901 枚 · 冠军 15）= 标签 33 ‖ 可见冠军全员上名 ‖ 被别人的名字盖住的点 86 枚 ‖ 矩形重叠 11 对
    *     并入旧包（917 枚 · 冠军 31）= 标签 46 ‖ 可见冠军全员上名 ‖ 被别人的名字盖住的点 88 枚 ‖ 矩形重叠  9 对
@@ -3920,6 +4004,131 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       bi >= 0 && nb >= 400 && NRBASE === 0 && !!P[bi].sv,
       '父边收到 SLOT-e379c62c 的 ' + nb + ' 枚（当下可见 ' + nbVis + '）‖ 靶节点在图上=' + (bi >= 0 ? '是（' + P[bi].id + ' 标签 ' + (P[bi].sv || '无版本') + '）' : '否')
         + ' ‖ 仍然解析不到实体的父锚 ' + NRBASE + ' 枚（要 0）');
+  })();
+  /* ===== §E467 连线密度对数叠加：拿"固定 alpha 那一版"当对照组，三帧互比 =====
+   *   用户 10-08：「线连太多了之后还是有点太糊了，调整一下透明度或者考虑一下连线透明度叠加时使用对数叠加。」
+   *   这条量的不是"有没有画线"，是**扇根那块板有没有被拆开**：
+   *   ① 窗内"到顶"（墨 ≥200）的像素数要塌到固定 alpha 的 40% 以下 —— 那就是"板"本身；
+   *   ② 窗内"有墨"（≥6）的像素数不能跟着塌（≥ 50%）—— 否则是"把线擦没了"而不是"压淡了"。
+   *   两条一起才叫"能数清几条"：单独 ① 可以被"整条不画"骗过去，单独 ② 可以被"照旧画满"骗过去。
+   *   ⚠ 判据**不拿"窗内最亮像素"当标准**（第一版这么写过，量出来 221→218 直接假红）：
+   *     那块窗 ±40px 里必然穿过几条疏尾边，它们本来就该保持全 alpha —— "最亮"量的恰好是不该变的那个东西。
+   *     改成数"到顶像素有几个"才是"板"的直测。三帧都带 NOPTS=1（一枚点都不画），判完立刻还原并补一帧。 */
+  (function () {
+    var SN = { elev: st.elev, yaw: st.yaw, pit: st.pit, tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy,
+      edges: st.edges, color: st.color, labels: st.labels, mode: st.mode };
+    function grab() { try { return g.getImageData(0, 0, cv.width, cv.height).data; } catch (E8) { return null; } }
+    st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
+    st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1;
+    st.edges = 'all'; st.color = 'fam'; st.labels = 'off'; NOPTS = 1;
+    ELOG = 1; draw();
+    var hub = EDGR.hub, hn = EDGR.hubn, amin = EDGR.amin, amax = EDGR.amax, nE = EDGR.n;
+    st.edges = 'off'; draw(); var d0 = grab();
+    st.edges = 'all'; ELOG = 1; draw(); var dL = grab();
+    ELOG = 0; draw(); var dF = grab();
+    var satL = 0, satF = 0, covL = 0, covF = 0, ceilL = 0, ceilF = 0, R = Math.round(40 * devicePixelRatio);
+    if (d0 && dL && dF && hub) {
+      var x0 = Math.max(0, Math.round(hub[0]) - R), x1 = Math.min(cv.width - 1, Math.round(hub[0]) + R);
+      var y0 = Math.max(0, Math.round(hub[1]) - R), y1 = Math.min(cv.height - 1, Math.round(hub[1]) + R);
+      for (var yy = y0; yy <= y1; yy++) for (var xx = x0; xx <= x1; xx++) {
+        var o = (yy * cv.width + xx) * 4;
+        var iL = Math.max(Math.abs(dL[o] - d0[o]), Math.abs(dL[o + 1] - d0[o + 1]), Math.abs(dL[o + 2] - d0[o + 2]));
+        var iF = Math.max(Math.abs(dF[o] - d0[o]), Math.abs(dF[o + 1] - d0[o + 1]), Math.abs(dF[o + 2] - d0[o + 2]));
+        if (iL > satL) satL = iL; if (iF > satF) satF = iF;
+        if (iL >= 6) covL++; if (iF >= 6) covF++;
+        if (iL >= 200) ceilL++; if (iF >= 200) ceilF++; } }
+    for (var kk in SN) st[kk] = SN[kk];
+    ELOG = 1; NOPTS = 0;
+    recomputeVIS(); draw();   /* 还原 + 补一帧：后面还有读像素的判据，不许看到一张"只有边"的画布 */
+    T('连线太糊这条要真被压下去：扇根那块「板」的到顶像素必须塌掉一大截，而「有墨的像素」不能跟着塌（密度律 vs 固定 alpha，三帧互比）',
+      !!d0 && !!dL && !!dF && !!hub && ceilF >= 20 && ceilL <= ceilF * 0.4 && covL >= covF * 0.5,
+      '窗 = 最密那一格 ±40 CSS px（那一格压着 ' + hn + ' 条线 ‖ 全图 ' + nE + ' 条边，一条一次 stroke）‖ 整条 alpha '
+        + amax.toFixed(3) + '~' + amin.toFixed(3) + ' ‖ **到顶**（墨 ≥200）的像素 固定 alpha ' + ceilF + ' → 对数 ' + ceilL
+        + '（要 ≤ 40%，且对照组本身要 ≥20 个 —— 不然这块窗根本没板可言）‖ 有墨（≥6）像素 ' + covF + ' → ' + covL + '（要 ≥ 50%）'
+        + ' ‖ 参考：窗内最亮像素 ' + satF + ' → ' + satL + '（这条不拿它当判据：疏尾那条本来就该亮）'
+        + (d0 && dL && dF ? '' : ' ‖ 取不到三帧像素'));
+  })();
+  /* ===== §E467b 一条线**一路上不许断**（用户 10-08 10:5x 否掉上一版的原话：「现在线条重合的部分反而出现了中断」）=====
+   *   上一版把每条边切成 8 段按密度分桶，同一条线在不同段上以不同 alpha 落笔 ⇒ 断口。
+   *   这条判据不读代码结构（"我是不是分了桶"数组自己算自己 = 永远绿），它读**画面上有没有墨**：
+   *   沿探针边取 40 个点，每点在 3×3 邻域里问一句"这儿有没有线"；**连续 ≥3 点没墨**才叫断口
+   *   （单个孤立点是抗锯齿噪声，实测地板 alpha=.030 的线上会撞到 1/480 —— 拿它当断口会把判据磨成"永远红"）。
+   *   ⚠ 与上一条共用同一套钉法：mode=tree、平面、labels 关、NOPTS=1（点与名字都不许混进差里）。 */
+  (function () {
+    var SN2 = { elev: st.elev, yaw: st.yaw, pit: st.pit, tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy,
+      edges: st.edges, color: st.color, labels: st.labels, mode: st.mode };
+    function grab2() { try { return g.getImageData(0, 0, cv.width, cv.height).data; } catch (E9) { return null; } }
+    st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
+    st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1;
+    st.edges = 'all'; st.color = 'fam'; st.labels = 'off'; NOPTS = 1; ELOG = 1;
+    /* 步长要**按当下的边数算**（先空跑一帧拿 EDGR.n）：写死 60 在出厂态（726 条）取到 12 条探针，
+     *   而 #flo=0.3 那一态只剩 184 条 ⇒ 只收到 4 条，红的是"探针不够"不是"线断了"。 */
+    EPROBE = 0; draw(); var nEd = EDGR.n;
+    var strd = Math.max(1, Math.round(nEd / 24)); EPROBE = strd; draw(); var pb = EDGR.probe.slice();
+    var amin2 = EDGR.amin, amax2 = EDGR.amax;
+    var dOn = grab2();
+    st.edges = 'off'; draw(); var dOff = grab2();
+    for (var kk2 in SN2) st[kk2] = SN2[kk2];
+    EPROBE = 0; ELOG = 1; NOPTS = 0; recomputeVIS(); draw();
+    var nBad = 0, nS = 0, nP = 0, runMax = 0, worst = '', spInk = [], spInk2 = [], spInk3 = [];
+    if (dOn && dOff) for (var z = 0; z < pb.length; z++) { var pts = pb[z].pts, run = 0, rmx = 0;
+      for (var u2 = 0; u2 < pts.length; u2 += 3) {
+        var px2 = Math.round(pts[u2]), py2 = Math.round(pts[u2 + 1]), den2 = pts[u2 + 2]; nS++;
+        /* 取 3×3 邻域里的**最大**墨：一条 1px 抗锯齿线会把墨分到相邻两行，
+         *   按"恰好那一个像素"读会把好线误判成断口（实测 alpha=.030 的线峰值墨只有 6.6，四邻一分就掉到 3 以下）。
+         *   "这儿有没有线"这件事本来就该按邻域问，不是按一个像素问。 */
+        var ik2 = 0;
+        for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+          var qx2 = px2 + dx, qy2 = py2 + dy;
+          if (qx2 < 0 || qy2 < 0 || qx2 >= cv.width || qy2 >= cv.height) continue;
+          var o2 = (qy2 * cv.width + qx2) * 4;
+          var ik = Math.max(Math.abs(dOn[o2] - dOff[o2]), Math.abs(dOn[o2 + 1] - dOff[o2 + 1]), Math.abs(dOn[o2 + 2] - dOff[o2 + 2]));
+          if (ik > ik2) ik2 = ik; }
+        /* "中断"的操作性定义 = **连续 3 个采样点以上没墨**（一条边 40 个点，3 个连着 = 线长的 7% 看不见，那才叫断口）。
+         *   单个孤立点没墨是抗锯齿/取整的噪声，拿它当断口会把判据磨成"永远红"。 */
+        if (ik2 < 3) { run++; if (run > rmx) rmx = run; } else run = 0;
+        if (den2 <= 8) spInk.push(ik2); else if (den2 <= 32) spInk2.push(ik2); else spInk3.push(ik2); }   /* 分两档：d=1 才是"单根线"，d=2~3 已经在小堆里 */
+      if (rmx > runMax) { runMax = rmx; worst = pb[z].id + '（中段 alpha ' + pb[z].al.toFixed(3) + '）最长连续没墨 ' + rmx + ' 个点'; }
+      if (rmx >= 3) nBad++; }
+    nP = pb.length;
+    T('沿一条边走一圈不许有断口（§E467a 那一版把边切成不同 alpha 的段，重合处肉眼看得见中断 ‖ 断口 = 连续 ≥3 个采样点没墨）',
+      !!dOn && !!dOff && nP >= 6 && nBad === 0,
+      '当下 ' + nEd + ' 条边 ⇒ 每 ' + strd + ' 条留一条，收到探针 ' + nP + ' 条 × 40 个采样点 = ' + nS + ' 点 ‖ 有断口的边 ' + nBad + ' 条（要 0）‖ 全组最长连续没墨 ' + runMax + ' 个点'
+        + (worst ? ' ‖ 例：' + worst : '') + (dOn && dOff ? '' : ' ‖ 取不到两帧像素'));
+    /* §E467c 第二条：埋在堆里可以淡，**真正独处的那一段必须看得见**。上一版整条边取一个均值 ⇒
+     *   一条长线只要蹭到扇根那一格，整条（包括它自己那段空地）被拉到地板 alpha .03 = 6.6 墨，肉眼等于没有。 */
+    function med(a5) { if (!a5.length) return -1; var b5 = a5.slice().sort(function (x, y) { return x - y; }); return b5[b5.length >> 1]; }
+    var m1 = med(spInk), m23 = med(spInk2);
+    T('空地上的单根线必须看得见（探针里"所在格子只压着 ≤8 条线"那些采样点，中位墨要 ≥30 = 满量程 221 的 14%）',
+      !!dOn && !!dOff && spInk.length >= 12 && m1 >= 30,
+      'd≤8 的采样点 ' + spInk.length + ' 个 ‖ 中位墨 ' + m1 + ' ‖ 参考 d=9~32 的 ' + spInk2.length + ' 个中位墨 ' + m23 + ' ‖ d>32 的 ' + spInk3.length + ' 个中位墨 ' + med(spInk3)
+        + ' ‖ 全组 alpha ' + amax2.toFixed(3) + '~' + amin2.toFixed(3));
+  })();
+  /* ===== §E466 家族行序必须与"这一行真显示的那些枚"的训练时刻同向 =====
+   *   用户 10-08：「怎么有几个后期的点飞到家族 1 去了，是不是哪里写错了」—— 写错的地方在 lineage.mjs 的聚类：
+   *   16 枚旧槽位冠军（不是训练产物）一起进了聚类，其中 SLOT-6ed47e18（09-09）与 E59/BIG 那批"配置字段全空"的类
+   *   签名逐字相同 ⇒ **整类被这一枚拖到第 2 行**，于是 09-27/10-02 的 12 枚显示在"最早那一批"那一行。
+   *   ⚠ 判据不许读 fams 数组自己（数组自己算自己 = 永远绿，§E44x 记过这一族），要读**每行真显示的那些枚的时刻**；
+   *     零散那一行按定义就是混装，不套这条序。 */
+  (function () {
+    var byF = {};
+    for (var i8 = 0; i8 < N; i8++) { var d8 = P[i8], tv8 = Date.parse(d8.ts); if (!isFinite(tv8)) continue;
+      var f8 = d8.famTop ? 0 : d8.fam; if (f8 === undefined || f8 === null || f8 === '') continue;
+      (byF[f8] || (byF[f8] = [])).push(tv8); }
+    var rows8 = Object.keys(byF).map(Number).sort(function (a, b) { return a - b; });
+    var st8 = rows8.map(function (f) { var a = byF[f].slice().sort(function (x, y) { return x - y; });
+      return { f: f, n: a.length, min: a[0] }; });
+    var bad8 = [], nSlotOut = 0;
+    for (var k8 = 1; k8 < st8.length; k8++) { var cu = st8[k8], pv = st8[k8 - 1];
+      if (cu.f === 0 || /零散/.test(String(FAMLAB[cu.f] || '')) || /零散/.test(String(FAMLAB[pv.f] || ''))) continue;
+      if (cu.min < pv.min) bad8.push('行 ' + cu.f + ' 最早 ' + new Date(cu.min).toISOString().slice(5, 10)
+        + ' 早于行 ' + pv.f + ' 的 ' + new Date(pv.min).toISOString().slice(5, 10)); }
+    for (var j8 = 0; j8 < N; j8++) if (String(P[j8].id).indexOf('SLOT-') === 0 && !P[j8].famTop && P[j8].fam) nSlotOut++;
+    T('家族行序要与"这一行真显示的那些枚"的训出时刻同向，且旧槽位冠军只能住在合成那一行（§E466：一枚 09-09 的旧冠军曾把 10-02 那批拖上第 2 行）',
+      bad8.length === 0 && nSlotOut === 0,
+      st8.length + ' 行 ‖ 序违规 ' + bad8.length + ' 条' + (bad8.length ? '：' + bad8.slice(0, 4).join(' ‖ ') : '')
+        + ' ‖ 落在家族 0 之外的旧槽位冠军 ' + nSlotOut + ' 枚（要 0）‖ 头三行 '
+        + st8.slice(0, 3).map(function (s) { return s.f + '：n' + s.n + ' ‖ 最早 ' + new Date(s.min).toISOString().slice(5, 10); }).join(' '));
   })();
   /* ===== §E462 拖动手本身要有判据 =====
    *   三块浮层各拖一次：① 真的落在拖到的地方（不是"看着动了"）；② 拖不出画面（夹取）；③ 双击回得到出厂位；
