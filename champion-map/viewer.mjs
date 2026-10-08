@@ -122,6 +122,21 @@ if (PROJTSNE) {
   console.log('投影口径 ✅ ' + (rows.length - empty.length) + '/' + rows.length + ' 枚用 t-SNE 列 xt/yt' +
     (empty.length ? '（' + empty.length + ' 枚没有 ⇒ 逐行退旧坐标，见上面那条 2% 的界）' : ''));
 }
+/* ===== §E491 头号尺有空洞就是**装错货**，比缺投影更狠 =====
+ *   下面那句 DATA 取数是 `Hp: +r.Hp` ⇒ 空串变成 **0**，而 `Fv(d) = d.Hp/100 + st.T*d.S` 是图上**所有**排序与
+ *   颜色的底（名次、F 窗口、绿红分界、色标定标全读它）。于是"没测过"被画成"线上口径夺1率 0%"。
+ *   实测踩过：三枚融合粒没跑 attach-hp 那张 --more ⇒ Hp 空 ⇒ 图上名次 728/732，悬停卡还写着
+ *   「Hp 线上口径夺1率 = 0.0%（图上的尺就是它）」；补测之后是 51.8 / 52.8 / 53.0（现役 47.3）⇒ 完全反过来。
+ *   这与 §E308 那条"空串必须是 null，不许当 0"是同一条规矩，只是这次漏在 Hp 上。
+ *   ⇒ 这里**不留退路**：要出图就得补测（命令照抄下面那句）。留一个 --allow-no-hp 就等于把这条守卫变成建议。 */
+{ const noHp = rows.filter(r => String(r.Hp === undefined ? '' : r.Hp).trim() === '');
+  const noDe = rows.filter(r => String(r.De === undefined ? '' : r.De).trim() === '');
+  if (noHp.length || noDe.length) { console.error('⛔ coords.tsv 的头号尺有空洞：Hp 空 ' + noHp.length + ' 枚 ‖ De 空 ' + noDe.length + ' 枚' +
+    '\n       前 8 枚：' + noHp.concat(noDe).slice(0, 8).map(r => r.id).join(' ') +
+    '\n       ⇒ 下面那句 `Hp: +r.Hp` 会把空串变成 0，而 F = Hp/100 + T·S 是图上**所有**排序的底 ⇒ 这几枚会被画成库内倒数（"未测"冒充"0%"）。' +
+    '\n         补测：node champion-map/eps-full.mjs --extra=<这批的 extra 表> --onlyExtra --out=eNN-epsfull.tsv' +
+    '\n         然后重跑：node champion-map/rebuild-coords.mjs（第③步会把 eNN-epsfull.tsv 一起喂给 attach-hp）'); process.exit(2); }
+  console.log('头号尺口径 ✅ ' + rows.length + ' 枚的 Hp/De 全部在册（空值会让 F 把"未测"当 0 算）'); }
 const fitP = join(HERE, 'fit.tsv');
 const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [];
 /* 过线来源（§E298）：**优先**用现跑的同一道闸 `feas-s*.tsv`（覆盖全 718 枚、样本量统一 n=20/aggr40/seat100）；

@@ -56,7 +56,24 @@ run('ruler-figs.mjs', ['--ruler=' + ruler, '--coords=champion-map/coords.tsv'], 
 for (const f of ['e287-ladder.svg', 'e287-map2.svg', 'e287-map3.svg', 'e287-figs.html']) {
   const p = join(HERE, f); if (ex(p)) renameSync(p, join(ROOT, 'docs/artifacts/e375-out/rc-static-' + f)); }
 run('attach-kin.mjs', ['--from=' + FROM], '② attach-kin 搬当选键 + 打 kin');
-run('attach-hp.mjs', ['--more=e328-epsfull.tsv' + (EXTRA ? ',e370-epsfull.tsv' : '')], '③ attach-hp 头号尺');
+/* ===== §E491 第③步的 --more 原来写死两张表 ⇒ 新加的枚**天生没有 Hp/De** =====
+ *   `Hp` 是图上那把头号尺（F = Hp/100 + T·S），而查看器把空 Hp 当 0 算 ⇒
+ *   本轮三枚融合粒在图上排到 728/732，用户拿截图问"这个点都排到倒数去了，显然不是噪声"。
+ *   实测补测：它们的线上口径 Hp = 51.8 / 52.8 / 53.0，而现役是 47.3 ⇒ **在现役之上 4.5~5.7pt**，
+ *   那 728 名完全是"未测被当 0"造出来的假象。
+ *   ⇒ --more 现在从 --extra 派生（`<批>-ruler.tsv` 的同名 `<批>-epsfull.tsv`），
+ *     少一张就**当场停**（不许静默少测 —— 收尾那条核验也会兜住）。 */
+const HPMORE = ['e328-epsfull.tsv'];
+{ const missMore = [];
+  for (const s of String(EXTRA).split(',').map(x => x.trim()).filter(Boolean)) {
+    const base = s.replace(/^.*[\\/]/, '').replace(/-ruler\.tsv$/, '');
+    if (!base) continue; const t = base + '-epsfull.tsv';
+    if (HPMORE.indexOf(t) < 0) HPMORE.push(t);
+    if (!ex(join(HERE, t))) missMore.push(t + '（来自 --extra 的 ' + s + '）'); }
+  if (missMore.length) { console.error('⛔ 这批 ruler 表没有配对的线上口径表：' + missMore.join(' ‖ ') +
+    '\n       ⇒ 这些枚会**没有 Hp**，而 Hp 是图上头号尺（空值在查看器里当 0 算 ⇒ 名次直接掉到倒数）。' +
+    '\n         补测：node champion-map/eps-full.mjs --extra=<那个 extra 表> --onlyExtra --out=<上面那张表名>'); process.exit(2); } }
+run('attach-hp.mjs', ['--more=' + HPMORE.join(',')], '③ attach-hp 头号尺（' + HPMORE.join(' ‖ ') + '）');
 /* §E488：这一步原来把 `e370-ruler.tsv` **写死**在 --ruler 里，而不是转发 `--extra=` 的那一串
  *   ⇒ 正是本文件头注自己列的第 ② 条病（"attach-path 的 --ruler 不给全 ⇒ 没覆盖到的枚退回顶层猜路径"）：
  *   本轮加三枚融合粒时，它们的 path 变成"按 <id>.bak 猜"，attach-path 自己的守卫当场拒绝（那是对的）。
@@ -89,4 +106,15 @@ console.log('身份分布 ' + Object.entries(cls).map(([k, v]) => k + ' ' + v).j
     const n = rows.filter(r => !isFinite(parseFloat(r[i]))).length; if (n) badNum.push(c + ' ' + n + ' 行不是数'); }
   if (badNum.length) { console.error('⛔ 投影列有非数：' + badNum.join(' ‖ ')); process.exit(2); }
   console.log('投影自证 ✅ xt/yt/xt3/yt3/zt3 五列齐全，' + rows.length + ' 行全是数（旧力导向那套 x2/y2 仍在表里，只是不再被页面取用）'); }
+/* §E491 头号尺不许有空洞：`Hp` 空 = 查看器按 0 算 F = "线上口径夺1率 0%"，一枚没测过的包会被画成库内倒数。
+ *   本轮实测踩过：三枚融合粒 Hp 空 ⇒ 名次 728/732，而补测之后是 51.8/52.8/53.0（现役 47.3）。
+ *   `De`（Δε）同源同判 —— 它俩都来自 attach-hp 那一步。 */
+{ const noHp = []; for (const c of ['Hp', 'De']) { const i = h.indexOf(c);
+    if (i < 0) { console.error('⛔ 表里没有 ' + c + ' 列 ⇒ 第③步没跑成'); process.exit(2); }
+    const n = rows.filter(r => String(r[i]).trim() === '').map(r => r[0]);
+    if (n.length) noHp.push(c + ' 空 ' + n.length + ' 枚：' + n.slice(0, 8).join(' ')); }
+  if (noHp.length) { console.error('⛔ 头号尺有空洞 ⇒ ' + noHp.join(' ‖ ') +
+    '\n       空 Hp 在查看器里当 0 算（F = Hp/100 + T·S），那几枚会被画成库内倒数 —— 这不是"弱"，是"没测"。' +
+    '\n       补测：node champion-map/eps-full.mjs --extra=<这批的 ruler 对应的 extra 表> --onlyExtra --out=<eNN-epsfull.tsv>，再重跑本链。'); process.exit(2); }
+  console.log('头号尺自证 ✅ Hp/De 两列 ' + rows.length + ' 行无一为空（空值会被查看器当 0 ⇒ 名次假倒数）'); }
 console.log('✅ 六步跑完且产物自洽（列名唯一、行宽一致、投影五列齐全）');

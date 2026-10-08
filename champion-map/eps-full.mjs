@@ -44,8 +44,14 @@ if (EXTRA) {
   const eh = EL[0].split('\t');
   const iArm = eh.indexOf('arm'), iRel = eh.indexOf('productRel');
   if (iArm < 0 || iRel < 0) { console.error('⛔ --extra 表头必须有 arm 与 productRel 两列（收到：' + EL[0] + '）'); process.exit(2); }
+  let dupN = 0;
   for (const l of EL.slice(1)) { const c = l.split('\t'); if (!c[iArm] || !c[iRel]) continue; PATHOF[c[iArm]] = c[iRel]; ids.push(c[iArm]); }
-  console.error('--extra 拉进 ' + Object.keys(PATHOF).length + ' 枚（这些在 coords 里没有行 ⇒ hp_old 留 0，不参与复现守卫）');
+  /* §E491 去重：这批 id **已经在 coords.tsv 里**（融合粒这轮进了图）⇒ 原来 `ids.push` 会把它们再塞一遍，
+   *   于是 `--onlyExtra` 的"3 枚"实际是 6 枚，表里每个 id 两行（值一样，但白跑一倍 + 下游按行读会重复计数）。
+   *   去重放在这里而不是放在写表那一步：一台仪器不该产出重复行。 */
+  { const seen = {}; for (let i = ids.length - 1; i >= 0; i--) { if (seen[ids[i]]) { ids.splice(i, 1); dupN++; } else seen[ids[i]] = 1; } }
+  console.error('--extra 拉进 ' + Object.keys(PATHOF).length + ' 枚（这些在 coords 里没有行 ⇒ hp_old 留 0，不参与复现守卫）' +
+    (dupN ? ' ‖ 去重砍掉 ' + dupN + ' 条重复（这批已在 coords 里有行）' : ''));
   /* `--onlyExtra`：名单**只留**这批。第一版没这条，我拿 2 枚的测试表跑起来实际吃的是 718+2 的全名单
    *   （`--extra` 只加不减）⇒ 100 秒只跑到第 44 枚就被我掐了。要"只补子代"就必须能砍掉原名单。 */
   if (process.argv.includes('--onlyExtra')) {
