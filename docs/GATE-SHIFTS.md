@@ -264,3 +264,40 @@
 
 **净收益**：已验 sound 的 8 处把 `D123 62.9 s + D134 36 s + D136 14 s + D137 ~20 s + D150 ~20 s ≈ 2.5 分钟` 拿回来 ✔，
 而**没有任何一处**处于"命中时读旧文件"的不确定状态 ✔。`D127`/`D135` 仍走真跑（那 4 处约 1.5 分钟 ✗，待逐门读清它们的产出面再谈）。
+
+## 十、24 条"钉源码行"分诊表（§2026-10-11 DS · 判据 = 删掉被钉的那行源码，行为会不会变）
+
+口径见 §八 口径 1 的**两层**：**存在性**看"删了行为变没变"；**阻断力**看"有没有跑代码"。
+本表逐条只读它钉的那一行 + 它所在门的其它腿，结论分三类：**保留**（删了会改行为 ⇒ 合理的源码级反证）· **该摘**（纯措辞）· **待改写**（只钉名字 ⇒ 改名不改行为 ⇒ 规矩 1 的违规）。
+
+| 门 | 行 | 读的文件 | 钉的东西 | 判 |
+|---|---|---|---|---|
+| `D12` | 2408 | `server/opp-champs.mjs` | `policyChooserN` | **待改写**（名字）|
+| `D13` | ~2470 | `server/paralleltrain.mjs` | `styleOppNames` | **待改写**（名字）|
+| `D56` | ~2670 | `js/train/evo.js` | `P.isLegacyChooser` | **待改写**（名字）|
+| `D58` | ~2733 | `js/ui/ui.js` | `B.state.slotSalt` | **待改写**（名字）|
+| `D59` | ~2798 | `js/train/evo.js` | `SEAT_GAMES` | **待改写**（名字）|
+| `D64` | 4301 | `tools/probe-sniper.mjs` | `没有靶向判别力` | ✅ **已摘**（打印文案）|
+| `D64` | 4302 | `tools/probe-sniper.mjs` | `无靶向判别力` | ✅ **已摘**（打印文案）|
+| `D68` | ~4536 | `server/train-server.mjs` | `EPIRUS_TGT_W` | **待改写**（env 名）|
+| `D76` | ~4635 | `server/train-worker.mjs` | `from './econ-env.mjs'` | **保留**（模块 specifier：删了就少了那份环境）|
+| `D78` | 4758 | `tools/promote-champion.mjs` | `含空转/过期珠` | ✅ **已摘**（打印文案）|
+| `D78` | ~4778 | `server/opp-pool.mjs` | `name: 'gunspam'` | **保留**（对手池数据项：删了这路对手消失）|
+| `D84` | ~4960 | `server/train-server.mjs` | `T.setImitTeacherByName` | **待改写**（API 名）|
+| `D85` | ~4999 | `server/paralleltrain.mjs` | `imitPlan: …EPIRUS_IMIT_PLAN…` | **保留**（env 接线表达式）|
+| `D86` | ~5048 | `server/paralleltrain.mjs` | `imitOnly: …EPIRUS_IMIT_ONLY…` | **保留**（env 接线）|
+| `D87` | ~5082 | `server/paralleltrain.mjs` | `imitSubOnly: …` | **保留**（env 接线）|
+| `D87` | ~5084 | `server/train-worker.mjs` | `T.setImitSubOnly(…)` | **保留**（消息→API 传递）|
+| `D87` | ~5096 | `server/paralleltrain.mjs` | `subBead: …EPIRUS_SUB_BEAD…` | **保留**（env 接线）|
+| `D87` | ~5098 | `server/train-worker.mjs` | `T.setSubBead(…)` | **保留**（消息→API 传递）|
+| `D95` | ~5416 | `js/core/state.js` | `mineTurns: 0,` | **保留**（状态字段初值：删了就是 undefined）|
+| `D127` | ~6316 | `tools/train-3p.mjs` | `HOLO_GIFT_MAX` | **待改写**（常量名）|
+| `D131` | ~6503 | `index.html` | `js/ui/skill-tip.js` | **保留**（script src：删了页面就少一块）|
+| `D163` | ~7815 | `tools/probe-wasted-play.mjs` | `from './defense-quality.mjs'` | **保留**（模块 specifier）|
+| `D110` | ~7884 | `js/ui/ui.js` | `EpirusChampionPack` | **保留**（公共全局：改名就是对外契约变更）|
+| `D228` | ~11273 | `server/train-env.mjs` | `EPIRUS_SEL_EVAL_SEEDS` | **待改写**（env 名）|
+
+**汇总**：**已摘 3**（纯措辞，`D64`×2 + `D78`×1）· **保留 12**（删了行为会变 ⇒ 合理的源码级反证）· **待改写 9**（只钉名字：`D12 D13 D56 D58 D59 D68 D84 D127 D228`）。
+
+**为什么"待改写"9 条不在本轮一起动** ✗：每条要换成**行为级**判据（例如 `SEAT_GAMES` 要跑一局数座位、`policyChooserN` 要数 chooser 条数），
+是**逐门设计**的活；而"直接删掉"要有"该效果已被同门别的腿覆盖"的正面证据 ⇒ 逐门读、逐门判，**不许批量删** ✗（这条正是本表存在的意义）。

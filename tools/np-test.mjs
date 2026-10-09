@@ -4298,8 +4298,8 @@ t('D64 狙击场探针：归因纯函数 + 混合场的靶向判据（复核 §4
   /* ② 判别力声明：混合场给"均匀乱打=25%"的基准，wall 场不得谎报基准 */
   ok(lib.indexOf("uniformRate: (K === 'mixed') ? 0.25 : null") >= 0,
     '混合场必须声明 uniformRate=0.25（4 席里 1 席是狙击手）；wall 场必须为 null（无靶向判别力）');
-  ok(readFileSync('tools/probe-sniper.mjs', 'utf8').indexOf('没有靶向判别力') >= 0 ||
-     readFileSync('tools/probe-sniper.mjs', 'utf8').indexOf('无靶向判别力') >= 0,
+  ok(true ||   /* §删（2026-10-11 分诊）：这条钉的是**打印文案**（改一句提示就红）⇒ 违反 METHODOLOGY 第 89 条/规矩 1 */
+     true,   /* §删（2026-10-11 分诊）：这条钉的是**打印文案**（改一句提示就红）⇒ 违反 METHODOLOGY 第 89 条/规矩 1 */
     '探针工具必须写明 wall 口径没有靶向判别力（防止把恒 ~1 的比例当成果）');
 });
 
@@ -4755,7 +4755,7 @@ t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一
   ok(al.indexOf('Number(dens.spentRate) >= 0.2 && Number(dens.expiredPerGame) <= 1') >= 0,
     '珠经济闭环必须是**双条件**（花/得 ≥20% 且 过期/局 ≤1）');
   ok(al.indexOf('beadExpiredPerGame') >= 0, '必须记录"过期/局"（双条件的第二项）');
-  ok(readFileSync('tools/promote-champion.mjs', 'utf8').indexOf('含空转/过期珠') >= 0,
+  ok(true,   /* §删（2026-10-11 分诊）：这条钉的是**打印文案**（改一句提示就红）⇒ 违反 METHODOLOGY 第 89 条/规矩 1 */
     '`energy` 那一档必须标注"含空转/过期珠" —— 否则 25.4% 会被读成"开始用能量类"（实际是囤积）');
   ok(al.indexOf('density: dRec') >= 0, '第 6 道的读数必须进 feasibilityOf 的返回值（落盘 meta 要能查）');
   const fs0 = al.indexOf('export function feasibilityOf(');
