@@ -105,7 +105,9 @@ function restoreOutputs(key, outputs) {
   let okAll = true;
   outputs.forEach(function (p, i) {
     const src = join(box, String(i));
-    if (!existsSync(src)) return;
+    /* §2026-10-11（千问复核 D）：盒子里**少一项**说明这次没存全 ⇒ 必须当**还原失败**（回退真跑），
+     *   不能跳过就算了 —— 否则「命中必须还原成功才返回」这句话是假的。 */
+    if (!existsSync(src)) { okAll = false; return; }
     try { cpSync(src, p, { recursive: true }); } catch (e) { okAll = false; }
   });
   return okAll;
@@ -113,7 +115,8 @@ function restoreOutputs(key, outputs) {
 
 function pruneIfNeeded() {
   try {
-    const es = readdirSync(CACHE_DIR).filter(function (f) { return /\.json$/.test(f); });
+    /* §2026-10-11（千问复核 D）：`.out` 产出盒也要参与轮换 —— 原来只删 .json ⇒ 盒子只增不减（实测 46 盒/22.8MB）。 */
+    const es = readdirSync(CACHE_DIR).filter(function (f) { return /\.json$/.test(f) || /\.out$/.test(f); });
     if (es.length <= MAX_ENTRIES) return;
     const withT = es.map(function (f) { let t = 0; try { t = statSync(join(CACHE_DIR, f)).mtimeMs; } catch (e) {} return [t, f]; });
     withT.sort(function (a, b) { return a[0] - b[0]; });
