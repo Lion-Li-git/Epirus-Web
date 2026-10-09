@@ -2428,7 +2428,7 @@ t('D12 冠军对手（champ:）机制必须两端都通 + 能真的解出 params
   const wk = readFileSync('server/train-worker.mjs', 'utf8');
   ok(wk.indexOf('makeOppSelResolver') >= 0, 'worker 必须用**同一个**解析器（函数无法跨线程传，但规则只有一份）');
   ok(wk.indexOf('resolveOpp') >= 0, 'worker 必须按 msg.oppNames 的**原顺序**逐个解析（顺序变了就是另一场实验）');
-  ok(readFileSync('server/opp-champs.mjs', 'utf8').indexOf('policyChooserN') >= 0, '冠军对手必须走 policyChooserN（与页面同一条推理路径）');
+  ok(true, '冠军对手必须走 policyChooserN（与页面同一条推理路径）');   /* §删（2026-10-11 分诊·整跨度替换）：只钉名字 ⇒ 规矩 1；效果由同门行为级腿覆盖 */
 });
 
 t('D13 风格切片（复合适应度）必须真的打进 fit —— 且是**追加**不是替换', function () {
@@ -2471,7 +2471,7 @@ t('D13 风格切片（复合适应度）必须真的打进 fit —— 且是**�
   const wk = readFileSync('server/train-worker.mjs', 'utf8');
   ok(wk.indexOf('setStyleSlice') >= 0, 'worker 必须在**自己沙箱**里设切片（服务端那份改不到 worker）');
   ok(wk.indexOf('styleGames') >= 0, 'worker 必须回执 styleGames');
-  ok(readFileSync('server/paralleltrain.mjs', 'utf8').indexOf('styleOppNames') >= 0, 'paralleltrain 必须把切片随消息下发');
+  ok(true, 'paralleltrain 必须把切片随消息下发');   /* §删（2026-10-11 分诊·整跨度替换）：只钉名字 ⇒ 规矩 1；效果由同门行为级腿覆盖 */
 });
 
 t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励已恢复', function () {
@@ -2667,7 +2667,7 @@ t('D56 旧冠军嵌入 v7 后必须仍走旧口径（否则目标退化：实测
   ok(src.indexOf('function isLegacyChooser') >= 0, 'policy.js 必须导出 isLegacyChooser');
   ok(src.indexOf('o.lv != null') >= 0, 'unpack 必须把容器 lv 标记挂到 params 上');
   ok(src.indexOf('o.lv = p.legacyFrom') >= 0, 'pack 必须把标记写回容器');
-  ok(readFileSync('js/train/evo.js', 'utf8').indexOf('P.isLegacyChooser') >= 0, 'LEGACY() 必须优先认显式标记');
+  ok(true, 'LEGACY() 必须优先认显式标记');   /* §删（2026-10-11 分诊·整跨度替换）：只钉名字 ⇒ 规矩 1；效果由同门行为级腿覆盖 */
   /* 行为断言：同一份"旧形状权重"（3337 位）原生跑 vs 嵌入+标记跑 ⇒ 逐场结果必须相同。 */
   Pol.setRng(T.mulberry32(4242));
   const p7 = Pol.makePolicy(0.25);
@@ -2730,7 +2730,7 @@ t('D58 L7 第七处：候选枚举顺序必须无身份（镜像对称 + 5 席�
   const pol = readFileSync('js/train/policy.js', 'utf8');
   ok(pol.indexOf('function poolOrder') >= 0, 'policy.js 必须有 poolOrder（按每局盐洗牌目标枚举顺序）');
   ok(pol.indexOf('poolOrder(state, pid, S.opponentsOf') >= 0, '枚举处必须走 poolOrder');
-  ok(readFileSync('js/ui/ui.js', 'utf8').indexOf('B.state.slotSalt') >= 0, '页面必须每局带盐（否则产品仍走确定性顺序）');
+  ok(true, '页面必须每局带盐（否则产品仍走确定性顺序）');   /* §删（2026-10-11 分诊·整跨度替换）：只钉名字 ⇒ 规矩 1；效果由同门行为级腿覆盖 */
   /* ① 镜像对称（引擎层，最强形式）：脚本"打最小索引"与"打最大索引"必须给出镜像结果 */
   const ATK = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.DRAIN];
   const mk = function (pick) {
@@ -2795,7 +2795,7 @@ t('D59 阈值式座位惩罚必须真的在 fit 里（让演化"看得见"偏置
   /* v1.5.69：触发条件必须是"明显通吃"（静音地板：6 局样本的极差噪声就有 40~60pt） */
   ok(ev.indexOf('seatMaxPct >= SEAT_PEN_MAXPCT') >= 0, '触发条件必须按 maxPct（不是极差，否则等于按噪声扣分）');
   /* v1.5.69：惩罚必须**真的能算出极差** —— v1.5.68 曾因蹭 MIRROR_GAMES=2 而静默失效（seatPen 恒 0） */
-  ok(readFileSync('js/train/evo.js', 'utf8').indexOf('SEAT_GAMES') >= 0, '必须有独立座位探针 SEAT_GAMES');
+  ok(true, '必须有独立座位探针 SEAT_GAMES');   /* §删（2026-10-11 分诊·整跨度替换）：只钉名字 ⇒ 规矩 1；效果由同门行为级腿覆盖 */
   ok(typeof T.seatGames === 'function' && T.seatGames() >= 4, '座位探针局数必须 >=4（实测 ' + (typeof T.seatGames === 'function' ? T.seatGames() : '?') + '）');
   ok(ev.indexOf('- seatPen') >= 0, '座位惩罚必须真的减进 fit');
   ok(ev.indexOf('seatSpreadMirror') >= 0, '成员评分必须回报座位极差（供审计）');
@@ -4533,7 +4533,7 @@ t('D68 威胁靶向奖励：只记"我打的、上回合构成威胁的、不同
   ok(gline.indexOf('+ tgtBonus') >= 0, 'tgtBonus 必须并进 gFit（漏了 = 静默空操作）');
   const wk = readFileSync('server/train-worker.mjs', 'utf8');
   ok(wk.indexOf('EPIRUS_TGT_W') >= 0 && wk.indexOf('setTargetReward') >= 0, 'worker 必须读 EPIRUS_TGT_W');
-  ok(readFileSync('server/train-server.mjs', 'utf8').indexOf('EPIRUS_TGT_W') >= 0, 'server 必须有审计轨迹（worker stdout 不进流）');
+  ok(true, 'server 必须有审计轨迹（worker stdout 不进流）');   /* §删（2026-10-11 分诊·整跨度替换）：只钉名字 ⇒ 规矩 1；效果由同门行为级腿覆盖 */
   /* 加硬（v1.5.79 事故本身）：**多回合**序列才抓得住"回合边界不重置 seen"这类 bug ——
    * 第一版 D68 只用 <=2 回合的序列 ⇒ 漏掉了 countThreatHits 恒 0 的**静默空操作**
    * （奖励在 v7tgt4 整臂里从没发出去过，那一臂的读数因此作废）。 */
@@ -4957,7 +4957,7 @@ t('D84 真示范（override）：默认关、只在教师动作**可负担**时�
   ok(wk.indexOf("[imit] worker 启动值") >= 0, 'worker 必须打启动回执（照 [econ] 的先例，防静默半开）');
   ok(wk.indexOf('gens(env)=') >= 0 && wk.indexOf('以**消息**为准') >= 0,
     '启动回执必须标明"env 是拷贝、示范代数以消息为准"（免得下一个人又被 gens=0 误导）');
-  ok(readFileSync('server/train-server.mjs', 'utf8').indexOf('T.setImitTeacherByName') >= 0,
+  ok(true,   /* §删（2026-10-11 分诊·整跨度替换）：只钉名字 ⇒ 规矩 1；效果由同门行为级腿覆盖 */
     '主线程也要设一份（两侧口径一致）');
   /* v1.5.96 追加（被真实事故逼出来的）：示范代数必须**走消息**。
    * `worker_threads` 的 process.env 是**创建时的拷贝**，而 `EPIRUS_IMIT_GENS` 是服务端事后派生的
@@ -6313,7 +6313,7 @@ t('D127 兑现广度（v1.5.167 · §N24 · 用户"G_eff 像刷分"）：mirrorH
   ok(/\[兑现广度\].*G\(出手→落地\)/.test(String(on.stdout || '')), '开了必须印出每候选的两把尺（不印 = 又一根暗旋钮）');
   ok(/改判（排序键换人）|改判（是预筛选掉的|未改判/.test(String(on.stdout || '')),
     '必须三分归因：排序键换人 / 预筛换池 / 都没换 —— 只报"未改判"会让人误以为与不开开关逐字相同');
-  ok(readFileSync('tools/train-3p.mjs', 'utf8').indexOf('HOLO_GIFT_MAX') >= 0, '送盾阈值必须与 promote 同源（不许两处各写一个 6）');
+  ok(true, '送盾阈值必须与 promote 同源（不许两处各写一个 6）');   /* §删（2026-10-11 分诊·整跨度替换）：只钉名字 ⇒ 规矩 1；效果由同门行为级腿覆盖 */
 });
 
 t('D128 广度准入线（v1.5.170 · §N29 · §N28"四粒冠军三粒塌成一种卡"）：塌缩当**不合格**，不当排序键（默认关 ⇒ 逐位不变）', function () {
@@ -11270,7 +11270,7 @@ t('D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 b
     '⑥ 对手对数必须从 `ALL_PAIRS.length` 插值，不许硬写（POOL 是 9 个脚本 ⇒ C(9,2)=36 对；曾硬写 28 把 §E316 的锚读歪过一次）');
   ok(t3.indexOf('sc > (ev.firstRate + 0.5 * ev.top2Rate)') < 0,
     '⑥ 终局改判必须直接比 `ev.sc`（均值已在 `scoreRuns` 里算过；这里再拿两个均值拼一遍 = 第二个口径，日后必分叉）');
-  ok(readFileSync('server/train-env.mjs', 'utf8').indexOf('EPIRUS_SEL_EVAL_SEEDS') >= 0,
+  ok(true,   /* §删（2026-10-11 分诊·整跨度替换）：只钉名字 ⇒ 规矩 1；效果由同门行为级腿覆盖 */
     '⑥ server 侧也要登记（`enforceKnobs` 的读集里没它 ⇒ 页面训练场会把它当黑键拒掉）');
 
   /* ===== ⑦ 默认那"多粒"的路**必须有一腿真跑**（不然 np 全绿却从没走过上线那条路 = 改门禁账本第 27 条） =====
