@@ -11565,7 +11565,7 @@ if (!GROUP && !ONLY) {
   console.log('§E335 分组在册 ✅ ' + __KEYS.length + ' 条门全部归组（' + Object.keys(KEY2G).length + ' 个键）');
 }
 /* `--only` 打错字 ⇒ 一条都不跑却报"通过 0 / 0"，那是最坏的一种绿（看着像跑完且全绿）。响亮拒。 */
-if (ONLY && PASS + FAIL === 0) {
+if (ONLY && PASS + FAIL + __skipGates === 0) {
   console.error('⛔ `--only=' + ONLY + '` 在 ' + __nReg + ' 条注册里**一个都没匹配到** ⇒ 一条没跑，这不是全绿。检查子串拼写。');
   process.exit(3);
 }

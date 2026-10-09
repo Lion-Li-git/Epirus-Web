@@ -126,6 +126,12 @@ worktree 只用**被跟踪的文件**（≈ 一个全新 clone），而它们的
 | 主树（产物在）| ✔ 通过 | ✔ 通过 | — | — |
 
 ```text
-干净 worktree: node tools/np-test.mjs --only=D231  ⇒ ⚠ SKIP … · 退出码 0（CI 不再假红）
 主树        : node tools/np-test.mjs --only=D231  ⇒ ✔ 通过（有产物时行为不变）
+
+⚠ 更正（10-09 晚）：不要把 --only 的退出码当判据 —— 我第一版报的"干净 worktree --only=D231 ⇒ 退出码 0"**是错的**。
+   实测干净 worktree --only=D231 ⇒ **退出码 3**，原因是 harness 那条"`--only` 一个都没匹配到"的守卫用 `PASS + FAIL === 0` 判，
+   而**被跳过的门既不算 PASS 也不算 FAIL** ⇒ "唯一匹配的那门恰好被跳过"就被误判成"一条没跑"。
+   ⇒ 已把该守卫改成 `PASS + FAIL + __skipGates === 0`（tools/np-test.mjs:11568）。
+   真正对应 CI 的场景是**整组/整轮**，实测（干净 worktree · 无任何本机产物）：
+       node tools/gate-all.mjs --np --group=probe  ⇒ np/probe 193/193 · **退出码 0** · 5 道全绿
 ```
