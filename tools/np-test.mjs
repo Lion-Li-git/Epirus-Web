@@ -19,6 +19,7 @@ function spawnSync(cmd, args, opts) {
 }
 import { parsePairTable } from './defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
 import { makeGuardCost } from './guard-cost-lib.mjs';   /* D161 用：直接对库做单元级判定（不靠探针的输出措辞） */
+import { resolveOutPath } from './out-path.mjs';   /* D232 ⑦ 用：`--out=` 的解析是纯函数 ⇒ 给输入比输出（§2026-10-09 规矩 1） */
 import { pushTarget } from './bot-chooser-lib.mjs';   /* D223 用：选点规则是纯函数 ⇒ 喂合成 state 逐条钉（§E262） */
 import { hardwiredLine } from './probe-layer-caliber.mjs';   /* D149 用：指针行号从源码现算（钉死数字会在别人插一行后变成假行号） */
 /* D163 用：防御质量三档的单一来源（用户 09-26 裁定："出防御的时候完全没人打他就算白防御，被穿透算半有效"） */
@@ -11485,15 +11486,25 @@ t('D232 §E497 按卡出手谱 `tools/usage-probe.mjs`：三格手算自检必�
     ok(!/writeFileSync\([\s\S]{0,40}'js\//.test(src), '⑤ 不许往 js/** 写');
     ok(/from '\.\/audit-lib\.mjs'/.test(src) && /loadChamp/.test(src),
       '⑥ 读包/装配必须走 audit-lib 这一份（不许自己再写一套引擎装载 —— 那就会与训练侧口径分叉）');
-    /* ⑦ §2026-10-09：判"绝对路径"必须用 `isAbsolute`，**不许退回盘符正则**。
-     *   病（CI 连红 12 笔的唯一一条门，本机每一遍都绿）：上一版写的是 `/^[A-Za-z]:[\\\/]/.test(OUT)`，
-     *   D232 的 ④ 腿在 ubuntu runner 上传 `--out=/tmp/e497-usage-XXXX/u.tsv` ⇒ 不命中 ⇒ 被当相对路径拼进仓库
-     *   ⇒ `<repo>/champion-map/tmp/…` 那层目录不存在 ⇒ ENOENT ⇒ 子进程 exit 1 ⇒ `got=1 want=0`。
-     *   为什么钉源码而不是"再跑一次那一支"：POSIX 根路径这一支**只有 Linux 才构造得出来**
-     *   （Windows 的 `/x` 落在当前盘根，CI 上建 `/x` 会因权限失败 ⇒ 那种腿在 CI 上恰好不跑 = 假自证）。
-     *   ⇒ 这一条是 class-D（删掉 `isAbsolute` 会改行为），不是第 89 条禁止的"钉文档措辞"。 */
-  ok(!/\^\[A-Za-z\]:/.test(src), '⑦ 判绝对路径不许用 Windows 盘符正则（`/^[A-Za-z]:` 在 ubuntu 上不命中 ⇒ CI 假红，§2026-10-09 实测连红 12 笔）');
-  ok(/isAbsolute\(\s*OUT[A-Z]*\s*\)/.test(src), '⑦ 必须用 `isAbsolute(OUT)` 判绝对路径（实测源码里找不到它 ⇒ 那一支又退回盘符了）');
+    /* ⑦ §2026-10-09：`--out=` 的解析必须是"**绝对路径按原样、相对路径落 champion-map**"。
+     *   病（CI 连红 12 笔的唯一一条门）：原先用 Windows 盘符正则判绝对路径 ⇒ ubuntu 上
+     *   `--out=/tmp/e497-usage-XXXX/u.tsv` 不命中 ⇒ 被拼进仓库 ⇒ 那层目录不存在 ⇒ ENOENT ⇒ 子进程 exit 1。
+     *   为什么这一条不打在 ④ 上：④ 是行为腿，Windows 传进去的 `C:\…` **恰好命中盘符正则** ⇒ 本机结构上看不见；
+     *   而这一条喂的是**纯字符串**（不碰盘、不建目录）⇒ **Windows 与 ubuntu 上都真判**，
+     *   且旧实现在 Windows 上也会红（`/tmp/…` 同样不命中盘符）⇒ 它抓得住回归，不是摆设。
+     *   按整改建议的规矩 1（门禁只许测行为）：原先这里是对 `usage-probe.mjs` 做源码正则，已改成打纯函数。 */
+  const ROOTX = process.cwd();
+  const ABS_NATIVE = join(tmpdir(), '__e558_never_created__', 'u.tsv');
+  eq(resolveOutPath(ABS_NATIVE, ROOTX, 'champion-map'), ABS_NATIVE,
+    '⑦a 当前平台的绝对路径必须**按原样**返回（拼进仓库就是 CI 那一支）');
+  const POSIXY = '/tmp/e497-usage-XXXXXX/u.tsv';
+  const rPosix = resolveOutPath(POSIXY, ROOTX, 'champion-map');
+  ok(!rPosix.startsWith(ROOTX), '⑦b POSIX 形状不许被拼进仓库（旧盘符正则在两台上都会走到这一支）got=' + rPosix);
+  eq(rPosix.replace(/\\/g, '/'), POSIXY, '⑦b 该返回的就是这个字符串本身');
+  eq(resolveOutPath('usage.tsv', ROOTX, 'champion-map'), join(ROOTX, 'champion-map', 'usage.tsv'),
+    '⑦c 相对 `--out=` 必须落在 champion-map 下（默认值行为一字没变）');
+  let threw = false; try { resolveOutPath('   ', ROOTX, 'champion-map'); } catch (e) { threw = true; }
+  ok(threw, '⑦d 空 `--out=` 必须响亮失败（不许悄悄退回默认文件名去覆盖在册表）');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
