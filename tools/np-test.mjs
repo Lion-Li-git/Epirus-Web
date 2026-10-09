@@ -6741,7 +6741,7 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
   const outHtml = join(dir, 'r.html'), outJson = join(dir, 'r.json');
   const run = spawnSync(process.execPath,
     ['tools/skill-report.mjs', '3', '2', outHtml, '--champ=js/bundled-champion-3p.js', '--json=' + outJson],
-    { encoding: 'utf8', timeout: 600000 });
+    { outputs: [dir], encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, 'skill-report 要跑得通（stderr=' + String(run.stderr || '').slice(0, 200) + '）');
   ok(existsSync(outJson), '必须能导出 --json（否则这条判据只能靠肉眼读 HTML）');
   const rep = JSON.parse(readFileSync(outJson, 'utf8'));
@@ -6772,9 +6772,9 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
   /* ===== ② probe-cross-mode：通吃排序必须"除 2P" =====
    * 病（今天 9 粒历史包实测）：3P 包塞进 2P 格是**结构性 0% 胜/100% 平**（含现役）⇒ 含 2P 的"最弱格"对这批包恒 0，
    * 排序键等于没有，把真正分辨得出的四格糊平。 */
-  const cm = spawnNC(['tools/probe-cross-mode.mjs',
+  const cm = spawnCached(['tools/probe-cross-mode.mjs',
     'js/bundled-champion-3p.js', 'docs/artifacts/v7aim3-93.bak', 'docs/artifacts/v7divK-31.bak', '--games=6', '--json'],
-    { encoding: 'utf8', timeout: 600000 });
+    { outputs: [dir], encoding: 'utf8', timeout: 600000 });
   eq(cm.status, 0, '通吃矩阵要跑得通');
   const mx = JSON.parse(String(cm.stdout)).rows;
   ok(mx.length > 0 && mx[0].weakestMulti !== undefined, '每行必须带 `weakestMulti`（除 2P 的最弱格）');
@@ -6792,8 +6792,8 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
   /* ===== ③ probe-skill-marginal：把"读不出"分成两种病 =====
    * `机会≈0` 的判据是 `chance`（每局几次机会）⇒ **与局数无关 ⇒ 加算力救不了**；`噪声内` 才是算力问题。
    * 混为一谈就会白烧算力（Q-10 的实际答复：×3.1 算力只把原生口径的可测从 3/30 抬到 4/30，换 `--rich=card` 才到 14/30）。 */
-  const mg = spawnNC(['tools/probe-skill-marginal.mjs', '--mode=multi', '--games=6', '--only=ji,gun'],
-    { encoding: 'utf8', timeout: 600000 });
+  const mg = spawnCached(['tools/probe-skill-marginal.mjs', '--mode=multi', '--games=6', '--only=ji,gun'],
+    { outputs: [dir], encoding: 'utf8', timeout: 600000 });
   eq(mg.status, 0, '边际价值探针要跑得通');
   const mgOut = String(mg.stdout || '');
   ok(/病因拆开/.test(mgOut), '汇总必须把"读不出"拆成**钱墙 / 算力**两种病（不拆就是让人拿算力去治钱墙）');
