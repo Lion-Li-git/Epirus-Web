@@ -34,7 +34,12 @@ const SET = arg('set', 'all'), OUT = arg('out', 'e287-ruler.tsv'), LIMIT = Numbe
 const SH = String(arg('shard', '1/1')).split('/').map(Number);
 const COLS = ['id', 'path', 'H', 'Hstrict', 'Htie', 'cost3', 'S', 'Geff', 'dmg', 'heavy', 'holo', 'zeroRate', 'drawRate',
   'rounds', 'distinctKeys', 'seatSpread', 'rwDmg', 'charges', 'waste', 'noThreatStance', 'fieldAAtk', 'fieldARounds',
-  'mode', 'n', 'pop', 'games', 'oppsN', 'seed', 'ts', 'lineage'];
+  'rounds', 'distinctKeys', 'seatSpread', 'rwDmg', 'charges', 'waste', 'noThreatStance', 'fieldAAtk', 'fieldARounds',
+  /* §E566（千问）：把**测量档**盖进每一行。原来这张表只有 `games`/`pop`/`n` 这些**包自己的配方字段**，
+   *   而"这行的 H 是考卷几局/组合"数据里根本没有 ⇒ 30 档与 120 档的两张表拼在一起看不出来（§E562/§E563
+   *   那个"档把候选与现役的差距压掉一半"的讨论， provenance 全靠日志里的一句话）。
+   *   下游（rebuild-coords / eps-full / lineage / viewer）全是按**列名** `indexOf` 取数 ⇒ 末尾加列不动列序，安全。 */
+  'mode', 'n', 'pop', 'games', 'oppsN', 'seed', 'ts', 'lineage', 'examG'];
 
 /* ---- 名单 ---- */
 function metaOf(file) {
@@ -122,7 +127,7 @@ if (todo.length === 0 && list.length > 0) { console.error('⛔ 待量为 0（名
 const W = sandbox();
 const t0 = Date.now();
 todo.forEach((e, i) => {
-  const rec = { id: e.id, path: e.path, lineage: e.lineage };
+  const rec = { id: e.id, path: e.path, lineage: e.lineage, examG: EXG };   /* §E566：档跟着行走（失败行也要有，见下面 ERR 那条 append） */
   try {
     const ex = exam(e.path, [], EXG);
     rec.H = ex.first; rec.Hstrict = ex.strict; rec.Htie = ex.tie; rec.cost3 = ex.cost3;
