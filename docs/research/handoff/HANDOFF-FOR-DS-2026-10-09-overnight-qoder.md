@@ -13,6 +13,7 @@
 | `champion-map/index.html` | 重新生成的查看器（853 KB，自包含）‖ 线型新增"**父身份可证**"这一级 ‖ 按家族高亮时非高亮族的标签跟着暗 | 页面读的是这两张表，不重算 |
 | `champion-map/rebuild-coords.mjs` ‖ `viewer.mjs` ‖ `lineage.mjs` | ① 落点目录不在就 `mkdir`（清缓存后 ENOENT 会死在第一步之前）；② §E378 的悬空父边别名**按身份认而不按文件名认**（清掉一份同权重拷贝 ⇒ 56 条实录边当场悬空）；③ 新增 `seedpack-wid` 级 + 来路白名单 + 连线开关同步；④ 探针只收实线；⑤ `wantLabel` 开始看 `st.hi` | 都是"删缓存 / 加密度之后才现形"的依赖，细节见 §E554/§E555 |
 | **`champion-map/gate-arms-2026-10-09.tsv`**（新，31 列 × 275 行） | 逐枚**出厂门与人席读数**：`g5_games / g5_long / g5_multi / g5d_* / passG5 / g4_worst(_cell) / promote_blocks(+list) / seat_long_max / seat_multi_max / bat_*(四道单型场严胜) / charges / H_exam30 / sel_gap_pt / sel_band_pt / sel_verdict / seedpack / knobs` ‖ 外加 **`on_map` / `map_why`**（谁在图上、为什么是它） | 以前逐枚数只在 gitignored 的 `e5xx-out/{g5,gate,seat,battery}-*.{log,tsv}` 里，日志只留聚合数 ⇒ **删缓存之后就没法重算了**。落选那 208 枚的读数也全在表里 ⇒ **换一套代表只需改规则重跑，不用重测尺**。表名**故意不叫 `e552-*`**，那个前缀被 `.gitignore` 的 `champion-map/e5[0-9][0-9]-*.tsv` 吃掉 |
+| `champion-map/feas-s4.tsv`（新） | 那 63 枚代表**现跑同一道闸**（`feas.mjs --ids=…`，3.7s/枚 / 63 枚 233 秒）⇒ **22 过线 ‖ 41 未过**；查看器"无判定"从 250 枚降到 **0** | 用户 09:5x 指出这批点漏了过线认证。⚠ 不能"把结论抄进去"：今晚跑的是 `gate-drafts`（G4/G5）与 8 枚 `promote --dry`，而着色吃的是这张 `feasibilityOf` 表 —— 是另一道闸、另一批列 |
 | `docs/METHODOLOGY.md` 120/121/**122/123** | 进图必须单档 ‖ 行为列能否当键的四段检验 ‖ 路径级父指针可升到身份级（新增枚举值要一起改四处）‖ 判据的采样范围要与病同型 | 本班四条方法账 |
 
 **读 `gate-arms-2026-10-09.tsv` 必须知道的三条口径**（列名旁边也写了，这里再钉一次）：
@@ -51,6 +52,8 @@
    （`U-s203` 的 2.28 进了）。`tools/promote-champion.mjs:239` 那句 `feas.ok ? '✅ 五道全过' : '✗ ' + fails.join('；')`
    只是显示，真正的阻断走另一条 `fails.push` ⇒ 会出现"印着 ✗ 但退出码 0"的读数。**今晚有 4 枚臂是 0 条阻断**，
    其中至少一枚的可行性行带 ✗ ⇒ 这条不改，出厂门的"0 条阻断"就不可全信。
+   ⚠ **§E556 把它从"显示问题"升到"判据问题"**：同一枚 `U-s202` 在 `feas.mjs`（同一个 `feasibilityOf` 真源）里是 **ok=0**，
+   栽的正是那行印了却没算进阻断的 `G(long) 3.00 < 3` ⇒ 不是两个工具口径不同，是**同一条可行性判据在两条路径上给了两个答案**。
 
 ## 4. 后续规划（10-09 白天起，按性价比排）
 

@@ -142,7 +142,10 @@ const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [
 /* 过线来源（§E298）：**优先**用现跑的同一道闸 `feas-s*.tsv`（覆盖全 718 枚、样本量统一 n=20/aggr40/seat100）；
  *   没有才退回包自己 META 里的历史 feasibility.ok（`panel.tsv` 只有 94 枚，且那 482 枚有值的还跨 6 个 opps 层
  *   ⇒ §E287 实测"只换 opps 池过线率 45.7%→6.4%"，混在一起画就是假范围）。 */
-const FEAS_FILES = ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv', 'feas.tsv'].filter(f => existsSync(join(HERE, f)));
+/* §E556：`feas-s4.tsv` = 10-09 那 63 枚**代表臂**现跑同一道闸的判定（`feas.mjs --ids=…`，tag 同为 n=20/aggr100/seat100）。
+ *   为什么不并进 s1~s3 那张：那三片是 10-08 全库 920 枚的一次性跑批，混写会让"哪一行是哪一批"从文件上消失；
+ *   分开一片，代价只是这一行多一个名字，换来的是 §E492 那道 tag 对账仍然指着"每片自己是什么档"说得清。 */
+const FEAS_FILES = ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv', 'feas-s4.tsv', 'feas.tsv'].filter(f => existsSync(join(HERE, f)));
 const panelP = join(HERE, 'panel.tsv');
 /* §E304 家族表（`lineage.mjs` 生成）：**家族 = 训练方法/目标配置的等价类**，不是 seed。
  *   为什么必须换：coords 的 seed 列只有 14 个取值（31~36 / 81~96），它就是包名尾部那个数 = META.seed
