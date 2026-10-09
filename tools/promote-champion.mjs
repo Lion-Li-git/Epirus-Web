@@ -337,14 +337,20 @@ const brd = breadthProfile(W, params, 'long', Number(process.env.EPIRUS_BREADTH_
  * 本改动**只补打印、不动任何判据**（阻断仍是 multi 的 `sp.G`，逐字不变）；把 long 的 G 与它和门的差**并列报出来**，
  *   并把"哪边是门"写清楚 —— 否则读体检的人会把只记录的那一栏当成门。 */
 const brdM = breadthProfile(W, params, 'multi', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
-console.log('   ⚠️ 广度**两个模式都判**（v1.5.145 用户裁定）：multi 有效技能数=' + Number(sp.effSkills).toFixed(2) +
+/* §2026-10-10 DS（Claude 整改建议 §训练侧建议 1「修好 promote --dry 打印与阻断不一致后重跑一遍」· U-s202）：
+ *   病：**门只判 multi 的 `sp.effSkills`**（fails.push 那一条），而下面这段却把 **long 的 `G_eff`** 印出来，
+ *       还写「广度两个模式都判」⇒ 读体检的人会把只记录的那栏当成门（违反 METHODOLOGY 第 44 条「打印机必须打印门所判的那个量」）。
+ *   修法（**不动判据** —— 判据要不要收严是用户的裁定，v1.5.145 明确 deferred）：让打印**从 `fails` 派生**每栏的阻断状态，
+ *       并把 long 那一栏明确标成「只记录」。⇒ 打印与阻断从此**同源**：谁改判据，打印会自动跟着变。 */
+const _gBlocked = fails.some(function (f) { return f.indexOf('G 有效技能数') === 0; });
+console.log('   广度（**门只判 multi**：阻断项 = 本轮 `G 有效技能数`，这次' + (_gBlocked ? '已阻断' : '未阻断') + '）：multi 有效技能数=' + Number(sp.effSkills).toFixed(2) +
   '（selfPlay）· **long（= 长程，产品常用模式）** 有效技能数=' + Number(spL.effSkills).toFixed(2) + '（selfPlay）· ' +
   '（另两个熵量具作对照：multi G_eff=' + brdM.G_eff.toFixed(2) + '（n=' + brdM.N + '）· long G_eff=' + brd.G_eff.toFixed(2) +
   '（n=' + brd.N + '）—— 同模式不同量具/样本会有差，属已知的样本敏感性' +
   ((feas.G2 != null && Number(feas.G2) >= 3 && brd.G_eff < 3)
-    ? ' ⇒ ⚠️ **同一模式两量具分歧**：门用的 selfPlay long G=' + Number(feas.G2).toFixed(2) +
+    ? ' ⇒ ⚠️ **同一模式两量具分歧**（long：**只记录，未进阻断**）：门用的 selfPlay long G=' + Number(feas.G2).toFixed(2) +
       ' ≥3 过，而 breadthProfile long G_eff=' + brd.G_eff.toFixed(2) + ' <3 不过 ⇒ 这条线恰好骑在门槛上，' +
-      '要不要让门**取更严的那个**请用户裁定（DS 不改判据）'
+      '要不要让门**取更严的那个**（即把 long 也变成阻断项）**请用户裁定** —— DS 不动判据'
     : '') + '）');
 console.log('   技能广度 S（n=' + brd.N + ' 个非ジ出手 · ' + brd.games + ' 局自对局）：S=' + brd.S.toFixed(3) +
   ' = 类间 ' + brd.S_cat.toFixed(3) + ' + 类内 ' + brd.S_within.toFixed(3) +
