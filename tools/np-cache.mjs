@@ -97,7 +97,9 @@ function pruneIfNeeded() {
  */
 export function spawnCached(argv, opts) {
   const o = opts || {};
-  if (!cacheOn() || !o.encoding) return spawnSync(process.execPath, argv, o);
+  /* §2026-10-10 DS：显式逃生口 —— 断言要读子进程**产出的文件**时，必须 `nocache: true`（缓存命中 ⇒ 子进程不跑 ⇒
+   *   那些文件是上一次留下的 ⇒ 可双向骗人，见 METHODOLOGY 117 与 Claude 整改建议）。np-test 里用 spawnNC() 包一层。 */
+  if (!cacheOn() || !o.encoding || o.nocache) return spawnSync(process.execPath, argv, o);
   __S.on = true;
   let f = null, key = null;
   try {
