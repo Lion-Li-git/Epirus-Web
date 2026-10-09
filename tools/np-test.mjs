@@ -6678,7 +6678,13 @@ t('D135 大雷连带收益项（v1.5.187 接线 · v1.5.188 换**率形**）：�
    *      若整臂一条链都没打出，fit 不许出现 +0.5 级的跳变（否则 = 计数漏了、奖励却在动）。
    *      v1.5.187 用的是 W=1.5 计数形（一发幸运链吃满 ⇒ 把名次适应度整个盖掉，实测考卷 35.4%→23.5%）⇒ 剂量降到 0.5。 */
   const dir = mkdtempSync(join(tmpdir(), 'd135-'));
-  const run = spawnNC(['tools/train-3p.mjs', '60', '3', '8', '8'], {
+  /* §E566（千问）：这两处从 `spawnNC` 收回普通 `spawnCached`。§九 里 D135 是被"门里出现过变量路径的 readFileSync"
+   *   那道**过宽判据**扫进来的（同 D150 的误伤），DS 当时写的是"同理未验完 ⇒ 一并退回"。逐门读清了：
+   *   本门体从 `mkdtempSync` 到结尾**没有任何一处读 `dir`/`dir2`**（那两个目录只作为 `EPIRUS_BAND_DIR` 写出去），
+   *   断言全部吃 `String(run.stdout)` ⇒ 前置要求（断言只用 stdout/status）本来就满足 ⇒ 可以缓存，省下 60 代臂 × 2 ≈ 109 s/热遍。
+   *   ⚠ 这条判断的依据是"读代码 + 第二遍必须命中且仍绿"两件事一起算，不是只看第二遍绿（那只读 stdout 的门，
+   *     盒子对错的第二遍都是绿的 —— 见 `np-cache` 头注与 §十五）。 */
+  const run = spawnCached(['tools/train-3p.mjs', '60', '3', '8', '8'], {
     env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTChain', EPIRUS_IMIT_ONLY: 'bigT', EPIRUS_IMIT_OVERRIDE: '1',
       EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd135', EPIRUS_BAND_DIR: dir
@@ -6701,7 +6707,7 @@ t('D135 大雷连带收益项（v1.5.187 接线 · v1.5.188 换**率形**）：�
    *      （事件流里注入与原生出手不可区分 —— 没有标记），所以在"原生零出手"的物种上，这一项**不是在评这个包**。
    *      ⇒ 这就是 Q-14 ①② 都买不到行为的机制解释；钉在这里，防以后有人拿"率很高"当出货。 */
   const dir2 = mkdtempSync(join(tmpdir(), 'd135b-'));
-  const run2 = spawnNC(['tools/train-3p.mjs', '60', '3', '8', '8'], {
+  const run2 = spawnCached(['tools/train-3p.mjs', '60', '3', '8', '8'], {   /* §E566：同上，本门不读任何产出 ⇒ 收回普通缓存 */
     env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd135b', EPIRUS_BAND_DIR: dir2,
       /* §E275：v1.5.333 起大雷那档是**引擎默认**，所以"这一项的非零只能来自注入"这个前提**必须显式关档**才成立。
