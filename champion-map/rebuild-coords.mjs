@@ -20,7 +20,7 @@
  * ⚠ 会覆盖 champion-map/coords.tsv（先自己备份，这台不动 git）。
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync, renameSync, existsSync as ex } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, renameSync, mkdirSync, existsSync as ex } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -38,6 +38,9 @@ const ruler = 'champion-map/ruler-all.tsv' + (EXTRA ? ',' + EXTRA : '');
 let FROM = String(arg('from', ''));
 if (!FROM) {
   FROM = 'docs/artifacts/e375-out/coords-from-git.tsv';
+  /* §E554：这台把自己的落点**写死**在一个可能被清理掉的产物目录里，而清理是常规动作 ⇒ ENOENT 直接死在第 42 行
+   *   （10-09 早上清缓存之后就撞上了）。链子必须自带它自己依赖的那一步（METHODOLOGY 106 的同族）⇒ 目录不在就先建。 */
+  mkdirSync(join(ROOT, dirname(FROM)), { recursive: true });
   const txt = execFileSync('git', ['show', 'HEAD:champion-map/coords.tsv'], { cwd: ROOT, maxBuffer: 1 << 26, encoding: 'utf8' });
   writeFileSync(join(ROOT, FROM), txt.replace(/\r\n/g, '\n'));
   console.log('--from 缺省取 git HEAD 那一版 ⇒ ' + FROM + '（' + txt.trim().split('\n').length + ' 行）');
@@ -54,7 +57,8 @@ const run = (script, args, tag) => {
 /* 1) 几何。ruler-figs 除了 --coords 还固定往自己目录甩四张静态图 ⇒ 顺手挪走，别脏工作树 */
 run('ruler-figs.mjs', ['--ruler=' + ruler, '--coords=champion-map/coords.tsv'], '① ruler-figs 画几何');
 for (const f of ['e287-ladder.svg', 'e287-map2.svg', 'e287-map3.svg', 'e287-figs.html']) {
-  const p = join(HERE, f); if (ex(p)) renameSync(p, join(ROOT, 'docs/artifacts/e375-out/rc-static-' + f)); }
+  const p = join(HERE, f); if (ex(p)) { mkdirSync(join(ROOT, 'docs/artifacts/e375-out'), { recursive: true });
+    renameSync(p, join(ROOT, 'docs/artifacts/e375-out/rc-static-' + f)); } }
 run('attach-kin.mjs', ['--from=' + FROM], '② attach-kin 搬当选键 + 打 kin');
 /* ===== §E491 第③步的 --more 原来写死两张表 ⇒ 新加的枚**天生没有 Hp/De** =====
  *   `Hp` 是图上那把头号尺（F = Hp/100 + T·S），而查看器把空 Hp 当 0 算 ⇒

@@ -1,0 +1,276 @@
+id	batch	recipe	g5_games	g5_long	g5_multi	g5d_long	g5d_multi	passG5	g4_worst	g4_worst_cell	promote_blocks	promote_list	seat_long_max	seat_multi_max	seat_files	bat_guardwall	bat_farmerwall	bat_reflectwall	bat_mix4	bat_worst	charges	H_exam30	n_g5_logs	sel_gap_pt	sel_band_pt	sel_is_draw	sel_verdict	seedpack	knobs
+B-s61	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：键 B																			0	44	0	7.66	3	0	判得动	K2	BREADTH_FLOOR=3 · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+B-s62	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：键 B																			0.925	50	0	0	3	1	抽签	K2	BREADTH_FLOOR=3 · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+B-s63	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：键 B																			0.3	38.5	0	3.94	3	0	判得动	K2	BREADTH_FLOOR=3 · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+B-s64	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：键 B														0	100	0	60	0	8.15	51.5	0	10.4	3	0	判得动	K2	BREADTH_FLOOR=3 · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+BK-s61	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：B+K 两个键																			0	44	0	7.66	3	0	判得动	K2	BREADTH_FLOOR=3 · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_BIGT=3 · SEL_KEEP=0.25
+BK-s62	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：B+K 两个键																			0.925	50	0	0	3	1	抽签	K2	BREADTH_FLOOR=3 · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_BIGT=3 · SEL_KEEP=0.25
+BK-s63	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：B+K 两个键																			0.3	38.5	0	3.94	3	0	判得动	K2	BREADTH_FLOOR=3 · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_BIGT=3 · SEL_KEEP=0.25
+BK-s64	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：B+K 两个键																			8.15	51.5	0	10.4	3	0	判得动	K2	BREADTH_FLOOR=3 · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_BIGT=3 · SEL_KEEP=0.25
+D4a	其他	其他									0					100	100	95	53.3	53.3			0						
+G-s71	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	100	60	0	0.35	53.1	0	3.02	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+G-s72	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）									0					0	100	100	28.3	0	2.125	53	0	4.43	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+G-s73	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	100	63.3	0	0.025	47.7	0	0.26	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+G-s74	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	0	43.3	0	0.025	46	0	1.49	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+G-s75	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	98.3	80	0	4	54.5	0	14.03	3	0	判得动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+G-s76	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	100	76.7	0	2.175	55	0	0.21	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+G-s77	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	76.7	70	0	9.025	52.9	0	13.65	3	0	判得动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+G-s78	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	73.3	76.7	0	1.025	47.9	0	0.05	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+G-s79	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	0	25	0	0.375	36.3	0	0	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+G-s80	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	71.7	53.3	0	3.05	41.8	0	8.77	3	0	判得动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+G-s81	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	5	53.3	0	3.25	49.2	0	4.01	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+G-s82	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	85	51.7	0	0.1	31	0	2.99	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s100	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	100	60	0	13.125	54.4	0	0.19	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s101	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	0	63.3	0	2.1	41.8	0	9.9	3	0	判得动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s102	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池	300	42	28	41	28	0	50	只枪(1ジ压制·打最肥)						0	100	100	48.3	0	4.85	57.1	1	0.95	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s103	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														60	90	93.3	40	40	0	59.4	0	4.2	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s104	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	30	66.7	0	3.4	53.4	0	4.39	3	0	判得动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s105	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池	300	74	57	79	59	0	81	只防御(不还手)						0	100	0	41.7	0	0.325	42	1	0.68	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s106	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池	300	30	36	30	29	0	87	只枪(1ジ压制·打最肥)						0	100	100	63.3	0	0	47.8	1	0.05	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s83	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池	300	94	84	94	84	0	96	只防御(不还手)						100	100	5	83.3	5	0	35.9	1	10.4	3	0	判得动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s84	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	0	86.7	0	1.4	57.9	0	5.23	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s85	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														98.3	100	98.3	58.3	58.3	1.2	50.2	0	0.59	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s86	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	0	56.7	0	1	45	0	1.22	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s87	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	100	76.7	0	2.025	52.4	0	8.47	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s88	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池	300	57	32	56	29	0	46	只防御(不还手)						0	100	0	73.3	0	0	38.5	1	4.17	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s89	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														100	100	0	73.3	0	0.5	46.7	0	1.58	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s90	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	0	51.7	0	1.725	52.5	0	0.1	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s91	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	100	61.7	0	0.875	45	0	1.98	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s92	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														100	100	85	75	75	2.3	54.6	0	2.85	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s93	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池	300	39	40	58	41	0	59	只防御(不还手)						0	100	100	56.7	0	0.975	49.1	1	1.6	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s94	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	0	58.3	0	0.225	52.6	0	2.45	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s95	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	100	36.7	0	7	28.7	0	3.65	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s96	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池	300	52	37	51	35	0	51	只防御(不还手)						28.3	98.3	0	65	0	6.325	49	1	3.65	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s97	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	100	85	0	4.65	53	0	0.05	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s98	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池														0	100	0	78.3	0	0.175	54.7	0	5	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+H-s99	e518 §E518/§E527 guardSpam 池 24 粒	guardSpam 池	300	41	13	53	26	0	52	只防御(不还手)						0	100	100	71.7	0	3.05	53.9	1	10.71	3	0	判得动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+K-s61	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：键 K																			0	44	0	7.66	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_KEEP=0.25
+K-s62	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：键 K																			0.925	50	0	0	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_KEEP=0.25
+K-s63	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：键 K																			0.025	28.5	0	3.94	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_KEEP=0.25
+K-s64	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：键 K																			8.15	51.5	0	10.4	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_KEEP=0.25
+K2	K2	现役子代 K2	300	30	13	49	26	0	47	只防御(不还手)						0	100	100	70	0			1						
+P-s21	e504 §E504 抽签假说 24 臂	纯续训														100	100	25	65	25	0.15	42.1	0	1.53	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+P-s22	e504 §E504 抽签假说 24 臂	纯续训														0	100	100	30	0	1.625	54.8	0	3.47	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+P-s23	e504 §E504 抽签假说 24 臂	纯续训														0	100	98.3	76.7	0	1.2	50.8	0	1.51	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+P-s24	e504 §E504 抽签假说 24 臂	纯续训														100	100	100	38.3	38.3	0	49.1	0	3.18	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+P-s25	e504 §E504 抽签假说 24 臂	纯续训														100	100	0	33.3	0	0	38.9	0	1.79	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+P-s26	e504 §E504 抽签假说 24 臂	纯续训														0	100	100	23.3	0	0	42.5	0	5.17	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+P-s27	e504 §E504 抽签假说 24 臂	纯续训														0	100	0	30	0	10.5	53.1	0	2.38	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+P-s28	e504 §E504 抽签假说 24 臂	纯续训														0	100	100	71.7	0	0.7	48.2	0	5.71	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+P-s29	e504 §E504 抽签假说 24 臂	纯续训														100	100	8.3	23.3	8.3	0	48.6	0	2.12	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+P-s30	e504 §E504 抽签假说 24 臂	纯续训														0	100	51.7	78.3	0	1.75	56.2	0	1.04	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+P-s31	e504 §E504 抽签假说 24 臂	纯续训														0	100	0	56.7	0	4.55	48	0	1.3	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+P-s32	e504 §E504 抽签假说 24 臂	纯续训														0	100	13.3	61.7	0	1.425	47.4	0	0	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s33	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	0	86.7	0	1.1	56.6	0	1.46	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s34	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	0	63.3	0	0	44.4	0	0.78	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s35	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）	300	32	27	43	25	0	48	只防御(不还手)						100	100	98.3	80	80	4.15	52.8	1	1.39	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s36	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	0	16.7	0	0	34.8	0	4.03	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s37	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	70	68.3	0	2.8	55.6	0	0	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s38	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	0	10	0	0	28.8	0	1.42	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s39	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	98.3	71.7	0	6.8	53.9	0	1.79	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s40	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	0	21.7	0	1.075	34.6	0	1.32	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s41	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	0	53.3	0	1.075	53.5	0	4.81	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s42	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	0	46.7	0	10.85	34.7	0	0.17	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s43	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	100	13.3	0	0.45	29	0	3.92	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s44	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	100	46.7	0	0	50.4	0	7.22	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s45	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	0	33.3	0	0	39.9	0	0.62	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s46	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	23.3	80	0	1.425	55.2	0	0.1	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s47	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	100	65	0	2.5	56.3	0	7.24	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s48	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	98.3	43.3	56.7	0	2.125	46.9	0	4.43	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s49	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	95	80	0	6.275	56	0	7.41	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s50	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	0	66.7	0	2.625	49.6	0	3.94	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s51	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	0	55	0	7.325	48.5	0	0.16	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s52	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	96.7	71.7	0	18.825	55.8	0	13.51	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s53	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	16.7	33.3	0	0.025	46.1	0	1.56	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s54	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	0	63.3	0	0.15	50	0	0.54	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s55	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														100	100	15	51.7	15	0	46.4	0	5.07	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+Q-s56	e507 §E507 纯续训第二批（seed 33~56）	纯续训（库内抽样）														0	100	50	41.7	0	2.6	35.3	0	1.63	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s107	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	42	29	42	29	0	50	激光剑连刺											0	21.3	1	0.17	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s108	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	6	15	6	15	1	45	坦克线											1.675	48.3	1	1.72	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s109	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	58	42	58	42	0	63	只防御(不还手)											0.125	38.4	1	1.68	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s110	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	79	47	79	47	0	95	只枪(1ジ压制·打最肥)											0.025	45	1	1.93	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s111	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	98	91	98	91	0	99	只防御(不还手)											32.6	37.5	1	5.97	3	0	判得动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s112	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	56	21	56	21	0	55	只防御(不还手)											0.075	46.7	1	2.88	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s113	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	33	19	50	28	0	54	只枪(1ジ压制·打最肥)						0	100	85	50	0	1.3	53.3	2	1.58	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s114	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	94	97	94	97	0	97	只防御(不还手)											0	30.7	1	0.26	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s115	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	12	0	12	0	1	87	只枪(1ジ压制·打最肥)											0	46.6	1	1.15	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s116	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	100	100	100	100	0	100	只防御(不还手)											0.225	54.6	1	1.48	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s117	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	27	32	51	42	0	64	只枪(1ジ压制·打最肥)											1.55	44	1	3.85	3	0	判不动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s118	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	26	40	25	41	0	73	激光剑连刺											2.4	36.5	1	0.24	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s119	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	98	87	98	87	0	97	只防御(不还手)											0	28.1	1	0.57	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s120	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	83	76	83	76	0	83	只防御(不还手)											0	42.9	1	1.65	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s121	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	98	98	96	97	0	97	只防御(不还手)											0	46.4	1	4.36	3	0	判不动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s122	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	34	25	34	25	0	45	只枪(1ジ压制·打最肥)											0	27.8	1	0.92	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s123	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	15	4	23	6	1	41	只枪(1ジ压制·打最肥)											1.675	58.3	1	3.44	3	0	判不动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s124	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	65	27	78	32	0	81	只防御(不还手)											0	35.5	1	3.61	3	0	判不动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s125	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	11	4	17	7	1	58	只枪(1ジ压制·打最肥)											0.125	51.6	1	3.45	3	0	判得动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s127	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	46	14	46	14	0	51	珠爆发(ジ→蓄电珠→电磁炮/摄魂)											0	27.4	1	0.92	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s128	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	79	7	79	7	0	83	只防御(不还手)											0	41.8	1	1.39	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s129	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	32	29	32	29	0	46	珠爆发(ジ→蓄电珠→电磁炮/摄魂)											0	55.2	1	5.31	3	0	判不动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s130	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	93	69	86	77	0	88	只防御(不还手)											0.275	39.2	1	0.14	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s131	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	100	96	100	96	0	100	只防御(不还手)											0	49	1	5.49	3	0	判不动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s132	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	94	91	94	91	0	97	只防御(不还手)											0.175	41.7	1	0.36	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s135	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	90	92	92	95	0	93	只防御(不还手)											0	48.5	1	0.23	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+R-s137	e521 §E521 三台配方 × seed 107~138（66 粒）	狙击池+示范	300	100	100	100	100	0	100	只防御(不还手)											30.2	26.5	1	1.23	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s107	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	21	16	26	19	1	31	只枪(1ジ压制·打最肥)											3.525	54.5	1	2.95	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s108	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	27	15	27	16	0	99	只枪(1ジ压制·打最肥)											2.975	44.2	1	0.17	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s109	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	39	21	69	38	0	64	只防御(不还手)											2.85	50.4	1	0.82	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s110	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	26	23	43	29	0	40	只防御(不还手)											7.95	50.1	1	24.13	3	0	判得动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s111	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	5	4	16	9	1	24	激光剑连刺											0.775	53	1	1.48	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s112	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	78	51	91	72	0	92	只防御(不还手)											1.35	51	1	2.64	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s113	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	54	40	74	47	0	72	只防御(不还手)											6.15	55.5	1	1.94	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s114	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	34	37	34	37	0	71	珠爆发(ジ→蓄电珠→电磁炮/摄魂)											46.95	19.4	1	3.7	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s115	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	41	37	50	39	0	50	只防御(不还手)						0	100	70	48.3	0	2.225	48.5	1	1.34	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s116	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	81	37	79	50	0	82	只防御(不还手)											0.675	46.2	1	2.14	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s117	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	7	3	6	4	1	41	珠爆发(ジ→蓄电珠→电磁炮/摄魂)											5.875	52.1	1	3.63	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s118	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	80	66	70	51	0	68	只防御(不还手)											3.975	49.3	1	0.57	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s119	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	43	27	47	28	0	55	激光剑连刺											3.65	43.7	1	0.94	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s120	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	600	17	6	23	8	1	49	激光剑连刺	0		48	38	3	100	100	0	81.7	0	7.775	57.2	2	1.48	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s124	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	0	0	0	0	1	29	只枪(1ジ压制·打最肥)											16.95	53	1	1.77	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+S-s125	e521 §E521 三台配方 × seed 107~138（66 粒）	guardSpam 池	300	98	94	99	96	0	98	只防御(不还手)											0	50	1	0.23	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+SHIPPED-Ldemo	incumbent	现役 Ldemo	600	11	16	36	26	1	35	只防御(不还手)			23	10	2	0	100	0	80	0			2						
+SP-s21	e504 §E504 抽签假说 24 臂	教狙击+狙击场														0	100	0	50	0	4.5	49.3	0	7.2	3	0	判得动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+SP-s22	e504 §E504 抽签假说 24 臂	教狙击+狙击场														0	100	0	16.7	0	0	29.1	0	2.76	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+SP-s23	e504 §E504 抽签假说 24 臂	教狙击+狙击场														0	100	0	26.7	0	0	54.5	0	1.06	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+SP-s24	e504 §E504 抽签假说 24 臂	教狙击+狙击场														0	100	0	53.3	0	2.325	30.9	0	4.22	3	0	判不动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+SP-s25	e504 §E504 抽签假说 24 臂	教狙击+狙击场														100	100	100	75	75	0	64.2	0	1.65	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+SP-s26	e504 §E504 抽签假说 24 臂	教狙击+狙击场														100	100	0	38.3	0	0.05	50.4	0	0.69	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+SP-s27	e504 §E504 抽签假说 24 臂	教狙击+狙击场														0	100	0	6.7	0	0	30	0	1.56	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+SP-s28	e504 §E504 抽签假说 24 臂	教狙击+狙击场														0	100	0	1.7	0	0	29.5	0	3.89	3	0	判不动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+SP-s29	e504 §E504 抽签假说 24 臂	教狙击+狙击场														98.3	100	100	61.7	61.7	0	61.7	0	6.37	3	0	判得动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+SP-s30	e504 §E504 抽签假说 24 臂	教狙击+狙击场														0	100	100	76.7	0	7.35	48.4	0	0.66	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+SP-s31	e504 §E504 抽签假说 24 臂	教狙击+狙击场														0	100	100	65	0	2.85	55	0	0.92	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+SP-s32	e504 §E504 抽签假说 24 臂	教狙击+狙击场														0	100	0	8.3	0	0	28	0	3.39	3	0	判不动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s107	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	30	10	35	16	0	39	只防御(不还手)											5.175	53.4	1	3.75	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s108	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	53	46	48	44	0	50	只防御(不还手)											4.3	53.2	1	8.65	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s109	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	17	15	20	8	1	29	珠爆发(ジ→蓄电珠→电磁炮/摄魂)											4.75	48.4	1	6.93	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s110	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	98	92	98	92	0	99	只防御(不还手)											0	35.5	1	0.19	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s111	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	19	6	32	13	1	29	只防御(不还手)	0		23	16	2	0	100	100	75	0	7.925	53	1	1.04	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s112	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	47	46	47	46	0	97	只枪(1ジ压制·打最肥)											0	39.8	1	0	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s113	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	19	24	18	20	1	80	只枪(1ジ压制·打最肥)											31.575	56.9	1	2.9	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s114	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	20	12	27	10	1	40	只枪(1ジ压制·打最肥)											4.9	57.1	1	14.97	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s115	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	83	77	94	91	0	95	只防御(不还手)											0.8	45.1	1	0.47	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s116	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	40	31	36	30	0	55	珠爆发(ジ→蓄电珠→电磁炮/摄魂)											0.225	41.4	1	1.88	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s117	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	92	67	92	67	0	87	只防御(不还手)											0	51.9	1	5.52	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s118	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	60	54	60	54	0	59	只防御(不还手)						0	100	100	68.3	0	0.375	50.4	1	2.48	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s119	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	100	98	98	97	0	99	只防御(不还手)											0	53.3	1	1.46	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s120	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	17	17	32	21	1	32	只防御(不还手)											2.65	51.9	1	2.6	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s121	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	77	81	81	79	0	84	只防御(不还手)											0	44.1	1	1.98	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s122	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	97	95	96	90	0	94	只防御(不还手)											0.6	52.7	1	2.08	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s123	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	55	22	58	23	0	59	只防御(不还手)											2.5	49.2	1	8.52	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s124	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	55	43	69	50	0	70	只防御(不还手)											1.5	50.3	1	0.21	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s126	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	6	2	6	2	1	46	珠爆发(ジ→蓄电珠→电磁炮/摄魂)											6.425	40.4	1	2.2	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s127	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	36	5	36	5	0	36	只防御(不还手)											0	58.4	1	1.34	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s129	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	100	100	100	100	0	100	只防御(不还手)											0	26.2	1	0.02	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s130	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	61	24	61	24	0	52	只防御(不还手)											9.375	39.3	1	5.19	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T-s136	e521 §E521 三台配方 × seed 107~138（66 粒）	纯续训	300	70	49	70	49	0	65	只防御(不还手)											0	25.6	1	1.34	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+T8-s107	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			5.175	53.4	0	2.82	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s108	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			4.3	53.2	0	8.32	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s109	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			4.75	48.4	0	7.33	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s110	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			0	35.5	0	0.36	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s111	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			7.925	53	0	0.23	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s112	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			0	41	0	0.16	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s113	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			31.575	56.9	0	2.8	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s114	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			4.9	57.1	0	12.56	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s115	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			6.075	44.8	0	0.06	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s116	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			0.225	41.4	0	1.28	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s117	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			0	51.9	0	5.43	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s118	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			0.375	50.4	0	2.03	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s119	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			0	53.3	0	0.89	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s120	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			2.65	51.9	0	3.73	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s121	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			0	44.1	0	1.2	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+T8-s122	e528 §E528 当选重验 SEL_EVAL_SEEDS 4→8	纯续训（当选重验 8 粒档）																			0.6	52.7	0	2.39	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_EVAL_SEEDS=8
+U-s200	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	57	29	56	25	0	77	只枪(1ジ压制·打最肥)											2.65	55.9	1	0.21	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s201	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	74	62	75	58	0	74	只防御(不还手)											0.125	40.8	1	0.33	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s202	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	8	1	10	1	1	46	只枪(1ジ压制·打最肥)	0		39	24	1						9.825	61.1	1	2.73	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s203	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	1	1	1	1	1	81	只枪(1ジ压制·打最肥)	3	G 有效技能数 2.71 < 3（打法坍缩到两三张卡） | 行为门未过：G4[docs\artifacts\e548-e539-out\U-s203/long] 无一行脚本能以 > | 行为门未过：G4[docs\artifacts\e548-e539-out\U-s203/multi] 无一行脚本能以 	62	47	1						7.15	53.1	1	1.86	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s204	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	39	19	53	30	0	51	只防御(不还手)											2.975	55.1	1	0.19	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s205	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	47	34	42	33	0	50	只防御(不还手)											3.625	58.3	1	0.71	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s206	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	58	29	58	33	0	100	只枪(1ジ压制·打最肥)											0	43.6	1	6.58	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s207	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	92	78	88	75	0	88	只防御(不还手)											4.4	38.1	1	2.74	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s208	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	33	14	33	10	0	40	只枪(1ジ压制·打最肥)											6.525	56.4	1	1.89	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s209	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	0	0	0	0	1	78	只枪(1ジ压制·打最肥)											7.05	47.2	1	6.79	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s210	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	70	31	70	36	0	73	只防御(不还手)											0.075	32.3	1	0.09	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s211	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	84	46	84	48	0	84	只防御(不还手)											2	58.2	1	0.61	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s212	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	92	93	89	84	0	88	只防御(不还手)											0.15	32.2	1	3.72	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s213	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	88	48	88	44	0	88	只防御(不还手)											0.6	46.1	1	5.42	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s214	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	2	2	2	2	1	54	只枪(1ジ压制·打最肥)											0	56.4	1	0.43	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s215	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	63	47	63	41	0	94	只枪(1ジ压制·打最肥)											18.5	51.2	1	0.43	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s216	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	12	7	13	8	1	49	坦克线	0		35	40	1						21.85	51.1	1	1.41	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s217	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	28	17	26	17	0	34	只枪(1ジ压制·打最肥)											13.25	45.2	1	3.56	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s218	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	30	20	45	36	0	52	只防御(不还手)											1.975	54.6	1	0.26	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s219	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	2	0	2	0	1	47	只枪(1ジ压制·打最肥)											0	50.7	1	7.47	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s220	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	93	88	93	88	0	94	只防御(不还手)											0.575	36.7	1	7.64	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s221	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	94	97	94	97	0	97	只防御(不还手)											0	36.6	1	0.4	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s222	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	29	50	39	53	0	48	只防御(不还手)											4.875	44.9	1	1.32	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+U-s223	e539 §E539 独立抽样一（seed 200~223）	纯续训（独立抽样一）	300	59	44	68	35	0	79	只防御(不还手)											2.6	43.2	1	8.3	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s300	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	78	50	79	52	0	91	只枪(1ジ压制·打最肥)											3.725	54	1	1.02	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s301	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	85	85	82	74	0	78	只防御(不还手)											0.475	45.8	1	8.42	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s302	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	51	40	48	34	0	54	只枪(1ジ压制·打最肥)											0.7	58.4	1	0.59	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s303	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	13	13	15	14	1	27	只枪(1ジ压制·打最肥)											2.05	54.4	1	0.66	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s304	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	28	8	27	9	0	27	珠爆发(ジ→蓄电珠→电磁炮/摄魂)											4.8	48.4	1	4.27	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s305	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	16	5	25	13	1	28	只防御(不还手)											1.975	50.8	1	1.7	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s306	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	47	44	55	44	0	60	只防御(不还手)											0.8	57.4	1	0.49	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s307	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	14	6	26	19	1	35	珠爆发(ジ→蓄电珠→电磁炮/摄魂)											5.3	49	1	0.26	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s308	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	84	51	84	53	0	88	只防御(不还手)											0.375	45.7	1	0.42	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s309	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	88	86	88	86	0	90	只防御(不还手)											0.15	56.8	1	0.4	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s310	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	100	100	100	100	0	100	只防御(不还手)											0.9	22.5	1	1.75	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s311	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	44	26	52	31	0	72	激光剑连刺											7.725	50.7	1	2.74	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s312	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	11	14	11	14	1	47	只枪(1ジ压制·打最肥)											0	46.1	1	4.08	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s313	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	34	37	37	35	0	41	只防御(不还手)											0.325	51	1	1.01	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s314	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	61	30	56	29	0	52	只防御(不还手)											10.025	54.8	1	9.27	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s315	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	0	1	0	1	1	11	激光剑连刺											6.025	52.3	1	1.02	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s316	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	27	9	51	14	0	55	只防御(不还手)											2.675	53.4	1	3.98	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s317	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	35	47	64	53	0	65	只防御(不还手)											0.75	48.9	1	4.72	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s318	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	100	99	100	98	0	100	只防御(不还手)											0	49.2	1	2.19	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s319	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	86	87	88	89	0	87	只防御(不还手)											4.525	50.6	1	3.06	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s320	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	80	63	82	67	0	79	只防御(不还手)											1.075	44.6	1	0.69	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s321	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	83	67	83	66	0	82	只防御(不还手)											50.925	38.8	1	0.66	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s322	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	46	29	45	29	0	85	只枪(1ジ压制·打最肥)											0.55	32.7	1	4.83	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s323	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	63	30	65	31	0	58	只防御(不还手)											0.15	43.4	1	1.28	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s324	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	90	45	90	44	0	91	只防御(不还手)											1.225	34.8	1	1.79	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s325	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	89	86	89	87	0	90	只防御(不还手)											0.075	43.7	1	1.35	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s326	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	97	92	98	92	0	94	只防御(不还手)											0	46.3	1	0	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s327	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	66	43	68	39	0	68	只防御(不还手)											3.125	54.7	1	4.69	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s328	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	14	7	14	7	1	53	只枪(1ジ压制·打最肥)											0	49.1	1	0.31	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s329	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	37	26	47	30	0	45	只防御(不还手)											2.175	53	1	0.69	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s330	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	58	35	69	43	0	65	只防御(不还手)											2.925	53.2	1	10.4	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s331	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	100	100	100	100	0	100	只防御(不还手)											0	47.2	1	2.53	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s332	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	85	74	87	74	0	87	只防御(不还手)											0	52.2	1	0.87	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s333	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	88	90	88	90	0	93	只防御(不还手)											0	30.9	1	6.39	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s334	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	99	99	100	99	0	100	只防御(不还手)											0	43	1	3.06	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s335	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	92	92	75	66	0	76	只防御(不还手)											0.35	37.8	1	3.18	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s336	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	19	12	20	17	1	22	激光剑连刺											1.15	49.8	1	0.71	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s337	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	38	25	45	28	0	49	只防御(不还手)											2.85	54.9	1	1.84	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s338	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	35	20	51	46	0	50	只防御(不还手)											0.3	49.7	1	2.81	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s339	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	99	63	99	63	0	100	只防御(不还手)											19.575	42.4	1	6.44	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s340	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	7	6	12	10	1	16	珠爆发(ジ→蓄电珠→电磁炮/摄魂)											1.3	53.7	1	7.22	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s341	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	26	11	41	23	0	36	只防御(不还手)											5.325	53	1	0.36	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s342	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	33	28	34	29	0	37	只防御(不还手)											7.575	47.5	1	0.71	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s343	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	58	48	56	49	0	54	只防御(不还手)											1.075	47.8	1	2.5	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s344	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	32	12	37	22	0	45	激光剑连刺											3.85	50.9	1	10.09	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s345	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	38	35	39	28	0	43	只防御(不还手)											5.125	49.7	1	1.44	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s346	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	17	7	19	8	1	31	只枪(1ジ压制·打最肥)											0.475	40.3	1	0.17	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s347	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	91	76	91	87	0	93	只防御(不还手)											0.025	48.9	1	0.14	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s348	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	84	81	84	81	0	81	只防御(不还手)											9.1	40.4	1	5.92	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s349	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	28	15	31	20	0	41	只枪(1ジ压制·打最肥)											0.125	47.5	1	4.46	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s350	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	14	9	14	9	1	66	只枪(1ジ压制·打最肥)											0	53.2	1	1.32	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s351	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	58	50	57	49	0	65	只防御(不还手)											22.85	44.5	1	2.36	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s352	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	30	45	27	36	0	59	只枪(1ジ压制·打最肥)											0.825	45	1	4.24	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s353	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	34	16	34	16	0	34	只防御(不还手)											0.025	44.4	1	3.18	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s354	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	5	0	85	71	1	83	只防御(不还手)											1.7	48.8	1	2.05	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s355	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	93	72	93	72	0	92	只防御(不还手)											0.1	47.6	1	0.68	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s356	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	98	99	98	99	0	99	只防御(不还手)											0	41.9	1	4.05	3	0	判得动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s357	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	63	51	68	53	0	64	只防御(不还手)											0.325	50.5	1	1.41	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s358	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	50	44	74	60	0	72	只防御(不还手)											7.05	43.9	1	4.43	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+V-s359	e551 §E551 判决批（seed 300~359）	纯续训（判决批）	300	36	30	45	36	0	43	只防御(不还手)											7.225	51.1	1	0.4	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+plainAnchor-s11	e502 §E502 R1 修正版（狙击场单自由度 ×3 seed）	示范锚·无狙击场（对照）																			18.325	53	0	0.52	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+plainAnchor-s12	e502 §E502 R1 修正版（狙击场单自由度 ×3 seed）	示范锚·无狙击场（对照）																			0	57.8	0	3.65	3	0	判不动	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+plainAnchor-s13	e502 §E502 R1 修正版（狙击场单自由度 ×3 seed）	示范锚·无狙击场（对照）																			0.025	50.2	0	0.75	3	1	抽签	K2	HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js
+snipeNoPool-s11	e502 §E502 R1 修正版（狙击场单自由度 ×3 seed）	示范+狙击池·不上场																			0.025	36.2	0	1.44	3	1	抽签	K2	HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+snipeNoPool-s12	e502 §E502 R1 修正版（狙击场单自由度 ×3 seed）	示范+狙击池·不上场																			16.225	39.7	0	0.8	3	1	抽签	K2	HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+snipeNoPool-s13	e502 §E502 R1 修正版（狙击场单自由度 ×3 seed）	示范+狙击池·不上场																			0.025	44.4	0	2.78	3	1	抽签	K2	HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+snipePool-s11	e502 §E502 R1 修正版（狙击场单自由度 ×3 seed）	示范+狙击池·上场																			0	43.3	0	2.93	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+snipePool-s12	e502 §E502 R1 修正版（狙击场单自由度 ×3 seed）	示范+狙击池·上场																			2.025	59.5	0	0.73	3	1	抽签	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+snipePool-s13	e502 §E502 R1 修正版（狙击场单自由度 ×3 seed）	示范+狙击池·上场																			0.025	50.1	0	3.47	3	0	判不动	K2	COUNTER_OPPS=snipeSpam · HOTSTART=1 · IMIT_FRAC=1 · IMIT_ONLY=snipe · IMIT_OVERRIDE=1 · IMIT_TEACHER=pickSnipeSpam · SEEDPACK=docs/artifacts/e234-out/K2.js
+v7ws1-82	其他	其他									3	反弹墙里穿透卡零命中（激光剑/坦克/狙击枪/电磁炮）⇒ 面对 4 面反弹墙一枪未发（D 列会归零） | 行为门未过：G4[e524-out/v7ws1-82/long] 无一行脚本能以 >60% 击败它（最克「只枪(1ジ压制 | 行为门未过：G5[e524-out/v7ws1-82/long] 面对"只防御不还手"必须能清场（实测防席夺冠 32% 				0	100	0	83.3	0			0						

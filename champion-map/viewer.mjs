@@ -410,7 +410,13 @@ for (const r of DATA) if (r.fam && LIN[r.id]) FAMLAB[r.fam] = LIN[r.id].famLabel
     c.par = String(p.id).slice(5, 13); c.pof = p.id; c.psrc = 'slot-chain'; nchain++; }
   const tgt = byId['SLOT-e379c62c'];
   let nfix = 0, held = 0;
-  if (tgt) for (const d of DATA) { if (d.pof !== 'champion-5p-ab2-base') continue;
+  if (tgt) for (const d of DATA) {
+    /* §E554：这里原来只认 `champion-5p-ab2-base` 这**一个文件名**。但那是同一份权重在盘上的两份拷贝之一
+     *   （§E374 已证 ab2-base 与 v1.3.58 同 wid），而 `lineage.mjs` 的 `parentOf` 填的是"当时在盘上的那份的名字" ⇒
+     *   10-09 早上清掉那份未入库的拷贝之后，生成器改填 `champion-5p-v1.3.58`，别名不匹配 ⇒ **56 条实录边又悬空**
+     *   （页内那条"父边不许指向图上不存在的枚"当场红，实测 56 条）。
+     *   ⇒ 别名必须按**身份**认，不能按"哪份拷贝今天活着"认：两个名字都收，下面的 wid/时间守卫原样不动。 */
+    if (d.pof !== 'champion-5p-ab2-base' && d.pof !== 'champion-5p-v1.3.58') continue;
     /* 身份守卫先于接线：父哈希必须真的是这枚节点的权重（不是"名字看着像"） */
     if (String(d.par).slice(0, 8) === String(tgt.id).slice(5, 13) && Date.parse(d.ts) > Date.parse(tgt.ts)) { d.pof = tgt.id; nfix++; continue; }
     /* 挡下来的必须**显式退回**，不许留着那个图上没有的文件名 —— 留着就是"静默少画"（§E378 之前 57 条就是这么没的）。

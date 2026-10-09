@@ -320,7 +320,32 @@ const FUS = ROWS.filter(r => !SLOTID[r.id] && (SOUPSET[r.id] || fromSoup(r.id)))
 const FUSID = {}; for (const r of FUS) FUSID[r.id] = 1;
 if (FUS.length) console.log('§E490 融合家族摘出来 ' + FUS.length + ' 枚（融合粒 ' + Object.keys(SOUPSET).length +
   ' ‖ 从它续训的 ' + (FUS.length - Object.keys(SOUPSET).length) + '）：' + FUS.map(r => r.id).join(' '));
-for (const r of ROWS) { if (SLOTID[r.id] || FUSID[r.id]) continue; if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push(r); }
+/* ===== §E554 训练臂按**方法快照**拆家族（用户 10-09 07:2x：「把晚上训练的东西进图」）=====
+ * 病（实测出来的，不是设想）：`train-3p` 从 v1.6 起把旋钮写进 `meta.recipe.env`，而上面那 16 根在册轴**一根都不填** ⇒
+ *   照轴聚类，今晚 271 枚（其实是"纯续训 / guardSpam 池 / 狙击池+示范 / SEL_EVAL_SEEDS=8 / veto 单自由度…"好几条线）
+ *   全落进同一个兜底类（家族 22，283 枚），标签印的是"珠价 divW 0.3→- ‖ 代数 250→400"—— 它们从没碰过 divW。
+ *   那样这张图等于没进：用户问"今晚那批在哪"，答案是"和 9 枚 E59 老臂叠在同一行"。
+ * 名单**不许住在 gitignored 的产物目录里**（§E503 的教训：干净克隆里融合父边 6→0 而退出码还是 0）⇒
+ *   批次表走**入库件** `champion-map/gate-arms-2026-10-09.tsv` 的 `knobs` / `seedpack` 两列；
+ *   读不到就**响亮降级**（合回兜底类可以，但不许静默）。 */
+const ARMF = join(HERE, (process.argv.find(x => x.indexOf('--arms=') === 0) || '').slice(7) || 'gate-arms-2026-10-09.tsv');
+const ARMMETA = {};
+if (existsSync(ARMF)) {
+  const AL = rd(ARMF).replace(/\n+$/, '').split('\n'), ah = AL[0].split('\t');
+  const iId = ah.indexOf('id'), iK = ah.indexOf('knobs'), iS = ah.indexOf('seedpack');
+  if (iId < 0 || iK < 0) { console.error('⛔ §E554 臂批次表 ' + ARMF + ' 没有 id/knobs 两列 ⇒ 不敢按它拆家族'); process.exit(2); }
+  for (const l of AL.slice(1)) { const c = l.split('\t');
+    if (c[iId] && c[iK]) ARMMETA[c[iId]] = { knobs: c[iK], seedpack: c[iS] || '' }; }
+} else {
+  console.log('⚠ §E554 读不到臂批次表（' + ARMF.replace(ROOT + '/', '') +
+    '）⇒ 本次**不拆臂家族**：臂会落回"只按代数分"的兜底类，图上看不出哪一晚哪条线。要完整图别漏这张入库表。');
+}
+const INROWS = {}; for (const r of ROWS) INROWS[r.id] = 1;
+const ARMID = {}; for (const id of Object.keys(ARMMETA)) if (INROWS[id]) ARMID[id] = 1;
+const nArmMiss = Object.keys(ARMMETA).filter(id => !INROWS[id]).length;
+if (Object.keys(ARMID).length) console.log('§E554 臂批次表读到 ' + Object.keys(ARMMETA).length + ' 枚 ‖ 在图上 ' +
+  Object.keys(ARMID).length + ' 枚（不在图上的 ' + nArmMiss + ' 枚是库里对照件，本来就没登记）⇒ 按 knobs+父 拆臂家族');
+for (const r of ROWS) { if (SLOTID[r.id] || FUSID[r.id] || ARMID[r.id]) continue; if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push(r); }
 const groups = [...bySig.entries()].map(([sig, rs]) => ({ sig, rs,
   t0: rs.map(x => x.ts).sort()[0] || '', t1: rs.map(x => x.ts).sort().slice(-1)[0] || '' }))
   .sort((a, b) => (a.t0 < b.t0 ? -1 : a.t0 > b.t0 ? 1 : b.rs.length - a.rs.length));
@@ -364,6 +389,44 @@ if (FUS.length) {
       ' ‖ 父 ' + (pr.join(' · ') || '不可考') + ' ‖ 不是训练家族：两粒父的权重平均（tools/soup-pack.mjs）' };
   defs.push(d); for (const r of FUS) FAM[r.id] = d;
   console.log('§E490 已开融合家族 号=' + n + '（' + FUS.length + ' 枚 ‖ 标签「' + d.label + '」）'); }
+/* ===== §E554 训练臂的**臂线家族**（追加在融合那一行之后 ⇒ 家族号只往后加，不动任何在册枚的号）=====
+ *   为什么必须追加而不是插进去：CHANGELOG v1.6.32 与 10-07/10-08 日志都点名"**融合家族 25**"，
+ *   把新行排在它前面就会让历史账面指向另一族（25 变成 146 枚的纯续训臂）⇒ 家族号是**身份**，不是排版。
+ *   成员规则来自批次表的 `knobs`（`meta.recipe.env` 剔掉逐枚身份键 ARM/SEED/BAND_DIR/T3P_OUT）+ 热启动父；
+ *   ≥6 枚独立成行，<6 枚并成"臂线·零散"（与「零散实验」同一口径，但**不混进那一行** —— 那一行是"配置各不相同的老散枚"）。
+ *   标签里必须写清"这不是那 16 根轴"，否则读图的人会把 `HOTSTART=1` 当成一次配置改动。 */
+{ const byArm = new Map();
+  for (const r of ROWS) { const m = ARMMETA[r.id]; if (!m || !ARMID[r.id]) continue;
+    const s = 'env:' + m.knobs + '#parent=' + m.seedpack;
+    if (!byArm.has(s)) byArm.set(s, []); byArm.get(s).push(r); }
+  const ag = [...byArm.entries()].map(([s, rs]) => ({ s, rs,
+    t0: rs.map(x => x.ts).sort()[0] || '', t1: rs.map(x => x.ts).sort().slice(-1)[0] || '' }))
+    /* 排序键是 **t0**，不是枚数：这张图"上→下即时间推进"是既有的读法，而页内自检那条"家族行序"腿就是钉这条的
+     *   （第一版按枚数排 ⇒ guardSpam 那行(52 枚)排在狙击池那行(42 枚)下面，而它的训出时刻更早 ⇒ 当场红一条序违规）。
+     *   同 t0 再按枚数多的在上， purely 为了让同一天的几条线有个稳定次序。 */
+    .sort((a, b) => (a.t0 < b.t0 ? -1 : a.t0 > b.t0 ? 1 : b.rs.length - a.rs.length));
+  const big = ag.filter(g => g.rs.length >= 6), small = ag.filter(g => g.rs.length < 6);
+  let an = Math.max.apply(null, defs.map(x => x.n).concat([0]));
+  const lab = g => { const k = g.s.replace(/^env:/, '').replace(/#parent=.*$/, '');
+    const short = k.split(' · ').filter(x => !/^(HOTSTART|SEEDPACK)=/.test(x));
+    return '臂线 ' + (short.join(' · ') || '无额外旋钮（纯续训）') + ' ‖ ' + g.rs.length + ' 枚 ‖ ' +
+      String(g.t0).slice(5, 10) + '→' + String(g.t1).slice(5, 10) + ' ‖ 父 ' + (g.s.split('#parent=')[1] || '不可考') +
+      ' ‖ 配方差异在 meta.recipe.env，不在那 16 根在册轴上（§E554）'; };
+  /* 零散那一行也参加 t0 排序（它是几个小类的合并，t0 取成员里最早的）⇒ 否则"追加在最后"照样会踩行序那条腿 */
+  const all = big.slice();
+  if (small.length) { const rs = small.flatMap(g => g.rs);
+    all.push({ s: '零散#' + small.map(g => g.s.split('#parent=')[1] || '').join(','), rs, merged: small.length,
+      t0: rs.map(x => x.ts).sort()[0] || '', t1: rs.map(x => x.ts).sort().slice(-1)[0] || '' }); }
+  all.sort((a, b) => (a.t0 < b.t0 ? -1 : a.t0 > b.t0 ? 1 : b.rs.length - a.rs.length));
+  for (const g of all) {
+    const d = { n: ++an, g: { sig: g.merged ? null : g.s, rs: g.rs, t0: g.t0, t1: g.t1 },
+      label: g.merged ? ('臂线·零散（<6 枚的旋钮类合并） ‖ ' + g.rs.length + ' 枚 ‖ ' +
+        String(g.t0).slice(5, 10) + '→' + String(g.t1).slice(5, 10) + ' ‖ ' + g.merged +
+        ' 个旋钮类（veto 单自由度、示范锚那一族）') : lab(g) };
+    defs.push(d); for (const r of g.rs) FAM[r.id] = d; }
+  console.log('§E554 臂家族：≥6 枚的线 ' + big.length + ' 个（覆盖 ' + big.reduce((s, g) => s + g.rs.length, 0) + ' 枚 ‖ ' +
+    big.map(g => g.rs.length + ' 枚').join(' ‖ ') + '） ‖ 零散 ' + small.reduce((s, g) => s + g.rs.length, 0) +
+    ' 枚 / ' + small.length + ' 个类 ‖ 家族号追加到 ' + an + '（在册各行的号一个没动）'); }
 /* §E314 → §E464 更正：这里原来写的「无实体」是**错的**，错的是一台仪器的口径。
  *   §E314 那遍穷尽扫过盘上 1461 个 .bak + 593 个可达 blob + 4190 个对象库 blob，逐枚算权重指纹 ⇒ 没找到 `d13d3c85…`。
  *   但它算的是「文件里那份数组」的哈希，而训练服务记父走的是 `weightsId(loadAny(种子).params)`
