@@ -154,10 +154,30 @@ const BYBASE = {};
 for (const r of REC) { const k = String(r.rel || r.id).replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, '');
   if (k && !BYBASE[k]) BYBASE[k] = r.id; if (r.id && !BYBASE[r.id]) BYBASE[r.id] = r.id;
   const a = r.id.replace(/^SHIPPED-/, ''); if (a !== r.id && !BYBASE[a]) BYBASE[a] = r.id; }   /* 链上节点叫 Ldemo、图上叫 SHIPPED-Ldemo */
-function seedpackOf(m) { const e = m.recipe && m.recipe.env; const p = e && e.EPIRUS_SEEDPACK;
-  if (typeof p !== 'string' || !p) return '';
+function seedpackFile(m) { const e = m.recipe && m.recipe.env; const p = e && e.EPIRUS_SEEDPACK;
+  return typeof p === 'string' && p ? p : ''; }
+function seedpackOf(m) { const p = seedpackFile(m); if (!p) return '';
   const k = p.replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, '');
   return BYBASE[k] || ''; }
+/* ===== §E555 把"按路径解析出来的父"再问一句：**那份文件此刻的权重，和图上那个节点的权重是不是同一份？**
+ *   为什么这一问值得问（用户 10-09 08:5x：「你昨天刚训练的怎么会不确定父节点」）：
+ *   `train-3p` 写进包里的父只有 `EPIRUS_SEEDPACK`（一个**路径**），没有 `hotstartFrom`（权重哈希）⇒
+ *   按 DS 10-08 定的分级（实线 = 有哈希为证 ‖ 虚线 = 从路径推断）今晚 271 枚连同 K2/D4a 全被画成虚线，
+ *   读起来像"父是谁不知道"。可事实是：**父节点是确定的（K2），不确定的只是证据的级别**。
+ *   而这一级其实可以升到"身份可核"：把 env 里那条路径指向的文件算一遍权重指纹，与该节点在册的指纹比 ⇒
+ *   相等就不是"拿今天的槽主冒充昨天的父"（§E330/§E367 那两种病都被这一问挡住：同名不同权重会直接不等）。
+ *   不等或读不到 ⇒ 保持 `seedpack`（虚线），**不给自己升等**。 */
+const WIDCACHE = {};
+function widOfFile(rel) { if (!rel) return ''; if (WIDCACHE[rel] !== undefined) return WIDCACHE[rel];
+  let w = ''; try { w = widOfArr(packArr(readFileSync(join(ROOT, rel), 'utf8'))) || ''; } catch (e) { w = ''; }
+  WIDCACHE[rel] = w; return w; }
+let nSpkWid = 0, nSpkLoose = 0;
+function seedpackVerified(m, parId) {
+  if (!parId) return false;
+  const f = seedpackFile(m); if (!f) return false;
+  const wFile = widOfFile(f); if (!wFile) return false;
+  const wNode = WIDOF[parId] || '';
+  return !!wNode && wFile === wNode; }
 /* ===== §E464 pre-v7 包的「第二身份」登记 =====
  * 训练服务记热启动父走的是 `weightsId(loadAny(种子).params)`，也就是**嵌入成 v7 之后**那份数组的指纹
  *   （FEAT_S 123 → 213 ⇒ 数组 3337 → 5689 ⇒ 哈希必变）⇒ 只索引「文件里那份数组」的哈希时，
@@ -240,6 +260,9 @@ for (const r of REC) { const m = r.m || {};
     else { demoted = parId; nBack++; }
     byPath = ''; byArm = ''; }
   if (byPath) nSpk++; if (byArm) nArm++;
+  /* §E555：路径级父指针能不能升到"权重身份可核"，只由这道比较决定（相等才算，读不到/不等一律留在 seedpack） */
+  const spWid = !!byPath && seedpackVerified(m, byPath);
+  if (byPath) { if (spWid) nSpkWid++; else nSpkLoose++; }
   /* ===== §E487 融合粒（`tools/soup-pack.mjs` 的产物）：它**天生有两个父** =====
    *   `meta.soup.sources` 是工具自己写进去的实录（每粒来源的 路径 + wid + ts），不是推断 ⇒
    *   第一父走正常的 `parentOf`，第二父走新列 `parentOf2`，图上用**另一种颜色的边**画第二条。
@@ -266,7 +289,7 @@ for (const r of REC) { const m = r.m || {};
     parent: norm(m.hotstartFrom || WIDOF[byPath || byArm || bySlot] || '') };
   ROWS.push({ id: r.id, ts: m.ts || '', seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
     parentOf: byHash || byPath || byArm || bySlot || sP1, wid: r.wid || '',
-    psrc: byHash ? (byHashEmb ? 'hash-emb' : 'hash') : (byPath ? 'seedpack' : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (sP1 ? 'soup' : (demoted ? 'demoted' : ''))))),
+    psrc: byHash ? (byHashEmb ? 'hash-emb' : 'hash') : (byPath ? (spWid ? 'seedpack-wid' : 'seedpack') : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (sP1 ? 'soup' : (demoted ? 'demoted' : ''))))),
     pof2: sP2, psrc2: sP2 ? 'soup' : '',
     demoted: demoted,
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
@@ -295,6 +318,9 @@ for (const r of ROWS) if (r.psrc === 'slot-at-time' || r.demoted)
 console.log('父指针：' + np + ' 枚记了 hotstartFrom ‖ 其中 ' + nres + ' 枚能解析到**具体哪一枚**（' +
   (np ? Math.round(nres / np * 100) : 0) + '%）‖ 解析不出的多是"父是当时的现役冠军、后来被覆写没留档"');
 console.log('　§E330 退路解析出的：SEEDPACK 路径 ' + nSpk + ' 枚 ‖ 臂级（同臂带内候选留的指针）' + nArm + ' 枚（这些的产物自己不带任何指针）');
+/* §E555：路径级父指针里"权重身份可核"的那部分单独报数 —— 它决定图上画实线还是虚线，所以必须看得见是多少枚 */
+console.log('　§E555 SEEDPACK 那 ' + nSpk + ' 枚里：**种子文件的权重指纹 == 图上节点的指纹**（可升到实线）' + nSpkWid +
+  ' 枚 ‖ 只按名字对上、身份核不了（保持虚线）' + nSpkLoose + ' 枚');
 const bySig = new Map();
 /* ===== §E466 旧槽位冠军**不参与家族聚类**（用户 10-08 指着图问"怎么有几个后期的点飞到家族 1 去了"）=====
  *   它们不是一次训练产物，是"当时上槽的那枚权重"（16 行的 META 来自 e370-out 的导出，配置字段多半是空的）。

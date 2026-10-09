@@ -880,6 +880,16 @@ function tip(d, fr) {
     '\\n家族 ' + d.fam + '（按训练方法/目标分）：' + (famLab(d) || '—') +
     '\\n　RNG seed 名字后缀=' + d.seed + ' ‖ META.seed=' + (d.ms || '—') + ' ‖ 训出 ' + (d.ts || '—') +
     '\\n　热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof : (d.pnm ? '\\n　　' + d.pnm : '（父指针未落档）')) +
+    /* §E555（用户 10-09 08:5x：「你昨天刚训练的怎么会不确定父节点」）：线的实/虚就是这条"来路"决定的，
+     *   所以它必须能在明细里直读，而不是只有一张图例。三种写法分开：
+     *   hash / hash-emb = 包里 「hotstartFrom” 记的就是父的权重指纹（训练服务自己写的实录）；
+     *   seedpack-wid = 包里只有 「EPIRUS_SEEDPACK” 这条**路径**，但生成器把该文件的权重指纹与图上节点对过 ⇒ 相等（身份可核，画实线）；
+     *   seedpack / arm / slot-at-time = 只按名字或时间对上，没核到权重（画虚线）。 */
+    (d.pof ? '\\n　这条父边的来路 = ' + (d.psrc || '未标') +
+      (d.psrc === 'seedpack-wid' ? '（种子路径 + 事后核过权重一致）'
+        : d.psrc === 'seedpack' ? '（只有种子路径，权重没对上 ⇒ 虚线）'
+        : d.psrc === 'arm' ? '（按臂名反查，虚线）'
+        : d.psrc === 'slot-at-time' ? '（按时间轴问"当时槽里是谁"改接的，虚线）' : '') : '') +
     /* §E487 融合粒：把"它是哪两枚的平均"直读出来（来源与权重在包 meta 里，这里只印第二父的节点名）*/
     (d.pof2 ? '\\n　融合的另一粒父 ' + d.pof2 + '（图上走红线 ‖ 这枚 = 两粒的权重平均）' : '') +
     /* §E363 + §E367 更正：这条边"父比子晚"**不是**槽位时刻的语义问题，而是**假边** ——
@@ -1239,7 +1249,17 @@ function putLabel(txt, x, y, force, rot, idx) {
 function wantLabel(d) {
   if (st.labels === 'off') return false;
   if (st.hi[gk(d)]) return true;
+  /* §E556（用户 10-09 08:5x：「按家族高亮的时候，历代冠军的标签并不会暗掉，很容易导致混淆」）：
+   *   被点选 / 加进对比 / 搜索命中的**一定标**（这是用户自己指定的，不能被高亮规则挤掉）。
+   *   原来这条只是"事实上成立"——labelSet 给它们 pri=-1，但要不要进名单是这里决定的，
+   *   所以一枚既不在高亮族、又不是冠军/前 12 的选中点其实**没有名字**。顺手补明。 */
+  if (d.id === st.sel || st.cmp.indexOf(d.id) >= 0) return true;
   if (st.q && String(d.id).toLowerCase().indexOf(st.q) >= 0) return true;   /* §E453 搜索改成不分大小写：包名里有 v7FGta / SLOT-AB12 这种混写，按原样比会「打了却搜不到」 */
+  /* §E556：高亮态下"冠军 / 父链 / 前 12 / 尾 6"这几条常驻规则**让位给高亮**。
+   *   不这样就是用户截图里那个样子：一片暗点上面浮着十几个亮名字，读起来像"这些名字属于刚点的那一族"。
+   *   压暗的是标签，不是数据 —— 取消高亮（或点"清除高亮"）它们全回来。 */
+  var hiOn = false; for (var hk in st.hi) if (st.hi[hk]) { hiOn = true; break; }
+  if (hiOn) return false;
   if (st.labels === 'all') return true;
   /* §E330 父链那几枚必须常驻：它们不是冠军、名次也不显眼（E51-t8-713 排 61），落在"零散实验"那一行里
    *   ⇒ 不点名就找不到，而用户问的正是"现役的祖先在图上哪去了"。 */
@@ -1519,9 +1539,11 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
   if (st.edges !== 'off') {
     var EL = [];
     for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
-      /* §E373 连线开关：'off' 一条不画；'hash' 只画包自己记下的那份权重哈希（最硬的一级来路）。
-       *   §E378 的接替边 psrc='slot-chain' 在 'hash' 档**不画**（它不是血统）。 */
-      if (st.edges === 'hash' && dd.psrc !== 'hash') continue;
+      /* §E373 连线开关：'off' 一条不画；'hash' 只画**父身份可证**那一级（哈希 / 种子文件同权重）。
+       *   §E378 的接替边 psrc='slot-chain' 在 'hash' 档**不画**（它不是血统）。
+       *   ⚠ 原来这一档写的是 「psrc !== 'hash'” ⇒ 连 「hash-emb”（§E464 那批靠"嵌入后身份"才对上的）都不画，
+       *     与同一文件里"实线 = hash / hash-emb"的分级自相矛盾；这次一起收进来。 */
+      if (st.edges === 'hash' && dd.psrc !== 'hash' && dd.psrc !== 'hash-emb' && dd.psrc !== 'seedpack-wid') continue;
       var bq = backOf(dd), cq = dd.psrc === 'slot-chain', sq = dd.psrc === 'soup';
       /* §E490 融合粒的**两根父边同色**（用户 10-08：「让两根融合线都用同一个颜色。可以用红色的和蓝色区分开」）：
        *   原来第一父走普通淡蓝、只有第二父是紫 ⇒ 读起来像"一枚热启动 + 一枚额外说明"，
@@ -1532,13 +1554,20 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
        *     页内那条腿就变成一台只会回显条件的假仪器（本仓"回显生效值"那条老规矩；牙口实测过这一层）。 */
       /* §2026-10-08 DS（用户转 Claude 复核：「实线 = 有哈希为证的血缘，虚线 = 从路径推断出来的」）：
        *   kind 0 原来没有区分来源 ⇒ 把"实线"收紧为**只有 hash / hash-emb**（有哈希为证）；
-       *   其余来源（seedpack / arm / slot-at-time）与倒挂假边一样走**长虚线**（kind 1 的既有样式）。 */
-      var _hashBacked = (dd.psrc === 'hash' || dd.psrc === 'hash-emb');
+       *   其余来源（seedpack / arm / slot-at-time）与倒挂假边一样走**长虚线**（kind 1 的既有样式）。
+       * §2026-10-09 §E555 把这条分级修准了一格（用户 08:5x：「你昨天刚训练的怎么会不确定父节点」）：
+       *   「train-3p” 写进包里的父只有 「EPIRUS_SEEDPACK”（路径）没有 「hotstartFrom”（哈希）⇒ 今晚 271 枚连同 K2/D4a 全被画成虚线，
+       *   读起来像"父是谁不知道"，而**父节点从来是确定的**，不确定的只是证据级别。
+       *   「lineage.mjs” 现在会把那条路径指向的文件算一遍权重指纹、与图上节点的指纹比：**相等 ⇒ psrc=seedpack-wid**
+       *   （同名不同权重那种假父边会被这一步否掉，正是 §E330/§E367 的病）⇒ 与 hash 同级画实线；
+       *   不等/读不到 ⇒ 留在 「seedpack”，继续虚线。**这一级不等于哈希级**：哈希是训练服务自己记的，这条是 runner 的环境变量 + 事后核权重，
+       *   所以图例与页脚都写成"父身份可证（哈希 / 种子文件同权重）"，不写成"哈希为证"。 */
+      var _idenBacked = (dd.psrc === 'hash' || dd.psrc === 'hash-emb' || dd.psrc === 'seedpack-wid');
       /* §2026-10-08 DS②（用户：「黄虚线比蓝线还显眼…灰点线又太虚…既然这两个都是不能完全确定的类型，
        *   你就统一成一种线，能见度跟蓝线差不多或略低」）：**三类不确定合一个 kind** ——
        *   倒挂假边(bq) / 槽位接替边(cq) / 路径推断(seedpack·arm·slot-at-time) 全部 = kind 1（淡蓝虚线）。 */
-      if (!_hashBacked && !cq && !bq && !sq) NINF++;   /* §DS②②：路径推断来源（seedpack/arm/slot-at-time）—— 别把槽位接替也算进来 */
-      var kind = (sq ? 3 : (_hashBacked ? 0 : 1));
+      if (!_idenBacked && !cq && !bq && !sq) NINF++;   /* §DS②②：路径推断来源（seedpack/arm/slot-at-time）—— 别把槽位接替也算进来 */
+      var kind = (sq ? 3 : (_idenBacked ? 0 : 1));
       if (bq) NBACK++; if (cq) NCHAIN++; if (kind === 3) { NSOUP++; NSOUP1++; }
       var pa = pos[dd.pof], pb2 = pos[dd.id];
       /* §E469 每条边同时带**纸面坐标**（papA/papB）：密度网格建在那一层上，而不是建在投影后的屏幕上。
@@ -1601,8 +1630,13 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
       EDGR.segs++;
       /* §E467b 探针：EPROBE 是"每几条留一条"的步长（页内两条判据设的，平时 0 = 不收）。
        *   沿同一条曲线取 40 个点，每个点带上"它自己那一格压了几条线" ⇒ 判据能分清
-       *   "埋在堆里所以淡"与"在空地上还看不见"（后者才是用户点的病）。 */
-      if (EPROBE && e2 % EPROBE === 0 && EDGR.probe.length < 24) { var pp = [];
+       *   "埋在堆里所以淡"与"在空地上还看不见"（后者才是用户点的病）。
+       * §E555（10-09 早上这条红了，查出来的根因在这里）：**探针只收实线**（kind 0 身份可证的父边 ‖ kind 3 融合红线）。
+       *   虚线在下面一句按设计 setLineDash([4,4]) ⇒ 每 4px 就有一段"没墨"，而这条判据数的是"连续 ≥3 个采样点没墨"
+       *   ⇒ 拿虚线去量它，量到的是**虚线自己的间隔**，不是 §E467a 那种"边被切成不同 alpha 的段"的病。
+       *   为什么以前没红：步长 = 边数 / 24，边数一变，被抽中的那 24 条就换一批（10-09 加进 63 枚代表之后
+       *   抽到一条 'arm' 级虚线 B5-10-71 就当场红）。**改的是采样范围，不是阈值。** */
+      if (EPROBE && (!kd || kd === 3) && e2 % EPROBE === 0 && EDGR.probe.length < 24) { var pp = [];
         for (var u = 0; u <= 39; u++) { var tu = u / 39, iu = 1 - tu;
           var ux = iu * iu * A2[0] + 2 * iu * tu * C2[0] + tu * tu * B2[0];
           var uy = iu * iu * A2[1] + 2 * iu * tu * C2[1] + tu * tu * B2[1];
@@ -1671,11 +1705,11 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
   /* §E442 页脚拆**两行**（用户 10-08：「超级长的第二行就可以分成两行显示」）：第一行 = 这张图怎么读（行/轴/颜色口径），
    *   第二行 = 边与手势。⚠ 原来那个"量宽缩字"是**死代码**：先 measureText 算出该缩到几号，紧接着下一句又把字体写回 12px
    *   ⇒ 缩字从未生效，超长那行是被画布右缘**截掉**的（她截图里"· 滚轮 = 横轴"整段看不见就是这件事）。 */
-  var foot2 = (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝实线 = 有哈希为证 · 淡蓝虚线 = 不确定来源（共画了 ' + NEDG + ' 条父边'
-      + (st.edges === 'hash' ? ' ‖ 只实录级' : '') + '）') +
+  var foot2 = (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝实线 = 父身份可证（哈希 ‖ 种子文件同权重）· 淡蓝虚线 = 只按名字/时间推出来的（共画了 ' + NEDG + ' 条父边'
+      + (st.edges === 'hash' ? ' ‖ 只身份可证那一级' : '') + '）') +
     /* §E378 接替边必须自己在图上说一句它是什么：它和血统边画在同一片地方，而两者的意思完全不同
        （'hash' 那一档不画它，所以那句计数跟着 NCHAIN 走，为 0 就整段不出现）*/
-    (NCHAIN ? ' ‖ 淡蓝虚线 = 不确定来源（路径推断 ' + NINF + ' + 槽位接替 ' + NCHAIN + ' + 倒挂 ' + NBACK + '），不是有哈希为证的血统' : '') +
+    (NCHAIN ? ' ‖ 淡蓝虚线 = 不确定来源（路径推断 ' + NINF + ' + 槽位接替 ' + NCHAIN + ' + 倒挂 ' + NBACK + '），不是身份可证的血统' : '') +
     /* §E487：融合粒的第二父走紫色实线 —— 它是"两枚的权重平均"里的那一条，不是热启动 */
     (NSOUP ? ' ‖ 红线 = 融合父边 ' + NSOUP + ' 条（这枚 = 两粒的权重平均 ‖ 两条红边各自连一个父，不是热启动）' : '') +
     /* §E442：RUNNER-BASE 那批边现在**画得出来了**（收到时间轴最左那颗灰菱形），所以这句话从原来的"这条边上不画"
@@ -2401,10 +2435,10 @@ function paintLegend(fr) {
   var _col = document.createElement('div'); _col.style.maxWidth = '150px'; _col.style.flex = '0 0 auto';
   _col.appendChild(s1); _col.appendChild(s2);
   /* §2026-10-08 DS：补两处口径说明 —— ① 底色/壳是**空处插值**（只在有点的地方有意义）；
-   *   ② 壳建在三维行为轴 (x3/y3/z3) 上，不是投影坐标；③ 谱系图实线 = 哈希为证、虚线 = 路径推断或倒挂。 */
+   *   ② 壳建在三维行为轴 (x3/y3/z3) 上，不是投影坐标；③ 谱系图实线 = 父身份可证（哈希 ‖ 种子文件同权重）、虚线 = 只按名字/时间推出来的。 */
   var _cav = document.createElement('div'); _cav.style.marginTop = '4px'; _cav.style.color = 'var(--dim)'; _cav.style.maxWidth = '150px';
   _cav.innerHTML = (st.mode === 'tree')
-    ? '实线 = 哈希为证<br>虚线 = 路径推断或倒挂'
+    ? '实线 = 父身份可证<br>（包里的哈希 ‖ 种子文件同权重）<br>虚线 = 只按名字/时间推出'
     : '底色/壳只在有点的地方有意义（空处 = 插值）<br>壳建在三维行为轴上，不是投影坐标';
   _col.appendChild(_cav); if (s3h) _col.appendChild(s3h);   /* §E458 只有 hp 档多这一行（单批读数的噪声必须写在读数的地方）*/
   var _row = document.createElement('div'); _row.style.display = 'flex'; _row.style.gap = '8px';
@@ -3434,10 +3468,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   /* §E487 'soup' = 这一枚的父是**权重平均的另一粒**（tools/soup-pack.mjs 写进包 meta 的来源 wid），
    *   与热启动的五个来路并列放在这里：它同样是一条"真边"，只是语义不是"续训自谁"。
    *   融合格式：'soup' 档的**第一父**进 pof，**第二父**进 pof2（下面那条 §E487 腿管它）。 */
-  T('父边来路必须标全：有父边的只能来自 hash/seedpack/arm/slot-at-time/slot-chain/soup，标 demoted 的一律不许还有父边',
+  T('父边来路必须标全：有父边的只能来自 hash/hash-emb/seedpack-wid/seedpack/arm/slot-at-time/slot-chain/soup，标 demoted 的一律不许还有父边',
     (function () {
       for (var q = 0; q < N; q++) { var d = P[q];
-        if (d.pof && ['hash', 'seedpack', 'arm', 'slot-at-time', 'slot-chain', 'soup'].indexOf(d.psrc) < 0) return false;
+        /* §E555：来路的白名单必须跟着分级一起长 —— 新加的「seedpack-wid」（种子路径 + 事后核过权重一致）
+         *   与早就存在但漏在册的「hash-emb」（§E464 靠"嵌入后身份"才对上的那批）都要列进来，
+         *   否则这条腿会把**合法的新等级**判成"标了个没见过的来路"。 */
+        if (d.pof && ['hash', 'hash-emb', 'seedpack-wid', 'seedpack', 'arm', 'slot-at-time', 'slot-chain', 'soup'].indexOf(d.psrc) < 0) return false;
         if (d.pof2 && d.psrc2 !== 'soup') return false;      /* §E487 第二父只有融合格一种来路 */
         if ((d.psrc === 'demoted' || d.psrc === 'demoted-time') && d.pof) return false; }
       return P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length >= 1; })(),
@@ -4283,7 +4320,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       if (rmx > runMax) { runMax = rmx; worst = pb[z].id + '（中段 alpha ' + pb[z].al.toFixed(3) + '）最长连续没墨 ' + rmx + ' 个点'; }
       if (rmx >= 3) nBad++; }
     nP = pb.length;
-    T('沿一条边走一圈不许有断口（§E467a 那一版把边切成不同 alpha 的段，重合处肉眼看得见中断 ‖ 断口 = 连续 ≥3 个采样点没墨）',
+    T('沿一条边走一圈不许有断口（§E467a 那一版把边切成不同 alpha 的段，重合处肉眼看得见中断 ‖ 断口 = 连续 ≥3 个采样点没墨 ‖ §E555：**只探实线**，虚线按设计每 4px 留白，量它等于量虚线自己的间隔）',
       !!dOn && !!dOff && nP >= 6 && nBad === 0,
       '当下 ' + nEd + ' 条边 ⇒ 每 ' + strd + ' 条留一条，收到探针 ' + nP + ' 条 × 40 个采样点 = ' + nS + ' 点 ‖ 有断口的边 ' + nBad + ' 条（要 0）‖ 全组最长连续没墨 ' + runMax + ' 个点'
         + (worst ? ' ‖ 例：' + worst : '') + (dOn && dOff ? '' : ' ‖ 取不到两帧像素'));
