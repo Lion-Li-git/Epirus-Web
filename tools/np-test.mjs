@@ -6063,7 +6063,7 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
   };
   const dir = mkdtempSync(join(tmpdir(), 'd123-'));
   const mini = function (env) {
-    return spawnNC(['tools/train-3p.mjs', '3', '3', '6', '4'], {
+    return spawnCached(['tools/train-3p.mjs', '3', '3', '6', '4'], { outputs: [dir],
       env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd123', EPIRUS_BAND_DIR: dir }, env || {}),
       encoding: 'utf8', timeout: 300000,
     });

@@ -22,7 +22,7 @@
  */
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync, statSync, existsSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -81,6 +81,36 @@ export function inputHash(argv, env) {
   return h.digest('hex');
 }
 
+/* §2026-10-11 DS（用户：「先试一下能不能提高缓存的功效」）：**产出文件也进缓存**。
+ *   动机：有一批门的断言要读子进程**产出的文件**（训练臂写进 EPIRUS_BAND_DIR 的 band、量具的输出）。
+ *   头注的前置要求把这类排除在缓存之外（对：只缓存 stdout 会造**假绿**），但代价是它们每遍真跑（实测热跑多付 2~3 分钟）。
+ *   做法：调用方用 `opts.outputs = [路径, …]`（文件或目录）声明"这次会产出什么" ⇒
+ *     **存**：真跑之后把那些路径整份拷进 `CACHE_DIR/<key>.out/<i>`；
+ *     **还**：命中时先还原到**本次**的路径（临时目录每次都不同 ⇒ 正因如此键里要把临时路径归一化，见 TMP_RE）。
+ *   ⚠️ 安全性靠两条：① 命中**必须**还原成功才返回缓存结果，否则当未命中回退真跑；
+ *     ② 仍然不许缓存"非确定性"的子进程（前置要求第 1 条不变：键=内容，任何输入变键就变）。 */
+function outBox(key) { return join(CACHE_DIR, key + '.out'); }
+function captureOutputs(key, outputs) {
+  if (!outputs || !outputs.length) return;
+  const box = outBox(key);
+  try { rmSync(box, { recursive: true, force: true }); mkdirSync(box, { recursive: true }); } catch (e) { return; }
+  outputs.forEach(function (p, i) {
+    try { if (existsSync(p)) cpSync(p, join(box, String(i)), { recursive: true }); } catch (e) { /* 拷不动就算了 */ }
+  });
+}
+function restoreOutputs(key, outputs) {
+  if (!outputs || !outputs.length) return true;
+  const box = outBox(key);
+  if (!existsSync(box)) return false;
+  let okAll = true;
+  outputs.forEach(function (p, i) {
+    const src = join(box, String(i));
+    if (!existsSync(src)) return;
+    try { cpSync(src, p, { recursive: true }); } catch (e) { okAll = false; }
+  });
+  return okAll;
+}
+
 function pruneIfNeeded() {
   try {
     const es = readdirSync(CACHE_DIR).filter(function (f) { return /\.json$/.test(f); });
@@ -106,6 +136,7 @@ export function spawnCached(argv, opts) {
     key = inputHash(argv, o.env);
     f = join(CACHE_DIR, key + '.json');
     const c = JSON.parse(readFileSync(f, 'utf8'));
+    if (!restoreOutputs(key, o.outputs)) throw new Error('产出未入库 ⇒ 当未命中');   /* §2026-10-11：假绿防线 */
     __S.hit++; __S.savedMs += (c.ms || 0);
     console.log('  ⏩ 缓存命中（' + key.slice(0, 8) + ' · 省 ' + ((c.ms || 0) / 1000).toFixed(1) + ' 秒）：' + argv.join(' ').slice(0, 88));
     return { status: c.status, stdout: c.stdout, stderr: c.stderr, error: null, signal: null, __cached: true };
@@ -118,6 +149,7 @@ export function spawnCached(argv, opts) {
     if (f) {
       mkdirSync(CACHE_DIR, { recursive: true });
       writeFileSync(f, JSON.stringify({ status: r.status, stdout: r.stdout, stderr: r.stderr, ms: ms, argv: argv, at: new Date().toISOString() }));
+      captureOutputs(key, o.outputs);
       pruneIfNeeded();
     }
   } catch (e) { /* 写不进去也无所谓：下次照样真跑 */ }
