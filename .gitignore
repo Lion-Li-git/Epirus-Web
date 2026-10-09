@@ -122,3 +122,6 @@ champion-map/e49[0-9]-*.txt
 champion-map/e5[0-9][0-9]-*.tsv
 champion-map/e5[0-9][0-9]*-extra.tsv
 champion-map/e504x-extra.tsv
+
+# §2026-10-09 孤儿产物（无任何代码/文档引用 ⇒ 不再进库；文件仍在盘上）
+docs/artifacts/*.png
