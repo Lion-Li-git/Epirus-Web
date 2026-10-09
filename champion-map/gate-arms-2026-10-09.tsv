@@ -7,9 +7,9 @@ BK-s61	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：
 BK-s62	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：B+K 两个键																			0.925	50	0	0	3	1	抽签	K2	BREADTH_FLOOR=3 · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_BIGT=3 · SEL_KEEP=0.25	0	
 BK-s63	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：B+K 两个键																			0.3	38.5	0	3.94	3	0	判得动	K2	BREADTH_FLOOR=3 · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_BIGT=3 · SEL_KEEP=0.25	1	组内极值/中位(n=4)
 BK-s64	e513 §E513 当选侧 veto 单自由度（B/K/BK × seed 61~64）	veto：B+K 两个键																			8.15	51.5	0	10.4	3	0	判得动	K2	BREADTH_FLOOR=3 · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js · SEL_BIGT=3 · SEL_KEEP=0.25	1	组内极值/中位(n=4)
-D4a	其他	其他									0					100	100	95	53.3	53.3			0								
+D4a	其他	其他									0		27	28		100	100	95	53.3	53.3			0								
 G-s71	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	100	60	0	0.35	53.1	0	3.02	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js	0	
-G-s72	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）									0					0	100	100	28.3	0	2.125	53	0	4.43	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js	1	出厂门 0 条阻断
+G-s72	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）									0		48	38		0	100	100	28.3	0	2.125	53	0	4.43	3	0	判不动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js	1	出厂门 0 条阻断
 G-s73	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	100	63.3	0	0.025	47.7	0	0.26	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js	0	
 G-s74	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	0	43.3	0	0.025	46	0	1.49	3	1	抽签	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js	0	
 G-s75	e514 §E514 只把「只防御」上桌（guardSpam ×12 seed）	只防御上桌（单自由度）														0	100	98.3	80	0	4	54.5	0	14.03	3	0	判得动	K2	COUNTER_OPPS=guardSpam · HOTSTART=1 · SEEDPACK=docs/artifacts/e234-out/K2.js	1	组内极值/中位(n=12)
