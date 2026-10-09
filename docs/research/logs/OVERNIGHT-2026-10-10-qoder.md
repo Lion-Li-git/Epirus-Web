@@ -72,10 +72,28 @@
 `门禁：np 277/277（883.5s） · spec 52/52（0.3s） · smoke OK（11.4s） · battle OK（33.6s） · map OK（2.8s）` ⇒ **结论行 `✔ 5 道全绿`，RC=0** ✔
 （对照：DS 那遍 1356s、我上一遍撞车 1404s 都**不能**当基线；这一遍可以。）
 
-## NEXT（按顺序）
+## DONE-追加 · 克隆面自证（00:0x 实测 —— 这遍不是整轮，是我这四道门的"CI 那一面"）
 
-1. 提交并推送**本分支**（`main` 动不动由用户裁 —— 他这次明确要开分支）。
-2. `workflow_dispatch` 到本分支跑一次 ubuntu 阻断档：今晚两次红都是"Linux 那一支本机看不见"（我的 `isAbsolute` 病、DS 的门没这一类），值得花一次 runner 分钟。
+本机整轮用的是**工作树**，而 CI 用**克隆** ⇒ 今晚两次红都出在这个差上（我的 `isAbsolute` 病是 Linux 分支，DS 的 D231/D233 是缺未入库产物）。
+所以新腿落地后我做了三层核对：
+
+1. **tracked 面**：我四条腿用到的文件全在库（`git ls-files --error-unmatch`）
+   `js/bundled-champion-3p.js` ‖ `server/train-server.mjs` ‖ `tools/train-fast.mjs` ‖ `server/knob-guard.mjs` ‖ `server/opp-champs.mjs` ‖ `js/train/evo.js` ‖ `tools/np-cache.mjs` ✔
+2. **干净 worktree**（`git worktree add --detach … 76f6556`，盘上没有我本机那些未入库残留）：
+   `--only="D12 "` / `"D56 "` / `"D68 "` / `"D157 "` ⇒ **各 1/1** ✔
+3. **真 LF 克隆**（`git -c core.autocrlf=false checkout-index -a -f`，因为 worktree 是 CRLF 而 runner 是 LF ⇒ 这正是 D232 那类病的分界）：
+   先证明它真的是 LF（`evo.js` 里 **无 CR 字节** ✔），再跑同样四道 ⇒ **各 1/1** ✔
+   ⇒ 收尾：worktree 与临时克隆都是我自己造的，已删（`git worktree remove --force` ‖ `rm -rf`）。
+
+**⚠ ubuntu 那一档今晚拿不到**：`gh` 未安装、MCP 没有 workflow 工具、未登录 API 不能 POST `workflow_dispatch`；
+而 `pull_request` 触发要开 PR ⇒ 属"公开可见的动作"，按规矩**等用户点头**，我不擅自开。
+⇒ 上面的 LF 克隆是我能在本机做到的最近似替代，但它**不等于** ubuntu（文件系统大小写敏感、`/tmp` 语义、Chrome 路径那几处差异仍只有 runner 能验）。
+
+## NEXT（更新）
+
+1. **等用户点头的公开动作**（二选一即可拿到 ubuntu 判词）：开一个 PR（`qoder/e566-gate-coverage-overnight` → `main`），
+   或给他一个能 POST `workflow_dispatch` 的口径（装了 `gh` 或给了 token 我就能跑）。**`main` 动不动也在这一步里**。
+2. 转训练侧欠账（我自己的地盘）：先修 `champion-map/ruler-measure.mjs` 的 `--ids` 静默漏人（我 10-09 下午实测到的坑），
+   再按"贵尺只上选出的 3~5 枚"跑 `exam=120` 试点；全库重测约 75 min@jobs=4，**不并发**。
 3. 明早收尾汇报：先结论后记账 + 实测时间戳。
-4. 若 03:00 后机器空闲再开训练侧欠账：先修 `ruler-measure --ids` 的静默漏人，再小批试 `exam=120`（全库约 75 min@jobs=4，**不并发**）。
 
