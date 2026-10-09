@@ -125,3 +125,6 @@ champion-map/e504x-extra.tsv
 
 # §2026-10-09 孤儿产物（无任何代码/文档引用 ⇒ 不再进库；文件仍在盘上）
 docs/artifacts/*.png
+
+# §2026-10-09：产物目录整体忽略（仓规本就是"产物不进库"；已入库的仍被跟踪，故意加用 git add -f）
+docs/artifacts/
