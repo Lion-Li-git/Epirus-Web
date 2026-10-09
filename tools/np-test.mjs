@@ -32,7 +32,7 @@ import * as PF_FRONT from './pool-frontier-lib.mjs';
  * 只缓存 (status, stdout, stderr)，**断言照旧跑**；命中响亮打印；`NP_NOCACHE=1` 一律真跑。
  * ⚠️ 只许缓存"断言只用 stdout/status"的子进程（前置要求见 tools/np-cache.mjs 头注）。
  * ⚠️ 门里**不许**把缓存计数器清零（模块里那个清零 API，np-test 一律不许 import）：那会把收尾的"命中/省下多少"抹掉。 */
-import { spawnCached, inputHash, cacheStats } from './np-cache.mjs';
+import { spawnCached, inputHash, cacheStats, cacheDir } from './np-cache.mjs';
 /* §2026-10-10 DS：断言要读子进程**产出的文件**的门，spawn 必须绕开缓存（命中 ⇒ 子进程不跑 ⇒ 读到上次留下的文件 ⇒ 可双向骗人）。
  *   D157 例外：它自己就是缓存的自证门，必须走缓存。 */
 const spawnNC = function (argv, opts) { return spawnCached(argv, Object.assign({}, opts, { nocache: true })); };
@@ -50,7 +50,7 @@ import { loadPool, selfTest } from './human-pool.mjs';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
-import { isChampOpp, loadChampParams } from '../server/opp-champs.mjs';
+import { isChampOpp, loadChampParams, makeChampOppResolver } from '../server/opp-champs.mjs';   /* §E566 加 makeChampOppResolver：D12 要行为式验"解析出来的 chooser 就是页面那条推理路径" */
 import { makeShapeScorer } from '../server/shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
 /* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
 import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
@@ -2428,7 +2428,29 @@ t('D12 冠军对手（champ:）机制必须两端都通 + 能真的解出 params
   const wk = readFileSync('server/train-worker.mjs', 'utf8');
   ok(wk.indexOf('makeOppSelResolver') >= 0, 'worker 必须用**同一个**解析器（函数无法跨线程传，但规则只有一份）');
   ok(wk.indexOf('resolveOpp') >= 0, 'worker 必须按 msg.oppNames 的**原顺序**逐个解析（顺序变了就是另一场实验）');
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §E566（千问 · 把 D12 摘掉的那条名字钉换成行为判据）：解析出来的冠军对手 chooser 必须**就是页面那条推理路径**。
+   *   原腿钉的是「`opp-champs.mjs` 里出现 `policyChooserN` 这个串」⇒ 改名不改行为（§八 口径 1 第二层：只读源码文本的腿没有阻断力），
+   *   而真正要守的是它的反面：**换成别的 chooser / 别的 temp，训练池里那颗"冠军"就不再是页面上玩家遇到的那颗冠军**
+   *   （v1.5.2 那族病是"名字→函数写两处"，形状上 D12 已经用 `B[BOT_FN_N[` 那条负钉守着；这条补的是"走错了推理路径"那一半）。
+   *   判据照 D56 的 `eq(B, A)` 形状：同一份权重，走解析器 vs 直接 `policyChooserN` ⇒ 三场**逐场结果必须相同**。 */
+  const champResolved = makeChampOppResolver({ EpirusPolicy: Pol, EpirusTrainer: T }, process.cwd(), 0.15)('champ:js/bundled-champion-3p.js');
+  const gamesOf = function (sel) {
+    const out = [];
+    for (let k = 0; k < 3; k++) {
+      const st = S.createState('multi', { next: mulberry32(90210 + k) }, 5);
+      const ch = []; for (let i = 0; i < 5; i++) ch.push(sel);
+      Play.autoGameN(st, ch);
+      out.push(String(st.winner) + '|' + st.round + '|' + st.p.map(function (p) { return Math.max(0, p.hp); }).join(','));
+    }
+    return out.join(' ; ');
+  };
+  eq(gamesOf(champResolved.sel), gamesOf(T.policyChooserN(params, 0.15)),
+    '冠军对手必须与页面走同一条推理路径（三场的 winner/回合/血量必须逐场相同；不同 = 训练池里那颗冠军不是玩家遇到的那颗）');
+  ok(gamesOf(champResolved.sel) !== gamesOf(T.policyChooserN(params, 0.6)),
+    '正对照：temp 换到 0.6 必须读出不一样（读不出 ⇒ 上面那条等式是空枪，这把尺量不到 chooser）');
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
 });
 
 t('D13 风格切片（复合适应度）必须真的打进 fit —— 且是**追加**不是替换', function () {
@@ -2471,7 +2493,9 @@ t('D13 风格切片（复合适应度）必须真的打进 fit —— 且是**�
   const wk = readFileSync('server/train-worker.mjs', 'utf8');
   ok(wk.indexOf('setStyleSlice') >= 0, 'worker 必须在**自己沙箱**里设切片（服务端那份改不到 worker）');
   ok(wk.indexOf('styleGames') >= 0, 'worker 必须回执 styleGames');
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
 });
 
 t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励已恢复', function () {
@@ -2667,7 +2691,9 @@ t('D56 旧冠军嵌入 v7 后必须仍走旧口径（否则目标退化：实测
   ok(src.indexOf('function isLegacyChooser') >= 0, 'policy.js 必须导出 isLegacyChooser');
   ok(src.indexOf('o.lv != null') >= 0, 'unpack 必须把容器 lv 标记挂到 params 上');
   ok(src.indexOf('o.lv = p.legacyFrom') >= 0, 'pack 必须把标记写回容器');
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
   /* 行为断言：同一份"旧形状权重"（3337 位）原生跑 vs 嵌入+标记跑 ⇒ 逐场结果必须相同。 */
   Pol.setRng(T.mulberry32(4242));
   const p7 = Pol.makePolicy(0.25);
@@ -2688,6 +2714,18 @@ t('D56 旧冠军嵌入 v7 后必须仍走旧口径（否则目标退化：实测
   const A = [0, 1, 2].map(function (k) { return play(legacy, 777 + k); }).join(' ; ');
   const B = [0, 1, 2].map(function (k) { return play(emb, 777 + k); }).join(' ; ');
   eq(B, A, '嵌入+标记后必须与原生旧口径逐场相同（旧版嵌入会改行为）');
+  /* §E566（千问 · 替回被摘掉的那条"evo.js 认显式标记"名字钉的**行为**面）：
+   *   上面那把 `play()` 直接调 `T.policyChooserN` ⇒ 它证明的是"分类器 + 引擎结果"对，**绕过了 evo.js 里那句 `LEGACY()`**
+   *   （`js/train/evo.js:14` 定义、:146 在评分路径上用）。原腿钉的是 `evo.js` 里出现 `P.isLegacyChooser` 这个串 —— 改名不改行为。
+   *   这里改问行为：**走 evo 的评分那条路**，带标记的嵌入包必须与原生旧口径**同分**；
+   *   再拿"同一份权重、把标记摘掉"当正对照 —— 它必须**分数不同**，否则这把尺根本看不见标记，上面那条等式就是空枪。
+   *   病根（本门标题里那个读数）：旧版嵌入把目标改成 v7 口径 ⇒ 破墙 12.25 → 7.70。 */
+  const oppsD56 = [{ name: 'random', sel: Bots.pickRandom }];
+  const fitOf = function (p) { return T.scoreMemberN(p, oppsD56, 2, 3, 1, 0, 0).fit; };
+  T.setTrainMode('multi');                      /* D10 那族用例的出厂默认，别继承上一个门留下的模式 */
+  eq(fitOf(emb), fitOf(legacy), '带 lv 标记的嵌入包走 evo 评分必须与原生旧口径同分（不同 = evo 没认这个标记 ⇒ 目标会退化）');
+  const unmarkedD56 = Float64Array.from(emb);   /* 同长度、无标记：若 evo 不认标记，上面那条就会与它等值 ⇒ 这条对照正是来看穿的 */
+  ok(fitOf(unmarkedD56) !== fitOf(legacy), '正对照：同一份权重摘掉标记必须读出不一样（读不出 ⇒ 这把尺看不见标记，上面那条等式是空枪）');
 });
 
 t('D57 multi 的收缩必须落进回合上限内，且"全灭"必须按伤害判胜（否则场 B 上限恒为 0）', function () {
@@ -2730,7 +2768,9 @@ t('D58 L7 第七处：候选枚举顺序必须无身份（镜像对称 + 5 席�
   const pol = readFileSync('js/train/policy.js', 'utf8');
   ok(pol.indexOf('function poolOrder') >= 0, 'policy.js 必须有 poolOrder（按每局盐洗牌目标枚举顺序）');
   ok(pol.indexOf('poolOrder(state, pid, S.opponentsOf') >= 0, '枚举处必须走 poolOrder');
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
   /* ① 镜像对称（引擎层，最强形式）：脚本"打最小索引"与"打最大索引"必须给出镜像结果 */
   const ATK = [R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.DRAIN];
   const mk = function (pick) {
@@ -2795,7 +2835,9 @@ t('D59 阈值式座位惩罚必须真的在 fit 里（让演化"看得见"偏置
   /* v1.5.69：触发条件必须是"明显通吃"（静音地板：6 局样本的极差噪声就有 40~60pt） */
   ok(ev.indexOf('seatMaxPct >= SEAT_PEN_MAXPCT') >= 0, '触发条件必须按 maxPct（不是极差，否则等于按噪声扣分）');
   /* v1.5.69：惩罚必须**真的能算出极差** —— v1.5.68 曾因蹭 MIRROR_GAMES=2 而静默失效（seatPen 恒 0） */
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
   ok(typeof T.seatGames === 'function' && T.seatGames() >= 4, '座位探针局数必须 >=4（实测 ' + (typeof T.seatGames === 'function' ? T.seatGames() : '?') + '）');
   ok(ev.indexOf('- seatPen') >= 0, '座位惩罚必须真的减进 fit');
   ok(ev.indexOf('seatSpreadMirror') >= 0, '成员评分必须回报座位极差（供审计）');
@@ -4298,7 +4340,9 @@ t('D64 狙击场探针：归因纯函数 + 混合场的靶向判据（复核 §4
   /* ② 判别力声明：混合场给"均匀乱打=25%"的基准，wall 场不得谎报基准 */
   ok(lib.indexOf("uniformRate: (K === 'mixed') ? 0.25 : null") >= 0,
     '混合场必须声明 uniformRate=0.25（4 席里 1 席是狙击手）；wall 场必须为 null（无靶向判别力）');
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
 });
 
 
@@ -4531,7 +4575,23 @@ t('D68 威胁靶向奖励：只记"我打的、上回合构成威胁的、不同
   ok(gline.indexOf('+ tgtBonus') >= 0, 'tgtBonus 必须并进 gFit（漏了 = 静默空操作）');
   const wk = readFileSync('server/train-worker.mjs', 'utf8');
   ok(wk.indexOf('EPIRUS_TGT_W') >= 0 && wk.indexOf('setTargetReward') >= 0, 'worker 必须读 EPIRUS_TGT_W');
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §E566（千问 · 把上面那条名字钉要守的**行为**补回来，替掉它而不是留着恒真式）：
+   *   原腿钉的是「`server/train-server.mjs` 里出现 `EPIRUS_TGT_W` 这个串」⇒ 改个名就红、真断了却不响
+   *   （§八 口径 1 的第二层：只读源码文本的腿不许当红灯）。这里改问行为：**这个键在这条路上认不认**。
+   *   `detectDarkKnobs` 顺着 import 链找到真正读键的那一层（与 `enforceKnobs` 同一份读集）⇒ server 侧一旦不认，
+   *   就会被列成暗键 ⇒ 红。病根（v1.5.79）：`v7tgt4` 整臂的靶向奖励从没发出去过，而 worker 的 stdout 不进流
+   *   ⇒ 当时事后无从追查"这根旋钮到底开没开"，那臂的读数全部作废。 */
+  const dkSrv = detectDarkKnobs({ EPIRUS_TGT_W: '0.07' }, { entry: 'server/train-server.mjs' });
+  eq(dkSrv.dark.indexOf('EPIRUS_TGT_W'), -1,
+    '页面训练服务必须**认** EPIRUS_TGT_W（被列为暗键 = 会被黑键闸拒掉或静默吞，实测 dark=[' + dkSrv.dark.join(',') + ']）');
+  /* 负对照：同一个探测器必须**能**把这个键列成暗键（实测 `train-fast` 不读它 ⇒ dark 里有它）。
+   *   没有这半条，上面那句就成了"探测器永远说读得到"的空枪 —— 照 D143 那种"正/负同键成对"的写法。 */
+  const dkCtl = detectDarkKnobs({ EPIRUS_TGT_W: '0.07' }, { entry: 'tools/train-fast.mjs' });
+  ok(dkCtl.dark.indexOf('EPIRUS_TGT_W') >= 0,
+    '负对照：`train-fast` 不读 EPIRUS_TGT_W 必须被列为暗键（列不出 ⇒ 上面那条判据没有判别力，实测 dark=[' + dkCtl.dark.join(',') + ']）');
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
   /* 加硬（v1.5.79 事故本身）：**多回合**序列才抓得住"回合边界不重置 seen"这类 bug ——
    * 第一版 D68 只用 <=2 回合的序列 ⇒ 漏掉了 countThreatHits 恒 0 的**静默空操作**
    * （奖励在 v7tgt4 整臂里从没发出去过，那一臂的读数因此作废）。 */
@@ -4753,7 +4813,9 @@ t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一
   ok(al.indexOf('Number(dens.spentRate) >= 0.2 && Number(dens.expiredPerGame) <= 1') >= 0,
     '珠经济闭环必须是**双条件**（花/得 ≥20% 且 过期/局 ≤1）');
   ok(al.indexOf('beadExpiredPerGame') >= 0, '必须记录"过期/局"（双条件的第二项）');
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
   ok(al.indexOf('density: dRec') >= 0, '第 6 道的读数必须进 feasibilityOf 的返回值（落盘 meta 要能查）');
   const fs0 = al.indexOf('export function feasibilityOf(');
   const fs1 = al.indexOf('export function chargeProfile(');
@@ -4954,7 +5016,9 @@ t('D84 真示范（override）：默认关、只在教师动作**可负担**时�
   ok(wk.indexOf("[imit] worker 启动值") >= 0, 'worker 必须打启动回执（照 [econ] 的先例，防静默半开）');
   ok(wk.indexOf('gens(env)=') >= 0 && wk.indexOf('以**消息**为准') >= 0,
     '启动回执必须标明"env 是拷贝、示范代数以消息为准"（免得下一个人又被 gens=0 误导）');
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
   /* v1.5.96 追加（被真实事故逼出来的）：示范代数必须**走消息**。
    * `worker_threads` 的 process.env 是**创建时的拷贝**，而 `EPIRUS_IMIT_GENS` 是服务端事后派生的
    * ⇒ 只走 env 时 worker 永远读到 0 ⇒ 整臂与对照**逐位相同**（本轮 `v7ringT` 实测，回执里 `gens=0`）。 */
@@ -6308,7 +6372,9 @@ t('D127 兑现广度（v1.5.167 · §N24 · 用户"G_eff 像刷分"）：mirrorH
   ok(/\[兑现广度\].*G\(出手→落地\)/.test(String(on.stdout || '')), '开了必须印出每候选的两把尺（不印 = 又一根暗旋钮）');
   ok(/改判（排序键换人）|改判（是预筛选掉的|未改判/.test(String(on.stdout || '')),
     '必须三分归因：排序键换人 / 预筛换池 / 都没换 —— 只报"未改判"会让人误以为与不开开关逐字相同');
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
 });
 
 t('D128 广度准入线（v1.5.170 · §N29 · §N28"四粒冠军三粒塌成一种卡"）：塌缩当**不合格**，不当排序键（默认关 ⇒ 逐位不变）', function () {
@@ -8102,7 +8168,11 @@ t('D157 确定性重活的缓存必须**内容寻址**、**响亮**、且不许�
    * ⇒ 所以本门判三件：① 键必须是**内容**（不是路径/时间）；② 只缓存 (status,stdout,stderr) 且**断言照旧跑**；
    *   ③ 命中必须**响亮**（独立一行 + 收尾计数），且有 `NP_NOCACHE=1` 逃生口。 */
   const src = readFileSync('tools/np-test.mjs', 'utf8');
-  ok(/import \{ spawnCached, inputHash, cacheStats \}/.test(src), 'np-test 必须接缓存模块（spawnCached / inputHash / cacheStats）');
+  /* §E566（千问）：这条原来钉的是**逐字顺序** `{ spawnCached, inputHash, cacheStats }` ⇒ 今晚我往里加一个名字就当场红
+   *   （钉拼写不钉语义 —— 与 §2026-10-11 摘掉的那两条"数名字出现次数"同族，只是这次咬到的是我自己）。
+   *   改成钉"从 np-cache 导入 spawnCached"这件事：加别的名字算接上，删掉导入照样红。 */
+  ok(/import\s*\{[^}]*\bspawnCached\b[^}]*\}\s*from\s*'\.\/np-cache\.mjs'/.test(src),
+    'np-test 必须从 `./np-cache.mjs` 导入 spawnCached（往里加别的名字不算红，删掉导入才算红）');
   /* 门里**绝不许**把缓存计数器清零：那会把收尾"命中 N 次 · 省下 X 秒"抹掉 —— D157 第一版就这么把自己的成绩抹了
    * （热跑明明省 140+ 秒，收尾却印"命中 2 次 · 省 0.2 秒"）。
    * ⚠️ 判的是**整份源码里不许出现那个名字**（含注释）：v1.5.225 试过"逐行过滤掉注释行"，被 `/*` 与字符串骗了两次。 */
@@ -8113,8 +8183,12 @@ t('D157 确定性重活的缓存必须**内容寻址**、**响亮**、且不许�
    *   那四条重臂（40/60/60/30 代）正是**断言要读子进程产出文件**的门（D134/D135/D136/D137）⇒ 缓存命中时子进程不跑 ⇒
    *   它们读的是**上一次留下的文件** ⇒ 可双向骗人（Claude 整改建议 §门禁「现在要修的问题」· METHODOLOGY 117）。
    *   所以现在要求的是**反过来的**那条：读产出的门必须走 spawnNC（nocache）。判据仍用**下限**，免得扩面时无故变红。 */
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
   ok(/缓存：命中 ' \+ __cs\.hit/.test(src), '收尾必须印命中数与省下的秒数（亮不亮要看得见）');
   const mod = readFileSync('tools/np-cache.mjs', 'utf8');
   ok(/NP_NOCACHE/.test(mod) && /export function spawnCached/.test(mod) && /createHash\('sha1'\)/.test(mod),
@@ -8169,6 +8243,46 @@ t('D157 确定性重活的缓存必须**内容寻址**、**响亮**、且不许�
   ok(String(r3.stdout) === String(r1.stdout) && cacheStats().hit === cs.hit,
     '`NP_NOCACHE=1` 时必须**真跑**（命中数不许再涨）');
   if (bak == null) delete process.env.NP_NOCACHE; else process.env.NP_NOCACHE = bak;
+
+  /* ===== 行为断言：`opts.outputs`（"命中时连子进程产出的文件一起还原"）的语义 =====
+   * §2026-10-11 千问复核 · 待办②。为什么这条必须存在：`b371306` 把 6 处 `outputs` 声明删光之后，
+   *   这套能力**既没有调用者也没有测试** ⇒ 它坏掉不会有任何东西响（而 §九 的结论是"读产出的门将来要接回缓存得靠它"）。
+   * 三条各自都能红，缺一条就是假绿：
+   *   ① 真跑 ⇒ 产出落在声明的路径里；
+   *   ② 命中 ⇒ 把**本次被删掉的**产出还原回来，而且**不靠重跑子进程**；
+   *   ③ 盒子里少一项 ⇒ **不再算命中**（回退真跑）—— 这正是 `cb20df1` 补的那个洞，补之前它是"跳过那一项照样命中"。
+   * ⚠️ 为什么不再拿"第二遍门仍绿"当 sound 判据：只读 stdout 的门，盒子对/错/整个缺失，第二遍**都是绿的**
+   *   （今晚实测 6 处声明里 5 处挂在这种腿上、1 处挂在原生 `spawnSync` 上被静默忽略，两遍验全程绿 ⇒ 它证不了任何事）。
+   * ⚠️ 观测点：`counter.txt` **故意不声明进 outputs** ⇒ 它只随真跑递增，于是"有没有偷偷重跑"是可数的。 */
+  const oScratch = mkdtempSync(join(tmpdir(), 'd157o-'));
+  const oDir = join(oScratch, 'out'), oCnt = join(oScratch, 'counter.txt'), oTool = join(oScratch, 'w.mjs');
+  writeFileSync(oCnt, '0');
+  writeFileSync(oTool, "import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';\n"
+    + "const d = process.argv[2], c = process.argv[3];\nmkdirSync(d, { recursive: true });\n"
+    + "const n = Number(readFileSync(c, 'utf8')) + 1; writeFileSync(c, String(n));\n"
+    + "writeFileSync(d + '/f.txt', 'payload-' + n);\n");
+  const oArgv = [oTool, oDir, oCnt], oOpts = { outputs: [oDir], encoding: 'utf8', timeout: 120000 };
+  const oFile = () => (existsSync(join(oDir, 'f.txt')) ? readFileSync(join(oDir, 'f.txt'), 'utf8') : '缺');
+  const oRuns = () => Number(readFileSync(oCnt, 'utf8'));
+  const oBox = join(cacheDir(), inputHash(oArgv, oOpts.env) + '.out');
+
+  const o1 = spawnCached(oArgv, oOpts);
+  eq(o1.status, 0, '① 声明 outputs 的 spawn 要跑得通（status=' + o1.status + ' ' + String(o1.stderr || '').slice(0, 120) + '）');
+  ok(/^payload-/.test(oFile()), '① 真跑必须把产出写进声明的路径（实测 ' + oFile() + '）');
+  if (!existsSync(join(oBox, '0'))) throw new Skip('缺缓存产出盒（被轮换掉了，或同机正有第二遍整轮在跑）⇒ ②③ 不可判：' + oBox);
+  const runs0 = oRuns(), v1 = oFile();
+
+  rmSync(join(oDir, 'f.txt'));                       /* 毁掉本次产出，逼"命中"这条路径自己证明它还原了 */
+  const o2 = spawnCached(oArgv, oOpts);
+  ok(o2.__cached === true, '② 同输入第二遍必须命中（没命中 ⇒ 键不稳，那是另一条腿管的病）');
+  eq(oFile(), v1, '② 命中必须把被删掉的产出**还原回本次路径**（实测 ' + oFile() + ' 应为 ' + v1 + '）');
+  eq(oRuns(), runs0, '② 还原不许靠重跑子进程（真跑次数必须还是 ' + runs0 + '，实测 ' + oRuns() + '）');
+
+  rmSync(join(oBox, '0'), { recursive: true, force: true });   /* 假装"上次只存了一半" */
+  const o3 = spawnCached(oArgv, oOpts);
+  ok(o3.__cached !== true, '③ 盒子里少一项必须**不再算命中**（回退真跑）—— 命中却交出一份没还原的产出就是假绿');
+  eq(oRuns(), runs0 + 1, '③ 回退必须真的重跑了一次（实测真跑次数 ' + oRuns() + '，应为 ' + (runs0 + 1) + '）');
+  /* 不用手工还原现场：o3 真跑之后 captureOutputs 自己先 rmSync(box) 再整盒重写 */
 });
 
 t('D158 产物必须能自证**实际生效的 EPIRUS_* 配方**（v1.5.226 · 用户批准；千问 E9/E10 就是被这个缺口逼着绕道跑的）', function () {
@@ -11260,7 +11374,9 @@ t('D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 b
     '⑥ 对手对数必须从 `ALL_PAIRS.length` 插值，不许硬写（POOL 是 9 个脚本 ⇒ C(9,2)=36 对；曾硬写 28 把 §E316 的锚读歪过一次）');
   ok(t3.indexOf('sc > (ev.firstRate + 0.5 * ev.top2Rate)') < 0,
     '⑥ 终局改判必须直接比 `ev.sc`（均值已在 `scoreRuns` 里算过；这里再拿两个均值拼一遍 = 第二个口径，日后必分叉）');
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 规矩 1；整条删掉，不留「恒真式 + 原文案」那种看着有覆盖的假象。6 处是真丢覆盖（D12/D13/D56/D58/D68/D127）· D157 那条是假不变式，记为待办（行为级 outputs 自证）。 */
+  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
+   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
+   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
 
   /* ===== ⑦ 默认那"多粒"的路**必须有一腿真跑**（不然 np 全绿却从没走过上线那条路 = 改门禁账本第 27 条） =====
    * 下面 ⑧ 把整份门钉在单粒上（认证时长的账），所以这一腿反过来显式要 3 粒，并**逐字核对粒数、base 序列与分差行**。 */
