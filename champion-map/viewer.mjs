@@ -758,18 +758,48 @@ function fMed() { var a = splitSets().all; return a.length ? a[Math.floor(a.leng
 /* 现役在库内的百分位（= 底图色带上那根针的位置；也是"为什么不能拿现役当中性灰"的那个证据） */
 function incPct() { var s = splitSets(); return s.all.length ? 100 * s.dn.length / s.all.length : 0; }
 /* §E304 两套分组并存：'fam' = **训练方法/目标家族**（默认），'seed' = RNG 种子（旧口径，留着当对照）。
- *   颜色按黄金角铺 HSL ⇒ 22 个家族也不撞色，不用手写调色板（12 色那套一超过 12 家就开始重复）。*/
-function hueAt(i) { return 'hsl(' + Math.round((i * 137.508) % 360) + ',' + (60 + (i % 3) * 10) + '%,' + (56 + (i % 2) * 12) + '%)'; }
+ * §E557（用户 10-09：「各个家族的颜色已经非常多了，以至于很容易搞混掉。要做成有区分度、且临近颜色对应临近家族」）：
+ *   原来这两件事**都是反的** ——
+ *   ① 色相按黄金角铺（137.508°/家）⇒ 相邻序号被推到色环两端，"挨着的家族"在颜色上毫不相邻，
+ *      它优化的是"任意两家不撞色"，代价正是用户要的"临近对应"没有了；
+ *   ② 序号本身按**枚数**排 ⇒ 家族号相邻的两家，颜色可以完全无关。
+ *   现在：色相 = 360 × 排名 / 家族数 **顺序**走一圈（图例那排也跟着家族号 ⇒ 读起来是一条渐变），
+ *   代价是 n=30 时相邻色相差只有 12°，肉眼分不开 ⇒ 补**第二条轴**：明度按 3 档循环、饱和按 2 档循环（合周期 6）
+ *   ⇒ 相邻两家同时差"色相 + 明度 + 饱和"，而隔 6 家的那两家虽然 s/l 相同，色相已经差开 72°。
+ *   ⚠ 这条改动只动**分类色**（fam / seed 两档）；F / Hp / Δε / sc 那几档是连续 LUT，不归它管。 */
+function hueAt(i, n) {
+  var nn = Math.max(1, n || 1);
+  var h = Math.round(360 * (i % nn) / nn);
+  var s = (i % 2) ? 60 : 88;
+  var l = [50, 74, 62][i % 3];
+  return 'hsl(' + h + ',' + s + '%,' + l + '%)'; }
 function gk(d) { return String(st.color === 'seed' ? (d.seed || '?') : (d.famTop ? 0 : (d.fam || '?'))); }
 var GRP = { keys: [], cnt: {}, col: {} };
 function buildGroups() { var cnt = {}, keys = [];
   for (var i = 0; i < N; i++) { var k = gk(P[i]); if (!(k in cnt)) { cnt[k] = 0; keys.push(k); } cnt[k]++; }
-  keys.sort(function (x, y) { return cnt[y] - cnt[x] || ((+x) - (+y)); });
-  var col = {}; for (var j = 0; j < keys.length; j++) col[keys[j]] = hueAt(j);
+  /* §E557：排序键从"枚数"换成**家族号**（颜色与图例都跟着它走 ⇒ "临近颜色 = 临近家族"这句真的成立）。
+   *   非数字的键（缺家族号的老行）排到最后，不参与渐变。 */
+  keys.sort(function (x, y) { var nx = +x, ny = +y;
+    var badx = isFinite(nx) ? 0 : 1, bady = isFinite(ny) ? 0 : 1;
+    return badx - bady || (badx ? String(x).localeCompare(String(y)) : nx - ny); });
+  var col = {}; for (var j = 0; j < keys.length; j++) col[keys[j]] = hueAt(j, keys.length);
   GRP = { keys: keys, cnt: cnt, col: col }; }
 buildGroups();
-function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GRP.col[gk(d)] || '#9aa8bd';
-  if (st.color === 'gl') { var g = d.gl === null || d.gl === undefined ? -1 : d.gl;
+/* §E557 悬停明细卡的落点（用户：「只出现在右下角，点靠右下的时候会看不见，做成自适应展开」）。
+ *   抽成纯函数是为了**能被自证**：页内那条腿直接喂四个角 + 中心给它，判"卡永远整张在视口里"，
+ *   而不是靠人去鼠标挪到角落看一眼（那种"验过"下次改回去也没人知道）。
+ *   规则：默认落在指针右下；右下放不下就**翻面**（右→左、下→上）；翻面后还溢出就夹进视口。
+ *   ⚠ 不裁内容、不缩字号 —— 内容读不全比卡片挡一点更糟。 */
+function tipPlace(cx, cy, w, h, vw, vh) {
+  vw = vw || window.innerWidth; vh = vh || window.innerHeight;
+  var x = cx + 14, y = cy + 10;
+  if (x + w + 8 > vw) x = cx - w - 14;
+  if (y + h + 8 > vh) y = cy - h - 10;
+  if (x < 8) x = 8; if (y < 8) y = 8;
+  if (x + w > vw - 4) x = Math.max(8, vw - 4 - w);
+  if (y + h > vh - 4) y = Math.max(8, vh - 4 - h);
+  return [x, y]; }
+function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GRP.col[gk(d)] || '#9aa8bd';  if (st.color === 'gl') { var g = d.gl === null || d.gl === undefined ? -1 : d.gl;
     return g < 0 ? '#5a6478' : ramp(Math.max(0, Math.min(1, (g - GLR[0]) / (GLR[1] - GLR[0] || 1)))); }
   /* §E308 三档离色（不是渐变）：绿 = 实测能上槽，红 = 实测栽桩，灰 = 没测过（**不等于**没过）*/
   if (st.color === 'pm') { var v = d.pv; return v === 1 ? '#39d98a' : (v === 0 ? '#ff6b6b' : '#5a6478'); }
@@ -2882,8 +2912,17 @@ window.addEventListener('mousemove', function (e) {
   var mm = ptrXY(e.clientX, e.clientY), mx = mm[0], my = mm[1];
   var hit = pickAt(mx, my);
   var t2 = document.getElementById('tip');
-  if (hit >= 0) { t2.style.display = 'block'; t2.style.left = (e.clientX + 14) + 'px'; t2.style.top = (e.clientY + 10) + 'px';
-    t2.textContent = tip(P[hit], fRange()); } else t2.style.display = 'none';
+  if (hit >= 0) {
+    /* §E557（用户 10-09：「悬停时展开的数据只出现在右下角，点靠右下的时候会看不见，做成自适应展开」）：
+     *   原来固定写 clientX+14 / clientY+10 ⇒ 靠右、靠下的点整张卡被顶出画面（截图里 eco-36 就是被右缘切掉半张）。
+     *   顺序也必须是**先写内容、再量尺寸、最后定位**：#tip 是 white-space:pre，宽度完全由这一帧的文案决定，
+     *   先量后写会拿到**上一枚**的尺寸（那正好是这条腿历史上犯过的错：拿上一个人的信息当这个人的）。
+     *   放不下就翻面（右→左、下→上），最后再夹进视口 —— 不裁内容、不缩字号。 */
+    t2.textContent = tip(P[hit], fRange());
+    t2.style.display = 'block';
+    var tp = tipPlace(e.clientX, e.clientY, t2.offsetWidth, t2.offsetHeight);
+    t2.style.left = tp[0] + 'px'; t2.style.top = tp[1] + 'px';
+  } else t2.style.display = 'none';
 });
 /* §E338 命中判定（悬停与点击共用一份 ⇒ 不会出现"看着能点、点下去没反应"）：
  *   ① 先按**标签包围盒**判。这条是修一个真 bug：标签为了避让会离开自己那枚点（putLabel 会推移 bx/by，
@@ -4448,6 +4487,46 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     st.lgPos = SNF.lgPos; st.cardPos = SNF.cardPos; st.sidePos = SNF.sidePos;
     floatApply(LG, 'lgPos'); floatApply(CD, 'cardPos'); floatApply(SD, 'sidePos');
     st.side = SNF.sidePos === undefined && SNF.lgPos === undefined ? st.side : st.side;
+    /* ===== §E557 两条新腿：悬停卡不许出视口 ‖ 家族配色要"临近号 = 临近色"还分得开 =====
+     *   都是"改完必须能自己喊"的那种：不靠人把鼠标挪到角落看一眼，也不靠肉眼扫一遍色板。 */
+    (function () {
+      var VW = 1600, VH = 900, bad = [], nCases = 0;
+      var PTS = [[VW - 30, VH - 20], [VW - 30, 20], [30, VH - 20], [VW / 2, VH / 2], [VW - 6, VH - 6], [6, 6]];
+      var SIZES = [[420, 260], [640, 120], [180, 700], [300, 200]];   /* 明细卡实际会有的几种体型（pre 排版 ⇒ 宽由文案决定）*/
+      for (var pi = 0; pi < PTS.length; pi++) for (var si = 0; si < SIZES.length; si++) {
+        var w = SIZES[si][0], h = SIZES[si][1], pt = PTS[pi];
+        var r = tipPlace(pt[0], pt[1], w, h, VW, VH); nCases++;
+        if (r[0] < 0 || r[1] < 0 || r[0] + w > VW || r[1] + h > VH)
+          bad.push('指针(' + pt[0] + ',' + pt[1] + ') 卡 ' + w + 'x' + h + ' ⇒ 落在 (' + r[0] + ',' + r[1] + ') 溢出');
+      }
+      /* 卡片比视口还大时不可能整张放下 —— 那种情况只许它**贴左上**（内容至少从头读起），不许跑到右下去 */
+      var big = tipPlace(VW - 10, VH - 10, VW + 200, VH + 200, VW, VH);
+      if (!(big[0] === 8 && big[1] === 8)) bad.push('卡比视口大时没有贴左上，而是落在 (' + big[0] + ',' + big[1] + ')');
+      T('悬停明细卡必须整张在视口内（§E557 用户：「点靠右下的时候会看不见」）—— 四个角 + 中心 × 四种卡尺 ' + nCases + ' 个组合',
+        bad.length === 0, bad.slice(0, 3).join(' ‖ ') + (bad.length ? '' : ' ⇒ 右下放不下就翻面，再溢出就夹进视口'));
+    })();
+    (function () {
+      /* 家族配色：从 GRP.col 里把 hsl() 解回来量，不重新算一遍（重算就是拿另一把尺自证）*/
+      function parse(c) { var m = /^hsl\\((\\d+),(\\d+)%,(\\d+)%\\)$/.exec(c); return m ? [+m[1], +m[2], +m[3]] : null; }
+      var ks = GRP.keys, n = ks.length, p = [], adjBad = [], monoBad = [], farBad = [];
+      for (var i = 0; i < n; i++) { var q = parse(GRP.col[ks[i]]); if (!q) { adjBad.push('家族 ' + ks[i] + ' 的颜色不是 hsl() 形式：' + GRP.col[ks[i]]); q = [0, 0, 0]; } p.push(q); }
+      if (n >= 10) {
+        for (var j = 0; j + 1 < n; j++) {
+          var dl = Math.abs(p[j][2] - p[j + 1][2]), ds = Math.abs(p[j][1] - p[j + 1][1]);
+          if (!(dl >= 10 || ds >= 20)) adjBad.push('家族 ' + ks[j] + ' / ' + ks[j + 1] + ' 只差色相（Δ明度 ' + dl + ' ‖ Δ饱和 ' + ds + '）');
+        }
+        for (var k2 = 1; k2 < n; k2++) if (p[k2][0] <= p[k2 - 1][0]) monoBad.push('排名 ' + k2 + ' 的色相没有比上一家更走（' + p[k2 - 1][0] + ' → ' + p[k2][0] + '）');
+        /* 同 (饱和,明度) 的两家只能靠色相分 ⇒ 必须差开 40° 以上（周期 6 ⇒ n=30 时是 72°）*/
+        for (var a = 0; a < n; a++) for (var b = a + 1; b < n; b++)
+          if (p[a][1] === p[b][1] && p[a][2] === p[b][2]) {
+            var dh = Math.abs(p[a][0] - p[b][0]); dh = Math.min(dh, 360 - dh);
+            if (dh < 40) farBad.push('家族 ' + ks[a] + ' / ' + ks[b] + ' 明度饱和都相同而色相只差 ' + dh + '°'); }
+      } else monoBad.push('家族数只有 ' + n + ' ⇒ 这条测不到东西');
+      T('家族配色要"临近家族号 = 临近色相"且相邻两家分得开（§E557 用户：「颜色已经非常多了，很容易搞混；要临近颜色对应临近家族」）',
+        adjBad.length === 0 && monoBad.length === 0 && farBad.length === 0,
+        n + ' 家 ‖ 色相不单调 ' + monoBad.length + ' 处（' + monoBad.slice(0, 2).join(' ‖ ') + '）‖ 相邻分不开 ' + adjBad.length +
+        ' 处（' + adjBad.slice(0, 2).join(' ‖ ') + '）‖ 同明度饱和而色相差 <40° 的 ' + farBad.length + ' 对（' + farBad.slice(0, 2).join(' ‖ ') + '）');
+    })();
     T('浮层可拖动：图例 / 选中卡 / 冠军序列各拖一次要真跟着走、拖不出画面、双击回出厂位，且图例拖过之后窗口轴那两个柄还接得住',
       dBad.length === 0, dBad.join(' ‖ ') || '三块都跟着走 ‖ 夹取生效 ‖ 双击复位 ‖ 轴柄仍接得住');
   })();
