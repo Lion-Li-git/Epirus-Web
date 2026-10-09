@@ -72,6 +72,8 @@ function blockEnd(i) {
   }
   return end;
 }
+const isGateLine = function (k) { return lines[k].indexOf('t(') === 0; };
+const nextGate = function (i) { for (let k = i + 1; k < lines.length; k++) if (isGateLine(k)) return k; return lines.length; };
 const bodyOf = function (i, end) {
   const arr = [];
   for (let k = i; k <= end; k++) arr.push(isCommentOnly(k) ? '' : lines[k]);
@@ -93,8 +95,9 @@ const gates = [];
 for (let i = 0; i < lines.length; i++) {
   const m = /^t\(['"]([^'"]+)['"]/.exec(lines[i]);
   if (!m) continue;
-  const end = blockEnd(i);
-  if (end < 0) continue;
+  /* §2026-10-10：门体改用「到下一个 `^t(` 之前」（与 tools/gate-sentinel.mjs 同款）——
+   *   哨兵实测这一划法能看到 **277/277**，而花括号配平会因多行字符串丢 3 门 ✗。*/
+  const end = nextGate(i) - 1;
   gates.push({ title: m[1], start: i + 1, body: bodyOf(i, end) });
 }
 

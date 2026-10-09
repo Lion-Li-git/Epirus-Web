@@ -77,6 +77,14 @@ jobs:
           node-version: '24'
       - name: 整轮门禁 = np 全量 + spec（条数与末号由工具自己印，本文件不抄）
         run: node tools/gate-all.mjs --np --no-browser
+      # §2026-10-10（Claude 整改建议 §门禁规矩 1）：**门禁只许测行为**的机械检查。
+      #   文档明说它「不算门、也不进 np-test」⇒ 所以它是一个独立脚本、一个独立 step：
+      #     node tools/gate-sentinel.mjs   报告三类（读 .md ‖ 对源码做正则 ‖ 匹配日志措辞）的**门号清单**。
+      #   ⚠️ 现在**只报告不红**（脚本默认 exit 0）：163 条"钉源码行"还没逐条分诊，
+      #     此刻让 CI 变红 = 用假红训练大家忽略红色（本仓交过这笔学费）。
+      #     分诊完之后把这一行改成 `node tools/gate-sentinel.mjs --strict` 即可开始阻断（一处开关）。
+      - name: 门禁哨兵（规矩 1：只许测行为 · 只报告）
+        run: node tools/gate-sentinel.mjs
 
   browser:
     # ⚠️ **10-01 深夜退回观察档**（千问复核发现 · 用户点头）：转阻断之后**非确定性**，不是内容问题。
