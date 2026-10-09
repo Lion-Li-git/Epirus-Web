@@ -6537,7 +6537,7 @@ t('D134 切片相位不许与座位轮换锁死（v1.5.186 · 复核 DS 交接 �
   ok(evoSrc.indexOf('regenForGame(g, games, gen)') >= 0, '补贴切片必须收到 gen（不传 = 相位不转 = 病复发）');
   /* ④ 真跑一臂：判**产出的覆盖席**，不判横幅（§N11 那条纪律） */
   const dir = mkdtempSync(join(tmpdir(), 'd134-'));
-  const run = spawnNC(['tools/train-3p.mjs', '40', '3', '8', '8'], {
+  const run = spawnCached(['tools/train-3p.mjs', '40', '3', '8', '8'], { outputs: [dir],
     env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTFocus', EPIRUS_IMIT_ONLY: 'bigT',
       EPIRUS_IMIT_OVERRIDE: '1', EPIRUS_IMIT_FRAC: '0.5', EPIRUS_IMIT_SUBONLY: '0',
@@ -6709,7 +6709,7 @@ t('D136 示范归因（v1.5.189）：教师的手必须能从包自己的手里�
   ok(sOn.chainEvents !== undefined, '顺带：连带读数仍在（与 D135 同一把尺，不许跟着开关关）');
   /* ⑤ 真跑一臂：窗口后的代数里必须仍有归因读数，且**分桶不是恒零尺**（别的卡要在 `econ` 桶里有出手） */
   const dir = mkdtempSync(join(tmpdir(), 'd136-'));
-  const run = spawnNC(['tools/train-3p.mjs', '30', '3', '8', '6'], {
+  const run = spawnCached(['tools/train-3p.mjs', '30', '3', '8', '6'], { outputs: [dir],
     env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTChain', EPIRUS_IMIT_ONLY: 'bigT', EPIRUS_IMIT_OVERRIDE: '1',
       EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd136', EPIRUS_BAND_DIR: dir
@@ -7325,7 +7325,7 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
     '期望的写死处数量必须**从源码现算**（METHODOLOGY 52：冻结成常数的"期望值"会在别人补一处后静默少覆盖）');
   ok(/arguments\.length >= 3 \? orig\.apply/.test(p),
     '包装层必须**原样透传**已经传了 ≥3 个参数的调用（否则会把产品口径自己的四参数调用改坏，制造假差异）');
-  const run = spawnNC(['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30'],
+  const run = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30'],
     { encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 200) + '）');
   const out = String(run.stdout || '');
@@ -7342,7 +7342,7 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
   ok(seat[0] !== seat[1] || wall[0] !== wall[1],
     '两栏至少一列必须**不同** ⇒ 证明搬运真的到了引擎（全同 = 测量没打开）。实测 座位 ' + seat.join(' vs ') + ' / 墙 ' + wall.join(' vs '));
   /* 对照：把产品口径也设成 ε=0，则两栏必须**逐字相同** —— 这条是上面那条的反证，也顺手钉住"差异来自口径而不是别的参数" */
-  const ctl = spawnNC(['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30', '--eps=0'],
+  const ctl = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30', '--eps=0'],
     { encoding: 'utf8', timeout: 600000 });
   eq(ctl.status, 0, 'eps=0 对照要跑得通');
   const cout = String(ctl.stdout || '');
