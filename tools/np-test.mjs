@@ -11485,6 +11485,15 @@ t('D232 §E497 按卡出手谱 `tools/usage-probe.mjs`：三格手算自检必�
     ok(!/writeFileSync\([\s\S]{0,40}'js\//.test(src), '⑤ 不许往 js/** 写');
     ok(/from '\.\/audit-lib\.mjs'/.test(src) && /loadChamp/.test(src),
       '⑥ 读包/装配必须走 audit-lib 这一份（不许自己再写一套引擎装载 —— 那就会与训练侧口径分叉）');
+    /* ⑦ §2026-10-09：判"绝对路径"必须用 `isAbsolute`，**不许退回盘符正则**。
+     *   病（CI 连红 12 笔的唯一一条门，本机每一遍都绿）：上一版写的是 `/^[A-Za-z]:[\\\/]/.test(OUT)`，
+     *   D232 的 ④ 腿在 ubuntu runner 上传 `--out=/tmp/e497-usage-XXXX/u.tsv` ⇒ 不命中 ⇒ 被当相对路径拼进仓库
+     *   ⇒ `<repo>/champion-map/tmp/…` 那层目录不存在 ⇒ ENOENT ⇒ 子进程 exit 1 ⇒ `got=1 want=0`。
+     *   为什么钉源码而不是"再跑一次那一支"：POSIX 根路径这一支**只有 Linux 才构造得出来**
+     *   （Windows 的 `/x` 落在当前盘根，CI 上建 `/x` 会因权限失败 ⇒ 那种腿在 CI 上恰好不跑 = 假自证）。
+     *   ⇒ 这一条是 class-D（删掉 `isAbsolute` 会改行为），不是第 89 条禁止的"钉文档措辞"。 */
+  ok(!/\^\[A-Za-z\]:/.test(src), '⑦ 判绝对路径不许用 Windows 盘符正则（`/^[A-Za-z]:` 在 ubuntu 上不命中 ⇒ CI 假红，§2026-10-09 实测连红 12 笔）');
+  ok(/isAbsolute\(\s*OUT[A-Z]*\s*\)/.test(src), '⑦ 必须用 `isAbsolute(OUT)` 判绝对路径（实测源码里找不到它 ⇒ 那一支又退回盘符了）');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -11571,7 +11580,10 @@ if (ONLY && PASS + FAIL + __skipGates === 0) {
 }
 
 
-console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL)) + (__skipGates ? ' · 跳过 ' + __skipGates : '');
+/* §2026-10-09：括号挪回正确位置 —— 上一版写成 `console.log(…) + (跳过…)`，于是**跳过数永远不显示**
+ * （它拼到了 console.log 的返回值 undefined 上）。CI 日志就是证据：那一遍 D233 明明被跳过，
+ * 总结行却是光秃秃的「通过 274 / 275」⇒ 读者会把"少跑了一条"读成"跑完 275 条"。 */
+console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL) + (__skipGates ? ' · 跳过 ' + __skipGates + '（不算通过也不算失败）' : ''));
 
 
 process.exit(FAIL ? 1 : 0);

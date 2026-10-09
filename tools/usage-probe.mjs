@@ -108,7 +108,15 @@ if (!list.length) { console.error('⛔ 名单是空的（给 --ids= / --sample= 
 const miss = list.filter(e => !existsSync(isAbsolute(e.path) ? e.path : join(ROOT, e.path)));
 if (miss.length) console.error('⚠ ' + miss.length + ' 枚文件不在（前 6：' + miss.slice(0, 6).map(e => e.id).join(' ') + '）⇒ 这些枚会被跳过');
 
-const OUTP = /^[A-Za-z]:[\\\/]/.test(OUT) ? OUT : join(ROOT, 'champion-map', OUT);
+/* §2026-10-09：**判绝对路径要用 isAbsolute，不能用盘符正则**。
+ * 病（CI 连红 12 笔的唯一一条门，本机永远看不见的形状）：D232 的 ④ 腿传的是 `--out=<mkdtemp>/u.tsv`，
+ *   Windows 上它是 `C:\Users\…\e497-usage-XXXX\u.tsv` ⇒ 命中盘符正则、按原样写；
+ *   而 ubuntu runner 上是 `/tmp/e497-usage-XXXX/u.tsv` ⇒ **不命中** ⇒ 被当相对路径拼进仓库
+ *   ⇒ `<repo>/champion-map/tmp/e497-usage-XXXX/u.tsv`，那层目录不存在 ⇒ writeFileSync 抛 ENOENT ⇒ 子进程 exit 1。
+ *   复原过一次的脚本贴在日志 `docs/research/logs/OVERNIGHT-2026-10-09-qoder.md` §E558
+ *   （`docs/artifacts/` 已整体 gitignore ⇒ 一次性脚本**不入库**，别把复现指到一个全新 clone 里没有的路径）。
+ * 同仓的 champion-map/feas.mjs:63 早就写了两条支（盘符 **或** `/` 开头）⇒ 这一处是漏写，不是口径。 */
+const OUTP = isAbsolute(OUT) ? OUT : join(ROOT, 'champion-map', OUT);
 if (!existsSync(OUTP)) writeFileSync(OUTP, COLS.join('\t') + '\n');
 const done = new Set(readFileSync(OUTP, 'utf8').trim().split('\n').slice(1).map(l => l.split('\t')[0]).filter(x => x));
 let n = 0;

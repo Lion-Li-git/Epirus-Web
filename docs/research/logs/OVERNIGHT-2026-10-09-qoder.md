@@ -1150,3 +1150,71 @@
 - 定向门禁：`--group=meta` **16/16 rc=0** ‖ `--only=D23` **5/5 rc=0** ⇒ ⚠ 只跑 16/277 与 5/277，**不是整轮认证**。
   `js/**` 未改 ‖ 线上两颗冠军槽未动 ‖ 没有 promote。
 
+### §E558 14:0x–14:5x（用户："看 DS 的工作情况，GitHub 还是红的"）：CI 连红 12 笔的那条门是**我自己 10-08 写的**，病在"判绝对路径只用 Windows 盘符"
+
+判词（用户贴来的 CI 日志，`ef9cd2a` 那一遍）：**只红一条** ⇒
+`✘ D232 … ④ 跑一枚真包必须成功：got=1 want=0` ‖ `门禁：np 274/275（1102.2s） · spec 52/52` ‖ `⚠ SKIP D233 …` ‖ **exit 7**。
+
+**先给 DS 记账**（他这班 10 笔全在 `origin/main`，方向对、两处修得实）：
+① `Skip(msg)/needArtifacts/…` 哨兵把"缺从未入库的本机产物"从假红改成响亮跳过（D231/D233）；
+② `--only` 那条"一个都没匹配到"的守卫补上 `+ __skipGates`（否则唯一匹配的门恰好被跳过 = 被误判成一条没跑）。
+**他验的是干净 worktree 的 `--group=probe`（累计含 train ⇒ 里面就有 D232）⇒ 193/193 rc=0 是真的**，
+但那棵 worktree 在 **Windows** 上 ⇒ ④ 腿传的 `--out=` 是 `C:\Users\…\e497-usage-XXXX\u.tsv` ⇒ 恰好命中盘符正则 ⇒ 走对支。
+⇒ **这条门在本机怎么跑都验不到，只有 ubuntu 那一遍看得见。** `gates.yml` 里那句
+   "若哪天 ubuntu 档红了而 windows 档绿：那是发现了真问题"——今天第一次兑现，兑现的正是它。
+
+**起点账（API 实测，不是猜）**：最后一次绿 = `e26ea22`（10-08 12:11Z），第一次红 = `e3f7cb7`（10-08 14:50Z）；
+而 14:50 那一次 push 一次性携带 4 笔，其中就有 **`0ec7d39` = 我自己写 `usage-probe.mjs` + D232 的那笔（10-08 20:57 本机）**
+⇒ **这条门从出生第一天起在 ubuntu 上就是红的**，与 DS 的清理无关（DS 之后 8 笔都改不到它，所以一路红到 `ef9cd2a`）。
+
+**机制（复原过一次，不是推理）**：`tools/usage-probe.mjs:111` 判绝对路径用的是 `/^[A-Za-z]:[\\\/]/`。
+Linux 的 `--out=/tmp/e497-usage-XXXX/u.tsv` 不命中 ⇒ 被当相对路径拼进仓库 ⇒
+`<repo>/champion-map/tmp/e497-usage-XXXX/u.tsv`，那层目录不存在 ⇒ `writeFileSync` 抛 **ENOENT** ⇒ 子进程 **exit 1** ⇒ `got=1`。
+- 复原脚本 `docs/artifacts/e558-out/posix-out-repro.mjs`（把 POSIX 形状的路径**直接放进 argv**，绕开 Git Bash 会做的路径改写 —— 第一版我在 bash 里传 `/tmp/…`，被 MSYS 换成 `C:\Users\…\Temp\…`，于是"命中盘符"，假复现）。
+- 修前实测：`status=1 ‖ path: 'D:\\code\\Epirus-Web\\champion-map\\tmp\\e497repro2\\u.tsv'` —— 与 CI 同一形状。
+- 修后实测：同一命令 `status=0 ‖ 完成 1 枚 … SHIPPED-Ldemo 狙击=3.5/局 防御类=13/局`。
+- 修法 = 改用 `isAbsolute(OUT)`（该文件本来就 import 了它）。**同仓的 `champion-map/feas.mjs:63` 早就写了两条支**
+  （盘符 **或** `/` 开头）⇒ 这一处是漏写，不是口径分歧。默认相对 `usage.tsv` 的行为一字未变。
+
+**顺手抓到 DS 的一处"话与实现不符"**（有 CI 日志作证据）：`tools/np-test.mjs:11574` 写成了
+`console.log('…通过 X / Y') + (跳过 N)` —— 括号把跳过数拼到了 `console.log` 的返回值上 ⇒ **跳过数永远不会出现在总结行**。
+他 commit message 与 §九 那张两向验证表里写的"总结行同步（通过 X / Y · 跳过 Z）"因此不成立；
+证据就在用户贴的日志里：那一遍 D233 明明被跳过，打的却是光秃秃的 `通过 274 / 275` ⇒ 读者会把"少跑了一条"读成"跑完 275 条"。
+已把括号挪回去并补成 `通过 0 / 0 · 跳过 1（不算通过也不算失败）`（干净克隆 `--only=D233` 实测 rc=0 ‖ 该行照印）。
+
+**我这边的排查过程里，有一遍"绿"是脏的，作废**：第一份全新克隆（CRLF）整轮 `np 275/275 rc=0` 我当下当成证据用了——
+其实 np-cache 住在 `join(tmpdir(),'epirus-npcache')`，**与主树共用同一个目录**（实测已堆到 400 条上限）⇒ 那条"绿"里有缓存命中。
+第二份 **LF 克隆**（`git checkout-index -a -f`，实测 CRLF=0）键里带文件字节 ⇒ 与主树不同 ⇒ 才是冷跑；
+第三遍又叠了 `TZ=UTC` + **独立空 TMPDIR**。**行尾、时区、缺产物三条假设都被这三遍排掉了，最终靠的是 CI 日志那一行门号。**
+⇒ 教训进 METHODOLOGY 第 124 条：**判"绝对路径"要用 `isAbsolute`；而本机一台机器上的整轮绿，永远不能当"CI 会绿"的证据**。
+
+**给这条门补了第 ⑦ 条腿，并两向验过**（`--only=D232`，每遍约 2 分钟）：④ 是行为腿，**在本机结构上看不见这个病**
+（Windows 的 `C:\…` 恰好命中盘符正则）⇒ 补的是**源码级负向钉**（不许出现 `/^[A-Za-z]:`，必须有 `isAbsolute(OUT)`）。
+为什么不写成"在 Windows 上模拟 POSIX 那一支"：`/x` 在 Windows 落到当前盘根、在 CI 上建 `/x` 会因权限失败
+⇒ 那种腿恰好**在需要它的那台机器上不跑** = 假自证（第 118 条的同族）。
+| 装回哪一版 | ④ 行为 | ⑦ 源码 | rc |
+|---|---|---|---|
+| 修好的 `isAbsolute` | ✔ | ✔ | 0 |
+| **原样**盘符正则 `[\\\/]`（Linux 红 / 本机绿的那一版） | ✔ **看不出** | ✘ 响 | 1 |
+| 手抖装歪的 `[\/]`（反斜杠掉了 ⇒ 本机也红） | ✘ 响 | 没走到 | 1 |
+⇒ 第二行是这条腿的存在理由：**它抓的正是 ④ 抓不到的那一支**。第三行是我自己的转义折扣（`node -e` 里 `\\\\` 被吃掉一层，
+   和 METHODOLOGY 记过的模板字符串那条是同一个坑）—— 发现方式是 `grep "^const OUTP"` 把那一行打出来看，不是靠猜。
+修好后 `--only=D232` **rc=0** ‖ `node --check` ✔。
+
+**复原脚本（贴在日志里，不入库）** —— `docs/artifacts/` 已整体 gitignore ⇒ 一次性脚本留在文档面上才是可核的；
+关键是**路径要直接进 argv**（走 bash 会被 MSYS 把 `/tmp/…` 换成 `C:\Users\…\Temp\…`，于是"命中盘符"，那是假复现）：
+
+```js
+/* 用法：放在仓库根旁边跑一次；判读 = status。修前 1（ENOENT，路径被拼进 champion-map\tmp\…）‖ 修后 0 */
+import { spawnSync } from 'node:child_process';
+import { mkdirSync } from 'node:fs';
+const OUT = '/tmp/e497repro2/u.tsv';                 // POSIX 形状：Linux 上就是 tmpdir() 的形状
+mkdirSync('D:/tmp/e497repro2', { recursive: true }); // Windows 上 `/tmp/…` 落在当前盘根，先把那层建出来
+const r = spawnSync(process.execPath, ['tools/usage-probe.mjs', '--ids=SHIPPED-Ldemo', '--games=2', '--out=' + OUT],
+  { encoding: 'utf8', cwd: 'D:/code/Epirus-Web' });
+console.log('status=' + r.status, String(r.stderr || '').slice(-260));
+```
+
+
+
+
