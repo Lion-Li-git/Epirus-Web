@@ -11634,8 +11634,28 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
    *   而**退出码 0、页面自测 71 PASS 全绿**（页面读的是已生成好的表）⇒ 图变薄是静默的。
    *   根因：融合粒的**父**住在 gitignored 的 `docs/artifacts/…`，新机器上根本没有那些 `.bak`。
    * 同族账：§E489（重建链漏第⑥步 ⇒ 投影整列写丢）‖ §E491（`Hp` 空洞 ⇒ `+'' = 0` 把"未测"当"0%"画成库内倒数）。
-   *   三条的共同点：**门测的是"表在不在"，不是"这张图还是不是那张图"**。
-   * ⚠ 红路牙口怎么验的：不在这里造 fixture（那要搬 js/core + champion-map + tools 三套），而是在**干净克隆**里复原一次
+   *   三条的共同点：**门测的是"表在不在"，不是"这张图还是不是那张图"**。 */
+  /* ⑥ 同族病在**量具侧**（§E566 千问）：`champion-map/ruler-measure.mjs` 的 `--ids` 原来**只筛不报** ⇒
+   *   打错一个 id、或那枚根本不在本档面板里（层内 / 历代冠军 / --extra 是三套不同来源），
+   *   结果都是"少测几枚却 exit 0"，跨次比较就在比两套不对齐的名单。本门盯的是 lineage 那边"图变薄"，
+   *   这条补的是**名单齐不齐**。两条腿各都能红：
+   *     ⑥a 负向：有找不到的枚 ⇒ 必须响亮失败（exit 2）并点名是哪枚；
+   *     ⑥b 正对照：面板里真有的枚（`SHIPPED-Ldemo` 是脚本自己硬放进去的那枚）**不许**被筛子拒掉
+   *                ⇒ 否则这道判据本身就成了假红机器。
+   *   ⚠ 按规矩 1 的边界：⑥b 只读"**哪个守卫响了**"这个判别（stderr 里是不是 `--ids` 那条），**不钉措辞**
+   *     —— 要钉"名单 N 枚"那种文案就等于又种下一条恒绿/措辞债。
+   *   放在本门**最前面**（`needArtifacts` 之前）⇒ 这两条不需要任何本机产物，CI 的干净克隆上也照样跑。 */
+  const rmBad = spawnSync(process.execPath, ['champion-map/ruler-measure.mjs', '--ids=__gate-nonexistent-id__', '--set=champ', '--shard=9/9',
+    '--out=__gate-probe-ruler.tsv'], { encoding: 'utf8', timeout: 120000 });
+  eq(rmBad.status, 2, '⑥a `--ids` 里有找不到的枚 ⇒ 必须 exit 2 响亮失败，不许"少测几枚却当跑成功"（实测 status=' + rmBad.status + '）');
+  ok(/--ids 里有 1 枚/.test(String(rmBad.stderr || '')) && /__gate-nonexistent-id__/.test(String(rmBad.stderr || '')),
+    '⑥a 报错必须**点名是哪枚**找不到（只说"筛空了"没法定位 · 实测 stderr=' + String(rmBad.stderr || '').replace(/\n/g, ' ').slice(0, 110) + '）');
+  const rmGood = spawnSync(process.execPath, ['champion-map/ruler-measure.mjs', '--ids=SHIPPED-Ldemo', '--set=champ', '--shard=9/9',
+    '--out=__gate-probe-ruler.tsv'], { encoding: 'utf8', timeout: 120000 });
+  ok(!/--ids 里有/.test(String(rmGood.stderr || '')),
+    '⑥b 正对照：合法枚被自己的筛子拒了 ⇒ 这道判据会变成假红机器（实测 stderr=' + String(rmGood.stderr || '').replace(/\n/g, ' ').slice(0, 110) + '）');
+  try { rmSync('champion-map/__gate-probe-ruler.tsv', { force: true }); } catch (e) { /* 清不掉也不要影响判词 */ }
+  /* （上面那段病写的红路牙口：）不在这里造 fixture（那要搬 js/core + champion-map + tools 三套），而是在**干净克隆**里复原一次
    *   —— 改守卫前那棵克隆 exit 0 且第二父边 0 条，改完同一棵 **exit 2** 并点名缺的 5 枚（记录见 §E503）。 */
   needArtifacts('D233 ⑤ 本机跑 lineage.mjs', ['docs/artifacts/e234-out/K2.js', 'docs/artifacts/e85-out/E20-71.bak']);
   const SRC = 'champion-map/lineage.mjs';

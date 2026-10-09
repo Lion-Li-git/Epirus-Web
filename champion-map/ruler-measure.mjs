@@ -93,7 +93,19 @@ if (EXTRA) {
 }
 const only = String(arg('ids', '')).split(',').map(s => s.trim()).filter(Boolean);
 let list = [...want.entries()].map(([path, v]) => ({ path, ...v }));
-if (only.length) list = list.filter(e => only.indexOf(e.id) >= 0);
+if (only.length) {
+  const haveIds = new Set(list.map(e => e.id));
+  list = list.filter(e => only.indexOf(e.id) >= 0);
+  /* §E566（千问）：`--ids` 原来**只筛不报** ⇒ 打错一个 id、或那枚根本不在本档（`--set` 选的那一层）里，
+   *   结果是"少测几枚却 exit 0"，而跨次比较就在比两个不对齐的面板（§E562 实测：估成本时就是这么漏的人）。
+   *   本文件对"筛到空"已经有响亮失败（见下面 `待量为 0`），这里补的是**筛到不全**那一半。 */
+  const missIds = only.filter(function (id) { return !haveIds.has(id); });
+  if (missIds.length) {
+    console.error('⛔ --ids 里有 ' + missIds.length + ' 枚在**本档**（--set=' + SET + '，面板共 ' + haveIds.size + ' 枚）找不到：' + missIds.join(' ‖ ')
+      + '\n   ⇒ 不许当成"跑完了"：要么那枚不在这个面板里（层内 / 历代冠军 / --extra 各是不同来源），要么 id 打错。宁可不跑，不许拿半套名单去跟另一套比。');
+    process.exit(2);
+  }
+}
 if (LIMIT > 0) list = list.slice(0, LIMIT);
 
 /* ---- 续跑：跳过已量过的 id ---- */
