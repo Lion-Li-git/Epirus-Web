@@ -6059,8 +6059,7 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
   };
   const dir = mkdtempSync(join(tmpdir(), 'd123-'));
   const mini = function (env) {
-    return spawnCached(['tools/train-3p.mjs', '3', '3', '6', '4'], { outputs: [dir],
-      env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd123', EPIRUS_BAND_DIR: dir }, env || {}),
+    return spawnCached(['tools/train-3p.mjs', '3', '3', '6', '4'], { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd123', EPIRUS_BAND_DIR: dir }, env || {}),
       encoding: 'utf8', timeout: 300000,
     });
   };
@@ -6533,8 +6532,7 @@ t('D134 切片相位不许与座位轮换锁死（v1.5.186 · 复核 DS 交接 �
   ok(evoSrc.indexOf('regenForGame(g, games, gen)') >= 0, '补贴切片必须收到 gen（不传 = 相位不转 = 病复发）');
   /* ④ 真跑一臂：判**产出的覆盖席**，不判横幅（§N11 那条纪律） */
   const dir = mkdtempSync(join(tmpdir(), 'd134-'));
-  const run = spawnCached(['tools/train-3p.mjs', '40', '3', '8', '8'], { outputs: [dir],
-    env: Object.assign({}, process.env, {
+  const run = spawnCached(['tools/train-3p.mjs', '40', '3', '8', '8'], { env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTFocus', EPIRUS_IMIT_ONLY: 'bigT',
       EPIRUS_IMIT_OVERRIDE: '1', EPIRUS_IMIT_FRAC: '0.5', EPIRUS_IMIT_SUBONLY: '0',
       EPIRUS_REGEN_SLICE: '0.25', EPIRUS_ARM: 'd134', EPIRUS_BAND_DIR: dir
@@ -6705,8 +6703,7 @@ t('D136 示范归因（v1.5.189）：教师的手必须能从包自己的手里�
   ok(sOn.chainEvents !== undefined, '顺带：连带读数仍在（与 D135 同一把尺，不许跟着开关关）');
   /* ⑤ 真跑一臂：窗口后的代数里必须仍有归因读数，且**分桶不是恒零尺**（别的卡要在 `econ` 桶里有出手） */
   const dir = mkdtempSync(join(tmpdir(), 'd136-'));
-  const run = spawnCached(['tools/train-3p.mjs', '30', '3', '8', '6'], { outputs: [dir],
-    env: Object.assign({}, process.env, {
+  const run = spawnCached(['tools/train-3p.mjs', '30', '3', '8', '6'], { env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTChain', EPIRUS_IMIT_ONLY: 'bigT', EPIRUS_IMIT_OVERRIDE: '1',
       EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd136', EPIRUS_BAND_DIR: dir
     }), encoding: 'utf8', timeout: 600000
@@ -6737,7 +6734,7 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
   const outHtml = join(dir, 'r.html'), outJson = join(dir, 'r.json');
   const run = spawnSync(process.execPath,
     ['tools/skill-report.mjs', '3', '2', outHtml, '--champ=js/bundled-champion-3p.js', '--json=' + outJson],
-    { outputs: [dir], encoding: 'utf8', timeout: 600000 });
+    { encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, 'skill-report 要跑得通（stderr=' + String(run.stderr || '').slice(0, 200) + '）');
   ok(existsSync(outJson), '必须能导出 --json（否则这条判据只能靠肉眼读 HTML）');
   const rep = JSON.parse(readFileSync(outJson, 'utf8'));
@@ -6770,7 +6767,7 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
    * 排序键等于没有，把真正分辨得出的四格糊平。 */
   const cm = spawnCached(['tools/probe-cross-mode.mjs',
     'js/bundled-champion-3p.js', 'docs/artifacts/v7aim3-93.bak', 'docs/artifacts/v7divK-31.bak', '--games=6', '--json'],
-    { outputs: [dir], encoding: 'utf8', timeout: 600000 });
+    { encoding: 'utf8', timeout: 600000 });
   eq(cm.status, 0, '通吃矩阵要跑得通');
   const mx = JSON.parse(String(cm.stdout)).rows;
   ok(mx.length > 0 && mx[0].weakestMulti !== undefined, '每行必须带 `weakestMulti`（除 2P 的最弱格）');
@@ -6789,7 +6786,7 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
    * `机会≈0` 的判据是 `chance`（每局几次机会）⇒ **与局数无关 ⇒ 加算力救不了**；`噪声内` 才是算力问题。
    * 混为一谈就会白烧算力（Q-10 的实际答复：×3.1 算力只把原生口径的可测从 3/30 抬到 4/30，换 `--rich=card` 才到 14/30）。 */
   const mg = spawnCached(['tools/probe-skill-marginal.mjs', '--mode=multi', '--games=6', '--only=ji,gun'],
-    { outputs: [dir], encoding: 'utf8', timeout: 600000 });
+    { encoding: 'utf8', timeout: 600000 });
   eq(mg.status, 0, '边际价值探针要跑得通');
   const mgOut = String(mg.stdout || '');
   ok(/病因拆开/.test(mgOut), '汇总必须把"读不出"拆成**钱墙 / 算力**两种病（不拆就是让人拿算力去治钱墙）');
