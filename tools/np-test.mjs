@@ -1,5 +1,5 @@
 /* Epirus N 人（3-5）引擎测试：随机对局 fuzz + 关键裁定点（docs/RULES-NP.md） */
-import { readFileSync, existsSync, readdirSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -88,6 +88,15 @@ function mulberry32(seed) {
   };
 }
 let PASS = 0, FAIL = 0;
+let __skipGates = 0;   /* §2026-10-09 DS：响亮跳过（缺本机产物）—— 不算通过、不算失败、CI 不红 */
+/* 区分对象：缺产品/线上槽（不可判）仍然红（本仓既有规矩「不可判必须红，不许静默跳过」）；
+ * 缺本机实验残留（训练产物、融合粒那种只活在这台机器上的件）⇒ 用哨兵 Skip 响亮跳过并点名缺哪个文件。
+ * 理由：假红会训练大家忽略红色（Claude 复核 + D82 那类依赖本机状态的病）。 */
+function Skip(msg) { this.__skip = true; this.message = msg; }
+function needArtifacts(why, files) {
+  const miss = files.filter(function (f) { return !existsSync(f); });
+  if (miss.length) throw new Skip('缺本机产物（' + why + '）：' + miss.join(' ‖ '));
+}
 const __T = [];   /* v1.5.224：按门计时。默认**零成本**（只 push 两个数），NP_TIME=1 时才在收尾印排行榜。
                    * 整轮墙钟用 `process.uptime()`（见收尾），不另记起点 —— 少一个变量就少一处能写错的地方。 */
 /* `--only=<子串>`：**只跑名字匹配的门**（v1.5.288）。
@@ -143,7 +152,9 @@ function t(name, fn) {
   if (RUNSET && !RUNSET.has(__k)) { __skipped++; return; }
   const __t0 = Date.now();
   try { fn(); PASS++; console.log('  ✔ ' + name); }
-  catch (e) { FAIL++; console.log('  ✘ ' + name + '  → ' + e.message); }
+  catch (e) {
+    if (e && e.__skip) { __skipGates++; console.log('  ⚠ SKIP ' + name + '  → ' + e.message); return; }
+    FAIL++; console.log('  ✘ ' + name + '  → ' + e.message); }
   __T.push([Date.now() - __t0, name]);
 }
 function ok(c, m) { if (!c) throw new Error(m || 'assert failed'); }
@@ -11353,6 +11364,9 @@ t('D229 §E340 全息屏障→原型制御 的映射档（v1.6.8）：默认 off
 });
 
 t('D231 §E477 权重融合入口 `tools/soup-pack.mjs`：自证必须绿 · 四道守卫都要真咬 · 融合结果必须能被引擎解开 · 不许碰线上槽', function () {
+  /* §2026-10-09 DS：⑧ 那条腿要真包（K2 / E20-71 / v17-146），而它们从未入库 ⇒ 全新 clone（CI）上必红；
+   *   缺件时响亮跳过并点名（其余腿是门内自造的，仍会跑）。 */
+  needArtifacts('D231 ⑧ 真包融合', ['docs/artifacts/e234-out/K2.js', 'docs/artifacts/e85-out/E20-71.bak', 'docs/artifacts/v17-146.bak']);
   /* 为什么值得一条门（METHODOLOGY 第 15 条："交付清单里的每个文件都得有一条会失败的用例点名"）：
    * 这个工具产出的东西**看起来就是一枚冠军包**（同外壳、同长度、能被页面导入），但它不是任何一次训练的结果。
    * 一旦"平均错了"（形状错位 / 权重没归一 / 把 2P 包拌进 3P 包），产出的仍然是一枚能跑、会给出数、
@@ -11477,6 +11491,9 @@ t('D232 §E497 按卡出手谱 `tools/usage-probe.mjs`：三格手算自检必�
 });
 
 t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融合粒 vs 真解出父边"守卫必须在，且默认判红', function () {
+  /* §2026-10-09 DS：⑤ 那条腿跑 lineage.mjs，而它按表去解融合粒的父边（那 5 枚 SOUP-* 的包从未入库）⇒ 全新 clone 上必红；
+   *   缺件时响亮跳过并点名。 */
+  needArtifacts('D233 ⑤ 本机跑 lineage.mjs', ['docs/artifacts/e234-out/K2.js', 'docs/artifacts/e85-out/E20-71.bak']);
   /* 病（实测复现，不是推测）：10-08 深夜我拿 `git archive HEAD` 解出一棵**干净克隆**跑 `lineage.mjs` ⇒
    *   第二父边 **6 条 → 0 条**，K2 从家族 23（159 枚 · 标签"代数 400→1200"）塌进家族 1 的 868 枚兜底类，
    *   而**退出码 0、页面自测 71 PASS 全绿**（页面读的是已生成好的表）⇒ 图变薄是静默的。
@@ -11516,7 +11533,7 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 
 const __nReg = __src.filter(l => /^t\(/.test(l)).length;
-if (__nReg !== PASS + FAIL + __skipped) {
+if (__nReg !== PASS + FAIL + __skipped + __skipGates) {
   console.error("⛔ 注册的 t() 有 " + __nReg + " 条，但只执行了 " + (PASS + FAIL) + " 条"
     + (__skipped ? "（另有 " + __skipped + " 条被 --only 跳过）" : "")
     + " ⇒ 有门落在 process.exit 之后（死代码）或被条件跳过。这不是全绿，是少跑。");
@@ -11554,7 +11571,7 @@ if (ONLY && PASS + FAIL === 0) {
 }
 
 
-console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL));
+console.log('\nN人测试：通过 ' + PASS + ' / ' + (PASS + FAIL)) + (__skipGates ? ' · 跳过 ' + __skipGates : '');
 
 
 process.exit(FAIL ? 1 : 0);
