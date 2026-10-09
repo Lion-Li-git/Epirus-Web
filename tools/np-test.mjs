@@ -11365,9 +11365,6 @@ t('D229 §E340 全息屏障→原型制御 的映射档（v1.6.8）：默认 off
 });
 
 t('D231 §E477 权重融合入口 `tools/soup-pack.mjs`：自证必须绿 · 四道守卫都要真咬 · 融合结果必须能被引擎解开 · 不许碰线上槽', function () {
-  /* §2026-10-09 DS：⑧ 那条腿要真包（K2 / E20-71 / v17-146），而它们从未入库 ⇒ 全新 clone（CI）上必红；
-   *   缺件时响亮跳过并点名（其余腿是门内自造的，仍会跑）。 */
-  needArtifacts('D231 ⑧ 真包融合', ['docs/artifacts/e234-out/K2.js', 'docs/artifacts/e85-out/E20-71.bak', 'docs/artifacts/v17-146.bak']);
   /* 为什么值得一条门（METHODOLOGY 第 15 条："交付清单里的每个文件都得有一条会失败的用例点名"）：
    * 这个工具产出的东西**看起来就是一枚冠军包**（同外壳、同长度、能被页面导入），但它不是任何一次训练的结果。
    * 一旦"平均错了"（形状错位 / 权重没归一 / 把 2P 包拌进 3P 包），产出的仍然是一枚能跑、会给出数、
@@ -11408,6 +11405,9 @@ t('D231 §E477 权重融合入口 `tools/soup-pack.mjs`：自证必须绿 · 四
     const sha = f => createHash('sha1').update(readFileSync(f, 'utf8').split('\n').slice(2).join('\n')).digest('hex').slice(0, 12);
     eq(sha(A), sha(B), '⑦ 权重归一化必须与写法无关（`1,1` 与 `0.5,0.5` 要产出逐位相同的包）');
     /* ⑧ 真包融合完必须能被引擎解开（防"平均出 NaN / 形状坏 / 页面导入失败"） */
+  /* §2026-10-09 DS：⑧ 那条腿要真包（K2 / E20-71 / v17-146），而它们从未入库 ⇒ 全新 clone（CI）上必红；
+   *   缺件时响亮跳过并点名（其余腿是门内自造的，仍会跑）。 */
+  needArtifacts('D231 ⑧ 真包融合', ['docs/artifacts/e234-out/K2.js', 'docs/artifacts/e85-out/E20-71.bak', 'docs/artifacts/v17-146.bak']);
     const real = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/e234-out/K2.js,docs/artifacts/e85-out/E20-71.bak', '--out=' + join(dir, 'ke.js')], { encoding: 'utf8', timeout: 120000 });
     eq(real.status, 0, '⑧ 真包融合必须成功（K2 + E20-71，实测 ' + real.status + '）：\n' + String(real.stderr || '').slice(0, 200));
     const s3 = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Float64Array };
@@ -11513,7 +11513,6 @@ t('D232 §E497 按卡出手谱 `tools/usage-probe.mjs`：三格手算自检必�
 t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融合粒 vs 真解出父边"守卫必须在，且默认判红', function () {
   /* §2026-10-09 DS：⑤ 那条腿跑 lineage.mjs，而它按表去解融合粒的父边（那 5 枚 SOUP-* 的包从未入库）⇒ 全新 clone 上必红；
    *   缺件时响亮跳过并点名。 */
-  needArtifacts('D233 ⑤ 本机跑 lineage.mjs', ['docs/artifacts/e234-out/K2.js', 'docs/artifacts/e85-out/E20-71.bak']);
   /* 病（实测复现，不是推测）：10-08 深夜我拿 `git archive HEAD` 解出一棵**干净克隆**跑 `lineage.mjs` ⇒
    *   第二父边 **6 条 → 0 条**，K2 从家族 23（159 枚 · 标签"代数 400→1200"）塌进家族 1 的 868 枚兜底类，
    *   而**退出码 0、页面自测 71 PASS 全绿**（页面读的是已生成好的表）⇒ 图变薄是静默的。
@@ -11522,6 +11521,7 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
    *   三条的共同点：**门测的是"表在不在"，不是"这张图还是不是那张图"**。
    * ⚠ 红路牙口怎么验的：不在这里造 fixture（那要搬 js/core + champion-map + tools 三套），而是在**干净克隆**里复原一次
    *   —— 改守卫前那棵克隆 exit 0 且第二父边 0 条，改完同一棵 **exit 2** 并点名缺的 5 枚（记录见 §E503）。 */
+  needArtifacts('D233 ⑤ 本机跑 lineage.mjs', ['docs/artifacts/e234-out/K2.js', 'docs/artifacts/e85-out/E20-71.bak']);
   const SRC = 'champion-map/lineage.mjs';
   const src = readFileSync(SRC, 'utf8');
   /* ① 声明数必须来自包自己的 meta（`soup.sources`），不许从"这张表今天解不解得开"倒推 —— 那样洞就自灭了 */
