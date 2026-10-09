@@ -931,11 +931,18 @@ function tip(d, fr) {
        真出现了就是生成器的时间守卫漏了一种来路 ⇒ 画虚线并点名，让它看得见而不是悄悄画成实线。 */
     (backOf(d) ? '\\n⛔ 这条父边时间倒挂（父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts + '）'
         + ' ⇒ 它是"按路径反查今天的槽主"造出来的**假血统**，不该画成实线（来路 = ' + (d.psrc || '未标') + '）' : '') +
-    (d.ok === 1 ? '  · 过线 ✓' : (d.ok === 0 ? '  · 未过线' : '')) +
+    /* §E563（整改建议 规矩/建议 4 · 用户 10-09）：**"过线"这个词改名**。它测的是**训练侧五道检查**（feas.mjs 那五道），
+     *   与**真正的换包闸不是同一件事**（§E551 实测两者只有 41% 的情况结论一致）⇒ 旧措辞会让人以为"绿环 = 可以换上去了"。
+     *   这不是排版问题：文档点名的就是这个混用会让人误判。 */
+    (d.ok === 1 ? '  · 训练侧五道检查 ✓（≠ 换包闸）' : (d.ok === 0 ? '  · 未过训练侧五道检查' : '')) +
     (d.ok === 0 && d.why ? '\\n　栽在：' + d.why : '') +
     '\\n名次 ' + d.rk + '/' + N + '（线上口径 · 出厂 T 下重算；旧考卷口径是第 ' + d.rkExam + ' 名）· 按当前 T 重排见一维视图' +
-    '\\nHp 线上口径夺1率 = ' + d.Hp.toFixed(1) + '%（ε=0.2 soft · 图上的尺就是它）   H 考卷口径 = ' + d.H.toFixed(1) +
-      '%（ε=0 贪心 · 旧尺，历史文档里的数）   Δε = ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1) + 'pt' +
+    /* §E563：两把尺各补一句**采样口径**（整改建议 现象 5 + §E561/§E562 我今天实测的数）：
+     *   Hp 只有一个种子批（77000）⇒ 四批复量现役极差 5.7pt ‖ H 是 exam=30 档 ⇒ 研究结论引用的多为 120 档（现役 55.4↔51.3）。
+     *   不写这两句，图上"谁排在谁前面"就会被当成读数 —— 而它今天实测**撑不住排序**。 */
+    '\\nHp 线上口径夺1率 = ' + d.Hp.toFixed(1) + '%（ε=0.2 soft · 图上的尺就是它 · **只跑过种子批 77000 一批**，四批极差 5.7pt ⇒ 只当水位别当排序）   ' +
+      'H 考卷口径 = ' + d.H.toFixed(1) +
+      '%（ε=0 贪心 · 旧尺，历史文档里的数 · **exam=30 档**，研究常引的是 120 档：现役 55.4↔51.3）   Δε = ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1) + 'pt' +
       '\\n   S = ln G_eff = ' + d.S.toFixed(2) + '（G_eff ' + d.Ge.toFixed(2) + '）' +
     (d.gl === null || d.gl === undefined ? '' : '\\n长程广度 G(long) = ' + (+d.gl).toFixed(2) + (d.gl < 3 ? '  ← 低于闸要求的 3（这条腿最常卡前沿）' : '')) +
     (d.pv === null || d.pv === undefined ? '' : '\\n上槽体检（promote --dry 实测）：' + (d.pv === 1 ? '✅ 三条腿全过 —— 这枚真能换包' : '⛔ ' + d.pb)) +
@@ -1396,7 +1403,7 @@ function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, d
     t.fillStyle = st.ink; t.textAlign = 'right'; t.font = ff(9);
     var ls = wrapLabel(t, '家族 ' + f + ' · ' + full, maxW, 2);
     t.fillText(ls[0], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.36);
-    var cnt = mem.length + ' 枚 · 过线 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best;
+    var cnt = mem.length + ' 枚 · 五道检查 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best;
     t.fillStyle = st.dim; t.font = ff(9);
     if (ls[1]) t.fillText(ls[1], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.82);
     else if (t.measureText(cnt).width <= maxW) t.fillText(cnt, padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.82);
@@ -1871,8 +1878,8 @@ function drawMap(fr) {
     g.beginPath(); g.arc(scr[i][0], scr[i][1], 11 * st.size, 0, 6.284); g.strokeStyle = st.ink; g.lineWidth = 2; g.stroke(); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText(st.elev < 0.5
-    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（蓝 = 低 → 红 = 高 · 针 = 现役那一档，它在库内第 ' + Math.round(incPct()) + ' 百分位）· 绿环 = 该枚过线 · 点一枚 = 选中 · 缩放 ×' + st.k.toFixed(2)
-    : '左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 柱高 = ' + (st.goodTop ? 'F − F_min（越高越好）' : 'F_max − F（越低越好 = 冠军在阱底）') + ' · 绿环 = 该枚过线',
+    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（蓝 = 低 → 红 = 高 · 针 = 现役那一档，它在库内第 ' + Math.round(incPct()) + ' 百分位）· 绿环 = 过了训练侧五道检查 · 点一枚 = 选中 · 缩放 ×' + st.k.toFixed(2)
+    : '左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 柱高 = ' + (st.goodTop ? 'F − F_min（越高越好）' : 'F_max − F（越低越好 = 冠军在阱底）') + ' · 绿环 = 过了训练侧五道检查',
     14 * devicePixelRatio, h - 12 * devicePixelRatio);
 }
 /* ---- 三维投影（3db 行为轴 / 3dw 势阱 共用） ---- */
@@ -2443,7 +2450,7 @@ function paintLegend(fr) {
     hp: '每枚都是单批读数 ‖ 同一枚换一批实测摆 2.3~5.7pt ⇒ 颜色看水位，排序请用「对现役决斗」那档',
     de: 'Δε = 考卷（ε=0）− 页面（ε=0.2 soft）‖ 发散带 0 在正中：红 = 一开探索就掉，蓝 = 开了反而强',
     sc: 'Scd = 8 粒 seedBase 的逐种子配对差均值（不是主场那一粒）‖ 橙 = 同号但 <6/8 ⇒ 判不动',
-    champ: '这一档只标历代上槽那几枚 ‖ 针 = 现役 · 绿环 = 该枚过线'
+    champ: '这一档只标历代上槽那几枚 ‖ 针 = 现役 · 绿环 = 过了训练侧五道检查'
   };
   var _nt = LEG_NOTE[st.color];
   if (_nt) { s3h = document.createElement('div'); s3h.style.color = 'var(--dim)'; s3h.textContent = _nt; }
@@ -2503,7 +2510,7 @@ function paintLegend(fr) {
    *   ③ 上一版其实已经生效，却因为我校验时只截了 420 字符的 DOM 窗口而**误判为未生效**并把它撤掉了（校验方式本身有坑）。 */
   if (OKL.length && (st.color === 'fam' || st.color === 'seed')) {
     /* §E437：用户要求「逐枚过线」后面也换行再接 185/901 */
-    s2.innerHTML = '黄针 = 现役 · 绿环 = 逐枚过线<br>' + OKL.length + '/' + POKJ;
+    s2.innerHTML = '黄针 = 现役 · 绿环 = 过了训练侧五道检查（**不是换包闸**）<br>' + OKL.length + '/' + POKJ;
     s2.title = OKSRCJ || '包自己 META 里的历史 feasibility.ok（没有现跑的判定表）';   /* §E492 同上：口径由数据说 */
     /* §E434 DS：§E432 那笔把 s1 整行清空了（用户当时说顶部有选项框、这行是重复），但**颜色的含义**也跟着没了 ——
      *   用户 10-08：「你刚才删的太多，现在图例颜色是啥没掉了，至少要保留这玩意是 F = Hp + T·S」。
