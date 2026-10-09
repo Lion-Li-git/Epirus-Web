@@ -5344,7 +5344,7 @@ t('D92 R56 同层内资源型先结算（用户裁定：过载炮的清除须含
   ok(rs.indexOf('for (const i of ord3) {') >= 0, '那一层必须真的用新顺序遍历（别只造了数组不用）');
   /* §删（2026-10-08，用户转 Claude 复核 + METHODOLOGY 第 89 条）：这里原来钉的是「文档必须出现 R56」——
    *   那正是第 89 条禁止的**正向**钉法：删掉文档里那行字游戏照常跑，门却会红 ⇒ 门测的是记事本措辞，不是行为。
-   *   教训仍然保留在 docs/METHODOLOGY.md 与 CHANGELOG 里（记忆归记忆、门归行为）。¶ 原断言：ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R56') >= 0, 'RULE */
+  /* §删（2026-10-09 DS 空转审计）：正向钉文档措辞（删掉那行字游戏照跑、门却会红）⇒ 违反 METHODOLOGY 第 89 条。¶ 原断言：*   教训仍然保留在 docs/METHODOLOGY.md 与 CHANGELOG 里（记忆归记忆、门归行为）。¶  */
   });
 
 t('D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必须一致）', function () {
@@ -5366,7 +5366,7 @@ t('D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必
   ok(rs.indexOf("{ type: R.DMG.FIRE, source: i }") < 0, '天火不许带 `source`（v1.5.107 首版加过、被用户纠正）');
   /* §删（2026-10-08，用户转 Claude 复核 + METHODOLOGY 第 89 条）：这里原来钉的是「文档必须出现 R57」——
    *   那正是第 89 条禁止的**正向**钉法：删掉文档里那行字游戏照常跑，门却会红 ⇒ 门测的是记事本措辞，不是行为。
-   *   教训仍然保留在 docs/METHODOLOGY.md 与 CHANGELOG 里（记忆归记忆、门归行为）。¶ 原断言：ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R57') >= 0, 'RULE */
+  /* §删（2026-10-09 DS 空转审计）：正向钉文档措辞（删掉那行字游戏照跑、门却会红）⇒ 违反 METHODOLOGY 第 89 条。¶ 原断言：*   教训仍然保留在 docs/METHODOLOGY.md 与 CHANGELOG 里（记忆归记忆、门归行为）。¶  */
   });
 
 t('D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下回合结束）', function () {
@@ -5439,9 +5439,9 @@ t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被�
     'tests/spec.js 场景用例不许再用裸 Math.random 当 rng（1/8 抖动会红门禁；判定敏感的用例显式喂 seqRng）');
   /* §删（2026-10-08，用户转 Claude 复核 + METHODOLOGY 第 89 条）：这里原来钉的是「文档必须出现 R59」——
    *   那正是第 89 条禁止的**正向**钉法：删掉文档里那行字游戏照常跑，门却会红 ⇒ 门测的是记事本措辞，不是行为。
-   *   教训仍然保留在 docs/METHODOLOGY.md 与 CHANGELOG 里（记忆归记忆、门归行为）。¶ 原断言：ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('R59') >= 0, 'RULE */
+  /* §删（2026-10-09 DS 空转审计）：正向钉文档措辞（删掉那行字游戏照跑、门却会红）⇒ 违反 METHODOLOGY 第 89 条。¶ 原断言：*   教训仍然保留在 docs/METHODOLOGY.md 与 CHANGELOG 里（记忆归记忆、门归行为）。¶  */
   ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('持续直到被触发') < 0 ||
-     readFileSync('docs/RULES-2P.md', 'utf8').indexOf('旧文 R38 是') >= 0,
+     readFileSync('docs/RULES-2P.md', 'utf8').indexOf('旧文 R38 是') >= 0,   /* §2026-10-09 修回：这是**负向**检查的第二个操作数，被我上一版误删 ⇒ 曾退化成 A || 字符串 = 恒真 */
     'R38 的"持续直到被触发"必须被标注为**已被 R59 取代**');
   });
 
@@ -5459,7 +5459,7 @@ t('D96 R60 净化清除"自身全部持续状态"（含增益）+ 写入点只�
     '两个 `case SK.PURIFY`（正式路径 + 镜面复制路径）都必须走 purgeSelf');
   ok(rs.indexOf('me.stickers = []; me.nightmare = false; me.tauntPending = false;') < 0,
     '旧的"两处各写一遍"写法不得回来');
-  /* §删（2026-10-08）：同上 —— 正向钉文档措辞，违反 METHODOLOGY 第 89 条。¶ 原断言：ok(readFileSync('docs/RULES-2P.md', 'utf8').indexOf('**R60**') >= 0, ' */
+  /* §删（2026-10-08 起）：正向钉文档措辞已摘（违反 METHODOLOGY 第 89 条）；教训留在 METHODOLOGY/CHANGELOG。 */
   /* （原来还钉"rules.js 的卡面描述必须写着『清除自身全部持续状态』"那句整话 —— v1.6.12 删除：
    *   那是**措辞在册**，改一次文案就红，而真正防得住的是上面那条"两处各写一遍不得回来"的结构钉。） */
   });
