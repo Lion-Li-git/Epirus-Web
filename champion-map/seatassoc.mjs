@@ -41,7 +41,7 @@ const rd = p => { const L = readFileSync(p.indexOf(':') >= 0 || p[0] === '/' ? p
 
 const BEH = ['dmg', 'heavy', 'holo', 'rounds', 'distinctKeys', 'charges', 'waste', 'noThreatStance', 'Geff', 'seatSpread'];
 const SCR = ['H', 'Hp', 'De'];
-const TARGETS = ['multi六格均值', 'long六格均值', '最大格'];
+const TARGETS = ['六格均值(multi)', '六格均值(long)', '最大格(multi)'];   // 表里列名通用，口径在 mode 列
 const BASE_LDEMO = { multi: 5.3, long: 12.3, 最大格: 28, 格: '只枪压制' };   // §E506 那次同 seed 90210 的基线
 
 const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
@@ -76,18 +76,26 @@ console.log('# (f) 名单：A 批 ' + ia.length + ' 枚 ‖ B 批 ' + ib.length 
 if (名单差.length || A.rows.length !== ia.length * 2) { console.error('⛔ (f) 红 ⇒ 别判读'); process.exit(2); }
 
 /* ---- 两批合并成一枚一行的人席读数 ---- */
+/* ⚑ 身份必须走 coords 的 **path 列**，不是文件名 basename：现役那枚在 coords 里叫 `SHIPPED-Ldemo`，
+ *   而探针打印的是 `js/bundled-champion-3p.js`（⇒ basename = `bundled-champion-3p`）。
+ *   按 basename 接的话 Ldemo 会"不在 coords"，锚点与关联同时接错 —— 同 §E330 那条"人席参照必须从 path 列取"。 */
+const PATH2ID = {};
+for (const r of C.rows) if (r[C.h.path]) PATH2ID[r[C.h.path].replace(/\\/g, '/')] = r[C.h.id];
 const cellOf = (t, id, mode, col) => { const r = t.rows.filter(x => x[t.h.id] === id && x[t.h.mode] === mode)[0]; return r ? r[t.h[col]] : undefined; };
+const pathOf = {}; for (const r of A.rows) pathOf[r[A.h.id]] = r[A.h.path];
 const P = [];
 for (const id of ia) {
-  const crow = C.rows.filter(r => r[C.h.id] === id)[0];
-  if (!crow) { console.log('  ⚠ ' + id + ' 不在 coords ⇒ 无人席以外的维度读数，只进锚点/噪声，不进关联'); continue; }
+  const cid = PATH2ID[(pathOf[id] || '').replace(/\\/g, '/')] || id;
+  const crow = C.rows.filter(r => r[C.h.id] === cid)[0];
+  if (!crow) { console.log('  ⚠ ' + id + '（coords id=' + cid + '）不在 coords ⇒ 无人席以外的维度读数，只进锚点/噪声，不进关联'); continue; }
   const g = k => Number(crow[C.h[k]]);
-  const rec = { id: id, 行为: {}, 分数: {} };
+  const rec = { id: cid, 行为: {}, 分数: {} };
   for (const k of BEH) rec.行为[k] = g(k);
   for (const k of SCR) rec.分数[k] = g(k);
-  /* 三个目标量各自的 A 批（seed 90210）与 B 批（90211）读数；`最大格` 取 multi 口径（注册否决线看的就是 multi） */
-  rec.multi_a = Number(cellOf(A, id, 'multi', 'multi六格均值')); rec.multi_b = Number(cellOf(Bt, id, 'multi', 'multi六格均值'));
-  rec.long_a = Number(cellOf(A, id, 'long', 'long六格均值')); rec.long_b = Number(cellOf(Bt, id, 'long', 'long六格均值'));
+  /* 三个目标量各自的 A 批（seed 90210）与 B 批（90211）读数。⚑ 表里列名是**通用的** `六格均值`/`最大格`，
+   *   口径在 `mode` 列上 —— 干跑时按 `multi六格均值` 取列拿到 undefined ⇒ 均值整片 NaN（这错是干跑抓的，不是判读时）。 */
+  rec.multi_a = Number(cellOf(A, id, 'multi', '六格均值')); rec.multi_b = Number(cellOf(Bt, id, 'multi', '六格均值'));
+  rec.long_a = Number(cellOf(A, id, 'long', '六格均值')); rec.long_b = Number(cellOf(Bt, id, 'long', '六格均值'));
   rec.最大格_a = Number(cellOf(A, id, 'multi', '最大格')); rec.最大格_b = Number(cellOf(Bt, id, 'multi', '最大格'));
   rec.最大格long_a = Number(cellOf(A, id, 'long', '最大格'));
   rec.锚_multimax = cellOf(A, id, 'multi', '最大格是谁'); rec.锚_longmax = cellOf(A, id, 'long', '最大格是谁');
@@ -161,6 +169,27 @@ for (const t of ['multi_a', 'long_a']) {
   const xs = P.map(() => rngC()), ys = P.map(p => p[t]);
   const rho = sp(xs, ys), p = mcP(xs, ys, B_, rngC); 随机表.push(rho.toFixed(3) + '/p=' + p.toFixed(3));
   if (p <= 0.05) 随机显著++;
+}
+/* ---- (e)② 正对照亮了之后的**诊断**（写在这里是在第二粒 seed 落地之前，不是看完数再补的解释）----
+ * 预登记的 (e)② 说"分数维应当 ≈0，|ρ| ≥ 0.5 ⇒ 接线可疑"。**这个前提本身可能是错的**：
+ *   §E506 那 24 粒是**同一配方的续训臂**，分数带很窄（页面 42~64），那是"截断范围"下的相关；
+ *   本轮抽样框按行为空间最远点铺，Hp 从 ~10 一路到 ~61 —— 范围一大，"烂包在每把尺上都烂"完全可以显出相关。
+ * 所以红了先问该不该红：同一段分数带内（Hp ≥ 40，对齐 §E506 那批）重算一次。
+ *   带内若回落到 ≈0 ⇒ 亮的是**框**、不是接线；带内仍 ≥0.5 ⇒ 接线真的有嫌疑，本轮判读降级为"待复跑"。
+ * ⚠ 这是诊断，不是把判据改松：主表与入围清单仍按跑前的 (c)/(e) 印。 */
+const 段 = P.filter(p => isFinite(p.分数.Hp) && p.分数.Hp >= 40);
+const rngB = rng0();
+console.log('\n----- 诊断（(e)② 亮了之后）-----');
+console.log('# 全框 Hp 范围 ' + Math.min.apply(null, P.map(p => p.分数.Hp)).toFixed(1) + '~' +
+  Math.max.apply(null, P.map(p => p.分数.Hp)).toFixed(1) + ' ‖ 同段（Hp ≥ 40）n=' + 段.length);
+for (const k of ['H', 'Hp']) {
+  const row = [];
+  for (const t of ['multi_a', 'long_a']) {
+    const xs = [], ys = [];
+    for (const p of 段) if (isFinite(p.分数[k]) && isFinite(p[t])) { xs.push(p.分数[k]); ys.push(p[t]); }
+    row.push(t.slice(0, 5) + ' ρ=' + sp(xs, ys).toFixed(3) + ' p=' + mcP(xs, ys, B_, rngB).toFixed(3) + '（n=' + xs.length + '）');
+  }
+  console.log('# 带内 ' + k + ' ↔ 人席：' + row.join(' ‖ '));
 }
 const idl = P.map(p => p.行为.dmg), per = sp(idl, P.map(p => p.行为.dmg));
 /* 置换 p 函数自己的已知答案（§E572 那次"尾数写成累积分布"的教训的延续）：完美同序的 p 必须是尾数最小值。 */
