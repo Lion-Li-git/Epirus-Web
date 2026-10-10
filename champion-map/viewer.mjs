@@ -301,13 +301,14 @@ if (existsSync(stlP)) {
   }
 } else console.log('提示：没有 slot-timeline.tsv ⇒ 旧槽位冠军会全部落在"未上槽"里（跑 node champion-map/slot-timeline.mjs）');
 const DATA = rows.map(r => ({
-  /* §E314 **头号尺换成线上口径**（用户："把冠军演化全部改成线上口径吧"）。
-   *   `Hp` = 同一台 `eval-5p`、同一批 35 组合 × 30 局、同 seed，只是主体席按页面那样开 ε=0.2 soft；
-   *   `H`  保留 = 考卷口径（ε=0 贪心）—— 历史文档里大量读数写的是它，覆盖掉就把名字偷走了（attach-hp.mjs 头注有账）。
-   *   `De` = Δε = H − Hp（正 = 开探索就掉）。*/
+  /* §E314 **头号尺换成线上口径**（用户："把冠军演化全部改成线上口径吧"）‖ §E569（10-10 晚）**考卷档整体换到 120，不留两套值**
+   *   （用户："H120 既然一定比 H30 更准确，就不要留 H30 做历史对照，历史数据反而是准确度差的那一份"）。
+   *   `Hp` = 同一台 `eval-5p`、同一批 35 组合、同 seed，主体席按页面那样开 ε=0.2 soft（局数与 `H` 同档，写在 `examG` 里）；
+   *   `H`  = 考卷口径（ε=0 贪心）· **档 = `examG` 列**（自 §E569 起全图 120 局/组合）⇒ 不再并列 30/120 两套数；
+   *   `De` = Δε = H − Hp（正 = 开探索就掉）—— 两口径必须**同批同档成对**，否则 Δε 里会混进采样量之差（档差中位就有 0.30pt）。*/
   id: r.id, lin: r.lineage || '', kin: r.kin || '', seed: r.seed || '', H: +r.H, Hp: +r.Hp, De: +r.De, S: +r.S, Ge: +r.Geff, rk: +r.rank,
   /* §E566：同枚的 exam=120 档读数。**空必须是 null，不许 `+'' = 0`**（§E491 那条病就是 Hp 空洞被当 0% 画成库内倒数） */
-  H120: (String(r.H120 === undefined ? '' : r.H120).trim() === '') ? null : +r.H120,
+  examG: (String(r.examG === undefined ? '' : r.examG).trim() === '') ? null : +r.examG,
   /* §E373 预留的那个标记现在真的有值了：§E375 把 16 枚旧槽位冠军并进 coords.tsv 之后，
    *   档位里"旧冠军段"那一档才有东西可按（§E373 那版库里一枚旧包都没有 ⇒ 它一直藏着不出现）。
    *   判据按**类别名**判，不按 id 前缀判 —— id 是我起的名字（SLOT-<wid8>），lineage 才是"它住在槽里过"这件事的记录。
@@ -612,7 +613,13 @@ function FR() { var k = st.T.toFixed(4); if (_FR.k === k) return _FR.v; _FR.k = 
 function winLo() { var r = FR(); return r[0] + st.flo * (r[1] - r[0]); }
 function winHi() { var r = FR(); return r[0] + st.fhi * (r[1] - r[0]); }
 function winFull() { return st.flo <= 1e-9 && st.fhi >= 1 - 1e-9; }
-function inWin(d) { if (winFull()) return true; var v = Fv(d); return v >= winLo() && v <= winHi(); }
+function winEps() { var r = FR(); return (r[1] - r[0]) * 1e-9; }   /* §E569：与 winFull() 已有的 1e-9 同一量级，比 F 的 1e-6 量化小三个数量级 */
+/* §E569 边界一致性（不是新判据，是修一条既存脆弱）：
+ *   oldBand() 数"段里有几枚"用精确闭区间 lo/hi，而点击之后 inWin 比的是 winLo()=a+((lo-a)/sp)*sp
+ *   ⇒ 分数往返会把上边压低约 5.55e-17（node 实测：wh − hi = -5.55e-17），
+ *   于是**F 正好等于段上边的那一枚**（换档后实测是 SLOT-037b2f71，F=0.42565000）被踢出窗外 ⇒ 页检报"窗内 100 ‖ 段里 101"。
+ *   修法只有一处：两边的边界判定共用同一个 epsilon，不靠运气对齐浮点。 */
+function inWin(d) { if (winFull()) return true; var v = Fv(d), e = winEps(); return v >= winLo() - e && v <= winHi() + e; }
 function recomputeVIS() { NVIS = 0;
   for (var i = 0; i < N; i++) { var d = P[i];
     /* 冠军与"加进对比的那几枚"**永远钉在图上**：切批次不能把参照物一起切没，
@@ -944,19 +951,19 @@ function tip(d, fr) {
     (d.ok === 0 && d.why ? '\\n　栽在：' + d.why : '') +
     '\\n名次 ' + d.rk + '/' + N + '（线上口径 · 出厂 T 下重算；旧考卷口径是第 ' + d.rkExam + ' 名）· 按当前 T 重排见一维视图' +
     /* §E563：两把尺各补一句**采样口径**（整改建议 现象 5 + §E561/§E562 我今天实测的数）：
-     *   Hp 只有一个种子批（77000）⇒ 四批复量现役极差 5.7pt ‖ H 是 exam=30 档 ⇒ 研究结论引用的多为 120 档（现役 55.4↔51.3）。
+     *   Hp 只有一个种子批（77000）⇒ 四批复量现役极差 5.7pt（**那是换档前 30 档那一批复量的旧数，120 档没重测四批**）
+     *   ‖ H 的档从 §E569 起**写在数据里**（coords.tsv 的 examG 列，全图 = 120 局/组合），不再写在文案里 ——
+     *     文案写死 "30" 而数据是 120 的那天，读图的人就会拿旧档的现役去比研究文档里的新档候选（§E566 早上我就那么错过一次）。
      *   不写这两句，图上"谁排在谁前面"就会被当成读数 —— 而它今天实测**撑不住排序**。 */
-    '\\nHp 线上口径夺1率 = ' + d.Hp.toFixed(1) + '%（ε=0.2 soft · 图上的尺就是它 · **只跑过种子批 77000 一批**，四批极差 5.7pt ⇒ 只当水位别当排序）   ' +
+    '\\nHp 线上口径夺1率 = ' + d.Hp.toFixed(1) + '%（ε=0.2 soft · 图上的尺就是它 · **只跑过种子批 77000 一批** ⇒ 只当水位别当排序；四批极差 5.7pt 是**换档前 30 档**复量的旧读数，120 档下没重测四批）   ' +
       'H 考卷口径 = ' + d.H.toFixed(1) +
-      '%（ε=0 贪心 · 旧尺，历史文档里的数 · **exam=30 档**）   Δε = ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1) + 'pt' +
-      /* §E566（10-10 全库 986 枚实测）：并列显示**同一枚在 exam=120 档**的读数，并把两档差算给它看。
-       *   为什么必须并列：库内互比时档差中位只有 0.5pt（Spearman 0.98，30 档基本够用），
-       *   但**现役自己恰好是全库最敏感的那一枚**（55.4 → 51.3，−4.1pt，718 枚里排第 1）
-       *   ⇒ "候选离现役多远"会随档整体挪 ~4.5pt，138/717 = 19.2% 的候选"比不比现役强"会因档而异。
-       *   不并列，读图的人就会拿 30 档的现役去比研究文档里 120 档的候选（我今天早上就那么错过一次）。
-       *   ⚠ 未测的枚显式写"未测"，不许把空串当 0 读（§E491 那条同族病）。 */
-      (d.H120 === null ? '\\n　exam=120 档：未测（别当 0 读）'
-        : '\\n　同枚 exam=120 档 = ' + d.H120.toFixed(1) + '%（与上面 30 档差 ' + (d.H120 - d.H >= 0 ? '+' : '') + (d.H120 - d.H).toFixed(1) + 'pt）') +
+      /* §E569（10-10 晚 · 用户裁定「既然 120 更准就别留 H30 做历史对照，不要堆一堆变量」）：
+       *   图上从此只有**一把**考卷尺，而它的**档必须从数据里取**（coords.tsv 的 examG 列），不许把 "30" 写死在文案里 ——
+       *   文案写 30、数据是 120 的那一天，读图的人就会拿旧档的现役去比研究文档里的新档候选（§E566 今天早上我刚错过一次）。
+       *   历史句子（14 个文件 / 51 行引的 55.4 那一类）**不在这里回改**：语义变更点立在 CHANGELOG 顶部那一条。
+       *   ⚠ 档没标出来时显式说"未标"并禁止跨文档比，不许把空值当成 30（§E491 那族病：空串当 0 读）。 */
+      '%（ε=0 贪心 · **exam=' + (d.examG === null ? '未标档' : d.examG) + ' 局/组合**' +
+      (d.examG === null ? ' ⇒ 这一行没带档，别拿它和研究文档里的数互比' : '') + '）   Δε = ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1) + 'pt' +
       '\\n   S = ln G_eff = ' + d.S.toFixed(2) + '（G_eff ' + d.Ge.toFixed(2) + '）' +
     (d.gl === null || d.gl === undefined ? '' : '\\n长程广度 G(long) = ' + (+d.gl).toFixed(2) + (d.gl < 3 ? '  ← 低于闸要求的 3（这条腿最常卡前沿）' : '')) +
     (d.pv === null || d.pv === undefined ? '' : '\\n上槽体检（promote --dry 实测）：' + (d.pv === 1 ? '✅ 三条腿全过 —— 这枚真能换包' : '⛔ ' + d.pb)) +
@@ -2818,8 +2825,8 @@ function oldBand() {
   if (!n) return [0, 1, 0, 0];
   var a = Infinity, b = -Infinity;
   for (i = 0; i < N; i++) { var w = Fv(P[i]); if (w < a) a = w; if (w > b) b = w; }
-  var sp = (b - a) || 1, inb = 0;
-  for (i = 0; i < N; i++) { var v2 = Fv(P[i]); if (v2 >= lo && v2 <= hi) inb++; }
+  var sp = (b - a) || 1, eps = sp * 1e-9, inb = 0;
+  for (i = 0; i < N; i++) { var v2 = Fv(P[i]); if (v2 >= lo - eps && v2 <= hi + eps) inb++; }   /* §E569：与 inWin 同一条边界判定（共用 epsilon），否则"段里的枚数"和"点下去窗内的枚数"永远差一枚压线的 */
   return [(lo - a) / sp, (hi - a) / sp, n, inb];
 }
 function toFrac(lo, hi) { var r = FR(), w = (r[1] - r[0]) || 1; return [(lo - r[0]) / w, (hi - r[0]) / w]; }
@@ -3453,19 +3460,20 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('高亮：非选中那批不许压到 0.2 以下（留上下文）‖ 未测过那一支单独量（§E308 = 0.16，不许掉到 0）',
     mn >= 0.2 && (nGray === 0 || mnGray >= 0.15),
     '非选中最低 ' + mn.toFixed(2) + '（' + (mn >= 0.2 ? '✅' : '✗') + '）‖ 未测过 ' + nGray + ' 枚 ‖ 其最低 ' + (nGray ? mnGray.toFixed(2) : '—'));
-  /* §E566（10-10 全库 986 枚实测）：新列 H120 = **同一枚在 exam=120 档**的考卷读数，明细卡并列显示它。
-   *   这条自检要能喊的三件事（不是打印读数）：
-   *     ① 一枚都没有值 ⇒ attach-h120 没跑／列没挂上（那卡片文案就是空话）
-   *     ② 出现"H 正常、H120 却是 0"的形态 ⇒ §E491 那族病（空串被当 0 读 ⇒ "未测"冒充"0%"）
-   *     ③ 现役那一枚必须有值、且与 30 档同量级（实测差 −4.1pt；列错位/串了别的列会跳出 10pt 之外）*/
-  var c12Has = 0, c12Zero = 0, c12Inc = null;
-  for (var c12i = 0; c12i < DATA.length; c12i++) { var c12d = DATA[c12i];
-    if (c12d.H120 !== null && c12d.H120 !== undefined) c12Has++;
-    if (c12d.H120 === 0 && (c12d.H || 0) > 5) c12Zero++;
-    if (c12Inc === null && (c12d.lin || '').indexOf('当前线上') >= 0) c12Inc = c12d; }
-  T('§E566 明细卡的第二个档（H120 · exam=120）必须有值，且不许把"未测"冒充成 0',
-    c12Has > 0 && c12Zero === 0 && c12Inc !== null && isFinite(c12Inc.H120) && Math.abs(c12Inc.H120 - c12Inc.H) < 10,
-    '带值 ' + c12Has + '/' + DATA.length + ' ‖ 0 冒充 ' + c12Zero + ' ‖ 现役 ' + (c12Inc ? (c12Inc.H + ' → ' + c12Inc.H120) : '不在表上'));
+  /* §E569（10-10 晚 · 用户裁定「120 更准就全换成 120，不要留 H30 做历史对照、不要堆一堆变量」）：
+   *   图上从此只有**一把**考卷尺，所以这条自检从"两档对照"换成"**每一行都得自带它的档**"。
+   *   它能红的三种情况（都是真会发生的，不是装饰）：
+   *     ① 生成链忘了挂 examG ⇒ 整列没值，卡片上那句"exam=?"就是空话（§E566 的根病就是 provenance 只活在人脑子里）
+   *     ② 只有部分行有档（半挂）⇒ 没档那些行的读数没法跨文档比，却照样被画进同一张排序里
+   *     ③ 一张表里出现**两个不同的档** ⇒ 那才叫"混档画在一张图上"，正是 §E566/§E562 那次误判的形状 */
+  var gHas = 0, gVals = {}, gKeys;
+  for (var gi = 0; gi < DATA.length; gi++) { var gd = DATA[gi];
+    if (gd.examG !== null && gd.examG !== undefined && isFinite(gd.examG) && gd.examG >= 1) { gHas++; gVals[gd.examG] = (gVals[gd.examG] || 0) + 1; } }
+  gKeys = Object.keys(gVals);
+  T('§E569 每一行都必须带考卷档 examG，且全图只能有一个档（档写在数据里，不靠文案和记性）',
+    DATA.length > 0 && gHas === DATA.length && gKeys.length === 1,
+    '带档 ' + gHas + '/' + DATA.length + ' ‖ 出现过的档 = ' + (gKeys.join(',') || '（无）') +
+    ' ⇒ 漏档／半挂／混档都会让"离现役多远"这类读法失去意义');
   st.hi = {};
   /* ⑥ 冠军序列按上线时刻排，抽不到的**必须标出来**（不许拿训出时刻冒充上线时刻） */
   var CH = champList(), prevS = '';

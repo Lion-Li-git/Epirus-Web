@@ -25,6 +25,13 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
 const SEED = Number(arg('seed', 77000)), JOBS = Math.max(1, Number(arg('jobs', 4)));
+/* §E569（10-10 晚 · 用户裁定「全部换成 120」）：`--games=` = **同一把卷子的题量档**（每组合局数），默认 30 ⇒ 老用法一字不变。
+ *   为什么不是"只测页面、考卷沿用"：判据 (i) 的复现守卫要的就是**同批同 seed 成对**（§E312 那条教训），
+ *   换档时两口径一起重测，`d = exam − page` 才是同档的 Δε；否则 Δε 里会混进采样量之差（实测档差中位就有 0.30pt，
+ *   与 Δε 的库内中位同量级 ⇒ 混进去就是那条轴自己脏掉）。
+ *   产物多带一列 `examG`（§E566「档跟着行走」的同族）：**这张表是哪一档量的，写进行里，不靠文件名和人的记性。** */
+const GAMES = Number(arg('games', 30));
+if (!isFinite(GAMES) || GAMES <= 0) { console.error('⛔ --games 必须是正数（每组合局数），收到 `' + arg('games', '') + '`'); process.exit(2); }
 const OUT = join(HERE, arg('out', 'epsfull.tsv'));   // §E328：可另指一张表，别把两批混进 epsfull.tsv
 
 const CO = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n').map((l) => l.split('\t'));
@@ -71,13 +78,13 @@ if (ids.indexOf('SHIPPED-Ldemo') >= 0 && !existsSync(SHIP)) {
 }
 if (existsSync(OUT)) { const done = readFileSync(OUT, 'utf8').trim().split('\n').length - 1;
   console.error('⛔ ' + 'epsfull.tsv 已存在（' + done + ' 行）⇒ 先删再跑，别把两批混成一张表'); process.exit(2); }
-writeFileSync(OUT, ['id', 'exam', 'page', 'd', 'hp_old', 'sec'].join('\t') + '\n', 'utf8');
+writeFileSync(OUT, ['id', 'exam', 'page', 'd', 'hp_old', 'sec', 'examG'].join('\t') + '\n', 'utf8');
 
 function one(id, on) {
   /* 路径必须走 `PATHOF`：这批子代的产物在 `docs/artifacts/eNN-out/` 里，硬拼 `docs/artifacts/<id>.bak`
    *   会全部 ENOENT ⇒ 每一枚都记成"失败"，表里一行不写而 exit 0（§E312 那条"空跑要响亮失败"同族）。 */
   const rel = PATHOF[id] || ('docs/artifacts/' + id + '.bak');
-  const a = ['tools/eval-5p.mjs', '30', '5', String(SEED), rel];
+  const a = ['tools/eval-5p.mjs', String(GAMES), '5', String(SEED), rel];
   if (on) a.push('--eps=0.2', '--eps-mode=soft');
   return new Promise((res) => {
     const t0 = Date.now();
@@ -92,7 +99,7 @@ async function worker() {
     const ex = await one(id, false), pg = await one(id, true);
     done++;
     if (!isFinite(ex.v) || !isFinite(pg.v)) { fail++; console.error('  ⛔ ' + id + ' ' + (ex.err || '') + ' ' + (pg.err || '')); continue; }
-    appendFileSync(OUT, [id, ex.v.toFixed(2), pg.v.toFixed(2), (ex.v - pg.v).toFixed(2), (HOLD[id] || 0).toFixed(2), pg.sec].join('\t') + '\n', 'utf8');
+    appendFileSync(OUT, [id, ex.v.toFixed(2), pg.v.toFixed(2), (ex.v - pg.v).toFixed(2), (HOLD[id] || 0).toFixed(2), pg.sec, GAMES].join('\t') + '\n', 'utf8');
     if (done % 50 === 0) console.error('  … ' + done + '/' + ids.length + ' 枚（失败 ' + fail + '）');
   }
 }
