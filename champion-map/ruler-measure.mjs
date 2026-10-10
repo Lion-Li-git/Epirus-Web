@@ -34,7 +34,6 @@ const SET = arg('set', 'all'), OUT = arg('out', 'e287-ruler.tsv'), LIMIT = Numbe
 const SH = String(arg('shard', '1/1')).split('/').map(Number);
 const COLS = ['id', 'path', 'H', 'Hstrict', 'Htie', 'cost3', 'S', 'Geff', 'dmg', 'heavy', 'holo', 'zeroRate', 'drawRate',
   'rounds', 'distinctKeys', 'seatSpread', 'rwDmg', 'charges', 'waste', 'noThreatStance', 'fieldAAtk', 'fieldARounds',
-  'rounds', 'distinctKeys', 'seatSpread', 'rwDmg', 'charges', 'waste', 'noThreatStance', 'fieldAAtk', 'fieldARounds',
   /* §E566（千问）：把**测量档**盖进每一行。原来这张表只有 `games`/`pop`/`n` 这些**包自己的配方字段**，
    *   而"这行的 H 是考卷几局/组合"数据里根本没有 ⇒ 30 档与 120 档的两张表拼在一起看不出来（§E562/§E563
    *   那个"档把候选与现役的差距压掉一半"的讨论， provenance 全靠日志里的一句话）。
