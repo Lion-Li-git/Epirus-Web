@@ -19,6 +19,16 @@
  * 若某条门还要读该子进程**产出的文件**（例如训练臂存进 `EPIRUS_BAND_DIR` 的 band，随后被断言打开），
  * 那么缓存命中的那一次**没有那些文件** ⇒ 光缓存 stdout 会造出**假绿**。
  * 判断方法：在该门的 `spawnSync` 之后 `grep readFileSync|readdirSync|existsSync` —— 命中就等于前置不满足。
+ *
+ * ### §2026-10-11 更新：这一条现在有两种安全做法（口径变了，别照旧文一刀切绕开）
+ * ① **绕开**：`spawnNC()` / `opts.nocache` —— 简单，代价是每遍热跑真跑（实测 `D134` 36 s ‖ `D135` 54.5 s ‖ `D137` ~10 s）。
+ * ② **把产出也进缓存**：`opts.outputs = [路径,…]`（见下面的 `captureOutputs`/`restoreOutputs`）—— 命中时先还原再交结果。
+ * ⚠️ ②只有一种情形是真安全的：**声明必须覆盖那条门读到的每一个产出路径**。这条**机制测试永远看不见**
+ *   （它对"只读 stdout 的门"和"声明漏了东西的门"都照样绿），只能逐门读代码确认 —— 实测反例：`D127` 按
+ *   `EPIRUS_BAND_DIR` 声明了 `[dirA,dirB]`，命中那遍**门红了** ⇒ 它读的产出超出所声明 ⇒ 退回①。
+ * ⚠️ 另一个坑：`outputs` 是**本模块的选项**，传给原生 `spawnSync` 会被**静默忽略**（不报错、status 照回）
+ *   ⇒ 用 ② 时必须确认那一句调的确实是 `spawnCached`，不是同名形状的 `spawnSync`（今晚就有 1/6 处栽在这）。
+ * ② 的语义由门 `D157` 行为式自证（真跑写进声明路径 ‖ 命中把被删掉的产出还原回来且不重跑 ‖ 盒子里少一项必须**不再算命中**）。
  */
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -34,6 +44,8 @@ const __S = { hit: 0, miss: 0, savedMs: 0, on: true };
 export function cacheOn() { return process.env.NP_NOCACHE !== '1'; }
 export function cacheStats() { return { hit: __S.hit, miss: __S.miss, savedMs: __S.savedMs }; }
 export function cacheReset() { __S.hit = 0; __S.miss = 0; __S.savedMs = 0; }
+/** §2026-10-11 千问复核：给门**行为式地**验 `outputs` 语义用（腿要能算出产出盒的路径，不许自己再拼一遍目录约定）。 */
+export function cacheDir() { return CACHE_DIR; }
 
 const TREE_DIRS = ['tools', 'js', 'server'];
 function collectFiles() {
