@@ -213,7 +213,11 @@ if (existsSync(promP)) {
 const duelP = join(HERE, 'duel.tsv');
 let DUEL = {};
 if (existsSync(duelP)) {
-  const dl = readFileSync(duelP, 'utf8').trim().split('\n'); const dh = dl[0].split('\t');
+  /* §E567 读法更正：这里原来是 `readFileSync(...).trim()` —— **整文件 trim 会把末行的行尾空单元格连着 tab 一起削掉**
+   *   （duel.tsv 现在第 7 列是 `note`，最后一行那格正是空的 ⇒ 那一行只剩 6 格）。
+   *   今天没有读者取 `note`，所以不是活 bug；但 §E314/§E375 立的规矩就是防"只错一行、无声无息"，
+   *   而同一天我在合并 exam=120 那张表时真的踩中过一次（`480d30e`）⇒ 只剥行尾换行，不 trim 整文件。 */
+  const dl = String(readFileSync(duelP, 'utf8')).replace(/\r?\n$/, '').split('\n'); const dh = dl[0].split('\t');
   const iId = dh.indexOf('id'), iM = dh.indexOf('mean'), iS = dh.indexOf('sign'), i7 = dh.indexOf('s77000'), i8 = dh.indexOf('s88000');
   for (const l of dl.slice(1)) { const c = l.split('\t'); if (!c[iId]) continue;
     DUEL[c[iId]] = { m: +c[iM], s: c[iS], a: c[i7], b: c[i8] }; }
