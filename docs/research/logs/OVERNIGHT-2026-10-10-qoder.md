@@ -247,6 +247,7 @@
 **留给用户的两件（我不会替您裁）**：
 ① 分支要不要并进 `main` 或开 PR —— **并进去（或开 PR）才会跑 CI 的 ubuntu 阻断档**，本机拿不到那一档的判词；
    `gh` 未安装、MCP 没有 workflow 工具、未登录不能 POST dispatch ⇒ 这三条我都在昨夜实测过，不是"没想到"。
+   ⚠️ 但这句把"**触发**不了"说成了"**判词**读不到"，11:2x 已由 §E566-m 更正（public 仓库一条 curl 就能读 `check-runs`）。
 ② 图上"离现役多远"这类**读法**要不要整体搬到 `exam=120` 档（排序/颜色/线都会动，会改您已验收的视觉底）
    ⇒ 本班只做了**并列显示 + 页检断言**，把换档这一步留着等您点头。
 
@@ -266,9 +267,32 @@
 
 **推送回执**（实测）：`git push origin main` ⇒ `To https://github.com/Lion-Li-git/Epirus-Web.git  219e676..289edd5  main -> main`，`origin/main` 现指 `289edd5` ✔
 ⇒ CI 的 **ubuntu 阻断档**从此有了触发面（`.github/workflows/gates.yml` 的 `on: push: branches:[main]`）。本机仍拿不到那一档的判词（`gh` 未装、MCP 无 workflow 工具）。
+   ⚠️ **后半句当时就写错了**，见下面 §E566-m 的更正：`gh` 只影响"触发"，读判词一条 `curl` 就够。
 
 **本段自己的记账时序**（照 §E566 那条自订规矩：改文档就补跑 meta）：`--group=meta` 在 **10:17:49 = 16/16 ✔**，覆盖的是 §E566-l 写完那一刻；
 之后我又只改了本日志两行**时间戳措辞**（`10:15` → `10:15:56` 与加合并时刻）⇒ 那两行不再补跑本机门，**最终态由推上去后 CI 那一档认证**。
+
+## §E566-m（11:2x）CI 的 ubuntu 阻断档判词回来了 —— 顺带更正我今早写下的"本机拿不到"那句
+
+**判词（直接读 GitHub API，实测）**：`00dd8c4`（main 现指的那笔）上两个 job 都收口 ——
+`gates`（**ubuntu 阻断档**）**completed / success**，job `114107978783` 起 `10:19:37` 止 `10:45:05`（本机时刻）= **25 分 28 秒**；
+`browser`（windows 观察档）completed / success。中间那笔 `289edd5`（合并提交）自己那一遍也是 `gates` **success** ⇒ **两遍都绿**。
+
+⚠️ **更正一条我自己写进 §E566-l 和提交信息的说法**：我写的是"本机仍拿不到那一档的判词（`gh` 未装、MCP 无 workflow 工具）"。
+**只对"触发"成立，对"读判词"不成立** —— 仓库是 public，一条
+`curl https://api.github.com/repos/Lion-Li-git/Epirus-Web/commits/<sha>/check-runs` 就把 `name/status/conclusion/started_at/completed_at` 全给了，不需要 `gh`、不需要登录。
+⇒ 以后这类"外部系统已经算好、只差一次 GET"的读数我自己拿，不用等用户去看。
+
+⚠️ 第二条记账：为了等这个判词我起了个轮询看守（`ci-wait-00dd8c4.sh`，任务 id `b65cm6rze`），**它一次都没跑成** ——
+第一次 `fork` 就死（Git Bash：`dofork: child -1 ... exit code 0xC000026B, errno 11 / fork: retry: Resource temporarily unavailable`，
+时机正好在我那遍整轮把机器资源吃满之后），**零次轮询、连日志文件都没创建出来**。判词最后是 11:21:04 我直接 curl 拿到的（距 CI 收口已 36 分钟，纯浪费）。
+⇒ 规矩：这种情况**根本不该写看守脚本**（一次性 GET 就够）；真要挂守候，判死要用实证 —— 我这次做了三条才敢说它没了：`sleep.exe` 进程数 = **0**、
+   按 `CommandLine` 里那个脚本名匹配只剩我自己这条查询的包装进程（四个都是 11:20:50 同一秒创建）、`TaskStop` 报 `No task found`。
+   ⚠ 附带一条本机会骗人的细节：用 `grep -i ci-wait` 筛进程会**匹配到自己这条命令**（它的 CommandLine 里就带着那个词）⇒ 要用 `CreationDate` 或精确脚本名排除自匹配。
+
+**本班完整时间线（全部实测）**：合并 `289edd5` 10:00:54 ‖ main 树本机整轮「✔ 5 道全绿」RC=0 10:15:56 ‖ 推 `origin main`（`219e676..289edd5`）
+‖ §E566-l 提交 `00dd8c4`（committer date 10:19:17）并推上去 ‖ CI 起 10:19:37 / 止 10:45:05 ⇒ **gates success** ‖ 我读到判词 11:21:04。
+⇒ 待裁的只剩图上读法要不要整体换到 `exam=120` 档那一条。
 
 **上面那条 ① 关闭**；仍开放的是 **②**（图上读法要不要整体搬到 `exam=120` 档）。本班新增的训练/图产物一律没动线上槽，`js/**` 未动、未 promote。
 

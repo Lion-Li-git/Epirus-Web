@@ -24,6 +24,11 @@
   `654.8s` 比上两遍快是因为缓存热 + 无抢核 ⇒ 秒数只在本仓意义上可比（门数 277 未变）。
   ⚠ 本行是整轮跑完后回填的 ⇒ 按 §E566 那条自订规矩，回填后另跑 `--group=meta` 复验（判词见日志 §E566-k）。
   `js/**` 未动、未 promote、门数 277 不变。
+- **并入 `main` 之后重跑了一遍整轮，并拿到 CI 的 ubuntu 阻断档判词**（用户 10-10 裁定合并）：
+  合并提交 `289edd5`（10:00:54，`--no-ff`，树哈希与分支末笔 `96ac511` 相同）‖ 本机在 main 这棵树上 **10:15:56** = `np 277/277（845.5s） · spec 52/52 · smoke/battle/map OK` ⇒「✔ 5 道全绿」RC=0 ✔
+  ‖ **CI `gates`（ubuntu 阻断档）= success**（`00dd8c4`，job `114107978783`，10:19:37 → 10:45:05 = **25 分 28 秒**；中间 `289edd5` 那一遍也 success）‖ `browser`（windows 观察档）也 success。
+  ⚠️ 顺带更正我写进日志 §E566-l 的一句话："本机拿不到 CI 那一档的判词"**只对"触发"成立** ⇒ 仓库 public，一条
+  `curl https://api.github.com/repos/<owner>/<repo>/commits/<sha>/check-runs` 就返回 `name/status/conclusion/started_at/completed_at`，**不需要 `gh`、不需要登录**（细节与那条死掉的轮询看守见日志 §E566-m）。
 
 ## v1.6.47 — 门禁线 §E566（千问 10-09 23:2x–23:5x · 接 DS 的三条欠账）：3 条**行为级腿**补回被摘的名字钉 ‖ `D157` 的 `outputs` 三段式自证（两向验）‖ 更正：`D127` 不算丢覆盖
 
