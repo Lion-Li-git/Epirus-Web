@@ -994,7 +994,15 @@ function tip(d) {
       (d.ds === 'flip' ? '两批符号翻' : d.dm > 0 ? '两批都赢' : '两批都输') + '）' : '') +
     '\\n──── 特性剖面 ‖ P = 本屏 ' + N + ' 枚里 ≤ 该读数的占比 ────' + prof(d);
 }
-function fit0() { var r = cv.getBoundingClientRect(); cv.width = Math.max(1, r.width * devicePixelRatio); cv.height = Math.max(1, r.height * devicePixelRatio); }
+/* §E574 两件事都必须在这条函数里成立（用户报"缩小范围的瞬间整张黑一下"，实测在他机器上一次拖拽触发了 9 次 fit0）：
+ *   ① **幂等**：给 canvas 的 width/height 赋值 = 清空画布，哪怕赋的是同一个值。原来这里无条件赋值
+ *      ⇒ 布局只要抖 1 物理像素（RO → refit → fit0）就清空一次。
+ *   ② 尺寸按**四舍五入**取（原来是截断）：截断会让 cv.width 与 CSS 盒 × dpr 恒差 ~1px，
+ *      正好落在 refit 那道 1.5px 守卫的边界上 ⇒ 抖一下就翻过去。四舍五入后差 ≤ 0.5px，稳。 */
+function fit0() { var r = cv.getBoundingClientRect();
+  var w = Math.max(1, Math.round(r.width * devicePixelRatio)), h = Math.max(1, Math.round(r.height * devicePixelRatio));
+  if (cv.width === w && cv.height === h) return false;
+  cv.width = w; cv.height = h; return true; }
 function pct(a, q) { var b = a.slice().sort(function (x, y) { return x - y; }); return b[Math.max(0, Math.min(b.length - 1, Math.floor(q * b.length)))]; }
 
 /* ---- 势场：邻域缓存（每套"坐标轴 × 屏幕比例尺"一次）+ 位图（每次换 T 只重算加权和） ----
@@ -3177,8 +3185,12 @@ document.getElementById('bgc').addEventListener('input', function () { setBg(thi
 function refit() { var r = cv.getBoundingClientRect();
   if (r.width < 2 || r.height < 2) return;
   if (Math.abs(cv.width - r.width * devicePixelRatio) <= 1.5 && Math.abs(cv.height - r.height * devicePixelRatio) <= 1.5) return;
-  fit0(); NBK = {}; FL = null; req(); }
-window.addEventListener('resize', function () { fit0(); NBK = {}; FL = null; req(); });   /* 比例尺变了 ⇒ 场要按新度量重建 */
+  /* §E574 ②：fit0 一赋值就是**清空**，而原来这里把重画交给 req()（下一帧的 rAF）⇒ 中间那一帧是空画布，
+   *   浏览器会把它合成出去 = 用户看到的"整张黑一下"。改成**同一个任务里立刻重画**：清空与重画之间不经过帧边界，
+   *   空画布就没有被呈现的机会。真变了才作废缓存（fit0 返回 false 时什么都不动）。 */
+  if (!fit0()) return;
+  NBK = {}; FL = null; draw(); }
+window.addEventListener('resize', function () { if (!fit0()) return; NBK = {}; FL = null; draw(); });   /* 比例尺变了 ⇒ 场要按新度量重建 */
 if (typeof ResizeObserver !== 'undefined') { try { new ResizeObserver(refit).observe(cv); } catch (E) {} }
 /* 深链：#mode=map&3d=1&T=0.2&labels=all&color=fam&hi=31,82&bg=%23e6ebf5（mode=2d/3dw 是旧链兼容，也方便无头截图复核）*/
 var HCL = null, HT_SEEN = 0, WSEEN = 0;
@@ -4904,6 +4916,30 @@ st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
     var bad = []; for (var z = 0; z < _pv.length; z++) if (!_pv[z][1].length) bad.push(_pv[z][0]);
     return bad.length === 0; })(), '取不到值的维：' + (function () { var b = [];
     for (var z = 0; z < _pv.length; z++) if (!_pv[z][1].length) b.push(_pv[z][0]); return b.join(','); })());
+  /* §E574 三条"清空画布"的牙（用户报：拖窗口时整张黑一下；他机器上一次拖拽里 fit0 触发 9 次。
+   *   给 canvas 的 width/height 赋值本身就是**清空** ⇒ 清空与重画之间只要跨过一帧边界，那一帧就是空的画布）：
+   *   ① fit0 幂等 —— 布局没变时重复调用不许再动位图；
+   *   ② 位图与 CSS 盒 × dpr 的差 ≤ 0.5px（四舍五入的不变量。原来截断 ⇒ 恒差 ~1px，正好卡在 refit 那道 1.5px 守卫上，抖一下就翻过去）
+   *      ⚠ 这条**只在盒×dpr 的分数部分 > 0.5 的尺寸上才咬得住**：实测把 Math.round 改成 Math.floor，
+   *        在这台 1600×900/dpr1 的窗口里两者同值 ⇒ 判据照样绿（变异实测记在这儿，不假装它全能）。
+   *        真正承重的是 ① 与 ③ 两条，它们各自被变异打红过。
+   *   ③ refit 真的改了尺寸必须**同一帧画回来** —— 判法是把位图强行改小、跑 refit，然后立刻取中心像素的 alpha：
+   *      还是 0 就说明清空与重画之间跨了帧（那正是用户看见的黑帧）。这条对"改回 req()"会红。*/
+  (function () {
+    var r4 = cv.getBoundingClientRect(), w0 = cv.width, h0 = cv.height;
+    var c1 = fit0(), c2 = fit0();
+    T('§E574 fit0 必须幂等（赋值 cv.width 就是清空，重复赋值 = 重复清空）',
+      c1 === false && c2 === false && cv.width === w0 && cv.height === h0,
+      '第一次 ' + c1 + ' ‖ 第二次 ' + c2 + ' ‖ 位图 ' + w0 + 'x' + h0 + ' → ' + cv.width + 'x' + cv.height);
+    T('§E574 位图 = CSS 盒 × dpr 且误差 ≤ 0.5px（四舍五入，不许截断）',
+      Math.abs(cv.width - r4.width * devicePixelRatio) <= 0.5 && Math.abs(cv.height - r4.height * devicePixelRatio) <= 0.5,
+      '位图 ' + cv.width + 'x' + cv.height + ' ‖ 盒×dpr ' + (r4.width * devicePixelRatio).toFixed(2) + 'x' + (r4.height * devicePixelRatio).toFixed(2));
+    var a4 = -1;
+    try { cv.width = Math.max(2, cv.width - 30); refit();
+      var px = g.getImageData(Math.round(cv.width / 2), Math.round(cv.height / 2), 1, 1).data; a4 = px[3]; } catch (E4) { a4 = -2; }
+    T('§E574 refit 改了尺寸必须同帧重画（否则空画布会被合成出去 = 整张黑一下）', a4 > 0,
+      '中心像素 alpha = ' + a4 + '（0 = 清空后没重画；-2 = 取像素抛错）');
+  })();
   /* §E573 势场快路的牙：抽格把快路那张表与一份**独立写的暴力**逐位比（名次比 idx，距离比 Float32 存储尺下的 dst）。
    *   为什么这条必须常驻而不是只跑一次探针：快路的依据是"库里那 12 名此刻全都画得出来"，
    *   而它挂在三个别人手里的前提上 —— SHOWN 的口径、nb.idx 的来源、KF 的大小。前提哪天被改动，
