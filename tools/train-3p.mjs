@@ -113,6 +113,8 @@ const SELF_ENV_KEYS = [
 const CLI_ECON_REWARD_KEYS = ['bigtChainW', 'fitTailW', 'fitTailQ',
   'beadW', 'bigcardW', 'stockBonus', 'hoardOnLeftover', 'convRatio',
   'costlyW', 'fitCal',   /* v1.5.260（用户 GO"做 B+"）：贵卡预算权重（默认 0 ⇒ 行为逐字不变；见 js/train/evo.js 的 costlyBonus） */
+  'fitGW', 'fitGF',      /* v1.6.50（用户 10-10 裁定「B 也可以做」）：把出厂闸的广度维度折进适应度（默认 0 ⇒ 逐位不变）
+                          *   —— 缺这一处就被入口黑键闸拦（D172 立的"三处名单齐全"规矩的第三处）。 */
   /* v1.5.274（§E91）：补 `ringW` —— 它在 `ECON_REWARD_KEYS`（引擎）与 `ECON_ENV_KEYS`（env 名单）里都齐，
    * 唯独这个入口的投递名单没有 ⇒ `EPIRUS_RING_W` 被黑键闸拦下（实测：整臂 exit 6，一秒响）。
    * 这正是 D172 立的"三处名单齐全"规矩的第三处；不设这个键时 `readEconEnv` 给 null ⇒ 不进 payload ⇒ 出厂行为逐字不变。 */
@@ -618,23 +620,40 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
    *   ⇒ 三条硬规矩：**没有 setter 就 exit 7**（拒静默空转）· 下令后**读回消费点** · 退出前印**开火计数**，
    *     `eps>0 而一次决策都没经过漏斗` ⇒ `exitCode=8`（空枪，与 D123 同规矩）。 */
   {
-    const rawEps = process.env.EPIRUS_TRAIN_EPS;
-    if (rawEps != null && String(rawEps).trim() !== '') {
+    /* ===== v1.6.50（用户 10-10 裁定「A 和 B 都可以做」）：**产品口径成为训练臂的默认** =====
+     * 为什么改默认（不是加新机制——机制 v1.5.237 就有了，只是默认关，所以从来没有一臂活在产品口径下）：
+     *   每代适应度的被评席出厂是 `temp 0.35 · ε=0.15 · 不带 epsMode`（`js/train/evo.js:536` 的 `fitChooser()`），
+     *   而产品 5 人档是 `temp 0.15 · ε=0.2 · k=5 · soft`。差的不只是一个常数：**缺 epsMode 就丢了
+     *   v1.5.141 的"防御/环豁免"**，硬档会把防御出现率从 4.0% 抬到 26.4%、把聚能环从 1.2% 压到 0.0%
+     *   ⇒ 一句话：**我们一直在用一个已知会虚增防御、杀死滚环的口径去挑"该防不防、该环不环"的包**。
+     * 逃生口（两侧都要有，否则"想跑出厂口径"就没法表达）：
+     *   `EPIRUS_TRAIN_EPS=off` ⇒ 显式回到出厂硬档（逐字等于旧行为）；`EPIRUS_TRAIN_EPS=0` ⇒ 真零剂量贪心（原本就支持）。
+     * ⚠️ 下面那三条硬规矩**一条都不许松**（没有 setter 就 exit 7 · 下令后读回消费点 · 空枪 exit 8）：默认值也要经过同一条路。 */
+    const RAW_EPS_ENV = process.env.EPIRUS_TRAIN_EPS;
+    const EXPLICIT = RAW_EPS_ENV != null && String(RAW_EPS_ENV).trim() !== '';
+    const WANT_OFF = EXPLICIT && /^(off|no|none|ship|false)$/i.test(String(RAW_EPS_ENV).trim());
+    const rawEps = WANT_OFF ? '0' : (EXPLICIT ? RAW_EPS_ENV : '0.2');
+    /* 默认值也要用产品那一组常数（与 `js/ui/ui.js` 的 5 人档同源：temp0.15 · ε0.2 · k5 · soft）；
+     * 显式下达时用调用方给的（缺哪项补哪项，与本块旧行为一致）。 */
+    const DFLT_K = EXPLICIT ? (process.env.EPIRUS_TRAIN_EPS_K || null) : '5';
+    const DFLT_MODE = EXPLICIT ? (process.env.EPIRUS_TRAIN_EPS_MODE || null) : 'soft';
+    const DFLT_TEMP = EXPLICIT ? (process.env.EPIRUS_TRAIN_TEMP || null) : '0.15';
+    {
       if (typeof T.setTrainEps !== 'function') {
-        console.error('[train-3p] ⛔ 传了 EPIRUS_TRAIN_EPS 但引擎没有 setTrainEps ⇒ 拒绝静默空转');
+        console.error('[train-3p] ⛔ 需要 setTrainEps，但引擎没有 ⇒ 拒绝静默空转');
         process.exit(7);
       }
       let epsBack = null;
       try {
-        epsBack = T.setTrainEps(Number(rawEps), process.env.EPIRUS_TRAIN_EPS_K || null, process.env.EPIRUS_TRAIN_EPS_MODE || null,
-          process.env.EPIRUS_TRAIN_TEMP || null);
+        epsBack = T.setTrainEps(Number(rawEps), DFLT_K, DFLT_MODE, DFLT_TEMP);
       } catch (e) {
-        console.error('[train-3p] ⛔ EPIRUS_TRAIN_EPS=' + rawEps + ' 被 setter 拒绝：' + (e && e.message));
+        console.error('[train-3p] ⛔ 执行口径下达失败（raw=' + rawEps + '）：' + (e && e.message));
         process.exit(7);
       }
-      console.log('[train-3p] 训练/选择执行口径已下达 ⇒ 消费点读回 eps=' + epsBack.eps + ' k=' + epsBack.k + ' mode=' + epsBack.mode +
+      console.log('[train-3p] 训练/选择执行口径' + (EXPLICIT ? '（显式下达' + (WANT_OFF ? ' · 回出厂硬档' : '') + '）' : '（**默认 = 产品口径**，v1.6.50；`EPIRUS_TRAIN_EPS=off` 可回出厂硬档）') +
+        ' ⇒ 消费点读回 eps=' + epsBack.eps + ' k=' + epsBack.k + ' mode=' + epsBack.mode +
         ' temp=' + (epsBack.temp == null ? '各点出厂值' : epsBack.temp) +
-        '\n            作用范围 = `fitChooser()`（每代评分的被评席，出厂 temp0.35·ε0.15·硬档）+ `trainChooser()`（自评/健康门槛漏斗，出厂 ε=0）；' +
+        '\n            作用范围 = `fitChooser()`（每代评分的被评席）+ `trainChooser()`（自评/健康门槛漏斗）；' +
         '`audit-lib` 的 9 处与承诺局(`makeCommitChooser`)不经过它');
       process.on('exit', function () {
         if (typeof T.countTrainEps !== 'function') return;

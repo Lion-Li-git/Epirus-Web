@@ -6071,8 +6071,19 @@ t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：�
 
 /* v1.5.201（审计：硬编码复制 D123/D127 各写一遍）：默认关的 CLI 臂产物基线只留**一处**。
  * 红了 = 默认关的产物变了（那等于偷偷改了所有 CLI 臂的分布）⇒ 先查是不是有意的；
- * 确认有意要重记，就只改这一行（别再去两个用例里各改一处）。 */
-const CLI_ARM_BASELINE = 'aa743488cc';
+ * 确认有意要重记，就只改这一行（别再去两个用例里各改一处）。
+ *
+ * ⚠️ v1.6.50 重记（`aa743488cc` → `bec6adb7c3`）：**这次是有意的**。用户 10-10 裁定候选 A「产品口径成为
+ *   训练臂的默认」（`tools/train-3p.mjs` 里 `EPIRUS_TRAIN_EPS` 不再只在显式下达时开档）。默认口径一改，
+ *   这个文件里那支迷你臂的产物**必然**变 —— 这正是这两道门要抓的东西，所以：
+ *   ① **复现方法（两次都在这里踩过，写清楚免得下次再踩）**：这两条用例消费的是**同一个调用**
+ *      `node tools/train-3p.mjs 3 3 6 4`（env `EPIRUS_SEED=7` + 任意 `EPIRUS_ARM` + `EPIRUS_BAND_DIR=<临时目录>`）。
+ *      不是随便跑一支 CLI 臂就算 —— 我第一版拿 `40 3 8 8` 跑，算出的是另一个数（那次错还有第二层：
+ *      `wh()` 哈希的是 `/\"a\":\[([^\]]*)\]/` **抓到的原始字符串**，不是解析后的数字，两种口径结果不同）。
+ *   ② 跑**两遍**确认逐位相同（门的前提是这条可复现）⇒ 实测 `bec6adb7c3`，且与门报的 `got=` 逐字一致。
+ *   ③ 想回到旧分布现在要显式写 `EPIRUS_TRAIN_EPS=off`（回出厂硬档）。
+ *   ⇒ 记在这里而不是散在两个用例里：下次谁再动默认口径，红了他能一眼看到"上一次为什么改、怎么重算"。 */
+const CLI_ARM_BASELINE = 'bec6adb7c3';
 
 t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手池"）：默认关逐位不变 + **判开火计数不判横幅** + 座位不偏置 + 不拿纯攒钱型当陪练', function () {
   /* 四条各钉一类 09-22 实测过的病：
@@ -8728,7 +8739,12 @@ t('D172 贵卡预算权重 costlyW：默认 0 · 线性形状 · **三处名单�
   ok(/let COSTLY_W = 0;/.test(EVO), '`costlyW` 必须默认 0（默认关 ⇒ 行为逐字不变）');
   ok(/const costlyBonus = COSTLY_W > 0 \? \(COSTLY_W \* bigUses\) : 0;/.test(EVO),
     '形状必须是**线性计数** `costlyW × bigUses`（不许复用 bigcardW 那条 1 次即吃满的饱和形状）');
-  ok(/\+\s*widthBonus \+ bigBonus \+ costlyBonus \+ chainBonus\)\)/.test(EVO), 'costlyBonus 必须真的进 fit 求和（接线不许只到声明）');
+  /* v1.6.50 改判（用户裁定 B 那笔带出来的）：原来这条锚的是**整段字面求和式**
+   *   `/\+\s*widthBonus \+ bigBonus \+ costlyBonus \+ chainBonus\)\)/`
+   *   ⇒ 任何人**合法地**在末尾再加一项（本次是 `gBonus`）它就红，而它声称要判的是"接线不许只到声明"。
+   *   这正是本仓反复写的"定死标签/不看效果"那族（§E430 按用户裁定删过两条同族的门）⇒ 改成锚"作为项被加进 gFit"这件事。 */
+  ok(/\+\s*costlyBonus\b/.test(EVO) && /const costlyBonus = COSTLY_W > 0 \? \(COSTLY_W \* bigUses\) : 0;/.test(EVO),
+    'costlyBonus 必须真的进 fit 求和（接线不许只到声明）');
   ok(/if \(o\.costlyW != null\) COSTLY_W = Math\.max\(0, Number\(o\.costlyW\)\);/.test(EVO), 'setEconomyReward 必须收口这个键');
   ok(/costlyW: COSTLY_W,/.test(EVO), '生效值回执里必须有它（否则读不回 = 不知道有没有生效）');
   const E = readFileSync('server/econ-env.mjs', 'utf8');

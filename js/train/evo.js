@@ -1468,6 +1468,22 @@
   }
   let ECO_T = null, ECO_C = null;     // 显式覆盖（默认 null ⇒ 走 (n, mode) 推导）
   let DIV_W = 0.06;
+  /* ===== v1.6.50（用户 10-10 裁定「B 也可以做」）：**把出厂闸的广度维度折进适应度**（默认关 ⇒ 行为逐字不变）=====
+   * 病（§E445/§E446 四轮 47 臂）：训练分数是 21 个脚本对手的**加权平均**，被某个脚本打穿只扣约 5%；
+   *   而出厂闸要的是**最坏情况**（G4/G5）、**人席**、**广度**（G）—— 全是训完才筛 ⇒
+   *   实测"Hp 涨"的臂**全部**过不了闸、"过线"的臂 Hp 全是负的，**47 臂没有一臂跑赢自己的起点**。
+   * 这一维怎么接（与闸**同源**，不是另造一把尺）：
+   *   `spUse` 是"自对局里成功非ジ动作"的直方图（`:1866` 起），`mirrorHealth` 的 `keyCount` 与它**同口径**
+   *   （`:3168` 的注释自己写着"累计成功非ジ动作，与 mirrorHealth 的 keyCount 同口径"）
+   *   ⇒ `spG = exp(spH)` 与闸那条 `G 有效技能数 = tot ? Math.exp(H) : 0`（`:3144` 附近）是同一条量。
+   * 形状：**只罚下界、线性**（`FIT_G_W × max(0, FLOOR − spG)`）——
+   *   不奖励"比下界更宽"（那是把臂往"什么都用一点"推，本仓已量过"变宽但丢关键卡"这种骗法：
+   *   G 4.15→6.55 的同时把唯一能穿反弹的激光眼用到 0 命中）。
+   * ⚠️ 覆盖面要说清（别当成"B 全做完了"）：这一项用的是**本装配（multi）自对局**的 G，
+   *   覆盖闸的 `G(multi)` 那一条；闸还有 `G(long)`（要 `mirrorHealth(..., 'long')` 或 `breadthProfile(..., 'long')`
+   *   那一趟完整自对局，成本高一个数量级）⇒ **G(long) 不在本项里**，要它也折进来是下一步的独立裁定。
+   * ⚠️ 默认 `FIT_G_W = 0` ⇒ 逐位不变；开档必须经过下面 `setEconomyReward` 的收口（三处名单齐才送得到）。 */
+  let FIT_G_W = 0, FIT_G_FLOOR = 3;
   /* v1.5.124（复核 §28a）：**广度收益项**的权重与阈值（默认关 ⇒ 出厂行为一字不变）。
    * 形状：G 从 `WIDTH_FLOOR` 到 `WIDTH_TARGET` 线性给钱 ⇒ 与 `DIV_W` 那个"归一化熵"不同，**刷不动**。 */
   let WIDTH_W = 0, WIDTH_FLOOR = 3, WIDTH_TARGET = 7;
@@ -1630,7 +1646,7 @@ let WALL_GAMES = 3;
     if (!ECON_DEFAULTS && !o.reset) {
       /* v1.5.299（DS）：**这份快照是字面量列表**（注释里说"不抄字面量"其实不成立）⇒ 加新键必须同时补这里，
        * 否则 `setEconomyReward({reset:true})` 抹不掉它 —— 我的 `fitCal` 就是这么被 D175 抓到的（门是对的）。 */
-      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W, fitCal: FIT_CAL_EXCESS };
+      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W, fitCal: FIT_CAL_EXCESS, fitGW: FIT_G_W, fitGF: FIT_G_FLOOR };
     }
     /* qoder-research 0920（RESEARCH-LOG §5b）：环奖励权重接进 econ-env 单一来源（默认不设 ⇒ RING_W 原样 0.10）。
      * setRingReward 自带 `isFinite && >=0` 校验；调用发生在模块求值之后 ⇒ 无 TDZ 问题（RING_W 声明在 :1955）。 */
@@ -1649,6 +1665,9 @@ let WALL_GAMES = 3;
     if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.costlyW != null) COSTLY_W = Math.max(0, Number(o.costlyW)); if (o.bigtChainW != null) BIGT_CHAIN_W = Math.max(0, Number(o.bigtChainW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
     if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover; if (o.convRatio != null) CONV_RATIO = !!o.convRatio; if (o.convOffense != null) CONV_OFFENSE = !!o.convOffense;
     if (o.fitCal != null) FIT_CAL_EXCESS = !!(o.fitCal && String(o.fitCal) !== '0' && o.fitCal !== 0);
+    /* v1.6.50（用户裁定 B）：把闸的广度折进适应度。两个键一起收口（只给 W 不给下界 ⇒ 用默认下界 3，与闸同线）。 */
+    if (o.fitGW != null) FIT_G_W = Math.max(0, Number(o.fitGW) || 0);
+    if (o.fitGF != null) FIT_G_FLOOR = Math.max(0, Number(o.fitGF) || 0);
     if (o.hoardCapMult != null) HOARD_CAP_MULT = Number(o.hoardCapMult) || 1; if (o.stockBonus != null) STOCK_BONUS = Number(o.stockBonus) || 0;
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
@@ -1671,12 +1690,15 @@ let WALL_GAMES = 3;
         DIV_W = ECON_DEFAULTS.divW; DIV_K = ECON_DEFAULTS.divK; DIV_ROLE_W = ECON_DEFAULTS.divRoleW;
         DIV_FORCE_GENS = ECON_DEFAULTS.divForceGens; COSTLY_W = ECON_DEFAULTS.costlyW;
         if (ECON_DEFAULTS.fitCal != null) FIT_CAL_EXCESS = !!ECON_DEFAULTS.fitCal;   // v1.5.299：新键也要能复位
+        if (ECON_DEFAULTS.fitGW != null) FIT_G_W = ECON_DEFAULTS.fitGW;              // v1.6.50：B 的两个键同样要能复位
+        if (ECON_DEFAULTS.fitGF != null) FIT_G_FLOOR = ECON_DEFAULTS.fitGF;
       }
     }
     return economyReward();
   }
   function economyReward() {
     return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divCatW: DIV_ROLE_W, K_role: K_ROLE,
+      fitGW: FIT_G_W, fitGF: FIT_G_FLOOR,
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
@@ -1839,6 +1861,11 @@ let WALL_GAMES = 3;
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
     let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0, varietyMax = 0, bigUses = 0, chains = 0, bigTCasts = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
+    /* v1.6.50（用户裁定 B）：广度惩罚项**不是每局项** —— 它要的是"这一员的动作分布有多宽"，
+     * 而 `spUse` 要打完全部局才攒齐 ⇒ 只能在跨局聚合那一层加（`fitAgg`）。
+     * ⚠️ 我第一版把它塞进每局的 `gFit` 求和里，当场被 D175 的探针抓住：
+     *   `ReferenceError: Cannot access 'gBonus' before initialization`（TDZ）—— 门是对的，我是错的。 */
+    let gBonus = 0;
     let leftEpSum = 0, spentEpSum = 0, gainEpSum = 0;   // v1.5.116 L2′：余款/已花/已获得（每局）
     let imitSum = 0, imitGames = 0;
     /* ===== v1.5.272（qoder 09-28 §E83）：**行为计数剂的门槛从"各自的 W"换成"这一族有没有任何 W 被下达"** =====
@@ -2168,6 +2195,10 @@ let WALL_GAMES = 3;
     for (const k in spUse) spTot += spUse[k];
     let spH = 0;
     if (spTot > 0) for (const k in spUse) { const pr = spUse[k] / spTot; spH -= pr * Math.log(pr); }
+    /* v1.6.50（用户裁定 B）：与闸同源的有效技能数 G = exp(熵)（`mirrorHealth` 的 `effSkills` 同一算式），
+     * 并按 FIT_G_W 只罚下界。`FIT_G_W = 0` ⇒ gBonus 恒 0 ⇒ fit 逐位不变（默认关的形状照 D173 那族）。 */
+    const spG = spTot > 0 ? Math.exp(spH) : 0;
+    gBonus = FIT_G_W > 0 ? (FIT_G_W * Math.max(0, FIT_G_FLOOR - spG)) : 0;   /* 赋值（非声明）⇒ 给最终 fit 用 */
     const spDivNorm = spTot > 0 ? (spH / Math.log(DIV_K)) : 0;
     /* v1.5.93（用户裁定）：类间广度 —— 同一份 `spUse`，只按 `roleOf` 再聚合一层（8 个功能角色）。
      * 分层熵恒等式 `S = S_role + S_within` ⇒ 这里只需单独算 `S_role`，角色内由减法得到，不必重算。 */
@@ -2250,7 +2281,7 @@ let WALL_GAMES = 3;
     const doseEv = function (v) { return DOSE_ON ? v : null; };
     const dosePer = function (v) { return DOSE_ON ? (doseG ? v / doseG : 0) : null; };
     return {
-      fit: (wallReject ? (-5.0) : (fitAgg + divBonus + STYLE_W * styleRate - seatPen + shapeBonus)),
+      fit: (wallReject ? (-5.0) : (fitAgg + divBonus + STYLE_W * styleRate - seatPen + shapeBonus + gBonus)),
       wallDmg: wallDmg,
       wallReject: wallReject,
       fitNoDiv: fitAgg,
@@ -2283,6 +2314,7 @@ let WALL_GAMES = 3;
       spDivNorm: spDivNorm,
       spRoleNorm: spRoleNorm, spRoleH: spRoleH, spMixNorm: spMixNorm, divRoleW: DIV_ROLE_W,
       spH: spH,
+      spG: spG, gBonus: gBonus, fitGW: FIT_G_W, fitGF: FIT_G_FLOOR,   // v1.6.50（B）：这一维的读数栏（开档才非零）
       divBonus: divBonus,
       seatPen: seatPen, seatSpreadMirror: seatSpreadMir, seatMaxPct: seatMaxPct, mirrorDecisive: mirDec,
       divW: DIV_W,

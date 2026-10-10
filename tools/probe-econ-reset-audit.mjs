@@ -32,7 +32,11 @@ const SENT = {
   target: 9, cap: 9, divW: 0.5, divK: 7, divRoleW: 0.5, divCatW: 0.5, divForceGens: 5,
   wallFilter: true, wallGames: 5, hoardOnLeftover: true, convRatio: true, convOffense: true,
   hoardCapMult: 3, stockBonus: 0.5, blockW: 0.5, widthW: 0.5, bigcardW: 0.5, costlyW: 0.5,
-  bigtChainW: 0.5, ringW: 0.5, s4W: 0.5, beadW: 0.5, fitTailW: 0.5, fitTailQ: 0.5, fitCal: true
+  bigtChainW: 0.5, ringW: 0.5, s4W: 0.5, beadW: 0.5, fitTailW: 0.5, fitTailQ: 0.5, fitCal: true,
+  /* v1.6.50（用户裁定 B）：闸的广度折进适应度那两个键也要有哨兵 ——
+   *   这一段的检查是**名单驱动**的（从 `ECON_REWARD_KEYS` 反推），加了键却忘了给哨兵值，
+   *   探针会印"下达 undefined 读回仍=…"。那不算漏但会盖住真话（本次实测就是这么印的）。 */
+  fitGW: 0.5, fitGF: 5
 };
 /* 下达名 ≠ 读回名的两处（第一版把这两处误报成"setter 不吃键"，故显式映射并注释） */
 const readKey = k => (k === 'target' ? 'targetOverride' : (k === 'cap' ? 'capOverride' : k));
