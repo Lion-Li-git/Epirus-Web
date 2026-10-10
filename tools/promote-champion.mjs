@@ -121,8 +121,13 @@ const FEAS_N = feasPlan(process.env, (function () {
 })());
 const G = FEAS_N.games;
 const sp = selfPlay(W, params, 'multi', G);
-/* v1.5.145（用户裁定"两个模式都判"）：long 也跑一份**自对局**并进阻断（与 multi 同一条线 3）。
- * 动因：阻断项原本只取 multi ⇒ 现役包 multi 4.44 过门，而 long G_eff 2.79 < 3 无人管（用户追问"这怎么过的门"）。 */
+/* ⚠️ 更正（本条原写「v1.5.145（用户裁定"两个模式都判"）：long 也跑一份自对局并进阻断」——**那句话与代码不符**）：
+ *   实测：`fails.push` 那一处（下面的 G 条）从来只判 multi 的 `sp.effSkills`，全文件没有第二处用 `spL` 做阻断
+ *   ⇒ long 的自对局**一直只是打印/feasibility 第四道的输入，从未进过阻断**。同一份文件里
+ *   `:333` 那段自己写的才是实情：「本改动**只补打印、不动任何判据**（阻断仍是 multi 的 `sp.G`，逐字不变）」。
+ *   动因（真实历史）：v1.5.145 是用户追问"这个包不探索时技能广度那么差，怎么过的门？"之后**只补了打印**，
+ *   把"要不要让门取更严的那个"明确 deferred 给用户裁定。
+ *   ⇒ 2026-10-10/11 用户裁定：**long 也阻断**（线沿用同一条 3，与 multi 对称）——见下面两处 G 条。 */
 const spL = selfPlay(W, params, 'long', G);
 const fPass = fieldRate(W, params, 'passive', 'multi');
 const fAct = fieldRate(W, params, 'active', 'multi');
@@ -222,6 +227,14 @@ if (ss.verdict === 'biased') {
   console.log('  座位对称性 OK：极差 ' + ss.spread.toFixed(0) + 'pt（' + ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '）');
 }
 if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) + ' < 3（打法坍缩到两三张卡）');
+/* v1.6.49（2026-10-10/11 用户裁定「long 也该阻断」）：**long 的广度同样进阻断**，线沿用同一条 3。
+ * 动因：这条腿自 v1.5.145 起只被"打印 + feasibility 第四道"记录，**从未挡过任何候选**（见上面 `spL` 处的更正），
+ *   而 long（5 血，产品常用模式）恰恰是玩家会遇到的赛程 —— 「multi 过门、long 塌成两三张卡」这形状
+ *   以前能一路走到出厂。口径与 multi **逐字对称**（同一个 `selfPlay`、同一个阈值、同一条 G 量）。
+ * ⚠️ 打印那侧（`_gBlocked`）也要跟着改：它原来只认前缀 `indexOf('G 有效技能数') === 0`（**只覆盖 multi 那一条**，
+ *   而本条以 `G(long)` 开头 ⇒ 它**认不到**）⇒ 已把 `_gBlocked` 改成两条前缀都收的 `fails.filter(...)`，
+ *   标题同步改成「门判 multi **与** long」（打印与阻断同源，规矩 44）。 */
+if (spL.effSkills < 3) fails.push('G(long) 有效技能数 ' + spL.effSkills.toFixed(2) + ' < 3（长程打法坍缩到两三张卡）');
 /* ===== v1.5.71（第五轮复核 §4-6）：**出厂换包也写一份 feasibility 记录** =====
  * 病：线上包的 meta 里没有 `feasibility` —— 它是经 tools/upgrade-pack.mjs 换回来的、绕过了训练落盘
  * 那一步 ⇒ "这个包当年怎么过的五道门"在产物上不可查。
@@ -331,26 +344,33 @@ if (process.env.EPIRUS_NO_DEFQ !== '1') {
 
 const brd = breadthProfile(W, params, 'long', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
 /* ===== v1.5.145（用户追问"这个包在不探索的时候技能广度非常差，是怎么通过门禁上线的？"）=====
- * 实情：**阻断项 `G` 取自 `selfPlay(..., 'multi', G)`（上面第 92 行），而本行打印的是 `breadthProfile(..., 'long')`**
+ * 实情（**当时**）：**阻断项 `G` 取自 `selfPlay(..., 'multi', G)`，而本行打印的是 `breadthProfile(..., 'long')`**
  *   ⇒ 同一份体检里出现**两个模式**的广度：门判 multi（现役 4.44 ⇒ 过），用户玩 long（现役 **G_eff 2.79 < 3** ⇒ 不过）。
  * ⇒ 违反本仓老规矩"**打印机必须打印门所判的那个量**"（METHODOLOGY 第 44 条）。
- * 本改动**只补打印、不动任何判据**（阻断仍是 multi 的 `sp.G`，逐字不变）；把 long 的 G 与它和门的差**并列报出来**，
- *   并把"哪边是门"写清楚 —— 否则读体检的人会把只记录的那一栏当成门。 */
+ * v1.5.145 那笔**只补打印、没动判据**（阻断当时仍是 multi 的 `sp.G`，逐字不变）；把 long 的 G 与它和门的差**并列报出来**，
+ *   并把"哪边是门"写清楚 —— 否则读体检的人会把只记录的那一栏当成门。
+ * ⚠️ **上面这段是历史，不是现状**：自 2026-10-10/11 用户裁定起，long 的 `spL.effSkills` **也进阻断**（同一条线 3）。 */
 const brdM = breadthProfile(W, params, 'multi', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
-/* §2026-10-10 DS（Claude 整改建议 §训练侧建议 1「修好 promote --dry 打印与阻断不一致后重跑一遍」· U-s202）：
- *   病：**门只判 multi 的 `sp.effSkills`**（fails.push 那一条），而下面这段却把 **long 的 `G_eff`** 印出来，
- *       还写「广度两个模式都判」⇒ 读体检的人会把只记录的那栏当成门（违反 METHODOLOGY 第 44 条「打印机必须打印门所判的那个量」）。
- *   修法（**不动判据** —— 判据要不要收严是用户的裁定，v1.5.145 明确 deferred）：让打印**从 `fails` 派生**每栏的阻断状态，
- *       并把 long 那一栏明确标成「只记录」。⇒ 打印与阻断从此**同源**：谁改判据，打印会自动跟着变。 */
-const _gBlocked = fails.some(function (f) { return f.indexOf('G 有效技能数') === 0; });
-console.log('   广度（**门只判 multi**：阻断项 = 本轮 `G 有效技能数`，这次' + (_gBlocked ? '已阻断' : '未阻断') + '）：multi 有效技能数=' + Number(sp.effSkills).toFixed(2) +
+/* §2026-10-10 DS（Claude 整改建议 §训练侧建议 1「修好 promote --dry 打印与阻断不一致后重跑一遍」· U-s202）
+ *   ⇒ §2026-10-10/11 用户裁定「long 也该阻断」，所以这条注释里的"门只判 multi"**已作废**，按下面重写。
+ *   来时路（留着，别当成现状）：`U-s202` 那次的病是**打印与阻断不同源** —— 同一份体检里 `U-s202` 印了
+ *     `✗ G(long) 3.00 < 3` 却没进阻断列表（同批 `U-s203` 的 2.28 进了），因为当时门只吃 `sp.effSkills`（multi），
+ *     而打印另外取了 long 的 `G_eff`。DS 当时的修法是"不动判据、只让打印从 `fails` 派生"，
+ *     并把"要不要让门取更严的那个"标成待用户裁定。
+ *   现在：**两处 G 都进 `fails`**（multi 与 long，同一条线 3）⇒ 打印仍然只认前缀 `G 有效技能数`，
+ *     而 `G(long) 有效技能数 …` 以 `G(long)` 开头 ⇒ **不会**被那个前缀认到（它只覆盖 multi 那一条）
+ *     ⇒ 标题不再能说"门只判 multi"，改成"已阻断（哪几条）"并列印。 */
+const _gBlocked = fails.filter(function (f) { return f.indexOf('G 有效技能数') === 0 || f.indexOf('G(long) 有效技能数') === 0; });
+console.log('   广度（**门判 multi 与 long**（用户裁定 10-10/11 · 两条同线 3）：' +
+  (_gBlocked.length ? '已阻断 —— ' + _gBlocked.join(' ‖ ') : '两条都未阻断') + '）：multi 有效技能数=' + Number(sp.effSkills).toFixed(2) +
   '（selfPlay）· **long（= 长程，产品常用模式）** 有效技能数=' + Number(spL.effSkills).toFixed(2) + '（selfPlay）· ' +
   '（另两个熵量具作对照：multi G_eff=' + brdM.G_eff.toFixed(2) + '（n=' + brdM.N + '）· long G_eff=' + brd.G_eff.toFixed(2) +
   '（n=' + brd.N + '）—— 同模式不同量具/样本会有差，属已知的样本敏感性' +
   ((feas.G2 != null && Number(feas.G2) >= 3 && brd.G_eff < 3)
-    ? ' ⇒ ⚠️ **同一模式两量具分歧**（long：**只记录，未进阻断**）：门用的 selfPlay long G=' + Number(feas.G2).toFixed(2) +
-      ' ≥3 过，而 breadthProfile long G_eff=' + brd.G_eff.toFixed(2) + ' <3 不过 ⇒ 这条线恰好骑在门槛上，' +
-      '要不要让门**取更严的那个**（即把 long 也变成阻断项）**请用户裁定** —— DS 不动判据'
+    ? ' ⇒ ⚠️ **同一模式两量具分歧**（long）：门用的 selfPlay long G=' + Number(feas.G2).toFixed(2) +
+      ' ≥3 过，而 breadthProfile long G_eff=' + brd.G_eff.toFixed(2) + ' <3 不过 ⇒ 这条线恰好骑在门槛上。' +
+      '**long 已是阻断项**（用户裁定），但门吃的是 selfPlay 那一个量；要不要让门**取更严的那个**' +
+      '（即把 breadthProfile 也接进阻断）**仍请用户裁定**'
     : '') + '）');
 console.log('   技能广度 S（n=' + brd.N + ' 个非ジ出手 · ' + brd.games + ' 局自对局）：S=' + brd.S.toFixed(3) +
   ' = 类间 ' + brd.S_cat.toFixed(3) + ' + 类内 ' + brd.S_within.toFixed(3) +
