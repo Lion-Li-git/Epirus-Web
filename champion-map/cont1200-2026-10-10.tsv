@@ -1,0 +1,4 @@
+arm	seed	gens	caliber	exam1st_pct	page1st_pct	de	notes
+contX-201	201	1200	factory(EPIRUS_TRAIN_EPS=off)	56.4	55.9	0.50	from 250-gen checkpoint epsX-201.js, +800 gens
+contP-201	201	1200	product(eps=0.2 k=5 soft temp=0.15)	41.9	42.1	-0.20	from 250-gen checkpoint epsP-201.js, +800 gens
+SHIPPED-Ldemo	31	1200	factory	48.8	50.4	-1.60	reference, same ruler
