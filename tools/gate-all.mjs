@@ -82,8 +82,11 @@ if (process.argv.includes('--auto')) {
   }
 }
 if (process.argv.includes('--np') || process.argv.includes('--auto')) {
+  /* ⚑ 总结行要把 np 自己印的**跳过数**接住（§E576）：此前这里的 `want` 只抓两个数字
+   *   ⇒ 「· 跳过 N（不算通过也不算失败）」那半段被整段丢掉，274/275 与"275 条全跑过"在总结论里长得一模一样。
+   *   CI 的绿看不出少跑了什么，就是这一行造成的。正则**可选**：没有跳过段时照样匹配（旧格式不能变红）。 */
   jobs.unshift({ name: GRPA ? 'np/' + GRPA : 'np', argv: ['node', 'tools/np-test.mjs'].concat(GRPA ? ['--group=' + GRPA] : []),
-    want: /通过 (\d+) \/ (\d+)/ });
+    want: /通过 (\d+) \/ (\d+)(?: · 跳过 (\d+))?/ });
 }
 
 /* ===== 10-01 19:3x（千问 §E214）：四道**并发起跑**，判词与顺序一字不改 =====
@@ -142,7 +145,7 @@ for (let ji = 0; ji < jobs.length; ji++) {
    * 早先版本对后者取 `m[1]===m[2]` ⇒ 两边都是 undefined ⇒ NaN!==NaN ⇒ **全绿也报红**。 */
   const counted = m && m[1] !== undefined;
   const pass = r.status === 0 && !!m && (!counted || Number(m[1]) === Number(m[2]));
-  const reading = counted ? (m[1] + '/' + m[2]) : (m ? 'OK' : '无判词');
+  const reading = counted ? (m[1] + '/' + m[2] + (m[3] ? ' · 跳过' + m[3] : '')) : (m ? 'OK' : '无判词');
   out.push({ name: j.name, pass, reading, sec });
   if (!pass) {
     /* v1.5.286 修自己的缺陷：以前只留尾部 40 行 ⇒ **np 234/236 时第二道红被藏住**，

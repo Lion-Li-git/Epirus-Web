@@ -11693,7 +11693,11 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
   try { rmSync('champion-map/__gate-probe-ruler.tsv', { force: true }); } catch (e) { /* 清不掉也不要影响判词 */ }
   /* （上面那段病写的红路牙口：）不在这里造 fixture（那要搬 js/core + champion-map + tools 三套），而是在**干净克隆**里复原一次
    *   —— 改守卫前那棵克隆 exit 0 且第二父边 0 条，改完同一棵 **exit 2** 并点名缺的 5 枚（记录见 §E503）。 */
-  needArtifacts('D233 ⑤ 本机跑 lineage.mjs', ['docs/artifacts/e234-out/K2.js', 'docs/artifacts/e85-out/E20-71.bak']);
+  /* ⚑ §E576：`needArtifacts` 从这儿**下移到 ⑤ 之前**（原来是 11696 行，就在 ①–④ 前面）。
+   *   病：①–④ 是对 `champion-map/lineage.mjs` 源码的纯正则断言，任何机器上都跑得动，
+   *   却被一句"⑤ 需要本机 K2/E20-71 产物"的 Skip 连带整门跳过 ⇒ **干净克隆里这四条一条都没跑**，
+   *   而 CI 总结行当时还不印跳过数（就是本门上面刚修的那处）。两句叠起来 = "D233 在册"看着像绿，其实 0 条落地。
+   *   下移之后：①–④ 与 ⑥a/⑥b 在干净克隆照样判；只有 ⑤/⑥ 那两条真要本机产物，缺了才 Skip。 */
   const SRC = 'champion-map/lineage.mjs';
   const src = readFileSync(SRC, 'utf8');
   /* ① 声明数必须来自包自己的 meta（`soup.sources`），不许从"这张表今天解不解得开"倒推 —— 那样洞就自灭了 */
@@ -11706,6 +11710,7 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
   ok(/console\.log\('⚠ §E503 薄图模式/.test(src),
     '④ `--soup-thin-ok` 那一支必须响亮印警告（灰而不判死 ≠ 假装没事）');
   /* ⑤ 行为：本机有父粒 ⇒ 守卫必须绿着过，并把条数报出来（只 exit 0 不算，被吞掉的断言照样绿） */
+  needArtifacts('D233 ⑤ 本机跑 lineage.mjs', ['docs/artifacts/e234-out/K2.js', 'docs/artifacts/e85-out/E20-71.bak']);
   const r = spawnSync(process.execPath, [SRC], { encoding: 'utf8', timeout: 300000 });
   eq(r.status, 0, '⑤ 本机跑 `lineage.mjs` 必须成功：\n' + String(r.stderr || r.stdout || '').slice(-400));
   const m1 = /融合血统口径 ✅ (\d+) 枚声明是权重平均的粒，父边全部解析（第二父边 (\d+) 条）/.exec(String(r.stdout || ''));
