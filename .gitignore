@@ -128,3 +128,7 @@ docs/artifacts/*.png
 
 # §2026-10-09：产物目录整体忽略（仓规本就是"产物不进库"；已入库的仍被跟踪，故意加用 git add -f）
 docs/artifacts/
+
+# §E572（10-10 晚）：K=8 臂内 trainFit 配对实验的带文件落点（48 个 .bak × 113KB，可重跑得到）。
+# 账记在 champion-map/k8bands.tsv（含 trainFit 与权重 sha1），不靠这些 .bak 入库；子目录也不欠 D82 的账（D82 非递归 readdir）。
+docs/artifacts/k8bands/

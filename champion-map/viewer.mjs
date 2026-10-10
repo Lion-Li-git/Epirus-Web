@@ -225,24 +225,34 @@ if (existsSync(duelP)) {
     Object.values(DUEL).filter(x => x.s === 'same').length + ' ‖ 符号翻 ' +
     Object.values(DUEL).filter(x => x.s === 'flip').length + '）');
 } else console.log('提示：没有 duel.tsv ⇒ "对现役决斗"着色口径不可用（跑 node champion-map/duelscan.mjs 生成）');
-/* §E313 部署口径表（`eps-scan.mjs` 跑 + `epsread.mjs` 汇成 `epsagg.tsv`）= 图上第 5 条腿："页面开着 ε=0.2 soft 还值多少"。
+/* §E313 部署口径表 = 图上第 5 条腿："页面开着 ε=0.2 soft 还值多少"。
  *   为什么这一格非补不可：图上那把头号尺 H = `eval-5p` 的**考卷口径（ε=0 贪心）**，而真页面每手有 20% 概率
  *   在短名单里软采样（§E275 才把这条口径接进工具）⇒ 两把尺一直没并排量过。
- *   实测（121 枚 × 2 eval seed × 2 口径 = 484 遍 · 50.8 万局）：两口径的**排名**几乎同构（Spearman 0.912），
- *   但**电平**不同构 —— 线上包 53.65 → 49.10（**Δε 4.55pt = 过线组第 94 百分位**），而历代冠军的 Δε 中位 2.25
- *   是非冠军 1.20 的 1.9 倍 ⇒ **当选过程在挑"最贴贪心 argmax"的包，页面恰好在扰动那个 argmax**（过拟合到评估器口径）。
- *   字段：`hp` = 页面口径夺1率 ‖ `de` = Δε（考卷 − 页面，正 = 开探索就掉）。*/
+ *   §E571（10-10 晚）换了**产法**：旧的是 `eps-scan.mjs`（硬编码 30 局/组合 · 串行）+ `epsread.mjs`；
+ *     v1.6.55 全图换 120 档之后那张表就成了"旧档数混在新档图上"，所以改由 `eps2seed.mjs` 把
+ *     **两批 eps-full（seed 77000 与 88000 · 都 120 档）**按 id 配对平均成这张表，`examG` 列随表走，
+ *     页内有一条判据盯它（§E571 那条：档不同 ⇒ 红）。实测（121 枚 × 2 seed × 2 口径 = 484 遍）：
+ *     两口径的**排名**几乎同构（ρ ≈ 0.91），**电平**不同构，但**"现役特别脆"那句在 120 档下不成立** ——
+ *     现役 Δε = 1.95pt，在 121 枚里第 75.2 百分位（旧 30 档给的 4.55pt / 第 94 百分位是小样本形状，
+ *     已被 v1.6.55 的 986 枚重测算推翻，见 METHODOLOGY 129）。Δε 分布：中位 0.80 ‖ p90 2.90 ‖ max 7.95。
+ *   字段：`hp` = 页面口径夺1率 ‖ `de` = Δε（考卷 − 页面，正 = 开探索就掉）‖ `examG` = 这张表的档。*/
 const epsP = join(HERE, 'epsagg.tsv');
 let EPS = {};
 if (existsSync(epsP)) {
-  const el = readFileSync(epsP, 'utf8').trim().split('\n'); const eh = el[0].split('\t');
+  const el = readFileSync(epsP, 'utf8').replace(/\r?\n$/, '').split(/\r?\n/); const eh = el[0].split('\t');
   const iId = eh.indexOf('id'), iE = eh.indexOf('exam'), iP = eh.indexOf('page'), iD = eh.indexOf('de');
+  /* §E571 这张表也必须**自带档**：v1.6.55 全图换到 exam=120 后，这张由 eps-scan 旧硬编码 30 档产出的表
+   *   与 coords 不同档 ⇒ 卡片上「Δε 两seed」与「Δε 单批」不是同一把卷量出来的（图上混画，§E566 那一族）。
+   *   列缺失 ⇒ 下面那条页内判据红（不许"读不到就跳过"）。 */
+  const iG = eh.indexOf('examG');
   for (const l of el.slice(1)) { const c = l.split('\t'); if (!c[iId]) continue;
-    EPS[c[iId]] = { h: +c[iP], e: +c[iE], d: +c[iD] }; }
+    EPS[c[iId]] = { h: +c[iP], e: +c[iE], d: +c[iD], g: iG >= 0 && String(c[iG] || '').trim() !== '' ? +c[iG] : null }; }
   console.log('部署口径实测 ' + Object.keys(EPS).length + ' 枚（页面比考卷强的 ' +
     Object.values(EPS).filter(x => x.d < 0).length + ' ‖ Δε ≥ 3.41pt 的 ' +
-    Object.values(EPS).filter(x => x.d >= 3.41).length + '）');
+    Object.values(EPS).filter(x => x.d >= 3.41).length + ' ‖ 表上标的档 = ' +
+    ([...new Set(Object.values(EPS).map(x => String(x.g)))].join(',') || '（无）') + '）');
 } else console.log('提示：没有 epsagg.tsv ⇒ "部署口径/脆弱性"着色不可用（跑 node champion-map/eps-scan.mjs && node champion-map/epsread.mjs）');
+const EPSG = [...new Set(Object.values(EPS).map(x => x.g === undefined || x.g === null ? '未标档' : String(x.g)))];
 /* §E338 上线时刻（用户 ⑤：「冠军卡按上线时间排序放一列」）。
  *   ⚠ 不能用 coords.tsv 的 `ts` 顶替 —— 那是**训出**时刻；上线是另一次动作（用户 GO 之后换包），
  *   两者能差好几天（实测 v7cmin4-31 训出于 09-20 前后、09-21 18:49 才上槽）。
@@ -540,7 +550,10 @@ var NDUEL = 0, NWIN = 0, NFLIP = 0;
 (function () { for (var i = 0; i < N; i++) { if (!P[i].ds) continue; NDUEL++;
   if (P[i].ds === 'flip') NFLIP++; else if (P[i].dm > 0) NWIN++; } })();
 /* §E313 部署口径实测数：NEPS = 两 seed 齐的枚数；NBRIT = Δε ≥ 3.41pt 的"脆"枚数
- *   （3.41 = 线上包 Δε 4.55 的 0.75 倍，判据 (b) 跑前写死的那个"同量级"线）*/
+ *   （3.41 的出处 = 旧 30 档表上线上包 Δε 4.55 的 0.75 倍，判据 (b) 跑前写死的那条"同量级"线。
+ *    §E571 换到 120 档 × 两 seed 后现役只有 1.95pt ⇒ **按原出处这条线该挪到 1.46**；线**不挪**，
+ *    因为挪它等于替历史读数改语义（§E314 加列不换语义那条）。挪不动的代价如实写在这：
+ *    3.41 现在落在这张 121 枚表的第 94.2 百分位，其上只有 7 枚。*/
 var NEPS = 0, NBRIT = 0, NSTRONG = 0;
 /* §E321 当选键那条腿的计数：NSEL = 有读数的枚数 ‖ NSELUP = 配对差 ≥ +2pt 的枚数 ‖ NSELSOFT = 同号数 < 6/8 的枚数
  *   （判据跑前定死：幅度 ≥2pt 且 ≥6/8 同号才算"在这把尺上赢现役"，§E318 的那套）*/
@@ -657,9 +670,12 @@ var FLAT = { yaw: -Math.PI / 2, pit: Math.PI / 2 }, SOLID = { yaw: -Math.PI / 2,
 var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
 
 /* §E314 势 = **线上口径**的 H + T·S（用户裁定把整张图换成玩家真正拿到的那个数）。
- *   旧写法是 d.H / 100（考卷口径 · ε=0 贪心）。两口径的**排名**同构（Spearman 0.912 / 全库 718 枚），
- *   但**电平不同构**：全库 Δε 中位只有 0.20pt，而现役是 8.10pt（第 99.6 百分位）⇒ 换尺主要改的是"谁吃亏"，
- *   不是"整体挪一挪"。考卷那个数仍在 d.H 里，悬停与 pm/duel 两种口径都还能读。*/
+ *   旧写法是 d.H / 100（考卷口径 · ε=0 贪心）。两口径**排名同构**：§E571 在**同一档（exam=120）**下重测的
+ *   图上 794 枚给 ρ(H, Hp) = 0.966（986 行加权口径 0.967）—— 比当年 30 档"新页面 vs 旧考卷"的 0.947 更高。
+ *   但**电平**不同构：120 档全库 Δε 中位 1.00pt ‖ p90 3.70 ‖ max 9.50 ‖ min −7.80，现役 2.40pt = 第 75.9 百分位；
+ *   两 seed 那张表（121 枚）给现役 1.95pt = 第 75.2 百分位 —— 两个独立仪器同向。
+ *   ⚠ 这里原来写的是"现役 8.10pt = 第 99.6 百分位 / 全库中位 0.20pt"—— 已被 v1.6.55 的 986 枚重测**推翻**
+ *     （那是 30 档的小样本形状）。规矩写在 METHODOLOGY 129：档一变，所有百分位/极值断言必须重算才许引用。*/
 function Fv(d) { return d.Hp / 100 + st.T * d.S; }
 /* 名次必须跟着尺重算：coords.tsv 的 rank 列是**考卷口径 + 出厂 T** 下算的，沿用就会把"第 N 名"读成旧尺。
  *   这段在装载时跑，而装载时 st.T 还没被人动过 ⇒ 它本身就是出厂 T，不再另存一份常数（§E278：注释/代码里不许复制数值）。*/
@@ -919,10 +935,50 @@ function wrapLabel(t, s, maxW, max) {
 }
 function famShort(d, n) { var s = String(famLab(d)).split(' ‖ ')[0] || ('家族 ' + d.fam);
   return s.length > (n || 26) ? s.slice(0, n || 26) + '…' : s; }
-function tip(d, fr) {
+/* ---- §E571 特性剖面（明细卡的主体，替代"以总分为头"的旧写法）----
+ *   一维一行：读数 + 库内分位 P + 10 格条；两列并排 ⇒ 一眼读出这枚包的形状。
+ *   P 的定义写在剖面那一行的行头（图例里不重复）。缺测那一维**不进分位样本**，条上如实写「未测」
+ *   （§E491 那一族：不许把缺测读成 0）。分位数组按维惰性烘一次并缓存：DATA 全程不变 ⇒ 悬停帧只做二分。*/
+var PC = {};
+function pcol(key) { var a = PC[key]; if (!a) { a = [];
+  for (var i = 0; i < DATA.length; i++) { var v = DATA[i][key]; if (typeof v === 'number' && isFinite(v)) a.push(v); }
+  a.sort(function (x, y) { return x - y; }); PC[key] = a; } return a; }
+function pctl(key, v) { var a = pcol(key); if (!a.length || typeof v !== 'number' || !isFinite(v)) return null;
+  var lo = 0, hi = a.length; while (lo < hi) { var m = (lo + hi) >> 1; if (a[m] <= v) lo = m + 1; else hi = m; } return lo * 100 / a.length; }
+function dwc(s) { var w = 0; for (var i = 0; i < s.length; i++) { w += s.charCodeAt(i) >= 0x3000 ? 2 : 1; } return w; }
+function padc(s, n) { s = String(s); var k = n - dwc(s); while (k-- > 0) s += ' '; return s; }
+function pbar(p) { var k = Math.round(p / 10), s = ''; for (var i = 0; i < 10; i++) s += i < k ? '#' : '.'; return s; }
+function pfmt(kind, v) {
+  if (typeof v !== 'number' || !isFinite(v)) return '未测';
+  if (kind === '%') return v.toFixed(1) + '%';
+  if (kind === 'sgn') return (v >= 0 ? '+' : '') + v.toFixed(1);
+  if (kind === 'pt') return v.toFixed(0) + 'pt';
+  if (kind === 'p0') return (v * 100).toFixed(0) + '%';
+  if (kind === 'f2') return v.toFixed(2);
+  if (kind === 'f0') return v.toFixed(0);
+  return v.toFixed(1);
+}
+/* 剖面那张表：卡片与页内自检读**同一份**（维名在两处各列一遍，早晚漂移 —— 白名单同族病） */
+var PROF = [['Hp', '页面夺1', '%'], ['H', '考卷夺1', '%'], ['De', 'Δε 单批', 'sgn'], ['de', 'Δε 两seed', 'sgn'],
+  ['Ge', '广度', 'f2'], ['gl', '长程广度', 'f2'], ['sc', '当选键', 'f1'], ['seat', '座位极差', 'pt'],
+  ['dmg', '伤害/局', 'f1'], ['heavy', '重击/局', 'f1'], ['holo', '护盾/局', 'f1'], ['rounds', '回合', 'f1'],
+  ['keys', '技能种类', 'f0'], ['chg', '蓄能/局', 'f1'], ['waste', '珠浪费', 'p0'], ['stance', '摆架势', 'p0']];
+function prow(key, lab, v, txt) { var p = pctl(key, v);
+  return padc(lab, 10) + padc(txt, 7) + ' ' + (p === null ? '               ' : padc('P' + Math.round(p), 5) + pbar(p)); }
+function prof(d) {
+  var s = '';
+  for (var i = 0; i < PROF.length; i += 2) {
+    var A = PROF[i], B = PROF[i + 1];
+    s += '\\n' + prow(A[0], A[1], d[A[0]], pfmt(A[2], d[A[0]])) + '│ ' +
+      prow(B[0], B[1], d[B[0]], pfmt(B[2], d[B[0]]));
+  }
+  return s;
+}
+function tip(d) {
   /* §E570（用户 10-10 20:2x：「这个标签展开之后内容也太多了，这里只要写纯信息就可以了，注释什么的不要写在里面」）
-   *   ⇒ 明细卡只放**这一枚的身份与读数**。解释性内容（为什么这么定、§ 号出处、"别把 1pt 当差别"这类告诫）
-   *   一律搬到 docs/ 与图例，卡片里不重复；搬去的落点记在 CHANGELOG v1.6.56 那一条。 */
+  *   §E571（用户 10-10 21:1x：「我们的考卷目标是分析冠军的特性而不是单纯拿几个数字比」）
+  *   ⇒ 卡片 = **身份 + 特性剖面**。总分那一行（F 与"高于地板"）与所有解释性旁注都拿掉了：
+  *     F 是图上那根轴，名次行已经带着它；剖面才是这张卡要回答的问题。 */
   return d.id + (d.lin ? ' 【' + d.lin + '】' : '') + (d.kin ? ' 〔' + d.kin + '〕' : '') +
     (d.dn > 1 ? '\\n本枚代表 ' + d.dn + ' 份同一权重（面板原占 ' + d.dn + ' 行）：' + d.dups : '') +
     '\\n家族 ' + d.fam + '（按训练方法/目标分）：' + (famLab(d) || '—') +
@@ -932,24 +988,11 @@ function tip(d, fr) {
     (d.pof2 ? '\\n融合的另一粒父 ' + d.pof2 : '') +
     (backOf(d) ? '\\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts + '（来路 ' + (d.psrc || '未标') + '）' : '') +
     (d.ok === 1 ? '\\n训练侧五道检查 ✓' : (d.ok === 0 ? '\\n训练侧五道检查 ✗' + (d.why ? '（' + d.why + '）' : '') : '')) +
-    '\\n名次 ' + d.rk + '/' + N + '（Hp 口径 · 出厂 T）‖ 考卷口径第 ' + d.rkExam + ' 名' +
-    '\\nHp ' + d.Hp.toFixed(1) + '%（ε=0.2 soft · seed 批 77000）   H ' + d.H.toFixed(1) +
-      '%（ε=0 · exam=' + (d.examG === null ? '未标档' : d.examG) + ' 局/组合）   Δε ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1) + 'pt' +
-      '\\nS ' + d.S.toFixed(2) + '（G_eff ' + d.Ge.toFixed(2) + '）' +
-    (d.gl === null || d.gl === undefined ? '' : '   G(long) ' + (+d.gl).toFixed(2)) +
+    '\\n名次 ' + d.rk + '/' + N + '（页面 Hp · 出厂 T）‖ 考卷口径第 ' + d.rkExam + ' 名 ‖ exam=' + (d.examG === null ? '未标档' : d.examG) + ' 局/组合' +
     (d.pv === null || d.pv === undefined ? '' : '\\npromote --dry：' + (d.pv === 1 ? '✅ 三条腿全过' : '⛔ ' + d.pb)) +
     (d.ds ? '\\n对现役配对决斗 A−B ' + d.da + ' ‖ ' + d.db + ' pt（' +
       (d.ds === 'flip' ? '两批符号翻' : d.dm > 0 ? '两批都赢' : '两批都输') + '）' : '') +
-    (d.de === null ? '' : '\\n部署口径 ' + d.hp.toFixed(1) + '% ‖ 考卷 ' + d.he.toFixed(1) + '% ‖ Δε ' +
-      (d.de >= 0 ? '+' : '') + d.de.toFixed(1) + 'pt') +
-    (d.scd === null ? '' : '\\n当选键 evalN ' + d.sc.toFixed(1) +
-      (d.id === 'SHIPPED-Ldemo' ? '（现役 = 参照本身）' : ' ‖ 比现役 ' + (d.scd >= 0 ? '+' : '') + d.scd.toFixed(2) + 'pt ‖ 同号 ' + d.scs) +
-      ' ‖ 主场那一粒(@987654) = ' + (d.sch === null ? '—' : d.sch.toFixed(1))) +
-    '\\nF = Hp + T·S = ' + Fv(d).toFixed(3) + '（线上口径）   高于地板 = F − F_min = ' + (Fv(d) - fr[0]).toFixed(3) +
-    '\\n伤害/局 ' + d.dmg.toFixed(1) + ' · 重击 ' + d.heavy.toFixed(1) + ' · 盾 ' + d.holo.toFixed(1) +
-    ' · 回合 ' + d.rounds.toFixed(1) + ' · 平局 ' + (d.draw * 100).toFixed(0) + '%' +
-    '\\n座位极差 ' + d.seat.toFixed(0) + 'pt · 技能种类 ' + d.keys + ' · 蓄能/局 ' + d.chg.toFixed(1) +
-    ' · 珠浪费 ' + (d.waste * 100).toFixed(0) + '% · 无威胁摆架势 ' + (d.stance * 100).toFixed(0) + '%';
+    '\\n──── 特性剖面 ‖ P = 本屏 ' + N + ' 枚里 ≤ 该读数的占比 ────' + prof(d);
 }
 function fit0() { var r = cv.getBoundingClientRect(); cv.width = Math.max(1, r.width * devicePixelRatio); cv.height = Math.max(1, r.height * devicePixelRatio); }
 function pct(a, q) { var b = a.slice().sort(function (x, y) { return x - y; }); return b[Math.max(0, Math.min(b.length - 1, Math.floor(q * b.length)))]; }
@@ -2429,8 +2472,8 @@ function paintLegend(fr) {
     gl: 'G(long) = 长程自对局的技能广度，与过线判定同一道闸现跑（n=20）‖ 线 ≥3，低于 3 直接不过线',
     pm: '上槽体检 = ' + OKSRCJ + ' ‖ 灰 = 没测过，**不等于**没过',   /* §E492 样本量从表里派生，不许把数字抄在文案里 */
     duel: '配对差 A−B：同座位表、同批种子、两批各 60 局 ‖ 黄 = 两批符号翻 ⇒ 判不动，不许并进赢',
-    hp: '每枚都是单批读数 ‖ 同一枚换一批实测摆 2.3~5.7pt ⇒ 颜色看水位，排序请用「对现役决斗」那档',
-    de: 'Δε = 考卷（ε=0）− 页面（ε=0.2 soft）‖ 发散带 0 在正中：红 = 一开探索就掉，蓝 = 开了反而强',
+    hp: '每枚都是单批读数 ‖ 现役同档（120）换 4 批 eval seed 摆 2.2pt（30 档时同一枚摆 5.7pt）⇒ 颜色看水位，排序请用「对现役决斗」那档',
+    de: 'Δε = 考卷（ε=0）− 页面（ε=0.2 soft）· 两 eval seed · exam=120 局/组合 ‖ 发散带 0 在正中：红 = 一开探索就掉，蓝 = 开了反而强',
     sc: 'Scd = 8 粒 seedBase 的逐种子配对差均值（不是主场那一粒）‖ 橙 = 同号但 <6/8 ⇒ 判不动',
     champ: '这一档只标历代上槽那几枚 ‖ 针 = 现役 · 绿环 = 过了训练侧五道检查'
   };
@@ -2907,7 +2950,7 @@ window.addEventListener('mousemove', function (e) {
      *   顺序也必须是**先写内容、再量尺寸、最后定位**：#tip 是 white-space:pre，宽度完全由这一帧的文案决定，
      *   先量后写会拿到**上一枚**的尺寸（那正好是这条腿历史上犯过的错：拿上一个人的信息当这个人的）。
      *   放不下就翻面（右→左、下→上），最后再夹进视口 —— 不裁内容、不缩字号。 */
-    t2.textContent = tip(P[hit], fRange());
+    t2.textContent = tip(P[hit]);
     t2.style.display = 'block';
     var tp = tipPlace(e.clientX, e.clientY, t2.offsetWidth, t2.offsetHeight);
     t2.style.left = tp[0] + 'px'; t2.style.top = tp[1] + 'px';
@@ -3435,6 +3478,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     DATA.length > 0 && gHas === DATA.length && gKeys.length === 1,
     '带档 ' + gHas + '/' + DATA.length + ' ‖ 出现过的档 = ' + (gKeys.join(',') || '（无）') +
     ' ⇒ 漏档／半挂／混档都会让"离现役多远"这类读法失去意义');
+  /* §E571 部署口径表（epsagg）与考卷必须**同档**。卡片上「Δε 单批」取自 coords（v1.6.55 已换 120 档），
+   *   「Δε 两seed」取自 epsagg —— 那张历史上由 eps-scan 硬编码 30 档产出 ⇒ 两维不同档就是图上混画（§E566 那一族）。
+   *   旧表根本没有 examG 列 ⇒ 这条**判红**（读不到档不算通过），跑 eps2seed --phase=agg 换上新表才绿。*/
+  T('§E571 部署口径表必须自带档且与 coords 同档（否则剖面的两维 Δε 不是同一把卷量出来的）',
+    EPSG.length === 1 && EPSG[0] !== '未标档' && gKeys.length === 1 && String(EPSG[0]) === String(gKeys[0]),
+    'epsagg 标的档 = ' + EPSG.join(',') + ' ‖ coords 的档 = ' + (gKeys.join(',') || '（无）'));
   st.hi = {};
   /* ⑥ 冠军序列按上线时刻排，抽不到的**必须标出来**（不许拿训出时刻冒充上线时刻） */
   var CH = champList(), prevS = '';
@@ -4806,6 +4855,20 @@ st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
     st.lgPos = SN5.lgPos; st.cardPos = SN5.cardPos; st.sidePos = SN5.sidePos;   /* §E462 位置也要还原：自检不许把用户拖好的布局改掉 */
     recomputeVIS(); paintCard(); paintSide(); draw();
   })();
+  /* §E571 明细卡剖面的两条牙（都按"改坏了会红"的形状写，不是打印读数）：
+   *   ① 分位边界不变量 —— 任一维的**最大**读数，P 必须是 100。把 a[m] <= v 写成 a[m] < v、或二分差一格，这条立刻红。
+   *   ② 接线不变量 —— 剖面那 16 维每一维都必须在屏上取到 ≥1 枚读数。键名打错（coords 的 Geff 对成 DATA 的 Ge 之类）
+   *     的症状是整列静默"未测"，卡片照样画得出来 ⇒ 只有数取值枚数才拦得住（§E491 那一族）。*/
+  var _pv = [];
+  for (var _z = 0; _z < PROF.length; _z++) _pv.push([PROF[_z][0], pcol(PROF[_z][0])]);
+  T('剖面：每维最大读数的 P 必须 = 100（分位边界与二分同一条线）', (function () {
+    for (var z = 0; z < _pv.length; z++) { var a = _pv[z][1];
+      if (a.length && pctl(_pv[z][0], a[a.length - 1]) !== 100) return false; }
+    return true; })(), '红 = pctl 的 ≤ 或二分偏了（用**精确等于**判：取整会把 99.87 读成 100，那条就白写）');
+  T('剖面：16 维每一维都取到读数（键名接错会整列静默未测）', (function () {
+    var bad = []; for (var z = 0; z < _pv.length; z++) if (!_pv[z][1].length) bad.push(_pv[z][0]);
+    return bad.length === 0; })(), '取不到值的维：' + (function () { var b = [];
+    for (var z = 0; z < _pv.length; z++) if (!_pv[z][1].length) b.push(_pv[z][0]); return b.join(','); })());
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\\n' + out.join('\\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\\n已经跑到：\\n' + out.join('\\n'); nbad++; }
@@ -4829,7 +4892,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '#fam button.fam i{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid rgba(255,255,255,.35)}\n' +
 '#fam button.fam b{color:var(--dim);font-weight:400}\n' +
 '#fam .famtip{color:var(--dim);font-size:12px;padding-right:6px}\n' +
-'#tip{position:fixed;display:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre;font-size:12px;line-height:1.5;pointer-events:none;z-index:9;box-shadow:0 6px 22px rgba(0,0,0,.55);color:var(--ink)}\n' +
+'#tip{position:fixed;display:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre;font-size:12px;line-height:1.5;pointer-events:none;z-index:9;box-shadow:0 6px 22px rgba(0,0,0,.55);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Noto Sans Mono CJK SC",monospace}\n' +
 '#legend{position:absolute;right:6px;top:12px;cursor:move;user-select:none;touch-action:none;   /* §E431 用户 10-08：整块往右缩（贴右缘），别压到一维图 */font-size:11px;color:var(--ink);text-align:left;padding:7px 9px;border:1px solid var(--line);border-radius:6px}\n' +
 '#legend canvas{border:1px solid #8ea2c0;margin:3px 0}\n' +
 '#stat{position:absolute;left:14px;top:10px;color:var(--dim);font-size:12px}\n' +
@@ -4904,7 +4967,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>\n' +
 '<div id="tip"></div>\n' +
 '<div id="selftest"></div>\n' +
-'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var NRAW = ' + NRAW + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
+'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var NRAW = ' + NRAW + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + '; var EPSG = ' + JSON.stringify(EPSG) + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
 /* §E338 落盘之后**必须把内联脚本再解析一遍**（"写完不回读"这一族的第三种形态）：
  *   模板里写 '\n' 会被 Node 先吃成**真换行** ⇒ 写进页面就成了一条未闭合的字符串 ⇒ **整页脚本一条都不执行**，
  *   而构建照样打印"已写 xxx KB"、截图照样是一张画布（地板是 canvas 之外没画 ⇒ 看着像空的但没人报错）。
