@@ -219,6 +219,9 @@
   变异逐字节复原并核 `sha1sum = b370cdafc066812e3e22cfeff3455160f392a060`。`--group=meta` **16/16**（17:13:49）。
 - ⚠ 一条自己造成的作废：我改 `tools/np-test.mjs` 会让 np 缓存键变（键含 `tools/` 字节），而当时**整轮正在跑** ⇒ 停掉那半遍（`TaskStop` 后按 `CommandLine` 实证 `gate-all`/`np-test` 无残留才继续），
   `round7.log` 留着当"被打断"的证据，**它的秒数与判词一律不引用**。⇒ 规矩 sharpen：**要在整轮跑着的时候改 `tools/`，先停轮、再改、再重跑**，不要一边改一边引用那遍的绿灯。
+- **重跑那遍回来了**：整轮 `gate-all --np`（五道全含）跑在 `2b54f41` 这棵树上，**17:30 判词 = `np 277/277（824.9s） · spec 52/52 · smoke OK · battle OK · map OK` ⇒「✔ 结论：5 道全绿」RC=0** ✔
+  （任务 id `b7x5hhrza` ‖ pid 14520 = `tools/gate-all.mjs --np`、子 39016 = `np-test.mjs` ‖ 完成标记 `round8.done` 带 uuid `round8-v1654` + 该遍自身 pid 929）。
+  `824.9s` 与今早两遍（654.8 / 845.5）同量级，**我没有拿它们互相校正成基线**；本笔回填后再补跑一次 `--group=meta`（时间戳写进提交信息）。
 
 ## 本班交付（分支 `qoder/e566-gate-coverage-overnight`，`main` 未动）
 
