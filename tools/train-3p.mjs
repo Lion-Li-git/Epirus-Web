@@ -620,40 +620,37 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
    *   ⇒ 三条硬规矩：**没有 setter 就 exit 7**（拒静默空转）· 下令后**读回消费点** · 退出前印**开火计数**，
    *     `eps>0 而一次决策都没经过漏斗` ⇒ `exitCode=8`（空枪，与 D123 同规矩）。 */
   {
-    /* ===== v1.6.50（用户 10-10 裁定「A 和 B 都可以做」）：**产品口径成为训练臂的默认** =====
-     * 为什么改默认（不是加新机制——机制 v1.5.237 就有了，只是默认关，所以从来没有一臂活在产品口径下）：
-     *   每代适应度的被评席出厂是 `temp 0.35 · ε=0.15 · 不带 epsMode`（`js/train/evo.js:536` 的 `fitChooser()`），
-     *   而产品 5 人档是 `temp 0.15 · ε=0.2 · k=5 · soft`。差的不只是一个常数：**缺 epsMode 就丢了
-     *   v1.5.141 的"防御/环豁免"**，硬档会把防御出现率从 4.0% 抬到 26.4%、把聚能环从 1.2% 压到 0.0%
-     *   ⇒ 一句话：**我们一直在用一个已知会虚增防御、杀死滚环的口径去挑"该防不防、该环不环"的包**。
-     * 逃生口（两侧都要有，否则"想跑出厂口径"就没法表达）：
-     *   `EPIRUS_TRAIN_EPS=off` ⇒ 显式回到出厂硬档（逐字等于旧行为）；`EPIRUS_TRAIN_EPS=0` ⇒ 真零剂量贪心（原本就支持）。
-     * ⚠️ 下面那三条硬规矩**一条都不许松**（没有 setter 就 exit 7 · 下令后读回消费点 · 空枪 exit 8）：默认值也要经过同一条路。 */
-    const RAW_EPS_ENV = process.env.EPIRUS_TRAIN_EPS;
-    const EXPLICIT = RAW_EPS_ENV != null && String(RAW_EPS_ENV).trim() !== '';
-    const WANT_OFF = EXPLICIT && /^(off|no|none|ship|false)$/i.test(String(RAW_EPS_ENV).trim());
-    const rawEps = WANT_OFF ? '0' : (EXPLICIT ? RAW_EPS_ENV : '0.2');
-    /* 默认值也要用产品那一组常数（与 `js/ui/ui.js` 的 5 人档同源：temp0.15 · ε0.2 · k5 · soft）；
-     * 显式下达时用调用方给的（缺哪项补哪项，与本块旧行为一致）。 */
-    const DFLT_K = EXPLICIT ? (process.env.EPIRUS_TRAIN_EPS_K || null) : '5';
-    const DFLT_MODE = EXPLICIT ? (process.env.EPIRUS_TRAIN_EPS_MODE || null) : 'soft';
-    const DFLT_TEMP = EXPLICIT ? (process.env.EPIRUS_TRAIN_TEMP || null) : '0.15';
-    {
+    /* ===== v1.6.51（用户 10-10 裁定「把 A 回退了吧」）：**回退 v1.6.50 那条"产品口径成为训练臂默认"** =====
+     * 用户给的原则（本仓此前没写下来过，逐字记在这里）：
+     *   **"冠军在训练过程中应该是不含或少含随机注入的，而测量的地方才应该按照上线的要求。"**
+     * ⇒ 我 v1.6.50 做反了：把 `ε=0.2/k5/soft` 注入**选择回路**，期望它"训出更稳的冠军"。
+     *   那不是换个尺，那是**在噪声更大的目标上做选择**——实测代价（配对、预算对齐到 1200 代）：
+     *   页面 `H` 出厂口径 55.9 vs 产品口径 42.1（**−13.8pt**），而 250 代时差 −10.2pt ⇒ 越训越差。
+     *   同种子当选键「第 1 与第 2 名分差」在产品口径下只有 **0.30pt（落在同分带内 ⇒ 基本是抽签）**
+     *   —— 一个分不清前两名的选择过程，选出来的就是运气。读数见 `champion-map/cont1200-2026-10-10.tsv`。
+     * 所以默认回到**出厂形状**：`fitChooser()` = `temp0.35·ε0.15·不带 epsMode` 硬档 ‖ `trainChooser()` = `temp0.15·ε0` 纯贪心。
+     * 想跑"产品口径训练臂"做研究**仍然可以**（显式 `EPIRUS_TRAIN_EPS=0.2 EPIRUS_TRAIN_EPS_K=5
+     *   EPIRUS_TRAIN_EPS_MODE=soft EPIRUS_TRAIN_TEMP=0.15`）—— 那是**显式的实验**，不是默认。
+     * ⚠️ 别再把"上线口径"搬进这两个漏斗当默认：**上线口径的用武之地在"量"的那一侧**
+     *   （页面 / `eval-5p --eps=0.2` / `promote --dry` 的页面那一栏），不在选择回路里。
+     * ⚠️ 三条硬规矩一条都不许松：没有 setter 就 exit 7 · 下令后读回消费点 · 空枪 exit 8。 */
+    const rawEps = process.env.EPIRUS_TRAIN_EPS;
+    if (rawEps != null && String(rawEps).trim() !== '') {
       if (typeof T.setTrainEps !== 'function') {
-        console.error('[train-3p] ⛔ 需要 setTrainEps，但引擎没有 ⇒ 拒绝静默空转');
+        console.error('[train-3p] ⛔ 传了 EPIRUS_TRAIN_EPS 但引擎没有 setTrainEps ⇒ 拒绝静默空转');
         process.exit(7);
       }
       let epsBack = null;
       try {
-        epsBack = T.setTrainEps(Number(rawEps), DFLT_K, DFLT_MODE, DFLT_TEMP);
+        epsBack = T.setTrainEps(Number(rawEps), process.env.EPIRUS_TRAIN_EPS_K || null, process.env.EPIRUS_TRAIN_EPS_MODE || null,
+          process.env.EPIRUS_TRAIN_TEMP || null);
       } catch (e) {
-        console.error('[train-3p] ⛔ 执行口径下达失败（raw=' + rawEps + '）：' + (e && e.message));
+        console.error('[train-3p] ⛔ EPIRUS_TRAIN_EPS=' + rawEps + ' 被 setter 拒绝：' + (e && e.message));
         process.exit(7);
       }
-      console.log('[train-3p] 训练/选择执行口径' + (EXPLICIT ? '（显式下达' + (WANT_OFF ? ' · 回出厂硬档' : '') + '）' : '（**默认 = 产品口径**，v1.6.50；`EPIRUS_TRAIN_EPS=off` 可回出厂硬档）') +
-        ' ⇒ 消费点读回 eps=' + epsBack.eps + ' k=' + epsBack.k + ' mode=' + epsBack.mode +
+      console.log('[train-3p] 训练/选择执行口径已下达 ⇒ 消费点读回 eps=' + epsBack.eps + ' k=' + epsBack.k + ' mode=' + epsBack.mode +
         ' temp=' + (epsBack.temp == null ? '各点出厂值' : epsBack.temp) +
-        '\n            作用范围 = `fitChooser()`（每代评分的被评席）+ `trainChooser()`（自评/健康门槛漏斗）；' +
+        '\n            作用范围 = `fitChooser()`（每代评分的被评席，出厂 temp0.35·ε0.15·硬档）+ `trainChooser()`（自评/健康门槛漏斗，出厂 ε=0）；' +
         '`audit-lib` 的 9 处与承诺局(`makeCommitChooser`)不经过它');
       process.on('exit', function () {
         if (typeof T.countTrainEps !== 'function') return;
