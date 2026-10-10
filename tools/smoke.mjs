@@ -93,7 +93,28 @@ async function main() {
 
   await send('Page.enable'); await send('Runtime.enable'); await send('Log.enable');
   await send('Page.navigate', { url: URL });
-  await sleep(1600);
+  /* ===== v1.6.52：把"写死等待"改成"轮询到就绪"（修 CI 上那条观察档 flaky）=====
+   * 病（2026-10-10 实测）：这里原来是 `await sleep(1600)`，紧接着就断言 DOM。
+   *   本机跑是 `SUMMARY: SMOKE OK`，而 CI 上**同一批页面代码两笔绿两笔红**（6864093 红 / 我两笔绿 / 7023bff 又红）
+   *   ⇒ 纯等待竞态：页面初始化（解包冠军包 + 渲染 30 个技能钮 + 开新局）一旦超过 1.6 秒，第一段就整片红 ——
+   *   实测症状正是「对局页可见 & 技能按钮=30(28可用+2置灰)」/「多人专用技能置灰(≥2 disabled)」/
+   *   「双方 HP 显示 3」/「点击出招:ジ」一起 FAIL，而「点击出招:防御」有时 PASS（= 初始化到一半）。
+   * 改法：**先轮询到"30 个技能钮都渲染出来"再往下走**，上限 15 秒（就绪即刻返回 ⇒ 正常路径不拖慢）。
+   *   ⚠️ 这不是放松判据：超时后下面的 `check` 照样判 FAIL，只是**先给它足够时间**。
+   * 同族另外两处一起修：① 点招前先等那个按钮可点（原来直接找，找不到就 FAIL）；
+   *   ② 第四回合的日志（原来靠 4×650ms 攒出来，慢机器上不够）。 */
+  const waitFor = async (expr, desc, timeoutMs) => {
+    const t0 = Date.now(), cap = timeoutMs || 15000;
+    for (;;) {
+      let v = false;
+      try { v = await evalJS(expr); } catch (e) { v = false; }
+      if (v) return true;
+      if (Date.now() - t0 > cap) { console.log('⚠ 等待超时（' + desc + '，' + cap + 'ms）—— 下面照常判'); return false; }
+      await sleep(120);
+    }
+  };
+  await waitFor(`document.querySelectorAll('.skillbtn').length === 30`, '技能钮渲染完成（30 个）', 15000);
+  await sleep(150);   // 给 disabled / HP 那一帧落定
 
   const checks = [];
   const check = (name, cond) => { checks.push([name, !!cond]); console.log((cond ? 'PASS' : 'FAIL') + ' ' + name); };
@@ -106,10 +127,13 @@ async function main() {
   // 打 4 个回合（稳健招，避免提前终局）
   const moves = ['ジ', '防御', 'ジ', '防御'];
   for (const mv of moves) {
+    /* v1.6.52：点之前先等这个按钮可点（同族的等待竞态，见上面 waitFor 的说明）。 */
+    await waitFor(`(()=>{const b=[...document.querySelectorAll('.skillbtn')].find(x=>x.querySelector('.nm')?.textContent===${JSON.stringify(mv)} && !x.disabled); return !!b;})()`, '按钮可点:' + mv, 8000);
     const okClick = await evalJS(`(()=>{const b=[...document.querySelectorAll('.skillbtn')].find(x=>x.querySelector('.nm')?.textContent===${JSON.stringify(mv)} && !x.disabled); if(!b) return false; b.click(); return true;})()`);
     check('点击出招:' + mv, okClick === true);
     await sleep(650);
   }
+  await waitFor(`document.getElementById('logbox').textContent.includes('第 4 回合')`, '日志出现第 4 回合', 8000);
   check('日志有第 4 回合', await evalJS(`document.getElementById('logbox').textContent.includes('第 4 回合')`));
   check('界面无 over 覆盖层', await evalJS(`document.getElementById('overlay-root').classList.contains('hidden')`));
   await shot(join(tmpdir(), 'screenshot-battle.png'));
