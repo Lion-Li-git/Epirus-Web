@@ -242,6 +242,9 @@
 - 我今晚第三次栽在同一条上：**把反引号写进模板区注释** ⇒ `node --check` 与 `lint-viewer` 当场抓住（同一条坑今早栽过一次、下午评审里还引用过它，晚上又犯）。已清干净并核 lint ✅。
 - 清理：临时对照品 `docs/artifacts/SHIPPED-Ldemo.bak`（`eps-full` 造的，gitignored，但会被整目录枚举当一枚包 ⇒ 已删）。
 - 待办：整轮判词回填 + CI 判词（一次 curl，不写轮询）；下一步动作（等用户点头）＝ 明细卡从单一总分改成**特性剖面** + §四 那批 K=8 臂内配对。
+- **整轮判词回来了**：`cf2c140` 这棵树上 **20:07 = `np 277/277（669.4s） · spec 52/52 · smoke OK · battle OK · map OK` ⇒「✔ 5 道全绿」RC=0** ✔
+  （任务 id `bd3fa2bbl` ‖ pid 37988 = `tools/gate-all.mjs --np` ‖ 日志 `round9.log`）。`--group=meta` 换档前 19:54:40 = 16/16 ✔；本笔回填是纯文档面 ⇒ 再补一遍 meta。
+  ⇒ 这 669.4 秒与今天另三遍（654.8 / 845.5 / 824.9）**不互相校正成基线**，各记各的。
 
 ## 本班交付（分支 `qoder/e566-gate-coverage-overnight`，`main` 未动）
 | 提交 | 一句话 |
