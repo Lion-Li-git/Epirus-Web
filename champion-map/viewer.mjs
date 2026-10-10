@@ -1125,27 +1125,62 @@ var SW = new Float32Array(gx * gy), SH = new Float32Array(gx * gy), SS = new Flo
  *     nShown === N 时两条路**逐字节相同**，所以那种情况用已在 buildNB 缓存好的全库表（快），有过滤时才现算。
  *     （对比 §E382b 被否：它两条路的**数学不同**（12 近邻截断 vs 半径内全点）⇒ 切换瞬间观感突变。）
  *   成本 cells × |可见|，且只在**可见名单变化**时重算（T 滑动不触发 ⇒ 那条交互仍跟手）。*/
-function visKNN(nb, sig) {
+/* §E573 快路（修"从全范围缩小的那一帧要 169.8~189.1ms"那条病；机制与实测读数见日志 §E573）。
+ *   证明只有一条：**若某格"全库 12 近邻"此刻全都画得出来，那这 12 名也就是"窗内 12 近邻"**
+ *     —— 可见集 ⊆ 全库 ⇒ 任何别的可见点在全库序里也排在它们之后 ⇒ 挤不进前 12。
+ *   于是绝大多数格只要 12 次可见判断 + 12 次距离重算；只有"少了人"的边界格走原来那条暴力循环
+ *   （那条循环**一个字没改** ⇒ 快路的证明成立时两张表逐位相同，不成立时页内那条抽格对比会红）。
+ *   ⚠ 距离必须用**本函数自己的表达式**重算，不许抄 nb.dst：buildNB 那份写的是 (x−X)·bx、这里是 (格坐标差)·cs，
+ *     代数相同但浮点不同串 ⇒ 抄过来就是"看着一样、判据红"的那类病（§E314 只错一行的同族）。
+ *   ⚠ 插入按 (距离, 点号) 字典序留最小的 12 个：暴力那版"严格大于才挪位 + 扫描序就是点号升序"的终态
+ *     正是这个序，所以快路不必管 nb.idx 里那 12 名是按什么顺序给的。
+ *   ⚠ 诚实记下这条证明唯一的缝：两份距离是不同浮点串 ⇒ 只有当两枚点到该格的距离差在 1e-15 量级、
+ *     又正好卡在 12 名边界上才可能翻membership。那种翻在视觉与数值上都读不出来，但**它不是零**，
+ *     所以才配一条抽格对比的腿，而不是只靠这段论证。*/
+function knnLess(dA, iA, dB, iB) { return iB < 0 ? true : (dA < dB || (dA === dB && iA < iB)); }
+function knnPut(dst, idx, b0, dd, pi) {
+  var last = b0 + KF - 1;
+  if (!knnLess(dd, pi, dst[last], idx[last])) return;
+  var p0 = KF - 1;
+  while (p0 > 0 && knnLess(dd, pi, dst[b0 + p0 - 1], idx[b0 + p0 - 1])) {
+    dst[b0 + p0] = dst[b0 + p0 - 1]; idx[b0 + p0] = idx[b0 + p0 - 1]; p0--; }
+  dst[b0 + p0] = dd; idx[b0 + p0] = pi;
+}
+function visKNN(nb, sig, SHOWN) {
   if (VK && VK.sig === sig) return VK;
   var gx = nb.gx, gy = nb.gy, cells = gx * gy;
   var idx = new Int16Array(cells * KF), dst = new Float32Array(cells * KF);
   for (var z = 0; z < cells * KF; z++) { idx[z] = -1; dst[z] = 1e18; }
-  var vx = [], vy = [], vi = [];
+  /* ⚠ 这里必须是**双精度**：第一版我写成 Float32Array，每格距离就被削到 ~1e-4px ⇒ 与原来的逐位不同，
+   *   而近 tied 的两枚点完全可能因此换名次（等价性实测当场抓到：idx 全同、dst 全项不等）。 */
+  var vx = new Float64Array(N), vy = new Float64Array(N), vlist = [];
   for (var i = 0; i < N; i++) {
     if (!(VIS[i] && inWin(P[i]))) continue;
-    vx.push((P[i][nb.ax] - nb.x0) / (nb.x1 - nb.x0) * (gx - 1));
-    vy.push((P[i][nb.by] - nb.y0) / (nb.y1 - nb.y0) * (gy - 1));
-    vi.push(i);
+    vx[i] = (P[i][nb.ax] - nb.x0) / (nb.x1 - nb.x0) * (gx - 1);
+    vy[i] = (P[i][nb.by] - nb.y0) / (nb.y1 - nb.y0) * (gy - 1);
+    vlist.push(i);
   }
   var csx = (nb.x1 - nb.x0) * nb.bx / (gx - 1), csy = (nb.y1 - nb.y0) * nb.byy / (gy - 1);
+  var LIB = nb.idx, nFast = 0, nSlow = 0;
   for (var c = 0; c < cells; c++) {
-    var cgi = c % gx, cgj = (c / gx) | 0, b0 = c * KF, w2 = dst[b0 + KF - 1] * dst[b0 + KF - 1];
-    for (var v = 0; v < vi.length; v++) {
-      var dx = (vx[v] - cgi) * csx, dy = (vy[v] - cgj) * csy, d2 = dx * dx + dy * dy;
+    var cgi = c % gx, cgj = (c / gx) | 0, b0 = c * KF, q, allv = true;
+    for (q = 0; q < KF; q++) { var pc = LIB[b0 + q]; if (pc < 0 || !SHOWN[pc]) { allv = false; break; } }
+    if (allv) {
+      nFast++;
+      for (q = 0; q < KF; q++) { var pf = LIB[b0 + q];
+        var dxf = (vx[pf] - cgi) * csx, dyf = (vy[pf] - cgj) * csy;
+        knnPut(dst, idx, b0, Math.sqrt(dxf * dxf + dyf * dyf), pf); }
+      continue;
+    }
+    /* 慢路 = 原来那条暴力循环，一字未改（候选从 vlist 取，值与原来的 vi 逐项相同） */
+    nSlow++;
+    var w2 = dst[b0 + KF - 1] * dst[b0 + KF - 1];
+    for (var v = 0; v < vlist.length; v++) {
+      var pi = vlist[v], dx = (vx[pi] - cgi) * csx, dy = (vy[pi] - cgj) * csy, d2 = dx * dx + dy * dy;
       if (d2 >= w2) continue;
       var dd = Math.sqrt(d2), p0 = KF - 1;
       while (p0 > 0 && dst[b0 + p0 - 1] > dd) { dst[b0 + p0] = dst[b0 + p0 - 1]; idx[b0 + p0] = idx[b0 + p0 - 1]; p0--; }
-      dst[b0 + p0] = dd; idx[b0 + p0] = vi[v];
+      dst[b0 + p0] = dd; idx[b0 + p0] = pi;
       w2 = dst[b0 + KF - 1] * dst[b0 + KF - 1];
     }
   }
@@ -1155,7 +1190,7 @@ function visKNN(nb, sig) {
   var dv = []; for (var cc = 0; cc < cells; cc++) { if (idx[cc * KF + KF - 1] >= 0) dv.push(dst[cc * KF + KF - 1]); }
   dv.sort(function (x, y) { return x - y; });
   var d12v = dv.length ? dv[dv.length >> 1] : (nb.d12m || 1);
-  VK = { sig: sig, idx: idx, dst: dst, n: vi.length, d12v: d12v };
+  VK = { sig: sig, idx: idx, dst: dst, n: vlist.length, d12v: d12v, nFast: nFast, nSlow: nSlow };
   return VK;
 }
 function buildBitmap(key, visSigNow) {
@@ -1180,7 +1215,7 @@ function buildBitmap(key, visSigNow) {
   var nPainted = 0, nOob = 0;   /* §E381 见下面 FL.painted / FL.oob */
   var SHOWN = new Uint8Array(N), nShown = 0;
   for (var s9 = 0; s9 < N; s9++) { SHOWN[s9] = (VIS[s9] && inWin(P[s9])) ? 1 : 0; nShown += SHOWN[s9]; }
-  var VIS_TB = (nShown === N) ? null : visKNN(nb, key + '@' + visSigNow);
+  var VIS_TB = (nShown === N) ? null : visKNN(nb, key + '@' + visSigNow, SHOWN);
   /* E389 DS：**不再**把覆盖度基准跟着可见集放大 —— 那会让远处的可见点把场拉成一片平均（用户：「暴力拉到无穷远」）。
    *   覆盖度基准保持全库 d12m 那一把尺 ⇒ 晕有固有尺度；配合下面的截断半径，远处自然回到底色。 */
   for (var i = 0; i < nb.gx * nb.gy; i++) {
@@ -4869,6 +4904,42 @@ st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
     var bad = []; for (var z = 0; z < _pv.length; z++) if (!_pv[z][1].length) bad.push(_pv[z][0]);
     return bad.length === 0; })(), '取不到值的维：' + (function () { var b = [];
     for (var z = 0; z < _pv.length; z++) if (!_pv[z][1].length) b.push(_pv[z][0]); return b.join(','); })());
+  /* §E573 势场快路的牙：抽格把快路那张表与一份**独立写的暴力**逐位比（名次比 idx，距离比 Float32 存储尺下的 dst）。
+   *   为什么这条必须常驻而不是只跑一次探针：快路的依据是"库里那 12 名此刻全都画得出来"，
+   *   而它挂在三个别人手里的前提上 —— SHOWN 的口径、nb.idx 的来源、KF 的大小。前提哪天被改动，
+   *   代码不会报错，只会把**地形算歪**（正是 §E388 当初修的那类"看着一样、读出来不同"的病）。
+   *   树状档没铺过势场 ⇒ 这条临时切到 map 画一帧再切回来（与其它"先钉态、判完还原"的腿同一条套路）。*/
+  (function () {
+    var SN9 = { mode: st.mode, flo: st.flo, fhi: st.fhi }, bad = '', ncmp = 0;
+    try {
+      st.mode = 'map'; st.flo = 0.22; st.fhi = 0.74; recomputeVIS(); draw();
+      var nb9 = (window.FL && NBK[FL.key]) || null;
+      if (!nb9) bad = '这一帧没铺出邻域表（FL.key 找不到 NBK 条目）';
+      else {
+        var SH9 = new Uint8Array(N);
+        for (var i9 = 0; i9 < N; i9++) SH9[i9] = (VIS[i9] && inWin(P[i9])) ? 1 : 0;
+        var TB9 = visKNN(nb9, 'selfchk@' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3), SH9);
+        var g9 = nb9.gx, g9y = nb9.gy, cs9x = (nb9.x1 - nb9.x0) * nb9.bx / (g9 - 1), cs9y = (nb9.y1 - nb9.y0) * nb9.byy / (g9y - 1);
+        var F9 = new Float32Array(1);
+        for (var s9 = 0; s9 < g9 * g9y && !bad; s9 += 197) {
+          var cg9i = s9 % g9, cg9j = (s9 / g9) | 0, cd9 = [];
+          for (var q9 = 0; q9 < N; q9++) { if (!SH9[q9]) continue;
+            var xx9 = (P[q9][nb9.ax] - nb9.x0) / (nb9.x1 - nb9.x0) * (g9 - 1), yy9 = (P[q9][nb9.by] - nb9.y0) / (nb9.y1 - nb9.y0) * (g9y - 1);
+            var dx9 = (xx9 - cg9i) * cs9x, dy9 = (yy9 - cg9j) * cs9y; cd9.push([Math.sqrt(dx9 * dx9 + dy9 * dy9), q9]); }
+          cd9.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+          for (var u9 = 0; u9 < KF; u9++) {
+            var gi9 = u9 < cd9.length ? cd9[u9][1] : -1;
+            F9[0] = u9 < cd9.length ? cd9[u9][0] : 1e18; ncmp++;
+            if (TB9.idx[s9 * KF + u9] !== gi9) { bad = '第 ' + s9 + ' 格第 ' + u9 + ' 名：表 ' + TB9.idx[s9 * KF + u9] + ' ‖ 独立暴力 ' + gi9; break; }
+            if (gi9 >= 0 && TB9.dst[s9 * KF + u9] !== F9[0]) { bad = '第 ' + s9 + ' 格第 ' + u9 + ' 名距离：表 ' +
+              TB9.dst[s9 * KF + u9] + ' ‖ 独立暴力 ' + F9[0]; break; }
+          }
+        }
+      }
+    } catch (E9) { bad = '抛错 ' + ((E9 && E9.message) || E9); }
+    st.mode = SN9.mode; st.flo = SN9.flo; st.fhi = SN9.fhi; recomputeVIS(); draw();
+    T('§E573 势场快路必须逐位等于独立暴力（' + ncmp + ' 项比对）', !bad, bad);
+  })();
   var el = document.getElementById('selftest');
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\\n' + out.join('\\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\\n已经跑到：\\n' + out.join('\\n'); nbad++; }

@@ -132,3 +132,6 @@ docs/artifacts/
 # §E572（10-10 晚）：K=8 臂内 trainFit 配对实验的带文件落点（48 个 .bak × 113KB，可重跑得到）。
 # 账记在 champion-map/k8bands.tsv（含 trainFit 与权重 sha1），不靠这些 .bak 入库；子目录也不欠 D82 的账（D82 非递归 readdir）。
 docs/artifacts/k8bands/
+# §E573（10-10 晚）：`shot.mjs` 每次截图的落点（champion-map/shot.png）。它不进门禁（gates 跑完会重写），
+# 但会一直把未跟踪文件留在工作区里 ⇒ 与 D180/D453 那两处"截图残留改名入库"的旧病同族，直接忽略掉。
+champion-map/shot.png
