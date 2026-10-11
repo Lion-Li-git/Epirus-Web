@@ -27,7 +27,7 @@ import { loadChampParams } from '../server/opp-champs.mjs';
 
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
 rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'extra',
-  'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool'], 'probe-diff-ladder');
+  'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier'], 'probe-diff-ladder');
 
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const GAMES = Math.max(1, Number(flag('games', 1500)) || 1500);
@@ -112,10 +112,12 @@ function makeLevelChooser(L, p) {
  *   （`st.slotSalt` 由本工具自己的 rng 逐局给，同 seed 同局序 ⇒ 跨档仍是逐局配对的，配对性质没丢）。
  *   风格档（`lv:hunter`）按契约 §3 **不带包**，两种模式下行为一致。 */
 const USE_POOL = (flag('pool', '0') || '0') === '1';
+const POOL_TIER = (flag('pooltier', '') || '').trim();   /* 非空 = 把所有档钉在**同一批池成员**上 ⇒ 档间只剩剂量差 */
 const PD = W.EpirusPoolDraw;
 const POOL_BY_TIER = {}, MEMBER_P = {};
+if (POOL_TIER && !USE_POOL) { console.error('⛔ --pooltier= 只在 --pool=1 下有意义（单包装配没有"档到池"的映射可钉）'); process.exit(2); }
 if (USE_POOL) {
-  if (!PD || typeof PD.compose !== 'function') { console.error('⛔ `js/pool-draw.js` 没进 sandbox 的 CORE 名单 ⇒ 池模式没有抽签实现，只能退回单包'); process.exit(2); }
+  if (!PD || typeof PD.compose !== 'function') { console.error('⛔ js/pool-draw.js 没进 sandbox 的 CORE 名单 ⇒ 池模式没有抽签实现，只能退回单包'); process.exit(2); }
   const PT = join(ROOT, 'champion-map/pool-members.tsv');
   if (!existsSync(PT)) { console.error('⛔ 池真源表不在：champion-map/pool-members.tsv（先跑 tools/pool-add.mjs）'); process.exit(2); }
   const PL = readFileSync(PT, 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
@@ -149,7 +151,9 @@ for (const L of LEVELS) {
      *   这条顺序与 `js/pool-draw.js` 末尾那句"席位号按升序领"以及 `ui.js` 的 `champForSeat` 同源，不许在这儿另排一次。 */
     let comp = null, seatK = 0;
     if (USE_POOL && L.kind !== 'style' && N > 2) {
-      const mem = POOL_BY_TIER[L.pool] || [];
+      /* `--pooltier=` 把**所有档钉在同一批池成员上** ⇒ 这样档与档之间只剩剂量差，"剂量阶梯本身"才被单独量到
+       *   （不钉的时候档差混着"抽哪一批包"，见 docs/GATE-SHIFTS.md §十九 那句主语漂移）。 */
+      const mem = POOL_BY_TIER[POOL_TIER || L.pool] || [];
       if (mem.length < 2) { console.error('⛔ 档 ' + L.id + ' 的池只有 ' + mem.length + ' 枚 ⇒ 抽签在数学上必然全同（契约 §3）' +
         ' ⇒ 这一档还没成型，别拿池模式量它'); process.exit(2); }
       comp = PD.compose(mem, N - 1, PD.rng(st.slotSalt >>> 0));
