@@ -14,7 +14,11 @@ import { dirname, join } from 'node:path';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const rd = p => { const L = readFileSync(join(HERE, p), 'utf8').replace(/\r?\n$/, '').split(/\r?\n/);
   return { h: Object.fromEntries(L[0].split('\t').map((x, i) => [x, i])), rows: L.slice(1).map(l => l.split('\t')) }; };
-const FILES = ['seat-2026-10-11-90210.tsv', 'seat-2026-10-11-90211.tsv'];
+/* 默认还是 §E576 那两张批表；`--files=a.tsv,b.tsv` 让别一批（如 §E584 的新框）也走**同一把杀刀**，
+ *   免得为一批数据再抄第二份判据实现（本仓"两份代码分叉"栽过很多次）。 */
+const FILES_ARG = (process.argv.find(a => a.indexOf('--files=') === 0) || '').slice(8).split(',').filter(Boolean);
+const FILES = FILES_ARG.length === 2 ? FILES_ARG : ['seat-2026-10-11-90210.tsv', 'seat-2026-10-11-90211.tsv'];
+if (FILES_ARG.length && FILES_ARG.length !== 2) { console.error('⛔ --files= 要正好两张批表（' + FILES_ARG.length + ' 张）'); process.exit(2); }
 const BASE = 'bundled-champion-3p';                       // 现役（coords 里叫 SHIPPED-Ldemo，探针打的是路径）
 const CELLS = ['全程刷反弹', '全程只防御', '只攒不打(农民)', '只枪压制', '攒钱+反弹(会玩)', '重火力+反弹'];
 const LINE = 20;                                          // §E531 的注册否决线（pt）
@@ -42,4 +46,4 @@ for (const mode of ['multi', 'long']) {
       ' | ' + 过线.length + '/6 | ' + (过线.length ? '⛔ 否决（' + 过线.map(x => x.c).join(' ‖ ') + '）' : '✅ 无线上格'));
   }
 }
-console.log('\n# 格内数字 = 两批（90210/90211）各自的人类席夺冠率%；带 Δ 的是该格至少一批比现役差 ≥' + LINE + 'pt，只有**两批同号**才计入否决。');
+console.log('\n# 格内数字 = 两批（' + FILES.join(' ‖ ') + '）各自的人类席夺冠率%；带 Δ 的是该格至少一批比现役差 ≥' + LINE + 'pt，只有**两批同号**才计入否决。');

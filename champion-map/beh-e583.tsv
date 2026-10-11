@@ -1,0 +1,13 @@
+id	path	mode	dmgPerGame	heavyPerGame	rounds	effSkills	distinctKeys	drawRate	games	source
+s302-off-h2-band4	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band4.bak	multi	15.03	2.90	20.05	3.132	10	0.000	40	selfPlay(audit-lib)=mirrorHealth
+s302-off-h2-band4	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band4.bak	long	23.85	1.60	35.45	3.138	10	0.000	40	selfPlay(audit-lib)=mirrorHealth
+s302-on-h2-band1	docs/artifacts/opphuman/s302-on-h2/s302-on-h2-band1.bak	multi	15.45	0.85	28.45	5.902	11	0.000	40	selfPlay(audit-lib)=mirrorHealth
+s302-on-h2-band1	docs/artifacts/opphuman/s302-on-h2/s302-on-h2-band1.bak	long	24.48	0.35	62.98	3.114	11	0.000	40	selfPlay(audit-lib)=mirrorHealth
+bundled-champion-3p	js/bundled-champion-3p.js	multi	15.10	2.85	24.30	6.808	10	0.000	40	selfPlay(audit-lib)=mirrorHealth
+bundled-champion-3p	js/bundled-champion-3p.js	long	24.00	2.75	49.35	3.854	10	0.000	40	selfPlay(audit-lib)=mirrorHealth
+v7beadseed-93	docs/artifacts/v7beadseed-93.bak	multi	14.47	0.90	23.07	5.472	9	0.000	40	selfPlay(audit-lib)=mirrorHealth
+v7beadseed-93	docs/artifacts/v7beadseed-93.bak	long	23.82	0.25	33.15	5.339	9	0.000	40	selfPlay(audit-lib)=mirrorHealth
+# 现役自检：heavy(multi)=2.85 · Geff(multi)=6.808 · exam120 first=51.3% —— 与 champion-map/coords.tsv 的 SHIPPED-Ldemo 行逐字对上 ⇒ 同一把尺
+# exam=120（tools/eval-5p 120 局 × 5 席 · seed 77000 · audit-lib.exam() 每枚单开一个进程，避开 §E575 那条顺序依赖）：
+#   s302-off-h2 first=56.6% 严胜=56.4% cost≥3=0.5% ‖ s302-on-h2 46.4%/45.7%/0.8% ‖ 现役 51.3%/50.8%/1.7% ‖ v7beadseed-93 57.0%/56.6%/0.2%
+# 纪律：这张表**不进判据**（§E572/§E576：分数尺与验收尺、人席尺都不同向），只当特性剖面与 §E581 heavy 梯子的新样本。

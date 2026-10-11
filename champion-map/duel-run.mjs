@@ -9,12 +9,15 @@
  * 双臂（每枚候选跑两次，互为攻守）：
  *   A = style-exam(受试 = 候选, 场 = 4 × 现役) → 候选在"现役场"里的夺 1 率
  *   B = style-exam(受试 = 现役, 场 = 4 × 候选) → 现役在"候选场"里的夺 1 率
- *   读数 = A − B（>0 ⇒ 候选更强）。地板 = 20%（1 打 4，对称策略下各席等权）。
+ *   读数 = A − B（>0 ⇒ **在这副桌的配对里**前者占优）。地板 = 20%（1 打 4，对称策略下各席等权）。
+ *   ⚠ **这不是强度、不许读成"强 X pt"、不许跨参照传递**（`docs/METHODOLOGY.md` 第 110 条 10-08 §E495b ‖ 第 114 条 10-09 §E524/§E526）。
+ *     用法头原来写的是"（>0 ⇒ 候选更强）"——那句话和 110/114 冲突，10-11 §E584 又一次实测到它不传递（预测 −3.05 ‖ 实测 +15.28 ‖ 偏差 18.3pt=3.9σ）。
+ *     ⇒ 引用必须连参照一起说（"X 在现役场里 +15.3"），要排名次就两两全跑成矩阵并明写传递性；换代决策请用**可加口径**（考卷/覆盖度/人席均值/Δε）。
  *   ⚠ A 与 B 不是同一局轨迹（换受试者会换随机流消耗）⇒ 这是"同批种子 + 同座位表"的配对，不是逐局同轨迹配对。
  *   自检：现役 vs 现役 ⇒ A−B 必须**恰好 0**，不为 0 就是仪器坏了（旧稿只打印，这里直接 exit 2）。
  *
  * 用法：node champion-map/duel-run.mjs [--ids=a,b | --top=8] [--games=60] [--seed=77000] [--out=duel-e334-s77000.tsv]
- *        [--ref=SHIPPED-Ldemo]
+ *        [--ref=SHIPPED-Ldemo] [--cand=id=相对路径,id2=相对路径2]   # §E583：没进过 coords.tsv 的包（训练臂/本地实验件）
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -40,9 +43,27 @@ const RAW = CL.slice(1).map(l => { const c = l.split('\t');
 /* §E364 这里原来把"剔除参照枚"和"取全量"写在同一个 filter 里，而下面的 refRow 又是从这个**已剔除 REF**
  *   的列表里找 ⇒ 用法头虽然写着支持 --ref=，实际只有默认值能跑（拿 --ref=v7beadseed-82 会报
  *   "参照枚找不到文件"，而那个 .bak 明明在盘上）。⇒ 全量留一份 RAW 专门给参照枚查。 */
-const ALL = RAW.filter(r => r.id !== REF).sort((a, b) => a.rank - b.rank);
+/* ===== §E583：`--cand=id=相对路径[,...]` —— 让**没进过 coords.tsv 的包**也能上这台尺 =====
+ * 为什么要：训练臂（如 `docs/artifacts/opphuman/s302-off-h2/*.bak`）住在 gitignored 目录、有意不进谱系图 ⇒
+ *   原来候选只能按 id 从 coords.tsv 查路径，这类包**根本进不了决斗**（不是不想跑，是跑不了）。
+ * 只扩候选名单：档 ‖ 双臂 ‖ 自检 ‖ 输出格式都不动。
+ * ⚠ 撞名直接退出（§E330 那个"同名旧拷贝"的洞：find 只回第一条，撞名就等于"量的不是那枚"）。 */
+const EXTRA = String(arg('cand', '')).split(',').map(s => s.trim()).filter(Boolean).map((s, i) => {
+  const eq = s.indexOf('=');
+  const id = eq < 0 ? '' : s.slice(0, eq);
+  const path = eq < 0 ? '' : s.slice(eq + 1);
+  if (!id || !path) { console.error('⛔ --cand 要写成 id=相对路径（收到 ' + s + '）'); process.exit(2); }
+  if (!existsSync(join(ROOT, path))) { console.error('⛔ --cand 里这个包不在盘上：' + path); process.exit(2); }
+  if (RAW.some(r => r.id === id)) { console.error('⛔ --cand 的 id 与 coords.tsv 撞名：' + id + ' ⇒ 会拿错包，换个别名'); process.exit(2); }
+  return { id: id, path: path, F: NaN, rank: -1 - i };
+});
+const POOL = RAW.concat(EXTRA);
+const ALL = POOL.filter(r => r.id !== REF).sort((a, b) => a.rank - b.rank);
 const only = String(arg('ids', '')).split(',').map(s => s.trim()).filter(Boolean);
-const cands = only.length ? ALL.filter(r => only.indexOf(r.id) >= 0) : ALL.slice(0, Number(arg('top', 8)) || 8);
+const picked = [];
+if (only.length) for (const r of ALL) if (only.indexOf(r.id) >= 0) picked.push(r);
+if (EXTRA.length) for (const r of ALL) if (EXTRA.some(e => e.id === r.id)) picked.push(r);
+const cands = picked.length ? picked : ALL.slice(0, Number(arg('top', 8)) || 8);
 const missing = only.filter(id => !ALL.some(r => r.id === id));
 if (missing.length) { console.error('⛔ --ids 里这些枚不在名单上（拼错或没进过面板）：' + missing.join(' ')); process.exit(2); }
 const refRow = RAW.find(r => r.id === REF);
@@ -65,8 +86,8 @@ function exam(subject, fieldOpp, tag) {
 }
 const out = [];
 function duel(aId, bId, tag) {
-  const pa = RAW.find(r => r.id === aId);
-  const pb = RAW.find(r => r.id === bId);
+  const pa = POOL.find(r => r.id === aId);
+  const pb = POOL.find(r => r.id === bId);
   if (!pa || !pb) { console.log('⛔ 名单里查不到：' + aId + ' / ' + bId); return; }
   if (!existsSync(join(ROOT, pa.path)) || !existsSync(join(ROOT, pb.path))) { console.log('⛔ 缺包：' + pa.path + ' / ' + pb.path); return; }
   const t0 = Date.now();
