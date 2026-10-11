@@ -13,10 +13,13 @@
  *   （`kin` 列非空的 183 枚）⇒ 对不上就红着退出，不许"少贴几枚也算跑完"。
  *
  * 用法：node champion-map/attach-path.mjs [--ruler=e328-ruler-s1.tsv,e328-ruler-s2.tsv,e328-ruler-s3.tsv]
+ *      [--incumbent=SHIPPED-Ldemo] [--incumbent-path=docs/artifacts/SHIPPED-Ldemo-<日期>-pre-<新枚>.bak]
+ *      —— 现役行默认**按 wid 自动解**（见下面 §E588 那段），只有在出现多份快照、机器没法判时才要人点名。
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { widOf, parseMeta } from './pack-id.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -37,6 +40,47 @@ for (const f of rts) {
 }
 console.log('路径来源 ' + rts.join(',') + ' ‖ 解出 ' + Object.keys(PATHOF).length + ' 条');
 
+/* ===== 现役行（默认 `SHIPPED-Ldemo`）的 path：**按权重身份解，不按名字硬接**（§E588 · 千问 10-11）=====
+ * 病（v1.6.62 换包当天暴露，实测不是推测）：这一行原来无条件指 `js/bundled-champion-3p.js`，
+ *   而"换包"这个动作就是把**另一枚包**写进那个文件 ⇒ 从那一刻起，图上"写着 Ldemo 读数的那一行"指向的是新包。
+ *   下游每一把按 `path` 列找包的尺（`duel-run --ref=SHIPPED-Ldemo` ‖ `usage-probe --ids=` ‖ `ruler-measure`
+ *   ‖ `seatassoc` 的 path→id）**量的和行里那串读数不是同一枚，而且一字不报**。
+ *   同一族病 DS 自己在 §PROFILE §1.3 刚记过一次（能力表的"现役实测"列量的是 `v7cmin4-31`，而槽里早已是 `Ldemo`）
+ *   ⇒ 那一次是文档里的表，这一次是**表里那一列本身**，所以修在解路径这一步。
+ * 规矩（与本文件开头那条同源）：一行的 path 必须是"**量它时真用的那枚权重**"所在的文件；
+ *   活槽文件只有**在它仍是同一枚权重时**才有资格当这一行的 path。
+ * ⚠ 判据用 `pack-id.mjs` 的 `widOf`（sha1(权重数组) 前 16 位，与 `server/train-server.mjs` 的 `weightsId()` 同口径），
+ *   不用文件名、不用 META.ts（整文件哈希会被 META 的 ts 污染 —— 那边踩过）。 */
+const LIVE = 'js/bundled-champion-3p.js';
+const INC = arg('incumbent', 'SHIPPED-Ldemo');
+const widAt = rel => { try { return widOf(rd(join(ROOT, rel))); } catch (e) { return null; } };
+const liveWid = widAt(LIVE);
+if (!liveWid) { console.error('⛔ 活槽 ' + LIVE + ' 解不出权重 ⇒ 现役行的身份没法判（宁可红，不许把行指到读不到的文件）'); process.exit(2); }
+const SNAP = /^SHIPPED-Ldemo.*\.bak$/;
+const pinned = readdirSync(join(ROOT, 'docs', 'artifacts')).filter(f => SNAP.test(f))
+  .map(f => ({ rel: 'docs/artifacts/' + f, wid: widAt('docs/artifacts/' + f) })).filter(e => e.wid);
+const OVERRIDE = arg('incumbent-path', '');
+let incPath = LIVE, incWhy = '活槽（还没换包 ⇒ 行与槽同权重）';
+if (OVERRIDE) {
+  const w = widAt(OVERRIDE);
+  if (!w) { console.error('⛔ --incumbent-path=' + OVERRIDE + ' 解不出权重'); process.exit(2); }
+  incPath = OVERRIDE; incWhy = '显式指定';
+} else if (pinned.some(p => p.wid === liveWid)) { incPath = LIVE; incWhy = '活槽里就是钉过的那枚（快照 wid 相同）'; }
+else if (pinned.length === 1) { incPath = pinned[0].rel; incWhy = '换包后钉住的快照（与活槽 wid 不同）'; }
+else if (pinned.length > 1) {
+  console.error('⛔ 有 ' + pinned.length + ' 份 `SHIPPED-Ldemo-*.bak` 快照，而活槽（wid=' + liveWid.slice(0, 8) + '）与它们**都**不同权重：\n   ' +
+    pinned.map(p => p.rel + ' wid=' + p.wid.slice(0, 8)).join('\n   ') +
+    '\n   ⇒ 这一行的读数出自哪一份没法判。用 `--incumbent-path=<那份文件>` 点名，别让它猜。');
+  process.exit(2);
+} else {
+  console.log('⚠ 没有钉住的 `SHIPPED-Ldemo-*.bak` 快照 ⇒ 现役行仍指活槽；**下次换包这一行的读数就会属于另一枚包**（换包当天请把旧现役钉一份进 docs/artifacts/）');
+}
+const incWid = widAt(incPath);
+const liveMeta = parseMeta(rd(join(ROOT, LIVE))) || {};
+console.log('现役行身份：`' + INC + '` → ' + incPath + '（wid=' + (incWid || '?').slice(0, 8) + ' · ' + incWhy + '）' +
+  ' ‖ 活槽 ' + LIVE + ' wid=' + liveWid.slice(0, 8) + '（meta.ts=' + (liveMeta.ts || '?') + ' · n=' + (liveMeta.n || '?') + '）' +
+  (incWid === liveWid ? ' ⇒ 同一枚 ✓' : ' ⇒ **不是同一枚**：要量线上槽必须显式传 `' + LIVE + '`，别用 `' + INC + '`'));
+
 const CF = join(HERE, 'coords.tsv');
 const L = rd(CF).replace(/\n+$/, '').split('\n');
 const hd = L[0].split('\t');
@@ -51,9 +95,9 @@ for (const r of rows) {
   const id = r[iId];
   /* 优先级是**有原因的**：现测尺的 path 列 = 量它时真用的文件；顶层 `<id>.bak` 只是老那批的约定位置。
    *   同一个 id 两处都有而约定赢 ⇒ 就读到旧拷贝（§E330 那 181 枚叠在同一秒就是这么来的）。 */
-  const rel = id === 'SHIPPED-Ldemo' ? 'js/bundled-champion-3p.js'
+  const rel = id === INC ? incPath
     : (PATHOF[id] || ('docs/artifacts/' + id + '.bak'));
-  if (PATHOF[id] || id === 'SHIPPED-Ldemo') nPath++; else nConv++;
+  if (PATHOF[id] || id === INC) nPath++; else nConv++;
   if (rel.indexOf('/') >= 0 && PATHOF[id]) nSub++;
   try { readFileSync(join(ROOT, rel)).length || gone.push(id + '（空文件）'); } catch (e) { gone.push(id + '（读不到）'); }
   r[iP] = rel;

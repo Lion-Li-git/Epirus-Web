@@ -17,12 +17,15 @@
  *   自检：现役 vs 现役 ⇒ A−B 必须**恰好 0**，不为 0 就是仪器坏了（旧稿只打印，这里直接 exit 2）。
  *
  * 用法：node champion-map/duel-run.mjs [--ids=a,b | --top=8] [--games=60] [--seed=77000] [--out=duel-e334-s77000.tsv]
- *        [--ref=SHIPPED-Ldemo] [--cand=id=相对路径,id2=相对路径2]   # §E583：没进过 coords.tsv 的包（训练臂/本地实验件）
+ *        [--ref=SHIPPED-Ldemo | --ref=<相对路径，如 js/bundled-champion-3p.js>] [--cand=id=相对路径,id2=相对路径2]
+ *        # §E583：`--cand=` 让没进过 coords.tsv 的包（训练臂/本地实验件）上这台尺
+ *        # §E588：`--ref=` 同样收路径（换代当天"现役"会换主人 ⇒ 参照必须能点名到文件），两种写法都在头行印 wid
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { widOf } from './pack-id.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -66,8 +69,20 @@ if (EXTRA.length) for (const r of ALL) if (EXTRA.some(e => e.id === r.id)) picke
 const cands = picked.length ? picked : ALL.slice(0, Number(arg('top', 8)) || 8);
 const missing = only.filter(id => !ALL.some(r => r.id === id));
 if (missing.length) { console.error('⛔ --ids 里这些枚不在名单上（拼错或没进过面板）：' + missing.join(' ')); process.exit(2); }
-const refRow = RAW.find(r => r.id === REF);
+/* ===== 参照枚：`--ref=` 既收图上的 id，也收**文件路径**（§E588）=====
+ * 为什么现在要这一支：`SHIPPED-Ldemo` 这一行的 path 从 10-11 换包起指"**钉住的旧现役**"（`attach-path.mjs` 按 wid 解），
+ *   而"现役"这个词在换代当天会换主人 ⇒ 想量"对**线上槽那一枚**占不占优"，就得能把活槽文件本身当参照传
+ *   （`--ref=js/bundled-champion-3p.js`）。原来只有 `--cand=` 能吃路径，参照不行（§E364 那条"`--ref=` 写了跑不了"的同族）。
+ * ⚠ 不管走哪条，打印与落盘都必须带 **wid**：METHODOLOGY 114 要"引用连参照一起说"，而路径会被下一次换包悄悄改掉。 */
+const refIsPath = REF.indexOf('/') >= 0 || /\.(bak|js)$/.test(REF);
+const refRow = refIsPath
+  ? { id: REF.replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, ''), path: REF, F: NaN, rank: -1 }
+  : RAW.find(r => r.id === REF);
 if (!refRow || !refRow.path || !existsSync(join(ROOT, refRow.path))) { console.error('⛔ 参照枚 ' + REF + ' 找不到文件'); process.exit(2); }
+if (refIsPath) POOL.push(refRow);   /* 只进 POOL 给 duel() 查身份；ALL/cands 在上面已算完 ⇒ 参照不会变成候选 */
+const widAt = rel => { try { return String(widOf(rd(join(ROOT, rel))) || '(解不出权重)'); } catch (e) { return '(读不到)'; } };
+const REFWID = widAt(refRow.path);
+const LIVEWID = existsSync(join(ROOT, 'js/bundled-champion-3p.js')) ? widAt('js/bundled-champion-3p.js') : '(盘上没有活槽)';
 
 function exam(subject, fieldOpp, tag) {
   /* 中间产物落 gitignored 的 docs/artifacts/ 下，**不进 champion-map/**：那 28 份 .A/.B.json 是每次跑都会重写的
@@ -101,16 +116,18 @@ function duel(aId, bId, tag) {
   console.log('  ' + aId.padEnd(16) + ' vs ' + bId.padEnd(16) + ' A=' + (100 * A.first).toFixed(1) + '% B=' + (100 * B.first).toFixed(1) +
     '% ⇒ 差 ' + (d >= 0 ? '+' : '') + d.toFixed(1) + ' ±' + se.toFixed(1) + 'pt（' + ((Date.now() - t0) / 1000).toFixed(0) + 's）');
 }
-console.log('§E334 配对决斗 · 参照 = ' + REF + '（' + refRow.path + '）‖ 候选 ' + cands.length + ' 枚 ‖ 每场 ' + GAMES +
+console.log('§E334 配对决斗 · 参照 = ' + REF + '（' + refRow.path + ' · wid=' + REFWID.slice(0, 8) + '）‖ 候选 ' + cands.length + ' 枚 ‖ 每场 ' + GAMES +
   ' 局 · n5 · ' + MODE + ' · seed 基 ' + SEED + ' ‖ 入口 = tools/style-exam.mjs（champ: 对手场）');
+if (REFWID !== LIVEWID) console.log('  ⚠ 参照与**线上槽**（js/bundled-champion-3p.js · wid=' + LIVEWID.slice(0, 8) + '）不是同一枚 ⇒' +
+  ' 这批读数的意思是"对 `' + refRow.id + '` 占优"，**不是**"对线上冠军占优"（要后者请传 `--ref=js/bundled-champion-3p.js`）');
 console.log('— 仪器自检（同一枚包打自己 ⇒ 差必须恰好 0）—');
-duel(REF, REF, 'selftest-' + SEED);
+duel(refRow.id, refRow.id, 'selftest-' + SEED);   /* §E588：按 refRow.id 查，不按 `--ref=` 原样字符串（传路径时两者不同） */
 if (!out.length || Math.abs(out[0].diff) > 1e-9) {
   console.error('⛔ 自检没过（A−B = ' + (out.length ? out[0].diff : '无读数') + '）⇒ 仪器坏了，这一批读数一条都不许引');
   process.exit(2); }
 out.length = 0;
 console.log('— 正式 —');
-for (const c of cands) duel(c.id, REF, 'r' + c.rank + '-' + c.id);
+for (const c of cands) duel(c.id, refRow.id, 'r' + c.rank + '-' + c.id);
 
 const wins = out.filter(o => o.diff > 0).length, sig = out.filter(o => o.diff - 1.96 * o.se > 0).length;
 console.log('\n判定：' + out.length + ' 枚里 ' + wins + ' 枚 A>B（其中 ' + sig + ' 枚超出 1.96SE）‖ 配对差中位 ' +

@@ -375,7 +375,10 @@ html += '.tag{padding:2px 8px;border-radius:10px;font-size:11px;color:#0d0f14;fo
 html += '.legend{font-size:12px;color:#7c8494;margin-top:10px}code{background:#1b202b;padding:1px 5px;border-radius:3px;font-size:11px}';
 html += '.cov{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}.cov table{margin-top:6px}.cov b{color:#9aa0b0;font-size:12px}.cov code{color:#7dd3fc}</style></head><body>';
 html += '<h1>Epirus AI 训练分析报告</h1>';
-html += '<div class="meta">人数 ' + N + ' 人 · 模式 <b>' + esc(MODE) + '</b> · 冠军 <code>' + esc(file) + '</code> · 对手场 ' + PAIRS.length + ' 组(4 个互不相同脚本) × ' + GAMES + ' 局 · 富裕经济 = 每回合补到 ' + RICH + ' ep · 游戏 ' + u.dec + ' 个决策采样</div>';
+html += '<div class="meta">人数 ' + N + ' 人 · 模式 <b>' + esc(MODE) + '</b> · 冠军 <code>' + esc(file) + '</code> · 对手场 ' + PAIRS.length + ' 组(4 个互不相同脚本) × ' + GAMES + ' 局 · 富裕经济 = 每回合补到 ' + RICH + ' ep · 游戏 ' + u.dec + ' 个决策采样<br>' +
+  '<b>「实际使用率」这一列的装配 = 1 个冠军席 + 4 个脚本席</b>（座位轮转 · temp ' + TEMP + ' · 不吃 ε）⇒ <b>反制卡</b>与"要对手先施法才有意义"的卡在这一列<b>结构性读 0</b>：' +
+  '0.0% 只说明"这个场里没有它的触发条件"，<b>不等于"这枚包不会用"</b>。要问"会不会用"请配镜像谱 ' +
+  '<code>tools/usage-probe.mjs --mode=multi|long --eps=0 --eps=0.2</code>，或按每行末「该用口径」那列重测。</div>';
 
 html += '<div class="cards">';
 html += '<div class="card"><b>' + (Math.exp(-rows.reduce(function (a, r) { return a + (r.use > 0 ? r.use * Math.log(r.use) : 0); }, 0))).toFixed(2) + '</b><span>有效技能数 exp(H)</span></div>';
@@ -397,7 +400,7 @@ html += '<h2>覆盖表：口径不足 / 冠军已在用 → 该用什么命令</
 html += '<div class="cov"><div><b>① 本口径量不到（' + lack.length + ' 个）</b> —— Δ 不可读，不是"弱"：<table><tr><th>技能</th><th>费用</th><th>强制命中</th><th>该用命令</th></tr>';
 for (const r of lack) html += '<tr><td>' + esc(r.name) + '</td><td>' + (r.cost == null ? '?' : r.cost) + '</td><td>' + (r.forceHit * 100).toFixed(0) + '%</td><td><code>' + esc(r.tool) + '</code></td></tr>';
 if (!lack.length) html += '<tr><td colspan="4">（无 —— 所有技能在本口径下都量到了）</td></tr>';
-html += '</table></div><div><b>② 冠军已经在用（' + inUse.length + ' 个）</b> —— 对它们"强制 spam"没有意义，应测<b>消融（拿掉）</b>：<table><tr><th>技能</th><th>实际使用率</th><th>消融 Δ_lost（已测）</th><th>该用命令</th></tr>';
+html += '</table></div><div><b>② 冠军已经在用（' + inUse.length + ' 个）</b> —— 对它们"强制 spam"没有意义，应测<b>消融（拿掉）</b>：<table><tr><th>技能</th><th>实际使用率（1v4 脚本场）</th><th>消融 Δ_lost（已测）</th><th>该用命令</th></tr>';
 for (const r of inUse) {
   const bl = (r.banLost == null) ? '—' : ((r.banLost >= 0 ? '+' : '') + (r.banLost * 100).toFixed(1) + 'pt');
   html += '<tr><td>' + esc(r.name) + '</td><td>' + (r.use * 100).toFixed(1) + '%</td><td>' + bl + '</td><td><code>' + esc(r.tool) + '</code></td></tr>';
@@ -406,7 +409,7 @@ if (!inUse.length) html += '<tr><td colspan="3">（无 —— 冠军几乎不用
 html += '</table></div></div>';
 
 html += '<h2>每技能：实际使用率 × 实际强度（富裕经济下强制使用的收益差）</h2>';
-html += '<table><tr><th>技能</th><th>费用</th><th>实际使用率</th><th></th><th>强制命中率</th><th>强制使用的 1st</th><th>强度 Δ vs 自由发挥</th><th></th>' +
+html += '<table><tr><th>技能</th><th>费用</th><th>实际使用率（1v4 脚本场）</th><th></th><th>强制命中率</th><th>强制使用的 1st</th><th>强度 Δ vs 自由发挥</th><th></th>' +
   '<th>1.96·SE（分不出就小于它）</th><th>要辨 ' + TARGET_PT + 'pt 需</th><th>消融 Δ_lost</th><th>判定</th><th>该用口径</th></tr>';
 rows.sort(function (a, b) { return b.use - a.use; });
 for (const r of rows) {

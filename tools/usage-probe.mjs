@@ -18,7 +18,7 @@
  *   ③ 能狙击就狙击 ⇒ 狙击 > 0 而防御类必须**恰好 0**。
  *   ⇒ 这三格钉的是"计数器接对了事件"，不是"某枚包读数是几"。
  *
- * 用法：node tools/usage-probe.mjs [--ids=a,b | --sample=120 | --paths=f1,f2] [--games=60] [--eps=0] [--out=usage.tsv]
+ * 用法：node tools/usage-probe.mjs [--ids=a,b | --sample=120 | --paths=f1,f2] [--games=60] [--eps=0] [--mode=multi] [--out=usage.tsv]
  *      node tools/usage-probe.mjs --self-test
  * 退出码：0 = 跑完 ‖ 2 = 输入不齐或自检不过（宁可红也不许假绿）
  */
@@ -29,21 +29,28 @@ import { sandbox, loadChamp, mulberry32, rejectUnknownFlags } from './audit-lib.
 import { resolveOutPath } from './out-path.mjs';   /* §2026-10-09：`--out=` 的解析是纯函数 ⇒ 门能直接单元判（规矩 1） */
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = join(HERE, '..');
-const KNOWN = ['ids', 'sample', 'paths', 'games', 'eps', 'out', 'self-test', 'seed'];
+const KNOWN = ['ids', 'sample', 'paths', 'games', 'eps', 'out', 'self-test', 'seed', 'mode'];
 const bad = process.argv.slice(2).filter(a => a.startsWith('--') && !KNOWN.some(k => a.startsWith('--' + k + '=') || a === '--' + k));
 if (bad.length) { console.error('⛔ 不认识的参数：' + bad.join(' ') + '（只认 ' + KNOWN.join('/') + '）'); process.exit(64); }
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const GAMES = Number(arg('games', 60)), EPS = Number(arg('eps', 0)), SEED = Number(arg('seed', 4242));
+/* §E588（千问 10-11）：`--mode=` —— 这台尺原来把 `'multi'` 写死在 `createState` 里，
+ *   而用户实打的是**长程（5 血）**那桌 ⇒ "这枚包会不会用某张卡"这句话在 multi 与 long 上可以完全相反
+ *   （包 `T8-s114`：镜像 multi 里聚能环 5.05/局，而 10-11 的 6 局长程实打里 AI 四席一个环都没打）。
+ *   默认仍是 multi ⇒ 在册 `usage.tsv` 那些行一字不变。⚠ **两种模式的读数不要混写进同一张表**
+ *   （表里没有 mode 列，列序是在册契约 ⇒ 换模式请换 `--out=` 文件名，别并到一张里）。 */
+const MODE = arg('mode', 'multi');
 const OUT = arg('out', 'usage.tsv');
 const W = sandbox(ROOT), R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
 const SK = R.SK, CAT = 'defense';
+if (!R.MODES || !R.MODES[MODE]) { console.error('⛔ --mode=' + MODE + ' 不在引擎的模式表里（可选：' + Object.keys(R.MODES || {}).join('/') + '）'); process.exit(2); }
 const isDef = k => { const d = R.byKey[k]; return !!(d && d.cat === CAT); };
 
 /* ---------- 一局镜像装配 + 按卡计数 ---------- */
 function spectrum(choose, G) {
   const cnt = {}; let acts = 0, games = 0, rounds = 0;
   for (let g = 0; g < G; g++) {
-    const st = S.createState('multi', { next: mulberry32(SEED + g) }, 5);
+    const st = S.createState(MODE, { next: mulberry32(SEED + g) }, 5);
     st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
     const ch = []; for (let i = 0; i < 5; i++) ch.push(choose);
     Play.autoGameN(st, ch);
@@ -117,7 +124,15 @@ if (miss.length) console.error('⚠ ' + miss.length + ' 枚文件不在（前 6�
  *   搬成纯函数之后 D232 的 ⑦ 是**给三种输入比三个输出**，Windows 与 ubuntu 上判同一件事。 */
 const OUTP = resolveOutPath(OUT, ROOT, 'champion-map');
 if (!existsSync(OUTP)) writeFileSync(OUTP, COLS.join('\t') + '\n');
-const done = new Set(readFileSync(OUTP, 'utf8').trim().split('\n').slice(1).map(l => l.split('\t')[0]).filter(x => x));
+const PREV = readFileSync(OUTP, 'utf8').trim().split('\n').slice(1);
+const done = new Set(PREV.map(l => l.split('\t')[0]).filter(x => x));
+const prevEps = [...new Set(PREV.map(l => l.split('\t')[1]).filter(x => x !== undefined))].join('/');
+/* ⚠ 去重键是 **id**，而表里没有 mode 列 ⇒ 往一张已写过 multi 的表里跑 long，会"全部跳过、一行不写"，
+ *   而旧版只报一句"跳过已在册 N 枚"，读起来像"long 也量过了"。这里把两件事点破（§E588）。 */
+if (done.size && (MODE !== 'multi' || (prevEps && prevEps.indexOf(String(EPS)) < 0))) {
+  console.log('⚠ 目标表里已有 ' + done.size + ' 行（eps=' + (prevEps || '?') + '，而这张表**没有 mode 列**、在册那些都是 multi）' +
+    ' ⇒ 本次 --mode=' + MODE + ' --eps=' + EPS + ' 的同名枚会被**按 id 跳过**（不是"已经量过"）。换模式/换剂量请另存一张 `--out=`。');
+}
 let n = 0;
 for (const e of list) {
   if (done.has(e.id)) continue;
@@ -128,4 +143,4 @@ for (const e of list) {
   appendFileSync(OUTP, [e.id, EPS].concat(COLS.slice(2).map(c => (typeof r[c] === 'number' ? r[c].toFixed(3) : r[c]))).join('\t') + '\n');
   if (++n % 25 === 0 || n === list.length) console.log('  ' + n + ' 枚 … 最新 ' + e.id + ' 狙击=' + r.snipe + '/局 防御类=' + r.defense + '/局 大雷=' + r.bigT + '/局');
 }
-console.log('完成 ' + n + ' 枚（跳过已在册 ' + done.size + ' 枚）⇒ ' + OUTP);
+console.log('完成 ' + n + ' 枚（跳过已在册 ' + done.size + ' 枚 · 本次口径 --mode=' + MODE + ' --eps=' + EPS + '）⇒ ' + OUTP);

@@ -150,6 +150,18 @@ if (GROUP && !(GROUP in CUM)) {
   console.error('⛔ `--group=' + GROUP + '` 不认识（可选：' + Object.keys(CUM).join('/') + '）。含糊拼写不许当"没写"。');
   process.exit(2); }
 const RUNSET = GROUP ? new Set(CUM[GROUP].reduce((a, g) => a.concat(g === 'engine' ? Object.keys(GRP).flatMap(x => GRP[x].split(' ')) : GRP[g].split(' ')), [])) : null;
+/* ===== §E588（千问 10-11）：门的**夹具包** —— 它不是"现役"，是一枚钉住不动的包 =====
+ * 病（v1.6.62 换包当天由 CI 整轮抓出来，本地 4/4 复现同数；前三条 commit 全绿 ⇒ 红是换包带出来的）：
+ *   有几条腿把"量哪一枚"钉成了**活槽那一枚**（`js/bundled-champion-3p.js`）⇒ 换包 = 换夹具 = 门红，
+ *   而红的理由跟被测旋钮一字关系都没有：
+ *     · D225⑥c 要"N=4 的摄魂张数严格低于 N=1" —— 旧包 82 ‖ 19 成立，新包 482 ‖ 469（几乎持平）不成立；
+ *     · D138   要"关掉定向垫钱后摄魂判 **U（未测到）**" —— 旧包判 U，新包 0.5 次/局 ⇒ 判 N（它确实活得够久、出得起钱）；
+ *     · D229⑦  要"出厂冠军本来就不用 holo ⇒ 开 proto 之后逐字相同" —— 新包镜像里送盾 0.267/局 ⇒ 前提直接没了。
+ *   这三条断言讲的是**旋钮与分类器**的性质，与"槽里此刻躺着谁"无关 ⇒ 夹具必须钉死（`docs/METHODOLOGY.md` 131 同族）。
+ * ⚠ 这不是"把门改松"：断言一条不减，只是把被测对象换成一枚 **tracked 的钉住快照**；
+ *   D229 那条改成**两向都有牙**（默认档必须逐字等于显式 `off` ＋ 用 holo 的包必须看得出 `proto` 的差异）。
+ * ⚠ 换冠军时若想让这些性质重新在**新包**上判一次，那是另一件事（要显式跑，不能靠门自己悄悄换夹具）。 */
+const FIXTURE_PACK = 'docs/artifacts/SHIPPED-Ldemo-2026-10-11-pre-T8s114.bak';
 function t(name, fn) {
   const __k = gateKey(name); __KEYS.push(__k);
   if (ONLY && name.indexOf(ONLY) < 0) { __skipped++; return; }
@@ -1867,9 +1879,12 @@ t('D225 §E275/§E284 摄魂指法的"残血只在**探索里**软提升"档（e
   ok(/'#shipdrain=' \+ String\(DRAIN_EFFECTIVE\)/.test(evSrc), '⑤a `#shipdrain=` 必须进落盘（且写的是**回读值**）');
   ok(/'#eps=' \+ \(SHIP_EPS > 0/.test(evSrc), '⑤b `#eps=` 必须进落盘 ⇒ 少了这一维，摄魂档的"必然相同"会被当成"测过没效果"');
 
-  /* ⑥ 兑现率必须真落在落点上（同 D224④ 那一族：判**密度**、判**两臂之差**，不判"出现过"） */
+  /* ⑥ 兑现率必须真落在落点上（同 D224④ 那一族：判**密度**、判**两臂之差**，不判"出现过"）
+   *    §E588：这里第 4 个位置参数（`eval-5p` 的包文件）从"缺省=活槽"改成**钉住的夹具包** ——
+   *    这条腿判的是 `DRAIN_PUSH` 的剂量-反应，与槽里躺着谁无关（旧包 82‖19 通过，v1.6.62 换上去的新包
+   *    482‖469 几乎持平 ⇒ 门红在夹具身上，不是红在旋钮身上；新包那一笔读数记进 §E588 日志，不靠门保）。 */
   const runP = function (extra) {
-    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '8', '5', '77000', '--pool=all', '--every=48',
+    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '8', '5', '77000', FIXTURE_PACK, '--pool=all', '--every=48',
       '--eps=0.2', '--eps-mode=soft'].concat(extra),
       { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
     return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
@@ -6943,13 +6958,18 @@ t('D138 拦截代价表（v1.5.191 新量具）：归因必须真收到 blocked/
   const clsOf = function (r) { return r.cls; };
   ok(j.judged.map(clsOf).every(function (c) { return 'RLNUC?'.indexOf(c) >= 0; }), '判读只能落在 R/L/N/U/C/? 里');
   {
-    const u = spawnSync(process.execPath, ['tools/probe-intercept-cost.mjs', '--games=6', '--only=drain', '--grant=0', '--json'],
+    /* §E588：这一臂原来不传 `--pack=` ⇒ 默认拿**活槽那一枚**，而它要证的是"**分类器能把'没测到'单独成类**"。
+     *   旧包在"关垫钱"下确实活不到有钱（判 U ✓），v1.6.62 换上去的新包 0.5 次/局 ⇒ 判 N（不是 bug，它真出得起钱）。
+     *   ⇒ 夹具钉成 `FIXTURE_PACK`，断言一字不减；"新包活得久"是包的事实，归 §E588 日志，不归这条腿。 */
+    const u = spawnSync(process.execPath, ['tools/probe-intercept-cost.mjs', '--games=6', '--only=drain', '--grant=0',
+      '--pack=' + FIXTURE_PACK, '--json'],
       { encoding: 'utf8', timeout: 600000 });
     ok(u.status === 0, '关掉垫钱的对照臂要跑得通（status=' + u.status + '）');
     const uu = JSON.parse((function (s) { return s.slice(s.indexOf('{"games"')); })(String(u.stdout || '')));
     const r0 = uu.judged.filter(function (x) { return x.key === 'drain'; })[0];
     ok(r0 && r0.cls === 'U', '关掉定向垫钱后，"活不到有钱"的卡必须判 **U（未测到）**而不是 N —— ' +
-      '把"没测到"读成"拦截解释不成立"就是本仓门 L2 点名的那族病（实测 cls=' + (r0 && r0.cls) + ' casts/局=' + (r0 && r0.casts) + '）');
+      '把"没测到"读成"拦截解释不成立"就是本仓门 L2 点名的那族病（实测 cls=' + (r0 && r0.cls) + ' casts/局=' + (r0 && r0.casts) +
+      ' ‖ 夹具=' + FIXTURE_PACK + '）');
   }
   /* ③ 判据形状：R 要求两场符号翻转（Δ混合<0 且 Δ不防>0）；L 要求 Δ混合>0 —— 直接从产物复核，不钉源码文本 */
   for (const r of j.judged) {
@@ -11522,15 +11542,23 @@ t('D229 §E340 全息屏障→原型制御 的映射档（v1.6.8）：默认 off
   ok(d && d.key !== R.SK.HOLO, '⑥ drop 档（对照档）必须真的不再送盾，实测回到 ' + (d && d.key));
   P.setHolo2Proto('off');
 
-  /* ⑦ 端到端零剂量：出厂冠军本来就不用 holo ⇒ 开 proto 之后整局读数必须**逐字相同**。
-   *    这条是"默认关 = 没改任何东西"的最强形式：不是看代码里有没有 if，而是看跑出来一样不一样。 */
-  const a = T.mirrorHealth(pack, 8, 5, 'multi');
+  /* ⑦ 端到端零剂量 —— §E588 改成**两向都有牙**。旧写法把前提钉在"出厂冠军本来就不用 holo"上：
+   *    v1.6.62 换成 `T8-s114` 之后它镜像里每局送盾 0.375 ⇒ 前提跟着旧现役一起没了，"逐字相同"当场红
+   *    （红的是夹具，不是旋钮 —— 同族病见文件头 `FIXTURE_PACK` 那段与 METHODOLOGY 131）。
+   *      ⑦a「进程默认 = 显式 off」这枚包用不用 holo 都必须成立 ⇒ 它才是"默认关 = 没改任何东西"的最强形式；
+   *      ⑦b 基线里真的在送盾的包 ⇒ `proto` 必须**看得出差异**（否则"这一档接上了"只是源码里有个 if）；
+   *         基线里不送盾的包 ⇒ 必须逐字相同。两条合起来仍然咬得住"偷偷把档打开"和"这一档其实是死代码"两种坏法。 */
+  const hk = o => [o.holoOtherPerGame, o.dmgPerGame, o.rounds, o.effSkills].map(x => x.toFixed(3)).join('|');
+  const a = T.mirrorHealth(pack, 8, 5, 'multi');                 // 谁都没 set 过 = 进程默认
+  P.setHolo2Proto('off');
+  const aOff = T.mirrorHealth(pack, 8, 5, 'multi');
+  eq(hk(a), hk(aOff), '⑦a 进程默认必须逐字等于显式 `off`（送盾/伤害/回合/有效技能）—— 这一条与"这枚包用不用 holo"无关');
   P.setHolo2Proto('proto');
   const b = T.mirrorHealth(pack, 8, 5, 'multi');
   P.setHolo2Proto('off');
-  eq([a.holoOtherPerGame, a.dmgPerGame, a.rounds, a.effSkills].map(x => x.toFixed(3)).join('|'),
-    [b.holoOtherPerGame, b.dmgPerGame, b.rounds, b.effSkills].map(x => x.toFixed(3)).join('|'),
-    '⑦ 对不用 holo 的出厂冠军，这一档必须零剂量（送盾/伤害/回合/有效技能逐字相同）');
+  ok(a.holoOtherPerGame > 0 ? hk(b) !== hk(a) : hk(b) === hk(a),
+    '⑦b 基线每局送盾 ' + a.holoOtherPerGame.toFixed(3) + ' ⇒ ' + (a.holoOtherPerGame > 0 ? '`proto` 必须改变整局读数' : '必须逐字相同') +
+    '（实测 proto=' + hk(b) + ' ‖ 基线=' + hk(a) + '）');
   /* ⑧ 出厂面读不到这一档。§E342 曾把它升成"包自带的声明"并接进 promote / 考卷 / 页面，
    *    10-06 由用户撤回 ⇒ 判据回到"别读"（而不是"只能从一个口读"）。
    *    为什么是"别读"：这一档是**进程级研究旋钮**，不属于任何一枚包 ⇒ promote 一旦读它，

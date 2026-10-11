@@ -669,10 +669,18 @@ if (DRY) {
  * 它回答的是"每个技能的实际强度 vs 使用率"（高使用+负强度=坑 / 零使用+正强度=没学会的强招），
  * 与 champ-audit 的"打架活跃度"互补 —— 换冠军时正是最该看它的时候。用 --no-skill-report 可跳过。 */
 if (!DRY && !process.argv.includes('--no-skill-report')) {
-  const nP = Number(meta.n || 5);
+  /* §E588（千问 10-11）这一档原来传的是 `meta.n`，那是**这枚包训练时的粒数**，不是产品桌的席数。
+   *   v1.6.62 上槽自动跑出来的那份 `docs/skill-report.html` 因此整份是"3 人局"的（`T8-s114` 的 meta.n=3），
+   *   而冠军在产品里坐的是 5 席桌（人席尺与用户实打都是 5 席）。同一枚包、同一台工具，两档人数读出来的
+   *   使用率列实测差到 6 倍：全息屏障 5.1%(3人) ↔ 0.8%(5人) ‖ 聚能环 0.0% ↔ 0.3% ‖ 真正的落雷 0.2% ↔ 0.4%
+   *   （前者=本次自动跑，后者=DS 手工 `skill-report.mjs 5 6` 那一份）。换冠军的报告是给"要不要上槽"看的 ⇒ 跑在产品形态上。
+   * 另：原来**不传 `--champ=`** ⇒ skill-report 按人数自己挑文件（`N<=2` 会去读 2P 槽 `js/bundled-champion.js`），
+   *   一台只写 3P 槽的 promote 遇到 n=2 的包会给**另一颗包**出报告。现在把刚写进去的文件点名。 */
+  const nP = 5;
   const outHtml = 'docs/skill-report.html';
-  console.log('\n== 自动跑技能报告（' + nP + ' 人，每条件 6 局）→ ' + outHtml + ' ==');
-  const sk = spawnSync(process.execPath, ['tools/skill-report.mjs', String(nP), '6', outHtml], { cwd: ROOT, encoding: 'utf8' });
+  console.log('\n== 自动跑技能报告（产品形态 ' + nP + ' 席 · 冠军 = js/bundled-champion-3p.js，每条件 6 局）→ ' + outHtml + ' ==');
+  const sk = spawnSync(process.execPath, ['tools/skill-report.mjs', String(nP), '6', outHtml,
+    '--champ=js/bundled-champion-3p.js'], { cwd: ROOT, encoding: 'utf8' });
   const lines = ((sk.stdout || '') + (sk.stderr || '')).trim().split(/\r?\n/);
   lines.slice(-8).forEach(function (l) { console.log('   ' + l); });
   console.log('   （完整报告：' + outHtml + '，可直接双击打开）');
