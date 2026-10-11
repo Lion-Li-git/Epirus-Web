@@ -27,7 +27,7 @@ import { loadChampParams } from '../server/opp-champs.mjs';
 
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
 rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'extra',
-  'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier'], 'probe-diff-ladder');
+  'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier', 'pairs'], 'probe-diff-ladder');
 
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const GAMES = Math.max(1, Number(flag('games', 1500)) || 1500);
@@ -184,7 +184,9 @@ function pairedDiff(a, b) {
   const mean = d.reduce((s, x) => s + x, 0) / m;
   let v = 0; for (const x of d) v += (x - mean) * (x - mean);
   const se = Math.sqrt(v / Math.max(1, m - 1) / m);
-  return { m: 100 * mean, ci: 100 * 1.96 * se, n: m };
+  /* ⚠ `ci` 是 **95% 区间 = 1.96σ**，不是 1σ。10-12 有过一次把 `±ci` 当 1σ 去除差 ⇒ 把 t 值系统性压低 1.96 倍
+   *   （"入门/普通 0.9σ"其实是 2.6σ）。这里把 se 一起带出去，打印处两个都印，别让下一个人再猜。 */
+  return { m: 100 * mean, ci: 100 * 1.96 * se, se: 100 * se, n: m };
 }
 
 rows.sort((a, b) => a.pct - b.pct);
@@ -200,9 +202,28 @@ if (QUIET) {
     const pd = r.id !== ref ? pairedDiff(r.id, ref) : null;
     console.log('  ' + r.label.padEnd(24) + ' 替身夺冠 ' + r.pct.toFixed(1) + '%  · 局长 ' + r.avgR.toFixed(1) +
       ' 回合 · 大雷 ' + r.bigT.toFixed(2) + ' 张/桌 · 摄魂 ' + r.drain.toFixed(2) + ' 张/桌' +
-      (pd ? '  · 与『' + ref + '』配对差 ' + (pd.m >= 0 ? '+' : '') + pd.m.toFixed(2) + ' ±' + pd.ci.toFixed(2) + 'pt' : '  ← 默认档'));
+      (pd ? '  · 与『' + ref + '』配对差 ' + (pd.m >= 0 ? '+' : '') + pd.m.toFixed(2) +
+        ' ±' + pd.ci.toFixed(2) + 'pt（95%CI ⇒ 1σ=' + pd.se.toFixed(2) + ' ‖ ' + (Math.abs(pd.m) / pd.se).toFixed(1) + 'σ）' : '  ← 默认档'));
   }
   console.log('  耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
+  /* `--pairs=1`：**相邻档两两配对差**（`D227`④ 原句要的是"两两分得开"，而上面那段只报"对『普通』"的差 ⇒
+   *   拿"对基准 +8.8"去说"与上一档 +4.4"是另一件事）。逐局胜负向量本来就在手里（同批种子 ⇒ 第 i 局对第 i 局），
+   *   所以这里不需要重跑，只是把 `pairedDiff` 换一对参数再算一次。
+   *   判"分不分得开"用 **|差| ≥ 2×CI95/1.96**（即 95% 区间不跨 0），并且**同时印出次序**：
+   *   次序翻（弱档反而更难）比"分不开"更值得响。 */
+  if ((flag('pairs', '0') || '0') === '1') {
+    const asc2 = rows.slice().sort((a, b) => a.pct - b.pct);
+    console.log('  相邻档两两配对差（按夺冠率从难到易排；正 = 后一档更容易被打赢）：');
+    for (let i = 1; i < asc2.length; i++) {
+      const pd2 = pairedDiff(asc2[i].id, asc2[i - 1].id);
+      if (!pd2) { console.log('    ' + asc2[i - 1].label + ' → ' + asc2[i].label + ' 算不出（胜负向量长度不一致？）'); continue; }
+      const se = pd2.se;
+      console.log('    ' + (asc2[i - 1].label + '                    ').slice(0, 22) + '→ ' +
+        (asc2[i].label + '                  ').slice(0, 20) + ' ' + (pd2.m >= 0 ? '+' : '') + pd2.m.toFixed(2) +
+        ' ±' + se.toFixed(2) + 'pt（1σ ‖ 95%CI ±' + pd2.ci.toFixed(2) + '） ⇒ ' + (Math.abs(pd2.m) < 2 * se ? '**分不开**' : (pd2.m > 0 ? '分得开（' + (Math.abs(pd2.m) / se).toFixed(1) + 'σ）' : '**次序翻了**')) +
+        ' ‖ 局长 ' + asc2[i - 1].avgR.toFixed(1) + ' → ' + asc2[i].avgR.toFixed(1) + ' 回合');
+    }
+  }
 }
 if (machine) {
   /* 分级判定（门用）：按"替身夺冠率"**从难到易**排开后，相邻档差必须 ≥ MIN_GAP，且默认档必须存在。
