@@ -20,6 +20,10 @@
  *        [--scope=docs/artifacts,d180-bands] [--include-tracked]
  *   缺省 = `--plan`（只读，什么都不动）。`--write-manifest` 才落账本；`--quarantine` 才移文件；`--check` 查断链。
  *   ⚠ 默认**不动 tracked 的那 35 份**（动了会改 git 状态，要单独批）；加 `--include-tracked` 才把它们算进要移的名单。
+ *   ⚠ **只有只读档 `--audit`/`--check` 允许 scope 里的目录不在**（跳过并把名字报进 `missing`）：
+ *     `d180-bands/` 被 `.gitignore:29` 屏着 ⇒ **干净克隆里根本没有这个目录**，若在这种档里 exit 2 就会把门 D191 的 ④ 在 CI 上钉红
+ *     （10-11 实测红过一次 ⇒ 那条腿的判据被我绑到了"我这台机的盘"上）。其余档（plan/write-manifest/quarantine/repoint）**照旧拒绝** ——
+ *     它们描述的是"要动谁"，目录名打错等于"什么都没搬却报成功"。
  *   推荐顺序：`--repoint`（试运行看清单）→ `--repoint --apply` → `--check`（应为 0）→ `--quarantine` → `--check`（仍为 0）。
  * 退出码：0 = 跑完 ‖ 2 = 输入/前置不齐（宁可红也不许假绿）
  */
@@ -32,7 +36,7 @@ import { widOf, parseMeta } from '../champion-map/pack-id.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const has = k => process.argv.includes('--' + k);
-const bad = process.argv.slice(2).filter(a => a.startsWith('--') && !['plan', 'write-manifest', 'quarantine', 'restore', 'check', 'include-tracked', 'repoint', 'apply', 'audit']
+const bad = process.argv.slice(2).filter(a => a.startsWith('--') && !['plan', 'write-manifest', 'quarantine', 'restore', 'check', 'include-tracked', 'repoint', 'apply', 'audit', 'scope', 'to']
   .some(f => a === '--' + f || a.startsWith('--' + f.split('=')[0] + '=')));
 if (bad.length) { console.error('⛔ 不认识的参数：' + bad.join(' ') + '（只认 plan/write-manifest/quarantine/restore/check/repoint/apply/include-tracked/scope/to）'); process.exit(2); }
 const SCOPE = String(arg('scope', 'docs/artifacts,d180-bands')).split(',').map(s => s.trim()).filter(Boolean);
@@ -50,7 +54,17 @@ function walk(d, out) {
   return out;
 }
 const files = [];
-for (const s of SCOPE) { const d = join(ROOT, s); if (!existsSync(d)) { console.error('⛔ scope 里这个目录不在：' + s); process.exit(2); } walk(d, files); }
+/* ⚠ 只读档不许因为"这个目录只在我这台机上存在"就整条不干：见头注。MISSING 要报出门的判词，覆盖变小必须看得见。 */
+const READONLY = has('audit') || has('check');
+const MISSING = [];
+for (const s of SCOPE) {
+  const d = join(ROOT, s);
+  if (!existsSync(d)) {
+    if (!READONLY) { console.error('⛔ scope 里这个目录不在：' + s); process.exit(2); }
+    MISSING.push(s); continue;
+  }
+  walk(d, files);
+}
 const tracked = new Set(execSync('git ls-files ' + SCOPE.map(s => JSON.stringify(s)).join(' '), { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }).trim().split('\n').filter(Boolean));
 
 /* ---------- 2. 引用数：下游表 + 门体里出现这个相对路径的次数 ---------- */
@@ -197,7 +211,7 @@ if (has('audit')) {
     if (extra.length) worst.push({ w: w.slice(0, 8), n: extra.length, e: extra.map(x => x.rel).slice(0, 3) });
   }
   worst.sort((a, b) => b.n - a.n);
-  console.log(JSON.stringify({ groups, files, unregistered: unreg, trackedRedundant: plan.filter(p => p.role === 'move' && p.tracked).length, worst: worst.slice(0, 5) }));
+  console.log(JSON.stringify({ groups, files, unregistered: unreg, trackedRedundant: plan.filter(p => p.role === 'move' && p.tracked).length, missing: MISSING, worst: worst.slice(0, 5) }));
   process.exitCode = unreg ? 1 : 0;
 }
 if (has('check')) {

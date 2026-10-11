@@ -9560,7 +9560,13 @@ t('D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · �
   /* ④ §E589 防新增：全库"**未登记的重复**"必须为 0。判据与算法都在 `tools/dedupe-artifacts.mjs --audit` 那一份里
    *   （规矩 1：门只测行为，不在这儿再抄一遍 wid 公式）。登记 = 账本 `dupes-manifest.tsv` 的 role=move
    *    ‖ 别名表 `pack-aliases.tsv` 的 wantedPath ⇒ band 夹具、kept 耐久层这类"设计如此的复制"经 `pack-guard` 登记后不算。
-   *   ⚠ 判的是 JSON 里 `unregistered` 这个数，**不是退出码**（管道会把退出码吃掉 —— 本机栽过两次）。 */
+   *   ⚠ 判的是 JSON 里 `unregistered` 这个数，**不是退出码**（管道会把退出码吃掉 —— 本机栽过两次）。
+   *   ⚠ 这条腿 10-11 在 **CI 上红过一次**（exit=1，判词"必须吐出机器可读那一行"）：`--scope` 默认含 `d180-bands/`，
+   *     而它被 `.gitignore:29` 屏着 ⇒ 干净克隆里没这个目录 ⇒ 审计工具 `exit 2`、一行不吐 ⇒ **门自己没跑，被当成门红**。
+   *     根因在我这条腿：**把判据绑到了"只在我这台机的盘上存在的东西"**（与规矩 134 同族，134 管"会换主人的指针"，这条是"只在本机存在的目录"）。
+   *     ⇒ 修的是工具（只读档跳过缺失目录并把名字报进 `missing`），**不是把腿删掉或放宽阈值**。
+   *     ⚑ 代价要写明：**CI 上这条腿覆盖的池子比本机小**（只剩 tracked 的那些），所以它抓不到"本机新落盘的未登记拷贝"——
+   *       与 D233 在 CI 永远 SKIP 是同一族盲区，差别是这条腿在 CI 仍有实效（tracked 层照样判）。 */
   const au = spawnSync(process.execPath, ['tools/dedupe-artifacts.mjs', '--audit'], { encoding: 'utf8', timeout: 600000 });
   const aLine = String(au.stdout || '').trim().split('\n').filter(l => /^\{/.test(l)).pop();
   ok(!!aLine, '④ `--audit` 必须吐出机器可读那一行（stdout 尾部：' + String(au.stdout || au.stderr || '').slice(-200) + '）');
@@ -9568,7 +9574,8 @@ t('D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · �
     const A = JSON.parse(aLine);
     eq(A.unregistered, 0, '④ 未登记的重复必须为 0（实测 ' + A.unregistered + ' ‖ 最坏几组：' + JSON.stringify(A.worst) +
       '）⇒ 同一粒权重多存一份，就会把"N 个配方/N 枚候选"读得比实际多（§E589 普查：1443 个文件其实只有 1130 粒）');
-    ok(A.files > 0, '④ 审计必须真数到包文件（files=' + A.files + ' groups=' + A.groups + '）⇒ 数到 0 是"没数"，不是"没重复"');
+    ok(A.files > 0, '④ 审计必须真数到包文件（files=' + A.files + ' groups=' + A.groups +
+      ' scope 里缺的目录=' + JSON.stringify(A.missing || []) + '）⇒ 数到 0 是"没数"，不是"没重复"');
   }
 });
 
