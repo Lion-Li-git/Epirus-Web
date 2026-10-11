@@ -1,143 +1,153 @@
-id	wid	Hp	H	tier	noThreatStance	charges	distinctKeys	Geff	path
-v7l2c-82	dcf2611751d8d00b	56.8	55.4	hard	0	3.575	7	3.973	docs/artifacts/v7l2c-82.bak
-e35prod807	ed5aa28dfbad4ab2	55.3	56.4	hard	0	8.5	5	4.166	docs/artifacts/E35-prod-807.bak
-R-s123	4072e215256c41b8	55	58.1	hard	0.068	1.675	11	5.147	docs/artifacts/e521-out/R-s123.js
-S-s120	590d4a47367be109	54.8	57.6	hard	0	7.775	10	4.975	docs/artifacts/e521-out/S-s120.js
-R231	3afd512a5c385dc6	54.3	53.4	hard	0	12.4	10	3.893	docs/artifacts/eval-out/win-R231.bak
-E3	827c47f91419af05	54.3	50.9	hard	0.0177	7.375	10	5.46	docs/artifacts/e234-out/E3.js
-D4a	5a60c8489990e8b6	54.3	54	hard	0.0063	1	12	7.709	docs/artifacts/e234-out/D4a.js
-T8-s114	24d8fa30bb0c3414	53.1	56	hard	0.0813	4.9	12	8.256	docs/artifacts/e528-out/T8-s114.js
-K2	1d4b687da27187b7	51.4	54.4	hard	0.5	1.9	12	8.227	docs/artifacts/kept/e70-out__D02-31.bak
-SHIPPED-Ldemo	d490dc136293cfc4	48.9	51.3	hard	0.0063	2.1	10	6.808	docs/artifacts/eval-out/win-Ldemo.bak
-v7beadseed-82	492b77d8516e82b6	58.5	62.1	hard-blocked	0.0717	0.05	12	7.374	docs/artifacts/v7beadseed-82.bak
-v7s9-82	579ebd20dea82558	57.9	58.5	hard-blocked	0.25	0	9	6.928	docs/artifacts/v7s9-82.bak
-V-s302	9d445132c3f41c27	57.8	59.5	hard-blocked	0.0095	0.7	9	3.765	docs/artifacts/e551-out/V-s302.js
-v7press3-81	e6a8c6a4cee51506	57.4	57.4	hard-blocked	0.0303	0	9	3.261	docs/artifacts/v7press3-81.bak
-v7u1-93	1c33b13882853baf	57	58.3	hard-blocked	0.1444	0	10	6.246	docs/artifacts/v7u1-93.bak
-SOUP-s9-82XD4a	2b1f3be7e07e680b	56.9	58.2	hard-blocked	0.1374	0	9	6.574	docs/artifacts/SOUP-s9-82XD4a.bak
-v7bead100-82	3436ec5015ea002b	56.1	56.6	hard-blocked	0.0388	0	8	4.275	docs/artifacts/v7bead100-82.bak
-v7bead1-31	2963faea1c0dfea8	55.9	59.6	hard-blocked	0	0	7	3.148	docs/artifacts/v7bead1-31.bak
-v7s8-82	30c3cc672d308e85	55.8	56.9	hard-blocked	0	0	4	3.511	docs/artifacts/v7s8-82.bak
-v7beadseed-93	da62eec92346a0a8	55.4	57	hard-blocked	0.0063	0	9	5.472	docs/artifacts/v7beadseed-93.bak
-v7l2c-143	85934b04c198b783	54.9	57	hard-blocked	0.0233	0.375	9	4.41	docs/artifacts/v7l2c-143.bak
-v7ws1-91	03b35fcab7de018a	54.6	56.1	hard-blocked	0.0875	0.125	15	7.567	docs/artifacts/v7press3-91.bak
-v7f2b-31	0acc866beb52c709	54.6	57.5	hard-blocked	0.0111	0.025	11	4.942	docs/artifacts/v7f2b-31.bak
-v7bead25-82	946561f5f83cfebd	54.5	53.3	hard-blocked	0.0126	0.025	9	6.266	docs/artifacts/v7bead25-82.bak
-D2a	ffee118971691716	54.4	52.7	hard-blocked	0	0	7	3.072	docs/artifacts/e234-out/D2a.js
-D4a	5a60c8489990e8b6	54.3	54	hard-blocked	0.0063	1	12	7.709	docs/artifacts/e234-out/D4a.js
-v7f5div3-93	fa1d31f9828be181	54.2	56.4	mid	0	0	9	4.266	docs/artifacts/v7f5div3-93.bak
-v7bead100-31	1b0ea81dc9547c3c	53.8	53.9	mid	0.0218	0	9	4.94	docs/artifacts/v7bead100-31.bak
-v7stock1-92	81d2f406fddebc20	53.8	54.9	mid	0	0	10	3.202	docs/artifacts/v7stock1-92.bak
-v7bead1-93	8d3418c8f8ae2265	53.6	53.3	mid	0.0189	0.05	9	5.912	docs/artifacts/v7bead1-93.bak
-v12-91	13616c9f03d76592	53.6	57.1	mid	0.062	0	8	5.022	docs/artifacts/v12-91.bak
-v7l2c-114	316a7acbc5e4413d	53.4	54	mid	0	0	4	3.163	docs/artifacts/v7l2c-114.bak
-B5-10-31	ce3c6b4a3c527952	53.4	55.4	mid	0.1	13.35	11	6.677	docs/artifacts/e100-out/B5-10-31.bak
-HF-191	3df992a9e40c1533	53.3	50.9	mid	0.0449	6.25	11	6.882	docs/artifacts/e116-out/HF-191.bak
-T8-s114	24d8fa30bb0c3414	53.1	56	mid	0.0813	4.9	12	8.256	docs/artifacts/e528-out/T8-s114.js
-v7bead2-31	668f746a1bb21568	53	55	mid	0.0126	0.075	14	6.146	docs/artifacts/v7bead2-31.bak
-v7cur3-31	662c3e82d90d3b49	52.8	53.6	mid	0.0573	8.075	11	4.433	docs/artifacts/v7cur3-31.bak
-T8-s120	e73fbba84db607e6	52.8	53	mid	0.0563	2.65	10	7.143	docs/artifacts/e521-out/T-s120.js
-v7cmin4-31	30724115a9996098	52.7	56	mid	0	4.65	10	4.767	docs/artifacts/incumbent-forpromote.bak
-e35prod814	c8289566e7fee1b7	52.7	55.3	mid	0	2.875	11	4.93	docs/artifacts/E35-prod-814.bak
-G03-31	b88b593b910ae4be	52.7	53.5	mid	0	24.275	12	3.941	docs/artifacts/e78-out/G03-31.bak
-v7blk1-31	4c20263d858a838b	52.5	55.2	mid	0.0063	0	8	2.779	docs/artifacts/v7blk1-31.bak
-v7cur3-82	f24d48a7eb34a644	52.5	50.9	mid	0	0.1	8	3.962	docs/artifacts/v7cur3-82.bak
-v7s9-93	a60ba27d6bff091b	51.9	52.3	mid	0.0755	0	11	6.224	docs/artifacts/v7s9-93.bak
-NC-301	6d3b04dcfe536292	51.9	50.4	mid	0.0063	1.725	10	5.32	docs/artifacts/e75-out/NC-301.bak
-v7tgt4-62	54600acab6333e65	51.8	50.6	mid	0	0.275	12	4.928	docs/artifacts/v7tgt4-62.bak
-W31	e283fe1a741c5a15	51.8	52.9	mid	0.0063	13.575	10	6.227	docs/artifacts/e234-out/W31.js
-E00-71	293a114058436bd0	51.8	52.5	mid	0	0.2	10	4.505	docs/artifacts/e85-out/E00-71.bak
-v7w3r1-82	9ee245accfe8a401	51.7	52	mid	0.0168	0	13	3.935	docs/artifacts/v7w3r1-82.bak
-v7l2o-91	c38ad6ed33754f8b	51.7	51.1	mid	0.0638	0	9	3.58	docs/artifacts/v7l2o-91.bak
-B-s64	2bd715abe48526a0	51.7	52.5	mid	0	8.15	11	5.459	docs/artifacts/e513-out/B-s64.js
-v7new1-31	5762595ec7f14922	51.5	55.3	mid	0	10.475	6	4.124	docs/artifacts/v7new1-31.bak
-r61fix-91	12a070434a153c7a	51.3	53.2	mid	0	0.05	7	3.189	docs/artifacts/r61fix-91.bak
-v7cur3-93	09b1b04a4a3143fb	51.3	53.2	mid	0	6.475	7	4.119	docs/artifacts/v7cur3-93.bak
-D3a	59d6f6efd8296692	51.1	55.8	mid	0	0.1	10	4.04	docs/artifacts/e234-out/D3a.js
-Q-s33	937d3a2d090fa997	51	53.9	mid	0	1.1	10	3.706	docs/artifacts/e507-out/Q-s33.js
-v7t1-93	2b52e8c45d3c565f	50.8	50.6	mid	0.0314	0	9	6.332	docs/artifacts/v7t1-93.bak
-v7sub1-82	c58d051d2725bdf0	50.5	50.2	mid	0	4.95	16	4.183	docs/artifacts/v7sub1-82.bak
-v14-114	3a79d47b1d9a117a	50.5	51.9	mid	0	0	6	3.239	docs/artifacts/v14-114.bak
-G15-71	fbc3926b144ee593	50.5	52.9	mid	0.0063	2.725	10	6.084	docs/artifacts/kept/e78-out__G08-71.bak
-M05-111	e2b0b2d5bdb58c16	50.4	55.5	mid	0	9.925	9	5.495	docs/artifacts/e73-out/M05-111.bak
-E20-71	798d04cd40cb9d3c	50.4	54	mid	0.025	4.65	11	7.514	docs/artifacts/e85-out/E20-71.bak
-v7role1-81	8e4e274ebf5fee03	50.2	53.9	mid	0	3.65	14	5.106	docs/artifacts/v7role1-81.bak
-v15-123	ad19731f3f1ecff9	49.9	52.1	mid	0	0	4	3.241	docs/artifacts/v15-123.bak
-v7w3c-82	9aa82f5cac1cd0ed	49.8	51.7	mid	0	12.425	9	4.204	docs/artifacts/v7divK2b-82.bak
-L05-31	f19bb211a8cb32cb	49.7	52.3	mid	0	7.525	10	6.161	docs/artifacts/kept/e78-out__G08-31.bak
-M05-231	35b8b9129b15f6e9	49.7	52	mid	0	8.725	10	6.129	docs/artifacts/e73-out/M05-231.bak
-v7cmin4-82	394b94614e5bfd0c	49.6	47.9	mid	0	28.975	8	4.877	docs/artifacts/v7cmin4-82.bak
-PL31	6c1a6b23e88512dd	49.4	50.9	mid	0.025	0.575	10	5.686	docs/artifacts/e73-out/M05C02-31.bak
-E2	b3c6be11febc11f9	49.4	50.8	mid	0.0377	11.925	10	5.701	docs/artifacts/e234-out/E2.js
-blk1t40-s71	772194200f18d2c2	49.3	52	mid	0.025	9.225	10	6.763	docs/artifacts/kept/e124-out__blk1t40-s71.bak
-plainAnchor-s13	7b641285cf7f66da	49.3	51.8	mid	0	0.025	9	4.161	docs/artifacts/e502-out/plainAnchor-s13.js
-v7new5_01-81	3408de99c8aeb134	49.2	53	mid	0	0	11	3.572	docs/artifacts/v7new5_01-81.bak
-v7f2t-92	82f872b85b6feb21	49.1	52.6	mid	0.0189	0.025	11	5.042	docs/artifacts/v7f2t-92.bak
-v7divK2-81	58befd30dddd85ad	49	50.9	mid	0	8.35	10	5.102	docs/artifacts/v7divK2-81.bak
-X1	97e5a93f1704d2ad	49	50.5	mid	0.0063	4.625	10	7.055	docs/artifacts/e234-out/X1.js
-v7cmin3-93	7e961179bcf37880	48.9	46.5	mid	0.0189	0	9	5.231	docs/artifacts/v7cmin3-93.bak
-SHIPPED-Ldemo	d490dc136293cfc4	48.9	51.3	mid	0.0063	2.1	10	6.808	docs/artifacts/eval-out/win-Ldemo.bak
-v7protoE-82	d0d5c0e1afdd0ec8	48.9	48.7	mid	0	9.225	6	3.535	docs/artifacts/v7protoE-82.bak
-M05C02-111	e80f1c495d345b95	48.9	51.1	mid	0.0063	5.175	10	7.139	docs/artifacts/e73-out/M05C02-111.bak
-M05C02-71	19fbdb8a6a12e5c0	48.9	52.1	mid	0.0063	9	10	6.66	docs/artifacts/e73-out/M05C02-71.bak
-E10-31	c8b41c7d6d8e443b	48.6	49.7	mid	0.0313	5.275	10	6.898	docs/artifacts/kept/e85-out__E10-31.bak
-V-s347	325920a319830273	48.6	47.8	mid	0.0742	0.025	8	5.591	docs/artifacts/e551-out/V-s347.js
-v7beadseed-31	f7d49de4aa44b479	48.4	48.1	mid	0	8.2	10	5.192	docs/artifacts/v7beadseed-31.bak
-v7rand-32	3ed3228d4667a346	48.3	50.7	mid	0.0375	0	15	4.792	docs/artifacts/v7rand-32.bak
-blk1t40-s31	89825f22b4dd03e5	48.3	50.2	mid	0.0313	10.625	10	6.47	docs/artifacts/kept/e124-out__blk1t40-s31.bak
-v7f35b-94	7729901f7391aa07	48.2	49.7	mid	0	5.175	8	5.048	docs/artifacts/v7f35b-94.bak
-E51-t8-713	3d7fca4e50920e03	48.2	52.7	mid	0.0187	1.675	10	8.01	docs/artifacts/kept/artifacts__E51-t8-713.bak
-v7f5b-96	0c5fa3e50896b22c	48.1	51	mid	0	1.325	8	3.997	docs/artifacts/v7f5b-96.bak
-v7new5_005-81	ab21a7d18e7dbe62	48.1	48.4	mid	0	9.575	4	3.288	docs/artifacts/v7new5_005-81.bak
-v7f5div3-81	0863d1fde8f567e1	48.1	46.4	mid	0	0	9	3.665	docs/artifacts/v7f5div3-81.bak
-v7bead3-31	55c7af3588c45432	47.8	50.4	mid	0	0.4	16	8.122	docs/artifacts/v7bead3-31.bak
-G03-71	049a2875a79c6477	47.8	50.1	mid	0	0.075	8	4.72	docs/artifacts/e78-out/G03-71.bak
-N5L-30	2b5da24e1770b24a	47.8	50.8	mid	0.0063	1.15	10	6.384	docs/artifacts/e106-out/N5L-30.bak
-v13-101	83886bd0014842a7	47.6	46.1	mid	0.0314	0	8	4.081	docs/artifacts/v13-101.bak
-v7gf1-93	eea2f3668bbce600	47.6	47.9	mid	0	0.05	7	3.834	docs/artifacts/v7gf1-93.bak
-seed80	c99b5c2d3cea3722	47.5	46	mid	0	10.425	8	4.749	docs/artifacts/eval-out/sel80.bak
-U-s209	7bd2f48125029cd8	47.4	48.6	mid	0.0252	7.05	13	6.285	docs/artifacts/e539-out/U-s209.js
-v7n1-93	8358c7b72b4d9dc8	47.3	44	mid	0.0215	0	9	4.817	docs/artifacts/v7n1-93.bak
-NCV-71	392bc3dbd46f4605	47.3	50.2	mid	0.0125	1.825	10	6.901	docs/artifacts/e75-out/NCV-71.bak
-v7new6-94	9efbdfdd37d65bd4	47.1	50.1	mid	0	0.6	9	5.285	docs/artifacts/v7new6-94.bak
-SP-s30	faf11b47ade2a352	47	48.4	mid	0.0452	7.35	10	5.415	docs/artifacts/e504-out/SP-s30.js
-U-s216	e358710b0e1130eb	47	48.5	mid	0	21.85	9	3.95	docs/artifacts/e539-out/U-s216.js
-E59-land-902	6ae53731631a0eba	46.9	51.1	mid	0.0125	6.375	10	8.027	docs/artifacts/E59-land-902.bak
-v7l2c-101	4cb7516d80145d0d	46.8	46.5	low	0	3.475	10	3.031	docs/artifacts/v7l2c-101.bak
-r61fix-92	1f42af27d61b38ea	46.8	46.5	low	0.0818	1.15	11	5.177	docs/artifacts/r61fix-92.bak
-blk0t40-s31	f279ffdfc6cbf1ff	46.7	48.3	low	0	2.075	10	5.199	docs/artifacts/kept/e124-out__blk0t40-s31.bak
-v7force-34	cf63a1b569ce88bb	46.6	48.2	low	0	0.625	9	4.463	docs/artifacts/v7force-34.bak
-v7cur2-82	36ba2891b9567c45	46.4	43.8	low	0.0063	11.375	7	4.112	docs/artifacts/v7cur2-82.bak
-v7u1-82	36d9f858545e13d2	46.2	45.1	low	0.0492	0	9	6.933	docs/artifacts/v7u1-82.bak
-v14-111	524a20e044f1ad10	46.2	50.8	low	0.0503	0	8	4.63	docs/artifacts/v14-111.bak
-v7l2s-93	bb7bd792a419d10c	46	50.3	low	0.0881	0.05	10	3.576	docs/artifacts/v7l2s-93.bak
-v7ringB1-81	ae438393550ff6a1	45.7	44.4	low	0	24.225	10	4.048	docs/artifacts/v7ringB1-81.bak
-R311	ccc41e51a11947ce	45.7	49	low	0.0125	1.375	10	7.165	docs/artifacts/eval-out/win-R311.bak
-v7iso1-81	8b4d6d010601c272	45.6	45.6	low	0	0	4	3.583	docs/artifacts/v7iso1-81.bak
-v7tgt4-66	dea1277ce135d2b5	45.1	47.7	low	0	0.075	12	3.364	docs/artifacts/v7tgt4-66.bak
-v7new5_01-93	9bf736bf756a8d4d	45.1	47	low	0.0063	0	6	4.157	docs/artifacts/v7new5_01-93.bak
-SQ2-15-31	ee82e7694b6eb4be	45.1	44.7	low	0.0063	0.625	10	4.579	docs/artifacts/kept/e120-out__N5L-05.bak
-v7m2_noTarget-36	65f4402c5c8847c1	44.9	41.1	low	0	0	8	4.756	docs/artifacts/v7m2_noEffects-31.bak
-v12-95	eda9f142df9ab815	44.8	42.8	low	0	0	9	3.622	docs/artifacts/v12-95.bak
-PL71	f8bd1419522c6773	44.6	45.7	low	0.0897	3.95	10	7.554	docs/artifacts/e77-out/PL71.bak
-v7cmin3-31	59c0fcc9acc2458c	44.1	46.5	low	0.0705	0	11	5.308	docs/artifacts/v7cmin3-31.bak
-E00-31	9f99c0090d7c758b	44	45.9	low	0.0563	1.475	11	6.443	docs/artifacts/e85-out/E00-31.bak
-v7role1-91	97dd729190d13063	43.8	45.4	low	0	5.4	7	3.939	docs/artifacts/v7role1-91.bak
-NC-191	3d2fa5c3f7725711	43.7	44.8	low	0.0411	10.85	10	5.758	docs/artifacts/e75-out/NC-191.bak
-v7force2-35	0d61340ade07129e	43.5	44.6	low	0	0.825	9	3.845	docs/artifacts/v7force2-35.bak
-v7sub1-81	cad76c004b2318f6	43.3	45.2	low	0	0.4	5	3.311	docs/artifacts/v7sub1-81.bak
-v7fix1-82	88add28fb048237b	42.6	42.8	low	0	2.375	6	3.709	docs/artifacts/v7fix1-82.bak
-v7ringB1-93	5591af276caa41fe	42.6	45.3	low	0	2.075	11	4.731	docs/artifacts/v7ringB1-93.bak
-v7bead3-82	de1fcffb5fc4ed1e	42.4	43.1	low	0.0377	0.125	11	7.095	docs/artifacts/v7bead3-82.bak
-v7wall2-97	d75083df4847be17	42	43.8	low	0	9.4	13	8.832	docs/artifacts/v7wall2-97.bak
-v7tgt2-52	65207cc7229527a4	41.8	43.7	low	0.0351	0.025	10	4.807	docs/artifacts/v7tgt2-52.bak
-v7b-45	773f81c0e2a6f5d2	41.6	45.5	low	0	0.1	12	3.742	docs/artifacts/v7b-45.bak
-v7clear2-81	1dd6836b8b2edb8a	41.5	43.2	low	0	1.2	9	4.545	docs/artifacts/v7clear2-81.bak
-v7wall1-93	68d63a633bea51f9	41	39	low	0.0063	9.95	13	3.886	docs/artifacts/v7wall1-93.bak
-NOL24-31	5724843a1c1e1832	36.5	36.4	low	0	1.9	12	5.041	docs/artifacts/e66-out/B0-31.bak
-v7aim3-93	362131bb77ebd059	35.6	34.6	low	0	0	9	4.054	docs/artifacts/v7aim3-93.bak
-v7f3-94	ba5a75b49ec5737c	34	31.6	low	0	0	8	4.266	docs/artifacts/v7f3-94.bak
-eco2-34	65a68ff19f0841b4	28	30.3	low	0	4.75	10	5.361	docs/artifacts/eco2-34.bak
-fgtB-34	b790c53e4475f499	28	35.3	low	0.0539	2.525	12	5.317	docs/artifacts/fgtB-34.bak
-fgtB-32	a0372a73fac9ae71	24.8	26.8	low	0	0.05	8	3.813	docs/artifacts/fgtB-32.bak
-rwd0-36	5a074e41844fbbc7	20.7	20.9	low	0	0.025	11	4.428	docs/artifacts/rwd0-36.bak
+id	wid	Hp	H	tier	noThreatStance	charges	distinctKeys	Geff	verdict	holoOther	blocks	path
+e35prod807	ed5aa28dfbad4ab2	55.3	56.4	hard	0	8.5	5	4.166	untested			docs/artifacts/E35-prod-807.bak
+R-s123	4072e215256c41b8	55	58.1	hard	0.068	1.675	11	5.147	untested			docs/artifacts/e521-out/R-s123.js
+S-s120	590d4a47367be109	54.8	57.6	hard	0	7.775	10	4.975	untested			docs/artifacts/e521-out/S-s120.js
+R231	3afd512a5c385dc6	54.3	53.4	hard	0	12.4	10	3.893	untested			docs/artifacts/eval-out/win-R231.bak
+E3	827c47f91419af05	54.3	50.9	hard	0.0177	7.375	10	5.46	untested			docs/artifacts/e234-out/E3.js
+D4a	5a60c8489990e8b6	54.3	54	hard	0.0063	1	12	7.709	untested			docs/artifacts/e234-out/D4a.js
+T8-s114	24d8fa30bb0c3414	53.1	56	hard	0.0813	4.9	12	8.256	untested			docs/artifacts/e528-out/T8-s114.js
+K2	1d4b687da27187b7	51.4	54.4	hard	0.5	1.9	12	8.227	untested			docs/artifacts/kept/e70-out__D02-31.bak
+SHIPPED-Ldemo	d490dc136293cfc4	48.9	51.3	hard	0.0063	2.1	10	6.808	pass	0	—	docs/artifacts/eval-out/win-Ldemo.bak
+V-s302	9d445132c3f41c27	57.8	59.5	hard-blocked	0.0095	0.7	9	3.765	untested			docs/artifacts/e551-out/V-s302.js
+v7u1-93	1c33b13882853baf	57	58.3	hard-blocked	0.1444	0	10	6.246	pass	0.35	—	docs/artifacts/v7u1-93.bak
+SOUP-s9-82XD4a	2b1f3be7e07e680b	56.9	58.2	hard-blocked	0.1374	0	9	6.574	untested			docs/artifacts/SOUP-s9-82XD4a.bak
+v7bead100-82	3436ec5015ea002b	56.1	56.6	hard-blocked	0.0388	0	8	4.275	pass	0.3	—	docs/artifacts/v7bead100-82.bak
+v7bead1-31	2963faea1c0dfea8	55.9	59.6	hard-blocked	0	0	7	3.148	pass	4.3	—	docs/artifacts/v7bead1-31.bak
+v7beadseed-93	da62eec92346a0a8	55.4	57	hard-blocked	0.0063	0	9	5.472	pass	0.8	—	docs/artifacts/v7beadseed-93.bak
+D2a	ffee118971691716	54.4	52.7	hard-blocked	0	0	7	3.072	untested			docs/artifacts/e234-out/D2a.js
+D4a	5a60c8489990e8b6	54.3	54	hard-blocked	0.0063	1	12	7.709	untested			docs/artifacts/e234-out/D4a.js
+v7f5div3-93	fa1d31f9828be181	54.2	56.4	mid	0	0	9	4.266	pass	1	—	docs/artifacts/v7f5div3-93.bak
+v7bead100-31	1b0ea81dc9547c3c	53.8	53.9	mid	0.0218	0	9	4.94	pass	0.4	—	docs/artifacts/v7bead100-31.bak
+v7bead1-93	8d3418c8f8ae2265	53.6	53.3	mid	0.0189	0.05	9	5.912	pass	0.3	—	docs/artifacts/v7bead1-93.bak
+B5-10-31	ce3c6b4a3c527952	53.4	55.4	mid	0.1	13.35	11	6.677	untested			docs/artifacts/e100-out/B5-10-31.bak
+HF-191	3df992a9e40c1533	53.3	50.9	mid	0.0449	6.25	11	6.882	untested			docs/artifacts/e116-out/HF-191.bak
+T8-s114	24d8fa30bb0c3414	53.1	56	mid	0.0813	4.9	12	8.256	untested			docs/artifacts/e528-out/T8-s114.js
+v7bead2-31	668f746a1bb21568	53	55	mid	0.0126	0.075	14	6.146	pass	0.55	—	docs/artifacts/v7bead2-31.bak
+T8-s120	e73fbba84db607e6	52.8	53	mid	0.0563	2.65	10	7.143	untested			docs/artifacts/e521-out/T-s120.js
+v7cmin4-31	30724115a9996098	52.7	56	mid	0	4.65	10	4.767	pass	0	—	docs/artifacts/incumbent-forpromote.bak
+e35prod814	c8289566e7fee1b7	52.7	55.3	mid	0	2.875	11	4.93	untested			docs/artifacts/E35-prod-814.bak
+G03-31	b88b593b910ae4be	52.7	53.5	mid	0	24.275	12	3.941	untested			docs/artifacts/e78-out/G03-31.bak
+NC-301	6d3b04dcfe536292	51.9	50.4	mid	0.0063	1.725	10	5.32	untested			docs/artifacts/e75-out/NC-301.bak
+W31	e283fe1a741c5a15	51.8	52.9	mid	0.0063	13.575	10	6.227	untested			docs/artifacts/e234-out/W31.js
+E00-71	293a114058436bd0	51.8	52.5	mid	0	0.2	10	4.505	untested			docs/artifacts/e85-out/E00-71.bak
+B-s64	2bd715abe48526a0	51.7	52.5	mid	0	8.15	11	5.459	untested			docs/artifacts/e513-out/B-s64.js
+D3a	59d6f6efd8296692	51.1	55.8	mid	0	0.1	10	4.04	untested			docs/artifacts/e234-out/D3a.js
+Q-s33	937d3a2d090fa997	51	53.9	mid	0	1.1	10	3.706	untested			docs/artifacts/e507-out/Q-s33.js
+v7t1-93	2b52e8c45d3c565f	50.8	50.6	mid	0.0314	0	9	6.332	pass	1.1	—	docs/artifacts/v7t1-93.bak
+G15-71	fbc3926b144ee593	50.5	52.9	mid	0.0063	2.725	10	6.084	untested			docs/artifacts/kept/e78-out__G08-71.bak
+M05-111	e2b0b2d5bdb58c16	50.4	55.5	mid	0	9.925	9	5.495	untested			docs/artifacts/e73-out/M05-111.bak
+E20-71	798d04cd40cb9d3c	50.4	54	mid	0.025	4.65	11	7.514	untested			docs/artifacts/e85-out/E20-71.bak
+v15-123	ad19731f3f1ecff9	49.9	52.1	mid	0	0	4	3.241	pass	0	—	docs/artifacts/v15-123.bak
+v7w3c-82	9aa82f5cac1cd0ed	49.8	51.7	mid	0	12.425	9	4.204	untested			docs/artifacts/v7divK2b-82.bak
+L05-31	f19bb211a8cb32cb	49.7	52.3	mid	0	7.525	10	6.161	untested			docs/artifacts/kept/e78-out__G08-31.bak
+M05-231	35b8b9129b15f6e9	49.7	52	mid	0	8.725	10	6.129	untested			docs/artifacts/e73-out/M05-231.bak
+PL31	6c1a6b23e88512dd	49.4	50.9	mid	0.025	0.575	10	5.686	untested			docs/artifacts/e73-out/M05C02-31.bak
+E2	b3c6be11febc11f9	49.4	50.8	mid	0.0377	11.925	10	5.701	untested			docs/artifacts/e234-out/E2.js
+blk1t40-s71	772194200f18d2c2	49.3	52	mid	0.025	9.225	10	6.763	untested			docs/artifacts/kept/e124-out__blk1t40-s71.bak
+plainAnchor-s13	7b641285cf7f66da	49.3	51.8	mid	0	0.025	9	4.161	untested			docs/artifacts/e502-out/plainAnchor-s13.js
+X1	97e5a93f1704d2ad	49	50.5	mid	0.0063	4.625	10	7.055	untested			docs/artifacts/e234-out/X1.js
+v7cmin3-93	7e961179bcf37880	48.9	46.5	mid	0.0189	0	9	5.231	pass	0.9	—	docs/artifacts/v7cmin3-93.bak
+SHIPPED-Ldemo	d490dc136293cfc4	48.9	51.3	mid	0.0063	2.1	10	6.808	pass	0	—	docs/artifacts/eval-out/win-Ldemo.bak
+M05C02-111	e80f1c495d345b95	48.9	51.1	mid	0.0063	5.175	10	7.139	untested			docs/artifacts/e73-out/M05C02-111.bak
+M05C02-71	19fbdb8a6a12e5c0	48.9	52.1	mid	0.0063	9	10	6.66	untested			docs/artifacts/e73-out/M05C02-71.bak
+E10-31	c8b41c7d6d8e443b	48.6	49.7	mid	0.0313	5.275	10	6.898	untested			docs/artifacts/kept/e85-out__E10-31.bak
+V-s347	325920a319830273	48.6	47.8	mid	0.0742	0.025	8	5.591	untested			docs/artifacts/e551-out/V-s347.js
+v7beadseed-31	f7d49de4aa44b479	48.4	48.1	mid	0	8.2	10	5.192	pass	0	—	docs/artifacts/v7beadseed-31.bak
+blk1t40-s31	89825f22b4dd03e5	48.3	50.2	mid	0.0313	10.625	10	6.47	untested			docs/artifacts/kept/e124-out__blk1t40-s31.bak
+E51-t8-713	3d7fca4e50920e03	48.2	52.7	mid	0.0187	1.675	10	8.01	untested			docs/artifacts/kept/artifacts__E51-t8-713.bak
+v7new5_005-81	ab21a7d18e7dbe62	48.1	48.4	mid	0	9.575	4	3.288	pass	0	—	docs/artifacts/v7new5_005-81.bak
+v7bead3-31	55c7af3588c45432	47.8	50.4	mid	0	0.4	16	8.122	pass	1.2	—	docs/artifacts/v7bead3-31.bak
+G03-71	049a2875a79c6477	47.8	50.1	mid	0	0.075	8	4.72	untested			docs/artifacts/e78-out/G03-71.bak
+N5L-30	2b5da24e1770b24a	47.8	50.8	mid	0.0063	1.15	10	6.384	untested			docs/artifacts/e106-out/N5L-30.bak
+seed80	c99b5c2d3cea3722	47.5	46	mid	0	10.425	8	4.749	untested			docs/artifacts/eval-out/sel80.bak
+U-s209	7bd2f48125029cd8	47.4	48.6	mid	0.0252	7.05	13	6.285	untested			docs/artifacts/e539-out/U-s209.js
+v7n1-93	8358c7b72b4d9dc8	47.3	44	mid	0.0215	0	9	4.817	pass	0.85	—	docs/artifacts/v7n1-93.bak
+NCV-71	392bc3dbd46f4605	47.3	50.2	mid	0.0125	1.825	10	6.901	untested			docs/artifacts/e75-out/NCV-71.bak
+SP-s30	faf11b47ade2a352	47	48.4	mid	0.0452	7.35	10	5.415	untested			docs/artifacts/e504-out/SP-s30.js
+U-s216	e358710b0e1130eb	47	48.5	mid	0	21.85	9	3.95	untested			docs/artifacts/e539-out/U-s216.js
+E59-land-902	6ae53731631a0eba	46.9	51.1	mid	0.0125	6.375	10	8.027	untested			docs/artifacts/E59-land-902.bak
+v7l2c-101	4cb7516d80145d0d	46.8	46.5	low	0	3.475	10	3.031	pass	0.15	—	docs/artifacts/v7l2c-101.bak
+r61fix-92	1f42af27d61b38ea	46.8	46.5	low	0.0818	1.15	11	5.177	untested			docs/artifacts/r61fix-92.bak
+blk0t40-s31	f279ffdfc6cbf1ff	46.7	48.3	low	0	2.075	10	5.199	untested			docs/artifacts/kept/e124-out__blk0t40-s31.bak
+v7force-34	cf63a1b569ce88bb	46.6	48.2	low	0	0.625	9	4.463	pass	0	—	docs/artifacts/v7force-34.bak
+v7u1-82	36d9f858545e13d2	46.2	45.1	low	0.0492	0	9	6.933	pass	0.1	—	docs/artifacts/v7u1-82.bak
+v7ringB1-81	ae438393550ff6a1	45.7	44.4	low	0	24.225	10	4.048	pass	1.25	—	docs/artifacts/v7ringB1-81.bak
+R311	ccc41e51a11947ce	45.7	49	low	0.0125	1.375	10	7.165	untested			docs/artifacts/eval-out/win-R311.bak
+v7iso1-81	8b4d6d010601c272	45.6	45.6	low	0	0	4	3.583	pass	0	—	docs/artifacts/v7iso1-81.bak
+SQ2-15-31	ee82e7694b6eb4be	45.1	44.7	low	0.0063	0.625	10	4.579	untested			docs/artifacts/kept/e120-out__N5L-05.bak
+v12-95	eda9f142df9ab815	44.8	42.8	low	0	0	9	3.622	pass	0.3	—	docs/artifacts/v12-95.bak
+PL71	f8bd1419522c6773	44.6	45.7	low	0.0897	3.95	10	7.554	untested			docs/artifacts/e77-out/PL71.bak
+v7cmin3-31	59c0fcc9acc2458c	44.1	46.5	low	0.0705	0	11	5.308	pass	3.3	—	docs/artifacts/v7cmin3-31.bak
+E00-31	9f99c0090d7c758b	44	45.9	low	0.0563	1.475	11	6.443	untested			docs/artifacts/e85-out/E00-31.bak
+v7role1-91	97dd729190d13063	43.8	45.4	low	0	5.4	7	3.939	pass	0	—	docs/artifacts/v7role1-91.bak
+NC-191	3d2fa5c3f7725711	43.7	44.8	low	0.0411	10.85	10	5.758	untested			docs/artifacts/e75-out/NC-191.bak
+v7ringB1-93	5591af276caa41fe	42.6	45.3	low	0	2.075	11	4.731	pass	0	—	docs/artifacts/v7ringB1-93.bak
+v7bead3-82	de1fcffb5fc4ed1e	42.4	43.1	low	0.0377	0.125	11	7.095	pass	0.6	—	docs/artifacts/v7bead3-82.bak
+v7wall2-97	d75083df4847be17	42	43.8	low	0	9.4	13	8.832	untested			docs/artifacts/v7wall2-97.bak
+v7wall1-93	68d63a633bea51f9	41	39	low	0.0063	9.95	13	3.886	untested			docs/artifacts/v7wall1-93.bak
+NOL24-31	5724843a1c1e1832	36.5	36.4	low	0	1.9	12	5.041	untested			docs/artifacts/e66-out/B0-31.bak
+v7beadseed-82	492b77d8516e82b6	58.5	62.1	prom-blocked	0.0717	0.05	12	7.374	block	17.3	送盾 17.3/局 > 6（不可 --force）	docs/artifacts/v7beadseed-82.bak
+v7s9-82	579ebd20dea82558	57.9	58.5	prom-blocked	0.25	0	9	6.928	block	3.4	G5/long 清不了防席（它夺冠 38%） · G5/multi 清不了防席（它夺冠 28%）	docs/artifacts/v7s9-82.bak
+v7press3-81	e6a8c6a4cee51506	57.4	57.4	prom-blocked	0.0303	0	9	3.261	block	1.65	G4/long 被一行脚本打穿 89% · G4/multi 被一行脚本打穿 64% · G5/long 清不了防席（它夺冠 63%） · G5/multi 清不了防席（它夺冠 44%）	docs/artifacts/v7press3-81.bak
+v7l2c-82	dcf2611751d8d00b	56.8	55.4	prom-blocked	0	3.575	7	3.973	block	0	G4/long 被一行脚本打穿 99% · G4/multi 被一行脚本打穿 83% · G5/long 清不了防席（它夺冠 64%） · G5/multi 清不了防席（它夺冠 83%）	docs/artifacts/v7l2c-82.bak
+v7s8-82	30c3cc672d308e85	55.8	56.9	prom-blocked	0	0	4	3.511	block	0	G5/long 清不了防席（它夺冠 27%）	docs/artifacts/v7s8-82.bak
+v7l2c-143	85934b04c198b783	54.9	57	prom-blocked	0.0233	0.375	9	4.41	block	0.05	G4/long 被一行脚本打穿 80% · G4/multi 被一行脚本打穿 73% · G5/long 清不了防席（它夺冠 70%） · G5/multi 清不了防席（它夺冠 42%）	docs/artifacts/v7l2c-143.bak
+v7ws1-91	03b35fcab7de018a	54.6	56.1	prom-blocked	0.0875	0.125	15	7.567	block	0.4	G4/long 被一行脚本打穿 69% · G4/multi 被一行脚本打穿 63%	docs/artifacts/v7press3-91.bak
+v7f2b-31	0acc866beb52c709	54.6	57.5	prom-blocked	0.0111	0.025	11	4.942	block	0	G4/long 被一行脚本打穿 73% · G4/multi 被一行脚本打穿 62% · G5/long 清不了防席（它夺冠 77%） · G5/multi 清不了防席（它夺冠 52%）	docs/artifacts/v7f2b-31.bak
+v7bead25-82	946561f5f83cfebd	54.5	53.3	prom-blocked	0.0126	0.025	9	6.266	block	0.55	G4/long 被一行脚本打穿 65%	docs/artifacts/v7bead25-82.bak
+v7stock1-92	81d2f406fddebc20	53.8	54.9	prom-blocked	0	0	10	3.202	block	0.1	G4/long 被一行脚本打穿 69% · G5/long 清不了防席（它夺冠 48%） · G5/multi 清不了防席（它夺冠 48%）	docs/artifacts/v7stock1-92.bak
+v12-91	13616c9f03d76592	53.6	57.1	prom-blocked	0.062	0	8	5.022	block	0	G4/long 被一行脚本打穿 93% · G4/multi 被一行脚本打穿 90% · G5/multi 清不了防席（它夺冠 40%）	docs/artifacts/v12-91.bak
+v7l2c-114	316a7acbc5e4413d	53.4	54	prom-blocked	0	0	4	3.163	block	0	G4/long 被一行脚本打穿 80% · G5/long 清不了防席（它夺冠 40%） · G5/multi 清不了防席（它夺冠 56%）	docs/artifacts/v7l2c-114.bak
+v7bead2-82	55533ecb541bd9e4	53.2	57.7	prom-blocked	0.1344	0	9	5.763	block	4	G4/long 被一行脚本打穿 61%	docs/artifacts/v7bead2-82.bak
+v7cur3-31	662c3e82d90d3b49	52.8	53.6	prom-blocked	0.0573	8.075	11	4.433	block	0.05	G4/long 被一行脚本打穿 88% · G5/long 清不了防席（它夺冠 30%） · G5/multi 清不了防席（它夺冠 28%）	docs/artifacts/v7cur3-31.bak
+v7new5_01-92	c1e01fd3562a75e3	52.7	53.7	prom-blocked	0.1412	0	7	3.877	block	0	G4/long 被一行脚本打穿 96% · G4/multi 被一行脚本打穿 71% · G5/multi 清不了防席（它夺冠 29%）	docs/artifacts/v7new5_01-92.bak
+v7blk1-31	4c20263d858a838b	52.5	55.2	prom-blocked	0.0063	0	8	2.779	block	0	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 98% · G5/long 清不了防席（它夺冠 100%） · G5/multi 清不了防席（它夺冠 96%）	docs/artifacts/v7blk1-31.bak
+v7cur3-82	f24d48a7eb34a644	52.5	50.9	prom-blocked	0	0.1	8	3.962	block	0	G4/long 被一行脚本打穿 93% · G5/long 清不了防席（它夺冠 32%）	docs/artifacts/v7cur3-82.bak
+v7l2s-91	954d4e9160905ce5	52	53.9	prom-blocked	0.1572	0	7	5.393	block	0	G4/long 被一行脚本打穿 67% · G5/long 清不了防席（它夺冠 26%）	docs/artifacts/v7l2s-91.bak
+v7s9-93	a60ba27d6bff091b	51.9	52.3	prom-blocked	0.0755	0	11	6.224	block	0.15	G4/long 被一行脚本打穿 71%	docs/artifacts/v7s9-93.bak
+v7tgt4-62	54600acab6333e65	51.8	50.6	prom-blocked	0	0.275	12	4.928	block	0	G4/long 被一行脚本打穿 89% · G5/long 清不了防席（它夺冠 57%） · G5/multi 清不了防席（它夺冠 33%）	docs/artifacts/v7tgt4-62.bak
+v7w3r1-82	9ee245accfe8a401	51.7	52	prom-blocked	0.0168	0	13	3.935	block	0.55	G4/long 被一行脚本打穿 96% · G4/multi 被一行脚本打穿 90%	docs/artifacts/v7w3r1-82.bak
+v7l2o-91	c38ad6ed33754f8b	51.7	51.1	prom-blocked	0.0638	0	9	3.58	block	0.15	G5/multi 清不了防席（它夺冠 31%）	docs/artifacts/v7l2o-91.bak
+v7new1-31	5762595ec7f14922	51.5	55.3	prom-blocked	0	10.475	6	4.124	block	0	G4/long 被一行脚本打穿 97% · G4/multi 被一行脚本打穿 94% · G5/long 清不了防席（它夺冠 76%） · G5/multi 清不了防席（它夺冠 51%）	docs/artifacts/v7new1-31.bak
+v7s8-31	2b5acc40808c6c68	51.5	51.6	prom-blocked	0.1021	0.075	12	5.308	block	0	G4/long 被一行脚本打穿 92% · G4/multi 被一行脚本打穿 74% · G5/long 清不了防席（它夺冠 93%） · G5/multi 清不了防席（它夺冠 78%）	docs/artifacts/v7s8-31.bak
+r61fix-91	12a070434a153c7a	51.3	53.2	prom-blocked	0	0.05	7	3.189	block	0	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 100% · G5/long 清不了防席（它夺冠 58%） · G5/multi 清不了防席（它夺冠 62%）	docs/artifacts/r61fix-91.bak
+v7cur3-93	09b1b04a4a3143fb	51.3	53.2	prom-blocked	0	6.475	7	4.119	block	0	G4/long 被一行脚本打穿 80%	docs/artifacts/v7cur3-93.bak
+v7sub1-82	c58d051d2725bdf0	50.5	50.2	prom-blocked	0	4.95	16	4.183	block	0.15	G4/long 被一行脚本打穿 83% · G4/multi 被一行脚本打穿 96% · G5/long 清不了防席（它夺冠 44%）	docs/artifacts/v7sub1-82.bak
+v14-114	3a79d47b1d9a117a	50.5	51.9	prom-blocked	0	0	6	3.239	block	0	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 95% · G5/long 清不了防席（它夺冠 89%） · G5/multi 清不了防席（它夺冠 86%）	docs/artifacts/v14-114.bak
+v7new2-93	0eec84914377e6a6	50.4	50.3	prom-blocked	0.1569	0	8	6.643	block	2	G4/long 被一行脚本打穿 68% · G5/long 清不了防席（它夺冠 56%） · G5/multi 清不了防席（它夺冠 30%）	docs/artifacts/v7new2-93.bak
+v7role1-81	8e4e274ebf5fee03	50.2	53.9	prom-blocked	0	3.65	14	5.106	block	0	G4/long 被一行脚本打穿 89% · G4/multi 被一行脚本打穿 74% · G5/long 清不了防席（它夺冠 90%） · G5/multi 清不了防席（它夺冠 75%）	docs/artifacts/v7role1-81.bak
+v7role1w-91	71ab98d0f032cc86	49.9	50.4	prom-blocked	0.1321	0	8	3.482	block	0.5	G4/long 被一行脚本打穿 88% · G4/multi 被一行脚本打穿 77%	docs/artifacts/v7role1w-91.bak
+v7cmin4-82	394b94614e5bfd0c	49.6	47.9	prom-blocked	0	28.975	8	4.877	block	0	G4/long 被一行脚本打穿 89% · G4/multi 被一行脚本打穿 93%	docs/artifacts/v7cmin4-82.bak
+v7new5_01-81	3408de99c8aeb134	49.2	53	prom-blocked	0	0	11	3.572	block	0	G4/long 被一行脚本打穿 96% · G4/multi 被一行脚本打穿 87%	docs/artifacts/v7new5_01-81.bak
+v7f2t-92	82f872b85b6feb21	49.1	52.6	prom-blocked	0.0189	0.025	11	5.042	block	0	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 96% · G5/long 清不了防席（它夺冠 99%） · G5/multi 清不了防席（它夺冠 98%）	docs/artifacts/v7f2t-92.bak
+v7divK2-81	58befd30dddd85ad	49	50.9	prom-blocked	0	8.35	10	5.102	block	0	G4/long 被一行脚本打穿 85% · G4/multi 被一行脚本打穿 63% · G5/long 清不了防席（它夺冠 42%） · G5/multi 清不了防席（它夺冠 32%）	docs/artifacts/v7divK2-81.bak
+v7protoE-82	d0d5c0e1afdd0ec8	48.9	48.7	prom-blocked	0	9.225	6	3.535	block	0	G4/long 被一行脚本打穿 88% · G4/multi 被一行脚本打穿 90% · G5/long 清不了防席（它夺冠 31%） · G5/multi 清不了防席（它夺冠 51%）	docs/artifacts/v7protoE-82.bak
+v7rand-32	3ed3228d4667a346	48.3	50.7	prom-blocked	0.0375	0	15	4.792	block	1.65	G5/long 清不了防席（它夺冠 31%）	docs/artifacts/v7rand-32.bak
+v7f35b-94	7729901f7391aa07	48.2	49.7	prom-blocked	0	5.175	8	5.048	block	0	G4/long 被一行脚本打穿 82%	docs/artifacts/v7f35b-94.bak
+v7f5b-96	0c5fa3e50896b22c	48.1	51	prom-blocked	0	1.325	8	3.997	block	0	G4/long 被一行脚本打穿 87% · G4/multi 被一行脚本打穿 84% · G5/long 清不了防席（它夺冠 86%） · G5/multi 清不了防席（它夺冠 81%）	docs/artifacts/v7f5b-96.bak
+v7f5div3-81	0863d1fde8f567e1	48.1	46.4	prom-blocked	0	0	9	3.665	block	0	G4/long 被一行脚本打穿 99% · G4/multi 被一行脚本打穿 100% · G5/long 清不了防席（它夺冠 100%） · G5/multi 清不了防席（它夺冠 100%）	docs/artifacts/v7f5div3-81.bak
+v13-101	83886bd0014842a7	47.6	46.1	prom-blocked	0.0314	0	8	4.081	block	0	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 100% · G5/long 清不了防席（它夺冠 47%）	docs/artifacts/v13-101.bak
+v7gf1-93	eea2f3668bbce600	47.6	47.9	prom-blocked	0	0.05	7	3.834	block	0	G4/long 被一行脚本打穿 76%	docs/artifacts/v7gf1-93.bak
+v7l2f-141	70eaad2e41353832	47.1	48	prom-blocked	0.3125	0.025	12	7.427	block	0.1	G5/long 清不了防席（它夺冠 48%） · G5/multi 清不了防席（它夺冠 34%）	docs/artifacts/v7l2f-141.bak
+v7new6-94	9efbdfdd37d65bd4	47.1	50.1	prom-blocked	0	0.6	9	5.285	block	0	G5/long 清不了防席（它夺冠 40%）	docs/artifacts/v7new6-94.bak
+v7gf1-91	23a7c51ad1d3c8af	47	44.8	prom-blocked	0.2463	0	15	7.648	block	0.05	G4/long 被一行脚本打穿 94% · G4/multi 被一行脚本打穿 78% · G5/long 清不了防席（它夺冠 59%） · G5/multi 清不了防席（它夺冠 32%）	docs/artifacts/v7gf1-91.bak
+v7cur2-82	36ba2891b9567c45	46.4	43.8	prom-blocked	0.0063	11.375	7	4.112	block	0	G4/long 被一行脚本打穿 99% · G4/multi 被一行脚本打穿 71%	docs/artifacts/v7cur2-82.bak
+v14-111	524a20e044f1ad10	46.2	50.8	prom-blocked	0.0503	0	8	4.63	block	0	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 97% · G5/long 清不了防席（它夺冠 100%） · G5/multi 清不了防席（它夺冠 96%）	docs/artifacts/v14-111.bak
+v7l2s-93	bb7bd792a419d10c	46	50.3	prom-blocked	0.0881	0.05	10	3.576	block	0.1	G4/long 被一行脚本打穿 87% · G5/long 清不了防席（它夺冠 88%） · G5/multi 清不了防席（它夺冠 36%）	docs/artifacts/v7l2s-93.bak
+v7tgt4-66	dea1277ce135d2b5	45.1	47.7	prom-blocked	0	0.075	12	3.364	block	0.05	G4/long 被一行脚本打穿 90% · G4/multi 被一行脚本打穿 73% · G5/long 清不了防席（它夺冠 87%） · G5/multi 清不了防席（它夺冠 79%）	docs/artifacts/v7tgt4-66.bak
+v7new5_01-93	9bf736bf756a8d4d	45.1	47	prom-blocked	0.0063	0	6	4.157	block	0	G4/long 被一行脚本打穿 99% · G4/multi 被一行脚本打穿 97% · G5/long 清不了防席（它夺冠 99%） · G5/multi 清不了防席（它夺冠 96%）	docs/artifacts/v7new5_01-93.bak
+v7m2_noTarget-36	65f4402c5c8847c1	44.9	41.1	prom-blocked	0	0	8	4.756	block	0.05	G5/long 清不了防席（它夺冠 46%） · G5/multi 清不了防席（它夺冠 50%）	docs/artifacts/v7m2_noEffects-31.bak
+v7l2o-93	ef8de8e65453e1cf	44.5	45	prom-blocked	0.2026	0	11	4.638	block	0	G4/long 被一行脚本打穿 97% · G4/multi 被一行脚本打穿 74%	docs/artifacts/v7l2o-93.bak
+v7force2-35	0d61340ade07129e	43.5	44.6	prom-blocked	0	0.825	9	3.845	block	0	G4/long 被一行脚本打穿 95% · G4/multi 被一行脚本打穿 85% · G5/long 清不了防席（它夺冠 98%） · G5/multi 清不了防席（它夺冠 88%）	docs/artifacts/v7force2-35.bak
+v7sub1-81	cad76c004b2318f6	43.3	45.2	prom-blocked	0	0.4	5	3.311	block	2.45	G4/long 被一行脚本打穿 87% · G4/multi 被一行脚本打穿 83% · G5/long 清不了防席（它夺冠 77%） · G5/multi 清不了防席（它夺冠 79%）	docs/artifacts/v7sub1-81.bak
+v7fix1-82	88add28fb048237b	42.6	42.8	prom-blocked	0	2.375	6	3.709	block	0	G4/long 被一行脚本打穿 88% · G5/long 清不了防席（它夺冠 45%） · G5/multi 清不了防席（它夺冠 40%）	docs/artifacts/v7fix1-82.bak
+v7tgt2-52	65207cc7229527a4	41.8	43.7	prom-blocked	0.0351	0.025	10	4.807	block	6.15	G4/long 被一行脚本打穿 66%	docs/artifacts/v7tgt2-52.bak
+v7b-45	773f81c0e2a6f5d2	41.6	45.5	prom-blocked	0	0.1	12	3.742	block	0	G4/long 被一行脚本打穿 95% · G4/multi 被一行脚本打穿 77% · G5/long 清不了防席（它夺冠 80%） · G5/multi 清不了防席（它夺冠 68%）	docs/artifacts/v7b-45.bak
+v7clear2-81	1dd6836b8b2edb8a	41.5	43.2	prom-blocked	0	1.2	9	4.545	block	1.35	G4/long 被一行脚本打穿 76%	docs/artifacts/v7clear2-81.bak
+v7aim3-93	362131bb77ebd059	35.6	34.6	prom-blocked	0	0	9	4.054	block	0	G4/long 被一行脚本打穿 64%	docs/artifacts/v7aim3-93.bak
+v7f3-94	ba5a75b49ec5737c	34	31.6	prom-blocked	0	0	8	4.266	block	0	G4/long 被一行脚本打穿 67% · G4/multi 被一行脚本打穿 69%	docs/artifacts/v7f3-94.bak
+eco2-34	65a68ff19f0841b4	28	30.3	prom-blocked	0	4.75	10	5.361	block	2.25	G5/long 清不了防席（它夺冠 41%）	docs/artifacts/eco2-34.bak
+fgtB-34	b790c53e4475f499	28	35.3	prom-blocked	0.0539	2.525	12	5.317	block	0	G4/long 被一行脚本打穿 97% · G4/multi 被一行脚本打穿 87% · G5/long 清不了防席（它夺冠 81%） · G5/multi 清不了防席（它夺冠 64%）	docs/artifacts/fgtB-34.bak
+eco2-35	6157caa39cd53c57	25.9	29.5	prom-blocked	0.4291	0	10	4.9	block	0	G4/long 被一行脚本打穿 96% · G4/multi 被一行脚本打穿 66% · G5/long 清不了防席（它夺冠 94%） · G5/multi 清不了防席（它夺冠 67%）	docs/artifacts/eco2-35.bak
+fgtB-32	a0372a73fac9ae71	24.8	26.8	prom-blocked	0	0.05	8	3.813	block	0	G4/long 被一行脚本打穿 94% · G4/multi 被一行脚本打穿 77% · G5/long 清不了防席（它夺冠 95%） · G5/multi 清不了防席（它夺冠 81%）	docs/artifacts/fgtB-32.bak
+rwd0-36	5a074e41844fbbc7	20.7	20.9	prom-blocked	0	0.025	11	4.428	block	0	G5/long 清不了防席（它夺冠 30%） · G5/multi 清不了防席（它夺冠 28%）	docs/artifacts/rwd0-36.bak

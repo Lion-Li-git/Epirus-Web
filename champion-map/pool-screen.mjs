@@ -106,10 +106,30 @@ for (const w in byWid) {
 }
 all.sort((a, b) => b.Hp - a.Hp);
 
+/* ---------- 2b. 上槽体检（`promote.tsv`）= **另一道更严的闸**，必须接进来 ----------
+ * 为什么：`feas` 的五道**不含**"送盾 ≤ 6/局"与 G4（不许被一行脚本打穿）/G5（面对只防御必须清场）那几条腿，
+ *   而池成员恰恰怕的是**退化对手**（被一支脚本打穿 99% 的包放在任何档都是坏对手）。
+ * 实测（本班）：池 170 枚里只有 99 枚测过，其中 **65 枚 `block`**、71 枚没测过；
+ *   我按 Hp 自动挑出的 `v7l2c-82`（56.8，本档最高）是 `block`（G4/long 被打穿 99%），
+ *   我推荐的"不蓄能候选" `v7beadseed-82` 也是 `block`（**送盾 17.3/局 > 6**，`--force` 也不放行）。
+ *   ⇒ 教训：**"过线"有两个口径，只用 `feas` 会安静地放进退化包**。 */
+const PROM = {};
+const promP = join(HERE, 'promote.tsv');
+if (existsSync(promP)) {
+  const PL = rd(promP), ph = PL[0].split('\t');
+  const pI = ph.indexOf('id'), pV = ph.indexOf('verdict'), pB = ph.indexOf('blocks'), pH = ph.indexOf('holoOther');
+  for (const l of PL.slice(1)) { const c = l.split('\t'); if (!c[pI]) continue;
+    PROM[c[pI]] = { v: c[pV] || '', blocks: c[pB] || '', holo: c[pH] || '' }; }
+}
+const VD = p => (PROM[p.id] || {}).v || 'untested';
+const BLOCKS = p => (PROM[p.id] || {}).blocks || '';
+const HOLO = p => (PROM[p.id] || {}).holo || '';
+
 /* ---------- 3. 分档（门槛是分档的，见文件头）---------- */
-const auto = all.filter(p => p.ns <= NS_MAX);                       // 卡死门槛：自动成员全体
+const auto = all.filter(p => p.ns <= NS_MAX && VD(p) !== 'block');   // 卡死门槛（全体）+ 上槽体检 block 出局（自动成员）
 const hardAuto = auto.filter(p => p.Hp >= HI && p.chg > CHG_MIN);   // 困难档自动成员：另加蓄能门槛
 const blockedByChg = all.filter(p => p.Hp >= HI && p.chg <= CHG_MIN);// 被困难档蓄能门槛挡掉的（裁定②的候选清单）
+const blockedByProm = all.filter(p => VD(p) === 'block' && !KEEP.some(k => k === p.id));   // 被上槽体检挡掉的
 const mid = auto.filter(p => p.Hp >= LO && p.Hp < HI);
 const low = auto.filter(p => p.Hp < LO);
 const byId = {}; for (const p of all) byId[p.id] = p;
@@ -147,20 +167,28 @@ function pick(tier, k, fixed) {
 }
 const extremes = z => DIMS.map((k, j) => [k, z[j]]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 2)
   .map(([k, v]) => k + (v > 0 ? '↑' : '↓')).join('/');
-const warnOf = p => (p.ns > NS_MAX ? ' ⚠摆架' + p.ns.toFixed(3) : '') + (p.chg <= CHG_MIN ? ' ⚠蓄能' + p.chg.toFixed(2) : '');
+const warnOf = p => (p.ns > NS_MAX ? ' ⚠摆架' + p.ns.toFixed(3) : '') + (p.chg <= CHG_MIN ? ' ⚠蓄能' + p.chg.toFixed(2) : '') +
+  (VD(p) === 'block' ? ' ⛔体检block[' + BLOCKS(p).slice(0, 30) + ']' : VD(p) === 'pass' ? ' 体检过' : '');
 
 /* ---------- 5. 打印 + 落盘 ---------- */
 console.log('# 冠军池筛选 ‖ 过线判定源 = ' + FILES.join('+') + '（tag ' + TAG + '）‖ 过线 ' + cand.length +
   ' 枚 → 按权重去重 **' + all.length + ' 枚**（折掉 ' + (cand.length - all.length) + '）');
 if (sameWidDiffHp.length) console.log('  ⚠ 同权重却不同 Hp 的组 ' + sameWidDiffHp.length + '：' +
   sameWidDiffHp.map(g => g[0].wid.slice(0, 8) + '[' + g.map(x => x.id + ':' + x.Hp).join(' ') + ']').join(' ‖ '));
-console.log('# 门槛：自动成员须 摆架 ≤ ' + NS_MAX + '（卡死病）‖ 困难档自动成员另须 蓄能 > ' + CHG_MIN +
+console.log('# 门槛：自动成员须 摆架 ≤ ' + NS_MAX + '（卡死病）**且上槽体检 ≠ block**（送盾/G4/G5 —— `feas` 五道不含这几条）' +
+  '‖ 困难档自动成员另须 蓄能 > ' + CHG_MIN +
   '（裁定①：中低档不卡蓄能）‖ 点名 ' + (keepP.length ? keepP.map(p => p.id).join(',') : '（无）') + ' 越过全部门槛');
+const nPass = all.filter(p => VD(p) === 'pass').length;
+console.log('# 上槽体检（champion-map/promote.tsv，' + Object.keys(PROM).length + ' 枚有记录）：池里 pass ' + nPass +
+  ' ‖ block ' + blockedByProm.length + '（已从自动成员出局）‖ 没测过 ' + all.filter(p => VD(p) === 'untested').length +
+  ' ⇒ **没测过 ≠ 过关**，池上线前建议逐枚补 `promote --dry`（≈2.5 分钟/枚）');
 if (keepMiss.length) console.log('  ⚠ 点名里有 ' + keepMiss.length + ' 个查不到（不在过线集合或 coords 里）：' + keepMiss.join(','));
 console.log('# 切点：高 ≥ ' + HI + ' ‖ 中 ' + LO + '~' + HI + ' ‖ 低 < ' + LO + ' ⇒ 困难 ' + hard.length +
   '（其中自动 ' + hardAuto.length + ' + 点名 ' + keepP.length + '）/ 中等 ' + mid.length + ' / 低 ' + low.length + ' 枚 ‖ 行为维 ' + DIMS.length + ' 维（与 seatroster 对账过）');
 if (blockedByChg.length) console.log('# 被困难档的蓄能门槛挡掉 ' + blockedByChg.length + ' 枚（裁定②里"可以放一两个不蓄能的"就从这里点名）: ' +
-  blockedByChg.slice(0, 12).map(p => p.id + ':' + p.Hp + '(蓄能' + p.chg + ')' + (p.ns > NS_MAX ? '⚠摆架' + p.ns.toFixed(2) : '')).join('  ') + (blockedByChg.length > 12 ? ' …' : ''));
+  blockedByChg.slice(0, 12).map(p => p.id + ':' + p.Hp + '(蓄能' + p.chg + ')' + (p.ns > NS_MAX ? '⚠摆架' + p.ns.toFixed(2) : '') + (VD(p) === 'pass' ? ' ✔体检过' : VD(p) === 'block' ? ' ⛔体检block' : '')).join('  ') + (blockedByChg.length > 12 ? ' …' : ''));
+if (blockedByProm.length) console.log('# ⛔ 被上槽体检挡掉 ' + blockedByProm.length + ' 枚（自动成员里已剔除；要点名请 `--keep=`）: ' +
+  blockedByProm.slice(0, 8).map(p => p.id + ':' + p.Hp + '[' + BLOCKS(p).slice(0, 44) + ']').join('  ') + (blockedByProm.length > 8 ? ' …' : ''));
 
 for (const t of ['hard', 'mid', 'low']) {
   const name = { hard: '困难（裁定②：少而精 = 点名 + 自动挑）', mid: '中等（不卡蓄能）', low: '低（脚本 + 低 Hp 包随机参与）' }[t];
@@ -173,15 +201,21 @@ for (const t of ['hard', 'mid', 'low']) {
       ' 显著维 ' + extremes(x.z).padEnd(18) + ' ' + x.why + (x.d ? ' d=' + x.d : '') + warnOf(p));
   }
 }
-const L = ['id\twid\tHp\tH\ttier\tnoThreatStance\tcharges\tdistinctKeys\tGeff\tpath'];
-/* ⚠ 这三档**盖不满** `all`：Hp ≥ 切点但蓄能 ≤ 门槛的那批（裁定②"可以放一两个不蓄能的"候选）
- *   既进不了困难档、也不属于中/低档 ⇒ 必须单独落成 `hard-blocked` 行，否则它们在 tsv 里**静默消失**
- *   （用户要点名时连 path 都查不到）。"覆盖变小要看得见"——与 千问 在 dedupe 里立的同一条规矩。 */
-for (const p of hard) L.push([p.id, p.wid, p.Hp, p.H, 'hard', p.ns, p.chg, p.v[4], p.v[8], p.path].join('\t'));
-for (const p of blockedByChg) L.push([p.id, p.wid, p.Hp, p.H, 'hard-blocked', p.ns, p.chg, p.v[4], p.v[8], p.path].join('\t'));
-for (const p of mid) L.push([p.id, p.wid, p.Hp, p.H, 'mid', p.ns, p.chg, p.v[4], p.v[8], p.path].join('\t'));
-for (const p of low) L.push([p.id, p.wid, p.Hp, p.H, 'low', p.ns, p.chg, p.v[4], p.v[8], p.path].join('\t'));
+const L = ['id\twid\tHp\tH\ttier\tnoThreatStance\tcharges\tdistinctKeys\tGeff\tverdict\tholoOther\tblocks\tpath'];
+const row = (p, t) => [p.id, p.wid, p.Hp, p.H, t, p.ns, p.chg, p.v[4], p.v[8], VD(p), HOLO(p), BLOCKS(p).slice(0, 120), p.path].join('\t');
+/* ⚠ 这几档**盖不满** `all`，每一支都必须单独落行，否则它们会在 tsv 里**静默消失**（用户要点名时连 path 都查不到）：
+ *   `hard-blocked` = Hp ≥ 切点但蓄能 ≤ 门槛（裁定②"可以放一两个不蓄能的"候选）‖
+ *   `prom-blocked` = 上槽体检判 block（送盾/G4/G5）—— 它们不是"没过五道"，是**没过更严的那道**，必须看得见。
+ *   ⚠ 两边**会重叠**（Hp 到线 ∧ 蓄能不够 ∧ 体检 block）⇒ 落盘时按 `prom-blocked` 优先去重，否则同一枚出两行。 */
+const chgRows = blockedByChg.filter(p => VD(p) !== 'block');
+for (const p of hard) L.push(row(p, 'hard'));
+for (const p of chgRows) L.push(row(p, 'hard-blocked'));
+for (const p of mid) L.push(row(p, 'mid'));
+for (const p of low) L.push(row(p, 'low'));
+for (const p of blockedByProm) L.push(row(p, 'prom-blocked'));
 writeFileSync(join(HERE, OUT), L.join('\n') + '\n');
-console.log('\n已写 champion-map/' + OUT + '（hard ' + hard.length + ' + hard-blocked ' + blockedByChg.length +
-  ' + mid ' + mid.length + ' + low ' + low.length + ' = ' + (L.length - 1) + ' 行；漏了就是有行静默消失了）');
+console.log('\n已写 champion-map/' + OUT + '（hard ' + hard.length + ' + hard-blocked ' + chgRows.length +
+  '（蓄能候选 ' + blockedByChg.length + ' 枚里已剔掉体检 block 的 ' + (blockedByChg.length - chgRows.length) + '）' +
+  ' + mid ' + mid.length + ' + low ' + low.length + ' + prom-blocked ' + blockedByProm.length + ' = ' + (L.length - 1) +
+  ' 行；漏了/多了就是有行静默消失或重复了）');
 console.log('# 人席跑法：node tools/probe-human-seat.mjs --packs=' + hard.map(p => p.path).join(',') + ' --games=200 --modes=multi,long --seed=90210');
