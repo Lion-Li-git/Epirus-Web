@@ -19,8 +19,8 @@
  *
  * ⚠ 引用它的读数必须带四样（§E272/第 45 条）：**装配（人数 × 血量）+ 用哪颗包 + 替身是模型不是真人 + 这是绝对电平不是配对差**。
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { join, isAbsolute } from 'node:path';
 import { sandbox, mulberry32, ROOT, extractJsonObject, rejectUnknownFlags } from './audit-lib.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 import { loadChampParams } from '../server/opp-champs.mjs';
@@ -44,6 +44,16 @@ const W = sandbox(ROOT);
 const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, Bots = W.EpirusBots, T = W.EpirusTrainer;
 const POOL = W.EpirusPolicy;
 const params3p = loadChampParams(POOL, join(ROOT, 'js/bundled-champion-3p.js'));
+/* §E588（千问 10-11）：`--pack=<相对路径>` —— 让这把尺能指到**钉住的某一枚**。
+ *   理由与 `duel-run --ref=` 同一件事：`auto` 指的是活槽，而活槽会换主人 ⇒
+ *   v1.6.62 换包之后"相邻难度档分不开"到底是**阶梯的剂量坏了**还是**新包把电平压平了**，只有能点名才判得出来。 */
+const paramsCustom = (PACK !== 'auto' && PACK !== '2p' && PACK !== '3p')
+  ? (function () {
+      const f = isAbsolute(PACK) ? PACK : join(ROOT, PACK);
+      if (!existsSync(f)) { console.error('⛔ --pack=' + PACK + ' 不在盘上（`auto|2p|3p` 之外的值一律当**路径**处理）'); process.exit(2); }
+      return loadChampParams(POOL, f);
+    })()
+  : null;
 let params2p = null;
 try {
   const j2 = extractJsonObject(readFileSync(join(ROOT, 'js/bundled-champion.js'), 'utf8'), 'window.EPIRUS_CHAMPION', '_META');
@@ -70,6 +80,7 @@ function affordableFirst(legal) {
 }
 /* 2 人桌换包的理由见 `DIFF_TIERS` 上面那段（§E286 实测：3P 那颗在 1v1 上是分布外的，剂量梯还反号）。 */
 function packFor(n) {
+  if (paramsCustom) return { p: paramsCustom, tag: PACK.replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, '') };
   if (PACK === '3p') return { p: params3p, tag: '3P' };
   if (PACK === '2p') return { p: params2p || params3p, tag: params2p ? '2P' : '3P(2P 槽缺失)' };
   if (n > 2) return { p: params3p, tag: '3P' };
