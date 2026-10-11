@@ -4,6 +4,7 @@
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
+import { loadPool, makeMimic } from './human-pool.mjs';   // v1.6.60：人类形状对手的**单一来源**（§E152e/§E155/§E168 的产物；别再抄一份采样器）
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
@@ -92,6 +93,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
+  'EPIRUS_OPP_HUMAN', 'EPIRUS_OPP_HUMAN_SRC', 'EPIRUS_OPP_HUMAN_TGT', 'EPIRUS_OPP_HUMAN_FILE',   // v1.6.60：把**人类形状替身**放上训练桌（默认关 ⇒ OPPS 一字不变）
   'EPIRUS_BIGT_PUSH', 'EPIRUS_DRAIN_PUSH',   // §E275（v1.5.334）：**部署档的 CLI 把手**（大雷默认档 / 摄魂探索软提升）；不设 ⇒ 引擎默认一字不动，设了就由引擎回读
   'EPIRUS_SEL_BIGT', 'EPIRUS_SEL_BIGT_KEYS', 'EPIRUS_SEL_BIGT_GAMES', 'EPIRUS_SEL_BIGT_MODE',   // v1.5.326 §E249：同分带内按贵卡出手选人（默认 0 ⇒ 当选者逐字不变）
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
@@ -891,6 +893,80 @@ if (ECON_OPPS.length) {
   for (const o of ECON_OPPS) OPPS.push(o);
   console.log('[econ-ops] "会攒并且真兑现"的对手已进训练桌：' + ECON_OPPS.map(function (o) { return o.name; }).join(',') +
     ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（判据：产物的**决策时 ep 均值 / 大雷出手**，见日志 §E236 预注册）');
+}
+
+/* ===== v1.6.60（用户 10-10 提的方向，10-11 落成接线）：把**人类形状替身**放上训练桌 =====
+ * `EPIRUS_OPP_HUMAN=<n>`（默认关）· `_SRC=human|ai`（默认 human）· `_TGT=next|rand`（默认 next）· `_FILE=<路径>`（默认 human-behavior.json）
+ *
+ * 病（四处独立读数指向同一件事）：出厂闸反复毙掉候选的理由是"**对着人类原型崩**"——
+ *   §E505 那一类到 10-11 已**独立复现 4 次**（最近一次是 `contX-201`：页面 55.9 > 现役 50.4、考卷 56.4，
+ *   而人类原型把它当靶子打：三格双双过否决线）。⇒ 而**训练桌上没有人**：
+ *   `OPPS` 那 9 条全是脚本，最接近的 `defend` 是"**会还手**的防御" ⇒ 训练目标与闸要考的东西之间，缺的正是这一型对手。
+ *
+ * 口径（单一来源，不抄实现）：`tools/human-pool.mjs` 的 `loadPool/makeMimic`，
+ *   分布来自 `docs/artifacts/human-behavior.json`（56 局 / ~997 个决策的人类日志，§E152e 的产物）。
+ *   条件键 = `钱档(0..5)/是否富有(≥5ep)/上一手的显示名`；抽不到可负担的卡最多重试 8 次后退回 ジ。
+ *   ⚠️ 它是**粗模型**（按经验分布抽样、**不会针对你调整**）⇒ 只当"人类这种打法"的代理，**别当真人**。
+ *
+ * 确定性（本设计里最要紧的一条）：`makeMimic` 的随机流**由调用方注入**，而引擎给的局种子含 `opp.name`
+ *   （`js/train/evo.js:286`）⇒ 我**不能**用一条全局推进的流：那会让"谁先被评"影响后面的抽样，
+ *   破坏配对评估（v1.4.1 那个疤：轮换跟个体下标走 ⇒ 考卷 38.4% 掉到 21.8%）。
+ *   ⇒ 所以**每次决策前按 state 重播种**（round / 各席血量 / 钱 / 电珠 / pid / 合法集大小）：
+ *   人形对手成了"**state 的确定性函数**"，与代次、个体下标、局号**都无关** ⇒ 可复现、且两臂面对同一个人。
+ *
+ * 纪律与 §N35（COUNTER_OPPS）/§E127（RING_OPPS）/§E236（ECON_OPPS）逐字同形：
+ *   **默认关 ⇒ `OPPS` 一字不变**（历史臂仍可逐位复现）‖ 分布读不出/参数非法 ⇒ **`exit 4` 点名**（少一个就是一根空枪）
+ *   ‖ 开了必须印"OPPS 从 9 个变 N 个"与分布口径，并在退出前印**开火计数**（命中/退回ジ）。
+ * ⚠️ 空枪守卫**不许盖掉已经存在的非零退出码**（与 `EPIRUS_TRAIN_EPS` 那条不同——它正是这样把 D176 的 exit 7 盖成 8 的）。 */
+const HUMAN_N_RAW = String(process.env.EPIRUS_OPP_HUMAN || '').trim();
+const HUMAN_N = HUMAN_N_RAW === '' ? 0 : Number(HUMAN_N_RAW);
+if (HUMAN_N_RAW !== '' && (!Number.isFinite(HUMAN_N) || HUMAN_N < 0 || HUMAN_N !== Math.floor(HUMAN_N) || HUMAN_N > 8)) {
+  console.error('[opp-human] ⛔ EPIRUS_OPP_HUMAN 必须是不大于 8 的非负整数（收到 ' + JSON.stringify(HUMAN_N_RAW) + '）');
+  process.exit(4);
+}
+const HUMAN_OPPS = [];
+if (HUMAN_N > 0) {
+  const HB_SRC = String(process.env.EPIRUS_OPP_HUMAN_SRC || 'human').trim();
+  const HB_TGT = String(process.env.EPIRUS_OPP_HUMAN_TGT || 'next').trim();
+  if (HB_TGT !== 'next' && HB_TGT !== 'rand') {
+    console.error('[opp-human] ⛔ EPIRUS_OPP_HUMAN_TGT 只能是 next 或 rand（收到 ' + JSON.stringify(HB_TGT) + '）');
+    process.exit(4);
+  }
+  let pool = null;
+  try { pool = loadPool(sb.window, HB_SRC, process.env.EPIRUS_OPP_HUMAN_FILE || null); }
+  catch (e) {
+    console.error('[opp-human] ⛔ 读不出人类形状分布（SRC=' + HB_SRC + '）：' + (e && e.message) +
+      ' ⇒ 拒绝静默少放对手（少一个就是一根空枪）');
+    process.exit(4);
+  }
+  for (let i = 0; i < HUMAN_N; i++) {
+    const st = { cur: null };
+    const fn = makeMimic(sb.window, pool, HB_TGT, function () { return st.cur(); });
+    const wrapped = function (state, pid, legal) {
+      let h = (Math.imul(state.round | 0, 2654435761) ^ Math.imul(pid | 0, 40503) ^ Math.imul(legal ? legal.length : 0, 97)) | 0;
+      const ps = state.p || [];
+      for (let k = 0; k < ps.length; k++) {
+        h = (Math.imul(h, 31) + ((ps[k].hp | 0) * 7 + ((ps[k].ep || 0) * 13) + ((ps[k].elec || 0) * 3))) | 0;
+      }
+      st.cur = sb.window.EpirusTrainer.mulberry32(((h >>> 0) ^ Math.imul(i + 1, 2246822519)) >>> 0);
+      return fn(state, pid, legal);
+    };
+    wrapped.stat = fn.stats;   /* 与 `makeMimic` 的 stats 同一个对象 ⇒ 计数直接落在它上面 */
+    HUMAN_OPPS.push({ name: 'human' + (i + 1), sel: wrapped });
+  }
+  for (const o of HUMAN_OPPS) OPPS.push(o);
+  console.log('[opp-human] 人类形状替身已进训练桌：' + HUMAN_OPPS.map(function (o) { return o.name; }).join(',') +
+    '（分布=' + HB_SRC + ' · 指向=' + HB_TGT + ' · 条件数=' + pool.conds + ' · 样本 ' + pool.games + ' 局）' +
+    ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个');
+  process.on('exit', function () {
+    let hit = 0, miss = 0;
+    for (const o of HUMAN_OPPS) { if (o && o.sel && o.sel.stat) { hit += o.sel.stat.hit; miss += o.sel.stat.miss; } }
+    console.log('[opp-human] 开火计数：命中条件分布 **' + hit + '** 次 · 8 次抽不到退回ジ ' + miss + ' 次');
+    if (hit + miss === 0 && !process.exitCode) {
+      console.error('[opp-human] ⛔ 空枪：放上了人形对手却一次都没被问到 ⇒ 读数与出厂臂无差别，作废');
+      process.exitCode = 8;
+    }
+  });
 }
 
 /* ===== §E124（v1.5.279 · qoder 0928 下午班）：**整桌同原型** `EPIRUS_OPP_BLOCK` 的下达（默认关）=====
