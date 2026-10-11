@@ -11920,8 +11920,14 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
   ok(one.allSame && one.degraded === 'single-member-tier',
     '⑤ 档内只有 1 枚时全同是数学必然 ⇒ 必须**说出来**（degraded=single-member-tier），静默就是骗玩家');
 
-  /* ⑥ 契约的三处读者必须存在且各就各位：产品取包点、量具、真源表 —— 少一个就是"文档写了但没人执行" */
-  ok(readFileSync('docs/POOL-CONTRACT.md', 'utf8').indexOf('逐席') >= 0, '⑥ 契约文档要还在册并写着"逐席"（删文档不删判据 = 假绿）');
+  /* ⑥ 契约的三处读者必须存在且各就各位：产品取包点、量具、真源表 —— 少一个就是"文档写了但没人执行"。
+   *   ⚠ 这里**原本还有一条** `POOL-CONTRACT.md` 里必须出现"逐席"的正向钉措辞腿，10-12 摘掉了：
+   *     ① 它违反 METHODOLOGY 第 89 条（10-06 用户点名：文档面只许钉"指向不存在的东西"，不许钉"某句话必须出现"，后者同时造假绿与假红），
+   *        而且是全库 278 条里**唯一**一条 C 类（`node tools/gate-audit-vacuous.mjs` 报 C=1 就报到我这条上）；
+   *     ② 按第 127 条判"摘了丢不丢覆盖"是**全仓**判的：`docs/POOL-CONTRACT.md` 被 12 处活引用面指着
+   *        （`js/ui/ui.js` / `js/train/bots.js` / 生成的 bundle 头 / `tools/audit-lib.mjs` / `build-pool-bundle` 的两条警告 …），
+   *        而 `D230` 会把"活引用面里的 `docs/**.md` 指针落空"当场判红 ⇒ 删文档这件事**已经有人守**，我这条只是把措辞也钉死。
+   *     ⇒ 保留下面三条**行为/接线**腿（量具存在、必须走 `chooserFor`+`js/pool-draw.js`、必须用共享人类原型表）。 */
   const PB = 'tools/probe-pool.mjs';
   ok(existsSync(PB), '⑥ 池形态的量具不在：' + PB + ' ⇒ 旧尺的缺省装配没被动过，池读数无处来');
   const pbs = readFileSync(PB, 'utf8');
@@ -11983,7 +11989,7 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
   ok(readFileSync('champion-map/pool-members.tsv', 'utf8').indexOf(killedPath) < 0,
     '⑧ 已被人席判死的 ' + killedPath + ' 不许还在池里（腿③ 只查自动成员的 seatKill>0，这条钉的是"路径也别留在表里"）');
 
-  /* ⑨ **回显与决策必须走同一个判定**（10-12 04:1x 浏览器实机抓到的一条真撒谎）：
+  /* ⑨ **回显与决策必须走同一个判定**（10-12 03:0x~03:1x 浏览器实机抓到的一条真撒谎；时间更正见 `js/ui/ui.js` 的 `poolPlan` 头注）：
    *   `champForSeat`（真决策）先查了"本机导入优先"，而 `aiInfo`（席位标签）没查就报"池·mid 本局=…"
    *   ⇒ 只要用户在这台机器上训练/导入过 3P 冠军（训练完页面**自动**写 `localStorage['epirus.champion3p']`），
    *     五人桌实际四席用他那枚，而标签说池在跑。修法不是补一句注释，是把判定收成一个 `poolPlan()`，两边都问它。
