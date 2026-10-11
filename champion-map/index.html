@@ -476,7 +476,12 @@ function incPct() { var s = splitSets(); return s.all.length ? 100 * s.dn.length
  *   ⚠ 这条改动只动**分类色**（fam / seed 两档）；F / Hp / Δε / sc 那几档是连续 LUT，不归它管。 */
 function hueAt(i, n) {
   var nn = Math.max(1, n || 1);
-  var h = Math.round(360 * (i % nn) / nn);
+  /* ⚠ 色相**不许铺满一整圈**（10-12 02:2x 实测：n=31 时铺满一圈 ⇒ 头尾两家在色环上又贴回一起，
+   *   差 12°，而这两家恰好 s/l 都相同 ⇒ 页内那条「家族配色」自检一直红着）。
+   *   现在铺到 316° 为止：缝 = 360−316 = 44° ≥40 ⇒ 头尾分得开；同 (s,l) 的两家下标差 6 的倍数，
+   *   6 × (316/(n−1)) ≥ 40 解到 n ≤ 48 —— 家族数超过 48 时这条几何上就不可能再满足，
+   *   那时该改的是"家族不该只用一维颜色编码"，而不是把 40° 调小。 */
+  var h = nn > 1 ? Math.round(316 * (i % nn) / (nn - 1)) : 0;
   var s = (i % 2) ? 60 : 88;
   var l = [50, 74, 62][i % 3];
   return 'hsl(' + h + ',' + s + '%,' + l + '%)'; }
@@ -2270,9 +2275,9 @@ function paintLegend(fr) {
     plg.innerHTML = '<span style="color:' + POOL_COL.hard + '">◍</span>池·困难 ' + (_pt.hard || 0) +
       ' ‖ <span style="color:' + POOL_COL.mid + '">◍</span>池·中 ' + (_pt.mid || 0) +
       ' ‖ <span style="color:' + POOL_COL.low + '">◍</span>池·低 ' + (_pt.low || 0) +
-      '<br><span style="color:' + POOL_COL.hard + '">◍</span> 环色 = 这枚在冠军池哪一档（真源 pool-members.tsv）';
-    plg.title = '多人桌的四个 AI 席**逐席各抽一枚**（同档可重复、禁四席全同）。环只在"这枚是池成员"时画；' +
-      '悬停里那句"人席否决 N 格"的口径 = 与现役比、两批同号 ≥20pt 的格数（§E531，检出力脚注见 §E587）。';
+      '<br><span style="color:' + POOL_COL.hard + '">◍</span> 环色 = 这枚在冠军池哪一档';
+    plg.title = '真源 champion-map/pool-members.tsv（图只抄数不重算）。多人桌的四个 AI 席**逐席各抽一枚**（同档可重复、禁四席全同）' +
+      ' ⇒ 环只在"这枚是池成员"时画；悬停里那句"人席否决 N 格"的口径 = 与现役比、两批同号 ≥20pt 的格数（§E531，检出力脚注见 §E587）。';
     lg.appendChild(plg);
   }
   /* §E433 DS（用户 10-08：「图例下方那两行字纹丝不动…要怎么排版比较合适可以省图例空间」）：
