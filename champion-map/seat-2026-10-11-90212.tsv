@@ -1,0 +1,9 @@
+id	path	mode	games	seed0	全程刷反弹	全程只防御	只攒不打(农民)	只枪压制	攒钱+反弹(会玩)	重火力+反弹	六格均值	最大格	最大格是谁	和棋均值
+bundled-champion-3p	js/bundled-champion-3p.js	multi	200	90212	1	9	1	9	9	8	6.17	9.0	全程只防御	3.5
+bundled-champion-3p	js/bundled-champion-3p.js	long	200	90212	4	12	0	29	15	8	11.33	29.0	只枪压制	2.6666666666666665
+s302-off-h2-band4	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band4.bak	multi	200	90212	0	2	1	5	3	3	2.33	5.0	只枪压制	3.1666666666666665
+s302-off-h2-band4	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band4.bak	long	200	90212	0	4	0	12	22	6	7.33	22.0	攒钱+反弹(会玩)	2
+s302-on-h2-band1	docs/artifacts/opphuman/s302-on-h2/s302-on-h2-band1.bak	multi	200	90212	2	5	0	4	4	8	3.83	8.0	重火力+反弹	4.166666666666667
+s302-on-h2-band1	docs/artifacts/opphuman/s302-on-h2/s302-on-h2-band1.bak	long	200	90212	6	6	0	13	11	2	6.33	13.0	只枪压制	9.5
+v7beadseed-93	docs/artifacts/v7beadseed-93.bak	multi	200	90212	7	9	0	10	5	27	9.67	27.0	重火力+反弹	2.8333333333333335
+v7beadseed-93	docs/artifacts/v7beadseed-93.bak	long	200	90212	8	5	0	12	0	27	8.67	27.0	重火力+反弹	3.3333333333333335
