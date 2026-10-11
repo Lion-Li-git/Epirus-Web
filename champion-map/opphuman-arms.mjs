@@ -71,20 +71,23 @@ const HUMAN = Number(arg('human', 2));
 const TAG = arg('tag', '');
 /* 热启动源：给了就开 `EPIRUS_HOTSTART=1`（两臂都从这枚包续训）。默认空 = 冷启动（v1 那批的形状）。 */
 const HOTSTART = arg('hotstart', '');
+/* 旋钮二选一：给了 `--opps=` ⇒ "on" 臂设 `EPIRUS_COUNTER_OPPS`（把**判据原型**放上桌，v1.5.172 的现成旋钮）；
+ * 否则 ⇒ "on" 臂设 `EPIRUS_OPP_HUMAN`。两臂的唯一差异仍然只有这一个自由变量。 */
+const OPPS = arg('opps', '');
 const SEEDS = String(arg('seeds', '301,302,303')).split(',').map((s) => Number(s.trim())).filter((x) => x > 0);
 
-/* 臂格：每粒种子两臂，唯一差异 = EPIRUS_OPP_HUMAN */
+/* 臂格：每粒种子两臂，唯一差异 = 一根旋钮（OPP_HUMAN 或 COUNTER_OPPS） */
 const arms = [];
 for (const s of SEEDS) {
-  arms.push({ arm: 's' + s + '-off' + (TAG ? '-' + TAG : ''), seed: s, human: 0 });
-  arms.push({ arm: 's' + s + '-on' + (TAG ? '-' + TAG : ''), seed: s, human: HUMAN });
+  arms.push({ arm: 's' + s + '-off' + (TAG ? '-' + TAG : ''), seed: s, human: 0, st: 'off' });
+  arms.push({ arm: 's' + s + '-on' + (TAG ? '-' + TAG : ''), seed: s, human: OPPS ? 0 : HUMAN, st: 'on' });
 }
 
-console.log('配对臂 ' + arms.length + ' 支（' + SEEDS.length + ' 粒种子 × 2 状态，同配方只换 EPIRUS_OPP_HUMAN）'
+console.log('配对臂 ' + arms.length + ' 支（' + SEEDS.length + ' 粒种子 × 2 状态，同配方只换**一根**旋钮）'
   + '‖ 预算 ' + GENS + ' 代 · ' + PN + ' 人 · ' + PG + ' 局/代 · 种群 ' + PP + ' ‖ 并发 ' + POOL
-  + '‖ 人类形状替身 = ' + HUMAN + ' 席'
+  + (OPPS ? ('‖ on 臂加判据原型 EPIRUS_COUNTER_OPPS=' + OPPS) : ('‖ 人类形状替身 = ' + HUMAN + ' 席'))
   + '‖ 起点 = ' + (HOTSTART ? ('热启动 ' + HOTSTART) : '冷启动'));
-console.log('判据跑前已钉：见本文件头部（主端点 = 人席**最坏格**配对差；只看闸侧，不用训练分）\n');
+console.log('判据跑前已钉：见本文件头部（只看闸侧，不用训练分）\n');
 
 const t0 = Date.now();
 const done = [];
@@ -101,7 +104,11 @@ function launch(a) {
     EPIRUS_T3P_OUT: 'docs/artifacts/opphuman/' + a.arm + '/' + a.arm + '-out.js',
   };
   delete env.EPIRUS_PUBLISH;
-  if (a.human > 0) env.EPIRUS_OPP_HUMAN = String(a.human); else delete env.EPIRUS_OPP_HUMAN;
+  if (a.st === 'on' && OPPS) { env.EPIRUS_COUNTER_OPPS = OPPS; delete env.EPIRUS_OPP_HUMAN; }
+  else {
+    if (a.human > 0) env.EPIRUS_OPP_HUMAN = String(a.human); else delete env.EPIRUS_OPP_HUMAN;
+    delete env.EPIRUS_COUNTER_OPPS;
+  }
   if (HOTSTART) { env.EPIRUS_HOTSTART = '1'; env.EPIRUS_SEEDPACK = HOTSTART; }
   else { delete env.EPIRUS_HOTSTART; delete env.EPIRUS_SEEDPACK; }
   if (!existsSync(join(ROOT, env.EPIRUS_BAND_DIR))) mkdirSync(join(ROOT, env.EPIRUS_BAND_DIR), { recursive: true });
@@ -135,9 +142,9 @@ function pump() {
 function sha1(s) { return createHash('sha1').update(s).digest('hex'); }
 
 function report() {
-  const rows = [['arm', 'seed', 'oppHuman', 'hotstart', 'band', 'trainFit', 'packHash12', 'selected', 'bandRel', 'gens', 'n', 'games', 'pop', 'sec']];
+  const rows = [['arm', 'seed', 'oppHuman', 'hotstart', 'opps', 'band', 'trainFit', 'packHash12', 'selected', 'bandRel', 'gens', 'n', 'games', 'pop', 'sec']];
   const selectedPacks = [];
-  for (const r of done.slice().sort((x, y) => (x.seed - y.seed) || (x.human - y.human))) {
+  for (const r of done.slice().sort((x, y) => (x.seed - y.seed) || (x.st < y.st ? -1 : 1))) {
     const d = join(BANDROOT, r.arm);
     if (!existsSync(d)) continue;
     for (const f of readdirSync(d).filter((x) => x.endsWith('.bak')).sort()) {
@@ -148,9 +155,9 @@ function report() {
       let meta; try { meta = JSON.parse(mLine.slice('window.EPIRUS_CHAMPION_3P_META = '.length).replace(/;\s*$/, '')); } catch (e) { continue; }
       const wjson = wLine.slice('window.EPIRUS_CHAMPION_3P = '.length).replace(/;\s*$/, '');
       const rel = 'docs/artifacts/opphuman/' + r.arm + '/' + f;
-      rows.push([r.arm, r.seed, r.human, HOTSTART || '', f.replace('.bak', ''), meta.trainFit != null ? Number(meta.trainFit).toFixed(4) : '',
+      rows.push([r.arm, r.seed, r.human, HOTSTART || '', (OPPS && r.st === 'on') ? OPPS : '', f.replace('.bak', ''), meta.trainFit != null ? Number(meta.trainFit).toFixed(4) : '',
         sha1(wjson).slice(0, 12), meta.selected ? 1 : 0, rel, meta.gens, meta.n, meta.games, meta.pop, r.sec]);
-      if (meta.selected) selectedPacks.push({ arm: r.arm, seed: r.seed, human: r.human, rel, trainFit: meta.trainFit });
+      if (meta.selected) selectedPacks.push({ arm: r.arm, seed: r.seed, human: r.human, st: r.st, rel, trainFit: meta.trainFit });
     }
   }
   const TSV = join(HERE, 'opphuman-arms' + (TAG ? '-' + TAG : '') + '.tsv');

@@ -24,6 +24,9 @@ const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith('--' + k
 const GAMES = arg('games', '200');
 const SEAT_SEEDS = String(arg('seeds', '90210,90211')).split(',').map((s) => s.trim()).filter(Boolean);
 const TAG = arg('tag', '');
+/* v3：本批主端点 = 人席的**某一格**（默认「只枪压制」）—— 那正是杀掉 12/17 候选的那一格（§E584 §5），
+ * 也是 `gunSpam` 这个判据原型对应的人类原型。两批 × 两口径取**最大**（任一次漏了就算漏）。 */
+const CELL = arg('cell', '只枪压制');
 const ARMS = arg('arms', '');
 const LIST = join(HERE, ARMS || ('opphuman-arms' + (TAG ? '-' + TAG : '') + '.tsv'));
 const REF = 'js/bundled-champion-3p.js';   // 现役锚点（探针的锚点自证：multi 5.33/5.00 · long 12.33/9.50）
@@ -80,7 +83,8 @@ for (const sd of SEAT_SEEDS) {
   execFileSync(process.execPath, ['champion-map/seat-parse.mjs', '--in=' + raw, '--out=' + tsv], { cwd: ROOT, stdio: 'inherit' });
   const tl = readFileSync(tsv, 'utf8').trim().split('\n');
   const th = tl[0].split('\t');
-  const cPath = th.indexOf('path'), cMode = th.indexOf('mode'), cMean = th.indexOf('六格均值'), cId = th.indexOf('id'), cWorst = th.indexOf('最大格');
+  const cPath = th.indexOf('path'), cMode = th.indexOf('mode'), cMean = th.indexOf('六格均值'), cId = th.indexOf('id'), cWorst = th.indexOf('最大格'), cCell = th.indexOf(CELL);
+  if (cCell < 0) { console.error('⛔ 人席表里没有列「' + CELL + '」（可用列：' + th.join('/') + '）'); process.exit(3); }
   for (const l of tl.slice(1)) {
     const c = l.split('\t');
     const key = c[cPath] || c[cId];
@@ -89,6 +93,8 @@ for (const sd of SEAT_SEEDS) {
     /* v2：**最坏格**（`最大格` 列）——上批的教训：六格均值会被单个尖刺格支配（三格 0、一格 96%）⇒
      * "这个包能不能上桌"要看最坏那一栏，不是平均。 */
     seatRows[key][sd][c[cMode] + '_w'] = Number(c[cWorst]);
+    /* v3：点名的那一格（默认「只枪压制」）—— 本批主端点。 */
+    seatRows[key][sd][c[cMode] + '_cell'] = Number(c[cCell]);
     seatRows[key].id = c[cId];
   }
 }
@@ -105,6 +111,20 @@ function seatMean(rel) {   // 两批 × 两口径的均值（越低越好）
   if (!r) return NaN;
   const v = [];
   for (const sd of SEAT_SEEDS) { const o = r[sd] || {}; if (isFinite(o.multi)) v.push(o.multi); if (isFinite(o.long)) v.push(o.long); }
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN;
+}
+function seatCellMax(rel) {  // 点名那一格在两批 × 两口径里的**最大**值（任一次漏了就算漏）—— v3 主端点
+  const r = seatOf(rel);
+  if (!r) return NaN;
+  const v = [];
+  for (const sd of SEAT_SEEDS) { const o = r[sd] || {}; if (isFinite(o.multi_cell)) v.push(o.multi_cell); if (isFinite(o.long_cell)) v.push(o.long_cell); }
+  return v.length ? Math.max.apply(null, v) : NaN;
+}
+function seatCellMean(rel) {
+  const r = seatOf(rel);
+  if (!r) return NaN;
+  const v = [];
+  for (const sd of SEAT_SEEDS) { const o = r[sd] || {}; if (isFinite(o.multi_cell)) v.push(o.multi_cell); if (isFinite(o.long_cell)) v.push(o.long_cell); }
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN;
 }
 function seatWorst(rel) {  // 两批 × 两口径里**最坏的那一格**（越低越好）—— A′ 批的主端点
@@ -128,15 +148,16 @@ function gate(file) {
 const R = {};
 for (const p of packs) {
   const gt = gate(p);
-  R[p] = { seat: seatMean(p), worst: seatWorst(p), gm: gt.gm, gl: gt.gl, blocked: gt.blocked };
+  R[p] = { seat: seatMean(p), worst: seatWorst(p), cell: seatCellMax(p), cellMean: seatCellMean(p), gm: gt.gm, gl: gt.gl, blocked: gt.blocked };
 }
 console.log('\n===== 逐包读数 =====');
-console.log('  包'.padEnd(46) + '人席均值  最坏格  G(multi) G(long)  闸');
+console.log('  包'.padEnd(46) + '人席均值  最坏格  ' + CELL + '  G(multi) G(long)  闸');
 for (const p of packs) {
   const r = R[p];
   console.log('  ' + p.replace('docs/artifacts/opphuman/', '').padEnd(44)
     + (isFinite(r.seat) ? r.seat.toFixed(2) : 'NaN').padStart(6) + '  '
     + (isFinite(r.worst) ? r.worst.toFixed(1) : 'NaN').padStart(6) + '  '
+    + (isFinite(r.cell) ? r.cell.toFixed(1) : 'NaN').padStart(6) + '  '
     + (isFinite(r.gm) ? r.gm.toFixed(2) : 'NaN').padStart(6) + '  '
     + (isFinite(r.gl) ? r.gl.toFixed(2) : 'NaN').padStart(6) + '   '
     + (r.blocked ? '⛔阻断' : '✅0 条'));
@@ -172,10 +193,11 @@ function paired(key, label) {
   return { ds: ds, mean: m, verdict: v };
 }
 
-const PW = paired('worst', '★ 主端点 = 人席**最坏格**');
-const PM = paired('seat', '次端点 = 人席六格均值（与上批可比）');
+const PC = paired('cell', '★★ 本批主端点 = 人席「' + CELL + '」格（两批 × 两口径取最大）');
+const PW = paired('worst', '次端点 1 = 人席最坏格');
+const PM = paired('seat', '次端点 2 = 人席六格均值（与上批可比）');
 const diffs = PM.ds, mean = PM.mean, verdict = PM.verdict;
-const verdictW = PW.verdict;
+const verdictW = PW.verdict, verdictC = PC.verdict;
 
 const guard = sel.filter((s) => isFinite(R[s.rel].gl) && R[s.rel].gl < 3);
 console.log('\n  护栏 G(long) ≥ 3：' + (guard.length ? '⛔ ' + guard.map((s) => s.arm + '(' + R[s.rel].gl.toFixed(2) + ')').join(' ') : '全部 ≥3 ✅'));
@@ -192,8 +214,10 @@ for (const s of sel.sort((a, b) => a.seed - b.seed || a.human - b.human)) {
     isFinite(r.gm) ? r.gm.toFixed(2) : '', isFinite(r.gl) ? r.gl.toFixed(2) : '', r.blocked ? 1 : 0, s.trainFit].join('\t'));
 }
 outLines.push('# 现役锚点：人席均值 ' + (isFinite(R[REF].seat) ? R[REF].seat.toFixed(2) : 'NaN') + ' ‖ 最坏格 ' + (isFinite(R[REF].worst) ? R[REF].worst.toFixed(1) : 'NaN'));
-outLines.push('# ★ 主端点配对差（ON − OFF 人席最坏格，负 = 改善）: ' + PW.ds.map((d) => d.toFixed(2)).join(' / ') + ' ‖ 均值 ' + (isFinite(PW.mean) ? PW.mean.toFixed(2) : 'NaN') + 'pt');
-outLines.push('# ★ 主端点判词: ' + verdictW);
+outLines.push('# ★★ 本批主端点配对差（ON − OFF 人席「' + CELL + '」格取最大，负 = 改善）: ' + PC.ds.map((d) => d.toFixed(2)).join(' / ') + ' ‖ 均值 ' + (isFinite(PC.mean) ? PC.mean.toFixed(2) : 'NaN') + 'pt');
+outLines.push('# ★★ 本批主端点判词: ' + verdictC);
+outLines.push('# 次端点 1 配对差（ON − OFF 人席最坏格，负 = 改善）: ' + PW.ds.map((d) => d.toFixed(2)).join(' / ') + ' ‖ 均值 ' + (isFinite(PW.mean) ? PW.mean.toFixed(2) : 'NaN') + 'pt');
+outLines.push('# 次端点 1 判词: ' + verdictW);
 outLines.push('# 次端点配对差（ON − OFF 人席六格均值，负 = 改善）: ' + diffs.map((d) => d.toFixed(2)).join(' / ') + ' ‖ 均值 ' + (isFinite(mean) ? mean.toFixed(2) : 'NaN') + 'pt');
 outLines.push('# 次端点判词: ' + verdict);
 writeFileSync(join(HERE, 'opphuman-verdict-' + stamp + '.tsv'), outLines.join('\n') + '\n', 'utf8');
