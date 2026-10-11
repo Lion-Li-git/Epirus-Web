@@ -5,6 +5,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 import { loadPool, makeMimic } from './human-pool.mjs';   // v1.6.60：人类形状对手的**单一来源**（§E152e/§E155/§E168 的产物；别再抄一份采样器）
+import { guardWrite, declareCopy } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
@@ -1627,10 +1628,13 @@ try {
       /* v1.5.226：band 也要能自证来历 —— 原先只有 arm/gens/seed 这些手写字段，**没有旋钮配方**。 */
       recipe: { env: EFFECTIVE_ENV, envKeys: Object.keys(EFFECTIVE_ENV).length }
     };
-    writeFileSync(BAND_DIR + '/' + ARM + '-band' + (bi + 1) + '.bak',
-      '/* band-save ' + ARM + '-band' + (bi + 1) + '（tools/train-3p.mjs v1.5.150 起） */\n' +
+    /* band 夹具**设计上就是同一粒权重按 band 各存一份**（打印里本来就写着「与 bandN 同一粒权重」）
+     *   ⇒ 走 declareCopy：照写，但每一份额外登记进别名表，于是"未登记的重复"才是 D191 那条腿要打的东西。 */
+    declareCopy({ root: process.cwd(), dest: BAND_DIR + '/' + ARM + '-band' + (bi + 1) + '.bak', tool: 'train-3p:band',
+      why: 'band 夹具（同一次跑的第 ' + (bi + 1) + ' 席）',
+      text: '/* band-save ' + ARM + '-band' + (bi + 1) + '（tools/train-3p.mjs v1.5.150 起） */\n' +
       'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(bmeta) + ';\n' +
-      'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(hh.params)) + ';\n');
+      'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(hh.params)) + ';\n' });
     console.log('[band-save] ' + ARM + '-band' + (bi + 1) + '.bak  trainFit=' + hh.fit.toFixed(3) +
       (bmeta.selected ? '（当选）' : (dupWinner ? '（与 band' + bmeta.dupOfBand + ' 同一粒权重）' : '')));
   }
@@ -1679,9 +1683,19 @@ const meta = {
   selSeeds: SEL.k, selSeedBases: SEL_BASES, selSpreadPt: Number(ev.spreadPt ? ev.spreadPt.toFixed(2) : 0),
   ts: new Date().toISOString(), firstRate: ev.firstRate, top2Rate: ev.top2Rate
 };
-writeFileSync(OUT_PATH,
+const ARM_TXT =
   '/* Epirus \u591a\u4eba\u51a0\u519b\uff08\u7531 tools/train-3p.mjs \u751f\u6210\uff09\u3002\u53ea\u8bfb\u6570\u636e\uff0c\u4e0d\u8981\u624b\u6539\u3002 */\n' +
   'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
-  'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(pack) + ';\n');
-console.log('\n\u5df2\u5199\u5165 ' + OUT_PATH + '  (coldStart=' + (!seedParams) + ', seed=' + __SEED + ')' +
+  'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(pack) + ';\n';
+/* §E589 防新增拷贝：臂产物落盘前先查"这粒权重是否已有真身"。
+ *   最常见的命中就是 `PRODUCT_IS_SEED`（本臂零改包 ⇒ 产物与起点逐位相同）与"同一次跑换个系列名再存一遍"——
+ *   普查里最大那组 17 份就是这么来的。命中 ⇒ 不写第二份，只登记别名（`champion-map/pack-aliases.tsv`）。
+ *   要真复制（例如臂产物必须留在当批目录里当夹具用）加 `--force-copy` 并写 `--copy-note=`。 */
+const GUARD = guardWrite({ root: process.cwd(), dest: OUT_PATH, text: ARM_TXT, tool: 'train-3p',
+  force: process.argv.includes('--force-copy'),
+  /* 本文件没有 `arg()` 那套旗标助手（它读 env）⇒ 这里自己扫 argv，别凭空引一个不存在的函数 */
+  why: ((process.argv.find(x => x.indexOf('--copy-note=') === 0) || '').slice('--copy-note='.length)
+    || (PRODUCT_IS_SEED ? '本臂零改包：产物 = 起点那一粒' : '')) });
+console.log('[train-3p] 落盘：' + GUARD.note);
+console.log((GUARD.wrote ? '\n\u5df2\u5199\u5165 ' : '\n✘ 没写文件（§E589 守卫）：' + GUARD.note + '\n  原本要写 ') + OUT_PATH + '  (coldStart=' + (!seedParams) + ', seed=' + __SEED + ')' +
   (PRODUCT_IS_SEED ? '  ⚠ 产物与起点逐位相同（本臂零改包）' : ''));

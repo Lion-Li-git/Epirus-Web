@@ -20,6 +20,7 @@ import path from 'path';
 import crypto from 'crypto';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
+import { guardWrite } from '../champion-map/pack-guard.mjs';   /* §E589：kept/ 里同一粒权重只留一份（D191 实测 25 文件只有 19 粒） */
 const SRC_DIRS = [path.join(ROOT, 'docs', 'artifacts'), path.join(ROOT, 'js')];
 const KEEP_DIR = path.join(ROOT, 'docs', 'artifacts', 'kept');
 const MANIFEST = path.join(KEEP_DIR, 'MANIFEST.tsv');
@@ -129,7 +130,7 @@ if (!add) {
 const names = add.split(',').map(s => s.trim()).filter(Boolean);
 fs.mkdirSync(KEEP_DIR, { recursive: true });
 const rows = readManifest();
-let added = 0, failed = [];
+let added = 0, failed = [], dupSkipped = [];
 for (const n of names) {
   const want = n.endsWith('.bak') ? n : n + '.bak';
   const p = path.resolve(ROOT, n);
@@ -140,7 +141,13 @@ for (const n of names) {
   const src = hits[0];
   const file = flat(src);
   const dest = path.join(KEEP_DIR, file);
-  fs.copyFileSync(src, dest);
+  /* §E589：`kept/` 是故意的 git 耐久层，但**同一粒权重在 kept/ 里也只该有一份**
+   *   （D191 早就量到 25 个 kept 文件其实只有 19 粒 —— 因为 `flat()` 按来源目录命名，
+   *    `eval-out/win-Ldemo.bak` 与 `e111-out/C5-02-31.bak` 同权重却会各进一份）。
+   *   ⇒ 查重范围就定在 kept/ 里面（不是全库），命中就不写第二份、也不记进 MANIFEST。 */
+  const GK = guardWrite({ root: ROOT, dest, text: fs.readFileSync(src, 'utf8'), scope: ['docs/artifacts/kept'],
+    tool: 'keep-artifact', force: process.argv.includes('--force-copy'), why: opt('note', '') || 'kept/ 是 git 耐久层' });
+  if (!GK.wrote) { dupSkipped.push(n + ' ⇒ kept 里已有同权重的 `' + path.basename(GK.canonical) + '`'); continue; }
   const rec = { file, sha: sha256(dest), bytes: String(fs.statSync(dest).size),
     src: rel(src), at: localStamp(),
     note: opt('note', '') };
@@ -154,5 +161,9 @@ if (failed.length) {
   failed.forEach(f => console.error('⛔ ' + f));
   console.error('⇒ 已入库 ' + added + '/' + names.length + '；缺包按 D177 的规矩必须点名，不许静默跳过。');
   process.exit(7);
+}
+if (dupSkipped.length) {
+  dupSkipped.forEach(d => console.log('↷ 跳过（kept 里已有同权重）：' + d));
+  console.log('⇒ 要强行再存一份（例如要保留另一条来历的字面记录）加 `--force-copy`。');
 }
 console.log('账本：' + rel(MANIFEST) + '（共 ' + rows.length + ' 行）。记得 git add docs/artifacts/kept/');

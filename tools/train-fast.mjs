@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { makeAsyncStep } from '../server/paralleltrain.mjs';
 import { rulesFingerprint } from './rules-fingerprint.mjs';
+import { guardWrite } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
 /* v1.5.200：同 train-best —— 读不到的旋钮不许静默（判定单一来源 `server/knob-guard.mjs`）。 */
 import { enforceKnobs } from '../server/knob-guard.mjs';
 enforceKnobs({ tool: 'train-fast', env: process.env, entry: 'tools/train-fast.mjs' });
@@ -74,10 +75,13 @@ const pack = JSON.stringify(P.pack(t.champion));
  * （"成绩已过期"守门）只罩住多人包，2P 侧换过 11 次 rules/resolve 都没人发现。 */
 const meta = { source: 'tools/train-fast.mjs', gens: gens, ts: new Date().toISOString(),
   seed: __SEED, workers: stepAsync.workers, rulesFingerprint: rulesFingerprint() };
-writeFileSync(OUT,
+const GUARD = guardWrite({ root, dest: OUT, tool: 'train-fast', force: process.argv.includes('--force-copy'),
+  why: '2P 快跑产物', text:
   '/* Epirus 内置冠军：由 tools/train-fast.mjs 生成（' + gens + ' 代，' + secs + 's）。不要手改。 */\n' +
   'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(meta) + ';\n' +
-  'window.EPIRUS_CHAMPION = ' + pack + ';\n', 'utf8');
+  'window.EPIRUS_CHAMPION = ' + pack + ';\n' });
+console.log('[train-fast] 落盘：' + GUARD.note);
 console.log(`训练完成 ${gens} 代，用时 ${secs}s；冠军 score=${t.bestChampScore.toFixed(3)}，attackShare=${(t.bestChampAttack||0).toFixed(2)}`);
-console.log('已写入 ' + OUT + '（' + pack.length + ' 字节；其中 2P 线下路径只在 EPIRUS_PUBLISH=1 时才会被写）');
+console.log(GUARD.wrote ? '已写入 ' + OUT + '（' + pack.length + ' 字节；其中 2P 线下路径只在 EPIRUS_PUBLISH=1 时才会被写）'
+  : '✘ 没写文件（§E589 守卫）：' + GUARD.note);
 stepAsync.close();   // 关停 worker 池，让进程正常结束（否则 worker 会让进程挂住）

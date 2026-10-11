@@ -30,6 +30,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, extractJsonObject, parseMetaTolerant } from '../tools/audit-lib.mjs';   /* 读包只走这一份（`loadChamp` 同源的解析器） */
+import { guardWrite } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查"这粒权重是否已有真身" */
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
@@ -237,12 +238,20 @@ const isAbs = p => /^[a-zA-Z]:[\\/]/.test(p) || p.startsWith('/') || p.startsWit
 const outAbs = isAbs(OUT) ? OUT : join(ROOT, OUT);
 const outDir = dirname(outAbs);
 if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
-writeFileSync(outAbs,
+const packTxt =
   '/* Epirus 多人冠军 · 权重融合（由 tools/soup-pack.mjs 生成，只读数据，不要手改） */\n' +
   'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
-  'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(pack) + ';\n');
+  'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(pack) + ';\n';
+/* §E589 防新增：融合**很容易算出一粒已经存在的权重**（例如 `--copy-cols=` 全抄一方、或权重平均恰好落回原处）。
+ *   那种情况不再落第二份，只登记别名（账本 `champion-map/pack-aliases.tsv`）⇒ "N 个产物"不会再被读成"N 粒打法"。 */
+const GUARD = guardWrite({ root: ROOT, dest: outAbs, text: packTxt, tool: 'soup-pack',
+  force: process.argv.includes('--force-copy'), why: '融合产物（默认不复制已有权重）' });
+console.log('[soup-pack] 落盘：' + GUARD.note);
 
 console.log('[soup] ' + (MODE === 'copy-cols' ? '模式 = 外科复制列（不是平均）' : '来源 ' + src.length + ' 粒 · 权重 ' + w.map(x => x.toFixed(3)).join(' : ')));
 src.forEach((s, i) => console.log('   w=' + w[i].toFixed(3) + '  ' + s.wid + '  ' + s.file + (s.meta.arm ? '  arm=' + s.meta.arm : '')));
 console.log('[soup] 与每粒来源的逐位相对距离：' + meta.soup.l2ToSource.join('  '));
-console.log('[soup] ✔ 已写 ' + outAbs + '   （形状 v' + pack.v + ' · len=' + pack.a.length + ' · f=' + pack.f + ' · fa=' + pack.fa + ' · h=' + pack.h + '）');
+/* ⚠ 这句只在**真的写了**之后印：§E589 的守卫会拒绝写第二份，那时还印"已写"就是让工具替我说谎
+ *   （实测 teeth 跑就是这样：文件没落盘，日志却说已写）。 */
+if (GUARD.wrote) console.log('[soup] ✔ 已写 ' + outAbs + '   （形状 v' + pack.v + ' · len=' + pack.a.length + ' · f=' + pack.f + ' · fa=' + pack.fa + ' · h=' + pack.h + '）');
+else console.log('[soup] ✘ 没写文件：' + GUARD.note);

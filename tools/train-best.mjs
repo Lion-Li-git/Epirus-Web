@@ -12,6 +12,7 @@ import { makeAsyncStep } from '../server/paralleltrain.mjs';
  * ⚠️ 键序就是基准顺序（考卷种子 = 20260207 + i*977）⇒ 插/删/重排都会改变历史成绩。 */
 import { P2_FNAME as fname, P2_NAMES as NAMES } from './p2-baselines.mjs';
 import { rulesFingerprint } from './rules-fingerprint.mjs';
+import { guardWrite, declareCopy } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
 /* v1.5.130：择优（不回归层 + 容差带 + 发散度）抽成**纯函数单一来源** `tools/pick-best.mjs` ——
  * 动机见该文件头：旧实现内联在这里，`np-test` 想守它只能钉文本；抽出来后门可以喂合成候选表验行为。 */
 import { pickBestByExam, regressionsOf, fixesOf, vetoBy3p } from './pick-best.mjs';
@@ -236,8 +237,11 @@ try {
         fieldBClears: c.col3p.fieldBClears != null ? Number(c.col3p.fieldBClears) : null,
         wall: c.col3p.wall != null ? Number(c.col3p.wall) : null, fails: c.col3p.fails || [] } : null,
       rulesFingerprint: rulesFingerprint(), ts: new Date().toISOString() };
-    writeFileSync(join(dir, ARM + '-band' + (bi + 1) + '.bak'),
-      'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(bmeta) + ';\nwindow.EPIRUS_CHAMPION = ' + JSON.stringify(c.pack) + ';\n', 'utf8');
+    /* band 夹具是设计上的一份一份拷贝 ⇒ 走 declareCopy：照写，但把理由登记进别名表
+     *   （§E589：D191 那条腿只打**未登记**的重复，设计如此的复制要留名）。 */
+    declareCopy({ root, dest: join(dir, ARM + '-band' + (bi + 1) + '.bak'), tool: 'train-best:band',
+      why: 'band 夹具（第 ' + (bi + 1) + ' 席）',
+      text: 'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(bmeta) + ';\nwindow.EPIRUS_CHAMPION = ' + JSON.stringify(c.pack) + ';\n' });
     console.log('[band-save] ' + ARM + '-band' + (bi + 1) + '.bak  ' + c.tag + (bmeta.selected ? '（当选）' : ''));
   }
 } catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
@@ -271,10 +275,12 @@ const meta = {
   tb3p: TB3P_PLAN_GAMES,
   seed: __SEED, workers: stepAsync.workers, rulesFingerprint: rulesFingerprint()
 };
-writeFileSync(OUT,
+const GUARD = guardWrite({ root, dest: OUT, tool: 'train-best', force: process.argv.includes('--force-copy'),
+  why: '2P 择优产物', text:
   '/* Epirus 内置冠军：由 tools/train-best.mjs 生成（' + N + ' 候选择优，' + GENS + ' 代，总 ' + bestTime.toFixed(0) + 's）。不要手改。 */\n' +
   'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(meta) + ';\n' +
-  'window.EPIRUS_CHAMPION = ' + packStr + ';\n', 'utf8');
+  'window.EPIRUS_CHAMPION = ' + packStr + ';\n' });
+console.log('[train-best] 落盘：' + GUARD.note);
 // cache-busting：只在**真的覆写了 2P 槽**时更新 index.html 里冠军 script 的 ?v=（改道产物不该动槽的戳）
 if (OUT === dest) try {
   const htmlPath = join(root, 'index.html');
@@ -283,7 +289,8 @@ if (OUT === dest) try {
   writeFileSync(htmlPath, html, 'utf8');
 } catch (e) { /* ignore */ }
 console.log(`择优完成：avg wr=${(best.ev.avg * 100).toFixed(0)}% wall=${(best.ev.per.wall * 100).toFixed(0)}% defend=${(best.ev.per.defend * 100).toFixed(0)}% score=${best.score != null ? best.score.toFixed(3) : '--(现有冠军)'}`);
-console.log('已写入 ' + (OUT === dest ? 'js/bundled-champion.js' : OUT) + '（' + packStr.length + ' 字节）');
+console.log(GUARD.wrote ? '已写入 ' + (OUT === dest ? 'js/bundled-champion.js' : OUT) + '（' + packStr.length + ' 字节）'
+  : '✘ 没写文件（§E589 守卫）：' + GUARD.note);
 for (const nm of NAMES) console.log('  ' + nm.padEnd(9) + (best.ev.per[nm] * 100).toFixed(0) + '%');
 stepAsync.close();
 process.exit(0);
