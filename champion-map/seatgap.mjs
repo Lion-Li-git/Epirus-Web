@@ -12,8 +12,15 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const rd = p => { const L = readFileSync(join(HERE, p), 'utf8').replace(/\r?\n$/, '').split(/\r?\n/);
-  return { h: Object.fromEntries(L[0].split('\t').map((x, i) => [x, i])), rows: L.slice(1).map(l => l.split('\t')) }; };
+/* 路径口径与 `seat-parse.mjs` 对齐（2026-10-11 DS 修）：带盘符（`D:/…`）或前导 `/` 视为**绝对路径**，
+ * 不再无条件 `join(HERE, p)`。起因（实测撞了两次）：按 `--files=champion-map/seat-prof-90210.tsv`
+ * 或 `D:/code/…` 传都会被拼成 `champion-map/D:/code/…` ⇒ ENOENT，而报错里的双路径很难一眼看出是 join 造成的。
+ * 裸文件名（历史的默认口径）一字不变 ⇒ 向后兼容。 */
+const rd = p => {
+  const abs = (p.indexOf(':') >= 0 || p[0] === '/') ? p : join(HERE, p);
+  const L = readFileSync(abs, 'utf8').replace(/\r?\n$/, '').split(/\r?\n/);
+  return { h: Object.fromEntries(L[0].split('\t').map((x, i) => [x, i])), rows: L.slice(1).map(l => l.split('\t')) };
+};
 /* 默认还是 §E576 那两张批表；`--files=a.tsv,b.tsv` 让别一批（如 §E584 的新框）也走**同一把杀刀**，
  *   免得为一批数据再抄第二份判据实现（本仓"两份代码分叉"栽过很多次）。 */
 const FILES_ARG = (process.argv.find(a => a.indexOf('--files=') === 0) || '').slice(8).split(',').filter(Boolean);
