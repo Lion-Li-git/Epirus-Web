@@ -73,10 +73,20 @@ for (const p of P) { p.cid = PATH2ID[(packPath[p.id] || '').replace(/\\/g, '/')]
 const ids = [...new Set(P.filter(p => p.f).map(p => p.id))];
 console.log('# (f) 进关联的枚数 ' + ids.length + ' ‖ 接不到 coords 的 ' + [...new Set(skipped)].join(',') + '（只进地板，不进关联）');
 
-/* ---- (a) 锚点：现役两批逐格原值 ---- */
-for (const [tag, m, exp] of [['90210 multi', A.get(BASE + '|multi'), '2,5,3,12,4,6'], ['90210 long', A.get(BASE + '|long'), '5,15,0,28,16,10'],
-  ['90211 multi', Bt.get(BASE + '|multi'), '1,7,1,12,5,4'], ['90211 long', Bt.get(BASE + '|long'), '2,12,0,21,9,13']]) {
+/* ---- (a) 锚点：现役逐格原值，**按 seed0 查在册基线** ----
+ * ⚑ 早期版本把期望值写死成 90210/90211 那四行 ⇒ 换档跑（前向 90212/90213）会**假红**（"锚点不符"其实是换了档）。
+ *   现在按 `--seedA/--seedB` 查这张表；表里没有的档只印值 + 声明"无在册基线可比"，不冒充验证。 */
+const ANCHORS = {
+  '90210': { multi: '2,5,3,12,4,6', long: '5,15,0,28,16,10' },   // §E576 / §E506
+  '90211': { multi: '1,7,1,12,5,4', long: '2,12,0,21,9,13' },     // §E576
+  '90212': { multi: '1,9,1,9,9,8', long: '4,12,0,29,15,8' },      // §E583（本班第二次跑=§E585 前向，逐位复现）
+  '90213': { multi: '2,4,1,14,6,8', long: '5,10,1,23,14,14' },    // §E585 第一次测 ⇒ 只印不验
+};
+const sA = String(arg('seedA', '90210')), sB = String(arg('seedB', '90211'));
+for (const [tag, m, exp] of [[sA + ' multi', A.get(BASE + '|multi'), (ANCHORS[sA] || {}).multi], [sA + ' long', A.get(BASE + '|long'), (ANCHORS[sA] || {}).long],
+  [sB + ' multi', Bt.get(BASE + '|multi'), (ANCHORS[sB] || {}).multi], [sB + ' long', Bt.get(BASE + '|long'), (ANCHORS[sB] || {}).long]]) {
   const got = m ? m.cells.join(',') : '(缺)';
+  if (!exp) { console.log('# (a) 锚点 ' + tag + ' = ' + got + ' ‖ 此档无在册基线 ⇒ 只印不验'); continue; }
   console.log('# (a) 锚点 ' + tag + ' = ' + got + (got === exp ? ' ✅' : ' ⛔ 与在册基线不符（' + exp + '）⇒ 整表作废'));
   if (got !== exp) process.exit(2);
 }
@@ -94,12 +104,15 @@ for (const mode of ['multi', 'long']) {
   console.log('#   ' + mode + '：' + q.join(' ‖ '));
 }
 
-/* ---- 目标量：逐格差（每批各算 + 两批平均） ---- */
-function targets(m1, m2) {
+/* 目标量：逐格差（每批各算 + 两批平均）
+ * ⚑ 基线（现役）永远从**完整的批**里取：子集/前向那两批被筛过就没有 `bundled-champion-3p` 这一行，
+ *   第一版没留这个口子 ⇒ 直接 TypeError（差值必须对同一个基线算，不能对子集均值算）。 */
+function targets(m1, m2, baseA_all, baseB_all) {
+  const BA = baseA_all || A, BB = baseB_all || Bt;
   const out = [];
   for (const mode of ['multi', 'long']) for (let i = 0; i < 6; i++) {
     const xs = [], ysA = [], ysB = [], ysM = [];
-    const baseA = (m1 || A).get(BASE + '|' + mode), baseB = (m2 || Bt).get(BASE + '|' + mode);
+    const baseA = BA.get(BASE + '|' + mode), baseB = BB.get(BASE + '|' + mode);
     for (const id of ids) {
       const a = (m1 || A).get(id + '|' + mode), b = (m2 || Bt).get(id + '|' + mode);
       if (!a || !b || !featOf[PATH2ID[(packPath[id] || '').replace(/\\/g, '/')] || id]) continue;
@@ -193,7 +206,7 @@ if (FWD) {
   const subA = new Map([...A].filter(([k]) => idsF.indexOf(k.split('|')[0]) >= 0));
   const subB = new Map([...Bt].filter(([k]) => idsF.indexOf(k.split('|')[0]) >= 0));
   const save = ids.splice(0); ids.push(...idsF);
-  const Tsub = targets(subA, subB), TF = targets(FA, FB);
+  const Tsub = targets(subA, subB, A, Bt), TF = targets(FA, FB, FA, FB);
   ids.push(...save);
   if (!shortlist.length) console.log('本框无入围项 ⇒ 前向没东西可验（但仍印同子集与前向的最强维，供 §9 写"这框里到底有没有信号"）');
   const show = shortlist.length ? shortlist : Tsub.filter(t => t.cell === '只枪压制' || t.cell === '全程刷反弹')
