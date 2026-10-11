@@ -18,7 +18,7 @@ v15-123	docs/artifacts/v15-123.bak	eps2seed
 v7aim3-93	docs/artifacts/v7aim3-93.bak	eps2seed
 v7b-45	docs/artifacts/v7b-45.bak	eps2seed
 v7bead1-31	docs/artifacts/v7bead1-31.bak	eps2seed
-v7bead1-82	docs/artifacts/v7bead1-82.bak	eps2seed
+v7bead1-82	docs/artifacts/v7u1-82.bak	eps2seed
 v7bead1-93	docs/artifacts/v7bead1-93.bak	eps2seed
 v7bead100-31	docs/artifacts/v7bead100-31.bak	eps2seed
 v7bead100-82	docs/artifacts/v7bead100-82.bak	eps2seed
@@ -38,7 +38,7 @@ v7blk1-31	docs/artifacts/v7blk1-31.bak	eps2seed
 v7clear2-81	docs/artifacts/v7clear2-81.bak	eps2seed
 v7cmin3-31	docs/artifacts/v7cmin3-31.bak	eps2seed
 v7cmin3-93	docs/artifacts/v7cmin3-93.bak	eps2seed
-v7cmin4-31	docs/artifacts/v7cmin4-31.bak	eps2seed
+v7cmin4-31	docs/artifacts/incumbent-forpromote.bak	eps2seed
 v7cmin4-82	docs/artifacts/v7cmin4-82.bak	eps2seed
 v7cur2-82	docs/artifacts/v7cur2-82.bak	eps2seed
 v7cur3-31	docs/artifacts/v7cur3-31.bak	eps2seed
@@ -70,12 +70,12 @@ v7l2o-93	docs/artifacts/v7l2o-93.bak	eps2seed
 v7l2s-91	docs/artifacts/v7l2s-91.bak	eps2seed
 v7l2s-93	docs/artifacts/v7l2s-93.bak	eps2seed
 v7m2_noEffects-31	docs/artifacts/v7m2_noEffects-31.bak	eps2seed
-v7m2_noEffects-32	docs/artifacts/v7m2_noEffects-32.bak	eps2seed
-v7m2_noTarget-36	docs/artifacts/v7m2_noTarget-36.bak	eps2seed
+v7m2_noEffects-32	docs/artifacts/v7m2_noEffects-31.bak	eps2seed
+v7m2_noTarget-36	docs/artifacts/v7m2_noEffects-31.bak	eps2seed
 v7n1-93	docs/artifacts/v7n1-93.bak	eps2seed
 v7new1-31	docs/artifacts/v7new1-31.bak	eps2seed
 v7new2-93	docs/artifacts/v7new2-93.bak	eps2seed
-v7new3-93	docs/artifacts/v7new3-93.bak	eps2seed
+v7new3-93	docs/artifacts/v7new2-93.bak	eps2seed
 v7new5_005-31	docs/artifacts/v7new5_005-31.bak	eps2seed
 v7new5_005-81	docs/artifacts/v7new5_005-81.bak	eps2seed
 v7new5_01-81	docs/artifacts/v7new5_01-81.bak	eps2seed
@@ -87,7 +87,7 @@ v7press-36	docs/artifacts/v7press-36.bak	eps2seed
 v7press3-81	docs/artifacts/v7press3-81.bak	eps2seed
 v7press3-91	docs/artifacts/v7press3-91.bak	eps2seed
 v7protoE-82	docs/artifacts/v7protoE-82.bak	eps2seed
-v7r2-35	docs/artifacts/v7r2-35.bak	eps2seed
+v7r2-35	docs/artifacts/v7force2-35.bak	eps2seed
 v7rand-32	docs/artifacts/v7rand-32.bak	eps2seed
 v7ringB1-81	docs/artifacts/v7ringB1-81.bak	eps2seed
 v7ringB1-93	docs/artifacts/v7ringB1-93.bak	eps2seed
@@ -112,11 +112,11 @@ v7tgt4-62	docs/artifacts/v7tgt4-62.bak	eps2seed
 v7tgt4-66	docs/artifacts/v7tgt4-66.bak	eps2seed
 v7u1-82	docs/artifacts/v7u1-82.bak	eps2seed
 v7u1-93	docs/artifacts/v7u1-93.bak	eps2seed
-v7w3c-82	docs/artifacts/v7w3c-82.bak	eps2seed
+v7w3c-82	docs/artifacts/v7divK2b-82.bak	eps2seed
 v7w3r1-82	docs/artifacts/v7w3r1-82.bak	eps2seed
 v7wall-31	docs/artifacts/v7wall-31.bak	eps2seed
 v7wall-33	docs/artifacts/v7wall-33.bak	eps2seed
 v7wall1-93	docs/artifacts/v7wall1-93.bak	eps2seed
 v7wall2-97	docs/artifacts/v7wall2-97.bak	eps2seed
-v7ws1-81	docs/artifacts/v7ws1-81.bak	eps2seed
-v7ws1-91	docs/artifacts/v7ws1-91.bak	eps2seed
+v7ws1-81	docs/artifacts/v7press3-81.bak	eps2seed
+v7ws1-91	docs/artifacts/v7press3-91.bak	eps2seed

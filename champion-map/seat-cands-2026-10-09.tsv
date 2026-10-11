@@ -1,7 +1,7 @@
 # §E560 人席补测（2026-10-09 · Qoder）—— 文档"库里躺着一枚已过关候选"那条的第三方复核，逐格原始读数
 # 尺：tools/probe-human-seat.mjs（1 席"人" vs 4 席被测 · 与 G4 同一份装配 v2v4-lib.duelAssembly · 200 局/格 · 轮座）
 # 读法：六格印的都是**那一席"人"的夺冠率 %** ⇒ **越高越差**（这枚包越拿那一手没办法）；括号里的和棋率不进本表。
-# 参照（现役）= js/bundled-champion-3p.js = coords.tsv 里 SHIPPED-Ldemo 的 path 列（与 docs/artifacts/eval-out/win-Ldemo.bak 六格逐格相同 ⇒ 同一枚）。
+# 参照（现役）= js/bundled-champion-3p.js = coords.tsv 里 SHIPPED-Ldemo 的 path 列（与 docs/artifacts/e316-out/SHIPPED-3P.bak 六格逐格相同 ⇒ 同一枚）。
 # ⚠ 跑法教训：第一遍我手敲成 js/bundled-champion.js（另一颗槽）⇒ 同一格读数差一个数量级（只枪压制 100% vs 12%）⇒ 那份作废。
 #   ⇒ 现役的路径**必须从 coords.tsv 的 path 列取**，不许手敲文件名（同 §E330 那个洞的同族）。
 # gap_max = 候选与现役**同批同格**的最大差（pt）；注册否决线 = 任一格 ≥20pt（§E531）。

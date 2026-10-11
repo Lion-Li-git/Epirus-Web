@@ -48,6 +48,7 @@ const BASE_LDEMO = { multi: 5.3, long: 12.3, 最大格: 28, 格: '只枪压制' 
  *   抽取的铁证是**抽取前后本文件的每个 ρ 与 p 逐值不变** —— 拿 §E576 在册读数对：
  *   heavy −0.663/−0.602 ‖ rounds 0.715/0.566 ‖ Geff −0.670/−0.414 ‖ 带内 H −0.036/−0.164。 */
 import { mean, ranks, pear, sp, mcP, holm, rngSeed } from './stats-lib.mjs';
+import { buildResolver, incumbentAt, resolveId } from './pack-resolve.mjs';
 
 const A = rd(arg('a', 'seat-2026-10-11-90210.tsv'));
 const Bt = rd(arg('b', 'seat-2026-10-11-90211.tsv'));
@@ -69,13 +70,25 @@ if (名单差.length || A.rows.length !== ia.length * 2) { console.error('⛔ (f
 /* ⚑ 身份必须走 coords 的 **path 列**，不是文件名 basename：现役那枚在 coords 里叫 `SHIPPED-Ldemo`，
  *   而探针打印的是 `js/bundled-champion-3p.js`（⇒ basename = `bundled-champion-3p`）。
  *   按 basename 接的话 Ldemo 会"不在 coords"，锚点与关联同时接错 —— 同 §E330 那条"人席参照必须从 path 列取"。 */
-const PATH2ID = {};
-for (const r of C.rows) if (r[C.h.path]) PATH2ID[r[C.h.path].replace(/\\/g, '/')] = r[C.h.id];
+/* §E589：身份解析搬到 `pack-resolve.mjs` 那一份（**id 优先 → path 兜底 → 现役按 slot-history 声明认**）。
+ *   为什么现役不能按 path 猜：§E588 把 `SHIPPED-Ldemo` 行的 path 改成钉住的快照之后，图上再没有一行的 path
+ *   等于活槽，而活槽自己会换主人 ⇒ 只能按声明（`--incumbent=` 或 `slot-history.tsv`）。 */
+const ROOTD = join(HERE, '..');
+const INC = arg('incumbent', '') || (function () {
+  const r = incumbentAt(ROOTD, [arg('a', 'seat-2026-10-11-90210.tsv'), arg('b', 'seat-2026-10-11-90211.tsv')]);
+  console.log('# 现役身份：' + r.why);
+  if (!r.id) { console.error('⛔ 现役认不出 ⇒ 不许猜，传 `--incumbent=<图上的行名>`'); process.exit(2); }
+  return r.id;
+})();
+const RS = buildResolver(ROOTD, C.rows.map(r => ({ id: r[C.h.id], path: r[C.h.path] })), { incumbent: INC });
+console.log('# ' + RS.liveNote);
 const cellOf = (t, id, mode, col) => { const r = t.rows.filter(x => x[t.h.id] === id && x[t.h.mode] === mode)[0]; return r ? r[t.h[col]] : undefined; };
 const pathOf = {}; for (const r of A.rows) pathOf[r[A.h.id]] = r[A.h.path];
 const P = [];
 for (const id of ia) {
-  const cid = PATH2ID[(pathOf[id] || '').replace(/\\/g, '/')] || id;
+  const rr = resolveId(RS, id, pathOf[id]);
+  const cid = rr.id;
+  if (rr.how.indexOf('共享') >= 0) console.log('  ⚠ ' + id + ' 的 path 去重后被多行共享 ⇒ 这一枚的身份不可靠');
   const crow = C.rows.filter(r => r[C.h.id] === cid)[0];
   if (!crow) { console.log('  ⚠ ' + id + '（coords id=' + cid + '）不在 coords ⇒ 无人席以外的维度读数，只进锚点/噪声，不进关联'); continue; }
   const g = k => Number(crow[C.h[k]]);

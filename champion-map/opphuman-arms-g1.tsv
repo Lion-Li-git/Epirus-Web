@@ -1,37 +1,37 @@
 arm	seed	oppHuman	hotstart	opps	band	trainFit	packHash12	selected	bandRel	gens	n	games	pop	sec
-s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band1	1.2547	3537e18775de	0	docs/artifacts/opphuman/s301-off-g1/s301-off-g1-band1.bak	250	5	12	12	233.3
-s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band2	1.2542	befd65331aa9	0	docs/artifacts/opphuman/s301-off-g1/s301-off-g1-band2.bak	250	5	12	12	233.3
-s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band3	1.1823	0dc46bea5e2f	0	docs/artifacts/opphuman/s301-off-g1/s301-off-g1-band3.bak	250	5	12	12	233.3
-s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band4	1.1630	31463bbd7b78	1	docs/artifacts/opphuman/s301-off-g1/s301-off-g1-band4.bak	250	5	12	12	233.3
-s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band5	1.1561	86017b48e430	0	docs/artifacts/opphuman/s301-off-g1/s301-off-g1-band5.bak	250	5	12	12	233.3
-s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band6	1.1422	fb4ab7c009fc	0	docs/artifacts/opphuman/s301-off-g1/s301-off-g1-band6.bak	250	5	12	12	233.3
+s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band1	1.2547	3537e18775de	0	docs/artifacts/opphuman/s301-off-h2/s301-off-h2-band1.bak	250	5	12	12	233.3
+s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band2	1.2542	befd65331aa9	0	docs/artifacts/opphuman/s301-off-h2/s301-off-h2-band2.bak	250	5	12	12	233.3
+s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band3	1.1823	0dc46bea5e2f	0	docs/artifacts/opphuman/s301-off-h2/s301-off-h2-band3.bak	250	5	12	12	233.3
+s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band4	1.1630	31463bbd7b78	1	docs/artifacts/opphuman/s301-off-h2/s301-off-h2-band4.bak	250	5	12	12	233.3
+s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band5	1.1561	86017b48e430	0	docs/artifacts/opphuman/s301-off-h2/s301-off-h2-band5.bak	250	5	12	12	233.3
+s301-off-g1	301	0	js/bundled-champion-3p.js		s301-off-g1-band6	1.1422	fb4ab7c009fc	0	docs/artifacts/opphuman/s301-off-h2/s301-off-h2-band6.bak	250	5	12	12	233.3
 s301-on-g1	301	0	js/bundled-champion-3p.js	gunSpam	s301-on-g1-band1	1.1397	328212341aa1	0	docs/artifacts/opphuman/s301-on-g1/s301-on-g1-band1.bak	250	5	12	12	243.9
 s301-on-g1	301	0	js/bundled-champion-3p.js	gunSpam	s301-on-g1-band2	1.1265	fa62e4c73999	0	docs/artifacts/opphuman/s301-on-g1/s301-on-g1-band2.bak	250	5	12	12	243.9
 s301-on-g1	301	0	js/bundled-champion-3p.js	gunSpam	s301-on-g1-band3	1.1183	b2958ab8431a	0	docs/artifacts/opphuman/s301-on-g1/s301-on-g1-band3.bak	250	5	12	12	243.9
 s301-on-g1	301	0	js/bundled-champion-3p.js	gunSpam	s301-on-g1-band4	1.0978	3757a926c26c	1	docs/artifacts/opphuman/s301-on-g1/s301-on-g1-band4.bak	250	5	12	12	243.9
 s301-on-g1	301	0	js/bundled-champion-3p.js	gunSpam	s301-on-g1-band5	1.0603	3000245e79ae	0	docs/artifacts/opphuman/s301-on-g1/s301-on-g1-band5.bak	250	5	12	12	243.9
 s301-on-g1	301	0	js/bundled-champion-3p.js	gunSpam	s301-on-g1-band6	1.0577	52857c995299	0	docs/artifacts/opphuman/s301-on-g1/s301-on-g1-band6.bak	250	5	12	12	243.9
-s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band1	1.2740	4cf869613387	0	docs/artifacts/opphuman/s302-off-g1/s302-off-g1-band1.bak	250	5	12	12	302.3
-s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band2	1.2701	96c8873217ee	0	docs/artifacts/opphuman/s302-off-g1/s302-off-g1-band2.bak	250	5	12	12	302.3
-s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band3	1.2231	a5c8e3d8223c	0	docs/artifacts/opphuman/s302-off-g1/s302-off-g1-band3.bak	250	5	12	12	302.3
-s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band4	1.2117	deccf6ef833a	1	docs/artifacts/opphuman/s302-off-g1/s302-off-g1-band4.bak	250	5	12	12	302.3
-s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band5	1.1911	37b87b12f239	0	docs/artifacts/opphuman/s302-off-g1/s302-off-g1-band5.bak	250	5	12	12	302.3
-s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band6	1.1894	65c747800da7	0	docs/artifacts/opphuman/s302-off-g1/s302-off-g1-band6.bak	250	5	12	12	302.3
+s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band1	1.2740	4cf869613387	0	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band1.bak	250	5	12	12	302.3
+s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band2	1.2701	96c8873217ee	0	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band2.bak	250	5	12	12	302.3
+s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band3	1.2231	a5c8e3d8223c	0	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band3.bak	250	5	12	12	302.3
+s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band4	1.2117	deccf6ef833a	1	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band4.bak	250	5	12	12	302.3
+s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band5	1.1911	37b87b12f239	0	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band5.bak	250	5	12	12	302.3
+s302-off-g1	302	0	js/bundled-champion-3p.js		s302-off-g1-band6	1.1894	65c747800da7	0	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band6.bak	250	5	12	12	302.3
 s302-on-g1	302	0	js/bundled-champion-3p.js	gunSpam	s302-on-g1-band1	1.1026	0305b4d9bf28	0	docs/artifacts/opphuman/s302-on-g1/s302-on-g1-band1.bak	250	5	12	12	248.7
 s302-on-g1	302	0	js/bundled-champion-3p.js	gunSpam	s302-on-g1-band2	1.0967	41d7bb11a8a6	1	docs/artifacts/opphuman/s302-on-g1/s302-on-g1-band2.bak	250	5	12	12	248.7
 s302-on-g1	302	0	js/bundled-champion-3p.js	gunSpam	s302-on-g1-band3	1.0926	30eb9c576a05	0	docs/artifacts/opphuman/s302-on-g1/s302-on-g1-band3.bak	250	5	12	12	248.7
 s302-on-g1	302	0	js/bundled-champion-3p.js	gunSpam	s302-on-g1-band4	1.0855	67ac53ffcb85	0	docs/artifacts/opphuman/s302-on-g1/s302-on-g1-band4.bak	250	5	12	12	248.7
 s302-on-g1	302	0	js/bundled-champion-3p.js	gunSpam	s302-on-g1-band5	1.0754	0f98c9eea06b	0	docs/artifacts/opphuman/s302-on-g1/s302-on-g1-band5.bak	250	5	12	12	248.7
 s302-on-g1	302	0	js/bundled-champion-3p.js	gunSpam	s302-on-g1-band6	1.0742	1850da2d731d	0	docs/artifacts/opphuman/s302-on-g1/s302-on-g1-band6.bak	250	5	12	12	248.7
-s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band1	1.2228	8fbc4df3d013	0	docs/artifacts/opphuman/s303-off-g1/s303-off-g1-band1.bak	250	5	12	12	219.7
-s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band2	1.1748	ca61a97d1543	1	docs/artifacts/opphuman/s303-off-g1/s303-off-g1-band2.bak	250	5	12	12	219.7
-s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band3	1.1734	c5e0f895ce94	0	docs/artifacts/opphuman/s303-off-g1/s303-off-g1-band3.bak	250	5	12	12	219.7
-s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band4	1.1731	76dabfed907a	0	docs/artifacts/opphuman/s303-off-g1/s303-off-g1-band4.bak	250	5	12	12	219.7
-s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band5	1.1726	2d6e945b48e6	0	docs/artifacts/opphuman/s303-off-g1/s303-off-g1-band5.bak	250	5	12	12	219.7
-s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band6	1.1624	b7221a127848	0	docs/artifacts/opphuman/s303-off-g1/s303-off-g1-band6.bak	250	5	12	12	219.7
+s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band1	1.2228	8fbc4df3d013	0	docs/artifacts/opphuman/s303-off-h2/s303-off-h2-band1.bak	250	5	12	12	219.7
+s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band2	1.1748	ca61a97d1543	1	docs/artifacts/opphuman/s303-off-h2/s303-off-h2-band2.bak	250	5	12	12	219.7
+s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band3	1.1734	c5e0f895ce94	0	docs/artifacts/opphuman/s303-off-h2/s303-off-h2-band3.bak	250	5	12	12	219.7
+s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band4	1.1731	76dabfed907a	0	docs/artifacts/opphuman/s303-off-h2/s303-off-h2-band4.bak	250	5	12	12	219.7
+s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band5	1.1726	2d6e945b48e6	0	docs/artifacts/opphuman/s303-off-h2/s303-off-h2-band5.bak	250	5	12	12	219.7
+s303-off-g1	303	0	js/bundled-champion-3p.js		s303-off-g1-band6	1.1624	b7221a127848	0	docs/artifacts/opphuman/s303-off-h2/s303-off-h2-band6.bak	250	5	12	12	219.7
 s303-on-g1	303	0	js/bundled-champion-3p.js	gunSpam	s303-on-g1-band1	1.1272	8596ce7db46e	0	docs/artifacts/opphuman/s303-on-g1/s303-on-g1-band1.bak	250	5	12	12	307.5
 s303-on-g1	303	0	js/bundled-champion-3p.js	gunSpam	s303-on-g1-band2	1.1228	54f0545bddae	0	docs/artifacts/opphuman/s303-on-g1/s303-on-g1-band2.bak	250	5	12	12	307.5
-s303-on-g1	303	0	js/bundled-champion-3p.js	gunSpam	s303-on-g1-band3	1.0905	8596ce7db46e	0	docs/artifacts/opphuman/s303-on-g1/s303-on-g1-band3.bak	250	5	12	12	307.5
+s303-on-g1	303	0	js/bundled-champion-3p.js	gunSpam	s303-on-g1-band3	1.0905	8596ce7db46e	0	docs/artifacts/opphuman/s303-on-g1/s303-on-g1-band1.bak	250	5	12	12	307.5
 s303-on-g1	303	0	js/bundled-champion-3p.js	gunSpam	s303-on-g1-band4	1.0838	56cf7208f8ca	0	docs/artifacts/opphuman/s303-on-g1/s303-on-g1-band4.bak	250	5	12	12	307.5
 s303-on-g1	303	0	js/bundled-champion-3p.js	gunSpam	s303-on-g1-band5	1.0684	4922ecb811da	1	docs/artifacts/opphuman/s303-on-g1/s303-on-g1-band5.bak	250	5	12	12	307.5
 s303-on-g1	303	0	js/bundled-champion-3p.js	gunSpam	s303-on-g1-band6	1.0545	a5165c228a9a	0	docs/artifacts/opphuman/s303-on-g1/s303-on-g1-band6.bak	250	5	12	12	307.5

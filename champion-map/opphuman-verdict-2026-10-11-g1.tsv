@@ -1,11 +1,11 @@
 # opHuman 配对臂 · 闸侧读数（2026-10-11-g1）· 判据跑前钉在 champion-map/opphuman-arms.mjs 头部
 # 尺：人席 = tools/probe-human-seat.mjs（200 局/格 · 两批 90210/90211 · 六格均值两批两口径平均） ‖ 闸 = tools/promote-champion.mjs --dry --games=20 ‖ 现役锚点人席均值 = 8.04
 arm	seed	oppHuman	pack	wid	seatWorst	seatMean	Gmulti	Glong	blocked	trainFit
-s301-off-g1	301	0	docs/artifacts/opphuman/s301-off-g1/s301-off-g1-band4.bak	e2d2b4c7c183b3fc	18.0	5.33	4.21	2.39	1	1.1630
+s301-off-g1	301	0	docs/artifacts/opphuman/s301-off-h2/s301-off-h2-band4.bak	e2d2b4c7c183b3fc	18.0	5.33	4.21	2.39	1	1.1630
 s301-on-g1	301	0	docs/artifacts/opphuman/s301-on-g1/s301-on-g1-band4.bak	6b046b144440fe01	13.0	5.67	3.29	5.07	0	1.0978
-s302-off-g1	302	0	docs/artifacts/opphuman/s302-off-g1/s302-off-g1-band4.bak	140411a9fb5a41f2	17.0	4.42	3.10	3.38	0	1.2117
+s302-off-g1	302	0	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band4.bak	140411a9fb5a41f2	17.0	4.42	3.10	3.38	0	1.2117
 s302-on-g1	302	0	docs/artifacts/opphuman/s302-on-g1/s302-on-g1-band2.bak	2e3acf9daf2351d2	28.0	8.46	6.93	3.25	0	1.0967
-s303-off-g1	303	0	docs/artifacts/opphuman/s303-off-g1/s303-off-g1-band2.bak	e9d235104dd8eb26	41.0	10.50	4.20	2.84	1	1.1748
+s303-off-g1	303	0	docs/artifacts/opphuman/s303-off-h2/s303-off-h2-band2.bak	e9d235104dd8eb26	41.0	10.50	4.20	2.84	1	1.1748
 s303-on-g1	303	0	docs/artifacts/opphuman/s303-on-g1/s303-on-g1-band5.bak	bb5e2686b56f7d14	30.0	8.88	3.44	2.76	1	1.0684
 # 现役锚点：人席均值 8.04 ‖ 最坏格 28.0
 # ★★ 本批主端点配对差（ON − OFF 人席「只枪压制」格取最大，负 = 改善）: -5.00 / 16.00 / -11.00 ‖ 均值 0.00pt

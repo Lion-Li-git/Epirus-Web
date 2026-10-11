@@ -15,6 +15,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { sp, mcP, holm, rngSeed } from './stats-lib.mjs';
+import { buildResolver, incumbentAt, resolveId } from './pack-resolve.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
@@ -59,8 +60,11 @@ const ALLB = FILES.map(loadBatch);
 
 /* ---- coords：id ↔ path 只认 path 列（§E330 那条同名不同槽的坑） ---- */
 const C = rd('coords.tsv');
-const PATH2ID = {};
-for (const r of C.rows) if (r[C.h.path]) PATH2ID[r[C.h.path].replace(/\\/g, '/')] = r[C.h.id];
+/* §E589：身份解析走 `pack-resolve.mjs` 那一份（id 优先 → path 兜底 → 现役按 slot-history/`--incumbent` 声明认）。
+ *   去重之后"一个文件被多行共享"是常态（986 行 → 794 个文件），按 path 反查会拿别人的读数当自己的。 */
+const RS = buildResolver(join(HERE, '..'), C.rows.map(r => ({ id: r[C.h.id], path: r[C.h.path] })),
+  { incumbent: arg('incumbent', '') || incumbentAt(join(HERE, '..'), FILES.flat()).id });
+console.log('# 现役身份：' + (arg('incumbent', '') ? '--incumbent=' + RS.liveId : '') + ' ‖ ' + RS.liveNote);
 const featOf = {};
 for (const r of C.rows) { const o = {}; for (const k of BEH.concat(SCR)) o[k] = Number(r[C.h[k]]); featOf[r[C.h.id]] = o; }
 const packPath = {};
@@ -69,7 +73,10 @@ for (const list of FILES) for (const f of list) { const t = rd(f); for (const r 
 const ids = [...new Set(ALLB.map(m => [...m.keys()].map(k => k.split('|')[0]))
   .reduce((a, b) => a.filter(x => b.indexOf(x) >= 0)))].filter(id => id !== BASE);
 const cidOf = {}; const skipped = [];
-for (const id of ids) { const cid = PATH2ID[(packPath[id] || '').replace(/\\/g, '/')] || id; cidOf[id] = cid; if (!featOf[cid]) skipped.push(id); }
+for (const id of ids) {
+  const rr = resolveId(RS, id, packPath[id]);
+  cidOf[id] = rr.id; if (!featOf[rr.id]) skipped.push(id);
+  if (rr.how.indexOf('共享') >= 0) console.log('  ⚠ ' + id + ' 的 path 去重后被多行共享 ⇒ 身份不可靠'); }
 const usable = ids.filter(id => featOf[cidOf[id]]);
 console.log('# (f) 批数 ' + ALLB.length + '（' + FILES.join(' ‖ ') + '）‖ 全批都有的候选 ' + ids.length + ' 枚 ‖ 进关联 ' + usable.length +
   ' ‖ 接不到 coords 的 ' + (skipped.join(',') || '无') + '（只进地板，不进关联）');

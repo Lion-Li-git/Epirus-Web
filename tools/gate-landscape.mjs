@@ -22,7 +22,7 @@ const BUILTIN = [
   'docs/artifacts/v7f5t-31.bak',               // 唯一过五道门的那个（座位 n≥400）
   'docs/artifacts/v7f5t-92.bak',
   'docs/artifacts/v7f2t-82.bak',
-  'docs/artifacts/v7f35t-82.bak',
+  'docs/artifacts/v7stock2-82.bak',
   'docs/artifacts/v7f5b-94.bak', 'docs/artifacts/v7f5b-95.bak', 'docs/artifacts/v7f5b-96.bak',
   'docs/artifacts/v7f5b-97.bak', 'docs/artifacts/v7f5b-98.bak', 'docs/artifacts/v7f5b-99.bak',
   'docs/artifacts/v7f35b-94.bak', 'docs/artifacts/v7f35b-95.bak', 'docs/artifacts/v7f35b-96.bak',

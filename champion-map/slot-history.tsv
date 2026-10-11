@@ -1,0 +1,11 @@
+# slot-history.tsv —— 活槽 `js/bundled-champion-3p.js` 在各时间段里住的是**图上哪一行**（§E589 · 千问 10-11）
+#
+# 为什么要有这张表：换包就是把**另一枚权重**写进同一个文件 ⇒ 文件路径不能当身份（§E588 修的就是这件事）。
+#   但下游有几把尺要拿"探针打印出来的 `js/bundled-champion-3p.js`"接回图上的行（现役锚点），
+#   而 §E588 把 `SHIPPED-Ldemo` 行的 path 改成钉住的快照之后，图上再没有任何一行的 path 等于活槽 ⇒
+#   `seatassoc` 直接报「⛔ 这一批里没有现役 ⇒ 没锚点，判读作废」。**这一跳只能靠声明，不能靠猜。**
+# 规矩：**每次换包（写 `js/bundled-champion-3p.js` 的那一笔）必须在这里加一行**，`since` 用那笔 commit 的本地时间（`git show -s --format=%ai <sha>`，不许估）。
+#   解析方（`champion-map/pack-resolve.mjs`）按"表自己的日期 ≤ 哪一条"来认；**表日期正好等于换包那一天**时它会拒绝自选、要人显式声明。
+sinceLocal	coordsId	commit	note
+2026-09-27T18:42:36+08:00	SHIPPED-Ldemo	3c17e23	v1.5.257 上槽 `Ldemo`（wid d490dc13）
+2026-10-11T17:30:34+08:00	T8-s114	2f88f09	v1.6.62 上槽 `T8-s114`（wid 24d8fa30 ‖ 生 `T-s114` 逐位相同）

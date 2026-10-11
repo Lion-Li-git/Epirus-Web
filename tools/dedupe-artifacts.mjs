@@ -16,9 +16,11 @@
  *   引用数 = 这个路径在"下游表 + 门体"里出现的次数（`coords.tsv` 的 path 列、`lineage.tsv`、ruler/feas/oldpacks 各表、`np-test.mjs`）。
  *
  * 用法：node tools/dedupe-artifacts.mjs [--plan] [--write-manifest] [--quarantine [--to=<目录>]] [--restore] [--check]
+ *        [--repoint [--apply]]        # 路线 A：把数据表/代码里指向冗余拷贝的路径**改指主名**（缺省试运行；docs/** 与 js/** 不动）
  *        [--scope=docs/artifacts,d180-bands] [--include-tracked]
  *   缺省 = `--plan`（只读，什么都不动）。`--write-manifest` 才落账本；`--quarantine` 才移文件；`--check` 查断链。
  *   ⚠ 默认**不动 tracked 的那 35 份**（动了会改 git 状态，要单独批）；加 `--include-tracked` 才把它们算进要移的名单。
+ *   推荐顺序：`--repoint`（试运行看清单）→ `--repoint --apply` → `--check`（应为 0）→ `--quarantine` → `--check`（仍为 0）。
  * 退出码：0 = 跑完 ‖ 2 = 输入/前置不齐（宁可红也不许假绿）
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, readdirSync, statSync } from 'node:fs';
@@ -30,9 +32,9 @@ import { widOf, parseMeta } from '../champion-map/pack-id.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const has = k => process.argv.includes('--' + k);
-const bad = process.argv.slice(2).filter(a => a.startsWith('--') && !['plan', 'write-manifest', 'quarantine', 'restore', 'check', 'include-tracked']
+const bad = process.argv.slice(2).filter(a => a.startsWith('--') && !['plan', 'write-manifest', 'quarantine', 'restore', 'check', 'include-tracked', 'repoint', 'apply']
   .some(f => a === '--' + f || a.startsWith('--' + f.split('=')[0] + '=')));
-if (bad.length) { console.error('⛔ 不认识的参数：' + bad.join(' ') + '（只认 plan/write-manifest/quarantine/restore/check/include-tracked/scope/to）'); process.exit(2); }
+if (bad.length) { console.error('⛔ 不认识的参数：' + bad.join(' ') + '（只认 plan/write-manifest/quarantine/restore/check/repoint/apply/include-tracked/scope/to）'); process.exit(2); }
 const SCOPE = String(arg('scope', 'docs/artifacts,d180-bands')).split(',').map(s => s.trim()).filter(Boolean);
 const QDIR = arg('to', '');
 const MAN = join(ROOT, 'champion-map', 'dupes-manifest.tsv');
@@ -145,6 +147,29 @@ if (has('restore')) {
   writeManifest();
 }
 if (has('write-manifest') && !has('quarantine') && !has('restore')) writeManifest();
+
+/* ---------- 5. 改指主名（路线 A）----------
+ * 只改**数据表与代码**里的路径。`docs/**` 里的历史引用**一个字都不改** ——
+ *   那是"当时说过的话"（哪一局、哪个产物、哪条判词），改了就是把证据改掉；别名关系由账本 `dupes-manifest.tsv` 解释。
+ * ⚠ `js/**` 永远不改（引擎与活槽）。缺省是**试运行**，加 `--apply` 才写盘。 */
+if (has('repoint')) {
+  const MAP = {}; for (const p of plan) if (p.role === 'move') MAP[p.rel] = p.keep;
+  const keys = Object.keys(MAP).sort((a, b) => b.length - a.length);   /* 长的排前面：alternation 取第一个能匹配的 ⇒ 保证吃到最长路径 */
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const RX = new RegExp('(' + keys.map(esc).join('|') + ')', 'g');
+  const cand = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }).trim().split('\n')
+    .filter(f => /\.(tsv|mjs|js)$/.test(f) && !/^docs\//.test(f) && !/^js\//.test(f) && f !== 'champion-map/dupes-manifest.tsv');
+  let nFiles = 0, nRep = 0;
+  for (const f of cand) {
+    let txt; try { txt = readFileSync(join(ROOT, f), 'utf8'); } catch (e) { continue; }
+    const hits = txt.match(RX); if (!hits || !hits.length) continue;
+    nFiles++; nRep += hits.length;
+    console.log((has('apply') ? '  改了 ' : '  会改 ') + String(hits.length).padStart(4) + ' 处  ' + f);
+    if (has('apply')) writeFileSync(join(ROOT, f), txt.replace(RX, m => MAP[m]));   /* 原文进原文出 ⇒ CRLF 与列序一字不动，只换路径 */
+  }
+  console.log((has('apply') ? '✔ 已改指：' : '（试运行 —— 加 `--apply` 才写盘）要改：') + nRep + ' 处引用 · ' + nFiles + ' 个文件' +
+    ' ‖ 名单外不动：docs/**（历史引用）与 js/**');
+}
 if (has('check')) {
   /* `__d177_missing__` 这类是**门自己造的"文件不存在"夹具**（np-test 里喂给守卫用例的假路径），不算断链。 */
   const synthetic = c => /__/.test(c.replace(/^.*[\\/]/, ''));

@@ -17,6 +17,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { buildResolver, incumbentAt, resolveId } from './pack-resolve.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
@@ -186,17 +187,24 @@ const FRAME_C = ['seat-e586-90216.tsv', 'seat-e586-90217.tsv'];
 const FRAME_D = ['seat-2026-10-11-90210.tsv', 'seat-2026-10-11-90211.tsv', 'seat-2026-10-11-90212.tsv', 'seat-2026-10-09-90310.tsv', 'seat-2026-10-09-90420.tsv'];
 /* Hp（页面分数）只用来划"候选级人群"，不参与任何规则的判定
  * ⚑ 键必须是 **coords 的 id**，而人席表打的是探针 id（basename 或路径派生）⇒ 必须走 path 列接回去（§E330 那条同一个洞） */
-const HP = {}, PATH2ID = {};
+const HP = {};
+const CROWS = [];
 {
   const L = readFileSync(join(HERE, 'coords.tsv'), 'utf8').replace(/\r?\n$/, '').split(/\r?\n/);
   const h = Object.fromEntries(L[0].split('\t').map((x, i) => [x, i]));
-  for (const l of L.slice(1)) { const c = l.split('\t'); const id = c[h.id]; if (!id) continue; HP[id] = Number(c[h.Hp]); if (c[h.path]) PATH2ID[c[h.path].replace(/\\/g, '/')] = id; }
+  for (const l of L.slice(1)) { const c = l.split('\t'); const id = c[h.id]; if (!id) continue; HP[id] = Number(c[h.Hp]); CROWS.push({ id, path: c[h.path] }); }
 }
+/* §E589：现役身份**按声明**认（`--incumbent=` 或 `slot-history.tsv`），不许按 path 猜——
+ *   去重之后一个文件可被多行共享，而活槽自己会换主人（`seatassoc` 同一条）。 */
+const ROOTD = join(HERE, '..');
+const INCV = arg('incumbent', '') || incumbentAt(ROOTD, FRAME_A.concat(FRAME_B, FRAME_C, FRAME_D)).id;
+if (!INCV) { const r = incumbentAt(ROOTD, FRAME_A.concat(FRAME_B, FRAME_C, FRAME_D)); console.error('⛔ ' + r.why); process.exit(2); }
+const RS = buildResolver(ROOTD, CROWS, { incumbent: INCV });
 function hpOf(probeId, files) {
   for (const f of files) {
     const L = readFileSync(join(HERE, f), 'utf8').replace(/\r?\n$/, '').split(/\r?\n/).filter(l => l[0] !== '#');
     const h = Object.fromEntries(L[0].split('\t').map((x, i) => [x, i]));
-    for (const l of L.slice(1)) { const c = l.split('\t'); if (c[h.id] === probeId) return HP[PATH2ID[(c[h.path] || '').replace(/\\/g, '/')] || probeId]; }
+    for (const l of L.slice(1)) { const c = l.split('\t'); if (c[h.id] === probeId) return HP[resolveId(RS, probeId, c[h.path]).id]; }
   }
   return HP[probeId];
 }
