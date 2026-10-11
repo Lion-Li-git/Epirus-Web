@@ -23,6 +23,7 @@ import { resolveOutPath } from './out-path.mjs';   /* D232 ⑦ 用：`--out=` �
 import { pushTarget } from './bot-chooser-lib.mjs';   /* D223 用：选点规则是纯函数 ⇒ 喂合成 state 逐条钉（§E262） */
 import { hardwiredLine } from './probe-layer-caliber.mjs';   /* D149 用：指针行号从源码现算（钉死数字会在别人插一行后变成假行号） */
 import { widOfArr } from '../champion-map/pack-id.mjs';   /* D234 用：池 bundle 里内嵌权重的指纹要**现算**比对，不许信它自己写的 */
+import { rdTable as seatRd, seatKillIndex, pairHasBase } from '../champion-map/seat-rule.mjs';   /* D234⑧ 用：人席闸的"算不出 ≠ 零格"直接喂两种表比 */
 /* D163 用：防御质量三档的单一来源（用户 09-26 裁定："出防御的时候完全没人打他就算白防御，被穿透算半有效"） */
 import { classifyDefenseWindow, defenseQuality, formatQuality, parseQuality, formatQualityRecord } from './defense-quality.mjs';
 /* D164 用：池子前沿的三条判据（**只 import 纯函数模块**，探针本体会去扫 1457 个文件） */
@@ -9578,6 +9579,25 @@ t('D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · �
     ok(A.files > 0, '④ 审计必须真数到包文件（files=' + A.files + ' groups=' + A.groups +
       ' scope 里缺的目录=' + JSON.stringify(A.missing || []) + '）⇒ 数到 0 是"没数"，不是"没重复"');
   }
+  /* ⑤ §E590 别名账本 `pack-aliases.tsv` 是**进仓的账本** ⇒ 里面只许出现仓内相对路径。
+   *   起因（实测，不是推测）：门跑测试时 `train-3p` 往 `os.tmpdir()` 写 band 夹具，
+   *   `pack-guard` 的"目标在仓外 ⇒ 不登记"判断**在 Windows 跨盘时失效**
+   *   （`path.relative('D:/…','C:/Users/…/Temp/…')` 不返回 `..` 开头，而是原样吐绝对路径）
+   *   ⇒ 我一跑 `--group=meta`/`ui` 就一口气往账本里追加了 **75 行 temp 绝对路径**（`git status` 里那笔"意外改动"就是它）。
+   *   ⇒ 这条腿钉的就是"账本别再被测试自己写脏"：任何仓外/绝对路径都判红。 */
+  const AL = readFileSync('champion-map/pack-aliases.tsv', 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
+  const ah = Object.fromEntries(AL[0].split('\t').map((c, i) => [c, i]));
+  const badPath = [];
+  for (const l of AL.slice(1)) {
+    const c = l.split('\t');
+    for (const col of ['canonical', 'wantedPath']) {
+      const v = c[ah[col]] || '';
+      if (!v) continue;
+      if (/^[A-Za-z]:[\\/]/.test(v) || v.startsWith('\\\\') || v.split('/').indexOf('..') === 0) badPath.push(col + '=' + v.slice(0, 60));
+    }
+  }
+  ok(badPath.length === 0, '⑤ 别名账本里有 ' + badPath.length + ' 个仓外/绝对路径（样例：' + badPath.slice(0, 3).join(' ‖ ') +
+    '）⇒ 账本只描述仓内真身关系，门跑测试产生的 temp 路径不许进来（`pack-guard` 的 `isOutside` 判跨盘要用 resolve 比前缀，不能只看 `..`）');
 });
 
 
@@ -11833,6 +11853,9 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
  *   ③ 自动成员带 block / 被人席判死进池 ⇒ 把已经判过刑的包又放上桌
  *   ④ 抽签不可复现 ⇒ 池读数全部作废（同 seed 重放必须逐字相同）
  *   ⑤ 降级不说话 ⇒ 池空/单成员时产品会"看起来正常"地四席全同
+ *   ⑥ 契约的三处读者（页面 / 量具 / 真源表）少一个 ⇒ 文档写了但没人执行
+ *   ⑦ 页面解包用错对象 ⇒ 整池静默退回单包，而标签照样说"池在生效"（只有真跑解包才抓得到）
+ *   ⑧ 人席批表缺基准行 ⇒ "算不出"被读成"零格否决"，被判死的包会以"自动成员"身份进池（10-12 实测两枚）
  * ⚠ 判的是 `pool-add --audit` 吐的 **JSON 里的数**，不是退出码（管道会吃掉退出码 —— 本机栽过两次）。
  * ⚠ 本门的输入全在 git 里（腿①自己就在查这件事）⇒ 它不会变成又一个"CI 上永远 SKIP"（`D231`/`D233` 的教训）。 */
 t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话', function () {
@@ -11904,6 +11927,60 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
   ok(pbs.indexOf('chooserFor') >= 0 && pbs.indexOf('EpirusPoolDraw') >= 0,
     '⑥ 量具必须走 `duelAssembly` 的 `chooserFor` + `js/pool-draw.js` ⇒ 自己写一份对局循环就是第二份实现（规矩：单一来源）');
   ok(pbs.indexOf('humanPrototypes') >= 0, '⑥ 量具必须用共享的人类原型表（`audit-lib.humanPrototypes`）⇒ 与 `probe-human-seat` 不同原型 = 两个数不能并排读');
+
+  /* ⑦ **真跑解包**：页面的 `loadPool` 必须用能解开 bundle 的那个对象。
+   *   这条腿存在是因为 10-11 夜我亲手写错了一次：把 `unpack` 当成 `EpirusChampionPack` 的方法（它只导出 `extract`/`version`），
+   *   于是 7 枚成员全部"解不开" ⇒ 页面**静默退回单包**，而标签却照样显示池在生效 —— 浏览器实机才抓得到，CI 抓不到。
+   *   ⇒ 这里不用注释提醒，直接把两个模块跑起来比 API，再把 bundle 第一条真解一遍。 */
+  const boxPC = { window: {} };
+  vm.runInNewContext(readFileSync('js/champion-pack.js', 'utf8'), boxPC, { filename: 'js/champion-pack.js' });
+  const PC = boxPC.window.EpirusChampionPack || {};
+  ok(typeof PC.unpack !== 'function', '⑦ 前提变了：`EpirusChampionPack` 现在有了 `unpack` ⇒ 本条腿与页面用哪个对象 need 一起重看（别只改门）');
+  /* `policy.js` 依赖 rules/state（`R.SK`）⇒ 不能单独塞进空 vm（第一版就是这么炸的：`reading 'SK'`）。
+   *   走 `audit-lib.sandbox()` 那条既有链路（`CORE` 里已含 policy.js）。 */
+  const POL = sandbox(process.cwd()).EpirusPolicy;
+  ok(POL && typeof POL.unpack === 'function', '⑦ 解包的唯一入口 `EpirusPolicy.unpack` 必须存在（页面靠它）');
+  const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
+  const lpAll = uiSrc.slice(uiSrc.indexOf('function loadPool'), uiSrc.indexOf('function poolDrawFor'));
+  /* ⚠ 判"有没有写错对象"只能看**代码**：我在那儿留了一句解释错误本身的注释（"第一版写成 `window.EpirusChampionPack.unpack`"），
+   *   不剥注释这条腿会永远红 —— 与普查脚本同一课（`gate-audit` 技能的"常见自坑"）。 */
+  const lp = lpAll.split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+  ok(lp.length > 80 && /P\.unpack\(/.test(lp), '⑦ 页面的 `loadPool` 必须走 `P.unpack(`（= `EpirusPolicy.unpack` 的模块内别名）');
+  ok(!/EpirusChampionPack\.unpack|PK\.unpack/.test(lp), '⑦ `loadPool` 里不许出现 `EpirusChampionPack.unpack`/`PK.unpack` ⇒ 那个对象没有 `unpack`，写错了不报错、只会静默退回单包');
+  const bundleSrc = readFileSync('js/bundled-champion-pool.js', 'utf8');
+  const rawB = AUDIT.extractJsonObject(bundleSrc, 'global.EPIRUS_CHAMPION_POOL');
+  ok(!!rawB, '⑦ bundle 解析不出来（生成格式变了？）');
+  if (rawB) {
+    const first = JSON.parse(rawB).members[0];
+    const un = POL.unpack(first.pack, true);
+    ok(un && typeof un.length === 'number' && un.length > 50,
+      '⑦ `EpirusPolicy.unpack` 必须真能解开成员 ' + first.id + ' 的内嵌包（拿到长度 ' + (un && un.length) + '）' +
+      ' ⇒ 解不开就意味着页面里该枚会被整枚踢出池，而这是**静默**的');
+  }
+
+  /* ⑧ **人席那道闸的输入卫生**：批表里没有基准行 ⇒ "与现役比 ≥20pt"根本比不出来，不许读成"零格否决 = 合格"。
+   *   立案依据（10-12 00:5x 实测）：`pool-seat-ml-*.tsv` 是跑探针时 `--packs=` 顶掉了默认基准
+   *   `js/bundled-champion-3p.js` 造出来的 ⇒ 12 行全是成员、0 行基准，而第一版 `seatKillIndex` 的 `kills` 初值是 0
+   *   ⇒ 六枚 mid/low 全被刷成"量过且干净"进了自动成员，其中两枚**真踩 4 格 / 2 格**（给只会开枪的人类送一半的局）。
+   *   这条腿不钉文案：把同一批表**带基准 / 剥掉基准**各喂一次，比两次的结论数量。 */
+  const SF = 'champion-map/pool-seat-ml2-90210.tsv', SF2 = 'champion-map/pool-seat-ml2-90211.tsv';
+  ok(existsSync(SF) && existsSync(SF2), '⑧ 人席批表不在：' + SF + ' / ' + SF2 +
+    ' ⇒ 这条腿没有输入可判（要判"没量过 ≠ 干净"，表必须在册 —— 与腿① 同一个纪律）');
+  const idw = rel => rel;                     /* 只验证判据本身：按路径当身份就能对齐两张表，不需要读包 */
+  const withBase = [SF, SF2].map(f => seatRd(f, readFileSync(f, 'utf8')));
+  const strip = t => ({ h: t.h, rows: t.rows.filter(r => r[t.h.id] !== 'bundled-champion-3p') });
+  const noBase = withBase.map(strip);
+  eq(pairHasBase(withBase), true, '⑧ 带基准的那一对必须被认成"可判"（认不出 ⇒ 这条闸永远整对作废，等于没有）');
+  eq(pairHasBase(noBase), false, '⑧ 剥掉基准行之后必须判"不可判" ⇒ 现在它被当成可判，说明基准的找法不对');
+  const ixOk = seatKillIndex(withBase, idw), ixBad = seatKillIndex(noBase, idw);
+  ok(ixOk.size > 0, '⑧ 带基准的表必须出得了结论（现在 0 条 ⇒ 批表格式或判据接线变了，本门在看空气）');
+  eq(ixBad.size, 0, '⑧ 无基准的表必须一条结论都不给，实测给了 ' + ixBad.size + ' 条 ⇒ "算不出"正在被读成"零格否决"（假干净）');
+  const killedPath = 'docs/artifacts/v7divK2b-82.bak';   /* 池里的 `v7w3c-82`，10-12 实测踩 4 格；它已被移出池 */
+  const kHit = ixOk.get(killedPath);
+  ok(kHit && kHit.kills > 0, '⑧ 已知送分包 ' + killedPath + ' 必须被判出踩线（实测 ' + (kHit ? kHit.kills : '索引里没有') +
+    '）⇒ 判据读不到格就别说自己在守门');
+  ok(readFileSync('champion-map/pool-members.tsv', 'utf8').indexOf(killedPath) < 0,
+    '⑧ 已被人席判死的 ' + killedPath + ' 不许还在池里（腿③ 只查自动成员的 seatKill>0，这条钉的是"路径也别留在表里"）');
 });
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 

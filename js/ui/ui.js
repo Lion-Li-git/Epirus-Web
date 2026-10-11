@@ -346,6 +346,66 @@
     const p3 = loadMultiChamp();   // 2P 那颗也没有 ⇒ 回退 3P 并**明说**（不许静默换包）
     return { params: p3 || null, from: p3 ? multiChampFrom + '·回退(2P 槽空)' : null };
   }
+  /* ===== v1.6.63（§E590）冠军池：≥3 人桌逐席各抽一枚 =====
+   * 契约 `docs/POOL-CONTRACT.md` §3/§4。真源 `champion-map/pool-members.tsv`，页面只读它的派生物
+   *   `js/bundled-champion-pool.js`（**内嵌不 fetch**：产品入口是双击 index.html，`file://` 取不到本地文件）。
+   * ⚠ 组成是**纯派生**（`compose(该档成员, n-1, rng(state.slotSalt))`）⇒ 同一局不论问第几席、第几回合答案都同，
+   *   所以这里**故意不设缓存**（有缓存就有"缓存与局不同步"这一类错）。`cloneState` 走 JSON 往返会带上 slotSalt。
+   * ⚠ 抽签实现不在本文件重写 —— 走 `js/pool-draw.js` 那一份（门 `D234` 与量具 `tools/probe-pool.mjs` 用的是同一份）。 */
+  const POOL = { members: null, params: {}, bad: [], status: 'init' };
+  /** 降级分三种原因，**必须分开说**（浏览器实机跑出来的第一条就是这句：默认档"普通"没配成员时，
+   *  旧文案会写"bundle 缺失或该档池空"，而 bundle 其实加载得好好的 ⇒ 把"还没配"说成了"坏了"）。 */
+  function poolOffReason(tier) {
+    loadPool();
+    if (POOL.status === 'no-bundle') return '池 bundle 未加载 ⇒ 四席同一枚（内置槽）';
+    if (!POOL.members.length) return '池 bundle 里一枚都解不开 ⇒ 四席同一枚（内置槽）';
+    const n = POOL.members.filter(function (m) { return m.tier === (tier && tier.pool); }).length;
+    if (!n) return '该难度档（' + (tier && tier.pool) + '）还没配池成员 ⇒ 四席同一枚，**不是故障**';
+    return null;
+  }
+  function loadPool(force) {
+    if (POOL.members !== null && !force) return POOL.members;
+    POOL.members = []; POOL.params = {}; POOL.bad = []; POOL.status = 'ok';
+    const raw = (typeof window !== 'undefined' && window.EPIRUS_CHAMPION_POOL) || null;
+    if (!raw || !Array.isArray(raw.members)) { POOL.status = 'no-bundle'; return POOL.members; }   /* 调用方按契约 §4 退回单包并说出来 */
+    /* ⚠ 解包用的是本文件顶上的别名 `P = window.EpirusPolicy`（`unpack` 挂在那里）——
+     *   第一版这里写成 `window.EpirusChampionPack.unpack` 是**错的**：那个对象只导出 `extract`/`version`，
+     *   于是 7 枚全部"解不开"、静默退回单包（是浏览器实机跑出来的，不是推出来的：`PK.unpack is not a function`）。
+     *   `allowLegacy=true`：池成员跨代（`K2`/`SHIPPED-Ldemo` 是 v6 形状，`T8-s114` 是 v7）⇒
+     *   与 `tools/*` 侧同一口径；权重身份已由 `tools/build-pool-bundle.mjs` 逐条重算 wid 与表对账过。 */
+    for (const m of raw.members) {
+      let p = null;
+      try { p = P.unpack(m.pack, true); } catch (e) { p = null; }
+      if (!p) { POOL.bad.push(m.id); continue; }                    /* 契约 §4：解不出的整枚出局并点名，不许拿 null 顶上 */
+      POOL.members.push({ id: m.id, wid: m.wid, tier: m.tier });
+      POOL.params[m.id] = p;
+    }
+    return POOL.members;
+  }
+  function poolDrawFor(state, tier, n) {
+    const D = window.EpirusPoolDraw;
+    if (!D || !tier || !tier.pool) return null;
+    const members = D.byTier(loadPool(), tier.pool);
+    if (!members.length) return null;
+    return D.compose(members, Math.max(1, n - 1), D.rng((state && state.slotSalt >>> 0) || 1));
+  }
+  /** 这一席该用哪一枚。`n<=2` 完全走老路：§E286 实测 3P 包在 1v1 上是**分布外**的 ⇒ 把池搬到 2 人桌等于造一个假档。 */
+  function champForSeat(pid, state, tier) {
+    const n = (state && state.p && state.p.length) || (B.players || 2);
+    if (n <= 2) return champForCount(n);
+    const single = champForCount(n);
+    if (single.from === 'local') { single.poolNote = '本机导入优先 ⇒ 池不生效（四席都用你这枚）'; return single; }
+    const draw = poolDrawFor(state, tier, n);
+    if (!draw || !draw.seats.length) {
+      single.poolNote = poolOffReason(tier) || '池未生效（原因未归类）⇒ 退回单包（四席同一枚）';
+      return single;
+    }
+    const m = draw.seats[(pid || 1) - 1];
+    const p = m && POOL.params[m.id];
+    if (!p) { single.poolNote = '席位 ' + pid + ' 抽到的成员解不开 ⇒ 本席退回单包'; single.poolDraw = draw; return single; }
+    return { params: p, from: 'pool:' + m.id, poolDraw: draw, seatId: m.id,
+      poolNote: draw.allSame ? '该档池只够 ' + draw.seats.length + ' 席 ⇒ 四席全同（降级，已明说）' : null };
+  }
   /* ===== v1.6.6 兜底脚本（冠军包拿不到时）=====
    * 这里必须是个**定义得住**的函数：`chooseAIMulti` 那行历史上引用过 `DN.hard.pick`，而 `DN` 的声明在 v1.3.22
    * 就删了 ⇒ 那条"显式回退"其实是 ReferenceError（门 D227③e 钉这一处不许再出现未定义的名字）。
@@ -430,10 +490,29 @@
     }
     const cf = champForCount(B.players || 2);
     const packLabel = (B.players || 2) > 2 ? '3P' : '2P';
+    /* v1.6.63（§E590）池生效时这里**必须说得出逐席是谁**（契约 §4：降级不许静默）。
+     *   组成与 `champForSeat` 用的是同一个纯派生（同 slotSalt 同答案）⇒ 回显与实际决策不会分叉。 */
+    if ((B.players || 2) > 2 && tier.pool) {
+      const d = poolDrawFor(B.state, tier, B.players || 2);
+      if (d && d.seats.length) {
+        const n = loadPool().filter(function (m) { return m.tier === tier.pool; }).length;
+        return {
+          source: '池·' + tier.pool + '(' + n + ' 枚) 本局=' +
+            d.seats.map(function (s) { return s.id; }).join('+') +
+            (d.allSame ? ' ⚠四席全同:该档成员不足' : '') +
+            (POOL.bad.length ? ' ⚠出局:' + POOL.bad.join(',') : '') +
+            ' · ' + tier.name + ' ε=' + tier.eps + '/k' + tier.epsK + '/' + tier.epsMode + (tier.ramp ? '·斜坡' : ''),
+          champ: true, from: 'pool', tier: tier.id, eps: tier.eps, epsK: tier.epsK, epsMode: tier.epsMode,
+          ramp: !!tier.ramp, poolDraw: d, allSame: !!d.allSame
+        };
+      }
+    }
     if (!cf.params) return { source: fallbackNameFor(B.players || 2), champ: false, fallback: true, tier: tier.id };
     const from = cf.from === 'local' ? '本机自训/导入' : cf.from === 'builtin' ? '内置' : String(cf.from);
+    const poolOff = (B.players || 2) > 2 && tier.pool
+      ? (cf.from === 'local' ? '（池未生效：本机导入优先 ⇒ 四席用你这枚）' : '（' + poolOffReason(tier) + '）') : '';
     return {
-      source: packLabel + ' 冠军（' + from + '）· ' + tier.name + ' ε=' + tier.eps + '/k' + tier.epsK + '/' + tier.epsMode + (tier.ramp ? '·斜坡' : ''),
+      source: packLabel + ' 冠军（' + from + '）· ' + tier.name + ' ε=' + tier.eps + '/k' + tier.epsK + '/' + tier.epsMode + (tier.ramp ? '·斜坡' : '') + poolOff,
       champ: true, from: cf.from, tier: tier.id, eps: tier.eps, epsK: tier.epsK, epsMode: tier.epsMode, ramp: !!tier.ramp
     };
   }
@@ -474,7 +553,10 @@
      * 剂量 = (eps, epsK, epsMode, ramp) 四个值 ⇒ 它们**只在这一处**被消费，`tools/probe-diff-ladder.mjs` 量的也是这四个值。 */
     const tier = tierOf(B.diff);
     if (tier && tier.kind === 'champ') {
-      const cf = champForCount(state.p.length);
+      /* v1.6.63（§E590）：这里原来写 `champForCount(state.p.length)` ⇒ 四席拿到的是**同一枚**包。
+       *   换成 `champForSeat(pid, state, tier)`（契约 §3.1：逐席各抽一枚、可重复、禁四席全同），
+       *   下面那行剂量**一字没动** —— 难度与池是两根正交的轴（池决定桌上是谁，ε 决定他多昏手）。 */
+      const cf = champForSeat(pid, state, tier);
       const c = cf.params;
       if (c) {
         B.aiFallback = false;

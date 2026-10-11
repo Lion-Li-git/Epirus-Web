@@ -1053,14 +1053,20 @@
    *   它衡量的是"一桌同档 AI 给一个会按人类分布出牌的玩家多大压力"，与"AI 互打的强度"不是一回事。
    * ⚠ 上线档的大雷/摄魂注入**在这些数里**（`BIGT_PUSH=12` ‖ `DRAIN_PUSH=1`，走的是页面同一份 chooser）⇒ 别把 note 再当成"裸包"的读数。
    * ⚠ 剂量还会改**局长**：简单档 5 人桌平均 45.1 回合、普通档 16.8 ⇒ "看得见的节奏"也是难度的一部分。 */
+  /* ===== v1.6.63（§E590）：档位多了一根 `pool` —— 冠军池按档取成员 =====
+   * 契约在 `docs/POOL-CONTRACT.md` §3：**难度与池是两根正交的轴** —— `pool` 决定"从哪一档的池里逐席抽一枚"，
+   *   而 `eps/epsK/epsMode/ramp` 仍是"抽到的那枚上面叠多少探索剂量"。
+   * ⚠ 这不是把"难度"换个写法：以前"困难"只能靠 ε=0 在同一枚包上做文章，现在它同时意味着"桌上是困难档那 7 枚"。
+   *   ⇒ `D227` 的④（五档两两分得开）在池形态下的语义要重给（那条腿已按用户 10-11 裁定暂停，回来条件就写着"池第一版接线"）。
+   * ⚠ `lv:hunter` 没有 `pool`：它是 `kind:'style'`（脚本整桌上桌），本来就不带包。 */
   const DIFF_TIERS = [
-    { id: 'lv:sparring', name: '简单 · 陪练', kind: 'champ', eps: 1, epsK: 40, epsMode: 'uniform', ramp: false,
+    { id: 'lv:sparring', name: '简单 · 陪练', kind: 'champ', eps: 1, epsK: 40, epsMode: 'uniform', ramp: false, pool: 'low',
       note: '冠军的牌，但每一手都在"网络看好的前 40 张"里**均匀**乱抽：看得懂局面，抓不住机会（替身夺冠 60.9~90.1%，五格同向软 46~70pt；局长也跟着变长，5 人桌 45 回合 vs 普通档 17）' },
-    { id: 'lv:novice', name: '入门', kind: 'champ', eps: 0.5, epsK: 5, epsMode: 'soft', ramp: false,
+    { id: 'lv:novice', name: '入门', kind: 'champ', eps: 0.5, epsK: 5, epsMode: 'soft', ramp: false, pool: 'low',
       note: '两手里有一手乱抽（替身夺冠 17.5~28.4%，比默认档软 4.0~5.5pt；这一步五格全同号）' },
-    { id: 'lv:regular', name: '普通（默认）', kind: 'champ', eps: 0.2, epsK: 5, epsMode: 'soft', ramp: true,
+    { id: 'lv:regular', name: '普通（默认）', kind: 'champ', eps: 0.2, epsK: 5, epsMode: 'soft', ramp: true, pool: 'mid',
       note: '★ 默认档 = v1.5.141 以来页面一直在跑的那条口径（前 3 回合逐步放开 0→0.1→0.2）。替身夺冠 13.4~23.4%' },
-    { id: 'lv:hard', name: '困难 · 冠军', kind: 'champ', eps: 0, epsK: 5, epsMode: 'soft', ramp: false,
+    { id: 'lv:hard', name: '困难 · 冠军', kind: 'champ', eps: 0, epsK: 5, epsMode: 'soft', ramp: false, pool: 'hard',
       note: '冠军本体：每手都取网络最优（替身夺冠 11.9~21.4%）。⚠ 与"普通"实测只差 1.5~4.6pt，**5 人 3 血那一格（−1.53±2.36pt）落在噪声里** —— 次序对、幅度小，已如实标；门 D227④ 只点名放行这一对"不许翻序"，其余相邻档仍要 ≥2pt' },
     { id: 'lv:hunter', name: '极限 · 读招', kind: 'style', style: 'st:combocounter',
       note: '读招反制整桌上：会读你最近 5 次出招来反制（替身夺冠 6.5~10.3%，五格都比"困难"硬 3.9~16.9pt）⇒ 想比贪心冠军更难，目前只有脚本这一条路（ε=0 已是"完全不探索"的下界）' }

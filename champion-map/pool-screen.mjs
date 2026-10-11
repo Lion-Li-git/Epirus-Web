@@ -28,6 +28,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { widOf } from './pack-id.mjs';
+import { rdTable, seatKillIndex, pairHasBase, BASE_ID } from './seat-rule.mjs';   /* 人席杀刀的判据只有一份（§E590）*/
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -125,11 +126,50 @@ const VD = p => (PROM[p.id] || {}).v || 'untested';
 const BLOCKS = p => (PROM[p.id] || {}).blocks || '';
 const HOLO = p => (PROM[p.id] || {}).holo || '';
 
+/* ---------- 2c. 人席杀刀（§E531「某格两批同号都比现役差 ≥20pt」）= 自动成员的第三道闸 ----------
+ * 为什么必须接（§E590 · 千问）：DS 10-11 手工合并"困难档 7 枚"时正是用这条把 `e35prod807` / `win-R231` 挑掉的，
+ *   但**工具当时没接它** ⇒ 谁照着 `pool-hp.tsv` 装配就把那两枚又请回桌上。这条腿补的就是这个落差。
+ * 判据不在这里重写 —— 走 `champion-map/seat-rule.mjs`（`tools/pool-add.mjs` 用的是同一份，两份会分叉）。
+ * ⚠ 批表里的 id 与池里的 id **不同名**（同一粒权重在表里叫 `win-Ldemo`、池里叫 `SHIPPED-Ldemo`）
+ *   ⇒ 一律按 `wid` 对齐（`seatKillIndex` 内部做）。缺表/缺行 = **没量过**，不是"没踩线"。 */
+const SEAT_FILES = String(arg('seat', 'pool-seat-90210.tsv,pool-seat-90211.tsv')).split(',').map(s => s.trim()).filter(Boolean);
+if (SEAT_FILES.length % 2) { console.error('⛔ --seat= 要成对给（两批同号才判得出）：' + SEAT_FILES.length + ' 个'); process.exit(2); }
+const SEAT = new Map(); const seatPairsUsed = []; let seatPairsNoBase = 0;
+for (let i = 0; i < SEAT_FILES.length; i += 2) {
+  const pair = [SEAT_FILES[i], SEAT_FILES[i + 1]];
+  let tables = null;
+  try { tables = pair.map(f => rdTable(f, readFileSync(join(HERE, f), 'utf8'))); }
+  catch (e) { console.log('# 人席批表缺 ' + pair.join(' ‖ ') + ' ⇒ 这一对不参与判读（**缺表 ≠ 没踩线**）'); continue; }
+  /* ⛔ **没有基准行的整对作废**：判据是"与现役比 ≥20pt"，表里没有现役就比不出，
+   *   而第一版会把"比不出"读成"零格否决" ⇒ 送分包被当成干净的自动成员请上桌
+   *   （10-11 夜 `pool-seat-ml-*.tsv` 实测：六枚里两枚真踩 4 格 / 2 格）。 */
+  if (!pairHasBase(tables)) {
+    seatPairsNoBase++;
+    console.log('# ⛔ 批表对 ' + pair.join(' ‖ ') + ' 里没有基准行（' + BASE_ID + '，两个口径都要）⇒ **这一对判不出杀刀，整对跳过**' +
+      ' ⇒ 重跑要带基准：node tools/probe-human-seat.mjs --packs=js/bundled-champion-3p.js,<成员…>');
+    continue;
+  }
+  for (const [wid, v] of seatKillIndex(tables, rel => {
+    const abs = join(ROOT, rel);
+    if (!existsSync(abs)) return null;
+    try { return widOf(readFileSync(abs, 'utf8')); } catch (e) { return null; }
+  })) {
+    const prev = SEAT.get(wid);
+    if (!prev || v.kills > prev.kills) SEAT.set(wid, v);
+  }
+  seatPairsUsed.push(pair.join('/'));
+}
+const SEATK = p => { const v = SEAT.get(p.wid); return v ? v.kills : -1; };   /* -1 = 这两对表里都没这一粒 */
+
 /* ---------- 3. 分档（门槛是分档的，见文件头）---------- */
-const auto = all.filter(p => p.ns <= NS_MAX && VD(p) !== 'block');   // 卡死门槛（全体）+ 上槽体检 block 出局（自动成员）
+/* 自动成员要同时过三道闸：卡死病（摆架）‖ 上槽体检 ≠ block ‖ 人席杀刀 ≠ 踩线。
+ *   第三道是 §E590 补的：只前两道的版本会把 `e35prod807`/`win-R231` 这类**已被人席判死**的包挑进困难档。 */
+const auto = all.filter(p => p.ns <= NS_MAX && VD(p) !== 'block' && SEATK(p) <= 0);
 const hardAuto = auto.filter(p => p.Hp >= HI && p.chg > CHG_MIN);   // 困难档自动成员：另加蓄能门槛
 const blockedByChg = all.filter(p => p.Hp >= HI && p.chg <= CHG_MIN);// 被困难档蓄能门槛挡掉的（裁定②的候选清单）
 const blockedByProm = all.filter(p => VD(p) === 'block' && !KEEP.some(k => k === p.id));   // 被上槽体检挡掉的
+const blockedBySeat = all.filter(p => SEATK(p) > 0 && !KEEP.some(k => k === p.id) && VD(p) !== 'block');   // 被人席杀刀挡掉的（不与 prom-blocked 重复计）
+const seatRowsK = all.filter(p => SEATK(p) > 0);   // 踩了线的全部（含点名的）——只为把覆盖面印出来，不参与落盘去重
 const mid = auto.filter(p => p.Hp >= LO && p.Hp < HI);
 const low = auto.filter(p => p.Hp < LO);
 const byId = {}; for (const p of all) byId[p.id] = p;
@@ -183,6 +223,12 @@ console.log('# 上槽体检（champion-map/promote.tsv，' + Object.keys(PROM).l
   ' ‖ block ' + blockedByProm.length + '（已从自动成员出局）‖ 没测过 ' + all.filter(p => VD(p) === 'untested').length +
   ' ⇒ **没测过 ≠ 过关**，池上线前建议逐枚补 `promote --dry`（≈2.5 分钟/枚）');
 if (keepMiss.length) console.log('  ⚠ 点名里有 ' + keepMiss.length + ' 个查不到（不在过线集合或 coords 里）：' + keepMiss.join(','));
+/* 人席那道闸的覆盖面必须自己报出来：**没量过 ≠ 干净**（批表只覆盖量过的批次）。 */
+console.log('# 人席杀刀（§E531 两批同号 ≥20pt，判据在 `seat-rule.mjs`；批表 ' + (seatPairsUsed.join(' + ') || '无') + '）：' +
+  '量过 ' + all.filter(p => SEATK(p) >= 0).length + ' 枚 ‖ 踩线出局（自动成员）' + seatRowsK.length + ' 枚：' +
+  (seatRowsK.map(p => p.id + '(' + SEATK(p) + '格)').join(' ‖ ') || '无') +
+  ' ‖ **没量过 ' + all.filter(p => SEATK(p) < 0).length + ' 枚**（不是"干净"）' +
+  (seatPairsNoBase ? ' ‖ ⛔ 另有 ' + seatPairsNoBase + ' 对表因**缺基准行**被整对作废（见上面那行）' : ''));
 console.log('# 切点：高 ≥ ' + HI + ' ‖ 中 ' + LO + '~' + HI + ' ‖ 低 < ' + LO + ' ⇒ 困难 ' + hard.length +
   '（其中自动 ' + hardAuto.length + ' + 点名 ' + keepP.length + '）/ 中等 ' + mid.length + ' / 低 ' + low.length + ' 枚 ‖ 行为维 ' + DIMS.length + ' 维（与 seatroster 对账过）');
 if (blockedByChg.length) console.log('# 被困难档的蓄能门槛挡掉 ' + blockedByChg.length + ' 枚（裁定②里"可以放一两个不蓄能的"就从这里点名）: ' +
@@ -205,17 +251,20 @@ const L = ['id\twid\tHp\tH\ttier\tnoThreatStance\tcharges\tdistinctKeys\tGeff\tv
 const row = (p, t) => [p.id, p.wid, p.Hp, p.H, t, p.ns, p.chg, p.v[4], p.v[8], VD(p), HOLO(p), BLOCKS(p).slice(0, 120), p.path].join('\t');
 /* ⚠ 这几档**盖不满** `all`，每一支都必须单独落行，否则它们会在 tsv 里**静默消失**（用户要点名时连 path 都查不到）：
  *   `hard-blocked` = Hp ≥ 切点但蓄能 ≤ 门槛（裁定②"可以放一两个不蓄能的"候选）‖
- *   `prom-blocked` = 上槽体检判 block（送盾/G4/G5）—— 它们不是"没过五道"，是**没过更严的那道**，必须看得见。
- *   ⚠ 两边**会重叠**（Hp 到线 ∧ 蓄能不够 ∧ 体检 block）⇒ 落盘时按 `prom-blocked` 优先去重，否则同一枚出两行。 */
-const chgRows = blockedByChg.filter(p => VD(p) !== 'block');
+ *   `prom-blocked` = 上槽体检判 block（送盾/G4/G5）—— 它们不是"没过五道"，是**没过更严的那道**，必须看得见 ‖
+ *   `seat-killed`  = 人席杀刀踩线（§E531 两批同号 ≥20pt）—— §E590 补的这一档，就是为了让"被杀过"这件事在表里看得见。
+ *   ⚠ 三者**会重叠**（Hp 到线 ∧ 蓄能不够 ∧ 体检 block ∧ 人席踩线）⇒ 按"更严重的那道"优先去重，否则同一枚出两行。 */
+const seatRows = blockedBySeat;
+const chgRows = blockedByChg.filter(p => VD(p) !== 'block' && SEATK(p) <= 0);
 for (const p of hard) L.push(row(p, 'hard'));
 for (const p of chgRows) L.push(row(p, 'hard-blocked'));
 for (const p of mid) L.push(row(p, 'mid'));
 for (const p of low) L.push(row(p, 'low'));
 for (const p of blockedByProm) L.push(row(p, 'prom-blocked'));
+for (const p of seatRows) L.push(row(p, 'seat-killed'));
 writeFileSync(join(HERE, OUT), L.join('\n') + '\n');
 console.log('\n已写 champion-map/' + OUT + '（hard ' + hard.length + ' + hard-blocked ' + chgRows.length +
   '（蓄能候选 ' + blockedByChg.length + ' 枚里已剔掉体检 block 的 ' + (blockedByChg.length - chgRows.length) + '）' +
-  ' + mid ' + mid.length + ' + low ' + low.length + ' + prom-blocked ' + blockedByProm.length + ' = ' + (L.length - 1) +
-  ' 行；漏了/多了就是有行静默消失或重复了）');
+  ' + mid ' + mid.length + ' + low ' + low.length + ' + prom-blocked ' + blockedByProm.length +
+  ' + seat-killed ' + seatRows.length + ' = ' + (L.length - 1) + ' 行；漏了/多了就是有行静默消失或重复了）');
 console.log('# 人席跑法：node tools/probe-human-seat.mjs --packs=' + hard.map(p => p.path).join(',') + ' --games=200 --modes=multi,long --seed=90210');

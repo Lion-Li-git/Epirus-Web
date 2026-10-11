@@ -1,12 +1,9 @@
 id	wid	Hp	H	tier	noThreatStance	charges	distinctKeys	Geff	verdict	holoOther	blocks	path
-e35prod807	ed5aa28dfbad4ab2	55.3	56.4	hard	0	8.5	5	4.166	untested			docs/artifacts/E35-prod-807.bak
-R-s123	4072e215256c41b8	55	58.1	hard	0.068	1.675	11	5.147	untested			docs/artifacts/e521-out/R-s123.js
-S-s120	590d4a47367be109	54.8	57.6	hard	0	7.775	10	4.975	untested			docs/artifacts/e521-out/S-s120.js
-R231	3afd512a5c385dc6	54.3	53.4	hard	0	12.4	10	3.893	untested			docs/artifacts/eval-out/win-R231.bak
-E3	827c47f91419af05	54.3	50.9	hard	0.0177	7.375	10	5.46	untested			docs/artifacts/e234-out/E3.js
-D4a	5a60c8489990e8b6	54.3	54	hard	0.0063	1	12	7.709	untested			docs/artifacts/e234-out/D4a.js
-T8-s114	24d8fa30bb0c3414	53.1	56	hard	0.0813	4.9	12	8.256	untested			docs/artifacts/e528-out/T8-s114.js
-K2	1d4b687da27187b7	51.4	54.4	hard	0.5	1.9	12	8.227	untested			docs/artifacts/kept/e70-out__D02-31.bak
+R-s123	4072e215256c41b8	55	58.1	hard	0.068	1.675	11	5.147	pass		—	docs/artifacts/e521-out/R-s123.js
+S-s120	590d4a47367be109	54.8	57.6	hard	0	7.775	10	4.975	pass		—	docs/artifacts/e521-out/S-s120.js
+E3	827c47f91419af05	54.3	50.9	hard	0.0177	7.375	10	5.46	pass		—	docs/artifacts/e234-out/E3.js
+T8-s114	24d8fa30bb0c3414	53.1	56	hard	0.0813	4.9	12	8.256	pass		—	docs/artifacts/e528-out/T8-s114.js
+K2	1d4b687da27187b7	51.4	54.4	hard	0.5	1.9	12	8.227	block		G5/long 清不了防席（它夺冠 30%）	docs/artifacts/kept/e70-out__D02-31.bak
 SHIPPED-Ldemo	d490dc136293cfc4	48.9	51.3	hard	0.0063	2.1	10	6.808	pass	0	—	docs/artifacts/eval-out/win-Ldemo.bak
 V-s302	9d445132c3f41c27	57.8	59.5	hard-blocked	0.0095	0.7	9	3.765	untested			docs/artifacts/e551-out/V-s302.js
 v7u1-93	1c33b13882853baf	57	58.3	hard-blocked	0.1444	0	10	6.246	pass	0.35	—	docs/artifacts/v7u1-93.bak
@@ -15,13 +12,12 @@ v7bead100-82	3436ec5015ea002b	56.1	56.6	hard-blocked	0.0388	0	8	4.275	pass	0.3	�
 v7bead1-31	2963faea1c0dfea8	55.9	59.6	hard-blocked	0	0	7	3.148	pass	4.3	—	docs/artifacts/v7bead1-31.bak
 v7beadseed-93	da62eec92346a0a8	55.4	57	hard-blocked	0.0063	0	9	5.472	pass	0.8	—	docs/artifacts/v7beadseed-93.bak
 D2a	ffee118971691716	54.4	52.7	hard-blocked	0	0	7	3.072	untested			docs/artifacts/e234-out/D2a.js
-D4a	5a60c8489990e8b6	54.3	54	hard-blocked	0.0063	1	12	7.709	untested			docs/artifacts/e234-out/D4a.js
-v7f5div3-93	fa1d31f9828be181	54.2	56.4	mid	0	0	9	4.266	pass	1	—	docs/artifacts/v7f5div3-93.bak
+D4a	5a60c8489990e8b6	54.3	54	hard-blocked	0.0063	1	12	7.709	pass		—	docs/artifacts/e234-out/D4a.js
 v7bead100-31	1b0ea81dc9547c3c	53.8	53.9	mid	0.0218	0	9	4.94	pass	0.4	—	docs/artifacts/v7bead100-31.bak
 v7bead1-93	8d3418c8f8ae2265	53.6	53.3	mid	0.0189	0.05	9	5.912	pass	0.3	—	docs/artifacts/v7bead1-93.bak
 B5-10-31	ce3c6b4a3c527952	53.4	55.4	mid	0.1	13.35	11	6.677	untested			docs/artifacts/e100-out/B5-10-31.bak
 HF-191	3df992a9e40c1533	53.3	50.9	mid	0.0449	6.25	11	6.882	untested			docs/artifacts/e116-out/HF-191.bak
-T8-s114	24d8fa30bb0c3414	53.1	56	mid	0.0813	4.9	12	8.256	untested			docs/artifacts/e528-out/T8-s114.js
+T8-s114	24d8fa30bb0c3414	53.1	56	mid	0.0813	4.9	12	8.256	pass		—	docs/artifacts/e528-out/T8-s114.js
 v7bead2-31	668f746a1bb21568	53	55	mid	0.0126	0.075	14	6.146	pass	0.55	—	docs/artifacts/v7bead2-31.bak
 T8-s120	e73fbba84db607e6	52.8	53	mid	0.0563	2.65	10	7.143	untested			docs/artifacts/e521-out/T-s120.js
 v7cmin4-31	30724115a9996098	52.7	56	mid	0	4.65	10	4.767	pass	0	—	docs/artifacts/incumbent-forpromote.bak
@@ -38,7 +34,6 @@ G15-71	fbc3926b144ee593	50.5	52.9	mid	0.0063	2.725	10	6.084	untested			docs/arti
 M05-111	e2b0b2d5bdb58c16	50.4	55.5	mid	0	9.925	9	5.495	untested			docs/artifacts/e73-out/M05-111.bak
 E20-71	798d04cd40cb9d3c	50.4	54	mid	0.025	4.65	11	7.514	untested			docs/artifacts/e85-out/E20-71.bak
 v15-123	ad19731f3f1ecff9	49.9	52.1	mid	0	0	4	3.241	pass	0	—	docs/artifacts/v15-123.bak
-v7w3c-82	9aa82f5cac1cd0ed	49.8	51.7	mid	0	12.425	9	4.204	untested			docs/artifacts/v7divK2b-82.bak
 L05-31	f19bb211a8cb32cb	49.7	52.3	mid	0	7.525	10	6.161	untested			docs/artifacts/kept/e78-out__G08-31.bak
 M05-231	35b8b9129b15f6e9	49.7	52	mid	0	8.725	10	6.129	untested			docs/artifacts/e73-out/M05-231.bak
 PL31	6c1a6b23e88512dd	49.4	50.9	mid	0.025	0.575	10	5.686	untested			docs/artifacts/e73-out/M05C02-31.bak
@@ -71,11 +66,8 @@ r61fix-92	1f42af27d61b38ea	46.8	46.5	low	0.0818	1.15	11	5.177	untested			docs/ar
 blk0t40-s31	f279ffdfc6cbf1ff	46.7	48.3	low	0	2.075	10	5.199	untested			docs/artifacts/kept/e124-out__blk0t40-s31.bak
 v7force-34	cf63a1b569ce88bb	46.6	48.2	low	0	0.625	9	4.463	pass	0	—	docs/artifacts/v7force-34.bak
 v7u1-82	36d9f858545e13d2	46.2	45.1	low	0.0492	0	9	6.933	pass	0.1	—	docs/artifacts/v7u1-82.bak
-v7ringB1-81	ae438393550ff6a1	45.7	44.4	low	0	24.225	10	4.048	pass	1.25	—	docs/artifacts/v7ringB1-81.bak
 R311	ccc41e51a11947ce	45.7	49	low	0.0125	1.375	10	7.165	untested			docs/artifacts/eval-out/win-R311.bak
-v7iso1-81	8b4d6d010601c272	45.6	45.6	low	0	0	4	3.583	pass	0	—	docs/artifacts/v7iso1-81.bak
 SQ2-15-31	ee82e7694b6eb4be	45.1	44.7	low	0.0063	0.625	10	4.579	untested			docs/artifacts/kept/e120-out__N5L-05.bak
-v12-95	eda9f142df9ab815	44.8	42.8	low	0	0	9	3.622	pass	0.3	—	docs/artifacts/v12-95.bak
 PL71	f8bd1419522c6773	44.6	45.7	low	0.0897	3.95	10	7.554	untested			docs/artifacts/e77-out/PL71.bak
 v7cmin3-31	59c0fcc9acc2458c	44.1	46.5	low	0.0705	0	11	5.308	pass	3.3	—	docs/artifacts/v7cmin3-31.bak
 E00-31	9f99c0090d7c758b	44	45.9	low	0.0563	1.475	11	6.443	untested			docs/artifacts/e85-out/E00-31.bak
@@ -151,3 +143,10 @@ fgtB-34	b790c53e4475f499	28	35.3	prom-blocked	0.0539	2.525	12	5.317	block	0	G4/l
 eco2-35	6157caa39cd53c57	25.9	29.5	prom-blocked	0.4291	0	10	4.9	block	0	G4/long 被一行脚本打穿 96% · G4/multi 被一行脚本打穿 66% · G5/long 清不了防席（它夺冠 94%） · G5/multi 清不了防席（它夺冠 67%）	docs/artifacts/eco2-35.bak
 fgtB-32	a0372a73fac9ae71	24.8	26.8	prom-blocked	0	0.05	8	3.813	block	0	G4/long 被一行脚本打穿 94% · G4/multi 被一行脚本打穿 77% · G5/long 清不了防席（它夺冠 95%） · G5/multi 清不了防席（它夺冠 81%）	docs/artifacts/fgtB-32.bak
 rwd0-36	5a074e41844fbbc7	20.7	20.9	prom-blocked	0	0.025	11	4.428	block	0	G5/long 清不了防席（它夺冠 30%） · G5/multi 清不了防席（它夺冠 28%）	docs/artifacts/rwd0-36.bak
+e35prod807	ed5aa28dfbad4ab2	55.3	56.4	seat-killed	0	8.5	5	4.166	untested			docs/artifacts/E35-prod-807.bak
+R231	3afd512a5c385dc6	54.3	53.4	seat-killed	0	12.4	10	3.893	untested			docs/artifacts/eval-out/win-R231.bak
+v7f5div3-93	fa1d31f9828be181	54.2	56.4	seat-killed	0	0	9	4.266	pass	1	—	docs/artifacts/v7f5div3-93.bak
+v7w3c-82	9aa82f5cac1cd0ed	49.8	51.7	seat-killed	0	12.425	9	4.204	untested			docs/artifacts/v7divK2b-82.bak
+v7ringB1-81	ae438393550ff6a1	45.7	44.4	seat-killed	0	24.225	10	4.048	pass	1.25	—	docs/artifacts/v7ringB1-81.bak
+v7iso1-81	8b4d6d010601c272	45.6	45.6	seat-killed	0	0	4	3.583	pass	0	—	docs/artifacts/v7iso1-81.bak
+v12-95	eda9f142df9ab815	44.8	42.8	seat-killed	0	0	9	3.622	pass	0.3	—	docs/artifacts/v12-95.bak

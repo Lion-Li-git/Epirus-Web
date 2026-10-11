@@ -28,7 +28,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { widOf } from '../champion-map/pack-id.mjs';
-import { resolve as resolvePath, rdTable, killTotal, MODES } from '../champion-map/seat-rule.mjs';
+import { resolve as resolvePath, rdTable, seatKillIndex, pairHasBase, MODES } from '../champion-map/seat-rule.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -47,32 +47,49 @@ function loadMap() {
 }
 function saveMap(t) { writeFileSync(MAP, [COLS.join('\t')].concat(t.rows.map(r => r.join('\t'))).join('\n') + '\n'); }
 const trackedSet = () => new Set(execSync('git ls-files docs/artifacts', { cwd: ROOT, maxBuffer: 1 << 26 }).toString().trim().split('\n').filter(Boolean));
+const WARNED = new Set();   /* `--refresh` 会对每枚成员调一次 seatKillOf ⇒ 同一对坏表只吼一次，别刷 13 遍屏 */
 
-/* ---------- 人席：按 **wid** 找批表里的行（名字会骗人，路径也会 —— §E589 的教训） ---------- */
+/* ---------- 人席：按 **wid** 找批表里的行（名字会骗人，路径也会 —— §E589 的教训） ----------
+ * 归一逻辑在 `champion-map/seat-rule.mjs` 的 `seatKillIndex`（`pool-screen.mjs` 用的是**同一个**，不另抄一份）。
+ * ⚠ 批表必须**两两成对**再喂：`killOf` 只读 batches[0]/batches[1]（§E531 的"两批同号"天生是成对的判据），
+ *   而 `seatKillIndex` 的公共 id 集合却是**全部**表的交集 ⇒ 一次传 4 张表 = 用第 1、2 张算格、
+ *   却要求这枚同时出现在第 3、4 张里 ⇒ 老成员会被读成"没量过"（10-11 夜就是这么把 hard 档的 0 冲成 -1 的）。
+ *   所以这里按对切片，**每对独立出结论，取最坏的那一对**（同一枚在 A 对干净、B 对踩线 ⇒ 判踩线）。 */
 function seatKillOf(wid, seatFiles) {
-  const batches = seatFiles.map(f => {
-    const p = resolvePath(f, join(ROOT, 'champion-map'));
-    if (!existsSync(p)) { console.error('⛔ 批表不在：' + f); process.exit(2); }
-    return rdTable(f, readFileSync(p, 'utf8'));
-  });
   const tr = trackedSet();
-  /* 把每张批表的 id 列**换成按 wid 归一**后的代表 id ⇒ 同一粒权重在两张表里叫不同名字也能对上 */
-  const norm = batches.map(t => {
-    const byWid = {};
-    for (const r of t.rows) {
-      const rel = r[t.h.path];
-      const abs = resolvePath(rel, ROOT);
-      if (!existsSync(abs) || !tr.has(rel)) continue;         /* 批表里指向未在册/已消失的文件 ⇒ 这一行不参与身份对齐 */
-      let w = null; try { w = widOf(readFileSync(abs, 'utf8')); } catch (e) { continue; }
-      if (w === wid) byWid[r[t.h.id]] = 1;
+  const readWid = rel => {
+    const abs = resolvePath(rel, ROOT);
+    if (!existsSync(abs) || !tr.has(rel)) return null;      /* 批表指向未在册/已消失的文件 ⇒ 这一行不参与身份对齐 */
+    try { return widOf(readFileSync(abs, 'utf8')); } catch (e) { return null; }
+  };
+  if (seatFiles.length % 2) console.error('⚠ --seat 传了 ' + seatFiles.length + ' 张（奇数）⇒ 最后一张没有同伴，按对丢弃');
+  let worst = -1, pairsUsable = 0, pairs = 0;
+  for (let i = 0; i + 1 < seatFiles.length; i += 2) {
+    pairs++;
+    const pairFiles = [seatFiles[i], seatFiles[i + 1]];
+    const pair = pairFiles.map(f => {
+      const p = resolvePath(f, join(ROOT, 'champion-map'));
+      if (!existsSync(p)) { console.error('⛔ 批表不在：' + f); process.exit(2); }
+      return rdTable(f, readFileSync(p, 'utf8'));
+    });
+    /* **没有基准行的那一对整对作废**（不许读成"零格否决"）—— 10-11 夜 `pool-seat-ml-*` 就是这种表：
+     *   跑探针时 `--packs=` 顶掉了默认的 `js/bundled-champion-3p.js` ⇒ 判不出差，六枚成员全被刷成"干净"。 */
+    if (!pairHasBase(pair)) {
+      if (!WARNED.has(pairFiles.join('/'))) { WARNED.add(pairFiles.join('/'));
+        console.error('⛔ 批表对 ' + pairFiles.join(' ‖ ') + ' 里没有基准行（两个口径都要）⇒ **这一对判不出杀刀，整对跳过**' +
+          ' ⇒ 重跑：node tools/probe-human-seat.mjs --packs=js/bundled-champion-3p.js,<成员…> --seed=…'); }
+      continue;
     }
-    return Object.keys(byWid);
-  });
-  const ids = norm[0].filter(x => norm[1].indexOf(x) >= 0);
-  if (!ids.length) return -1;                                  /* 两张批表里都没有这一粒 ⇒ 未知，不是零 */
-  let worst = 0;
-  for (const id of ids) { const k = killTotal(id, batches); if (k >= 0) worst = Math.max(worst, k); }
-  return worst;
+    pairsUsable++;
+    const hit = seatKillIndex(pair, readWid).get(wid);
+    if (hit && (worst < 0 || hit.kills > worst)) worst = hit.kills;
+  }
+  if (pairs >= 1 && pairsUsable === 0) {
+    console.error('⛔ --seat 给的 ' + seatFiles.length + ' 张表里**没有一对**带基准 ⇒ 人席闸这次什么都没判。' +
+      '要么带基准重跑，要么别传 --seat=（传了却不判 = 假装判过）');
+    process.exit(2);
+  }
+  return worst;                                             /* 每一对里都没有这一粒 ⇒ 未知，不是零 */
 }
 
 /* ---------- 上槽体检：查表；表里没有就（按点名）现跑一次 ---------- */
@@ -145,6 +162,32 @@ if (has('list')) {
       ' · 体检 ' + r[t.h.promoteVerdict] + ' · 人席否决 ' + (r[t.h.seatKill] === '-1' ? '没量过' : r[t.h.seatKill] + ' 格') +
       (r[t.h.invited] === '1' ? ' · 点名越过门槛' : '') + ' · ' + r[t.h.path]);
   }
+  process.exit(0);
+}
+
+/* ---------- --refresh：把表里已有行的"两道闸"重算一遍（人席/体检的数据常晚于入池那一刻到） ----------
+ * 为什么必须有：入池时某枚可能 `seatKill=-1`（批表还没跑它）。没有这条模式的话，表会**永远停在"没量过"**，
+ *   而 `D234` 只把"没量过"印出来不判红 ⇒ 一个没人回填的字段就是假象上的完整。 */
+if (has('refresh')) {
+  const t = loadMap();
+  const seatFiles = arg('seat', 'pool-seat-90210.tsv,pool-seat-90211.tsv').split(',');
+  const changes = []; let unknown = 0;
+  for (const r of t.rows) {
+    const before = r[t.h.promoteVerdict] + '/' + r[t.h.seatKill];
+    const got = promoteInfoOf(r[t.h.id], r[t.h.path], has('run-promote'));
+    /* ⚠ 查不到行**不许把已记录的裁决冲掉**（第一版就是这么干的：`pass/-1 → untested/-1`，
+     *   同一类错的第二个副本是 `0 → -1`：只喂了新到的 mid/low 批表，hard 档量过的 0 被当成"没量过"抹掉）。
+     *   表里的旧值来自上一次真跑，这张表里没有这行只说明"这批表没覆盖它"，
+     *   不等于"它没被量过/它没过体检" ⇒ 保持原样，只有明确跑出来/查出来才覆盖。**没查到 ≠ 作废。** */
+    if (got) r[t.h.promoteVerdict] = got.verdict;
+    const sk = seatKillOf(r[t.h.wid], seatFiles);
+    if (sk >= 0) r[t.h.seatKill] = String(sk);
+    if (Number(r[t.h.seatKill]) < 0) unknown++;
+    if (before !== r[t.h.promoteVerdict] + '/' + r[t.h.seatKill]) changes.push(r[t.h.id] + ' ' + before + ' → ' + r[t.h.promoteVerdict] + '/' + r[t.h.seatKill]);
+  }
+  if (has('dry')) { console.log('（--dry）要改 ' + changes.length + ' 行：\n   ' + (changes.join('\n   ') || '无')); }
+  else { saveMap(t); console.log('✔ 已刷 champion-map/pool-members.tsv：改了 ' + changes.length + ' 行 ‖ 人席仍没量过的 ' + unknown + ' 枚');
+    for (const c of changes) console.log('   · ' + c); }
   process.exit(0);
 }
 

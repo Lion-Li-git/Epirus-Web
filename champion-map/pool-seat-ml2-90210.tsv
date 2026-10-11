@@ -1,0 +1,15 @@
+id	path	mode	games	seed0	全程刷反弹	全程只防御	只攒不打(农民)	只枪压制	攒钱+反弹(会玩)	重火力+反弹	六格均值	最大格	最大格是谁	和棋均值
+bundled-champion-3p	js/bundled-champion-3p.js	multi	200	90210	3	8	2	27	2	19	10.17	27.0	只枪压制	6
+bundled-champion-3p	js/bundled-champion-3p.js	long	200	90210	5	13	0	30	5	17	11.67	30.0	只枪压制	3.8333333333333335
+B5-10-31	docs/artifacts/e100-out/B5-10-31.bak	multi	200	90210	2	3	0	28	3	16	8.67	28.0	只枪压制	9.166666666666666
+B5-10-31	docs/artifacts/e100-out/B5-10-31.bak	long	200	90210	9	13	1	46	9	15	15.50	46.0	只枪压制	5.666666666666667
+e78-out__G08-71	docs/artifacts/kept/e78-out__G08-71.bak	multi	200	90210	1	5	1	12	2	8	4.83	12.0	只枪压制	4.666666666666667
+e78-out__G08-71	docs/artifacts/kept/e78-out__G08-71.bak	long	200	90210	1	11	0	18	11	11	8.67	18.0	只枪压制	2.1666666666666665
+v7new5_005-81	docs/artifacts/v7new5_005-81.bak	multi	200	90210	6	2	0	14	11	20	8.83	20.0	重火力+反弹	10.166666666666666
+v7new5_005-81	docs/artifacts/v7new5_005-81.bak	long	200	90210	17	9	0	23	13	23	14.17	23.0	只枪压制	11.333333333333334
+v7divK2b-82	docs/artifacts/v7divK2b-82.bak	multi	200	90210	6	36	0	50	7	29	21.33	50.0	只枪压制	16.5
+v7divK2b-82	docs/artifacts/v7divK2b-82.bak	long	200	90210	10	48	0	55	17	24	25.67	55.0	只枪压制	5.5
+v7ringB1-81	docs/artifacts/v7ringB1-81.bak	multi	200	90210	0	0	1	0	36	24	10.17	36.0	攒钱+反弹(会玩)	16.833333333333332
+v7ringB1-81	docs/artifacts/v7ringB1-81.bak	long	200	90210	0	0	2	35	49	32	19.67	49.0	攒钱+反弹(会玩)	8.5
+v7wall2-97	docs/artifacts/v7wall2-97.bak	multi	200	90210	0	0	0	0	21	6	4.50	21.0	攒钱+反弹(会玩)	14.833333333333334
+v7wall2-97	docs/artifacts/v7wall2-97.bak	long	200	90210	0	1	0	1	23	6	5.17	23.0	攒钱+反弹(会玩)	4.833333333333333

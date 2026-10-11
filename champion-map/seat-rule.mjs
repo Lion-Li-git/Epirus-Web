@@ -61,3 +61,48 @@ export function killTotal(id, batches, baseId) {
   }
   return n;
 }
+
+/** 这一**对**表里有没有基准行（两个口径都要有）。
+ * 没有 ⇒ 这对表**根本判不出杀刀**，调用方必须拒绝它 —— 不许读成"零格否决"。
+ * 立案依据（10-11 夜的假干净）：`pool-seat-ml-*.tsv` 是 `--packs=` 只列了 6 枚新成员、
+ *   把默认的基准 `js/bundled-champion-3p.js` 顶掉了 ⇒ 12 行全是成员、0 行基准 ⇒
+ *   六枚 mid/low 成员被刷成"人席量过、零格"，其中两枚其实是**踩了 4 格 / 2 格**的送分包。 */
+export function pairHasBase(tables, baseId) {
+  const bs = baseId || BASE_ID;
+  if (!tables || tables.length < 2) return false;
+  return MODES.every(m => tables.every(t => !!rowOf(t, bs, m)));
+}
+
+/** 把一对（两张）批表按权重身份归一 ⇒ 返回 `wid → {kills, ids}`。
+ *
+ * 为什么不能按 id 对：同一粒权重在不同表里叫不同名字（§E589 普查：1443 个文件其实 1130 粒；
+ *   池里叫 `K2`，人席表里的路径是 `kept/e70-out__D02-31.bak`；`v7w3c-82` 的文件主名是 `v7divK2b-82.bak`）。
+ *   按 id 硬对 ⇒ 一部分成员会被读成"没量过"，那是**假象的干净**。
+ * `readWid(relPath)` 由调用方给：只有它知道仓库根、哪些路径 tracked、怎么算 wid（读文件是 I/O，不该塞进判据模块）。
+ * ⚠ 只收"每张表里都有这一粒"的 id ⇒ 缺表就是没有结论，不猜。
+ * ⚠ **基准行不在表里 ⇒ 这一粒根本没法判，不许落成 0（= 干净）**（10-11 夜实测：`pool-seat-ml-*.tsv` 两张
+ *   只跑了 6 枚成员、没带 `bundled-champion-3p` ⇒ `killOf` 全返回 null、`killTotal` 全是 -1，
+ *   而第一版的 `kills` 初值是 0 ⇒ 六枚 mid/low 成员被刷成"人席量过、零格否决"。
+ *   `没量过 ≠ 干净` 这条在这里也咬人。现在要求"至少一个 id 真出了读数"才入索引。 */
+export function seatKillIndex(batches, readWid) {
+  const out = new Map();
+  if (!batches || batches.length < 2) return out;
+  const per = batches.map(t => {
+    const m = new Map();
+    for (const r of t.rows) {
+      const w = readWid(r[t.h.path]);
+      if (!w) continue;
+      if (!m.has(w)) m.set(w, new Set());
+      m.get(w).add(r[t.h.id]);
+    }
+    return m;
+  });
+  for (const [wid, set0] of per[0]) {
+    const common = [...set0].filter(id => per.slice(1).every(m => m.has(wid) && m.get(wid).has(id)));
+    if (!common.length) continue;
+    let kills = -1;                                          /* -1 = 这对表里认得出它，但算不出格（缺基准/缺 mode 行） */
+    for (const id of common) { const k = killTotal(id, batches); if (k >= 0) kills = Math.max(kills, k); }
+    if (kills >= 0) out.set(wid, { kills: kills, ids: common });
+  }
+  return out;
+}

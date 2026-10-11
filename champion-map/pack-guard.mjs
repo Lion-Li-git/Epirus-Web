@@ -16,7 +16,7 @@
  * ⚠ 扫一遍约 1.5 秒（1158 个文件）：只在**真要写盘**时扫，且同一次进程里缓存。
  */
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
-import { join, dirname, relative, sep } from 'node:path';
+import { join, dirname, relative, sep, isAbsolute, resolve } from 'node:path';
 import { widOf } from './pack-id.mjs';
 
 const SCAN = ['docs/artifacts', 'd180-bands'];
@@ -63,6 +63,16 @@ function registerAlias(root, row) {
   return line;
 }
 const relOf = (root, abs) => relative(root, abs).split(sep).join('/');
+/** 目标在不在仓库内。**不能只看 `rel` 是否以 `..` 开头** —— 见 `guardWrite` 里那条 Windows 跨盘的坑。
+ *  判法：把两边都 resolve 成绝对路径再比前缀（大小写与分隔符按当前平台归一，Windows 盘符大小写不敏感）。 */
+function isOutside(root, dest, rel) {
+  if (isAbsolute(rel)) return true;
+  if (rel.split('/').indexOf('..') === 0) return true;
+  const R = resolve(root).replace(/[\\/]$/, ''), D = resolve(dest);
+  const same = process.platform === 'win32';
+  const rr = same ? R.toLowerCase() : R, dd = same ? D.toLowerCase() : D;
+  return !(dd === rr || dd.startsWith(rr + sep) || dd.startsWith(rr + '/'));
+}
 
 /**
  * 要写一枚包之前调它。返回 `{ wrote, canonical, rel }`。
@@ -70,8 +80,14 @@ const relOf = (root, abs) => relative(root, abs).split(sep).join('/');
  */
 export function guardWrite(o) {
   const rel = relOf(o.root, o.dest);
-  /* 目标不在仓库里（临时目录、别的盘）⇒ 不查重也不登记：账本只描述仓内的真身关系。 */
-  if (rel.startsWith('..')) { mkdirSync(dirname(o.dest), { recursive: true }); writeFileSync(o.dest, o.text, 'utf8'); return { wrote: true, canonical: rel, rel, wid: null, note: '目标在仓库外 ⇒ 不查重（' + rel + '）' }; }
+  /* 目标不在仓库里（临时目录、别的盘）⇒ 不查重也不登记：账本只描述仓内的真身关系。
+   * ⚠ 判断"在不在仓内"不能靠 `rel.startsWith('..')`：**Windows 下跨盘根的 `path.relative` 不返回 `..` 开头，
+   *   而是把绝对路径原样吐回来**（`D:` 仓 vs `C:\...\Temp` ⇒ `'C:/Users/...'`）。
+   *   10-11 夜门跑测试时把 75 行 temp 路径写进了进仓的别名账本，就是这么漏的（`D191` 的⑤ 现在盯着这件事）。 */
+  if (isOutside(o.root, o.dest, rel)) {
+    mkdirSync(dirname(o.dest), { recursive: true }); writeFileSync(o.dest, o.text, 'utf8');
+    return { wrote: true, canonical: rel, rel, wid: null, note: '目标在仓库外 ⇒ 不查重（' + rel + '）' };
+  }
   /* `js/**` 是产品槽，不是产物：查重只针对 `docs/artifacts/` 与 `d180-bands/`。 */
   if (/^js\//.test(rel)) { writeFileSync(o.dest, o.text, 'utf8'); return { wrote: true, canonical: rel, rel, wid: null, note: '写的是 `js/**`（产品槽）⇒ 不查重' }; }
   const { wid, hit } = findCanonical(o.root, o.text, o.scope);
