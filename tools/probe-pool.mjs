@@ -9,6 +9,14 @@
  *   对局循环用 `v2v4-lib.duelAssembly` 的 `chooserFor`/`onGame` 钩子 ⇒ **这把尺没有第二份引擎实现**。
  * v1 的定位（用户要裁的那句，我先按保守做）：**只排序 + 量 σ，不作换包判词**。
  *   依据是 §E586/§E587 的教训：一次抽样里的"稳"可能只是仪器稳，换框就翻（`waste` 那次 0.703 → −0.031）。
+ * ⚠ **这把尺自己的条款**（10-12 01:5x 实测出来的，读它印的数之前先看这两句）：
+ *   ① 组成只由 `slotSalt` 决定，而 `duelAssembly` 的盐是 `h32(seed0 + g×常数)` ⇒ **同 seed 的六格共用同一批组成**
+ *      （实测：20 局/格 × 3 seed = 360 场里只有 **60 个不同盐 / 56 种"成员×席位"配对**）。
+ *      ⇒ 想加"阵容的多样性"要**加 `--seeds=`**，加 `--games=` 只降仪器噪声、不升独立组成数（与"重复测量不是复现"同一条）。
+ *   ② 正因为独立组成少，**逐枚夺冠率 + 逐枚席位分布在 n(组成) < 200 时不可用来排名次**：
+ *      实测 hard 档 360 场里 `K2` 的四席分布是 54/30/84/60（期望各 57），而同一份 `pool-draw.js` 用 2 万个**新盐**跑
+ *      2 万场时 (成员×席) 极差只有期望的 **5.6%** ⇒ 偏的是这把尺的抽样，不是产品里的抽签。
+ *      （页面那侧每局是 `Math.random()` 新盐 ⇒ 产品是均匀的，别把尺的毛病读成产品的毛病。）
  *
  * 用法：node tools/probe-pool.mjs [--tier=hard] [--games=60] [--seeds=90210,90211] [--modes=multi,long]
  *        [--members=champion-map/pool-members.tsv] [--out=某.tsv]
@@ -68,6 +76,10 @@ const rows = [];
 for (const mode of MODES) {
   const per = {};                                   // 格 → [每枚 seed 的人类夺冠率]
   const memberGames = {}, memberWins = {};
+  /* 席位账：池形态下**四席不是同一枚包**，"自对弈里座位效应会自我抵消"那句前提没了（用户 10-11 澄清：
+   *   座位无偏只属于自对弈装配）。⇒ 必须把"座位本身值多少 pt"量出来，否则逐枚夺冠率里掺的是坐席不是强度。 */
+  const seatGames = [0, 0, 0, 0], seatWins = [0, 0, 0, 0], memberSeat = {};
+  const salts = new Set(), comps = new Set();   /* 每场组成由 `slotSalt` 唯一决定 ⇒ 盐/组成只有几种在转的话，"逐枚席位分布"不是独立抽样，得先说出来 */
   let allSameGames = 0, totalGames = 0, distinctSum = 0, missSeat = 0;
   let seqSamples = null;                            // 只留第一枚 seed 的前 6 场组成（给人眼看"随机"是不是真的在换）
   for (const seed of SEEDS) {
@@ -88,14 +100,18 @@ for (const mode of MODES) {
     const onGame = function (st, scriptedSeat) {
       const g = games.get(st); if (!g) return;
       totalGames++;
+      salts.add((st.slotSalt >>> 0) || 1);
+      comps.add(g.comp.seats.map(s => s.id + ':' + s.seat).join('|'));
       if (g.comp.allSame) allSameGames++;
       distinctSum += PD.distinct(g.comp.seats);
       if (seqSamples === null) seqSamples = [];
       if (seqSamples.length < 6) seqSamples.push(g.comp.seats.map(s => s.id).join('+'));
       for (const pid in g.byPid) {
-        const id = g.byPid[pid].id;
+        const m = g.byPid[pid], id = m.id, s = m.seat, won = (st.winner === Number(pid));
         memberGames[id] = (memberGames[id] || 0) + 1;
-        if (st.winner === Number(pid)) memberWins[id] = (memberWins[id] || 0) + 1;
+        if (won) memberWins[id] = (memberWins[id] || 0) + 1;
+        seatGames[s]++; if (won) seatWins[s]++;
+        (memberSeat[id] = memberSeat[id] || [0, 0, 0, 0])[s]++;
       }
     };
     HUMAN.forEach(function (x, i) {
@@ -117,13 +133,34 @@ for (const mode of MODES) {
     rows.push({ mode: mode, cell: x[0], seedVals: v.join(','), mean: mean.toFixed(2), spread: spread.toFixed(2) });
   }
   console.log('   ⚑ 六格均值的批间极差 = ' + (function () {
-    const means = SEEDS.map((s, i) => per[HUMAN[0][0]][i]);
     const all = SEEDS.map((s, i) => HUMAN.reduce((a, x) => a + per[x[0]][i], 0) / HUMAN.length);
-    return (Math.max.apply(null, all) - Math.min.apply(null, all)).toFixed(2) + 'pt（' + all.map(a => a.toFixed(2)).join(' vs ') + '）';
+    /* ⚠ 极差(max−min)**不是 σ**：它是"批数越多越大"的量（3 批的 E[极差]≈1.69σ、20 批≈3.7σ）
+     *   ⇒ 同一把尺换批数再比极差是自欺。σ 用**批间标准差**，下面同时印出来，引用只许引 SD。 */
+    const m = all.reduce((a, b) => a + b, 0) / all.length;
+    const sd = Math.sqrt(all.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, all.length - 1));
+    return (Math.max.apply(null, all) - Math.min.apply(null, all)).toFixed(2) + 'pt（' + all.map(a => a.toFixed(2)).join(' vs ') + '）' +
+      ' ‖ **σ(单批六格均值)=' + sd.toFixed(2) + 'pt** ‖ 批均值 ' + m.toFixed(2) + ' ‖ 批数 ' + all.length +
+      ' ⇒ 两池比较时"差 > "要 ≥ ' + (sd * Math.sqrt(2 / all.length)).toFixed(2) + 'pt（' + all.length + ' 批均值之差的双侧 1σ）';
   })());
   console.log('   ⚑ 四席全同的场数 = ' + allSameGames + ' / ' + totalGames + '（用户裁定不许全同 ⇒ 不为 0 就要查抽签）');
   console.log('   ⚑ 平均每场不同枚数 = ' + (distinctSum / Math.max(1, totalGames)).toFixed(2) + ' / 4');
   console.log('   逐枚夺冠率：' + lite.map(m => m.id + ' ' + ((memberWins[m.id] || 0) / Math.max(1, memberGames[m.id]) * 100).toFixed(1) + '%(上场 ' + (memberGames[m.id] || 0) + ')').join(' ‖ '));
+  /* 座位效应：把"哪一席更容易赢"跨成员合并成一个数 ⇒ 它才是"逐枚夺冠率能不能并排读"的那把尺。
+   *   四席的夺冠率之和必然 = P(AI 赢)（其余给人类那一席），所以**看的是极差不是绝对值**。 */
+  const seatRate = seatGames.map((n, s) => n ? seatWins[s] / n * 100 : 0);
+  const seatSpread = Math.max.apply(null, seatRate) - Math.min.apply(null, seatRate);
+  console.log('   ⚑ 座位效应（AI 四席各自夺冠率，跨成员合并）：' +
+    seatRate.map((r, s) => '席' + s + ' ' + r.toFixed(1) + '%(n=' + seatGames[s] + ')').join(' ‖ ') +
+    ' ⇒ **极差 ' + seatSpread.toFixed(2) + 'pt**' + (seatSpread <= 3 ? '（≤3pt ⇒ 逐枚夺冠率可以并排读）' :
+      '（>3pt ⇒ 逐枚夺冠率里掺的是坐席不是强度，比名次前先按席位分层）'));
+  const imbal = lite.map(m => { const a = memberSeat[m.id] || [0, 0, 0, 0];
+    return { id: m.id, lo: Math.min.apply(null, a), hi: Math.max.apply(null, a) }; })
+    .sort((x, y) => (y.hi - y.lo) - (x.hi - x.lo))[0];
+  console.log('   ⚑ 席位分布最不均的一枚：' + imbal.id + '（各席 ' + (memberSeat[imbal.id] || []).join('/') +
+    ' ⇒ 高到低差 ' + (imbal.hi - imbal.lo) + ' 场）');
+  console.log('   ⚑ 抽样独立性：这 ' + totalGames + ' 场里出现 ' + salts.size + ' 个 `slotSalt` ‖ ' + comps.size + ' 种"成员×席位"配对' +
+    (salts.size < totalGames / 2 ? ' ⇒ **盐在复用**（组成不是逐场独立 ⇒ 逐枚席位分布/夺冠率的误差棒要比 n 之前先按"独立组成数"打折）' : ''));
+  for (let s = 0; s < 4; s++) rows.push({ mode: mode, cell: '__seat' + s, seedVals: seatWins[s] + '/' + seatGames[s], mean: seatRate[s].toFixed(2), spread: s === 3 ? seatSpread.toFixed(2) : '' });
   rows.push({ mode: mode, cell: '__allSame', seedVals: allSameGames + '/' + totalGames, mean: (distinctSum / Math.max(1, totalGames)).toFixed(2), spread: '' });
 }
 if (flag('out', '')) {
@@ -133,4 +170,5 @@ if (flag('out', '')) {
 }
 console.log('\n# 最后一行是机器可读的（给门与以后的自己核对用）：');
 console.log(JSON.stringify({ tier: TIER, members: lite.length, games: G, seeds: SEEDS, modes: MODES,
-  allSameGames: rows.filter(r => r.cell === '__allSame').map(r => r.seedVals) }));
+  allSameGames: rows.filter(r => r.cell === '__allSame').map(r => r.seedVals),
+  seatSpread: MODES.map(function (mo) { const s = rows.filter(r => r.mode === mo && r.cell === '__seat3')[0]; return s ? Number(s.spread) : null; }) }));
