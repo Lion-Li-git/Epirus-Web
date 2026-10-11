@@ -1,0 +1,20 @@
+n	id	path	入选理由	当时最近距离	Hp	waste	heavy	Geff	人席在册?
+40	v7a-34	docs/artifacts/v7a-34.bak	最远点贪心 第 35 步	3.20	31.50	0.0000	0.0000	3.984	新
+41	v7aim1f-82	docs/artifacts/v7aim1f-82.bak	最远点贪心 第 36 步	3.14	39.60	0.8022	1.1000	6.179	新
+42	v7aim2-93	docs/artifacts/v7aim2-93.bak	最远点贪心 第 37 步	3.11	39.80	1.0000	16.0000	1.857	新
+43	fstA-33	docs/artifacts/fstA-33.bak	最远点贪心 第 38 步	3.06	18.70	1.0000	2.4750	9.905	新
+44	SLOT-037b2f71	docs/artifacts/e370-out/037b2f71-v7.js	最远点贪心 第 39 步	3.06	22.00	1.0000	0.1000	7.818	新
+45	v7wall2-99	docs/artifacts/v7wall2-99.bak	最远点贪心 第 40 步	3.05	44.80	0.9687	0.0000	1.399	新
+46	v14-115	docs/artifacts/v14-115.bak	最远点贪心 第 41 步	3.05	45.70	0.9512	1.5500	2.296	新
+47	v7rb1-92	docs/artifacts/v7rb1-92.bak	最远点贪心 第 42 步	2.99	39.10	0.0000	4.0500	5.643	新
+48	mix-35	docs/artifacts/mix-35.bak	最远点贪心 第 43 步	2.98	24.50	1.0000	0.0000	3.501	新
+49	v7new3-31	docs/artifacts/v7new3-31.bak	最远点贪心 第 44 步	2.97	48.00	0.4094	0.0000	3.996	新
+50	K3	docs/artifacts/e234-out/K3.js	最远点贪心 第 45 步	2.93	31.20	0.6962	1.8000	1.831	新
+51	SP-s32	docs/artifacts/e504-out/SP-s32.js	最远点贪心 第 46 步	2.84	30.10	0.0000	0.0000	3.341	碰过⇒剔
+52	v12-96	docs/artifacts/v12-96.bak	最远点贪心 第 47 步	2.83	52.40	1.0000	3.6500	2.812	新
+53	v11-64	docs/artifacts/v11-64.bak	最远点贪心 第 48 步	2.83	47.10	1.0000	0.0000	4.973	新
+54	SLOT-6ed47e18	docs/artifacts/e370-out/6ed47e18-v7.js	最远点贪心 第 49 步	2.82	10.50	0.0000	0.0000	3.000	新
+55	v7press1-92	docs/artifacts/v7press1-92.bak	最远点贪心 第 50 步	2.82	49.40	0.0000	0.0000	2.735	新
+56	eco2-36	docs/artifacts/eco2-36.bak	最远点贪心 第 51 步	2.78	27.20	0.7368	3.5500	5.104	新
+57	fgtA-32	docs/artifacts/fgtA-32.bak	最远点贪心 第 52 步	2.77	27.30	0.0000	10.8500	4.399	新
+0	SHIPPED-Ldemo	js/bundled-champion-3p.js	现役基线（锚点 + 逐格差基准）	—	48.90	0.55	2.85	6.808	在册
