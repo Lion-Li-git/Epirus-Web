@@ -1,0 +1,14 @@
+# opHuman 配对臂 · 闸侧读数（2026-10-11-h2）· 判据跑前钉在 champion-map/opphuman-arms.mjs 头部
+# 尺：人席 = tools/probe-human-seat.mjs（200 局/格 · 两批 90210/90211 · 六格均值两批两口径平均） ‖ 闸 = tools/promote-champion.mjs --dry --games=20 ‖ 现役锚点人席均值 = 8.04
+arm	seed	oppHuman	pack	wid	seatWorst	seatMean	Gmulti	Glong	blocked	trainFit
+s301-off-h2	301	0	docs/artifacts/opphuman/s301-off-h2/s301-off-h2-band4.bak	e2d2b4c7c183b3fc	18.0	5.33	4.21	2.39	1	1.1630
+s301-on-h2	301	2	docs/artifacts/opphuman/s301-on-h2/s301-on-h2-band4.bak	96e3e6ba8f9d5a85	37.0	13.09	3.85	1.81	1	1.1227
+s302-off-h2	302	0	docs/artifacts/opphuman/s302-off-h2/s302-off-h2-band4.bak	140411a9fb5a41f2	17.0	4.42	3.10	3.38	0	1.2117
+s302-on-h2	302	2	docs/artifacts/opphuman/s302-on-h2/s302-on-h2-band1.bak	ddb6abb7ed8510dd	14.0	4.83	5.59	3.04	0	1.2005
+s303-off-h2	303	0	docs/artifacts/opphuman/s303-off-h2/s303-off-h2-band2.bak	e9d235104dd8eb26	41.0	10.50	4.20	2.84	1	1.1748
+s303-on-h2	303	2	docs/artifacts/opphuman/s303-on-h2/s303-on-h2-band1.bak	e98fdbae49684784	83.0	28.71	2.83	2.55	1	1.2954
+# 现役锚点：人席均值 8.04 ‖ 最坏格 28.0
+# ★ 主端点配对差（ON − OFF 人席最坏格，负 = 改善）: 19.00 / -3.00 / 42.00 ‖ 均值 19.33pt
+# ★ 主端点判词: FAIL（本 n 下无信号：≥2 粒反号 或 |均值| < 1.0pt）
+# 次端点配对差（ON − OFF 人席六格均值，负 = 改善）: 7.75 / 0.41 / 18.21 ‖ 均值 8.79pt
+# 次端点判词: FAIL（本 n 下无信号：≥2 粒反号 或 |均值| < 1.0pt）
