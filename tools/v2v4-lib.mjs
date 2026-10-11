@@ -111,6 +111,12 @@ export function duelAssembly(deps, params, opts) {
   const scripted = o.scripted;
   if (typeof scripted !== 'function' && scripted !== 'champ') throw new Error('[v2v4] scripted 必须是 chooser 函数或 \'champ\'');
   const ch = T.policyChooserN(params, 0.15);
+  /* §E590 两个**可选**钩子（默认全关 ⇒ 在册读数一字不变，改完拿 `probe-human-seat` 同一份参数逐字比过）：
+   *   · `chooserFor(pid)` —— 逐席换 chooser ⇒ 冠军池装配（四席不同包）只需要这一个入口，不必抄第二份对局循环；
+   *     返回 null/undefined 就落回 `ch`（所以"只给某几席换包"也是合法的）。
+   *   · `onGame(st, scriptedSeat, g)` —— 每局结束回调，池侧用它统计"哪一枚赢了"（不新增指标口径，只是把已有的 `st` 递出去）。 */
+  const chooserFor = o.chooserFor || null;
+  const onGame = o.onGame || null;
   const JI = R.SK.JI, GUN = R.SK.GUN;
   const keys = o.countKeys || null;
   const counts = {}; if (keys) keys.forEach(function (k) { counts[k] = 0; });
@@ -127,7 +133,8 @@ export function duelAssembly(deps, params, opts) {
     const st = S.createState(mode, { next: mb(seed0 + g * 991) }, 5);
     st.slotSalt = h32(seed0 + g * 2246822519);
     const mine = function (s2, pid, lg) {
-      let r = ch(s2, pid, lg);
+      let r = (chooserFor ? chooserFor(pid, s2) : null) || ch;
+      r = r(s2, pid, lg);
       dec++;
       if (r && r.key === JI) {
         ji++;
@@ -153,6 +160,7 @@ export function duelAssembly(deps, params, opts) {
     };
     const cs = []; for (let i = 0; i < 5; i++) cs.push(i === seat ? (scripted === 'champ' ? mine : scripted) : mine);
     Play.autoGameN(st, cs);
+    if (onGame) onGame(st, seat, g);      /* §E590：池侧用它统计"哪一枚赢了"（默认 null ⇒ 老读数不动） */
     /* qoder-research 0920（P2 第三行）：**收缩前击杀数** —— 与场B 门禁同口径（`countClears` 单一真源，
      * 只认"收缩开始前打死"，按伤害归属记在击杀者头上）。V4 形状里脚本席只有 1 个 ⇒ 每局合计 ∈ {0,1}。 */
     if (typeof T.countClears === 'function') {

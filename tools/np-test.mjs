@@ -22,6 +22,7 @@ import { makeGuardCost } from './guard-cost-lib.mjs';   /* D161 用：直接对�
 import { resolveOutPath } from './out-path.mjs';   /* D232 ⑦ 用：`--out=` 的解析是纯函数 ⇒ 给输入比输出（§2026-10-09 规矩 1） */
 import { pushTarget } from './bot-chooser-lib.mjs';   /* D223 用：选点规则是纯函数 ⇒ 喂合成 state 逐条钉（§E262） */
 import { hardwiredLine } from './probe-layer-caliber.mjs';   /* D149 用：指针行号从源码现算（钉死数字会在别人插一行后变成假行号） */
+import { widOfArr } from '../champion-map/pack-id.mjs';   /* D234 用：池 bundle 里内嵌权重的指纹要**现算**比对，不许信它自己写的 */
 /* D163 用：防御质量三档的单一来源（用户 09-26 裁定："出防御的时候完全没人打他就算白防御，被穿透算半有效"） */
 import { classifyDefenseWindow, defenseQuality, formatQuality, parseQuality, formatQualityRecord } from './defense-quality.mjs';
 /* D164 用：池子前沿的三条判据（**只 import 纯函数模块**，探针本体会去扫 1457 个文件） */
@@ -124,7 +125,7 @@ let __skipped = 0;
 const GRP = {
   meta: 'REPRO L1 L2 L3 L7 L6 L5 D218 D8 D82 D189 D191 D194 D205 D206 D230',   // 仓库纪律：只读源码/CHANGELOG/README/门号
   ui: 'D37 D38 D28 D70 D131 D111 D166',                                    // 页面与前端契约
-  ship: 'D219 D55 D16 D35 D27 D49 D60 D61 D62 D67 D73 D78 D79 D103 D105 D116 D118 D124 D125 D141 D153 D155 D163 D107 D110 D121 D145 D146 D147 D168 D169 D170 D190 D197 D210 D228',   // 出厂面：可行性闸 / 当选 / promote / 线上槽
+  ship: 'D219 D55 D16 D35 D27 D49 D60 D61 D62 D67 D73 D78 D79 D103 D105 D116 D118 D124 D125 D141 D153 D155 D163 D107 D110 D121 D145 D146 D147 D168 D169 D170 D190 D197 D210 D228 D234',   // 出厂面：可行性闸 / 当选 / promote / 线上槽 / 池装配契约
   train: 'REPRO2 L4 D217 D220 D221 D222 D223 D224 D225 D226 D227 D229 D5 D7 D9 D10 D11 D12 D13 D15 D56 D58 D59 D17 D24 D25 D26 D33b D33 D36 D39 D40 D41 D42 D43 D44 D45 D47 D48 D65 D66 D68 D72 D74 D75 D76 D77 D80 D81 D84 D85 D86 D87 D89 D90 D104 D97 D99 D100 D101 D108 D109 D112 D113 D114 D119 D122 D123 D127 D128 D129 D130 D132 D134 D135 D136 D139 D140 D115 D162 D120 D143 D144 D157 D159 D167 D172 D173 D174 D175 D176 D179 D181 D180 D182 D184 D185 D213 D164 D165 D187 D188 D201 D204 D231 D232',   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
   probe: 'D34 D64 D83 D88 D137 D138 D148 D149 D150 D151 D152 D154 D160 D161 D106 D158 D177 D178 D183 D186 D192 D193 D195 D196 D198 D200 D199 D212 D214 D202 D203 D207 D208 D209 D211 D216 D233',   // 研究量具自身的牙
   engine: 'N1 N2 目标：attemptAction N3 N3b N10 N10b N10c N8 N14 N14b N15 N16 N17 N18 N19 N4 N4b N4c N12 N12b N6 N6b 目标反锁：上回合与某对手互为目标而相抵 目标选择：能一击必杀先杀；否则打血量最高的领先者 fuzz：3/4/5 autoGame N20a N20b N20c N20d N20e N21 N22 N22b N22c N23 D1 D2 D3 D4 D6 D51 D52 D53 D54 D57 D18 D19 D20 D21 D22 D14 D23 D29 D30 D31 D46 D50 D63 D91 D102 D92 D93 D94 D95 D96 D98 D71 D117 D126 D142',   // 引擎与规则语义（改这里 ⇒ 只能全跑）
@@ -11820,6 +11821,89 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
   const nDisk = LT.slice(1).filter(l => (l.split('\t')[i2] || '').trim() !== '').length;
   ok(!m1 || nDisk === Number(m1[2]), '⑦ 落盘的第二父边行数必须等于守卫报的条数（实测表 ' + nDisk +
     (m1 ? ' ‖ 守卫 ' + m1[2] : '') + '）—— 不一致就是守卫数内存、表写另一套');
+});
+/* ===== D234（§E590 · 千问）冠军池的装配契约不许漂 =====
+ * 为什么**立新门**而不是往别处加腿（用户 2026-10-11 23:0x：「不必要死守按照现有的规则」+
+ *   「往现有门加腿甚至比单纯加门还要差，不好区分了」）：池是新对象（逐席不同枚），
+ *   它的判据主语是"成员在册 / bundle 与表同权重 / 抽签可复现 / 降级要说话"，与 `D191`（kept 别名）、
+ *   `D227`（难度阶梯）、`D168`（出厂槽）都不重叠。塞进它们的腿里，只会让这几条门"在判什么"变成不可知。
+ * 每条腿都对应一种**具体的坏法**（不写空枪腿）：
+ *   ① 成员不在 git ⇒ CI 与干净克隆看不见这枚（今晚 `D191` 的④就是被"只在本机存在的目录"钉红的，同一个坑不能再踩第二遍）
+ *   ② bundle 与表不同权重 ⇒ "名字对、包不对"（§E589 那 301 份拷贝的老病，换了形态）
+ *   ③ 自动成员带 block / 被人席判死进池 ⇒ 把已经判过刑的包又放上桌
+ *   ④ 抽签不可复现 ⇒ 池读数全部作废（同 seed 重放必须逐字相同）
+ *   ⑤ 降级不说话 ⇒ 池空/单成员时产品会"看起来正常"地四席全同
+ * ⚠ 判的是 `pool-add --audit` 吐的 **JSON 里的数**，不是退出码（管道会吃掉退出码 —— 本机栽过两次）。
+ * ⚠ 本门的输入全在 git 里（腿①自己就在查这件事）⇒ 它不会变成又一个"CI 上永远 SKIP"（`D231`/`D233` 的教训）。 */
+t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话', function () {
+  const TS = 'champion-map/pool-members.tsv', BD = 'js/bundled-champion-pool.js';
+  const AU = spawnSync(process.execPath, ['tools/pool-add.mjs', '--audit'], { encoding: 'utf8', timeout: 600000 });
+  const aLine = String(AU.stdout || '').trim().split('\n').filter(l => /^\{/.test(l)).pop();
+  ok(!!aLine, '① `pool-add --audit` 必须吐出机器可读那一行（stdout 尾部：' + String(AU.stdout || AU.stderr || '').slice(-220) + '）');
+  const A = JSON.parse(aLine);
+  ok(existsSync(TS), '① 池真源表不在：' + TS + ' ⇒ 池机制被引用了但根本没接');
+  eq(A.untracked, 0, '① 有 ' + A.untracked + ' 枚成员的文件不在 git 里 ⇒ CI 里这枚不存在（最坏几处：' + JSON.stringify(A.bad) +
+    '）⇒ 跑 `git add -f <那几枚>` 再重烘 bundle');
+  eq(A.dupWid, 0, '① 同一粒权重占了 ' + A.dupWid + ' 个成员 ⇒ "池里有 N 枚"会虚高，而抽签会连着抽到同一颗（§E589：1443 文件 = 1130 粒）');
+  eq(A.blockedAuto, 0, '③ 自动成员里有 ' + A.blockedAuto + ' 枚被上槽体检判 block（送盾/G4/G5）⇒ 自动挑出来的包必须过体检，要点名请走 --invite');
+  eq(A.seatKilledAuto, 0, '③ 自动成员里有 ' + A.seatKilledAuto + ' 枚被人席杀刀判死（§E531 两批同号 ≥20pt）⇒ 它已经给人类送分了');
+  console.log('   ⚑ 池成员 ' + A.members + ' 枚 ' + JSON.stringify(A.tiers) +
+    ' ‖ 体检没量过的自动成员 ' + A.untestedAuto + ' 枚 ‖ 人席没量过的 ' + A.seatUnknown + ' 枚（**没测 ≠ 过关**）');
+
+  /* ② bundle 与表同权重：读 bundle（committed）里的内嵌权重**重算** wid，再与表逐条对 —— 只比"两边都写着同一个字符串"是抓不到"表改了没重烘"的 */
+  ok(existsSync(BD), '② 池 bundle 不在：' + BD + ' ⇒ 跑 node tools/build-pool-bundle.mjs');
+  const bt = readFileSync(BD, 'utf8');
+  const raw = AUDIT.extractJsonObject(bt, 'global.EPIRUS_CHAMPION_POOL');
+  ok(!!raw, '② bundle 里找不到 `global.EPIRUS_CHAMPION_POOL = {…}`（生成格式被人改了 ⇒ 页面加载会静默拿不到池）');
+  const BO = JSON.parse(raw);
+  const TL = readFileSync(TS, 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
+  const th = Object.fromEntries(TL[0].split('\t').map((x, i) => [x, i]));
+  const trows = TL.slice(1).map(l => l.split('\t'));
+  eq(BO.members.length, trows.length, '② bundle 有 ' + BO.members.length + ' 条而表有 ' + trows.length + ' 条 ⇒ 表改过没重烘 bundle');
+  for (const m of BO.members) {
+    const w = widOfArr(m.pack && m.pack.a);
+    ok(w === m.wid, '② bundle 里 ' + m.id + ' 的**内嵌权重**算出 wid=' + w + '，但它自己写着 ' + m.wid + ' ⇒ 嵌的是另一枚');
+    const row = trows.filter(r => r[th.id] === m.id)[0];
+    ok(!!row, '② bundle 里的 ' + m.id + ' 在表里没有这一行（bundle 过期或手改）');
+    if (row) { eq(row[th.wid], m.wid, '② ' + m.id + ' 的 wid 表与 bundle 不一致'); eq(row[th.tier], m.tier, '② ' + m.id + ' 的 tier 表与 bundle 不一致'); }
+  }
+
+  /* ④⑤ 抽签：产品与量具必须跑同一份实现 ⇒ 拿 sandbox 里的 `js/pool-draw.js`（不是在本文件里再抄一遍抽签） */
+  const W = sandbox(process.cwd());
+  const PD = W.EpirusPoolDraw;
+  ok(PD && typeof PD.compose === 'function' && typeof PD.rng === 'function',
+    '④ `js/pool-draw.js` 必须进 `audit-lib.mjs` 的 `CORE` 名单 ⇒ 否则门、量具、页面跑的是三份不同的抽签');
+  const lite = trows.map(r => ({ id: r[th.id], wid: r[th.wid], tier: r[th.tier] }));
+  ok(lite.length >= 2, '④ 这一份名单不足 2 枚 ⇒ 抽签在数学上必然全同（用户裁定不许）：先补齐成员再谈装配');
+  const same = JSON.stringify(PD.compose(lite, 4, PD.rng(20261011))), again = JSON.stringify(PD.compose(lite, 4, PD.rng(20261011)));
+  eq(again, same, '④ 同 seed 重放得到不同组成 ⇒ 抽签吃了别的东西（时间/上一个局的状态），所有池读数当场作废');
+  let allSame = 0, distinctSum = 0;
+  const seen = {};
+  for (let s = 1; s <= 40; s++) {
+    const c = PD.compose(lite, 4, PD.rng(s * 7919));
+    eq(c.seats.length, 4, '④ 五席桌必须恰好分到 4 枚 AI 成员（实测 ' + c.seats.length + '）');
+    if (c.allSame) allSame++;
+    distinctSum += PD.distinct(c.seats);
+    seen[c.seats.map(x => x.id).sort().join('+')] = 1;
+  }
+  eq(allSame, 0, '④ 40 个 seed 里有 ' + allSame + ' 场四席全同 ⇒ 违反裁定②"可以有重复，但别全同"');
+  ok(distinctSum / 40 >= 3.5, '④ 平均不同枚数 ' + (distinctSum / 40).toFixed(2) + ' < 3.5 ⇒ 抽签退化成"基本同一枚"，多样性没进来');
+  ok(Object.keys(seen).length >= 8, '④ 40 场只出现 ' + Object.keys(seen).length + ' 种组成 ⇒ "随机抽"名不副实（多样性检查，不是口味）');
+  const e = PD.compose([], 4, PD.rng(1));
+  eq(e.degraded, 'empty', '⑤ 空池必须报 degraded=empty（不报 ⇒ 页面会"看起来正常"地没有 AI）');
+  eq(e.seats.length, 0, '⑤ 空池不许凑席位');
+  const one = PD.compose([lite[0]], 4, PD.rng(1));
+  ok(one.allSame && one.degraded === 'single-member-tier',
+    '⑤ 档内只有 1 枚时全同是数学必然 ⇒ 必须**说出来**（degraded=single-member-tier），静默就是骗玩家');
+
+  /* ⑥ 契约的三处读者必须存在且各就各位：产品取包点、量具、真源表 —— 少一个就是"文档写了但没人执行" */
+  ok(readFileSync('docs/POOL-CONTRACT.md', 'utf8').indexOf('逐席') >= 0, '⑥ 契约文档要还在册并写着"逐席"（删文档不删判据 = 假绿）');
+  const PB = 'tools/probe-pool.mjs';
+  ok(existsSync(PB), '⑥ 池形态的量具不在：' + PB + ' ⇒ 旧尺的缺省装配没被动过，池读数无处来');
+  const pbs = readFileSync(PB, 'utf8');
+  ok(pbs.indexOf('chooserFor') >= 0 && pbs.indexOf('EpirusPoolDraw') >= 0,
+    '⑥ 量具必须走 `duelAssembly` 的 `chooserFor` + `js/pool-draw.js` ⇒ 自己写一份对局循环就是第二份实现（规矩：单一来源）');
+  ok(pbs.indexOf('humanPrototypes') >= 0, '⑥ 量具必须用共享的人类原型表（`audit-lib.humanPrototypes`）⇒ 与 `probe-human-seat` 不同原型 = 两个数不能并排读');
 });
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 

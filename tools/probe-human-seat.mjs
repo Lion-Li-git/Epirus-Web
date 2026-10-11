@@ -6,7 +6,7 @@
  * 口径：**复用 `v2v4-lib.duelAssembly`（G4 的同一份装配实现，单一来源）** ⇒ 这里印的数与 G4 八格同尺同播种，可直接并排读。
  * 用法：node tools/probe-human-seat.mjs [--packs=a.js,b.js] [--games=200] [--modes=multi,long] [--seed=90210]
  */
-import { sandbox, rejectUnknownFlags, loadChamp } from './audit-lib.mjs';
+import { sandbox, rejectUnknownFlags, loadChamp, humanPrototypes } from './audit-lib.mjs';
 import { duelAssembly } from './v2v4-lib.mjs';
 rejectUnknownFlags(process.argv.slice(2), ['packs', 'games', 'modes', 'seed'], 'probe-human-seat');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
@@ -22,24 +22,10 @@ function loadPack(f) {
   if (!p) throw new Error('没有可认的冠军外壳（既非 EPIRUS_CHAMPION_3P 也非 EPIRUS_CHAMPION）');
   return p;
 }
-/* "人类原型"：4 个纯策略 + 2 个组合（真实的人不会只按一张键）。全部走 `bots.js` 的现成实现，不抄第二份、**也不写兜底链**
- * （兜底链会把"名字写错"伪装成"这个原型就是不赢"—— 本仓比较器假通过的老账）。 */
-const HUMAN = [
-  ['全程刷反弹', B.pickReflectSpam, 'reflectspam'],
-  ['全程只防御', B.pickDefend, 'defend'],
-  ['只攒不打(农民)', B.pickFarmer, 'farmer'],
-  ['只枪压制', B.pickGunSpam, 'gunspam'],
-  ['攒钱+反弹(会玩)', function (st, pid, legal) {
-    const k = B.pickReflectSpam(st, pid, legal);
-    if (k && k.key) return k;
-    return B.pickDeepSaver(st, pid, legal);
-  }, 'deepsaver+reflect'],
-  ['重火力+反弹', function (st, pid, legal) {
-    const k = B.pickReflectSpam(st, pid, legal);
-    if (k && k.key) return k;
-    return B.pickHeavyFire(st, pid, legal);
-  }, 'heavyfire+reflect']
-];
+/* "人类原型"：4 个纯策略 + 2 个组合（真实的人不会只按一张键）。
+ *   §E590 起这张表抽到 `audit-lib.humanPrototypes(B)` —— 池的新尺 `tools/probe-pool.mjs` 用的是**同一组**原型，
+ *   抽取前后本文件的输出逐字相同（`/tmp/phs-before.txt` 对 `/tmp/phs-after.txt`）。 */
+const HUMAN = humanPrototypes(B);
 for (const h of HUMAN) {
   if (typeof h[1] !== 'function') {
     console.error('⛔ 人类原型「' + h[0] + '」的脚本不是函数 ⇒ `bots.js` 里没有那个名字（拒绝把它当"这人赢不了"读）');

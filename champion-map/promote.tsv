@@ -1,4 +1,10 @@
 id	verdict	blocks	g4worst	g5worst	holoOther
+D4a	pass	—			
+E3	pass	—			
+R-s123	pass	—			
+S-s120	pass	—			
+T8-s114	pass	—			
+K2	block	G5/long 清不了防席（它夺冠 30%）		30	
 incumbent-forpromote	pass	—			0
 SHIPPED-Ldemo	pass	—			0
 v12-95	pass	—			0.3

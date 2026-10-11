@@ -25,7 +25,9 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const CORE = ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/policy.js', 'js/train/bots.js', 'js/train/evo.js'];
+  'js/train/policy.js', 'js/train/bots.js', 'js/train/evo.js',
+  /* §E590 池抽签：产品与量具跑**同一份**（契约 `docs/POOL-CONTRACT.md` §3 ⇒ 这里的顺序就是 `index.html` 里的加载顺序）*/
+  'js/pool-draw.js'];
 
 export function sandbox(root) {
   const R = root || ROOT;
@@ -33,6 +35,29 @@ export function sandbox(root) {
   sb.globalThis = sb;
   for (const f of CORE) vm.runInNewContext(readFileSync(join(R, f), 'utf8'), sb, { filename: f });
   return sb.window;
+}
+
+/** 「人类形状」原型表（§E590 从 `tools/probe-human-seat.mjs` 抽出来 —— 池的新尺要用**同一组**原型，
+ *   否则"池形态下人类那一席"与"单包形态下人类那一席"读的不是同一件事，两个数不能并排看）。
+ *   ⚠ 全部走 `bots.js` 的现成实现，不抄第二份、**也不写兜底链**（兜底链会把"名字写错"伪装成"这个原型就是不赢"
+ *   —— 本仓比较器假通过的老账）。调用方必须像 `probe-human-seat` 那样先逐个 `typeof === 'function'` 校验。 */
+export function humanPrototypes(B) {
+  return [
+    ['全程刷反弹', B.pickReflectSpam, 'reflectspam'],
+    ['全程只防御', B.pickDefend, 'defend'],
+    ['只攒不打(农民)', B.pickFarmer, 'farmer'],
+    ['只枪压制', B.pickGunSpam, 'gunspam'],
+    ['攒钱+反弹(会玩)', function (st, pid, legal) {
+      const k = B.pickReflectSpam(st, pid, legal);
+      if (k && k.key) return k;
+      return B.pickDeepSaver(st, pid, legal);
+    }, 'deepsaver+reflect'],
+    ['重火力+反弹', function (st, pid, legal) {
+      const k = B.pickReflectSpam(st, pid, legal);
+      if (k && k.key) return k;
+      return B.pickHeavyFire(st, pid, legal);
+    }, 'heavyfire+reflect']
+  ];
 }
 
 export function mulberry32(a) {
