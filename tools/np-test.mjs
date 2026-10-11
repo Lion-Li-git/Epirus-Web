@@ -3796,18 +3796,48 @@ t('D41 E 新口径：只有"**没有大雷威胁时还一直摆架势**"才算�
    *   `docs/artifacts/e504-out/P-s30.js --dry` 从 **exit 6 变 exit 0**（⇒ 这行就是唯一挡手），而 D27/D41/D155/D163 **当时全部 1/1** ⇒ 删掉它门禁一声不响。
    *   记录见 `docs/research/reviews/2026-10-10-day-review-ds.md` §3-②（那里也记了真测出的代价：**净新增挡下 74 枚**，不是 v1.6.49 写的 102）。
    * 为什么补在 D41 而不是新开一门：D41 的本业就是"出厂闸的门槛必须挂在**正确那条口径**上"（E 的新旧口径、F 的 25%/35% 反断言、反弹墙的"必须阻断/不得阻断"一对，全是这个形状）
-   *   ⇒ 只加腿不加门（仓规 v1.5.x 起沿用）。三条各管一个失败模式：① 断口被删或被短路 ② 挡住了但打印只报 multi（规矩 44 打印与阻断同源）③ 反过来把现役自己误伤。 */
-  ok(/if\s*\(\s*spL\.effSkills\s*<\s*3\s*\)\s*fails\.push\(/.test(pc),
-    '① `long` 的有效技能广度必须**真的进阻断**（`spL.effSkills < 3 ⇒ fails.push`）—— 只打印不挡就是用户那次追问"这怎么过的门"的本体');
-  ok(/_gBlocked\s*=\s*fails\.filter\(/.test(pc) && pc.indexOf("indexOf('G(long) 有效技能数') === 0") >= 0,
-    '② 打印侧 `_gBlocked` 必须**两条前缀都认**（只认 multi ⇒ 挡住了却不报是哪条挡的，与"只打印"一样坏）');
-  /* ③ 正对照：现役必须仍然放行 —— 若有人把这条线改成"相对现役 + 容差"之类而**反过来把现役自己挡下**，本腿先红（那正是该停下来问的时刻） */
-  const curDry = spawnCached(['tools/promote-champion.mjs', 'js/bundled-champion-3p.js', '--dry', '--games=20', '--skip-gate-drafts'], { encoding: 'utf8' });
-  eq(curDry.status, 0, '③ 正对照：现役包 `--dry` 必须放行（实测 exit=' + curDry.status + '）');
-  const curOut = String(curDry.stdout || '') + String(curDry.stderr || '');
-  ok(/门判 multi 与 long/.test(curOut) && /两条都未阻断/.test(curOut),
-    '③ 现役那一遍必须印「门判 multi 与 long … 两条都未阻断」（打印与阻断同源 · 实测片段=' +
-    String(curOut.split(/\r?\n/).filter(function (l) { return l.indexOf('广度（') >= 0; })[0] || '(没有广度行)').replace(/\n/g, ' ').slice(0, 90) + '）');
+   *   ⇒ 只加腿不加门（仓规 v1.5.x 起沿用）。三条各管一个失败模式：① 断口被删或被短路 ② 挡住了但打印只报 multi（规矩 44 打印与阻断同源）③ 反过来把现役自己误伤。
+   *
+   * ===== v1.6.61（用户 10-11 裁定「先做 C」）：这三条腿从**源码正则 / 中文措辞**改成**行为级** =====
+   * 病（Claude 点名 · 千问 §E580 草案 · 本班实测复现）：
+   *   ① 原来钉的是 `ok(/if\s*\(\s*spL\.effSkills\s*<\s*3\s*\)\s*fails\.push\(/)` —— **源码文本**。后果两个：
+   *      之一：有人把阈值 3 改成 4（那是**换判据**，不是坏）这条腿就红；
+   *      之二：有人把 `fails.push` 挪进**永远进不去的分支**时它**反而绿** —— 断口被删也一声不响。**这才是要治的病。**
+   *   ② 打印侧原来钉 `_gBlocked = fails.filter(` 的文本 + `门判 multi 与 long` / `两条都未阻断` 两句中文 ⇒
+   *      改一个字就红，而"打印与阻断同源"（METHODOLOGY 44）这条**规矩本身**反而没被验。
+   * 新守法：**喂证人、看行为**（不看源码、不看措辞）。
+   *   证人 = `docs/artifacts/v7w3c-93.bak`：**已入库**（干净克隆也在）· 实测唯一阻断就是 long 广度 2.38 < 3 · 两遍逐字相同（确定性）。
+   *     备选 `docs/artifacts/v7divK-31.bak`（2.39）。投影 = promote 的 `--json`（v1.6.61 加；不带它时输出**逐字节不变**，已实测）。 */
+  const W_LONG = 'docs/artifacts/v7w3c-93.bak';
+  const promoteJson = function (pack) {
+    const r = spawnCached(['tools/promote-champion.mjs', pack, '--dry', '--games=20', '--skip-gate-drafts', '--json'], { encoding: 'utf8' });
+    const txt = String(r.stdout || '') + String(r.stderr || '');
+    const ln = txt.split(/\r?\n/).filter(function (l) { return l.indexOf('EPIRUS_JSON ') === 0; })[0];
+    let j = null;
+    if (ln) { try { j = JSON.parse(ln.slice('EPIRUS_JSON '.length)); } catch (e) { j = null; } }
+    return { status: r.status, json: j, txt: txt };
+  };
+  /* ① 断口必须**真的挡**，而且挡它的**就是 long 广度这一类**（把"文本里有这行字"换成"行为上真的挡了"） */
+  const wj = promoteJson(W_LONG);
+  ok(wj.json, '① promote `--json` 必须给出结构化投影（拿不到 ⇒ 下面两条是空的，先修投影）');
+  ok(wj.status !== 0 && wj.json && wj.json.blocked === true,
+    '①a 证人（唯一阻断 = long 广度）必须**真的被挡**：实测 exit=' + wj.status + ' · blocked=' + (wj.json ? wj.json.blocked : '无投影'));
+  if (wj.json) {
+    eq(wj.json.breadthBlocked.join(','), 'breadth-long',
+      '①b 广度类阻断必须**恰好是 long 那一条**（G=' + wj.json.G + ' · G(long)=' + wj.json.G2 + '）；' +
+      '这一格变空或变成 breadth-multi ⇒ long 断口被删/被短路/判据被换 ⇒ 本腿红');
+    eq(wj.json.printSaysBlocked.join(','), wj.json.breadthBlocked.join(','),
+      '② 打印侧 `_gBlocked` 必须与阻断侧**同源**（METHODOLOGY 44）：挡住 long 却不报是哪条挡的，与"只打印"一样坏');
+  }
+  /* ③ 正对照：现役必须仍然放行，且**两类都不许有**（既没被误伤、打印也不许瞎报被挡） */
+  const cj = promoteJson('js/bundled-champion-3p.js');
+  eq(cj.status, 0, '③a 正对照：现役包 `--dry` 必须放行（实测 exit=' + cj.status + '）');
+  if (cj.json) {
+    eq(cj.json.classes.length, 0, '③b 现役不许有任何阻断类（实测 ' + JSON.stringify(cj.json.classes) + '）');
+    eq(cj.json.printSaysBlocked.length, 0, '③c 现役的打印侧也不许报"被挡"（实测 ' + JSON.stringify(cj.json.printSaysBlocked) + '）');
+  } else {
+    ok(false, '③ 现役那一遍也必须带结构化投影（拿不到 ⇒ promote --json 坏了）');
+  }
 });
 
 t('D42 破墙奖励（方案 b）：只有"我用穿透卡**落地命中**"才记分', function () {

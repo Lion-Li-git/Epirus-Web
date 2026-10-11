@@ -16,7 +16,7 @@
  * 用法：node tools/promote-champion.mjs docs/artifacts/eco-34.bak [--exam-games=40] [--games=10] [--note="..."]
  *       [--force] [--exam-first=<1st%>]   # 后者用于沙箱里子进程管道被拦时，先自己跑 eval-5p 再把数传进来
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, writeSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 /* v1.5.202：UNRUN 的**处置**（哪个方向阻断）是单一来源纯函数 ⇒ 门可以喂合成输入验它。 */
 import { unrunDisposition, UNRUN_KINDS } from './unrun-policy.mjs';
@@ -515,6 +515,42 @@ if (!process.argv.includes('--skip-gate-drafts')) {
     console.log('   ⚠ G4/G5 行为门未能运行（不阻断，但**别当通过**）：' + String(e && e.message || e));
     gateDrafts = { error: String(e && e.message || e) };
   }
+}
+/* ===== v1.6.61（用户 10-11 裁定「先做 C」· 承接 Claude 整改建议 §训练侧 · 千问 §E580 草案）=====
+ * 为什么加 `--json`：门禁 D41 里钉这条 long 广度断口的三条腿，原来全是**源码正则 + 匹配中文措辞**。
+ *   它们的病（Claude 点名，本班当场实测复现）：
+ *     ① 有人把阈值 3 改成 4 ⇒ 腿红（那是**换判据**，不是坏）；
+ *     ② 有人把 `fails.push` 挪进永远进不去的分支 ⇒ 腿**反而绿**（它只查文本在不在）⇒ 断口被删也一声不响。这正是要治的病。
+ *   ⇒ 正确守法是**行为级**：喂一枚"已知只栽 long 广度"的入库包，看它**真的被挡**、且阻断类别**就是** long 广度。
+ * 本块只是把判据的**机器可读投影**打出来，一行 `EPIRUS_JSON {...}`：
+ *   不改任何判定 ‖ 不改退出码 ‖ 不改人类可读输出 ‖ 不带 `--json` 时逐字节不变。
+ * ⚠ 类别映射在这里**单一处声明** —— 别把 class 散到每个 `fails.push` 点上（那会把一个真源变成九份）。
+ * ⚠ 用 `writeSync` 而不是 `console.log`：下面 `process.exit(6)` 走的是管道（门里用 spawnCached/spawnSync 收），
+ *   而管道上的 stdout 是异步的 ⇒ `console.log` 有机会在 exit 时被丢掉。本仓对"打印了但没出去"已有多笔教训。 */
+if (process.argv.includes('--json')) {
+  const CLASS_OF = [
+    [/^伤害\/局/, 'dmg-per-game'],
+    [/^平局率/, 'draw-rate'],
+    [/^反弹墙/, 'reflect-wall'],
+    [/^E 无威胁时/, 'stance'],
+    [/^F 被集火/, 'field-a'],
+    [/^座位对称性/, 'seat-symmetry'],
+    [/^G 有效技能数/, 'breadth-multi'],
+    [/^G\(long\) 有效技能数/, 'breadth-long'],
+    [/^行为门/, 'behavior-gate'],
+    [/^全息屏障/, 'holo-gift'],
+  ];
+  const classOf = function (f) { for (const kv of CLASS_OF) if (kv[0].test(f)) return kv[1]; return 'other'; };
+  const _classes = fails.map(classOf);
+  writeSync(1, 'EPIRUS_JSON ' + JSON.stringify({
+    dry: !!DRY, forced: !!FORCE,
+    blocked: fails.length > 0, count: fails.length,
+    classes: _classes,
+    breadthBlocked: _classes.filter(function (c) { return c === 'breadth-multi' || c === 'breadth-long'; }),
+    printSaysBlocked: _gBlocked.map(classOf),
+    G: Number(Number(sp.effSkills).toFixed(4)),
+    G2: Number(Number(spL.effSkills).toFixed(4)),
+  }) + '\n');
 }
 if (fails.length) {
   console.error('⛔ 体检未过（' + fails.length + ' 项阻断条件）：');
