@@ -1,0 +1,11 @@
+id	path	mode	games	seed0	全程刷反弹	全程只防御	只攒不打(农民)	只枪压制	攒钱+反弹(会玩)	重火力+反弹	六格均值	最大格	最大格是谁	和棋均值
+bundled-champion-3p	js/bundled-champion-3p.js	multi	200	90210	3	8	2	27	2	19	10.17	27.0	只枪压制	6
+bundled-champion-3p	js/bundled-champion-3p.js	long	200	90210	5	13	0	30	5	17	11.67	30.0	只枪压制	3.8333333333333335
+v7cmin3-31	docs/artifacts/v7cmin3-31.bak	multi	200	90210	11	5	1	19	15	23	12.33	23.0	重火力+反弹	7.333333333333333
+v7cmin3-31	docs/artifacts/v7cmin3-31.bak	long	200	90210	10	9	0	26	50	30	20.83	50.0	攒钱+反弹(会玩)	4.333333333333333
+v7role1-91	docs/artifacts/v7role1-91.bak	multi	200	90210	0	0	0	0	5	22	4.50	22.0	重火力+反弹	10.666666666666666
+v7role1-91	docs/artifacts/v7role1-91.bak	long	200	90210	3	0	1	17	22	11	9.00	22.0	攒钱+反弹(会玩)	7
+v7bead3-82	docs/artifacts/v7bead3-82.bak	multi	200	90210	0	3	0	5	9	12	4.83	12.0	重火力+反弹	4.833333333333333
+v7bead3-82	docs/artifacts/v7bead3-82.bak	long	200	90210	0	0	0	4	7	21	5.33	21.0	重火力+反弹	5.666666666666667
+v7ringB1-93	docs/artifacts/v7ringB1-93.bak	multi	200	90210	8	4	0	14	5	5	6.00	14.0	只枪压制	7.333333333333333
+v7ringB1-93	docs/artifacts/v7ringB1-93.bak	long	200	90210	3	17	0	30	24	9	13.83	30.0	只枪压制	3.5

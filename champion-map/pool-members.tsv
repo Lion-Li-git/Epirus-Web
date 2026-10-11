@@ -12,7 +12,10 @@ v7bead1-93	8d3418c8f8ae2265	docs/artifacts/v7bead1-93.bak	mid	0	pass	0	Mon Oct 1
 v7cmin3-93	7e961179bcf37880	docs/artifacts/v7cmin3-93.bak	mid	0	pass	0	Mon Oct 12 2026 01:15:31 GMT+0800 (中国标准时间)	
 v7n1-93	8358c7b72b4d9dc8	docs/artifacts/v7n1-93.bak	mid	0	pass	0	Mon Oct 12 2026 01:15:31 GMT+0800 (中国标准时间)	
 v7new5_005-81	ab21a7d18e7dbe62	docs/artifacts/v7new5_005-81.bak	mid	0	pass	0	Mon Oct 12 2026 00:22:19 GMT+0800 (中国标准时间)	中/低档自动成员（§E590 补档） ‖ 10-12 00:5x 订正：00:2x 那两次写入的 seatKill=0 是假干净（pool-seat-ml-* 两张表没带基准 bundled-champion-3p ⇒ 杀刀算不出，被 seatKillIndex 的初值 0 当成零格否决）⇒ 改回 -1，等人席真补过再刷
+v7bead3-82	de1fcffb5fc4ed1e	docs/artifacts/v7bead3-82.bak	low	0	pass	0	Mon Oct 12 2026 01:47:33 GMT+0800 (中国标准时间)	
 v7force-34	cf63a1b569ce88bb	docs/artifacts/v7force-34.bak	low	0	pass	0	Mon Oct 12 2026 01:14:06 GMT+0800 (中国标准时间)	
 v7l2c-101	4cb7516d80145d0d	docs/artifacts/v7l2c-101.bak	low	0	pass	0	Mon Oct 12 2026 01:14:06 GMT+0800 (中国标准时间)	
+v7ringB1-93	5591af276caa41fe	docs/artifacts/v7ringB1-93.bak	low	0	pass	0	Mon Oct 12 2026 01:47:33 GMT+0800 (中国标准时间)	
+v7role1-91	97dd729190d13063	docs/artifacts/v7role1-91.bak	low	0	pass	0	Mon Oct 12 2026 01:47:33 GMT+0800 (中国标准时间)	
 v7u1-82	36d9f858545e13d2	docs/artifacts/v7u1-82.bak	low	0	pass	0	Mon Oct 12 2026 01:14:06 GMT+0800 (中国标准时间)	
 v7wall2-97	d75083df4847be17	docs/artifacts/v7wall2-97.bak	low	0	pass	0	Mon Oct 12 2026 00:38:59 GMT+0800 (中国标准时间)	中/低档自动成员（§E590 补档） ‖ 10-12 00:5x 订正：00:2x 那两次写入的 seatKill=0 是假干净（pool-seat-ml-* 两张表没带基准 bundled-champion-3p ⇒ 杀刀算不出，被 seatKillIndex 的初值 0 当成零格否决）⇒ 改回 -1，等人席真补过再刷

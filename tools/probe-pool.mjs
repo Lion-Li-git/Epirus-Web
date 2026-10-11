@@ -77,8 +77,12 @@ for (const mode of MODES) {
   const per = {};                                   // 格 → [每枚 seed 的人类夺冠率]
   const memberGames = {}, memberWins = {};
   /* 席位账：池形态下**四席不是同一枚包**，"自对弈里座位效应会自我抵消"那句前提没了（用户 10-11 澄清：
-   *   座位无偏只属于自对弈装配）。⇒ 必须把"座位本身值多少 pt"量出来，否则逐枚夺冠率里掺的是坐席不是强度。 */
+   *   座位无偏只属于自对弈装配）。⇒ 必须把"座位本身值多少 pt"量出来，否则逐枚夺冠率里掺的是坐席不是强度。
+   * 弱点剖面：`memberCell[成员][人类原型] = {n, hw}` = "**这枚在桌上时**那个原型夺冠的场次 / 总场次"
+   *   —— 这是"逐席不同枚"才问得出的问题（旧装配四席同包 ⇒ 每枚的剖面就等于整体的剖面），旧尺里没有对应物。 */
   const seatGames = [0, 0, 0, 0], seatWins = [0, 0, 0, 0], memberSeat = {};
+  const memberCell = {};                              /* 成员 id → 格名 → {n, hw} */
+  let curCell = null;                                 /* 原型名只能由调用侧带进来（`onGame` 的钩子签名里没有它） */
   const salts = new Set(), comps = new Set();   /* 每场组成由 `slotSalt` 唯一决定 ⇒ 盐/组成只有几种在转的话，"逐枚席位分布"不是独立抽样，得先说出来 */
   let allSameGames = 0, totalGames = 0, distinctSum = 0, missSeat = 0;
   let seqSamples = null;                            // 只留第一枚 seed 的前 6 场组成（给人眼看"随机"是不是真的在换）
@@ -112,9 +116,12 @@ for (const mode of MODES) {
         if (won) memberWins[id] = (memberWins[id] || 0) + 1;
         seatGames[s]++; if (won) seatWins[s]++;
         (memberSeat[id] = memberSeat[id] || [0, 0, 0, 0])[s]++;
+        const c = ((memberCell[id] = memberCell[id] || {})[curCell] = (memberCell[id][curCell] || { n: 0, hw: 0 }));
+        c.n++; if (st.winner === scriptedSeat) c.hw++;      /* 这枚在桌上时，人类那一格赢了多少场 = 它的弱点剖面 */
       }
     };
     HUMAN.forEach(function (x, i) {
+      curCell = x[0];
       const r = duelAssembly({ S: S, Play: Play, T: T, R: R }, PARAMS[lite[0].id],
         { games: G, mode: mode, seed0: seed, scripted: x[1], chooserFor: chooserFor, onGame: onGame });
       (per[x[0]] = per[x[0]] || []).push(r.winPct);
@@ -147,6 +154,35 @@ for (const mode of MODES) {
   console.log('   逐枚夺冠率：' + lite.map(m => m.id + ' ' + ((memberWins[m.id] || 0) / Math.max(1, memberGames[m.id]) * 100).toFixed(1) + '%(上场 ' + (memberGames[m.id] || 0) + ')').join(' ‖ '));
   /* 座位效应：把"哪一席更容易赢"跨成员合并成一个数 ⇒ 它才是"逐枚夺冠率能不能并排读"的那把尺。
    *   四席的夺冠率之和必然 = P(AI 赢)（其余给人类那一席），所以**看的是极差不是绝对值**。 */
+  /* 弱点剖面矩阵：行 = 成员，列 = 人类原型，格 = "这枚在桌上时该原型夺冠率"（括号里是场数）。
+   *   读法只许这样用：**同一行里比较**（这枚怕哪一格），不要跨行比大小（那是夺冠率干的事）。
+   *   参照行 = 整池平均（同口径），差 ≥3σ(单格) 才叫"漏"；σ(单格) 按 n 现算，不许拍一个数。 */
+  const CELLS = HUMAN.map(x => x[0]);
+  const colMean = {}, colN = {};
+  for (const m of lite) for (const cn of CELLS) {
+    const c = (memberCell[m.id] || {})[cn]; if (!c) continue;
+    colMean[cn] = (colMean[cn] || 0) + c.hw; colN[cn] = (colN[cn] || 0) + c.n;
+  }
+  const poolRate = cn => (colN[cn] ? colMean[cn] / colN[cn] * 100 : 0);
+  console.log('   弱点剖面（行内比：这枚在桌上时，该原型夺冠率 %；⚑ = 比整池平均高 ≥3σ）');
+  console.log('     ' + '成员'.padEnd(15) + CELLS.map(c => c.slice(0, 5).padStart(8)).join(''));
+  for (const m of lite) {
+    const cells = [];
+    let worst = null;
+    for (const cn of CELLS) {
+      const c = (memberCell[m.id] || {})[cn]; if (!c || !c.n) { cells.push('        -'); continue; }
+      const r = c.hw / c.n * 100, base = poolRate(cn);
+      const se = Math.max(0.5, Math.sqrt(Math.max(1e-6, base / 100 * (1 - base / 100)) / c.n) * 100);
+      const flag = (r - base) >= 3 * se ? '⚑' : ' ';
+      cells.push((r.toFixed(0) + '(' + c.n + ')' + flag).padStart(8));
+      if (!worst || (r - base) / se > (worst.z)) worst = { cn: cn, z: (r - base) / se, r: r, base: base, se: se, n: c.n };
+    }
+    console.log('     ' + (m.id + '              ').slice(0, 15) + cells.join(''));
+    if (worst && worst.z >= 3) console.log('        └ 最漏的一格：' + worst.cn + ' ' + worst.r.toFixed(1) + '% vs 整池 ' +
+      worst.base.toFixed(1) + '%（' + worst.z.toFixed(1) + 'σ，n=' + worst.n + '）');
+    rows.push({ mode: mode, cell: '__profile:' + m.id, seedVals: CELLS.map(cn => {
+      const c = (memberCell[m.id] || {})[cn]; return c && c.n ? (c.hw / c.n * 100).toFixed(1) + '/' + c.n : '-'; }).join(','), mean: '', spread: '' });
+  }
   const seatRate = seatGames.map((n, s) => n ? seatWins[s] / n * 100 : 0);
   const seatSpread = Math.max.apply(null, seatRate) - Math.min.apply(null, seatRate);
   console.log('   ⚑ 座位效应（AI 四席各自夺冠率，跨成员合并）：' +

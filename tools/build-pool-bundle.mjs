@@ -77,6 +77,11 @@ for (const m of members) {
 }
 const 不足 = Object.keys(byTier).filter(t => byTier[t] < 4);
 if (不足.length) console.log('   ⚠ 这些档成员数 < 4 席 ⇒ 抽签必然出现重复（用户裁定②允许部分重复），组成里会出现同枚：' + 不足.join(' ‖ '));
+/* 契约 §3.7：`== 4` 时"洗牌取前 4"= 全员上场 ⇒ **抽签不产生阵容变化**，只有席位排列在变。
+ *   这一档看着"池在工作"（没有降级、没有全同），实际玩家每场遇到的是同一批包 —— 所以必须说出来。 */
+const 刚好 = Object.keys(byTier).filter(t => byTier[t] === 4);
+if (刚好.length) console.log('   ⚠ 这些档成员数 **正好等于 4 席** ⇒ 每枚每场都上场、阵容不会变（只有席位在换）：' + 刚好.join(' ‖ ') +
+  ' ⇒ 要阵容多样性得补到 ≥5 枚（见 docs/POOL-CONTRACT.md §3.7）');
 if (process.argv.includes('--dry')) { console.log('（--dry：没写文件）将写 ' + OUT + '，' + (body.length / 1024).toFixed(0) + ' KB'); process.exit(0); }
 writeFileSync(join(ROOT, OUT), body);
 console.log('✔ 已写 ' + OUT + '（' + (body.length / 1024).toFixed(0) + ' KB）');

@@ -1,10 +1,19 @@
 id	verdict	blocks	g4worst	g5worst	holoOther
+B5-10-31	pass	—			
 D4a	pass	—			
 E3	pass	—			
+G15-71	pass	—			
 R-s123	pass	—			
 S-s120	pass	—			
 T8-s114	pass	—			
+v7w3c-82	pass	—			0
+v7wall2-97	pass	—			0.15
+G03-31	block	G5/long 清不了防席（它夺冠 36%） · G5/multi 清不了防席（它夺冠 38%）		38	
 K2	block	G5/long 清不了防席（它夺冠 30%）		30	
+NC-191	block	G4/long 被一行脚本打穿 97% · G4/multi 被一行脚本打穿 90% · G5/long 清不了防席（它夺冠 95%） · G5/multi 清不了防席（它夺冠 92%）	97	95	
+NOL24-31	block	G4/long 被一行脚本打穿 85% · G5/long 清不了防席（它夺冠 86%） · G5/multi 清不了防席（它夺冠 42%）	85	86	
+PL71	block	G5/long 清不了防席（它夺冠 27%）		27	
+r61fix-92	block	G4/long 被一行脚本打穿 94% · G4/multi 被一行脚本打穿 76% · G5/long 清不了防席（它夺冠 87%） · G5/multi 清不了防席（它夺冠 67%）	94	87	0
 incumbent-forpromote	pass	—			0
 SHIPPED-Ldemo	pass	—			0
 v12-95	pass	—			0.3
