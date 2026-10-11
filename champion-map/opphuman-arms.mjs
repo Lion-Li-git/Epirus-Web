@@ -27,11 +27,26 @@
  *   且 `*.bak` 全局忽略 ⇒ 本实验的账记在 `champion-map/opphuman-arms.tsv`（含 trainFit 与权重 sha1）
  * - 不给线上两颗冠军槽写任何东西；不 promote；不改 `js/**`
  *
- * 用法：
- *   node champion-map/opphuman-arms.mjs [--gens=250] [--n=5] [--games=12] [--pop=12] [--pool=3]
- *                                      [--seeds=301,302,303] [--human=2] [--tag=]
+ * ===== v2（2026-10-11 A′）：**热启动配对** —— 上批（冷启动 250 代）判「不可判」，病因不是 n 小，
+ *   是**两臂都太弱、离现役太远**（人席均值 21~33 vs 现役 8.04），且六支臂全是**尖刺形**（三格 0、一格 70~100%）
+ *   ⇒ 六格均值在那形状上量的是「哪个孔没堵上」，不是「人类对手有没有用」。
+ *   本批改法：两臂都**从现役 `js/bundled-champion-3p.js` 热启动续训**（`EPIRUS_HOTSTART=1` + `EPIRUS_SEEDPACK=`），
+ *   唯一差异仍是 `EPIRUS_OPP_HUMAN` ⇒ 起点贴在同一条线上，配对差才是"人类对手"的净效应。
+ *   依据：§E438 —— 过线的臂恰好都是**从过线的种子出发**的；从未过线的包热启动"臂大概率继承缺陷"。
+ *
+ * ===== 本批判据（跑前钉死）=====
+ *   主端点 = 人席**最坏格**（`最大格` 列，两批 × 两口径 取最大）的配对差 ON − OFF（负 = 改善）
+ *            —— 上批的教训：均值会被单个尖刺格支配，最坏格才是"这个包能不能上桌"的那一栏
+ *   次端点 = 人席六格均值（两批两口径平均）的配对差（与上批可比）
+ *   护栏   = `G(long) ≥ 3` 不塌 ‖ 零剂量守卫（同 seed 两臂指纹必须不同）
+ *   PASS = 3/3 同号改善（最坏格）且配对均值改善 ≥ 3.0pt ‖ FAIL = ≥2 粒反号 或 |均值| < 1.0pt
+ *   ⚠ 只看闸侧，**不许用训练分**（§E572）‖ ⚠ 尺子口径：0.7~2.3pt = 同枚换 seed 抖动，12.8pt = 臂间地板
+ * ================================================================================================
+ *
+ * 用法： node champion-map/opphuman-arms.mjs [--gens=250] [--n=5] [--games=12] [--pop=12] [--pool=3]
+ *                                      [--seeds=301,302,303] [--human=2] [--tag=] [--hotstart=<包>]
  * 产物：
- *   docs/artifacts/opphuman/<arm>/<arm>-band{1..6}.bak ‖ champion-map/opphuman-arms.tsv（tracked）
+ *   docs/artifacts/opphuman/<arm>/<arm>-band{1..6}.bak ‖ champion-map/opphuman-arms[-<tag>].tsv（tracked）
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -54,6 +69,8 @@ const GENS = Number(arg('gens', 250));
 const PN = arg('n', 5), PG = arg('games', 12), PP = arg('pop', 12), POOL = Number(arg('pool', 3));
 const HUMAN = Number(arg('human', 2));
 const TAG = arg('tag', '');
+/* 热启动源：给了就开 `EPIRUS_HOTSTART=1`（两臂都从这枚包续训）。默认空 = 冷启动（v1 那批的形状）。 */
+const HOTSTART = arg('hotstart', '');
 const SEEDS = String(arg('seeds', '301,302,303')).split(',').map((s) => Number(s.trim())).filter((x) => x > 0);
 
 /* 臂格：每粒种子两臂，唯一差异 = EPIRUS_OPP_HUMAN */
@@ -65,8 +82,9 @@ for (const s of SEEDS) {
 
 console.log('配对臂 ' + arms.length + ' 支（' + SEEDS.length + ' 粒种子 × 2 状态，同配方只换 EPIRUS_OPP_HUMAN）'
   + '‖ 预算 ' + GENS + ' 代 · ' + PN + ' 人 · ' + PG + ' 局/代 · 种群 ' + PP + ' ‖ 并发 ' + POOL
-  + '‖ 人类形状替身 = ' + HUMAN + ' 席');
-console.log('判据跑前已钉：见本文件头部（主端点 = 人席六格均值 ≤ 现役改善；只看闸侧，不用训练分）\n');
+  + '‖ 人类形状替身 = ' + HUMAN + ' 席'
+  + '‖ 起点 = ' + (HOTSTART ? ('热启动 ' + HOTSTART) : '冷启动'));
+console.log('判据跑前已钉：见本文件头部（主端点 = 人席**最坏格**配对差；只看闸侧，不用训练分）\n');
 
 const t0 = Date.now();
 const done = [];
@@ -84,6 +102,8 @@ function launch(a) {
   };
   delete env.EPIRUS_PUBLISH;
   if (a.human > 0) env.EPIRUS_OPP_HUMAN = String(a.human); else delete env.EPIRUS_OPP_HUMAN;
+  if (HOTSTART) { env.EPIRUS_HOTSTART = '1'; env.EPIRUS_SEEDPACK = HOTSTART; }
+  else { delete env.EPIRUS_HOTSTART; delete env.EPIRUS_SEEDPACK; }
   if (!existsSync(join(ROOT, env.EPIRUS_BAND_DIR))) mkdirSync(join(ROOT, env.EPIRUS_BAND_DIR), { recursive: true });
 
   const t = Date.now();
@@ -115,7 +135,7 @@ function pump() {
 function sha1(s) { return createHash('sha1').update(s).digest('hex'); }
 
 function report() {
-  const rows = [['arm', 'seed', 'oppHuman', 'band', 'trainFit', 'packHash12', 'selected', 'bandRel', 'gens', 'n', 'games', 'pop', 'sec']];
+  const rows = [['arm', 'seed', 'oppHuman', 'hotstart', 'band', 'trainFit', 'packHash12', 'selected', 'bandRel', 'gens', 'n', 'games', 'pop', 'sec']];
   const selectedPacks = [];
   for (const r of done.slice().sort((x, y) => (x.seed - y.seed) || (x.human - y.human))) {
     const d = join(BANDROOT, r.arm);
@@ -128,13 +148,14 @@ function report() {
       let meta; try { meta = JSON.parse(mLine.slice('window.EPIRUS_CHAMPION_3P_META = '.length).replace(/;\s*$/, '')); } catch (e) { continue; }
       const wjson = wLine.slice('window.EPIRUS_CHAMPION_3P = '.length).replace(/;\s*$/, '');
       const rel = 'docs/artifacts/opphuman/' + r.arm + '/' + f;
-      rows.push([r.arm, r.seed, r.human, f.replace('.bak', ''), meta.trainFit != null ? Number(meta.trainFit).toFixed(4) : '',
+      rows.push([r.arm, r.seed, r.human, HOTSTART || '', f.replace('.bak', ''), meta.trainFit != null ? Number(meta.trainFit).toFixed(4) : '',
         sha1(wjson).slice(0, 12), meta.selected ? 1 : 0, rel, meta.gens, meta.n, meta.games, meta.pop, r.sec]);
       if (meta.selected) selectedPacks.push({ arm: r.arm, seed: r.seed, human: r.human, rel, trainFit: meta.trainFit });
     }
   }
-  writeFileSync(join(HERE, 'opphuman-arms.tsv'), rows.map((r) => r.join('\t')).join('\n') + '\n', 'utf8');
-  console.log('\n清单 champion-map/opphuman-arms.tsv：' + (rows.length - 1) + ' 行'
+  const TSV = join(HERE, 'opphuman-arms' + (TAG ? '-' + TAG : '') + '.tsv');
+  writeFileSync(TSV, rows.map((r) => r.join('\t')).join('\n') + '\n', 'utf8');
+  console.log('\n清单 champion-map/opphuman-arms' + (TAG ? '-' + TAG : '') + '.tsv：' + (rows.length - 1) + ' 行'
     + '‖ 成功臂 ' + done.length + '/' + arms.length + '‖ 失败 ' + fail
     + '‖ 总机时 ' + ((Date.now() - t0) / 1000 / 60).toFixed(1) + ' 分钟');
   console.log('\n===== 当选包（下一步量这些）=====');
