@@ -1,0 +1,11 @@
+# opHuman 配对臂 · 闸侧读数（2026-10-11）· 判据跑前钉在 champion-map/opphuman-arms.mjs 头部
+# 尺：人席 = tools/probe-human-seat.mjs（200 局/格 · 两批 90210/90211 · 六格均值两批两口径平均） ‖ 闸 = tools/promote-champion.mjs --dry --games=20 ‖ 现役锚点人席均值 = 8.04
+arm	seed	oppHuman	pack	wid	seatMean	Gmulti	Glong	blocked	trainFit
+s301-off	301	0	docs/artifacts/opphuman/s301-off/s301-off-band4.bak	d7f5c4dd368f5f51	21.67	3.64	2.53	1	0.9480
+s301-on	301	2	docs/artifacts/opphuman/s301-on/s301-on-band4.bak	3a8c3c6ecbbff36c	33.00	3.01	2.61	1	1.1198
+s302-off	302	0	docs/artifacts/opphuman/s302-off/s302-off-band2.bak	163a98e3b994c7f4	26.04	4.24	4.31	1	1.0449
+s302-on	302	2	docs/artifacts/opphuman/s302-on/s302-on-band5.bak	39bc7d8ce51f3353	21.25	1.13	1.15	1	1.0031
+s303-off	303	0	docs/artifacts/opphuman/s303-off/s303-off-band5.bak	7449abd4950c3ea0	25.50	5.04	5.03	1	1.0457
+s303-on	303	2	docs/artifacts/opphuman/s303-on/s303-on-band4.bak	9fd8a24264ca2577	22.71	6.25	5.12	1	1.0348
+# 配对差（ON − OFF 人席均值，负 = 改善）: 11.33 / -4.79 / -2.79 ‖ 均值 1.25pt
+# 判词: 不可判（样本/方向不足 ⇒ 要不要加样本由用户裁；本仓教训：n=3 不足以定论）

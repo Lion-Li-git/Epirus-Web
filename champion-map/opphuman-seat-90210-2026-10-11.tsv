@@ -1,0 +1,15 @@
+id	path	mode	games	seed0	全程刷反弹	全程只防御	只攒不打(农民)	只枪压制	攒钱+反弹(会玩)	重火力+反弹	六格均值	最大格	最大格是谁	和棋均值
+s301-off-band4	docs/artifacts/opphuman/s301-off/s301-off-band4.bak	multi	200	90210	100	4	0	21	0	0	20.83	100.0	全程刷反弹	14
+s301-off-band4	docs/artifacts/opphuman/s301-off/s301-off-band4.bak	long	200	90210	100	6	0	25	0	1	22.00	100.0	全程刷反弹	5
+s301-on-band4	docs/artifacts/opphuman/s301-on/s301-on-band4.bak	multi	200	90210	2	80	0	77	5	26	31.67	80.0	全程只防御	14.833333333333334
+s301-on-band4	docs/artifacts/opphuman/s301-on/s301-on-band4.bak	long	200	90210	1	83	0	83	8	31	34.33	83.0	全程只防御	6
+s302-off-band2	docs/artifacts/opphuman/s302-off/s302-off-band2.bak	multi	200	90210	96	8	2	29	0	17	25.33	96.0	全程刷反弹	3.8333333333333335
+s302-off-band2	docs/artifacts/opphuman/s302-off/s302-off-band2.bak	long	200	90210	100	20	0	34	1	10	27.50	100.0	全程刷反弹	1.5
+s302-on-band5	docs/artifacts/opphuman/s302-on/s302-on-band5.bak	multi	200	90210	100	7	0	15	2	1	20.83	100.0	全程刷反弹	22.833333333333332
+s302-on-band5	docs/artifacts/opphuman/s302-on/s302-on-band5.bak	long	200	90210	100	7	0	18	6	0	21.83	100.0	全程刷反弹	16.166666666666668
+s303-off-band5	docs/artifacts/opphuman/s303-off/s303-off-band5.bak	multi	200	90210	99	10	0	32	1	10	25.33	99.0	全程刷反弹	6.333333333333333
+s303-off-band5	docs/artifacts/opphuman/s303-off/s303-off-band5.bak	long	200	90210	100	16	0	28	3	4	25.17	100.0	全程刷反弹	3.1666666666666665
+s303-on-band4	docs/artifacts/opphuman/s303-on/s303-on-band4.bak	multi	200	90210	70	2	0	26	2	27	21.17	70.0	全程刷反弹	3.3333333333333335
+s303-on-band4	docs/artifacts/opphuman/s303-on/s303-on-band4.bak	long	200	90210	87	4	0	28	2	25	24.33	87.0	全程刷反弹	1.3333333333333333
+bundled-champion-3p	js/bundled-champion-3p.js	multi	200	90210	2	5	3	12	4	6	5.33	12.0	只枪压制	3.5
+bundled-champion-3p	js/bundled-champion-3p.js	long	200	90210	5	15	0	28	16	10	12.33	28.0	只枪压制	2.5
