@@ -80,6 +80,8 @@ const ANCHORS = {
   '90211': { multi: '1,7,1,12,5,4', long: '2,12,0,21,9,13' },     // §E576
   '90212': { multi: '1,9,1,9,9,8', long: '4,12,0,29,15,8' },      // §E583 ⇒ §E585 第二次跑**逐位复现**
   '90213': { multi: '2,4,1,14,6,8', long: '5,10,1,23,14,14' },    // §E585 第一次测
+  '90216': { multi: '3,6,1,7,10,5', long: '3,11,0,18,13,12' },     // §E586 第一次测（本相登记，供以后复算对表）
+  '90217': { multi: '2,4,1,13,7,6', long: '4,9,1,30,16,13' },      // §E586 第一次测
 };
 ALLB.forEach((m, bi) => {
   const seed = SEEDS[bi] || (m.get(BASE + '|multi') || {}).seed0 || '?';
@@ -189,4 +191,39 @@ console.log('\n入围清单：' + (shortlist.length ? shortlist.map(s => s.目�
     const best = BEH.map(d => ({ d, r: sp(t.xs.map(o => o[d]), t.ysM) })).sort((a, b) => Math.abs(b.r) - Math.abs(a.r))[0];
     console.log('    ' + t.mode + '·' + t.cell + ' ← ' + best.d + ' ρ=' + best.r.toFixed(3));
   }
+}
+
+/* ===== §E586 `--hypo=目标|维`：**单目标单维**检验（METHODOLOGY 132 的第 2 条）=====
+ * 一个检验一个 α ⇒ **不做多重校正**（判据落在日志 §3：合池 ρ ≥ 临界、p ≤ 0.05、逐批同号、方向为正）。
+ * 其余维/其余格只作**附列**，明写"非判据"，不许拿来改判词。 */
+const HYPO = String(arg('hypo', ''));
+if (HYPO) {
+  const parts = HYPO.split('|');
+  if (parts.length !== 2) { console.error('⛔ --hypo 要写成 "multi·重火力+反弹|waste"'); process.exit(2); }
+  const [tgt, dim] = parts.map(s => s.trim());
+  const T = targets();
+  const t = T.filter(x => x.mode + '·' + x.cell === tgt)[0];
+  if (!t) { console.error('⛔ --hypo 里的目标不存在（可用：' + T.map(x => x.mode + '·' + x.cell).join(' ') + '）'); process.exit(2); }
+  if (BEH.concat(SCR).indexOf(dim) < 0) { console.error('⛔ --hypo 里的维不存在（可用：' + BEH.join(',') + ' ‖ ' + SCR.join(',') + '）'); process.exit(2); }
+  const x = t.xs.map(o => o[dim]);
+  const rM = sp(x, t.ysM), rEach = t.perBatch.map(y => sp(x, y));
+  const p = mcP(x, t.ysM, B_, rngSeed(20261011));
+  const n = t.xs.length; const rr = []; const g = rngSeed(4242);
+  for (let b = 0; b < 4000; b++) rr.push(Math.abs(sp([...Array(n)].map(() => g()), [...Array(n)].map(() => g()))));
+  rr.sort((a, b) => a - b);
+  const crit = rr[Math.round(0.95 * (rr.length - 1))];
+  const 同号 = rEach.every(v => v > 0);
+  const 中 = [rM >= crit, p <= 0.05, 同号, true];
+  console.log('\n===== §E586 单目标单维（非筛查）：' + tgt + ' ← ' + dim + ' =====');
+  console.log('  n=' + n + ' ‖ ρ(合池)=' + rM.toFixed(3) + ' ‖ 逐批 ' + rEach.map(v => v.toFixed(2)).join('/') +
+    '（' + (同号 ? '全正' : '有非正批') + '）‖ 未校正 p=' + p.toFixed(4) + ' ‖ 双侧 5% 临界 |ρ|=' + crit.toFixed(3));
+  console.log('  四条：① ρ ≥ 临界 ' + (中[0] ? '✅' : '⛔') + ' ‖ ② p ≤ 0.05 ' + (中[1] ? '✅' : '⛔') + ' ‖ ③ 逐批同号 ' + (中[2] ? '✅' : '⛔') +
+    ' ‖ ④ 方向为正 ' + (rM > 0 ? '✅' : '⛔') + ' ⇒ **判词：' + (中.every(Boolean) ? '立住' : (rM <= 0 || !中[0] || !中[1] ? '判死（waste 不外推 ⇒ 第三步不开 js/** 口子）' : '测不出来（不许写成"倾向成立"）')) + '**');
+  console.log('  ---- 附列（**非判据**，只用于看 §E585 那张表是不是框的特异）----');
+  const others = BEH.map(d => ({ d, r: sp(t.xs.map(o => o[d]), t.ysM) })).sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+  console.log('  同一格其余维（|ρ| 前 4）：' + others.slice(0, 4).map(o => o.d + ' ' + o.r.toFixed(2)).join(' ‖ '));
+  const across = T.filter(y => y.cell === t.cell).map(y => ({ 格: y.mode, r: sp(y.xs.map(o => o[dim]), y.ysM) }));
+  console.log('  同一维对另一口径格：' + across.map(o => o.格 + ' ' + o.r.toFixed(2)).join(' ‖ '));
+  const sameCell = T.filter(y => y.cell === '重火力+反弹').map(y => ({ 口: y.mode, r: sp(y.xs.map(o => o[dim]), y.ysM) }));
+  console.log('  同一维对「重火力+反弹」两口径：' + sameCell.map(o => o.口 + ' ' + o.r.toFixed(2)).join(' ‖ '));
 }
