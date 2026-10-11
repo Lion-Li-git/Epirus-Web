@@ -44,28 +44,18 @@ const SCR = ['H', 'Hp', 'De'];
 const TARGETS = ['六格均值(multi)', '六格均值(long)', '最大格(multi)'];   // 表里列名通用，口径在 mode 列
 const BASE_LDEMO = { multi: 5.3, long: 12.3, 最大格: 28, 格: '只枪压制' };   // §E506 那次同 seed 90210 的基线
 
-const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
-function ranks(x) { const idx = x.map((v, i) => i).sort((a, b) => x[a] - x[b]); const r = new Array(x.length); let i = 0;
-  while (i < idx.length) { let j = i; while (j + 1 < idx.length && x[idx[j + 1]] === x[idx[i]]) j++;
-    const avg = (i + j) / 2 + 1; for (let k = i; k <= j; k++) r[idx[k]] = avg; i = j + 1; } return r; }
-function pear(a, b) { const ma = mean(a), mb = mean(b); let n = 0, da = 0, db = 0;
-  for (let i = 0; i < a.length; i++) { n += (a[i] - ma) * (b[i] - mb); da += (a[i] - ma) ** 2; db += (b[i] - mb) ** 2; }
-  return (da === 0 || db === 0) ? NaN : n / Math.sqrt(da * db); }
-const sp = (x, y) => pear(ranks(x), ranks(y));
-/* 蒙特卡洛置换 p（n=25 ⇒ 25! 不可枚举）。⚠ 尾数方向必须对（§E572 那次把累积分布当 p 印，结论直接反）：
- *   这里数的是 `|ρ_perm| ≥ |ρ_obs|`，并且带一条自查：完美同序的 p 必须 = 1/B 那种最小值。 */
-function mcP(x, y, B, rng) { const obs = Math.abs(sp(x, y)); const ry = ranks(y); let hit = 0;
-  for (let b = 0; b < B; b++) { const p = ry.slice(); for (let i = p.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = p[i]; p[i] = p[j]; p[j] = t; }
-    if (Math.abs(pear(ranks(x), p)) >= obs - 1e-12) hit++; }
-  return (hit + 1) / (B + 1); }
-function holm(ps) { const idx = ps.map((v, i) => i).sort((a, b) => ps[a] - ps[b]); const m = ps.length; const adj = new Array(m);
-  let run = 0; for (let k = 0; k < idx.length; k++) { const v = Math.max(run, (m - k) * ps[idx[k]]); run = v; adj[idx[k]] = Math.min(1, v); } return adj; }
+/* §E585：统计件抽到 `stats-lib.mjs`（同一份实现给逐格筛查复用，不抄第二份）。
+ *   抽取的铁证是**抽取前后本文件的每个 ρ 与 p 逐值不变** —— 拿 §E576 在册读数对：
+ *   heavy −0.663/−0.602 ‖ rounds 0.715/0.566 ‖ Geff −0.670/−0.414 ‖ 带内 H −0.036/−0.164。 */
+import { mean, ranks, pear, sp, mcP, holm, rngSeed } from './stats-lib.mjs';
 
 const A = rd(arg('a', 'seat-2026-10-11-90210.tsv'));
 const Bt = rd(arg('b', 'seat-2026-10-11-90211.tsv'));
 const C = rd('coords.tsv');
 const B_ = Number(arg('B', 20000));
-const rng0 = () => { let s = 20261011 >>> 0; return () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+const rng0 = () => rngSeed(20261011);   /* ⚑ `rng0` 在原作者手里是**工厂**（每次调用发一条新流：rng0()），不是流本身
+   —— 第一版我写成 `const rng0 = rngSeed(20261011)`，于是下面的 `rngD = rng0()` 拿到的是**一个数**而不是函数，
+   跑起来才报 "rngD is not a function"。留着这句注释是因为"工厂 vs 流"这个区别下次还会咬人。 */
 
 /* ---- (f) 名单与行数 ---- */
 const idsOf = t => [...new Set(t.rows.map(r => r[t.h.id]))];
