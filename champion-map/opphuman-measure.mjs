@@ -27,6 +27,9 @@ const TAG = arg('tag', '');
 /* v3：本批主端点 = 人席的**某一格**（默认「只枪压制」）—— 那正是杀掉 12/17 候选的那一格（§E584 §5），
  * 也是 `gunSpam` 这个判据原型对应的人类原型。两批 × 两口径取**最大**（任一次漏了就算漏）。 */
 const CELL = arg('cell', '只枪压制');
+/* `--reuse`：两批 seat tsv 已在盘上就**不重跑探针**（那是 14 秒/枚·批 × 7 枚 × 2 批 ≈ 3.3 分钟）—— 只重做判读。
+ * 用于"判读代码改了、读数没变"的场景（本批就是这么修的：配对按臂名取 on/off）。 */
+const REUSE = process.argv.includes('--reuse');
 const ARMS = arg('arms', '');
 const LIST = join(HERE, ARMS || ('opphuman-arms' + (TAG ? '-' + TAG : '') + '.tsv'));
 const REF = 'js/bundled-champion-3p.js';   // 现役锚点（探针的锚点自证：multi 5.33/5.00 · long 12.33/9.50）
@@ -41,7 +44,11 @@ for (const l of lines.slice(1)) {
   const c = l.split('\t');
   if (c[ix('selected')] !== '1') continue;
   const arm = c[ix('arm')];
-  sel.push({ arm: arm, seed: Number(c[ix('seed')]), human: Number(c[ix('oppHuman')]), rel: c[ix('bandRel')], trainFit: c[ix('trainFit')] });
+  /* on/off 的判据**必须从臂名取**：`--opps=` 模式下两臂的 `oppHuman` 都是 0（on 臂加的是判据原型、不是人）。
+   * ⚠ 这里原先是按 `human` 分的 ⇒ 加了 `--opps` 之后配对全丢（三端点齐报"可判 0 粒 · NaN"）。
+   * 那个形状（**逐包读数齐全却 0 粒**）就是这条 bug 的指纹 —— 留着当教训：读数齐全 ≠ 判读成立。 */
+  const stm = arm.match(/-(off|on)(-|$)/);
+  sel.push({ arm: arm, seed: Number(c[ix('seed')]), human: Number(c[ix('oppHuman')]), st: stm ? stm[1] : '?', opps: c[ix('opps')] || '', rel: c[ix('bandRel')], trainFit: c[ix('trainFit')] });
 }
 if (!sel.length) { console.error('⛔ 清单里一枚 selected 都没有 ⇒ 先查臂日志'); process.exit(2); }
 console.log('当选包 ' + sel.length + ' 枚（' + sel.map((s) => s.arm).join(' ') + '）\n');
@@ -55,8 +62,8 @@ const seeds = [...new Set(sel.map((s) => s.seed))].sort();
 console.log('===== 零剂量守卫（§E249）=====');
 const voidSeeds = new Set();
 for (const sd of seeds) {
-  const off = sel.find((s) => s.seed === sd && s.human === 0);
-  const on = sel.find((s) => s.seed === sd && s.human > 0);
+  const off = sel.find((s) => s.seed === sd && s.st === 'off');
+  const on = sel.find((s) => s.seed === sd && s.st === 'on');
   if (!off || !on) { console.log('  seed ' + sd + '：缺一臂 ⇒ 这一格不判'); voidSeeds.add(sd); continue; }
   const same = wid[off.arm] === wid[on.arm];
   if (same) voidSeeds.add(sd);
@@ -73,14 +80,18 @@ console.log('\n===== 人席（1 席"人" vs 4 席被测 · ' + GAMES + ' 局/格
 for (const sd of SEAT_SEEDS) {
   const raw = join(HERE, 'opphuman-seat-raw-' + sd + '-' + stamp + '.txt');   // ⚠ .txt 不是 .log（.gitignore:2 是 *.log）
   const tsv = join(HERE, 'opphuman-seat-' + sd + '-' + stamp + '.tsv');
-  console.log('  跑 seed ' + sd + ' …');
-  let out = '';
-  try {
-    out = execFileSync(process.execPath, ['tools/probe-human-seat.mjs', '--packs=' + allPacks, '--games=' + GAMES, '--modes=multi,long', '--seed=' + sd],
-      { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 });
-  } catch (e) { out = String((e && e.stdout) || '') + String((e && e.stderr) || ''); }
-  writeFileSync(raw, out, 'utf8');
-  execFileSync(process.execPath, ['champion-map/seat-parse.mjs', '--in=' + raw, '--out=' + tsv], { cwd: ROOT, stdio: 'inherit' });
+  if (REUSE && existsSync(tsv)) {
+    console.log('  复用已落盘的 seed ' + sd + '（--reuse ⇒ 不重跑探针）');
+  } else {
+    console.log('  跑 seed ' + sd + ' …');
+    let out = '';
+    try {
+      out = execFileSync(process.execPath, ['tools/probe-human-seat.mjs', '--packs=' + allPacks, '--games=' + GAMES, '--modes=multi,long', '--seed=' + sd],
+        { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 });
+    } catch (e) { out = String((e && e.stdout) || '') + String((e && e.stderr) || ''); }
+    writeFileSync(raw, out, 'utf8');
+    execFileSync(process.execPath, ['champion-map/seat-parse.mjs', '--in=' + raw, '--out=' + tsv], { cwd: ROOT, stdio: 'inherit' });
+  }
   const tl = readFileSync(tsv, 'utf8').trim().split('\n');
   const th = tl[0].split('\t');
   const cPath = th.indexOf('path'), cMode = th.indexOf('mode'), cMean = th.indexOf('六格均值'), cId = th.indexOf('id'), cWorst = th.indexOf('最大格'), cCell = th.indexOf(CELL);
@@ -171,7 +182,7 @@ function paired(key, label) {
   console.log('\n===== ' + label + '：配对 ON − OFF（负 = 人更难赢 = 改善）=====');
   const ds = [];
   for (const sd of seeds) {
-    const off = sel.find((s) => s.seed === sd && s.human === 0), on = sel.find((s) => s.seed === sd && s.human > 0);
+    const off = sel.find((s) => s.seed === sd && s.st === 'off'), on = sel.find((s) => s.seed === sd && s.st === 'on');
     if (!off || !on) continue;
     const a = R[off.rel][key], b = R[on.rel][key];
     const d = b - a;
