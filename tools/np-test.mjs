@@ -11856,6 +11856,7 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
  *   ⑥ 契约的三处读者（页面 / 量具 / 真源表）少一个 ⇒ 文档写了但没人执行
  *   ⑦ 页面解包用错对象 ⇒ 整池静默退回单包，而标签照样说"池在生效"（只有真跑解包才抓得到）
  *   ⑧ 人席批表缺基准行 ⇒ "算不出"被读成"零格否决"，被判死的包会以"自动成员"身份进池（10-12 实测两枚）
+ *   ⑨ 回显（`aiInfo`）与决策（`champForSeat`）各判一次池生不生效 ⇒ 本机导入时标签说"池在跑"而实际四席用你那一枚
  * ⚠ 判的是 `pool-add --audit` 吐的 **JSON 里的数**，不是退出码（管道会吃掉退出码 —— 本机栽过两次）。
  * ⚠ 本门的输入全在 git 里（腿①自己就在查这件事）⇒ 它不会变成又一个"CI 上永远 SKIP"（`D231`/`D233` 的教训）。 */
 t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话', function () {
@@ -11981,6 +11982,19 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
     '）⇒ 判据读不到格就别说自己在守门');
   ok(readFileSync('champion-map/pool-members.tsv', 'utf8').indexOf(killedPath) < 0,
     '⑧ 已被人席判死的 ' + killedPath + ' 不许还在池里（腿③ 只查自动成员的 seatKill>0，这条钉的是"路径也别留在表里"）');
+
+  /* ⑨ **回显与决策必须走同一个判定**（10-12 04:1x 浏览器实机抓到的一条真撒谎）：
+   *   `champForSeat`（真决策）先查了"本机导入优先"，而 `aiInfo`（席位标签）没查就报"池·mid 本局=…"
+   *   ⇒ 只要用户在这台机器上训练/导入过 3P 冠军（训练完页面**自动**写 `localStorage['epirus.champion3p']`），
+   *     五人桌实际四席用他那枚，而标签说池在跑。修法不是补一句注释，是把判定收成一个 `poolPlan()`，两边都问它。
+   *   这条腿因此钉"结构"：`aiInfo` 里不许再出现直接调 `poolDrawFor` 的那条路（走了就绕开本机导入那一支）。 */
+  const aiAll = uiSrc.slice(uiSrc.indexOf('function aiInfo'), uiSrc.indexOf('function pickTargetFor'));
+  const ai = aiAll.split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+  ok(ai.length > 200, '⑨ 前提变了：`aiInfo` 抽不出来了（改名或挪走 ⇒ 本条与它要防的那件事一起失效，别让它默默不跑）');
+  ok(/poolPlan\(/.test(ai), '⑨ `aiInfo` 必须问 `poolPlan(`（回显与决策同一个判定）⇒ 现在它自己判池，就会漏掉"本机导入优先"那一支');
+  ok(!/poolDrawFor\(/.test(ai), '⑨ `aiInfo` 里不许直接调 `poolDrawFor(` ⇒ 绕开 `poolPlan` 就是绕开"本机导入优先"，标签会与真决策分叉（实测过的病）');
+  ok(uiSrc.indexOf('function poolPlan') > 0 && uiSrc.indexOf('function champForSeat') > 0,
+    '⑨ `poolPlan` 与 `champForSeat` 必须都在（少一个就是"单一判定"这句只剩一半）');
 });
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 

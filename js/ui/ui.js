@@ -392,19 +392,30 @@
   /** 这一席该用哪一枚。`n<=2` 完全走老路：§E286 实测 3P 包在 1v1 上是**分布外**的 ⇒ 把池搬到 2 人桌等于造一个假档。 */
   function champForSeat(pid, state, tier) {
     const n = (state && state.p && state.p.length) || (B.players || 2);
-    if (n <= 2) return champForCount(n);
     const single = champForCount(n);
-    if (single.from === 'local') { single.poolNote = '本机导入优先 ⇒ 池不生效（四席都用你这枚）'; return single; }
-    const draw = poolDrawFor(state, tier, n);
-    if (!draw || !draw.seats.length) {
-      single.poolNote = poolOffReason(tier) || '池未生效（原因未归类）⇒ 退回单包（四席同一枚）';
-      return single;
-    }
+    const plan = poolPlan(state, tier, n);
+    if (!plan.on) { if (plan.why) single.poolNote = plan.why; return single; }
+    const draw = plan.draw;
     const m = draw.seats[(pid || 1) - 1];
     const p = m && POOL.params[m.id];
     if (!p) { single.poolNote = '席位 ' + pid + ' 抽到的成员解不开 ⇒ 本席退回单包'; single.poolDraw = draw; return single; }
     return { params: p, from: 'pool:' + m.id, poolDraw: draw, seatId: m.id,
       poolNote: draw.allSame ? '该档池只够 ' + draw.seats.length + ' 席 ⇒ 四席全同（降级，已明说）' : null };
+  }
+  /** 池到底生不生效，**只这一处判**（v1.6.63 内的一次修正，未另起版本号）。
+   *   为什么要有这个函数：`champForSeat`（真决策）先查了"本机导入优先"，而 `aiInfo`（席位标签的回显）**没查**就报"池·mid 本局=…"
+   *   ⇒ 10-12 04:1x 浏览器实机抓到：只要用户在这台机器上训练/导入过 3P 冠军（页面训练完**自动**写
+   *   `localStorage['epirus.champion3p']`），五人桌实际四席都用他那枚，而标签说池在跑。
+   *   这与契约 §4"降级不许静默"是同一条纪律的另一面：**回显与决策必须走同一个判定**，否则修好一边另一边还是撒谎。 */
+  function poolPlan(state, tier, n) {
+    if (n <= 2 || !tier || !tier.pool) return { on: false, local: false, why: null, draw: null };
+    const single = champForCount(n);
+    if (single.from === 'local') return { on: false, local: true, why: '本机导入优先 ⇒ 池不生效（四席都用你这枚）', draw: null };
+    const draw = poolDrawFor(state, tier, n);
+    if (!draw || !draw.seats.length) {
+      return { on: false, local: false, why: poolOffReason(tier) || '池未生效（原因未归类）⇒ 退回单包（四席同一枚）', draw: null };
+    }
+    return { on: true, local: false, why: null, draw: draw };
   }
   /* ===== v1.6.6 兜底脚本（冠军包拿不到时）=====
    * 这里必须是个**定义得住**的函数：`chooseAIMulti` 那行历史上引用过 `DN.hard.pick`，而 `DN` 的声明在 v1.3.22
@@ -493,8 +504,9 @@
     /* v1.6.63（§E590）池生效时这里**必须说得出逐席是谁**（契约 §4：降级不许静默）。
      *   组成与 `champForSeat` 用的是同一个纯派生（同 slotSalt 同答案）⇒ 回显与实际决策不会分叉。 */
     if ((B.players || 2) > 2 && tier.pool) {
-      const d = poolDrawFor(B.state, tier, B.players || 2);
-      if (d && d.seats.length) {
+      const plan = poolPlan(B.state, tier, B.players || 2);
+      const d = plan.draw;
+      if (plan.on && d && d.seats.length) {
         const n = loadPool().filter(function (m) { return m.tier === tier.pool; }).length;
         return {
           source: '池·' + tier.pool + '(' + n + ' 枚) 本局=' +

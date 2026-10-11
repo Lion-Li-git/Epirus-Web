@@ -90,6 +90,13 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 | `js/bundled-champion-pool.js` 缺失/解析失败 | 退回 `js/bundled-champion-3p.js` 单包 + 页面打印降级原因（沿用 `champForCount` 现有的"回退并明说"写法） |
 | 表里某枚的 pack 文本解不出（`js/champion-pack.js` 的 `P.unpack` 返回 null） | **该枚整枚出局**，不参与本局抽签，并打印 id；不许用 null 顶上 |
 | 某档成员数 = 0 | 退回单包语义 + 打印 |
+| 本机导入/自训过 3P 冠军（`localStorage['epirus.champion3p']` 有可用包） | **池不生效**，四席都用用户那一枚 + 打印"本机导入优先"（契约 §3.6） |
+
+**回显与决策必须走同一个判定**（10-12 04:1x 补，起因是一条实机抓到的撒谎）：
+"池到底生不生效"这件事只许有**一个**判定点 —— `js/ui/ui.js` 的 `poolPlan(state, tier, n)`，
+`champForSeat`（真决策）与 `aiInfo`（席位标签回显）都问它。
+第一版 `aiInfo` 自己判了一遍且**漏掉"本机导入优先"那一支** ⇒ 任何训练过 3P 冠军的用户，五人桌实际四席用他本机那枚，
+而标签照样写 `池·mid(6 枚) 本局=…`，**看起来完全正常**。`D234` 第⑨条腿钉的就是"回显不许绕开 `poolPlan`"。
 
 ## 5. 量具侧（新尺，不动旧尺的缺省）
 
