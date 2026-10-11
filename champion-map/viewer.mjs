@@ -206,6 +206,26 @@ if (existsSync(promP)) {
     Object.values(PROM).filter(function (x) { return x.pass; }).length + ' ‖  ' +
     Object.values(PROM).filter(function (x) { return !x.pass; }).length + '）');
 } else console.log('提示：没有 promote.tsv ⇒ "上槽体检"着色口径不可用（跑 node champion-map/promscan.mjs 生成）');
+/* §E590 冠军池（真源 pool-members.tsv，由 tools/pool-add.mjs 写）。
+ *   为什么这张表必须上图：v1.6.63 之后"线上冠军"不再是一枚包而是**按难度档抽的池**（困难 7 ‖ 中 6 ‖ 低 7），
+ *   而谱系图原来只有"这一枚强不强"的三条腿（过线 / 体检 / 决斗）⇒ 玩家问"我现在遇到的这枚在池里是哪一档、
+ *   它给人送过分没有"，图上完全读不出来，只能去翻 tsv。
+ *   ⚠ 这里**只读不判**：谁是成员、踩了几格，全由 pool-add/seat-rule 那边算完落表；图抄数不重算（单一来源）。 */
+const poolP = join(HERE, 'pool-members.tsv');
+let POOLM = {};
+/* 档 → 环色（品红 / 蓝紫 / 橙）：刻意避开图里已经占掉的三色 —— 绿 #39d98a=过线、金 #ffd166=选中、青 #7fd1ff=对比。
+ *   换色要连同底部那句画布内提示与图例一起改，否则"环色 = 档"这件事只有代码知道。 */
+const POOL_COL = { hard: '#ff4fa3', mid: '#8f7bff', low: '#ff9a3c' };
+if (existsSync(poolP)) {
+  const pl2 = String(readFileSync(poolP, 'utf8')).replace(/\r?\n$/, '').split('\n'); const ph2 = pl2[0].split('\t');
+  const iId = ph2.indexOf('id'), iT = ph2.indexOf('tier'), iS = ph2.indexOf('seatKill'), iV = ph2.indexOf('promoteVerdict'), iI = ph2.indexOf('invited');
+  for (const l of pl2.slice(1)) { const c = l.split('\t'); if (!c[iId]) continue;
+    POOLM[c[iId]] = { tier: c[iT] || '', sk: Number(c[iS]), pv: c[iV] || '', inv: c[iI] === '1' }; }
+  const byT = {}; for (const k in POOLM) byT[POOLM[k].tier] = (byT[POOLM[k].tier] || 0) + 1;
+  console.log('冠军池 ' + Object.keys(POOLM).length + ' 枚 ' + JSON.stringify(byT) + ' ‖ 人席踩过的 ' +
+    Object.values(POOLM).filter(function (x) { return x.sk > 0; }).length + ' 枚 ‖ 没量过的 ' +
+    Object.values(POOLM).filter(function (x) { return !(x.sk >= 0); }).length + ' 枚');
+} else console.log('提示：没有 pool-members.tsv ⇒ 池层不可用（跑 node tools/pool-add.mjs 生成）');
 /* §E310 决斗表（§E289 那台配对决斗的汇总，`duelscan.mjs` 生成）= 图上第 4 条腿："这枚打赢现役没有"。
  *   为什么非画不可：§E308 ① 我拿"考卷 H 高 5.2pt"当"更强的冠军"写进头条，被这台仪器当场推翻
  *   （v7t1-82 两批种子都输）⇒ 这个仓库里"更强"有专门的尺，图上却只有 F/H/S。
@@ -362,6 +382,9 @@ const DATA = rows.map(r => ({
   ok: OKM && (r.id in OKM) ? (OKM[r.id].ok ? 1 : 0) : null,
   gl: OKM && (r.id in OKM) && isFinite(OKM[r.id].g2) ? OKM[r.id].g2 : null,
   pv: r.id in PROM ? (PROM[r.id].pass ? 1 : 0) : null, pb: r.id in PROM ? PROM[r.id].b : '',
+  /* §E590 池层：pt = 该枚在池里的档（hard/mid/low），不在池里 = ''；psk = 人席否决格数（-1 = 没量过）；pi = 用户点名越过门槛 */
+  pt: r.id in POOLM ? POOLM[r.id].tier : '', psk: r.id in POOLM ? POOLM[r.id].sk : null,
+  ppv: r.id in POOLM ? POOLM[r.id].pv : '', pi: r.id in POOLM ? POOLM[r.id].inv : false,
   dm: r.id in DUEL ? DUEL[r.id].m : null, ds: r.id in DUEL ? DUEL[r.id].s : '',
   da: r.id in DUEL ? DUEL[r.id].a : '', db: r.id in DUEL ? DUEL[r.id].b : '',
   /* §E313 部署口径：`hp` = 页面（ε=0.2 soft）夺1率 ‖ `de` = Δε = 考卷 − 页面（正 = 开探索就掉）*/
@@ -990,6 +1013,10 @@ function tip(d) {
     (d.ok === 1 ? '\\n训练侧五道检查 ✓' : (d.ok === 0 ? '\\n训练侧五道检查 ✗' + (d.why ? '（' + d.why + '）' : '') : '')) +
     '\\n名次 ' + d.rk + '/' + N + '（页面 Hp · 出厂 T）‖ 考卷口径第 ' + d.rkExam + ' 名 ‖ exam=' + (d.examG === null ? '未标档' : d.examG) + ' 局/组合' +
     (d.pv === null || d.pv === undefined ? '' : '\\npromote --dry：' + (d.pv === 1 ? '✅ 三条腿全过' : '⛔ ' + d.pb)) +
+    /* §E590 池层：只印读数，口径那句话（"两批同号 ≥20pt"）留给图例，卡片不写旁注（用户 10-10 的排版裁定）。 */
+    (d.pt ? '\\n冠军池 · ' + d.pt + ' 档' + (d.pi ? '（点名）' : '') +
+      ' ‖ 人席否决 ' + (d.psk === null || d.psk < 0 ? '没量过' : d.psk + ' 格') +
+      ' ‖ 体检 ' + (d.ppv || '未记') : '') +
     (d.ds ? '\\n对现役配对决斗 A−B ' + d.da + ' ‖ ' + d.db + ' pt（' +
       (d.ds === 'flip' ? '两批符号翻' : d.dm > 0 ? '两批都赢' : '两批都输') + '）' : '') +
     '\\n──── 特性剖面 ‖ P = 本屏 ' + N + ' 枚里 ≤ 该读数的占比 ────' + prof(d);
@@ -1782,6 +1809,11 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
     if (d.lin && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.4; g.stroke(); }
     if (d.ok === 1 && al > 0.3) { g.globalAlpha = al * 0.72; g.strokeStyle = '#39d98a'; g.lineWidth = 1.15 * devicePixelRatio;
       g.beginPath(); g.arc(p[0], p[1], rr + 2.2 * st.size, 0, 6.284); g.stroke(); }
+    /* §E590 池层环（环色 = 难度档，见图例/画布底那行提示）。画在"选中/对比"**之前** ⇒ 那两圈永远压得住它，
+     *   不然选中一枚池成员会出现"金环被粉环盖住"这种读不出选中的情形。 */
+    if (d.pt && POOL_COL[d.pt] && al > 0.3) { g.globalAlpha = Math.min(1, al * 0.95); g.strokeStyle = POOL_COL[d.pt];
+      g.lineWidth = 1.7 * devicePixelRatio;
+      g.beginPath(); g.arc(p[0], p[1], rr + 3.7 * st.size, 0, 6.284); g.stroke(); }
     if (d.id === st.sel) { g.globalAlpha = 1; g.strokeStyle = '#ffd166'; g.lineWidth = 2 * devicePixelRatio;
       g.beginPath(); g.arc(p[0], p[1], rr + 5 * devicePixelRatio, 0, 6.284); g.stroke(); }
     if (st.cmp.indexOf(d.id) >= 0 && d.id !== st.sel) { g.globalAlpha = 1; g.strokeStyle = '#7fd1ff'; g.lineWidth = 1.6 * devicePixelRatio;
@@ -1933,6 +1965,10 @@ function drawMap(fr) {
     if (d.ok === 1 && al > 0.3) {
       g.globalAlpha = al * 0.72; g.strokeStyle = '#39d98a'; g.lineWidth = 1.15 * devicePixelRatio;
       g.beginPath(); g.arc(pr[i].x, pr[i].y, rr + 2.2 * st.size, 0, 6.284); g.stroke(); }
+    /* §E590 池层环（三维态与二维同一条规则：环色 = 档，画在选中环之前） */
+    if (d.pt && POOL_COL[d.pt] && al > 0.3) { g.globalAlpha = Math.min(1, al * 0.95); g.strokeStyle = POOL_COL[d.pt];
+      g.lineWidth = 1.7 * devicePixelRatio;
+      g.beginPath(); g.arc(pr[i].x, pr[i].y, rr + 3.7 * st.size, 0, 6.284); g.stroke(); }
     if (isC && st.elev > 0.02) { g.globalAlpha = al * st.elev;
       g.beginPath(); g.arc(foot[0], foot[1], 2.4 * st.size, 0, 6.284); g.fillStyle = st.ink; g.fill(); }
     g.globalAlpha = 1;
@@ -1946,8 +1982,8 @@ function drawMap(fr) {
     g.beginPath(); g.arc(scr[i][0], scr[i][1], 11 * st.size, 0, 6.284); g.strokeStyle = st.ink; g.lineWidth = 2; g.stroke(); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText(st.elev < 0.5
-    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（蓝 = 低 → 红 = 高 · 针 = 现役那一档，它在库内第 ' + Math.round(incPct()) + ' 百分位）· 绿环 = 过了训练侧五道检查 · 点一枚 = 选中 · 缩放 ×' + st.k.toFixed(2)
-    : '左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 柱高 = ' + (st.goodTop ? 'F − F_min（越高越好）' : 'F_max − F（越低越好 = 冠军在阱底）') + ' · 绿环 = 过了训练侧五道检查',
+    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（蓝 = 低 → 红 = 高 · 针 = 现役那一档，它在库内第 ' + Math.round(incPct()) + ' 百分位）· 绿环 = 过了训练侧五道检查 · 池环（品红/蓝紫/橙）= 冠军池 困难/中/低 档 · 点一枚 = 选中 · 缩放 ×' + st.k.toFixed(2)
+    : '左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 柱高 = ' + (st.goodTop ? 'F − F_min（越高越好）' : 'F_max − F（越低越好 = 冠军在阱底）') + ' · 绿环 = 过了训练侧五道检查 · 池环 = 冠军池按档着色',
     14 * devicePixelRatio, h - 12 * devicePixelRatio);
 }
 /* ---- 三维投影（3db 行为轴 / 3dw 势阱 共用） ---- */
@@ -2571,6 +2607,19 @@ function paintLegend(fr) {
       : '针 = 现役那一档（灰）· 绿 = 比现役强 ‖ 红 = 不如 · 深浅 = 离现役多远（两侧各按该侧 p90 距归一：绿侧 '
         + splitSets().sU.toFixed(3) + ' ‖ 红侧 ' + splitSets().sD.toFixed(3) + '，超出即钉在两端）';
     lg.appendChild(sm); }
+  /* §E590 池层图例：**常驻一行**（不塞进 LEG_NOTE —— 那本账是"按当前着色口径的说明"，而池环在任何口径下都画）。
+   *   三色环 = 这枚在冠军池的哪一档；枚数直接从真源表数，不抄死（改了池忘了改图例就是又一处"记账说门在、门不在"）。 */
+  if (Object.keys(POOLM).length) {
+    var plg = document.createElement('div'); plg.style.color = 'var(--dim)';
+    var _pt = {}; for (var _pk in POOLM) _pt[POOLM[_pk].tier] = (_pt[POOLM[_pk].tier] || 0) + 1;
+    plg.innerHTML = '<span style="color:' + POOL_COL.hard + '">◍</span>池·困难 ' + (_pt.hard || 0) +
+      ' ‖ <span style="color:' + POOL_COL.mid + '">◍</span>池·中 ' + (_pt.mid || 0) +
+      ' ‖ <span style="color:' + POOL_COL.low + '">◍</span>池·低 ' + (_pt.low || 0) +
+      '<br><span style="color:' + POOL_COL.hard + '">◍</span> 环色 = 这枚在冠军池哪一档（真源 pool-members.tsv）';
+    plg.title = '多人桌的四个 AI 席**逐席各抽一枚**（同档可重复、禁四席全同）。环只在"这枚是池成员"时画；' +
+      '悬停里那句"人席否决 N 格"的口径 = 与现役比、两批同号 ≥20pt 的格数（§E531，检出力脚注见 §E587）。';
+    lg.appendChild(plg);
+  }
   /* §E433 DS（用户 10-08：「图例下方那两行字纹丝不动…要怎么排版比较合适可以省图例空间」）：
    *   原图例 **五块竖堆**：s1(点色行,§E432 已空) → wr(色条+F轴) → s2(黄针=现役) → s3(绿环…) → s4(现跑同一道闸…)
    *   ⇒ 这里把 s3/s4 **并进 s2 一行**、闸门那句移进 hover 提示（信息不丢）⇒ **五块变两块**。
@@ -2676,7 +2725,10 @@ function paintCard() {
      *   而不截的话 v7seat24-31 那条本来读得出"四条腿各差多少"，截 60 就断成"场B 清场 0.20 < "（阈值那半句没了）。
      *   这张卡是"为什么这枚不能上槽"的唯一自证位，半句等于没写。*/
     '上槽体检：' + (d.pv === 1 ? '✅ 三条腿全过（真能换包）' : (d.pv === 0 ? '⛔ ' + String(d.pb) : '未测')) +
-    ' ‖ 过线判定：' + (d.ok === 1 ? '是' : (d.ok === 0 ? '否' : '未测')) + (d.why ? '（栽在 ' + String(d.why) + '）' : '')
+    ' ‖ 过线判定：' + (d.ok === 1 ? '是' : (d.ok === 0 ? '否' : '未测')) + (d.why ? '（栽在 ' + String(d.why) + '）' : '') +
+    /* §E590 池层（读 pool-members.tsv，不重算）：这一行回答的是"玩家现在这局会不会遇到它、遇上了算哪一档"。 */
+    (d.pt ? ' ‖ 冠军池：' + d.pt + ' 档' + (d.pi ? '（点名越过门槛）' : '') +
+      ' · 人席否决 ' + (d.psk === null || d.psk < 0 ? '没量过' : d.psk + ' 格') : '')
   ].concat(relLines(d)).concat(d.dn > 1 ? ['⚠ 同一份权重占 ' + d.dn + ' 行：' + String(d.dups).split(',').slice(0, 4).join(' ‖ ') + (d.dn > 4 ? ' 等 ' + d.dn + ' 行' : '')] : []);
   el.style.display = 'block'; el.textContent = body.join('\\n');
   floatApply(el, 'cardPos');   /* §E462 卡是盖住数据最多的那块（实测 39 枚，含 12 枚历代冠军）⇒ 也要能拖走 */
@@ -4916,6 +4968,57 @@ st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
     var bad = []; for (var z = 0; z < _pv.length; z++) if (!_pv[z][1].length) bad.push(_pv[z][0]);
     return bad.length === 0; })(), '取不到值的维：' + (function () { var b = [];
     for (var z = 0; z < _pv.length; z++) if (!_pv[z][1].length) b.push(_pv[z][0]); return b.join(','); })());
+  /* ===== §E590 池层的三条牙（为什么要有：v1.6.63 之后线上冠军是**按档抽的池**，而这张图原来只标"过线/体检/决斗"，
+   *   池成员在图上和普通臂**长得一样** ⇒ 读图的人分不清"这枚是玩家真会遇到的"还是"库里的一粒臂"。
+   *   三条各防一种坏法：① 表里改了名/被 §E440 去重摘掉 ⇒ 图上没有那枚的环（少标）
+   *   ② 表与图两边都有但档写错 ⇒ 环色不对（错标） ③ POOL_COL 少给一档 ⇒ 那一档**静默不画环**（最阴：看起来只是"这枚没进池"）。*/
+  (function () {
+    var ids = Object.keys(POOLM);
+    if (!ids.length) { T('池层：真源表非空（pool-members.tsv 读到东西）', false, '读到 0 枚 ⇒ 表不在或读法变了，池环整层隐形'); return; }
+    var miss = [], wrong = [];
+    for (var i = 0; i < ids.length; i++) {
+      var hit = null; for (var j = 0; j < P.length; j++) if (P[j].id === ids[i]) { hit = P[j]; break; }
+      if (!hit || !hit.pt) miss.push(ids[i]);
+      else if (hit.pt !== POOLM[ids[i]].tier) wrong.push(ids[i] + '(图=' + hit.pt + ' 表=' + POOLM[ids[i]].tier + ')');
+    }
+    T('池层：真源表每一枚都在图上且带档（少一枚 = 图读不出这枚是池成员）', miss.length === 0,
+      '图上没有或没有档的：' + miss.join(','));
+    T('池层：图上标的档必须逐字等于真源表的档', wrong.length === 0, wrong.join(' ‖ '));
+    var tiers = {}; for (var k = 0; k < ids.length; k++) tiers[POOLM[ids[k]].tier] = 1;
+    var noCol = Object.keys(tiers).filter(function (t) { return !POOL_COL[t]; });
+    T('池层：表里出现的每一档都得有环色（漏一档 = 那一档静默不画环）', noCol.length === 0, '没有颜色的档：' + noCol.join(','));
+    var nRing = 0; for (var q = 0; q < P.length; q++) if (P[q].pt) nRing++;
+    T('池层：环数 == 表行数（多出来的环 = 表里删过成员而图上还挂着）', nRing === ids.length, '环 ' + nRing + ' ‖ 表 ' + ids.length);
+    /* 第五条：字段有 ≠ 画得出来。用**两帧差分**（把 pt 摘掉画一帧、装回去画一帧），差分的像素里必须真有环色。
+     *   为什么按差分而不是直接扫颜色：F 底色与家族色里也有红紫，按颜色数会把"节点本身"数成环（§E449 同一课）。
+     *   窗口切掉大部分池成员时这条**不适用**（明写出来，不许让它靠运气绿）。 */
+    var nVis = 0; for (var w = 0; w < P.length; w++) if (P[w].pt && VIS[w]) nVis++;
+    if (nVis < 5) { T('池层：环真画到画布上（两帧差分里得有环色像素）', true, '不适用：当下可见的池成员只有 ' + nVis + ' 枚（窗口切掉了）'); }
+    else {
+      var iIdx = [], iHeld = [], img0 = null, img1 = null, blew = '';
+      for (var w = 0; w < P.length; w++) if (P[w].pt) { iIdx.push(w); iHeld.push(P[w].pt); }
+      try {
+        for (w = 0; w < iIdx.length; w++) P[iIdx[w]].pt = '';
+        draw(); img0 = g.getImageData(0, 0, cv.width, cv.height).data;
+        for (w = 0; w < iIdx.length; w++) P[iIdx[w]].pt = iHeld[w];
+        draw(); img1 = g.getImageData(0, 0, cv.width, cv.height).data;
+      } catch (eE) { blew = String((eE && eE.message) || eE); }
+      var nDiff = 0, nCol = 0;
+      var cols = [[255, 79, 163], [143, 123, 255], [255, 154, 60]];
+      if (!blew) for (var q = 0; q < img1.length; q += 4) {
+        if (img0[q] === img1[q] && img0[q + 1] === img1[q + 1] && img0[q + 2] === img1[q + 2]) continue;
+        nDiff++;
+        for (var c = 0; c < 3; c++) if (Math.abs(img1[q] - cols[c][0]) < 46 && Math.abs(img1[q + 1] - cols[c][1]) < 46 &&
+          Math.abs(img1[q + 2] - cols[c][2]) < 46) { nCol++; break; }
+      }
+      /* 阈值为什么是 20% 而不是"大部分"：差分的环像素里**混着抗锯齿与 alpha 混合**（环宽 1.7dpr、alpha 0.95，
+       *   边缘那圈离纯色很远）。实测默认态 20 枚 ≈ 1300 颗差分、其中 27% 落在三种环色 ±46 内
+       *   ⇒ 判"画没画"用颗数（>300），判"画的是不是环色"用占比（>20%）。把环色改成白色这条立刻红（牙验过）。 */
+      T('池层：环真画到画布上（两帧差分里得有环色像素）', !blew && nDiff > 300 && nCol / Math.max(1, nDiff) > 0.2,
+        (blew ? '取色抛错 ' + blew : '差分 ' + nDiff + ' 颗 ‖ 其中环色 ' + nCol + ' 颗（' +
+          (nDiff ? (nCol / nDiff * 100).toFixed(0) : 0) + '%）‖ 可见池成员 ' + nVis + ' 枚'));
+    }
+  })();
   /* §E574 三条"清空画布"的牙（用户报：拖窗口时整张黑一下；他机器上一次拖拽里 fit0 触发 9 次。
    *   给 canvas 的 width/height 赋值本身就是**清空** ⇒ 清空与重画之间只要跨过一帧边界，那一帧就是空的画布）：
    *   ① fit0 幂等 —— 布局没变时重复调用不许再动位图；
@@ -5074,7 +5177,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>\n' +
 '<div id="tip"></div>\n' +
 '<div id="selftest"></div>\n' +
-'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var NRAW = ' + NRAW + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + '; var EPSG = ' + JSON.stringify(EPSG) + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
+'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var NRAW = ' + NRAW + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + '; var EPSG = ' + JSON.stringify(EPSG) + '; var POOLM = ' + JSON.stringify(POOLM) + '; var POOL_COL = ' + JSON.stringify(POOL_COL) + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
 /* §E338 落盘之后**必须把内联脚本再解析一遍**（"写完不回读"这一族的第三种形态）：
  *   模板里写 '\n' 会被 Node 先吃成**真换行** ⇒ 写进页面就成了一条未闭合的字符串 ⇒ **整页脚本一条都不执行**，
  *   而构建照样打印"已写 xxx KB"、截图照样是一张画布（地板是 canvas 之外没画 ⇒ 看着像空的但没人报错）。
