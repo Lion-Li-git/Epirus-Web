@@ -118,6 +118,15 @@ console.log('\n判定：' + out.length + ' 枚里 ' + wins + ' 枚 A>B（其中 
 /* ⚠ 这里不下"F 有效/无效"的结论：只看"几枚赢了参照包"会骗人 —— 判剂量-反应要合两批种子并算秩相关（§E289 的同一套）。*/
 const TSVOUT = arg('out', 'duel-e334-s' + SEED + '.tsv');
 const P = TSVOUT.indexOf('/') >= 0 ? TSVOUT : join(HERE, TSVOUT);
+/* 2026-10-11 DS 血债：默认输出名与**在册历史表**同名（`duel-e334-s77000.tsv` 那张有 12 行历史读数），
+ * 而这里是**无条件 `writeFileSync`** ⇒ 跑单枚的决斗就把 12 行历史静默压成 1 行（本班实测踩到，随后从 git 恢复）。
+ * 章程是"拒绝静默"：目标已存在就停，换名字，或显式 `--force`。 */
+if (existsSync(P) && !process.argv.includes('--force')) {
+  console.error('⛔ 输出文件已存在：' + P + '\n' +
+    '   本工具默认名与在册历史表同名（如 duel-e334-s77000.tsv），覆盖会静默丢掉历史读数。\n' +
+    '   ⇒ 换 `--out=<别的名字>`，或确实要覆盖再加 `--force`。');
+  process.exit(2);
+}
 writeFileSync(P, ['a', 'b', 'aPath', 'bPath', 'aFirst%', 'bFirst%', 'diff_pt', 'approxSE', 'aTop2%', 'bTop2%', 'aRanks', 'secs'].join('\t') + '\n' +
   out.map(o => [o.a, o.b, o.aPath, o.bPath, o.aFirst.toFixed(2), o.bFirst.toFixed(2), o.diff.toFixed(2), o.se.toFixed(2),
     o.aTop2.toFixed(2), o.bTop2.toFixed(2), o.aRanks, o.secs].join('\t')).join('\n') + '\n');
