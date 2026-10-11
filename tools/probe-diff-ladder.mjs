@@ -27,7 +27,7 @@ import { loadChampParams } from '../server/opp-champs.mjs';
 
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
 rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'extra',
-  'quiet', 'machine', 'minGap', 'except', 'exceptMin'], 'probe-diff-ladder');
+  'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool'], 'probe-diff-ladder');
 
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const GAMES = Math.max(1, Number(flag('games', 1500)) || 1500);
@@ -90,7 +90,7 @@ const pk = packFor(N);
 if (!pk.p) { console.error('⛔ 冠军包解不开（2P/3P 都不兼容）⇒ 这把尺没有所指'); process.exit(2); }
 const humanPool = loadPool(W, 'human');   // 读一次文件（每局重读会把仪器自己变成 I/O 瓶颈）
 
-function makeLevelChooser(L) {
+function makeLevelChooser(L, p) {
   if (L.kind === 'style') {
     const st = (Bots.STYLES || []).find(x => x.id === L.style);
     if (!st) { console.error('⛔ 风格不在册: ' + L.style); process.exit(2); }
@@ -101,15 +101,42 @@ function makeLevelChooser(L) {
     /* 这条斜坡与 `ui.js` 那条**逐字同形**（D153 钉 ui.js 的那一份；这里改了不响门 ⇒ 两者一旦不一致，本工具的数就不再是页面的数，
      *   记在 METHODOLOGY 的"两根锚点必须一起看"那条下面）。 */
     const e = L.ramp ? (state.round <= 1 ? 0 : (state.round === 2 ? 0.1 : L.eps)) : L.eps;
-    return T.pickChampion(state, pid, affordableFirst(legal), pk.p, 0.15, e, L.epsK, L.epsMode);
+    return T.pickChampion(state, pid, affordableFirst(legal), p, 0.15, e, L.epsK, L.epsMode);
   };
+}
+/* ===== §E590 `--pool=1`：让这把尺指到**池形态的产品**上 =====
+ *   为什么要加这一档（不是"再给旧门加腿"）：v1.6.63 起 ≥3 人桌的四个 AI 席**逐席各抽一枚**，
+ *   而默认态这把尺给所有 AI 席喂的是同一颗 `pk.p` ⇒ 它量的是"剂量阶梯"在一种已经不存在的装配上的表现。
+ *   台账 `docs/GATE-SHIFTS.md` §十九 把 `D227`④ 的"主语漂移"登记成等裁，这一档就是裁之前先把数拿到手。
+ *   口径：组成 = `js/pool-draw.js` 的 `compose(该档成员, N-1, rng(state.slotSalt))` —— **与页面同一份实现、同一个盐**
+ *   （`st.slotSalt` 由本工具自己的 rng 逐局给，同 seed 同局序 ⇒ 跨档仍是逐局配对的，配对性质没丢）。
+ *   风格档（`lv:hunter`）按契约 §3 **不带包**，两种模式下行为一致。 */
+const USE_POOL = (flag('pool', '0') || '0') === '1';
+const PD = W.EpirusPoolDraw;
+const POOL_BY_TIER = {}, MEMBER_P = {};
+if (USE_POOL) {
+  if (!PD || typeof PD.compose !== 'function') { console.error('⛔ `js/pool-draw.js` 没进 sandbox 的 CORE 名单 ⇒ 池模式没有抽签实现，只能退回单包'); process.exit(2); }
+  const PT = join(ROOT, 'champion-map/pool-members.tsv');
+  if (!existsSync(PT)) { console.error('⛔ 池真源表不在：champion-map/pool-members.tsv（先跑 tools/pool-add.mjs）'); process.exit(2); }
+  const PL = readFileSync(PT, 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
+  const ph = Object.fromEntries(PL[0].split('\t').map((x, i) => [x, i]));
+  for (const l of PL.slice(1)) { const c = l.split('\t'); if (!c[ph.id]) continue;
+    const tier = c[ph.tier];
+    let p = null;
+    try { p = loadChampParams(POOL, join(ROOT, c[ph.path])); } catch (e) { p = null; }
+    if (!p) { console.error('⛔ 池成员 ' + c[ph.id] + ' 的包解不开（' + c[ph.path] + '）⇒ 按失败处理，不许少一席继续量'); process.exit(7); }
+    MEMBER_P[c[ph.id]] = p;
+    (POOL_BY_TIER[tier] = POOL_BY_TIER[tier] || []).push({ id: c[ph.id], wid: c[ph.wid], tier: tier });
+  }
+  console.log('# 装配 = **池形态**（逐席不同枚，真源 champion-map/pool-members.tsv）：' +
+    Object.keys(POOL_BY_TIER).map(t => t + ' ' + POOL_BY_TIER[t].length + ' 枚').join(' ‖ '));
 }
 
 const win = {}, rows = [];
 const t0 = Date.now();
 for (const L of LEVELS) win[L.id] = [];
 for (const L of LEVELS) {
-  const chooser = makeLevelChooser(L);
+  const chooser = makeLevelChooser(L, pk.p);
   let sumR = 0, bigT = 0, drain = 0, wins = 0;
   for (let g = 0; g < GAMES; g++) {
     const rng = mulberry32(SEED + g * 7919);
@@ -118,8 +145,22 @@ for (const L of LEVELS) {
     st.slotSalt = (Math.floor(rng() * 4294967296)) >>> 0;
     const refSeat = g % N;
     const mimic = makeMimic(W, humanPool, TGT, mrng);
+    /* 池形态：每局按 `state.slotSalt` 抽一次组成（与页面同一份 `compose`），AI 席按 pid 升序领第 0..n-1 枚 ——
+     *   这条顺序与 `js/pool-draw.js` 末尾那句"席位号按升序领"以及 `ui.js` 的 `champForSeat` 同源，不许在这儿另排一次。 */
+    let comp = null, seatK = 0;
+    if (USE_POOL && L.kind !== 'style' && N > 2) {
+      const mem = POOL_BY_TIER[L.pool] || [];
+      if (mem.length < 2) { console.error('⛔ 档 ' + L.id + ' 的池只有 ' + mem.length + ' 枚 ⇒ 抽签在数学上必然全同（契约 §3）' +
+        ' ⇒ 这一档还没成型，别拿池模式量它'); process.exit(2); }
+      comp = PD.compose(mem, N - 1, PD.rng(st.slotSalt >>> 0));
+      if (comp.allSame) { console.error('⛔ 池模式抽出四席全同（' + L.id + ' · salt=' + st.slotSalt + '）⇒ 违反裁定③，本行读数作废'); process.exit(2); }
+    }
     const cs = [];
-    for (let pid = 0; pid < N; pid++) cs.push(pid === refSeat ? mimic : chooser);
+    for (let pid = 0; pid < N; pid++) {
+      if (pid === refSeat) { cs.push(mimic); continue; }
+      if (comp) cs.push(makeLevelChooser(L, MEMBER_P[comp.seats[seatK++].id]));
+      else cs.push(chooser);
+    }
     Play.autoGameN(st, cs);
     win[L.id].push(st.winner === refSeat ? 1 : 0);
     if (st.winner === refSeat) wins++;
