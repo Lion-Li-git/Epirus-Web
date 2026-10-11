@@ -142,7 +142,7 @@ for (const f of allBak) { try {
 for (const r of REC) if (r.wid && !BYWID[r.wid]) BYWID[r.wid] = r.id;
 /* §E330 哈希之外还有第二条父指针：`recipe.env.EPIRUS_SEEDPACK` 记的是**文件路径**。
  *   现役那枚（js/bundled-champion-3p.js）走的正是这一条 —— 它**没有** hotstartFrom，实测
- *   `EPIRUS_SEEDPACK = docs/artifacts/E51-t8-713.bak` ⇒ 只按哈希解析时"当前线上"那个点没有父边，
+ *   `EPIRUS_SEEDPACK = docs/artifacts/kept/artifacts__E51-t8-713.bak` ⇒ 只按哈希解析时"当前线上"那个点没有父边，
  *   用户因此看不到现役的祖先。而它下面那 182 支臂的产物同样只写了这一条
  *   （`EPIRUS_SEEDPACK = js/bundled-champion-3p.js`）⇒ 图上"子代一堆点没有连线"也是这同一个洞。
  *   ⚠ 路径的**文件名 ≠ 图上的 id**：现役在图上叫 `SHIPPED-Ldemo`，文件却叫 `bundled-champion-3p.js`

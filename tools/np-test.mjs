@@ -161,7 +161,7 @@ const RUNSET = GROUP ? new Set(CUM[GROUP].reduce((a, g) => a.concat(g === 'engin
  * ⚠ 这不是"把门改松"：断言一条不减，只是把被测对象换成一枚 **tracked 的钉住快照**；
  *   D229 那条改成**两向都有牙**（默认档必须逐字等于显式 `off` ＋ 用 holo 的包必须看得出 `proto` 的差异）。
  * ⚠ 换冠军时若想让这些性质重新在**新包**上判一次，那是另一件事（要显式跑，不能靠门自己悄悄换夹具）。 */
-const FIXTURE_PACK = 'docs/artifacts/e316-out/SHIPPED-3P.bak';
+const FIXTURE_PACK = 'docs/artifacts/eval-out/win-Ldemo.bak';
 function t(name, fn) {
   const __k = gateKey(name); __KEYS.push(__k);
   if (ONLY && name.indexOf(ONLY) < 0) { __skipped++; return; }
@@ -8909,7 +8909,7 @@ t('D175 econ 接线卫生：贵卡计数**不受权重门控** + costlyW 到作�
  *   ④ 参照缺失 / 非法卡名 / 越界 ⇒ `exit 7`（拒绝恒真判据与静默空转）。 */
 t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + 全塌缩不硬换人 + 账进产物 + 无参照即拒', function () {
   const dir = mkdtempSync(join(tmpdir(), 'd176-'));
-  const SEEDPACK = 'docs/artifacts/e316-out/SHIPPED-3P.bak';   // 与线上槽权重逐位相同（09-28 实测 d490dc136293）
+  const SEEDPACK = 'docs/artifacts/eval-out/win-Ldemo.bak';   // 与线上槽权重逐位相同（09-28 实测 d490dc136293）
   ok(existsSync(SEEDPACK), '用例需要一粒"起点包"当参照（缺了就只能造静默通过的假绿）');
   const armEnv = (name, extra) => Object.assign({
     EPIRUS_HOTSTART: '1', EPIRUS_SEEDPACK: SEEDPACK, EPIRUS_SEED: '31', EPIRUS_ARM: name,
@@ -9541,6 +9541,19 @@ t('D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · �
   const src = readFileSync('tools/keep-artifact.mjs', 'utf8');
   ok(/JSON\.parse\(m\[1\]\)\.a/.test(src) && /createHash\('sha1'\)\.update\(JSON\.stringify\(arr\)\)/.test(src),
     '③ 分组键必须是**权重数组本体**的哈希（文件 sha 会因 META 不同而漏掉别名 —— 这正是本次要抓的情形）');
+  /* ④ §E589 防新增：全库"**未登记的重复**"必须为 0。判据与算法都在 `tools/dedupe-artifacts.mjs --audit` 那一份里
+   *   （规矩 1：门只测行为，不在这儿再抄一遍 wid 公式）。登记 = 账本 `dupes-manifest.tsv` 的 role=move
+   *    ‖ 别名表 `pack-aliases.tsv` 的 wantedPath ⇒ band 夹具、kept 耐久层这类"设计如此的复制"经 `pack-guard` 登记后不算。
+   *   ⚠ 判的是 JSON 里 `unregistered` 这个数，**不是退出码**（管道会把退出码吃掉 —— 本机栽过两次）。 */
+  const au = spawnSync(process.execPath, ['tools/dedupe-artifacts.mjs', '--audit'], { encoding: 'utf8', timeout: 600000 });
+  const aLine = String(au.stdout || '').trim().split('\n').filter(l => /^\{/.test(l)).pop();
+  ok(!!aLine, '④ `--audit` 必须吐出机器可读那一行（stdout 尾部：' + String(au.stdout || au.stderr || '').slice(-200) + '）');
+  if (aLine) {
+    const A = JSON.parse(aLine);
+    eq(A.unregistered, 0, '④ 未登记的重复必须为 0（实测 ' + A.unregistered + ' ‖ 最坏几组：' + JSON.stringify(A.worst) +
+      '）⇒ 同一粒权重多存一份，就会把"N 个配方/N 枚候选"读得比实际多（§E589 普查：1443 个文件其实只有 1130 粒）');
+    ok(A.files > 0, '④ 审计必须真数到包文件（files=' + A.files + ' groups=' + A.groups + '）⇒ 数到 0 是"没数"，不是"没重复"');
+  }
 });
 
 
@@ -9867,8 +9880,8 @@ t('D197 §E136 的换包开关默认必须是关的（v1.5.292）：不写 --swa
    *      **第一臂与第二臂必须逐字相同（只有标签不同），第三臂必须不同** ⇒ 一正一负，"没生效"和"总在生效"都跑不掉。
    *   ② 含糊的写法（没有 @、第 0 回合、路径不存在、和第二粒包与主包同一个、抢主体席的组合）必须 exit 2，
    *     不许降级成"当没写"。 */
-  const A = 'docs/artifacts/e78-out/G15-71.bak';
-  const B = 'docs/artifacts/e316-out/SHIPPED-3P.bak';
+  const A = 'docs/artifacts/kept/e78-out__G08-71.bak';
+  const B = 'docs/artifacts/eval-out/win-Ldemo.bak';
   ok(existsSync(A) && existsSync(B), '⓪ 两粒入库包必须在（门要用它们做"换包 vs 不换包"的对照）：A=' +
     existsSync(A) + ' B=' + existsSync(B));
   const run = function (extra) {
@@ -10072,8 +10085,8 @@ t('D200 §E142/§E143 的 5P 环境量具有牙（v1.5.296）：构造默认满�
    *   ① 名字表/对手包装规则各抄一份 ⇒ "探针里的对手"与"评测里的对手"不是同一种对手（本仓这族事故踩过四次）；
    *   ② 桌子种子跟着包走 ⇒ `oracle − best_single` 变成两批不同桌子的比较（配对假成立，§E136 前科）；
    *   ③ 构造（每桌几席原型）不写进产物 ⇒ mix=4 与 mix=2 的产物混在一个目录里也照样算出一个数。 */
-  const A = 'docs/artifacts/e78-out/G15-71.bak';
-  const B = 'docs/artifacts/e316-out/SHIPPED-3P.bak';
+  const A = 'docs/artifacts/kept/e78-out__G08-71.bak';
+  const B = 'docs/artifacts/eval-out/win-Ldemo.bak';
   const dir = mkdtempSync(join(tmpdir(), 'd200-'));
   const probe = function (tag, extra) {
     const out = join(dir, tag + '.tsv');
@@ -10182,8 +10195,8 @@ t('D199 eval-5p 必须决定论、逐桌子账必须与它自己印的读数对�
   /* 为什么钉这道：§E140 之所以能当"新旗标没动口径"的证据，全靠**同 seed 重跑逐字相同**这一件事。
    * 而这条此前**没有任何门守着** ⇒ 任何一次重构（换随机流消费顺序、把 ε 探索改成共享、把 dump 挪到统计之后）
    * 都会让今晚所有"同 seed 复现"式的论证一夜之间失效。四段 spawn 各约 1~2 秒，成本可忽略。 */
-  const A = 'docs/artifacts/e78-out/G15-71.bak';
-  const B = 'docs/artifacts/e316-out/SHIPPED-3P.bak';
+  const A = 'docs/artifacts/kept/e78-out__G08-71.bak';
+  const B = 'docs/artifacts/eval-out/win-Ldemo.bak';
   const dir = mkdtempSync(join(tmpdir(), 'd199-'));
   /* ⚠ 场子必须选 **farmerwall**（4 席只按ジ的农民）：实测主体 1st=100% 而对照 `pickRandom` 是
    * `1st=91.7% 严胜=75.0% 并列=16.7%` ⇒ **有并列**，才能把"把 rank 当 winner 写进账里"这类错暴露出来。
@@ -11617,8 +11630,8 @@ t('D231 §E477 权重融合入口 `tools/soup-pack.mjs`：自证必须绿 · 四
     /* ⑧ 真包融合完必须能被引擎解开（防"平均出 NaN / 形状坏 / 页面导入失败"） */
   /* §2026-10-09 DS：⑧ 那条腿要真包（K2 / E20-71 / v17-146），而它们从未入库 ⇒ 全新 clone（CI）上必红；
    *   缺件时响亮跳过并点名（其余腿是门内自造的，仍会跑）。 */
-  needArtifacts('D231 ⑧ 真包融合', ['docs/artifacts/e70-out/D02-31.bak', 'docs/artifacts/e85-out/E20-71.bak', 'docs/artifacts/v17-146.bak']);
-    const real = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/e70-out/D02-31.bak,docs/artifacts/e85-out/E20-71.bak', '--out=' + join(dir, 'ke.js')], { encoding: 'utf8', timeout: 120000 });
+  needArtifacts('D231 ⑧ 真包融合', ['docs/artifacts/kept/e70-out__D02-31.bak', 'docs/artifacts/e85-out/E20-71.bak', 'docs/artifacts/v17-146.bak']);
+    const real = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/kept/e70-out__D02-31.bak,docs/artifacts/e85-out/E20-71.bak', '--out=' + join(dir, 'ke.js')], { encoding: 'utf8', timeout: 120000 });
     eq(real.status, 0, '⑧ 真包融合必须成功（K2 + E20-71，实测 ' + real.status + '）：\n' + String(real.stderr || '').slice(0, 200));
     const s3 = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Float64Array };
     s3.window = s3; s3.globalThis = s3;
@@ -11637,7 +11650,7 @@ t('D231 §E477 权重融合入口 `tools/soup-pack.mjs`：自证必须绿 · 四
     ok(/不写 `js\/\*\*`|只写 `--out=`/.test(src), '⑨ 且头注里那条"不写 js/**"的规矩要留字（谁改这段注释得说明为什么）');
     /* ===== §E498 外科复制模式（`--copy-cols=`）的三条 ===== */
     const cp = join(dir, 'copy.js');
-    const r2 = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/e70-out/D02-31.bak,docs/artifacts/v17-146.bak',
+    const r2 = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/kept/e70-out__D02-31.bak,docs/artifacts/v17-146.bak',
       '--copy-cols=4', '--out=' + cp], { encoding: 'utf8', timeout: 300000 });
     eq(r2.status, 0, '⑩ 真跑一次"只复制防御向那一列"必须成功：\n' + String(r2.stderr || r2.stdout).split('\n').slice(-5).join('\n'));
     const csrc = readFileSync(cp, 'utf8');
@@ -11646,17 +11659,17 @@ t('D231 §E477 权重融合入口 `tools/soup-pack.mjs`：自证必须绿 · 四
     const cpk = sb.EpirusPolicy.checkPack(cobj);   // 引擎自己那份严格校验（不是工具侧放宽版）
     ok(cpk && cpk.ok !== false, '⑩ 产物必须被**引擎自己**收下（checkPack 不 ok ⇒ 这枚包在页面上就是一堆乱码）：' + JSON.stringify(cpk));
     /* 改动格数必须**正好**等于 HID × 列数：多一格就是"复制时顺手做了平均"，少一格就是行主序算错 */
-    const pb = sb.EpirusPolicy.unpack(JSON.parse((readFileSync('docs/artifacts/e70-out/D02-31.bak', 'utf8')
+    const pb = sb.EpirusPolicy.unpack(JSON.parse((readFileSync('docs/artifacts/kept/e70-out__D02-31.bak', 'utf8')
       .match(/window\.EPIRUS_CHAMPION_3P = (\{[\s\S]*?\});/) || [])[1]), true);
     let diff = 0; const q = sb.EpirusPolicy.unpack(cobj, true);
     for (let i = 0; i < pb.length; i++) if (pb[i] !== q[i]) diff++;
     eq(diff, 24, '⑪ 复制 1 列必须改**恰好 24 格**（HID=24 个隐单元 × 1 列；实测 ' + diff + '）');
     ok(/"mode":"copy-cols"/.test(csrc) && /"cols":\[4\]/.test(csrc),
       '⑫ 产物 meta 必须写明"这是外科复制、复制了哪几列"（否则日后有人拿它当平均产物去复算）');
-    const r3 = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/e70-out/D02-31.bak,docs/artifacts/v17-146.bak',
+    const r3 = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/kept/e70-out__D02-31.bak,docs/artifacts/v17-146.bak',
       '--copy-cols=99', '--out=' + join(dir, 'bad.js')], { encoding: 'utf8', timeout: 120000 });
     eq(r3.status, 3, '⑬ 列号越界（99 ≥ FEAT_A=22）必须拒（exit 3），实测 ' + r3.status);
-    const r4 = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/e70-out/D02-31.bak,docs/artifacts/v17-146.bak',
+    const r4 = spawnSync(process.execPath, [SRC, '--packs=docs/artifacts/kept/e70-out__D02-31.bak,docs/artifacts/v17-146.bak',
       '--copy-cols=4', '--w=0.5,0.5', '--out=' + join(dir, 'bad2.js')], { encoding: 'utf8', timeout: 120000 });
     eq(r4.status, 64, '⑭ `--copy-cols` 与 `--w` 同时给必须 64（两种语义不许混），实测 ' + r4.status);
   } finally {
@@ -11768,7 +11781,7 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
   ok(/console\.log\('⚠ §E503 薄图模式/.test(src),
     '④ `--soup-thin-ok` 那一支必须响亮印警告（灰而不判死 ≠ 假装没事）');
   /* ⑤ 行为：本机有父粒 ⇒ 守卫必须绿着过，并把条数报出来（只 exit 0 不算，被吞掉的断言照样绿） */
-  needArtifacts('D233 ⑤ 本机跑 lineage.mjs', ['docs/artifacts/e70-out/D02-31.bak', 'docs/artifacts/e85-out/E20-71.bak']);
+  needArtifacts('D233 ⑤ 本机跑 lineage.mjs', ['docs/artifacts/kept/e70-out__D02-31.bak', 'docs/artifacts/e85-out/E20-71.bak']);
   const r = spawnSync(process.execPath, [SRC], { encoding: 'utf8', timeout: 300000 });
   eq(r.status, 0, '⑤ 本机跑 `lineage.mjs` 必须成功：\n' + String(r.stderr || r.stdout || '').slice(-400));
   const m1 = /融合血统口径 ✅ (\d+) 枚声明是权重平均的粒，父边全部解析（第二父边 (\d+) 条）/.exec(String(r.stdout || ''));

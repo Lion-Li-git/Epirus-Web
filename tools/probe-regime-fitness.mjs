@@ -48,7 +48,7 @@ const PANEL = {
     'js/bundled-champion-3p.js',        // 现役
     'docs/artifacts/v7t1-31.bak',       // 池子里最抗克的那端（最克 16/15）
     'docs/artifacts/v7ds1-band4.bak',   // 最接近"三合一"的一粒（48/44 + 闭环 0.79）
-    'docs/artifacts/v7wall-31.bak',   // 示范血统，宽（5.10/5.22）但脆
+    'docs/artifacts/v7teach2-31.bak',   // 示范血统，宽（5.10/5.22）但脆
     'docs/artifacts/E35-prod-814.bak',  // 今天臂产物里最宽+闭环的（场B 恒 4.00 那粒）
     'docs/artifacts/E39-ctl-911.bak',   // 今天唯一"五维不劣于现役 + 零阻断"的臂产物
     'docs/artifacts/v7blk1-91.bak',     // 宽 5.00/4.51，池子里另一头

@@ -3,11 +3,11 @@ D4a	SHIPPED-Ldemo	docs/artifacts/e234-out/D4a.js	js/bundled-champion-3p.js	10.00
 NCV-151	SHIPPED-Ldemo	docs/artifacts/e73-out/M05C02-151.bak	js/bundled-champion-3p.js	17.50	20.00	-2.50	5.04	47.50	51.67	0/21/36/20/20/23	4
 E20-71	SHIPPED-Ldemo	docs/artifacts/e85-out/E20-71.bak	js/bundled-champion-3p.js	19.17	16.67	2.50	4.95	50.00	33.33	0/23/37/27/22/11	3
 M05-111	SHIPPED-Ldemo	docs/artifacts/e73-out/M05-111.bak	js/bundled-champion-3p.js	15.83	22.50	-6.67	5.06	57.50	33.33	0/19/50/21/16/14	3
-blk1t40-s71	SHIPPED-Ldemo	docs/artifacts/e124-out/blk1t40-s71.bak	js/bundled-champion-3p.js	13.33	19.17	-5.83	4.75	42.50	40.83	0/16/35/24/21/24	3
-C5-02-31	SHIPPED-Ldemo	docs/artifacts/e316-out/SHIPPED-3P.bak	js/bundled-champion-3p.js	17.50	17.50	0.00	4.91	41.67	41.67	0/21/29/22/27/21	4
-C5-02-71	SHIPPED-Ldemo	docs/artifacts/e316-out/SHIPPED-3P.bak	js/bundled-champion-3p.js	17.50	17.50	0.00	4.91	41.67	41.67	0/21/29/22/27/21	4
-K2	SHIPPED-Ldemo	docs/artifacts/e70-out/D02-31.bak	js/bundled-champion-3p.js	16.67	14.17	2.50	4.66	35.00	38.33	0/20/22/27/28/23	4
-D02-31	SHIPPED-Ldemo	docs/artifacts/e70-out/D02-31.bak	js/bundled-champion-3p.js	16.67	14.17	2.50	4.66	35.00	38.33	0/20/22/27/28/23	4
+blk1t40-s71	SHIPPED-Ldemo	docs/artifacts/kept/e124-out__blk1t40-s71.bak	js/bundled-champion-3p.js	13.33	19.17	-5.83	4.75	42.50	40.83	0/16/35/24/21/24	3
+C5-02-31	SHIPPED-Ldemo	docs/artifacts/eval-out/win-Ldemo.bak	js/bundled-champion-3p.js	17.50	17.50	0.00	4.91	41.67	41.67	0/21/29/22/27/21	4
+C5-02-71	SHIPPED-Ldemo	docs/artifacts/eval-out/win-Ldemo.bak	js/bundled-champion-3p.js	17.50	17.50	0.00	4.91	41.67	41.67	0/21/29/22/27/21	4
+K2	SHIPPED-Ldemo	docs/artifacts/kept/e70-out__D02-31.bak	js/bundled-champion-3p.js	16.67	14.17	2.50	4.66	35.00	38.33	0/20/22/27/28/23	4
+D02-31	SHIPPED-Ldemo	docs/artifacts/kept/e70-out__D02-31.bak	js/bundled-champion-3p.js	16.67	14.17	2.50	4.66	35.00	38.33	0/20/22/27/28/23	4
 M05C02-71	SHIPPED-Ldemo	docs/artifacts/e73-out/M05C02-71.bak	js/bundled-champion-3p.js	14.17	22.50	-8.33	4.97	46.67	46.67	0/17/39/22/21/21	3
 E10-71	SHIPPED-Ldemo	docs/artifacts/e73-out/M05C02-71.bak	js/bundled-champion-3p.js	14.17	22.50	-8.33	4.97	46.67	46.67	0/17/39/22/21/21	3
 W31	SHIPPED-Ldemo	docs/artifacts/e234-out/W31.js	js/bundled-champion-3p.js	21.67	25.83	-4.17	5.49	54.17	46.67	0/26/39/18/23/14	4

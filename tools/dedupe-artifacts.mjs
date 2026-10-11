@@ -32,7 +32,7 @@ import { widOf, parseMeta } from '../champion-map/pack-id.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const has = k => process.argv.includes('--' + k);
-const bad = process.argv.slice(2).filter(a => a.startsWith('--') && !['plan', 'write-manifest', 'quarantine', 'restore', 'check', 'include-tracked', 'repoint', 'apply']
+const bad = process.argv.slice(2).filter(a => a.startsWith('--') && !['plan', 'write-manifest', 'quarantine', 'restore', 'check', 'include-tracked', 'repoint', 'apply', 'audit']
   .some(f => a === '--' + f || a.startsWith('--' + f.split('=')[0] + '=')));
 if (bad.length) { console.error('⛔ 不认识的参数：' + bad.join(' ') + '（只认 plan/write-manifest/quarantine/restore/check/repoint/apply/include-tracked/scope/to）'); process.exit(2); }
 const SCOPE = String(arg('scope', 'docs/artifacts,d180-bands')).split(',').map(s => s.trim()).filter(Boolean);
@@ -87,8 +87,12 @@ for (const abs of files) {
   (G[w] = G[w] || []).push({ rel, ts: m.ts || '', refs: REFC[rel] || 0, tracked: tracked.has(rel) });
 }
 const groups = Object.entries(G).filter(([, v]) => v.length > 1);
-/* 主名：最早 ts ‖ 同 ts 按引用多 ‖ 再按路径字典序（保证可复算，不依赖 readdir 顺序） */
-const rank = v => v.slice().sort((a, b) => (a.ts || '9999').localeCompare(b.ts || '9999')
+/* 主名规则（用户 10-11 裁 + CI 血案补的一条硬前提）：
+ *   ⓪ **在 git 里的那份优先**——CI 跑的是干净克隆，`docs/artifacts/` 整个被 gitignore，只有 force-add 进去的 79 份存在。
+ *      第一版漏了这条 ⇒ 把引用改指到 untracked 的"最早 ts"文件上，本机全绿、CI 红 8 条（05f5749）。
+ *   ① 然后按最早 `META.ts`；② 同时间戳按被引用数；③ 再按路径字典序（保证可复算，不依赖 readdir 顺序）。 */
+const rank = v => v.slice().sort((a, b) => (b.tracked ? 1 : 0) - (a.tracked ? 1 : 0)
+  || (a.ts || '9999').localeCompare(b.ts || '9999')
   || (b.refs - a.refs) || a.rel.localeCompare(b.rel));
 const plan = [];
 for (const [w, v] of groups) {
@@ -170,6 +174,32 @@ if (has('repoint')) {
   console.log((has('apply') ? '✔ 已改指：' : '（试运行 —— 加 `--apply` 才写盘）要改：') + nRep + ' 处引用 · ' + nFiles + ' 个文件' +
     ' ‖ 名单外不动：docs/**（历史引用）与 js/**');
 }
+/* ---------- 6. `--audit`：给门用的机器可读一行（§E589 的"防新增"就靠它） ----------
+ * 定义：**未登记的重复** = 盘上有两份以上同权重，而多出来的那些既不在账本（`dupes-manifest.tsv` 的 role=move）
+ *   也不在别名表（`pack-aliases.tsv` 的 wantedPath）里。设计如此的复制（band 夹具、kept 耐久层、`--force-copy`）
+ *   会经 `pack-guard` 登记进别名表 ⇒ 不算未登记。门 D191 只判这一个数，判据与算法都只有一份。 */
+if (has('audit')) {
+  const reg = new Set();
+  for (const [f, col] of [[MAN, 'path'], [join(ROOT, 'champion-map', 'pack-aliases.tsv'), 'wantedPath']]) {
+    if (!existsSync(f)) continue;
+    const L = rd(f).replace(/\n+$/, '').split('\n'); if (L.length < 2) continue;
+    const h = Object.fromEntries(L[0].split('\t').map((c, i) => [c, i]));
+    if (h[col] === undefined) continue;
+    for (const l of L.slice(1)) { const c = l.split('\t'); if (c[h[col]]) reg.add(c[h[col]]); }
+  }
+  let unreg = 0, groups = 0, files = 0; const worst = [];
+  for (const [w, v] of Object.entries(G)) {
+    const onDisk = v.filter(e => existsSync(join(ROOT, e.rel)));
+    if (onDisk.length < 2) continue;
+    groups++; files += onDisk.length;
+    const extra = onDisk.slice().sort((a, b) => (a.rel === rank(onDisk)[0].rel ? -1 : 1)).slice(1).filter(e => !reg.has(e.rel));
+    unreg += extra.length;
+    if (extra.length) worst.push({ w: w.slice(0, 8), n: extra.length, e: extra.map(x => x.rel).slice(0, 3) });
+  }
+  worst.sort((a, b) => b.n - a.n);
+  console.log(JSON.stringify({ groups, files, unregistered: unreg, trackedRedundant: plan.filter(p => p.role === 'move' && p.tracked).length, worst: worst.slice(0, 5) }));
+  process.exitCode = unreg ? 1 : 0;
+}
 if (has('check')) {
   /* `__d177_missing__` 这类是**门自己造的"文件不存在"夹具**（np-test 里喂给守卫用例的假路径），不算断链。 */
   const synthetic = c => /__/.test(c.replace(/^.*[\\/]/, ''));
@@ -186,8 +216,20 @@ if (has('check')) {
     }
   }
   const uniq = [...new Set(broken)];
+  /* ★ CI 等价检查（05f5749 血案补的，**范围要收准**）：`docs/artifacts/` 整个被 gitignore ⇒ 干净克隆里只有 force-add 进 git 的那些存在。
+   *   第一版把"所有表引用的 untracked 路径"都算成问题（733 条）—— 那是**既存事实**：coords 986 行本来就大多指着臂产物，
+   *   CI 从来不管（需要的门都用的是入库件，拿不到的那条腿本来就 SKIP）。
+   *   真正的不变量只有一条：**门体 `tools/np-test.mjs` 里写死的产物路径必须在 git 里** ⇒ 只查这个。 */
+  const GATE_BODY = 'tools/np-test.mjs';
+  const gateTxt = existsSync(join(ROOT, GATE_BODY)) ? rd(join(ROOT, GATE_BODY)) : '';
+  const ciMissing = [...new Set((gateTxt.match(/(docs\/artifacts|d180-bands)\/[A-Za-z0-9_.\/\-\u4e00-\u9fff]+\.(bak|js)/g) || [])
+    .filter(c => !synthetic(c) && !tracked.has(c)))];
+  const gateMissingOnDisk = ciMissing.filter(c => !existsSync(join(ROOT, c)));
   console.log('\n断链检查：' + uniq.length + ' 条' + (uniq.length ? '' : '（下游表与门体里所有指到的包文件都在盘上 ✓）'));
+  console.log('CI 等价检查（只看门体写死的产物路径）：' + ciMissing.length + ' 条指着 **untracked** 的产物 ⇒ 干净克隆里那些腿会红或静默 SKIP' +
+    (ciMissing.length ? '（' + ciMissing.join(' ') + '）' : ' ✓') +
+    (gateMissingOnDisk.length ? ' ‖ 其中本机也不在盘上：' + gateMissingOnDisk.join(' ') : ''));
   for (const b of uniq.slice(0, 40)) console.log('  ✘ ' + b);
   if (uniq.length > 40) console.log('  … 其余 ' + (uniq.length - 40) + ' 条略');
-  process.exitCode = uniq.length ? 1 : 0;
+  process.exitCode = (uniq.length || ciMissing.length) ? 1 : 0;
 }

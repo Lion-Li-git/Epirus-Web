@@ -1,0 +1,5 @@
+ts	wid	canonical	wantedPath	tool	note
+2026-10-11T12:37:12.914Z	24d8fa30bb0c3414	docs/artifacts/e528-out/T8-s114.js	docs/artifacts/soup-out/e589-teeth.js	soup-pack	融合产物（默认不复制已有权重）
+2026-10-11T12:37:14.252Z	24d8fa30bb0c3414	docs/artifacts/e528-out/T8-s114.js	docs/artifacts/soup-out/e589-teeth.js	soup-pack	融合产物（默认不复制已有权重）
+2026-10-11T12:50:17.954Z	d490dc136293cfc4	docs/artifacts/kept/eval-out__win-Ldemo.bak	docs/artifacts/kept/artifacts__e588-teeth-src.bak	keep-artifact	kept/ 是 git 耐久层
+2026-10-11T12:50:18.163Z	d490dc136293cfc4	docs/artifacts/kept/eval-out__win-Ldemo.bak	docs/artifacts/kept/kept__eval-out__win-Ldemo.bak	keep-artifact	已登记的复制：teeth 对照

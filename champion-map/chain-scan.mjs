@@ -7,7 +7,7 @@
  *   ① `hotstartFrom`        —— 父指针（父包的**权重哈希**）
  *   ② `seedEmbeddedFrom`    —— 另一种嵌入来源
  *   ③ `recipe.env.EPIRUS_SEEDPACK` / `EPIRUS_HOTSTART` —— 白名单写法：直接给**文件路径**（现役那颗就是这么来的：
- *      `recipe.env.EPIRUS_SEEDPACK = docs/artifacts/E51-t8-713.bak`，而它的 `hotstartFrom` 字段**是空的**）
+ *      `recipe.env.EPIRUS_SEEDPACK = docs/artifacts/kept/artifacts__E51-t8-713.bak`，而它的 `hotstartFrom` 字段**是空的**）
  *   ⇒ 只按 ① 找子代会漏掉 ③ 这一路，所以两条都查（这是本工具存在的主要理由）。
  *
  * 身份哈希与 META 解析一律 import `./pack-id.mjs`（**单一来源**，与 `lineage.mjs` 共用同一份实现；
