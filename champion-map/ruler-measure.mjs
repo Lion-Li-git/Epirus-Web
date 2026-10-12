@@ -20,6 +20,7 @@ import { readdirSync, readFileSync, existsSync, appendFileSync, writeFileSync } 
 import { join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, exam, selfPlay, fieldRate, seatSymmetry, chargeProfile, reflectWall, aggressionProfile, extractJsonObject } from '../tools/audit-lib.mjs';
+import * as slotIdentity from './slot-identity.mjs';   /* §E600-A：上槽名单的唯一解析处（不再手抄）*/
    // ↑ 搬家改的这一处：原稿在 `docs/artifacts/e287-out/`，相对深度是 `../../../tools/`；本文件在 `champion-map/` ⇒ `../tools/`
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -47,8 +48,23 @@ function metaOf(file) {
     extractJsonObject(src, 'window.EPIRUS_CHAMPION_META', null) || extractJsonObject(src, 'window.EPIRUS_CHAMPION', '_META');
   try { return j ? JSON.parse(j) : null; } catch (e) { return null; }
 }
-const CHAMPS = ['Ldemo', 'eco-34', 'long-33', 'v7cmin4-31', 'v7n1-93', 'v7new5_005-31', 'v7new6-94', 'v7new6-96', 'v7press-36',
-  'v7press3-91', 'v7r2-35', 'v7seat24-31', 'v7tgt2-52', 'v7wall-31', 'v7wall-33'];
+/* §E600-A：**名单不再手抄**。旧写法是一串 `CHAMPS` 数组 + 一行
+ *   `want.set('js/bundled-champion-3p.js', { id: 'SHIPPED-Ldemo', lineage: '当前线上' })` ——
+ *   活槽文件会换主人（10-11 17:30 v1.6.62 起槽里是 T8-s114），而这一行把它**永远**登记成上一任的名字，
+ *   于是换包之后任何一次 `--set=champ` 重跑都是"用别人的权重出 Ldemo 的读数"
+ *   （`METHODOLOGY.md` 第 134 条：活槽身份只能声明，不能按 path 猜；S0 取证明这一列**还没**被污染，
+ *    见 `docs/research/logs/2026-10-12-incumbent-realtime-soup-qoder.md`，雷在这行）。
+ *   现在身份一律走 `slot-identity.mjs`：上槽集合 = `slot-timeline.tsv` 逐提交解出的权重 + `slot-history.tsv` 的声明行，
+ *   换包只需要在那张声明表加一行（它头注本来就要求这么做），这里**不需要再改任何代码**。
+ * ⚠ 类别只剩 `历代上槽` 一种 —— 用户 10-12 裁定③：「如今没有『当前现役』这个东西了，顶多只有当前困难席平均水平」，
+ *   所以"当下那一枚"不再是一个身份类别，它只是"上过槽"里最近的一段；分界锚在查看器侧是 hard 带均值。 */
+const SID = slotIdentity.load();
+const slotPathOf = id => {
+  const r = SID.ROW[id] || {};
+  const cand = [r.path, 'docs/artifacts/' + id + '.bak'].filter(Boolean);
+  for (const p of cand) if (existsSync(join(ROOT, p))) return p;
+  return null;                                     /* 盘上查无此包 ⇒ 不放进名单（宁缺，不许拿活槽顶） */
+};
 const want = new Map();   /* path -> {id, lineage} */
 if (SET !== 'champ') {
   for (const f of readdirSync(ART).filter(x => x.endsWith('.bak'))) {
@@ -58,11 +74,15 @@ if (SET !== 'champ') {
   }
 }
 if (SET !== 'layer') {
-  for (const c of CHAMPS) {
-    const p = 'docs/artifacts/' + c + '.bak';
-    if (existsSync(join(ROOT, p))) want.set(p, { id: c, lineage: '历代上槽' });
-  }
-  want.set('js/bundled-champion-3p.js', { id: 'SHIPPED-Ldemo', lineage: '当前线上' });
+  let miss = 0;
+  for (const id of SID.onSlot) { const p = slotPathOf(id);
+    if (p) want.set(p, { id: id, lineage: '历代上槽' }); else miss++; }
+  /* 活槽现主：认到的行如果在册路径不在盘上（线上槽自己就是那份权重），就用槽文件本身出数 —— 但**id 用的是现主的名字** */
+  const lv = SID.live;
+  if (lv.coordsId && !slotPathOf(lv.coordsId)) want.set('js/bundled-champion-3p.js', { id: lv.coordsId, lineage: '历代上槽' });
+  console.log('上槽名单走解析：' + SID.onSlot.length + ' 枚（盘上查无 ' + miss + ' 枚 ⇒ 不进名单）‖ 活槽现主 = ' +
+    (lv.coordsId || '⛔ 认不出') + '（wid ' + String(lv.wid || '').slice(0, 8) + ' ‖ 声明 ' + (lv.declaredRaw || '无') + '）');
+  if (!lv.coordsId) { console.error('⛔ 活槽解不到图上任何一行 ⇒ 换包那一笔没同步，别用这张表'); process.exit(2); }
 }
 /* §E328 加的一条入口：`--extra=<_e328-descendants.tsv>` 把**名单外**的臂产品也拉进来量。
  *   为什么必须加这条：上面那道筛子写死了 `mode==='multi' && n===5 && pop===16 && games===8`，
