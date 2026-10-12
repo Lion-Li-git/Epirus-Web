@@ -83,6 +83,7 @@
  *      只留逐枚**绿环**（= 这枚自己过了今天那道闸）+ 悬停明细里"栽在哪条腿"。为什么不该再画回去，写在 `buildNB` 末尾。
  */
 import { readFileSync as _readFs, writeFileSync, existsSync } from 'node:fs';
+import * as slotIdentity from './slot-identity.mjs';   /* §E600-A：活槽身份的唯一解析处 */
 /* §E333 本仓工作树是 CRLF（autocrlf），而下面八处读表全是 `split('\n')` ⇒ 每行**末列**会带一个裸 \r，
  *   末列的名字就变成 "path\r" 这种查不到的键（本班 coords.tsv 的 path 列正好在末列，被 git checkout 兜一圈后就瞎了）。
  *   与其在八处各写一遍归一，不如在读文件这一步统一 ⇒ 任何新增的表都自动免疫这一族。*/
@@ -285,54 +286,52 @@ let SHIP = {};
 /* §E378 旧槽位冠军的两把钟（§E376 只留了一把）：`SLOT_FIRST` = **第一次**进槽的时刻，
  *   `SLOT_META` = 那枚包自己 META 里的写盘时刻（= 训出）。横轴用的是后者，理由见 §E378 那一节。 */
 let SLOT_FIRST = {}, SLOT_META = {};
+const SID = slotIdentity.load();   /* §E600-A 唯一解析处：时间轴 + 声明表 + 图上的同权重组 */
+/* §E600-A：**主源改成解析**（`slot-timeline.tsv` + `slot-history.tsv`），`ship-times.tsv` 降级成对账的第二只眼。
+ *   为什么必须换主语：旧写法只读那张表 ⇒ 换包那一笔只要没人重跑 `ship-scan`，图就**静默落后**。
+ *   实测已经发生过一次：`T8-s114` 10-11 17:30 起住在槽里（`2f88f09` v1.6.62、声明表有它、时间轴有那一段），
+ *   而 `ship-times.tsv` 停在 09-27 的 `SHIPPED-Ldemo` ⇒ 真现役被画成"没上过线"的小点、退役那枚被画成 ★。
+ *   牙没丢：`:3641` 那条变异（把 `slot-timeline.tsv` 挪走 ⇒ 16 枚里 0 枚有时刻）在解析版下同样成立，
+ *   而且"换了包没同步"从此落进同一颗牙里。 */
+if (!SID.segs.length) console.log('提示：解析不到任何槽位段 ⇒ 冠军序列只能按训出时刻排（跑 node champion-map/slot-timeline.mjs）');
+/* 时刻一律归一成 `YYYY-MM-DD HH:MM[:SS]`：**秒必须留着**。
+ *   第一版截到分钟，实测把 `SLOT-f970452c` 判红 —— 它 ts=19:07:28.308 而槽那一段起于 19:07:28（同一条提交既写盘又上槽），
+ *   截掉秒之后 sh 变成 19:07:00 ⇒ "上槽早于写盘"，页内那条「横轴必须是训出时刻、同一根轴不许两把钟」当场红。
+ *   也就是说：**截精度会自己造出一类假病**（第 92 条同一族）。对账时才降到分钟（`ship-times.tsv` 只有分钟精度）。 */
+const MIN = function (s) { const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(String(s || ''));
+  if (!m) return String(s || '');
+  return m[1] + '-' + m[2] + '-' + m[3] + ' ' + m[4] + ':' + m[5] + (m[6] ? ':' + m[6] : ''); };
+const M1 = function (s) { return String(MIN(s)).slice(0, 16); };   /* 分钟版，只用于两张表对账 */
+for (const s of SID.segs) { if (!s.coordsId) continue;
+  const w8 = String(s.wid).slice(0, 8);
+  if (!(w8 in SLOT_FIRST)) { SLOT_FIRST[w8] = MIN(s.from); SLOT_META[w8] = s.metaTs || ''; }
+  /* 组内每个名字都填一行（查看器与判据读的是**名字**，不是权重）；同一枚回槽多次时取**最早**那段（§E378）*/
+  const names = (SID.GROUP[s.coordsId] && SID.GROUP[s.coordsId].length) ? SID.GROUP[s.coordsId] : [s.coordsId];
+  for (const nm of names) { const cur = SHIP[nm]; const w = MIN(s.from);
+    if (!cur || (w && w < cur.when)) SHIP[nm] = { when: w, hash: s.sha || '', ver: s.ver || '', wid: s.wid }; } }
+console.log('上线时刻走解析：' + Object.keys(SHIP).filter(k => SHIP[k].when).length + ' 枚在册（覆盖 ' +
+  SID.segs.length + ' 段 ‖ 面板有名 ' + SID.onSlot.length + ' 枚）‖ 活槽现主 ' + (SID.live.coordsId || '⛔ 认不出'));
+if (!SID.live.coordsId) console.log('⛔ 活槽解不到图上任何一行 ⇒ 换包那一笔没同步（这条与 D234⑪ 同判据）');
+/* 对账：`ship-times.tsv`（git 侧另算的一份）与解析不一致就点名，**不拿它覆盖解析** */
 if (existsSync(shipP)) {
   const sl = readFileSync(shipP, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), sh = sl[0].split('\t');
-  const sId = sh.indexOf('id'), sW = sh.indexOf('shipWhen'), sH = sh.indexOf('hash'), sV = sh.indexOf('version');
+  const sId = sh.indexOf('id'), sW = sh.indexOf('shipWhen');
+  let diff = 0, extra = 0;
   for (const l of sl.slice(1)) { const c = l.split('\t'); if (!c[sId]) continue;
-    SHIP[c[sId]] = { when: c[sW] || '', hash: c[sH] || '', ver: c[sV] || '' }; }
-  console.log('上线时刻 ' + Object.keys(SHIP).filter(k => SHIP[k].when).length + ' 枚在册（' +
-    Object.keys(SHIP).filter(k => !SHIP[k].when).length + ' 枚抽不到 ⇒ 图上会退回训出时刻并标明）');
-} else console.log('提示：没有 ship-times.tsv ⇒ 冠军序列只能按训出时刻排（跑 node champion-map/ship-scan.mjs）');
-/* §E375：旧槽位冠军（id = SLOT-<wid8>）在 ship-times.tsv 里**没有**行 —— 那张表的建法是"从面板上有名字的包反查它何时上槽"，
- *   而这 16 枚恰恰是面板上没名字的那几段（§E369：槽文件一共换过 39 段，其中 20 段在面板上查不到 id）。
- *   它们的上线时刻在 `slot-timeline.tsv` 里（从**槽文件那一侧**逐提交算权重指纹建出来的，所以覆盖全部 39 段）。
- *   ⚠ 只填 SHIP 里还没有的键：面板上本来有名字的那 13 段仍以 ship-scan 为准（那张表连提交标题与版本号都核过）。
- *   ⚠ 也不许拿 coords.tsv 的 ts 顶 —— 那是**训出**时刻，与上槽是两次动作（§E338 记过这笔账）。 */
-const stlP = join(HERE, 'slot-timeline.tsv');
-if (existsSync(stlP)) {
-  const tl = readFileSync(stlP, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), th = tl[0].split('\t');
-  const tW = th.indexOf('wid'), tF = th.indexOf('fromUTC'), tS = th.indexOf('sha'), tM = th.indexOf('metaTs'), tU = th.indexOf('subject');
-  /* §E463 旧槽位冠军在图上的标签原来是 SLOT-<8位哈希>（16 枚全是），用户 10-08：「太长了也让人看不明白，你把标签改成对应版本号」。
-     版本号不用新数据：这张时间轴的 subject 就是引入它的那条提交标题，本仓换包一律把版本写在标题里
-     （实测形如 "v1.3.0：多人（3 人）自对战训练…" ‖ "v1.3.4 训练场支持…" ‖ "feat(pack) v1.5.257 上槽 Ldemo"）。
-     ⚠ 这里不用正则（模板转义那台自证会连累别处，且正则里要写 \d）：手扫第一个 'v' + 数字 + 至少一个点号。 */
-  function verOf(sub) { const t = String(sub || '');
-    for (let k = 0; k + 4 < t.length; k++) { if (t.charAt(k) !== 'v') continue;
-      let e = k + 1, dig = 0, dot = 0; const NUM = '0123456789.';
-      while (e < t.length && NUM.indexOf(t.charAt(e)) >= 0) { if (t.charAt(e) === '.') dot++; else dig++; e++; }
-      if (dig >= 2 && dot >= 1) return t.slice(k, e); }
-    return ''; }
-  if (tW < 0 || tF < 0) console.log('⚠ slot-timeline.tsv 没有 wid/fromUTC 列（表头：' + tl[0] + '）⇒ 旧槽位冠军会退回"未上槽"');
-  else {
-    const BY8 = {};
-    for (const l of tl.slice(1)) { const c = l.split('\t'); if (!c[tW]) continue;
-      const w8 = c[tW].slice(0, 8);
-      /* §E378：这张表 39 段里只有 **32 个不同权重**（同一枚回槽过多次：实测 cc573172 两次、037b2f71 三次、
-       *   e379c62c 两次）。原来这份 BY8 是"后一行覆盖前一行"⇒ 记下来的是**最后一次**进槽的时刻，
-       *   而"上线"这件事的第一次才是它（也是 §E378 那条接替链不出现倒挂的前提）。改成只留第一次。 */
-      if (!(w8 in BY8)) { BY8[w8] = { when: c[tF] || '', hash: tS >= 0 ? (c[tS] || '') : '', ver: tU >= 0 ? verOf(c[tU]) : '' };
-        SLOT_FIRST[w8] = c[tF] || ''; SLOT_META[w8] = tM >= 0 ? (c[tM] || '') : ''; } }
-    let nstl = 0;
-    for (const r of rows) { const id = String(r.id || '');
-      if (id.indexOf('SLOT-') !== 0 || SHIP[id]) continue;
-      const k = id.slice(5, 13);
-      if (BY8[k]) { SHIP[id] = { when: BY8[k].when, hash: BY8[k].hash, ver: BY8[k].ver || '' }; nstl++; } }
-    console.log('上线时刻补自**槽位时间轴** ' + nstl + ' 枚（其中版本号从提交标题认回 '
-      + Object.keys(SHIP).filter(k => SHIP[k] && SHIP[k].ver).length + ' 枚 ‖ 旧槽位冠军 ‖ ship-times.tsv 覆盖不到的那几段 ‖ 时间轴共 ' + (tl.length - 1) +
-      ' 段 / ' + Object.keys(SLOT_FIRST).length + ' 个不同权重 ‖ 横轴取 META 写盘时刻，有该时刻的 ' +
-      Object.keys(SLOT_META).filter(k => SLOT_META[k]).length + ' 个）');
-  }
-} else console.log('提示：没有 slot-timeline.tsv ⇒ 旧槽位冠军会全部落在"未上槽"里（跑 node champion-map/slot-timeline.mjs）');
+    const mine = SHIP[c[sId]];
+    if (!mine) { if (c[sW]) extra++; continue; }
+    if (M1(c[sW] || '') !== M1(mine.when)) { diff++; if (diff <= 5) console.log('⚠ 上线时刻对账不一致：' + c[sId] + ' 解析=' + (mine.when || '(无)') + ' ‖ ship-times=' + (c[sW] || '(无)')); } }
+  console.log('上线时刻对账 `ship-times.tsv`：不一致 ' + diff + ' ‖ 那张表多出的（解析认它没进过槽）' + extra +
+    ((diff || extra) ? ' ⇒ 重跑 node champion-map/ship-scan.mjs' : ''));
+} else console.log('提示：没有 ship-times.tsv ⇒ 少一只对账的眼（跑 node champion-map/ship-scan.mjs）');
+/* §E375 那条兜底**并入解析**了（§E600-A）：原来 `ship-times.tsv` 只收"面板上有名字的包"，
+ *   16 枚 `SLOT-<wid8>` 靠下面这一段从 `slot-timeline.tsv` 补 —— 那是两处逻辑、两份口径，
+ *   而解析早就同时覆盖两者（`slot-identity.mjs` 的 `via` 字段记的就是"这行是按 panelId / wid8 / metaArm 哪一跳认到的"）。
+ *   留着它的后果是构建日志会说"上线时刻补自槽位时间轴 **0** 枚"（实际全来自解析）——那是句假话，删。
+ * ⚠ §E463 那条"版本号从提交标题认回、且不用正则"的纪律原样搬进 `slot-identity.verOf`。 */
+console.log('时间轴共 ' + SID.segs.length + ' 段 / ' + Object.keys(SLOT_FIRST).length + ' 个不同权重 ‖ 横轴取 META 写盘时刻的 ' +
+  Object.keys(SLOT_META).filter(k => SLOT_META[k]).length + ' 个 ‖ 版本号从提交标题认回 ' +
+  Object.keys(SHIP).filter(k => SHIP[k] && SHIP[k].ver).length + ' 行');
 const DATA = rows.map(r => ({
   /* §E314 **头号尺换成线上口径**（用户："把冠军演化全部改成线上口径吧"）‖ §E569（10-10 晚）**考卷档整体换到 120，不留两套值**
    *   （用户："H120 既然一定比 H30 更准确，就不要留 H30 做历史对照，历史数据反而是准确度差的那一份"）。
@@ -396,8 +395,10 @@ const DATA = rows.map(r => ({
   dmg: +r.dmg, heavy: +r.heavy, holo: +r.holo, rounds: +r.rounds, draw: +r.drawRate, zero: +r.zeroRate,
   seat: +r.seatSpread, keys: +r.distinctKeys, chg: +r.charges, waste: +r.waste, stance: +r.noThreatStance, atk: +r.fieldAAtk, rw: +r.rwDmg
 }));
-const ship = DATA.find(d => d.id === 'SHIPPED-Ldemo');
-console.log('内联 ' + DATA.length + ' 枚（历代冠军 ' + DATA.filter(d => d.lin).length + ' 枚 ‖ 线上 ' + (ship ? '有' : '缺') + '）');
+/* §E600-A：不再有"某一枚是线上冠军"这回事 —— 活槽住的是谁由解析说，图只报事实、不给身份。
+ *   （池上线后逐席抽签，`docs/POOL-CONTRACT.md` §0③ 早就写了"不再有 promote 这件事"）*/
+console.log('内联 ' + DATA.length + ' 枚（带冠军记录 ' + DATA.filter(d => d.lin).length + ' 枚 ‖ 活槽现主（解析）= ' +
+  (SID.live.coordsId || '⛔ 认不出') + (SID.live.coordsId && DATA.some(d => d.id === SID.live.coordsId) ? ' ‖ 在图上' : '') + '）');
 /* 家族标签**去重**：22 条长文本 × 718 枚 = 86 KB 的重复 ⇒ 表只发一份，枚上只留编号。*/
 const FAMLAB = {};
 for (const r of DATA) if (r.fam && LIN[r.id]) FAMLAB[r.fam] = LIN[r.id].famLabel;
@@ -475,9 +476,11 @@ let NRAW = 0;   /* §E440 去重**之前**的面板行数（= 原始 tsv 行数�
 /* ===== §E440 权重去重：同一份权重在图上只留一枚（用户 10-08：「去掉这些重复的权重再重新渲染一下」）=====
  *   §E334 那版只做了**标注**（悬停里印"同一份权重在面板上占 17 行"），图上照旧 917 枚 ⇒ 一撮拷贝挤在同一个位置，
  *   数点会多数，而"917 枚"与"729 种打法"这两个数永远对不上。现在直接从 DATA 里把重复行摘掉。
- *   留哪一枚必须确定（§E596 之后分界是**一批的均值**、不再按某一枚的 id 找，但组内代表仍优先 SHIPPED-Ldemo —— 它带着 09-27 那条血统记录，换代表会挪 fam/ts）：
- *     ① 组内有 SHIPPED-Ldemo ⇒ 留它；② 否则留有血统记录的那枚（d.lin 非空 ⇒ 它身上才有 ts/fam/par 这些信息）；
- *     ③ 否则留 dupOf 里排最前的那枚（dupOf 是 attach-dup 按**文件权重哈希**算出来的组内全集，顺序稳定）。
+ *   留哪一枚必须确定（§E596 之后分界是**一批的均值**、不再按某一枚的 id 找；§E600-A 又把组内代表从
+ *     「优先 SHIPPED-Ldemo」改成三条可复算的序，见下面 keeper 处）：
+ *     ① 留有血统记录的那枚（d.lin 非空 ⇒ 它身上才有 ts/fam/par 这些信息）；
+ *     ② 同格取**上线时刻最新**的那枚；③ 都没上过线 ⇒ 取 dupOf 里排最前的那枚
+ *        （dupOf 是 attach-dup 按**文件权重哈希**算出来的组内全集，顺序稳定）。
  *   摘掉的那枚不丢：id 记在保留那枚的 dups 上（悬停从"警告"改口成"本枚代表 N 份同名拷贝"），
  *   而**所有指向被摘那枚的父边一律改指保留那枚** —— 同一份权重 ⇒ 改指不改变这条边的意思（与 §E378 的别名接回同一种做法）。
  *   ⚠ 兜底还是页内那条「不许有任何父边指向图上不存在的枚」：漏改一条边它就红。 */
@@ -490,7 +493,16 @@ let NRAW = 0;   /* §E440 去重**之前**的面板行数（= 原始 tsv 行数�
   for (const key in groups) {
     const mem = groups[key];
     const order = key.split(' ').filter(Boolean);
-    let k = mem.find(d => d.id === 'SHIPPED-Ldemo') || mem.find(d => d.lin) ||
+    /* 组内代表的**确定规则**（§E600-A 改掉"优先 SHIPPED-Ldemo"那句硬编码 —— 那句话的实际意思是"让退役那枚继续当组代表"）：
+     *   ① 带血统记录的优先（d.lin 非空 ⇒ 它身上才有 ts/fam/par 这些信息）；
+     *   ② 同格时取**上线时刻最新**的那枚（时刻来自解析，冠军序列那一列读的就是它）；
+     *   ③ 都没上过线 ⇒ 取 dupOf 组内排最前的那枚（attach-dup 的顺序稳定，不随遍历次序漂）。
+     *   ⚠ 这条序必须与 id 无关地确定：第一版靠 `mem.find(d => d.id === ...)`，等于把一次裁定写死在代码里，
+     *     下次换包它不会报错，只会**静默把一族的 fam/ts/par 挪到另一枚身上**。 */
+    const linned = mem.filter(d => d.lin);
+    const bySh = function (a, b) { const wa = (SHIP[a.id] && SHIP[a.id].when) || '', wb = (SHIP[b.id] && SHIP[b.id].when) || '';
+      if (wa !== wb) return wa < wb ? 1 : -1; return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0); };
+    let k = (linned.length ? linned.slice().sort(bySh)[0] : null) ||
       mem.slice().sort((a, b) => { const ia = order.indexOf(a.id), ib = order.indexOf(b.id);
         return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib); })[0];
     keeperOf[k.id] = k.id;
@@ -506,7 +518,8 @@ let NRAW = 0;   /* §E440 去重**之前**的面板行数（= 原始 tsv 行数�
   /* 保留那枚的 dn 必须重算成"它代表几份"（原来那列是**全组行数**，摘完之后图上的语义才是"几份拷贝合成一枚"）*/
   for (const d of DATA) if (d.dn > 1) d.dn = 1 + drop.filter(x => keeperOf[x] === d.id).length;
   console.log('§E440 权重去重：' + before + ' 行 → ' + DATA.length + ' 枚（' + Object.keys(groups).length + ' 组共摘 ' + drop.length +
-    ' 行）‖ 父边改指 ' + nrep + ' 条 ‖ 现役在图上=' + (DATA.some(d => d.id === 'SHIPPED-Ldemo') ? '是' : '⛔没了') );
+    ' 行）‖ 父边改指 ' + nrep + ' 条 ‖ 活槽现主(解析) ' + (SID.live.coordsId || '认不出') +
+    ' 在图上=' + (SID.live.coordsId && DATA.some(d => d.id === SID.live.coordsId) ? '是' : '⛔没了'));
 })();
 console.log('家族 ' + Object.keys(FAMLAB).length + ' 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 ' + DATA.filter(d => !d.fam && !d.famTop).length + ' 枚');
 /* §E440：这一行的三个数必须**同源**（都从去重之后的 DATA 数），不能再印 POK = OKM 的键数 ——
@@ -1504,7 +1517,7 @@ function draw1(fr) {
   labelReset(); g.fillStyle = st.ink;
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var p = scr[ls[i].i]; if (!p) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), p[0], p[1], !!P[ls[i].i].lin, true, ls[i].i); }
+    putLabel(labOf(P[ls[i].i]), p[0], p[1], !!P[ls[i].i].lin, true, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText('一维：位置 = ' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次') + '（下方蓝条 = Hp 线上口径夺1率，黄条 = T·S）· 悬停看明细 · 点一枚 = 选中（点空白取消）· 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
 }
@@ -1861,7 +1874,7 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+    putLabel(labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
   g.restore();   /* §E314 数据层的裁剪到这里收口（点与点标签都不许滑进左栏）*/
   /* §E379 这里原来是"数据画完之后按同一仿射把左栏那一条回贴一遍"（§E377 加的，为了让点糊不住家族名）。
    *   撤掉：左栏现在是纸上的墨，与点同进同退，"糊住"这件事只能靠层序（纸在下、点在上）表达，
@@ -2015,7 +2028,7 @@ function drawMap(fr) {
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+    putLabel(labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
   if (st.q) for (i = 0; i < N; i++) if (String(P[i].id).toLowerCase().indexOf(st.q) >= 0 && scr[i]) {   /* §E453 与 labelSet 那一处必须同一条规则 */
     g.beginPath(); g.arc(scr[i][0], scr[i][1], 11 * st.size, 0, 6.284); g.strokeStyle = st.ink; g.lineWidth = 2; g.stroke(); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
@@ -2442,7 +2455,7 @@ function draw3b(fr) {
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel((P[ls[i].i].id === 'SHIPPED-Ldemo' ? '★' : '') + labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+    putLabel(labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText('三维行为轴（x3/y3/z3）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 颜色 = F（线上口径势 = Hp + T·S）⇒ 第三轴是行为不是深度' +
     /* §E312 壳好不好必须当场给数，而且**两列一起给**：含自己那列与画出来的壳同口径但循环，留一那列才是"不是靠自己被圈进来"。
@@ -2757,7 +2770,7 @@ function paintCard() {
   var i = st.sel === null ? -1 : nOf(st.sel);
   if (i < 0 || !P[i]) { el.style.display = 'none'; el.textContent = ''; return; }
   var d = P[i];
-  var head = (d.id === 'SHIPPED-Ldemo' ? '★ ' : '') + d.id + (d.lin ? ' 【' + d.lin + '】' : '') + (d.kin ? ' 〔' + d.kin + '〕' : '')
+  var head = d.id + (d.lin ? ' 【' + d.lin + '】' : '') + (d.pt ? ' ‖ ' + d.pt + ' 带成员' : '') + (d.kin ? ' 〔' + d.kin + '〕' : '')
     + (d.sv && String(d.id).indexOf('SLOT-') === 0 ? '（版本号 ' + d.sv + ' ‖ 标签上写的就是它）' : '');   /* §E463 卡上给全身份 */
   /* 家族标签用**截断版**：famLab 全串里带一整列"父"权重哈希（实测 20 个 ≈ 700 字符），
    *   直接拼进来这张卡会横贯整个画布，把下面的页脚与投影判据全盖住（第一版截图就是这样）。
@@ -2804,8 +2817,8 @@ function paintSide() {
   var CH = champList();
   for (var j = 0; j < CH.length; j++) { (function (i) { var d = P[i];
     var b = document.createElement('button');
-    b.className = (st.cmp.indexOf(d.id) >= 0 ? 'on ' : '') + (d.id === 'SHIPPED-Ldemo' ? 'cur' : '');
-    b.textContent = (d.sh ? '' : '⚠') + (d.id === 'SHIPPED-Ldemo' ? '★ ' : '') + labOf(d) +   /* §E463 序列里也标版本号（原来 16 枚全是 SLOT-8位哈希，读不懂）*/
+    b.className = (st.cmp.indexOf(d.id) >= 0 ? 'on ' : '');
+    b.textContent = (d.sh ? '' : '⚠') + labOf(d) +   /* §E463 序列里也标版本号（原来 16 枚全是 SLOT-8位哈希，读不懂）*/
       /* §E463 标签已经换成版本号的那几枚，第二栏就别再把同一个版本号抄一遍 ⇒ 让位给全 id（身份还在，只是排在可读名后面）*/
       ' ‖ ' + (labOf(d) === d.sv ? d.id : (d.sv || (d.sh ? '' : '未上槽'))) + ' ‖ ' + (d.sh ? d.sh.slice(5, 10) : (d.ts || '').slice(5, 10)) +
       ' ‖ F ' + Fv(d).toFixed(3) + ' ‖ Hp ' + d.Hp.toFixed(1);
@@ -3847,10 +3860,16 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   判据读几何不读 fams 数组：数组自己算自己 = 永远绿，而真正的病是"这一行有没有排在现役上面、有没有被丢掉"。 */
   var SNAPT = { kx: st.tKx, ky: st.tKy, tx: st.tX, ty: st.tY, e: st.elev, y: st.yaw, p: st.pit };
   st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.tKx = 1; st.tKy = 1; st.tX = 0; st.tY = 0; draw();
-  var yOld = [], yInc = -1, oi;
+  var yOld = [], yBand = [], nBandAll = 0, yInc = -1, oi;
   for (oi = 0; oi < N; oi++) { if (!VIS[oi] || !scr[oi]) continue;
     if (P[oi].famTop) yOld.push(scr[oi][1]);
-    if (P[oi].id === 'SHIPPED-Ldemo') yInc = scr[oi][1]; }
+    /* §E600-A：参照物不再是一枚包，而是**困难带那一批**（分界 = hard 带均值）。
+     *   所以这里收整带的 y，取中位数当"分界画在哪"；整带被窗口切掉时 nBandVis = 0 ⇒ 下面那句
+     *   "画得出来才判"照旧成立，但页脚会把它点出来（不许静默把分界弄看不见）。 */
+    if (P[oi].pt === 'hard') yBand.push(scr[oi][1]); }
+  if (nBandAll === 0) for (oi = 0; oi < N; oi++) if (P[oi].pt === 'hard') nBandAll++;
+  yBand.sort(function (a, b) { return a - b; });
+  var nBandVis = yBand.length, yInc = nBandVis ? yBand[Math.floor(nBandVis / 2)] : -1;
   yOld.sort(function (a, b) { return a - b; });
   var medOld = yOld.length ? yOld[Math.floor(yOld.length / 2)] : -1;
   /* §E448 主语换掉：原来判的是"旧包那一行必须比**现役那一行**高 100px 以上"，
@@ -3873,12 +3892,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var inRows = LASTFAMS.indexOf(0) >= 0;
   var rowOk = inRows ? (LASTFAMS[0] === 0) : true;
   var noRow = yOld.length === 0 && !inRows;
-  T('旧槽位冠军那一行必须排在最上面（家族 0）‖ 现役画得出来时还须比它高 100px 以上',
+  T('旧槽位冠军那一行必须排在最上面（家族 0）‖ 困难带画得出来时它必须在那一批之上 100px',
     (noRow ? rowOk : (!topBad && rowOk)) && (yInc <= 0 || medOld < yInc - 100 * devicePixelRatio),
     (noRow ? '这一档窗口（' + st.flo.toFixed(3) + '~' + st.fhi.toFixed(3) + '）里家族 0 一枚都没有 ⇒ 图上没有这一行，退到行表核（行表 ' + LASTFAMS.length + ' 行，第一行 = 家族 ' + LASTFAMS[0] + '）‖ '
       : '行表第一行 = 家族 ' + (LASTFAMS[0] === undefined ? '—' : LASTFAMS[0]) + ' ‖ ') +
     '旧包行 y 中位 ' + Math.round(medOld) + ' ‖ 其余家族行最小的中位 y ' + (nOther ? Math.round(minOther) : '—') +
-    ' ‖ 现役那一行 y ' + Math.round(yInc) + (yInc > 0 ? '' : '（现役在窗口外 ⇒ 只比行序）') + ' ‖ 画布高 ' + cv.height);
+    ' ‖ 困难带窗口内 ' + nBandVis + '/' + nBandAll + ' 枚，中位 y ' + Math.round(yInc) +
+    (yInc > 0 ? '' : '（整带都被窗口切掉 ⇒ 只比行序，分界在这一档看不见）') + ' ‖ 画布高 ' + cv.height);
   /* §E379 这条判据**方向反了**，而且是故意的：§E377 钉的是"左栏不许跟着横轴走"（把左栏当屏幕上的框），
    *   而用户 10-07 的口径从头到尾是「网格当做底图整体进行平移缩放」⇒ 那一半恰恰是"修一个坏一个"的来源
    *   （纸带着视图变换烘出来，于是每个元素各自决定参不参与，每修一次重投一次票）。
@@ -4970,12 +4990,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       PAN.push([id, (r.left - cvr.left) * devicePixelRatio, (r.top - cvr.top) * devicePixelRatio,
         r.width * devicePixelRatio, r.height * devicePixelRatio]); }
     addP('legend'); addP('card'); addP('side');
-    var hid = 0, hidCh = 0, tot = 0, hidBy = {}, exCh = '', hidInc = 0;
+    var hid = 0, hidCh = 0, tot = 0, hidBy = {}, exCh = '', hidBand = 0, bandTot = 0;
     for (var oi = 0; oi < N; oi++) { var so = scr[oi]; if (!so || !VIS[oi]) continue; tot++;
+      if (P[oi].pt === 'hard') bandTot++;
       for (var pi = 0; pi < PAN.length; pi++) { var B = PAN[pi];
         if (so[0] >= B[1] && so[0] <= B[1] + B[3] && so[1] >= B[2] && so[1] <= B[2] + B[4]) {
           hid++; hidBy[B[0]] = (hidBy[B[0]] || 0) + 1;
-          if (P[oi].id === 'SHIPPED-Ldemo') hidInc++;
+          if (P[oi].pt === 'hard') { bandTot++; hidBand++; }
           if (P[oi].lin) { hidCh++; if (!exCh) exCh = P[oi].id; }
           break; } } }
     var parts = []; for (var kk in hidBy) parts.push(kk + ' ' + hidBy[kk]);
@@ -4991,7 +5012,9 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
      *        这才是那句"无声变大"，且与坐标完全无关，任何重建都判得到。
      *     ② 相对总量界 hid ≤ tot 的 20%（实测 64/729 = 8.8% ‖ 88/732 = 12.0%）：布局重算确实会把点挪到面板底下，
      *        这条只挡"面板盖掉大半个画面"那种真病，不赌某一次的落点。
-     *   现役 hidInc === 0 原样硬判（分界参照物被压住 = 图上没有基准）。
+     *   §E600-A：分界参照物从"某一枚现役"改成**困难带那一批** ⇒ 这一条从 hidInc === 0（那枚不许被压）
+     *     改成"**整带不许一起被压**"（hidBand < bandTot）。语义等价于原句"看不见基准"，
+     *     而它不再要求某一枚恰好没落在面板底下 —— 用户 10-13 裁定「改成整带可见性」。
      *   牙口（两条都实测过，读数照抄）：
      *     ⚠ 第一版写的牙口是**假的**：把卡的 max-width 400 → 660 之后**没红**（卡的高度由内容驱动，
      *        加宽就换行变矮 ⇒ 面积几乎不变，实测仍 10.7%，点也没多被压）。这条判据量的是面积，
@@ -5004,11 +5027,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     var aMax = Math.max.apply(null, AR), aSum = 0; for (var ai = 0; ai < AR.length; ai++) aSum += AR[ai];
     var aCv = Math.max(1, cv.width * cv.height);
     var pMax = 100 * aMax / aCv, pSum = 100 * aSum / aCv;
-    T('浮层面板不许把现役压住（它是全图唯一的分界参照）‖ 面板面积不许失控 ‖ 被压住的点按当下样本有相对界',
-      PAN.length >= 2 && tot > 0 && hidInc === 0 && pMax <= 15 && pSum <= 40 && hid <= tot * 0.20,
+    T('浮层面板不许把困难带整排压掉（分界就是那一批的均值）‖ 面板面积不许失控 ‖ 被压住的点按当下样本有相对界',
+      PAN.length >= 2 && tot > 0 && (bandTot === 0 || hidBand < bandTot) && pMax <= 15 && pSum <= 40 && hid <= tot * 0.20,
       '钉的态：平面地图 + 卡开着（选 why 最长那枚 ' + worstId + '，明细 ' + worst + ' 字符）+ 侧栏开着'
         + ' ‖ 画布内 ' + tot + ' 枚 ‖ 被压住 ' + hid + ' 枚 = ' + (100 * hid / Math.max(1, tot)).toFixed(1) + '%（线 20%）‖ 分块 ' + (parts.join(' ‖ ') || '无')
-        + ' ‖ 其中冠军 ' + hidCh + (exCh ? '（例 ' + exCh + '）' : '') + ' ‖ 现役 ' + hidInc + '（要 0）'
+        + ' ‖ 其中冠军 ' + hidCh + (exCh ? '（例 ' + exCh + '）' : '') + ' ‖ 困难带被压 ' + hidBand + '/' + bandTot + ' 枚（要 <整带）'
         + ' ‖ 画布 ' + Math.round(cv.width / devicePixelRatio) + '×' + Math.round(cv.height / devicePixelRatio) + ' CSS'
         + ' ‖ 面板 ' + PAN.map(function (x) { return x[0] + ' ' + Math.round(x[3] / devicePixelRatio) + '×' + Math.round(x[4] / devicePixelRatio) +
             '（' + (100 * x[3] * x[4] / aCv).toFixed(1) + '%）'; }).join(' / ') + ' ‖ 最大 ' + pMax.toFixed(1) + '%（线 15）‖ 合计 ' + pSum.toFixed(1) + '%（线 40）');
