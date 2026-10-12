@@ -19,7 +19,9 @@
  *      （页面那侧每局是 `Math.random()` 新盐 ⇒ 产品是均匀的，别把尺的毛病读成产品的毛病。）
  *
  * 用法：node tools/probe-pool.mjs [--tier=hard] [--games=60] [--seeds=90210,90211] [--modes=multi,long]
- *        [--members=champion-map/pool-members.tsv] [--out=某.tsv]
+ *        [--members=champion-map/pool-members.tsv] [--out=某.tsv] [--mixSeats=k]
+ *        （`--mixSeats=k` 只顶 `scriptMix.seats` 这一维，`min`/`ids` 与推导仍走档位表 + `PD.scriptSeats`
+ *          ⇒ 量出来的是"掺 0/1/2/3 席"这四个装配，不是四份抄出来的算法；引用它的数必须带上这句）
  * 退出码：0 ‖ 2 输入/成员不齐 ‖ 7 有成员读不出包（缺行 ≠ 量了没测出来）
  */
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -30,7 +32,7 @@ import { duelAssembly } from './v2v4-lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
-rejectUnknownFlags(process.argv.slice(2), ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose'], 'probe-pool');
+rejectUnknownFlags(process.argv.slice(2), ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose', 'mixSeats'], 'probe-pool');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const TIER = flag('tier', 'hard'), G = Number(flag('games', 60));
 const SEEDS = String(flag('seeds', '90210,90211')).split(',').map(Number).filter(x => !Number.isNaN(x));
@@ -94,10 +96,20 @@ for (const x of HUMAN) if (typeof x[1] !== 'function') { console.error('⛔ 人�
 /* §E600-B：这把尺必须量**产品真实装配**，所以掺脚本席的推导走 `js/pool-draw.js` 的同一份 `scriptSeats`
  *   —— 页面调它，这里也调它；两边各自写一遍就是"量具在量一个产品里没有的东西"（规矩 134 那一族）。
  *   取哪一档：`pool` 字段等于本次 `--tier=` 的那一档（今天每带只有一档；真出现多档且 mix 不一致，这里就红）。 */
-let MIX = null, SCRIPTS = {};
+let MIX = null, SCRIPTS = {}, SEATNOTE = '';
 {
   const tiers = (B && B.DIFF_TIERS) || [];
-  const users = tiers.filter(t => t.pool === TIER && t.scriptMix);
+  /* `--mixSeats=k` 是给"掺几席才算简单"那道扫描用的**顶盖**：只顶 `seats`，`min`/`ids` 仍旧吃表里那一份，
+   *   推导仍旧只有 `PD.scriptSeats` 一处 ⇒ 契约 §3.8（"谁都不许抄第二遍"）不破，扫出来的才是同一个装配的不同剂量。 */
+  const SEATK = flag('mixSeats', '');
+  let users = tiers.filter(t => t.pool === TIER && t.scriptMix);
+  if (SEATK !== '') {
+    if (!/^\d+$/.test(String(SEATK))) { console.error('⛔ --mixSeats= 只能是非负整数（收到 `' + SEATK + '`）'); process.exit(2); }
+    const base = users[0] || tiers.find(t => t.scriptMix);
+    if (!base) { console.error('⛔ --mixSeats= 要顶 `scriptMix.seats`，而全表没有任何一档声明 scriptMix ⇒ 没得顶'); process.exit(2); }
+    users = [Object.assign({}, base, { scriptMix: Object.assign({}, base.scriptMix, { seats: Number(SEATK) }) })];
+    SEATNOTE = ' ‖ ⚑ 本批把 seats 顶成 ' + SEATK + '（`min`/`ids` 仍取 `' + base.id + '` 那份 ⇒ 引用这行数要带这句）';
+  }
   if (users.length > 1) {
     console.error('⛔ 有多档共用 tier=' + TIER + ' 且都声明了 scriptMix ⇒ 这把尺不知道该按哪一档装配（' +
       users.map(t => t.id).join(' ‖ ') + '）'); process.exit(7);
@@ -112,10 +124,18 @@ let MIX = null, SCRIPTS = {};
         SCRIPTS[sid] = T.wrapBigTPush ? T.wrapBigTPush(st.pick) : st.pick;   /* 与页面同一层包装（v1.6.3 那条裁定） */
       }
     }
+    /* ⚠ 顶盖有可能**顶不上去**：`scriptSeats` 的天花板是 `min(AI席 − min, ids.length)` ⇒ 今天 ids 只有 2 个，
+     *   要 3 席实际还是 2 席。不喊出来的话就会有人拿"2 席的数"去引用成"3 席"。
+     *   （真要多席得往 `ids` 里加风格 —— "掺几席"与"掺谁"今天其实是**同一根旋钮**。） */
+    if (SEATK !== '' && MIX && MIX.seats < Number(SEATK)) {
+      console.error('⚠ 顶盖没顶上去：要 ' + SEATK + ' 席，`scriptSeats` 只给到 ' + MIX.seats + ' 席 ⇒ 天花板 = min(AI席 ' +
+        (4 - ((users[0].scriptMix || {}).min || 1)) + ' , ids ' + (MIX.ids || []).length + ')）' +
+        '**这一批量的是 ' + MIX.seats + ' 席那个装配**，不许当 ' + SEATK + ' 席引用');
+    }
   }
 }
 console.log('# 池形态新尺（1 席人类形状 + 4 席按 tier=' + TIER + ' 抽 · 允许重复 · 禁四席全同' +
-  (MIX && MIX.seats ? ' ‖ 掺脚本席 ' + MIX.seats + ' 席：' + MIX.ids.join(' ‖ ') : ' ‖ 不掺脚本席') + '）');
+  (MIX && MIX.seats ? ' ‖ 掺脚本席 ' + MIX.seats + ' 席：' + MIX.ids.join(' ‖ ') : ' ‖ 不掺脚本席') + '）' + SEATNOTE);
 console.log('# 剂量 ' + DOSE.label + (DOSE.ramp ? '' : '') + '   ← 这一行是引用读数时**必须**带上的口径（§E272/第 45 条）');
 console.log('# 成员 ' + lite.length + ' 枚：' + lite.map(m => m.id).join(' ‖ '));
 console.log('# ' + G + ' 局/格 × ' + SEEDS.length + ' 枚 seed（' + SEEDS.join('/') + '）· 装配实现与 `probe-human-seat` 同一份（duelAssembly）');
