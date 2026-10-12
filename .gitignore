@@ -135,3 +135,10 @@ docs/artifacts/k8bands/
 # §E573（10-10 晚）：`shot.mjs` 每次截图的落点（champion-map/shot.png）。它不进门禁（gates 跑完会重写），
 # 但会一直把未跟踪文件留在工作区里 ⇒ 与 D180/D453 那两处"截图残留改名入库"的旧病同族，直接忽略掉。
 champion-map/shot.png
+
+# §E600-B（10-13）：融合实验粒的落盘目录。为什么不放 `docs/artifacts/` 下面 ——
+#   门 D233⑤ 的"融合血统普查"是 **readdirSync 递归 walk("docs/artifacts")**，
+#   它数的是"盘上有几粒 meta 里写了 soup.sources"。实验粒丢进去就会把这台机器的临时产物
+#   当成账（实测 10-13 02:1x 因此红一条：lineage 报 6 ‖ 门扫到 17 —— 17 = 6 在册 + 我这一晚造的 11 粒）。
+#   整轮认证在干净克隆上是绿的（CI 看不到这些文件），但"只有干净机器上才对"的门正是本仓反复记的那笔账。
+champion-map/_soup/

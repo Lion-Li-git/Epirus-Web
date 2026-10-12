@@ -12177,6 +12177,58 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
   const sB = syncArgs(['--check', '--quiet', '--chart=' + psFix]);
   eq(sB.status, 1, '⑩b 合成正对照：把图里一枚成员的带改掉（图 ≠ 表）⇒ `--check` 必须 exit 1（实测 ' + sB.status + '）');
 
+  /* ⑫ §E600-B（用户 10-13 裁定「把启发式随机脚本塞到弱池子里面」）：**掺脚本席这件事必须两侧同源、可复现、不吞掉池**。
+   *   钉四件行为 + 一条窄接线：
+   *     ⑫a 声明了 `scriptMix` 的档，`scriptSeats` 推出的席数必须 ≥1 且 **小于 AI 席数**（至少留一席包 ⇒ 池不许被整个盖掉）
+   *     ⑫b 同 salt 重放 ⇒ 组成逐字相同（掺席用的是同一个 rand，不许偷偷读时间/自造种子）
+   *     ⑫c 掺席只**盖位置**、不重排抽签：不掺时的包阵容前缀必须与掺了之后的包阵容一致
+   *     ⑫d `scriptMix.ids` 里每个 id 都必须真在 `Bots.STYLES` 里（D227①f 钉的是 style 档，这条钉 mix 档）
+   *     ⑫e 页面的 `poolDrawFor` 必须把 mix 传进 `compose`（少传一个参数就是"档位表写了但产品没跑"——
+   *          这类"配置在、接线断"是本仓第 45/92 条反复付过学费的形状，只能钉接线这一处） */
+  {
+    const BW = sandbox(process.cwd());
+    const BPD = BW.EpirusPoolDraw, BB = BW.EpirusBots;
+    ok(!!BPD && typeof BPD.scriptSeats === 'function' && typeof BPD.compose === 'function',
+      '⑫ 前提：`js/pool-draw.js` 必须导出 `scriptSeats` 与 `compose`（推导只许这一份）');
+    ok(!!BB && Array.isArray(BB.STYLES), '⑫ 前提：`Bots.STYLES` 取不到');
+    const mixTiers = ((BB && BB.DIFF_TIERS) || []).filter(t => t.scriptMix);
+    ok(mixTiers.length >= 1, '⑫ 前提：现在至少有一档声明 scriptMix（实测 ' + mixTiers.length + ' 档）⇒ 一条都没了就是被撤了，这条门要一起改');
+    const fake = []; for (let i = 0; i < 11; i++) fake.push({ id: 'M' + i, wid: 'w' + i, tier: 'soft' });
+    for (const t of mixTiers) {
+      const ai = 4;
+      const mix = BPD.scriptSeats(t, ai, BB.STYLES);
+      ok(mix && mix.seats >= 1 && mix.seats < ai,
+        '⑫a 档 ' + t.id + ' 的掺席数必须在 1..' + (ai - 1) + ' 之间（至少留一席包）实测 ' + (mix ? mix.seats : 'null'));
+      const ids = (t.scriptMix.ids || []);
+      ok(ids.every(id => BB.STYLES.some(s => s.id === id)),
+        '⑫d 档 ' + t.id + ' 的 scriptMix.ids 必须全在 STYLES 里（认不出的会被静默跳过 = 档位表撒谎）：' + ids.join(','));
+      const m2 = BPD.scriptSeats(t, ai, BB.STYLES);
+      ok(JSON.stringify(mix) === JSON.stringify(m2), '⑫b 同一档推导两次必须逐字相同（不许读时间）');
+      const r1 = BPD.compose(BPD.byTier(fake, 'soft'), ai, BPD.rng(90210), mix);
+      const r2 = BPD.compose(BPD.byTier(fake, 'soft'), ai, BPD.rng(90210), mix);
+      ok(JSON.stringify(r1) === JSON.stringify(r2), '⑫b 同 salt 两次组成逐字相同（' + t.id + '）');
+      const noMix = BPD.compose(BPD.byTier(fake, 'soft'), ai, BPD.rng(90210));
+      /* 正确的比法：**把脚本席那几号位置去掉**之后的包序列，必须与不掺时同位置的包一致。
+       *   （第一版我比的是"不掺序列的前 k 个"—— 脚本席落在中间时那个前缀本来就不该相等，
+       *    红的是我的断言，不是产品：这条腿当场把这句话抓出来了。） */
+      const packsAfter = r1.seats.filter(s => s.kind !== 'script').map(s => s.id);
+      const packsNoMixSamePos = noMix.seats.filter((s, ix) => !r1.seats.some(q => q.kind === 'script' && q.seat === ix)).map(s => s.id);
+      ok(JSON.stringify(packsNoMixSamePos) === JSON.stringify(packsAfter),
+        '⑫c 档 ' + t.id + '：掺席只许盖位置、不许重排抽签 ⇒ 去掉脚本席之后的包序列必须与不掺时一致（不掺=' +
+        packsNoMixSamePos.join(',') + ' ‖ 掺后=' + packsAfter.join(',') + '）');
+      const nScript = r1.seats.filter(s => s.kind === 'script').length;
+      ok(nScript === mix.seats, '⑫a 档 ' + t.id + ' 组成里的脚本席数必须等于推导值（实测 ' + nScript + ' vs ' + mix.seats + '）');
+      const two = BPD.scriptSeats(t, 1, BB.STYLES);
+      ok(!two || !two.seats, '⑫a 只有 1 席 AI（2P 桌）时不许掺（会把池整个盖掉），实测 seats=' + (two ? two.seats : 'null'));
+    }
+    const uiS = String(readFileSync('js/ui/ui.js', 'utf8')).split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l));
+    /* 只看那一行调用本身（第一版写 `/D\.compose\([^)]*mix/`，但参数里嵌套着 `D.rng((state && ...))` ⇒
+     *   `[^)]*` 在第一个右括号就断了，**接线其实是通的、腿却红** —— 又一例"红的是尺子自己"）。 */
+    const compLine = uiS.find(l => l.indexOf('D.compose(') >= 0) || '';
+    ok(compLine.length > 0 && /,\s*mix\b/.test(compLine),
+      '⑫e 页面 `poolDrawFor` 必须把推导出来的 mix 传给 `compose`（档位表写了 scriptMix 而产品不传 = 假档）‖ 实测那行：' +
+      (compLine.trim().slice(0, 120) || '(整页找不到 D.compose 调用)'));
+  }
   /* ⑪ §E600-A（用户 10-13 裁定③④：「如今没有『当前现役』这个东西了」‖「调整成实时更新而不是定死」）
    *   钉两件**可控**的事，不钉措辞（METHODOLOGY 89）：
    *     ⑪a 名册与烘焙页都不许再带「当前线上」这个身份类别（扫**数据**的值）；

@@ -324,6 +324,54 @@
     for (const k of order) if (byKey[k] && byKey[k].affordable) return k;
     return SK.JI;
   }
+  /* ===== §E600-B「杂货铺」：目标不是赢，是"这局还没用过的卡，能用就用" =====
+   * 立项依据（实测 `docs/debug/breadth-probe.mjs`，25 局/格 × 5 席镜像 · multi）：
+   *   现在最广的一只 `st:mix` 每局有 **避雷针 72.5 次 / 净化 72.5 次 / 双枪 55.5 次 / 镜面 55.5 次**
+   *   的合法机会（机会 = 这一回合这席位本来能出），而**出手全是 0**；其余四只风格脚本出手种类只有 1~2 种。
+   *   ⇒ 弱档"没广度"不是随机性不够，是**选择侧永远排不到这些卡**（用户 10-13：这些技能进不了高强度的包）。
+   * 这只脚本因此按「这局没用过 > 用得最少 > 别的」排序，只从**合法且买得起**的卡里挑 ⇒
+   *   广度天然上去、强度天然下来，正是弱档席要的形状。
+   * ⚠ 它的主语是**弱档席**：判它只看两件事 —— 广度（出手种类数 / G）与"人类席夺冠率"（`tools/probe-pool.mjs`）。
+   *   不许拿"能不能打赢冠军"来评价它，那不是它要解的题（同一课见 `METHODOLOGY.md`："弱点必须是目标在乎的缺口"）。
+   * ⚠ 计数从 `state.events` 现算（事件形状 `{type:'action', pid, key, outcome}`，与 `usage-probe` 同一判据），
+   *   不存模块级状态 ⇒ 同一个种子必然同一个行为，`cloneState` / 并行 worker 都不会串味。 */
+  const TOOL_KEYS = [SK.ROD, SK.LASER_EYE, SK.SHIFT, SK.JINSHIELD, SK.ARMOR, SK.PROTO, SK.TRANSFER,
+    SK.CURSE, SK.FIRESTORM, SK.TAUNT, SK.CANNON, SK.PURIFY, SK.MINE, SK.DUAL_GUN, SK.MIRROR, SK.HOLO, SK.DRAIN];
+  function toolkitUsed(state, pid) {
+    const used = {};
+    const evs = (state && state.events) || [];
+    for (let i = 0; i < evs.length; i++) { const e = evs[i];
+      if (e && e.type === 'action' && e.outcome === 'ok' && e.pid === pid && e.key) used[e.key] = (used[e.key] || 0) + 1; }
+    return used;
+  }
+  function pickToolKit(state, pid, legal) {
+    const used = toolkitUsed(state, pid);
+    const have = (legal || []).filter(function (l) { return l && l.affordable && TOOL_KEYS.indexOf(l.key) >= 0; });
+    /* 先决定"**要不要为一张还差 1~2 珠的没用过的工具攒钱**"：不攒的话它就会在每张便宜工具出现时把珠花光，
+     *   永远摸不到 3~4 珠那批（避雷针 4 / 双枪 3 / 净化 3 / 镜面 3），广度就卡在便宜那几档上不去。
+     *   实测（第一版没有这一段）：杂货铺出手 6 种、ジ 120 次/局，而 避雷针/天火/地雷/挑衅 各 235 次机会全 0 出手。 */
+    const want = (legal || []).filter(function (l) { return !l.affordable && l.loan >= 1 && l.loan <= 2 &&
+      TOOL_KEYS.indexOf(l.key) >= 0 && !used[l.key]; });
+    if (want.length && rnd(state) < 0.6) return SK.JI;
+    if (have.length) {
+      const fresh = have.filter(function (l) { return !used[l.key]; });
+      let pool = fresh;
+      if (!pool.length) {                                     /* 全都用过了 ⇒ 退回"用得最少的"那一批 */
+        let min = 1e9;
+        for (let i = 0; i < have.length; i++) { const u = used[have[i].key] || 0; if (u < min) min = u; }
+        pool = have.filter(function (l) { return (used[l.key] || 0) === min; });
+      }
+      return pool[Math.floor(rnd(state) * pool.length) % pool.length].key;
+    }
+    /* 工具卡这回合都没得开 ⇒ 三成的概率随手打一下（不然整局只ジ，那就不是"弱而广"而是"站着不动"），
+     *   其余按ジ 攒资源 —— 攒不出珠也就开不出贵的工具卡，这条是广度的天然节流阀。 */
+    if (rnd(state) < 0.35) {
+      const atk = (legal || []).filter(function (l) { return l && l.affordable && (l.key === SK.GUN || l.key === SK.SWORD || l.key === SK.TANK); });
+      if (atk.length) return atk[Math.floor(rnd(state) * atk.length) % atk.length].key;
+    }
+    return SK.JI;
+  }
+
   // 空放型对手：故意挑一个"买不起/条件不满足"的技能空放（→ 招式作废 → 对手 lastSkill=null）。
   // 唯一用途是让冠军见过"对手上一招无效"这个状态，别掉进未训练区退化成死循环。
   // 带 whiffOk 标记：play.js 的空放兜底会放行它（普通脚本/AI 一律被兜底改成按ジ）。
@@ -1021,7 +1069,9 @@
     { id: 'st:breakdef',     name: '憋大招',   pick: pickBreakDef,     note: '86% ジ 攒钱，等真正的落雷一发定胜负（大雷密度极高，但整桌最软的一档）' },
     { id: 'st:mix',          name: '全能型',   pick: pickMix,          note: '什么都用一点，出招最杂（有效技能数 4.38）' },
     { id: 'st:aggro',        name: '激进快攻', pick: pickAggro,        note: '一有机会就开枪，逼你打快棋（均 27 回合）' },
-    { id: 'st:combocounter', name: '读招反制', pick: pickComboCounter, note: '读你最近 5 次出招来反制 —— 五个装配里都比"困难"更硬，所以它被收进 `DIFF_TIERS` 当成最高档' }
+    { id: 'st:combocounter', name: '读招反制', pick: pickComboCounter, note: '读你最近 5 次出招来反制 —— 五个装配里都比"困难"更硬，所以它被收进 `DIFF_TIERS` 当成最高档' },
+    { id: 'st:toolkit', name: '杂货铺', pick: pickToolKit, note: '§E600-B：**目标不是赢，是把低性价比卡真的打出来**（避雷针/双枪/贴贴→天火/镜面/挑衅/净化/过载炮…这局没用过就用）。'
+      + '广度天然最高、强度天然偏低 ⇒ 它是给**弱档掺席**用的，不许拿"能不能打赢冠军"评价它（判据见 `docs/debug/breadth-probe.mjs` 头注）' }
   ];
 
   /* ===== v1.6.6 难度阶梯（用户 10-03 夜指令 2：「重新研究脚本难度…比如可以设计成冠军作为底层但脚本探索概率很高的版本」）=====
@@ -1086,6 +1136,14 @@
    *   或单独给简单档留一点 ε（`eps2` 之外再加一个 `epsEasy` 之类，那是下一次裁定）。 */
   const DIFF_TIERS = [
     { id: 'lv:sparring', name: '简单 · 陪练', kind: 'champ', eps: 0.2, epsK: 5, epsMode: 'soft', ramp: false, pool: 'soft', eps2: 0.5,
+      /* §E600-B（用户 10-13 裁定：「把启发式随机脚本塞到弱池子里面，能用更多低性价比的技能…
+       *   反正这些技能进不了高强度的包」）⇒ 这一档的装配 = 池的 soft 带 **加 k 席脚本**。
+       *   · seats = 想掺几席；min = 至少留几席**包**（2P 只有 1 席 AI ⇒ 掺不动，会走"降级要说话"那条）
+       *   · ids 必须是 `STYLES` 里真有的 id（门 D227①f 钉这一条，点了选不出来的风格 = 假档）
+       *   · 选这两只的理由是实测（`docs/debug/breadth-probe.mjs`，30 局/格 · 5 席镜像）：
+       *     `st:toolkit` 杂货铺 16 种出手且"买得起却没出"归零 ‖ `st:mix` 全能型 23 种 ——
+       *     弱档缺的正是这个广度（可玩性），不是又一种墙。 */
+      scriptMix: { seats: 2, min: 1, ids: ['st:toolkit', 'st:mix'] },
       note: '桌上是**最弱那一批**（7 枚），探索比默认档多一档（ε=0.2/k5/soft；用户 10-12 16:4x 定「简单 0.2 ‖ 普通与困难 0.1」）。'
         + '10-12 18:1x 重测（斜坡单一来源化之后）人类席夺冠 19.4%（multi）‖ 20.2%（long）；与"普通"那一步：'
         + 'multi **3.27±1.40 = 2.3σ** 过线 ‖ long 只有 **0.80±1.44 = 0.6σ ⇒ 分不开**'
@@ -1126,7 +1184,7 @@
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
-    pickReflectMix, pickReflectTank, pickDefReflectGun, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, resetBotMem,
+    pickReflectMix, pickReflectTank, pickDefReflectGun, pickToolKit, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, resetBotMem,
     snapshotBotMem, restoreBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,

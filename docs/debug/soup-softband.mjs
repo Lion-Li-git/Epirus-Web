@@ -10,7 +10,7 @@
  *   2) 现测 Hp（`eps-full --extra --onlyExtra`，同批同 seed 才可配对）
  *   3) 出一张**把 soft 档整带替掉**的名册 `_soup-members-SOFTALL.tsv`（hard/mid 行原样保留）
  * 用法：node docs/debug/soup-softband.mjs [--pairs=N]
- * ⚠ 只写 scratch（`champion-map/_soup-*`、`docs/artifacts/e599-soup/`），不碰 `pool-members.tsv`、不碰线上槽。
+ * ⚠ 只写 scratch（`champion-map/_soup-*`、`champion-map/_soup/`），不碰 `pool-members.tsv`、不碰线上槽。
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -20,7 +20,9 @@ import { widOf } from '../../champion-map/wid.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
-const OUT = join(ROOT, 'docs', 'artifacts', 'e599-soup');
+/* ⚠ 不能落在 docs/artifacts/ 下面：门 D233⑤ 的融合普查是递归 walk 那个目录，实验粒会被当成账（实测红一条）。
+   与 `.gitignore` 里 `champion-map/_soup/` 那一行是同一件事的两半。 */
+const OUT = join(ROOT, 'champion-map', '_soup');
 if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });
 
 const P = f => join(ROOT, f);
@@ -41,7 +43,7 @@ pairs.push([hard[0], soft[0]]);
 const made = [];
 for (const [a, b] of pairs) {
   const name = 'soupSB-' + a.id.replace(/[^A-Za-z0-9]/g, '') + 'x' + b.id.replace(/[^A-Za-z0-9]/g, '');
-  const rel = 'docs/artifacts/e599-soup/' + name + '.js';
+  const rel = 'champion-map/_soup/' + name + '.js';
   try {
     execFileSync(process.execPath, ['tools/soup-pack.mjs', '--packs=' + a.path + ',' + b.path, '--w=0.5,0.5', '--out=' + rel],
       { cwd: ROOT, encoding: 'utf8' });

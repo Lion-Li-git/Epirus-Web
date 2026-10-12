@@ -398,13 +398,28 @@
   }
   function loadPool(force) { return loadPoolOf('p3', force); }
   function loadPool2(force) { return loadPoolOf('p2', force); }
+  /* §E600-B（用户 10-13 裁定：「把启发式随机脚本塞到弱池子里面」）：掺几席、掺谁由 `bots.js` 的
+   *   `DIFF_TIERS[].scriptMix` 说话，而**推导只有一处** —— `js/pool-draw.js` 的 `scriptSeats`。
+   *   页面与量具（`tools/probe-pool.mjs`）都调它，否则量的是"我以为产品会怎么掺"（规矩 134 那一族）。
+   *   规则（写在 `pool-draw.js` 里）：① 至少留 `min` 席**包**（2P 只有 1 席 AI ⇒ 掺不动，池不许被整个盖掉）
+   *   ② 认不出的风格 id 跳过并说出来（契约 §4：降级不许静默）③ 位置由 `compose` 用同一个 rand 决定。 */
+  function scriptMixFor(tier, aiSeats) {
+    const D = window.EpirusPoolDraw;
+    if (!D || typeof D.scriptSeats !== 'function') return null;
+    const styles = (window.EpirusBots && window.EpirusBots.STYLES) || [];
+    return D.scriptSeats(tier, aiSeats, styles);
+  }
   function poolDrawFor(state, tier, n) {
     const D = window.EpirusPoolDraw;
     if (!D || !tier || !tier.pool) return null;
     const k = (n > 2) ? 'p3' : 'p2';                       /* §E599：2P 走 2P 原生池那一份（不是把 3P 池搬过去） */
     const members = D.byTier(loadPoolOf(k), tier.pool);
     if (!members.length) return null;
-    return D.compose(members, Math.max(1, n - 1), D.rng((state && state.slotSalt >>> 0) || 1));   /* 2P ⇒ 1 席 */
+    const aiSeats = Math.max(1, n - 1);                   /* 2P ⇒ 1 席 */
+    const mix = scriptMixFor(tier, aiSeats);
+    const draw = D.compose(members, aiSeats, D.rng((state && state.slotSalt >>> 0) || 1), mix && mix.seats ? mix : null);
+    if (draw && mix && mix.note) draw.mixNote = mix.note;
+    return draw;
   }
   /** 这一席该用哪一枚。`n<=2` 完全走老路：§E286 实测 3P 包在 1v1 上是**分布外**的 ⇒ 把池搬到 2 人桌等于造一个假档。 */
   /* §E599（10-12）：`n<=2` **不再**短路 —— 2P 也走池，但走的是**2P 原生**那一份（用户裁定：每局一个对手、成员不必多）。
@@ -418,6 +433,14 @@
     const draw = plan.draw;
     /* 2P 只抽 1 席 ⇒ 不论人类坐哪个 pid，AI 那一席永远取 `seats[0]`（3P/4P/5P 才按 pid 对位） */
     const m = draw.seats.length === 1 ? draw.seats[0] : draw.seats[(pid || 1) - 1];
+    /* §E600-B：这一席是**脚本席**（简单档掺进来的启发式脚本）⇒ 不查包，直接给脚本的 pick。
+     *   认不出这个风格 = 本席退回单包并说出来（契约 §4 同一条纪律，不许静默换人）。 */
+    if (m && m.kind === 'script') {
+      const sst = styleOf(m.id);
+      if (!sst) { single.poolNote = '脚本席 ' + m.id + ' 认不出 ⇒ 本席退回单包'; single.poolDraw = draw; return single; }
+      return { params: null, scriptPick: sst.pick, scriptName: sst.name, from: 'script:' + m.id,
+        poolDraw: draw, seatId: m.id, poolNote: draw.mixNote || null };
+    }
     const P2 = plan.two ? POOLS.p2.st : POOL;
     const p = m && P2.params[m.id];
     if (!p) { single.poolNote = '席位 ' + pid + ' 抽到的成员解不开 ⇒ 本席退回单包'; single.poolDraw = draw; return single; }
@@ -537,7 +560,13 @@
         const n = S.members.filter(function (m) { return m.tier === tier.pool; }).length;
         return {
           source: nm + '·' + tier.pool + '(' + n + ' 枚) 本局=' +
-            d.seats.map(function (s) { return s.id; }).join('+') +
+            d.seats.map(function (s) {
+              /* §E600-B：脚本席要一眼看得出是脚本（不然"本局=st:toolkit"读起来像一枚包的名字） */
+              if (s.kind === 'script') { const q = styleOf(s.id); return '脚本·' + (q ? q.name : s.id); }
+              return s.id;
+            }).join('+') +
+            (d.scriptSeats ? (' 掺脚本 ' + d.scriptSeats + ' 席') : '') +
+            (d.mixNote ? ' ⚠' + d.mixNote : '') +
             (d.allSame && !plan.two ? ' ⚠四席全同:该档成员不足' : '') +
             (S.bad.length ? ' ⚠出局:' + S.bad.join(',') : '') +
             ' · ' + tier.name + ' ε=' + tier.eps + '/k' + tier.epsK + '/' + tier.epsMode + (tier.ramp ? '·斜坡' : ''),
@@ -598,6 +627,12 @@
        *   换成 `champForSeat(pid, state, tier)`（契约 §3.1：逐席各抽一枚、可重复、禁四席全同），
        *   下面那行剂量**一字没动** —— 难度与池是两根正交的轴（池决定桌上是谁，ε 决定他多昏手）。 */
       const cf = champForSeat(pid, state, tier);
+      /* §E600-B：脚本席走脚本那条路，**与大雷注入的包装层同一处**（`Trainer.wrapBigTPush`，v1.6.3 那条裁定）
+       *   ⇒ 简单档掺脚本席不会把"看得见大雷"这条用途绕过去。 */
+      if (cf.scriptPick) {
+        B.aiFallback = false;
+        return finish(Trainer.wrapBigTPush(cf.scriptPick)(state, pid, legal));
+      }
       const c = cf.params;
       if (c) {
         B.aiFallback = false;

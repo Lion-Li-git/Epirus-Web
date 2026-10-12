@@ -91,7 +91,31 @@ if (bad.length) { console.error('⛔ ' + bad.length + ' 枚读不出包：' + ba
 const HUMAN = humanPrototypes(B);
 for (const x of HUMAN) if (typeof x[1] !== 'function') { console.error('⛔ 人类原型「' + x[0] + '」不是函数'); process.exit(7); }
 
-console.log('# 池形态新尺（1 席人类形状 + 4 席按 tier=' + TIER + ' 抽 · 允许重复 · 禁四席全同）');
+/* §E600-B：这把尺必须量**产品真实装配**，所以掺脚本席的推导走 `js/pool-draw.js` 的同一份 `scriptSeats`
+ *   —— 页面调它，这里也调它；两边各自写一遍就是"量具在量一个产品里没有的东西"（规矩 134 那一族）。
+ *   取哪一档：`pool` 字段等于本次 `--tier=` 的那一档（今天每带只有一档；真出现多档且 mix 不一致，这里就红）。 */
+let MIX = null, SCRIPTS = {};
+{
+  const tiers = (B && B.DIFF_TIERS) || [];
+  const users = tiers.filter(t => t.pool === TIER && t.scriptMix);
+  if (users.length > 1) {
+    console.error('⛔ 有多档共用 tier=' + TIER + ' 且都声明了 scriptMix ⇒ 这把尺不知道该按哪一档装配（' +
+      users.map(t => t.id).join(' ‖ ') + '）'); process.exit(7);
+  }
+  if (users.length === 1) {
+    MIX = PD.scriptSeats(users[0], 4, B.STYLES || []);
+    if (MIX && MIX.seats > 0) {
+      SCRIPTS = {};
+      for (const sid of MIX.ids) {
+        const st = (B.STYLES || []).find(x => x.id === sid);
+        if (!st) { console.error('⛔ scriptMix 里的风格 ' + sid + ' 不在 STYLES ⇒ 认不出就是错主'); process.exit(7); }
+        SCRIPTS[sid] = T.wrapBigTPush ? T.wrapBigTPush(st.pick) : st.pick;   /* 与页面同一层包装（v1.6.3 那条裁定） */
+      }
+    }
+  }
+}
+console.log('# 池形态新尺（1 席人类形状 + 4 席按 tier=' + TIER + ' 抽 · 允许重复 · 禁四席全同' +
+  (MIX && MIX.seats ? ' ‖ 掺脚本席 ' + MIX.seats + ' 席：' + MIX.ids.join(' ‖ ') : ' ‖ 不掺脚本席') + '）');
 console.log('# 剂量 ' + DOSE.label + (DOSE.ramp ? '' : '') + '   ← 这一行是引用读数时**必须**带上的口径（§E272/第 45 条）');
 console.log('# 成员 ' + lite.length + ' 枚：' + lite.map(m => m.id).join(' ‖ '));
 console.log('# ' + G + ' 局/格 × ' + SEEDS.length + ' 枚 seed（' + SEEDS.join('/') + '）· 装配实现与 `probe-human-seat` 同一份（duelAssembly）');
@@ -117,13 +141,14 @@ for (const mode of MODES) {
     const chooserFor = function (pid, st) {
       if (st !== curState) {
         curState = st;
-        const comp = PD.compose(lite, 4, PD.rng((st.slotSalt >>> 0) || 1));
+        const comp = PD.compose(lite, 4, PD.rng((st.slotSalt >>> 0) || 1), (MIX && MIX.seats) ? MIX : null);
         cur = { comp: comp, byPid: {}, order: 0 };
         games.set(st, cur);
       }
       if (!(pid in cur.byPid)) { cur.byPid[pid] = cur.comp.seats[cur.order++]; }
       const m = cur.byPid[pid];
       if (!m) { missSeat++; return null; }           /* null 会落回 duelAssembly 自带的那颗 ⇒ 计数暴露，不静默补位 */
+      if (m.kind === 'script') return SCRIPTS[m.id] || null;   /* 脚本席：与页面同一份 pick（含 wrapBigTPush 那层） */
       return CHOOSERS[m.id];
     };
     const onGame = function (st, scriptedSeat) {
