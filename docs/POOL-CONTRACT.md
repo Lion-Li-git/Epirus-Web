@@ -147,3 +147,20 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
    ⚠ 这只是"够抽签 + 阵容真会变"，不是"配比定了"——低档要不要掺脚本、每档要不要按行为再摊开，仍等裁。
 3. `ship` 组 36 条门（promote/当选/线上槽语义）里，哪些要改成"进池"语义、哪些留在"单包上首发/回滚"语义 —— 面积最大的一块。
 4. `D58` 的②、`D149`、能力表【5】的**适用域标注**（按裁定⑤它们只属于自对弈，不是删它们）。
+
+---
+
+## §9 2P 池（§E599 · 2026-10-12 用户裁定）
+
+1. **2P 也有池，但是另一份**：真源 `champion-map/pool-members-2p.tsv`，产物 `js/bundled-champion-pool-2p.js`
+   （同一支 `tools/build-pool-bundle.mjs --table= --key=EPIRUS_CHAMPION --global=EPIRUS_CHAMPION_POOL_2P` 生成）。
+   **不是**把 3P 池搬到 2 人桌 —— §E286 那条"3P 包在 1v1 上是分布外"实测仍然成立（3P 冠军塞进 2P 格 = `0%/平100%`，退化装配）。
+2. **每局只要一个对手 ⇒ 池不必大**（用户原话）。当前 7 枚（hard 2 ‖ mid 3 ‖ soft 2），全部是 2P 考卷（20 基准）训出来的包。
+3. **成员门槛**：① 2P 考卷平均 ≥ `examMinBaseline`（现役 2P 冠军那枚的下限 0.825）‖
+   ② **行为种类 ≥5**（用户原话「种类小于 5 的就丢掉」；种类 = `pick-best` 的 `div.distinct`）‖
+   ③ 分带按**正面对决**（`probe-cross-mode --cells=2P --fields=vschamp --ref=js/bundled-champion.js`）实测强度，不按 Hp。
+4. **抽签**：`compose(members, 1, rng(slotSalt))` —— 只有 1 个 AI 席 ⇒ 契约 §3 的"逐席各抽一枚/可重复/**禁四席全同**"里，
+   第三条在 2P **自动满足**（1 席无所谓全同），代码里也不再对该档报"四席全同"降级。
+5. **降级**（与 3P 同纪律，见 §4）：2P bundle 缺失/该档没配成员/成员解不开 ⇒ **退回那一枚 2P 冠军并说明原因**，不许静默。
+6. **现役 2P 槽的角色**：与 3P 槽同构 —— 池缺席时的回退；它自己也是池里的一枚（soft 带 · 钉住快照
+   `docs/artifacts/e598-2p/SHIPPED-2P-2026-09-22.bak`，理由是"换包会移走参照物"）。

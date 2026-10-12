@@ -215,7 +215,13 @@ async function main() {
     /内置/.test(String(r2.trHas || '')), 'tr-has=' + r2.trHas);
   await setupBattle2P();
   const src2Builtin = await aiSource();
-  check('2P 重开后用的是内置冠军', src2Builtin.indexOf('内置') >= 0, '对手AI=' + src2Builtin);
+  /* §E599（10-12）：2P 池上线后，2P 侧的内置来源由**2P 原生池**供给（标签 `2P池·mid(…)`）⇒
+   *   判据从"钉『内置』二字"改成**钉实质**：来源是"内置"或"池"，且**永远不许**出现"本机"
+   *   （本机导入那一支在上面已单独验过）。与 §E286/§E590 那次 3P 的修法同一条纪律：
+   *   **钉"用的是哪一类来源"，不钉那句话当时怎么写**。 */
+  check('2P 重开后走内置来源（内置或 2P 池），且不许是本机那枚',
+    (src2Builtin.indexOf('内置') >= 0 || src2Builtin.indexOf('池') >= 0) && src2Builtin.indexOf('本机') < 0,
+    '对手AI=' + src2Builtin);
 
   /* ── 正式对局：5 人 + 难度=冠军 ── */
   const setup = await setupBattle();

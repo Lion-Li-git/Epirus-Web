@@ -21,10 +21,22 @@ import { braceObj, widOfArr } from '../champion-map/pack-id.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
-const MAP = join(ROOT, 'champion-map', 'pool-members.tsv');
+/* §E599（2P 池 · 用户 10-12「2p 每次只要一个对手就行了，池子不需要很大」）：
+ *   加 `--table=` 与 `--key=` ⇒ 同一个构建器能出**第二份池**（2P），产物 `js/bundled-champion-pool-2p.js`。
+ *   为什么必须参数化而不是抄一份：本仓为"同一条口径抄两遍"栽过多次（本文件头 ①②③ 三条都是那次教训）。
+ *   ⚠ 2P 包的外壳是 `EPIRUS_CHAMPION`（3P 池成员是 `EPIRUS_CHAMPION_3P`）⇒ `--key=` 不是装饰，
+ *     传错会**响亮**红在"解不出权重数组"上，不会静默出空池。 */
+const absPath = p => (p.indexOf(':') >= 0 || p[0] === '/' || /^[A-Za-z]:[\/\\]/.test(p)) ? p : join(ROOT, p);
+const MAP = absPath(arg('table', 'champion-map/pool-members.tsv'));
+const KEY = arg('key', 'EPIRUS_CHAMPION_3P');
+/* ⚠ 全局名也必须参数化 —— §E599 的血证：第一版这里硬编码 `EPIRUS_CHAMPION_POOL`，
+ *   于是 2P 池 bundle 写的是 **3P 那个全局**，按 `index.html` 的加载顺序它把 3P 池（27 枚）**顶成了 7 枚 2P 包**，
+ *   而页面侧 `EPIRUS_CHAMPION_POOL_2P` 根本不存在 ⇒ 5 人桌静默用错池、2P 池不生效。
+ *   抓到它的是**真页面**（`tools/battle-test.mjs` 的 `[对手AI=…]` 标签），不是 code review。 */
+const GLOBAL = arg('global', 'EPIRUS_CHAMPION_POOL');
 const OUT = arg('out', 'js/bundled-champion-pool.js');
 
-if (!existsSync(MAP)) { console.error('⛔ 真源表不在：champion-map/pool-members.tsv（先用 tools/pool-add.mjs 加成员）'); process.exit(2); }
+if (!existsSync(MAP)) { console.error('⛔ 真源表不在：' + MAP + '（先用 tools/pool-add.mjs 加成员）'); process.exit(2); }
 const L = readFileSync(MAP, 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
 const h = Object.fromEntries(L[0].split('\t').map((x, i) => [x, i]));
 for (const c of ['id', 'wid', 'path', 'tier', 'invited', 'promoteVerdict', 'seatKill']) {
@@ -43,10 +55,10 @@ for (const r of rows) {
   if (!existsSync(abs)) { console.error('⛔ 成员 ' + r[h.id] + ' 的包文件不在盘上：' + rel); process.exit(2); }
   const txt = readFileSync(abs, 'utf8');
   /* 取权重数组：`.bak`/`.js` 外壳里那一个赋值（`packArr` 的坑注释解释了为什么不能裸 indexOf 名字） */
-  const KEY = 'EPIRUS_CHAMPION_3P';
+  const KEYX = KEY;
   let o = null;
-  for (let k = txt.indexOf(KEY); k >= 0; k = txt.indexOf(KEY, k + 1)) {
-    if (!/^\s*=/.test(txt.slice(k + KEY.length, k + KEY.length + 4))) continue;
+  for (let k = txt.indexOf(KEYX); k >= 0; k = txt.indexOf(KEYX, k + 1)) {
+    if (!/^\s*=/.test(txt.slice(k + KEYX.length, k + KEYX.length + 4))) continue;
     const c = braceObj(txt, k); if (c && Array.isArray(c.a)) { o = c; break; }
   }
   if (!o) { console.error('⛔ ' + rel + ' 解不出权重数组 ⇒ 这一枚不许进池（缺行 ≠ 相等）'); process.exit(2); }
@@ -62,11 +74,11 @@ for (const r of rows) {
 const byTier = {};
 for (const m of members) byTier[m.tier] = (byTier[m.tier] || 0) + 1;
 
-const body = '/* Epirus 冠军池：由 tools/build-pool-bundle.mjs 生成（真源 champion-map/pool-members.tsv）。不要手改。\n' +
+const body = '/* Epirus 冠军池：由 tools/build-pool-bundle.mjs 生成（真源 ' + arg('table', 'champion-map/pool-members.tsv') + '）。不要手改。\n' +
   ' * 成员 ' + members.length + ' 枚 ' + JSON.stringify(byTier) + ' ‖ 源文件合计 ' + (bytes / 1024).toFixed(0) + ' KB ‖ 生成于 ' + new Date().toString() + '\n' +
   ' * 契约（装配语义 / 抽签 / 降级）见 docs/POOL-CONTRACT.md —— 本页与量具、门禁 D234 必须逐字对齐那份契约。 */\n' +
   '(function (global) {\n  \'use strict\';\n' +
-  '  global.EPIRUS_CHAMPION_POOL = ' + JSON.stringify({ built: new Date().toString(), members: members }) + ';\n' +
+  '  global.' + GLOBAL + ' = ' + JSON.stringify({ built: new Date().toString(), members: members }) + ';\n' +
   '})(typeof window !== \'undefined\' ? window : globalThis);\n';
 
 console.log('== 生成池 bundle ==');

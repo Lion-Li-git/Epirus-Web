@@ -352,55 +352,77 @@
    * ⚠ 组成是**纯派生**（`compose(该档成员, n-1, rng(state.slotSalt))`）⇒ 同一局不论问第几席、第几回合答案都同，
    *   所以这里**故意不设缓存**（有缓存就有"缓存与局不同步"这一类错）。`cloneState` 走 JSON 往返会带上 slotSalt。
    * ⚠ 抽签实现不在本文件重写 —— 走 `js/pool-draw.js` 那一份（门 `D234` 与量具 `tools/probe-pool.mjs` 用的是同一份）。 */
-  const POOL = { members: null, params: {}, bad: [], status: 'init' };
   /** 降级分三种原因，**必须分开说**（浏览器实机跑出来的第一条就是这句：默认档"普通"没配成员时，
    *  旧文案会写"bundle 缺失或该档池空"，而 bundle 其实加载得好好的 ⇒ 把"还没配"说成了"坏了"）。 */
-  function poolOffReason(tier) {
-    loadPool();
-    if (POOL.status === 'no-bundle') return '池 bundle 未加载 ⇒ 四席同一枚（内置槽）';
-    if (!POOL.members.length) return '池 bundle 里一枚都解不开 ⇒ 四席同一枚（内置槽）';
-    const n = POOL.members.filter(function (m) { return m.tier === (tier && tier.pool); }).length;
-    if (!n) return '该难度档（' + (tier && tier.pool) + '）还没配池成员 ⇒ 四席同一枚，**不是故障**';
+  function poolOffReasonOf(k, tier) {
+    const slot = POOLS[k], S = slot.st;
+    loadPoolOf(k);
+    const back = k === 'p2' ? '退回单包（那一枚 2P 冠军）' : '四席同一枚（内置槽）';
+    if (S.status === 'no-bundle') return slot.name + ' bundle 未加载 ⇒ ' + back;
+    if (!S.members.length) return slot.name + ' bundle 里一枚都解不开 ⇒ ' + back;
+    const n = S.members.filter(function (m) { return m.tier === (tier && tier.pool); }).length;
+    if (!n) return '该难度档（' + (tier && tier.pool) + '）还没配' + slot.name + '成员 ⇒ ' + back + '，**不是故障**';
     return null;
   }
-  function loadPool(force) {
-    if (POOL.members !== null && !force) return POOL.members;
-    POOL.members = []; POOL.params = {}; POOL.bad = []; POOL.status = 'ok';
-    const raw = (typeof window !== 'undefined' && window.EPIRUS_CHAMPION_POOL) || null;
-    if (!raw || !Array.isArray(raw.members)) { POOL.status = 'no-bundle'; return POOL.members; }   /* 调用方按契约 §4 退回单包并说出来 */
-    /* ⚠ 解包用的是本文件顶上的别名 `P = window.EpirusPolicy`（`unpack` 挂在那里）——
+  function poolOffReason(tier) { return poolOffReasonOf('p3', tier); }
+  function poolOffReason2(tier) { return poolOffReasonOf('p2', tier); }
+  /* §E599（10-12）：池层**两份**（多人 3P 与 2P 各一份），而逻辑**只写一遍** —— 抄第二份是本仓栽得最多的一种错。
+   *   2P 池 = **2P 原生**包（`js/bundled-champion-pool-2p.js`，真源 `champion-map/pool-members-2p.tsv`）；
+   *   用户 10-12 裁定：2P 每局只要一个对手 ⇒ 成员不必多；**种类 <5 的不要**。
+   *   ⚠ 老注释里"`n<=2` 完全走老路"的理由（§E286：3P 包在 1v1 上是分布外）**对 2P 原生包不成立** ⇒
+   *     2P 走的是另一份池，不是把 3P 池搬到 2 人桌。 */
+  const POOLS = {
+    p3: { g: 'EPIRUS_CHAMPION_POOL', st: { members: null, params: {}, bad: [], status: 'init' }, name: '池' },
+    p2: { g: 'EPIRUS_CHAMPION_POOL_2P', st: { members: null, params: {}, bad: [], status: 'init' }, name: '2P 池' },
+  };
+  const POOL = POOLS.p3.st;                      /* 旧引用（`POOL.bad` 等）继续指向 3P 那一份 */
+  function loadPoolOf(k, force) {
+    const slot = POOLS[k], S = slot.st;
+    if (S.members !== null && !force) return S.members;
+    S.members = []; S.params = {}; S.bad = []; S.status = 'ok';
+    const raw = (typeof window !== 'undefined' && window[slot.g]) || null;
+    if (!raw || !Array.isArray(raw.members)) { S.status = 'no-bundle'; return S.members; }   /* 调用方按契约 §4 退回单包并说出来 */
+    /* ⚠ 解包用本文件顶上的别名 `P = window.EpirusPolicy`（`unpack` 挂在那里）——
      *   第一版这里写成 `window.EpirusChampionPack.unpack` 是**错的**：那个对象只导出 `extract`/`version`，
-     *   于是 7 枚全部"解不开"、静默退回单包（是浏览器实机跑出来的，不是推出来的：`PK.unpack is not a function`）。
-     *   `allowLegacy=true`：池成员跨代（`K2`/`SHIPPED-Ldemo` 是 v6 形状，`T8-s114` 是 v7）⇒
-     *   与 `tools/*` 侧同一口径；权重身份已由 `tools/build-pool-bundle.mjs` 逐条重算 wid 与表对账过。 */
+     *   于是全部"解不开"、静默退回单包（浏览器实机跑出来的：`PK.unpack is not a function`）。
+     *   `allowLegacy=true`：池成员跨代（3P 侧 `K2`/`SHIPPED-Ldemo` 是 v6 形状、`T8-s114` 是 v7；
+     *   2P 侧是 2P 原生形状）⇒ 与 `tools/*` 侧同一口径；权重身份已由 `tools/build-pool-bundle.mjs` 逐条重算 wid 与表对账过。 */
     for (const m of raw.members) {
       let p = null;
       try { p = P.unpack(m.pack, true); } catch (e) { p = null; }
-      if (!p) { POOL.bad.push(m.id); continue; }                    /* 契约 §4：解不出的整枚出局并点名，不许拿 null 顶上 */
-      POOL.members.push({ id: m.id, wid: m.wid, tier: m.tier });
-      POOL.params[m.id] = p;
+      if (!p) { S.bad.push(m.id); continue; }                    /* 契约 §4：解不出的整枚出局并点名，不许拿 null 顶上 */
+      S.members.push({ id: m.id, wid: m.wid, tier: m.tier });
+      S.params[m.id] = p;
     }
-    return POOL.members;
+    return S.members;
   }
+  function loadPool(force) { return loadPoolOf('p3', force); }
+  function loadPool2(force) { return loadPoolOf('p2', force); }
   function poolDrawFor(state, tier, n) {
     const D = window.EpirusPoolDraw;
     if (!D || !tier || !tier.pool) return null;
-    const members = D.byTier(loadPool(), tier.pool);
+    const k = (n > 2) ? 'p3' : 'p2';                       /* §E599：2P 走 2P 原生池那一份（不是把 3P 池搬过去） */
+    const members = D.byTier(loadPoolOf(k), tier.pool);
     if (!members.length) return null;
-    return D.compose(members, Math.max(1, n - 1), D.rng((state && state.slotSalt >>> 0) || 1));
+    return D.compose(members, Math.max(1, n - 1), D.rng((state && state.slotSalt >>> 0) || 1));   /* 2P ⇒ 1 席 */
   }
   /** 这一席该用哪一枚。`n<=2` 完全走老路：§E286 实测 3P 包在 1v1 上是**分布外**的 ⇒ 把池搬到 2 人桌等于造一个假档。 */
+  /* §E599（10-12）：`n<=2` **不再**短路 —— 2P 也走池，但走的是**2P 原生**那一份（用户裁定：每局一个对手、成员不必多）。
+   *   老注释那句"3P 包在 1v1 上是分布外（§E286）⇒ 把池搬到 2 人桌等于造一个假档"**仍然成立**，
+   *   正因为如此，2P 池的成员一律是 2P 考卷训出来的包（`pool-members-2p.tsv`），而不是 3P 池的成员。 */
   function champForSeat(pid, state, tier) {
     const n = (state && state.p && state.p.length) || (B.players || 2);
     const single = champForCount(n);
     const plan = poolPlan(state, tier, n);
     if (!plan.on) { if (plan.why) single.poolNote = plan.why; return single; }
     const draw = plan.draw;
-    const m = draw.seats[(pid || 1) - 1];
-    const p = m && POOL.params[m.id];
+    /* 2P 只抽 1 席 ⇒ 不论人类坐哪个 pid，AI 那一席永远取 `seats[0]`（3P/4P/5P 才按 pid 对位） */
+    const m = draw.seats.length === 1 ? draw.seats[0] : draw.seats[(pid || 1) - 1];
+    const P2 = plan.two ? POOLS.p2.st : POOL;
+    const p = m && P2.params[m.id];
     if (!p) { single.poolNote = '席位 ' + pid + ' 抽到的成员解不开 ⇒ 本席退回单包'; single.poolDraw = draw; return single; }
-    return { params: p, from: 'pool:' + m.id, poolDraw: draw, seatId: m.id,
-      poolNote: draw.allSame ? '该档池只够 ' + draw.seats.length + ' 席 ⇒ 四席全同（降级，已明说）' : null };
+    return { params: p, from: (plan.two ? 'pool2:' : 'pool:') + m.id, poolDraw: draw, seatId: m.id,
+      poolNote: (draw.allSame && !plan.two) ? '该档池只够 ' + draw.seats.length + ' 席 ⇒ 四席全同（降级，已明说）' : null };
   }
   /** 池到底生不生效，**只这一处判**（v1.6.63 内的一次修正，未另起版本号）。
    *   为什么要有这个函数：`champForSeat`（真决策）先查了"本机导入优先"，而 `aiInfo`（席位标签的回显）**没查**就报"池·mid 本局=…"
@@ -409,14 +431,16 @@
    *   `localStorage['epirus.champion3p']`），五人桌实际四席都用他那枚，而标签说池在跑。
    *   这与契约 §4"降级不许静默"是同一条纪律的另一面：**回显与决策必须走同一个判定**，否则修好一边另一边还是撒谎。 */
   function poolPlan(state, tier, n) {
-    if (n <= 2 || !tier || !tier.pool) return { on: false, local: false, why: null, draw: null };
+    if (!tier || !tier.pool) return { on: false, local: false, two: false, why: null, draw: null };
+    const two = !(n > 2);
     const single = champForCount(n);
-    if (single.from === 'local') return { on: false, local: true, why: '本机导入优先 ⇒ 池不生效（四席都用你这枚）', draw: null };
+    if (single.from === 'local') return { on: false, local: true, two: two, why: '本机导入优先 ⇒ 池不生效（' + (two ? '对手用你这枚' : '四席都用你这枚') + '）', draw: null };
     const draw = poolDrawFor(state, tier, n);
     if (!draw || !draw.seats.length) {
-      return { on: false, local: false, why: poolOffReason(tier) || '池未生效（原因未归类）⇒ 退回单包（四席同一枚）', draw: null };
+      return { on: false, local: false, two: two, draw: null,
+        why: (two ? poolOffReason2(tier) : poolOffReason(tier)) || '池未生效（原因未归类）⇒ 退回单包' };
     }
-    return { on: true, local: false, why: null, draw: draw };
+    return { on: true, local: false, two: two, why: null, draw: draw };
   }
   /* ===== v1.6.6 兜底脚本（冠军包拿不到时）=====
    * 这里必须是个**定义得住**的函数：`chooseAIMulti` 那行历史上引用过 `DN.hard.pick`，而 `DN` 的声明在 v1.3.22
@@ -504,16 +528,18 @@
     const packLabel = (B.players || 2) > 2 ? '3P' : '2P';
     /* v1.6.63（§E590）池生效时这里**必须说得出逐席是谁**（契约 §4：降级不许静默）。
      *   组成与 `champForSeat` 用的是同一个纯派生（同 slotSalt 同答案）⇒ 回显与实际决策不会分叉。 */
-    if ((B.players || 2) > 2 && tier.pool) {
+    if (tier.pool) {
       const plan = poolPlan(B.state, tier, B.players || 2);
       const d = plan.draw;
       if (plan.on && d && d.seats.length) {
-        const n = loadPool().filter(function (m) { return m.tier === tier.pool; }).length;
+        const S = plan.two ? POOLS.p2.st : POOL;
+        const nm = plan.two ? '2P池' : '池';
+        const n = S.members.filter(function (m) { return m.tier === tier.pool; }).length;
         return {
-          source: '池·' + tier.pool + '(' + n + ' 枚) 本局=' +
+          source: nm + '·' + tier.pool + '(' + n + ' 枚) 本局=' +
             d.seats.map(function (s) { return s.id; }).join('+') +
-            (d.allSame ? ' ⚠四席全同:该档成员不足' : '') +
-            (POOL.bad.length ? ' ⚠出局:' + POOL.bad.join(',') : '') +
+            (d.allSame && !plan.two ? ' ⚠四席全同:该档成员不足' : '') +
+            (S.bad.length ? ' ⚠出局:' + S.bad.join(',') : '') +
             ' · ' + tier.name + ' ε=' + tier.eps + '/k' + tier.epsK + '/' + tier.epsMode + (tier.ramp ? '·斜坡' : ''),
           champ: true, from: 'pool', tier: tier.id, eps: tier.eps, epsK: tier.epsK, epsMode: tier.epsMode,
           ramp: !!tier.ramp, poolDraw: d, allSame: !!d.allSame
@@ -522,8 +548,10 @@
     }
     if (!cf.params) return { source: fallbackNameFor(B.players || 2), champ: false, fallback: true, tier: tier.id };
     const from = cf.from === 'local' ? '本机自训/导入' : cf.from === 'builtin' ? '内置' : String(cf.from);
-    const poolOff = (B.players || 2) > 2 && tier.pool
-      ? (cf.from === 'local' ? '（池未生效：本机导入优先 ⇒ 四席用你这枚）' : '（' + poolOffReason(tier) + '）') : '';
+    const poolOff = tier.pool
+      ? (cf.from === 'local'
+        ? '（池未生效：本机导入优先 ⇒ ' + ((B.players || 2) > 2 ? '四席用你这枚' : '对手用你这枚') + '）'
+        : '（' + (((B.players || 2) > 2) ? poolOffReason(tier) : poolOffReason2(tier)) + '）') : '';
     return {
       source: packLabel + ' 冠军（' + from + '）· ' + tier.name + ' ε=' + tier.eps + '/k' + tier.epsK + '/' + tier.epsMode + (tier.ramp ? '·斜坡' : '') + poolOff,
       champ: true, from: cf.from, tier: tier.id, eps: tier.eps, epsK: tier.epsK, epsMode: tier.epsMode, ramp: !!tier.ramp
