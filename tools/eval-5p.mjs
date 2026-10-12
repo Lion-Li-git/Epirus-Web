@@ -35,7 +35,7 @@ for (const a of process.argv.slice(2)) {
 /* ⚠ 名单里写的必须是**读侧的实际拼写**，不是"我以为的小写"：`--drainHp` 的正写带大写 H（读的是 `FLAG.drainHp`），
  *   `--eps-mode` 用连字符 ⇒ 若这里写成 `drainhp`/`epsmode`，这道守卫就会在**正确用法**上 exit 2（我第一版就这么错了，实测抓回）。
  *   `file` 不在名单里：落盘的 `#file=` 来自位置参数，不是旗标。 */
-const IDENTITY_FLAGS = ['shipbigt', 'shipdrain', 'eps', 'epsk', 'eps-mode', 'bigtpush', 'bigttgt',
+const IDENTITY_FLAGS = ['shipbigt', 'shipdrain', 'eps', 'eps-tier', 'epsk', 'eps-mode', 'bigtpush', 'bigttgt',
   'pushrank', 'pushfloor', 'pushkey', 'pushminep', 'bigtcost', 'ban', 'drainHp', 'mode', 'swap', 'pool', 'every'];
 const IDENTITY_BY_LOWER = {};
 for (const k of IDENTITY_FLAGS) IDENTITY_BY_LOWER[k.toLowerCase()] = k;
@@ -136,9 +136,42 @@ if (FLAG.eps != null && !(isFinite(SHIP_EPS) && SHIP_EPS >= 0 && SHIP_EPS <= 1))
 }
 const SHIP_EPSK = FLAG.epsk == null ? 5 : Number(FLAG.epsk);
 const SHIP_EPMODE = FLAG['eps-mode'] || (SHIP_EPS > 0 ? 'soft' : 'uniform');
+/* ===== §E597（10-12 晚）：`--eps-tier=<DIFF_TIERS 的档 id>` = 把剂量**交给产品那张表** =====
+ * 为什么现在必须有这根旗标：`--eps=0.2` 这个"页面口径"是 v1.5.141 时代的**常数**剂量，
+ *   而默认档从 v1.5.298 起是回合斜坡、10-12 又把顶点降到 0.1 ⇒ 常数 0.2 今天是**简单档**的剂量，
+ *   用它量的 Hp 已经不是"玩家默认拿到的那个数"（用户 10-12 17:4x：「调整了随机之后演化图的 Hp 也要调整了」）。
+ * ⚠ 斜坡形状**不在这里再写一遍**：走 `Bots.tierEps(tier, round)`（`js/train/bots.js` 里那份，D153 钉它并判"全仓只许有一份"）。
+ * ⚠ 与 `--eps` 互斥：两个来源同时给就拒绝出读数（宁可 exit 2，也不要"我以为控制住了剂量"）。 */
+const EPS_TIER = FLAG['eps-tier'] || '';
+/* ε 是否真在场（`--eps-tier=` 也算）：摄魂那一档的钩子埋在 ε 分支里，判"我看不见它"必须按这个，不能只按 SHIP_EPS */
+const EPS_ACTIVE = SHIP_EPS > 0 || !!EPS_TIER;
+if (EPS_TIER && FLAG.eps != null) {
+  console.error('⛔ `--eps-tier=` 与 `--eps=` 不能同时给（剂量有两个来源 ⇒ 读数不知道自己是被什么量出来的）。收到 `--eps=' + FLAG.eps + '`');
+  process.exit(2);
+}
+if (EPS_TIER && (FLAG.epsk != null || FLAG['eps-mode'] != null)) {
+  console.error('⛔ `--eps-tier=` 已经把整组剂量（eps/epsK/epsMode/斜坡）交给 `DIFF_TIERS` 了，再单给 `--epsk`/`--eps-mode` '
+    + '就是"表说了算还是我说了算"两可 ⇒ 拒绝出读数。要自己定剂量请用 `--eps=`。');
+  process.exit(2);
+}
+/** 按档取剂量的主体席策略：每回合的 ε/epsK/epsMode 全部来自 `DIFF_TIERS`，第 1 回合走贪心分支当 ramp 档的 ε=0 */
+function tierPolicy(prms, tierId) {
+  const tier = (Bots.DIFF_TIERS || []).find(function (x) { return x.id === tierId; });
+  if (!tier) {
+    console.error('⛔ --eps-tier=' + tierId + ' 不在 `DIFF_TIERS` 里（在册：'
+      + (Bots.DIFF_TIERS || []).map(function (x) { return x.id; }).join(' ‖ ') + '）');
+    process.exit(2);
+  }
+  const mk = function (e) {
+    return e > 0 ? T.policyChooserN(prms, 0.15, e, tier.epsK, tier.epsMode) : T.policyChooserN(prms, 0.15);
+  };
+  const byRound = { 1: mk(Bots.tierEps(tier, 1)), 2: mk(Bots.tierEps(tier, 2)), 3: mk(Bots.tierEps(tier, 3)) };
+  return function (state, id, legal) { return byRound[Math.min(3, state.round)](state, id, legal); };
+}
 /** 主体席的 chooser：`makeSel()` 每局调一次 ⇒ 这里给的是"这一局用的策略对象" */
 function subjectPolicy() {
-  const a = SHIP_EPS > 0 ? T.policyChooserN(params, 0.15, SHIP_EPS, SHIP_EPSK, SHIP_EPMODE) : T.policyChooserN(params, 0.15);
+  const a = EPS_TIER ? tierPolicy(params, EPS_TIER)
+    : (SHIP_EPS > 0 ? T.policyChooserN(params, 0.15, SHIP_EPS, SHIP_EPSK, SHIP_EPMODE) : T.policyChooserN(params, 0.15));
   if (!swapParams) return a;
   const b = T.policyChooserN(swapParams, 0.15);
   return function (state, id, legal) { return (state.round >= SWAP_ROUND ? b : a)(state, id, legal); };
@@ -408,10 +441,10 @@ const DRAIN_EFFECTIVE0 = (typeof T.drainPushOn === 'function') ? T.drainPushOn()
 let DRAIN_EFFECTIVE = DRAIN_EFFECTIVE0;
 if (SHIPDRAIN_RAW != null) {
   console.log('[shipdrain] 引擎档 = ' + DRAIN_EFFECTIVE + '（0 = 关）· 窗口 = 自己 hp≤1 **且这张牌可付**（不改 `drainHpMax` ⇒ 不是改规则）'
-    + '· 机制 = 只在 ε 分支里把这张牌**并入探索集**（软提升，不强推）· 本臂 ε=' + SHIP_EPS + (SHIP_EPMODE ? '/' + SHIP_EPMODE : ''));
-  if (DRAIN_EFFECTIVE >= 1 && !(SHIP_EPS > 0)) {
+    + '· 机制 = 只在 ε 分支里把这张牌**并入探索集**（软提升，不强推）· 本臂 ε=' + (EPS_TIER ? '档位 ' + EPS_TIER + ' 给的剂量' : SHIP_EPS + (SHIP_EPMODE ? '/' + SHIP_EPMODE : '')));
+  if (DRAIN_EFFECTIVE >= 1 && !EPS_ACTIVE) {
     console.error('⛔ `--shipdrain>=1` 但 ε=0 ⇒ 这一档在贪心里**永不触发**，跑出来必然与关档逐字相同（= 一根静默失效的旗标）。'
-      + '要量它就给页面口径：`--eps=0.2 --eps-mode=soft`（对照臂同样要给）。');
+      + '要量它就给页面口径：`--eps=0.2 --eps-mode=soft`，或直接给产品那张表 `--eps-tier=lv:regular`（对照臂同样要给）。');
     process.exit(2);
   }
 }
@@ -929,9 +962,9 @@ if (SHIPDRAIN_RAW == null && DRAIN_INJECT_SEEN.length) {
 }
 /* ⚠ 这一档**只在 ε>0 时存在** ⇒ 默认开着之后，贪心臂必须**自己说出来**"我看不见它"，否则下一个人会把"逐字相同"读成"测过没效果"
  *   （显式给 `--shipdrain>=1` 且 ε=0 仍然是 `exit 2`，见上面那段；这里只管"默认档捎带开着"的情况）。 */
-if (DRAIN_EFFECTIVE >= 1 && !(SHIP_EPS > 0)) {
+if (DRAIN_EFFECTIVE >= 1 && !EPS_ACTIVE) {
   console.log('[shipdrain] ⚠ 引擎默认档 = ' + DRAIN_EFFECTIVE + '，但本臂 ε=0 ⇒ 这一档**永不触发**（钩子在 soft 探索支里）⇒ 与关档逐字相同。'
-    + '要量它必须带页面口径 `--eps=0.2 --eps-mode=soft`（§E283：3 血桌上每 4.3 局一张 ‖ 关档 0 张/200 局）。');
+    + '要量它必须带页面口径 `--eps=0.2 --eps-mode=soft`，或直接给产品那张表 `--eps-tier=lv:regular`（§E283：3 血桌上每 4.3 局一张 ‖ 关档 0 张/200 局）。');
 }
 /* §E267：自检挂**进程出口** —— 前面两版分别落在 `if (PUSH)` 与 `if (FLAG['dump-per'])` 里，
  * 于是"纯提顺位臂"与"不落盘的跑法"都**一声不响**（同一族病：静默的量具）。出口钩子与作用域无关。 */
@@ -1147,10 +1180,10 @@ if (SHIP_EFFECTIVE >= 1 || PUSH) {
 }
 
 /* §E275：摄魂的用量单独印一行 —— **口径必须与"软提升"匹配**（只有 ε>0 才谈得上触发）。 */
-if (DRAIN_EFFECTIVE >= 1 && SHIP_EPS > 0) {
+if (DRAIN_EFFECTIVE >= 1 && EPS_ACTIVE) {
   const dcasts = (champ.use && champ.use[R.SK.DRAIN]) || 0;
   const dper = champ.total ? dcasts / champ.total : 0;
-  console.log('[摄魂用量] 路径=现网(evo DRAIN_PUSH=' + DRAIN_EFFECTIVE + ' · ε=' + SHIP_EPS + '/' + SHIP_EPMODE + ')'
+  console.log('[摄魂用量] 路径=现网(evo DRAIN_PUSH=' + DRAIN_EFFECTIVE + ' · ε=' + (EPS_TIER ? '档位 ' + EPS_TIER : SHIP_EPS + '/' + SHIP_EPMODE) + ')'
     + ' · 真打出 **' + dcasts + ' 张 / ' + champ.total + ' 局 = 每 ' + (dper > 0 ? (1 / dper).toFixed(1) : '∞') + ' 局一张**'
     + '（占主体出手 ' + (tot ? (dcasts / tot * 100).toFixed(2) : '0') + '%）· 窗口=自己 hp≤1'
     + (dcasts === 0 ? '   ← 一次都没打 ⇒ 这一臂没测到东西（档太稀、窗口从没开、或这张牌不可付），不许记"无效"' : ''));
@@ -1185,7 +1218,7 @@ if (FLAG['dump-per']) {
     /* §E275：摄魂档与 **ε 口径**都是臂维 —— 少了 `#eps`，"贪心考卷"与"页面口径"两批落盘会被配成同一世界，
        而前者对摄魂档结构性失明（读数必然相同）⇒ 那是一副**静默的错配**（记忆：补表头 ≠ 补守卫）。 */
     '#shipdrain=' + String(DRAIN_EFFECTIVE),
-    '#eps=' + (SHIP_EPS > 0 ? (SHIP_EPS + '-' + SHIP_EPMODE + '-k' + SHIP_EPSK) : '0'),
+    '#eps=' + (EPS_TIER ? ('tier:' + EPS_TIER) : (SHIP_EPS > 0 ? (SHIP_EPS + '-' + SHIP_EPMODE + '-k' + SHIP_EPSK) : '0')),
     '#swap=' + (SWAP || '-'), '#arm\tidx\tnames\tgames\tfirst\tstrict'];
   for (const s of [{ arm: 'subject', r: champ }, { arm: 'ctrl', r: ctrl }]) {
     s.r.perCombo.forEach(function (c, i) {

@@ -13,8 +13,11 @@
  *   (ii) 覆盖：718 枚里测成的枚数要 ≥ 700，否则不许换尺（缺太多 = 新尺只覆盖一片，图上会出现两种口径混画）。
  *   (iii)换尺前后**名次相关性**：Spearman(F_旧, F_新)。这是"换口径改不改结论"的全库版（§E313 只有 121 枚）。
  *
- * 用法：node champion-map/eps-full.mjs [--seed=77000] [--jobs=4]
- *   产物：champion-map/epsfull.tsv（增量写，中途可读）= id / exam / page / d / hp_old / ms
+ * 用法：node champion-map/eps-full.mjs [--seed=77000] [--jobs=4] [--games=120]
+ *       [--epsTier=lv:regular]   页面臂的剂量取自 `DIFF_TIERS` 那一档（§E597：不给就还是老写法 ε=0.2 常数 = 今天的**简单档**）
+ *       [--pageOnly=1 --examFrom=<同格式表>]   只重测页面臂，考卷列从那张表搬（成立前提见下面 `PAGE_ONLY` 的注释）
+ *       [--out=<表>] [--extra=<清单>] [--onlyExtra]
+ *   产物：champion-map/epsfull.tsv（增量写，中途可读）= id / exam / page / d / hp_old / ms / examG / pageDose
  */
 import { readFileSync, writeFileSync, existsSync, appendFileSync, copyFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
@@ -43,6 +46,39 @@ const HOLD = {}; for (const r of CO.slice(1)) HOLD[r[ch.id]] = +r[ch.H];
  *   `--out=` 同时可指，**不许把两批混进同一张表**（下面那道"已存在就 exit 2"的守卫就是为这件事建的）。
  *   ⚠ 路径必须能指到子目录（这批的产物在 `docs/artifacts/eNN-out/` 下），所以这里存的是 `id → 相对仓库根的路径`。 */
 const PATHOF = {};
+/* 记哪些枚没用上名单/在册的第一顺位路径（跑完点名印出来）：读数照样是真的，但"这一枚是从哪个文件量的"必须可查。 */
+const FALLBACK = {};
+/* §E597：coords.tsv 的 `path` 列是**在册的产物路径**（attach-path 那一步写进去的），比"猜 `<id>.bak`"可靠 ⇒ 建一张回退表。 */
+const CO_PATH = {}; for (const r of CO.slice(1)) { if (r[ch.id] && r[ch.path]) CO_PATH[r[ch.id]] = r[ch.path]; }
+/* `--epsTier=lv:regular` = 页面臂的剂量取自 `DIFF_TIERS` 那一档（**图上头号尺 Hp 从此跟着产品走**，不再挂在一个手抄的 0.2 上）。
+ *   用户 10-12 17:4x：「调整了随机之后演化图的 Hp 也要调整了」。 */
+const EPS_TIER = arg('epsTier', '');
+if (EPS_TIER && !/^(lv:)?[a-z]/.test(EPS_TIER)) { console.error('⛔ --epsTier 得是 `DIFF_TIERS` 的档 id'); process.exit(2); }
+/* `--pageOnly=1 --examFrom=<同格式表>`：只重测页面臂，考卷列从那张表**原样搬**。
+ *   成立的前提是结构性的：ε 只活在页面臂的 chooser 里，`--eps=0`（考卷臂）走的是贪心分支 ⇒ 剂量改动对考卷臂逐字无差。
+ *   ⚠ 这么跑的时候 `attach-hp.mjs` 那道"本次考卷 == coords 的 H"守卫是**搬来的、不是测的** ⇒
+ *     要真验仪器没漂，就另点 5~8 枚把考卷臂也跑一遍（本机 120 局 ≈ 20 秒/枚，比全库重跑便宜两个数量级）。 */
+const PAGE_ONLY = process.argv.includes('--pageOnly=1');
+const EXAM_FROM = String(arg('examFrom', ''));
+const CARRIED = {};
+if (PAGE_ONLY) {
+  if (!EXAM_FROM) { console.error('⛔ --pageOnly=1 必须给 `--examFrom=<表>`（考卷列从哪儿搬）'); process.exit(2); }
+  const ef = join(HERE, EXAM_FROM);
+  if (!existsSync(ef)) { console.error('⛔ --examFrom 读不到：' + ef); process.exit(2); }
+  const ET = readFileSync(ef, 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
+  const eh2 = Object.fromEntries(ET[0].split('\t').map((x, i) => [x, i]));
+  if (eh2.id === undefined || eh2.exam === undefined) { console.error('⛔ --examFrom 表头缺 id/exam：' + ET[0]); process.exit(2); }
+  for (const l of ET.slice(1)) { const c = l.split('\t'); if (c[eh2.id]) CARRIED[c[eh2.id]] = c[eh2.exam]; }
+  /* 名单在这里还没定稿（`--extra` 那段在后面）⇒ 缺失统计放到 `reportCarried()`，开跑前叫。 */
+  reportCarried();
+}
+function reportCarried() {
+  if (!PAGE_ONLY) return;
+  const miss = ids.filter((x) => CARRIED[x] === undefined);
+  console.error('--pageOnly=1 ⇒ 考卷臂不重测，从 ' + EXAM_FROM + ' 搬 ' + Object.keys(CARRIED).length + ' 枚'
+    + (miss.length ? ' ‖ ⚠ 名单里有 ' + miss.length + ' 枚在那张表里没有行（会记成失败）：' + miss.slice(0, 6).join(',') : ''));
+  if (miss.length === ids.length) { console.error('⛔ 一个都搬不到 ⇒ 别出全空的表'); process.exit(2); }
+}
 const EXTRA = arg('extra', '');
 if (EXTRA) {
   const ep = join(HERE, EXTRA);
@@ -70,22 +106,34 @@ if (EXTRA) {
 
 /* 线上那颗盘上没有 .bak（§E308 ③ 那条仪器事实）⇒ 现造临时对照品，跑完由调用方删。
  *   §E328：只在名单**真的含** SHIPPED-Ldemo 时才造 —— 跑 `--extra` 那批子代时不需要它，
- *   而在顶层留一个 .bak 就是要欠 D82 的账（24 小时内要么点名要么删）。 */
+ *   而在顶层留一个 .bak 就是要欠 D82 的账（24 小时内要么点名要么删）。
+ *   ⚠ §E597 加了"没在册路径才造"这个前提：`coords.tsv` 的 `path` 列如今有 Ldemo 自己的权重
+ *     （`docs/artifacts/eval-out/win-Ldemo.bak`），而这一支造的是**当下那颗活槽**（v1.6.62 起 = T8-s114）
+ *     ⇒ 不加前提就会"用别人的权重出 Ldemo 的读数"（METHODOLOGY 134：活槽身份只能声明，不能按 path 猜）。 */
 const SHIP = join(ROOT, 'docs/artifacts/SHIPPED-Ldemo.bak');
-if (ids.indexOf('SHIPPED-Ldemo') >= 0 && !existsSync(SHIP)) {
+if (ids.indexOf('SHIPPED-Ldemo') >= 0 && !existsSync(SHIP) && !(CO_PATH['SHIPPED-Ldemo'] && existsSync(join(ROOT, CO_PATH['SHIPPED-Ldemo'])))) {
   copyFileSync(join(ROOT, 'js/bundled-champion-3p.js'), SHIP);
   console.error('已临时造出对照品 docs/artifacts/SHIPPED-Ldemo.bak（跑完请删，留着会撞 D82）');
 }
 if (existsSync(OUT)) { const done = readFileSync(OUT, 'utf8').trim().split('\n').length - 1;
   console.error('⛔ ' + 'epsfull.tsv 已存在（' + done + ' 行）⇒ 先删再跑，别把两批混成一张表'); process.exit(2); }
-writeFileSync(OUT, ['id', 'exam', 'page', 'd', 'hp_old', 'sec', 'examG'].join('\t') + '\n', 'utf8');
+writeFileSync(OUT, ['id', 'exam', 'page', 'd', 'hp_old', 'sec', 'examG', 'pageDose'].join('\t') + '\n', 'utf8');
 
 function one(id, on) {
-  /* 路径必须走 `PATHOF`：这批子代的产物在 `docs/artifacts/eNN-out/` 里，硬拼 `docs/artifacts/<id>.bak`
-   *   会全部 ENOENT ⇒ 每一枚都记成"失败"，表里一行不写而 exit 0（§E312 那条"空跑要响亮失败"同族）。 */
-  const rel = PATHOF[id] || ('docs/artifacts/' + id + '.bak');
+  /* 路径按 `--extra` 映射 → coords 的 `path` 列 → `docs/artifacts/<id>.bak` 的顺序找**第一个真在盘上的**：
+   *   §E597 实测踩到的两种病都在这条链上 ——
+   *     ① 只按 `.bak` 猜 ⇒ 清过缓存的 382 枚全 ENOENT，每枚记成"失败"而表里一行不写、exit 0（§E312 同族）；
+   *     ② 名单里那条路径已经掉盘、而 `path` 列还指着真件 ⇒ 拿"最后一个候选"去跑就是白失败
+   *        （10-12 晚跑 seed=88000 那批时 `SHIPPED-Ldemo` 就这么 ⛔ 了一次）。
+   *   ⚠ 三个候选都不在盘上时**照旧交回最后一个**让 eval-5p 报错，不许静默换一枚包来出数。 */
+  const cand = [PATHOF[id], CO_PATH[id], ('docs/artifacts/' + id + '.bak')].filter(Boolean);
+  let rel = cand[cand.length - 1];
+  for (const c of cand) { if (existsSync(join(ROOT, c))) { rel = c; break; } }
+  if (rel !== cand[0] && cand[0]) { FALLBACK[id] = cand[0]; }
   const a = ['tools/eval-5p.mjs', String(GAMES), '5', String(SEED), rel];
-  if (on) a.push('--eps=0.2', '--eps-mode=soft');
+  /* 页面口径的剂量来源（§E597）：给 `--epsTier=<档 id>` ⇒ 剂量由产品那张表给（默认档就是玩家实际吃的那条）；
+   *   不给就是老写法 `--eps=0.2 --eps-mode=soft`（v1.5.141 时代的常数剂量，如今等于**简单档**那一档）。 */
+  if (on) { if (EPS_TIER) a.push('--eps-tier=' + EPS_TIER); else a.push('--eps=0.2', '--eps-mode=soft'); }
   return new Promise((res) => {
     const t0 = Date.now();
     execFile(process.execPath, a, { cwd: ROOT, maxBuffer: 1 << 28, timeout: 300000 },
@@ -96,10 +144,12 @@ let qi = 0, done = 0, fail = 0;
 async function worker() {
   while (qi < ids.length) {
     const id = ids[qi++];
-    const ex = await one(id, false), pg = await one(id, true);
+    const pg = await one(id, true);
+    const ex = PAGE_ONLY ? { v: Number(CARRIED[id]), err: CARRIED[id] === undefined ? '⛔ --examFrom 那张表里没有这一枚' : '' } : await one(id, false);
     done++;
     if (!isFinite(ex.v) || !isFinite(pg.v)) { fail++; console.error('  ⛔ ' + id + ' ' + (ex.err || '') + ' ' + (pg.err || '')); continue; }
-    appendFileSync(OUT, [id, ex.v.toFixed(2), pg.v.toFixed(2), (ex.v - pg.v).toFixed(2), (HOLD[id] || 0).toFixed(2), pg.sec, GAMES].join('\t') + '\n', 'utf8');
+    appendFileSync(OUT, [id, ex.v.toFixed(2), pg.v.toFixed(2), (ex.v - pg.v).toFixed(2), (HOLD[id] || 0).toFixed(2), pg.sec, GAMES,
+      EPS_TIER ? ('tier:' + EPS_TIER) : 'eps:0.2-soft'].join('\t') + '\n', 'utf8');
     if (done % 50 === 0) console.error('  … ' + done + '/' + ids.length + ' 枚（失败 ' + fail + '）');
   }
 }
@@ -107,6 +157,10 @@ async function worker() {
   const t0 = Date.now();
   await Promise.all(Array.from({ length: JOBS }, worker));
   console.error('完成 ' + done + ' 枚 / 失败 ' + fail + ' ‖ 用时 ' + ((Date.now() - t0) / 60000).toFixed(1) + ' 分钟（jobs=' + JOBS + '）');
+  { const fb = Object.keys(FALLBACK);
+    if (fb.length) console.error('⚑ 有 ' + fb.length + ' 枚没用上第一顺位路径（名单/在册路径掉盘，退到下一个候选）：'
+      + fb.slice(0, 8).map(function (i) { return i + ' ← ' + FALLBACK[i]; }).join(' ‖ ')
+      + (fb.length > 8 ? ' …' : '') + ' ⇒ 引用这批读数时要能说清"是从哪个文件量的"'); }
   /* 覆盖判据 (ii) 是给"全库换尺"那一跑建的（718 枚里 ≥700 才许动头号尺）。
    *   跑 `--onlyExtra` 那批子代时这条不适用 ⇒ 别把"183/183"读成"够换尺"，也别让它闭嘴（失败数仍然要看）。 */
   if (EXTRA && ids.length < 400) console.error('判据 (ii) 覆盖：' + (done - fail) + '/' + ids.length +

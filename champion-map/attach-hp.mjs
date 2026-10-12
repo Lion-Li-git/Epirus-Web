@@ -14,7 +14,9 @@
  * 判据（跑前写死，来自 eps-full.mjs）：覆盖 ≥700 才许换尺；复现守卫 |本次考卷 − 旧 H| 必须 p50≈0。
  *   实测：718/718 ‖ 718 枚逐字相同（max 差 0.00）⇒ 两条都过。
  *
- * 用法：node champion-map/attach-hp.mjs [--check]
+ * 用法：node champion-map/attach-hp.mjs [--check] [--table=epsfull.tsv] [--more=<表>,<表>]
+ *   ⚠ `--table=` 决定"Hp 是哪把尺量的"⇒ 换剂量时必须指对（§E597：默认档的 ε 从常数 0.2 变成斜坡 0→0.05→0.1 之后，
+ *     旧表里那一列已经不是"玩家拿到的那个数"了）。表里的 `pageDose` 列写着这批是哪条剂量出的。
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -28,7 +30,10 @@ const rd = (f) => readFileSync(join(HERE, f), 'utf8').replace(/\r\n/g, '\n').rep
 
 const CO = rd('coords.tsv'), ch = Object.fromEntries(CO[0].map((h, i) => [h, i]));
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
-const EP = rd('epsfull.tsv'), eh = Object.fromEntries(EP[0].map((h, i) => [h, i]));
+/* `--table=` = 主表（默认还是 `epsfull.tsv`，老用法一字不变）。§E597 用它把头号尺指到新剂量那张表
+ *   （`epsfull-tier-2026-10-12.tsv`，页面臂的剂量由 `DIFF_TIERS` 的默认档给）。
+ *   为什么要这根旗标而不是"先把新表 cp 成 epsfull.tsv"：那样盘上就只剩一张表，**上一次是哪把尺量的就没人记得了**。 */
+const EP = rd(String(arg('table', 'epsfull.tsv'))), eh = Object.fromEntries(EP[0].map((h, i) => [h, i]));
 const HP = {}, DE = {}, EX = {};
 for (const r of EP.slice(1)) { if (!r[eh.id]) continue; HP[r[eh.id]] = +r[eh.page]; EX[r[eh.id]] = +r[eh.exam]; DE[r[eh.id]] = +r[eh.d]; }
 /* §E328：`--more=` 再并几张同格式的表（子代那 183 枚量在 `e328-epsfull.tsv` 里，不并进来的话它们就没有头号尺 `Hp`）。

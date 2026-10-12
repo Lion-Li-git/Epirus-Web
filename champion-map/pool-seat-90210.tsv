@@ -23,3 +23,17 @@ win-R231	docs/artifacts/eval-out/win-R231.bak	multi	200	90210	8	13	0	57	1	45	20.
 win-R231	docs/artifacts/eval-out/win-R231.bak	long	200	90210	21	29	0	51	3	47	25.17	51.0	只枪压制	8.333333333333334
 v7beadseed-82	docs/artifacts/v7beadseed-82.bak	multi	200	90210	2	9	1	45	0	10	11.17	45.0	只枪压制	16
 v7beadseed-82	docs/artifacts/v7beadseed-82.bak	long	200	90210	8	28	0	48	1	12	16.17	48.0	只枪压制	3.6666666666666665
+win-R311	docs/artifacts/eval-out/win-R311.bak	multi	200	90210	10	4	1	11	3	9	6.33	11.0	只枪压制	3.5
+win-R311	docs/artifacts/eval-out/win-R311.bak	long	200	90210	18	23	0	27	15	20	17.17	27.0	只枪压制	2.1666666666666665
+e124-out__blk0t40-s31	docs/artifacts/kept/e124-out__blk0t40-s31.bak	multi	200	90210	0	3	1	15	6	13	6.33	15.0	只枪压制	1
+e124-out__blk0t40-s31	docs/artifacts/kept/e124-out__blk0t40-s31.bak	long	200	90210	2	5	1	23	18	7	9.33	23.0	只枪压制	0.6666666666666666
+E59-land-902	docs/artifacts/E59-land-902.bak	multi	200	90210	4	5	0	17	7	9	7.00	17.0	只枪压制	4.833333333333333
+E59-land-902	docs/artifacts/E59-land-902.bak	long	200	90210	14	18	0	29	14	11	14.33	29.0	只枪压制	3
+SP-s30	docs/artifacts/e504-out/SP-s30.js	multi	200	90210	1	8	0	21	0	8	6.33	21.0	只枪压制	6.166666666666667
+SP-s30	docs/artifacts/e504-out/SP-s30.js	long	200	90210	5	1	0	19	0	7	5.33	19.0	只枪压制	4
+U-s216	docs/artifacts/e539-out/U-s216.js	multi	200	90210	1	6	1	32	0	20	10.00	32.0	只枪压制	5
+U-s216	docs/artifacts/e539-out/U-s216.js	long	200	90210	1	5	1	28	0	29	10.67	29.0	重火力+反弹	4.666666666666667
+sel80	docs/artifacts/eval-out/sel80.bak	multi	200	90210	0	4	0	19	1	30	9.00	30.0	重火力+反弹	4.666666666666667
+sel80	docs/artifacts/eval-out/sel80.bak	long	200	90210	2	5	0	22	7	23	9.83	23.0	重火力+反弹	3
+N5L-30	docs/artifacts/e106-out/N5L-30.bak	multi	200	90210	1	8	1	15	6	6	6.17	15.0	只枪压制	2.8333333333333335
+N5L-30	docs/artifacts/e106-out/N5L-30.bak	long	200	90210	3	13	1	35	20	11	13.83	35.0	只枪压制	2.5

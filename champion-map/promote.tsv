@@ -1,19 +1,32 @@
 id	verdict	blocks	g4worst	g5worst	holoOther
 B5-10-31	pass	—			
+blk0t40-s31	pass	—			
 D4a	pass	—			
 E3	pass	—			
+E59-land-902	pass	—			
 G15-71	pass	—			
+N5L-30	pass	—			
 R-s123	pass	—			
+R311	pass	—			
 S-s120	pass	—			
+seed80	pass	—			
+SP-s30	pass	—			
 T8-s114	pass	—			
+U-s216	pass	—			
 v7w3c-82	pass	—			0
 v7wall2-97	pass	—			0.15
+E00-31	block	G4/long 被一行脚本打穿 74% · G4/multi 被一行脚本打穿 73% · G5/long 清不了防席（它夺冠 79%） · G5/multi 清不了防席（它夺冠 73%）	74	79	
 G03-31	block	G5/long 清不了防席（它夺冠 36%） · G5/multi 清不了防席（它夺冠 38%）		38	
+G03-71	block	G4/long 被一行脚本打穿 80%	80		
 K2	block	G5/long 清不了防席（它夺冠 30%）		30	
 NC-191	block	G4/long 被一行脚本打穿 97% · G4/multi 被一行脚本打穿 90% · G5/long 清不了防席（它夺冠 95%） · G5/multi 清不了防席（它夺冠 92%）	97	95	
+NCV-71	block	G5/long 清不了防席（它夺冠 40%）		40	
 NOL24-31	block	G4/long 被一行脚本打穿 85% · G5/long 清不了防席（它夺冠 86%） · G5/multi 清不了防席（它夺冠 42%）	85	86	
 PL71	block	G5/long 清不了防席（它夺冠 27%）		27	
 r61fix-92	block	G4/long 被一行脚本打穿 94% · G4/multi 被一行脚本打穿 76% · G5/long 清不了防席（它夺冠 87%） · G5/multi 清不了防席（它夺冠 67%）	94	87	0
+SQ2-15-31	block	G4/long 被一行脚本打穿 79% · G4/multi 被一行脚本打穿 75% · G5/long 清不了防席（它夺冠 74%） · G5/multi 清不了防席（它夺冠 53%）	79	74	
+U-s209	block	G4/long 被一行脚本打穿 78%	78		
+v7wall1-93	block	G4/long 被一行脚本打穿 71%	71		0.25
 incumbent-forpromote	pass	—			0
 SHIPPED-Ldemo	pass	—			0
 v12-95	pass	—			0.3

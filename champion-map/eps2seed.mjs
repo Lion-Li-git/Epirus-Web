@@ -33,12 +33,18 @@ const rd = (p) => { const L = readFileSync(join(HERE, p), 'utf8').replace(/\r?\n
 if (PHASE === 'roster') {
   const old = rd('epsagg.tsv');
   const ids = old.rows.map((r) => r[old.h.id]).filter(Boolean);
+  const CO = rd('coords.tsv');
+  const COP = {}; for (const r of CO.rows) { if (r[CO.h.id] && r[CO.h.path]) COP[r[CO.h.id]] = r[CO.h.path]; }
   const lines = ['arm\tproductRel\tlineage'];
   let miss = 0;
   for (const id of ids) {
-    const rel = id === 'SHIPPED-Ldemo' ? 'docs/artifacts/SHIPPED-Ldemo.bak' : 'docs/artifacts/' + id + '.bak';
-    /* 现役那枚盘上本来没有 .bak（§E308 ③），eps-full 会在名单含它时现造 ⇒ 这里不能按 existsSync 砍它 */
-    if (id !== 'SHIPPED-Ldemo' && !existsSync(join(HERE, '..', rel))) { miss++; console.log('  ⛔ 盘上查无 ' + rel + ' ⇒ 该枚不进名单'); continue; }
+    /* §E597：路径先查 **coords.tsv 的 `path` 列**，再退回"猜 `docs/artifacts/<id>.bak`"。
+     *   原来只按 `.bak` 猜 ⇒ 10-09 清缓存之后有 10 枚被当成"掉盘"砍出名单，这张腿的覆盖从 121 掉到 111，
+     *   而 `--phase=agg` 的判据 (b) 自己会喊"不够，别换表"（那就是它该红的时候真红了，只是没人听）。 */
+    const cand = [COP[id], 'docs/artifacts/' + id + '.bak'].filter(Boolean);
+    let rel = cand[cand.length - 1];
+    for (const c of cand) { if (existsSync(join(HERE, '..', c))) { rel = c; break; } }
+    if (!existsSync(join(HERE, '..', rel))) { miss++; console.log('  ⛔ 盘上查无 ' + rel + '（在册路径也没有）⇒ 该枚不进名单'); continue; }
     lines.push(id + '\t' + rel + '\teps2seed');
   }
   writeFileSync(join(HERE, 'eps2seed-extra.tsv'), lines.join('\n') + '\n', 'utf8');
@@ -47,7 +53,8 @@ if (PHASE === 'roster') {
 } else if (PHASE === 'agg') {
   const A = rd(arg('a', 'epsfull120-2026-10-10.tsv')), B = rd(arg('b', 'eps2s88000-120-2026-10-10.tsv'));
   const pick = (T) => { const m = {}; for (const r of T.rows) { const g = +r[T.h.examG];
-      if (!isFinite(g) || g !== 120) continue; m[r[T.h.id]] = { e: +r[T.h.exam], p: +r[T.h.page], g }; } return m; };
+      if (!isFinite(g) || g !== 120) continue;
+      m[r[T.h.id]] = { e: +r[T.h.exam], p: +r[T.h.page], g, dose: T.h.pageDose !== undefined ? String(r[T.h.pageDose] || '') : '' }; } return m; };
   const a = pick(A), b = pick(B);
   const gearsA = [...new Set(Object.values(a).map((x) => x.g))], gearsB = [...new Set(Object.values(b).map((x) => x.g))];
   console.log('判据(a) 同档：A=' + gearsA.join(',') + ' ‖ B=' + gearsB.join(',') +
@@ -56,6 +63,18 @@ if (PHASE === 'roster') {
   const ids = Object.keys(a).filter((k) => k in b);
   const onlyA = Object.keys(a).filter((k) => !(k in b));
   console.log('配对 ' + ids.length + ' 枚（A 有 B 无 ' + onlyA.length + '：' + onlyA.slice(0, 12).join(' ‖ ') + '）');
+  /* §E597 判据 (a2)：**页面臂的剂量来源**必须自带且两批同源。
+   *   这张腿以前只在注释里写"ε=0.2 soft"，改了默认档剂量之后注释就成了假话（10-12 晚那次就是靠注释发现的）
+   *   ⇒ 现在把 `pageDose`（`eps-full` 写进表里那一列）搬进这张表，两批不一致直接 exit 2，不许平均。 */
+  const DOSE = {};
+  for (const k of ids) {
+    const da = a[k].dose, db = b[k].dose;
+    if (da && db && da !== db) { console.log('⛔ ' + k + ' 两批的剂量不同（A=' + da + ' ‖ B=' + db + '）⇒ 不许平均'); process.exit(2); }
+    DOSE[da || db || '(表里没有 pageDose 列)'] = 1;
+  }
+  const doseKeys = Object.keys(DOSE);
+  console.log('判据(a2) 剂量来源：' + doseKeys.join(' ‖ ') + (doseKeys.length === 1 ? ' ✅ 两批同源' : ' ⛔ 一批里出现两种剂量 ⇒ 不许平均'));
+  if (doseKeys.length !== 1) process.exit(2);
   /* 判据(c) 要与**旧档那张表**比，而旧表默认不入库（用户裁定：不留准确度差的那一份当历史对照）
    *   ⇒ 只有显式 `--old=<路径>` 才比；不指就跳过并说出来。绝不跟本表自己比 —— 自己比自己恒为 0，是假读数。 */
   const oldP = arg('old', ''), OM = {};
@@ -65,11 +84,11 @@ if (PHASE === 'roster') {
     for (const r of L.slice(1).map((l) => l.split('\t'))) OM[r[oh.id]] = { e: +r[oh.exam], p: +r[oh.page], d: +r[oh.de] };
     console.log('判据(c) 的旧表 = ' + oldP + '（' + Object.keys(OM).length + ' 枚）'); }
   else console.log('判据(c) 跳过：没给 --old=<旧 epsagg> ⇒ 不与本表自己比');
-  const out = [['id', 'exam', 'page', 'de', 'nseed', 'examG']];
+  const out = [['id', 'exam', 'page', 'de', 'nseed', 'examG', 'pageDose']];
   const diffs = [];
   for (const k of ids.sort()) {
     const e = (a[k].e + b[k].e) / 2, p = (a[k].p + b[k].p) / 2;
-    out.push([k, e.toFixed(2), p.toFixed(2), (e - p).toFixed(2), 2, 120].join('\t'));
+    out.push([k, e.toFixed(2), p.toFixed(2), (e - p).toFixed(2), 2, 120, a[k].dose || b[k].dose || ''].join('\t'));
     if (OM[k]) diffs.push({ k, d: (e - p) - OM[k].d, old: OM[k].d, neu: e - p });
   }
   writeFileSync(join(HERE, 'epsagg.tsv'), [out[0].join('\t')].concat(out.slice(1)).join('\n') + '\n', 'utf8');

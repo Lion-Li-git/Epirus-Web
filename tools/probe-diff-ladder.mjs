@@ -69,7 +69,7 @@ String(flag('extra', '') || '').split(',').filter(Boolean).forEach(function (spe
   const p = spec.split(':');
   if (p.length < 2) return;
   LEVELS.push({
-    id: 'x:' + spec, name: '[extra] ε=' + p[0] + '/k' + p[1] + (p[2] ? '/' + p[2] : ''),
+    id: 'x:' + spec, name: '[extra] ε=' + p[0] + '/k' + p[1] + (p[2] ? '/' + p[2] : '') + (p[3] === 'ramp' ? '+回合斜坡' : ''),
     kind: 'champ', eps: Number(p[0]), epsK: Number(p[1]), epsMode: p[2] || 'soft', ramp: p[3] === 'ramp'
   });
 });
@@ -98,9 +98,10 @@ function makeLevelChooser(L, p) {
     return function (state, pid, legal) { return wrapped(state, pid, legal); };
   }
   return function (state, pid, legal) {
-    /* 这条斜坡与 `ui.js` 那条**逐字同形**（D153 钉 ui.js 的那一份；这里改了不响门 ⇒ 两者一旦不一致，本工具的数就不再是页面的数，
-     *   记在 METHODOLOGY 的"两根锚点必须一起看"那条下面）。 */
-    const e = L.ramp ? (state.round <= 1 ? 0 : (state.round === 2 ? 0.1 : L.eps)) : L.eps;
+    /* ★ 斜坡的字面值**不在这里**，在 `js/train/bots.js` 的 `tierEps(tier, round)` —— 本工具与页面共用那一份。
+     *   原来这里抄了一份，而 D153 只钉 ui.js 那份（下面的旧注释写的正是"这里改了不响门"），
+     *   10-12 下午顶点 0.2→0.1 之后就真的漂了：页面是 0/0.05/0.1，这份还是 0/0.1/0.1 ⇒ b5ceab1 的在册账量的是不存在的剂量。 */
+    const e = Bots.tierEps(L, state.round);
     return T.pickChampion(state, pid, affordableFirst(legal), p, 0.15, e, L.epsK, L.epsMode);
   };
 }

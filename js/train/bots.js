@@ -1087,7 +1087,8 @@
   const DIFF_TIERS = [
     { id: 'lv:sparring', name: '简单 · 陪练', kind: 'champ', eps: 0.2, epsK: 5, epsMode: 'soft', ramp: false, pool: 'soft', eps2: 0.5,
       note: '桌上是**最弱那一批**（7 枚），探索比默认档多一档（ε=0.2/k5/soft；用户 10-12 16:4x 定「简单 0.2 ‖ 普通与困难 0.1」）。'
-        + '10-12 17:10 实测人类席夺冠 19.4%（multi）‖ 20.2%（long）；与"普通"那一步：**multi 3.13±1.40 = 2.2σ 勉强过线，long 只有 1.20±1.45 = 0.8σ ⇒ 分不开**'
+        + '10-12 18:1x 重测（斜坡单一来源化之后）人类席夺冠 19.4%（multi）‖ 20.2%（long）；与"普通"那一步：'
+        + 'multi **3.27±1.40 = 2.3σ** 过线 ‖ long 只有 **0.80±1.44 = 0.6σ ⇒ 分不开**'
         + '⚠ 为什么只有这一档没跟着"三档剂量统一"：**完全统一时 long 模式"简单↔普通"只差 2.40±1.47 = 1.6σ**，按裁定甲不许声称分得开 ⇒ 那个模式下"三档"只剩两级；'
         + '⚑ 备选实测：这一档给 ε=0.5 时四步全过 2σ（简单↔普通 4.67±1.38 = 3.4σ ‖ 3.73±1.46 = 2.6σ，16:18~16:20 那批）—— '
         + '换到 ε=0.2 是为了让"简单"别软得太假（0.5 时人类席夺冠 20.1/21.9），代价就是 long 那一步现在只剩 0.8σ。'
@@ -1095,16 +1096,29 @@
         + '56 枚过线包从没补过上槽体检 ‖ 71 枚被体检判 block ⇒ 那是欠账，不是再挑挑就有）。'
         + '2 人桌读 `eps2: 0.5`（那里没有池，剂量是唯一能分档的轴）。' },
     { id: 'lv:regular', name: '普通（默认）', kind: 'champ', eps: 0.1, epsK: 5, epsMode: 'soft', ramp: true, pool: 'mid',
-      note: '★ 默认档 = v1.5.141 以来页面一直在跑的那条口径（前 3 回合的斜坡 0→0.05→0.1 —— 顶点按用户 10-12 16:4x 裁定从 0.2 降到 0.1）。10-12 池装配实测人类席夺冠 15.4 ‖ 18.2%' },
+      note: '★ 默认档 = v1.5.141 以来页面一直在跑的那条口径（前 3 回合的斜坡 0→0.05→0.1 —— 顶点按用户 10-12 16:4x 裁定从 0.2 降到 0.1，形状现在只有一份：`tierEps`）。10-12 18:1x 池装配实测人类席夺冠 16.1 ‖ 19.4%' },
     { id: 'lv:hard', name: '困难 · 冠军', kind: 'champ', eps: 0.1, epsK: 5, epsMode: 'soft', ramp: true, pool: 'hard', eps2: 0,
       note: '冠军本体，而且桌上是**最强那一批**（7 枚，按"凑到一桌的实测强度"选，不是按逐枚分数排）。剂量与"普通"逐字相同 ⇒ '
-        + '这一档的强度**全部来自带**（10-12 实测：同剂量换带差 3.4~7.2pt，而同带换剂量只差 0.5pt）。'
-        + '人类席夺冠 13.5%（multi）‖ 10.3%（long）（17:10 重测）。⚠ 2 人桌读 `eps2: 0`（每手取最优）—— 那里没池可分档。' },
+        + '这一档的强度**全部来自带**（10-12 18:1x 重测：同剂量换带 long 差 9.33pt = 7.3σ，multi 只差 2.47pt = **1.9σ ⇒ 那一步按裁定甲标"分不开"**；'
+        + '而同带换剂量只值 0.5pt）。'
+        + '人类席夺冠 13.7%（multi）‖ 10.1%（long）。⚠ 2 人桌读 `eps2: 0`（每手取最优）—— 那里没池可分档。' },
     /* `lv:hunter`（极限 · 读招）§E596 从难度表里摘掉：它本来就是"整桌上桌的脚本"而不是冠军档，
      *   且实测与最强冠军档分不开（9.5 对 8.9 ‖ 7.9 对 8.0，都在 1σ 内）。摘掉后 `st:combocounter`
      *   自动回到下拉第二组"风格"里（`ui.js:syncDiffOptions` 的 `claimed` 去重），玩家没有失去任何东西。 */
   ];
   const DIFF_DEFAULT = 'lv:regular';
+
+  /* §E596（10-12 晚）：**档 → 这一手该用的 ε** 只写这一遍。
+   *   为什么要搬进来：斜坡形状原来在 `ui.js` 与 `tools/probe-diff-ladder.mjs` 各有一份，
+   *   下午把顶点从 0.2 降到 0.1 时只改到了页面那一份 ⇒ 量具那份还停在 0/0.1/0.1，
+   *   于是"在册的那套阶梯读数"量的是一种**产品里不存在**的剂量（round 2 多一倍）。
+   *   `ramp` 档 = 第 1 回合 0、第 2 回合 0.05、第 3 回合起取该档的 `eps`；非 ramp 档 = 常数 `eps`。
+   *   消费者三处：`ui.js`（产品）‖ `tools/probe-diff-ladder.mjs`（阶梯尺）‖ `tools/eval-5p.mjs --eps-tier=`（图上头号尺 Hp）。 */
+  function tierEps(tier, round) {
+    if (!tier || !(tier.eps > 0)) return 0;
+    if (!tier.ramp) return tier.eps;
+    return round <= 1 ? 0 : (round === 2 ? 0.05 : tier.eps);
+  }
 
   /* v1.6.6 删除 `DIFFICULTY`（2 人那三档 简单/中等/困难）：页面的 2 人分支已并进 `DIFF_TIERS`，
    * 全库再无消费者（实测：只剩 ui.js 那一行 `Bots.DIFFICULTY.easy.pick`）。旧档名"简单/普通"按用户裁定不再保留。 */
@@ -1112,7 +1126,7 @@
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
-    pickReflectMix, pickReflectTank, pickDefReflectGun, STYLES, DIFF_TIERS, DIFF_DEFAULT, resetBotMem,
+    pickReflectMix, pickReflectTank, pickDefReflectGun, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, resetBotMem,
     snapshotBotMem, restoreBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,

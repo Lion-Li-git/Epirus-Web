@@ -247,7 +247,8 @@ if (existsSync(duelP)) {
     Object.values(DUEL).filter(x => x.s === 'same').length + ' ‖ 符号翻 ' +
     Object.values(DUEL).filter(x => x.s === 'flip').length + '）');
 } else console.log('提示：没有 duel.tsv ⇒ "对旧冠军决斗"着色口径不可用（跑 node champion-map/duelscan.mjs 生成）');
-/* §E313 部署口径表 = 图上第 5 条腿："页面开着 ε=0.2 soft 还值多少"。
+/* §E313 部署口径表 = 图上第 5 条腿："页面开着**默认档那条剂量**还值多少"（§E597 起 = lv:regular 的斜坡 0→0.05→0.1 ‖ k5 ‖ soft；
+ *   旧写法 ε=0.2 常数在今天等于**简单档**，所以那句"页面口径"必须点名到档 id 才成立）。
  *   为什么这一格非补不可：图上那把头号尺 H = `eval-5p` 的**考卷口径（ε=0 贪心）**，而真页面每手有 20% 概率
  *   在短名单里软采样（§E275 才把这条口径接进工具）⇒ 两把尺一直没并排量过。
  *   §E571（10-10 晚）换了**产法**：旧的是 `eps-scan.mjs`（硬编码 30 局/组合 · 串行）+ `epsread.mjs`；
@@ -335,7 +336,7 @@ if (existsSync(stlP)) {
 const DATA = rows.map(r => ({
   /* §E314 **头号尺换成线上口径**（用户："把冠军演化全部改成线上口径吧"）‖ §E569（10-10 晚）**考卷档整体换到 120，不留两套值**
    *   （用户："H120 既然一定比 H30 更准确，就不要留 H30 做历史对照，历史数据反而是准确度差的那一份"）。
-   *   `Hp` = 同一台 `eval-5p`、同一批 35 组合、同 seed，主体席按页面那样开 ε=0.2 soft（局数与 `H` 同档，写在 `examG` 里）；
+   *   `Hp` = 同一台 `eval-5p`、同一批 35 组合、同 seed，主体席按页面默认档开剂量（§E597 起走 `--eps-tier=lv:regular` = 斜坡 0→0.05→0.1 ‖ k5 ‖ soft；旧写法是常数 ε=0.2，那在今天已经是**简单档**的剂量。局数与 `H` 同档，写在 `examG` 里）；
    *   `H`  = 考卷口径（ε=0 贪心）· **档 = `examG` 列**（自 §E569 起全图 120 局/组合）⇒ 不再并列 30/120 两套数；
    *   `De` = Δε = H − Hp（正 = 开探索就掉）—— 两口径必须**同批同档成对**，否则 Δε 里会混进采样量之差（档差中位就有 0.30pt）。*/
   id: r.id, lin: r.lineage || '', kin: r.kin || '', seed: r.seed || '', H: +r.H, Hp: +r.Hp, De: +r.De, S: +r.S, Ge: +r.Geff, rk: +r.rank,
@@ -389,7 +390,7 @@ const DATA = rows.map(r => ({
   ppv: r.id in POOLM ? POOLM[r.id].pv : '', pi: r.id in POOLM ? POOLM[r.id].inv : false,
   dm: r.id in DUEL ? DUEL[r.id].m : null, ds: r.id in DUEL ? DUEL[r.id].s : '',
   da: r.id in DUEL ? DUEL[r.id].a : '', db: r.id in DUEL ? DUEL[r.id].b : '',
-  /* §E313 部署口径：`hp` = 页面（ε=0.2 soft）夺1率 ‖ `de` = Δε = 考卷 − 页面（正 = 开探索就掉）*/
+  /* §E313 部署口径：`hp` = 页面（默认档 lv:regular 的剂量）夺1率 ‖ `de` = Δε = 考卷 − 页面（正 = 开探索就掉）*/
   hp: r.id in EPS ? EPS[r.id].h : null, he: r.id in EPS ? EPS[r.id].e : null, de: r.id in EPS ? EPS[r.id].d : null,
   why: OKM && (r.id in OKM) ? OKM[r.id].fails : '',
   dmg: +r.dmg, heavy: +r.heavy, holo: +r.holo, rounds: +r.rounds, draw: +r.drawRate, zero: +r.zeroRate,
@@ -889,7 +890,7 @@ function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GR
   /* §E310 第 4 条腿：对现役的配对决斗 A−B。绿 = 两批种子都赢，红 = 两批都输，黄 = 符号翻（判不动），灰 = 没测 */
   if (st.color === 'duel') { if (d.ds === 'same') return d.dm > 0 ? '#39d98a' : '#ff6b6b';
     return d.ds === 'flip' ? '#e0b13c' : '#5a6478'; }
-  /* §E313 第 5 条腿：页面口径（ε=0.2 soft）的夺1率 —— 这才是玩家真正拿到的那个数。
+  /* §E313 第 5 条腿：页面口径（默认档剂量，§E597 起 = lv:regular）的夺1率 —— 这才是玩家默认拿到的那个数。
    *   渐变沿用 ramp（与 F 同一条色标），但**分母换成实测到的那批的 p02..p98**，不用 0..100：
    *   全库页面 1st 落在 20~60%，用 0..100 会把所有点压成同一个蓝。*/
   if (st.color === 'hp') { if (d.hp === null) return '#5a6478';
@@ -2595,7 +2596,7 @@ function paintLegend(fr) {
     pm: '上槽体检 = ' + OKSRCJ + ' ‖ 灰 = 没测过，**不等于**没过',   /* §E492 样本量从表里派生，不许把数字抄在文案里 */
     duel: '配对差 A−B：同座位表、同批种子、两批各 60 局 ‖ 黄 = 两批符号翻 ⇒ 判不动，不许并进赢',
     hp: '每枚都是单批读数 ‖ 现役同档（120）换 4 批 eval seed 摆 2.2pt（30 档时同一枚摆 5.7pt）⇒ 颜色看水位，排序请用「对现役决斗」那档',
-    de: 'Δε = 考卷（ε=0）− 页面（ε=0.2 soft）· 两 eval seed · exam=120 局/组合 ‖ 发散带 0 在正中：红 = 一开探索就掉，蓝 = 开了反而强',
+    de: 'Δε = 考卷（ε=0）− 页面（默认档 lv:regular 的剂量：斜坡 0→0.05→0.1 ‖ k5 ‖ soft）· 两 eval seed · exam=120 局/组合 ‖ 发散带 0 在正中：红 = 一开探索就掉，蓝 = 开了反而强（§E597：默认档下全库 46% 的包落在"开了反而强"那一侧）',
     sc: 'Scd = 8 粒 seedBase 的逐种子配对差均值（不是主场那一粒）‖ 橙 = 同号但 <6/8 ⇒ 判不动',
     champ: '这一档只标历代上槽那几枚 ‖ 针 = 现役 · 绿环 = 过了训练侧五道检查'
   };

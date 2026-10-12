@@ -20,9 +20,11 @@ import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
-/* 所有 e3xx-out 臂目录都收（新增一批日志不用改这里）‖ 外加 docs/artifacts 根目录的 `promote-<id>.txt`
- *   —— 那是**真上槽那一次**的日志（不是 --dry），10-11 换 `T8-s114` 留下的就是这一种（§E588）。*/
-const DIRS = readdirSync(join(ROOT, 'docs', 'artifacts')).filter((d) => /^e3\d{2}-out$/.test(d)).map((d) => 'docs/artifacts/' + d);
+/* 所有 `e*-out` 臂目录都收（新增一批日志不用改这里）‖ 外加 docs/artifacts 根目录的 `promote-<id>.txt`
+ *   —— 那是**真上槽那一次**的日志（不是 --dry），10-11 换 `T8-s114` 留下的就是这一种（§E588）。
+ *   ⚠ §E597（10-12 晚）把名单从 `^e3\d{2}-out$` 放宽到 `^e\d+-out$`：臂目录早就进到 e5xx 了，
+ *     而这里是旧的 ⇒ 新跑的 `--dry` 落进 e5xx-out 会**静默不进裁决表**，这就是"56 枚欠账"能一直欠着的机制之一。 */
+const DIRS = readdirSync(join(ROOT, 'docs', 'artifacts')).filter((d) => /^e\d+-out$/.test(d)).map((d) => 'docs/artifacts/' + d);
 DIRS.push('docs/artifacts');
 const files = [];
 for (const d of DIRS) {

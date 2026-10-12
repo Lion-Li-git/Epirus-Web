@@ -1,5 +1,5 @@
 arm	productRel	lineage
-SHIPPED-Ldemo	docs/artifacts/SHIPPED-Ldemo.bak	eps2seed
+SHIPPED-Ldemo	docs/artifacts/eval-out/win-Ldemo.bak	eps2seed
 eco-34	docs/artifacts/eco-34.bak	eps2seed
 eco2-34	docs/artifacts/eco2-34.bak	eps2seed
 eco2-35	docs/artifacts/eco2-35.bak	eps2seed

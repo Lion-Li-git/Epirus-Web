@@ -2130,9 +2130,11 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
   ok(champs.length >= 2 && bandOf(champs[0]) !== bandOf(champs[champs.length - 1]),
     '②b 首末两档必须落在**不同的带**（实测 ' + bandOf(champs[0]) + ' vs ' + bandOf(champs[champs.length - 1]) +
     '）⇒ 剂量已并成一条，带就是难度的唯一载体；同带两档 = 同一档写了两遍');
-  /* 2 人桌的**有效**剂量按 `ui.js` 那一行的规则算（有 `eps2` 用它，否则 ramp 的稳定值 0.2 / 常数 eps）——
-   *   不许在这条腿里抄第二份规则，所以这段与 `ui.js` 的 `(p.length<=2 && eps2!==undefined) ? eps2 : (ramp?…:eps)` 逐字同形。 */
-  const eff2 = function (t) { return typeof t.eps2 === 'number' ? t.eps2 : (t.ramp ? 0.2 : t.eps); };
+  /* 2 人桌的**有效**剂量：有 `eps2` 用它，否则**调产品自己那份形状**（`bots.js:tierEps`，第 3 回合起 = 稳定值）。
+   *   ⚠ 这里原来写的是 `(t.ramp ? 0.2 : t.eps)` —— 一份手抄的规则，而且抄的还是**旧顶点**：
+   *   下午把顶点降到 0.1 之后这条腿一直在按 0.2 判，注释却写着"不许抄第二份"。
+   *   ⇒ 现在它和页面共用 `BT.tierEps`，产品改形状时这条腿自己跟着变（D153 钉住那份字面值）。 */
+  const eff2 = function (t) { return typeof t.eps2 === 'number' ? t.eps2 : BT.tierEps(t, 3); };
   for (let i = 1; i < champs.length; i++) {
     ok(eff2(champs[i]) <= eff2(champs[i - 1]), '②a2 2 人桌的剂量也不许翻序：第 ' + i + ' 档（' + champs[i].id + ' 有效 eps=' +
       eff2(champs[i]) + '）不许比上一档（' + champs[i - 1].id + ' 有效 eps=' + eff2(champs[i - 1]) + '）更能探索'
@@ -7645,7 +7647,7 @@ t('D152 「空蓄能」分因量具 `probe-bead-loop.mjs`：两种相反的病�
   ok(/真源 `chargeProfile`（\*\*按珠子计\*\*）/.test(out), '必须印真源那一行做并排对照');
 });
 
-t('D153 产品的探索口径必须钉住（temp0.15 + 档位表给的 ε/epsK/epsMode，默认档那条回合斜坡逐字 0→.05→.1（顶点 10-12 从 .2 降下来））——本夜全部"口径"结论都挂在这一行代码 + DIFF_TIERS 上', function () {
+t('D153 产品的探索口径必须钉住（temp0.15 + 档位表给的 ε/epsK/epsMode，默认档那条回合斜坡逐字 0→.05→.1，形状在 bots.js:tierEps、全仓只许有一份）——本夜全部"口径"结论都挂在这一行代码 + DIFF_TIERS 上', function () {
   /* 为什么单独立一条：§H-6/H-10/H-12/H-13 的整串"评测口径 ≠ 产品口径"结论，**唯一的凭据就是 `ui.js` 里那一次调用**；
    *   而那行没有任何门钉着（D111/D118 钉的是探索规则与代理栏存在，不钉这四个值）。⇒ 有人调了它，全夜的读数就失去所指。
    * v1.5.298（用户 09-29 裁定）：5 人槽的 ε 从常数 0.2 改成**按回合斜坡 0 → 0.1 → 0.2**。
@@ -7657,8 +7659,20 @@ t('D153 产品的探索口径必须钉住（temp0.15 + 档位表给的 ε/epsK/e
   ok(/Trainer\.pickChampion\(state, pid, legalForAI, c, 0\.15, epsForTier, tier\.epsK, tier\.epsMode\)/.test(ui),
     '冠军路径必须是 temp0.15 + **取自档位表**的 (eps, epsK, epsMode) ⇒ 这是本仓唯一一份"玩家实际看到的探索口径"。' +
     'v1.6.6 前这一行末尾写死 `5, \'soft\'`，现在那个 5/soft 住在 `Bots.DIFF_TIERS` 里（默认档仍是 k5/soft，由 D227②c 钉住值）');
-  ok(/const epsRound = state\.round <= 1 \? 0 : \(state\.round === 2 \? 0\.05 : 0\.1\);/.test(ui),
-    'ε 的回合斜坡必须逐字是 0 / 0.05 / 0.1（形状来自用户 09-29 裁定"第 1~3 回合逐步提升"；顶点 0.2→0.1 是用户 10-12 16:4x 裁定「普通和困难调成 0.1，简单 0.2」）⇒ 改回常数 .2 就把 §E145 那条 14.91% 的白站防御放回来');
+  /* ===== v1.6.65（10-12 晚）：斜坡的字面值从 ui.js 搬进 `js/train/bots.js` 的 `tierEps(tier, round)` =====
+   * 为什么搬：原来 ui.js 与 `tools/probe-diff-ladder.mjs` **各抄一份**这条斜坡，而这份门只钉 ui.js 那一份
+   *   （旧注释自己就写着"这里改了不响门"）。10-12 下午把顶点从 0.2 降到 0.1 时只改到了页面那份 ⇒
+   *   量具仍在 0/0.1/0.1 上出数，而 b5ceab1 的在册阶梯账正是那批数 —— 这就是"两份实现"的代价，实测发生过一次。
+   * ⇒ 钉法跟着搬，**钉的还是同一件事**：斜坡必须逐字 0 / 0.05 / 0.1，不许悄悄变回常数；多加的是"全仓只许有一份"。 */
+  const botsSrc = readFileSync('js/train/bots.js', 'utf8');
+  ok(/function tierEps\(tier, round\)[\s\S]{0,200}?return round <= 1 \? 0 : \(round === 2 \? 0\.05 : tier\.eps\);/.test(botsSrc),
+    'ε 的回合斜坡必须逐字是 0 / 0.05 / 0.1，而且**住在 `bots.js:tierEps` 里**（形状来自用户 09-29 裁定"第 1~3 回合逐步提升"；'
+    + '顶点 0.2→0.1 是用户 10-12 16:4x 裁定「普通和困难调成 0.1，简单 0.2」）⇒ 改回常数 .2 就把 §E145 那条 14.91% 的白站防御放回来');
+  ok(/Bots\.tierEps\(tier, state\.round\)/.test(ui),
+    '页面必须**调用**那一份（不是自己再写一遍形状）⇒ 抄一份就会漂移，而抄的那份往往在量具手里、不在门手里');
+  const probeSrc = readFileSync('tools/probe-diff-ladder.mjs', 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ');
+  ok(/Bots\.tierEps\(/.test(probeSrc) && !/\bround\s*===\s*2\s*\?/.test(probeSrc),
+    '阶梯尺必须走 `Bots.tierEps` 且**代码里不许再出现第二个回合三元组**（剥掉注释后判：注释里写"为什么搬走"是合法的，代码里写形状就是漂移的源头）');
   /* ===== v1.6.6 改钉法（用户指令 1/2：2 人并进多人、难度做成一条阶梯）=====
    * 旧的第二条断言钉的是"2 人困难槽 = ε=0"那一行（`pickChampion(state, 1, ..., 0.15)`），那行已随 2 人专属 AI 路径一起删了。
    * 现在"产品口径"仍然不是一个数，但**来源变了**：一条阶梯上的不同档 ⇒ 报数要指明**档 id**，而不是"哪个槽"。
