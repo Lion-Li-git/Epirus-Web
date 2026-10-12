@@ -125,6 +125,13 @@ jobs:
         #      （先排除了"判据量错画布"：draw1/draw3b 用的就是同一块 cv/g，所以那不是仪器瞎。）已补画，四个视图各 86 PASS / 0 FAIL。
         shell: bash
         run: |
+          # ⚠ 这个 shell 是 `bash -e -o pipefail`：循环里任何一条命令非零（或 `grep` 没命中 + pipefail）
+          #   都会**当场中止**，于是下面那句 `cat /tmp/shot-all.log` 永远轮不到 ⇒ **红得看不见原因**。
+          #   10-12 实测：run #153 第 6 步 4 秒红，日志里连一行"视图 mode=… ‖ … ‖ exit=" 都没有，
+          #   而 /tmp/shot-*.log 是 runner 上的临时文件，事后取不到 ⇒ 这一步当时是"黑箱红"。
+          #   口径改成：**允许中间失败**、收集完四个视图再统一 exit；失败时把该视图日志的尾部也写进汇总
+          #   （与这段注释上面那两条同一条纪律：观察档也必须读得出成败）。
+          set +e
           fail=0
           : > /tmp/shot-all.log
           for m in tree 1d 3db map; do
@@ -133,7 +140,10 @@ jobs:
             line=$(grep -E '^断言：' "/tmp/shot-$m.log" | tail -1)
             [ -n "$line" ] || line='（没抓到"断言："那一行 ⇒ 这一步本身没跑成，别当全绿）'
             echo "视图 mode=$m ‖ ${line} ‖ exit=${st}" >> /tmp/shot-all.log
-            [ "$st" -eq 0 ] || fail=1
+            if [ "$st" -ne 0 ]; then fail=1
+              echo "--- mode=$m 日志尾 25 行（失败原因在这里） ---" >> /tmp/shot-all.log
+              tail -25 "/tmp/shot-$m.log" >> /tmp/shot-all.log
+            fi
           done
           { echo "## 谱系图页内自检（观察档 · 不阻断）"; echo; echo '```'; cat /tmp/shot-all.log; echo '```';
             echo; echo "退出码口径：0=全过 ‖ 1=有 FAIL ‖ 2=浏览器没跑出结果或一条断言都没跑（宁可红也不许假绿）。"; } >> "$GITHUB_STEP_SUMMARY"
