@@ -152,6 +152,11 @@ for (const mode of MODES) {
   const seatGames = [0, 0, 0, 0], seatWins = [0, 0, 0, 0], memberSeat = {};
   const memberCell = {};                              /* 成员 id → 格名 → {n, hw} */
   let curCell = null;                                 /* 原型名只能由调用侧带进来（`onGame` 的钩子签名里没有它） */
+  /* ⚑ 机制探针（§E600-B 尾，10-13 03:3x）：`全程刷反弹` 那一格跨三带六个格子有五个是**往下**的（掺席反而让纯反射墙更难）。
+   *   假设：脚本席的廉价进攻少 ⇒ **落在人类席上的进攻变少**，一面墙没什么可反弹。
+   *   数得出来而不用改引擎：`damage` 事件带 `to`（受害者）‖ `reflect` 带 `by:'proto'`（人类侧反弹成功）‖ 进攻动作按 `R.byKey[key].cat === 'attack'` 分。
+   *   自证：真跑过场子之后这三个数不许全是 0（接错线的形状就是"读数全 0 而表看着正常"）。 */
+  const press = {};                                   /* 格名 → {dOn, dAmt, rfl, atk, rounds, games} */
   const salts = new Set(), comps = new Set();   /* 每场组成由 `slotSalt` 唯一决定 ⇒ 盐/组成只有几种在转的话，"逐枚席位分布"不是独立抽样，得先说出来 */
   let allSameGames = 0, totalGames = 0, distinctSum = 0, missSeat = 0;
   let seqSamples = null;                            // 只留第一枚 seed 的前 6 场组成（给人眼看"随机"是不是真的在换）
@@ -180,6 +185,25 @@ for (const mode of MODES) {
       distinctSum += PD.distinct(g.comp.seats);
       if (seqSamples === null) seqSamples = [];
       if (seqSamples.length < 6) seqSamples.push(g.comp.seats.map(s => s.id).join('+'));
+      { /* 机制探针的账（见上面 `press` 那段）：按"人类那一席"统计落在它身上的伤害、它用**反弹卡**格挡的次数、场上 AI 的进攻动作数。
+         *   ⚠ 第一版这里接过错线：`type:'reflect' && by:'proto'` 是**原型制御·转移**（resolve.js 的 `protoReflectAll`，要一回合累计 ≥3 伤才触发），
+         *     不是 反弹 卡 ⇒ 每一格都数到 0.00 而表看着一切正常。反弹卡的账在 `type:'blocked' && by:'反弹'`（`:503`）。 */
+        const hum = Number(scriptedSeat);
+        const p = press[curCell || '(没格名)'] || (press[curCell || '(没格名)'] = { dOn: 0, dAmt: 0, blk: 0, rfl: 0, proto: 0, atk: 0, rounds: 0, games: 0 });
+        for (const e of (st.events || [])) {
+          if (e.type === 'damage' && Number(e.to) === hum) { p.dOn++; p.dAmt += Number(e.amt) || 0; }
+          /* 反弹卡的两条去路（resolve.js 的守卫分支 `g === 'reflect'`）：
+             · `type:'reflect' ‖ by:'reflect'` = **挡下并把这份伤害打回来源**（`REFLECTABLE` 的 via、且有真来源、且不是二次反弹）；
+             · `type:'blocked'  ‖ by:'反弹'`   = 只挡不反击（不可反弹的 via / 无来源 / 已被反弹过的）。
+             ⚠ 别把 `by:'proto'` 当成反弹卡 —— 那是**原型制御·转移**（`protoReflectAll`，一回合累计 ≥3 伤才触发）。 */
+          else if (e.type === 'reflect' && e.by === 'reflect') p.rfl++;
+          else if (e.type === 'reflect' && e.by === 'proto') p.proto++;
+          else if (e.type === 'blocked' && Number(e.to) === hum && e.by === '反弹') p.blk++;
+          else if (e.type === 'action' && e.outcome === 'ok' && Number(e.pid) !== hum &&
+            ((R.byKey || {})[e.key] || {}).cat === 'attack') p.atk++;
+        }
+        p.rounds += Number(st.round) || 0; p.games++;
+      }
       for (const pid in g.byPid) {
         const m = g.byPid[pid], id = m.id, s = m.seat, won = (st.winner === Number(pid));
         memberGames[id] = (memberGames[id] || 0) + 1;
@@ -266,6 +290,35 @@ for (const mode of MODES) {
     ' ⇒ 高到低差 ' + (imbal.hi - imbal.lo) + ' 场）');
   console.log('   ⚑ 抽样独立性：这 ' + totalGames + ' 场里出现 ' + salts.size + ' 个 `slotSalt` ‖ ' + comps.size + ' 种"成员×席位"配对' +
     (salts.size < totalGames / 2 ? ' ⇒ **盐在复用**（组成不是逐场独立 ⇒ 逐枚席位分布/夺冠率的误差棒要比 n 之前先按"独立组成数"打折）' : ''));
+  /* 机制探针的输出：每格四个数（落在人类席的伤害事件数/回合 ‖ 人类用反弹卡格挡/局 ‖ 原型制御转移/局 ‖ AI 进攻动作/回合）。
+   *   两条自证：① 一格都没数到 / 每格全 0 ⇒ exit 8；② **正对照**：`全程刷反弹` 那一格整场只在反弹，
+   *   它的"反弹格挡/局"如果是 0，那是计数器接错线（第一版就是这么错的），不是"墙没反弹"。 */
+  const pc = Object.keys(press);
+  let pz = 0;
+  console.log('   ⚑ 压力账（机制探针 · 解释 `全程刷反弹` 那个反例用）：落在人类席的伤害·每回合 ‖ 反弹反击·每局 ‖ 只挡不反击·每局 ‖ 原型制御转移·每局 ‖ AI 进攻·每回合');
+  for (const cn of pc) {
+    const p = press[cn];
+    if (!p.dOn && !p.blk && !p.rfl && !p.atk) pz++;
+    console.log('      ' + cn.padEnd(15) + (p.dOn / Math.max(1, p.rounds)).toFixed(3) + ' ‖ ' +
+      (p.rfl / Math.max(1, p.games)).toFixed(2) + ' ‖ ' + (p.blk / Math.max(1, p.games)).toFixed(2) + ' ‖ ' +
+      (p.proto / Math.max(1, p.games)).toFixed(2) + ' ‖ ' +
+      (p.atk / Math.max(1, p.rounds)).toFixed(3) +
+      '（n=' + p.games + ' 局 · ' + p.rounds + ' 回合 · 人类挨到的伤害合计 ' + (p.dAmt / Math.max(1, p.games)).toFixed(2) + '/局）');
+    rows.push({ mode: mode, cell: '__press:' + cn, seedVals: p.games + '局/' + p.rounds + '回合',
+      mean: (p.dOn / Math.max(1, p.rounds)).toFixed(4),
+      spread: '反击/局 ' + (p.rfl / Math.max(1, p.games)).toFixed(3) + ' ‖ 只挡/局 ' + (p.blk / Math.max(1, p.games)).toFixed(3) +
+        ' ‖ atk/回合 ' + (p.atk / Math.max(1, p.rounds)).toFixed(4) });
+  }
+  if (!pc.length || pz === pc.length) {
+    console.error('⛔ 压力账一个数都没数到（格子 ' + pc.length + ' 个 · 全 0 的 ' + pz + ' 个）⇒ 事件字段接错线，本批读数作废');
+    process.exit(8);
+  }
+  const wall = press['全程刷反弹'];
+  if (wall && !(wall.rfl + wall.blk > 0)) {
+    console.error('⛔ 正对照失败：`全程刷反弹` 那格跑了 ' + wall.games + ' 局却数到 **0 次反弹**（反击 ' + wall.rfl + ' ‖ 只挡 ' + wall.blk + '）'
+      + ' ⇒ 是这台探针接错了事件字段（不是"墙没反弹"），本批压力账作废');
+    process.exit(8);
+  }
   for (let s = 0; s < 4; s++) rows.push({ mode: mode, cell: '__seat' + s, seedVals: seatWins[s] + '/' + seatGames[s], mean: seatRate[s].toFixed(2), spread: s === 3 ? seatSpread.toFixed(2) : '' });
   rows.push({ mode: mode, cell: '__allSame', seedVals: allSameGames + '/' + totalGames, mean: (distinctSum / Math.max(1, totalGames)).toFixed(2), spread: '' });
 }
