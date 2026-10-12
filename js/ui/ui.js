@@ -622,17 +622,16 @@
      * `kind:'style'` 的档（含最高一档"极限·猎队"）走脚本；`kind:'champ'` 的档 = **同一颗冠军包 + 一组探索剂量**。
      * 剂量 = (eps, epsK, epsMode, ramp) 四个值 ⇒ 它们**只在这一处**被消费，`tools/probe-diff-ladder.mjs` 量的也是这四个值。 */
     const tier = tierOf(B.diff);
+    let scriptChooser = null;   /* §E600-B：这一档掺进来的脚本席登记在这里，交给函数尾**那一处**包装层调用 */
     if (tier && tier.kind === 'champ') {
       /* v1.6.63（§E590）：这里原来写 `champForCount(state.p.length)` ⇒ 四席拿到的是**同一枚**包。
        *   换成 `champForSeat(pid, state, tier)`（契约 §3.1：逐席各抽一枚、可重复、禁四席全同），
        *   下面那行剂量**一字没动** —— 难度与池是两根正交的轴（池决定桌上是谁，ε 决定他多昏手）。 */
       const cf = champForSeat(pid, state, tier);
-      /* §E600-B：脚本席走脚本那条路，**与大雷注入的包装层同一处**（`Trainer.wrapBigTPush`，v1.6.3 那条裁定）
-       *   ⇒ 简单档掺脚本席不会把"看得见大雷"这条用途绕过去。 */
-      if (cf.scriptPick) {
-        B.aiFallback = false;
-        return finish(Trainer.wrapBigTPush(cf.scriptPick)(state, pid, legal));
-      }
+      /* §E600-B：脚本席**不在这里出手**，只把脚本登记进 `scriptChooser` ⇒ 大雷那层包装在整个 `chooseAIMulti` 里
+       *   只许有**一处**调用（门 D224⑫l 数的就是它），掺席既不会把"每几局看得见大雷"这条用途绕过去，
+       *   也不会给页面留下第二份"包一层"的形状。落不下去就顺着原路走到函数尾那一处返回。 */
+      if (cf.scriptPick) scriptChooser = cf.scriptPick;
       const c = cf.params;
       if (c) {
         B.aiFallback = false;
@@ -688,14 +687,15 @@
         const epsForTier = (state.p.length <= 2 && tier.eps2 !== undefined) ? tier.eps2 : Bots.tierEps(tier, state.round);
         return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15, epsForTier, tier.epsK, tier.epsMode));
       }
-      B.aiFallback = true;                                  // 冠军缺失 → 显式回退，不静默
+      if (!scriptChooser) B.aiFallback = true;                // 冠军缺失 → 显式回退，不静默（§E600-B：脚本席不算回退）
       /* v1.6.6 修的一处**自 v1.3.22 起就存在的死引用**：这一行历史上写的是 `DN.hard.pick(...)`，
        * 而 `const DN = Bots.DIFFICULTY_N` 在同一个提交（3462abf「对手风格即难度档」）里被删掉了 ⇒
        * 走进这条分支不是"回退"，是当场 `ReferenceError: DN is not defined`。
        * 触发条件不罕见：本机训练包损坏/版本不兼容 **且**内置包也解不开（我 10-04 把 2P bundle 的 meta 写成
        *   ASCII 引号那次正是这个形状 —— 页面 `EPIRUS_CHAMPION` 变 undefined，但因为没人点过这条分支所以没炸）。
        * 现在的回退按桌形选脚本（≥3 人用多人强档、2 人用自适应），与 `aiInfo()` 里那句标签同源（`fallbackNameFor`）。 */
-      return finish(fallbackPickFor(state.p.length)(state, pid, legal));
+      if (!scriptChooser) return finish(fallbackPickFor(state.p.length)(state, pid, legal));
+      /* §E600-B：走到这里 = 这一席被抽成脚本席 ⇒ **不算回退**，也不在这里返回，顺着走到函数尾那一处包装层调用。 */
     }
     B.aiFallback = false;
     const st = styleOf(tier ? tier.style : B.diff) || styleOf(B.diff);
@@ -707,7 +707,7 @@
      * ⚠ v1.6.6 的形状变化：2 人桌现在**也**走这一行（页面只剩这一条 AI 路，见上面"doPick 已删除"那段）
      *   ⇒ 旧说法"2 人那条路不许包"（D224⑫h）已随之改写：钩子在同一处，但**2 人桌上这扇窗基本开不了**
      *   （要攒满 5 珠，而 1v1 里双方互相打，实测密度由 `probe-diff-ladder` 一并印出，不是"接了就一定看得见"）。 */
-    return finish(Trainer.wrapBigTPush(st ? st.pick : Bots.pickBalanced)(state, pid, legal));
+    return finish(Trainer.wrapBigTPush(scriptChooser || (st ? st.pick : Bots.pickBalanced))(state, pid, legal));
   }
 
   /* ===== v1.5.21：回合行与 transcript 的**单一真源** =====
