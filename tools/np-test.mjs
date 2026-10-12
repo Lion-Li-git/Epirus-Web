@@ -11778,8 +11778,11 @@ t('D232 §E497 按卡出手谱 `tools/usage-probe.mjs`：三格手算自检必�
 });
 
 t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融合粒 vs 真解出父边"守卫必须在，且默认判红', function () {
-  /* §2026-10-09 DS：⑤ 那条腿跑 lineage.mjs，而它按表去解融合粒的父边（那 5 枚 SOUP-* 的包从未入库）⇒ 全新 clone 上必红；
-   *   缺件时响亮跳过并点名。 */
+  /* §2026-10-09 DS：⑤ 那条腿跑 lineage.mjs，而它按表去解融合粒的父边（那几枚 SOUP-* 的父从未入库）⇒ 全新 clone 上必红；
+   *   当时处置是"缺件时响亮跳过并点名"。
+   * ⚠ 10-12 用户裁定②把这个处置**换掉了**：跳过 = 这条门在 CI 上**一次都没执行过**（台账 §十七 记的就是这件事），
+   *   而"守缺件"守的还是**路径**——`lineage.mjs:274` 解析父边用的是 `BYWID[wid]`，路径不住在表里。
+   *   ⇒ ⑤ 现在带 `--soup-thin-ok` 真跑，并钉"不许整层塌 + 每一枚薄掉的都要能指到具体缺失来源"。见下面 ⑤ 的注释。 */
   /* 病（实测复现，不是推测）：10-08 深夜我拿 `git archive HEAD` 解出一棵**干净克隆**跑 `lineage.mjs` ⇒
    *   第二父边 **6 条 → 0 条**，K2 从家族 23（159 枚 · 标签"代数 400→1200"）塌进家族 1 的 868 枚兜底类，
    *   而**退出码 0、页面自测 71 PASS 全绿**（页面读的是已生成好的表）⇒ 图变薄是静默的。
@@ -11824,23 +11827,104 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
     '③ 默认路径必须 exit 2（"薄图"要显式承认才能出）');
   ok(/console\.log\('⚠ §E503 薄图模式/.test(src),
     '④ `--soup-thin-ok` 那一支必须响亮印警告（灰而不判死 ≠ 假装没事）');
-  /* ⑤ 行为：本机有父粒 ⇒ 守卫必须绿着过，并把条数报出来（只 exit 0 不算，被吞掉的断言照样绿） */
-  needArtifacts('D233 ⑤ 本机跑 lineage.mjs', ['docs/artifacts/kept/e70-out__D02-31.bak', 'docs/artifacts/e85-out/E20-71.bak']);
-  const r = spawnSync(process.execPath, [SRC], { encoding: 'utf8', timeout: 300000 });
-  eq(r.status, 0, '⑤ 本机跑 `lineage.mjs` 必须成功：\n' + String(r.stderr || r.stdout || '').slice(-400));
-  const m1 = /融合血统口径 ✅ (\d+) 枚声明是权重平均的粒，父边全部解析（第二父边 (\d+) 条）/.exec(String(r.stdout || ''));
-  ok(!!m1, '⑤ 必须印出"融合血统口径"那一行（没印 = 守卫被条件跳过或措辞被改，正是 §E489 那一族）');
-  if (m1) ok(Number(m1[1]) >= 1 && Number(m1[2]) === Number(m1[1]),
-    '⑤ 声明数与第二父边条数必须**相等且非零**（实测声明 ' + m1[1] + ' ‖ 边 ' + m1[2] + '）');
+  /* ⑤ 真跑 `lineage.mjs` —— 10-12 用户裁定②：**这条腿从此不许再靠"缺件即 SKIP"躲 CI**。
+   *   ⚠ 旧写法错在守错了对象：它用 `needArtifacts(['docs/artifacts/kept/e70-out__D02-31.bak', 'docs/artifacts/e85-out/E20-71.bak'])`
+   *     守**两个 .bak 路径**，而 `lineage.mjs:274` 解析父边用的是 `BYWID[s.wid]` —— **路径根本不住在表里**。
+   *     后果两头都错：CI 上这条门**一次都没执行过**（永远 SKIP），而本机它绿着也说明不了什么
+   *     （实测：`e234-out/K2.js` 这条声明路径连我这台盘的 docs/artifacts 下都不存在，wid 却照样解得到 `kept/e70-out__D02-31.bak`）。
+   *   现在：带 `--soup-thin-ok` 跑（父粒不齐 ⇒ 它必须响亮印薄图警告并继续，而不是 exit 2），
+   *     并把**门自己独立扫 meta** 得到的账对上 —— 不 import lineage 的解析器，两边不是同一份实现，对不上就是真错位。
+   *   钉三件事：⑴ 不许"整层塌"（§E503 那个病就是 clone 里 6→0）；⑵ 每一枚被判"薄"的融合粒，必须能指出**至少一条
+   *     在盘上找不到同权重来源**的声明来源 ⇒ 指不出就是"边被静默吞掉"；⑶ 全解析那条分支里，lineage 报的声明数必须等于我扫出来的数。 */
+  const soupMeta = (function () {
+    const out = [];
+    const walk = function (dir, depth) {
+      let ents;
+      try { ents = readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+      for (const en of ents) {
+        const p = dir + '/' + en.name;
+        if (en.isDirectory()) { if (depth < 3) walk(p, depth + 1); continue; }
+        if (!/\.(bak|js)$/.test(en.name)) continue;
+        let head;
+        try { head = readFileSync(p, 'utf8'); } catch (e) { continue; }
+        const mi = head.indexOf('EPIRUS_CHAMPION_3P_META');
+        if (mi < 0) continue;
+        const seg = head.slice(mi, mi + 9000);
+        const sm = /"soup"\s*:\s*\{/.exec(seg);
+        if (!sm) continue;
+        const arr = /"sources"\s*:\s*\[([\s\S]{0,1600}?)\]/.exec(seg.slice(sm.index));
+        if (!arr) continue;
+        const srcs = [];
+        for (const o of arr[1].matchAll(/\{[^{}]*\}/g)) {
+          const f = /"file"\s*:\s*"([^"]+)"/.exec(o[0]);
+          const w = /"wid"\s*:\s*"([^"]+)"/.exec(o[0]);
+          if (f) srcs.push({ file: f[1], wid: w ? w[1] : '' });
+        }
+        if (srcs.length) out.push({ id: en.name.replace(/\.(bak|js)$/, ''), file: p, srcs: srcs });
+      }
+    };
+    walk('docs/artifacts', 0);
+    return out;
+  })();
+  /* 一粒"声明的来源在这台机器上到底有没有同权重真身"—— 只看它自己声明的那几条路径，不扫全库（≤12 次读包，代价与库大小无关） */
+  const srcPresent = function (s) {
+    if (!existsSync(s.file)) return false;
+    try {
+      const ch = AUDIT.loadChamp(sandbox(process.cwd()), s.file, process.cwd());
+      const pr = ch && ch.params ? ch.params : ch;
+      if (!pr || typeof pr.length !== 'number') return false;
+      return !s.wid || widOfArr(Array.from(pr)) === s.wid;
+    } catch (e) { return false; }
+  };
+  const r = spawnSync(process.execPath, [SRC, '--soup-thin-ok'], { encoding: 'utf8', timeout: 300000 });
+  eq(r.status, 0, '⑤ `lineage.mjs --soup-thin-ok` 必须跑成（父粒齐 ⇒ 不该走到薄图分支；不齐 ⇒ 必须印警告继续而不是 exit 2）：\n' +
+    String(r.stderr || r.stdout || '').slice(-400));
+  const so = String(r.stdout || '');
+  const okLine = /融合血统口径 ✅ (\d+) 枚声明是权重平均的粒，父边全部解析（第二父边 (\d+) 条）/.exec(so);
+  const thinLine = /薄图模式（`--soup-thin-ok`）：(\d+) 枚融合粒的父边解不开 ⇒ 图上这几条\*\*不画\*\*（([^）]*)）/.exec(so);
+  ok(!!okLine || !!thinLine, '⑤ 两条口径行必须**至少印出一条**（都没印 ⇒ 守卫被条件跳过或措辞被改，正是 §E489 那一族）');
+  ok(soupMeta.length >= 1, '⑤ 门自己扫 meta 得到的融合粒数是 ' + soupMeta.length + '（= 0 ⇒ `soup.sources` 的写法变了或产物面被搬走，'
+    + '这条腿从此在看空气）');
+  if (okLine) {
+    ok(Number(okLine[1]) >= 1 && Number(okLine[2]) === Number(okLine[1]),
+      '⑤ 声明数与第二父边条数必须**相等且非零**（实测声明 ' + okLine[1] + ' ‖ 边 ' + okLine[2] + '）');
+    eq(Number(okLine[1]), soupMeta.length, '⑤ lineage 报的声明枚数必须等于门自己扫 `soup.sources` 扫出来的数'
+      + '（lineage ' + okLine[1] + ' ‖ 门 ' + soupMeta.length + '）⇒ 不相等就是它没扫到那几枚（尺子瞎了），而不是数据薄了');
+  }
+  if (thinLine) {
+    const thinN = Number(thinLine[1]);
+    const ids = thinLine[2].split(' ‖ ').map(x => x.trim()).filter(Boolean);
+    ok(thinN < soupMeta.length, '⑤ 薄图枚数 ' + thinN + ' 必须**小于**声明总数 ' + soupMeta.length +
+      ' ⇒ 相等就是"融合父边整层消失"（§E503 立这条门的那件事：干净克隆里 6→0）');
+    const unexplained = ids.filter(id => {
+      const me = soupMeta.filter(x => x.id === id || x.file.indexOf(id) >= 0)[0];
+      return !me || me.srcs.every(srcPresent);
+    });
+    eq(unexplained.length, 0, '⑤ 这几枚被判"父边解不开"，但门查得出它们声明的来源**在盘上都有同权重真身** ⇒ '
+      + '那不是"机器新、父粒没入库"，是边被**静默吞掉**（本条门要防的正病）：' + unexplained.join(' ‖ '));
+    console.log('   ⚑ ⑤ 薄图口径：lineage 报 ' + thinN + ' 枚解不开（' + ids.join(' ‖ ') + '）‖ 门扫 meta 共 ' + soupMeta.length + ' 枚 ‖ 每条缺失都能指到具体来源');
+  }
   /* ⑥ 新列不许被删：删掉 `parentOf2` 就等于把"融合粒有两个父"这件事从数据面上抹掉（比薄图更彻底） */
   const LT = readFileSync('champion-map/lineage.tsv', 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
   const hd = LT[0].split('\t');
   ok(['parentOf2', 'parentName2', 'parentSrc2'].every(c => hd.indexOf(c) >= 0), '⑥ lineage.tsv 表尾三条融合列必须还在');
   ok(hd.indexOf('parentOf2') > hd.indexOf('parentSrc'), '⑥ 新列必须在表尾（插在中间会让按下标取数的下游静默错位 —— §E367 的规矩）');
   const i2 = hd.indexOf('parentOf2');
+  const iS2 = hd.indexOf('parentSrc2');
   const nDisk = LT.slice(1).filter(l => (l.split('\t')[i2] || '').trim() !== '').length;
-  ok(!m1 || nDisk === Number(m1[2]), '⑦ 落盘的第二父边行数必须等于守卫报的条数（实测表 ' + nDisk +
-    (m1 ? ' ‖ 守卫 ' + m1[2] : '') + '）—— 不一致就是守卫数内存、表写另一套');
+  const nSrc2 = LT.slice(1).filter(l => (l.split('\t')[iS2] || '').trim() === 'soup').length;
+  /* ⑦ 落盘的两列必须自洽，且不许整层空。
+   * ⚠ 这里原本写的是"声明数 − 薄掉的 − 只解出一个父的 = 边数"那种**自己推 lineage 内部**的公式，
+   *   10-12 在干净克隆里第一次真跑就量出它错（期望 1 ‖ 实测 4）：`pof2` 在"父同时能按路径/臂解出来"的粒上也会落值，
+   *   而那就不属于"薄图"口径了 ⇒ 在门外重算别人的解析器，得到的只会是这种**看起来合理的假红**。
+   *   现在钉的是不需要知道内部的两件事：① `parentOf2` 有值 ⇔ `parentSrc2 == 'soup'`（把两列解耦就当场红）
+   *   ② 边数不许为 0、也不许凭空多于声明枚数（§E503 那个病形就是干净克隆里 6→0）。 */
+  eq(nDisk, nSrc2, '⑦ `parentOf2` 有值的行数必须等于 `parentSrc2=soup` 的行数（实测 ' + nDisk + ' ‖ ' + nSrc2 +
+    '）⇒ 两列一旦解耦，"这枚有两个父"就只剩一半证据');
+  ok(nDisk >= 1, '⑦ 第二父边一条都没有（实测 0 ‖ 门扫 meta 声明 ' + soupMeta.length +
+    ' 枚融合粒）⇒ 这就是 §E503 立的原始病：图上融合家族整层消失');
+  ok(nDisk <= soupMeta.length, '⑦ 第二父边 ' + nDisk + ' 条多于声明的融合粒数 ' + soupMeta.length +
+    ' ⇒ 边是从别处冒出来的（表被手改或 wid 反查撞了）');
 });
 /* ===== D234（§E590 · 千问）冠军池的装配契约不许漂 =====
  * 为什么**立新门**而不是往别处加腿（用户 2026-10-11 23:0x：「不必要死守按照现有的规则」+
