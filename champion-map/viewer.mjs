@@ -228,7 +228,7 @@ if (existsSync(poolP)) {
     Object.values(POOLM).filter(function (x) { return x.sk > 0; }).length + ' 枚 ‖ 没量过的 ' +
     Object.values(POOLM).filter(function (x) { return !(x.sk >= 0); }).length + ' 枚');
 } else console.log('提示：没有 pool-members.tsv ⇒ 池层不可用（跑 node tools/pool-add.mjs 生成）');
-/* §E310 决斗表（§E289 那台配对决斗的汇总，`duelscan.mjs` 生成）= 图上第 4 条腿："这枚打赢现役没有"。
+/* §E310 决斗表（§E289 那台配对决斗的汇总，`duelscan.mjs` 生成）= 图上第 4 条腿："这枚打赢旧冠军 Ldemo 没有（历史参照，它已不下场）"。
  *   为什么非画不可：§E308 ① 我拿"考卷 H 高 5.2pt"当"更强的冠军"写进头条，被这台仪器当场推翻
  *   （v7t1-82 两批种子都输）⇒ 这个仓库里"更强"有专门的尺，图上却只有 F/H/S。
  *   口径：A−B = （我做异类时夺1率）−（现役做异类时夺1率），**两批种子同向才给颜色**，符号翻的画黄（判不动）。*/
@@ -246,7 +246,7 @@ if (existsSync(duelP)) {
   console.log('决斗实测 ' + Object.keys(DUEL).length + ' 枚（两批同向 ' +
     Object.values(DUEL).filter(x => x.s === 'same').length + ' ‖ 符号翻 ' +
     Object.values(DUEL).filter(x => x.s === 'flip').length + '）');
-} else console.log('提示：没有 duel.tsv ⇒ "对现役决斗"着色口径不可用（跑 node champion-map/duelscan.mjs 生成）');
+} else console.log('提示：没有 duel.tsv ⇒ "对旧冠军决斗"着色口径不可用（跑 node champion-map/duelscan.mjs 生成）');
 /* §E313 部署口径表 = 图上第 5 条腿："页面开着 ε=0.2 soft 还值多少"。
  *   为什么这一格非补不可：图上那把头号尺 H = `eval-5p` 的**考卷口径（ε=0 贪心）**，而真页面每手有 20% 概率
  *   在短名单里软采样（§E275 才把这条口径接进工具）⇒ 两把尺一直没并排量过。
@@ -474,7 +474,7 @@ let NRAW = 0;   /* §E440 去重**之前**的面板行数（= 原始 tsv 行数�
 /* ===== §E440 权重去重：同一份权重在图上只留一枚（用户 10-08：「去掉这些重复的权重再重新渲染一下」）=====
  *   §E334 那版只做了**标注**（悬停里印"同一份权重在面板上占 17 行"），图上照旧 917 枚 ⇒ 一撮拷贝挤在同一个位置，
  *   数点会多数，而"917 枚"与"729 种打法"这两个数永远对不上。现在直接从 DATA 里把重复行摘掉。
- *   留哪一枚必须确定，而且不许把"现役"摘掉（INC 是按 id 找 SHIPPED-Ldemo 的）：
+ *   留哪一枚必须确定（§E596 之后分界是**一批的均值**、不再按某一枚的 id 找，但组内代表仍优先 SHIPPED-Ldemo —— 它带着 09-27 那条血统记录，换代表会挪 fam/ts）：
  *     ① 组内有 SHIPPED-Ldemo ⇒ 留它；② 否则留有血统记录的那枚（d.lin 非空 ⇒ 它身上才有 ts/fam/par 这些信息）；
  *     ③ 否则留 dupOf 里排最前的那枚（dupOf 是 attach-dup 按**文件权重哈希**算出来的组内全集，顺序稳定）。
  *   摘掉的那枚不丢：id 记在保留那枚的 dups 上（悬停从"警告"改口成"本枚代表 N 份同名拷贝"），
@@ -624,12 +624,36 @@ var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三
  *   ① 批次切换：谱系图 24 个家族 × 901 枚一起画，行带只剩 29px，左栏两行字必然叠（截图实测）。
  *      批次 = **训出日期**（用户举的例子就是 0923/0928/1002 这种日号）。
  *   ② 点大小 = 名次（名次越高越小）+ 命中范围按半径算（原来固定 14px，圈大圈小都按同一个阈值判 ⇒ "选中范围非常模糊"）。
- *   ③ 颜色分界 = 现役那一枚（见下面 splitSets/fCol）。
+ *   ③ 颜色分界 = 最强一批的均值（见下面 splitSets/fCol）。
  *   ④ 滚轮放大时点跟着变大（原来刻意不跟，理由写在 §E314 那段"经典统计图约定"里 —— 用户看了实物否掉了）。
  *   ⑤ 冠军一列按**上线时刻**排（ship-scan.mjs 从 git 逐提交算槽文件权重指纹抽的，不是按提交标题点名）。 */
 st.batch = 'all'; st.sel = null; st.cmp = []; st.side = false;
-var INC = P[0];                                   /* 线上冠军：颜色的分界、以及"相对位置"那句话都钉在它身上 */
-for (var _zi = 0; _zi < N; _zi++) if (P[_zi].id === 'SHIPPED-Ldemo') INC = P[_zi];
+/* ===== §E596 分界的锚从"某一枚包"换成"最强那一批的均值"（用户 10-12：「演化图里还标着现役，应该把这些都去掉或者改成最强一批的平均值」）=====
+ *   病：颜色的分界、库内百分位、明细里那句"vs 现役"、标签上那颗 ★，原来全都钉在 'SHIPPED-Ldemo' 这一枚上 ——
+ *   而它是 v1.6.62 就被 'T8-s114' 换掉的旧冠军，且池上线后**没有任何一枚**是"玩家遇到的那一个"（四席逐席抽）。
+ *   ⇒ 拿一枚不下场的包当"现役"，读起来问的是"能不能换掉现役"，量到的却是历史。
+ *   做法：把锚做成一个**伪行**（只带下游真会读的字段：'Hp'/'S'/'rk'/'hp'/'H'），于是 20 多处 'Fv(INC)' 一处不用改；
+ *     而它的 'id' 故意不像任何包名 ⇒ 'd.id === INC.id' 恒假 ⇒ 那颗 ★ 自然消失（就是用户要的"去掉"）。
+ *   ⚠ 池表里没有这一带（清空/改名）⇒ 退回图上 F 最高的那一枚并**在控制台响亮说**，不许静默拿 0 当中性分界（§E308 那条"灰≠红"同一课）。
+ *   ⚠ 'ANCH_TIER' 必须是 'pool-members.tsv' 里最难那一带（契约 §2 与 'tools/pool-add.mjs:TIERS' 的第一项）；
+ *     它不读 'bots.js' 的档位表，因为图侧没有那棵树 —— 改了带名要连这里一起改，页内"每一档都有环色"那条牙会提醒。 */
+var ANCH_TIER = 'hard';
+var ANCHN = 0;                                     /* 锚盖住几枚（必须在 IIFE 之前声明：'var' 会 hoist，但后面那句 '= 0' 会把 IIFE 里赋的数冲掉 —— 第一版就踩了这个） */
+var INC = (function () {
+  var mem = [], best = P[0], i;
+  for (i = 0; i < N; i++) { if (P[i].pt === ANCH_TIER) mem.push(P[i]); if (Fv(P[i]) > Fv(best)) best = P[i]; }
+  if (!mem.length) {
+    console.warn('⚠ 池表里没有 tier=' + ANCH_TIER + ' 这一带 ⇒ 分界退回图上 F 最高的一枚（' + best.id + '），**不是均值**');
+    return best;
+  }
+  function mean(get) { var s = 0, n = 0; for (var k = 0; k < mem.length; k++) { var v = get(mem[k]);
+    if (typeof v === 'number' && isFinite(v)) { s += v; n++; } } return n ? s / n : null; }
+  ANCHN = mem.length;
+  return { id: '@cohort:' + ANCH_TIER, name: '最强一批均值（池 ' + ANCH_TIER + ' 带 ' + mem.length + ' 枚）',
+    Hp: mean(function (d) { return d.Hp; }), S: mean(function (d) { return d.S; }),
+    rk: Math.round(mean(function (d) { return d.rk; })), hp: mean(function (d) { return d.hp; }),
+    H: mean(function (d) { return d.H; }), pt: ANCH_TIER, ts: '', lin: false };
+})();
 function batchOf(d) { return d.ts ? String(d.ts).slice(0, 10) : ''; }
 var BATCH = [];                                    /* [{k:'2026-09-13', n:枚数, no:第几批}] 按日期正序 */
 (function () { var m = {}; for (var i = 0; i < N; i++) { var k = batchOf(P[i]); if (!k) continue; m[k] = (m[k] || 0) + 1; }
@@ -722,7 +746,7 @@ var LUT = (function () { var o = [],
   return o; })();
 function rampRGB(tt) { var i = Math.max(0, Math.min(255, Math.round(tt * 255))); return LUT[i]; }
 function ramp(tt) { var c = rampRGB(tt); return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
-/* §E338 用户 ③：F 那一档的色标换成**以现役为分界的发散带**（红 = 不如现役 ‖ 正中 = 现役那一档 ‖ 绿 = 比现役强）。
+/* §E338 用户 ③：F 那一档的色标换成**以最强一批均值为分界的发散带**（红 = 不如最强一批 ‖ 正中 = 现役那一档 ‖ 绿 = 比最强一批强）。
  *   原来那条蓝→红带读得出"高/低"，读不出"能不能换掉现役"，而后者才是这张图唯一要回答的问题。
  *   中性灰放在分界上（不是放在全库中位上）⇒ 图例那条刻度线的 50% 处必须画一根针，否则"分界"没人找得到。*/
 var LUTF = (function () { var o = [],
@@ -749,7 +773,7 @@ function rampRGBF(tt) { return LUTF[Math.max(0, Math.min(255, Math.round(tt * 25
  *   ③ 场只要抖一点就在 0.5 两侧来回翻 ⇒ 用户看到的那种**大块硬边绿斑**；
  *   ④ 右侧那条渐变带画的是 LUT（蓝→灰→红），与图上的绿红**根本对不上** —— 我当时是用一行"这一档不参与着色"糊过去的，那是错的。
  *   ⇒ 底图回到 §E338 之前的读法：「fCol」= 全库分位（秩），色带 = LUT（蓝 = 地板 ‖ 中性灰 = 库内中位 ‖ 红 = 好）。
- *   ⇒ "离现役多远 / 绿=比现役强"这个读法没丢，它降到颜色下拉第 6 档「rel」（fColRel + LUTF）：
+ *   ⇒ "离最强一批均值多远 / 绿=比现役强"这个读法没丢，它降到颜色下拉第 6 档「rel」（fColRel + LUTF）：
  *     那是**判决**（能不能换掉现役），底图那件事是**地形**（谁高谁低）—— 两件事共用一根 18px 的条必然打架。
  *   ⚠ 只改颜色，不改几何：u01()/高度/势场仍是线性 min-max（把高度也换成秩会把"差 0.02"和"差 0.2"画成一样高）。
  *   ⚠ 分位的分母永远是**全库**（不是当前可见那些）⇒ 缓存键只需要 T，批次不参与（切批次只改"画哪些点"）。*/
@@ -805,7 +829,7 @@ function fCol(F) { var bd = colBand(); if (!bd) return 0.5;
   var t = F <= bd.med ? (F - bd.lo) / ((bd.med - bd.lo) || 1e-9) * 0.5
     : 0.5 + (F - bd.med) / ((bd.hi - bd.med) || 1e-9) * 0.5;
   return Math.max(0, Math.min(1, t)); }
-/* 「rel」档用的：离现役多远（两侧各按该侧 p90 距归一，绿=强 ‖ 红=不如 ‖ 灰=现役那一档） */
+/* 「rel」档用的：离最强一批均值多远（两侧各按该侧 p90 距归一，绿=强 ‖ 红=不如 ‖ 灰=现役那一档） */
 function fColRel(F) { var s = splitSets();
   return F >= s.iv ? 0.5 + 0.5 * Math.min(1, (F - s.iv) / s.sU) : 0.5 - 0.5 * Math.min(1, (s.iv - F) / s.sD); }
 function fMed() { var a = splitSets().all; return a.length ? a[Math.floor(a.length / 2)] : 0; }
@@ -881,7 +905,7 @@ function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GR
     var ts = Math.max(-1, Math.min(1, d.scd / 8));
     var sc = ts >= 0 ? mix('#dce6f5', '#39d98a', ts) : mix('#dce6f5', '#ff6b6b', -ts);
     return (d.scs && d.scs.indexOf('+') > 0 && parseInt(d.scs, 10) < 6) ? '#e0b13c' : sc; }
-  /* §E347 第 6 档「rel」：相对现役的发散带（绿 = 比现役强 ‖ 红 = 不如 ‖ 灰 = 现役那一档），底图同向。*/
+  /* §E347 第 6 档「rel」：相对现役的发散带（绿 = 比最强一批强 ‖ 红 = 不如 ‖ 灰 = 现役那一档），底图同向。*/
   if (st.color === 'rel') return rampF(fColRel(Fv(d)));
   return ramp(fCol(Fv(d))); }   /* 「F」档回到蓝→灰→红（§E338 之前那样），不再拿现役当中性灰 */
 /* §E313 页面口径 1st 的显示区间（实测枚数的 p02..p98，同 GLR 的取法）。
@@ -1848,12 +1872,12 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
    *   颜色口径/绿环在右上图例里，这里不重复。*/
   var foot1 = '行 = 家族（按首次出现排，上→下即时间推进）· 横轴 = 训练时刻 · 颜色 = ' + (st.color === 'hp' ? '页面口径夺1率' : st.color === 'de' ? '部署脆弱性 Δε' : st.color === 'sc' ? '当选键 sc − 现役' : 'F（线上口径势）') +
     /* 色标方向必须跟着口径走：写死"蓝低 → 红高"会在 Δε 那档说反（那档是**红 = 脆**），
-       在当选键这档更是彻底错（这档是**绿 = 比现役强、红 = 落后**）—— 图上画的与页脚说的不能是两件事。 */
+       在当选键这档更是彻底错（这档是**绿 = 比最强一批强、红 = 落后**）—— 图上画的与页脚说的不能是两件事。 */
     (st.color === 'sc' ? '（绿=强 ‖ 红=落后 ‖ 橙=判不动 ‖ 灰=未测）'
       : st.color === 'de' ? '（红=脆 ‖ 蓝=吃探索 ‖ 白=不敏感）'
       /* §E347：F 档回到"地形"读法（蓝低 → 红高），"相对现役"那件事交给第 6 档 rel ⇒ 页脚/图例按当前档现说，不许各讲一套。*/
-        : st.color === 'F' ? '（蓝 = 低 = 地板 → 红 = 高 = 好 ‖ 针 = 现役那一档 ‖ 它在库内第 ' + Math.round(incPct()) + ' 百分位）'
-        : st.color === 'rel' ? '（绿 = 比现役强 ‖ 灰 = 就是现役那一档 ‖ 红 = 不如现役）'
+        : st.color === 'F' ? '（蓝 = 低 = 地板 → 红 = 高 = 好 ‖ 针 = 最强一批均值那一档 ‖ 它在库内第 ' + Math.round(incPct()) + ' 百分位）'
+        : st.color === 'rel' ? '（绿 = 比最强一批强 ‖ 灰 = 就是现役那一档 ‖ 红 = 不如最强一批）'
         : (st.color === 'fam' || st.color === 'seed' ? '（点色 = ' + (st.color === 'fam' ? '训练方法家族' : 'RNG seed') + '，底图 = F 地形（蓝低 → 红高））' : '（蓝低 → 红高）'));
   /* §E442 页脚拆**两行**（用户 10-08：「超级长的第二行就可以分成两行显示」）：第一行 = 这张图怎么读（行/轴/颜色口径），
    *   第二行 = 边与手势。⚠ 原来那个"量宽缩字"是**死代码**：先 measureText 算出该缩到几号，紧接着下一句又把字体写回 12px
@@ -1995,7 +2019,7 @@ function drawMap(fr) {
     g.beginPath(); g.arc(scr[i][0], scr[i][1], 11 * st.size, 0, 6.284); g.strokeStyle = st.ink; g.lineWidth = 2; g.stroke(); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText(st.elev < 0.5
-    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（蓝 = 低 → 红 = 高 · 针 = 现役那一档，它在库内第 ' + Math.round(incPct()) + ' 百分位）· 绿环 = 过了训练侧五道检查 · 池环（品红/蓝紫/橙）= 冠军池 困难/中/低 档 · 点一枚 = 选中 · 缩放 ×' + st.k.toFixed(2)
+    ? '滚轮 = 以光标为中心缩放 · 左键拖动 = 平移 · 底色 = F（蓝 = 低 → 红 = 高 · 针 = 最强一批均值那一档，它在库内第 ' + Math.round(incPct()) + ' 百分位）· 绿环 = 过了训练侧五道检查 · 池环（品红/蓝紫/橙）= 冠军池 困难/中/低 档 · 点一枚 = 选中 · 缩放 ×' + st.k.toFixed(2)
     : '左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 柱高 = ' + (st.goodTop ? 'F − F_min（越高越好）' : 'F_max − F（越低越好 = 冠军在阱底）') + ' · 绿环 = 过了训练侧五道检查 · 池环 = 冠军池按档着色',
     14 * devicePixelRatio, h - 12 * devicePixelRatio);
 }
@@ -2478,7 +2502,7 @@ function drawBody() {
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
     (winFull() ? '' : ' · ⚠ F窗口 ' + winLo().toFixed(3) + '…' + winHi().toFixed(3) + ' ⇒ 只画 ' + nWin() + '/' + N + ' 枚'
-      + (inWin(INC) ? '' : ' ‖ **现役在窗外（已隐藏）**')) +
+      + (inWin(INC) ? '' : ' ‖ **分界（最强一批均值）在窗外**')) +
     (n ? ' · 高亮 ' + n + ' 个家族' : '');
 }
 /* ⑥ 所有重绘走 rAF 合并：一帧最多画一次（拖动/滑杆连续事件下这是"卡死"的第二条来源）*/
@@ -2504,7 +2528,7 @@ function paintLegend(fr) {
       var rgb = st.color === 'rel' ? rampRGBF(ltt) : rampRGB(ltt);
       cg.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')'; cg.fillRect(0, i, 18 * devicePixelRatio, 1); }
     /* §E353：只要这条带画的是**底图那条 LUT**（fam / seed / F / rel 四种），针就该在。
-     *   原来只在 F / rel 两档画，而 fam/seed 的图例与页脚都写着"黄针 = 现役那一档" ⇒ **文案承诺、图上没有**
+     *   原来只在 F / rel 两档画，而 fam/seed 的图例与页脚都写着"黄针 = 最强一批均值那一档" ⇒ **文案承诺、图上没有**
      *   （这条是写页内自检时抓出来的：断言去数黄像素，数到 0 个）。*/
     if (st.color === 'F' || st.color === 'rel' || st.color === 'fam' || st.color === 'seed') {
       /* 现役那根针：不画出来，"现役在哪"这句话在 18px 宽的条上找不到位置。
@@ -2529,7 +2553,7 @@ function paintLegend(fr) {
     for (var di = 0; di < 150 * devicePixelRatio; di++) { var t = 1 - di / (150 * devicePixelRatio);   /* 顶 = +6，底 = −6 */
       cg.fillStyle = t >= 0 ? mix('#dce6f5', '#ff6b6b', t) : mix('#dce6f5', '#57a6ff', -t);
       cg.fillRect(0, di, 18 * devicePixelRatio, 1); } }
-  /* §E321 当选键：绿 = 比现役强、红 = 落后、白 = 打平；**橙带 = 方向偏正但同号数不到 6/8（判不动）**，
+  /* §E321 当选键：绿 = 比最强一批强、红 = 落后、白 = 打平；**橙带 = 方向偏正但同号数不到 6/8（判不动）**，
    *   不许并进绿里（duel 那条腿的同一规矩，§E310）。色标两端 ±8pt = §E316 量到的种子极差量级。*/
   if (st.color === 'sc') {
     for (var si = 0; si < 150 * devicePixelRatio; si++) { var ts2 = 1 - si / (150 * devicePixelRatio);
@@ -2541,12 +2565,12 @@ function paintLegend(fr) {
     : st.color === 'duel' ? ('✅ 两批种子都赢现役 ' + NWIN + ' 枚（绿）')
     : st.color === 'hp' ? ('页面 1st 高 ' + EPR()[1].toFixed(1) + '%（红）')
     : st.color === 'de' ? ('Δε +' + 6 + 'pt（红 = 脆）')
-    : st.color === 'sc' ? ('当选键 +8pt（绿 = 比现役强 · 实测 ' + NSEL + ' 枚 ‖ 判据内赢 ' + NSELUP + '）')
+    : st.color === 'sc' ? ('当选键 +8pt（绿 = 比最强一批强 · 实测 ' + NSEL + ' 枚 ‖ 判据内赢 ' + NSELUP + '）')
     : (st.color === 'fam' || st.color === 'seed') ? ('（点色 = ' + (st.color === 'fam' ? '家族' : 'RNG seed')
-      + ' ‖ 底图 = F 地形（蓝 = 低 → 红 = 高）· 现役 = 库内第 ' + Math.round(incPct()) + ' 百分位（' + splitSets().up.length + ' 枚在它之上）')
-    : st.color === 'rel' ? ('绿 = 比现役强（F 顶 ' + fr[1].toFixed(2) + '）')
+      + ' ‖ 底图 = F 地形（蓝 = 低 → 红 = 高）· 分界（最强一批均值）= 库内第 ' + Math.round(incPct()) + ' 百分位（' + splitSets().up.length + ' 枚在它之上）')
+    : st.color === 'rel' ? ('绿 = 比最强一批强（F 顶 ' + fr[1].toFixed(2) + '）')
     : ('红 = 好（F 顶 ' + CB.hi.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最高' : '') + ' ‖ 针 = 现役）');
-  /* §E432 DS（用户 10-08）：删掉 s1 那行「点色 = … ‖ 底图 = F 地形（蓝 = 低 → 红 = 高）· 现役 = 库内第 82 百分位…」——
+  /* §E432 DS（用户 10-08）：删掉 s1 那行「点色 = … ‖ 底图 = F 地形（蓝 = 低 → 红 = 高）· 分界（最强一批均值）= 库内第 82 百分位…」——
    *   ① 顶部本来就有颜色选项框，这行是重复说明；② 它是图例**最宽**的一行（块宽内容驱动）⇒ 删了整块才会真的变窄、不再压一维图。 */
   if (st.color === 'fam' || st.color === 'seed') s1.textContent = '';
   var s2 = document.createElement('div'); s2.textContent = st.color === 'gl' ? ('G(long) 低 ' + GLR[0].toFixed(1) + '（蓝）· 闸要求 ≥3')
@@ -2556,14 +2580,14 @@ function paintLegend(fr) {
     : st.color === 'de' ? ('Δε −6pt（蓝 = 开了探索反而强）· 白 = 不敏感 · 灰 = 未测（' + (N - NEPS) + '）‖ 脆（≥3.41）' + NBRIT + ' 枚 ‖ 吃探索（<0）' + NSTRONG + ' 枚')
     : st.color === 'sc' ? ('当选键 −8pt（红 = 落后现役）· 白 = 打平 · 橙 = 偏正但同号 <6/8（判不动 ' + NSELSOFT + ' 枚）· 灰 = 未测（' + (N - NSEL) + '）‖ 明显落后（≤−2）' + NSELDOWN + ' 枚')
     : (st.color === 'fam' || st.color === 'seed') ? ('（黄针 = 现役）')   /* §E431 用户 10-08：删掉「下 = 地板 ‖ 上 = 好」这种没用的说明，只留黄针 = 现役（顺带让整块变窄）*/
-    : st.color === 'rel' ? ('红 = 不如现役（F 底 ' + fr[0].toFixed(2) + '）')
+    : st.color === 'rel' ? ('红 = 不如最强一批（F 底 ' + fr[0].toFixed(2) + '）')
     : ('蓝 = 地板（F 底 ' + CB.lo.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最低' : ' ‖ 灰 = 库内中位') + '）');
   /* §E460/§E461 轴高恢复成固定 150 之后，死空**只许用文字排版去消**（用户原话：「只换字排版」）。
    *   补的每一句都是"这个数是怎么量出来的"—— 原来只写在 CHANGELOG 与代码注释里，读图人在页面上看不到，
    *   正好填进文字列：既消死空，也不注水。⚠ 只有 hp 那句是 §E458 今晚实测出来的（换批复量摆 2.3~5.7pt）。 */
   var s3h = null;
   var LEG_NOTE = {
-    fam: '底图与这条带是同一条 LUT（蓝 = 低 → 灰 = 库内中位 → 红 = 好）‖ 黄针 = 现役那一档 · 名次看点大小',
+    fam: '底图与这条带是同一条 LUT（蓝 = 低 → 灰 = 库内中位 → 红 = 好）‖ 黄针 = 最强一批均值那一档 · 名次看点大小',
     seed: '点色换成 RNG seed，带仍是底图那条 LUT ‖ 黄针 = 现役',
     F: '针的位置按**当下窗口**里现役的铺位比算 ‖ 灰 = 库内中位，不是"不好不坏"的绝对电平',
     rel: '只有这一档把带换成分散色标：0 = 现役那一档（灰），两侧各按本侧 p90 距归一 ⇒ 超出即钉在两端',
@@ -2620,10 +2644,10 @@ function paintLegend(fr) {
    *   留在这里说明，免得下一个人把它当"漏改"补上、再把省下来的空间吃回去。 */
   if (st.color === 'F' || st.color === 'rel') { var sm = document.createElement('div'); sm.style.color = 'var(--dim)';
     sm.textContent = st.color === 'F'
-      ? ('针 = 现役 Ldemo（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 红 = 好 ‖ 蓝 = 地板 · 深浅 = '
+      ? ('针 = 最强一批（池 hard 带）均值（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 红 = 好 ‖ 蓝 = 地板 · 深浅 = '
         + (CB.mode === 'win' ? '窗内两端线性铺满（' + CB.lo.toFixed(3) + ' → ' + CB.hi.toFixed(3) + ' ‖ 等数值差 = 等色差）'
           : '当前这批点的两端线性铺满（' + CB.lo.toFixed(3) + ' → ' + CB.hi.toFixed(3) + ' ‖ 等数值差 = 等色差 ‖ 中位在 ' + (CB.med !== undefined ? fCol(CB.med).toFixed(2) : '—') + ' 那一格）') + ' · 名次看点大小')
-      : '针 = 现役那一档（灰）· 绿 = 比现役强 ‖ 红 = 不如 · 深浅 = 离现役多远（两侧各按该侧 p90 距归一：绿侧 '
+      : '针 = 最强一批均值那一档（灰）· 绿 = 比最强一批强 ‖ 红 = 不如 · 深浅 = 离最强一批均值多远（两侧各按该侧 p90 距归一：绿侧 '
         + splitSets().sU.toFixed(3) + ' ‖ 红侧 ' + splitSets().sD.toFixed(3) + '，超出即钉在两端）';
     lg.appendChild(sm); }
   /* §E590 池层图例：**常驻一行**（不塞进 LEG_NOTE —— 那本账是"按当前着色口径的说明"，而池环在任何口径下都画）。
@@ -2717,9 +2741,9 @@ function nOf(id) { for (var i = 0; i < N; i++) if (P[i].id === id) return i; ret
 /* 「相对现役」那一行（用户 ③ 后半句）。⚠ 三个数一起给，只给一个就会被当成"综合更强"：
  *   F 是训练目标那一把尺、Hp 是页面口径、名次是全库秩；§E336 实测这三把与配对决斗的秩相关只有 0.39~0.53。 */
 function relLines(d) {
-  if (!INC || d.id === INC.id) return ['★ 线上冠军 = 分界本身（图上所有绿/红都以它为零点）'];
+  if (!INC) return [];
   var out = [];
-  out.push('vs 现役：F ' + (Fv(d) >= Fv(INC) ? '+' : '') + (Fv(d) - Fv(INC)).toFixed(3) +
+  out.push('vs 最强一批均值：F ' + (Fv(d) >= Fv(INC) ? '+' : '') + (Fv(d) - Fv(INC)).toFixed(3) +
     ' ‖ 名次 第 ' + d.rk + ' vs 第 ' + INC.rk + '（' + (d.rk < INC.rk ? '强 ' + (INC.rk - d.rk) + ' 位' : '落后 ' + (d.rk - INC.rk) + ' 位') + '）');
   out.push('　　　　　页面口径 Hp ' + (d.Hp >= INC.Hp ? '+' : '') + (d.Hp - INC.Hp).toFixed(1) + 'pt' +
     (d.hp === null || INC.hp === null ? '' : '（实测两 seed 均值 ' + (d.hp >= INC.hp ? '+' : '') + (d.hp - INC.hp).toFixed(1) + 'pt）'));
@@ -2800,7 +2824,7 @@ function paintSide() {
     row('上线', function (d) { return d.sh ? d.sh.slice(5, 10) : '未上槽'; });
     row('名次', function (d) { return '第' + d.rk; });
     row('F', function (d) { return Fv(d).toFixed(3); });
-    row('ΔF vs 现役', function (d) { return (Fv(d) - Fv(INC) >= 0 ? '+' : '') + (Fv(d) - Fv(INC)).toFixed(3); });
+    row('ΔF vs 最强一批', function (d) { return (Fv(d) - Fv(INC) >= 0 ? '+' : '') + (Fv(d) - Fv(INC)).toFixed(3); });
     row('Hp 页面', function (d) { return d.Hp.toFixed(1); });
     row('H 考卷', function (d) { return d.H.toFixed(1); });
     row('Δε', function (d) { return (d.De >= 0 ? '+' : '') + d.De.toFixed(1); });
@@ -3458,18 +3482,18 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   下面那条"底图两端"本来就用了同一套钉法（SWIN），这里只是把适用面提前到 rel。 */
   var SWINR = { flo: st.flo, fhi: st.fhi }; st.flo = 0; st.fhi = 1; recomputeVIS(); draw();
   var s7 = splitSets();
-  T('rel 档：现役那一档正好在分界 0.5', Math.abs(fColRel(Fv(INC)) - 0.5) < 0.02, fColRel(Fv(INC)).toFixed(3));
+  T('rel 档：分界（最强一批均值）正好落在 0.5', Math.abs(fColRel(Fv(INC)) - 0.5) < 0.02, fColRel(Fv(INC)).toFixed(3));
   var up = 0, dn = 0, tie = 0;
   for (var ci = 0; ci < N; ci++) { if (!VIS[ci] || P[ci].id === INC.id) continue;
     var gap = Fv(P[ci]) - Fv(INC);
-    /* 与现役**逐位相等**的那些不是"分错侧"，是同一份权重的另一行（§E334 实测 4 行都是现役：
+    /* 与分界**逐位相等**的那些不是"分错侧"，是同一份权重的另一行（§E334 实测 4 行都是现役：
      *   SHIPPED-Ldemo ‖ Ldemo ‖ C5-02-31 ‖ C5-02-71）⇒ 它们注定落在分界上，单独计数不判红。*/
     if (Math.abs(gap) < 1e-12) { tie++; if (Math.abs(fColRel(Fv(P[ci])) - 0.5) > 0.02) dn++; continue; }
     if (gap > 0) { up++; if (fColRel(Fv(P[ci])) <= 0.5) dn++; }
     else if (fColRel(Fv(P[ci])) >= 0.5) dn++; }
-  T('rel 档：比现役强的全在绿半边、弱的全在红半边（同权重的并列行单列）', up > 0 && dn === 0,
+  T('rel 档：比最强一批均值强的全在绿半边、弱的全在红半边（同权重的并列行单列）', up > 0 && dn === 0,
     dn + ' 枚反了 / 强于现役 ' + up + ' 枚 ‖ 与现役同权重并列 ' + tie + ' 枚');
-  T('rel 档：半侧 p90 距 = 半程 0.25（色深 = 离现役多远，不是排第几）',
+  T('rel 档：半侧 p90 距 = 半程 0.25（色深 = 离最强一批均值多远，不是排第几）',
     Math.abs(fColRel(s7.iv + 0.5 * s7.sU) - 0.75) < 0.01 && Math.abs(fColRel(s7.iv - 0.5 * s7.sD) - 0.25) < 0.01,
     '绿侧 ' + fColRel(s7.iv + 0.5 * s7.sU).toFixed(3) + '（要 0.750） ‖ 红侧 ' + fColRel(s7.iv - 0.5 * s7.sD).toFixed(3) + '（要 0.250）');
   st.flo = SWINR.flo; st.fhi = SWINR.fhi; recomputeVIS(); draw();   /* §E448 钉完就还原，别把窗口改动留给后面的判据；
@@ -3597,7 +3621,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('§E569 每一行都必须带考卷档 examG，且全图只能有一个档（档写在数据里，不靠文案和记性）',
     DATA.length > 0 && gHas === DATA.length && gKeys.length === 1,
     '带档 ' + gHas + '/' + DATA.length + ' ‖ 出现过的档 = ' + (gKeys.join(',') || '（无）') +
-    ' ⇒ 漏档／半挂／混档都会让"离现役多远"这类读法失去意义');
+    ' ⇒ 漏档／半挂／混档都会让"离最强一批均值多远"这类读法失去意义');
   /* §E571 部署口径表（epsagg）与考卷必须**同档**。卡片上「Δε 单批」取自 coords（v1.6.55 已换 120 档），
    *   「Δε 两seed」取自 epsagg —— 那张历史上由 eps-scan 硬编码 30 档产出 ⇒ 两维不同档就是图上混画（§E566 那一族）。
    *   旧表根本没有 examG 列 ⇒ 这条**判红**（读不到档不算通过），跑 eps2seed --phase=agg 换上新表才绿。*/
@@ -4107,9 +4131,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var outN = 0, wVs = [];
   for (var q5 = 0; q5 < N; q5++) { var v5 = Fv(P[q5]);
     if (VIS[q5]) { if (v5 < winLo() - 1e-12 || v5 > winHi() + 1e-12) outN++; wVs.push(v5); } }
-  T('强度窗口：画出来的每一枚都必须在窗内，而冠军也不例外（越界的一律不画）',
-    outN === 0 && NVIS < N && NVIS > 0 && inWin(INC) === (VIS[nOf(INC.id)] === 1),
-    '越界还在画的 ' + outN + ' 枚 ‖ 窗内 ' + NVIS + '/' + N + ' ‖ 现役在窗内=' + inWin(INC) + ' 而它在图上=' + (VIS[nOf(INC.id)] === 1));
+  /* §E596：分界不再是一枚真点（是"最强一批"的伪行），所以原来那句"冠军自己也得遵守窗口"改成查**那一批的真成员**：
+   *   伪行没有下标，「VIS[nOf(INC.id)]「 恒 undefined ⇒ 原式在分界落进窗口时会**永久红**（自造假红）。 */
+  var cohBad = 0;
+  for (var ch = 0; ch < N; ch++) if (P[ch].pt === ANCH_TIER && (inWin(P[ch]) !== (VIS[ch] === 1))) cohBad++;
+  T('强度窗口：画出来的每一枚都必须在窗内，而最强一批的成员也不例外（越界的一律不画）',
+    outN === 0 && NVIS < N && NVIS > 0 && cohBad === 0,
+    '越界还在画的 ' + outN + ' 枚 ‖ 窗内 ' + NVIS + '/' + N + ' ‖ 最强一批里"画没画与窗口不一致"的 ' + cohBad + ' 枚（分界自身 F=' + Fv(INC).toFixed(3) + ' ‖ 在窗内=' + inWin(INC) + '）');
   /* §E373（用户澄清："顶到色带端点的意思是重新做一下映射的缩放罢了，目标是提高显示点的区分度"）：
    *   窗口态判四件事 —— 两端真的顶到色带端点、**仍是线性**（等数值差 = 等色差，§E349 那条不许破）、
    *   中点与四分之一处必须正好落在 0.5 / 0.25（这两条合起来才排掉"随便贴两端"），
@@ -4140,10 +4168,10 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var stTxt = document.getElementById('stat').textContent;
   /* ⚠ 这里不用正则：模板字符串会先把 \d 吃成 d、\/ 吃成 / ⇒ 页面里那条正则当场断掉（构建期的自解析会红，
    *   但错误信息只说 "Unexpected token '.'"，很费时间）。所以这段一律用 indexOf。 */
-  T('强度窗口：现役被切掉时页面必须响亮说一句（不许静默画一张看不见分界的图）',
-    stTxt.indexOf('现役在窗外') >= 0 && stTxt.indexOf('只画 ') >= 0 && stTxt.indexOf(' 枚') >= 0,
+  T('强度窗口：分界被切掉时页面必须响亮说一句（不许静默画一张看不见分界的图）',
+    stTxt.indexOf('在窗外') >= 0 && stTxt.indexOf('只画 ') >= 0 && stTxt.indexOf(' 枚') >= 0,
     '窗 = 比例 ' + floW.toFixed(3) + '…1.000 = F ' + winLo().toFixed(3) + '…' + winHi().toFixed(3)
-      + ' ‖ 现役 F = ' + Fv(INC).toFixed(3) + '（T ' + st.T.toFixed(2) + '）‖ ' + stTxt.slice(0, 170));
+      + ' ‖ 分界（最强一批均值）F = ' + Fv(INC).toFixed(3) + '（T ' + st.T.toFixed(2) + '）‖ ' + stTxt.slice(0, 170));
   /* 档位：按钮不能只是"写着好看"，点下去必须真的把两端推到它自己说的那一段（含夹取后的值）。 */
   var _bps = document.getElementById('winpre').querySelectorAll('button'), preBad = [], hasOld = false;
   for (var oi = 0; oi < N; oi++) if (P[oi].old) { hasOld = true; break; }
