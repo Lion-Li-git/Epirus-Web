@@ -195,12 +195,34 @@ function seedCandidates(rel) {
   push('docs/artifacts/kept/' + rel.replace(/^docs\/artifacts\//, '').replace(/\//g, '__'));
   return out;
 }
+/* ===== 2026-10-12 DS：文件被搬走时，按**登记的别名表**解权重 =====
+ * 修的是哪一件事：子包 meta 里 `EPIRUS_SEEDPACK` 点名的父**被去重搬走了**（实测全库只有一例：
+ *   63 枚子包点名 `docs/artifacts/e234-out/K2.js`，那份文件在隔离区 `D:/code/Epirus-Web-artifacts-quarantine/`）
+ *   ⇒ 候选全是**文件**路径 ⇒ 读不到 ⇒ 只能留虚线，而那 63 条的权重身份**本来是可查的**
+ *   （搬它走的那台工具算过 wid：隔离区那份 = `kept/e70-out__D02-31.bak` = 父行 wid = `1d4b687da27187b7`，三边一致）。
+ * 安全性：这张表只提供"这个路径当时是哪一粒权重"；**升等条件一字未改**（`seedpackVerified` 仍要求与父行 wid 逐位相等）
+ *   ⇒ 登记错了只会升不上去。表里解不出的（例如 33 条点名**活槽**路径的）**照旧虚线** —— 活槽换过主人，
+ *   那些边在原理上就没记下"当时槽里是谁"，不许拿今天的占位者冒充血统（§E555「读不到不许自我升等」）。 */
+const ALIAS = (function () {
+  const m = {};
+  for (const spec of [['pack-aliases.tsv', 'wantedPath'], ['dupes-manifest.tsv', 'path']]) {
+    try {
+      const L = readFileSync(join(ROOT, 'champion-map', spec[0]), 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
+      const h = L[0].split('\t'), iK = h.indexOf(spec[1]), iW = h.indexOf('wid');
+      if (iK < 0 || iW < 0) continue;
+      for (const l of L.slice(1)) { const c = l.split('\t');
+        if (c[iK] && c[iW] && !m[c[iK]]) m[c[iK]] = c[iW]; }
+    } catch (e) { /* 表不在就不解：别让整张图因为缺一张登记表而炸 */ }
+  }
+  return m;
+})();
 function widOfFile(rel) { if (!rel) return ''; if (WIDCACHE[rel] !== undefined) return WIDCACHE[rel];
   let w = '';
   for (const cand of seedCandidates(rel)) {
     try { w = widOfArr(packArr(readFileSync(isAbsolute(cand) ? cand : join(ROOT, cand), 'utf8'))) || ''; } catch (e) { w = ''; }
     if (w) break;
   }
+  if (!w) w = ALIAS[rel] || '';          /* 候选文件都读不到 ⇒ 按登记表解（搬走的那些）；解不出就留空 = 继续虚线 */
   WIDCACHE[rel] = w; return w; }
 let nSpkWid = 0, nSpkLoose = 0;
 function seedpackVerified(m, parId) {
