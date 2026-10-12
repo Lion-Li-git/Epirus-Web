@@ -245,6 +245,50 @@ try {
     console.log('[band-save] ' + ARM + '-band' + (bi + 1) + '.bak  ' + c.tag + (bmeta.selected ? '（当选）' : ''));
   }
 } catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
+/* ===== v1.6.66（§E599 · 用户 10-12：「落盘规则改一下，这搞半天好候选都没落盘」）=====
+ * 病：上面那一档写的是 `pick.band` = **容差带**（`sc ≥ topSc − WR_TOL`）——
+ *   那个口径是为"选一枚最好的单一冠军"设计的；而**池**要的是"同档且**不同**"的候选。
+ *   实测（三跑种子 21/43/65）：最散的候选（种类 7 / divNorm 0.404 与 种类 5 / divNorm 0.351）
+ *   只因 sc 比 topSc 低 0.05 就落在带外 ⇒ **权重从未落盘、直接丢了**（连复盘机会都没有）。
+ * ⇒ 多一档「收集档」：把 **band 没覆盖到的候选**（`pick.safe` 里因 sc 低于容差线而进不了 band 的那些，
+ *   实测就是这么丢掉"种类 5~7 的最散候选"的）另写 `<ARM>-cand<k>.bak`，meta 带 `harvest:true`、
+ *   `regressedVsInc`、`inTolBand`、以及 sc/avg/种类/有效技能/divNorm ⇒ 攒池时按"同档 + 散"自己筛。
+ *   已作为 band 落过盘的不重复写。
+ * ⚠ 只在**改道跑**（`EPIRUS_TB_OUT`）时写：不设改道时目标目录是 `docs/artifacts` 平铺目录，
+ *   而 D82/D124 盯的正是那里"未点名的产物"（本文件上方那句实测注释就是这条）⇒ 历史臂行为逐字不变。
+ * ⚠ 与当选者**同权重**的候选跳过（绝不写第二份；`declareCopy` 只负责"设计如此的拷贝要登记"）。 */
+try {
+  const ARM2 = (process.env.EPIRUS_ARM || ('tb' + __SEED)).replace(/[^A-Za-z0-9_.-]/g, '');
+  const dir2 = TB_OUT ? dirname(isAbsolute(TB_OUT) ? TB_OUT : join(root, TB_OUT)) : null;
+  if (!dir2) console.log('[harvest] 未改道（无 EPIRUS_TB_OUT）⇒ 不写收集档（平铺目录会脏 D82/D124）');
+  else {
+    /* 已经作为 band 落过盘的（含当选者）不再写第二份 —— 收集档只**救** band 没覆盖到的那些。
+     * ⚠ `pickBestByExam` 只返回 `safe`（= 不回归层内）与 `band`，**被淘汰的那批不在返回值里**
+     *   （`pick.dropped` 是个**数字**）⇒ 本档只能收"合格但落在容差带外"的那些；要连"回归/被否决"的
+     *   一起收，得改 `tools/pick-best.mjs` 的返回形状（会牵到吃它形状的门）⇒ 属单独一笔，不混在这里。 */
+    const seen = new Set([JSON.stringify(best.pack)].concat((pick.band || []).map(function (c) { return JSON.stringify(c.pack); })));
+    let k = 0;
+    for (const c of (pick.safe || [])) {
+      const js = JSON.stringify(c.pack);
+      if (seen.has(js)) continue;
+      seen.add(js); k++;
+      const hmeta = {
+        source: 'tools/train-best.mjs (harvest)', arm: ARM2, harvest: true, candIdx: k, tag: c.tag, selected: false,
+        seed: __SEED, gens: GENS, sc: Number(c.sc.toFixed(4)), avg: Number(c.ev.avg.toFixed(4)),
+        div: { hill05: c.div.hill05 || null, effSkills: c.div.effSkills || null, distinct: c.div.distinct, divNorm: c.div.divNorm },
+        regressedVsInc: regressionsOf(c, inc), inTolBand: (pick.band || []).indexOf(c) >= 0,
+        rulesFingerprint: rulesFingerprint(), ts: new Date().toISOString(),
+      };
+      declareCopy({ root, dest: join(dir2, ARM2 + '-cand' + k + '.bak'), tool: 'train-best:harvest',
+        why: '池攒料（第 ' + k + ' 枚：band 容差带没覆盖到，但权重值得留下）',
+        text: 'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(hmeta) + ';\nwindow.EPIRUS_CHAMPION = ' + JSON.stringify(c.pack) + ';\n' });
+      console.log('[harvest] ' + ARM2 + '-cand' + k + '.bak  ' + c.tag + '  sc=' + c.sc.toFixed(3)
+        + ' 种类=' + c.div.distinct + ' 有效技能=' + (c.div.effSkills || 0).toFixed(2)
+        + '（在容差带外 ⇒ band 档没写它）');
+    }
+    if (!k) console.log('[harvest] band 档已覆盖全部合格候选 ⇒ 没有额外要救的');
+  }
+} catch (e) { console.log('[harvest] 失败（不影响当选者写盘）：' + e.message); }
 const packStr = JSON.stringify(best.pack);
 /* v1.5.161：产物可改道（`EPIRUS_TB_OUT`）⇒ 门/探针跑真训练臂时**不必碰 2P 槽**，也不会顺手改 index.html 的缓存戳
  * （§N14 实测：还原了槽内容、忘了还原戳 ⇒ 工作区脏）。改道时既不备份槽、也不动戳 —— 因为槽根本没被写。 */
