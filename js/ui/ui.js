@@ -614,8 +614,12 @@
          *   长程镜像 300 局僵死 0/300（24.6→26.1 回合）⇒ 没有把 v1.5.139 请 ε 进来的那条用途堵回去。 */
         /* 剂量取值：`tier.ramp` 为真 ⇒ 用下面这条**逐字**的回合斜坡（v1.5.298 用户裁定"第 1~3 回合逐步提升"，
          *   门 D153 钉这条字面形状，改动会把 §E145 那 14.91% 的"首手白站防御"放回来）；
-         *   其余档 = 常数 ε。**这两个形状不许在别处再写一遍**（`probe-diff-ladder.mjs` 读的就是这张表）。 */
-        const epsRound = state.round <= 1 ? 0 : (state.round === 2 ? 0.1 : 0.2);
+         *   其余档 = 常数 ε。**这两个形状不许在别处再写一遍**（`probe-diff-ladder.mjs` 读的就是这张表）。
+         * ⚠ §E596（10-12 用户裁定「普通和困难调成 0.1，简单 0.2」）把这条斜坡的**顶点从 0.2 降到 0.1**：
+         *   保住的是那条机制的形状 —— **第 1 回合仍然 ε=0**（§E145 的 14.91% 首手防御全部来自这个 0），
+         *   改掉的只是"放开多少"：第 2 回合 0.05、第 3 回合起 0.1 ⇒ 默认档比 v1.5.298 以来**略强**（老手感的探索少了半档）。
+         *   这是一次产品裁定，不是顺手改：D153 的钉法与 `D227`②c 的默认档元组都跟着重钉了。 */
+        const epsRound = state.round <= 1 ? 0 : (state.round === 2 ? 0.05 : 0.1);
         const epsForTier = (state.p.length <= 2 && tier.eps2 !== undefined) ? tier.eps2 : (tier.ramp ? epsRound : tier.eps);
         return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15, epsForTier, tier.epsK, tier.epsMode));
       }

@@ -32,7 +32,7 @@ export const LADDER_CLAIM = {
   /* 与生成这份读数的档位参数逐字对应（`D227`④ 拿 `sigOf(Bots.DIFF_TIERS)` 现算来比这里）。
    * ⚠ 这串是**现算出来贴上的**，不是我手打的 —— 第一版手打时把 style 档的 `ramp` 写成了 `-`，
    *   而 `sigOf` 对未定义一律给 `0` ⇒ 差一个字符就是永久过期。手打派生值是这个仓最常犯的错之一。 */
-  sig: 'lv:sparring:champ:0.5:5:soft:0:soft:-;lv:regular:champ:0.2:5:soft:1:mid:-;lv:hard:champ:0.2:5:soft:1:hard:-',
+  sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-;lv:regular:champ:0.1:5:soft:1:mid:-;lv:hard:champ:0.1:5:soft:1:hard:-',
   source: 'node tools/probe-diff-ladder.mjs --pairs=all --games=1500 [--pool=1] --mode=multi|long（四组 · 原始日志与两次候选分带在 docs/research/logs/2026-10-12-e596-three-tier.md，上一版的翻序记录在 …/2026-10-12-e595-ladder-register.md）',
   rule: '判"分得开" = |差| ≥ 2σ(配对)（不是 ≥2pt）。行按**档位表声明序**的相邻对记：`from` = 声明里更难那一档，`d` = 人类席夺冠率( to ) − 人类席夺冠率( from ) ⇒ **d 为负 = 实测把这一对的次序翻了**（不是抄错，是记账）。',
   measuredAt: '2026-10-12',
@@ -57,21 +57,20 @@ export const LADDER_CLAIM = {
    *   也不含池成员名册（名册一进签名 = 每次调池都要重跑 6000 局）。这两处的兜底是 ④d 那条现场腿与 `D234` 的池契约。 */
   modes: {
     'pool:multi': [
-      { from: 'lv:regular', to: 'lv:sparring', d: 4.67, se: 1.38, sep: true },
-      { from: 'lv:hard', to: 'lv:regular', d: 3.40, se: 1.26, sep: true }
+      { from: "lv:regular", to: "lv:sparring", d: 3.13, se: 1.4, sep: true },
+      { from: "lv:hard", to: "lv:regular", d: 2.8, se: 1.28, sep: true }
     ],
     'pool:long': [
-      { from: 'lv:regular', to: 'lv:sparring', d: 3.73, se: 1.46, sep: true },
-      { from: 'lv:hard', to: 'lv:regular', d: 7.20, se: 1.25, sep: true }
+      { from: "lv:regular", to: "lv:sparring", d: 1.2, se: 1.45, sep: false },
+      { from: "lv:hard", to: "lv:regular", d: 8.73, se: 1.27, sep: true }
     ],
-    /* 四席同一枚包（去掉 `--pool=1`）⇒ 只剩剂量差：普通↔简单分不开，困难↔普通是**恒等**（0±0）。 */
     'single:multi': [
-      { from: 'lv:regular', to: 'lv:sparring', d: 1.87, se: 1.14, sep: false },
-      { from: 'lv:hard', to: 'lv:regular', d: 0, se: 0, sep: false }
+      { from: "lv:regular", to: "lv:sparring", d: 0.67, se: 1.16, sep: false },
+      { from: "lv:hard", to: "lv:regular", d: 0, se: 0, sep: false }
     ],
     'single:long': [
-      { from: 'lv:regular', to: 'lv:sparring', d: 0.93, se: 1.10, sep: false },
-      { from: 'lv:hard', to: 'lv:regular', d: 0, se: 0, sep: false }
+      { from: "lv:regular", to: "lv:sparring", d: -1.07, se: 1.07, sep: false },
+      { from: "lv:hard", to: "lv:regular", d: 0, se: 0, sep: false }
     ]
   }
 };

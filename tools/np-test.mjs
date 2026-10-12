@@ -2139,9 +2139,10 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
       + '（2 人桌没池 ⇒ 剂量是那里唯一的分档轴）');
   }
   const def = TIERS.filter(function (t) { return t.id === BT.DIFF_DEFAULT; })[0] || {};
-  ok(def.eps === 0.2 && def.epsK === 5 && def.epsMode === 'soft' && def.ramp === true,
-    '②c 默认档必须逐字是 (ε=0.2, k=5, soft, ramp) —— 这就是 v1.5.141/1.5.298 以来玩家实际吃的那条口径（D153 钉斜坡本身）；' +
-    '改默认档 = 改所有老用户的手感，属产品裁定，不许夹在别的机会里做（实测默认 ' + JSON.stringify({ e: def.eps, k: def.epsK, m: def.epsMode, r: def.ramp }) + '）');
+  ok(def.eps === 0.1 && def.epsK === 5 && def.epsMode === 'soft' && def.ramp === true,
+    '②c 默认档必须逐字是 (ε=0.1, k=5, soft, ramp) —— 斜坡这条**形状**是 v1.5.141/1.5.298 以来玩家实际吃的那条口径（D153 钉斜坡本身），'
+    + '而**顶点 0.2 → 0.1 是用户 10-12 16:4x 的裁定**（「普通和困难调成 0.1，简单 0.2」）⇒ 这里重钉的是那次裁定的落地，不是顺手改手感；'
+    + '再改默认档仍属产品裁定，不许夹在别的机会里做（实测默认 ' + JSON.stringify({ e: def.eps, k: def.epsK, m: def.epsMode, r: def.ramp }) + '）');
 
   /* ===== ③ 页面接线：值只从表里拿，旧三档不许回来 ===== */
   ok(/tier\.epsK,\s*tier\.epsMode/.test(uiSrc),
@@ -2214,9 +2215,10 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
      *   现在判**首末两档**（简单带 vs 困难带），因为带是这次难度的唯一载体。
      *   ⚑ 局数从 200 提到 600：1500 局的真值是 7.0pt，200 局的配对 σ ≈ 3.4pt ⇒ 200 局下"线以下"的概率不低
      *     （实测三个 seed 的首末差 = 7.5 ‖ 13.5 ‖ 7.0，而第三跑里 普通 21.5 已经**反超** 简单 18.5 ⇒ 中段的序在 200 局根本钉不住，
-     *     所以这条腿只判首末，不判中间）。600 局 σ ≈ 2.0pt ⇒ 4pt 的线离真值 1.5σ 之外，才是能长期跑的地板。 */
+     *     所以这条腿只判首末，不判中间）。⚠ 地板是**跟着在册真值算出来的**，不是拍来的：17:10 剂量再调（简单 0.2 ‖ 普通/困难 0.1）之后真值从 7.0pt 压到 5.9pt,
+     *     ⇒ 局数 600 → 1200（1σ≈1.4pt）、地板 4pt → 3pt（≈2σ 之下，误红率 ~2%）。**每次改剂量都要重算这两个数**，否则这条腿会先于产品坏掉。 */
     const run = spawnSync(process.execPath, ['tools/probe-diff-ladder.mjs', '--machine=1', '--quiet',
-      '--games=600', '--n=5', '--mode=multi', '--pool=1'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+      '--games=1200', '--n=5', '--mode=multi', '--pool=1'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
     const out = String(run.stdout || '');
     const last = out.trim().split('\n').filter(function (l) { return /^\{/.test(l); }).pop();
     let obj = null; try { obj = JSON.parse(last || 'null'); } catch (e) { /* 下面响亮报 */ }
@@ -2228,9 +2230,9 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
       '）⇒ 全相同说明带没在动判决（第二十五条那族"夹具退化"），那 ④b/④c 那张账就是在描述一台停住的机器');
     const byId = {}; ((obj && obj.rows) || []).forEach(function (r) { byId[r.id] = r.pct; });
     const easyEnd = byId['lv:sparring'], hardEnd = byId['lv:hard'];
-    ok(typeof easyEnd === 'number' && typeof hardEnd === 'number' && easyEnd - hardEnd >= 4,
+    ok(typeof easyEnd === 'number' && typeof hardEnd === 'number' && easyEnd - hardEnd >= 3,
       '④d 首末两档（简单带 vs 困难带）必须还分得开：实测 简单 ' + easyEnd + '% ‖ 困难 ' + hardEnd + '% ‖ 差 ' +
-      ((easyEnd || 0) - (hardEnd || 0)).toFixed(2) + 'pt（1500 局真值 7.0pt ‖ 600 局 1σ≈2.0pt ⇒ 地板钉 4pt）'
+      ((easyEnd || 0) - (hardEnd || 0)).toFixed(2) + 'pt（17:10 在册真值 5.9pt ‖ 1200 局 1σ≈1.4pt ⇒ 地板钉 3pt）'
       + ' ⇒ 这一步塌了说明"难度由带扛"整句话失效，那张在册账要整张重测');
   }
 });
@@ -7643,7 +7645,7 @@ t('D152 「空蓄能」分因量具 `probe-bead-loop.mjs`：两种相反的病�
   ok(/真源 `chargeProfile`（\*\*按珠子计\*\*）/.test(out), '必须印真源那一行做并排对照');
 });
 
-t('D153 产品的探索口径必须钉住（temp0.15 + 档位表给的 ε/epsK/epsMode，默认档那条回合斜坡逐字 0→.1→.2）——本夜全部"口径"结论都挂在这一行代码 + DIFF_TIERS 上', function () {
+t('D153 产品的探索口径必须钉住（temp0.15 + 档位表给的 ε/epsK/epsMode，默认档那条回合斜坡逐字 0→.05→.1（顶点 10-12 从 .2 降下来））——本夜全部"口径"结论都挂在这一行代码 + DIFF_TIERS 上', function () {
   /* 为什么单独立一条：§H-6/H-10/H-12/H-13 的整串"评测口径 ≠ 产品口径"结论，**唯一的凭据就是 `ui.js` 里那一次调用**；
    *   而那行没有任何门钉着（D111/D118 钉的是探索规则与代理栏存在，不钉这四个值）。⇒ 有人调了它，全夜的读数就失去所指。
    * v1.5.298（用户 09-29 裁定）：5 人槽的 ε 从常数 0.2 改成**按回合斜坡 0 → 0.1 → 0.2**。
@@ -7655,16 +7657,21 @@ t('D153 产品的探索口径必须钉住（temp0.15 + 档位表给的 ε/epsK/e
   ok(/Trainer\.pickChampion\(state, pid, legalForAI, c, 0\.15, epsForTier, tier\.epsK, tier\.epsMode\)/.test(ui),
     '冠军路径必须是 temp0.15 + **取自档位表**的 (eps, epsK, epsMode) ⇒ 这是本仓唯一一份"玩家实际看到的探索口径"。' +
     'v1.6.6 前这一行末尾写死 `5, \'soft\'`，现在那个 5/soft 住在 `Bots.DIFF_TIERS` 里（默认档仍是 k5/soft，由 D227②c 钉住值）');
-  ok(/const epsRound = state\.round <= 1 \? 0 : \(state\.round === 2 \? 0\.1 : 0\.2\);/.test(ui),
-    'ε 的回合斜坡必须逐字是 0 / 0.1 / 0.2（用户 09-29 裁定"第 1~3 回合逐步提升"）⇒ 改回常数 .2 就把 §E145 那条 14.91% 的白站防御放回来');
+  ok(/const epsRound = state\.round <= 1 \? 0 : \(state\.round === 2 \? 0\.05 : 0\.1\);/.test(ui),
+    'ε 的回合斜坡必须逐字是 0 / 0.05 / 0.1（形状来自用户 09-29 裁定"第 1~3 回合逐步提升"；顶点 0.2→0.1 是用户 10-12 16:4x 裁定「普通和困难调成 0.1，简单 0.2」）⇒ 改回常数 .2 就把 §E145 那条 14.91% 的白站防御放回来');
   /* ===== v1.6.6 改钉法（用户指令 1/2：2 人并进多人、难度做成一条阶梯）=====
    * 旧的第二条断言钉的是"2 人困难槽 = ε=0"那一行（`pickChampion(state, 1, ..., 0.15)`），那行已随 2 人专属 AI 路径一起删了。
    * 现在"产品口径"仍然不是一个数，但**来源变了**：一条阶梯上的不同档 ⇒ 报数要指明**档 id**，而不是"哪个槽"。
    * ⚠ 这里改钉"两行不许并存 + 贪心档在表里"，因为那才是"口径只有一个真源"的可执行内容；旧文案留在 METHODOLOGY §54（同一处同步改）。 */
   ok(!/pickChampion\(\s*state,\s*1\s*,/.test(ui),
     '页面不许再有**第二条**冠军调用（写死 `state, 1,` 的那种 2 人专属路径）⇒ 两条路 = 两份口径，历史读数就得先问"哪条"');
-  ok(/kind:\s*'champ',\s*eps:\s*0\b/.test(readFileSync('js/train/bots.js', 'utf8')),
-    '阶梯里必须还有一档 ε=0（贪心冠军）⇒ 考卷/门禁量的就是那一格；它一旦从表里消失，"评测口径 vs 产品口径"这句话就没人能兑现了');
+  /* ⚠ 这条原来钉"表里还有一档 `eps: 0`（贪心冠军）"，但 10-12  dose 改动后**表里已经没有 ε=0 的五人桌档**了，
+   *   而它照样绿 —— 因为正则 `eps:\s*0\b` 会把 `eps: 0.1` 也算命中（`0` 与 `.` 之间就是词边界）。
+   *   这是"正则太松 = 假绿"的现行标本，改钉成今天真正的下界：**2 人桌那一档必须有一个 ε=0 的贪心档**
+   *   （§E286：2 人桌没池 ⇒ 那里的难度只能靠剂量，而 ε=0 是"完全不探索"的下界，训练场/考卷量的就是它）。 */
+  ok(/kind:\s*'champ',[\s\S]{0,220}?\beps2:\s*0\b/.test(readFileSync('js/train/bots.js', 'utf8')),
+    '阶梯里必须还有一档 **2 人桌 ε=0**（贪心冠军下界）⇒ 2 人桌没有池，那里"难度"就是剂量，而 ε=0 是"完全不探索"的下界；'
+    + '它一旦从表里消失，"评测口径 vs 产品口径"这句话在 1v1 上就没人能兑现了');
   /* ⚠ **故意剥块注释后再判**：修复说明里必须写出那个坏名字（`DN.hard.pick`），不剥注释就是"因为解释了 bug 而红"。
    *   同一族第三次踩（D226⑤c / ③b / 这一条）⇒ 记进门禁编辑坑：静态钉判"取用"，注释豁免。 */
   const uiCode = ui.replace(/\/\*[\s\S]*?\*\//g, ' ');
