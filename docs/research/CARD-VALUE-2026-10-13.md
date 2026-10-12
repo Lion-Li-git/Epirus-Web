@@ -145,9 +145,26 @@ dose=1（"一有机会就打"，极端剂量）另有一批：整体 Δ 变成 �
   ε=0.2 重跑两枚（`K2` / `T8-s114`）仍是 proto 0.00 ‖ holo 0.17/0.23 ⇒ 贪心和 ε 抽签**两条路都不通向它**。
   这一格正是表 B 唯一给 proto 抬到 −3.3 的那个场合 ⇒ "**在最该用它的时刻也不选**"是本次最强的证据，
   但它只证明"策略里有系统性偏向"，**不证明"用了更好"**（表 A/表 B 说多用是亏的）。
-· **还没答的那半句**（写成待验证，不许当结论）：同为 `self` 防御，`guard`/`reflect` 在 K2 手里到 8.9 次/局，proto 却是 0。
-  要分"特征里没有'我即将被打'这一维"与"有、但它的价值在混战里被击杀竞赛压过"，得再写一条 logit-vs-特征 的探针；
-  现有的表 A/表 B 只支持后者的**方向**（−11.3 → 只有血≤1 抬到 −3.3），不支持把 proto 说成"被埋没了"。
+· **当时以为还没答的那半句**：同为 `self` 防御，`guard`/`reflect` 在 K2 手里到 8.9 次/局，proto 却是 0 —— 原计划写一条 logit-vs-特征 的探针，
+  但**先翻一遍卡表就答掉了**（比较对象搞错了：proto 是 **1 珠**卡，guard/reflect 是 **0 珠**卡）⇒ 见 §5-c。
+
+### 5-c 那半句当场答掉了：**是珠价，不是针对 proto 的压制**
+
+翻 `js/core/rules.js:54~65` 的卡表（`mk(key, name, cat, **cost**, **pri**, target, …)`）就知道比较对象搞错了 ——
+`原型制御` 不是"免费的强防御"，它**要 1 颗珠**，而它上面那两层"弱一点的防御"是**免费的**：
+
+| 卡 | cost | pri | target | 卡面作用 | 9 枚困难手里（ε=0，次/局） |
+|---|---|---|---|---|---|
+| `防御` guard | **0** | 3 | self | 阻止**部分**技能伤害 | 0.05 ~ **8.85** |
+| `反弹` reflect | **0** | 3 | self | 阻挡并把 枪/坦克 弹回 | 0.00 ~ **8.47** |
+| `原型制御` proto | **1** | 3 | self | 阻挡除地雷/转移外的技能伤害（**最全**） | **0.000**（9/9 枚） |
+| `无极变速` shift | **1** | 3 | self | 同两个回合的八卦阵 | **0.000**（9/9 枚） |
+| `全息屏障` holo | **1** | 3 | **other** | 给**别人**上一回合原型制御 | 0.00 ~ 0.62（6/9 枚有一点） |
+
+⇒ 形状是"**要花钱的防御整类都不出**"，proto 不是唯一被压的那个，甚至不是被压得最狠的（`shift` 也恒 0）。
+所以"AI 明明能免费挡一半，为什么要花一颗珠去挡全部"是它的实际答案，与表 A 的 −11.3 同向；
+而"反倒跑去用全息屏障"这句里，**holo 是那一类里唯一偶尔被选中的**——选它的代价是"给别人套盾、自己不沾光"（表 A 原生 −13.3/−7.7，定向垫钱后仍 −9.7/−13.7）。
+⚠ 这条不改变 §5-b 那句"系统性偏向"的存在（proto 在 13,445 次残血机会里 0 次被选），只是把它的**归因**从"proto 被埋没"改成"1 珠防御整类不值那颗珠"。
 
 
 ## 6. 脚本席的"强度地板"：v1 → v2（v3 试装后判死、已撤）
@@ -194,6 +211,7 @@ node docs/debug/card-window-rct.mjs --games=800 --mode=multi --out=champion-map/
 node docs/debug/card-window-rct.mjs --dose=0.25 --games=1200 --mode=multi --cards=proto,transfer,taunt,armor,jinshield,shift,holo,firestorm,curse,cannon,rod,dualGun,mirror,purify,mine
 # §5-b 的两条（10-13 晨）：proto 那一列 + "机会 vs 归属"分开数
 node tools/usage-probe.mjs --ids=B5-10-31,D4a,E3,R-s123,S-s120,T8-s114,v7bead1-93,K2,SHIPPED-Ldemo --games=40 --eps=0   --out=_r1eps0.tsv
+#   （§5-c 那张"价-手"对照 = 同一张表的 guard/reflect（0 珠）与 shift/proto/holo（1 珠）五列，别另跑一把尺）
 node tools/usage-probe.mjs --ids=B5-10-31,D4a,E3,R-s123,S-s120,T8-s114,v7bead1-93,K2,SHIPPED-Ldemo --games=40 --eps=0.2 --out=_r1eps2.tsv
 node docs/debug/proto-chance.mjs --self-test
 node docs/debug/proto-chance.mjs --ids=B5-10-31,D4a,E3,R-s123,S-s120,T8-s114,v7bead1-93,K2,SHIPPED-Ldemo --games=40 --eps=0
