@@ -12,7 +12,9 @@
  *
  * 用法：node docs/debug/sentinel-triage.mjs > champion-map/_sentinel-triage.txt
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 const SRC = 'tools/np-test.mjs';
 const lines = readFileSync(SRC, 'utf8').split('\n');
@@ -39,6 +41,22 @@ function pins(text) {
   return out;
 }
 const mdRead = t => /read(?:File)?Sync?\(([^)]*\.md[^)]*)\)/i.test(t);
+/* 第二条轴：这条门**读的是什么东西**再去比字符串。规矩 1 真正防的是"拿实现细节/措辞当判据"，
+ *   而"读一份文件确认它在"（干净克隆里必须有这份件）是另一件事 —— 不分开就没法分诊。 */
+function subjects(text) {
+  const s = new Set();
+  const re = /['"]([\w./-]+\.(?:mjs|js|tsv|md|json|html|yml|ts))['"]/g;
+  let m; while ((m = re.exec(text))) {
+    const p = m[1];
+    if (/\.md$/.test(p)) s.add('doc');
+    else if (/\.html$/.test(p)) s.add('page');
+    else if (/\.(tsv|json|ts)$/.test(p)) s.add('table');
+    else if (/^(js|tools|champion-map|docs\/debug)\//.test(p)) s.add('src:' + p.split('/')[0]);
+    else s.add('other:' + p);
+  }
+  if (/spawnSync\(|runE\(|execFileSync\(/.test(text)) s.add('spawn');
+  return [...s];
+}
 
 const rows = [];
 for (const g of gates) {
@@ -53,8 +71,23 @@ for (const g of gates) {
   const vars = p.filter(x => x.varLike).map(x => x.raw);
   const bucket = cnPins.length ? 'C' : (idPins.length ? 'A' : (vars.length ? 'B' : 'B'));
   rows.push({ id: idOf(g.head), line: g.start, end: g.end, kinds: kinds.join('+'), bucket: bucket,
-    n: p.length, cnPins: cnPins, idPins: idPins, vars: vars });
+    subj: subjects(g.text).join('+'), n: p.length, cnPins: cnPins, idPins: idPins, vars: vars });
 }
+/* 交叉表：桶（读的东西）× 语言（中文措辞 vs 标识符）。分诊就按这张表定先后。 */
+const cross = {};
+for (const r of rows) {
+  const s = r.subj || 'unknown';
+  cross[s] = cross[s] || { C: 0, A: 0, B: 0, ids: { C: [], A: [] } };
+  cross[s][r.bucket]++;
+  if (r.bucket !== 'B') cross[s].ids[r.bucket].push(r.id);
+}
+console.log('\n交叉表（读的对象 × 桶）：');
+for (const s of Object.keys(cross).sort()) {
+  const c = cross[s];
+  console.log('  ' + s.padEnd(28) + ' C=' + c.C + ' A=' + c.A + ' B=' + c.B +
+    (c.ids.C.length ? '   C 桶门号: ' + c.ids.C.slice(0, 12).join(' ') : ''));
+}
+
 const by = b => rows.filter(r => r.bucket === b);
 console.log('门体里带 indexOf/read 的条目：' + rows.length + '（桶 C 含中文措辞 ' + by('C').length +
   ' ‖ 桶 A 只比英文/路径 ' + by('A').length + ' ‖ 桶 B 读不出操作数 ' + by('B').length + '）');
@@ -63,9 +96,17 @@ console.log('   B 里多半是操作数在变量/拼接里，脚本看不见 ⇒
 for (const b of ['C', 'A', 'B']) {
   console.log('\n===== 桶 ' + b + '（' + by(b).length + ' 条）=====');
   for (const r of by(b)) {
-    console.log(r.id + '@' + r.line + '-' + r.end + ' [' + r.kinds + '] indexOf×' + r.n);
+    console.log(r.id + '@' + r.line + '-' + r.end + ' [' + r.kinds + '] 读=' + (r.subj || '?') + ' indexOf×' + r.n);
     if (r.cnPins.length) console.log('    中文串: ' + r.cnPins.slice(0, 6).map(s => '「' + s.slice(0, 40) + '」').join(' ‖ '));
     if (r.idPins.length) console.log('    英文串: ' + r.idPins.slice(0, 6).map(s => '「' + s.slice(0, 40) + '」').join(' ‖ '));
     if (r.vars.length) console.log('    变量式: ' + r.vars.slice(0, 5).join(' ‖ '));
   }
 }
+/* 顺带出一份 TSV，分诊文档里的表直接由它生成（人只写"建议"那一列） */
+const TSV = ['gate', 'line', 'end', 'kinds', 'reads', 'bucket', 'n_indexOf', 'cn_pins', 'id_pins']
+  .concat([]).join('\t');
+const body = rows.map(r => [r.id, r.line, r.end, r.kinds, r.subj, r.bucket, r.n,
+  r.cnPins.slice(0, 4).join(' | ').replace(/\s+/g, ' '), r.idPins.slice(0, 4).join(' | ').replace(/\s+/g, ' ')].join('\t'));
+writeFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../champion-map/_sentinel-rows.tsv'),
+  TSV + '\n' + body.join('\n') + '\n', 'utf8');
+console.log('\n已写 champion-map/_sentinel-rows.tsv（' + rows.length + ' 行 · 分诊文档的表由它生成）');
