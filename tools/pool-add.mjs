@@ -50,6 +50,20 @@ function loadMap() {
   return t;
 }
 function saveMap(t) { writeFileSync(MAP, [COLS.join('\t')].concat(t.rows.map(r => r.join('\t'))).join('\n') + '\n'); }
+/* §E599（用户 10-12：「你搞一个自动同步到实际冠军池的东西吧」）：池表一改，**演化图的池层必须跟着走**。
+ *   图是**烘焙期**从这张表抄的（`champion-map/viewer.mjs` 把每枚的 `tier` 写进内联 `var DATA` 的 `pt`），
+ *   以前全靠人记得重烘 —— 本仓手工重烘过多次，还整整落后过一个名册（图里 20 枚 7/6/7 vs 真源 27 枚 9/7/11）。
+ *   现在**真写盘之后自动调** `champion-map/pool-sync.mjs`（0.3 秒：重烘 + **回读复核**）⇒ 想落后也难。
+ *   ⚠ 与 D234⑩ 分工：这里负责"改完就同步"，门负责"同步不了就红"（两条一起才叫不会烂）。
+ *   ⚠ 同步失败**不阻断入池**（表已写成功），但必须**响亮**印出来；同步器自己会在"写完仍漂移"时 exit 2 并逐枚点名。 */
+function syncChart() {
+  const r = spawnSync(process.execPath, ['champion-map/pool-sync.mjs', '--quiet'], { cwd: ROOT, encoding: 'utf8' });
+  const line = String(r.stdout || '').trim().split('\n').filter(Boolean).slice(-1)[0] || '';
+  if (r.status === 0) console.log('   ↻ 演化图已自动同步：' + (line || '（一致）'));
+  else console.log('   ⚠ 演化图**没同步成功**（exit ' + r.status + '）'
+    + (line ? '：' + line : String(r.stderr || '').trim().slice(0, 160))
+    + '\n      手跑：node champion-map/pool-sync.mjs（D234⑩ 会在 CI 上因此判红）');
+}
 const trackedSet = () => new Set(execSync('git ls-files docs/artifacts', { cwd: ROOT, maxBuffer: 1 << 26 }).toString().trim().split('\n').filter(Boolean));
 const WARNED = new Set();   /* `--refresh` 会对每枚成员调一次 seatKillOf ⇒ 同一对坏表只吼一次，别刷 13 遍屏 */
 
@@ -237,7 +251,8 @@ if (has('refresh')) {
   }
   if (has('dry')) { console.log('（--dry）要改 ' + changes.length + ' 行：\n   ' + (changes.join('\n   ') || '无')); }
   else { saveMap(t); console.log('✔ 已刷 champion-map/pool-members.tsv：改了 ' + changes.length + ' 行 ‖ 人席仍没量过的 ' + unknown + ' 枚');
-    for (const c of changes) console.log('   · ' + c); }
+    for (const c of changes) console.log('   · ' + c);
+    if (changes.length) syncChart(); }
   process.exit(0);
 }
 
@@ -286,3 +301,4 @@ t.rows.sort((a, b) => (TIERS.indexOf(a[3]) - TIERS.indexOf(b[3])) || a[0].locale
 saveMap(t);
 console.log('✔ 已写 champion-map/pool-members.tsv（现 ' + t.rows.length + ' 枚）');
 console.log('   下一步：node tools/build-pool-bundle.mjs（把表派生成浏览器读的 js/bundled-champion-pool.js）');
+syncChart();

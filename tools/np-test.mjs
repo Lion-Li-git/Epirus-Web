@@ -12159,6 +12159,22 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
   ok(!/poolDrawFor\(/.test(ai), '⑨ `aiInfo` 里不许直接调 `poolDrawFor(` ⇒ 绕开 `poolPlan` 就是绕开"本机导入优先"，标签会与真决策分叉（实测过的病）');
   ok(uiSrc.indexOf('function poolPlan') > 0 && uiSrc.indexOf('function champForSeat') > 0,
     '⑨ `poolPlan` 与 `champForSeat` 必须都在（少一个就是"单一判定"这句只剩一半）');
+  /* ⑩ §E599（用户 10-12：「现在演化图的分带问题，现在还挂着旧冠军池」）：**图必须与池真源一致**。
+   *   图是**烘焙期**从 `pool-members.tsv` 抄的（`champion-map/viewer.mjs` 把每枚的 `tier` 写进内联
+   *   `var DATA` 的 `pt`），池表一改（`tools/pool-add.mjs` 写）图就落后 —— 而以前**没有任何东西会提醒**
+   *   （本仓为此手工重烘过多次；本次实测图整整落后一个名册：图里 20 枚 7/6/7、真源 27 枚 9/7/11
+   *   ⇒ 新增 7 枚 + 换带 4 枚）。
+   *   同步器 = `champion-map/pool-sync.mjs`（重烘 0.3 秒 + **回读复核**，不信"我写了"）；`--check` 只报不写。 */
+  const syncArgs = a => spawnSync(process.execPath, ['champion-map/pool-sync.mjs'].concat(a), { cwd: process.cwd(), encoding: 'utf8' });
+  const sA = syncArgs(['--check', '--quiet']);
+  eq(sA.status, 0, '⑩a 演化图的池层必须与真源逐枚一致（同步：`node champion-map/pool-sync.mjs`）：'
+    + String(sA.stdout || sA.stderr || '').trim().split('\n').slice(-1)[0].slice(0, 200));
+  /* ⑩b 合成正对照：拿一份"被改过一枚带的图"当输入 ⇒ `--check` 必须 exit 1
+   *   （否则这条腿只是"跑了个命令"，钉不住任何东西 —— 它咬的正是"图 ≠ 表"这件事）。 */
+  const psFix = join(tmpdir(), 'np-d234-poolsync-fixture.html');
+  writeFileSync(psFix, String(readFileSync('champion-map/index.html', 'utf8')).replace('"pt":"hard"', '"pt":"soft"'));
+  const sB = syncArgs(['--check', '--quiet', '--chart=' + psFix]);
+  eq(sB.status, 1, '⑩b 合成正对照：把图里一枚成员的带改掉（图 ≠ 表）⇒ `--check` 必须 exit 1（实测 ' + sB.status + '）');
 });
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 
