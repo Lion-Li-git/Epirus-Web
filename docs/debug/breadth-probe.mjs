@@ -1,6 +1,6 @@
 /* breadth-probe.mjs —— §E600-B 的"广度是不是可玩性"那把尺（研究量具，不进判据）
  *
- * 用户 10-13 01:3x 的要点（原话）：「弱包只是强度差但**广度不能弱**，广度是基本的可玩性」
+ * 用户 10-13 凌晨的要点（原话，掺席落 `44384ea`）：「弱包只是强度差但**广度不能弱**，广度是基本的可玩性」
  *   ‖「可以把启发式随机脚本塞到弱池子里面，能用更多低性价比的技能如**避雷针、双枪、贴贴天火、镜面反射**，
  *     反正这些技能进不了高强度的包」。
  *
@@ -124,7 +124,12 @@ String(arg('packs', '')).split(',').map(s => s.trim()).filter(Boolean).forEach(p
 });
 if (!list.length) { console.log('用法：--all-styles 或 --ids=st:aggro,...（本次没有可测对象 ⇒  exit 2）'); process.exit(2); }
 
-const rows = [['target', 'name', 'distinct', 'rounds', '出手/局:全部'].concat(TARGETS.map(k => NAME[k])).join('\t')];
+/* ⚠ 表头必须按**数据列同一个序**（`TK` 是从 SKILLS 现取的 key 序，不是 `TARGETS` 那串名字序）。
+ *   第一版写的是 `TARGETS.map(k => NAME[k])` —— TARGETS 里装的是**中文卡名**而不是 key，
+ *   `NAME[中文]` 一律 undefined，而 `Array.join` 把 undefined 变成**空串** ⇒ 表头 18 列全空、
+ *   数据列却有值：这就是 §E307 那一族"列贴错名字"，读的人只能靠猜。 */
+const rows = [['target', 'name', 'distinct', 'rounds', '出手/局:全部'].concat(TK.map(k => NAME[k])).join('\t')];
+if (rows[0].split('\t').length !== 5 + TK.length) { console.log('⛔ 表头列数与数据列数不一致 ⇒ 这台尺自己错列了，读数作废'); process.exit(2); }
 console.log('被测脚本 ' + list.length + ' 个 ‖ 装配 = ' + N + ' 席镜像 · ' + MODE + ' · ' + G + ' 局/格');
 for (const t of list) {
   const r = probe(t.fn, t.id, G);
