@@ -167,7 +167,14 @@ async function main() {
   check('提示告知已改回内置冠军', /内置/.test(rr.hint || ''), '提示=' + rr.hint);
   await setupBattle();
   const srcBuiltin = await aiSource();
-  check('重开后用的是内置冠军', srcBuiltin.indexOf('内置') >= 0, '对手AI=' + srcBuiltin);
+  /* §E286/§E590：这一句的**实质** = 点过「用内置冠军」之后，多方侧用的是**内置**来源、**不许**是用户本机那枚。
+   *   池上线（10-11）后多人侧的内置来源由**池**供给，标签是 `池·…` ⇒ 原来只认 `内置` 二字会**误报**
+   *   （10-12 CI 实测：`SUMMARY: BATTLE FAILED`，唯一一条 `FAIL 重开后用的是内置冠军 [对手AI=池]`；本机逐字复现）。
+   *   判据改成：来源是内置（`内置`，或池上线后的 `池`）**且**不含 `本机` —— 本机导入那一支永远不许在这里出现，
+   *   所以"清掉本机包之后仍走本机"这类回归照样红（两向验过）。 */
+  check('重开后用的是内置冠军（本机导入已清掉：来源是"内置"或池上线后的"池"，且不许含"本机"）',
+    (srcBuiltin.indexOf('内置') >= 0 || srcBuiltin.indexOf('池') >= 0) && srcBuiltin.indexOf('本机') < 0,
+    '对手AI=' + srcBuiltin);
 
   /* ── v1.5.131（handoff §4-10）：**2P 槽位**上的同一件事（原先只测了 3P 键）──
    * 病：2P 的本机冠军存在 `epirus.champion.v3`（`js/train/trainer.js:6`），而「用内置冠军」原先
