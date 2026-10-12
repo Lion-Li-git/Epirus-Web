@@ -27,7 +27,7 @@ import { loadChampParams } from '../server/opp-champs.mjs';
 
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
 rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'extra',
-  'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier', 'pairs'], 'probe-diff-ladder');
+  'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier', 'pairs', 'banddef'], 'probe-diff-ladder');
 
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const GAMES = Math.max(1, Number(flag('games', 1500)) || 1500);
@@ -132,6 +132,25 @@ if (USE_POOL) {
   }
   console.log('# 装配 = **池形态**（逐席不同枚，真源 champion-map/pool-members.tsv）：' +
     Object.keys(POOL_BY_TIER).map(t => t + ' ' + POOL_BY_TIER[t].length + ' 枚').join(' ‖ '));
+  /* §E595 `--banddef="A=id1,id2;B=id3,..."`：**不落盘**地量一种分带。
+   *   为什么需要：搜分带时每一次评估都要量"这一带组出来的桌有多硬"，而改真源表再改回来 = 把没验过的划分
+   *   在盘上留一分钟（还会被 `D234` 的 bundle 一致腿咬）。名单里的 id 必须已在池表里（要解得出包）。
+   *   ⚠ 这是**量具的临时视图**，不是产品口径：要用它选出的划分上线，得把 tier 写回 `pool-members.tsv` 并重烘 bundle。 */
+  const BANDDEF = (flag('banddef', '') || '').trim();
+  if (BANDDEF) {
+    const ALL_M = {};
+    for (const t of Object.keys(POOL_BY_TIER)) for (const m of POOL_BY_TIER[t]) ALL_M[m.id] = m;
+    const NB = {};
+    for (const seg of BANDDEF.split(';')) { if (!seg.trim()) continue;
+      const ci = seg.indexOf(':'); const nm = (ci < 0 ? seg : seg.slice(0, ci)).trim();
+      const ids = (ci < 0 ? '' : seg.slice(ci + 1)).split(',').map(x => x.trim()).filter(Boolean);
+      const bad = ids.filter(i => !ALL_M[i]);
+      if (bad.length) { console.error('⛔ --banddef 的 `' + nm + '` 带里这几个 id 不在池表（解不出包）：' + bad.join(',')); process.exit(2); }
+      if (!ids.length) { console.error('⛔ --banddef 的 `' + nm + '` 带是空的'); process.exit(2); }
+      NB[nm] = ids.map(i => ({ id: i, wid: ALL_M[i].wid, tier: nm })); }
+    for (const k of Object.keys(NB)) POOL_BY_TIER[k] = NB[k];
+    console.log('# --banddef 生效（临时视图，表没动）：' + Object.keys(NB).map(t => t + ' ' + NB[t].length + ' 枚').join(' ‖ '));
+  }
 }
 
 const win = {}, rows = [];
@@ -222,6 +241,22 @@ if (QUIET) {
         (asc2[i].label + '                  ').slice(0, 20) + ' ' + (pd2.m >= 0 ? '+' : '') + pd2.m.toFixed(2) +
         ' ±' + se.toFixed(2) + 'pt（1σ ‖ 95%CI ±' + pd2.ci.toFixed(2) + '） ⇒ ' + (Math.abs(pd2.m) < 2 * se ? '**分不开**' : (pd2.m > 0 ? '分得开（' + (Math.abs(pd2.m) / se).toFixed(1) + 'σ）' : '**次序翻了**')) +
         ' ‖ 局长 ' + asc2[i - 1].avgR.toFixed(1) + ' → ' + asc2[i].avgR.toFixed(1) + ' 回合');
+    }
+  }
+  /* `--pairs=all`：**全部 C(n,2) 对**都算一遍（同样免费 —— 逐局胜负向量本来就在手里）。
+   *   为什么需要这一档（§E595，10-12）：`--pairs=1` 配的是"**实测名次**上相邻"的那几对，而 `D227`④ 的在册账要的是
+   *   "**档位表声明序**上相邻"的那几对。10-12 把池收成两带之后，三档共用 `soft` 带 ⇒ 实测名次第一次和声明序分开，
+   *   `--pairs=1` 就产不出那几对 ⇒ 门红在"没记账"上，而真实情况是"这把尺没法用相邻档的名次记账"。
+   *   逐对全算 = 两种口径都拿得到，且不用多跑一场。 */
+  if ((flag('pairs', '0') || '0') === 'all') {
+    const asc3 = rows.slice().sort((a, b) => a.pct - b.pct);
+    console.log('  全部配对差（from = 更低夺冠率那一档 = 对人类更难；正 = to 更容易被打赢）：');
+    for (let i = 0; i < asc3.length; i++) for (let j = i + 1; j < asc3.length; j++) {
+      const a = asc3[i], b = asc3[j], pd3 = pairedDiff(b.id, a.id);
+      if (!pd3) { console.log('    ' + a.id + '→' + b.id + ' 算不出'); continue; }
+      console.log('    ' + (a.id + '                ').slice(0, 16) + '→ ' + (b.id + '            ').slice(0, 14) +
+        ' ' + (pd3.m >= 0 ? '+' : '') + pd3.m.toFixed(2) + ' ±' + pd3.se.toFixed(2) + 'pt ⇒ ' +
+        (Math.abs(pd3.m) < 2 * pd3.se ? '分不开' : (pd3.m > 0 ? '分得开（' + (Math.abs(pd3.m) / pd3.se).toFixed(1) + 'σ）' : '次序翻了')));
     }
   }
 }

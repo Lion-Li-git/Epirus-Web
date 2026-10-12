@@ -213,9 +213,11 @@ if (existsSync(promP)) {
  *   ⚠ 这里**只读不判**：谁是成员、踩了几格，全由 pool-add/seat-rule 那边算完落表；图抄数不重算（单一来源）。 */
 const poolP = join(HERE, 'pool-members.tsv');
 let POOLM = {};
-/* 档 → 环色（品红 / 蓝紫 / 橙）：刻意避开图里已经占掉的三色 —— 绿 #39d98a=过线、金 #ffd166=选中、青 #7fd1ff=对比。
+/* 档 → 环色（品红 = 困难带 / 橙 = 软带）：刻意避开图里已经占掉的三色 —— 绿 #39d98a=过线、金 #ffd166=选中、青 #7fd1ff=对比。
+ *   ⚠ §E594（10-12）把池从三档收成两带（`soft` / `hard`），这里的键名必须跟 `pool-members.tsv` 的 `tier` 逐字一致 ——
+ *   少一档的后果不是报错，是**那一档的池环静默不画**（页内第三条牙就是为此而存在，它 10-12 咬到了这一格）。
  *   换色要连同底部那句画布内提示与图例一起改，否则"环色 = 档"这件事只有代码知道。 */
-const POOL_COL = { hard: '#ff4fa3', mid: '#8f7bff', low: '#ff9a3c' };
+const POOL_COL = { hard: '#ff4fa3', soft: '#ff9a3c' };
 if (existsSync(poolP)) {
   const pl2 = String(readFileSync(poolP, 'utf8')).replace(/\r?\n$/, '').split('\n'); const ph2 = pl2[0].split('\t');
   const iId = ph2.indexOf('id'), iT = ph2.indexOf('tier'), iS = ph2.indexOf('seatKill'), iV = ph2.indexOf('promoteVerdict'), iI = ph2.indexOf('invited');
@@ -2629,10 +2631,12 @@ function paintLegend(fr) {
   if (Object.keys(POOLM).length) {
     var plg = document.createElement('div'); plg.style.color = 'var(--dim)';
     var _pt = {}; for (var _pk in POOLM) _pt[POOLM[_pk].tier] = (_pt[POOLM[_pk].tier] || 0) + 1;
-    plg.innerHTML = '<span style="color:' + POOL_COL.hard + '">◍</span>池·困难 ' + (_pt.hard || 0) +
-      ' ‖ <span style="color:' + POOL_COL.mid + '">◍</span>池·中 ' + (_pt.mid || 0) +
-      ' ‖ <span style="color:' + POOL_COL.low + '">◍</span>池·低 ' + (_pt.low || 0) +
-      '<br><span style="color:' + POOL_COL.hard + '">◍</span> 环色 = 这枚在冠军池哪一档';
+    /* 段由 POOL_COL 现生成（不在这里抄第二份档名清单）：10-12 池从三档收成两带，抄死的清单会把已经不存在的档印成 0 枚。
+     *   只印"表里真有这一档"的段 ⇒ 表改了新档名而 POOL_COL 没跟上 ⇒ 这里少一段，而页内第三条牙会红（不是这里静默少）。 */
+    var _pl = { hard: '困难带', soft: '软带' }, _seg = [];
+    for (var _ck in POOL_COL) if (_pt[_ck]) _seg.push('<span style="color:' + POOL_COL[_ck] + '">◍</span>池·' + (_pl[_ck] || _ck) + ' ' + _pt[_ck] + ' 枚');
+    plg.innerHTML = _seg.join(' ‖ ') +
+      '<br><span style="color:' + POOL_COL.hard + '">◍</span> 环色 = 这枚在冠军池哪一带（多人桌四个 AI 席逐席各抽一枚）';
     plg.title = '真源 champion-map/pool-members.tsv（图只抄数不重算）。多人桌的四个 AI 席**逐席各抽一枚**（同档可重复、禁四席全同）' +
       ' ⇒ 环只在"这枚是池成员"时画；悬停里那句"人席否决 N 格"的口径 = 与现役比、两批同号 ≥20pt 的格数（§E531，检出力脚注见 §E587）。';
     lg.appendChild(plg);
@@ -5034,19 +5038,33 @@ st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
         draw(); img1 = g.getImageData(0, 0, cv.width, cv.height).data;
       } catch (eE) { blew = String((eE && eE.message) || eE); }
       var nDiff = 0, nCol = 0;
-      var cols = [[255, 79, 163], [143, 123, 255], [255, 154, 60]];
+      /* 环色名单**从 POOL_COL 现取**，不在这里抄第二份 RGB（§E595：抄第二份的后果是"改了色没改检查"
+       *   与"检查里的三种色已经不在表里了"—— 10-12 池收成两带，硬编码的 mid/low 那两色就成了幽灵）。 */
+      var cols = Object.keys(POOL_COL).map(function (h) { var s = String(POOL_COL[h]).replace('#', '');
+        return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)]; });
       if (!blew) for (var q = 0; q < img1.length; q += 4) {
         if (img0[q] === img1[q] && img0[q + 1] === img1[q + 1] && img0[q + 2] === img1[q + 2]) continue;
         nDiff++;
-        for (var c = 0; c < 3; c++) if (Math.abs(img1[q] - cols[c][0]) < 46 && Math.abs(img1[q + 1] - cols[c][1]) < 46 &&
+        for (var c = 0; c < cols.length; c++) if (Math.abs(img1[q] - cols[c][0]) < 46 && Math.abs(img1[q + 1] - cols[c][1]) < 46 &&
           Math.abs(img1[q + 2] - cols[c][2]) < 46) { nCol++; break; }
       }
-      /* 阈值为什么是 20% 而不是"大部分"：差分的环像素里**混着抗锯齿与 alpha 混合**（环宽 1.7dpr、alpha 0.95，
-       *   边缘那圈离纯色很远）。实测默认态 20 枚 ≈ 1300 颗差分、其中 27% 落在三种环色 ±46 内
-       *   ⇒ 判"画没画"用颗数（>300），判"画的是不是环色"用占比（>20%）。把环色改成白色这条立刻红（牙验过）。 */
-      T('池层：环真画到画布上（两帧差分里得有环色像素）', !blew && nDiff > 300 && nCol / Math.max(1, nDiff) > 0.2,
-        (blew ? '取色抛错 ' + blew : '差分 ' + nDiff + ' 颗 ‖ 其中环色 ' + nCol + ' 颗（' +
-          (nDiff ? (nCol / nDiff * 100).toFixed(0) : 0) + '%）‖ 可见池成员 ' + nVis + ' 枚'));
+      /* 为什么"落在环色 ±46 内"而不是精确等值：环宽 1.7dpr、alpha 0.95，边缘那一圈与底下的节点/连线混过色，
+       *   离纯色很远 —— 精确等值会把真画出来的环判成没画（这条最早就是这么定的，没变）。 */
+      /* 判据从"占比 >20%"改成"**每枚可见成员 ≥8 颗环色**"（§E595，10-12，被 CI 逼出来的）：
+       *   本机四视图实测（把阈值临时改成不可能、让 FAIL 行把读数印出来量的）：
+       *     tree 差分 1309 颗 / 环色 342（26%） ‖ 1d 1645/587（36%） ‖ 3db 2063/766（37%） ‖ map 2107/878（42%）
+       *   而 GitHub 的 windows runner 跑 tree 是 **2104/338 = 16%** ⇒ 占比这条**跨环境不稳**：
+       *   分子（环色颗数）两处都一样（338 对 342），分母（差分总颗数）却随视图与 runner 的窗口/像素比变 1.6~2.6 倍。
+       *   这条断言要判的是"环这一层画没画到画布上"，那是**分子**的事；把分母拽进来等于让"别的层重绘了多少"
+       *   决定池环的存活 —— 红了也说不清是谁坏了。改成按可见成员数归一：20 枚 ⇒ 下限 160 颗，
+       *   实测最少的 runner 有 338 颗 ⇒ 2.1 倍余量；而"环色改成白色"那格变异照样当场红（0 颗 < 160，重验过）。
+       *   ⚠ 换来的盲区要如实写：检测名单改成从 POOL_COL 现取之后，**"整层换个颜色"这条它抓不到了**
+       *     （检测器跟着一起换色，旧写法靠硬编码 RGB 能抓，代价是那份抄本在 10-12 变成了幽灵）。
+       *     这一条判的就剩"画没画"；"画的是不是**该画的那档的颜色**"由上面第二条（图上档 == 表里档）与配色表本身管。
+       *     牙的复验用的是"把四处画环整体短路"那格变异 ⇒ 实测 差分 0 颗 / 环色 0 颗，当场红（14:33 本机）。 */
+      T('池层：环真画到画布上（两帧差分里得有环色像素）', !blew && nDiff > 300 && nCol >= 8 * nVis,
+        (blew ? '取色抛错 ' + blew : '差分 ' + nDiff + ' 颗 ‖ 其中环色 ' + nCol + ' 颗（每枚可见成员 ' +
+          (nCol / Math.max(1, nVis)).toFixed(1) + ' 颗 ‖ 下限 8 颗/枚 ‖ 占比 ' + (nDiff ? (nCol / nDiff * 100).toFixed(0) : 0) + '%）‖ 可见池成员 ' + nVis + ' 枚'));
     }
   })();
   /* §E574 三条"清空画布"的牙（用户报：拖窗口时整张黑一下；他机器上一次拖拽里 fit0 触发 9 次。

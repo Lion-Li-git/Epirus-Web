@@ -2173,9 +2173,18 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
       ok(!!hit, '④c[' + mk + '] 相邻档 `' + hard.id + '→' + easy.id + '` 在册账里没有这一行 ⇒ 这一步没人判过（新增档忘了测 / 换序没记账）');
     }
   }
-  const notClaimed = (LADDER_CLAIM.modes['pool:long'] || []).filter(p => !p.sep).map(p => p.from + '→' + p.to);
+  /* 这一行只是**把账本上的东西念出来**，不加判据（第 102 条管着扩判据那件事）。
+   *   ⚠ 原来这里写死了"（1.9σ < 2σ）"—— 那个 1.9 是上一批读数的数，换池之后就对不上了（手打派生值这个仓最常犯）。
+   *   现在每步的 σ 从行里现算；另外把"过 2σ 但符号与声明序相反"的那几步也念出来 ——
+   *   门不为此红（等裁：要不要让它红是另一件事），但**不许绿色把翻序藏起来**。 */
+  const notClaimed = (LADDER_CLAIM.modes['pool:long'] || []).filter(p => !p.sep)
+    .map(p => p.from + '→' + p.to + '（' + (p.se > 0 ? (Math.abs(p.d) / p.se).toFixed(1) : '?') + 'σ）');
+  const flipped = [];
+  for (const mk of claimModes) for (const p of (LADDER_CLAIM.modes[mk] || []))
+    if (p.sep && p.d < 0) flipped.push(mk + ' `' + p.from + '→' + p.to + '` ' + p.d.toFixed(2) + '±' + p.se.toFixed(2) + 'pt');
   console.log('   ⚑ ④ 阶梯在册账：' + claimModes.join(' ‖ ') + ' ‖ 按甲**没声称分得开**的那几步：' +
-    (notClaimed.length ? notClaimed.join(' ‖ ') + '（1.9σ < 2σ）' : '无'));
+    (notClaimed.length ? notClaimed.join(' ‖ ') : '无') +
+    ' ‖ ⚠ 符号与声明序相反（= 实测这一档比它下面那档**更软**）：' + (flipped.length ? flipped.join(' ‖ ') : '无'));
   {
     const run = spawnSync(process.execPath, ['tools/probe-diff-ladder.mjs', '--machine=1', '--quiet',
       '--games=200', '--n=5', '--mode=multi', '--pool=1'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });

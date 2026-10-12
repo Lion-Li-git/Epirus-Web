@@ -34,7 +34,11 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const MAP = join(ROOT, 'champion-map', 'pool-members.tsv');
 const COLS = ['id', 'wid', 'path', 'tier', 'invited', 'promoteVerdict', 'seatKill', 'addedAt', 'note'];
-const TIERS = ['hard', 'mid', 'low'];
+/* 池的**带名**（`pool-members.tsv` 的 `tier` 列取值）。§E594（10-12 用户裁定）把三档收成两带：
+ *   `soft`（5 枚）/ `hard`（15 枚，现役钉在这一带）。旧的 `mid`/`low` 已不存在 ⇒ 别再往表里写。
+ * ⚠ 这张名单同时管着三件事：`--tier=` 的校验、表内排序、以及"少了一档 = 图例与环色要一起加"的那个信号。
+ *   页面侧的环色表是 `champion-map/viewer.mjs` 的 `POOL_COL`（两处都得改，改一处会被页内第三条牙抓红）。 */
+const TIERS = ['hard', 'soft'];
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const has = k => process.argv.includes('--' + k);
 const rd = p => { const L = readFileSync(p, 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
