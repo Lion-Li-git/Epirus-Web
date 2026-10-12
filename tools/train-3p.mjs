@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 import { loadPool, makeMimic } from './human-pool.mjs';   // v1.6.60：人类形状对手的**单一来源**（§E152e/§E155/§E168 的产物；别再抄一份采样器）
 import { guardWrite, declareCopy } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
+import { widOf } from '../champion-map/pack-id.mjs';   /* 2026-10-12 DS：`hotstartFrom` 记权重身份（wid）而不是路径 —— 与 server 的 weightsId 同式 */
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
@@ -1045,7 +1046,7 @@ const t0 = Date.now();
  *     (EPIRUS_SEEDPACK=<path>, default = the shipped champion, never OUT_PATH);
  *   - the hot-start source is recorded in meta.hotstartFrom, so "which champion this run
  *     grew from" becomes part of the reproducible input instead of hidden state. */
-let seedParams = null, hotstartFrom = null;
+let seedParams = null, hotstartFrom = null, hotstartPath = null;
 if (process.env.EPIRUS_HOTSTART === '1') {
   const srcPath = process.env.EPIRUS_SEEDPACK || 'js/bundled-champion-3p.js';
   /* v1.5.153 修正（DS 09-22 · **两臂白跑**的根因）：这里原来只认 `window.EPIRUS_CHAMPION_3P`，
@@ -1057,7 +1058,20 @@ if (process.env.EPIRUS_HOTSTART === '1') {
   try {
     const src = readFileSync(srcPath, 'utf8');
     const m = src.match(/window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/);
-    if (m) { const raw = P.unpack(JSON.parse(m[1]), true); seedParams = raw ? P.embedLegacy(raw) : null; hotstartFrom = srcPath; ok = !!seedParams; }
+    if (m) {
+      const raw = P.unpack(JSON.parse(m[1]), true); seedParams = raw ? P.embedLegacy(raw) : null;
+      hotstartPath = srcPath;
+      /* ===== 2026-10-12 DS：`hotstartFrom` 记**权重身份（wid）**，不再记文件路径 =====
+       * 依据：① `server/train-server.mjs:289` 一直记的是 `weightsId(seedPack)`；
+       *   ② `champion-map/lineage.mjs:9` 的契约写着"`hotstartFrom` —— 父指针：从哪一枚的**权重**热启动来的（一个哈希）"。
+       * 病（实测，不是推测）：CLI 侧记**路径** ⇒ 血统图只能按路径推 ⇒ 画**虚线**，而路径会因去重/改名而失效
+       *   ——63 枚子包点名 `docs/artifacts/e234-out/K2.js`，那份被搬进隔离区 ⇒ 6 天来只能画虚线；
+       *   服务端那一路因为记哈希，一直是实线。两条路记的东西不同 = 同一件事两处维护的那种漂移。
+       * 路径**不丢**：它就在 `recipe.env.EPIRUS_SEEDPACK` 里（本次只改这一个字段的**内容**，不改 meta 形状、不加字段）。
+       * 算不出（外壳不认/形状异常）⇒ **退回路径**（老行为）——不猜、也不静默。 */
+      hotstartFrom = (seedParams && widOf(src)) || srcPath;
+      ok = !!seedParams;
+    }
   } catch (e) { ok = false; }
   if (!ok) {
     console.error('[train-3p] ⛔ EPIRUS_HOTSTART=1 但读不出种子包：' + srcPath +
@@ -1268,7 +1282,7 @@ if (HALL_SEED > 0 && seedParams) {
   if (!hall.some(function (h) { return h.params === seedParams; })) {
     hall.push({ params: seedParams, fit: null });
     HALL_SEED_APPENDED = true;
-    console.log('[hall-seed] 起点已追加为终局重验候选（现在 ' + hall.length + ' 席，逐位来自 ' + hotstartFrom + '）');
+    console.log('[hall-seed] 起点已追加为终局重验候选（现在 ' + hall.length + ' 席，逐位来自 ' + (hotstartPath || hotstartFrom) + '）');
   } else {
     console.log('[hall-seed] 起点本来就在名人堂里（' + hall.filter(function (h) { return h.params === seedParams; }).length + ' 席）⇒ 不重复追加');
   }
@@ -1389,7 +1403,7 @@ for (const h of hall) {
         : (((u.src === 'land' ? mhOf(e.ref.params, e, u.mode).landByKey : mhOf(e.ref.params, e, u.mode).castByKey)[u.key] || 0) / SEL_LAND_GAMES);
     };
     if (!usable.length) {
-      console.error('[train-3p] ⛔ 起点（' + (hotstartFrom || '热启动种子包') + '）在 ' + modes.join('/') + ' 镜的 ' +
+      console.error('[train-3p] ⛔ 起点（' + (hotstartPath || hotstartFrom || '热启动种子包') + '）在 ' + modes.join('/') + ' 镜的 ' +
         SEL_KEEP_KEYS.concat(SEL_KEEP_CAST_KEYS).join('/') + ' 上落地与出手**全为 0** ⇒ "不劣于起点"没有参照，' +
         '拒绝按恒真判据空转（可换 --keys / --modes 或加大 EPIRUS_SEL_LAND_GAMES）');
       process.exit(7);
@@ -1619,6 +1633,12 @@ try {
     if (hh.fit === null) { console.log('[band-save] 第 ' + (bi + 1) + ' 席 = 追加的起点 ⇒ 不另存（线上包本来就在仓里）'); continue; }
     const dupWinner = hh.params === bestParams && bi !== selFirst;
     const bmeta = {
+      /* ===== 2026-10-12 DS：热启动的**父权重身份**（与终局产物那条同一把尺，理由见 `const meta` 处的长注释）=====
+       * band 是**真正被留下来的候选**（终局重验常由起点夺冠 ⇒ 那条根本不落盘）⇒ 这一条比终局那条更要紧。
+       * 只有真的是哈希（16 位 hex）时才写：算不出时 `hotstartFrom` 退回的是**路径**，而路径写进这个字段会让
+       *   `lineage` 的 `byHash` 一级去解一个不存在的身份（那一级"永远不否"）；路径本身在 `recipe.env` 里已有。
+       * 冷启动一个字段都不加（`docs/artifacts/train-3p-out.js` 是被 D123/D127 钉在 `aa743488cc` 的登记基线）。 */
+      ...(/^[0-9a-f]{16}$/.test(hotstartFrom || '') ? { hotstartFrom: hotstartFrom } : {}),
       source: 'tools/train-3p.mjs (band-save)', arm: ARM, bandIdx: bi, trainFit: hh.fit,
       xn2w: XN2W || 0, xn2g: XN2G, xn2refs: (XN2W > 0 ? XN2REF_PATHS : []),
       n: N, gens: GENS, games: GAMES, pop: POP, seed: __SEED,
@@ -1646,6 +1666,18 @@ console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
 
 const pack = P.pack(bestParams);
 const meta = {
+  /* ===== 2026-10-12 DS：热启动的**父权重身份**必须落进产物 =====
+   * 为什么非写不可：`champion-map/lineage.mjs:9` 的契约是"`hotstartFrom` = 从哪一枚的**权重**热启动来的（一个哈希）"，
+   *   而 CLI 侧此前只记 `recipe.env.EPIRUS_SEEDPACK`（一个**路径**）⇒ 血统图只能按路径推 ⇒ **画虚线**，
+   *   且路径会因去重/改名失效 —— 实测 63 枚子包点名 `docs/artifacts/e234-out/K2.js`，那份被搬进隔离区
+   *   ⇒ 六天来只能画虚线（本班已按别名表把那 63 条解回实线）。
+   * 这不是新字段：服务端那一路（`server/train-server.mjs:289,357`）一直写 `hotstartFrom: weightsId(seedPack)`；
+   *   本条是**对齐** —— 同一个名字、同一个量（`widOfArr` 与 `weightsId` 逐字同式 = `sha1(权重数组)` 前 16 位）。
+   * ⚠ **只有真的是哈希时才写**（16 位 hex）：① 算不出时 `hotstartFrom` 会退回路径，路径写进这个字段会让
+   *   `lineage` 的 `byHash` 一级去解一个不存在的身份（那一级"永远不否"，会画出悬空边）；路径本身在 `recipe.env` 里已有。
+   * ② **冷启动一个字段都不加**：`docs/artifacts/train-3p-out.js` 是被 D123/D127 钉在 `CLI_ARM_BASELINE='aa743488cc'`
+   *   的登记基线（默认冷启动的产物），加一个 `null` 字段就等于改了它。 */
+  ...(/^[0-9a-f]{16}$/.test(hotstartFrom || '') ? { hotstartFrom: hotstartFrom } : {}),
   selLand: SEL_LAND_LOG,
   selKeep: SEL_KEEP_LOG,   // v1.5.265b（§E66）：载重 veto 的账（参照/线/剔了谁/改没改判）—— 事后能从产物自证
   /* v1.5.169：产物自带配方。§N11 的教训是"读日志才知道这臂开了什么"，而日志会滚走、`.bak` 会留下来——
