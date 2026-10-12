@@ -59,11 +59,15 @@ const OUT_H = H0.concat(NEED_SC ? SC : []).concat(['kin']);
 const ROWLEN = OUT_H.length;
 const out = [OUT_H.join('\t')];
 let cleared = 0, carried = 0, keptChamp = 0;
-/* §E488：`lineage` 这一列在图上/查看器里都是"**当过线上冠军**"的意思，所以它只许吃这三类。
+/* §E488：`lineage` 这一列在图上/查看器里都是"**当过线上冠军**"的意思，所以它只许吃这几类。
  *   原来"清不清"只看"在不在 chain-scan 的名单里" ⇒ 任何**新批次**自带一个没见过的 lineage 值，
  *   就会既不被清、又被算进冠军数（本轮加三枚融合粒时踩到：它们带的 '融合（权重平均）' 不是冠军身份）。
- *   ⇒ 改成白名单：不在名单里但类别不认识 ⇒ 清成空并计数，类别一律不许自己长出来。*/
-const CH_CLASSES = { '历代上槽': 1, '当前线上': 1, '旧槽位冠军': 1 };
+ *   ⇒ 改成白名单：不在名单里但类别不认识 ⇒ 清成空并计数，类别一律不许自己长出来。
+ * §E600-A（用户 10-12 裁定③：「如今没有『当前现役』这个东西了，顶多只有当前困难席平均水平」）：
+ *   白名单**收掉 `当前线上`** —— 池上线后逐席抽签，没有任何一枚是"玩家遇到的那一个"，
+ *   而"活槽此刻住的是谁"由 `slot-identity.mjs` 现解，不再是一个写进表里的身份类别。
+ *   ⇒ 副作用正是想要的：旧 ruler 表里残留的 `当前线上` 会被这台自动清成空并计数（不必手工回改 20 张历史表）。*/
+const CH_CLASSES = { '历代上槽': 1, '旧槽位冠军': 1 };
 const unknownCls = {};
 for (const r of ROWS) { const c = r[ch.lineage]; if (c && !CH_CLASSES[c]) unknownCls[c] = (unknownCls[c] || 0) + 1; }
 if (Object.keys(unknownCls).length) console.log('⚠ §E488 这批表里带了**不是冠军身份**的 lineage 类别，按白名单清成空：' +

@@ -79,7 +79,7 @@ export function load(root) {
     if (!cid && t.metaArm && ROW[t.metaArm]) { cid = canon(t.metaArm); via = 'metaArm'; }
     if (!cid && ID_OF_WID[t.wid]) { cid = ID_OF_WID[t.wid]; via = 'wid'; }
     segs.push({ wid: t.wid, from: t.fromUTC || '', sha: t.sha || '', ver: verOf(t.subject || ''),
-      panelId: t.panelId || '', coordsId: cid, via: via, metaTs: t.metaTs || '' });
+      panelId: t.panelId || '', metaArm: t.metaArm || '', coordsId: cid, via: via, metaTs: t.metaTs || '' });
   }
 
   /* ---- 首次上槽 = 最早那一段（§E378：同一枚回槽多次，"上线"这件事的第一次才是它）---- */
@@ -114,7 +114,7 @@ export function load(root) {
   };
 
   return { coordsCount: Object.keys(ROW).length, hasCoords: CO.length > 0,
-    segs, byId, onSlot: Object.keys(byId), decl, live, ROW,
+    segs, byId, onSlot: Object.keys(byId), decl, live, ROW, GROUP,
     isOnSlot: id => !!byId[canon(id)], classOf: id => (byId[canon(id)] ? '历代上槽' : ''),
     canon: canon, widOfId: id => WIDOF[id] || '', verOf: verOf };
 }
