@@ -1708,7 +1708,7 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
        *   （同名不同权重那种假父边会被这一步否掉，正是 §E330/§E367 的病）⇒ 与 hash 同级画实线；
        *   不等/读不到 ⇒ 留在 「seedpack”，继续虚线。**这一级不等于哈希级**：哈希是训练服务自己记的，这条是 runner 的环境变量 + 事后核权重，
        *   所以图例与页脚都写成"父身份可证（哈希 / 种子文件同权重）"，不写成"哈希为证"。 */
-      var _idenBacked = (dd.psrc === 'hash' || dd.psrc === 'hash-emb' || dd.psrc === 'seedpack-wid');
+      var _idenBacked = (dd.psrc === 'hash' || dd.psrc === 'hash-emb' || dd.psrc === 'seedpack-wid' || dd.psrc === 'slot-wid');
       /* §2026-10-08 DS②（用户：「黄虚线比蓝线还显眼…灰点线又太虚…既然这两个都是不能完全确定的类型，
        *   你就统一成一种线，能见度跟蓝线差不多或略低」）：**三类不确定合一个 kind** ——
        *   倒挂假边(bq) / 槽位接替边(cq) / 路径推断(seedpack·arm·slot-at-time) 全部 = kind 1（淡蓝虚线）。 */
@@ -1856,7 +1856,7 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
   /* §E442 页脚拆**两行**（用户 10-08：「超级长的第二行就可以分成两行显示」）：第一行 = 这张图怎么读（行/轴/颜色口径），
    *   第二行 = 边与手势。⚠ 原来那个"量宽缩字"是**死代码**：先 measureText 算出该缩到几号，紧接着下一句又把字体写回 12px
    *   ⇒ 缩字从未生效，超长那行是被画布右缘**截掉**的（她截图里"· 滚轮 = 横轴"整段看不见就是这件事）。 */
-  var foot2 = (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝实线 = 父身份可证（哈希 ‖ 种子文件同权重）· 淡蓝虚线 = 只按名字/时间推出来的（共画了 ' + NEDG + ' 条父边'
+  var foot2 = (st.edges === 'off' ? '父边已关掉（开关在工具栏「连线」）' : '淡蓝实线 = 父身份可证（哈希 ‖ 种子文件同权重 ‖ 活槽期实录权重）· 淡蓝虚线 = 只按名字/时间推出来的（共画了 ' + NEDG + ' 条父边'
       + (st.edges === 'hash' ? ' ‖ 只身份可证那一级' : '') + '）') +
     /* §E378 接替边必须自己在图上说一句它是什么：它和血统边画在同一片地方，而两者的意思完全不同
        （'hash' 那一档不画它，所以那句计数跟着 NCHAIN 走，为 0 就整段不出现）*/
@@ -2599,7 +2599,7 @@ function paintLegend(fr) {
    *   ② 壳建在三维行为轴 (x3/y3/z3) 上，不是投影坐标；③ 谱系图实线 = 父身份可证（哈希 ‖ 种子文件同权重）、虚线 = 只按名字/时间推出来的。 */
   var _cav = document.createElement('div'); _cav.style.marginTop = '4px'; _cav.style.color = 'var(--dim)'; _cav.style.maxWidth = '150px';
   _cav.innerHTML = (st.mode === 'tree')
-    ? '实线 = 父身份可证<br>（包里的哈希 ‖ 种子文件同权重）<br>虚线 = 只按名字/时间推出'
+    ? '实线 = 父身份可证<br>（包里的哈希 ‖ 种子文件同权重 ‖ 活槽期实录权重）<br>虚线 = 只按名字/时间推出'
     : '底色/壳只在有点的地方有意义（空处 = 插值）<br>壳建在三维行为轴上，不是投影坐标';
   _col.appendChild(_cav); if (s3h) _col.appendChild(s3h);   /* §E458 只有 hp 档多这一行（单批读数的噪声必须写在读数的地方）*/
   var _row = document.createElement('div'); _row.style.display = 'flex'; _row.style.gap = '8px';
@@ -3670,25 +3670,38 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var BK = P.filter(function (d) { return backOf(d); });
   var DM = P.filter(function (d) { return d.psrc === 'demoted'; });
   var _e7 = P.filter(function (d) { return d.id === 'e35prod807'; })[0];
-  T('倒挂假边必须被修掉：e35prod807 的父现在按**槽位时间轴**接到 v7cmin4-31（它跑的那一刻槽里是这枚）',
-    !!_e7 && _e7.psrc === 'slot-at-time' && _e7.pof === 'v7cmin4-31' && !backOf(_e7),
+  T('倒挂假边必须被修掉：e35prod807 的父现在按**子包 ts 落在的那一段槽期**接到 v7cmin4-31（它跑的那一刻槽里是这枚）',
+    !!_e7 && (_e7.psrc === 'slot-at-time' || _e7.psrc === 'slot-wid') && _e7.pof === 'v7cmin4-31' && !backOf(_e7),
     _e7 ? ('psrc=' + (_e7.psrc || '(空)') + ' ‖ parentOf=' + (_e7.pof || '(空)') + ' ‖ 其 ts=' + (TSBY[_e7.pof] || '—') + '（本枚 ' + _e7.ts + '）') : '图上查无此枚');
+  /* §E593：这一条**不再钉死等级名**（原来只认 slot-at-time）。父**是谁**（v7cmin4-31 = 它跑的那一刻的槽主）
+   *   与"不许倒挂"这两件是实质，必须继续钉；而"用哪条来路接上的"是机制：活槽路径那一族现在是**先**由
+   *   seedpackOf 按 ts 问完整时间轴解出父、再由 seedpackVerified 核权重 ⇒ 等级是 slot-wid（实线），
+   *   只有"父指针记的是非活槽路径、而按今天的内容解析出更晚的节点"那种才走 slot-at-time。
+   *   若哪天有人把"今天的槽主"当成父接上去，pof 立刻不是 v7cmin4-31 ⇒ 这一条照样红（实测过，见 §E593）。 */
   T('全库不许有任何时间倒挂的父边（0 条 ⇒ 有就是守卫漏了来路，图上会拿假血统画实线）',
     BK.length === 0, BK.length + ' 条：' + BK.slice(0, 4).map(function (d) { return d.id + '→' + d.pof; }).join(' ‖ '));
   /* §E487 'soup' = 这一枚的父是**权重平均的另一粒**（tools/soup-pack.mjs 写进包 meta 的来源 wid），
    *   与热启动的五个来路并列放在这里：它同样是一条"真边"，只是语义不是"续训自谁"。
    *   融合格式：'soup' 档的**第一父**进 pof，**第二父**进 pof2（下面那条 §E487 腿管它）。 */
-  T('父边来路必须标全：有父边的只能来自 hash/hash-emb/seedpack-wid/seedpack/arm/slot-at-time/slot-chain/soup，标 demoted 的一律不许还有父边',
+  T('父边来路必须标全：有父边的只能来自 hash/hash-emb/seedpack-wid/slot-wid/slot-infer/seedpack/arm/slot-at-time/slot-chain/soup，标 demoted 的一律不许还有父边',
     (function () {
       for (var q = 0; q < N; q++) { var d = P[q];
         /* §E555：来路的白名单必须跟着分级一起长 —— 新加的「seedpack-wid」（种子路径 + 事后核过权重一致）
          *   与早就存在但漏在册的「hash-emb」（§E464 靠"嵌入后身份"才对上的那批）都要列进来，
-         *   否则这条腿会把**合法的新等级**判成"标了个没见过的来路"。 */
-        if (d.pof && ['hash', 'hash-emb', 'seedpack-wid', 'seedpack', 'arm', 'slot-at-time', 'slot-chain', 'soup'].indexOf(d.psrc) < 0) return false;
+         *   否则这条腿会把**合法的新等级**判成"标了个没见过的来路"。
+         * §E593：「slot-wid」同理 —— 子包点名的是**活槽路径**、按子包 ts 问完整时间轴核过权重的那一级。
+         * ⚠ 同时补「slot-infer」（10-12 §E593 前一笔给 E51 那族加的"有 HOTSTART 证据、但没记路径"的推断级，
+         *   虚线）—— 它一直漏在这张白名单外，于是那一笔把这同一条腿打红过一次。
+         *   == 白名单**必须跟着分级一起长**：§E555 写过一次，这是第三次踩同一个坑。 */
+        if (d.pof && ['hash', 'hash-emb', 'seedpack-wid', 'slot-wid', 'slot-infer', 'seedpack', 'arm', 'slot-at-time', 'slot-chain', 'soup'].indexOf(d.psrc) < 0) return false;
         if (d.pof2 && d.psrc2 !== 'soup') return false;      /* §E487 第二父只有融合格一种来路 */
         if ((d.psrc === 'demoted' || d.psrc === 'demoted-time') && d.pof) return false; }
-      return P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length >= 1; })(),
-    '按时间轴改接 ' + P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length + ' 枚 ‖ 退回不可考 ' + DM.length + ' 枚 ‖ 有父边 '
+      /* §E593：这条腿的**实质** = "按时间轴解父"这台机器真的在用（原来是数 slot-at-time >= 1）。
+       *   活槽路径那一族现在先被 slot-wid 接走 ⇒ 只数 slot-at-time 会误报（10-12 CI：四个视图各 2 FAIL 中的一条）。
+       *   ⇒ 要求两条来路**合起来 ≥ 1**：机器没在用、或两条都塌成 0，照样红。 */
+      return P.filter(function (d) { return d.psrc === 'slot-at-time' || d.psrc === 'slot-wid'; }).length >= 1; })(),
+    '按时间轴（改接 slot-at-time ' + P.filter(function (d) { return d.psrc === 'slot-at-time'; }).length
+      + ' 枚 + 活槽期解析 slot-wid ' + P.filter(function (d) { return d.psrc === 'slot-wid'; }).length + ' 枚）‖ 退回不可考 ' + DM.length + ' 枚 ‖ 有父边 '
       + P.filter(function (d) { return d.pof; }).length + ' 枚 ‖ 融合第一父 '
       + P.filter(function (d) { return d.psrc === 'soup'; }).length + ' 枚');
   /* ===== §E378 旧冠军的连线：三条判据（悬空边 / 接替链的形状 / 横轴那把钟）=====

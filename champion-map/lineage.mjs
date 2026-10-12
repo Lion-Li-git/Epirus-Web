@@ -235,7 +235,7 @@ function widOfFile(rel) { if (!rel) return ''; if (WIDCACHE[rel] !== undefined) 
   }
   if (!w) w = ALIAS[rel] || '';          /* 候选文件都读不到 ⇒ 按登记表解（搬走的那些）；解不出就留空 = 继续虚线 */
   WIDCACHE[rel] = w; return w; }
-let nSpkWid = 0, nSpkLoose = 0;
+let nSpkWid = 0, nSpkLoose = 0, nSlotWid = 0;
 function seedpackVerified(m, parId, ts) {
   if (!parId) return false;
   const f = seedpackFile(m); if (!f) return false;
@@ -376,9 +376,15 @@ for (const r of REC) { const m = r.m || {};
     if (isSlotDefault) { const alt = slotAt(m.ts); if (alt && IDTS[alt] && (!m.ts || IDTS[alt] <= m.ts)) bySlotInfer = alt; }
   }
   if (byPath) nSpk++; if (byArm) nArm++;
-  /* §E555：路径级父指针能不能升到"权重身份可核"，只由这道比较决定（相等才算，读不到/不等一律留在 seedpack） */
+  /* §E555：路径级父指针能不能升到"权重身份可核"，只由这道比较决定（相等才算，读不到/不等一律留在 seedpack）。
+   * §E593：**升到实线有两条来路，必须分开标**（原来的写法把它藏进 `seedpack-wid`，于是页面上"时间轴那台机器
+   *   真的在用吗"这条腿失去了观测点）：
+   *     · `seedpack-wid` = 子包点名的那份**文件此刻的权重** == 父节点在册权重（文件还在，内容就是当时那份）；
+   *     · `slot-wid`    = 子包点名的是**活槽路径**，权重要按子包 ts 问完整时间轴（当时那一段住的是谁）才对得上。
+   *   两条的**升等条件同一把尺**（逐位相等的权重），只是"那份权重从哪儿读"不同。 */
   const spWid = !!byPath && seedpackVerified(m, byPath, m.ts);
-  if (byPath) { if (spWid) nSpkWid++; else nSpkLoose++; }
+  const spSlot = !!byPath && /(^|[\\/])bundled-champion-3p\.js$/.test(seedpackFile(m) || '');
+  if (byPath) { if (spWid) { nSpkWid++; if (spSlot) nSlotWid++; } else nSpkLoose++; }
   /* ===== §E487 融合粒（`tools/soup-pack.mjs` 的产物）：它**天生有两个父** =====
    *   `meta.soup.sources` 是工具自己写进去的实录（每粒来源的 路径 + wid + ts），不是推断 ⇒
    *   第一父走正常的 `parentOf`，第二父走新列 `parentOf2`，图上用**另一种颜色的边**画第二条。
@@ -405,7 +411,7 @@ for (const r of REC) { const m = r.m || {};
     parent: norm(m.hotstartFrom || WIDOF[byPath || byArm || bySlot] || '') };
   ROWS.push({ id: r.id, ts: m.ts || '', seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
     parentOf: byHash || byPath || byArm || bySlot || bySlotInfer || sP1, wid: r.wid || '',
-    psrc: byHash ? (byHashEmb ? 'hash-emb' : 'hash') : (byPath ? (spWid ? 'seedpack-wid' : 'seedpack') : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (bySlotInfer ? 'slot-infer' : (sP1 ? 'soup' : (demoted ? 'demoted' : '')))))),
+    psrc: byHash ? (byHashEmb ? 'hash-emb' : 'hash') : (byPath ? (spWid ? (spSlot ? 'slot-wid' : 'seedpack-wid') : 'seedpack') : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (bySlotInfer ? 'slot-infer' : (sP1 ? 'soup' : (demoted ? 'demoted' : '')))))),
     pof2: sP2, psrc2: sP2 ? 'soup' : '',
     demoted: demoted,
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
@@ -442,7 +448,8 @@ console.log('　§E555 SEEDPACK 那 ' + nSpk + ' 枚里：**种子文件的权�
 /* §E593：走**活槽路径**的那一支单独报数 —— 它的"身份可核"问的是**当时那一段的实录权重**（完整时间轴），
  *   不是"今天那格文件里装的是谁"（后者正是 §E367 那个病）。时间轴没追到今天时它是 0，且上面那行会响亮印出来。 */
 console.log('　§E593 其中点名**现役槽位路径**（`js/bundled-champion-3p.js`）的 ' + nSlotEra +
-  ' 枚：父 = 子包 ts 落在的那一段槽主（问 slot-timeline.tsv 完整时间轴，不读今天那格文件）');
+  ' 枚：父 = 子包 ts 落在的那一段槽主（问 slot-timeline.tsv 完整时间轴，不读今天那格文件）'
+  + ' ‖ 这 ' + nSlotEra + ' 枚里有 ' + nSlotWid + ' 枚权重对上了、升到 **`slot-wid`**（实线，与 `seedpack-wid` 同一把尺、不同来路）');
 const bySig = new Map();
 /* ===== §E466 旧槽位冠军**不参与家族聚类**（用户 10-08 指着图问"怎么有几个后期的点飞到家族 1 去了"）=====
  *   它们不是一次训练产物，是"当时上槽的那枚权重"（16 行的 META 来自 e370-out 的导出，配置字段多半是空的）。
