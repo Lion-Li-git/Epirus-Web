@@ -62,6 +62,107 @@ export function killTotal(id, batches, baseId) {
   return n;
 }
 
+/* ============ 带内参照（§E598 · 2026-10-12 用户裁定 A）============
+ * 病（用户点名）：人席杀刀原来一律跟**现役**那一行比，而**池上线后根本没有"某一枚现役"在场**——
+ *   四个 AI 席逐席从带里抽 ⇒ 玩家遇到的是"这一带"，不是那一枚包。
+ *   铁证（本班算出来的）：按老口径，**我们自己的池成员 `D4a`、`E3` 各踩 1 格**；而困难带在多数格上
+ *   本来就比现役软 +4~+7pt ⇒ "比现役差 20pt"根本不是离群，只是"这枚不像现役"。
+ * 口径：`(read − 现役) − (本带同伴在同一对批表里的均值)` ≥ 20pt 且两批同号 ⇒ 计 1 格。
+ *   问的是「**你在你自己的带里是不是那个洞**」，而不是「你比那枚已经不再单独上场的现役差多少」。
+ * ⚠ **现役参照（`killOf`/`killTotal`/`seatKillIndex`）已无线上消费者**（§E598 · 用户 10-12：「理论上讲，现在也没有所谓上槽了吧」）：
+ *   3P 的"上槽冠军"按用户 10-11 裁定③（「池上线后不再有 promote，改『加入冠军池』」）**已经退役** ——
+ *   玩家遇到的是"从某一带里逐席抽"，不是某一枚包 ⇒ 池这一层唯一的合法参照是**本带同伴**。
+ *   保留这三个导出只为**复算历史读数**（旧表里的 `seatKill` 是老口径算的）；新判决一律走 `*Band`。
+ *   （唯一还"有单一冠军"的是 **2 人桌**：池按 §E286 不上 2 张桌，那儿的对手仍是 `js/bundled-champion-2p.js` ——
+ *     但人席探针量的是 5 席 multi/long，表里**根本没有 2P 那一枚**，所以这条不构成本文件的参照问题。）
+ * ⚠ 带内均值只用**池成员**（不含被判的那枚候选）⇒ 候选不能自己给自己定参照。
+ */
+
+/** 一对批表里，各带各口径的「相对现役」均值 ⇒ `{band: {mode: [6 个数]}}`。
+ *  `widBands`: wid → band（由调用方给，只有它知道池表）；`readWid(relPath)`: 路径 → wid。 */
+export function bandMeans(batches, widBands, readWid) {
+  const out = {};
+  const base = {};                                   /* batch idx → mode → row */
+  batches.forEach((t, k) => { base[k] = {}; for (const m of MODES) base[k][m] = rowOf(t, BASE_ID, m); });
+  for (const t of batches) {
+    for (const r of t.rows) {
+      const w = readWid(r[t.h.path]); const b = w ? widBands[w] : null;
+      if (!b) continue;
+      out[b] = out[b] || {};
+      for (const m of MODES) {
+        if (r[t.h.mode] !== m) continue;
+        const k = batches.indexOf(t);
+        const br = base[k][m]; if (!br) continue;
+        const own = []; for (let i = 0; i < CELLS.length; i++) own.push(cell(r, i) - cell(br, i));
+        out[b][m] = out[b][m] || [];
+        out[b][m].push(own);
+      }
+    }
+  }
+  const mean = {};                                   /* band → mode → [6] */
+  for (const b of Object.keys(out)) {
+    mean[b] = {};
+    for (const m of MODES) {
+      const rows = out[b][m] || [];
+      mean[b][m] = rows.length ? CELLS.map((_, i) => rows.reduce((a, r) => a + r[i], 0) / rows.length) : null;
+    }
+  }
+  return mean;
+}
+
+/** 带内口径的单口径逐格差（`ref` = `bandMeans(...)[band][mode]`，缺则退回现役参照 ⇒ 不静默）*/
+export function killOfBand(id, mode, batches, ref) {
+  const baseRows = batches.map(t => rowOf(t, BASE_ID, mode));
+  const rows = batches.map(t => rowOf(t, id, mode));
+  if (!baseRows[0] || !baseRows[1] || !rows[0] || !rows[1]) return null;
+  const per = CELLS.map((c, i) => {
+    const r = (ref && Number.isFinite(ref[i])) ? ref[i] : 0;
+    return {
+      c: c,
+      a: cell(rows[0], i), b: cell(rows[1], i),
+      d0: cell(rows[0], i) - cell(baseRows[0], i),
+      d1: cell(rows[1], i) - cell(baseRows[1], i),
+      ga: cell(rows[0], i) - cell(baseRows[0], i) - r,
+      gb: cell(rows[1], i) - cell(baseRows[1], i) - r,
+    };
+  });
+  const over = per.filter(p => p.ga >= LINE && p.gb >= LINE);
+  return { per: per, over: over, ref: ref || null, base: baseRows.map(r => CELLS.map((c, i) => cell(r, i))) };
+}
+
+/** 带内口径的两口径合计（缺读数 ⇒ -1，调用方必须显式标"没量过"） */
+export function killTotalBand(id, batches, ref) {
+  let n = 0;
+  for (const mode of MODES) {
+    const k = killOfBand(id, mode, batches, ref ? ref[mode] : null);
+    if (!k) return -1;
+    n += k.over.length;
+  }
+  return n;
+}
+
+/** 带内口径的 `wid → {kills, ids}`（与 `seatKillIndex` 同形，供池那一层替换用）。
+ *  ⚠ 参照用**池成员**算；被判的那枚若是池外候选，它不会把自己算进参照。 */
+export function seatKillIndexBand(batches, readWid, widBands) {
+  const out = new Map();
+  if (!batches || batches.length < 2) return out;
+  const refs = bandMeans(batches, widBands, readWid);
+  const per = batches.map(t => {
+    const m = new Map();
+    for (const r of t.rows) { const w = readWid(r[t.h.path]); if (!w) continue; if (!m.has(w)) m.set(w, new Set()); m.get(w).add(r[t.h.id]); }
+    return m;
+  });
+  for (const [wid, set0] of per[0]) {
+    const common = [...set0].filter(id => per.slice(1).every(m => m.has(wid) && m.get(wid).has(id)));
+    if (!common.length) continue;
+    const band = widBands[wid];
+    let kills = -1;
+    for (const id of common) { const k = killTotalBand(id, batches, band ? refs[band] : null); if (k >= 0) kills = Math.max(kills, k); }
+    if (kills >= 0) out.set(wid, { kills: kills, ids: common, band: band || null, refMode: band && refs[band] ? 'band' : 'incumbent' });
+  }
+  return out;
+}
+
 /** 这一**对**表里有没有基准行（两个口径都要有）。
  * 没有 ⇒ 这对表**根本判不出杀刀**，调用方必须拒绝它 —— 不许读成"零格否决"。
  * 立案依据（10-11 夜的假干净）：`pool-seat-ml-*.tsv` 是 `--packs=` 只列了 6 枚新成员、

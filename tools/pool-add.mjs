@@ -28,7 +28,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { widOf } from '../champion-map/pack-id.mjs';
-import { resolve as resolvePath, rdTable, seatKillIndex, pairHasBase, MODES } from '../champion-map/seat-rule.mjs';
+import { resolve as resolvePath, rdTable, seatKillIndex, seatKillIndexBand, pairHasBase, MODES } from '../champion-map/seat-rule.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -53,14 +53,32 @@ function saveMap(t) { writeFileSync(MAP, [COLS.join('\t')].concat(t.rows.map(r =
 const trackedSet = () => new Set(execSync('git ls-files docs/artifacts', { cwd: ROOT, maxBuffer: 1 << 26 }).toString().trim().split('\n').filter(Boolean));
 const WARNED = new Set();   /* `--refresh` 会对每枚成员调一次 seatKillOf ⇒ 同一对坏表只吼一次，别刷 13 遍屏 */
 
+/* 人席杀刀的**参照物**（§E598 · 2026-10-12 用户裁定 A）：
+ *   `band`（默认，唯一活的）= 跟**本带同伴**比 —— 池上线后四席逐席从带里抽，玩家遇到的是"这一带"，
+ *     不是某一枚包；老口径（跟现役比）会把**自家池成员** `D4a`/`E3` 判成踩格（困难带本来就在多数格上比现役软 +4~+7pt）。
+ *   `incumbent` = 老口径，**只留作复算历史读数**：用户 10-12 指出「现在也没有所谓上槽了吧」——
+ *     3P 的上槽冠军按 10-11 裁定③已退役 ⇒ 现役参照没有线上消费者，新判决一律用 band。
+ * ⚠ 顺带纠正本文件里一处旧措辞（同一件事）：`promote` 那两道闸（送盾/G4/G5）在本文件里的角色是
+ *   **入池体检**（"这枚会不会是池里的负担"），不是"要不要换掉上场的冠军"。 */
+const REF = arg('ref', 'band');
+if (REF !== 'band' && REF !== 'incumbent') { console.error('⛔ --ref= 只能是 band|incumbent'); process.exit(2); }
+/* wid → 带（参照物要用"池成员"算；被判的新成员按它要进的档挂上，不能自己给自己定参照） */
+function widBandsMap(t, pendingWid, pendingTier) {
+  const m = {};
+  for (const r of t.rows) { const w = r[t.h.wid]; if (w) m[w] = r[t.h.tier]; }
+  if (pendingWid && pendingTier) m[pendingWid] = pendingTier;
+  return m;
+}
+
 /* ---------- 人席：按 **wid** 找批表里的行（名字会骗人，路径也会 —— §E589 的教训） ----------
  * 归一逻辑在 `champion-map/seat-rule.mjs` 的 `seatKillIndex`（`pool-screen.mjs` 用的是**同一个**，不另抄一份）。
  * ⚠ 批表必须**两两成对**再喂：`killOf` 只读 batches[0]/batches[1]（§E531 的"两批同号"天生是成对的判据），
  *   而 `seatKillIndex` 的公共 id 集合却是**全部**表的交集 ⇒ 一次传 4 张表 = 用第 1、2 张算格、
  *   却要求这枚同时出现在第 3、4 张里 ⇒ 老成员会被读成"没量过"（10-11 夜就是这么把 hard 档的 0 冲成 -1 的）。
  *   所以这里按对切片，**每对独立出结论，取最坏的那一对**（同一枚在 A 对干净、B 对踩线 ⇒ 判踩线）。 */
-function seatKillOf(wid, seatFiles) {
+function seatKillOf(wid, seatFiles, pendingTier) {
   const tr = trackedSet();
+  const widBands = widBandsMap(loadMap(), wid, pendingTier);   /* 带内参照要用"池成员 + 待入池这枚"的带 */
   const readWid = rel => {
     const abs = resolvePath(rel, ROOT);
     if (!existsSync(abs) || !tr.has(rel)) return null;      /* 批表指向未在册/已消失的文件 ⇒ 这一行不参与身份对齐 */
@@ -85,7 +103,8 @@ function seatKillOf(wid, seatFiles) {
       continue;
     }
     pairsUsable++;
-    const hit = seatKillIndex(pair, readWid).get(wid);
+    const idx = REF === 'band' ? seatKillIndexBand(pair, readWid, widBands) : seatKillIndex(pair, readWid);
+    const hit = idx.get(wid);
     if (hit && (worst < 0 || hit.kills > worst)) worst = hit.kills;
   }
   if (pairs >= 1 && pairsUsable === 0) {
@@ -243,13 +262,13 @@ const INVITE = has('invite');
  *   （10-11 夜自测抓到：一枚查不到裁决的包就这么静默进了表）。null 与 'untested' 在这里是同一件事，必须合并。 */
 const PI = poolVerdictOf(ID, PACK, has('run-promote')) || { verdict: 'untested', blocks: '' };
 const PV = PI.verdict;
-const SK = seatKillOf(WID, arg('seat', 'pool-seat-90210.tsv,pool-seat-90211.tsv').split(','));
+const SK = seatKillOf(WID, arg('seat', 'pool-seat-90210.tsv,pool-seat-90211.tsv').split(','), TIER);
 /* 每条 blocker 自带"点名能不能越过"的标记 ⇒ 能不能越过是**判据的属性**，不是调用时的口味 */
 const hard = [], soft = [];
 if (!TR.has(PACK)) hard.push('包文件不在 git 里 ⇒ CI 与干净克隆看不见这枚 ⇒ 先跑：git add -f ' + PACK);
 if (PV === 'block') { const c = classifyBlock(PI.blocks); (c.kind === 'hard' ? hard : soft).push(c.why); }
 if (PV === 'untested') soft.push('没过上槽体检（没测 ≠ 过关；要现在跑加 --run-promote）');
-if (SK > 0) soft.push('人席否决 ' + SK + ' 格（§E531 两批同号 ≥20pt；引用时须带 §E587 的检出力脚注）');
+if (SK > 0) soft.push('人席否决 ' + SK + ' 格（参照：' + (REF === 'band' ? '**本带同伴**（§E598 裁定 A）' : '现役（老口径）') + '；§E531 两批同号 ≥20pt；引用时须带 §E587 的检出力脚注）');
 if (SK < 0 && PV !== 'pass') soft.push('人席也没量过（批表里没这枚 ⇒ seatKill=-1，不是 0）');
 
 console.log('== 加入冠军池 ==');
