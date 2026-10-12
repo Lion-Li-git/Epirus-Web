@@ -1880,7 +1880,17 @@ t('D225 §E275/§E284 摄魂指法的"残血只在**探索里**软提升"档（e
 
   /* ⑤ 落盘身份：两维都必须在（配对尺靠 `#eps` 拒绝"贪心 vs 页面口径"跨世界配对） */
   ok(/'#shipdrain=' \+ String\(DRAIN_EFFECTIVE\)/.test(evSrc), '⑤a `#shipdrain=` 必须进落盘（且写的是**回读值**）');
-  ok(/'#eps=' \+ \(SHIP_EPS > 0/.test(evSrc), '⑤b `#eps=` 必须进落盘 ⇒ 少了这一维，摄魂档的"必然相同"会被当成"测过没效果"');
+  /* §E599（2026-10-12 DS 修）：本条原来是**源码字面**断言 `/'#eps=' \+ \(SHIP_EPS > 0/` ——
+   *   §E597 给 `eval-5p.mjs` 加 `--eps-tier=` 时，同一行被改成三元式
+   *   （`EPS_TIER ? 'tier:…' : (SHIP_EPS > 0 ? … : '0')`）⇒ **行为没坏、断言坏了**（钉文本不钉行为的又一例）。
+   *   改法：钉"落盘里真有一行 `#eps=`，且它的 ε 来路同时覆盖 `--eps=` 与 `--eps-tier=`" ⇒
+   *   以后往这一行加第三种来路不必改门，而**删掉/注释掉**这一维照样红（⑤b′ 的合成正对照咬这个）。 */
+  const epsTagLine = (evSrc.split('\n').filter(function (l) { return l.indexOf("'#eps='") >= 0; })[0] || '');
+  ok(epsTagLine && epsTagLine.indexOf('EPS_TIER') >= 0 && epsTagLine.indexOf('SHIP_EPS') >= 0,
+    '⑤b `#eps=` 必须进落盘、且这一维要同时覆盖 `--eps=` 与 `--eps-tier=` 两条来路 ⇒ 少了它，摄魂档的"必然相同"会被当成"测过没效果"'
+    + '（读到的那一行：' + (epsTagLine.trim().slice(0, 130) || '**没有 `#eps=` 那一行**') + '）');
+  ok(!!epsTagLine && !/^\s*\/\/.*#eps=/.test(epsTagLine) && !/if\s*\(\s*false\s*\)/.test(epsTagLine),
+    '⑤b′ 合成正对照：把那一维注释掉或塞进 `if (false)` ⇒ 本条必须红（否则它只是在门里抄了一遍源码）');
 
   /* ⑥ 兑现率必须真落在落点上（同 D224④ 那一族：判**密度**、判**两臂之差**，不判"出现过"）
    *    §E588：这里第 4 个位置参数（`eval-5p` 的包文件）从"缺省=活槽"改成**钉住的夹具包** ——
