@@ -30,7 +30,7 @@ import { duelAssembly } from './v2v4-lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
-rejectUnknownFlags(process.argv.slice(2), ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n'], 'probe-pool');
+rejectUnknownFlags(process.argv.slice(2), ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose'], 'probe-pool');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const TIER = flag('tier', 'hard'), G = Number(flag('games', 60));
 const SEEDS = String(flag('seeds', '90210,90211')).split(',').map(Number).filter(x => !Number.isNaN(x));
@@ -54,6 +54,29 @@ const W = sandbox();
 const PD = W.EpirusPoolDraw;
 if (!PD || typeof PD.compose !== 'function') { console.error('⛔ `js/pool-draw.js` 没进 sandbox 的 CORE 名单'); process.exit(2); }
 const S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, R = W.EpirusRules, B = W.EpirusBots;
+/* §E593b（10-12 DS）：**剂量开关** —— 用户 10-12 指令「既然用不同水平冠军池了，把随机性统一一下、可以降低一点」。
+ *   量这份裁定之前先说清一件事：**这把尺原来量的是"池在 ε=0 下的强度"**（下一行 `policyChooserN(p, 0.15)`），
+ *   与产品真实档位（池 × 该档剂量四元组）**不是同一个东西**。所以加这个开关，同一把尺能两种口径都量：
+ *     · `--dose=zero`（默认，与历史读数逐字一致）= 池这一条轴**单独**的强度；
+ *     · `--dose=table:<页档 id>`（如 `--dose=table:lv:novice`）= 从 `js/train/bots.js` 的 `DIFF_TIERS` 读那一档的
+ *       剂量四元组（**不建第二份表**；`low` 有"简单/入门"两档共用，所以必须点名页档，不许我替你挑）；
+ *     · `--dose=<eps:epsK:mode>`（如 `--dose=0.2:5:soft`）= 研究用的显式候选。
+ *   ⚠ 两条口径都要印在头几行（读数离开口径就没法引用，§E272/第 45 条）。 */
+const DOSE_ARG = String(flag('dose', 'zero'));
+const DOSE = (function () {
+  if (DOSE_ARG === 'zero') return { eps: 0, epsK: 1, epsMode: 'soft', label: 'zero（ε=0 纯贪心 = 池轴的单独强度）' };
+  if (DOSE_ARG.indexOf('table:') === 0) {
+    const pid = DOSE_ARG.slice(6);
+    const tiers = (B && B.DIFF_TIERS) || [];
+    const t = tiers.filter(x => x && x.id === pid)[0];
+    if (!t) { console.error('⛔ --dose=table:' + pid + ' 在 DIFF_TIERS 里找不到（有的是：' + tiers.map(x => x.id).join(',') + '）'); process.exit(2); }
+    if (t.kind !== 'champ') { console.error('⛔ ' + pid + ' 是 `kind:' + t.kind + '` ⇒ 它不吃包，剂量对它无意义'); process.exit(2); }
+    return { eps: t.eps, epsK: t.epsK, epsMode: t.epsMode, ramp: !!t.ramp, label: pid + ' 的表值 ε=' + t.eps + '/k' + t.epsK + '/' + t.epsMode + (t.ramp ? '·斜坡(本尺按起手剂量,不模拟逐回合上升)' : '') };
+  }
+  const m = /^([0-9.]+):([0-9]+):(soft|uniform)$/.exec(DOSE_ARG);
+  if (!m) { console.error('⛔ --dose 只认 zero ‖ table:<页档id> ‖ <eps:epsK:soft|uniform>，收到 ' + DOSE_ARG); process.exit(2); }
+  return { eps: Number(m[1]), epsK: Number(m[2]), epsMode: m[3], label: '显式 ε=' + m[1] + '/k' + m[2] + '/' + m[3] };
+})();
 const lite = members.map(r => ({ id: r[h.id], wid: r[h.wid] }));
 const PARAMS = {}, CHOOSERS = {};
 const bad = [];
@@ -61,13 +84,15 @@ for (const r of members) {
   let p = null;
   try { p = loadChamp(W, r[h.path]); } catch (e) { p = null; }
   if (!p) { bad.push(r[h.id] + '(' + r[h.path] + ')'); continue; }
-  PARAMS[r[h.id]] = p; CHOOSERS[r[h.id]] = T.policyChooserN(p, 0.15);
+  PARAMS[r[h.id]] = p;
+  CHOOSERS[r[h.id]] = T.policyChooserN(p, 0.15, DOSE.eps, DOSE.epsK, DOSE.epsMode);
 }
 if (bad.length) { console.error('⛔ ' + bad.length + ' 枚读不出包：' + bad.join(' ‖ ') + ' ⇒ 按失败处理'); process.exit(7); }
 const HUMAN = humanPrototypes(B);
 for (const x of HUMAN) if (typeof x[1] !== 'function') { console.error('⛔ 人类原型「' + x[0] + '」不是函数'); process.exit(7); }
 
 console.log('# 池形态新尺（1 席人类形状 + 4 席按 tier=' + TIER + ' 抽 · 允许重复 · 禁四席全同）');
+console.log('# 剂量 ' + DOSE.label + (DOSE.ramp ? '' : '') + '   ← 这一行是引用读数时**必须**带上的口径（§E272/第 45 条）');
 console.log('# 成员 ' + lite.length + ' 枚：' + lite.map(m => m.id).join(' ‖ '));
 console.log('# ' + G + ' 局/格 × ' + SEEDS.length + ' 枚 seed（' + SEEDS.join('/') + '）· 装配实现与 `probe-human-seat` 同一份（duelAssembly）');
 console.log('# 读法：印的是**人类那一席的夺冠率**（越高 = 这池子拿它没办法）；批间极差 = 这把尺自己的抖动，**没量出 σ 之前不许拿来判换不换包**\n');
