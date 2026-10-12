@@ -20,6 +20,7 @@ function spawnSync(cmd, args, opts) {
 import { parsePairTable } from './defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
 import { makeGuardCost } from './guard-cost-lib.mjs';   /* D161 用：直接对库做单元级判定（不靠探针的输出措辞） */
 import { resolveOutPath } from './out-path.mjs';   /* D232 ⑦ 用：`--out=` 的解析是纯函数 ⇒ 给输入比输出（§2026-10-09 规矩 1） */
+import { sigOf, LADDER_CLAIM } from './diff-ladder-claims.mjs';   /* D227 ④ 用（裁定甲）：难度阶梯"哪几步分得开"是在册账，不是每次现场判断 */
 import { pushTarget } from './bot-chooser-lib.mjs';   /* D223 用：选点规则是纯函数 ⇒ 喂合成 state 逐条钉（§E262） */
 import { hardwiredLine } from './probe-layer-caliber.mjs';   /* D149 用：指针行号从源码现算（钉死数字会在别人插一行后变成假行号） */
 import { widOfArr } from '../champion-map/pack-id.mjs';   /* D234 用：池 bundle 里内嵌权重的指纹要**现算**比对，不许信它自己写的 */
@@ -2139,56 +2140,60 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
   ok(/function champForCount/.test(uiSrc) && /Champ\.store\.load\(\)/.test(uiSrc.slice(uiSrc.indexOf('function champForCount'), uiSrc.indexOf('function champForCount') + 1400)),
     '③d 2 人桌必须换包（`champForCount` 里读 2P 那颗 `Champ.store.load()`）⇒ §E286 实测 3P 包在 1v1 上是分布外的（贪心档替身夺冠 27.5% ‖ 2P 包 15.5%），而且剂量梯反号');
 
-  /* ===== ④ 真跑两次量具：阶梯必须分级（这条是行为腿，不是文本腿）=====
-   * 两个装配 = 5人3血(3P 包) ‖ 2人3血(2P 包) ⇒ 覆盖"包的两种来源"和"桌形的两端"。
-   * 局数 1500/档是**跑前定的**：300 局时配对差的 CI 是 ±2.9pt，连"入门比普通软 4pt"那一步都判不动（第一版就这么红过一趟，
-   *   红的是量具的分辨率，不是表）。种子写死 ⇒ 这一行的读数是代码的确定函数，不会因重跑而翻。
-   * ⚠ `--except=lv:hard>lv:regular` 是**点名**的松口子（只要求不翻序），理由是 §E286 实测那一步在 5 人桌上分不开
-   *   （−1.53±2.36pt）⇒ 与其把全局 minGap 压到 1.5 以下（那会连"普通/入门"一起免检），不如松的地方写名单、别处照旧 ≥2pt。
-   *   ④e 钉的就是"名单真的只有这一对在里面" —— 口子被扩大时这条会红。 */
-  /* ===== ④ 【已暂停 · 用户 2026-10-11 裁定】"五档必须两两分得开"不再阻断 =====
-   * 谁关的：用户原话「并不需要 5 个难度梯度。而且我们后面需要做冠军池（在多人局中抽取不同冠军以增加对局多样性），
-   *   可能还会影响这个门。至少暂时关了」。
-   * 为什么现在必然红：`T8-s114` 上槽之后，同一把尺**只换包**就把中段压平了（`hunter→hard` 1.27pt ‖
-   *   `regular→novice` 1.87pt ‖ 线 2pt），而我们的"难度"是靠给冠军加**探索剂量**做出来的 ——
-   *   包变强之后同样的剂量抬不动替身胜率（旧包那一趟 `ok=true`、gaps 全过）。这不是量具坏。
-   * 为什么是"暂停"而不是"删"：接下来要做**冠军池** ⇒ "四席同一枚包"这个装配前提本身会变，
-   *   这条门的语义要重写；现在删掉就等于把"难度分级"这件事整个丢掉。
-   * 什么时候必须回来：并档/调档裁定落地之后，或冠军池第一版接线时 —— 两者都要**重给一个"分得开"的判据**，
-   *   不许只是把 2pt 阈值调小（那是喂数字，禁）。
-   * ⚠ 用 `Skip` ⇒ 判词每次都会印 `⚠ SKIP D227`，**不算通过也不算失败**、CI 不红；
-   *   ①②③ 三条腿（档位表是唯一来源 / 剂量由易到难单调 / 默认档逐字等于旧口径）**照旧阻断**。 */
-  throw new Skip('④ "五档两两分得开"按用户 10-11 裁定暂停（不需要 5 个梯度 ‖ 冠军池会改这条门的语义）' +
-    ' ‖ 触发事实：T8-s114 上槽后 hunter→hard 1.27pt、regular→novice 1.87pt（线 2pt），旧包同尺同种子 ok=true' +
-    ' ‖ 回来条件：并档/调档裁定 或 冠军池第一版接线，且要重给判据（不许只把阈值调小）');
-
-  const ladderRuns = [
-    { tag: '5人·3血·3P包', args: ['--games=1500', '--n=5', '--mode=multi', '--minGap=2', '--except=lv:hard>lv:regular'] },
-    { tag: '2人·3血·2P包', args: ['--games=1500', '--n=2', '--mode=standard', '--minGap=2'] }
-  ];
-  for (const LR of ladderRuns) {
-    const run = spawnSync(process.execPath, ['tools/probe-diff-ladder.mjs', '--machine=1', '--quiet'].concat(LR.args),
-      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  /* ===== ④ 【10-12 用户裁定甲】"分得开"必须是在册声称，不是每次现场判断 =====
+   * 为什么不是原样恢复：旧 ④ 每次跑 1500 局 × 两装配去现场证明"五档两两分得开"，
+   *   而那句话已经被 10-11 的实测证否（换包把中段压平：hunter→hard 1.27pt ‖ regular→novice 1.87pt，线 2pt）。
+   *   甲 = **只声明分得开的档** ⇒ "分得开"变成一条**有出处、绑定参数签名**的读数（`tools/diff-ladder-claims.mjs`）：
+   *     ④a 签名对得上 ⇒ 剂量/池档一改，那张账就过期，要重跑 `--pairs=1 --games=1500` 才许再声称；
+   *     ④b σ 与"分得开/分不开"的标法必须彼此自洽 ⇒ 手动把某步改成"分得开"而 σ 不够，当场红；
+   *     ④c 每一对相邻档在每个池装配模式下都**必须有记录** ⇒ 新增一档却没测 = 红（不许多一个没人管的位置）；
+   *     ④d 现场只验两件事，因为它们对样本量不敏感：量具还活着（≥3 个不同夺冠率）+ 极端那一步仍分得开（实测 25.8σ）。
+   *   ⚠ 为什么不在门里现场判中段：200 局下"普通↔入门"经常正好并列（10-12 实测三遍，两遍序就翻），
+   *     把那种 n 的序钉进去只会造出**随机假红** —— 这正是暂停期间该防的事。
+   * ⚠ 已知边界（写在账本上，不假装没有）：签名不含**池成员名册** ⇒ 只换池成员时这张账不会自动过期；
+   *   那种情形的兜底是 ④d 与 `D234` 的池契约。名册进签名 = 每次调池都要重跑 1500 局 × 两模式，现在不付这个代价。 */
+  eq(sigOf(TIERS), LADDER_CLAIM.sig, '④a 在册实测账绑的是这套档位参数（签名不同 ⇒ 那张账过期）。'
+    + '重跑：node tools/probe-diff-ladder.mjs --pairs=1 --games=1500 --pool=1（另跑一遍不带 --pool=1 的是单包对照）再把 sig 现算贴回 tools/diff-ladder-claims.mjs'
+    + '\n     现算=' + sigOf(TIERS) + '\n     在册=' + LADDER_CLAIM.sig);
+  const claimModes = Object.keys(LADDER_CLAIM.modes || {});
+  ok(claimModes.length >= 2, '④a2 至少要有"池装配"与"单包对照"两类账（实测 ' + claimModes.length + ' 类）⇒ 只留一类就没法说"是池把阶梯修好的"');
+  for (const mk of claimModes) {
+    const rows = LADDER_CLAIM.modes[mk] || [];
+    for (const p of rows) {
+      const sg = p.se > 0 ? Math.abs(p.d) / p.se : Infinity;
+      eq(sg >= 2, p.sep, '④b[' + mk + '] `' + p.from + '→' + p.to + '` 差 ' + p.d + '±' + p.se + ' = ' + sg.toFixed(2) +
+        'σ，却标成"' + (p.sep ? '分得开' : '分不开') + '" ⇒ 判据边界（|σ|≥2 才许声称分得开）与标法不一致');
+    }
+    /* ⚠ `Bots.DIFF_TIERS` 的数组顺序是**从易到难**（`lv:sparring` 在头，实测 10-12：读出来就是这个序），
+     *   而在册账里 `from` 一律是**更难**那一档（与 `probe-diff-ladder` 输出的从难到易一致）。
+     *   第一版我把两边取向写反 ⇒ 门立刻红在"sparring→novice 没记账"这种根本不存在的缝隙上（自造假红）。 */
+    for (let i = 0; i + 1 < TIERS.length; i++) {
+      const easy = TIERS[i], hard = TIERS[i + 1];
+      const hit = rows.filter(function (p) { return p.from === hard.id && p.to === easy.id; })[0];
+      ok(!!hit, '④c[' + mk + '] 相邻档 `' + hard.id + '→' + easy.id + '` 在册账里没有这一行 ⇒ 这一步没人判过（新增档忘了测 / 换序没记账）');
+    }
+  }
+  const notClaimed = (LADDER_CLAIM.modes['pool:long'] || []).filter(p => !p.sep).map(p => p.from + '→' + p.to);
+  console.log('   ⚑ ④ 阶梯在册账：' + claimModes.join(' ‖ ') + ' ‖ 按甲**没声称分得开**的那几步：' +
+    (notClaimed.length ? notClaimed.join(' ‖ ') + '（1.9σ < 2σ）' : '无'));
+  {
+    const run = spawnSync(process.execPath, ['tools/probe-diff-ladder.mjs', '--machine=1', '--quiet',
+      '--games=200', '--n=5', '--mode=multi', '--pool=1'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
     const out = String(run.stdout || '');
     const last = out.trim().split('\n').filter(function (l) { return /^\{/.test(l); }).pop();
     let obj = null; try { obj = JSON.parse(last || 'null'); } catch (e) { /* 下面响亮报 */ }
-    ok(!!obj, '④a[' + LR.tag + '] 量具必须跑出机器可读的那一行（rc=' + run.status + ' ‖ 尾部：' + out.slice(-160) + '）');
+    ok(!!obj, '④d 现场那跑必须跑出机器可读的一行（rc=' + run.status + ' ‖ 尾部：' + out.slice(-160) + '）');
     ok(!!obj && Array.isArray(obj.rows) && obj.rows.length === TIERS.length,
-      '④b[' + LR.tag + '] 量具必须把**整张表**都跑一遍（实测 ' + (obj && obj.rows ? obj.rows.length : '?') + ' 行 ‖ 表 ' + TIERS.length + ' 档）⇒ 少跑一档 = 那条"分级"结论只覆盖跑到的部分');
-    ok(obj && obj.ok === true, '④c[' + LR.tag + '] 相邻档差必须 ≥' + (obj ? obj.minGap : 2) + 'pt（唯一点名那对只要求不翻序）‖ 实测不达标：' +
-      JSON.stringify(obj && obj.gaps) + ' ⇒ 分不开的两档不该同时占一个位置，合并或调剂量');
-    ok(obj && new Set(obj.rows.map(function (r) { return r.pct; })).size >= 3,
-      '④d[' + LR.tag + '] 正对照：至少三个不同的夺冠率（实测 ' + (obj ? new Set(obj.rows.map(r => r.pct)).size : '?') + ' 个）⇒ 全相同说明量具没在动剂量（第二十五条那族"夹具退化"）');
-    if (LR.args.join(' ').indexOf('--except=') >= 0) {
-      const exc = (obj && obj.excepted) || [];
-      eq(exc.length, 1, '④e 点名放行必须**恰好**一对（实测 ' + exc.join(',') + '）⇒ 这个口子一旦装进第二对，"分级"就只覆盖剩下的缝隙了');
-      ok(exc.length === 1 && /^lv:hard>lv:regular=/.test(exc[0]),
-        '④e 唯一那一对必须是 `lv:hard>lv:regular`（贪心冠军 vs 默认档，§E286 实测分不开的那一步），实测 ' + exc.join(','));
-      const pcts = ((obj && obj.rows) || []).map(function (r) { return r.pct; });
-      const gapsAll = pcts.slice(1).map(function (v, i) { return v - pcts[i]; });
-      const minOther = Math.min.apply(null, gapsAll.filter(function (g) { return g > 1.6; }));
-      ok(minOther >= 2, '④f 除点名那对之外的最小相邻差实测 ' + minOther.toFixed(2) + 'pt ⇒ 阈值 2pt 有没有余量看这一行（贴着线就是"下次改表要连阈值一起重定"）');
-    }
+      '④d 量具要把**整张表**都跑一遍（实测 ' + (obj && obj.rows ? obj.rows.length : '?') + ' 行 ‖ 表 ' + TIERS.length + ' 档）');
+    const pcts = ((obj && obj.rows) || []).map(function (r) { return r.pct; });
+    ok(new Set(pcts).size >= 3, '④d 正对照：至少三个不同的夺冠率（实测 ' + new Set(pcts).size + ' 个 ‖ ' + pcts.join('/') +
+      '）⇒ 全相同说明剂量没在动判决（第二十五条那族"夹具退化"），那 ④b/④c 那张账就是在描述一台停住的机器');
+    const byId = {}; ((obj && obj.rows) || []).forEach(function (r) { byId[r.id] = r.pct; });
+    const softEnd = byId['lv:sparring'], midEnd = byId['lv:regular'];
+    ok(typeof softEnd === 'number' && typeof midEnd === 'number' && softEnd - midEnd >= 10,
+      '④d 极端那一步（简单 vs 默认）必须还分得开：实测 简单 ' + softEnd + '% ‖ 普通 ' + midEnd + '% ‖ 差 ' +
+      ((softEnd || 0) - (midEnd || 0)).toFixed(2) + 'pt（在册读数 25.8σ ⇒ 200 局也判得动）'
+      + ' ⇒ 这一步塌了就说明"难度"这件事整体失效，那张账要整张重测');
   }
 });
 
