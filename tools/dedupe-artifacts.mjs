@@ -86,6 +86,27 @@ for (const f of REF_FILES) {
     COUNTED.set(tok, (COUNTED.get(tok) || 0) + 1);
   }
 }
+/* §E591（10-12）：**包自己 meta 里点名的父/种子文件也算引用**。
+ *   病（实测，我 10-11 那笔 §E589 就是这么弄出来的）：`recipe.env.EPIRUS_SEEDPACK` 记的是"这枚是从哪个文件热启动的"，
+ *   而那个路径不在上面任何一张表里 ⇒ 去重把它当冗余搬走 ⇒ 血统图上 **191 条边**从"权重身份可核"掉回"按路径猜"
+ *   （用户 10-12 看到的原话是"后期的点全部从实线变成虚线"）。
+ *   同理 `soup.sources[].file` 是融合粒的两个父 —— 搬走等于把融合血统整层弄断（§E503 那个病形的另一半，
+ *   实测已跟踪的 6 枚融合粒有 4 个父从未入库，就是同一件事）。
+ *   ⇒ 被同行 meta 点名当父/种子的文件 = **承重件**，不许当副本移走。 */
+for (const abs of files) {
+  let txt; try { txt = rd(abs); } catch (e) { continue; }
+  const rels = [];
+  const sp = /EPIRUS_SEEDPACK"\s*:\s*"([^"]+)"/.exec(txt);
+  if (sp) rels.push(sp[1]);
+  const sm = /"sources"\s*:\s*\[([\s\S]{0,1600}?)\]/.exec(txt);
+  if (sm) for (const o of sm[1].matchAll(/"file"\s*:\s*"([^"]+)"/g)) rels.push(o[1]);
+  for (const r of rels) {
+    const norm = r.replace(/\\/g, '/');
+    const rel2 = (norm.charAt(0) === '/' || /^[A-Za-z]:\//.test(norm))
+      ? relative(ROOT, norm).split(sep).join('/') : norm;          /* 绝对路径折回相对（规矩 124） */
+    if (rel2 && rel2.indexOf('..') !== 0) COUNTED.set(rel2, (COUNTED.get(rel2) || 0) + 1);
+  }
+}
 for (const abs of files) {
   const rel = relative(ROOT, abs).split(sep).join('/');
   const n = COUNTED.get(rel) || 0; if (n) REFC[rel] = n;

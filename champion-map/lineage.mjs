@@ -20,7 +20,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { braceObj, parseMeta, widOf, packArr, widOfArr } from './pack-id.mjs';
 import { sandbox } from '../tools/audit-lib.mjs';   /* §E464 只为拿 embedLegacy：同一枚包的两个身份要按同一条嵌入规则算，不留第二份 */   // §E328：身份三件套搬进单一来源（函数体逐字搬，本文件行为不变）
-import { join, dirname } from 'node:path';
+import { join, dirname, isAbsolute } from 'node:path';   /* §E591：`isAbsolute` 必须有 —— 绝对路径拼进仓根就是"文件在、读不到"（规矩 124） */
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -168,8 +168,39 @@ function seedpackOf(m) { const p = seedpackFile(m); if (!p) return '';
  *   相等就不是"拿今天的槽主冒充昨天的父"（§E330/§E367 那两种病都被这一问挡住：同名不同权重会直接不等）。
  *   不等或读不到 ⇒ 保持 `seedpack`（虚线），**不给自己升等**。 */
 const WIDCACHE = {};
+/* §E591（10-12）：两处"路径还在、证据读不出来"的机械补法。
+ *   病（实测，是我 10-11 §E589 那笔去重弄出来的）：`seedpack-wid`（实线）从 **153 掉到 8**，
+ *   用户看到的是"后期那批点全变虚线"。两个原因都跟权重无关，纯粹是**文件搬了家 / 写法不同**：
+ *     ① 有些包的 `EPIRUS_SEEDPACK` 写的是**绝对路径**（`D:/code/.../win-Ldemo.bak`），
+ *        而这里一律 `join(ROOT, rel)` ⇒ 拼出 `D:\code\Epirus-Web\D:/code/...` 这种不存在的路径（规矩 124 那一族）。
+ *     ② 去重把文件改名进了 `docs/artifacts/kept/`（两种命名都出现过：`artifacts__X.bak` 与 `dir__X.bak`），
+ *        而子包 meta 里记的仍是**老路径** ⇒ `existsSync` 落空。
+ *   ⚠ 这不是"猜父"：父节点早由 `byPath` 定死了，这一层只决定**能不能升到"权重身份可核"**，
+ *     而升等唯一条件是 `读到的 wid === 节点在册 wid`（逐位相同的权重）。
+ *     ⇒ 候选就算挑错文件，结果只会是"升不上去"，**不可能是"升错"**（§E330 的同名不同权重照样被这一问挡住）。 */
+function seedCandidates(rel) {
+  const out = [rel];
+  const push = p => { if (p && out.indexOf(p) < 0) out.push(p); };
+  if (isAbsolute(rel)) {
+    /* 绝对路径也可能是**指向本仓**的（实测 52 枚的 meta 写的是 `D:/code/Epirus-Web/docs/artifacts/eval-out/win-Ldemo.bak`）。
+     *   原样用在我这台机器上能读到，但 CI / 别人的机器上那个盘符路径不存在 ⇒ 同一张表会因机器不同而线型不同。
+     *   ⇒ 只要它落在仓根内，就把相对形式也列进候选（读的是同一个文件，两边答案一致）。 */
+    const nrm = rel.replace(/\\/g, '/'), rootNrm = ROOT.replace(/\\/g, '/');
+    if (nrm.toLowerCase().indexOf(rootNrm.toLowerCase() + '/') === 0) push(nrm.slice(rootNrm.length + 1));
+    return out;
+  }
+  const base = rel.replace(/^.*[\\/]/, '');
+  push('docs/artifacts/kept/' + base);                   /* 只搬进 kept/、没改名 */
+  if (/^docs\//.test(rel)) push('docs/artifacts/kept/' + rel.replace(/^docs\//, '').replace(/\//g, '__'));
+  push('docs/artifacts/kept/' + rel.replace(/^docs\/artifacts\//, '').replace(/\//g, '__'));
+  return out;
+}
 function widOfFile(rel) { if (!rel) return ''; if (WIDCACHE[rel] !== undefined) return WIDCACHE[rel];
-  let w = ''; try { w = widOfArr(packArr(readFileSync(join(ROOT, rel), 'utf8'))) || ''; } catch (e) { w = ''; }
+  let w = '';
+  for (const cand of seedCandidates(rel)) {
+    try { w = widOfArr(packArr(readFileSync(isAbsolute(cand) ? cand : join(ROOT, cand), 'utf8'))) || ''; } catch (e) { w = ''; }
+    if (w) break;
+  }
   WIDCACHE[rel] = w; return w; }
 let nSpkWid = 0, nSpkLoose = 0;
 function seedpackVerified(m, parId) {
