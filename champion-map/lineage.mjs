@@ -156,9 +156,17 @@ for (const r of REC) { const k = String(r.rel || r.id).replace(/^.*[\\/]/, '').r
   const a = r.id.replace(/^SHIPPED-/, ''); if (a !== r.id && !BYBASE[a]) BYBASE[a] = r.id; }   /* 链上节点叫 Ldemo、图上叫 SHIPPED-Ldemo */
 function seedpackFile(m) { const e = m.recipe && m.recipe.env; const p = e && e.EPIRUS_SEEDPACK;
   return typeof p === 'string' && p ? p : ''; }
-function seedpackOf(m) { const p = seedpackFile(m); if (!p) return '';
+const SLOT_BASE = 'bundled-champion-3p';
+let nSlotEra = 0;
+function seedpackOf(m, ts) { const p = seedpackFile(m); if (!p) return '';
   const k = p.replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, '');
-  return BYBASE[k] || ''; }
+  if (BYBASE[k]) return BYBASE[k];
+  /* §E593：**活槽路径是时间相关的量** —— 同样的 `js/bundled-champion-3p.js` 在不同时刻住着不同的权重。
+   *   ⇒ 按子包自己的 ts 问完整时间轴（那时住的是谁），而不是按"今天那格文件里装的是谁"。
+   *   ⚠ 这不是"拿今天的槽主冒充昨天的父"（§E367 那个病）：走的是**当时那一段的实录**；
+   *     而且时间轴没追到今天时 `slotEraAt` 直接返回 null ⇒ 这条路径仍解不出父（照旧虚线）。 */
+  if (k === SLOT_BASE) { const e = slotEraAt(ts); if (e) { nSlotEra++; return e.id; } }
+  return ''; }
 /* ===== §E555 把"按路径解析出来的父"再问一句：**那份文件此刻的权重，和图上那个节点的权重是不是同一份？**
  *   为什么这一问值得问（用户 10-09 08:5x：「你昨天刚训练的怎么会不确定父节点」）：
  *   `train-3p` 写进包里的父只有 `EPIRUS_SEEDPACK`（一个**路径**），没有 `hotstartFrom`（权重哈希）⇒
@@ -201,8 +209,11 @@ function seedCandidates(rel) {
  *   ⇒ 候选全是**文件**路径 ⇒ 读不到 ⇒ 只能留虚线，而那 63 条的权重身份**本来是可查的**
  *   （搬它走的那台工具算过 wid：隔离区那份 = `kept/e70-out__D02-31.bak` = 父行 wid = `1d4b687da27187b7`，三边一致）。
  * 安全性：这张表只提供"这个路径当时是哪一粒权重"；**升等条件一字未改**（`seedpackVerified` 仍要求与父行 wid 逐位相等）
- *   ⇒ 登记错了只会升不上去。表里解不出的（例如 33 条点名**活槽**路径的）**照旧虚线** —— 活槽换过主人，
- *   那些边在原理上就没记下"当时槽里是谁"，不许拿今天的占位者冒充血统（§E555「读不到不许自我升等」）。 */
+ *   ⇒ 登记错了只会升不上去。表里解不出的**照旧虚线** —— 不许拿今天的占位者冒充血统（§E555「读不到不许自我升等」）。
+ *   ⚠ 这一段原来还写着「例如 33 条点名**活槽**路径的照旧虚线 —— 活槽换过主人，那些边在原理上就没记下
+ *     '当时槽里是谁'」。**10-12 被证伪并升级（§E593）**：当时槽里是谁**有实录** —— `slot-timeline.tsv`
+ *     是**槽文件侧**逐提交算权重指纹建的表（40 段全收，`ship-times.tsv` 只有 13 段有名字）
+ *     ⇒ 那 33 条连同另外 14 条同族（`slot-at-time` 5 + `slot-infer` 9）已升到 `seedpack-wid`（实线）。 */
 const ALIAS = (function () {
   const m = {};
   for (const spec of [['pack-aliases.tsv', 'wantedPath'], ['dupes-manifest.tsv', 'path']]) {
@@ -225,11 +236,18 @@ function widOfFile(rel) { if (!rel) return ''; if (WIDCACHE[rel] !== undefined) 
   if (!w) w = ALIAS[rel] || '';          /* 候选文件都读不到 ⇒ 按登记表解（搬走的那些）；解不出就留空 = 继续虚线 */
   WIDCACHE[rel] = w; return w; }
 let nSpkWid = 0, nSpkLoose = 0;
-function seedpackVerified(m, parId) {
+function seedpackVerified(m, parId, ts) {
   if (!parId) return false;
   const f = seedpackFile(m); if (!f) return false;
-  const wFile = widOfFile(f); if (!wFile) return false;
   const wNode = WIDOF[parId] || '';
+  const k = f.replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, '');
+  if (k === SLOT_BASE) {
+    /* §E593：活槽路径的"权重身份可核" = **当时那一段的实录权重** == 父节点在册的权重。
+     *   两边的来路互相独立：段里的 wid 来自"槽文件侧逐提交算指纹"，父节点的 wid 来自面板的包。
+     *   ⚠ 不许拿"今天那格文件里的内容"来比（§E367 的病）；时间轴追不到今天 ⇒ `slotEraAt` 返回 null ⇒ 升不上去。 */
+    const e = slotEraAt(ts);
+    return !!e && e.id === parId && !!wNode && e.wid === wNode; }
+  const wFile = widOfFile(f); if (!wFile) return false;
   return !!wNode && wFile === wNode; }
 /* ===== §E464 pre-v7 包的「第二身份」登记 =====
  * 训练服务记热启动父走的是 `weightsId(loadAny(种子).params)`，也就是**嵌入成 v7 之后**那份数组的指纹
@@ -280,10 +298,40 @@ const SLOT_TL = [];
       const t = Date.parse(c[iwh].replace(' ', 'T') + '+08:00');
       if (isFinite(t)) SLOT_TL.push({ id: c[ii], wid: c[iw], t: t }); }
     SLOT_TL.sort((a, b) => a.t - b.t); } }
-function slotAt(tsStr) { const t = Date.parse(tsStr); if (!isFinite(t) || !SLOT_TL.length) return '';
-  let hit = ''; for (const s of SLOT_TL) { if (s.t <= t) hit = s.id; else break; } return hit; }
-console.log('槽位时间轴（§E368）：' + SLOT_TL.length + ' 段（最早 ' + (SLOT_TL[0] ? SLOT_TL[0].id : '—')
-  + ' ‖ 最晚一段起于 ' + (SLOT_TL.length ? new Date(SLOT_TL[SLOT_TL.length - 1].t).toISOString() : '—') + '）');
+/* §E593（10-12 DS）：**凡"当时槽里是谁"一律问完整时间轴**（`slot-timeline.tsv` = §E369 从**槽文件侧**逐提交
+ *   算权重指纹建的那张，覆盖全部段落），不再用面板侧的 `ship-times.tsv`（实测只有 13 段有名字 / 槽文件换过 40 段）。
+ *   两个病同源：
+ *     ① 用户 10-12 报「D4a 一族 8 号时可证、现在不可证」——子包 meta 记的是**活槽路径** `js/bundled-champion-3p.js`，
+ *        解析走的是"文件基名 → 面板"（`BYBASE`）。它原来解得出来**只因为**现役那行的 path 恰好就是这个文件；
+ *        §E591 把现役行改指钉住的快照（免得量具静默量到别的包）⇒ 这条路径整族解不出父 ⇒ 从 `seedpack-wid`
+ *        （实线）掉到 `arm`（虚线）。实测 `341724a`(10-09) 时 D4a/D2a 都是 `seedpack-wid`。
+ *     ② `slotAt()` 在**没有名字的那些段**里会返回**上一个有名字的槽主** —— 那不是当时槽里的人，是**错的父**，
+ *        而且 §E367 那道的"父比子晚"时间闸拦不住（上一个槽主本来就更早）。
+ *   ⇒ 名字优先 `panelId`，其次按 `wid` 反查面板节点，两者都解不出就**不接**（宁缺勿错，与 §E330 同一条规矩）。
+ *   ⚠ 时间轴必须**追到今天**（最后一段的权重 == 当下槽文件里的权重）：追不上 ⇒ 最后一段之后的区间"当时是谁"
+ *     是不知道的 ⇒ 这一级整体不生效，并**响亮印出来**（不静默降级）。 */
+const SLOT_FULL = [];
+{ const f = join(HERE, 'slot-timeline.tsv');
+  if (existsSync(f)) { const S = rd(f).trim().split('\n'), sh = S[0].split('\t');
+    const iw = sh.indexOf('wid'), ip = sh.indexOf('panelId'), iu = sh.indexOf('fromUTC'), ia = sh.indexOf('metaArm');
+    for (const l of S.slice(1)) { const c = l.split('\t'); const t = Date.parse(c[iu] || '');
+      if (!isFinite(t)) continue;
+      SLOT_FULL.push({ t: t, wid: (c[iw] || '').trim(), panelId: (c[ip] || '').trim(), arm: (c[ia] || '').trim() }); }
+    SLOT_FULL.sort((a, b) => a.t - b.t); } }
+const SLOT_NOWWID = widOfFile('js/bundled-champion-3p.js');
+const SLOT_FULL_OK = !!(SLOT_FULL.length && SLOT_NOWWID && SLOT_FULL[SLOT_FULL.length - 1].wid === SLOT_NOWWID);
+function slotEraAt(tsStr) {   /* 子包跑的那一刻槽里是谁 ⇒ { id, wid } 或 null */
+  if (!SLOT_FULL_OK) return null;
+  const t = Date.parse(tsStr); if (!isFinite(t)) return null;
+  let hit = null; for (const s of SLOT_FULL) { if (s.t <= t) hit = s; else break; }
+  if (!hit) return null;
+  const id = (hit.panelId && IDSET.has(hit.panelId)) ? hit.panelId
+    : (BYWID[hit.wid] || BYWID_EMB[hit.wid] || (hit.arm && IDSET.has(hit.arm) ? hit.arm : ''));
+  return id ? { id: id, wid: hit.wid } : null; }
+function slotAt(tsStr) { const e = slotEraAt(tsStr); return e ? e.id : ''; }
+console.log('槽位时间轴：完整版（slot-timeline.tsv，槽文件侧）' + SLOT_FULL.length + ' 段 ‖ 面板侧（ship-times.tsv）'
+  + SLOT_TL.length + ' 段 —— 凡"当时槽里是谁"一律问完整版（§E593）‖ 追到今天（末段 wid == 现役槽文件 ' + (SLOT_NOWWID || '—') + '）: '
+  + (SLOT_FULL_OK ? 'yes' : 'no ⇒ 这一级不生效（跑 node champion-map/slot-timeline.mjs 重烘）'));
 let nSpk = 0, nArm = 0;
 /* §E367（用户 10-06 22:4x：「e35prod807 比父节点的父节点还要早，太离谱了」）
  *   查出来的真相：**那五条边是假的**。`_e330-armparent.tsv` 里 seed80/seed81/e35prod807/e35prod814/e39ctl911
@@ -300,7 +348,7 @@ for (const r of REC) { const m = r.m || {};
   const byHash = (m.hotstartFrom && (BYWID[m.hotstartFrom] || BYWID_EMB[m.hotstartFrom])) || '';
   /* §E464 靠「嵌入后那个身份」才对上的单独记一笔（pSrc = hash-emb），不许混在 hash 里看不出来 */
   const byHashEmb = byHash && !BYWID[m.hotstartFrom] ? 1 : 0; if (byHashEmb) nEmb++;
-  let byPath = byHash ? '' : seedpackOf(m);
+  let byPath = byHash ? '' : seedpackOf(m, m.ts);
   let byArm = (byHash || byPath) ? '' : (ARMPAR[r.id] || '');
   const parId = byHash || byPath || byArm;
   const parTs = parId ? (IDTS[parId] || '') : '';
@@ -329,7 +377,7 @@ for (const r of REC) { const m = r.m || {};
   }
   if (byPath) nSpk++; if (byArm) nArm++;
   /* §E555：路径级父指针能不能升到"权重身份可核"，只由这道比较决定（相等才算，读不到/不等一律留在 seedpack） */
-  const spWid = !!byPath && seedpackVerified(m, byPath);
+  const spWid = !!byPath && seedpackVerified(m, byPath, m.ts);
   if (byPath) { if (spWid) nSpkWid++; else nSpkLoose++; }
   /* ===== §E487 融合粒（`tools/soup-pack.mjs` 的产物）：它**天生有两个父** =====
    *   `meta.soup.sources` 是工具自己写进去的实录（每粒来源的 路径 + wid + ts），不是推断 ⇒
@@ -391,6 +439,10 @@ console.log('　§E330 退路解析出的：SEEDPACK 路径 ' + nSpk + ' 枚 ‖
 /* §E555：路径级父指针里"权重身份可核"的那部分单独报数 —— 它决定图上画实线还是虚线，所以必须看得见是多少枚 */
 console.log('　§E555 SEEDPACK 那 ' + nSpk + ' 枚里：**种子文件的权重指纹 == 图上节点的指纹**（可升到实线）' + nSpkWid +
   ' 枚 ‖ 只按名字对上、身份核不了（保持虚线）' + nSpkLoose + ' 枚');
+/* §E593：走**活槽路径**的那一支单独报数 —— 它的"身份可核"问的是**当时那一段的实录权重**（完整时间轴），
+ *   不是"今天那格文件里装的是谁"（后者正是 §E367 那个病）。时间轴没追到今天时它是 0，且上面那行会响亮印出来。 */
+console.log('　§E593 其中点名**现役槽位路径**（`js/bundled-champion-3p.js`）的 ' + nSlotEra +
+  ' 枚：父 = 子包 ts 落在的那一段槽主（问 slot-timeline.tsv 完整时间轴，不读今天那格文件）');
 const bySig = new Map();
 /* ===== §E466 旧槽位冠军**不参与家族聚类**（用户 10-08 指着图问"怎么有几个后期的点飞到家族 1 去了"）=====
  *   它们不是一次训练产物，是"当时上槽的那枚权重"（16 行的 META 来自 e370-out 的导出，配置字段多半是空的）。
