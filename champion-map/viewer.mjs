@@ -650,7 +650,7 @@ st.batch = 'all'; st.sel = null; st.cmp = []; st.side = false;
  *     是字面量 'SHIPPED-Ldemo'，不是 'INC.id'，所以伪行换锚**根本碰不到它们** —— 当时实测只剩 2 处用 'INC.id'、
  *     12 处仍是字面量，★ 一直挂在 09-27 就退役的那枚上。真正的清除是 §E600-A 这一笔做的（现在代码位 0 处）。
  *     留这句话在这里，是因为它就是"自述与实现不符"的样本：判据/注释说"自然消失"，页面却照旧画着 ★，
- *     而四视图 86 条自检里没有一条管"★ 落在不在活槽那一枚"⇒ 它绿着漂了一整天。 */
+ *     而四视图 86 条自检里没有一条管"★ 落在不在活槽那一枚"⇒ 它绿着漂了一整天。
  *   ⚠ 池表里没有这一带（清空/改名）⇒ 退回图上 F 最高的那一枚并**在控制台响亮说**，不许静默拿 0 当中性分界（§E308 那条"灰≠红"同一课）。
  *   ⚠ 'ANCH_TIER' 必须是 'pool-members.tsv' 里最难那一带（契约 §2 与 'tools/pool-add.mjs:TIERS' 的第一项）；
  *     它不读 'bots.js' 的档位表，因为图侧没有那棵树 —— 改了带名要连这里一起改，页内"每一档都有环色"那条牙会提醒。 */
@@ -3466,6 +3466,20 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         bd.lo.toFixed(3) + '/' + bd.med.toFixed(3) + '/' + bd.hi.toFixed(3) + ' → 色值 ' +
         fCol(bd.lo).toFixed(3) + '/' + fCol(bd.med).toFixed(3) + '/' + fCol(bd.hi).toFixed(3); })());
   st.batch = 'all'; recomputeVIS(); draw();
+  /* §E600-A 新增的一条：标签文字里**不许出现 ★**。
+   *   为什么这条值得占一处：★ 原来钉的是"当前线上那一枚"，而它比的是字面量 'SHIPPED-Ldemo' ——
+   *   §E596 把分界锚换成 hard 带均值之后，注释写着"★ 自然消失"，实际上 12 处字面里有 10 处根本没走锚，
+   *   那颗星就一直在退役那枚头上，而这一版自检当时 86 条全绿 ⇒ **没有一条读的是标签内容**。
+   *   这条不钉源码，钉的是渲染出来的文本（走的是画标签同一个函数 labOf），所以将来谁再往标签里塞
+   *   身份符号，这里就会红。 */
+  var starBad = [];
+  for (var sbi = 0; sbi < LAB.length; sbi++) { var sbi2 = LAB[sbi][4];
+    if (sbi2 === undefined || sbi2 < 0 || !P[sbi2]) continue;
+    if (String(labOf(P[sbi2])).indexOf('★') >= 0) starBad.push(P[sbi2].id); }
+  T('标签文字里不许出现 ★（"当前现役"那个身份 §E600-A 已退场，分界 = ' + BANDLBL + '）',
+    starBad.length === 0, '这一帧画了 ' + LAB.length + ' 条标签 ‖ 带 ★ 的 ' + starBad.length + ' 条' +
+      (starBad.length ? '：' + starBad.slice(0, 6).join(' ‖ ') : '') +
+      ' ‖ 全库带冠军记录的 ' + P.filter(function (d) { return d.lin; }).length + ' 枚（同一帧内判，不看构建期源码）');
   /* ② 命中：指着**标签**必须读到那一枚自己（这条就是用户说的"悬停显示上一个冠军的信息"）。
    *    两条标签本来就可能重叠（force 那几枚允许避让失败照样画）⇒ 判据换成"命中者的框必须真的盖住这个点"，
    *    那才是用户看到的：盖在最上面的那张卡说话，不许出现"命中一张不在这儿的卡"（phantom）。*/
