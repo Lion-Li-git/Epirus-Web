@@ -1456,6 +1456,12 @@ function draw1(fr) {
     var rr1 = (d.lin ? 5 : 2.6) * st.size;
     g.beginPath(); g.arc(x, y, rr1, 0, 6.284); g.fillStyle = colOf(d, fr); g.fill();
     if (d.lin && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.4; g.stroke(); }
+    /* §E590 池层环（与 drawTree/drawMap 同一件事）：**这一条是补的 bug** —— 10-12 把页内自检搬到 mode=1d 上跑，
+     *   量到"两帧差分 0 颗像素"⇒ 池环在 1D 视图里**整层不存在**，而池档正是"这枚玩家会不会遇到"的身份信息。
+     *   判据没写错（它就是在量"这个视图里画没画"），错的是我只在两个视图里画了环。 */
+    if (d.pt && POOL_COL[d.pt] && al > 0.3) { g.globalAlpha = Math.min(1, al * 0.95); g.strokeStyle = POOL_COL[d.pt];
+      g.lineWidth = 1.7 * devicePixelRatio;
+      g.beginPath(); g.arc(x, y, rr1 + 3.7 * st.size, 0, 6.284); g.stroke(); }
     if (d.id === st.sel) { g.globalAlpha = 1; g.strokeStyle = '#ffd166'; g.lineWidth = 2 * devicePixelRatio;
       g.beginPath(); g.arc(x, y, rr1 + 5 * devicePixelRatio, 0, 6.284); g.stroke(); }
     /* 分解条：蓝 = Hp（线上口径夺1率），黄 = T·S（广度）。谁靠哪一头站在这上面一眼可见。
@@ -2395,6 +2401,12 @@ function draw3b(fr) {
     g.beginPath(); g.arc(pr[i][0], pr[i][1], rr3, 0, 6.284);
     g.fillStyle = colOf(d, fr); g.fill();
     if (d.lin && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.5; g.stroke(); }
+    /* §E590 池层环（第三处，也是最后一片空白）：10-12 把同一条页内自检搬到 mode=3db 上跑 ⇒ 差分 0 颗像素。
+     *   先排除了"判据量错画布"这种解释：draw3b 用的就是同一块 cv/g（见上面 clear(w, h)），所以那不是仪器瞎，是真没画。
+     *   与选中环的先后顺序同 drawTree/drawMap：环画在前，选中金环才压得住它。 */
+    if (d.pt && POOL_COL[d.pt] && al > 0.3) { g.globalAlpha = Math.min(1, al * 0.95); g.strokeStyle = POOL_COL[d.pt];
+      g.lineWidth = 1.7 * devicePixelRatio;
+      g.beginPath(); g.arc(pr[i][0], pr[i][1], rr3 + 3.7 * st.size, 0, 6.284); g.stroke(); }
     if (d.id === st.sel) { g.strokeStyle = '#ffd166'; g.lineWidth = 2 * devicePixelRatio;
       g.beginPath(); g.arc(pr[i][0], pr[i][1], rr3 + 5 * devicePixelRatio, 0, 6.284); g.stroke(); }
     scr[pr[i][6]] = [pr[i][0], pr[i][1]];

@@ -112,9 +112,30 @@ jobs:
         run: node tools/smoke.mjs
       - name: 多人页面对战（CDP 真 Chrome）
         run: node tools/battle-test.mjs
-      - name: 冠军演化页页内自检（CDP 真 Chrome · §E365 新增）
+      - name: 冠军演化页页内自检（CDP 真 Chrome · §E365 新增 · 10-12 补"四个视图各跑一遍 + 读数必须可读"）
         # 为什么放这一档而不是阻断档：它要真 Chrome，而本机认证的 np/spec 那两跑在 ubuntu。
-        #   判据 = 页内自检总结论那一行（PASS 条数会变、"0 FAIL"不许变）；shot.mjs 的 exit code 就是这一档的 exit code。
-        #   ⚠ 这一档整体仍是 continue-on-error（见上面 10-01 那笔退回记录）⇒ **演化页的红不会阻断提交**，
-        #     但它从此会在每次 push 上留一条可见的记录（此前是零记录：CI 与本机关禁都不读 champion-map）。
-        run: node champion-map/shot.mjs '--hash=mode=tree&check=1' --dump
+        #   判据 = 页内自检总结论那一行（PASS 条数会变、"0 FAIL"不许变）。
+        #   ⚠ 这一档整体仍是 continue-on-error（见上面 10-01 那笔退回记录）⇒ **演化页的红不会阻断提交**。
+        # 🔴 10-12 千问补的两件事（用户裁定"进 CI，先只当观察档"）：
+        #   ① **观察档也必须读得出成败**：job 级 `continue-on-error: true` 会让"步骤失败"与"通过"都显示 conclusion=success
+        #      ⇒ 我以前在 API 上看到 browser=success 就以为这 86 条过了，那句话其实毫无信息量。
+        #      现在把每个视图的 `断言：N PASS ‖ M FAIL` 与退出码写进 job summary（`$GITHUB_STEP_SUMMARY`，API 可取）。
+        #   ② **原来只跑 mode=tree 这一个视图**：把同一批自检搬到其余视图上，当场量出两条真红
+        #      —— mode=1d 与 mode=3db 的"池层环真画到画布上"都是 差分 0 颗 ⇒ 池档身份在这两个视图里整层不存在。
+        #      （先排除了"判据量错画布"：draw1/draw3b 用的就是同一块 cv/g，所以那不是仪器瞎。）已补画，四个视图各 86 PASS / 0 FAIL。
+        shell: bash
+        run: |
+          fail=0
+          : > /tmp/shot-all.log
+          for m in tree 1d 3db map; do
+            node champion-map/shot.mjs "--hash=mode=$m&check=1" --dump > "/tmp/shot-$m.log" 2>&1
+            st=$?
+            line=$(grep -E '^断言：' "/tmp/shot-$m.log" | tail -1)
+            [ -n "$line" ] || line='（没抓到"断言："那一行 ⇒ 这一步本身没跑成，别当全绿）'
+            echo "视图 mode=$m ‖ ${line} ‖ exit=${st}" >> /tmp/shot-all.log
+            [ "$st" -eq 0 ] || fail=1
+          done
+          { echo "## 谱系图页内自检（观察档 · 不阻断）"; echo; echo '```'; cat /tmp/shot-all.log; echo '```';
+            echo; echo "退出码口径：0=全过 ‖ 1=有 FAIL ‖ 2=浏览器没跑出结果或一条断言都没跑（宁可红也不许假绿）。"; } >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/shot-all.log
+          exit $fail
