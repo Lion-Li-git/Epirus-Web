@@ -8,6 +8,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { load as loadSlotId } from './slot-identity.mjs';   /* §E600-A：活槽身份的唯一解析处 */
 const HERE = dirname(fileURLToPath(import.meta.url));
 const L = readFileSync(join(HERE, 'eps.tsv'), 'utf8').trim().split('\n').map((l) => l.split('\t'));
 const hd = Object.fromEntries(L[0].map((h, i) => [h, i]));
@@ -52,14 +53,19 @@ console.log('    全量：考卷均值 ' + mean(ex).toFixed(1) + '% ‖ 页面�
 
 const d = ids.map((k) => ({ k, d: AT(k).exam - AT(k).page })).sort((a, b) => a.d - b.d);
 const ds = d.map((x) => x.d), q = (p) => ds[Math.max(0, Math.min(ds.length - 1, Math.floor(ds.length * p)))];
-const inc = AT('SHIPPED-Ldemo');
+/* ⚑ §E600-A（10-13 夜班）身份说明：这里的 `SHIPPED-Ldemo` 是 **§E313 那次实验点名的参照包**
+ *   （跑的那天才它是线上冠军），下面 (b)(c) 两句里的"线上包/现役"讲的都是**它**，不是今天的活槽现主。
+ *   今天活槽是谁只从解析来（`slot-identity.mjs`，本脚本末尾会印出来）。
+ *   ⚠ 为什么判据不改成吃解析：这两条是 §E313 跑前写死的，把主语换成今天那颗等于**改写一次已完成实验的结论**。 */
+const REF = 'SHIPPED-Ldemo';
+const inc = AT(REF);
 const incD = inc.exam - inc.page;
 const pctile = (ds.filter((v) => v <= incD).length / ds.length * 100);
-console.log('\n(b) 线上包 Δε = ' + incD.toFixed(1) + 'pt（考卷 ' + inc.exam.toFixed(1) + ' → 页面 ' + inc.page.toFixed(1) + '）' +
+console.log('\n(b) 参照包（§E313 那天它在线上）' + REF + ' 的 Δε = ' + incD.toFixed(1) + 'pt（考卷 ' + inc.exam.toFixed(1) + ' → 带探索 ' + inc.page.toFixed(1) + '）' +
   '   过线组分位：p50 ' + q(.5).toFixed(1) + ' ‖ p75 ' + q(.75).toFixed(1) + ' ‖ p90 ' + q(.9).toFixed(1) + ' ‖ p95 ' + q(.95).toFixed(1) +
   ' ‖ 最大 ' + ds[ds.length - 1].toFixed(1));
-console.log('    线上包落在第 ' + pctile.toFixed(0) + ' 百分位 ⇒ ' + (pctile >= 90 ? '**判据 (b) 第一半：现役确实偏脆**' : '现役不算特别脆'));
-const same = d.filter((x) => x.k !== 'SHIPPED-Ldemo' && x.d >= 0.75 * incD);
+console.log('    参照包落在第 ' + pctile.toFixed(0) + ' 百分位 ⇒ ' + (pctile >= 90 ? '**判据 (b) 第一半：这一枚确实偏脆**' : '这一枚不算特别脆'));
+const same = d.filter((x) => x.k !== REF && x.d >= 0.75 * incD);
 const sameCh = same.filter((x) => CH.has(x.k));
 console.log('    同量级（≥0.75×）的枚数：全库 ' + same.length + ' ‖ 历代冠军 ' + sameCh.length + ' 枚 ⇒ ' +
   (sameCh.length >= 2 ? '第二半也过 ⇒ "冠军体质"可说' : '**第二半没过 ⇒ 只能说这两枚的性格，不能说冠军体质**'));
@@ -67,9 +73,9 @@ const chD = ids.filter((k) => CH.has(k)).map((k) => ({ k, d: AT(k).exam - AT(k).
 console.log('    历代冠军里最脆的五枚：' + chD.slice(0, 5).map((x) => x.k + ' ' + x.a.exam.toFixed(1) + '→' + x.a.page.toFixed(1) +
   ' (Δ' + x.d.toFixed(1) + ')').join('  ‖  '));
 
-console.log('\n(c) 页面口径下 候选 − 现役 ≥ +5pt 且两个 seed 同号：');
+console.log('\n(c) 带探索口径（ε=0.2 常数 = 今天的**简单档**剂量，不是页面默认档 0.1·斜坡）下 候选 − 参照包 ≥ +5pt 且两个 seed 同号：');
 const hits = ids.filter((k) => {
-  if (k === 'SHIPPED-Ldemo') return false;
+  if (k === REF) return false;
   const a = AT(k); if (a.page - inc.page < 5) return false;
   return a.p.every((v) => v > inc.page) || (a.p[0] - inc.p[0] > 0 && a.p[1] - inc.p[1] > 0);
 }).map((k) => ({ k, a: AT(k) })).sort((x, y) => y.a.page - x.a.page);
@@ -77,9 +83,9 @@ for (const h of hits) console.log('   ' + h.k.padEnd(18) + ' 页面 ' + h.a.page
   '） ‖ 考卷 ' + h.a.exam.toFixed(1) + '%（+' + (h.a.exam - inc.exam).toFixed(1) + '） ‖ 逐 seed 页面 ' + h.a.p.map((v) => v.toFixed(1)).join(' ‖ ') +
   '   过线=' + (PASS.has(h.k) ? '是' : '否') + ' 冠军=' + (CH.has(h.k) ? '是' : '否'));
 console.log('   合计 ' + hits.length + ' 枚');
-console.log('\n   现役逐 seed：考卷 ' + inc.e.map((v) => v.toFixed(1)).join(' ‖ ') + '  页面 ' + inc.p.map((v) => v.toFixed(1)).join(' ‖ '));
+console.log('\n   参照包 ' + REF + ' 逐 seed：考卷 ' + inc.e.map((v) => v.toFixed(1)).join(' ‖ ') + '  带探索 ' + inc.p.map((v) => v.toFixed(1)).join(' ‖ '));
 
-/* 汇成查看器要读的那张表（一页一行）。⚠ 只有两个 seed 都有页面口径才算数 ⇒ 缺的留空，图上按"没测"压暗 */
+/* 汇成查看器要读的那张表（一页一行）。⚠ 只有两个 seed 都有"带探索"那一臂才算数 ⇒ 缺的留空，图上按"没测"压暗 */
 const OUT = ['id', 'exam', 'page', 'de', 'nseed'];
 const lines = [OUT.join('\t')];
 for (const k of ids.sort()) {
@@ -87,5 +93,17 @@ for (const k of ids.sort()) {
   if (a.p.length < 2) continue;
   lines.push([k, a.exam.toFixed(2), a.page.toFixed(2), (a.exam - a.page).toFixed(2), a.p.length].join('\t'));
 }
-writeFileSync(join(HERE, 'epsagg.tsv'), lines.join('\n') + '\n', 'utf8');
-console.log('\n已写 champion-map/epsagg.tsv（' + (lines.length - 1) + ' 枚，两 seed 齐的才收）');
+/* ⛔ 落点改名（10-13 夜班实测抓到的）：这张 5 列表**以前写的是 `epsagg.tsv`**，
+ *   而 `epsagg.tsv` 现在是查看器吃的那张、由 `eps2seed.mjs`（§E597 那批 120 局 · 8 列 · 剂量走 `tier:lv:regular`）产出
+ *   ⇒ 谁跑一遍本尺这个**§E313 的 30 局 · ε=0.2 常数**旧表，就会把活跃表连列带数一起覆掉（实测覆了 122 行，靠 `git checkout` 复原）。
+ *   一台仪器的产物不许 squat 另一台的活跃路径 —— 改成本尺自己的名字，历史读数要再看还看得着。 */
+const AGG = 'eps313-agg.tsv';
+writeFileSync(join(HERE, AGG), lines.join('\n') + '\n', 'utf8');
+console.log('\n已写 champion-map/' + AGG + '（' + (lines.length - 1) + ' 枚，两 seed 齐的才收）'
+  + ' ‖ ⚠ 这不是查看器吃的那张（那张 = eps2seed 产的 epsagg.tsv，120 局 · tier:lv:regular 剂量）');
+/* §E600-A：上面那些"参照包/线上包"讲的始终是 §E313 点名的 SHIPPED-Ldemo；
+ *   **今天的活槽现主只从解析来**，印在这一行的目的就是别让两个人把这两件事读成一件。 */
+const SID = loadSlotId();
+console.log('今天活槽现主（slot-identity 解析 ‖ 与上面那个参照包无关）：' + (SID.live.coordsId || '(解不出来)') +
+  ' ‖ 声明行 = ' + (SID.live.declared || '(无)') + ' ‖ 三方一致 = ' + (SID.live.ok ? '是' : '否') +
+  ' ‖ 上槽名单 ' + SID.onSlot.length + ' 枚');

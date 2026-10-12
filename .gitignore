@@ -145,3 +145,7 @@ champion-map/_soup/
 # §E600-B（10-13）：`docs/debug/play-mix.mjs` 的原始回合行落点（`_playmix-<档>.json`）。
 #   读数记在研究日志里，原始行只是取证件 ⇒ 可重跑得到，不入库（与上面 `_*.tsv`/`_*.txt` 同判）。
 champion-map/_*.json
+# §E600-B（10-13）：`epsread.mjs`（§E313 那把旧尺：30 局 · ε=0.2 常数）的产物。
+#   原先它写的是 `epsagg.tsv` —— 那张是**查看器在吃的活跃表**、由 `eps2seed.mjs`（120 局 · 剂量 tier:lv:regular）产出，
+#   跑一次旧尺就把活跃表连列带数覆掉（10-13 02:0x 实测覆了 122 行，靠 `git checkout` 复原）⇒ 落点各归各，产物不入库。
+champion-map/eps313-agg.tsv
