@@ -616,7 +616,7 @@
          *   门 D153 钉这条字面形状，改动会把 §E145 那 14.91% 的"首手白站防御"放回来）；
          *   其余档 = 常数 ε。**这两个形状不许在别处再写一遍**（`probe-diff-ladder.mjs` 读的就是这张表）。 */
         const epsRound = state.round <= 1 ? 0 : (state.round === 2 ? 0.1 : 0.2);
-        const epsForTier = tier.ramp ? epsRound : tier.eps;
+        const epsForTier = (state.p.length <= 2 && tier.eps2 !== undefined) ? tier.eps2 : (tier.ramp ? epsRound : tier.eps);
         return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15, epsForTier, tier.epsK, tier.epsMode));
       }
       B.aiFallback = true;                                  // 冠军缺失 → 显式回退，不静默

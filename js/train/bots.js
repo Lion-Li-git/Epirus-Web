@@ -1060,13 +1060,13 @@
    *   ⇒ `D227` 的④（五档两两分得开）在池形态下的语义要重给（那条腿已按用户 10-11 裁定暂停，回来条件就写着"池第一版接线"）。
    * ⚠ `lv:hunter` 没有 `pool`：它是 `kind:'style'`（脚本整桌上桌），本来就不带包。 */
   const DIFF_TIERS = [
-    { id: 'lv:sparring', name: '简单 · 陪练', kind: 'champ', eps: 1, epsK: 40, epsMode: 'uniform', ramp: false, pool: 'low',
+    { id: 'lv:sparring', name: '简单 · 陪练', kind: 'champ', eps: 1, epsK: 40, epsMode: 'uniform', ramp: false, pool: 'soft',
       note: '冠军的牌，但每一手都在"网络看好的前 40 张"里**均匀**乱抽：看得懂局面，抓不住机会（替身夺冠 60.9~90.1%，五格同向软 46~70pt；局长也跟着变长，5 人桌 45 回合 vs 普通档 17）' },
-    { id: 'lv:novice', name: '入门', kind: 'champ', eps: 0.5, epsK: 5, epsMode: 'soft', ramp: false, pool: 'low',
+    { id: 'lv:novice', name: '入门', kind: 'champ', eps: 0.5, epsK: 5, epsMode: 'soft', ramp: false, pool: 'soft',
       note: '两手里有一手乱抽（替身夺冠 17.5~28.4%，比默认档软 4.0~5.5pt；这一步五格全同号）' },
-    { id: 'lv:regular', name: '普通（默认）', kind: 'champ', eps: 0.2, epsK: 5, epsMode: 'soft', ramp: true, pool: 'mid',
+    { id: 'lv:regular', name: '普通（默认）', kind: 'champ', eps: 0.2, epsK: 5, epsMode: 'soft', ramp: true, pool: 'soft',
       note: '★ 默认档 = v1.5.141 以来页面一直在跑的那条口径（前 3 回合逐步放开 0→0.1→0.2）。替身夺冠 13.4~23.4%' },
-    { id: 'lv:hard', name: '困难 · 冠军', kind: 'champ', eps: 0, epsK: 5, epsMode: 'soft', ramp: false, pool: 'hard',
+    { id: 'lv:hard', name: '困难 · 冠军', kind: 'champ', eps: 0.2, epsK: 5, epsMode: 'soft', ramp: false, pool: 'hard', eps2: 0,
       note: '冠军本体：每手都取网络最优（替身夺冠 11.9~21.4%）。⚠ 与"普通"实测只差 1.5~4.6pt，**5 人 3 血那一格（−1.53±2.36pt）落在噪声里** —— 次序对、幅度小，已如实标；门 D227④ 只点名放行这一对"不许翻序"，其余相邻档仍要 ≥2pt' },
     { id: 'lv:hunter', name: '极限 · 读招', kind: 'style', style: 'st:combocounter',
       note: '读招反制整桌上：会读你最近 5 次出招来反制（替身夺冠 6.5~10.3%，五格都比"困难"硬 3.9~16.9pt）⇒ 想比贪心冠军更难，目前只有脚本这一条路（ε=0 已是"完全不探索"的下界）' }
