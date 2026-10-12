@@ -324,19 +324,33 @@
     for (const k of order) if (byKey[k] && byKey[k].affordable) return k;
     return SK.JI;
   }
-  /* ===== §E600-B「杂货铺」：目标不是赢，是"这局还没用过的卡，能用就用" =====
-   * 立项依据（实测 `docs/debug/breadth-probe.mjs`，25 局/格 × 5 席镜像 · multi）：
-   *   现在最广的一只 `st:mix` 每局有 **避雷针 72.5 次 / 净化 72.5 次 / 双枪 55.5 次 / 镜面 55.5 次**
-   *   的合法机会（机会 = 这一回合这席位本来能出），而**出手全是 0**；其余四只风格脚本出手种类只有 1~2 种。
+  /* ===== §E600-B「杂货铺」：弱档席——**地板是全能型，多余的动作才交给低性价比卡**（v2，10-13）=====
+   * 立项依据（实测 `docs/debug/breadth-probe.mjs`，40 局/格 · 5 席镜像 · multi ‖ 机会只数**买得起**的）：
+   *   现有 5 只风格脚本里 4 只出手种类是 1~2，只有 `st:mix` 有 23 种；而 `st:mix` 真正的缺口是
+   *   **净化 2.8 ‖ 双枪 2.0 ‖ 镜面 2.0 次/局的"买得起却没出"**。
+   *   ⚠ 我 v1 之前在这里写过"避雷针 72.5 次/局"——那是尺子把"规则允许但珠不够"数成了机会，**比真值大一个数量级**；
+   *     修在尺上（`breadth-probe` 现在分开报 机会/差手 两列），旧数不许再引。
    *   ⇒ 弱档"没广度"不是随机性不够，是**选择侧永远排不到这些卡**（用户 10-13：这些技能进不了高强度的包）。
-   * 这只脚本因此按「这局没用过 > 用得最少 > 别的」排序，只从**合法且买得起**的卡里挑 ⇒
-   *   广度天然上去、强度天然下来，正是弱档席要的形状。
-   * ⚠ 它的主语是**弱档席**：判它只看两件事 —— 广度（出手种类数 / G）与"人类席夺冠率"（`tools/probe-pool.mjs`）。
-   *   不许拿"能不能打赢冠军"来评价它，那不是它要解的题（同一课见 `METHODOLOGY.md`："弱点必须是目标在乎的缺口"）。
+   * v1（`44384ea`）的形状 = "这局没用过 > 用得最少 > 别的" ⇒ 广度天然上去，但**它挤掉的是正招**，
+   *   强度天然掉到"脚本席不该有的程度"。用户 10-13 补的那句把它钉住了：「**就算给简单掺脚本席也要让脚本有基础强度**」。
+   * v2 的依据 = `docs/research/CARD-VALUE-2026-10-13.md` §4 的分层**配对** RCT（同 seed 跑两遍：A=一有机会就打这张卡 / B=一次都不打）：
+   *   15 张弱卡平均全是负的（dose=1 时 −13.6%~−33.3%），但**"我血≤1"那一格普遍抬到 0 附近甚至转正**
+   *   （藤甲 +0.4/+3.9 ‖ 全息屏障 +3.9 ‖ 镜面反射 +3.1 ‖ 双枪射手 +4.3/+3.9/+6.8 ‖ 无极变速 +0.3），
+   *   而"地板本来就只剩 ジ"的时刻打工具**不挤掉任何正招** ⇒ 这两类回合就是天然的广度预算。
+   * ⚠ 判它只看两件事 —— 广度（出手种类数）与"人类席夺冠率"（`tools/probe-pool.mjs`）：
+   *   不许拿"能不能打赢冠军"评它，那不是它要解的题（同一课见 `METHODOLOGY.md`："弱点必须是目标在乎的缺口"）。
    * ⚠ 计数从 `state.events` 现算（事件形状 `{type:'action', pid, key, outcome}`，与 `usage-probe` 同一判据），
    *   不存模块级状态 ⇒ 同一个种子必然同一个行为，`cloneState` / 并行 worker 都不会串味。 */
   const TOOL_KEYS = [SK.ROD, SK.LASER_EYE, SK.SHIFT, SK.JINSHIELD, SK.ARMOR, SK.PROTO, SK.TRANSFER,
     SK.CURSE, SK.FIRESTORM, SK.TAUNT, SK.CANNON, SK.PURIFY, SK.MINE, SK.DUAL_GUN, SK.MIRROR, SK.HOLO, SK.DRAIN];
+  /* 血≤1 那一格里最不值钱的是"防御类工具"（RCT 里它们抬到 0 附近）⇒ 保命窗口先给这一批，别先甩天火/贴贴 */
+  const TOOL_DEFENSE = [SK.SHIFT, SK.JINSHIELD, SK.ARMOR, SK.PROTO, SK.HOLO, SK.TRANSFER, SK.ROD];
+  /* ⚠ v3「演出配额」（每局至多 N 手"不是闲着的也开一张贵工具"）**测过、判死、已删**（10-13 晨）：
+   *   强度轴 —— `tools/probe-pool.mjs --mixSeats=2` 六格人类席读数与 v2 一致；
+   *   广度轴 —— 页面 16 局整桌低性价比卡 v1 19 ‖ v2 14 ‖ v3 13（`docs/debug/play-mix.mjs`，配额没把它抬回去反而少 1）；
+   *   根因是配额**花错了时机**：`played` 数的是**所有**工具出手，而 ③ 在开局那几手攒珠的闲回合就把配额吃满，
+   *   等 3 珠卡买得起时配额已归零 ⇒ 这条分支基本不落地。真要做该按"贵卡自己那批"计数、且排在 ③ 之前 —— 那是 v4，得单独测。
+   *   留这段话是为了下一个人别再照原样把配额加回来。 */
   function toolkitUsed(state, pid) {
     const used = {};
     const evs = (state && state.events) || [];
@@ -346,30 +360,24 @@
   }
   function pickToolKit(state, pid, legal) {
     const used = toolkitUsed(state, pid);
-    const have = (legal || []).filter(function (l) { return l && l.affordable && TOOL_KEYS.indexOf(l.key) >= 0; });
-    /* 先决定"**要不要为一张还差 1~2 珠的没用过的工具攒钱**"：不攒的话它就会在每张便宜工具出现时把珠花光，
-     *   永远摸不到 3~4 珠那批（避雷针 4 / 双枪 3 / 净化 3 / 镜面 3），广度就卡在便宜那几档上不去。
-     *   实测（第一版没有这一段）：杂货铺出手 6 种、ジ 120 次/局，而 避雷针/天火/地雷/挑衅 各 235 次机会全 0 出手。 */
-    const want = (legal || []).filter(function (l) { return !l.affordable && l.loan >= 1 && l.loan <= 2 &&
-      TOOL_KEYS.indexOf(l.key) >= 0 && !used[l.key]; });
-    if (want.length && rnd(state) < 0.6) return SK.JI;
-    if (have.length) {
-      const fresh = have.filter(function (l) { return !used[l.key]; });
-      let pool = fresh;
-      if (!pool.length) {                                     /* 全都用过了 ⇒ 退回"用得最少的"那一批 */
-        let min = 1e9;
-        for (let i = 0; i < have.length; i++) { const u = used[have[i].key] || 0; if (u < min) min = u; }
-        pool = have.filter(function (l) { return (used[l.key] || 0) === min; });
-      }
-      return pool[Math.floor(rnd(state) * pool.length) % pool.length].key;
+    const aff = (legal || []).filter(function (l) { return l && l.affordable; });
+    /* 挑一张**这局还没用过**的工具卡（没有新的就交 null，让调用方回到地板）*/
+    const freshTool = function (arr) {
+      const f = arr.filter(function (l) { return TOOL_KEYS.indexOf(l.key) >= 0 && !used[l.key]; });
+      if (!f.length) return null;
+      return f[Math.floor(rnd(state) * f.length) % f.length].key;
+    };
+    /* ① 保命窗口（实测唯一普遍不亏的一格）：先把回合交给还没用过的**防御类**工具，其次才是别的工具 */
+    if (state && state.p && state.p[pid] && state.p[pid].hp <= 1) {
+      const k = freshTool(aff.filter(function (l) { return TOOL_DEFENSE.indexOf(l.key) >= 0; })) || freshTool(aff);
+      if (k) return k;
     }
-    /* 工具卡这回合都没得开 ⇒ 三成的概率随手打一下（不然整局只ジ，那就不是"弱而广"而是"站着不动"），
-     *   其余按ジ 攒资源 —— 攒不出珠也就开不出贵的工具卡，这条是广度的天然节流阀。 */
-    if (rnd(state) < 0.35) {
-      const atk = (legal || []).filter(function (l) { return l && l.affordable && (l.key === SK.GUN || l.key === SK.SWORD || l.key === SK.TANK); });
-      if (atk.length) return atk[Math.floor(rnd(state) * atk.length) % atk.length].key;
-    }
-    return SK.JI;
+    /* ② 地板 = 全能型（六条人格线随机切换；实测是脚本里出手最广、强度最高的一只）*/
+    const base = pickMix(state, pid, legal);
+    const bk = (typeof base === 'string') ? base : (base && base.key);
+    /* ③ 地板这一手本来就是 ジ（这回合没有更值的事做）⇒ 换成还没用过的工具卡：不挤掉任何正招，广度就在这类便宜回合里长 */
+    if (bk === SK.JI) { const k = freshTool(aff); if (k) return k; }
+    return base;
   }
 
   // 空放型对手：故意挑一个"买不起/条件不满足"的技能空放（→ 招式作废 → 对手 lastSkill=null）。
@@ -1070,8 +1078,9 @@
     { id: 'st:mix',          name: '全能型',   pick: pickMix,          note: '什么都用一点，出招最杂（有效技能数 4.38）' },
     { id: 'st:aggro',        name: '激进快攻', pick: pickAggro,        note: '一有机会就开枪，逼你打快棋（均 27 回合）' },
     { id: 'st:combocounter', name: '读招反制', pick: pickComboCounter, note: '读你最近 5 次出招来反制 —— 五个装配里都比"困难"更硬，所以它被收进 `DIFF_TIERS` 当成最高档' },
-    { id: 'st:toolkit', name: '杂货铺', pick: pickToolKit, note: '§E600-B：**目标不是赢，是把低性价比卡真的打出来**（避雷针/双枪/贴贴→天火/镜面/挑衅/净化/过载炮…这局没用过就用）。'
-      + '广度天然最高、强度天然偏低 ⇒ 它是给**弱档掺席**用的，不许拿"能不能打赢冠军"评价它（判据见 `docs/debug/breadth-probe.mjs` 头注）' }
+    { id: 'st:toolkit', name: '杂货铺', pick: pickToolKit, note: '§E600-B v2：**地板=全能型，只在这回合本来只剩 ジ 或自己血≤1 时**才把动作交给还没用过的低性价比卡（避雷针/双枪/贴贴→天火/镜面/挑衅/净化/过载炮…）。'
+      + 'v1 是"没用过就优先打"⇒ 实测每局挤掉正招的代价 −13.6%~−33.3%（配对 RCT，见 `docs/research/CARD-VALUE-2026-10-13.md`），'
+      + 'v2 把广度限制在"便宜回合"里 ⇒ 强度有地板、广度靠闲时与保命窗口长。给**弱档掺席**用，不许拿"能不能打赢冠军"评价它（判据见 `docs/debug/breadth-probe.mjs` 头注）' }
   ];
 
   /* ===== v1.6.6 难度阶梯（用户 10-03 夜指令 2：「重新研究脚本难度…比如可以设计成冠军作为底层但脚本探索概率很高的版本」）=====

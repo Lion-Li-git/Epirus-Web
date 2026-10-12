@@ -246,6 +246,12 @@ for (const mode of MODES) {
   console.log('   ⚑ 四席全同的场数 = ' + allSameGames + ' / ' + totalGames + '（用户裁定不许全同 ⇒ 不为 0 就要查抽签）');
   console.log('   ⚑ 平均每场不同枚数 = ' + (distinctSum / Math.max(1, totalGames)).toFixed(2) + ' / 4');
   console.log('   逐枚夺冠率：' + lite.map(m => m.id + ' ' + ((memberWins[m.id] || 0) / Math.max(1, memberGames[m.id]) * 100).toFixed(1) + '%(上场 ' + (memberGames[m.id] || 0) + ')').join(' ‖ '));
+  /* §E600-B（10-13）：脚本席**也上场、也被上面那个循环记了账**，但它不在 `lite` 里 ⇒ 那行永远不报它
+   *   ⇒ "掺进来的脚本席自己有多强"这条是**问得出、报不出**（用户要"脚本有基础强度"，先得看得见它）。
+   *   同口径（同一场、同一座位轮换）；⚠ 也受文件头第 ② 条那个"独立组成少"的折扣，不许拿来排名次。 */
+  const scriptIds = Object.keys(memberGames).filter(id => !lite.some(m => m.id === id)).sort();
+  if (scriptIds.length) console.log('   脚本席自身夺冠率（同口径 ‖ 人类席占的那部分不在这里）：' + scriptIds.map(id => id + ' ' +
+    ((memberWins[id] || 0) / Math.max(1, memberGames[id]) * 100).toFixed(1) + '%(上场 ' + memberGames[id] + ')').join(' ‖ '));
   /* 座位效应：把"哪一席更容易赢"跨成员合并成一个数 ⇒ 它才是"逐枚夺冠率能不能并排读"的那把尺。
    *   四席的夺冠率之和必然 = P(AI 赢)（其余给人类那一席），所以**看的是极差不是绝对值**。 */
   /* 弱点剖面矩阵：行 = 成员，列 = 人类原型，格 = "这枚在桌上时该原型夺冠率"（括号里是场数）。
