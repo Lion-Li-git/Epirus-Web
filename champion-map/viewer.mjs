@@ -213,11 +213,11 @@ if (existsSync(promP)) {
  *   ⚠ 这里**只读不判**：谁是成员、踩了几格，全由 pool-add/seat-rule 那边算完落表；图抄数不重算（单一来源）。 */
 const poolP = join(HERE, 'pool-members.tsv');
 let POOLM = {};
-/* 档 → 环色（品红 = 困难带 / 橙 = 软带）：刻意避开图里已经占掉的三色 —— 绿 #39d98a=过线、金 #ffd166=选中、青 #7fd1ff=对比。
- *   ⚠ §E594（10-12）把池从三档收成两带（`soft` / `hard`），这里的键名必须跟 `pool-members.tsv` 的 `tier` 逐字一致 ——
- *   少一档的后果不是报错，是**那一档的池环静默不画**（页内第三条牙就是为此而存在，它 10-12 咬到了这一格）。
+/* 档 → 环色（品红 = 困难带 / 蓝紫 = 中带 / 橙 = 简单带）：刻意避开图里已经占掉的三色 —— 绿 #39d98a=过线、金 #ffd166=选中、青 #7fd1ff=对比。
+ *   ⚠ §E596（10-12）把难度并成三档、池跟着切成三带（`hard` 7 ‖ `mid` 6 ‖ `soft` 7），键名必须与 `pool-members.tsv` 的 `tier` 逐字一致 ——
+ *   少一档的后果不是报错，是**那一档的池环静默不画**（页内第三条牙就是为此存在，10-12 咬到过：两带那版漏了 `soft`）。
  *   换色要连同底部那句画布内提示与图例一起改，否则"环色 = 档"这件事只有代码知道。 */
-const POOL_COL = { hard: '#ff4fa3', soft: '#ff9a3c' };
+const POOL_COL = { hard: '#ff4fa3', mid: '#8f7bff', soft: '#ff9a3c' };
 if (existsSync(poolP)) {
   const pl2 = String(readFileSync(poolP, 'utf8')).replace(/\r?\n$/, '').split('\n'); const ph2 = pl2[0].split('\t');
   const iId = ph2.indexOf('id'), iT = ph2.indexOf('tier'), iS = ph2.indexOf('seatKill'), iV = ph2.indexOf('promoteVerdict'), iI = ph2.indexOf('invited');

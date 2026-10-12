@@ -2097,7 +2097,11 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
   const TIERS = BT.DIFF_TIERS || [];
 
   /* ===== ① 表在册且自洽（形状检查，不看数） ===== */
-  ok(Array.isArray(TIERS) && TIERS.length >= 4, '①a `Bots.DIFF_TIERS` 必须至少 4 档（实测 ' + TIERS.length + '）⇒ 单一来源被掏空时下面的腿全是装饰');
+  /* ⚠ 10-12 用户裁定「不需要 5 个难度了，合并成 3 个吧」⇒ 下限从 4 降到 **3**。
+   *   这不是"放宽以让它绿"：原来的 4 挡的是"表被掏空成一档"，3 同样挡得住（掏空到 1~2 档照样红），
+   *   而多出来的那一格（第 4 档）在这张表里已经没有了 —— 留着 4 就等于宣布"这次合并永远不许发生"。
+   *   台账记在 `docs/GATE-AUDIT-2026-10-12.md` 的裁定段（判据变窄必须看得见）。 */
+  ok(Array.isArray(TIERS) && TIERS.length >= 3, '①a `Bots.DIFF_TIERS` 必须至少 3 档（实测 ' + TIERS.length + '）⇒ 单一来源被掏空时下面的腿全是装饰');
   const ids = TIERS.map(function (t) { return t.id; });
   eq(new Set(ids).size, ids.length, '①b 档 id 不许重复：' + ids.join(','));
   ok(TIERS.every(function (t) { return t.kind === 'champ' || t.kind === 'style'; }),
@@ -2117,7 +2121,23 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
     ok(champs[i].eps <= champs[i - 1].eps,
       '②a 第 ' + i + ' 档（' + champs[i].id + ' ε=' + champs[i].eps + '）不许比上一档（' + champs[i - 1].id + ' ε=' + champs[i - 1].eps + '）更**能探索** ⇒ 下拉顺序就是难度顺序，翻过来就是标签说谎');
   }
-  ok(champs.length >= 2 && champs[0].eps > champs[champs.length - 1].eps, '②b 首末两档的剂量必须真的不同（否则整条阶梯是一个点）');
+  /* ⚠ §E596（用户 10-12 15:2x 裁定「统一成 0→0.1→0.2」）：**五人桌的剂量轴被并掉了 ⇒ 难度只剩"带"**，
+   *   所以原来那句"首末两档的剂量必须真的不同"描述的是已经不存在的机制（照它判 = 判一个恒假的东西）。
+   *   换成判这次改动**真正依赖**的那件事：首末两档必须落在不同的带里（同带 = 同一档写了两遍 = 下拉在骗人）。
+   *   ⚑ 同一条判据换到了 2 人桌那一根轴上：2 人桌没池（§E286），所以那里剂量仍是唯一的分档轴 ⇒ ②a 现在**两条轴都查**
+   *     （五人桌读 `eps/ramp`，2 人桌读 `eps2`），这不是新增判据，是同一句"剂量不许翻序"跟着产品换了实现点。 */
+  const bandOf = function (t) { return t.pool || ('style:' + (t.style || '')); };
+  ok(champs.length >= 2 && bandOf(champs[0]) !== bandOf(champs[champs.length - 1]),
+    '②b 首末两档必须落在**不同的带**（实测 ' + bandOf(champs[0]) + ' vs ' + bandOf(champs[champs.length - 1]) +
+    '）⇒ 剂量已并成一条，带就是难度的唯一载体；同带两档 = 同一档写了两遍');
+  /* 2 人桌的**有效**剂量按 `ui.js` 那一行的规则算（有 `eps2` 用它，否则 ramp 的稳定值 0.2 / 常数 eps）——
+   *   不许在这条腿里抄第二份规则，所以这段与 `ui.js` 的 `(p.length<=2 && eps2!==undefined) ? eps2 : (ramp?…:eps)` 逐字同形。 */
+  const eff2 = function (t) { return typeof t.eps2 === 'number' ? t.eps2 : (t.ramp ? 0.2 : t.eps); };
+  for (let i = 1; i < champs.length; i++) {
+    ok(eff2(champs[i]) <= eff2(champs[i - 1]), '②a2 2 人桌的剂量也不许翻序：第 ' + i + ' 档（' + champs[i].id + ' 有效 eps=' +
+      eff2(champs[i]) + '）不许比上一档（' + champs[i - 1].id + ' 有效 eps=' + eff2(champs[i - 1]) + '）更能探索'
+      + '（2 人桌没池 ⇒ 剂量是那里唯一的分档轴）');
+  }
   const def = TIERS.filter(function (t) { return t.id === BT.DIFF_DEFAULT; })[0] || {};
   ok(def.eps === 0.2 && def.epsK === 5 && def.epsMode === 'soft' && def.ramp === true,
     '②c 默认档必须逐字是 (ε=0.2, k=5, soft, ramp) —— 这就是 v1.5.141/1.5.298 以来玩家实际吃的那条口径（D153 钉斜坡本身）；' +
@@ -2156,11 +2176,14 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
     + '重跑：node tools/probe-diff-ladder.mjs --pairs=1 --games=1500 --pool=1（另跑一遍不带 --pool=1 的是单包对照）再把 sig 现算贴回 tools/diff-ladder-claims.mjs'
     + '\n     现算=' + sigOf(TIERS) + '\n     在册=' + LADDER_CLAIM.sig);
   const claimModes = Object.keys(LADDER_CLAIM.modes || {});
-  ok(claimModes.length >= 2, '④a2 至少要有"池装配"与"单包对照"两类账（实测 ' + claimModes.length + ' 类）⇒ 只留一类就没法说"是池把阶梯修好的"');
+  ok(claimModes.length >= 2, '④a2 至少要有两类装配的账（实测 ' + claimModes.length + ' 类：池装配 = 现在难度的载体 ‖ 单包对照 = 证明剂量轴已被并掉）⇒ 只留一类就没法说"台阶是带给的"');
   for (const mk of claimModes) {
     const rows = LADDER_CLAIM.modes[mk] || [];
     for (const p of rows) {
-      const sg = p.se > 0 ? Math.abs(p.d) / p.se : Infinity;
+      /* ⚠ `se = 0` 是"两行读数逐字相同"（§E596 并掉剂量后，单包装配下三档真的成了同一台机器）——
+       *   那**不是**"无穷显著"，而是"没有任何东西可声称" ⇒ 判 -1（永远不许标成"分得开"）。
+       *   原来这里给 Infinity 会因为 `Infinity >= 2` 把恒等行判成"分得开"，正好把这次改动的证据反着读。 */
+      const sg = p.se > 0 ? Math.abs(p.d) / p.se : -1;
       eq(sg >= 2, p.sep, '④b[' + mk + '] `' + p.from + '→' + p.to + '` 差 ' + p.d + '±' + p.se + ' = ' + sg.toFixed(2) +
         'σ，却标成"' + (p.sep ? '分得开' : '分不开') + '" ⇒ 判据边界（|σ|≥2 才许声称分得开）与标法不一致');
     }
@@ -2186,8 +2209,14 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
     (notClaimed.length ? notClaimed.join(' ‖ ') : '无') +
     ' ‖ ⚠ 符号与声明序相反（= 实测这一档比它下面那档**更软**）：' + (flipped.length ? flipped.join(' ‖ ') : '无'));
   {
+    /* ⚠ §E596 并重写了这条现场腿的**判的对象**（不是放宽阈值）：原来它拿"简单 − 普通 ≥ 10pt"当"量具还活着"的证据，
+     *   而那 10pt 来自简单档的 ε=1/uniform —— 剂量并掉之后那一步只剩 3.6pt，继续判它 = 判一个已经不存在的机制。
+     *   现在判**首末两档**（简单带 vs 困难带），因为带是这次难度的唯一载体。
+     *   ⚑ 局数从 200 提到 600：1500 局的真值是 7.0pt，200 局的配对 σ ≈ 3.4pt ⇒ 200 局下"线以下"的概率不低
+     *     （实测三个 seed 的首末差 = 7.5 ‖ 13.5 ‖ 7.0，而第三跑里 普通 21.5 已经**反超** 简单 18.5 ⇒ 中段的序在 200 局根本钉不住，
+     *     所以这条腿只判首末，不判中间）。600 局 σ ≈ 2.0pt ⇒ 4pt 的线离真值 1.5σ 之外，才是能长期跑的地板。 */
     const run = spawnSync(process.execPath, ['tools/probe-diff-ladder.mjs', '--machine=1', '--quiet',
-      '--games=200', '--n=5', '--mode=multi', '--pool=1'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+      '--games=600', '--n=5', '--mode=multi', '--pool=1'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
     const out = String(run.stdout || '');
     const last = out.trim().split('\n').filter(function (l) { return /^\{/.test(l); }).pop();
     let obj = null; try { obj = JSON.parse(last || 'null'); } catch (e) { /* 下面响亮报 */ }
@@ -2196,13 +2225,13 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
       '④d 量具要把**整张表**都跑一遍（实测 ' + (obj && obj.rows ? obj.rows.length : '?') + ' 行 ‖ 表 ' + TIERS.length + ' 档）');
     const pcts = ((obj && obj.rows) || []).map(function (r) { return r.pct; });
     ok(new Set(pcts).size >= 3, '④d 正对照：至少三个不同的夺冠率（实测 ' + new Set(pcts).size + ' 个 ‖ ' + pcts.join('/') +
-      '）⇒ 全相同说明剂量没在动判决（第二十五条那族"夹具退化"），那 ④b/④c 那张账就是在描述一台停住的机器');
+      '）⇒ 全相同说明带没在动判决（第二十五条那族"夹具退化"），那 ④b/④c 那张账就是在描述一台停住的机器');
     const byId = {}; ((obj && obj.rows) || []).forEach(function (r) { byId[r.id] = r.pct; });
-    const softEnd = byId['lv:sparring'], midEnd = byId['lv:regular'];
-    ok(typeof softEnd === 'number' && typeof midEnd === 'number' && softEnd - midEnd >= 10,
-      '④d 极端那一步（简单 vs 默认）必须还分得开：实测 简单 ' + softEnd + '% ‖ 普通 ' + midEnd + '% ‖ 差 ' +
-      ((softEnd || 0) - (midEnd || 0)).toFixed(2) + 'pt（在册读数 25.8σ ⇒ 200 局也判得动）'
-      + ' ⇒ 这一步塌了就说明"难度"这件事整体失效，那张账要整张重测');
+    const easyEnd = byId['lv:sparring'], hardEnd = byId['lv:hard'];
+    ok(typeof easyEnd === 'number' && typeof hardEnd === 'number' && easyEnd - hardEnd >= 4,
+      '④d 首末两档（简单带 vs 困难带）必须还分得开：实测 简单 ' + easyEnd + '% ‖ 困难 ' + hardEnd + '% ‖ 差 ' +
+      ((easyEnd || 0) - (hardEnd || 0)).toFixed(2) + 'pt（1500 局真值 7.0pt ‖ 600 局 1σ≈2.0pt ⇒ 地板钉 4pt）'
+      + ' ⇒ 这一步塌了说明"难度由带扛"整句话失效，那张在册账要整张重测');
   }
 });
 

@@ -32,51 +32,41 @@ export const LADDER_CLAIM = {
   /* 与生成这份读数的档位参数逐字对应（`D227`④ 拿 `sigOf(Bots.DIFF_TIERS)` 现算来比这里）。
    * ⚠ 这串是**现算出来贴上的**，不是我手打的 —— 第一版手打时把 style 档的 `ramp` 写成了 `-`，
    *   而 `sigOf` 对未定义一律给 `0` ⇒ 差一个字符就是永久过期。手打派生值是这个仓最常犯的错之一。 */
-  sig: 'lv:sparring:champ:1:40:uniform:0:soft:-;lv:novice:champ:0.5:5:soft:0:soft:-;lv:regular:champ:0.2:5:soft:1:soft:-;lv:hard:champ:0.2:5:soft:0:hard:-;lv:hunter:style::::0:-:st:combocounter',
-  source: 'node tools/probe-diff-ladder.mjs --pairs=all --games=1500 [--pool=1] --mode=multi|long（四组 · 原始日志全文贴在 docs/research/logs/2026-10-12-e595-ladder-register.md）',
+  sig: 'lv:sparring:champ:0.2:5:soft:1:soft:-;lv:regular:champ:0.2:5:soft:1:mid:-;lv:hard:champ:0.2:5:soft:1:hard:-',
+  source: 'node tools/probe-diff-ladder.mjs --pairs=all --games=1500 [--pool=1] --mode=multi|long（四组 · 原始日志与两次候选分带在 docs/research/logs/2026-10-12-e596-three-tier.md，上一版的翻序记录在 …/2026-10-12-e595-ladder-register.md）',
   rule: '判"分得开" = |差| ≥ 2σ(配对)（不是 ≥2pt）。行按**档位表声明序**的相邻对记：`from` = 声明里更难那一档，`d` = 人类席夺冠率( to ) − 人类席夺冠率( from ) ⇒ **d 为负 = 实测把这一对的次序翻了**（不是抄错，是记账）。',
   measuredAt: '2026-10-12',
-  /* §E595（10-12 下半场）：`bb0ca22` 把池收成两带（soft 5 / hard 15）+ 困难档 ε 0→0.2 ⇒ 本账按新口径重测。
-   *   四组各 1500 局（逐局配对，同批种子），人类席夺冠率（越低 = 这一档对人类越硬）：
-   *     池装配 multi  入门 8.9 ‖ 极限 9.5 ‖ 普通 11.1 ‖ 困难 **17.4** ‖ 简单 46.5
-   *     池装配 long    普通 7.1 ‖ 极限 7.9 ‖ 入门 8.0 ‖ 困难 **17.9** ‖ 简单 50.2
-   *     单包 multi    极限 9.5 ‖ 普通 11.0 ‖ 困难 12.5 ‖ 入门 12.9 ‖ 简单 41.5
-   *     单包 long     极限 7.9 ‖ 困难 9.0 ‖ 普通 10.5 ‖ 入门 11.4 ‖ 简单 47.9
-   *   ⚠ **账里的负号就是结论**：池装配下"困难"这一档对人类比"普通"容易 6.27±1.25（5.0σ，long 更是 10.80±1.18 = 9.1σ），
-   *     比"入门"也容易（multi 8.53±1.23 ‖ long 9.87±1.20）⇒ 下拉菜单上"困难"排第四（由易到难），实测它排第二。
-   *     multi 下"普通→入门"也翻（−2.27±1.07 = 2.1σ）。单包对照里同这些对**全都分不开**（1.3~1.6σ）⇒
-   *     翻序是**换池带之后才出现的**，不是仪器噪声，也不是抄账方向错（我复跑四组，读数与 DS 手贴的那版逐字对得上）。
-   *   为什么两带会把中段的次序弄反（待裁的假设，不是结论）：三档现在共用同一个 5 枚的 `soft` 带 ⇒
-   *     四个 AI 席只能从这 5 枚里抽 = **每桌近乎同一批风格**，而 15 枚的 `hard` 带反而每桌是混编。
-   *     §E286 说过"风格的强度是桌形的函数，不是它的属性" ⇒ 带越小越同质、反而越硬，于是"按逐枚强度分带"这件事
-   *     在**逐席抽 4 枚**的装配下不成立。这既是档位问题，也是分带规则的问题（不是把某一行数字改一改就能了）。
+  /* §E596（10-12 下午，用户两条裁定）：① 「不需要 5 个难度了，合并成 3 个」 ② 「现在又有强度差别了就不用非得搞 ε 差异了，
+   *   统一成 0→0.1→0.2」⇒ 三档 = 三带（soft 7 ‖ mid 6 ‖ hard 7），**五人桌的剂量三档逐字相同**（ramp 0→0.1→0.2 ‖ k5 ‖ soft），
+   *   难度只剩"桌上是哪一带"这一根轴。分带的键是"这一组凑到桌上的实测强度"，不是逐枚分数（切法与两次候选在上面那份日志）。
+   *   部署口径实测（人类席夺冠率 = 这一档对人类多软，越低越硬；1500 局/格 · 逐局配对）：
+   *     池 multi  困难 12.0 ‖ 普通 15.4 ‖ 简单 19.0        池 long  困难 11.0 ‖ 普通 18.2 ‖ 简单 20.6
+   *   ⇒ **multi 两步都过 2σ（2.7σ ‖ 2.7σ）；long 只有"困难↔普通"过线（7.20±1.25 = 5.8σ），
+   *      而"普通↔简单" 2.40±1.47 = 1.6σ ⇒ 按裁定甲如实标成"分不开"**（不许吹成台阶）。
+   *      要补平 long 那一格的杠杆不是加剂量，是**往 soft 带里添更弱的成员**（用户 10-12 原话"往 soft 里加更多冠军把它也变软一些"）
+   *      —— 现在 soft 是"最弱 7 枚"，弱端材料已经见底，得往库里找新的候选（要过体检 + 人席两道闸）。
+   *   ⚠ `single:*` 那四行读数 **0.00±0.00** 不是"量不出"也不是仪器坏：四席同一枚包 + 三档剂量逐字相同 ⇒ 装配上它们
+   *     **就是同一台机器**。这四行是这次改动本身的证据（剂量那根轴并掉了），所以 ④b 把 `se = 0` 判成"永远不许声称分得开"
+   *     —— 原来那里给 Infinity，会因为 `Infinity >= 2` 把恒等行反着读成"无穷显著"。
    * ⚠ 已知边界（写清楚，不假装没有）：`sigOf` 不含 `eps2`（2 人桌的剂量），因为这张账量的是 **5 人桌**；
-   *   也不含池成员名册（名册一改就要重跑 6000 局）。这两处要在意的日子再收紧，别提前加戏。 */
+   *   也不含池成员名册（名册一进签名 = 每次调池都要重跑 6000 局）。这两处的兜底是 ④d 那条现场腿与 `D234` 的池契约。 */
   modes: {
     'pool:multi': [
-      { from: 'lv:novice', to: 'lv:sparring', d: 37.60, se: 1.48, sep: true },
-      { from: 'lv:regular', to: 'lv:novice', d: -2.27, se: 1.07, sep: true },    /* 翻序：入门比普通还硬（2.1σ） */
-      { from: 'lv:hard', to: 'lv:regular', d: -6.27, se: 1.25, sep: true },    /* 翻序：困难比普通还软（5.0σ） */
-      { from: 'lv:hunter', to: 'lv:hard', d: 7.87, se: 1.23, sep: true }
+      { from: 'lv:regular', to: 'lv:sparring', d: 3.60, se: 1.35, sep: true },
+      { from: 'lv:hard', to: 'lv:regular', d: 3.40, se: 1.26, sep: true }
     ],
     'pool:long': [
-      { from: 'lv:novice', to: 'lv:sparring', d: 42.20, se: 1.47, sep: true },
-      { from: 'lv:regular', to: 'lv:novice', d: 0.93, se: 0.96, sep: false },
-      { from: 'lv:hard', to: 'lv:regular', d: -10.80, se: 1.18, sep: true },    /* 翻序：9.1σ，四组里最狠的一步 */
-      { from: 'lv:hunter', to: 'lv:hard', d: 9.93, se: 1.19, sep: true }
+      { from: 'lv:regular', to: 'lv:sparring', d: 2.40, se: 1.47, sep: false },   /* 1.6σ ⇒ 按甲不许声称分得开 */
+      { from: 'lv:hard', to: 'lv:regular', d: 7.20, se: 1.25, sep: true }
     ],
-    /* 四席同一枚包（去掉 `--pool=1` 的对照装配）：中段三步**没有一个**过 2σ ⇒ 上面那两个翻序不是"本来就量不出次序" */
+    /* 四席同一枚包（去掉 `--pool=1`）+ 三档剂量已并成一条 ⇒ 同一台机器，差恒等于 0。这四行就是钉这句话的。 */
     'single:multi': [
-      { from: 'lv:novice', to: 'lv:sparring', d: 28.67, se: 1.56, sep: true },
-      { from: 'lv:regular', to: 'lv:novice', d: 1.87, se: 1.14, sep: false },
-      { from: 'lv:hard', to: 'lv:regular', d: -1.53, se: 1.14, sep: false },
-      { from: 'lv:hunter', to: 'lv:hard', d: 3.00, se: 1.17, sep: true }
+      { from: 'lv:regular', to: 'lv:sparring', d: 0, se: 0, sep: false },
+      { from: 'lv:hard', to: 'lv:regular', d: 0, se: 0, sep: false }
     ],
     'single:long': [
-      { from: 'lv:novice', to: 'lv:sparring', d: 36.47, se: 1.53, sep: true },
-      { from: 'lv:regular', to: 'lv:novice', d: 0.93, se: 1.10, sep: false },
-      { from: 'lv:hard', to: 'lv:regular', d: 1.47, se: 1.07, sep: false },
-      { from: 'lv:hunter', to: 'lv:hard', d: 1.07, se: 1.03, sep: false }
+      { from: 'lv:regular', to: 'lv:sparring', d: 0, se: 0, sep: false },
+      { from: 'lv:hard', to: 'lv:regular', d: 0, se: 0, sep: false }
     ]
   }
 };

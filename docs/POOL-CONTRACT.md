@@ -48,7 +48,7 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 | `id` | 池里的名字（与 `champion-map/coords.tsv` 同口径；**必须全等 join，不许子串**） | `D234` ① |
 | `wid` | 权重指纹 = `champion-map/pack-id.mjs` 的 `widOf`（sha1(权重数组) 前 16 位） | `D234` ②（bundle 里每条目的 wid 必须与表一致） |
 | `path` | 包文件相对路径 | `D234` ①：**必须 `git ls-files` 查得到**（否则 CI 与干净克隆里这枚根本不存在） |
-| `tier` | `hard` \| `soft`（§E594 起**两带**，10-12 用户裁定"按实测强度重排、现役钉在 hard"；旧的 `mid`/`low` 已并入这两带，名单在 `tools/pool-add.mjs:TIERS`，环色在 `champion-map/viewer.mjs:POOL_COL`，两处必须同时改） | 抽签按带取；页面池环按带着色 |
+| `tier` | `hard` \| `mid` \| `soft`（§E596 起**三带 7/6/7**，与难度三档一一对应；分带的键是"这一组凑到桌上的实测强度"，不是逐枚分数——理由与读数在 `docs/research/logs/2026-10-12-e596-three-tier.md`。名单在 `tools/pool-add.mjs:TIERS`，环色在 `champion-map/viewer.mjs:POOL_COL`，两处必须同时改） | 抽签按带取；页面池环按带着色 |
 | `invited` | `1` = 用户点名（可越过行为门槛，但必须标警） ‖ `0` = 自动成员 | 沿用 DS 的分档门槛裁定（`docs/research/logs/2026-10-11-pool-screen-ds.md` §8） |
 | `promoteVerdict` | `pass` \| `block` \| `untested`（上槽体检：送盾/G4/G5，真源 `champion-map/promote.tsv`） | `D234` ③：自动成员不许 `block`，`untested` 必须显式印出来 |
 | `seatKill` | 人席否决的格数（`两批同号 ≥20pt`，判据在 `champion-map/seat-rule.mjs`，`seatgap.mjs`/`pool-add`/`pool-screen` 共用这一份）；**`-1` = 没量过（不是干净）**，`0` = 真量过且零格 | `D234` ③ 同上；⑧ 钉"喂进去的批表必须带基准行"；引用时必须带 §E587 的检出力脚注 |
