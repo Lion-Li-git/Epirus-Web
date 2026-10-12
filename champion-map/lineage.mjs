@@ -312,6 +312,21 @@ for (const r of REC) { const m = r.m || {};
     if (alt && alt !== parId && IDTS[alt] && IDTS[alt] <= m.ts) bySlot = alt;
     else { demoted = parId; nBack++; }
     byPath = ''; byArm = ''; }
+  /* ===== 2026-10-12 DS：**确实热启动了，但父只在槽位时间轴里** =====
+   * 用户 10-12 报的病：`E51-t8-713` 那一大批点**整片断联** —— 它自己 `parent = -`。
+   * 证据（写在包里，不是猜）：它的 `recipe.env.EPIRUS_HOTSTART === '1'` ⇒ 它**确实热启动了**；
+   *   而 `recipe.env.EPIRUS_SEEDPACK` 是**空的** ⇒ 走 `tools/train-3p.mjs:1050` 的默认
+   *   （`process.env.EPIRUS_SEEDPACK || 'js/bundled-champion-3p.js'`）= **当时的活槽**。
+   *   ⇒ 父 = `slotAt(ts)`（§E368 那张槽位时间轴），接不上就不接。
+   * ⚠ **这一级只在"有 HOTSTART 证据"时才生效** ⇒ 冷启动的包永远不会被接上假父（这是本条与"猜"的分界）。
+   * 它和 `seedpack` 级的区别：后者**记了路径**、只是核不出权重；前者**连路径都没记**，靠"默认=活槽"+时间轴推。
+   * 与 `slot-at-time` 的区别：那一级是"槽位接替边"（SLOT-* 合成节点的链），不是谁生了谁。 */
+  let bySlotInfer = '';
+  if (!parId && m.recipe && m.recipe.env && String(m.recipe.env.EPIRUS_HOTSTART) === '1') {
+    const sp0 = String(m.recipe.env.EPIRUS_SEEDPACK || '');
+    const isSlotDefault = !sp0 || /(^|[\\/])bundled-champion-3p\.js$/.test(sp0);
+    if (isSlotDefault) { const alt = slotAt(m.ts); if (alt && IDTS[alt] && (!m.ts || IDTS[alt] <= m.ts)) bySlotInfer = alt; }
+  }
   if (byPath) nSpk++; if (byArm) nArm++;
   /* §E555：路径级父指针能不能升到"权重身份可核"，只由这道比较决定（相等才算，读不到/不等一律留在 seedpack） */
   const spWid = !!byPath && seedpackVerified(m, byPath);
@@ -341,12 +356,14 @@ for (const r of REC) { const m = r.m || {};
     seedEmb: norm(m.seedEmbeddedFrom), gens: norm(m.gens), mode: norm(m.mode), rulesFp: norm(m.rulesFingerprint),
     parent: norm(m.hotstartFrom || WIDOF[byPath || byArm || bySlot] || '') };
   ROWS.push({ id: r.id, ts: m.ts || '', seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
-    parentOf: byHash || byPath || byArm || bySlot || sP1, wid: r.wid || '',
-    psrc: byHash ? (byHashEmb ? 'hash-emb' : 'hash') : (byPath ? (spWid ? 'seedpack-wid' : 'seedpack') : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (sP1 ? 'soup' : (demoted ? 'demoted' : ''))))),
+    parentOf: byHash || byPath || byArm || bySlot || bySlotInfer || sP1, wid: r.wid || '',
+    psrc: byHash ? (byHashEmb ? 'hash-emb' : 'hash') : (byPath ? (spWid ? 'seedpack-wid' : 'seedpack') : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (bySlotInfer ? 'slot-infer' : (sP1 ? 'soup' : (demoted ? 'demoted' : '')))))),
     pof2: sP2, psrc2: sP2 ? 'soup' : '',
     demoted: demoted,
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
 const nres = ROWS.filter(r => r.parentOf).length, np = ROWS.filter(r => r.cfg.parent !== '-').length;
+console.log('槽位推断级父边（2026-10-12：包里有 EPIRUS_HOTSTART=1 的证据 + 槽位时间轴）：' +
+  ROWS.filter(r => r.psrc === 'slot-infer').length + ' 条');
 /* ===== §E464 钉子：第二身份必须**真的登记成功**，不能只看"今天这张表解得开" =====
  *   为什么不能只验结果：BYWID 优先级高于 BYWID_EMB，而本机恰好有 e370-out 那批**未入库**的 v7 导出 ⇒
  *   两条路同时在，表看不出区别。实测就是这么漏的：`embedLegacy()` 返回 Float64Array、`widOfArr` 当时只收 Array ⇒
