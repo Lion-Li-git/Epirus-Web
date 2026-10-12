@@ -113,6 +113,33 @@ function promoteInfoOf(id, pack, runPromote) {
   if (verdict === null) console.log('   ⚠ 跑了但没解析出裁决（原文在 ' + out + '）⇒ 记 untested，不猜');
   return verdict ? { verdict: verdict, blocks: bl } : null;
 }
+/* 用户 10-12 裁定：「**按上线档算**」—— G5 在池里的判据用**上线档**阈值（用户 10-03 已裁定"G5 稍微差一点问题不大"，
+ *   `tools/gate-drafts.mjs:399` 的 `G5_MAX_DEPLOY = 40`），不是严格档 25%。
+ * 为什么落在**池这一层**、不去改 `promote.tsv`：那张表记的是**上槽**语义（严格档），池是另一个产品对象，
+ *   它的判据由本条裁定给出；把表改宽会让"上槽体检"这个词失去意义。
+ * ⚠ 只对 **G5** 生效：**G4**（被一行脚本打穿）阈值不动，送盾那类硬闸照旧一律拒（`classifyBlock` 里硬闸优先）。 */
+const G5_MAX_DEPLOY = 40;
+/* 阈值的单一真源在 `gate-drafts.mjs` —— 它是**脚本**（文件体就会跑起来）⇒ 不能 import ⇒ 从它源码里抽出来**对账**，
+ *   分叉就红（本仓"两处各写一个 6"栽过四次；同族做法见 `champion-map/pool-screen.mjs` 的 DIMS 对账）。 */
+(function reconcileG5() {
+  const gd = join(ROOT, 'tools', 'gate-drafts.mjs');
+  if (!existsSync(gd)) return;
+  const m = /G5_MAX\s*=\s*\d+\s*,\s*G5_MAX_DEPLOY\s*=\s*(\d+)/.exec(readFileSync(gd, 'utf8'));
+  if (m && Number(m[1]) !== G5_MAX_DEPLOY) {
+    console.error('⛔ G5 上线档阈值与 `tools/gate-drafts.mjs` 不一致：本文件 ' + G5_MAX_DEPLOY + ' ‖ 那边 ' + m[1] +
+      '\n   ⇒ 两处必须同一份（改阈值要一起改，否则池的判据与门说的不是一回事）。');
+    process.exit(2);
+  }
+})();
+function poolVerdictOf(id, pack, runPromote) {
+  const v = promoteInfoOf(id, pack, runPromote);
+  if (!v || v.verdict !== 'block') return v;
+  if (!/G5/.test(v.blocks) || /G4/.test(v.blocks)) return v;        /* G4 与送盾一律不豁免 */
+  const m = v.blocks.match(/夺冠\s*([0-9]+)\s*%/);
+  if (!m || Number(m[1]) > G5_MAX_DEPLOY) return v;
+  return { verdict: 'pass', blocks: v.blocks + ' ‖ **用户 10-12 裁定：G5 按上线档 ≤' + G5_MAX_DEPLOY +
+    '% 算 ⇒ 本条不构成阻断**（严格档 25% 仍越线，如实留在左边）' };
+}
 /* 阻断分两类（**这是产品裁定，不是我这台工具自定的口味**）：
  *   · **硬闸**（送盾 > `HOLO_GIFT_MAX`=6/局，`promote` 自己写着"不可 --force"）⇒ 点名也不放行；
  *   · **行为闸**（G4 被一行脚本打穿 / G5 清不了防席）⇒ 自动成员拒绝，**点名成员放行并把越过的原话记进 note**。
@@ -124,7 +151,7 @@ function classifyBlock(blocks) {
   if (/送盾/.test(blocks)) return { kind: 'hard', why: '送盾（不可 --force 那一类）：' + blocks };
   if (/G4|G5/.test(blocks)) {
     const m = blocks.match(/夺冠\s*([0-9]+)%/);
-    const deploy = m && Number(m[1]) <= 40 ? ' ‖ 按上线档 ≤40% 算合格（严格档阈值 25%）——这句只是把两个阈值都摆出来，要不要按上线档算等你裁' : '';
+    const deploy = m && Number(m[1]) <= G5_MAX_DEPLOY ? ' ‖ 按上线档 ≤' + G5_MAX_DEPLOY + '% 算**合格**（严格档 25% 越线只作记录）—— 用户 10-12 裁定' : '';
     return { kind: 'behavior', why: '行为闸：' + blocks + deploy };
   }
   return { kind: 'other', why: '其它阻断：' + blocks };
@@ -174,7 +201,7 @@ if (has('refresh')) {
   const changes = []; let unknown = 0;
   for (const r of t.rows) {
     const before = r[t.h.promoteVerdict] + '/' + r[t.h.seatKill];
-    const got = promoteInfoOf(r[t.h.id], r[t.h.path], has('run-promote'));
+    const got = poolVerdictOf(r[t.h.id], r[t.h.path], has('run-promote'));
     /* ⚠ 查不到行**不许把已记录的裁决冲掉**（第一版就是这么干的：`pass/-1 → untested/-1`，
      *   同一类错的第二个副本是 `0 → -1`：只喂了新到的 mid/low 批表，hard 档量过的 0 被当成"没量过"抹掉）。
      *   表里的旧值来自上一次真跑，这张表里没有这行只说明"这批表没覆盖它"，
@@ -210,7 +237,7 @@ if (t.rows.filter(r => r[t.h.id] === ID).length) { console.error('⛔ 池里已�
 const INVITE = has('invite');
 /* ⚠ 查不到行 ⇒ `promoteInfoOf` 返回 **null**，门槛判的是字符串 `'untested'` ⇒ 不归一就是"没测过被当放行"
  *   （10-11 夜自测抓到：一枚查不到裁决的包就这么静默进了表）。null 与 'untested' 在这里是同一件事，必须合并。 */
-const PI = promoteInfoOf(ID, PACK, has('run-promote')) || { verdict: 'untested', blocks: '' };
+const PI = poolVerdictOf(ID, PACK, has('run-promote')) || { verdict: 'untested', blocks: '' };
 const PV = PI.verdict;
 const SK = seatKillOf(WID, arg('seat', 'pool-seat-90210.tsv,pool-seat-90211.tsv').split(','));
 /* 每条 blocker 自带"点名能不能越过"的标记 ⇒ 能不能越过是**判据的属性**，不是调用时的口味 */

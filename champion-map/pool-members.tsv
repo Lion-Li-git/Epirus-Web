@@ -1,7 +1,7 @@
 id	wid	path	tier	invited	promoteVerdict	seatKill	addedAt	note
 D4a	5a60c8489990e8b6	docs/artifacts/e234-out/D4a.js	hard	0	pass	0	Sun Oct 11 2026 23:33:00 GMT+0800 (中国标准时间)	点名 · Hp 54.3
 E3	827c47f91419af05	docs/artifacts/e234-out/E3.js	hard	0	pass	0	Sun Oct 11 2026 23:33:00 GMT+0800 (中国标准时间)	困难档自动锚
-K2	1d4b687da27187b7	docs/artifacts/kept/e70-out__D02-31.bak	hard	1	block	0	Sun Oct 11 2026 23:33:09 GMT+0800 (中国标准时间)	用户点名（明知它防御多） · 点名越过：行为闸：G5/long 清不了防席（它夺冠 30%） ‖ 按上线档 ≤40% 算合格（严格档阈值 25%）——这句只是把两个阈值都摆出来，要不要按上线档算等你裁
+K2	1d4b687da27187b7	docs/artifacts/kept/e70-out__D02-31.bak	hard	1	pass	0	Sun Oct 11 2026 23:33:09 GMT+0800 (中国标准时间)	用户点名（明知它防御多） · 行为闸：G5/long 清不了防席（它夺冠 30%）；严格档 25% 越线，**用户 10-12 裁定"按上线档算"⇒ 按 ≤40% 判 pass，已不算"越过"**（invited=1 保留为点名来由）
 R-s123	4072e215256c41b8	docs/artifacts/e521-out/R-s123.js	hard	0	pass	0	Sun Oct 11 2026 23:38:17 GMT+0800 (中国标准时间)	困难档自动成员
 S-s120	590d4a47367be109	docs/artifacts/e521-out/S-s120.js	hard	0	pass	0	Sun Oct 11 2026 23:38:17 GMT+0800 (中国标准时间)	困难档自动成员
 SHIPPED-Ldemo	d490dc136293cfc4	docs/artifacts/eval-out/win-Ldemo.bak	hard	1	pass	0	Sun Oct 11 2026 23:32:59 GMT+0800 (中国标准时间)	旧现役 · 用户点名（§POOL-SCREEN 裁定②）
