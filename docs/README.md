@@ -52,6 +52,11 @@
 | `docs/REVIEW-*.md` ‖ `docs/AUDIT-RESPONSE-*.md` ‖ `docs/DECISIONS-*.md` ‖ `docs/PROPOSAL-*.md` ‖ `docs/SUMMARY-*.md` ‖ `docs/RESEARCH-QUEUE-*.md` ‖ `docs/PARAMS-PLAN.md` ‖ `docs/OPTIMIZATION-ep-cliff.md` ‖ `docs/REVIEW-3P.md` | `docs/research/reviews/…` | 10-06（§E356） |
 | `docs/logs/` ‖ `docs/archive/` | `docs/research/logs/` ‖ `docs/research/archive/` | 10-06（§E356） |
 | 更早在 `docs/archive/README.md` 里记的那批（10-05 §E339 的 19 + 16 份） | 同上，再套一层 | 10-05 / 10-06 |
+| `CHANGELOG.md` 里 **v1.5.319 及更早**的逐字条目 | 同一文件末尾那份「历史版本索引」里的一行摘要（全文 `git log -p CHANGELOG.md`） | 10-13（v1.7.0 · 用户要求「把旧的 changelog 压缩一下」；**界限抬到 v1.5.320 是为了保住 `## v1.5.` 这道门自己在用的抽取式边界** —— `D224⑩a` ‖ `D205④`） |
+| `CHANGELOG.md` 里 v1.5.129 及更早的逐字条目 | 同上（第一次压缩留下的那一段索引，现在并成一份 384 行） | v1.5.145（DS） |
+
+⚠️ 这一行的读法与上面几条不同：搬动是把**正文**挪到别处，而 CHANGELOG 的压缩只留摘要 —— 历史文本里"见 CHANGELOG v1.5.x"这类句子仍然成立，
+只是它现在指向索引行；要逐字读数请从 git 历史取（**别在索引行上续写新结论**，那会把摘要当成证据用）。
 
 ⚠️ 三处**故意没改**的旧锚：`js/core/resolve.js`、`js/core/state.js`、`js/train/policy.js` 的注释里还写着顶层旧路径。
 原因是这三个文件属于**规则指纹五件套**（`tools/rules-fingerprint.mjs` 的 `FINGERPRINT_FILES`），改一个字符就要换代指纹 + 重记两个线上槽的 meta，
