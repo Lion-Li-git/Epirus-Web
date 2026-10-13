@@ -1,3 +1,51 @@
+## v1.7.3 — 清一次性的东西：**5 枚入库的一次性件（4 个脚本 + 1 个 PID 标记）+ 8 个顶层临时日志**删掉 ‖ 另外三堆"看着像一次性、其实在册当证据"的列出来等你点头，不代删
+
+### 判据（就一句，删前逐条查过）
+
+**只删同时满足三条的**：① 零引用（`git grep` 在整个入库面里没人提它）② 自称一次性或已被替代品接管 ③ 它做的事在账里另有记录、或它调的东西还活着。
+**只要被任何文档以文件名/批次声明过（哪怕只引了同族的另一枚），就不删** —— 那是别人的证据，删它等于替人改账。
+
+### 删掉的入库件（`git rm`，随时能从 git 历史取回）
+
+· `docs/debug/night-probe-cross-mode.cjs` —— **重复件**：同一份研究早已晋升成 `tools/probe-cross-mode.mjs`（在册、被 12 处引，含 `docs/POOL-CONTRACT.md` 与门禁），
+  而它自己头注第一行写着"**研究件（只读，不进仓库）**"。留在 `docs/debug/` 里只是让下一个人分不清哪个是活的。
+· `docs/debug/night-scan-breadth.mjs` —— 批量筛"有广度的老包"，职责已被冠军池取代；它头注里的用法还写着**旧文件名** `scan-breadth.cjs`（那份早就不在了）。
+· `docs/debug/night-b-queue.sh` ‖ `docs/debug/night-n2-reroll.sh` —— 夜班**队列驱动器**（B 段四步 / §N2 重掷，靠 `docs/artifacts/.n2-*.done` 断点续跑）。
+  步骤与读数在 `docs/research/logs/RESEARCH-LOG-2026-09-22-qoder-night.md` 里逐条记着，它调的工具（`train-best` ‖ `behavior-profile` ‖ `np-test` ‖ `spec-run`）全部还在
+  ⇒ 驱动器本身没有独有能力；而且它里面还引用一个已不存在的 `docs/artifacts/v7tgt-44.bak`（**留着反而是一条假的可复现路径**）。
+· 删前查的两件事：`git grep -n "night-" -- tools server .github js README.md docs/*.md` ⇒ **0 命中**；门禁一条都不读这四个。
+· `docs/debug/.n2-pid.txt` —— 那支 §N2 队列留下的 **PID 标记**（`N2 PID=1529 (bash night-n2-reroll.sh, started 23:16)`），进程早没了、脚本也刚删 ⇒ 它是这批里唯一"藏起来的"残留：
+  **一次性的运行状态被当成品入库了**（`git ls-files` 里它一直在册）。删完 `docs/debug/` 现在只剩 16 件，**每一件都还有 ≥1 处外部引用**（逐枚 `git grep` 复算过），这个目录重新等于"在册尺"而不是堆放区。
+
+### 删掉的顶层临时日志（8 个，全是 gitignore 的 stdout 落盘，不可恢复但都可重生成）
+
+`np-full-round.log`（10-13 那轮门禁的输出）‖ `probe-s1.log`~`probe-s4.log`（P5 掺席剂量扫描的输出 —— 读数本身已逐条进了 CHANGELOG 的 `probe-pool --mixSeats=` 那一族与待裁 #1，日志只是当时的屏）
+‖ `soup-tier.log`（soft 带普查）‖ `script-value.log` ‖ `script-value2.log`（09-22 的"脚本价值表"：**产尺 `tools/script-value.mjs` 早被删**，这两份是孤儿输出，零文件级引用）。
+
+### 没动的三堆（要点头才动）
+
+1. **`champion-map/` 里 37 个 raw `.txt`（268K）**：其中 32 个零引用，但同族里有被各班日志以「**本次入库**」名义点名的（例：`docs/research/logs/2026-10-12-pool-add-novel-ds.md:52` 写「新证据（本次入库）：`champion-map/pool-seat-new-{90210,90211}.{txt,tsv}`」）
+   ⇒ 我按**族**整批留着了。要清的话需要先定一条规矩：**"入库证据"是只留 `.tsv` 汇总表，还是逐席 `.txt` 也算账**？这条我没替你定。
+2. **`docs/artifacts/` 168MB**（ignored：`e337-out` 37M ‖ `opphuman` 7.6M ‖ `e521-out` 7.0M ‖ `e551-out` 6.5M …）：删了**不可恢复**（不在 git 里），而 D82 的 24h 窗口现在扫到 0 个产物 ⇒ 要清就按批次点名，我不做批量 `rm`。
+   ⚠ 其中 `docs/artifacts/kept/`（2.7MB ‖ 26 个入库文件）是门禁的**对照证据包**（`tools/keep-artifact.mjs` + `MANIFEST.tsv` 按哈希记），**绝对不动**。
+3. **`champion-map/_probe-e330.mjs` ‖ `_probe-pan.mjs` ‖ `_probe-winflick.mjs` ‖ `repair-coords.mjs`**：头注自写"一次性诊断探针 / §E307 一次性修数据"，却各被文档引 1~2 处。
+   ⚠ 顺手量出来一条**约定的洞**：`.gitignore` 里那组下划线规则**只管 `champion-map/_*.tsv` 与 `_*.txt`**（第 114~115 行），**`_*.mjs` 一条都没盖**
+   —— `git check-ignore -v` 对这三枚**无命中** ⇒ 它们从 `cc749b7`（10-07）起就是**入库状态**，不是谁漏加了 `-f`。
+   也就是说"一次性脚本不落库"这句话现在只是工具头注里的**说法**，没有规则托着。两个方向都算改别人的账：
+   **要么留着当取证器**（文档还在引），**要么把那些引用改成"读数已在正文、脚本已删"** ⇒ 等你一句话，不自决（补 `.gitignore` 那条 `_*` 规则属新增纪律，也一并等你裁）。
+
+### 边界与判据
+
+`js/**` ‖ `tools/**` ‖ `server/**` ‖ 两张 RULES 文档 ‖ 两个内置包 ‖ 两个池 bundle **一字未改**；规则指纹仍 `b98985bf`（现测）；**没有新增门，也没有删门**；未 promote。
+`docs/debug/` 剩下的 16 件**每一个都还有 ≥1 处外部引用**（删完复查过），所以这一目录现在重新等于"在册尺"而不是堆放区。
+
+> 产物点名（D82）：（无新增）
+
+**本机复跑**（同一棵树 · 本机时刻由门禁自己印）：`gate-all --np --no-browser --group=meta` ⇒ **np/meta 16/16 ‖ spec 52/52**；`node tools/l2-bookkeep.mjs` ⇒ **24h 内 0 个产物**（删除不会饿掉 D82）。
+⚠ 这一遍**不算整轮认证**（删的全是研究件与 scratch，按你"改文档不跑全门禁"的口径走）。
+
+**门账**：**D8**（三处版本号：本条 = README「当前版本：v1.7.3」= index.html「程序 v1.7.3」）· **D230**（活引用面没被我新增指针，删掉的四枚在入库面里零引用）· **D205**（门号在册与抽取式自证）· **D82**（现测 0 个）。
+
 ## v1.7.2 — 「已知限制 ①」改成**按档位池子装配**量（新尺 `docs/debug/tier-census.mjs`）‖ 用户当场纠正两处串口径，另加一处写错的清单
 
 ### 一句话结论
