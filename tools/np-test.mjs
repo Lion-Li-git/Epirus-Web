@@ -1,5 +1,5 @@
 /* Epirus N 人（3-5）引擎测试：随机对局 fuzz + 关键裁定点（docs/RULES-NP.md） */
-import { existsSync, readFileSync, readdirSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -20,6 +20,7 @@ function spawnSync(cmd, args, opts) {
 import { parsePairTable } from './defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
 import { makeGuardCost } from './guard-cost-lib.mjs';   /* D161 用：直接对库做单元级判定（不靠探针的输出措辞） */
 import { resolveOutPath } from './out-path.mjs';   /* D232 ⑦ 用：`--out=` 的解析是纯函数 ⇒ 给输入比输出（§2026-10-09 规矩 1） */
+import { load as loadSlotId } from '../champion-map/slot-identity.mjs';   /* D234 ⑪ 用：活槽身份的唯一解析处（门里不许再写一份） */
 import { sigOf, LADDER_CLAIM } from './diff-ladder-claims.mjs';   /* D227 ④ 用（裁定甲）：难度阶梯"哪几步分得开"是在册账，不是每次现场判断 */
 import { pushTarget } from './bot-chooser-lib.mjs';   /* D223 用：选点规则是纯函数 ⇒ 喂合成 state 逐条钉（§E262） */
 import { hardwiredLine } from './probe-layer-caliber.mjs';   /* D149 用：指针行号从源码现算（钉死数字会在别人插一行后变成假行号） */
@@ -12175,6 +12176,118 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
   writeFileSync(psFix, String(readFileSync('champion-map/index.html', 'utf8')).replace('"pt":"hard"', '"pt":"soft"'));
   const sB = syncArgs(['--check', '--quiet', '--chart=' + psFix]);
   eq(sB.status, 1, '⑩b 合成正对照：把图里一枚成员的带改掉（图 ≠ 表）⇒ `--check` 必须 exit 1（实测 ' + sB.status + '）');
+
+  /* ⑫ §E600-B（用户 10-13 裁定「把启发式随机脚本塞到弱池子里面」）：**掺脚本席这件事必须两侧同源、可复现、不吞掉池**。
+   *   钉四件行为 + 一条窄接线：
+   *     ⑫a 声明了 `scriptMix` 的档，`scriptSeats` 推出的席数必须 ≥1 且 **小于 AI 席数**（至少留一席包 ⇒ 池不许被整个盖掉）
+   *     ⑫b 同 salt 重放 ⇒ 组成逐字相同（掺席用的是同一个 rand，不许偷偷读时间/自造种子）
+   *     ⑫c 掺席只**盖位置**、不重排抽签：不掺时的包阵容前缀必须与掺了之后的包阵容一致
+   *     ⑫d `scriptMix.ids` 里每个 id 都必须真在 `Bots.STYLES` 里（D227①f 钉的是 style 档，这条钉 mix 档）
+   *     ⑫e 页面的 `poolDrawFor` 必须把 mix 传进 `compose`（少传一个参数就是"档位表写了但产品没跑"——
+   *          这类"配置在、接线断"是本仓第 45/92 条反复付过学费的形状，只能钉接线这一处） */
+  {
+    const BW = sandbox(process.cwd());
+    const BPD = BW.EpirusPoolDraw, BB = BW.EpirusBots;
+    ok(!!BPD && typeof BPD.scriptSeats === 'function' && typeof BPD.compose === 'function',
+      '⑫ 前提：`js/pool-draw.js` 必须导出 `scriptSeats` 与 `compose`（推导只许这一份）');
+    ok(!!BB && Array.isArray(BB.STYLES), '⑫ 前提：`Bots.STYLES` 取不到');
+    const mixTiers = ((BB && BB.DIFF_TIERS) || []).filter(t => t.scriptMix);
+    ok(mixTiers.length >= 1, '⑫ 前提：现在至少有一档声明 scriptMix（实测 ' + mixTiers.length + ' 档）⇒ 一条都没了就是被撤了，这条门要一起改');
+    const fake = []; for (let i = 0; i < 11; i++) fake.push({ id: 'M' + i, wid: 'w' + i, tier: 'soft' });
+    for (const t of mixTiers) {
+      const ai = 4;
+      const mix = BPD.scriptSeats(t, ai, BB.STYLES);
+      ok(mix && mix.seats >= 1 && mix.seats < ai,
+        '⑫a 档 ' + t.id + ' 的掺席数必须在 1..' + (ai - 1) + ' 之间（至少留一席包）实测 ' + (mix ? mix.seats : 'null'));
+      const ids = (t.scriptMix.ids || []);
+      ok(ids.every(id => BB.STYLES.some(s => s.id === id)),
+        '⑫d 档 ' + t.id + ' 的 scriptMix.ids 必须全在 STYLES 里（认不出的会被静默跳过 = 档位表撒谎）：' + ids.join(','));
+      const m2 = BPD.scriptSeats(t, ai, BB.STYLES);
+      ok(JSON.stringify(mix) === JSON.stringify(m2), '⑫b 同一档推导两次必须逐字相同（不许读时间）');
+      const r1 = BPD.compose(BPD.byTier(fake, 'soft'), ai, BPD.rng(90210), mix);
+      const r2 = BPD.compose(BPD.byTier(fake, 'soft'), ai, BPD.rng(90210), mix);
+      ok(JSON.stringify(r1) === JSON.stringify(r2), '⑫b 同 salt 两次组成逐字相同（' + t.id + '）');
+      const noMix = BPD.compose(BPD.byTier(fake, 'soft'), ai, BPD.rng(90210));
+      /* 正确的比法：**把脚本席那几号位置去掉**之后的包序列，必须与不掺时同位置的包一致。
+       *   （第一版我比的是"不掺序列的前 k 个"—— 脚本席落在中间时那个前缀本来就不该相等，
+       *    红的是我的断言，不是产品：这条腿当场把这句话抓出来了。） */
+      const packsAfter = r1.seats.filter(s => s.kind !== 'script').map(s => s.id);
+      const packsNoMixSamePos = noMix.seats.filter((s, ix) => !r1.seats.some(q => q.kind === 'script' && q.seat === ix)).map(s => s.id);
+      ok(JSON.stringify(packsNoMixSamePos) === JSON.stringify(packsAfter),
+        '⑫c 档 ' + t.id + '：掺席只许盖位置、不许重排抽签 ⇒ 去掉脚本席之后的包序列必须与不掺时一致（不掺=' +
+        packsNoMixSamePos.join(',') + ' ‖ 掺后=' + packsAfter.join(',') + '）');
+      const nScript = r1.seats.filter(s => s.kind === 'script').length;
+      ok(nScript === mix.seats, '⑫a 档 ' + t.id + ' 组成里的脚本席数必须等于推导值（实测 ' + nScript + ' vs ' + mix.seats + '）');
+      const two = BPD.scriptSeats(t, 1, BB.STYLES);
+      ok(!two || !two.seats, '⑫a 只有 1 席 AI（2P 桌）时不许掺（会把池整个盖掉），实测 seats=' + (two ? two.seats : 'null'));
+    }
+    const uiS = String(readFileSync('js/ui/ui.js', 'utf8')).split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l));
+    /* 只看那一行调用本身（第一版写 `/D\.compose\([^)]*mix/`，但参数里嵌套着 `D.rng((state && ...))` ⇒
+     *   `[^)]*` 在第一个右括号就断了，**接线其实是通的、腿却红** —— 又一例"红的是尺子自己"）。 */
+    const compLine = uiS.find(l => l.indexOf('D.compose(') >= 0) || '';
+    ok(compLine.length > 0 && /,\s*mix\b/.test(compLine),
+      '⑫e 页面 `poolDrawFor` 必须把推导出来的 mix 传给 `compose`（档位表写了 scriptMix 而产品不传 = 假档）‖ 实测那行：' +
+      (compLine.trim().slice(0, 120) || '(整页找不到 D.compose 调用)'));
+  }
+  /* ⑪ §E600-A（用户 10-13 裁定③④：「如今没有『当前现役』这个东西了」‖「调整成实时更新而不是定死」）
+   *   钉两件**可控**的事，不钉措辞（METHODOLOGY 89）：
+   *     ⑪a 名册与烘焙页都不许再带「当前线上」这个身份类别（扫**数据**的值）；
+   *     ⑪b 活槽必须被解析认得到图上的一行，且**那一行在页面上带着上线时刻 `sh`** ——
+   *        这就是 10-11 那次没响的警报：`T8-s114` 上槽之后，`ship-times.tsv` 停在上一任，
+   *        真现役在图上被画成"没上过线"的小点，而 278 条门与 86 条页内自检**全绿**。
+   *   ⑪c 合成正对照（牙口）：把时间轴里活槽那一段的身份字段挖掉 + 声明末行改指一个图上不存在的名字
+   *        ⇒ 解析必须认不出（`live.ok` 为假），否则这条腿只是"跑了个命令"。 */
+  {
+    const SIDI = loadSlotId();
+    const LV = String(readFileSync('champion-map/coords.tsv', 'utf8')).replace(/\r\n/g, '\n').split('\n');
+    const lset = new Set(); const lIdx = LV[0].split('\t').indexOf('lineage');
+    for (let k = 1; k < LV.length; k++) { const c = LV[k].split('\t'); if (c[lIdx]) lset.add(c[lIdx]); }
+    ok(!lset.has('当前线上'), '⑪a 名册里不许再有「当前线上」这一类身份（现值：' + Array.from(lset).join(' ‖ ') + '）');
+    const PG = String(readFileSync('champion-map/index.html', 'utf8'));
+    ok(PG.indexOf('"lin":"当前线上"') < 0, '⑪a 烘焙页的 DATA 里也不许带它（图必须与名册同一份身份）');
+    /* 取节点用**balanced-free 的正则**而不是整段 JSON.parse：第一版 `indexOf('];')` 截到数组内部就炸
+     *   （实测 `Unexpected non-whitespace character after JSON at position 775`）—— 页内 DATA 的节点是扁平对象，
+     *   用 `"id":"X"` 起、到第一个 `}` 止就够，取不到就如实报"这一行不在图上"。 */
+    const nodeOf = id => { const m = new RegExp('"id":"' + id.replace(/[.]/g, '\\.') + '"[^}]*\\}').exec(PG);
+      return m ? m[0] : null; };
+    const nNodes = (PG.match(/\{"id":"/g) || []).length;
+    const nStr = nodeOf(SIDI.live.coordsId || '__no_such__');
+    ok(!!SIDI.live.coordsId, '⑪b 活槽 wid (' + String(SIDI.live.wid).slice(0, 8) + ') 必须解到图上的一行（现解 = ' + (SIDI.live.coordsId || '⛔ 认不出') + '）');
+    ok(!!nStr, '⑪b 活槽现主「' + SIDI.live.coordsId + '」必须在页内 DATA 里有行（' + nNodes + ' 枚里找不到 = 图没重烘）');
+    const mSh = nStr && /"sh":"([^"]*)"/.exec(nStr), mSv = nStr && /"sv":"([^"]*)"/.exec(nStr);
+    ok(mSh && mSh[1], '⑪b 活槽现主那一行必须带着上线时刻（sh 空 = 换包那笔没同步进图 ‖ 实测 sh=' + JSON.stringify(mSh && mSh[1]) + ' ‖ sv=' + JSON.stringify(mSv && mSv[1]) + ' ‖ 期望 wid=' + String(SIDI.live.wid).slice(0, 8) + '）');
+    { /* ⑪c 正对照：造一棵"换了包但什么都没同步"的临时树 */
+      const fx = mkdtempSync(join(tmpdir(), 'np-d234-slot-'));
+      mkdirSync(join(fx, 'champion-map'), { recursive: true }); mkdirSync(join(fx, 'js'), { recursive: true });
+      copyFileSync('champion-map/coords.tsv', join(fx, 'champion-map/coords.tsv'));
+      copyFileSync('champion-map/lineage.tsv', join(fx, 'champion-map/lineage.tsv'));
+      copyFileSync('js/bundled-champion-3p.js', join(fx, 'js/bundled-champion-3p.js'));
+      const tlF = String(readFileSync('champion-map/slot-timeline.tsv', 'utf8')).replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
+      const th = tlF[0].split('\t'), iw = th.indexOf('wid'), ip = th.indexOf('panelId'), ia = th.indexOf('metaArm');
+      let cut = 0;
+      for (let k = tlF.length - 1; k >= 1; k--) { const c = tlF[k].split('\t');
+        if (c[iw] === SIDI.live.wid) { c[ip] = ''; c[ia] = '不存在的名字-' + k; tlF[k] = c.join('\t'); cut++; } }
+      writeFileSync(join(fx, 'champion-map/slot-timeline.tsv'), tlF.join('\n') + '\n', 'utf8');
+      /* 第一版正对照只挖了 panelId/metaArm，结果**没咬下来**：解析还有第三跳 `ID_OF_WID[wid]`（按 `lineage.tsv` 的
+       *   wid 列认行）照样把它认成了 T8-s114。这不是解析器的错，是我这只眼做得太浅 ——
+       *   正对照要挖的是**整条兜底链**：面板名、合成行名（SLOT-<wid8> 在 coords 里没有对应行）、声明行、wid 跳。 */
+      const lgF = String(readFileSync('champion-map/lineage.tsv', 'utf8')).replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
+      const lh = lgF[0].split('\t'), lw = lh.indexOf('wid');
+      let lgcut = 0;
+      if (lw >= 0) for (let k = 1; k < lgF.length; k++) { const c = lgF[k].split('\t');
+        if (c[lw] === SIDI.live.wid) { c[lw] = ''; lgF[k] = c.join('\t'); lgcut++; } }
+      writeFileSync(join(fx, 'champion-map/lineage.tsv'), lgF.join('\n') + '\n', 'utf8');
+      ok(lgcut > 0, '⑪c 前提：lineage.tsv 里找不到活槽 wid 那一行（' + String(SIDI.live.wid).slice(0, 8) + '）⇒ 正对照没改到东西，这只眼是瞎的');
+      const hist = String(readFileSync('champion-map/slot-history.tsv', 'utf8')).replace(/\r\n/g, '\n').split('\n');
+      for (let k = hist.length - 1; k >= 0; k--) if (hist[k] && hist[k].charAt(0) !== '#' && hist[k].split('\t')[1]) {
+        const c = hist[k].split('\t'); c[1] = '不存在的名字-declared'; hist[k] = c.join('\t'); }
+      writeFileSync(join(fx, 'champion-map/slot-history.tsv'), hist.join('\n') + '\n', 'utf8');
+      const FX = loadSlotId(fx);
+      ok(cut > 0, '⑪c 前提：正对照没能改到活槽那一段（时间轴里找不到 wid=' + String(SIDI.live.wid).slice(0, 8) + '）⇒ 这只眼是瞎的');
+      ok(!FX.live.coordsId, '⑪c 合成正对照：时间轴身份挖掉 + 声明改指不存在的名字 ⇒ 解析必须认不出（实测认成「' + (FX.live.coordsId || '(空)') + '」）');
+      rmSync(fx, { recursive: true, force: true });
+    }
+  }
 });
 const __src = readFileSync(new URL(import.meta.url), "utf8").split("\n");
 

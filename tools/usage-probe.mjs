@@ -69,7 +69,7 @@ function row(o) {
   let atk = 0; for (const k in o.cnt) { const d = R.byKey[k]; if (d && d.cat === 'attack') atk += o.cnt[k]; }
   return {
     games: o.games, acts: o.acts / o.games,
-    snipe: rate(o, SK.SNIPE), defense: def / o.games, holo: rate(o, SK.HOLO),
+    snipe: rate(o, SK.SNIPE), defense: def / o.games, holo: rate(o, SK.HOLO), proto: rate(o, SK.PROTO), shift: rate(o, SK.SHIFT),
     guard: rate(o, SK.GUARD), reflect: rate(o, SK.REFLECT), bigT: rate(o, SK.BIG_T),
     miniT: rate(o, SK.MINI_T), gun: rate(o, SK.GUN), railgun: rate(o, SK.RAILGUN),
     charge: rate(o, SK.CHARGE), ring: rate(o, SK.RING), ji: rate(o, SK.JI),
@@ -77,7 +77,7 @@ function row(o) {
     rounds: o.rounds / o.games,
   };
 }
-const COLS = ['id', 'eps', 'games', 'acts', 'snipe', 'defense', 'defShare', 'holo', 'guard', 'reflect', 'bigT', 'miniT',
+const COLS = ['id', 'eps', 'games', 'acts', 'snipe', 'defense', 'defShare', 'holo', 'proto', 'shift', 'guard', 'reflect', 'bigT', 'miniT',
   'gun', 'railgun', 'charge', 'ring', 'ji', 'atkShare', 'rounds'];
 
 /* ---------- 自检：三格手算得出的 ---------- */

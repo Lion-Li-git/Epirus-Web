@@ -324,6 +324,212 @@
     for (const k of order) if (byKey[k] && byKey[k].affordable) return k;
     return SK.JI;
   }
+  /* ===== §E600-B「杂货铺」：弱档席——**地板是全能型，多余的动作才交给低性价比卡**（v2，10-13）=====
+   * 立项依据（实测 `docs/debug/breadth-probe.mjs`，40 局/格 · 5 席镜像 · multi ‖ 机会只数**买得起**的）：
+   *   现有 5 只风格脚本里 4 只出手种类是 1~2，只有 `st:mix` 有 23 种；而 `st:mix` 真正的缺口是
+   *   **净化 2.8 ‖ 双枪 2.0 ‖ 镜面 2.0 次/局的"买得起却没出"**。
+   *   ⚠ 我 v1 之前在这里写过"避雷针 72.5 次/局"——那是尺子把"规则允许但珠不够"数成了机会，**比真值大一个数量级**；
+   *     修在尺上（`breadth-probe` 现在分开报 机会/差手 两列），旧数不许再引。
+   *   ⇒ 弱档"没广度"不是随机性不够，是**选择侧永远排不到这些卡**（用户 10-13：这些技能进不了高强度的包）。
+   * v1（`44384ea`）的形状 = "这局没用过 > 用得最少 > 别的" ⇒ 广度天然上去，但**它挤掉的是正招**，
+   *   强度天然掉到"脚本席不该有的程度"。用户 10-13 补的那句把它钉住了：「**就算给简单掺脚本席也要让脚本有基础强度**」。
+   * v2 的依据 = `docs/research/CARD-VALUE-2026-10-13.md` §4 的分层**配对** RCT（同 seed 跑两遍：A=一有机会就打这张卡 / B=一次都不打）：
+   *   15 张弱卡平均全是负的（dose=1 时 −13.6%~−33.3%），但**"我血≤1"那一格普遍抬到 0 附近甚至转正**
+   *   （藤甲 +0.4/+3.9 ‖ 全息屏障 +3.9 ‖ 镜面反射 +3.1 ‖ 双枪射手 +4.3/+3.9/+6.8 ‖ 无极变速 +0.3），
+   *   而"地板本来就只剩 ジ"的时刻打工具**不挤掉任何正招** ⇒ 这两类回合就是天然的广度预算。
+   * ⚠ 判它只看两件事 —— 广度（出手种类数）与"人类席夺冠率"（`tools/probe-pool.mjs`）：
+   *   不许拿"能不能打赢冠军"评它，那不是它要解的题（同一课见 `METHODOLOGY.md`："弱点必须是目标在乎的缺口"）。
+   * ⚠ 计数从 `state.events` 现算（事件形状 `{type:'action', pid, key, outcome}`，与 `usage-probe` 同一判据），
+   *   不存模块级状态 ⇒ 同一个种子必然同一个行为，`cloneState` / 并行 worker 都不会串味。 */
+  const TOOL_KEYS = [SK.ROD, SK.LASER_EYE, SK.SHIFT, SK.JINSHIELD, SK.ARMOR, SK.PROTO, SK.TRANSFER,
+    SK.CURSE, SK.FIRESTORM, SK.TAUNT, SK.CANNON, SK.PURIFY, SK.MINE, SK.DUAL_GUN, SK.MIRROR, SK.HOLO, SK.DRAIN];
+  /* 计划层的经济门槛：开一次聚能环要 3 珠（`state.js:137` rawCost 的 `ringStreak===0 ⇒ ep 3`），
+   * 所以"手里不够 3 珠就别花钱"是 P1/P3/P4 能不能存在的前提（P0 那条纪律用的就是它）。*/
+  const PLAN_BANK = 5;
+  /* 攒钱的上限（用户 10-13：「攒到 51ep 也太夸张了，到 20 都绰绰有余可以玩各种技能了」）：
+   *   到 20 珠就不再开环/续环，逼它把钱花出去 ⇒ 镜像里那个 51 是无压力装配的长尾，不该当现场读数，更不该当行为目标。*/
+  const PLAN_SPEND = 20;
+  /* 血≤1 那一格里最不值钱的是"防御类工具"（RCT 里它们抬到 0 附近）⇒ 保命窗口先给这一批，别先甩天火/贴贴 */
+  const TOOL_DEFENSE = [SK.SHIFT, SK.JINSHIELD, SK.ARMOR, SK.PROTO, SK.HOLO, SK.TRANSFER, SK.ROD];
+  /* ⚠ v3「演出配额」（每局至多 N 手"不是闲着的也开一张贵工具"）**测过、判死、已删**（10-13 晨）：
+   *   强度轴 —— `tools/probe-pool.mjs --mixSeats=2` 六格人类席读数与 v2 一致；
+   *   广度轴 —— 页面 16 局整桌低性价比卡 v1 19 ‖ v2 14 ‖ v3 13（`docs/debug/play-mix.mjs`，配额没把它抬回去反而少 1）；
+   *   根因是配额**花错了时机**：`played` 数的是**所有**工具出手，而 ③ 在开局那几手攒珠的闲回合就把配额吃满，
+   *   等 3 珠卡买得起时配额已归零 ⇒ 这条分支基本不落地。真要做该按"贵卡自己那批"计数、且排在 ③ 之前 —— 那是 v4，得单独测。
+   *   留这段话是为了下一个人别再照原样把配额加回来。 */
+  /* ===== 计划层（P 系列 · 用户 10-13 上午给的六条推理形状，她原话抄在下面）=====
+   * 她的意思不是"再多几种卡"，是**脚本要看得懂局面**：「既然做脚本就可以搞一些有逻辑推理的部分…
+   *   而不是为了堆广度随便浪费」。所以这一层排在 ③（闲时换新卡）**之前**：能读出局面就走计划，读不出来才回地板。
+   * 花费结构全部从 `js/core/state.js` 的 `rawCost` 现读（不是照卡面文字猜）：
+   *   · 聚能环：首次 3 珠、之后 **0 珠**（`resolve.js:733` 每次 +1/+2/+3，第 3 次起封顶 +3；断环即归零 `resolve.js:1239`）
+   *     ⇒ 开环之后每一手都是**免费的钱**，代价是"这些回合不打人也不守"；
+   *   · 过载炮：phase = `cannonCount % 3 + 1` —— 第1次 2 珠；第2次**清空全部珠**（且要求 ep≥1）；第3次清空全部珠**再自损 1 血**
+   *     ⇒ 她给的三条正好是"花费最小化"的三条：phase1 当普通攻击、phase2 只在 ep=1 时按（只付 1 珠）、phase3 只在 ep=0 时按（无珠可清，只付 1 血）；
+   *   · 天火：不需要选目标、打**全场**我贴出且 `age<=3` 的符咒，**引爆后符咒仍在**（`resolve.js:1070`）⇒ "贴3次然后连续引爆两次"的第二爆天然成立。
+   * ⚠ 与整只脚本同一条纪律：**只读 state 现算**（ringStreak / cannonCount / stickers / ep / hp / elec），不存模块级状态
+   *   ⇒ 同一颗种子必然同一串行为，`cloneState` / 并行 worker / 页面都不会串味。每条实际触发几次由 `docs/debug/plan-firing.mjs` 数。 */
+  function planRichest(state, pid, minEp) {           // 攒珠最多、且不少于 minEp 的对手
+    let mx = -1; const cand = [];
+    for (const i of mpOpps(state, pid)) { const e = state.p[i].ep;
+      if (e < minEp) continue;
+      if (e > mx) { mx = e; cand.length = 0; cand.push(i); } else if (e === mx) cand.push(i); }
+    return cand.length ? mpPickOne(state, cand) : null;
+  }
+  function planMyStickers(state, pid) {               // 我贴在别人身上、还活着的符咒数（与天火的判据同一条）
+    let n = 0;
+    for (let i = 0; i < state.p.length; i++) { if (i === pid) continue;
+      const s = state.p[i].stickers || [];
+      for (let k = 0; k < s.length; k++) if (s[k].owner === pid && s[k].age <= 3) n++; }
+    return n;
+  }
+  function planUnstickered(state, pid) {              // 我一枚还没贴上去的对手（P4 要铺开贴三个人，不是叠一个人）
+    const out = [];
+    for (const i of mpOpps(state, pid)) { const s = state.p[i].stickers || [];
+      if (!s.some(function (x) { return x.owner === pid && x.age <= 3; })) out.push(i); }
+    return out;
+  }
+  function planHpNotBehind(state, pid) {              // 她那句"血多"的口径：我不比场上任何人血少
+    const me = state.p[pid]; let mx = -Infinity;
+    for (const i of mpOpps(state, pid)) if (state.p[i].hp > mx) mx = state.p[i].hp;
+    return !isFinite(mx) || me.hp >= mx;
+  }
+  /* 我最近 k 手真正打出的招（事件序就是时间序 ⇒ 倒着捡本席的 action）。
+   *   被防御挡掉的那一手**也算"贴了一次"**：她的窗口说的是"连续贴三次"这个**出手次数**，
+   *   而"到底落没落地"交给 `planMyStickers`（活符咒数）判 —— 两件事分开设判据，别混成一个。 */
+  function planMySeq(state, pid, k) {
+    const out = []; const evs = (state && state.events) || [];
+    for (let i = evs.length - 1; i >= 0 && out.length < k; i--) {
+      const e = evs[i];
+      if (e && e.type === 'action' && e.outcome === 'ok' && e.pid === pid && e.key) out.push(e.key);
+    }
+    return out;                                            // out[0] = 最近一手
+  }
+  /* 她那句"保命也要看现场"的量化：能威胁我的程度计分 ——
+   *   一个人有 5 珠或带雷珠 = 2 分（真能打死/大伤害），一人有 2~4 珠 = 1 分，没珠 = 0 分。
+   *   门槛取 2 ⇒ "别人都没 ep"（0 分）与"只有一个人有一两 ep"（1 分）都**不守**，两人有点钱或一人能放大雷才守。 */
+  function planThreatScore(state, pid) {
+    let s = 0;
+    for (const i of mpOpps(state, pid)) { const o = state.p[i];
+      if (o.ep >= 5 || (o.elec || 0) >= 1) s += 2; else if (o.ep >= 2) s += 1; }
+    return s;
+  }
+  function planPick(state, pid, legal) {
+    const bk = mpBk(legal), me = state.p[pid];
+    const live = planMyStickers(state, pid);
+    const seq = planMySeq(state, pid, 6);   // 窗口最长要能看见"贴-ジ-贴-ジ-贴-爆"这种节奏 ⇒ 取 6 手
+    let curseRun = 0, fireRun = 0;
+    /* ⚠ "连续"的口径：**ジ 不算打断**。第一版按字面"相邻两手"数，于是 贴/ジ/贴/ジ/贴 永远数不满 3 次
+     *   （40 局实测最长连贴 2，窗口从未上膛）——而攒钱回合本来就该允许插一手ジ，她说的"连续3次"指的是这个计划的三次贴。 */
+    for (const k of seq) { if (k === SK.JI) continue; if (k === SK.CURSE) curseRun++; else break; }
+    for (const k of seq) { if (k === SK.JI) continue; if (k === SK.FIRESTORM) fireRun++; else break; }
+    /* P4-引爆（时序版，按她 10-13 那句改）：「贴贴是连续3次，未必要3枚，不然开头那个就过期了」
+     *   ⇒ 判据是**连贴满 3 手**，不是"场上同时有 3 枚"（后者实测历史最大值只有 2 枚，条件永远凑不满）；
+     *   「三回合只贴上1枚或是没有那也可以不引爆」⇒ 还要 `live >= 2` 才点，别把 2 珠烧在空场上；
+     *   符咒引爆后仍在（`resolve.js:1070`）⇒ 刚点过一发就再点第二发，`fireRun < 2` 封顶，正是"连续引爆两次"。 */
+    if (live >= 2 && mpAff(bk, SK.FIRESTORM) && ((curseRun >= 3 && fireRun === 0) || fireRun === 1)) {
+      return { key: SK.FIRESTORM, target: null };
+    }
+    /* P4-连贴（**渐进式的"确认后才加码"**，用户 10-13：「贴贴可以试一下渐进式窗口，但是我担心这样会拉低强度和大雷使用率」）：
+     *   只有**上一手真的贴上了**（`live >= 1`）才继续补到 3 手；被防御挡掉（`live === 0`）就立刻止损回主线。
+     *   这条排在 P3 大雷**之前**是必须的：窗口已经开起来了，中途改放大雷会让前面那枚符咒白放（原子性）。
+     *   ⚠ 又试过一版"上膛了但买不起天火就继续贴"（`(curseRun<3 || !affordable(天火))`）⇒ 贴 140→149 手，天火 4→3 次，组合仍 0 ⇒ **已回退**；
+     *     卡点不是概率也不是原子性，而是**上膛那一刻手里没有那 2 珠**（P95 才 2 珠）⇒ 见 CARD-VALUE §8-c 的经济结论。 */
+    if (curseRun >= 1 && curseRun < 3 && live >= 1 && mpAff(bk, SK.CURSE)) {
+      const fresh = planUnstickered(state, pid);
+      const t = mpPickOne(state, fresh.length ? fresh : mpOpps(state, pid));
+      if (t != null) return { key: SK.CURSE, target: t };
+    }
+    /* P3-大雷：「ep 达到 5 之后对着别的有 2ep 或血厚的角色打」——先收能一雷打死的，再打断攒钱的，最后压领先者。 */
+    if (mpAff(bk, SK.BIG_T)) {
+      const k2 = mpKillable(state, pid, 2);
+      const rich = planRichest(state, pid, 2);
+      const t = k2 != null ? k2 : (rich != null ? rich : mpLeader(state, pid));
+      if (t != null) return { key: SK.BIG_T, target: t };
+    }
+    /* P4-贴（**渐进式入口**）：不再要求"攒够 7 珠才进窗口"（那是理想方案，实测真装配里凑不齐 ⇒ 整桌只有 6 手贴贴），
+     *   改成 4 珠起、五成概率**只投一枚试探**（1 珠成本），贴上了才按上面那条续到 3 手。
+     *   排在 P3 大雷**之后** ⇒ 保大雷使用率（她点名的担心）。 */
+    if (curseRun === 0 && fireRun === 0 && live === 0 && me.ep >= 4 && rnd(state) < 0.5 && mpAff(bk, SK.CURSE)) {
+      const t = mpPickOne(state, planUnstickered(state, pid));
+      if (t != null) return { key: SK.CURSE, target: t };
+    }
+    /* P1-续环：「血多可以连着打4-5次聚能环」——开环之后每手免费，所以只要没断、没到 5 手就续。
+     *   ⚠ 加 `me.ep < PLAN_SPEND`（用户 10-13：「攒到 51ep 也太夸张了，到 20 都绰绰有余可以玩各种技能了」）⇒ 20 珠封顶，钱必须花出去。 */
+    if (me.ringStreak >= 1 && me.ringStreak < 5 && me.ep < PLAN_SPEND && mpAff(bk, SK.RING)) return { key: SK.RING, target: null };
+    /* P1-开环：首次 3 珠（`state.js:137` rawCost：`ringStreak===0 ⇒ ep 3`）、之后每手免费 +2/+3 ⇒ 开环就是这台经济器的入口。
+     *   门槛只能到"买得起 + 我血不劣势"为止。⚠ 第一版写成 `ep>=5` 被实测打回来：40 局镜像**一段环都没开过**
+     *   （这只脚本的珠从来没到 5）⇒ 连带 P3 大雷 0 次、P4 的 ep≥7 窗口 0 次 —— "要有钱才开环、开环才有钱"是自我锁死。 */
+    if (me.ringStreak === 0 && me.ep < PLAN_SPEND && mpAff(bk, SK.RING) && planHpNotBehind(state, pid) && rnd(state) < 0.7) {
+      return { key: SK.RING, target: null };
+    }
+    /* P6-过载炮：三条按她的花费逻辑（phase1 随意 / phase2 只在 1ep / phase3 只在 0ep 且打最富的那个）*/
+    if (mpAff(bk, SK.CANNON)) {
+      const phase = (me.cannonCount % 3) + 1;
+      if (phase === 1) { const t = mpLeader(state, pid); if (t != null) return { key: SK.CANNON, target: t }; }
+      if (phase === 2 && me.ep <= 1) { const t = mpLeader(state, pid); if (t != null) return { key: SK.CANNON, target: t }; }
+      if (phase === 3 && me.ep === 0 && me.hp > 1) { const t = planRichest(state, pid, 4); if (t != null) return { key: SK.CANNON, target: t }; }
+    }
+    /* P2-避雷针：「看到有人蓄能或攒到 5ep 以上的时候倾向于使用」——电珠在手 = 电磁炮/大雷的入口，六成抬手 */
+    if (mpAff(bk, SK.ROD) && rnd(state) < 0.6) {
+      for (const i of mpOpps(state, pid)) { const o = state.p[i];
+        if (o.ep >= 5 || o.elec >= 1) return { key: SK.ROD, target: null }; }
+    }
+    return null;
+  }
+  function toolkitUsed(state, pid) {
+    const used = {};
+    const evs = (state && state.events) || [];
+    for (let i = 0; i < evs.length; i++) { const e = evs[i];
+      if (e && e.type === 'action' && e.outcome === 'ok' && e.pid === pid && e.key) used[e.key] = (used[e.key] || 0) + 1; }
+    return used;
+  }
+  function pickToolKit(state, pid, legal) {
+    const used = toolkitUsed(state, pid);
+    const aff = (legal || []).filter(function (l) { return l && l.affordable; });
+    /* 挑一张**这局还没用过**的工具卡（没有新的就交 null，让调用方回到地板）*/
+    const freshTool = function (arr) {
+      const f = arr.filter(function (l) { return TOOL_KEYS.indexOf(l.key) >= 0 && !used[l.key]; });
+      if (!f.length) return null;
+      return f[Math.floor(rnd(state) * f.length) % f.length].key;
+    };
+    /* ① 保命窗口（RCT 里唯一普遍不亏的一格）：先把回合交给还没用过的**防御类**工具，其次才是别的工具。
+     *   ⚠ 10-13 她补了一条对的：「保命窗口你也要看现场情况，要是别人都没有ep或者只有一个人有一两ep那也没必要保命（他都不一定来打你）」
+     *     ⇒ 加威胁门 `planThreatScore >= 2`（计分见上面那个 helper：一人 5 珠/带雷珠 = 2 分，一人 2~4 珠 = 1 分）；
+     *     原来的无条件守，在"没人有钱"的回合是**白守一手**（表 B 那一格的收益前提是"真的有人要打我"）。 */
+    if (state && state.p && state.p[pid] && state.p[pid].hp <= 1 && planThreatScore(state, pid) >= 2) {
+      const k = freshTool(aff.filter(function (l) { return TOOL_DEFENSE.indexOf(l.key) >= 0; })) || freshTool(aff);
+      if (k) return k;
+      /* ⚠ 兜底（加威胁门时漏掉过一次，实测血≤1 的回合有 **36% 直接回地板**，而 v2 是 0% —— 等于把表 B 里唯一量到"不亏"的那格丢掉了）：
+       *   没有"这局没用过"的新卡可试，也必须守 —— 买得起的**任何**防御类都算（用过也一样），因为残血时正招本来就是奢侈品。 */
+      const anyDef = aff.filter(function (l) { return TOOL_DEFENSE.indexOf(l.key) >= 0 || l.key === SK.GUARD || l.key === SK.REFLECT || l.key === SK.BAGUA; });
+      if (anyDef.length) return anyDef[Math.floor(rnd(state) * anyDef.length) % anyDef.length].key;
+    }
+    /* ⓪ 计划层（P1~P6，用户的六条推理形状）：读得出局面就走计划，返回 null 才往下走地板 */
+    const plan = planPick(state, pid, legal);
+    if (plan) return plan;
+    /* ② 地板 = 全能型（六条人格线随机切换；实测是脚本里出手最广、强度最高的一只）*/
+    const base = pickMix(state, pid, legal);
+    const bk = (typeof base === 'string') ? base : (base && base.key);
+    /* ③ 地板这一手本来就是 ジ（这回合没有更值的事做）⇒ 换成还没用过的工具卡：不挤掉任何正招，广度就在这类便宜回合里长 */
+    const idleTool = (bk === SK.JI) ? freshTool(aff) : null;
+    /* ★ P0 攒钱纪律 —— 她那五条计划的**前置**，是实测逼出来的（`docs/debug/plan-firing.mjs` 第一次跑：
+     *   六条里四条一次都不触发；诊断脚本给出 20 局 2,640 次决策的珠数分布 = **0珠 50.9% ‖ 1珠 44.4% ‖ 2珠 4.7%，最大 2**）。
+     *   原因很直白：③（见便宜工具就花）与地板（一有珠就开枪）会把珠随时花光 ⇒
+     *   她给的 3 珠开环、5 珠大雷、7 珠贴爆**永远够不到**；而 ep 的唯一收入是 `resolve.js` 的 `case SK.JI: me.ep += 1` ⇒
+     *   不主动攒，就没有那条"血多连打 4-5 次聚能环"的经济基础。
+     *   ⚠ 这正是本文件 `:507` 那条老教训的复刻（"ep>=3 开环…经济锁在 ep<=2，开环分支实测一次都没触发——堆分支不等于提吞吐量"）；
+     *     我这次是靠 plan-firing 那把尺发现的，不是靠"分支写完了"。
+     *   做法：不处于保命窗口、血不劣势、而这手准备花的钱 ≥1 珠且手里不够 3 珠 ⇒ 六成改按 ジ 攒（留四成照常打，别把脚本变成木头）。 */
+    const me = state.p[pid];
+    const spendKey = idleTool || (bk !== SK.JI ? bk : null);
+    const spendCost = (spendKey && R.byKey[spendKey] && typeof R.byKey[spendKey].cost === 'number') ? R.byKey[spendKey].cost : 0;
+    if (me && me.ep < PLAN_BANK && spendCost >= 1 && me.hp >= 2 && planHpNotBehind(state, pid) && rnd(state) < 0.6) {
+      return { key: SK.JI, target: null };
+    }
+    if (idleTool) return idleTool;
+    return base;
+  }
+
   // 空放型对手：故意挑一个"买不起/条件不满足"的技能空放（→ 招式作废 → 对手 lastSkill=null）。
   // 唯一用途是让冠军见过"对手上一招无效"这个状态，别掉进未训练区退化成死循环。
   // 带 whiffOk 标记：play.js 的空放兜底会放行它（普通脚本/AI 一律被兜底改成按ジ）。
@@ -1021,7 +1227,12 @@
     { id: 'st:breakdef',     name: '憋大招',   pick: pickBreakDef,     note: '86% ジ 攒钱，等真正的落雷一发定胜负（大雷密度极高，但整桌最软的一档）' },
     { id: 'st:mix',          name: '全能型',   pick: pickMix,          note: '什么都用一点，出招最杂（有效技能数 4.38）' },
     { id: 'st:aggro',        name: '激进快攻', pick: pickAggro,        note: '一有机会就开枪，逼你打快棋（均 27 回合）' },
-    { id: 'st:combocounter', name: '读招反制', pick: pickComboCounter, note: '读你最近 5 次出招来反制 —— 五个装配里都比"困难"更硬，所以它被收进 `DIFF_TIERS` 当成最高档' }
+    { id: 'st:combocounter', name: '读招反制', pick: pickComboCounter, note: '读你最近 5 次出招来反制 —— 五个装配里都比"困难"更硬，所以它被收进 `DIFF_TIERS` 当成最高档' },
+    { id: 'st:toolkit', name: '杂货铺', pick: pickToolKit, note: '§E600-B v2 + **计划层 P0~P6**（用户 10-13）：**地板=全能型**，只在"这回合本来只剩 ジ"或"自己血≤1 且场上真有威胁"时才把动作交给还没用过的低性价比卡；'
+      + '往上叠一套看得懂局面的计划 —— 攒够 3 珠开聚能环（免费 +2/+3，连到 5 手、20 珠封顶）‖ 有人攒到 5 珠或带电珠就抬避雷针 ‖ '
+      + '攒到 5 珠放大雷（先收能一雷打死的，再打断攒钱的，最后压领先者）‖ 贴贴渐进窗口（贴上才加码、被挡就止损）‖ 过载炮按 phase 的花费逻辑。'
+      + 'v1 是"没用过就优先打"⇒ 实测每局挤掉正招的代价 −13.6%~−33.3%（配对 RCT，见 `docs/research/CARD-VALUE-2026-10-13.md`）。'
+      + '给**弱档掺席**用：脚本席自身夺冠 v2 8.4% → 现在 12.1%（multi，同尺同 seed A/B）；不许拿"能不能打赢冠军"评价它（判据见 `docs/debug/breadth-probe.mjs` 头注与 `plan-firing.mjs`）' }
   ];
 
   /* ===== v1.6.6 难度阶梯（用户 10-03 夜指令 2：「重新研究脚本难度…比如可以设计成冠军作为底层但脚本探索概率很高的版本」）=====
@@ -1086,6 +1297,14 @@
    *   或单独给简单档留一点 ε（`eps2` 之外再加一个 `epsEasy` 之类，那是下一次裁定）。 */
   const DIFF_TIERS = [
     { id: 'lv:sparring', name: '简单 · 陪练', kind: 'champ', eps: 0.2, epsK: 5, epsMode: 'soft', ramp: false, pool: 'soft', eps2: 0.5,
+      /* §E600-B（用户 10-13 裁定：「把启发式随机脚本塞到弱池子里面，能用更多低性价比的技能…
+       *   反正这些技能进不了高强度的包」）⇒ 这一档的装配 = 池的 soft 带 **加 k 席脚本**。
+       *   · seats = 想掺几席；min = 至少留几席**包**（2P 只有 1 席 AI ⇒ 掺不动，会走"降级要说话"那条）
+       *   · ids 必须是 `STYLES` 里真有的 id（门 D227①f 钉这一条，点了选不出来的风格 = 假档）
+       *   · 选这两只的理由是实测（`docs/debug/breadth-probe.mjs`，30 局/格 · 5 席镜像）：
+       *     `st:toolkit` 杂货铺 16 种出手且"买得起却没出"归零 ‖ `st:mix` 全能型 23 种 ——
+       *     弱档缺的正是这个广度（可玩性），不是又一种墙。 */
+      scriptMix: { seats: 2, min: 1, ids: ['st:toolkit', 'st:mix'] },
       note: '桌上是**最弱那一批**（7 枚），探索比默认档多一档（ε=0.2/k5/soft；用户 10-12 16:4x 定「简单 0.2 ‖ 普通与困难 0.1」）。'
         + '10-12 18:1x 重测（斜坡单一来源化之后）人类席夺冠 19.4%（multi）‖ 20.2%（long）；与"普通"那一步：'
         + 'multi **3.27±1.40 = 2.3σ** 过线 ‖ long 只有 **0.80±1.44 = 0.6σ ⇒ 分不开**'
@@ -1126,7 +1345,7 @@
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
-    pickReflectMix, pickReflectTank, pickDefReflectGun, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, resetBotMem,
+    pickReflectMix, pickReflectTank, pickDefReflectGun, pickToolKit, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, resetBotMem,
     snapshotBotMem, restoreBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,

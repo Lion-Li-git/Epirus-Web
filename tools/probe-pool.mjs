@@ -19,7 +19,9 @@
  *      （页面那侧每局是 `Math.random()` 新盐 ⇒ 产品是均匀的，别把尺的毛病读成产品的毛病。）
  *
  * 用法：node tools/probe-pool.mjs [--tier=hard] [--games=60] [--seeds=90210,90211] [--modes=multi,long]
- *        [--members=champion-map/pool-members.tsv] [--out=某.tsv]
+ *        [--members=champion-map/pool-members.tsv] [--out=某.tsv] [--mixSeats=k]
+ *        （`--mixSeats=k` 只顶 `scriptMix.seats` 这一维，`min`/`ids` 与推导仍走档位表 + `PD.scriptSeats`
+ *          ⇒ 量出来的是"掺 0/1/2/3 席"这四个装配，不是四份抄出来的算法；引用它的数必须带上这句）
  * 退出码：0 ‖ 2 输入/成员不齐 ‖ 7 有成员读不出包（缺行 ≠ 量了没测出来）
  */
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -30,7 +32,7 @@ import { duelAssembly } from './v2v4-lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
-rejectUnknownFlags(process.argv.slice(2), ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose'], 'probe-pool');
+rejectUnknownFlags(process.argv.slice(2), ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose', 'mixSeats'], 'probe-pool');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const TIER = flag('tier', 'hard'), G = Number(flag('games', 60));
 const SEEDS = String(flag('seeds', '90210,90211')).split(',').map(Number).filter(x => !Number.isNaN(x));
@@ -91,7 +93,49 @@ if (bad.length) { console.error('⛔ ' + bad.length + ' 枚读不出包：' + ba
 const HUMAN = humanPrototypes(B);
 for (const x of HUMAN) if (typeof x[1] !== 'function') { console.error('⛔ 人类原型「' + x[0] + '」不是函数'); process.exit(7); }
 
-console.log('# 池形态新尺（1 席人类形状 + 4 席按 tier=' + TIER + ' 抽 · 允许重复 · 禁四席全同）');
+/* §E600-B：这把尺必须量**产品真实装配**，所以掺脚本席的推导走 `js/pool-draw.js` 的同一份 `scriptSeats`
+ *   —— 页面调它，这里也调它；两边各自写一遍就是"量具在量一个产品里没有的东西"（规矩 134 那一族）。
+ *   取哪一档：`pool` 字段等于本次 `--tier=` 的那一档（今天每带只有一档；真出现多档且 mix 不一致，这里就红）。 */
+let MIX = null, SCRIPTS = {}, SEATNOTE = '';
+{
+  const tiers = (B && B.DIFF_TIERS) || [];
+  /* `--mixSeats=k` 是给"掺几席才算简单"那道扫描用的**顶盖**：只顶 `seats`，`min`/`ids` 仍旧吃表里那一份，
+   *   推导仍旧只有 `PD.scriptSeats` 一处 ⇒ 契约 §3.8（"谁都不许抄第二遍"）不破，扫出来的才是同一个装配的不同剂量。 */
+  const SEATK = flag('mixSeats', '');
+  let users = tiers.filter(t => t.pool === TIER && t.scriptMix);
+  if (SEATK !== '') {
+    if (!/^\d+$/.test(String(SEATK))) { console.error('⛔ --mixSeats= 只能是非负整数（收到 `' + SEATK + '`）'); process.exit(2); }
+    const base = users[0] || tiers.find(t => t.scriptMix);
+    if (!base) { console.error('⛔ --mixSeats= 要顶 `scriptMix.seats`，而全表没有任何一档声明 scriptMix ⇒ 没得顶'); process.exit(2); }
+    users = [Object.assign({}, base, { scriptMix: Object.assign({}, base.scriptMix, { seats: Number(SEATK) }) })];
+    SEATNOTE = ' ‖ ⚑ 本批把 seats 顶成 ' + SEATK + '（`min`/`ids` 仍取 `' + base.id + '` 那份 ⇒ 引用这行数要带这句）';
+  }
+  if (users.length > 1) {
+    console.error('⛔ 有多档共用 tier=' + TIER + ' 且都声明了 scriptMix ⇒ 这把尺不知道该按哪一档装配（' +
+      users.map(t => t.id).join(' ‖ ') + '）'); process.exit(7);
+  }
+  if (users.length === 1) {
+    MIX = PD.scriptSeats(users[0], 4, B.STYLES || []);
+    if (MIX && MIX.seats > 0) {
+      SCRIPTS = {};
+      for (const sid of MIX.ids) {
+        const st = (B.STYLES || []).find(x => x.id === sid);
+        if (!st) { console.error('⛔ scriptMix 里的风格 ' + sid + ' 不在 STYLES ⇒ 认不出就是错主'); process.exit(7); }
+        SCRIPTS[sid] = T.wrapBigTPush ? T.wrapBigTPush(st.pick) : st.pick;   /* 与页面同一层包装（v1.6.3 那条裁定） */
+      }
+    }
+    /* ⚠ 顶盖有可能**顶不上去**：`scriptSeats` 的天花板是 `min(AI席 − min, ids.length)` ⇒ 今天 ids 只有 2 个，
+     *   要 3 席实际还是 2 席。不喊出来的话就会有人拿"2 席的数"去引用成"3 席"。
+     *   （真要多席得往 `ids` 里加风格 —— "掺几席"与"掺谁"今天其实是**同一根旋钮**。） */
+    if (SEATK !== '' && MIX && MIX.seats < Number(SEATK)) {
+      console.error('⚠ 顶盖没顶上去：要 ' + SEATK + ' 席，`scriptSeats` 只给到 ' + MIX.seats + ' 席 ⇒ 天花板 = min(AI席 ' +
+        (4 - ((users[0].scriptMix || {}).min || 1)) + ' , ids ' + (MIX.ids || []).length + ')）' +
+        '**这一批量的是 ' + MIX.seats + ' 席那个装配**，不许当 ' + SEATK + ' 席引用');
+    }
+  }
+}
+console.log('# 池形态新尺（1 席人类形状 + 4 席按 tier=' + TIER + ' 抽 · 允许重复 · 禁四席全同' +
+  (MIX && MIX.seats ? ' ‖ 掺脚本席 ' + MIX.seats + ' 席：' + MIX.ids.join(' ‖ ') : ' ‖ 不掺脚本席') + '）' + SEATNOTE);
 console.log('# 剂量 ' + DOSE.label + (DOSE.ramp ? '' : '') + '   ← 这一行是引用读数时**必须**带上的口径（§E272/第 45 条）');
 console.log('# 成员 ' + lite.length + ' 枚：' + lite.map(m => m.id).join(' ‖ '));
 console.log('# ' + G + ' 局/格 × ' + SEEDS.length + ' 枚 seed（' + SEEDS.join('/') + '）· 装配实现与 `probe-human-seat` 同一份（duelAssembly）');
@@ -108,6 +152,11 @@ for (const mode of MODES) {
   const seatGames = [0, 0, 0, 0], seatWins = [0, 0, 0, 0], memberSeat = {};
   const memberCell = {};                              /* 成员 id → 格名 → {n, hw} */
   let curCell = null;                                 /* 原型名只能由调用侧带进来（`onGame` 的钩子签名里没有它） */
+  /* ⚑ 机制探针（§E600-B 尾，10-13 03:3x）：`全程刷反弹` 那一格跨三带六个格子有五个是**往下**的（掺席反而让纯反射墙更难）。
+   *   假设：脚本席的廉价进攻少 ⇒ **落在人类席上的进攻变少**，一面墙没什么可反弹。
+   *   数得出来而不用改引擎：`damage` 事件带 `to`（受害者）‖ `reflect` 带 `by:'proto'`（人类侧反弹成功）‖ 进攻动作按 `R.byKey[key].cat === 'attack'` 分。
+   *   自证：真跑过场子之后这三个数不许全是 0（接错线的形状就是"读数全 0 而表看着正常"）。 */
+  const press = {};                                   /* 格名 → {dOn, dAmt, rfl, atk, rounds, games} */
   const salts = new Set(), comps = new Set();   /* 每场组成由 `slotSalt` 唯一决定 ⇒ 盐/组成只有几种在转的话，"逐枚席位分布"不是独立抽样，得先说出来 */
   let allSameGames = 0, totalGames = 0, distinctSum = 0, missSeat = 0;
   let seqSamples = null;                            // 只留第一枚 seed 的前 6 场组成（给人眼看"随机"是不是真的在换）
@@ -117,13 +166,14 @@ for (const mode of MODES) {
     const chooserFor = function (pid, st) {
       if (st !== curState) {
         curState = st;
-        const comp = PD.compose(lite, 4, PD.rng((st.slotSalt >>> 0) || 1));
+        const comp = PD.compose(lite, 4, PD.rng((st.slotSalt >>> 0) || 1), (MIX && MIX.seats) ? MIX : null);
         cur = { comp: comp, byPid: {}, order: 0 };
         games.set(st, cur);
       }
       if (!(pid in cur.byPid)) { cur.byPid[pid] = cur.comp.seats[cur.order++]; }
       const m = cur.byPid[pid];
       if (!m) { missSeat++; return null; }           /* null 会落回 duelAssembly 自带的那颗 ⇒ 计数暴露，不静默补位 */
+      if (m.kind === 'script') return SCRIPTS[m.id] || null;   /* 脚本席：与页面同一份 pick（含 wrapBigTPush 那层） */
       return CHOOSERS[m.id];
     };
     const onGame = function (st, scriptedSeat) {
@@ -135,6 +185,25 @@ for (const mode of MODES) {
       distinctSum += PD.distinct(g.comp.seats);
       if (seqSamples === null) seqSamples = [];
       if (seqSamples.length < 6) seqSamples.push(g.comp.seats.map(s => s.id).join('+'));
+      { /* 机制探针的账（见上面 `press` 那段）：按"人类那一席"统计落在它身上的伤害、它用**反弹卡**格挡的次数、场上 AI 的进攻动作数。
+         *   ⚠ 第一版这里接过错线：`type:'reflect' && by:'proto'` 是**原型制御·转移**（resolve.js 的 `protoReflectAll`，要一回合累计 ≥3 伤才触发），
+         *     不是 反弹 卡 ⇒ 每一格都数到 0.00 而表看着一切正常。反弹卡的账在 `type:'blocked' && by:'反弹'`（`:503`）。 */
+        const hum = Number(scriptedSeat);
+        const p = press[curCell || '(没格名)'] || (press[curCell || '(没格名)'] = { dOn: 0, dAmt: 0, blk: 0, rfl: 0, proto: 0, atk: 0, rounds: 0, games: 0 });
+        for (const e of (st.events || [])) {
+          if (e.type === 'damage' && Number(e.to) === hum) { p.dOn++; p.dAmt += Number(e.amt) || 0; }
+          /* 反弹卡的两条去路（resolve.js 的守卫分支 `g === 'reflect'`）：
+             · `type:'reflect' ‖ by:'reflect'` = **挡下并把这份伤害打回来源**（`REFLECTABLE` 的 via、且有真来源、且不是二次反弹）；
+             · `type:'blocked'  ‖ by:'反弹'`   = 只挡不反击（不可反弹的 via / 无来源 / 已被反弹过的）。
+             ⚠ 别把 `by:'proto'` 当成反弹卡 —— 那是**原型制御·转移**（`protoReflectAll`，一回合累计 ≥3 伤才触发）。 */
+          else if (e.type === 'reflect' && e.by === 'reflect') p.rfl++;
+          else if (e.type === 'reflect' && e.by === 'proto') p.proto++;
+          else if (e.type === 'blocked' && Number(e.to) === hum && e.by === '反弹') p.blk++;
+          else if (e.type === 'action' && e.outcome === 'ok' && Number(e.pid) !== hum &&
+            ((R.byKey || {})[e.key] || {}).cat === 'attack') p.atk++;
+        }
+        p.rounds += Number(st.round) || 0; p.games++;
+      }
       for (const pid in g.byPid) {
         const m = g.byPid[pid], id = m.id, s = m.seat, won = (st.winner === Number(pid));
         memberGames[id] = (memberGames[id] || 0) + 1;
@@ -177,6 +246,12 @@ for (const mode of MODES) {
   console.log('   ⚑ 四席全同的场数 = ' + allSameGames + ' / ' + totalGames + '（用户裁定不许全同 ⇒ 不为 0 就要查抽签）');
   console.log('   ⚑ 平均每场不同枚数 = ' + (distinctSum / Math.max(1, totalGames)).toFixed(2) + ' / 4');
   console.log('   逐枚夺冠率：' + lite.map(m => m.id + ' ' + ((memberWins[m.id] || 0) / Math.max(1, memberGames[m.id]) * 100).toFixed(1) + '%(上场 ' + (memberGames[m.id] || 0) + ')').join(' ‖ '));
+  /* §E600-B（10-13）：脚本席**也上场、也被上面那个循环记了账**，但它不在 `lite` 里 ⇒ 那行永远不报它
+   *   ⇒ "掺进来的脚本席自己有多强"这条是**问得出、报不出**（用户要"脚本有基础强度"，先得看得见它）。
+   *   同口径（同一场、同一座位轮换）；⚠ 也受文件头第 ② 条那个"独立组成少"的折扣，不许拿来排名次。 */
+  const scriptIds = Object.keys(memberGames).filter(id => !lite.some(m => m.id === id)).sort();
+  if (scriptIds.length) console.log('   脚本席自身夺冠率（同口径 ‖ 人类席占的那部分不在这里）：' + scriptIds.map(id => id + ' ' +
+    ((memberWins[id] || 0) / Math.max(1, memberGames[id]) * 100).toFixed(1) + '%(上场 ' + memberGames[id] + ')').join(' ‖ '));
   /* 座位效应：把"哪一席更容易赢"跨成员合并成一个数 ⇒ 它才是"逐枚夺冠率能不能并排读"的那把尺。
    *   四席的夺冠率之和必然 = P(AI 赢)（其余给人类那一席），所以**看的是极差不是绝对值**。 */
   /* 弱点剖面矩阵：行 = 成员，列 = 人类原型，格 = "这枚在桌上时该原型夺冠率"（括号里是场数）。
@@ -221,6 +296,35 @@ for (const mode of MODES) {
     ' ⇒ 高到低差 ' + (imbal.hi - imbal.lo) + ' 场）');
   console.log('   ⚑ 抽样独立性：这 ' + totalGames + ' 场里出现 ' + salts.size + ' 个 `slotSalt` ‖ ' + comps.size + ' 种"成员×席位"配对' +
     (salts.size < totalGames / 2 ? ' ⇒ **盐在复用**（组成不是逐场独立 ⇒ 逐枚席位分布/夺冠率的误差棒要比 n 之前先按"独立组成数"打折）' : ''));
+  /* 机制探针的输出：每格四个数（落在人类席的伤害事件数/回合 ‖ 人类用反弹卡格挡/局 ‖ 原型制御转移/局 ‖ AI 进攻动作/回合）。
+   *   两条自证：① 一格都没数到 / 每格全 0 ⇒ exit 8；② **正对照**：`全程刷反弹` 那一格整场只在反弹，
+   *   它的"反弹格挡/局"如果是 0，那是计数器接错线（第一版就是这么错的），不是"墙没反弹"。 */
+  const pc = Object.keys(press);
+  let pz = 0;
+  console.log('   ⚑ 压力账（机制探针 · 解释 `全程刷反弹` 那个反例用）：落在人类席的伤害·每回合 ‖ 反弹反击·每局 ‖ 只挡不反击·每局 ‖ 原型制御转移·每局 ‖ AI 进攻·每回合');
+  for (const cn of pc) {
+    const p = press[cn];
+    if (!p.dOn && !p.blk && !p.rfl && !p.atk) pz++;
+    console.log('      ' + cn.padEnd(15) + (p.dOn / Math.max(1, p.rounds)).toFixed(3) + ' ‖ ' +
+      (p.rfl / Math.max(1, p.games)).toFixed(2) + ' ‖ ' + (p.blk / Math.max(1, p.games)).toFixed(2) + ' ‖ ' +
+      (p.proto / Math.max(1, p.games)).toFixed(2) + ' ‖ ' +
+      (p.atk / Math.max(1, p.rounds)).toFixed(3) +
+      '（n=' + p.games + ' 局 · ' + p.rounds + ' 回合 · 人类挨到的伤害合计 ' + (p.dAmt / Math.max(1, p.games)).toFixed(2) + '/局）');
+    rows.push({ mode: mode, cell: '__press:' + cn, seedVals: p.games + '局/' + p.rounds + '回合',
+      mean: (p.dOn / Math.max(1, p.rounds)).toFixed(4),
+      spread: '反击/局 ' + (p.rfl / Math.max(1, p.games)).toFixed(3) + ' ‖ 只挡/局 ' + (p.blk / Math.max(1, p.games)).toFixed(3) +
+        ' ‖ atk/回合 ' + (p.atk / Math.max(1, p.rounds)).toFixed(4) });
+  }
+  if (!pc.length || pz === pc.length) {
+    console.error('⛔ 压力账一个数都没数到（格子 ' + pc.length + ' 个 · 全 0 的 ' + pz + ' 个）⇒ 事件字段接错线，本批读数作废');
+    process.exit(8);
+  }
+  const wall = press['全程刷反弹'];
+  if (wall && !(wall.rfl + wall.blk > 0)) {
+    console.error('⛔ 正对照失败：`全程刷反弹` 那格跑了 ' + wall.games + ' 局却数到 **0 次反弹**（反击 ' + wall.rfl + ' ‖ 只挡 ' + wall.blk + '）'
+      + ' ⇒ 是这台探针接错了事件字段（不是"墙没反弹"），本批压力账作废');
+    process.exit(8);
+  }
   for (let s = 0; s < 4; s++) rows.push({ mode: mode, cell: '__seat' + s, seedVals: seatWins[s] + '/' + seatGames[s], mean: seatRate[s].toFixed(2), spread: s === 3 ? seatSpread.toFixed(2) : '' });
   rows.push({ mode: mode, cell: '__allSame', seedVals: allSameGames + '/' + totalGames, mean: (distinctSum / Math.max(1, totalGames)).toFixed(2), spread: '' });
 }

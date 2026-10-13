@@ -125,14 +125,17 @@ if (SWAP) {
   if (SWAP_FILE === FILE) { console.error('--swap 的第二粒包与主包是同一个文件 ⇒ 这一臂没有可测之差'); process.exit(2); }
   swapParams = p2;
 }
-/* ===== §E275（v1.5.334）：`--eps=<0..1>` + `--epsk=` + `--eps-mode=` = 把主体席切到**页面口径** =====
+/* ===== §E275（v1.5.334）：`--eps=<0..1>` + `--epsk=` + `--eps-mode=` = 给主体席**加探索剂量** =====
+ * ⚠ 措辞纠偏（§E597 之后）：这一族旧话把 `--eps=0.2` 叫作"页面口径"，那个等号**已经不成立** ——
+ *   页面默认档（`lv:regular`）现在吃 0.1 的回合斜坡，0.2 是**简单档**的剂量。要"玩家默认那个数"走 `--eps-tier=`。
  * 为什么这根旗标是**必须**的而不是可选：用户裁定摄魂那一档「是**仅调整探索时**软提升的窗口」⇒ 它只活在
  *   `policyChooserN` 的 ε 分支里；而本考卷默认 ε=0（贪心）⇒ 对它是**结构性失明**的，
  *   跑出来必然是"与关档逐字相同"，如果不印清 ε，就会被记成"这一档没效果"（= 记忆第十八条"门钉了行为 ≠ 考卷真有那个压力"的镜像）。
  * 缺省 `eps=0` ⇒ 走的还是原来那行 `policyChooserN(params, 0.15)`，既有臂一字不变。 */
 const SHIP_EPS = FLAG.eps == null ? 0 : Number(FLAG.eps);
 if (FLAG.eps != null && !(isFinite(SHIP_EPS) && SHIP_EPS >= 0 && SHIP_EPS <= 1)) {
-  console.error('⛔ --eps 只能是 [0,1] 的数（0 = 考卷原口径·贪心；0.2 = 页面口径）；收到 `' + FLAG.eps + '`'); process.exit(2);
+  console.error('⛔ --eps 只能是 [0,1] 的数（0 = 考卷原口径·贪心；>0 = 带探索。注意别把 0.2 当"页面口径"：'
+    + '页面默认档 lv:regular 是 0.1 的回合斜坡，0.2 是**简单档**的剂量 ⇒ 要页面默认值请给 `--eps-tier=`）；收到 `' + FLAG.eps + '`'); process.exit(2);
 }
 const SHIP_EPSK = FLAG.epsk == null ? 5 : Number(FLAG.epsk);
 const SHIP_EPMODE = FLAG['eps-mode'] || (SHIP_EPS > 0 ? 'soft' : 'uniform');
@@ -424,7 +427,7 @@ if (SHIPBIGT_RAW != null) {
 /* ===== §E275（v1.5.334）：`--shipdrain=<0|1..12>` = 量**摄魂的"残血软提升"档**（现网路径，不是工具外挂）=====
  * 与大雷那档的区别写死在引擎里（`evo.js` 的 `drainPushWants` + `epsMode==='soft'` 那一支）：
  *   **不强推落子**，只在探索集里多给它一格；窗口 = **自己 hp≤1 且这张牌此刻可付**（`mode.drainHpMax` 一个字都不改）。
- * ⚠ 所以它**只在 ε>0（页面口径）时看得见**：ε=0 的考卷臂上这一档结构性不触发 ⇒ 那格读数必须被拒，不许被记成"没效果"。 */
+ * ⚠ 所以它**只在 ε>0（探索口径）时看得见**：ε=0 的考卷臂上这一档结构性不触发 ⇒ 那格读数必须被拒，不许被记成"没效果"。 */
 const SHIPDRAIN_RAW = FLAG.shipdrain;
 const SHIPDRAIN = SHIPDRAIN_RAW == null ? null : Number(SHIPDRAIN_RAW);
 if (SHIPDRAIN_RAW != null && !(SHIPDRAIN === 0 || (Number.isInteger(SHIPDRAIN) && SHIPDRAIN >= 1 && SHIPDRAIN <= 12))) {
@@ -444,7 +447,8 @@ if (SHIPDRAIN_RAW != null) {
     + '· 机制 = 只在 ε 分支里把这张牌**并入探索集**（软提升，不强推）· 本臂 ε=' + (EPS_TIER ? '档位 ' + EPS_TIER + ' 给的剂量' : SHIP_EPS + (SHIP_EPMODE ? '/' + SHIP_EPMODE : '')));
   if (DRAIN_EFFECTIVE >= 1 && !EPS_ACTIVE) {
     console.error('⛔ `--shipdrain>=1` 但 ε=0 ⇒ 这一档在贪心里**永不触发**，跑出来必然与关档逐字相同（= 一根静默失效的旗标）。'
-      + '要量它就给页面口径：`--eps=0.2 --eps-mode=soft`，或直接给产品那张表 `--eps-tier=lv:regular`（对照臂同样要给）。');
+      + '要量它就给**带探索的剂量**：首选产品那张表 `--eps-tier=lv:regular`（页面默认档，0.1·斜坡）；'
+      + '硬写 `--eps=0.2 --eps-mode=soft` 量的是**简单档**，不是页面默认档（对照臂同样要给）。');
     process.exit(2);
   }
 }
@@ -949,7 +953,7 @@ const RANK_ST = { dec: 0, close: 0, fired: 0, gapSum: 0, moved: 0 };
  * 哪些名字算"摄魂侧的注入"：`--pushkey`（提前的是哪张卡）、`--pushminep`（它的门槛）、`--drainHp`（**直接把窗口改宽 = 新世界**）、
  *   `--pushrank` / `--pushfloor`（软抬，作用在 `--pushkey` 那张卡上）。给了这些而**没有**显式 `--shipdrain` ⇒ 把引擎默认档顶成 0 并响亮印一行。
  * ⚠ 与大雷那条的区别要写清：这一档在 `eps=0` 下**结构上不触发**（钩子埋在 `epsMode === 'soft'` 的探索支里）⇒ 顶不顶对贪心考卷逐字无差；
- *   真正会被它污染的是**页面口径（ε>0）**的臂 —— 那时"软提升"和"提顺位/强制"会同时动同一张卡，读出来分不清是哪一样。 */
+ *   真正会被它污染的是**带探索的臂（ε>0）** —— 那时"软提升"和"提顺位/强制"会同时动同一张卡，读出来分不清是哪一样。 */
 const DRAIN_INJECT_FLAGS = ['pushkey', 'pushminep', 'drainHp', 'pushrank', 'pushfloor'];
 const DRAIN_INJECT_SEEN = DRAIN_INJECT_FLAGS.filter(function (k) { return FLAG[k] != null && FLAG[k] !== ''; });
 if (SHIPDRAIN_RAW == null && DRAIN_INJECT_SEEN.length) {
@@ -964,7 +968,8 @@ if (SHIPDRAIN_RAW == null && DRAIN_INJECT_SEEN.length) {
  *   （显式给 `--shipdrain>=1` 且 ε=0 仍然是 `exit 2`，见上面那段；这里只管"默认档捎带开着"的情况）。 */
 if (DRAIN_EFFECTIVE >= 1 && !EPS_ACTIVE) {
   console.log('[shipdrain] ⚠ 引擎默认档 = ' + DRAIN_EFFECTIVE + '，但本臂 ε=0 ⇒ 这一档**永不触发**（钩子在 soft 探索支里）⇒ 与关档逐字相同。'
-    + '要量它必须带页面口径 `--eps=0.2 --eps-mode=soft`，或直接给产品那张表 `--eps-tier=lv:regular`（§E283：3 血桌上每 4.3 局一张 ‖ 关档 0 张/200 局）。');
+    + '要量它必须带**探索剂量**：首选产品那张表 `--eps-tier=lv:regular`（页面默认档 0.1·斜坡），'
+    + '硬写 `--eps=0.2 --eps-mode=soft` 量的是**简单档**（§E283：3 血桌上每 4.3 局一张 ‖ 关档 0 张/200 局）。');
 }
 /* §E267：自检挂**进程出口** —— 前面两版分别落在 `if (PUSH)` 与 `if (FLAG['dump-per'])` 里，
  * 于是"纯提顺位臂"与"不落盘的跑法"都**一声不响**（同一族病：静默的量具）。出口钩子与作用域无关。 */
@@ -1215,7 +1220,7 @@ if (FLAG['dump-per']) {
        缺这一维就会把两条路配成同臂。⚠ v1.5.333 起写的是**引擎回读到的值**（不设旗标也写默认档），不是"旗标有没有出现"。
        ⇒ 所以这一维**不许在这里硬写默认值是几**：调 `evo.js` 的常数时这里自己会跟着变（§E278 记的教训：写过"默认 8"，p 改 12 后这行就成了假口径）。 */
     '#shipbigt=' + String(SHIP_EFFECTIVE),
-    /* §E275：摄魂档与 **ε 口径**都是臂维 —— 少了 `#eps`，"贪心考卷"与"页面口径"两批落盘会被配成同一世界，
+    /* §E275：摄魂档与 **ε 口径**都是臂维 —— 少了 `#eps`，"贪心考卷"与"带探索的臂"两批落盘会被配成同一世界，
        而前者对摄魂档结构性失明（读数必然相同）⇒ 那是一副**静默的错配**（记忆：补表头 ≠ 补守卫）。 */
     '#shipdrain=' + String(DRAIN_EFFECTIVE),
     '#eps=' + (EPS_TIER ? ('tier:' + EPS_TIER) : (SHIP_EPS > 0 ? (SHIP_EPS + '-' + SHIP_EPMODE + '-k' + SHIP_EPSK) : '0')),

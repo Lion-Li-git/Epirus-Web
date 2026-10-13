@@ -27,7 +27,12 @@ const DUMP = process.argv.indexOf('--dump') >= 0;
 const HASH = arg('hash', '');
 const WIN = arg('win', '1600,900');
 const BUDGET = arg('budget', '12000');
-const PAGE = 'file:///' + join(HERE, 'index.html').replace(/\\/g, '/') + (HASH ? '#' + HASH : '');
+/* `--html=<路径>`：把同一套页内自检跑到**另一份 HTML** 上 —— 为的是变异证明不必动活跃产物。
+ *   10-13 补这条的缘由：`cohBad` 那一支页内自检从写下来只跑到"绿"，没单独造过违反态
+ *   （§E596 那笔在册欠账，`docs/GATE-AUDIT-2026-10-12.md` §十九 也点了名）⇒ 要造就得改一份页面；
+ *   改在副本上跑，`champion-map/index.html` 一个字节都不动。 */
+const HTML = resolve(arg('html', join(HERE, 'index.html')));
+const PAGE = 'file:///' + HTML.replace(/\\/g, '/') + (HASH ? '#' + HASH : '');
 const OUT = DUMP ? '' : resolve(arg('out', join(HERE, 'shot.png')));
 if (!DUMP && !OUT) { console.error('⛔ 既没给 --out 也没给 --dump'); process.exit(2); }
 if (!DUMP) { const d = dirname(OUT); if (!existsSync(d)) mkdirSync(d, { recursive: true }); }
