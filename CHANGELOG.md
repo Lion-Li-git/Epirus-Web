@@ -1,3 +1,49 @@
+## v1.7.5 — 10-13 夜班续（Qoder）：浏览器仪器的**起 Chrome/等 CDP 收成一份**（`tools/cdp-boot.mjs`）‖ 5 枚 holo→proto 代表**按图上的档量完**（考卷 120 ‖ 页面 `tier:lv:regular`）‖ **进图不跑**：`rebuild-coords` 对着现役面板有五条既有缺陷，逐条取证写在日志里等裁
+
+### 一句话结论
+
+CI 那条 browser 红（`CDP endpoint not reachable`）**这一笔不判它该不该红，先让它自己说清是哪一种红**；
+今晚真正学到的是一条纪律：**进图之前先问"图上那把尺现在是哪一档、由哪张表喂"** —— 我问了，于是发现这条链今天跑不动，于是**没有跑**。
+
+### 仪器（S0）
+
+- 新增 `tools/cdp-boot.mjs` = 起 Chrome + 等 CDP + 收尸的**唯一**实现：`resolveChrome()`（参数 → `EPIRUS_CHROME` → 平台路径 → PATH，找不到抛 `NO_CHROME` 并列出**找过哪些路径**）、
+  `launchChrome()` 带 stderr 环形缓冲，`waitJson` 把原来一种报错分成三种可读结论（spawn 就错 / 进程**已退出** / 超时且进程还活着 + stderr 尾巴）。
+  原来 `tools/smoke.mjs` 用 `{ stdio: 'ignore' }` ⇒ Chrome 自己的报错整条丢掉，"没装 / 起了但死了 / 绑端口慢过预算"三种可能在日志里长得一模一样。
+- `tools/smoke.mjs` ‖ `tools/battle-test.mjs` 迁到这一份实现（删掉各自的 `waitJson`、硬编码的 Windows Chrome 缺省、重复的 `killTree`；顺手删掉迁移后不再被引用的 `spawn/spawnSync/mkdtempSync/rmSync/tmpdir` 导入）。
+  本机复跑：smoke `SUMMARY: SMOKE OK` ‖ battle `SUMMARY: BATTLE OK`（01:4x，改导入之后又各跑一遍）。
+- CI 侧只跑这两台（`.github/workflows/gates.yml` 的 browser 档 112/114 行），所以 `np-probe/remote-probe/ui-probe/docs/debug/play-mix` 那几处各自的 `waitJson` **今晚没动** —— 它们不在 CI 路径上，夜里搬它们只增加风险不增加信息。
+
+### 研究（S2c/S2d 的量数部分）
+
+- 5 枚代表按图上的档量完，表落**仓内**（不是 gitignore 的产物目录）：`champion-map/h2p-ruler.tsv` ‖ `h2p-epsfull.tsv` ‖ `h2p-extra.tsv`。
+  考卷 = `ruler-measure.mjs --exam=120`（seed 77000 · 35 组合 = 4200 局/枚 ‖ 83 秒 5 枚）；页面 = `eps-full.mjs --games=120 --epsTier=lv:regular`（54 秒）。
+  读数：`h2p-drop-5` H 46.9 ‖ Hp 46.7 ‖ `h2p-drop-3` 35.7/37.4 ‖ `h2p-drop-1` 35.4/36.1 ‖ `h2p-proto-3` 35.0/34.5 ‖ `h2p-off-1` 27.3/28.7。
+- **第一遍我按缺省 `--exam=30` 量的，重测了一遍**：同一枚 30 档与 120 档差到 **2.2pt**（`drop-1` 32.8 → 35.4），而面板 986 行 `examG` 全是 120。
+  `METHODOLOGY.md` 第 120 条「进图必须单档」量的就是这条台阶；改档重测 83 秒，比事后解释图上一条台阶便宜。**旧那份留在产物目录并改名 `h2p-ruler.EXAM30-do-not-feed.tsv`**（不许喂）。
+- 两台仪器互验：`ruler-measure` 的 `H` 与 `eps-full` 自己那列 `exam` 在这 5 枚上**逐字相同**（同 seed 同组合本应相同；不同就是接线错）。
+
+### 没做的事与为什么（全部可复算，见 `docs/research/logs/2026-10-13-tables-proto-holo-qoder.md` 的「卡点」节）
+
+- **`champion-map/coords.tsv` 一字未动**：`git diff --quiet HEAD -- champion-map/coords.tsv` rc=0 ‖ 换行归一后与 HEAD 逐字符相同（987 行）。
+  中途链子第①步确实覆盖过它一次，事后按 git 复原（动手前它是干净的）。
+- **进图四条卡点**（对照组 `--extra=champion-map/ruler120-2026-10-10-all.tsv`、不带今晚 5 枚，同样红 ⇒ 不是我这批带进来的）：
+  ① 第②步报 `冠军枚数 30 ≠ 旧表真冠军 35（差值 -5）` —— §E600-A 之后那 5 格身份由 `relabel-lineage.mjs` 按解析/裁定补，任何 ruler 表里都没有出处，而 `attach-kin` 的对账假设"身份能从表里重算出来"；
+  ② `rebuild-coords` 把 30 档的 `ruler-all.tsv` 写死在几何输入**第一个**，而 `ruler-figs` 是**先读的先赢** ⇒ 产出是 30 档的 H；
+  ③ 六步里**没有任何一步写 `examG`** ⇒ 跑完页内那条"每行带档且全图一档"必红（现在由 `switch-gear.mjs` 补，而它不在链子里）；
+  ④ 第③步 `attach-hp --table` 缺省 `epsfull.tsv`，实测它与现面板 `Hp` 只有 **16/718** 相同（`epsfull120-2026-10-10.tsv` 22/986 ‖ `docs/artifacts/e597-out/pool-hp2.tsv` **149/149**）
+  ⇒ 面板的 Hp 是"120 批打底 + §E597 那 149 枚 tier 覆盖"两层叠出来的，按缺参跑一次就把 986 行的头号尺全改成最旧那一批，并顺手冲掉 §E597 那条裁定。
+- **打过一手补丁又撤回**（`champion-map/attach-kin.mjs` 回到 HEAD）：让上一版认定的冠军身份随点走。
+  撤的理由比留的理由硬 —— ②③④ 一条没解决时，这一手只会把**现在唯一在响的警铃**关掉，让一次静默换档过去。
+- **账本语义读错一次并改正**：`champion-map/dupes-manifest.tsv` 的 `quarantineTo` 是"**要搬去**的默认去处"，不是"当前所在"。
+  证据：把 21 枚搬回原位后重跑 `--write-manifest`，产出与仓里那份**逐字节相同**（`diff` 无输出）⇒ 账本自洽，先前"账本在撒谎"是我把它当位置表读。
+- **D191 那条腿的牙验过**：基线 `--audit` = `unregistered 0`；临时多放一份同权重副本 ⇒ `unregistered 1` 并点名那份副本；删掉回到 0。
+  但它也**可以被账本自我填充**（`--quarantine`/`--restore`/`--write-manifest` 都会先落账再动文件，而审计把整张账本的 `path` 列都算"已登记"）⇒ 记为待裁 #21。
+
+**门账**：**D8**（三处版本号：本条 = README「当前版本：v1.7.5」= index.html「程序 v1.7.5」）· **D218**（新工具读的旗标 `EPIRUS_CHROME` 走同一份登记面，`--group=meta` 16/16 绿）·
+**D191**（未登记重复 = 0，且今晚验过它有牙）· **D82**（今晚新写的是 `.tsv`，没落 `.bak` 到 `docs/artifacts/` 顶层）· **D205**（本条点到的门号 D8/D218/D191/D82/D230 全在册）· **D230**（活引用面的 `docs/**.md` 指针真在盘上）。
+**没有新增门、没有删门、没有改判据**；`js/core/**` 与两张 RULES 一字未动（规则指纹 `b98985bf` 未变）；未 promote、未碰线上槽。
+
 ## v1.7.4 — 10-13 夜班（Qoder）：champion-map **83 张表并成一个容器 + 统一接口** ‖ 图上那档**只剩红色的红绿整档删除** ‖ `EPIRUS_HOLO2PROTO` **接进训练入口并 18 臂量完**（结论：不是"教会 proto"，是"整个自盾族被激活"）
 
 ### 一句话结论

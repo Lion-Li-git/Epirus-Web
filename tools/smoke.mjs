@@ -3,28 +3,38 @@
  * 产出：/tmp 下的 screenshot-battle.png / screenshot-train.png，收集 console/异常，
  *       并断言若干关键 UI 状态。
  */
-import { spawn, spawnSync } from 'node:child_process';
-import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+/* 起 Chrome / 等 CDP 的**唯一**实现（v1.7.5 S0） */
+import { launchChrome } from './cdp-boot.mjs';
 
 /* 位置参数：剔除 --flag（如 --max-ms=N），否则会被当成端口/chrome 路径 */
 const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
 
-const CHROME = ARGV[0] || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+/* v1.7.5：这里原来写死 `C:\Program Files\Google\...` 当默认值 ⇒ 换平台/换镜像就变成"CDP 连不上"的假象。
+ *   现在不传就是"让 cdp-boot 按平台找"，找不到会报出它找过哪些路径。 */
 const PORT = Number(ARGV[1] || 9337);
+const CDP_TRIES = Number((process.argv.find(function (a) { return /^--cdp-wait=/.test(a); }) || '').split('=')[1]) || 60;
 /* v1.5.310（DS 2026-10-01 复核）：URL 从**本文件位置**现算，与 battle-test/ui-probe 同款。
  * 原来硬编码 `file:///D:/code/Epirus-Web/index.html` ⇒ 换目录、换机器、上 CI 必红。
  * 同源硬编码还有两处：tools/np-probe.mjs、tools/remote-probe.mjs（同一轮一并修）。 */
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const URL = 'file:///' + join(ROOT, 'index.html').replace(/\\/g, '/');
 
-const udd = mkdtempSync(join(tmpdir(), 'epirus-cdp-'));
-const proc = spawn(CHROME, [
-  '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-  '--remote-debugging-port=' + PORT, '--user-data-dir=' + udd, 'about:blank'
-], { stdio: 'ignore' });
+/* v1.7.5（10-13 夜班 S0）：起 Chrome 与等 CDP 搬到 `tools/cdp-boot.mjs` 那**一份**实现。
+ * 病（用户 10-13 贴的 CI 判词）：windows runner 上这条红只说 "CDP endpoint not reachable"，
+ *   而原来 `{ stdio: 'ignore' }` 把 Chrome 自己的报错整条丢了 ⇒ "没装 Chrome / 起了但死了 / 绑端口慢过预算"
+ *   三种可能在日志里长得一模一样（同一把尺本机 10.7s 绿）。现在：路径、进程死活、stderr 尾巴都要打出来。 */
+let BOOT;
+try {
+  BOOT = launchChrome({ chrome: ARGV[0], port: PORT, tries: CDP_TRIES });
+} catch (e) {
+  console.error('SMOKE 起不来 Chrome：' + e.message);
+  process.exit(e.code === 'NO_CHROME' ? 4 : 2);
+}
+const proc = BOOT.proc, udd = BOOT.udd;
 /* --- 自限时 + 收尸（不再用 shell timeout 包 node：那样 node 被杀时
  * finally 不会执行 → 探针自己起的 headless Chrome 变成孤儿。
  * 现在由脚本自己计时，到点先杀 Chrome 进程树再退出。用 --max-ms=N 调。 --- */
@@ -32,12 +42,7 @@ const MAX_MS = Number((process.argv.find(function (a) { return /^--max-ms=/.test
 let __closed = false;
 function __killTree() {
   if (__closed) return; __closed = true;
-  try {
-    if (process.platform === 'win32' && proc && proc.pid) spawnSync('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
-    else if (proc) proc.kill('SIGKILL');
-  } catch (e) { }
-  // 一并删掉自己的临时 profile 目录（否则 %TEMP% 会积成堆）
-  try { rmSync(udd, { recursive: true, force: true }); } catch (e) { }
+  BOOT.killTree();   // 进程树 + 临时 profile 都在 cdp-boot 里收（原来这两件事在本文件与各探针里各抄一份）
 }
 const __watchdog = setTimeout(function () {
   console.error('[guard] 超时 ' + MAX_MS + 'ms，自杀并收尸 Chrome');
@@ -46,19 +51,13 @@ const __watchdog = setTimeout(function () {
 
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-async function waitJson(url, tries = 60) {
-  for (let i = 0; i < tries; i++) {
-    try { const r = await fetch(url); if (r.ok) return await r.json(); } catch (e) { /* retry */ }
-    await sleep(200);
-  }
-  throw new Error('CDP endpoint not reachable: ' + url);
-}
+/* v1.7.5：这里的 `waitJson`（以及它那句不带现场的重试循环）已搬到 `tools/cdp-boot.mjs` 一份实现。 */
 
 let errors = [];
 let cdp;
 async function main() {
-  const ver = await waitJson(`http://127.0.0.1:${PORT}/json/version`);
-  const tabs = await waitJson(`http://127.0.0.1:${PORT}/json/list`);
+  const ver = await BOOT.version();
+  const tabs = await BOOT.tabs();
   const page = tabs.find(t => t.type === 'page');
   const ws = new WebSocket(page.webSocketDebuggerUrl);
   await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });

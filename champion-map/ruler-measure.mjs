@@ -13,8 +13,10 @@
  * ⚠ 只有 H 走 `exam()`（它 spawn 子进程，一枚一次）；其余探针都在本进程内跑，**不另写一份"名字→函数"映射**（同 `opp-champs` 那条纪律）。
  *
  * 可续跑：`--out` 已存在的行会跳过（30 分钟级别的作业必须能断点续）。
- * 用法：node docs/artifacts/e287-out/e287-measure.mjs [--exam=120] [--self=40] [--seat=100] [--probe=40]
+ * 用法：node champion-map/ruler-measure.mjs [--exam=120] [--self=40] [--seat=100] [--probe=40]
  *       [--set=layer|champ|all] [--ids=a,b] [--out=e287-ruler.tsv] [--limit=0]
+ *   ⚠️ 这一行原来写的是 `node docs/artifacts/e287-out/e287-measure.mjs` —— 那台是**本机副本**（`docs/artifacts/` 被 gitignore），
+ *      干净克隆里照着跑必然扑空（10-13 夜班 S2 进图时撞上，改成仓内路径；工具本体一直住在这个文件里）。
  */
 import { readdirSync, readFileSync, existsSync, appendFileSync, writeFileSync } from 'node:fs';
 import { join, dirname, isAbsolute } from 'node:path';

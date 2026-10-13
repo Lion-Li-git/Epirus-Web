@@ -100,6 +100,13 @@ export function guardWrite(o) {
   if (hit) registerAlias(o.root, { wid, canonical: hit, wantedPath: rel, tool: o.tool, note: '已登记的复制：' + (o.why || '（没写理由）') });
   mkdirSync(dirname(o.dest), { recursive: true });
   writeFileSync(o.dest, o.text, 'utf8');
+  /* ⚠ 这里原本要补一行"把刚写的 wid 塞进本进程索引"（10-13 夜班查到：`widIndex` 每进程只扫一遍 ⇒
+   *   `train-3p` 收尾写产物时看不见**本进程刚落的 band 夹具** ⇒ 判成"新权重"、不登记别名 ⇒
+   *   每跑完一批臂都留下一批"未登记的重复"，等下次 D191④ 才红）。
+   *   **没做**，因为补上缓存会让下面那条非 force 分支真的命中 ⇒ 收尾那次会"不写第二份、只登记别名"
+   *   ⇒ 臂产物文件不再存在，而 `train-3p` 的注释写明这是**设计如此**（还有 `--force-copy` 出口）
+   *   ⇒ 该改的是"臂产物算不算设计如此的复制"（走 declareCopy），那是裁定面，不是夜里单方面动共享守卫。
+   *   现状与提案记在 10-13 夜班日志的待裁 #20。 */
   return { wrote: true, canonical: hit || rel, rel, wid, note: hit ? '按 `--force-copy` 复制了一份（已登记）' : '新权重 ⇒ 写盘' };
 }
 /** 设计如此的复制（`kept/` 耐久层、band 夹具…）：写，并且**必须**登记理由。 */

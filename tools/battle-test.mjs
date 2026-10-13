@@ -22,11 +22,11 @@
  * 验收单里的命令就会把工作区弄脏（复核者实测踩到，还得 `git checkout --` 还原）。
  * 新目录已进 `.gitignore`。要看历史截图仍在 `results/`（它们不再被覆盖）。
  */
-import { spawn, spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+/* 起 Chrome / 等 CDP 的唯一实现（v1.7.5 S0） */
+import { launchChrome } from './cdp-boot.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
@@ -34,8 +34,10 @@ const flag = function (n, d) {
   const hit = process.argv.find(function (a) { return a.indexOf('--' + n + '=') === 0; });
   return hit ? hit.split('=')[1] : d;
 };
-const CHROME = ARGV[0] || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+/* v1.7.5（S0）：Chrome 路径不再写死本机位置（原来 `ARGV[0] || 'C:\\Program Files\\...'` 在别的镜像上
+ *   只会变成一句"CDP 端点不可达"，指错方向）；起 Chrome / 等 CDP 统一走 `tools/cdp-boot.mjs` 一份实现。 */
 const PORT = Number(ARGV[1] || 9341);
+const CDP_TRIES = Number((process.argv.find(a => /^--cdp-wait=/.test(a)) || '').split('=')[1]) || 60;
 const URL = 'file:///' + join(ROOT, 'index.html').replace(/\\/g, '/');
 const PLAYERS = Number(flag('players', 5));
 /* v1.5.35（第三方复核 §4-3）：本门的看门狗是**墙钟**，而长局对峙（60 回合上限）是分布的尾部
@@ -47,30 +49,23 @@ const MAX_MS = Number(flag('max-ms', 300000));
 /* v1.5.18：默认落点改到**未跟踪**目录（原先写 results/，会覆写 git 跟踪的历史截图）。 */
 const OUT = join(ROOT, flag('out', 'docs/artifacts/battle-out'));
 
-const udd = mkdtempSync(join(tmpdir(), 'epirus-battle-'));
-const proc = spawn(CHROME, [
-  '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-  '--remote-debugging-port=' + PORT, '--user-data-dir=' + udd, 'about:blank'
-], { stdio: 'ignore' });
+let BOOT;
+try {
+  BOOT = launchChrome({ chrome: ARGV[0], port: PORT, tries: CDP_TRIES });
+} catch (e) {
+  console.error('BATTLE 起不来 Chrome：' + e.message);
+  process.exit(e.code === 'NO_CHROME' ? 4 : 2);
+}
+const proc = BOOT.proc, udd = BOOT.udd;
 let __closed = false;
 function killTree() {
   if (__closed) return; __closed = true;
-  try {
-    if (process.platform === 'win32' && proc && proc.pid) spawnSync('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
-    else if (proc) proc.kill('SIGKILL');
-  } catch (e) { /* ignore */ }
-  try { rmSync(udd, { recursive: true, force: true }); } catch (e) { /* ignore */ }
+  BOOT.killTree();   // 进程树 + 临时 profile 由 cdp-boot 收（原来这段在每台探针里各抄一份）
 }
 const watchdog = setTimeout(function () { console.error('[guard] 超时，收尸'); killTree(); process.exit(3); }, MAX_MS);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function waitJson(url, tries = 60) {
-  for (let i = 0; i < tries; i++) {
-    try { const r = await fetch(url); if (r.ok) return await r.json(); } catch (e) { /* retry */ }
-    await sleep(200);
-  }
-  throw new Error('CDP 端点不可达: ' + url);
-}
+/* v1.7.5：这里的 waitJson 已并入 `tools/cdp-boot.mjs`（那份会带上"进程死了还是慢"的现场） */
 
 const errors = [];
 const checks = [];
@@ -81,7 +76,7 @@ const check = (name, cond, extra) => {
 
 async function main() {
   mkdirSync(OUT, { recursive: true });
-  const tabs = await waitJson('http://127.0.0.1:' + PORT + '/json/list');
+  const tabs = await BOOT.tabs();
   const page = tabs.find((t) => t.type === 'page');
   const ws = new WebSocket(page.webSocketDebuggerUrl);
   await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
