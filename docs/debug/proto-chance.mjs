@@ -25,18 +25,20 @@
  *   ② **只在血≤1 时**必选 proto ⇒ 先证"血≤1 且 proto 买得起"这一格碰得到（①的装配里它一次也不出现，
  *      拿①验子格等于验了个空 —— 这正是"假绿"的形状），再要求子格出手 == 子格机会。
  *
- * 用法：node docs/debug/proto-chance.mjs [--ids=T8-s114,K2 | --paths=f.js] [--games=40] [--eps=0] [--mode=multi]
+ * 用法：node docs/debug/proto-chance.mjs [--ids=T8-s114,K2 | --paths=f.js] [--games=40] [--eps=0] [--mode=multi] [--logit]
  *       node docs/debug/proto-chance.mjs --self-test
  * 退出码：0 = 跑完 ‖ 2 = 名单空 / 装载失败 / 自检不过
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sandbox, loadChamp } from '../../tools/audit-lib.mjs';
+import { sandbox, loadChamp, rejectUnknownFlags } from '../../tools/audit-lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
+rejectUnknownFlags(process.argv.slice(2), ['ids', 'paths', 'games', 'eps', 'mode', 'seed', 'self-test', 'logit'], 'proto-chance');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
+const LOGIT = process.argv.includes('--logit');
 const GAMES = Number(arg('games', 40)) || 40;
 const EPS = Number(arg('eps', 0));
 const MODE = arg('mode', 'multi');
@@ -52,9 +54,11 @@ const ok = (c) => (c ? 1 : 0);
  * 机会/归属全部按**决策次数**计（不是按局），所以每一格都同时给"次/局"与"占该格的比例"。
  * `hp1*` 是同一批计数的**子格**（该席自己血≤1 时）—— 表 B 的分层 RCT 说 proto 只在血≤1 那一格抬到 0 附近（−3.3），
  *   所以这一格是唯一可能给它翻案的场合：若这里仍是 0，那"被埋没"就真没证据。 */
-function scan(choose, G) {
+function scan(choose, G, probe) {
   const t = { dec: 0, protoOpp: 0, holoOpp: 0, bothOpp: 0, pickProto: 0, pickHolo: 0, otherInBoth: 0,
-    hp1Dec: 0, hp1ProtoOpp: 0, hp1PickProto: 0, hp1PickHolo: 0, acts: 0, games: 0 };
+    hp1Dec: 0, hp1ProtoOpp: 0, hp1PickProto: 0, hp1PickHolo: 0, acts: 0, games: 0,
+    logitDec: 0, winProto: 0, winHolo: 0, winOther: 0, sProto: 0, sHolo: 0, top1: 0, top3: 0, top10: 0,
+    rankSum: 0, sTop: 0, nEnt: 0, nSkills: 0 };
   for (let g = 0; g < G; g++) {
     const st = S.createState(MODE, { next: mulberry32(SEED + g) }, 5);
     st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
@@ -70,6 +74,7 @@ function scan(choose, G) {
       if (hOn && key === SK.HOLO) t.pickHolo++;
       if (pOn && hOn && key !== SK.PROTO && key !== SK.HOLO) t.otherInBoth++;
       if (low) { if (key === SK.PROTO) t.hp1PickProto++; if (key === SK.HOLO) t.hp1PickHolo++; }
+      if (probe) probe(t, state, pid, legal, key, pOn, hOn);
       return pick;
     };
     const ch = []; for (let i = 0; i < 5; i++) ch.push(wrapped);
@@ -78,6 +83,39 @@ function scan(choose, G) {
     for (const e of st.events) if (e.type === 'action' && e.outcome === 'ok') t.acts++;
   }
   return t;
+}
+
+/* ★ 几率对照（`--logit`）：**这张卡在被选之前，网络给它的最好条目打多少分**。
+ *   只在"proto 与 holo 同时买得起"的决策上做（同 cost 同 pri，只差 target ⇒ 干净对照），
+ *   取 `forwardCands` 的 `probs`（两级归一后的**条目**概率）里该 key 的最大值，比出谁高。
+ * ⚠ 这条额外调用会碰特征里的 `slotRand`（`policy.js:141~151` 自己写明"特征调用时机/次数变化会扰动采样流"）
+ *   ⇒ **它是一次"多测一遍"的介入**，不是零成本观察。所以这里同时报"归属率"（不加探针也能算的那份），
+ *     两张表的 proto 都必须是 0 才算互相印证；若只在探针里出现 0 而主表不出现，就是探针改变了行为。 */
+const PT = W.EpirusPolicy;
+function mkProbe(params) {
+  return function (t, state, pid, legal, key, pOn, hOn) {
+    if (!(pOn && hOn)) return;
+    const f = PT.forwardCands(state, pid, legal, params, { temp: 0.5 });
+    if (!f || !f.probs) return;
+    /* ⚠ 口径修正（第一版比错了）：`probs[i]` 是**条目**概率 = `kProb[技能] × within[条目]`，
+     *   proto 只有一个条目（self，没有目标可选），holo 有"每个别人"一份 ⇒ 比条目最大值 = 拿 proto 的全部比 holo 的一份，
+     *   **系统性抬高 proto**（错版实测给到"proto 高 61.7%"，与"proto 一次也没被选"直接矛盾 —— 矛盾本身就是抓出它的东西）。
+     *   正确做法：按 key 求和 = 技能层概率；再报 proto 在**全部技能**里排第几（排位才答得出"离被选有多远"）。 */
+    const skill = {};
+    for (let i = 0; i < legal.length; i++) {
+      const k = legal[i].key; if (!k) continue;
+      skill[k] = (skill[k] || 0) + ((f.probs && f.probs[i]) || 0);
+    }
+    const bp = skill[SK.PROTO] || 0, bh = skill[SK.HOLO] || 0;
+    const order = Object.keys(skill).sort((a, b) => skill[b] - skill[a]);
+    const rank = order.indexOf(SK.PROTO) + 1;
+    t.logitDec++; t.sProto += bp; t.sHolo += bh;
+    if (bp > bh) t.winProto++; else if (bh > bp) t.winHolo++; else t.winOther++;
+    if (rank === 1) t.top1++; else if (rank <= 3) t.top3++; else if (rank <= 10) t.top10++;
+    t.rankSum += rank; t.nSkills += order.length;
+    const top = order.length ? skill[order[0]] : 0;
+    t.sTop += top; t.nEnt += Object.keys(skill).length;
+  };
 }
 
 /* ---------- 自检：强制 chooser ⇒ 两个计数必须咬合 ---------- */
@@ -134,7 +172,7 @@ for (const e of list) {
   let params; try { params = loadChamp(W, p, ROOT); } catch (x) { console.error('  ⚠ ' + e.id + ' 读包失败：' + String(x.message || x).split('\n')[0]); continue; }
   if (!params || !params.length) { console.error('  ⚠ ' + e.id + ' 读不出参数 ⇒ 跳过'); continue; }
   const base = T.policyChooserN(params, EPS);
-  const t = scan(base, GAMES); loaded++;
+  const t = scan(base, GAMES, LOGIT ? mkProbe(params) : null); loaded++;
   const g = t.games;
   console.log(e.id.padEnd(18) + per(t.protoOpp, g) + per(t.holoOpp, g) + per(t.bothOpp, g) +
     per(t.pickProto, g) + per(t.pickHolo, g) + per(t.otherInBoth, g));
@@ -145,6 +183,21 @@ for (const e of list) {
   console.log('   └ **血≤1 子格**（表 B 说 proto 只有这一格抬到 0 附近）：该格决策 ' + t.hp1Dec + ' 次 ‖ proto 买得起 ' +
     t.hp1ProtoOpp + ' 次 ‖ 选 proto ' + t.hp1PickProto + ' ‖ 选 holo ' + t.hp1PickHolo +
     (t.hp1ProtoOpp ? '（proto 在该格的选取率 ' + (t.hp1PickProto / t.hp1ProtoOpp * 100).toFixed(1) + '%）' : ''));
+  if (LOGIT) {
+    const L = t.logitDec;
+    /* ⚠ 数量级才是这条要看的东西：概率用百分数两位/三位小数会全印成 0.000%（我第一版就这么瞎过一次），
+     *   所以走 toExponential，并把"该次决策第一名"的平均概率一起印出来当标尺。 */
+    const ex = (v) => (L ? (v / L).toExponential(2) : '-');
+    console.log('   └ **技能层几率对照**（proto×holo 同格的 ' + L + ' 次；probs 按 key **求和**，不是比条目最大值）：' +
+      '平均概率 proto ' + ex(t.sProto) + ' ‖ holo ' + ex(t.sHolo) + ' ‖ 该次**第一名** ' + ex(t.sTop) +
+      '（平均 ' + (L ? (t.nSkills / L).toFixed(1) : '-') + ' 个技能可选）');
+    console.log('      ┖ proto 的排位：第 1 名 ' + t.top1 + ' ‖ 2~3 名 ' + t.top3 + ' ‖ 4~10 名 ' + t.top10 +
+      ' ‖ 11 名以后 ' + (L - t.top1 - t.top3 - t.top10) + ' ‖ 平均第 ' + (L ? (t.rankSum / L).toFixed(1) : '-') + ' 位');
+    console.log('      ┖ "谁比谁高"（proto 高 ' + t.winProto + ' ‖ holo 高 ' + t.winHolo + ' ‖ 相等 ' + t.winOther +
+      '）—— ⚠ **两边都在 1e-6 以下时这个比较没有决策意义**（第一名才吃概率），留着只为看两卡相对次序稳不稳。');
+    console.log('      ⚠ 这一行是**加了探针的一次多测**（`forwardCands` 会碰特征里的 slotRand ⇒ 采样流被扰动），' +
+      '与上面两行（无探针）同向才算印证；若只有这一行出现 0 而主表不是，那是探针改了行为。');
+  }
 }
 if (!loaded) { console.error('⛔ 一枚都没装载成功'); process.exit(2); }
 console.log('\n⚠ 口径：机会按**决策次数**摊到局，与"出手/局"同分母才可比；');
