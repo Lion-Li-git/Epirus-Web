@@ -123,7 +123,38 @@ if (miss.length) console.error('⚠ ' + miss.length + ' 枚文件不在（前 6�
  * 为什么搬出去而不是在门里正则这一段：整改建议的规矩 1「门禁只许测行为」——
  *   搬成纯函数之后 D232 的 ⑦ 是**给三种输入比三个输出**，Windows 与 ubuntu 上判同一件事。 */
 const OUTP = resolveOutPath(OUT, ROOT, 'champion-map');
-if (!existsSync(OUTP)) writeFileSync(OUTP, COLS.join('\t') + '\n');
+/* §E602（10-13 夜班 S2c · 我自己上一轮留下的洞）：表头必须跟得上 COLS。
+ *   病：给 COLS 加了 `proto`/`shift` 两列，而这里**只在文件不存在时写表头** ⇒ 已入库的 usage.tsv 仍是 19 列表头，
+ *   新行 21 列 ⇒ 从第 9 列起"按表头读"全部串位（同族病：§E307 `repair-coords.mjs`「表头与值不是同一份清单」）。
+ *   现测：244 行 × 19 列 ‖ 2 行 × 21 列。
+ *   现在的规矩：① 表头 == COLS ⇒ 什么都不做；② 只是"加了新列"这种形状 ⇒ 迁一次表头，**旧行的新列留空**
+ *   （空 = 未测；补 0 会把"没量过"变成"量出来是 0"，那是 §E491 烧掉三枚融合粒的那族病）；
+ *   ③ 出现别的宽度 ⇒ 响亮 exit 9，混口径不许猜。 */
+(function ensureHeader(p) {
+  if (!existsSync(p)) { writeFileSync(p, COLS.join('\t') + '\n'); return; }
+  const L = readFileSync(p, 'utf8').replace(/\r\n/g, '\n').split('\n').filter(function (x) { return x.trim(); });
+  if (L[0] === COLS.join('\t')) return;
+  const oldCols = L[0].split('\t');
+  const added = COLS.filter(function (c) { return oldCols.indexOf(c) < 0; });
+  const widths = [...new Set(L.slice(1).map(function (l) { return l.split('\t').length; }))].sort(function (a, b) { return a - b; });
+  const okShape = added.length > 0 && widths.every(function (w) { return w === oldCols.length || w === COLS.length; });
+  if (!okShape) {
+    console.error('⛔ ' + p + ' 的表头与 COLS 不一致，而且不是「只是加了新列」这种能安全迁移的形状：' +
+      '\n   表头 ' + oldCols.length + ' 列 ‖ 行宽有 ' + widths.join(',') + ' ‖ 当前 COLS ' + COLS.length + ' 列 ‖ 新增列 = ' + (added.join(',') || '(无)') +
+      '\n   ⇒ 混口径不能猜：人工并表（或换一张 --out=）后再跑。');
+    process.exit(9);
+  }
+  const body = L.slice(1).map(function (l) {
+    const c = l.split('\t');
+    if (c.length === COLS.length) return l;                       // 已经是新形状，原样留
+    const o = {}; oldCols.forEach(function (k, i) { o[k] = c[i]; });
+    return COLS.map(function (k) { return (k in o) ? o[k] : ''; }).join('\t');
+  });
+  writeFileSync(p, COLS.join('\t') + '\n' + body.join('\n') + '\n');
+  console.log('⇩ 表头升级 ' + oldCols.length + ' → ' + COLS.length + ' 列（' + added.join(',') + ' 是新加的）‖ ' +
+    body.filter(function (l) { return /(^|\t)\t(\t|$)/.test(l) || l.split('\t').some(function (x) { return x === ''; }); }).length +
+    ' 行旧数据的新列留**空**（空 = 未测，不补 0）');
+})(OUTP);
 const PREV = readFileSync(OUTP, 'utf8').trim().split('\n').slice(1);
 const done = new Set(PREV.map(l => l.split('\t')[0]).filter(x => x));
 const prevEps = [...new Set(PREV.map(l => l.split('\t')[1]).filter(x => x !== undefined))].join('/');

@@ -103,6 +103,8 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
   'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
   'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
+  'EPIRUS_HOLO2PROTO',   // v1.7.4（10-13 夜班 S2a）：训练期把"送盾"改写成"给自己上原型制御"（决策期档，`policy.js` 的 `setHolo2Proto`）
+                         //   ⇒ 与 TRAIN_MODE 同一条纪律：引擎没 setter / 读回不等于下达值就 exit 7；生效值进 `meta.recipe.h2p`
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
   'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W'
 ];
@@ -471,7 +473,7 @@ function rcptEq(a, b) {
  * 与 v1.5.159 那条已删的 passiveField 接线的**关键区别**：这条带**开火计数**（跑完必须报"注了几局 / 覆盖几个受评座位"，
  * 一局未注 ⇒ `exit 8`）。§N11 的教训就是"横幅读回 0.34 ✓ 而作用点 0 局"烧掉两臂 ⇒ 横幅只能证明**变量**到位，
  * 证明不了**效果**发生。语义与三条设计约束见 `js/train/evo.js` 的 `killSeatFor` 注释。 */
-let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null, BIGT_CHAIN_REQ = 0;   // 兑现广度当选的账（写进 meta，事后能查这臂到底改没改判）
+let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null, BIGT_CHAIN_REQ = 0, H2P_REQ = null;   // 兑现广度当选的账（写进 meta，事后能查这臂到底改没改判）
 let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注入"的归因（必须在下达块之前声明 —— 那里要赋值）
 {
   const trainEnv = readTrainEnv(process.env);
@@ -762,6 +764,33 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
     const M = Rules.MODES[want];
     console.log('[train-3p] 训练模式已下达：EPIRUS_TRAIN_MODE=' + want + ' ⇒ 消费点读回 ' + T.trainMode() +
       '（建局 hp=' + (M.hp != null ? M.hp : '?') + ' · suddenDeath=' + (M.suddenDeath != null ? M.suddenDeath : '?') + '）');
+  }
+}
+
+/* ===== v1.7.4（10-13 夜班 S2a）：把 `EPIRUS_HOLO2PROTO` 从"只有评测器会下达"接到训练入口 =====
+ * 病（在册）：这一档自 v1.6.8 起**只有 `champion-map/holo2proto.mjs` 在评测期调 `setHolo2Proto`**，
+ *   训练链路一条没接 ⇒ 给它设 env 会被 `knob-guard` 报成黑键（exit 6），或更糟：接了但不读回 = **A/A 臂**
+ *   （`server/knob-guard.mjs` 头注记着本仓为这一族栽过至少 9 次）。
+ * 三条纪律照 `EPIRUS_TRAIN_MODE`：① 引擎没 `setHolo2Proto` ⇒ exit 7 ② 下达后**读回消费点**，不等于下达值就 exit 7
+ *   ③ 生效值进 `meta.recipe.h2p`，让产物自己说它是在哪一档下长大的。非法值由 `policy.js` 自己 throw（只认 off|proto|drop）。
+ * ⚠ 这是**决策期**改写：不动包、不动卡面、不动网络形状 ⇒ 出厂面四个入口（`promote-champion` ‖ `eval-5p` ‖ `style-exam` ‖ `ui.js`）
+ *   按门 **D229⑧** 一条都不许读它。所以本臂的**评估必须在 off 档做**（拿现成的尺跑新产物）——
+ *   否则"网络学会了选自盾"与"评估时被换了个动作"这两件事分不开。 */
+{
+  const wantH2P = String(process.env.EPIRUS_HOLO2PROTO || '').trim();
+  if (wantH2P !== '') {
+    if (!P || typeof P.setHolo2Proto !== 'function') {
+      console.error('[train-3p] ⛔ 传了 EPIRUS_HOLO2PROTO 但引擎没有 setHolo2Proto ⇒ 拒绝静默空转');
+      process.exit(7);
+    }
+    const gotH2P = P.setHolo2Proto(wantH2P);
+    if (gotH2P !== wantH2P) {
+      console.error('[train-3p] ⛔ setHolo2Proto(' + wantH2P + ') 读回 ' + gotH2P + '（不等于下达值）⇒ 本臂作废');
+      process.exit(7);
+    }
+    H2P_REQ = gotH2P;
+    console.log('[train-3p] 决策期档已下达：EPIRUS_HOLO2PROTO=' + wantH2P + ' ⇒ 消费点读回 ' + P.holo2Proto() +
+      '（仅本进程训练期生效 ⇒ 出厂面与评测口径逐字不变）');
   }
 }
 
@@ -1693,6 +1722,9 @@ const meta = {
     selBigT: SEL_BIGT_LOG,
     selKeepCastKeys: (SEL_KEEP > 0 ? SEL_KEEP_CAST_KEYS : null),   // v1.5.266：出手口径名单（环/蓄能不打血）
     kill: KILL_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
+    /* v1.7.4 S2a：训练期那档决策期改写也要记账 —— 只记"下达值"不够（本仓的教训：横幅证明变量、证明不了效果）。
+     * ⇒ 两个都记：下达的 `h2p` 与写 meta 时消费点仍读到的 `h2pEffective`；两者不等 = 中途被改回去，产物不可信。 */
+    h2p: H2P_REQ, h2pEffective: (typeof P.holo2Proto === 'function' ? P.holo2Proto() : null),
     counterOpps: COUNTER_OPPS.map(function (o) { return o.name; }),   // v1.5.172：这臂的训练桌上放了哪几个判据原型
     /* v1.5.325 §E237：这臂的训练桌上有没有"会攒并且真兑现"的深经济对手（默认关 ⇒ `null`，产物自证）。
      * ⚠️ 与 `counterOpps` 分开写是故意的：那三个是**行为门原型**（判"被龟壳打死"），这三个是**经济威胁**（判"攒钱值不值"）。 */
