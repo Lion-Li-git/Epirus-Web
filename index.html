@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Epirus 拍手游戏 — 2人对战</title>
+<title>Epirus 拍手游戏 — 2~5 人对战（3/4/5 血）</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.7.0 （2~5 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.7.1 （2~5 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
   </header>
 
   <nav class="tabs">
@@ -152,8 +152,10 @@
 <script src="js/ui/skill-tip.js?v=mv3md9al"></script>
 <script src="js/ui/bead-choice.js?v=mv3md9al"></script>
 <script src="js/ui/ui.js?v=mv3md9al"></script>
-<!-- v1.6.63（§E590）冠军池：744KB 的成员权重表，defer ⇒ 不挡首屏；第一次 AI 决策前必然已执行。
-     真源 champion-map/pool-members.tsv，本文件由 tools/build-pool-bundle.mjs 生成，不要手改。 -->
+<!-- v1.6.63（§E590）冠军池：成员权重表，defer ⇒ 不挡首屏；第一次 AI 决策前必然已执行。
+     真源 champion-map/pool-members.tsv，本文件由 tools/build-pool-bundle.mjs 生成，不要手改。
+     ⚠ v1.7.1 订正读数：这里原写「744KB 的成员权重表」，那是池只有 7 枚时的尺寸；现测 **2,884KB**（27 枚 = hard 9 ‖ mid 7 ‖ soft 11，
+       与 js/bundled-champion-pool.js 文件头的「源文件合计 2917 KB」同源）⇒ 改的只是这句注释，产物一字未动。 -->
 <script defer src="js/bundled-champion-pool.js?v=mv3md9al"></script>
 <!-- v1.6.66（§E599）**2P 池**：2P 原生包（用户 10-12 裁定：每局只要一个对手 ⇒ 成员不必多；种类 <5 的不要）。
      真源 champion-map/pool-members-2p.tsv，同一支 build-pool-bundle.mjs 生成（--table=/--key=EPIRUS_CHAMPION）。

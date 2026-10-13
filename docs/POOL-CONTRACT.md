@@ -48,7 +48,7 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 | `id` | 池里的名字（与 `champion-map/coords.tsv` 同口径；**必须全等 join，不许子串**） | `D234` ① |
 | `wid` | 权重指纹 = `champion-map/pack-id.mjs` 的 `widOf`（sha1(权重数组) 前 16 位） | `D234` ②（bundle 里每条目的 wid 必须与表一致） |
 | `path` | 包文件相对路径 | `D234` ①：**必须 `git ls-files` 查得到**（否则 CI 与干净克隆里这枚根本不存在） |
-| `tier` | `hard` \| `mid` \| `soft`（§E596 起**三带 7/6/7**，与难度三档一一对应；分带的键是"这一组凑到桌上的实测强度"，不是逐枚分数——理由与读数在 `docs/research/logs/2026-10-12-e596-three-tier.md`。名单在 `tools/pool-add.mjs:TIERS`，环色在 `champion-map/viewer.mjs:POOL_COL`，两处必须同时改） | 抽签按带取；页面池环按带着色 |
+| `tier` | `hard` \| `mid` \| `soft`（§E596 起**三带**，与难度三档一一对应；⚠ 这里原写「三带 7/6/7」，那是 §E596 当时的形状 —— v1.7.1 现测真源 `champion-map/pool-members.tsv` 已是 **9/7/11**（hard/mid/soft，10-12 夜名册 20→27，`pool-add --audit` 现报 `members:27, tiers:{hard:9,mid:7,soft:11}`）；分带的键是"这一组凑到桌上的实测强度"，不是逐枚分数——理由与读数在 `docs/research/logs/2026-10-12-e596-three-tier.md`。名单在 `tools/pool-add.mjs:TIERS`，环色在 `champion-map/viewer.mjs:POOL_COL`，两处必须同时改） | 抽签按带取；页面池环按带着色 |
 | `invited` | `1` = 用户点名（可越过行为门槛，但必须标警） ‖ `0` = 自动成员 | 沿用 DS 的分档门槛裁定（`docs/research/logs/2026-10-11-pool-screen-ds.md` §8） |
 | `promoteVerdict` | `pass` \| `block` \| `untested`（上槽体检：送盾/G4/G5，真源 `champion-map/promote.tsv`） | `D234` ③：自动成员不许 `block`，`untested` 必须显式印出来 |
 | `seatKill` | 人席否决的格数（`两批同号 ≥20pt`，判据在 `champion-map/seat-rule.mjs`，`seatgap.mjs`/`pool-add`/`pool-screen` 共用这一份）；**`-1` = 没量过（不是干净）**，`0` = 真量过且零格 | `D234` ③ 同上；⑧ 钉"喂进去的批表必须带基准行"；引用时必须带 §E587 的检出力脚注 |
@@ -57,14 +57,18 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 
 ## 3. 抽签语义（产品侧唯一的实现点）
 
-现在的全貌：`js/ui/ui.js:477` 每席每次决策都调 `champForCount(state.p.length)`，而它内部只认**人数**不认席位 ⇒
-所有 AI 席拿到同一颗包（缓存单例在 `js/ui/ui.js:315`）。剂量四元组 `(eps, epsK, epsMode, ramp)` 在这一处消费，
-档位表在 `js/train/bots.js:1056-1067`（`DIFF_TIERS`，`kind:'champ'` 四档 + `kind:'style'` 的"极限·读招"走脚本）。
+现在的全貌（**v1.7.1 订正本节**：下面这几行写于 v1.6.63 之前，描述的是"所有 AI 席共用一颗包 + `champForCount`"那个形状）：入口是
+`js/ui/ui.js` 的 `champForSeat(pid, state, tier)` —— 它先问 `champForCount(n)` 拿**单包基线**（`n>2` = 3P 槽 ‖ `n<=2` = 2P 槽
+`Champ.store.load()`，2P 槽空时回退 3P 并明说），再问 `poolPlan(state, tier, n)` 这**一个**判定点决定池生不生效；
+池不生效就原样返回那个单包基线（回显 `aiInfo` 问的也是同一个 `poolPlan`）。剂量四元组 `(eps, epsK, epsMode, ramp)` 在这一处消费，
+档位表在 `js/train/bots.js` 的 `DIFF_TIERS`（§E596 起是 **三档** `kind:'champ'`：简单/普通/困难 —— 原来那第五档「极限·读招」已从难度表摘下，回到下拉第二组「风格」里）。
 
 **契约**：
 
-1. `champForCount(n)` 改成 **`champForSeat(pid, n, seed)`**（唯一的签名变更点；调用侧 `js/ui/ui.js:477` 已经在逐席调用）。
-   - `n <= 2` ⇒ **完全走老路**（2P 槽），池只作用于 ≥3 人的多人桌。理由不是省事：§E286 实测 3P 包在 1v1 上是分布外的
+1. 原提案：`champForCount(n)` 改成 **`champForSeat(pid, n, seed)`** ——
+   **实际落地的是 `champForSeat(pid, state, tier)`**（`js/ui/ui.js`，v1.6.63 起）：`state` 自带 `p.length` 与 `slotSalt`、`tier` 由 `DIFF_TIERS` 那一行给
+   ⇒ 参数形状与本提案不同、语义一致；`champForCount(n)` 没有被删，它作为**单包基线**留在 `champForSeat` 里（池不生效那条路）。
+   - `n <= 2` ⇒ **在 3P 池这条路上完全走老路**（2P 槽），3P 池只作用于 ≥3 人的多人桌。⚠ **v1.6.66（§E599）起 2 人桌也有池，但是另一份**（真源 `champion-map/pool-members-2p.tsv`，见 §9）⇒ 这一句只管 3P 池，别再读成"2 人桌没有池"。理由不是省事：§E286 实测 3P 包在 1v1 上是分布外的
      （替身夺冠 27.5% vs 2P 包 15.5%，且剂量梯**反号**），把池搬到 2 人桌等于造一个假档。
    - `n >= 3` ⇒ 从 `tier` 对应的成员里抽 `n-1` 枚（AI 席数）。
 2. **确定性**：抽签只用本局已有的随机流（`state.seed` 派生），**不引入新的时间源** ⇒ 同 seed 同档 ⇒ 逐场组成逐字相同。
@@ -73,7 +77,7 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
    8 次后仍全同（只可能发生在该档成员数 == 1 时）⇒ **允许全同但必须打印降级**，不许静默。
 4. **成员数不足**（该档 < AI 席数）⇒ 允许重复（裁定②本来允许部分重复），但组成里每一枚都必须是该档成员。
 5. 剂量四元组仍按 `tier` 给（难度与池是**两个正交自由度**：难度 = 抽完包之后再叠 ε）。
-   ⚠ 这意味着"困难"不再等于"强包"，而是"强档池 + ε=0"；`lv:hunter` 仍不带包（`kind:'style'`）。
+   ⚠ 这意味着"困难"不再等于"强包"，而是"强档池 + ε=0"。（§E596 起 `lv:hunter` **已不在 `DIFF_TIERS` 里** —— 那个风格档回到下拉第二组「风格」，本句留作历史。）
 7. **成员数 == AI 席数（4）时"抽签"不产生任何阵容变化**（10-12 01:42 实测发现，证据是 `champion-map/pool-probe20-low.tsv` 的 mtime 与它那四行逐字相同的剖面 ⇒ 写进契约是因为它很容易被读成"池在工作"）：
    `compose` 是"洗牌后取前 `aiSeats` 枚，不够就循环补足"（`js/pool-draw.js`），所以 4 枚配 4 席 ⇒ **每枚每场都上场**，变的只有席位排列。
    现场证据：`probe-pool` 的弱点剖面矩阵四行**逐字相同**（同一批场、同一批成员 ⇒ 同一个人类夺冠率）。
@@ -107,7 +111,7 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 "池到底生不生效"这件事只许有**一个**判定点 —— `js/ui/ui.js` 的 `poolPlan(state, tier, n)`，
 `champForSeat`（真决策）与 `aiInfo`（席位标签回显）都问它。
 第一版 `aiInfo` 自己判了一遍且**漏掉"本机导入优先"那一支** ⇒ 任何训练过 3P 冠军的用户，五人桌实际四席用他本机那枚，
-而标签照样写 `池·mid(6 枚) 本局=…`，**看起来完全正常**。`D234` 第⑨条腿钉的就是"回显不许绕开 `poolPlan`"。
+而标签照样写 `池·mid(7 枚) 本局=…`，**看起来完全正常**。`D234` 第⑨条腿钉的就是"回显不许绕开 `poolPlan`"。
 
 ## 5. 量具侧（新尺，不动旧尺的缺省）
 
@@ -138,7 +142,7 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 
 | 腿 | 判据 | 不立这条会怎样 |
 |---|---|---|
-| ① | `pool-members.tsv` 每枚的 `path` 必须被 `git ls-files` 查到 | 池成员 170 枚里现在只有 24 枚 tracked ⇒ CI/干净克隆里"这枚存在"是假的（今晚 `D191` 的④就是这一族红过一次） |
+| ① | `pool-members.tsv` 每枚的 `path` 必须被 `git ls-files` 查到 | 池成员 170 枚里去重后当时只有 24 枚 tracked（**当天就补掉了**：v1.7.1 现测 `pool-add --audit` 报 `untracked:0`，`D234`① 因此在 CI 上真在跑）⇒ 不查就是 CI/干净克隆里"这枚存在"是假的（当晚 `D191` 的④就是这一族红过一次） |
 | ② | bundle 里每条目的 `wid` 必须与表一致 | "名字对、包不对"——`coords.tsv` 的 `SHIPPED-Ldemo` 坑换了一种形态重演 |
 | ③ | 自动成员 `promoteVerdict` 不许 `block`；`untested` 必须在判词里印出枚数 | 把 `v7beadseed-82`（送盾 17.3/局）这类重新请进池；"没测 ≠ 过关" |
 | ④ | 同 `seed` 重放两遍 ⇒ 逐场组成逐字相同 | 池读数不可复算，且"这次好"可能是抽到好签 |
@@ -156,6 +160,8 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
    **10-12 01:2x 先填到"能装配"，01:4x 又按 §3.7 补了一轮**：困难 7 ‖ 中 6 ‖ 低 7 = **20 枚**，
    每一枚都过完三道闸（卡死病 ‖ 上槽体检 ‖ 人席杀刀）且**都被人类形状席量过**（`--audit` 的 `seatUnknown:0`）。
    ⚠ 这只是"够抽签 + 阵容真会变"，不是"配比定了"。
+   **v1.7.1 补注**：上面那 20 枚（困难 7 ‖ 中 6 ‖ 低 7）在 10-12 夜长到 **27 枚（hard 9 ‖ mid 7 ‖ soft 11）**，
+   下面那一段 §E600-B 就是那之后的裁定 ⇒ 读"20 枚"这个数时请连读这一句。
    **§E600-B（10-13 凌晨）用户裁定了其中一半**：「低档**掺脚本**」⇒ 语义已落进 §3.8（`scriptMix` + `D234`⑫ 四条腿），
    `lv:sparring` 现在掺 2 席。**仍未定的剩两问**：① 掺几席才算"简单"—— 10-13 03:0x 用 `probe-pool --mixSeats=` 顶盖扫了一遍
    （`tier=soft` + `dose=table:lv:sparring` · 300 局 × 3 seed × 两模式 · 批间极差 ~5pt）：
