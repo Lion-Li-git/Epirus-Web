@@ -40,6 +40,25 @@
 · **v1.7.5**（10-14 01:5x）：仪器收成一份 + 5 枚代表量完 + 卡点取证（内容见 CHANGELOG 那条与下面「卡点」节）。
   **上面那两条 D191 的记账要补一句**：我随后把 21 枚**搬回了原位**（臂产物是下游尺表要读的文件，`--extra` 当时报"拉进 0 枚 ‖ 盘上查无 5"就是被搬走害的），
   所以"D191 绿"现在的支撑是账本而不是"文件已经不在盘上"—— 这一条的可被自我填充记在待裁 **#21**，不是我已经解决的事。
+· **S1 那把"谁在读"的尺判错了一类，02:0x 抓到并改掉**（是我上一笔 `261b8f6` 自己引入的回归，不是既有的）：
+  判据当时是"**注释里提到文件名不算读**"（那条规矩本是为了防我自己的注释把 `beh-e583.tsv` 判成有读者），
+  但 `champion-map/attach-hp.mjs:34` 写的是 `--table=` 要吃 `epsfull-tier-2026-10-12.tsv` —— **那是说明书不是 `readFileSync`**，
+  去注释之后看不见 ⇒ §E597 那两张全库 tier 重测表被当"无人认领"并进了容器，于是"照着说明敲"当场 ENOENT。
+  而它正是现面板头号尺 `Hp` 的来源层（「卡点」④ 里 149/149 逐字相同那一层）。
+  复算与处置：`git diff --diff-filter=D 3c7ada4..HEAD` 点名两张 ⇒ `reconstruct()` 与 `git show 3c7ada4:` **逐字符相同**（56,914 ‖ 7,160 字符）
+  ⇒ `git checkout 3c7ada4 --` 放回盘上，并写进 `NEVER_MERGE`（判据修正也写在码里：**凡"文件名被源码点名"的表一律留盘，注释也算**）。
+  顺带把同一把新尺对整个容器过了一遍：还有 4 张也是"注释里被点名"（`_e318-all15` ‖ `_e328-descendants` ‖ `cont1200-2026-10-10` ‖ `opphuman-arms`），
+  逐条看过那 7 处命中**没有一处是运行时默认参数**（`evaln-noise.mjs:141`、`selkeys.mjs:5/144`、`chain-scan.mjs:31` 的 `--emit=` 例子、`seatroster.mjs:12`、`opphuman-arms.mjs:27`、`train-3p.mjs:636`、`np-test.mjs:6219`）
+  ⇒ 它们不会 ENOENT，但既然新判据说"留盘"，就一起放回（`--self-test` 的模式 A 逐字节确认 6 张全部与容器等值）。
+  ⚠ 这类"注释里的指针没人管"是 **D230 只盯 `.md`** 的边界（它管活引用面的 markdown，不管 `.mjs` 注释）⇒ 记进待裁 **#17**。
+· **还有一个连带抓到的洞（同一次改动里改掉）**：`selfTest()` 原来是 **A 或 B 二选一**（`if (!onDisk.length)` 才跑 B）
+  ⇒ 我把 6 张放回盘上之后，B 那条**整批都不跑了**，77 张没有源文件的 batch 一个结构检查都没有，而输出只说"模式 A"、看不出少了一半。
+  现在永远跑 B、盘上有源文件的再跑 A，两条合成正对照也各跑各的：实测 `模式 B 结构 全 83 张 ‖ A 逐字节 6 张 ‖ 比对 89 次 ‖ B 探针响=true ‖ A 探针响=true`。
+  ⚠ 副作用要说在前面：新判据下去跑 `--report` 会印 **可并 0**（盘上剩下的入库表**全部**被按文件名点名，实测分成两类各 **63 + 5** 张：
+  63 张是 `readFileSync`/路径字符串里真出现的"代码读者"，5 张是**只在注释/说明书里点名**的（`_e318-all15` ‖ `_e328-descendants` ‖ `cont1200-2026-10-10` ‖ `opphuman-arms` ‖ `seat-cands-2026-10-09`）——
+  两把尺各有理由，后一类正是上一笔漏掉的那一类），，
+  而 `--build` 会撞上那道"少一半就拒绝写盘"的护栏（`exit 8`）—— 这不是坏，是**它本来就该拒绝**：83 张的源文件已被 `git rm`，容器是唯一副本。
+  ⇒ `--build` 只在**迁移之前**有意义；迁移之后要改口径请先 `git checkout` 取回源表，别指望它原地重算。
 · 分支已推 origin（CI 在这棵树上跑不带分组的整轮）。
 
 ## DOING（现在手上这一步）
@@ -99,8 +118,22 @@
 
 1. ~~把上面 5 枚量完 + 进图 + 重建页面 + 页内自检 + `meta` 复跑，单独一笔提交（v1.7.5）~~ —— **量完做了，进图停在"卡点"那节等裁**（01:4x）。
    数与表都在仓里（`champion-map/h2p-ruler.tsv` ‖ `h2p-epsfull.tsv` ‖ `h2p-extra.tsv`），裁定一落就能接着跑。
-2. **S0 CI browser 红**：`smoke.mjs` 在 windows runner 上连不上 `127.0.0.1:9337`。本机同一把尺 10.7s 绿 ⇒ 先判是环境侧（Chrome 没起 / 端口没绑 / 固定 sleep 不够）还是仪器侧；`gates.yml` 的注释里 DS 已怀疑"那一串固定 sleep"。改完用分支推送让 CI 自证。**尚未动。**
-3. 待裁 **#19**（新记，见下）。
+2. **S0 CI browser 红**：仪器面已做完（`tools/cdp-boot.mjs` 一份实现 ‖ smoke/battle 迁过去 ‖ 本机 `SMOKE OK`/`BATTLE OK` 各复跑两遍，改完死导入又跑了一遍）。
+   **但"分支推送让 CI 自证"这句是我写错的**（本班 NEXT 原来的第 2 条）：`.github/workflows/gates.yml:35-38` 的触发器是
+   `on: push: branches: [main] ‖ pull_request ‖ workflow_dispatch` ⇒ **推分支根本不触发**。
+   实测（02:0x）：`GET /repos/.../actions/runs?per_page=6` 最新一条是 run **173 = 3c7ada4（v1.7.3）success**，
+   本班推上去的 `261b8f6`/`6bef0e9` **没有对应 run**（`status=in_progress` 查也是空）⇒ 不是"红"，是**压根没跑**。
+   剩下两条路都要她点头，我先不动：① 开 PR（会让 CI 在 PR 上跑一遍，但那是公开可见的动作）；② `workflow_dispatch` 手工点一次分支上的 run
+   —— 本班这个会话里连的 `github` MCP（45 条）**没有 actions 面**（`mcp_list keyword=workflow` 返回 0 条），
+   她提的那个带 Action 能力的 `@GitHubDirect` 在这个会话里没接上，所以连"试着用这个调用"这一手也落不了地。
+   **判"该不该红"仍然悬着**：现在能说的是——红的那一条以后一定会自己说清是哪一种（没装 Chrome / 起了但死了 / 绑端口慢过预算），因为报错已经分岔了。
+3. 待裁本班新增 **三条**（#19 门体写死的产物路径有 7 条 untracked ‖ #20 `pack-guard` 的 stale `widIndex` ⇒ 每次训练必留未登记重复 ‖ #21 D191 那条腿可被账本自我填充，且 `--quarantine` 把下游要读的臂产物判成"零引用"），见下面「待裁新增」。
+   另有「卡点」节最后那一句等裁：**整批重算 vs 增量登记** —— 这一条不裁，今晚这 5 枚（以及以后任何一枚）都进不了图。
+   两条路任选一条都能让 CI 在这棵树上跑（本机推分支不触发，见上面第 2 条）：
+   ① **手工点一次**：Actions → workflow「**gates**」（`name: gates`）→ Run workflow → 分支选 `qoder/night-1013-tables-proto-qoder`
+      （CLI 同效：`gh workflow run gates.yml --ref qoder/night-1013-tables-proto-qoder`，本机没装 `gh` ⇒ 要在有 token 的机器上）。
+      跑出来的 smoke 那一行会**第一次**告诉我们是哪一种红（没装 Chrome / 起了但死了 / 绑端口慢过预算），因为报错已经分岔。
+   ② 开 PR（`pull_request` 触发）—— 公开可见，等她点头才动；**本班没有开 PR、没有推 main、没有打 tag**。
 4. 有余力：#16（2P 桌缺"按档位装配"的尺 —— `tier-census` 是 5 席循环）‖ #14（`kill-instinct` 判据收紧到"扣掉被挡的那部分"）。
 
 ## 待裁新增
@@ -133,3 +166,10 @@
 
 `js/core/**` ‖ 两张 RULES 文档 ‖ 两个内置包 ‖ 两个池 bundle 一字未改；规则指纹 `b98985bf` 未变；
 **没有新增门、没有删门、没有改判据**（页内自检那条是既有自检块里的腿）；未 promote、未碰线上槽；DS 的提交不代推（main 上现在也没有待推的 DS 提交）。
+
+v1.7.5 那一笔再加几条（都是本班动过又**收回去**的手，写清楚免得下次以为它们还在）：
+· `champion-map/coords.tsv` 与 HEAD 逐字符相同（`git diff --quiet HEAD -- champion-map/coords.tsv` rc=0 ‖ 换行归一后 `===` true ‖ 987 行）——链子第①步确实覆盖过一次，事后按 git 复原（动手前它是干净的）。
+· `champion-map/attach-kin.mjs` 的身份 carry-forward 补丁**已撤回**（`git checkout --`，工作树与 HEAD 相同）；理由写在「卡点」节那条 bullet 里：**它会在②③④未解时关掉唯一在响的警铃**。
+· `champion-map/pack-guard.mjs` 只留了一段注释（说明 stale `widIndex` 与"为什么不在这儿修"），**没有改行为**。
+· 没有开 PR、没有推 main、没有打 tag（她说 tag 无所谓 ⇒ 就不加）、没有点 `workflow_dispatch`（那要她的会话外权限，也不该我替她点）。
+· `dedupe-artifacts --restore` **没用**：隔离目录里躺着 293 份**别人那一班**的文件（`e234-out/K2.js` 那种被 63 枚候选引用的），整目录搬回会把它们倒进仓库 ⇒ 只按名单搬回我自己那 21 枚。

@@ -44,7 +44,20 @@ const TXT_FAMILY = 'report-print';
 /* 名单/边表类：语义不是"某枚冠军的读数" ⇒ 永不并进容器，跳过要说清为什么（不许静默） */
 export const NEVER_MERGE = {
   'pool-members.tsv': '池成员名单（契约 §2 真源 ‖ 门 D234 的输入）—— 是"谁在池里"，不是"谁考了多少分"',
-  'pool-members-2p.tsv': '同上（2P 那一份，§E599）'
+  'pool-members-2p.tsv': '同上（2P 那一份，§E599）',
+  /* ⚠ 这两张是 10-13 夜班补进来的（我上一笔 S1 把它们并掉是**错的**）：
+   *   「谁在读」那把尺判的是**代码会不会去读这个文件**，而 `attach-hp.mjs --table=<文件名>` 的用法活在**注释**里
+   *   （`champion-map/attach-hp.mjs:34` 原文点名 `epsfull-tier-2026-10-12.tsv`）⇒ 注释不算读 ⇒ 被当成无人认领并走了。
+   *   后果不是"少一张表"而是**这条命令照着说明敲就 ENOENT**，而它正是 §E597 之后"头号尺 Hp 由哪把尺量的"那一层
+   *   （现面板 986 行里那 149 行的覆盖来源，见 10-13 夜班日志「卡点」④）。
+   *   判据修正：**容器里的副本没有文件名可读** ⇒ 凡是"按文件名当 CLI 参数被点名的表"一律留在盘上、不许并。 */
+  'epsfull-tier-2026-10-12.tsv': '§E597 全库 tier 重测（seed 77000）= `attach-hp --table=` 点名的那张 ‖ 现面板 Hp 的来源层',
+  'epsfull-tier-88000c-2026-10-12.tsv': '同一批的第二只 seed（88000）‖ 同上，按文件名被点名',
+  /* 今晚这批也一样留盘：`rebuild-coords.mjs` 第③步是拿 `--extra=<X>-ruler.tsv` 的**名字**去派生"必须有 `<X>-epsfull.tsv`"
+   *   （见它自己的 HPMORE 那段），派生出来的是**文件路径**，容器里的副本没有路径可读。 */
+  'h2p-ruler.tsv': '10-13 夜班 5 枚代表的现测尺（考卷 120 档）‖ `rebuild-coords --extra=` 按文件名吃它',
+  'h2p-epsfull.tsv': '与上表配对的另一半（页面臂 `tier:lv:regular`）‖ 上面那条派生规则**要求**这个名字存在',
+  'h2p-extra.tsv': '`eps-full --extra=` 的名单（arm/productRel 两列是其表头契约）'
 };
 const famOfHeader = line => 'tsv-' + createHash('sha1').update(line).digest('hex').slice(0, 6);
 
@@ -120,12 +133,32 @@ export function scanDir(opt) {
     return s;
   })();
   const tk = trackedTables();
+  /* ⚠ 第二把尺（10-13 夜班补，我自己上一笔 S1 就是被它漏掉的表坑的）：**文件名出现在源码里就算"有人按名字读"，注释也算**。
+   *   为什么去注释那把尺不够：`attach-hp.mjs:34` 的用法行写着 `--table=` 要吃 `epsfull-tier-2026-10-12.tsv` ——
+   *   那是**说明书**而不是 `readFileSync`，去注释之后看不见 ⇒ 那张 §E597 全库重测表被我当"无人认领"并进了容器，
+   *   于是"照着说明敲"当场 ENOENT（容器里的副本**没有文件名**可读）。两个后果都要：文件留在盘上、且不再被并走。
+   *   与上面那把尺的分工：`blob`（去注释）判"代码真在读"⇒ 数据形状要等 S1-B；`named`（不去注释）判"名字被点名"⇒ 一律不并。
+   *   排除本文件自己：`NEVER_MERGE` 的键名与这里的说明都写着表名，不排除就是自己咬自己。 */
+  const named = (function () {
+    let s = '';
+    for (const r of CODE_ROOTS) {
+      const rd = join(ROOT, r); if (!existsSync(rd)) continue;
+      for (const f of walk(rd)) {
+        if (!/\.(mjs|js|html|yml)$/.test(f)) continue;
+        if (/point-data\.mjs$/.test(f)) continue;
+        let t = ''; try { t = readFileSync(f, 'utf8'); } catch (e) { continue; }
+        s += t;
+      }
+    }
+    return s;
+  })();
   const res = { merged: [], skipped: [], refused: [], ignoredOnDisk: tk.ignored, bytesIn: 0 };
   for (const n of tk.files) {
     if (n === 'point-data.tsv') continue;
     if (NEVER_MERGE[n]) { res.skipped.push({ f: n, why: NEVER_MERGE[n] }); continue; }
     const text = readFileSync(join(MAP, n), 'utf8');
-    if (blob.includes(n) && !o.includeReaders) { res.skipped.push({ f: n, why: '有代码读者 ⇒ 留给 S1-B（迁移判据现成：逐字节重建必须等）' }); continue; }
+    if (blob.includes(n) && !o.includeReaders) { res.skipped.push({ f: n, why: '有代码读者（`readFileSync`/路径字符串里真出现）⇒ 留给 S1-B（迁移判据现成：逐字节重建必须等）' }); continue; }
+    if (named.includes(n)) { res.skipped.push({ f: n, why: '只在**注释/说明书**里被按文件名点名（例：`--table=<本表名>` 的用法行）⇒ 照样留盘，容器里的副本没有文件名可读' }); continue; }
     const e = encodeFile(n, text);
     if (e.err) { res.refused.push({ f: n, why: e.err }); continue; }
     res.bytesIn += Buffer.byteLength(text, 'utf8');
@@ -228,9 +261,14 @@ export function selfTest(opt) {
  *   B 迁移后（旧表已 git rm）⇒ 结构比对：每个 batch 有表头、每行列数 == 表头列数、且没有半空 batch。
    *   ⚠ 没有 B 的话，这个工具会在"迁移成功"之后永远红 ⇒ 一条正常工作后必然失败的自检等于没有自检。 */
   const onDisk = batches().filter(b => !!fileOf(b));
-  const mode = onDisk.length ? 'A 逐字节' : 'B 结构';
+  /* ⚠ 10-13 夜班改正：原来这里是 **A 或 B 二选一**（`if (!onDisk.length)` 才跑 B），
+   *   于是把 6 张表放回盘上（`epsfull-tier-*` 那批，见上面 NEVER_MERGE）之后，B 那条**整批都不跑了** ——
+   *   77 张没有源文件的 batch 一个结构检查都没有，而输出那行只说"模式 A"，看不出少了一半。
+   *   两种模式不是互斥的：B 判"容器自己有没有坏"（对**每一张**都成立），A 判"搬回来的还是不是原样"（只对盘上有源文件的成立）。
+   *   ⇒ 现在永远跑 B，盘上有源文件的**再**跑 A。 */
+  const mode = 'B 结构 全 ' + batches().length + ' 张' + (onDisk.length ? ' ‖ A 逐字节 ' + onDisk.length + ' 张' : '');
   let n = 0;
-  if (!onDisk.length) {
+  {
     let ragged = 0;
     for (const b of batches()) {
       const rs = records().filter(r => r.batch === b);
@@ -248,7 +286,7 @@ export function selfTest(opt) {
       if (hdr.family !== 'report-print' && kind !== 'lines' && now.split(',').length > 1) ragged++;
       n++;
     }
-    if (ragged) console.log('ℹ 其中 ' + ragged + ' 张源表本来就**行宽参差**（不是这次搬坏的：模式 A 已逐字节验过）⇒ 按表头读它们要留意列数。');
+    if (ragged) console.log('ℹ 其中 ' + ragged + ' 张源表本来就**行宽参差**（不是这次搬坏的：搬之前模式 A 逐字节等值才允许 git rm ⇒ 盘上原来就是这样）⇒ 按表头读它们要留意列数。');
   }
   for (const b of onDisk) {
     const f = fileOf(b);
@@ -266,24 +304,30 @@ export function selfTest(opt) {
    *   A：改一个字符 ⇒ 逐字节重建必须不等；
    *   B：从某行里摘掉一个单元格 ⇒ 结构比对必须报"列数与表头不符"。 */
   const saved = CACHE;
-  let caught = false, probe = '';
-  if (mode === 'A 逐字节') {
-    probe = onDisk[0];
-    const t = saved.filter(r => r.batch === probe && r.kind === 'row')[0];
-    if (t) t.rest = t.rest + 'X';
-    caught = reconstruct(probe) !== readFileSync(fileOf(probe), 'utf8').replace(/\r\n/g, '\n');
-  } else {
-    probe = batches().find(b => records().some(r => r.batch === b && r.kind === 'row' && r.rest.includes('\t')));
-    const t = records().find(r => r.batch === probe && r.kind === 'row' && r.rest.includes('\t'));
+  /* 两条正对照**各跑各的**（原来是一根 `caught` 二选一 ⇒ 跑了 A 就没验 B 的牙，反之亦然） */
+  let caughtB = false, probeB = '';
+  probeB = batches().find(b => records().some(r => r.batch === b && r.kind === 'row' && r.rest.includes('\t')));
+  if (probeB) {
+    const t = records().find(r => r.batch === probeB && r.kind === 'row' && r.rest.includes('\t'));
     if (t) t.rest = t.rest.replace(/\t/, '');                       // 摘掉一格 ⇒ 这一行的宽度偏离入库时记下的形状
-    const body = records().filter(r => r.batch === probe && r.kind === 'row');
-    const was = (records().find(r => r.batch === probe && r.kind === 'meta' && /^@widths\t/.test(r.rest)) || { rest: '' }).rest.split('\t')[1];
+    const body = records().filter(r => r.batch === probeB && r.kind === 'row');
+    const was = (records().find(r => r.batch === probeB && r.kind === 'meta' && /^@widths\t/.test(r.rest)) || { rest: '' }).rest.split('\t')[1];
     const now = [...new Set(body.map(r => r.rest.split('\t').length))].sort((x, y) => x - y).join(',');
-    caught = !!was && now !== was;
+    caughtB = !!was && now !== was;
+  }
+  let caughtA = false, probeA = '';
+  if (onDisk.length) {
+    probeA = onDisk[0];
+    const t = saved.filter(r => r.batch === probeA && r.kind === 'row')[0];
+    if (t) t.rest = t.rest + 'X';
+    caughtA = reconstruct(probeA) !== readFileSync(fileOf(probeA), 'utf8').replace(/\r\n/g, '\n');
   }
   CACHE = saved;
-  if (!caught) bad.push('合成正对照没响（模式 ' + mode + '，探针打在 ' + probe + '）⇒ 这条自检是装饰');
-  if (o.list) console.log('模式 ' + mode + ' ‖ 比对 ' + n + ' 张 ‖ 合成正对照探针 = ' + probe + '（响 = ' + caught + '）');
+  if (probeB && !caughtB) bad.push('合成正对照（B 结构）没响（探针打在 ' + probeB + '）⇒ 那条结构比对是装饰');
+  if (!probeB) bad.push('合成正对照（B 结构）没有受试者（容器里没有带制表符的数据行）⇒ 等于没验');
+  if (onDisk.length && !caughtA) bad.push('合成正对照（A 逐字节）没响（探针打在 ' + probeA + '）⇒ 那条逐字节比对是装饰');
+  if (o.list) console.log('模式 ' + mode + ' ‖ 比对 ' + n + ' 次（B 每张一次 + A 每个盘上源文件一次）‖ 正对照：B 探针 ' + probeB + '（响 = ' + caughtB + '）' +
+    (onDisk.length ? ' ‖ A 探针 ' + probeA + '（响 = ' + caughtA + '）' : ' ‖ A（盘上无源文件，不适用）'));
   return bad;
 }
 

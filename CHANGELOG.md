@@ -1,3 +1,35 @@
+## v1.7.6 — 10-13 夜班续2（Qoder）：**改掉我上一笔 S1 自己引入的回归** —— "谁在读"那把尺漏判第二类读者（说明书）‖ 6 张表回盘 ‖ `selfTest()` 从"A 或 B 二选一"改成两种都跑
+
+### 一句话结论
+
+S1 那条"注释里提到文件名不算读"的判据，本来是用来防**我自己的注释**把表判成有读者；
+它同一个方向上也把 `attach-hp.mjs --table=<表名>` 这种**说明书式读者**判没了 ⇒ §E597 那两张"头号尺 Hp 的来源表"被当无人认领并进容器，
+照说明敲就是 ENOENT。**并走的副本没有文件名可读** ⇒ 这类表必须留盘。
+
+### 改了什么
+
+- `champion-map/point-data.mjs` 的 `scanDir()`：新增第二把尺 `named`（**不去注释**、排除 `point-data.mjs` 自己），
+  命中即跳过并点名理由；`NEVER_MERGE` 补 5 条（`epsfull-tier-2026-10-12.tsv` ‖ `epsfull-tier-88000c-2026-10-12.tsv` ‖ 今晚那三张 `h2p-*` ——
+  `rebuild-coords` 第③步是拿 `--extra=<X>-ruler.tsv` 的**名字**派生"必须有 `<X>-epsfull.tsv`"，派生出来的是路径，容器给不了）。
+- 6 张表按新判据放回盘上（`git checkout 3c7ada4 --`）：两张 tier 表 + `_e318-all15` ‖ `_e328-descendants` ‖ `cont1200-2026-10-10` ‖ `opphuman-arms`。
+  后四张那 7 处命中逐条看过**都不是运行时默认参数**（`evaln-noise.mjs:141`、`selkeys.mjs:5/144`、`chain-scan.mjs:31` 的 `--emit=` 例子、`seatroster.mjs:12`、`opphuman-arms.mjs:27`、`train-3p.mjs:636`、`tools/np-test.mjs:6219`）
+  ⇒ 它们不会 ENOENT；放回来是为了让"按名字点名 = 留盘"这条判据不留例外，而不是为了救一条坏命令。
+  等值证明：`reconstruct()` 对两张 tier 表与 `git show 3c7ada4:` **逐字符相同**（56,914 ‖ 7,160 字符），六张全过模式 A。
+- `selfTest()` 一个**顺手抓到的更坏的洞**：原来是 `if (!onDisk.length)` 才跑 B ⇒ 只要盘上还有任何一张源表，B 就**整批不跑**。
+  我放回 6 张之后，77 张没有源文件的 batch 一个结构检查都没有，而输出那行只说"模式 A"、看不出少了一半。
+  现在 B 永远跑（全 83 张）、A 对盘上有源文件的再跑（6 张），两条合成正对照也各跑各的。
+  实测：`模式 B 结构 全 83 张 ‖ A 逐字节 6 张 ‖ 比对 89 次 ‖ B 探针 _e318-all15.tsv（响=true）‖ A 探针（响=true）‖ ✔ 自检通过`。
+
+### 副作用（说在前面，别当成坏了）
+
+- `--report` 现在印 **可并 0**：盘上剩下的 77 张入库表**全部**被按文件名点名。
+- `--build` 会撞那道"少一半就拒绝写盘"的护栏 —— **实测**：`⛔ 拒绝写盘：新容器只有 1 行，而现有容器有 5521 行` ‖ 退出码 **8** ‖ `cmp` 证明容器**一个字节没动**。
+  ⇒ `--build` 只在**迁移之前**有意义；迁移之后要重算口径得先 `git checkout` 取回源表。这不是坏，是它本来就该拒绝（容器是唯一副本）。
+- 同类没管的边界：**D230 只盯 `.md` 的活引用指针**，`.mjs` 注释里指向表名的那类不在它范围内 ⇒ 记入待裁 #17（见 10-13 夜班日志）。
+
+**门账**：**D8**（三处版本号：本条 = README「当前版本：v1.7.6」= index.html「程序 v1.7.6」）· **D205**（本条点到的 D8/D205/D230/D191/D82 全在册）· **D191 / D82 / D230** 复跑绿 · **`--self-test` 全 83+6 通过**。
+规则指纹 `b98985bf` 未变，`js/**` 一字未动；没有新增门、没有删门、没有改判据（改的是**工具自己的输入判据**）；未 promote、未开 PR、未推 main、未打 tag。
+
 ## v1.7.5 — 10-13 夜班续（Qoder）：浏览器仪器的**起 Chrome/等 CDP 收成一份**（`tools/cdp-boot.mjs`）‖ 5 枚 holo→proto 代表**按图上的档量完**（考卷 120 ‖ 页面 `tier:lv:regular`）‖ **进图不跑**：`rebuild-coords` 对着现役面板有五条既有缺陷，逐条取证写在日志里等裁
 
 ### 一句话结论
@@ -12,6 +44,8 @@ CI 那条 browser 红（`CDP endpoint not reachable`）**这一笔不判它该�
   原来 `tools/smoke.mjs` 用 `{ stdio: 'ignore' }` ⇒ Chrome 自己的报错整条丢掉，"没装 / 起了但死了 / 绑端口慢过预算"三种可能在日志里长得一模一样。
 - `tools/smoke.mjs` ‖ `tools/battle-test.mjs` 迁到这一份实现（删掉各自的 `waitJson`、硬编码的 Windows Chrome 缺省、重复的 `killTree`；顺手删掉迁移后不再被引用的 `spawn/spawnSync/mkdtempSync/rmSync/tmpdir` 导入）。
   本机复跑：smoke `SUMMARY: SMOKE OK` ‖ battle `SUMMARY: BATTLE OK`（01:4x，改导入之后又各跑一遍）。
+- `node tools/cdp-boot.mjs --self-test` 带两格可手算的正对照（① 路径全落空 ⇒ 必须报出**找过哪些路径**的清单；② 起的进程自己退出 ⇒ 必须说"已退出"并把 stderr 尾巴带出来），
+  实测 `✔ cdp-boot 自检过（① 找不到就报路径清单 ② 进程死了会说出来且带上 stderr）` —— 上面那三句分岔不是"代码里这么写"，是**跑出来的**。
 - CI 侧只跑这两台（`.github/workflows/gates.yml` 的 browser 档 112/114 行），所以 `np-probe/remote-probe/ui-probe/docs/debug/play-mix` 那几处各自的 `waitJson` **今晚没动** —— 它们不在 CI 路径上，夜里搬它们只增加风险不增加信息。
 
 ### 研究（S2c/S2d 的量数部分）
@@ -40,8 +74,12 @@ CI 那条 browser 红（`CDP endpoint not reachable`）**这一笔不判它该�
 - **D191 那条腿的牙验过**：基线 `--audit` = `unregistered 0`；临时多放一份同权重副本 ⇒ `unregistered 1` 并点名那份副本；删掉回到 0。
   但它也**可以被账本自我填充**（`--quarantine`/`--restore`/`--write-manifest` 都会先落账再动文件，而审计把整张账本的 `path` 列都算"已登记"）⇒ 记为待裁 #21。
 
-**门账**：**D8**（三处版本号：本条 = README「当前版本：v1.7.5」= index.html「程序 v1.7.5」）· **D218**（新工具读的旗标 `EPIRUS_CHROME` 走同一份登记面，`--group=meta` 16/16 绿）·
-**D191**（未登记重复 = 0，且今晚验过它有牙）· **D82**（今晚新写的是 `.tsv`，没落 `.bak` 到 `docs/artifacts/` 顶层）· **D205**（本条点到的门号 D8/D218/D191/D82/D230 全在册）· **D230**（活引用面的 `docs/**.md` 指针真在盘上）。
+**门账**：**D8**（三处版本号：本条 = README「当前版本：v1.7.5」= index.html「程序 v1.7.5」）· **D191**（未登记重复 = 0，且今晚验过它有牙：临时多放一份同权重副本 ⇒ `unregistered` 0→1 并点名，删掉回到 0）·
+**D82**（`find docs/artifacts -maxdepth 1 -name '*.bak' -newermt '2026-10-13 02:00'` = **空** ⇒ 今晚新落的是 `.tsv`，顶层没有 24 小时内的新 `.bak`）· **D205**（本条点到的门号 D8/D218/D191/D82/D205/D230 全在册）· **D230**（活引用面的 `docs/**.md` 指针真在盘上）· `--group=meta` **16/16**（01:4x 与 01:5x 各一遍，改完死导入又跑了一遍 smoke/battle）。
+⚠ **一处记账改正**（同一晚，落笔后自查发现）：这里原来写"**D218**（新工具读的旗标 `EPIRUS_CHROME` 走同一份登记面）"—— **那句话不成立**。
+`D218` 钉的是研究工具里 `rejectUnknownFlags(...)` 的**命令行旗标**与其内联名单是否自洽（`tools/np-test.mjs:1064`），
+而 `EPIRUS_CHROME` 是 `tools/cdp-boot.mjs:30-36` 读的**环境变量**，`cdp-boot` 根本没有 `rejectUnknownFlags` 那面 ⇒ 这条与本笔**无涉**，它绿只说明"回归没退"。
+写成"走同一份登记面"是把两件不同的事并成一句 —— 与 `METHODOLOGY.md` 第 110/114 条"给了承载不了的语义"同族，只不过这次承载的是我自己那句记账。
 **没有新增门、没有删门、没有改判据**；`js/core/**` 与两张 RULES 一字未动（规则指纹 `b98985bf` 未变）；未 promote、未碰线上槽。
 
 ## v1.7.4 — 10-13 夜班（Qoder）：champion-map **83 张表并成一个容器 + 统一接口** ‖ 图上那档**只剩红色的红绿整档删除** ‖ `EPIRUS_HOLO2PROTO` **接进训练入口并 18 臂量完**（结论：不是"教会 proto"，是"整个自盾族被激活"）
