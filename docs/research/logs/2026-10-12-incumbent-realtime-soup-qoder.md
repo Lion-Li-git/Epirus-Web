@@ -473,11 +473,14 @@ soft 带 11 枚的行为剖面（现成 `coords.tsv` 读数，未新跑）：
    ‖ ★ **早班最终树（含 v1.6.68 两笔）07:32:18→07:46:20 `gate-all --np --no-browser` = np 278/278（842.1s）+ spec 52/52 ‖ exit 0**，
    补跑 07:50:21→07:51:00 `gate-all`（不带 np）= spec 52/52 · smoke OK（10.0s）· battle OK（38.1s）· map OK（3.4s）⇒ **4 道全绿**。
    ⚠ 这两遍都只算各自那半轮（`--no-browser` 缺浏览器三道 ‖ 不带 `--np` 缺整轮门禁），合起来才是"CI 阻断档 + 观察档"全绿。
+   ⚠ 那两遍认证的是 `5276c58` 那棵树；之后 `b482f1a` ‖ `0648936` 只动了**文档 + 两把 `docs/debug` 研究尺**（`js/**` 与 `tools/**` 一字未动，门不读 `docs/debug/*`）
+   ⇒ 提交后各复跑一遍 `--group=meta` **16/16** ‖ `--only=D218 ` 1/1，**没有重跑整轮**（要整轮认证请以 `5276c58` 那两遍为准，或让她点头再起一遍）。
    ⚠ 过程里我**中断过一遍更早的整轮**（07:25 起跑、07:3x 发现树又变了 ⇒ `TaskStop`）：那一遍跑在源码/文档还在动的树上，不作数，
    重跑才是认证。另外确认过 `node.exe` 只剩一个无关进程（Adobe 的），排除"两轮并发把秒数污染"这种可能。
-3. ✅ 分支 `qoder/incumbent-realtime-2026-10-12` 已 push（`git rev-list --count origin/main..HEAD` = **19 笔**，早班两笔是 `692c59f` ‖ `5276c58`；
-   `origin/main` 自本分支切出后**没有新提交**（`rev-list --left-right --count` = `0 19` ⇒ 要并 main 无冲突风险，但那是她点头后的动作）。
-   ⚠ 旧话"共 16 笔"是**我自己数的笔数**，与命令口径不一致 ⇒ 从这里起一律写命令读数。
+3. ✅ 分支 `qoder/incumbent-realtime-2026-10-12` 已 push（在 `79495cd` 时点 `git rev-list --count origin/main..HEAD` = **19 笔**；
+   R1/R2 早班的五笔是 `692c59f` ‖ `5276c58` ‖ `79495cd` ‖ `b482f1a` ‖ `0648936` ⇒ 到 `0648936` 时该数字是 **22**，**引用前请现测**，别抄这一句）。
+   `origin/main` 自本分支切出后**没有新提交**（当时 `rev-list --left-right --count` = `0 19` ⇒ 要并 main 无冲突风险，但那是她点头后的动作）。
+   ⚠ 旧话"共 16 笔"是**我自己数的笔数**，与命令口径不一致 ⇒ 从这里起一律写命令读数 + 指明在哪个 commit 测的。
    ⚠ **没开 PR**（公开可见的动作一律先出草稿等点头），而 `gates.yml` 的触发是
    `push: branches:[main]` ‖ `pull_request` ‖ `workflow_dispatch` ⇒ **这条分支上的 push 根本没触发 CI**，远程那遍不存在。
    要让 CI 覆盖这一支：她点头后我开 PR，或她那边 `workflow_dispatch` 选这个 ref 跑一遍。
