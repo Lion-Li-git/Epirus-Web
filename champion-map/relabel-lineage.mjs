@@ -60,8 +60,19 @@ for (let i = 1; i < LINES.length; i++) {
   const id = c[iId], lin = c[iLin] || '';
   if (!id) continue;
   const onSlot = SID.isOnSlot(id);
+  /* §E605-A：补身份的条件从"这一格是空的"放宽成"**这一格不是身份类**"。
+   *   为什么必须放宽：链子第①步从现测尺表重画，那些表的 `lineage` 列写的是当年那套**非身份**分类（`续训现役` ‖ `融合（权重平均）` …），
+   *   而折行之后拿着 `历代上槽` 的那一行别名（`SHIPPED-Ldemo`）已经被第①步按面板的 aliasIds 拦掉 ⇒
+   *   `Ldemo`/`T8-s114` 这两枚"解析明明认它们住过槽"的行，格子里剩的是 `续训现役` ⇒ 按旧条件补不进去，
+   *   紧接着 attach-kin 按白名单把 `续训现役` 清成空 —— 身份就这么在链子里蒸发（实测产物比在册少 5 枚）。
+   *   放宽只动"非身份文本"，白名单里那三类**一概不覆盖**：`历代上槽`/`旧槽位冠军` 的改动仍然一条也没有。 */
+  const NOT_IDENTITY = v => !v || (v !== '历代上槽' && v !== '旧槽位冠军' && v !== '当前线上');
   if (lin === '当前线上') to1.push({ i: i, id: id, c: c, to: '历代上槽' });
-  else if (!lin && NAMED[id] && SID.canon(id) === id && !groupHasLabel(id)) {
+  else if (NOT_IDENTITY(lin) && (NAMED[id] || SID.isOnSlot(id)) && SID.canon(id) === id && !groupHasLabel(id)) {
+    /* §E605-A：判"解析点过它"不能只看 `NAMED`（那是按 timeline 的 panelId/metaArm 与 SLOT-wid8 三个**字面名**建的表），
+     *   还有一条解析通道是"段里的 wid 反查到面板行"（`ID_OF_WID`）—— 走那条通道认出来的行不会进 NAMED。
+     *   实测：`v7a-35` 解析认它住过槽（onSlot 命中），但 NAMED 里没有这个名字 ⇒ 补不上身份 ⇒ 链子第⑨步差 1 枚（34 ≠ 35）。
+     *   权威定义本来就只有一处：`slot-identity` 说它上过槽。所以这里改成 `NAMED[id] || isOnSlot(id)`。 */
     /* 现役与"声明表点过的那几枚"是这次要补的（用户裁定②点名 T8-s114）；
      *   其余的**也是真的住过槽**（旧 `CHAMPS` 手抄名单当年就漏了它们），但补进去会**改动图上的冠军序列**
      *   （多几枚白描边大点 + 家族行）—— 那一刀留给用户裁，这台只把名单如实印出来。 */

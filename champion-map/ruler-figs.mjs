@@ -71,6 +71,25 @@ for (const s of srcs) for (const r of s.rows) {
 }
 const raw = []; const noGear = [];
 for (const v of BYID.values()) { raw.push(v.o); if (!v.gear) noGear.push(v.o.id); }
+/* ===== §E605-A（用户 10-14 裁 A：attach-kin 挪到折行之后）配套的一半：重画**现役面板**时不许把副名复活 =====
+ *   病（实测）：现测尺表全是按折行前的名字记的（`ruler120-…-all.tsv` 986 行里 192 行是副名），
+ *   所以第①步一起手就产出 986 行 ⇒ 同一份权重又有两个点，而且**几何与投影是在这批重复点上算的** ——
+ *   那正是要避免的事：折行的理由就是"同权重只算一枚才可比"，布局却按 986 枚算，等于换了主语。
+ *   只在重画现役图时生效（`--coords=` 指着 champion-map/coords.tsv）：读它**还没被覆写之前**的 `aliasIds` 列当拦名单。 */
+let nAliasSkipped = 0; const aliasSkipped = [];
+{ const live = arg('coords', '');
+  if (live && /coords\.tsv$/.test(live)) {
+    const p = live.indexOf('/') < 0 ? join(HERE, live) : (existsSync(join(ROOT, live)) ? join(ROOT, live) : join(HERE, live));
+    if (existsSync(p)) {
+      const t = readFileSync(p, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), h = t[0].split('\t');
+      const iA = h.indexOf('aliasIds');
+      if (iA >= 0) { const DROP = new Set();
+        for (const l of t.slice(1)) { const c = l.split('\t'); for (const a of String(c[iA] || '').trim().split(/\s+/).filter(Boolean)) DROP.add(a); }
+        const keep = [];
+        for (const o of raw) { if (DROP.has(o.id)) { nAliasSkipped++; if (aliasSkipped.length < 8) aliasSkipped.push(o.id); } else keep.push(o); }
+        if (nAliasSkipped) { raw.length = 0; for (const o of keep) raw.push(o); }
+      } } } }
+if (nAliasSkipped) console.log('§E605-A 拦掉副名 ' + nAliasSkipped + ' 行（面板 aliasIds 在册 ‖ 前 8：' + aliasSkipped.join(' ') + '）⇒ 收 ' + raw.length + ' 枚，几何与投影都按"一行=一份权重"算');
 console.log('§E605 单档检查：档 = ' + (GEAR === null ? '（这批表**都没有** examG 列 ⇒ 按旧行为先来先赢，混档风险自负）' : GEAR + ' 局/组合（来自 ' + gearSrc + '）') +
   ' ‖ 收 ' + raw.length + ' 枚 ‖ 其中只能取自"未声明档"的表 ' + noGear.length + ' 枚' + (noGear.length ? '（前 8：' + noGear.slice(0, 8).join(' ') + '）' : '') +
   (sameGear.length ? ' ‖ 同 id 多表重复 ' + sameGear.length + ' 枚' : ''));
@@ -79,7 +98,11 @@ const COORD = ['dmg', 'heavy', 'holo', 'zeroRate', 'drawRate', 'rounds', 'distin
   'waste', 'noThreatStance', 'fieldAAtk', 'fieldARounds'];
 const pts = raw.filter(r => isFinite(num(r.H)) && isFinite(num(r.S)) && COORD.every(c => isFinite(num(r[c]))));
 const N = pts.length;
-const F = pts.map(p => num(p.H) / 100 + T * num(p.S));
+/* §E605-A：F 必须从**写进表里的那两个数**算（H 两位小数 ‖ S 四位小数），不是从内存里的全精度浮点 ——
+ *   在册那一列的口径是 `switch-gear.mjs:108` 的 `H/100 + 0.1·S`（读的是表里的字符串），
+ *   两边都写 `toFixed(6)` 却在第 6 位小数上差 3e-6（实测 712/794 行）⇒ "F 是 H 与 S 的函数"这句话在表里不成立。
+ *   改成同一个来源之后：F ‖ rank ‖ 落盘那一列三者由同一组数算出来，重跑链子不再留下这种假差异。 */
+const F = pts.map(p => Number(num(p.H).toFixed(2)) / 100 + T * Number(num(p.S).toFixed(4)));
 const order = F.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
 const rank = new Array(N); order.forEach((e, k) => { rank[e[1]] = k + 1; });
 console.log('现测尺 ' + N + ' 枚（历代上槽冠军 ' + pts.filter(p => p.lineage).length + ' 枚）‖ T=' + T);
@@ -342,7 +365,9 @@ const COORDS_OUT = arg('coords', '') ? (arg('coords').indexOf('/') < 0 ? join(HE
 writeFileSync(COORDS_OUT,
   ['id', 'lineage', 'seed', 'H', 'S', 'Geff', 'F', 'rank', 'x2', 'y2', 'x3', 'y3', 'z3'].concat(BEH)
     .join('\t') + '\n' +
-  pts.map((p, i) => [p.id, p.lineage || '', p.seed || '', num(p.H).toFixed(2), num(p.S).toFixed(4), num(p.Geff).toFixed(3), F[i].toFixed(5), rank[i],
+  /* §E605-A：`F` 写 6 位小数 —— 与在册面板那一批（`switch-gear` 落的 `toFixed(6)`）同写法。
+   *   5 位会把 `0.511150` 变成 `0.51115`：数值一字不差，但"重跑链子该复现这张表"这件事会被这种尾零差异弄成 794 行全红。 */
+  pts.map((p, i) => [p.id, p.lineage || '', p.seed || '', num(p.H).toFixed(2), num(p.S).toFixed(4), num(p.Geff).toFixed(3), F[i].toFixed(6), rank[i],
     P2[i][0].toFixed(5), P2[i][1].toFixed(5), P3[i][0].toFixed(5), P3[i][1].toFixed(5), P3[i][2].toFixed(5)].concat(
     BEH.map(c => num(p[c]).toFixed(4))).join('\t')).join('\n') + '\n');
 console.log('已写 e287-ladder.svg ‖ e287-map2.svg ‖ e287-map3.svg ‖ e287-figs.html ‖ e287-coords.tsv');

@@ -8,12 +8,16 @@
  *        下游按表头查列只看得见第一对 ⇒ 现在 attach-hp 自己幂等了，这台再兜一层"列名不许重复"。
  *     ② attach-path 的 --ruler 不给全 ⇒ 没覆盖到的枚退回"顶层 <id>.bak"猜路径（§E330 那个同名旧拷贝的病）。
  *
- * 顺序（= 现役 coords.tsv 的列序，逐列核过）：
- *   1) ruler-figs      画几何（26 列：id…z3 + 13 个行为列）
- *   2) attach-kin      搬上一版的当选键四列 + 打 kin，并把"续训现役"从 lineage 里清掉
- *   3) attach-hp       头号尺 Hp 与 Δε（--more= 把子代批与旧槽位冠军批都并进来）
- *   4) attach-path     path 列（--ruler= 必须覆盖**全部**枚，否则就是猜）
- *   5) attach-dup      dupN/dupOf（按权重身份去重，要吃 path 列）
+ * 顺序（§E605-A 之后共九步；列序 = 产物列序，`Sc/Scd/Scs/Sch/kin` 五列从此落在 `aliasN/aliasIds` 之后）：
+ *   1) ruler-figs       画几何（26 列：id…z3 + 13 个行为列 ‖ §E605：声明了 examG 的行优先 ‖ §E605-A：面板在册的副名不许复活）
+ *   2) attach-hp        头号尺 Hp 与 Δε（§E605：来源表显式点名 --table=，缺省 epsfull.tsv 会把整批换档）
+ *   3) attach-path      path 列（--ruler= 必须覆盖**全部**枚，否则就是猜 ‖ §E605-A：转发第①步那批输入）
+ *   4) attach-dup       dupN/dupOf（按权重身份去重，要吃 path 列）
+ *   5) proj-tsne        重算投影 xt/yt/xt3/yt3/zt3（§E489：少了它页面会逐行静默退回旧力导向）
+ *   6) 盖档 examG        §E605：链子里原来没有任何一步写这列 ⇒ 页内"全图只能一个档"那条会红，只能人手补跑 switch-gear
+ *   7) fold-coords      折行：一行 = 一份权重（§E605 新第⑦步；尺表按折行前的名字记着，不折就会把 192 个副名复活）
+ *   8) relabel-lineage  身份从解析来（§E600-A 的权威定义；以前是人手补的一手）
+ *   9) attach-kin       搬上一版当选键四列 + 打 kin + 冠军对账（**挪到折行之后** —— 用户 10-14 裁 A）
  *
  * 用法：node champion-map/rebuild-coords.mjs [--extra=champion-map/e370-ruler.tsv]
  *                                            [--from=<上一版 coords.tsv>] [--dry]
@@ -70,15 +74,7 @@ run('ruler-figs.mjs', ['--ruler=' + ruler, '--coords=champion-map/coords.tsv'], 
 for (const f of ['e287-ladder.svg', 'e287-map2.svg', 'e287-map3.svg', 'e287-figs.html']) {
   const p = join(HERE, f); if (ex(p)) { mkdirSync(join(ROOT, 'docs/artifacts/e375-out'), { recursive: true });
     renameSync(p, join(ROOT, 'docs/artifacts/e375-out/rc-static-' + f)); } }
-/* ===== §E605 第②a 步：`relabel-lineage` —— 身份**从解析来**，不在链子里就等于每跑一遍就退回旧分类 =====
- *   病（本链这次实测复现）：第①步是从现测尺表重画面板的，而那些尺表的 `lineage` 列写的是**当年那套分类**
- *   （`续训现役 252 枚 ‖ 当前线上 1 枚`）⇒ 直接进 attach-kin 的对账就是 `冠军枚数 30 ≠ 35`（差值 -5）。
- *   这个仓库 10-12 之后对"上过槽"这句话的权威定义只有一处：`slot-identity.mjs`（timeline 逐提交解出的权重 + history 的声明行），
- *   而把面板那一列改成"解析给的那批"的工具就是 `relabel-lineage.mjs` —— 它以前是**人手跑的**（在册面板就是它的产物），
- *   链子里没有它 ⇒ 每次重画都得人再补一手（METHODOLOGY 106 同族：链子必须自带它依赖的那一步）。 */
-run('relabel-lineage.mjs', [], '②a relabel-lineage 身份从解析来');
-run('attach-kin.mjs', ['--from=' + FROM], '②b attach-kin 搬当选键 + 打 kin');
-/* ===== §E491 第③步的 --more 原来写死两张表 ⇒ 新加的枚**天生没有 Hp/De** =====
+/* ===== §E491 第②步的 --more 原来写死两张表 ⇒ 新加的枚**天生没有 Hp/De** =====
  *   `Hp` 是图上那把头号尺（F = Hp/100 + T·S），而查看器把空 Hp 当 0 算 ⇒
  *   本轮三枚融合粒在图上排到 728/732，用户拿截图问"这个点都排到倒数去了，显然不是噪声"。
  *   实测补测：它们的线上口径 Hp = 51.8 / 52.8 / 53.0，而现役是 47.3 ⇒ **在现役之上 4.5~5.7pt**，
@@ -103,21 +99,31 @@ const HPMORE = ['e328-epsfull.tsv'];
     '\n       ⇒ 这些枚会**没有 Hp**，而 Hp 是图上头号尺（空值在查看器里当 0 算 ⇒ 名次直接掉到倒数）。' +
     '\n         补测：node champion-map/eps-full.mjs --extra=<那个 extra 表> --onlyExtra --out=<上面那张表名>' +
     '\n         或者用 --hp=<已有那张线上口径表> 直接点名（本台的 Hp 来源缺省 = ' + HPBASE + '）。'); process.exit(2); } }
-run('attach-hp.mjs', ['--table=' + HPBASE, '--more=' + HPMORE.join(',')], '③ attach-hp 头号尺（来源 ' + HPBASE + ' ‖ 补 ' + HPMORE.join(' ‖ ') + '）');
+/* §E605-A（用户 10-14 裁 A）：`relabel-lineage` 与 `attach-kin` **不在这里跑了**，挪到折行之后（第⑧⑨步）。
+ *   理由实测过：attach-kin 那条对账问的是"冠军枚数对不对"，而这个仓库里身份的权威定义只有一处（`slot-identity` 的解析），
+ *   在**还没折完、尺表按旧名字记着**的表上做这件事永远会红 —— 昨天报 -5、插入 relabel 之后报 -4，两次都卡在同一个次序问题上。
+ *   折行之后一行=一份权重，身份从解析来、对账在同一张表上做，这两步才谈得上"对得上"。
+ *   代价（已如实告诉用户并得到点头）：`Sc/Scd/Scs/Sch/kin` 五列从此落在 `aliasN/aliasIds` 之后 ⇒
+ *   面板的**列序**与 git 里那一版不同（读者全部按列名 indexOf 取数，语义不变；对照复现的比法因此改成"按列名逐列比"，见本文件收尾那条）。 */
+run('attach-hp.mjs', ['--table=' + HPBASE, '--more=' + HPMORE.join(',')], '② attach-hp 头号尺（来源 ' + HPBASE + ' ‖ 补 ' + HPMORE.join(' ‖ ') + '）');
 /* §E488：这一步原来把 `e370-ruler.tsv` **写死**在 --ruler 里，而不是转发 `--extra=` 的那一串
  *   ⇒ 正是本文件头注自己列的第 ② 条病（"attach-path 的 --ruler 不给全 ⇒ 没覆盖到的枚退回顶层猜路径"）：
  *   本轮加三枚融合粒时，它们的 path 变成"按 <id>.bak 猜"，attach-path 自己的守卫当场拒绝（那是对的）。
  *   改成从 EXTRA 派生（attach-path 按本目录解析，所以取 basename）。*/
-run('attach-path.mjs', ['--ruler=ruler-all.tsv' + (EXTRA ? ',' + String(EXTRA).split(',').map(s => s.replace(/^.*[\\/]/, '')).join(',') : '')], '④ attach-path 真用的文件');
-run('attach-dup.mjs', [], '⑤ attach-dup 权重身份去重');
+/* §E605-A：这里原来写死 `--ruler=ruler-all.tsv`（+ EXTRA 的 basename）⇒ 换档/折行之后覆盖不全，
+ *   没覆盖到的枚会退回"顶层 <id>.bak 猜路径"，而 attach-path 自己的守卫会当场拒绝（那是对的，但红的是链子的缺省，不是产品）。
+ *   改成把第①步那批几何输入**原样**转发（取 basename，attach-path 按 champion-map/ 解析）。 */
+run('attach-path.mjs', ['--ruler=' + String(RULER0).split(',').map(s => s.trim()).filter(Boolean).map(s => s.replace(/^.*[\\/]/, '')).concat(
+  String(EXTRA).split(',').map(s => s.trim()).filter(Boolean).map(s => s.replace(/^.*[\\/]/, ''))).join(',')], '③ attach-path 真用的文件');
+run('attach-dup.mjs', [], '④ attach-dup 权重身份去重');
 /* §E489 第六步是**必需的**，原来链子里没有它 ⇒ 谁跑一遍重建，页面就**静默退回旧投影**：
  *   ① ruler-figs 只落 36 列（xt/yt/xt3/yt3/zt3 不在它名单里），投影是 proj-tsne 事后**追加**的；
  *   viewer.mjs 那边走的是 `(PROJTSNE && r.xt) ? r.xt : r.x2` 这种**逐行**退路 ⇒ 列整列没了它也不喊，
  *   只是把 920 枚全画回力导向那一版（kNN@10 保住率 0.52 → 0.08）。
  *   实测踩过：本轮加 3 枚融合粒跑完五步，用户当场看出"投影变回很早的版本、区分度很低"。 */
-run('proj-tsne.mjs', [], '⑥ proj-tsne 重算投影（xt/yt/xt3/yt3/zt3）');
+run('proj-tsne.mjs', [], '⑤ proj-tsne 重算投影（xt/yt/xt3/yt3/zt3）');
 
-/* ===== §E605 第⑦步：盖档 `examG`（原来链子里**没有任何一步**写这一列）=====
+/* ===== §E605 第⑥步：盖档 `examG`（原来链子里**没有任何一步**写这一列）=====
  *   病：页内有一条"每一行都必须带考卷档且全图只能一个档"（`viewer.mjs` 的 §E569 那条腿），而链子的六步里没有产出者
  *   —— `grep -l examG champion-map/*.mjs` 只有 eps-full / eps2seed / switch-gear / k8measure / ruler-measure 命中 ⇒
  *   跑完链子那一列整列空 ⇒ 页检当场红，而且只能靠人再手跑一次 `switch-gear` 遮过去（METHODOLOGY 106：链子必须自带它依赖的那一步）。
@@ -129,30 +135,42 @@ run('proj-tsne.mjs', [], '⑥ proj-tsne 重算投影（xt/yt/xt3/yt3/zt3）');
     const p = s.indexOf('/') < 0 ? join(HERE, s) : (existsSync(join(ROOT, s)) ? join(ROOT, s) : join(HERE, s));
     if (!existsSync(p)) continue; const T = rd(p), th = T[0].split('\t'); const g = th.indexOf('examG');
     if (g < 0) continue; for (const l of T.slice(1)) { const c = l.split('\t'); if (c[g] && c[g].trim()) gears.add(c[g].trim()); } }
-  if (gears.size === 0) { console.error('⛔ 第⑦步盖不了档：这批几何输入**没有任何一张**声明 examG ⇒ 全图无从判断是哪种档（宁可不写，不许凭缺省猜一个数盖上去）。'); process.exit(2); }
-  if (gears.size > 1) { console.error('⛔ 第⑦步盖不了档：输入里出现 ' + gears.size + ' 种档（' + [...gears].join(' ‖ ') + '）⇒ 单档规矩破了'); process.exit(2); }
+  if (gears.size === 0) { console.error('⛔ 第⑥步盖不了档：这批几何输入**没有任何一张**声明 examG ⇒ 全图无从判断是哪种档（宁可不写，不许凭缺省猜一个数盖上去）。'); process.exit(2); }
+  if (gears.size > 1) { console.error('⛔ 第⑥步盖不了档：输入里出现 ' + gears.size + ' 种档（' + [...gears].join(' ‖ ') + '）⇒ 单档规矩破了'); process.exit(2); }
   const GEARV = [...gears][0];
   const iG0 = h0.indexOf('examG');
   const body0 = L0.slice(1).map(l => l.split('\t'));
   if (iG0 >= 0) {
     const bad = body0.filter(r => String(r[iG0] || '').trim() !== GEARV).map(r => r[0]);
-    if (bad.length) { console.error('⛔ 第⑦步：表里已有 examG 列，但 ' + bad.length + ' 行不是 ' + GEARV + '（前 8：' + bad.slice(0, 8).join(' ') + '）⇒ 不是单档，停'); process.exit(2); }
-    console.log('⑦ 盖档：已有 examG 列且 ' + body0.length + ' 行全是 ' + GEARV + ' ⇒ 不改一个字节');
+    if (bad.length) { console.error('⛔ 第⑥步：表里已有 examG 列，但 ' + bad.length + ' 行不是 ' + GEARV + '（前 8：' + bad.slice(0, 8).join(' ') + '）⇒ 不是单档，停'); process.exit(2); }
+    console.log('⑥ 盖档：已有 examG 列且 ' + body0.length + ' 行全是 ' + GEARV + ' ⇒ 不改一个字节');
   } else {
     const eol = readFileSync(CO, 'utf8').indexOf('\r\n') >= 0 ? '\r\n' : '\n';
     const out = [h0.concat(['examG']).join('\t')].concat(body0.map(r => r.concat([GEARV]).join('\t')));
     writeFileSync(CO, out.join(eol) + eol, 'utf8');
-    console.log('⑦ 盖档 ✅ 新列 examG = ' + GEARV + ' 局/组合，写在第 ' + (h0.length + 1) + ' 列（' + body0.length + ' 行无一为空）');
+    console.log('⑥ 盖档 ✅ 新列 examG = ' + GEARV + ' 局/组合，写在第 ' + (h0.length + 1) + ' 列（' + body0.length + ' 行无一为空）');
   } }
 
-/* ===== §E605 第⑧步：折行（一行 = 一份权重）=====
+/* ===== §E605 第⑦步：折行（一行 = 一份权重）=====
  *   为什么必须进链子：喂进来的现测尺（`ruler-all` ‖ `ruler120-…`）全是**按折行前的名字**记的，
  *   所以第①步一起手就把 986 个名字全复活了（实测：产物 986 行，其中 192 行是已被折掉的副名）。
  *   不折就往下走 = 同一份权重画两个点，而这正是用户 10-14 裁掉的那件事（"同权重只算一枚"）。
  *   `--i-resolved-consumers` 在这里是**诚实的**：消费者（slot-identity ‖ viewer ‖ pool-sync ‖ ruler-measure ‖ usage-probe）本班已改成认副名指针。
  *   主名判据加了一条稳定性优先（见 fold-coords 的 §E605 那段）：已经在册的主名**不许**被重排换掉，否则每重跑一次图就换一批名字。 */
 { const e3 = execFileSync('node', [join(HERE, 'fold-coords.mjs'), '--i-resolved-consumers'], { cwd: ROOT, maxBuffer: 1 << 26, encoding: 'utf8' });
-  console.log('—— ⑧ fold-coords 折行 ——\n' + e3.trim().split('\n').slice(-4).join('\n')); }
+  console.log('—— ⑦ fold-coords 折行 ——\n' + e3.trim().split('\n').slice(-4).join('\n')); }
+
+/* ===== §E605-A 第⑧步：`relabel-lineage` —— 身份**从解析来**，现在跑在折好的那张表上 =====
+ *   为什么必须在折行之后：这一步的输入是"面板上的行"，而第①步复活的 192 个副名也是行 ——
+ *   在折之前的表上做身份，同一份权重会有两行各自被解析点名（实测产物里 `SHIPPED-Ldemo` 拿到身份而 `Ldemo` 没有）。
+ *   这个仓库对"上过槽"的权威定义只有一处：`slot-identity.mjs`（timeline 逐提交解出的权重 + history 的声明行）。
+ *   它以前是**人手跑的**（在册面板就是它的产物），链子里没有 ⇒ 每次重画都要人再补一手（METHODOLOGY 106）。 */
+run('relabel-lineage.mjs', ['--all-true'], '⑧ relabel-lineage 身份从解析来（折行之后）');
+
+/* ===== §E605-A 第⑨步：`attach-kin` —— 搬上一版的当选键四列 + 打 kin + 冠军对账 =====
+ *   这条对账问的是"带身份的行数 = 旧表 + 本轮新增"，它**只有在一行=一份权重的表上**才谈得上对得上，所以跟着 A 挪到这里。
+ *   上一版（第②步位置）的实测：不挪 ⇒ 差值 -5；只插入 relabel 仍 -4（`SHIPPED-Ldemo ‖ eco-34-v7 ‖ v7a-35 ‖ v7n1-31 ‖ T8-s114` 五枚点名）。 */
+run('attach-kin.mjs', ['--from=' + FROM], '⑨ attach-kin 搬当选键 + 打 kin + 冠军对账');
 
 /* 收尾核验：列名不许重复、每行宽度一致、lineage/kin 两列的类必须还是那几类 */
 const L = rd(CO), h = L[0].split('\t'), rows = L.slice(1).map(l => l.split('\t'));
@@ -187,7 +205,7 @@ console.log('身份分布 ' + Object.entries(cls).map(([k, v]) => k + ' ' + v).j
 /* §E605 第④条的收尾账：`examG` 必须**在册、齐全、只有一个值** —— 这条以前没人钉，
  *   所以链子跑完把这一列整列弄丢时，只有等页面自测（读的是烘好的图）才响，晚了两步。 */
 { const iG = h.indexOf('examG');
-  if (iG < 0) { console.error('⛔ 产物里没有 examG 列 ⇒ 第⑦步没跑成（页内那条"全图只能一个档"会红，而这里先停）'); process.exit(2); }
+  if (iG < 0) { console.error('⛔ 产物里没有 examG 列 ⇒ 第⑥步没跑成（页内那条"全图只能一个档"会红，而这里先停）'); process.exit(2); }
   const vals = {}, blanks = [];
   for (const r of rows) { const v = String(r[iG] || '').trim(); if (!v) { blanks.push(r[0]); continue; } vals[v] = (vals[v] || 0) + 1; }
   if (blanks.length) { console.error('⛔ examG 空 ' + blanks.length + ' 行（前 8：' + blanks.slice(0, 8).join(' ') + '）⇒ 有枚没盖到档'); process.exit(2); }

@@ -110,19 +110,40 @@ const refOf = id => (CACHE_R[id] !== undefined ? CACHE_R[id] : (CACHE_R[id] = re
 const picked = [], warn = [], clash = [], carried = [];
 const DIFF = new Map();                       // 副名 id → 与主名不同、且副名表那五列没记到的测量列
 const RECD = { H: 1, S: 1, seed: 1, examG: 1, lineage: 1 };   // 副名表已单列记录的，不在 aliasDiff 里重复
+/* HEAD 那一版面板：既给"主名不许被重排换掉"当锚，也给副名指针账当结转来源（两件事都要它，所以一次读出来）。 */
+const HEADINFO = (function () {
+  try {
+    const txt = execSync('git show HEAD:champion-map/coords.tsv', { cwd: ROOT, maxBuffer: 1 << 26, encoding: 'utf8' });
+    const L = txt.replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
+    const hh = Object.fromEntries(L[0].split('\t').map((c, i) => [c, i]));
+    const main = new Set(), prevAlias = {};
+    for (const l of L.slice(1)) { const c = l.split('\t'); if (!c[hh.id]) continue;
+      main.add(c[hh.id]); prevAlias[c[hh.id]] = String(c[hh.aliasIds] || '').trim().split(/\s+/).filter(Boolean); }
+    return { main, prevAlias };
+  } catch (e) { console.log('⚠ 读不到 HEAD 的 coords.tsv（干净克隆或仓外跑）⇒ 主名稳定性与副名结转这两层都退回原样'); return { main: new Set(), prevAlias: {}, prevRows: {} }; }
+})();
+/* 副名表里那些**结转下来的**行（读数/宽列差异都在里面）：从 HEAD 那张账本原样搬，不改一个字节。
+ *   不搬的话：面板上指针还在、账本里那一行没了 ⇒ 下次谁问"这个旧名字当年是什么档、H 多少"就没处查（本班上午刚补的 `aliasDiff` 也会一起丢）。 */
+const HEADROWS = (function () {
+  const out = {};
+  try {
+    const txt = execSync('git show HEAD:champion-map/coords-aliases.tsv', { cwd: ROOT, maxBuffer: 1 << 26, encoding: 'utf8' });
+    const L = txt.replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
+    for (const l of L.slice(1)) { const c = l.split('\t'); if (c[1]) out[c[1]] = l; }
+  } catch (e) { /* 没有那张账本（首次折 / 仓外跑）⇒ 结转个空，不响 */ }
+  return out;
+})();
 /* §E605（10-14 晚，进链子时必须加的一条）：**已经在册的主名不许被重排换掉**。
  *   原判据是"最多引用 ‖ 最早入库"，而引用数是拿**当下的仓**数的 —— 链子每跑一遍，各表里的点名次数就变一点
  *   ⇒ 同一份权重可能今天叫 `Ldemo`、明天叫 `SHIPPED-Ldemo`，图上 192 个点的名字跟着抖，
  *   而 `slot-timeline` / `lineage` / `ship-times` 那些**按名字索引面板**的表会成片指不到（本班上午才刚把消费者教会认副名）。
  *   所以加一层最前的优先：这份表在 HEAD 里是哪一行，折完还叫那个名。并列时才回到引用数 ‖ 入库时刻 ‖ 字典序。 */
-const HEADMAIN = (function () {
-  try {
-    const txt = execSync('git show HEAD:champion-map/coords.tsv', { cwd: ROOT, maxBuffer: 1 << 26, encoding: 'utf8' });
-    const L = txt.replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
-    const hh = Object.fromEntries(L[0].split('\t').map((c, i) => [c, i]));
-    return new Set(L.slice(1).map(l => l.split('\t')[hh.id]).filter(Boolean));
-  } catch (e) { console.log('⚠ 读不到 HEAD 的 coords.tsv（干净克隆或仓外跑）⇒ 主名稳定性那一层退回"引用数优先"'); return new Set(); }
-})();
+const HEADMAIN = HEADINFO.main;
+/* §E605-A（10-14 晚）：**副名指针必须能从上一版结转过来**。
+ *   第①步（`ruler-figs`）现在会按面板的 `aliasIds` 拦掉副名行 —— 那是对的（布局该按"一行=一份权重"算），
+ *   但代价是折行时**再也没有副名行可折**：实测重跑一遍链子，`aliasN` 从 2/3 掉成 1、`aliasIds` 100 组全部变空，
+ *   而 slot-timeline ‖ lineage ‖ ship-times ‖ 池表里那些按旧名字写的指针从此无处可翻（上午刚教会消费者认的那张指针表就这么被重算掉了）。
+ *   ⇒ 指针是一份**账**，不是每次重画都能从尺表里重新学出来的东西：HEAD 里已有的先结转，本次真折出来的再并进来。 */
 for (const [w, v] of G) {
   if (v.length === 1) { picked.push({ main: v[0], al: [] }); continue; }
   /* 主名 = **外部指针最多**的那个名字（用户定的"最多引用"在前），并列再比"最早入库"，再并列按 id 字典序。
@@ -169,18 +190,40 @@ if (out.length !== G.size) { console.error('⛔ 折出来 ' + out.length + ' 行
 
 /* ---------- 3. 落盘：主表（尾部加两列）+ 副名表（读数全留） ---------- */
 const NEWH = head.concat(['aliasN', 'aliasIds']);
+const MAIN_SET = new Set(picked.map(p => p.main[H.id]));
+const NEWALIAS = new Set();                     // 本次真从表里折出来的副名（有读数可记的那些）
+const CARRIED = [];                             // §E605-A：从上一版账本结转下来的行（原样搬，只把 mainId 对准现在的主名）
+const ALH0 = ['mainId', 'aliasId', 'aliasH', 'aliasS', 'aliasSeed', 'aliasExamG', 'aliasLineage', 'path', 'wid', 'sameReading', 'mainH', 'mainS', 'aliasDiff'];
 const body = picked.map(p => {
   const r = p.main.slice();
   r[H.dupN] = '1';
   r[H.dupOf] = p.main[H.id];
   while (r.length < head.length) r.push('');
-  return r.concat([String(1 + p.al.length), p.al.map(a => a[H.id]).join(' ')]).join('\t');
+  for (const a of p.al) NEWALIAS.add(a[H.id]);
+  /* §E605-A：指针账 = 上一版结转 ∪ 本次新折；去掉自己、去掉"现在自己是主行"的名字（一个名字不许既当主名又当别人的副名） */
+  const als = new Set((HEADINFO.prevAlias[p.main[H.id]] || []).concat(p.al.map(a => a[H.id])));
+  als.delete(p.main[H.id]);
+  for (const a of Array.from(als)) if (MAIN_SET.has(a)) als.delete(a);
+  const list = Array.from(als).sort();
+  /* 结转的指针要有账可查：账本里有那一行就原样搬（只改 mainId），没有就补一行写明"结转、无记录"——
+   *   绝不允许主表指着一个说不出"当年是什么档、H 多少"的名字（本班上午刚给这张账本加过 `aliasDiff`，同一个道理）。 */
+  for (const a of list) if (!NEWALIAS.has(a)) {
+    const prev = HEADROWS[a];
+    const cells = prev ? prev.split('\t') : [p.main[H.id], a, '', '', '', '', '', '', '', 'carried-no-row', '', '', ''];
+    cells[0] = p.main[H.id];
+    while (cells.length < ALH0.length) cells.push('');
+    CARRIED.push(cells.join('\t'));
+  }
+  return r.concat([String(1 + list.length), list.join(' ')]).join('\t');
 });
 const ALH = ['mainId', 'aliasId', 'aliasH', 'aliasS', 'aliasSeed', 'aliasExamG', 'aliasLineage', 'path', 'wid', 'sameReading', 'mainH', 'mainS', 'aliasDiff'];
 const ALR = [];
 for (const p of picked) for (const a of p.al) ALR.push([p.main[H.id], a[H.id], a[H.H], a[H.S], a[H.seed] || '', a[H.examG] || '',
   a[H.lineage] || '', a[H.path], WID.get(a) || '', a[H.H] === p.main[H.H] && a[H.S] === p.main[H.S] ? 'same' : 'DIFF',
   p.main[H.H], p.main[H.S], DIFF.get(a[H.id]) || ''].join('\t'));
+for (const c of CARRIED.sort()) ALR.push(c);
+if (CARRIED.length) console.log('§E605-A 结转上一版账本 ' + CARRIED.length + ' 行（其中补写明"结转、无记录"的 ' +
+  CARRIED.filter(x => x.split('\t')[9] === 'carried-no-row').length + ' 行）');
 
 console.log('目标：' + out.length + ' 行 × ' + NEWH.length + ' 列 ‖ 副名表 ' + ALR.length + ' 行 × ' + ALH.length + ' 列');
 console.log('守卫② 从副名搬上主名的测量格 = ' + carried.length + ' 个' + (carried.length ? '：\n  ' + carried.join('\n  ') : ''));
