@@ -8,14 +8,33 @@ name: gates
 # 而且每个数字都得自己重算。门禁那几百道（**条数与末号由 `np-test` 跑完自己印，这里不抄** —— 抄过一次"259 道"就漂成了历史数字）
 # 是一笔很贵的资产，让它跟着仓库走比跟着某台机器走值钱。
 #
-# §E355（10-06 用户裁定）：这个 workflow 现在负责的是**"整轮兜底"那一遍**
+# §E355（10-06 用户裁定）：这个 workflow 负责的是**"整轮兜底"那一遍**
 # ────────────────────────────────────────────────────────────────────
 # 本机口径已经改成"按班次只跑对应模块那一组"（§E335 六组 + §E341 `gate-all --auto` 自己判该跑哪组；
 #   改图/改文档 ⇒ `--group=meta` 15 道 ≈ 9.7 秒，而不是每次 10~15 分钟）。
 # ⇒ 分组提速的代价是**红会跨组潜伏**，而且真发生过：D225⑩c 从 `c9c382b`（README 排版整理）起一直红，
 #   之后五笔提交、约 11 小时没人看见 —— 因为那几遍跑的都是 `--group=meta`，而那道门在 `train` 组里。
-# ⇒ 所以本文件现在的职责 = **每笔 push / 每个 PR 跑一遍不带 `--group` 的 np 整轮**（阻断档 `gates`），
+# ⇒ 所以本文件现在的职责 = **每笔 push / 每个 PR 跑一遍全部门**（阻断档 `gates`），
 #   这样"本机可以只跑一组"才是一个安全的取舍，而不是让红跨组溜走的那道缝。
+#
+# 2026-10-14（DS）：整轮**摊成 16 份并行**，判定仍然是**一个**
+# ─────────────────────────────────────────────────────────
+# 背景：用户问"为什么还是所有门禁都堆在整轮门禁里面"。答案有两层，第一层是上面那条 §E355（那是**故意**的兜底），
+#   第二层是当时**做不到**拆：`--group=` 那条轴是**累计深度轴**（meta ⊂ ship ⊂ train/ui ⊂ probe ⊂ engine=全部，
+#   组与组互相包含）⇒ 摆不出互不相交的并行；而 278 条门当时全住在一个 12339 行的文件里。
+# 10-14 拆成 `tools/gates/<部分>.mjs` 16 个文件之后，**"16 个文件"第一次成为一个真正的分区**
+#   （互不重叠、并集 = 278 条）⇒ 才有了这个矩阵。判据与实测：
+#   · 每个部分**单独跑**都是绿的（16/16）⇒ 没有任何一条门依赖另一个部分的副产物（跨部分副作用 = 0）；
+#   · 16 段单跑合计 **943s**，而整轮一次跑是 **975s** ⇒ 差 32s ≈ 16 个进程各 2s 启动，
+#     **其余逐秒对上** ⇒ 并集就是那 278 条，不重不漏；
+#   · 长尾极不均：`train-runner` 460s + `train-evo` 275s = 总时间的 **78%** ⇒
+#     矩阵墙钟 ≈ 最慢那一段（约 8 分钟），而不是 16 段相加。
+# ⚠ 覆盖不许靠"人记得"：本文件的 matrix **从 runner 现读**（`--list-parts --json` ⇒ 加第 17 个部分文件时
+#   workflow 不用改），并且聚合作业里跑 `tools/gate-parts-check.mjs` 这条**并集守卫**
+#   （盘上的部分文件集合 == runner 名单 ‖ Σ条数 == total == 门体里 `^t(` 的行数）。
+#   为什么这条必须有：并行的坏法**不是红而是绿** —— 少跑一份照样绿，而"整轮全绿"这句话就被污染了。
+#   本仓 10-14 一天之内在同一个形状上栽过两次（拆文件漏了四把按文件名找门体源码的尺、别名迁移漏了几台
+#   按名字索引面板的工具），两次都是**静默变瞎**。
 #
 # 为什么 browser 档跑 windows-latest
 # ─────────────────────────────────
@@ -40,43 +59,67 @@ on:
   workflow_dispatch:
 
 jobs:
-  gates:
-    # §E355（10-06 用户裁定）：本档改成**整轮的那一遍** —— 一条命令 `gate-all --np --no-browser`，
-    # 里面 = np **整轮**（不带 `--group`）+ spec，退出码 0/7 就是这道门的判定（gate-all 自己会印一行总结论）。
-    #
-    # 【为什么要改成这样】§E335/§E341 之后本机的口径变成"按班次只跑对应模块那一组"（改图/改文档 ⇒ `--group=meta`，9.7 秒）。
-    #   代价是**红会跨组潜伏**，而且已经真发生过一次：D225⑩c 从 `c9c382b`（README 排版整理）起就红，
-    #   之后五笔提交、约 11 小时没人看见 —— 因为那几遍跑的都是 `--group=meta`，而 D225 在 `train` 组。
-    #   ⇒ 本机可以分组跑的前提，是**有一遍不带分组的整轮兜底**。这一档就是那个兜底（每笔 push 与 PR 都跑）。
-    #
-    # 【为什么带 `--no-browser`】浏览器那三道（smoke / battle / 演化页 map，§E365 起）10-01 起是**观察档**，判据见下面 `browser` 那一节；
-    #   把它们放进阻断档 = 用 2/3 概率的红去训练大家忽略红色。gate-all 在摘掉它们时会在总结论里
-    #   **点名"本轮缺：smoke battle map ⇒ 不是整轮全绿"**，所以这一档的绿**不等于**"整轮全绿"（那一句仍然只属于本机收工前那遍）。
-    #
-    # 【历史：为什么这两道曾经是阻断档】原来这里有两个 job（`spec` 与 `np`），各自跑各自的全量；合并只是去重复，
-    #   判据一条没松。它们转正时留下的账保留在下面两条，因为那是**runner 能否代表仓库**的依据，不是流水话：
-    #
-    #   ✅ `spec` 在全新 clone（只有入库文件）上实测通过（2026-10-01，`通过 52 / 52`）。
-    #   ✅ `np` 转正依据：runner 上实测绿两遍 **12m00s ‖ 16m46s**（2026-10-01，head 24b9f63 ‖ 5184b2b）。
-    #     当初它只是观察档，是因为那 259 道门原先是"**这台机器的属性**"而不是"仓库的属性"：
-    #     全新 clone 实测 **250 / 259 exit 1**；9 道门读的是被 gitignore 的本机产物（D137 D139 D141 D150 D155 D161 D163 D176 D200）。
-    #     根因**不是**"每道缺一份"，而是这些 bench 吃的是**整个默认包列表**
-    #     （tools/probe-kill-reward.mjs:39 / tools/probe-seat-caliber.mjs:27 / tools/np-test.mjs:5438 都写死 3~5 份）。
-    #     按谓词量出全部依赖：`grep -ohE docs/artifacts/[A-Za-z0-9._/-]+\.bak -r tools server`
-    #     ⇒ 50 个引用 / 45 个未入库 / 43 份盘上还在；45 份已按原路径入库 ⇒ 干净 clone **259 / 259 exit 0**。
-    #     ⚠️ 连带后果（今天仍然成立）：干净 clone 会把被跟踪文件的 mtime 刷成"现在" ⇒ 45 份全落进 **D82** 的 24h 时窗 ⇒
-    #        最新条目的 `> 产物点名（D82）：` 行必须含全部 45 个名字 —— **入库与记账要一起做**。
-    #   ⚠️ 单道秒数不可与串行历史直接比（gate-all 是**并发起跑**）；timeout 60 分钟对 12~17 分钟余量足够。
+  # ── ① plan：部分清单的**单一来源** = tools/np-test.mjs 的 PARTS（不在这里抄一份）──
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 10
+    outputs:
+      parts: ${{ steps.lp.outputs.parts }}
     steps:
       - uses: actions/checkout@v4
-      # 本机开发用的是 Node v24.20.0；仓里零第三方依赖，只用内置 http/worker_threads/vm。
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: 整轮门禁 = np 全量 + spec（条数与末号由工具自己印，本文件不抄）
-        run: node tools/gate-all.mjs --np --no-browser
+      - id: lp
+        name: 从 runner 现读部分清单（写死清单迟早在加第 17 个部分时漏掉，而漏掉的表现是"少跑却全绿"）
+        run: |
+          node tools/np-test.mjs --list-parts --json > /tmp/parts.json
+          node -e 'const j=require("/tmp/parts.json");process.stdout.write("parts="+JSON.stringify(j.parts.map(p=>p.part))+"\n")' >> "$GITHUB_OUTPUT"
+          node -e 'const j=require("/tmp/parts.json");console.log("部分 " + j.parts.length + " 个 ‖ 条数合计 " + j.total)'
+
+  # ── ② part：一个部分一个作业（矩阵）⇒ 墙钟 ≈ 最慢那一段，且失败能归因到具体部分 ──
+  part:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        part: ${{ fromJson(needs.plan.outputs.parts) }}
+    name: part ${{ matrix.part }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # `--part=` 与 `--only`/`--group` 同罪：少跑了就是少跑了，np-test 收尾会自己响亮印出
+      #   「本部分共 N 条，跑了 M 条 ⇒ 不许当整轮全绿引用」。**整轮全绿这句话只属于聚合作业 ③。**
+      - name: np --part=${{ matrix.part }}
+        run: node tools/np-test.mjs --part=${{ matrix.part }}
+
+  # ── ③ gates：聚合成**一个**判定（作业名与旧版相同 ⇒ 分支保护/required check 不用改）──
+  gates:
+    name: gates
+    needs: [plan, part]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 各部分的判定（有红 ⇒ 这一档就红，并点名是哪一段）
+        run: |
+          echo "part 那一档：${{ needs.part.result }}"
+          if [ "${{ needs.part.result }}" != "success" ]; then
+            echo "⛔ 有部分红了（或 plan 挂了）⇒ 整轮不成立。去上面 'part <名字>' 那些作业里看是哪一条门，别先重跑。"
+            exit 1
+          fi
+      - name: 并集守卫（16 个部分的并集必须 = 整轮；少跑一条就红）
+        run: node tools/gate-parts-check.mjs
+      - name: spec（2 人引擎 52 用例）
+        run: node tools/spec-run.mjs
       # §2026-10-10（Claude 整改建议 §门禁规矩 1）：**门禁只许测行为**的机械检查。
       #   文档明说它「不算门、也不进 np-test」⇒ 所以它是一个独立脚本、一个独立 step：
       #     node tools/gate-sentinel.mjs   报告三类（读 .md ‖ 对源码做正则 ‖ 匹配日志措辞）的**门号清单**。
@@ -98,7 +141,7 @@ jobs:
     #   ⇒ 为什么必须退回：一个 2/3 概率红的**阻断**档，会把"红"训练成噪音，下次真红没人看 ——
     #     与本仓"永绿假守卫"（D199/D205 那一族）是同一种病的两面。**转正判据：连续 5 次绿**（当前计数从这次重新起算）。
     #   ⚠️ §E355 之后这一档是 **CI 里唯一跑 smoke/battle 的地方**（阻断档 `gates` 用 `--no-browser` 摘掉了它们）
-    #     ⇒ 所以"CI 绿了"这句话从此的准确说法是：**np 整轮 + spec 绿，浏览器两档未见红但也未参与判定**。
+    #     ⇒ 所以"CI 绿了"这句话从此的准确说法是：**np 全部门 + spec 绿，浏览器两档未见红但也未参与判定**。
     #     ⇒ 本机不受影响：`gate-all` 不带 `--no-browser` 时照旧跑四道，收工前那遍才算认证。
     continue-on-error: true
     runs-on: windows-latest
@@ -115,7 +158,7 @@ jobs:
       - name: 冠军演化页页内自检（CDP 真 Chrome · §E365 新增 · 10-12 补"四个视图各跑一遍 + 读数必须可读"）
         # 为什么放这一档而不是阻断档：它要真 Chrome，而本机认证的 np/spec 那两跑在 ubuntu。
         #   判据 = 页内自检总结论那一行（PASS 条数会变、"0 FAIL"不许变）。
-        #   ⚠ 这一档整体仍是 continue-on-error（见上面 10-01 那笔退回记录）⇒ **演化页的红不会阻断提交**。
+        #   ⚠️ 这一档整体仍是 continue-on-error（见上面 10-01 那笔退回记录）⇒ **演化页的红不会阻断提交**。
         # 🔴 10-12 千问补的两件事（用户裁定"进 CI，先只当观察档"）：
         #   ① **观察档也必须读得出成败**：job 级 `continue-on-error: true` 会让"步骤失败"与"通过"都显示 conclusion=success
         #      ⇒ 我以前在 API 上看到 browser=success 就以为这 86 条过了，那句话其实毫无信息量。

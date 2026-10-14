@@ -647,7 +647,17 @@ for (const r of ROWS) { const d = FAM[r.id] || (SLOTID[r.id] ? SLOTDEF : null); 
   out.push([r.id, d.n, d.label, (r.ts || '').slice(0, 19), r.seed, r.id.replace(/^.*-/, ''), c.parent.slice(0, 8), r.parentOf, r.parentName, r.wid, c.rulesFp, c.divW, c.divK, c.divRoleW, c.divCatW, c.oppsN,
     c.stockBonus, c.hoardPen, c.dealW, c.firstW, c.whistlePen, c.styleW, c.eTarget, c.eCap, c.gens, c.mode, c.seedEmb, r.psrc || '',
     r.pof2 || '', r.pof2 || '', r.psrc2 || ''].join('\t')); }
-writeFileSync(join(HERE, 'lineage.tsv'), out.join('\n') + '\n');
+/* v1.7.10：落盘行尾跟着**盘上那一份**走，不许写死 '\n'。
+ * 为什么（DS 10-14 实测）：本仓工作树是 CRLF（`core.autocrlf=true`），而这里原先写死 `'\n'` ⇒
+ *   跑一遍带 D233 ⑤ 腿的门之后，`lineage.tsv` 变成 795 行纯 LF（190413 → 189618 字节），
+ *   而**内容逐字节相同**：`git diff` 为空、`git status` 却显示脏 —— 因为 git 见到**尺寸变了**就直接判"改过"。
+ *   后果不止"看着脏"：`tools/gate-all.mjs --auto` 是按 `git status` 判改动面的 ⇒ 分类被污染，
+ *   而且"工作区干净 ⇒ 按 meta 跑一遍仓库纪律"这条路在整轮之后就不成立了。
+ * 同款写法（不是我新发明的）：`champion-map/attach-sc.mjs` 的 `const eol = raw.indexOf('\r\n') >= 0 ? '\r\n' : '\n';`
+ *   与 `champion-map/fold-coords.mjs` 的 `EOL`。**新写的落盘器请一律照这个来。** */
+const __linPath = join(HERE, 'lineage.tsv');
+const __linEol = (existsSync(__linPath) && readFileSync(__linPath, 'utf8').indexOf('\r\n') >= 0) ? '\r\n' : '\n';
+writeFileSync(__linPath, out.join(__linEol) + __linEol);
 console.log('已写 lineage.tsv（' + (out.length - 1) + ' 行 ‖ ' + defs.length + ' 个家族 ‖ 双父的融合粒 ' +
   ROWS.filter(r => r.pof2).length + ' 枚，第二父边 ' + ROWS.filter(r => r.pof2).length + ' 条）');
 for (const d of defs) console.log('  家族 ' + String(d.n).padStart(2) + '  ' + String(d.g.rs.length).padStart(4) + ' 枚  ' + d.label);

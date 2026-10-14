@@ -23,8 +23,10 @@
  *   所以 `gateBodyText()` 在每个文件前插一行 `BOUNDARY`（`//` 开头 ⇒ 掩码/注释过滤天然把它当注释）；
  *   工具把"下一个 `^t(` 或下一个分隔行"当门体终点，坐标改成 `文件:行号`（并集偏移对人没用）。
  *   ⚠ 坐标格式的消费者审计（v1.7.8）：全仓 `grep -n gate-sentinel` 17 处，**没有任何消费者 parse 坐标**
- *     （只有 CHANGELOG/日志/清单文档在引用**计数**；`.github/workflows/gates.yml:87` 那一步只有 `run: node tools/gate-sentinel.mjs`，
+ *     （只有 CHANGELOG/日志/清单文档在引用**计数**；`gates.yml` 里跑它的那一步只有 `run: node tools/gate-sentinel.mjs`，
  *      既没有 `want:` 也没有 grep ⇒ **只看退出码**，而它默认 `exit 0`）⇒ 改坐标安全。
+ *     ⚠ v1.7.10 补：这里原来写的是 `gates.yml:87` —— 那一版把 278 条门摊成 16 个并行作业、workflow 整个重排，
+ *       行号当场作废。**本文件与任何注释都不许再引用那个文件的绝对行号**，只说"跑它的那一步"。
  *
  * 导出：`gateBodyFiles()` ⇐ 面的文件名单（按面的顺序）· `partFiles()` ⇐ 只有 16 个部分 ·
  *       `gateBodyText()` ⇐ 面的正文（带分隔行）· `BOUNDARY` ⇐ 分隔行前缀。

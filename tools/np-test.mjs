@@ -8,6 +8,11 @@
  * 用法（`--only=` / `--group=` / `--list-groups` 与拆前逐字相同）：
  *   node tools/np-test.mjs                    整轮（278 条）
  *   node tools/np-test.mjs --group=meta       只跑仓库纪律那一组（含累计依赖）
+ *   node tools/np-test.mjs --part=train-evo   只跑**那一个部分文件**里的门（2026-10-14 DS 加；见下"两个轴"）
+ *      ⚠ 与 `--group` **不是同一个轴**：`--group` 是**累计深度轴**（meta ⊂ ship ⊂ train/ui ⊂ probe ⊂ engine=全部，
+ *        组与组互相包含 ⇒ 摆不出互不相交的并行）；`--part` 是**分区轴**（16 个文件互不重叠、并集 = 278 条）
+ *        ⇒ 它才是"把整轮摊成互不相交若干份（CI 矩阵）"与"单独量某一个部分的墙钟"的那个口子。
+ *        ⚠ 同样**不冒充全绿**：收尾响亮印"本部分共 N 条、跑了 M 条"。
  *   node tools/np-test.mjs --only=D193        只跑名字匹配的那条
  *   node tools/np-test.mjs --list-order       按**执行顺序**印 [原始行号, 门名]（用于证明保序）
  *   node tools/np-test.mjs --list-parts       印部分划分、每部分条数、路径→部分映射表
@@ -275,10 +280,40 @@ if (GROUP && !(GROUP in CUM)) {
   process.exit(2); }
 const RUNSET = GROUP ? new Set(CUM[GROUP].reduce((a, g) => a.concat(g === 'engine' ? Object.keys(GRP).flatMap(x => GRP[x].split(' ')) : GRP[g].split(' ')), [])) : null;
 /*#np-keep-end*/
+
+/* ===== `--part=<部分>`（2026-10-14 DS）：只跑**某一个部分文件**里的门 =====
+ * 为什么要有它：拆成 16 个文件之后，"16 个文件"第一次成为一个**分区**（互不重叠、并集 = 278 条），
+ *   而 `--group` 那条轴做不到这件事 —— 它是累计的（见文件头"两个轴"）。
+ * 判据用**门住在哪个文件**（注册时记下的 P.part），不是门名也不是它读了哪些路径：
+ *   并行的物理单位就是文件；用名字/路径去推会在 N2/N3/N4 那种同键多门的地方推歪。
+ * ⚠ 少跑了就是少跑了：执行处按跳过记账（`__skipped++`），收尾响亮印"本部分共 N 条 · 跑了 M 条"。 */
+const PART = (process.argv.find(a => a.startsWith('--part=')) || '').slice(7) || null;
+if (PART && !PARTS.some(p => p.part === PART)) {
+  console.error('⛔ `--part=' + PART + '` 不认识（可选：' + PARTS.map(p => p.part).join(' ') + '）。含糊拼写不许当"没写"。');
+  process.exit(2);
+}
+if (PART && GROUP) {
+  console.error('⛔ `--part=` 与 `--group=` 不许同时给：一个是分区轴、一个是累计深度轴，混在一起只会得到"看着像全量"的假绿。');
+  process.exit(2);
+}
 /* ===== --list-parts / --explain：把"哪条门落哪个部分、为什么"印出来（可复算）===== */
 if (ARG_LIST_PARTS || ARG_EXPLAIN) {
   const all = [];
   for (const P of PARTS) for (const g of partGateTexts(P)) all.push({ part: P.part, group: P.group, ord: g.ord, name: g.name, text: g.text });
+  /* `--list-parts --json`（2026-10-14 DS）：给 **CI 的 plan 作业**现读部分清单用。
+   * 为什么必须从 runner 现读、不许在 workflow 里写死：写死清单迟早在加第 17 个部分时漏掉，
+   *   而漏掉的表现是"少跑几条门却全绿" —— 本仓今天已经在这上面栽过两次（轮询漏消费者）。
+   * 条数报的是**文件成员数**（`ords.length`，也就是 `--part=` 真正会跑的那些），
+   *   同时把**路径归属表的条数**（`attr`）一起报出来：两者不一致 = 映射表漂了，CI 那条并集守卫会红。 */
+  if (process.argv.includes('--json')) {
+    const out = PARTS.map(function (P) {
+      return { part: P.part, group: P.group, file: P.file,
+        gates: (P.mod.ords || []).length,
+        attr: all.filter(function (g) { return g.part === P.part; }).length };
+    });
+    console.log(JSON.stringify({ parts: out, total: out.reduce(function (s, x) { return s + x.gates; }, 0) }));
+    process.exit(0);
+  }
   if (ARG_EXPLAIN) {
     const hit = all.filter(function (g) { return gateKey(g.name) === ARG_EXPLAIN; });
     if (!hit.length) { console.error("⛔ --explain=" + ARG_EXPLAIN + "：没有这条件（门键 = 门名第一个空格前那段）"); process.exit(2); }
@@ -327,7 +362,7 @@ for (const P of PARTS) {
   P.mod.register(function (name, fn) {
     const ord = o[i++];
     if (ord === undefined) throw new Error("部分文件 " + P.part + " 的 register() 比 ords 多调了一次 t()（拆分坏了）");
-    __UNITS.push([ord, name, fn]);
+    __UNITS.push([ord, name, fn, P.part]);   /* 第 4 位 = 这条门住在哪个部分文件（`--part=` 的筛子只看这个） */
   });
   if (i !== o.length) throw new Error("部分文件 " + P.part + " 的 register() 少调了 " + (o.length - i) + " 次 t()（拆分坏了）");
 }
@@ -355,7 +390,7 @@ function __npTimeStep() {
 /*#np-keep-end*/
 }
 /* 执行序列 = 278 条门 + 1 段门间顶层代码，**全部按原始行号排序** ⇒ 与拆前逐条同序。 */
-const __STEPS = __UNITS.map(function (u) { return [u[0], "gate", u[1], u[2]]; });
+const __STEPS = __UNITS.map(function (u) { return [u[0], "gate", u[1], u[2], u[3]]; });
 __STEPS.push([10490, "raw", "__np-time-block", __npTimeStep]);
 __STEPS.sort(function (a, b) { return a[0] - b[0]; });
 if (ARG_LIST_ORDER) { for (const st of __STEPS) console.log(String(st[0]).padStart(6) + "\t" + st[2]); process.exit(0); }
@@ -363,7 +398,18 @@ if (ARG_LIST_ORDER) { for (const st of __STEPS) console.log(String(st[0]).padSta
 console.log('== N 人引擎测试 ==');
 
 /*#np-keep-end*/
-for (const st of __STEPS) { if (st[1] === "gate") t(st[2], st[3]); else st[3](); }
+for (const st of __STEPS) {
+  if (st[1] !== "gate") { st[3](); continue; }
+  if (PART && st[4] !== PART) { __KEYS.push(gateKey(st[2])); __skipped++; continue; }   /* 跳过的门也登记键 ⇒ 收尾的"每条门都归了组"仍然是对**全仓 278 条**说的，不是对这一个部分说的 */
+  t(st[2], st[3]);
+}
+/* `--part` 与 `--only`/`--group` 同罪：少跑了就是少跑了，收尾前自己喊出来（这一段在 #np-keep 之外，可改）。 */
+if (PART) {
+  const __partN = __STEPS.filter(function (s) { return s[1] === 'gate' && s[4] === PART; }).length;
+  console.log('\n⚠ `--part=' + PART + '`：本部分共 ' + __partN + ' 条，跑了 ' + (PASS + FAIL) + ' 条（其余 ' + __skipped
+    + ' 条按跳过记账）⇒ 这不是全量门禁，**不许当整轮全绿引用**（整轮 = 不带 --part/--group/--only）。');
+  if (PASS + FAIL === 0) { console.error('⛔ `--part=' + PART + '` 一条都没跑 ⇒ 部分筛选写错了，这不是全绿。'); process.exit(3); }
+}
 
 /*#np-keep 12292-12339*/
 const __src = NP_GATE_FILES.map(function (f) { return readFileSync(f, "utf8"); }).join("\n").split("\n");
