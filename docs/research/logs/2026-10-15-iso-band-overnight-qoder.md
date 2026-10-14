@@ -581,6 +581,20 @@ DONE-15 只验了 2P 的 sparring 一格。这次把 DONE-17 那台 9 格矩阵�
 
 ⇒ **#28 的决策面现在是齐的**：A2 效果已被 9 格覆盖验证（含它顺带打开的 §E609 退路），B 是防复发的语义修；两者都不动产品数值、只动加载与状态。仍然等裁。
 
+## DONE-20 S19：干净克隆里复核"我这晚改过门禁 runner"这件事（CI 的调用形状全部照旧）
+
+`np-test.mjs` 加了"拒绝裸位置参数"（v1.7.22），而它是 **CI 的执行入口** ⇒ 光看 `grep` 过 workflows 不算完，按 `[[feedback-gate-red-question-validity]]` 那条"验证只在干净克隆里做"补一遍：
+`git worktree add --detach D:/tmp-e608-runner HEAD`（跑完 `git worktree remove`，克隆里一个字节没改，`git status --porcelain` 前后为空）：
+
+- CI 的 plan 步 `node tools/np-test.mjs --list-parts --json` ⇒ **exit 0**；
+- CI 的 matrix 步 `node tools/np-test.mjs --part=meta-lint` ⇒ **4/4**；
+- `node tools/np-test.mjs --group=meta` ⇒ **16/16**；
+- 负向：`--part= meta-lint meta-repo`（我这晚踩的那个坏形状）在干净克隆里同样 **exit 64** ⇒ 新守卫不是只在我工作区生效；
+- 顺带在克隆里跑了一遍烘焙产物的页内自检（`champion-map/shot.mjs --hash=mode=map&check=1&detail=1 --dump`）⇒ **89 PASS ‖ 0 FAIL**
+  ⇒ 提交进仓的那张图在**只有 tracked 文件**的环境里仍然自证（这正是 §E342/干净克隆那套判据要的"产物不是靠本机残留才绿"）。
+
+⇒ 结论：**本班次对 runner 的改动对 CI 无风险**；剩下真正的风险都集中在"等你裁的两条"（#27 装配、#28 加载顺序），它们都不在我能自己定的范围里。
+
 ## NEXT（剩下的）
 
 - 待裁：#24 `attach-sc` 的现役名（动在册 `Sc` 列主语）‖ #26 投影"读数不许依赖行序"要不要长腿（变异证据已有）‖
