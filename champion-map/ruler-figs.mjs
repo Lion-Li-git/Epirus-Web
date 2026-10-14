@@ -34,13 +34,47 @@ const files = String(arg('ruler', 'e287-ruler-s1.tsv,e287-ruler-s2.tsv,e287-rule
   .filter(existsSync);
 if (!files.length) { console.error('⛔ 现测尺一张都没读到 ⇒ 先跑 ruler-measure.mjs（--ruler= 收到：' + arg('ruler', '') + '）'); process.exit(2); }
 console.error('现测尺 ' + files.length + ' 张：' + files.map(f => f.slice(ROOT.length + 1).replace(/\\/g, '/')).join(' ‖ '));
-const seen = new Set(), raw = [];
+/* §E605：原来的 `const seen = new Set(), raw = []` 那一对手边变量没了 —— 收行改在下面的两遍循环里做
+ *   （第一遍算出这批表的档，第二遍**按"声明了档的行优先"**收，次序不再决定结果）。 */
 /* ⚠ 两处都不能省：① CRLF 归一 —— 原来直接 split，末列的**表头键**会带上 `\r`（'lineage\r'），
  *   于是 `o.lineage` 恒为 undefined，"历代上槽冠军 15 枚"那句其实是把 183 枚读成了没身份（今天靠 attach-kin
  *   再清一次才凑对，两件坏事撞成同一个结果 = 侥幸）；② 不许 `.trim()` 整份文件 —— 末行的行尾空单元格会被
  *   连着制表符一起削掉，那一行就少几列（§E375 加进来的 16 枚正好排在末尾）。只剥行尾换行。 */
-for (const p of files) { const t = readFileSync(p, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), h = t[0].split('\t');
-  for (const l of t.slice(1)) { const c = l.split('\t'); const o = {}; h.forEach((k, i) => { o[k] = c[i]; }); if (!o.id || seen.has(o.id)) continue; seen.add(o.id); raw.push(o); } }
+/* ===== §E605 单档必须是**机械检查**，不是"谁排在第一个"的副产品（用户 10-14 裁"五条全修"的第③条）=====
+ *   病（实测，不是推演）：`rebuild-coords.mjs` 把 `ruler-all.tsv` 排在几何输入第一个，而原来这一段是
+ *   `seen.has(o.id) ⇒ continue`（**先读的先赢**）。`ruler-all.tsv` **没有 `examG` 列**（30 档年代的东西），
+ *   `ruler120-2026-10-10-all.tsv` 声明 120 ⇒ 794 枚里 713 枚的 `H` 会从"档都没声明"的旧表取走，
+ *   而现役面板的 H 是 120 档那一套（现算对照：`eco-34-v7` 在 ruler-all = 51.3 ‖ 在 120 那张 = 50.5 = coords 那一格）。
+ *   ⇒ 跑一遍链子 = 把整张图换成另一种档的读数，而 `METHODOLOGY.md` §120「进图必须单档」以前**只是文档**。
+ * 现在按行分三类，输入次序不再有意义：**声明了 `examG` 的行永远优先于没声明的**；
+ *   两张表声明了**不同**的档 ⇒ `exit 2` 点名（那是两把尺，不是两个批次）；
+ *   只能从"未声明档"的表取到的行 ⇒ 数出来并印名单，不静默。 */
+const srcs = files.map(function (p) {
+  const t = readFileSync(p, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), h = t[0].split('\t');
+  const iG = h.indexOf('examG'); const rows = [];
+  for (const l of t.slice(1)) { const c = l.split('\t'); const o = {}; h.forEach((k, i) => { o[k] = c[i]; });
+    if (o.id) rows.push({ o: o, gear: iG >= 0 ? String(c[iG] || '').trim() : '' }); }
+  return { rel: p.slice(ROOT.length + 1).replace(/\\/g, '/'), rows: rows, declares: iG >= 0 };
+});
+let GEAR = null, gearSrc = '';
+for (const s of srcs) for (const r of s.rows) { if (!r.gear) continue;
+  if (GEAR === null) { GEAR = r.gear; gearSrc = s.rel; }
+  else if (r.gear !== GEAR) { console.error('⛔ §E605 单档检查红：这批现测尺里出现了**两种档** —— ' + gearSrc + ' 说 ' + GEAR +
+    ' ‖ ' + s.rel + ' 说 ' + r.gear + '（枚 ' + r.o.id + '）。' +
+    '\n   ⇒ 这不是"两个批次"，是两把尺（METHODOLOGY §120「进图必须单档」）。要么只喂同一档的那几张，要么把这批重测到同一档（`ruler-measure.mjs --exam=' + GEAR + '`）。'); process.exit(2); } }
+const BYID = new Map(); const sameGear = [];
+for (const s of srcs) for (const r of s.rows) {
+  const cur = BYID.get(r.o.id);
+  if (!cur) BYID.set(r.o.id, { o: r.o, gear: r.gear, src: s.rel });
+  else if (!cur.gear && r.gear) { BYID.set(r.o.id, { o: r.o, gear: r.gear, src: s.rel }); sameGear.push(r.o.id + '（旧表那份没有档记录 ⇒ 换成 ' + s.rel + '）'); }
+  else if (cur.gear && r.gear) { sameGear.push(r.o.id + '（' + cur.src + ' 与 ' + s.rel + ' 同档 ⇒ 取前者）'); }
+}
+const raw = []; const noGear = [];
+for (const v of BYID.values()) { raw.push(v.o); if (!v.gear) noGear.push(v.o.id); }
+console.log('§E605 单档检查：档 = ' + (GEAR === null ? '（这批表**都没有** examG 列 ⇒ 按旧行为先来先赢，混档风险自负）' : GEAR + ' 局/组合（来自 ' + gearSrc + '）') +
+  ' ‖ 收 ' + raw.length + ' 枚 ‖ 其中只能取自"未声明档"的表 ' + noGear.length + ' 枚' + (noGear.length ? '（前 8：' + noGear.slice(0, 8).join(' ') + '）' : '') +
+  (sameGear.length ? ' ‖ 同 id 多表重复 ' + sameGear.length + ' 枚' : ''));
+if (GEAR !== null && noGear.length) console.log('  ⚠ 那 ' + noGear.length + ' 枚的 H/S 出自**没有档记录**的旧表 ⇒ 与 ' + GEAR + ' 档同图不同源；要严格单档就把它们重测一遍再喂。');
 const COORD = ['dmg', 'heavy', 'holo', 'zeroRate', 'drawRate', 'rounds', 'distinctKeys', 'seatSpread', 'rwDmg', 'charges',
   'waste', 'noThreatStance', 'fieldAAtk', 'fieldARounds'];
 const pts = raw.filter(r => isFinite(num(r.H)) && isFinite(num(r.S)) && COORD.every(c => isFinite(num(r[c]))));

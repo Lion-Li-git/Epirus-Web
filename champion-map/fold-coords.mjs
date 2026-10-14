@@ -3,7 +3,10 @@
  *
  * 为什么能折：一台普查实测 794 个不同 path 解出 **794 个不同权重身份**、"同一份权重还有两个物理文件"的组数 = **0**
  *   ⇒ 盘上活着的权重全是主名；多出来那 192 行只是**搭在同一份文件上的名字**（副名），不是另一份权重。
- * 主名怎么定（用户定的规矩）：**最早入库** 优先，其次 **最多引用**，再按 id 字典序（不许靠遍历次序）。
+ * 主名怎么定（用户定的规矩 + §E605 加的一层稳定性）：**已经在 HEAD 里当主名的先赢**，
+ *   并列时 **最多引用**、再 **最早入库**、再按 id 字典序（不许靠遍历次序）。
+ *   加这一层是因为这台现在是 `rebuild-coords` 的第⑧步：引用数是拿当下的仓数的，重跑一次就变一点 ⇒
+ *   不加这层，同一份权重的名字会随每次重画在 `Ldemo` / `SHIPPED-Ldemo` 之间抖，而那些**按名字索引面板**的表（timeline ‖ lineage ‖ ship-times）会成片指不到。
  *   入库时刻 = 这个 id **第一次出现在 coords.tsv 的那笔提交**（`git log -S` 现查，不是抄注释里的日期）。
  *   引用数 = 这个 id 在**其它入库文件**里被点到的次数（`git grep` 现数，排除 coords.tsv 与自己那一行）。
  *
@@ -107,6 +110,19 @@ const refOf = id => (CACHE_R[id] !== undefined ? CACHE_R[id] : (CACHE_R[id] = re
 const picked = [], warn = [], clash = [], carried = [];
 const DIFF = new Map();                       // 副名 id → 与主名不同、且副名表那五列没记到的测量列
 const RECD = { H: 1, S: 1, seed: 1, examG: 1, lineage: 1 };   // 副名表已单列记录的，不在 aliasDiff 里重复
+/* §E605（10-14 晚，进链子时必须加的一条）：**已经在册的主名不许被重排换掉**。
+ *   原判据是"最多引用 ‖ 最早入库"，而引用数是拿**当下的仓**数的 —— 链子每跑一遍，各表里的点名次数就变一点
+ *   ⇒ 同一份权重可能今天叫 `Ldemo`、明天叫 `SHIPPED-Ldemo`，图上 192 个点的名字跟着抖，
+ *   而 `slot-timeline` / `lineage` / `ship-times` 那些**按名字索引面板**的表会成片指不到（本班上午才刚把消费者教会认副名）。
+ *   所以加一层最前的优先：这份表在 HEAD 里是哪一行，折完还叫那个名。并列时才回到引用数 ‖ 入库时刻 ‖ 字典序。 */
+const HEADMAIN = (function () {
+  try {
+    const txt = execSync('git show HEAD:champion-map/coords.tsv', { cwd: ROOT, maxBuffer: 1 << 26, encoding: 'utf8' });
+    const L = txt.replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
+    const hh = Object.fromEntries(L[0].split('\t').map((c, i) => [c, i]));
+    return new Set(L.slice(1).map(l => l.split('\t')[hh.id]).filter(Boolean));
+  } catch (e) { console.log('⚠ 读不到 HEAD 的 coords.tsv（干净克隆或仓外跑）⇒ 主名稳定性那一层退回"引用数优先"'); return new Set(); }
+})();
 for (const [w, v] of G) {
   if (v.length === 1) { picked.push({ main: v[0], al: [] }); continue; }
   /* 主名 = **外部指针最多**的那个名字（用户定的"最多引用"在前），并列再比"最早入库"，再并列按 id 字典序。
@@ -116,7 +132,9 @@ for (const [w, v] of G) {
    *   而"谁带冠军身份"是**权重**的属性、不是名字的属性 ⇒ 身份随权重搬到主名行（下面 UNION 那一段），不靠选名字来保。 */
   const ranked = v.slice().sort((a, b) => {
     const ia = a[H.id], ib = b[H.id];
-    return (refOf(ib) - refOf(ia)) || (tsOf(ia) - tsOf(ib)) || (ia < ib ? -1 : ia > ib ? 1 : 0);
+    /* §E605：在册主名优先（重跑不许换名字）⇒ 才轮到"最多引用"、"最早入库"、字典序 */
+    const ha = HEADMAIN.has(ia) ? 0 : 1, hb = HEADMAIN.has(ib) ? 0 : 1;
+    return (ha - hb) || (refOf(ib) - refOf(ia)) || (tsOf(ia) - tsOf(ib)) || (ia < ib ? -1 : ia > ib ? 1 : 0);
   });
   const main = ranked[0];
   const al = v.filter(r => r !== main);

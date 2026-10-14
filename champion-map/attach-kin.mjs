@@ -17,6 +17,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { load as loadSlotId } from './slot-identity.mjs';   /* §E605：身份是不是"解析也认它上过槽"，只有这一份说了算 */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -68,6 +69,15 @@ let cleared = 0, carried = 0, keptChamp = 0;
  *   而"活槽此刻住的是谁"由 `slot-identity.mjs` 现解，不再是一个写进表里的身份类别。
  *   ⇒ 副作用正是想要的：旧 ruler 表里残留的 `当前线上` 会被这台自动清成空并计数（不必手工回改 20 张历史表）。*/
 const CH_CLASSES = { '历代上槽': 1, '旧槽位冠军': 1 };
+/* §E605（10-14 晚，用户裁"五条全修"的第②条）：原来这句是 `if (kin || 类别不合法) 清身份` ⇒ 把"有 kin"当成"身份必假"。
+ *   病（现算复现）：折行之后 `Ldemo` 一行**同时**带 `lineage=历代上槽`（从旧 `SHIPPED-Ldemo` 行 UNION 过来）
+ *   与 `kin=续训现役`（旧 `Ldemo` 行自己的），而这两件事**都真的**：那枚包既是当年上槽的冠军、也确实有续训子代。
+ *   ⇒ 对账报 `冠军枚数 34 ≠ 旧表真冠军 35`（差值 -1，就是这一行被清掉了）。
+ *   改法不是"给 Ldemo 开后门"，而是承认这两列**是两个所指**（kin = 这枚是谁的子代 ‖ lineage = 这枚当过线上冠军），
+ *   只有当身份**没有独立凭据**时才清 —— 凭据就用 `slot-identity` 的解析名单（`onSlot`，来自 slot-timeline 逐提交解出的权重），
+ *   §E488 那 183 枚假冠军不在解析名单里 ⇒ 照旧被清 ⇒ 牙口没削（验证见本文件下面那条注释里的反例）。 */
+const ON_SLOT = new Set(loadSlotId(ROOT).onSlot);
+const bothCols = [];
 const unknownCls = {};
 for (const r of ROWS) { const c = r[ch.lineage]; if (c && !CH_CLASSES[c]) unknownCls[c] = (unknownCls[c] || 0) + 1; }
 if (Object.keys(unknownCls).length) console.log('⚠ §E488 这批表里带了**不是冠军身份**的 lineage 类别，按白名单清成空：' +
@@ -78,8 +88,12 @@ for (const r of ROWS) {
   while (row.length < H0.length) row.push('');
   const kin = KIN[id] || '';
   const cls = row[ch.lineage];
-  if (kin || (cls && !CH_CLASSES[cls])) { if (cls) cleared++; row[ch.lineage] = ''; }
-  else if (cls) keptChamp++;
+  /* 清身份的两种情况：类别不在白名单里（§E488 那批"新批次自带一个没见过的身份"）‖
+   *   有 kin 而身份**又没有解析凭据**（§E488 那 183 枚把子代标成冠军的）。两者都不成立 ⇒ 保留。 */
+  const badCls = cls && !CH_CLASSES[cls];
+  const fakeByKin = kin && cls && CH_CLASSES[cls] && !ON_SLOT.has(id);
+  if (badCls || fakeByKin) { if (cls) cleared++; row[ch.lineage] = ''; }
+  else if (cls) { keptChamp++; if (kin) bothCols.push(id + '(' + cls + ')'); }
   /* Sc 四列：新表（ruler-figs 重画时不带这四列）以旧表为准，量过的原样搬，没量过的**留空**（不许当 0） */
   if (NEED_SC) for (const k of SC) row.push(OLDROW[id] ? (OLDROW[id][oh[k]] || '') : '');
   if (OLDROW[id]) carried++;
@@ -115,6 +129,7 @@ if (nChamp !== expect) {
   console.error('⛔ 冠军枚数 ' + nChamp + ' ≠ 旧表真冠军 ' + oldChamp + ' + 本轮**新增**的旧槽位冠军 ' + (newSlot - oldSlot) +
     '（新表该类 ' + newSlot + ' ‖ 旧表该类 ' + oldSlot + '）⇒ 要么 ' + LIST + ' 那批没被清掉，要么新加的类没打上 lineage（差值 ' + (nChamp - expect) + '）'); process.exit(2); }
 console.log('守卫 ✅ 冠军 ' + nChamp + ' = 旧表 ' + oldChamp + ' + 本轮新增旧槽位冠军 ' + (newSlot - oldSlot) + '（旧表该类 ' + oldSlot + '）');
+if (bothCols.length) console.log('  §E605 保留下 ' + bothCols.length + ' 枚"既当过槽、又有续训子代"的行（kin 与 lineage 同行，解析认它上过槽）：' + bothCols.join(' ‖ '));
 if (nKin !== Object.keys(KIN).length) console.warn('⚠ kin 非空 ' + nKin + ' ‖ 名单 ' + Object.keys(KIN).length + ' —— 差的那几枚在面板里没有行');
 
 if (process.argv.includes('--check')) {
