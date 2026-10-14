@@ -29,6 +29,27 @@ for (const f of ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv']) {
 const rows = CO.slice(1).filter((r) => r[ch.id] && isFinite(+r[ch.x3]));
 const N = rows.length;
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
+
+/* ===== §E608 第四处不同源：**判定本身** =====
+ *   上面那三张 feas 表给的是 732 有判定 / 150 过线，而页面烘焙时**现跑同一道闸**（`feasibilityOf`）得到 794 / 170
+ *   ⇒ 空间对上了、门对上了、M0 对上了，绝对枚数还是差一截，差的就是这一层。
+ *   `--ok=page`（默认：读得到烘焙页就用它的标签）⇒ 这台量具才真是页面那行"壳内 194 ‖ 真过线 103"的复算器；
+ *   `--ok=feas` 回到旧形状（§E605 那批历史数就是它量的 ⇒ 别拿它的绝对数去对页面）。
+ *   ⚠ 选了 page 就**整份换过去**，不许一半 feas 一半 page（混源比换源更难查）。 */
+const OKMODE = (arg('ok', 'page') || 'page').toLowerCase();
+if (OKMODE !== 'page' && OKMODE !== 'feas') { console.error('⛔ --ok 只认 page|feas（给了 ' + OKMODE + '）'); process.exit(2); }
+let okSrc = 'feas-s1..s3 三表（§E605 那批历史数的口径）';
+if (OKMODE === 'page') {
+  let D = null;
+  try { const s = readFileSync(join(HERE, 'index.html'), 'utf8');
+    const m = s.match(/var DATA = (\[[\s\S]*?\]); var OKSRCJ/); if (m) D = JSON.parse(m[1]); } catch (e) { D = null; }
+  if (D) { const OKP = {}; for (const d of D) if (d.id) OKP[d.id] = (d.ok === 1 ? 1 : (d.ok === 0 ? 0 : null));
+    for (const k of Object.keys(OK)) delete OK[k];
+    for (const k of Object.keys(OKP)) OK[k] = OKP[k];
+    okSrc = '烘焙页 champion-map/index.html 的 DATA[].ok（与页面上那行读数同一份判定）';
+  } else console.error('⚠ --ok=page 但读不到/解不出 champion-map/index.html 的 var DATA ⇒ 退回 feas 三表（先跑 node champion-map/viewer.mjs）');
+}
+console.log('# 判定源 = ' + okSrc + ' ‖ 换源用 --ok=feas');
 /* 显示度量必须与查看器**逐字同式**（viewer.mjs:880~903）。这里曾经错过一次：
  *   旧写法用全 min/max + zBase = 0.62×max(spanX,spanY)，而页面用的是 **0.5%/99.5% 截尾** 的 span、
  *   zBase = 0.26×span ⇒ 两边走的是不同的第三轴比例，σ 和整张阈值表都不是同一台仪器量出来的
