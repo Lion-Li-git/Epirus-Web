@@ -290,7 +290,9 @@ for (const L of LEVELS) {
     let comp = null, seatK = 0;
     if (USE_POOL && L.kind !== 'style') {
       /* §E609：去掉原来那句 `&& N > 2` —— 它把"2 人桌的池装配"整条路关掉了，于是产品卖给 2 人桌的三档
-         从来没有一条池装配读数（`docs/debug/tier-census.mjs` 也是 5 席循环 ⇒ 两边都是盲区）。
+         从来没有一条池装配读数（当时 `docs/debug/tier-census.mjs` 也是 5 席循环 ⇒ 两把尺都是盲区）。
+         ⚑ §E624（10-15）把另一侧也补上了：`tier-census --n=2` 现在走**同一份** `duelAssembly`（那里加了默认的 `n` 维）
+         ⇒ "台阶分不分得开"与"这一档实际在打什么谱"两条读数在 2 人桌上都第一次存在。
          现在 2 人桌走 `pool-members-2p.tsv`，只有 1 席 AI ⇒ "全同"在那儿是数学必然而不是降级
          （产品侧 `ui.js` 早就是 `d.allSame && !plan.two` 才警告，这里跟它同一个口径）。
          `--pooltier=` 仍可用：把所有档钉在**同一批池成员**上 ⇒ 档间只剩剂量差，剂量阶梯本身被单独量到

@@ -117,6 +117,11 @@ export function duelAssembly(deps, params, opts) {
    *   · `onGame(st, scriptedSeat, g)` —— 每局结束回调，池侧用它统计"哪一枚赢了"（不新增指标口径，只是把已有的 `st` 递出去）。 */
   const chooserFor = o.chooserFor || null;
   const onGame = o.onGame || null;
+  /* §E624（10-15）：桌大小可选，**默认 5 ⇒ 所有在册读数逐字不变**（不传 `n` 的调用点走的还是原来那条路）。
+   *   为什么要开这个口：`docs/debug/tier-census.mjs` 那把"档位装配出手谱"的尺以前**只有 5 席循环** ⇒
+   *   2 人桌（现在真的走池了，v1.7.29）从头到尾没有一条档位级读数。补第二个对局引擎是错的（两份必然漂移），
+   *   所以在这**一份**上加一维。⚠ 换人数 = 换分布，不是换样本量：n=2 的读数不许与 n=5 的并排当同一条轴读。 */
+  const N = (typeof o.n === 'number' && o.n >= 2) ? o.n : 5;
   const JI = R.SK.JI, GUN = R.SK.GUN;
   const keys = o.countKeys || null;
   const counts = {}; if (keys) keys.forEach(function (k) { counts[k] = 0; });
@@ -129,8 +134,8 @@ export function duelAssembly(deps, params, opts) {
   pierceDef.add(R.SK.CANNON);
   let turtleAtk = 0, turtlePierce = 0, turtleLand = 0;
   for (let g = 0; g < G; g++) {
-    const seat = g % 5;
-    const st = S.createState(mode, { next: mb(seed0 + g * 991) }, 5);
+    const seat = g % N;
+    const st = S.createState(mode, { next: mb(seed0 + g * 991) }, N);
     st.slotSalt = h32(seed0 + g * 2246822519);
     const mine = function (s2, pid, lg) {
       let r = (chooserFor ? chooserFor(pid, s2) : null) || ch;
@@ -158,18 +163,18 @@ export function duelAssembly(deps, params, opts) {
       if (keys && r && keys.indexOf(r.key) >= 0) counts[r.key]++;
       return r;
     };
-    const cs = []; for (let i = 0; i < 5; i++) cs.push(i === seat ? (scripted === 'champ' ? mine : scripted) : mine);
+    const cs = []; for (let i = 0; i < N; i++) cs.push(i === seat ? (scripted === 'champ' ? mine : scripted) : mine);
     Play.autoGameN(st, cs);
     if (onGame) onGame(st, seat, g);      /* §E590：池侧用它统计"哪一枚赢了"（默认 null ⇒ 老读数不动） */
     /* qoder-research 0920（P2 第三行）：**收缩前击杀数** —— 与场B 门禁同口径（`countClears` 单一真源，
      * 只认"收缩开始前打死"，按伤害归属记在击杀者头上）。V4 形状里脚本席只有 1 个 ⇒ 每局合计 ∈ {0,1}。 */
     if (typeof T.countClears === 'function') {
-      for (let i = 0; i < 5; i++) if (i !== seat) clears += T.countClears(st.events, i);
+      for (let i = 0; i < N; i++) if (i !== seat) clears += T.countClears(st.events, i);
     }
     rounds += st.round;
     if (st.winner === seat) win++; else if (st.winner === 'draw') draw++;
     let ac = 0;
-    for (let i = 0; i < 5; i++) if (i !== seat && st.p[i].hp > 0) ac++;
+    for (let i = 0; i < N; i++) if (i !== seat && st.p[i].hp > 0) ac++;
     aliveChampEnd += ac;
     if (st.p[seat].hp > 0) aliveScriptedEnd++;
     hpScriptedEnd += st.p[seat].hp;

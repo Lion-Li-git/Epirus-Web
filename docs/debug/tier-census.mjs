@@ -28,6 +28,7 @@
  *
  * 用法：node docs/debug/tier-census.mjs [--tiers=lv:sparring,lv:regular,lv:hard] [--games=20]
  *         [--seeds=90210,90211,90212] [--protos=3] [--mode=multi] [--members=champion-map/pool-members.tsv]
+ *         [--n=5]        ← §E624：桌大小（默认 5；**n=2 自动换 2P 那张原生池表**，除非显式给了 --members=）
  *       node docs/debug/tier-census.mjs --self-test
  * 退出码：0 = 跑完 ‖ 2 = 输入不齐 / 自检不过（宁可红也不许假绿）‖ 7 = 有成员读不出包
  */
@@ -40,12 +41,18 @@ import { duelAssembly } from '../../tools/v2v4-lib.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
-rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'seeds', 'protos', 'mode', 'members', 'self-test'], 'tier-census');
+rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'seeds', 'protos', 'mode', 'members', 'n', 'self-test'], 'tier-census');
 
 const G = Math.max(1, Number(flag('games', 20)) || 20);
 const PROTOS = Math.max(1, Number(flag('protos', 3)) || 3);
 const MODE = flag('mode', 'multi');
-const TABLE = flag('members', 'champion-map/pool-members.tsv');
+/* §E624（10-15）：**桌大小**。以前这把尺只有 5 席循环 ⇒ 2 人桌（v1.7.29 起真的走池了）从头到尾没有一条档位级出手谱读数，
+ *   而 README §① 那条"2 人桌那 7 枚还没有对应尺"就是这么来的。补法是在**唯一那份**对局循环（`duelAssembly`）上加一维，
+ *   不另写第二台引擎。默认 5 ⇒ 在册的 n=5 读数逐字不变（回归验过：同参数新旧两跑的输出 `diff` 为空）。
+ *   ⚠ **换人数 = 换分布**：n=2 只有 1 个 AI 席 ⇒ 分母、"全同"概念、掺席可行性都跟着变（下面各处按 `AI` 走，不写死 4）。 */
+const N = Math.max(2, Number(flag('n', 5)) || 5);
+const AI = N - 1;
+const TABLE = flag('members', '') || (N > 2 ? 'champion-map/pool-members.tsv' : 'champion-map/pool-members-2p.tsv');
 const SEEDS = String(flag('seeds', '90210,90211,90212')).split(',').map(Number).filter(x => !Number.isNaN(x));
 const TIERS = String(flag('tiers', 'lv:sparring,lv:regular,lv:hard')).split(',').filter(Boolean);
 
@@ -144,8 +151,9 @@ const unknown = TIERS.filter((id, i) => !picked[i]);
 if (unknown.length) { console.error('⛔ --tiers 里有 DIFF_TIERS 不认的档：' + unknown.join(',') + '（在册：' + tiers.map(t => t.id).join(',') + '）'); process.exit(2); }
 if (SEEDS.length < 1) { console.error('⛔ --seeds 一枚都解析不出'); process.exit(2); }
 
-console.log('# 档位装配普查（1 席人类形状 + 4 席**按该档的带逐席抽** · 每局一个新盐 ⇒ 每局一个新排列组合）');
-console.log('# 口径：' + MODE + ' · ' + G + ' 局/格 × seed ' + SEEDS.join('/') + ' × 前 ' + PROTOS + ' 个人类原型 · 出手只数 action/ok · 分母=4 个 AI 席（含ジ）');
+console.log('# 档位装配普查（1 席人类形状 + ' + AI + ' 席**按该档的带逐席抽** · 每局一个新盐 ⇒ 每局一个新排列组合）');
+console.log('# 口径：**' + N + ' 人桌** · ' + MODE + ' · ' + G + ' 局/格 × seed ' + SEEDS.join('/') + ' × 前 ' + PROTOS + ' 个人类原型 · 出手只数 action/ok · 分母=' + AI + ' 个 AI 席（含ジ）');
+console.log('# 池真源表 = ' + TABLE + (N > 2 ? '（多人桌那张）' : '（2 人桌那张原生池，§E599 ⇒ 不是把 3P 搬到 1v1）'));
 console.log('# 剂量：吃各档表值（ramp 按起手剂量算 —— 与 probe-pool 同一条已知边界）');
 console.log('# 抽签/对局循环：`js/pool-draw.js` + `tools/v2v4-lib.mjs` 的 duelAssembly（无第二份实现）\n');
 
@@ -161,7 +169,8 @@ for (const t of picked) {
   const rows = RR.members.map(m => byId[m.id]).filter(Boolean);
   const bandTxt = bandW ? ('两带加权 ' + Object.keys(bandW).filter(x => x !== 'else').join('/')) : t.pool;
   if (RR.note) console.log('## ' + t.id + '：' + RR.note + '\n');
-  if (rows.length < 2) { console.log('## ' + t.id + '（带 ' + bandTxt + '）：只有 ' + rows.length + ' 枚 ⇒ 四席必然全同，**不量**（用户裁定不许全同）\n'); continue; }
+  if (!rows.length) { console.log('## ' + t.id + '（带 ' + bandTxt + '）：**0 枚** ⇒ ' + N + ' 人桌这张表里没有可抽的成员，不量（不是 0 分，是没量）\n'); continue; }
+  if (rows.length < 2 && AI > 1) { console.log('## ' + t.id + '（带 ' + bandTxt + '）：只有 ' + rows.length + ' 枚 ⇒ ' + AI + ' 席必然全同，**不量**（用户裁定不许全同）\n'); continue; }
   const PARAMS = {}, CHOOSERS = {}; const bad = [];
   for (const r of rows) {
     let p = null;
@@ -175,7 +184,7 @@ for (const t of picked) {
   const lite = rows.filter(r => PARAMS[r[h.id]]).map(r => ({ id: r[h.id], wid: r[h.wid], tier: r[h.tier] }));
   let MIX = null, SCRIPTS = {};
   if (t.scriptMix) {
-    MIX = PD.scriptSeats(t, 4, B.STYLES || []);
+    MIX = PD.scriptSeats(t, AI, B.STYLES || []);
     if (MIX && MIX.seats > 0) for (const sid of MIX.ids) {
       const st = (B.STYLES || []).find(x => x.id === sid);
       if (!st) { console.error('⛔ scriptMix 里的风格 ' + sid + ' 不在 STYLES'); process.exit(7); }
@@ -190,7 +199,7 @@ for (const t of picked) {
     const chooserFor = function (pid, st) {
       if (st !== curState) {
         curState = st;
-        const comp = PD.compose(lite, 4, PD.rng((st.slotSalt >>> 0) || 1), (MIX && MIX.seats) ? MIX : null, bandW);
+        const comp = PD.compose(lite, AI, PD.rng((st.slotSalt >>> 0) || 1), (MIX && MIX.seats) ? MIX : null, bandW);
         cur = { comp: comp, byPid: {}, kind: {}, order: 0 };
         comps.add(comp.seats.map(s => s.id).join('+'));
         if (comp.allSame) allSame++;
@@ -207,7 +216,7 @@ for (const t of picked) {
     };
     const kindRef = function () { return cur ? cur.kind : null; };
     duelAssembly({ S: S, Play: Play, T: T, R: R }, firstParams,
-      { games: G, mode: MODE, seed0: seed, scripted: proto[1], chooserFor: chooserFor,
+      { games: G, mode: MODE, seed0: seed, n: N, scripted: proto[1], chooserFor: chooserFor,
         onGame: function (st, seat) { tally(cen, st, seat, kindRef()); } });
   }
   const sp = spectrum(cen);
@@ -222,12 +231,13 @@ for (const t of picked) {
   console.log('     ' + sp.keys.map(k => sp.nameOf(k) + ' ' + (100 * sp.shareOf(k)).toFixed(1) + '%(' + sp.perGame(k).toFixed(2) + ')').join(' · '));
   const never = (R.skills || []).map(s => s.key).filter(k => !sp.keys.includes(k));
   console.log('   卡表 ' + (R.skills || []).length + ' 张里这一档**一次都没出现**的 ' + never.length + ' 张：' + never.map(k => sp.nameOf(k)).join(' · '));
-  console.log('   ⚑ 这 ' + cen.games + ' 场里出现 ' + comps.size + ' 种不同组成 ‖ 四席全同 ' + allSame + ' 局 ‖ 漏席 ' + miss + ' 次' + (miss ? ' ⇒ **组成漏席，本行数不可引用**' : '') + '\n');
-  out.push({ tier: t.id, band: bandTxt, members: lite.length, mix: MIX ? MIX.seats : 0, games: cen.games,
+  console.log('   ⚑ 这 ' + cen.games + ' 场里出现 ' + comps.size + ' 种不同组成 ‖ ' +
+    (AI > 1 ? 'AI 席全同 ' + allSame + ' 局' : '只有 1 个 AI 席 ⇒ "全同"这一判据不适用（不计数）') + ' ‖ 漏席 ' + miss + ' 次' + (miss ? ' ⇒ **组成漏席，本行数不可引用**' : '') + '\n');
+  out.push({ tier: t.id, n: N, band: bandTxt, members: lite.length, mix: MIX ? MIX.seats : 0, games: cen.games,
     roundsPerGame: +(cen.rounds / Math.max(1, cen.games)).toFixed(1), actions: sp.total,
     distinct: sp.distinct, top3: +(100 * sp.top3Share).toFixed(1), G: +sp.G.toFixed(2), defShare: +(100 * sp.defShare).toFixed(1),
-    comps: comps.size, allSame: allSame, miss: miss,
+    comps: comps.size, allSame: AI > 1 ? allSame : 'n/a', miss: miss,
     byKey: sp.keys.map(k => [k, cen.byKey[k]]) });
 }
 console.log('# 机器可读（给门与以后的自己核对用）：');
-console.log(JSON.stringify({ mode: MODE, games: G, seeds: SEEDS, protos: PROTOSET.map(p => p[0]), rows: out }));
+console.log(JSON.stringify({ mode: MODE, n: N, aiSeats: AI, table: TABLE, games: G, seeds: SEEDS, protos: PROTOSET.map(p => p[0]), rows: out }));
