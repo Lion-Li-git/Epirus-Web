@@ -125,7 +125,7 @@ function norm(v) { if (v === undefined || v === null || v === '' || v === '∅')
 const ROWS = [];
 /* 权重身份表要扫**全部** .bak（1461 个），不能只扫本图的 718 枚 —— 父指针指向的是"当时的现役冠军"，
  *   而那一枚未必进了 §E287 那批面板。实测只扫 718 枚时解析率 11%，扫全库后（下一行打印）才看得清谱系。*/
-let nSlotEmb = 0;
+let nSlotEmb = 0, nOrig = 0;   /* §E607 nOrig = 把"原始 wid"这一头也接回面板行的条数 */
 const BYWID = {};
 const BYWID_EMB = {};   /* §E464 嵌入成 v7 之后的指纹 → 图上的 id */
 let POL = null;
@@ -273,9 +273,17 @@ function seedpackVerified(m, parId, ts) {
     const txt = readFileSync(join(ART, f), 'utf8'); const arr = packArr(txt);
     const w = widOfArr(arr); if (!w) continue;
     const rid = BYBASE[f.slice(0, -4)] || SLOTBY8[w.slice(0, 8)]; if (!rid) continue;
+    /* §E607 这座桥原来**只搭了一半**：它登记"嵌入后的 wid → 面板行"，却没管**原始 wid** 那一头。
+     *   实测代价（10-15 凌晨查出来的）：`long-33` 等 **56 枚**的 `hotstartFrom` 记的是**原始** wid（`e379c62c…`），
+     *   而面板上那一行 `SLOT-e379c62c` 在册的是**嵌入成 v7 之后**的 `d13d3c85…` ⇒ `BYWID[原始]` 被上面那遍
+     *   .bak 扫描按**文件名**占了位（`champion-5p-v1.3.58`，而它不是面板行）⇒ 那 56 条父边**一条也画不出来**，
+     *   页面上看就像"父不可考"（用户原话：「历代上槽的 long-33 是找不到父节点」）。
+     *   守的还是同一条老规矩（§E330 ‖ §E604）：**登记目标必须是面板上真有的那一枚**，文件名只能补面板没有的权重。 */
+    if (IDSET.has(rid) && BYWID[w] !== rid && (!BYWID[w] || !IDSET.has(BYWID[w]))) { BYWID[w] = rid; nOrig++; }
     const e = embOf(arr); if (e && e !== w && !BYWID_EMB[e]) { BYWID_EMB[e] = rid; nSlotEmb++; }
   } catch (err) { /* 单枚读不动不影响全表 */ } }
-  console.log('§E464 pre-v7 包的第二身份登记：' + nSlotEmb + ' 条（目标一律是面板上真有的节点；SLOT 行走已入库的 v6 文件，不依赖 e370-out 那批未跟踪的 v7 导出）'); }
+  console.log('§E464 pre-v7 包的第二身份登记：' + nSlotEmb + ' 条（目标一律是面板上真有的节点；SLOT 行走已入库的 v6 文件，不依赖 e370-out 那批未跟踪的 v7 导出）' +
+    ' ‖ §E607 其中把**原始 wid** 这一头也接回面板行的 ' + nOrig + ' 条（那批子代记的是嵌入前的哈希，不接就整片断边）'); }
 /* 第三级退路 = **臂级**父指针（`chain-scan --emit=` 落的那张表）。为什么需要：一支臂留 7 个文件
  *   （1 枚产物 + 6 枚带内候选），实测**产物那份常常不带指针、带内候选那份带** ⇒ 只看产物就漏。
  *   臂级证据"这支臂是从 X 起步的"对产物同样成立，所以按 productRel 反查图上的那一枚。
@@ -349,7 +357,7 @@ let nSpk = 0, nArm = 0;
  *     并且**连那个哈希也不许留**（它是"今天槽主"的哈希，不是当时那份的）。
  *   ⚠ byHash 一级永远不否：那是包自己 META.hotstartFrom 里记的哈希，是实录；那种情况该怀疑的是 ts，不是边。*/
 const IDTS = {}; for (const r of REC) IDTS[r.id] = (r.m && r.m.ts) || '';
-let nBack = 0, nEmb = 0;
+let nBack = 0, nEmb = 0, nCold = 0, nUnres = 0, nSynthP = 0;   /* §E607 后三个 = "没有父边"的三种来路各多少枚（名字避开下面第 636 行那个 nSynth，那是另一码事） */
 for (const r of REC) { const m = r.m || {};
   const byHash = (m.hotstartFrom && (BYWID[m.hotstartFrom] || BYWID_EMB[m.hotstartFrom])) || '';
   /* §E464 靠「嵌入后那个身份」才对上的单独记一笔（pSrc = hash-emb），不许混在 hash 里看不出来 */
@@ -415,15 +423,32 @@ for (const r of REC) { const m = r.m || {};
     oppsN: norm(Array.isArray(m.opps) ? m.opps.length : (typeof m.opps === 'string' && m.opps ? m.opps.split(',').filter(Boolean).length : '')),
     seedEmb: norm(m.seedEmbeddedFrom), gens: norm(m.gens), mode: norm(m.mode), rulesFp: norm(m.rulesFingerprint),
     parent: norm(m.hotstartFrom || WIDOF[byPath || byArm || bySlot] || '') };
+  /* ===== §E607 「没有父」与「父找不到」必须在**表里**就分开（用户 10-15 00:3x：「把图上无父节点和父节点不可考分别标注出来」）=====
+   *   病：这一列原来只描述"边是从哪儿解析出来的"，**解析不出就一律空串** ⇒ 三种完全不同的事长成一个样：
+   *     ① 真包**冷启动**（包里连 `EPIRUS_HOTSTART` 都没有 ⇒ 它本来就没有父，不是漏记）
+   *     ② 有热启动证据却解不出（那才是"父不可考"，是要去补证据的那一类）
+   *     ③ `SLOT-*` 合成锚点（它根本不是包，是"当时槽里那枚、盘上没留档"的占位）
+   *   ⇒ 补两个值：`cold` / `unresolved`，合成节点给 `synthetic`。边本身一条都不因此多画或少画（这些都还是没有父边的行），
+   *     变的只是"页面能不能说清楚为什么没有"。 */
+  const HASPAR = !!(byHash || byPath || byArm || bySlot || bySlotInfer || sP1);
+  const ENVX = (m.recipe && m.recipe.env) || {};
+  let ps = byHash ? (byHashEmb ? 'hash-emb' : 'hash') : (byPath ? (spWid ? (spSlot ? 'slot-wid' : 'seedpack-wid') : 'seedpack') : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (bySlotInfer ? 'slot-infer' : (sP1 ? 'soup' : (demoted ? 'demoted' : ''))))));
+  if (!ps && !HASPAR && !demoted) {
+    const noEvidence = !m.hotstartFrom && String(ENVX.EPIRUS_HOTSTART || '') !== '1' && !seedpackFile(m);
+    ps = (/^SLOT-/.test(r.id) || !Object.keys(m).length) ? 'synthetic' : (noEvidence ? 'cold' : 'unresolved');
+    if (ps === 'cold') nCold++; else if (ps === 'unresolved') nUnres++; else nSynthP++; }
   ROWS.push({ id: r.id, ts: m.ts || '', seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
     parentOf: byHash || byPath || byArm || bySlot || bySlotInfer || sP1, wid: r.wid || '',
-    psrc: byHash ? (byHashEmb ? 'hash-emb' : 'hash') : (byPath ? (spWid ? (spSlot ? 'slot-wid' : 'seedpack-wid') : 'seedpack') : (byArm ? 'arm' : (bySlot ? 'slot-at-time' : (bySlotInfer ? 'slot-infer' : (sP1 ? 'soup' : (demoted ? 'demoted' : '')))))),
+    psrc: ps,
     pof2: sP2, psrc2: sP2 ? 'soup' : '',
     demoted: demoted,
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
 const nres = ROWS.filter(r => r.parentOf).length, np = ROWS.filter(r => r.cfg.parent !== '-').length;
 console.log('槽位推断级父边（2026-10-12：包里有 EPIRUS_HOTSTART=1 的证据 + 槽位时间轴）：' +
   ROWS.filter(r => r.psrc === 'slot-infer').length + ' 条');
+/* §E607 三种"没有父边"分开报数（页面要说清"为什么没有"，靠的就是这一列） */
+console.log('§E607 无父边的 ' + (nCold + nUnres + nSynthP) + ' 枚拆开：冷启动（包里连热启动证据都没有）' + nCold +
+  ' ‖ 有证据却解不出（真·父不可考）' + nUnres + ' ‖ SLOT-* 合成锚点 ' + nSynthP + ' ⇒ parentSrc 分别记 cold / unresolved / synthetic');
 /* ===== §E464 钉子：第二身份必须**真的登记成功**，不能只看"今天这张表解得开" =====
  *   为什么不能只验结果：BYWID 优先级高于 BYWID_EMB，而本机恰好有 e370-out 那批**未入库**的 v7 导出 ⇒
  *   两条路同时在，表看不出区别。实测就是这么漏的：`embedLegacy()` 返回 Float64Array、`widOfArr` 当时只收 Array ⇒
