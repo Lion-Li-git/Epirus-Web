@@ -54,13 +54,12 @@ export const LADDER_CLAIM = {
    *   ⇒ 差一个字符就是永久过期。手打派生值是这个仓最常犯的错之一。
    * §E609：签名尾巴多了一节（`poolMix`）—— 10-15 落地两带混抽时旧签名**逐字没变**，那张账明明换了抽法却还"有效"，
    *   ④a 就是抓不到。补上之后先复现了一次旧红（在册=旧串 vs 现算=新串），再按新串重测。 */
-  sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-:-:s2/min1/st:toolkit+st:mix;lv:regular:champ:0.1:5:soft:1:mid:-:hard=0.5+soft=0.5|else=mid:-;lv:hard:champ:0.1:5:soft:1:hard:-:-:-',
-  source: '§E610（10-15 重测 · **掺席进装配之后**）：node tools/probe-diff-ladder.mjs --tiers=lv:sparring,lv:regular,lv:hard --pool=1 --pairs=1 --games=1000 --seed=77000..77007 --mode=multi|long' +
-    '（`--pool=1` = 池装配 **且** 简单档按 `scriptSeats` 盖 2 席脚本；不带 `--pool=1` = 单包对照）‖' +
-    '聚合与逐 seed 日志：`docs/artifacts/e608-out/recheck-mix/` 与 `…/recheck-mix-summary.txt`（量具 `…/recheck-mix.mjs`，每跑两条守卫：抽法推导=按带加权 ‖ 掺席行=sparring 2 席）' +
-    '‖ **d = 跨 seed 配对差均值，se = 其标准误 sd/√8**。' +
-    '⛔ 上一批（`recheck/` ‖ `recheck-summary.txt`，签名尾巴只到 `poolMix`）量的是**四席全池包**：那时量具不读 `scriptMix`，所以那批 `pool:*` 的简单档与台阶一**不是产品那张桌** ⇒ 已被本批替换，不做历史对照列（它不是"更差的旧档"，是另一台机器）。' +
-    '‖ `single:*` 那两行是**故意的**负对照（同 seed 同盐、四席同一枚包、既无池也无掺席）⇒ 它的"不分"是设计，不是产品缺陷。' +
+  sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-:-:s2/min1/st:toolkit+st:toolkit;lv:regular:champ:0.1:5:soft:1:mid:-:hard=0.5+soft=0.5|else=mid:-;lv:hard:champ:0.1:5:soft:1:hard:-:-:-',
+  source: '§E622（10-15 早重测 · 掺席按用户裁定换成**两席杂货铺**之后）：node tools/probe-diff-ladder.mjs --pool=1 --tiers=lv:sparring,lv:regular,lv:hard --pairs=1 --games=1000 --seed=77000..77007 --mode=multi|long' +
+    '（跑法与聚合 = `docs/artifacts/e608-out/recheck-mix2.mjs`，日志 `…/recheck-mix2/`、汇总 `…/recheck-mix2-summary.txt`；每跑两条守卫：抽法推导里 regular=按带加权 ‖ 掺席行必须是 `lv:sparring=2 席[st:toolkit,st:toolkit]`）‖' +
+    '不带 `--pool=1` 的那两行是**故意的负对照**（同 seed 同盐、四席同一枚包、既无池也无掺席）⇒ 它的"不分"是设计，不是产品缺陷。' +
+    '‖ **d = 跨 seed 配对差均值，se = 其标准误 sd/√8**（10-12 那批是单次 1500 局的组内配对 SE ⇒ 两批的 se 不是同一个东西，只比 σ 数）。' +
+    '‖ 上一批（`recheck-mix/`，掺的是 `toolkit+mix`）已被本批替换：掺席换了 ⇒ 签名换了 ⇒ 那张账过期，不做历史对照列（同 §E610 那次的处理）。' +
     '‖ 10-12 那批的原始日志与两次候选分带在 `docs/research/logs/2026-10-12-e596-three-tier.md`，翻序记录在 `…/2026-10-12-e595-ladder-register.md`',
   rule: '判"分得开" = |差| ≥ 2σ(配对)（不是 ≥2pt）。行按**档位表声明序**的相邻对记：`from` = 声明里更难那一档，`d` = 人类席夺冠率( to ) − 人类席夺冠率( from ) ⇒ **d 为负 = 实测把这一对的次序翻了**（不是抄错，是记账）。',
   measuredAt: '2026-10-15',
@@ -135,11 +134,14 @@ export const LADDER_CLAIM = {
    */
   modes: {
     'pool:multi': [
-      { from: "lv:regular", to: "lv:sparring", d: 1.29, se: 0.61, sep: true },
+      { from: "lv:regular", to: "lv:sparring", d: 0.63, se: 0.21, sep: true },
       { from: "lv:hard", to: "lv:regular", d: 2.46, se: 0.29, sep: true }
     ],
     'pool:long': [
-      { from: "lv:regular", to: "lv:sparring", d: 0.17, se: 0.41, sep: false },
+      /* ⚠ d 为负 = 这一对的次序**翻了**（点"简单"拿到的桌子比普通档还硬）。`sep: true` 不是笔误：
+       *   ④b 的判据是 `sep == (|d|/se ≥ 2)`，而这里是 3.23σ ⇒ 想"分得开"（只是方向不对）。
+       *   ④d 会把这一条念成"翻序"（门不为此红，等裁要不要让它红），但**绿色不许把它藏起来**。 */
+      { from: "lv:regular", to: "lv:sparring", d: -1.20, se: 0.37, sep: true },
       { from: "lv:hard", to: "lv:regular", d: 2.70, se: 0.54, sep: true }
     ],
     'single:multi': [

@@ -189,8 +189,10 @@ if (USE_POOL) {
   }
   console.log('# 装配 = **池形态**（逐席不同枚，真源 ' + (N > 2 ? 'champion-map/pool-members.tsv' : 'champion-map/pool-members-2p.tsv') + '）：' +
     Object.keys(POOL_BY_TIER).map(t => t + ' ' + POOL_BY_TIER[t].length + ' 枚').join(' ‖ '));
-  /* §E595 `--banddef="A=id1,id2;B=id3,..."`：**不落盘**地量一种分带。
-   *   为什么需要：搜分带时每一次评估都要量"这一带组出来的桌有多硬"，而改真源表再改回来 = 把没验过的划分
+  /* §E595 `--banddef="A:id1,id2;B:id3,..."`：**不落盘**地量一种分带。
+   *   ⚠ 分隔符是 `:` 不是 `=`（这句 10-15 才订正 —— 原来这里写的是 `A=id1,id2`，而本文件的 `flag()` 是 `split('=')[1]`，
+   *   值里再带 `=` 会被截断；下面的解析用的就是 `indexOf(':')`）。形状写错不会静默跑错：`ids` 为空 ⇒ 当场"带是空的"退出 2。
+   *   为什么要它：搜分带时每一次评估都要量"这一带组出来的桌有多硬"，而改真源表再改回来 = 把没验过的划分
    *   在盘上留一分钟（还会被 `D234` 的 bundle 一致腿咬）。名单里的 id 必须已在池表里（要解得出包）。
    *   ⚠ 这是**量具的临时视图**，不是产品口径：要用它选出的划分上线，得把 tier 写回 `pool-members.tsv` 并重烘 bundle。 */
   const BANDDEF = (flag('banddef', '') || '').trim();
