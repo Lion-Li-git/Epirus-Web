@@ -207,8 +207,18 @@ if (USE_POOL) {
       if (bad.length) { console.error('⛔ --banddef 的 `' + nm + '` 带里这几个 id 不在池表（解不出包）：' + bad.join(',')); process.exit(2); }
       if (!ids.length) { console.error('⛔ --banddef 的 `' + nm + '` 带是空的'); process.exit(2); }
       NB[nm] = ids.map(i => ({ id: i, wid: ALL_M[i].wid, tier: nm })); }
+    /* ⚠ **整张换掉**，不是逐带合并（10-15 冒烟实测抓到的：原来那句 `for (k of NB) POOL_BY_TIER[k] = NB[k]` 留着没声明的 `mid` 带 ⇒
+     *   拿 `--banddef` 量"拆带"时 `rosterFor` 照旧走 `else:'mid'` 退路，而表头印的是 `hard 4 ‖ soft 3` ⇒
+     *   "我在量两带混抽"与"其实量的是退路"这两件事同屏出现（那跑的全表数是 **10 枚** = 声明的 7 + 残留的 3，一眼就该报警）。
+     *   拆带这种划分必须能把旧带**拿掉**才量得到 ⇒ 整张替换；同时要求名单覆盖表里每一枚，否则未声明的成员会静默消失。 */
+    const placed = {}; for (const t of Object.keys(NB)) for (const m of NB[t]) placed[m.id] = true;
+    const left = Object.keys(ALL_M).filter(i => !placed[i]);
+    if (left.length) { console.error('⛔ --banddef 没给这几枚分带：' + left.join(',') +
+      ' ⇒ 未声明的成员会静默消失（要么分给某个带，要么把整张表分完）'); process.exit(2); }
+    for (const k of Object.keys(POOL_BY_TIER)) delete POOL_BY_TIER[k];
     for (const k of Object.keys(NB)) POOL_BY_TIER[k] = NB[k];
-    console.log('# --banddef 生效（临时视图，表没动）：' + Object.keys(NB).map(t => t + ' ' + NB[t].length + ' 枚').join(' ‖ '));
+    console.log('# --banddef 生效（临时视图，表没动 ‖ 旧带整张替换 ⇒ 全表 ' + Object.keys(placed).length + ' 枚）：' +
+      Object.keys(NB).map(t => t + ' ' + NB[t].length + ' 枚').join(' ‖ '));
   }
   /* §E609 全表重算（banddef 之后）+ **把每一档实际走哪条抽法说出来**：
    *   这一行就是昨天那条教训的正面版本 —— 不看它，"我以为在量临时视图/混抽"和"其实量的是别的"长得一模一样。 */
