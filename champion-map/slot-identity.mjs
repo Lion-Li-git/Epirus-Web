@@ -56,13 +56,25 @@ export function load(root) {
   const R = root || ROOT;
   const CM = f => join(R, 'champion-map', f);
 
-  /* ---- 图上的行 + 同权重组（`dupOf` 存的是**空格隔开的组内 id**，代表取第一个）---- */
+  /* ---- 图上的行 + 同权重组 ----
+   * §E604（10-14 折行之后）：`coords.tsv` 一行 = 一份权重，组内其它名字搬到 **`aliasIds`** 这一列（用户裁：
+   *   "同权重只算一枚 ‖ 剩下的副名当做引用和指针"）。这两列都得吃到，少一只就当场现形：
+   *   ① `GROUP` 里要带上副名 —— 查看器给"上线时刻"填行时读的是**名字**（`viewer.mjs:309` 那句 `SID.GROUP[...]`），
+   *      只给主名 ⇒ 构建日志报"解析认它没进过槽 0 → 15"、版本号认回从 46 行掉到 31 行（本班实测）；
+   *   ② `ALIAS_OF` 让旧名字指回图上那一行 —— `slot-timeline.tsv` 的 `panelId`/`metaArm` 与 `slot-history.tsv`
+   *      的声明行都按**当年那个名字**写，主名换了就必须能翻译，否则 `活槽现主 …在图上=⛔没了`。 */
   const CO = rows(CM('coords.tsv'));
-  const ROW = {}, GROUP = {};
-  for (const r of CO) { if (!r.id) continue; ROW[r.id] = r;
+  const ROW = {}, GROUP = {}, ALIAS_OF = {};
+  for (const r of CO) {
+    if (!r.id) continue; ROW[r.id] = r;
     const g = String(r.dupOf || '').trim().split(/\s+/).filter(Boolean);
-    if (g.length) GROUP[r.id] = g; }
-  const canon = id => { const g = GROUP[id]; return (g && g.length) ? g[0] : id; };
+    const als = String(r.aliasIds || '').trim().split(/\s+/).filter(Boolean);
+    for (const a of als) if (a !== r.id && !ROW[a]) ALIAS_OF[a] = r.id;
+    if (g.length || als.length) GROUP[r.id] = [r.id].concat(g.filter(x => x !== r.id), als.filter(x => x !== r.id && g.indexOf(x) < 0));
+  }
+  /** 名字 → 图上真实存在的那一行的 id（副名翻译在这一跳） */
+  const resolve = id => (ROW[id] ? id : (ALIAS_OF[id] || null));
+  const canon = id => { const k = resolve(id); if (!k) return id; const g = GROUP[k]; return (g && g.length) ? g[0] : k; };
 
   /* ---- wid 只住在 `lineage.tsv`（第 10 列）⇒ 用它做"同一份权重"那一跳 ---- */
   const WIDOF = {}, ID_OF_WID = {};
@@ -73,10 +85,10 @@ export function load(root) {
   const segs = [];
   for (const t of rows(CM('slot-timeline.tsv'))) { if (!t.wid) continue;
     let cid = null, via = 'unresolved';
-    if (t.panelId && ROW[t.panelId]) { cid = canon(t.panelId); via = 'panelId'; }
+    if (t.panelId && resolve(t.panelId)) { cid = canon(t.panelId); via = 'panelId'; }
     if (!cid) { const guess = 'SLOT-' + String(t.wid).slice(0, 8);          /* 面板上没名字的段 ⇒ 图上的合成行名 */
       if (ROW[guess]) { cid = guess; via = 'wid8'; } }
-    if (!cid && t.metaArm && ROW[t.metaArm]) { cid = canon(t.metaArm); via = 'metaArm'; }
+    if (!cid && t.metaArm && resolve(t.metaArm)) { cid = canon(t.metaArm); via = 'metaArm'; }
     if (!cid && ID_OF_WID[t.wid]) { cid = ID_OF_WID[t.wid]; via = 'wid'; }
     segs.push({ wid: t.wid, from: t.fromUTC || '', sha: t.sha || '', ver: verOf(t.subject || ''),
       panelId: t.panelId || '', metaArm: t.metaArm || '', coordsId: cid, via: via, metaTs: t.metaTs || '' });
@@ -97,7 +109,7 @@ export function load(root) {
   const decl = rows(CM('slot-history.tsv')).filter(h => h.coordsId)
     .sort((a, b) => String(a.sinceLocal) < String(b.sinceLocal) ? -1 : 1);
   const lastDecl = decl.length ? decl[decl.length - 1] : null;
-  const declId = lastDecl ? (ROW[lastDecl.coordsId] ? canon(lastDecl.coordsId) : null) : null;
+  const declId = lastDecl ? (resolve(lastDecl.coordsId) ? canon(lastDecl.coordsId) : null) : null;
 
   /* ---- 活槽现主：wid 现算 → ① 图上同权重的行（最硬）② 声明末行 ③ 时间轴最后一段 ---- */
   const SLOT = join(R, 'js/bundled-champion-3p.js');
@@ -114,9 +126,9 @@ export function load(root) {
   };
 
   return { coordsCount: Object.keys(ROW).length, hasCoords: CO.length > 0,
-    segs, byId, onSlot: Object.keys(byId), decl, live, ROW, GROUP,
+    segs, byId, onSlot: Object.keys(byId), decl, live, ROW, GROUP, ALIAS_OF, resolve,
     isOnSlot: id => !!byId[canon(id)], classOf: id => (byId[canon(id)] ? '历代上槽' : ''),
-    canon: canon, widOfId: id => WIDOF[id] || '', verOf: verOf };
+    canon: canon, widOfId: id => WIDOF[id] || WIDOF[resolve(id)] || '', verOf: verOf };
 }
 
 /* ===== CLI ===== */

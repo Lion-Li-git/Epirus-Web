@@ -105,6 +105,23 @@ if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 docs/arti
 const t = readFileSync(CF, 'utf8').trim().split('\n'), head = t[0].split('\t');
 const rows = t.slice(1).map(l => { const c = l.split('\t'); const o = {}; head.forEach((k, i) => { o[k] = c[i]; }); return o; });
 if (rows.length < 50) { console.error('⛔ 坐标表只有 ' + rows.length + ' 行'); process.exit(2); }
+/* ===== §E604 副名 → 主名 的翻译表（10-14 折行之后加的一跳，位置必须在池表读入**之前**）=====
+ *   `coords.tsv` 现在**一行 = 一份权重**（用户裁：「同权重只算一枚」），组内其它历史名字搬到 `aliasIds` 列，当引用与指针。
+ *   可别的键表仍然按**当年的名字**写：`pool-members.tsv` 里写的是 `SHIPPED-Ldemo`、`lineage.tsv` 的 parentOf 也指它，
+ *   而那一枚权重在图上的行叫 `Ldemo`。不在这里翻译，页内会红出三种样（10-14 实测）：
+ *   ①「不许有任何父边指向图上不存在的枚」红 91 条 ②「池层每一枚都在图上」缺 2 枚 ③「环数 == 表行数」25 对 27。
+ *   ⚠ 补的是**翻译**，不是放松判据：那三条判据一个字没改，判的仍是"每一个键都得落到图上的某一枚"，
+ *   只是允许它经由副名这一跳落到同一枚上；既不是主名、也不是任何人的副名的键，照样红。 */
+const MAIN_OF = {}, ALIASES_OF = {};
+for (const r of rows) {
+  if (!r.id) continue;
+  MAIN_OF[r.id] = r.id;
+  const als = String(r.aliasIds === undefined ? '' : r.aliasIds).trim().split(/\s+/).filter(Boolean);
+  if (als.length) { ALIASES_OF[r.id] = als; for (const a of als) if (!MAIN_OF[a]) MAIN_OF[a] = r.id; }
+}
+const mainOf = id => (id ? (MAIN_OF[id] || id) : id);
+console.log('§E604 副名指针：图上 ' + rows.length + ' 枚 ‖ 其中 ' + Object.keys(ALIASES_OF).length + ' 枚带着历史副名 ‖ ' +
+  '翻译表覆盖 ' + Object.keys(MAIN_OF).length + ' 个名字（副名 ' + (Object.keys(MAIN_OF).length - rows.length) + ' 个）');
 /* ===== §E489 投影列不齐就是**装错货**，不许静默逐行退回到旧力导向 =====
  *   第 271 行那句 `(PROJTSNE && r.xt) ? r.xt : r.x2` 是"某枚**单独**没测过投影"时的退路，
  *   它挡不住"整列没了"（那种情况下每一枚都走退路 ⇒ 920 枚全画回旧布局，一个字的警告都没有）。
@@ -214,6 +231,8 @@ if (existsSync(promP)) {
  *   ⚠ 这里**只读不判**：谁是成员、踩了几格，全由 pool-add/seat-rule 那边算完落表；图抄数不重算（单一来源）。 */
 const poolP = join(HERE, 'pool-members.tsv');
 let POOLM = {};
+const POOL_ALIAS = {};    /* §E604：池表里经由副名归到主名的那几个（要打出来给人看见，不许静默合并） */
+const POOL_CLASH = [];    /* 同一枚被池表两个名字占了不同档 ⇒ 只点名，不自己裁决 */
 /* 档 → 环色（品红 = 困难带 / 蓝紫 = 中带 / 橙 = 简单带）：刻意避开图里已经占掉的三色 —— 绿 #39d98a=过线、金 #ffd166=选中、青 #7fd1ff=对比。
  *   ⚠ §E596（10-12）把难度并成三档、池跟着切成三带（`hard` 7 ‖ `mid` 6 ‖ `soft` 7），键名必须与 `pool-members.tsv` 的 `tier` 逐字一致 ——
  *   少一档的后果不是报错，是**那一档的池环静默不画**（页内第三条牙就是为此存在，10-12 咬到过：两带那版漏了 `soft`）。
@@ -223,11 +242,19 @@ if (existsSync(poolP)) {
   const pl2 = String(readFileSync(poolP, 'utf8')).replace(/\r?\n$/, '').split('\n'); const ph2 = pl2[0].split('\t');
   const iId = ph2.indexOf('id'), iT = ph2.indexOf('tier'), iS = ph2.indexOf('seatKill'), iV = ph2.indexOf('promoteVerdict'), iI = ph2.indexOf('invited');
   for (const l of pl2.slice(1)) { const c = l.split('\t'); if (!c[iId]) continue;
-    POOLM[c[iId]] = { tier: c[iT] || '', sk: Number(c[iS]), pv: c[iV] || '', inv: c[iI] === '1' }; }
+    /* §E604：池真源表按**当年的名字**写（`SHIPPED-Ldemo`），折行之后那一枚在图上的行叫主名（`Ldemo`）
+     *   ⇒ 键在读入时就归到主名。两个池名归到同一枚是**要显式知道的**（那意味着池表里同一份权重占了两席），所以单独数出来。 */
+    const km = mainOf(c[iId]);
+    if (km !== c[iId]) (POOL_ALIAS[c[iId]] = POOL_ALIAS[c[iId]] || []).push(km);
+    if (POOLM[km] && POOLM[km].tier !== (c[iT] || '')) POOL_CLASH.push(km + '：池表两个名字给了不同档（' + POOLM[km].tier + ' vs ' + (c[iT] || '') + '）');
+    POOLM[km] = { tier: c[iT] || '', sk: Number(c[iS]), pv: c[iV] || '', inv: c[iI] === '1' }; }
   const byT = {}; for (const k in POOLM) byT[POOLM[k].tier] = (byT[POOLM[k].tier] || 0) + 1;
   console.log('冠军池 ' + Object.keys(POOLM).length + ' 枚 ' + JSON.stringify(byT) + ' ‖ 人席踩过的 ' +
     Object.values(POOLM).filter(function (x) { return x.sk > 0; }).length + ' 枚 ‖ 没量过的 ' +
-    Object.values(POOLM).filter(function (x) { return !(x.sk >= 0); }).length + ' 枚');
+    Object.values(POOLM).filter(function (x) { return !(x.sk >= 0); }).length + ' 枚' +
+    (Object.keys(POOL_ALIAS).length ? ' ‖ §E604 有 ' + Object.keys(POOL_ALIAS).length + ' 个池名是经由副名归到主名的：' +
+      Object.entries(POOL_ALIAS).map(([a, m]) => a + '→' + m.join('/')).join(' ‖ ') : '') +
+    (POOL_CLASH.length ? ' ‖ ⛔ 同枚给了不同档：' + POOL_CLASH.join(' ‖ ') : ''));
 } else console.log('提示：没有 pool-members.tsv ⇒ 池层不可用（跑 node tools/pool-add.mjs 生成）');
 /* §E310 决斗表（§E289 那台配对决斗的汇总，`duelscan.mjs` 生成）= 图上第 4 条腿："这枚打赢旧冠军 Ldemo 没有（历史参照，它已不下场）"。
  *   为什么非画不可：§E308 ① 我拿"考卷 H 高 5.2pt"当"更强的冠军"写进头条，被这台仪器当场推翻
@@ -361,7 +388,10 @@ const DATA = rows.map(r => ({
   /* §E334 权重身份去重（`attach-dup.mjs`）：`dn` = 同一份权重在面板上有几行 ‖ `dups` = 那几行的 id。
    *   不标就会把"901 行"读成"901 种打法"：实测只有 **713 个不同权重**，而最刺眼的一组是 **4 行都是现役本身**
    *   （SHIPPED-Ldemo ‖ Ldemo  C5-02-31 ‖ C5-02-71）⇒ 对局仪器反过来自证：那三枚打现役配对差恰好 0.0pt。*/
-  dn: r.dupN === '' || r.dupN === undefined ? 1 : +r.dupN, dups: r.dupOf || '',
+  /* §E604：折行之后 `dupN` 恒为 1，"这枚权重有几个名字"搬到 `aliasIds` ⇒ dn 的所指随之改成 1 + 副名数，
+   *   否则图上那句"共 N 份"会永远说 1（同一枚权重确实有 N 个历史名字，池表与血统表用的就是这些名字）。 */
+  dn: ALIASES_OF[r.id] ? 1 + ALIASES_OF[r.id].length : (r.dupN === '' || r.dupN === undefined ? 1 : +r.dupN),
+  dups: ALIASES_OF[r.id] ? [r.id].concat(ALIASES_OF[r.id]).join(' ') : (r.dupOf || ''),
   /* §E338 上线时刻（`ship-scan.mjs` 逐提交算槽文件权重指纹抽出来的）：`sh` = 上槽时间 ‖ `sv` = 那一版号。
    *   抽不到 = 这枚**从没真进过槽**（实测 coords.tsv 的 lineage 列把 v7new6-94/96 标成"历代上槽"，
    *   而 git 里那两条只是 v1.5.114 标题"同时记 v7new6"的顺带点名 ⇒ 那是记账，不是上槽）。*/
@@ -369,7 +399,7 @@ const DATA = rows.map(r => ({
   /* §E304 家族：`fam` = 方法/目标等价类编号（按最早 ts 排 ⇒ 号大 = 训得晚）；`ms` = META 里真正的 RNG seed
    *   （和包名后缀那个数**不是一回事**，实测 META.seed 有 84 个取值、名字后缀只有 14 个）。*/
   fam: LIN[r.id] ? +LIN[r.id].fam : 0, ms: LIN[r.id] ? LIN[r.id].metaSeed : '',
-  ts: LIN[r.id] ? LIN[r.id].ts : '', par: LIN[r.id] ? LIN[r.id].parent : '', pof: LIN[r.id] ? LIN[r.id].parentOf : '',
+  ts: LIN[r.id] ? LIN[r.id].ts : '', par: LIN[r.id] ? LIN[r.id].parent : '', pof: mainOf(LIN[r.id] ? LIN[r.id].parentOf : ''),
   /* §E363：wid = 这枚自己的**权重哈希** ⇒ 用来证"倒挂的那条边确实连的是同一份权重"（页内自检里判），
    *   没有它就只能拿 ts 说话，而"ts 倒挂"这件事本身有两种相反的解释（槽位时刻 vs 数据错）。*/
   wid: LIN[r.id] ? (LIN[r.id].wid || '') : '',
@@ -515,8 +545,10 @@ let NRAW = 0;   /* §E440 去重**之前**的面板行数（= 原始 tsv 行数�
   /* 父边改指：pof 指向被摘那枚的，一律换成保留那枚（同一份权重） */
   let nrep = 0;
   for (const d of DATA) { if (d.pof && keeperOf[d.pof] && keeperOf[d.pof] !== d.pof) { d.pof = keeperOf[d.pof]; nrep++; } }
-  /* 保留那枚的 dn 必须重算成"它代表几份"（原来那列是**全组行数**，摘完之后图上的语义才是"几份拷贝合成一枚"）*/
-  for (const d of DATA) if (d.dn > 1) d.dn = 1 + drop.filter(x => keeperOf[x] === d.id).length;
+  /* 保留那枚的 dn 必须重算成"它代表几份"（原来那列是**全组行数**，摘完之后图上的语义才是"几份拷贝合成一枚"）
+   *   ⚠ §E604 折行之后 §E440 的 drop 恒为空（表里已经没有可摘的了），这行不能再把 dn 覆盖成 1 ——
+   *   那一列现在的来源是 `aliasIds` 的个数（行模型里算好的），这里只在**真的摘过行**时才重算。 */
+  for (const d of DATA) if (d.dn > 1 && drop.length) d.dn = 1 + drop.filter(x => keeperOf[x] === d.id).length;
   console.log('§E440 权重去重：' + before + ' 行 → ' + DATA.length + ' 枚（' + Object.keys(groups).length + ' 组共摘 ' + drop.length +
     ' 行）‖ 父边改指 ' + nrep + ' 条 ‖ 活槽现主(解析) ' + (SID.live.coordsId || '认不出') +
     ' 在图上=' + (SID.live.coordsId && DATA.some(d => d.id === SID.live.coordsId) ? '是' : '⛔没了'));
