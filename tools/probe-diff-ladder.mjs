@@ -16,6 +16,12 @@
  *       [--machine=1 --minGap=2 --except=lv:hard>lv:regular]   （门用的判定档，判据见文件末尾）
  *   `--pack=auto`（默认）= 按页面规则选包（人数=2 ⇒ 2P 那颗；≥3 ⇒ 3P 那颗），所以量的是**玩家真会遇到的那一颗**。
  *   `--extra=` 是给研究用的额外剂量行（不参与"阶梯分级"的判定），格式 `eps:epsK:mode`，逗号分隔多组。
+ *   §E610/611 三个**研究视图**旗标（都只在进程内生效、都不落盘，表头必须印 `# ⚑` 或 `# 掺席 =` 自证）：
+ *     `--pooltier=<带>` 把所有档钉在同一批成员（连带关掉按带加权与掺席）‖
+ *     `--mixseats=<N>` 把声明了 `scriptMix` 的那档盖成 N 席脚本（`0` = 回到 S10 之前那台机器，做闭合检查用）‖
+ *     `--epsover=<id>><值>` 覆盖某档的常数 ε（分隔符是 `>` 不是 `=` —— `flag()` 用 `split('=')[1]`，值里带 `=` 会被截断，
+ *       10-15 冒烟实测过；`ramp:true` 的档直接拒绝，因为它的 ε 由 `tierEps` 按回合给）。
+ *     ⚠ 用这三个旗标量出来的读数**不是产品口径**，不许进在册账（`sigOf` 也不覆盖它们 —— 那正是设计：账只绑产品形状）。
  *
  * ⚠ 引用它的读数必须带四样（§E272/第 45 条）：**装配（人数 × 血量）+ 用哪颗包 + 替身是模型不是真人 + 这是绝对电平不是配对差**。
  */
@@ -27,7 +33,8 @@ import { loadChampParams } from '../server/opp-champs.mjs';
 
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
 rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'extra',
-  'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier', 'pairs', 'banddef'], 'probe-diff-ladder');
+  'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier', 'pairs', 'banddef',
+  'mixseats', 'epsover'], 'probe-diff-ladder');
 
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const GAMES = Math.max(1, Number(flag('games', 1500)) || 1500);
@@ -64,6 +71,27 @@ try {
 let LEVELS = (Bots.DIFF_TIERS || []).slice();
 if (ONLY.length) LEVELS = LEVELS.filter(t => ONLY.indexOf(t.id) >= 0);
 if (ONLY.length && !LEVELS.length) { console.error('⛔ --tiers 一个都没匹配上（在册：' + (Bots.DIFF_TIERS || []).map(t => t.id).join(',') + '）'); process.exit(2); }
+/* §E611 研究旗标 `--epsover=<id>><值>[;<id>><值>…]`：**不落盘**地量一档的剂量（与 `--banddef=` 同族，只在这把尺的进程里生效）。
+ *   为什么要它而不是改 `bots.js`：改源码做变异会同时踩两条现成的线（`D153` 钉斜坡字面 ‖ `D227`②c 钉默认档口径），
+ *   而且 10-12 那条"变异实验不许与同机批量并发"的账还在（那次把 113/121 臂记废）。⇒ 剂量这种"给待裁附数据"的量法应该在量具侧。
+ *   ⚠ 分隔符用 `>`（照 `--except=a>b` 那一条的既有做法），**不用 `=`**：量具的 `flag()` 是 `split('=')[1]`，
+ *   值里再带 `=` 会被截成半截（10-15 冒烟实测：`--epsover=lv:sparring=0.5` 只拿到 `lv:sparring` ⇒ 当场按"形状不对"拒绝，没有静默跑错）。
+ *   ⚠ 这是**研究视图**：印在表头，读数不许当成产品口径引用；`ramp:true` 的档不适用（它的 ε 由 `tierEps` 按回合给，常数覆盖没有所指 ⇒ 响亮拒绝）。 */
+const EPSON = {};
+String(flag('epsover', '') || '').split(';').filter(Boolean).forEach(function (kv) {
+  const i = kv.indexOf('>'); if (i < 1) { console.error('⛔ --epsover 的形状是 <档id>><值>（分号分隔多个），收到：' + kv); process.exit(2); }
+  const id = kv.slice(0, i).trim(), v = Number(kv.slice(i + 1));
+  if (!isFinite(v) || v < 0 || v > 1) { console.error('⛔ --epsover 的值必须是 0~1 的常数 ε，收到：' + kv); process.exit(2); }
+  EPSON[id] = v;
+});
+if (Object.keys(EPSON).length) {
+  LEVELS = LEVELS.map(function (t) {
+    if (EPSON[t.id] === undefined) return t;
+    if (t.ramp) { console.error('⛔ --epsover 不能覆盖 ' + t.id + '：它是 `ramp:true`（ε 由 `tierEps` 按回合给），常数覆盖没有所指'); process.exit(2); }
+    const c = Object.assign({}, t); c.eps = EPSON[t.id]; return c;   /* 浅拷贝 ⇒ 绝不改到 `Bots.DIFF_TIERS` 本体 */
+  });
+  console.log('# ⚑ 研究视图 --epsover = ' + Object.keys(EPSON).map(k => k + '→ε' + EPSON[k]).join(' ‖ ') + '（产品档位表没动；读数别当产品口径引用）');
+}
 /* 研究用的额外剂量行（不参与分级判定，只在标签上标 [extra]） */
 String(flag('extra', '') || '').split(',').filter(Boolean).forEach(function (spec) {
   const p = spec.split(':');
@@ -200,6 +228,19 @@ if (USE_POOL) {
       const mx = (typeof PD.scriptSeats === 'function') ? PD.scriptSeats(lm, N - 1, Bots.STYLES) : null;
       if (mx && mx.seats) MIX_OF[lm.id] = mx;
       if (mx && mx.note) console.log('#   掺席降级 ' + lm.id + '：' + mx.note);
+    }
+    /* §E611 研究旗标 `--mixseats=<N>`：把声明了 `scriptMix` 的那档**盖成 N 席**（同 `--banddef` 那族"不落盘量一种形状"）。
+     *   `N=0` 就是"S10 之前那台机器"⇒ 用来做**闭合检查**：这一臂若复现 `recheck/` 那批（简单 17.66 ‖ 20.27），
+     *   才证明"台阶塌掉是那两席脚本造成的"这句因果；不复现就说明还有别的层不一样，S10 的结论要降级为"未闭合"。 */
+    const MS = flag('mixseats', '');
+    if (MS !== '') {
+      const want = Number(MS);
+      if (!isFinite(want) || want < 0) { console.error('⛔ --mixseats 必须是非负整数，收到：' + MS); process.exit(2); }
+      for (const k of Object.keys(MIX_OF)) {
+        if (want === 0) delete MIX_OF[k];
+        else { MIX_OF[k] = Object.assign({}, MIX_OF[k]); MIX_OF[k].seats = Math.min(want, (N - 1) - 1); }
+      }
+      console.log('# ⚑ 研究视图 --mixseats = ' + want + '（产品档位表没动；这一臂不是产品口径）');
     }
     console.log('# 掺席 = ' + LEVELS.filter(l1 => l1.kind === 'champ')
       .map(l1 => l1.id + '=' + (MIX_OF[l1.id] ? (MIX_OF[l1.id].seats + ' 席[' + MIX_OF[l1.id].ids.join(',') + ']') : '0 席')).join(' ‖ ') +
