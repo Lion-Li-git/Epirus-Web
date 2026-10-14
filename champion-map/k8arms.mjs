@@ -114,7 +114,21 @@ async function pump() {
     const nd = Object.keys(seen).length;
     if (nd < 5) { short++; console.log('  ⛔ ' + r.arm + ' 去重后只有 ' + nd + ' 带 ⇒ 判据(a) 不满足，本臂剔除'); }
   }
-  writeFileSync(join(HERE, 'k8bands.tsv'), rows.map((r) => r.join('\t')).join('\n') + '\n', 'utf8');
+  /* §E608 数据丢失护栏（同一族今晚撞过两次：`oldpacks.tsv` 17 行被一枚冒烟写成 2 行、`eps.tsv` 485 行同理）。
+   *   这台是**整张覆写**在册的 `k8bands.tsv`，而 `--arms=` 只跑前几支 ⇒ 窄跑会把别的臂从册子里冲掉。
+   *   `--inventory` 恰好是"扫盘上全部已落盘的臂"，重跑自愈，所以只拦**非盘点**的窄跑。 */
+  const KBF = join(HERE, 'k8bands.tsv');
+  const prevArms = existsSync(KBF) ? new Set(readFileSync(KBF, 'utf8').split('\n').slice(1)
+    .filter((l) => l.trim()).map((l) => l.split('\t')[0])).size : 0;
+  const nowArms = new Set(rows.slice(1).map((r) => r[0])).size;
+  const INV = process.argv.includes('--inventory');
+  if (!INV && prevArms > nowArms) {
+    console.error('⛔ 拒绝覆写 champion-map/k8bands.tsv：这次只算出 ' + nowArms + ' 支臂，在册那 ' + prevArms +
+      ' 支会被冲掉（`--arms=` 窄跑就是这个形状）。要**补全**就用 `--inventory`（扫盘上已落盘的全部臂）；' +
+      '确实要缩表才加 `--forceShrink=1`');
+    if (arg('forceShrink', '') !== '1') process.exit(2);
+  }
+  writeFileSync(KBF, rows.map((r) => r.join('\t')).join('\n') + '\n', 'utf8');
   console.log('\n清单 champion-map/k8bands.tsv：' + (rows.length - 1) + ' 行（去重后不同权重 ' +
     new Set(rows.slice(1).map((r) => r[4])).size + ' 枚）‖ 不足 5 带的臂 ' + short + ' 支');
   console.log('全部跑完 ' + ((Date.now() - t0) / 60000).toFixed(1) + ' 分钟');

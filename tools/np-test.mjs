@@ -296,6 +296,16 @@ if (PART && GROUP) {
   console.error('⛔ `--part=` 与 `--group=` 不许同时给：一个是分区轴、一个是累计深度轴，混在一起只会得到"看着像全量"的假绿。');
   process.exit(2);
 }
+/* v1.7.22：**裸位置参数一律拒**（10-15 夜班实测踩的：`--part= train-chooser train-evo …` 这种"等号后空格列多个"的写法，
+ *   `--part=` 的值是空串 ⇒ `PART = null` ⇒ 筛选**当成没给** ⇒ 我以为在跑 8 段，实际跑了整轮 278 条，退出码还是 0）。
+ *   整轮本身不是错，错在"以为自己在跑分段"——这一类静默降级与 D218 那条"拼错的旗标被忽略"是同一种病。
+ *   要跑多段请分别调用（一次一个 `--part=<名>`）。 */
+const STRAY = process.argv.slice(2).filter(function (a) { return a[0] !== '-'; });
+if (STRAY.length) {
+  console.error('⛔ 不认识裸参数：' + STRAY.join(' ') + ' ⇒ 本工具只认 `--flag=值`。' +
+    '特别地：`--part=` 后面**留空格再列多个名字**会被读成"没给筛选"= 整轮；要分段请一次一个 `--part=<名>` 分别调用。');
+  process.exit(64);
+}
 /* ===== --list-parts / --explain：把"哪条门落哪个部分、为什么"印出来（可复算）===== */
 if (ARG_LIST_PARTS || ARG_EXPLAIN) {
   const all = [];
