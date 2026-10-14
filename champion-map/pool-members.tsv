@@ -2,26 +2,26 @@ id	wid	path	tier	invited	promoteVerdict	seatKill	addedAt	note
 B5-10-31	ce3c6b4a3c527952	docs/artifacts/e100-out/B5-10-31.bak	hard	0	pass	0	Mon Oct 12 2026 00:24:22 GMT+0800 (中国标准时间)	中/低档自动成员（§E590 补档） ‖ 10-12 00:5x 订正：00:2x 那两次写入的 seatKill=0 是假干净（pool-seat-ml-* 两张表没带基准 bundled-champion-3p ⇒ 杀刀算不出，被 seatKillIndex 的初值 0 当成零格否决）⇒ 改回 -1，等人席真补过再刷
 D4a	5a60c8489990e8b6	docs/artifacts/e234-out/D4a.js	hard	0	pass	0	Sun Oct 11 2026 23:33:00 GMT+0800 (中国标准时间)	点名 · Hp 54.3
 E3	827c47f91419af05	docs/artifacts/e234-out/E3.js	hard	0	pass	0	Sun Oct 11 2026 23:33:00 GMT+0800 (中国标准时间)	困难档自动锚
+G15-71	fbc3926b144ee593	docs/artifacts/kept/e78-out__G08-71.bak	hard	0	pass	0	Mon Oct 12 2026 00:22:19 GMT+0800 (中国标准时间)	中/低档自动成员（§E590 补档） ‖ 10-12 00:5x 订正：00:2x 那两次写入的 seatKill=0 是假干净（pool-seat-ml-* 两张表没带基准 bundled-champion-3p ⇒ 杀刀算不出，被 seatKillIndex 的初值 0 当成零格否决）⇒ 改回 -1，等人席真补过再刷 ‖ §E609 拆带：mid 带按 Hp 归两端（≥48.9 → hard ‖ 其余 → soft），读数见 DONE-7 表 B split50
+K2	1d4b687da27187b7	docs/artifacts/kept/e70-out__D02-31.bak	hard	1	pass	0	Sun Oct 11 2026 23:33:09 GMT+0800 (中国标准时间)	用户点名（明知它防御多） · 行为闸：G5/long 清不了防席（它夺冠 30%）；严格档 25% 越线，**用户 10-12 裁定"按上线档算"⇒ 按 ≤40% 判 pass，已不算"越过"**（invited=1 保留为点名来由）
 R-s123	4072e215256c41b8	docs/artifacts/e521-out/R-s123.js	hard	0	pass	0	Sun Oct 11 2026 23:38:17 GMT+0800 (中国标准时间)	困难档自动成员
 S-s120	590d4a47367be109	docs/artifacts/e521-out/S-s120.js	hard	0	pass	0	Sun Oct 11 2026 23:38:17 GMT+0800 (中国标准时间)	困难档自动成员
+SHIPPED-Ldemo	d490dc136293cfc4	docs/artifacts/eval-out/win-Ldemo.bak	hard	1	pass	0	Sun Oct 11 2026 23:32:59 GMT+0800 (中国标准时间)	旧现役 · 用户点名（§POOL-SCREEN 裁定②）
 T8-s114	24d8fa30bb0c3414	docs/artifacts/e528-out/T8-s114.js	hard	1	pass	0	Sun Oct 11 2026 23:33:00 GMT+0800 (中国标准时间)	现役（v1.6.62 上槽）
 v7bead1-93	8d3418c8f8ae2265	docs/artifacts/v7bead1-93.bak	hard	0	pass	0	Mon Oct 12 2026 01:15:31 GMT+0800 (中国标准时间)	
-blk0t40-s31	f279ffdfc6cbf1ff	docs/artifacts/kept/e124-out__blk0t40-s31.bak	mid	0	pass	0	Mon Oct 12 2026 19:50:34 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带
-E59-land-902	6ae53731631a0eba	docs/artifacts/E59-land-902.bak	mid	0	pass	0	Mon Oct 12 2026 19:50:34 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带
-G15-71	fbc3926b144ee593	docs/artifacts/kept/e78-out__G08-71.bak	mid	0	pass	0	Mon Oct 12 2026 00:22:19 GMT+0800 (中国标准时间)	中/低档自动成员（§E590 补档） ‖ 10-12 00:5x 订正：00:2x 那两次写入的 seatKill=0 是假干净（pool-seat-ml-* 两张表没带基准 bundled-champion-3p ⇒ 杀刀算不出，被 seatKillIndex 的初值 0 当成零格否决）⇒ 改回 -1，等人席真补过再刷
-K2	1d4b687da27187b7	docs/artifacts/kept/e70-out__D02-31.bak	hard	1	pass	0	Sun Oct 11 2026 23:33:09 GMT+0800 (中国标准时间)	用户点名（明知它防御多） · 行为闸：G5/long 清不了防席（它夺冠 30%）；严格档 25% 越线，**用户 10-12 裁定"按上线档算"⇒ 按 ≤40% 判 pass，已不算"越过"**（invited=1 保留为点名来由）
-N5L-30	2b5da24e1770b24a	docs/artifacts/e106-out/N5L-30.bak	mid	0	pass	0	Mon Oct 12 2026 19:50:36 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带
+v7cmin3-93	7e961179bcf37880	docs/artifacts/v7cmin3-93.bak	hard	0	pass	0	Mon Oct 12 2026 01:15:31 GMT+0800 (中国标准时间)	 ‖ §E609 拆带：mid 带按 Hp 归两端（≥48.9 → hard ‖ 其余 → soft），读数见 DONE-7 表 B split50
+blk0t40-s31	f279ffdfc6cbf1ff	docs/artifacts/kept/e124-out__blk0t40-s31.bak	soft	0	pass	0	Mon Oct 12 2026 19:50:34 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带 ‖ §E609 拆带：mid 带按 Hp 归两端（≥48.9 → hard ‖ 其余 → soft），读数见 DONE-7 表 B split50
+E59-land-902	6ae53731631a0eba	docs/artifacts/E59-land-902.bak	soft	0	pass	0	Mon Oct 12 2026 19:50:34 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带 ‖ §E609 拆带：mid 带按 Hp 归两端（≥48.9 → hard ‖ 其余 → soft），读数见 DONE-7 表 B split50
+N5L-30	2b5da24e1770b24a	docs/artifacts/e106-out/N5L-30.bak	soft	0	pass	0	Mon Oct 12 2026 19:50:36 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带 ‖ §E609 拆带：mid 带按 Hp 归两端（≥48.9 → hard ‖ 其余 → soft），读数见 DONE-7 表 B split50
 R311	ccc41e51a11947ce	docs/artifacts/eval-out/win-R311.bak	soft	0	pass	0	Mon Oct 12 2026 19:50:34 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带
-seed80	c99b5c2d3cea3722	docs/artifacts/eval-out/sel80.bak	mid	0	pass	0	Mon Oct 12 2026 19:50:35 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带
-SHIPPED-Ldemo	d490dc136293cfc4	docs/artifacts/eval-out/win-Ldemo.bak	hard	1	pass	0	Sun Oct 11 2026 23:32:59 GMT+0800 (中国标准时间)	旧现役 · 用户点名（§POOL-SCREEN 裁定②）
+seed80	c99b5c2d3cea3722	docs/artifacts/eval-out/sel80.bak	soft	0	pass	0	Mon Oct 12 2026 19:50:35 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带 ‖ §E609 拆带：mid 带按 Hp 归两端（≥48.9 → hard ‖ 其余 → soft），读数见 DONE-7 表 B split50
 SP-s30	faf11b47ade2a352	docs/artifacts/e504-out/SP-s30.js	soft	0	pass	0	Mon Oct 12 2026 19:50:35 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带
-U-s216	e358710b0e1130eb	docs/artifacts/e539-out/U-s216.js	mid	0	pass	0	Mon Oct 12 2026 19:50:35 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带
-v7cmin3-93	7e961179bcf37880	docs/artifacts/v7cmin3-93.bak	mid	0	pass	0	Mon Oct 12 2026 01:15:31 GMT+0800 (中国标准时间)	
-v7n1-93	8358c7b72b4d9dc8	docs/artifacts/v7n1-93.bak	soft	0	pass	0	Mon Oct 12 2026 01:15:31 GMT+0800 (中国标准时间)	
-v7new5_005-81	ab21a7d18e7dbe62	docs/artifacts/v7new5_005-81.bak	soft	0	pass	0	Mon Oct 12 2026 00:22:19 GMT+0800 (中国标准时间)	中/低档自动成员（§E590 补档） ‖ 10-12 00:5x 订正：00:2x 那两次写入的 seatKill=0 是假干净（pool-seat-ml-* 两张表没带基准 bundled-champion-3p ⇒ 杀刀算不出，被 seatKillIndex 的初值 0 当成零格否决）⇒ 改回 -1，等人席真补过再刷
+U-s216	e358710b0e1130eb	docs/artifacts/e539-out/U-s216.js	soft	0	pass	0	Mon Oct 12 2026 19:50:35 GMT+0800 (中国标准时间)	§E597 补开体检 pass（10-12 千问），按实测落中带 ‖ §E609 拆带：mid 带按 Hp 归两端（≥48.9 → hard ‖ 其余 → soft），读数见 DONE-7 表 B split50
 v7bead3-82	de1fcffb5fc4ed1e	docs/artifacts/v7bead3-82.bak	soft	0	pass	0	Mon Oct 12 2026 01:47:33 GMT+0800 (中国标准时间)	
 v7force-34	cf63a1b569ce88bb	docs/artifacts/v7force-34.bak	soft	0	pass	0	Mon Oct 12 2026 01:14:06 GMT+0800 (中国标准时间)	
 v7l2c-101	4cb7516d80145d0d	docs/artifacts/v7l2c-101.bak	soft	0	pass	0	Mon Oct 12 2026 01:14:06 GMT+0800 (中国标准时间)	
+v7n1-93	8358c7b72b4d9dc8	docs/artifacts/v7n1-93.bak	soft	0	pass	0	Mon Oct 12 2026 01:15:31 GMT+0800 (中国标准时间)	
+v7new5_005-81	ab21a7d18e7dbe62	docs/artifacts/v7new5_005-81.bak	soft	0	pass	0	Mon Oct 12 2026 00:22:19 GMT+0800 (中国标准时间)	中/低档自动成员（§E590 补档） ‖ 10-12 00:5x 订正：00:2x 那两次写入的 seatKill=0 是假干净（pool-seat-ml-* 两张表没带基准 bundled-champion-3p ⇒ 杀刀算不出，被 seatKillIndex 的初值 0 当成零格否决）⇒ 改回 -1，等人席真补过再刷
 v7ringB1-93	5591af276caa41fe	docs/artifacts/v7ringB1-93.bak	soft	0	pass	0	Mon Oct 12 2026 01:47:33 GMT+0800 (中国标准时间)	
 v7role1-91	97dd729190d13063	docs/artifacts/v7role1-91.bak	soft	0	pass	0	Mon Oct 12 2026 01:47:33 GMT+0800 (中国标准时间)	
 v7u1-82	36d9f858545e13d2	docs/artifacts/v7u1-82.bak	soft	0	pass	0	Mon Oct 12 2026 01:14:06 GMT+0800 (中国标准时间)	

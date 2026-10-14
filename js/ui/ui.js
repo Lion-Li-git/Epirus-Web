@@ -413,12 +413,16 @@
     const D = window.EpirusPoolDraw;
     if (!D || !tier || !tier.pool) return null;
     const k = (n > 2) ? 'p3' : 'p2';                       /* §E599：2P 走 2P 原生池那一份（不是把 3P 池搬过去） */
-    const members = D.byTier(loadPoolOf(k), tier.pool);
+    /* §E609：这一档该拿哪份名单、要不要按带加权 —— **推导只有一份**（`pool-draw.js` 的 `rosterFor`），
+     *   页面不许自己判"mid 空了就换 mix"（那就是量具与产品两份实现，规矩 134 那一族）。 */
+    const R = D.rosterFor(loadPoolOf(k), tier);
+    const members = R.members;
     if (!members.length) return null;
     const aiSeats = Math.max(1, n - 1);                   /* 2P ⇒ 1 席 */
     const mix = scriptMixFor(tier, aiSeats);
-    const draw = D.compose(members, aiSeats, D.rng((state && state.slotSalt >>> 0) || 1), mix && mix.seats ? mix : null);
+    const draw = D.compose(members, aiSeats, D.rng((state && state.slotSalt >>> 0) || 1), mix && mix.seats ? mix : null, R.bandW);
     if (draw && mix && mix.note) draw.mixNote = mix.note;
+    if (draw && R.note) draw.bandNote = R.note;           /* 这张池表还没拆带 ⇒ 必须说出来，不许静默退回 mid */
     return draw;
   }
   /** 这一席该用哪一枚。`n<=2` 完全走老路：§E286 实测 3P 包在 1v1 上是**分布外**的 ⇒ 把池搬到 2 人桌等于造一个假档。 */
@@ -557,16 +561,22 @@
       if (plan.on && d && d.seats.length) {
         const S = plan.two ? POOLS.p2.st : POOL;
         const nm = plan.two ? '2P池' : '池';
-        const n = S.members.filter(function (m) { return m.tier === tier.pool; }).length;
+        /* §E609 这一行必须说得出"本档实际从哪些带抽"：mix 生效时还写 `mid(0 枚)` 就是骗人，
+         *   而走退路（这张表没拆带）时不写出来就是静默降级（契约 §4）。推导仍只有一份：`rosterFor`。 */
+        const RD = (window.EpirusPoolDraw && window.EpirusPoolDraw.rosterFor) ? window.EpirusPoolDraw.rosterFor(S.members, tier) : null;
+        const n = RD ? RD.members.length : S.members.filter(function (m) { return m.tier === tier.pool; }).length;
+        const srcName = (RD && RD.bandW) ? (nm + '·两带混抽（' + n + ' 枚）') : (nm + '·' + tier.pool + '(' + n + ' 枚)');
         return {
-          source: nm + '·' + tier.pool + '(' + n + ' 枚) 本局=' +
+          source: srcName + ' 本局=' +
             d.seats.map(function (s) {
               /* §E600-B：脚本席要一眼看得出是脚本（不然"本局=st:toolkit"读起来像一枚包的名字） */
               if (s.kind === 'script') { const q = styleOf(s.id); return '脚本·' + (q ? q.name : s.id); }
               return s.id;
             }).join('+') +
             (d.scriptSeats ? (' 掺脚本 ' + d.scriptSeats + ' 席') : '') +
+            (d.bands ? ' 带比 ' + d.bands : '') +
             (d.mixNote ? ' ⚠' + d.mixNote : '') +
+            (d.bandNote ? ' ⚠' + d.bandNote : '') +
             (d.allSame && !plan.two ? ' ⚠四席全同:该档成员不足' : '') +
             (S.bad.length ? ' ⚠出局:' + S.bad.join(',') : '') +
             ' · ' + tier.name + ' ε=' + tier.eps + '/k' + tier.epsK + '/' + tier.epsMode + (tier.ramp ? '·斜坡' : ''),

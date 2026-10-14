@@ -116,22 +116,38 @@ const USE_POOL = (flag('pool', '0') || '0') === '1';
 const POOL_TIER = (flag('pooltier', '') || '').trim();   /* 非空 = 把所有档钉在**同一批池成员**上 ⇒ 档间只剩剂量差 */
 const PD = W.EpirusPoolDraw;
 const POOL_BY_TIER = {}, MEMBER_P = {};
+/* §E609 全表（= 各带并起来的那份），**必须在 --banddef 覆盖之后**重算：
+ *   先算好再覆盖会让 `rosterFor` 看到的是旧形状 ⇒ 临时视图被静默忽略（昨天"banddef 没生效却量成现表"的反方向同款）。 */
+let ALL_POOL_M = [];
+const LADDER_NOTED = {};
 if (POOL_TIER && !USE_POOL) { console.error('⛔ --pooltier= 只在 --pool=1 下有意义（单包装配没有"档到池"的映射可钉）'); process.exit(2); }
 if (USE_POOL) {
   if (!PD || typeof PD.compose !== 'function') { console.error('⛔ js/pool-draw.js 没进 sandbox 的 CORE 名单 ⇒ 池模式没有抽签实现，只能退回单包'); process.exit(2); }
-  const PT = join(ROOT, 'champion-map/pool-members.tsv');
-  if (!existsSync(PT)) { console.error('⛔ 池真源表不在：champion-map/pool-members.tsv（先跑 tools/pool-add.mjs）'); process.exit(2); }
+  const PT = join(ROOT, N > 2 ? 'champion-map/pool-members.tsv' : 'champion-map/pool-members-2p.tsv');
+  /* §E609：`--n=2 --pool=1` 以前**根本走不到这里**（下面那句装配判定写死 N>2）⇒ 2 人桌的三档从来没有一条池装配读数。
+   *   补上之后按人数选表：2 人桌用的是 2P 原生那份（`pool-members-2p.tsv`，§E599 的裁定），不是把 3P 池搬过去。 */
+  if (!existsSync(PT)) { console.error('⛔ 池真源表不在：' + PT + '（先跑 tools/pool-add.mjs）'); process.exit(2); }
+  console.log('# 池真源表 = ' + (N > 2 ? 'champion-map/pool-members.tsv（多人桌）' : 'champion-map/pool-members-2p.tsv（2 人桌，§E599 那份原生池）'));
   const PL = readFileSync(PT, 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
   const ph = Object.fromEntries(PL[0].split('\t').map((x, i) => [x, i]));
+  /* §E609 解包：多人包的全局名是 `EPIRUS_CHAMPION_3P`，2P 原生那份是 `EPIRUS_CHAMPION`（`loadChampParams` 只认前者
+   *   ⇒ 直接拿它读 2P 的 .bak 会"全部解不开"，而那看起来像池坏了、其实是量具不认形状）。
+   *   两种都走 `EpirusPolicy.unpack(obj, true)` —— 与页面 `ui.js:loadPoolOf` 同一个入口、同一个 allowLegacy。 */
+  function loadPoolPack(file) {
+    const src = readFileSync(file, 'utf8');
+    let m = src.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
+    if (!m) m = src.match(/window\.EPIRUS_CHAMPION\s*=\s*(\{[\s\S]*?\})\s*;/);
+    return m ? POOL.unpack(JSON.parse(m[1]), true) : null;
+  }
   for (const l of PL.slice(1)) { const c = l.split('\t'); if (!c[ph.id]) continue;
     const tier = c[ph.tier];
     let p = null;
-    try { p = loadChampParams(POOL, join(ROOT, c[ph.path])); } catch (e) { p = null; }
+    try { p = loadPoolPack(join(ROOT, c[ph.path])); } catch (e) { p = null; }
     if (!p) { console.error('⛔ 池成员 ' + c[ph.id] + ' 的包解不开（' + c[ph.path] + '）⇒ 按失败处理，不许少一席继续量'); process.exit(7); }
     MEMBER_P[c[ph.id]] = p;
     (POOL_BY_TIER[tier] = POOL_BY_TIER[tier] || []).push({ id: c[ph.id], wid: c[ph.wid], tier: tier });
   }
-  console.log('# 装配 = **池形态**（逐席不同枚，真源 champion-map/pool-members.tsv）：' +
+  console.log('# 装配 = **池形态**（逐席不同枚，真源 ' + (N > 2 ? 'champion-map/pool-members.tsv' : 'champion-map/pool-members-2p.tsv') + '）：' +
     Object.keys(POOL_BY_TIER).map(t => t + ' ' + POOL_BY_TIER[t].length + ' 枚').join(' ‖ '));
   /* §E595 `--banddef="A=id1,id2;B=id3,..."`：**不落盘**地量一种分带。
    *   为什么需要：搜分带时每一次评估都要量"这一带组出来的桌有多硬"，而改真源表再改回来 = 把没验过的划分
@@ -152,6 +168,14 @@ if (USE_POOL) {
     for (const k of Object.keys(NB)) POOL_BY_TIER[k] = NB[k];
     console.log('# --banddef 生效（临时视图，表没动）：' + Object.keys(NB).map(t => t + ' ' + NB[t].length + ' 枚').join(' ‖ '));
   }
+  /* §E609 全表重算（banddef 之后）+ **把每一档实际走哪条抽法说出来**：
+   *   这一行就是昨天那条教训的正面版本 —— 不看它，"我以为在量临时视图/混抽"和"其实量的是别的"长得一模一样。 */
+  ALL_POOL_M = [];
+  for (const t of Object.keys(POOL_BY_TIER)) for (const m of POOL_BY_TIER[t]) ALL_POOL_M.push(m);
+  console.log('# 抽法推导 = rosterFor(全表 ' + ALL_POOL_M.length + ' 枚)' + (POOL_TIER ? ' ‖ 但 --pooltier=' + POOL_TIER + ' 把所有档钉在同一批成员上 ⇒ 加权关掉' : '') + '：' +
+    LEVELS.filter(l => l.kind === 'champ').map(l0 => { const R0 = PD.rosterFor(ALL_POOL_M, l0);
+      return l0.id + '=' + (POOL_TIER ? '钉在 ' + POOL_TIER : (R0.bandW ? '按带加权 ' + Object.keys(R0.bandW).filter(x => x !== 'else').join('/')
+        : (R0.note ? '退路→' + l0.pool + '(' + R0.members.length + ' 枚)' : '单带 ' + l0.pool + '(' + R0.members.length + ' 枚)'))); }).join(' ‖ '));
 }
 
 const win = {}, rows = [];
@@ -170,14 +194,20 @@ for (const L of LEVELS) {
     /* 池形态：每局按 `state.slotSalt` 抽一次组成（与页面同一份 `compose`），AI 席按 pid 升序领第 0..n-1 枚 ——
      *   这条顺序与 `js/pool-draw.js` 末尾那句"席位号按升序领"以及 `ui.js` 的 `champForSeat` 同源，不许在这儿另排一次。 */
     let comp = null, seatK = 0;
-    if (USE_POOL && L.kind !== 'style' && N > 2) {
-      /* `--pooltier=` 把**所有档钉在同一批池成员上** ⇒ 这样档与档之间只剩剂量差，"剂量阶梯本身"才被单独量到
-       *   （不钉的时候档差混着"抽哪一批包"，见 docs/GATE-SHIFTS.md §十九 那句主语漂移）。 */
-      const mem = POOL_BY_TIER[POOL_TIER || L.pool] || [];
-      if (mem.length < 2) { console.error('⛔ 档 ' + L.id + ' 的池只有 ' + mem.length + ' 枚 ⇒ 抽签在数学上必然全同（契约 §3）' +
-        ' ⇒ 这一档还没成型，别拿池模式量它'); process.exit(2); }
-      comp = PD.compose(mem, N - 1, PD.rng(st.slotSalt >>> 0));
-      if (comp.allSame) { console.error('⛔ 池模式抽出四席全同（' + L.id + ' · salt=' + st.slotSalt + '）⇒ 违反裁定③，本行读数作废'); process.exit(2); }
+    if (USE_POOL && L.kind !== 'style') {
+      /* §E609：去掉原来那句 `&& N > 2` —— 它把"2 人桌的池装配"整条路关掉了，于是产品卖给 2 人桌的三档
+         从来没有一条池装配读数（`docs/debug/tier-census.mjs` 也是 5 席循环 ⇒ 两边都是盲区）。
+         现在 2 人桌走 `pool-members-2p.tsv`，只有 1 席 AI ⇒ "全同"在那儿是数学必然而不是降级
+         （产品侧 `ui.js` 早就是 `d.allSame && !plan.two` 才警告，这里跟它同一个口径）。
+         `--pooltier=` 仍可用：把所有档钉在**同一批池成员**上 ⇒ 档间只剩剂量差，剂量阶梯本身被单独量到
+         （不钉时档差混着"抽哪一批包"，见 docs/GATE-SHIFTS.md §十九 那句主语漂移）。 */
+      const mem = POOL_TIER ? (POOL_BY_TIER[POOL_TIER] || []) : PD.rosterFor(ALL_POOL_M, L).members;
+      const bandW = POOL_TIER ? null : PD.rosterFor(ALL_POOL_M, L).bandW;
+      const need = N > 2 ? 2 : 1;
+      if (mem.length < need) { console.error('⛔ 档 ' + L.id + ' 的池只有 ' + mem.length + ' 枚（这一桌要至少 ' + need + ' 枚）' +
+        ' ⇒ ' + (need > 1 ? '抽签在数学上必然全同（契约 §3）' : '池是空的') + ' ⇒ 这一档还没成型，别拿池模式量它'); process.exit(2); }
+      comp = PD.compose(mem, N - 1, PD.rng(st.slotSalt >>> 0), null, bandW);
+      if (comp.allSame && N - 1 > 1) { console.error('⛔ 池模式抽出四席全同（' + L.id + ' · salt=' + st.slotSalt + '）⇒ 违反裁定③，本行读数作废'); process.exit(2); }
     }
     const cs = [];
     for (let pid = 0; pid < N; pid++) {

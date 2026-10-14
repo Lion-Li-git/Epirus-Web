@@ -20,22 +20,47 @@
 /* 参数签名：把"这套阶梯到底由什么构成"写成一根字符串。
  * 池的**成员名册**不在签名里（名册一改就要重跑 1500 局 × 两模式，太贵），
  *   ⇒ 已知边界：只换池成员而不改档位参数时，这张账不会自动过期；那种情形的兜底是 ④ 的现场腿
- *   （量具活着 + 极端档仍分得开）与 `D234` 的池契约。要收紧就到需要收紧的那天，别提前加戏。 */
+ *   （量具活着 + 极端档仍分得开）与 `D234` 的池契约。要收紧就到需要收紧的那天，别提前加戏。
+ * ⚠ §E609 把 **`poolMix` 加进了签名**：10-15 落地"两带各半混抽"时只加了 `poolMix` 这一个字段，
+ *   `pool` 仍是 `mid`（那是 2P 那张表的退路带名）⇒ 旧签名**逐字没变**，这张账明明已经被换掉了抽法却还"有效"。
+ *   那正是文件自己警告的那一类（"配置在、账过期"）。名册依旧不进签名（代价没变），但**抽法**必须进 ——
+ *   单带抽与按带加权抽是两台不同的机器，不是同一台机器的两个成员表。 */
 export function sigOf(tiers) {
+  const mixOf = function (t) {
+    if (!t.poolMix) return '-';
+    const ks = Object.keys(t.poolMix).filter(function (k) { return k !== 'else'; }).sort();
+    return ks.map(function (k) { return k + '=' + t.poolMix[k]; }).join('+') + (t.poolMix['else'] ? ('|else=' + t.poolMix['else']) : '');
+  };
   return (tiers || []).map(function (t) {
-    return [t.id, t.kind, t.eps, t.epsK, t.epsMode, t.ramp ? 1 : 0, t.pool || '-', t.style || '-'].join(':');
+    return [t.id, t.kind, t.eps, t.epsK, t.epsMode, t.ramp ? 1 : 0, t.pool || '-', t.style || '-', mixOf(t)].join(':');
   }).join(';');
 }
 
-/* 实测账（1500 局/档 · 逐局配对 · 表内 = 差 ±1σ） */
+/* 实测账（本批 = **8 个 seed × 1000 局/档 · 三档逐局配对 · 表内 = 差 ±SE(跨 seed)**，见下面 source） */
 export const LADDER_CLAIM = {
   /* 与生成这份读数的档位参数逐字对应（`D227`④ 拿 `sigOf(Bots.DIFF_TIERS)` 现算来比这里）。
-   * ⚠ 这串是**现算出来贴上的**，不是我手打的 —— 第一版手打时把 style 档的 `ramp` 写成了 `-`，
-   *   而 `sigOf` 对未定义一律给 `0` ⇒ 差一个字符就是永久过期。手打派生值是这个仓最常犯的错之一。 */
-  sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-;lv:regular:champ:0.1:5:soft:1:mid:-;lv:hard:champ:0.1:5:soft:1:hard:-',
-  source: 'node tools/probe-diff-ladder.mjs --pairs=all --games=1500 [--pool=1] --mode=multi|long（四组 · 原始日志与两次候选分带在 docs/research/logs/2026-10-12-e596-three-tier.md，上一版的翻序记录在 …/2026-10-12-e595-ladder-register.md）',
+   * ⚠ 这串是**现算出来贴上的**（跑 `node tools/np-test.mjs --part=train-chooser` 让 ④a 把"现算="那行吐出来），
+   *   不是我手打的 —— 第一版手打时把 style 档的 `ramp` 写成了 `-`，而 `sigOf` 对未定义一律给 `0`
+   *   ⇒ 差一个字符就是永久过期。手打派生值是这个仓最常犯的错之一。
+   * §E609：签名尾巴多了一节（`poolMix`）—— 10-15 落地两带混抽时旧签名**逐字没变**，那张账明明换了抽法却还"有效"，
+   *   ④a 就是抓不到。补上之后先复现了一次旧红（在册=旧串 vs 现算=新串），再按新串重测。 */
+  sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-:-;lv:regular:champ:0.1:5:soft:1:mid:-:hard=0.5+soft=0.5|else=mid;lv:hard:champ:0.1:5:soft:1:hard:-:-',
+  source: '§E609（10-15 重测）：node tools/probe-diff-ladder.mjs --tiers=lv:sparring,lv:regular,lv:hard --pairs=1 --games=1000 --seed=77000..77007 --mode=multi|long' +
+    '（带 --pool=1 = 池装配，不带 = 单包对照）‖ 跑法与聚合见 docs/artifacts/e608-out/recheck.mjs（一次性量具），原始日志 …/recheck/ 与 …/recheck-single/' +
+    '‖ **d = 跨 seed 配对差均值，se = 其标准误 sd/√8**（10-12 那批是单次 1500 局的组内配对 SE ⇒ 两批的 se 不是同一个东西，别横着比大小，只比 σ 数）。' +
+    '上一批（10-12）的原始日志与两次候选分带在 docs/research/logs/2026-10-12-e596-three-tier.md，翻序记录在 …/2026-10-12-e595-ladder-register.md',
   rule: '判"分得开" = |差| ≥ 2σ(配对)（不是 ≥2pt）。行按**档位表声明序**的相邻对记：`from` = 声明里更难那一档，`d` = 人类席夺冠率( to ) − 人类席夺冠率( from ) ⇒ **d 为负 = 实测把这一对的次序翻了**（不是抄错，是记账）。',
-  measuredAt: '2026-10-12',
+  measuredAt: '2026-10-15',
+  /* ===== §E609（10-15 这批）新形状与两条后果 =====
+   * 带形状：`mid` 清空（7 枚按 Hp 归两端）⇒ **hard 11 ‖ soft 16**，而 `lv:regular` = 逐席 0.5/0.5 按带加权
+   *   （`js/pool-draw.js` 的 `rosterFor` + `compose(..., bandW)`，页面与量具同一份）。
+   * 后果①：**普通档变硬了**，而且与 10-14 那次 split50 预告对得上（预告 multi 15.81 ‖ long 16.13，
+   *   落地实测 multi **15.89** ‖ long **16.13**）⇒ "按带加权"与"往名单里重复铺行"确实同分布，这条是那次量具妥协的正名。
+   * 后果②：**简单档也变硬了一点**（multi 19.4 → 17.66）—— soft 带吞了 5 枚原中带成员，比原来那 11 枚强。
+   *   所以台阶一在 multi 只有 1.77pt（long 有 4.06pt）：它是三档里最薄的一级，但 8 seed 下仍有 **5.0σ**（10-12 那批因为只跑一次、se=1.4，被记成"分不开"）。
+   * 后果③：单包对照那两组**逐字复现了"三档其实是同一台机器"**（困难≡普通 d=0 se=0，简单↔普通 0.17σ ‖ 1.16σ）
+   *   ⇒ 台阶是**带**给的，不是剂量给的。要"真简单"仍只剩两条老杠杆（单留大 ε，或往软带补真弱的成员）。
+   */
   /* ===== §E596（裁定）+ §E597（10-12 晚重测，这批数就是那次来的）=====
    * 剂量现状：简单 = 常数 ε=0.2 ‖ 普通与困难 = 回合斜坡 0→0.05→0.1（k5 ‖ soft）。
    *   ⚠ **三带 7/6/7 是"测这批数时"的形状** —— v1.7.1 现测真源 `champion-map/pool-members.tsv` 已长到 **soft 11 ‖ mid 7 ‖ hard 9**
@@ -70,19 +95,19 @@ export const LADDER_CLAIM = {
    */
   modes: {
     'pool:multi': [
-      { from: "lv:regular", to: "lv:sparring", d: 1.47, se: 1.4, sep: false },
-      { from: "lv:hard", to: "lv:regular", d: 4.53, se: 1.29, sep: true }
+      { from: "lv:regular", to: "lv:sparring", d: 1.77, se: 0.35, sep: true },
+      { from: "lv:hard", to: "lv:regular", d: 2.46, se: 0.29, sep: true }
     ],
     'pool:long': [
-      { from: "lv:regular", to: "lv:sparring", d: 3.07, se: 1.44, sep: true },
-      { from: "lv:hard", to: "lv:regular", d: 5.33, se: 1.25, sep: true }
+      { from: "lv:regular", to: "lv:sparring", d: 4.06, se: 0.39, sep: true },
+      { from: "lv:hard", to: "lv:regular", d: 2.70, se: 0.54, sep: true }
     ],
     'single:multi': [
-      { from: "lv:regular", to: "lv:sparring", d: 0.67, se: 1.16, sep: false },
+      { from: "lv:regular", to: "lv:sparring", d: 0.06, se: 0.36, sep: false },
       { from: "lv:hard", to: "lv:regular", d: 0, se: 0, sep: false }
     ],
     'single:long': [
-      { from: "lv:regular", to: "lv:sparring", d: -1.33, se: 1.07, sep: false },
+      { from: "lv:regular", to: "lv:sparring", d: 0.51, se: 0.44, sep: false },
       { from: "lv:hard", to: "lv:regular", d: 0, se: 0, sep: false }
     ]
   }

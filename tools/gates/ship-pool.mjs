@@ -244,6 +244,65 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
       '⑫e 页面 `poolDrawFor` 必须把推导出来的 mix 传给 `compose`（档位表写了 scriptMix 而产品不传 = 假档）‖ 实测那行：' +
       (compLine.trim().slice(0, 120) || '(整页找不到 D.compose 调用)'));
   }
+  /* ⑬ §E609 按带加权混抽（用户 10-15 裁定：中等带拆开丢进两端 ⇒ "普通"逐席按 0.5/0.5 掷带、带内均匀取枚）。
+   *   四条各卡一种坏法，其中 ⑬a 的牙是**量出来的**：
+   *     ⑬a 真源 3P 表上声明了 `poolMix` 的档必须真的走到加权，且 **10000 场 × 4 席 = 40000 席**里 soft 份额落在 0.500±0.02。
+   *          牙：把 `bandW` 传丢 ⇒ 退化成"整表均匀抽" ⇒ 份额就是 soft 占比 16/27 = **0.593**，当场出界（跑过，见 CHANGELOG v1.7.19）；
+   *          40000 席下 p=0.5 的 SE = 0.0025 ⇒ ±0.02 是 8σ，不是"刚好绿"。
+   *     ⑬b **没拆带的表必须走退路并说话**：2P 那张（hard 2 ‖ mid 3 ‖ soft 2）上 `rosterFor` 必须给 `bandW=null` + 非空 `note`
+   *          + 非空成员 ⇒ 抓的是"拿 3P 的证据替 2P 决定归属"和"静默换抽法"两种坏。
+   *     ⑬c `compose` 必须把生效的带比印出来（`out.bands`）⇒ 页面标签与判词有地方抄，不必自己再推一遍（第 134 条那一族）。
+   *     ⑬d 页面与量具都必须调 `rosterFor(` ⇒ 同 ⑫e 那一族："配置在表里、接线断了"。 */
+  {
+    const BW3 = sandbox(process.cwd());
+    const Q = BW3.EpirusPoolDraw, BT = BW3.EpirusBots;
+    ok(!!Q && typeof Q.rosterFor === 'function', '⑬ 前提：`js/pool-draw.js` 必须导出 `rosterFor`（带抽法只许这一份推导）');
+    const mixT = ((BT && BT.DIFF_TIERS) || []).filter(t => t.poolMix);
+    ok(mixT.length >= 1, '⑬ 前提：至少一档声明 poolMix（实测 ' + mixT.length + ' 档）⇒ 一条都没了就是被撤了，这条门要一起改');
+    const all3 = trows.map(r => ({ id: r[th.id], wid: r[th.wid], tier: r[th.tier] }));
+    const tierOf = {}; for (const m of all3) tierOf[m.id] = m.tier;
+    for (const t of mixT) {
+      const R = Q.rosterFor(all3, t);
+      const names = Object.keys(t.poolMix).filter(k => k !== 'else');
+      ok(names.every(k => all3.some(m => m.tier === k)),
+        '⑬a 档 ' + t.id + ' 声明的带在真源表里一枚都没有：' + names.join(',') + ' ⇒ 加权会静默退到剩下的那一头');
+      ok(!!R.bandW, '⑬a 真源 3P 表上档 ' + t.id + ' 必须走到按带加权（mid 已拆空）‖ 实测 bandW=' + JSON.stringify(R.bandW) +
+        ' ‖ note=' + (R.note || '无'));
+      let softCnt = 0, seatCnt = 0, bandsTxt = '';
+      for (let s = 1; s <= 10000; s++) {
+        const c = Q.compose(R.members, 4, Q.rng(s * 7919 + 13), null, R.bandW);
+        eq(c.seats.length, 4, '⑬a 五席桌必须恰好 4 席 AI（实测 ' + c.seats.length + '）');
+        for (const m of c.seats) { seatCnt++; if (tierOf[m.id] === 'soft') softCnt++; }
+        bandsTxt = c.bands || '';
+      }
+      const share = softCnt / seatCnt;
+      ok(Math.abs(share - 0.5) <= 0.02, '⑬a 档 ' + t.id + ' 抽 ' + seatCnt + ' 席里 soft 份额 ' + (100 * share).toFixed(2) +
+        '% 不在 50%±2% ⇒ 加权没落地（整表均匀抽会得到 ' + (100 * all3.filter(m => m.tier === 'soft').length / all3.length).toFixed(1) + '%）');
+      ok(/hard 50% ‖ soft 50%/.test(bandsTxt), '⑬c `compose` 必须把生效带比印出来（页面标签要抄这一句）‖ 实测 bands=' + (bandsTxt || '(空)'));
+    }
+    const P2 = 'champion-map/pool-members-2p.tsv';
+    if (existsSync(P2) && mixT.length) {
+      const L2 = readFileSync(P2, 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
+      const h2 = L2[0].split('\t'), i2 = h2.indexOf('tier'), id2 = h2.indexOf('id');
+      const m2 = L2.slice(1).map(l => l.split('\t')).filter(r => r[id2]).map(r => ({ id: r[id2], wid: r[id2], tier: r[i2] }));
+      const R2 = Q.rosterFor(m2, mixT[0]);
+      ok(!R2.bandW && !!R2.note && R2.members.length > 0,
+        '⑬b 2P 那张表还没拆带 ⇒ `rosterFor` 必须走退路（bandW=null + 说出 note）‖ 实测 bandW=' + JSON.stringify(R2.bandW) +
+        ' ‖ members ' + R2.members.length + ' 枚 ‖ note=' + (R2.note || '(空 = 静默降级)'));
+    }
+    const uiLines = String(readFileSync('js/ui/ui.js', 'utf8')).split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l));
+    const ladLines = String(readFileSync('tools/probe-diff-ladder.mjs', 'utf8')).split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l));
+    /* ⚠ 第一版这条只判"有没有调 rosterFor" ⇒ 拿"算出来但没传给 compose"那个变异去验，**它是绿的**（红话见 CHANGELOG v1.7.19）。
+     *   所以钉两处：① rosterFor 必须被调（推导不许在页面里重写一遍）② 它算出的 bandW 必须真的进 compose 那一行。
+     *   形状与 ⑫e 同一族（"配置在表里、接线断了"）—— 这类只能钉接线，因为断点在源码里，不在数据里。 */
+    ok(uiLines.some(l => l.indexOf('D.rosterFor(') >= 0), '⑬d1 页面 `poolDrawFor` 必须调 `rosterFor`（不许自己判 mid 空了要不要换 mix）');
+    const uiComp = uiLines.find(l => l.indexOf('D.compose(') >= 0) || '';
+    ok(/R\.bandW/.test(uiComp), '⑬d2 页面必须把 `rosterFor` 算出的 bandW 传进 `compose` ⇒ 传丢了就是"表里写了混抽、产品还在整表均匀抽"（实测份额会跑到 59.3%）‖ 实测那行：' +
+      (uiComp.trim().slice(0, 150) || '(找不到 D.compose 调用)'));
+    ok(ladLines.some(l => l.indexOf('rosterFor(') >= 0), '⑬d3 量具 `probe-diff-ladder` 必须调同一份 `rosterFor` ⇒ 否则量的是"我以为产品会怎么抽"');
+    const ladComp = ladLines.find(l => l.indexOf('PD.compose(') >= 0) || '';
+    ok(/bandW/.test(ladComp), '⑬d4 量具的 compose 也必须带 bandW（与页面同一条抽法）‖ 实测那行：' + (ladComp.trim().slice(0, 150) || '(找不到 PD.compose 调用)'));
+  }
   /* ⑪ §E600-A（用户 10-13 裁定③④：「如今没有『当前现役』这个东西了」‖「调整成实时更新而不是定死」）
    *   钉两件**可控**的事，不钉措辞（METHODOLOGY 89）：
    *     ⑪a 名册与烘焙页都不许再带「当前线上」这个身份类别（扫**数据**的值）；

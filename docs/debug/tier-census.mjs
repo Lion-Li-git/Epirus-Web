@@ -152,8 +152,16 @@ console.log('# 抽签/对局循环：`js/pool-draw.js` + `tools/v2v4-lib.mjs` �
 const PROTOSET = humanPrototypes(B).slice(0, PROTOS);
 const out = [];
 for (const t of picked) {
-  const rows = allRows.filter(r => r[h.tier] === t.pool);
-  if (rows.length < 2) { console.log('## ' + t.id + '（带 ' + t.pool + '）：只有 ' + rows.length + ' 枚 ⇒ 四席必然全同，**不量**（用户裁定不许全同）\n'); continue; }
+  /* §E609：以前这里直接 `allRows.filter(r => r[h.tier] === t.pool)` ⇒ 拆带之后 `lv:regular.pool` 指的 `mid` 是**空带**，
+   *   于是这一档被上面那句"只有 0 枚 ⇒ 不量"整档跳过 —— 不撒谎，但**普查表里从此没有普通档**。
+   *   推导改走与页面/量具同一份 `rosterFor`：该按带加权就按带加权，该走退路就把退路印出来。 */
+  const byId = {}; for (const r of allRows) byId[r[h.id]] = r;
+  const RR = PD.rosterFor(allRows.map(r => ({ id: r[h.id], wid: r[h.wid], tier: r[h.tier] })), t);
+  const bandW = RR.bandW;
+  const rows = RR.members.map(m => byId[m.id]).filter(Boolean);
+  const bandTxt = bandW ? ('两带加权 ' + Object.keys(bandW).filter(x => x !== 'else').join('/')) : t.pool;
+  if (RR.note) console.log('## ' + t.id + '：' + RR.note + '\n');
+  if (rows.length < 2) { console.log('## ' + t.id + '（带 ' + bandTxt + '）：只有 ' + rows.length + ' 枚 ⇒ 四席必然全同，**不量**（用户裁定不许全同）\n'); continue; }
   const PARAMS = {}, CHOOSERS = {}; const bad = [];
   for (const r of rows) {
     let p = null;
@@ -163,7 +171,8 @@ for (const t of picked) {
     CHOOSERS[r[h.id]] = T.policyChooserN(p, 0.15, t.eps, t.epsK, t.epsMode);
   }
   if (bad.length) { console.error('⛔ ' + t.id + ' 有 ' + bad.length + ' 枚读不出包：' + bad.join(' ‖ ') + ' ⇒ 按失败处理'); process.exit(7); }
-  const lite = rows.filter(r => PARAMS[r[h.id]]).map(r => ({ id: r[h.id], wid: r[h.wid] }));
+  /* ⚠ `tier` 必须带上：`compose` 的按带加权靠 `byTier(members, 带名)` 分名单，少了这一列混抽会直接判成"权重带全空" */
+  const lite = rows.filter(r => PARAMS[r[h.id]]).map(r => ({ id: r[h.id], wid: r[h.wid], tier: r[h.tier] }));
   let MIX = null, SCRIPTS = {};
   if (t.scriptMix) {
     MIX = PD.scriptSeats(t, 4, B.STYLES || []);
@@ -181,7 +190,7 @@ for (const t of picked) {
     const chooserFor = function (pid, st) {
       if (st !== curState) {
         curState = st;
-        const comp = PD.compose(lite, 4, PD.rng((st.slotSalt >>> 0) || 1), (MIX && MIX.seats) ? MIX : null);
+        const comp = PD.compose(lite, 4, PD.rng((st.slotSalt >>> 0) || 1), (MIX && MIX.seats) ? MIX : null, bandW);
         cur = { comp: comp, byPid: {}, kind: {}, order: 0 };
         comps.add(comp.seats.map(s => s.id).join('+'));
         if (comp.allSame) allSame++;
@@ -202,7 +211,7 @@ for (const t of picked) {
         onGame: function (st, seat) { tally(cen, st, seat, kindRef()); } });
   }
   const sp = spectrum(cen);
-  console.log('## ' + t.id + '（带 ' + t.pool + ' · ' + lite.length + ' 枚' +
+  console.log('## ' + t.id + '（带 ' + bandTxt + ' · ' + lite.length + ' 枚' +
     (MIX && MIX.seats ? ' ‖ 掺脚本席 ' + MIX.seats + ' 席：' + MIX.ids.join(' ‖ ') : ' ‖ 不掺脚本席') + '）');
   console.log('   局 ' + cen.games + ' ‖ 均 ' + (cen.rounds / Math.max(1, cen.games)).toFixed(1) + ' 回合/局 ‖ **AI 席有效出手 ' + sp.total +
     '**（' + (sp.total / Math.max(1, cen.games)).toFixed(1) + '/局）‖ 出现过的种类 **' + sp.distinct + '**');
@@ -214,7 +223,7 @@ for (const t of picked) {
   const never = (R.skills || []).map(s => s.key).filter(k => !sp.keys.includes(k));
   console.log('   卡表 ' + (R.skills || []).length + ' 张里这一档**一次都没出现**的 ' + never.length + ' 张：' + never.map(k => sp.nameOf(k)).join(' · '));
   console.log('   ⚑ 这 ' + cen.games + ' 场里出现 ' + comps.size + ' 种不同组成 ‖ 四席全同 ' + allSame + ' 局 ‖ 漏席 ' + miss + ' 次' + (miss ? ' ⇒ **组成漏席，本行数不可引用**' : '') + '\n');
-  out.push({ tier: t.id, band: t.pool, members: lite.length, mix: MIX ? MIX.seats : 0, games: cen.games,
+  out.push({ tier: t.id, band: bandTxt, members: lite.length, mix: MIX ? MIX.seats : 0, games: cen.games,
     roundsPerGame: +(cen.rounds / Math.max(1, cen.games)).toFixed(1), actions: sp.total,
     distinct: sp.distinct, top3: +(100 * sp.top3Share).toFixed(1), G: +sp.G.toFixed(2), defShare: +(100 * sp.defShare).toFixed(1),
     comps: comps.size, allSame: allSame, miss: miss,
