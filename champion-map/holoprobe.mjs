@@ -36,10 +36,23 @@ if (!Object.keys(OKM).length) { console.error('⛔ 没有 feas-s*.tsv ⇒ 无法
 
 const ct = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n');
 const hh = ct[0].split('\t');
+/* §E608（千问，DS 交接件 §2 那 6 台之一）：原来这一行的 path 是**按 id 猜文件**——
+ *   `id === 'SHIPPED-Ldemo' ? 'js/bundled-champion-3p.js' : 'docs/artifacts/' + id + '.bak'`。
+ *   两个坏：① 那枚 10-11 就退役了，而 `bundled-champion-3p.js` 装的是**当下活槽那颗** ⇒ 量出来的全息密度会记到
+ *      一枚退役枚头上（主语错了）；② 不在 `docs/artifacts/<id>.bak` 的那批（`kept/` 里、`.js` 结尾、e528-out/ 等）
+ *      被下面那道 `existsSync` **静默筛掉**，样本悄悄变小而没人说。
+ *   改法：path 一律读 `coords.tsv` 的 **path 列**（那是面板自己登记的来源），只有它为空才退回猜；
+ *   并且把"因文件不存在被筛掉多少枚、前几枚是谁"印出来 —— 缩样不许是无声的。 */
+let dropped = [];
 let list = ct.slice(1).map(l => { const c = l.split('\t'); const o = {}; hh.forEach((k, i) => o[k] = c[i]); return o; })
-  .map(r => ({ id: r.id, H: +r.H, S: +r.S, rank: +r.rank, ok: OKM[r.id] === undefined ? null : OKM[r.id],
-    path: r.id === 'SHIPPED-Ldemo' ? 'js/bundled-champion-3p.js' : 'docs/artifacts/' + r.id + '.bak' }))
-  .filter(e => existsSync(join(ROOT, e.path)));
+  .map(r => {
+    const guess = 'docs/artifacts/' + r.id + '.bak';
+    const path = String(r.path || '').trim() || guess;
+    return { id: r.id, H: +r.H, S: +r.S, rank: +r.rank, ok: OKM[r.id] === undefined ? null : OKM[r.id], path: path, guessed: !String(r.path || '').trim() };
+  })
+  .filter(e => { if (existsSync(join(ROOT, e.path))) return true; dropped.push(e.id + '（' + e.path + '）'); return false; });
+if (dropped.length) console.log('⚠ ' + dropped.length + ' 枚因包文件不存在被筛掉（样本比面板小）：' + dropped.slice(0, 6).join(' ‖ ') + (dropped.length > 6 ? ' …' : ''));
+if (list.some(e => e.guessed)) console.log('⚠ ' + list.filter(e => e.guessed).length + ' 枚的 path 列是空的 ⇒ 按 `docs/artifacts/<id>.bak` 猜的（这些行的读数别当在册口径引用）');
 if (LIMIT > 0) list = list.slice(0, LIMIT);
 const COLS = ['id', 'ok', 'H', 'rank', 'holoPerGame', 'holoOther', 'giftShare', 'overCap'];
 if (!existsSync(OUT)) writeFileSync(OUT, COLS.join('\t') + '\n');

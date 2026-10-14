@@ -26,6 +26,7 @@
  *   产物：champion-map/eps.tsv（id / seed / eps / first / drain / bigt / ms）
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { load as loadSlotId } from './slot-identity.mjs';   /* §E608：现役与副名的唯一翻译处 */
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -50,11 +51,22 @@ const CO = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n').map
 const ch = Object.fromEntries(CO[0].map((h, i) => [h, i]));
 const champ = CO.slice(1).filter((r) => r[ch.lineage]).map((r) => r[ch.id]);
 if (!champ.length) { console.error('⛔ 历代冠军名单为空 ⇒ lineage 列没读到，别把"只有过线组"当成全量'); process.exit(2); }
-const IDS0 = [...new Set([...PASS, ...champ, 'SHIPPED-Ldemo'])].filter((id) => existsSync(join(ROOT, 'docs/artifacts', id + '.bak')));
+/* §E608（千问，DS 交接件 §2 那 6 台之一）：原来这里往名单里硬加 `'SHIPPED-Ldemo'`，
+ *   而折行之后它**不再是 coords 的行 id**（只剩主名 `Ldemo`）⇒ 加进去的那一枚被下面那道
+ *   `existsSync('docs/artifacts/<id>.bak')` 筛掉 ⇒ 结果不是"多一枚退役枚"，而是**名单里根本没有现役**。
+ *   改两处：① 追加的是 `slot-identity.live`（解不出就响亮说，不静默少一枚）
+ *   ② 存在性一律按 **coords 的 path 列** 判（`docs/artifacts/<id>.bak` 只当兜底 —— kept/ 里、.js 结尾的那些以前会被静默筛掉）。 */
+const CO_PATH = {}; for (const r of CO.slice(1)) { if (r[ch.id] && r[ch.path]) CO_PATH[r[ch.id]] = r[ch.path]; }
+const SID = loadSlotId(ROOT);
+const LIVE = (SID.live && SID.live.coordsId) || '';
+if (!LIVE) console.error('⚠ slot-identity 解不出活槽现主 ⇒ 这次名单里没有"现役"这一枚（换代当天补 slot-history.tsv 再跑）');
+const WANT = [...new Set([...PASS, ...champ, ...(LIVE ? [LIVE] : [])])];
+const hasPack = (id) => { const p = CO_PATH[id] || ('docs/artifacts/' + id + '.bak'); return existsSync(join(ROOT, p)); };
+const IDS0 = WANT.filter(hasPack);
 const LIM = Number(arg('limit', 0));
 const IDS = LIM > 0 ? IDS0.slice(0, LIM) : IDS0;
-console.error('名单：过线 ' + PASS.size + ' ‖ 历代冠军 ' + champ.length + ' ‖ 盘上有 .bak 的 ' + IDS0.length + ' 枚（缺 ' +
-  ([...new Set([...PASS, ...champ, 'SHIPPED-Ldemo'])].length - IDS0.length) + ' 枚）' +
+console.error('名单：过线 ' + PASS.size + ' ‖ 历代冠军 ' + champ.length + ' ‖ 现役 ' + (LIVE || '(解不出)') +
+  ' ‖ 盘上解得出发包的 ' + IDS0.length + ' 枚（缺 ' + (WANT.length - IDS0.length) + ' 枚）' +
   (LIM > 0 ? ' ‖ **本次只跑前 ' + IDS.length + ' 枚（--limit）**' : ''));
 
 /* 一次 eval-5p：抓 [冠军] 的 1st，外加两条用量行（大雷/摄魂）—— 它们本身也是 ε 的函数，要落盘 */
@@ -80,6 +92,12 @@ for (const id of IDS) for (const seed of SEEDS) for (const on of [false, true]) 
   } catch (e) { console.error('⛔ ' + id + ' s' + seed + ' ' + (on ? 'page' : 'exam') + ' → ' + ((e && e.message) || e).slice(0, 120)); }
 }
 const HD = ['id', 'seed', 'eps', 'first', 'strict', 'bigt', 'ms'];
-writeFileSync(join(HERE, 'eps.tsv'), HD.join('\t') + '\n' +
+/* §E608 数据丢失护栏：这台工具是**整张覆写** `champion-map/eps.tsv`（在册 485 行），
+ *   而 `--limit=` 的窄跑只会算出几十行 ⇒ 一次冒烟就把册子截断（同一族今晚已经撞过 `oldpacks.tsv`：
+ *   那台跑了一枚就把 17 行写成 2 行，退出码还是 0）。所以窄跑必须显式换目的地。 */
+const OUTP = arg('out', 'eps.tsv');
+if (LIM > 0 && !arg('out', '')) { console.error('⛔ 带了 --limit 却没给 --out ⇒ 拒绝覆写在册的 champion-map/eps.tsv' +
+  '（整张重写会把没跑的行冲掉）。要窄跑就 `--out=eps.limited.tsv`（或指到 docs/artifacts/ 下）'); process.exit(2); }
+writeFileSync(join(HERE, OUTP), HD.join('\t') + '\n' +
   rows.map((r) => HD.map((h) => r[h]).join('\t')).join('\n') + '\n', 'utf8');
-console.error('已写 champion-map/eps.tsv（' + rows.length + ' 行 = ' + IDS.length + ' 枚 × ' + SEEDS.length + ' seed × 2 口径）');
+console.error('已写 champion-map/' + OUTP + '（' + rows.length + ' 行 = ' + IDS.length + ' 枚 × ' + SEEDS.length + ' seed × 2 口径）');

@@ -23,6 +23,7 @@ import { readFileSync, writeFileSync, existsSync, appendFileSync, copyFileSync }
 import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { load as loadSlotId } from './slot-identity.mjs';   /* §E608：副名→主名的唯一翻译处（CO_PATH 按主名登记） */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -110,8 +111,22 @@ if (EXTRA) {
  *   ⚠ §E597 加了"没在册路径才造"这个前提：`coords.tsv` 的 `path` 列如今有 Ldemo 自己的权重
  *     （`docs/artifacts/eval-out/win-Ldemo.bak`），而这一支造的是**当下那颗活槽**（v1.6.62 起 = T8-s114）
  *     ⇒ 不加前提就会"用别人的权重出 Ldemo 的读数"（METHODOLOGY 134：活槽身份只能声明，不能按 path 猜）。 */
-const SHIP = join(ROOT, 'docs/artifacts/SHIPPED-Ldemo.bak');
-if (ids.indexOf('SHIPPED-Ldemo') >= 0 && !existsSync(SHIP) && !(CO_PATH['SHIPPED-Ldemo'] && existsSync(join(ROOT, CO_PATH['SHIPPED-Ldemo'])))) {
+/* §E608（千问，DS 交接件 §2 那 6 台之一）：这一支原来整个按**副名** `SHIPPED-Ldemo` 判事，
+ *   而折行之后 coords 的行 id 只剩主名 `Ldemo` ⇒ 今天 `ids.indexOf('SHIPPED-Ldemo')` 恒为 **-1**（这段是死支，
+ *   所以"造出别人的权重挂退役枚名字"那个 §E597 警告的病**现在没有发作**）。但它是**潜伏**的：
+ *   只要哪次名单里真出现这个旧叫法（`--extra=` 拿旧表、或有人手抄），第三道守卫 `CO_PATH['SHIPPED-Ldemo']` 就会查不到
+ *   （`CO_PATH` 按主名登记）⇒ 于是把**当下活槽** `js/bundled-champion-3p.js` 复制成 `SHIPPED-Ldemo.bak`。
+ *   ⇒ 一律先翻成主名再判事；名单里出现副名就说出来。造临时对照品这条路只在"主名也没有在册路径"时才走。 */
+const SHIP_ALIAS = 'SHIPPED-Ldemo';
+const SHIP_MAIN = (loadSlotId(ROOT).resolve(SHIP_ALIAS) || SHIP_ALIAS);
+const SHIP = join(ROOT, 'docs/artifacts/' + SHIP_ALIAS + '.bak');
+const shipNamed = ids.indexOf(SHIP_ALIAS) >= 0 || ids.indexOf(SHIP_MAIN) >= 0;
+const shipRegistered = !!(CO_PATH[SHIP_MAIN] && existsSync(join(ROOT, CO_PATH[SHIP_MAIN])));
+if (ids.indexOf(SHIP_ALIAS) >= 0 && SHIP_MAIN !== SHIP_ALIAS) {
+  console.error('⚠ 名单里的 `' + SHIP_ALIAS + '` 是副名 ⇒ 按主名 `' + SHIP_MAIN + '` 的在册路径量（' +
+    (CO_PATH[SHIP_MAIN] || '在册路径也没有') + '）‖ **不**造临时对照品：造出来的会是当下活槽的权重挂着退役枚的名字');
+}
+if (shipNamed && !existsSync(SHIP) && !shipRegistered) {
   copyFileSync(join(ROOT, 'js/bundled-champion-3p.js'), SHIP);
   console.error('已临时造出对照品 docs/artifacts/SHIPPED-Ldemo.bak（跑完请删，留着会撞 D82）');
 }

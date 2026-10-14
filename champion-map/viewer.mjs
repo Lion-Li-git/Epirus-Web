@@ -97,6 +97,10 @@ const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=
  *   文件名一律去掉 `e287-` 前缀；**输入表是拷进来的**：`coords.tsv` 由 `docs/artifacts/e287-out/e287-figs.mjs`
  *   算出来（它吃 `results/`〔用户私有〕+ gitignored 的臂产物 ⇒ 换机不能重算），重算后要手工拷到本目录。*/
 const OUT = arg('out', 'index.html');
+/* §E608 路径口径与 `pool-sync.mjs` / `seat-rule.mjs` 同族：带盘符或前导 `/` 的是**绝对路径**，不许再 join 一层。
+ *   触发点是 D234⑩c：门从 tmpdir 传 `--out=C:\...\np-d234-rebake.html` 进来 ⇒ 无条件 `join(HERE, OUT)` 拼出歪路径
+ *   ⇒ 写盘失败 exit 1，看起来像"烘焙崩了"。这一族今晚是第四次撞（`--seat=`/`--in=`/`--chart=` 都栽过）。 */
+const OUTP = (OUT.indexOf(':') >= 0 || OUT[0] === '/' || /^[A-Za-z]:[\/\\]/.test(OUT)) ? OUT : join(HERE, OUT);
 /* E393 DS（丙·投影）：生成侧选定坐标（默认 t-SNE，--proj=old 回旧布局）。
  *   ⚠ 必须在生成侧：浏览器取景范围 PV 是装载时按坐标算的，装载后再换 ⇒ 视口对不上（实测画到右下角）。 */
 const PROJTSNE = arg('proj', 'tsne') !== 'old';
@@ -2147,7 +2151,9 @@ function clear(w, h) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = st.bg; g.
  *
  * 场：每个网格点取 **高斯加权的局部过线占比** f = Σ_{过线} G(d) / (Σ_{全体} G(d) + ε)，G(d)=exp(−d²/2σ²)。
  *   ⇒ f∈[0,1]、天生平滑，等值面 f=t 就是"这一片里过线的占多数"的边界。
- *   σ 用**显示度量**（第 12 近邻中位）⇒ 曲面在屏幕上是圆的，不会被轴的比例尺拉扁（§E296 那条教训的三维版）。
+ *   σ 用**显示度量**（**第 6 近邻**距离的中位，见下面 isoSigma 的 heap[5]；§E608 顺手订正：这句原来写"第 12 近邻"，
+ *     而 12 近邻是**淡出尺度**那把量（d12m，§E331），两者不是一回事 —— 注释错了六天，读它的人会把核宽算错一倍）
+ *     ⇒ 曲面在屏幕上是圆的，不会被轴的比例尺拉扁（§E296 那条教训的三维版）。
  * 抽面：**surface nets / dual contouring**，不用 marching cubes 的 256 项查表：
  *   ① 符号混合的格里，把 12 条"跨阈值"的棱按线性插值取交点、平均 ⇒ 该格一个顶点（顶点天然贴着等值面）；
  *   ② 每条网格棱的**四个相邻格**若都有顶点 ⇒ 连成一个四边形。
@@ -2753,11 +2759,14 @@ function paintLegend(fr) {
   var _col = document.createElement('div'); _col.style.maxWidth = '150px'; _col.style.flex = '0 0 auto';
   _col.appendChild(s1); _col.appendChild(s2);
   /* §2026-10-08 DS：补两处口径说明 —— ① 底色/壳是**空处插值**（只在有点的地方有意义）；
-   *   ② 壳建在三维行为轴 (x3/y3/z3) 上，不是投影坐标；③ 谱系图实线 = 父身份可证（哈希 ‖ 种子文件同权重）、虚线 = 只按名字/时间推出来的。 */
+   *   ② 壳建在**这台视图当下那三个轴**上 —— ⚠ §E608 更正：这句原来写"建在三维行为轴 (x3/y3/z3)，不是投影坐标"，
+   *      而 t-SNE 面板上 P[i].x3/y3/z3 这三个字段装的**就是投影坐标 xt3/yt3/zt3**（见本文件 386 行那一支）
+   *      ⇒ 页面那只壳量的是投影空间的密度（σ=0.105），行为轴上另有一张云（σ=0.1927，iso-sweep.mjs --axes=behavior 量的是它）；
+   *      ③ 谱系图实线 = 父身份可证（哈希 ‖ 种子文件同权重）、虚线 = 只按名字/时间推出来的。 */
   var _cav = document.createElement('div'); _cav.style.marginTop = '4px'; _cav.style.color = 'var(--dim)'; _cav.style.maxWidth = '150px';
   _cav.innerHTML = (st.mode === 'tree')
     ? '实线 = 父身份可证<br>（包里的哈希 ‖ 种子文件同权重 ‖ 活槽期实录权重）<br>虚线 = 只按名字/时间推出'
-    : '底色/壳只在有点的地方有意义（空处 = 插值）<br>壳建在三维行为轴上，不是投影坐标';
+    : '底色/壳只在有点的地方有意义（空处 = 插值）<br>壳建在当前这三根轴上 = 投影 t-SNE 坐标（不是行为轴）';
   _col.appendChild(_cav); if (s3h) _col.appendChild(s3h);   /* §E458 只有 hp 档多这一行（单批读数的噪声必须写在读数的地方）*/
   var _row = document.createElement('div'); _row.style.display = 'flex'; _row.style.gap = '8px';
   /* §E461 文字列与竖杠**垂直居中对齐**（原来 flex-start ⇒ 文字比条短时那条差全堆在底下，看着就是"图例下面空一块"；
@@ -5531,5 +5540,5 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 }
 
 /* E391 DS：先自证、后落盘。原来是反的（先写坏文件、再自证失败 exit 3）⇒ 产物已经坏了，而我下一句没看退出码就截图。顺序一换，写坏文件这一步根本不会发生。 */
-writeFileSync(join(HERE, OUT), html);
-console.log('已写 ' + join(HERE, OUT) + '（' + (html.length / 1024).toFixed(0) + ' KB，自包含、无外部依赖）');
+writeFileSync(OUTP, html);
+console.log('已写 ' + OUTP + '（' + (html.length / 1024).toFixed(0) + ' KB，自包含、无外部依赖）');

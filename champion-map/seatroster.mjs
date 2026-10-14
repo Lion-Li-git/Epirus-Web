@@ -19,12 +19,15 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { load as loadSlotId } from './slot-identity.mjs';   /* §E608：现役与副名的唯一翻译处 */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const TOTAL = Number(arg('n', 24));
 const SEEDS = ['SHIPPED-Ldemo', 'K2', 'v7beadseed-93', 'D4a', 'G-s72'];   // contX-201 不在 coords，单独追加
+/* ⚠ 第一格 `SHIPPED-Ldemo` 是**退役那枚的副名**（10-11 起活槽住的是别人），留在这里是因为它是历史基线的一颗锚 ——
+ *   它在下面会经 `slot-identity.resolve` 翻成图上的主名再点名，而**活槽现主另外加进来**（§E608）。 */
 /* 行为维：z 化后铺覆盖用。刻意不含分数列（Hp/H/De）⇒ 这不是"挑好包"。 */
 const DIMS = ['dmg', 'heavy', 'holo', 'rounds', 'distinctKeys', 'charges', 'waste', 'noThreatStance', 'Geff', 'seatSpread'];
 
@@ -47,7 +50,22 @@ const dist = (a, b) => Math.sqrt(a.reduce((s, x, j) => s + (x - b[j]) ** 2, 0));
 
 const chosen = [], why = [];
 const byId = id => pool.filter(p => p.id === id)[0];
-for (const s of SEEDS) { const p = byId(s); if (p) { chosen.push(p); why.push([p.id, '点名(基线/待核)', '']); } else console.log('  ⚠ 点名 ' + s + ' 在 coords 里查不到（或 path 不存在）'); }
+/* §E608（千问，DS 交接件 §2 那 6 台之一）：`SHIPPED-Ldemo` 在折行（v1.7.7）之后**只是副名**，
+ *   而 `byId` 按行 id 直查 ⇒ 查不到 ⇒ 这颗锚点从名单里掉出去（它打了 ⚠，但"名单少一枚"这件事不拦任何人）。
+ *   一律走 `slot-identity.resolve`（副名→主名的唯一翻译处），并且把**活槽现主也点名进来**（原来名单里没有它 ——
+ *   这份名册是"覆盖最广的一桌"，缺了现役本身就是一处说不通）。 */
+const SID = loadSlotId(ROOT);
+const SEEDLIST = SEEDS.slice();
+if (SID.live && SID.live.coordsId && SEEDLIST.indexOf(SID.live.coordsId) < 0) {
+  SEEDLIST.push(SID.live.coordsId);
+  console.log('  + 点名活槽现主（slot-identity.live）= ' + SID.live.coordsId);
+} else if (!(SID.live && SID.live.coordsId)) console.log('  ⚠ slot-identity 解不出活槽现主 ⇒ 名单里没有"现役"这一枚（换代当天要补 slot-history.tsv）');
+for (const s of SEEDLIST) {
+  const nm = (SID.resolve && SID.resolve(s)) || s;
+  const p = byId(nm) || byId(s);
+  if (p) { chosen.push(p); why.push([p.id, '点名(基线/待核)', '']); if (nm !== s) console.log('  点名 ' + s + ' 是副名 ⇒ 按指针取图上的主名 ' + nm); }
+  else console.log('  ⚠ 点名 ' + s + ' 在 coords 里查不到（或 path 不存在）');
+}
 while (chosen.length < TOTAL) {
   const Z = chosen.map(p => zOf(p));
   let best = null, bd = -1;
@@ -58,7 +76,7 @@ while (chosen.length < TOTAL) {
     if (d > bd) { bd = d; best = p; }
   }
   if (!best) break;
-  chosen.push(best); why.push([best.id, '最远点贪心 第 ' + (chosen.length - SEEDS.length) + ' 步', bd.toFixed(2)]);
+  chosen.push(best); why.push([best.id, '最远点贪心 第 ' + (chosen.length - SEEDLIST.length) + ' 步', bd.toFixed(2)]);
 }
 console.log('# 池 ' + pool.length + ' 枚（path 存在且 ' + DIMS.length + ' 维齐全）‖ 选 ' + chosen.length + ' 枚 ‖ 维度: ' + DIMS.join(','));
 console.log('# id | 入选理由 | 当时最近距离 | Hp | H');

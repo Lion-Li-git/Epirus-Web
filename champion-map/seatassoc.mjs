@@ -11,7 +11,7 @@
  *   ＋ 3 个分数维（H, Hp, De）—— 分数维**只作对照**（已知与人席无关，用来验仪器没接错）。
  *
  * 判据（跑前写死，不许事后改口径）：
- *   (a) **现役锚点**：`SHIPPED-Ldemo` 这一批的 multi/long 六格均值与最大格必须与 §E506 记录的基线
+ *   (a) **仪器锚点**（§E608 改名，原来叫现役锚点是措辞错）：`SHIPPED-Ldemo` 这一批的 multi/long 六格均值与最大格必须与 §E506 记录的基线
  *       （multi 5.3 ‖ long 12.3 ‖ 最大格 28% = 只枪压制）对上（均值 ±1.5pt、最大格同一格）。
  *       对不上 ⇒ 这台量具换了口径，整表作废（§E312 那条：复刻仪器要搬代码，锚点要搬读数）。
  *   (b) **噪声地板由实测给**：同一枚包在两粒 seed（90210 / 90211）上的六格均值之差 ⇒ 取这批的中位与 p90。
@@ -49,6 +49,7 @@ const BASE_LDEMO = { multi: 5.3, long: 12.3, 最大格: 28, 格: '只枪压制' 
  *   heavy −0.663/−0.602 ‖ rounds 0.715/0.566 ‖ Geff −0.670/−0.414 ‖ 带内 H −0.036/−0.164。 */
 import { mean, ranks, pear, sp, mcP, holm, rngSeed } from './stats-lib.mjs';
 import { buildResolver, incumbentAt, resolveId } from './pack-resolve.mjs';
+import { load as loadSlotId } from './slot-identity.mjs';
 
 const A = rd(arg('a', 'seat-2026-10-11-90210.tsv'));
 const Bt = rd(arg('b', 'seat-2026-10-11-90211.tsv'));
@@ -67,13 +68,14 @@ console.log('# (f) 名单：A 批 ' + ia.length + ' 枚 ‖ B 批 ' + ib.length 
 if (名单差.length || A.rows.length !== ia.length * 2) { console.error('⛔ (f) 红 ⇒ 别判读'); process.exit(2); }
 
 /* ---- 两批合并成一枚一行的人席读数 ---- */
-/* ⚑ 身份必须走 coords 的 **path 列**，不是文件名 basename：现役那枚在 coords 里叫 `SHIPPED-Ldemo`，
+/* ⚑ 身份必须走 coords 的 **path 列**，不是文件名 basename：那枚历史基线包在 coords 里曾叫 `SHIPPED-Ldemo`（折行后是副名），
  *   而探针打印的是 `js/bundled-champion-3p.js`（⇒ basename = `bundled-champion-3p`）。
  *   按 basename 接的话 Ldemo 会"不在 coords"，锚点与关联同时接错 —— 同 §E330 那条"人席参照必须从 path 列取"。 */
 /* §E589：身份解析搬到 `pack-resolve.mjs` 那一份（**id 优先 → path 兜底 → 现役按 slot-history 声明认**）。
  *   为什么现役不能按 path 猜：§E588 把 `SHIPPED-Ldemo` 行的 path 改成钉住的快照之后，图上再没有一行的 path
  *   等于活槽，而活槽自己会换主人 ⇒ 只能按声明（`--incumbent=` 或 `slot-history.tsv`）。 */
 const ROOTD = join(HERE, '..');
+const SID = loadSlotId(ROOTD);   /* §E608：副名→主名与"活槽现主"的唯一翻译处 */
 const INC = arg('incumbent', '') || (function () {
   const r = incumbentAt(ROOTD, [arg('a', 'seat-2026-10-11-90210.tsv'), arg('b', 'seat-2026-10-11-90211.tsv')]);
   console.log('# 现役身份：' + r.why);
@@ -105,13 +107,30 @@ for (const id of ia) {
   P.push(rec);
 }
 
-/* ---- (a) 现役锚点 ---- */
-const L = P.filter(p => p.id === 'SHIPPED-Ldemo')[0] || P.filter(p => /bundled|Ldemo/.test(p.id))[0];
-if (!L) { console.error('⛔ (a) 红：这一批里没有现役 ⇒ 没锚点，判读作废'); process.exit(2); }
+/* ---- (a) **仪器锚点**（这一条判的不是"谁是现役"）----
+ *   `BASE_LDEMO` 是 §E506 那次同 seed 90210 的读数，而那次跑的包就是 `SHIPPED-Ldemo` ⇒ 锚必须钉在**那一枚**上。
+ *   DS 交接件 §2 建议"问 live"，这一处**不采纳**：换成活槽 = 拿 T8-s114 的读数去比 Ldemo 的基线，
+ *   要么永久红、要么有人把基线重钉一次 —— 那这条"同一台仪器"的自证就悄悄变成另一件事了（同 §E588 那批"历史锚不许动"）。
+ *   真正要修的两件：① 折行之后 `SHIPPED-Ldemo` 只是**副名**（图上的行叫 `Ldemo`）⇒ 第一支现在恒空；
+ *   ② 那条兜底是**正则**（`/bundled|Ldemo/`）而不是精确名 ⇒ 换个名字就悄悄换主语。
+ *   ⚠ 我第一版改成"只准匹配解析出来的主名 `Ldemo`"，把这条判据做**红**了，而且**它红得不对**：
+ *     这批 seat 表把活槽那枚按**文件名**记成 `bundled-champion-3p`，那记的是**跑这批的当天**（10-11）住在槽里的包 = Ldemo；
+ *     今天再按 path 去解同一个名字会解成 T8-s114 ⇒ 拿"今天的活槽"对"Ldemo 的基线"必然对不上。
+ *     ⇒ 锚点按**记录名精确匹配**（两支：面板主名 或 这批的记录名），并把这层时间差印出来。不许用宽松正则兜。 */
+const ANCHOR_ID = (SID.resolve('SHIPPED-Ldemo') || 'SHIPPED-Ldemo');
+const BATCH_NAME = 'bundled-champion-3p';   /* 这批表里"活槽那枚"的记录名（seat 表按文件名记，不按面板行 id 记） */
+const L = P.filter(p => p.id === ANCHOR_ID)[0] || P.filter(p => p.id === BATCH_NAME)[0];
+if (!L) { console.error('⛔ (a) 红：这一批里没有仪器锚点那枚（既没有主名 ' + ANCHOR_ID + '，也没有记录名 ' + BATCH_NAME + '）。\n' +
+  '   为什么大概率就是这个结果：这批表把活槽那枚按文件名记成 `' + BATCH_NAME + '`，而 `resolveId` 今天按 path 把它解给**当下**住在槽里的 ' +
+  ((SID.live && SID.live.coordsId) || '?') + ' ⇒ 行的**身份**换人了、行里的**读数**还是跑批那天那枚的（本表 multi/long/最大格 = 5.33/12.0/28.0，恰好是 §E506 给 Ldemo 记的基线）。\n' +
+  '   ⇒ 这条仪器锚点只登记了 Ldemo 的基线：换现役之后要么补一份同 seed 的新基线（`BASE_LDEMO` 旁边加一档），要么明确"这条不适用"。\n' +
+  '   **不许**拿 Ldemo 的基线判 ' + ((SID.live && SID.live.coordsId) || '今天的活槽') + '，也不许为此放宽本条。'); process.exit(2); }
+console.log('# (a) 仪器锚点 = ' + L.id + '（§E506 基线那枚 = ' + ANCHOR_ID + '，副名 SHIPPED-Ldemo）‖ 活槽现主 = ' +
+  ((SID.live && SID.live.coordsId) || '解不出') + ' ⇒ **不参与**这条判据（`' + BATCH_NAME + '` 记的是跑批当天住在槽里的那枚，不是今天这枚）');
 /* §E506 那行基线说的是"最大格 28%（只枪压制 · long）"⇒ 锚点比的是 **long 口径的最大格**，不是 multi */
 const 锚ok = Math.abs(L.multi_a - BASE_LDEMO.multi) <= 1.5 && Math.abs(L.long_a - BASE_LDEMO.long) <= 1.5 &&
   Math.abs(L.最大格long_a - BASE_LDEMO.最大格) <= 6 && L.锚_longmax === BASE_LDEMO.格;
-console.log('# (a) 现役锚点：multi ' + L.multi_a + '（基线 ' + BASE_LDEMO.multi + '）‖ long ' + L.long_a + '（基线 ' + BASE_LDEMO.long +
+console.log('# (a) 仪器锚点（§E506 基线那枚）：multi ' + L.multi_a + '（基线 ' + BASE_LDEMO.multi + '）‖ long ' + L.long_a + '（基线 ' + BASE_LDEMO.long +
   '）‖ long 最大格 ' + L.最大格long_a + ' 落在「' + L.锚_longmax + '」（基线 ' + BASE_LDEMO.最大格 + ' · ' + BASE_LDEMO.格 + '）‖ multi 最大格 ' + L.最大格_a + '（' + L.锚_multimax + '）⇒ ' +
   (锚ok ? '✅ 同一台仪器' : '⛔ 对不上 ⇒ 整表作废'));
 if (!锚ok) process.exit(2);

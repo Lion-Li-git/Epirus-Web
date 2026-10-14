@@ -1754,7 +1754,9 @@ function clear(w, h) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = st.bg; g.
  *
  * 场：每个网格点取 **高斯加权的局部过线占比** f = Σ_{过线} G(d) / (Σ_{全体} G(d) + ε)，G(d)=exp(−d²/2σ²)。
  *   ⇒ f∈[0,1]、天生平滑，等值面 f=t 就是"这一片里过线的占多数"的边界。
- *   σ 用**显示度量**（第 12 近邻中位）⇒ 曲面在屏幕上是圆的，不会被轴的比例尺拉扁（§E296 那条教训的三维版）。
+ *   σ 用**显示度量**（**第 6 近邻**距离的中位，见下面 isoSigma 的 heap[5]；§E608 顺手订正：这句原来写"第 12 近邻"，
+ *     而 12 近邻是**淡出尺度**那把量（d12m，§E331），两者不是一回事 —— 注释错了六天，读它的人会把核宽算错一倍）
+ *     ⇒ 曲面在屏幕上是圆的，不会被轴的比例尺拉扁（§E296 那条教训的三维版）。
  * 抽面：**surface nets / dual contouring**，不用 marching cubes 的 256 项查表：
  *   ① 符号混合的格里，把 12 条"跨阈值"的棱按线性插值取交点、平均 ⇒ 该格一个顶点（顶点天然贴着等值面）；
  *   ② 每条网格棱的**四个相邻格**若都有顶点 ⇒ 连成一个四边形。
@@ -2360,11 +2362,14 @@ function paintLegend(fr) {
   var _col = document.createElement('div'); _col.style.maxWidth = '150px'; _col.style.flex = '0 0 auto';
   _col.appendChild(s1); _col.appendChild(s2);
   /* §2026-10-08 DS：补两处口径说明 —— ① 底色/壳是**空处插值**（只在有点的地方有意义）；
-   *   ② 壳建在三维行为轴 (x3/y3/z3) 上，不是投影坐标；③ 谱系图实线 = 父身份可证（哈希 ‖ 种子文件同权重）、虚线 = 只按名字/时间推出来的。 */
+   *   ② 壳建在**这台视图当下那三个轴**上 —— ⚠ §E608 更正：这句原来写"建在三维行为轴 (x3/y3/z3)，不是投影坐标"，
+   *      而 t-SNE 面板上 P[i].x3/y3/z3 这三个字段装的**就是投影坐标 xt3/yt3/zt3**（见本文件 386 行那一支）
+   *      ⇒ 页面那只壳量的是投影空间的密度（σ=0.105），行为轴上另有一张云（σ=0.1927，iso-sweep.mjs --axes=behavior 量的是它）；
+   *      ③ 谱系图实线 = 父身份可证（哈希 ‖ 种子文件同权重）、虚线 = 只按名字/时间推出来的。 */
   var _cav = document.createElement('div'); _cav.style.marginTop = '4px'; _cav.style.color = 'var(--dim)'; _cav.style.maxWidth = '150px';
   _cav.innerHTML = (st.mode === 'tree')
     ? '实线 = 父身份可证<br>（包里的哈希 ‖ 种子文件同权重 ‖ 活槽期实录权重）<br>虚线 = 只按名字/时间推出'
-    : '底色/壳只在有点的地方有意义（空处 = 插值）<br>壳建在三维行为轴上，不是投影坐标';
+    : '底色/壳只在有点的地方有意义（空处 = 插值）<br>壳建在当前这三根轴上 = 投影 t-SNE 坐标（不是行为轴）';
   _col.appendChild(_cav); if (s3h) _col.appendChild(s3h);   /* §E458 只有 hp 档多这一行（单批读数的噪声必须写在读数的地方）*/
   var _row = document.createElement('div'); _row.style.display = 'flex'; _row.style.gap = '8px';
   /* §E461 文字列与竖杠**垂直居中对齐**（原来 flex-start ⇒ 文字比条短时那条差全堆在底下，看着就是"图例下面空一块"；

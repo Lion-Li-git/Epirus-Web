@@ -19,7 +19,7 @@
  *   两件事不许混着讲。
  *
  * 用法：node champion-map/oldpacks.mjs [--segs=unnamed|all] [--games=30] [--seed=77000] [--only=<wid8,wid8>]
- *        [--promote=1]        ‖ [--duel=1 [--duelgames=200] [--ref=SHIPPED-Ldemo]]
+ *        [--promote=1]        ‖ [--duel=1 [--duelgames=200] [--ref=<id 或副名，默认 = slot-identity.live>]]
  * 产物：docs/artifacts/e370-out/<wid8>.js（git 原件）‖ <wid8>-v7.js（嵌入后）‖ champion-map/oldpacks.tsv
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
@@ -27,6 +27,7 @@ import { execFileSync, execFile, spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { widOf } from './wid.mjs';
+import { load as loadSlotId } from './slot-identity.mjs';   /* §E608：现役与副名的唯一翻译处（照 duel-run 那一份） */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -138,9 +139,25 @@ const COLS = ['wid8', 'wid', 'fromUTC', 'sha', 'container', 'wlen', 'panelId', '
   'duelOld%', 'duelRef%', 'duelDiff', 'approxSE', 'metaTs', 'metaFirst', 'hot', 'gens', 'subject'];
 const DO_PROMOTE = arg('promote', '0') === '1', DO_DUEL = arg('duel', '0') === '1';
 const DGAMES = Number(arg('duelgames', 200)) || 200;
-const REFID = arg('ref', 'SHIPPED-Ldemo');
+/* §E608（千问，DS 交接件 §2 那 6 台之一）：默认参照原来是**硬写的 `SHIPPED-Ldemo`**，而那枚 10-11 就退役了
+ *   ⇒ 不带 `--ref=` 跑出来的"决斗 vs 现役"讲的是对一枚退役旧冠军（同一件事 `duel-run` 在 v1.7.11 已经修过）。
+ *   改法照 `duel-run.mjs:43-58` 那一段：默认问 `slot-identity.live`（解不出就**响亮停**，不留静默退路），
+ *   并且 `--ref=` 收副名（折行之后副名只住在 `coords.tsv` 的 `aliasIds` 里、不再是行 id）。 */
+const SID = loadSlotId(join(HERE, '..'));
+const REF0 = arg('ref', '');   /* 空 = 用默认（下面在 `--duel=1` 分支里才解析 ⇒ 不跑决斗时不硬依赖 slot-identity） */
+let REFID = REF0;
 let refPath = '';
 if (DO_DUEL) {
+  if (!REF0) {
+    if (!SID.live.coordsId) { console.error('⛔ slot-identity 解不出活槽现主 ⇒ `--ref=` 没有可用的默认值，请显式给一个'
+      + '（换代当天补 slot-history.tsv 一行并重跑 slot-timeline.mjs）'); process.exit(2); }
+    REFID = SID.live.coordsId;
+    console.log('决斗参照（默认 = slot-identity.live，不是硬写的退役枚）= ' + REFID);
+  } else if (REF0.indexOf('/') < 0 && !/\.(bak|js)$/.test(REF0)) {
+    const r = SID.resolve(REF0);   /* 副名（`SHIPPED-Ldemo` 这类当年的叫法）翻成图上的主名；翻不动就原样留着，让下面那道 exit 2 点名 */
+    if (r && r !== REF0) console.log('参照名 `' + REF0 + '` 是副名 ⇒ 按指针翻成图上的主名 `' + r + '`');
+    REFID = r || REF0;
+  }
   const CO = rd(join(HERE, 'coords.tsv')).trim().split('\n'), c0 = CO[0].split('\t');
   const ci = c0.indexOf('id'), cp = c0.indexOf('path');
   for (const l of CO.slice(1)) { const c = l.split('\t'); if (c[ci] === REFID) refPath = c[cp]; }
@@ -149,7 +166,23 @@ if (DO_DUEL) {
 }
 const rows = [];
 let bad = 0;
-const write = () => writeFileSync(OUT, COLS.join('\t') + '\n' + rows.map(r => r.join('\t')).join('\n') + '\n');
+/* §E608（千问 10-15）：**这张表是在册账，不是"本次输出"**。
+ *   原来每次跑都整张重写（表头 + 本次算出来的行）⇒ 任何一次 `--only=` / `--segs=` 的窄跑都会把**没在跑的行冲掉**。
+ *   本机就是这么撞的：拿一枚跑 `--duel=1 --only=<wid8>` 之后 17 行只剩 2 行，靠 git 才救回来 ——
+ *   而它退出码是 0、末尾还印"已写 oldpacks.tsv：1 枚"，看着完全像正常跑完。
+ *   改法：写之前把旧表读回来，本次算过的按 `wid8` 覆盖，没算过的**原样保留**；行数对不上就说出来。 */
+const write = () => {
+  const keep = new Map();
+  if (existsSync(OUT)) {
+    const old = readFileSync(OUT, 'utf8').replace(/\r?\n$/, '').split('\n');
+    const ow = old.length ? old[0].split('\t').indexOf('wid8') : -1;
+    for (const l of old.slice(1)) { const c = l.split('\t'); if (ow >= 0 && c.length === COLS.length && c[ow]) keep.set(c[ow], l); }
+  }
+  for (const r of rows) keep.set(r[0], r.join('\t'));
+  const merged = Array.from(keep.values());
+  writeFileSync(OUT, COLS.join('\t') + '\n' + merged.join('\n') + '\n');
+  if (merged.length !== rows.length) console.log('   （合并写回：本次 ' + rows.length + ' 行 ‖ 连同表里没跑的行共 ' + merged.length + ' 行）');
+};
 (async function () {
   for (const w of list) {
     const p = prepare(w);

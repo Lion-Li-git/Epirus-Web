@@ -192,6 +192,26 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
   const sB = syncArgs(['--check', '--quiet', '--chart=' + psFix]);
   eq(sB.status, 1, '⑩b 合成正对照：把图里一枚成员的带改掉（图 ≠ 表）⇒ `--check` 必须 exit 1（实测 ' + sB.status + '）');
 
+  /* ⑩c §E608（千问 10-15）：**整张页面必须逐字等于生成器的输出** —— ⑩a 只比"池层那一小块"，
+   *   而 10-15 本机撞的是另一件事：`viewer.mjs` 的注释里混进反引号（那段是模板字符串 ⇒ 整个烘焙 **SyntaxError 崩掉**），
+   *   而四视图页检照样报 89/0 —— 因为它读的是**上一版产物**。崩了没人知道、判据全绿，这就是"跑在旧页面上"。
+   *   判据不能靠 mtime（CI 检出顺序会让它假红）⇒ 重烘到临时路径逐字节比。
+   *   ⑩d 是给这条比本身验牙：把在册产物改一个字符再比，必须**不等**（否则 ⑩c 只是"跑了个烘焙"）。 */
+  const bakeFix = join(tmpdir(), 'np-d234-rebake-' + process.pid + '.html');
+  const bk = spawnSync(process.execPath, ['champion-map/viewer.mjs', '--out=' + bakeFix],
+    { cwd: process.cwd(), encoding: 'utf8' });
+  eq(bk.status, 0, '⑩c 烘焙必须成功（失败 ⇒ 页面产物是旧的，判据与截图都跑在上一版上）：' +
+    String(bk.stdout || bk.stderr || '').trim().split('\n').slice(-2).join(' ‖ ').slice(0, 220));
+  const shipped = readFileSync('champion-map/index.html');
+  let pageSame = true;
+  try { const baked = readFileSync(bakeFix); pageSame = baked.length === shipped.length && baked.equals(shipped); }
+  catch (e) { pageSame = false; }
+  ok(pageSame, '⑩c 在册的 champion-map/index.html 必须逐字等于 `node champion-map/viewer.mjs` 的输出' +
+    '（改了生成器忘了重烘 ⇒ 页检/截图量的都不是这份代码）。重烘：node champion-map/viewer.mjs');
+  const perturbed = Buffer.from(shipped); perturbed[perturbed.length - 20] = perturbed[perturbed.length - 20] ^ 0x20;
+  ok(!perturbed.equals(shipped), '⑩d 牙口自证：改一个字节必须让上面的逐字比对判成"不等"（这条不成立说明 ⑩c 比的是空气）');
+  try { rmSync(bakeFix, { force: true }); } catch (e) { /* 临时件删不掉不影响判据（它在 tmpdir，不在 docs/artifacts 的 24h 账里） */ }
+
   /* ⑫ §E600-B（用户 10-13 裁定「把启发式随机脚本塞到弱池子里面」）：**掺脚本席这件事必须两侧同源、可复现、不吞掉池**。
    *   钉四件行为 + 一条窄接线：
    *     ⑫a 声明了 `scriptMix` 的档，`scriptSeats` 推出的席数必须 ≥1 且 **小于 AI 席数**（至少留一席包 ⇒ 池不许被整个盖掉）
