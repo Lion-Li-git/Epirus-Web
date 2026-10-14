@@ -34,7 +34,7 @@ import { loadChampParams } from '../server/opp-champs.mjs';
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
 rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'extra',
   'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier', 'pairs', 'banddef',
-  'mixseats', 'epsover'], 'probe-diff-ladder');
+  'mixseats', 'mixids', 'epsover'], 'probe-diff-ladder');
 
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const GAMES = Math.max(1, Number(flag('games', 1500)) || 1500);
@@ -232,6 +232,18 @@ if (USE_POOL) {
     /* §E611 研究旗标 `--mixseats=<N>`：把声明了 `scriptMix` 的那档**盖成 N 席**（同 `--banddef` 那族"不落盘量一种形状"）。
      *   `N=0` 就是"S10 之前那台机器"⇒ 用来做**闭合检查**：这一臂若复现 `recheck/` 那批（简单 17.66 ‖ 20.27），
      *   才证明"台阶塌掉是那两席脚本造成的"这句因果；不复现就说明还有别的层不一样，S10 的结论要降级为"未闭合"。 */
+    /* §E612 研究旗标 `--mixids=<a,b>`：把掺进来的那几席**换成指定的风格**（待裁 #27 的选项①"换脚本"需要这条）。
+     *   认不出来的 id 当场拒绝（产品的 `scriptSeats` 会"跳过并说出来"，但那是产品口径；研究臂里静默跳过会量成一桌别的东西）。 */
+    const MI = flag('mixids', '');
+    if (MI !== '') {
+      const ids = MI.split(',').filter(Boolean);
+      const known = {}; (Bots.STYLES || []).forEach(s => { known[s.id] = 1; });
+      const bad = ids.filter(x => !known[x]);
+      if (!ids.length || bad.length) { console.error('⛔ --mixids 里有不认识的风格 id：' + (bad.join(',') || '(空)') +
+        '（在册：' + Object.keys(known).join(' ') + '）⇒ 拒绝，不许静默跳过后量成一桌别的东西'); process.exit(2); }
+      for (const k of Object.keys(MIX_OF)) { MIX_OF[k] = Object.assign({}, MIX_OF[k]); MIX_OF[k].ids = ids; }
+      console.log('# ⚑ 研究视图 --mixids = ' + ids.join('+') + '（产品档位表没动；这一臂不是产品口径）');
+    }
     const MS = flag('mixseats', '');
     if (MS !== '') {
       const want = Number(MS);
