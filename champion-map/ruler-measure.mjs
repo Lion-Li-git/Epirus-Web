@@ -117,7 +117,13 @@ if (EXTRA) {
   console.log('--extra 拉进 ' + add + ' 枚（名单里已有 ' + skipOnMap + ' ‖ 盘上查无 ' + skipNoFile + '）'
     + (miss.length ? '\n  ⚠ 盘上查无的是：' + miss.join(' ‖ ') : ''));
 }
-const only = String(arg('ids', '')).split(',').map(s => s.trim()).filter(Boolean);
+const only0 = String(arg('ids', '')).split(',').map(s => s.trim()).filter(Boolean);
+/* §E604（10-14 折行之后）：`coords.tsv` 一行 = 一份权重 ⇒ 副名不在 `id` 列里了，它们住在 `aliasIds`/`coords-aliases.tsv`。
+ *   而**来料的名字**不少还是副名（池表 `SHIPPED-Ldemo`、旧研究表里的当年叫法）⇒ 先过 `SID.resolve` 这一份单一来源翻成主名，
+ *   翻不动的**原样**交给下面那道 missIds 响亮失败 —— 在这里吞名字就等于回到 §E566 那条"筛空了却 exit 0"的病。 */
+const only = [], ptr = [];
+for (const q of only0) { const r = SID.resolve(q) || q; if (r !== q) ptr.push(q + '⇒' + r); if (only.indexOf(r) < 0) only.push(r); }
+if (ptr.length) console.log('--ids 里的副名按指针翻成主名（同一份权重，取面板主名那一行）：' + ptr.join(' ‖ '));
 let list = [...want.entries()].map(([path, v]) => ({ path, ...v }));
 if (only.length) {
   const haveIds = new Set(list.map(e => e.id));

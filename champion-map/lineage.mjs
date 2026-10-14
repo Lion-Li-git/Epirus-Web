@@ -134,12 +134,18 @@ function embOf(arr) { try {
   const r = POL.embedLegacy(arr); return r ? widOfArr(r) : null;
 } catch (e) { return null; } }
 const allBak = existsSync(ART) ? readdirSync(ART).filter(f => f.endsWith('.bak')) : [];
+/* ⚠ §E604（10-14 折行之后）把这一条的**次序**换过来了：原来是"先扫全部 .bak 按文件名占位，再用面板行补漏"，
+ *   于是同一份权重有两个文件时，**先被扫到的文件名**抢走了 BYWID。实测代价：
+ *   `docs/artifacts/SHIPPED-Ldemo-2026-10-11-pre-T8s114.bak`（§E588 换包当天钉的快照，wid 与图上的 Ldemo **逐位相同** = d490dc13…）
+ *   抢在 `Ldemo` 之前登记 ⇒ 33 枚子代的父边被写成那个文件名，而折行后面板上只有 `Ldemo` 一行
+ *   ⇒ 页内那条「不许有任何父边指向图上不存在的枚」当场红 33 条。
+ *   规矩本来就是这条（§E330「登记目标必须是面板上真有的那一枚」）：**先按面板登记，文件名只补面板上没有的权重**。 */
+for (const r of REC) if (r.wid && !BYWID[r.wid]) BYWID[r.wid] = r.id;
 for (const f of allBak) { try {
   const txt = readFileSync(join(ART, f), 'utf8'); const arr = packArr(txt);
   const w = widOfArr(arr); if (!w) continue;
   const id = f.slice(0, -4); if (!BYWID[w]) BYWID[w] = id;
 } catch (e) { /* 单枚读不动不影响全表 */ } }
-for (const r of REC) if (r.wid && !BYWID[r.wid]) BYWID[r.wid] = r.id;
 /* §E330 哈希之外还有第二条父指针：`recipe.env.EPIRUS_SEEDPACK` 记的是**文件路径**。
  *   现役那枚（js/bundled-champion-3p.js）走的正是这一条 —— 它**没有** hotstartFrom，实测
  *   `EPIRUS_SEEDPACK = docs/artifacts/kept/artifacts__E51-t8-713.bak` ⇒ 只按哈希解析时"当前线上"那个点没有父边，

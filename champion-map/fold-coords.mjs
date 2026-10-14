@@ -11,9 +11,11 @@
  *   ① 身份优先：组里若只有一行带白名单 lineage（历代上槽 / 旧槽位冠军），**它必须当选主名** ——
  *      按"最早入库"挑到别的行会把冠军身份弄丢（`viewer.mjs` 挑组内代表读的就是"谁带身份"）。
  *      组里带身份的行 ≠ 1 且不是 0 ⇒ 停下来点名，不猜。
- *   ② 读数不丢：被折掉的副名连同它自己的 `H/S/seed/examG` 落到 `champion-map/coords-aliases.tsv`；
- *      副名读数与主名**不一致**的行单独点名（实测抓到 `eco-34-v7c`：与主名同一个文件、Hp 也相同，H 却差 10.5pt
- *      ⇒ 那是它自己那份已搬走的副本留下的读数，路径后来被 §E589 改指了主名）。
+ *   ② 读数不丢（10-14 白天补严）：原来这一条只比 `H/S`，把副名**其余各列**当空气 ⇒ 实测抓到两处静默丢失：
+ *      `Ldemo` 的 `Sc/Scd/Sch`（三格，来自 §E321 那批 10-05 的当选键读数，当年贴在 `SHIPPED-Ldemo` 那一行上）被折掉了 ‖
+ *      `eco-34-v7c` 与主名同一份权重、却在 12 个行为列上整体不同（那是 `legacyFrom=6` 那个**规则变体**下的另一次测量，不是第二个名字）。
+ *      ⇒ 现在分三类处理：**几何列**（`rank` ‖ `x2 y2 x3 y3 z3` ‖ `xt yt xt3 yt3 zt3`）按用户裁定不搬（同权重只算一枚，位置就是主名那一点）；
+ *      **主名空着、副名有值** ⇒ 搬上去并逐格点名；**两边都有值且不同** ⇒ 不猜，原样落到副名表新增的 `aliasDiff` 列。
  *   ③ 折完必须是 `行数 == 不同 path 数`，且列数与列序一字不动（只在尾部加 `aliasN`/`aliasIds` 两列）。
  *
  * 用法：node champion-map/fold-coords.mjs [--dry] [--check]
@@ -46,6 +48,11 @@ if (!ALLOW && !DRY && !CHECK) {
   process.exit(2);
 }
 const LIN = { '历代上槽': 1, '旧槽位冠军': 1 };
+/* 守卫② 的三类列（10-14 白天补）：**几何列**按"同权重只算一枚"归主名，不搬；
+ *   `lineage` 走上面的 UNION；`dupN/dupOf/aliasN/aliasIds` 是这台自己写的 ⇒ 不参与比较。
+ *   其余都是**测量列**：主名空着而副名有值 ⇒ 搬；两边都有值且不同 ⇒ 不猜，落到副名表的 `aliasDiff`。 */
+const GEO = { rank: 1, x2: 1, y2: 1, x3: 1, y3: 1, z3: 1, xt: 1, yt: 1, xt3: 1, yt3: 1, zt3: 1 };
+const SELF = { id: 1, lineage: 1, dupN: 1, dupOf: 1, aliasN: 1, aliasIds: 1 };
 
 const raw = readFileSync(CO, 'utf8');
 const EOL = raw.indexOf('\r\n') >= 0 ? '\r\n' : '\n';
@@ -97,7 +104,9 @@ const CACHE_T = {}, CACHE_R = {};
 const tsOf = id => (CACHE_T[id] !== undefined ? CACHE_T[id] : (CACHE_T[id] = gitTs(id)));
 const refOf = id => (CACHE_R[id] !== undefined ? CACHE_R[id] : (CACHE_R[id] = refCount(id)));
 
-const picked = [], warn = [], clash = [];
+const picked = [], warn = [], clash = [], carried = [];
+const DIFF = new Map();                       // 副名 id → 与主名不同、且副名表那五列没记到的测量列
+const RECD = { H: 1, S: 1, seed: 1, examG: 1, lineage: 1 };   // 副名表已单列记录的，不在 aliasDiff 里重复
 for (const [w, v] of G) {
   if (v.length === 1) { picked.push({ main: v[0], al: [] }); continue; }
   /* 主名 = **外部指针最多**的那个名字（用户定的"最多引用"在前），并列再比"最早入库"，再并列按 id 字典序。
@@ -118,6 +127,18 @@ for (const [w, v] of G) {
   /* 并列引用数（主名和某个副名被同样多点 ⇒ 选谁都会让另一边的指针变松）：只点名，不静默 */
   const tied = al.filter(r => refOf(r[H.id]) === refOf(main[H.id]) && refOf(main[H.id]) > 0).map(r => r[H.id]);
   if (tied.length) warn.push('引用数并列：' + main[H.id] + ' 与 ' + tied.join(' ‖ ') + ' 各被点 ' + refOf(main[H.id]) + ' 次 ⇒ 主名按最早入库定（' + new Date(tsOf(main[H.id]) * 1000).toISOString().slice(0, 10) + '）');
+  /* 守卫②（10-14 白天补严）：测量列不许被折行静默丢掉 —— 主名空着、副名有值就搬上去；两边都有值且不同就不猜 */
+  for (const a of al) {
+    const d = [];
+    for (const c of head) {
+      if (GEO[c] || SELF[c]) continue;
+      const j = H[c], v1 = String(main[j] || '').trim(), v2 = String(a[j] || '').trim();
+      if (!v2 || v1 === v2) continue;
+      if (!v1) { main[j] = v2; carried.push(main[H.id] + '.' + c + ' ← ' + a[H.id] + '（' + v2 + '）'); }
+      else if (!RECD[c]) d.push(c + '=' + v2);
+    }
+    DIFF.set(a[H.id], d.join(' '));
+  }
   picked.push({ main, al, by: '最多引用‖最早入库' });
   for (const a of al) {
     if (a[H.H] !== main[H.H] || a[H.S] !== main[H.S]) warn.push('读数矛盾：' + a[H.id] + ' H=' + a[H.H] + ' vs 主名 ' + main[H.id] + ' H=' + main[H.H] +
@@ -137,13 +158,17 @@ const body = picked.map(p => {
   while (r.length < head.length) r.push('');
   return r.concat([String(1 + p.al.length), p.al.map(a => a[H.id]).join(' ')]).join('\t');
 });
-const ALH = ['mainId', 'aliasId', 'aliasH', 'aliasS', 'aliasSeed', 'aliasExamG', 'aliasLineage', 'path', 'wid', 'sameReading', 'mainH', 'mainS'];
+const ALH = ['mainId', 'aliasId', 'aliasH', 'aliasS', 'aliasSeed', 'aliasExamG', 'aliasLineage', 'path', 'wid', 'sameReading', 'mainH', 'mainS', 'aliasDiff'];
 const ALR = [];
 for (const p of picked) for (const a of p.al) ALR.push([p.main[H.id], a[H.id], a[H.H], a[H.S], a[H.seed] || '', a[H.examG] || '',
   a[H.lineage] || '', a[H.path], WID.get(a) || '', a[H.H] === p.main[H.H] && a[H.S] === p.main[H.S] ? 'same' : 'DIFF',
-  p.main[H.H], p.main[H.S]].join('\t'));
+  p.main[H.H], p.main[H.S], DIFF.get(a[H.id]) || ''].join('\t'));
 
 console.log('目标：' + out.length + ' 行 × ' + NEWH.length + ' 列 ‖ 副名表 ' + ALR.length + ' 行 × ' + ALH.length + ' 列');
+console.log('守卫② 从副名搬上主名的测量格 = ' + carried.length + ' 个' + (carried.length ? '：\n  ' + carried.join('\n  ') : ''));
+const nDiff = ALR.filter(r => r.split('\t')[ALH.length - 1] !== '').length;
+const wDiff = ALR.reduce((a, r) => a + (r.split('\t')[ALH.length - 1] ? r.split('\t')[ALH.length - 1].split(' ').length : 0), 0);
+console.log('守卫② 两边都有值且不同 ⇒ **不搬、原样记进副名表 aliasDiff** = ' + wDiff + ' 格（涉及 ' + nDiff + ' 个副名）');
 console.log('读数不一致的副名 = ' + warn.length + ' 条' + (warn.length ? '：\n  ' + warn.join('\n  ') : ''));
 const byHow = {}; for (const p of picked) if (p.al.length) byHow[p.by] = (byHow[p.by] || 0) + 1;
 console.log('多数组的主名是凭什么定的：' + Object.entries(byHow).map(([k, v]) => k + ' ' + v + ' 组').join(' ‖ '));

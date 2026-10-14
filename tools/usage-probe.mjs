@@ -27,6 +27,7 @@ import { dirname, join, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, mulberry32, rejectUnknownFlags } from './audit-lib.mjs';
 import { resolveOutPath } from './out-path.mjs';   /* §2026-10-09：`--out=` 的解析是纯函数 ⇒ 门能直接单元判（规矩 1） */
+import * as slotIdentity from '../champion-map/slot-identity.mjs';   /* §E604：副名⇒主名的唯一翻译处（名单按名字索引面板的那跳） */
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = join(HERE, '..');
 const KNOWN = ['ids', 'sample', 'paths', 'games', 'eps', 'out', 'self-test', 'seed', 'mode'];
@@ -108,7 +109,12 @@ const rowsC = CO.slice(1).map(r => ({ id: r[ch0.id], path: r[ch0.path] })).filte
 let list = rowsC;
 const IDS = String(arg('ids', '')).split(',').map(s => s.trim()).filter(Boolean);
 const PATHS = String(arg('paths', '')).split(',').map(s => s.trim()).filter(Boolean);
-if (IDS.length) list = rowsC.filter(e => IDS.indexOf(e.id) >= 0);
+/* §E604（10-14 折行之后）：`coords.tsv` 一行 = 一份权重 ⇒ 副名只作为**指针**住在 `aliasIds`/`coords-aliases.tsv`，
+ *   而门与来料用的还是当年那个名字（`SHIPPED-Ldemo`）⇒ 翻主名一律走 `slot-identity.resolve` 这一份单一来源，
+ *   与 pool-sync ‖ ruler-measure ‖ viewer 同一张指针表。翻不动的原样交给下面"名单是空的"那道响亮失败。 */
+const SID = slotIdentity.load();
+const IDS_MAIN = IDS.map(id => SID.resolve(id) || id);
+if (IDS.length) list = rowsC.filter(e => IDS_MAIN.indexOf(e.id) >= 0);
 const SAMPLE = Number(arg('sample', 0));
 if (SAMPLE > 0) { const r = mulberry32(9090); const sh = rowsC.slice(); for (let i = sh.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1));[sh[i], sh[j]] = [sh[j], sh[i]]; } list = sh.slice(0, SAMPLE); }
 if (PATHS.length) list = PATHS.map((p, i) => ({ id: p.replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, ''), path: p })).concat(IDS.length || SAMPLE ? list : []);

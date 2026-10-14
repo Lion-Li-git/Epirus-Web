@@ -18,6 +18,7 @@ import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { load as loadSlotId } from './slot-identity.mjs';   /* §E604：副名⇒主名的唯一翻译处 */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -34,10 +35,28 @@ const say = m => { if (!QUIET) console.log(m); };
 /* ---- 真源：id → 带 ---- */
 if (!existsSync(TABLE)) { console.error('⛔ 池真源不在：' + TABLE); process.exit(2); }
 const TL = readFileSync(TABLE, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
-const TH = TL[0].split('\t'), ti = TH.indexOf('id'), tt = TH.indexOf('tier');
+const TH = TL[0].split('\t'), ti = TH.indexOf('id'), tt = TH.indexOf('tier'), tw = TH.indexOf('wid');
 if (ti < 0 || tt < 0) { console.error('⛔ 池表缺 id/tier 列'); process.exit(2); }
-const live = new Map();
-for (const l of TL.slice(1)) { const c = l.split('\t'); if (c[ti]) live.set(c[ti], c[tt] || ''); }
+/* §E604（10-14 折行之后）：池真源里有的成员写的还是**副名**（实测 `SHIPPED-Ldemo` ‖ `G15-71`），
+ *   而图上一行 = 一份权重、只有主名（`Ldemo` ‖ `G08-71`）⇒ 副名按**指针**处理，翻译走 `slot-identity.resolve` 这一份单一来源
+ *   （与 viewer ‖ ruler-measure ‖ usage-probe 同一张表，不许在这里再抄一份别名表）。
+ *   翻之前用 wid 对一遍（池表自带 `wid` 列）：指针指到别的权重上就是挂错带，必须当场停而不是"名字对上了就行"。 */
+const SID = loadSlotId(ROOT);
+const live = new Map(), ptr = [], badPtr = [];
+for (const l of TL.slice(1)) {
+  const c = l.split('\t'); if (!c[ti]) continue;
+  const raw = c[ti], tier = c[tt] || '', key = SID.resolve(raw) || raw;
+  if (key !== raw) {
+    const wp = tw >= 0 ? c[tw] : '', wq = SID.widOfId(key) || '';
+    if (!wp || !wq || wp !== wq) badPtr.push(raw + '⇒' + key + '（池 wid=' + (wp || '∅') + ' ‖ 图 wid=' + (wq || '∅') + '）');
+    ptr.push(raw + '⇒' + key);
+  }
+  if (live.has(key) && live.get(key) !== tier) {
+    console.error('⛔ 两行池成员翻到同一份权重却带不同：' + raw + '(' + tier + ') vs ' + key + '(' + live.get(key) + ')'); process.exit(2); }
+  live.set(key, tier);
+}
+if (badPtr.length) { console.error('⛔ 副名指针与权重不符（挂错带比挂错名严重）：' + badPtr.join(' ‖ ')); process.exit(2); }
+if (ptr.length) say('副名按指针翻成图上的主名（' + ptr.length + ' 枚，wid 已逐枚对上）：' + ptr.join(' ‖ '));
 
 /* ---- 图：内联 DATA 里每个节点的 id → pt ---- */
 if (!existsSync(CHART)) { console.error('⛔ 图不在：' + CHART); process.exit(2); }

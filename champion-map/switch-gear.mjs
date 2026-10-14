@@ -22,6 +22,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import * as slotIdentity from './slot-identity.mjs';   /* §E604：副名⇒主名的唯一翻译处（现役名折行后是 `Ldemo` 的副名） */
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
 const TABLE = arg('table', 'epsfull120-2026-10-10.tsv');
@@ -78,8 +79,15 @@ console.log('守卫③ 覆盖：' + hit + '/' + tot + (miss.length ? ' ‖ 缺 '
 if (missRate > 0.03) { console.error('⛔ 守卫③：缺 ' + (100 * missRate).toFixed(1) + '% > 3% ⇒ 换完图上会混两种口径，不换'); process.exit(2); }
 
 /* 换档前读数（给 CHANGELOG 与页检当对照） */
+/* §E604（10-14 折行之后）：这个硬名是**旧现役**的叫法，折行后它只是 `Ldemo` 的一个副名 ⇒ 一律过
+ *   `slot-identity.resolve` 这一份单一来源翻成面板主名。翻不动就响亮停 ——
+ *   原来下面那条守卫写的是 `if (incAfter && …)`，名字一丢它就从"守卫"变成"永不成立"（守卫静默失效比红更坏）。 */
+const INC0 = 'SHIPPED-Ldemo';
+const INC = (function () { const r = slotIdentity.load(join(HERE, '..')).resolve(INC0);
+  if (!r) { console.error('⛔ 现役名 `' + INC0 + '` 在面板上既不是行也不是副名 ⇒ 换档守卫没法跑，这不是绿'); process.exit(2); }
+  return r; })();
 const oldOf = (id) => { const r = CO.slice(1).find((x) => x[iId] === id); return r ? { H: +r[iH], Hp: +r[iHp], De: +r[iDe], F: +r[iF] } : null; };
-const incBefore = oldOf('SHIPPED-Ldemo');
+const incBefore = oldOf(INC);
 
 const newRows = [CO[0].slice()];
 /* 列操作：删 H120（若有）、加 examG（若无）在末尾 */
@@ -124,9 +132,10 @@ console.log('守卫④ 宽度 ✅ 每行 ' + head.length + ' 列（写 ' + kept 
   (nowTxt === out ? ' **本次内容与盘上逐字节相同 ⇒ 幂等：已换过**' : ' 目标内容与盘上不同（本次是真换档）'));
 console.log('列操作：删 H120 = ' + (iH120 === undefined ? '（本来就没有）' : '第 ' + (iH120 + 1) + ' 列') +
   ' ‖ examG = ' + (iExamG === undefined ? '新增（第 ' + head.length + ' 列）' : '覆写第 ' + (iExamG + 1) + ' 列'));
-const incAfter = (() => { const r = newRows.find((x) => x[iId] === 'SHIPPED-Ldemo'); return r ? { H: +r[iH], Hp: +r[iHp], De: +r[iDe], F: +r[iF], gear: r[head.indexOf('examG')] } : null; })();
-console.log('现役 SHIPPED-Ldemo 换档前 = ' + JSON.stringify(incBefore) + ' ‖ 换档后 = ' + JSON.stringify(incAfter));
-if (incAfter && !(incAfter.H > 0 && incAfter.H < 100 && incAfter.gear === String(GEAR))) { console.error('⛔ 现役换完不合法（H 或档没落上）'); process.exit(2); }
+const incAfter = (() => { const r = newRows.find((x) => x[iId] === INC); return r ? { H: +r[iH], Hp: +r[iHp], De: +r[iDe], F: +r[iF], gear: r[head.indexOf('examG')] } : null; })();
+console.log('现役 ' + INC + '（来料名 `' + INC0 + '`）换档前 = ' + JSON.stringify(incBefore) + ' ‖ 换档后 = ' + JSON.stringify(incAfter));
+if (!incAfter) { console.error('⛔ 换档后的表里找不到现役那一行（' + INC + '）⇒ 这道守卫没跑成，不是绿'); process.exit(2); }
+if (!(incAfter.H > 0 && incAfter.H < 100 && incAfter.gear === String(GEAR))) { console.error('⛔ 现役换完不合法（H 或档没落上）'); process.exit(2); }
 
 if (CHECK) { console.log('--check ⇒ 不落盘（守卫全过：' + [1, 2, 3, 4].join('/') + '）'); process.exit(0); }
 writeFileSync(join(HERE, 'coords.tsv'), out.replace(/\n/g, '\r\n'), 'utf8');
