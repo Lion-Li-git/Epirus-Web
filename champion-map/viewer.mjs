@@ -662,7 +662,14 @@ var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '',
   tTilt: 0, tShear: 0,            /* §E333 谱系图立体 = **不透视地板**的"原地上升"（用户否掉了压扁版）：
                                      tTilt = 把行方向按 cos 压扁（右键上下），tShear = 顺带一点横向错切（右键左右）。
                                      两者默认 0 ⇒ 立体态就是"同一张 2D 版式 + 点沿屏幕纵轴抬起"。*/
-  isoGN: 72 };           /* §E312 壳的网格分辨率（沿最长轴的格数）：52 = 旧默认（棱面明显）‖ 72 ‖ 96 */
+  isoGN: 72,
+  /* §E608（用户 10-15 00:5x 点题的"签名场 ↔ 平滑壳 折中"）：**壳的比较带宽**滑轨，c = 核宽 / σ。
+   *   c=1 ⇒ **今天逐字不变**（这就是这条滑轨的锚点，也是它唯一的"零剂量"状态）；c→0 ⇒ 核收到只剩自己那一点 ⇒
+   *   比值场退成 1-NN ⇒ 等值面 = Voronoi 边界 = 签名端（每个过线点一个小泡，误包归零、代价是碎片度爆掉）。
+   *   ⚠ 这条**不动阈值**（DS 交接件 §1.5 把 t 也一起插值成 0.30+0.20c，那会吃掉用户自己那根阈值滑杆的所指，
+   *     而且他 §1.5.1 与 §1.5.2/§1.6.1 对 c 的方向自相矛盾：一处说 c=0 是今天、三处说 c=1 是今天 ⇒ 按锚点那三条定）。
+   *   配套退场的还有两个补丁：M0 与密度门都是给"稀疏区长假壳"打的，小带宽天然不需要它们 ⇒ 让它们随 c 线性退场。*/
+  isoBW: 1 };           /* §E312 壳的网格分辨率（沿最长轴的格数）：52 = 旧默认（棱面明显）‖ 72 ‖ 96 */
 var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三维行为轴与谱系图只能用颜色表示势 */
 /* ===== §E338（用户 01:4x 那批八条里的 1/2/3/4/5）=====
  *   ① 批次切换：谱系图 24 个家族 × 901 枚一起画，行带只剩 29px，左栏两行字必然叠（截图实测）。
@@ -1149,6 +1156,10 @@ function THRLBL() { if (BASEP < 0) { var a1 = 0, b1 = 0;
   for (var q = 0; q < P.length; q++) { var o1 = P[q].ok; if (o1 === 1 || o1 === 0) { b1++; if (o1 === 1) a1++; } }
   BASEP = b1 ? a1 / b1 : 0.15; }
   return Math.round(st.isoT * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '%）'; }
+/* §E608 带宽旋钮的标签要说**生效值**而不是滑块的刻度：c 同时缩核宽、退 M0、退密度门，三个数都得看得见才知道现在这只壳是谁。 */
+function BWLBL(c) { c = (c === undefined || !isFinite(c)) ? st.isoBW : c;
+  return c.toFixed(2) + (c >= 0.995 ? '（今天：M0 ' + DM0 + ' ‖ 门全开）'
+    : '（核宽 ' + (c).toFixed(2) + 'σ ‖ M0 ' + (DM0 * c).toFixed(2) + ' ‖ 门 ' + (c * 100).toFixed(0) + '% ‖ 阈值不动）'); }
 var FRMS = 0, FRMA = [];
 var PERFON = 0;
 var GLPROBE = 0;
@@ -2142,13 +2153,18 @@ function clear(w, h) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = st.bg; g.
  *   ② 每条网格棱的**四个相邻格**若都有顶点 ⇒ 连成一个四边形。
  *   ⇒ 出来的面**闭合、连贯、朝向连续**，且顶点数远小于 marching cubes。
  * 关键性质：网格建在 (a,b,c) 空间（= 三轴各乘自己的屏幕尺度）⇒ **与相机无关**，建一次缓存，旋转/缩放每帧只重投影。*/
-function isoBuild(sig, thr, GN, field) {
+function isoBuild(sig, thr, GN, field, bw) {
+  /* §E608 带宽滑轨（c = bw）：核宽 σ_k = c·σ，同时让两个"给稀疏区长假壳打的补丁"线性退场（M0 与密度门）。
+   *   c=1 ⇒ 下面每一处都逐项回到今天的式子（这条是硬要求，页内自检有一条钉它）。
+   *   传进来是 undefined 的旧调用（没有）一律当 1。*/
+  var BW = (bw === undefined || !isFinite(bw)) ? 1 : Math.max(0.02, Math.min(1, bw));
   var i, j, k, a = [], b = [], c = [];
   for (i = 0; i < N; i++) { a.push(P[i].ax); b.push(P[i].by); c.push(P[i].cz); }
   var loA = Math.min.apply(null, a), hiA = Math.max.apply(null, a);
   var loB = Math.min.apply(null, b), hiB = Math.max.apply(null, b);
   var loC = Math.min.apply(null, c), hiC = Math.max.apply(null, c);
-  var R = 2.6 * sig;   /* GN 由调用方给（§E312：52 是旧默认、棱面明显；72/96 磨平一档，代价是重建时间平方涨）*/
+  var R = 2.6 * sig * BW;   /* GN 由调用方给（§E312：52 是旧默认、棱面明显；72/96 磨平一档，代价是重建时间平方涨）
+                               §E608：支撑半径跟着**核宽**走（σ_k = BW·σ）⇒ 小 c 时桶也变细（nb ∝ 1/R）*/
   var ext = Math.max(hiA - loA, hiB - loB, hiC - loC) + 2 * R;
   var dims = [Math.max(8, Math.round(GN * (hiA - loA + 2 * R) / ext)),
               Math.max(8, Math.round(GN * (hiB - loB + 2 * R) / ext)),
@@ -2175,7 +2191,7 @@ function isoBuild(sig, thr, GN, field) {
   var VF = new Float64Array(N);
   for (i = 0; i < N; i++) VF[i] = vAt(i);   /* 内层不再重复调 vAt 闭包 */
   var F = new Float32Array(dims[0] * dims[1] * dims[2]);
-  var s2 = 2 * sig * sig;
+  var s2 = 2 * sig * sig * BW * BW;   /* §E608 高斯核的宽度 = σ_k²（σ_k = BW·σ），支撑 R 已经跟着缩 ⇒ 两者必须一起缩 */
   /* §E312 场 = **往全局先验收缩的局部比值**。旧写法是裸比值 num/den ⇒
    *   稀疏区一个核里常只有一两个点，只要那点恰好过线比值就是 1.0（≥阈值）；稠密区比值被压向全局过线率 15.7%，永远够不到 50%
    *   ⇒ **旧壳恰好只在数据最稀的地方长出来**，那是纯噪声，与"圈出过线的冠军"完全相反（用户看到的"只圈到边缘"就是这个）。
@@ -2199,7 +2215,10 @@ function isoBuild(sig, thr, GN, field) {
     if (isFinite(v0)) { nV++; sumV += v0; } }
   /* base = 全库过线率，**与场无关**：壳内纯度要跟它比才知道壳是不是白画的。
    *   'pot' 场的 p0 是"平均势"（59%），拿它当"底率"印出去会把人带沟里（截图第一版就印成 59%）。*/
-  var p0 = nV ? sumV / nV : 0.15, base = nHas ? nOk / nHas : 0.15, M0 = DM0, maxF = 0;
+  var p0 = nV ? sumV / nV : 0.15, base = nHas ? nOk / nHas : 0.15, M0 = DM0 * BW, maxF = 0;
+  /* §E608：M0 是"往 0 收缩"的那剂药（E401），它治的是**稀疏区一两个点就把比值抬到 1** 的长假壳。
+   *   而带宽收到很小之后，一个核里本来就只有自己那一枚 ⇒ 那个假壳的来源自己没了 ⇒ 药该跟着退（M0 → 0 = 纯比值场）。
+   *   BW=1 ⇒ M0 = DM0 = 2 = 今天，逐字。*/
   /* E400 DS（用户 10-08：曲面经常过大、甚至整个在没有点的地方；而点很多的地方反被未过线点干扰保不住）：
    *   病根是这两行：① 空处 den→0 时直接 return p0（全库均值）⇒ 虚空里照样有值；
    *   ② M0=5 的收缩让「一小簇过线点」被拉向全库均值 ⇒ 局部证据被摊薄。
@@ -2241,7 +2260,8 @@ function isoBuild(sig, thr, GN, field) {
   function gfield(X, Y, Z, self) {
     var v = at(X, Y, Z, self);
     if (!(DREF > 0)) return v;
-    var gg = ATDEN / DREF; return v * (gg < 1 ? gg * gg : 1);   /* E401：门 = 纯衰减（基线已是 0）*/
+    var gg = ATDEN / DREF, gate = gg < 1 ? gg * gg : 1;   /* E401：门 = 纯衰减（基线已是 0）*/
+    return v * (1 - BW * (1 - gate));   /* §E608：BW=1 ⇒ v*gate（今天，逐字）‖ BW→0 ⇒ 门退场（小带宽不需要这道补丁）*/
   }
   for (k = 0; k < dims[2]; k++) for (j = 0; j < dims[1]; j++) for (i = 0; i < dims[0]; i++) {
     var fv = gfield(loA + i * dA, loB + j * dB, loC + k * dC, -1);
@@ -2332,7 +2352,7 @@ function isoBuild(sig, thr, GN, field) {
     }
   }
   return { quads: quads, dims: dims, sig: sig, thr: thr, gn: GN, field: field, nCell: F.length, nDrop: ndrop,
-    cov: cov, ins: ins, covL: covL, insL: insL, insCell: insCell, bad: badIn, miss: missOut, p0: p0, base: base, nOk: nOk, maxF: maxF };
+    cov: cov, ins: ins, covL: covL, insL: insL, insCell: insCell, bad: badIn, miss: missOut, bw: BW, p0: p0, base: base, nOk: nOk, maxF: maxF };
 }
 /* σ = 第 6 近邻距离的中位，**按显示度量**（三轴各自换算成同一屏幕单位之后）⇒ 曲面在屏幕上是圆的。
  *   用数据单位算就是 §E296 那个病的三维版：三轴比例尺不同 ⇒ 球被拉成椭球。
@@ -2363,14 +2383,16 @@ function isoEnsure() {
   var _tS = performance.now();
   var sg = isoSigma();
   SIGMS = performance.now() - _tS;   /* E422：算签名花了多少 */
-  if (ISO && ISO.sig === sg && ISO.thr === st.isoT && ISO.gn === st.isoGN && ISO.field === st.isoField) return ISO;
+  if (ISO && ISO.sig === sg && ISO.thr === st.isoT && ISO.gn === st.isoGN && ISO.field === st.isoField && ISO.bw === st.isoBW) return ISO;
   /* E423 DS：**指名道姓**记录这次为什么重建**（空闲时四个条件 sig/thr/gn/field 都该稳定）。
+   *   §E608：带宽是**第五个**条件 —— 不进缓存键的话，滑块一动而壳纹丝不动（"改了没生效"那一族，
+   *   与 §E464 那座只搭一半的桥同形：代码写了、路是空的，而页面自己看起来一切正常）。
    *   顺带把 SIGMS/BUILDMS 在该帧重建时才是当帧值；读数那边每帧清零，避免拿陈旧值判读。 */
   MISSWHY = ISO ? ((ISO.sig === sg ? '' : 'sig') + (ISO.thr === st.isoT ? '' : '|thr') +
-    (ISO.gn === st.isoGN ? '' : '|gn') + (ISO.field === st.isoField ? '' : '|field') || 'all-equal?') : 'noISO';
+    (ISO.gn === st.isoGN ? '' : '|gn') + (ISO.field === st.isoField ? '' : '|field') + (ISO.bw === st.isoBW ? '' : '|bw') || 'all-equal?') : 'noISO';
   ISOBUILDS++;   /* E419 DS：建壳次数 —— 用户真机实测 1.2s/帧、而每帧只有 3073 次画布调用(≈1.5ms)
                   *   ⇒ 1.2 秒必然花在"每帧重算"上；头号嫌疑就是这里被反复重建（GN=128 建一次 ~0.6~1.5s，量级吻合）。 */
-  var t0 = performance.now(); ISO = isoBuild(sg, st.isoT, st.isoGN, st.isoField); ISO.ms = performance.now() - t0;
+  var t0 = performance.now(); ISO = isoBuild(sg, st.isoT, st.isoGN, st.isoField, st.isoBW); ISO.ms = performance.now() - t0;
   BUILDMS = ISO.ms;   /* E422：真重建花了多少 */
   return ISO;
 }
@@ -2561,7 +2583,8 @@ function draw3b(fr) {
     /* §E312 壳好不好必须当场给数，而且**两列一起给**：含自己那列与画出来的壳同口径但循环，留一那列才是"不是靠自己被圈进来"。
      *   只报一列就会被骗（iso-sweep.mjs 实测两列差一倍）⇒ 这也回答"壳到底有没有用"：留一塌到 0 就说明这层壳是自我照亮。*/
     (isoInfo ? ' ‖ 壳[' + (isoInfo.field === 'pot' ? '势' : '过线概率') + '] 阈值 ' + Math.round(st.isoT * 100) +
-      '% · 网格 ' + isoInfo.gn + ' 格/最长轴 · ' + isoInfo.quads.length + ' 片' +
+      '% · 带宽 c=' + isoInfo.bw.toFixed(2) + '（σ ' + SIGVAL.toFixed(3) + ' → 核 ' + (SIGVAL * isoInfo.bw).toFixed(3) +
+      (isoInfo.bw < 0.2 && isoInfo.gn < 96 ? ' ‖ ⚠ 小 c 配 ' + isoInfo.gn + ' 格会把小泡当退化片丢掉，抬到 128' : '') + '）· 网格 ' + isoInfo.gn + ' 格/最长轴 · ' + isoInfo.quads.length + ' 片' +
       (isoInfo.nDrop ? '（另丢 ' + isoInfo.nDrop + ' 片退化桥）' : '') + ' · 建壳 ' + isoInfo.ms.toFixed(0) + 'ms（与相机无关，只建一次）' +
       ' ‖ 壳内 ' + isoInfo.ins + ' 枚（含自己 ' + isoInfo.cov + ' 枚真过线 = ' + (isoInfo.ins ? (100 * isoInfo.cov / isoInfo.ins).toFixed(0) : '—') +
       '%）‖ 误包（壳里的未过线）' + isoInfo.bad + ' 枚 ‖ 漏画（壳外的过线）' + isoInfo.miss + '/' + isoInfo.nOk + ' 枚 ‖ 留一复核 ' + isoInfo.insL + ' 枚里 ' + isoInfo.covL + ' 枚（' + (isoInfo.insL ? (100 * isoInfo.covL / isoInfo.insL).toFixed(0) : '—') +
@@ -3311,6 +3334,9 @@ function syncIso() { var b = document.getElementById('bisos');
   /* 阈值滑杆只在"曲面开着 + 三维行为轴"时占位 ⇒ 默认状态下一行都不多挤（§E304 那次数条撑出滚动条的教训）*/
   var r = document.getElementById('isorow'); if (r) r.style.display = (on3 && st.iso > 0) ? '' : 'none';
   var rg = document.getElementById('isognrow'); if (rg) rg.style.display = (on3 && st.iso > 0) ? '' : 'none';
+  var rw = document.getElementById('isobwrow'); if (rw) rw.style.display = (on3 && st.iso > 0) ? '' : 'none';
+  var ws = document.getElementById('isobw'), wv = document.getElementById('isobwv');
+  if (ws) ws.value = String(st.isoBW); if (wv) wv.textContent = BWLBL();   /* §E608 同 #isot 那条：深链 #isobw= 要既改状态又改旋钮 */
   var gs = document.getElementById('isogn'); if (gs) gs.value = String(st.isoGN);
   var fs2 = document.getElementById('isof'); if (fs2) fs2.value = st.isoField;
   /* 滑杆位置也由这里统一刷 ⇒ 深链 #isot= 才能既改状态又改旋钮（放在初始化 IIFE 里会早于 hash 解析 ⇒ 显示 50%、实际 25%）
@@ -3338,6 +3364,24 @@ document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) %
     clearTimeout(_isoTimer);
     _isoTimer = setTimeout(function () { st.isoT = val; if (v) v.textContent = THRLBL(); req(); }, 160);
   });
+})();
+/* §E608 带宽滑轨（c = 核宽 / σ，c=1 = 今天）。用 **change**（松手才重建）而不是逐 tick 重建：
+ *   isoBuild 一次 0.2~1.5 秒（GN 相关），拖动里每个 tick 都重建就是 E426 那次"拖一下卡一秒多"的重演。
+ *   两个预设按钮是给用户的：她问的是"从签名场拉到平滑壳"，来回拉比认刻度快。 */
+(function () { var w = document.getElementById('isobw'), wv2 = document.getElementById('isobwv');
+  if (!w) return;
+  w.value = String(st.isoBW); if (wv2) wv2.textContent = BWLBL();
+  w.addEventListener('input', function () { if (wv2) wv2.textContent = BWLBL(+this.value); });
+  w.addEventListener('change', function () { st.isoBW = +this.value; if (wv2) wv2.textContent = BWLBL(); req(); });
+  function setBw(c, gn) { st.isoBW = c; if (gn) st.isoGN = gn;
+    var a1 = document.getElementById('isobw'), a2 = document.getElementById('isogn');
+    if (a1) a1.value = String(c); if (a2) a2.value = String(st.isoGN);
+    if (wv2) wv2.textContent = BWLBL(); req(); }
+  var bt = document.getElementById('bwToday'); if (bt) bt.addEventListener('click', function () { setBw(1); });
+  /* 预设停在 **0.20** 而不是 0.05：扫描实测 c=0.2 就是"漏画归零"的那一档（本机 67→0 ‖ 误包 91→30 ‖ 7158 片画得出来），
+   *   而 c≤0.05 在**数值**上才是签名端（误包 3→0），画面上却看不见东西 —— GN=72 只剩 310 片、抬到 128 也只剩 1965 片亚像素小泡。
+   *   所以按钮叫"贴簇"不叫"签名端"：它给的是"壳贴着过线簇长"，不是那个画不出来的极限。*/
+  var bs = document.getElementById('bwSign'); if (bs) bs.addEventListener('click', function () { setBw(0.2); });
 })();
 (function () { var g2 = document.getElementById('isogn'), g3 = document.getElementById('isof');
   if (g2) { g2.value = String(st.isoGN);
@@ -3418,6 +3462,7 @@ var CHKDETAIL = 0;
     if (kv[0] === 'isot') { st.isoT = Math.max(0.15, Math.min(0.9, +kv[1])); HT_SEEN = 1; }
     /* §E312 壳分辨率 + 谱系图相机也走深链 ⇒ 无头复核能钉住这两个状态 */
     if (kv[0] === 'isogn') st.isoGN = Math.max(24, Math.min(128, +kv[1] || 72));
+    if (kv[0] === 'isobw') st.isoBW = Math.max(0.02, Math.min(1, +kv[1] || 1));   /* §E608 带宽（无头复核要用）*/
     if (kv[0] === 'isof') st.isoField = (kv[1] === 'pot' ? 'pot' : 'ok');
     if (kv[0] === 'tkx') st.tKx = Math.max(0.4, Math.min(12, +kv[1] || 1));
     if (kv[0] === 'tky') st.tKy = Math.max(0.4, Math.min(12, +kv[1] || 1));
@@ -4397,17 +4442,34 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *     ⇒ 这里把视图钉成 3db + 壳开、draw 一次再取 ISO，量完原样还回去。*/
   var SNISO = { mode: st.mode, iso: st.iso, elev: st.elev, flo: st.flo, fhi: st.fhi };
   st.mode = '3db'; st.iso = 1; st.flo = 0; st.fhi = 1; recomputeVIS(); draw();
+  /* 四组壳：**c=1 建两次**（一次经过 isoEnsure 拿用户当下的缓存，一次显式建当锚）+ c=0.2 建一次。
+   *   判据一律落在**显式建的那两组**上 —— 带宽是接线上的量，只读"当前状态"的话，
+   *   一个从不生效的 bw（没传进 isoBuild、或没进 isoEnsure 的缓存键）照样全绿，与 §E464 那座只搭一半的桥同形。*/
   var ISOC = isoEnsure();
-  var ISOpur = ISOC.ins ? 100 * ISOC.cov / ISOC.ins : -1, ISOgap = Math.abs(ISOC.ins - ISOC.insCell);
+  var _tb1 = performance.now(); var IS1 = isoBuild(SIGVAL, st.isoT, st.isoGN, st.isoField, 1); IS1.ms = performance.now() - _tb1;
+  var _tb2 = performance.now(); var IS2 = isoBuild(SIGVAL, st.isoT, st.isoGN, st.isoField, 0.2); IS2.ms = performance.now() - _tb2;
+  var ISOpur = IS1.ins ? 100 * IS1.cov / IS1.ins : -1, ISOgap = Math.abs(IS1.ins - IS1.insCell);
   T('壳：壳内过线率必须高于全库底率（不然这只壳是白画的）‖ 误包/漏画要说得出',
-    ISOC.ins === 0 || ISOpur > 100 * ISOC.base,
-    '壳内 ' + ISOC.ins + ' 枚 · 真过线 ' + ISOC.cov + ' = ' + (ISOC.ins ? ISOpur.toFixed(0) : '—') + '% ‖ 底率 ' +
-    (100 * ISOC.base).toFixed(1) + '% ‖ 误包（壳里的未过线）' + ISOC.bad + ' 枚 ‖ 漏画（壳外的过线）' + ISOC.miss + '/' + ISOC.nOk + ' 枚');
+    IS1.ins === 0 || ISOpur > 100 * IS1.base,
+    '壳内 ' + IS1.ins + ' 枚 · 真过线 ' + IS1.cov + ' = ' + (IS1.ins ? ISOpur.toFixed(0) : '—') + '% ‖ 底率 ' +
+    (100 * IS1.base).toFixed(1) + '% ‖ 误包（壳里的未过线）' + IS1.bad + ' 枚 ‖ 漏画（壳外的过线）' + IS1.miss + '/' + IS1.nOk + ' 枚');
   T('壳：印出来的读数与画出来的网格必须数到同一批点（同场，§E608）',
-    ISOgap <= Math.max(3, 0.03 * ISOC.ins),
-    '解析 ' + ISOC.ins + ' ‖ 网格采样 ' + ISOC.insCell + ' ‖ 差 ' + ISOgap + ' ‖ thr=' + ISOC.thr + ' field=' + ISOC.field +
-    ' gn=' + ISOC.gn + ' sig=' + SIGVAL.toFixed(3) + ' maxF=' + (100 * ISOC.maxF).toFixed(0) + '% p0=' + (100 * ISOC.p0).toFixed(0) +
-    '% quads=' + (ISOC.quads ? ISOC.quads.length : 0) + '（线 max(3, 3%)=' + Math.max(3, 0.03 * ISOC.ins).toFixed(1) + '）');
+    ISOgap <= Math.max(3, 0.03 * IS1.ins),
+    '解析 ' + IS1.ins + ' ‖ 网格采样 ' + IS1.insCell + ' ‖ 差 ' + ISOgap + ' ‖ thr=' + IS1.thr + ' field=' + IS1.field +
+    ' gn=' + IS1.gn + ' sig=' + SIGVAL.toFixed(3) + ' maxF=' + (100 * IS1.maxF).toFixed(0) + '% p0=' + (100 * IS1.p0).toFixed(0) +
+    '% quads=' + IS1.quads.length + '（线 max(3, 3%)=' + Math.max(3, 0.03 * IS1.ins).toFixed(1) + '）');
+  T('壳：带宽滑轨的零剂量端（c=1）必须逐字回到今天（壳内 194 ‖ 真过线 103 = v1.7.17 实测锚）',
+    IS1.ins === 194 && IS1.cov === 103,
+    'c=1：壳内 ' + IS1.ins + ' ‖ 真过线 ' + IS1.cov + ' ‖ 误包 ' + IS1.bad + ' ‖ 漏画 ' + IS1.miss + '/' + IS1.nOk +
+    ' ‖ 当前滑杆 bw=' + ISOC.bw.toFixed(2) + ' 壳内 ' + ISOC.ins + '（滑杆接没接上由「工具栏剩下的都能点」那条判）');
+  /* c=0.2 是扫描表上的拐点（本机 GN=72：漏画 67→**0** ‖ 纯度 53%→85% ‖ 片数 7158 ‖ 建壳 45ms）。
+   *   再往左（c≤0.05）解析读数说 170~173 枚在壳里、而网格只有 310（GN72）~150（GN128）片 ⇒ **画不出**：
+   *   那是网格的分辨率上限（小泡被退化片闸吃掉），不是场错了 ⇒ 滑轨下限停在 0.05，"同场"那条判据钉在 c=1 这一端。*/
+  T('壳：带宽真的改场（c=1 → 0.2 ⇒ 漏画归零、误包下降、读数不许塌成空，且必须与 c=1 不是同一个数）',
+    IS2.miss === 0 && IS2.cov === IS2.nOk && IS2.ins !== IS1.ins && IS2.bad < IS1.bad && IS2.quads.length > 0,
+    'c=0.2：壳内 ' + IS2.ins + ' ‖ 真过线 ' + IS2.cov + '/' + IS2.nOk + ' = ' + (IS2.ins ? (100 * IS2.cov / IS2.ins).toFixed(0) : '—') +
+    '% ‖ 误包 ' + IS2.bad + '（c=1 是 ' + IS1.bad + '）‖ 漏画 ' + IS2.miss + '（c=1 是 ' + IS1.miss + '）‖ 片数 ' + IS2.quads.length +
+    '（c=1 是 ' + IS1.quads.length + '）‖ 建壳 ' + IS2.ms.toFixed(0) + 'ms（c=1 是 ' + IS1.ms.toFixed(0) + 'ms）');
   st.mode = SNISO.mode; st.iso = SNISO.iso; st.elev = SNISO.elev;
   st.flo = SNISO.flo; st.fhi = SNISO.fhi; recomputeVIS(); draw(); paintWin();
   /* ===== §E373 连线开关（用户："给一个连线开关不然可能会太多挡住了"）=====
@@ -5014,7 +5076,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   /* ④ 剩下那几个能点的东西：平面⇄立体（那条 520ms 缓动要**一步推到底**才看得到落点，同一条 tick() 路径）、
    *    投影判据、底色取色器、地板四粒（开关 / 阈值 / 网格 / 场）、好在上⇅。
    *    判的还是两件事：st 跟上 ‖ 有个可观察的东西跟着动（按钮文案 / 面板显隐 / 夹取后的值）。 */
-  var SN2 = { iso: st.iso, isoT: st.isoT, isoGN: st.isoGN, isoField: st.isoField, goodTop: st.goodTop,
+  var SN2 = { iso: st.iso, isoT: st.isoT, isoGN: st.isoGN, isoField: st.isoField, isoBW: st.isoBW, goodTop: st.goodTop,
     bg: st.bg, elev: st.elev, yaw: st.yaw, pit: st.pit, fitOn: document.getElementById('fit').style.display };
   var c2Bad = [];
   var wb3 = document.getElementById('b3dt'), e0 = st.elev, t0b3 = wb3.textContent;
@@ -5067,16 +5129,32 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   if (st.isoField !== 'pot') c2Bad.push('场选 pot 而 st.isoField = ' + st.isoField);
   wif.value = wifBk; fireEv(wif, 'change');
   if (st.isoField !== wifBk) c2Bad.push('场没还原（' + st.isoField + ' ≠ ' + wifBk + '）');
+  /* §E608 带宽滑轨的**接线**判据（前面那几条判的是场本身，判不到这根滑杆）。
+   *   三条各卡一种"写了但没生效"：st 没改（监听没挂）‖ isoEnsure 还返同一个缓存（bw 没进缓存键）‖
+   *   重建了但读数一模一样（bw 没传进 isoBuild）。这一族就是 §E464 那座只搭一半的桥的形状。*/
+  var wbw = document.getElementById('isobw'), wbwBk = wbw.value, bv = document.getElementById('isobwv');
+  var nB0 = ISOBUILDS, iso0 = isoEnsure();
+  wbw.value = '0.2'; fireEv(wbw, 'change');
+  if (Math.abs(st.isoBW - 0.2) > 1e-9) c2Bad.push('带宽滑到 0.2 而 st.isoBW = ' + st.isoBW + ' ⇒ 监听没挂上');
+  if (bv && bv.textContent.indexOf('今天') >= 0) c2Bad.push('带宽改了而标签还写着「今天」（' + bv.textContent + '）');
+  var iso2 = isoEnsure();
+  if (iso2 === iso0) c2Bad.push('带宽改了而 isoEnsure 返同一个缓存对象 ⇒ bw 没进缓存键（滑块一动壳不动）');
+  else if (iso2.ins === iso0.ins) c2Bad.push('重建了但壳内枚数与 c=1 一模一样（' + iso0.ins + '）⇒ bw 没传进 isoBuild');
+  if (nB0 === ISOBUILDS) c2Bad.push('改了带宽而 ISOBUILDS 没加 ⇒ 根本没重建');
+  wbw.value = wbwBk; fireEv(wbw, 'change');
+  if (Math.abs(st.isoBW - +wbwBk) > 1e-9) c2Bad.push('带宽没还原（' + st.isoBW + ' ≠ ' + wbwBk + '）');
+  var bbw = document.getElementById('bwToday'), bbs = document.getElementById('bwSign');
+  if (!bbw || !bbs) c2Bad.push('带宽那两个预设按钮没找到（今天的壳 / 签名端）');
   var wbh = document.getElementById('bh'), gt0 = st.goodTop, tx0 = wbh.textContent;
   wbh.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   if (st.goodTop === gt0) c2Bad.push('好在上⇅ 点下去 st.goodTop 没翻');
   if (wbh.textContent === tx0) c2Bad.push('好在上⇅ 翻了状态没翻文案（还是「' + tx0 + '」）');
   wbh.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   if (st.goodTop !== gt0) c2Bad.push('好在上⇅ 点两下没回到原档');
-  T('工具栏剩下的都能点：平面⇄立体（缓动推到底）、投影判据、底色取色器、曲面三档与阈值/网格/场、好在上⇅',
+  T('工具栏剩下的都能点：平面⇄立体（缓动推到底）、投影判据、底色取色器、曲面三档与阈值/网格/场/带宽、好在上⇅',
     c2Bad.length === 0, c2Bad.join(' ‖ ') || ('st.elev ' + e0.toFixed(2) + ' → ' + e1.toFixed(2) + ' → 回到 ' + st.elev.toFixed(2)
       + ' ‖ #fit 显隐两态都对 ‖ 底色取色器接上 ‖ 曲面轮完三档并回到 ' + isoBk + ' ‖ 阈值槽位与标签跟手（st.isoT 由 E426 防抖，不在这里判）‖ 网格/场两个下拉走 change'));
-  st.iso = SN2.iso; st.isoT = SN2.isoT; st.isoGN = SN2.isoGN; st.isoField = SN2.isoField;
+  st.iso = SN2.iso; st.isoT = SN2.isoT; st.isoGN = SN2.isoGN; st.isoField = SN2.isoField; st.isoBW = SN2.isoBW;
   st.goodTop = SN2.goodTop; st.bg = SN2.bg; st.elev = SN2.elev; st.yaw = SN2.yaw; st.pit = SN2.pit;
   document.getElementById('fit').style.display = SN2.fitOn;
   syncIso(); syncHdir(); setBg(SN2.bg); document.getElementById('bgc').value = SN2.bg;
@@ -5377,6 +5455,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button data-m="3db">三维行为轴</button>' +
 '<button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button>' +
 '<label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label>' +
+'<label id="isobwrow" style="display:none" title="§E608 壳的**比较带宽** c = 核宽 / σ（σ = 显示度量第 6 近邻中位，现在印在下面那行读数里）。&#10;· c=1 = 今天这只壳：平滑的局部过线占比（M0 收缩 + 密度门都在）。&#10;· 往左收到 c→0 = 签名端：核里只剩自己那一枚 ⇒ 比值场退成 1-NN ⇒ 等值面就是 Voronoi 边界，每个过线点冒一个小泡、未过线一枚也不包（代价：壳碎成一片）。&#10;M0 与密度门跟着 c 线性退场 —— 它们是给「稀疏区一两个点就把比值抬到 1」打的补丁，小带宽天生不需要。&#10;⚠ 阈值这根滑杆不动（那是另一个所指）。⚠ 小 c 的泡比格子还小 ⇒ 要配 96~128 格，否则被退化片闸吃掉，看着像什么都没画。">带宽 <input type="range" id="isobw" min="0.05" max="1" step="0.01" value="1"><span id="isobwv">1.00（今天）</span><button id="bwToday" title="c=1 ‖ 今天的平滑局部占比壳（默认零剂量那一档）">今天的壳</button><button id="bwSign" title="c=0.20 ‖ 实测这一档漏画归零（67→0）、误包 91→30，壳碎成一坨一坨各自抱住过线簇。再往左（c≤0.05）数值上才是签名端（误包 3→0），但那些小泡比格子还小 ⇒ 画出来像什么都没画（GN=72 只剩 310 片）">贴簇 c=0.2</button></label>' +
 '<label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label>' +
 '<button id="sortb">排序：F 名次</button>' +
 '<button id="reset">复位视图</button>' +
