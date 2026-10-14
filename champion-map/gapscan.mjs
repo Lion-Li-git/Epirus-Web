@@ -16,11 +16,22 @@ if (RULER !== 'Hp' && RULER !== 'H') { console.error('⛔ --ruler 只认 Hp|H，
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { load as loadSlotId } from './slot-identity.mjs';   /* 现役（活槽现主）只问这一处 */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const T = Number((process.argv.find(a => a.startsWith('--T=')) || '--T=0.1').slice(4));
 function tsv(f) { const L = readFileSync(join(HERE, f), 'utf8').trim().split('\n'), h = L[0].split('\t');
   return L.slice(1).map(l => { const c = l.split('\t'); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; }); }
+/* §E607（DS 10-14）：**线上包 = 活槽现主，只问 `slot-identity`**，不许写死旧名。
+ * 病（实测）：这里原来写死 `'SHIPPED-Ldemo'`（= `Ldemo` 的副名，且那行的 path 已被 §E588 钉在旧快照上），
+ *   而活槽 10-11（`2f88f09` v1.6.62）起住的是 `T8-s114` ⇒ 印出来的"线上包 F"是**退役旧冠军的 F**
+ *   （这台读的就是今天的 `coords.tsv`，所以它没有"历史数据自洽"这个豁免）。 */
+const SID = loadSlotId(join(HERE, '..'));
+const LIVE = (function () { const L = SID.live;
+  if (!L.coordsId) { console.error('⛔ slot-identity 解不出活槽现主 ⇒ 这台脚本没法说"线上包"是谁'
+    + '（补 slot-history.tsv 一行并重跑 slot-timeline.mjs）'); process.exit(2); }
+  return L.coordsId; })();
+console.log('现役（slot-identity.live）= ' + LIVE + '（wid ' + String(SID.live.wid || '取不到').slice(0, 8) + '）');
 const co = tsv('coords.tsv'), lin = tsv('lineage.tsv'), LB = {};
 for (const r of lin) LB[r.id] = r;
 /* 名次不许读 coords.tsv 的 `rank` 列 —— 那一列是换尺前算的（viewer 在加载时重算，直接读 TSV 的人不会） */
@@ -47,7 +58,8 @@ for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
 }
 cells.sort((a, b) => b.F - a.F);
 const bestPack = P.slice().sort((a, b) => b.F - a.F)[0];
-const shipped = P.find(p => p.id === 'SHIPPED-Ldemo');
+const shipped = P.find(p => p.id === LIVE);
+if (!shipped) { console.error('⛔ 现役 ' + LIVE + ' 不在 coords.tsv 的行里 ⇒ "线上包"这一格没法算，这不是绿'); process.exit(2); }
 console.log('可估格 ' + cells.length + ' / ' + (NX * NY) + '  ‖ 实测最好 F = ' + bestPack.F.toFixed(4) + '（' + bestPack.id + '）‖ 线上包 ' + shipped.F.toFixed(4));
 const above = cells.filter(c => c.F > bestPack.F);
 console.log('预测 F 高于现存最好的格 = ' + above.length + ' 个（占可估格 ' + (above.length / cells.length * 100).toFixed(1) + '%）');

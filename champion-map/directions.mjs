@@ -17,6 +17,7 @@
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { load as loadSlotId } from './slot-identity.mjs';   /* 现役（活槽现主）只问这一处 */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
@@ -31,6 +32,18 @@ if (RULER !== 'Hp' && RULER !== 'H') { console.error('⛔ --ruler 只认 Hp|H，
 
 function tsv(f) { const L = readFileSync(join(HERE, f), 'utf8').trim().split('\n'), h = L[0].split('\t');
   return L.slice(1).map(l => { const c = l.split('\t'); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; }); }
+/* §E607（DS 10-14）**现役只问 `slot-identity`**，不许再写死某个旧名字。
+ * 病（实测）：这里原来写死 `'SHIPPED-Ldemo'`，而活槽 10-11（`2f88f09` v1.6.62）起住的是 `T8-s114`
+ *   ⇒ 这台脚本印的"线上包在不在前 20 / 线上包名次"讲的**一直是那枚退役的旧冠军**
+ *   （`Ldemo` 那行的 path 还被 §E588 钉在快照 `eval-out/win-Ldemo.bak` 上 ⇒ 连"指哪儿"都是旧包）。
+ * 唯一来源 = `champion-map/slot-identity.mjs` 的 `live.coordsId`（wid → 声明 → 时间轴三级）。
+ * ⚠ **印出来**：读数换了主语必须让人看见（本仓那条"名字换了不响 = 静默换主语"）。 */
+const SID = loadSlotId(join(HERE, '..'));
+const LIVE = (function () { const L = SID.live;
+  if (!L.coordsId) { console.error('⛔ slot-identity 解不出活槽现主 ⇒ 这台脚本没法说"线上包"是谁'
+    + '（补 slot-history.tsv 一行并重跑 slot-timeline.mjs）'); process.exit(2); }
+  return L.coordsId; })();
+console.log('现役（slot-identity.live）= ' + LIVE + '（wid ' + String(SID.live.wid || '取不到').slice(0, 8) + '）');
 const co = tsv('coords.tsv'), lin = tsv('lineage.tsv');
 const LB = {}; for (const r of lin) LB[r.id] = r;
 const OKM = {};
@@ -99,7 +112,7 @@ const top = R.slice().sort((a, b) => a.rk - b.rk).slice(0, TOPN);
 console.log('\n=== C. F 前 ' + TOPN + ' 名的构成 ===');
 const byFam = {}; for (const r of top) byFam[r.fam] = (byFam[r.fam] || 0) + 1;
 console.log('  家族分布：' + Object.keys(byFam).map(Number).sort((a, b) => a - b).map(f => 'f' + f + '×' + byFam[f]).join('  '));
-console.log('  其中历代冠军 ' + top.filter(r => r.lin).length + ' 枚 ‖ 今天过线 ' + top.filter(r => r.ok === 1).length + ' 枚 ‖ 线上包 ' + (top.filter(r => r.id === 'SHIPPED-Ldemo').length ? '在' : '不在'));
+console.log('  其中历代冠军 ' + top.filter(r => r.lin).length + ' 枚 ‖ 今天过线 ' + top.filter(r => r.ok === 1).length + ' 枚 ‖ 线上包 ' + (top.filter(r => r.id === LIVE).length ? '在' : '不在'));
 console.log('  行为中位数（前 ' + TOPN + ' vs 全库）：');
 for (const k of keys) { const a = med(top.map(r => r.beh[k])), b = med(R.map(r => r.beh[k]));
   const sd = (pct(R.map(r => r.beh[k]), .95) - pct(R.map(r => r.beh[k]), .05)) || 1;
@@ -114,4 +127,4 @@ for (const d of Object.keys(byDay).sort()) { const g = byDay[d];
   console.log('  ' + d + '  ' + String(g.length).padStart(4) + ' 枚  最好名次 ' + String(Math.min.apply(null, g.map(r => r.rk))).padStart(4) +
     '  过线率 ' + (g.filter(r => r.ok === 1).length / g.length * 100).toFixed(0) + '%'); }
 console.log('\n  ⇒ 全库最好名次 = ' + Math.min.apply(null, R.map(r => r.rk)) + '（第 1 名 ' + R.filter(r => r.rk === 1)[0].id + '）‖ 历代冠军里最好名次 = ' +
-  Math.min.apply(null, R.filter(r => r.lin).map(r => r.rk)) + '（线上包名次 ' + (R.find(r => r.id === 'SHIPPED-Ldemo') || {}).rk + '）');
+  Math.min.apply(null, R.filter(r => r.lin).map(r => r.rk)) + '（线上包名次 ' + (R.find(r => r.id === LIVE) || {}).rk + '）');

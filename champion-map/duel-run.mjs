@@ -17,7 +17,7 @@
  *   自检：现役 vs 现役 ⇒ A−B 必须**恰好 0**，不为 0 就是仪器坏了（旧稿只打印，这里直接 exit 2）。
  *
  * 用法：node champion-map/duel-run.mjs [--ids=a,b | --top=8] [--games=60] [--seed=77000] [--out=duel-e334-s77000.tsv]
- *        [--ref=SHIPPED-Ldemo | --ref=<相对路径，如 js/bundled-champion-3p.js>] [--cand=id=相对路径,id2=相对路径2]
+ *        [--ref=<id，**默认 = 活槽现主**（问 slot-identity）> | --ref=<相对路径，如 js/bundled-champion-3p.js>] [--cand=id=相对路径,id2=相对路径2]
  *        # §E583：`--cand=` 让没进过 coords.tsv 的包（训练臂/本地实验件）上这台尺
  *        # §E588：`--ref=` 同样收路径（换代当天"现役"会换主人 ⇒ 参照必须能点名到文件），两种写法都在头行印 wid
  */
@@ -26,6 +26,7 @@ import { spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { widOf } from './pack-id.mjs';
+import { load as loadSlotId } from './slot-identity.mjs';   /* 现役（活槽现主）只问这一处 */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -34,7 +35,27 @@ const rd = f => readFileSync(f, 'utf8').replace(/\r\n/g, '\n');   /* §E333 本�
 const GAMES = Number(arg('games', 60)) || 60;
 const SEED = String(Number(arg('seed', 77000)) || 77000);
 const MODE = 'multi';
-const REF = arg('ref', 'SHIPPED-Ldemo');
+/* §E607（DS 10-14）：**参照 = 活槽现主**，只问 `slot-identity`；不许写死旧名。
+ * 病（实测）：这里原来是 `arg('ref', 'SHIPPED-Ldemo')`，而活槽 10-11（`2f88f09` v1.6.62）起住的是 `T8-s114`
+ *   ⇒ 不带 `--ref=` 跑出来的 A−B 讲的是"对那枚退役旧冠军"，而上面第 10-11 行那句"4 × 现役"其实名不副实。
+ *   （`viewer.mjs` 里也记着这条：`duel-run.mjs:37 的默认参照至今仍是 SHIPPED-Ldemo，而它 10-11 就退役了`。）
+ * ⚠ 换了主语必须印出来：参照是谁、wid、以及这次是"默认值"还是"你点的"。 */
+const SID = loadSlotId(ROOT);        /* 现役 + 副名翻译：这一份是唯一来源 */
+const REF_DEFAULT = (function () {
+  const L = SID.live;
+  if (!L.coordsId) { console.error('⛔ slot-identity 解不出活槽现主 ⇒ `--ref=` 没有可用的默认值，请显式给一个'
+    + '（换代当天补 slot-history.tsv 一行并重跑 slot-timeline.mjs）'); process.exit(2); }
+  return L.coordsId; })();
+const REF = arg('ref', REF_DEFAULT);
+if (REF === REF_DEFAULT) console.log('参照（默认 = slot-identity.live）= ' + REF + '（要换参照用 `--ref=<id 或相对路径>`）');
+/* §E607（DS 10-14）第二件：`--ref=` 也要收**副名**（`SHIPPED-Ldemo` 这类当年的叫法）。
+ * 折行（v1.7.7）之后副名只住在 `coords.tsv` 的 `aliasIds` 列里、**不再是行 id** ⇒ 直接 `RAW.find(id===REF)`
+ *   会掉进下面那道"参照枚找不到文件"（实测：旧默认 `--ref=SHIPPED-Ldemo` 当场 **exit 2**，不是跑不了，是名字不在表里了）。
+ *   一律走 `slot-identity.resolve` 这一份单一来源；翻不动就原样留着，让那道 exit 2 照旧点名。
+ *   ⚠ 这是今早那族"别名轮询漏消费者"的**又一台**（`ruler-measure`/`usage-probe`/`pool-sync` 当时修了，这台漏了）。 */
+const refIsPath = REF.indexOf('/') >= 0 || /\.(bak|js)$/.test(REF);
+const REFID = refIsPath ? REF : (SID.resolve(REF) || REF);
+if (!refIsPath && REFID !== REF) console.log('参照名 `' + REF + '` 是副名 ⇒ 按指针翻成图上的主名 `' + REFID + '`');
 
 /* ---- 候选 = coords.tsv（id ‖ path  F ‖ rank），路径**一律读表里的 path 列** ---- */
 const CL = rd(join(HERE, 'coords.tsv')).trim().split('\n'), ch = CL[0].split('\t');
@@ -61,7 +82,7 @@ const EXTRA = String(arg('cand', '')).split(',').map(s => s.trim()).filter(Boole
   return { id: id, path: path, F: NaN, rank: -1 - i };
 });
 const POOL = RAW.concat(EXTRA);
-const ALL = POOL.filter(r => r.id !== REF).sort((a, b) => a.rank - b.rank);
+const ALL = POOL.filter(r => r.id !== REFID).sort((a, b) => a.rank - b.rank);
 const only = String(arg('ids', '')).split(',').map(s => s.trim()).filter(Boolean);
 const picked = [];
 if (only.length) for (const r of ALL) if (only.indexOf(r.id) >= 0) picked.push(r);
@@ -74,10 +95,9 @@ if (missing.length) { console.error('⛔ --ids 里这些枚不在名单上（拼
  *   而"现役"这个词在换代当天会换主人 ⇒ 想量"对**线上槽那一枚**占不占优"，就得能把活槽文件本身当参照传
  *   （`--ref=js/bundled-champion-3p.js`）。原来只有 `--cand=` 能吃路径，参照不行（§E364 那条"`--ref=` 写了跑不了"的同族）。
  * ⚠ 不管走哪条，打印与落盘都必须带 **wid**：METHODOLOGY 114 要"引用连参照一起说"，而路径会被下一次换包悄悄改掉。 */
-const refIsPath = REF.indexOf('/') >= 0 || /\.(bak|js)$/.test(REF);
 const refRow = refIsPath
   ? { id: REF.replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, ''), path: REF, F: NaN, rank: -1 }
-  : RAW.find(r => r.id === REF);
+  : RAW.find(r => r.id === REFID);
 if (!refRow || !refRow.path || !existsSync(join(ROOT, refRow.path))) { console.error('⛔ 参照枚 ' + REF + ' 找不到文件'); process.exit(2); }
 if (refIsPath) POOL.push(refRow);   /* 只进 POOL 给 duel() 查身份；ALL/cands 在上面已算完 ⇒ 参照不会变成候选 */
 const widAt = rel => { try { return String(widOf(rd(join(ROOT, rel))) || '(解不出权重)'); } catch (e) { return '(读不到)'; } };

@@ -13,6 +13,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { load as loadSlotId } from './slot-identity.mjs';   /* 现役（活槽现主）只问这一处 */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -214,7 +215,22 @@ const umax = Math.max.apply(null, U);
 const SEEDS = (() => { const c = {}; pts.forEach(p => { const k = p.seed || '(无)'; c[k] = (c[k] || 0) + 1; }); return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 5).map(e => e[0]); })();
 const PALETTE = ['#f2c94c', '#6fc7ea', '#f28c6b', '#b28df2', '#5fd6a4'];
 const SC2 = {}; SEEDS.forEach((k, i) => { SC2[k] = PALETTE[i]; });
-const shipI = pts.findIndex(p => p.id === 'SHIPPED-Ldemo');
+/* §E607（DS 10-14）：图上那颗 ★ 必须钉在**今天的活槽现主**上，不许写死旧名。
+ * 病（实测）：这里原来写死 `'SHIPPED-Ldemo'` —— 它是 v1.6.62（`2f88f09`）就被 `T8-s114` 换掉的旧冠军，
+ *   而 `viewer.mjs` 那 12 处同类字面同一天已经改成问 `slot-identity`（§E600-A），这台漏了。
+ *   ★ 只在这四处 `i === shipI ? '★' : ''` 用到 ⇒ 找不到就是**静默不画**（本仓最坏的那种坏）。
+ * ⚠ 这台默认读 §E290 那一代**自己的** `--coords=`（历史点云）⇒ 现役可能不在点里：那就**响亮退回**
+ *   到当年那一版图的现役，并把"这颗 ★ 讲的是谁"印出来（读数换了主语必须让人看见）。 */
+const SID = loadSlotId(ROOT);
+const LIVE = SID.live.coordsId || '';
+const shipI = (function () {
+  const inPts = LIVE ? pts.findIndex(p => p.id === LIVE) : -1;
+  if (inPts >= 0) { console.log('★ 现役（slot-identity.live）= ' + LIVE + '（wid ' + String(SID.live.wid || '取不到').slice(0, 8) + '）'); return inPts; }
+  const old = pts.findIndex(p => p.id === 'SHIPPED-Ldemo');
+  console.log('⚠ ★：现役 ' + (LIVE || '⛔ 认不出') + ' 不在本图的 ' + pts.length + ' 个点里 ⇒ '
+    + (old >= 0 ? '退回 `SHIPPED-Ldemo`（**当年那一版图的现役**，不是今天的）' : '这一版图不画 ★'));
+  return old;
+})();
 const title = t => '<text x="14" y="22" fill="#dce6f5" font-size="13" font-family="system-ui,sans-serif">' + esc(t) + '</text>';
 const cb = (x, y, h, lab) => { let o = '<defs><linearGradient id="cbg" x1="0" y1="1" x2="0" y2="0">' +
   [0, .25, .5, .75, 1].map(t => '<stop offset="' + (t * 100) + '%" stop-color="' + colmap(t) + '"/>').join('') + '</linearGradient></defs>' +

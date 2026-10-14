@@ -1,3 +1,61 @@
+## v1.7.11 — 10-14 晚（DS）：研究量具里的**现役硬名**（千问 #25）开始收 ‖ 修掉 4 台 ‖ 并抓到 `duel-run --ref=` **已经坏了**（折行之后它不认副名 ⇒ `exit 2`）‖ 另 6 台判据写清（历史锚 / 冻结产物不许改）
+
+### 一句话结论
+「现役」这件事**只有一个来源**：`champion-map/slot-identity.mjs` 的 `load().live.coordsId`（wid 现算 → 声明末行 → 时间轴末段，三级且带 `ok`）。
+本笔把**语义上真在问"今天谁在槽里"**的 4 台改成问它，并在每处**印出现役是谁**（本仓那条：换了主语的读数必须让人看见）。
+⚠ 同时把**判据**立起来：**不是所有 `SHIPPED-Ldemo` 都该改** —— 见下面第三节，照 grep 结果乱改会改坏。
+
+### 一、修掉的 4 台（现役 = `T8-s114`，wid `24d8fa30`，实测）
+| 台 | 原来 | 现在 | 验证（实测） |
+|---|---|---|---|
+| `champion-map/directions.mjs` | 写死 `'SHIPPED-Ldemo'` 当"线上包" | 问 `live` | 现印 `现役 = T8-s114` / `线上包 在` / **`线上包名次 6`**（改之前这一格讲的是那枚退役旧冠军） |
+| `champion-map/gapscan.mjs` | 同上，用于"线上包 F" | 问 `live`，且不在表里就响亮停 | 现印 `线上包 0.7651` |
+| `champion-map/ruler-figs.mjs` | ★ 钉在 `'SHIPPED-Ldemo'`（★ 只在 `i === shipI` 用到 ⇒ 找不到就**静默不画**） | 问 `live`；现役不在本图点里时**响亮退回**当年那一版并说清"这颗 ★ 讲的是谁" | 语法 + 逻辑审；**没整跑**（它要的 `e287-ruler-s*.tsv` 不在盘上 ⇒ 烟测当场 `exit 2`）—— ⚠ 且见下面那条陷阱 |
+| `champion-map/duel-run.mjs` | `arg('ref', 'SHIPPED-Ldemo')` | 默认 = `live`；**且 `--ref=` 现在认副名** | 默认：`exit 0`，自检 `T8-s114 vs T8-s114 ⇒ 差 +0.0` ✔；`--ref=SHIPPED-Ldemo`：先是 **exit 2**（见下），修完 `exit 0` + `Ldemo vs Ldemo ⇒ +0.0` ✔；按路径传参照的对照组同样 `exit 0` ✔ |
+
+### 二、顺带抓到：`duel-run.mjs --ref=SHIPPED-Ldemo` **已经是坏的**（今早那族的又一台）
+实测（改动前的代码）：`⛔ 参照枚 SHIPPED-Ldemo 找不到文件` ⇒ **exit 2**。
+根因与今早三台同一个：折行（v1.7.7）之后副名只住在 `coords.tsv` 的 `aliasIds` 列里、**不再是行 id**，而这台的参照查表是 `RAW.find(r => r.id === REF)` ⇒ 不认副名。
+千问当时修的是 `ruler-measure`/`usage-probe`/`pool-sync` 三台，**这台漏了**。
+⇒ 本笔让它走 `slot-identity.resolve`（单一来源）翻主名并**把"副名 ⇒ 主名"印出来**；翻不动则原样留给既有那道 `exit 2` 点名（不在这里吞名字）。
+（连带把 `ALL` 的"剔除参照枚"也改成比**翻过的** id —— 否则参照会同时出现在候选里。）
+
+⚠ **顺带一条陷阱（实测，险些踩到）**：`champion-map/ruler-figs.mjs` 的 `--coords=` **既是入参也是产物**
+（`COORDS_OUT = arg('coords', '') ? … : join(HERE,'e287-coords.tsv')`，L380-381）⇒ 拿 `--coords=champion-map/coords.tsv` 跑它
+**就是重写在册面板**。链子（`rebuild-coords.mjs` 第①步）正是这么调的，所以"只跑一下看看"这句话**在这台身上不成立**：
+要么给个别的 `--coords=`，要么跑完 `git checkout -- champion-map/coords.tsv`。
+本笔那次烟测是因为缺尺表 `e287-ruler-s*.tsv`（不在盘上）**当场 exit 2、还没走到写盘**才没事 —— 记下来免得下一个人真踩。
+
+### 三、判据：哪些硬名**不许**改（照 grep 乱改会改坏）
+| 类别 | 例子 | 为什么不改 |
+|---|---|---|
+| **冻结产物的聚合器** | `champion-map/duel-stats.mjs`（读 `duel-e336-s*.tsv`）‖ `champion-map/duelscan.mjs`（读 `docs/artifacts/e287-out/e287-duel*.tsv`） | 那批表的**参照行就是** `SHIPPED-Ldemo` ⇒ 跳过它是**与数据自洽**的；改成今天的现役反而错（表里没有那一行） |
+| **刻意的历史锚** | `champion-map/switch-gear.mjs` 的 `INC0`（换档读数挂在那行）‖ `champion-map/epsread.mjs` 的 `REF`（§E313 点名的参照包，判据主语已显式改成它）‖ `champion-map/attach-path.mjs` 的 `SNAP = /^SHIPPED-Ldemo.*\.bak$/`（§E588 换包当天钉的快照） | 它们**不是**在声称"现役"，是在点名某一枚具体权重；其中两处已经过 `resolve` 且翻不动就响亮停 |
+| **数据/账本/池表** | `coords.tsv` 的 `aliasIds` ‖ `coords-aliases.tsv` ‖ `pool-members.tsv` ‖ `eps*.tsv`/`ruler*.tsv` 各表 ‖ `slot-timeline.tsv` | 名字是**数据**，不是"现役"的声明 |
+| **用户裁定的池成员** | `pool-arrange.mjs` / `pool-arrange-ruler.mjs` 的 `--locked=T8-s114:hard,K2:hard,SHIPPED-Ldemo:hard` | 那是池**分带**的点名（用户 10-12 裁定），与被叫"现役"无关 |
+
+### 四、还没修的（如实记，附判据与位置）
+| 台 | 位置 | 症状 |
+|---|---|---|
+| `champion-map/holoprobe.mjs` | `L41` `path: r.id === 'SHIPPED-Ldemo' ? 'js/bundled-champion-3p.js' : …` | 现役那枚的路径映射会落空 |
+| `champion-map/seatroster.mjs` | `L27` `SEEDS = ['SHIPPED-Ldemo', …]` 首位当锚 | 锚是退役那枚 |
+| `champion-map/seatassoc.mjs` | `L109` `P.filter(id==='SHIPPED-Ldemo')[0] \|\| /bundled\|Ldemo/…` | 第一支现在恒空 ⇒ **静默落到第二支**（= 旧冠军）——正是"守卫静默失效"那种形状 |
+| `champion-map/eps-scan.mjs` / `eps-full.mjs` | `L53,57` / `L113-116` 把 `'SHIPPED-Ldemo'` 追加进扫描名单 | 名单里多一枚退役枚、少今天的现役 |
+| `champion-map/oldpacks.mjs` | `L141` `arg('ref', 'SHIPPED-Ldemo')` | 同 `duel-run` 的 `--ref`（且它被 `dedupe-artifacts` 当字符串引用） |
+| `champion-map/attach-path.mjs` | `L55` `arg('incumbent', 'SHIPPED-Ldemo')` | **写进在册 `path` 列** ⇒ 改它会动"现役那一行的 path 指谁"，与 §E588 的设计与 §E604 的折行都相邻 ⇒ **要用户裁**（千问 #24 同族） |
+| `champion-map/attach-sc.mjs` | `L55` `ALIAS[INCP] = 'SHIPPED-Ldemo'` | 千问 #24 原文：它把 dump 里的 `SHIPPED-3P` 改名成 `SHIPPED-Ldemo` 再贴 `Sc` 四列，而活槽 10-11 起住 `T8-s114` ⇒ **改它会动在册 `Sc` 列的主语**（那四列的读数是 Ldemo 时代量的）⇒ 留给用户裁 |
+
+⚠ 覆盖面上的一条事实（实测）：**上面这些台没有任何一条门读它们**（`oldpacks` 只是被 `dedupe-artifacts.mjs` 当路径字符串列过）
+⇒ 门禁**验不到**它们，只能靠"跑一遍 + 读输出"。所以本笔的验证是逐台实跑（见 §一的第三列），不是整轮认证书。
+
+### 判据与纪律
+`js/**` 与两份 RULES 一字未改（规则指纹仍 **`b98985bf`**）；**未新增门、未删门（278 条不变）**；未动任何在册表（`coords.tsv`/`lineage.tsv`/池表一字未改，`git status` 逐行可解释）。
+本条涉及 **D8**（三处版本号）· **D194**（分组口径）· **D205**（门号在册）· **D230**（无新 docs 指针）。
+
+> 产物点名（D82）：（无新增）
+
+**门账**：本笔改的全是**研究量具**（不在 np 的读取面上）⇒ 纪律组 + spec 照跑；没有任何门因此变红或变绿。
+
 ## v1.7.10 — 10-14 傍晚（DS）：门禁**按部分并行**（16 路矩阵 + **一个**聚合判定）‖ 并集守卫防"少跑却全绿" ‖ CI 从 16m27s 降到「最慢那一段」
 
 ### 一句话结论
