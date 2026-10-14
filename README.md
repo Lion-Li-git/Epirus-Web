@@ -3,7 +3,7 @@
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）
 重新实现的一整套 **2 人可玩、可自对战训练** 程序。
 
-> **当前版本：v1.7.7** · **人数 2~5 × 血量 3/4/5 两根正交轴**（2 人那一档规则仍冻结在 v1.0.0）+ **全人数共用一条难度阶梯** + **技能齐全 · AI 状态特征 v7，FEAT_S=213**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`（血量轴见 NP 的 **N26**，难度阶梯见 **N27**）。
+> **当前版本：v1.7.8** · **人数 2~5 × 血量 3/4/5 两根正交轴**（2 人那一档规则仍冻结在 v1.0.0）+ **全人数共用一条难度阶梯** + **技能齐全 · AI 状态特征 v7，FEAT_S=213**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`（血量轴见 NP 的 **N26**，难度阶梯见 **N27**）。
 >
 > ⚠️ 本文件**只留当前版本**：逐版改动、实测数字与门号**只记在** [`CHANGELOG.md`](CHANGELOG.md)（README 不是账本 —— 这里此前抄过四次、漂过四次，最长那次落后 63 条门）。
 > ⚠️ **老用户要点页面「用内置冠军」才会换到新包**（本机包优先：`localStorage['epirus.champion']` = 2P ‖ `['epirus.champion3p']` = 多人）。
@@ -95,7 +95,9 @@ Epirus-Web/
 │   └─ opp-pool.mjs / opp-champs.mjs   对手池 + "名字→包"的唯一入口
 ├─ tools/                        量具与门禁（一百多个 .mjs，每个都自带头注；这里只列入口）
 │   ├─ gate-all.mjs                ★ 一条命令跑完五道门禁（np+spec 并发，浏览器那三道排在它们之后 —— §E355b/§E365）‖ `--group=` 只跑一组 ‖ `--no-browser` 是 CI 阻断档的形状
-│   ├─ np-test.mjs                 ★ N 人引擎 + 门禁（**条数与末号由它跑完自己印**，别处不抄）
+│   ├─ np-test.mjs                 ★ 门禁 **runner**（v1.7.8 起只负责注册 / 过滤 / 计数 / 收尾；**278 条门体不在这个文件里**）‖ **条数与末号仍由它跑完自己印**，别处不抄
+│   ├─ gates/                        ★ 278 条门体（16 个部分文件：`engine-rules`/`engine-fuzz` ‖ `train-evo`/`train-chooser`/`train-feature`/`train-env`/`train-runner` ‖ `ship-feas`/`ship-pool`/`ship-promote`/`ship-artifact` ‖ `probe-instruments`/`probe-libs` ‖ `meta-repo`/`meta-lint` ‖ `ui-contract`）+ `_ctx.mjs`（共享前导）‖ **门体面的唯一定义**在 `tools/gate-src.mjs`（凡按文件名定位门体源码的工具都必须问它要）
+│   ├─ gate-src.mjs                门体面（runner → `_ctx` → 16 个部分）的**唯一定义**；`gateBodyText()` 在每个文件前插分隔行 ⇒ 门体不卷进下一个文件的脚手架
 │   ├─ spec-run.mjs                2 人引擎自测（52 用例 + 500 局 fuzz）
 │   ├─ smoke.mjs / battle-test.mjs / np-probe.mjs    CDP 真 Chrome 的三台页面仪器（冒烟 / 多人对战 / 多人探测）
 │   ├─ train-3p.mjs / train-best.mjs / train-fast.mjs   训练入口（多人 / 2 人多种子择优 / 快速）

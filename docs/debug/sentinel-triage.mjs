@@ -15,15 +15,24 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+/* v1.7.8：278 条门搬进 tools/gates/** ⇒ 源码面问 `gate-src.mjs` 要（继续读 tools/np-test.mjs 只会摊开 runner 那几行）。
+ *   面 = runner + _ctx + 16 个部分；文件之间有 `BOUNDARY` 分隔行 ⇒ 门体不跨文件、坐标改印 `文件:行号`。 */
+import { gateBodyText, BOUNDARY } from '../../tools/gate-src.mjs';
 
-const SRC = 'tools/np-test.mjs';
-const lines = readFileSync(SRC, 'utf8').split('\n');
-const starts = [];
-for (let i = 0; i < lines.length; i++) if (/^t\(/.test(lines[i])) starts.push(i);
-const gates = starts.map((s, k) => {
-  const e = (k + 1 < starts.length ? starts[k + 1] : lines.length) - 1;
-  return { start: s + 1, end: e + 1, text: lines.slice(s, e + 1).join('\n'), head: lines[s] };
-});
+const lines = gateBodyText().split('\n');
+const marks = [];
+for (let i = 0; i < lines.length; i++) if (/^t\(/.test(lines[i]) || lines[i].indexOf(BOUNDARY) === 0) marks.push(i);
+/* 坐标 = `文件:该文件内行号`（并集偏移对人没用）；分隔行本身是文件正文的前一行 ⇒ 局部行号 = 偏移 − 分隔行偏移 */
+const segStart = (i) => { for (let k = i; k >= 0; k--) if (lines[k].indexOf(BOUNDARY) === 0) return k; return -1; };
+const fileOf = (i) => { const k = segStart(i); return k < 0 ? '?' : lines[k].slice(BOUNDARY.length).trim(); };
+const atOf = (i) => fileOf(i) + ':' + (i - segStart(i));
+const gates = [];
+for (let k = 0; k < marks.length; k++) {
+  const s = marks[k];
+  if (!/^t\(/.test(lines[s])) continue;
+  const e = (k + 1 < marks.length ? marks[k + 1] : lines.length) - 1;
+  gates.push({ start: atOf(s), end: e + 1 - segStart(e), text: lines.slice(s, e + 1).join('\n'), head: lines[s] });
+}
 const idOf = h => { const m = /^t\(['"]([^'"]+)['"]/.exec(h); return m ? m[1] : '—'; };
 
 const has = (t, re) => re.test(t);

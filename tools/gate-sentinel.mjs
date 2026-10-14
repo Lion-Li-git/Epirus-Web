@@ -16,16 +16,24 @@
  */
 import { readFileSync } from 'node:fs';
 
-const SRC = 'tools/np-test.mjs';
-const lines = readFileSync(SRC, 'utf8').split('\n');
+/* v1.7.8：278 条门搬进 tools/gates/** ⇒ 源码面**只能**问 `gate-src.mjs` 要（继续读 tools/np-test.mjs 会看到 0 条门，
+ *   而默认档 exit 0 ⇒ CI 会全绿着变瞎）。面 = runner + _ctx + 16 个部分，文件之间有一行 `BOUNDARY` 分隔行
+ *   ⇒ 门体不跨文件；坐标随之改成 `文件:行号`（并集偏移对人没用）。消费者审计见 gate-src.mjs 头注。 */
+import { gateBodyText, BOUNDARY } from './gate-src.mjs';
 
-/* 门体 = 从 ^t( 行到下一个 ^t( 行之前（不做花括号配平 ⇒ 与审计器的口径互为独立校验） */
-const starts = [];
-for (let i = 0; i < lines.length; i++) if (/^t\(/.test(lines[i])) starts.push(i);
-const gates = starts.map((s, k) => {
-  const e = (k + 1 < starts.length ? starts[k + 1] : lines.length) - 1;
-  return { start: s + 1, text: lines.slice(s, e + 1).join('\n') };
-});
+const lines = gateBodyText().split('\n');
+
+/* 门体 = 从 ^t( 行到下一个 ^t( 行（或下一个文件分隔行）之前（不做花括号配平 ⇒ 与审计器的口径互为独立校验） */
+const marks = [];
+for (let i = 0; i < lines.length; i++) if (/^t\(/.test(lines[i]) || lines[i].indexOf(BOUNDARY) === 0) marks.push(i);
+const fileOf = (i) => { for (let k = i; k >= 0; k--) if (lines[k].indexOf(BOUNDARY) === 0) return lines[k].slice(BOUNDARY.length).trim(); return '?'; };
+const gates = [];
+for (let k = 0; k < marks.length; k++) {
+  const s = marks[k];
+  if (!/^t\(/.test(lines[s])) continue;
+  const e = (k + 1 < marks.length ? marks[k + 1] : lines.length) - 1;
+  gates.push({ idx: s, at: fileOf(s) + ':' + (s + 1), text: lines.slice(s, e + 1).join('\n') });
+}
 const idOf = t => {
   const m = /^t\(['"]([^'"]+)['"]/.exec(t);
   return m ? (m[1].match(/^(D\d+[a-z]?)/) || ['—'])[0] : '—';
@@ -34,10 +42,10 @@ const has = (t, re) => re.test(t);
 
 const cls = { md: [], src: [], log: [] };
 for (const g of gates) {
-  const id = idOf(lines[g.start - 1]);
-  if (/readFileSync\([^)]*\.md['"]/.test(g.text) || /readFile\([^)]*\.md['"]/.test(g.text)) cls.md.push(id + '@' + g.start);
-  if (has(g.text, /readFileSync\(/) && has(g.text, /indexOf\([^)]*\)\s*>=\s*0/)) cls.src.push(id + '@' + g.start);
-  if (has(g.text, /\.(out|stdout|stderr)\b/) && /indexOf\(['"][^'"]*[\u4e00-\u9fff][^'"]*['"]\)\s*>=\s*0/.test(g.text)) cls.log.push(id + '@' + g.start);
+  const id = idOf(lines[g.idx]);
+  if (/readFileSync\([^)]*\.md['"]/.test(g.text) || /readFile\([^)]*\.md['"]/.test(g.text)) cls.md.push(id + '@' + g.at);
+  if (has(g.text, /readFileSync\(/) && has(g.text, /indexOf\([^)]*\)\s*>=\s*0/)) cls.src.push(id + '@' + g.at);
+  if (has(g.text, /\.(out|stdout|stderr)\b/) && /indexOf\(['"][^'"]*[\u4e00-\u9fff][^'"]*['"]\)\s*>=\s*0/.test(g.text)) cls.log.push(id + '@' + g.at);
 }
 const out = { gates: gates.length, md: cls.md.length, src: cls.src.length, log: cls.log.length, lists: cls };
 if (process.argv.includes('--json')) console.log(JSON.stringify(out, null, 2));

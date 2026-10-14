@@ -25,10 +25,16 @@
  * 用法：node tools/gate-audit-vacuous.mjs [--json]
  */
 import { readFileSync } from 'node:fs';
+/* v1.7.8：278 条门搬进 tools/gates/** ⇒ 源码面**只能**问 `gate-src.mjs` 要（继续读 tools/np-test.mjs 只看到 runner，
+ *   而本工具默认只报告 ⇒ 它会静默变成"门数 0"。面 = runner + _ctx + 16 个部分，文件间有 `BOUNDARY` 分隔行，
+ *   门体因此不跨文件、坐标是 `文件:行号`）。消费者：无（不进 CI、也不被任何门 spawn）。 */
+import { gateBodyText, BOUNDARY } from './gate-src.mjs';
 
-const SRC = 'tools/np-test.mjs';
-const src = readFileSync(SRC, 'utf8');
+const src = gateBodyText();
 const lines = src.split('\n');
+/* 文件分隔行（`//` 开头 ⇒ 掩码/注释过滤天然把它当注释；但切片要停在它上面，别把下一个文件的脚手架卷进门体） */
+const isBoundary = function (k) { return lines[k].indexOf(BOUNDARY) === 0; };
+const fileOf = function (i) { for (let k = i; k >= 0; k--) if (isBoundary(k)) return lines[k].slice(BOUNDARY.length).trim(); return '?'; };
 
 const BACKSLASH = String.fromCharCode(92);
 const QUOTES = ['"', "'", '`'];
@@ -73,7 +79,7 @@ function blockEnd(i) {
   return end;
 }
 const isGateLine = function (k) { return lines[k].indexOf('t(') === 0; };
-const nextGate = function (i) { for (let k = i + 1; k < lines.length; k++) if (isGateLine(k)) return k; return lines.length; };
+const nextGate = function (i) { for (let k = i + 1; k < lines.length; k++) if (isGateLine(k) || isBoundary(k)) return k; return lines.length; };
 const bodyOf = function (i, end) {
   const arr = [];
   for (let k = i; k <= end; k++) arr.push(isCommentOnly(k) ? '' : lines[k]);
@@ -96,9 +102,10 @@ for (let i = 0; i < lines.length; i++) {
   const m = /^t\(['"]([^'"]+)['"]/.exec(lines[i]);
   if (!m) continue;
   /* §2026-10-10：门体改用「到下一个 `^t(` 之前」（与 tools/gate-sentinel.mjs 同款）——
-   *   哨兵实测这一划法能看到 **277/277**，而花括号配平会因多行字符串丢 3 门 ✗。*/
+   *   哨兵实测这一划法能看到 **277/277**，而花括号配平会因多行字符串丢 3 门 ✗。
+   *   v1.7.8：终点还要加一条"或下一个文件分隔行"（门体不跨文件）；`at` = 可打印坐标 `文件:行号`。 */
   const end = nextGate(i) - 1;
-  gates.push({ title: m[1], start: i + 1, body: bodyOf(i, end) });
+  gates.push({ title: m[1], start: i + 1, at: fileOf(i) + ':' + (i + 1), body: bodyOf(i, end) });
 }
 
 const TAUT = /ok\(\s*(true|1|'[^']*')\s*[,)]/;
@@ -111,16 +118,16 @@ for (const g of gates) {
   const id = idOf(g.title);
   if (!hasAssert(g.body)) {
     const via = callNames(g.body).filter(n => helperHasOk.get(n) === true);
-    (via.length ? out.A1 : out.A0).push({ id, start: g.start, via: via.slice(0, 3) });
+    (via.length ? out.A1 : out.A0).push({ id, start: g.start, at: g.at, via: via.slice(0, 3) });
   }
   const okLines = g.body.split('\n').filter(l => /\bok\(/.test(l));
-  if (okLines.length && okLines.every(l => TAUT.test(l))) out.B.push({ start: g.start });
+  if (okLines.length && okLines.every(l => TAUT.test(l))) out.B.push({ start: g.start, at: g.at });
   for (const m of g.body.matchAll(PIN)) {
     const f = m[1];
-    (/(^|\/)docs\//.test(f) || /\.md$/.test(f) ? out.C : out.D).push({ id, start: g.start, file: f });
+    (/(^|\/)docs\//.test(f) || /\.md$/.test(f) ? out.C : out.D).push({ id, start: g.start, at: g.at, file: f });
   }
 }
-const brief = a => a.map(x => (x.id && x.id !== '—' ? x.id : '') + '@' + x.start + (x.file ? '(' + x.file + ')' : '') + (x.via && x.via.length ? '→' + x.via.join('/') : '')).join(', ');
+const brief = a => a.map(x => (x.id && x.id !== '—' ? x.id : '') + '@' + (x.at || x.start) + (x.file ? '(' + x.file + ')' : '') + (x.via && x.via.length ? '→' + x.via.join('/') : '')).join(', ');
 if (process.argv.includes('--json')) console.log(JSON.stringify(out, null, 2));
 else {
   const same = out.n === out.runtime ? ' ✔ 与运行时一致' : ' ⚠ 与运行时差 ' + (out.runtime - out.n);

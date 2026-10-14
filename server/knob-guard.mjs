@@ -109,19 +109,29 @@ export function importClosure(entry) {
   return Array.from(seen).map(function (p) { return p.slice(REPO_ROOT.length + 1); });
 }
 
-/** 全集：`tools/` + `server/` 下所有 `.mjs`/`.js` 里出现过的键（**排除 `js/`**，理由见模块头）。 */
+/** 全集：`tools/` + `server/` 下所有 `.mjs`/`.js` 里出现过的键（**排除 `js/`**，理由见模块头）。
+ *  v1.7.8 修：原实现 `readdirSync(r)` 只列**顶层**、且 `if (!e.isFile()) continue` ⇒ **子目录被静默跳过**，
+ *    与上面那句"下**所有** .mjs/.js"（本模块自己声明的意图）不符。
+ *    症状是 278 条门从 `tools/np-test.mjs`（**顶层文件**）搬进 `tools/gates/`（**子目录**）之后才显出来的：
+ *    门体里那些**故意写错的假键**（`EPIRUS_BEAD_W_ROLL` / `EPIRUS_FIT_TAIL_OOPS` …）掉出全集 ⇒
+ *    黑键闸把它们当"全仓没人读的陌生变量"放行（模块头 ⚠️ 那条明确说只盯"有人读、而本入口读不到"的）⇒
+ *    **闸静默失效**：实测全集 149 → 142 键，D180 ④ 与 D165 当场红（返回 0，期望非零 / 期望 6）。
+ *    ⇒ 改成递归（与头注对齐）。实测 `tools/` 下只有 `gates/`、`server/` 没有子目录 ⇒ 无旁伤，全集回到 147 键。 */
 export function repoKnobUniverse(roots) {
   const rr = (roots || ['tools', 'server']).map(abs);
   const files = [];
-  for (const r of rr) {
-    if (!existsSync(r)) continue;
-    for (const e of readdirSync(r, { withFileTypes: true })) {
+  const walk = function (dir) {
+    let es;
+    try { es = readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+    for (const e of es) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) { walk(p); continue; }
       if (!e.isFile()) continue;
-      const p = join(r, e.name);
       const ext = extname(p);
       if (ext === '.mjs' || ext === '.js') files.push(p);
     }
-  }
+  };
+  for (const r of rr) { if (existsSync(r)) walk(r); }
   const out = new Set();
   for (const f of files) { try { for (const k of scanKeysFromSource(readFileSync(f, 'utf8'))) out.add(k); } catch (e) { } }
   return out;

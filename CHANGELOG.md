@@ -1,3 +1,70 @@
+## v1.7.8 — 门禁**拆文件**：278 条门从 `tools/np-test.mjs`（12339 行 / 1.1MB）搬进 `tools/gates/**` 的 **16 个部分文件** ‖ runner 缩到 419 行 ‖ 顺手补上「加一条门不再被推去跑整轮」+ 四个「按文件名找门体源码」的工具复明
+
+### 一句话结论
+用户 10-14：「他没事干啥又跑全门禁，又没有动引擎。你先把各个不同部分的门禁直接拆成独立文件吧，现在怎么一堆东西都塞在 np 里面」。
+
+### 拆成什么（`tools/gates/`，16 个部分 + 共享前导）
+| 组（`--group=` 的口径，**一个字都没变**） | 部分文件（新） |
+| --- | --- |
+| engine 75 条 | `engine-rules.mjs` ‖ `engine-fuzz.mjs` |
+| train 106 条 | `train-evo.mjs` ‖ `train-chooser.mjs` ‖ `train-feature.mjs` ‖ `train-env.mjs` ‖ `train-runner.mjs` |
+| ship 37 条 | `ship-feas.mjs` ‖ `ship-pool.mjs` ‖ `ship-promote.mjs` ‖ `ship-artifact.mjs` |
+| probe 37 条 | `probe-instruments.mjs` ‖ `probe-libs.mjs` |
+| meta 16 条 | `meta-repo.mjs` ‖ `meta-lint.mjs` |
+| ui 7 条 | `ui-contract.mjs` |
+
+`tools/np-test.mjs`：**1108179 B / 12339 行 → 33686 B / 419 行**，只留 runner（`t()` 注册、`ONLY`/`RUNSET` 过滤、计数、收尾与退出码）。
+共享前导（27 个顶层声明，含 `spawnSync` 的钉值包装、`FIXTURE_PACK`、`SEL_PIN`、`randChooser`）搬到 `tools/gates/_ctx.mjs`，**各部分用同名解构接回** ⇒ **门函数体一个字都没改**。
+新增两个只读口子：`--list-order`（印执行序 `[原始行号, 门名]`）‖ `--list-parts`（部分划分 + 路径→部分映射表 + `--explain=<门键>` 复算归属）。
+
+### 零行为改动的证据（四条，都能复跑）
+· **门体逐字节相同**：16 个部分里合计 **12042 行门体**与拆前**逐字节相同**（零变换）；按各自原始行号拼回 **12339/12339 行**，全局唯一差异 = 1 行自指守卫改写 + 32 行 import 相对路径重基（`./x`→`../x`，因为 `_ctx.mjs` 落在子目录；逐行清单见本条的复跑脚本）。
+· **保序**：278 条门按**原始行号**排序执行 ⇒ 执行序列 sha1 拆前拆后相同（`2fbc0fdc82429bce3e7c40c7eec5fecc227199c6`），逐条 0 差异。
+· **分组不变**：`--list-groups` 与拆前逐字相同（engine 72 键 / train 106 / ship 37 / probe 37 / meta 16 / ui 7 = 275 键 = **278 条门**）。
+· **零行为面**：`js/**` 一字未改 ⇒ 规则指纹仍 **`b98985bf`**；两包两池未重烘；**未新增门、未删门**。
+
+### 顺手止血：`--auto` 的三处分类（这才是「没事跑全门禁」的根）
+`tools/gate-all.mjs` 的 `cls()`：
+1. **`tools/gates/<部分>.mjs` 按前缀映射到它所属的组**（`engine-*`→engine ‖ `train-*`→train ‖ `ship-*`→ship ‖ `probe-*`→probe ‖ `meta-*`→meta ‖ `ui-*`→ui）。
+   拆前「**往 np-test 里加一条门**」会被判成 **engine ⇒ 推你跑整轮（11~22 分钟）**，哪怕一个字都没动引擎；现在只命中那一个部分 ⇒ 只跑那一组。
+2. runner（`np-test.mjs`）与 `gates/_ctx.mjs` **仍 = engine**：它们是**全体共享面**，改它们等于改每条门的注册/前置 ⇒ 保守方向必须整轮。
+3. 末行兜底从 `meta` 改成**量具面 → probe**：拆前 `tools/usage-probe.mjs` / `tools/behavior-profile.mjs` / `champion-map/*.mjs` 这些**被 probe 组读的量具**全落进 `meta`（改了它们只跑 16 条纪律门，**少跑 262 条**），与本节 ①「保守：只会多跑，不会少跑」自相矛盾。池装配那一族（`champion-map/pool-*` / `pack-*` / `seat-rule` / `slot-identity`）显式进 **ship**（`D234` 读它们）。
+
+### 拆文件连带修的「按文件名定位门体源码」一族（**不修就静默变瞎**，不红）
+新建 `tools/gate-src.mjs` = **门体面的唯一定义**（`gateBodyFiles()` / `partFiles()` / `gateBodyText()` / `BOUNDARY`；只读文本、绝不 import 门体文件 ⇒ 不成环）。四个消费者改从它取：
+`tools/gate-sentinel.mjs`（**CI 的 `gates.yml:87` 在跑它**）‖ `tools/gate-audit-vacuous.mjs` ‖ `tools/dedupe-artifacts.mjs`（`D191` 那条「门体里写死的产物路径」的账）‖ `docs/debug/sentinel-triage.mjs`。
+**复明实测（改前 ‖ 改后）**：`gate-sentinel` 门数 **278 ‖ 278**（① 读 `.md` 6 ‖ 6；② 对源码做正则 **127 ‖ 126** —— 少的那条是 **L1** 自己，它本次改走 `npSourceAll()`、门体里不再出现 `readFileSync(`；③ 匹配日志措辞 18 ‖ 18）· `gate-audit-vacuous` **278/0/0/0/0/12 ‖ 278/0/0/0/0/12** · `dedupe --audit` `unregistered 0 ‖ 0`。
+⚠ **并集文本必须在每个文件前插一行分隔行**（`//#np-gate-file-boundary <相对路径>`）：工具们的切片口径是「从 `^t(` 到下一个 `^t(` 之前」，18 个文件首尾相接会让某文件**最后一条门**一路卷进下一个文件的脚手架（实测 **+37 行/文件**）⇒ 门体不再等于「那一条门的源码」。坐标随之改成 `文件:行号`（并集偏移对人没用）；**坐标格式的消费者审计**：全仓 `grep -n gate-sentinel` 17 处，**没有任何消费者 parse 坐标**（只有计数被文档引用；`gates.yml:87` 那一步只 `run:`、既不 `want:` 也不 grep ⇒ **只看退出码，而它默认 `exit 0`**）⇒ 改坐标安全。
+⚠ 顺手记一条 CI 事实（属于「CI 上永远不会响的腿」，与待裁 #19/#21 同族）：`gate-sentinel` 在 CI 上**数到 0 也会绿** —— 这次拆分本来会以「CI 全绿」的形式把四个工具变成瞎的，靠人读到才没漏。
+
+### 拆文件**逼出来的三个潜伏缺陷**（都不是本笔造的，是本笔照出来的）
+1. **`server/knob-guard.mjs` 的 `repoKnobUniverse()` 只列顶层、目录静默跳过** —— 与它头注声明的「`tools/` 与 `server/` 下**所有** .mjs/.js」不符。
+   门体搬进子目录后，门里那些**故意写错的假键**（`EPIRUS_BEAD_W_ROLL` / `EPIRUS_FIT_TAIL_OOPS`）掉出全集 ⇒ **黑键闸静默失效** ⇒ D180④ / D165 红。**已修**（改递归）：
+   全集 **149 →（坏）142 →（修）147**，两门 **✔1/1 · ✔1/1**。（差的那 2 个是注释里 `EPIRUS_ECO_*` 那类通配写法被截出的假前缀，不是真键。）
+2. **四把按文件名定位门体源码的尺**（含 **CI 的 `gates.yml:87` 在跑的 `gate-sentinel`**）：拆完会**静默变瞎**。**已修**（`tools/gate-src.mjs` 单一来源），复明实测见上。
+3. **v1.7.7 的别名轮询漏了消费者**：池表写**副名**（`SHIPPED-Ldemo` / `G15-71`）、图里是**主名**（`Ldemo` / `G08-71`）⇒ **D232/D233/D234 三条红**
+   （`pool-sync` 报「移除 2 / 不在图节点里 2 枚」‖ `ruler-measure --set=champ` 找不到 `SHIPPED-Ldemo` ‖ `usage-probe` 名单为空）。
+   唯一解析处**早就存在**（`champion-map/slot-identity.mjs` 的 `resolve`），是轮询没叫上别的消费者。**本笔未修**（用户 10-14 14:00 的 deadline 到了，按指令停下交接）。
+
+### 认证状态：**本树尚未认证**（如实记）
+拆完之后跑过一遍整轮（`gate-all --np`，与本条同一棵树）：**np 273/278** · spec 52/52 · smoke OK · battle OK · map OK —— **np 红 5 条**：
+**D180④ / D165**（上面缺陷 1 ⇒ 已修）· **D232④ / D233⑥b / D234⑩a**（上面缺陷 3 ⇒ 未修）。
+⇒ **修完别名后必须在最终那棵树上重跑整轮**，这一笔才允许引用「5 道全绿」。
+**对照组**（`git worktree add --detach %TEMP%\epirus-v177-ctl HEAD`，HEAD = `040ffd4` = 拆前那棵树、12339 行单体）单跑那 5 条：**D232 ✘ ‖ D233 ✘ ‖ D234 ✘**（同样红）而 **D180 ✔ ‖ D165 ✔**。
+（诚实保留：对照组是干净 clone、没有 gitignored 的 `docs/artifacts/**` ⇒ 对依赖本地产物的 D232/D233 证据弱一档；对只比 tracked 文件的 D234⑩a 是硬的。）
+
+### 交接
+完整交接件（三条红的根因、单一来源、我**做了一半又撤回**的那一手、验证阶梯、对照组）：
+[`docs/research/handoff/HANDOFF-FOR-QWEN-2026-10-14-gate-split.md`](docs/research/handoff/HANDOFF-FOR-QWEN-2026-10-14-gate-split.md)。
+
+### 判据与纪律
+`js/**` ‖ 两张 RULES ‖ 两个内置包 ‖ 两个池 bundle 一字未改；规则指纹 **`b98985bf`**（现测）；**未新增门、未删门（278 条不变）**；未 promote；**未 push**。
+本笔另动过 `server/knob-guard.mjs`（只改 `repoKnobUniverse` 的遍历方式；同一函数、同一判据语义）；`champion-map/*` **没动**（试过的那半手已 `git checkout --` 撤回）。
+
+> 产物点名（D82）：（无新增）
+
+**门账**：本条涉及 **D8**（三处版本号）· **D191**（`dedupe-artifacts` 的门体面变了，`--audit` 复测 `unregistered:0`）· **D194**（`--group=`/`--only=` 不算认证的口径未变）· **D205**（门号在册）· **D230**（README 活引用面）· **D234**（池装配契约 —— 本笔**没修**它的 ⑩a，见上）。
+
 ## v1.7.7 — 10-14 上午（Qoder）：`champion-map` 表全普查 + 204 张零引用件移出 ‖ **`coords.tsv` 折成 794 行（一行 = 一份权重）** ‖ 副名改成真指针（`aliasIds` + `coords-aliases.tsv`），消费者四台跟着认
 
 ### 一句话结论

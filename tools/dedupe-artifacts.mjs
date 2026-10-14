@@ -13,7 +13,8 @@
  *   ③ **`js/**` 永远不碰**（活槽是产品，不是产物）；解不出权重的文件一律跳过并点名（缺行 ≠ 相等）。
  *
  * 主名规则（用户 10-11 裁定）：**最早 META.ts 的那份**为主名；**同一时间戳**则按**被引用次数**多的那份。
- *   引用数 = 这个路径在"下游表 + 门体"里出现的次数（`coords.tsv` 的 path 列、`lineage.tsv`、ruler/feas/oldpacks 各表、`np-test.mjs`）。
+ *   引用数 = 这个路径在"下游表 + 门体面"里出现的次数（`coords.tsv` 的 path 列、`lineage.tsv`、ruler/feas/oldpacks 各表、
+ *   门体面 —— v1.7.8 起那**不是一个文件**：定义在 `./gate-src.mjs`，拆前它就是 `tools/np-test.mjs`）。
  *
  * 用法：node tools/dedupe-artifacts.mjs [--plan] [--write-manifest] [--quarantine [--to=<目录>]] [--restore] [--check]
  *        [--repoint [--apply]]        # 路线 A：把数据表/代码里指向冗余拷贝的路径**改指主名**（缺省试运行；docs/** 与 js/** 不动）
@@ -30,6 +31,9 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+/* v1.7.8：278 条门搬进 tools/gates/** ⇒ "门体里写死的产物路径"这张面**只能**问 `gate-src.mjs` 要
+ *   （继续读 tools/np-test.mjs 只看到 runner ⇒ 引用数与 CI 等价检查都会静默缩水）。 */
+import { gateBodyFiles, gateBodyText } from './gate-src.mjs';
 import { execSync } from 'node:child_process';
 import { widOf, parseMeta } from '../champion-map/pack-id.mjs';
 
@@ -67,13 +71,15 @@ for (const s of SCOPE) {
 }
 const tracked = new Set(execSync('git ls-files ' + SCOPE.map(s => JSON.stringify(s)).join(' '), { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }).trim().split('\n').filter(Boolean));
 
-/* ---------- 2. 引用数：下游表 + 门体里出现这个相对路径的次数 ---------- */
+/* ---------- 2. 引用数：下游表 + 门体面里出现这个相对路径的次数 ---------- */
 const REF_FILES = ['champion-map/coords.tsv', 'champion-map/lineage.tsv', 'champion-map/ruler-all.tsv',
   'champion-map/e328-ruler-s1.tsv', 'champion-map/e328-ruler-s2.tsv', 'champion-map/e328-ruler-s3.tsv',
   'champion-map/feas.tsv', 'champion-map/feas-s1.tsv', 'champion-map/feas-s2.tsv', 'champion-map/feas-s3.tsv', 'champion-map/feas-s4.tsv',
-  'champion-map/oldpacks.tsv', 'tools/np-test.mjs'];
+  'champion-map/oldpacks.tsv'].concat(gateBodyFiles());
 /* ⚠ 账本 `dupes-manifest.tsv` **不在**这张名单里：它是"谁被移走了"的记录，
- *   把它当引用源会让每个被移走的路径都"看起来被引用"，既虚增 refs 又让 `--check` 自己报自己的钉子。 */
+ *   把它当引用源会让每个被移走的路径都"看起来被引用"，既虚增 refs 又让 `--check` 自己报自己的钉子。
+ * ⚠ v1.7.8：最后那一项**不是一个文件名**了 —— 门体面的定义在 `./gate-src.mjs`（runner + _ctx + 16 个部分，
+ *   拆前这些门体都躺在 `tools/np-test.mjs` 里，所以当时这一项写的是那一个路径）。 */
 const REFC = {};
 /* ⚠ 不能"对每个路径去大文件里 indexOf 一遍"（1443 个路径 × np-test 1.2 MB = 扫十几 GB，本机要等好几分钟）
  *   ⇒ 反过来：每个引用源**只切一遍**，把长得像包路径的 token 计数。 */
@@ -254,14 +260,15 @@ if (has('check')) {
   /* ★ CI 等价检查（05f5749 血案补的，**范围要收准**）：`docs/artifacts/` 整个被 gitignore ⇒ 干净克隆里只有 force-add 进 git 的那些存在。
    *   第一版把"所有表引用的 untracked 路径"都算成问题（733 条）—— 那是**既存事实**：coords 986 行本来就大多指着臂产物，
    *   CI 从来不管（需要的门都用的是入库件，拿不到的那条腿本来就 SKIP）。
-   *   真正的不变量只有一条：**门体 `tools/np-test.mjs` 里写死的产物路径必须在 git 里** ⇒ 只查这个。 */
-  const GATE_BODY = 'tools/np-test.mjs';
-  const gateTxt = existsSync(join(ROOT, GATE_BODY)) ? rd(join(ROOT, GATE_BODY)) : '';
+   *   真正的不变量只有一条：**门体面里写死的产物路径必须在 git 里** ⇒ 只查这个。
+   *   v1.7.8：门体面 = `./gate-src.mjs` 定义的那一份（runner + _ctx + 16 个部分）——
+   *     ⚠ 必须含 `_ctx.mjs`：`FIXTURE_PACK = 'docs/artifacts/eval-out/win-Ldemo.bak'` 就住在它里面。 */
+  const gateTxt = gateBodyText();
   const ciMissing = [...new Set((gateTxt.match(/(docs\/artifacts|d180-bands)\/[A-Za-z0-9_.\/\-\u4e00-\u9fff]+\.(bak|js)/g) || [])
     .filter(c => !synthetic(c) && !tracked.has(c)))];
   const gateMissingOnDisk = ciMissing.filter(c => !existsSync(join(ROOT, c)));
-  console.log('\n断链检查：' + uniq.length + ' 条' + (uniq.length ? '' : '（下游表与门体里所有指到的包文件都在盘上 ✓）'));
-  console.log('CI 等价检查（只看门体写死的产物路径）：' + ciMissing.length + ' 条指着 **untracked** 的产物 ⇒ 干净克隆里那些腿会红或静默 SKIP' +
+  console.log('\n断链检查：' + uniq.length + ' 条' + (uniq.length ? '' : '（下游表与门体面里所有指到的包文件都在盘上 ✓）'));
+  console.log('CI 等价检查（只看门体面里写死的产物路径）：' + ciMissing.length + ' 条指着 **untracked** 的产物 ⇒ 干净克隆里那些腿会红或静默 SKIP' +
     (ciMissing.length ? '（' + ciMissing.join(' ') + '）' : ' ✓') +
     (gateMissingOnDisk.length ? ' ‖ 其中本机也不在盘上：' + gateMissingOnDisk.join(' ') : ''));
   for (const b of uniq.slice(0, 40)) console.log('  ✘ ' + b);

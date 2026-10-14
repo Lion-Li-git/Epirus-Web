@@ -45,12 +45,33 @@ let GRPA = GRPA0;
  *   ③ 打印每张票的来路（哪个文件被判成哪一组），不然"为什么只跑 15 道"会变成下一次考古。 */
 if (process.argv.includes('--auto')) {
   const RANK = { meta: 1, ship: 2, train: 3, ui: 4, probe: 4, engine: 5 };
+  /* v1.7.8：278 条门从 `tools/np-test.mjs` 拆进 `tools/gates/**` 的 16 个部分文件 ⇒ 分类表跟着动三处：
+   *   ① **部分文件按前缀映射到它所属的组**（`engine-*`→engine ‖ `train-*`→train ‖ `ship-*`→ship ‖
+   *      `probe-*`→probe ‖ `meta-*`→meta ‖ `ui-*`→ui）。这是**本仓最重要的一次止血**：
+   *      拆前"往 np-test 里加一条门"会被下面第一行判成 engine ⇒ 推你跑**整轮**（11~22 分钟），
+   *      哪怕一个字都没动引擎（用户 10-14：「他没事干啥又跑全门禁，又没有动引擎」）。
+   *      现在"加/改一条门"只命中它所在的那张部分 ⇒ `--auto` 只跑那一组（如 ship 38 条、十几秒）。
+   *   ② runner（`np-test.mjs`）与共享前导（`gates/_ctx.mjs`）**仍然 = engine**：它们是**全体共享面**，
+   *      改它们等于改每一条门的注册/前置 ⇒ 保守方向必须整轮。
+   *   ③ 末行的兜底从 `meta` 改成**量具面 → probe**：拆前 `tools/usage-probe.mjs`、`tools/behavior-profile.mjs`、
+   *      `champion-map/*.mjs` 这些**被 probe 组读的量具**全落进 `meta`，改了它们只跑 16 条纪律门（**少跑 262 条**），
+   *      与本节 ①「保守：只会多跑，不会少跑」自相矛盾。现在量具面显式进 probe（累计 probe = 196 条）。 */
+  const PART2GRP = { engine: 'engine', train: 'train', ship: 'ship', probe: 'probe', meta: 'meta', ui: 'ui' };
   const cls = (p) => {
-    if (/^(tools\/(np-test|gate-all|np-cache|spec-run)\.mjs$|tests\/|js\/core\/|server\/|index\.html$)/.test(p)) return 'engine';
+    /* 未跟踪的**新目录**：git 只给 `?? tools/gates/`（不给里面的文件名）⇒ 认不出里面是什么，
+     *   保守方向必须整轮。拆前这里会掉进末行的 `meta`（少跑 262 条），与本节 ① 自相矛盾。 */
+    if (/\/$/.test(p)) return 'engine';
+    if (/^(tools\/(np-test|gate-all|np-cache|spec-run)\.mjs$|tools\/gates\/_ctx\.mjs$|tests\/|js\/core\/|server\/|index\.html$)/.test(p)) return 'engine';
+    const pm = /^tools\/gates\/([a-z]+)-[^/]*\.mjs$/.exec(p);
+    if (pm) return PART2GRP[pm[1]] || 'engine';       // 认不出的部分 ⇒ 保守：整轮（宁可多跑）
     if (/^(js\/ui\/|tools\/(smoke|battle-test)\.mjs$)/.test(p)) return 'ui';
     if (/^js\/train\/|^js\/bundled|^tools\/(train-3p|train-best|eval-5p|style-exam|promote-champion|ring2-run|human-pool|pool-frontier-lib|probe-|analyze-|keep-artifact)/.test(p)) return 'train';
     if (/^docs\/(METHODOLOGY|RULES-2P|RULES-NP)\.md$|^docs\/artifacts\/(e129-out\/matrix\.json|train-3p-out\.js|e161-ply\.mjs|e168-style-human\.mjs|e169-beadprice\.mjs|\.training-live\.sha1)$/.test(p)) return 'ship';
-    return 'meta';   // docs/ 其余、champion-map/、results/ 等：门的读取面上没有 ⇒ 只跑仓库纪律那一组
+    /* 池装配契约的输入面（`D234` 那族读它们）⇒ ship，别让它们掉进 meta */
+    if (/^champion-map\/(pool-[^/]*|pack-[^/]*|seat-rule|slot-identity)/.test(p)) return 'ship';
+    /* 量具面：`tools/**\/*.mjs` 与 `champion-map/**\/*.mjs`、`docs/debug/**` ⇒ probe（probe 组的门读它们） */
+    if (/^(tools\/[^/]+\.mjs|champion-map\/[^/]+\.mjs|docs\/debug\/)/.test(p)) return 'probe';
+    return 'meta';   // docs/ 其余、champion-map/ 的表与页面、results/ 等：门的读取面上没有 ⇒ 只跑仓库纪律那一组
   };
   const changed = new Set();
   for (const a of ['status --porcelain', 'diff --name-only HEAD']) {
