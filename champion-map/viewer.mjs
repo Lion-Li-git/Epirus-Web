@@ -1462,7 +1462,11 @@ function putLabel(txt, x, y, force, rot, idx) {
       for (var b = 0; b < boxes.length; b++) if (r[0] < boxes[b][0] + boxes[b][2] && r[0] + r[2] > boxes[b][0] &&
         r[1] < boxes[b][1] + boxes[b][3] && r[1] + r[3] > boxes[b][1]) { hit = true; break; }
       if (!hit || c === cand.length - 1) {
-        if (1) { boxes.push(r);   /* TEMP 复原故障：旋转标签不看碰撞，直接画在第一个候选位 */ noteLab(r[0], r[1] - r[3], r[2], r[3], idx); drawText(txt, r[0], r[1] + bh, true); return true; }
+        /* §E606-D 复原被留下的变异：这一行从 v1.6.19（10-08 提交 2a1c629）起一直是「if (1)」⇒ 旋转标签**不看碰撞**
+         *   直接画在第一个候选位。它同时冤枉了 §E376 那条牙口：当时"把避让拆掉两处，两个数一模一样没动"
+         *   被读成"这条测的不是避让那一层"，其实是因为**避让早就不在工作**，再拆当然没差别。
+         *   ⚠ 本文件这一带住在模板字面量里 ⇒ 注释里不许出现反引号。 */
+        if (!hit || force) { boxes.push(r); noteLab(r[0], r[1] - r[3], r[2], r[3], idx); drawText(txt, r[0], r[1] + bh, true); return true; }
       }
     }
     return false;
@@ -1471,38 +1475,53 @@ function putLabel(txt, x, y, force, rot, idx) {
   var bx = Math.min(x + 8, cv.width - bw - 4 * devicePixelRatio), by = Math.min(Math.max(y - 5, 2), cv.height - bh - 2), hit2 = false;
   for (var b2 = 0; b2 < boxes.length; b2++) if (bx < boxes[b2][0] + boxes[b2][2] && bx + bw > boxes[b2][0] &&
     by < boxes[b2][1] + boxes[b2][3] && by + bh > boxes[b2][1]) { hit2 = true; break; }
-  /* TEMP 复原故障：不许避让 */
+  /* §E606-D 复原同一笔留下的第二处变异：原来这里只剩「挤了就往下挪一行、照样画」，
+   *   把「不挤才画」那半句（if (hit2 && !force) return false;）删掉了 ⇒ 避让退化成位移。 */
+  if (hit2 && !force) return false;
   /* §E376 避让计数：重叠对数 = 0 只说明"最终没压在一起"，不说明"没挤过"。
    *   冠军从 15 枚涨到 31 枚之后，真正会退化的是**往下挪一行**这件事本身（挪多了整列标签就糊成一条竖队）。 */
   if (hit2) { by += bh; NLABPUSH++; }
   boxes.push([bx, by, bw, bh]); noteLab(bx, by, bw, bh, idx); drawText(txt, bx, by + bh - 3, false); return true;
 }
+/* §E606（用户 10-14 21:1x 裁：「只要标历代上槽和当前池子里的冠军就行了，并且你可以多做一个可选档位只标当前冠军」）：
+ *   出厂档不再是"冠军 + 名次前 12 / 尾 6"，而是**两批有名字的人** ——
+ *     ① lineage = 历代上槽（真上过活槽的那批）‖ ② 当前池子里的冠军（pool-members.tsv 解析到面板行的那批，看 d.pt）。
+ *   为什么由这一刀来解拥挤度：整图重算之后"被别人的名字压住的点"从 57 涨到 129（线 110），
+ *   而那 18 条**与身份无关**的名次名字正好压在最密的那片带上；读图的人要找的是"谁上过槽 / 池里现在是谁"，不是"第 9 名叫什么"。
+ *   ⚠ 这一裁的直接后果写清楚：**旧槽位冠军**（lineage = 旧槽位冠军 且不在池里的那批）从此没有常驻名字 ——
+ *     点照样画、"旧冠军段"那一档窗口照旧、点一下照样出卡，找回名字用搜索框或"冠军序列"侧栏。
+ *   ⚠ 上面那条"可见冠军必须全员上名"的硬判据跟着**换主语**（从"所有 lineage 非空"换成这一条常驻名单），
+ *     否则它判的就不是产品规则了 —— 判据换主语必须让人看见，不许静默跟着代码走。
+ *   ⚠ 这段住在模板字面量里 ⇒ 注释里**不许出现反引号**（出现了就是把整页字符串在这里截断，烘页面当场语法错）。 */
+function isLabOn(d) { return d.lin === '历代上槽' || !!d.pt; }
+/* §E606-D 「用户自己点名的那几枚」—— 选中 / 加进对比 / 搜索命中 / 被高亮。
+ *   它们与常驻名单一样**挤了也要画**：避让只该丢"顺手多标的那些"，不该把用户刚搜到的那枚藏起来
+ *   （牙口：复原避让之后页检当场红在搜索框那条 —— 片段「eco2」命中 6 枚只上了 4 个名字）。 */
+function pinLabel(d) {
+  if (d.id === st.sel || st.cmp.indexOf(d.id) >= 0) return true;
+  if (st.q && String(d.id).toLowerCase().indexOf(st.q) >= 0) return true;   /* §E453 搜索不分大小写：包名里有 v7FGta / SLOT-AB12 这种混写 */
+  return !!st.hi[gk(d)];
+}
+function mustLabel(d) { return isLabOn(d) || pinLabel(d); }
 function wantLabel(d) {
   if (st.labels === 'off') return false;
-  if (st.hi[gk(d)]) return true;
+  if (pinLabel(d)) return true;
   /* §E556（用户 10-09 08:5x：「按家族高亮的时候，历代冠军的标签并不会暗掉，很容易导致混淆」）：
-   *   被点选 / 加进对比 / 搜索命中的**一定标**（这是用户自己指定的，不能被高亮规则挤掉）。
-   *   原来这条只是"事实上成立"——labelSet 给它们 pri=-1，但要不要进名单是这里决定的，
-   *   所以一枚既不在高亮族、又不是冠军/前 12 的选中点其实**没有名字**。顺手补明。 */
-  if (d.id === st.sel || st.cmp.indexOf(d.id) >= 0) return true;
-  if (st.q && String(d.id).toLowerCase().indexOf(st.q) >= 0) return true;   /* §E453 搜索改成不分大小写：包名里有 v7FGta / SLOT-AB12 这种混写，按原样比会「打了却搜不到」 */
-  /* §E556：高亮态下"冠军 / 父链 / 前 12 / 尾 6"这几条常驻规则**让位给高亮**。
-   *   不这样就是用户截图里那个样子：一片暗点上面浮着十几个亮名字，读起来像"这些名字属于刚点的那一族"。
-   *   压暗的是标签，不是数据 —— 取消高亮（或点"清除高亮"）它们全回来。 */
+   *   被点选 / 加进对比 / 搜索命中的**一定标**（这是用户自己指定的，不能被高亮规则挤掉）。 */
+  /* §E556：高亮态下常驻名单那几条**让位给高亮** —— 压暗的是标签，不是数据，取消高亮全回来。 */
   var hiOn = false; for (var hk in st.hi) if (st.hi[hk]) { hiOn = true; break; }
   if (hiOn) return false;
   if (st.labels === 'all') return true;
-  /* §E330 父链那几枚必须常驻：它们不是冠军、名次也不显眼（E51-t8-713 排 61），落在"零散实验"那一行里
-   *   ⇒ 不点名就找不到，而用户问的正是"现役的祖先在图上哪去了"。 */
-  return !!d.lin || d.kin === '父链' || d.rk <= 12 || d.rk > N - 6;
+  if (st.labels === 'pool') return !!d.pt;   /* §E606 新档：只标当前池子里的冠军 */
+  return isLabOn(d);
 }
 function labelSet() {
   var out = [];
   /* §E338 批次过滤在这里生效（不在 wantLabel 里，因为 wantLabel 拿的是枚、这里拿的是下标 ⇒ VIS 按下标算）。
    *   选中的那枚与"加进对比"的那几枚**永远要标出来**，否则切了批次就找不到刚点的那张卡。 */
   for (var i = 0; i < N; i++) { if (!VIS[i]) continue; if (!wantLabel(P[i])) continue;
-    var pri = (P[i].id === st.sel || st.cmp.indexOf(P[i].id) >= 0) ? -1
-      : ((P[i].lin || P[i].kin === '父链') ? 0 : (P[i].rk <= 12 ? 1 : 2));
+    var pri = pinLabel(P[i]) ? -1 : (isLabOn(P[i]) ? 0 : (P[i].rk <= 12 ? 1 : 2));
+      /* §E606-D 用户点名的那几枚排在最前占位（挤了也要画 ⇒ 该先挑地方），常驻名单其次；名次那一档只剩 labels=all 时才进得来 */
     out.push({ i: i, pri: pri }); }
   out.sort(function (a, b) { return a.pri - b.pri || P[a.i].rk - P[b.i].rk; });
   return out;
@@ -1568,7 +1587,7 @@ function draw1(fr) {
   labelReset(); g.fillStyle = st.ink;
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var p = scr[ls[i].i]; if (!p) continue;
-    putLabel(labOf(P[ls[i].i]), p[0], p[1], !!P[ls[i].i].lin, true, ls[i].i); }
+    putLabel(labOf(P[ls[i].i]), p[0], p[1], mustLabel(P[ls[i].i]), true, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText('一维：位置 = ' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次') + '（下方蓝条 = Hp 线上口径夺1率，黄条 = T·S）· 悬停看明细 · 点一枚 = 选中（点空白取消）· 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
 }
@@ -1925,7 +1944,7 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel(labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+    putLabel(labOf(P[ls[i].i]), pp[0], pp[1], mustLabel(P[ls[i].i]), false, ls[i].i); }
   g.restore();   /* §E314 数据层的裁剪到这里收口（点与点标签都不许滑进左栏）*/
   /* §E379 这里原来是"数据画完之后按同一仿射把左栏那一条回贴一遍"（§E377 加的，为了让点糊不住家族名）。
    *   撤掉：左栏现在是纸上的墨，与点同进同退，"糊住"这件事只能靠层序（纸在下、点在上）表达，
@@ -2078,7 +2097,7 @@ function drawMap(fr) {
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel(labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+    putLabel(labOf(P[ls[i].i]), pp[0], pp[1], mustLabel(P[ls[i].i]), false, ls[i].i); }
   if (st.q) for (i = 0; i < N; i++) if (String(P[i].id).toLowerCase().indexOf(st.q) >= 0 && scr[i]) {   /* §E453 与 labelSet 那一处必须同一条规则 */
     g.beginPath(); g.arc(scr[i][0], scr[i][1], 11 * st.size, 0, 6.284); g.strokeStyle = st.ink; g.lineWidth = 2; g.stroke(); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
@@ -2505,7 +2524,7 @@ function draw3b(fr) {
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
-    putLabel(labOf(P[ls[i].i]), pp[0], pp[1], !!P[ls[i].i].lin, false, ls[i].i); }
+    putLabel(labOf(P[ls[i].i]), pp[0], pp[1], mustLabel(P[ls[i].i]), false, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText('三维行为轴（x3/y3/z3）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 颜色 = F（线上口径势 = Hp + T·S）⇒ 第三轴是行为不是深度' +
     /* §E312 壳好不好必须当场给数，而且**两列一起给**：含自己那列与画出来的壳同口径但循环，留一那列才是"不是靠自己被圈进来"。
@@ -4308,9 +4327,9 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   st.mode = 'map'; st.elev = 0; st.labels = 'champ'; st.batch = 'all'; st.flo = 0; st.fhi = 1; st.sel = null;
   recomputeVIS(); draw();
   var LB = (function () { var k, m, ov = 0, lbC = 0, nch = 0, missing = [], seen = {}, cov = 0;
-    for (k = 0; k < N; k++) if (P[k].lin && VIS[k]) nch++;
-    for (k = 0; k < LAB.length; k++) { seen[LAB[k][4]] = 1; if (P[LAB[k][4]] && P[LAB[k][4]].lin) lbC++; }
-    for (k = 0; k < N; k++) if (P[k].lin && VIS[k] && !seen[k]) missing.push(P[k].id);
+    for (k = 0; k < N; k++) if (isLabOn(P[k]) && VIS[k]) nch++;   /* §E606 判据主语 = 常驻名单（历代上槽 ∪ 池成员）*/
+    for (k = 0; k < LAB.length; k++) { seen[LAB[k][4]] = 1; if (P[LAB[k][4]] && isLabOn(P[LAB[k][4]])) lbC++; }
+    for (k = 0; k < N; k++) if (isLabOn(P[k]) && VIS[k] && !seen[k]) missing.push(P[k].id);
     for (k = 0; k < boxes.length; k++) for (m = k + 1; m < boxes.length; m++) { var a = boxes[k], b = boxes[m];
       if (a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1]) ov++; }
     /* 被别人的名字盖住的点（自己的那条不算：标签本来就锚在点旁边）*/
@@ -4318,12 +4337,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       for (m = 0; m < LAB.length; m++) { if (LAB[m][4] === k) continue; var r = LAB[m];
         if (scr[k][0] >= r[0] && scr[k][0] <= r[0] + r[2] && scr[k][1] >= r[1] && scr[k][1] <= r[1] + r[3]) { cov++; break; } } }
     return { n: LAB.length, lbC: lbC, nch: nch, ov: ov, push: NLABPUSH, missing: missing, cov: cov }; })();
-  T('标签：可见冠军必须全员上名（并入旧包后冠军翻倍，一个也不许被挤掉）',
+  T('标签：常驻名单（历代上槽 ∪ 池成员）必须全员上名（§E606 换了主语 —— 原来判的是"所有 lineage 非空"，那批里含不给常驻名字的旧槽位冠军）',
     LB.nch > 0 && LB.missing.length === 0 && LB.lbC === LB.nch,
-    '可见冠军 ' + LB.nch + ' 枚 ‖ 上了名字 ' + LB.lbC + ' ‖ 没上的：' + (LB.missing.length ? LB.missing.join(',') : '无'));
+    '常驻名单可见 ' + LB.nch + ' 枚 ‖ 上了名字 ' + LB.lbC + ' ‖ 没上的：' + (LB.missing.length ? LB.missing.join(',') : '无'));
   T('标签：默认视图里被别人的名字压住的点只查「被别人名字盖住的点」这一条（矩形重叠那条已按用户裁定删除 §E430）（实测与线见上面那段注释）',
     LB.cov <= 110 && true   /* §E430 用户裁定删除：这条是"定死标签"的代理判据（实测 37 对 > 线 16），用户手动验过**没有矩形重叠问题** */,
-    '盖住的点 ' + LB.cov + ' 枚（线 110）‖ 矩形重叠 ' + LB.ov + ' 对（线 16）‖ 标签 ' + LB.n + ' 个 ‖ 避让 ' + LB.push + ' 次');
+    '盖住的点 ' + LB.cov + ' 枚（线 110）‖ 矩形重叠 ' + LB.ov + ' 对（**只报不判**，那条腿按用户裁定删了 §E430）‖ 标签 ' + LB.n + ' 个 ‖ 避让 ' + LB.push + ' 次');
   st.mode = SNAPL.mode; st.elev = SNAPL.elev; st.labels = SNAPL.labels; st.batch = SNAPL.batch;
   st.flo = SNAPL.flo; st.fhi = SNAPL.fhi; st.sel = SNAPL.sel; recomputeVIS(); draw(); paintWin();
   st.mode = SNAPA.mode; st.elev = SNAPA.elev; st.batch = SNAPA.batch;
@@ -5301,7 +5320,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button id="fitt">投影判据 ⓘ</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
 '<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
-'<label>标签 <select id="labels"><option value="champ">只标冠军 + 首尾（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
+'<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
 '<label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">批次 <select id="batch"></select></label>' +
 '<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label>' +
 '<span id="winpre" style="display:flex;gap:4px;align-items:center"></span>' +
