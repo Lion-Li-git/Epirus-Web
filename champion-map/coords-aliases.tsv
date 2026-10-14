@@ -1,193 +1,193 @@
 mainId	aliasId	aliasH	aliasS	aliasSeed	aliasExamG	aliasLineage	path	wid	sameReading	mainH	mainS	aliasDiff
+B-s63	BK-s63	38.80	1.2315		120		docs/artifacts/e513-out/B-s63.js	6d4f987aaed0a54e	same	38.80	1.2315	
+B-s64	BK-s64	52.50	1.6972		120		docs/artifacts/e513-out/B-s64.js	2bd715abe48526a0	same	52.50	1.6972	
+B-s64	K-s64	52.50	1.6972		120		docs/artifacts/e513-out/B-s64.js	2bd715abe48526a0	same	52.50	1.6972	
+B0-111	M111	46.50	0.8947		120		docs/artifacts/e66-out/B0-111.bak	4d3222c3449e0916	same	46.50	0.8947	
+B0-111	Q111	46.50	0.8947		120		docs/artifacts/e66-out/B0-111.bak	4d3222c3449e0916	same	46.50	0.8947	
+B0-31	D0a	36.40	1.6176		120		docs/artifacts/e66-out/B0-31.bak	5724843a1c1e1832	same	36.40	1.6176	
+B0-31	M31	36.40	1.6176		120		docs/artifacts/e66-out/B0-31.bak	5724843a1c1e1832	same	36.40	1.6176	
+B0-31	NOL24-31	36.40	1.6176		120		docs/artifacts/e66-out/B0-31.bak	5724843a1c1e1832	same	36.40	1.6176	
+B0-31	V0-31	36.40	1.6176		120		docs/artifacts/e66-out/B0-31.bak	5724843a1c1e1832	same	36.40	1.6176	
+B0L-31	D5a	50.10	1.8360		120		docs/artifacts/e66-out/B0L-31.bak	81e6fdfb65a48614	same	50.10	1.8360	
+B5-05-31	N5-1	52.70	1.2795		120		docs/artifacts/kept/e100-out__B5-05-31.bak	215aa0bee4b6898d	same	52.70	1.2795	
+BIG0	BIG1	20.70	0.6918		120		docs/artifacts/e234-out/BIG0.js	b2263a30f5911655	same	20.70	0.6918	
+BIG0	BIG1R	20.70	0.6918		120		docs/artifacts/e234-out/BIG0.js	b2263a30f5911655	same	20.70	0.6918	
+D02-71	T71	52.90	0.3555		120		docs/artifacts/e70-out/D02-71.bak	2f3e611ab93c1b81	same	52.90	0.3555	
+D05-31	K3	27.30	0.6050		120		docs/artifacts/e70-out/D05-31.bak	7da3de5f7d4e2d96	same	27.30	0.6050	
+D05-31	S31	27.30	0.6050		120		docs/artifacts/e70-out/D05-31.bak	7da3de5f7d4e2d96	same	27.30	0.6050	
+D1a	V1-31	35.40	1.4772		120		docs/artifacts/e68-out/V1-31.bak	6108503fb15cdbbd	same	35.40	1.4772	
+D1a	V3-31	35.40	1.4772		120		docs/artifacts/e68-out/V1-31.bak	6108503fb15cdbbd	same	35.40	1.4772	
+E59-ctl-901	E59-land-901	52.40	1.9598		120		docs/artifacts/e59-out/E59-ctl-901.bak	f5665be87da55022	same	52.40	1.9598	
+E59-ctl-901	E59-seq-901	52.40	1.9598		120		docs/artifacts/e59-out/E59-ctl-901.bak	f5665be87da55022	same	52.40	1.9598	
+E59-land-903	E59-ctl-903	42.70	1.4806		120		docs/artifacts/e59-out/E59-land-903.bak	77f542bf149eda81	same	42.70	1.4806	
+E59-land-903	E59-seq-903	42.70	1.4806		120		docs/artifacts/e59-out/E59-land-903.bak	77f542bf149eda81	same	42.70	1.4806	
+E59-seq-902	E59-ctl-902	41.00	1.4536		120		docs/artifacts/e59-out/E59-seq-902.bak	3530cd6543fe1e63	same	41.00	1.4536	
+EL0	EL2	46.40	1.6306		120		docs/artifacts/eval-out/win-EL0.bak	afd8f1dcf70edc36	same	46.40	1.6306	
+G08-31	G15-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
+G08-31	H24-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
+G08-31	L05-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
+G08-31	L05K-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
+G08-31	R00-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
+G08-31	RG0-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
+G08-31	blk0t00-s31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
+G08-71	G15-71	52.90	1.8056		120		docs/artifacts/kept/e78-out__G08-71.bak	fbc3926b144ee593	same	52.90	1.8056	
+G08-71	R00-71	52.90	1.8056		120		docs/artifacts/kept/e78-out__G08-71.bak	fbc3926b144ee593	same	52.90	1.8056	
+G08-71	RG0-71	52.90	1.8056		120		docs/artifacts/kept/e78-out__G08-71.bak	fbc3926b144ee593	same	52.90	1.8056	
+G08-71	blk0t00-s71	52.90	1.8056		120		docs/artifacts/kept/e78-out__G08-71.bak	fbc3926b144ee593	same	52.90	1.8056	
+K2	D02-31	54.40	2.1074		120		docs/artifacts/kept/e70-out__D02-31.bak	1d4b687da27187b7	same	54.40	2.1074	
+K5	V1-71	27.60	1.6964		120		docs/artifacts/e68-out/V1-71.bak	bb026cb9daa01c17	same	27.60	1.6964	
+K5	V3-71	27.60	1.6964		120		docs/artifacts/e68-out/V1-71.bak	bb026cb9daa01c17	same	27.60	1.6964	
+K6	D05-71	41.50	1.9726		120		docs/artifacts/e70-out/D05-71.bak	4b10dc8dcbe6b07e	same	41.50	1.9726	
+L05-71	H24-71	53.50	1.5838		120		docs/artifacts/e71-out/L05-71.bak	e6081e595ce59963	same	53.50	1.5838	
+L05-71	L05K-71	53.50	1.5838		120		docs/artifacts/e71-out/L05-71.bak	e6081e595ce59963	same	53.50	1.5838	
+L71	C0s71	51.60	0.8013	71	120		docs/artifacts/eval-out/win-L71.bak	3290e99c09f2ac76	same	51.60	0.8013	
+L71	C1s71	51.60	0.8013	71	120		docs/artifacts/eval-out/win-L71.bak	3290e99c09f2ac76	same	51.60	0.8013	
+L71	C2s71	51.60	0.8013	71	120		docs/artifacts/eval-out/win-L71.bak	3290e99c09f2ac76	same	51.60	0.8013	
+Lctl	C0s31	34.80	1.9191	31	120		docs/artifacts/eval-out/win-Lctl.bak	dfae5c38af537bb7	same	34.80	1.9191	
+Lctl	C1s31	34.80	1.9191	31	120		docs/artifacts/eval-out/win-Lctl.bak	dfae5c38af537bb7	same	34.80	1.9191	
+Lctl	C2s31	34.80	1.9191	31	120		docs/artifacts/eval-out/win-Lctl.bak	dfae5c38af537bb7	same	34.80	1.9191	
+Ldemo	C5-02-31	51.30	1.9181		120		docs/artifacts/eval-out/win-Ldemo.bak	d490dc136293cfc4	same	51.30	1.9181	
+Ldemo	C5-02-71	51.30	1.9181		120		docs/artifacts/eval-out/win-Ldemo.bak	d490dc136293cfc4	same	51.30	1.9181	
+Ldemo	SHIPPED-Ldemo	51.30	1.9181	31	120	历代上槽	docs/artifacts/eval-out/win-Ldemo.bak	d490dc136293cfc4	same	51.30	1.9181	
+M05C02-111	NCV-111	51.10	1.9656		120		docs/artifacts/e73-out/M05C02-111.bak	e80f1c495d345b95	same	51.10	1.9656	
+M05C02-151	NCV-151	54.80	1.8903		120		docs/artifacts/e73-out/M05C02-151.bak	f9993dbb46ffd6d7	same	54.80	1.8903	
+M05C02-31	NCV-31	50.90	1.7381		120		docs/artifacts/e73-out/M05C02-31.bak	6c1a6b23e88512dd	same	50.90	1.7381	
+M05C02-31	PL31	50.90	1.7381		120		docs/artifacts/e73-out/M05C02-31.bak	6c1a6b23e88512dd	same	50.90	1.7381	
+M05C02-71	E10-71	52.10	1.8961		120		docs/artifacts/e73-out/M05C02-71.bak	19fbdb8a6a12e5c0	same	52.10	1.8961	
+N5L-05	SQ2-15-31	44.70	1.5215		120		docs/artifacts/kept/e120-out__N5L-05.bak	ee82e7694b6eb4be	same	44.70	1.5215	
+NCV-71	DM71	50.20	1.9317		120		docs/artifacts/e75-out/NCV-71.bak	392bc3dbd46f4605	same	50.20	1.9317	
+NCV-71	SM71	50.20	1.9317		120		docs/artifacts/e75-out/NCV-71.bak	392bc3dbd46f4605	same	50.20	1.9317	
+NOL24-71	B0-71	50.50	1.1501		120		docs/artifacts/kept/e68-out__V2-71.bak	5727b5d25afffe2a	same	50.50	1.1501	
+NOL24-71	C0b	50.50	1.1501		120		docs/artifacts/kept/e68-out__V2-71.bak	5727b5d25afffe2a	same	50.50	1.1501	
+NOL24-71	M71	50.50	1.1501		120		docs/artifacts/kept/e68-out__V2-71.bak	5727b5d25afffe2a	same	50.50	1.1501	
+NOL24-71	V2-71	50.50	1.1501		120		docs/artifacts/kept/e68-out__V2-71.bak	5727b5d25afffe2a	same	50.50	1.1501	
+P111	S111	36.40	1.3079		120		docs/artifacts/e234-out/P111.js	4bcca6ff7d235ebb	same	36.40	1.3079	
+P151	S151	50.50	1.2985		120		docs/artifacts/e234-out/P151.js	6c57a4ec5bb836ef	same	50.50	1.2985	
+P191	S191	39.90	1.1415		120		docs/artifacts/e234-out/P191.js	5f4840f292bb4b68	same	39.90	1.1415	
+P231	S231	36.60	1.1431		120		docs/artifacts/e234-out/P231.js	df878bc2ce8e2cf6	same	36.60	1.1431	
+Q151	M151	34.50	1.1482		120		docs/artifacts/e234-out/Q151.js	60ebf6632d3f43a8	same	34.50	1.1482	
+Q191	M191	30.80	1.1154		120		docs/artifacts/e234-out/Q191.js	8c5612555da9ead6	same	30.80	1.1154	
+Q231	M231	48.10	1.6442		120		docs/artifacts/e234-out/Q231.js	66b52ef0d0cbf252	same	48.10	1.6442	
+T8-s114	T-s114	56.00	2.1109		120		docs/artifacts/e528-out/T8-s114.js	24d8fa30bb0c3414	same	56.00	2.1109	
+cal-ctl	land20	46.90	1.9257		120		docs/artifacts/e59-out/cal-ctl.js	76ffdf712ff394a8	same	46.90	1.9257	
+cal-ctl	seq20	46.90	1.9257		120		docs/artifacts/e59-out/cal-ctl.js	76ffdf712ff394a8	same	46.90	1.9257	
 eco-34-v7	eco-34-v7c	40.00	1.4203	34	120		docs/artifacts/eco-34-v7.bak	d960dd589dad97e4	DIFF	50.50	1.2464	Geff=4.138 F=0.542030 dmg=14.1000 heavy=0.0000 rounds=29.5500 seatSpread=7.7778 charges=1.1250 waste=1.0000 noThreatStance=0.1403 fieldAAtk=0.2151 rwDmg=17.6000 De=-11.00
-v7l7-31	seedtest2-31	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7l7-33	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7l7-36	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7l7-43	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7l7-46	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7phase-36	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v9-35	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7l7-34	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7l7-41	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7l7-44	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v8fix-35	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7l7-32	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7l7-35	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7l7-42	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7l7-45	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v7l7-31	v7phase-35	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
-v9-31	v12-31	43.10	0.8862	31	120		docs/artifacts/v9-31.bak	99e2ff4165ff1bbb	same	43.10	0.8862	
-v9-31	v11-31	43.10	0.8862	31	120		docs/artifacts/v9-31.bak	99e2ff4165ff1bbb	same	43.10	0.8862	
+seedtest2-41	v7fix-31	39.20	1.0825	41	120		docs/artifacts/seedtest2-41.bak	794506667ff2ed9d	same	39.20	1.0825	
+seedtest2-41	v7fix-32	39.20	1.0825	41	120		docs/artifacts/seedtest2-41.bak	794506667ff2ed9d	same	39.20	1.0825	
 v14-31	v15-31	56.10	0.9494	31	120		docs/artifacts/v14-31.bak	6ed7217d0278bae8	same	56.10	0.9494	
 v14-31	v16-31	56.10	0.9494	31	120		docs/artifacts/v14-31.bak	6ed7217d0278bae8	same	56.10	0.9494	
 v7a-31	v7b-31	34.60	1.2656	31	120		docs/artifacts/v7a-31.bak	4877a44a7afaaf1d	same	34.60	1.2656	
 v7a-31	v7c-31	34.60	1.2656	31	120		docs/artifacts/v7a-31.bak	4877a44a7afaaf1d	same	34.60	1.2656	
 v7a-31	v7d-31	34.60	1.2656	31	120		docs/artifacts/v7a-31.bak	4877a44a7afaaf1d	same	34.60	1.2656	
-v7a-34	v7c-34	29.60	1.3822	34	120		docs/artifacts/v7a-34.bak	0a7eb2af0a0c6c67	same	29.60	1.3822	
-v7a-34	v7d-34	29.60	1.3822	34	120		docs/artifacts/v7a-34.bak	0a7eb2af0a0c6c67	same	29.60	1.3822	
-v7b-39	v7c-39	44.10	0.5004	39	120		docs/artifacts/v7b-39.bak	3e7b69b893784faf	same	44.10	0.5004	
-v7b-42	v7c-42	48.80	0.0000	42	120		docs/artifacts/v7b-42.bak	c49fe13a3f31af70	same	48.80	0.0000	
-v7b-42	v7d-42	48.80	0.0000	42	120		docs/artifacts/v7b-42.bak	c49fe13a3f31af70	same	48.80	0.0000	
+v7a-32	v7c-32	32.20	0.6744	32	120		docs/artifacts/v7a-32.bak	bb3fb69f94d31fb8	same	32.20	0.6744	
+v7a-32	v7d-32	32.20	0.6744	32	120		docs/artifacts/v7a-32.bak	bb3fb69f94d31fb8	same	32.20	0.6744	
 v7a-33	v7c-33	50.80	1.3720	33	120		docs/artifacts/v7a-33.bak	d1d093ffb42c5537	same	50.80	1.3720	
 v7a-33	v7d-33	50.80	1.3720	33	120		docs/artifacts/v7a-33.bak	d1d093ffb42c5537	same	50.80	1.3720	
-v7a-36	v7c-36	51.90	0.5086	36	120		docs/artifacts/v7a-36.bak	9e4aef4d47e8e1a7	same	51.90	0.5086	
-v7a-36	v7d-36	51.90	0.5086	36	120		docs/artifacts/v7a-36.bak	9e4aef4d47e8e1a7	same	51.90	0.5086	
-v7ctrlE-82	v7roleC-82	56.10	0.9516	82	120		docs/artifacts/v7ctrlE-82.bak	a3d89182eb70c771	same	56.10	0.9516	
-v7ctrlE-82	v7ringT-82	56.10	0.9516	82	120		docs/artifacts/v7ctrlE-82.bak	a3d89182eb70c771	same	56.10	0.9516	
-v7ctrlE-82	v7ringT2-82	56.10	0.9516	82	120		docs/artifacts/v7ctrlE-82.bak	a3d89182eb70c771	same	56.10	0.9516	
-v7a-35	v7f-35	47.00	1.0868	35	120	历代上槽	docs/artifacts/v7a-35.bak	f020ce0e2fef3aad	same	47.00	1.0868	
+v7a-34	v7c-34	29.60	1.3822	34	120		docs/artifacts/v7a-34.bak	0a7eb2af0a0c6c67	same	29.60	1.3822	
+v7a-34	v7d-34	29.60	1.3822	34	120		docs/artifacts/v7a-34.bak	0a7eb2af0a0c6c67	same	29.60	1.3822	
 v7a-35	v7c-35	47.00	1.0868	35	120		docs/artifacts/v7a-35.bak	f020ce0e2fef3aad	same	47.00	1.0868	
 v7a-35	v7d-35	47.00	1.0868	35	120		docs/artifacts/v7a-35.bak	f020ce0e2fef3aad	same	47.00	1.0868	
-v7stock2-31	v7f35t-31	55.10	1.0272	31	120		docs/artifacts/v7stock2-31.bak	85dca4ee62079d68	same	55.10	1.0272	
-v7stock2-31	v7f35b-31	55.10	1.0272	31	120		docs/artifacts/v7stock2-31.bak	85dca4ee62079d68	same	55.10	1.0272	
-v7stock2-91	v7f35t-91	52.60	0.4105	91	120		docs/artifacts/v7stock2-91.bak	74ae742b2b443657	same	52.60	0.4105	
-v7f5t-31	v7f5b-31	45.20	1.9593	31	120		docs/artifacts/v7f5t-31.bak	498457f88e83c69e	same	45.20	1.9593	
-seedtest2-41	v7fix-32	39.20	1.0825	41	120		docs/artifacts/seedtest2-41.bak	794506667ff2ed9d	same	39.20	1.0825	
-seedtest2-41	v7fix-31	39.20	1.0825	41	120		docs/artifacts/seedtest2-41.bak	794506667ff2ed9d	same	39.20	1.0825	
-v7r2-35	v7force2-35	44.60	1.3469	35	120		docs/artifacts/v7force2-35.bak	0d61340ade07129e	same	44.60	1.3469	
-v7ws2-81	v7gf1-81	47.10	0.9859	81	120		docs/artifacts/v7ws2-81.bak	ca383d787497efb8	same	47.10	0.9859	
-v7l2c-91	v7l2h-91	50.40	1.4260	91	120		docs/artifacts/v7l2c-91.bak	3d2a981a85d24e01	same	50.40	1.4260	
-v7m_noBead-32	v7m2_noBead-33	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
-v7m_noBead-32	v7m2_noBead-36	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
-v7m_noBead-32	v7m2_noTarget-33	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
-v7m_noBead-32	v7m2_noBead-34	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
-v7m_noBead-32	v7m2_noTarget-31	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
-v7m_noBead-32	v7m2_noTarget-34	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
-v7m_noBead-32	v7m2_noBead-32	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
-v7m_noBead-32	v7m2_noBead-35	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
-v7m_noBead-32	v7m2_noTarget-32	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
-v7m2_noEffects-33	v7m2_noEffects-36	39.70	1.1747	33	120		docs/artifacts/v7m2_noEffects-33.bak	034455a407804f7f	same	39.70	1.1747	
-v7m2_noEffects-33	v7m2_noEffects-34	39.70	1.1747	33	120		docs/artifacts/v7m2_noEffects-33.bak	034455a407804f7f	same	39.70	1.1747	
-v7m2_noEffects-33	v7m2_noEffects-35	39.70	1.1747	33	120		docs/artifacts/v7m2_noEffects-33.bak	034455a407804f7f	same	39.70	1.1747	
-v7m2_noEffects-31	v7m2_noTarget-36	41.10	1.5595	36	120		docs/artifacts/v7m2_noEffects-31.bak	65f4402c5c8847c1	same	41.10	1.5595	
-v7m2_noEffects-31	v7m2_noEffects-32	41.10	1.5595	36	120		docs/artifacts/v7m2_noEffects-31.bak	65f4402c5c8847c1	same	41.10	1.5595	
-v7new2-91	v7new3-91	46.20	1.0816	91	120		docs/artifacts/v7new2-91.bak	38d32417969e86f4	same	46.20	1.0816	
-v7new5_005-31	v7new6-31	45.60	1.9474	31	120		docs/artifacts/v7new5_005-31.bak	c7a69570d3d0182f	same	45.60	1.9474	
-v7phase-31	v7phase-33	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
-v7phase-31	v7salt-32	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
-v7phase-31	v7salt-35	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
-v7phase-31	v7phase-34	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
-v7phase-31	v7salt-33	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
-v7phase-31	v7salt-36	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
-v7phase-31	v7phase-32	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
-v7phase-31	v7salt-34	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
-v7press3-81	v7ws1-81	57.40	1.1819	81	120		docs/artifacts/v7press3-81.bak	e6a8c6a4cee51506	same	57.40	1.1819	
-v7press3-92	v7ws1-92	53.50	0.7471	92	120		docs/artifacts/v7press3-92.bak	c06640a7e9177466	same	53.50	0.7471	
-v7rand-33	v7rand-35	47.70	1.1486	33	120		docs/artifacts/v7rand-33.bak	dde8eb12881ccbb7	same	47.70	1.1486	
-v7rand-33	v7rand-36	47.70	1.1486	33	120		docs/artifacts/v7rand-33.bak	dde8eb12881ccbb7	same	47.70	1.1486	
-v7rand-33	v7rand-34	47.70	1.1486	33	120		docs/artifacts/v7rand-33.bak	dde8eb12881ccbb7	same	47.70	1.1486	
+v7a-35	v7f-35	47.00	1.0868	35	120	历代上槽	docs/artifacts/v7a-35.bak	f020ce0e2fef3aad	same	47.00	1.0868	
+v7a-36	v7c-36	51.90	0.5086	36	120		docs/artifacts/v7a-36.bak	9e4aef4d47e8e1a7	same	51.90	0.5086	
+v7a-36	v7d-36	51.90	0.5086	36	120		docs/artifacts/v7a-36.bak	9e4aef4d47e8e1a7	same	51.90	0.5086	
+v7b-37	v7c-37	36.50	1.3726	37	120		docs/artifacts/v7b-37.bak	c76335f8f42135f9	same	36.50	1.3726	
+v7b-38	v7c-38	32.00	0.3057	38	120		docs/artifacts/v7b-38.bak	5d59551fb85b5a5a	same	32.00	0.3057	
+v7b-39	v7c-39	44.10	0.5004	39	120		docs/artifacts/v7b-39.bak	3e7b69b893784faf	same	44.10	0.5004	
+v7b-40	v7c-40	31.50	1.0536	40	120		docs/artifacts/v7b-40.bak	54c7e5aade64c54a	same	31.50	1.0536	
+v7b-41	v7c-41	52.00	0.0397	41	120		docs/artifacts/v7b-41.bak	d8ae839207518bc5	same	52.00	0.0397	
+v7b-41	v7d-41	52.00	0.0397	41	120		docs/artifacts/v7b-41.bak	d8ae839207518bc5	same	52.00	0.0397	
+v7b-42	v7c-42	48.80	0.0000	42	120		docs/artifacts/v7b-42.bak	c49fe13a3f31af70	same	48.80	0.0000	
+v7b-42	v7d-42	48.80	0.0000	42	120		docs/artifacts/v7b-42.bak	c49fe13a3f31af70	same	48.80	0.0000	
+v7cmin4-31	incumbent-forpromote	56.00	1.5617	31	120		docs/artifacts/incumbent-forpromote.bak	30724115a9996098	same	56.00	1.5617	
 v7ctrlE-31	v7ringT-31	44.00	0.0000	31	120		docs/artifacts/v7ctrlE-31.bak	4f91458044aada8a	same	44.00	0.0000	
 v7ctrlE-31	v7ringT2-31	44.00	0.0000	31	120		docs/artifacts/v7ctrlE-31.bak	4f91458044aada8a	same	44.00	0.0000	
 v7ctrlE-31	v7roleC-31	44.00	0.0000	31	120		docs/artifacts/v7ctrlE-31.bak	4f91458044aada8a	same	44.00	0.0000	
 v7ctrlE-31	v7roleC2-31	44.00	0.0000	31	120		docs/artifacts/v7ctrlE-31.bak	4f91458044aada8a	same	44.00	0.0000	
-v7roleC-91	v7ringT-91	42.70	0.6192	91	120		docs/artifacts/v7roleC-91.bak	4ba1f887e8efd36f	same	42.70	0.6192	
-v7roleC-91	v7ringT2-91	42.70	0.6192	91	120		docs/artifacts/v7roleC-91.bak	4ba1f887e8efd36f	same	42.70	0.6192	
-v7role1-31	v7role12-31	50.40	0.8215	31	120		docs/artifacts/v7role1-31.bak	dbce409c57199b89	same	50.40	0.8215	
-v7roleC-93	v7ringT-93	55.30	0.7943	93	120		docs/artifacts/v7roleC-93.bak	062019520f5d0753	same	55.30	0.7943	
-v7roleC-93	v7ringT2-93	55.30	0.7943	93	120		docs/artifacts/v7roleC-93.bak	062019520f5d0753	same	55.30	0.7943	
-v7f35t-82	v7stock2-82	62.50	0.9661	82	120		docs/artifacts/v7f35t-82.bak	1be32c187b138436	same	62.50	0.9661	
-v7stock2-93	v7f35t-93	57.50	0.7520	93	120		docs/artifacts/v7stock2-93.bak	f296a979ad4bab84	same	57.50	0.7520	
-v7wall-35	v7teach-35	26.90	1.8357	35	120		docs/artifacts/v7wall-35.bak	cdab4b8708105801	same	26.90	1.8357	
-v7tgt2-31	v7tgt3-31	48.10	0.3600	31	120		docs/artifacts/v7tgt2-31.bak	ad084a1f4c98c04a	same	48.10	0.3600	
-v7u1-82	v7bead1-82	45.10	1.9363	82	120		docs/artifacts/v7u1-82.bak	36d9f858545e13d2	same	45.10	1.9363	
-v7wall-33	v7teach-33	42.50	1.8444	33	120		docs/artifacts/v7wall-33.bak	cab48220d93999d0	same	42.50	1.8444	
-v7wall1-31	v7wall2-31	42.40	0.6717	31	120		docs/artifacts/v7wall1-31.bak	50c328d4dc75c994	same	42.40	0.6717	
-v7press3-82	v7ws1-82	62.50	1.2726	82	120		docs/artifacts/v7press3-82.bak	422c0b490585ac7d	same	62.50	1.2726	
-v7press3-93	v7ws1-93	44.50	1.1007	93	120		docs/artifacts/v7press3-93.bak	8c6248bca7c09a08	same	44.50	1.1007	
-Ldemo	SHIPPED-Ldemo	51.30	1.9181	31	120	历代上槽	docs/artifacts/eval-out/win-Ldemo.bak	d490dc136293cfc4	same	51.30	1.9181	
-Ldemo	C5-02-31	51.30	1.9181		120		docs/artifacts/eval-out/win-Ldemo.bak	d490dc136293cfc4	same	51.30	1.9181	
-Ldemo	C5-02-71	51.30	1.9181		120		docs/artifacts/eval-out/win-Ldemo.bak	d490dc136293cfc4	same	51.30	1.9181	
-v7a-32	v7c-32	32.20	0.6744	32	120		docs/artifacts/v7a-32.bak	bb3fb69f94d31fb8	same	32.20	0.6744	
-v7a-32	v7d-32	32.20	0.6744	32	120		docs/artifacts/v7a-32.bak	bb3fb69f94d31fb8	same	32.20	0.6744	
-v7b-37	v7c-37	36.50	1.3726	37	120		docs/artifacts/v7b-37.bak	c76335f8f42135f9	same	36.50	1.3726	
-v7b-40	v7c-40	31.50	1.0536	40	120		docs/artifacts/v7b-40.bak	54c7e5aade64c54a	same	31.50	1.0536	
-v7cmin4-31	incumbent-forpromote	56.00	1.5617	31	120		docs/artifacts/incumbent-forpromote.bak	30724115a9996098	same	56.00	1.5617	
-v7b-41	v7d-41	52.00	0.0397	41	120		docs/artifacts/v7b-41.bak	d8ae839207518bc5	same	52.00	0.0397	
-v7b-41	v7c-41	52.00	0.0397	41	120		docs/artifacts/v7b-41.bak	d8ae839207518bc5	same	52.00	0.0397	
-v7stock2-81	v7f35t-81	48.30	0.9647	81	120		docs/artifacts/v7stock2-81.bak	91b838c67cb53b8e	same	48.30	0.9647	
-v7stock2-92	v7f35t-92	51.90	0.8357	92	120		docs/artifacts/v7stock2-92.bak	c3d6451e9b1d1317	same	51.90	0.8357	
-v7m_noBead-31	v7m2_noBead-31	43.70	0.9733	31	120		docs/artifacts/v7m_noBead-31.bak	8ba0623c8322bc4a	same	43.70	0.9733	
-v7new2-81	v7new3-81	51.30	1.0433	81	120		docs/artifacts/v7new2-81.bak	db86b1620cfb4cbf	same	51.30	1.0433	
-v7new2-92	v7new3-92	44.50	0.8206	92	120		docs/artifacts/v7new2-92.bak	0e78784b033f6373	same	44.50	0.8206	
 v7ctrlE-81	v7ringT-81	28.40	0.8893	81	120		docs/artifacts/v7ctrlE-81.bak	ccab8659a05f182d	same	28.40	0.8893	
 v7ctrlE-81	v7ringT2-81	28.40	0.8893	81	120		docs/artifacts/v7ctrlE-81.bak	ccab8659a05f182d	same	28.40	0.8893	
 v7ctrlE-81	v7roleC-81	28.40	0.8893	81	120		docs/artifacts/v7ctrlE-81.bak	ccab8659a05f182d	same	28.40	0.8893	
+v7ctrlE-82	v7ringT-82	56.10	0.9516	82	120		docs/artifacts/v7ctrlE-82.bak	a3d89182eb70c771	same	56.10	0.9516	
+v7ctrlE-82	v7ringT2-82	56.10	0.9516	82	120		docs/artifacts/v7ctrlE-82.bak	a3d89182eb70c771	same	56.10	0.9516	
+v7ctrlE-82	v7roleC-82	56.10	0.9516	82	120		docs/artifacts/v7ctrlE-82.bak	a3d89182eb70c771	same	56.10	0.9516	
+v7divK2b-82	v7w3c-82	51.70	1.4361	82	120		docs/artifacts/v7divK2b-82.bak	9aa82f5cac1cd0ed	same	51.70	1.4361	
+v7f35t-82	v7stock2-82	62.50	0.9661	82	120		docs/artifacts/v7f35t-82.bak	1be32c187b138436	same	62.50	0.9661	
+v7f5t-31	v7f5b-31	45.20	1.9593	31	120		docs/artifacts/v7f5t-31.bak	498457f88e83c69e	same	45.20	1.9593	
+v7l2c-91	v7l2h-91	50.40	1.4260	91	120		docs/artifacts/v7l2c-91.bak	3d2a981a85d24e01	same	50.40	1.4260	
+v7l7-31	seedtest2-31	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7l7-32	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7l7-33	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7l7-34	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7l7-35	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7l7-36	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7l7-41	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7l7-42	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7l7-43	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7l7-44	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7l7-45	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7l7-46	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7phase-35	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v7phase-36	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v8fix-35	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7l7-31	v9-35	35.90	1.5686	35	120		docs/artifacts/v7l7-31.bak	653a1d6688f6e8c4	same	35.90	1.5686	
+v7m2_noEffects-31	v7m2_noEffects-32	41.10	1.5595	36	120		docs/artifacts/v7m2_noEffects-31.bak	65f4402c5c8847c1	same	41.10	1.5595	
+v7m2_noEffects-31	v7m2_noTarget-36	41.10	1.5595	36	120		docs/artifacts/v7m2_noEffects-31.bak	65f4402c5c8847c1	same	41.10	1.5595	
+v7m2_noEffects-33	v7m2_noEffects-34	39.70	1.1747	33	120		docs/artifacts/v7m2_noEffects-33.bak	034455a407804f7f	same	39.70	1.1747	
+v7m2_noEffects-33	v7m2_noEffects-35	39.70	1.1747	33	120		docs/artifacts/v7m2_noEffects-33.bak	034455a407804f7f	same	39.70	1.1747	
+v7m2_noEffects-33	v7m2_noEffects-36	39.70	1.1747	33	120		docs/artifacts/v7m2_noEffects-33.bak	034455a407804f7f	same	39.70	1.1747	
+v7m_noBead-31	v7m2_noBead-31	43.70	0.9733	31	120		docs/artifacts/v7m_noBead-31.bak	8ba0623c8322bc4a	same	43.70	0.9733	
+v7m_noBead-32	v7m2_noBead-32	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
+v7m_noBead-32	v7m2_noBead-33	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
+v7m_noBead-32	v7m2_noBead-34	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
+v7m_noBead-32	v7m2_noBead-35	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
+v7m_noBead-32	v7m2_noBead-36	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
+v7m_noBead-32	v7m2_noTarget-31	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
+v7m_noBead-32	v7m2_noTarget-32	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
+v7m_noBead-32	v7m2_noTarget-33	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
+v7m_noBead-32	v7m2_noTarget-34	26.00	1.3323	32	120		docs/artifacts/v7m_noBead-32.bak	20035f4f7e032f8a	same	26.00	1.3323	
+v7new2-81	v7new3-81	51.30	1.0433	81	120		docs/artifacts/v7new2-81.bak	db86b1620cfb4cbf	same	51.30	1.0433	
+v7new2-82	v7new3-82	41.60	0.8726	82	120		docs/artifacts/v7new2-82.bak	106eff20f035af50	same	41.60	0.8726	
+v7new2-91	v7new3-91	46.20	1.0816	91	120		docs/artifacts/v7new2-91.bak	38d32417969e86f4	same	46.20	1.0816	
+v7new2-92	v7new3-92	44.50	0.8206	92	120		docs/artifacts/v7new2-92.bak	0e78784b033f6373	same	44.50	0.8206	
+v7new2-93	v7new3-93	50.30	1.8935	93	120		docs/artifacts/v7new2-93.bak	0eec84914377e6a6	same	50.30	1.8935	
+v7new5_005-31	v7new6-31	45.60	1.9474	31	120		docs/artifacts/v7new5_005-31.bak	c7a69570d3d0182f	same	45.60	1.9474	
+v7phase-31	v7phase-32	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
+v7phase-31	v7phase-33	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
+v7phase-31	v7phase-34	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
+v7phase-31	v7salt-32	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
+v7phase-31	v7salt-33	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
+v7phase-31	v7salt-34	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
+v7phase-31	v7salt-35	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
+v7phase-31	v7salt-36	61.20	1.0315	32	120		docs/artifacts/v7phase-31.bak	f5f71af64b604789	same	61.20	1.0315	
+v7press3-81	v7ws1-81	57.40	1.1819	81	120		docs/artifacts/v7press3-81.bak	e6a8c6a4cee51506	same	57.40	1.1819	
+v7press3-82	v7ws1-82	62.50	1.2726	82	120		docs/artifacts/v7press3-82.bak	422c0b490585ac7d	same	62.50	1.2726	
+v7press3-91	v7ws1-91	56.10	2.0238	91	120		docs/artifacts/v7press3-91.bak	03b35fcab7de018a	same	56.10	2.0238	
+v7press3-92	v7ws1-92	53.50	0.7471	92	120		docs/artifacts/v7press3-92.bak	c06640a7e9177466	same	53.50	0.7471	
+v7press3-93	v7ws1-93	44.50	1.1007	93	120		docs/artifacts/v7press3-93.bak	8c6248bca7c09a08	same	44.50	1.1007	
+v7r2-35	v7force2-35	44.60	1.3469	35	120		docs/artifacts/v7force2-35.bak	0d61340ade07129e	same	44.60	1.3469	
+v7rand-33	v7rand-34	47.70	1.1486	33	120		docs/artifacts/v7rand-33.bak	dde8eb12881ccbb7	same	47.70	1.1486	
+v7rand-33	v7rand-35	47.70	1.1486	33	120		docs/artifacts/v7rand-33.bak	dde8eb12881ccbb7	same	47.70	1.1486	
+v7rand-33	v7rand-36	47.70	1.1486	33	120		docs/artifacts/v7rand-33.bak	dde8eb12881ccbb7	same	47.70	1.1486	
+v7role1-31	v7role12-31	50.40	0.8215	31	120		docs/artifacts/v7role1-31.bak	dbce409c57199b89	same	50.40	0.8215	
+v7roleC-91	v7ringT-91	42.70	0.6192	91	120		docs/artifacts/v7roleC-91.bak	4ba1f887e8efd36f	same	42.70	0.6192	
+v7roleC-91	v7ringT2-91	42.70	0.6192	91	120		docs/artifacts/v7roleC-91.bak	4ba1f887e8efd36f	same	42.70	0.6192	
 v7roleC-92	v7ringT-92	62.30	0.2243	92	120		docs/artifacts/v7roleC-92.bak	80242ed77ae01f10	same	62.30	0.2243	
 v7roleC-92	v7ringT2-92	62.30	0.2243	92	120		docs/artifacts/v7roleC-92.bak	80242ed77ae01f10	same	62.30	0.2243	
-v7wall-31	v7teach2-31	52.90	1.5997	31	120		docs/artifacts/v7teach2-31.bak	213e6f320af2038a	same	52.90	1.5997	
-v7divK2b-82	v7w3c-82	51.70	1.4361	82	120		docs/artifacts/v7divK2b-82.bak	9aa82f5cac1cd0ed	same	51.70	1.4361	
-v7ws1-31	v7press3-31	53.60	1.7881	31	120		docs/artifacts/v7press3-31.bak	ab2a1959c1e327fc	same	53.60	1.7881	
-v7press3-91	v7ws1-91	56.10	2.0238	91	120		docs/artifacts/v7press3-91.bak	03b35fcab7de018a	same	56.10	2.0238	
-v7b-38	v7c-38	32.00	0.3057	38	120		docs/artifacts/v7b-38.bak	5d59551fb85b5a5a	same	32.00	0.3057	
-v7new2-82	v7new3-82	41.60	0.8726	82	120		docs/artifacts/v7new2-82.bak	106eff20f035af50	same	41.60	0.8726	
-v7new2-93	v7new3-93	50.30	1.8935	93	120		docs/artifacts/v7new2-93.bak	0eec84914377e6a6	same	50.30	1.8935	
+v7roleC-93	v7ringT-93	55.30	0.7943	93	120		docs/artifacts/v7roleC-93.bak	062019520f5d0753	same	55.30	0.7943	
+v7roleC-93	v7ringT2-93	55.30	0.7943	93	120		docs/artifacts/v7roleC-93.bak	062019520f5d0753	same	55.30	0.7943	
 v7seat24-31	v7seat24b-31	40.40	0.0000	31	120		docs/artifacts/v7seat24-31.bak	b561e0ee2538c5a9	same	40.40	0.0000	
-cal-ctl	seq20	46.90	1.9257		120		docs/artifacts/e59-out/cal-ctl.js	76ffdf712ff394a8	same	46.90	1.9257	
-cal-ctl	land20	46.90	1.9257		120		docs/artifacts/e59-out/cal-ctl.js	76ffdf712ff394a8	same	46.90	1.9257	
-E59-ctl-901	E59-seq-901	52.40	1.9598		120		docs/artifacts/e59-out/E59-ctl-901.bak	f5665be87da55022	same	52.40	1.9598	
-E59-ctl-901	E59-land-901	52.40	1.9598		120		docs/artifacts/e59-out/E59-ctl-901.bak	f5665be87da55022	same	52.40	1.9598	
-E59-land-903	E59-ctl-903	42.70	1.4806		120		docs/artifacts/e59-out/E59-land-903.bak	77f542bf149eda81	same	42.70	1.4806	
-E59-land-903	E59-seq-903	42.70	1.4806		120		docs/artifacts/e59-out/E59-land-903.bak	77f542bf149eda81	same	42.70	1.4806	
-L71	C1s71	51.60	0.8013	71	120		docs/artifacts/eval-out/win-L71.bak	3290e99c09f2ac76	same	51.60	0.8013	
-L71	C2s71	51.60	0.8013	71	120		docs/artifacts/eval-out/win-L71.bak	3290e99c09f2ac76	same	51.60	0.8013	
-L71	C0s71	51.60	0.8013	71	120		docs/artifacts/eval-out/win-L71.bak	3290e99c09f2ac76	same	51.60	0.8013	
-Lctl	C1s31	34.80	1.9191	31	120		docs/artifacts/eval-out/win-Lctl.bak	dfae5c38af537bb7	same	34.80	1.9191	
-Lctl	C2s31	34.80	1.9191	31	120		docs/artifacts/eval-out/win-Lctl.bak	dfae5c38af537bb7	same	34.80	1.9191	
-Lctl	C0s31	34.80	1.9191	31	120		docs/artifacts/eval-out/win-Lctl.bak	dfae5c38af537bb7	same	34.80	1.9191	
-B0-111	M111	46.50	0.8947		120		docs/artifacts/e66-out/B0-111.bak	4d3222c3449e0916	same	46.50	0.8947	
-B0-111	Q111	46.50	0.8947		120		docs/artifacts/e66-out/B0-111.bak	4d3222c3449e0916	same	46.50	0.8947	
-B0L-31	D5a	50.10	1.8360		120		docs/artifacts/e66-out/B0L-31.bak	81e6fdfb65a48614	same	50.10	1.8360	
-K5	V3-71	27.60	1.6964		120		docs/artifacts/e68-out/V1-71.bak	bb026cb9daa01c17	same	27.60	1.6964	
-K5	V1-71	27.60	1.6964		120		docs/artifacts/e68-out/V1-71.bak	bb026cb9daa01c17	same	27.60	1.6964	
-K6	D05-71	41.50	1.9726		120		docs/artifacts/e70-out/D05-71.bak	4b10dc8dcbe6b07e	same	41.50	1.9726	
-L05-71	L05K-71	53.50	1.5838		120		docs/artifacts/e71-out/L05-71.bak	e6081e595ce59963	same	53.50	1.5838	
-L05-71	H24-71	53.50	1.5838		120		docs/artifacts/e71-out/L05-71.bak	e6081e595ce59963	same	53.50	1.5838	
-G08-31	L05-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
-G08-31	R00-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
-G08-31	RG0-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
-G08-31	L05K-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
-G08-31	G15-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
-G08-31	blk0t00-s31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
-G08-31	H24-31	52.30	1.8182		120		docs/artifacts/kept/e78-out__G08-31.bak	f19bb211a8cb32cb	same	52.30	1.8182	
-M05C02-111	NCV-111	51.10	1.9656		120		docs/artifacts/e73-out/M05C02-111.bak	e80f1c495d345b95	same	51.10	1.9656	
-M05C02-151	NCV-151	54.80	1.8903		120		docs/artifacts/e73-out/M05C02-151.bak	f9993dbb46ffd6d7	same	54.80	1.8903	
-M05C02-71	E10-71	52.10	1.8961		120		docs/artifacts/e73-out/M05C02-71.bak	19fbdb8a6a12e5c0	same	52.10	1.8961	
-M05C02-31	PL31	50.90	1.7381		120		docs/artifacts/e73-out/M05C02-31.bak	6c1a6b23e88512dd	same	50.90	1.7381	
-M05C02-31	NCV-31	50.90	1.7381		120		docs/artifacts/e73-out/M05C02-31.bak	6c1a6b23e88512dd	same	50.90	1.7381	
-G08-71	G15-71	52.90	1.8056		120		docs/artifacts/kept/e78-out__G08-71.bak	fbc3926b144ee593	same	52.90	1.8056	
-G08-71	blk0t00-s71	52.90	1.8056		120		docs/artifacts/kept/e78-out__G08-71.bak	fbc3926b144ee593	same	52.90	1.8056	
-G08-71	RG0-71	52.90	1.8056		120		docs/artifacts/kept/e78-out__G08-71.bak	fbc3926b144ee593	same	52.90	1.8056	
-G08-71	R00-71	52.90	1.8056		120		docs/artifacts/kept/e78-out__G08-71.bak	fbc3926b144ee593	same	52.90	1.8056	
-B0-31	NOL24-31	36.40	1.6176		120		docs/artifacts/e66-out/B0-31.bak	5724843a1c1e1832	same	36.40	1.6176	
-B0-31	D0a	36.40	1.6176		120		docs/artifacts/e66-out/B0-31.bak	5724843a1c1e1832	same	36.40	1.6176	
-B0-31	M31	36.40	1.6176		120		docs/artifacts/e66-out/B0-31.bak	5724843a1c1e1832	same	36.40	1.6176	
-B0-31	V0-31	36.40	1.6176		120		docs/artifacts/e66-out/B0-31.bak	5724843a1c1e1832	same	36.40	1.6176	
-B5-05-31	N5-1	52.70	1.2795		120		docs/artifacts/kept/e100-out__B5-05-31.bak	215aa0bee4b6898d	same	52.70	1.2795	
-N5L-05	SQ2-15-31	44.70	1.5215		120		docs/artifacts/kept/e120-out__N5L-05.bak	ee82e7694b6eb4be	same	44.70	1.5215	
-D1a	V1-31	35.40	1.4772		120		docs/artifacts/e68-out/V1-31.bak	6108503fb15cdbbd	same	35.40	1.4772	
-D1a	V3-31	35.40	1.4772		120		docs/artifacts/e68-out/V1-31.bak	6108503fb15cdbbd	same	35.40	1.4772	
-K2	D02-31	54.40	2.1074		120		docs/artifacts/kept/e70-out__D02-31.bak	1d4b687da27187b7	same	54.40	2.1074	
-Q191	M191	30.80	1.1154		120		docs/artifacts/e234-out/Q191.js	8c5612555da9ead6	same	30.80	1.1154	
-P111	S111	36.40	1.3079		120		docs/artifacts/e234-out/P111.js	4bcca6ff7d235ebb	same	36.40	1.3079	
-BIG0	BIG1	20.70	0.6918		120		docs/artifacts/e234-out/BIG0.js	b2263a30f5911655	same	20.70	0.6918	
-BIG0	BIG1R	20.70	0.6918		120		docs/artifacts/e234-out/BIG0.js	b2263a30f5911655	same	20.70	0.6918	
-NOL24-71	M71	50.50	1.1501		120		docs/artifacts/kept/e68-out__V2-71.bak	5727b5d25afffe2a	same	50.50	1.1501	
-NOL24-71	V2-71	50.50	1.1501		120		docs/artifacts/kept/e68-out__V2-71.bak	5727b5d25afffe2a	same	50.50	1.1501	
-NOL24-71	C0b	50.50	1.1501		120		docs/artifacts/kept/e68-out__V2-71.bak	5727b5d25afffe2a	same	50.50	1.1501	
-NOL24-71	B0-71	50.50	1.1501		120		docs/artifacts/kept/e68-out__V2-71.bak	5727b5d25afffe2a	same	50.50	1.1501	
-E59-seq-902	E59-ctl-902	41.00	1.4536		120		docs/artifacts/e59-out/E59-seq-902.bak	3530cd6543fe1e63	same	41.00	1.4536	
-EL0	EL2	46.40	1.6306		120		docs/artifacts/eval-out/win-EL0.bak	afd8f1dcf70edc36	same	46.40	1.6306	
-D02-71	T71	52.90	0.3555		120		docs/artifacts/e70-out/D02-71.bak	2f3e611ab93c1b81	same	52.90	0.3555	
-NCV-71	SM71	50.20	1.9317		120		docs/artifacts/e75-out/NCV-71.bak	392bc3dbd46f4605	same	50.20	1.9317	
-NCV-71	DM71	50.20	1.9317		120		docs/artifacts/e75-out/NCV-71.bak	392bc3dbd46f4605	same	50.20	1.9317	
-D05-31	K3	27.30	0.6050		120		docs/artifacts/e70-out/D05-31.bak	7da3de5f7d4e2d96	same	27.30	0.6050	
-D05-31	S31	27.30	0.6050		120		docs/artifacts/e70-out/D05-31.bak	7da3de5f7d4e2d96	same	27.30	0.6050	
-Q151	M151	34.50	1.1482		120		docs/artifacts/e234-out/Q151.js	60ebf6632d3f43a8	same	34.50	1.1482	
-Q231	M231	48.10	1.6442		120		docs/artifacts/e234-out/Q231.js	66b52ef0d0cbf252	same	48.10	1.6442	
-P231	S231	36.60	1.1431		120		docs/artifacts/e234-out/P231.js	df878bc2ce8e2cf6	same	36.60	1.1431	
-P191	S191	39.90	1.1415		120		docs/artifacts/e234-out/P191.js	5f4840f292bb4b68	same	39.90	1.1415	
-P151	S151	50.50	1.2985		120		docs/artifacts/e234-out/P151.js	6c57a4ec5bb836ef	same	50.50	1.2985	
-B-s64	BK-s64	52.50	1.6972		120		docs/artifacts/e513-out/B-s64.js	2bd715abe48526a0	same	52.50	1.6972	
-B-s64	K-s64	52.50	1.6972		120		docs/artifacts/e513-out/B-s64.js	2bd715abe48526a0	same	52.50	1.6972	
-B-s63	BK-s63	38.80	1.2315		120		docs/artifacts/e513-out/B-s63.js	6d4f987aaed0a54e	same	38.80	1.2315	
-T8-s114	T-s114	56.00	2.1109		120		docs/artifacts/e528-out/T8-s114.js	24d8fa30bb0c3414	same	56.00	2.1109	
+v7stock2-31	v7f35b-31	55.10	1.0272	31	120		docs/artifacts/v7stock2-31.bak	85dca4ee62079d68	same	55.10	1.0272	
+v7stock2-31	v7f35t-31	55.10	1.0272	31	120		docs/artifacts/v7stock2-31.bak	85dca4ee62079d68	same	55.10	1.0272	
+v7stock2-81	v7f35t-81	48.30	0.9647	81	120		docs/artifacts/v7stock2-81.bak	91b838c67cb53b8e	same	48.30	0.9647	
+v7stock2-91	v7f35t-91	52.60	0.4105	91	120		docs/artifacts/v7stock2-91.bak	74ae742b2b443657	same	52.60	0.4105	
+v7stock2-92	v7f35t-92	51.90	0.8357	92	120		docs/artifacts/v7stock2-92.bak	c3d6451e9b1d1317	same	51.90	0.8357	
+v7stock2-93	v7f35t-93	57.50	0.7520	93	120		docs/artifacts/v7stock2-93.bak	f296a979ad4bab84	same	57.50	0.7520	
+v7tgt2-31	v7tgt3-31	48.10	0.3600	31	120		docs/artifacts/v7tgt2-31.bak	ad084a1f4c98c04a	same	48.10	0.3600	
+v7u1-82	v7bead1-82	45.10	1.9363	82	120		docs/artifacts/v7u1-82.bak	36d9f858545e13d2	same	45.10	1.9363	
+v7wall-31	v7teach2-31	52.90	1.5997	31	120		docs/artifacts/v7teach2-31.bak	213e6f320af2038a	same	52.90	1.5997	
+v7wall-33	v7teach-33	42.50	1.8444	33	120		docs/artifacts/v7wall-33.bak	cab48220d93999d0	same	42.50	1.8444	
+v7wall-35	v7teach-35	26.90	1.8357	35	120		docs/artifacts/v7wall-35.bak	cdab4b8708105801	same	26.90	1.8357	
+v7wall1-31	v7wall2-31	42.40	0.6717	31	120		docs/artifacts/v7wall1-31.bak	50c328d4dc75c994	same	42.40	0.6717	
+v7ws1-31	v7press3-31	53.60	1.7881	31	120		docs/artifacts/v7press3-31.bak	ab2a1959c1e327fc	same	53.60	1.7881	
+v7ws2-81	v7gf1-81	47.10	0.9859	81	120		docs/artifacts/v7ws2-81.bak	ca383d787497efb8	same	47.10	0.9859	
+v9-31	v11-31	43.10	0.8862	31	120		docs/artifacts/v9-31.bak	99e2ff4165ff1bbb	same	43.10	0.8862	
+v9-31	v12-31	43.10	0.8862	31	120		docs/artifacts/v9-31.bak	99e2ff4165ff1bbb	same	43.10	0.8862	
