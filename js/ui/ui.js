@@ -359,7 +359,10 @@
     loadPoolOf(k);
     const back = k === 'p2' ? '退回单包（那一枚 2P 冠军）' : '四席同一枚（内置槽）';
     if (S.status === 'no-bundle') return slot.name + ' bundle 未加载 ⇒ ' + back;
-    if (!S.members.length) return slot.name + ' bundle 里一枚都解不开 ⇒ ' + back;
+    /* §E621：走到这里说明"这一次还没拿到全局"（bundle 的 defer 脚本还没执行），**不是**坏了；
+     *   单独一句是为了下次有人读到它不会又去查 bundle 在不在（我这晚就是这么绕了一圈的）。 */
+    if (S.status === 'not-yet') return slot.name + ' bundle 还没执行到（脚本顺序，不是故障）⇒ ' + back;
+    if (!S.members || !S.members.length) return slot.name + ' bundle 里一枚都解不开 ⇒ ' + back;
     const n = S.members.filter(function (m) { return m.tier === (tier && tier.pool); }).length;
     if (!n) return '该难度档（' + (tier && tier.pool) + '）还没配' + slot.name + '成员 ⇒ ' + back + '，**不是故障**';
     return null;
@@ -379,9 +382,25 @@
   function loadPoolOf(k, force) {
     const slot = POOLS[k], S = slot.st;
     if (S.members !== null && !force) return S.members;
-    S.members = []; S.params = {}; S.bad = []; S.status = 'ok';
     const raw = (typeof window !== 'undefined' && window[slot.g]) || null;
-    if (!raw || !Array.isArray(raw.members)) { S.status = 'no-bundle'; return S.members; }   /* 调用方按契约 §4 退回单包并说出来 */
+    if (!raw || !Array.isArray(raw.members)) {
+      /* §E621 修法 B（用户 10-15 裁定：「按 b 修好 2p 冠军池的问题」）：**"这一次还没拿到全局"不是"bundle 坏了"**。
+       *   原来这里把 `S.members` 落成 `[]` 再记 `status='no-bundle'`，而上面那句 `members !== null` 就 return
+       *   ⇒ 首屏那一次"还没有"被**永久缓存**：`ui.js` 是同步脚本、两份 pool bundle 是 `defer`（defer 永远在解析完之后执行），
+       *   而默认人数 = 2 ⇒ 任何回显路径都会在这里先摸一次 p2 ⇒ **2 人桌的池自 §E599 起从未生效过**（日志 DONE-14 / 待裁 #28）。
+       *   现在：保持 `members = null`（下一次调用再试），状态单独记 `'not-yet'`，原因句与真·无 bundle 分开说（契约 §4：不许静默，也不许把"还没"说成"坏了"——
+       *   这句正是上面那条注释早就警告过的同一件事，这次是它自己的另一半被踩中）。 */
+      /* 两种"拿不到"要分开说，否则这句又变成第二个假原因：文档还在解析 ⇒ 真是脚本顺序问题（还会再来一次）；
+       *   解析已经完了还拿不到 ⇒ bundle 真的没加载/形状不对（这句才允许说"未加载"）。 */
+      const parsing = (typeof document === 'undefined') || document.readyState === 'loading';
+      S.members = null; S.params = {}; S.bad = []; S.status = parsing ? 'not-yet' : 'no-bundle'; return S.members;
+    }
+    S.members = []; S.params = {}; S.bad = []; S.status = 'ok';
+    /* ⚠ 解包用本文件顶上的别名 `P = window.EpirusPolicy`（`unpack` 挂在那里）——
+     *   第一版这里写成 `window.EpirusChampionPack.unpack` 是**错的**：那个对象只导出 `extract`/`version`，
+     *   于是全部"解不开"、静默退回单包（浏览器实机跑出来的：`PK.unpack is not a function`）。
+     *   `allowLegacy=true`：池成员跨代（3P 侧 `K2`/`SHIPPED-Ldemo` 是 v6 形状、`T8-s114` 是 v7；
+     *   2P 侧是 2P 原生形状）⇒ 与 `tools/*` 侧同一口径；权重身份已由 `tools/build-pool-bundle.mjs` 逐条重算 wid 与表对账过。 */
     /* ⚠ 解包用本文件顶上的别名 `P = window.EpirusPolicy`（`unpack` 挂在那里）——
      *   第一版这里写成 `window.EpirusChampionPack.unpack` 是**错的**：那个对象只导出 `extract`/`version`，
      *   于是全部"解不开"、静默退回单包（浏览器实机跑出来的：`PK.unpack is not a function`）。
