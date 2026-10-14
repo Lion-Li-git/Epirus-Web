@@ -90,6 +90,17 @@ const pk = packFor(N);
 if (!pk.p) { console.error('⛔ 冠军包解不开（2P/3P 都不兼容）⇒ 这把尺没有所指'); process.exit(2); }
 const humanPool = loadPool(W, 'human');   // 读一次文件（每局重读会把仪器自己变成 I/O 瓶颈）
 
+function makeScriptChooser(styleId) {
+  /* §E610：这一席是档声明的**脚本席**（`DIFF_TIERS[].scriptMix`，§E600-B 起简单档有 2 席）。
+   *   口径照 `js/ui/ui.js:442-446` + `:720`：给脚本自己的 `pick`，并与风格档同一条 `wrapBigTPush` 包一层（上线档的大雷/摄魂注入也在场）。
+   *   原来量具**根本没有这条路**：`compose(..., null, ...)` 把掺席硬关掉，于是每个 AI 席都领一枚包 ⇒
+   *   简单档量的是"四席全池包"，不是产品那张"两席软带 + 两席脚本"（v1.7.22 之后查明，见本日志 S10）。 */
+  const st = (Bots.STYLES || []).find(x => x.id === styleId);
+  if (!st) { console.error('⛔ 脚本席的风格不在册: ' + styleId + ' ⇒ 量具不许自己退回单包（产品侧会退回并说出来，那是另一件事）'); process.exit(2); }
+  const wrapped = T.wrapBigTPush(st.pick);
+  return function (state, pid, legal) { return wrapped(state, pid, legal); };
+}
+
 function makeLevelChooser(L, p) {
   if (L.kind === 'style') {
     const st = (Bots.STYLES || []).find(x => x.id === L.style);
@@ -119,6 +130,7 @@ const POOL_BY_TIER = {}, MEMBER_P = {};
 /* §E609 全表（= 各带并起来的那份），**必须在 --banddef 覆盖之后**重算：
  *   先算好再覆盖会让 `rosterFor` 看到的是旧形状 ⇒ 临时视图被静默忽略（昨天"banddef 没生效却量成现表"的反方向同款）。 */
 let ALL_POOL_M = [];
+const MIX_OF = {};   /* §E610 档 → 掺席（`scriptSeats` 的产出）；单包/钉成员模式下是空的 ⇒ compose 不盖席 */
 const LADDER_NOTED = {};
 if (POOL_TIER && !USE_POOL) { console.error('⛔ --pooltier= 只在 --pool=1 下有意义（单包装配没有"档到池"的映射可钉）'); process.exit(2); }
 if (USE_POOL) {
@@ -176,6 +188,23 @@ if (USE_POOL) {
     LEVELS.filter(l => l.kind === 'champ').map(l0 => { const R0 = PD.rosterFor(ALL_POOL_M, l0);
       return l0.id + '=' + (POOL_TIER ? '钉在 ' + POOL_TIER : (R0.bandW ? '按带加权 ' + Object.keys(R0.bandW).filter(x => x !== 'else').join('/')
         : (R0.note ? '退路→' + l0.pool + '(' + R0.members.length + ' 枚)' : '单带 ' + l0.pool + '(' + R0.members.length + ' 枚)'))); }).join(' ‖ '));
+  /* §E610：**掺席必须进装配**。档声明的 `scriptMix`（§E600-B 起简单档有 2 席启发式脚本）原来在这把尺里完全不存在 ——
+   *   `compose(..., null, ...)` 把第 4 参硬关掉，于是简单档量的是"四席全池包"，而玩家点到的桌是"两席软带 + 两席脚本"。
+   *   推导仍然只有 `js/pool-draw.js` 的 `scriptSeats` 这一份（页面 `ui.js:422` 调的是同一个函数），这里不抄第二套掺席规则。
+   *   ⚠ `--pooltier=` 那条研究口径下**一并关掉并说出来**：它本来就把按带加权关掉、要的是"档间只剩剂量差"，
+   *   而掺席是档的第二根轴不是带 ⇒ 留着它那句"只剩剂量"就成了假话（这与 §E609 那次"banddef 没生效却量成现表"是同一族自证）。 */
+  if (POOL_TIER) {
+    console.log('# 掺席 = **关掉**（--pooltier=' + POOL_TIER + ' 钉成员时一并关，否则"档间只剩剂量差"这句不成立）');
+  } else {
+    for (const lm of LEVELS) {
+      const mx = (typeof PD.scriptSeats === 'function') ? PD.scriptSeats(lm, N - 1, Bots.STYLES) : null;
+      if (mx && mx.seats) MIX_OF[lm.id] = mx;
+      if (mx && mx.note) console.log('#   掺席降级 ' + lm.id + '：' + mx.note);
+    }
+    console.log('# 掺席 = ' + LEVELS.filter(l1 => l1.kind === 'champ')
+      .map(l1 => l1.id + '=' + (MIX_OF[l1.id] ? (MIX_OF[l1.id].seats + ' 席[' + MIX_OF[l1.id].ids.join(',') + ']') : '0 席')).join(' ‖ ') +
+      '（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）');
+  }
 }
 
 const win = {}, rows = [];
@@ -206,13 +235,13 @@ for (const L of LEVELS) {
       const need = N > 2 ? 2 : 1;
       if (mem.length < need) { console.error('⛔ 档 ' + L.id + ' 的池只有 ' + mem.length + ' 枚（这一桌要至少 ' + need + ' 枚）' +
         ' ⇒ ' + (need > 1 ? '抽签在数学上必然全同（契约 §3）' : '池是空的') + ' ⇒ 这一档还没成型，别拿池模式量它'); process.exit(2); }
-      comp = PD.compose(mem, N - 1, PD.rng(st.slotSalt >>> 0), null, bandW);
+      comp = PD.compose(mem, N - 1, PD.rng(st.slotSalt >>> 0), MIX_OF[L.id], bandW);
       if (comp.allSame && N - 1 > 1) { console.error('⛔ 池模式抽出四席全同（' + L.id + ' · salt=' + st.slotSalt + '）⇒ 违反裁定③，本行读数作废'); process.exit(2); }
     }
     const cs = [];
     for (let pid = 0; pid < N; pid++) {
       if (pid === refSeat) { cs.push(mimic); continue; }
-      if (comp) cs.push(makeLevelChooser(L, MEMBER_P[comp.seats[seatK++].id]));
+      if (comp) { const s = comp.seats[seatK++]; cs.push(s.kind === 'script' ? makeScriptChooser(s.id) : makeLevelChooser(L, MEMBER_P[s.id])); }
       else cs.push(chooser);
     }
     Play.autoGameN(st, cs);

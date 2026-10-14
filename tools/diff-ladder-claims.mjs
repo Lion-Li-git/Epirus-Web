@@ -24,15 +24,25 @@
  * ⚠ §E609 把 **`poolMix` 加进了签名**：10-15 落地"两带各半混抽"时只加了 `poolMix` 这一个字段，
  *   `pool` 仍是 `mid`（那是 2P 那张表的退路带名）⇒ 旧签名**逐字没变**，这张账明明已经被换掉了抽法却还"有效"。
  *   那正是文件自己警告的那一类（"配置在、账过期"）。名册依旧不进签名（代价没变），但**抽法**必须进 ——
- *   单带抽与按带加权抽是两台不同的机器，不是同一台机器的两个成员表。 */
+ *   单带抽与按带加权抽是两台不同的机器，不是同一台机器的两个成员表。
+ * ⚠ §E610 再把 **`scriptMix`（掺进来的脚本席）** 加进签名：10-13 §E600-B 给简单档声明了 2 席脚本，
+ *   而量具 `probe-diff-ladder` **从没读过它**（`compose(..., null, ...)` 把第 4 参硬关掉）⇒
+ *   这张账里 `pool:*` 那两行量的其实是"四席全池包"，不是玩家点到的那张桌。签名不含掺席时，
+ *   这条分家既不会被 ④a 抓到、也不会在读数里留下痕迹 —— 与上面 `poolMix` 那一笔同形，只是这次漏的是**装配的一整层**。 */
 export function sigOf(tiers) {
   const mixOf = function (t) {
     if (!t.poolMix) return '-';
     const ks = Object.keys(t.poolMix).filter(function (k) { return k !== 'else'; }).sort();
     return ks.map(function (k) { return k + '=' + t.poolMix[k]; }).join('+') + (t.poolMix['else'] ? ('|else=' + t.poolMix['else']) : '');
   };
+  const seatOf = function (t) {
+    const sm = t.scriptMix;
+    if (!sm) return '-';
+    return 's' + (sm.seats | 0) + '/min' + (typeof sm.min === 'number' ? sm.min : 1) +
+      '/' + (sm.ids || []).join('+');
+  };
   return (tiers || []).map(function (t) {
-    return [t.id, t.kind, t.eps, t.epsK, t.epsMode, t.ramp ? 1 : 0, t.pool || '-', t.style || '-', mixOf(t)].join(':');
+    return [t.id, t.kind, t.eps, t.epsK, t.epsMode, t.ramp ? 1 : 0, t.pool || '-', t.style || '-', mixOf(t), seatOf(t)].join(':');
   }).join(';');
 }
 
@@ -44,11 +54,14 @@ export const LADDER_CLAIM = {
    *   ⇒ 差一个字符就是永久过期。手打派生值是这个仓最常犯的错之一。
    * §E609：签名尾巴多了一节（`poolMix`）—— 10-15 落地两带混抽时旧签名**逐字没变**，那张账明明换了抽法却还"有效"，
    *   ④a 就是抓不到。补上之后先复现了一次旧红（在册=旧串 vs 现算=新串），再按新串重测。 */
-  sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-:-;lv:regular:champ:0.1:5:soft:1:mid:-:hard=0.5+soft=0.5|else=mid;lv:hard:champ:0.1:5:soft:1:hard:-:-',
-  source: '§E609（10-15 重测）：node tools/probe-diff-ladder.mjs --tiers=lv:sparring,lv:regular,lv:hard --pairs=1 --games=1000 --seed=77000..77007 --mode=multi|long' +
-    '（带 --pool=1 = 池装配，不带 = 单包对照）‖ 跑法与聚合见 docs/artifacts/e608-out/recheck.mjs（一次性量具），原始日志 …/recheck/ 与 …/recheck-single/' +
-    '‖ **d = 跨 seed 配对差均值，se = 其标准误 sd/√8**（10-12 那批是单次 1500 局的组内配对 SE ⇒ 两批的 se 不是同一个东西，别横着比大小，只比 σ 数）。' +
-    '上一批（10-12）的原始日志与两次候选分带在 docs/research/logs/2026-10-12-e596-three-tier.md，翻序记录在 …/2026-10-12-e595-ladder-register.md',
+  sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-:-:s2/min1/st:toolkit+st:mix;lv:regular:champ:0.1:5:soft:1:mid:-:hard=0.5+soft=0.5|else=mid:-;lv:hard:champ:0.1:5:soft:1:hard:-:-:-',
+  source: '§E610（10-15 重测 · **掺席进装配之后**）：node tools/probe-diff-ladder.mjs --tiers=lv:sparring,lv:regular,lv:hard --pool=1 --pairs=1 --games=1000 --seed=77000..77007 --mode=multi|long' +
+    '（`--pool=1` = 池装配 **且** 简单档按 `scriptSeats` 盖 2 席脚本；不带 `--pool=1` = 单包对照）‖' +
+    '聚合与逐 seed 日志：`docs/artifacts/e608-out/recheck-mix/` 与 `…/recheck-mix-summary.txt`（量具 `…/recheck-mix.mjs`，每跑两条守卫：抽法推导=按带加权 ‖ 掺席行=sparring 2 席）' +
+    '‖ **d = 跨 seed 配对差均值，se = 其标准误 sd/√8**。' +
+    '⛔ 上一批（`recheck/` ‖ `recheck-summary.txt`，签名尾巴只到 `poolMix`）量的是**四席全池包**：那时量具不读 `scriptMix`，所以那批 `pool:*` 的简单档与台阶一**不是产品那张桌** ⇒ 已被本批替换，不做历史对照列（它不是"更差的旧档"，是另一台机器）。' +
+    '‖ `single:*` 那两行是**故意的**负对照（同 seed 同盐、四席同一枚包、既无池也无掺席）⇒ 它的"不分"是设计，不是产品缺陷。' +
+    '‖ 10-12 那批的原始日志与两次候选分带在 `docs/research/logs/2026-10-12-e596-three-tier.md`，翻序记录在 `…/2026-10-12-e595-ladder-register.md`',
   rule: '判"分得开" = |差| ≥ 2σ(配对)（不是 ≥2pt）。行按**档位表声明序**的相邻对记：`from` = 声明里更难那一档，`d` = 人类席夺冠率( to ) − 人类席夺冠率( from ) ⇒ **d 为负 = 实测把这一对的次序翻了**（不是抄错，是记账）。',
   measuredAt: '2026-10-15',
   /* ===== §E609（10-15 这批）新形状与两条后果 =====
@@ -60,10 +73,28 @@ export const LADDER_CLAIM = {
    *   ⚠ 这里的 long 我第一版写成了 **16.13**（把**预告值**抄进了"实测"那一格，v1.7.22 查出来）。真值从逐 seed 原始日志取：
    *     `docs/artifacts/e608-out/recheck/long-7700*.log` 的普通档电平 15.5 15.7 16.5 16.1 16.9 15.6 16.3 17.1 ⇒ 均值 **16.2125**；
    *     免费自检：这个值要让两条减法同时成立（20.27 − 4.06 = 16.21 ‖ 13.51 + 2.70 = 16.21），抄成 16.13 时两处各差 0.08 ⇒ 数字不要手打。
-   * 后果②：**简单档也变硬了一点**（multi 19.4 → 17.66）—— soft 带吞了 5 枚原中带成员，比原来那 11 枚强。
-   *   所以台阶一在 multi 只有 1.77pt（long 有 4.06pt）：它是三档里最薄的一级，但 8 seed 下仍有 **5.0σ**（10-12 那批因为只跑一次、se=1.4，被记成"分不开"）。
+   * 后果②（**⛔ 已被 §E610 替换**，留着是因为它记的是"那次为什么错"）：简单档 17.66 ‖ 20.27、台阶一 multi 1.77pt ‖ long 4.06pt
+   *   —— 那批的装配里**没有 2 席脚本**（量具把 `compose` 的第 4 参硬写成 `null`），所以它量的是"四席全池包"而不是产品那张桌。
+   *   同一批里 台阶二（普通↔困难）两模式 2.46 ‖ 2.70 **逐字没变** —— 因为这两档都不掺席 ⇒ 这个"只有一侧动了"本身就是漏了哪一层的指纹。
    * 后果③：单包对照那两组**逐字复现了"三档其实是同一台机器"**（困难≡普通 d=0 se=0，简单↔普通 0.17σ ‖ 1.16σ）
    *   ⇒ 台阶是**带**给的，不是剂量给的。要"真简单"仍只剩两条老杠杆（单留大 ε，或往软带补真弱的成员）。
+   *   ⚠ §E610 给这句话补了**第三条杠杆**（原来那句"只剩两条"是在没算掺席的装配上说的）：见下面 §E610 那块。
+   * ===== §E610（10-15 这批，签名尾巴多了 `scriptMix` 一节）：把掺席装回量具之后，台阶一塌了一半 =====
+   * 形状：简单档 = **2 席软带冠军 + 2 席脚本**（`st:toolkit` ‖ `st:mix`，§E600-B 为"广度/可玩性"加的），
+   *   推导走 `js/pool-draw.js:scriptSeats` 这一份，页面 `ui.js:422-423` 与量具 `probe-diff-ladder` 现在是同一个函数（此前量具根本没读它）。
+   * 读数（8 seed × 1000 局 × 三档逐局配对，`recheck-mix/`）：
+   *   池 multi 简单 **17.18** ‖ 普通 15.89 ‖ 困难 13.43 ⇒ 台阶一 **+1.29 ±0.61 = 2.11σ**（刚好过线）‖ 台阶二 **+2.46 ±0.29 = 8.36σ**（未变）
+   *   池 long   简单 **16.39** ‖ 普通 16.21 ‖ 困难 13.51 ⇒ 台阶一 **+0.17 ±0.41 = 0.43σ ⇒ 分不开**（逐 seed 1.9 −0.1 0.0 1.2 −1.3 1.2 −1.2 −0.3）‖ 台阶二 **+2.70 ±0.54 = 5.02σ**（未变）
+   * ★ 一句话结论：**那两席脚本在 long 模式下比软带冠军还强**（把简单档从"人类夺 20.27%"抬到"16.39%"，即整张桌变硬 ~3.9pt），
+   *   于是 long 侧"简单 vs 普通"实测**没有台阶**；multi 侧脚本大致中性（17.66 → 17.18，在 SE 内），台阶还剩 2.1σ。
+   *   ⚠ 这也**撤回 v1.7.22 那句"long 台阶一 = 10.40σ"**：那个 10.4σ 与旧的 0.6σ 都不算错在样本量，而是两台机器各量各的桌 ——
+   *   旧批与 10-12 批都**没有掺席**，所以旧批那个"0.6σ ⇒ 分不开"的**结论**在忠实装配上重新成立了（理由完全不同）。引用时务必带上"哪台装配"。
+   * 第三条杠杆（补 后果③ 那句"只剩两条"）：**换掺进来的脚本，或直接少掺一席**。
+   *   `st:toolkit`/`st:mix` 是按"出手种类多"选的（16 种 ‖ 23 种，`docs/debug/breadth-probe.mjs`），**没按 long 模式的强度筛过** ⇒
+   *   "广度"与"在 long 上比软带冠军还强"是同一枚币的两面。要 long 侧真有台阶，就得在广度之外再设一道强度上限（这是裁定，不是今天能自己定的）。
+   * 已知边界（不假装没有）：签名仍**不含池成员名册**（一进签名，每次调池都要重跑 16000 局）；
+   *   也不含 `eps2`（2 人桌剂量），因为这张账量的是 5 人桌。2P 那批（`recheck-2p/`）是**掺席关掉**的形状（1 席 AI ⇒ `scriptSeats` 返回 seats=0），
+   *   所以它的三档台阶数仍然成立，但"2P 简单档 = 只有剂量"这句必须连着说。
    */
   /* ===== §E596（裁定）+ §E597（10-12 晚重测，这批数就是那次来的）=====
    * 剂量现状：简单 = 常数 ε=0.2 ‖ 普通与困难 = 回合斜坡 0→0.05→0.1（k5 ‖ soft）。
@@ -99,11 +130,11 @@ export const LADDER_CLAIM = {
    */
   modes: {
     'pool:multi': [
-      { from: "lv:regular", to: "lv:sparring", d: 1.77, se: 0.35, sep: true },
+      { from: "lv:regular", to: "lv:sparring", d: 1.29, se: 0.61, sep: true },
       { from: "lv:hard", to: "lv:regular", d: 2.46, se: 0.29, sep: true }
     ],
     'pool:long': [
-      { from: "lv:regular", to: "lv:sparring", d: 4.06, se: 0.39, sep: true },
+      { from: "lv:regular", to: "lv:sparring", d: 0.17, se: 0.41, sep: false },
       { from: "lv:hard", to: "lv:regular", d: 2.70, se: 0.54, sep: true }
     ],
     'single:multi': [
