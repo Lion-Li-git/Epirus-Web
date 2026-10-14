@@ -49,11 +49,24 @@ const num = v => { const x = +v; return isFinite(x) ? x : NaN; };
 const X = FEAT.map(k => { const j = H.indexOf(k); return rows.map(r => num(r[j])); });
 if (X.some(c => c.some(v => !isFinite(v)))) { console.error('⛔ 有特征列含非数值（NaN）⇒ 先修数据'); process.exit(2); }
 
-/* 秩 → 正态分（与 e287-figs.mjs 的 normalScores 同族：抗离群，且让各特征同权）*/
+/* 秩 → 正态分（与 e287-figs.mjs 的 normalScores 同族：抗离群，且让各特征同权）
+ * §E605-C **并列必须给中位秩**。上一版按"稳定排序后依次发秩"，而这 12 根轴里 0 一大堆
+ *   （drawRate ‖ zeroRate  noThreatStance  holo 四列在多数枚上就是 0）⇒ 明明**同一取值**的点
+ *   被摊开成整段正态分位，等于往距离里注入只有行序才知道的假差异。
+ *   实测（10-14 夜，同一批 794 枚、同一份 xt/yt 列，只换行序）：kNN@10 在 0.477 ‖ 0.157 之间摆，
+ *   而全对全的 Spearman 这种**置换不变量**都能从 0.430 摆到 0.095 ⇒ 顶上面那段"0.51 vs 0.08"的
+ *   对比是掷骰子掷出来的，不能跨表引用。改成中位秩之后同一批点两个行序给逐位相同的读数。
+ *   ⚠ 这条不只影响指标：t-SNE 吃的就是这份 D2 ⇒ 投影本身原来也随 coords.tsv 的行序变。 */
 function normalScores(col) {
-  const o = col.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]);
   const n = col.length, out = new Array(n);
-  for (let r = 0; r < n; r++) { const p = (r + 0.5) / n; out[o[r][1]] = Math.sqrt(2) * erfinv(2 * p - 1); }
+  const o = col.map((v, i) => [v, i]).sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]));
+  let t = 0;
+  while (t < n) {
+    let u = t; while (u + 1 < n && o[u + 1][0] === o[t][0]) u++;
+    const p = ((t + u) / 2 + 0.5) / n, v = Math.sqrt(2) * erfinv(2 * p - 1);
+    for (let q = t; q <= u; q++) out[o[q][1]] = v;
+    t = u + 1;
+  }
   return out;
 }
 function erfinv(x) {   /* Acklam 近似，够用（只用于单调变换） */
@@ -69,6 +82,10 @@ function erfinv(x) {   /* Acklam 近似，够用（只用于单调变换） */
 }
 const Z = X.map(normalScores);
 const Zc = Z.map(c => { const m = c.reduce((s, v) => s + v, 0) / N; return c.map(v => v - m); });
+/* §E605-C 把"为什么必须中位秩"印出来：并列越多，旧写法注入的假差异越大 */
+{ const tie = X.map(c => { const s = new Set(c); return N - s.size; });
+  const any = FEAT.map((k, i) => tie[i] > 0 ? k + ' ' + tie[i] + '/' + N : null).filter(Boolean);
+  console.log('  §E605-C 中位秩 ‖ 有并列的轴：' + (any.length ? any.join(' ‖ ') : '一根都没有（这一改对本表不产生差别）')); }
 
 function mulberry(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 

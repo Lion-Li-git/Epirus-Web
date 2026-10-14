@@ -3346,6 +3346,11 @@ window.addEventListener('resize', function () { if (!fit0()) return; NBK = {}; F
 if (typeof ResizeObserver !== 'undefined') { try { new ResizeObserver(refit).observe(cv); } catch (E) {} }
 /* 深链：#mode=map&3d=1&T=0.2&labels=all&color=fam&hi=31,82&bg=%23e6ebf5（mode=2d/3dw 是旧链兼容，也方便无头截图复核）*/
 var HCL = null, HT_SEEN = 0, WSEEN = 0;
+/* §E605-B 「#detail=1」：自检的**实测串原来只在 FAIL 时才吐** ⇒ 一条界翻红之前拿不到它的读数，
+ *   就没法判"该不该红"。踩过：整图重算后浮层拥挤度翻红，而"重算前是多少"在册里查不到 ——
+ *   §E488 改那条判据时记的两个实测值（8.8% ‖ 12.0%）是另一棵树上的，不能拿来当对照。
+ *   深链开关默认关 ⇒ 出厂页一条都不多打（只有 #check=1&detail=1 这条无头复验的路径上才吐）。 */
+var CHKDETAIL = 0;
 (function () { var hs = (location.hash || '').replace(/^#/, '').split('&');
   for (var i = 0; i < hs.length; i++) { var kv = hs[i].split('='); if (kv.length !== 2) continue;
     if (kv[0] === 'mode') {
@@ -3388,6 +3393,7 @@ var HCL = null, HT_SEEN = 0, WSEEN = 0;
       st.edges = kv[1]; document.getElementById('edges').value = kv[1]; }
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
+    if (kv[0] === 'detail') CHKDETAIL = +kv[1] ? 1 : 0;   /* §E605-B 只给页内自检用（#check=1&detail=1）*/
     if (kv[0] === 'gl') { GLISO = (+kv[1] === 1 ? 1 : 0); console.log('PROBE parse gl kv=' + kv[1] + ' => GLISO=' + GLISO); }
     if (kv[0] === 'gfa') GFA = Math.max(0, Math.min(1, +kv[1]));
     if (kv[0] === 'gla') GLA = Math.max(0, Math.min(1, +kv[1]));
@@ -3458,7 +3464,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   —— 看的人分不清"没跑"与"跑完没写"，而这两件事的处置完全相反。*/
   el0.style.display = 'block'; el0.textContent = 'RUNNING §E338 页内自检…';
   try {
-  function T(name, cond, got) { if (cond) { nok++; out.push('PASS ' + name); }
+  function T(name, cond, got) { if (cond) { nok++; out.push('PASS ' + name + (CHKDETAIL && got !== undefined && got !== null ? ' ‖ ' + got : '')); }
     else { nbad++; out.push('FAIL ' + name + (got === undefined || got === null ? '' : ' ‖ 实测 ' + got)); } }
   /* ===== §E372 装载完成时的"位图 vs CSS 盒"（用户 10-07：「3d 下点的位置与光标选定的坐标似乎有偏移，
    *   光标要在偏下的地方才能选中当前点；三维行为轴开过线曲面时也是」）=====

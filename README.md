@@ -3,7 +3,7 @@
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）
 重新实现的一整套 **2 人可玩、可自对战训练** 程序。
 
-> **当前版本：v1.7.11** · **人数 2~5 × 血量 3/4/5 两根正交轴**（2 人那一档规则仍冻结在 v1.0.0）+ **全人数共用一条难度阶梯** + **技能齐全 · AI 状态特征 v7，FEAT_S=213**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`（血量轴见 NP 的 **N26**，难度阶梯见 **N27**）。
+> **当前版本：v1.7.12** · **人数 2~5 × 血量 3/4/5 两根正交轴**（2 人那一档规则仍冻结在 v1.0.0）+ **全人数共用一条难度阶梯** + **技能齐全 · AI 状态特征 v7，FEAT_S=213**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`（血量轴见 NP 的 **N26**，难度阶梯见 **N27**）。
 >
 > ⚠️ 本文件**只留当前版本**：逐版改动、实测数字与门号**只记在** [`CHANGELOG.md`](CHANGELOG.md)（README 不是账本 —— 这里此前抄过四次、漂过四次，最长那次落后 63 条门）。
 > ⚠️ **老用户要点页面「用内置冠军」才会换到新包**（本机包优先：`localStorage['epirus.champion']` = 2P ‖ `['epirus.champion3p']` = 多人）。
@@ -94,9 +94,11 @@ Epirus-Web/
 │   ├─ train-worker.mjs            单 worker 评估入口
 │   └─ opp-pool.mjs / opp-champs.mjs   对手池 + "名字→包"的唯一入口
 ├─ tools/                        量具与门禁（一百多个 .mjs，每个都自带头注；这里只列入口）
-│   ├─ gate-all.mjs                ★ 一条命令跑完五道门禁（np+spec 并发，浏览器那三道排在它们之后 —— §E355b/§E365）‖ `--group=` 只跑一组 ‖ `--no-browser` 是 CI 阻断档的形状
-│   ├─ np-test.mjs                 ★ 门禁 **runner**（v1.7.8 起只负责注册 / 过滤 / 计数 / 收尾；**278 条门体不在这个文件里**）‖ **条数与末号仍由它跑完自己印**，别处不抄
-│   ├─ gates/                        ★ 278 条门体（16 个部分文件：`engine-rules`/`engine-fuzz` ‖ `train-evo`/`train-chooser`/`train-feature`/`train-env`/`train-runner` ‖ `ship-feas`/`ship-pool`/`ship-promote`/`ship-artifact` ‖ `probe-instruments`/`probe-libs` ‖ `meta-repo`/`meta-lint` ‖ `ui-contract`）+ `_ctx.mjs`（共享前导）‖ **门体面的唯一定义**在 `tools/gate-src.mjs`（凡按文件名定位门体源码的工具都必须问它要）
+│   ├─ gate-all.mjs                ★ 一条命令跑完五道门禁（np+spec 并发，浏览器那三道排在它们之后 —— §E355b/§E365）‖ `--group=` 只跑一组 ‖ `--auto` 按 git status 判这班该跑哪几组 ‖ `--no-browser` 是 CI 阻断档的形状
+│   ├─ np-test.mjs                 ★ 门禁 **runner**（v1.7.8 起只负责注册 / 过滤 / 计数 / 收尾；**门体不在这个文件里**）‖ **条数与末号仍由它跑完自己印**，别处不抄
+│   │                                  两条过滤轴：`--group=` 是**累计深度**（meta ⊂ ship ⊂ train/ui ⊂ probe ⊂ engine），`--part=` 是**互不相交的分区**（判据 = 这条门住在哪个文件，v1.7.10 起给 CI 矩阵用）⇒ 两轴不许同时给，少跑一律响亮印出来
+│   ├─ gates/                        ★ 全部门体（16 个部分文件：`engine-rules`/`engine-fuzz` ‖ `train-evo`/`train-chooser`/`train-feature`/`train-env`/`train-runner` ‖ `ship-feas`/`ship-pool`/`ship-promote`/`ship-artifact` ‖ `probe-instruments`/`probe-libs` ‖ `meta-repo`/`meta-lint` ‖ `ui-contract`）+ `_ctx.mjs`（共享前导）‖ **门体面的唯一定义**在 `tools/gate-src.mjs`（凡按文件名定位门体源码的工具都必须问它要）
+│   ├─ gate-parts-check.mjs        并集守卫：16 段拼回来必须**正好**是全量（接线 / Σ各段条数 == 总数 == 门体行数 / 没有空段 / 归属表一致）⇒ 挡的是"矩阵少跑一段却全绿"
 │   ├─ gate-src.mjs                门体面（runner → `_ctx` → 16 个部分）的**唯一定义**；`gateBodyText()` 在每个文件前插分隔行 ⇒ 门体不卷进下一个文件的脚手架
 │   ├─ spec-run.mjs                2 人引擎自测（52 用例 + 500 局 fuzz）
 │   ├─ smoke.mjs / battle-test.mjs / np-probe.mjs    CDP 真 Chrome 的三台页面仪器（冒烟 / 多人对战 / 多人探测）
@@ -110,7 +112,20 @@ Epirus-Web/
 │   ├─ behavior-profile.mjs        行为剖面（引擎装配那一侧）
 │   ├─ log-behavior.mjs            **真机栏**：从实机对局记录按席位统计行动构成（只读 `results/*.txt`）
 │   └─ start-train-server.cmd      双击启动训练服务
-├─ champion-map/                 冠军演化图 / 谱系图（`viewer.mjs` 构建出 `index.html`）+ 这几张图自己的量具与中间产物 ‖ `pool-members*.tsv` 是**冠军池的真源**（页面那两个 bundle 由它烘出来）
+├─ champion-map/                 冠军演化图 / 谱系图 —— 研究侧的数据与量具都住这一层，**给人看的产物只有 `index.html`**
+│   ├─ index.html                  ★ 产物（自包含一张 ‖ 双击即开、无外部依赖）⇒ 由 `viewer.mjs` 烘，不许手改
+│   ├─ viewer.mjs                  ★ 烘页面那台：四个视图（一维 / 地图 / 三维行为轴 / 谱系）+ 一套**页内自检**（跑法见下面"自测"）
+│   ├─ shot.mjs                    无头复验：起一个真有视口的 Chrome 截图 ‖ 或把页内自检的逐条结果打到终端（`--dump`）
+│   ├─ coords.tsv                  ★ **面板**：一行 = 一份权重（同一份权重的多个名字已折成一行 ‖ 全图只许一个考卷档）
+│   ├─ coords-aliases.tsv            副名账本：被折掉的那些名字 → 主名，并留它当年的 H/S/档/路径（指针不许悬空）
+│   ├─ lineage.tsv                   谱系图的底：家族号 + 父边 + 训出时刻 + 权重身份 ‖ 由 `lineage.mjs` 现算（幂等，重跑逐字节相同）
+│   ├─ pool-members.tsv / -2p.tsv    ★ **冠军池的真源**（页面那两个 bundle 由它烘出来）‖ `pool-hp.tsv` 是池层的 Hp 读数
+│   ├─ rebuild-coords.mjs            ★ **链子**：一条命令把面板重算出来。九步 = 几何 → Hp → path → dup → 投影 → 盖档 → 折行 → 身份 → kin
+│   │                                  本体分别是 `ruler-figs` ‖ `attach-hp` ‖ `attach-path` ‖ `attach-dup` ‖ `proj-tsne` ‖（盖档在链子里）‖ `fold-coords` ‖ `relabel-lineage` ‖ `attach-kin`
+│   ├─ 四把尺                        `ruler-measure.mjs`（考卷 H，写 `examG`）‖ `eps-full.mjs`（页面臂 Hp/De）‖ `feas.mjs`（过线）‖ `switch-gear.mjs`（整批换档）
+│   ├─ 身份只有一处                  `slot-identity.mjs`（"谁上过活槽"的唯一解析处）‖ `pack-id.mjs`（一枚包的权重身份三件套）
+│   ├─ 现测批次表                    `ruler*.tsv` ‖ `epsfull*.tsv` ‖ `feas*.tsv` ‖ `seat-*.tsv` ‖ `duel*.tsv`（一张 = 一批，按**折行之前的名字**记 ⇒ 链子第⑦步负责折回去）
+│   └─ 其余是研究量具                `directions` ‖ `gapscan` ‖ `duel-run` ‖ `pool-screen` ‖ `pool-arrange` ‖ `table-census` ‖ `point-data` …（每台自带头注写清它量什么、坑在哪）
 ├─ tests/spec.html               引擎自测（浏览器打开即可，通过数 = 用例数）
 ├─ docs/                         **给人看的长期文档** + 研究流水（两层的规矩见 `docs/README.md`）
 │   ├─ RULES-2P.md / RULES-NP.md     ★ 规则裁定版（R1..R61 + 子证 ‖ N1..N27）—— **要改规则先改这里**
@@ -121,7 +136,7 @@ Epirus-Web/
 │   ├─ skill-report*.html            几代冠军 × 实机口径的技能分布报表
 │   └─ research/                     **研究流水**：`logs/`（按天日志）‖ `handoff/`（班与班交接）‖ `reviews/`（复核·提案·决策单）‖ `archive/`（过期流水）
 ├─ results/                      用户私人对局记录（**不进仓库**：.gitignore 整目录忽略）
-└─ .github/workflows/gates.yml   CI：每笔 push / 每个 PR 跑一遍**不带分组的整轮**（np 全量 + spec 阻断；浏览器两档在观察档）
+└─ .github/workflows/gates.yml   CI：`plan`（从 runner 现读部分清单）→ **16 路 `part` 矩阵并行** → `gates` 聚合判定（check 名仍是 `gates` ⇒ 分支保护不用改 ‖ `if: always()` ⇒ 有一段红也照样点名）‖ 外加 spec ‖ 并集守卫 ‖ 哨兵 ‖ 浏览器那几档在**观察档**（逐视图收退出码写进步骤摘要）
 ```
 
 `docs/` 分成两层：**顶层 = 长期文档**（给人看的、可以直接引用的），**`docs/research/` = 研究流水**（按天的日志、交接、复核、归档 —— 那是账，不是文档）。
@@ -145,10 +160,12 @@ Epirus-Web/
 ```bash
 node tools/gate-all.mjs --auto  # ★ **本机默认用这条**：读 git status 自己判这班次该跑哪几组（§E341）；只改图/改文档 ⇒ np 侧十几道、约 10 秒
 node tools/gate-all.mjs --np --group=train   # 手工指定一组（§E335 六组：meta / ui / ship / train / probe / engine，带累计依赖）
-node tools/gate-all.mjs --np   # ★ 五道全量（np+spec+smoke+battle+演化页自检，分两波起）= **本机认证那一遍**，收工前必须跑；np 冷跑约 8~15 分钟（准确秒数由它自己印）
-                                 #   ⚠ 带 `--group=` / `--only=` 的那一遍**都不算认证**（工具会在总结论里明写"不是整轮认证"，门 D194 钉这条）
-                                 #   ⚠ 为什么分组跑还兜得住：**GitHub 每笔 push / PR 都跑一遍不带分组的 np 整轮**（`.github/workflows/gates.yml`，§E355）。
+node tools/gate-all.mjs --np   # ★ 五道全量（np+spec+smoke+battle+演化页自检，分两波起）= **本机认证那一遍**，收工前必须跑；np 冷跑的秒数由它自己印
+                                 #   ⚠ 带 `--group=` / `--part=` / `--only=` 的那一遍**都不算认证**（工具会在总结论里明写"不是整轮认证"，门 D194 钉这条）
+                                 #   ⚠ 为什么分组跑还兜得住：**GitHub 每笔 push / PR 把 16 个部分并行跑一遍，并集 = 全量**（`.github/workflows/gates.yml`，§E355 那条"必须有整轮兜底"改成了矩阵形态，`gate-parts-check.mjs` 钉并集）。
                                  #     这不是洁癖 —— D225⑩c 曾在"只跑 meta"的口径下红了五笔提交、约 11 小时没人看见。
+                                 #   本机想快：`node tools/np-test.mjs --part=<部分>` 一段一段跑（16 段互不相交 ⇒ 可以并行开），但**收工那一遍仍要整轮**
+node tools/np-test.mjs --list-parts --json    # 现读部分清单（CI 的矩阵就吃这一行 ‖ 别在别处抄第二份段名）
 node tools/spec-run.mjs    # 2 人引擎：52/52
 node tools/np-test.mjs     # 多人引擎 + 门禁：**条数与末号由工具跑完自己印**（本文件不抄）。逐条标题由工具自己印（`node tools/np-test.mjs | grep ✔`），
                            #   改一条门时**不必等整轮**：`node tools/np-test.mjs --only=D193`（10 秒）；
@@ -165,6 +182,7 @@ node tools/probe-layer-caliber.mjs ...   # 血量档要按模式**直接调引�
 node tools/eval-3p.mjs     # 3 人冠军评测：28 对手对 × 座位轮换 → 1st/top2 + 出招分布
 node tools/smoke.mjs       # 2 人页面冒烟（CDP 真 Chrome）
 node tools/np-probe.mjs    # 多人页面探测（3 人 + 5 人，CDP 真 Chrome）
+node champion-map/shot.mjs "--hash=mode=map&check=1" --dump    # 演化图的**页内自检**（四个视图换 `mode=`；加 `&detail=1` 连**绿**的那条实测读数一起吐 §E605-B —— 判"该不该红"要先看得见数）
 ```
 
 ## 训练（Node 并行）
