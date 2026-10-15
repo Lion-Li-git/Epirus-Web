@@ -1645,6 +1645,16 @@ if (KILL_REQ > 0) {
 try {
   const ARM = process.env.EPIRUS_ARM || OUT_PATH.replace(/^.*[\\/]/, '').replace(/\.js$/, '');
   const BAND_DIR = process.env.EPIRUS_BAND_DIR || 'docs/artifacts';   // 可指向临时目录 ⇒ 门 D116 能行为式测它而**不欠 D82 的账**
+  /* ⚠ 只提醒、不改行为（本班实测踩到的形状）：产物被 `EPIRUS_T3P_OUT` 改道到**仓库外**（并发臂的常规做法），
+   *   但 band 备份仍按默认落进 `docs/artifacts` ⇒ 每一臂多 6 份 `.bak`，**下一位跑 `--group=meta` 的人当场吃 `D191` 的"未登记重复"红**
+   *   （实测：11 臂 × 6 = 66 份 ⇒ `got=5 want=0`；同一族 DS 上一批也撞过一次）。
+   *   旋钮本来就有（`EPIRUS_BAND_DIR`，见上一行注释）⇒ 这里不替谁改默认值，只把"改了产物没改 band"这件事**说响**。 */
+  const OUT_ABS = /^[a-zA-Z]:[\/\\]|^\//.test(OUT_PATH);    // 盘符开头（`C:/` 或 `C:\` 都算）或以 / 开头 ⇒ 产物被改道到仓库外
+  if (!process.env.EPIRUS_BAND_DIR && OUT_ABS) {
+    console.log('[band-save] ⚠ 产物已改道到仓库外（' + OUT_PATH.slice(0, 60) + '），但 band 备份仍要写默认目录 `docs/artifacts`'
+      + ' ⇒ 并发臂会把 ' + (process.env.EPIRUS_ARM || ARM) + '-band*.bak 撒进门禁扫描区（`D191` 的"未登记重复"会红）。'
+      + '要一并改道请带 `EPIRUS_BAND_DIR=<仓库外目录>`；本行只是提醒，**行为一字未改**。');
+  }
   /* v1.5.247：目录不存在 ⇒ **自己建**，不再静默跳过。
    * 起因（09-26 实测，我自己的漏）：E35/E39 两批共 52 支臂我都把 `EPIRUS_BAND_DIR` 指到 `<tmp>/bands/<arm>`，
    * 但并发脚本只 `mkdir` 了父目录 ⇒ 每支臂都打了 `[band-save] 无 … 目录，跳过` 就**把带内候选全丢了**
