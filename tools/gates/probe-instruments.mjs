@@ -66,6 +66,43 @@ t('D34 旧包"逐位等价嵌入"：embedLegacy 的输出必须与按旧布局�
   ok(Pol.loadAny({ v: 6, a: Array.from(w6), f: 123, h: HID }).legacy === true, 'loadAny 必须把 v6 包标成 legacy 并嵌入');
   ok(Pol.loadAny({ v: 7, a: Array.from(w7), f: Pol.FEAT_S, fa: Pol.FEAT_A, h: HID }).legacy === false,
     'loadAny 读当前版本包必须走严格路径（不得嵌入）');
+
+  /* ===== v8 准备（用户 10-15 晚「先做一下自动兼容性，让 v7 包可以直接加载进后续的版本」）=====
+   * 与上面 v6→v7 那条的**关键区别**：那里 `featA` 也变了（14→22）⇒ 嵌入过的旧包必须靠 `lv` 标记走旧候选口径；
+   * 这里只加**状态维**（`featA` 不动、新维一律追加在状态段末尾）⇒ 嵌入是纯列重映射 + 补零：
+   *   · 前向输出与旧包逐位相同（新列乘 0）⇒ 不必重训、不必重发池；
+   *   · 候选口径同源（`featA` 没变）⇒ **不需要** `lv` 标记。
+   * 做法（照本腿上面的方法）：把当前形状的权重**裁掉末尾 k 个状态列**造一只"旧形状"包，再嵌回去 ⇒ 必须逐位回到原样。
+   * 变异实验（人工）：把 `canUpgradeStateOnly` 里的 `sh.featA === FEAT_A` 去掉 ⇒ 下面那条 v6 反面断言当场红。 */
+  const kUp = 6;
+  const fsOld = Pol.FEAT_S - kUp, faOld = Pol.FEAT_A, fO = fsOld + faOld, fN = Pol.FEAT_S + Pol.FEAT_A;
+  const wCur = new Float64Array(Pol.paramCount());
+  for (let i = 0; i < wCur.length; i++) wCur[i] = ((i * 40503) % 991) / 991 - 0.5;
+  for (let j = 0; j < HID; j++) for (let i = fsOld; i < Pol.FEAT_S; i++) wCur[j * fN + i] = 0;   // 模拟"旧包没有这些新维"
+  const wOld = new Float64Array(HID * fO + HID + HID + 1);
+  for (let j = 0; j < HID; j++) {
+    const o = j * fO, q = j * fN;
+    for (let i = 0; i < fsOld; i++) wOld[o + i] = wCur[q + i];
+    for (let i = 0; i < faOld; i++) wOld[o + fsOld + i] = wCur[q + Pol.FEAT_S + i];
+  }
+  for (let i = 0; i < HID; i++) wOld[HID * fO + i] = wCur[HID * fN + i];
+  for (let i = 0; i < HID; i++) wOld[HID * fO + HID + i] = wCur[HID * fN + HID + i];
+  wOld[wOld.length - 1] = wCur[wCur.length - 1];
+  const shOldU = Pol.shapeOf(wOld);
+  ok(!!shOldU && shOldU.legacy === true && shOldU.featA === Pol.FEAT_A && shOldU.featS === fsOld,
+    '状态段只增的旧形状必须被 shapeOf 认出（featS=' + fsOld + ' 更小、featA 不变）');
+  const packOldU = { v: Pol.PACK_VERSION - 1, a: Array.from(wOld), f: fsOld, fa: faOld, h: HID };
+  ok(Pol.canUpgradeStateOnly(packOldU) === true, 'canUpgradeStateOnly 必须认这只包');
+  ok(Pol.checkPack(packOldU).ok === false, '严格 checkPack 仍必须拒它（放宽的是 loadGame 这条入口，不是闸的定义）');
+  const backU = Pol.embedLegacy(wOld);
+  let worstU = 0;
+  for (let i = 0; i < wCur.length; i++) worstU = Math.max(worstU, Math.abs(backU[i] - wCur[i]));
+  ok(worstU === 0, '状态段只增的旧包嵌回去必须**逐位**等于原权重（实测最大差 ' + worstU + '）');
+  const lgU = Pol.loadGame(packOldU);
+  ok(!!lgU && lgU.length === Pol.paramCount(), 'loadGame（游戏侧入口）必须接受它并给出当前形状');
+  ok(Pol.canUpgradeStateOnly({ v: 6, a: Array.from(w6), f: 123, h: HID }) === false,
+    '反面：featA 也变过的 v6/v5 包**不许**走这条自动升级（那会静默切错候选口径，见 policy.js:777-791）');
+  ok(Pol.loadGame({ v: 6, a: Array.from(w6), f: 123, h: HID }) === null, '反面：loadGame 对 v6 包必须返回 null');
 });
 
 t('D83 转化率探针：分母必须是"可负担的决策点"（**不得用使用率**）+ 蒙特卡洛不得消耗对局随机流', function () {

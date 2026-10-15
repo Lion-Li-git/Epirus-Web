@@ -833,6 +833,28 @@
     return q;
   }
 
+  /* ===== v8 准备（用户 10-15 晚「先做一下自动兼容性，让 v7 包可以直接加载进后续的版本」）=====
+   * **状态段只增不改**的旧包，可以在**游戏侧**直接逐位等价嵌入 ⇒ 不必重训、不必重发池。
+   * 与 v6→v7 那次的关键区别：那次 `featA` 也从 14 变 22 ⇒ 嵌入过的旧包动作段有 8 列恒零、会被切到
+   *   "它从没训练过的候选口径"（:777-791 记的那次事故：破墙伤害 12.25→7.70）⇒ 必须靠容器里的 `lv` 标记走旧口径。
+   * 若**只**加状态维（`featA` 不动、新维一律**追加在状态段末尾**）：
+   *   · `shapeOf` 的通用兜底（:344-346）已能从长度反推出 `{featS: 旧, featA: FEAT_A}`；
+   *   · `embedLegacy`（:819-834）把旧的两段逐列搬进新布局、新列补 0 ⇒ **前向输出与旧包逐位相同**；
+   *   · 候选口径同源（`featA` 没变）⇒ **不需要 `lv` 标记、不需要重训、不需要重发池**（池成员继续当对手，行为不变）。
+   * 于是游戏侧唯一的门槛只是"严格闸"本身 —— 这里给它一个**显式、可被门钉住**的入口。 */
+  function canUpgradeStateOnly(o) {
+    if (!o || !Array.isArray(o.a)) return false;
+    const sh = shapeOf(o.a);
+    return !!(sh && sh.legacy && sh.featA === FEAT_A && sh.featS < FEAT_S);
+  }
+  /* 游戏侧读包入口：严格优先；只在"状态段只增"的旧形状上做逐位等价嵌入；其余一律 null（沿用旧纪律）。 */
+  function loadGame(o) {
+    const strict = unpack(o, false);
+    if (strict) return strict;
+    if (!canUpgradeStateOnly(o)) return null;
+    return embedLegacy(unpack(o, true));
+  }
+
   /* 工具/训练入口统一用这个读包：先严格（当前版本），失败再按长度嵌入（历史版本）。
    * 返回 { params, legacy, from } 或 null。 */
   function loadAny(o) {
@@ -850,6 +872,8 @@
     ACT_KEYS, FEAT_N, FEAT_S, FEAT_A, HID, PACK_VERSION, FEAT_S_V6,
     features, featuresV7, actionFeatures, value, forward, choose, shapeOf, setRng, oppAgg, oppSlots, skillHistory, OPP_SLOTS, HIST_K,
     isLegacyChooser, embedLegacy, pack, unpack, loadAny, checkPack, paramCount,
+    /* v8 准备：游戏侧"状态段只增"的自动兼容（见 canUpgradeStateOnly 的注释块） */
+    canUpgradeStateOnly, loadGame,
     /* v7 新增对外面：候选体系 + 实验掩码 + 形状表 + 旧包等价嵌入（守门/训练/工具用） */
     candidatesFor, forwardCands, chooseCandidates, setFeatMask, featMask,
     /* §E340 全息屏障→原型制御 的映射档（默认 off）：量具/评测用它成对读同一枚包的两个玩法 */

@@ -50,8 +50,9 @@
       let j;
       try { j = JSON.parse(text); } catch (e) { return { ok: false, reason: 'parse-error' }; }
       const c = P.checkPack(j);
-      if (!c.ok) return { ok: false, reason: c.reason, got: c.got, want: c.want };
-      return { ok: true, policy: P.unpack(j) };
+      /* v8 兼容（用户 10-15 晚）：**状态段只增**的旧包可以直接等价嵌入 ⇒ 不必重训/重发（见 policy.js 的 canUpgradeStateOnly） */
+      if (!c.ok && !P.canUpgradeStateOnly(j)) return { ok: false, reason: c.reason, got: c.got, want: c.want };
+      return { ok: true, policy: P.loadGame(j) };
     }
   };
 

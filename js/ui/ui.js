@@ -321,10 +321,10 @@
       const raw = localStorage.getItem('epirus.champion3p');
       if (raw) pack = JSON.parse(raw);
     } catch (e) { /* ignore */ }
-    multiChampCache = P.unpack(pack);                      // 旧版/损坏包 → null
+    multiChampCache = P.loadGame(pack);                      // 严格 → 状态段只增的旧包**逐位等价嵌入**（v8 兼容）
     multiChampFrom = multiChampCache ? 'local' : null;
     if (!multiChampCache && typeof window.EPIRUS_CHAMPION_3P !== 'undefined') {
-      multiChampCache = P.unpack(window.EPIRUS_CHAMPION_3P);   // 回退内置包
+      multiChampCache = P.loadGame(window.EPIRUS_CHAMPION_3P);   // 回退内置包
       multiChampFrom = multiChampCache ? 'builtin' : null;
     }
     return multiChampCache;
@@ -1454,7 +1454,7 @@
         return;
       }
       const c = P.checkPack(ex.pack);
-      if (!c.ok) {
+      if (!c.ok && !P.canUpgradeStateOnly(ex.pack)) {
         alert('导入失败：' + champReasonText(c.reason, c));
         return;
       }
