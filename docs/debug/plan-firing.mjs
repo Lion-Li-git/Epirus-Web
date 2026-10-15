@@ -21,7 +21,7 @@
  *       node docs/debug/plan-firing.mjs --self-test
  * 退出码：0 ‖ 2 = 自检不过 / 名单空
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, rejectUnknownFlags } from '../../tools/audit-lib.mjs';
@@ -94,6 +94,26 @@ function classifyPure(id, stylesMap, packRows, resolveFn) {
   return { kind: 'unknown', id: id };
 }
 
+/* ---------- 纯函数：**机会与抓取**（千问 10-15 14:0x，为 S32 训练批补的那一列）----------
+ * 为什么要：原来"过载炮 0 次"这一格**同形**于两种完全不同的病 ——
+ *   ① 这臂整局就没攒到 3 珠（买不起 ⇒ 不是它不想打），② 它买得起却不打（= 纪律没学出来）。
+ *   而"像不像杂货铺"的判据恰恰是 ②，所以必须把分母摊开：
+ *     可达性 reach = 买得起这一张的决策手数 ÷ 总决策手数   ← "穷不穷"
+ *     抓取率 grab  = 打了 ÷ 买得起的                       ← "看见了有没有拿"
+ * `legal` 的每一项形如 `{ key, affordable }`（引擎给选择器的同一份，不重新求值 ⇒ 口径与产品一致）。 */
+function oppTally(counts, legal) {
+  for (const l of (legal || [])) {
+    if (l && l.affordable === true && l.key) counts[l.key] = (counts[l.key] || 0) + 1;
+  }
+  return counts;
+}
+function grabStat(opps, plays, decisions) {
+  return { opps, plays, decisions,
+    reach: decisions > 0 ? opps / decisions : null,
+    grab: opps > 0 ? plays / opps : null,
+    perDecision: decisions > 0 ? plays / decisions : null };
+}
+
 if (process.argv.includes('--self-test')) {
   const E = (k, extra) => Object.assign({ key: k }, extra || {});
   let nok = 0, nbad = 0;
@@ -130,6 +150,17 @@ if (process.argv.includes('--self-test')) {
     cl('SHIPPED-Ldemo', {}, { 'Ldemo': 'x/win.bak' }, (i) => (i === 'SHIPPED-Ldemo' ? 'Ldemo' : null)).kind);
   chk('⑤d 两边都不落 ⇒ unknown（调用方必须响亮停，不许当空读数跑过去）', cl('no-such-thing', {}, {}, () => null).kind === 'unknown',
     cl('no-such-thing', {}, {}, () => null).kind);
+  /* ⑥⑦ 机会/抓取这两列的牙（千问 10-15）：判的是"分母从哪来"，不是"读数是多少"。
+   *   变异实验：把 `oppTally` 里 `l.affordable === true` 换成 `l.key`（= 把买不起的也算成机会）⇒ ⑥ 当场红。 */
+  const oc = oppTally({}, [{ key: SK.GUN, affordable: true }, { key: SK.CANNON, affordable: false }, { key: SK.RING }]);
+  chk('⑥只数 affordable===true（买不起的、缺字段的都不算机会）', oc[SK.GUN] === 1 && !oc[SK.CANNON] && !oc[SK.RING], JSON.stringify(oc));
+  const oc2 = oppTally(oppTally({}, [{ key: SK.GUN, affordable: true }]), [{ key: SK.GUN, affordable: true }]);
+  chk('⑥两次决策同一张 ⇒ 机会累计=2（分母是"决策手数"不是"局数"）', oc2[SK.GUN] === 2, oc2[SK.GUN]);
+  const gs = grabStat(10, 3, 100);
+  chk('⑦抓取=3/10=30% ‖ 可达=10/100=10% ‖ 每决策=3/100', Math.abs(gs.grab - 0.3) < 1e-9 && Math.abs(gs.reach - 0.1) < 1e-9 && Math.abs(gs.perDecision - 0.03) < 1e-9,
+    [gs.grab, gs.reach, gs.perDecision].join('/'));
+  const gs0 = grabStat(0, 0, 50);
+  chk('⑦一次都没买得起 ⇒ 抓取率必须是 null 而不是 0%（"0%"与"没量到"不许同形）', gs0.grab === null && gs0.reach === 0, String(gs0.grab));
   console.log('plan-firing 自检：' + nok + ' ok ‖ ' + nbad + ' FAIL');
   process.exit(nbad ? 2 : 0);
 }
@@ -147,6 +178,12 @@ const list = IDS.map(id => classifyPure(id, styles, PACKROWS, SID.resolve)).filt
   console.error('⛔ 认不出的 id：' + e.id + '（既不在 STYLES，也不在 coords.tsv 的 path 列 ⇒ 读数会是空的）'); return false; })
   .concat(PATHS.map(p => { const id = basename(p).replace(/\.(js|bak)$/i, ''); return { kind: 'pack', id: id, main: id, path: p }; }));
 if (!list.length) { console.error('⛔ 名单空'); process.exit(2); }
+/* ⚠ §E628（千问 10-15 复核时踩到的脚枪）：`--out=` 原来**一律**当 `champion-map/` 下的文件名解析，
+ *   传 `docs/artifacts/…` 会在**跑完全部对局之后**才 ENOENT 崩 ⇒ 白跑一整批。现在：
+ *   带路径分隔符的按**仓库根**解析，并在开跑前就把父目录建好（失败当场说，不留到最后）。 */
+const OUTNAME = arg('out', '_planfiring.tsv');
+const OUTP = OUTNAME.indexOf('/') >= 0 || OUTNAME.indexOf('\\') >= 0 ? join(ROOT, OUTNAME) : join(ROOT, 'champion-map', OUTNAME);
+mkdirSync(dirname(OUTP), { recursive: true });
 
 console.log('装配=' + MODE + ' · ' + N + ' 席镜像 · ' + GAMES + ' 局/只（计划触发只做观察，判据仍在 breadth-probe 与 probe-pool）\n');
 const rows = [];
@@ -161,12 +198,15 @@ for (const e of list) {
     label = id + ' · **冠军包** `' + e.path + '`（ε=' + EPS + (e.main !== id ? '，副名经 ' + e.main + ' 归并' : '') + '）';
   }
   const perSeat = []; let rounds = 0, games = 0;
+  /* §E628 机会分母：每一手决策都记"这张卡当时买得起吗" ⇒ 抓取率才分得出"穷"与"不打" */
+  const opps = Object.create(null); let decisions = 0;
   for (let g = 0; g < GAMES; g++) {
     const st = S.createState(MODE, { next: mulberry32(SEED + g) }, N);
     st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
     const seat = []; for (let i = 0; i < N; i++) seat.push([]);
     /* 威胁标记只能在**出手那一刻**记 ⇒ 包装一层：调用真 pick 之前先记下"当时场上有没有 5ep 或电珠的对手" */
     const wrapped = function (state, pid, legal) {
+      decisions++; oppTally(opps, legal);
       const threat = (() => { for (let i = 0; i < state.p.length; i++) { if (i === pid) continue;
         if (state.p[i].hp > 0 && (state.p[i].ep >= 5 || (state.p[i].elec || 0) >= 1)) return true; } return false; })();
       const res = pick(state, pid, legal);
@@ -206,13 +246,27 @@ for (const e of list) {
   console.log('  P6 过载炮 phase1/2/3：' + agg.cannon.join(' / ') + '（她给的花费逻辑：p1 随意 ‖ p2 在 1ep ‖ p3 在 0ep）');
   console.log('  P3 大雷 ' + agg.bigT + ' 次（每局 ' + per(agg.bigT) + '）‖ P2 避雷针 ' + agg.rod + ' 次，其中' +
     '出手那回合场上确有 5ep/电珠威胁的 ' + agg.rodPlanned + ' 次' + (agg.rod ? '（' + (agg.rodPlanned / agg.rod * 100).toFixed(0) + '%）' : ''));
+  /* §E628 这一行才是"学没学出来"的主语：可达性说"穷不穷"，抓取率说"看见了拿不拿"。
+   *   ⚠ 抓取率 > 100% 不是bug，是**空放**（选择器交了一张当时买不起的卡 ⇒ 机会分母里没它）⇒ 当场说出来，不静默。 */
+  const PLAN_KEYS = [[SK.CANNON, '过载炮'], [SK.CURSE, '贴贴'], [SK.FIRESTORM, '天火'], [SK.RING, '聚能环'], [SK.BIG_T, '大雷'], [SK.ROD, '避雷针']];
+  const grabParts = [], whiff = [];
+  for (const [k, nm] of PLAN_KEYS) {
+    const gs2 = grabStat(opps[k] || 0, kindsAll[k] || 0, decisions);
+    if (gs2.plays > gs2.opps) whiff.push(nm + ' ' + gs2.plays + '/' + gs2.opps);
+    grabParts.push(nm + ' 可达 ' + (gs2.reach === null ? '—' : (100 * gs2.reach).toFixed(1) + '%') +
+      ' 抓取 ' + (gs2.grab === null ? '—（从没买得起过）' : (100 * gs2.grab).toFixed(1) + '%') +
+      '（' + gs2.plays + '/' + gs2.opps + '）');
+  }
+  console.log('  机会与抓取（§E628 · 决策 ' + decisions + ' 手）：' + grabParts.join(' ‖ ') +
+    (whiff.length ? ' ‖⚠ 空放（出手数 > 买得起的决策数）：' + whiff.join(' ‖') : ''));
   const top = Object.keys(kindsAll).sort((a, b) => kindsAll[b] - kindsAll[a]).slice(0, 12).map(k => (NAME[k] || k) + '×' + kindsAll[k]);
   console.log('  出手谱：' + top.join(' ‖ '));
   rows.push({ id: id, games: games, kinds: agg.kinds.size, ringMax: agg.ringMax, ringRuns: per(agg.ringRuns),
     curseMax: agg.curseMax, fireMax: agg.fireMax, combos: per(agg.combos), bigT: per(agg.bigT), rod: agg.rod, rodPlanned: agg.rodPlanned,
-    p1: agg.cannon[0], p2: agg.cannon[1], p3: agg.cannon[2], rounds: (rounds / games).toFixed(1) });
+    p1: agg.cannon[0], p2: agg.cannon[1], p3: agg.cannon[2], rounds: (rounds / games).toFixed(1),
+    decisions: decisions,
+    grab: PLAN_KEYS.map(([k, nm]) => nm + '=' + ((opps[k] || 0) > 0 ? (100 * (kindsAll[k] || 0) / opps[k]).toFixed(1) + '%' : '—') + '/' + (opps[k] || 0)).join(' ') });
 }
-const OUTP = join(ROOT, 'champion-map', arg('out', '_planfiring.tsv'));
-writeFileSync(OUTP, 'id\tgames\tkinds\tringMax\tringRunsPerGame\tcurseMax\tfireMax\tcombosPerGame\tbigTPerGame\trod\trodPlanned\tcannonP1\tcannonP2\tcannonP3\trounds\n' +
-  rows.map(r => [r.id, r.games, r.kinds, r.ringMax, r.ringRuns, r.curseMax, r.fireMax, r.combos, r.bigT, r.rod, r.rodPlanned, r.p1, r.p2, r.p3, r.rounds].join('\t')).join('\n') + '\n');
-console.log('\n已写 ' + arg('out', '_planfiring.tsv') + '（' + rows.length + ' 行 · champion-map 下 `_*` 已被 .gitignore 挡掉，不入库）');
+writeFileSync(OUTP, 'id\tgames\tkinds\tringMax\tringRunsPerGame\tcurseMax\tfireMax\tcombosPerGame\tbigTPerGame\trod\trodPlanned\tcannonP1\tcannonP2\tcannonP3\trounds\tdecisions\tgrab(抓取率/机会手数)\n' +
+  rows.map(r => [r.id, r.games, r.kinds, r.ringMax, r.ringRuns, r.curseMax, r.fireMax, r.combos, r.bigT, r.rod, r.rodPlanned, r.p1, r.p2, r.p3, r.rounds, r.decisions, r.grab].join('\t')).join('\n') + '\n');
+console.log('\n已写 ' + OUTP + '（' + rows.length + ' 行 ‖ 落在 `champion-map/` 下的 `_*` 已被 .gitignore 挡掉，不入库）');
