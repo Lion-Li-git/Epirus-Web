@@ -250,7 +250,7 @@ writeFileSync(join(ROOT, arg('out', 'champion-map/_clone-report.json')), JSON.st
 /* ===== v1.7.50：**把克隆权重写成能热启动的包**（用户 10-15 晚：「用克隆出来的权重做热启动」）=====
  * 只有与引擎同宽的那一档 HID 能写：`P.pack` 写的是 `paramCount()` 那个布局，别的宽度装不进去。
  * 写完**当场读回自证**：走热启动那条路（`P.unpack(o,true)` → `embedLegacy`，与 `tools/train-3p.mjs:1091` 逐字同一套）必须拿回形状正确的权重。 */
-const PACKREL = arg('pack', 'champion-map/_clone-HID' + P.HID + '.js');
+const PACKREL = arg('pack', 'docs/artifacts/e608-out/clone-HID' + P.HID + '.js');
 const PACKP = join(ROOT, PACKREL);
 const mine24 = out.find(o => o.HID === P.HID && o.w);
 if (!mine24) {
