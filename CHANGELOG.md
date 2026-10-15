@@ -1,3 +1,29 @@
+## v1.7.50 — 10-15 夜（DS 执行用户三条之第 1 条）：**监督克隆脚本正式入库**（`docs/debug/supervised-clone.mjs`，原 `docs/artifacts/e608-out/s33-clone.mjs`）‖ 新增 `--pack=` ⇒ 克隆权重直接可做**热启动源**
+
+### 一句话结论
+用户 10-15 晚（转述 claude 给的顺序）：「先把 v1.7.42 那个监督克隆脚本正式入库。它现在在 ignore 区里，是**目前最重要的资产**」。
+⇒ 本笔把它从 ignore 区升成一等公民，并补上它缺的那一环：**产出可热启动的权重包**。
+同轮另两条（**用克隆权重热启动 vs 冷启动** · **每条件 ≥2 个不同种子** · **进化期加一条不退火的约束**；然后**看哪些分支还学不会再定加哪几维**）**下一步做**，本笔只做第 1 条。
+
+### 一、入库（`docs/artifacts/e608-out/s33-clone.mjs` → `docs/debug/supervised-clone.mjs`）
+- 与原件**逐字节同源**（复制后原地改），只动**工程面**：`ROOT` 3 级上溯 → 2 级 ‖ `import` → `../../tools/audit-lib.mjs` ‖ 加 `rejectUnknownFlags`（白名单 `games/mode/seed/hid/epochs/out/pack/frac/self-test`）‖
+  `--seed=`（原来只认 env `EPIRUS_SEED`）‖ 报告路径从写死的 ignore 区改成 `--out=`（默认 `champion-map/_clone-report.json`，`_*` gitignored）。
+- **训练学与损失函数一字未动**（Adam `lr=0.008` / batch 32 / 温度 0.6 / 技能层 max-pool 的次梯度 / 按局切 `0.72` —— 都是他那笔验证过的）。
+- 保留它最强的纪律：**逐位自证**（采集时用参照权重比 `EpirusPolicy.value`，`max|Δ| > 1e-9` ⇒ **整批作废** `exit 3`）；本笔另加 **`--self-test`** 把这条**单独**跑（不跑对局 ⇒ 以后可被门直接钉住）。
+
+### 二、补上"能热启动"这一环（`--pack=`）
+- `trainSplit` 现在把训练好的权重带出来；`--pack=<路径>` 写成 `window.EPIRUS_CHAMPION_3P = {P.pack(w)};`。
+  **只有与引擎同宽的那一档 HID 能写**（别的宽度装不进 `paramCount()` 的布局 ⇒ 不写并说明原因）。
+- 写完**当场读回自证**：走热启动那条路（`P.unpack(o,true)` → `embedLegacy`，与 `tools/train-3p.mjs:1091` **逐字同一套**）必须拿回形状正确的权重。
+- 热启动接口（读 `tools/train-3p.mjs:1079-1109` 确认）：`EPIRUS_HOTSTART=1` + `EPIRUS_SEEDPACK=<该包>`；**读不出就 `exit 5`**（拒绝静默冷启动 —— 09-22 臂 7/8 白跑的教训）。
+
+### 三、验过什么
+- `node --check` ✔ ‖ `--self-test` ⇒ 比对 9 个技能 **`max|Δ| = 0.00e+0`（完全相等）** ✔
+- 小真跑（6 局 · 2 epoch · `--hid=24`）：采集 **456** 个决策 ‖ 现场自证 `0.00e+0` ✔ ‖ 切分 289/167（按局 4/2）‖ **写包成功 + 读回自证 ✓**（`champion-map/_clone-smoke.js` · 5689 参数 · 留出 top-1 51.5%）
+- 未动引擎/在册表/门（**278 条**，本笔没有加门）；规则指纹仍 **`a78cda4c`**（本笔只碰 `docs/`）。
+
+> 下一步（用户已给的顺序）：**用克隆权重热启动 · 5 人 long · 对照冷启动 · 每条件 ≥2 个不同种子 · 进化期加一条不退火约束**（`EPIRUS_IMIT_FRAC=1` 可让示范全程不退火；"与教师一致率"那把尺是 `docs/artifacts/e608-out/s34-teacher-ceil.mjs`，要不要也一并入库归用户裁）。
+
 ## v1.7.49 — 10-15 夜（DS 执行用户两条：「先做一下自动兼容性」+「把这个维度报告记一下吧」）：**"状态段只增"的旧包可在游戏侧逐位等价嵌入**（⇒ 加维不必重训/重发池）‖ 落 `docs/research/FEATURE-REPORT-2026-10-15-ds.md`
 
 ### 一句话结论
