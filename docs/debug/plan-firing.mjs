@@ -21,19 +21,21 @@
  *       node docs/debug/plan-firing.mjs --self-test
  * 退出码：0 ‖ 2 = 自检不过 / 名单空
  */
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sandbox, rejectUnknownFlags } from '../../tools/audit-lib.mjs';
+import { sandbox, loadChamp, rejectUnknownFlags } from '../../tools/audit-lib.mjs';
+import * as slotIdentity from '../../champion-map/slot-identity.mjs';   /* §E604：副名 ⇒ 主名的唯一翻译处 */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
-rejectUnknownFlags(process.argv.slice(2), ['ids', 'games', 'n', 'mode', 'out', 'seed', 'self-test'], 'plan-firing');
+rejectUnknownFlags(process.argv.slice(2), ['ids', 'games', 'n', 'mode', 'out', 'seed', 'eps', 'self-test'], 'plan-firing');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const GAMES = Number(arg('games', 40)) || 40;
 const N = Number(arg('n', 5));
 const MODE = arg('mode', 'multi');
 const IDS = String(arg('ids', 'st:toolkit')).split(',').map(s => s.trim()).filter(Boolean);
+const EPS = Number(arg('eps', 0)) || 0;   /* 只对**冠军包**那一侧有效（脚本席没有 ε 这根轴） */
 
 const W = sandbox(ROOT);
 const R = W.EpirusRules, S = W.EpirusState, P = W.EpirusPlay, BT = W.EpirusBots;
@@ -75,6 +77,21 @@ function analyze(seatEvents) {
 }
 /* 她的"贴3次符咒然后连续引爆两次"= 连贴满 3 手的窗口之后，连爆两发 ⇒ analyze() 里直接计数（combos） */
 
+/* ---------- 纯函数：一个 id 量的是**脚本**还是**冠军包**（纯 ⇒ 自检能喂合成夹具钉它） ----------
+ * 为什么要这一层（DS 10-15，用户点题的缺口）：本台原来**只认风格 id**（`--ids=T8-s114` ⇒ `⛔ 认不出的风格 id`），
+ *   而"计划层触发成什么形状"这个判据对**冠军包**同样要量 —— 用户问的是"能不能得到一个很接近杂货铺的**冠军**"，
+ *   验收就必须能量包里那一侧。发生率不够用（实测：冠军的聚能环 5.7/局、大雷 1.2/局，都不比杂货铺低），
+ *   真正要读的是**"按计划 / 乱按"那种条件列**，而那正是本台在数的东西。
+ * 三条判据：① 在 STYLES 里 ⇒ `script`；② 否则按 `slot-identity.resolve` 翻副名后能落在 `coords.tsv` 的 path 列 ⇒ `pack`；
+ *   ③ 两边都不落 ⇒ `unknown`（调用方**响亮停**，不许当空读数跑过去）。 */
+function classifyPure(id, stylesMap, packRows, resolveFn) {
+  if (stylesMap && stylesMap[id]) return { kind: 'script', id: id };
+  const main = (typeof resolveFn === 'function' ? (resolveFn(id) || id) : id);
+  const path = (packRows && (packRows[id] || packRows[main])) || '';
+  if (path) return { kind: 'pack', id: id, main: main, path: path };
+  return { kind: 'unknown', id: id };
+}
+
 if (process.argv.includes('--self-test')) {
   const E = (k, extra) => Object.assign({ key: k }, extra || {});
   let nok = 0, nbad = 0;
@@ -99,19 +116,47 @@ if (process.argv.includes('--self-test')) {
     g.cannon[0] === 2 && g.cannon[1] === 1 && g.cannon[2] === 1, JSON.stringify(g.cannon));
   const r = analyze([E(SK.ROD, { threat: true }), E(SK.ROD, { threat: false })]);
   chk('④避雷针"按计划/乱按"分得开（2 次里 1 次有威胁）', r.rod === 2 && r.rodPlanned === 1, r.rod + '/' + r.rodPlanned);
+  /* ⑤ 认包那条路（DS 10-15 补的缺口）：纯函数 ⇒ 合成夹具直接喂，不必跑局。
+   *   变异实验（人工）：把 classifyPure 里 `packRows[...]` 那支摘掉 ⇒ ⑤b/⑤c 当场红。 */
+  const cl = (id, st, pr, rs) => classifyPure(id, st, pr, rs);
+  chk('⑤a STYLES 里的 id ⇒ script', cl('st:toolkit', { 'st:toolkit': {} }, {}, () => null).kind === 'script',
+    cl('st:toolkit', { 'st:toolkit': {} }, {}, () => null).kind);
+  chk('⑤b coords 的 path 列里有 ⇒ pack', cl('T8-s114', {}, { 'T8-s114': 'a/b.js' }, () => null).kind === 'pack',
+    cl('T8-s114', {}, { 'T8-s114': 'a/b.js' }, () => null).kind);
+  chk('⑤c 副名先翻主名再查表（SHIPPED-Ldemo ⇒ Ldemo ⇒ pack）',
+    cl('SHIPPED-Ldemo', {}, { 'Ldemo': 'x/win.bak' }, (i) => (i === 'SHIPPED-Ldemo' ? 'Ldemo' : null)).kind === 'pack',
+    cl('SHIPPED-Ldemo', {}, { 'Ldemo': 'x/win.bak' }, (i) => (i === 'SHIPPED-Ldemo' ? 'Ldemo' : null)).kind);
+  chk('⑤d 两边都不落 ⇒ unknown（调用方必须响亮停，不许当空读数跑过去）', cl('no-such-thing', {}, {}, () => null).kind === 'unknown',
+    cl('no-such-thing', {}, {}, () => null).kind);
   console.log('plan-firing 自检：' + nok + ' ok ‖ ' + nbad + ' FAIL');
   process.exit(nbad ? 2 : 0);
 }
 
 /* ---------- 跑：N 席镜像自对局（与 breadth-probe / mirrorHealth 同一套装配）---------- */
 const styles = {}; (BT.STYLES || []).forEach(s => { styles[s.id] = s; });
-const list = IDS.filter(id => { if (!styles[id]) { console.error('⛔ 认不出的风格 id：' + id + '（STYLES 里没有这一只 ⇒ 读数会是空的）'); return false; } return true; });
+/* 包那一侧的两件与 `tools/usage-probe.mjs` **逐字同源**：`coords.tsv` 的 path 列（+ `slot-identity` 翻副名）与 `loadChamp`/`policyChooserN` */
+const CO = readFileSync(join(ROOT, 'champion-map', 'coords.tsv'), 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
+const ch0 = CO[0].split('\t'), iId = ch0.indexOf('id'), iPth = ch0.indexOf('path');
+const PACKROWS = {}; if (iId >= 0 && iPth >= 0) for (const l of CO.slice(1)) { const c = l.split('\t'); if (c[iId] && c[iPth]) PACKROWS[c[iId]] = c[iPth]; }
+const SID = slotIdentity.load(ROOT);
+const T = W.EpirusTrainer;
+const list = IDS.map(id => classifyPure(id, styles, PACKROWS, SID.resolve)).filter(e => {
+  if (e.kind !== 'unknown') return true;
+  console.error('⛔ 认不出的 id：' + e.id + '（既不在 STYLES，也不在 coords.tsv 的 path 列 ⇒ 读数会是空的）'); return false; });
 if (!list.length) { console.error('⛔ 名单空'); process.exit(2); }
 
 console.log('装配=' + MODE + ' · ' + N + ' 席镜像 · ' + GAMES + ' 局/只（计划触发只做观察，判据仍在 breadth-probe 与 probe-pool）\n');
 const rows = [];
-for (const id of list) {
-  const pick = styles[id].pick;
+for (const e of list) {
+  const id = e.id;
+  let pick, label;
+  if (e.kind === 'script') { pick = styles[id].pick; label = id + ' · **脚本**'; }
+  else {
+    let params; try { params = loadChamp(W, e.path); } catch (x) { console.error('  ⚠ ' + id + ' 读包失败：' + String(x.message || x).split('\n')[0]); continue; }
+    if (!params || !params.length) { console.error('  ⚠ ' + id + ' 读不出参数（' + e.path + '）'); continue; }
+    pick = T.policyChooserN(params, EPS);
+    label = id + ' · **冠军包** `' + e.path + '`（ε=' + EPS + (e.main !== id ? '，副名经 ' + e.main + ' 归并' : '') + '）';
+  }
   const perSeat = []; let rounds = 0, games = 0;
   for (let g = 0; g < GAMES; g++) {
     const st = S.createState(MODE, { next: mulberry32(SEED + g) }, N);
@@ -151,7 +196,7 @@ for (const id of list) {
     Object.keys(a.kinds).forEach(k => { kindsAll[k] = (kindsAll[k] || 0) + a.kinds[k]; if (k !== SK.JI) agg.kinds.add(k); });
   }
   const per = (v) => (v / games).toFixed(2);
-  console.log(styles[id].name + '（' + id + '）· ' + games + ' 局 · 局长 ' + (rounds / games).toFixed(1) + ' 回合 ‖ 出手种类 ' + agg.kinds.size);
+  console.log((e.kind === 'script' ? styles[id].name : id) + '（' + label + '）· ' + games + ' 局 · 局长 ' + (rounds / games).toFixed(1) + ' 回合 ‖ 出手种类 ' + agg.kinds.size);
   console.log('  P1 聚能环：最长连击 ' + agg.ringMax + ' 手 ‖ 开环 ' + agg.ringRuns + ' 段（平均每局 ' + per(agg.ringRuns) + ' 段）');
   console.log('  P4 贴爆（时序窗口）：贴贴 ' + agg.curse + ' 次（最长连贴 ' + agg.curseMax + '）‖ 天火 ' + agg.fire +
     ' 次（最长连爆 ' + agg.fireMax + '）‖ **完成"连贴3→连爆2"组合 ' + agg.combos + ' 次**（每局 ' + per(agg.combos) + '）');
