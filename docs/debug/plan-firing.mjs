@@ -248,7 +248,7 @@ for (const e of list) {
     '出手那回合场上确有 5ep/电珠威胁的 ' + agg.rodPlanned + ' 次' + (agg.rod ? '（' + (agg.rodPlanned / agg.rod * 100).toFixed(0) + '%）' : ''));
   /* §E628 这一行才是"学没学出来"的主语：可达性说"穷不穷"，抓取率说"看见了拿不拿"。
    *   ⚠ 抓取率 > 100% 不是bug，是**空放**（选择器交了一张当时买不起的卡 ⇒ 机会分母里没它）⇒ 当场说出来，不静默。 */
-  const PLAN_KEYS = [[SK.CANNON, '过载炮'], [SK.CURSE, '贴贴'], [SK.FIRESTORM, '天火'], [SK.RING, '聚能环'], [SK.BIG_T, '大雷'], [SK.ROD, '避雷针']];
+  const PLAN_KEYS = [[SK.CANNON, '过载炮'], [SK.CURSE, '贴贴'], [SK.FIRESTORM, '天火'], [SK.RING, '聚能环'], [SK.BIG_T, '大雷'], [SK.ROD, '避雷针'], [SK.MINI_T, '小雷']];
   const grabParts = [], whiff = [];
   for (const [k, nm] of PLAN_KEYS) {
     const gs2 = grabStat(opps[k] || 0, kindsAll[k] || 0, decisions);
