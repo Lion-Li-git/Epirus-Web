@@ -262,11 +262,14 @@ for (const e of list) {
   const top = Object.keys(kindsAll).sort((a, b) => kindsAll[b] - kindsAll[a]).slice(0, 12).map(k => (NAME[k] || k) + '×' + kindsAll[k]);
   console.log('  出手谱：' + top.join(' ‖ '));
   rows.push({ id: id, games: games, kinds: agg.kinds.size, ringMax: agg.ringMax, ringRuns: per(agg.ringRuns),
-    curseMax: agg.curseMax, fireMax: agg.fireMax, combos: per(agg.combos), bigT: per(agg.bigT), rod: agg.rod, rodPlanned: agg.rodPlanned,
-    p1: agg.cannon[0], p2: agg.cannon[1], p3: agg.cannon[2], rounds: (rounds / games).toFixed(1),
+    curseMax: agg.curseMax, fireMax: agg.fireMax, combos: per(agg.combos), bigT: per(agg.bigT), curse: per(agg.curse), rod: agg.rod, rodPlanned: agg.rodPlanned,
+    p1: agg.cannon[0], p2: agg.cannon[1], p3: agg.cannon[2], rounds: (rounds / games).toFixed(1), rpg: (rounds / games),
     decisions: decisions,
     grab: PLAN_KEYS.map(([k, nm]) => nm + '=' + ((opps[k] || 0) > 0 ? (100 * (kindsAll[k] || 0) / opps[k]).toFixed(1) + '%' : '—') + '/' + (opps[k] || 0)).join(' ') });
 }
-writeFileSync(OUTP, 'id\tgames\tkinds\tringMax\tringRunsPerGame\tcurseMax\tfireMax\tcombosPerGame\tbigTPerGame\trod\trodPlanned\tcannonP1\tcannonP2\tcannonP3\trounds\tdecisions\tgrab(抓取率/机会手数)\n' +
-  rows.map(r => [r.id, r.games, r.kinds, r.ringMax, r.ringRuns, r.curseMax, r.fireMax, r.combos, r.bigT, r.rod, r.rodPlanned, r.p1, r.p2, r.p3, r.rounds, r.decisions, r.grab].join('\t')).join('\n') + '\n');
+/* ⚑ §E628 的**第二条脚枪**（千问 10-15 复核 §5④ 指认）：跨臂比"次/局"会被**局长**带走（实测 A 22.0 ‖ B 13.2 ‖ C 14.2 回合 ⇒ 差到 70%）
+ *   ⇒ 末尾追加 4 列"次/回合"；**旧列列序与列名一字未动**（老消费者不受影响），新增列只在尾部。 */
+writeFileSync(OUTP, 'id\tgames\tkinds\tringMax\tringRunsPerGame\tcurseMax\tfireMax\tcombosPerGame\tbigTPerGame\trod\trodPlanned\tcannonP1\tcannonP2\tcannonP3\trounds\tdecisions\tgrab(抓取率/机会手数)\tcursePerGame\tbigTPerRound\tcursePerRound\tringRunsPerRound\tcombosPerRound\n' +
+  rows.map(r => [r.id, r.games, r.kinds, r.ringMax, r.ringRuns, r.curseMax, r.fireMax, r.combos, r.bigT, r.rod, r.rodPlanned, r.p1, r.p2, r.p3, r.rounds, r.decisions, r.grab,
+    r.curse, (r.bigT / r.rpg).toFixed(3), (r.curse / r.rpg).toFixed(3), (r.ringRuns / r.rpg).toFixed(3), (r.combos / r.rpg).toFixed(3)].join('\t')).join('\n') + '\n');
 console.log('\n已写 ' + OUTP + '（' + rows.length + ' 行 ‖ 落在 `champion-map/` 下的 `_*` 已被 .gitignore 挡掉，不入库）');
