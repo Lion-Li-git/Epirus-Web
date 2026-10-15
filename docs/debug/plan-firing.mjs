@@ -22,20 +22,22 @@
  * 退出码：0 ‖ 2 = 自检不过 / 名单空
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, rejectUnknownFlags } from '../../tools/audit-lib.mjs';
 import * as slotIdentity from '../../champion-map/slot-identity.mjs';   /* §E604：副名 ⇒ 主名的唯一翻译处 */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
-rejectUnknownFlags(process.argv.slice(2), ['ids', 'games', 'n', 'mode', 'out', 'seed', 'eps', 'self-test'], 'plan-firing');
+rejectUnknownFlags(process.argv.slice(2), ['ids', 'paths', 'games', 'n', 'mode', 'out', 'seed', 'eps', 'self-test'], 'plan-firing');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const GAMES = Number(arg('games', 40)) || 40;
 const N = Number(arg('n', 5));
 const MODE = arg('mode', 'multi');
 const IDS = String(arg('ids', 'st:toolkit')).split(',').map(s => s.trim()).filter(Boolean);
 const EPS = Number(arg('eps', 0)) || 0;   /* 只对**冠军包**那一侧有效（脚本席没有 ε 这根轴） */
+/* `--paths=`：直接量**还没入册**的产物（训练臂、临时件）——照 `usage-probe` 的同名旗标，id 取文件名 */
+const PATHS = String(arg('paths', '')).split(',').map(s => s.trim()).filter(Boolean);
 
 const W = sandbox(ROOT);
 const R = W.EpirusRules, S = W.EpirusState, P = W.EpirusPlay, BT = W.EpirusBots;
@@ -142,7 +144,8 @@ const SID = slotIdentity.load(ROOT);
 const T = W.EpirusTrainer;
 const list = IDS.map(id => classifyPure(id, styles, PACKROWS, SID.resolve)).filter(e => {
   if (e.kind !== 'unknown') return true;
-  console.error('⛔ 认不出的 id：' + e.id + '（既不在 STYLES，也不在 coords.tsv 的 path 列 ⇒ 读数会是空的）'); return false; });
+  console.error('⛔ 认不出的 id：' + e.id + '（既不在 STYLES，也不在 coords.tsv 的 path 列 ⇒ 读数会是空的）'); return false; })
+  .concat(PATHS.map(p => { const id = basename(p).replace(/\.(js|bak)$/i, ''); return { kind: 'pack', id: id, main: id, path: p }; }));
 if (!list.length) { console.error('⛔ 名单空'); process.exit(2); }
 
 console.log('装配=' + MODE + ' · ' + N + ' 席镜像 · ' + GAMES + ' 局/只（计划触发只做观察，判据仍在 breadth-probe 与 probe-pool）\n');
