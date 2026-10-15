@@ -138,7 +138,9 @@ t('D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但�
    *   ⚠ 这里原来写的是 `(t.ramp ? 0.2 : t.eps)` —— 一份手抄的规则，而且抄的还是**旧顶点**：
    *   下午把顶点降到 0.1 之后这条腿一直在按 0.2 判，注释却写着"不许抄第二份"。
    *   ⇒ 现在它和页面共用 `BT.tierEps`，产品改形状时这条腿自己跟着变（D153 钉住那份字面值）。 */
-  const eff2 = function (t) { return typeof t.eps2 === 'number' ? t.eps2 : BT.tierEps(t, 3); };
+  /* §E625：这里原来自己写了一份"几个人才用 eps2"的三元（与本夜在 ui.js / 两把量具上抓到的同一族病）
+   *   ⇒ 改成调 `bots.js:tierEpsAt` 那一份。**判据内容逐字不变**：`tierEpsAt(t, 2, 3)` ≡ `typeof t.eps2 === 'number' ? t.eps2 : tierEps(t, 3)`。 */
+  const eff2 = function (t) { return BT.tierEpsAt(t, 2, 3); };
   for (let i = 1; i < champs.length; i++) {
     ok(eff2(champs[i]) <= eff2(champs[i - 1]), '②a2 2 人桌的剂量也不许翻序：第 ' + i + ' 档（' + champs[i].id + ' 有效 eps=' +
       eff2(champs[i]) + '）不许比上一档（' + champs[i - 1].id + ' 有效 eps=' + eff2(champs[i - 1]) + '）更能探索'

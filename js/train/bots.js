@@ -1361,9 +1361,11 @@
         + '这一档的强度**全部来自带**（10-12 18:1x 重测：同剂量换带 long 差 9.33pt = 7.3σ，multi 只差 2.47pt = 当时判"分不开"；'
         + '而同带换剂量只值 0.5pt）。'
         + '⚠ **那句"multi 侧分不开"已被 §E609 撤掉**：同一对差重测到 8 个 seed（+2.46 ±0.29pt = **8.36σ**）⇒ 它是**样本量不够**，不是台阶不存在（在册账已换新）。'
-        + '人类席夺冠 13.43%（multi）‖ 13.51%（long）（10-12 那批是 13.7 ‖ 10.1 —— long 侧那 3.4pt 的差是**旧带形状**给的，拆带后困难档本身没怎么动，动的是它下面那一档）。⚠ 2 人桌读 `eps2: 0`（每手取最优）—— **不是"那里没池"**：§E599 裁定那里走 2P 原生那份池（`pool-members-2p.tsv`，hard 2 ‖ mid 3 ‖ soft 2），§E609 第一次量到它的三档台阶（multi 3.98σ ‖ 2.87σ ‖ long 8.39σ ‖ 14.22σ）；'
-        + '⛔ 但那批 2P 读数的**主语被 §E613 卡出一个分界**：v1.7.29 之前页面上 2 人桌的池从未真的生效（负状态被粘住 ⇒ 真页面退回那一枚内置 2P 冠军），'
-        + '所以对那之前的玩家而言那些数是"若 2P 池按裁定生效会长什么样"；**v1.7.29 修好（B）之后它才等于现状**（2P 重测留给下一笔，日志 DONE-22）。' },
+        + '人类席夺冠 13.43%（multi）‖ 13.51%（long）（10-12 那批是 13.7 ‖ 10.1 —— long 侧那 3.4pt 的差是**旧带形状**给的，拆带后困难档本身没怎么动，动的是它下面那一档）。⚠ 2 人桌读 `eps2: 0`（每手取最优）—— **不是"那里没池"**：§E599 裁定那里走 2P 原生那份池（`pool-members-2p.tsv`，hard 2 ‖ mid 3 ‖ soft 2）；'
+        + '★ 2 人桌现状三档台阶（**§E625 修正剂量后重测**，8 seed×1000 逐局配对）：困难 **13.71%（multi）‖ 14.99%（long）** ‖ 台阶二 +3.79 ±0.66 = 5.70σ ‖ +8.38 ±0.56 = 15.09σ（`docs/artifacts/e608-out/s27-2p-refit.txt`）。'
+        + '⛔ **§E609/§E622 那两批 2P 读数（multi 3.98σ ‖ 2.87σ ‖ long 8.39σ ‖ 14.22σ）已作废**：那时两把量具都**不读 `eps2`**（简单喂 0.2 而不是 0.5 ‖ 困难喂 0.1 而不是 0）⇒ 量的不是产品那张桌；'
+        + '同一族病 10-12 已犯过一次（斜坡字面值两份，D153 就是为它写的），这次漂的是**人数**那一维 ⇒ 修法是一处定义三处调用（`bots.js:tierEpsAt`），D153 的钉法跟着搬。'
+        + '⚠ 另外 **v1.7.29 之前**页面上 2 人桌的池从未真的生效（负状态被粘住 ⇒ 真页面退回那一枚内置 2P 冠军），那之前的玩家遇到的仍是单包（日志 DONE-14/22）。' },
     /* `lv:hunter`（极限 · 读招）§E596 从难度表里摘掉：它本来就是"整桌上桌的脚本"而不是冠军档，
      *   且实测与最强冠军档分不开（9.5 对 8.9 ‖ 7.9 对 8.0，都在 1σ 内）。摘掉后 `st:combocounter`
      *   自动回到下拉第二组"风格"里（`ui.js:syncDiffOptions` 的 `claimed` 去重），玩家没有失去任何东西。 */
@@ -1381,6 +1383,16 @@
     if (!tier.ramp) return tier.eps;
     return round <= 1 ? 0 : (round === 2 ? 0.05 : tier.eps);
   }
+  /* §E625（10-15 早）：**"几个人才用 `eps2`"这条规则也只写这一遍**。
+   *   以前它只活在 `ui.js:716` 那一行的三元里（注释还写着"这是页面才知道的事"），而两把量具
+   *   （`probe-diff-ladder` 与 `tier-census`）**各自直接读 `tier.eps`** ⇒ 它们在 2 人桌上量的是
+   *   产品不喂的那份剂量（简单 0.2 而不是 0.5 ‖ 困难 0.1 而不是 0）。§E622 那批 2 人桌读数就是这么来的（已重测并更正，见日志 DONE-27）。
+   *   ⇒ 这正是 10-12 那次"斜坡字面值两份、量具那份漂了"的**同一族**，只是这次漂的是人数那维。
+   *   ⚠ `nPlayers > 2` 时逐字等于 `tierEps(tier, round)` ⇒ 所有在册的 5 人桌读数不受影响（回归实测在 DONE-27）。 */
+  function tierEpsAt(tier, nPlayers, round) {
+    if (nPlayers <= 2 && tier && typeof tier.eps2 === 'number') return tier.eps2;
+    return tierEps(tier, round);
+  }
 
   /* v1.6.6 删除 `DIFFICULTY`（2 人那三档 简单/中等/困难）：页面的 2 人分支已并进 `DIFF_TIERS`，
    * 全库再无消费者（实测：只剩 ui.js 那一行 `Bots.DIFFICULTY.easy.pick`）。旧档名"简单/普通"按用户裁定不再保留。 */
@@ -1388,7 +1400,7 @@
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
-    pickReflectMix, pickReflectTank, pickDefReflectGun, pickToolKit, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, resetBotMem,
+    pickReflectMix, pickReflectTank, pickDefReflectGun, pickToolKit, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, tierEpsAt, resetBotMem,
     snapshotBotMem, restoreBotMem,
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,

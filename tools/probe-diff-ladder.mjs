@@ -139,8 +139,10 @@ function makeLevelChooser(L, p) {
   return function (state, pid, legal) {
     /* ★ 斜坡的字面值**不在这里**，在 `js/train/bots.js` 的 `tierEps(tier, round)` —— 本工具与页面共用那一份。
      *   原来这里抄了一份，而 D153 只钉 ui.js 那份（下面的旧注释写的正是"这里改了不响门"），
-     *   10-12 下午顶点 0.2→0.1 之后就真的漂了：页面是 0/0.05/0.1，这份还是 0/0.1/0.1 ⇒ b5ceab1 的在册账量的是不存在的剂量。 */
-    const e = Bots.tierEps(L, state.round);
+     *   10-12 下午顶点 0.2→0.1 之后就真的漂了：页面是 0/0.05/0.1，这份还是 0/0.1/0.1 ⇒ b5ceab1 的在册账量的是不存在的剂量。
+     * ★ §E625：这里改成走 `tierEpsAt`（带人数）—— 原来这把尺在 2 人桌上直接吃 `tier.eps`，
+     *   而产品那里吃的是 `tier.eps2`（简单 0.5 ‖ 困难 0）⇒ 它量的是**产品不喂的那份剂量**。同一族病，同一处治。 */
+    const e = Bots.tierEpsAt(L, state.p.length, state.round);
     return T.pickChampion(state, pid, affordableFirst(legal), p, 0.15, e, L.epsK, L.epsMode);
   };
 }

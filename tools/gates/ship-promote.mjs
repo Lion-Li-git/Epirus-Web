@@ -484,11 +484,24 @@ t('D153 产品的探索口径必须钉住（temp0.15 + 档位表给的 ε/epsK/e
   ok(/function tierEps\(tier, round\)[\s\S]{0,200}?return round <= 1 \? 0 : \(round === 2 \? 0\.05 : tier\.eps\);/.test(botsSrc),
     'ε 的回合斜坡必须逐字是 0 / 0.05 / 0.1，而且**住在 `bots.js:tierEps` 里**（形状来自用户 09-29 裁定"第 1~3 回合逐步提升"；'
     + '顶点 0.2→0.1 是用户 10-12 16:4x 裁定「普通和困难调成 0.1，简单 0.2」）⇒ 改回常数 .2 就把 §E145 那条 14.91% 的白站防御放回来');
-  ok(/Bots\.tierEps\(tier, state\.round\)/.test(ui),
-    '页面必须**调用**那一份（不是自己再写一遍形状）⇒ 抄一份就会漂移，而抄的那份往往在量具手里、不在门手里');
+  ok(/Bots\.tierEpsAt\(tier, state\.p\.length, state\.round\)/.test(ui) && !/tier\.eps2\s*!==\s*undefined/.test(ui),
+    '页面必须**调用**那一份（不是自己再写一遍形状）⇒ 抄一份就会漂移，而抄的那份往往在量具手里、不在门手里。' +
+    '⚠ §E625 重钉：斜坡之上还有"几个人才用 `eps2`"这一层，它以前**只活在页面那行的三元里**（注释还写着"这是页面才知道的事"），'
+    + '结果两把量具各自直接吃 `tier.eps` ⇒ 它们在 2 人桌上量的是产品不喂的那份剂量（简单 0.2 而不是 0.5 ‖ 困难 0.1 而不是 0）。'
+    + '现在这条规则住在 `bots.js:tierEpsAt`，页面与两把尺都只调用它 ⇒ 这里同时判"页面不许再把 `eps2` 的挑选写回本地"');
+  const botsForAt = readFileSync('js/train/bots.js', 'utf8');
+  ok(/function tierEpsAt\(tier, nPlayers, round\)/.test(botsForAt),
+    '§E625：人数那层必须**只有一份定义**（`bots.js:tierEpsAt`）⇒ 没有这条定义，上面那条"页面必须调用它"就是空话');
   const probeSrc = readFileSync('tools/probe-diff-ladder.mjs', 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ');
-  ok(/Bots\.tierEps\(/.test(probeSrc) && !/\bround\s*===\s*2\s*\?/.test(probeSrc),
-    '阶梯尺必须走 `Bots.tierEps` 且**代码里不许再出现第二个回合三元组**（剥掉注释后判：注释里写"为什么搬走"是合法的，代码里写形状就是漂移的源头）');
+  ok(/Bots\.tierEpsAt\(/.test(probeSrc) && !/\bround\s*===\s*2\s*\?/.test(probeSrc),
+    '阶梯尺必须走 `Bots.tierEpsAt`（§E625 前钉的是 `Bots.tierEps`，但那一份不读人数 ⇒ 2 人桌读数与产品脱节；钉法跟着搬，判的还是同一件事）'
+    + '，且**代码里不许再出现第二个回合三元组**（剥掉注释后判：注释里写"为什么搬走"是合法的，代码里写形状就是漂移的源头）');
+  const censusSrc = readFileSync('docs/debug/tier-census.mjs', 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ');
+  /* ⚠ 这条腿第一版只判"文件里出现过 `B.tierEpsAt(`"⇒ **变异实验当场把它打掉**：把取值那行换回 `t.eps` 之后门仍然绿，
+   *   因为表头打印那句也调了同一个函数 ⇒ "出现过"不等于"用在承重的那一行上"（本仓反复栽的那一族：判在字符串上，不判在接线点上）。
+   *   ⇒ 改成钉**赋值点**：`const EPS0 = B.tierEpsAt(`。 */
+  ok(/const EPS0 = B\.tierEpsAt\(/.test(censusSrc),
+    '§E625 同一条病的第二台：普查尺的**剂量取值那一行**必须走 `B.tierEpsAt(档, 人数, 回合)`（它原来直接 `t.eps` ⇒ 2 人桌那批"谱"读数吃的是产品的 0.2/0.1 而不是 0.5/0）');
   /* ===== v1.6.6 改钉法（用户指令 1/2：2 人并进多人、难度做成一条阶梯）=====
    * 旧的第二条断言钉的是"2 人困难槽 = ε=0"那一行（`pickChampion(state, 1, ..., 0.15)`），那行已随 2 人专属 AI 路径一起删了。
    * 现在"产品口径"仍然不是一个数，但**来源变了**：一条阶梯上的不同档 ⇒ 报数要指明**档 id**，而不是"哪个槽"。

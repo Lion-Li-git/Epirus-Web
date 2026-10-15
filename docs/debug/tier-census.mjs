@@ -154,7 +154,9 @@ if (SEEDS.length < 1) { console.error('⛔ --seeds 一枚都解析不出'); proc
 console.log('# 档位装配普查（1 席人类形状 + ' + AI + ' 席**按该档的带逐席抽** · 每局一个新盐 ⇒ 每局一个新排列组合）');
 console.log('# 口径：**' + N + ' 人桌** · ' + MODE + ' · ' + G + ' 局/格 × seed ' + SEEDS.join('/') + ' × 前 ' + PROTOS + ' 个人类原型 · 出手只数 action/ok · 分母=' + AI + ' 个 AI 席（含ジ）');
 console.log('# 池真源表 = ' + TABLE + (N > 2 ? '（多人桌那张）' : '（2 人桌那张原生池，§E599 ⇒ 不是把 3P 搬到 1v1）'));
-console.log('# 剂量：吃各档表值（ramp 按起手剂量算 —— 与 probe-pool 同一条已知边界）');
+console.log('# 剂量：各档走 `Bots.tierEpsAt(档, ' + N + ', 3)`（与页面同一份 ⇒ **2 人桌吃 `eps2`**）＝ ' +
+  picked.map(t0 => t0.id + ' ε=' + B.tierEpsAt(t0, N, 3) + (t0.eps2 !== undefined ? '（eps2）' : '')).join(' ‖ ') +
+  ' ‖ ⚠ ramp 档按顶点算 = 本尺已知边界（与 probe-pool 同一条）');
 console.log('# 抽签/对局循环：`js/pool-draw.js` + `tools/v2v4-lib.mjs` 的 duelAssembly（无第二份实现）\n');
 
 const PROTOSET = humanPrototypes(B).slice(0, PROTOS);
@@ -171,13 +173,18 @@ for (const t of picked) {
   if (RR.note) console.log('## ' + t.id + '：' + RR.note + '\n');
   if (!rows.length) { console.log('## ' + t.id + '（带 ' + bandTxt + '）：**0 枚** ⇒ ' + N + ' 人桌这张表里没有可抽的成员，不量（不是 0 分，是没量）\n'); continue; }
   if (rows.length < 2 && AI > 1) { console.log('## ' + t.id + '（带 ' + bandTxt + '）：只有 ' + rows.length + ' 枚 ⇒ ' + AI + ' 席必然全同，**不量**（用户裁定不许全同）\n'); continue; }
+  /* §E625：剂量走 `Bots.tierEpsAt(t, N, 3)`（**带人数**）。
+   *   原来这里直接吃 `t.eps` ⇒ 在 2 人桌上量的是产品不喂的那份剂量（产品：简单 `eps2: 0.5` ‖ 困难 `eps2: 0`；这里：0.2 ‖ 0.1）。
+   *   `n>2` 时 `tierEpsAt` 逐字等于 `tierEps(t, 3)` = 该档的 `eps`（ramp 档到第 3 回合也是顶点）⇒ **在册的 5 人桌读数一字节都不变**（回归实测见日志 DONE-27）。
+   *   ⚠ 这条"ramp 按顶点算"的近似本身仍是本尺的已知边界（与 `probe-pool` 同一条）。 */
+  const EPS0 = B.tierEpsAt(t, N, 3);
   const PARAMS = {}, CHOOSERS = {}; const bad = [];
   for (const r of rows) {
     let p = null;
     try { p = loadChamp(W, r[h.path]); } catch (e) { p = null; }
     if (!p) { bad.push(r[h.id]); continue; }
     PARAMS[r[h.id]] = p;
-    CHOOSERS[r[h.id]] = T.policyChooserN(p, 0.15, t.eps, t.epsK, t.epsMode);
+    CHOOSERS[r[h.id]] = T.policyChooserN(p, 0.15, EPS0, t.epsK, t.epsMode);
   }
   if (bad.length) { console.error('⛔ ' + t.id + ' 有 ' + bad.length + ' 枚读不出包：' + bad.join(' ‖ ') + ' ⇒ 按失败处理'); process.exit(7); }
   /* ⚠ `tier` 必须带上：`compose` 的按带加权靠 `byTier(members, 带名)` 分名单，少了这一列混抽会直接判成"权重带全空" */

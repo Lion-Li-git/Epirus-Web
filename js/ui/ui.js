@@ -713,7 +713,7 @@
          *   保住的是那条机制的形状 —— **第 1 回合仍然 ε=0**（§E145 的 14.91% 首手防御全部来自这个 0，改动就会把它放回来），
          *   改掉的只是"放开多少"：第 2 回合 0.05、第 3 回合起 0.1 ⇒ 默认档比 v1.5.298 以来**略强**（老手感的探索少了半档）。
          *   这是一次产品裁定，不是顺手改：D153 的钉法与 `D227`②c 的默认档元组都跟着重钉了。 */
-        const epsForTier = (state.p.length <= 2 && tier.eps2 !== undefined) ? tier.eps2 : Bots.tierEps(tier, state.round);
+        const epsForTier = Bots.tierEpsAt(tier, state.p.length, state.round);
         return finish(Trainer.pickChampion(state, pid, legalForAI, c, 0.15, epsForTier, tier.epsK, tier.epsMode));
       }
       if (!scriptChooser) B.aiFallback = true;                // 冠军缺失 → 显式回退，不静默（§E600-B：脚本席不算回退）
