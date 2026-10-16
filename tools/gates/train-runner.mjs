@@ -451,7 +451,7 @@ t('D11 训练模式必须随消息下发到 worker（并行路径不是同一个
 t('D12 冠军对手（champ:）机制必须两端都通 + 能真的解出 params', function () {
   /* v1.5.2：训练池要能放「风格化冠军」当靶子（脚本对手打不出成体系的策略）。
    * 这类"两处各写一遍"的机制只要漏一端就静默取子集（v1.4.8 踩过），所以两端都要点名；
-   * 而且**功能上**必须真能解包 —— 这里用在册夹具 `FIXTURE_PACK`（10-17 前用的是活槽，见日志 DONE-15 的 R3 账）。 */
+   * 而且**功能上**必须真能解包 —— 这里用在册夹具 `FIXTURE_PACK`（10-17 前用的是活槽，账见日志 DONE-16 那一节）。 */
   ok(isChampOpp('champ:docs/artifacts/champion-5p-armB12f.bak'), 'champ: 前缀必须被识别');
   ok(!isChampOpp('heavyfire'), '普通脚本名不得被当成冠军对手');
   const params = loadChampParams(Pol, FIXTURE_PACK);   /* ⚑ 10-17 夜班（R3）：活槽 → 在册夹具。这条腿判的是"能解包 + 解出来的 chooser 与直接走 policyChooserN 逐场相同"，主语是解析路径不是线上那枚 */
