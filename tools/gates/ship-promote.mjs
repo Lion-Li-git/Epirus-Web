@@ -153,7 +153,9 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
    * 默认 300 的依据：同一只包的参照行基线在 n=60→300 之间摆 **7pt**（long 27%→20%）；代价实测 +35 秒（15s→50s）。
    * 生产路径（promote-champion）走的就是这个默认值；本用例自己显式传 60 只为跑得快。 */
   ok(g.indexOf('GATE4_GAMES || 300') >= 0, 'G4/G5 的**默认**样本量必须是 300（n=60 的参照行基线会摆 ±7pt）');
-  ok(g.indexOf(' 记录  G6[') >= 0 && g.indexOf('gate(`G6[${nm}]') < 0, 'G6 的逐包行必须是**记录**而不是 PASS/FAIL（四代包全未达 ⇒ 恒假）；元测试那条仍是门');
+  /* v1.7.70 · gate-sentinel ③ 分诊：原来钉的是 `' 记录  G6['` —— **连排版（两个空格）一起钉死**，属 ③ 里最硬的一条。
+   *   要保的语义是「逐包行是**记录**不是 PASS/FAIL」，与空几格无关 ⇒ 换成对空格宽容的正则。 */
+  ok(/记录\s+G6\[/.test(g) && g.indexOf('gate(`G6[${nm}]') < 0, 'G6 的逐包行必须是**记录**而不是 PASS/FAIL（四代包全未达 ⇒ 恒假）；元测试那条仍是门');
   ok(g.indexOf('process.exitCode') >= 0, '必须有退出码契约（FAIL ⇒ 非 0）');
   const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
   ok(pc.indexOf("['tools/gate-drafts.mjs', SRC]") >= 0, 'promote-champion 必须调用量具');

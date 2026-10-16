@@ -2471,7 +2471,10 @@ t('D162 训练/选择执行口径旋钮（v1.5.237 · E28）：默认关要**可
      * **行为式**判定（真跑一遍看退出码），不判横幅。 */
     const hf = spawnSync(process.execPath, ['tools/train-3p.mjs', '--help'], { encoding: 'utf8', timeout: 60000 });
     eq(hf.status, 64, '`train-3p --help` 必须 exit 64（只吃位置参数的入口收到 `--` 一律响亮拒绝），实际 status=' + hf.status + ' 输出=' + String(hf.stdout || '').slice(0, 80));
-    ok(String(hf.stderr || '').indexOf('不认识的参数') >= 0, '拒绝时必须说清"不认识的参数"并给出正确用法');
+    /* v1.7.70 · gate-sentinel ③ 分诊：原来这里钉的是 stderr 里那句**中文措辞**（`indexOf('不认识的参数') >= 0`）——
+   *   属 METHODOLOGY 第 89 条禁的「钉措辞」。退出码 64 上面那行已经判了；这条要保的语义只是**不许沉默失败**
+   *   （仓规：响亮失败）。⇒ 改成判「stderr 非空」，措辞交给工具自己定。 */
+  ok(String(hf.stderr || '').trim().length > 0, '拒绝时必须**出声**（不许只给退出码、什么都不说）；具体措辞不判');
     eq(createHash('sha1').update(readFileSync(def)).digest('hex'), before, '那次 `--help` 尝试之后基线文件仍须逐字节不变（不许它已经把臂跑出来）');
     rmSync(dir, { recursive: true, force: true });
   }

@@ -67,7 +67,7 @@ function sh(cmd, args) {
 }
 
 /* ===== 计划与聚合：两件**可以独立验**的纯逻辑，自检就钉在这两件上 ===== */
-function buildPlan(parts, total) {
+function buildPlan(parts, total, requireAll) {
   if (!parts.length) return { ok: false, why: '一个部分都没有' };
   const seen = {};
   for (let i = 0; i < parts.length; i++) {
@@ -77,11 +77,17 @@ function buildPlan(parts, total) {
     seen[p.part] = 1;
   }
   const sum = parts.reduce(function (s, p) { return s + (p.gates || 0); }, 0);
-  if (sum !== total) {
+  /* ⚠ v1.7.71 修：并集守卫**只在没给 `--part=` 时**成立。
+   *   原来它对任何清单都要求 Σ = total ⇒ 显式选子集**永远被拒**（exit 2）——
+   *   于是 `--part=a,b` 这条本来能省掉整轮的选择**从来没生效过**，用的人（包括我）只能回去跑整轮。
+   *   子集档要防的是另一件事：**选中的名字必须真的存在**（调用方在 :142-151 已按现读清单核过，认不出就 exit 2）
+   *   与**不许重名**（下面那条，两档都管）。子集永远不该被当成整轮认证 —— 那由 `verdictOf` 的
+   *   `results.length === allCount` 兜着（结论行会写「不是整轮认证」）。 */
+  if (requireAll !== false && sum !== total) {
     return { ok: false, why: '并集守卫：Σ部分门数 = ' + sum + ' ≠ np-test 现读 total = ' + total
       + '（少跑的部分会**不吭声** —— 这正是 gate-parts-check.mjs 防的那个坏法）' };
   }
-  return { ok: true, sum: sum };
+  return { ok: true, sum: sum, partial: requireAll === false };
 }
 function verdictOf(results, allCount, totalGates) {
   const red = results.filter(function (r) { return r.code !== 0; });
@@ -98,15 +104,19 @@ function verdictOf(results, allCount, totalGates) {
 function selfTest() {
   let bad = 0;
   const cases = [
-    ['正常清单 2+3=5', [{ part: 'a', gates: 2 }, { part: 'b', gates: 3 }], 5, true],
-    ['少一个部分', [{ part: 'a', gates: 2 }], 5, false],
-    ['部分名重复', [{ part: 'a', gates: 2 }, { part: 'a', gates: 3 }], 5, false],
-    ['门数多出来', [{ part: 'a', gates: 6 }], 5, false],
-    ['空清单', [], 5, false]
+    ['全量清单 2+3=5', [{ part: 'a', gates: 2 }, { part: 'b', gates: 3 }], 5, true, true],
+    ['全量清单少一个部分', [{ part: 'a', gates: 2 }], 5, false, true],
+    ['全量清单门数多出来', [{ part: 'a', gates: 6 }], 5, false, true],
+    ['部分名重复（两档都拒）', [{ part: 'a', gates: 2 }, { part: 'a', gates: 3 }], 5, false, true],
+    ['空清单', [], 5, false, true],
+    /* v1.7.71：显式子集（`--part=`）**不许**再被并集守卫拒 —— 这正是它以前从来没生效过的原因 */
+    ['子集清单 1 个部分（--part=）', [{ part: 'a', gates: 2 }], 5, true, false],
+    ['子集清单 2 个部分（--part=）', [{ part: 'a', gates: 2 }, { part: 'b', gates: 3 }], 5, true, false],
+    ['子集清单空（--part= 给了空串）', [], 5, false, false]
   ];
   for (let i = 0; i < cases.length; i++) {
     const c = cases[i];
-    const r = buildPlan(c[1], c[2]);
+    const r = buildPlan(c[1], c[2], c[4]);
     if (!!r.ok !== c[3]) { bad++; console.log('✘ 自检「' + c[0] + '」：期望 ' + (c[3] ? '放行' : '拒') + '，实际 ' + (r.ok ? '放行' : '拒')); }
     else console.log('✔ 自检「' + c[0] + '」：' + (r.ok ? '放行' : '拒 · ' + r.why));
   }
@@ -150,7 +160,7 @@ if (only.length) {
   picked = ALL.filter(function (p) { return only.indexOf(p.part) >= 0; });
 }
 
-const plan = buildPlan(picked, TOTAL);
+const plan = buildPlan(picked, TOTAL, only.length === 0);
 if (!plan.ok) { console.error('⛔ 计划被判据拒：' + plan.why); process.exit(2); }
 
 const timingFile = arg('timing', '');
