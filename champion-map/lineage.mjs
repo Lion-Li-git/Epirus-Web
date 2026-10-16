@@ -33,6 +33,22 @@ const SURVEY = process.argv.includes('--survey');
 const rd = f => readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
 const ids = rd(join(HERE, 'coords.tsv')).trim().split('\n').slice(1).map(l => l.split('\t')[0]);
 
+/* ===== §E613 包内没自报 `ts` 时的**补录表**（10-16 早上用户看图抓出来的那条静默病）=====
+ *   病：查看器的横轴就是训出时刻，`viewer.mjs:1781` 对 `Date.parse(ts)` 非有限值**直接不定位**（`PT(i)` 返回 null）
+ *     ⇒ `pos[父id]` 缺失 ⇒ `:1819` 那句 `if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue` 把父边**一条不画、一声不响**。
+ *     实测：`G12H1` 的父 `clone-79101` 是 796 枚里**唯一**没有 ts 的一枚（监督克隆产物不盖时间戳）⇒ 卡片区写着
+ *     "父边来路 = hash"，图上却是孤点。症状不是数字错，是**一条有哈希为证的实线被静默丢掉**。
+ *   为什么不改包：往包 META 里补 `ts` 会改权重指纹 ⇒ 那条 `hash` 级父边自己作废（R3 同族）。
+ *   为什么不在查看器里给"时间未知"造一列：横轴是时间，给未知时间编一个位置 = 把缺测画成一个读数
+ *     （[[feedback-subcell-control]] 那条"分母为 0 的 0% 与真 0 同形"的图版）。
+ *   ⇒ 补录必须**带证据串**，且由 `audit-parent-evidence.mjs` 那条新腿钉住"有 parentOf 的行两端 ts 都得非空"。
+ *   ⚠ 这张表只填**缺 ts 的**，不许拿它覆盖包内自报值（覆盖 = 把训练侧的时钟换成研究侧的，历史读数就没法核）。 */
+const TSFIX = {};
+{ const p = join(HERE, 'ts-override.tsv');
+  if (existsSync(p)) { const T = rd(p).replace(/\n+$/, '').split('\n').map(l => l.split('\t')), th = Object.fromEntries(T[0].map((x, i) => [x, i]));
+    for (const r of T.slice(1)) if (r[th.id] && r[th.ts]) TSFIX[r[th.id]] = r[th.ts]; } }
+let nTsFix = 0;
+
 /* `braceObj` / `parseMeta` / `widOf` 住在 `./pack-id.mjs`（§E328 起）—— 那份注释也在那里。 */
 /* §E330：**同一个 id 在盘上可以有两份不同的包**，而血统表过去只按 `docs/artifacts/<id>.bak` 找 ⇒ 读错了文件。
  *   实测后果：`M05-111` / `D4a` / `E20-71` 这些"续训现役"的臂产品，真身在 `docs/artifacts/e234-out/…`（ts = 10-02），
@@ -437,13 +453,22 @@ for (const r of REC) { const m = r.m || {};
     const noEvidence = !m.hotstartFrom && String(ENVX.EPIRUS_HOTSTART || '') !== '1' && !seedpackFile(m);
     ps = (/^SLOT-/.test(r.id) || !Object.keys(m).length) ? 'synthetic' : (noEvidence ? 'cold' : 'unresolved');
     if (ps === 'cold') nCold++; else if (ps === 'unresolved') nUnres++; else nSynthP++; }
-  ROWS.push({ id: r.id, ts: m.ts || '', seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
+  const TSVAL = m.ts || TSFIX[r.id] || '';
+  if (!m.ts && TSFIX[r.id]) nTsFix++;
+  ROWS.push({ id: r.id, ts: TSVAL, seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
     parentOf: byHash || byPath || byArm || bySlot || bySlotInfer || sP1, wid: r.wid || '',
     psrc: ps,
     pof2: sP2, psrc2: sP2 ? 'soup' : '',
     demoted: demoted,
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
 const nres = ROWS.filter(r => r.parentOf).length, np = ROWS.filter(r => r.cfg.parent !== '-').length;
+/* §E613 补录 ts 报数 + **孤点父边探测器**：一条有父的边只要有一端没有时间，查看器就把它静默丢掉（见上面补录表的注）。
+ *   这条不是"顺手打印"：它是今晚那条病的牙 —— 以前生成器解出 parentOf 就完事，**画不画得出来没人管**。 */
+const TSBY2 = {}; for (const r of ROWS) TSBY2[r.id] = r.ts;
+const ORPH = ROWS.filter(r => r.parentOf && (!r.ts || !TSBY2[r.parentOf]));
+console.log('§E613 ts 来自补录表（包内没自报）：' + nTsFix + ' 枚 ‖ 有父边但两端任一无 ts（⇒ 查看器画不出这条边）：' + ORPH.length + ' 条'
+  + (ORPH.length ? ' ⛔ ' + ORPH.map(r => r.id + '→' + r.parentOf + (r.ts ? '（父无 ts）' : '（本枚无 ts）')).join(' ‖ ') : ''));
+if (ORPH.length) process.exitCode = 1;
 console.log('槽位推断级父边（2026-10-12：包里有 EPIRUS_HOTSTART=1 的证据 + 槽位时间轴）：' +
   ROWS.filter(r => r.psrc === 'slot-infer').length + ' 条');
 /* §E607 三种"没有父边"分开报数（页面要说清"为什么没有"，靠的就是这一列） */
