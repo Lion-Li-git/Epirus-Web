@@ -20,8 +20,19 @@
    * 于是"我打断了开环者"与"别人打断、我恰好也放过小雷"在事件层**无法区分** ⇒ 奖励结构上无法归因。
    * 加第 4 参 `byPid`（施法者 pid；不传时保持旧形状，兼容历史事件流）。 */
   function setVoid(state, pid, by, byPid) {
-    if (state.actions[pid] && !state.actions[pid].voided) {
-      state.actions[pid].voided = true;
+    const acted = state.actions[pid];
+    if (acted && !acted.voided) {
+      acted.voided = true;
+      /* 用户裁定 2026-10-16：**被作废的技能不许留下副作用**。
+       * 目前唯一在**生产侧**就写状态的技能是藤甲（:1129 贴火弱），而作废可能落在它之后（激光眼与藤甲同层、
+       *   按 turnOrder 轮换）⇒ 这里把那次行动留下的火弱**回滚成贴之前的值**（快照存在行动对象上）。
+       * 其余副作用都判在**消费侧**：金刚盾的反击 / 防御·反弹·八卦阵的格挡走 `guardOf`→`actionOf`，
+       *   全息盾走 `holoShieldFrom` 里的 `actionOf`（那一处自己写着「必须走 actionOf，不能直读
+       *   state.actions[i]」）⇒ 作废后自然不生效。这一处是唯一的例外。 */
+      if (acted.key === SK.ARMOR && acted.fireWeakPrev) {
+        const fp = acted.fireWeakPrev, victim = state.p[fp.pid];
+        if (victim) { victim.fireWeakNow = fp.now; victim.fireWeakNext = fp.next; }
+      }
       const e = { type: 'voided', pid, by };
       if (byPid != null) e.byPid = byPid;
       ev(state, e);
@@ -380,7 +391,13 @@
     const q = state.p[hitTo];
     let amt = 1;
     if (q.fireWeakNow) amt += 1;                        // 火弱：只加到最终挨这跳的人身上
-    rawDamage(state, hitTo, amt, '地雷', 'mine', { source: null, mineFrom: mineFrom });
+    /* 用户裁定 2026-10-16（N20⑥）：地雷**不吃铁索连环**。
+     * 理由：地雷是**全场伤害**（每个活人都挨一跳），而铁索连环是**一次性**触发 —— 链一旦被这一跳带出来，
+     *   就会有**随机的那一个**人多吃一份伤害（链的落点由 `p.chains` 的顺序决定）。
+     *   `rawDamage` 的链闸门在 :306、默认**开** ⇒ 地雷这一跳必须显式关掉。
+     *   与 `RULES-NP.md:251` 的 N20⑥「无来源 ⇒ 不会被铁索连环共享」一致（`source: null` 只是归因面，
+     *   真正挡住共享的是这一行的 `chain: false`）。 */
+    rawDamage(state, hitTo, amt, '地雷', 'mine', { source: null, mineFrom: mineFrom, chain: false });
     return hitTo;
   }
   /* N20 mine resolution (called after the damage phase in resolveActions).
@@ -1126,7 +1143,17 @@
            * 依据（旧文）：`RULES-2P.md:159` R22"仅在下回合内有效" —— 那是把藤甲当纯预置 debuff 的写法，
            * 用户认为它应当**多覆盖一回合**（贴上就被利用）。
            * ⚠️ 诚实边界：本层是**顺序结算**，同回合内**先于**藤甲结算的火伤吃不到这次 +1（R56 同款边界）。 */
-          if (a.key === SK.ARMOR) { you.fireWeakNext = true; you.fireWeakNow = true; }
+          if (a.key === SK.ARMOR) {
+            /* 用户裁定 2026-10-16：**被作废的藤甲不许挂上火弱**。
+             * 火弱是在这里（**生产侧**）就写下的，而作废可能落在这一步**之后** —— 激光眼与藤甲同层、按
+             *   `turnOrder` 轮换 ⇒ 只在这一行判 `a.voided` 不够（那时还没被作废）。所以把「贴之前是什么」
+             *   快照在**这次行动**上，由 `setVoid` 回滚。 */
+            /* ⚠ `you` 是**目标**不是施放者（本文件 :994 的 `you = state.p[t]`）—— 藤甲是
+             *   `target: 'enemy'`（rules.js:59「贴在对手身上」）⇒ 火弱**落在被贴的那个人身上**，
+             *   所以快照必须连**目标席位**一起记，回滚时才知道该还原谁。 */
+            a.fireWeakPrev = { pid: t, now: !!you.fireWeakNow, next: !!you.fireWeakNext };
+            you.fireWeakNext = true; you.fireWeakNow = true;
+          }
           ev(state, { type: 'guardSet', pid: i, key: a.key });
           break;
         case SK.HOLO:

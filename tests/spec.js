@@ -228,6 +228,83 @@
     ok(st.events.some(e => e.type === 'hidden' && e.name === '铁索连环'));
   });
 
+  t('N20⑥ 地雷伤害**不吃铁索连环**（N≥3；2 人用例天然测不出差异 —— 那正是它长期漏掉的原因）', function () {
+    /* 用户裁定 2026-10-16：地雷是**全场伤害**，而铁索连环是**一次性**触发 ⇒ 链一旦被这一跳带出来，
+     *   就会有**随机的那一个**人多吃一份伤害。修法：`mineHit` 里那一跳显式 `chain: false`。
+     * 构造要点：链挂在 **P0↔P2**（挨雷波的两个）上，**不**挂在挨枪的 P1 上 —— 挂在 P1 上会被枪那一跳
+     *   先把链耗掉，雷波来的时候已经没链了，那样这条用例就测不出这件事。 */
+    const st = S.createState('multi', noJudge(), 3);
+    for (let i = 0; i < 3; i++) st.p[i].ep = 9;
+    st.events = []; X.startTurn(st);
+    st.p[1].mineArmed = true; st.p[1].mineTurns = 3; st.p[1].mineRound = st.round;
+    st.p[0].chains = [2]; st.p[2].chains = [0];
+    S.attemptAction(st, 0, SK.GUN, { target: 1 });
+    S.attemptAction(st, 1, SK.JI, null);
+    S.attemptAction(st, 2, SK.JI, null);
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[1].hp, 2, '埋雷者挨枪 1 点');
+    eq(st.p[0].hp, 2, 'P0 挨雷波 1 点 —— 不许因为链再多挨一份');
+    eq(st.p[2].hp, 2, 'P2 挨雷波 1 点 —— 同上（旧实现会给链上那一位多扣 1）');
+    eq(st.p[0].hp + st.p[1].hp + st.p[2].hp, 6, '总扣血 = 1(枪) + 2(雷波)，一点都不能多');
+  });
+
+  t('R58×N23 被激光眼作废的藤甲**不许挂上火弱**（用户裁定 2026-10-16；两个座序都要判）', function () {
+    /* 病：火弱是藤甲在**生产侧**写下的（`resolve.js:1129`），而作废可能落在它之后（激光眼与藤甲同层、
+     *   按 `turnOrder` 轮换）⇒ 只判 `a.voided` 不够。修法：贴之前快照 + `setVoid` 回滚。
+     * **两个座序都判**，因为旧实现只在一个座序上错（另一个恰好因为结算循环跳过 `voided` 而没贴上）——
+     *   只测一个座序的话，修好与没修好长得一模一样。 */
+    const run = function (armorSeat) {
+      const st = game(); setEp(st, 9, 9);
+      st.p[1 - armorSeat].boom = 1;      /* 激光眼**首次**使用要 1 颗爆珠（R32）⇒ 不给就是非法行动、什么都没发生 */
+      st.events = []; X.startTurn(st);
+      if (armorSeat === 0) { S.attemptAction(st, 0, SK.ARMOR, null); S.attemptAction(st, 1, SK.LASER_EYE, { target: 0 }); }
+      else { S.attemptAction(st, 0, SK.LASER_EYE, { target: 1 }); S.attemptAction(st, 1, SK.ARMOR, null); }
+      X.resolveActions(st);   /* 停在**结算后**：`Now` 要到回合末才被清（`play()` 会顺手清掉）⇒ 两格都判得动 */
+      return st;
+    };
+    /* ⚠ 藤甲是 `target: 'enemy'`（rules.js:59「贴在对手身上」）⇒ 火弱落在**被贴的人**身上，
+     *   判据也必须判那个人（判施放者会永远绿：施放者本来就不会被贴）。 */
+    const a0 = run(0);
+    ok(a0.actions[0].voided, '藤甲（座 0 用）必须被作废 —— 否则这条用例是空枪');
+    ok(!a0.p[1].fireWeakNow && !a0.p[1].fireWeakNext, '被作废 ⇒ 对手身上一格都不许挂上（旧实现两格都亮）');
+    const a1 = run(1);
+    ok(a1.actions[1].voided, '藤甲（座 1 用）必须被作废');
+    ok(!a1.p[0].fireWeakNow && !a1.p[0].fireWeakNext, '另一个座序同样一格都不许挂上');
+    /* 正对照：**没有**激光眼时火弱必须照常亮 —— 否则上面两条可以靠"火弱功能整体坏掉"蒙过去 */
+    const ctl = game(); setEp(ctl, 9, 9);
+    ctl.events = []; X.startTurn(ctl);
+    S.attemptAction(ctl, 0, SK.ARMOR, null); S.attemptAction(ctl, 1, SK.JI, null);
+    X.resolveActions(ctl);
+    ok(ctl.p[1].fireWeakNow && ctl.p[1].fireWeakNext, '正对照：没被作废的藤甲必须把火弱挂在**对手**身上（Now 与 Next 都亮）');
+  });
+
+  t('N23 被激光眼作废的金刚盾**不挡也不反击**（同族对照：它的副作用判在**消费侧** ⇒ 本来就对，钉住别再坏）', function () {
+    /* 与藤甲同族的问题：金刚盾的格挡/反击都走 `guardOf`→`actionOf`（消费侧），作废后自然不生效。
+     * 这条用例把它钉住；判定序列故意给"必胜"，这样"反击"那一格才是**有牙的**（否则恒败的 rng
+     * 会让它无论挡没挡都不反击 ⇒ 空枪）。 */
+    const st = S.createState('multi', seqRng([0.1, 0.1, 0.1, 0.1]), 3);
+    for (let i = 0; i < 3; i++) st.p[i].ep = 9;
+    st.p[2].boom = 1;                    /* 激光眼首次使用要 1 颗爆珠（R32） */
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.GUN, { target: 1 });
+    S.attemptAction(st, 1, SK.JINSHIELD, null);
+    S.attemptAction(st, 2, SK.LASER_EYE, { target: 1 });
+    X.resolveActions(st); X.endTurn(st);
+    ok(st.actions[1].voided, '金刚盾必须被作废');
+    eq(st.p[1].hp, 2, '被作废 ⇒ 枪打进来（不许挡）');
+    eq(st.p[0].hp, 3, '被作废 ⇒ 不许反击枪手');
+    /* 正对照：同一构造去掉激光眼 ⇒ 挡住 + 反击 1（证明上面两条不是靠"金刚盾没接上"蒙的） */
+    const st2 = S.createState('multi', seqRng([0.1, 0.1, 0.1, 0.1]), 3);
+    for (let i = 0; i < 3; i++) st2.p[i].ep = 9;
+    st2.events = []; X.startTurn(st2);
+    S.attemptAction(st2, 0, SK.GUN, { target: 1 });
+    S.attemptAction(st2, 1, SK.JINSHIELD, null);
+    S.attemptAction(st2, 2, SK.JI, null);
+    X.resolveActions(st2); X.endTurn(st2);
+    eq(st2.p[1].hp, 3, '正对照：金刚盾挡住枪');
+    eq(st2.p[0].hp, 2, '正对照：判定胜 ⇒ 反击枪手 1 点');
+  });
+
   t('R44 净化：移除符咒并回血、清梦魇', function () {
     const st = game(); setEp(st, 5, 5);
     st.p[1].stickers = [{ owner: 0, age: 0 }, { owner: 0, age: 2 }];

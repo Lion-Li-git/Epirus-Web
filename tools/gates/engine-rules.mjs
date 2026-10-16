@@ -1305,11 +1305,26 @@ t('D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必
 
 t('D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下回合结束）', function () {
   /* 旧文 R22「仅在下回合内有效」= 纯预置 debuff；用户 2026-09-18 要求多覆盖一回合。 */
-  const rs = readFileSync('js/core/resolve.js', 'utf8');
-  ok(rs.indexOf('if (a.key === SK.ARMOR) { you.fireWeakNext = true; you.fireWeakNow = true; }') >= 0,
-    '藤甲必须**同时**点亮 Now（本回合）与 Next（下回合）—— 只挂 Next 是旧行为（当回合白贴）');
-  ok(rs.indexOf('if (a.key === SK.ARMOR) you.fireWeakNext = true;') < 0,
-    '旧的"只挂 Next"写法不得回来（那是 R22 的旧口径）');
+  /* 旧文 R22「仅在下回合内有效」= 纯预置 debuff；用户 2026-09-18 要求多覆盖一回合。
+   * v1.7.66 改判（用户 2026-10-16 裁定「藤甲被作废时火弱应该是挂不上的」）：本条原来钉的是 `resolve.js` 里
+   *   **那一整行源码字面量**（`if (a.key === SK.ARMOR) { you.fireWeakNext = true; you.fireWeakNow = true; }`）
+   *   ⇒ 任何人**合法地**在那一行旁边加一句快照就红，而它声称要判的是「贴上即生效」这个**行为**。
+   *   与本文件 :1301-1303 那两处 §删 同族（METHODOLOGY 第 89 条：门只许测行为）⇒ 改成真跑一局判状态。
+   * ⚠ 藤甲是 `target` 为 enemy（rules.js:59「贴在对手身上」）⇒ 火弱落在**被贴的那个人**身上，判据也判他。 */
+  const st = S.createState('standard', { next: function () { return 0.9; } });
+  st.p[0].ep = 9; st.p[1].ep = 9;
+  st.events = []; X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.ARMOR, null);      // 贴对手
+  S.attemptAction(st, 1, R.SK.JI, null);
+  X.resolveActions(st);
+  ok(!st.p[0].fireWeakNow && !st.p[0].fireWeakNext, '火弱**不在施放者**身上（藤甲是贴对手的）');
+  eq(st.p[1].fireWeakNow, true, '贴上**当回合**就生效：被贴的人 Now 必须亮（只挂 Next = 旧的 R22 口径，当回合白贴）');
+  eq(st.p[1].fireWeakNext, true, '并且下回合继续：Next 也要亮（R58 覆盖到下回合结束）');
+  X.endTurn(st);
+  eq(st.p[1].fireWeakNow, false, '回合末清 Now（到期由既有机制完成）');
+  eq(st.p[1].fireWeakNext, true, 'Next 要留到下一回合开始被提升为 Now ⇒ 第三回合起失效');
+  ok(readFileSync('js/core/resolve.js', 'utf8').indexOf('if (a.key === SK.ARMOR) you.fireWeakNext = true;') < 0,
+    '旧的「只挂 Next」写法不得回来（那是 R22 的旧口径）');
   const rp = readFileSync('docs/RULES-2P.md', 'utf8');
   ok(rp.indexOf('R58') >= 0, 'RULES-2P 必须记下 R58');
   ok(rp.indexOf('仅在下回合内有效') < 0 || rp.indexOf('旧口径（R22 原文）') >= 0,
