@@ -4525,10 +4525,24 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     '解析 ' + IS1.ins + ' ‖ 网格采样 ' + IS1.insCell + ' ‖ 差 ' + ISOgap + ' ‖ thr=' + IS1.thr + ' field=' + IS1.field +
     ' gn=' + IS1.gn + ' sig=' + SIGVAL.toFixed(3) + ' maxF=' + (100 * IS1.maxF).toFixed(0) + '% p0=' + (100 * IS1.p0).toFixed(0) +
     '% quads=' + IS1.quads.length + '（线 max(3, 3%)=' + Math.max(3, 0.03 * IS1.ins).toFixed(1) + '）');
-  T('壳：带宽滑轨的零剂量端（c=1）必须逐字回到今天（壳内 194 ‖ 真过线 103 = v1.7.17 实测锚）',
-    IS1.ins === 194 && IS1.cov === 103,
-    'c=1：壳内 ' + IS1.ins + ' ‖ 真过线 ' + IS1.cov + ' ‖ 误包 ' + IS1.bad + ' ‖ 漏画 ' + IS1.miss + '/' + IS1.nOk +
-    ' ‖ 当前滑杆 bw=' + ISOC.bw.toFixed(2) + ' 壳内 ' + ISOC.ins + '（滑杆接没接上由「工具栏剩下的都能点」那条判）');
+  /* §E618（用户 10-16 傍晚：「把这个弱智钉绝对数量的门改掉或者删了，不要搞这种东西。变得每次加包都要重新搞」）
+   *   原来这条钉的是 IS1.ins === 194 && IS1.cov === 103（v1.7.17 那天的实测枚数）。
+   *   它坏在**主语**上：壳是 F 空间里一条固定带宽，而"壳内有多少枚"由**面板上有多少枚**决定
+   *     ⇒ 往图上加一枚合法的新包就红一次（实测：Z1/Z2 进图 ⇒ 194/103 变 184/97，产品一点没坏）。
+   *   绝对枚数当时只是"滑杆生效了吗 + 建壳确定吗"的代理，而这两件事都有**与面板规模无关**的正身判据：
+   *     ① **同参数重跑必须逐字相同**（抓不确定性：网格顺序、浮点累加、缓存漏键）；
+   *     ② **c=1 与 c=0.2 必须不一样**（抓"bw 根本没传进去"——那正是这条腿最初要防的事，
+   *        而绝对枚数对它的覆盖是间接的：一个从不生效的 bw 也会"逐字回到 194"，只要面板没长）。
+   *   枚数照旧**印出来**当观察档（跨版本能看出分布挪了），但不再当判据。 */
+  var IS1b = isoBuild(SIGVAL, st.isoT, st.isoGN, st.isoField, 1);
+  T('壳：带宽滑轨的两端必须真的在做两件事（c=1 与 c=0.2 的壳不同 ‖ 同参数重跑逐字相同）',
+    IS1.ins === IS1b.ins && IS1.cov === IS1b.cov && IS1.quads.length === IS1b.quads.length
+      && (IS2.ins !== IS1.ins || IS2.cov !== IS1.cov),
+    '同参重跑：壳内 ' + IS1.ins + ' vs ' + IS1b.ins + ' ‖ 真过线 ' + IS1.cov + ' vs ' + IS1b.cov +
+    ' ‖ 片数 ' + IS1.quads.length + ' vs ' + IS1b.quads.length + '（三条必须都相等 ⇒ 建壳是确定的）' +
+    ' ‖ 剂量响应：c=1 罩 ' + IS1.ins + ' 枚 vs c=0.2 罩 ' + IS2.ins + ' 枚（必须不等 ⇒ bw 真传进去了）' +
+    ' ‖ 观察：c=1 真过线 ' + IS1.cov + ' ‖ 误包 ' + IS1.bad + ' ‖ 漏画 ' + IS1.miss + '/' + IS1.nOk +
+    ' ‖ 当前滑杆 bw=' + ISOC.bw.toFixed(2) + ' 壳内 ' + ISOC.ins);
   /* c=0.2 是扫描表上的拐点（本机 GN=72：漏画 67→**0** ‖ 纯度 53%→85% ‖ 片数 7158 ‖ 建壳 45ms）。
    *   再往左（c≤0.05）解析读数说 170~173 枚在壳里、而网格只有 310（GN72）~150（GN128）片 ⇒ **画不出**：
    *   那是网格的分辨率上限（小泡被退化片闸吃掉），不是场错了 ⇒ 滑轨下限停在 0.05，"同场"那条判据钉在 c=1 这一端。*/
@@ -5590,6 +5604,15 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
     if (c === String.fromCharCode(39) || c === String.fromCharCode(34)) { q = c; continue; }
     if (c === BS) { const m = n; if (m === BS) { i++; continue; } if (m === 'u' || m === 'x') continue; if (/[A-Za-z]/.test(m)) bad.push('第 ' + (tpl.slice(0, i).split(NL).length + 1) + ' 行：反斜杠 ' + m + ' ⇒ 产物里会变成 ' + m); }
   }
+  /* §E618 同一条扫描顺手补一刀：**模板体内出现裸反引号 = 生成器自己编译不过**（整页源码是模板字面量，
+   *   注释里的一个反引号就能把它提前闭合 —— 本班连撞三次，第三次是靠"跑页检前先 echo exit=$?"才发现的）。
+   *   这条比上面那条更便宜：不用管字符串/注释状态，模板体内**任何**裸反引号都是错的。 */
+  { const BT = String.fromCharCode(96), at = tpl.indexOf(BT);
+    if (at >= 0) {
+      console.error('⛔ 模板体内有裸反引号（第 ' + (tpl.slice(0, at).split(NL).length + 1) + ' 行）⇒ 它会把整页源码的模板字面量提前闭合，'
+        + '生成器直接 SyntaxError。注释里也别写反引号，改用「」或裸词。');
+      process.exit(3);
+    } }
   if (bad.length) {
     console.error('⛔ 模板区（代码/字符串）里有会被模板字面量吃掉的转义 —— 在源里写**双反斜杠**即可：');
     console.error('  ' + bad.slice(0, 12).join(NL + '  '));
