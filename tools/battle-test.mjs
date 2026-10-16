@@ -27,6 +27,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 /* 起 Chrome / 等 CDP 的唯一实现（v1.7.5 S0） */
 import { launchChrome } from './cdp-boot.mjs';
+import { rejectUnknownFlags } from './audit-lib.mjs';
+/* v1.7.69：仓规「不认识的 `--` 参数必须**响亮失败**」—— 本工具此前没有消毒层，拼错的旗标被**静默忽略**
+ *   （正是「静默忽略 = 假读数」那条规矩要防的事；`gate-sentinel` 一族一直在报告这个缺口）。 */
+/* v1.7.69：只在**本文件是入口**时校验 —— 量具既可能被当 CLI 跑，也可能被别的门 `import` 当模块用；
+ *   后者时 `process.argv` 是**调用方**的 argv（例如 gate runner 的 `--part=`），无条件校验会把整轮门禁打红。 */
+if (process.argv[1] && process.argv[1].endsWith("battle-test.mjs")) {
+  rejectUnknownFlags(process.argv.slice(2), ['max-ms', 'out', 'players'], "battle-test");
+}
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });

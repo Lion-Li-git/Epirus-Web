@@ -31,6 +31,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, extractJsonObject, parseMetaTolerant } from '../tools/audit-lib.mjs';   /* 读包只走这一份（`loadChamp` 同源的解析器） */
 import { guardWrite } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查"这粒权重是否已有真身" */
+import { rejectUnknownFlags } from './audit-lib.mjs';
+/* v1.7.69：仓规「不认识的 `--` 参数必须**响亮失败**」—— 本工具此前没有消毒层，拼错的旗标被**静默忽略**
+ *   （正是「静默忽略 = 假读数」那条规矩要防的事；`gate-sentinel` 一族一直在报告这个缺口）。 */
+/* v1.7.69：只在**本文件是入口**时校验 —— 量具既可能被当 CLI 跑，也可能被别的门 `import` 当模块用；
+ *   后者时 `process.argv` 是**调用方**的 argv（例如 gate runner 的 `--part=`），无条件校验会把整轮门禁打红。 */
+if (process.argv[1] && process.argv[1].endsWith("soup-pack.mjs")) {
+  rejectUnknownFlags(process.argv.slice(2), ['copy-cols', 'flag', 'force-copy', 'force-fp', 'out', 'packs', 'self-test', 'w'], "soup-pack");
+}
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };

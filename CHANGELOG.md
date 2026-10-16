@@ -1,3 +1,34 @@
+## v1.7.69 — 10-16 深夜（DS · `main`）：把「工具读了旗标却没有消毒层」这一族补齐（18 台），并分诊完 `gate-sentinel` 报的 6 条「读 .md 的门」。
+
+### ① 18 台工具有了 `rejectUnknownFlags`
+
+`gate-sentinel` 一族长期只**报告**的那个缺口：读了 `--` 旗标、却**没有**消毒层 ⇒ 拼错的旗标被**静默忽略**
+（"静默忽略 = 假读数"）。本笔给这 18 台补上（旗标名单 = 各自源码里的旗标字面量 ∪ **调用方传给它的**旗标，宁宽不窄）：
+`analyze-5p-envfit` · `analyze-routing-gain` · `analyze-swap-gain` · `battle-test` · `behavior-profile` ·
+`build-pool-bundle` · `champ-audit` · `count-spectrum` · `dedupe-artifacts` · `gate-all` · `keep-artifact` ·
+`np-parallel` · `parse-battle-log` · `pick-5p` · `pool-add` · `promote-champion` · `promote-champion2p` · `soup-pack`。
+在册：**18/18 传 `--zzz-bogus` 一律 exit 64 并点名**（⛔ `[build-pool-bundle] 不认识的参数：--zzz-bogus`）。
+
+⚠️ **踩到的坑（值得单记）**：第一版把校验无条件写在模块顶层 ⇒ **整轮门禁当场死** —— `--part=meta-lint` 被
+`np-parallel.mjs` 拒收，因为 `_ctx.mjs:56` 把它当**模块** import，那一刻 `process.argv` 是**调用方**的 argv。
+`behavior-profile.mjs` 更狠：被 **6 处** import（含 `_ctx.mjs` / `train-3p.mjs` / `promote-champion.mjs`）。
+⇒ 校验必须**只在 `process.argv[1]` 是本文件时**生效；18 台全部按这个形状落地。
+
+### ② `gate-sentinel` 那 6 条「读 .md 的门」分诊完毕
+
+| 门 | 它读文档干什么 | 判 |
+|---|---|---|
+| `D94` | 钉 `resolve.js` 的字面量 + `docs/RULES-2P.md` 必须出现 `R58`、旧文必须被标注 | **三条全摘**（METHODOLOGY 第 89 条：删掉那句话游戏照跑、门却会红）—— 上面那三条**行为**断言已覆盖「只挂 Next」与「挂到施放者」两种错法，**牙口一条没少** |
+| `D95` | 同上，但 10-09 已被摘成 `… < 0 \|\| true` | **摘死代码**：那是恒真表达式，可 `readFileSync` 还在执行 ⇒ 白让这条门被算进"读 .md 的门" |
+| `D8` | 版本号三处一致（CHANGELOG / README / index.html） | **保留**：这是**不变量**，不是措辞 |
+| `D82` | 24h 内落盘的 `.bak` 必须在 CHANGELOG 里被点名 | **保留**：记账纪律 |
+| `D205` | 从 CHANGELOG 抽门号做**抽取式自证**（"数到 0 就是正则/边界被改坏"） | **保留**：自证的是抽取器，不是文档 |
+| `D224` | 拿 CHANGELOG 交叉检查「文档指向一个已经不存在的旋钮」 | **保留**：文档 vs 代码的一致性，正是它该管的 |
+
+### ③ 在册读数
+
+18/18 bogus→64 ‖ `--part=meta-lint` **4/4 ✔** ‖ `--only=D94` **1/1 ✔** ‖ `--only=D95` **1/1 ✔** ‖ 整轮并行验收另报。
+
 ## v1.7.68 — 10-16 深夜（DS · `main`）：清掉四条**已被现实推翻的注释** + 又一处绝对数 + 一份研究稿入库（用户 10-16：低风险的都做）。
 
 ### ① 四条注释已被现实推翻（逐条核实过，不是看注释猜的）

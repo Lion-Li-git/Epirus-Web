@@ -15,6 +15,14 @@ import { readFileSync } from 'node:fs';
 /* 配对差的算术住在 lib（单一来源）：本文件与 `analyze-swap-gain.mjs` 用的是同一把尺，
  * 只是配的对象不同（这里配**逐环境**，那里配**逐桌子**）。默认 z=1.96 ⇒ §E129/§E130 已印的区间逐位不变。 */
 import { pairedDiff } from './routing-gain-lib.mjs';
+import { rejectUnknownFlags } from './audit-lib.mjs';
+/* v1.7.69：仓规「不认识的 `--` 参数必须**响亮失败**」—— 本工具此前没有消毒层，拼错的旗标被**静默忽略**
+ *   （正是「静默忽略 = 假读数」那条规矩要防的事；`gate-sentinel` 一族一直在报告这个缺口）。 */
+/* v1.7.69：只在**本文件是入口**时校验 —— 量具既可能被当 CLI 跑，也可能被别的门 `import` 当模块用；
+ *   后者时 `process.argv` 是**调用方**的 argv（例如 gate runner 的 `--part=`），无条件校验会把整轮门禁打红。 */
+if (process.argv[1] && process.argv[1].endsWith("analyze-routing-gain.mjs")) {
+  rejectUnknownFlags(process.argv.slice(2), [], "analyze-routing-gain");
+}
 
 const files = process.argv.slice(2).filter(a => !a.startsWith('--'));
 if (!files.length) { console.error('用法：node tools/analyze-routing-gain.mjs <dump.json> …'); process.exit(2); }
