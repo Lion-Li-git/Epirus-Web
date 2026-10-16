@@ -382,7 +382,9 @@ t('D151 「攒钱→防御」量具：ep 必须**决策时实读**，因果必�
   /* 引擎侧：决策时读到的是**当下**的 ep（不是回合开始）—— 这条钉的是"包看得见什么" */
   ok(p.indexOf('state.p[0]') >= 0 || /s2\.p\[0\]/.test(p), '必须从 state 直接读对手席');
   for (const sv of ['hold', 'cycle']) {
-    const run = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--games=6', '--packs=js/bundled-champion-3p.js', '--saver=' + sv],
+    const run = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--games=6', '--packs=' + FIXTURE_PACK, '--saver=' + sv],
+    /* ⚑ 10-17 夜班（R3）：夹具由活槽换成在册 FIXTURE_PACK —— 这条腿判的是"两档配对能不能自证搬运生效 + 读数带装配"，
+     * 主语是量具不是线上那枚包（换包那天它读的会是新包，而红的理由跟量具坏没坏无关）。实测：换夹具后 1/1，输入换成不存在的包 ⇒ 红（非恒真）。 */
       { encoding: 'utf8', timeout: 600000 });
     eq(run.status, 0, '量具两档都要跑得通（saver=' + sv + '：' + String(run.stderr || '').slice(0, 140) + '）');
     const out = String(run.stdout || '');
@@ -407,7 +409,8 @@ t('D152 「空蓄能」分因量具 `probe-bead-loop.mjs`：两种相反的病�
   ok(/按决策计/.test(p) && /按珠子计/.test(p),
     '必须写明"本表按决策计、真源按珠子计，两者不该相等"—— 不写就会有人拿其中一个去"校验"另一个，把发现当 bug 删掉');
   ok(/实际干了什么/.test(p), '② 必须并排印"那些决策实际出了什么卡"（不然"选择问题"这四个字没有内容）');
-  const run = spawnSync(process.execPath, ['tools/probe-bead-loop.mjs', '--games=8', '--packs=js/bundled-champion-3p.js'],
+  const run = spawnSync(process.execPath, ['tools/probe-bead-loop.mjs', '--games=8', '--packs=' + FIXTURE_PACK],
+    /* ⚑ 10-17 夜班（R3）：同上 —— 这条腿判的是"三桶互斥 + 并排印真源那一行 + 两把尺不许互相校验"，主语是量具。 */
     { encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 180) + '）');
   const out = String(run.stdout || '');
@@ -570,7 +573,11 @@ t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行�
    * ⇒ **全仓没有一个能用的场A/场B 打印器**，而这两条轴正是 G4/五道门争论里被反复引用的东西。
    * 本门**真跑一次探针**（1 局），不钉源码文本；同时要求它打印**门禁真正判的那一列**「清场/局」
    * （阈值 ≥0.3 局；D60 明确：场B 判据只能是清场数，胜率是规则红利）—— 原探针只打胜率/平局。 */
-  const r = spawnSync(process.execPath, ['tools/probe-aggr.mjs', '1', 'js/bundled-champion-3p.js'],
+  /* ⚑ 10-17 夜班（R3）：夹具从**活槽** `js/bundled-champion-3p.js` 换成在册 `FIXTURE_PACK`。
+   * 这条腿的主语是"打印器还能不能用"（退出码 / 不许出现「读失败」/ 必须印出被门禁判的那一列），
+   * **不是**"线上这枚包的场A/场B 形状" ⇒ 按它自己的写法，换包那天它读的是新包，而红的理由跟仪器坏没坏无关。
+   * 同一家precedent 见本文件 D154（"断言一字不减；'新包活得久'是包的事实，归 §E588 日志，不归这条腿"）。 */
+  const r = spawnSync(process.execPath, ['tools/probe-aggr.mjs', '1', FIXTURE_PACK],
     { encoding: 'utf8', timeout: 180000 });
   const out = String(r.stdout || '') + String(r.stderr || '');
   ok(r.status === 0, '探针必须正常退出（实测 status=' + r.status + '）');
