@@ -107,7 +107,21 @@ t('D218 研究工具的旗标登记结构（v1.5.318）：读了却没登记的�
     const miss = Object.keys(used).filter(function (x) { return !listed[x]; });
     if (miss.length) offenders.push(files[fi] + ' -> ' + miss.join(','));
   }
-  ok(scanned >= 8, '至少要有 8 台工具带 rejectUnknownFlags（实测 ' + scanned + ' 台）—— 少了说明消毒层被人拆了');
+  ok(scanned > 0, '抽取没瞎：至少要能认出带消毒层的入口（实测 ' + scanned + ' 台）—— 一个都认不出来说明抽取式坏了');
+  /* v1.7.67（用户 10-16 裁定「钉绝对数量的门改掉或者删了」）：原来是 `scanned >= 8` —— 一个**绝对数**，已换成不钉数量的形状。
+   *   ⚠ 但要把**真缺口**记在案（本门的已知盲区，第一版注释自己就写过）：本门只扫「**已经有**这道层的工具」，
+   *   对「根本没有消毒层、却在读 `--` 旗标」的工具是**瞎的**。实测（2026-10-16）：读了旗标却没有层的 = **18 台**
+   *   （analyze-* / build-pool-bundle / promote-champion{,2p} / soup-pack / pick-5p / gate-all / np-parallel …）
+   *   ⇒ 它们**静默忽略拼错的旗标** = 「静默忽略 = 假读数」那条规矩下的真缺口。**先只记录、不阻断**（给 18 台各补一份
+   *   旗标名单是单独一笔活），已在 CHANGELOG v1.7.67 记账。 */
+  const readsFlags = files.filter(function (f) {
+    const s = readFileSync('tools/' + f, 'utf8');
+    return /arg\('|flag\(|=== '--|startsWith\('--/.test(s);
+  });
+  const noLayerAny = readsFlags.filter(function (f) { return readFileSync('tools/' + f, 'utf8').indexOf('rejectUnknownFlags') < 0; });
+  if (noLayerAny.length) {
+    console.log('  ℹ️ 读了 `--` 旗标但**没有** rejectUnknownFlags 的工具 = ' + noLayerAny.length + ' 台（待办，不阻断）：' + noLayerAny.join(' '));
+  }
   eq(offenders.length, 0, '读了却没登记的旗标必须为 0（实测违规：' + (offenders.join(' | ') || '无') + '）');
   /* 行为腿：假旗标必须**响亮**失败（exit 64），不许静默按默认档跑完 */
   const rb = spawnSync(process.execPath, ['tools/probe-distill-learnability.mjs', '--绝对不存在的旗标=1'], { encoding: 'utf8' });

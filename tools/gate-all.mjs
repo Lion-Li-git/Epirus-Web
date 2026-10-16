@@ -9,7 +9,9 @@
  *   node tools/gate-all.mjs --np     # 加跑 np-test（**串行** ≈16 分钟；本机想快就用 tools/gate-par.mjs，16 部分并发 ≈5.5 分钟）= **认证那一遍**（五道全绿才算）
  *   ⚠ 耗时**只在 docs/GATE-SHIFTS.md 那张真源表里维护**（v1.7.67 收拢：此前五个口径在各处打架）
  *   node tools/gate-all.mjs --np --group=meta    # §E335 只跑那一组（np 侧 16 条 ≈ 10 秒）
- *   node tools/gate-all.mjs --np --no-browser    # §E355 **CI 阻断档的形状**：np 整轮 + spec，摘掉浏览器那三道
+ *   node tools/gate-all.mjs --np --no-browser    # 本地近似"无浏览器"那一档：np 整轮 + spec
+ *   ⚠ **CI 的阻断档不是这个形状**（v1.7.67 更正）：CI 走 `.github/workflows/gates.yml` 的 **16 路 `--part=` 矩阵**
+ *     （每部分一台机），`--no-browser` 只是本机想复现"摘掉浏览器那三道"时的近似。
  * 退出码：0 全绿；7 有任意一道红（点名是哪道）。
  * ⚠ 带 `--group=` 的那一遍**不是认证**：np 只跑了分组里的门，总结论行会显式标出来（同 `--only` 的规矩）。
  * ⚠ 带 `--no-browser` 的那遍**也不是"全绿"**：总结论会点名"本轮缺哪几道"。

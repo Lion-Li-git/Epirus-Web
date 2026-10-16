@@ -240,7 +240,8 @@ const __T = [];   /* v1.5.224：按门计时。默认**零成本**（只 push �
 const ONLY = (process.argv.find(a => a.startsWith('--only=')) || '').slice(7) || null;
 let __skipped = 0;
 /* ===== §E335 分组：以后不必每次全跑一遍（用户 10-06 点名）=====
- * 为什么这样切：整轮里最慢的 15 道全是 train/ship（D176 一道 107.5s），而"只改了 champion-map/ 或 docs/"
+ * 为什么这样切：整轮里最慢的 15 道全是 train/ship（当时 D176 一道 107.5s —— **那是 v1.5.281 之前的读数**：
+ *   D176 早已改 `spawnBatch`、v1.7.64 又把两波合成一波；现数见 docs/GATE-SHIFTS.md 的真源表），而"只改了 champion-map/ 或 docs/"
  *   那一类工作，实测**没有任何一道门读那两个目录**
  *   （`grep -c champion-map tools/np-test.mjs tools/spec-run.mjs tools/smoke.mjs tools/battle-test.mjs` 全 0）
  *   ⇒ 那种班次真正该跑的只有"仓库纪律"那 15 道（读 CHANGELOG/README/门号/源码形状），是**秒级**的。
