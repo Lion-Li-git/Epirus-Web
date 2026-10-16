@@ -55,6 +55,13 @@ const CO_PATH = {}; for (const r of CO.slice(1)) { if (r[ch.id] && r[ch.path]) C
  *   用户 10-12 17:4x：「调整了随机之后演化图的 Hp 也要调整了」。 */
 const EPS_TIER = arg('epsTier', '');
 if (EPS_TIER && !/^(lv:)?[a-z]/.test(EPS_TIER)) { console.error('⛔ --epsTier 得是 `DIFF_TIERS` 的档 id'); process.exit(2); }
+/* §E615 `--mode=<multi|long>`：**桌形也是这把尺的一维**（10-16 午实测：同 seed 同档只换桌形，26 枚配对
+ *   `Spearman=0.654` ⇒ 两张桌不是同一把尺；而包的 `meta.recipe.env.EPIRUS_TRAIN_MODE` 从 10-15 起普遍写着 `long`）。
+ *   原来这条链**从不传 `--mode`** ⇒ 全图 `H`/`Hp` 都落在 `eval-5p` 的默认 `multi`（3 血短程）上。
+ *   ⚠ 传了 `--mode` 就必须换 `--out=`：产物多带一列 `mode` 写清"这批是哪张桌量的"，两批**不许混进同一张表**
+ *     （同一道守卫，理由同 §E569 的 `examG` 与 §E597 的 `pageDose` —— 档靠行走，不靠文件名和人的记性）。 */
+const MODE = arg('mode', '');
+if (MODE && MODE !== 'multi' && MODE !== 'long') { console.error('⛔ `--mode` 只认 `multi` / `long`（`js/core/rules.js:123` 的 MODES），收到 `' + MODE + '`'); process.exit(2); }
 /* `--pageOnly=1 --examFrom=<同格式表>`：只重测页面臂，考卷列从那张表**原样搬**。
  *   成立的前提是结构性的：ε 只活在页面臂的 chooser 里，`--eps=0`（考卷臂）走的是贪心分支 ⇒ 剂量改动对考卷臂逐字无差。
  *   ⚠ 这么跑的时候 `attach-hp.mjs` 那道"本次考卷 == coords 的 H"守卫是**搬来的、不是测的** ⇒
@@ -132,7 +139,7 @@ if (shipNamed && !existsSync(SHIP) && !shipRegistered) {
 }
 if (existsSync(OUT)) { const done = readFileSync(OUT, 'utf8').trim().split('\n').length - 1;
   console.error('⛔ ' + 'epsfull.tsv 已存在（' + done + ' 行）⇒ 先删再跑，别把两批混成一张表'); process.exit(2); }
-writeFileSync(OUT, ['id', 'exam', 'page', 'd', 'hp_old', 'sec', 'examG', 'pageDose'].join('\t') + '\n', 'utf8');
+writeFileSync(OUT, ['id', 'exam', 'page', 'd', 'hp_old', 'sec', 'examG', 'pageDose', 'mode'].join('\t') + '\n', 'utf8');
 
 function one(id, on) {
   /* 路径按 `--extra` 映射 → coords 的 `path` 列 → `docs/artifacts/<id>.bak` 的顺序找**第一个真在盘上的**：
@@ -149,6 +156,8 @@ function one(id, on) {
   /* 页面口径的剂量来源（§E597）：给 `--epsTier=<档 id>` ⇒ 剂量由产品那张表给（默认档就是玩家实际吃的那条）；
    *   不给就是老写法 `--eps=0.2 --eps-mode=soft`（v1.5.141 时代的常数剂量，如今等于**简单档**那一档）。 */
   if (on) { if (EPS_TIER) a.push('--eps-tier=' + EPS_TIER); else a.push('--eps=0.2', '--eps-mode=soft'); }
+  /* §E615 两个臂都要带上 `--mode` —— 只给页面臂换桌形的话，`d = exam − page` 就变成"两张桌之差"而不是 Δε */
+  if (MODE) a.push('--mode=' + MODE);
   return new Promise((res) => {
     const t0 = Date.now();
     execFile(process.execPath, a, { cwd: ROOT, maxBuffer: 1 << 28, timeout: 300000 },
@@ -164,7 +173,7 @@ async function worker() {
     done++;
     if (!isFinite(ex.v) || !isFinite(pg.v)) { fail++; console.error('  ⛔ ' + id + ' ' + (ex.err || '') + ' ' + (pg.err || '')); continue; }
     appendFileSync(OUT, [id, ex.v.toFixed(2), pg.v.toFixed(2), (ex.v - pg.v).toFixed(2), (HOLD[id] || 0).toFixed(2), pg.sec, GAMES,
-      EPS_TIER ? ('tier:' + EPS_TIER) : 'eps:0.2-soft'].join('\t') + '\n', 'utf8');
+      EPS_TIER ? ('tier:' + EPS_TIER) : 'eps:0.2-soft', MODE || 'multi(默认)'].join('\t') + '\n', 'utf8');
     if (done % 50 === 0) console.error('  … ' + done + '/' + ids.length + ' 枚（失败 ' + fail + '）');
   }
 }
