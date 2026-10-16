@@ -832,7 +832,10 @@ export function aggressionProfile(W, params, GAMES, opts) {
     let forced = 0, jiActs = 0;
     for (let g = 0; g < G; g++) {
       const me = g % 5;
-      const st = S.createState('multi', { next: mulberry32(15000 + g) }, 5);
+      /* §E616 `HOOK.mode`（默认 `'multi'` ⇒ 在册读数**逐位不变**，与上面 `seatAct`/`forceAttack` 同一规矩）：
+       *   场A/场B 这两条腿原先写死在 3 血短程桌上，而"过线"这道闸其余腿各自选桌（反弹墙/密度/蓄能 = long）
+       *   ⇒ 要出"全腿长程"那份平行读数，得能让调用方指定桌形，而不是再抄一份探针实现。 */
+      const st = S.createState(HOOK.mode || 'multi', { next: mulberry32(15000 + g) }, 5);
       st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
       const r = mulberry32(20000 + g);
       const scripted = (kind === 'aggr')

@@ -35,13 +35,23 @@ const OUT = arg('out', 'feas.tsv'), LIMIT = Number(arg('limit', 0));
 const OUTARG = OUT.indexOf('/') >= 0 || OUT.indexOf('\\') >= 0 ? OUT : join(HERE, OUT);
 const SH = String(arg('shard', '1/1')).split('/').map(Number);
 const FEAS_N = feasPlan(process.env, null);
+/* ===== §E616 `--allLong=1`：**全腿长程**那份平行读数（10-16 午用户问"五人长程下的过线更新过来了吗"）=====
+ *   先说清在册这道闸**本来就是一张混合桌**（逐腿各自裁定过，不是一致口径）：
+ *     multi 上跑的 = `G`(主判) ‖ `座位对称` ‖ `场A 还手` ‖ `场B 清场`
+ *     long  上跑的 = `G2`(v1.5.145 用户裁"两个模式都判") ‖ `反弹墙` ‖ `密度` ‖ `蓄能`
+ *   ⇒ 所以"过线"没有"是不是长程"这一个答案，只有"哪几条腿在哪张桌上"。本档**不改在册判定**，
+ *     只另出一张 `feas-long.tsv`：把那 4 条 multi 腿换成 long（`G2` 那一腿就不必再判第二遍 ⇒ 传 null）。
+ *   ⚠ 两张表**不许混**：`--out=` 必须指到别的文件名，产物多一列 `legsMode` 写清这批是哪套桌形。 */
+const ALL_LONG = arg('allLong', '') === '1';
+const M_MAIN = ALL_LONG ? 'long' : 'multi';
 const G = FEAS_N.games;
 const COLS = ['id', 'ok', 'nFail', 'fails', 'G', 'G2', 'wallDmg', 'fieldA', 'fieldBClears',
-  'seatVerdict', 'seatSpread', 'zeroAtkRate', 'recOk', 'recFails', 'oppsN',
-  /* §E492 样本量必须**随行**记录：这张表原来不写 n，于是"aggr40 那批"与"aggr100 那批"混进同一条
+  'seatVerdict', 'seatSpread', 'zeroAtkRate', 'recOk', 'recFails', 'oppsN',  /* §E492 样本量必须**随行**记录：这张表原来不写 n，于是"aggr40 那批"与"aggr100 那批"混进同一条
    *   `fieldA` 列时**没有任何一行能自证是哪批**（而 viewer 是按"后写的覆盖先写的"合并四张表的）。
    *   下游 `viewer.mjs` 现在读这一列：见到两种 tag 就拒绝出图。 */
-  'tag'];
+  'tag',
+  /* §E616 桌形随行：`--allLong` 与默认那批**格式相同、语义不同**，只靠文件名分家迟早混（同 `tag` 那次）*/
+  'legsMode'];
 
 /* ---- 名单：直接读坐标表 ⇒ "判了几枚"与"画了几枚"永远是同一批 ----
  *   ⚠ 先归一 CRLF：coords.tsv 的**末列**就是 path，用 split('\n') 会把它读成 "path\r" ⇒ indexOf 拿 −1。*/
@@ -79,11 +89,11 @@ todo.forEach((e, i) => {
   try {
     const params = loadChamp(W, e.path);
     /* 与 promote-champion 逐字同序同参（顺序不同不影响判定，但同序便于对着读）*/
-    const sp = selfPlay(W, params, 'multi', G);
-    const spL = selfPlay(W, params, 'long', G);
+    const sp = selfPlay(W, params, M_MAIN, G);
+    const spL = ALL_LONG ? null : selfPlay(W, params, 'long', G);
     const rw = reflectWall(W, params, 'long', G);
-    const agg = aggressionProfile(W, params, FEAS_N.aggr);
-    const ss = seatSymmetry(W, params, 'multi', FEAS_N.seat);
+    const agg = aggressionProfile(W, params, FEAS_N.aggr, ALL_LONG ? { mode: 'long' } : {});
+    const ss = seatSymmetry(W, params, M_MAIN, FEAS_N.seat);
     const dens = densityProfile(W, params, 'long', FEAS_N.density);
     const chg = chargeProfile(W, params, 'long', FEAS_N.charge);
     const feas = feasibilityOf({ seat: ss, G: sp, G2: spL, G2name: 'long', wall: rw, aggr: agg,
@@ -108,6 +118,7 @@ todo.forEach((e, i) => {
     if (i < 3 || i % 50 === 0) console.log('  ⚠ ' + e.id + ' 判定失败：' + rec.fails.slice(0, 90));
   }
   rec.tag = FEAS_N.tag;   /* §E492 出错行也要带 tag（否则"没判定"会被读成"这一批的样本量不明"）*/
+  rec.legsMode = ALL_LONG ? 'all-long(G主判/座位/场A/场B 都换 long)' : 'as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)';
   appendFileSync(OUTP, COLS.map(c => rec[c] === undefined ? '' : rec[c]).join('\t') + '\n');
   if (i % 25 === 0 || i === todo.length - 1) {
     const el = (Date.now() - t0) / 1000, per = el / (i + 1);

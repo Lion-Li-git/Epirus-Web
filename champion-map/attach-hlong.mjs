@@ -46,8 +46,26 @@ for (const r of LT.slice(1)) {
 }
 if (bad.length) { console.error('⛔ 源表里有 ' + bad.length + ' 行的档/桌形/剂量不是 `long/120/tier:lv:regular` ⇒ 整表拒绝：' + bad.slice(0, 6).join(' ‖ ')); process.exit(2); }
 
+/* ===== §E616 第二件产物：**全腿长程版的过线**（`feas.mjs --allLong=1` 的分片表）=====
+ *   在册那道闸是**混合桌**（G主判/座位/场A/场B = multi ‖ G2/反弹墙/密度/蓄能 = long），
+ *   所以"这枚过不过线"没有单一的"长程版"，只有"把剩下 4 条腿也搬上长程之后过不过"。
+ *   判据同上面那条：`legsMode` 必须是 `all-long` 开头（读错表 = 把混合桌读数当长程读数挂上去），
+ *   没有这枚的长程判定就写 `-`（**不是 0、不是"没过"**）。 */
+const OKL = {};
+{ const files = ['feas-long-s1.tsv', 'feas-long-s2.tsv', 'feas-long-s3.tsv', 'feas-long-s4.tsv'].filter(f => existsSync(join(HERE, f)));
+  if (!files.length) console.log('⚠ 没找到 feas-long-s*.tsv ⇒ `okLong/failsLong` 两列本轮不更新（先跑 feas.mjs --allLong=1 --shard=k/4）');
+  for (const f of files) {
+    const F = rd(f), fh = Object.fromEntries(F[0].map((x, i) => [x, i]));
+    if (fh.ok === undefined || fh.legsMode === undefined) { console.error('⛔ ' + f + ' 缺 `ok` 或 `legsMode` 列 ⇒ 不敢挂（混合桌与长程桌会混成一列）'); process.exit(2); }
+    for (const r of F.slice(1)) {
+      if (!r[fh.id]) continue;
+      if (!/^all-long/.test(String(r[fh.legsMode] || ''))) { console.error('⛔ ' + f + ' 里有行的 legsMode 不是 all-long：' + r[fh.id] + ' ⇒ 这张表不是全腿长程那批'); process.exit(2); }
+      OKL[r[fh.id]] = { ok: r[fh.ok] === '1' ? 1 : (r[fh.ok] === '0' ? 0 : null), fails: String(r[fh.fails] || '').slice(0, 120) };
+    }
+  } }
+
 const CO = rd('coords.tsv'), ch = Object.fromEntries(CO[0].map((x, i) => [x, i]));
-const COLS = ['Hlong', 'Hplong', 'Flong'];
+const COLS = ['Hlong', 'Hplong', 'Flong', 'okLong', 'failsLong'];
 let idx = COLS.map(c => ch[c]);
 if (idx.some(x => x === undefined)) {
   if (CHECK) { console.error('⛔ coords.tsv 还没有这三列 ⇒ 先不带 --check 跑一次'); process.exit(2); }
@@ -56,24 +74,32 @@ if (idx.some(x => x === undefined)) {
   for (let i = 1; i < CO.length; i++) while (CO[i].length < at) CO[i].push('');
   idx = COLS.map((c, k) => at + k);
 }
-let nHit = 0, miss = [];
+let nHit = 0, nOk = 0, miss = [], okMiss = [];
 for (let i = 1; i < CO.length; i++) {
   const r = CO[i], id = r[ch.id]; if (!id) continue;
-  if (HP2[id] === undefined) { for (const j of idx) r[j] = '-'; miss.push(id); continue; }
-  r[idx[0]] = HL[id].toFixed(2); r[idx[1]] = HP2[id].toFixed(2);
-  /* ⚠ 标度必须跟页面那根 `F = Hp/100 + T·S`（工具栏 F窗口 的提示语就是这个式子）逐字一致。
-   *   第一版写成 `Hp + T·S` ⇒ 两根轴差 100 倍，"ΔF 均值 40"就是这么来的（同一个 bug 的免费探测器：
-   *   差值大得离谱就该先怀疑自己抄错了式子，而不是先解释成"两桌差很多"）。 */
-  r[idx[2]] = (HP2[id] / 100 + T * (+r[ch.S] || 0)).toFixed(4);
-  nHit++;
+  /* 三列考卷/页面/势：没量到就整组写 `-`（**不许当 0**）*/
+  if (HP2[id] === undefined) { for (let k = 0; k < 3; k++) r[idx[k]] = '-'; miss.push(id); }
+  else {
+    r[idx[0]] = HL[id].toFixed(2); r[idx[1]] = HP2[id].toFixed(2);
+    /* ⚠ 标度必须跟页面那根 `F = Hp/100 + T·S`（工具栏 F窗口 的提示语就是这个式子）逐字一致。
+     *   第一版写成 `Hp + T·S` ⇒ 两根轴差 100 倍，"ΔF 均值 40"就是这么来的（同一个 bug 的免费探测器：
+     *   差值大得离谱就该先怀疑自己抄错了式子，而不是先解释成"两桌差很多"）。 */
+    r[idx[2]] = (HP2[id] / 100 + T * (+r[ch.S] || 0)).toFixed(4);
+    nHit++;
+  }
+  const o = OKL[id];
+  if (!o || o.ok === null) { r[idx[3]] = '-'; r[idx[4]] = ''; okMiss.push(id); }
+  else { r[idx[3]] = String(o.ok); r[idx[4]] = (o.fails || '').replace(/[\t\n]/g, ' '); nOk++; }
 }
 const out = CO.map(r => r.join('\t')).join('\n') + '\n';
 if (CHECK) {
-  console.log('✔ 只核不写：量到 ' + nHit + ' 枚 ‖ 没量到 ' + miss.length + ' 枚（写 `-`，不是 0）');
+  console.log('✔ 只核不写：考卷/页面量到 ' + nHit + ' 枚 ‖ 没量到 ' + miss.length + ' 枚（写 `-`，不是 0）‖ 过线(全腿长程) ' + nOk + ' 枚 ‖ 无 ' + okMiss.length + ' 枚');
   process.exitCode = nHit >= 700 ? 0 : 1;
 } else {
   writeFileSync(join(HERE, 'coords.tsv'), out, 'utf8');
-  console.log('已写 coords.tsv：三列 ' + COLS.join('/') + '（T=' + T + '）‖ 量到 ' + nHit + ' ‖ 没量到 ' + miss.length +
-    (miss.length ? '（前 8：' + miss.slice(0, 8).join(' ') + '）' : ''));
+  console.log('已写 coords.tsv：五列 ' + COLS.join('/') + '（T=' + T + '）‖ 考卷/页面量到 ' + nHit + ' ‖ 没量到 ' + miss.length +
+    (miss.length ? '（前 8：' + miss.slice(0, 8).join(' ') + '）' : '') +
+    ' ‖ 过线(全腿长程) ' + nOk + ' ‖ 无 ' + okMiss.length);
   console.log('⚠ 坐标一列未动 —— 点坐标是**行为轴**（探针列），换桌形不改它们；变的只有颜色与一维排序。');
+  console.log('⚠ 绿环（在册 `ok`）也**没动** —— 把环换成"全腿长程"等于换判据的主语，那是另一件要裁的事（日志 #47）。');
 }
