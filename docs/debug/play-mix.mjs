@@ -8,7 +8,9 @@
  *   （避雷针 / 贴贴→天火 / 镜面反射 / 双枪射手 / 挑衅 / 净化 / 过载炮 / 金刚盾 / 藤甲 / 原型制御 …）。
  *   这些卡在高强度包里从不出现（`README` 的"从未出现的 15 张"那张表），而 `st:toolkit` 的存在理由就是把它们打出来。
  *
- * 用法：node docs/debug/play-mix.mjs [chrome路径] [端口] [--games=3] [--rounds=60] [--tier=lv:sparring]
+ * 用法：node docs/debug/play-mix.mjs [chrome路径] [端口] [--games=3] [--rounds=60] [--tier=lv:sparring] [--pack=<候选包.js>]
+ *   `--pack=` 把某枚**还没上线的候选包**灌进 `localStorage['epirus.champion3p']` 再重开页面 ⇒ 四席真打的就是这一枚
+ *   （`ui.js:480-484`：该键有值 ⇒ `from='local'` ⇒ **池不生效**），并在开局前用 `aiInfo()` 自证注入生效。
  * 退出码：0 = 跑完并吐出读数 ‖ 2 = 起不来 / 页面没起来 / 下拉设不上 ‖ 3 = 看门狗到点 ‖
  *   7 = 有局的行数没对上页面自数的回合数（漏读）
  * ⚑ 这把尺自己错过的三次都在这里（都是"报给用户的数比真的窄"那一族）：
@@ -17,7 +19,7 @@
  *      明明在局里出现过）；③ 局末判定用"夺冠|胜利"去 match 文字，从来没命中 ⇒ 点击全打在已结束桌上。
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -28,6 +30,12 @@ const PORT = Number(ARGV[1] || 9777);
 const GAMES = Number(flag('games', 3)), ROUNDS = Number(flag('rounds', 60)), TIER = flag('tier', 'lv:sparring');
 /* 下拉里的字样（页面自己按 `DIFF_TIERS[].name` 生成）：简单 · 陪练 ‖ 普通（默认） ‖ 困难 · 冠军 */
 const TIERLABEL = flag('tierlabel', TIER === 'lv:sparring' ? '简单' : TIER === 'lv:hard' ? '困难' : '普通');
+/* --pack=<文件>：把某枚**候选包**灌进 `localStorage['epirus.champion3p']` 再重开页面 ⇒ 打的就是这一枚，不是内置冠军。
+ *   为什么必须走这条路（`js/ui/ui.js:480-484` 的 `poolPlan`）：只要该键有值，`champForCount().from === 'local'`
+ *   ⇒ **池不生效、四席全用这一枚**（这正是 v1.5.10 那次"换 bundle 对老用户无效"的反面用法：本机导入优先）。
+ *   ⚑ 自检不许省：注入之后当场问 `EpirusUI.aiInfo()`，回显里认不出"本机/local"就退 2 ——
+ *      否则我报的是内置冠军的风格，却写成候选包的风格（10-12 那次"标签说池在跑"就是同一条病）。 */
+const PACK = flag('pack', '');
 const URL = 'file:///' + process.cwd().replace(/\\/g, '/') + '/index.html';
 const udd = mkdtempSync(join(tmpdir(), 'playmix-'));
 const proc = spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
@@ -68,15 +76,18 @@ await send('Page.enable'); await send('Runtime.enable');
 await send('Page.navigate', { url: URL });
 await new Promise(r => setTimeout(r, 2500));
 /* 页面要解析 ~4.5 MB 的内联池 bundle（2.9 MB 的 3P 池 + 765 KB 的 2P 池），2.5 秒在这台机器上不够
- *   ⇒ 先等到控件真出现（最多 25 秒），别把"页面还没起来"读成"下拉找不到 = 产品坏了"。 */
-const ready = await evl(`(async () => { const sleep = ms => new Promise(r => setTimeout(r, ms));
+ *   ⇒ 先等到控件真出现（最多 25 秒），别把"页面还没起来"读成"下拉找不到 = 产品坏了"。
+ *   v1.7.52：这段抽成 `waitReady()` **一处实现** —— 注入候选包（`--pack`）之后要**第二次**等它，抄两遍就会漂移。 */
+const READY_EXPR = `(async () => { const sleep = ms => new Promise(r => setTimeout(r, ms));
   for (let i = 0; i < 250; i++) {
     if (document.querySelectorAll('select').length >= 3 && document.querySelectorAll('#skillgrid button').length > 20) return 'ok';
     await sleep(100);
   }
   return '控件没出现：select=' + document.querySelectorAll('select').length +
     ' ‖ skill按钮=' + document.querySelectorAll('#skillgrid button').length +
-    ' ‖ body文字长=' + (document.body ? document.body.innerText.length : 0); })()`);
+    ' ‖ body文字长=' + (document.body ? document.body.innerText.length : 0); })()`;
+const waitReady = async () => await evl(READY_EXPR);
+let ready = await waitReady();
 console.log('页面就绪：' + ready);
 if (String(ready) !== 'ok') {
   /* 红之前先把"到底打开的是什么"印出来：headless 的 /json/list 里第一条经常是 about:blank 或扩展页，
@@ -85,6 +96,23 @@ if (String(ready) !== 'ok') {
   console.log('  当前 target 里是：' + where);
   console.log('  targets：' + JSON.stringify((pages || []).map(p => ({t: p.type, u: String(p.url).slice(0, 60)}))));
   console.log('⛔ 页面没起来，先看这个再说别的'); bye(2);
+}
+if (PACK) {
+  if (!existsSync(PACK)) { console.log('⛔ --pack 指向的文件不存在：' + PACK); bye(2); }
+  const praw = readFileSync(PACK, 'utf8');
+  const pm = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(praw);
+  if (!pm) { console.log('⛔ 在 ' + PACK + ' 里找不到 window.EPIRUS_CHAMPION_3P（2P 包不许硬灌五人桌）'); bye(2); }
+  await evl('localStorage.setItem("epirus.champion3p", ' + JSON.stringify(pm[1]) + '); String(localStorage.getItem("epirus.champion3p").length)');
+  await send('Page.navigate', { url: URL });
+  await new Promise(r => setTimeout(r, 1500));
+  ready = await waitReady();
+  console.log('注入 ' + PACK + '（包体 ' + Math.round(pm[1].length / 1024) + ' KB）后重开页面：就绪 = ' + ready);
+  if (String(ready) !== 'ok') { console.log('⛔ 注入之后页面起不来'); bye(2); }
+  /* 重开之后先证**键还在**（`useBuiltinChampion()` 那类清理、或页面自己的兼容解码失败都会让它悄悄没了）；
+   *   "这一桌到底用了谁"要等 PLAY 设完下拉再问（见 PLAY 里 aiAtStart 那条注释）。 */
+  const still = await evl('String((localStorage.getItem("epirus.champion3p") || "").length)');
+  console.log('  键 epirus.champion3p 重开后还剩 ' + still + ' 字符（注入时 ' + pm[1].length + '）');
+  if (String(still) !== String(pm[1].length)) { console.log('⛔ 注入的包在重开后不在 localStorage 里 ⇒ 停'); bye(2); }
 }
 
 const PLAY = `(async () => {
@@ -101,7 +129,12 @@ const PLAY = `(async () => {
   const btn = t => [...document.querySelectorAll('button')].find(b => b.textContent.trim().indexOf(t) === 0 && !b.disabled);
   const err = setSel('5 人'), err2 = setSel('${TIERLABEL}');
   if (err || err2) return { fatal: '下拉设不上: ' + [err, err2].filter(Boolean).join(' ‖ ') };
-  const out = { games: [], seatLabels: [] };
+  const out = { games: [], seatLabels: [], aiAtStart: null };
+  /* 设完「5 人 + 档位」之后立刻问一次页面自己用的是哪颗包：EpirusUI.aiInfo() 与真决策同一个判定。
+   *   ⚠ 必须在设完下拉之后问 —— 本机第一版在重开页面后就问，那时桌还是默认 2 人、档还是普通，
+   *   回显给的是「2P池·mid」，看着像注入失败，其实问的是另一张桌（我注入的是 3P 那个键）。
+   *   ⚠ 这段在模板字面量里面 ⇒ 注释里不许出现反引号（本仓实测会 SyntaxError）。 */
+  out.aiAtStart = (window.EpirusUI && window.EpirusUI.aiInfo) ? window.EpirusUI.aiInfo() : null;
   /* 一局打完的标志是结算浮层（ui.js 的 finish() 摘掉 #overlay-root 上的 hidden 类），
    *   不是任何一句日志文字 ⇒ 第一版拿"夺冠|胜利"去 match 整块 logbox，从来没命中过，
    *   于是每局剩下的几十次点击全打在已结束桌上（看着像"跑了 70 回合"，其实真回合只有 8~19）。
@@ -161,6 +194,14 @@ const PLAY = `(async () => {
 const res = await evl(PLAY);
 if (!res || res.fatal) { console.log('⛔ ' + (res && res.fatal)); bye(2); }
 
+if (PACK) {
+  /* 开局回显是这台仪器唯一能证明「打的就是注入那枚」的地方 ⇒ 认不出「本机导入 / local」就作废，
+   *   别把内置包的风格报成候选包的（v1.5.10 那次"换 bundle 对老用户无效"是同一条病的正面） */
+  const ai = res.aiAtStart || {};
+  console.log('开局时页面自报这一桌用的是：' + JSON.stringify(ai).slice(0, 300));
+  console.log('  席位标签（页面上那行字）：' + String((res.seatLabels || [])[0] || '(没读到)').slice(0, 220));
+  if (!/local|本机/.test(JSON.stringify(ai))) { console.log('⛔ 设完档之后回显仍不含「本机导入 / local」⇒ 这一桌打的不是注入的那枚，读数作废'); bye(2); }
+}
 const LOW = ['避雷针', '贴贴', '天火', '镜面反射', '双枪射手', '挑衅', '净化', '过载炮', '金刚盾', '藤甲', '无极变速', '原型制御', '全息屏障', '激光眼', '电磁炮', '真正的落雷', '转移伤害', '地雷', '狙击枪', '坦克', '聚能环', '蓄能'];
 /* ⚠ 日志里的动作名带落点（`枪→玩家4`、`过载炮→玩家1`），必须先摘掉 `→…` 再去比卡名。
  *   第一版没摘 ⇒ 凡是**带落点**的低性价比卡一律算成 0 种（藤甲 / 双枪射手 / 全息屏障 / 过载炮
@@ -197,7 +238,9 @@ const hitLow = LOW.filter(k => seenAll.has(k));
 console.log('\n这一晚整桌出现过的低性价比卡：' + (hitLow.length ? hitLow.join('、') : '（一张都没有）'));
 /* 按档分文件写：两档（掺脚本的简单 / 纯包的普通）要在同一份账里对比，
  *   都写同一个路径的话后一次会把前一次的原始行覆掉（第一版就是这么丢的数）。 */
-const OUT = 'champion-map/_playmix-' + TIERLABEL + '.json';
+/* 输出文件名要带上"打的是哪枚包"——本机踩过：基线跑与 --pack 跑同名（`_playmix-困难.json`），
+ *   后一份把前一份的原始回合行**覆盖**掉了，console 里的读数还在但没法再回去看出手序列。 */
+const OUT = 'champion-map/_playmix-' + TIERLABEL + (PACK ? '-pack' : '-builtin') + '.json';
 writeFileSync(OUT, JSON.stringify(res, null, 1), 'utf8');
 console.log('✔ 原始回合行已写 ' + OUT);
 /* 只要有一局"收到的行数 ≠ 页面自己数的回合数"，这批读数就是漏的 ⇒ 红着退，别让人拿漏数去下结论。 */
