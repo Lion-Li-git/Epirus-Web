@@ -477,6 +477,7 @@
 ② 落 soft 实测踩 ④d（2.92 < 3）；
 ③ **`mid` 是地雷，不是"多一档"**：`js/pool-draw.js:136-142` 规则② —— 只要 `poolMix.else`（= `mid`）那一带**非空**，`rosterFor` 就把整档退回"按 mid 抽"、`bandW=null` ⇒ **按带加权混抽被静默关掉** + D234⑬a（`ok(!!R.bandW)`）当场红。
    现表 mid 空着（hard 12 ‖ soft 16）所以一切正常。真要做三带，得同时改 `bots.js:1386` 的 `poolMix`、重测 split50 剂量、改掉 `ship-pool.mjs:301` 那句硬编码文案（`/hard 50% ‖ soft 50%/`）⇒ 单独一条 **#39**，不夹进这次入池。
+**⚑ 11:4x 打旗：下面这一段的核心判断（"工具缺口 / 鸡生蛋"）是错的，正解见 DONE-60** —— 生产入口一直在仓里（`ruler-measure --extra/--ids/--out` ＋ `eps-full --onlyExtra`），我第一轮只 grep 了 `champ-audit`/`eps-full` 就下结论，还把它写进了已推送的 CHANGELOG v1.7.53。原文留着不删，因为它记着"我为什么当时会那样判"。
 **进演化图：卡在一个工具缺口，我没有手搓"在册真值"**。G12H1 现在是"**池成员但图里无节点**"（`pool-sync` 原话：`⚠ 池成员不在图的节点里（1 枚）：G12H1`）。
 原因：图的几何来自 ruler 表的 20 个现测列（`H Hstrict cost3 S Geff dmg heavy holo zeroRate drawRate rounds distinctKeys seatSpread rwDmg charges waste noThreatStance fieldAAtk fieldARounds`），
    而 `rebuild-coords.mjs` 第①步只吃**三张历史 ruler 表**（`ruler120-2026-10-10-all.tsv` ‖ `ruler-all.tsv` ‖ `e370-ruler.tsv`），
@@ -497,6 +498,32 @@
 
 
 
+## DONE-60（11:4x）G12H1 **进演化图做成**了，同时**撤回我 030 分钟前写的那条"工具缺口"**（它不存在）
+**⚑ 先撤自己**：DONE-59 与 CHANGELOG v1.7.53、待裁 **#40** 都写着"全仓没有给新包产 ruler 行的入口、这是鸡生蛋"——**这条是错的**。
+入口一直在仓里，只是我第一轮 grep 只找了 `champ-audit`/`eps-full` 就下了结论：**`champion-map/ruler-measure.mjs --set=champ --extra=<表> --ids=<枚> --out=<tsv>`**（还支持断点续跑与分片），
+配套的头号尺生产口是 **`champion-map/eps-full.mjs --extra=... --onlyExtra --out=...`**。⇒ 同一条病（`grep 不到 ≠ 没有`）我今天第二次犯，而且这次**写进了推出去的 CHANGELOG** ⇒ #40 已改写成"撤回 + 真正的缺口在哪"。
+另一个信号我也差点忽略：`rebuild-coords` 第①步**自己就点名要 `e608-epsfull.tsv`** 并说明后果（"Hp 是图上头号尺，空值在查看器里当 0 算 ⇒ 名次直接掉到倒数"）⇒ 它不是障碍，是**它在教我正确的顺序**。
+
+**做了的事（顺序就是链子要求的顺序）**
+| 步 | 命令 | 结果 |
+| --- | --- | --- |
+| ① 先核父边证据 | `s61-parent-wid.mjs`（用仓里那份 `widOf(整份文件文本)`） | `clone-79101 wid=0f36af446247c5c4` **正好等于** G12H1 的 `META.hotstartFrom`，且 `recipe.env.EPIRUS_HOTSTART=1` ⇒ 这条边够格烘成**实线** |
+| ② 现测尺（同档） | `ruler-measure --exam=120 --ids=G12H1,clone-79101` | 28 秒两枚 ⇒ `G12H1 H=46.30 ‖ clone-79101 H=28.10` |
+| ③ 补头号尺 | `eps-full --extra=e608-ruler-extra.tsv --onlyExtra --out=e608-epsfull.tsv` | 7.4 秒，2/2 有 Hp |
+| ④ 九步链 | `rebuild-coords --extra=e370-ruler.tsv,e608-ruler.tsv` | `coords.tsv` 796 行 × 44 列；自证齐全：**投影五列无缺、Hp/De 796 行无一为空、全图同一档 examG=120、id 唯一** |
+| ⑤ 解父边 | `lineage.mjs` | `G12H1 → parentOf=clone-79101 ‖ parentSrc=hash`（**不是 unresolved**）；`clone-79101 → parentSrc=synthetic`（它是监督克隆产物，没有进化父） |
+| ⑥ 边证据审计 | `audit-parent-evidence.mjs` | 各级 `slot-wid 38/38 证据齐全`，✔ 行要求"热启动开关 ∧ 子包自己记的 SEEDPACK ∧ wid 对得上"三件齐 ⇒ 我们那条 `hash` 边三件全中 |
+| ⑦ 池层与页面 | `pool-sync` → `viewer` → `pool-sync --check` | 第一次 `pool-sync` 跑在 `viewer` **之前** ⇒ 读的是旧页面，报"图里 27 枚 ‖ 不在节点里：G12H1"（**顺序错了的假账，不是缺口**）；重烘后 `池真源 28 ‖ 图里标了池的 28 ⇒ ✔ 逐枚核过` |
+**门（全部定向）**：`D234` 1/1 ✔（含 ⑩a `pool-sync --check`、⑩c 页面逐字等于 viewer 输出）‖ `D233` 1/1 ✔（表尾三列还在）‖ `D227` 1/1 ✔（阶梯含 ④d 现场腿）。
+
+**⚑ 一条必须报给她的口径冲突（比"进图"本身更有用）**：图这把尺（`eval-5p` **默认 multi**、120 局/组合、seed 77000）给 G12H1 的是 **H=46.30**，
+  而 hard 带成员在册是 `K2 54.40 ‖ D4a 54.00 ‖ E3 50.90 ‖ v7new5_005-81 48.40 ‖ v7u1-82 45.10`、**活槽现主 T8-s114 = 56.00**
+  ⇒ **按图上这把尺，G12H1 比困难带平均低约 8pt**；而我昨晚引的 **71.2%** 是 **long 档**（5 血长程 = 它训练时的模式）。
+  两把尺都对，但**不能互相引用** ⇒ 于是入池的理由要这样写：**"它在自己的训练档（long）里略强于线上参照，在困难档主流档（multi）里偏弱，且风格化极强"** ⇒ 这与我量到的阶梯行为完全自洽：
+  落 hard 时 multi 困难档变软 0.7pt（它比该带平均弱一点）、long 变硬 1.2pt（它在长程里强）。**"它更强所以入池"这句话不成立，成立的是"它带来一种桌面上没有的打法"**。
+- 顺带一条自查（我第一版的错）：`s61` 最初把两枚 wid 都读成 `null`，因为它照 `window.EPIRUS_CHAMPION_3P` 的名字去 indexOf，而 `pack-id.mjs:29-40` 的注释**早写着**"那样会拿到 META 对象（没有 `.a`）⇒ 全部静默返回 null"
+  ⇒ 差点据此宣布"父边对不上、只能 unresolved"。改成用仓里那份单一来源解析器（`widOf(整份文本)`）后两条 ✔。**"读出来是 null/0"必须先怀疑尺，再怀疑事实。**
+
 ## NEXT（10-16 续 · 本班新开的待裁）
 
 - **★ 新增待裁 #38（DONE-55 的下游，我一行代码没改）**：现役 213 列里有 **4 个结构性死列** —— `EFFECTS` 的 `guardPrev`（读 `p.guardNext`，第 32 与 172 列）与 `tauntPend`（读 `p.tauntPending`，第 28 与 178 列）
@@ -516,10 +543,13 @@
   现在的形状是 `bots.js:1386` 的 `poolMix={hard:0.5, soft:0.5, else:'mid'}` 而表里 `mid` **空着** ⇒ 一切正常；
   **一旦有人往 mid 放一枚**，`js/pool-draw.js:139-141` 规则② 会把整档退回"按 mid 抽"、`bandW=null` ⇒ 按带加权混抽被关掉、D234⑬a 红、`ship-pool.mjs:299/301` 那两条份额与硬编码文案也一起翻。
   ⇒ 真做三带要同批改：`poolMix.else`/权重、split50 剂量重测、`:301` 的文案、`viewer.mjs:244` 的环色（少一档 ⇒ 图例与池环静默不画，:241-242 已写明）。**我不夹进这次入池。**
-- **★ 新增待裁 #40（用户要的"进演化图"卡在工具缺口上）**：**新包进图没有生产入口**。
-  几何来自 ruler 表的 20 个现测列，而 `rebuild-coords.mjs` 只吃三张**历史** ruler 表；`champ-audit.mjs` 只打印、`eps-full.mjs` 又要求先在 `coords.tsv` 里 ⇒ 鸡生蛋。
-  建议做法（等她点头再动）：给 `tools/champ-audit.mjs` 加一个 `--tsv=` 出口（列名严格照 `ruler-all.tsv` 表头）+ 在 `pool-add` 里加一条牙"**新成员若不在图节点里就点名警告**"（现在只有 pool-sync 的 ⚠ 行，不红）。
-  现状态：G12H1 **在池里 28 枚、在图里 27 枚**（`pool-sync` 原话），这个差我留在纸上没糊过去。
+- **★ 待裁 #40（**原表述已撤回**，见 DONE-60 开头）**：原来写的是"新包进图没有生产入口 / 鸡生蛋"——**这条错了**，入口一直在仓里：
+  `champion-map/ruler-measure.mjs --set=champ --extra=<表> --ids=<枚> --out=<tsv>`（可断点续跑、可分片）＋ `champion-map/eps-full.mjs --extra= --onlyExtra --out=`（补头号尺 Hp）。
+  做完 G12H1 进图之后，**真正剩下的缺口只有两条**：
+  ① **这条链的输入表该放哪儿**：历史上那张叫 `_e328-descendants.tsv`，而 `champion-map/_*.tsv` 被 `.gitignore` 吃掉 ⇒ **干净克隆里链子的输入读不到**（正是 D233 注释里那条病）。
+     我这次把新表放在可跟踪的 `champion-map/e608-ruler-extra.tsv`（＋两张派生表 `e608-ruler.tsv` ‖ `e608-epsfull.tsv`），但这只是本班的一次决定 ⇒ 要不要定成规矩："**进图用的 extra 表一律不带下划线、必须 tracked**"？
+  ② **没有一条牙钉"新池成员必须先进图"**：现在全靠人记得跑 `ruler-measure → eps-full → rebuild-coords → lineage → viewer → pool-sync`；漏跑时 `pool-sync` 只**印一行 ⚠**（这次它确实印了"图里 27 枚 ‖ 不在节点里：G12H1"）而**不红**。
+     要加牙的话，`D234` 加一条腿比新增门合适（按"规矩不是目的、新对象才立新门"那条：池成员进图是**已有池契约的续集**，不是新对象）。
 - **★ 新增待裁 #41（④d 这条腿现在跑在噪声边缘）**：同一名册 1200 局给 5.5pt、3000 局给 3.6pt，而地板钉 3pt ⇒ **余量 ≈ 0.6pt < 单档 SE**；门自己的注释也承认要真稳只有两条路（**多 seed 判定 = 每次 8 倍时间**，或换装配），两条都归裁。
 - **★ 新增待裁 #42（一个"没量到"与"零"同形的活口）**：`tools/audit-lib.mjs:796` 的 `wasteRate: gained ? expired/gained : 0` ⇒ 从不蓄能的包会被读成**零浪费**（本次就是这么把 G12H1 读成"珠全烂在手里"的）；`tools/play-shape.mjs` 那份 `beadRotRate` 用 NaN 是对的。
   修法：让 `chargeProfile` 也返回 NaN + 先 grep 清消费方（改的是判据口径，所以不动）。

@@ -1,3 +1,29 @@
+## v1.7.54 — 10-16 中午（Qoder · 分支 `research/night-1015-train-dims-qoder`）：G12H1 **进演化图做成**（父边是有证据的实线）‖ 撤回我 30 分钟前写进 v1.7.53 的那条"工具缺口"判断（**入口一直在仓里**）‖ 顺带量出一条**口径冲突**：图上这把尺给它 46.3，我昨晚引的是 71.2
+
+### ① 先撤自己
+v1.7.53 与日志 DONE-59 都写着"新包进图没有生产入口 / 鸡生蛋 / 待裁 #40 要 champ-audit 加 `--tsv=` 出口"——**错的**。
+入口是现成的：`champion-map/ruler-measure.mjs --set=champ --extra=<表> --ids=<枚> --out=<tsv>`（可断点续跑、可分片）＋ `champion-map/eps-full.mjs --extra= --onlyExtra --out=`（补头号尺 Hp）。
+病因：我只 grep 了 `champ-audit` 与 `eps-full` 两处就下了"没有"的结论，并且**把它推到了远端**。`rebuild-coords` 第①步其实**当场点名要 `e608-epsfull.tsv` 并解释后果**（"Hp 是图上头号尺，空值在查看器里当 0 算 ⇒ 名次直接掉到倒数"）——那不是障碍，是它在教正确的顺序。⇒ 同一条病（`grep 不到 ≠ 没有`）今天第二次，且第一次是写进 CHANGELOG 的那种。
+
+### ② 进图的六步（顺序即链子要求的顺序）
+`s61-parent-wid.mjs` 先核边：**`clone-79101` 的 wid = `0f36af446247c5c4` 正好等于 G12H1 的 `META.hotstartFrom`**，且 `recipe.env.EPIRUS_HOTSTART=1` ⇒ 够格烘成实线。
+（第一版我把两枚 wid 都读成 `null` 差点判成"边对不上"——`pack-id.mjs:29-40` 的注释早就写着"照 `..._3P` 名字 indexOf 会拿到 META 对象（没有 `.a`）⇒ 全部静默返回 null"；改用仓里那份 `widOf(整份文本)` 后两条 ✔ ⇒ **"读出来是 null/0"先怀疑尺，再怀疑事实**。）
+`ruler-measure --exam=120`（与面板同档，第一版我漏了 `--exam` 默认 30 局/组合，会让新点位置偏 ⇒ 删掉重跑）⇒ `eps-full --onlyExtra` ⇒ `rebuild-coords --extra=e370-ruler.tsv,e608-ruler.tsv`（九步，产物自证：投影五列齐全 ‖ **Hp/De 796 行无一为空** ‖ 全图同一档 examG=120 ‖ id 唯一）⇒ `lineage.mjs` ⇒ `viewer` ⇒ `pool-sync --check`。
+- 结果：`coords.tsv` 796 行；`G12H1 → parentOf=clone-79101 ‖ parentSrc=hash`（**不是 unresolved**），`clone-79101 → parentSrc=synthetic`（监督克隆产物，无进化父）；`audit-parent-evidence.mjs` 对各级边要求"热启动开关 ∧ 子包自记 SEEDPACK ∧ wid 对得上"三件齐 ⇒ 这条 `hash` 边三件全中。
+- `pool-sync` 第一次跑在 `viewer` **之前** ⇒ 读旧页面，报"图里 27 枚 ‖ 不在节点里：G12H1"（**顺序错了的假账，不是缺口**）；重烘后 `池真源 28 ‖ 图里标了池 28 ⇒ ✔ 逐枚核过`。
+- 新增可跟踪文件：`champion-map/e608-ruler-extra.tsv`（输入表，刻意不带 `_` 前缀，避开 `champion-map/_*.tsv` 的 gitignore 洞）‖ `e608-ruler.tsv` ‖ `e608-epsfull.tsv` ‖ `docs/artifacts/e608-out/clone-79101.js`（`-f` 强制入仓，父节点必须读得到）。
+
+### ③ 一条要她知道的口径冲突（比"进图"本身更有用）
+图这把尺（`eval-5p` **默认 multi**、120 局/组合、seed 77000）给 G12H1 的是 **H=46.30**；hard 带在册是 `K2 54.40 ‖ D4a 54.00 ‖ E3 50.90 ‖ v7new5_005-81 48.40 ‖ v7u1-82 45.10`，**活槽现主 T8-s114 = 56.00**
+⇒ **按图这把尺它比困难带平均低约 8pt**；而我昨晚引的 **71.2% 是 long 档**（5 血长程 = 它训练时的模式）。两把尺都不错，但**不许互相引用**。
+⇒ 于是入池的理由要改写成：**"在自己的训练档里略强于线上参照、在困难档主流档里偏弱、风格化极强"**——
+  这与我量的阶梯行为自洽（落 hard 时 multi 困难档变软 0.7pt、long 变硬 1.2pt）；**"它更强所以入池"不成立，成立的是"它带来桌面上没有的一种打法"**。
+
+### ④ 剩余缺口（#40 已按实情改写）
+① 这条链的**输入表**放哪儿没定成规矩（历史那张 `_e328-descendants.tsv` 被 `champion-map/_*.tsv` 的忽略规则吃掉 ⇒ 干净克隆读不到链子输入）；② **没有牙钉"新池成员必须先进图"**——漏跑六步时 `pool-sync` 只印 ⚠ 不红 ⇒ 建议挂到 `D234` 加一条腿（池契约的续集，不是新对象，按"规矩不是目的"那条不该立新门）。
+
+认证（**全部定向，不是整轮**）：`D234` 1/1 ✔（含 ⑩a `pool-sync --check`、⑩c 页面逐字等于 `viewer` 输出）‖ `D233` 1/1 ✔（表尾 `parentOf2/parentName2/parentSrc2` 仍在表尾）‖ `D227` 1/1 ✔ ‖ `--group=meta` 16/16 ✔（16/278，含 D8 三方一致 = v1.7.54）‖ `js/**` 一字未动（改的是 `champion-map/` 三张表 + 派生页面 + `coords/lineage.tsv` + 文档）。
+
 ## v1.7.53 — 10-16 上午（Qoder · 分支 `research/night-1015-train-dims-qoder`）：用户裁定 **G12H1 作为"风格化极强"的包入池（hard 带）** ⇒ 池 27→28 枚并重的 bundle ‖ 按门自己的口径量了"与简单档是拉开还是缩小"：**落 hard 测不出影响，落 soft 会把 D227④d 直接判红** ‖ 撤一条我自己写错的读数（"珠过期率 100%"是另一台装配的 3/3 小分母）
 
 ### 一句话结论
