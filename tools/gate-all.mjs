@@ -5,8 +5,9 @@
  * 而五条命令要分别手敲、而且 np 一条就 9.5 分钟 —— 于是实际发生的是"只跑了其中一两道，
  * 然后引用全绿的口径"。这里把顺序与判词固定下来，并且明写耗时预算。
  *
- *   node tools/gate-all.mjs          # spec + smoke + battle + map（约 1 分钟），不跑 np
- *   node tools/gate-all.mjs --np     # 加跑 np-test（约 10 分钟）= **认证那一遍**（五道全绿才算）
+ *   node tools/gate-all.mjs          # spec + smoke + battle + map（≈45 秒），不跑 np
+ *   node tools/gate-all.mjs --np     # 加跑 np-test（**串行** ≈16 分钟；本机想快就用 tools/gate-par.mjs，16 部分并发 ≈5.5 分钟）= **认证那一遍**（五道全绿才算）
+ *   ⚠ 耗时**只在 docs/GATE-SHIFTS.md 那张真源表里维护**（v1.7.67 收拢：此前五个口径在各处打架）
  *   node tools/gate-all.mjs --np --group=meta    # §E335 只跑那一组（np 侧 16 条 ≈ 10 秒）
  *   node tools/gate-all.mjs --np --no-browser    # §E355 **CI 阻断档的形状**：np 整轮 + spec，摘掉浏览器那三道
  * 退出码：0 全绿；7 有任意一道红（点名是哪道）。
@@ -112,7 +113,7 @@ if (process.argv.includes('--np') || process.argv.includes('--auto')) {
 
 /* ===== 10-01 19:3x（千问 §E214）：四道**并发起跑**，判词与顺序一字不改 =====
  * ⚠ 这笔改动**没占版本号**（本仓惯例：`probe/perf(tool)` 类提交不 bump，版本与门由 DS 合并时定）⇒ 别去找"v1.5.310"。
- * 为什么要改：`NP_TIME=1` 实测 np 热跑 **315.9 秒**（门内合计 315.9、门槛外 0.1）‖ spec 0.3 + smoke 12.3 + battle 31.3
+ * 为什么要改：`NP_TIME=1` 当时实测 np 热跑 ≈315 秒（**那是 v1.5.2xx 的读数；现数见 `docs/GATE-SHIFTS.md` 的真源表**）‖ spec 0.3 + smoke 12.3 + battle 31.3
  *   ≈ **44 秒**，而这 44 秒以前是**排在 np 后面串行等的** —— 18 核机器上四道彼此独立（各起自己的沙箱，不共享进程），
  *   串行纯粹是 `spawnSync` 写法的顺出，不是判据要求（同族判例：D176 在 v1.5.281 已经把内部那批 60 代臂并发了）。
  * ⇒ 现在一起起跑、**按原顺序判定与打印**（判词逻辑、退出码、失败落盘全部保持）。

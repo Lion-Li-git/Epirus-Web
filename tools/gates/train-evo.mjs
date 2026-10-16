@@ -12,6 +12,7 @@ const {
   seatKillIndex, pairHasBase, classifyDefenseWindow, defenseQuality, formatQuality,
   parseQuality, formatQualityRecord, AUDIT, PS, PF_FRONT,
   spawnCached, inputHash, cacheStats, cacheDir, spawnNC,
+  packMetaOf, packMetaFrom, packWeightsOf, packWeightsFrom,
   spawnBatch, RGAIN, OPP_SPECS, ECON_REWARD_KEYS, readEconEnv,
   conc, fieldProfile, tallyPick, WIN, loadPool,
   selfTest, vm, isChampOpp, loadChampParams, makeChampOppResolver,
@@ -31,6 +32,13 @@ const {
 } = makeCtx();
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
 export const ords = [797, 884, 1598, 1820, 1993, 2363, 2433, 2447, 2592, 2776, 2920, 3001, 3437, 3472, 3501, 3572, 3609, 3731, 3798, 3821, 3846, 3934, 3953, 4201, 4239, 4258, 4540, 4685, 4797, 4812, 4820, 4843, 5006, 5042, 5127, 5183, 5228, 5263, 5333, 5680, 5745, 5772, 5798, 5820, 5947, 5965, 6223, 6568, 6652, 6713, 7060, 7087, 7235, 7929, 8889, 8922, 9176, 9300, 10514, 10652, 10699, 10733, 10898, 11709, 11799];
+/* v1.7.67 收拢：`eval-5p 1 5 77000 --pool=core --every=17` 这一发原先在**两条门里各抄了一份逐字相同的包装**
+ *   （`:135` 与 `:386`，连包装都各一份）⇒ 提到文件级只留一份。判据一字未改。 */
+const runE = function (extra) {
+  const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--pool=core', '--every=17'].concat(extra),
+    { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
+  return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
+};
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 t('REPRO2 每个训练入口都必须**真的**播种（按 makeTrainer 调用点反查 + 按函数体切分）', function () {
@@ -132,11 +140,7 @@ t('D224 §E271/§E273/§E274 大雷"每几局看得见一次"的档（v1.5.333 �
     '①e **页面里不许再有第二处开关**（v1.5.332 的 `ui.js` 显式调用已撤 ⇒ 两处开关必漂移；默认值只由 `evo.js` 那个常数表达。实测页面里出现=' + (uiSrc.indexOf('setBigTPush(') >= 0) + '）');
 
   /* ② 坏输入 exit 2（工具侧旗标与引擎侧 setter 都要拒，不许静默降级）*/
-  const runE = function (extra) {
-    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--pool=core', '--every=17'].concat(extra),
-      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
-    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
-  };
+  /* `runE` 见文件头那一份（v1.7.67 收拢：此前两处逐字相同） */
   for (const b of [['--shipbigt=13'], ['--shipbigt=0.5'], ['--shipbigt=abc'], ['--shipbigt=12', '--bigtpush=1'], ['--shipbigt=12', '--bigtpush=0']]) {
     const rb = runE(b);
     eq(rb.code, 2, '`' + b.join(' ') + '` 必须 exit 2（实测 ' + rb.code + '）⇒ 越界或与"工具外挂"同时给 = 两个自由量捆一起');
@@ -383,11 +387,7 @@ t('D225 §E275/§E284 摄魂指法的"残血只在**探索里**软提升"档（e
   ok(hits >= 3 && hits <= 22, '③f N=4 时 40 个 (回合, 盐) 组合里命中数应在 ~10 附近（实测 ' + hits + '）⇒ 0 = 剂量不落地，接近 40 = 散列退化成恒真');
 
   /* ④ 工具侧：ε=0 的臂必须**拒跑**，不许把"结构性看不见"读成"没效果" */
-  const runE = function (extra) {
-    const r = spawnSync(process.execPath, ['tools/eval-5p.mjs', '1', '5', '77000', '--pool=core', '--every=17'].concat(extra),
-      { cwd: process.cwd(), encoding: 'utf8', timeout: 600000 });
-    return { code: r.status, out: String(r.stdout || '') + String(r.stderr || '') };
-  };
+  /* `runE` 见文件头那一份（v1.7.67 收拢：此前两处逐字相同） */
   const blind = runE(['--shipdrain=1']);
   eq(blind.code, 2, '`--shipdrain=1` 但不给 ε 必须 exit 2（实测 ' + blind.code + '）⇒ 贪心臂上这一档永不触发，静默跑完会被记成"这一档没效果"');
   ok(/永不触发/.test(blind.out), '④a 拒绝时要把**为什么**说清楚（实测输出里没那句解释）');
@@ -2099,8 +2099,7 @@ t('D129 训练模式可以在 CLI 上下达（v1.5.169 · §N28 · 用户"炼一
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd129long', EPIRUS_TRAIN_MODE: 'long', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: join(dir, 'd129long.js') }), encoding: 'utf8', timeout: 300000 });
   eq(good.status, 0, '长程臂要跑得通');
   ok(/训练模式已下达：EPIRUS_TRAIN_MODE=long ⇒ 消费点读回 long/.test(String(good.stdout || '')), '必须印"下达 ⇒ 读回"（横幅只证明变量，读回证明消费点）');
-  const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(join(dir, 'd129long.js'), 'utf8'));
-  const mt = JSON.parse(jm[1]);
+  const mt = packMetaOf(join(dir, 'd129long.js'));
   eq(mt.recipe.trainMode, 'long', '产物要自带这臂的模式（日志会滚走，.bak 不会）');
   eq(mt.recipe.trainModeEffective, 'long', '连消费点读回值一起记');
   /* ③ 长程臂建局真的 5 血（D10 证的是 setter；这里证**整条 CLI 路**通到建局） */

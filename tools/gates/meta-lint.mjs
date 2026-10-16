@@ -124,7 +124,22 @@ t('D218 研究工具的旗标登记结构（v1.5.318）：读了却没登记的�
   for (let pi = 0; pi < probes.length; pi++) {
     if (readFileSync('tools/' + probes[pi], 'utf8').indexOf('rejectUnknownFlags') < 0) noLayer.push(probes[pi]);
   }
-  ok(probes.length >= 40, '枚举规则内的研究量具至少 40 台（实测 ' + probes.length + ' 台）—— 少了说明枚举被改窄了');
+  /* v1.7.67（用户 10-16 裁定「钉绝对数量的门改掉或者删了」）：原来这条是 `probes.length >= 40` —— 一个**绝对数**。
+   *   规模无关的判据应该判**「一台都不许逃过扫描」**：扫描根是 `readdirSync('tools')`（**不递归**）⇒ 把一台探针
+   *   搬进子目录就会静默掉出名单（门变瞎、而名单看着还是「够多」），那正是原来那个数字想防的事。
+   *   改成递归对账。⚠ 要排除 `tools/gates/**`：那里的 `probe-instruments.mjs` / `probe-libs.mjs` 是**部分文件**
+   *   （门体），只是名字撞上了 `probe-`，它们不是量具。 */
+  const probeAll = [];
+  (function walk(d) {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = d + '/' + e.name;
+      if (e.isDirectory()) { if (p !== 'tools/gates') walk(p); }
+      else if (/^probe-.*\.mjs$/.test(e.name)) probeAll.push(p);
+    }
+  })('tools');
+  eq(probes.length, probeAll.length,
+    '工具根下的 probe-*.mjs 台数必须等于**递归**数到的台数（实测 ' + probes.length + ' vs ' + probeAll.length
+    + '）—— 多了说明有探针被搬出了扫描根（那台量具的门会**静默变瞎**，而台数看着还够）');
   eq(noLayer.length, 0, '每一台研究量具都必须带 rejectUnknownFlags（实测缺口：' + (noLayer.join(', ') || '无') + '）');
   /* 登记一致性**覆盖两种调用形式**：原版只认 `rejectUnknownFlags(argv, [` ⇒
    * 用 `process.argv.slice(2)` 的那批工具从来没被这条腿扫到过（同一个"名单写两遍"家族）。 */

@@ -21,7 +21,7 @@
 
 ## 二、班次 → 该跑什么
 
-| 我这次改的是 | 跑这条 | 实测耗时 |
+| 我这次改的是 | 跑这条 | 实测耗时（**口径与真源见本节末**） |
 |---|---|---|
 | 只动 `champion-map/`、`docs/` 里不被门读的那些、`results/` | `node tools/gate-all.mjs --np --group=meta` | **~36 秒** |
 | 动了 `CHANGELOG.md` / `README.md` / `.gitignore` / 任何 `.bak` 落盘 | 同上（`meta` 就是为这个存在的：D8 / D82 / D205 / D194 都在里面） | ~36 秒 |
@@ -29,8 +29,28 @@
 | 动了 `js/train/`、`tools/train-3p.mjs`、`tools/eval-5p.mjs`、`tools/style-exam.mjs`、env 旋钮 | `--np --group=train` | ~10 分钟 |
 | 动了 `js/ui/`、页面契约、`tools/smoke.mjs` / `battle-test.mjs` | `--np --group=ui` | ~11 分钟 |
 | 动了**量具本身**（`tools/probe-*`、`analyze-*`、`pool-frontier-lib`、被门当输入的 `docs/artifacts/e16*-*.mjs`） | `--np --group=probe` | ~10 分钟 |
-| 动了 `js/core/`、`server/`、`tests/`、根 `index.html`、`tools/np-test.mjs` 自己 | **整轮**：`node tools/gate-all.mjs --np`（不带 `--group`） | ~20 分钟 |
+| 动了 `js/core/`、`server/`、`tests/`、根 `index.html`、`tools/np-test.mjs` 自己 | **整轮**：`node tools/gate-all.mjs --np`（不带 `--group`） | **见本节末真源表**（本机并行 ≈5.5 分钟 ‖ 串行 ≈16 分钟） |
 | 说不清改了哪些面 | `node tools/gate-all.mjs --auto`（它自己判，**认不出来就升到整轮**） | 取决于判定 |
+
+### 耗时只有一个真源（v1.7.67 收拢）
+
+> 下面这张表是**唯一**维护耗时的地方。此前同一件事有五个口径在各处打架（`gate-all.mjs` 头注写「约 1 分钟 /
+> np 约 10 分钟」、本节写「整轮 ~20 分钟」、`np-parallel.mjs:5` 与 `_ctx.mjs:47` 写「D176 274.6s = 整套 562.6s
+> 的 49%」、`train-runner.mjs:1063` 写「D135 41.4s / D134 16.1s / D136 13.8s」），**其中三条已经被后来的改动推翻**
+> （D176 早已改 `spawnBatch`、v1.7.64 又把两波合成一波）。**别再抄到第二处** —— 抄第二遍正是本仓反复出事的形状。
+
+| 跑法 | 实测 | 日期 / 条件 |
+|---|---|---|
+| **整轮 · 本机并行**：`node tools/gate-par.mjs` | **315.5 / 326.3 / 347.6 秒**（≈5.2–5.8 分钟） | 2026-10-16 · 本机 18 核 · 三次重复；下限 = `train-runner`（≈315s） |
+| **整轮 · CI**：`.github/workflows/gates.yml` 的 16 路 `part` 矩阵（每部分一台机） | 各段合计 **943 秒** / 整轮 **975 秒** | CI run #218（v1.7.61）；下限 = `train-runner`（460s） |
+| **整轮 · 本机串行**：`node tools/np-test.mjs` | **≈16 分钟** | 未单独重测（并行化之前就是这个量级 = 上表各分组之和） |
+| `gate-all.mjs` 不带 `--np`（spec+smoke+battle+map，四道并行） | spec **0.4s** ‖ smoke **10.7s** ‖ battle **38.2s** ‖ map **6.1s** | 2026-10-16 · 本机 |
+| `--group=meta` | **≈20 秒** | 2026-10-16 · 本机 |
+| 长尾构成（整轮墙钟的下限所在） | `train-runner` **315s** ‖ `train-evo` **275s** | 2026-10-16 · 本机并行实测（CI 上是 460s / 275s） |
+
+⚠️ **`gate-par.mjs` 刻意不实现 `--group=`**（累计深度语义只许住在 `np-test` 一处）⇒ 上表里"分组跑"各档仍是**串行口径**。
+⚠️ **并行会压低墙钟，但不会压低下限**：整轮墙钟 ≈ 最慢那个部分。`train-runner` 的 78% 花在 `D176`（6 支 60 代臂）与
+   `D135`（2 支 60 代臂）这类"真算"的门上 —— 想让整轮再快两分钟，只能动它们（改并发≈省一半，量级不到两分钟 ⇒ 不值）。
 
 ## 三、三条不许越过的线
 

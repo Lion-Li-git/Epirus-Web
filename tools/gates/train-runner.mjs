@@ -12,6 +12,7 @@ const {
   seatKillIndex, pairHasBase, classifyDefenseWindow, defenseQuality, formatQuality,
   parseQuality, formatQualityRecord, AUDIT, PS, PF_FRONT,
   spawnCached, inputHash, cacheStats, cacheDir, spawnNC,
+  packMetaOf, packMetaFrom, packWeightsOf, packWeightsFrom,
   spawnBatch, RGAIN, OPP_SPECS, ECON_REWARD_KEYS, readEconEnv,
   conc, fieldProfile, tallyPick, WIN, loadPool,
   selfTest, vm, isChampOpp, loadChampParams, makeChampOppResolver,
@@ -62,9 +63,8 @@ t('D220 深经济对手必须能放上**训练桌**（v1.5.325 · §E237 · DS �
   eq(on.status, 0, '开了要跑得通（实测 status=' + on.status + ' · ' + String(on.stdout || '').slice(-160) + '）');
   ok(/\[econ-ops\] .*已进训练桌：econ:deepSaver,econ:deadlineBurst.*OPPS 从 9 个变 11 个/.test(String(on.stdout || '')),
     '必须印出进了哪几个、桌变大（不印 = 又一根暗旋钮）');
-  const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(out, 'utf8'));
-  ok(!!jm, '产物要能读出 META（读不出就是这条门自己瞎了）');
-  const mt = JSON.parse(jm[1]);
+  const mt = packMetaOf(out);
+  ok(!!mt, '产物要能读出 META（读不出就是这条门自己瞎了）');
   ok(mt.recipe && Array.isArray(mt.recipe.econOpps) && mt.recipe.econOpps.length === 2,
     '产物要自带"这臂的训练桌上放了哪几个深经济对手"（实测 ' + JSON.stringify(mt.recipe && mt.recipe.econOpps) + '）');
   /* ③ 反面：写错名字必须**当场响**，不许静默少放一个对手（这正是本仓烧过三臂的那一族） */
@@ -76,8 +76,7 @@ t('D220 深经济对手必须能放上**训练桌**（v1.5.325 · §E237 · DS �
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd220off', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: out, EPIRUS_PUBLISH: '' }), encoding: 'utf8', timeout: 300000 });
   eq(off.status, 0, '关档要跑得通');
   ok(String(off.stdout || '').indexOf('[econ-ops]') < 0, '关档不许印 econ-ops（印了 = 默认分布被悄悄改了）');
-  const jmOff = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(out, 'utf8'));
-  const mtOff = JSON.parse(jmOff[1]);
+  const mtOff = packMetaOf(out);
   ok(mtOff.recipe && mtOff.recipe.econOpps === null, '关档产物的 recipe 必须写 null（实测 ' + JSON.stringify(mtOff.recipe && mtOff.recipe.econOpps) + '）');
 });
 
@@ -122,10 +121,7 @@ t('D221 同分带内按"贵卡出手"选人（v1.5.326 · §E249 · 今晚 4 批
     });
     return { r: r, out: out };
   };
-  const metaOf = function (p) {
-    const m = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(p, 'utf8'));
-    return m ? JSON.parse(m[1]) : null;
-  };
+  const metaOf = packMetaOf;   /* v1.7.67：实现只有一份（`_ctx.mjs`） */
   const weightsOf = function (p) {
     const m = /"a":\[([^\]]*)\]/.exec(readFileSync(p, 'utf8'));
     return m ? m[1] : 'NOPARSE';
@@ -775,10 +771,8 @@ t('D128 广度准入线（v1.5.170 · §N29 · §N28"四粒冠军三粒塌成一
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd128floor', EPIRUS_BREADTH_FLOOR: '1.5', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: join(dir, 'd128floor.js') }), encoding: 'utf8', timeout: 300000 });
   eq(run.status, 0, '开了线也要跑通');
   ok(/\[广度线\] 判据 = 净 `G\(落地\)/.test(String(run.stdout || '')), '开了必须印出判据与每粒的净兑现（不印 = 又一根暗旋钮）');
-  const txt = readFileSync(join(dir, 'd128floor.js'), 'utf8');
-  const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(txt);
-  ok(!!jm, '产物 meta 必须能解析（配方自证的前提）');
-  const mt = JSON.parse(jm[1]);
+  const mt = packMetaOf(join(dir, 'd128floor.js'));
+  ok(!!mt, '产物 meta 必须能解析（配方自证的前提）');
   ok(mt.recipe && Number(mt.recipe.breadthFloor && mt.recipe.breadthFloor.floor) === 1.5, 'meta.recipe.breadthFloor 必须记下这臂的线');
   if (mt.breadthFloorAllNarrow) {
     ok(/⛔ \[广度线\] 名人堂\*\*全部塌缩\*\*/.test(String(run.stderr || '') + String(run.stdout || '')),
@@ -817,10 +811,7 @@ t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a
   /* 2026-10-16：每个臂**各有各的落点**（原先都写默认落点 `docs/artifacts/train-3p-out.js`，靠"最后写的那个"
    *   被读到 —— 本机与别的部分并发时那个文件会被别人覆盖，所以 metaOf 现在收一个路径参数）。 */
   const D130OUT = join(dir, 'd130on.js'), D130ONE = join(dir, 'd130one.js');
-  const metaOf = function (p) {
-    const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(p, 'utf8'));
-    return JSON.parse(jm[1]);
-  };
+  const metaOf = packMetaOf;   /* v1.7.67：实现只有一份（`_ctx.mjs`） */
   const on = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130on', EPIRUS_COUNTER_OPPS: '1', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: D130OUT }), encoding: 'utf8', timeout: 300000 });
   eq(on.status, 0, '老口径 `=1` 要跑得通（历史臂逐位复现不能坏）');
@@ -1072,7 +1063,8 @@ t('D144 墙上时钟上限：`EPIRUS_WALL_MS=0` 必须是**关闭**（v1.5.200�
 
 t('D157 确定性重活的缓存必须**内容寻址**、**响亮**、且不许把"没跑"伪装成"过了"（v1.5.225 · 用户批准方案 a）', function () {
   /* 病：D134/D135/D136 里的训练臂是**确定性**的（固定 seed + 固定 env + 固定输入），却每次全量重跑 ——
-   * 实测 D135 一条 41.4 秒、D134 16.1、D136 13.8，合计约 71 秒；而绝大多数提交根本没碰训练侧。
+   * 实测（**v1.5.225 当时**）D135 一条 41.4 秒、D134 16.1、D136 13.8，合计约 71 秒；而绝大多数提交根本没碰训练侧。
+   *   ⚠ 这三个数是**改法之前**的读数（此后当选键默认改 4 粒、缓存腿又绕开 seed 钉值）⇒ 现数见 `docs/GATE-SHIFTS.md` 真源表，别引用这一行。
    * 危险不在"慢"，在**修错方向**：把"门跑过"变成"门认定输入没变"就是 D58/D59 那族"静默跳过"的新外衣。
    * ⇒ 所以本门判三件：① 键必须是**内容**（不是路径/时间）；② 只缓存 (status,stdout,stderr) 且**断言照旧跑**；
    *   ③ 命中必须**响亮**（独立一行 + 收尾计数），且有 `NP_NOCACHE=1` 逃生口。 */
