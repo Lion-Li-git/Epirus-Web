@@ -157,7 +157,9 @@ t('D222 费用表反事实旗标 `--bigtcost=`（v1.5.327 · §E255）：不设 
    * ⚠ 判"没生效"的对照必须是**同种子同场**的差分（绝对量守卫会杀掉正对照，METHODOLOGY 那一族）。 */
   const src = readFileSync('tools/eval-5p.mjs', 'utf8');
   ok(src.indexOf('FLAG.bigtcost') >= 0, '① `eval-5p` 里已经没有 `FLAG.bigtcost` ⇒ 旗标被删了而记账（CHANGELOG §E255）还写着有');
-  ok(src.indexOf('computeCost') >= 0 && src.indexOf('改价没生效') >= 0,
+  /* v1.7.73 · gate-sentinel ③ 分诊：摘掉 `indexOf('改价没生效')`（措辞）。本门**真跑**反事实臂去量"改价有没有生效"，
+   *   那才是判据；源码里那句提示只是它的措辞 ⇒ 留 `computeCost`（接线在不在）就够。 */
+  ok(src.indexOf('computeCost') >= 0,
     '② 缺"由引擎回读新价"那条自检 ⇒ 定价若被别处缓存，工具会印"已生效"而跑的仍是出厂世界');
 
   const runE = function (extra, tag) {

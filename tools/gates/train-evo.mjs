@@ -2018,7 +2018,9 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
   ok(!/farmer|deepsaver/.test(br[0]), '注入分支里不许出现 farmer/deepsaver（用户裁定：囤是有效打法，不许拿它当陪练罚）');
   ok(evo.indexOf('KILL_STAT.fired++') >= 0 && typeof T.countKillSeats === 'function',
     '必须有开火计数（§N12 教训：setter + 横幅读回证明不了作用点）');
-  ok(t3.indexOf('process.exit(8)') >= 0 && t3.indexOf('本臂作废') >= 0, '一局未注 / 座位偏置 ⇒ 必须 exit 8 响亮');
+  /* v1.7.73 · gate-sentinel ③ 分诊：摘掉 `indexOf('本臂作废')` —— 那是**措辞**（换个说法门就红、行为没变）。
+   *   要保的语义是「一局未注 / 座位偏置 ⇒ **响亮失败**」，而响亮 = `exit 8`（上面那半句仍在判，且接口处真跑过）。 */
+  ok(t3.indexOf('process.exit(8)') >= 0, '一局未注 / 座位偏置 ⇒ 必须 exit 8 响亮（措辞不判：换成哪句话都一样要响）');
   /* ② 单元：只注多人局 + 永不注到受评席自己 + 相位真的按代旋转（自建沙箱，别污染共享 T） */
   const sb2 = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
   sb2.window = sb2; sb2.globalThis = sb2;

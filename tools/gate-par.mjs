@@ -307,4 +307,9 @@ if (timingFile) {
 if (has('json')) {
   console.log(JSON.stringify({ parts: results.length, all: ALL.length, total: TOTAL, wall: +wall, certified: v.certified, results: results.map(function (r) { return { part: r.part, code: r.code, sec: r.sec, pass: r.pass, tot: r.tot }; }) }));
 }
-process.exit(v.certified ? 0 : 1);
+/* v1.7.73（`--changed` 第一次实战暴露的第二个 bug）：退出码按「**选中的**部分是否全绿」算，不按「是不是整轮」算。
+ *   原来 `v.certified ? 0 : 1` 让任何 `--part=` 子集都退 1（并集按定义就不可能 = total）⇒
+ *   脚本/CI 会把一次**完全干净的子集跑**当成失败。「不是整轮认证」是**报告**层面的事（上面那行已写明），
+ *   不该混进退出码。整轮那一档仍然用 `v.certified`（它额外要求 `Σ实际门数 == total`，那条**只在整轮**有意义）。 */
+const allGreen = results.length > 0 && results.every(function (r) { return r.code === 0 && r.pass === r.tot; });
+process.exit((plan.partial === true ? allGreen : v.certified) ? 0 : 1);

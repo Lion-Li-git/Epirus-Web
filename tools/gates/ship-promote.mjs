@@ -401,7 +401,8 @@ t('D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（�
   ok(t3.indexOf('T.scoreMemberN(params, XN2_OPPS') >= 0,
     '2P 切片必须用参照列表 XN2_OPPS（改成 OPPS 就退回"常数切片"= 空枪）');
   ok(t3.indexOf("EPIRUS_XN2REF || 'js/bundled-champion.js'") >= 0, '默认参照 = 现役 2P 冠军（不设环境变量也得有梯度）');
-  ok(t3.indexOf('process.exit(2)') >= 0 && t3.indexOf('拒绝静默退化') >= 0,
+  /* v1.7.73 · gate-sentinel ③ 分诊：摘掉 `indexOf('拒绝静默退化')`（措辞）；响亮 = `exit 2`，那半句仍在判。 */
+  ok(t3.indexOf('process.exit(2)') >= 0,
     '参照包读不出必须**立刻退出**（静默退化正是这次踩的坑）');
   ok(t3.indexOf('-band') >= 0 && t3.indexOf('EPIRUS_BAND_DIR') >= 0,
     '必须带内候选落盘，且目录可指（门才测得了它，且不欠 D82 的账）');
