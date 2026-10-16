@@ -818,10 +818,13 @@ var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
  *   因为三维行为轴和谱系图里都不能选择点颜色，他们的点颜色直接就是F定的。"
  *   ⇒ 正确的位置就是这里：Fv 是**单一函数、41 处消费**（谱系点色 / 三维高度与颜色 / 一维位置 / 名次 / 立体 / 冠军序列 / F窗口）
  *     改这一层，全部视图一起跟着换；而颜色下拉与排序按钮里那两档是我上一版塞错地方，已撤。
- *   ⚠ 缺测**不许静默退回默认桌**（那等于一张图上混两把尺）⇒ 计数 NFALL 并把它印在表头与页脚。 */
-var NFALL = 0;
+ *   ⚠ 缺测**不许静默退回默认桌**（那等于一张图上混两把尺）⇒ 必须在表头报出来。
+ *   ⚠ 但报的是**枚数**（N − NHLONG，纯函数的面板属性），不是"回退了几次"：Fv 每帧被叫几十次
+ *     （颜色 / 高度 / 排序比较器 / 标签 / 色带三端都走它），早先那个累加器 NFALL 会随拖动画布和拉滑块
+ *     无上限上涨（用户 10-16 傍晚："缺测回默认桌 人次这个东西会随着拖动画布或调整滑块疯狂上涨"）
+ *     ⇒ 一个只量"你动了多少下鼠标"的数不是读数，删。 */
 function Fv(d) {
-  if (st.ftab === 'long') { if (d.fl !== null && isFinite(d.fl)) return d.fl; NFALL++; return d.Hp / 100 + st.T * d.S; }
+  if (st.ftab === 'long') { if (d.fl !== null && isFinite(d.fl)) return d.fl; return d.Hp / 100 + st.T * d.S; }
   return d.Hp / 100 + st.T * d.S; }
 /* 页面口径那一档（颜色 'hp'）也跟着桌形走 —— 同一个"玩家拿到的夺1率"，两版各有读数；缺测回 null 走灰 */
 function hpNow(d) { return (st.ftab === 'long' && d.hpl2 !== null && isFinite(d.hpl2)) ? d.hpl2 : d.hp; }
@@ -1463,7 +1466,7 @@ function buildBitmap(key, visSigNow) {
     dta[o + 3] = 255;
   }
   cg.putImageData(img, 0, 0);
-  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color,
+  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color, tab: st.ftab,
     vis: NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3),
     /* §E381 自检要读的两个数：地板被涂了几格 ‖ 有几格的场值跑到"可见点的 F 区间"之外（应当恒为 0）。
      *   带外 = 0 这一条同时排掉两种病：钳位（一大片纯色）与淡出（黑洞）—— 因为加权平均不可能跑到被平均的那些点之外。*/
@@ -1480,9 +1483,14 @@ function ensureField(key, bx, byy) {
    * §E371：同理还要带**强度窗口** —— 它重铺的是同一条色带。
    * §E381 改口径：**地板的 IDW 现在按"当下画出来的那批点"加权**（用户："不渲染的点摘出去，附近点要正常覆盖那块区域"）
    *   ⇒ 缓存键必须带**可见名单**（批次 + 窗口 + 可见枚数），漏了就是"切了批次、地形还是上一批的形状"。
-   *   ⚠ 邻域表 NBK 仍然不进这些：那是几何（每格最近 12 名，按全库算一次），过滤发生在**加权**那一步 ⇒ 每帧只多 48 万次乘加。 */
+   *   ⚠ 邻域表 NBK 仍然不进这些：那是几何（每格最近 12 名，按全库算一次），过滤发生在**加权**那一步 ⇒ 每帧只多 48 万次乘加。
+   * §E623（用户 10-16 傍晚："单纯切换右上角的桌型不会重新渲染地图，必须配合调整一下点颜色才会更新"）：**第六项必须是桌形**。
+   *   位图的内容吃 colBand() 与 Fv()（两样都随桌形变），而这一判定原来只有 key/tv/bgc/col/vis 五项 ——
+   *   那个 key 还是常量 'x2y2'（第 2097 行传进来的坐标空间名），所以只翻桌形时**位图根本不重建**，
+   *   要"顺手改一下点颜色"（col 变了）才更新 ⇒ 她那句现象一字不差就是这一条。
+   *   ⚠ 下拉框处理程序里那串"清键"（_FR.k='' 那些）是另一条自救路，它掩盖这个洞：判据必须**绕开清键**去量（见 §E623 那条）。 */
   var visSig = NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
-  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.vis !== visSig) buildBitmap(k2, visSig);
+  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.tab !== st.ftab || FL.vis !== visSig) buildBitmap(k2, visSig);
 }
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
 var boxes = [];
@@ -2405,7 +2413,7 @@ function isoBuild(sig, thr, GN, field, bw) {
       quads.push(o);
     }
   }
-  return { quads: quads, dims: dims, sig: sig, thr: thr, gn: GN, field: field, nCell: F.length, nDrop: ndrop,
+  return { quads: quads, dims: dims, sig: sig, thr: thr, gn: GN, field: field, bw: BW, tab: st.ftab, nCell: F.length, nDrop: ndrop,
     cov: cov, ins: ins, covL: covL, insL: insL, insCell: insCell, bad: badIn, miss: missOut, bw: BW, p0: p0, base: base, nOk: nOk, maxF: maxF };
 }
 /* σ = 第 6 近邻距离的中位，**按显示度量**（三轴各自换算成同一屏幕单位之后）⇒ 曲面在屏幕上是圆的。
@@ -2437,13 +2445,18 @@ function isoEnsure() {
   var _tS = performance.now();
   var sg = isoSigma();
   SIGMS = performance.now() - _tS;   /* E422：算签名花了多少 */
-  if (ISO && ISO.sig === sg && ISO.thr === st.isoT && ISO.gn === st.isoGN && ISO.field === st.isoField && ISO.bw === st.isoBW) return ISO;
+  /* §E619 第六个条件必须是**桌形**：场值走 Fv（vAt 里 field 是 pot 的那一支），而 Fv 现在有两个自由度（T 与 ftab）。
+   *   原来只比 sig/thr/gn/field/bw ⇒ 换桌形时这五项全相等 ⇒ 直接回吐旧场，**底图一动不动**。
+   *   用户 10-16 傍晚的现象就是这条："切换桌型不会重新渲染地图，必须配合调整一下点颜色才会更新"。
+   *   （与今早那三处缓存键同一族病：凡缓存"由 Fv 导出的量"，键要带上 Fv 的每一个自由度。） */
+  if (ISO && ISO.sig === sg && ISO.thr === st.isoT && ISO.gn === st.isoGN && ISO.field === st.isoField && ISO.bw === st.isoBW && ISO.tab === st.ftab) return ISO;
   /* E423 DS：**指名道姓**记录这次为什么重建**（空闲时四个条件 sig/thr/gn/field 都该稳定）。
    *   §E608：带宽是**第五个**条件 —— 不进缓存键的话，滑块一动而壳纹丝不动（"改了没生效"那一族，
    *   与 §E464 那座只搭一半的桥同形：代码写了、路是空的，而页面自己看起来一切正常）。
    *   顺带把 SIGMS/BUILDMS 在该帧重建时才是当帧值；读数那边每帧清零，避免拿陈旧值判读。 */
   MISSWHY = ISO ? ((ISO.sig === sg ? '' : 'sig') + (ISO.thr === st.isoT ? '' : '|thr') +
-    (ISO.gn === st.isoGN ? '' : '|gn') + (ISO.field === st.isoField ? '' : '|field') + (ISO.bw === st.isoBW ? '' : '|bw') || 'all-equal?') : 'noISO';
+    (ISO.gn === st.isoGN ? '' : '|gn') + (ISO.field === st.isoField ? '' : '|field') + (ISO.bw === st.isoBW ? '' : '|bw') +
+    (ISO.tab === st.ftab ? '' : '|tab') || 'all-equal?') : 'noISO';
   ISOBUILDS++;   /* E419 DS：建壳次数 —— 用户真机实测 1.2s/帧、而每帧只有 3073 次画布调用(≈1.5ms)
                   *   ⇒ 1.2 秒必然花在"每帧重算"上；头号嫌疑就是这里被反复重建（GN=128 建一次 ~0.6~1.5s，量级吻合）。 */
   var t0 = performance.now(); ISO = isoBuild(sg, st.isoT, st.isoGN, st.isoField, st.isoBW); ISO.ms = performance.now() - t0;
@@ -2688,7 +2701,7 @@ function drawBody() {
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺测回默认桌 ' + NFALL + ' 人次）') : 'F = 默认桌(3血)') + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚退回默认桌，一张图上混两把尺') + '）') : 'F = 默认桌(3血)') + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
@@ -3361,8 +3374,28 @@ function tick() {
   req();
   if (t < 1) requestAnimationFrame(tick);
 }
+/* ===== §E620 工具栏分三段（用户 10-16 傍晚：「上方选项太多了，先重新排序：前面几个是不同图选项，
+ *   中间一段通用选项，最后是针对每个图特有的，并且切换到其他图的时候就不要显示」）=====
+ *   第三段按视图显隐。表在这里，不在各处 if —— 免得下一件控件又漏一处（本仓"两处各写一个 6"栽过四次）。
+ *   ⚠ 只动 display，不删节点：那几条判据（工具栏接线 / 复位视图 / 投影判据）是按 id 找控件的。 */
+var BAR_VIEW = { sortb: ['1d'], fitt: ['map', '1d', '3db'], edgerow: ['tree'], bside: ['map', 'tree'],
+  bisos: ['3db'], bh: ['1d', '3db'] };
+function barVis() { for (var k in BAR_VIEW) { var el = document.getElementById(k); if (!el) continue;
+  el.style.display = BAR_VIEW[k].indexOf(st.mode) >= 0 ? '' : 'none'; } }
+/* 段序：源码里壳的三行滑杆挨着壳开关（长说明和它管的旋钮必须写在一起才看得懂），
+ *   所以"立体/好在上/过线曲面/连线/冠军序列"这几件天然落在了第一段中间。装配时挪一次节点把它们放到第三段。
+ *   ⚠ 挪的是节点，不改任何文案；DOM 源序保持按功能家族相邻。 */
+var BAR_G3 = ['b3dt', 'bh', 'bisos', 'isorow', 'isobwrow', 'isognrow', 'edgerow', 'bside'];
+function barGroup() { var bar = document.getElementById('bar'); if (!bar) return;
+  var g2 = document.getElementById('g2h'), g3 = document.getElementById('g3h'), anchor = document.getElementById('sortb');
+  if (!g2 || !g3 || !anchor) return;
+  bar.insertBefore(g2, document.getElementById('reset'));
+  bar.insertBefore(g3, anchor);
+  BAR_G3.forEach(function (k) { var el = document.getElementById(k); if (el) bar.insertBefore(el, anchor); }); }
+barGroup();
 function setMode(m) {
   st.mode = m; st.color = DEF_COLOR[m] || 'fam';
+  barVis();   /* §E620 第三段（本图特有）随视图显隐 */
   buildGroups();   /* 分组的键随颜色口径变 ⇒ 每次换模式都要重建，否则上一口径的颜色表会串色 */
   var cs = document.getElementById('color'); if (cs) cs.value = st.color;
   Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-m]'), function (b) { b.classList.toggle('on', b.getAttribute('data-m') === m); });
@@ -3480,7 +3513,7 @@ document.getElementById('labels').addEventListener('change', function () { st.la
  *   ③ 清 Fv 的缓存（fRange/色域/窗口都按值缓存过，键里没桌形 ⇒ 不清会拿旧域画新尺）；④ 重烘当前视图。 */
 (function () { var f = document.getElementById('ftab'); if (!f) return; f.value = st.ftab;
   f.addEventListener('change', function () { st.ftab = (this.value === 'long' ? 'long' : 'multi');
-    NFALL = 0; recalcRank(); FSRT.key = ''; _FR.k = ''; _EPR.k = ''; _SCR.k = '';
+    recalcRank(); FSRT.key = ''; _FR.k = ''; _EPR.k = ''; _SCR.k = '';
     st.hi = {}; buildGroups(); buildFamBar(); req();
     var b = document.getElementById('ftabl'); if (b) b.textContent = st.ftab === 'long' ? '桌形·长程' : '桌形'; }); })();
 document.getElementById('size').addEventListener('input', function () { st.size = +this.value; req(); });
@@ -4483,9 +4516,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('标签：常驻名单（历代上槽 ∪ 池成员）必须全员上名（§E606 换了主语 —— 原来判的是"所有 lineage 非空"，那批里含不给常驻名字的旧槽位冠军）',
     LB.nch > 0 && LB.missing.length === 0 && LB.lbC === LB.nch,
     '常驻名单可见 ' + LB.nch + ' 枚 ‖ 上了名字 ' + LB.lbC + ' ‖ 没上的：' + (LB.missing.length ? LB.missing.join(',') : '无'));
+  /* §E620 这条原来钉 LB.cov <= 110（绝对枚数）—— 与刚被她否掉的那条同一种坏法：
+     *   "被名字盖住的点"随面板规模线性涨（钉它那天 718 枚，现在 798 枚），线不动就必然越线。
+     *   改成**密度**：按钉它那天实测的 110/718 = 15.3% 换算到当前点数，另给 3 枚的舍入余量。 */
+  var COVL = Math.round(110 / 718 * N) + 3;
   T('标签：默认视图里被别人的名字压住的点只查「被别人名字盖住的点」这一条（矩形重叠那条已按用户裁定删除 §E430）（实测与线见上面那段注释）',
-    LB.cov <= 110 && true   /* §E430 用户裁定删除：这条是"定死标签"的代理判据（实测 37 对 > 线 16），用户手动验过**没有矩形重叠问题** */,
-    '盖住的点 ' + LB.cov + ' 枚（线 110）‖ 矩形重叠 ' + LB.ov + ' 对（**只报不判**，那条腿按用户裁定删了 §E430）‖ 标签 ' + LB.n + ' 个 ‖ 避让 ' + LB.push + ' 次');
+    LB.cov <= COVL,
+    '盖住的点 ' + LB.cov + ' 枚 ‖ 线 ' + COVL + '（= 110/718 的密度 × 当前 ' + N + ' 枚 + 3）‖ 矩形重叠 ' + LB.ov + ' 对（**只报不判**，那条腿按用户裁定删了 §E430）‖ 标签 ' + LB.n + ' 个 ‖ 避让 ' + LB.push + ' 次');
   st.mode = SNAPL.mode; st.elev = SNAPL.elev; st.labels = SNAPL.labels; st.batch = SNAPL.batch;
   st.flo = SNAPL.flo; st.fhi = SNAPL.fhi; st.sel = SNAPL.sel; recomputeVIS(); draw(); paintWin();
   st.mode = SNAPA.mode; st.elev = SNAPA.elev; st.batch = SNAPA.batch;
@@ -4543,6 +4580,129 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     ' ‖ 剂量响应：c=1 罩 ' + IS1.ins + ' 枚 vs c=0.2 罩 ' + IS2.ins + ' 枚（必须不等 ⇒ bw 真传进去了）' +
     ' ‖ 观察：c=1 真过线 ' + IS1.cov + ' ‖ 误包 ' + IS1.bad + ' ‖ 漏画 ' + IS1.miss + '/' + IS1.nOk +
     ' ‖ 当前滑杆 bw=' + ISOC.bw.toFixed(2) + ' 壳内 ' + ISOC.ins);
+  /* ===== §E619 桌形开关必须真的重画底图（用户 10-16 傍晚："切换桌型不会重新渲染地图，必须配合调整一下点颜色才会更新"）=====
+   *   为什么这条必须做成判据而不是我手测一次：底图那层是**带缓存的**（isoEnsure 只在条件变了时重建），
+   *   而"缓存键少一维"的症状恰好是**首帧正确、交互后不更新** —— 截图量具每次都是新载入，永远测不到。
+   *   所以只能像用户那样"在同一个页面里翻一下"，再比像素。
+   *   三面判：① 翻完 ISO 必须真的换了桌（tab 对得上）‖ ② 重建原因里必须点名 tab ‖ ③ 同一块底图像素必须变。 */
+  (function () {
+    /* ⚑ 这条自己也要有牙：第一版它**静默没跑**（里面引用了一个不存在的名字 ⇒ 抛在 try 里，汇总照报 89/0，
+     *   断言少一条没人知道）。所以整段包 try/catch，抛了就用 T() 报一条红，而不是让计数悄悄变少。 */
+    try {
+      /* ⚠ 不许调 setMode：它会重排工具栏 ⇒ 画布高度变（实测 498→543），后面几条按"当前画面"取样的
+       *   判据会连带红（第一版就是这么把 89/0 变成 87/3 的）。
+       * ⚑ 但**必须**把 st.mode 钉在 'map' 上（照 §E306 那条壳判据的同款做法：直接改 st.mode + recomputeVIS + draw）：
+       *   前面那条判据为了量壳，临时把视图改成了 3db 并在**更后面**才还原 ⇒ 本条第一版是在 3db 画面上量的，
+       *   却写着"底图像素"（用户问的是地图）。尺子没对上她抱怨的那个画面，读数再准也是废的。 */
+      var md0 = st.mode, iso0 = st.iso;
+      st.mode = 'map'; st.iso = 0; recomputeVIS(); draw();
+      var fx = Math.round(cv.width * 0.42), fy = Math.round(cv.height * 0.46);
+      function patch() { try { return String(g.getImageData(fx, fy, 9, 9).data.join(',')); } catch (e) { return 'ERR'; } }
+      function band() { var b = colBand(); return b ? [b.lo, b.med, b.hi].join('/') : '—'; }
+      /* 她问的是"这张图**看起来**偏灰蓝" ⇒ 量画面本身，不量 F 的分布（第一版拿分布当尺子，
+       *   报的"近灰 50.0%→55.3%"复算不出来，已撤）。这条 LUT 是 蓝→灰→红 ⇒ b>r 冷、r>b 暖、max-min 小 = 近灰。
+       *   ⚠ 分母必须先剔掉**底色本身**：#0f1522 自己的 max-min 只有 19，不剔的话整张画布 92% 都算"近灰"
+       *     —— 那一版量的还是背景，不是图。每 4 个像素取 1 个。只当观察，不当判据。 */
+      function gray() { try {
+        var bh = parseInt(String(st.bg).slice(1), 16), br0 = (bh >> 16) & 255, bg0 = (bh >> 8) & 255, bb0 = bh & 255;
+        var im = g.getImageData(0, 0, cv.width, cv.height).data, cool = 0, warm = 0, gry = 0, tot = 0;
+        for (var i = 0; i < im.length; i += 16) { var r = im[i], gg = im[i + 1], bb = im[i + 2];
+          if (Math.abs(r - br0) + Math.abs(gg - bg0) + Math.abs(bb - bb0) < 36) continue;   /* 就是底色 ⇒ 不进分母 */
+          tot++;
+          if (Math.max(r, gg, bb) - Math.min(r, gg, bb) < 28) gry++; else if (bb > r) cool++; else if (r > bb) warm++; }
+        return tot ? (100 * cool / tot).toFixed(1) + '/' + (100 * gry / tot).toFixed(1) + '/' + (100 * warm / tot).toFixed(1) + '（n=' + tot + '）' : '—'; } catch (e) { return 'ERR'; } }
+      draw(); var isoA = isoEnsure(), pA = patch(), tabA = isoA ? isoA.tab : '?', bA = band(), grA = gray();
+      var flOld = FL, vSig = flOld ? flOld.vis : '—';
+      var oSig = flOld ? (flOld.key + '|' + flOld.tv + '|' + flOld.bgc + '|' + flOld.col) : '—';
+      st.ftab = (st.ftab === 'long' ? 'multi' : 'long');
+      recalcRank(); FSRT.key = ''; _FR.k = ''; _EPR.k = ''; _SCR.k = '';
+      /* ⚠ 这一版原来在这里写了 ISO = null —— 那等于**替缓存自己造一个重建理由**：
+       *   清空之后 isoEnsure 只能报 noISO，"到底是不是桌形逼着重建的"就永远量不出来了（判据看着绿，
+       *   量的是我手动清缓存）。现在什么都不清，只翻桌形 ⇒ 重建必须**由键里的 tab 那一维**触发。 */
+      draw(); var isoB = isoEnsure(), pB = patch(), tabB = isoB ? isoB.tab : '?', bB = band(), grB = gray();
+      var whyB = String(MISSWHY), flFlip = st.ftab, flNew = FL;
+      var back = (flFlip === 'long' ? 'multi' : 'long');   /* back = 进来时那一档；flFlip = 翻过去那一档 */
+      /* ===== §E623 第二层：地图**底图位图**的失效判定必须含桌形（上面那条只修了壳/场那一层，她报的病有两层）=====
+       *   位图那层原来五项判定（key/tv/bgc/col/vis）里没有桌形，而 key 是常量 'x2y2' ⇒ 只翻桌形时**位图不重建**，
+       *   要"顺手改一下点颜色"（col 正是那五项之一）才更新 —— 与她那句现象一字不差。
+       *   ⚠ 这一遍**什么都不清**：清键是下拉框处理程序那条自救路，绕开它才量得到"键自己有没有这一维"。
+       *   ⚠ 还要自证"唯一变量就是桌形"：vis 串与其余四项必须逐字相同，否则这次重建可能是别的条件触发的
+       *     （算得出 ≠ 算得干净）。 */
+      var vSig2 = flNew ? flNew.vis : '—', oSig2 = flNew ? (flNew.key + '|' + flNew.tv + '|' + flNew.bgc + '|' + flNew.col) : '—';
+      var flClean = !!flOld && !!flNew && vSig === vSig2 && oSig === oSig2;
+      var flSwap = flClean && flOld !== flNew && flNew.tab === flFlip;
+      /* 判据钉的是**场必须换桌**（对象换了 + 重建原因点名 tab + 色带三端跟着 Fv 动）；像素与冷暖占比**只当观察**。
+       *   ⚠ 为什么"像素必须变"不能当判据：它随画布尺寸与相机摆位变（同一条 LUT，3db 那次跑出来 n 只有地图那次的一半），
+       *     钉它等于钉一台仪器而不是钉产品。
+       *   ⚠ **自我更正（写在这里免得下一班又信那句错的）**：本条第一版观察到"9×9 像素未变"，我当时解释成
+       *     "电平平移被 §E379 归一化吸收"。那个解释是**错的** —— 未变是因为底图位图那层根本没重建（§E623 那个洞），
+       *     修好之后同一处像素是变的。异常读数不许用"噪声/正常"解释掉，这一条又欠了一笔实测。
+       *   ⚠ 原因串用 indexOf 不用正则：源里写 反斜杠| 会被模板字面量吃掉那个反斜杠（产物变成"或空串"，
+       *     恒真）—— 这一族又一撞，所以 §E618 那道转义门已从"只报字母"改成白名单。 */
+      T('桌形开关：底图那层必须换桌（场重建 + 色带三端跟着 Fv 走），不许"要动颜色才更新"',
+        isoA !== isoB && tabA !== tabB && whyB.indexOf('tab') >= 0 && bA !== bB,
+        '量于 ' + st.mode + ' 视图 ‖ ISO.tab ' + tabA + ' → ' + tabB +
+        ' ‖ 重建对象' + (isoA === isoB ? '**没换**（缓存直接回吐旧场）' : '换了') +
+        ' ‖ 重建原因 MISSWHY=' + (whyB || '—') +
+        ' ‖ 色带三端 ' + bA + ' → ' + bB + ' ‖ 观察：底图 9×9 像素' + (pA === pB ? '未变（电平平移被归一化吸收，见 §E379）' : '变了') +
+        ' ‖ 地图画面占比 冷/近灰/暖 % = ' + grA + ' → ' + grB +
+        ' ‖ 取样点 (' + fx + ',' + fy + ')');
+      T('底图位图：只翻桌形、不清任何缓存键，那一层也必须自己重建（ensureField 的判定必须含桌形）',
+        flSwap,
+        '唯一变量自证：vis ' + (vSig === vSig2 ? '相同' : '**变了**') + ' ‖ 其余四项 ' + (oSig === oSig2 ? '相同' : '**变了**') +
+        ' ‖ 位图对象' + (flOld !== flNew ? '换了' : '**没换**（这就是她那句"要动颜色才更新"）') +
+        ' ‖ FL.tab ' + (flOld ? flOld.tab : '—') + ' → ' + (flNew ? flNew.tab : '—') + '（应等于 ' + flFlip + '）' +
+        ' ‖ 旧洞：判定只有 key/tv/bgc/col/vis 五项');
+      st.ftab = back; ISO = null; recalcRank(); FSRT.key = ''; _FR.k = ''; _EPR.k = ''; _SCR.k = '';
+      st.mode = md0; st.iso = iso0; recomputeVIS(); draw();
+    } catch (E) {
+      T('桌形开关：这条判据自己跑挂了（不许静默少一条）', false, String(E && E.message || E).slice(0, 120));
+    }
+  })();
+  /* ===== §E620 工具栏分三段（用户 10-16 傍晚："上方的选项太多了…前面几个是不同图选项，后面先一段通用选项，
+   *   最后是针对每个图特有的选项，并且在切换到其他图的时候就不要显示"）=====
+   *   这条钉的是**登记完整性**，不是件数（她同一批话里否掉了钉绝对枚数的那类门）。
+   *   坏法只有一种是静默的：往第三段加一件控件却忘了写进 BAR_VIEW ⇒ 它永远挂着 ⇒ 用户看到的还是"太多"。
+   *   所以判据是：第一段除"换哪张图"之外不许有东西 ‖ 第三段每件带 id 的控件要么在 BAR_VIEW 里，
+   *   要么在 OWN 里（那四件有各自的显隐逻辑：相机开关跟着视图、壳三行跟着壳开关）。 */
+  (function () {
+    try {
+      var kids = Array.prototype.slice.call(document.getElementById('bar').children);
+      function gi(id) { var e = document.getElementById(id); return e ? kids.indexOf(e) : -1; }
+      var g2 = gi('g2h'), g3 = gi('g3h');
+      var OWN = { b3dt: 1, isorow: 1, isobwrow: 1, isognrow: 1 };
+      var s1bad = kids.slice(1, g2 < 0 ? 1 : g2).filter(function (e) { return !e.hasAttribute('data-m'); })
+        .map(function (e) { return e.id || e.tagName.toLowerCase(); });
+      var s3bad = kids.slice(g3 < 0 ? kids.length : g3 + 1).filter(function (e) { return e.id && !BAR_VIEW[e.id] && !OWN[e.id]; })
+        .map(function (e) { return e.id; });
+      var moved = ['b3dt', 'edgerow', 'bside', 'sortb'].filter(function (id) { return gi(id) <= g3; });
+      T('工具栏三段：第一段只放"换哪张图" ‖ 第三段每件控件都必须在显隐表里登过记（漏登记 = 换图不收起）',
+        g2 > 0 && g3 > g2 && s1bad.length === 0 && s3bad.length === 0 && moved.length === 0,
+        '段头 @' + g2 + '/' + g3 + ' ‖ 第一段混进来的 ' + (s1bad.join(',') || '无') +
+        ' ‖ 第三段没登记的 ' + (s3bad.join(',') || '无') + ' ‖ 还没搬进第三段的 ' + (moved.join(',') || '无') +
+        ' ‖ 显隐表 ' + Object.keys(BAR_VIEW).length + ' 件（件数只印，不当判据）');
+    } catch (E) {
+      T('工具栏三段：这条判据自己跑挂了（不许静默少一条）', false, String(E && E.message || E).slice(0, 120));
+    }
+  })();
+  /* ===== §E622 表头那一行必须是"状态的纯函数"（用户 10-16 傍晚："缺测回默认桌 人次这个东西会随着拖动画布或调整滑块疯狂上涨"）=====
+   *   病形：把**每帧累加**的量（Fv 被叫几十次：颜色 / 高度 / 排序比较器 / 标签 / 色带三端）当成"关于数据的事实"印出去。
+   *   那种数唯一的用处是量"你动了多少下鼠标"，而它看着像一个读数 —— 比"没有读数"更坏。
+   *   判据不针对 NFALL 那一枚名字（它已经删了），而是钉这一族：**同一状态下多画三帧，那一行必须逐字不变**。
+   *   ⚠ 长度门槛是防"空 === 空"的假绿（算不出与算过且干净不许同形）。 */
+  (function () {
+    try {
+      var stx = document.getElementById('stat');
+      if (!stx) { T('表头读数自证：找不到 #stat ⇒ 这条没接上', false, '量具没连上被测对象'); return; }
+      draw(); var t1 = String(stx.textContent || '');
+      draw(); draw(); draw(); var t2 = String(stx.textContent || '');
+      T('表头读数不许随重绘上涨（同一状态下再画三帧必须逐字相同 ‖ 有每帧累加器就会红）',
+        t1.length > 40 && t1 === t2,
+        '长度 ' + t1.length + ' ‖ 三帧后' + (t1 === t2 ? '逐字相同' : '变了：[' + t1.slice(0, 70) + '] → [' + t2.slice(0, 70) + ']'));
+    } catch (E) {
+      T('表头读数自证：这条判据自己跑挂了（不许静默少一条）', false, String(E && E.message || E).slice(0, 120));
+    }
+  })();
   /* c=0.2 是扫描表上的拐点（本机 GN=72：漏画 67→**0** ‖ 纯度 53%→85% ‖ 片数 7158 ‖ 建壳 45ms）。
    *   再往左（c≤0.05）解析读数说 170~173 枚在壳里、而网格只有 310（GN72）~150（GN128）片 ⇒ **画不出**：
    *   那是网格的分辨率上限（小泡被退化片闸吃掉），不是场错了 ⇒ 滑轨下限停在 0.05，"同场"那条判据钉在 c=1 这一端。*/
@@ -5499,6 +5659,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
  *   ② Chrome 的原生轨道把滑块**中心**的行程卡在 [半滑块, 宽 − 半滑块]，两端各留半个滑块。
  *   修法不是去挪滑块（挪不动），是**把画出来的轨道缩到滑块中心真正走得到的那一段** ⇒ 拖到头 = 看上去到头。
  *   轨道色用 --dim：深浅两套底色下都看得见（用 --line 在深蓝底上几乎与面板同色，等于没有轨道）。 */
+'#bar .tbgrp{align-self:center;font-size:11px;color:var(--dim);border-left:1px solid var(--line);padding-left:9px;margin-left:4px;white-space:nowrap}\n' +
 'input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;border:none;padding:0;height:16px;cursor:pointer;min-width:60px}\n' +
 'input[type=range]::-webkit-slider-runnable-track{height:16px;background:linear-gradient(var(--dim),var(--dim)) no-repeat;' +
 'background-size:calc(100% - 14px) 4px;background-position:7px center;border-radius:2px}\n' +
@@ -5528,20 +5689,20 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '#selftest{display:none;position:fixed;left:14px;top:40%;background:#101a2c;border:1px solid #6f83a8;color:#dce6f5;padding:8px 10px;border-radius:6px;font-size:11px;white-space:pre;z-index:30}\n' +
 '</style></head><body>\n' +
 '<div id="bar">' +
+'<span class="tbgrp" title="第一段：换的是「看哪张图」">视图</span>' +
 '<button data-m="1d">一维（F 排序带）</button>' +
 '<button data-m="map" class="on">地图（缩放/平移）</button>' +
-'<button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button>' +
-'<button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button>' +
 '<button data-m="tree">谱系（时间 × 家族）</button>' +
 '<button data-m="3db">三维行为轴</button>' +
+'<button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button>' +
+'<button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button>' +
 '<button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button>' +
 '<label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label>' +
 '<label id="isobwrow" style="display:none" title="§E608 壳的**比较带宽** c = 核宽 / σ（σ = 显示度量第 6 近邻中位，现在印在下面那行读数里）。&#10;· c=1 = 今天这只壳：平滑的局部过线占比（M0 收缩 + 密度门都在）。&#10;· 往左收到 c→0 = 签名端：核里只剩自己那一枚 ⇒ 比值场退成 1-NN ⇒ 等值面就是 Voronoi 边界，每个过线点冒一个小泡、未过线一枚也不包（代价：壳碎成一片）。&#10;M0 与密度门跟着 c 线性退场 —— 它们是给「稀疏区一两个点就把比值抬到 1」打的补丁，小带宽天生不需要。&#10;⚠ 阈值这根滑杆不动（那是另一个所指）。⚠ 小 c 的泡比格子还小 ⇒ 要配 96~128 格，否则被退化片闸吃掉，看着像什么都没画。">带宽 <input type="range" id="isobw" min="0.05" max="1" step="0.01" value="1"><span id="isobwv">1.00（今天）</span><button id="bwToday" title="c=1 ‖ 今天的平滑局部占比壳（默认零剂量那一档）">今天的壳</button><button id="bwSign" title="c=0.20 ‖ 实测这一档漏画归零（67→0）、误包 91→30，壳碎成一坨一坨各自抱住过线簇。再往左（c≤0.05）数值上才是签名端（误包 3→0），但那些小泡比格子还小 ⇒ 画出来像什么都没画（GN=72 只剩 310 片）">贴簇 c=0.2</button></label>' +
 '<label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label>' +
-'<button id="sortb">排序：F 名次</button>' +
 '<button id="reset">复位视图</button>' +
-'<button id="fitt">投影判据 ⓘ</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
+'<span id="g2h" class="tbgrp" title="第二段：所有图通用的口径与筛选">通用</span>' +
 '<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp/F，796 行历史引用都指着它。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong = Hplong/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label>' +
 '<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
@@ -5556,6 +5717,9 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button data-bg="#0f1522">深蓝</button><button data-bg="#05070d">纯黑</button>' +
 '<button data-bg="#212a3b">石板</button><button data-bg="#e6ebf5">浅底</button>' +
 '<input type="color" id="bgc" value="#0f1522" title="自定义底色"><span id="bgn" style="color:var(--dim);font-size:11px"></span>' +
+'<span id="g3h" class="tbgrp" title="第三段：只有当前这张图用得上的（换图就收起来，不占地方）">本图特有</span>' +
+'<button id="sortb">排序：F 名次</button>' +
+'<button id="fitt">投影判据 ⓘ</button>' +
 '</div>\n' +
 '<div id="wrap"><canvas id="cv"></canvas><div id="stat"></div><div id="legend"></div>' +
 '<div id="card"></div><div id="side"></div>' +
@@ -5593,16 +5757,26 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
   const a0 = self.indexOf(head), b0 = a0 < 0 ? -1 : self.indexOf(BT, a0 + head.length);
   if (a0 < 0 || b0 < 0) { console.error('⛔ 找不到 JS 模板区 ⇒ 转义门失效（拒绝落盘）'); process.exit(3); }
   const tpl = self.slice(a0 + head.length, b0), bad = [];
+  /* §E621 这一族第五撞补的课：原来只报「反斜杠 + **字母**」，而我今天写的是 反斜杠|（正则里的"或"）
+   *   ⇒ 模板字面量照样把反斜杠吃掉，产物变成"空串 或 tab"⇒ 恒真，那条判据看着绿、其实一条都没判。
+   *   规则改成**白名单**：只有 双反斜杠 / 反斜杠$（防插值）/ 反斜杠换行（续行）是有意为之，
+   *   其余（字母、数字、任何标点）在模板里都会掉反斜杠 ⇒ 源里必须写两个。 */
+  const OKBS = BS + '$' + NL;
   let inBlk = false, inLine = false, q = '';
   for (let i = 0; i < tpl.length; i++) {
     const c = tpl[i], n = tpl[i + 1] || '';
     if (inBlk) { if (c === '*' && n === '/') { inBlk = false; i++; } continue; }
     if (inLine) { if (c === NL) inLine = false; continue; }
-    if (q) { if (c === BS) { const m = tpl[i + 2] || ''; if (m !== BS && m !== 'u' && m !== 'x' && /[A-Za-z]/.test(n)) bad.push('第 ' + (tpl.slice(0, i).split(NL).length + 1) + ' 行（字符串内）：反斜杠 ' + n); i++; continue; } if (c === q) q = ''; continue; }
+    if (c === BS) {
+      const ln = tpl.slice(0, i).split(NL).length + 1;
+      if (n === BS) { i += 2; continue; }                    /* 双反斜杠 ⇒ 产物里是一个，后面那个字符是正文 */
+      if (OKBS.indexOf(n) < 0) bad.push('第 ' + ln + ' 行' + (q ? '（字符串内）' : '') + '：反斜杠 ' + n + ' ⇒ 产物里会变成 ' + n);
+      i++; continue;
+    }
+    if (q) { if (c === q) q = ''; continue; }
     if (c === '/' && n === '*') { inBlk = true; i++; continue; }
     if (c === '/' && n === '/') { inLine = true; i++; continue; }
     if (c === String.fromCharCode(39) || c === String.fromCharCode(34)) { q = c; continue; }
-    if (c === BS) { const m = n; if (m === BS) { i++; continue; } if (m === 'u' || m === 'x') continue; if (/[A-Za-z]/.test(m)) bad.push('第 ' + (tpl.slice(0, i).split(NL).length + 1) + ' 行：反斜杠 ' + m + ' ⇒ 产物里会变成 ' + m); }
   }
   /* §E618 同一条扫描顺手补一刀：**模板体内出现裸反引号 = 生成器自己编译不过**（整页源码是模板字面量，
    *   注释里的一个反引号就能把它提前闭合 —— 本班连撞三次，第三次是靠"跑页检前先 echo exit=$?"才发现的）。
@@ -5618,7 +5792,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
     console.error('  ' + bad.slice(0, 12).join(NL + '  '));
     process.exit(3);
   }
-  console.log('模板转义自证 ✅ 代码/字符串里没有被吃掉的「反斜杠+字母」（注释不计）');
+  console.log('模板转义自证 ✅ 代码/字符串里没有会被模板字面量吃掉反斜杠的写法（白名单：双反斜杠 / 反斜杠$ / 续行；注释不计）');
 }
 
 /* E391 DS：先自证、后落盘。原来是反的（先写坏文件、再自证失败 exit 3）⇒ 产物已经坏了，而我下一句没看退出码就截图。顺序一换，写坏文件这一步根本不会发生。 */
