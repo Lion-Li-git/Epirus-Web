@@ -203,13 +203,19 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
   eq(bk.status, 0, '⑩c 烘焙必须成功（失败 ⇒ 页面产物是旧的，判据与截图都跑在上一版上）：' +
     String(bk.stdout || bk.stderr || '').trim().split('\n').slice(-2).join(' ‖ ').slice(0, 220));
   const shipped = readFileSync('champion-map/index.html');
+  /* ⚠ 比对前必须**抹平行尾**：Windows 的 `core.autocrlf` 会在 checkout 时把产物刷成 CRLF，而生成器写的是 LF
+   *   ⇒ 原始字节比会**假红**（10-16 实测：`git checkout main` 之后 D234 立刻 0/1，而 `git diff` 是空的）。
+   *   这不是放宽判据：内容仍然逐字节比，只是不再拿"编辑器/平台怎么存行尾"当产品差异。
+   *   ⑩d 的牙口也跟着改到**归一化之后**那一份上动字节 —— 否则它验的是"没在用的那次比较"。 */
+  const NL = (b) => Buffer.from(String(b.toString('utf8')).replace(/\r\n/g, '\n'));
+  const shippedN = NL(shipped);
   let pageSame = true;
-  try { const baked = readFileSync(bakeFix); pageSame = baked.length === shipped.length && baked.equals(shipped); }
+  try { const baked = NL(readFileSync(bakeFix)); pageSame = baked.length === shippedN.length && baked.equals(shippedN); }
   catch (e) { pageSame = false; }
   ok(pageSame, '⑩c 在册的 champion-map/index.html 必须逐字等于 `node champion-map/viewer.mjs` 的输出' +
     '（改了生成器忘了重烘 ⇒ 页检/截图量的都不是这份代码）。重烘：node champion-map/viewer.mjs');
-  const perturbed = Buffer.from(shipped); perturbed[perturbed.length - 20] = perturbed[perturbed.length - 20] ^ 0x20;
-  ok(!perturbed.equals(shipped), '⑩d 牙口自证：改一个字节必须让上面的逐字比对判成"不等"（这条不成立说明 ⑩c 比的是空气）');
+  const perturbed = Buffer.from(shippedN); perturbed[perturbed.length - 20] = perturbed[perturbed.length - 20] ^ 0x20;
+  ok(!perturbed.equals(shippedN), '⑩d 牙口自证：在**归一化之后**的产物上改一个字节必须让逐字比对判成"不等"（这条不成立说明 ⑩c 比的是空气）');
   try { rmSync(bakeFix, { force: true }); } catch (e) { /* 临时件删不掉不影响判据（它在 tmpdir，不在 docs/artifacts 的 24h 账里） */ }
 
   /* ⑫ §E600-B（用户 10-13 裁定「把启发式随机脚本塞到弱池子里面」）：**掺脚本席这件事必须两侧同源、可复现、不吞掉池**。
