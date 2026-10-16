@@ -45,6 +45,10 @@ t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：�
    * train-best / train-fast / 页面训练服务全都没有这道闸）。静态钉跟着搬到单一来源，
    * 行为断言（下面 ①②③）**一个字没改** —— 门守的是行为，不是实现放在哪个文件。 */
   const kgSrc = readFileSync('server/knob-guard.mjs', 'utf8');
+  /* 为什么这几条**源码正则腿**能留（T1 分诊 train-env · 千问 10-17）：判据是"删掉被钉那行，行为会不会变"。
+   *   `SELF_ENV_KEYS` / `enforceKnobs(` / `knob-guard.mjs` 三处是**接线本身** —— 删掉调用，暗键就回到"传了等于没传"的静默档，
+   *   行为真的变（而且正是这条门存在的理由）。所以它不是钉措辞，是钉"这个入口有没有接上那道闸"。
+   *   ⚠ 同一条门里下面的 exit 6 / ALLOW_DARK 放行两条是**行为腿**，两半各管一件事：正则腿防"换了个入口忘了接"，行为腿防"接了但没生效"。 */
   ok(t3.indexOf('SELF_ENV_KEYS') >= 0 && t3.indexOf('enforceKnobs(') >= 0 && t3.indexOf('knob-guard.mjs') >= 0,
     'train-3p 必须走单一来源的黑键闸（enforceKnobs + 自己的闭集 SELF_ENV_KEYS）');
   /* v1.7.74 · gate-sentinel ③ 分诊：摘掉中间那句中文（`CLI 黑键`）—— 它只是那两个**标识符**之间的措辞；
@@ -113,6 +117,8 @@ t('D143 黑键闸必须铺到**每个**训练入口（v1.5.200）：`EPIRUS_KILL
   const ENTRIES = ['tools/train-3p.mjs', 'tools/train-best.mjs', 'tools/train-fast.mjs', 'server/train-server.mjs'];
   for (const e of ENTRIES) {
     const src = readFileSync(e, 'utf8');
+    /* 留（T1 train-env）：这条是**逐入口的接线检查** —— 少接一个入口，那个入口就把旋钮当暗键静默吞掉（`EPIRUS_KILL_REWARD`
+     *   当年在 train-best / 页面训练服务上就是"传了等于没传"，产物与不带它逐字节相同）。删掉这行 ⇒ 行为真的变 ⇒ 措辞不算主语。 */
     ok(src.indexOf('knob-guard.mjs') >= 0 && src.indexOf('enforceKnobs(') >= 0,
       e + ' 必须挂 enforceKnobs —— 否则它继续静默忽略自己读不到的键（整臂可能跑成 A/A）');
   }
@@ -160,8 +166,12 @@ t('D167 econ 族 5 键必须能在 CLI **真下达并读回消费点**（用户 
   const econ = readFileSync('server/econ-env.mjs', 'utf8');
   ok(econ.indexOf("'EPIRUS_BEAD_W'") >= 0,
     '`ECON_ENV_KEYS` 必须含 `EPIRUS_BEAD_W`（v1.5.254 之前**漏在名单外**：`readEconEnv` 一直在读它 ⇒ 名单是"本族覆盖了哪些 env"的单一来源，漏名 = 任何按名单派生的入口都把它当暗键）');
-  ok(/for \(const v of \[0\.5, '1'\]\)/.test(src),
-    '派生探针必须**一试两档**（`0.5` 与 `\'1\'`）：布尔档键（`convRatio`/`hoardOnLeftover`）只喂 `0.5` 时命中为空 ⇒ 会被误判成"本工具不认得"');
+  /* §删（千问 10-17 通宵班 · T1 分诊 train-env 部分）：这里原来还有一条
+   *   `ok(/for \(const v of \[0\.5, '1'\]\)/.test(src), '派生探针必须一试两档…')` —— 钉的是 `train-3p.mjs:140` 那一行的**写法**。
+   *   按 DS 的判据（"删掉那行代码，行为会不会变"）它属于 B 族：把那两档改成任何等价的写法（常量表 / 两次调用）行为不变而门会红。
+   *   ⚠ 摘它之前先做过一次"先摘腿再变异"的实验（不是"看着像冗余就摘"）：把 `train-3p.mjs:140` 改成只试 `0.5`，
+   *     带着这条正则腿跑 ⇒ 红在**这条措辞腿**上（前面的腿红会短路后面的行为腿，所以那一次**不能**证明行为腿抓不住）；
+   *     摘掉之后再跑同一个变异 ⇒ 红在下面 `EPIRUS_CONV_RATIO=1` 那两条行为腿上 ⇒ 覆盖没丢，只是把主语从"源码怎么写"换回"行为是什么"。 */
 
   const dir = mkdtempSync(join(tmpdir(), 'd167-'));
   const runArm = (name, extra) => spawnSync(process.execPath, ['tools/train-3p.mjs', '1'], {
@@ -188,6 +198,9 @@ t('D167 econ 族 5 键必须能在 CLI **真下达并读回消费点**（用户 
 
 t('D181 `EPIRUS_RING_W` 在 train-3p 可命令（v1.5.274 · §E91）：三处名单齐 + 边界必须可见', function () {
   const T3 = readFileSync('tools/train-3p.mjs', 'utf8'), E = readFileSync('server/econ-env.mjs', 'utf8');
+  /* 留（T1 train-env）：这里读源码读的是**名单成员**（`CLI_ECON_REWARD_KEYS` 里有没有 `ringW`），不是散文措辞 ——
+   *   少一个名字就是"设了没人读"的那一类静默半开（D206 从"三处名单自洽"的角度管同一件事，两条主语不同：
+   *   D206 判"名单之间一致"，这条判"这个键在投递名单里 + 边界必须出声"）。改名单写法（换行/加注释）不会误红。 */
   const cli = ((T3.match(/CLI_ECON_REWARD_KEYS = \[([\s\S]*?)\]/) || ['', ''])[1].match(/'([^']+)'/g) || [])
     .map(function (q) { return q.replace(/'/g, ''); });
   ok(cli.indexOf('ringW') >= 0, '① 投递名单必须有 `ringW`（这次缺的就是这一处）');
