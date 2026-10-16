@@ -977,7 +977,7 @@ t('D210 §E169 的第 4 剂药有牙（`setBeliefBead` / `setBeliefRingPrice`，
   T210.setBeliefRingPrice(99); eq(T210.beliefRingPrice(), 12, '②⁵ 环价同样有上界');
   T210.setBeliefRingPrice(0); eq(T210.beliefRingPrice(), 0, '②⁶ 0 必须能关回去');
   const SK210 = WIN.EpirusRules.SK;
-  const params210 = AUDIT.loadChamp(WIN, 'js/bundled-champion-3p.js', process.cwd());
+  const params210 = AUDIT.loadChamp(WIN, FIXTURE_PACK, process.cwd());   /* ⚑ 10-17 夜班（R3）：活槽 → 在册夹具。本班在一次性临时树里先量过（`s79`，NP_NOCACHE=1）：④⑤ 那两条对比度断言（bead=4 抬珠、ring=4 抬环）在夹具包上**照样成立** ⇒ 这条不属于"换夹具会误红"那一族 */
   const arm = function (bead, ringp) {
     T210.setBeliefSearch(1); T210.setBeliefBead(bead); T210.setBeliefRingPrice(ringp); T210.setBeliefTie(0);
     fieldProfile(params210, 0.2, 'soft', 5, 4100, 'mixed', 'multi');           /* 暖机（§E164b：换档后第一遍不同，原因未定位） */

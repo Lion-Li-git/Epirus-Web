@@ -141,7 +141,7 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
   const dir = mkdtempSync(join(tmpdir(), 'd137-'));
   const outHtml = join(dir, 'r.html'), outJson = join(dir, 'r.json');
   const run = spawnSync(process.execPath,
-    ['tools/skill-report.mjs', '3', '2', outHtml, '--champ=js/bundled-champion-3p.js', '--json=' + outJson],
+    ['tools/skill-report.mjs', '3', '2', outHtml, '--champ=' + FIXTURE_PACK, '--json=' + outJson],
     { encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, 'skill-report 要跑得通（stderr=' + String(run.stderr || '').slice(0, 200) + '）');
   ok(existsSync(outJson), '必须能导出 --json（否则这条判据只能靠肉眼读 HTML）');
@@ -174,7 +174,7 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
    * 病（今天 9 粒历史包实测）：3P 包塞进 2P 格是**结构性 0% 胜/100% 平**（含现役）⇒ 含 2P 的"最弱格"对这批包恒 0，
    * 排序键等于没有，把真正分辨得出的四格糊平。 */
   const cm = spawnCached(['tools/probe-cross-mode.mjs',
-    'js/bundled-champion-3p.js', 'docs/artifacts/v7aim3-93.bak', 'docs/artifacts/v7divK-31.bak', '--games=6', '--json'],
+    FIXTURE_PACK, 'docs/artifacts/v7aim3-93.bak', 'docs/artifacts/v7divK-31.bak', '--games=6', '--json'],
     { encoding: 'utf8', timeout: 600000 });
   eq(cm.status, 0, '通吃矩阵要跑得通');
   const mx = JSON.parse(String(cm.stdout)).rows;
@@ -298,7 +298,9 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
     '期望的写死处数量必须**从源码现算**（METHODOLOGY 52：冻结成常数的"期望值"会在别人补一处后静默少覆盖）');
   ok(/arguments\.length >= 3 \? orig\.apply/.test(p),
     '包装层必须**原样透传**已经传了 ≥3 个参数的调用（否则会把产品口径自己的四参数调用改坏，制造假差异）');
-  const run = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30'],
+  /* ⚑ 10-17 夜班（R3）：这一条与 D137 的包参数由活槽换成在册 `FIXTURE_PACK`。本班先在一次性临时树里**量过**再落地（`s79-fixture-probe.mjs`，NP_NOCACHE=1）：D150 12.9s 绿 ‖ D137 10.8s 绿 ⇒
+   * 它们那两条"看起来像数据断言"的腿（搬运生效要有差值 / 通吃矩阵里 2P 是最弱格）在这枚夹具上照样成立 ⇒ 不属于"换夹具会误红"那一族。反面例子是同批测的 D141：红（原话"必须有『破龟群 × 现役包』和『头对头 × 现役包』两格"）⇒ 那条留在等拍。 */
+  const run = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=' + FIXTURE_PACK, '--games=30'],
     { encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 200) + '）');
   const out = String(run.stdout || '');
@@ -315,7 +317,7 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
   ok(seat[0] !== seat[1] || wall[0] !== wall[1],
     '两栏至少一列必须**不同** ⇒ 证明搬运真的到了引擎（全同 = 测量没打开）。实测 座位 ' + seat.join(' vs ') + ' / 墙 ' + wall.join(' vs '));
   /* 对照：把产品口径也设成 ε=0，则两栏必须**逐字相同** —— 这条是上面那条的反证，也顺手钉住"差异来自口径而不是别的参数" */
-  const ctl = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30', '--eps=0'],
+  const ctl = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=' + FIXTURE_PACK, '--games=30', '--eps=0'],
     { encoding: 'utf8', timeout: 600000 });
   eq(ctl.status, 0, 'eps=0 对照要跑得通');
   const cout = String(ctl.stdout || '');
@@ -665,8 +667,10 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
   ok(/import \{ duelAssembly \} from '\.\/v2v4-lib\.mjs'/.test(src), '① 必须 import v2v4-lib 的 duelAssembly（与 G4 同源）');
   ok(!/autoGameN\(/.test(src), '① 不许自己写装配（第二份实现必然漂移，本仓栽过四次）');
   ok(!/pickDefend \|\|/.test(src) && !/\|\| *B\.pick/.test(src), '① 人类原型不许写兜底链（把"名字写错"伪装成"这原型不赢"）');
+  /* ⚑ 10-17 夜班（R3）：这条以前拿**活槽**当输入，且第三处把包名写死进判据（`/== js\/bundled-champion-3p\.js/`）⇒ 换包那天它找的还是旧名字。
+   * 先在一次性 worktree 里真换真跑量过（`s79`，NP_NOCACHE=1，7.4s **绿**：六个"人类原型"都在、12 格齐、两遍逐字相同、判别力那条也在）⇒ 才落地。 */
   const run = (extra) => spawnSync(process.execPath, ['tools/probe-human-seat.mjs',
-    '--packs=js/bundled-champion-3p.js', '--games=40'].concat(extra || []), { encoding: 'utf8', timeout: 420000 });
+    '--packs=' + FIXTURE_PACK, '--games=40'].concat(extra || []), { encoding: 'utf8', timeout: 420000 });
   const r1 = run(), r2 = run();
   eq(r1.status, 0, '正常包必须 exit 0：' + String(r1.stderr || '').slice(0, 160));
   const nm = ['全程刷反弹', '全程只防御', '只攒不打(农民)', '只枪压制', '攒钱+反弹(会玩)', '重火力+反弹'];
@@ -674,15 +678,15 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
   for (const k of nm) ok(out1.indexOf(k) >= 0, '② 六个"人类原型"必须都在（缺一个 = 那格静默消失）：' + k);
   ok(/multi/.test(out1) && /long/.test(out1), '② 两个模式都要印（与 G4 同规矩）');
   eq(String(r2.stdout), out1, '② 同 seed0 两次必须逐字相同（量具不可复现 = 读数无意义）');
-  ok(!/所有"人"都 0%/.test(out1), '④ 现役包上这一格必须有判别力（全行 0% 时工具自己会警告）');
+  ok(!/所有"人"都 0%/.test(out1), '④ 这一格必须有判别力（全行 0% 时工具自己会警告）—— 注意它现在量的是夹具包，不是线上那枚');
   const cells = (out1.match(/(\d+\.\d)%\(和\d+%\)/g) || []);
   eq(cells.length, 12, '④ 必须正好 6 原型 × 2 模式 = 12 格（少一格 = 有原型静默失败）');
   const rBad = spawnSync(process.execPath, ['tools/probe-human-seat.mjs',
-    '--packs=js/bundled-champion-3p.js,docs/artifacts/__d178_missing__.bak', '--games=20'], { encoding: 'utf8', timeout: 420000 });
+    '--packs=' + FIXTURE_PACK + ',docs/artifacts/__d178_missing__.bak', '--games=20'], { encoding: 'utf8', timeout: 420000 });
   eq(rBad.status, 7, '③ 缺包必须非零退出（缺行 ≠ 量了没测出来）');
   ok(/__d178_missing__/.test(String(rBad.stdout) + String(rBad.stderr)), '③ 要点名是哪个包');
-  ok(/== js\/bundled-champion-3p\.js/.test(String(rBad.stdout)), '③ 坏包不许带走整张表');
-  const rFlag = spawnSync(process.execPath, ['tools/probe-human-seat.mjs', '--packs=js/bundled-champion-3p.js', '--mode=multi'],
+  ok(String(rBad.stdout).indexOf('== ' + FIXTURE_PACK) >= 0, '③ 坏包不许带走整张表（好包那一行 `== ' + FIXTURE_PACK + '` 必须还在）');
+  const rFlag = spawnSync(process.execPath, ['tools/probe-human-seat.mjs', '--packs=' + FIXTURE_PACK, '--mode=multi'],
     { encoding: 'utf8', timeout: 120000 });
   eq(rFlag.status, 64, '③ 不认识的 `--mode=` 必须响亮失败（写错开关名不许当默认值跑）');
 });
