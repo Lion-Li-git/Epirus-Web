@@ -268,6 +268,48 @@ t('D82 记账纪律：24 小时内落盘的 .bak 必须在 CHANGELOG 里被点�
    *   上面那半（点过名却不在场）是确定性的，**继续当断言**。 */
   if (miss.length) console.log('⚠ D82（警告，不计红）这些 24h 内的产物在 CHANGELOG 里查无字（' + fresh.length + ' 个里缺 ' + miss.length + '）：' +
     miss.slice(0, 12).join(', ') + (miss.length > 12 ? ' …' : ''));
+  /* ===== T2（用户 10-16 深夜交班 · 千问本笔）：把"设防的那半条"从**时钟**挪到**账本**上 =====
+   * 病（实测，不是推测）：上面那半条 mtime 判据在**今天这台机器上就是空的** —— 盘上 700 个 `.bak`、
+   *   24h 内 **0 个**，而 `namedTop` 依赖的那行 `> 产物点名（D82）：…` 在当前 CHANGELOG 顶部条目里**根本不存在**
+   *   ⇒ `absent=[]`、`miss=[]` ⇒ 这条门**一个断言都没做却报绿**（R8 那一族：初值空数组被读成"零违规=合格"）。
+   *   而干净克隆里 mtime 全是 checkout 时刻 ⇒ 那半条永远不可靠。
+   * 改法：**用仓里已经有的那本账** —— `tools/keep-artifact.mjs` 维护的 `docs/artifacts/kept/MANIFEST.tsv`
+   *   （`file / sha256 / bytes / source / keptAt / note`）。它是**被跟踪的文件**，所以干净克隆里照样可判，
+   *   不需要时钟、不需要 git 历史（CI 是 depth=1 检出，靠历史的那类修法在这里直接失效）。
+   *   ⛔ 不另起第二份清单：本仓 v1.7.67 刚清完"同一件事五处口径"，再造一个 baseline 就是复发。
+   * 两条新断言（都有反向实验，见日志 DONE）：
+   *   **① 账本完整性**：manifest 每一行的 kept 文件必须在场，且 sha256 与 bytes 都对得上 ⇒ "结论引用的证据不许悄悄消失"（§E120 那笔就是这么丢的）；
+   *   **② 最新条目引用的证据必须在场**：顶部 CHANGELOG 条目里写全路径的 `docs/artifacts/….bak` 必须盘上有
+   *      （⚠ 只认**带目录的全路径**，且跳过带 `*`/`..` 的范围写法 —— DS 第一版把正文里随口提到的名字当账本，误报过）。
+   * mtime 那半条**保留为警告**（本机有用），但它在门文本里被明确标成"不设防"。 */
+  const MAN = 'docs/artifacts/kept/MANIFEST.tsv';
+  if (!existsSync(MAN)) {
+    ok(false, '账本 ' + MAN + ' 不在 ⇒ D82 无从判（这条门的设防面就是这本账，不许缺文件还报绿）');
+  } else {
+    const rows = readFileSync(MAN, 'utf8').split('\n').slice(1).filter(function (l) { return l.trim().length; });
+    const bad = [], gone = [];
+    for (const r of rows) {
+      const c = r.split('\t');
+      const f = c[0], sha = c[1], by = Number(c[2]);
+      if (!f || !sha) continue;
+      const p = 'docs/artifacts/kept/' + f;
+      if (!existsSync(p)) { gone.push(f); continue; }
+      const buf = readFileSync(p);
+      if (by && buf.length !== by) { bad.push(f + '（bytes ' + buf.length + ' ≠ 账上 ' + by + '）'); continue; }
+      const h = createHash('sha256').update(buf).digest('hex');
+      if (h !== sha) bad.push(f + '（sha256 不符 ⇒ 内容被改过而账本没换）');
+    }
+    ok(gone.length === 0, '账本里点过名、盘上却不在了的 kept 产物（' + rows.length + ' 行里缺 ' + gone.length + '）：' + gone.slice(0, 10).join(', '));
+    ok(bad.length === 0, 'kept 产物与账本对不上（bytes/sha256）：' + bad.slice(0, 6).join(' ‖ '));
+    const i3 = cd.indexOf('\n## ', 1);
+    const top = i3 > 0 ? cd.slice(0, i3) : cd;
+    const cited = (top.match(/docs\/artifacts\/[A-Za-z0-9_./-]+\.bak/g) || [])
+      .filter(function (p) { return p.indexOf('..') < 0 && p.indexOf('*') < 0; });
+    const citedMiss = cited.filter(function (p) { return !existsSync(p); });
+    ok(citedMiss.length === 0, '最新 CHANGELOG 条目写了全路径引用、但盘上不在的产物（结论的证据消失了）：' +
+      citedMiss.slice(0, 8).join(', ') + '（引用 ' + cited.length + ' 处）');
+    console.log('  D82 读数：账本 ' + rows.length + ' 行全在场全对账 ‖ 最新条目引用 ' + cited.length + ' 处全在场 ‖（mtime 那半条只警告：' + fresh.length + ' 个 24h 内产物）');
+  }
 });
 
 t('D189 gate-drafts **不许静默吞参数**（认不出 ⇒ exit 64；`.bak` 与 bundle `.js` 都要真量）（v1.5.282 · Qoder §5-3 点名）', function () {
