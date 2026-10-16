@@ -451,10 +451,10 @@ t('D11 训练模式必须随消息下发到 worker（并行路径不是同一个
 t('D12 冠军对手（champ:）机制必须两端都通 + 能真的解出 params', function () {
   /* v1.5.2：训练池要能放「风格化冠军」当靶子（脚本对手打不出成体系的策略）。
    * 这类"两处各写一遍"的机制只要漏一端就静默取子集（v1.4.8 踩过），所以两端都要点名；
-   * 而且**功能上**必须真能解包 —— 这里用仓库里在库的 js/bundled-champion-3p.js 验证。 */
+   * 而且**功能上**必须真能解包 —— 这里用在册夹具 `FIXTURE_PACK`（10-17 前用的是活槽，见日志 DONE-15 的 R3 账）。 */
   ok(isChampOpp('champ:docs/artifacts/champion-5p-armB12f.bak'), 'champ: 前缀必须被识别');
   ok(!isChampOpp('heavyfire'), '普通脚本名不得被当成冠军对手');
-  const params = loadChampParams(Pol, 'js/bundled-champion-3p.js');
+  const params = loadChampParams(Pol, FIXTURE_PACK);   /* ⚑ 10-17 夜班（R3）：活槽 → 在册夹具。这条腿判的是"能解包 + 解出来的 chooser 与直接走 policyChooserN 逐场相同"，主语是解析路径不是线上那枚 */
   ok(params && params.length > 0, 'loadChampParams 必须能从在库冠军包解出 params（实测 length=' + (params && params.length) + '）');
   /* 反向：拿一个不是冠军包的文件去解，必须**响亮抛错**，不能静默返回半个东西 */
   let threw = false;
@@ -476,7 +476,7 @@ t('D12 冠军对手（champ:）机制必须两端都通 + 能真的解出 params
    *   而真正要守的是它的反面：**换成别的 chooser / 别的 temp，训练池里那颗"冠军"就不再是页面上玩家遇到的那颗冠军**
    *   （v1.5.2 那族病是"名字→函数写两处"，形状上 D12 已经用 `B[BOT_FN_N[` 那条负钉守着；这条补的是"走错了推理路径"那一半）。
    *   判据照 D56 的 `eq(B, A)` 形状：同一份权重，走解析器 vs 直接 `policyChooserN` ⇒ 三场**逐场结果必须相同**。 */
-  const champResolved = makeChampOppResolver({ EpirusPolicy: Pol, EpirusTrainer: T }, process.cwd(), 0.15)('champ:js/bundled-champion-3p.js');
+  const champResolved = makeChampOppResolver({ EpirusPolicy: Pol, EpirusTrainer: T }, process.cwd(), 0.15)('champ:' + FIXTURE_PACK);
   const gamesOf = function (sel) {
     const out = [];
     for (let k = 0; k < 3; k++) {
