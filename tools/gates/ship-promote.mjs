@@ -568,7 +568,10 @@ t('D155 设防持续性栏必须**只记录不阻断**，且配对表的解析�
   ok(pc.indexOf("from './defense-axis.mjs'") >= 0 && ax.indexOf('export function parsePairTable') >= 0,
     '解析必须单一来源：promote 里不许有第二份 parsePairTable（同 D150 的"搬运不许各写一份"）');
   ok(pc.indexOf('createState') < 0, 'promote 的新栏**不许自己仿真** —— 只 spawn 探针再解析（自己搭桌子必然与探针漂移）');
-  ok(ax.indexOf('不许按 0 处理') >= 0, '解析不出行时必须明说"没量到"，不许静默回 0（0 会被读成"这包不龟"）');
+  /* §删（2026-10-16 · v1.7.72 · gate-sentinel ③ 分诊）：这里原来钉的是 `tools/defense-axis.mjs` **源码里的中文**
+   *   （`indexOf('不许按 0 处理')`）—— 既是②（对源码做正则）又是③（钉措辞）。它要保的语义是
+   *   「解析不出行时必须说**没量到**，不许静默回 0」；**同一件事已经有行为版**：D163 那条拿 `null` 真调
+   *   `formatQualityRecord(null, {})`，判「含 没量到」且「不含 0.0%」⇒ 本条是**重复的文本版**，摘掉不丢牙口。 */
   /* ① 固定样本回归：第一版把 Δ 读成了"跨种子极差"（每粒种子列有 1~3 个数，按空白切下标就串位） */
   const SAMPLE = ['   包                      placebo    hold均%  cycle均%      Δpt  每粒种子Δ                 极差   判定',
     '   cbs1s2-band2                2 粒      37.2      13.7     +23.5  +22.0 +25.1       3.1   钱驱动（高，≥18pt）',

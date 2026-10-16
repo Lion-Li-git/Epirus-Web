@@ -30,15 +30,16 @@
  *   （想数「有几个部分在共享可变状态」，跑 `--no-recheck` 一眼就看出来。）
  * 退出码：0 全绿且并集 = 总数；1 有部分红或门数对不上；2 计划被判据拒（并集/重名/参数）。
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { rejectUnknownFlags } from './audit-lib.mjs';
+import { gateBodyText, BOUNDARY, partFiles } from './gate-src.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['jobs', 'part', 'dry-run', 'self-test', 'timing', 'json', 'help'], 'gate-par');
+rejectUnknownFlags(argv, ['jobs', 'part', 'dry-run', 'self-test', 'timing', 'json', 'help', 'changed'], 'gate-par');
 
 const DASH = '--';
 function arg(name, dflt) {
@@ -147,7 +148,68 @@ const LIST = JSON.parse(m[0]);
 const ALL = LIST.parts;
 const TOTAL = LIST.total;
 
-const only = arg('part', '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+/* `--changed`（v1.7.72）：按工作区**实际改了哪些文件**选部分。
+ *   判据是「反向查：这个路径被哪些部分的门体**引用**」（面取自 gate-src，与 gate-sentinel 同一口径），
+ *   而不是抄 `gate-all.mjs` 的组表 —— 组是**累计深度**语义，只在 gate-all 那一份实现里，本工具不碰它。
+ *   保守方向三条：① 改到「全体共享面」或引擎/UI 面 ⇒ 整轮；② 认不出的路径 ⇒ 整轮；③ 一处都查不到 ⇒ 整轮。
+ *   ⚠ 静态引用 ≠ 数据流：门体 spawn 出去的工具读了什么，这里看不出来 ⇒ `--changed` 只是「**不会少跑**」的近似，
+ *     要「整轮认证」这句话成立仍然得跑满 16 个部分（或交给 CI）。 */
+const SHARED = ['tools/np-test.mjs', 'tools/gate-all.mjs', 'tools/gate-par.mjs', 'tools/gate-src.mjs',
+  'tools/np-cache.mjs', 'tools/np-parallel.mjs', 'tools/spec-run.mjs', 'tools/gates/_ctx.mjs'];
+const norm = function (p) { return String(p).replace(/\\\\/g, '/'); };
+const base = function (p) { return norm(p).split('/').pop(); };
+function changedPaths() {
+  const out = new Set();
+  const cmds = [['status', '--porcelain'], ['diff', '--name-only', 'HEAD']];
+  for (let i = 0; i < cmds.length; i++) {
+    const r = spawnSync('git', cmds[i], { cwd: ROOT, encoding: 'utf8', maxBuffer: 32 << 20 });
+    if (r.status !== 0) return null;
+    const ls = String(r.stdout || '').split('\n');
+    for (let k = 0; k < ls.length; k++) {
+      const t = ls[k].trim(); if (!t) continue;
+      let f = t.length > 3 ? t.slice(3).trim() : t;
+      if (f.indexOf(' -> ') >= 0) f = f.split(' -> ').pop().trim();
+      out.add(norm(f));
+    }
+  }
+  return Array.from(out);
+}
+function partsForChanged(paths) {
+  const files = partFiles();
+  const blocks = []; let cur = null;
+  const body = gateBodyText().split('\n');
+  for (let i = 0; i < body.length; i++) {
+    if (body[i].indexOf(BOUNDARY) === 0) { cur = { f: base(body[i].slice(BOUNDARY.length).trim()), t: '' }; blocks.push(cur); }
+    else if (cur) cur.t += body[i] + '\n';
+  }
+  const hit = new Set(); let hard = false;
+  for (let i = 0; i < paths.length; i++) {
+    const p = paths[i];
+    if (SHARED.indexOf(p) >= 0 || /^(js|server|tests)\//.test(p) || p === 'index.html') { hard = true; break; }
+    let any = false;
+    for (let k = 0; k < blocks.length; k++) {
+      if (blocks[k].t.indexOf(p) >= 0 || (p.indexOf('/') > 0 && blocks[k].t.indexOf(base(p)) >= 0)) { hit.add(blocks[k].f); any = true; }
+    }
+    if (!any) {
+      if (/^(docs\/|CHANGELOG|README|\.github\/)/.test(p)) { hit.add('meta-repo.mjs'); hit.add('meta-lint.mjs'); }
+      else { hard = true; break; }
+    }
+  }
+  const nm = function (f) { return base(f).replace(/\.mjs$/, ''); };
+  if (hard) return files.map(nm);
+  const picked = files.map(nm).filter(function (f) { return hit.has(f + '.mjs'); });
+  return picked.length ? picked : files.map(nm);
+}
+let only = arg('part', '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+if (argv.indexOf('--changed') >= 0) {
+  const cp = changedPaths();
+  if (cp === null) { console.error('⛔ --changed 认不出改动面（git 跑不动）⇒ 不猜，请手给 --part= 或跑整轮'); process.exit(2); }
+  if (!cp.length) { console.error('⛔ --changed：工作区干净 ⇒ 没有改动面可判（要重跑全部就别给 --changed）'); process.exit(2); }
+  const auto = partsForChanged(cp);
+  console.error('ℹ️ --changed：工作区 ' + cp.length + ' 个路径 ⇒ 选 ' + auto.length + '/16 个部分：' + auto.join(' '));
+  const merged = new Set(only.concat(auto));
+  only = Array.from(merged);
+}
 let picked = ALL;
 if (only.length) {
   const names = ALL.map(function (p) { return p.part; });
