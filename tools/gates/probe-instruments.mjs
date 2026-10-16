@@ -604,9 +604,13 @@ t('D158 产物必须能自证**实际生效的 EPIRUS_* 配方**（v1.5.226 · �
   /* 行为断言：真跑一条小臂，读它写出来的 `.bak` 的 META —— 配方必须**逐键逐值**对上，且只记"真设了的"。
    * ⚠️ 这条 spawn **故意不走缓存**：它要读子进程**产出的文件**（np-cache 的前置要求正好把这类排除在外）。 */
   const d = mkdtempSync(join(tmpdir(), 'd158-'));
+  /* ⚠ 必须**改道**主产物（2026-10-16 实测）：这条 spawn 原先没设 `EPIRUS_T3P_OUT` ⇒ 它写的是**默认落点**
+   *   `docs/artifacts/train-3p-out.js` —— 而那是 `train-evo` 的 D123/D162 拿来当 CLI 基线的**同一个文件**
+   *   ⇒ CI 上没事（每个部分一台机），本机并行跑门时就变成"隔壁部分把我的基线文件写脏了"（实测 D162 红）。
+   *   本门要读的是 `EPIRUS_BAND_DIR` 里的 `.bak`，改道不影响它。 */
   const r = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'], {
     env: Object.assign({}, process.env, {
-      EPIRUS_BAND_DIR: d, EPIRUS_ARM: 'd158probe', EPIRUS_KILL_REWARD: '2', EPIRUS_BIGT_CHAIN_W: '0.5'
+      EPIRUS_BAND_DIR: d, EPIRUS_T3P_OUT: join(d, 'd158probe.js'), EPIRUS_ARM: 'd158probe', EPIRUS_KILL_REWARD: '2', EPIRUS_BIGT_CHAIN_W: '0.5'
     }), encoding: 'utf8', timeout: 600000
   });
   eq(r.status, 0, '小臂要跑得通（' + String(r.stderr || '').slice(0, 160) + '）');
@@ -1664,10 +1668,33 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
       return !s.wid || widOfArr(Array.from(pr)) === s.wid;
     } catch (e) { return false; }
   };
+  /* ⚠ v1.7.62（修 CI 连红三笔的 D233）：判“跑成”不许用 `status === 0`。
+   *   `lineage.mjs` 的两个非零码含义不同 ——
+   *     2 = 薄图硬分支（`if (thin.length && !argv.includes('--soup-thin-ok'))` ⇒ 本腿真正要挡的就是它）；
+   *     1 = `lineage.mjs:471` 的 ORPH 守卫“有父边但两端任一无 ts ⇒ 查看器画不出这条边”，
+   *         而它按**本机 `docs/artifacts/` 的产物面**给数：本机 0 条 ‖ 干净克隆 127 条
+   *         （那 127 枚子包的 .bak 没入库 ⇒ 包里 `META.ts` 读不到）。
+   *   ⇒ 在 CI（干净克隆）上 `status === 0` 永远不成立 ⇒ 这条腿红的是“缺件”，不是产品坏。
+   *   改成钉两件**行为**：
+   *     ⑴ 不许走 exit 2（薄图硬分支）；
+   *     ⑵ 必须真的把表写出来（`champion-map/lineage.tsv` 的 mtime 必须被这次运行推后）——
+   *        崩在写表之前会被 ⑵ 抓住；而“崩了”与“缺件”在退出码上同形，只有看落盘才分得开。
+   *   ORPH 那个数改为**只记录不进判据**（它是本机产物面的函数，钉它等于钉“我这台盘很全”）。 */
+  const LIN_TSV = 'champion-map/lineage.tsv';
+  let linBefore = -1;
+  try { linBefore = statSync(LIN_TSV).mtimeMs; } catch (e) { linBefore = -1; }
   const r = spawnSync(process.execPath, [SRC, '--soup-thin-ok'], { encoding: 'utf8', timeout: 300000 });
-  eq(r.status, 0, '⑤ `lineage.mjs --soup-thin-ok` 必须跑成（父粒齐 ⇒ 不该走到薄图分支；不齐 ⇒ 必须印警告继续而不是 exit 2）：\n' +
-    String(r.stderr || r.stdout || '').slice(-400));
   const so = String(r.stdout || '');
+  ok(r.status !== 2, '⑤ `lineage.mjs --soup-thin-ok` 不许走薄图硬分支（exit 2）—— 给了 `--soup-thin-ok` 就必须印警告后继续：\n' +
+    String(r.stderr || r.stdout || '').slice(-400));
+  let linAfter = -1;
+  try { linAfter = statSync(LIN_TSV).mtimeMs; } catch (e) { linAfter = -1; }
+  ok(linAfter > linBefore, '⑤ 必须真的跑到写表那一步（`' + LIN_TSV + '` 的 mtime 必须被这次运行推后：'
+    + linBefore + ' → ' + linAfter + '）⇒ 崩在写表之前与“缺件”在退出码上同形，只有落盘分得开。'
+    + ' ‖ status=' + r.status + '\n' + String(r.stderr || '').slice(-400));
+  { const orphLine = /有父边但两端任一无 ts（⇒ 查看器画不出这条边）：(\d+) 条/.exec(so);
+    console.log('   ℹ️ §E613 孤点父边 = ' + (orphLine ? orphLine[1] : '?')
+      + ' 条（`lineage.mjs:471` 按**本机产物面**给数 ⇒ 只记录、不进判据；本机 0 ‖ 干净克隆 127）'); }
   const okLine = /融合血统口径 ✅ (\d+) 枚声明是权重平均的粒，父边全部解析（第二父边 (\d+) 条）/.exec(so);
   const thinLine = /薄图模式（`--soup-thin-ok`）：(\d+) 枚融合粒的父边解不开 ⇒ 图上这几条\*\*不画\*\*（([^）]*)）/.exec(so);
   ok(!!okLine || !!thinLine, '⑤ 两条口径行必须**至少印出一条**（都没印 ⇒ 守卫被条件跳过或措辞被改，正是 §E489 那一族）');

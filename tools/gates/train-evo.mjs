@@ -2049,12 +2049,22 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
     return m ? createHash('sha1').update(m[1]).digest('hex').slice(0, 10) : 'NOPARSE';
   };
   const dir = mkdtempSync(join(tmpdir(), 'd123-'));
-  const mini = function (env) {
-    return spawnCached(['tools/train-3p.mjs', '3', '3', '6', '4'], { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd123', EPIRUS_BAND_DIR: dir }, env || {}),
+  /* ⚠ `nocache` 那一档是**必须**的（2026-10-16 实测）：下面 2059 行读的是**子进程写出的产物**
+   *   `docs/artifacts/train-3p-out.js`，而 `spawnCached` 命中时子进程**根本不跑** ⇒ 读到的是盘上留着的
+   *   上一次的东西（`_ctx.mjs:44` 那段 §2026-10-10 立的规矩就是这件事："命中 ⇒ 子进程不跑 ⇒ 读到上次留下的文件
+   *   ⇒ 可双向骗人"）。实测病象：`probe-instruments` 的 D158 用**默认落点**跑过 train-3p 之后，
+   *   缓存一热 D123 就红（`got=50ada2f512 want=aa743488cc`），而门本身是对的。 */
+  let miniN = 0;
+  const mini = function (env, nocache, defaultOut) {
+    /* `defaultOut` 只有**要读默认落点产物的那一次**才传：其余两次改道进自己的 temp 目录
+     *   （2026-10-16：否则未命中缓存时它们顺手写脏 `docs/artifacts/train-3p-out.js`，而那是别人当基线的文件）。 */
+    miniN++;
+    const outEnv = defaultOut ? {} : { EPIRUS_T3P_OUT: join(dir, 'd123-' + miniN + '.js') };
+    return (nocache ? spawnNC : spawnCached)(['tools/train-3p.mjs', '3', '3', '6', '4'], { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd123', EPIRUS_BAND_DIR: dir }, outEnv, env || {}),
       encoding: 'utf8', timeout: 300000,
     });
   };
-  let r = mini({});
+  let r = mini({}, true, true);   /* 第一次**必须真跑、且必须写默认落点**：跑完要读它写出的产物去比 `CLI_ARM_BASELINE` */
   eq(r.status, 0, '默认关必须跑通（实测 exit=' + r.status + '）');
   eq(wh('docs/artifacts/train-3p-out.js'), CLI_ARM_BASELINE, '默认关的产物必须与登记基线逐位相同（动了它 = 偷偷改了所有 CLI 臂的分布）');
   /* ④ 行为 · 下达 ⇒ **必须真开火**，且覆盖 ≥2 个受评座位（判计数，不判横幅） */
@@ -2081,15 +2091,15 @@ t('D129 训练模式可以在 CLI 上下达（v1.5.169 · §N28 · 用户"炼一
   const dir = mkdtempSync(join(tmpdir(), 'd129-'));
   /* ① 乱写的模式名 ⇒ 必须 exit 7 且**不产出**（静默退回 multi 就是 §N11 那一族） */
   const bad = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
-    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd129bad', EPIRUS_TRAIN_MODE: 'nope', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd129bad', EPIRUS_TRAIN_MODE: 'nope', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: join(dir, 'd129bad.js') }), encoding: 'utf8', timeout: 300000 });
   eq(bad.status, 7, '不认的模式名必须 exit 7（实测 ' + bad.status + '）');
   ok(/不是规则表里的模式/.test(String(bad.stderr || '')), 'exit 7 要说清为什么');
   /* ② 合法名 ⇒ 跑通 + 横幅读回 + 产物 meta 自证 */
   const good = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
-    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd129long', EPIRUS_TRAIN_MODE: 'long', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd129long', EPIRUS_TRAIN_MODE: 'long', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: join(dir, 'd129long.js') }), encoding: 'utf8', timeout: 300000 });
   eq(good.status, 0, '长程臂要跑得通');
   ok(/训练模式已下达：EPIRUS_TRAIN_MODE=long ⇒ 消费点读回 long/.test(String(good.stdout || '')), '必须印"下达 ⇒ 读回"（横幅只证明变量，读回证明消费点）');
-  const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync('docs/artifacts/train-3p-out.js', 'utf8'));
+  const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(join(dir, 'd129long.js'), 'utf8'));
   const mt = JSON.parse(jm[1]);
   eq(mt.recipe.trainMode, 'long', '产物要自带这臂的模式（日志会滚走，.bak 不会）');
   eq(mt.recipe.trainModeEffective, 'long', '连消费点读回值一起记');
@@ -2157,7 +2167,10 @@ t('D134 切片相位不许与座位轮换锁死（v1.5.186 · 复核 DS 交接 �
   const run = spawnCached(['tools/train-3p.mjs', '40', '3', '8', '8'], { env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTFocus', EPIRUS_IMIT_ONLY: 'bigT',
       EPIRUS_IMIT_OVERRIDE: '1', EPIRUS_IMIT_FRAC: '0.5', EPIRUS_IMIT_SUBONLY: '0',
-      EPIRUS_REGEN_SLICE: '0.25', EPIRUS_ARM: 'd134', EPIRUS_BAND_DIR: dir
+      EPIRUS_REGEN_SLICE: '0.25', EPIRUS_ARM: 'd134', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: join(dir, 'd134.js')
+   /* ⚠ 必须**改道**（2026-10-16 实测）：这条 spawn 没设 `EPIRUS_T3P_OUT` ⇒ 未命中缓存时它把产物写在**默认落点**
+    *   `docs/artifacts/train-3p-out.js` —— 那是 `train-evo` 的 D123/D162 当 CLI 基线的同一个文件。CI 上每部分一台机
+    *   所以看不见；本机并行跑门就变成「隔壁部分把我的基线写脏了」。本门只吃 stdout / 只读自己的 temp 目录 ⇒ 改道零损失。 */
     }), encoding: 'utf8', timeout: 600000
   });
   eq(run.status, 0, '示范臂要跑得通');

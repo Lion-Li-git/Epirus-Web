@@ -244,7 +244,8 @@ let __skipped = 0;
  *   那一类工作，实测**没有任何一道门读那两个目录**
  *   （`grep -c champion-map tools/np-test.mjs tools/spec-run.mjs tools/smoke.mjs tools/battle-test.mjs` 全 0）
  *   ⇒ 那种班次真正该跑的只有"仓库纪律"那 15 道（读 CHANGELOG/README/门号/源码形状），是**秒级**的。
- * 分组键 = 门名第一个空格前那段（D###/N##/L#/REPRO…）。269 个键盖住 272 条门；有 3 个键被多条门共用
+ * 分组键 = 门名第一个空格前那段（D###/N##/L#/REPRO…）。键数 < 门数（一个键可盖住多条同前缀的门）；
+ *   ⚠ 这两个数**都不在本文件里写死**（曾写死 269/272，早已漂）⇒ 现读 `--list-parts --json`；有 3 个键被多条门共用
  *   （N2/N3/N4 那几族）⇒ **同键必须同组**，启动时撞组直接红。
  * ⚠ 三条不许糊：① `--group` 与 `--only` 一样**不冒充全绿**（跳过多少条响亮印出来）；
  *   ② **整轮（不带 --group）额外要求"每条门都归了组"** ⇒ 新加门忘了归类当场判红，
@@ -270,7 +271,7 @@ const gateKey = n => String(n).trim().split(/[ \u3000]/)[0];
 const __KEYS = [];
 if (process.argv.includes('--list-groups')) {
   for (const g in GRP) console.log('  ' + g.padEnd(7) + GRP[g].split(' ').length + ' 个键');
-  console.log('  合计   ' + Object.keys(KEY2G).length + ' 个键（= 272 条门；N2/N3/N4 各有同前缀的多条）');
+  console.log('  合计   ' + Object.keys(KEY2G).length + ' 个键（⚠ 键数 ≠ 门数：一个键可盖住多条同前缀的门（N2/N3/N4 那几族）⇒ 门数看 `--list-parts --json` 的 total，本文件不许再写死那个数）');
   console.log('  累计   ' + Object.keys(CUM).map(g => g + (CUM[g] ? '=' + (CUM[g].reduce((s, x) => s + GRP[x].split(' ').length, 0)) + '条' : '=全部')).join(' ‖ '));
   process.exit(0);
 }

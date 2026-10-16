@@ -734,9 +734,9 @@ t('D127 兑现广度（v1.5.167 · §N24 · 用户"G_eff 像刷分"）：mirrorH
   eq(r.skipped || 0, 0, '未提供 gateOk（旧调用点）⇒ 视为通过，行为与 v1.5.167 一致');
   const dirA = mkdtempSync(join(tmpdir(), 'd127a-')), dirB = mkdtempSync(join(tmpdir(), 'd127b-'));
   const off = spawnNC(['tools/train-3p.mjs', '3', '3', '6', '4'],
-    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127off', EPIRUS_BAND_DIR: dirA }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127off', EPIRUS_BAND_DIR: dirA, EPIRUS_T3P_OUT: join(dirA, 'd127off.js') }), encoding: 'utf8', timeout: 300000 });
   eq(off.status, 0, '默认关必须跑通');
-  eq(wh('docs/artifacts/train-3p-out.js'), CLI_ARM_BASELINE, '默认关的产物必须仍是那条基线（动了它 = 所有 CLI 臂的当选规则被偷改）');
+  eq(wh(join(dirA, 'd127off.js')), CLI_ARM_BASELINE, '默认关的产物必须仍是那条基线（动了它 = 所有 CLI 臂的当选规则被偷改）');
   const on = spawnNC(['tools/train-3p.mjs', '3', '3', '6', '4'],
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127on', EPIRUS_SEL_LAND: '1', EPIRUS_BAND_DIR: dirB }), encoding: 'utf8', timeout: 300000 });
   eq(on.status, 0, '开开关也要跑通');
@@ -772,10 +772,10 @@ t('D128 广度准入线（v1.5.170 · §N29 · §N28"四粒冠军三粒塌成一
   ok(t3.indexOf("'EPIRUS_BREADTH_FLOOR'") >= 0, '必须进 SELF_ENV_KEYS（否则黑键侦测会把它当"传了没人读"）');
   const dir = mkdtempSync(join(tmpdir(), 'd128-'));
   const run = spawnSync(process.execPath, ['tools/train-3p.mjs', '3', '3', '6', '4'],
-    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd128floor', EPIRUS_BREADTH_FLOOR: '1.5', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd128floor', EPIRUS_BREADTH_FLOOR: '1.5', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: join(dir, 'd128floor.js') }), encoding: 'utf8', timeout: 300000 });
   eq(run.status, 0, '开了线也要跑通');
   ok(/\[广度线\] 判据 = 净 `G\(落地\)/.test(String(run.stdout || '')), '开了必须印出判据与每粒的净兑现（不印 = 又一根暗旋钮）');
-  const txt = readFileSync('docs/artifacts/train-3p-out.js', 'utf8');
+  const txt = readFileSync(join(dir, 'd128floor.js'), 'utf8');
   const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(txt);
   ok(!!jm, '产物 meta 必须能解析（配方自证的前提）');
   const mt = JSON.parse(jm[1]);
@@ -814,28 +814,31 @@ t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a
   ok(t3.indexOf("'EPIRUS_COUNTER_OPPS'") >= 0, '必须进 SELF_ENV_KEYS（否则黑键侦测会判它"传了没人读"）');
   ok(/typeof o\.sel !== 'function'[\s\S]{0,200}process\.exit\(4\)/.test(t3), '缺一个对手必须 exit 4（少一个 = 一根空枪，不许静默少放）');
   const dir = mkdtempSync(join(tmpdir(), 'd130-'));
-  const metaOf = function () {
-    const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync('docs/artifacts/train-3p-out.js', 'utf8'));
+  /* 2026-10-16：每个臂**各有各的落点**（原先都写默认落点 `docs/artifacts/train-3p-out.js`，靠"最后写的那个"
+   *   被读到 —— 本机与别的部分并发时那个文件会被别人覆盖，所以 metaOf 现在收一个路径参数）。 */
+  const D130OUT = join(dir, 'd130on.js'), D130ONE = join(dir, 'd130one.js');
+  const metaOf = function (p) {
+    const jm = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(p, 'utf8'));
     return JSON.parse(jm[1]);
   };
   const on = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
-    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130on', EPIRUS_COUNTER_OPPS: '1', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130on', EPIRUS_COUNTER_OPPS: '1', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: D130OUT }), encoding: 'utf8', timeout: 300000 });
   eq(on.status, 0, '老口径 `=1` 要跑得通（历史臂逐位复现不能坏）');
   ok(/\[counter-ops\] 判据原型已进训练桌：cnt:guardSpam,cnt:gunSpam,cnt:snipeSpam/.test(String(on.stdout || '')),
     '必须印出进了哪三个（不印 = 又一根暗旋钮）');
   ok(/老口径[^\n]*不能[^\n]*归因|不能归因到某一型对手/.test(String(on.stdout || '')),
     '三个一起上时**日志必须自认"归因不到某一型"**（§E500 的病：一根 boolean 改三个自由度却读起来像单自由度）');
-  const mt1 = metaOf();
+  const mt1 = metaOf(D130OUT);
   ok(mt1.recipe && Array.isArray(mt1.recipe.counterOpps) && mt1.recipe.counterOpps.length === 3,
     '产物要自带"这臂的训练桌上放了哪几个判据原型"（实测 ' + JSON.stringify(mt1.recipe && mt1.recipe.counterOpps) + '）');
   /* ③ §E500 的新牙口：名字表 ⇒ **单自由度**必须表达得出来（今晚 R1 的对照臂就靠这一格） */
   const one = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
-    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130one', EPIRUS_COUNTER_OPPS: 'snipeSpam', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130one', EPIRUS_COUNTER_OPPS: 'snipeSpam', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: D130ONE }), encoding: 'utf8', timeout: 300000 });
   eq(one.status, 0, '只上狙击场要跑得通');
   ok(/\[counter-ops\][^\n]*cnt:snipeSpam[^\n]*OPPS 从 9 个变 10 个/.test(String(one.stdout || '')),
     '只上 `snipeSpam` ⇒ 必须**恰好进一个**（9→10；印成 9→12 = 名字表没接住，三个又被一把塞）');
   ok(/单自由度/.test(String(one.stdout || '')), '单自由度那一臂要把"单自由度"印出来（读日志的人要能分辨这臂归因得动）');
-  const mtOne = metaOf();
+  const mtOne = metaOf(D130ONE);
   ok(mtOne.recipe && mtOne.recipe.counterOpps.length === 1 && mtOne.recipe.counterOpps[0] === 'cnt:snipeSpam',
     '产物 meta 要落生效值（实测 ' + JSON.stringify(mtOne.recipe && mtOne.recipe.counterOpps) + '）');
   const bad = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
@@ -916,7 +919,10 @@ t('D135 大雷连带收益项（v1.5.187 接线 · v1.5.188 换**率形**）：�
   const run = spawnCached(['tools/train-3p.mjs', '60', '3', '8', '8'], {
     env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTChain', EPIRUS_IMIT_ONLY: 'bigT', EPIRUS_IMIT_OVERRIDE: '1',
-      EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd135', EPIRUS_BAND_DIR: dir
+      EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd135', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: join(dir, 'd135a.js')
+   /* ⚠ 必须**改道**（2026-10-16 实测）：这条 spawn 没设 `EPIRUS_T3P_OUT` ⇒ 未命中缓存时它把产物写在**默认落点**
+    *   `docs/artifacts/train-3p-out.js` —— 那是 `train-evo` 的 D123/D162 当 CLI 基线的同一个文件。CI 上每部分一台机
+    *   所以看不见；本机并行跑门就变成「隔壁部分把我的基线写脏了」。本门只吃 stdout / 只读自己的 temp 目录 ⇒ 改道零损失。 */
     }), encoding: 'utf8', timeout: 600000
   });
   eq(run.status, 0, '带连带权重的臂要跑得通');
@@ -938,7 +944,10 @@ t('D135 大雷连带收益项（v1.5.187 接线 · v1.5.188 换**率形**）：�
   const dir2 = mkdtempSync(join(tmpdir(), 'd135b-'));
   const run2 = spawnCached(['tools/train-3p.mjs', '60', '3', '8', '8'], {   /* §E566：同上，本门不读任何产出 ⇒ 收回普通缓存 */
     env: Object.assign({}, process.env, {
-      EPIRUS_SEED: '31', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd135b', EPIRUS_BAND_DIR: dir2,
+      EPIRUS_SEED: '31', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd135b', EPIRUS_BAND_DIR: dir2, EPIRUS_T3P_OUT: join(dir2, 'd135b.js'),
+   /* ⚠ 必须**改道**（2026-10-16 实测）：这条 spawn 没设 `EPIRUS_T3P_OUT` ⇒ 未命中缓存时它把产物写在**默认落点**
+    *   `docs/artifacts/train-3p-out.js` —— 那是 `train-evo` 的 D123/D162 当 CLI 基线的同一个文件。CI 上每部分一台机
+    *   所以看不见；本机并行跑门就变成「隔壁部分把我的基线写脏了」。本门只吃 stdout / 只读自己的 temp 目录 ⇒ 改道零损失。 */
       /* §E275：v1.5.333 起大雷那档是**引擎默认**，所以"这一项的非零只能来自注入"这个前提**必须显式关档**才成立。
        *   实测：不关时 np 红在这里（4 张原生大雷出手）⇒ 红的是**量具前提**，不是结论 ⇒ 修夹具，不把判据改松。 */
       EPIRUS_BIGT_PUSH: '0'
@@ -1006,7 +1015,10 @@ t('D136 示范归因（v1.5.189）：教师的手必须能从包自己的手里�
   const dir = mkdtempSync(join(tmpdir(), 'd136-'));
   const run = spawnCached(['tools/train-3p.mjs', '30', '3', '8', '6'], { env: Object.assign({}, process.env, {
       EPIRUS_SEED: '31', EPIRUS_IMIT_TEACHER: 'pickBigTChain', EPIRUS_IMIT_ONLY: 'bigT', EPIRUS_IMIT_OVERRIDE: '1',
-      EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd136', EPIRUS_BAND_DIR: dir
+      EPIRUS_IMIT_FRAC: '0.5', EPIRUS_REGEN_SLICE: '0.25', EPIRUS_BIGT_CHAIN_W: '0.5', EPIRUS_ARM: 'd136', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: join(dir, 'd136.js')
+   /* ⚠ 必须**改道**（2026-10-16 实测）：这条 spawn 没设 `EPIRUS_T3P_OUT` ⇒ 未命中缓存时它把产物写在**默认落点**
+    *   `docs/artifacts/train-3p-out.js` —— 那是 `train-evo` 的 D123/D162 当 CLI 基线的同一个文件。CI 上每部分一台机
+    *   所以看不见；本机并行跑门就变成「隔壁部分把我的基线写脏了」。本门只吃 stdout / 只读自己的 temp 目录 ⇒ 改道零损失。 */
     }), encoding: 'utf8', timeout: 600000
   });
   eq(run.status, 0, '归因臂要跑得通');
@@ -1331,6 +1343,12 @@ t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + �
     ['d176wide', { EPIRUS_SEL_KEEP: '1' }],
     ['d176tight', { EPIRUS_SEL_KEEP: '0.35' }],
     ['d176other', { EPIRUS_SEED: '57' }],
+    /* 2026-10-16：v1.5.267 那两支**座位对称性**臂并进同一批。原先它们另起一批、串在第一批之后，
+     *   而两批之间**没有任何数据依赖**（各自 EPIRUS_ARM / BAND_DIR / T3P_OUT，判据吃各自的产物）
+     *   ⇒ 串行纯属 spawnBatch 的写法顺出来的，不是判据要求的。合并后并发 4→6；
+     *   批跑的「归属不串台 / 失败不吞 / 少一个 job 就判红」仍由 D188 单独钉着。判据一条没减。 */
+    ['d176seatlax', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '100' }],
+    ['d176seat', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '0' }],
   ]);
   const rCtl = BB.d176ctl, rWide = BB.d176wide, rTight = BB.d176tight, rOther = BB.d176other;
   eq(rCtl.status, 0, '对照臂必须成功：' + String(rCtl.stderr || '').slice(0, 140));
@@ -1381,10 +1399,8 @@ t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + �
   ok(!((sk && sk.unjudgeable) || []).some(function (x) { return /^charge/.test(x); }),
     'v1.5.266 修的就是这条：`charge` 从前只按落地判 ⇒ 被点名"无法判"（09-28 实测），现在按出手判就不该再出现');
   /* ===== v1.5.267：座位对称性维（第三条尺）—— 起点读 16.7pt(N=3/60 局)，宽容差必须完全不动人 ===== */
-  const BS = armBatch([
-    ['d176seatlax', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '100' }],
-    ['d176seat', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: '0' }],
-  ]);
+  /* 2026-10-16：这两支臂已并进上面那一批（`BB`）⇒ 这里只取结果，不再单独起一批。 */
+  const BS = BB;
   const rSeatLax = BS.d176seatlax, rSeatStrict = BS.d176seat;
   const rSeatBad = arm('d176seatbad', { EPIRUS_SEL_KEEP: '1', EPIRUS_SEL_KEEP_SEAT: 'abc' });
   eq(rSeatBad.status, 7, '`SEL_KEEP_SEAT` 非数值必须 exit 7');

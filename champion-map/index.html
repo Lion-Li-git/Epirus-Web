@@ -5163,10 +5163,19 @@ st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
    *      还是 0 就说明清空与重画之间跨了帧（那正是用户看见的黑帧）。这条对"改回 req()"会红。*/
   (function () {
     var r4 = cv.getBoundingClientRect(), w0 = cv.width, h0 = cv.height;
-    var c1 = fit0(), c2 = fit0();
-    T('§E574 fit0 必须幂等（赋值 cv.width 就是清空，重复赋值 = 重复清空）',
-      c1 === false && c2 === false && cv.width === w0 && cv.height === h0,
-      '第一次 ' + c1 + ' ‖ 第二次 ' + c2 + ' ‖ 位图 ' + w0 + 'x' + h0 + ' → ' + cv.width + 'x' + cv.height);
+    var c1 = fit0(), c2 = fit0(), c3 = fit0();
+    /* ⚠ v1.7.62（修 CI 上 1d / 3db 两个视图各 1 FAIL）：原来这条钉的是"自检跑的那一刻位图必须已经与盒子逐像素同步"，
+     *   可那是个**环境前提**，不是产品不变量：盒子只要在最后一次 fit0 之后变了不到 1px（RO 对亚像素改动不触发），
+     *   位图就会与四舍五入值差 1 ⇒ 第一次 fit0 必然返回 true。
+     *   实测：CI 上 1584x543 → 1584x542（tree / map 两个视图恰好已同步，所以那两个是绿的）。
+     *   真正要钉的是**收敛且对齐**：清空只许发生在第一次，之后连续两次都不许再动位图（那才是"重复赋值 = 重复清空"
+     *   那条黑帧的病），且收敛后的位图必须等于盒 × dpr。这样"无条件赋值"与"来回振荡"照旧红。 */
+    var r4b = cv.getBoundingClientRect(), dpr4 = devicePixelRatio || 1;
+    var wantW = Math.max(1, Math.round(r4b.width * dpr4)), wantH = Math.max(1, Math.round(r4b.height * dpr4));
+    T('§E574 fit0 必须收敛且幂等（收敛后重复调用不许再清空位图）',
+      c2 === false && c3 === false && cv.width === wantW && cv.height === wantH,
+      '第一次 ' + c1 + ' ‖ 第二次 ' + c2 + ' ‖ 第三次 ' + c3 + ' ‖ 位图 ' + w0 + 'x' + h0 + ' → '
+      + cv.width + 'x' + cv.height + ' ‖ 盒×dpr 四舍五入 ' + wantW + 'x' + wantH);
     T('§E574 位图 = CSS 盒 × dpr 且误差 ≤ 0.5px（四舍五入，不许截断）',
       Math.abs(cv.width - r4.width * devicePixelRatio) <= 0.5 && Math.abs(cv.height - r4.height * devicePixelRatio) <= 0.5,
       '位图 ' + cv.width + 'x' + cv.height + ' ‖ 盒×dpr ' + (r4.width * devicePixelRatio).toFixed(2) + 'x' + (r4.height * devicePixelRatio).toFixed(2));
