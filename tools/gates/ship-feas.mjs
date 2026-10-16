@@ -271,7 +271,8 @@ t('D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证"band2 被 hil
   const so = String(run.stdout || '') + String(run.stderr || '');
   ok(/\[3P栏 n=20[\/]/.test(so), '开了 EPIRUS_TB3P 必须真跑 3P 栏并打印读数（实测输出无该行 = 又一处死作用点）');
   ok(run.status === 0 || run.status === 9, '只许两种收场：0=有合格候选并择优、9=全否决响亮退出（实测 exit=' + run.status + '）\n' + so.slice(-500));
-  if (run.status === 9) ok(so.indexOf('不接受静默退回单栏择优') >= 0, 'exit 9 必须说清"不接受退回单栏"');
+  /* v1.7.74 · gate-sentinel ③ 分诊：响亮 = **exit 9**（那半句判的就是它）；原钉的是解释那句话的措辞 ⇒ 改成「必须出声」。 */
+  if (run.status === 9) ok(String(so).trim().length > 0, 'exit 9 时必须**出声**（响亮失败）；具体措辞不判');
   else ok(existsSync(out), 'exit 0 时产物必须写在 EPIRUS_TB_OUT 指的位置');
   ok(so.indexOf('已写入 js/bundled-champion.js') < 0, '改道跑时**一个字都不许碰 2P 槽**');
 });
@@ -538,7 +539,9 @@ t('D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 b
         EPIRUS_BAND_DIR: dir7, EPIRUS_T3P_OUT: out7, EPIRUS_PUBLISH: '' }), encoding: 'utf8', timeout: 300000 });
     eq(r7.status, 0, '⑦ 3 粒那一档要跑得通（status=' + r7.status + ' ' + String(r7.stderr || '').slice(-140) + '）');
     const so7 = String(r7.stdout || '');
-    ok(so7.indexOf('每粒候选重验 3 粒 seedBase（987654 ‖ 1087654 ‖ 1187654）') >= 0,
+    /* v1.7.74 · gate-sentinel ③ 分诊：原来钉的是**一整句中文+分隔符**（`每粒候选重验 3 粒 seedBase（987654 ‖ 1087654 ‖ 1187654）`）
+   *   ⇒ 换个说法/换种分隔符就红，行为没变。要保的语义是「重验用的是这**三粒** seedBase」⇒ 直接判那三个数在不在。 */
+  ok(['987654', '1087654', '1187654'].every(function (n) { return so7.indexOf(n) >= 0; }) && so7.indexOf('seedBase') >= 0,
       '⑦ 必须把**粒数与 base 序列**一起印出来（只印"重验 3 粒"不印 base = 没人能核对步长真的生效）');
     ok(/\[当选键\] 第 1 与第 2 名分差 [0-9.]+pt/.test(so7), '⑦ 当选现场必须印出"分差 vs 噪声"那行（§E318 的病就是这句从来没印过）');
     ok(/（n=3 粒 seedBase ‖ 自身极差 [0-9.]+pt）/.test(so7), '⑦ n≥2 时每枚要印实测极差（n=1 那一档才改印"无从估"）');

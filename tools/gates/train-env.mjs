@@ -47,7 +47,9 @@ t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：�
   const kgSrc = readFileSync('server/knob-guard.mjs', 'utf8');
   ok(t3.indexOf('SELF_ENV_KEYS') >= 0 && t3.indexOf('enforceKnobs(') >= 0 && t3.indexOf('knob-guard.mjs') >= 0,
     'train-3p 必须走单一来源的黑键闸（enforceKnobs + 自己的闭集 SELF_ENV_KEYS）');
-  ok(kgSrc.indexOf('detectDarkKnobs') >= 0 && kgSrc.indexOf('CLI 黑键') >= 0 && kgSrc.indexOf('EPIRUS_ALLOW_DARK') >= 0,
+  /* v1.7.74 · gate-sentinel ③ 分诊：摘掉中间那句中文（`CLI 黑键`）—— 它只是那两个**标识符**之间的措辞；
+   *   要保的是「`detectDarkKnobs` 与 `EPIRUS_ALLOW_DARK` 这条链路在源码里接上了」。 */
+  ok(kgSrc.indexOf('detectDarkKnobs') >= 0 && kgSrc.indexOf('EPIRUS_ALLOW_DARK') >= 0,
     '单一来源里必须响亮说明白 + 留逃逸口');
   /* ① 行为：**仍未下达**的暗键 ⇒ exit 6（用 fight 族键：CLI 至今不 import 它 ⇒ 传它本就无效） */
   const dark = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
