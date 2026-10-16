@@ -637,15 +637,20 @@ t('D158 产物必须能自证**实际生效的 EPIRUS_* 配方**（v1.5.226 · �
 });
 
 t('D177 champ-audit 缺包必须点名 + 保留其余行 + exit 7（v1.5.270 · §E81）', function () {
-  const rGood = spawnSync(process.execPath, ['tools/champ-audit.mjs', 'js/bundled-champion-3p.js'],
+  /* ⚑ 10-17 夜班（R3）：夹具由活槽换成在册 `FIXTURE_PACK`（这条断言全在工具回执上：exit 0 / exit 7 / 点名哪个包读不出 /
+   * 坏包不许带走整张表 ⇒ 主语是"缺包处理"，不是线上那枚）。⚠ 原先两条 `^bundled-champion-3p\.js\s+\d` 把**上一班的夹具名**钉死了，
+   * 所以这里跟着夹具走：行名字从 FIXTURE_PACK 现取，`\\S*` 容许工具打成相对短路径（实测 champ-audit 印的是 basename）。 */
+  const fxName = FIXTURE_PACK.split(/[\\/]/).pop();
+  const fxRow = new RegExp('^\\S*' + fxName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s+\\d', 'm');
+  const rGood = spawnSync(process.execPath, ['tools/champ-audit.mjs', FIXTURE_PACK],
     { encoding: 'utf8', timeout: 420000 });
   eq(rGood.status, 0, '只给一个正常包时必须 exit 0（新加的"缺包即失败"不许误伤常规路径）：' + String(rGood.stderr || '').slice(0, 120));
-  ok(/^bundled-champion-3p\.js\s+\d/m.test(String(rGood.stdout)), '正常路径必须真的打出行（否则下面那条"保留其余行"是恒真）');
-  const rBad = spawnSync(process.execPath, ['tools/champ-audit.mjs', 'js/bundled-champion-3p.js', 'docs/artifacts/__d177_missing__.bak'],
+  ok(fxRow.test(String(rGood.stdout)), '正常路径必须真的打出行（夹具 `' + fxName + '`，否则下面那条"保留其余行"是恒真）');
+  const rBad = spawnSync(process.execPath, ['tools/champ-audit.mjs', FIXTURE_PACK, 'docs/artifacts/__d177_missing__.bak'],
     { encoding: 'utf8', timeout: 420000 });
   eq(rBad.status, 7, '有一个包读不出必须非零退出（缺行 ≠ 量了没测出来）');
   ok(/__d177_missing__/.test(String(rBad.stdout) + String(rBad.stderr)), '要点名**是哪个包**读不出（只报一句 ENOENT 等于没报）');
-  ok(/^bundled-champion-3p\.js\s+\d/m.test(String(rBad.stdout)), '坏包**不能带走整张表**：好包那一行必须仍然打出来');
+  ok(fxRow.test(String(rBad.stdout)), '坏包**不能带走整张表**：好包那一行（`' + fxName + '`）必须仍然打出来');
   ok(/整行没量到/.test(String(rBad.stdout) + String(rBad.stderr)), '末尾必须汇总"有几个包整行没量到"');
 });
 
@@ -762,14 +767,18 @@ t('D186 序列机会率探针（v1.5.278 · §E122）：原样交回 + 复现/�
   const miss = P(['--packs=no/such/pack.bak', '--games=40']);
   eq(miss.status, 7, '③ 包读不出必须 exit 7（"读不到"不许被读成"机会率 0"）：实得 ' + miss.status);
   ok(/no\/such\/pack\.bak/.test(String(miss.stderr)), '③ 且要点名是哪个包');
-  const okRun = P(['--packs=js/bundled-champion-3p.js', '--games=40']);
-  eq(okRun.status, 0, '④ 现役包（含四道自证）必须跑通（exit=' + okRun.status + ' ' + String(okRun.stderr || '').slice(0, 160) + '）');
+  const fxName = FIXTURE_PACK.split(/[\\/]/).pop();
+  const fxEsc = fxName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const okRun = P(['--packs=' + FIXTURE_PACK, '--games=40']);
+  eq(okRun.status, 0, '④ 在册夹具包（含四道自证）必须跑通（exit=' + okRun.status + ' ' + String(okRun.stderr || '').slice(0, 160) + '）');
   ok(/判别力自证 @train/.test(String(okRun.stdout)) && /判别力自证 @product/.test(String(okRun.stdout)),
     '④ 判别力自证必须两档口径都跑（均匀策略对照必须与真包不同 ⇒ "机会率 0"才不是"探针没在看"）');
   ok(/训练评分口径/.test(String(okRun.stdout)) && /产品口径/.test(String(okRun.stdout)), '⑤ 输出必须同时给两档口径的表');
-  const dup = P(['--packs=js/bundled-champion-3p.js,js/bundled-champion-3p.js', '--games=40']);
+  const dup = P(['--packs=' + FIXTURE_PACK + ',' + FIXTURE_PACK, '--games=40']);
   eq(dup.status, 0, '⑥ 同一粒包传两次必须跑通（这不是"零比较"，是**确定性**自证）：实得 ' + dup.status);
-  const rows = String(dup.stdout).split('\n').filter(function (l) { return /bundled-champion-3p\.js/.test(l); });
+  /* ⚑ 10-17 夜班（R3）：上面三处的包由活槽换成在册 FIXTURE_PACK，**行名跟着夹具现取**（原来写死 `bundled-champion-3p\.js`
+   * = 把上一班的夹具名钉进了判据；换包那天它会因为"名字不在了"而红，而红的理由跟探针坏没坏无关）。 */
+  const rows = String(dup.stdout).split('\n').filter(function (l) { return new RegExp(fxEsc).test(l); });
   /* 形状（§E123 之后）：每档口径印**两块**（机会率表 + 电珠流水账）× 两行（同粒包传两次）= 8 行 */
   eq(rows.length, 8, '⑥ 两档口径 × 两块表 × 两行 = 8 行读数（实测 ' + rows.length + ' 行 ⇒ 表的形状变了，本门的基准要跟着改，别把它改成"只要非空就过"）');
   eq(rows[0], rows[1], '⑥ 同一粒包同尺同种子 ⇒ 机会率表两行必须**逐字相同**（不同就说明读数里混了未播种的随机）');
@@ -1380,7 +1389,7 @@ t('D208 开档的可复现性地基（§E164b · 09-30 夜班）：跨进程逐�
         ⇒ 所以这条门钉的是**实测成立的那两条**（跨进程相同、暖机后相同），而不是我原先那句错的"逐字同形"；
           第一遍不同这件事**留在 §E164b 当未结缺陷**，别当成"已经稳了"。 */
   const TBP = WIN.EpirusTrainer;
-  const params = AUDIT.loadChamp(WIN, 'js/bundled-champion-3p.js', process.cwd());
+  const params = AUDIT.loadChamp(WIN, FIXTURE_PACK, process.cwd());   /* ⚑ 10-17（R3）活槽 → 在册夹具：这条腿判的是"同参数两遍逐字相同 + 换进程逐字相同"，主语是可复现性，不是线上那枚 */
   const key = (t) => JSON.stringify({ a: t.acts, w: t.wins, r: t.rounds, d: t.decisive, v: t.voided, f: t.focus, ta: t.tgtActs,
     tg: t.tgtGames, ts: Number((t.tgtTopSum * 1e6).toFixed(6)), tk: t.tgtKindSum, mx: t.maxEp, k: Object.keys(t.keys).sort().map((x) => x + ':' + t.keys[x]) });
   for (const mode of ['off', 'on']) {
@@ -1514,7 +1523,7 @@ t('D211 §E169b 把"屯而不打"与"没钱打"分开数的量具有牙（`beadL
   ok(/beadHeld/.test(code169) && /beadBroke/.test(code169) && /beadLive/.test(code169),
     '⑤′ 仪器必须把三样都读出来（少一样就退化成"看起来像屯"的单边读数）');
   /* ⑥ 地板：这套计数器**必须真的在真局里有非零读数**，否则前面五条静态钉合起来仍然可能是装饰 */
-  const params6 = AUDIT.loadChamp(WIN, 'js/bundled-champion-3p.js', process.cwd());
+  const params6 = AUDIT.loadChamp(WIN, FIXTURE_PACK, process.cwd());   /* ⚑ 10-17（R3）活槽 → 在册夹具；这条地板断言"真局里三个计数器必须都活"，换包后仍要成立才算数（本班实测见日志 DONE-15） */
   const T6 = WIN.EpirusTrainer;
   T6.setBeliefSearch(1); T6.setBeliefBead(2);
   fieldProfile(params6, 0.2, 'soft', 3, 4100, 'mixed', 'multi');
