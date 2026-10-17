@@ -56,7 +56,15 @@ const SEEDS = String(flag('seeds', '90210,90211,90212')).split(',').map(Number).
 const TIERS = String(flag('tiers', 'lv:sparring,lv:regular,lv:hard')).split(',').filter(Boolean);
 /* 逐枚底片档：`--subject=<id>` ⇒ 每局把**一席**换成被测包（其余三席照常按该档的带抽、人类席照常轮座），
  *   且每席计数只算被测那一席（集火/对齐是全场量，这一档不进）。位置按局轮换 ⇒ 座位不混进读数。 */
-const SUBJ = flag('subject', '') || null;
+/* `--subject-path=<.bak/.js>`：测**还没进任何表的新臂产物**时用（T5 那四臂就落在这里）。
+ *   标签取文件名（去扩展名）⇒ `--subject=` 与 `--subject-path=` 同时给且对不上 ⇒ 响亮拒（两条来源指向不同包 = 静默换成别人）。 */
+const SUBJ_PATH_FLAG = flag('subject-path', '') || null;
+const SUBJ_ID = flag('subject', '') || '';
+const SUBJ_FROM_PATH = SUBJ_PATH_FLAG ? String(SUBJ_PATH_FLAG).replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, '') : '';
+if (SUBJ_ID && SUBJ_PATH_FLAG && SUBJ_ID !== SUBJ_FROM_PATH) {
+  console.error('⛔ --subject=' + SUBJ_ID + ' 与 --subject-path 的文件名「' + SUBJ_FROM_PATH + '」对不上 ⇒ 不许自己挑一个'); process.exit(2);
+}
+const SUBJ = SUBJ_ID || SUBJ_FROM_PATH || null;
 /* 测配方/谱系时才放开"读非池内成员"：放开的是**能不能读**，不是**读了算谁的** ⇒ 打印会自己喊来源 */
 const ALLOW_NONPOOL = process.argv.includes('--allow-nonpool');
 const WANT = String(flag('protos', 'reflectspam,defend,farmer,gunspam,deepsaver+reflect,heavyfire+reflect')).split(',').map(s => s.trim()).filter(Boolean);
@@ -517,6 +525,14 @@ for (const t of picked) {
   if (SUBJ) {
     /* 在册检查的范围 = **整张池表**而不是本档的带：被测席是"覆盖一席"，它本来就不必来自这一档
      *   （第一版查的是 `rows`（带内名单）⇒ 困难带只有 12 枚，其余 16 枚被误判成"打错 id"） */
+    /* 三种来源，优先级从高到低：**显式路径**（新臂产物，还没进任何表）→ 池表 → coords.tsv（需 --allow-nonpool） */
+    if (SUBJ_PATH_FLAG) {
+      const p = /^[A-Za-z]:[\\/]/.test(SUBJ_PATH_FLAG) || SUBJ_PATH_FLAG.charAt(0) === '/'
+        ? SUBJ_PATH_FLAG : join(ROOT, SUBJ_PATH_FLAG);
+      if (!existsSync(p)) { console.error('⛔ --subject-path= 指向的文件不存在：' + p); process.exit(2); }
+      SUBJ_PATH = p; SUBJ_WID = null;
+      SUBJ_SRC = '显式路径（**未进池表也未进 coords.tsv**）⇒ 只许当本批实验的证据，不许与池内成员并排';
+    } else {
     const pr = allRows.find(r => r[h0.id] === SUBJ);
     if (pr) { SUBJ_PATH = pr[h0.path]; SUBJ_WID = pr[h0.wid]; }
     else if (ALLOW_NONPOOL) {
@@ -530,8 +546,10 @@ for (const t of picked) {
     } else {
       console.error('⛔ --subject=' + SUBJ + ' 不在池表里。要读全库的某一枚（测配方/谱系）必须显式加 --allow-nonpool ⇒ 那批数不许进池内比较'); process.exit(2);
     }
+    }
     if (!PARAMS[SUBJ]) {
-      let ps = null; try { ps = loadChamp(W, join(ROOT, SUBJ_PATH), ROOT); } catch (e) { ps = null; }
+      const abs = /^[A-Za-z]:[\\/]/.test(SUBJ_PATH) || SUBJ_PATH.charAt(0) === '/' ? SUBJ_PATH : join(ROOT, SUBJ_PATH);
+      let ps = null; try { ps = loadChamp(W, abs, ROOT); } catch (e) { ps = null; }
       if (!ps) { console.error('⛔ 被测包读不出：' + SUBJ + '（' + SUBJ_PATH + '）'); process.exit(7); }
       PARAMS[SUBJ] = ps;
       CHOOSERS[SUBJ] = T.policyChooserN(ps, 0.15, B.tierEpsAt(t, N, 3), t.epsK, t.epsMode);
