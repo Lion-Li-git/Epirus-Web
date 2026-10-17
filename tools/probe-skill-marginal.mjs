@@ -27,7 +27,7 @@
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { rejectUnknownFlags } from './audit-lib.mjs';   /* v1.5.323：输入消毒层（仓规：不认识的 -- 参数必须响亮失败） */
-rejectUnknownFlags(process.argv.slice(2), ['eps', 'games', 'json', 'mode', 'n', 'only', 'pack', 'rich', 'seed', 'target-se'], 'probe-skill-marginal');   /* v1.5.323 */
+rejectUnknownFlags(process.argv.slice(2), ['eps', 'games', 'json', 'mode', 'n', 'only', 'pack', 'rich', 'seed', 'target-se', 'when'], 'probe-skill-marginal');   /* v1.5.323 */
 
 const arg = function (k, d) {
   const h = process.argv.find(function (a) { return a.indexOf('--' + k + '=') === 0; });
@@ -42,6 +42,32 @@ const TARGET_SE = Number(arg('target-se', 3));
 const EPS = Number(arg('eps', 0.25));
 const ONLY = arg('only', '');
 const SEED0 = Number(arg('seed', 20260923));
+/* ===== `--when=`（千问 2026-10-18 夜）：条件化注入 =====
+ * 值：`weakcharger`（场上存在 `hp≤1 ∧ (ep≥3 ∨ ringStreak≥2)` 的席 ⇒ 只在那时注入，且**把牌给它**）
+ *    ‖ `notweak`（只有那种席**不存在**时才注入，目标交回 `pickTargetN`）
+ *    ‖ `ringopen`（存在 `ringStreak≥2` 的席 ⇒ 只在那时注入并瞄它） ‖ `notring`（反之）
+ *    ‖ 空 = 旧口径（不设条件、目标走 `pickTargetN`）⇒ 在册读数逐字可比 */
+const WHEN = arg('when', '');
+if (WHEN && ['weakcharger', 'weaktime', 'notweak', 'ringopen', 'notring'].indexOf(WHEN) < 0) {
+  console.error('⛔ --when= 只认 weakcharger/weaktime/notweak/ringopen/notring，给了「' + WHEN + '」⇒ 打错条件就等于换了一把没登记的尺'); process.exit(2);
+}
+function whenSeat(state, pid) {
+  const cand = [];
+  for (let i = 0; i < state.p.length; i++) {
+    if (i === pid || state.p[i].hp <= 0) continue;
+    cand.push({ i: i, p: state.p[i] });
+  }
+  const weak = cand.filter(x => x.p.hp <= 1 && (x.p.ep >= 3 || (x.p.ringStreak | 0) >= 2));
+  const ring = cand.filter(x => (x.p.ringStreak | 0) >= 2);
+  if (WHEN === 'weakcharger') return weak.length ? weak[0].i : false;
+  /* `weaktime`：**同样时机、目标交回 `pickTargetN`**（血最多的敌人）⇒ 与 `weakcharger` 成对，才拆得开
+   *   "该不该在这一回合出手"与"该不该给这个人"（合成一个数就说不清是哪半在付钱）。 */
+  if (WHEN === 'weaktime') return weak.length ? null : false;
+  if (WHEN === 'ringopen') return ring.length ? ring[0].i : false;
+  if (WHEN === 'notweak') return weak.length ? false : null;
+  if (WHEN === 'notring') return ring.length ? false : null;
+  return undefined;
+}
 /* 补贴档（口径②）：每回合把**受评席**的 ep 抬到 RICH 并给满两种珠 ⇒ 回答「这手卡**付得起时**值多少胜率」。
  * ⚠️ 只能当**读价值的显微镜**，不许当上线判据 —— 本仓前例：补贴 = 白来的 ep 会造出「只在补贴下成立」的幻影目标
  *   （`evo.js` 的 `makeEconChooser`/v1.5.99 与「承诺局一分不进 fit」都是为躲这个坑）。base 与注入**同补**，Δ 只在同口径内比。 */
@@ -118,10 +144,19 @@ function run(injectKey, eps, games, seedBase, rich, cardSub) {
       if (injectKey) {
         const l = legal.find(function (x) { return x.key === injectKey && x.affordable; });
         if (l) {
+          /* `--when=`（千问 2026-10-18 夜）：**只在场面谓词成立时注入** ⇒ 把"这张牌值多少"拆成"它在哪种场面下值多少"。
+           *   为什么必须拆开：原口径的**目标一律走 `pickTargetN`**，而它"没伤害 ⇒ 选血最多的对手"
+           *   ⇒ 全息屏障（唯一 `target:'other'`）在旧口径下是把盾**给最肉的那个敌人**
+           *   ⇒ 所以 §E613/CARD-VALUE 的"全息 −13.3/−7.7 ⇒ 归真弱"里混着**瞄准策略的价**，不是牌本身的价。这条必须实测。
+           *   谓词都只用**决策时刻的公开信息**（血/珠/环计数），珠的**类型**一律不读（v1.5.15 那条泄漏红线）。 */
+          const j = WHEN ? whenSeat(state, pid) : undefined;
+          /* ⚠ 判"条件不成立"必须用 `=== false` 这个哨兵：席位号 0 是 falsy
+           *   （本仓在 `policy.js:420` 那条 D108 上栽过一模一样的写法 ⇒ 这里不当布尔用） */
+          if (j === false) { return bs(state, pid, legal); }        // 条件不成立 ⇒ 这手交回冠军自己（不记机会）
           stat.chance++;
           if (rnd() < eps) {
             stat.hit++;
-            const t = T.pickTargetN(state, pid, injectKey);
+            const t = typeof j === 'number' ? j : T.pickTargetN(state, pid, injectKey);
             return t == null ? { key: injectKey } : { key: injectKey, target: t };
           }
         }
@@ -205,7 +240,7 @@ for (const k of cards) {
 }
 list.sort(function (a, b) { return b.d1 - a.d1; });
 
-console.log('# 技能边际价值（机会式 ε 注入）· 包=' + PACK + ' 模式=' + MODE + ' n=' + N +
+console.log('# 技能边际价值（机会式 ε 注入）· 包=' + PACK + ' 模式=' + MODE + ' n=' + N + (WHEN ? ' **条件=' + WHEN + '（只在该场面成立时注入 ⇒ 与无条件那批不可并排读）**' : '（无条件 · 旧口径）') +
   ' 局数=' + GAMES + ' ε=' + EPS + (RICH_CARD ? ' 【定向垫钱：只为被测卡垫到刚够 · 两臂同垫】' : (RICH_EP ? ' 【无差别补贴 ep=' + RICH_EP + '+双珠 · 会打进天花板，只作对照】' : '')) + ' 基线1st=' + (base0.first * 100).toFixed(1) + '%' +
   ' 噪声地板=' + (NOISE * 100).toFixed(1) + 'pt');
 console.log('# 卡名         费用  机会/局 注入/局   Δ1st(pt)   ±配对SE  Δ伤害/局  合法率  光垫钱  判定  ‖ 为什么这手不可测/不合法');
