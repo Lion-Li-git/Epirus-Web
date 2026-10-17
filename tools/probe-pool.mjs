@@ -22,17 +22,44 @@
  *        [--members=champion-map/pool-members.tsv] [--out=某.tsv] [--mixSeats=k]
  *        （`--mixSeats=k` 只顶 `scriptMix.seats` 这一维，`min`/`ids` 与推导仍走档位表 + `PD.scriptSeats`
  *          ⇒ 量出来的是"掺 0/1/2/3 席"这四个装配，不是四份抄出来的算法；引用它的数必须带上这句）
- * 退出码：0 ‖ 2 输入/成员不齐 ‖ 7 有成员读不出包（缺行 ≠ 量了没测出来）
+ *
+ * ===== 主体席模式（§E630 · 10-17 定尺）：`--subject=<包|池内 id|rand>` =====
+ * 上面那把量的是**池**（人类原型那一席赢不赢 ⇒ 这桌子拿它没办法吗）。加 `--subject=` 之后量的是**一枚包**：
+ *   被考的那一枚坐主体席（`seat = g % N` 照常逐局轮换），另外 4 席仍按 `js/pool-draw.js` 抽 ⇒ **同一个装配，换了坐在中间的是谁**。
+ * 为什么要它：在册那把考卷尺（`eps-full`→`eval-5p`，4 席固定脚本）的**历史最高分只比现役高 4.5~9.4pt**
+ *   （我 10-17 复算 `coords.tsv` 798 行：long·exam 全库 max 70.1 而现役 65.6 ⇒ +7pt 那条预注册线**历史上 0 枚够得到**），
+ *   于是"任何方法都推不动"这个读数里混着"分数没有量程"这一半 —— 换训练法之前得先有一把张得开的尺。
+ * 池当尺的**循环**（池成员本来就是按尺筛进来的）用三件事堵死，缺一件就会把漂移读成进步：
+ *   ① **每批必带一枚在册参照包同批同盐重测**（`--ref=`，默认 `docs/artifacts/eval-out/win-Ldemo.bak`，
+ *      由 `_ctx.mjs:130` 的 `FIXTURE_PACK` 同一枚）⇒ 报的是**配对差**，名单变强时参照也一起掉，差才不是假的；
+ *      ⚠ 参照不许用两颗活槽（R3 那条普查的原文：会换主人的指针不是夹具）。
+ *   ② **名单签名钉进每一行**（sha1：池表 + tier + 去掉被考两枚后的 `id:wid` 有序表 + 席数 + 桌形 + 两侧剂量）
+ *      ⇒ 签名不同的两行**不许并排读**，更不许拿它去重算 rank/带（METHODOLOGY 119/120：两把尺不许并池、进图必须单档）。
+ *   ③ **被考的两枚一起从对手席里摘掉**（只摘 subject 的话，subject 臂与 ref 臂的对手名单就不同 ⇒ 那不是配对）。
+ *      摘完不足 2 枚 ⇒ exit 2（四席全同是数学必然，读出来的不是强度）。
+ * 三条自证（接错线的形状就是"表看着正常而数全是同一个"）：
+ *   · `--subject=` 与 `--ref=` 同一枚 ⇒ 逐批配对差**必须恰好 0**，否则 exit 8（配对了个假的）；
+ *   · `--subject=rand`（`Bots.pickRandom`）⇒ 随机席**必须明显低于**参照包，否则 exit 8（公平份额锚 20% 接反了）；
+ *   · 主体席逐席计数必须轮换均匀（max−min ≤ 1）、每枚对手都上过场、`missSeat` 必须为 0 ⇒ 否则 exit 8。
+ * ⚠ 这把尺自己的条款（沿用文件头 ①②）：加 `--games=` 只降仪器噪声、**加批数才升独立组成**；
+ *   逐枚读数在 n(独立组成) < 200 时不许排名次。σ 用**批间标准差**，极差不是 σ。
+ * `--assertDiff=<pt>`：配对差均值 < 该值 ⇒ exit 9（以后要立门直接吃这个码，不必再写一台仪器）。
+ *
+ * 退出码：0 ‖ 2 输入/成员不齐 ‖ 7 有成员读不出包（缺行 ≠ 量了没测出来） ‖ 8 自证不过（读数作废） ‖ 9 `--assertDiff` 不过
  */
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { sandbox, loadChamp, rejectUnknownFlags, humanPrototypes } from './audit-lib.mjs';
 import { duelAssembly } from './v2v4-lib.mjs';
+import { widOf } from '../champion-map/pack-id.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
-rejectUnknownFlags(process.argv.slice(2), ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose', 'mixSeats'], 'probe-pool');
+rejectUnknownFlags(process.argv.slice(2),
+  ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose', 'mixSeats',
+    'subject', 'ref', 'batches', 'seedBase', 'subjectDose', 'assertDiff', 'alsoDrop'], 'probe-pool');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const TIER = flag('tier', 'hard'), G = Number(flag('games', 60));
 const SEEDS = String(flag('seeds', '90210,90211')).split(',').map(Number).filter(x => !Number.isNaN(x));
@@ -65,20 +92,23 @@ const S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, R = W.EpirusR
  *     · `--dose=<eps:epsK:mode>`（如 `--dose=0.2:5:soft`）= 研究用的显式候选。
  *   ⚠ 两条口径都要印在头几行（读数离开口径就没法引用，§E272/第 45 条）。 */
 const DOSE_ARG = String(flag('dose', 'zero'));
-const DOSE = (function () {
-  if (DOSE_ARG === 'zero') return { eps: 0, epsK: 1, epsMode: 'soft', label: 'zero（ε=0 纯贪心 = 池轴的单独强度）' };
-  if (DOSE_ARG.indexOf('table:') === 0) {
-    const pid = DOSE_ARG.slice(6);
+/* 剂量解析抽成一个函数（**不是**为了好看）：主体席模式还要再解一份 `--subjectDose=`，
+ *   在原地再写一个 if-else 就是同一件事两份实现 ⇒ 两份必然漂移（本仓的老账）。 */
+function parseDose(s, who) {
+  if (s === 'zero') return { eps: 0, epsK: 1, epsMode: 'soft', label: 'zero（ε=0 纯贪心 = 池轴的单独强度）' };
+  if (s.indexOf('table:') === 0) {
+    const pid = s.slice(6);
     const tiers = (B && B.DIFF_TIERS) || [];
     const t = tiers.filter(x => x && x.id === pid)[0];
-    if (!t) { console.error('⛔ --dose=table:' + pid + ' 在 DIFF_TIERS 里找不到（有的是：' + tiers.map(x => x.id).join(',') + '）'); process.exit(2); }
+    if (!t) { console.error('⛔ ' + who + '=table:' + pid + ' 在 DIFF_TIERS 里找不到（有的是：' + tiers.map(x => x.id).join(',') + '）'); process.exit(2); }
     if (t.kind !== 'champ') { console.error('⛔ ' + pid + ' 是 `kind:' + t.kind + '` ⇒ 它不吃包，剂量对它无意义'); process.exit(2); }
     return { eps: t.eps, epsK: t.epsK, epsMode: t.epsMode, ramp: !!t.ramp, label: pid + ' 的表值 ε=' + t.eps + '/k' + t.epsK + '/' + t.epsMode + (t.ramp ? '·斜坡(本尺按起手剂量,不模拟逐回合上升)' : '') };
   }
-  const m = /^([0-9.]+):([0-9]+):(soft|uniform)$/.exec(DOSE_ARG);
-  if (!m) { console.error('⛔ --dose 只认 zero ‖ table:<页档id> ‖ <eps:epsK:soft|uniform>，收到 ' + DOSE_ARG); process.exit(2); }
+  const m = /^([0-9.]+):([0-9]+):(soft|uniform)$/.exec(s);
+  if (!m) { console.error('⛔ ' + who + ' 只认 zero ‖ table:<页档id> ‖ <eps:epsK:soft|uniform>，收到 ' + s); process.exit(2); }
   return { eps: Number(m[1]), epsK: Number(m[2]), epsMode: m[3], label: '显式 ε=' + m[1] + '/k' + m[2] + '/' + m[3] };
-})();
+}
+const DOSE = parseDose(DOSE_ARG, '--dose');
 const lite = members.map(r => ({ id: r[h.id], wid: r[h.wid] }));
 const PARAMS = {}, CHOOSERS = {};
 const bad = [];
@@ -134,6 +164,196 @@ let MIX = null, SCRIPTS = {}, SEATNOTE = '';
     }
   }
 }
+/* ===== §E630 主体席模式：被考的那一枚坐中间，四席仍是池（口径见文件头） ===== */
+const SUBJECT_ARG = String(flag('subject', ''));
+if (SUBJECT_ARG) {
+  const REF_ARG = String(flag('ref', 'docs/artifacts/eval-out/win-Ldemo.bak'));
+  const BATCHES = Number(flag('batches', 0));
+  const SEED_BASE = Number(flag('seedBase', 90210));
+  const ASSERT_DIFF = flag('assertDiff', '') === '' ? null : Number(flag('assertDiff'));
+  const SUBJ_DOSE = parseDose(String(flag('subjectDose', DOSE_ARG)), '--subjectDose');
+  if (flag('n', '') !== '') { console.error('⛔ 主体席模式今天只量 5 席（1 主体 + 4 池）⇒ `--n=` 在这里还没接，别拿 2 人桌的池读数当同一条轴'); process.exit(2); }
+  const ALL = L.slice(1).map(l => l.split('\t'));
+  const bn = s => String(s).split(/[\\/]/).pop();
+  function resolve(spec, who) {
+    if (spec === 'rand') return { label: 'rand（`Bots.pickRandom` 公平份额锚）', wid: null, chooser: B.pickRandom, id: 'rand' };
+    /* 既收路径，也收**池内 id**（扫池成员时逐个写路径太容易点错，而 id 是表里唯一的键） */
+    const rowById = ALL.find(r => r[h.id] === spec);
+    const p = rowById ? rowById[h.path] : spec;
+    if (!existsSync(join(ROOT, p))) { console.error('⛔ ' + who + ' 的包不在库里：' + p + (rowById ? '（表里 id=' + spec + ' 指向它）' : '')); process.exit(2); }
+    let params = null; try { params = loadChamp(W, p); } catch (e) { params = null; }
+    if (!params) { console.error('⛔ ' + who + ' 解不出权重：' + p + ' ⇒ 按失败处理（不许静默退回别一枚）'); process.exit(7); }
+    const wid = widOf(readFileSync(join(ROOT, p), 'utf8')) || null;
+    const row = wid ? ALL.find(r => r[h.wid] === wid) : null;
+    return { label: p, wid, id: row ? row[h.id] : bn(p), params,
+      chooser: T.policyChooserN(params, 0.15, SUBJ_DOSE.eps, SUBJ_DOSE.epsK, SUBJ_DOSE.epsMode) };
+  }
+  const SUBJ = resolve(SUBJECT_ARG, '--subject'), REF = resolve(REF_ARG, '--ref');
+  /* ③ 两枚一起摘：只摘被考者会让两臂的对手名单不同 ⇒ 那就不叫配对。
+   *   `--alsoDrop=id1,id2` 是给**扫多枚**用的：把这一批要考的都先摘出去 ⇒ 所有行共用同一份名单 ⇒ 同一个签名，
+   *   才谈得上并排读（不传就是各摘各的，一行一个签名，行与行不是同一把尺）。 */
+  const ALSO_DROP = String(flag('alsoDrop', '')).split(',').map(s => s.trim()).filter(Boolean);
+  const DROP = new Set([SUBJ.wid, REF.wid].filter(Boolean));
+  const unknown = ALSO_DROP.filter(id => !members.some(r => r[h.id] === id));
+  if (unknown.length) { console.error('⛔ --alsoDrop 里有 tier=' + TIER + ' 名单认不出的 id：' + unknown.join(' ‖ ') +
+    '（在册的：' + members.map(r => r[h.id]).join(' ') + '）⇒ 名字拼错不许静默少摘一枚'); process.exit(2); }
+  for (const id of ALSO_DROP) { const w = members.find(r => r[h.id] === id)[h.wid]; if (w) DROP.add(w); }
+  if (SUBJ.wid && members.some(r => r[h.wid] === SUBJ.wid) && ALSO_DROP.indexOf(SUBJ.id) < 0) {
+    console.log('⚑ 被考者本身在 ' + TIER + ' 名单里（' + SUBJ.id + '）⇒ 已摘出对手席，所以**这一行的签名与"新包"那批不同**；' +
+      '要跨枚并排读就用 `--alsoDrop=` 把要扫的都列上（同一份名单才同一把尺）');
+  }
+  const ROSTER = members.filter(r => !DROP.has(r[h.wid])).map(r => ({ id: r[h.id], wid: r[h.wid] }));
+  if (ROSTER.length < 2) {
+    console.error('⛔ 摘掉被考的两枚（' + [SUBJ.id, REF.id].join(' ‖ ') + '）之后 tier=' + TIER + ' 只剩 ' + ROSTER.length +
+      ' 枚 ⇒ 四席全同在数学上必然（用户裁定不许）⇒ 这一档还没成型，先别量'); process.exit(2);
+  }
+  /* ② 名单签名：签名不同的两行不是同一把尺（METHODOLOGY 119/120） */
+  const sigOf = mode => createHash('sha1').update(['poolruler~1', TABLE, TIER,
+    ROSTER.map(m => m.id + ':' + m.wid).sort().join(','), 'aiSeats=4', 'N=5', 'mode=' + mode, 'G=' + G,
+    'dose=' + DOSE.label, 'subjectDose=' + SUBJ_DOSE.label].join('|')).digest('hex').slice(0, 16);
+  const SEEDS_RUN = BATCHES > 0
+    ? Array.from({ length: BATCHES }, (_, i) => SEED_BASE + i * 1000003)     /* 步数 1000003：与盐里那个乘数互质，批次之间不给"复用盐"留门 */
+    : SEEDS;
+  if (SEEDS_RUN.length < 2) { console.error('⛔ 至少两批（--batches=≥2 或 --seeds=≥2 枚）⇒ 一批量不出 σ，只能给一个孤零零的均值'); process.exit(2); }
+
+  console.log('# 主体席尺（1 席被考包 + 4 席按 tier=' + TIER + ' 逐席抽 · 允许重复 · 禁四席全同 · 被考两枚一起摘出对手席）');
+  console.log('# 被考 ' + SUBJ.label + '（id=' + SUBJ.id + ' ‖ wid=' + (SUBJ.wid || '—') + '）· 参照 ' + REF.label +
+    '（id=' + REF.id + ' ‖ wid=' + (REF.wid || '—') + '）');
+  console.log('# 对手席剂量 ' + DOSE.label + ' ‖ 被考席剂量 ' + SUBJ_DOSE.label + '   ← 引用读数必须带上这两句');
+  console.log('# 名单 ' + ROSTER.length + ' 枚（摘掉 ' + DROP.size + ' 枚）：' + ROSTER.map(m => m.id).join(' ‖ '));
+  console.log('# ' + G + ' 局/批 × ' + SEEDS_RUN.length + ' 批（seedBase=' + SEED_BASE + ' 步长 1000003' +
+    (BATCHES > 0 ? '' : ' ‖ 这批吃的是 --seeds= 列出来的 ' + SEEDS_RUN.length + ' 枚') + '）· 两臂同 seed 同盐 ⇒ 逐批配对\n');
+
+  const rowsOut = [];
+  let fail = null;
+  for (const mode of MODES) {
+    const SIG = sigOf(mode);
+    const agg = { salts: new Set(), comps: new Set(), seatCnt: [0, 0, 0, 0, 0], memberG: {}, memberW: {}, allSame: 0, miss: 0, games: 0 };
+    const per = { subj: [], ref: [], diff: [], subjDraw: [], refDraw: [] };
+
+    /* 一臂 = 一批（seed）× G 局。回调用局部闭包 ⇒ 两臂之间不共享状态（共享就会把上一臂的组成算到这一臂头上）。 */
+    function runArm(arm, seed) {
+      let curState = null, cur = null, win = 0, drawN = 0, games = 0, mismatch = 0;
+      const chooserFor = function (pid, st) {
+        if (st !== curState) {
+          curState = st;
+          const comp = PD.compose(ROSTER, 4, PD.rng((st.slotSalt >>> 0) || 1));
+          cur = { comp, byPid: {}, order: 0 };
+        }
+        if (!(pid in cur.byPid)) cur.byPid[pid] = cur.comp.seats[cur.order++];
+        const m = cur.byPid[pid];
+        if (!m) { agg.miss++; return null; }
+        if (m.kind === 'script') { mismatch++; return null; }
+        return CHOOSERS[m.id];
+      };
+      const onGame = function (st, scriptedSeat) {
+        games++; agg.games++;
+        agg.salts.add((st.slotSalt >>> 0) || 1);
+        agg.comps.add(cur.comp.seats.map(s => s.id + ':' + s.seat).join('|'));
+        if (cur.comp.allSame) agg.allSame++;
+        agg.seatCnt[Number(scriptedSeat)]++;
+        for (const pid in cur.byPid) {
+          const id = cur.byPid[pid].id;
+          agg.memberG[id] = (agg.memberG[id] || 0) + 1;
+          if (st.winner === Number(pid)) agg.memberW[id] = (agg.memberW[id] || 0) + 1;
+        }
+        if (st.winner === Number(scriptedSeat)) win++;
+        else if (st.winner === 'draw') drawN++;
+      };
+      const r = duelAssembly({ S: S, Play: Play, T: T, R: R }, ROSTER.length ? PARAMS[ROSTER[0].id] : arm.params,
+        { games: G, mode: mode, seed0: seed, scripted: arm.chooser, chooserFor: chooserFor, onGame: onGame });
+      if (mismatch) { console.error('⛔ 对手席里出现了脚本席（' + mismatch + ' 次）⇒ 主体席模式不掺席，装配不是我说的那个'); process.exit(2); }
+      if (games !== G) { fail = '主体席跑了 ' + games + ' 局而声明是 ' + G + ' 局 ⇒ 对局循环没跑满，读数作废'; return null; }
+      /* ⚑ 第四条自证（这次真咬到东西）：我数到的主体席胜局必须与 `duelAssembly` 报的 `winPct` 对得上。
+       *   ⚠ 它**取整到 1 个百分点**（`v2v4-lib.mjs:202` = `Math.round(100*win/G)`）⇒ 一把要辨 1~2pt 的尺不能吃这个取整值，
+       *     所以**尺用自己的未取整比率**，这里只按"取整后相等"这条紧关系验接线（差 0.6pt 也算断线）。 */
+      const rate = win / games * 100;
+      if (Math.round(rate) !== r.winPct) {
+        fail = '主体席夺冠率自证不过（' + arm.tag + '）：我数 ' + win + '/' + games + ' = ' + rate.toFixed(2) +
+          '% ‖ duelAssembly 报 winPct=' + r.winPct + '% ⇒ 席位接线错了，本批读数作废';
+        return null;
+      }
+      return { rate: rate, drawRate: drawN / games * 100, win: win, games: games };
+    }
+
+    console.log('== 口径 ' + mode + ' ‖ 名单签名 ' + SIG + ' ==');
+    for (const seed of SEEDS_RUN) {
+      const a = runArm({ tag: 'subj', chooser: SUBJ.chooser, params: SUBJ.params }, seed);
+      const b = runArm({ tag: 'ref', chooser: REF.chooser, params: REF.params }, seed);
+      if (a === null || b === null) break;
+      per.subj.push(a.rate); per.ref.push(b.rate); per.diff.push(a.rate - b.rate);
+      per.subjDraw.push(a.drawRate); per.refDraw.push(b.drawRate);
+    }
+    if (fail) break;
+
+    const mean = v => v.reduce((x, y) => x + y, 0) / v.length;
+    const sd = v => { const m = mean(v); return Math.sqrt(v.reduce((x, y) => x + (y - m) ** 2, 0) / Math.max(1, v.length - 1)); };
+    const mS = mean(per.subj), mR = mean(per.ref), mD = mean(per.diff), sD = sd(per.diff);
+    const seD = sD / Math.sqrt(per.diff.length), tD = seD > 0 ? mD / seD : Infinity;
+    console.log('   批 | 被考夺1% | 参照夺1% | 配对差 | 被考平局 | 参照平局');
+    per.subj.forEach((v, i) => {
+      console.log('   ' + String(i + 1).padStart(2) + ' | ' + v.toFixed(2).padStart(7) + ' | ' + per.ref[i].toFixed(2).padStart(8) +
+        ' | ' + ((per.diff[i] >= 0 ? '+' : '') + per.diff[i].toFixed(2)).padStart(7) +
+        ' | ' + per.subjDraw[i].toFixed(2).padStart(7) + ' | ' + per.refDraw[i].toFixed(2).padStart(7));
+      rowsOut.push({ mode: mode, sig: SIG, batch: SEEDS_RUN[i], subj: v.toFixed(2), ref: per.ref[i].toFixed(2),
+        diff: per.diff[i].toFixed(2), subjDraw: per.subjDraw[i].toFixed(2), refDraw: per.refDraw[i].toFixed(2), games: G });
+    });
+    console.log('   均值 | ' + mS.toFixed(2) + ' | ' + mR.toFixed(2) + ' | **配对差 ' + (mD >= 0 ? '+' : '') + mD.toFixed(2) + 'pt**' +
+      '（σ(配对差)=' + sD.toFixed(2) + ' ‖ ' + per.diff.length + ' 批 ⇒ SE=' + seD.toFixed(2) + ' ‖ t=' + (Number.isFinite(tD) ? tD.toFixed(2) : '∞') +
+      ' ‖ 判得动的下限：1σ=' + seD.toFixed(2) + ' ‖ 2σ=' + (2 * seD).toFixed(2) + 'pt）' +
+      ' ‖ 平局 被考 ' + mean(per.subjDraw).toFixed(2) + '% / 参照 ' + mean(per.refDraw).toFixed(2) + '%');
+    rowsOut.push({ mode: mode, sig: SIG, batch: '__mean', subj: mS.toFixed(2), ref: mR.toFixed(2), diff: mD.toFixed(2),
+      subjDraw: mean(per.subjDraw).toFixed(2), refDraw: mean(per.refDraw).toFixed(2), games: per.diff.length + ' 批' });
+    console.log('   ⚑ 公平份额 = ' + (100 / 5).toFixed(1) + '%（5 席）⇒ 参照包坐主体席应当高于它；低于它说明参照已经不该再当参照');
+    /* 结构自证 ①：同一枚两臂 ⇒ 配对差必须逐批恰好 0 */
+    if (SUBJ.wid && SUBJ.wid === REF.wid) {
+      const nz = per.diff.filter(d => Math.abs(d) > 1e-9);
+      if (nz.length) { fail = '自证① 不过：--subject 与 --ref 是同一枚（wid=' + SUBJ.wid + '）却有 ' + nz.length + '/' + per.diff.length + ' 批配对差不为 0 ⇒ 两臂没真配对（盐/席位/剂量有一处没共用）'; break; }
+      console.log('   ✔ 自证①（同枚两臂 ⇒ 差恰好 0）：' + per.diff.length + ' 批全过');
+    }
+    /* 结构自证 ②：随机席必须明显低于参照包 */
+    if (SUBJECT_ARG === 'rand') {
+      if (!(mS < mR)) { fail = '自证② 不过：`rand` 席 ' + mS.toFixed(2) + '% 不低于参照 ' + mR.toFixed(2) + '% ⇒ 公平份额锚接反了（多半是主体席没换成随机 chooser）'; break; }
+      console.log('   ✔ 自证②（公平份额锚）：随机席 ' + mS.toFixed(2) + '% < 参照 ' + mR.toFixed(2) + '%（差 ' + (mR - mS).toFixed(2) + 'pt）');
+    }
+    const used = agg.seatCnt.filter(x => x > 0).length, mx = Math.max.apply(null, agg.seatCnt), mn = Math.min.apply(null, agg.seatCnt);
+    if (used < 5 || mx - mn > 1) { fail = '自证③ 不过：主体席只出现在 ' + used + '/5 席（各席 ' + agg.seatCnt.join('/') + ' ⇒ 极差 ' + (mx - mn) +
+      '）⇒ 被考的那一枚没有逐席轮换，读数里掺的是座位'; break; }
+    const noShow = ROSTER.filter(m => !agg.memberG[m.id]);
+    if (noShow.length) { fail = '自证③ 不过：名单里有 ' + noShow.length + ' 枚一场没上（' + noShow.map(m => m.id).join(' ‖ ') + '）⇒ 抽签与席位的接线断了'; break; }
+    if (agg.miss) { fail = '自证③ 不过：' + agg.miss + ' 次决策没分配到成员（落回缺省包）⇒ 组成漏席'; break; }
+    if (SUBJECT_ARG !== 'rand' && !(SUBJ.wid && SUBJ.wid === REF.wid)) {
+      console.log('   ✔ 自证③（席位接线）：主体席逐席 ' + agg.seatCnt.join('/') + ' ‖ ' + ROSTER.length + ' 枚对手全部上场 ‖ 漏席 0');
+    }
+    console.log('   ⚑ 四席全同 ' + agg.allSame + ' / ' + agg.games + ' 场 ‖ 独立盐 ' + agg.salts.size + ' ‖ 独立"成员×席位"配对 ' + agg.comps.size +
+      (agg.comps.size < 200 ? ' ⇒ **<200：逐枚夺冠率不许用来排名次**（文件头第②条），只能当整体读数' : ''));
+    console.log('   逐枚对手夺冠率：' + ROSTER.map(m => m.id + ' ' + ((agg.memberW[m.id] || 0) / Math.max(1, agg.memberG[m.id]) * 100).toFixed(1) +
+      '%(上场 ' + (agg.memberG[m.id] || 0) + ')').join(' ‖ '));
+    console.log('   ⚠ 上面那行是**对手**的账，不是被考包的排名；且它随名单签名变 ⇒ 换池之后不许与旧行并排读。\n');
+  }
+
+  if (fail) { console.error('⛔ ' + fail); process.exit(8); }
+  if (flag('out', '')) {
+    const cols = ['mode', 'sig', 'batch', 'subj', 'ref', 'diff', 'subjDraw', 'refDraw', 'games'];
+    writeFileSync(join(ROOT, flag('out')), cols.join('\t') + '\n' + rowsOut.map(r => cols.map(c => r[c]).join('\t')).join('\n') + '\n');
+    console.log('✔ 已写 ' + flag('out'));
+  }
+  const last = rowsOut.filter(r => r.batch === '__mean');
+  console.log('\n# 机器可读（给门与以后的自己核对签名与配对差用）：');
+  console.log(JSON.stringify({ subject: SUBJ.id, subjectWid: SUBJ.wid, ref: REF.id, refWid: REF.wid, tier: TIER,
+    roster: ROSTER.length, rosterIds: ROSTER.map(m => m.id), games: G, batches: SEEDS_RUN.length, seedBase: SEED_BASE,
+    dose: DOSE.label, subjectDose: SUBJ_DOSE.label,
+    perMode: last.map(r => ({ mode: r.mode, sig: r.sig, subj: +r.subj, ref: +r.ref, diff: +r.diff,
+      subjDraw: +r.subjDraw, refDraw: +r.refDraw })),
+    assertDiff: ASSERT_DIFF }));
+  if (ASSERT_DIFF !== null) {
+    const worst = last.map(r => r.diff).sort((a, b) => a - b)[0];
+    if (!(worst >= ASSERT_DIFF)) { console.error('⛔ --assertDiff=' + ASSERT_DIFF + ' 不过：最差那格配对差 ' + worst + 'pt'); process.exit(9); }
+    console.log('✔ --assertDiff=' + ASSERT_DIFF + ' 过（最差那格 ' + worst + 'pt）');
+  }
+  process.exit(0);
+}
+
 console.log('# 池形态新尺（1 席人类形状 + 4 席按 tier=' + TIER + ' 抽 · 允许重复 · 禁四席全同' +
   (MIX && MIX.seats ? ' ‖ 掺脚本席 ' + MIX.seats + ' 席：' + MIX.ids.join(' ‖ ') : ' ‖ 不掺脚本席') + '）' + SEATNOTE);
 console.log('# 剂量 ' + DOSE.label + (DOSE.ramp ? '' : '') + '   ← 这一行是引用读数时**必须**带上的口径（§E272/第 45 条）');
