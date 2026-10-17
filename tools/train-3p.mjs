@@ -117,7 +117,13 @@ const SELF_ENV_KEYS = [
  * 病：`beadW / bigcardW / stockBonus / hoardOnLeftover / convRatio` 只走 server/worker，
  *   而本工具不 dispatch 这些键 ⇒ **CLI 传进去静默 `exit 6`**（千问要治闭环的"花"那一半时被卡在这里）。
  * ⚠️ 这里**只写奖励键名**、不写 env 字面量：下面的 `extendSelfWithCliEcon()` 会按 D77 的单一来源反推出 env 名。 */
-const CLI_ECON_REWARD_KEYS = ['bigtChainW', 'fitTailW', 'fitTailQ',
+/* v1.7.86（DS · 10-17）：补 `widthW` 与 `divForceGens` —— 这两个键在 `server/econ-env.mjs` 的
+ *   `ECON_ENV_KEYS`（`EPIRUS_WIDTH_W` / `EPIRUS_DIV_FORCE_GENS`）与 `ECON_REWARD_KEYS` 里都齐，
+ *   **唯独本入口的投递名单缺**（D172 立的「三处名单齐全」规矩的第三处）。实测：不补，喂它们一律 `exit 6` 被黑键闸拦。
+ *   而这两个恰好是广度上**最该试的两根**（`WIDTH_W` 按 `WIDTH_FLOOR=3 → WIDTH_TARGET=7` 线性给钱，`evo.js:1503` 明写
+ *   「与 `DIV_W` 那个归一化熵不同，**刷不动**」；`divForceGens` 是强迫窗）—— 而 `DIV_W` 在 `evo.js:1532` 有实测
+ *   「×5 后产物 G=1.24/1.90」的反面记录。 */
+const CLI_ECON_REWARD_KEYS = ['bigtChainW', 'fitTailW', 'fitTailQ', 'widthW', 'divForceGens',
   'beadW', 'bigcardW', 'stockBonus', 'hoardOnLeftover', 'convRatio',
   'costlyW', 'fitCal',   /* v1.5.260（用户 GO"做 B+"）：贵卡预算权重（默认 0 ⇒ 行为逐字不变；见 js/train/evo.js 的 costlyBonus） */
   'fitGW', 'fitGF',      /* v1.6.50（用户 10-10 裁定「B 也可以做」）：把出厂闸的广度维度折进适应度（默认 0 ⇒ 逐位不变）
