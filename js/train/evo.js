@@ -256,6 +256,14 @@
   }
   function seedOfGen(gen, idx, tag) {
     let h = 17;
+    /* ⚠ 已知 bug（2026-10-17 实测，**没修**，理由写在下面）：这里只混 `tag.length` ⇒ `champion` / `breakdef` /
+     *   `tankline` / `guardgun` / `balanced` 这些**等长**的对手共享同一个局种子 ⇒「对 N 个基准的胜率」里有一部分
+     *   **不是独立样本**，配对差的显著性被系统性高估（千问 DONE-1/E4 的账）。
+     *   **修法试过了**（把 tag 的字符混进去：`String(gen*7919+idx*104729) + '|' + String(tag)`）⇒ 立即真红两条门：
+     *     ① `train-runner.mjs:953` D135「没有示范 ⇒ 该席大雷出手必须恒 0」实测变成 **1**；
+     *     ② `train-runner.mjs:1674` D165「开档臂必须训出不同的权重」实测**相同**。
+     *   ⇒ 这两条是**种子校准过的行为读数**，改种子必须**同一批里一起重新基线**（不是各自孤立的数字）。
+     *   所以本行**暂留旧口径**，等一条完整批次：改种子 + 重基线 D135/D165 + 复核所有在册臂读数。 */
     const s = String(gen * 7919 + idx * 104729 + tag.length * 31);
     for (let k = 0; k < s.length; k++) h = (h * 31 + s.charCodeAt(k)) >>> 0;
     return h;

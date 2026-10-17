@@ -1800,5 +1800,13 @@ const GUARD = guardWrite({ root: process.cwd(), dest: OUT_PATH, text: ARM_TXT, t
   why: ((process.argv.find(x => x.indexOf('--copy-note=') === 0) || '').slice('--copy-note='.length)
     || (PRODUCT_IS_SEED ? '本臂零改包：产物 = 起点那一粒' : '')) });
 console.log('[train-3p] 落盘：' + GUARD.note);
+/* v1.7.79（用户 2026-10-17 裁定）：§E589 守卫拦下 = **产物没落盘** ⇒ 给专属退出码 9。
+ *   原来这里继续往下走、最后 `exit 0` ⇒ 调用方把「退出码 0」读成「这臂跑成了、产物在那儿」，
+ *   而它读到的是**上一次留在那个路径上的旧文件**；这与 D233（拿退出码当"跑成没跑成"的唯一凭据）是同一个病。
+ *   规矩：**要么真的写了、要么响亮失败** —— 不许用 0 表示"我什么都没写"。 */
+if (!GUARD.wrote) {
+  console.error('⛔ [train-3p] §E589 守卫拦下了这次落盘 ⇒ 产物不存在（退出码 9，不是 0）。原本要写 ' + OUT_PATH);
+  process.exit(9);
+}
 console.log((GUARD.wrote ? '\n\u5df2\u5199\u5165 ' : '\n✘ 没写文件（§E589 守卫）：' + GUARD.note + '\n  原本要写 ') + OUT_PATH + '  (coldStart=' + (!seedParams) + ', seed=' + __SEED + ')' +
   (PRODUCT_IS_SEED ? '  ⚠ 产物与起点逐位相同（本臂零改包）' : ''));
