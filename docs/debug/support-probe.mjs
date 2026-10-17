@@ -72,7 +72,8 @@ const HIDDEN = { merge: '合二为一', spotlight: '聚光炮', hop: '反复横�
 function blankAgg() {
   return {
     games: 0, decisions: 0, roundsSeen: 0, rewind: 0, orphan: 0, gapBad: 0, gapNoRound: 0, gapTail: 0, tailSample: [],
-    holo: { oppA: 0, oppB: 0, fireA: 0, fireB: 0, gift: 0, eff: 0, idle: 0, self: 0, rightTarget: 0, baseEffSum: 0, baseN: 0 },
+    holo: { oppA: 0, oppB: 0, fireA: 0, fireB: 0, gift: 0, eff: 0, later: 0, idle: 0, self: 0, rightTarget: 0, baseEffSum: 0, baseN: 0 },
+    delay: { hoard: 0, spent: 0, never: 0, dl: [] },                    /* 攒到 ep≥3 的席次 ‖ 之后花掉 ≥3 费的 ‖ 到死/局终没花 ‖ 延迟回合数 */
     armor: { opp: 0, fire: 0, withTarget: 0, land: [0, 0, 0] },
     xfer: { opp: 0, fire: 0, landed: 0, destOther: 0 },
     ring: { opp: 0, hitJ: 0, baseSum: 0, baseN: 0 },
@@ -225,8 +226,16 @@ function tallyGame(agg, st, seat, DEC, RS, kindOf, onlyPid) {
         agg.holo.gift++;
         if (a.target == null) { agg.orphan++; continue; }
         if (a.target === a.pid) { agg.holo.self++; continue; }
-        const k = addressed(ev, w, a.target);
-        if (k === 'idle') agg.holo.idle++; else agg.holo.eff++;
+        /* 兑现分三档（2026-10-18 夜改的口径，改因要写着）：
+         *   `eff`   = **当回合**真被招呼 ⇒ 盾挡住了那一手
+         *   `later` = 当回合没人打他，但**下一回合**被招呼 ⇒ 这是**提前保护**，不是浪费
+         *   `idle`  = 两回合都没人打他 ⇒ 才是真白给
+         * 第一版只有两档，把"提前保护"记成了"白给"⇒ 那个 79.3% 是**口径造成的**，不是行为造成的（DONE-7 的数已被取代）。 */
+        const k0 = addressed(ev, w, a.target);
+        const k1 = next ? addressed(ev, next, a.target) : 'idle';
+        if (k0 !== 'idle') agg.holo.eff++;
+        else if (k1 !== 'idle') agg.holo.later++;
+        else agg.holo.idle++;
         /* 基线：随机把盾给"别的存活席"时，那人当回合被招呼的概率 */
         const cands = alive.filter(x => x.i !== a.pid);
         const hit = cands.filter(x => addressed(ev, w, x.i) !== 'idle').length;
@@ -244,8 +253,10 @@ function tallyGame(agg, st, seat, DEC, RS, kindOf, onlyPid) {
         for (let i = w.s; i < w.e; i++) { const e = ev[i]; if (e && e.type === 'transfer' && Number(e.to) === a.pid) { agg.xfer.landed++; if (Number(e.dest) !== a.pid) agg.xfer.destOther++; } }
       }
     }
-    /* 点名正确率：A 局面里那一手 holo 有没有正好给到那个"濒死+憋大"的席 */
-    for (const a of r.acts) {
+    /* 点名正确率：A 局面里那一手 holo 有没有正好给到那个"濒死+憋大"的席
+     *   ⚠ 必须走 `actsFor`（逐枚底片档只算被测那一席）—— 第一版这里用了 `r.acts` ⇒ 把别的席记功到被测席头上，
+     *     出现过 SP-s30 "点名 14 / 送盾 5" 这种 >1 的荒唐比，是 batch-2 对比时才露出来的。 */
+    for (const a of actsFor) {
       if (a.key !== SK.HOLO || !firePlayed[r.rd + '|' + a.pid]) continue;
       const pre = preOf(r.rd); if (!pre) continue;
       const j = pre.map((p, i) => ({ i, p })).filter(x => x.i !== a.pid && x.p.hp > 0 && x.p.hp <= 1 && (x.p.ring >= 2 || x.p.ep >= 3));
@@ -281,6 +292,30 @@ function tallyGame(agg, st, seat, DEC, RS, kindOf, onlyPid) {
     }
     }   /* ← 收 `if (!actsOnly)`：集火与对齐是全场量，逐枚底片档不进这两列 */
     agg.roundsSeen++;
+  }
+  /* ---------- 攒→花延迟（长程最便宜的一个代理：忍不忍得住）----------
+   * 定义：某席 `ep ≥ 3` 第一次成立的那一回合起，到它第一次打出一张**静态费用 ≥3** 的牌之间隔了几回合；
+   *   到死/到局终都没打出来 ⇒ `never`。动态费用的牌（聚能环/过载炮/激光眼 `cost=null`）一律跳过 ⇒ 不抄数。
+   * ⚠ 两条边界要连着引：① 用的是**结算后**快照（那才是"真的握有 3 珠"的时刻），所以延迟是**下界**；
+   *   ② **能量珠不能用这个代理** —— 规则上珠只活到下一回合（`resolve.js:1292-1297`，未用即 `beadExpire`）
+   *     ⇒ "蓄能→兑现"恒 ≤1 回合，量不出长程；DS 任务书里"留牌到后手"同理不成立（本作没有手牌）。 */
+  {
+    const hoardRd = {}, spentAt = {};
+    for (const r of RS) for (let pid = 0; pid < r.snap.length; pid++) {
+      if (r.snap[pid].hp <= 0) continue;
+      if (hoardRd[pid] === undefined && r.snap[pid].ep >= 3) hoardRd[pid] = r.rd;
+    }
+    for (const r of RS) for (const a of r.acts) {
+      const h = hoardRd[a.pid];
+      if (h === undefined || spentAt[a.pid] !== undefined || a.voided || r.rd < h) continue;
+      const d = R.byKey[a.key];
+      if (d && typeof d.cost === 'number' && d.cost >= 3) spentAt[a.pid] = r.rd - h;
+    }
+    for (const pid of Object.keys(hoardRd)) {
+      if (onlyPid != null && Number(pid) !== onlyPid) continue;
+      agg.delay.hoard++;
+      if (spentAt[pid] !== undefined) { agg.delay.spent++; agg.delay.dl.push(spentAt[pid]); } else agg.delay.never++;
+    }
   }
   DEC.length = 0; RS.length = 0;   /* 逐局清空：不清就是每局重数前面所有局（自检腿⑤ 钉这条） */
 }
@@ -384,6 +419,35 @@ function selfTest() {
   if (!(aR.ring.opp > 0)) bad.push('⑧ 构造场面（有人连开聚能环）没建立起"惩罚开环"的机会 ⇒ 分母是空的，正式读的 0% 就不能引用');
   if (!(aR.ring.hitJ > 0)) bad.push('⑧ 构造场面里那些明明打向开环者的出手没被记到 ⇒ `ring.hitJ` 计数器断了（重写时丢的就是这一行）');
   /* ⑨ 事件窗必须逐局无缝铺满：这条专门钉"换局时 `prevEv` 没归零"那个错（空窗不报错，只会把兑现读成 0） */
+  /* ⑩⑪⑫ 三档兑现与延迟（2026-10-18 夜新增那一层）：
+   *   ⑩ 闭合：`eff + later + idle + self == gift`（漏一档就是分母不全）
+   *   ⑪ **提前保护的正对照**：造一个"奇数回合给 pid2 套盾、偶数回合打 pid2"的场 ⇒ 必须 `later > 0` 且 `eff == 0`
+   *      ⇒ 没有这一腿，"later"这一档可能永远是 0（我第一版就是把 later 记进 idle，于是"白给 79%"里混着提前保护）
+   *   ⑫ 延迟闭合：`spent + never == hoard` 且每个延迟 ≥0 且不超过局长 */
+  if (!(hA.holo.eff + hA.holo.later + hA.holo.idle + hA.holo.self === hA.holo.gift))
+    bad.push('⑩ 三档相加 ≠ 送盾数：' + hA.holo.eff + '+' + hA.holo.later + '+' + hA.holo.idle + '+' + hA.holo.self + ' vs ' + hA.holo.gift);
+  const altField = function (st, pid, legal) {
+    /* 角色分工（第一版没分工 ⇒ 三席同枪，pid3 第 2 回合就死、盾手又还没攒到 1 珠 ⇒ `later` 恒 0 是夹具的 0）：
+     *   pid1 = 只在**奇数**回合给 pid3 套盾 ‖ pid2 = 只在**偶数**回合枪 pid3 ‖ 其余全程按ジ（保 pid3 活得够久） */
+    if (pid === 1 && (st.round % 2) === 1) {
+      const h = legal.find(l => l.key === SK.HOLO && l.affordable);
+      if (h) return { key: SK.HOLO, target: 3 };
+    } else if (pid === 2 && (st.round % 2) === 0) {
+      const g = legal.find(l => l.key === SK.GUN && l.affordable);
+      if (g) return { key: SK.GUN, target: 3 };
+    }
+    return { key: SK.JI, target: null };
+  };
+  const aL = runWith(altField, 40, 2727);
+  if (!(aL.holo.later > 0)) bad.push('⑪ 构造场面（奇数回合套盾、下一回合才开枪）里 `later` 恒 0 ⇒ "提前保护"这一档没接上窗（下一回合的窗取错了）');
+  if (aL.holo.eff > 0) bad.push('⑪ 构造场面里套盾那一回合本该没人挨打，却数到 eff ' + aL.holo.eff + ' ⇒ 窗口重叠/回合边界错');
+  /* ⑫ 延迟闭合放在**只按ジ**那批上验：那批必然"攒到 ≥3 却从不花" ⇒ `never` 必须等于 `hoard`、`spent` 必须为 0
+   *    （放在 aL 上验是错的：那个场里没人真攒到 3 珠，hoard=0 会让闭合断言变成空转） */
+  if (!(jiA.delay.hoard > 0)) bad.push('⑫ 只按ジ那批一次都没攒到 ep≥3 ⇒ 延迟的分母是空的（这条断言就变成空转）');
+  if (jiA.delay.spent !== 0) bad.push('⑫ 只按ジ那批不该有任何"花掉 ≥3 费"，实测 ' + jiA.delay.spent + ' ⇒ 花的判据接错了牌');
+  if (jiA.delay.spent + jiA.delay.never !== jiA.delay.hoard)
+    bad.push('⑫ 延迟闭合不过：攒到≥3 ' + jiA.delay.hoard + ' ‖ 花掉 ' + jiA.delay.spent + ' ‖ 没花 ' + jiA.delay.never);
+  if (aL.delay.dl.some(x => x < 0 || x > 200)) bad.push('⑫ 有延迟值不在 [0, 局长] 内 ⇒ 回合号接错');
   const gaps = jiA.gapBad + hA.gapBad + ag3.gapBad + aA.gapBad + aX.gapBad + aR.gapBad;
   if (gaps) bad.push('⑨ 有 ' + gaps + ' 处回合窗不连续 / 起点不是 0 / 终点不等于事件总长 ⇒ **兑现与白给整列不可引用**（先修窗口，别去解释读数）');
   if (bad.length) { bad.forEach(b => console.error('✘ ' + b)); console.error('⇒ 自检不过：读数作废'); process.exit(2); }
@@ -392,7 +456,9 @@ function selfTest() {
     ' ‖ ③ 集火 ' + ag3.align.focus + ' ‖ ③′ 兑现窗非 idle ' + nonIdle + ' 回合' +
     ' ‖ ⑥ 藤甲 决策 ' + aA.armor.fire + ' = 快照 ' + aA.armor.withTarget + '（≥2 火源 ' + aA.armor.land[2] + '）' +
     ' ‖ ⑦ 转嫁机会 ' + aX.xfer.opp + ' 出手 ' + aX.xfer.fire + ' 事件 ' + aX.xfer.landed +
-    ' ‖ ⑧ 开环机会 ' + aR.ring.opp + ' 打向开环者 ' + aR.ring.hitJ + ' ‖ ④⑤ 闭合与逐局清空）');
+    ' ‖ ⑧ 开环机会 ' + aR.ring.opp + ' 打向开环者 ' + aR.ring.hitJ +
+    ' ‖ ⑩ 三档闭合 ‖ ⑪ 提前保护 later ' + aL.holo.later + '（eff ' + aL.holo.eff + '）‖ ⑫ 延迟 ' + aL.delay.spent + '+' + aL.delay.never + '=' + aL.delay.hoard +
+    ' ‖ ④⑤ 闭合与逐局清空）');
   if (process.argv.includes('--self-test')) process.exit(0);
 }
 selfTest();
@@ -445,8 +511,19 @@ for (const t of picked) {
   }
   const agg = blankAgg();
   let miss = 0, allSame = 0, comps = new Set(), decByKind = { pack: 0, script: 0, human: 0 }, giftByKind = { pack: 0, script: 0 };
-  let subjTurn = 0; const subjPosCnt = [];
-  if (SUBJ && !rows.some(r => r[h0.id] === SUBJ)) { console.error('⛔ --subject=' + SUBJ + ' 不在这张池表里（逐枚底片只量在册成员 ⇒ 打错 id 就该红，不许静默换成别人）'); process.exit(2); }
+  let subjTurn = 0; const subjPosCnt = []; let SUBJ_ROW = null;
+  if (SUBJ) {
+    /* 在册检查的范围 = **整张池表**而不是本档的带：被测席是"覆盖一席"，它本来就不必来自这一档
+     *   （第一版查的是 `rows`（带内名单）⇒ 困难带只有 12 枚，其余 16 枚被误判成"打错 id"） */
+    SUBJ_ROW = allRows.find(r => r[h0.id] === SUBJ);
+    if (!SUBJ_ROW) { console.error('⛔ --subject=' + SUBJ + ' 不在池表里 ⇒ 打错 id 就该红，不许静默换成别人'); process.exit(2); }
+    if (!PARAMS[SUBJ]) {
+      let ps = null; try { ps = loadChamp(W, join(ROOT, SUBJ_ROW[h0.path]), ROOT); } catch (e) { ps = null; }
+      if (!ps) { console.error('⛔ 被测包读不出：' + SUBJ + '（' + SUBJ_ROW[h0.path] + '）'); process.exit(7); }
+      PARAMS[SUBJ] = ps;
+      CHOOSERS[SUBJ] = T.policyChooserN(ps, 0.15, B.tierEpsAt(t, N, 3), t.epsK, t.epsMode);
+    }
+  }
   for (const proto of PROTOSET) for (const seed of SEEDS) {
     let curState = null, cur = null;
     const { DEC, wrap } = mkDec(agg);
@@ -458,7 +535,7 @@ for (const t of picked) {
         cur = { comp: comp, byPid: {}, kind: {}, order: 0, subjPid: null };
         if (SUBJ) {
           /* 盖席用的是**同一个 compose 之后的位置覆盖**（与产品 `scriptMix` 同一形状）⇒ 其余三席的阵容不随被测者变 */
-          const src = rows.find(r => r[h0.id] === SUBJ);
+          const src = SUBJ_ROW;
           const pos = subjTurn++ % AI;
           comp.seats[pos] = { id: SUBJ, wid: src[h0.wid], seat: pos, kind: 'pack' };
           cur.subjPos = pos;
@@ -508,16 +585,25 @@ for (const t of picked) {
     const used = subjPosCnt.filter(x => x > 0).length, mx = Math.max.apply(null, subjPosCnt), mn = Math.min.apply(null, subjPosCnt);
     if (used < AI || mx - mn > 1) { console.error('⛔ 被测席只落在 ' + used + '/' + AI + ' 个位置（各位置 ' + subjPosCnt.join('/') + ' ⇒ 极差 ' + (mx - mn) + '）⇒ 逐枚读数作废'); process.exit(2); }
     const selA = agg.holo.oppA ? 100 * agg.holo.fireA / agg.holo.oppA : 0, selB = agg.holo.oppB ? 100 * agg.holo.fireB / agg.holo.oppB : 0;
+    console.log('   ⚑ 列序：id games 机会A 出手A 机会B 出手B 选择性pt 送盾 当回合挡住 提前保护 真白给 点名给A席 基线当回合兑现率% 攒到≥3席次 花掉≥3费 藤甲机会 藤甲出手 转移机会 转移出手 开环机会 开环命中 决策数 位置');
     console.log('   ⚑ SUBJ-ROW\t' + SUBJ + '\t' + agg.games + '\t' + agg.holo.oppA + '\t' + agg.holo.fireA + '\t' + agg.holo.oppB + '\t' + agg.holo.fireB +
-      '\t' + (selA - selB).toFixed(2) + '\t' + agg.holo.gift + '\t' + agg.holo.eff + '\t' + agg.holo.idle + '\t' + agg.armor.opp + '\t' + agg.armor.fire +
+      '\t' + (selA - selB).toFixed(2) + '\t' + agg.holo.gift + '\t' + agg.holo.eff + '\t' + agg.holo.later + '\t' + agg.holo.idle + '\t' + agg.holo.rightTarget +
+      '\t' + (agg.holo.baseN ? (100 * agg.holo.baseEffSum / agg.holo.baseN).toFixed(1) : '0') + '\t' +
+      agg.delay.hoard + '\t' + agg.delay.spent + '\t' +
+      agg.armor.opp + '\t' + agg.armor.fire +
       '\t' + agg.xfer.opp + '\t' + agg.xfer.fire + '\t' + agg.ring.opp + '\t' + agg.ring.hitJ + '\t' + agg.decisions + '\t位置 ' + subjPosCnt.join('/'));
   }
   console.log('   **holo（唯一能交给别人的牌）**：机会 A（有濒死+憋大的席）' + agg.holo.oppA + ' ‖ B（没有）' + agg.holo.oppB +
     ' ‖ 出手 A ' + agg.holo.fireA + ' ‖ B ' + agg.holo.fireB + ' ⇒ **选择性 ' + sel.toFixed(2) + '% − ' + selB.toFixed(2) + '% = ' + (sel - selB).toFixed(2) + 'pt**');
   console.log('     送盾 ' + agg.holo.gift + '（' + per(agg.holo.gift) + '/局）**按席别：包 ' + (giftByKind.pack || 0) + ' ‖ 脚本 ' + (giftByKind.script || 0) + '**' +
-    ' ‖ 兑现 ' + agg.holo.eff + ' ‖ **白给 ' + agg.holo.idle + '**（' + pct(agg.holo.idle, agg.holo.gift) + ' ‖ 无差别送盾的基线兑现率 ' +
+    ' ‖ **当回合挡住 ' + agg.holo.eff + ' ‖ 提前保护（下一回合才被打）' + agg.holo.later + ' ‖ 两回合都没人打（真白给）' + agg.holo.idle + '**' +
+    '（' + pct(agg.holo.idle, agg.holo.gift) + ' ‖ 无差别送盾的基线当回合兑现率 ' +
     (agg.holo.baseN ? (100 * agg.holo.baseEffSum / agg.holo.baseN).toFixed(1) + '%' : '—') + '）‖ 送给自己 ' + agg.holo.self +
-    ' ‖ 点名给那个 A 席 ' + agg.holo.rightTarget + '（' + pct(agg.holo.rightTarget, agg.holo.oppA) + '）');
+    ' ‖ 点名给那个 A 席 ' + agg.holo.rightTarget + '（' + pct(agg.holo.rightTarget, agg.holo.gift) + '）');
+  console.log('   **攒→花延迟（长程代理，用结算后快照 ⇒ 下界）**：攒到 ep≥3 的席次 ' + agg.delay.hoard + ' ‖ 之后打出 ≥3 费的牌 ' + agg.delay.spent +
+    ' = ' + pct(agg.delay.spent, agg.delay.hoard) + ' ‖ 到死/局终没花 ' + agg.delay.never +
+    (agg.delay.dl.length ? ' ‖ 延迟回合 P50 ' + agg.delay.dl.slice().sort((x, y) => x - y)[Math.floor(agg.delay.dl.length / 2)] +
+    ' ‖ P90 ' + agg.delay.dl.slice().sort((x, y) => x - y)[Math.floor(agg.delay.dl.length * 0.9)] + ' ‖ 最大 ' + Math.max.apply(null, agg.delay.dl) : ''));
   console.log('   **藤甲（用户例：只有自己触发=纯亏，两个火源=+2）**：机会 ' + agg.armor.opp + ' ‖ 出手（按决策）' + agg.armor.fire +
     ' ‖ 快照里对上目标的 ' + agg.armor.withTarget + (agg.armor.withTarget !== agg.armor.fire ? ' **⇒ 不相等，兑现那列不可引用**' : '') +
     ' ‖ 兑现分档 0 火源 ' + agg.armor.land[0] + ' ‖ 1 火源 ' + agg.armor.land[1] + ' ‖ **≥2 火源 ' + agg.armor.land[2] + '**（火源数是**下界**，见文件头）');
@@ -530,7 +616,7 @@ for (const t of picked) {
     ' ‖ =当时珠最多 ' + pct(agg.align.focusEp, agg.align.focus) + ' ‖ 无差别点名基线 ' + (agg.align.baseN ? (100 * agg.align.baseSum / agg.align.baseN).toFixed(1) + '%' : '—') + '\n');
   if (agg.orphan) console.log('   ⚠ 有 ' + agg.orphan + ' 手辅助在回合快照里读不到目标 ⇒ 该档的兑现列只能当**下界**\n');
   rowsOut.push({ tier: t.id, games: agg.games, rounds: agg.roundsSeen, holoOppA: agg.holo.oppA, holoOppB: agg.holo.oppB, holoFireA: agg.holo.fireA, holoFireB: agg.holo.fireB,
-    holoGift: agg.holo.gift, holoGiftPack: giftByKind.pack || 0, holoGiftScript: giftByKind.script || 0, holoEff: agg.holo.eff, holoIdle: agg.holo.idle, holoBase: +(agg.holo.baseN ? agg.holo.baseEffSum / agg.holo.baseN : -1).toFixed(4), holoRight: agg.holo.rightTarget,
+    holoGift: agg.holo.gift, holoGiftPack: giftByKind.pack || 0, holoGiftScript: giftByKind.script || 0, holoEff: agg.holo.eff, holoLater: agg.holo.later, holoIdle: agg.holo.idle, hoard: agg.delay.hoard, hoardSpent: agg.delay.spent, hoardNever: agg.delay.never, holoBase: +(agg.holo.baseN ? agg.holo.baseEffSum / agg.holo.baseN : -1).toFixed(4), holoRight: agg.holo.rightTarget,
     armorOpp: agg.armor.opp, armorFire: agg.armor.fire, armorTargeted: agg.armor.withTarget, armor2: agg.armor.land[2],
     xferOpp: agg.xfer.opp, xferFire: agg.xfer.fire, xferLanded: agg.xfer.landed, ringOpp: agg.ring.opp, ringHit: agg.ring.hitJ, ringBase: +(agg.ring.baseN ? agg.ring.baseSum / agg.ring.baseN : -1).toFixed(4),
     merge: agg.align.merge, spotlight: agg.align.spotlight, hop: agg.align.hop, chain: agg.align.chain,
