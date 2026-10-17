@@ -57,6 +57,8 @@ const TIERS = String(flag('tiers', 'lv:sparring,lv:regular,lv:hard')).split(',')
 /* 逐枚底片档：`--subject=<id>` ⇒ 每局把**一席**换成被测包（其余三席照常按该档的带抽、人类席照常轮座），
  *   且每席计数只算被测那一席（集火/对齐是全场量，这一档不进）。位置按局轮换 ⇒ 座位不混进读数。 */
 const SUBJ = flag('subject', '') || null;
+/* 测配方/谱系时才放开"读非池内成员"：放开的是**能不能读**，不是**读了算谁的** ⇒ 打印会自己喊来源 */
+const ALLOW_NONPOOL = process.argv.includes('--allow-nonpool');
 const WANT = String(flag('protos', 'reflectspam,defend,farmer,gunspam,deepsaver+reflect,heavyfire+reflect')).split(',').map(s => s.trim()).filter(Boolean);
 
 const W = sandbox(ROOT);
@@ -511,15 +513,26 @@ for (const t of picked) {
   }
   const agg = blankAgg();
   let miss = 0, allSame = 0, comps = new Set(), decByKind = { pack: 0, script: 0, human: 0 }, giftByKind = { pack: 0, script: 0 };
-  let subjTurn = 0; const subjPosCnt = []; let SUBJ_ROW = null;
+  let subjTurn = 0; const subjPosCnt = []; let SUBJ_PATH = null, SUBJ_WID = null, SUBJ_SRC = 'pool-members.tsv';
   if (SUBJ) {
     /* 在册检查的范围 = **整张池表**而不是本档的带：被测席是"覆盖一席"，它本来就不必来自这一档
      *   （第一版查的是 `rows`（带内名单）⇒ 困难带只有 12 枚，其余 16 枚被误判成"打错 id"） */
-    SUBJ_ROW = allRows.find(r => r[h0.id] === SUBJ);
-    if (!SUBJ_ROW) { console.error('⛔ --subject=' + SUBJ + ' 不在池表里 ⇒ 打错 id 就该红，不许静默换成别人'); process.exit(2); }
+    const pr = allRows.find(r => r[h0.id] === SUBJ);
+    if (pr) { SUBJ_PATH = pr[h0.path]; SUBJ_WID = pr[h0.wid]; }
+    else if (ALLOW_NONPOOL) {
+      /* 测**配方/谱系**时用（例：`v7l2c-*` 那 22 枚共享同一次热启动的兄弟，只有一枚进了池）。
+       *   放开的是"能不能读"，不是"读了算谁的"：这一档的数**不许写进池内比较**，头部会自己喊。 */
+      const co = readFileSync(join(ROOT, 'champion-map/coords.tsv'), 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
+      const ch0 = Object.fromEntries(co[0].split('\t').map((x, i) => [x, i]));
+      const row = co.slice(1).map(l => l.split('\t')).find(c => c[ch0.id] === SUBJ);
+      if (!row || !row[ch0.path]) { console.error('⛔ --subject=' + SUBJ + ' 池表与 coords.tsv 都查不到 ⇒ 十有八九是 id 打错（不许静默换成别人）'); process.exit(2); }
+      SUBJ_PATH = row[ch0.path]; SUBJ_WID = null; SUBJ_SRC = 'coords.tsv ⇒ **非池内成员**，只许当配方/谱系证据，不许与池内成员并排';
+    } else {
+      console.error('⛔ --subject=' + SUBJ + ' 不在池表里。要读全库的某一枚（测配方/谱系）必须显式加 --allow-nonpool ⇒ 那批数不许进池内比较'); process.exit(2);
+    }
     if (!PARAMS[SUBJ]) {
-      let ps = null; try { ps = loadChamp(W, join(ROOT, SUBJ_ROW[h0.path]), ROOT); } catch (e) { ps = null; }
-      if (!ps) { console.error('⛔ 被测包读不出：' + SUBJ + '（' + SUBJ_ROW[h0.path] + '）'); process.exit(7); }
+      let ps = null; try { ps = loadChamp(W, join(ROOT, SUBJ_PATH), ROOT); } catch (e) { ps = null; }
+      if (!ps) { console.error('⛔ 被测包读不出：' + SUBJ + '（' + SUBJ_PATH + '）'); process.exit(7); }
       PARAMS[SUBJ] = ps;
       CHOOSERS[SUBJ] = T.policyChooserN(ps, 0.15, B.tierEpsAt(t, N, 3), t.epsK, t.epsMode);
     }
@@ -535,9 +548,8 @@ for (const t of picked) {
         cur = { comp: comp, byPid: {}, kind: {}, order: 0, subjPid: null };
         if (SUBJ) {
           /* 盖席用的是**同一个 compose 之后的位置覆盖**（与产品 `scriptMix` 同一形状）⇒ 其余三席的阵容不随被测者变 */
-          const src = SUBJ_ROW;
           const pos = subjTurn++ % AI;
-          comp.seats[pos] = { id: SUBJ, wid: src[h0.wid], seat: pos, kind: 'pack' };
+          comp.seats[pos] = { id: SUBJ, wid: SUBJ_WID, seat: pos, kind: 'pack' };
           cur.subjPos = pos;
           subjPosCnt[pos] = (subjPosCnt[pos] || 0) + 1;
         }
@@ -573,6 +585,7 @@ for (const t of picked) {
   const pct = (a, b) => (b > 0 ? (100 * a / b).toFixed(1) + '%（' + a + '/' + b + '）' : '—（分母 0，不是 0%）');
   const sel = agg.holo.oppA ? 100 * agg.holo.fireA / agg.holo.oppA : 0;
   const selB = agg.holo.oppB ? 100 * agg.holo.fireB / agg.holo.oppB : 0;
+  if (SUBJ) console.log('   ⚑ 被测席来源：' + SUBJ + ' ← ' + SUBJ_SRC);
   console.log('## ' + t.id + (MIX && MIX.seats ? '（掺脚本席 ' + MIX.seats + '：' + MIX.ids.join(' ‖ ') + ' ⇒ 下面混合了两类席，看"席别"那两行）' : '（**不掺脚本席 ⇒ 下面全是训练包席的**）'));
   console.log('   局 ' + agg.games + ' ‖ 回合 ' + agg.roundsSeen + ' ‖ 决策 ' + agg.decisions + '（包 ' + (decByKind.pack || 0) + ' ‖ 脚本 ' + (decByKind.script || 0) + ' ‖ 人类 ' + (decByKind.human || 0) + '）‖ 独立组成 ' + comps.size + ' ‖ 全同局 ' + allSame + ' ‖ 漏席 ' + miss);
   console.log('   ⚑ 窗口三成因：内部断裂 ' + agg.gapBad + '（>0 就判死）‖ 空局(0 回合) ' + agg.gapNoRound + ' ‖ 末格终点≠事件总长 ' + agg.gapTail + ' ‖ 倒退 ' + agg.rewind + ' ‖ 读不到目标的辅助 ' + agg.orphan +
