@@ -150,6 +150,13 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
     'pt）⇒ 读出 0 就是各行其实来自同一个源（串台），那"名次"是抄出来的');
   ok(/★ 当选者 .* 在榜内名次 \*\*[12]\/2\*\*/.test(String(hallRun.stdout || '')),
     '⑥c `--elected=` 点了就得印出名次那行，且名次必须落在 1..2 之内 ⇒ 静默没点到会被读成"这臂的当选者查过了"');
+/* ⑥c-2（2026-10-17 · 千问指出「--elected= 的 id 写错那一支只有代码路径保证」）：补实测。
+ *   V4 测的是**路径写错**；这里测 **id 写错** —— 两者都能让「点了却没点到」，而后者会被读成
+ *   「这臂的当选者查过了」，与 ⑥c 正文同一条纪律（静默跳过 = 假读数）。 */
+const electBad = spawnSync(process.execPath, [PB, '--subject=' + FIXTURE_PACK + ',rand', '--ref=' + FIXTURE_PACK,
+  '--batches=2', '--games=20', '--modes=multi', '--elected=no-such-id-zzz'], { encoding: 'utf8', timeout: 180000 });
+eq(electBad.status, 2, '⑥c-2 `--elected=` 给了不存在的 id 必须 exit 2（响亮拒绝），实际 ' + electBad.status);
+ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝时必须说清「认不出来」并列出可用的 id（不许静默跳过）');
 
   /* ⑦ **真跑解包**：页面的 `loadPool` 必须用能解开 bundle 的那个对象。
    *   这条腿存在是因为 10-11 夜我亲手写错了一次：把 `unpack` 当成 `EpirusChampionPack` 的方法（它只导出 `extract`/`version`），
