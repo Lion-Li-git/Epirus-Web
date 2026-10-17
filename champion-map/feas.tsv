@@ -2,3 +2,8 @@ id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAt
 SOUP-s9-82XD4a	1	0		6.61	6.56	1.8	0.267	4	ok	5	0			0	n=20/aggr100/seat100
 SOUP-stock1XK2-l35	0	1	反弹墙伤害 0.00 ≤ 0.5/局	6.48	4.26	0	0.286	3.43	ok	2	0			0	n=20/aggr100/seat100
 SOUP-sub1-92XD4a	0	2	G(long) 1.98 < 3；场B 清场 0.07 < 0.3/局	3.33	1.98	1	0.214	0.07	ok	11.1	0			0	n=20/aggr100/seat100
+t5-151-ringon	0	3	G 1.70 < 3；G(long) 1.61 < 3；场B 清场 0.12 < 0.3/局	1.7	1.61	17.95	0.271	0.12	ok	4.3	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)
+t5-151-ringoff	1	0		3.58	3.19	8.4	0.285	1	ok	5.5	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)
+t5-G12H1-ringon	0	4	G 2.45 < 3；G(long) 2.46 < 3；反弹墙伤害 0.00 ≤ 0.5/局；场B 清场 0.00 < 0.3/局	2.45	2.46	0	0.368	0	ok	7.8	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)
+t5-G12H1-ringoff	0	2	反弹墙伤害 0.00 ≤ 0.5/局；场B 清场 0.00 < 0.3/局	4.24	3.84	0	0.268	0	ok	10.8	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)
+t5-T8-ringon	1	0		7.85	4.91	2	0.309	1.9	ok	8.3	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)

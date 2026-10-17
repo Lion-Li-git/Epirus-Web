@@ -215,4 +215,25 @@ console.log('身份分布 ' + Object.entries(cls).map(([k, v]) => k + ' ' + v).j
   const dupId = rows.map(r => r[0]).filter((x, i, a) => a.indexOf(x) !== i);
   if (dupId.length) { console.error('⛔ 折行之后还有重复 id：' + dupId.slice(0, 8).join(' ')); process.exit(2); }
   console.log('单档与折行自证 ✅ 全图 ' + rows.length + ' 枚同一档（examG=' + ks[0] + '）‖ aliasN/aliasIds 在册 ‖ id 唯一'); }
-console.log('✅ 八步跑完且产物自洽（列名唯一、行宽一致、投影五列齐全、头号尺无空洞、单档、已折行）');
+/* §E641 新增的一条牙：**不许有行凭空消失**。
+ *   起因（10-18 早班实测）：给这张图加五枚新臂时我只喂了本批的尺表 ⇒ `--extra=` 是**替换**缺省几何输入而不是追加，
+ *   上一批（§E608 那四枚：`G12H1 / Z1 / Z2 / clone-79101`）的几何只存在于 `e608-ruler.tsv` 里 ⇒
+ *   链子把它们**静默丢掉**，而当时那四条自证（列名唯一 / 投影齐全 / 头号尺无空洞 / 单档折行）**全绿** ——
+ *   "产物自洽"不等于"没丢东西"：803 行、id 唯一、每列都有数，少掉的那 4 行不会在任何一条上响。
+ *   判据写成"每一枚都要有下落"而不是"行数不许变"：折行本来就会把副名收进 `aliasIds`/`coords-aliases.tsv`，
+ *   那是合法消失；既不剩行也不在副名账里 = 事故。 */
+{ const oldL = rd(join(ROOT, FROM)), oldIds = oldL.slice(1).map(l => String(l).split('\t')[0]).filter(Boolean);
+  const have = {};
+  for (const r of rows) { have[r[0]] = 1;
+    const i = h.indexOf('aliasIds'); if (i >= 0 && r[i]) String(r[i]).split(/\s+/).filter(Boolean).forEach(x => { have[x] = 1; }); }
+  const af = join(HERE, 'coords-aliases.tsv');
+  if (existsSync(af)) { const AL = rd(af), ah = AL[0].split('\t'), ia = ah.indexOf('aliasId');
+    if (ia < 0) { console.error('⛔ coords-aliases.tsv 没有 aliasId 列 ⇒ 副名账读不了，这条守卫不能假装通过'); process.exit(2); }
+    AL.slice(1).forEach(l => { const c = l.split('\t'); if (c[ia]) have[c[ia]] = 1; }); }
+  const gone = oldIds.filter(x => !have[x]);
+  if (gone.length) { console.error('⛔ 这一趟重建弄丢了 ' + gone.length + ' 枚（在册、既没留行也不在任何副名账里）：' + gone.slice(0, 12).join(' ') +
+    '\n       最常见的原因是 `--extra=` **替换**了几何输入而没带上上一批那张尺表 ⇒ 那些枚拿不到几何就被丢掉了。' +
+    '\n       修法：把它们一起喂进来，例如 --extra=champion-map/eNN-上一批-ruler.tsv,champion-map/eNN-本批-ruler.tsv' +
+    '\n       （回滚用：git checkout -- champion-map/coords.tsv）'); process.exit(2); }
+  console.log('行数守恒自证 ✅ 上一版 ' + oldIds.length + ' 枚每一枚都有下落（在册 ' + rows.length + ' ‖ 副名账补齐）‖ 消失 0 枚'); }
+console.log('✅ 八步跑完且产物自洽（列名唯一、行宽一致、投影五列齐全、头号尺无空洞、单档、已折行、上一版每一枚都有下落）');
