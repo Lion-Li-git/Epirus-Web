@@ -2034,5 +2034,6 @@ console.log((GUARD.wrote ? '\n\u5df2\u5199\u5165 ' : '\n✘ 没写文件（§E58
 if (WIDTH_LAND_WANT > 0) {
   const vs = (T.economyReward() || {}).widthLandStat || {};
   console.log('[width-land] 自证：games=' + vs.games + ' max=' + vs.max + ' paid=' + vs.paid +
-    '（max ≤ 3 ⇒ 这一项从来没付过钱）');
+    ' ‖ 归因覆盖：blk=' + vs.blk + ' blkAttr=' + vs.blkAttr +
+    '（覆盖率低 ⇒ 归因窗口错，不是饱和压没）');
 }

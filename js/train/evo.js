@@ -1508,7 +1508,7 @@
  *   本项把**同一形状**（`FLOOR → TARGET` 线性、饱和）挂在**落地量**上 ⇒ 奖励与验收对齐。 */
 let WIDTH_LAND_W = 0;
 /* v1.7.91 自证：这一项到底有没有付过钱（`varietyMaxLanded ≤ FLOOR` ⇒ 永远 0 ⇒ "没效果"是恒零的必然）。 */
-const WIDTH_LAND_STAT = { games: 0, max: 0, paid: 0 };
+const WIDTH_LAND_STAT = { games: 0, max: 0, paid: 0, blk: 0, blkAttr: 0 };
   /* v1.5.126（用户洞察）：**贵卡**（cost≥3 或需珠）出手的奖励权重（默认关）。 */
   let BIGCARD_W = 0;
   /* v1.5.260（用户 GO"做 B+"）：**贵卡预算权重**（默认 0 ⇒ 行为逐字不变）。形状故意用**线性计数**，
@@ -1724,7 +1724,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, widthLandW: WIDTH_LAND_W, widthLandStat: { games: WIDTH_LAND_STAT.games, max: WIDTH_LAND_STAT.max, paid: WIDTH_LAND_STAT.paid }, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, fitCal: FIT_CAL_EXCESS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
+      blockW: BLOCK_W, widthW: WIDTH_W, widthLandW: WIDTH_LAND_W, widthLandStat: { games: WIDTH_LAND_STAT.games, max: WIDTH_LAND_STAT.max, paid: WIDTH_LAND_STAT.paid, blk: WIDTH_LAND_STAT.blk, blkAttr: WIDTH_LAND_STAT.blkAttr }, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, fitCal: FIT_CAL_EXCESS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
       fitTailW: FIT_TAIL_W, fitTailQ: FIT_TAIL_Q,   // 09-26 §E49：ECON_REWARD_KEYS 里每个键都要"设得进、读得回"（D77 往返）
       /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
        * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
@@ -2975,6 +2975,20 @@ function countVarietyLanded(events, seat, RR) {
       if ((f.type === 'blocked' || f.type === 'reflect') && f.to === seat) { landed = true; break; }
     }
     if (landed) seen[e.key] = 1;
+  }
+  /* v1.7.95 自证：**归因覆盖率** —— 该席吃到的 blocked/reflect 里，有多少能归到它某个 action。
+   *   这个数直接分开「归因窗口写错」与「饱和形状压没」：覆盖率高 ⇒ 窗口没错；覆盖率低 ⇒ 窗口错了。 */
+  if (WIDTH_LAND_W > 0) {
+    for (let i = 0; i < evs.length; i++) {
+      const e = evs[i];
+      if (!((e.type === 'blocked' || e.type === 'reflect') && e.to === seat)) continue;
+      WIDTH_LAND_STAT.blk++;
+      for (let j = i - 1; j >= 0; j--) {
+        const f = evs[j];
+        if (f.type !== 'action' || f.pid !== seat) continue;
+        WIDTH_LAND_STAT.blkAttr++; break;
+      }
+    }
   }
   return Object.keys(seen).length;
 }
