@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 import { loadPool, makeMimic } from './human-pool.mjs';   // v1.6.60：人类形状对手的**单一来源**（§E152e/§E155/§E168 的产物；别再抄一份采样器）
 import { guardWrite, declareCopy } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
-import { widOf } from '../champion-map/pack-id.mjs';   /* 2026-10-12 DS：`hotstartFrom` 记权重身份（wid）而不是路径 —— 与 server 的 weightsId 同式 */
+import { widOf, widOfArr } from '../champion-map/pack-id.mjs';   /* 2026-10-12 DS：`hotstartFrom` 记权重身份（wid）而不是路径 —— 与 server 的 weightsId 同式 */
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
@@ -96,6 +96,8 @@ const SELF_ENV_KEYS = [
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
   'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）
+  'EPIRUS_SEL_POOL',   // v1.7.92 §E635：把池成员**也放上选拔桌**（终局重验那张表；默认关 ⇒ `ALL_PAIRS` 一字不变）
+  'EPIRUS_HALL_DEDUP', // v1.7.92 §E635：名人堂按 wid 去重（同一粒权重只占一席；默认关 ⇒ 榜的形状一字不变）
   'EPIRUS_OPP_HUMAN', 'EPIRUS_OPP_HUMAN_SRC', 'EPIRUS_OPP_HUMAN_TGT', 'EPIRUS_OPP_HUMAN_FILE',   // v1.6.60：把**人类形状替身**放上训练桌（默认关 ⇒ OPPS 一字不变）
   'EPIRUS_BIGT_PUSH', 'EPIRUS_DRAIN_PUSH',   // §E275（v1.5.334）：**部署档的 CLI 把手**（大雷默认档 / 摄魂探索软提升）；不设 ⇒ 引擎默认一字不动，设了就由引擎回读
   'EPIRUS_SEL_BIGT', 'EPIRUS_SEL_BIGT_KEYS', 'EPIRUS_SEL_BIGT_GAMES', 'EPIRUS_SEL_BIGT_MODE',   // v1.5.326 §E249：同分带内按贵卡出手选人（默认 0 ⇒ 当选者逐字不变）
@@ -1068,33 +1070,54 @@ if (POOL_OPP_N > 0) {
     '但开了它就改了 `OPPS.length` ⇒ **配对实验两臂必须同 K**，不许拿出厂臂当逐位对照');
   process.on('exit', function () {
     /* 牙要判得对，先得把"轮换到底能走到哪几席"算出来，而不是拿"没被问到"当断线的证据。
-     *   与 `js/train/evo.js` 的 `oppSeatIndex(gen,g,k,len,block=false) = (gen*3+g+k) % len` **同式**（这里是第二份式子，
-     *   所以它的价值正是"两份不一致时当场炸"：实测 2 代 × 6 局 × N=3 时可达索引只有 0..9 ⇒ 第 10 号池席**结构上到不了**，
-     *   那轮跑完 `asked=0` 不是接错线，是我把短程 smoke 当证据。三种情形分开判：）
-     *   ① 可达而没被问到 ⇒ 真断线（分母不是 `OPPS.length`？席位没填到那一格？）⇒ `exit 8`；
-     *   ② 不可达却被问到 ⇒ **我的轮换模型与引擎不符**（更严重：说明分母/推进方式变了）⇒ `exit 8`；
-     *   ③ 不可达且没被问到 ⇒ 响亮说"这轮根本没测到它"，不判失败（短程 smoke 是合法用法，但**不许**当"池对手参与训练"的证据）。 */
+     * ⚑ **本班订正（v1.7.92，19:5x 实测）**：这一块的旧版有两处错，都是"仪器自己骗自己"那一族 ——
+     *   ① `k` 的界写成了 `N-2`，而引擎里 `ok` 是**每个非受评席**都加一（`evo.js:1963` ⇒ 一局有 `N-1` 个对手席）
+     *     ⇒ 可达索引被**系统性少数一格**：2 代 × 6 局 × N=3 时旧版算出 `0..8`，而引擎真走到 `9`
+     *     ⇒ 于是同一条日志里既印了「B5-10-31 被问 60 次」又印了「#9 不可达」——**自相矛盾摆在脸上**。
+     *   ② 注释里承诺的第三种情形（"不可达却被问到 ⇒ 我的模型与引擎不符"）**代码从没实现**，
+     *     所以那次矛盾读数落进了"全不可达"那一支，报了句假话（"一枚池席都没轮到"）。
+     *   订正做法：**不再自己抄公式**，直接问引擎的纯函数 `T.oppSeatIndex(gen,g,k,len,block)`（单一来源，
+     *     门 D187 钉它），并把 `EPIRUS_OPP_BLOCK` 的形状读回来一起算（开了整桌同原型时 `k` 项归零 ⇒ 可达集**更小**，
+     *     旧版完全没管这一维）。
+     *   三种情形分开判：① 可达而没被问到 ⇒ 真断线 `exit 8`；② **不可达却被问到 ⇒ 模型与引擎不符** `exit 8`；
+     *   ③ 不可达且没被问到 ⇒ 响亮说"这轮根本没测到它"，不判失败（短程 smoke 合法，但**不许**当"池对手参与训练"的证据）。 */
     const baseIdx = OPPS.length - POOL_OPPS.length;                 // 我这两枚在表里的位置（append 在尾部）
     const len = OPPS.length, reach = new Set();
-    for (let gen = 0; gen < GENS; gen++) for (let g = 0; g < GAMES; g++) for (let k = 0; k < Math.max(0, N - 2); k++) reach.add((gen * 3 + g + k) % len);
+    const blockedOf = (function () {
+      if (typeof T.oppTable !== 'function') return false;
+      const tb = T.oppTable() || {};
+      return !!tb.block;
+    })();
+    if (typeof T.oppSeatIndex === 'function') {
+      for (let gen = 0; gen < GENS; gen++) for (let g = 0; g < GAMES; g++)
+        for (let k = 0; k < Math.max(0, N - 1); k++) reach.add(T.oppSeatIndex(gen, g, k, len, blockedOf));
+    }
     const hits = POOL_OPPS.map(o => o.sel.asked());
-    const unreachable = POOL_OPPS.map((o, i) => ({ o: o, idx: baseIdx + i, asked: hits[i] })).filter(x => !reach.has(x.idx));
-    const reachableButSilent = POOL_OPPS.map((o, i) => ({ o: o, idx: baseIdx + i, asked: hits[i] })).filter(x => reach.has(x.idx) && !x.asked);
+    const cells = POOL_OPPS.map((o, i) => ({ o: o, idx: baseIdx + i, asked: hits[i] }));
+    const unreachable = cells.filter(x => !reach.has(x.idx));
+    const reachableButSilent = cells.filter(x => reach.has(x.idx) && !x.asked);
+    const askedButUnreachable = unreachable.filter(x => x.asked > 0);
     console.log('[pool-ops] 开火计数：' + POOL_OPPS.map((o, i) => o.name + ' ' + hits[i]).join(' ‖ ') +
-      '（合计 ' + hits.reduce((a, b) => a + b, 0) + ' 次 ‖ 按 `oppSeatIndex` 同式现算：' + len + ' 席里本轮可达 ' + reach.size + ' 个索引' +
+      '（合计 ' + hits.reduce((a, b) => a + b, 0) + ' 次 ‖ 可达集**问引擎 `oppSeatIndex` 现算**（整桌同原型=' + (blockedOf ? '开' : '关') +
+      '）：' + len + ' 席里本轮可达 ' + reach.size + ' 个索引' +
       (unreachable.length ? ' ‖ 不可达：' + unreachable.map(x => x.o.name + '#' + x.idx).join(',') : '') + '）');
-    if (!process.exitCode && reachableButSilent.length) {
+    if (!process.exitCode && askedButUnreachable.length) {
+      console.error('[pool-ops] ⛔ 模型与引擎不符：' + askedButUnreachable.map(x => x.o.name + '(#' + x.idx + ' 被问 ' + x.asked + ' 次)').join(' ‖ ') +
+        ' 按 `oppSeatIndex` 算出来到不了，却真被问到了 ⇒ 分母/推进方式与引擎不一致，**这轮的可达性读数作废**');
+      process.exitCode = 8;
+    } else if (!process.exitCode && reachableButSilent.length) {
       console.error('[pool-ops] ⛔ 空枪：' + reachableButSilent.map(x => x.o.name).join(' ‖ ') +
         ' 按轮换模型这一代/局应当被问到，实际 0 次 ⇒ 分母或席位填充与 `evo.js` 的 `oppSeatIndex` 不一致，读数作废');
       process.exitCode = 8;
-    } else if (!process.exitCode && unreachable.length === POOL_OPPS.length) {
-      console.error('[pool-ops] ⛔ 这一轮**一枚池席都没轮到**（GENS=' + GENS + ' GAMES=' + GAMES + ' N=' + N +
-        ' ⇒ 可达索引最大 ' + Math.max.apply(null, Array.from(reach)) + ' < 池席起点 ' + baseIdx +
+    } else if (!process.exitCode && unreachable.length === POOL_OPPS.length && !hits.some(h => h > 0)) {
+      console.error('[pool-ops] ⛔ 这一轮**一枚池席都没被问到**（GENS=' + GENS + ' GAMES=' + GAMES + ' N=' + N +
+        ' ⇒ 现算可达集最大 ' + Math.max.apply(null, Array.from(reach)) + ' < 池席起点 ' + baseIdx +
         '）⇒ 短程 smoke 可以，但**不许**把这轮读成"池对手参与了训练"');
       process.exitCode = 8;
     } else if (!process.exitCode && unreachable.length) {
-      console.log('[pool-ops] ⚑ ' + unreachable.map(x => x.o.name).join(' ‖ ') +
-        ' 这轮结构性到不了（要覆盖全部池席需 `GENS×3 + GAMES + (N-2) ≥ ' + (baseIdx + POOL_OPPS.length) + '`）⇒ 这几枚的读数缺失，别当测过');
+      console.log('[pool-ops] ⚑ ' + unreachable.map(x => x.o.name + '#' + x.idx).join(' ‖ ') +
+        ' 这轮结构性到不了（现算可达集最大 ' + Math.max.apply(null, Array.from(reach)) + '）⇒ 这几枚的读数**缺失**，' +
+        '不是"测过是 0"，别当测过；要全覆盖就把 `GENS`/`GAMES` 提到可达集里出现那个索引');
     }
   });
 }
@@ -1281,11 +1304,37 @@ if (process.env.EPIRUS_SIGMA_FLOOR || process.env.EPIRUS_SIGMA_DECAY || process.
 }
 let bestParams = pop[0], bestFit = -1e9;
 const hall = [];                       // 名人堂：训练分靠前的个体（终局用全对手验证重选）
+/* ===== §E635（v1.7.92 · 千问 10-17 晚班）：名人堂按 **wid 去重** `EPIRUS_HALL_DEDUP=1`（默认关）=====
+ * 病（实测，不是推测）：`addHall` 无脑 push、按**当代 8 局的 fit** 排序、第 7 名 pop ⇒ **同一粒权重可以占两席**。
+ *   抓到实例：`pfx60`（seed 9101 · 60 代 · K=0）的 band3 与 band5 是同一个 wid `44fa8b50`，
+ *   逐元素比 5689 个数 **0 处不同**，却各记一个 fit（1.072 ‖ 1.040）⇒ 那一臂的"前 6 名"实际只有 **5 个候选**。
+ * 口径：开 ⇒ 已在榜的那粒**再进榜时拒收并计数**；**不更新**它榜里那个 fit ——
+ *   "同一粒再抽一次拿到更高分"正是本条要挡住的那种运气；要改它的分得靠"进榜重评"那一类修法，不在这条里。
+ *   ⚠ 只对**当前在榜**的席位去重（被 pop 掉的以后可以再进来）⇒ 拿席位上存好的 wid 比，不重算全表哈希。
+ * 默认关 ⇒ hall 席位的对象里**一个字段都不加**、行为逐字不变 ⇒ 历史臂仍可逐位复现。 */
+const HALL_DEDUP_RAW = process.env.EPIRUS_HALL_DEDUP;
+const HALL_DEDUP = (HALL_DEDUP_RAW === undefined || HALL_DEDUP_RAW === '') ? false : (function () {
+  const v = Number(HALL_DEDUP_RAW);
+  if (!Number.isInteger(v) || v < 0 || v > 1) {
+    console.error('[hall-dedup] ⛔ `EPIRUS_HALL_DEDUP` 只认 0 或 1（收到 ' + JSON.stringify(HALL_DEDUP_RAW) +
+      '）⇒ 拒绝把它当默认关（这一格直接改榜的形状，不许静默回落）');
+    process.exit(4);
+  }
+  return v === 1;
+})();
+let hallDupDropped = 0;
 function addHall(params, fit) {
-  hall.push({ params: params, fit: fit });
+  if (HALL_DEDUP) {
+    const w = widOfArr(params);
+    if (hall.some(function (h) { return h.wid === w; })) { hallDupDropped++; return; }
+    hall.push({ params: params, fit: fit, wid: w });
+  } else {
+    hall.push({ params: params, fit: fit });
+  }
   hall.sort(function (a, b) { return b.fit - a.fit; });
   if (hall.length > 6) hall.pop();
 }
+if (HALL_DEDUP) console.log('[hall-dedup] 名人堂开按 wid 去重（同一粒权重只占一席；末了印拒收次数，不许留空）');
 
 console.log('[train-3p] 人数=' + N + ' 代=' + GENS + ' 种群=' + POP + ' 每代局数=' + GAMES +
   ' 参数=' + P.paramCount() + (XN2W > 0 ? (' · XN混适应度 W=' + XN2W + ' 2P局=' + XN2G + '/个体 · 2P对手=' +
@@ -1445,10 +1494,45 @@ const POOL = [Bots.pickRandom, Bots.pickAggro, Bots.pickDefend, Bots.pickBalance
 const ALL_PAIRS = [];
 for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) ALL_PAIRS.push([POOL[a], POOL[b]]);
 
-// 名人堂逐个用全部对手对（`ALL_PAIRS.length` 对）× 多粒 seedBase 验证，取 `sc` 最高者作为最终冠军
+/* ===== §E635（v1.7.92 · 千问 10-17 晚班）：把池成员**也放上选拔桌** `EPIRUS_SEL_POOL=1`（默认关）=====
+ * 病（读出来的，不是猜的）：`EPIRUS_POOL_OPPS` 只把池成员加进**训练桌** `OPPS`（上面 `pool-ops` 那一块），
+ *   而终局选拔用的是这份**写死的 9 脚本两两**（36 对）⇒ 于是「训练时对着池打 ‖ 选冠军时不看池 ‖ 验收又用池桌」
+ *   三段不在同一张桌上：**往训练桌上加对手，结构上管不到最后输出的是谁**（日志 §十八 18.1 的实测来源）。
+ * 口径：开 ⇒ 选拔桌 = 9 脚本 + `POOL_OPPS` 的两两（K=2 时 36 → 55 对 = 脚本×脚本 36 ‖ 脚本×池 18 ‖ 池×池 1）；
+ *   关 ⇒ 逐字仍是 `ALL_PAIRS` ⇒ 历史臂仍可逐位复现。
+ * ⚠ 只加**池成员**，不加 `COUNTER/RING/ECON/OPP_HUMAN` 那几族塞进 `OPPS` 的对手 —— 一臂只改一维，
+ *   否则"选拔桌变了"与"训练桌变了"会被混成同一次读数（这几族的表各在自己那块里，见上面 :840~:960）。
+ * ⚠ 开了却 `POOL_OPPS=0` ⇒ `exit 4` 点名（一张桌也没多出来 = 空枪，与 `EPIRUS_COUNTER_OPPS` 同纪律）。
+ * ⚠ 这条一旦开，`probe-pool` 那把池桌尺就**部分变成了目标函数**：它的配对差不再是独立证据，
+ *   只有"把被考者从名单里摘掉再抽"那一腿还给它保着独立性（10-17 实测摘掉之后优势从 +8.9 涨到 +10.2pt，§十五）。
+ *   ⇒ 开档的臂**必须**继续带那条腿跑，不然"+pt"读不出是变强还是练过考官。 */
+const SEL_POOL_RAW = process.env.EPIRUS_SEL_POOL;
+const SEL_POOL = (SEL_POOL_RAW === undefined || SEL_POOL_RAW === '') ? false : (function () {
+  const v = Number(SEL_POOL_RAW);
+  if (!Number.isInteger(v) || v < 0 || v > 1) {
+    console.error('[sel-pool] ⛔ `EPIRUS_SEL_POOL` 只认 0 或 1（收到 ' + JSON.stringify(SEL_POOL_RAW) +
+      '）⇒ 拒绝把它当默认关（这一格直接换选拔桌，不许静默回落）');
+    process.exit(4);
+  }
+  return v === 1;
+})();
+if (SEL_POOL && POOL_OPPS.length === 0) {
+  console.error('[sel-pool] ⛔ 要池席上选拔桌，但 `EPIRUS_POOL_OPPS=0` ⇒ 一张桌也没多出来（空枪）' +
+    ' ⇒ 要开就 `EPIRUS_SEL_POOL=1 EPIRUS_POOL_OPPS=<k>` 一起下达');
+  process.exit(4);
+}
+const SEL_TABLE = SEL_POOL ? POOL.concat(POOL_OPPS.map(function (o) { return o.sel; })) : POOL;
+const SEL_PAIRS = [];
+for (let a = 0; a < SEL_TABLE.length; a++) for (let b = a + 1; b < SEL_TABLE.length; b++) SEL_PAIRS.push([SEL_TABLE[a], SEL_TABLE[b]]);
+
+// 名人堂逐个用选拔桌全部对手对（`SEL_PAIRS.length` 对）× 多粒 seedBase 验证，取 `sc` 最高者作为最终冠军
 let finalParams = bestParams, ev = null;
 let DEGENERATE_ONLY = false;   // §N9：名人堂全退化时置真并写进 meta
-console.log('=== 名人堂验证（' + ALL_PAIRS.length + ' 对 x 20 局）===');
+console.log('=== 名人堂验证（' + SEL_PAIRS.length + ' 对 x 20 局' +
+  (SEL_POOL ? ' · **选拔桌含池席 ' + POOL_OPPS.length + ' 枚**（' + POOL_OPPS.map(o => o.name).join(',') + '）'
+            : ' · 出厂那张桌：9 个脚本两两') + '）===');
+if (HALL_DEDUP) console.log('[hall-dedup] 进榜拒收同一粒权重 ' + hallDupDropped + ' 次 ⇒ 榜 ' + hall.length + ' 席' +
+  '（开档必印：0 次也要印，否则"没遇到重复"与"没生效"在日志上同形）');
 /* ===== §N9（qoder 09-22 · xn10b 反例）：当选面退化闸 =====
  * 收割/存活混合梯度能把"纯ジ龟包"推成带内最高 trainFit（奖励的反向捷径），
  * 而本工具的终局当选**过去没有任何退化检查** ⇒ 三处（promote 阻断 / 2P vetoDegenerate / 这里）必须同判据。
@@ -1458,7 +1542,7 @@ console.log('=== 名人堂验证（' + ALL_PAIRS.length + ' 对 x 20 局）===')
 let HALL_SEED_APPENDED = false;
 if (HALL_SEED > 0 && seedParams) {
   if (!hall.some(function (h) { return h.params === seedParams; })) {
-    hall.push({ params: seedParams, fit: null });
+    hall.push(HALL_DEDUP ? { params: seedParams, fit: null, wid: widOfArr(seedParams) } : { params: seedParams, fit: null });
     HALL_SEED_APPENDED = true;
     console.log('[hall-seed] 起点已追加为终局重验候选（现在 ' + hall.length + ' 席，逐位来自 ' + (hotstartPath || hotstartFrom) + '）');
   } else {
@@ -1473,7 +1557,7 @@ if (SEL.bad) console.warn('[当选键] ⚠ EPIRUS_SEL_EVAL_SEEDS=' + SEL.bad + '
 const SEL_BASES = selBases(SEL.k);
 console.log('[当选键] 每粒候选重验 ' + SEL.k + ' 粒 seedBase（' + SEL_BASES.join(' ‖ ') + '）取均值 ‖ 来源=' + SEL.from);
 for (const h of hall) {
-  const runs = SEL_BASES.map(function (b) { return T.evalN(h.params, ALL_PAIRS, 20, N, b); });
+  const runs = SEL_BASES.map(function (b) { return T.evalN(h.params, SEL_PAIRS, 20, N, b); });
   const v = scoreRuns(runs);
   const sc = v.sc;
   const zr = densityProfile(sb, h.params, 'multi', 12).zeroAtkRate;
@@ -1847,7 +1931,7 @@ try {
       (bmeta.selected ? '（当选）' : (dupWinner ? '（与 band' + bmeta.dupOfBand + ' 同一粒权重）' : '')));
   }
 } catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
-console.log('\n=== ' + N + ' 人实测（最终冠军，' + ALL_PAIRS.length + ' 对 × 20 局 × ' + SEL.k + ' 粒 seedBase，座位轮换，temp0.15）===');
+console.log('\n=== ' + N + ' 人实测（最终冠军，' + SEL_PAIRS.length + ' 对 × 20 局 × ' + SEL.k + ' 粒 seedBase，座位轮换，temp0.15）===');
 console.log('1st=' + (ev.firstRate * 100).toFixed(1) + '%  top2=' + (ev.top2Rate * 100).toFixed(1) +
   '%   (1st/2nd/3rd = ' + ev.first + '/' + ev.second + '/' + ev.third + ' of ' + ev.games + ')');
 console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
@@ -1873,6 +1957,12 @@ const meta = {
    * 让每一粒产物能自证"我当时是在什么分布下选出来的"。只加字段，不改任何判定。 */
   recipe: { arm: (process.env.EPIRUS_ARM || null), seed: __SEED, gens: GENS, games: GAMES, pop: POP,
     ringOpps: (RING_OPPS.length ? { on: true, poolSize: OPPS.length } : null),   // §E127：上桌了才记，没上桌一行都不留
+    /* §E635（v1.7.92）：这两张"桌"的账必须能从产物自证 —— 关档 ⇒ `null`（一行都不留，与历史臂逐字相同）。
+     * `selPool` 记的是**选拔桌**（终局重验那张表）有没有池席；`poolOpps`（上面那个字段）记的是**训练桌**。
+     * 分两处记不是重复：它们本来就是两张桌，而 10-17 那页归因的病正是"只记了一张、另一张没人知道"。 */
+    selPool: (SEL_POOL ? { table: SEL_TABLE.length, pairs: SEL_PAIRS.length, poolSeats: POOL_OPPS.length,
+      poolIds: POOL_OPPS.map(function (o) { return o.name; }) } : null),
+    hallDedup: (HALL_DEDUP ? { dropped: hallDupDropped, seats: hall.length } : null),   // 开过就记次数，0 次也记（0 与"没开"不同形）
     oppBlock: (typeof T.oppTable === 'function' ? T.oppTable() : null),   // §E124：桌形 + 开火计数（下达值不够，要看真发生了多少局）
     xn2w: XN2W, xn2g: XN2G, selLand: SEL_LAND, selLandGames: SEL_LAND_GAMES, selLandTol: SEL_LAND_TOL,
     selKeep: SEL_KEEP, selKeepKeys: (SEL_KEEP > 0 ? SEL_KEEP_KEYS : null),
