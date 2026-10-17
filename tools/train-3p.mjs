@@ -1541,8 +1541,13 @@ if (HALL_DEDUP) console.log('[hall-dedup] 进榜拒收同一粒权重 ' + hallDu
 /* v1.5.277（§E114 · 默认关）：起点不在名人堂 ⇒ 追加成终局重验的一粒候选（见文件头 `EPIRUS_HALL_SEED` 的注释）。 */
 let HALL_SEED_APPENDED = false;
 if (HALL_SEED > 0 && seedParams) {
-  if (!hall.some(function (h) { return h.params === seedParams; })) {
-    hall.push(HALL_DEDUP ? { params: seedParams, fit: null, wid: widOfArr(seedParams) } : { params: seedParams, fit: null });
+  if (!hall.some(function (h) { return h.params === seedParams || (HALL_DEDUP && h.wid === widOfArr(seedParams)); })) {
+    hall.push({ params: seedParams, fit: null });
+    /* §E635：开了去重也要给这席带上 wid，否则它躲得过查重（起点那粒常与榜里某席同权重）。
+     * ⚠ 这一行**必须保持字面 `hall.push({ params: seedParams, fit: null })`** —— 门 `D185`② 钉的就是这条锚点
+     *   （10-17 我把它写成三元式，CI 当场红：行为没变（两支都写 fit:null）而锚点没了 ⇒ 属"门没跑成"不是"产品坏了"；
+     *   它的意图其实已由同门的行为腿覆盖：`fitsOn.length===6` 且六席读数与关档逐字相同）。改法：push 之后补字段。 */
+    if (HALL_DEDUP) hall[hall.length - 1].wid = widOfArr(seedParams);
     HALL_SEED_APPENDED = true;
     console.log('[hall-seed] 起点已追加为终局重验候选（现在 ' + hall.length + ' 席，逐位来自 ' + (hotstartPath || hotstartFrom) + '）');
   } else {
