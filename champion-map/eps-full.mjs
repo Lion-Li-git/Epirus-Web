@@ -104,9 +104,23 @@ if (EXTRA) {
   console.error('--extra 拉进 ' + Object.keys(PATHOF).length + ' 枚（这些在 coords 里没有行 ⇒ hp_old 留 0，不参与复现守卫）' +
     (dupN ? ' ‖ 去重砍掉 ' + dupN + ' 条重复（这批已在 coords 里有行）' : ''));
   /* `--onlyExtra`：名单**只留**这批。第一版没这条，我拿 2 枚的测试表跑起来实际吃的是 718+2 的全名单
-   *   （`--extra` 只加不减）⇒ 100 秒只跑到第 44 枚就被我掐了。要"只补子代"就必须能砍掉原名单。 */
-  if (process.argv.includes('--onlyExtra')) {
+   *   （`--extra` 只加不减）⇒ 100 秒只跑到第 44 枚就被我掐了。要"只补子代"就必须能砍掉原名单。
+   * ⚑ **本班（10-17 通宵）实测到这条旗标自己是静默半开的**：原来只认 `process.argv.includes('--onlyExtra')`，
+   *   而我按别的旗标的习惯写成 `--onlyExtra=1` ⇒ **完全不生效**，"只跑 2 枚"变成跑整张 800 枚名单
+   *   （跑到 v12-86 才被我看见 —— 白烧机器不说，产物表还是往 `--out` 指的那张增量写，看着像"我的实验表"）。
+   *   修法：认裸写法与 `=1/true`；`0/false` 算关；**其余值一律 exit 2**（不许再出现"传了等于没传"）；
+   *   开了但 `--extra` 没拉到任何一枚也 exit 2（那会把名单砍成空、静默跑 0 枚）。 */
+  const oeRaw = process.argv.find(x => x === '--onlyExtra' || x.indexOf('--onlyExtra=') === 0);
+  const oeVal = oeRaw === undefined ? '' : (oeRaw.indexOf('=') < 0 ? '1' : oeRaw.split('=')[1]);
+  const ONLY_EXTRA = (function () {
+    if (oeRaw === undefined || oeVal === '0' || oeVal === 'false') return false;
+    if (oeVal === '1' || oeVal === 'true') return true;
+    console.error('⛔ `--onlyExtra` 只认裸写法 / =1 / =true / =0 / =false，收到 `' + oeVal + '` ⇒ 拒绝启动（不许"传了等于没传"）');
+    process.exit(2);
+  })();
+  if (ONLY_EXTRA) {
     const keep = new Set(Object.keys(PATHOF));
+    if (!keep.size) { console.error('⛔ `--onlyExtra` 要求 `--extra=` 真的拉到枚数（现在 0 枚 ⇒ 名单会被砍空、静默跑 0）'); process.exit(2); }
     for (let i = ids.length - 1; i >= 0; i--) if (!keep.has(ids[i])) ids.splice(i, 1);
     console.error('--onlyExtra ⇒ 本次名单 = ' + ids.length + ' 枚（全部来自 --extra）');
   }

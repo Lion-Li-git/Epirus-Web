@@ -1140,6 +1140,25 @@ let hGenes = pop.map(function (_, i) {
   return 1 + (Math.floor(i / 3) % 4);
 });
 let sigma = 0.18;
+/* ===== E2（千问 10-17 通宵班）搜索算子的三个旋钮 —— **默认值 = 今天的行为，一字不变** =====
+ * 为什么先做这个而不是继续调梯度：本班 E1 量到"从冠军出发 1300 代 = 15.9 分钟，注册尺上 −0.6pt（种子散差 2.9pt）"
+ *   ⇒ 预算不是瓶颈，**步长策略**才是。而这里有一条在册的口径打架（实测，不是推测）：
+ *   `js/train/evo.js:2464` 写的是 `sigma = max(0.10, sigma*0.999)`，旁边那句注释还给了理由
+ *     （"较高sigma地板+缓衰减：种群别坍缩，才能持续探索、突破退化盆地（否则冠军蝉联且续训退化）"）；
+ *   而**真正跑 N 人臂的这里**（原 :1291）是 `max(0.06, sigma*0.995)` —— 地板低 40%、衰减快一倍。
+ *   ⇒ 同一件事两份口径（v1.7.67 刚清过那一族），而且带理由的那份不是生效的那份。
+ *   本班实测：跑到 gen 580 时 stdout 印 `sigma=0.060`（= 撞在这份 0.06 地板上），与 evo.js 注释承诺的 0.10 不同。
+ * 旋钮：`EPIRUS_SIGMA_FLOOR`（默认 0.06）‖ `EPIRUS_SIGMA_DECAY`（默认 0.995）‖
+ *       `EPIRUS_SIGMA_STALL=<K>`（默认 0=关）⇒ 连续 K 代 bestFit 没进步就把 σ 往回抬一档（×1.25，上限 0.18）
+ * ⚠ 这三个键**只在显式下达时改行为**；默认档与今天逐位相同（下面读 env 时把默认写回同一组常数，不另立一份）。 */
+const SIG_FLOOR = Number(process.env.EPIRUS_SIGMA_FLOOR || 0.06);
+const SIG_DECAY = Number(process.env.EPIRUS_SIGMA_DECAY || 0.995);
+const SIG_STALL = Number(process.env.EPIRUS_SIGMA_STALL || 0);
+let sigStall = 0, sigBumps = 0;
+if (process.env.EPIRUS_SIGMA_FLOOR || process.env.EPIRUS_SIGMA_DECAY || process.env.EPIRUS_SIGMA_STALL) {
+  console.log('[sigma 档] floor=' + SIG_FLOOR + ' decay=' + SIG_DECAY + ' stall=' + SIG_STALL +
+    '（默认档是 floor=0.06 decay=0.995 stall=0 ‖ 而 `evo.js:2464` 那份写的是 0.10/0.999 —— 两份口径的账记在日志 E2）');
+}
 let bestParams = pop[0], bestFit = -1e9;
 const hall = [];                       // 名人堂：训练分靠前的个体（终局用全对手验证重选）
 function addHall(params, fit) {
@@ -1224,7 +1243,8 @@ for (let gen = 0; gen < GENS; gen++) {
     return { params: params, r: r };
   });
   scored.sort(function (a, b) { return b.r.fit - a.r.fit; });
-  if (scored[0].r.fit > bestFit) { bestFit = scored[0].r.fit; bestParams = scored[0].params; }
+  if (scored[0].r.fit > bestFit) { bestFit = scored[0].r.fit; bestParams = scored[0].params; sigStall = 0; }
+  else sigStall++;
   addHall(scored[0].params, scored[0].r.fit);
   addHall(scored[1].params, scored[1].r.fit);
   if (gen % 20 === 0 || gen === GENS - 1) {
@@ -1288,7 +1308,16 @@ for (let gen = 0; gen < GENS; gen++) {
   }
   if (gen % 30 === 29) { next[POP - 1] = P.makePolicy(0.25); nextH[POP - 1] = 0; }
   pop = next; hGenes = nextH;
-  sigma = Math.max(0.06, sigma * 0.995);
+  sigma = Math.max(SIG_FLOOR, sigma * SIG_DECAY);
+  /* E2 的"成功驱动"那一半：连续 SIG_STALL 代 bestFit 没进步 ⇒ 把 σ 往回抬一档（上限 0.18 = 初值）。
+   *   默认 SIG_STALL=0 ⇒ 这段永不执行，今天的形状一字不变。
+   *   ⚠ 抬的是**步长**不是"随机重置"：种群已经坍缩时，只有把探索半径拉回来才有机会跳出退化盆地
+   *     （这正是 `evo.js:2464` 那句注释承诺的机制，而生效的这份代码此前地板更低、衰减更快）。 */
+  if (SIG_STALL > 0 && sigStall >= SIG_STALL) {
+    const up = Math.min(0.18, sigma * 1.25);
+    if (up > sigma + 1e-9) { sigma = up; sigBumps++; }
+    sigStall = 0;
+  }
 }
 
 const POOL = [Bots.pickRandom, Bots.pickAggro, Bots.pickDefend, Bots.pickBalanced,

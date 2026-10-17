@@ -75,8 +75,50 @@ t('D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不
    * ② 不过门槛必须**中止**，越过必须显式 `--force` 且在 meta 里留痕。 */
   const ca = readFileSync('tools/champ-audit.mjs', 'utf8');
   const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
-  ok(ca.indexOf("from './audit-lib.mjs'") >= 0, 'champ-audit 必须用共享指标库（tools/audit-lib.mjs）');
-  ok(pc.indexOf("from './audit-lib.mjs'") >= 0, 'promote-champion 必须用**同一份**指标库');
+  /* v1.7.76（千问夜班 · DS §五 T1 ③→②）：原来这两条钉的是**字符串** `from './audit-lib.mjs'`
+   * —— 它既不认 `../`、也不认双引号，更要命的是**指到别处的第二份 lib 也算过**。
+   * 现在做三件真事：① 抓出那条 import 的**说明符与清单**；② 按该文件所在目录把说明符**解析成绝对路径**，
+   * 与已装载模块自报的 `AUDIT.ROOT/tools/audit-lib.mjs` 比（路径不同 = 两份实现，正是这条门的病根）；
+   * ③ 清单里每个名字都拿去问**已经装载好的那个模块**在不在。
+   * 牙口四条**实测**（`docs/artifacts/e608-out/s72-d27-teeth.mjs`，03:2x）：
+   *   A 路径写 `../audit-lib.mjs` ⇒ 红（原话「解析成 …\audit-lib.mjs ⇒ 必须就是那一份 …\tools\audit-lib.mjs」）‖
+   *   B 清单里 `selfPlay`→`selfPlayX` ⇒ 红（原话「导入的 `selfPlayX` 在…已装载模块里必须真存在」）‖
+   *   C 基线 ⇒ 绿 ‖ **D 只改头注一句话 ⇒ 绿**（这条是"别把注释又钉回去"的反向对照）。 */
+
+  const LIB_PATH = join(AUDIT.ROOT, 'tools', 'audit-lib.mjs');
+  /* 手写解析（ctx 里没有 node:path 的 resolve/dirname，而为两个名字去扩 _ctx 的导出面 = 全部门文件头部要重烘，
+   * 那是 DS §五 T3 那类"要付整轮"的钱 ⇒ 这里只做**同一件事的便宜版**：按 ./ ../ 逐段走）。 */
+  const walkUp = function (p, k) { const seg = p.split(/[\\/]/); while (k-- > 0) seg.pop(); return seg.join('/'); };
+  const resolveSpec = function (dir, spec) {
+    let p = spec.charAt(0) === '/' ? spec : dir;
+    for (const seg of spec.split('/')) {
+      if (seg === '' || seg === '.') continue;
+      if (seg === '..') p = walkUp(p, 1);
+      else p = join(p, seg);
+    }
+    return p;
+  };
+  const libNames = function (src, file, label) {
+    const dir = walkUp(join(AUDIT.ROOT, file), 1);
+    const re = /import\s*\{([^}]*)\}\s*from\s*['"]([^'"]*audit-lib\.mjs)['"]/g;
+    const names = []; let m;
+    while ((m = re.exec(src)) !== null) {
+      const abs = resolveSpec(dir, m[2]);
+      ok(abs === LIB_PATH || abs.replace(/[\\/]/g, '/') === LIB_PATH.replace(/[\\/]/g, '/'),
+        label + ' 的 audit-lib 说明符 `' + m[2] + '` 解析成 ' + abs + ' ⇒ 必须就是那一份 ' + LIB_PATH);
+      for (const raw of m[1].split(',')) { const nm = raw.trim().split(/\s+as\s+/)[0].trim(); if (nm) names.push(nm); }
+    }
+    ok(names.length >= 3, label + ' 必须从 audit-lib 具名导入指标（本次读到 ' + names.length + ' 个：' + names.join(',') + '）');
+    for (const nm of names) ok(nm in AUDIT, label + ' 导入的 `' + nm + '` 在 tools/audit-lib.mjs 的**已装载模块**里必须真存在');
+    return names;
+  };
+  const caNames = libNames(ca, 'tools/champ-audit.mjs', 'champ-audit');
+  const pcNames = libNames(pc, 'tools/promote-champion.mjs', 'promote-champion');
+  /* 单一来源的另一半：两边都得名带到**同一批**指标（否则"门"和"打印"就会各算各的）。
+   * 名单取的是本班实测的交集形状：`loadChamp` 只有 champ-audit 用（promote 走自己的读取口），所以不能拿它当共同项。 */
+  for (const nm of ['selfPlay', 'fieldRate', 'seatSymmetry']) {
+    ok(caNames.indexOf(nm) >= 0 && pcNames.indexOf(nm) >= 0, nm + ' 必须由两个工具**各自从库里**导入（共享的那一份才是真源）');
+  }
   for (const f of ['function fieldRate', 'function selfPlay', 'function loadChamp']) {
     ok(ca.indexOf(f) < 0, 'champ-audit 不得再自带 ' + f + '（两处各写一遍必漂移）');
     ok(pc.indexOf(f) < 0, 'promote-champion 不得再自带 ' + f);
@@ -129,7 +171,22 @@ t('D60 场B 判据只认清场数，胜率是规则红利（复核 §2-1）', fu
 t('D62 座位判据的样本量守卫：小样本必须报"不知道"，不得当"均衡"（复核 §2-3）', function () {
   const lib = readFileSync('tools/audit-lib.mjs', 'utf8');
   ok(lib.indexOf("'underpowered'") >= 0, '必须存在第三态 underpowered（小样本=不知道）');
-  ok(/MIN_N_SPREAD = 50/.test(lib), '极差判据必须有最小局数门槛（n<50 的极差是噪声：n=6 期望 41pt/p99 67pt）');
+  /* v1.7.76（千问夜班 · DS §五 T1 ③→②）：这条原来钉的是 `/MIN_N_SPREAD = 50/` —— 一个**常数文本**。
+   * 它管不到真正的病：把门槛挪到 `G < 1`、或把判定顺序换到 `biased` 之后，`MIN_N_SPREAD = 50` 这行**照在**、门照绿。
+   * 改成两格**真跑**（夹具 = 在册 FIXTURE_PACK，种子固定 ⇒ 确定性；实测成本 72ms + 465ms）：
+   *   ① G=6（<门槛）verdict 必须是 underpowered —— 守卫真的在挡；
+   *   ② G=50（=门槛）verdict 必须**不再**是 underpowered —— 它是门槛不是一票否决，否则①恒真。
+   * 牙口（`s73-d62-teeth.mjs` 实测）：把 `MIN_N_SPREAD` 从 50 改成 1 ⇒ ①当场红；改成 500 ⇒ ②当场红。 */
+  const W62 = AUDIT.sandbox(AUDIT.ROOT);
+  const p62 = AUDIT.loadChamp(W62, FIXTURE_PACK, AUDIT.ROOT);
+  ok(!!p62 && p62.length > 0, '夹具包必须读得出参数（读不出 = 这两格什么都没判，不许当干净）：' + FIXTURE_PACK);
+  const r6a = AUDIT.seatSymmetry(W62, p62, 'multi', 6);
+  const r6b = AUDIT.seatSymmetry(W62, p62, 'multi', 50);
+  ok(r6a && r6a.verdict === 'underpowered',
+    'G=6（低于门槛）必须报"不知道"，实测 verdict=' + (r6a || {}).verdict + ' basis=' + (r6a || {}).basis);
+  ok(r6b && r6b.verdict !== 'underpowered',
+    'G=50（达到门槛）不得继续报"不知道"（否则上一条恒真），实测 verdict=' + (r6b || {}).verdict + ' basis=' + (r6b || {}).basis);
+  eq(r6a.minNForSpread, r6b.minNForSpread, '两格读到的必须是同一个门槛值（不许两处各写一份）');
   ok(/SHARE_BIAS = 70/.test(lib), '占比判据必须是"某座 ≥70%"（对称假设下 ~0.2%，任意 n 稳健）');
   /* 行为反证：underpowered 不许判 fail，但必须留 note；biased/missing 必须判 fail。
    * 注意**必须给全四道探针**：缺值本身是另一条失败（见 D61 的"探针缺失"断言）。 */

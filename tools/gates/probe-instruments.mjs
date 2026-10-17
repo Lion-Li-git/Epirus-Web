@@ -141,7 +141,7 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
   const dir = mkdtempSync(join(tmpdir(), 'd137-'));
   const outHtml = join(dir, 'r.html'), outJson = join(dir, 'r.json');
   const run = spawnSync(process.execPath,
-    ['tools/skill-report.mjs', '3', '2', outHtml, '--champ=js/bundled-champion-3p.js', '--json=' + outJson],
+    ['tools/skill-report.mjs', '3', '2', outHtml, '--champ=' + FIXTURE_PACK, '--json=' + outJson],
     { encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, 'skill-report 要跑得通（stderr=' + String(run.stderr || '').slice(0, 200) + '）');
   ok(existsSync(outJson), '必须能导出 --json（否则这条判据只能靠肉眼读 HTML）');
@@ -174,7 +174,7 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
    * 病（今天 9 粒历史包实测）：3P 包塞进 2P 格是**结构性 0% 胜/100% 平**（含现役）⇒ 含 2P 的"最弱格"对这批包恒 0，
    * 排序键等于没有，把真正分辨得出的四格糊平。 */
   const cm = spawnCached(['tools/probe-cross-mode.mjs',
-    'js/bundled-champion-3p.js', 'docs/artifacts/v7aim3-93.bak', 'docs/artifacts/v7divK-31.bak', '--games=6', '--json'],
+    FIXTURE_PACK, 'docs/artifacts/v7aim3-93.bak', 'docs/artifacts/v7divK-31.bak', '--games=6', '--json'],
     { encoding: 'utf8', timeout: 600000 });
   eq(cm.status, 0, '通吃矩阵要跑得通');
   const mx = JSON.parse(String(cm.stdout)).rows;
@@ -298,7 +298,9 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
     '期望的写死处数量必须**从源码现算**（METHODOLOGY 52：冻结成常数的"期望值"会在别人补一处后静默少覆盖）');
   ok(/arguments\.length >= 3 \? orig\.apply/.test(p),
     '包装层必须**原样透传**已经传了 ≥3 个参数的调用（否则会把产品口径自己的四参数调用改坏，制造假差异）');
-  const run = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30'],
+  /* ⚑ 10-17 夜班（R3）：这一条与 D137 的包参数由活槽换成在册 `FIXTURE_PACK`。本班先在一次性临时树里**量过**再落地（`s79-fixture-probe.mjs`，NP_NOCACHE=1）：D150 12.9s 绿 ‖ D137 10.8s 绿 ⇒
+   * 它们那两条"看起来像数据断言"的腿（搬运生效要有差值 / 通吃矩阵里 2P 是最弱格）在这枚夹具上照样成立 ⇒ 不属于"换夹具会误红"那一族。反面例子是同批测的 D141：红（原话"必须有『破龟群 × 现役包』和『头对头 × 现役包』两格"）⇒ 那条留在等拍。 */
+  const run = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=' + FIXTURE_PACK, '--games=30'],
     { encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 200) + '）');
   const out = String(run.stdout || '');
@@ -315,7 +317,7 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
   ok(seat[0] !== seat[1] || wall[0] !== wall[1],
     '两栏至少一列必须**不同** ⇒ 证明搬运真的到了引擎（全同 = 测量没打开）。实测 座位 ' + seat.join(' vs ') + ' / 墙 ' + wall.join(' vs '));
   /* 对照：把产品口径也设成 ε=0，则两栏必须**逐字相同** —— 这条是上面那条的反证，也顺手钉住"差异来自口径而不是别的参数" */
-  const ctl = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=js/bundled-champion-3p.js', '--games=30', '--eps=0'],
+  const ctl = spawnCached(['tools/probe-layer-caliber.mjs', '--packs=' + FIXTURE_PACK, '--games=30', '--eps=0'],
     { encoding: 'utf8', timeout: 600000 });
   eq(ctl.status, 0, 'eps=0 对照要跑得通');
   const cout = String(ctl.stdout || '');
@@ -382,7 +384,9 @@ t('D151 「攒钱→防御」量具：ep 必须**决策时实读**，因果必�
   /* 引擎侧：决策时读到的是**当下**的 ep（不是回合开始）—— 这条钉的是"包看得见什么" */
   ok(p.indexOf('state.p[0]') >= 0 || /s2\.p\[0\]/.test(p), '必须从 state 直接读对手席');
   for (const sv of ['hold', 'cycle']) {
-    const run = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--games=6', '--packs=js/bundled-champion-3p.js', '--saver=' + sv],
+    const run = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--games=6', '--packs=' + FIXTURE_PACK, '--saver=' + sv],
+    /* ⚑ 10-17 夜班（R3）：夹具由活槽换成在册 FIXTURE_PACK —— 这条腿判的是"两档配对能不能自证搬运生效 + 读数带装配"，
+     * 主语是量具不是线上那枚包（换包那天它读的会是新包，而红的理由跟量具坏没坏无关）。实测：换夹具后 1/1，输入换成不存在的包 ⇒ 红（非恒真）。 */
       { encoding: 'utf8', timeout: 600000 });
     eq(run.status, 0, '量具两档都要跑得通（saver=' + sv + '：' + String(run.stderr || '').slice(0, 140) + '）');
     const out = String(run.stdout || '');
@@ -407,7 +411,8 @@ t('D152 「空蓄能」分因量具 `probe-bead-loop.mjs`：两种相反的病�
   ok(/按决策计/.test(p) && /按珠子计/.test(p),
     '必须写明"本表按决策计、真源按珠子计，两者不该相等"—— 不写就会有人拿其中一个去"校验"另一个，把发现当 bug 删掉');
   ok(/实际干了什么/.test(p), '② 必须并排印"那些决策实际出了什么卡"（不然"选择问题"这四个字没有内容）');
-  const run = spawnSync(process.execPath, ['tools/probe-bead-loop.mjs', '--games=8', '--packs=js/bundled-champion-3p.js'],
+  const run = spawnSync(process.execPath, ['tools/probe-bead-loop.mjs', '--games=8', '--packs=' + FIXTURE_PACK],
+    /* ⚑ 10-17 夜班（R3）：同上 —— 这条腿判的是"三桶互斥 + 并排印真源那一行 + 两把尺不许互相校验"，主语是量具。 */
     { encoding: 'utf8', timeout: 600000 });
   eq(run.status, 0, '量具要跑得通（' + String(run.stderr || '').slice(0, 180) + '）');
   const out = String(run.stdout || '');
@@ -570,7 +575,11 @@ t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行�
    * ⇒ **全仓没有一个能用的场A/场B 打印器**，而这两条轴正是 G4/五道门争论里被反复引用的东西。
    * 本门**真跑一次探针**（1 局），不钉源码文本；同时要求它打印**门禁真正判的那一列**「清场/局」
    * （阈值 ≥0.3 局；D60 明确：场B 判据只能是清场数，胜率是规则红利）—— 原探针只打胜率/平局。 */
-  const r = spawnSync(process.execPath, ['tools/probe-aggr.mjs', '1', 'js/bundled-champion-3p.js'],
+  /* ⚑ 10-17 夜班（R3）：夹具从**活槽** `js/bundled-champion-3p.js` 换成在册 `FIXTURE_PACK`。
+   * 这条腿的主语是"打印器还能不能用"（退出码 / 不许出现「读失败」/ 必须印出被门禁判的那一列），
+   * **不是**"线上这枚包的场A/场B 形状" ⇒ 按它自己的写法，换包那天它读的是新包，而红的理由跟仪器坏没坏无关。
+   * 同一家precedent 见本文件 D154（"断言一字不减；'新包活得久'是包的事实，归 §E588 日志，不归这条腿"）。 */
+  const r = spawnSync(process.execPath, ['tools/probe-aggr.mjs', '1', FIXTURE_PACK],
     { encoding: 'utf8', timeout: 180000 });
   const out = String(r.stdout || '') + String(r.stderr || '');
   ok(r.status === 0, '探针必须正常退出（实测 status=' + r.status + '）');
@@ -630,15 +639,20 @@ t('D158 产物必须能自证**实际生效的 EPIRUS_* 配方**（v1.5.226 · �
 });
 
 t('D177 champ-audit 缺包必须点名 + 保留其余行 + exit 7（v1.5.270 · §E81）', function () {
-  const rGood = spawnSync(process.execPath, ['tools/champ-audit.mjs', 'js/bundled-champion-3p.js'],
+  /* ⚑ 10-17 夜班（R3）：夹具由活槽换成在册 `FIXTURE_PACK`（这条断言全在工具回执上：exit 0 / exit 7 / 点名哪个包读不出 /
+   * 坏包不许带走整张表 ⇒ 主语是"缺包处理"，不是线上那枚）。⚠ 原先两条 `^bundled-champion-3p\.js\s+\d` 把**上一班的夹具名**钉死了，
+   * 所以这里跟着夹具走：行名字从 FIXTURE_PACK 现取，`\\S*` 容许工具打成相对短路径（实测 champ-audit 印的是 basename）。 */
+  const fxName = FIXTURE_PACK.split(/[\\/]/).pop();
+  const fxRow = new RegExp('^\\S*' + fxName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s+\\d', 'm');
+  const rGood = spawnSync(process.execPath, ['tools/champ-audit.mjs', FIXTURE_PACK],
     { encoding: 'utf8', timeout: 420000 });
   eq(rGood.status, 0, '只给一个正常包时必须 exit 0（新加的"缺包即失败"不许误伤常规路径）：' + String(rGood.stderr || '').slice(0, 120));
-  ok(/^bundled-champion-3p\.js\s+\d/m.test(String(rGood.stdout)), '正常路径必须真的打出行（否则下面那条"保留其余行"是恒真）');
-  const rBad = spawnSync(process.execPath, ['tools/champ-audit.mjs', 'js/bundled-champion-3p.js', 'docs/artifacts/__d177_missing__.bak'],
+  ok(fxRow.test(String(rGood.stdout)), '正常路径必须真的打出行（夹具 `' + fxName + '`，否则下面那条"保留其余行"是恒真）');
+  const rBad = spawnSync(process.execPath, ['tools/champ-audit.mjs', FIXTURE_PACK, 'docs/artifacts/__d177_missing__.bak'],
     { encoding: 'utf8', timeout: 420000 });
   eq(rBad.status, 7, '有一个包读不出必须非零退出（缺行 ≠ 量了没测出来）');
   ok(/__d177_missing__/.test(String(rBad.stdout) + String(rBad.stderr)), '要点名**是哪个包**读不出（只报一句 ENOENT 等于没报）');
-  ok(/^bundled-champion-3p\.js\s+\d/m.test(String(rBad.stdout)), '坏包**不能带走整张表**：好包那一行必须仍然打出来');
+  ok(fxRow.test(String(rBad.stdout)), '坏包**不能带走整张表**：好包那一行（`' + fxName + '`）必须仍然打出来');
   ok(/整行没量到/.test(String(rBad.stdout) + String(rBad.stderr)), '末尾必须汇总"有几个包整行没量到"');
 });
 
@@ -653,8 +667,10 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
   ok(/import \{ duelAssembly \} from '\.\/v2v4-lib\.mjs'/.test(src), '① 必须 import v2v4-lib 的 duelAssembly（与 G4 同源）');
   ok(!/autoGameN\(/.test(src), '① 不许自己写装配（第二份实现必然漂移，本仓栽过四次）');
   ok(!/pickDefend \|\|/.test(src) && !/\|\| *B\.pick/.test(src), '① 人类原型不许写兜底链（把"名字写错"伪装成"这原型不赢"）');
+  /* ⚑ 10-17 夜班（R3）：这条以前拿**活槽**当输入，且第三处把包名写死进判据（`/== js\/bundled-champion-3p\.js/`）⇒ 换包那天它找的还是旧名字。
+   * 先在一次性 worktree 里真换真跑量过（`s79`，NP_NOCACHE=1，7.4s **绿**：六个"人类原型"都在、12 格齐、两遍逐字相同、判别力那条也在）⇒ 才落地。 */
   const run = (extra) => spawnSync(process.execPath, ['tools/probe-human-seat.mjs',
-    '--packs=js/bundled-champion-3p.js', '--games=40'].concat(extra || []), { encoding: 'utf8', timeout: 420000 });
+    '--packs=' + FIXTURE_PACK, '--games=40'].concat(extra || []), { encoding: 'utf8', timeout: 420000 });
   const r1 = run(), r2 = run();
   eq(r1.status, 0, '正常包必须 exit 0：' + String(r1.stderr || '').slice(0, 160));
   const nm = ['全程刷反弹', '全程只防御', '只攒不打(农民)', '只枪压制', '攒钱+反弹(会玩)', '重火力+反弹'];
@@ -662,15 +678,15 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
   for (const k of nm) ok(out1.indexOf(k) >= 0, '② 六个"人类原型"必须都在（缺一个 = 那格静默消失）：' + k);
   ok(/multi/.test(out1) && /long/.test(out1), '② 两个模式都要印（与 G4 同规矩）');
   eq(String(r2.stdout), out1, '② 同 seed0 两次必须逐字相同（量具不可复现 = 读数无意义）');
-  ok(!/所有"人"都 0%/.test(out1), '④ 现役包上这一格必须有判别力（全行 0% 时工具自己会警告）');
+  ok(!/所有"人"都 0%/.test(out1), '④ 这一格必须有判别力（全行 0% 时工具自己会警告）—— 注意它现在量的是夹具包，不是线上那枚');
   const cells = (out1.match(/(\d+\.\d)%\(和\d+%\)/g) || []);
   eq(cells.length, 12, '④ 必须正好 6 原型 × 2 模式 = 12 格（少一格 = 有原型静默失败）');
   const rBad = spawnSync(process.execPath, ['tools/probe-human-seat.mjs',
-    '--packs=js/bundled-champion-3p.js,docs/artifacts/__d178_missing__.bak', '--games=20'], { encoding: 'utf8', timeout: 420000 });
+    '--packs=' + FIXTURE_PACK + ',docs/artifacts/__d178_missing__.bak', '--games=20'], { encoding: 'utf8', timeout: 420000 });
   eq(rBad.status, 7, '③ 缺包必须非零退出（缺行 ≠ 量了没测出来）');
   ok(/__d178_missing__/.test(String(rBad.stdout) + String(rBad.stderr)), '③ 要点名是哪个包');
-  ok(/== js\/bundled-champion-3p\.js/.test(String(rBad.stdout)), '③ 坏包不许带走整张表');
-  const rFlag = spawnSync(process.execPath, ['tools/probe-human-seat.mjs', '--packs=js/bundled-champion-3p.js', '--mode=multi'],
+  ok(String(rBad.stdout).indexOf('== ' + FIXTURE_PACK) >= 0, '③ 坏包不许带走整张表（好包那一行 `== ' + FIXTURE_PACK + '` 必须还在）');
+  const rFlag = spawnSync(process.execPath, ['tools/probe-human-seat.mjs', '--packs=' + FIXTURE_PACK, '--mode=multi'],
     { encoding: 'utf8', timeout: 120000 });
   eq(rFlag.status, 64, '③ 不认识的 `--mode=` 必须响亮失败（写错开关名不许当默认值跑）');
 });
@@ -755,14 +771,18 @@ t('D186 序列机会率探针（v1.5.278 · §E122）：原样交回 + 复现/�
   const miss = P(['--packs=no/such/pack.bak', '--games=40']);
   eq(miss.status, 7, '③ 包读不出必须 exit 7（"读不到"不许被读成"机会率 0"）：实得 ' + miss.status);
   ok(/no\/such\/pack\.bak/.test(String(miss.stderr)), '③ 且要点名是哪个包');
-  const okRun = P(['--packs=js/bundled-champion-3p.js', '--games=40']);
-  eq(okRun.status, 0, '④ 现役包（含四道自证）必须跑通（exit=' + okRun.status + ' ' + String(okRun.stderr || '').slice(0, 160) + '）');
+  const fxName = FIXTURE_PACK.split(/[\\/]/).pop();
+  const fxEsc = fxName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const okRun = P(['--packs=' + FIXTURE_PACK, '--games=40']);
+  eq(okRun.status, 0, '④ 在册夹具包（含四道自证）必须跑通（exit=' + okRun.status + ' ' + String(okRun.stderr || '').slice(0, 160) + '）');
   ok(/判别力自证 @train/.test(String(okRun.stdout)) && /判别力自证 @product/.test(String(okRun.stdout)),
     '④ 判别力自证必须两档口径都跑（均匀策略对照必须与真包不同 ⇒ "机会率 0"才不是"探针没在看"）');
   ok(/训练评分口径/.test(String(okRun.stdout)) && /产品口径/.test(String(okRun.stdout)), '⑤ 输出必须同时给两档口径的表');
-  const dup = P(['--packs=js/bundled-champion-3p.js,js/bundled-champion-3p.js', '--games=40']);
+  const dup = P(['--packs=' + FIXTURE_PACK + ',' + FIXTURE_PACK, '--games=40']);
   eq(dup.status, 0, '⑥ 同一粒包传两次必须跑通（这不是"零比较"，是**确定性**自证）：实得 ' + dup.status);
-  const rows = String(dup.stdout).split('\n').filter(function (l) { return /bundled-champion-3p\.js/.test(l); });
+  /* ⚑ 10-17 夜班（R3）：上面三处的包由活槽换成在册 FIXTURE_PACK，**行名跟着夹具现取**（原来写死 `bundled-champion-3p\.js`
+   * = 把上一班的夹具名钉进了判据；换包那天它会因为"名字不在了"而红，而红的理由跟探针坏没坏无关）。 */
+  const rows = String(dup.stdout).split('\n').filter(function (l) { return new RegExp(fxEsc).test(l); });
   /* 形状（§E123 之后）：每档口径印**两块**（机会率表 + 电珠流水账）× 两行（同粒包传两次）= 8 行 */
   eq(rows.length, 8, '⑥ 两档口径 × 两块表 × 两行 = 8 行读数（实测 ' + rows.length + ' 行 ⇒ 表的形状变了，本门的基准要跟着改，别把它改成"只要非空就过"）');
   eq(rows[0], rows[1], '⑥ 同一粒包同尺同种子 ⇒ 机会率表两行必须**逐字相同**（不同就说明读数里混了未播种的随机）');
@@ -1373,7 +1393,7 @@ t('D208 开档的可复现性地基（§E164b · 09-30 夜班）：跨进程逐�
         ⇒ 所以这条门钉的是**实测成立的那两条**（跨进程相同、暖机后相同），而不是我原先那句错的"逐字同形"；
           第一遍不同这件事**留在 §E164b 当未结缺陷**，别当成"已经稳了"。 */
   const TBP = WIN.EpirusTrainer;
-  const params = AUDIT.loadChamp(WIN, 'js/bundled-champion-3p.js', process.cwd());
+  const params = AUDIT.loadChamp(WIN, FIXTURE_PACK, process.cwd());   /* ⚑ 10-17（R3）活槽 → 在册夹具：这条腿判的是"同参数两遍逐字相同 + 换进程逐字相同"，主语是可复现性，不是线上那枚 */
   const key = (t) => JSON.stringify({ a: t.acts, w: t.wins, r: t.rounds, d: t.decisive, v: t.voided, f: t.focus, ta: t.tgtActs,
     tg: t.tgtGames, ts: Number((t.tgtTopSum * 1e6).toFixed(6)), tk: t.tgtKindSum, mx: t.maxEp, k: Object.keys(t.keys).sort().map((x) => x + ':' + t.keys[x]) });
   for (const mode of ['off', 'on']) {
@@ -1507,7 +1527,7 @@ t('D211 §E169b 把"屯而不打"与"没钱打"分开数的量具有牙（`beadL
   ok(/beadHeld/.test(code169) && /beadBroke/.test(code169) && /beadLive/.test(code169),
     '⑤′ 仪器必须把三样都读出来（少一样就退化成"看起来像屯"的单边读数）');
   /* ⑥ 地板：这套计数器**必须真的在真局里有非零读数**，否则前面五条静态钉合起来仍然可能是装饰 */
-  const params6 = AUDIT.loadChamp(WIN, 'js/bundled-champion-3p.js', process.cwd());
+  const params6 = AUDIT.loadChamp(WIN, FIXTURE_PACK, process.cwd());   /* ⚑ 10-17（R3）活槽 → 在册夹具；这条地板断言"真局里三个计数器必须都活"，换包后仍要成立才算数（本班实测见日志 DONE-15） */
   const T6 = WIN.EpirusTrainer;
   T6.setBeliefSearch(1); T6.setBeliefBead(2);
   fieldProfile(params6, 0.2, 'soft', 3, 4100, 'mixed', 'multi');
