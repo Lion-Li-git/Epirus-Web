@@ -95,6 +95,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
+  'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）
   'EPIRUS_OPP_HUMAN', 'EPIRUS_OPP_HUMAN_SRC', 'EPIRUS_OPP_HUMAN_TGT', 'EPIRUS_OPP_HUMAN_FILE',   // v1.6.60：把**人类形状替身**放上训练桌（默认关 ⇒ OPPS 一字不变）
   'EPIRUS_BIGT_PUSH', 'EPIRUS_DRAIN_PUSH',   // §E275（v1.5.334）：**部署档的 CLI 把手**（大雷默认档 / 摄魂探索软提升）；不设 ⇒ 引擎默认一字不动，设了就由引擎回读
   'EPIRUS_SEL_BIGT', 'EPIRUS_SEL_BIGT_KEYS', 'EPIRUS_SEL_BIGT_GAMES', 'EPIRUS_SEL_BIGT_MODE',   // v1.5.326 §E249：同分带内按贵卡出手选人（默认 0 ⇒ 当选者逐字不变）
@@ -1000,6 +1001,97 @@ if (HUMAN_N > 0) {
   });
 }
 
+/* ===== §E631（v1.7.83 · 千问 10-17 白班）：**把冠军池放上训练桌** `EPIRUS_POOL_OPPS=<k>`（默认关）=====
+ * 用户裁定（10-17 逐字）：「把冠军池本身当做一个新判据也可以参与训练，并且新冠军总是能进冠军池，这样永远不会碰到区分度低的问题」。
+ * 为什么是**混进 `OPPS`** 而不是"换成池桌"：`docs/research/TRAINING-METHOD-CONCLUSIONS-2026-10-17-ds.md:67` 那条实测——
+ *   **对固定对手做 RL 必然练出 exploiter**（E1 臂就是标本：对手是四份冻结的自己，回收 −27.6/−43.0pt），
+ *   而标准解法写的就是「混合对手池（池成员 + 脚本 + 自己的历史快照，**轮换**）」。
+ *   轮换这里**已经是现成的**：`js/train/evo.js` 的 `oppSeatIndex(gen,g,k,len,block) = (gen*3+g+(block?0:k)) % len`
+ *   会遍历整张 `OPPS` ⇒ append 池成员就自动与 9 条脚本基准同桌轮换，**不新增任何席位逻辑**
+ *   （自己写一份席位分配就是第二份实现，而且会跟钉着闭键的 `D187` 打架）。
+ * ⚠ 两条口径必须先说清楚，不然是给自己埋"赢了但不知道谁在施压"那种臂：
+ *   ① **默认关 ⇒ `OPPS` 一字不变**（历史臂逐位可复现；`tools/gates/train-evo.mjs:2071` 那条"默认关的产物与登记基线逐位相同"照绿）；
+ *   ② 一开就改 `OPPS.length` ⇒ **每一局**的对手映射都变（不是"多出几席"那么局部）⇒ **配对实验要两臂同 K**，
+ *      对照臂不能拿出厂臂当逐位对照（这条与 §E500 的名字表驱动同一个坑）。
+ * 纪律与 `EPIRUS_COUNTER_OPPS` / `EPIRUS_ECON_OPPS` 同形：档认不出、枚数不够、成员包读不出 ⇒ **`exit 4` 点名**
+ *   （少一个就是一根空枪）；上了桌必须**真被问到**，否则 `exit 8`（横幅证明变量、证明不了效果）。
+ * 名单真源 = `champion-map/pool-members.tsv`（产品池的真源，`js/pool-draw.js` 与 `D234` 都吃这一张）。
+ * ⚠ 成员 `.path` 指向的 `.bak` 里有一部分是 gitignore 的 ⇒ 干净克隆可能读不到，那是 **`D234` 的活**（在册产物闸），
+ *   这里只负责"读不到就响亮失败"，不静默少放。记账写 **wid**（与 `hotstartFrom` 同一条纪律），不写路径。 */
+const POOL_OPP_N = Number(process.env.EPIRUS_POOL_OPPS || 0);
+const POOL_OPP_TIER = String(process.env.EPIRUS_POOL_OPPS_TIER || 'hard');
+const POOL_OPP_TABLE = 'champion-map/pool-members.tsv';
+const POOL_OPPS = [];
+if (Number.isNaN(POOL_OPP_N) || POOL_OPP_N < 0 || POOL_OPP_N !== Math.floor(POOL_OPP_N)) {
+  console.error('[pool-ops] ⛔ `EPIRUS_POOL_OPPS` 要非负整数（收到 ' + JSON.stringify(process.env.EPIRUS_POOL_OPPS || '') + '）⇒ 拒绝把它当 0');
+  process.exit(4);
+}
+if (POOL_OPP_N > 0) {
+  if (!existsSync(POOL_OPP_TABLE)) { console.error('[pool-ops] ⛔ 池真源表不在：' + POOL_OPP_TABLE); process.exit(4); }
+  const pl = readFileSync(POOL_OPP_TABLE, 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
+  const ph = Object.fromEntries(pl[0].split('\t').map((x, i) => [x, i]));
+  for (const c of ['id', 'wid', 'path', 'tier']) {
+    if (ph[c] === undefined) { console.error('[pool-ops] ⛔ 池表缺列 ' + c + ' ⇒ 表头变了要去改真源，不在这里兜底'); process.exit(4); }
+  }
+  const pr = pl.slice(1).map(r => r.split('\t'));
+  const cand = pr.filter(r => r[ph.tier] === POOL_OPP_TIER);
+  if (cand.length < POOL_OPP_N) {
+    console.error('[pool-ops] ⛔ tier=' + POOL_OPP_TIER + ' 只有 ' + cand.length + ' 枚 ⇒ 要 ' + POOL_OPP_N + ' 枚，拒绝静默少放' +
+      '（这张表里的档：' + Array.from(new Set(pr.map(r => r[ph.tier]))).join(' ‖ ') + '，可用 `EPIRUS_POOL_OPPS_TIER=` 点名）');
+    process.exit(4);
+  }
+  for (const r of cand.slice(0, POOL_OPP_N)) {
+    const mid = r[ph.id], mpath = r[ph.path];
+    let params = null;
+    try {
+      if (!existsSync(mpath)) throw new Error('路径不在盘上');
+      params = loadPackParamsAny(mpath);
+      if (!params) throw new Error('外壳解不出来（没有 `EPIRUS_CHAMPION[_3P]` 对象）');
+    } catch (e) { console.error('[pool-ops] ⛔ 成员 ' + mid + ' 的包读不出（' + mpath + '：' + e.message + '）⇒ 缺行 ≠ 量了没测出来，拒绝静默少放对手'); process.exit(4); }
+    let asked = 0;
+    const base = champChooser(params);
+    const wrapped = function (state, pid, legal) { asked++; return base(state, pid, legal); };
+    wrapped.poolId = mid; wrapped.poolWid = r[ph.wid]; wrapped.asked = function () { return asked; };
+    POOL_OPPS.push({ name: 'pool:' + mid, sel: wrapped });
+  }
+  for (const o of POOL_OPPS) OPPS.push(o);
+  console.log('[pool-ops] 冠军池成员已进训练桌：' + POOL_OPPS.map(o => o.name).join(',') +
+    '（档=' + POOL_OPP_TIER + ' · 真源=' + POOL_OPP_TABLE + '）⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个');
+  console.log('[pool-ops] ⚑ 轮换走既有 `oppSeatIndex`（池成员与 9 条脚本基准同桌轮换 ⇒ 不是"对固定名单训"）；' +
+    '但开了它就改了 `OPPS.length` ⇒ **配对实验两臂必须同 K**，不许拿出厂臂当逐位对照');
+  process.on('exit', function () {
+    /* 牙要判得对，先得把"轮换到底能走到哪几席"算出来，而不是拿"没被问到"当断线的证据。
+     *   与 `js/train/evo.js` 的 `oppSeatIndex(gen,g,k,len,block=false) = (gen*3+g+k) % len` **同式**（这里是第二份式子，
+     *   所以它的价值正是"两份不一致时当场炸"：实测 2 代 × 6 局 × N=3 时可达索引只有 0..9 ⇒ 第 10 号池席**结构上到不了**，
+     *   那轮跑完 `asked=0` 不是接错线，是我把短程 smoke 当证据。三种情形分开判：）
+     *   ① 可达而没被问到 ⇒ 真断线（分母不是 `OPPS.length`？席位没填到那一格？）⇒ `exit 8`；
+     *   ② 不可达却被问到 ⇒ **我的轮换模型与引擎不符**（更严重：说明分母/推进方式变了）⇒ `exit 8`；
+     *   ③ 不可达且没被问到 ⇒ 响亮说"这轮根本没测到它"，不判失败（短程 smoke 是合法用法，但**不许**当"池对手参与训练"的证据）。 */
+    const baseIdx = OPPS.length - POOL_OPPS.length;                 // 我这两枚在表里的位置（append 在尾部）
+    const len = OPPS.length, reach = new Set();
+    for (let gen = 0; gen < GENS; gen++) for (let g = 0; g < GAMES; g++) for (let k = 0; k < Math.max(0, N - 2); k++) reach.add((gen * 3 + g + k) % len);
+    const hits = POOL_OPPS.map(o => o.sel.asked());
+    const unreachable = POOL_OPPS.map((o, i) => ({ o: o, idx: baseIdx + i, asked: hits[i] })).filter(x => !reach.has(x.idx));
+    const reachableButSilent = POOL_OPPS.map((o, i) => ({ o: o, idx: baseIdx + i, asked: hits[i] })).filter(x => reach.has(x.idx) && !x.asked);
+    console.log('[pool-ops] 开火计数：' + POOL_OPPS.map((o, i) => o.name + ' ' + hits[i]).join(' ‖ ') +
+      '（合计 ' + hits.reduce((a, b) => a + b, 0) + ' 次 ‖ 按 `oppSeatIndex` 同式现算：' + len + ' 席里本轮可达 ' + reach.size + ' 个索引' +
+      (unreachable.length ? ' ‖ 不可达：' + unreachable.map(x => x.o.name + '#' + x.idx).join(',') : '') + '）');
+    if (!process.exitCode && reachableButSilent.length) {
+      console.error('[pool-ops] ⛔ 空枪：' + reachableButSilent.map(x => x.o.name).join(' ‖ ') +
+        ' 按轮换模型这一代/局应当被问到，实际 0 次 ⇒ 分母或席位填充与 `evo.js` 的 `oppSeatIndex` 不一致，读数作废');
+      process.exitCode = 8;
+    } else if (!process.exitCode && unreachable.length === POOL_OPPS.length) {
+      console.error('[pool-ops] ⛔ 这一轮**一枚池席都没轮到**（GENS=' + GENS + ' GAMES=' + GAMES + ' N=' + N +
+        ' ⇒ 可达索引最大 ' + Math.max.apply(null, Array.from(reach)) + ' < 池席起点 ' + baseIdx +
+        '）⇒ 短程 smoke 可以，但**不许**把这轮读成"池对手参与了训练"');
+      process.exitCode = 8;
+    } else if (!process.exitCode && unreachable.length) {
+      console.log('[pool-ops] ⚑ ' + unreachable.map(x => x.o.name).join(' ‖ ') +
+        ' 这轮结构性到不了（要覆盖全部池席需 `GENS×3 + GAMES + (N-2) ≥ ' + (baseIdx + POOL_OPPS.length) + '`）⇒ 这几枚的读数缺失，别当测过');
+    }
+  });
+}
+
 /* ===== §E124（v1.5.279 · qoder 0928 下午班）：**整桌同原型** `EPIRUS_OPP_BLOCK` 的下达（默认关）=====
  * 与 `EPIRUS_COUNTER_OPPS` 的区别要说清：那根改的是**名单**（有谁），这根改的是**桌子的形状**
  * （一局的 N−1 席是不是同一个原型）⇒ 后者才让"一局 = 一个环境"第一次成为训练里的对象。
@@ -1768,6 +1860,9 @@ const meta = {
     /* v1.5.325 §E237：这臂的训练桌上有没有"会攒并且真兑现"的深经济对手（默认关 ⇒ `null`，产物自证）。
      * ⚠️ 与 `counterOpps` 分开写是故意的：那三个是**行为门原型**（判"被龟壳打死"），这三个是**经济威胁**（判"攒钱值不值"）。 */
     econOpps: (ECON_OPPS.length ? ECON_OPPS.map(function (o) { return o.name; }) : null),
+    /* v1.7.83 §E631：这臂的训练桌上有没有**池成员**（默认关 ⇒ `null`，一行都不留，与历史臂同形）。
+     * 记 **wid + 被问到几次**而不是路径 —— 成员 `.bak` 有一批是 gitignore 的，路径在干净克隆里可能指空（那是 `D234` 的活）。 */
+    poolOpps: (POOL_OPPS.length ? POOL_OPPS.map(function (o) { return { name: o.name, wid: o.sel.poolWid, asked: o.sel.asked() }; }) : null),
     bigtChainW: BIGT_CHAIN_REQ,   // v1.5.187：这臂有没有给"连带"付钱（0 = 出厂口径）
     /* v1.5.194：这臂是**在哪套规则下训的**。写在最显眼处 —— 否则第二天没人知道这粒冠军学过击杀奖励，
      * 拿回现状引擎里一评就成了"冠军莫名变弱"的悬案。 */

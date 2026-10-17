@@ -96,13 +96,19 @@ export function rates(w, k) {
  *     `T.pickTargetN`，与 `gate-drafts` 的 `pT` 同口径）。这测的就是"**它本来买得起却没进攻**"那些回合；
  *   · `forceTurtle`：反方向 —— 被测席任何非ジ输出都改判成ジ（只测"完全不还手"会怎样）。
  *   两个钩子都记 `forced` 次数（**空枪检测**：为 0 ⇒ 本行无信息，不得读成"改了没用"）。
- * 返回：{ winPct, drawPct, champWinPct, avgRounds, champDecisions, jiShare, counts, forced,
+ * 返回：{ winPct, drawPct, champWinPct,          ← **0.1pt**（v1.7.83 起；原来取整到 1pt）
+ *        winRate, drawRate, champRate,           ← 未取整，给要精确接线的一方（`probe-pool --subject=` 吃这三列）
+ *        avgRounds, champDecisions, jiShare, counts, forced,
  *        aliveChampEnd, aliveScriptedEnd, hpScriptedEnd,
  *        turtleAtkPerGame, turtlePierceShare, turtleLandShare }
  *  —— 末三列（qoder-research 0920 · N1）只在脚本席常开防御时有意义：
  *  `turtleAtkPerGame` = 被测席对防御中的脚本席出手的频次（被挡 + 落害都算）；
  *  `turtlePierceShare` = 其中"穿防卡"（坦克/狙击/电磁炮/过载炮）占比 —— DS 预注册的行为判据分母；
  *  `turtleLandShare` = 落害/总出手（作废防御后落害也算数）—— 训练行分用它，判据两个都读。 */
+
+/** 百分比报到 0.1pt（`Math.round(x*10)/10`）—— 只给 `*Pct` 那三列用，别让 0.30000000000000004 进判词。 */
+function r1(x) { return Math.round(x * 10) / 10; }
+
 export function duelAssembly(deps, params, opts) {
   const S = deps.S, Play = deps.Play, T = deps.T, R = deps.R;
   const o = opts || {};
@@ -199,8 +205,15 @@ export function duelAssembly(deps, params, opts) {
     }
   }
   return {
-    winPct: Math.round(100 * win / G), drawPct: Math.round(100 * draw / G),
-    champWinPct: Math.round(100 * (G - win - draw) / G),
+    /* v1.7.83（用户裁定「改一下取整应该不会有什么问题」）：这里原来是 `Math.round(100*win/G)` = **取整到 1 个百分点**
+     *   ⇒ 一把要辨 1~2pt 的尺带 ±0.5pt 量化误差，而且**阈值会被四舍五入放行**（60.4% 打成 60% ⇒ `>60` 判它过）。
+     *   改成 0.1pt（`r1()`）；同时把**未取整**的那三个作为新列交出去（`winRate/drawRate/champRate`），
+     *   要精确接线的调用方吃新列，只印数的老调用方吃 `*Pct` ⇒ 一张表两种精度，不必再抄一份计数逻辑。
+     * ⚠ 这不是"没代价"：`probe-pool` 默认那六格的在册读数会带上 0.1pt 位（口径变），`gate-drafts` 的 G4/G5 判词里的数字变长。
+     *   实测现役包那 8 格离 `>60` 线最近的是 42%（差 18pt）、G5 的 27% 离 25% 线差 2pt ⇒ **没有一条判定被翻**（§五 表）。 */
+    winPct: r1(100 * win / G), drawPct: r1(100 * draw / G),
+    champWinPct: r1(100 * (G - win - draw) / G),
+    winRate: 100 * win / G, drawRate: 100 * draw / G, champRate: 100 * (G - win - draw) / G,
     avgRounds: rounds / G, champDecisions: dec,
     jiShare: dec ? ji / dec : 0, counts: counts, forced: forced,
     aliveChampEnd: aliveChampEnd / G, aliveScriptedEnd: aliveScriptedEnd / G,

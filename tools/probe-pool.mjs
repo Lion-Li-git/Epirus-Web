@@ -264,13 +264,13 @@ if (SUBJECT_ARG) {
         { games: G, mode: mode, seed0: seed, scripted: arm.chooser, chooserFor: chooserFor, onGame: onGame });
       if (mismatch) { console.error('⛔ 对手席里出现了脚本席（' + mismatch + ' 次）⇒ 主体席模式不掺席，装配不是我说的那个'); process.exit(2); }
       if (games !== G) { fail = '主体席跑了 ' + games + ' 局而声明是 ' + G + ' 局 ⇒ 对局循环没跑满，读数作废'; return null; }
-      /* ⚑ 第四条自证（这次真咬到东西）：我数到的主体席胜局必须与 `duelAssembly` 报的 `winPct` 对得上。
-       *   ⚠ 它**取整到 1 个百分点**（`v2v4-lib.mjs:202` = `Math.round(100*win/G)`）⇒ 一把要辨 1~2pt 的尺不能吃这个取整值，
-       *     所以**尺用自己的未取整比率**，这里只按"取整后相等"这条紧关系验接线（差 0.6pt 也算断线）。 */
-      const rate = win / games * 100;
-      if (Math.round(rate) !== r.winPct) {
-        fail = '主体席夺冠率自证不过（' + arm.tag + '）：我数 ' + win + '/' + games + ' = ' + rate.toFixed(2) +
-          '% ‖ duelAssembly 报 winPct=' + r.winPct + '% ⇒ 席位接线错了，本批读数作废';
+      /* ⚑ 第四条自证（v1.7.83 起升级成**逐位**对照）：我数到的主体席夺1率必须等于 `duelAssembly` 的未取整列 `winRate`。
+       *   以前 `winPct` 取整到 1pt ⇒ 这条只能要求"取整后相等"（自带 ±0.5pt 容差，正是它第一次跑把我咬出来的：
+       *   我数 12.50% 它报 13）；现在 `winPct` 是 0.1pt、`winRate` 未取整 ⇒ 断言强度提到 ±1e-9，席位接错一律作废。 */
+      const rate = 100 * win / games;
+      if (Math.abs(rate - r.winRate) > 1e-9) {
+        fail = '主体席夺冠率自证不过（' + arm.tag + '）：我数 ' + win + '/' + games + ' = ' + rate.toFixed(4) +
+          '% ‖ duelAssembly 报 winRate=' + r.winRate.toFixed(4) + '% ⇒ 席位接线错了，本批读数作废';
         return null;
       }
       return { rate: rate, drawRate: drawN / games * 100, win: win, games: games };
@@ -322,9 +322,9 @@ if (SUBJECT_ARG) {
     const noShow = ROSTER.filter(m => !agg.memberG[m.id]);
     if (noShow.length) { fail = '自证③ 不过：名单里有 ' + noShow.length + ' 枚一场没上（' + noShow.map(m => m.id).join(' ‖ ') + '）⇒ 抽签与席位的接线断了'; break; }
     if (agg.miss) { fail = '自证③ 不过：' + agg.miss + ' 次决策没分配到成员（落回缺省包）⇒ 组成漏席'; break; }
-    if (SUBJECT_ARG !== 'rand' && !(SUBJ.wid && SUBJ.wid === REF.wid)) {
-      console.log('   ✔ 自证③（席位接线）：主体席逐席 ' + agg.seatCnt.join('/') + ' ‖ ' + ROSTER.length + ' 枚对手全部上场 ‖ 漏席 0');
-    }
+    /* 自证③ 每一档都印（**包括 rand 与同枚两臂**）：它证的是"席位接线"，与被考者是包还是随机席无关；
+     *   门 `D234`⑥b 正是靠这一行的存在来判"自证有没有真跑"（不印 = 跳过了自证还报绿）。 */
+    console.log('   ✔ 自证③（席位接线）：主体席逐席 ' + agg.seatCnt.join('/') + ' ‖ ' + ROSTER.length + ' 枚对手全部上场 ‖ 漏席 0');
     console.log('   ⚑ 四席全同 ' + agg.allSame + ' / ' + agg.games + ' 场 ‖ 独立盐 ' + agg.salts.size + ' ‖ 独立"成员×席位"配对 ' + agg.comps.size +
       (agg.comps.size < 200 ? ' ⇒ **<200：逐枚夺冠率不许用来排名次**（文件头第②条），只能当整体读数' : ''));
     console.log('   逐枚对手夺冠率：' + ROSTER.map(m => m.id + ' ' + ((agg.memberW[m.id] || 0) / Math.max(1, agg.memberG[m.id]) * 100).toFixed(1) +

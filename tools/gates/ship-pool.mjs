@@ -109,6 +109,27 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
     '⑥ 量具必须走 `duelAssembly` 的 `chooserFor` + `js/pool-draw.js` ⇒ 自己写一份对局循环就是第二份实现（规矩：单一来源）');
   ok(pbs.indexOf('humanPrototypes') >= 0, '⑥ 量具必须用共享的人类原型表（`audit-lib.humanPrototypes`）⇒ 与 `probe-human-seat` 不同原型 = 两个数不能并排读');
 
+  /* ⑥b §E631（v1.7.83）：**主体席那把尺真跑两遍**。上面三条钉的是"文件里有没有那几个词"——
+   *   按 METHODOLOGY 第 89 条那只是接线证据，不是行为证据 ⇒ 补两条会算数的：
+   *     · 同一枚包坐两臂 ⇒ 逐批配对差必须**恰好 0**（仪器自证①；两臂没共用盐/阵容就 exit 8）
+   *     · `rand` 坐主体席 ⇒ 必须明显低于参照（公平份额锚；接反了就 exit 8）
+   *   ⚠ 判"跑成"不许只看退出码（`D233` / v1.7.62 同一条纪律）⇒ 三条输出行都得点名，
+   *     否则"跳过了自证还报绿"这件事又没人守。夹具一律用**在册** `FIXTURE_PACK`（tracked，干净克隆读得到；
+   *     不拿两颗活槽当夹具 —— 会换主人的指针不是夹具，R3 普查那条）。 */
+  const prPair = spawnSync(process.execPath, [PB, '--subject=' + FIXTURE_PACK, '--ref=' + FIXTURE_PACK,
+    '--batches=2', '--games=20', '--modes=multi'], { encoding: 'utf8', timeout: 180000 });
+  eq(prPair.status, 0, '⑥b 主体席尺（同枚两臂）必须跑成（实测 exit=' + prPair.status + ' ‖ ' + String(prPair.stderr || '').slice(-240) + '）');
+  ok(/自证①（同枚两臂 ⇒ 差恰好 0）：\d+ 批全过/.test(String(prPair.stdout || '')),
+    '⑥b 必须印出"同枚两臂配对差恰好 0"那条自证 ⇒ 没印 = 自证根本没跑却报绿（这台尺的配对性没人验过）');
+  ok(/配对差 \+0\.00pt/.test(String(prPair.stdout || '')),
+    '⑥b 同枚两臂的配对差均值必须是 +0.00pt ⇒ 不是 +0.00 就说明两臂没共用盐/阵容，那"配对"是假的');
+  const prRand = spawnSync(process.execPath, [PB, '--subject=rand', '--ref=' + FIXTURE_PACK,
+    '--batches=2', '--games=20', '--modes=multi'], { encoding: 'utf8', timeout: 180000 });
+  eq(prRand.status, 0, '⑥b 主体席尺（`rand` 公平份额锚）必须跑成（实测 exit=' + prRand.status + '）');
+  ok(/自证②（公平份额锚）：随机席 [\d.]+% < 参照 [\d.]+%/.test(String(prRand.stdout || '')),
+    '⑥b 必须印出"随机席低于参照" ⇒ 锚接反（或主体席没真换成 rand）= 这台尺的绝对刻度不可信');
+  ok(/漏席 0/.test(String(prRand.stdout || '')), '⑥b 主体席模式不许有漏席 ⇒ 漏一次就是有一格落回了缺省包');
+
   /* ⑦ **真跑解包**：页面的 `loadPool` 必须用能解开 bundle 的那个对象。
    *   这条腿存在是因为 10-11 夜我亲手写错了一次：把 `unpack` 当成 `EpirusChampionPack` 的方法（它只导出 `extract`/`version`），
    *   于是 7 枚成员全部"解不开" ⇒ 页面**静默退回单包**，而标签却照样显示池在生效 —— 浏览器实机才抓得到，CI 抓不到。
