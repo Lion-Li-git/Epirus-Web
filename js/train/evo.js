@@ -1507,6 +1507,8 @@
  *   （只数**打上血**的真卡名）⇒ 奖励比验收早一步：抬 `WIDTH_W` 必然抬 `G`、必然掉兑现比（10-17 三批实测）。
  *   本项把**同一形状**（`FLOOR → TARGET` 线性、饱和）挂在**落地量**上 ⇒ 奖励与验收对齐。 */
 let WIDTH_LAND_W = 0;
+/* v1.7.91 自证：这一项到底有没有付过钱（`varietyMaxLanded ≤ FLOOR` ⇒ 永远 0 ⇒ "没效果"是恒零的必然）。 */
+const WIDTH_LAND_STAT = { games: 0, max: 0, paid: 0 };
   /* v1.5.126（用户洞察）：**贵卡**（cost≥3 或需珠）出手的奖励权重（默认关）。 */
   let BIGCARD_W = 0;
   /* v1.5.260（用户 GO"做 B+"）：**贵卡预算权重**（默认 0 ⇒ 行为逐字不变）。形状故意用**线性计数**，
@@ -1722,7 +1724,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, widthLandW: WIDTH_LAND_W, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, fitCal: FIT_CAL_EXCESS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
+      blockW: BLOCK_W, widthW: WIDTH_W, widthLandW: WIDTH_LAND_W, widthLandStat: { games: WIDTH_LAND_STAT.games, max: WIDTH_LAND_STAT.max, paid: WIDTH_LAND_STAT.paid }, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, fitCal: FIT_CAL_EXCESS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
       fitTailW: FIT_TAIL_W, fitTailQ: FIT_TAIL_Q,   // 09-26 §E49：ECON_REWARD_KEYS 里每个键都要"设得进、读得回"（D77 往返）
       /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
        * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
@@ -2082,6 +2084,7 @@ let WALL_GAMES = 3;
       const widthLandBonus = WIDTH_LAND_W > 0
         ? (WIDTH_LAND_W * Math.min(1, Math.max(0, varietyMaxLanded - WIDTH_FLOOR) / Math.max(1, WIDTH_TARGET - WIDTH_FLOOR)))
         : 0;
+      if (WIDTH_LAND_W > 0) { WIDTH_LAND_STAT.games++; if (varietyMaxLanded > WIDTH_LAND_STAT.max) WIDTH_LAND_STAT.max = varietyMaxLanded; if (widthLandBonus > 0) WIDTH_LAND_STAT.paid++; }
       const widthBonus = WIDTH_W > 0
         ? (WIDTH_W * Math.min(1, Math.max(0, varietyMax - WIDTH_FLOOR) / Math.max(1, WIDTH_TARGET - WIDTH_FLOOR)))
         : 0;
@@ -2950,14 +2953,28 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   /* v1.7.90：**落地**的招数种类数 —— 与 `effSkillsLand` 的分子同源（`damage.via` 且是真卡名）。
  *   为什么不用 `action.outcome==='ok'`：那是"出手成功"，不含"打上了没有"（`WIDTH_W` 用的就是那个）。
  *   口径说明：`via` 有一批取值不是卡（`chain` / `夢魘` 之类）⇒ 必须 `R.byKey[via]` 过滤。 */
+/* v1.7.91（用户 10-17 质问：「为什么 Geff 不读防御类？把白防御倒过来不就是有效防御」）：
+ *   原版只数 `damage.via` ⇒ **防御类永远不落地** ⇒ 落地奖励一分钱不给防御（实测把防御类占比挤掉 8pt）。
+ *   改成**材料性落地**：① 造成伤害（`damage.via`）② 被挡/反弹（`blocked`/`reflect` 归给**同席那张防御 action**）
+ *   ③ 治疗（`heal.via`）。口径与 `defense-quality.mjs` 的「白防御」互为反面：白防御 = 出了防御但没人打他。
+ *   ⚠ 事件流**没有 round 字段**（`D196` 记过）⇒ 用「该席下一次 action」当回合边界。 */
 function countVarietyLanded(events, seat, RR) {
   const rules = RR || R;
+  const evs = events || [];
   const seen = {};
-  for (const e of (events || [])) {
-    if (e.type !== 'damage' || !e.via) continue;
-    if (e.source != null && e.source !== seat) continue;
-    if (!rules.byKey[e.via]) continue;
-    seen[e.via] = 1;
+  for (let i = 0; i < evs.length; i++) {
+    const e = evs[i];
+    if (e.type === 'damage' && e.via && (e.source == null || e.source === seat) && rules.byKey[e.via]) { seen[e.via] = 1; continue; }
+    if (e.type === 'heal' && e.via && rules.byKey[e.via]) { seen[e.via] = 1; continue; }
+    if (e.type !== 'action' || e.pid !== seat || !e.key || e.outcome !== 'ok' || e.key === R.SK.JI) continue;
+    /* 防御那一半：向后找同席的 blocked/reflect，直到该席下一次 action（= 下一回合）为止。 */
+    let landed = false;
+    for (let j = i + 1; j < evs.length; j++) {
+      const f = evs[j];
+      if (f.type === 'action' && f.pid === seat) break;
+      if ((f.type === 'blocked' || f.type === 'reflect') && f.to === seat) { landed = true; break; }
+    }
+    if (landed) seen[e.key] = 1;
   }
   return Object.keys(seen).length;
 }

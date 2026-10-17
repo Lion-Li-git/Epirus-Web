@@ -1933,3 +1933,11 @@ if (!GUARD.wrote) {
 }
 console.log((GUARD.wrote ? '\n\u5df2\u5199\u5165 ' : '\n✘ 没写文件（§E589 守卫）：' + GUARD.note + '\n  原本要写 ') + OUT_PATH + '  (coldStart=' + (!seedParams) + ', seed=' + __SEED + ')' +
   (PRODUCT_IS_SEED ? '  ⚠ 产物与起点逐位相同（本臂零改包）' : ''));
+
+/* v1.7.91 自证：落地广度这一项到底有没有付过钱。
+ *   `max <= WIDTH_FLOOR(3)` ⇒ 这一项从来没付过钱 ⇒ "没效果"是恒零的必然，不是"奖励无效"。 */
+if (WIDTH_LAND_WANT > 0) {
+  const vs = (T.economyReward() || {}).widthLandStat || {};
+  console.log('[width-land] 自证：games=' + vs.games + ' max=' + vs.max + ' paid=' + vs.paid +
+    '（max ≤ 3 ⇒ 这一项从来没付过钱）');
+}
