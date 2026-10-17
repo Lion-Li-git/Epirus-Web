@@ -1502,6 +1502,11 @@
   /* v1.5.124（复核 §28a）：**广度收益项**的权重与阈值（默认关 ⇒ 出厂行为一字不变）。
    * 形状：G 从 `WIDTH_FLOOR` 到 `WIDTH_TARGET` 线性给钱 ⇒ 与 `DIV_W` 那个"归一化熵"不同，**刷不动**。 */
   let WIDTH_W = 0, WIDTH_FLOOR = 3, WIDTH_TARGET = 7;
+/* v1.7.90（DS · 10-17）：**按"落地"付的广度**（默认 0 ⇒ 逐位不变）。
+ *   病：`WIDTH_W` 量的是 `countVariety`（事件流里**用过**几种），而验收的兑现腿量的是 `effSkillsLand`
+ *   （只数**打上血**的真卡名）⇒ 奖励比验收早一步：抬 `WIDTH_W` 必然抬 `G`、必然掉兑现比（10-17 三批实测）。
+ *   本项把**同一形状**（`FLOOR → TARGET` 线性、饱和）挂在**落地量**上 ⇒ 奖励与验收对齐。 */
+let WIDTH_LAND_W = 0;
   /* v1.5.126（用户洞察）：**贵卡**（cost≥3 或需珠）出手的奖励权重（默认关）。 */
   let BIGCARD_W = 0;
   /* v1.5.260（用户 GO"做 B+"）：**贵卡预算权重**（默认 0 ⇒ 行为逐字不变）。形状故意用**线性计数**，
@@ -1677,7 +1682,7 @@ let WALL_GAMES = 3;
     if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;
     else if (o.divCatW != null) DIV_ROLE_W = Number(o.divCatW) || 0;
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
-    if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.costlyW != null) COSTLY_W = Math.max(0, Number(o.costlyW)); if (o.bigtChainW != null) BIGT_CHAIN_W = Math.max(0, Number(o.bigtChainW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
+    if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.widthLandW != null) WIDTH_LAND_W = Math.max(0, Number(o.widthLandW) || 0); if (o.costlyW != null) COSTLY_W = Math.max(0, Number(o.costlyW)); if (o.bigtChainW != null) BIGT_CHAIN_W = Math.max(0, Number(o.bigtChainW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
     if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover; if (o.convRatio != null) CONV_RATIO = !!o.convRatio; if (o.convOffense != null) CONV_OFFENSE = !!o.convOffense;
     if (o.fitCal != null) FIT_CAL_EXCESS = !!(o.fitCal && String(o.fitCal) !== '0' && o.fitCal !== 0);
     /* v1.6.50（用户裁定 B）：把闸的广度折进适应度。两个键一起收口（只给 W 不给下界 ⇒ 用默认下界 3，与闸同线）。 */
@@ -1717,7 +1722,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, fitCal: FIT_CAL_EXCESS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
+      blockW: BLOCK_W, widthW: WIDTH_W, widthLandW: WIDTH_LAND_W, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, fitCal: FIT_CAL_EXCESS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
       fitTailW: FIT_TAIL_W, fitTailQ: FIT_TAIL_Q,   // 09-26 §E49：ECON_REWARD_KEYS 里每个键都要"设得进、读得回"（D77 往返）
       /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
        * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
@@ -1874,7 +1879,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0, varietyMax = 0, bigUses = 0, chains = 0, bigTCasts = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     /* v1.6.50（用户裁定 B）：广度惩罚项**不是每局项** —— 它要的是"这一员的动作分布有多宽"，
      * 而 `spUse` 要打完全部局才攒齐 ⇒ 只能在跨局聚合那一层加（`fitAgg`）。
@@ -1892,7 +1897,7 @@ let WALL_GAMES = 3;
      *   没被下达的兄弟也能当**对照组**读；全 0 时没有任何杠杆需要否证 ⇒ 直接不算、逐位不变、零成本。
      * 收益项（`pressBonus` 等，:1553~:1582）**仍各自按自己的 W 门控** ⇒ `fit` 一字不变。 */
     const DOSE_ON = PRESS_W > 0 || PIERCE_W > 0 || BEAD_W > 0 || TGT_W > 0 || CLEAR_W > 0 ||
-      BLOCK_W > 0 || WIDTH_W > 0 || BIGCARD_W > 0 || COSTLY_W > 0 || BIGT_CHAIN_W > 0 || ringWeightAt(gen) > 0;
+      BLOCK_W > 0 || WIDTH_W > 0 || WIDTH_LAND_W > 0 || BIGCARD_W > 0 || COSTLY_W > 0 || BIGT_CHAIN_W > 0 || ringWeightAt(gen) > 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
      * 此前它是每局随机抽的噪声（30% 的局抽 h∈1..4）：个体不携带它 ⇒ 选择压力
      * 作用不到它 ⇒ "走通连续攒钱长轨迹"的能力没有任何机制被保留下来。
@@ -2070,6 +2075,13 @@ let WALL_GAMES = 3;
        * 见 v1.5.92 的注释）；这里改用**绝对**的"用过的招数种类数"（`countVariety` 去重计数），
        * 并挂在阈值之上：`≤ WIDTH_FLOOR(3)` 不给钱 · `≥ WIDTH_TARGET(7)` 给满 ⇒ 刷不动、有 0→1 梯度。
        * ⚠️ 关掉时必须是**严格 0**（`0 * NaN = NaN` 会把整个 fit 打成 NaN —— 我第一版就这么踩的）。 */
+      /* v1.7.90：**落地广度**项 —— 形状与下面 `widthBonus` 逐字同形，只把度量换成 `varietyMaxLanded`
+       *   （`countVarietyLanded`：`damage.via` 里的真卡名，与验收的 `effSkillsLand` 同源）。
+       *   为什么另起一项而不是改 `widthBonus` 的度量：默认 0 ⇒ **逐位不变**，不逼在册臂重基线；
+       *   要对齐验收时显式开这一项即可（`EPIRUS_WIDTH_LAND_W`）。 */
+      const widthLandBonus = WIDTH_LAND_W > 0
+        ? (WIDTH_LAND_W * Math.min(1, Math.max(0, varietyMaxLanded - WIDTH_FLOOR) / Math.max(1, WIDTH_TARGET - WIDTH_FLOOR)))
+        : 0;
       const widthBonus = WIDTH_W > 0
         ? (WIDTH_W * Math.min(1, Math.max(0, varietyMax - WIDTH_FLOOR) / Math.max(1, WIDTH_TARGET - WIDTH_FLOOR)))
         : 0;
@@ -2098,7 +2110,7 @@ let WALL_GAMES = 3;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus + widthBonus + bigBonus + costlyBonus + chainBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + bigBonus + costlyBonus + chainBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -2137,6 +2149,8 @@ let WALL_GAMES = 3;
         /* v1.5.124（§28a）：**广度**的绝对量 —— 该快照里"用过的招数种类数"（去重）。
          * 取 `max` 而不是累加：要的是"这个策略的招式面有多宽"，不是"出手多少次"。 */
         if (DOSE_ON) varietyMax = Math.max(varietyMax, countVariety(r.state.events, seat));
+/* v1.7.90：**落地广度**的绝对量（与 `effSkillsLand` 同源：只数 `damage.via` 里**真卡名**）。 */
+if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.state.events, seat));
         /* v1.5.126：**贵卡**（声明费用 ≥3 或需珠）的出手 —— 用户指出"这个包不会用电磁炮/大雷、也丢了地雷/净化
          * ⇒ 它当然没必要攒 ep" ⇒ 直接给这一族付钱（它们不可刷：真的用出来才给钱）。 */
         /* v1.5.265（qoder §E65）：**累加移出权重门** —— 这一行原本包在 `if (BIGCARD_W > 0)` 里，
@@ -2933,7 +2947,21 @@ let WALL_GAMES = 3;
   }
   /* v1.5.124（§28a）：**用过的招数种类数**（去重、排除 ジ）—— 广度收益项的绝对量。
    * 只认"成功结算"的出手（`outcome === 'ok'`），被无效化的不算（否则刷被废的假动作也能赚钱）。 */
-  function countVariety(events, seat) {
+  /* v1.7.90：**落地**的招数种类数 —— 与 `effSkillsLand` 的分子同源（`damage.via` 且是真卡名）。
+ *   为什么不用 `action.outcome==='ok'`：那是"出手成功"，不含"打上了没有"（`WIDTH_W` 用的就是那个）。
+ *   口径说明：`via` 有一批取值不是卡（`chain` / `夢魘` 之类）⇒ 必须 `R.byKey[via]` 过滤。 */
+function countVarietyLanded(events, seat, RR) {
+  const rules = RR || R;
+  const seen = {};
+  for (const e of (events || [])) {
+    if (e.type !== 'damage' || !e.via) continue;
+    if (e.source != null && e.source !== seat) continue;
+    if (!rules.byKey[e.via]) continue;
+    seen[e.via] = 1;
+  }
+  return Object.keys(seen).length;
+}
+function countVariety(events, seat) {
     const seen = {};
     for (const e of (events || [])) {
       if (e.type === 'action' && e.pid === seat && e.outcome === 'ok' && e.key && e.key !== R.SK.JI) seen[e.key] = 1;

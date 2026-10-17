@@ -107,7 +107,8 @@ const SELF_ENV_KEYS = [
   'EPIRUS_HOLO2PROTO',   // v1.7.4（10-13 夜班 S2a）：训练期把"送盾"改写成"给自己上原型制御"（决策期档，`policy.js` 的 `setHolo2Proto`）
                          //   ⇒ 与 TRAIN_MODE 同一条纪律：引擎没 setter / 读回不等于下达值就 exit 7；生效值进 `meta.recipe.h2p`
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
-  'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W'
+  'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W',
+  'EPIRUS_WIDTH_LAND_W'
 ];
 /* v1.5.187：**大雷连带收益权重**（`evo.js` 的 `BIGT_CHAIN_W`，DS 交接 §2b 的唯一待做）走 econ 族，
  * 而它的 env 名按 D77 只许出现在 `server/econ-env.mjs` ⇒ 这里**不写字面量**，
@@ -1116,6 +1117,27 @@ if (OPP_BLOCK_WANT) {
   }
   console.log('[opp-block] 训练桌改为**整桌同原型**：每局 N−1 席填同一脚本，原型按 (gen*3+g) 跨局轮换' +
     '（覆盖面/轮换节奏/CRN 一字不动，只改一桌的纯度）⇒ 判据见 §E124 ⑤/⑥');
+}
+
+/* ===== v1.7.90（DS · 10-17）：**落地广度** `EPIRUS_WIDTH_LAND_W` 的下达（默认关）=====
+ * 病（10-17 三批实测）：`WIDTH_W` 量的是「事件流里**用过**几种」（`countVariety`），
+ *   而验收的兑现腿量的是「**打上血**几种」（`effSkillsLand`）⇒ 抬 `WIDTH_W` 必然抬 `G`、必然掉兑现比。
+ *   本项把**同一形状**（FLOOR→TARGET 线性、饱和）挂在**落地量**（`varietyMaxLanded`）上 ⇒ 奖励与验收对齐。
+ * 纪律照 §N35/D174：下达后**读回消费点**、不等就 `exit 7`；**没开就一行不印**。 */
+const WIDTH_LAND_WANT = Number(process.env.EPIRUS_WIDTH_LAND_W || 0);
+if (WIDTH_LAND_WANT > 0) {
+  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_WIDTH_LAND_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
+    process.exit(7);
+  }
+  T.setEconomyReward({ widthLandW: WIDTH_LAND_WANT });
+  const gotWL = (T.economyReward() || {}).widthLandW;
+  if (gotWL !== WIDTH_LAND_WANT) {
+    console.error('[train-3p] ⛔ EPIRUS_WIDTH_LAND_W=' + WIDTH_LAND_WANT + ' 读回 ' + JSON.stringify(gotWL) + ' ⇒ 没生效，退出（不许跑出\"以为开了\"的臂）');
+    process.exit(7);
+  }
+  console.log('[width-land] 广度奖励改为**按落地**：' + JSON.stringify({ widthLandW: gotWL, floor: 3, target: 7 }) +
+    '（形状与 widthW 同形，度量 = damage.via 里的真卡名）');
 }
 
 /* ===== §N6 修正（v1.5.150 · DS 09-22）：**2P 切片的对手必须是 2P 强参照，不能是多人池** =====
