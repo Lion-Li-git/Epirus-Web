@@ -130,6 +130,27 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
     '⑥b 必须印出"随机席低于参照" ⇒ 锚接反（或主体席没真换成 rand）= 这台尺的绝对刻度不可信');
   ok(/漏席 0/.test(String(prRand.stdout || '')), '⑥b 主体席模式不许有漏席 ⇒ 漏一次就是有一格落回了缺省包');
 
+  /* ⑥c §E638（v1.7.93）：**榜模式必须真跑且带牙** —— 这条腿存在是因为"当选者在榜内第几名"那张表
+    *   今天是我拿三个 scratch 脚本手算的（能算出来 ≠ 下次还算得出来，同一族里栽过"两格串台"）。
+    *   夹具全用**在册** `FIXTURE_PACK`（干净克隆读得到；不拿活槽当夹具）。三枚同一个包 ⇒ 极差必须是 0，
+    *   这本身就是"行与行没串"的数值证据（不是只看退出码，`D233` 那条纪律）。 */
+  /* 第二枚用 `rand`（公平份额锚）而不是另一枚真包：实测 2 批 × 20 局时**两枚真包的榜内极差会恰好打平成 0.00**
+   *   ⇒ 那条"极差 > 0"的牙就变成看运气。`rand` 与参照的差是十几 pt 量级 ⇒ 小预算也稳。 */
+  const hallRun = spawnSync(process.execPath, [PB, '--subject=' + FIXTURE_PACK + ',rand', '--ref=' + FIXTURE_PACK,
+    '--batches=2', '--games=20', '--modes=multi', '--elected=1'], { encoding: 'utf8', timeout: 180000 });
+  eq(hallRun.status, 0, '⑥c 榜模式（两枚不同包 + 影子行）必须跑成（实测 exit=' + hallRun.status + ' ‖ ' + String(hallRun.stderr || '').slice(-240) + '）');
+  ok(/^   名次 \| 被考 /m.test(String(hallRun.stdout || '')), '⑥c 必须印出榜表（没印 = 榜模式从没被走过，全绿是假的）');
+  ok(/自证④（影子行 ⇒ 位置不影响读数）：\d+ 批逐字相同/.test(String(hallRun.stdout || '')),
+    '⑥c 必须印自证④ ⇒ 同一枚坐在第 1 位与坐在末位要逐批相同；不印就是"各枚共享了状态"没人守（名次/gap 会全是假的）');
+  ok(/自证①\(榜版\)：第 1 行与参照同权重/.test(String(hallRun.stdout || '')),
+    '⑥c 与参照同权重的那一行必须过"逐批差恰好 0"（老自证① 的榜版推广）');
+  const hallRange = /极差 ([\d.]+)pt/.exec(String(hallRun.stdout || ''));
+  ok(!!hallRange && Number(hallRange[1]) > 0,
+    '⑥c 两行不同源（参照包 ‖ `rand`）⇒ 榜内极差必须 > 0（实测 ' + (hallRange ? hallRange[1] : '没读到') +
+    'pt）⇒ 读出 0 就是各行其实来自同一个源（串台），那"名次"是抄出来的');
+  ok(/★ 当选者 .* 在榜内名次 \*\*[12]\/2\*\*/.test(String(hallRun.stdout || '')),
+    '⑥c `--elected=` 点了就得印出名次那行，且名次必须落在 1..2 之内 ⇒ 静默没点到会被读成"这臂的当选者查过了"');
+
   /* ⑦ **真跑解包**：页面的 `loadPool` 必须用能解开 bundle 的那个对象。
    *   这条腿存在是因为 10-11 夜我亲手写错了一次：把 `unpack` 当成 `EpirusChampionPack` 的方法（它只导出 `extract`/`version`），
    *   于是 7 枚成员全部"解不开" ⇒ 页面**静默退回单包**，而标签却照样显示池在生效 —— 浏览器实机才抓得到，CI 抓不到。

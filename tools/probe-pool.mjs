@@ -40,6 +40,19 @@
  *   ④ `--subject=` / `--ref=` 的路径**只认仓库内**（`resolve()` 把它拼在 `ROOT` 底下）。
  *      并发臂常把产物改道到仓库外 ⇒ 那会被本尺 `exit 2` 响亮拒绝而不是静默少读（10-17 实测：四格尺读因此全废一次）。
  *      要量就先把包复制进 `docs/artifacts/<临时目录>/`，**读完即删**（`D191` 查的是"未登记的重复权重"）。
+ *
+ * ===== §E638 榜模式（v1.7.93）：`--subject=` 收逗号列多枚 ⇒ 尺自己印"榜内名次 / gap / regret" =====
+ * 为什么把它搬进尺里：10-17 那张"当选者在榜内第几名"的表是拿三个 scratch 脚本手算的 ——
+ *   **能算出来 ≠ 下次还算得出来**（同一族里已经栽过"shell 循环让两格串台"那次）。
+ * 口径：① 只给 1 枚 ⇒ **走老形状**（跑序、打印、机器可读 JSON 一字不变，验收线 V1 逐字节比过 20:29 的基线）；
+ *       ② 多枚 ⇒ 全列一起摘出对手席 ⇒ 所有行**同一份名单、同一个签名**（不同签名的名次没有意义，文件头第②条）；
+ *       ③ 参照臂**每批只跑一次**（N 枚从 2N 臂/批 降到 N+1 臂/批），跑序仍是"被考在前、参照在后"；
+ *       ④ 自动追加一行**影子行**（列表第一枚再坐一次主体席，排在最后）⇒ `自证④` 永远有一对可比：
+ *          **同一枚在不同位置必须逐批读出相同的差**（不靠"数据里恰好有重复"来触发 —— 那是空转不报错那一族）；
+ *       ⑤ `--elected=<id|wid|序号>` 点出该臂当选者 ⇒ 额外印一行名次/gap/regret，并写进 JSON 的 `elected`。
+ * ⚠ 三量的读法：**名次与 `gap`（对榜均值）可以当判据**；**`regret`（对榜首）只当描述** ——
+ *    榜首是"带噪读数里取 max"，本身正向偏，拿它过线就是把仪器的极值当效应（同 §二十二 那条）。
+ * ⚠ 榜模式仍然**只读**：不 promote、不写包、不碰 `pool-members.tsv`。
  * 三条自证（接错线的形状就是"表看着正常而数全是同一个"）：
  *   · `--subject=` 与 `--ref=` 同一枚 ⇒ 逐批配对差**必须恰好 0**，否则 exit 8（配对了个假的）；
  *   · `--subject=rand`（`Bots.pickRandom`）⇒ 随机席**必须明显低于**参照包，否则 exit 8（公平份额锚 20% 接反了）；
@@ -62,7 +75,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 rejectUnknownFlags(process.argv.slice(2),
   ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose', 'mixSeats',
-    'subject', 'ref', 'batches', 'seedBase', 'subjectDose', 'assertDiff', 'alsoDrop'], 'probe-pool');
+    'subject', 'ref', 'batches', 'seedBase', 'subjectDose', 'assertDiff', 'alsoDrop', 'elected'], 'probe-pool');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const TIER = flag('tier', 'hard'), G = Number(flag('games', 60));
 const SEEDS = String(flag('seeds', '90210,90211')).split(',').map(Number).filter(x => !Number.isNaN(x));
@@ -191,12 +204,29 @@ if (SUBJECT_ARG) {
     return { label: p, wid, id: row ? row[h.id] : bn(p), params,
       chooser: T.policyChooserN(params, 0.15, SUBJ_DOSE.eps, SUBJ_DOSE.epsK, SUBJ_DOSE.epsMode) };
   }
-  const SUBJ = resolve(SUBJECT_ARG, '--subject'), REF = resolve(REF_ARG, '--ref');
+  const REF = resolve(REF_ARG, '--ref');
+  /* ===== §E638（v1.7.93 · 千问 10-17 晚班）：**榜模式** —— `--subject=` 收逗号列多枚 =====
+   * 动因：§二十二 那张"当选者在榜内第几名 / gap / regret"的表是我拿三个 scratch 脚本手算的 ——
+   *   能算出来 ≠ 下次还算得出来（同一族里已经栽过"两格串台"）。所以把这一步搬进尺里，
+   *   并且**参照臂每批只跑一次**（N 枚从 2N 臂/批 降到 N+1 臂/批）。
+   * ⚠ 三条硬约束（预注册见日志 §二十五 25.2）：
+   *   ① **只给 1 枚时走老形状**：跑序、打印、机器可读 JSON 一字不变（历史读数还要能引用）；
+   *   ② 多枚 ⇒ 全列一起摘出对手席 ⇒ 所有行共用同一份名单与**同一个签名**（否则"名次"是两把尺排出来的）；
+   *   ③ 多枚自动追加一行**影子行**（第一枚重复一次，排在末尾）⇒ `自证④` 永远有一对可比：
+   *     **同一枚在不同位置必须逐批读出相同的差**。不靠"数据里恰好有重复"来触发（那是空转不报错那一族）。
+   * 名次/gap 可以当判据；`regret = 榜内最大 − 该行` **只当描述**（max 取自带噪读数，本身正向偏，不许拿它过线）。 */
+  const HALL = SUBJECT_ARG.split(',').map(s => s.trim()).filter(Boolean);
+  const IS_HALL = HALL.length > 1;
+  const SUBJECTS = HALL.map(function (s) { return resolve(s, '--subject'); });
+  const SUBJ = SUBJECTS[0];   /* 老形状里那个"被考者" = 列表第一枚（单枚时就是唯一那枚，行为一字不变） */
+  /* 影子行：只在榜模式开 —— 它就是"第一枚再坐一次主体席"，位置排最后 */
+  const SHADOW = IS_HALL ? { arm: SUBJECTS[0], tagSuffix: '（影子行）', shadowOf: 0 } : null;
+  const ARMS = SUBJECTS.concat(SHADOW ? [SHADOW.arm] : []);
   /* ③ 两枚一起摘：只摘被考者会让两臂的对手名单不同 ⇒ 那就不叫配对。
    *   `--alsoDrop=id1,id2` 是给**扫多枚**用的：把这一批要考的都先摘出去 ⇒ 所有行共用同一份名单 ⇒ 同一个签名，
    *   才谈得上并排读（不传就是各摘各的，一行一个签名，行与行不是同一把尺）。 */
   const ALSO_DROP = String(flag('alsoDrop', '')).split(',').map(s => s.trim()).filter(Boolean);
-  const DROP = new Set([SUBJ.wid, REF.wid].filter(Boolean));
+  const DROP = new Set(ARMS.map(a => a.wid).concat([REF.wid]).filter(Boolean));
   const unknown = ALSO_DROP.filter(id => !members.some(r => r[h.id] === id));
   if (unknown.length) { console.error('⛔ --alsoDrop 里有 tier=' + TIER + ' 名单认不出的 id：' + unknown.join(' ‖ ') +
     '（在册的：' + members.map(r => r[h.id]).join(' ') + '）⇒ 名字拼错不许静默少摘一枚'); process.exit(2); }
@@ -220,7 +250,11 @@ if (SUBJECT_ARG) {
   if (SEEDS_RUN.length < 2) { console.error('⛔ 至少两批（--batches=≥2 或 --seeds=≥2 枚）⇒ 一批量不出 σ，只能给一个孤零零的均值'); process.exit(2); }
 
   console.log('# 主体席尺（1 席被考包 + 4 席按 tier=' + TIER + ' 逐席抽 · 允许重复 · 禁四席全同 · 被考两枚一起摘出对手席）');
-  console.log('# 被考 ' + SUBJ.label + '（id=' + SUBJ.id + ' ‖ wid=' + (SUBJ.wid || '—') + '）· 参照 ' + REF.label +
+  if (IS_HALL) console.log('# 被考 ' + SUBJECTS.length + ' 枚（**榜模式**：全列一起摘出对手席 ⇒ 所有行同一份名单、同一个签名，才谈得上并排排名次）：' +
+    SUBJECTS.map(function (s) { return s.id + '(' + (s.wid || '—') + ')'; }).join(' ‖ ') +
+    '  · 参照 ' + REF.label + '（id=' + REF.id + ' ‖ wid=' + (REF.wid || '—') + '）' +
+    '\n#   影子行 = 第 1 枚重复坐一次主体席（排在最后）⇒ `自证④` 永远有一对可比：**同一枚在不同位置必须逐批读出相同的差**');
+  else console.log('# 被考 ' + SUBJ.label + '（id=' + SUBJ.id + ' ‖ wid=' + (SUBJ.wid || '—') + '）· 参照 ' + REF.label +
     '（id=' + REF.id + ' ‖ wid=' + (REF.wid || '—') + '）');
   console.log('# 对手席剂量 ' + DOSE.label + ' ‖ 被考席剂量 ' + SUBJ_DOSE.label + '   ← 引用读数必须带上这两句');
   console.log('# 名单 ' + ROSTER.length + ' 枚（摘掉 ' + DROP.size + ' 枚）：' + ROSTER.map(m => m.id).join(' ‖ '));
@@ -228,11 +262,28 @@ if (SUBJECT_ARG) {
     (BATCHES > 0 ? '' : ' ‖ 这批吃的是 --seeds= 列出来的 ' + SEEDS_RUN.length + ' 枚') + '）· 两臂同 seed 同盐 ⇒ 逐批配对\n');
 
   const rowsOut = [];
+  const HALL_ROWS = [];      /* §E638 榜模式：每个口径一行的榜账（名次/gap/regret 的来源） */
+  let HALL_LAST = null;
   let fail = null;
   for (const mode of MODES) {
     const SIG = sigOf(mode);
     const agg = { salts: new Set(), comps: new Set(), seatCnt: [0, 0, 0, 0, 0], memberG: {}, memberW: {}, allSame: 0, miss: 0, games: 0 };
     const per = { subj: [], ref: [], diff: [], subjDraw: [], refDraw: [] };
+    /* 榜模式：每枚（含影子行）各自一条逐批序列 */
+    const HALLPER = IS_HALL ? ARMS.map(function () { return { subj: [], diff: [], subjDraw: [] }; }) : null;
+    /* 自证③（席位接线）抽成一个函数 —— 老形状与榜模式**共用同一份判据**（同一件事不许抄两遍）。
+     *   每一档都印（**包括 rand 与同枚两臂**）：它证的是"席位接线"，与被考者是包还是随机席无关；
+     *   门 `D234`⑥b 正是靠这一行的存在来判"自证有没有真跑"（不印 = 跳过了自证还报绿）。 */
+    function selfTest3() {
+      const usedN = agg.seatCnt.filter(x => x > 0).length, mxv = Math.max.apply(null, agg.seatCnt), mnv = Math.min.apply(null, agg.seatCnt);
+      if (usedN < 5 || mxv - mnv > 1) return '自证③ 不过：主体席只出现在 ' + usedN + '/5 席（各席 ' + agg.seatCnt.join('/') +
+        ' ⇒ 极差 ' + (mxv - mnv) + '）⇒ 被考的那一枚没有逐席轮换，读数里掺的是座位';
+      const noShow = ROSTER.filter(m => !agg.memberG[m.id]);
+      if (noShow.length) return '自证③ 不过：名单里有 ' + noShow.length + ' 枚一场没上（' + noShow.map(m => m.id).join(' ‖ ') + '）⇒ 抽签与席位的接线断了';
+      if (agg.miss) return '自证③ 不过：' + agg.miss + ' 次决策没分配到成员（落回缺省包）⇒ 组成漏席';
+      console.log('   ✔ 自证③（席位接线）：主体席逐席 ' + agg.seatCnt.join('/') + ' ‖ ' + ROSTER.length + ' 枚对手全部上场 ‖ 漏席 0');
+      return null;
+    }
 
     /* 一臂 = 一批（seed）× G 局。回调用局部闭包 ⇒ 两臂之间不共享状态（共享就会把上一臂的组成算到这一臂头上）。 */
     function runArm(arm, seed) {
@@ -281,13 +332,87 @@ if (SUBJECT_ARG) {
 
     console.log('== 口径 ' + mode + ' ‖ 名单签名 ' + SIG + ' ==');
     for (const seed of SEEDS_RUN) {
-      const a = runArm({ tag: 'subj', chooser: SUBJ.chooser, params: SUBJ.params }, seed);
+      const rates = [];
+      let broke = false;
+      /* 跑序与 v1.7.92 一致：先被考（榜模式则按列表顺序 + 末尾影子行），后参照 ⇒ 参照每批只跑一次 */
+      for (let ai = 0; ai < ARMS.length; ai++) {
+        const a = runArm({ tag: IS_HALL ? ('subj#' + ai) : 'subj', chooser: ARMS[ai].chooser, params: ARMS[ai].params }, seed);
+        if (a === null) { broke = true; break; }
+        rates.push(a);
+      }
       const b = runArm({ tag: 'ref', chooser: REF.chooser, params: REF.params }, seed);
-      if (a === null || b === null) break;
-      per.subj.push(a.rate); per.ref.push(b.rate); per.diff.push(a.rate - b.rate);
-      per.subjDraw.push(a.drawRate); per.refDraw.push(b.drawRate);
+      if (broke || b === null) break;
+      /* index 0 = 被考者 ⇒ 单枚时下面这几行与改动前逐字同值（验收线 V1 就钉这个） */
+      per.subj.push(rates[0].rate); per.ref.push(b.rate); per.diff.push(rates[0].rate - b.rate);
+      per.subjDraw.push(rates[0].drawRate); per.refDraw.push(b.drawRate);
+      if (IS_HALL) for (let ai = 0; ai < ARMS.length; ai++) {
+        HALLPER[ai].subj.push(rates[ai].rate);
+        HALLPER[ai].diff.push(rates[ai].rate - b.rate);
+        HALLPER[ai].subjDraw.push(rates[ai].drawRate);
+      }
     }
     if (fail) break;
+    if (IS_HALL) {
+      /* ===== 榜模式的报告：名次 / gap / regret（口径与判据见文件头 §E638 与日志 §二十五）===== */
+      const mn = v => v.reduce((x, y) => x + y, 0) / v.length;
+      const sdv = v => { const m = mn(v); return Math.sqrt(v.reduce((x, y) => x + (y - m) ** 2, 0) / Math.max(1, v.length - 1)); };
+      const rows = SUBJECTS.map(function (s, i) {
+        const d = HALLPER[i].diff, m = mn(d), sD = sdv(d), se = sD / Math.sqrt(d.length);
+        return { id: s.id, wid: s.wid, diff: m, sd: sD, se: se, t: se > 0 ? m / se : Infinity, subj: mn(HALLPER[i].subj), batch: d };
+      });
+      /* 自证④：影子行（列表第一枚再坐一次）必须与它那行**逐批**相同 ⇒ 证"位置不影响读数" */
+      const sh = HALLPER[ARMS.length - 1].diff, first = rows[0].batch;
+      const shDiff = sh.map((v, i) => Math.abs(v - first[i]) > 1e-12 ? 1 : 0).reduce((a, b) => a + b, 0);
+      if (shDiff) { fail = '自证④ 不过：同一枚（' + SUBJECTS[0].id + '）坐在第 1 位与坐在最后（影子行）有 ' + shDiff + '/' + sh.length +
+        ' 批配对差不同（最大 ' + Math.max.apply(null, sh.map((v, i) => Math.abs(v - first[i]))).toFixed(4) +
+        '）⇒ 各枚的臂之间共享了状态，名次/gap/regret 全是假的，本批读数作废'; break; }
+      const meanOfAll = mn(rows.map(r => r.diff));
+      /* 老自证① 的榜版推广：任何一行若与参照同权重 ⇒ 它那列必须逐批恰好 0（同一份权重坐在主体席与坐在参照席应当打平） */
+      for (let si = 0; si < SUBJECTS.length; si++) {
+        if (!SUBJECTS[si].wid || SUBJECTS[si].wid !== REF.wid) continue;
+        const nz = HALLPER[si].diff.filter(d => Math.abs(d) > 1e-9);
+        if (nz.length) { fail = '自证①(榜版) 不过：第 ' + (si + 1) + ' 行与参照同权重（' + SUBJECTS[si].id + '）却有 ' + nz.length + '/' +
+          HALLPER[si].diff.length + ' 批差不为 0 ⇒ 两臂没真配对'; break; }
+        console.log('   ✔ 自证①(榜版)：第 ' + (si + 1) + ' 行与参照同权重 ⇒ ' + HALLPER[si].diff.length + ' 批差恰好 0');
+      }
+      const best = rows.reduce((a, b) => b.diff > a.diff ? b : a, rows[0]);
+      const order = rows.map((r, i) => i).sort((a, b) => rows[b].diff - rows[a].diff);
+      console.log('   榜（' + rows.length + ' 枚 · 同一份名单同一签名 ‖ 参照 ' + REF.id + ' 每批只跑一次）：');
+      console.log('   名次 | 被考 | 夺1% | 配对差 | σ | SE | t | gap(对榜均值) | regret(对榜首,只当描述)');
+      order.forEach(function (ri, k) {
+        const r = rows[ri];
+        console.log('   ' + String(k + 1).padStart(2) + ' | ' + r.id.padEnd(14) + ' | ' + r.subj.toFixed(2).padStart(6) +
+          ' | ' + ((r.diff >= 0 ? '+' : '') + r.diff.toFixed(2)).padStart(7) + ' | ' + r.sd.toFixed(2).padStart(5) +
+          ' | ' + r.se.toFixed(2).padStart(5) + ' | ' + (Number.isFinite(r.t) ? r.t.toFixed(2) : '∞').padStart(6) +
+          ' | ' + ((r.diff - meanOfAll >= 0 ? '+' : '') + (r.diff - meanOfAll).toFixed(2)).padStart(7) +
+          ' | ' + (best.diff - r.diff).toFixed(2).padStart(6));
+      });
+      console.log('   榜均值 ' + meanOfAll.toFixed(2) + 'pt ‖ 榜首 ' + best.id + ' ' + best.diff.toFixed(2) + 'pt' +
+        ' ‖ 极差 ' + (best.diff - order.map(ri => rows[ri].diff).reduce((a, b) => Math.min(a, b), Infinity)).toFixed(2) + 'pt');
+      console.log('   ✔ 自证④（影子行 ⇒ 位置不影响读数）：' + sh.length + ' 批逐字相同（' + SUBJECTS[0].id + ' 坐第 1 位 ‖ 坐末位）');
+      console.log('   ⚑ `regret` 那列是"对榜首的差"，`max` 取自带噪读数 ⇒ **本身正向偏，只当描述、不许拿去判过线**（日志 §二十二 那条）。');
+      const electRaw = String(flag('elected', ''));
+      if (electRaw) {
+        const ei = rows.findIndex(function (r) { return r.id === electRaw || r.wid === electRaw || String(rows.indexOf(r) + 1) === electRaw; });
+        if (ei < 0) { console.error('⛔ --elected 认不出来：' + electRaw + '（榜里的 id：' + rows.map(r => r.id).join(' ‖ ') + '）⇒ 拒绝按"没点到"静默跳过'); process.exit(2); }
+        const rk = order.indexOf(ei) + 1;
+        console.log('   ★ 当选者 ' + rows[ei].id + ' 在榜内名次 **' + rk + '/' + rows.length + '** ‖ gap=' +
+          (rows[ei].diff - meanOfAll >= 0 ? '+' : '') + (rows[ei].diff - meanOfAll).toFixed(2) + 'pt ‖ regret=' +
+          (best.diff - rows[ei].diff).toFixed(2) + 'pt（描述）');
+        HALL_LAST = { mode: mode, rank: rk, n: rows.length, gap: +(rows[ei].diff - meanOfAll).toFixed(2), regret: +(best.diff - rows[ei].diff).toFixed(2) };
+      }
+      console.log('   ⚠ 下面这行自证③是**全臂合起来**的账（榜模式里含所有被考者与参照 ⇒ 与单枚那档同一口径，只是样本更多）。');
+      const s3h = selfTest3(); if (s3h) { fail = s3h; break; }
+      console.log('');
+      rowsOut.push({ mode: mode, sig: SIG, batch: '__mean', subj: rows[0].subj.toFixed(2), ref: mn(per.ref).toFixed(2),
+        diff: rows[0].diff.toFixed(2), subjDraw: mn(HALLPER[0].subjDraw).toFixed(2), refDraw: mn(per.refDraw).toFixed(2),
+        games: per.diff.length + ' 批' });
+      rowsOut.push({ mode: mode, sig: SIG, batch: '__hall', subj: best.subj.toFixed(2), ref: best.id, diff: best.diff.toFixed(2),
+        subjDraw: '—', refDraw: '—', games: rows.length + ' 枚' });
+      HALL_ROWS.push({ mode: mode, sig: SIG, mean: +meanOfAll.toFixed(2), best: best.id, bestDiff: +best.diff.toFixed(2),
+        rows: rows.map(function (r) { return { id: r.id, wid: r.wid, subj: +r.subj.toFixed(2), diff: +r.diff.toFixed(2), sd: +r.sd.toFixed(2), se: +r.se.toFixed(2) }; }) });
+      if (!fail) continue;   /* 榜模式走完自己这套报告，跳过老形状那段（老形状保持一字不变） */
+    }
 
     const mean = v => v.reduce((x, y) => x + y, 0) / v.length;
     const sd = v => { const m = mean(v); return Math.sqrt(v.reduce((x, y) => x + (y - m) ** 2, 0) / Math.max(1, v.length - 1)); };
@@ -319,15 +444,7 @@ if (SUBJECT_ARG) {
       if (!(mS < mR)) { fail = '自证② 不过：`rand` 席 ' + mS.toFixed(2) + '% 不低于参照 ' + mR.toFixed(2) + '% ⇒ 公平份额锚接反了（多半是主体席没换成随机 chooser）'; break; }
       console.log('   ✔ 自证②（公平份额锚）：随机席 ' + mS.toFixed(2) + '% < 参照 ' + mR.toFixed(2) + '%（差 ' + (mR - mS).toFixed(2) + 'pt）');
     }
-    const used = agg.seatCnt.filter(x => x > 0).length, mx = Math.max.apply(null, agg.seatCnt), mn = Math.min.apply(null, agg.seatCnt);
-    if (used < 5 || mx - mn > 1) { fail = '自证③ 不过：主体席只出现在 ' + used + '/5 席（各席 ' + agg.seatCnt.join('/') + ' ⇒ 极差 ' + (mx - mn) +
-      '）⇒ 被考的那一枚没有逐席轮换，读数里掺的是座位'; break; }
-    const noShow = ROSTER.filter(m => !agg.memberG[m.id]);
-    if (noShow.length) { fail = '自证③ 不过：名单里有 ' + noShow.length + ' 枚一场没上（' + noShow.map(m => m.id).join(' ‖ ') + '）⇒ 抽签与席位的接线断了'; break; }
-    if (agg.miss) { fail = '自证③ 不过：' + agg.miss + ' 次决策没分配到成员（落回缺省包）⇒ 组成漏席'; break; }
-    /* 自证③ 每一档都印（**包括 rand 与同枚两臂**）：它证的是"席位接线"，与被考者是包还是随机席无关；
-     *   门 `D234`⑥b 正是靠这一行的存在来判"自证有没有真跑"（不印 = 跳过了自证还报绿）。 */
-    console.log('   ✔ 自证③（席位接线）：主体席逐席 ' + agg.seatCnt.join('/') + ' ‖ ' + ROSTER.length + ' 枚对手全部上场 ‖ 漏席 0');
+    const s3 = selfTest3(); if (s3) { fail = s3; break; }
     console.log('   ⚑ 四席全同 ' + agg.allSame + ' / ' + agg.games + ' 场 ‖ 独立盐 ' + agg.salts.size + ' ‖ 独立"成员×席位"配对 ' + agg.comps.size +
       (agg.comps.size < 200 ? ' ⇒ **<200：逐枚夺冠率不许用来排名次**（文件头第②条），只能当整体读数' : ''));
     console.log('   逐枚对手夺冠率：' + ROSTER.map(m => m.id + ' ' + ((agg.memberW[m.id] || 0) / Math.max(1, agg.memberG[m.id]) * 100).toFixed(1) +
@@ -348,6 +465,9 @@ if (SUBJECT_ARG) {
     dose: DOSE.label, subjectDose: SUBJ_DOSE.label,
     perMode: last.map(r => ({ mode: r.mode, sig: r.sig, subj: +r.subj, ref: +r.ref, diff: +r.diff,
       subjDraw: +r.subjDraw, refDraw: +r.refDraw })),
+    /* 榜模式才加这几个键（单枚时**一个字都不加** ⇒ 老读者/门的解析形状不变，验收线 V1） */
+    ...(IS_HALL ? { hall: true, subjects: SUBJECTS.map(function (s) { return { id: s.id, wid: s.wid }; }),
+      hallRows: HALL_ROWS, elected: HALL_LAST } : {}),
     assertDiff: ASSERT_DIFF }));
   if (ASSERT_DIFF !== null) {
     const worst = last.map(r => r.diff).sort((a, b) => a - b)[0];
