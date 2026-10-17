@@ -170,7 +170,12 @@ export function duelAssembly(deps, params, opts) {
       return r;
     };
     const cs = []; for (let i = 0; i < N; i++) cs.push(i === seat ? (scripted === 'champ' ? mine : scripted) : mine);
-    Play.autoGameN(st, cs);
+    /* §E640 第三个**可选**钩子（与 `chooserFor`/`onGame` 同一先例：默认 undefined ⇒ 在册读数逐字不变）：
+     *   `onTurn(st)` 由 `autoGameN` 在 `resolveActions` + `endTurn` **之后**、下一回合 `startTurn` 之前调用
+     *   （`js/core/play.js:73-75`）⇒ 这是唯一能看到"引擎实际解析出的目标"的时机：
+     *   chooser 返回裸 key 时（脚本席全是这种形状）目标由 `resolveTarget` 兜底，`action` 事件里又不带 target
+     *   ⇒ 不在这里快照，"这一手打给谁/套盾给谁"就永远读不到（`docs/debug/support-probe.mjs` 的藤甲那格第一版就是这么空的）。 */
+    Play.autoGameN(st, cs, o.onTurn || undefined);
     if (onGame) onGame(st, seat, g);      /* §E590：池侧用它统计"哪一枚赢了"（默认 null ⇒ 老读数不动） */
     /* qoder-research 0920（P2 第三行）：**收缩前击杀数** —— 与场B 门禁同口径（`countClears` 单一真源，
      * 只认"收缩开始前打死"，按伤害归属记在击杀者头上）。V4 形状里脚本席只有 1 个 ⇒ 每局合计 ∈ {0,1}。 */

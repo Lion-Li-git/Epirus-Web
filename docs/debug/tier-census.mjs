@@ -23,6 +23,9 @@
  *     就是多跑几局 / 多给几枚 seed / 多换几个原型 —— 不是把同一份组成重复算；
  *   · 出手只数 `type==='action' && outcome==='ok'`（`js/core/state.js:231`；与 `usage-probe`/`log-behavior` 同一判据），
  *     **分母 = 4 个 AI 席的全部成功出手**（含 ジ），**人类那一席不计**；
+ *   · 2026-10-17 夜新增 **席别分解**（每张牌 = 包席次数 ‖ 脚本席次数）：README ① 那张"每张卡各档次/局"表只有合计，
+ *     ⇒ 现读的 全息屏障 0.44 次/局 分不清是手写的 `st:toolkit` 计划层打的还是**训练包席**打的，
+ *     而"冠军会不会做辅助/结盟"这句话的主语只能是包席。两桶之和必须等于合计（自检 ⑤ + 正式跑逐档断言，不等就 exit 7）。
  *   · §E626 另有**逐局**种类一列（含ジ / 不含ジ 两栏，均值 + P10/P50/P90）。为什么并集那格不够用：
  *     卡表只有 30 张，**2 席的臂全都顶到 30 ⇒ 分不开**，而"这一桌我看到了什么"是**每局**的量；
  *     不含ジ = 把"按兵不动/攒"摘掉（ ジ 不是技能），两列的自检：全ジ 合成装配必须逐局 含ジ=1 ‖ 不含ジ=0；
@@ -65,8 +68,11 @@ const PD = W.EpirusPoolDraw, S = W.EpirusState, Play = W.EpirusPlay, T = W.Epiru
 if (!PD || typeof PD.compose !== 'function') { console.error('⛔ `js/pool-draw.js` 没进 sandbox 的 CORE 名单'); process.exit(2); }
 if (!T || typeof T.policyChooserN !== 'function') { console.error('⛔ `js/train/evo.js` 的 policyChooserN 取不到'); process.exit(2); }
 
-/* ===== 出手谱账（唯一一处口径；自检与正式跑共用它，免得"量的是另一个东西"） ===== */
-function newCensus() { return { games: 0, rounds: 0, byKey: Object.create(null), packActs: 0, scriptActs: 0, kindSeen: Object.create(null), pgAll: [], pgSkill: [] }; }
+/* ===== 出手谱账（唯一一处口径；自检与正式跑共用它，免得"量的是另一个东西"） =====
+ * ⚑ `byKeyKind`（2026-10-17 夜新增）：README ① 那张"每张卡各档次/局"表**只有合计、没有席别**
+ *   ⇒ 现读的 全息屏障 0.44 次/局 分不清是脚本席（手写的 `st:toolkit` 计划层）打的还是**训练包席**打的，
+ *   而"冠军会不会做辅助"这句话的主语只能是包席。分桶只多加一份计数，合计那一列逐字不变。 */
+function newCensus() { return { games: 0, rounds: 0, byKey: Object.create(null), byKeyKind: Object.create(null), packActs: 0, scriptActs: 0, kindSeen: Object.create(null), pgAll: [], pgSkill: [] }; }
 function tally(cen, st, seat, kindOfPid) {
   cen.games++; cen.rounds += Number(st.round) || 0;
   /* §E626 逐局种类（用户 10-15 12:0x 要的"一桌一局能见到几种"）：整档并集会顶到卡表天花板（30 张里 2 席的臂全是 30 ⇒ 分不开），
@@ -81,6 +87,9 @@ function tally(cen, st, seat, kindOfPid) {
     const k = (kindOfPid && kindOfPid[pid]) || 'pack';
     cen.kindSeen[k] = (cen.kindSeen[k] || 0) + 1;
     if (k === 'script') cen.scriptActs++; else cen.packActs++;
+    /* 席别分桶：合计与分桶必须**相加闭合**（下面自检钉这条），否则"包席那一列"是另一套账 */
+    const bk = cen.byKeyKind[e.key] || (cen.byKeyKind[e.key] = { pack: 0, script: 0 });
+    bk[k === 'script' ? 'script' : 'pack']++;
   }
   cen.pgAll.push(gAll.size); cen.pgSkill.push(gSkill.size);
 }
@@ -127,15 +136,17 @@ function selfTest() {
     const g = (lg || []).find(x => x.key === R.SK.GUN && x.affordable);
     return g ? { key: R.SK.GUN, target: T.pickTargetN(s, p, R.SK.GUN) } : { key: R.SK.JI, target: null };
   };
-  const run = function (pick, games) {
+  const run = function (pick, games, scriptPids) {
     const cen = newCensus();
     const kindOfPid = {}; for (let i = 0; i < 5; i++) kindOfPid[i] = 'pack';
+    /* 席别桶要**能被碰到**才算自检（分层读数的自检不许只走默认桶）：这里人为把几标记成脚本席 */
+    for (const s of (scriptPids || [])) kindOfPid[s] = 'script';
     duelAssembly({ S: S, Play: Play, T: T, R: R }, params,
       { games: games, mode: 'multi', seed0: 4242, scripted: pick, chooserFor: function (pid) { return pick; },
         onGame: function (st, seat) { tally(cen, st, seat, kindOfPid); } });
     return { cen, sp: spectrum(cen) };
   };
-  const jiR = run(onlyJi, 2), gunR = run(gunFirst, 2);
+  const jiR = run(onlyJi, 2), gunR = run(gunFirst, 2, [2]);
   const ji = jiR.sp, gun = gunR.sp;
   const bad = [];
   if (!(ji.total > 0)) bad.push('① 全ジ装配一手都没数到（events 字段接错线 ⇒ 最像"跑通了"的坏）');
@@ -157,10 +168,26 @@ function selfTest() {
   if (aGun.bad) bad.push('④ 枪优先臂逐局种类不闭合：' + aGun.bad);
   else if (aGun.max > gun.distinct) bad.push('④ 枪优先臂逐局最大 ' + aGun.max + ' 超过整档并集 ' + gun.distinct + ' ⇒ 计数器接错了对象');
   else if (sGun.max > aGun.max) bad.push('④ 两列不自洽：不含ジ 的最大 ' + sGun.max + ' 大于含ジ 的最大 ' + aGun.max);
+  /* ⑤ 席别分桶（README ① 那张表缺的那一列）三条都要咬：
+   *   a 相加闭合（分桶不许是另一套账）‖ b 标了一席脚本的臂**两个桶都必须非 0**（新桶得被走到，正对照自己要有来源）
+   *   ‖ c 全包席臂的脚本桶必须**恰好 0**（反证分桶不是恒等映射） */
+  const bucketBad = []; let bPack = 0, bScript = 0;
+  for (const k of gun.keys) {
+    const bk = gunR.cen.byKeyKind[k];
+    if (!bk) { bucketBad.push(k + ' 缺桶'); continue; }
+    if (bk.pack + bk.script !== gunR.cen.byKey[k]) bucketBad.push(k + '(' + bk.pack + '+' + bk.script + '≠' + gunR.cen.byKey[k] + ')');
+    bPack += bk.pack; bScript += bk.script;
+  }
+  if (bucketBad.length) bad.push('⑤ 席别分桶不闭合：' + bucketBad.slice(0, 6).join(' ‖ '));
+  if (bPack + bScript !== gun.total) bad.push('⑤ 两桶之和 ' + (bPack + bScript) + ' ≠ 合计出手 ' + gun.total + ' ⇒ 分桶与合计是两套账');
+  if (!(bScript > 0 && bPack > 0)) bad.push('⑤ 把 pid2 标成脚本席之后两桶都该非 0，实测 包 ' + bPack + ' ‖ 脚本 ' + bScript + ' ⇒ 新桶根本没被走到');
+  const jiScript = Object.keys(jiR.cen.byKeyKind).reduce((s, k) => s + jiR.cen.byKeyKind[k].script, 0);
+  if (jiScript !== 0) bad.push('⑤ 全包席臂的脚本桶必须恰好 0，实测 ' + jiScript + ' ⇒ 分桶把包席算成了脚本席');
   if (bad.length) { bad.forEach(b => console.error('✘ ' + b)); console.error('⇒ 自检不过：本文件与引擎之间断线了，读数作废'); process.exit(2); }
   console.log('✔ 自检通过（全ジ：' + ji.total + ' 手 / 种类 ' + ji.distinct + ' / G ' + ji.G.toFixed(2) + ' / 防御 0 / 逐局含ジ ' + jiR.cen.pgAll.join(',') +
     ' ‖ 枪优先：' + gun.total + ' 手 / 种类 ' + gun.distinct + ' / 枪占 ' + (100 * gun.shareOf(R.SK.GUN)).toFixed(1) + '% / G ' + gun.G.toFixed(2) +
-    ' / 逐局含ジ ' + gunR.cen.pgAll.join(',') + ' ‖ 逐局不含ジ ' + gunR.cen.pgSkill.join(',') + '）');
+    ' / 逐局含ジ ' + gunR.cen.pgAll.join(',') + ' ‖ 逐局不含ジ ' + gunR.cen.pgSkill.join(',') +
+    ' ‖ ⑤ 席别桶：包 ' + bPack + ' ‖ 脚本 ' + bScript + '（闭合，且全包席臂脚本=0））');
   process.exit(0);
 }
 if (process.argv.includes('--self-test')) selfTest();
@@ -271,6 +298,11 @@ for (const t of picked) {
     ' ‖ 0 种的局 ' + cen.pgSkill.filter(x => x === 0).length + ' 局');
   console.log('   出手谱（占 AI 席有效出手的比例，后括号 = 次/局）：');
   console.log('     ' + sp.keys.map(k => sp.nameOf(k) + ' ' + (100 * sp.shareOf(k)).toFixed(1) + '%(' + sp.perGame(k).toFixed(2) + ')').join(' · '));
+  /* 席别分解（2026-10-17 新增那一列）：合计与分桶必须同一套账，否则"包席会不会做辅助"这句没有主语 */
+  const bkSum = Object.keys(cen.byKeyKind).reduce((s, k) => s + cen.byKeyKind[k].pack + cen.byKeyKind[k].script, 0);
+  if (bkSum !== sp.total) { console.error('⛔ ' + t.id + ' 席别桶合计 ' + bkSum + ' ≠ AI 席有效出手 ' + sp.total + ' ⇒ 分桶是两套账，本行作废'); process.exit(7); }
+  console.log('   **席别分解**（包席 ‖ 脚本席，次/局；两数相加 = 上面那行的括号）：');
+  console.log('     ' + sp.keys.map(k => { const bk = cen.byKeyKind[k]; return sp.nameOf(k) + ' ' + (bk.pack / cen.games).toFixed(2) + '‖' + (bk.script / cen.games).toFixed(2); }).join(' · '));
   const never = (R.skills || []).map(s => s.key).filter(k => !sp.keys.includes(k));
   console.log('   卡表 ' + (R.skills || []).length + ' 张里这一档**一次都没出现**的 ' + never.length + ' 张：' + never.map(k => sp.nameOf(k)).join(' · '));
   console.log('   ⚑ 这 ' + cen.games + ' 场里出现 ' + comps.size + ' 种不同组成 ‖ ' +
@@ -281,7 +313,8 @@ for (const t of picked) {
     comps: comps.size, allSame: AI > 1 ? allSame : 'n/a', miss: miss,
     perGameKinds: { all: { mean: +pga.mean.toFixed(2), p10: pga.p10, p50: pga.p50, p90: pga.p90, min: pga.min, max: pga.max },
       skill: { mean: +pgs.mean.toFixed(2), p10: pgs.p10, p50: pgs.p50, p90: pgs.p90, min: pgs.min, max: pgs.max } },
-    byKey: sp.keys.map(k => [k, cen.byKey[k]]) });
+    byKey: sp.keys.map(k => [k, cen.byKey[k]]),
+    byKeyKind: sp.keys.map(k => [k, cen.byKeyKind[k].pack, cen.byKeyKind[k].script]) });
 }
 console.log('# 机器可读（给门与以后的自己核对用）：');
 console.log(JSON.stringify({ mode: MODE, n: N, aiSeats: AI, table: TABLE, games: G, seeds: SEEDS, protos: PROTOSET.map(p => p[0]), rows: out }));
