@@ -41,7 +41,7 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 /* v1.7.69：只在**本文件是入口**时校验 —— 量具既可能被当 CLI 跑，也可能被别的门 `import` 当模块用；
  *   后者时 `process.argv` 是**调用方**的 argv（例如 gate runner 的 `--part=`），无条件校验会把整轮门禁打红。 */
 if (process.argv[1] && process.argv[1].endsWith("promote-champion.mjs")) {
-  rejectUnknownFlags(process.argv.slice(2), ['assembly', 'champ', 'dry', 'exam-first', 'exam-games', 'force', 'games', 'json', 'mode', 'no-skill-report', 'note', 'packs', 'pair', 'quiet', 'seeds', 'skip-gate-drafts'], "promote-champion");
+  rejectUnknownFlags(process.argv.slice(2), ['assembly', 'champ', 'dry', 'exam-first', 'exam-games', 'force', 'support', 'games', 'json', 'mode', 'no-skill-report', 'note', 'packs', 'pair', 'quiet', 'seeds', 'skip-gate-drafts'], "promote-champion");
 }
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -116,6 +116,16 @@ console.log('   ⚠ A 考卷**只作诊断**：连续两轮它与稳健性反相
  * （罕见技能还没出现 ⇒ 熵被低估）。用 n=10 去卡 `G<3` 等于把噪声当结论（本项目"阈值是刀锋"的第 N 次）。
  * B/C/E/F 几列在 n=10 与 n=20 下读数接近（伤害/局 13.60 → 13.50），所以统一用 20 不影响历史可比性。 */
 const W = sandbox();
+/* v1.7.104（用户 10-18：「试一下送盾多的冠军在新环境下能否进池」）：本工具原来**没法**在 SUPPORT_PRIOR 开档下体检，
+ *   而 `全息屏障套给别人` 那条硬门槛 正是被这个先验改写的对象 ⇒ 加一个透传，**默认不设 = 与出厂一致**。
+ *   ⚠ 只透传，不改默认、不改门槛值（`HOLO_GIFT_MAX = 6` 仍由 `audit-lib` 单点定义）。 */
+const SUPPORT_ARG = flag('support', '');
+if (SUPPORT_ARG !== '') {
+  const n = Number(SUPPORT_ARG);
+  if (W.EpirusTrainer && typeof W.EpirusTrainer.setSupportPrior === 'function') W.EpirusTrainer.setSupportPrior(n);
+  else { console.error('⛔ --support=<0|1|2> 需要引擎导出 setSupportPrior（当前没有）'); process.exit(6); }
+  console.log('[promote] SUPPORT_PRIOR=' + W.EpirusTrainer.supportPriorOn() + '（部署层先验，不是学到的能力）');
+}
 /* v1.5.63：**必须原生读取**（`unpack(json, true)`）。历史包是 v5/v6 形状，`unpack(json)`（默认嵌入 v7）
  * 对它们返回 **null** ⇒ 体检直接崩（实测 eco-34.bak：unpack(j)=null / unpack(j,true)=3337 位）。
  * 规矩见 `audit-lib.loadChamp` 的注释："测量工具必须能读历史形状 —— 保持原生形状读取，不要嵌入"。 */

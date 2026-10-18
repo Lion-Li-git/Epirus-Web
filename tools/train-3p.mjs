@@ -11,7 +11,7 @@ import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径�
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
 import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, rejectNarrowWinners,
-  parseSelSeeds, selBases, scoreRuns, selNote, selGapNote } from './pick-best.mjs';
+  parseSelSeeds, selBases, scoreRuns, selNote, selGapNote, bandFor } from './pick-best.mjs';
 import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
 /* v1.5.269（§E77）：载重 veto 的**同口径量具** —— `behavior-profile` 的 `fieldProfile`（ε=0 · temp 0.15 · 5 席同包）。
  * 该模块的主体被 `if (RUN_AS_MAIN)` 守着 ⇒ **import 无副作用**（只会多装载一次引擎，实测 ~0.5 秒）。 */
@@ -1568,10 +1568,31 @@ for (const h of hall) {
   const zr = densityProfile(sb, h.params, 'multi', 12).zeroAtkRate;
   console.log('  trainFit=' + (typeof h.fit === 'number' ? h.fit.toFixed(3) : '起点') + ' -> 1st=' + (v.firstRate * 100).toFixed(1) +
     '% top2=' + (v.top2Rate * 100).toFixed(1) + '% 零攻击局=' + (zr * 100).toFixed(0) + '% ' + selNote(v));
-  hallEntries.push({ ref: h, score: sc, zeroAtkRate: zr, ev: v });
+  hallEntries.push({ ref: h, score: sc, zeroAtkRate: zr, ev: v, runs: runs });
   if (!ev || sc > ev.sc) { finalParams = h.params; ev = v; }
 }
 {
+  /* v1.7.104（用户 10-18：「做两段式」）：先跑 `SEL.k` 粒；**只有**第 1 与第 2 名的分差落进同分带（= 判不动）时，
+   *   才把 k 追加到 8 粒重验一次 —— 于是在"大多数轮次分差够大"的情况下只付 k 粒的钱。
+   *   同分带按 k 查表（`bandFor`，k=4 ⇒ 5.8pt），不是旧常数 3.0。
+   *   默认**关**（`EPIRUS_SEL_TWO_STAGE=1` 才开）⇒ 不设时与旧行为逐字相同。 */
+  if (process.env.EPIRUS_SEL_TWO_STAGE === '1' && hallEntries.length >= 2) {
+    const srt = hallEntries.slice().sort(function (a, b) { return b.score - a.score; });
+    const gapPt = (srt[0].score - srt[1].score) * 100;
+    const band = bandFor(SEL.k);
+    if (gapPt <= band) {
+      const k2 = Math.min(8, Math.max(SEL.k + 2, 8));
+      const extra = selBases(k2).slice(SEL.k);
+      console.log('[当选键] 两段式：第 1↔2 名分差 ' + gapPt.toFixed(2) + 'pt ≤ 同分带 ' + band.toFixed(1) + 'pt ⇒ 追加 ' + extra.length + ' 粒（k ' + SEL.k + '→' + k2 + '）后再选');
+      for (const e of hallEntries) {
+        for (const b of extra) e.runs.push(T.evalN(e.ref.params, SEL_PAIRS, 20, N, b));
+        e.ev = scoreRuns(e.runs); e.score = e.ev.sc;
+      }
+      console.log('[当选键] 两段式之后：' + selGapNote(hallEntries));
+    } else {
+      console.log('[当选键] 两段式：第 1↔2 名分差 ' + gapPt.toFixed(2) + 'pt > 同分带 ' + band.toFixed(1) + 'pt ⇒ **判得动，不追加**（只付 ' + SEL.k + ' 粒）');
+    }
+  }
   console.log(selGapNote(hallEntries));
   const sel = rejectDegenerateWinners(hallEntries);
   if (sel.dropped) console.log('[退化闸] 剔除 ' + sel.dropped + ' 粒零攻击≥90% 的名人堂成员（与 promote/2P 同判据）');
