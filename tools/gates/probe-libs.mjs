@@ -2,6 +2,7 @@
 {"file":"tools/gates/probe-libs.mjs","part":"probe-libs","group":"probe","ranges":[[4454,4490],[7473,7530],[10069,10312]],"gates":[4454,7473,10069,10201],"patched":[]}
 #np-part-header-end*/
 import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
+import { pairedStats } from '../audit-lib.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
@@ -132,6 +133,18 @@ t('D198 §E136 的配对判读有牙（v1.5.292）：配对不成立要拒、三
   /* 为什么钉这道：`analyze-swap-gain.mjs` 是"把 8 臂变成一个结论"的那一层 ——
    * 它若把"配对不成立"当警告、或把判读分支写死成一条，§E136 的结案就是脚本自己编的。
    * 全部用合成 TSV（tmpdir），一局都不重跑。 */
+/* v1.7.101（用户 10-18：「配对 SE 要成硬规矩」）：配对统计的**三条边界**必须长牙 ——
+ *   以后谁写"涨了 x 分"都得走 `audit-lib.pairedStats`，那它就**不许**在 n=1 时给 SE、
+ *   也不许把 SE=0 印成 t=∞（两种都会把"没量过"伪装成"铁证"）。合成输入，不跑局。 */
+const ps5 = pairedStats([1, 2, 3, 4, 5]);
+ok(ps5.n === 5 && Math.abs(ps5.mean - 3) < 1e-9 && Math.abs(ps5.se - Math.sqrt(0.5)) < 1e-9,
+  '⑨ 已知输入必须给出已知 SE（[1..5] ⇒ mean 3.00 / se √0.5，实测 ' + ps5.mean + ' / ' + ps5.se + '）');
+const ps1 = pairedStats([2]);
+ok(ps1.se === null && String(ps1.why).indexOf('n<2') >= 0,
+  '⑨ **n<2 不许给 SE**（也不许当 0）—— 那是"没有噪声估计"，实测 se=' + ps1.se);
+const ps0 = pairedStats([0, 0, 0]);
+ok(ps0.t === null && String(ps0.why).indexOf('SE=0') >= 0,
+  '⑨ **SE=0 时 t 无定义**，不许印成 Infinity（实测 t=' + ps0.t + '）');
   const dir = mkdtempSync(join(tmpdir(), 'd198-'));
   const NAMES = []; for (let i = 0; i < 24; i++) NAMES.push('n' + i + 'a,n' + i + 'b,n' + i + 'c,n' + i + 'd');
   const tsv = function (firsts, games) {

@@ -1039,3 +1039,34 @@ export function rejectUnknownFlags(argv, known, tool) {
     process.exit(64);
   }
 }
+
+/* v1.7.101（用户 10-18：「配对 SE 要成硬规矩」）：**配对统计的唯一实现**。
+ *   为什么抽到这里：`evaln-noise` / `probe-pool` / `analyze-swap-gain` 各自写了一遍 mean/SE/t，
+ *   而"算术有第二份"在这个仓出过事（§E136 那条就是"配对算术只有一份"）。
+ *   ⚠ 两条**不许含糊**的边界（都是实测踩过的）：
+ *     ① `n < 2` ⇒ **没有噪声估计**，不许返回 `se: 0`（那会被读成"量出来是 0"）；
+ *     ② `se === 0` 且均值非零 ⇒ `t` 无定义，不许写成 `Infinity`（会印出 `t=∞` 当"铁证"）。 */
+export function pairedStats(diffs) {
+  const d = (diffs || []).filter(function (x) { return typeof x === 'number' && isFinite(x); });
+  const pos = d.filter(function (x) { return x > 0; }).length;
+  const neg = d.filter(function (x) { return x < 0; }).length;
+  if (d.length < 2) {
+    return { n: d.length, mean: d.length ? d[0] : NaN, se: null, t: null, pos: pos, neg: neg,
+      why: 'n<2 ⇒ 没有噪声估计（不许把 se 当 0）' };
+  }
+  const n = d.length;
+  const m = d.reduce(function (a, b) { return a + b; }, 0) / n;
+  const sd = Math.sqrt(d.reduce(function (a, b) { return a + (b - m) * (b - m); }, 0) / (n - 1));
+  const se = sd / Math.sqrt(n);
+  return { n: n, mean: m, se: se, t: se > 0 ? m / se : null, pos: pos, neg: neg,
+    why: se > 0 ? null : 'SE=0 ⇒ t 无定义（不许印 t=∞）' };
+}
+/** 一句话判读：`均值 ± SE（t）` + 判得动/判不动。**n<2 或 SE=0 时明说"没有噪声估计"**，不给数字。 */
+export function fmtPaired(label, diffs, unit) {
+  const s = pairedStats(diffs);
+  const u = unit || 'pt';
+  if (!s.se) return '[' + label + '] n=' + s.n + ' ⇒ **' + s.why + '**（均值 ' + (isFinite(s.mean) ? s.mean.toFixed(2) : '?') + u + '，但不可判幅度）';
+  const verdict = Math.abs(s.t) < 2 ? '方向一致、幅度判不动（|t|<2）' : '判得动（|t|≥2）';
+  return '[' + label + '] ' + s.mean.toFixed(2) + ' ± ' + s.se.toFixed(2) + u + '（t=' + s.t.toFixed(2) + '，n=' + s.n +
+    '，同号 ' + s.pos + '+' + s.neg + '−）⇒ ' + verdict;
+}
