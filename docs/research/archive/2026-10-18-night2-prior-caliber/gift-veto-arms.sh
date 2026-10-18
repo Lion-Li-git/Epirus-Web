@@ -9,6 +9,13 @@ HERE="$(cd "$(dirname "$0")" && pwd)"; REPO="$(cd "$HERE/../../../.." && pwd)"  
 cd "$REPO" || { echo "⛔ 进不去 REPO=$REPO"; exit 9; }
 SEEDPACK="docs/artifacts/v7beadseed-82.bak"
 LOG="$HERE/gift-veto-arms.log.txt"; : > "$LOG"
+# ⚑ 单实例锁（本班真实事故的产物：11:2x 我一边跑这个脚本一边改它 ⇒ 旧驱动仍在跑旧逻辑，与新驱动往同一个日志里交错写，
+#    日志里同时出现 rc=0/rc=127 与乱序臂名 ⇒ 那批数据整个作废）。改脚本之前必须按 PID 确认老进程已经收干净。
+LOCK="$HERE/.gift-veto-arms.lock"
+if [ -f "$LOCK" ] && kill -0 "$(cat "$LOCK" 2>/dev/null)" 2>/dev/null; then
+  echo "⛔ 已有一个实例在跑（pid $(cat "$LOCK")）⇒ 拒绝第二个：两个写者往同一个日志追加，事后分不出谁是谁" | tee -a "$LOG"; exit 1
+fi
+echo $$ > "$LOCK"; trap 'rm -f "$LOCK"' EXIT
 [ -f "$SEEDPACK" ] || { echo "⛔ 起点不在盘上：$SEEDPACK" | tee -a "$LOG"; exit 8; }
 echo "# §E650 臂批：start=$SEEDPACK 120代 × 3 seed × {veto=0,1} ‖ 起 $(date '+%F %T')" >> "$LOG"
 n=0
