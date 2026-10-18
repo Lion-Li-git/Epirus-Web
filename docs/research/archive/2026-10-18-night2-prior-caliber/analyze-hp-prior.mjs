@@ -46,6 +46,14 @@ for (const f of FILES) {
     const id = c[h.id], page = Number(c[h.page]), bare = Number(c[h.pageBare]), exam = Number(c[h.exam]);
     if (!id || !isFinite(page) || !isFinite(bare) || !isFinite(exam)) { console.error('⛔ 不合法的一行（不许静默丢分母）：' + l); process.exit(3); }
     if (c[h.support] !== '2') { console.error('⛔ ' + id + ' 的 support=' + c[h.support] + ' ⇒ 这批混档了'); process.exit(3); }
+    /* 结构性牙（免费的）：`d` 既然声明是"从裸包表搬来的 Δε"，就必须恒等于 `exam − pageBare`。
+     *   不等只有三种可能：① `--examFrom` 指错了表；② 搬运那一步错位（本仓 §E375 那族"只错一行、无声无息"）；③ 这行的 page 被写进了 d 的位置。
+     *   三种都要当场拦，不许"看着差不多"。 */
+    const dCell = Number(c[h.d]);
+    if (isFinite(dCell) && Math.abs(dCell - (exam - bare)) > 0.011) {
+      console.error('⛔ ' + id + ' 的 `d`=' + dCell + ' 与 `exam − pageBare`=' + (exam - bare).toFixed(2) + ' 不等 ⇒ 搬运错位或指错表，停下');
+      process.exit(5);
+    }
     const key = id + '|' + c[h.mode];
     const d = +(page - bare).toFixed(2);
     if (seen[key] !== undefined && seen[key] !== d) { console.error('⛔ 同一个键两个不同 Δ：' + key + ' ⇒ ' + seen[key] + ' ↔ ' + d); process.exit(4); }
