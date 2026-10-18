@@ -119,7 +119,8 @@ const W = sandbox();
 /* v1.7.104（用户 10-18：「试一下送盾多的冠军在新环境下能否进池」）：本工具原来**没法**在 SUPPORT_PRIOR 开档下体检，
  *   而 `全息屏障套给别人` 那条硬门槛 正是被这个先验改写的对象 ⇒ 加一个透传，**默认不设 = 与出厂一致**。
  *   ⚠ 只透传，不改默认、不改门槛值（`HOLO_GIFT_MAX = 6` 仍由 `audit-lib` 单点定义）。 */
-const SUPPORT_ARG = flag('support', '');
+/* v1.7.112（用户 10-18「都改成默认 2」）：页面已默认开档 2 ⇒ 本工具**默认也按 2 体检**（`--support=0` 才回到出厂口径）。 */
+const SUPPORT_ARG = flag('support', '2');
 if (SUPPORT_ARG !== '') {
   const n = Number(SUPPORT_ARG);
   if (W.EpirusTrainer && typeof W.EpirusTrainer.setSupportPrior === 'function') W.EpirusTrainer.setSupportPrior(n);

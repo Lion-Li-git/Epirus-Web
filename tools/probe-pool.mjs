@@ -100,7 +100,7 @@ if (members.length < 2) {
 
 const W = sandbox();
 /* v1.7.111：`--support=<0|1|2>` 把送盾先验带上这把尺（页面已默认开档 2 ⇒ A/B 要能在同一把尺上开关）。 */
-const SUPPORT = flag('support', '');
+const SUPPORT = flag('support', '2');   /* v1.7.112：页面已默认开档 2 ⇒ 这把尺也默认 2（`--support=0` 才关；口径变了，旧读数不许并排读） */
 if (SUPPORT !== '' && ['0','1','2'].indexOf(SUPPORT) < 0) { console.error('⛔ --support= 只能是 0/1/2（收到 `' + SUPPORT + '`）'); process.exit(2); }
 if (SUPPORT !== '') { if (typeof W.EpirusTrainer.setSupportPrior !== 'function') { console.error('⛔ 引擎没导出 setSupportPrior'); process.exit(2); } W.EpirusTrainer.setSupportPrior(Number(SUPPORT)); }
 const PD = W.EpirusPoolDraw;
