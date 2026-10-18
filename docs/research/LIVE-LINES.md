@@ -13,12 +13,18 @@
 | 线 | 归属 | HEAD | 动的面 | 状态 | 继续做之前的入口条件 |
 |---|---|---|---|---|---|
 | `main` | 公共脊柱 | 以第三节命令为准（**不在本表写死 SHA**：写死的那一行会被自己的下一笔提交过期掉） | — | **活** | 主工作树 `D:/code/Epirus-Web` **常驻这里**，不许切走 |
-| `research/feat-ring-2026-10-18` | DS | `4d0b68c`（落后 main 3 / 领先 2） | `js/train/policy.js` 动作段 +2 维 ‖ `VER_SHAPES` 补 v7 ‖ 两个 bundle 的 `rulesFingerprint` 重记 ‖ `unpack` **严格路径**里的旧形状旁路 | **parked（DS 自判"不能当能训用"，千问同尺复跑过 D161 与 D34 两条红）** | ① 旧包嵌入链（`shapeOf→embedLegacy→loadAny→value(sh)`）当**一笔完整改动**做完；② D34/D161 复跑绿；③ 版本改用 **v1.8.0**（`v1.7.99` 已被时机闸用掉，注释里同号是两件事）；④ 新加的旁路挪进 `allowLegacy` 分支或明写"产品也接旧形状包"这条改裁定；⑤ 知道 §E642 那条——**新两维从目标算 ⇒ 对 `target:'self'` 恒零 ⇒ 不缓解动作段混叠** |
+| `research/feat-ring-2026-10-18` | DS | `4d0b68c` | `js/train/policy.js` 动作段 +2 维 ‖ `VER_SHAPES` 补 v7 ‖ 两个 bundle 指纹 | **parked（15:33 归档，不复活）**：① §E642 证明这两维对 `target:'self'` 恒零 ⇒ 救不了编码混叠；② 实测打坏旧包嵌入链（`D34`/`D161` 双红）⇒ 加维要动整条 `shapeOf→embedLegacy→loadAny→value(sh)`。结论已进 §E642 与 v1.7.99。**要再动加维请新开分支且先读这两条。** |
 | （无）千问这边 | 千问 | 已并 main 的 §E642/§E643/§E644 | 只有 `docs/research/logs/2026-10-18-beadseed82-qoder.md` | **已并**（分支已删） | — |
 | `D:/wt-qoder-1018` | 千问 | detached worktree（main 的 **14:31 快照**） | 只读测量（`scratch/` 里 §E643/§E644 那几台的 `ROOT` 硬编码指向这里） | **活 · 测量用** | ⚠ 它不会自动跟上新提交 ⇒ 引它跑出的数必须写清快照点；摘除前先在本表销行（否则重跑 ENOENT，见规矩 ②） |
 
 历史遗留的**测量用**工作树（都不是活跃研究线，也**不属于本表要管的线**，别去动它们）：
 `C:/Users/14765/AppData/Local/Temp/epi-base` ‖ `…/epirus-v177-ctl` ‖ `D:/tmp-ci-repro` ‖ `D:/tmp-ci-repro-A`。
+
+## 一·补　待办（不属于某条研究线，但别让它烂掉）
+
+| 待办 | 读数 / 入口 | 状态 |
+|---|---|---|
+| **证据腐化**：`champion-map/coords.tsv` 里指向「不在 git 里的本机 `.bak`」的行 | `node tools/evidence-rot.mjs`（只读）⇒ 实测 **803 行里 101 可复算 / 702 只活在本机 / 0 已腐化**（15:32:54） | **只记录**，不做门（规矩 2：摘哪条要用户裁）。**清理 `docs/artifacts/` 之前必须先跑一遍。** |
 
 ## 二、规矩（这次定下来的四条，都是踩过之后写的）
 
