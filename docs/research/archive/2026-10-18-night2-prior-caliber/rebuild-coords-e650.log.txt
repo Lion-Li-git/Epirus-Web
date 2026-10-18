@@ -1,0 +1,51 @@
+--from 缺省取 git HEAD 那一版 ⇒ docs/artifacts/e375-out/coords-from-git.tsv（804 行）
+几何输入 champion-map/ruler120-2026-10-10-all.tsv,champion-map/ruler-all.tsv,champion-map/e370-ruler.tsv ‖ 上一版 coords.tsv = docs/artifacts/e375-out/coords-from-git.tsv
+现测尺 3 张：champion-map/ruler120-2026-10-10-all.tsv ‖ champion-map/ruler-all.tsv ‖ champion-map/e370-ruler.tsv
+—— ① ruler-figs 画几何 ——
+三维力导向：Spearman=0.698 ‖ recall@15=29.9% ‖ 能反推 12/14 列（超额 R² 平均 0.373）‖ 反推 H 的 R²=0.20
+★ 现役（slot-identity.live）= T8-s114（wid 24d8fa30）
+已写 e287-ladder.svg ‖ e287-map2.svg ‖ e287-map3.svg ‖ e287-figs.html ‖ e287-coords.tsv
+—— ② attach-hp 头号尺（来源 epsfull-hp-final-2026-10-19.tsv ‖ 补 e328-epsfull.tsv ‖ e370-epsfull.tsv） ——
+覆盖 794/794
+已写 coords.tsv（新增两列：Hp = 线上口径夺1率 ‖ De = Δε = 考卷 − 页面；原 26 列一字未动）
+Δε 分位 p50 0.10 ‖ p90 2.00 ‖ 吃探索(Δε<0) 455/986
+—— ③ attach-path 真用的文件 ——
+  路径全部来自显式来源 ✅（现测尺 794 枚 + 现役特例 1 枚 ‖ 带 kin 0 ‖ 带 lineage 211）
+回读守卫 ✅ 794 行 × 29 列，path 列无脏尾
+已写 D:\code\Epirus-Web\champion-map\coords.tsv：794 枚全部有 path ‖ 其中按现测尺贴的子目录件 794 枚（kin 非空的 0 枚）‖ 显式来源 794 枚 ‖ 走顶层 <id>.bak 约定 0 枚
+—— ④ attach-dup 权重身份去重 ——
+回读守卫 ✅ 794 行 ‖ 按 dupN 加权的"不同权重数" = 794.0（应等于去重表 794）
+已写 D:\code\Epirus-Web\champion-map\coords.tsv：794 行 ‖ 权重身份去重 = 794 个（读不出 wid 的 0 枚各算一个）‖ 同权重多名的组 = 0 组，覆盖 0 行
+—— ⑤ proj-tsne 重算投影（xt/yt/xt3/yt3/zt3） ——
+§E605-C 中位秩 ‖ 有并列的轴：dmg 658/794 ‖ heavy 645/794 ‖ holo 689/794 ‖ rounds 262/794 ‖ drawRate 793/794 ‖ zeroRate 793/794 ‖ seatSpread 423/794 ‖ distinctKeys 773/794 ‖ charges 563/794 ‖ waste 555/794 ‖ noThreatStance 584/794 ‖ fieldAAtk 159/794
+  t-SNE(perp=30, iters=500, seed=7)：Spearman=0.364  kNN@10=0.48   （旧 x2/y2 基线：0.365 / 0.08）
+  已写 D:\code\Epirus-Web\champion-map\coords.tsv（新增/覆盖列 xt yt xt3 yt3 zt3）
+⑥ 盖档 ✅ 新列 examG = 120 局/组合，写在第 37 列（794 行无一为空）
+—— ⑦ fold-coords 折行 ——
+守卫② 两边都有值且不同 ⇒ **不搬、原样记进副名表 aliasDiff** = 13 格（涉及 2 个副名）
+读数不一致的副名 = 0 条
+多数组的主名是凭什么定的：
+✔ 折完并回读通过：794 行 × 39 列 ‖ 副名 192 条全部落到 coords-aliases.tsv ‖ id 唯一
+—— ⑧ relabel-lineage 身份从解析来（折行之后） ——
+⚠ ③ 类不一致（有身份、解析说没上过槽）2 枚，**这台不动它们**：v7new6-94(历代上槽) ‖ v7new6-96(历代上槽)
+✔ 回读复核过：改 5 格 ‖ `当前线上` 余 0 ‖ 行数 796 ‖ 每行 39 列 ‖ id 逐行对齐
+（备份在 D:\code\Epirus-Web\champion-map\coords.tsv.pre-e600.bak，这台不动 git）
+⚠ kin 非空 116 ‖ 名单 183 —— 差的那几枚在面板里没有行
+—— ⑨ attach-kin 搬当选键 + 打 kin + 冠军对账 ——
+守卫 ✅ 冠军 35 = 旧表 35 + 本轮新增旧槽位冠军 0（旧表该类 16）
+  §E605 保留下 1 枚"既当过槽、又有续训子代"的行（kin 与 lineage 同行，解析认它上过槽）：Ldemo(历代上槽)
+已写 coords.tsv：794 枚 ‖ lineage 非空（真冠军）35 ‖ kin 非空 116
+—— ⑩ attach-hlong 长程桌三列 + 全腿长程过线（来源 epsfull-hlong-final-2026-10-19.tsv） ——
+已写 coords.tsv：五列 Hlong/Hplong/Flong/okLong/failsLong（T=0.1）‖ 考卷/页面量到 794 ‖ 没量到 0 ‖ 过线(全腿长程) 794 ‖ 无 0
+⚠ 坐标一列未动 —— 点坐标是**行为轴**（探针列），换桌形不改它们；变的只有颜色与一维排序。
+⚠ 绿环（在册 `ok`）也**没动** —— 把环换成"全腿长程"等于换判据的主语，那是另一件要裁的事（日志 #47）。
+
+产物 794 行 × 49 列 ‖ 列序 id,lineage,seed,H,S,Geff,F,rank,x2,y2,x3,y3,z3,dmg,heavy,holo,rounds,drawRate,zeroRate,seatSpread,distinctKeys,charges,waste,noThreatStance,fieldAAtk,rwDmg,Hp,De,path,dupN,dupOf,xt,yt,xt3,yt3,zt3,examG,aliasN,aliasIds,Sc,Scd,Scs,Sch,kin,Hlong,Hplong,Flong,okLong,failsLong
+身份分布 层内 644 ‖ 续训现役 114 ‖ 父链 1 ‖ 历代上槽 19 ‖ 旧槽位冠军 16
+投影自证 ✅ xt/yt/xt3/yt3/zt3 五列齐全，794 行全是数（旧力导向那套 x2/y2 仍在表里，只是不再被页面取用）
+头号尺自证 ✅ Hp/De 两列 794 行无一为空（空值会被查看器当 0 ⇒ 名次假倒数）
+单档与折行自证 ✅ 全图 794 枚同一档（examG=120）‖ aliasN/aliasIds 在册 ‖ id 唯一
+⛔ 这一趟重建弄丢了 9 枚（在册、既没留行也不在任何副名账里）：G12H1 clone-79101 Z1 Z2 t5-151-ringon t5-151-ringoff t5-G12H1-ringon t5-G12H1-ringoff t5-T8-ringon
+       最常见的原因是 `--extra=` **替换**了几何输入而没带上上一批那张尺表 ⇒ 那些枚拿不到几何就被丢掉了。
+       修法：把它们一起喂进来，例如 --extra=champion-map/eNN-上一批-ruler.tsv,champion-map/eNN-本批-ruler.tsv
+       （回滚用：git checkout -- champion-map/coords.tsv）
