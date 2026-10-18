@@ -1,0 +1,26 @@
+# 送盾超线包 · 松绑版(SUPPORT_PRIOR=2, skipP=0.6) 复测 · 门槛 6
+# id	file	multi_off	long_off	multi_on	long_on	新环境
+mix-31	docs/artifacts/mix-31.bak	74.03	151.25	74.03	151.25	FAIL
+mix-34	docs/artifacts/mix-34.bak	75.93	183.53	75.93	183.53	FAIL
+sty-35	docs/artifacts/sty-35.bak	46.05	99.40	46.05	99.40	FAIL
+v7a-31	docs/artifacts/v7a-31.bak	15.67	30.78	2.37	5.15	PASS
+v7bead15-93	docs/artifacts/v7bead15-93.bak	14.60	6.58	1.72	1.32	PASS
+v7bead3-93	docs/artifacts/v7bead3-93.bak	8.78	19.00	3.92	6.92	FAIL
+v7m2_noEffects-33	docs/artifacts/v7m2_noEffects-33.bak	9.88	3.53	0.77	0.17	PASS
+v7smoke-31	docs/artifacts/v7smoke-31.bak	8.50	11.43	1.27	1.17	PASS
+v7stock1-82	docs/artifacts/v7stock1-82.bak	37.68	24.00	2.35	3.07	PASS
+v7wall-33	docs/artifacts/v7wall-33.bak	7.45	21.53	2.22	3.42	PASS
+v9-32	docs/artifacts/v9-32.bak	13.43	30.22	2.20	4.52	PASS
+mix-32	docs/artifacts/mix-32.bak	42.78	95.80	42.78	95.80	FAIL
+sty-36	docs/artifacts/sty-36.bak	110.83	247.57	110.83	247.57	FAIL
+v7expo-33	docs/artifacts/v7expo-33.bak	8.88	16.00	4.57	9.18	FAIL
+v7f5div3-31	docs/artifacts/v7f5div3-31.bak	11.07	10.58	1.72	3.50	PASS
+v7s8-93	docs/artifacts/v7s8-93.bak	4.83	11.43	0.53	1.48	PASS
+v7teach-32	docs/artifacts/v7teach-32.bak	80.78	180.20	7.90	15.88	FAIL
+v7wall-34	docs/artifacts/v7wall-34.bak	18.58	29.98	1.88	2.68	PASS
+v16-135	docs/artifacts/v16-135.bak	10.55	94.57	0.35	1.30	PASS
+v7beadseed-82	docs/artifacts/v7beadseed-82.bak	16.47	51.00	4.15	5.42	PASS
+v7expo-34	docs/artifacts/v7expo-34.bak	115.00	260.00	7.65	15.58	FAIL
+v7f2t-31	docs/artifacts/v7f2t-31.bak	15.15	24.80	1.93	1.97	PASS
+v7press3-31	docs/artifacts/v7press3-31.bak	15.58	14.05	0.97	1.87	PASS
+v7tgt2-52	docs/artifacts/v7tgt2-52.bak	5.40	8.15	1.25	2.68	PASS
