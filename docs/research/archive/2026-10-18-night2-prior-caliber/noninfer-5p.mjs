@@ -11,11 +11,13 @@ import path from 'node:path';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
 const { sandbox, loadChamp, pairedStats, rejectUnknownFlags, landShareOf } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
-rejectUnknownFlags(process.argv.slice(2), [], 'noninfer-5p');   /* 不吃旗标 ⇒ 任何 `--x=` 都该 exit 64 */
+const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
+rejectUnknownFlags(process.argv.slice(2), ['pfx'], 'noninfer-5p');
+const PFX = String(arg('pfx', 'gv'));   /* 第二个起点用 `--pfx=tw`（产物名 = `<前缀>{0,1}-<seed>.winner.js`） */
 const SEEDS = [77000, 77001, 77002];
 const prodOf = a => path.join(HERE, 'arms', a + '.winner.js');
 for (const s of SEEDS) for (const v of [0, 1]) {
-  const p = prodOf('gv' + v + '-' + s);
+  const p = prodOf(PFX + v + '-' + s);
   if (!existsSync(p)) { console.error('⛔ 产物不在盘上：' + p + ' ⇒ 读不出，别用别的格顶'); process.exit(2); }
 }
 /* 名单签名由 `arms/MANIFEST.tsv.txt` 记着（每格的权威源与权重本体 sha8）；这台只量两把尺，不重述它 */
@@ -32,7 +34,7 @@ const one = (seed, arm) => {
 console.log('# §E650 三.2 强度非劣（尺 = `eval-5p` 考卷 200 局 × 5 席 multi，同 seed 配对 ‖ 差 = 开档产物 − 关档产物）');
 const diffs = [];
 for (const s of SEEDS) {
-  const off = one(s, 'gv0-' + s), on = one(s, 'gv1-' + s);
+  const off = one(s, PFX + '0-' + s), on = one(s, PFX + '1-' + s);
   const d = on - off; diffs.push(d);
   console.log('  seed ' + s + '  关档 1st=' + off.toFixed(1) + '%  开档 1st=' + on.toFixed(1) + '%  Δ=' + (d >= 0 ? '+' : '') + d.toFixed(2) + 'pt');
 }
@@ -52,11 +54,11 @@ const share = a => landShareOf(W, T.mirrorHealth(loadChamp(W, prodOf(a), ROOT), 
 console.log('臂'.padEnd(14) + '关档份额'.padEnd(12) + '开档份额'.padEnd(12) + 'Δ(pt)'.padEnd(10) + '关档主落卡 ‖ 开档主落卡');
 let worst = 0; const shares = [];
 for (const s of SEEDS) {
-  const off = share('gv0-' + s), on = share('gv1-' + s);
+  const off = share(PFX + '0-' + s), on = share(PFX + '1-' + s);
   shares.push(off.share, on.share);
   const dd = (on.share - off.share) * 100;
   if (dd > worst) worst = dd;
-  console.log(('gv·' + s).padEnd(14) + (off.share * 100).toFixed(1).padEnd(12) + (on.share * 100).toFixed(1).padEnd(12) +
+  console.log((PFX + '·' + s).padEnd(14) + (off.share * 100).toFixed(1).padEnd(12) + (on.share * 100).toFixed(1).padEnd(12) +
     (dd >= 0 ? '+' : '') + dd.toFixed(1) + 'pt'.padEnd(5) + '   ' + off.key + ' ‖ ' + on.key);
 }
 console.log('  §三.3 的线（开档不得比关档恶化 >10pt）⇒ 最大恶化 ' + worst.toFixed(1) + 'pt ⇒ **判词：' + (worst > 10 ? '广度塌了' : '没塌') + '**');

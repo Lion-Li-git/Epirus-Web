@@ -12,13 +12,21 @@ import path from 'node:path';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
 const { sandbox, loadChamp, rejectUnknownFlags } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
-rejectUnknownFlags(process.argv.slice(2), [], 'analyze-gift-arms');   /* 这台不吃旗标 ⇒ 空名单 = 任何 `--x=` 都该 exit 64 */
+rejectUnknownFlags(process.argv.slice(2), ['log', 'pfx'], 'analyze-gift-arms');
+const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
+/* `--pfx=` 是臂名与 band 目录的前缀：第二个起点用 `--log=gift-veto-arms-tw.log.txt --pfx=tw`（PREREG §三.4 要两起点才许升格）。
+ *   换起点**必须**换前缀 ⇒ 否则两批往同一份 `arms/<臂>.winner.js` 与同一个 band 目录里写，事后分不出谁是谁。 */
+const PFX = String(arg('pfx', 'gv'));
 const W = sandbox(ROOT); const T = W.EpirusTrainer;
-const LOGF = path.join(HERE, 'gift-veto-arms.log.txt');
-if (!existsSync(LOGF)) { console.error('⛔ 还没有臂批日志 ⇒ 读不出（别写"没影响"）'); process.exit(2); }
+const LOGF = path.join(HERE, String(arg('log', 'gift-veto-arms.log.txt')));
+if (!existsSync(LOGF)) { console.error('⛔ 还没有臂批日志（' + LOGF + '）⇒ 读不出（别写"没影响"）'); process.exit(2); }
 const lines = readFileSync(LOGF, 'utf8').replace(/\r\n/g, '\n').split('\n').filter(l => l.indexOf('ARM ') === 0);
 if (!lines.length) { console.error('⛔ 日志里没有 ARM 行 ⇒ 这批没跑成'); process.exit(2); }
 T.setSupportPrior(0);   // 全部按**裸包**量：这一节问的是"包自己送不送盾"，不是"开档后剩多少"
+const { createHash } = await import('node:crypto');
+/* 权重本体 sha8（与门 D191③ / `dedupe-artifacts` 同一判据：比 `.a` 数组，不比文件字节）
+ *   ⇒ 它是**唯一能看出"两臂当选同一粒"的量**：数值读数在结构零上是 0.00，看着像"测过且无差异"。 */
+const widOf = abs => { const p = loadChamp(W, abs, ROOT); return p ? createHash('sha1').update(JSON.stringify(p.a || p)).digest('hex').slice(0, 8) : null; };
 const giftOf = function (abs, games) {
   const p = loadChamp(W, abs, ROOT);
   if (!p) return null;
@@ -40,8 +48,8 @@ function winnerOf(arm) {
    *   再看 `docs/artifacts/` 里那一版；两个都找不到才报"找不到"。
    *   为什么以归档为准：批收尾会把 `pack-aliases.tsv` 里本批追加的登记行还原 ⇒ 池里那些 band 就成了"未登记的重复"，
    *   门 D191④ 会红（实测 unregistered 从 0 跳到 19）⇒ 收尾必须把 `gv-*` 移出共享产物池，那时只有 arms/ 这份还在。 */
-  const archived = bandSel.length ? path.join(HERE, 'arms', 'gv-' + arm + '--' + bandSel[0] + '.bak') : null;
-  const live = bandSel.length ? path.join(ROOT, 'docs/artifacts/gv-' + arm, bandSel[0] + '.bak') : null;
+  const archived = bandSel.length ? path.join(HERE, 'arms', PFX + '-' + arm + '--' + bandSel[0] + '.bak') : null;
+  const live = bandSel.length ? path.join(ROOT, 'docs/artifacts/' + PFX + '-' + arm, bandSel[0] + '.bak') : null;
   const bandPath = archived && existsSync(archived) ? archived : (live && existsSync(live) ? live : null);
   const copy = path.join(HERE, 'arms', arm + '.winner.js');
   let prod = null, how = '';
@@ -61,28 +69,39 @@ function winnerOf(arm) {
 }
 const rows = [];
 for (const l of lines) {
-  const m = /^ARM gv([01])-(\d+) rc=(\d+)/.exec(l);
-  if (!m) { console.error('⛔ ARM 行解析不了：' + l); process.exit(3); }
-  const veto = m[1], seed = m[2], arm = veto + '-' + seed;
-  const w = winnerOf('gv' + arm);
-  let g20 = null, g100 = null;
-  if (w.prod) { g20 = giftOf(w.prod, 20); g100 = giftOf(w.prod, 100); }
-  rows.push({ veto: veto, seed: seed, rc: m[3], prod: w.prod, how: w.how, allSpam: w.allSpam, gate: w.gate, g20: g20, g100: g100, missing: w.missing });
+  const m = new RegExp('^ARM ' + PFX + '([01])-(\\d+) rc=(\\d+)').exec(l);
+  if (!m) { console.error('⛔ ARM 行解析不了（前缀按 `--pfx=' + PFX + '` 找）：' + l); process.exit(3); }
+  const veto = m[1], seed = m[2];
+  const w = winnerOf(PFX + veto + '-' + seed);
+  let g20 = null, g100 = null, wid = null;
+  if (w.prod) { g20 = giftOf(w.prod, 20); g100 = giftOf(w.prod, 100); wid = widOf(w.prod); }
+  rows.push({ veto: veto, seed: seed, rc: m[3], prod: w.prod, how: w.how, wid: wid, allSpam: w.allSpam, gate: w.gate, g20: g20, g100: g100, missing: w.missing });
 }
-console.log('# §E650 六臂收口（裸包送盾 = `mirrorHealth(multi)` @20/@100 局 ‖ 线 = `HOLO_GIFT_MAX` = 6）');
-console.log('臂'.padEnd(14) + 'seed'.padEnd(8) + 'veto'.padEnd(6) + 'rc'.padEnd(5) + '@20局'.padEnd(9) + '@100局'.padEnd(9) + 'allRejected'.padEnd(12) + '备注');
+console.log('# §E650 六臂收口（pfx=' + PFX + ' ‖ 裸包送盾 = `mirrorHealth(multi)` @20/@100 局 ‖ 线 = `HOLO_GIFT_MAX` = 6）');
+console.log('臂'.padEnd(14) + 'seed'.padEnd(8) + 'veto'.padEnd(6) + 'rc'.padEnd(5) + '权重sha8'.padEnd(11) + '@20局'.padEnd(9) + '@100局'.padEnd(9) + 'allRejected'.padEnd(12) + '备注');
 for (const r of rows) {
-  console.log(('gv' + r.veto).padEnd(14) + r.seed.padEnd(8) + r.veto.padEnd(6) + r.rc.padEnd(5)
+  console.log((PFX + r.veto).padEnd(14) + r.seed.padEnd(8) + r.veto.padEnd(6) + r.rc.padEnd(5)
+    + String(r.wid || '读不出').padEnd(11)
     + (r.g20 === null ? '读不出' : r.g20.toFixed(2)).padEnd(9)
     + (r.g100 === null ? '读不出' : r.g100.toFixed(2)).padEnd(9)
     + (r.allSpam ? '⛔ 全超线' : '否').padEnd(12)
     + (r.missing || '') + (r.prod ? ' ‖ 产物 ' + path.basename(r.prod) + '（' + r.how + '）' : ''));
 }
+/* 结构零点名：同一 seed 的两臂若当选**同一粒权重**，那格的 Δ 恒零、不是"测过且无差异" ⇒ 从分母里摘出去报 */
+const pairsSame = [];
+for (const r of rows.filter(x => x.veto === '1')) {
+  const mate = rows.find(x => x.veto === '0' && x.seed === r.seed);
+  if (mate && r.wid && mate.wid && r.wid === mate.wid) pairsSame.push(r.seed);
+}
+if (pairsSame.length) console.log('  ⚑ seed ' + pairsSame.join(' ‖ ') + ' 那格两臂当选**同一粒权重** ⇒ 该格任何"差"都是恒零（自反对照），**不计入**分母');
 const off = rows.filter(r => r.veto === '0'), on = rows.filter(r => r.veto === '1');
 const med = a => { const v = a.filter(x => x !== null).sort((p, q) => p - q); return v.length ? v[Math.floor(v.length / 2)] : null; };
 console.log('\n## 预注册 §三 的逐条判读');
 console.log('  主判据（开档 ≤6 且 关档 >6，@100 局）：开档中位 ' + (med(on.map(r => r.g100)) === null ? '读不出' : med(on.map(r => r.g100)).toFixed(2))
   + ' ‖ 关档中位 ' + (med(off.map(r => r.g100)) === null ? '读不出' : med(off.map(r => r.g100)).toFixed(2)));
+const onReal = on.filter(r => pairsSame.indexOf(r.seed) < 0), offReal = off.filter(r => pairsSame.indexOf(r.seed) < 0);
+console.log('  §三.1 去掉"同一粒"那格之后（分母 ' + onReal.length + ' 格）：开档中位 ' + (med(onReal.map(r => r.g100)) === null ? '读不出' : med(onReal.map(r => r.g100)).toFixed(2))
+  + ' ‖ 关档中位 ' + (med(offReal.map(r => r.g100)) === null ? '读不出' : med(offReal.map(r => r.g100)).toFixed(2)));
 const nSpam = on.filter(r => r.allSpam).length;
 console.log('  §三.5 全被挡那一格：开档臂里 ' + nSpam + '/' + on.length + ' 臂出现 allRejected'
   + (nSpam ? ' ⇒ 按预注册记"这条线在该谱系上剪不出合格当选者"，**不许**读成"veto 无效"，也不许读成"包学会了少送"' : ''));
