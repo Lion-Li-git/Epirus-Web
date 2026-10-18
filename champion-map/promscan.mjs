@@ -44,7 +44,10 @@ const HOLO = {};
 if (existsSync(join(HERE, 'holo.tsv'))) {
   const hl = readFileSync(join(HERE, 'holo.tsv'), 'utf8').trim().split('\n');
   const hh = hl[0].split('\t'), hi = hh.indexOf('id'), hg = hh.indexOf('holoOther');
-  for (const l of hl.slice(1)) { const c = l.split('\t'); if (c[hi]) HOLO[c[hi]] = +c[hg]; }
+  /* v1.7.111：页面默认开送盾先验（档 2）⇒ 体检要用**产品口径**的值。
+ *   `holo.tsv` 的 `holoOther` 是**裸包**实测，`holoOtherPrior2` 是**开档 2**实测 ⇒ 有后者就用后者（否则入库口径与真机不一致）。 */
+const hp2 = hh.indexOf('holoOtherPrior2');
+for (const l of hl.slice(1)) { const c = l.split('\t'); if (!c[hi]) continue; HOLO[c[hi]] = (hp2 >= 0 && c[hp2] !== undefined && c[hp2] !== '') ? +c[hp2] : +c[hg]; }
 }
 
 const rows = [];

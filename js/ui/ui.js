@@ -7,6 +7,12 @@
   const Play = window.EpirusPlay, Bots = window.EpirusBots;
   const P = window.EpirusPolicy, Trainer = window.EpirusTrainer, Champ = window.EpirusChampion;
 
+  /* v1.7.111（用户 10-18 裁定「页面开先验」）：**送盾先验默认开档 2**（改目标 + 挑不到就改攒，按概率）。
+   *   为什么要在页面开：`v7beadseed-82` 这类包**靠它才不刷屏**（裸包 17.3 次/局，开档 4.2/5.4），
+   *   而先验原先只接在评测/训练工具里（`eval-5p` / `promote-champion`），页面零调用 ⇒ 产品行为与测量口径不一致。
+   *   这里只是**把部署层开关打开**，不改引擎规则；开关本身不消耗 `state.rng`（`evo.js` 那份实现已自证）。 */
+  try { if (Trainer && typeof Trainer.setSupportPrior === 'function') Trainer.setSupportPrior(2); } catch (e) { void e; }
+
   const $ = function (id) { return document.getElementById(id); };
   const NAME = ['你', '电脑'];
   const CAT_NM = { energy: '能量', attack: '攻击', defense: '防御', special: '特殊' };

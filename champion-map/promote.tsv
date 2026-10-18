@@ -13,6 +13,7 @@ seed80	pass	—
 SP-s30	pass	—			
 T8-s114	pass	—			
 U-s216	pass	—			
+v7beadseed-82	pass	—			5.42
 v7w3c-82	pass	—			0
 v7wall2-97	pass	—			0.15
 E00-31	block	G4/long 被一行脚本打穿 74% · G4/multi 被一行脚本打穿 73% · G5/long 清不了防席（它夺冠 79%） · G5/multi 清不了防席（它夺冠 73%）	74	79	
@@ -26,6 +27,7 @@ PL71	block	G5/long 清不了防席（它夺冠 27%）		27
 r61fix-92	block	G4/long 被一行脚本打穿 94% · G4/multi 被一行脚本打穿 76% · G5/long 清不了防席（它夺冠 87%） · G5/multi 清不了防席（它夺冠 67%）	94	87	0
 SQ2-15-31	block	G4/long 被一行脚本打穿 79% · G4/multi 被一行脚本打穿 75% · G5/long 清不了防席（它夺冠 74%） · G5/multi 清不了防席（它夺冠 53%）	79	74	
 U-s209	block	G4/long 被一行脚本打穿 78%	78		
+v7a-31	block	G(long) 有效技能数 2.03 < 3（长程打法坍缩到两三张卡）			5.15
 v7wall1-93	block	G4/long 被一行脚本打穿 71%	71		0.25
 incumbent-forpromote	pass	—			0
 SHIPPED-Ldemo	pass	—			0
@@ -91,7 +93,6 @@ v7b-45	block	G4/long 被一行脚本打穿 95% · G4/multi 被一行脚本打穿
 v7bead2-82	block	G4/long 被一行脚本打穿 61%	61		4
 v7bead25-82	block	G4/long 被一行脚本打穿 65%	65		0.55
 v7bead25-93	block	G 有效技能数 2.95 < 3（打法坍缩到两三张卡）			0
-v7beadseed-82	block	送盾 17.3/局 > 6（不可 --force）			17.3
 v7blk1-31	block	G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 98% · G5/long 清不了防席（它夺冠 100%） · G5/multi 清不了防席（它夺冠 96%）	100	100	0
 v7clear2-81	block	G4/long 被一行脚本打穿 76%	76		1.35
 v7cmin4-82	block	G4/long 被一行脚本打穿 89% · G4/multi 被一行脚本打穿 93%	93		0

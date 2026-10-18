@@ -74,7 +74,7 @@ import { widOf } from '../champion-map/pack-id.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 rejectUnknownFlags(process.argv.slice(2),
-  ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose', 'mixSeats', 'seat',
+  ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose', 'mixSeats', 'seat', 'support',
     'subject', 'ref', 'batches', 'seedBase', 'subjectDose', 'assertDiff', 'alsoDrop', 'elected'], 'probe-pool');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const TIER = flag('tier', 'hard'), G = Number(flag('games', 60));
@@ -99,6 +99,10 @@ if (members.length < 2) {
 }
 
 const W = sandbox();
+/* v1.7.111：`--support=<0|1|2>` 把送盾先验带上这把尺（页面已默认开档 2 ⇒ A/B 要能在同一把尺上开关）。 */
+const SUPPORT = flag('support', '');
+if (SUPPORT !== '' && ['0','1','2'].indexOf(SUPPORT) < 0) { console.error('⛔ --support= 只能是 0/1/2（收到 `' + SUPPORT + '`）'); process.exit(2); }
+if (SUPPORT !== '') { if (typeof W.EpirusTrainer.setSupportPrior !== 'function') { console.error('⛔ 引擎没导出 setSupportPrior'); process.exit(2); } W.EpirusTrainer.setSupportPrior(Number(SUPPORT)); }
 const PD = W.EpirusPoolDraw;
 if (!PD || typeof PD.compose !== 'function') { console.error('⛔ `js/pool-draw.js` 没进 sandbox 的 CORE 名单'); process.exit(2); }
 const S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, R = W.EpirusRules, B = W.EpirusBots;

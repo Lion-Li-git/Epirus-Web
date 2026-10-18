@@ -150,7 +150,7 @@ function promoteInfoOf(id, pack, runPromote) {
   if (v || !runPromote) return v;
   const out = 'docs/artifacts/promote-' + id + '.txt';           /* 用这个文件名 ⇒ 下次 promscan 直接收得到（它的 glob 已扩） */
   console.log('   跑上槽体检（≈2.5 分钟）：node tools/promote-champion.mjs ' + pack + ' --dry → ' + out);
-  const s = spawnSync(process.execPath, ['tools/promote-champion.mjs', pack, '--dry'], { cwd: ROOT, encoding: 'utf8', timeout: 20 * 60 * 1000 });
+  const s = spawnSync(process.execPath, ['tools/promote-champion.mjs', pack, '--dry', '--support=2'], { cwd: ROOT, encoding: 'utf8', timeout: 20 * 60 * 1000 });
   const txt = String((s.stdout || '') + '\n' + (s.stderr || ''));
   writeFileSync(join(ROOT, out), txt);
   const bl = [...txt.split('\n')].filter(l => /^\s+·\s/.test(l) && !/⇒/.test(l)).map(l => l.trim().replace(/^·\s*/, '')).join(' · ');
