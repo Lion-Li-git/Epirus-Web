@@ -24,7 +24,9 @@ const gift = (p, g) => { const a = loadChamp(W, p, ROOT); if (!a) return null; c
 const LINES = [['gv', 'v7beadseed-82（现网池成员，起点 17.3/局）', 'docs/artifacts/v7beadseed-82.bak'],
                ['tw', 'v7teach-32（起点 81.4）', 'docs/artifacts/v7teach-32.bak'],
                ['ex', 'v7expo-34（起点 115.0）', 'docs/artifacts/v7expo-34.bak'],
-               ['wa', 'v7wall-33（起点 8.7，灰带）', 'docs/artifacts/v7wall-33.bak']];
+               ['wa', 'v7wall-33（起点 8.7，灰带）', 'docs/artifacts/v7wall-33.bak'],
+               ['b3', 'v7beadseed-31（**82 的同族姊妹**，起点登记 0.00/局）', 'docs/artifacts/v7beadseed-31.bak'],
+               ['b9', 'v7beadseed-93（同族姊妹，起点 0.80/局）', 'docs/artifacts/v7beadseed-93.bak']];
 
 for (const [pfx, tag, start] of LINES) {
   const seen = new Map();
@@ -86,13 +88,22 @@ for (const [pfx, name] of LINES) {
     }
     const rank = 1 + ladder.filter(g => g > wg + 1e-9).length;
     cells.push(s + '=' + wg.toFixed(2) + '/局 名次 ' + rank + '/' + ladder.length);
-    ranks.push({ pfx: pfx, seed: s, rank: rank, n: ladder.length });
+    ranks.push({ pfx: pfx, seed: s, rank: rank, n: ladder.length, g: wg });
   }
   if (cells.length) console.log('  ' + name.padEnd(38) + cells.join('   ‖   '));
   else console.log('  ' + name.padEnd(38) + '还没跑（臂日志不在 ⇒ 这一支不参与名次统计）');
 }
 if (ranks.length) {
-  const top2 = ranks.filter(r => r.rank <= 2).length;
-  console.log('  合计 ' + ranks.length + ' 格 ‖ 落在前两席（最凶的两粒）= ' + top2 + ' 格 ‖ 判线要 ≥8/12 ⇒ ' + (ranks.length >= 12 && top2 >= 8 ? '**可升格**' : '**维持"方向一致的观察"**'));
+  /* ⚑ 判线是**为 §六 那四支（12 格）**写死的 ⇒ 只在那 12 格上判；`b3/b9` 是 §七 另一问的格子，
+   *   拿它们把分母从 12 撑到 18 再套同一条"≥8"就是**移动球门**。两套分开印，且把绝对值一起印出来。 */
+  const PRE = ['gv', 'tw', 'ex', 'wa'];
+  const pre = ranks.filter(r => PRE.indexOf(r.pfx) >= 0), extra = ranks.filter(r => PRE.indexOf(r.pfx) < 0);
+  const t2 = a => a.filter(r => r.rank <= 2).length;
+  console.log('  【§六 预注册那 12 格】落前两席 = ' + t2(pre) + '/' + pre.length + ' ‖ 线要 ≥8 ⇒ ' + (t2(pre) >= 8 ? '**可升格**' : '**维持"方向一致的观察"**'));
+  if (extra.length) console.log('  【§七 另跑的 ' + extra.length + ' 格：不参与上面那条线】落前两席 = ' + t2(extra) + '/' + extra.length
+    + '（其中绝对值 ≤1 的 ' + extra.filter(r => r.rank <= 2 && r.g <= 1).length + ' 格 ⇒ 这些"名次靠前"只是在一堆 0.00 里排序）');
+  const zeroish = ranks.filter(r => r.rank <= 2 && r.g <= 1).length;
+  console.log('  ⚑ 全 ' + ranks.length + ' 格里"落前两席但绝对值 ≤1 次/局"的有 ' + zeroish + ' 格 ⇒ 名次这把尺**看不见剂量**（写在跑之前的 §六 1b ⚑⚑），'
+    + '要判"选择键挑不挑刷屏"得用绝对量（例如"当选位 >6 的格数"），那是下一次预注册的事。');
 }
 
