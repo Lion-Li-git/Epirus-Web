@@ -657,14 +657,17 @@ function supportPriorRand(state, pid, salt) {
       const churning = (state.p[i].ringStreak | 0) >= 1 || state.p[i].ep >= SUPPORT_PRIOR_MIN_EP;
       if (!churning) continue;
       const wgt = Math.max(1, state.p[i].ep | 0);
-      cand.push({ i: i, w: wgt }); wsum += wgt;
+      cand.push({ i: i, w: wgt, e: state.p[i].ep | 0 }); wsum += wgt;
     }
     if (!cand.length) return null;
     /* `pick='max'` = §E643/§E647 当初被量的那个形状（升序扫、严格大于 ⇒ **并列取席号最小那一位**）。
-     *   写在这里而不是"顺手复用加权那支"：并列时的取值规则就是那个旧读数的一部分，改了它旧数就不复现了。 */
+     *   写在这里而不是"顺手复用加权那支"：并列时的取值规则就是那个旧读数的一部分，改了它旧数就不复现了。
+     *   ⚑ 比较的是**原始 ep**（`e`）而不是钳过 1 的权重（`w`）：`Math.max(1, ep)` 会把 0 与 1 压成同值 ⇒
+     *     "ep=0 但在搓环流"会赢过"ep=1 也在搓环流"（退化成选席号小的那个），与旧形状不等价。
+     *     这一格是我自己 A1 那版写错的，抓它的是 `tools/probe-support-prior.mjs` 的腿④d（构造态：ep=1 必须赢过 ep=0 且在搓招）。 */
     if (SUPPORT_PRIOR_PICK === 'max') {
-      let b = cand[0].i, be = cand[0].w;
-      for (let k = 1; k < cand.length; k++) { if (cand[k].w > be) { be = cand[k].w; b = cand[k].i; } }
+      let b = cand[0].i, be = cand[0].e;
+      for (let k = 1; k < cand.length; k++) { if (cand[k].e > be) { be = cand[k].e; b = cand[k].i; } }
       return b;
     }
     let r = supportPriorRand(state, pid, 1) * wsum;

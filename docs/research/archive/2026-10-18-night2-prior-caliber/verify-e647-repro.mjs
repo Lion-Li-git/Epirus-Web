@@ -14,8 +14,13 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
 const OLD = [path.join(ROOT, 'docs/research/archive/2026-10-18-guard-the-charger/support-strength-E647.txt'),
   path.join(ROOT, 'docs/research/archive/2026-10-18-guard-the-charger/support-strength-E647b.txt')].filter(existsSync);
-const NEWF = path.join(HERE, 'strength-E648.log.txt');
-if (!OLD.length || !existsSync(NEWF)) { console.error('⛔ 归档或新批文件缺 ⇒ 无法校验（' + OLD.length + ' 份旧 ‖ 新 ' + existsSync(NEWF) + '）'); process.exit(2); }
+/* 新批文件可由命令行给多个（**后给的覆盖先给的**）：A1b 复验时我要的是"修完码之后的 strict 行"，
+ *   而 off 行不需要重跑（prior=0 走不到那条分支）⇒ 传 [E648, E648b] 就是"旧批的 off + 新批的 strict"。
+ *   覆盖数必须报出来，不许静默：覆盖发生 = 同键两值，那正是我要看的差异。 */
+const NEWFS = process.argv.slice(2).filter(f => f.indexOf('--') !== 0);
+const FILES = (NEWFS.length ? NEWFS : [path.join(HERE, 'strength-E648.log.txt')]).map(f => path.resolve(f));
+if (!OLD.length) { console.error('⛔ 归档缺 ⇒ 无法校验'); process.exit(2); }
+for (const f of FILES) if (!existsSync(f)) { console.error('⛔ 新批文件读不到：' + f); process.exit(2); }
 
 /* 旧文件里 pack 只出现在注释行（`# … R-s123.js（池成员）‖ bundled-champion-3p.js …`）⇒ 按"注释里最后提到的那枚"分段不可靠，
  * 所以这里显式建表：E647.txt 全是 82；E647b.txt 按行内 `pack=` 读（它确实带）。**不许用正则猜历史文件**。 */
@@ -42,14 +47,24 @@ for (const r of oldRows) {
   oldByKey[k] = r.first;
 }
 const newRows = [];
-for (const l of readFileSync(NEWF, 'utf8').replace(/\r\n/g, '\n').split('\n')) {
-  if (l.indexOf('ROW ') !== 0) continue;
-  const pack = (l.match(/pack=(\S+)/) || [])[1], mode = (l.match(/mode=(\w+)/) || [])[1];
-  const seed = Number((l.match(/seed=(\d+)/) || [])[1]), gear = (l.match(/gear=(\w+)/) || [])[1];
-  const first = Number((l.match(/1st=([\d.]+)%/) || [])[1]);
-  if (!pack || !mode || !gear || isNaN(seed) || isNaN(first)) { console.error('⛔ 新行解析失败：' + l); process.exit(2); }
-  newRows.push({ pack, mode, seed, gear, first });
+const byKey = {}; let overrides = 0;
+for (const f of FILES) {
+  for (const l of readFileSync(f, 'utf8').replace(/\r\n/g, '\n').split('\n')) {
+    if (l.indexOf('ROW ') !== 0) continue;
+    const pack = (l.match(/pack=(\S+)/) || [])[1], mode = (l.match(/mode=(\w+)/) || [])[1];
+    const seed = Number((l.match(/seed=(\d+)/) || [])[1]), gear = (l.match(/gear=(\w+)/) || [])[1];
+    const first = Number((l.match(/1st=([\d.]+)%/) || [])[1]);
+    if (!pack || !mode || !gear || isNaN(seed) || isNaN(first)) { console.error('⛔ 新行解析失败：' + l); process.exit(2); }
+    const key = pack + '|' + mode + '|' + seed + '|' + gear;
+    if (byKey[key] !== undefined) {
+      overrides++;
+      if (byKey[key].first !== first) console.log('   ⚑ 同键不同值（后给的档覆盖先给的，这一格要解释）：' + key + ' ⇒ ' + byKey[key].first + ' → ' + first + '（来自 ' + path.basename(f) + '）');
+    }
+    byKey[key] = { pack, mode, seed, gear, first };
+  }
 }
+for (const k of Object.keys(byKey)) newRows.push(byKey[k]);
+console.log('读的档：' + FILES.map(f => path.basename(f)).join(' + ') + '‖ 合并后 ' + newRows.length + ' 行（覆盖 ' + overrides + ' 处）');
 /* 驱动里的 pack 名字是简称（`R-s123`），归档里是文件名（`R-s123.js`）⇒ 显式对照表，不做后缀猜测 */
 const ALIAS = { 'v7beadseed-82': 'v7beadseed-82.bak', 'R-s123': 'R-s123.js', 'bundled-champion-3p': 'bundled-champion-3p.js' };
 let cmp = 0, diff = [], missing = [];

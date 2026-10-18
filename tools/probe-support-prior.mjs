@@ -131,6 +131,14 @@ say(T.supportPriorTarget(fake([[4, 0, 0], [3, 2, 0], [3, 1, 0], [3, 0, 0], [3, 2
   '没人 `ringStreak≥1 ∨ ep≥3` ⇒ 必须 null（分母 0，不是"随便给一个"）');
 say(T.supportPriorTarget(fake([[4, 9, 9], [3, 3, 0], [3, 0, 0], [3, 0, 0], [3, 0, 0]]), 0) === 1,
   '自己 ep=9 最会搓 ⇒ 不得选自己，退到下一位 churning 席（实测 ' + T.supportPriorTarget(fake([[4, 9, 9], [3, 3, 0], [3, 0, 0], [3, 0, 0], [3, 0, 0]]), 0) + '）');
+/* ④d max 档比的是**原始 ep**，不是"钳到 ≥1 的权重"：ep=1 与"ep=0 但在搓环流"同时在场时必须选 ep=1 那一位。
+ *   这条是我自己 A1 那版 `pick='max'` 分支的漏洞（权重 `Math.max(1, ep)` 会把 0 与 1 压成同值 ⇒ 变成"选席号小的"，
+ *   与 §E643/§E647 那个 argmax 形状在 ep∈{0,1} 的组合上不等价）。红就要红在这里：修完必须变绿。 */
+T.setSupportPriorKnobs(STRICT);
+const EP1 = fake([[4, 0, 0], [3, 0, 1], [3, 1, 1], [3, 0, 0], [3, 0, 0]]);   // 1 号 ep=0 但 ringStreak=1 ‖ 2 号 ep=1 且 ringStreak=1
+say(T.supportPriorTarget(EP1, 0) === 2,
+  '④d max 档：ep=1（2 号）必须赢过"ep=0 但在搓环流"（1 号）⇒ 旧形状比的是原始 ep（实测挑到 ' + T.supportPriorTarget(EP1, 0) + '）');
+T.setSupportPriorKnobs(LOOSE);
 
 /* ⑤ 真局侧的牙（**在 `pick=max` 那一趟上做**：宽松版谓词是"argmax 但不排濒死"，只有在确定性挑人下两者才只差"排不排濒死"这一格；
  *   拿 weighted 那趟比就会把"挑人规则不同"混进"门槛不同"里 ⇒ 读数不再是单变量） */
