@@ -177,7 +177,12 @@ run('attach-kin.mjs', ['--from=' + FROM], '⑨ attach-kin 搬当选键 + 打 kin
  *   页面上"长程考卷"那一维读成 null ⇒ 用户看到的是"**完全缺位**"（数据一直在 `epsfull-long-2026-10-16.tsv`，只是没挂回来）。
  * 放在最后：它按 id 匹配、列落表尾，不扰动前九步的列序；缺源表时它自己会响亮退出（"先跑 eps-full --mode=long"）。
  * ⚠ 它只写这五列、**不动坐标**，也不换绿环（换环=换判据主语，在册待裁 #47）。 */
-run('attach-hlong.mjs', [], '⑩ attach-hlong 长程桌三列 + 全腿长程过线');
+/* §E649（千问）：`--hlong=<表>` 只是一个**默认不变的透传**——不给就照旧吃 `attach-hlong.mjs` 里的缺省表。
+ *   为什么要它：Hp 换到开档口径时，`Hplong` 也要一起换（用户 10-18 夜：「长程 Hp 也要重跑」），
+ *   而这一步原来写死缺省 ⇒ 手跑 `attach-hlong --table=<新表>` 会被本链的第⑩步用旧缺省**覆盖掉**（修了又没修，最坏那种）。
+ *   加参数而不是改缺省值：缺省那条链子的历史行为要逐字不动（§E605 那条"缺参就整批换档"的教训就是改缺省改出来的）。 */
+const HLONG = String(arg('hlong', ''));
+run('attach-hlong.mjs', HLONG ? ['--table=' + HLONG] : [], '⑩ attach-hlong 长程桌三列 + 全腿长程过线' + (HLONG ? '（来源 ' + HLONG + '）' : '（来源：attach-hlong 缺省表）'));
 
 /* 收尾核验：列名不许重复、每行宽度一致、lineage/kin 两列的类必须还是那几类 */
 const L = rd(CO), h = L[0].split('\t'), rows = L.slice(1).map(l => l.split('\t'));
