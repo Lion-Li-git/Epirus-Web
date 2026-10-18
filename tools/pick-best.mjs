@@ -82,6 +82,15 @@ export function selNote(s) {
  *  entries = `hallEntries`（有 `score` 与 `ev.spreadPt`、`ev.n`）。返回一行可直接 console.log 的字符串。
  *  ⚠ `EPIRUS_SEL_EVAL_SEEDS=1` 时每枚的"自身极差"恒为 0 —— 那是**没有噪声估计**，不是"噪声为零"。
  *    拿 0 去比分差会印出"判得动"，等于用一把从没量过的尺自证清白（口径陷阱第 57 条的同族）。 */
+/* v1.7.103（用户 10-18 裁「带宽做成可配置」）：**同分带建议值按 k 查表**，不再硬写 3.0。
+ *   来源：千问 §E645 的 k 表（28 枚 × 12 粒 = 241,920 局，`champion-map/selband-2026-10-18.tsv`），
+ *   判据是「带要盖住该 k 的噪声」⇒ 取该行的 **p90 极差**：
+ *     k=1 ⇒ 9.1pt ‖ k=3 ⇒ 6.5 ‖ **k=4（现状）⇒ 5.8** ‖ k=6 ⇒ 4.2 ‖ k=8 ⇒ 2.9
+ *   ⇒ 原来那句「带 3.0」，只对 **k≈8** 才成立；现状 k=4 用它就是**带比噪声窄**（当选者常换人）。
+ *   ⚠ 这里只改**判读口径**，不改 `WR_TOL` 的选择行为（那要另裁）：调用方想用建议值，传 `opts.wrTol`。 */
+export const SEL_BAND_BY_K = { 1: 9.1, 3: 6.5, 4: 5.8, 6: 4.2, 8: 2.9 };
+export function bandFor(k) { return SEL_BAND_BY_K[k] || 3.0; }
+
 export function selGapNote(entries) {
   const list = (entries || []).filter(function (e) { return e && typeof e.score === 'number'; })
     .slice().sort(function (a, b) { return b.score - a.score; });
@@ -93,8 +102,10 @@ export function selGapNote(entries) {
       '（极差恒 0 是"没量过"，不是"量出来是 0"）⇒ 分差与噪声不可比，要判就得加 seedBase';
   }
   const noisePt = Math.max(list[0].ev.spreadPt || 0, list[1].ev.spreadPt || 0);
-  const tol = 3.0;   // 同分带容差（WR_TOL / SEL_LAND_TOL 的默认 0.03，换算到 ×100 的读数上就是 3.0pt）
-  return '[当选键] 第 1 与第 2 名分差 ' + gapPt.toFixed(2) + 'pt ‖ 两者自身极差较大者 ' + noisePt.toFixed(1) + 'pt ‖ 同分带 ' + tol.toFixed(1) + 'pt（各 n=' + ns[0] + ' 粒） ⇒ ' +
+  /* 带按**这一格实际用的 k** 查表（v1.7.103）；k 缺失才退回旧常数 3.0。 */
+  const kUsed = Math.max(list[0].ev && list[0].ev.n ? list[0].ev.n : 0, list[1].ev && list[1].ev.n ? list[1].ev.n : 0);
+  const tol = bandFor(kUsed);
+  return '[当选键] 第 1 与第 2 名分差 ' + gapPt.toFixed(2) + 'pt ‖ 两者自身极差较大者 ' + noisePt.toFixed(1) + 'pt ‖ 同分带 ' + tol.toFixed(1) + 'pt（各 n=' + ns[0] + ' 粒；k 查表 ⇒ ' + (SEL_BAND_BY_K[kUsed] ? '按 k=' + kUsed : 'k 不在表里，退回旧常数') + '） ⇒ ' +
     (gapPt <= tol ? '**分差落在同分带内 ⇒ 这一格基本是抽签**（要判就得加 seedBase 或换键）'
       : gapPt <= noisePt ? '**分差小于自身噪声 ⇒ 方向可信、幅度判不动**'
         : '分差大于自身噪声 ⇒ 这一格判得动');

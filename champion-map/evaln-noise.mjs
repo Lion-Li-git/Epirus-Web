@@ -254,7 +254,7 @@ console.log('   序对逆序（榜换了几个前后次序）' + swaps + ' / ' +
 if (packs.length >= 2) {
   console.log('\n⑤ 逐 seedBase 配对差（各枚 − 参照「' + packs[0].name + '」，单位 pt；+ = 比参照强）:');
   for (let i = 1; i < packs.length; i++) {
-    /* v1.7.102（METHODOLOGY 122 条第 4 款）：配对算术改用 `audit-lib.pairedStats` —— **唯一实现**。
+    /* v1.7.102（METHODOLOGY 136 条第 4 款）：配对算术改用 `audit-lib.pairedStats` —— **唯一实现**。
      *   输出格式逐字保持不变（正常情形），只有两种退化情形会变：n<2 ⇒ 印「没有噪声估计」；SE=0 ⇒ 印「t 无定义」，
      *   不再印 `Infinity`/`NaN`（旧实现在这两格里会把"没量过"伪装成"铁证"）。 */
     const ds = packs[i].sc.map(function (o, k) { return (o.s - packs[0].sc[k].s) * 100; });
