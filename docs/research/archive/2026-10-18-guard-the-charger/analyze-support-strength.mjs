@@ -26,6 +26,21 @@ for (const f of FILES) {
   }
 }
 const layers = {};
+/* ⚑ 重复键检查（本班真实事故）：我在旧作业没确认判活的情况下把同一份输出重发了一次，
+ *   结果两个作业往同一个文件追加 ⇒ 43 行 / 24 个唯一键。`eval-5p` 同 seed 同参数是**确定性**的，
+ *   所以重复行数值一致、可以安全去重；但这件事必须由程序认定，不许我事后"看着一样"就放过：
+ *   同键不同值 ⇒ 要么不 deterministic、要么两条命令并非同参 ⇒ 立刻拒，不许挑一条用。 */
+const seen = {};
+for (const r of rows) {
+  const key = r.pack + '|' + r.mode + '|' + r.seed + '|k' + r.k;
+  if (seen[key] !== undefined && seen[key] !== r.first) {
+    console.error('⛔ 同一个键出现两个不同读数：' + key + ' ⇒ ' + seen[key] + ' ↔ ' + r.first + '（不是重复，是不同值 ⇒ 这批不可用，查两条命令的参数差在哪）');
+    process.exit(4);
+  }
+  seen[key] = r.first;
+}
+const dup = rows.length - Object.keys(seen).length;
+console.log('   （去重：' + rows.length + ' 行 → ' + Object.keys(seen).length + ' 个唯一键，重复 ' + dup + ' 行且**逐值相同**' + (dup ? ' ⇒ 典型原因是同一个批被并发跑了两遍，见本文件头注' : '') + '）');
 for (const r of rows) {
   const key = r.pack + ' · ' + r.mode;
   layers[key] = layers[key] || {};
