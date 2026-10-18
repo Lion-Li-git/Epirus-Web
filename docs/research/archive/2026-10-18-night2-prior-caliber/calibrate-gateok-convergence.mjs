@@ -12,7 +12,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
-const { sandbox, loadChamp } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
+const { sandbox, loadChamp, rejectUnknownFlags } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
+rejectUnknownFlags(process.argv.slice(2), ['prior'], 'calibrate-gateok-convergence');   /* 不认识的 `--` 一律 exit 64（D218 那条规矩在归档工具上同样成立） */
 const W = sandbox(ROOT);
 const T = W.EpirusTrainer;
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };

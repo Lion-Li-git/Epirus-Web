@@ -14,7 +14,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
-const { pairedStats, fmtPaired } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
+const { pairedStats, fmtPaired, rejectUnknownFlags } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
+/* 仓规（门 D218 的形状）：读了的旗标必须逐个登记、不认识的 `--` 要响亮拒绝。归档目录里的量具不在门的扫描面上，但病一样。 */
+rejectUnknownFlags(process.argv.slice(2), ['pool'], 'analyze-hp-prior');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const POOL = arg('pool', 'champion-map/pool-members.tsv');
 

@@ -7,9 +7,11 @@
  * 用法：node docs/research/archive/2026-10-18-night2-prior-caliber/calibrate-gift-veto.mjs
  */
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+const { rejectUnknownFlags } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
+rejectUnknownFlags(process.argv.slice(2), ['pool'], 'calibrate-gift-veto');   /* 仓规：不认识的 `--` 一律 exit 64 */
 const rd = (p) => readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
 
 const CO = rd('champion-map/coords.tsv'), ch = Object.fromEntries(CO[0].map((h, i) => [h, i]));

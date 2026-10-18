@@ -11,7 +11,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
-const { sandbox, loadChamp } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
+const { sandbox, loadChamp, rejectUnknownFlags } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
+rejectUnknownFlags(process.argv.slice(2), [], 'analyze-gift-arms');   /* 这台不吃旗标 ⇒ 空名单 = 任何 `--x=` 都该 exit 64 */
 const W = sandbox(ROOT); const T = W.EpirusTrainer;
 const LOGF = path.join(HERE, 'gift-veto-arms.log.txt');
 if (!existsSync(LOGF)) { console.error('⛔ 还没有臂批日志 ⇒ 读不出（别写"没影响"）'); process.exit(2); }
@@ -25,26 +26,32 @@ const giftOf = function (abs, games) {
   const v = Number(mh && mh.holoOtherPerGame);
   return isFinite(v) ? v : null;
 };
-/* 产物指认：臂日志的落盘行给的是 `docs/artifacts/<arm>-bandN.bak` 或 `train-3p-out.js` ⇒ 优先取带臂名的那个 */
+/* 产物指认：**权威来源是臂自己日志里 `[band-save] …（当选）` 那行**，不是 `train-3p-out.js`。
+ *   为什么改（01:32 实测踩到）：当选者与上一臂的**带内某一粒**权重相同时，§E589 守卫判"这粒已在盘上"⇒
+ *   **不写产物、退出码 9**，`train-3p-out.js` 里躺着的还是**上一臂**的东西；驱动照抄 ⇒ 把 gv0 的冠军登记成 gv1 的。
+ *   band-save 在守卫之前就跑完了、写的是 `docs/artifacts/gv-<臂>/<臂>-bandN.bak`，带臂名 ⇒ 这才是这一臂的当选者。
+ *   拷贝（`arms/<臂>.winner.js`）只在**它自己的 `META.arm` 等于这一臂**时才可用作"落盘时刻"的证据；不相等就当场点名失配。 */
 function winnerOf(arm) {
   const f = path.join(HERE, 'gift-veto-' + arm + '.log.txt');
   if (!existsSync(f)) return { arm: arm, missing: '日志缺失' };
   const s = readFileSync(f, 'utf8');
-  /* 首选驱动趁落盘还没被下一臂覆写时收走的那份拷贝（`arms/gv0-77000.winner.js`）；
-   *   找不到才退回按日志文本猜路径 —— 猜来的东西必须说明是猜的。 */
+  const bandSel = [...s.matchAll(/^\[band-save\] (\S+?-band\d+)\.bak\s+trainFit=[\d.]+（当选）/gm)].map(x => x[1]);
+  const bandPath = bandSel.length ? path.join(ROOT, 'docs/artifacts/gv-' + arm, bandSel[0] + '.bak') : null;
   const copy = path.join(HERE, 'arms', arm + '.winner.js');
-  let prod = existsSync(copy) ? copy : null, how = '拷贝自落盘时刻';
-  if (!prod) {
-    const m = s.match(/已在 `?(docs\/artifacts\/[^\s`]+\.bak)/) || s.match(/已写入 (\S+\.js)/);
-    const band = m ? m[1] : null;
-    prod = band && existsSync(path.join(ROOT, band)) ? path.join(ROOT, band) : null;
-    how = '按日志文本指认';
+  let prod = null, how = '';
+  if (existsSync(copy)) {
+    const metaArm = (readFileSync(copy, 'utf8').match(/"arm":"([^"]*)"/) || [])[1];
+    if (metaArm === arm) { prod = copy; how = '拷贝自落盘时刻（META arm 相符）'; }
+    else { how = '⚑ 拷贝失配：arms/' + arm + '.winner.js 的 META arm=' + (metaArm || '无') + ' ⇒ 不用它，改用当选 band'; }
   }
+  if (!prod && bandPath && existsSync(bandPath)) { prod = bandPath; how = how || '按 `[band-save] …（当选）` 行指认'; }
+  if (!prod && bandSel.length) how += ' ‖ 当选 band 文件找不到：' + bandPath;
   const gate = (s.match(/^\[送盾闸\].*$/m) || [null])[0];
   const allSpam = /名人堂\*\*全部超线\*\*/.test(s);
   const first = (s.match(/^1st=([\d.]+)%/m) || [])[1];
-  return { arm: arm, prod: prod, how: how, gate: gate, allSpam: allSpam,
-    missing: (prod ? '' : '产物找不到 ‖ ') + (first === undefined ? '末局 1st 没读到' : '') };
+  return { arm: arm, prod: prod, how: how, gate: gate, allSpam: allSpam, bandSel: bandSel,
+    missing: (prod ? '' : '产物找不到 ‖ ') + (first === undefined ? '末局 1st 没读到' : '')
+      + (bandSel.length > 1 ? ' ‖ ⚑ 日志里 ' + bandSel.length + ' 个"（当选）"（名人堂装了同一粒权重两次 ⇒ 取第一个，要人工确认）' : '') };
 }
 const rows = [];
 for (const l of lines) {
@@ -54,12 +61,12 @@ for (const l of lines) {
   const w = winnerOf('gv' + arm);
   let g20 = null, g100 = null;
   if (w.prod) { g20 = giftOf(w.prod, 20); g100 = giftOf(w.prod, 100); }
-  rows.push({ veto: veto, seed: seed, rc: m[3], prod: w.prod, allSpam: w.allSpam, gate: w.gate, g20: g20, g100: g100, missing: w.missing });
+  rows.push({ veto: veto, seed: seed, rc: m[3], prod: w.prod, how: w.how, allSpam: w.allSpam, gate: w.gate, g20: g20, g100: g100, missing: w.missing });
 }
 console.log('# §E650 六臂收口（裸包送盾 = `mirrorHealth(multi)` @20/@100 局 ‖ 线 = `HOLO_GIFT_MAX` = 6）');
-console.log('臂'.padEnd(14) + 'seed'.padEnd(8) + 'veto'.padEnd(6) + '@20局'.padEnd(9) + '@100局'.padEnd(9) + 'allRejected'.padEnd(12) + '备注');
+console.log('臂'.padEnd(14) + 'seed'.padEnd(8) + 'veto'.padEnd(6) + 'rc'.padEnd(5) + '@20局'.padEnd(9) + '@100局'.padEnd(9) + 'allRejected'.padEnd(12) + '备注');
 for (const r of rows) {
-  console.log(('gv' + r.veto).padEnd(14) + r.seed.padEnd(8) + r.veto.padEnd(6)
+  console.log(('gv' + r.veto).padEnd(14) + r.seed.padEnd(8) + r.veto.padEnd(6) + r.rc.padEnd(5)
     + (r.g20 === null ? '读不出' : r.g20.toFixed(2)).padEnd(9)
     + (r.g100 === null ? '读不出' : r.g100.toFixed(2)).padEnd(9)
     + (r.allSpam ? '⛔ 全超线' : '否').padEnd(12)

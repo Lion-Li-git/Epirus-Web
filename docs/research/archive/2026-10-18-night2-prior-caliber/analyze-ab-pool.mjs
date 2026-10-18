@@ -11,7 +11,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
-const { pairedStats, fmtPaired } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
+const { pairedStats, fmtPaired, rejectUnknownFlags } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
+rejectUnknownFlags(process.argv.slice(2), ['dir'], 'analyze-ab-pool');   /* 仓规：不认识的 `--` 必须响亮拒绝（门 D218 的形状；归档目录不在门的扫描面上，但病一样会犯） */
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const DIR = path.join(HERE, arg('dir', 'ab-tmp'));
 if (!existsSync(DIR)) { console.error('⛔ 读不到 ' + DIR + ' ⇒ 批还没跑'); process.exit(2); }

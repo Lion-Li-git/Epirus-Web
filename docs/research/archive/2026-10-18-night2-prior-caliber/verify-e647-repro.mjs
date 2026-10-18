@@ -12,6 +12,10 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
+/* 仓规：不认识的 `--` 参数必须响亮失败。这台校验器**一个旗标都不接**（只接位置参数=新批文件），
+ *   所以守卫给空名单 ⇒ 手滑写 `--support=0` 这类"以为控制住了"的东西会 exit 64，不会被 filter 掉后静默照跑。 */
+const { rejectUnknownFlags } = await import(new URL('../../../../tools/audit-lib.mjs', import.meta.url).href);
+rejectUnknownFlags(process.argv.slice(2), [], 'verify-e647-repro');
 const OLD = [path.join(ROOT, 'docs/research/archive/2026-10-18-guard-the-charger/support-strength-E647.txt'),
   path.join(ROOT, 'docs/research/archive/2026-10-18-guard-the-charger/support-strength-E647b.txt')].filter(existsSync);
 /* 新批文件可由命令行给多个（**后给的覆盖先给的**）：A1b 复验时我要的是"修完码之后的 strict 行"，

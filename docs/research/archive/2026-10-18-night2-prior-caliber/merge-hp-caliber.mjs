@@ -8,9 +8,12 @@
  * 用法：node merge-hp-caliber.mjs --main=epsfull-prior2-2026-10-18.tsv --fill=epsfull-tier-2026-10-12.tsv --out=epsfull-hp-final-2026-10-19.tsv [--label=prior]
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+/* 不认识的 `--` 必须响亮拒绝（D218 那条仓规；归档工具不在门的扫描面上，但"传了等于没传"这个病不分位置） */
+const { rejectUnknownFlags } = await import(pathToFileURL(path.resolve(HERE, '../../../..') + '/tools/audit-lib.mjs').href);
+rejectUnknownFlags(process.argv.slice(2), ['main', 'fill', 'out', 'label'], 'merge-hp-caliber');
 const CM = path.resolve(HERE, '../../../..', 'champion-map');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const MAIN = arg('main', ''), FILL = arg('fill', ''), OUT = arg('out', ''), LABEL = arg('label', 'prior');

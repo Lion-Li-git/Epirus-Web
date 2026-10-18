@@ -11,6 +11,12 @@
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import path from 'node:path';
 const ROOT = process.env.WT || path.resolve(fileURLToPath(import.meta.url), '../..');
+const { rejectUnknownFlags } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);
+/* 仓规（门 D218）：研究量具必须响亮拒绝不认识的 `--` 参数。**这台工具不吃任何旗标 ⇒ 名单是空数组**，
+ *   意思是"给它任何 `--x=` 都该 exit 64"（写了旗标却被静默忽略，比不写更坏：那会把"我以为控制了这一维"变成假绿）。
+ *   ⚑ 这一条就是被 D218 当场拦下来补的（01:29 那次 `--group=train` 报"实测缺口：probe-gift-veto.mjs"）。 */
+const argv = process.argv.slice(2);
+rejectUnknownFlags(argv, [], 'probe-gift-veto');
 const { rejectGiftSpamWinners } = await import(pathToFileURL(ROOT + '/tools/pick-best.mjs').href);
 
 let bad = 0;
