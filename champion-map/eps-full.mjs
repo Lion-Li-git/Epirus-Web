@@ -68,7 +68,32 @@ if (MODE && MODE !== 'multi' && MODE !== 'long') { console.error('⛔ `--mode` �
  *     要真验仪器没漂，就另点 5~8 枚把考卷臂也跑一遍（本机 120 局 ≈ 20 秒/枚，比全库重跑便宜两个数量级）。 */
 const PAGE_ONLY = process.argv.includes('--pageOnly=1');
 const EXAM_FROM = String(arg('examFrom', ''));
+/* §E649（用户 10-18 夜：「页面开先验 ⇒ Hp/Hplong 都要按新口径重跑，但可以筛掉不受影响的枚」）：
+ *   `--support=<0|1|2>` **只加在页面臂上**，因为 `Hp` 的定义就是"玩家拿到的那个数"，而玩家那一侧现在开着档 2。
+ *   硬要求 `--pageOnly=1 --examFrom=<裸包那张表>`：考卷臂（ε=0 贪心）不属于产品口径，把它也带上先验的话
+ *   `d = exam − page` 就不再是 Δε 而是"Δε + 先验效应"混在一个已注册的列名里 —— 那是偷列名的语义（§E278 同族）。
+ *   ⇒ 这一跑里 `exam` 与 `d` 都**从 `--examFrom` 那张表原样搬**（保持裸包口径），只有 `page` 是开档新测；
+ *     另多写两列：`support`（这批是哪一档量的，档靠行走）‖ `pageBare`（搬来的裸包页面值）
+ *     ⇒ **先验效应 = 同一行里的 page − pageBare**，自足、不必去比两张表。 */
+const SUPPORT = arg('support', '');
+if (SUPPORT !== '') {
+  if (['0', '1', '2'].indexOf(SUPPORT) < 0) { console.error('⛔ `--support=` 只认 0/1/2，收到 `' + SUPPORT + '`'); process.exit(2); }
+  if (!PAGE_ONLY || !EXAM_FROM) { console.error('⛔ `--support=` 必须配 `--pageOnly=1 --examFrom=<裸包表>`（否则 `d` 列会混进先验效应）'); process.exit(2); }
+}
+/* knobs 透传（不给就吃引擎默认 ⇒ 与产品逐字同）：`--supportpick=max --supportskip=1` 才回到 §E643/§E647 那个严档。 */
+const KNOB_ARGS = [];
+for (const [f, sw] of [['supportpick', '--supportpick='], ['supportskip', '--supportskip='], ['supportminep', '--supportminep=']]) {
+  const v = arg(f, ''); if (v !== '') KNOB_ARGS.push(sw + v);
+}
+/* §E649 的筛选（用户的原话是"不送盾的冠军不会被这个规则影响"）：`--only=<清单>` 只跑名单里的枚。
+ *   清单 = 每行一个 id（TSV 取第一列）。名单外的**不写行**，由 `attach-hp --more=<裸包表>` 去补值 ⇒
+ *   "没测"与"测了且证明不变"分得开（这条规矩本仓踩过：缺行静默当成零）。 */
+const ONLY_FILE = arg('only', '');
+const ONLY = ONLY_FILE ? new Set(readFileSync(join(HERE, ONLY_FILE), 'utf8').replace(/\r\n/g, '\n').split('\n')
+  .map((l) => l.split('\t')[0].trim()).filter((x) => x && !x.startsWith('#'))) : null;
+if (ONLY_FILE && !ONLY.size) { console.error('⛔ `--only=` 清单读出来是空的：' + ONLY_FILE + '（空名单会跑出一张全空的表）'); process.exit(2); }
 const CARRIED = {};
+const CARRIED_D = {}, CARRIED_PAGE = {};
 if (PAGE_ONLY) {
   if (!EXAM_FROM) { console.error('⛔ --pageOnly=1 必须给 `--examFrom=<表>`（考卷列从哪儿搬）'); process.exit(2); }
   const ef = join(HERE, EXAM_FROM);
@@ -76,7 +101,13 @@ if (PAGE_ONLY) {
   const ET = readFileSync(ef, 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
   const eh2 = Object.fromEntries(ET[0].split('\t').map((x, i) => [x, i]));
   if (eh2.id === undefined || eh2.exam === undefined) { console.error('⛔ --examFrom 表头缺 id/exam：' + ET[0]); process.exit(2); }
-  for (const l of ET.slice(1)) { const c = l.split('\t'); if (c[eh2.id]) CARRIED[c[eh2.id]] = c[eh2.exam]; }
+  if (SUPPORT !== '' && (eh2.d === undefined || eh2.page === undefined)) {
+    console.error('⛔ 带 `--support=` 时 `--examFrom` 表必须有 `d` 与 `page` 两列（要搬裸包的 Δε 与裸页面值），收到：' + ET[0]); process.exit(2);
+  }
+  for (const l of ET.slice(1)) { const c = l.split('\t'); if (!c[eh2.id]) continue;
+    CARRIED[c[eh2.id]] = c[eh2.exam];
+    if (eh2.d !== undefined) CARRIED_D[c[eh2.id]] = c[eh2.d];
+    if (eh2.page !== undefined) CARRIED_PAGE[c[eh2.id]] = c[eh2.page]; }
   /* 名单在这里还没定稿（`--extra` 那段在后面）⇒ 缺失统计放到 `reportCarried()`，开跑前叫。 */
   reportCarried();
 }
@@ -153,7 +184,22 @@ if (shipNamed && !existsSync(SHIP) && !shipRegistered) {
 }
 if (existsSync(OUT)) { const done = readFileSync(OUT, 'utf8').trim().split('\n').length - 1;
   console.error('⛔ ' + 'epsfull.tsv 已存在（' + done + ' 行）⇒ 先删再跑，别把两批混成一张表'); process.exit(2); }
-writeFileSync(OUT, ['id', 'exam', 'page', 'd', 'hp_old', 'sec', 'examG', 'pageDose', 'mode'].join('\t') + '\n', 'utf8');
+/* §E649 的筛选在**名单定稿之后**才砍（`--extra` 那段会往 ids 里加东西，先砍就漏）。 */
+if (ONLY) {
+  const before = ids.length;
+  for (let i = ids.length - 1; i >= 0; i--) if (!ONLY.has(ids[i])) ids.splice(i, 1);
+  const notInList = [];
+  for (const want of ONLY) if (ids.indexOf(want) < 0) notInList.push(want);
+  console.error('--only ⇒ 名单 ' + before + ' → ' + ids.length + ' 枚（名单外 ' + (before - ids.length) + ' 枚**不跑**，'
+    + '由 `attach-hp --more=<裸包表>` 补值 ⇒ "没测"与"测过且证明不变"在表里分得开）'
+    + (notInList.length ? ' ‖ ⚠ 清单里有 ' + notInList.length + ' 枚不在本次全名单（一行都不会写）：' + notInList.slice(0, 6).join(',') : ''));
+  if (!ids.length) { console.error('⛔ `--only=` 把名单砍空了 ⇒ 别出全空的表'); process.exit(2); }
+}
+const HDR = ['id', 'exam', 'page', 'd', 'hp_old', 'sec', 'examG', 'pageDose', 'mode'];
+if (SUPPORT !== '') HDR.push('support', 'pageBare');
+writeFileSync(OUT, HDR.join('\t') + '\n', 'utf8');
+if (SUPPORT !== '') console.error('⚑ 本批页面臂带先验（`--support=' + SUPPORT + (KNOB_ARGS.length ? ' ' + KNOB_ARGS.join(' ') : '') + '`）'
+  + '‖ `exam`/`d` 是从 ' + EXAM_FROM + ' **搬来的裸包值**（不重测）⇒ `d` 仍是裸包 Δε，**先验效应 = 本行 `page − pageBare`**');
 
 function one(id, on) {
   /* 路径按 `--extra` 映射 → coords 的 `path` 列 → `docs/artifacts/<id>.bak` 的顺序找**第一个真在盘上的**：
@@ -170,6 +216,8 @@ function one(id, on) {
   /* 页面口径的剂量来源（§E597）：给 `--epsTier=<档 id>` ⇒ 剂量由产品那张表给（默认档就是玩家实际吃的那条）；
    *   不给就是老写法 `--eps=0.2 --eps-mode=soft`（v1.5.141 时代的常数剂量，如今等于**简单档**那一档）。 */
   if (on) { if (EPS_TIER) a.push('--eps-tier=' + EPS_TIER); else a.push('--eps=0.2', '--eps-mode=soft'); }
+  /* §E649：先验只加在**页面臂**上（`Hp` = 玩家拿到的那个数，而玩家那一侧开着档）；考卷臂保持裸包口径。 */
+  if (on && SUPPORT !== '') { a.push('--support=' + SUPPORT); for (const k of KNOB_ARGS) a.push(k); }
   /* §E615 两个臂都要带上 `--mode` —— 只给页面臂换桌形的话，`d = exam − page` 就变成"两张桌之差"而不是 Δε */
   if (MODE) a.push('--mode=' + MODE);
   return new Promise((res) => {
@@ -186,8 +234,17 @@ async function worker() {
     const ex = PAGE_ONLY ? { v: Number(CARRIED[id]), err: CARRIED[id] === undefined ? '⛔ --examFrom 那张表里没有这一枚' : '' } : await one(id, false);
     done++;
     if (!isFinite(ex.v) || !isFinite(pg.v)) { fail++; console.error('  ⛔ ' + id + ' ' + (ex.err || '') + ' ' + (pg.err || '')); continue; }
-    appendFileSync(OUT, [id, ex.v.toFixed(2), pg.v.toFixed(2), (ex.v - pg.v).toFixed(2), (HOLD[id] || 0).toFixed(2), pg.sec, GAMES,
-      EPS_TIER ? ('tier:' + EPS_TIER) : 'eps:0.2-soft', MODE || 'multi(默认)'].join('\t') + '\n', 'utf8');
+    /* 带先验时 `d` 用搬来的裸包值（**不许**现算 `exam − page`，那会把先验效应塞进一个已注册的列名）；
+     *   搬不到就必须响亮失败，不许写空 —— 空 `d` 到 `attach-hp` 那里会变成 `+'' = 0`，静默把 Δε 写成 0。 */
+    if (SUPPORT !== '' && (CARRIED_D[id] === undefined || CARRIED_PAGE[id] === undefined)) {
+      fail++; console.error('  ⛔ ' + id + ' --examFrom 那张表里没有 d/page 两列的值 ⇒ 不写行（宁缺毋混）'); continue;
+    }
+    const row = [id, ex.v.toFixed(2), pg.v.toFixed(2),
+      SUPPORT !== '' ? CARRIED_D[id] : (ex.v - pg.v).toFixed(2),
+      (HOLD[id] || 0).toFixed(2), pg.sec, GAMES,
+      EPS_TIER ? ('tier:' + EPS_TIER) : 'eps:0.2-soft', MODE || 'multi(默认)'];
+    if (SUPPORT !== '') row.push(SUPPORT, String(CARRIED_PAGE[id]).trim());
+    appendFileSync(OUT, row.join('\t') + '\n', 'utf8');
     if (done % 50 === 0) console.error('  … ' + done + '/' + ids.length + ' 枚（失败 ' + fail + '）');
   }
 }

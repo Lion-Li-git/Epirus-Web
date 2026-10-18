@@ -10,8 +10,22 @@
   /* v1.7.111（用户 10-18 裁定「页面开先验」）：**送盾先验默认开档 2**（改目标 + 挑不到就改攒，按概率）。
    *   为什么要在页面开：`v7beadseed-82` 这类包**靠它才不刷屏**（裸包 17.3 次/局，开档 4.2/5.4），
    *   而先验原先只接在评测/训练工具里（`eval-5p` / `promote-champion`），页面零调用 ⇒ 产品行为与测量口径不一致。
-   *   这里只是**把部署层开关打开**，不改引擎规则；开关本身不消耗 `state.rng`（`evo.js` 那份实现已自证）。 */
-  try { if (Trainer && typeof Trainer.setSupportPrior === 'function') Trainer.setSupportPrior(2); } catch (e) { void e; }
+   *   这里只是**把部署层开关打开**，不改引擎规则；开关本身不消耗 `state.rng`（`evo.js` 那份实现已自证）。
+   * §E648：这一行现在是**现网默认值的唯一来源**（引擎常数仍是 0），原来那个 `catch(e){void e;}` 会把
+   *   "加载顺序被调后 `EpirusTrainer` 还没就绪"吞成**静默回裸包**——页面照样能玩、CHANGELOG 却写着已开，
+   *   只有去量行为才发现。⇒ 现在**回读引擎**并逐条响亮报（控制台没这两行之一就是没接上，不是"没问题"）。 */
+  try {
+    if (!Trainer || typeof Trainer.setSupportPrior !== 'function') {
+      console.warn('[support-prior] ⛔ `EpirusTrainer.setSupportPrior` 不存在 ⇒ **页面没开先验**（产品口径退回裸包，而账上写着已开）');
+    } else {
+      Trainer.setSupportPrior(2);
+      const PRIOR_BACK = typeof Trainer.supportPriorOn === 'function' ? Trainer.supportPriorOn() : null;
+      const PRIOR_KNOBS = typeof Trainer.supportPriorKnobs === 'function' ? Trainer.supportPriorKnobs() : null;
+      if (PRIOR_BACK !== 2) console.warn('[support-prior] ⛔ 声明开档 2，引擎回读 `' + PRIOR_BACK + '` ⇒ setter 没生效，产品与测量已分叉');
+      else console.info('[support-prior] 页面档 = ' + PRIOR_BACK + ' ‖ knobs 引擎回读 = pick=' + (PRIOR_KNOBS && PRIOR_KNOBS.pick)
+        + ' skipP=' + (PRIOR_KNOBS && PRIOR_KNOBS.skipP) + ' minEp=' + (PRIOR_KNOBS && PRIOR_KNOBS.minEp));
+    }
+  } catch (e) { console.warn('[support-prior] ⛔ 开档抛错：' + ((e && e.message) || e)); }
 
   const $ = function (id) { return document.getElementById(id); };
   const NAME = ['你', '电脑'];
