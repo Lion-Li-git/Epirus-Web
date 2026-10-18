@@ -1,0 +1,19 @@
+# §E648b A1b 复验：strict 档（--support=2 --supportpick=max --supportskip=1）× 3 起点 × 2 模式 × 3 seed × 200 局
+ROW pack=v7beadseed-82 seed=77000 mode=multi gear=strict 1st=63.8%
+ROW pack=v7beadseed-82 seed=77001 mode=multi gear=strict 1st=63.4%
+ROW pack=v7beadseed-82 seed=77002 mode=multi gear=strict 1st=63.3%
+ROW pack=v7beadseed-82 seed=77000 mode=long gear=strict 1st=70.9%
+ROW pack=v7beadseed-82 seed=77001 mode=long gear=strict 1st=70.0%
+ROW pack=v7beadseed-82 seed=77002 mode=long gear=strict 1st=70.1%
+ROW pack=R-s123 seed=77000 mode=multi gear=strict 1st=57.9%
+ROW pack=R-s123 seed=77001 mode=multi gear=strict 1st=57.9%
+ROW pack=R-s123 seed=77002 mode=multi gear=strict 1st=59.2%
+ROW pack=R-s123 seed=77000 mode=long gear=strict 1st=62.9%
+ROW pack=R-s123 seed=77001 mode=long gear=strict 1st=63.0%
+ROW pack=R-s123 seed=77002 mode=long gear=strict 1st=60.8%
+ROW pack=bundled-champion-3p seed=77000 mode=multi gear=strict 1st=58.1%
+ROW pack=bundled-champion-3p seed=77001 mode=multi gear=strict 1st=57.1%
+ROW pack=bundled-champion-3p seed=77002 mode=multi gear=strict 1st=57.7%
+ROW pack=bundled-champion-3p seed=77000 mode=long gear=strict 1st=65.5%
+ROW pack=bundled-champion-3p seed=77001 mode=long gear=strict 1st=65.2%
+ROW pack=bundled-champion-3p seed=77002 mode=long gear=strict 1st=66.0%

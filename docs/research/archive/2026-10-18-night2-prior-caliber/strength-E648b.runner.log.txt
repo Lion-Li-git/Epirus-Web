@@ -1,0 +1,4 @@
+STRENGTHB_DONE 18 格 2026-10-19 01:00:22
+读的档：strength-E648.log.txt + strength-E648b-strict.log.txt‖ 合并后 54 行（覆盖 18 处）
+本次可比格 36 ‖ 缺归档对照 0 ‖ 值不同 0
+✔ 所有 36 格逐字相同 ⇒ `off` 与 `strict` 两档都没被我的改动挪动 ⇒ "产品档 vs 关档"的差可以归给档位，不归给代码漂移
