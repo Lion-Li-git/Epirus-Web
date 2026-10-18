@@ -48,3 +48,48 @@ for (const [tag, pfx, start] of [['82 谱系（起点 v7beadseed-82）', 'gv', '
 }
 console.log('\n⚑ 单位说清：这一台数的是**候选分布**（训练器端出来多少粒超线），不是"谁当选"；当选那一席的读数在 §E650 一/六。');
 console.log('⚑ 分母仍然是**两条谱系各一批候选**（谱系 n=1/条）⇒ 它把"当选者恰好超线"那句话说实，但不构成"起点决定收敛形状"的结论。');
+
+/* ===== 名次那一格（PREREG §六 1b，判线写在跑之前）=====
+ * 每格 = 一个（谱系 × seed）：取**关档臂**日志里 `[band-save] …（当选）` 那一粒，量它的 @100 裸包送盾，
+ * 在那条梯子六席的 @100 值里排名（1 = 最凶 … 6 = 最干净）。同谱系三格共享起点 ⇒ 只判"形状是不是巧合"。 */
+const { readFileSync } = await import('node:fs');
+const LINES = [['gv', 'v7beadseed-82'], ['tw', 'v7teach-32'], ['ex', 'v7expo-34'], ['wa', 'v7wall-33']];
+/* 从臂日志里取"（当选）"那个 band 名（与 `analyze-gift-arms.mjs` 同一把判据，别在这儿发明第二种） */
+const winnerBandOf = (txt, arm) => ((txt.match(new RegExp('^\\[band-save\\] (' + arm + '-band\\d+)\\.bak\\s+trainFit=[\\d.]+（当选）', 'm')) || [])[1]) || null;
+console.log('\n## 关档当选者在自家六席里按 @100 送盾的名次（1=最凶 ‖ 判线见 PREREG §六 1b：≥8/12 落在前两席才许升格）');
+const ranks = [];
+for (const [pfx, name] of LINES) {
+  const cells = [];
+  for (const s of [77000, 77001, 77002]) {
+    const lg = path.join(HERE, 'gift-veto-' + pfx + '0-' + s + '.log.txt');
+    if (!existsSync(lg)) continue;
+    const m = winnerBandOf(readFileSync(lg, 'utf8'), pfx + '0-' + s);
+    if (!m) { cells.push(s + '=日志里读不到（当选）行'); continue; }
+    const abs = path.join(A, pfx + '-' + pfx + '0-' + s + '--' + m + '.bak');
+    const absLive = path.join(ROOT, 'docs/artifacts', pfx + '-' + pfx + '0-' + s, m + '.bak');
+    const p = existsSync(abs) ? abs : (existsSync(absLive) ? absLive : null);
+    if (!p) { cells.push(s + '=产物不在盘上'); continue; }
+    const wg = gift(p, 100);
+    if (wg === null) { cells.push(s + '=读不出'); continue; }
+    /* 同一条梯子的六席（按权重去重后取该 seed 那一支）*/
+    const lAD = new Set(); const ladder = [];
+    for (let k = 1; k <= 6; k++) {
+      const f = path.join(A, pfx + '-' + pfx + '0-' + s + '--' + pfx + '0-' + s + '-band' + k + '.bak');
+      const fl = path.join(ROOT, 'docs/artifacts', pfx + '-' + pfx + '0-' + s, pfx + '0-' + s + '-band' + k + '.bak');
+      const q = existsSync(f) ? f : (existsSync(fl) ? fl : null);
+      if (!q) continue;
+      const w = wid(q); if (lAD.has(w)) continue; lAD.add(w);
+      const g = gift(q, 100); if (g !== null) ladder.push(g);
+    }
+    const rank = 1 + ladder.filter(g => g > wg + 1e-9).length;
+    cells.push(s + '=' + wg.toFixed(2) + '/局 名次 ' + rank + '/' + ladder.length);
+    ranks.push({ pfx: pfx, seed: s, rank: rank, n: ladder.length });
+  }
+  if (cells.length) console.log('  ' + name.padEnd(16) + cells.join('   ‖   '));
+  else console.log('  ' + name.padEnd(16) + '还没跑（臂日志不在 ⇒ 这一支不参与名次统计）');
+}
+if (ranks.length) {
+  const top2 = ranks.filter(r => r.rank <= 2).length;
+  console.log('  合计 ' + ranks.length + ' 格 ‖ 落在前两席（最凶的两粒）= ' + top2 + ' 格 ‖ 判线要 ≥8/12 ⇒ ' + (ranks.length >= 12 && top2 >= 8 ? '**可升格**' : '**维持"方向一致的观察"**'));
+}
+
