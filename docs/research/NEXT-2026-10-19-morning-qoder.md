@@ -52,7 +52,8 @@ grep -E 'AB_CELLS_DONE|⛔' docs/research/archive/2026-10-18-night2-prior-calibe
 3. **§E649 只剩 long 层没填**：multi 那张表（794 枚）与池桌 A/B（29 枚两层）都已落纸；强度三档在 §E648 六（"时刻待补"已回填）。
    E0 那 16 枚现役成员的裸包送盾**已补测**（`champion-map/holo-e649-2026-10-19.tsv`，803 包全量在册）。
 4. **合并回 main 的清单**（版本号在这一步才写）：CHANGELOG 新节（写 knobs/九条腿/Hp 口径/veto 四件事，注意 D205 的门号正则与"最新版正文"这条扫描面）
-   ‖ `index.html` 的 `?v=` 缓存戳（我改了 `js/ui/ui.js`，DS 的 promote 机器人才会刷它 ⇒ 合并时手动刷一次）‖ 归档 `champion-map/epsfull-noopcheck*.tsv` 从 champion-map 挪进 archive 目录。
+   ‖ `index.html` 的 `?v=` 缓存戳（我改了 `js/ui/ui.js`，DS 的 promote 机器人才会刷它 ⇒ 合并时手动刷一次）。
+   ⚑ 原写在这条里的"把 `champion-map/epsfull-noopcheck*.tsv` 挪进归档目录"**已经做完且已跟踪**（四份都在 `docs/research/archive/2026-10-18-night2-prior-caliber/`：`epsfull-noopcheck-2026-10-18.tsv` ‖ `epsfull-noopcheck-s0-2026-10-18.tsv` ‖ `hp-noopcheck-12.tsv` ‖ `hp-rerun-list.tsv`）⇒ 别再照这句话去 champion-map 里找。
 5. **veto 的下一步不是再跑臂**，是等 §四.1/.3 那两条裁定（强度代价要不要付、线画在哪）；第二起点 `v7teach-32` 只在"要写普适"时才需要（2 臂 ≈4 分钟，我今晚没跑 ⇒ 现在这句只到"这一支上能剪"）。
 
 ## 四、等她裁的四件（都在 `LIVE-LINES` 有对应行）
