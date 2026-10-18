@@ -8,7 +8,7 @@
  *        下游按表头查列只看得见第一对 ⇒ 现在 attach-hp 自己幂等了，这台再兜一层"列名不许重复"。
  *     ② attach-path 的 --ruler 不给全 ⇒ 没覆盖到的枚退回"顶层 <id>.bak"猜路径（§E330 那个同名旧拷贝的病）。
  *
- * 顺序（§E605-A 之后共九步；列序 = 产物列序，`Sc/Scd/Scs/Sch/kin` 五列从此落在 `aliasN/aliasIds` 之后）：
+ * 顺序（§E605-A 之后共九步 + §E615 的 `attach-hlong` 第十步；列序 = 产物列序，`Sc/Scd/Scs/Sch/kin` 五列从此落在 `aliasN/aliasIds` 之后）：
  *   1) ruler-figs       画几何（26 列：id…z3 + 13 个行为列 ‖ §E605：声明了 examG 的行优先 ‖ §E605-A：面板在册的副名不许复活）
  *   2) attach-hp        头号尺 Hp 与 Δε（§E605：来源表显式点名 --table=，缺省 epsfull.tsv 会把整批换档）
  *   3) attach-path      path 列（--ruler= 必须覆盖**全部**枚，否则就是猜 ‖ §E605-A：转发第①步那批输入）
@@ -171,6 +171,13 @@ run('relabel-lineage.mjs', ['--all-true'], '⑧ relabel-lineage 身份从解析�
  *   这条对账问的是"带身份的行数 = 旧表 + 本轮新增"，它**只有在一行=一份权重的表上**才谈得上对得上，所以跟着 A 挪到这里。
  *   上一版（第②步位置）的实测：不挪 ⇒ 差值 -5；只插入 relabel 仍 -4（`SHIPPED-Ldemo ‖ eco-34-v7 ‖ v7a-35 ‖ v7n1-31 ‖ T8-s114` 五枚点名）。 */
 run('attach-kin.mjs', ['--from=' + FROM], '⑨ attach-kin 搬当选键 + 打 kin + 冠军对账');
+
+/* ===== ⑩ attach-hlong：**长程桌**那五列（§E615）=====
+ * 2026-10-18 补：这条链原来**没有它** ⇒ 每次重建都把 `Hlong/Hplong/Flong/okLong/failsLong` 丢掉，
+ *   页面上"长程考卷"那一维读成 null ⇒ 用户看到的是"**完全缺位**"（数据一直在 `epsfull-long-2026-10-16.tsv`，只是没挂回来）。
+ * 放在最后：它按 id 匹配、列落表尾，不扰动前九步的列序；缺源表时它自己会响亮退出（"先跑 eps-full --mode=long"）。
+ * ⚠ 它只写这五列、**不动坐标**，也不换绿环（换环=换判据主语，在册待裁 #47）。 */
+run('attach-hlong.mjs', [], '⑩ attach-hlong 长程桌三列 + 全腿长程过线');
 
 /* 收尾核验：列名不许重复、每行宽度一致、lineage/kin 两列的类必须还是那几类 */
 const L = rd(CO), h = L[0].split('\t'), rows = L.slice(1).map(l => l.split('\t'));

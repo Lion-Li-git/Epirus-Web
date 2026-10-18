@@ -1,3 +1,30 @@
+## v1.7.97 — 10-18（DS · `main`）：修谱系图"**长程考卷完全缺位**" —— 数据一直在，是**重建链把它丢了**。
+
+### ① 根因（不是数据没读进去，是列被删了）
+
+`champion-map/rebuild-coords.mjs` 的九步链里**没有 `attach-hlong`** ⇒ 每次重建都把
+`Hlong / Hplong / Flong / okLong / failsLong` 五列丢掉 ⇒ 页面读 `r.Hlong === undefined` ⇒ 长程那一维读成 null。
+
+证据：
+- 源表**一直在**：`epsfull-long-2026-10-16.tsv` 799 行、`feas-long-s1..s4.tsv` 各 200 行；
+- 但 `coords.tsv` 表头**没有** `Hlong`（跑到 `… exam` 就结束了）；
+- `node champion-map/attach-hlong.mjs --check` 当场报 `⛔ coords.tsv 还没有这三列`。
+
+### ② 修法（两条：立刻恢复 + 别再复发）
+
+1. **立刻恢复**：跑 `attach-hlong.mjs` ⇒ 五列挂回，`Hlong` 非空 **798/803** 行
+   （缺的 5 枚正是 §E641 新加的 `t5-*` 臂 —— 它们不在长程源表里，属预期）；
+2. **别再复发**：给 `rebuild-coords.mjs` 补第 **⑩** 步 `attach-hlong`（放最后：按 id 匹配、列落表尾，不扰动前九步列序；
+   缺源表时它自己会响亮退出）。同时说明：**它只写这五列、不动坐标**，也不换绿环（换环 = 换判据主语，在册待裁 #47）。
+
+### ③ 验证
+
+- 重烘 `champion-map/index.html`（1017 KB），页内 `Hlong` 出现 4 处；
+- 四视图 `shot.mjs --hash="mode=<tree|1d|3db|map>&check=1" --dump` ⇒ **各 93 PASS / 0 FAIL**。
+
+⚠ 一处坑记一下：`--hash=mode=tree&check=1` 里的 `&` 在 PowerShell 里必须**加引号**，
+否则它被当成运算符拆掉 ⇒ 断言一条都没跑，而工具只会印 `0 PASS ‖ 0 FAIL` —— **那是"没跑"，不是"全绿"**。
+
 ## v1.7.96 — 10-18 凌晨（千问 · 分支 `research/support-2026-10-17`）：**给"辅助"装第一把能读的尺** —— 训练包席送盾 0.579 次/局、79% 白给、点名 0.3%；四个"多方对齐"机制在 91723 回合里**零剂量**
 
 ### ① 为什么先做尺不做训练
