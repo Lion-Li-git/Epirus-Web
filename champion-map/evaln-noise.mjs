@@ -28,6 +28,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { pairedStats } from '../tools/audit-lib.mjs';
 
 const argv = process.argv.slice(2);
 const FLAG = {};
@@ -253,14 +254,15 @@ console.log('   序对逆序（榜换了几个前后次序）' + swaps + ' / ' +
 if (packs.length >= 2) {
   console.log('\n⑤ 逐 seedBase 配对差（各枚 − 参照「' + packs[0].name + '」，单位 pt；+ = 比参照强）:');
   for (let i = 1; i < packs.length; i++) {
+    /* v1.7.102（METHODOLOGY 122 条第 4 款）：配对算术改用 `audit-lib.pairedStats` —— **唯一实现**。
+     *   输出格式逐字保持不变（正常情形），只有两种退化情形会变：n<2 ⇒ 印「没有噪声估计」；SE=0 ⇒ 印「t 无定义」，
+     *   不再印 `Infinity`/`NaN`（旧实现在这两格里会把"没量过"伪装成"铁证"）。 */
     const ds = packs[i].sc.map(function (o, k) { return (o.s - packs[0].sc[k].s) * 100; });
-    const mean = ds.reduce(function (a, b) { return a + b; }, 0) / ds.length;
-    const sd = Math.sqrt(ds.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / Math.max(1, ds.length - 1));
-    const se = sd / Math.sqrt(ds.length);
-    const pos = ds.filter(function (d) { return d > 0; }).length, neg = ds.filter(function (d) { return d < 0; }).length;
+    const st = pairedStats(ds);
     console.log('   ' + packs[i].name.padEnd(22) + ds.map(function (d) { return (d >= 0 ? '+' : '') + d.toFixed(1).padStart(6); }).join('') +
-      '   均值 ' + (mean >= 0 ? '+' : '') + mean.toFixed(2) + ' ‖ 同号 ' + pos + '+' + neg + '−' +
-      ' ‖ SE ' + se.toFixed(2) + ' ‖ 均值/SE ' + (mean / se).toFixed(2));
+      '   均值 ' + (st.mean >= 0 ? '+' : '') + st.mean.toFixed(2) + ' ‖ 同号 ' + st.pos + '+' + st.neg + '−' +
+      ' ‖ SE ' + (st.se === null ? '—（n<2，没有噪声估计）' : st.se.toFixed(2)) +
+      ' ‖ 均值/SE ' + (st.t === null ? '—（' + st.why + '）' : st.t.toFixed(2)));
   }
   console.log('   ⚠ 判读规矩：均值要出 **配对 SE**（不是单枚极差）才算幅度；均值/SE < 2 ⇒ 只报"方向一致、幅度判不动"。' +
     '  参照那枚如果是"用它自己的 home seedBase 选上台的"，务必看第一列（= 主场那一粒）与均值的差。');
