@@ -605,16 +605,45 @@
     SUPPORT_PRIOR = n;
   }
   function supportPriorOn() { return SUPPORT_PRIOR; }
+/* v1.7.105（用户 10-18：「SUPPORT_PRIOR 压得太死，留一些阈值或随机性，免得完全变成脚本工作」）。
+ *   两条旋钮，都**不消耗 `state.rng`**（用无状态 hash 派生）⇒ 开/关档的随机流仍逐字同：
+ *     `SUPPORT_PRIOR_MIN_EP`  —— “在搓长招”的软阈值（默认 3，与 `ringStreak ≥ 1` 并联）；
+ *     `SUPPORT_PRIOR_SKIP_P`  —— 档 2 挑不到目标时“改攒”的概率（默认 0.6；其余照网络自己走）。
+ *   ⇒ 行为不再是“永远取 ep 最大 + 永远改攒”，而是**按 ep 加权抽一个 + 有时不拦**。 */
+let SUPPORT_PRIOR_MIN_EP = 3;
+let SUPPORT_PRIOR_SKIP_P = 0.6;
+function setSupportPriorKnobs(o) {
+  const a = (o && o.minEp != null) ? Number(o.minEp) : NaN;
+  const b = (o && o.skipP != null) ? Number(o.skipP) : NaN;
+  if (isFinite(a) && a >= 1) SUPPORT_PRIOR_MIN_EP = a | 0;
+  if (isFinite(b) && b >= 0 && b <= 1) SUPPORT_PRIOR_SKIP_P = b;
+}
+function supportPriorKnobs() { return { minEp: SUPPORT_PRIOR_MIN_EP, skipP: SUPPORT_PRIOR_SKIP_P }; }
+/* 无状态伪随机（**不碰 state.rng**）：同一 (回合, 席, 盐) 永远同一个数 ⇒ 可复现。 */
+function supportPriorRand(state, pid, salt) {
+  const t = (state.turn != null) ? state.turn : (state.round != null ? state.round : 0);
+  const s = t + '|' + pid + '|' + (salt || 0);
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h / 4294967296;
+}
   /* 挑不到就返回 null ⇒ 照网络自己的选择（那一格是**分母 0**，不是"先验表现差"）。不消耗 `state.rng`。 */
   function supportPriorTarget(state, pid) {
-    let b = -1, be = -1;
+    /* v1.7.105：从「**永远取 ep 最大**」改成「**按 ep 加权抽一个**」（无状态 hash，不碰 state.rng）
+     *   ⇒ 挑人里有随机成分，不再是一张固定脚本；同 (回合,席) 仍可复现。 */
+    const cand = [];
+    let wsum = 0;
     for (let i = 0; i < state.p.length; i++) {
       if (i === pid || state.p[i].hp <= 1) continue;
-      const churning = (state.p[i].ringStreak | 0) >= 1 || state.p[i].ep >= 3;
+      const churning = (state.p[i].ringStreak | 0) >= 1 || state.p[i].ep >= SUPPORT_PRIOR_MIN_EP;
       if (!churning) continue;
-      if (state.p[i].ep > be) { be = state.p[i].ep; b = i; }
+      const wgt = Math.max(1, state.p[i].ep | 0);
+      cand.push({ i: i, w: wgt }); wsum += wgt;
     }
-    return b >= 0 ? b : null;
+    if (!cand.length) return null;
+    let r = supportPriorRand(state, pid, 1) * wsum;
+    for (let k = 0; k < cand.length; k++) { r -= cand[k].w; if (r <= 0) return cand[k].i; }
+    return cand[cand.length - 1].i;
   }
   /* ===== §E275（v1.5.334 · 用户 10-03 晚：「你把摄魂的给做一下」+「HP=1 是**仅调整探索时软提升的窗口**，不是调整实际规则」）=====
    * 与大雷那档的**根本区别**：这条**不强行落子**，只在**探索那一支**里把"摄魂指法"并入探索集（= 软提升，
@@ -876,8 +905,12 @@
           /* 挑不到 ⇒ 这一手不送：落回"攒"（`JI`，可付且合法时）；连攒都不合法就照旧送出（不许凭空造一个非法动作）。
            *   两档的差别不是洁癖：§E644 四 实测"少而准"里大半的强度收益来自**少送本身**（省下 1 费与回合节奏），
            *   而 §E643 二 被量过的那条 churn 臂正是"挑不到就不给盾（改攒）"这一形 ⇒ 档 2 复现它，档 1 只改给谁。 */
-          const ji = legal.find(function (l) { return l.key === R.SK.JI && l.affordable; });
-          if (ji) return { key: R.SK.JI, target: null, target2: null, bead: null };
+          /* v1.7.105：改攒**不是必然** —— 只有 hash 抽中 `SUPPORT_PRIOR_SKIP_P` 才改攒，否则照网络送出去。
+           *   ⇒ 档 2 不再等价于「几乎取消送盾」，留了随机性（用户：「免得完全变成脚本工作」）。 */
+          if (supportPriorRand(state, pid, 2) < SUPPORT_PRIOR_SKIP_P) {
+            const ji = legal.find(function (l) { return l.key === R.SK.JI && l.affordable; });
+            if (ji) return { key: R.SK.JI, target: null, target2: null, bead: null };
+          }
         }
       }
       return { key: pick.key, target: shipTarget, target2: pickTarget2N(state, pid, pick.key, shipTarget), bead: pick.bead };
@@ -3462,7 +3495,7 @@ function countVariety(events, seat) {
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
     setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt, wrapBigTPush,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认值只由上面那个常数表达，门 D224 钉）· v1.6.3 §E282：外面那层给脚本席用
-    setSupportPrior, supportPriorOn, supportPriorTarget,   // §E646（路线 B）：送盾的部署层先验，**默认 0=关**；自证在 `tools/probe-support-prior.mjs`
+    setSupportPrior, supportPriorOn, supportPriorTarget, setSupportPriorKnobs, supportPriorKnobs,   // §E646（路线 B）：送盾的部署层先验，**默认 0=关**；自证在 `tools/probe-support-prior.mjs`
     setDrainPush, drainPushOn, drainPushWants, drainPushSalt,              // v1.5.334 §E275：摄魂"残血只在探索里软提升"（默认 0=关，门 D225 钉）
     setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve, setBeliefPly, beliefPly,
     setBeliefTarget, beliefTarget, setBeliefTie, beliefTie,

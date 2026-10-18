@@ -1576,7 +1576,8 @@ for (const h of hall) {
    *   才把 k 追加到 8 粒重验一次 —— 于是在"大多数轮次分差够大"的情况下只付 k 粒的钱。
    *   同分带按 k 查表（`bandFor`，k=4 ⇒ 5.8pt），不是旧常数 3.0。
    *   默认**关**（`EPIRUS_SEL_TWO_STAGE=1` 才开）⇒ 不设时与旧行为逐字相同。 */
-  if (process.env.EPIRUS_SEL_TWO_STAGE === '1' && hallEntries.length >= 2) {
+  /* v1.7.105（用户 10-18：「两段式默认开」）：**默认开**，`EPIRUS_SEL_TWO_STAGE=0` 才关。 */
+  if (process.env.EPIRUS_SEL_TWO_STAGE !== '0' && hallEntries.length >= 2) {
     const srt = hallEntries.slice().sort(function (a, b) { return b.score - a.score; });
     const gapPt = (srt[0].score - srt[1].score) * 100;
     const band = bandFor(SEL.k);
