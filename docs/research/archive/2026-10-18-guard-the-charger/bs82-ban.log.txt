@@ -1,0 +1,14 @@
+ROW mode=multi seed=77000 arm=as-is games=200 1st=62.5% | 哨兵= | 出牌= 全息屏障 1.7% 费用=1 | 平均回合=29.4
+ROW mode=multi seed=77000 arm=--ban=holo games=200 1st=63.8% | 哨兵=被拿掉的技能在可负担集里 103581 次 = 63.4% | 出牌= | 平均回合=29.3
+ROW mode=multi seed=77000 arm=--ban=ji games=200 1st=10.3% | 哨兵=被拿掉的技能在可负担集里 234209 次 = 100.0% | 出牌= | 平均回合=38.6
+ROW mode=multi seed=77001 arm=as-is games=200 1st=61.6% | 哨兵= | 出牌= 全息屏障 1.7% 费用=1 | 平均回合=29.4
+ROW mode=multi seed=77001 arm=--ban=holo games=200 1st=63.2% | 哨兵=被拿掉的技能在可负担集里 103058 次 = 63.1% | 出牌= | 平均回合=29.3
+ROW mode=multi seed=77001 arm=--ban=ji games=200 1st=9.5% | 哨兵=被拿掉的技能在可负担集里 233204 次 = 100.0% | 出牌= | 平均回合=38.5
+ROW mode=multi seed=77002 arm=as-is games=200 1st=61.0% | 哨兵= | 出牌= 全息屏障 1.7% 费用=1 | 平均回合=29.4
+ROW mode=multi seed=77002 arm=--ban=holo games=200 1st=63.0% | 哨兵=被拿掉的技能在可负担集里 103259 次 = 63.4% | 出牌= | 平均回合=29.3
+ROW mode=multi seed=77002 arm=--ban=ji games=200 1st=10.0% | 哨兵=被拿掉的技能在可负担集里 234037 次 = 100.0% | 出牌= | 平均回合=38.5
+ROW mode=long seed=77000 arm=as-is games=200 1st=69.2% | 哨兵= | 出牌= 全息屏障 1.8% 费用=1 | 平均回合=51.4
+ROW mode=long seed=77000 arm=--ban=holo games=200 1st=70.9% | 哨兵=被拿掉的技能在可负担集里 233141 次 = 69.0% | 出牌= | 平均回合=55.3
+ROW mode=long seed=77001 arm=as-is games=200 1st=69.3% | 哨兵= | 出牌= 全息屏障 1.8% 费用=1 | 平均回合=51.1
+ROW mode=long seed=77001 arm=--ban=holo games=200 1st=71.4% | 哨兵=被拿掉的技能在可负担集里 226191 次 = 68.2% | 出牌= | 平均回合=54.3
+BS82_DONE 13:32:34
