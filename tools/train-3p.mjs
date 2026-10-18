@@ -1872,13 +1872,14 @@ for (const h of hall) {
       }
       return v;
     };
-    const view = sel.clean.map(function (e) {
+    const view = sel.clean.map(function (e, i) {
       const g = giftOf(e.ref.params);
-      return Object.assign({}, e, { id: e.ref.id || (e.ref.wid ? String(e.ref.wid).slice(0, 8) : '?'), giftPerGame: g, gateOk: g <= HOLO_GIFT_MAX });
+      /* 名人堂的 `ref` 只有 `params/fit(/wid)` ⇒ 没 id 时退回"榜内第几席"，**不许打成 '?' 让人以为丢了数据** */
+      return Object.assign({}, e, { id: e.ref.id || (e.ref.wid ? String(e.ref.wid).slice(0, 8) : ('榜内#' + (i + 1))), giftPerGame: g, gateOk: g <= HOLO_GIFT_MAX });
     });
     const gv = rejectGiftSpamWinners(view);
     const who = gv.droppedList.map(function (d) { return d.id + ' ' + (d.gift === null ? '?' : d.gift.toFixed(2)) + '/局'; }).join(' ‖ ');
-    const widOf = function (e) { return (e && e.ref && (e.ref.id || (e.ref.wid ? String(e.ref.wid).slice(0, 8) : null))) || '?'; };
+    const widOf = function (e) { return e.id || (e.ref && e.ref.id) || (e.ref && e.ref.wid ? String(e.ref.wid).slice(0, 8) : '未名'); };
     const tail = gv.best
       ? (gv.best.ref.params === (sel.best && sel.best.ref.params)
         ? ' ⇒ 池内冠军**没换人**'
