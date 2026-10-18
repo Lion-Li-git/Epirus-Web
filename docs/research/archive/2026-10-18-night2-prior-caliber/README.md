@@ -46,6 +46,9 @@ node docs/research/archive/2026-10-18-night2-prior-caliber/gift-ladder-dist.mjs
 # 重建那张图：--extra 是**替换**默认 extra，历批尺表一张都不能少
 node champion-map/rebuild-coords.mjs --hp=epsfull-hp-final-2026-10-19.tsv --hlong=epsfull-hlong-final-2026-10-19.tsv \
   --extra=champion-map/e370-ruler.tsv,champion-map/e608-ruler.tsv,champion-map/e641-ruler.tsv
+# 第⑪步（本班被门 D234⑩c 教的一课）：改了 coords 必须重烘那张自包含页，否则页检/截图量的都不是这份数据
+node champion-map/viewer.mjs
+node tools/np-test.mjs --only="D234 "      # 逐字比对 index.html 与生成器输出 ⇒ 应 1/1
 ```
 
 ## 三、本目录想拦住的三个坑（都是这一班自己踩的，写在这里而不是只写在日志里）
@@ -55,3 +58,6 @@ node champion-map/rebuild-coords.mjs --hp=epsfull-hp-final-2026-10-19.tsv --hlon
 2. **实验 `.bak` 别落共享产物池 `docs/artifacts/` 根上。** 门 D191④ 扫的就是那里；驱动收尾还原 `champion-map/pack-aliases.tsv`  ⇒ "文件在、登记没了" 立刻红（实测 0→6，还原 gv-* 时 0→19）。
    收尾顺序固定：证据进 `arms/` → 目录移出池 → `node tools/dedupe-artifacts.mjs --audit` 确认 `unregistered: 0`。
 3. **"已复验"三个字必须贴命令原文。** 本目录那台校验器缺省只读最近一批 ⇒ 拿缺省跑一遍不构成对"改码之后"的复验（这一班差点把没做的写进账）。多输入型校验器还要看它自报的**覆盖处数**。
+4. **`rebuild-coords` 之后还有一步：重烘 `champion-map/index.html`。** 本班重建完去跑门禁，**195/196** 里那条红就是 D234 ⑩c——它逐字比对在册那份自包含页与 `viewer.mjs` 的输出，
+   而我改了 `coords.tsv` 却没重烘 ⇒ "页检/截图量的都不是这份代码"。门给的话就是修法（`node champion-map/viewer.mjs` ⇒ D234 单跑 1/1 绿，03:05:26）。
+   ⇒ 记的是**链子的边界**：`rebuild-coords` 的"✅ 八步跑完且产物自洽"**不包含**这张页，别把它的绿灯当成"图这件事做完了"。
