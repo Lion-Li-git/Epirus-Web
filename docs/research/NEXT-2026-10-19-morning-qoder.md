@@ -66,6 +66,8 @@
    ‖ `index.html` 的 `?v=` 缓存戳（我改了 `js/ui/ui.js`，DS 的 promote 机器人才会刷它 ⇒ 合并时手动刷一次）。
    ⚑ 原写在这条里的"把 `champion-map/epsfull-noopcheck*.tsv` 挪进归档目录"**已经做完且已跟踪**（四份都在 `docs/research/archive/2026-10-18-night2-prior-caliber/`：`epsfull-noopcheck-2026-10-18.tsv` ‖ `epsfull-noopcheck-s0-2026-10-18.tsv` ‖ `hp-noopcheck-12.tsv` ‖ `hp-rerun-list.tsv`）⇒ 别再照这句话去 champion-map 里找。
 5. **veto 这条线今晚到此为止**：第二起点已跑（§一.11）⇒ 剩下的是**裁定**而不是再跑臂。若她要说"训练侧能解决"，缺的是**谱系数量**（现在每条谱系 3 粒 seed、谱系本身 n=1）⇒ 补一条谱系 ≈20 分钟；若她说"上 veto"，缺的是**线值标定**（只量过 2/4/6/8）＋ 非劣性在**多条谱系**上的复量。
+6. **一件现场清理等她一句话**：`%LOCALAPPDATA%\..\Temp\epirus-scratch-2026-10-19\` 里放着本班移出的现场（实测 **24 项 / 9.2 MB**：12 个 `inv*-band*.bak` + 6 个 `gv-*` + 6 个 `tw-*` 带内目录，`.gitignore` 本来就屏 `*.bak`）。
+   删掉不影响任何在册证据——**读数与六份当选产物已在仓里**（`归档/.../arms/*.winner.js` ‖ `MANIFEST.tsv.txt` ‖ `gift-arms-{gv,tw}.analyzed.txt` ‖ `veto-seed7-inert.log.txt`）；留着只是为了"万一要复算梯子"。我不擅自删别人的盘。
 
 ## 四、等她裁的四件（都在 `LIVE-LINES` 有对应行）
 
