@@ -31,6 +31,8 @@
 | [`reviews/`](research/reviews/) | 第三方复核（`REVIEW-*` ‖ `AUDIT-RESPONSE-*`）、决策单（`DECISIONS-*`）、提案（`PROPOSAL-*`）、薄汇总（`SUMMARY-*`）、研究队列（`RESEARCH-QUEUE-*`）、单次分析（`PARAMS-PLAN` / `OPTIMIZATION-ep-cliff` / `REVIEW-3P`） | 这类文件的**结论若被采纳**，要落进 CHANGELOG + 长期文档，然后它就退化成过程账 |
 | [`archive/`](research/archive/README.md) | 过期流水（只读）。里面有历次搬动的 **old→new 对照表** | 只进不出；改名/合并都要在对照表里补一行 |
 
+顶层另有一张**跨班状态表**（不是流水，不参与"收工搬 `archive/`"）：[`research/LIVE-LINES.md`](research/LIVE-LINES.md) —— 谁在哪条线、在哪个工作树、动的是哪一面、状态是活/parked/已并，以及"主工作树常驻 `main`、实验自开 worktree"这四条规矩。
+
 还有三个**产物目录**不属于"文档"：`docs/artifacts/`（臂产物 `.bak` 与仪器脚本 —— 门 D82 读它）‖ `docs/debug/` ‖ `docs/screenshots/`。
 
 ## 三、引用规矩（本仓栽过的形状，逐条对着防）
