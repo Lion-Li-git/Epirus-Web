@@ -1,2 +1,15 @@
 # §E648 先验三档强度配对：3 枚起点 × 2 模式 × 3 seed × {off,strict,prod} × 200 局（配对同 seed 同座位）
 # 分支 qoder-1018-night2 ‖ 起时刻 2026-10-18 23:50:11
+ROW pack=v7beadseed-82 seed=77000 mode=multi gear=off 1st=62.5%
+ROW pack=v7beadseed-82 seed=77000 mode=multi gear=strict 1st=63.8%
+ROW pack=v7beadseed-82 seed=77000 mode=multi gear=prod 1st=63.3%
+ROW pack=v7beadseed-82 seed=77001 mode=multi gear=off 1st=61.6%
+ROW pack=v7beadseed-82 seed=77001 mode=multi gear=strict 1st=63.4%
+ROW pack=v7beadseed-82 seed=77001 mode=multi gear=prod 1st=62.3%
+ROW pack=v7beadseed-82 seed=77002 mode=multi gear=off 1st=61.0%
+ROW pack=v7beadseed-82 seed=77002 mode=multi gear=strict 1st=63.3%
+ROW pack=v7beadseed-82 seed=77002 mode=multi gear=prod 1st=62.1%
+ROW pack=v7beadseed-82 seed=77000 mode=long gear=off 1st=69.2%
+ROW pack=v7beadseed-82 seed=77000 mode=long gear=strict 1st=70.9%
+ROW pack=v7beadseed-82 seed=77000 mode=long gear=prod 1st=70.2%
+ROW pack=v7beadseed-82 seed=77001 mode=long gear=off 1st=69.3%
