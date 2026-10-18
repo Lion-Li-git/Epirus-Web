@@ -74,12 +74,15 @@ import { widOf } from '../champion-map/pack-id.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 rejectUnknownFlags(process.argv.slice(2),
-  ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose', 'mixSeats',
+  ['tier', 'games', 'seeds', 'modes', 'members', 'out', 'n', 'dose', 'mixSeats', 'seat',
     'subject', 'ref', 'batches', 'seedBase', 'subjectDose', 'assertDiff', 'alsoDrop', 'elected'], 'probe-pool');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const TIER = flag('tier', 'hard'), G = Number(flag('games', 60));
 const SEEDS = String(flag('seeds', '90210,90211')).split(',').map(Number).filter(x => !Number.isNaN(x));
 const MODES = String(flag('modes', 'multi,long')).split(',').filter(Boolean);
+/* v1.7.110：`--seat=<0..4>` 把被测钉在固定席（不设 = 照旧逐局轮换）。0 = 玩家席。 */
+const SEATFIX = flag('seat', '') === '' ? null : Number(flag('seat', ''));
+if (SEATFIX !== null && !(SEATFIX >= 0 && SEATFIX <= 4)) { console.error('⛔ --seat= 只能是 0..4（收到 `' + flag('seat', '') + '`）'); process.exit(2); }
 const TABLE = flag('members', 'champion-map/pool-members.tsv');
 
 if (SEEDS.length < 2) { console.error('⛔ 至少两枚 seed ⇒ 不然量不出批间抖动（σ），只能给一个孤零零的均值'); process.exit(2); }
@@ -276,7 +279,14 @@ if (SUBJECT_ARG) {
      *   门 `D234`⑥b 正是靠这一行的存在来判"自证有没有真跑"（不印 = 跳过了自证还报绿）。 */
     function selfTest3() {
       const usedN = agg.seatCnt.filter(x => x > 0).length, mxv = Math.max.apply(null, agg.seatCnt), mnv = Math.min.apply(null, agg.seatCnt);
-      if (usedN < 5 || mxv - mnv > 1) return '自证③ 不过：主体席只出现在 ' + usedN + '/5 席（各席 ' + agg.seatCnt.join('/') +
+      /* v1.7.110：--seat= 钉住固定席时，要判的是「全部落在那一席」，不是「轮换均匀」（两种断言互斥）。 */
+  if (SEATFIX !== null) {
+    const othersAll = agg.seatCnt.every((v, i) => (i === SEATFIX ? v >= 0 : v === 0));
+    if (!othersAll || agg.seatCnt[SEATFIX % 5] <= 0) return '自证③ 不过：--seat=' + SEATFIX + ' 要求主体席固定在那一席（各席 ' + agg.seatCnt.join('/') + '）';
+    console.log('   ✔ 自证③（席位接线 · 钉席模式）：主体席全部落在 ' + SEATFIX + ' 号席（各席 ' + agg.seatCnt.join('/') + '）');
+    return null;
+  }
+  if (usedN < 5 || mxv - mnv > 1) return '自证③ 不过：主体席只出现在 ' + usedN + '/5 席（各席 ' + agg.seatCnt.join('/') +
         ' ⇒ 极差 ' + (mxv - mnv) + '）⇒ 被考的那一枚没有逐席轮换，读数里掺的是座位';
       const noShow = ROSTER.filter(m => !agg.memberG[m.id]);
       if (noShow.length) return '自证③ 不过：名单里有 ' + noShow.length + ' 枚一场没上（' + noShow.map(m => m.id).join(' ‖ ') + '）⇒ 抽签与席位的接线断了';
@@ -315,7 +325,7 @@ if (SUBJECT_ARG) {
         else if (st.winner === 'draw') drawN++;
       };
       const r = duelAssembly({ S: S, Play: Play, T: T, R: R }, ROSTER.length ? PARAMS[ROSTER[0].id] : arm.params,
-        { games: G, mode: mode, seed0: seed, scripted: arm.chooser, chooserFor: chooserFor, onGame: onGame });
+        { games: G, mode: mode, seed0: seed, scripted: arm.chooser, chooserFor: chooserFor, onGame: onGame, seatFix: SEATFIX });
       if (mismatch) { console.error('⛔ 对手席里出现了脚本席（' + mismatch + ' 次）⇒ 主体席模式不掺席，装配不是我说的那个'); process.exit(2); }
       if (games !== G) { fail = '主体席跑了 ' + games + ' 局而声明是 ' + G + ' 局 ⇒ 对局循环没跑满，读数作废'; return null; }
       /* ⚑ 第四条自证（v1.7.83 起升级成**逐位**对照）：我数到的主体席夺1率必须等于 `duelAssembly` 的未取整列 `winRate`。
@@ -560,7 +570,7 @@ for (const mode of MODES) {
     HUMAN.forEach(function (x, i) {
       curCell = x[0];
       const r = duelAssembly({ S: S, Play: Play, T: T, R: R }, PARAMS[lite[0].id],
-        { games: G, mode: mode, seed0: seed, scripted: x[1], chooserFor: chooserFor, onGame: onGame });
+        { games: G, mode: mode, seed0: seed, scripted: x[1], chooserFor: chooserFor, onGame: onGame, seatFix: SEATFIX });
       (per[x[0]] = per[x[0]] || []).push(r.winPct);
     });
   }

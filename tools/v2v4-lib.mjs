@@ -140,7 +140,10 @@ export function duelAssembly(deps, params, opts) {
   pierceDef.add(R.SK.CANNON);
   let turtleAtk = 0, turtlePierce = 0, turtleLand = 0;
   for (let g = 0; g < G; g++) {
-    const seat = g % N;
+    /* v1.7.110：`o.seatFix` 可把被测钉在固定席（默认 null = 照旧逐局轮换）。
+     *   用户 10-18：「坐玩家位置和整个池抽出来的冠军打多人」—— 轮换排除了座位偏差，但那是另一个问题；
+     *   要复议「坐在玩家席上」的强度，就得能固定 `seat=0`。默认不设 ⇒ 既有尺读数逐字不变。 */
+    const seat = (o.seatFix != null ? (o.seatFix % N) : (g % N));
     const st = S.createState(mode, { next: mb(seed0 + g * 991) }, N);
     st.slotSalt = h32(seed0 + g * 2246822519);
     const mine = function (s2, pid, lg) {
