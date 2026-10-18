@@ -36,7 +36,13 @@ function winnerOf(arm) {
   if (!existsSync(f)) return { arm: arm, missing: '日志缺失' };
   const s = readFileSync(f, 'utf8');
   const bandSel = [...s.matchAll(/^\[band-save\] (\S+?-band\d+)\.bak\s+trainFit=[\d.]+（当选）/gm)].map(x => x[1]);
-  const bandPath = bandSel.length ? path.join(ROOT, 'docs/artifacts/gv-' + arm, bandSel[0] + '.bak') : null;
+  /* 权威 band 文件的**归档拷贝**优先（`arms/gv-<臂>--<臂>-bandN.bak`，驱动收尾收的），
+   *   再看 `docs/artifacts/` 里那一版；两个都找不到才报"找不到"。
+   *   为什么以归档为准：批收尾会把 `pack-aliases.tsv` 里本批追加的登记行还原 ⇒ 池里那些 band 就成了"未登记的重复"，
+   *   门 D191④ 会红（实测 unregistered 从 0 跳到 19）⇒ 收尾必须把 `gv-*` 移出共享产物池，那时只有 arms/ 这份还在。 */
+  const archived = bandSel.length ? path.join(HERE, 'arms', 'gv-' + arm + '--' + bandSel[0] + '.bak') : null;
+  const live = bandSel.length ? path.join(ROOT, 'docs/artifacts/gv-' + arm, bandSel[0] + '.bak') : null;
+  const bandPath = archived && existsSync(archived) ? archived : (live && existsSync(live) ? live : null);
   const copy = path.join(HERE, 'arms', arm + '.winner.js');
   let prod = null, how = '';
   if (existsSync(copy)) {
@@ -44,8 +50,8 @@ function winnerOf(arm) {
     if (metaArm === arm) { prod = copy; how = '拷贝自落盘时刻（META arm 相符）'; }
     else { how = '⚑ 拷贝失配：arms/' + arm + '.winner.js 的 META arm=' + (metaArm || '无') + ' ⇒ 不用它，改用当选 band'; }
   }
-  if (!prod && bandPath && existsSync(bandPath)) { prod = bandPath; how = how || '按 `[band-save] …（当选）` 行指认'; }
-  if (!prod && bandSel.length) how += ' ‖ 当选 band 文件找不到：' + bandPath;
+  if (!prod && bandPath) { prod = bandPath; how = how ? (how + ' ‖ 当选 band 用归档拷贝') : '按 `[band-save] …（当选）` 行指认（归档拷贝）'; }
+  if (!prod && bandSel.length) how += ' ‖ 当选 band 文件找不到：' + archived + ' 与 ' + live;
   const gate = (s.match(/^\[送盾闸\].*$/m) || [null])[0];
   const allSpam = /名人堂\*\*全部超线\*\*/.test(s);
   const first = (s.match(/^1st=([\d.]+)%/m) || [])[1];

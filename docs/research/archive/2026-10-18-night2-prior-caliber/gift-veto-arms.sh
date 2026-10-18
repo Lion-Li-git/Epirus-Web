@@ -31,8 +31,13 @@ for SEED in 77000 77001 77002; do
       exec node tools/train-3p.mjs 120 5 8 12 ) > "$HERE/gift-veto-$ARM.log.txt" 2>&1
     rc=$?
     # 每臂跑完**立刻**把当选产物收走：`train-3p-out.js` 是所有臂共用的落点名，下一臂会覆写它 ⇒ 不趁现在收就永远分不清哪臂是谁
-    if [ -f docs/artifacts/train-3p-out.js ]; then
+    # ⚑ 但**只有 rc=0 才收**：§E589 守卫判"这粒权重已在盘上"时不写产物（退出码 9），那一刻 `train-3p-out.js` 里躺着的是**上一臂**的冠军
+    #   ⇒ 照抄就会把上一臂登记成本臂（01:32 实测：gv1-77000.winner.js 的 META arm=gv0-77000，读数 39.24 其实是关档那格的）。
+    #   rc=9 那格的权威产物由收尾那段 band 拷贝 + 分析器读 `[band-save] …（当选）` 行来定。
+    if [ "$rc" = "0" ] && [ -f docs/artifacts/train-3p-out.js ]; then
       mkdir -p "$HERE/arms"; cp -f docs/artifacts/train-3p-out.js "$HERE/arms/$ARM.winner.js"
+    else
+      echo "  ⚑ $ARM rc=$rc ⇒ 没写产物，不收 train-3p-out.js（那是上一臂的）；当选那粒看 arms/gv-$ARM--*-bandN.bak" >> "$LOG"
     fi
     LINE=$(grep -E "^\[送盾闸\]" "$HERE/gift-veto-$ARM.log.txt" | tail -1)
     PROD=$(grep -oE "已写入 [^ ]+\.js|已在 \`?docs/artifacts/[^ \`]+" "$HERE/gift-veto-$ARM.log.txt" | tail -1)
@@ -55,5 +60,13 @@ for d in docs/artifacts/gv-gv*/; do
   grep -E "已写入|已在 \`?docs/artifacts" "$HERE/gift-veto-$(basename "$d" | sed 's/^gv-//').log.txt" | tail -2 | sed "s|^|  落盘($d): |" >> "$LOG"
 done
 echo "  arms/ 收了 $(ls "$HERE/arms" 2>/dev/null | wc -l) 份 band 产物" >> "$LOG"
+# ⚑ 收尾必须把本批的 band 目录**移出共享产物池**（01:44 实测到的自相矛盾）：
+#   上面那步还原了 `pack-aliases.tsv` ⇒ 池里这些 band 立刻变成"未登记的重复" ⇒ 门 D191④ 红（unregistered 0→19）。
+#   证据已经收在 `arms/`（分析器优先读它），池里留着只会让下一班以为"重复是我的码造的"。
+for d in docs/artifacts/gv-gv*/; do
+  [ -d "$d" ] || continue
+  mkdir -p /c/Users/14765/AppData/Local/Temp/epirus-scratch-2026-10-19
+  mv "$d" /c/Users/14765/AppData/Local/Temp/epirus-scratch-2026-10-19/ && echo "  移出产物池：$d → Temp/epirus-scratch-2026-10-19/" >> "$LOG"
+done
 echo "GVARMS_DONE $n 臂（期望 6）$(date '+%F %T')" >> "$LOG"
 grep -c "^ARM " "$LOG" | sed 's/^/落账臂数: /'
