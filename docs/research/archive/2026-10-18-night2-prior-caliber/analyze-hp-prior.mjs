@@ -38,19 +38,19 @@ const rows = [], seen = {};
 for (const f of FILES) {
   const L = readFileSync(f, 'utf8').replace(/\r\n/g, '\n').split('\n').filter(l => l.indexOf('#') !== 0 && l.trim());
   const h = Object.fromEntries(L[0].split('\t').map((x, i) => [x.trim(), i]));
-  for (const col of ['id', 'page', 'pageBare', 'support', 'mode']) {
+  for (const col of ['id', 'page', 'pageBare', 'exam', 'support', 'mode']) {
     if (h[col] === undefined) { console.error('⛔ ' + path.basename(f) + ' 缺列 `' + col + '`（表头：' + L[0] + '）⇒ 这台读数器要的是带 `--support=` 的那批'); process.exit(2); }
   }
   for (const l of L.slice(1)) {
     const c = l.split('\t');
-    const id = c[h.id], page = Number(c[h.page]), bare = Number(c[h.pageBare]);
-    if (!id || !isFinite(page) || !isFinite(bare)) { console.error('⛔ 不合法的一行（不许静默丢分母）：' + l); process.exit(3); }
+    const id = c[h.id], page = Number(c[h.page]), bare = Number(c[h.pageBare]), exam = Number(c[h.exam]);
+    if (!id || !isFinite(page) || !isFinite(bare) || !isFinite(exam)) { console.error('⛔ 不合法的一行（不许静默丢分母）：' + l); process.exit(3); }
     if (c[h.support] !== '2') { console.error('⛔ ' + id + ' 的 support=' + c[h.support] + ' ⇒ 这批混档了'); process.exit(3); }
     const key = id + '|' + c[h.mode];
     const d = +(page - bare).toFixed(2);
     if (seen[key] !== undefined && seen[key] !== d) { console.error('⛔ 同一个键两个不同 Δ：' + key + ' ⇒ ' + seen[key] + ' ↔ ' + d); process.exit(4); }
     seen[key] = d;
-    rows.push({ id, mode: c[h.mode], page, bare, d });
+    rows.push({ id, mode: c[h.mode], page, bare, exam, d });
   }
 }
 const dup = rows.length - Object.keys(seen).length;
@@ -80,6 +80,15 @@ function report(label, set) {
 const byMode = {};
 for (const r of rows) (byMode[r.mode] = byMode[r.mode] || []).push(r);
 for (const m of Object.keys(byMode).sort()) report('全库 · ' + m, byMode[m]);
+/* 挪得最多的前十枚：图上颜色/排序会因开档而变的就是这一批，明后要人工看一眼的是它们 */
+for (const m of Object.keys(byMode).sort()) {
+  const top = byMode[m].slice().sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 10);
+  console.log('\n## 挪动最大的前十枚 · ' + m + '（按 |Δ| 排）');
+  for (const r of top) {
+    console.log('   ' + r.id.padEnd(20) + ' 裸包 ' + r.bare.toFixed(2) + ' → 开档 ' + r.page.toFixed(2)
+      + '（Δ ' + (r.d >= 0 ? '+' : '') + r.d.toFixed(2) + 'pt）' + (inPool[r.id] ? ' ‖ 现役[' + inPool[r.id] + ']' : '') + ' ‖ 考卷(搬来的裸包值) ' + r.exam.toFixed(2));
+  }
+}
 for (const m of Object.keys(byMode).sort()) {
   const pool = byMode[m].filter(r => inPool[r.id]);
   report('现役池成员 · ' + m + '（' + POOL + '）', pool);
