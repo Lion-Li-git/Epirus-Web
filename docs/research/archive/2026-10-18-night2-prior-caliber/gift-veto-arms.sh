@@ -11,6 +11,8 @@ cd "$REPO" || { echo "⛔ 进不去 REPO=$REPO"; exit 9; }
 #   换起点**必须同时换 PFX**，否则两批写同一个日志/同一个目录/同一个 `arms/<臂>.winner.js`（=本班那个"两个写者"病的静态版本）。
 PFX="${PFX:-gv}"; TAG="${TAG:-}"
 SEEDPACK="${SEEDPACK:-docs/artifacts/v7beadseed-82.bak}"
+# ⚑ `VSET` = 要跑哪几档（默认两档都跑）。PREREG §七 那一问只要"训练器自己把当选位推到多少送盾"⇒ 只跑关档，省一半时间。
+VSET="${VSET:-0 1}"
 LOG="$HERE/gift-veto-arms${TAG}.log.txt"; : > "$LOG"
 # ⚑ 单实例锁（本班真实事故的产物：11:2x 我一边跑这个脚本一边改它 ⇒ 旧驱动仍在跑旧逻辑，与新驱动往同一个日志里交错写，
 #    日志里同时出现 rc=0/rc=127 与乱序臂名 ⇒ 那批数据整个作废）。改脚本之前必须按 PID 确认老进程已经收干净。
@@ -20,10 +22,11 @@ if [ -f "$LOCK" ] && kill -0 "$(cat "$LOCK" 2>/dev/null)" 2>/dev/null; then
 fi
 echo $$ > "$LOCK"; trap 'rm -f "$LOCK"' EXIT
 [ -f "$SEEDPACK" ] || { echo "⛔ 起点不在盘上：$SEEDPACK" | tee -a "$LOG"; exit 8; }
-echo "# §E650 臂批：start=$SEEDPACK pfx=$PFX 120代 × 3 seed × {veto=0,1} ‖ 起 $(date '+%F %T')" >> "$LOG"
+EXP=$(( 3 * $(echo "$VSET" | wc -w) ))   # ⚑ 期望臂数从 VSET 算出来，**不写死 6**——写死的守卫会在只跑一档的批上骗人
+echo "# §E650 臂批：start=$SEEDPACK pfx=$PFX VSET='$VSET' 120代 × 3 seed × {veto=$VSET} ‖ 期望 $EXP 臂 ‖ 起 $(date '+%F %T')" >> "$LOG"
 n=0
 for SEED in 77000 77001 77002; do
-  for V in 0 1; do
+  for V in $VSET; do
     ARM="${PFX}${V}-${SEED}"
     # shellcheck disable=SC2086
     ( export EPIRUS_SEED="$SEED" EPIRUS_ARM="$ARM" EPIRUS_BAND_DIR="docs/artifacts/$PFX-$ARM" \
@@ -77,5 +80,6 @@ for d in docs/artifacts/$PFX-$PFX*/; do
   mkdir -p /c/Users/14765/AppData/Local/Temp/epirus-scratch-2026-10-19
   mv "$d" /c/Users/14765/AppData/Local/Temp/epirus-scratch-2026-10-19/ && echo "  移出产物池：$d → Temp/epirus-scratch-2026-10-19/" >> "$LOG"
 done
-echo "GVARMS_DONE $n 臂（期望 6）$(date '+%F %T')" >> "$LOG"
+if [ "$n" != "$EXP" ]; then echo "GVARMS_INCOMPLETE $n 臂 ≠ 期望 $EXP（VSET='$VSET'）$(date '+%F %T')" >> "$LOG"; grep -c "^ARM " "$LOG" | sed 's/^/落账臂数: /'; exit 1; fi
+echo "GVARMS_DONE $n 臂（期望 $EXP）$(date '+%F %T')" >> "$LOG"
 grep -c "^ARM " "$LOG" | sed 's/^/落账臂数: /'

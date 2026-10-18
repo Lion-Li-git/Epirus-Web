@@ -21,8 +21,12 @@ T.setSupportPrior(0);   // 全部按**裸包**量
 const wid = p => { const a = loadChamp(W, p, ROOT); return a ? createHash('sha1').update(JSON.stringify(a.a || a)).digest('hex').slice(0, 8) : null; };
 const gift = (p, g) => { const a = loadChamp(W, p, ROOT); if (!a) return null; const mh = T.mirrorHealth(a, g, 5, 'multi'); const v = Number(mh && mh.holoOtherPerGame); return isFinite(v) ? v : null; };
 
-for (const [tag, pfx, start] of [['82 谱系（起点 v7beadseed-82）', 'gv', 'docs/artifacts/v7beadseed-82.bak'],
-                                 ['teach 谱系（起点 v7teach-32）', 'tw', 'docs/artifacts/v7teach-32.bak']]) {
+const LINES = [['gv', 'v7beadseed-82（现网池成员，起点 17.3/局）', 'docs/artifacts/v7beadseed-82.bak'],
+               ['tw', 'v7teach-32（起点 81.4）', 'docs/artifacts/v7teach-32.bak'],
+               ['ex', 'v7expo-34（起点 115.0）', 'docs/artifacts/v7expo-34.bak'],
+               ['wa', 'v7wall-33（起点 8.7，灰带）', 'docs/artifacts/v7wall-33.bak']];
+
+for (const [pfx, tag, start] of LINES) {
   const seen = new Map();
   for (const f of readdirSync(A)) {
     if (f.indexOf(pfx + '-') !== 0 || f.indexOf('--') < 0) continue;
@@ -53,7 +57,6 @@ console.log('⚑ 分母仍然是**两条谱系各一批候选**（谱系 n=1/条
  * 每格 = 一个（谱系 × seed）：取**关档臂**日志里 `[band-save] …（当选）` 那一粒，量它的 @100 裸包送盾，
  * 在那条梯子六席的 @100 值里排名（1 = 最凶 … 6 = 最干净）。同谱系三格共享起点 ⇒ 只判"形状是不是巧合"。 */
 const { readFileSync } = await import('node:fs');
-const LINES = [['gv', 'v7beadseed-82'], ['tw', 'v7teach-32'], ['ex', 'v7expo-34'], ['wa', 'v7wall-33']];
 /* 从臂日志里取"（当选）"那个 band 名（与 `analyze-gift-arms.mjs` 同一把判据，别在这儿发明第二种） */
 const winnerBandOf = (txt, arm) => ((txt.match(new RegExp('^\\[band-save\\] (' + arm + '-band\\d+)\\.bak\\s+trainFit=[\\d.]+（当选）', 'm')) || [])[1]) || null;
 console.log('\n## 关档当选者在自家六席里按 @100 送盾的名次（1=最凶 ‖ 判线见 PREREG §六 1b：≥8/12 落在前两席才许升格）');
@@ -85,8 +88,8 @@ for (const [pfx, name] of LINES) {
     cells.push(s + '=' + wg.toFixed(2) + '/局 名次 ' + rank + '/' + ladder.length);
     ranks.push({ pfx: pfx, seed: s, rank: rank, n: ladder.length });
   }
-  if (cells.length) console.log('  ' + name.padEnd(16) + cells.join('   ‖   '));
-  else console.log('  ' + name.padEnd(16) + '还没跑（臂日志不在 ⇒ 这一支不参与名次统计）');
+  if (cells.length) console.log('  ' + name.padEnd(38) + cells.join('   ‖   '));
+  else console.log('  ' + name.padEnd(38) + '还没跑（臂日志不在 ⇒ 这一支不参与名次统计）');
 }
 if (ranks.length) {
   const top2 = ranks.filter(r => r.rank <= 2).length;

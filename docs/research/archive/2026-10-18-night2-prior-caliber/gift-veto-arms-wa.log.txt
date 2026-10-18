@@ -1,0 +1,22 @@
+# §E650 臂批：start=docs/artifacts/v7wall-33.bak pfx=wa 120代 × 3 seed × {veto=0,1} ‖ 起 2026-10-19 03:23:11
+ARM wa0-77000 rc=0 ‖ （veto 关档不印，这是预期的） ‖ 产物: 已写入 docs/artifacts/train-3p-out.js
+ARM wa1-77000 rc=0 ‖ [送盾闸] 判据 = 裸包 `holoOtherPerGame > 6`（单源 `audit-lib.HOLO_GIFT_MAX`）· 量具 20 局 multi 镜 ‖ 剔 0/6 ⇒ 池内冠军**没换人** ‖ 产物: 已写入 docs/artifacts/train-3p-out.js
+ARM wa0-77001 rc=0 ‖ （veto 关档不印，这是预期的） ‖ 产物: 已写入 docs/artifacts/train-3p-out.js
+ARM wa1-77001 rc=0 ‖ [送盾闸] 判据 = 裸包 `holoOtherPerGame > 6`（单源 `audit-lib.HOLO_GIFT_MAX`）· 量具 20 局 multi 镜 ‖ 剔 1/6：榜内#3 9.65/局 ⇒ 池内冠军**没换人** ‖ 产物: 已写入 docs/artifacts/train-3p-out.js
+ARM wa0-77002 rc=0 ‖ （veto 关档不印，这是预期的） ‖ 产物: 已写入 docs/artifacts/train-3p-out.js
+ARM wa1-77002 rc=0 ‖ [送盾闸] 判据 = 裸包 `holoOtherPerGame > 6`（单源 `audit-lib.HOLO_GIFT_MAX`）· 量具 20 局 multi 镜 ‖ 剔 0/6 ⇒ 池内冠军**没换人** ‖ 产物: 已写入 docs/artifacts/train-3p-out.js
+⚑ pack-aliases.tsv 被本批追加 18 行 ⇒ 已留在 gift-veto-wa-aliases-side.diff.txt 后还原
+  落盘(docs/artifacts/wa-wa0-77000/): 已写入 docs/artifacts/train-3p-out.js  (coldStart=false, seed=77000)
+  落盘(docs/artifacts/wa-wa0-77001/): 已写入 docs/artifacts/train-3p-out.js  (coldStart=false, seed=77001)
+  落盘(docs/artifacts/wa-wa0-77002/): 已写入 docs/artifacts/train-3p-out.js  (coldStart=false, seed=77002)
+  落盘(docs/artifacts/wa-wa1-77000/): 已写入 docs/artifacts/train-3p-out.js  (coldStart=false, seed=77000)
+  落盘(docs/artifacts/wa-wa1-77001/): 已写入 docs/artifacts/train-3p-out.js  (coldStart=false, seed=77001)
+  落盘(docs/artifacts/wa-wa1-77002/): 已写入 docs/artifacts/train-3p-out.js  (coldStart=false, seed=77002)
+  arms/ 收了 169 份 band 产物
+  移出产物池：docs/artifacts/wa-wa0-77000/ → Temp/epirus-scratch-2026-10-19/
+  移出产物池：docs/artifacts/wa-wa0-77001/ → Temp/epirus-scratch-2026-10-19/
+  移出产物池：docs/artifacts/wa-wa0-77002/ → Temp/epirus-scratch-2026-10-19/
+  移出产物池：docs/artifacts/wa-wa1-77000/ → Temp/epirus-scratch-2026-10-19/
+  移出产物池：docs/artifacts/wa-wa1-77001/ → Temp/epirus-scratch-2026-10-19/
+  移出产物池：docs/artifacts/wa-wa1-77002/ → Temp/epirus-scratch-2026-10-19/
+GVARMS_DONE 6 臂（期望 6）2026-10-19 03:42:23
