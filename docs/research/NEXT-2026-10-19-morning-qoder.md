@@ -19,50 +19,57 @@
 7. **登记**：`LIVE-LINES` 加了分支行、Hp 进行中的接法、`SUPPORT_PRIOR` 无门覆盖的待裁、`bandFor` 回落待裁；route-B 文档顶部标了"本文的形状是严档"。
 8. **E 段真的做了（§E650，01:27:01→01:52:16）**：`EPIRUS_SEL_GIFT_VETO` 默认关接进当选面 + 纯函数 `rejectGiftSpamWinners` + 合成表自证 `tools/probe-gift-veto.mjs`（5 腿，做过变异测试）；
    六臂跑完并按预注册逐条判 ⇒ **闸咬得动（@100 裸包 39.24→4.55 ‖ 24.04→2.44），但 `eval-5p` 考卷上撑住判线的那两格是 −5.65pt** ⇒ 读数是"能剪、要付强度"，**没接上线上**（默认仍关）。
-   第二起点没跑 ⇒ 按 §三.4 **不升格**。证据：`归档/.../arms/*.winner.js` 六份 + `arms/MANIFEST.tsv.txt`（每格的权威源与权重 sha8）。
+   第二起点 02:35 也跑完了（见下面第 11 条）⇒ 按 §三.4 **仍然不升格**。证据：`归档/.../arms/*.winner.js` 十二份（gv 六 ‖ tw 六）+ `arms/MANIFEST.tsv.txt`（每格的权威源与权重 sha8）+ `gift-arms-gv.analyzed.txt` ‖ `gift-arms-tw.analyzed.txt`。
 9. **D218 那条规矩补齐到我这班新写的 7 台量具**（`rejectUnknownFlags`，实测 bogus 旗标一律 exit 64、正常调用照旧出数）。
 10. **门禁跑过**：`--group=train` **157/159**（01:06→01:40）‖ `--group=meta` **16/16**（01:51:40）；唯一那条红 D191④ 的根因是我自己的产物池卫生（见 §五），处理后 D191 单跑 **1/1**（01:45:25）。
     ⚑ 两遍都是**按组**跑（工具原话"只跑了 159 / 278"与"16 / 278"）⇒ **不是整轮认证**；且与批同机并发 ⇒ 秒数不作证据。
+11. **第二起点跑完（§E650 六，02:14:36→02:35:06）**：`v7teach-32`（裸包 81.4 次/局，池里最凶的一档）× 同 3 seed × {关,开}
+    ⇒ 三格当选者送盾 **0.00 ‖ 1.14 ‖ 0.00**，且三格两臂当选**同一粒权重**（结构零）⇒ 主判据"读不出"、**§三.4 的升格没解锁**（"veto 是这根杠杆"仍不许写）；
+    `eval-5p` 非劣性**没跑**并写明理由：产物逐位相同 ⇒ 那把尺在这里无事可判，跑了只是同一粒包测两遍。
+    ⚑ 这条比升格值钱：**同一个训练器，在 teach 谱系上把刷屏练没了，在 82（现网池成员）谱系上把 17.3 练成 24~39**
+    ⇒ "训练侧能不能解决送盾"不是训练器的属性，是**起点与选择压**的属性 ⇒ veto 的定位改成"给不会自己收敛的谱系兜底的闸"。
+    分母老实说：每条谱系 3 粒 seed、**谱系本身 n=1** ⇒ 方向明确的观察、不是"起点决定收敛"的结论（要钉死得再补一两条谱系，每条 ≈20 分钟）。
+12. **图按新口径重建完（02:1x）**：803 行 × 49 列，五道自证全过 ‖ 四视图 tree/1d/3db/map **各 93 PASS ‖ 0 FAIL**；
+    第一趟只带 `--hp/--hlong` 时被链子自己的"行数守恒"守卫点名**弄丢 9 枚**（历批 `--extra` 尺表被替换掉了）⇒ 补 `--extra=e370,e608,e641` 才对；这条已写进 `LIVE-LINES` §二.5 与 §E649 三。
 
-## 二、DOING（只剩 **Hp long** 一批；判活**只看进程 CommandLine 与日志收尾行**，不看行数）
+## 二、批与链子：**全部收口**（判活只看进程 CommandLine 与日志收尾行，不看行数）
 
-查法：
-```bash
-powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Select-Object ProcessId,@{n='c';e={$_.CommandLine.Substring(0,[Math]::Min(120,$_.CommandLine.Length))}} | Format-Table -Wrap"
-wc -l < champion-map/epsfull-prior2-2026-10-18.tsv          # multi，目标 794 行（803 减缺基线的 9 枚）
-[ -f champion-map/epsfull-long-prior2-2026-10-18.tsv ] && wc -l < champion-map/epsfull-long-prior2-2026-10-18.tsv
-grep -c '^ROW' docs/research/archive/2026-10-18-night2-prior-caliber/strength-E648.log.txt   # 目标 54
-tail -1 docs/research/archive/2026-10-18-night2-prior-caliber/strength-E648.runner.log.txt   # 认 STRENGTH_DONE
-ls docs/research/archive/2026-10-18-night2-prior-caliber/ab-tmp/ | wc -l                     # 目标 116
-grep -E 'AB_CELLS_DONE|⛔' docs/research/archive/2026-10-18-night2-prior-caliber/ab-pool.runner.log.txt
-```
-- **Hp multi → long**（一条链式后台）：跑完接 `attach-hp --table=epsfull-prior2-2026-10-18.tsv --more=epsfull-tier-2026-10-12.tsv`，
-  再 `rebuild-coords`（**必须含第⑩步 `attach-hlong`**）+ 四视图 `--hash=…&check=1` 各 93 PASS；long 用 `epsfull-long-prior2-2026-10-18.tsv` + `--more=epsfull-long-2026-10-16.tsv`。
-- **强度三档**（54 格）：`node .../analyze-support-strength.mjs .../strength-E648.log.txt`（已扩 gear 维度，旧文件向后兼容已验）。
-- **C1 池桌 A/B**（116 格）：驱动末尾自动吐 `ab-pool.paired.txt`。
+| 那一批 | 收尾行与时刻 | 产物 |
+|---|---|---|
+| Hp multi | 00:30:01 `PRIOR_MULTI_DONE` | `champion-map/epsfull-prior2-2026-10-18.tsv`（794 行） |
+| Hp long | 02:09 `完成 803 枚 / 失败 5 ‖ 用时 99.8 分钟（jobs=4）` | `champion-map/epsfull-long-prior2-2026-10-18.tsv`（798 行） |
+| 合并进图 | 02:1x 链子两趟（第一趟被"行数守恒"拦）‖ 四视图各 93 PASS ‖ 0 FAIL | `epsfull-hp-final-…` ‖ `epsfull-hlong-final-…` ‖ `coords.tsv` 803 行 × 49 列 |
+| 强度三档 54 格 | 00:26:36 `STRENGTH_DONE 54 格` ‖ strict 复跑 01:00 | `strength-E648.log.txt` ‖ `strength-E648b-strict.log.txt` ‖ `verify-e647-postfix.log.txt` |
+| C1 池桌 A/B 116 格 | 00:28:12 `AB_CELLS_DONE` | `ab-pool.paired.txt` |
+| §E650 臂批（82 谱系） | 01:46:14 `GVARMS_DONE 6 臂（期望 6）` | `arms/gv-*.winner.js` 六份 + `gift-arms-gv.analyzed.txt` |
+| §E650 六（teach 谱系） | 02:35:06 `GVARMS_DONE 6 臂（期望 6）` | `arms/tw-*.winner.js` 六份 + `gift-arms-tw.analyzed.txt` |
+
+**还在跑的一件事**：收尾门禁复跑 `--group=probe`（累计 probe+train+ship+meta，覆盖本班全部改动面；输出落 `归档/.../gate-probe-final-e650.txt`）。
+查活的命令与批的判活规矩都写在上面的表里；⚑ 这批表里的"时刻"是从日志收尾行与 `date` 抄的，不是估的。
 
 ## 三、NEXT（按优先级，明早醒来看见的第一件事）
 
 1. **收尾复跑门禁**：`--group=train` 已跑 **157/159**（唯一那条红 D191④ 已根因=我的产物池卫生，处理后单跑 **1/1** 绿）‖ `--group=meta` **16/16**；
-   但**代码在 train 那一遍之后又改过**（归档量具的旗标守卫 + 分析器产物指认）⇒ 明早若要引"这条分支绿"，重跑一遍 `--group=train`（约 13 分钟，**别与批并发**，秒数会作废）；
-   ⚑ 两遍都是按组跑的，工具原话"只跑了 159 / 278 ‖ 16 / 278 ⇒ 不是整轮认证"要照抄；**整轮（不带 `--group`）今晚没跑**。
-2. **Hp long 收口后接 T1 链**：`merge-hp-caliber.mjs --main=epsfull-long-prior2-… --fill=epsfull-long-2026-10-16.tsv --out=…` ⇒
-   `rebuild-coords.mjs --hp=epsfull-hp-final-2026-10-19.tsv --hlong=<long 合并产物>` ⇒ 四视图 `--hash=…&check=1` 各 93 PASS。
-   这台链子会**覆盖** `champion-map/coords.tsv`：工作树里它现在是干净的 ⇒ `git show HEAD:champion-map/coords.tsv` 就是备份（`--from` 缺省也正是这份）。
-3. **§E649 只剩 long 层没填**：multi 那张表（794 枚）与池桌 A/B（29 枚两层）都已落纸；强度三档在 §E648 六（"时刻待补"已回填）。
-   E0 那 16 枚现役成员的裸包送盾**已补测**（`champion-map/holo-e649-2026-10-19.tsv`，803 包全量在册）。
+   但**代码与图在 train 那一遍之后又改过**（归档量具的旗标守卫 ‖ 分析器产物指认 ‖ `coords.tsv` 整张重建）⇒ 收尾复跑 `--group=probe`（累计 probe+train+ship+meta，覆盖本班全部改动面，约 10~20 分钟）已经在我这班最后起掉了；
+   ⚑ 按组跑就得照抄工具原话"只跑了 X / 278 ⇒ 不是整轮认证"；**整轮（不带 `--group`）今晚没跑**（改过 `js/train/**` 与 `js/ui/ui.js` 的话，明早若要出厂请先跑整轮）。
+2. ~~Hp long 收口后接 T1 链~~ ⇒ **跑完了**（见 §一.12）：合并产物 `epsfull-hlong-final-2026-10-19.tsv`（798 行 × 12 列）已进第⑩步，`coords.tsv` 803 行 × 49 列、四视图各 93 PASS ‖ 0 FAIL。
+   留给下一次的只有链子那条教训：**`--extra` 是替换不是追加** ⇒ 重建必须带齐历批尺表（本次 `e370,e608,e641`），否则守卫点名丢行。
+3. ~~§E649 只剩 long 层没填~~ ⇒ **填完了**，而且 long 那一层顺手打掉我一句说过头的话（"涨幅跟着送盾量走"只对 multi 的次序成立，long 头名是 2.7 次/局的 `D005-71` ⇒ 原文留着、旁边挂了 ⚑ 更正）。
 4. **合并回 main 的清单**（版本号在这一步才写）：CHANGELOG 新节（写 knobs/九条腿/Hp 口径/veto 四件事，注意 D205 的门号正则与"最新版正文"这条扫描面）
    ‖ `index.html` 的 `?v=` 缓存戳（我改了 `js/ui/ui.js`，DS 的 promote 机器人才会刷它 ⇒ 合并时手动刷一次）。
    ⚑ 原写在这条里的"把 `champion-map/epsfull-noopcheck*.tsv` 挪进归档目录"**已经做完且已跟踪**（四份都在 `docs/research/archive/2026-10-18-night2-prior-caliber/`：`epsfull-noopcheck-2026-10-18.tsv` ‖ `epsfull-noopcheck-s0-2026-10-18.tsv` ‖ `hp-noopcheck-12.tsv` ‖ `hp-rerun-list.tsv`）⇒ 别再照这句话去 champion-map 里找。
-5. **veto 的下一步不是再跑臂**，是等 §四.1/.3 那两条裁定（强度代价要不要付、线画在哪）；第二起点 `v7teach-32` 只在"要写普适"时才需要（2 臂 ≈4 分钟，我今晚没跑 ⇒ 现在这句只到"这一支上能剪"）。
+5. **veto 这条线今晚到此为止**：第二起点已跑（§一.11）⇒ 剩下的是**裁定**而不是再跑臂。若她要说"训练侧能解决"，缺的是**谱系数量**（现在每条谱系 3 粒 seed、谱系本身 n=1）⇒ 补一条谱系 ≈20 分钟；若她说"上 veto"，缺的是**线值标定**（只量过 2/4/6/8）＋ 非劣性在**多条谱系**上的复量。
 
 ## 四、等她裁的四件（都在 `LIVE-LINES` 有对应行）
 
-1. **体检线能不能被先验洗白**：82 从"裸包 17.3 阻断"变"开档 5.42 过线"并进 hard ⇒ 你要的是"玩家看不见刷屏"还是"包自己不刷"？后者意味着 82 该撤或该等训练侧解决。
+1. **体检线能不能被先验洗白**：82 从"裸包 17.3 阻断"变"开档 5.42 过线"并进 hard ⇒ 你要的是"玩家看不见刷屏"还是"包自己不刷"？
+   ⚑ 今晚的数据把"该等训练侧解决"这半句削弱了：在 **82 自己这条谱系**上，120 代热启动训出来的当选者送盾是 **39.24 ‖ 2.25 ‖ 24.04**（起点只有 17.3，**方向是往上**）⇒ "等训练把它练掉"对现网这枚**没有证据支持**；另一条谱系（teach）有，但那是另一枚包（§E650 六）。
 2. **要不要给"页面默认开档"加一条门腿**（按 D224 家族加腿 + 我同时交一条该摘的旧腿）；现在门里对 `SUPPORT_PRIOR` 零命中，红只在手跑时可见。
 3. **veto 的线画在哪、以及"要不要用强度去换干净"**（§E650 把两半都量出来了）：线值只量了 6（与体检线同值，我倾向保持"一条线一个意思"）；
    代价那一半是新的信息 —— 咬到的那两格在 `eval-5p` 考卷上是 **−6.20 ‖ −5.10（两格均值 −5.65pt）**，换来的是当选产物裸包送盾 **39.24→4.55 ‖ 24.04→2.44**。
-   ⇒ 现在能裁的是"这买卖做不做 / 线放低到只剪 >20/局那种极端刷屏"，**不能裁**的是"普适"（第二起点没跑）与"广度会不会塌"（三格方向不一致，单抽）。
+   ⇒ 现在能裁的是"这买卖做不做 / 线放低到只剪 >20/局那种极端刷屏"；**仍然不能裁**的是两件事：
+     ① **普适**——第二起点跑完了，但它跑成"三格当选者与关档同一粒权重、送盾 0.00 ‖ 1.14 ‖ 0.00"（那条谱系自己就不刷）⇒ 升格条件没满足，"veto 是这根杠杆"这句还是不许写，能写的只有"在 82 这支上能剪、要付考卷 ≈5~6pt"；
+     ② **广度会不会塌**——三格方向不一致（−10.1 ‖ 0.0 ‖ +17.6pt 破线）且那把尺 20 局单抽没复抽。
 4. **`bandFor` 表外的 k 怎么办**（返回 null / 补全表=编数 / 收窄 `parseSelSeeds`）——归 DS 的文件，我只写了选项。
 
 ## 四·补　DS 交班 T2（全库 `promote.tsv` 重扫）——今晚**没做**，两条理由都写在实测上
