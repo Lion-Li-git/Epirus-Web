@@ -586,6 +586,36 @@
     BIGT_PUSH = n;
   }
   function bigTPushOn() { return BIGT_PUSH; }
+  /* ===== §E646（路线 B · 用户 10-18 晚裁「那你顺便做一下 B 吧」；版本号留到合并那一刻再写，见规矩③）=====
+   * **部署层先验：档 1 只改送盾的目标；档 2 在此基础上"挑不到就不送（改攒）"。** 默认 **0 = 关** ⇒ 训练/评测/门禁与现网逐字不变，
+   *   开档必须显式 `setSupportPrior(1|2)`（评测侧 = `tools/eval-5p.mjs --support=1|2`，对照臂 = `--support=0`）。
+   * 谓词不是拍脑袋，是本轮实测挑出来的（§E644 二 ‖ §E643 二 补的四臂表）：
+   *   `churning = ringStreak ≥ 1 ∨ ep ≥ 3`（正在攒长招）**且 `hp > 1`（还没濒死）**，取 `ep` 最大、排除自己。
+   * ⚠ 反过来那两种写法都被量过、都是错的：**"挑血最少"送得比现状还多而兑现 0/235 ‖ 0/233**（`weak` 臂），
+   *   **随机给**只有 3/210（`rand` 臂）⇒ 濒死那一格一回合的盾救不回来，不许拿 `hp` 最低当判据。
+   * ⚑ **这是先验，不是学到的**（主语规矩）；收益不归送礼者（§E644 三：打到其威胁只有 0~2.6%），
+   *   所以它**不进 reward、不进特征**，也不许在产品文案里写成"AI 学会辅助"。
+   * 不新增门（默认关的开关不在现网路径上）；三条腿的可跑自证在 `tools/probe-support-prior.mjs`。 */
+  let SUPPORT_PRIOR = 0;
+  function setSupportPrior(v) {
+    const n = (v == null || v === '') ? 0 : Number(v);
+    if (!(n === 0 || n === 1 || n === 2)) {
+      throw new Error('setSupportPrior: 只能是 0（关，默认）、1（只改送盾目标）或 2（改目标 + 挑不到就不送、改攒）；收到 `' + v + '`');
+    }
+    SUPPORT_PRIOR = n;
+  }
+  function supportPriorOn() { return SUPPORT_PRIOR; }
+  /* 挑不到就返回 null ⇒ 照网络自己的选择（那一格是**分母 0**，不是"先验表现差"）。不消耗 `state.rng`。 */
+  function supportPriorTarget(state, pid) {
+    let b = -1, be = -1;
+    for (let i = 0; i < state.p.length; i++) {
+      if (i === pid || state.p[i].hp <= 1) continue;
+      const churning = (state.p[i].ringStreak | 0) >= 1 || state.p[i].ep >= 3;
+      if (!churning) continue;
+      if (state.p[i].ep > be) { be = state.p[i].ep; b = i; }
+    }
+    return b >= 0 ? b : null;
+  }
   /* ===== §E275（v1.5.334 · 用户 10-03 晚：「你把摄魂的给做一下」+「HP=1 是**仅调整探索时软提升的窗口**，不是调整实际规则」）=====
    * 与大雷那档的**根本区别**：这条**不强行落子**，只在**探索那一支**里把"摄魂指法"并入探索集（= 软提升，
    *   与 v1.5.142 给电磁炮/激光眼/天火开的 `forced` 口子同一形状、同一作用面）。
@@ -836,7 +866,21 @@
       } else {
         pick = greedyOf();
       }
-      return { key: pick.key, target: pick.target, target2: pickTarget2N(state, pid, pick.key, pick.target), bead: pick.bead };
+      /* §E646（路线 B）：送盾目标的部署层先验。**挂在 pick 已经定完之后** ⇒ 不消耗 `state.rng`、
+       *   不改"要不要打这张牌"、关档（默认）短路都不进 ⇒ 随机流与开档/关档逐字同（D204⑧ 那族"钩子挂错位置把随机流错开一格"的错，形状上防掉）。 */
+      let shipTarget = pick.target;
+      if (SUPPORT_PRIOR >= 1 && pick.key === R.SK.HOLO) {
+        const t = supportPriorTarget(state, pid);
+        if (t !== null) shipTarget = t;
+        else if (SUPPORT_PRIOR === 2) {
+          /* 挑不到 ⇒ 这一手不送：落回"攒"（`JI`，可付且合法时）；连攒都不合法就照旧送出（不许凭空造一个非法动作）。
+           *   两档的差别不是洁癖：§E644 四 实测"少而准"里大半的强度收益来自**少送本身**（省下 1 费与回合节奏），
+           *   而 §E643 二 被量过的那条 churn 臂正是"挑不到就不给盾（改攒）"这一形 ⇒ 档 2 复现它，档 1 只改给谁。 */
+          const ji = legal.find(function (l) { return l.key === R.SK.JI && l.affordable; });
+          if (ji) return { key: R.SK.JI, target: null, target2: null, bead: null };
+        }
+      }
+      return { key: pick.key, target: shipTarget, target2: pickTarget2N(state, pid, pick.key, shipTarget), bead: pick.bead };
     };
   }
   /* ===== v1.5.30x（Qoder 09-30 夜 · **默认关**）· 在线对手模型 + 1-ply 引擎重放搜索 =====
@@ -3418,6 +3462,7 @@ function countVariety(events, seat) {
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
     setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt, wrapBigTPush,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认值只由上面那个常数表达，门 D224 钉）· v1.6.3 §E282：外面那层给脚本席用
+    setSupportPrior, supportPriorOn, supportPriorTarget,   // §E646（路线 B）：送盾的部署层先验，**默认 0=关**；自证在 `tools/probe-support-prior.mjs`
     setDrainPush, drainPushOn, drainPushWants, drainPushSalt,              // v1.5.334 §E275：摄魂"残血只在探索里软提升"（默认 0=关，门 D225 钉）
     setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve, setBeliefPly, beliefPly,
     setBeliefTarget, beliefTarget, setBeliefTie, beliefTie,

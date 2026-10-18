@@ -8,9 +8,12 @@ import path from 'node:path';
 /* ROOT 自解析（10-18 归仓时改），`WT=<路径>` 可覆盖到别的工作树。 */
 const ROOT = process.env.WT || path.resolve(fileURLToPath(import.meta.url), '../..');
 const imp = (p) => import(pathToFileURL(ROOT + '/' + p).href);
-const { sandbox, loadChamp } = await imp('tools/audit-lib.mjs');
+const { sandbox, loadChamp, rejectUnknownFlags } = await imp('tools/audit-lib.mjs');
 const { duelAssembly } = await imp('tools/v2v4-lib.mjs');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
+/* 仓规（门 D218）：归仓进 `tools/` 就必须带旗标消毒层（名单 = 下面 arg() 读的四个）。 */
+const argv = process.argv.slice(2);
+rejectUnknownFlags(argv, ['games', 'mode', 'pack', 'seats'], 'reachability');
 const W = await imp('tools/audit-lib.mjs').then(m => sandbox(ROOT));
 const S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, R = W.EpirusRules, B = W.EpirusBots;
 const MODE = arg('mode', 'multi');

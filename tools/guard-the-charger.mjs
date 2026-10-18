@@ -14,9 +14,12 @@ import path from 'node:path';
  *   需要在别的工作树（测量 worktree）上量时给 `WT=<路径>` 覆盖，别再把某台机器的路径写死在源码里。 */
 const ROOT = process.env.WT || path.resolve(fileURLToPath(import.meta.url), '../..');
 const imp = (p) => import(pathToFileURL(ROOT + '/' + p).href);
-const { sandbox, loadChamp } = await imp('tools/audit-lib.mjs');
+const { sandbox, loadChamp, rejectUnknownFlags } = await imp('tools/audit-lib.mjs');
 const { duelAssembly } = await imp('tools/v2v4-lib.mjs');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
+/* 仓规（门 D218）：归仓进 `tools/` 就必须带旗标消毒层，否则"拼错的旗标静默按默认档跑完"跟着脚本一起进了仓（名单 = 下面 arg() 读的四个）。 */
+const argv = process.argv.slice(2);
+rejectUnknownFlags(argv, ['arm', 'games', 'mode', 'seats'], 'guard-the-charger');
 const W = sandbox(ROOT);
 const S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, R = W.EpirusRules, B = W.EpirusBots;
 const ARM = arg('arm', 'asis'), MODE = arg('mode', 'multi'), G = Number(arg('games', 150));

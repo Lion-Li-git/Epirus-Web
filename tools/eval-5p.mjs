@@ -35,7 +35,7 @@ for (const a of process.argv.slice(2)) {
 /* ⚠ 名单里写的必须是**读侧的实际拼写**，不是"我以为的小写"：`--drainHp` 的正写带大写 H（读的是 `FLAG.drainHp`），
  *   `--eps-mode` 用连字符 ⇒ 若这里写成 `drainhp`/`epsmode`，这道守卫就会在**正确用法**上 exit 2（我第一版就这么错了，实测抓回）。
  *   `file` 不在名单里：落盘的 `#file=` 来自位置参数，不是旗标。 */
-const IDENTITY_FLAGS = ['shipbigt', 'shipdrain', 'eps', 'eps-tier', 'epsk', 'eps-mode', 'bigtpush', 'bigttgt',
+const IDENTITY_FLAGS = ['shipbigt', 'shipdrain', 'support', 'eps', 'eps-tier', 'epsk', 'eps-mode', 'bigtpush', 'bigttgt',
   'pushrank', 'pushfloor', 'pushkey', 'pushminep', 'bigtcost', 'ban', 'drainHp', 'mode', 'swap', 'pool', 'every'];
 const IDENTITY_BY_LOWER = {};
 for (const k of IDENTITY_FLAGS) IDENTITY_BY_LOWER[k.toLowerCase()] = k;
@@ -423,6 +423,29 @@ if (SHIPBIGT_RAW != null) {
 } else {
   console.log('[shipbigt] 未设旗标 ⇒ 走**引擎默认档** `BIGT_PUSH = ' + SHIP_EFFECTIVE + '`'
     + (SHIP_EFFECTIVE >= 1 ? '（v1.5.333 起默认开着 ⇒ 这一臂**不是**出厂形状，出厂形状要显式 `--shipbigt=0`）' : '（关着）'));
+}
+/* ===== §E646（路线 B）：`--support=<0|1|2>` = 送盾的**部署层先验**（引擎默认 **0=关**）=====
+ * 档 1 = 只改"给谁"（谓词 = 正在搓长招 `ringStreak≥1 ∨ ep≥3` **且 `hp>1`**，取 `ep` 最大 ⇒ 口径与量具 `tools/guard-the-charger.mjs` 的 `churnnoweak` 一字相同）；
+ * 档 2 = 再加"挑不到就不送、改攒"（§E643 二 被量过的那一形；§E644 四 说强度收益大半来自少送本身）。
+ * ⚠ 反过来那两种写法都被量过、都错：**挑血最少**兑现 0/235 ‖ 0/233，**随机给**3/210 ⇒ 濒死那一格救不回来，不许拿 `hp` 最低当判据。
+ * 接线纪律照 `--shipbigt`：**先回读引擎默认档、再 setter、再校验真生效**，banner 印引擎回读值而不是旗标原值（§E278）。
+ * ⚑ 这是**先验不是学到的**（用户 10-17 主语规矩）；对照臂必须显式 `--support=0`。 */
+const SUPPORT_RAW = FLAG.support;
+const SUPPORT = SUPPORT_RAW == null ? null : Number(SUPPORT_RAW);
+if (SUPPORT_RAW != null && !(SUPPORT === 0 || SUPPORT === 1 || SUPPORT === 2)) {
+  console.error('⛔ --support 只能是 0（关）/ 1（改送盾目标）/ 2（改目标 + 挑不到就不送）；收到 `' + SUPPORT_RAW + '`'); process.exit(2);
+}
+const SUPPORT_DEFAULT = (typeof T.supportPriorOn === 'function') ? T.supportPriorOn() : null;
+if (SUPPORT_RAW != null) {
+  if (typeof T.setSupportPrior !== 'function') { console.error('⛔ `EpirusTrainer.setSupportPrior` 不存在 ⇒ 旗标没有生效对象，拒跑'); process.exit(2); }
+  T.setSupportPrior(SUPPORT);
+  const SUPPORT_EFFECTIVE = T.supportPriorOn();
+  if (SUPPORT_EFFECTIVE !== SUPPORT) {
+    console.error('⛔ `--support=' + SUPPORT + '` 没生效：引擎回读 `SUPPORT_PRIOR = ' + SUPPORT_EFFECTIVE + '`'); process.exit(2);
+  }
+  console.log('[support] 已按旗标改引擎档：`SUPPORT_PRIOR = ' + SUPPORT_EFFECTIVE + '`（引擎自己的默认档回读为 ' + SUPPORT_DEFAULT + '）‖ 档 1 = 只改 holo 目标 ‖ 档 2 = 再加"挑不到就不送、改攒" ‖ 不消耗 `state.rng`');
+} else {
+  console.log('[support] 未设旗标 ⇒ 走**引擎默认档** `SUPPORT_PRIOR = ' + SUPPORT_DEFAULT + '`（0 = 关 ⇒ 这一臂不带动作先验）');
 }
 /* ===== §E275（v1.5.334）：`--shipdrain=<0|1..12>` = 量**摄魂的"残血软提升"档**（现网路径，不是工具外挂）=====
  * 与大雷那档的区别写死在引擎里（`evo.js` 的 `drainPushWants` + `epsMode==='soft'` 那一支）：
