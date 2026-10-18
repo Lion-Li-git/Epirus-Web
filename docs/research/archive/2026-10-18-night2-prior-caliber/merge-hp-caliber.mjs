@@ -39,11 +39,18 @@ for (const r of b.uniq) {
   const id = r[b.h.id];
   if (have.has(id)) continue;
   // 旧表的列数可能与新表不同（新表多了 support/pageBare 两列）⇒ 按**列名**搬，缺的补空串，位置绝不错位
-  const row = head.slice(0, -1).map(c => (b.h[c] === undefined ? '' : (r[b.h[c]] === undefined ? '' : r[b.h[c]])));
+  //   ⚑ 第一版这里写的是 `head.slice(0, -1)`——那是我误以为 `head` 已含 `hpSrc`（其实它是主表原始的 11 列表头）
+  //     ⇒ carry 行只有 11 格、标签顶掉了 `pageBare`，行宽与表头不符。数值没脏（attach-hp 按列名读），但形状错了。
+  //     现在写成 `head.map(...)` 并在下面**逐行断言行宽**（§E375 那一族"只错一行、无声无息"的机械尺）。
+  const row = head.map(c => (b.h[c] === undefined ? '' : (r[b.h[c]] === undefined ? '' : r[b.h[c]])));
   out.push(row.concat(['carry']));
   filled++;
 }
 for (const id of have) if (!b.uniq.some(r => r[b.h.id] === id)) droppedIds.push(id);
+const W = head.length + 1;
+const bad = [];
+out.forEach((r, i) => { if (r.length !== W) bad.push((i + 1) + ':' + r.length); });
+if (bad.length) { console.error('⛔ 行宽不等于表头宽（应为 ' + W + ' 列）：' + bad.slice(0, 8).join(' ‖ ') + ' ⇒ 不写出，先修形状'); process.exit(4); }
 writeFileSync(path.join(CM, OUT), out.map(r => r.join('\t')).join('\n') + '\n', 'utf8');
 console.log('合并 ' + OUT + '：主表 ' + LABEL + ' ' + have.size + ' 枚 ‖ 从 ' + FILL + ' 补 ' + filled + ' 枚 ‖ 合计 ' + (have.size + filled) + ' 枚');
 console.log('   主表里旧表没有的 id ' + droppedIds.length + ' 枚（这些只有新口径值，正常：它们是本轮新测的枚）');
