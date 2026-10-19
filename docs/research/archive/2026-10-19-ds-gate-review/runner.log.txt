@@ -33,3 +33,4 @@ VERIFY_DONE 2026-10-19 15:45:51
 verify rc=0 2026-10-19 15:45:51
 clean matrix start 2026-10-19 15:52:46
 clean matrix rc=1 2026-10-19 16:09:52
+retract gate-par claim + meta 16/16  start 2026-10-19 16:23:45 rc=0 (docs-only, 撤回上一条对量具的指控)
