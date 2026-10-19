@@ -2,7 +2,7 @@
  * 用法：node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
  * 产出：js/bundled-champion-3p.js（window.EPIRUS_CHAMPION_3P）
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 import { loadPool, makeMimic } from './human-pool.mjs';   // v1.6.60：人类形状对手的**单一来源**（§E152e/§E155/§E168 的产物；别再抄一份采样器）
 import { guardWrite, declareCopy } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
@@ -1351,6 +1351,25 @@ function addHall(params, fit) {
 }
 if (HALL_DEDUP) console.log('[hall-dedup] 名人堂开按 wid 去重（同一粒权重只占一席；末了印拒收次数，不许留空）');
 
+/* ===== §E654（10-19 下午 · 千问 · 用户裁「你来负责搞这些门禁的问题」）：**要开始训练就必须声明落点** =====
+ *   病：`docs/artifacts/train-3p-out.js` 是门 D123 逐字比对的**基线**（`train-evo.mjs:2071`），任何一条忘了改道的臂覆盖它，
+ *     红的都是**别人** —— 10-19 一天之内抓到两例现行：D162 报 `got≠want`（写方 = D127 的 on 臂 `train-runner.mjs:738`）
+ *     ‖ D116 行为二（`ship-promote.mjs:422`）没改道，被 §E589 拦成 exit 9。
+ *   老办法是"每条腿自己记得带 `EPIRUS_T3P_OUT`"——纪律长在人身上就会漏（DS 的 CHANGELOG 教训 #2 写的正是这条：跟着红点清，从没红过的腿就一直漏）。
+ *   现在改成**声明制**，三选一：① `EPIRUS_T3P_OUT=<路径>`（并发臂的常规做法；改道到仓库外要一并给 `EPIRUS_BAND_DIR`，否则 band 备份仍撒进 `docs/artifacts` ⇒ D191 红）；
+ *   ② `EPIRUS_T3P_BASELINE=1`（只有基线持有者该用，写明"这一次就是要写默认落点"，落盘时打 `[WRITE-BASELINE]`）；③ `EPIRUS_PUBLISH=1`（发布态写 `js/**`，另一条路）。
+ *   位置**故意放在所有启动校验之后**：暗键 exit 6 / 坏参照 exit 2 / 坏种子 exit 5 / 打错名 exit 4 / `--help` exit 64 这些退出码一个都不许被我这条闸改掉；
+ *     而"没声明就要开跑"的臂在这里停 ⇒ 省的是**一整臂的算力**（不只是归因）。退出码 **10**（与既有 9「守卫拦下没写盘」不撞）。 */
+if (!process.env.EPIRUS_T3P_OUT && process.env.EPIRUS_T3P_BASELINE !== '1' && process.env.EPIRUS_PUBLISH !== '1') {
+  console.error('⛔ [train-3p] 马上要开始训练了，但产物落点没声明 ⇒ 拒跑（exit 10）。'
+    + '\n   默认落点 `docs/artifacts/train-3p-out.js` 是门禁（D123/D162）逐字比对的基线文件，任何臂写它都会让**别人的门**红（§E653 实测两例）。'
+    + '\n   三选一：① `EPIRUS_T3P_OUT=<路径>`（改道；仓库外的话记得同时给 `EPIRUS_BAND_DIR=<目录>`）'
+    + '\n             ② `EPIRUS_T3P_BASELINE=1`（基线持有者专用，等于说"我就是要写这一份"）'
+    + '\n             ③ `EPIRUS_PUBLISH=1`（发布态：写 `js/bundled-champion-3p.js`）'
+    + '\n   本次 argv=' + process.argv.slice(2).join(' ') + ' ‖ EPIRUS_ARM=' + String(process.env.EPIRUS_ARM || '(no-arm)'));
+  process.exit(10);
+}
+
 console.log('[train-3p] 人数=' + N + ' 代=' + GENS + ' 种群=' + POP + ' 每代局数=' + GAMES +
   ' 参数=' + P.paramCount() + (XN2W > 0 ? (' · XN混适应度 W=' + XN2W + ' 2P局=' + XN2G + '/个体 · 2P对手=' +
     XN2_OPPS.map(function (o) { return o.name; }).join('+')) : '') +
@@ -2117,10 +2136,24 @@ if (!GUARD.wrote) {
  *   三条判据都要能各自成立：① 上面 `!GUARD.wrote` 那条已经 exit(9) ⇒ 走到这儿就是真写了；
  *   ② `EPIRUS_PUBLISH=1` 那次写的是 `js/bundled-champion-3p.js`（发布态），不是"默认落点" ⇒ 不混进这份名单；
  *   ③ 没设 `EPIRUS_T3P_OUT` 且非发布态 ⇒ 才是要点名的"没改道就写共享基线"。
- *   自证：`docs/research/archive/2026-10-19-ds-gate-review/verify-writedefault.mjs`（三格：该失败的失败 / 发布态 / 真写默认落点）。 */
+ *   自证：`docs/research/archive/2026-10-19-ds-gate-review/verify-writedefault.mjs`（三格：该失败的失败 / 发布态 / 真写默认落点）。
+ * ⚑ §E654 加的第二条通道：`EPIRUS_LOG_DEFAULT_OUT=<文件路径>` 时**另外追加一行到那个文件**。
+ *   为什么必须有文件这一路：门里每条腿是用 `spawnSync` 拿子进程 stdout 的，那行 `[WRITE-DEFAULT]` 落在**腿自己的变量**里，
+ *   腿不失败就永远不打印 ⇒ 光靠 stdout（DS 交班那条 `| Select-String`）在门里**一条都捞不到**（10-19 实测：整趟六个部分，stdout 里 0 条）。
+ *   值是 `1` 时只打 stdout（手跑的用法）；值是个路径时 stdout + 台账都写。台账由调用方放到仓库外，门禁面不产新文件。 */
 if (process.env.EPIRUS_LOG_DEFAULT_OUT && !process.env.EPIRUS_T3P_OUT && process.env.EPIRUS_PUBLISH !== '1') {
-  console.log('[WRITE-DEFAULT] ' + String(process.env.EPIRUS_ARM || '(no-arm)') + ' ‖ argv=' + process.argv.slice(2).join(' ')
-    + ' ‖ 落点=' + OUT_PATH);
+  const TAGX = process.env.EPIRUS_T3P_BASELINE === '1' ? '[WRITE-BASELINE] ' : '[WRITE-DEFAULT] ';
+  const WDL = TAGX + String(process.env.EPIRUS_ARM || '(no-arm)') + ' ‖ argv=' + process.argv.slice(2).join(' ')
+    + ' ‖ 落点=' + OUT_PATH;
+  console.log(WDL);
+  const LED = String(process.env.EPIRUS_LOG_DEFAULT_OUT);
+  if (LED !== '1') {
+    try {
+      appendFileSync(LED, new Date().toISOString() + '\t' + String(process.env.EPIRUS_ARM || '(no-arm)')
+        + '\t' + process.pid + '\t' + OUT_PATH + '\t' + process.argv.slice(2).join(' ')
+        + '\t' + (process.env.EPIRUS_T3P_BASELINE === '1' ? 'BASELINE（声明过）' : 'DEFAULT（没声明）') + '\n', 'utf8');
+    } catch (e) { console.error('⛔ [WRITE-DEFAULT] 台账写不进去（' + LED + '）：' + (e && e.message ? e.message : e)); }
+  }
 }
 console.log((GUARD.wrote ? '\n\u5df2\u5199\u5165 ' : '\n✘ 没写文件（§E589 守卫）：' + GUARD.note + '\n  原本要写 ') + OUT_PATH + '  (coldStart=' + (!seedParams) + ', seed=' + __SEED + ')' +
   (PRODUCT_IS_SEED ? '  ⚠ 产物与起点逐位相同（本臂零改包）' : ''));

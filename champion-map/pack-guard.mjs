@@ -59,7 +59,18 @@ function registerAlias(root, row) {
   const p = join(root, ALIAS_REL);
   const line = [row.ts || new Date().toISOString(), row.wid, row.canonical, row.wantedPath, row.tool, (row.note || '').replace(/[\t\r\n]+/g, ' ')].join('\t');
   if (!existsSync(p)) { mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, ALIAS_COLS.join('\t') + '\r\n' + line + '\r\n'); }
-  else appendFileSync(p, line + '\r\n');
+  else {
+    /* §E654（10-19 下午 · 千问）：**同一三元组不重复追加**（幂等）。
+     *   病：10-19 实测同一个 (wid, canonical, wantedPath) 在一趟门里被追加了 3 行（只有 `ts` 不同）⇒
+     *     ① 门跑一轮就改一份 tracked 文件、越跑越长；② 读账的人会把一次事件读成三次（"重复测量不是复现"同族）。
+     *   键只用 wid + canonical + wantedPath（`ts`/`note` 每次必不同，进键就等于永远不命中）。
+     *   ⚠ 只去掉重复行，不动 §E589"命中守卫就不写第二份、只登记别名"这条设计本身。 */
+    const keyOf = function (l) { const q = l.split('\t'); return q.length >= 4 ? (q[1] + '|' + q[2] + '|' + q[3]) : null; };
+    const mine = keyOf(line);
+    const prior = readFileSync(p, 'utf8').replace(/\r\n/g, '\n').split('\n');
+    if (mine && prior.some(function (l) { return keyOf(l) === mine; })) return '(已在册，不重复追加) ' + line;
+    appendFileSync(p, line + '\r\n');
+  }
   return line;
 }
 const relOf = (root, abs) => relative(root, abs).split(sep).join('/');

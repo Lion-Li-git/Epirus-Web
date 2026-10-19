@@ -41,3 +41,18 @@ EPIRUS_LOG_DEFAULT_OUT=1 node tools/gate-par.mjs --part=train-evo,train-env,trai
 2. **点名器要能用还得动 np-test**：现在 `gate-par`/`np-test` 把子进程 stdout 吞掉 ⇒ `[WRITE-DEFAULT]` 在门里永远看不见（DS 交班那条命令照抄捞不到东西）。在那之前，运行时取证靠**默认产物的 `META.arm` + mtime**（本次就是这么抓到 `d127on` 的）。
 3. **门禁不是只读的**：门跑一轮就往 **tracked** 的 `champion-map/pack-aliases.tsv` 加登记行（§E589"不写第二份、只登记别名"的设计后果）。本次主树那处改动我**既没提交也没还原**，等裁。
 4. ⚑ 我自己的一台尺也有口径病：本目录那段"表格列数自检"用 `line.match(/\|/g).length` 数竖线，**不剥转义 `\|`** ⇒ 把已修好的行 28/32 报成断列（doc-structure-guard 那把尺认转义，才是干净的）。⇒ 用别人的尺之前先读它的条款（见记忆「用尺前先读这把尺的条款」）。
+
+## 四、落地后的验证（§E654，数字都从工具自己那行抄）
+
+| 这台/那趟 | 结果 |
+|---|---|
+| `verify-writedefault.mjs`（钉旧版参照 = `0b46840`） | **22 PASS ‖ 0 FAIL**（含格 0 反向对照"旧版在 exit 6 也打"、格 1"暗键仍拿 6 不是 10"、格 5"没声明 ⇒ exit 10 且横幅都没印"、格 3/4"声明过的写标 `[WRITE-BASELINE]` + 台账六段齐"） |
+| `alias-dedupe.mjs` + `alias-dedupe-step.mjs` | **4/4 PASS**（含反面：换 `wantedPath` 必须新增一行） |
+| 六条红腿单跑（`serial-legs.log.txt`） | D116 **1/1**(24s) ‖ D123 **1/1**(131s) ‖ D15 **1/1**(0s) ‖ D124 **1/1**(7s) ‖ D125 **1/1**(7s) ‖ D162 **1/1**(59s) |
+| 全 16 部分并发（`fullmatrix.log.txt`，15:31–15:45） | 14 绿 ‖ 2 红（`meta-repo` D191 实测 3 ‖ `ship-feas` D124/D125）⇒ **两条都是我的脏**：第一版幂等测试把 `docs/artifacts/A/B/C.bak` 写进真仓 |
+| 清脏之后复跑 | `--only="D191 "` **1/1** ‖ `--part=ship-feas` **14/14**（15:48:55，`ship-feas-after-cleanup.txt`）；`train-evo` 65/65 ‖ `train-runner` 31/31 ‖ `ship-promote` 21/21 在矩阵里已全绿 |
+| 台账（`write-default.tsv`） | 整趟 **1 行**，`arm=d123` 且标 `BASELINE（声明过）` ⇒ 除声明者外无人再写默认落点 |
+
+新增原始文件：`serial-legs.log.txt` ‖ `fullmatrix.log.txt` ‖ `write-default.tsv` ‖ `ship-feas-after-cleanup.txt` ‖ `alias-dedupe.log.txt` ‖ `verify-g654.sh`（单跑→并发→台账收口的驱动，可整跑）。
+
+⚑ **两条留给下一班的硬话**：① `D124/D125` 的读数会被 `docs/artifacts/` 里的陌生包影响（我三个 `.bak` 一进去它们就"3P 栏没跑"）⇒ 这两条腿**对池子没有隔离**；② `train-runner` 单部分 1014.6 s 是整趟墙钟的顶（拆成两个部分预计压到 ~13 分钟）。

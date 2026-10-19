@@ -134,7 +134,10 @@ async function main() {
     const runCli = () => spawnSync('pwsh', ['-NoProfile', '-Command',
       "Start-Process -FilePath node -ArgumentList '" + cliScript + "','20','3','4','6' -WorkingDirectory '" +
       process.cwd() + "' -WindowStyle Hidden -Wait"],
-      { stdio: 'ignore', env: Object.assign({}, process.env, { EPIRUS_SEED: '11' }) });
+      /* §E654：这台 [D] 腿的定义就是"**删掉**默认产物 → 用登记配方重生成 → 比两次哈希"⇒ 它就是基线持有者，
+       *   所以必须显式声明（根上那条"没声明不许写默认落点"的闸，exit 10）。不声明的话这里会静默拿到一份**不存在的**产物，
+       *   然后报"冷启动不可复现"——那是假象，不是产品坏了。 */
+      { stdio: 'ignore', env: Object.assign({}, process.env, { EPIRUS_SEED: '11', EPIRUS_T3P_BASELINE: '1' }) });
     const artHash = () => {
       if (!existsSync(cliOut)) return null;
       const m = readFileSync(cliOut, 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);

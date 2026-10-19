@@ -2061,7 +2061,9 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
     /* `defaultOut` 只有**要读默认落点产物的那一次**才传：其余两次改道进自己的 temp 目录
      *   （2026-10-16：否则未命中缓存时它们顺手写脏 `docs/artifacts/train-3p-out.js`，而那是别人当基线的文件）。 */
     miniN++;
-    const outEnv = defaultOut ? {} : { EPIRUS_T3P_OUT: join(dir, 'd123-' + miniN + '.js') };
+    /* §E654：`defaultOut` 那一支不再"默默用缺省路径"，而是**显式声明基线身份**（`EPIRUS_T3P_BASELINE=1`）——
+     *   根上那条闸（`train-3p` 的 exit 10）只该为这种"我就是要写基线"的调用放行；落盘时它打 `[WRITE-BASELINE]`。 */
+    const outEnv = defaultOut ? { EPIRUS_T3P_BASELINE: '1' } : { EPIRUS_T3P_OUT: join(dir, 'd123-' + miniN + '.js') };
     return (nocache ? spawnNC : spawnCached)(['tools/train-3p.mjs', '3', '3', '6', '4'], { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd123', EPIRUS_BAND_DIR: dir }, outEnv, env || {}),
       encoding: 'utf8', timeout: 300000,
     });

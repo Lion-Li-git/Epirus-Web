@@ -1,3 +1,33 @@
 start 2026-10-19 14:04:41
 end 2026-10-19 14:04:43
 B start 2026-10-19 14:10:57
+round start 2026-10-19 14:44:14 ledger=C:/Users/14765/AppData/Local/Temp/epirus-scratch-2026-10-19/write-default.tsv
+round rc=1 2026-10-19 15:07:00
+verify start 2026-10-19 15:24:35
+  single D116 rc=0 15:25:00
+  single D123 rc=0 15:27:11
+  single D15 rc=0 15:27:11
+  single D124 rc=0 15:27:18
+  single D125 rc=0 15:27:25
+  single D162 rc=0 15:28:25
+MATRIX rc=1 用时 17 分钟（jobs=4，全 16 部分）
+✔ GREEN engine-rules           0.5s  62/62
+✔ GREEN ship-promote          90.3s  21/21
+✔ GREEN probe-instruments     98.2s  33/33
+✔ GREEN engine-fuzz            0.7s  13/13
+✘ RED   meta-repo              7.1s  11/12
+✔ GREEN ui-contract            0.2s  7/7
+✔ GREEN train-feature          0.7s  4/4
+✘ RED   ship-feas             24.5s  12/14
+✔ GREEN probe-libs            15.5s  4/4
+✔ GREEN meta-lint              6.1s  4/4
+✔ GREEN train-chooser         17.8s  2/2
+✔ GREEN ship-pool              4.2s  1/1
+✔ GREEN ship-artifact          1.9s  1/1
+✔ GREEN train-env            120.3s  4/4
+✔ GREEN train-evo            452.4s  65/65
+✔ GREEN train-runner        1014.6s  31/31
+LEDGER 行数=1（0 = 除基线声明者外没人再写默认落点）
+      1 d123
+VERIFY_DONE 2026-10-19 15:45:51
+verify rc=0 2026-10-19 15:45:51

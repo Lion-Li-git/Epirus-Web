@@ -1,10 +1,11 @@
+〔格 0 用的旧版参照 = 0b46840（钉死，不用 HEAD）〕
 
 〔格 0 反向对照：v1.7.114 那份〕exit=6 ‖ 打了 WRITE-DEFAULT = 是 ‖ 真落盘行 = 无
   PASS 格 0 ⚑ 旧版在"没跑成"那次**也打了**（这就是假阳性的现场，不是我推测的）  ⇒ exit=6 ‖ 打了=是
   PASS 格 0 自证有坏样本 ⇒ 新版那格 PASS 才叫修好了（旧打 / 新不打）
 
 〔vwd-darkknob〕exit=6 ‖ 打了 WRITE-DEFAULT = 否 ‖ 真落盘行 = 无
-  PASS 格 1 那次调用确实**没跑成**（退出码非 0）  ⇒ exit=6
+  PASS 格 1 那次调用确实**没跑成**（暗键必须拿到它自己的 exit 6，不是被 §E654 那条闸改成 10）  ⇒ exit=6 ⇒ 闸的位置对不对就看这一格：校验之后、训练之前
   PASS 格 1 ⛔ 没跑成就不许点进来（原版会打，因为打在加载时）  ⇒ WRITE-DEFAULT=没打=对
   PASS 格 1 自证这条红会红：若那次真写了默认落点却没打，才算漏报
 
@@ -17,13 +18,24 @@
   PASS 格 2 ⛔ 发布态不许被标成"写默认落点"  ⇒ WRITE-DEFAULT=没打=对
   PASS 格 2 落点行里印的是发布态那个文件（证明它确实写了别的落点）  ⇒ 已写入 js/bundled-champion-3p.js  (coldStart=true, seed=1)
 
-〔vwd-default〕exit=0 ‖ 打了 WRITE-DEFAULT = 是 ‖ 真落盘行 = 有
+〔vwd-baseline〕exit=0 ‖ 打了 WRITE-DEFAULT = 是 ‖ 真落盘行 = 有
   PASS 格 3 真跑成并落了盘  ⇒ exit=0 ‖ 已写入行=有
-  PASS 格 3 必须上榜  ⇒ WRITE-DEFAULT=打了=对
-  PASS 格 3 那行要能定位到是谁（arm 名 + argv + 落点三样齐）  ⇒ [WRITE-DEFAULT] vwd-default ‖ argv=1 3 2 2 ‖ 落点=docs/artifacts/train-3p-out.js
+  PASS 格 3 必须上榜  ⇒ WRITE-*=打了=对
+  PASS 格 3 声明了基线 ⇒ 标 [WRITE-BASELINE]、不许再标 [WRITE-DEFAULT]（两种身份在名单里要分得开）  ⇒ [WRITE-BASELINE] vwd-baseline ‖ argv=1 3 2 2 ‖ 落点=docs/artifacts/train-3p-out.js
+
+〔vwd-nodeclare〕exit=10 ‖ 打了 WRITE-DEFAULT = 否 ‖ 真落盘行 = 无
+  PASS 格 5 没声明落点 ⇒ exit 10（实测 10）  ⇒ exit=10
+  PASS 格 5 必须在**训练开始之前**就停（不许已经印出"人数=… 代=…"那条横幅）  ⇒ 横幅=未印=对
+  PASS 格 5 拒跑时不许打 WRITE-* 那行（它根本没写盘）  ⇒ 打了=否=对
+  PASS 格 5 的报错里要点名三条出路（T3P_OUT / T3P_BASELINE / PUBLISH），否则下一班不知道该给哪一个  ⇒ 
+
+〔vwd-ledger〕exit=0 ‖ 打了 WRITE-DEFAULT = 是 ‖ 真落盘行 = 有
+  PASS 格 4 台账文件被写出且只有一行  ⇒ 行数=1
+  PASS 格 4 那行六段齐（时刻/arm/pid/落点/argv/**身份**）  ⇒ 2026-10-19T07:24:28.016Z	vwd-ledger	39600	docs/artifacts/train-3p-out.js	1 3 2 2	BASELINE（声明过）
+  PASS 格 4 台账只在真写时加行（没写就不许加 ⇒ 与 stdout 那条同一条判据）  ⇒ hit=true ‖ wrote=true
 
 〔主工作树未被触碰自证〕
   PASS 主树 `js/bundled-champion-3p.js` sha 逐字不变  ⇒ e379142780bb → e379142780bb
-  PASS 主树 `docs/artifacts/train-3p-out.js` sha 逐字不变  ⇒ 5e6614ea3780 → 5e6614ea3780
+  PASS 主树 `docs/artifacts/train-3p-out.js` sha 逐字不变  ⇒ 6646c23805c5 → 6646c23805c5
 
 ⚑ 主语：这三格判的是"点名器自己在不在说谎"，不是"门腿有没有改道"——后者要跑 `EPIRUS_LOG_DEFAULT_OUT=1 node tools/gate-par.mjs --part=…` 才出名单。

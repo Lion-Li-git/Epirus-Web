@@ -736,7 +736,10 @@ t('D127 兑现广度（v1.5.167 · §N24 · 用户"G_eff 像刷分"）：mirrorH
   eq(off.status, 0, '默认关必须跑通');
   eq(wh(join(dirA, 'd127off.js')), CLI_ARM_BASELINE, '默认关的产物必须仍是那条基线（动了它 = 所有 CLI 臂的当选规则被偷改）');
   const on = spawnNC(['tools/train-3p.mjs', '3', '3', '6', '4'],
-    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127on', EPIRUS_SEL_LAND: '1', EPIRUS_BAND_DIR: dirB }), encoding: 'utf8', timeout: 300000 });
+    /* §E654：这条臂原先**只改了 BAND_DIR 没改落点** ⇒ 它把 D123/D162 逐字比对的基线覆盖掉了
+     *   （运行时台账抓到：`d127on` 于 14:50:38 与 06:50 那轮各写一次 `docs/artifacts/train-3p-out.js`，
+     *   同一趟 D162 就报 `got≠want`）。孪生的 off 臂一直有 `EPIRUS_T3P_OUT`（上一行），on 臂是漏的那一条。 */
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127on', EPIRUS_SEL_LAND: '1', EPIRUS_BAND_DIR: dirB, EPIRUS_T3P_OUT: join(dirB, 'd127on.js') }), encoding: 'utf8', timeout: 300000 });
   eq(on.status, 0, '开开关也要跑通');
   ok(/\[兑现广度\].*G\(出手→落地\)/.test(String(on.stdout || '')), '开了必须印出每候选的两把尺（不印 = 又一根暗旋钮）');
   ok(/改判（排序键换人）|改判（是预筛选掉的|未改判/.test(String(on.stdout || '')),

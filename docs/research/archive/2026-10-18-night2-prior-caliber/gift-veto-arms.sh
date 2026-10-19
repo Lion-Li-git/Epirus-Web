@@ -30,7 +30,11 @@ for SEED in 77000 77001 77002; do
     ARM="${PFX}${V}-${SEED}"
     # shellcheck disable=SC2086
     ( export EPIRUS_SEED="$SEED" EPIRUS_ARM="$ARM" EPIRUS_BAND_DIR="docs/artifacts/$PFX-$ARM" \
+             EPIRUS_T3P_OUT="docs/artifacts/$PFX-$ARM/out.js" \
              EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK="$SEEDPACK"
+      # §E654 补：原先所有臂共用默认落点 `docs/artifacts/train-3p-out.js` ⇒ ① 下一臂覆写上一臂（"哪臂是谁"只能靠时序），
+      #   ② 那次 rc=9 里躺着的是**上一臂**的冠军（01:32 实测把 gv0-77000 登成 gv1-77000），③ 它还写脏了 D123 的基线。
+      #   现在每臂有自己的 out.js；根上也加了"没声明不许写默认落点"的闸（train-3p 的 exit 10）。
       # ⚑ 第一版这里写的是 `$ENV_EXTRA node …`（把 `EPIRUS_SEL_GIFT_VETO=1` 存在变量里当前缀赋值）
       #   ⇒ bash 把"VAR=1"当成**命令名**去找，rc=127 立刻失败，日志却长得像"跑完了没印东西"。前缀赋值必须是字面词。
       if [ "$V" = "1" ]; then export EPIRUS_SEL_GIFT_VETO=1; fi
@@ -40,8 +44,8 @@ for SEED in 77000 77001 77002; do
     # ⚑ 但**只有 rc=0 才收**：§E589 守卫判"这粒权重已在盘上"时不写产物（退出码 9），那一刻 `train-3p-out.js` 里躺着的是**上一臂**的冠军
     #   ⇒ 照抄就会把上一臂登记成本臂（01:32 实测：gv1-77000.winner.js 的 META arm=gv0-77000，读数 39.24 其实是关档那格的）。
     #   rc=9 那格的权威产物 = 臂日志里 `[band-save] …（当选）` 那一粒，就地落成 `arms/<臂>.winner.js`（这样分析器拿到的拷贝永远自证 META arm 相符）。
-    if [ "$rc" = "0" ] && [ -f docs/artifacts/train-3p-out.js ]; then
-      mkdir -p "$HERE/arms"; cp -f docs/artifacts/train-3p-out.js "$HERE/arms/$ARM.winner.js"
+    if [ "$rc" = "0" ] && [ -f "docs/artifacts/$PFX-$ARM/out.js" ]; then
+      mkdir -p "$HERE/arms"; cp -f "docs/artifacts/$PFX-$ARM/out.js" "$HERE/arms/$ARM.winner.js"
     else
       SEL=$(sed -n "s/^\[band-save\] \(${ARM}-band[0-9]*\)\.bak.*（当选）.*/\1/p" "$HERE/gift-veto-$ARM.log.txt" | head -1)
       if [ -n "$SEL" ] && [ -f "docs/artifacts/$PFX-$ARM/$SEL.bak" ]; then
