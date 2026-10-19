@@ -856,8 +856,8 @@ t('D17 技能熵必须**只统计非ジ动作**（否则熵奖励会惩罚攒钱
   const c = E({ [GUN]: 50, [SWORD]: 50 }, { [JI]: 1, [GUN]: 1, [SWORD]: 1 }, null);
   ok(Math.abs(c.divNorm - 1) < 1e-9, '两种可负担的非ジ均匀 ⇒ 归一化后应为 1（实测 ' + c.divNorm.toFixed(4) + '）');
   /* ⑥ fit 里那条也要跟着变：报告里 distinctNonJi 存在 */
+  Pol.setRng(T.mulberry32(31));   /* §E660：播种必须在 `makePolicy` 之前（它逐位读模块级 `__rng`，见 D15 那条的同一处） */
   const p = Pol.makePolicy(0.25);
-  Pol.setRng(T.mulberry32(31));
   const r = T.scoreMemberN(p, [{ name: 'random', sel: Bots.pickRandom }], 2, 3, 1, 0, 0);
   ok(r.distinctNonJi != null && r.nonJiShare != null, 'scoreMemberN 必须回报 distinctNonJi / nonJiShare');
   ok(r.distinctNonJi <= r.distinct, '非ジ种类数不得多于总种类数（实测 ' + r.distinctNonJi + ' vs ' + r.distinct + '）');

@@ -370,6 +370,15 @@ t('D13 风格切片（复合适应度）必须真的打进 fit —— 且是**�
    *   ① 关闭时不产生风格局；② 打开时真的打 k 局；③ fit 里那部分恰好是 w*styleRate（自洽）；
    *   ④ **池子那一半 fit 逐位不变**（追加而非替换 —— 这正是"不摊薄"的保证）。 */
   ok(typeof T.setStyleSlice === 'function', 'T.setStyleSlice 必须存在');
+  /* §E660（10-20 夜班 P3 · 实测尺 `d13-leak.mjs`）：这条腿原来有两处"上游说了算"——
+   *   ① `makePolicy` 里的 `randn()` 读的是 `js/train/policy.js:465` 那个模块级 `__rng`，而本腿把
+   *     `makePolicy` 写在 `setRng` **之前** ⇒ 这副权重其实来自 `Math.random`。25 档实测：恒等式仍 25/25 绿，
+   *     但 `fit` 25 档 25 个取值 ⇒ 判据是相对量所以侥幸不红，读数却不可复现。
+   *   ② 前一条腿把 `wallFilter` 设了没复位 ⇒ `fit` 走 `evo.js:2422` 的 −5.0 短路 ⇒ 下面**两条**恒等式
+   *     残差同时破（实测 5.85 与 5.60）⇒ 与今晚 D15 那次红是同一条病。
+   * 修法与 D15 一致：这条腿自己先复位、先播种再装配。**没加任何新断言**（只是把夹具钉住）。 */
+  T.setEconomyReward({ reset: true });
+  Pol.setRng(T.mulberry32(777001));
   const p = Pol.makePolicy(0.25);
   const opps = [{ name: 'random', sel: Bots.pickRandom }];
   const styleOpps = [{ name: 'defend', sel: Bots.pickDefend }];
