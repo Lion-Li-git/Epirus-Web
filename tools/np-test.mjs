@@ -27,7 +27,13 @@ import * as PART2 from './gates/train-evo.mjs';
 import * as PART3 from './gates/train-chooser.mjs';
 import * as PART4 from './gates/train-feature.mjs';
 import * as PART5 from './gates/train-env.mjs';
-import * as PART6 from './gates/train-runner.mjs';
+/* §E659（10-20 夜班 #51）：原 `train-runner`（31 条 ‖ CI 上一个部分顶住整趟 97%）按**语义族**拆成四个部分
+ *   —— 用户 23:1x 口径「拆门禁要尽量保证其基本逻辑，而不是单纯为了快而拆」⇒ 不是按耗时对半切。
+ *   族表在 docs/research/archive/2026-10-20-night-d15-gates/families.json，搬门体由 tools/gate-resplit.mjs 做（带四条自证）。 */
+import * as PART6 from './gates/train-table.mjs';
+import * as PART17 from './gates/train-pick.mjs';
+import * as PART18 from './gates/train-econ.mjs';
+import * as PART19 from './gates/train-breadth.mjs';
 import * as PART7 from './gates/ship-feas.mjs';
 import * as PART8 from './gates/ship-pool.mjs';
 import * as PART9 from './gates/ship-promote.mjs';
@@ -42,7 +48,7 @@ import * as PART15 from './gates/meta-lint.mjs';
 #np-runner-header-end*/
 const { cacheStats } = makeCtx();   /* runner 侧只借这一件：收尾的缓存计数行（原 L10501） */
 
-/* ===== 16 个部分文件（顺序无关：收上来之后按原始行号排序）===== */
+/* ===== 19 个部分文件（顺序无关：收上来之后按原始行号排序）===== */
 const PARTS = [
   { part: 'engine-rules', group: 'engine', file: 'tools/gates/engine-rules.mjs', mod: PART0 },   /* 62 条 */
   { part: 'engine-fuzz', group: 'engine', file: 'tools/gates/engine-fuzz.mjs', mod: PART1 },   /* 13 条 */
@@ -50,7 +56,10 @@ const PARTS = [
   { part: 'train-chooser', group: 'train', file: 'tools/gates/train-chooser.mjs', mod: PART3 },   /* 2 条 */
   { part: 'train-feature', group: 'train', file: 'tools/gates/train-feature.mjs', mod: PART4 },   /* 4 条 */
   { part: 'train-env', group: 'train', file: 'tools/gates/train-env.mjs', mod: PART5 },   /* 4 条 */
-  { part: 'train-runner', group: 'train', file: 'tools/gates/train-runner.mjs', mod: PART6 },   /* 31 条 */
+  { part: 'train-table', group: 'train', file: 'tools/gates/train-table.mjs', mod: PART6 },   /* 10 条：训练桌与对手（原 train-runner 的 C 族） */
+  { part: 'train-pick', group: 'train', file: 'tools/gates/train-pick.mjs', mod: PART17 },   /* 6 条：当选键与 veto（A 族） */
+  { part: 'train-econ', group: 'train', file: 'tools/gates/train-econ.mjs', mod: PART18 },   /* 11 条：econ 下达 · 起点 · 缓存（D 族） */
+  { part: 'train-breadth', group: 'train', file: 'tools/gates/train-breadth.mjs', mod: PART19 },   /* 4 条：广度与兑现（B 族） */
   { part: 'ship-feas', group: 'ship', file: 'tools/gates/ship-feas.mjs', mod: PART7 },   /* 14 条 */
   { part: 'ship-pool', group: 'ship', file: 'tools/gates/ship-pool.mjs', mod: PART8 },   /* 1 条 */
   { part: 'ship-promote', group: 'ship', file: 'tools/gates/ship-promote.mjs', mod: PART9 },   /* 21 条 */
@@ -63,7 +72,7 @@ const PARTS = [
 ];
 const PART_GROUPS = {
   engine: ['engine-rules', 'engine-fuzz'],
-  train: ['train-evo', 'train-chooser', 'train-feature', 'train-env', 'train-runner'],
+  train: ['train-evo', 'train-chooser', 'train-feature', 'train-env', 'train-table', 'train-pick', 'train-econ', 'train-breadth'],
   ship: ['ship-feas', 'ship-pool', 'ship-promote', 'ship-artifact'],
   probe: ['probe-instruments', 'probe-libs'],
   meta: ['meta-repo', 'meta-lint'],
@@ -72,7 +81,7 @@ const PART_GROUPS = {
 
 /* ===== 路径 → 部分 映射表（判据 = 这道门**读哪一层的输入**；本表与 --list-parts 是同一份）=====
  * 深度序（越靠前越深；一条门同时命中多个部分时取**它所在组内**最深的那个）：
- *   engine-rules > engine-fuzz > train-evo > train-chooser > train-feature > train-env > train-runner > ship-feas > ship-pool > ship-promote > ship-artifact > probe-libs > probe-instruments > ui-contract > meta-repo > meta-lint
+ *   engine-rules > engine-fuzz > train-evo > train-chooser > train-feature > train-env > train-runner(已拆成 train-table ‖ train-pick ‖ train-econ ‖ train-breadth，四者同深度) > ship-feas > ship-pool > ship-promote > ship-artifact > probe-libs > probe-instruments > ui-contract > meta-repo > meta-lint
  * 组归属由 GRP 钉死（与拆分前逐字相同）：命中的部分若不在本门所在组 ⇒ 跳过，继续往下看。
  * 记号表（只对 engine 组生效：N/D 裁定点读的是进程内沙箱、没有文件路径 ⇒ 只用路径表会把整组压进 engine-rules）：
  *   /Play\.autoGame/ ⇒ engine-fuzz   （记号：自动对局驱动（Play.autoGame*））
@@ -89,13 +98,13 @@ const PART_GROUPS = {
  *   /^policy\.js$/ ⇒ train-feature   （裸名 policy）
  *   /^js\/train\/bots\.js$/ ⇒ train-chooser   （js/train/bots.js）
  *   /^bots\.js$/ ⇒ train-chooser   （裸名 bots）
- *   /^js\/train\// ⇒ train-runner   （js/train/** 其余）
+ *   /^js\/train\// ⇒ train-table   （js/train/** 其余）
  *   /^server\/(train-env|econ-env|knob-guard|wall-cap|fight-env)\.mjs$/ ⇒ train-env   （server 旋钮表）
  *   /^(train-env|econ-env|knob-guard|wall-cap|fight-env)\.mjs$/ ⇒ train-env   （裸名旋钮表）
- *   /^server\/(train-server|train-worker|paralleltrain)\.mjs$/ ⇒ train-runner   （server 训练跑器）
- *   /^(train-server|train-worker|paralleltrain)\.mjs$/ ⇒ train-runner   （裸名训练跑器）
- *   /^tools\/(train-3p|train-best|train-fast|eval-5p|pick-5p|ring2-run|diag|style-exam)\.mjs$/ ⇒ train-runner   （tools 训练入口）
- *   /^(train-3p|train-best|train-fast|eval-5p|pick-5p|ring2-run|diag|style-exam)\.mjs$/ ⇒ train-runner   （裸名训练入口）
+ *   /^server\/(train-server|train-worker|paralleltrain)\.mjs$/ ⇒ train-table   （server 训练跑器）
+ *   /^(train-server|train-worker|paralleltrain)\.mjs$/ ⇒ train-table   （裸名训练跑器）
+ *   /^tools\/(train-3p|train-best|train-fast|eval-5p|pick-5p|ring2-run|diag|style-exam)\.mjs$/ ⇒ train-table   （tools 训练入口）
+ *   /^(train-3p|train-best|train-fast|eval-5p|pick-5p|ring2-run|diag|style-exam)\.mjs$/ ⇒ train-table   （裸名训练入口）
  *   /^champion-map\/feas/ ⇒ ship-feas   （champion-map/feas*）
  *   /^champion-map\/ruler-/ ⇒ ship-feas   （champion-map/ruler-*）
  *   /^tools\/champ-audit\.mjs$/ ⇒ ship-feas   （tools/champ-audit.mjs）
@@ -145,19 +154,27 @@ const MAP_RULES = [
   ['path', /^js\/core\//, 'engine-rules', 'js/core/** 引擎语义'],
   ['path', /^tests\//, 'engine-rules', 'tests/** 引擎用例'],
   ['path', /^(rules|state|resolve|play)\.js$/, 'engine-rules', '裸名核心引擎件'],
+  /* §E659 语义族规则**必须排在所有 train 组的路径规则之前**：一条门常常同时读 `js/train/evo.js` 与
+   *   `tools/train-3p.mjs`，按路径分根本分不开（那会把同一族拆散、把不同族混在一起）⇒ 归属按**门号名单**判。
+   *   ⚠ 往这四个部分里**新加一条门**必须同时把它加进下面对应的那串门号，否则它落到下面的路径规则上 ⇒
+   *   `tools/gate-parts-check.mjs` 的判据④（文件成员数 ≠ 归属条数）当场红，不会静默。 */
+  ['sig', /^t\('D(?:221|104|114|176|213|165)\b/, 'train-pick', 'A 族：当选键与 veto'],
+  ['sig', /^t\('D(?:127|128|130|159)\b/, 'train-breadth', 'B 族：广度与兑现'],
+  ['sig', /^t\('D(?:220|223|7|11|12|72|89|13|135|136)\b/, 'train-table', 'C 族：训练桌与对手'],
+  ['sig', /^t\('D(?:185|184|180|175|174|120|144|157|229|222|119)\b/, 'train-econ', 'D 族：econ 下达 · 起点 · 缓存'],
   ['path', /^js\/train\/evo\.js$/, 'train-evo', 'js/train/evo.js'],
   ['path', /^(evo|trainer)\.js$/, 'train-evo', '裸名 evo / trainer'],
   ['path', /^js\/train\/policy\.js$/, 'train-feature', 'js/train/policy.js'],
   ['path', /^policy\.js$/, 'train-feature', '裸名 policy'],
   ['path', /^js\/train\/bots\.js$/, 'train-chooser', 'js/train/bots.js'],
   ['path', /^bots\.js$/, 'train-chooser', '裸名 bots'],
-  ['path', /^js\/train\//, 'train-runner', 'js/train/** 其余'],
+  ['path', /^js\/train\//, 'train-table', 'js/train/** 其余（原 train-runner 的路径规则 ⇒ 拆族后归到训练桌族，新门要靠上面的门号名单登记）'],
   ['path', /^server\/(train-env|econ-env|knob-guard|wall-cap|fight-env)\.mjs$/, 'train-env', 'server 旋钮表'],
   ['path', /^(train-env|econ-env|knob-guard|wall-cap|fight-env)\.mjs$/, 'train-env', '裸名旋钮表'],
-  ['path', /^server\/(train-server|train-worker|paralleltrain)\.mjs$/, 'train-runner', 'server 训练跑器'],
-  ['path', /^(train-server|train-worker|paralleltrain)\.mjs$/, 'train-runner', '裸名训练跑器'],
-  ['path', /^tools\/(train-3p|train-best|train-fast|eval-5p|pick-5p|ring2-run|diag|style-exam)\.mjs$/, 'train-runner', 'tools 训练入口'],
-  ['path', /^(train-3p|train-best|train-fast|eval-5p|pick-5p|ring2-run|diag|style-exam)\.mjs$/, 'train-runner', '裸名训练入口'],
+  ['path', /^server\/(train-server|train-worker|paralleltrain)\.mjs$/, 'train-table', 'server 训练跑器（原 train-runner 的路径规则 ⇒ 拆族后归到训练桌族，新门要靠上面的门号名单登记）'],
+  ['path', /^(train-server|train-worker|paralleltrain)\.mjs$/, 'train-table', '裸名训练跑器（原 train-runner 的路径规则 ⇒ 拆族后归到训练桌族，新门要靠上面的门号名单登记）'],
+  ['path', /^tools\/(train-3p|train-best|train-fast|eval-5p|pick-5p|ring2-run|diag|style-exam)\.mjs$/, 'train-table', 'tools 训练入口（原 train-runner 的路径规则 ⇒ 拆族后归到训练桌族，新门要靠上面的门号名单登记）'],
+  ['path', /^(train-3p|train-best|train-fast|eval-5p|pick-5p|ring2-run|diag|style-exam)\.mjs$/, 'train-table', '裸名训练入口（原 train-runner 的路径规则 ⇒ 拆族后归到训练桌族，新门要靠上面的门号名单登记）'],
   ['path', /^champion-map\/feas/, 'ship-feas', 'champion-map/feas*'],
   ['path', /^champion-map\/ruler-/, 'ship-feas', 'champion-map/ruler-*'],
   ['path', /^tools\/champ-audit\.mjs$/, 'ship-feas', 'tools/champ-audit.mjs'],

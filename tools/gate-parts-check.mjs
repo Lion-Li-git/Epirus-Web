@@ -83,5 +83,5 @@ if (bad.length) {
   console.error('   ⇒ 这不是"某一条门红了"，是**覆盖本身不成立**：并行的那几份加起来不等于整轮。别重跑，先修上面这几条。');
   process.exit(1);
 }
-console.log('\n✔ 并集守卫：16 个部分互不重叠、并集 = ' + info.total + ' 条 = 整轮 ⇒ 按部分并行不丢覆盖。');
+console.log('\n✔ 并集守卫：' + parts.length + ' 个部分互不重叠、并集 = ' + info.total + ' 条 = 整轮 ⇒ 按部分并行不丢覆盖。');
 process.exit(0);

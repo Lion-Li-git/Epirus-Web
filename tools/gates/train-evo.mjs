@@ -724,17 +724,17 @@ t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励
    *     ⇒ 改成断**全式**；`shapeBonus` 这一项不新增引擎读数，而是**先把档别钉住**（`s4W = 0` ⇒ `:2411` 那支恒 0）。
    *   ③ 开头补一次 `setEconomyReward({reset:true})` 做**自隔离** ⇒ 本腿不再依赖"前面哪些腿跑过"。 */
   T.setEconomyReward({ reset: true });
-  const p0 = Pol.makePolicy(0.25);
   Pol.setRng(T.mulberry32(4242));
+  const p0 = Pol.makePolicy(0.25);
   const r = T.scoreMemberN(p0, [{ name: 'random', sel: Bots.pickRandom }], 2, 3, 1, 0, 0);
-  eq(T.economyReward().s4W, 0, '本腿必须在"形状项关着"的档上断（s4W ≠ 0 ⇒ fit 里多一项 `shapeBonus`，全式就不成立）');
-  /* 10-20 夜班自证抓到的边界：出厂 `STYLE_W = 0` ⇒ 式子里"风格切片"这一项恒 0，**这条断言盖不到风格路径**
+  eq(T.economyReward().s4W, 0, '本腿跑在出厂档（s4W=0 ⇒ shapeBonus 恒 0；下面那条全式已把它算进去，开着也不会假红）');
+  /* 10-20 夜班自证抓到的边界：出厂 `STYLE_W = 0` ⇒ 式子里"风格切片"那一项恒 0，**这条断言盖不到风格路径**
    *   （变异实测：把 styleRate 挪 1e-3，残差仍是 0）。把它钉在文案里，别让下一个人以为全式过了=风格过了。 */
   eq(r.styleWeight, 0, '出厂风格权重必须是 0（≠ 0 ⇒ 本腿这条全式开始覆盖风格路径，但同时它不再是"风格项的自证"，要另立断言）');
   ok(!r.wallReject, '这次调用不该触发破墙硬过滤（走了 `fit = −5` 那条支 ⇒ 全式不适用，得换断法）');
-  ok(Math.abs(r.fit - (r.fitNoDiv + r.divBonus + r.styleWeight * r.styleRate - r.seatPen + r.gBonus)) < 1e-9,
-    'fit 必须 = 池子分 + 熵奖励 + 风格切片 − 座位罚 + 广度罚（实测 fit=' + r.fit.toFixed(5)
-    + ' ‖ seatPen=' + r.seatPen.toFixed(5) + ' ‖ gBonus=' + r.gBonus.toFixed(5)
+  ok(Math.abs(r.fit - (r.fitNoDiv + r.divBonus + r.styleWeight * r.styleRate - r.seatPen + r.shapeBonus + r.gBonus)) < 1e-9,
+    'fit 必须 = 池子分 + 熵奖励 + 风格切片 − 座位罚 + 形状项 + 广度罚（实测 fit=' + r.fit.toFixed(5)
+    + ' ‖ seatPen=' + r.seatPen.toFixed(5) + ' ‖ shapeBonus=' + r.shapeBonus.toFixed(5) + ' ‖ gBonus=' + r.gBonus.toFixed(5)
     + ' ‖ seatMaxPct=' + (r.seatMaxPct == null ? '—' : r.seatMaxPct.toFixed(0)) + '）');
   /* v1.5.87（用户裁定 A）：进 fit 的熵改用与门禁同口径的 spDivNorm（自对局·成功非ジ动作），
    * 旧口径 divNorm 只留作对照 ⇒ 这条公式断言跟着改（它红过一次，正是它该做的事）。 */
