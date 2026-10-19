@@ -606,19 +606,38 @@
   }
   function supportPriorOn() { return SUPPORT_PRIOR; }
 /* v1.7.105（用户 10-18：「SUPPORT_PRIOR 压得太死，留一些阈值或随机性，免得完全变成脚本工作」）。
- *   两条旋钮，都**不消耗 `state.rng`**（用无状态 hash 派生）⇒ 开/关档的随机流仍逐字同：
+ *   旋钮都**不消耗 `state.rng`**（用无状态 hash 派生）⇒ 开/关档的随机流仍逐字同：
  *     `SUPPORT_PRIOR_MIN_EP`  —— “在搓长招”的软阈值（默认 3，与 `ringStreak ≥ 1` 并联）；
- *     `SUPPORT_PRIOR_SKIP_P`  —— 档 2 挑不到目标时“改攒”的概率（默认 0.6；其余照网络自己走）。
- *   ⇒ 行为不再是“永远取 ep 最大 + 永远改攒”，而是**按 ep 加权抽一个 + 有时不拦**。 */
+ *     `SUPPORT_PRIOR_SKIP_P`  —— 档 2 挑不到目标时“改攒”的概率（默认 0.6；其余照网络自己走）；
+ *     `SUPPORT_PRIOR_PICK`    —— 挑人的形状：`'weighted'`（默认，按 ep 加权抽）‖ `'max'`（**永远取 ep 最大**）。
+ *   ⚑ 千问 §E648 为什么补第三条：§E643 二 被量过的那条 churn 臂、以及 §E647 那张三起点强度表，量的都是 `max` + `skipP=1` 的形状；
+ *     v1.7.105 把码改成 weighted/0.6 之后**没有任何 CLI 能回到那个形状** ⇒ 同一句 `--support=2` 指向了另一个对象，
+ *     在册读数就成了"命令还能跑、但量的不是当初那件事"。这条 knob 只为**让旧口径可复现**而存在，默认值一字不动 ⇒ 产品行为逐字不变（自证：默认档对拍在册读数）。 */
 let SUPPORT_PRIOR_MIN_EP = 3;
 let SUPPORT_PRIOR_SKIP_P = 0.6;
+let SUPPORT_PRIOR_PICK = 'weighted';
+/* setter 的牙（与 `setBigTPush`/`setSupportPrior` 同形，也是门 D218 那条"不许静默吞参数"在 knobs 上的对应物）：
+ *   给了就必须合法、名单外的键要拒（打错 `skipp` 不能变成"悄悄用默认值跑"）；不给的键保持原值。 */
 function setSupportPriorKnobs(o) {
-  const a = (o && o.minEp != null) ? Number(o.minEp) : NaN;
-  const b = (o && o.skipP != null) ? Number(o.skipP) : NaN;
-  if (isFinite(a) && a >= 1) SUPPORT_PRIOR_MIN_EP = a | 0;
-  if (isFinite(b) && b >= 0 && b <= 1) SUPPORT_PRIOR_SKIP_P = b;
+  if (o == null || typeof o !== 'object') throw new Error('setSupportPriorKnobs: 要一个对象 {minEp, skipP, pick}；收到 `' + o + '`');
+  const KN = ['minEp', 'skipP', 'pick'];
+  for (const k in o) if (KN.indexOf(k) < 0) throw new Error('setSupportPriorKnobs: 不认识的旋钮 `' + k + '`（合法只有 ' + KN.join('/') + '）');
+  if (o.minEp != null) {
+    const a = Number(o.minEp);
+    if (!(isFinite(a) && a >= 1 && Number.isInteger(a))) throw new Error('setSupportPriorKnobs: `minEp` 要是 ≥1 的整数；收到 `' + o.minEp + '`');
+    SUPPORT_PRIOR_MIN_EP = a;
+  }
+  if (o.skipP != null) {
+    const b = Number(o.skipP);
+    if (!(isFinite(b) && b >= 0 && b <= 1)) throw new Error('setSupportPriorKnobs: `skipP` 要在 0..1；收到 `' + o.skipP + '`');
+    SUPPORT_PRIOR_SKIP_P = b;
+  }
+  if (o.pick != null) {
+    if (o.pick !== 'weighted' && o.pick !== 'max') throw new Error("setSupportPriorKnobs: `pick` 只能是 'weighted'（默认）或 'max'；收到 `" + o.pick + '`');
+    SUPPORT_PRIOR_PICK = o.pick;
+  }
 }
-function supportPriorKnobs() { return { minEp: SUPPORT_PRIOR_MIN_EP, skipP: SUPPORT_PRIOR_SKIP_P }; }
+function supportPriorKnobs() { return { minEp: SUPPORT_PRIOR_MIN_EP, skipP: SUPPORT_PRIOR_SKIP_P, pick: SUPPORT_PRIOR_PICK }; }
 /* 无状态伪随机（**不碰 state.rng**）：同一 (回合, 席, 盐) 永远同一个数 ⇒ 可复现。 */
 function supportPriorRand(state, pid, salt) {
   const t = (state.turn != null) ? state.turn : (state.round != null ? state.round : 0);
@@ -638,9 +657,19 @@ function supportPriorRand(state, pid, salt) {
       const churning = (state.p[i].ringStreak | 0) >= 1 || state.p[i].ep >= SUPPORT_PRIOR_MIN_EP;
       if (!churning) continue;
       const wgt = Math.max(1, state.p[i].ep | 0);
-      cand.push({ i: i, w: wgt }); wsum += wgt;
+      cand.push({ i: i, w: wgt, e: state.p[i].ep | 0 }); wsum += wgt;
     }
     if (!cand.length) return null;
+    /* `pick='max'` = §E643/§E647 当初被量的那个形状（升序扫、严格大于 ⇒ **并列取席号最小那一位**）。
+     *   写在这里而不是"顺手复用加权那支"：并列时的取值规则就是那个旧读数的一部分，改了它旧数就不复现了。
+     *   ⚑ 比较的是**原始 ep**（`e`）而不是钳过 1 的权重（`w`）：`Math.max(1, ep)` 会把 0 与 1 压成同值 ⇒
+     *     "ep=0 但在搓环流"会赢过"ep=1 也在搓环流"（退化成选席号小的那个），与旧形状不等价。
+     *     这一格是我自己 A1 那版写错的，抓它的是 `tools/probe-support-prior.mjs` 的腿④d（构造态：ep=1 必须赢过 ep=0 且在搓招）。 */
+    if (SUPPORT_PRIOR_PICK === 'max') {
+      let b = cand[0].i, be = cand[0].e;
+      for (let k = 1; k < cand.length; k++) { if (cand[k].e > be) { be = cand[k].e; b = cand[k].i; } }
+      return b;
+    }
     let r = supportPriorRand(state, pid, 1) * wsum;
     for (let k = 0; k < cand.length; k++) { r -= cand[k].w; if (r <= 0) return cand[k].i; }
     return cand[cand.length - 1].i;

@@ -1,0 +1,7 @@
+# §E651 补跑名单：这 4 枚在 10-16 的长表里有行、在 10-12 的短表里没有行 ⇒ §E649 multi 那趟判失败（long 那趟跑成）
+# 于是它们的 Hp 至今是 e608 那批的关档旧值，而同一行的 Hplong 是开档新值 ⇒ 图上仅剩的 4 格跨口径混排
+# 用法：node champion-map/eps-full.mjs --pageOnly=1 --support=<0|2> --examFrom=e608-epsfull.tsv --only=e651-hp4fix-list.tsv --out=...
+G12H1
+clone-79101
+Z1
+Z2

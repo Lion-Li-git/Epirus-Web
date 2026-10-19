@@ -1,0 +1,29 @@
+diff --git a/champion-map/pack-aliases.tsv b/champion-map/pack-aliases.tsv
+index 253eabb..de823cd 100644
+--- a/champion-map/pack-aliases.tsv
++++ b/champion-map/pack-aliases.tsv
+@@ -4,3 +4,24 @@ ts	wid	canonical	wantedPath	tool	note
+ 2026-10-11T12:50:17.954Z	d490dc136293cfc4	docs/artifacts/kept/eval-out__win-Ldemo.bak	docs/artifacts/kept/artifacts__e588-teeth-src.bak	keep-artifact	kept/ 是 git 耐久层
+ 2026-10-11T12:50:18.163Z	d490dc136293cfc4	docs/artifacts/kept/eval-out__win-Ldemo.bak	docs/artifacts/kept/kept__eval-out__win-Ldemo.bak	keep-artifact	已登记的复制：teeth 对照
+ 2026-10-12T04:18:01.000Z	1d4b687da27187b7	docs/artifacts/kept/e70-out__D02-31.bak	docs/artifacts/e234-out/K2.js	lineage-alias	63 枚子包的 meta 点名它（EPIRUS_SEEDPACK）而文件被去重搬进隔离区 ⇒ 登记别名让血统图能升等到 seedpack-wid（升等条件不变：wid 逐位相等）
++2026-10-18T17:32:39.754Z	cdc13c0c953909ea	docs/artifacts/gv-gv0-77000/gv0-77000-band1.bak	docs/artifacts/gv-gv1-77000/gv1-77000-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
++2026-10-18T17:32:39.759Z	603e6622030b14bf	docs/artifacts/gv-gv0-77000/gv0-77000-band2.bak	docs/artifacts/gv-gv1-77000/gv1-77000-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
++2026-10-18T17:32:39.762Z	47741a4da9e64bc9	docs/artifacts/gv-gv0-77000/gv0-77000-band3.bak	docs/artifacts/gv-gv1-77000/gv1-77000-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
++2026-10-18T17:32:39.765Z	22bdb56470002197	docs/artifacts/gv-gv0-77000/gv0-77000-band4.bak	docs/artifacts/gv-gv1-77000/gv1-77000-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
++2026-10-18T17:32:39.768Z	2df83b60e122286e	docs/artifacts/gv-gv0-77000/gv0-77000-band5.bak	docs/artifacts/gv-gv1-77000/gv1-77000-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
++2026-10-18T17:32:39.770Z	1da762ce18ef90b2	docs/artifacts/gv-gv0-77000/gv0-77000-band6.bak	docs/artifacts/gv-gv1-77000/gv1-77000-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
++2026-10-18T17:32:39.781Z	22bdb56470002197	docs/artifacts/gv-gv0-77000/gv0-77000-band4.bak	docs/artifacts/train-3p-out.js	train-3p	未复制：同一粒权重已有真身
++2026-10-18T17:40:32.762Z	e7301c4241a06f23	docs/artifacts/gv-gv0-77001/gv0-77001-band1.bak	docs/artifacts/gv-gv1-77001/gv1-77001-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
++2026-10-18T17:40:32.765Z	fa8637a9f16b8d60	docs/artifacts/gv-gv0-77001/gv0-77001-band2.bak	docs/artifacts/gv-gv1-77001/gv1-77001-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
++2026-10-18T17:40:32.767Z	9cdfda44fff462a6	docs/artifacts/gv-gv0-77001/gv0-77001-band3.bak	docs/artifacts/gv-gv1-77001/gv1-77001-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
++2026-10-18T17:40:32.770Z	2ee77c36236cce2c	docs/artifacts/gv-gv0-77001/gv0-77001-band4.bak	docs/artifacts/gv-gv1-77001/gv1-77001-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
++2026-10-18T17:40:32.772Z	50ab297e2037415e	docs/artifacts/gv-gv0-77001/gv0-77001-band5.bak	docs/artifacts/gv-gv1-77001/gv1-77001-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
++2026-10-18T17:40:32.775Z	d02ac5bf8a898a6f	docs/artifacts/gv-gv0-77001/gv0-77001-band6.bak	docs/artifacts/gv-gv1-77001/gv1-77001-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
++2026-10-18T17:40:32.787Z	2ee77c36236cce2c	docs/artifacts/gv-gv0-77001/gv0-77001-band4.bak	docs/artifacts/train-3p-out.js	train-3p	未复制：同一粒权重已有真身
++2026-10-18T17:46:10.193Z	646c0967da547bab	docs/artifacts/gv-gv0-77002/gv0-77002-band1.bak	docs/artifacts/gv-gv1-77002/gv1-77002-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
++2026-10-18T17:46:10.196Z	9b14f0f943df0c64	docs/artifacts/gv-gv0-77002/gv0-77002-band2.bak	docs/artifacts/gv-gv1-77002/gv1-77002-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
++2026-10-18T17:46:10.199Z	0df193ff7f13fd8f	docs/artifacts/gv-gv0-77002/gv0-77002-band3.bak	docs/artifacts/gv-gv1-77002/gv1-77002-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
++2026-10-18T17:46:10.201Z	f7c84848dd552062	docs/artifacts/gv-gv0-77002/gv0-77002-band4.bak	docs/artifacts/gv-gv1-77002/gv1-77002-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
++2026-10-18T17:46:10.204Z	99f647581c767c2c	docs/artifacts/gv-gv0-77002/gv0-77002-band5.bak	docs/artifacts/gv-gv1-77002/gv1-77002-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
++2026-10-18T17:46:10.206Z	ec97540efac8d7f5	docs/artifacts/gv-gv0-77002/gv0-77002-band6.bak	docs/artifacts/gv-gv1-77002/gv1-77002-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
++2026-10-18T17:46:10.209Z	9b14f0f943df0c64	docs/artifacts/gv-gv0-77002/gv0-77002-band2.bak	docs/artifacts/train-3p-out.js	train-3p	未复制：同一粒权重已有真身

@@ -148,6 +148,28 @@ export function rejectDegenerateWinners(entries, thr) {
   return { best: clean.length ? clean[0] : null, dropped: dropped, clean: clean };
 }
 
+/** §E650（千问 · 预注册 `docs/research/PREREG-2026-10-19-gift-veto-qoder.md`，**默认关** ⇒ `EPIRUS_SEL_GIFT_VETO` 不设时没人调它）：
+ * **把"裸包送盾超线"从"不许参与带内换人"升成"不许当选"**。
+ * 为什么不在这儿再写一个数：阈值已有单一来源（`audit-lib.HOLO_GIFT_MAX = 6`），而**判定结果**也早有人算过 ——
+ *   `train-3p.mjs:1624` 写 `e.gateOk = mh.holoOtherPerGame <= HOLO_GIFT_MAX`，可它的消费者只有 `bandPickByLand`（本文件 :309，只挡带内换人）
+ *   ⇒ 本函数**只吃 `gateOk`**：不开新阈值、不复制那个 6（"两处各写一遍"是本仓反复犯的那件事）。
+ * 与 `rejectDegenerateWinners` / `rejectNarrowWinners` 同规矩：**全不合格 ⇒ `allRejected=true`，调用方必须响亮**，
+ *   不许静默退回"不过滤"。可跑自证在 `tools/probe-gift-veto.mjs`（三条都要能在被改坏时红）。 */
+export function rejectGiftSpamWinners(entries) {
+  const list = (entries || []).filter(function (e) { return !!e; });
+  /* `gateOk` 缺 = **这台量具没跑过那一粒**（默认档下 `mirrorHealth` 整段不跑 ⇒ 全员缺），与"跑过且合格"不是一回事 ⇒
+   *   按既有规矩（`rejectNarrowWinners.shareMissing` 那一族）：**放行但计数报出来**，不许静默把"没测"读成"合格"。 */
+  const gateMissing = list.filter(function (e) { return e.gateOk === undefined || e.gateOk === null; }).length;
+  const clean = list.filter(function (e) { return e.gateOk !== false; });
+  const dropped = list.length - clean.length;
+  clean.sort(function (a, b) { return b.score - a.score; });
+  /* 报数用：被剔那几粒各自读到多少（没带 `giftPerGame` 字段就说"没带"，不许当成 0） */
+  const droppedList = list.filter(function (e) { return e.gateOk === false; })
+    .map(function (e) { return { id: (e.ref && e.ref.id) ? e.ref.id : (e.id || '?'), gift: (typeof e.giftPerGame === 'number' ? e.giftPerGame : null) }; });
+  return { best: clean.length ? clean[0] : null, dropped: dropped, clean: clean, gateMissing: gateMissing,
+    allRejected: list.length > 0 && clean.length === 0, droppedList: droppedList };
+}
+
 /** v1.5.170（qoder §N29 · `EPIRUS_BREADTH_FLOOR`）：**广度塌缩当"不合格"，不当"排序键"**。
  * 为什么换成"线"：§N25 已否掉排序键（同分带里只剩 1 粒 ⇒ 咬不动；咬动了换上来的是病包），
  * 而 §N28 两对种子实测**四粒冠军里有三粒净兑现只剩一种卡**（`xn17a`/`xn15f` = `G(落地) 1.00、1 种`）

@@ -10,7 +10,7 @@ import { widOf, widOfArr } from '../champion-map/pack-id.mjs';   /* 2026-10-12 D
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
-import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, rejectNarrowWinners,
+import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, rejectNarrowWinners, rejectGiftSpamWinners,
   parseSelSeeds, selBases, scoreRuns, selNote, selGapNote, bandFor } from './pick-best.mjs';
 import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
 /* v1.5.269（§E77）：载重 veto 的**同口径量具** —— `behavior-profile` 的 `fieldProfile`（ε=0 · temp 0.15 · 5 席同包）。
@@ -91,6 +91,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
   'EPIRUS_HALL_SEED',   // v1.5.277 §E114：把起点补进终局重验的候选池（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
+  'EPIRUS_SEL_GIFT_VETO', 'EPIRUS_SEL_GIFT_VETO_GAMES',   // §E650（千问）：送盾当选 veto + 它的测量长度（默认关 ⇒ `gateOk` 那一次测量也不跑）
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
@@ -212,6 +213,15 @@ const HALL_SEED = Number(process.env.EPIRUS_HALL_SEED || 0) > 0 ? 1 : 0;
  * ⇒ 线画在 1.5 只砍"塌成一种卡"，不砍"宽但兑现率低"。默认关，开了必须自己说剔了几粒。 */
 const BREADTH_FLOOR = Number(process.env.EPIRUS_BREADTH_FLOOR || 0);
 let BREADTH_LOG = null, BREADTH_ALL_NARROW = false;
+/* ===== §E650（千问 · 预注册 `docs/research/PREREG-2026-10-19-gift-veto-qoder.md` · **默认 0 ⇒ 行为逐字不变**）=====
+ * 送盾 veto：把"裸包送盾超线"从**只挡带内换人**（`bandPickByLand` 吃 `gateOk`）升成**也挡当选**。
+ * 为什么不算新加阈值：判定与那个数都已有单一来源（`audit-lib.HOLO_GIFT_MAX = 6` + `e.gateOk`，:1624 那行算的就是它）；
+ *   本开关只多一个**消费点**，函数体里没有第二个数（`tools/probe-gift-veto.mjs` 腿⑤ 钉这件事）。
+ * ⚑ 已知风险（预注册里写死的）：贴着线的那批包，20 局的读数会随抽样长度翻判定（§E649 实测 `v7tgt2-52` 6.15→4.94）
+ *   ⇒ 所以 `EPIRUS_SEL_GIFT_VETO_GAMES` 可指长度（默认沿用 `SEL_LAND_GAMES`），跑出来的账必须带上这个长度。 */
+const SEL_GIFT_VETO = Number(process.env.EPIRUS_SEL_GIFT_VETO || 0);
+const SEL_GIFT_VETO_GAMES = Number(process.env.EPIRUS_SEL_GIFT_VETO_GAMES || 0) || SEL_LAND_GAMES;
+let GIFT_VETO_LOG = null, GIFT_VETO_ALL_SPAM = false;
 /* ===== v1.5.265b（qoder 09-28 夜班 §E66 · 默认 0 ⇒ 行为逐字不变）：**载重优点 veto** =====
  * 动因（同批 12 支臂实测，见 `RESEARCH-LOG-2026-09-28-qoder.md` §E66）：从现役接力 1200 代，
  * 五粒里 **4 粒把"载重卡"打没了**（电磁炮 2.23→0~0.08 次/局、蓄能 3.83→0、最大 ep 93→2~18），
@@ -1845,6 +1855,53 @@ for (const h of hall) {
         ' ⇒ **未改判**（原当选者本来就是带内用量最高的）');
     }
   }
+  /* ===== §E650（千问 · 默认关）：送盾 veto ⇒ 超线的不许当选 =====
+   * 单独量一次 `holoOtherPerGame`（长度可由 `EPIRUS_SEL_GIFT_VETO_GAMES` 指，默认沿用 `SEL_LAND_GAMES=20`）而**不复用 :1624 那个 gateOk**，
+   *   理由是 §E649 实测：20 局的读数在贴着 6 的那批包上会随长度翻判定（`v7tgt2-52` 20 局 6.15 / 100 局 4.94）
+   *   ⇒ 这一闸的判定必须与它自己报出的那个数同一批局，不能"用的是 20 局的旧 gateOk、报的是另一个长度"。
+   * 只喂**浅拷贝**给纯函数（`{ref, score, gateOk, giftPerGame}`），不改 `sel.clean` 里那些对象——`bandPickByLand` 还要按它原来的 gateOk 走。 */
+  if (SEL_GIFT_VETO > 0 && sel.clean && sel.clean.length) {
+    const giftCache = new Map();
+    const giftOf = function (params) {
+      let v = giftCache.get(params);
+      if (v === undefined) {
+        const mh = T.mirrorHealth(params, SEL_GIFT_VETO_GAMES, N, 'multi');
+        v = Number(mh && mh.holoOtherPerGame);
+        if (!isFinite(v)) { console.error('⛔ [送盾闸] `mirrorHealth` 没读出 `holoOtherPerGame` ⇒ 不许当 0 放行'); process.exit(7); }
+        giftCache.set(params, v);
+      }
+      return v;
+    };
+    const view = sel.clean.map(function (e, i) {
+      const g = giftOf(e.ref.params);
+      /* 名人堂的 `ref` 只有 `params/fit(/wid)` ⇒ 没 id 时退回"榜内第几席"，**不许打成 '?' 让人以为丢了数据** */
+      return Object.assign({}, e, { id: e.ref.id || (e.ref.wid ? String(e.ref.wid).slice(0, 8) : ('榜内#' + (i + 1))), giftPerGame: g, gateOk: g <= HOLO_GIFT_MAX });
+    });
+    const gv = rejectGiftSpamWinners(view);
+    const who = gv.droppedList.map(function (d) { return d.id + ' ' + (d.gift === null ? '?' : d.gift.toFixed(2)) + '/局'; }).join(' ‖ ');
+    const widOf = function (e) { return e.id || (e.ref && e.ref.id) || (e.ref && e.ref.wid ? String(e.ref.wid).slice(0, 8) : '未名'); };
+    const tail = gv.best
+      ? (gv.best.ref.params === (sel.best && sel.best.ref.params)
+        ? ' ⇒ 池内冠军**没换人**'
+        : ' ⇒ 池内冠军**换成 ' + widOf(gv.best) + '（送盾 ' + gv.best.giftPerGame.toFixed(2) + '/局）**')
+      : '';
+    console.log('[送盾闸] 判据 = 裸包 `holoOtherPerGame > ' + HOLO_GIFT_MAX + '`（单源 `audit-lib.HOLO_GIFT_MAX`）· 量具 ' + SEL_GIFT_VETO_GAMES + ' 局 multi 镜'
+      + ' ‖ 剔 ' + gv.dropped + '/' + view.length + (who ? '：' + who : '') + tail);
+    GIFT_VETO_LOG = { line: HOLO_GIFT_MAX, games: SEL_GIFT_VETO_GAMES, dropped: gv.dropped, of: view.length,
+      droppedList: gv.droppedList, allSpam: gv.allRejected,
+      winnerGift: gv.best ? Number(gv.best.giftPerGame.toFixed(2)) : null, changedWinner: !!(gv.best && sel.best && gv.best.ref.params !== sel.best.ref.params) };
+    if (gv.allRejected) {
+      GIFT_VETO_ALL_SPAM = true;
+      console.error('⛔ [送盾闸] 名人堂**全部超线**（' + view.length + ' 粒没有一粒 ≤' + HOLO_GIFT_MAX + '/局）⇒ 产物照写但标 giftVetoAllSpam；'
+        + '这按预注册算"线画太紧或该回奖励面"，**不许静默退回不过滤**');
+    } else {
+      /* 把当选者换到 veto 后的第一名：按 `ref.params` 找回**原对象**（不拿浅拷贝去写 finalParams） */
+      const keep = new Set(gv.clean.map(function (e) { return e.ref.params; }));
+      sel.clean = sel.clean.filter(function (e) { return keep.has(e.ref.params); });
+      const nb = gv.best ? sel.clean.find(function (e) { return e.ref.params === gv.best.ref.params; }) : null;
+      if (nb) sel.best = nb;
+    }
+  }
   if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; }
   else if (hallEntries.length) {
     DEGENERATE_ONLY = true;
@@ -1996,6 +2053,9 @@ const meta = {
     /* v1.5.326 §E249：这根排序键**有没有真的换人**必须写在产物里（`{changedWinner, zeroDose, usage…}`）。
      * 关档 ⇒ `null`（一行都不跑，与历史臂逐字相同）。`zeroDose:true` 那一臂**不许**被读成"测过且无效"。 */
     selBigT: SEL_BIGT_LOG,
+    /* §E650（千问 · 默认关 ⇒ 两个 `null`，与历史臂同形）：送盾 veto 的账。
+     * 记 `games` 是硬要求：§E649 实测这条判定随抽样长度翻（20 局 6.15 / 100 局 4.94），**没带长度的送盾读数不许被引用**。 */
+    selGiftVeto: (SEL_GIFT_VETO > 0 ? SEL_GIFT_VETO : null), giftVeto: GIFT_VETO_LOG, giftVetoAllSpam: GIFT_VETO_ALL_SPAM,
     selKeepCastKeys: (SEL_KEEP > 0 ? SEL_KEEP_CAST_KEYS : null),   // v1.5.266：出手口径名单（环/蓄能不打血）
     kill: KILL_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     /* v1.7.4 S2a：训练期那档决策期改写也要记账 —— 只记"下达值"不够（本仓的教训：横幅证明变量、证明不了效果）。

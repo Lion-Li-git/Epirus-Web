@@ -35,7 +35,7 @@ for (const a of process.argv.slice(2)) {
 /* ⚠ 名单里写的必须是**读侧的实际拼写**，不是"我以为的小写"：`--drainHp` 的正写带大写 H（读的是 `FLAG.drainHp`），
  *   `--eps-mode` 用连字符 ⇒ 若这里写成 `drainhp`/`epsmode`，这道守卫就会在**正确用法**上 exit 2（我第一版就这么错了，实测抓回）。
  *   `file` 不在名单里：落盘的 `#file=` 来自位置参数，不是旗标。 */
-const IDENTITY_FLAGS = ['shipbigt', 'shipdrain', 'support', 'eps', 'eps-tier', 'epsk', 'eps-mode', 'bigtpush', 'bigttgt',
+const IDENTITY_FLAGS = ['shipbigt', 'shipdrain', 'support', 'supportpick', 'supportskip', 'supportminep', 'eps', 'eps-tier', 'epsk', 'eps-mode', 'bigtpush', 'bigttgt',
   'pushrank', 'pushfloor', 'pushkey', 'pushminep', 'bigtcost', 'ban', 'drainHp', 'mode', 'swap', 'pool', 'every'];
 const IDENTITY_BY_LOWER = {};
 for (const k of IDENTITY_FLAGS) IDENTITY_BY_LOWER[k.toLowerCase()] = k;
@@ -424,18 +424,39 @@ if (SHIPBIGT_RAW != null) {
   console.log('[shipbigt] 未设旗标 ⇒ 走**引擎默认档** `BIGT_PUSH = ' + SHIP_EFFECTIVE + '`'
     + (SHIP_EFFECTIVE >= 1 ? '（v1.5.333 起默认开着 ⇒ 这一臂**不是**出厂形状，出厂形状要显式 `--shipbigt=0`）' : '（关着）'));
 }
-/* ===== §E646（路线 B）：`--support=<0|1|2>` = 送盾的**部署层先验**（引擎默认 **0=关**）=====
- * 档 1 = 只改"给谁"（谓词 = 正在搓长招 `ringStreak≥1 ∨ ep≥3` **且 `hp>1`**，取 `ep` 最大 ⇒ 口径与量具 `tools/guard-the-charger.mjs` 的 `churnnoweak` 一字相同）；
- * 档 2 = 再加"挑不到就不送、改攒"（§E643 二 被量过的那一形；§E644 四 说强度收益大半来自少送本身）。
+/* ===== §E646/§E648（路线 B）：`--support=<0|1|2>` = 送盾的**部署层先验**（引擎默认 0=关 ‖ **页面默认开档 2**，见 `js/ui/ui.js`）=====
+ * 档 1 = 只改"给谁"：谓词 = 正在搓长招 `ringStreak≥1 ∨ ep≥minEp(默认 3)` **且 `hp>1`**；挑人形状由 `--supportpick` 定
+ *   （`weighted`=按 ep 加权抽，v1.7.105 起的产品默认 ‖ `max`=永远取 ep 最大，§E643/§E647 在册那些数的形状，与量具 `tools/guard-the-charger.mjs` 的 `churnnoweak` 一字相同）；
+ * 档 2 = 再加"挑不到时按 `skipP`（默认 0.6）的概率改攒"（`skipP=1` 就是 §E643 二 被量过的那一形；§E644 四 说强度收益大半来自少送本身）。
  * ⚠ 反过来那两种写法都被量过、都错：**挑血最少**兑现 0/235 ‖ 0/233，**随机给**3/210 ⇒ 濒死那一格救不回来，不许拿 `hp` 最低当判据。
- * 接线纪律照 `--shipbigt`：**先回读引擎默认档、再 setter、再校验真生效**，banner 印引擎回读值而不是旗标原值（§E278）。
+ * 接线纪律照 `--shipbigt`：**先回读引擎默认档、再 setter、再校验真生效**，banner 印引擎回读值而不是旗标原值（§E278）——
+ *   knobs 同一条纪律：给了就回读比对，**印出来的必须是引擎回读的那三个值**（否则"档 2"这个词在两种形状之间没有区分）。
  * ⚑ 这是**先验不是学到的**（用户 10-17 主语规矩）；对照臂必须显式 `--support=0`。 */
 const SUPPORT_RAW = FLAG.support;
 const SUPPORT = SUPPORT_RAW == null ? null : Number(SUPPORT_RAW);
 if (SUPPORT_RAW != null && !(SUPPORT === 0 || SUPPORT === 1 || SUPPORT === 2)) {
-  console.error('⛔ --support 只能是 0（关）/ 1（改送盾目标）/ 2（改目标 + 挑不到就不送）；收到 `' + SUPPORT_RAW + '`'); process.exit(2);
+  console.error('⛔ --support 只能是 0（关）/ 1（改送盾目标）/ 2（改目标 + 挑不到时按概率改攒）；收到 `' + SUPPORT_RAW + '`'); process.exit(2);
 }
 const SUPPORT_DEFAULT = (typeof T.supportPriorOn === 'function') ? T.supportPriorOn() : null;
+/* §E648：knobs 也是量具的一维。`setSupportPriorKnobs` 在 v1.7.105 就有了但**全仓零调用**，
+ *   于是"档 2"有两种形状（按 ep 加权抽 + 60% 改攒 ‖ 永远取 ep 最大 + 必然改攒），
+ *   而 §E643/§E647 在册那些数量的是后者 ⇒ 没有这三根旗标，旧口径就再也复现不了（同一条命令指向另一个对象）。
+ *   默认值一个都不给 ⇒ 走引擎默认（weighted/0.6/3）⇒ 在册的产品档读数逐字不变。 */
+const KNOB_RAW = { pick: FLAG.supportpick, skipP: FLAG.supportskip, minEp: FLAG.supportminep };
+const KNOB = {};
+for (const k in KNOB_RAW) if (KNOB_RAW[k] != null && KNOB_RAW[k] !== '') KNOB[k] = KNOB_RAW[k];
+if (Object.keys(KNOB).length && typeof T.setSupportPriorKnobs !== 'function') {
+  console.error('⛔ 引擎没导出 `setSupportPriorKnobs` ⇒ knobs 旗标没有生效对象，拒跑'); process.exit(2);
+}
+if (Object.keys(KNOB).length) {
+  try { T.setSupportPriorKnobs(KNOB); } catch (e) { console.error('⛔ knobs 被引擎拒：' + e.message); process.exit(2); }
+  const kb = T.supportPriorKnobs();
+  const want = { minEp: KNOB.minEp == null ? kb.minEp : Number(KNOB.minEp),
+    skipP: KNOB.skipP == null ? kb.skipP : Number(KNOB.skipP), pick: KNOB.pick == null ? kb.pick : KNOB.pick };
+  if (kb.minEp !== want.minEp || kb.skipP !== want.skipP || kb.pick !== want.pick) {
+    console.error('⛔ knobs 没生效：要 `' + JSON.stringify(want) + '`，引擎回读 `' + JSON.stringify(kb) + '`'); process.exit(2);
+  }
+}
 if (SUPPORT_RAW != null) {
   if (typeof T.setSupportPrior !== 'function') { console.error('⛔ `EpirusTrainer.setSupportPrior` 不存在 ⇒ 旗标没有生效对象，拒跑'); process.exit(2); }
   T.setSupportPrior(SUPPORT);
@@ -443,9 +464,16 @@ if (SUPPORT_RAW != null) {
   if (SUPPORT_EFFECTIVE !== SUPPORT) {
     console.error('⛔ `--support=' + SUPPORT + '` 没生效：引擎回读 `SUPPORT_PRIOR = ' + SUPPORT_EFFECTIVE + '`'); process.exit(2);
   }
-  console.log('[support] 已按旗标改引擎档：`SUPPORT_PRIOR = ' + SUPPORT_EFFECTIVE + '`（引擎自己的默认档回读为 ' + SUPPORT_DEFAULT + '）‖ 档 1 = 只改 holo 目标 ‖ 档 2 = 再加"挑不到就不送、改攒" ‖ 不消耗 `state.rng`');
+  const kb = T.supportPriorKnobs();
+  console.log('[support] 已按旗标改引擎档：`SUPPORT_PRIOR = ' + SUPPORT_EFFECTIVE + '`（引擎自己的默认档回读为 ' + SUPPORT_DEFAULT + '）'
+    + '‖ 档 1 = 只改 holo 目标 ‖ 档 2 = 再加"挑不到时按 `skipP` 的概率改攒" ‖ 不消耗 `state.rng`'
+    + '‖ **knobs（引擎回读）= pick=' + kb.pick + ' skipP=' + kb.skipP + ' minEp=' + kb.minEp + '**'
+    + (SUPPORT === 2 && kb.pick === 'max' && kb.skipP === 1 ? ' ⇒ 这一臂是 §E643/§E647 那个**严档**形状' : ''));
 } else {
-  console.log('[support] 未设旗标 ⇒ 走**引擎默认档** `SUPPORT_PRIOR = ' + SUPPORT_DEFAULT + '`（0 = 关 ⇒ 这一臂不带动作先验）');
+  const kb0 = (typeof T.supportPriorKnobs === 'function') ? T.supportPriorKnobs() : null;
+  console.log('[support] 未设旗标 ⇒ 走**引擎默认档** `SUPPORT_PRIOR = ' + SUPPORT_DEFAULT + '`（0 = 引擎默认关；**页面另有默认，见 `js/ui/ui.js`**）'
+    + (kb0 ? ' ‖ knobs 默认 = pick=' + kb0.pick + ' skipP=' + kb0.skipP + ' minEp=' + kb0.minEp : '')
+    + ' ⇒ 这一臂不带动作先验');
 }
 /* ===== §E275（v1.5.334）：`--shipdrain=<0|1..12>` = 量**摄魂的"残血软提升"档**（现网路径，不是工具外挂）=====
  * 与大雷那档的区别写死在引擎里（`evo.js` 的 `drainPushWants` + `epsMode==='soft'` 那一支）：

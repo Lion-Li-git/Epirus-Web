@@ -1,0 +1,16 @@
+# §E650 臂批：start=docs/artifacts/v7beadseed-82.bak 120代 × 3 seed × {veto=0,1} ‖ 起 2026-10-19 01:27:01
+ARM gv0-77000 rc=0 ‖ （veto 关档不印，这是预期的） ‖ 产物: 已写入 docs/artifacts/train-3p-out.js
+ARM gv1-77000 rc=9 ‖ [送盾闸] 判据 = 裸包 `holoOtherPerGame > 6`（单源 `audit-lib.HOLO_GIFT_MAX`）· 量具 20 局 multi 镜 ‖ 剔 4/6：榜内#1 35.95/局 ‖ 榜内#3 6.75/局 ‖ 榜内#5 28.80/局 ‖ 榜内#6 25.05/局 ⇒ 池内冠军**换成 榜内#2（送盾 4.95/局）** ‖ 产物: 已在 `docs/artifacts/gv-gv0-77000/gv0-77000-band4.bak
+ARM gv0-77001 rc=0 ‖ （veto 关档不印，这是预期的） ‖ 产物: 已写入 docs/artifacts/train-3p-out.js
+ARM gv1-77001 rc=9 ‖ [送盾闸] 判据 = 裸包 `holoOtherPerGame > 6`（单源 `audit-lib.HOLO_GIFT_MAX`）· 量具 20 局 multi 镜 ‖ 剔 1/6：榜内#6 6.50/局 ⇒ 池内冠军**没换人** ‖ 产物: 已在 `docs/artifacts/gv-gv0-77001/gv0-77001-band4.bak
+ARM gv0-77002 rc=0 ‖ （veto 关档不印，这是预期的） ‖ 产物: 已写入 docs/artifacts/train-3p-out.js
+ARM gv1-77002 rc=9 ‖ [送盾闸] 判据 = 裸包 `holoOtherPerGame > 6`（单源 `audit-lib.HOLO_GIFT_MAX`）· 量具 20 局 multi 镜 ‖ 剔 4/6：榜内#1 25.60/局 ‖ 榜内#3 27.95/局 ‖ 榜内#5 23.15/局 ‖ 榜内#6 22.55/局 ⇒ 池内冠军**换成 榜内#2（送盾 3.25/局）** ‖ 产物: 已在 `docs/artifacts/gv-gv0-77002/gv0-77002-band2.bak
+⚑ pack-aliases.tsv 被本批追加 21 行 ⇒ 已留在 gift-veto-aliases-side.diff.txt 后还原
+  落盘(docs/artifacts/gv-gv0-77000/): 已写入 docs/artifacts/train-3p-out.js  (coldStart=false, seed=77000)
+  落盘(docs/artifacts/gv-gv0-77001/): 已写入 docs/artifacts/train-3p-out.js  (coldStart=false, seed=77001)
+  落盘(docs/artifacts/gv-gv0-77002/): 已写入 docs/artifacts/train-3p-out.js  (coldStart=false, seed=77002)
+  落盘(docs/artifacts/gv-gv1-77000/): [train-3p] 落盘：↷ 同一粒权重已在 `docs/artifacts/gv-gv0-77000/gv0-77000-band4.bak` ⇒ 没写第二份，只登记别名 `docs/artifacts/train-3p-out.js`（真要复制请加 `--force-copy` 并写明理由）
+  落盘(docs/artifacts/gv-gv1-77001/): [train-3p] 落盘：↷ 同一粒权重已在 `docs/artifacts/gv-gv0-77001/gv0-77001-band4.bak` ⇒ 没写第二份，只登记别名 `docs/artifacts/train-3p-out.js`（真要复制请加 `--force-copy` 并写明理由）
+  落盘(docs/artifacts/gv-gv1-77002/): [train-3p] 落盘：↷ 同一粒权重已在 `docs/artifacts/gv-gv0-77002/gv0-77002-band2.bak` ⇒ 没写第二份，只登记别名 `docs/artifacts/train-3p-out.js`（真要复制请加 `--force-copy` 并写明理由）
+  arms/ 收了 42 份 band 产物
+GVARMS_DONE 6 臂（期望 6）2026-10-19 01:46:14

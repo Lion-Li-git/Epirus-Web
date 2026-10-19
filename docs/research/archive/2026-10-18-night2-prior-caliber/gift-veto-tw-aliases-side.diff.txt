@@ -1,0 +1,26 @@
+diff --git a/champion-map/pack-aliases.tsv b/champion-map/pack-aliases.tsv
+index 253eabb..e39a7ec 100644
+--- a/champion-map/pack-aliases.tsv
++++ b/champion-map/pack-aliases.tsv
+@@ -4,3 +4,21 @@ ts	wid	canonical	wantedPath	tool	note
+ 2026-10-11T12:50:17.954Z	d490dc136293cfc4	docs/artifacts/kept/eval-out__win-Ldemo.bak	docs/artifacts/kept/artifacts__e588-teeth-src.bak	keep-artifact	kept/ 是 git 耐久层
+ 2026-10-11T12:50:18.163Z	d490dc136293cfc4	docs/artifacts/kept/eval-out__win-Ldemo.bak	docs/artifacts/kept/kept__eval-out__win-Ldemo.bak	keep-artifact	已登记的复制：teeth 对照
+ 2026-10-12T04:18:01.000Z	1d4b687da27187b7	docs/artifacts/kept/e70-out__D02-31.bak	docs/artifacts/e234-out/K2.js	lineage-alias	63 枚子包的 meta 点名它（EPIRUS_SEEDPACK）而文件被去重搬进隔离区 ⇒ 登记别名让血统图能升等到 seedpack-wid（升等条件不变：wid 逐位相等）
++2026-10-18T18:21:23.540Z	f24d855e2ce70aa9	docs/artifacts/tw-tw0-77000/tw0-77000-band1.bak	docs/artifacts/tw-tw1-77000/tw1-77000-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
++2026-10-18T18:21:23.544Z	ab8e1aee2ba830ef	docs/artifacts/tw-tw0-77000/tw0-77000-band2.bak	docs/artifacts/tw-tw1-77000/tw1-77000-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
++2026-10-18T18:21:23.549Z	d0e52a14cbab4149	docs/artifacts/train-3p-out.js	docs/artifacts/tw-tw1-77000/tw1-77000-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
++2026-10-18T18:21:23.554Z	9f81f51e04cf12ba	docs/artifacts/tw-tw0-77000/tw0-77000-band4.bak	docs/artifacts/tw-tw1-77000/tw1-77000-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
++2026-10-18T18:21:23.558Z	ccaaa80b3d654a1b	docs/artifacts/tw-tw0-77000/tw0-77000-band5.bak	docs/artifacts/tw-tw1-77000/tw1-77000-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
++2026-10-18T18:21:23.562Z	b7851f637d3f4bd7	docs/artifacts/tw-tw0-77000/tw0-77000-band6.bak	docs/artifacts/tw-tw1-77000/tw1-77000-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
++2026-10-18T18:27:47.240Z	b4f417c503ced8f7	docs/artifacts/tw-tw0-77001/tw0-77001-band1.bak	docs/artifacts/tw-tw1-77001/tw1-77001-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
++2026-10-18T18:27:47.245Z	6d77891e8d81e9d0	docs/artifacts/tw-tw0-77001/tw0-77001-band2.bak	docs/artifacts/tw-tw1-77001/tw1-77001-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
++2026-10-18T18:27:47.249Z	6d77891e8d81e9d0	docs/artifacts/tw-tw0-77001/tw0-77001-band2.bak	docs/artifacts/tw-tw1-77001/tw1-77001-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
++2026-10-18T18:27:47.253Z	3647a2a2285306d5	docs/artifacts/train-3p-out.js	docs/artifacts/tw-tw1-77001/tw1-77001-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
++2026-10-18T18:27:47.258Z	d0e77a1fbc9141cb	docs/artifacts/tw-tw0-77001/tw0-77001-band5.bak	docs/artifacts/tw-tw1-77001/tw1-77001-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
++2026-10-18T18:27:47.263Z	64dd7d81203604b2	docs/artifacts/tw-tw0-77001/tw0-77001-band6.bak	docs/artifacts/tw-tw1-77001/tw1-77001-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
++2026-10-18T18:33:39.227Z	c29dfae9e1a2b18d	docs/artifacts/tw-tw0-77002/tw0-77002-band1.bak	docs/artifacts/tw-tw1-77002/tw1-77002-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
++2026-10-18T18:33:39.230Z	045e6fd3b86b7097	docs/artifacts/tw-tw0-77002/tw0-77002-band2.bak	docs/artifacts/tw-tw1-77002/tw1-77002-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
++2026-10-18T18:33:39.234Z	ae38bbd9e25b4d79	docs/artifacts/train-3p-out.js	docs/artifacts/tw-tw1-77002/tw1-77002-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
++2026-10-18T18:33:39.237Z	0609caeeac454f72	docs/artifacts/tw-tw0-77002/tw0-77002-band4.bak	docs/artifacts/tw-tw1-77002/tw1-77002-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
++2026-10-18T18:33:39.241Z	b1528f416e4fd72c	docs/artifacts/tw-tw0-77002/tw0-77002-band5.bak	docs/artifacts/tw-tw1-77002/tw1-77002-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
++2026-10-18T18:33:39.246Z	eff836e7b3c39c27	docs/artifacts/tw-tw0-77002/tw0-77002-band6.bak	docs/artifacts/tw-tw1-77002/tw1-77002-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
