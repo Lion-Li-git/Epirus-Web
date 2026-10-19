@@ -31,3 +31,5 @@ LEDGER 行数=1（0 = 除基线声明者外没人再写默认落点）
       1 d123
 VERIFY_DONE 2026-10-19 15:45:51
 verify rc=0 2026-10-19 15:45:51
+clean matrix start 2026-10-19 15:52:46
+clean matrix rc=1 2026-10-19 16:09:52
