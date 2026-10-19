@@ -89,11 +89,16 @@ export function spawnBatch(jobs, opts) {
       tag: j.tag, argv: j.argv, env: Object.assign({}, process.env, j.env || {}), cwd: j.cwd,
     }))));
     /* v1.7.116（10-19 晚，查 CI 变慢的根因）：并发上限原来**写死 7**。7 是照 18 核开发机调的，
-     *   而 GitHub 免费档 runner 是 **2 核** ⇒ 7 个 CPU 密集子进程挤 2 核 = **7 倍超订**，
-     *   墙上时间由争抢决定 ⇒ `train-runner` 在 CI 上**双峰摆动**（实测 run 271/274 = 827/817s，
-     *   run 273/286 = 1616/1669s，同一时段、同一份代码风格，其余部分都稳定在 ~650s）。
-     *   改成按核数：`min(7, max(2, cpus))`；`EPIRUS_BATCH_MAX` 可覆盖（CI 想更保守可设 2）。
-     *   本地 18 核仍得 7（与旧行为逐字相同），CI 2 核得 2。 */
+     *   而 GitHub 免费档 runner 是 **2 核** ⇒ 超订确实存在。
+     * ⚑⚑ **10-19 深夜（千问复核）这条闸够不到热点**：下面写的是 `o.max || cap` ⇒ **显式传 `max` 的调用点永远赢**，
+     *   而真实耗时主体全部显式传了 —— `tools/gates/train-runner.mjs:1319` 是 `{ max: specs.length }`（1338 那批实际 6 支臂
+     *   ⇒ CI 2 核上仍是 6 路），`:1558` 是 `{ max: 2 }`，`train-evo.mjs:2742/:2761/:2765` 是 4/3/1。
+     *   全仓唯一吃到这个新缺省的是 `train-evo.mjs:2748`（三个 `-e` 微型 job，微秒级）⇒ **本缺省对 CI 墙钟没有可测影响**。
+     *   所以 run 287 的 train-runner 从 1669s 回到 1428s **不能记在这把闸上**（同因：DS 自己 §二 的双峰 820↔1620，
+     *   而同一张表里 `train-evo` 286=352s ↔ 287=645s ⇒ 摆动是全体的，n=1 读不出任何 ~14% 的效果）。
+     *   真要接上只需一行（把 `armBatch` 的 `max: specs.length` 改成 `Math.min(specs.length, cap)`），但
+     *   **预期不买时间**——2 核上 CPU 工作总量没变，只减调度与内存压力 ⇒ 落地前要先答"做了会不会改变什么"，
+     *   并且验收必须 n≥3 趟 run。剩下的确定杠杆是**少干活**（拆 train-runner，见 docs/research/CI-WALLCLOCK-2026-10-19-ds.md §七）。 */
     const CPUS = (os.availableParallelism ? os.availableParallelism() : os.cpus().length);
     const autoMax = Math.max(2, Math.min(7, CPUS));
     const cap = Number(process.env.EPIRUS_BATCH_MAX) > 0 ? Number(process.env.EPIRUS_BATCH_MAX) : autoMax;
