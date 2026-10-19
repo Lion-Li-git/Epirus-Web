@@ -62,7 +62,7 @@ t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：�
   /* ② 行为：逃逸口放行（1 代迷你臂，写临时目录 ⇒ 不欠 D82） */
   const dir2 = mkdtempSync(join(tmpdir(), 'darkok-'));
   const okRun = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
-    { env: Object.assign({}, process.env, { EPIRUS_FIGHT_WHISTLE: '0.34', EPIRUS_ALLOW_DARK: '1', EPIRUS_BAND_DIR: dir2, EPIRUS_ARM: 'nptest-dark' }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_FIGHT_WHISTLE: '0.34', EPIRUS_ALLOW_DARK: '1', EPIRUS_BAND_DIR: dir2, EPIRUS_T3P_OUT: dir2 + '/env-out.js', EPIRUS_ARM: 'nptest-dark' }), encoding: 'utf8', timeout: 300000 });
   ok(okRun.status === 0, 'EPIRUS_ALLOW_DARK=1 必须放行（实测 exit=' + okRun.status + '）');
   /* ③a 行为（v1.5.163）：**已删除的键也必须响亮** —— 传 `EPIRUS_PASSIVE_FIELD` ⇒ exit 6 + 说明删于哪一版。
    * 静默忽略等于把"传了等于没传"换个形态留下（它就是白跑两臂的那个病）。 */
@@ -74,7 +74,7 @@ t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：�
    * 判据是跑完打印的 `开火计数` 与它覆盖的受评座位数，不是"消费点读回 X"（§N11 的教训：读回 = 变量到位 ≠ 效果发生）。 */
   const dir3 = mkdtempSync(join(tmpdir(), 'knobok-'));
   const knobRun = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '8', '4'],
-    { env: Object.assign({}, process.env, { EPIRUS_KILL_FIELD: '0.2', EPIRUS_SEED: '7', EPIRUS_BAND_DIR: dir3, EPIRUS_ARM: 'nptest-knob' }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_KILL_FIELD: '0.2', EPIRUS_SEED: '7', EPIRUS_BAND_DIR: dir3, EPIRUS_T3P_OUT: dir3 + '/env-out.js', EPIRUS_ARM: 'nptest-knob' }), encoding: 'utf8', timeout: 300000 });
   ok(knobRun.status === 0, 'EPIRUS_KILL_FIELD 下达 ⇒ 不许 exit 5/6/7/8（实测 exit=' + String(knobRun.status) + '）');
   const fired = /开火计数：注入 (\d+) 局 · 覆盖受评座位 (\d+) 个/.exec(String(knobRun.stdout || ''));
   ok(fired, '必须打印开火计数（没有它 = 回到"横幅自证"）');

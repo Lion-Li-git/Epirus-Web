@@ -57,7 +57,11 @@ function has(name) {
 
 function sh(cmd, args) {
   return new Promise(function (res) {
-    const p = spawn(cmd, args, { cwd: ROOT, windowsHide: true });
+    /* v1.7.114：**不做全局改道**（试过，已撤回）。`EPIRUS_T3P_OUT` 不只是「落点」——`train-3p` 拿它判「发布态」，
+   *   全局设它会让 `ship-feas` 的 D124/D125 认为进了发布态 ⇒「3P 栏没跑」两条红（10-19 实测：真红，单独复跑也红）。
+   *   正解是**逐条把写方改道**（`train-env:64/:76` 已修，10-19 验证 `train-env`+`train-evo` 并发全绿）；
+   *   剩下的用 `EPIRUS_LOG_DEFAULT_OUT=1` 在运行时点名（`train-3p` 里那条日志）。 */
+  const p = spawn(cmd, args, { cwd: ROOT, windowsHide: true });
     let so = '', se = '';
     p.stdout.on('data', function (d) { so += d; });
     p.stderr.on('data', function (d) { se += d; });

@@ -53,6 +53,14 @@ const OUT_PATH = process.env.EPIRUS_PUBLISH === '1'
    * 改道后默认路径**一字不动**（门禁那两道比对它哈希的 CLI 基线门因此不会被我的臂污染）。 */
   : (process.env.EPIRUS_T3P_OUT || ('docs/artifacts/' + 'train-3p' + '-out.js'));
 
+/* v1.7.114（10-19）：**点名谁在写默认落点**。`EPIRUS_LOG_DEFAULT_OUT=1` 时，凡是没改道、真要写
+ *   `docs/artifacts/train-3p-out.js` 的那次调用都会打一行 `[WRITE-DEFAULT]`（带 arm 名与四个代数参数）。
+ *   为什么要有这条：本机并行跑门时它是**别人（D123/D162）的比对基线**，不点名的写方只能靠时序巧合抓
+ *   （10-19 的 `train-env` 两腿就是这么漏掉的，靠 D162 红了才发现）。不动任何行为，只在开了这个 env 时打日志。 */
+if (process.env.EPIRUS_LOG_DEFAULT_OUT && !process.env.EPIRUS_T3P_OUT) {
+  console.log('[WRITE-DEFAULT] ' + String(process.env.EPIRUS_ARM || '(no-arm)') + ' ‖ argv=' + process.argv.slice(2).join(' '));
+}
+
 /* ===== Hard guard (belt & braces) =====
  * Twice now a training run silently replaced the SHIPPED champion (js/bundled-champion-3p.js):
  * once by a 40-gen test run, and the stale hard-coded log line made it look like it wrote
