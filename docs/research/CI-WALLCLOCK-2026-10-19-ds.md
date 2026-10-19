@@ -121,9 +121,21 @@ const cap = +process.env.EPIRUS_BATCH_MAX > 0 ? +process.env.EPIRUS_BATCH_MAX : 
 
 ### ② 拆分执行状态（细节与自证在 §E659）
 
-31 条 → `train-pick`(6 ‖ 当选键与 veto) ‖ `train-breadth`(4 ‖ 广度与兑现) ‖ `train-table`(10 ‖ 训练桌与对手) ‖ `train-econ`(11 ‖ econ 回执·起点·缓存)；工具 `tools/gate-resplit.mjs` 的自证②保证**每条门体逐字节没动** ⇒ "保逻辑"这件事不靠人核对。并集守卫：**19 个部分 ‖ 279 条 ‖ 互不重叠**。
+31 条 → `train-pick`(6 ‖ 当选键与 veto) ‖ `train-breadth`(4 ‖ 广度与兑现) ‖ `train-table`(10 ‖ 训练桌与对手) ‖ `train-econ`(11 ‖ econ 回执·起点·缓存)；工具 `tools/gate-resplit.mjs` 的自证②保证**每条门体逐字节没动** ⇒ "保逻辑"这件事不靠人核对。并集守卫：**19 个部分 ‖ 279 条 ‖ 互不重叠**（两种坏法都验过有牙：塞一条不登记的野门 ⇒ exit 1；放一个没进 runner 名单的部分文件 ⇒ 判据① exit 1）。
 
-冷跑（`NP_NOCACHE=1` ⇒ 与 CI 同口径）逐部分墙钟：`docs/research/archive/2026-10-20-night-d15-gates/parts-cold.log.txt`（本机 18 核 ‖ 串行空机）。
+冷跑（`NP_NOCACHE=1` ⇒ 与 CI 同口径 ‖ 串行空机 ‖ 00:50:04→01:14:42 带 `ALLDONE` 收尾行，`docs/research/archive/2026-10-20-night-d15-gates/parts-cold.log.txt`）：
+
+| 部分 | 条数 | 本机冷跑 | 判定 |
+|---|---|---|---|
+| `train-pick` | 6 | **320 s** | 6/6 |
+| `train-breadth` | 4 | 216 s | 4/4 |
+| `train-table` | 10 | 267 s | 10/10 |
+| `train-econ` | 11 | 220 s | 10/10 ‖ **1 SKIP**（D157 自己设计成"NOCACHE 时不验缓存"⇒ 跳，本地冷跑照不到它） |
+| `train-evo`（没拆，作对照） | 65 | **455 s** | 65/65 |
+| 拆前 `train-runner`（DS 同口径读数） | 31 | 928.8 s | 31/31 |
+
+⇒ **critical path 928.8 → 455 s（−51%），瓶颈换成了没拆的 `train-evo`**（正是 §四 那句"critical path 变 train-evo 的 468s"，误差 3%）。
+⚑ 两句要一起说：① 四份**合计 1023 s** 比整段 928.8 s **多 95 s** ⇒ 拆不减总 CPU（本来就不是为了减），多出来的候选机制是"我在窗口里另跑了单门与 dry-run 有争抢 + 每部分进程启动开销"，**未测**；② 这是本机 18 核的数 ⇒ CI 2 核上"最慢一段 ÷ 并行度"的关系不变，但绝对秒数要按 §九④ 的 run 号来认。
 
 ### ③ 认证口径（从 `PLAN-…qoder.md` 搬来，v1.7.115 起生效）
 
