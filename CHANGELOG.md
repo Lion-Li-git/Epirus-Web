@@ -1,3 +1,35 @@
+## v1.7.117 — 10-19 深夜（DS）：**把并发上限接到它本来就该管的地方**（千问 §E655 的纠错落实）+ 我的两处措辞更正。
+
+### ① 先认错：v1.7.116 的那把闸**够不到热点**
+
+`np-parallel.mjs` 取上限是 `o.max` 优先、缺省才用 `cap`；而**耗时的调用点全都显式传了 `max`**：
+`train-runner.mjs:1319` `max: specs.length`（实际 6 支臂）‖ `:1558` `max: 2` ‖ `train-evo:2742/2761/2765` = 4/3/1。
+⇒ 全仓唯一吃到新缺省的只有 `train-evo:2748` 那三个**微秒级** job。**run 287 的 1669→1428s 不能记在这把闸上。**
+
+### ② 我的两条读数也一并更正
+
+- **「其余 15 个部分一秒没变」不成立**：`train-evo` 在 run 286 = **352s**、run 287 = **645s**（1.8×）；双峰 820↔1620 本就是 ±2×，任何 ~14% 的单趟差都落在带内 ⇒ **n=1 不许归因**；
+- **「本地快」的真因不是机器、是缓存**：`np-cache.mjs:44` `cacheOn()` **默认开**（`NP_NOCACHE=1` 才真跑）⇒ 本地秒数被缓存洗过。
+  「验收读 CI run 号」仍然对，**理由要换成"本地有缓存"**。
+
+### ③ 落在码上的改动（**本地行为逐字不变**）
+
+```js
+// np-parallel.mjs：上限的唯一来源
+export function batchCap() { const e = +process.env.EPIRUS_BATCH_MAX; if (e > 0) return e; const n = cpus(); return Math.max(2, Math.min(7, n)); }
+// train-runner.mjs:1319（热点）
+... { max: Math.min(specs.length, batchCap()), timeout: 900000 }
+```
+
+- 本地 18 核：`min(6, 7) = 6` = **与旧行为逐字相同**；CI 2 核：`min(6, 2) = 2`（不再 6 路挤 2 核）；
+- 为什么不在 `spawnBatch` 里一刀切 `min(o.max, cap)`：显式传 `max` 是**有意**要那么多并发，由调用点显式取上限，语义才看得见。
+
+⚠ **预期不买时间**（2 核上 CPU 总工作没变，只减调度/内存压力）⇒ 验收必须 **n≥3 趟 CI run**，只看 `train-runner` 一个 job 的秒数分布；单趟差一律不当结论。
+
+### ④ 台账销两行（千问交接 #53）
+
+`LIVE-LINES` 里 `bandFor(k)` 与 `SUPPORT_PRIOR` 两行的"待裁"已结：前者 v1.7.115 起**抛错**（选项①），后者 v1.7.115 的 **D236** 已钉住页面侧。
+
 ## v1.7.116 — 10-19 晚（DS）：**CI 变慢的根因 = `spawnBatch` 并发上限写死 7，而 CI runner 是 2 核**。
 
 > ⚑ **10-19 深夜更正（千问，用户裁"先做 A"）**：本节 ③/⑤ 的归因**不成立**——`np-parallel.mjs:100` 是 `String(o.max || cap)`，

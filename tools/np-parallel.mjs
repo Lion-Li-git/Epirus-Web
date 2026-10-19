@@ -76,6 +76,16 @@ if (process.argv[2] === '--run') {
 }
 
 /* ---------- 同步门面（门禁里用）---------- */
+/** v1.7.117：**并发上限的唯一来源**（`EPIRUS_BATCH_MAX` > 按核数）。
+ *  热点调用点写成 `max: Math.min(想要的, batchCap())` —— 「本来想要几路」仍可读，
+ *  而「这台机器顶得住几路」只此一处。 */
+export function batchCap() {
+  const env = Number(process.env.EPIRUS_BATCH_MAX);
+  if (env > 0) return env;
+  const cpus = (os.availableParallelism ? os.availableParallelism() : os.cpus().length);
+  return Math.max(2, Math.min(7, cpus));
+}
+
 export function spawnBatch(jobs, opts) {
   const o = opts || {};
   if (!Array.isArray(jobs) || !jobs.length) throw new Error('[spawnBatch] 零个 job —— 一条都没跑不许当过了');
@@ -99,7 +109,12 @@ export function spawnBatch(jobs, opts) {
      *   真要接上只需一行（把 `armBatch` 的 `max: specs.length` 改成 `Math.min(specs.length, cap)`），但
      *   **预期不买时间**——2 核上 CPU 工作总量没变，只减调度与内存压力 ⇒ 落地前要先答"做了会不会改变什么"，
      *   并且验收必须 n≥3 趟 run。剩下的确定杠杆是**少干活**（拆 train-runner，见 docs/research/CI-WALLCLOCK-2026-10-19-ds.md §七）。 */
-    const CPUS = (os.availableParallelism ? os.availableParallelism() : os.cpus().length);
+/* v1.7.117（千问 §E655 点破的那一处）：**让并发上限够得到热点**。
+ * 形���：导出 `batchCap()`，由**显式传 max 的热点调用点**自己取 `Math.min(想要的, batchCap())`。
+ * 为什么不在这里把 `o.max || cap` 改成 `min(o.max, cap)`：显式传 max 的调用点是**有意**要那么多并发
+ * （D176 的 6 支臂就是一个），在这里一刀切会把「有意」与「缺省」混起来；由调用点显式取上限，语义才看得见。
+ * 本地 18 核仍得 7、CI 2 核得 2 ⇒ **本地行为逐字不变**。 */
+const CPUS = (os.availableParallelism ? os.availableParallelism() : os.cpus().length);
     const autoMax = Math.max(2, Math.min(7, CPUS));
     const cap = Number(process.env.EPIRUS_BATCH_MAX) > 0 ? Number(process.env.EPIRUS_BATCH_MAX) : autoMax;
     const sup = spawnSync(process.execPath, [SELF, '--run', jobsFile, outFile, String(o.max || cap)], {

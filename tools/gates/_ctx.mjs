@@ -53,7 +53,7 @@ function packMetaFrom(text) { const m = PACK_META_RE.exec(text); if (!m) return 
 function packMetaOf(file) { try { return packMetaFrom(readFileSync(file, 'utf8')); } catch (e) { return null; } }
 function packWeightsFrom(text) { const m = PACK_WEIGHTS_RE.exec(text); if (!m) return null; try { return JSON.stringify(JSON.parse(m[1]).a); } catch (e) { return null; } }
 function packWeightsOf(file) { try { return packWeightsFrom(readFileSync(file, 'utf8')); } catch (e) { return null; } }
-import { spawnBatch } from '../np-parallel.mjs';   // v1.5.281：互相独立的臂并发跑（当时的动因：D176 一道就占全套 49% —— 那是改法**之前**的读数，现数见 docs/GATE-SHIFTS.md 真源表）
+import { spawnBatch, batchCap } from '../np-parallel.mjs';   // v1.7.117：`batchCap` 一起转出去（热点调用点要显式取上限）   // v1.5.281：互相独立的臂并发跑（当时的动因：D176 一道就占全套 49% —— 那是改法**之前**的读数，现数见 docs/GATE-SHIFTS.md 真源表）
 /* v1.5.288（D193）：多包路由收益的**算式单一来源** —— 门直接喂合成表覆盖六个分支与两类拒绝，
  * 不靠探针的输出措辞、也不依赖本机产物（同 D149/D161/D164 的路子）；环境名从 opp-pool 现取，不写死。 */
 import * as RGAIN from '../routing-gain-lib.mjs';
@@ -196,7 +196,7 @@ export function makeCtx() {
   parseQuality, formatQualityRecord, AUDIT, PS, PF_FRONT,
   spawnCached, inputHash, cacheStats, cacheDir, spawnNC,
   packMetaOf, packMetaFrom, packWeightsOf, packWeightsFrom,
-  spawnBatch, RGAIN, OPP_SPECS, ECON_REWARD_KEYS, readEconEnv,
+  spawnBatch, batchCap, RGAIN, OPP_SPECS, ECON_REWARD_KEYS, readEconEnv,
   conc, fieldProfile, tallyPick, WIN, loadPool,
   selfTest, vm, isChampOpp, loadChampParams, makeChampOppResolver,
   makeShapeScorer, rulesFingerprint, fingerprintOfBundle, pickBestByExam, regressionsOf,

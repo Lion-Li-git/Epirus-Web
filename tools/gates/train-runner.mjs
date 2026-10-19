@@ -13,7 +13,7 @@ const {
   parseQuality, formatQualityRecord, AUDIT, PS, PF_FRONT,
   spawnCached, inputHash, cacheStats, cacheDir, spawnNC,
   packMetaOf, packMetaFrom, packWeightsOf, packWeightsFrom,
-  spawnBatch, RGAIN, OPP_SPECS, ECON_REWARD_KEYS, readEconEnv,
+  spawnBatch, batchCap, RGAIN, OPP_SPECS, ECON_REWARD_KEYS, readEconEnv,
   conc, fieldProfile, tallyPick, WIN, loadPool,
   selfTest, vm, isChampOpp, loadChampParams, makeChampOppResolver,
   makeShapeScorer, rulesFingerprint, fingerprintOfBundle, pickBestByExam, regressionsOf,
@@ -1316,7 +1316,7 @@ t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + �
    * 门面另有门 D188 判"归属不串台 / 失败不吞 / 少一个 job 就判红"。 */
   const armBatch = (specs) => spawnBatch(specs.map(s => ({
     tag: s[0], argv: ['tools/train-3p.mjs', '60'], env: armEnv(s[0], s[1])
-  })), { max: specs.length, timeout: 900000 });
+  })), { max: Math.min(specs.length, batchCap()), timeout: 900000 });   /* v1.7.117：显式取上限（§E655 指出这台闸原先够不到这里）。本地 18 核仍是 6 = 与旧行为逐字相同；CI 2 核降到 2。 */
   const metaOf = f => {
     const s = readFileSync(f, 'utf8'); const i = s.indexOf('EPIRUS_CHAMPION_3P_META = ');
     if (i < 0) return null;
