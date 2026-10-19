@@ -20,11 +20,14 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rejectUnknownFlags } from './audit-lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
 const GATE_DIR = join(HERE, 'gates');
 const argv = process.argv.slice(2);
+/* 仓规（D218 那一族）：不认识的 `--` 参数必须响亮失败 ⇒ 这台工具只认这三个 */
+rejectUnknownFlags(argv, ['from', 'map', 'write'], 'gate-resplit');
 const arg = (k, d) => { const a = argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const flag = (k) => argv.indexOf('--' + k) >= 0;
 
