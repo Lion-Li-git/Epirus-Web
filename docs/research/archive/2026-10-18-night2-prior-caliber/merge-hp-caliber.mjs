@@ -5,7 +5,9 @@
  *   ⇒ 做法：先把"新口径主表 + 旧表补缺"合成一张，再交给链子当 `--hp=`（链子自己的 HPMORE 照旧补剩下的，行为逐字不变）。
  * 规矩：① 主表赢（同名不覆盖，与 attach-hp 的 `--more` 同一语义）；② 每张表都必须有 `page/exam/d` 三列，缺就 exit 2；
  *   ③ 输出多带一列 `hpSrc`（`prior` = 新测 ‖ `carry` = 沿用旧表）⇒ 每一行的来路写在行里，不靠文件名和人的记性。
- * 用法：node merge-hp-caliber.mjs --main=epsfull-prior2-2026-10-18.tsv --fill=epsfull-tier-2026-10-12.tsv --out=epsfull-hp-final-2026-10-19.tsv [--label=prior]
+ *   ⇒ 所以 `--main=` 认**逗号分隔的多张表**（§E651：`G12H1 / clone-79101 / Z1 / Z2` 这 4 枚的开档 Hp 量在另一张表里，
+ *     它们的 `exam`/`pageBare` 来自 `e608` 而不是 10-12 ⇒ 用 `表@标签` 给这一支单独打来源，来路仍写在行里）。
+ * 用法：node merge-hp-caliber.mjs --main=<表>[,<表>[@标签]] --fill=<旧表> --out=<合并产物> [--label=prior]
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -31,12 +33,27 @@ const rd = (f) => {
   if (dup) console.log('   （' + f + '：' + rows.length + ' 行 → ' + uniq.length + ' 个唯一 id，重复 ' + dup + ' 行且 page 逐值相同 ⇒ 去重）');
   return { h, uniq, f };
 };
-const a = rd(MAIN), b = rd(FILL);
-const HDR = a.uniq[0].concat(['hpSrc']).slice(0, 0);   // 表头单独取，避免上面 slice 迷惑
-const head = readFileSync(path.join(CM, MAIN), 'utf8').replace(/\r\n/g, '\n').split('\n')[0].replace(/\r$/, '').split('\t').map(x => x.trim());
+const MAINS = String(MAIN).split(',').map((s) => s.trim()).filter(Boolean).map((s) => {
+  const at = s.indexOf('@');
+  return at < 0 ? { f: s, label: LABEL } : { f: s.slice(0, at), label: s.slice(at + 1) };
+});
+if (!MAINS.length) { console.error('⛔ --main= 解析出来是空的（收到 `' + MAIN + '`）'); process.exit(2); }
+const parsed = MAINS.map((m) => Object.assign({}, rd(m.f), { label: m.label }));
+const b = rd(FILL);
+const head = readFileSync(path.join(CM, parsed[0].f), 'utf8').replace(/\r\n/g, '\n').split('\n')[0].replace(/\r$/, '').split('\t').map((x) => x.trim());
 const out = [head.concat(['hpSrc'])];
 const have = new Set();
-for (const r of a.uniq) { out.push(r.concat([LABEL])); have.add(r[a.h.id]); }
+for (const p of parsed) {
+  let n = 0, dup = 0;
+  for (const r of p.uniq) {
+    const id = r[p.h.id]; if (have.has(id)) { dup++; continue; }
+    // 按**列名**搬（与下面 carry 那支同一条规矩）⇒ 某张主表列序不同或多/少一列时不会错位；缺的列写空串，
+    //   由链子收尾那条"全图同档 examG"自证去响亮地拦（空 examG 到那里就是红，不是静默）。
+    out.push(head.map((c) => (p.h[c] === undefined ? '' : (r[p.h[c]] === undefined ? '' : r[p.h[c]]))).concat([p.label]));
+    have.add(id); n++;
+  }
+  console.log('   主表 ' + p.f + ' → 标签 `' + p.label + '` 写 ' + n + ' 枚' + (dup ? '（与前面主表同名 ' + dup + ' 枚，前者赢、不覆盖）' : ''));
+}
 let filled = 0, droppedIds = [];
 for (const r of b.uniq) {
   const id = r[b.h.id];

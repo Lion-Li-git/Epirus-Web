@@ -257,8 +257,10 @@ async function worker() {
       + fb.slice(0, 8).map(function (i) { return i + ' ← ' + FALLBACK[i]; }).join(' ‖ ')
       + (fb.length > 8 ? ' …' : '') + ' ⇒ 引用这批读数时要能说清"是从哪个文件量的"'); }
   /* 覆盖判据 (ii) 是给"全库换尺"那一跑建的（718 枚里 ≥700 才许动头号尺）。
-   *   跑 `--onlyExtra` 那批子代时这条不适用 ⇒ 别把"183/183"读成"够换尺"，也别让它闭嘴（失败数仍然要看）。 */
-  if (EXTRA && ids.length < 400) console.error('判据 (ii) 覆盖：' + (done - fail) + '/' + ids.length +
-    ' ⇒ **本次是 --extra 局部跑，"≥700 才许换尺"那条不适用**（图上头号尺的资格由原 epsfull.tsv 的 718 枚全量跑撑着）');
+   *   跑 `--onlyExtra` 那批子代、或用 `--only=<清单>` 局部补测时这条不适用 ⇒ 别把"183/183""4/4"读成"够换尺"，也别让它闭嘴（失败数仍然要看）。
+   *   §E651 实测到 `--only=` 那一支原来会印"不够换尺，别动图上的头号尺"——可那一跑的目的就是把清单里几格换成新口径，
+   *     它问的不是同一个问题（换尺资格由全库那趟撑着），所以把 `--only` 也归进"局部跑"这一支。 */
+  if ((EXTRA || ONLY) && ids.length < 400) console.error('判据 (ii) 覆盖：' + (done - fail) + '/' + ids.length +
+    ' ⇒ **本次是 --extra/--only 局部跑，"≥700 才许换尺"那条不适用**（图上头号尺的资格由原 epsfull.tsv 的 718 枚全量跑撑着）');
   else console.error('判据 (ii) 覆盖：' + (done - fail) + '/' + ids.length + (done - fail >= 700 ? ' ⇒ 够换尺' : ' ⇒ **不够换尺，别动图上的头号尺**'));
 })();
