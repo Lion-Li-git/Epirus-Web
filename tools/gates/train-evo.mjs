@@ -713,11 +713,29 @@ t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励
   /* 熵奖励：从 0 恢复，且权重必须小（"奖惩不用给太多"） */
   const er = T.economyReward();
   ok(er.divW > 0 && er.divW <= 0.2, '熵奖励权重要小而正（实测 divW=' + er.divW + '）');
-  const p = Pol.makePolicy(0.25);
+  /* §E658（10-20 夜班）这条腿以前是**运气绿**，两处病一起修：
+   *   ① 原来 `setRng` 写在 `makePolicy` **之后** ⇒ 策略初始化吃的是"跑到这里时进程里剩的 RNG 状态"，
+   *     而策略长什么样决定那 2 局的座位分布 ⇒ 上游任何一条腿多动/少动一次随机都能把它翻红。
+   *     实测（归档 `d15-residual.log.txt`）：只改 `makePolicy` 之前的 RNG 状态、跑 40 档，
+   *     **7/40 = 18% 让下面那条断言崩**（最大残差 0.300），而崩的正是 `seatPen > 0` 那 7 个。⇒ 先播种再造策略。
+   *   ② 引擎的 `fit` 实际是六项（`js/train/evo.js:2422`：`fitAgg + divBonus + STYLE_W*styleRate
+   *     − seatPen + shapeBonus + gBonus`），而这里只断前三项 ⇒ 只要 `seatPen > 0` 就必然崩，
+   *     而 `SEAT_PEN_W = 1.0` 是写死的常数（`:2370`）**不是开关**：2 局里同一席全赢就是 100%。
+   *     ⇒ 改成断**全式**；`shapeBonus` 这一项不新增引擎读数，而是**先把档别钉住**（`s4W = 0` ⇒ `:2411` 那支恒 0）。
+   *   ③ 开头补一次 `setEconomyReward({reset:true})` 做**自隔离** ⇒ 本腿不再依赖"前面哪些腿跑过"。 */
+  T.setEconomyReward({ reset: true });
+  const p0 = Pol.makePolicy(0.25);
   Pol.setRng(T.mulberry32(4242));
-  const r = T.scoreMemberN(p, [{ name: 'random', sel: Bots.pickRandom }], 2, 3, 1, 0, 0);
-  ok(Math.abs(r.fit - (r.fitNoDiv + r.divBonus + r.styleWeight * r.styleRate)) < 1e-9,
-    'fit 必须 = 池子分 + 熵奖励 + 风格切片（实测 fit=' + r.fit.toFixed(5) + '）');
+  const r = T.scoreMemberN(p0, [{ name: 'random', sel: Bots.pickRandom }], 2, 3, 1, 0, 0);
+  eq(T.economyReward().s4W, 0, '本腿必须在"形状项关着"的档上断（s4W ≠ 0 ⇒ fit 里多一项 `shapeBonus`，全式就不成立）');
+  /* 10-20 夜班自证抓到的边界：出厂 `STYLE_W = 0` ⇒ 式子里"风格切片"这一项恒 0，**这条断言盖不到风格路径**
+   *   （变异实测：把 styleRate 挪 1e-3，残差仍是 0）。把它钉在文案里，别让下一个人以为全式过了=风格过了。 */
+  eq(r.styleWeight, 0, '出厂风格权重必须是 0（≠ 0 ⇒ 本腿这条全式开始覆盖风格路径，但同时它不再是"风格项的自证"，要另立断言）');
+  ok(!r.wallReject, '这次调用不该触发破墙硬过滤（走了 `fit = −5` 那条支 ⇒ 全式不适用，得换断法）');
+  ok(Math.abs(r.fit - (r.fitNoDiv + r.divBonus + r.styleWeight * r.styleRate - r.seatPen + r.gBonus)) < 1e-9,
+    'fit 必须 = 池子分 + 熵奖励 + 风格切片 − 座位罚 + 广度罚（实测 fit=' + r.fit.toFixed(5)
+    + ' ‖ seatPen=' + r.seatPen.toFixed(5) + ' ‖ gBonus=' + r.gBonus.toFixed(5)
+    + ' ‖ seatMaxPct=' + (r.seatMaxPct == null ? '—' : r.seatMaxPct.toFixed(0)) + '）');
   /* v1.5.87（用户裁定 A）：进 fit 的熵改用与门禁同口径的 spDivNorm（自对局·成功非ジ动作），
    * 旧口径 divNorm 只留作对照 ⇒ 这条公式断言跟着改（它红过一次，正是它该做的事）。 */
   ok(Math.abs(r.divBonus - r.divW * r.spDivNorm) < 1e-9,
