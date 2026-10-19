@@ -28,7 +28,7 @@
  * ==========================================================================*/
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync, openSync, closeSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import os, { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 /* v1.7.69：仓规「不认识的 `--` 参数必须**响亮失败**」—— 本工具此前没有消毒层，拼错的旗标被**静默忽略**
@@ -88,7 +88,16 @@ export function spawnBatch(jobs, opts) {
     writeFileSync(jobsFile, JSON.stringify(jobs.map(j => ({
       tag: j.tag, argv: j.argv, env: Object.assign({}, process.env, j.env || {}), cwd: j.cwd,
     }))));
-    const sup = spawnSync(process.execPath, [SELF, '--run', jobsFile, outFile, String(o.max || 7)], {
+    /* v1.7.116（10-19 晚，查 CI 变慢的根因）：并发上限原来**写死 7**。7 是照 18 核开发机调的，
+     *   而 GitHub 免费档 runner 是 **2 核** ⇒ 7 个 CPU 密集子进程挤 2 核 = **7 倍超订**，
+     *   墙上时间由争抢决定 ⇒ `train-runner` 在 CI 上**双峰摆动**（实测 run 271/274 = 827/817s，
+     *   run 273/286 = 1616/1669s，同一时段、同一份代码风格，其余部分都稳定在 ~650s）。
+     *   改成按核数：`min(7, max(2, cpus))`；`EPIRUS_BATCH_MAX` 可覆盖（CI 想更保守可设 2）。
+     *   本地 18 核仍得 7（与旧行为逐字相同），CI 2 核得 2。 */
+    const CPUS = (os.availableParallelism ? os.availableParallelism() : os.cpus().length);
+    const autoMax = Math.max(2, Math.min(7, CPUS));
+    const cap = Number(process.env.EPIRUS_BATCH_MAX) > 0 ? Number(process.env.EPIRUS_BATCH_MAX) : autoMax;
+    const sup = spawnSync(process.execPath, [SELF, '--run', jobsFile, outFile, String(o.max || cap)], {
       encoding: 'utf8', timeout: o.timeout || 1800000,
     });
     if (sup.status !== 0 || !existsSync(outFile)) {
