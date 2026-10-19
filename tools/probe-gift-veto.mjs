@@ -1,6 +1,6 @@
 /* §E650 自证 · 选拔层"送盾 veto"那台纯函数（`tools/pick-best.mjs` 的 `rejectGiftSpamWinners`）
  * 为什么用可跑自证而不是门：用户规矩"不新增门（加一条要删一条）"⇒ 这条先在 `tools/gates/` 外面钉住，
- *   要不要挂一条腿（挂在 train-runner 的 `bandPickByLand` 夹具旁边）留给用户裁；要挂我就同时交一条该摘的。
+ *   要不要挂一条腿（挂在 train-pick 的（§E659 拆分前叫 train-runner） `bandPickByLand` 夹具旁边）留给用户裁；要挂我就同时交一条该摘的。
  * 五条腿，全部喂**合成 entries**（不跑臂、不读盘 ⇒ 确定性、秒级）：
  *   ① 全员合格 ⇒ 不误伤：`dropped=0` ‖ `best` 就是分数最高那粒 ‖ `allRejected=false`
  *   ② 有一粒超线 ⇒ 剔它、`best` 换人、`droppedList` 报出 id 与读数
