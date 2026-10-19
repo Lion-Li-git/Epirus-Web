@@ -223,9 +223,9 @@ export function makeCtx() {
  * ⚠ 本文件不 import 门体文件（只让 gate-src 读文本）⇒ 无环；runner 也不直接 import gate-src（它经本文件转出）。 */
 import { gateBodyText, partFiles } from '../gate-src.mjs';
 
-/* 16 个部分文件（**只有门体**），按各自最小原始行号升序：runner 的收尾"注册数守卫"与 D125 用它数门。 */
+/* 全部部分文件（**只有门体**），按各自最小原始行号升序：runner 的收尾"注册数守卫"与 D125 用它数门。 */
 export const NP_GATE_FILES = partFiles();
-/* 门体面全文 = runner + 本文件 + 16 个部分（文件间有 BOUNDARY 分隔行）：
+/* 门体面全文 = runner + 本文件 + 全部部分（文件间有 BOUNDARY 分隔行）：
  * L1/D146/D157/D194/D205/D206/D228 这些自指门用它 ⇒ 与拆前"读 np-test.mjs 自己"同义。 */
 export function npSourceAll() { return gateBodyText(); }
 

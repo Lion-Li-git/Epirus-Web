@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* gate-par.mjs —— np-test 整轮的**并行跑法**（同一份 16 个部分，按部分并发跑）。
+/* gate-par.mjs —— np-test 整轮的**并行跑法**（同一份 全部部分，按部分并发跑）。
  *
  * 为什么要有它：CI 早就把 278 条门切成 16 个 job 并行（`.github/workflows/gates.yml` 的 `part` 矩阵），
  *   而本机只有串行入口 —— `gate-all.mjs` 只把 spec/smoke/battle/map 并发，np 那条腿仍是串行
@@ -14,8 +14,8 @@
  *     在这里再实现一遍就是「同一个语义写两遍」—— 本仓最容易漂的一类病。分组跑请继续用 np-test。
  *
  * 用法：
- *   node tools/gate-par.mjs                     # 16 个部分全跑 = np-test 整轮的并行等价物
- *   node tools/gate-par.mjs --jobs=4            # 限并发（默认 8；18 核上留余量给 train-runner/train-evo 内部那套 worker 池）
+ *   node tools/gate-par.mjs                     # 全部部分全跑 = np-test 整轮的并行等价物
+ *   node tools/gate-par.mjs --jobs=4            # 限并发（默认 8；18 核上留余量给 train-runner ‖ train-evo（§E659 后前者已拆成四个训练段） 内部那套 worker 池）
  *   node tools/gate-par.mjs --part=train-evo    # 只跑指定部分（逗号分隔）⇒ 结论行**明标**不是整轮认证
  *   node tools/gate-par.mjs --dry-run           # 只印计划（部分/权重/顺序/并发），不真跑
  *   node tools/gate-par.mjs --self-test         # 只验跑器自己的牙口（并集守卫 + 聚合忠实）
@@ -23,7 +23,7 @@
  *   node tools/gate-par.mjs --json              # 末尾多印一行机器可读的汇总
  *   node tools/gate-par.mjs --no-recheck        # 关掉「红的部分单独复跑」（默认**开**，理由见下）
  *
- * ⚠ **本机 16 个部分共用同一棵工作树，CI 是 16 台机各一棵干净树** ⇒ 会写文件的腿可能互相撞车，
+ * ⚠ **本机 全部部分共用同一棵工作树，CI 是一个部分一台干净机** ⇒ 会写文件的腿可能互相撞车，
  *   产生**并发假红**。实测（2026-10-16 本机）：`train-evo` 的 D15 在 8 并发下红、单独复跑绿 ——
  *   它是「抢共享状态」，不是产品坏。所以本工具默认对任何红的部分**单独复跑一遍**：
  *   复跑绿 = 记成并发假红（响亮印出、**不计入结论**）；复跑仍红 = 真红。
@@ -157,7 +157,7 @@ const TOTAL = LIST.total;
  *   而不是抄 `gate-all.mjs` 的组表 —— 组是**累计深度**语义，只在 gate-all 那一份实现里，本工具不碰它。
  *   保守方向三条：① 改到「全体共享面」或引擎/UI 面 ⇒ 整轮；② 认不出的路径 ⇒ 整轮；③ 一处都查不到 ⇒ 整轮。
  *   ⚠ 静态引用 ≠ 数据流：门体 spawn 出去的工具读了什么，这里看不出来 ⇒ `--changed` 只是「**不会少跑**」的近似，
- *     要「整轮认证」这句话成立仍然得跑满 16 个部分（或交给 CI）。 */
+ *     要「整轮认证」这句话成立仍然得跑满 全部部分（或交给 CI）。 */
 const SHARED = ['tools/np-test.mjs', 'tools/gate-all.mjs', 'tools/gate-par.mjs', 'tools/gate-src.mjs',
   'tools/np-cache.mjs', 'tools/np-parallel.mjs', 'tools/spec-run.mjs', 'tools/gates/_ctx.mjs'];
 const norm = function (p) { return String(p).replace(/\\\\/g, '/'); };
@@ -210,7 +210,7 @@ if (argv.indexOf('--changed') >= 0) {
   if (cp === null) { console.error('⛔ --changed 认不出改动面（git 跑不动）⇒ 不猜，请手给 --part= 或跑整轮'); process.exit(2); }
   if (!cp.length) { console.error('⛔ --changed：工作区干净 ⇒ 没有改动面可判（要重跑全部就别给 --changed）'); process.exit(2); }
   const auto = partsForChanged(cp);
-  console.error('ℹ️ --changed：工作区 ' + cp.length + ' 个路径 ⇒ 选 ' + auto.length + '/16 个部分：' + auto.join(' '));
+  console.error('ℹ️ --changed：工作区 ' + cp.length + ' 个路径 ⇒ 选 ' + auto.length + '/' + partFiles().length + ' 个部分：' + auto.join(' '));
   const merged = new Set(only.concat(auto));
   only = Array.from(merged);
 }
@@ -244,7 +244,7 @@ const queue = picked.slice().sort(function (a, b) {
 console.log('▶ 计划：' + picked.length + '/' + ALL.length + ' 个部分 | 并发 ' + JOBS + ' | 门 ' + plan.sum + '/' + TOTAL
   + ' | 排序权重 = ' + (Object.keys(weights).length ? '实测耗时(--timing)' : '门数（可用 --timing=<file> 换成实测）'));
 console.log('  起跑顺序：' + queue.map(function (p) { return p.part; }).join(' '));
-console.log('  本机：' + os.cpus().length + ' 核（并发上限 8 是给 train-runner/train-evo 内部的 worker 池留余量，不是核数限制）');
+console.log('  本机：' + os.cpus().length + ' 核（并发上限 8 是给 train-runner ‖ train-evo（§E659 后前者已拆成四个训练段） 内部的 worker 池留余量，不是核数限制）');
 if (has('dry-run')) { console.log('（--dry-run ⇒ 不真跑）'); process.exit(0); }
 
 /* ===== 真跑：按部分并发，每个部分 = 一个 np-test 子进程 ===== */

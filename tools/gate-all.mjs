@@ -6,7 +6,7 @@
  * 然后引用全绿的口径"。这里把顺序与判词固定下来，并且明写耗时预算。
  *
  *   node tools/gate-all.mjs          # spec + smoke + battle + map（≈45 秒），不跑 np
- *   node tools/gate-all.mjs --np     # 加跑 np-test（**串行** ≈16 分钟；本机想快就用 tools/gate-par.mjs，16 部分并发 ≈5.5 分钟）= **认证那一遍**（五道全绿才算）
+ *   node tools/gate-all.mjs --np     # 加跑 np-test（**串行** ≈16 分钟；本机想快就用 tools/gate-par.mjs，全部部分并发 ⇒ 本机秒数只作排序参考，冷/热差 3 倍）= **认证那一遍**（五道全绿才算）
  *   ⚠ 耗时**只在 docs/GATE-SHIFTS.md 那张真源表里维护**（v1.7.67 收拢：此前五个口径在各处打架）
  *   node tools/gate-all.mjs --np --group=meta    # §E335 只跑那一组（np 侧 16 条 ≈ 10 秒）
  *   node tools/gate-all.mjs --np --no-browser    # 本地近似"无浏览器"那一档：np 整轮 + spec
