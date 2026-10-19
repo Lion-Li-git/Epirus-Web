@@ -1,0 +1,43 @@
+[shipbigt] 未设旗标 ⇒ 走**引擎默认档** `BIGT_PUSH = 12`（v1.5.333 起默认开着 ⇒ 这一臂**不是**出厂形状，出厂形状要显式 `--shipbigt=0`）
+[support] 未设旗标 ⇒ 走**引擎默认档** `SUPPORT_PRIOR = 0`（0 = 引擎默认关；**页面另有默认，见 `js/ui/ui.js`**） ‖ knobs 默认 = pick=weighted skipP=0.6 minEp=3 ⇒ 这一臂不带动作先验
+=== 5 人局评测 ===
+主体: docs/research/archive/2026-10-18-night2-prior-caliber/arms/gv0-77002.winner.js
+meta: {"hotstartFrom":"492b77d8516e82b6","selLand":null,"selKeep":null,"recipe":{"arm":"gv0-77002","seed":77002,"gens":120,"games":8,"pop":12,"ringOpps":null,"selPool":null,"hallDedup":null,"oppBlock":{"block":false,"fitGames":11520,"blockedGames":0,"styleGames":0,"styleBlocked":0},"xn2w":0,"xn2g":4,"selLand":0,"selLandGames":20,"selLandTol":0.03,"selKeep":0,"selKeepKeys":null,"selBigT":null,"selGiftVeto":null,"giftVeto":null,"giftVetoAllSpam":false,"selKeepCastKeys":null,"kill":null,"trainMode":null,"trainModeEffective":"multi","h2p":null,"h2pEffective":"off","counterOpps":[],"econOpps":null,"poolOpps":null,"bigtChainW":0,"killReward":0,"krTransfer":null,"killRewardProbe":-1,"breadthFloor":null,"env":{"EPIRUS_ARM":"gv0-77002","EPIRUS_BAND_DIR":"docs/artifacts/gv-gv0-77002","EPIRUS_HOTSTART":"1","EPIRUS_SEED":"77002","EPIRUS_SEEDPACK":"docs/artifacts/v7beadseed-82.bak"},"envKeys":5},"breadthFloorAllNarrow":false,"degenerateOnlyWinner":false,"productIsSeed":false,"hallSeedEntries":0,"hallSeedReq":0,"hallSeedAppended":false,"source":"tools/train-3p.mjs","n":5,"gens":120,"games":8,"pop":12,"selSeeds":4,"selSeedBases":[987654,1087654,1187654,1287654],"selSpreadPt":5,"ts":"2026-10-18T17:43:21.679Z","firstRate":0.5135416666666667,"top2Rate":0.7114583333333333}
+对手池(7): random defend antidef wall farmer heavyfire deepsaver
+!! 模式 --mode=multi : 多人模式(3-5人)  hp=3  摄魂门槛 HP<=1
+对手场 = 4 个互不相同的脚本，全部 35 组合 × 200 局 = 7000 局；含深经济对手的组合 30/35
+随机基线（5 人局）: 1st 20.0% / top2 40.0% / top3 60.0%
+
+[shipdrain] ⚠ 引擎默认档 = 1，但本臂 ε=0 ⇒ 这一档**永不触发**（钩子在 soft 探索支里）⇒ 与关档逐字相同。要量它必须带**探索剂量**：首选产品那张表 `--eps-tier=lv:regular`（页面默认档 0.1·斜坡），硬写 `--eps=0.2 --eps-mode=soft` 量的是**简单档**（§E283：3 血桌上每 4.3 局一张 ‖ 关档 0 张/200 局）。
+[冠军] 1st=60.6% 严胜=59.4% 并列=1.2%  2nd=20.7%  3rd=12.1%  4th=4.9%  5th=1.7%   | top2=81.3% top3=93.4%
+    各座位 1st 率: P0=57.8% P1=59.3% P2=60.5% P3=62.1% P4=63.2%
+    前置条件: 主体场均承伤=2.06  平均回合=31.4  转移事件=1278  火焰伤害事件=71
+    机制: 自己的攻击被弹回=0.11 次/局  平局率=3%  终局血量=0.96
+    拆分: 含深经济对手 58.8%（6000 局）  vs  不含 71.0%（1000 局）  Δ=-12.2pt
+    拆分: 含反弹席(reflectspam) -（0 局）  vs  不含 60.6%（7000 局）  Δ=-
+[对照 pickRandom] 1st=8.9% 严胜=8.5% 并列=0.5%  2nd=13.9%  3rd=26.8%  4th=26.4%  5th=24.0%   | top2=22.8% top3=49.6%
+    各座位 1st 率: P0=8.9% P1=8.5% P2=8.9% P3=9.1% P4=9.0%
+    前置条件: 主体场均承伤=2.98  平均回合=36.6  转移事件=610  火焰伤害事件=122
+    机制: 自己的攻击被弹回=0.05 次/局  平局率=3%  终局血量=0.10
+    拆分: 含深经济对手 9.6%（6000 局）  vs  不含 4.9%（1000 局）  Δ=4.7pt
+    拆分: 含反弹席(reflectspam) -（0 局）  vs  不含 8.9%（7000 局）  Δ=-
+
+=== 冠军 的经济行为（这套指标才是"货架"的直接读数）===
+决策次数=175055  到达过的最高 ep=37  ep>=3 的决策占比=4.3%  cost>=3 出手占比=0.2%
+  决策时 ep 分带: 0-1=73.0%  2-4=24.5%  5-9=1.8%  10+=0.7%   ← 若 5+/10+ 占比高，则"钱不够"不是约束，问题是**买了什么**
+出手种类=16  分布（前 12）:
+  ジ          62.9%   费用=0
+  激光剑        13.1%   费用=2
+  枪          11.1%   费用=1
+  狙击枪         9.3%   费用=2
+  全息屏障        1.4%   费用=1
+  反弹          0.4%   费用=0
+  八卦阵         0.4%   费用=0
+  防御          0.4%   费用=0
+  蓄能          0.4%   费用=1
+  真正的落雷       0.2%   费用=5
+  电磁炮         0.1%   费用=?
+  聚能环         0.0%   费用=3
+耗时 27.5s
+[大雷用量] 路径=现网(evo BIGT_PUSH=12) · 真打出 **344 张 / 7000 局 = 每 20.3 局一张**（占主体出手 0.2%）
+逐桌子命中数 → docs/research/archive/2026-10-20-night-d15-gates/pool-split/gv0-77002.per.txt（35 组 × 200 局）
