@@ -1,0 +1,6 @@
+id	exam	page	d	hp_old	sec	examG	pageDose	mode	support	pageBare
+t5-151-ringon	42.00	43.40	-1.00	42.00	11.6	120	tier:lv:regular	multi(默认)	2	43.00
+t5-151-ringoff	53.80	53.00	0.70	53.80	11.9	120	tier:lv:regular	multi(默认)	2	53.10
+t5-G12H1-ringoff	41.40	40.70	0.70	41.40	11.9	120	tier:lv:regular	multi(默认)	2	40.70
+t5-G12H1-ringon	54.90	54.70	0.20	54.90	12.1	120	tier:lv:regular	multi(默认)	2	54.70
+t5-T8-ringon	55.80	54.20	1.90	55.80	12.8	120	tier:lv:regular	multi(默认)	2	53.90

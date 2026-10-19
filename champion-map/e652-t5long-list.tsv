@@ -1,0 +1,9 @@
+# §E652 补跑名单：§E641 的 ring 开/关五枚实验臂（两张裸包表都没有它们的行 ⇒ Hp 与 Hplong 两侧都缺新口径）
+# 长程侧**从来没有裸包表** ⇒ 先跑一遍裸包（考卷臂 + 页面臂，--mode=long），再拿它当 --examFrom 跑开档
+# 短程侧有裸包表（e641-epsfull.tsv，exam 与 coords 的 H 逐字同、page 与 coords 的 Hp 逐字同 ⇒ 复现守卫不响）
+# 用法见 docs/research/archive/2026-10-19-e652-t5long/README.md
+t5-151-ringon
+t5-151-ringoff
+t5-G12H1-ringon
+t5-G12H1-ringoff
+t5-T8-ringon
