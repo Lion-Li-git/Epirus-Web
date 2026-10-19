@@ -1270,13 +1270,39 @@ var CHM = null;
  *   现在：纸面坐标一次画完，视图变换只在**贴这张纸**与**算点的屏幕位置**两处施加，两者读同一个 PS ⇒ 结构上不可能各走各的。
  *   日期步长是唯一的例外：它按当前横轴倍率现算（字不能糊成一坨），但**只有步长真的变了才重烘**（步长进缓存键，倍率不进）。 */
 /* E395 DS（谱系图去位图 · 步1）：绘制体独立出来，位图/矢量两条路共用同一份代码（「不要修完又变坏」的结构保证）。 */
+/* §E656 行带的灰度：改成按**与当下底色的 L* 差**给（用户 10-19 实测指出 SDR 下灰行几乎与黑行同色）。
+ *   原来这一格写死 rgba(255,255,255,.028) —— 一层"往透明纸上刷 2.8% 白"的洗色，抬多少**取决于纸后面是什么**，
+ *   所以四档底色的分离度各走各的。无头 Chrome 2560x1600 截图像素实测（改前 / 改后，ΔL* 按 CIE L* 算）：
+ *     纯黑 #05070d：黑行 rgb(5,7,13) ‖ 旧灰行 rgb(11,13,19) ⇒ ΔL* **1.74** ‖ 新灰行 rgb(21,23,29) ⇒ ΔL* **5.83**
+ *     深蓝 #0f1522：黑行 rgb(15,21,34) ‖ 旧灰行 rgb(21,27,40) ⇒ ΔL* **2.87**  ‖ 新灰行 rgb(27,33,46) ⇒ ΔL* **5.84**
+ *     浅底 #e6ebf5：旧档**整条带子根本不出现**（837 行扫描线上只有一种颜色）‖ 新灰行 rgb(213,218,228) ⇒ ΔL* **6.00**（朝暗走）
+ *   ⇒ 1 个 L* 约等于刚能看见，旧值贴着阈、再经显示链路低端那一段就归零（她此前在 HDR 下分得开，是那条 tone-map
+ *     把低电平抬高的假象）。现在带子是**不透明色**，落点由 BAND_DL 这一个数说了算，与纸后面是什么无关。
+ * ⚠ 这个旋钮**没有任何自动上界**（10-19 变异实测：BAND_DL 设到 60 ⇒ 灰行亮到 rgb(156,162,175)、比左栏统计行的字还亮，
+ *   页内 93 条自检仍然全绿）。页内那条 inkLeft 的 150 门槛拦不住它 —— 带子横贯整行，被当成"最左边的墨"时两帧都返回
+ *   x=0，位移差仍然是 80px ⇒ 断言照样过。⇒ 调它只能靠量像素或看图，别以为有门在管。 */
+var BAND_DL = 6;
+function srgbL(v) { var s = v / 255, l = s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  return l <= 0.008856 ? 903.3 * l : 116 * Math.pow(l, 1 / 3) - 16; }
+function lSrgb(L) { var l = L <= 7.9916 ? L / 903.3 : Math.pow((L + 16) / 116, 3);
+  var s = l <= 0.0031308 ? l * 12.92 : 1.055 * Math.pow(l, 1 / 2.4) - 0.055;
+  return Math.max(0, Math.min(255, Math.round(s * 255))); }
+function rgbOf(c) { var h = String(c || '000000'); if (h.charAt(0) === '#') h = h.slice(1);
+  if (h.length === 3) h = h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2);
+  return [parseInt(h.slice(0, 2), 16) || 0, parseInt(h.slice(2, 4), 16) || 0, parseInt(h.slice(4, 6), 16) || 0]; }
+function bandFillFor(bg) {
+  var c = rgbOf(bg), L = 0.2126 * srgbL(c[0]) + 0.7152 * srgbL(c[1]) + 0.0722 * srgbL(c[2]);
+  var dlt = lSrgb(L < 50 ? L + BAND_DL : L - BAND_DL) - lSrgb(L);
+  /* 三通道同一个增量 ⇒ 深蓝/石板这些非中性底色不会把带子偏成灰白，档色线索留在字与点上 */
+  function cl(v) { return Math.max(0, Math.min(255, v + dlt)); }
+  return 'rgb(' + cl(c[0]) + ',' + cl(c[1]) + ',' + cl(c[2]) + ')'; }
 function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep) {
   t.font = ff(11);
   for (i = 0; i < fams.length; i++) {
     var f = fams[i], mem = P.filter(function (d, mi) { return d.fam === f && VIS[mi]; });
     var nOk = mem.filter(function (d) { return d.ok === 1; }).length, nCh = mem.filter(function (d) { return d.lin; }).length;
     var best = Math.min.apply(null, mem.map(function (d) { return d.rk; }));
-    t.fillStyle = i % 2 ? 'rgba(255,255,255,.028)' : 'rgba(255,255,255,.0)';
+    t.fillStyle = i % 2 ? bandFillFor(st.bg) : 'rgba(255,255,255,.0)';
     t.fillRect(0, padT + i * rowH, w, rowH);
     /* E396 DS：名字优先（最多 2 行），装得下才在第二行带计数 —— 不硬塞、不溢出。 */
     var maxW = padL - 24 * devicePixelRatio;
@@ -1369,7 +1395,9 @@ function drawTree(fr) {
    *   平面按仿射贴、立体按同一台相机贴，点用**同一个 PS** ⇒ 点与它那一行的名字必然对齐，
    *   因为两者出自同一张纸、同一个矩阵。 */
   var SS = Math.max(1, Math.min(2, TKX));
-  var ck = [w, h, fams.join(','), tmin, tmax, st.ink, st.dim, devicePixelRatio,
+  /* §E656：st.bg 必须进这张纸的缓存键 —— 行带现在跟着底色算（见 bandFillFor），不进就等于"换底色但纸不重烘"，
+   *   带子会停在旧底色上。原来它是白 alpha、与底色无关，所以漏了也没现形。 */
+  var ck = [w, h, fams.join(','), tmin, tmax, st.ink, st.dim, st.bg, devicePixelRatio,
     st.elev.toFixed(3), st.batch, NVIS, st.flo.toFixed(3) + ',' + st.fhi.toFixed(3), Math.round(dayStep / DAY), SS.toFixed(2)].join('|');
   if (!CHROMEVEC && (!CHM || CHM.k !== ck)) CHM = { k: ck, c: treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep, SS) };
   var T3 = st.elev, uc = w / 2, vc = h / 2, cb = cam();   /* E352 DS: 相机基 cb（与地图同一套） */
