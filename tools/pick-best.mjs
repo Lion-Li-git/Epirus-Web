@@ -89,7 +89,15 @@ export function selNote(s) {
  *   ⇒ 原来那句「带 3.0」，只对 **k≈8** 才成立；现状 k=4 用它就是**带比噪声窄**（当选者常换人）。
  *   ⚠ 这里只改**判读口径**，不改 `WR_TOL` 的选择行为（那要另裁）：调用方想用建议值，传 `opts.wrTol`。 */
 export const SEL_BAND_BY_K = { 1: 9.1, 3: 6.5, 4: 5.8, 6: 4.2, 8: 2.9 };
-export function bandFor(k) { return SEL_BAND_BY_K[k] || 3.0; }
+/* v1.7.115：**表外的 k 不再静默回落到 3.0**。回落会把一个没标定过的 k 判成「带 = 3.0pt」，
+ *   而 3.0 只对 k≈8 成立（噪声 2.9pt）—— 用在 k=1/3 上会**系统性低估**噪声、把"判不动"读成"判得动"，
+ *   或把真差别读成抽签。一个响亮的错比一个安静的假结论便宜得多。
+ *   现有调用面只用 1/3/4/6/8/12（`SEL_SEEDS_DEFAULT=4`、两段式升到 8、门里用 1/3/8），全部在表内。 */
+export function bandFor(k) {
+  const v = SEL_BAND_BY_K[k];
+  if (v == null) throw new Error('bandFor: k=' + k + ' 不在标定表里（表内只有 ' + Object.keys(SEL_BAND_BY_K).join('/') + '）—— 回落到 3.0 会把没标定过的 k 判成\'带=3pt\'，那是假结论');
+  return v;
+}
 
 export function selGapNote(entries) {
   const list = (entries || []).filter(function (e) { return e && typeof e.score === 'number'; })

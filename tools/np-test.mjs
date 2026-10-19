@@ -57,7 +57,7 @@ const PARTS = [
   { part: 'ship-artifact', group: 'ship', file: 'tools/gates/ship-artifact.mjs', mod: PART10 },   /* 1 条 */
   { part: 'probe-libs', group: 'probe', file: 'tools/gates/probe-libs.mjs', mod: PART11 },   /* 4 条 */
   { part: 'probe-instruments', group: 'probe', file: 'tools/gates/probe-instruments.mjs', mod: PART12 },   /* 33 条 */
-  { part: 'ui-contract', group: 'ui', file: 'tools/gates/ui-contract.mjs', mod: PART13 },   /* 7 条 */
+  { part: 'ui-contract', group: 'ui', file: 'tools/gates/ui-contract.mjs', mod: PART13 },   /* 8 条（v1.7.115 加 D236） */
   { part: 'meta-repo', group: 'meta', file: 'tools/gates/meta-repo.mjs', mod: PART14 },   /* 12 条 */
   { part: 'meta-lint', group: 'meta', file: 'tools/gates/meta-lint.mjs', mod: PART15 },   /* 4 条 */
 ];
@@ -254,7 +254,7 @@ let __skipped = 0;
  *   ③ 归组判据是"这道门读哪一层的输入"，不是"它属于哪个 §E 编号" —— 后者会把改引擎的门留在窄组里。*/
 const GRP = {
   meta: 'REPRO L1 L2 L3 L7 L6 L5 D218 D8 D82 D189 D191 D194 D205 D206 D230',   // 仓库纪律：只读源码/CHANGELOG/README/门号
-  ui: 'D37 D38 D28 D70 D131 D111 D166',                                    // 页面与前端契约
+  ui: 'D37 D38 D28 D70 D131 D111 D166 D236',                                    // 页面与前端契约
   ship: 'D219 D55 D16 D35 D27 D49 D60 D61 D62 D67 D73 D78 D79 D103 D105 D116 D118 D124 D125 D141 D153 D155 D163 D107 D110 D121 D145 D146 D147 D168 D169 D170 D190 D197 D210 D228 D234',   // 出厂面：可行性闸 / 当选 / promote / 线上槽 / 池装配契约
   train: 'REPRO2 L4 D217 D220 D221 D222 D223 D224 D225 D226 D227 D229 D5 D7 D9 D10 D11 D12 D13 D15 D56 D58 D59 D17 D24 D25 D26 D33b D33 D36 D39 D40 D41 D42 D43 D44 D45 D47 D48 D65 D66 D68 D72 D74 D75 D76 D77 D80 D81 D84 D85 D86 D87 D89 D90 D104 D97 D99 D100 D101 D108 D109 D112 D113 D114 D119 D122 D123 D127 D128 D129 D130 D132 D134 D135 D136 D139 D140 D115 D162 D120 D143 D144 D157 D159 D167 D172 D173 D174 D175 D176 D179 D181 D180 D182 D184 D185 D213 D164 D165 D187 D188 D201 D204 D231 D232',   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
   probe: 'D34 D64 D83 D88 D137 D138 D148 D149 D150 D151 D152 D154 D160 D161 D106 D158 D177 D178 D183 D186 D192 D193 D195 D196 D198 D200 D199 D212 D214 D202 D203 D207 D208 D209 D211 D216 D233',   // 研究量具自身的牙

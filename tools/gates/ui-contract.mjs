@@ -1,5 +1,5 @@
 /*#np-part-header
-{"file":"tools/gates/ui-contract.mjs","part":"ui-contract","group":"ui","ranges":[[3751,3797],[3993,4044],[5846,5859],[6671,6712],[8132,8174],[8542,8643]],"gates":[3751,3772,3993,5846,6671,8132,8542],"patched":[]}
+{"file":"tools/gates/ui-contract.mjs","part":"ui-contract","group":"ui","ranges":[[3751,3797],[3993,4044],[5846,5859],[6671,6712],[8132,8174],[8542,8643]],"gates":[3751,3772,3993,5846,6671,8132,8542,8543],"patched":[]}
 #np-part-header-end*/
 import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
@@ -30,7 +30,8 @@ const {
   fnBody,
 } = makeCtx();
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
-export const ords = [3751, 3772, 3993, 5846, 6671, 8132, 8542];
+export const ords = [3751, 3772, 3993, 5846, 6671, 8132, 8542, 8543];
+/* 8543 = v1.7.115 的 D236（新门）。取上一枚之后的合成号：排序仍落在最后，且与既有门的原始行号不冲突。 */
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 t('D37 页面回合列表/导出：死人不许出ジ、观战回合必须显示技能并落 transcript', function () {
@@ -331,6 +332,25 @@ t('D166 大雷连带**被挡下时 UI 不许说"造成伤害"**（v1.5.253 用�
     '页面里带事件表的 `evText` 调用点必须**恰好 2 处**（v1.6.6 起 2 人不再有自己的第三条渲染路径）；多一处 = 又开了一条没并进来的循环');
   ok(/case 'bigTChain': return bigTChainText\(e, roundEvents\);/.test(src),
     '`evText` 的 bigTChain 分支必须委托给 `bigTChainText`（不许再内联硬编码）');
+});
+
+/* ===== v1.7.115（用户 10-19 裁「页面默认开档要不要门腿」= 要）：页面必须把送盾先验开起来 =====
+ * 为什么需要这条腿：`js/ui/ui.js` 里那一行 `setSupportPrior(2)` 是**产品行为的开关**——删掉它，
+ *   `v7beadseed-82` 这类包在真机上就是 17.3 次/局送盾刷屏（我 v1.7.111 开的就是它）。
+ *   而它此前**没有任何门覆盖**（`grep tools/gates/ tools/np-test.mjs` 对 `SUPPORT_PRIOR` 零命中）⇒ 删了没人拦。
+ * 形状：**接线腿**（源码里那条调用在）+ **反静默腿**（不许再用 `catch (e) { void e; }` 吞掉回读失败）。
+ *   行为面已由 `tools/probe-support-prior.mjs` 的 9 条自证腿覆盖，这里只管"页面有没有接上"。 */
+t('D236 页面必须把送盾先验开档 2 并且**不许静默吞**回读失败（v1.7.115 · 接线腿）', function () {
+  const uiRaw = readFileSync('js/ui/ui.js', 'utf8');
+  /* ⚠ 先剥注释：ui.js 的 §E648 注释里就写着「原来那个 catch(e){void e;}」，不剥会自己踩自己。 */
+  const ui = uiRaw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  ok(/setSupportPrior\(2\)/.test(ui), '页面必须在拿到 Trainer 之后调 `setSupportPrior(2)`（实测没有该调用 ⇒ 送盾先验在真机上等于关闭）');
+  ok(!/catch\s*\(\s*e\s*\)\s*\{\s*void\s+e;\s*\}/.test(ui),
+    '回读失败不许用 `catch (e) { void e; }` 静默吞（那会把"设失败"变成"看不出"）—— 必须回读 + 响亮警告');
+  const T = readFileSync('js/train/evo.js', 'utf8');
+  ok(/function setSupportPrior\(/.test(T) && /setSupportPrior,\s*supportPriorOn/.test(T),
+    '引擎必须导出 `setSupportPrior`（页面的调用要真有落点，不能是死名）');
+  ok(/supportPriorOn,/.test(T) || /supportPriorOn\s*,/.test(T), '引擎必须同时导出只读回读口 `supportPriorOn`（否则页面无法自证\'真的设成了 2\'）');
 });
 
 }
