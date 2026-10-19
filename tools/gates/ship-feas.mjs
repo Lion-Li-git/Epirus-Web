@@ -326,7 +326,12 @@ t('D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证"band2 被 hil
     encoding: 'utf8', timeout: 600000,
   });
   const so = String(run.stdout || '') + String(run.stderr || '');
-  ok(/\[3P栏 n=20[\/]/.test(so), '开了 EPIRUS_TB3P 必须真跑 3P 栏并打印读数（实测输出无该行 = 又一处死作用点）');
+  /* 10-19 下午：这条腿在册的并发红（12/14）复现不出来，而它的失败文案只写"输出无该行"——**下一班拿不到任何东西**。
+   *   真正有信息量的那条断言（下面 exit= 那行）永远轮不到跑：前面这条先红、整条腿就短路了。
+   *   ⇒ 把 exit 码与输出尾巴挪进**这条**的文案里（只加文案，判据一字未动）。 */
+  ok(/\[3P栏 n=20[\/]/.test(so), '开了 EPIRUS_TB3P 必须真跑 3P 栏并打印读数（实测输出无该行 = 又一处死作用点'
+    + ' ‖ exit=' + run.status + (run.error ? ' ‖ error=' + run.error.code : '')
+    + ' ‖ stdout ' + String(run.stdout || '').length + ' 字 ‖ stderr 末尾：' + String(run.stderr || '').slice(-400) + '）');
   ok(run.status === 0 || run.status === 9, '只许两种收场：0=有合格候选并择优、9=全否决响亮退出（实测 exit=' + run.status + '）\n' + so.slice(-500));
   /* v1.7.74 · gate-sentinel ③ 分诊：响亮 = **exit 9**（那半句判的就是它）；原钉的是解释那句话的措辞 ⇒ 改成「必须出声」。 */
   if (run.status === 9) ok(String(so).trim().length > 0, 'exit 9 时必须**出声**（响亮失败）；具体措辞不判');
@@ -394,13 +399,17 @@ t('D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测
     encoding: 'utf8', timeout: 600000,
   });
   const so = String(r.stdout || '');
+  /* 10-19 下午：同 D124 —— 这条红的时候文案只说"（没跑这一栏）"，而**这个腿原先把 stderr 整个丢了**（`so` 只取 stdout）
+   *   ⇒ 迷你臂真崩了也读不到崩在哪。判据不动，只把 exit / error / stderr 尾巴补进失败文案。 */
+  const FAILTAIL = ' ‖ exit=' + r.status + (r.error ? ' ‖ error=' + r.error.code : '')
+    + ' ‖ stderr 末尾：' + String(r.stderr || '').slice(-400);
   /* §E492 这一行原来写死 `/\[3P栏 n=20\/aggr40\/seat100\]/` ⇒ 把"当年拍的样本量"钉成了判据。
    *   这条腿真正判的是**3P 栏必须与体检同一把尺**（同一个 `feasPlan`），所以期望值必须从
    *   `FEAS_N_DEFAULTS` 派生 —— 否则改 n 就要来改这里，而"改一处忘一处"正是这条规矩要防的东西。
    *   用 indexOf 而不是正则：tag 里带斜杠，转义只是给下一次漏改留坑。 */
   const WANT3P = '[3P栏 n=' + FEAS_N_DEFAULTS.games + '/aggr' + FEAS_N_DEFAULTS.aggr + '/seat' + FEAS_N_DEFAULTS.seat + ']';
   ok(so.indexOf(WANT3P) >= 0,
-    '不设 EPIRUS_TB3P_GAMES 时 3P 栏必须与体检同尺（期望 ' + WANT3P + ' ‖ 实测打印的是：' + ((so.match(/\[3P栏[^\]]*\]/) || ['（没跑这一栏）'])[0]) + '）');
+    '不设 EPIRUS_TB3P_GAMES 时 3P 栏必须与体检同尺（期望 ' + WANT3P + ' ‖ 实测打印的是：' + ((so.match(/\[3P栏[^\]]*\]/) || ['（没跑这一栏）'])[0]) + FAILTAIL + '）');
   ok(r.status === 0 || r.status === 9, '迷你臂只许 0/9 收场（实测 ' + r.status + '）');
 });
 
