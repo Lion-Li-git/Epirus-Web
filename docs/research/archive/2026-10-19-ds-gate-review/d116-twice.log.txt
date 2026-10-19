@@ -1,0 +1,16 @@
+〔v1.7.114（DS 那版，点名行在加载时）〕
+  旧版·第 1 遍              exit=0 ‖ 落盘：新权重 ⇒ 写盘
+                        (没打 WRITE-DEFAULT)
+  旧版·第 2 遍              exit=9 ‖ 落盘：↷ 同一粒权重已在 `docs/artifacts/train-3p-out-band2.bak` ⇒ 没写第二份，只登记别名 `docs/arti
+                        (没打 WRITE-DEFAULT)
+
+〔v1.7.115（我改后，点名行在真落盘之后）〕
+  新版·第 1 遍              exit=9 ‖ 落盘：↷ 同一粒权重已在 `docs/artifacts/train-3p-out-band2.bak` ⇒ 没写第二份，只登记别名 `docs/arti
+                        (没打 WRITE-DEFAULT)
+  新版·第 2 遍              exit=9 ‖ 落盘：↷ 同一粒权重已在 `docs/artifacts/train-3p-out-band2.bak` ⇒ 没写第二份，只登记别名 `docs/arti
+                        (没打 WRITE-DEFAULT)
+
+判读：
+  两版第一遍 exit 0/9 ‖ 第二遍 exit 9/9 ⇒ ⚠ 两版不同 ⇒ 得查我这一改
+  第二遍与前一遍不同 ⇒ 这条腿**不可重入**（第二次被 §E589 守卫拦下）
+⚑ 主语：这台不修门（tools/gates/** 归 DS），它只把"D116 行为二没改道 ⇒ 既是基线写方、又不可重入"这条钉成可复跑的实验。

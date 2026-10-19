@@ -53,13 +53,10 @@ const OUT_PATH = process.env.EPIRUS_PUBLISH === '1'
    * 改道后默认路径**一字不动**（门禁那两道比对它哈希的 CLI 基线门因此不会被我的臂污染）。 */
   : (process.env.EPIRUS_T3P_OUT || ('docs/artifacts/' + 'train-3p' + '-out.js'));
 
-/* v1.7.114（10-19）：**点名谁在写默认落点**。`EPIRUS_LOG_DEFAULT_OUT=1` 时，凡是没改道、真要写
- *   `docs/artifacts/train-3p-out.js` 的那次调用都会打一行 `[WRITE-DEFAULT]`（带 arm 名与四个代数参数）。
- *   为什么要有这条：本机并行跑门时它是**别人（D123/D162）的比对基线**，不点名的写方只能靠时序巧合抓
- *   （10-19 的 `train-env` 两腿就是这么漏掉的，靠 D162 红了才发现）。不动任何行为，只在开了这个 env 时打日志。 */
-if (process.env.EPIRUS_LOG_DEFAULT_OUT && !process.env.EPIRUS_T3P_OUT) {
-  console.log('[WRITE-DEFAULT] ' + String(process.env.EPIRUS_ARM || '(no-arm)') + ' ‖ argv=' + process.argv.slice(2).join(' '));
-}
+/* v1.7.114（10-19，DS）：**点名谁在写默认落点**（`EPIRUS_LOG_DEFAULT_OUT=1`）。
+ *   ⚠ 这一行**不在这里打**，挪到真正落盘之后（本文件末尾 `GUARD.wrote` 那一段）⇒ 见那里的 v1.7.115 注释。
+ *   为什么必须挪：原版打在模块加载时，于是 `--help` 与"该失败的失败"那几条腿（exit 5/6/7/8，**根本没写盘**）也上榜；
+ *   而条件没排 `EPIRUS_PUBLISH=1` ⇒ 覆盖出厂冠军那一次也被标成"写默认落点"，最该另说的一类被归了错名。 */
 
 /* ===== Hard guard (belt & braces) =====
  * Twice now a training run silently replaced the SHIPPED champion (js/bundled-champion-3p.js):
@@ -2115,6 +2112,15 @@ console.log('[train-3p] 落盘：' + GUARD.note);
 if (!GUARD.wrote) {
   console.error('⛔ [train-3p] §E589 守卫拦下了这次落盘 ⇒ 产物不存在（退出码 9，不是 0）。原本要写 ' + OUT_PATH);
   process.exit(9);
+}
+/* v1.7.115（10-19，千问）：点名器**只在真落了盘之后**打，而且把发布态分出去。
+ *   三条判据都要能各自成立：① 上面 `!GUARD.wrote` 那条已经 exit(9) ⇒ 走到这儿就是真写了；
+ *   ② `EPIRUS_PUBLISH=1` 那次写的是 `js/bundled-champion-3p.js`（发布态），不是"默认落点" ⇒ 不混进这份名单；
+ *   ③ 没设 `EPIRUS_T3P_OUT` 且非发布态 ⇒ 才是要点名的"没改道就写共享基线"。
+ *   自证：`docs/research/archive/2026-10-19-ds-gate-review/verify-writedefault.mjs`（三格：该失败的失败 / 发布态 / 真写默认落点）。 */
+if (process.env.EPIRUS_LOG_DEFAULT_OUT && !process.env.EPIRUS_T3P_OUT && process.env.EPIRUS_PUBLISH !== '1') {
+  console.log('[WRITE-DEFAULT] ' + String(process.env.EPIRUS_ARM || '(no-arm)') + ' ‖ argv=' + process.argv.slice(2).join(' ')
+    + ' ‖ 落点=' + OUT_PATH);
 }
 console.log((GUARD.wrote ? '\n\u5df2\u5199\u5165 ' : '\n✘ 没写文件（§E589 守卫）：' + GUARD.note + '\n  原本要写 ') + OUT_PATH + '  (coldStart=' + (!seedParams) + ', seed=' + __SEED + ')' +
   (PRODUCT_IS_SEED ? '  ⚠ 产物与起点逐位相同（本臂零改包）' : ''));
