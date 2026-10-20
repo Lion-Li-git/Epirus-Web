@@ -60,7 +60,11 @@
     state: null, modeKey: 'standard', diff: 'lv:regular', players: 2, hp: 3, multi: false,
     roundStarted: false, locked: false, snap: null, aiKey: null,
     evCursor: 0, transcript: [], aiHistory: [],
-    roundStartSnapshot: null, warnedChampNoTrain: false, undoUsed: false
+    roundStartSnapshot: null, warnedChampNoTrain: false, undoUsed: false,
+    /* §E667（2026-10-20，用户："给导出对局记录里面加上本次的对手"）：开局/换档**当场**记下的历史，
+     *   导出的头部只读这几格，不在那里重推（理由见 `seatOppLabel` 头上那段）。`diffLabel` 跟着一起快照，
+     *   否则 `难度=`（活读）会与 `对手=`（快照）不同档 ⇒ 一张头部自相矛盾。 */
+    oppSeats: '', oppInfo: '', oppMid: null, diffLabel: ''
   };
 
   /* v1.5.11（用户裁定"按你的意思做"）：终局收缩参数（起扣回合 / 每回合扣血）从页面控制区读，
@@ -114,8 +118,14 @@
     buildSkillGrid();
     renderSide(0); renderSide(1);
     /* v1.6.5：这行不再分"多人/标准"两种写法 —— 人数与血量是两根明写的轴，模式名只是它们的查表结果。 */
+    /* §E667：开局这一格算**一次**，页面首行与导出的头部读同一份（抄两遍 = 两份实现会分叉） */
+    const oppInfo = aiInfo();
+    B.oppInfo = oppInfo.source;
+    B.oppSeats = seatOppLabel(oppInfo);
+    B.oppMid = null;
+    B.diffLabel = diffName(B.diff);            /* 与 `对手=` 同一时刻的快照：中途换档时这两格必须说的是同一档 */
     logClear('新对局：' + n + ' 人 · ' + (MODE_NM[B.modeKey] || B.modeKey) + ' · 难度=' + diffName(B.diff) +
-      ' · 对手AI=' + aiInfo().source + ' · 每人初始 ' + B.state.mode.hp + ' 血');
+      ' · 对手AI=' + B.oppInfo + ' · 每人初始 ' + B.state.mode.hp + ' 血');
     hint('请选择技能出招 —— 双方同时出手，按优先级结算。');
   }
 
@@ -581,6 +591,28 @@
     sel.value = B.diff;
     if (!sel.value && want.length) { sel.value = want[0].v; B.diff = want[0].v; }
   }
+  /* ===== §E667（用户要求）：导出的对局记录要写得出"本次的对手是谁" =====
+   * 逐席标签取自 `aiInfo().poolDraw.seats` —— 与 `champForSeat` 同一个纯派生（同 slotSalt 同答案），
+   *   所以"回显"与"实际决策"不会分叉（`ship-pool` 那条 ⑨ 腿盯的就是这件事，故这里也**不许**自己调 `poolDrawFor`）。
+   * ⚠ 必须在**开局当场**算一次存进 `B`，不许导出时再问：① 难度下拉是"对局中即时生效"、不换局（`bind()` 里 `#sel-diff` 那条 onchange），
+   *   事后读到的是最后那一档；② 池生不生效第一条判的是"本机有没有导入冠军"，而那个键在局中可被训练/导入改写
+   *   ⇒ 事后重推会把"这局到底是谁在打"说成"此刻会是谁在打"。 */
+  function seatOppLabel(info) {
+    const d = info && info.poolDraw;
+    if (!d || !d.seats || !d.seats.length) return info ? info.source : '';   /* 非池档（风格/单包/兜底）：source 本身就是"谁在打" */
+    const seats = B.state.p.slice(1);                      /* AI 席 = pid 1..N-1，与 draw.seats 同序 */
+    const one = d.seats.length === 1;                      /* 2P 只抽一席 ⇒ 每一席同取 seats[0]（与 champForSeat 一致） */
+    const who = seats.map(function (p, i) {
+      const m = d.seats[one ? 0 : i];
+      if (!m) return p.name + '=未抽到';
+      /* §E600-B 同一条纪律：脚本席要一眼看得出是脚本，别读起来像一枚包的名字 */
+      return p.name + '=' + (m.kind === 'script' ? '脚本·' + ((styleOf(m.id) || {}).name || m.id) : m.id);
+    }).join('  ');
+    return who + (d.scriptSeats ? '（掺脚本 ' + d.scriptSeats + ' 席）' : '') +
+      (d.mixNote ? ' ⚠' + d.mixNote : '') + (d.bandNote ? ' ⚠' + d.bandNote : '') +
+      (d.allSame ? ' ⚠各席全同：该档成员不足' : '');
+  }
+
   function aiInfo() {
     /* v1.6.6：一条阶梯、一种写法。原来这里是两分支（2 人看 `Champ.store`、多人看 `multiChampFrom`），
      * 因为页面有两条 AI 路；现在路只有一条，"用的是哪颗包"当场问 `champForCount()`（它才是判定处，这里只回显）。 */
@@ -904,7 +936,7 @@
   /* 测试钩子（tools/np-probe.mjs 用）：只暴露对象引用，不改变游戏逻辑
    * v1.6.5：加 `modeFor` ⇒ smoke 可以**在真页面里**把 12 种（人数 × 血量）组合全过一遍，
    * 断言"映射的像恰好 = R.MODES 的全部 key"（这是行为断言，不是扫文本 —— 静态钉会被重构架空，本仓记过账）。 */
-  if (typeof window !== 'undefined') window.EpirusUI = { B: B, newGame: newGame, aiInfo: aiInfo, showRecap: showRecap, modeFor: modeFor, tierOf: tierOf, refresh: function () { buildSkillGrid(); renderSide(0); renderSide(1); } };
+  if (typeof window !== 'undefined') window.EpirusUI = { B: B, newGame: newGame, aiInfo: aiInfo, seatOppLabel: seatOppLabel, battleText: buildBattleText, showRecap: showRecap, modeFor: modeFor, tierOf: tierOf, refresh: function () { buildSkillGrid(); renderSide(0); renderSide(1); } };
 
   /* v1.6.6：`chooseAI`（2 人专用那条 AI 路）已删除 —— 难度阶梯现在全人数共用一条路（`chooseAIMulti` + `DIFF_TIERS`）。
    * 它原来的三档（简单 = 60% 随机 + 中等、中等 = `pickBalanced`、困难 = 2P 冠军 ε=0）由阶梯接住：
@@ -980,7 +1012,15 @@
   /* 导出当前对局记录（纯文本，用于复查；同时存 localStorage） */
   /* 组装对局记录纯文本（导出 / 自动保存共用） */
   function buildBattleText() {
-    let txt = 'Epirus 拍手游戏 对局记录\n模式=' + MODE_NM[B.modeKey] + '  难度=' + diffName(B.diff) + '\n\n';
+    /* §E667（用户要求加"本次的对手"）：这四格是**开局/换档当场**存下的历史，不是此刻重推的读数
+     *   —— 换难度不换局，重推会把已经打完的回合说成"此刻这一档"。`难度=` 一并改成开局快照，
+     *   否则它会与 `对手=` 不同档（前者活读、后者快照 ⇒ 同一张头部自相矛盾）。
+     *   旧记录（改代码前存在 localStorage 里的那些局）没有这几格 ⇒ 明写"未登记"，不许留成空格看起来像"对手不明"。 */
+    let txt = 'Epirus 拍手游戏 对局记录\n模式=' + MODE_NM[B.modeKey] + '  难度=' + (B.diffLabel || diffName(B.diff)) + '\n';
+    txt += '对手=' + (B.oppSeats || B.oppInfo || '（本局未登记，看不到是谁在打）') + '\n';
+    if (B.oppInfo && B.oppSeats && B.oppInfo !== B.oppSeats) txt += '对手AI=' + B.oppInfo + '\n';
+    if (B.oppMid && B.oppMid.length) txt += '中途换档=' + B.oppMid.join(' ‖ ') + '\n';
+    txt += '\n';
     for (const r of B.transcript) {
       txt += '第 ' + r.round + ' 回合：' + (r.line ? r.line : '你=【' + r.human + '】 电脑=【' + r.ai + '】') + '\n';
       for (const l of r.lines) txt += '   - ' + l + '\n';
@@ -1543,7 +1583,22 @@
     /* v1.6.5：两根轴各自的重开逻辑一样（换局），差别只在 `newGame` 里查出来的 modeKey 不同。 */
     $('sel-players').onchange = function () { newGame(); };
     $('sel-hp').onchange = function () { newGame(); };
-    $('sel-diff').onchange = function () { B.diff = $('sel-diff').value; hint('难度已切换：' + diffName(B.diff) + '（对局中即时生效）'); };
+    $('sel-diff').onchange = function () {
+      const prev = B.diff;
+      B.diff = $('sel-diff').value;
+      /* §E667：换档**不换局**（这条本来就写着"对局中即时生效"）⇒ 一局可能是两档拼的。
+       *   导出的头部若只写开局对手就把"前面 K 回合由 A 打、之后由 B 打"说成"全程由 A 打"，
+       *   所以这里当场把换档后的逐席也记一行（开局那一格不动，它记的是开局）。 */
+      if (B.state && B.state.p && prev !== B.diff) {
+        const oi = aiInfo();
+        /* 池档的逐席标签不含剂量，补一段；非池档时 `seatOppLabel` 返回的就是 `source`，它自己已经带 ε ⇒ 不再追加 */
+        const dose = (oi.poolDraw && oi.eps != null)
+          ? ' ε=' + oi.eps + '/k' + oi.epsK + '/' + oi.epsMode + (oi.ramp ? '·斜坡' : '') : '';
+        B.oppMid = (B.oppMid || []).concat(['第 ' + (B.roundStarted ? B.state.round : B.state.round + 1) +
+          ' 回合起改 ' + diffName(B.diff) + '：' + seatOppLabel(oi) + dose]);
+      }
+      hint('难度已切换：' + diffName(B.diff) + '（对局中即时生效）');
+    };
     $('btn-newgame').onclick = newGame;
     /* v1.5.10（用户要求）：清掉本机冠军、改回内置冠军 */
     if ($('btn-champ-reset')) $('btn-champ-reset').onclick = useBuiltinChampion;
