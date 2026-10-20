@@ -13,12 +13,21 @@ import { spawnSync as _spawnSync } from 'node:child_process';
  *   ⇒ D124/D125 红（认证 40 实测：np 270/272）。**那个红是对的** —— "传了没人读"正是这些闸要拦的事，
  *   所以钉值必须只落在真读它的入口上，而不是整棵环境里。 */
 const T3P_ENTRY = 'tools/train-3p.mjs';
+/* v1.7.123（千问 §E674 / DS 交班 §五 那条）：`[WRITE-DEFAULT]` 行**透传到 stdout**。
+ *   门的 stdout 默认被 `np-test` 吞掉 ⇒ 开了 `EPIRUS_LOG_DEFAULT_OUT` 也捞不到 —— 点名器等于白装。
+ *   只在**开了那个 env** 时才加班（默认零开销、零输出）。 */
+function __echoWriteDefault(r) {
+  if (!process.env.EPIRUS_LOG_DEFAULT_OUT || !r || !r.stdout) return r;
+  const s = String(r.stdout); if (s.indexOf('WRITE-DEFAULT') < 0) return r;
+  for (const line of s.split(/\r?\n/)) if (line.indexOf('WRITE-DEFAULT') >= 0) console.log('    ' + line.trim());
+  return r;
+}
 function spawnSync(cmd, args, opts) {
-  if (!Array.isArray(args) || args[0] !== T3P_ENTRY) return _spawnSync(cmd, args, opts);
+  if (!Array.isArray(args) || args[0] !== T3P_ENTRY) return __echoWriteDefault(_spawnSync(cmd, args, opts));
   const o = opts || {}, env = Object.assign({}, o.env || process.env);
   /* 腿自己显式给了粒数就**尊重它**（D228 ⑦ 要跑 `=3` 那一档；包装不许把它压回 1，否则那条腿永远测默认档以外的那条路） */
   if (env.EPIRUS_SEL_EVAL_SEEDS === undefined) env.EPIRUS_SEL_EVAL_SEEDS = '1';
-  return _spawnSync(cmd, args, Object.assign({}, o, { env }));
+  return __echoWriteDefault(_spawnSync(cmd, args, Object.assign({}, o, { env })));
 }
 import { parsePairTable } from '../defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
 import { makeGuardCost } from '../guard-cost-lib.mjs';   /* D161 用：直接对库做单元级判定（不靠探针的输出措辞） */
