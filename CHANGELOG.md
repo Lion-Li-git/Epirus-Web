@@ -1,3 +1,30 @@
+## v1.7.125 — 10-20（DS）：用户拍板的三件 —— **带内不换人** · **门内别名表改道** · `SUPPORT_PRIOR` 那条的结案。
+
+### ① 带内不换人（`tools/pick-best.mjs`）
+
+两个 band 函数加**可选** `incumbentId`：`bandPickByUsage(entries, tolPt, usageOf, incumbentId)` ‖ `bandPickByLand(entries, tol, incumbentId)`。
+**带内找到现役就返回它**，并标 `tieBrokenBy: 'incumbent'`（与 `'usage'`/`'land'`/`'score'` 并列，门可以分别钉）。
+
+动因（写进注释）：`runs` 实测「加粒数只稳住**榜**、当选身份仍由**带内那 7 枚的非-sc 仲裁**决定」⇒ 抽签的来源是**仲裁规则**，不是粒数。
+**旧调用点不传 = 行为逐字不变** ⇒ 这一笔不改任何在册读数，只把能力接上（接线由调用方下一步做）。
+
+### ② 门内别名表改道 %TEMP%（幂等 ≠ 只读）
+
+`champion-map/pack-guard.mjs` 会把登记行**追加**进 tracked 的 `pack-aliases.tsv` ⇒ 每跑一轮门工作树就脏。
+现在：`ALIAS_REL = process.env.EPIRUS_ALIAS_TSV || 'champion-map/pack-aliases.tsv'`，而 `tools/gates/_ctx.mjs` **一加载**就把这个 env 指到 `%TEMP%/gate-pack-aliases.tsv`。
+⇒ **门里写临时账、手跑仍写正式表**；读者（`lineage.mjs` / `audit-parent-evidence.mjs`）一行没动。
+
+### ③ `SUPPORT_PRIOR` 那条：**接门早已完成，「摘一条」无对象**
+
+- 「接门」= **D236**（v1.7.115，`ui-contract.mjs:338-353`）：钉 `setSupportPrior(2)` + 引擎导出面 + 不许静默吞回读失败；
+- 「摘一条旧腿」：把 `tools/gates/**` 里所有 `SUPPORT_PRIOR/supportPrior` 引用捞了一遍，**除 D236 外一条都没有** ⇒ 候选「档 2 只在评测可达」在当前树里不存在。
+- ⇒ **硬删一条别的门去凑「加一删一」会改 279 这个总数、连带并集守卫与多处写死计数，风险不值** ⇒ D236 净 +1 保留，`LIVE-LINES` 那行改成「已无对象可销」。
+
+### ④ 在册读数
+
+`--part=train-env,ship-pool,ui-contract,meta-lint` ⇒ **4/4 ‖ 1/1 ‖ 8/8 ‖ 4/4**（17 门；子集，不是整轮认证）。
+**且跑完 `git status` 为空** —— 这就是 ② 的行为证据（改前跑一轮会脏 `pack-aliases.tsv`）。
+
 ## v1.7.124 — 10-20（DS）：送盾硬门槛按用户裁定重定成 **1.5/席**（5 席 = 7.5）。
 
 ### ① 为什么改
