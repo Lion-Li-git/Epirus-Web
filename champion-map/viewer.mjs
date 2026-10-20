@@ -1304,8 +1304,12 @@ function buildNB(key, bx, byy) {
   var idx = new Int16Array(gx * gy * KF), dst = new Float32Array(gx * gy * KF);
   /* E388 DS（用户 10-07 第三件）：地板的值从 **H（考卷口径）** 换成 **Hp（页面口径）**。
  *   原来吃 H 而色带/点/图例读 Fv = Hp/100 + T·S ⇒ 两条尺 ⇒ 一收窄范围场值就跑出可见点的 F 区间 ⇒
- *   被「带外收尾」涂成底色 = 黑洞的一半成因（另 half 是加权没按可见名单过滤，§E381 已修）。 */
-var SW = new Float32Array(gx * gy), SH = new Float32Array(gx * gy), SS = new Float32Array(gx * gy);
+ *   被「带外收尾」涂成底色 = 黑洞的一半成因（另 half 是加权没按可见名单过滤，§E381 已修）。
+   *   §E672 再往下一层：地板现在**只吃 Fv**（当前桌形 + 当前 T），而这里只剩 SW（"画空"守卫的分母）。
+   *   原来同处还存了一对 SH/SS（= 逐格的 Σw·Hp/100 与 Σw·S，配下面那句"(SH + T·SS)/SW"的快路），
+   *   但 §E381 之后加权必须按**可见名单**每帧现算 ⇒ 那两张表**只写不读**，而且硬编码 Hp ——
+   *   留着就是下一次"第二处取数"的温床（这张缓存**不按桌形作废**，接回去就会静默把长程档画成默认桌的场），已删。 */
+var SW = new Float32Array(gx * gy);
   for (var gj = 0; gj < gy; gj++) for (var gi = 0; gi < gx; gi++) {
     var X = x0 + (x1 - x0) * gi / (gx - 1), Y = y0 + (y1 - y0) * gj / (gy - 1);
     var ci = gj * gx + gi, base = ci * KF;
@@ -1318,10 +1322,10 @@ var SW = new Float32Array(gx * gy), SH = new Float32Array(gx * gy), SS = new Flo
         dst[base + pos] = d2; idx[base + pos] = c2;
       }
     }
-    var wsum = 0, hsum = 0, ssum = 0;
+    var wsum = 0;
     for (var u = 0; u < KF; u++) { var pi = idx[base + u]; if (pi < 0) break;
-      var w = 1 / Math.pow(Math.max(dst[base + u], 1e-6), KEXP); wsum += w; hsum += w * (P[pi].Hp / 100); ssum += w * P[pi].S; }
-    SW[ci] = wsum; SH[ci] = hsum; SS[ci] = ssum;
+      wsum += 1 / Math.pow(Math.max(dst[base + u], 1e-6), KEXP); }
+    SW[ci] = wsum;
   }
   /* 守卫：坐标列名取错时 pct 会**静默**返回 undefined ⇒ 距离全是 NaN ⇒ 一格邻居都没有 ⇒ 整页画空。
    *   这一版 2D 就是这么"什么都没画"的（by 拼成 '2' 而不是 'y2'）。空画布比红字坏得多 ⇒ 必须抛出来。*/
@@ -1335,10 +1339,11 @@ var SW = new Float32Array(gx * gy), SH = new Float32Array(gx * gy), SS = new Flo
    *   所以"过线点固定半径盘并"任何半径都是二选一的假范围（r=1.2×nmed ⇒ 圈住过线 113 + 未过线 100 = 纯度 53.1%）；
    *   我换的"局部过线率场 + 插值等值线"能把纯度做到 88%，但代价是绿区糊在底图上、且只圈到两成过线枚。
    *   ⇒ 过线只按**逐枚真值**标（drawMap 里的绿环），悬停明细给"栽在哪条腿"。*/
-  NBK[key] = { idx: idx, dst: dst, SW: SW, SH: SH, SS: SS, x0: x0, x1: x1, y0: y0, y1: y1,
+  NBK[key] = { idx: idx, dst: dst, SW: SW, x0: x0, x1: x1, y0: y0, y1: y1,
     px0: px0, px1: px1, py0: py0, py1: py1, nmed: nmed, d12m: d12m, ax: ax, by: by, gx: gx, gy: gy };
 }
-/* 每格只需 (SH + T·SS)/SW ⇒ 换 T 不碰邻域。
+/* §E672：这里原来第一句是"每格只需 (SH + T·SS)/SW ⇒ 换 T 不碰邻域" —— 那是 §E381 之前的快路，**早已没人走**
+ *   （地板必须按**可见名单**每帧现算，见 buildBitmap 里烘的那张 FV9 表），两张表只写不读，删了。
  * 位图**不透明**：每格把势色按覆盖度合成到底色上（远格 = 纯底色）⇒
  *   平面态没有"雾蒙蒙"的半透明晕，立体态没有透明边的割裂/接缝（位图边界之外就是底色）。*/
 /* E388 DS：**可见点**的 k-NN 表（每格最近 KF 枚"当下画得出来的点"）。

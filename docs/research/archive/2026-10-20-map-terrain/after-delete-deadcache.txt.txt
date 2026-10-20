@@ -1,0 +1,12 @@
+### 删掉 SH/SS 死账之后（用户 10-20 下午点选项 A）
+地形读数与删之前 diff：逐字相同（见 terrain-after.txt.txt 与本文件对照）
+### --part=meta-repo
+N人测试：通过 12 / 12
+### --part=meta-lint
+N人测试：通过 4 / 4
+### --part=ship-pool
+N人测试：通过 1 / 1
+### --part=probe-instruments
+N人测试：通过 33 / 33
+### §E671 取证器（点色层）
+断言：18 PASS ‖ 0 FAIL
