@@ -66,3 +66,5 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 # CI（远端 main）：
 #   gh api repos/Lion-Li-git/Epirus-Web/actions/runs?per_page=3   ‖ 或 mcp__githubdirect__actions_list
 ```
+| **#1「带内不换人」= parked（用户 10-20 裁决后复核）** | 能力已在 `tools/pick-best.mjs:315/347`（`bandPickByUsage/ByLand` 加可选 `incumbentId`，带内找到现役就返回它，`tieBrokenBy='incumbent'`；旧调用点不传 = 逐字不变）。**但没有落点**：`train-3p` **冷启动没有"现役"概念**（它不知道线上是谁）；唯一有现役的是 **`EPIRUS_HOTSTART` 的起点包**，而热启动的目的是**改进**起点，接线等于反向；`promote` 那层没有 band 仲裁（是体检 + veto）。⇒ **不接**，等"持续训练（从线上冠军起训、只接受显著改进）"成为常规时，传一个 id 即生效。 |
+
