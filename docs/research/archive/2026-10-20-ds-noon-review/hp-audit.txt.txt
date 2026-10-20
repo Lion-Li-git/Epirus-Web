@@ -1,0 +1,14 @@
+① 烘焙页面 champion-map/index.html ‖ 行数（coords）=803
+   "hp" 出现 803 次，null=692 ⇒ 覆盖 13.8%   ‖ "hpl2" 出现 803 次，null=0
+   coords.tsv 自身覆盖：Hp=803 ‖ Hplong=803 ‖ Hlong=803（都是全库）
+
+② "hp" 的来源 = champion-map/epsagg.tsv 的 page 列（viewer.mjs:427 `hp: r.id in EPS ? EPS[r.id].h : null`）
+   epsagg 行数=121 ‖ 其中 id 在 coords 里查不到=10 ⇒ 可配对 111 枚
+   epsagg.page − coords.Hp：中位 -0.30 ‖ P10 -1.20 ‖ P90 0.45 ‖ 极值 -5.65…1.15（同口径不同批 ⇒ 差在采样噪声内）
+
+③ 按页面自己的规则算"点色"应有比例（默认窗口=全库，域 = 该档实测那批的 p02..p98）
+   multi  用 Hp（有值 803 枚）域 [20.6,60.1] ‖ 中位 48.7 ⇒ 偏蓝 23.9% ‖ 偏红 76.1%
+   long   用 Hplong（有值 803 枚）域 [17.0,68.1] ‖ 中位 52.0 ⇒ 偏蓝 27.6% ‖ 偏红 72.4%
+   （DS 的像素尺读数：long 90.3% 蓝 ‖ multi 65.9% 蓝，亮点 3.2 万 / 3.0 万个）
+   ⇒ 803 枚点撑不出三万个亮点像素；同档换 color 档（hp/fam/de）我的复测只动 0.5–1.5pt（见 layer-probe.txt.txt）
+   ⇒ 那条"反算偏橙红 vs 实测 90% 蓝"的不闭合，是**两把尺量的层不同**，不是页面坏了。
