@@ -1417,7 +1417,8 @@ M(x)（pt）        defend +4.18   heavyfire +3.68   farmer +3.39   antidef −0
 
 原话是"把这套拆法照跑到 teach/expo/wall 三支谱系的当选包，把'一枚谱系 3 粒 seed'扩成多起点"。
 **发臂前先量分母**（这是我自己记过的规矩）：`arms/` 里 `tw*` ‖ `ex*` ‖ `wa*` 三支的关/开两臂，**九格的当选权重全部是同一粒**
-（逐格取 `window.EPIRUS_CHAMPION_3P` 的权重向量 `a` 做 sha256 前 8 位，实测两两相同；只有 `gv` 支的 77000 ‖ 77002 是两粒，77001 也是同一粒）。
+（逐格取 `window.EPIRUS_CHAMPION_3P` 的权重向量 `a` 做 sha256 前 12 位，原件落盘 `lineage-zero.txt`；只有 `gv` 支的 77000 ‖ 77002 是两粒，77001 也是同一粒；
+`b3*` ‖ `b9*` 那六格**只有关档臂** ⇒ 根本没有配对）。
 ⇒ 这三支配对差**恒等于 0**，跑 `eval-5p` 只是把同一个文件测两遍（自反对照）。
 ⇒ **(b) 在"veto 两臂"这个对象上没有分母 ⇒ 不发**。这不是"测出来没差别"，是**根本没有两粒可测**。
 
@@ -1434,6 +1435,7 @@ M(x)（pt）        defend +4.18   heavyfire +3.68   farmer +3.39   antidef −0
 
 - 只读：`tools/eval-5p.mjs` 一字未动（三条门钉它），没有新跑一局、没有训练臂、没动 `js/**`、不 promote。
 - 不新增门（她的裁定面）；本节的可复现性靠 `seat-swap-analyze.mjs` 的四条闸 + 四趟变异自证，落盘原件全在 `archive/2026-10-20-seat-swap/`。
-- ⚠ 同 rng 两次跑**逐字相同**（`swap-clean.txt.txt` ‖ `/tmp/swap-a|b`），换 rng 只有"过线的对"那一格会挪 ⇒ 引用的时候带 `--rng` 值（缺省 20261020）。
+- ⚠ 同 rng 两次跑**逐字相同**（`swap-clean.txt.txt` ‖ `swap-clean-rerun.txt.txt` 两份原件都在本目录），换 rng 只有"过线的对"那一格会挪
+  （`swap-clean-rng777.txt.txt`：6 → 5）⇒ 引用的时候带 `--rng` 值（缺省 20261020）。
 - ⚑ 记一笔自己的犯规：给 `PREREG-2026-10-20-seat-swap-qoder.md` 追加"事后三条"时我用了 shell 的 `cat >>`，**违反了"仓内文本只走 Edit/Write"**这条在册规矩
   （那次追加同时被结构尺看过，`GUARD OK`，内容没坏 —— 坏的是流程：`Edit` 会把我改的行回显给我看，`cat >>` 不会）。
