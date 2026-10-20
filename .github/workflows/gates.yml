@@ -66,8 +66,8 @@ jobs:
     outputs:
       parts: ${{ steps.lp.outputs.parts }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '24'
       - id: lp
@@ -88,8 +88,8 @@ jobs:
         part: ${{ fromJson(needs.plan.outputs.parts) }}
     name: part ${{ matrix.part }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '24'
       # `--part=` 与 `--only`/`--group` 同罪：少跑了就是少跑了，np-test 收尾会自己响亮印出
@@ -105,8 +105,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '24'
       - name: 各部分的判定（有红 ⇒ 这一档就红，并点名是哪一段）
@@ -147,8 +147,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '24'
       - name: 页面冒烟（CDP 真 Chrome）
