@@ -545,6 +545,28 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
    * 纪律与 `REGEN_SLICE`/`KILL_FIELD` 逐字一致：无 setter ⇒ `exit 7`；下达后**读回消费点**；
    * NaN/被 clamp 都算被拒 ⇒ `exit 7`（`Math.abs(got - NaN) > 1e-9` 恒 false 那个坑已写进下面的判据）。
    * ⚠️ 取值**必须**经 `server/econ-env.mjs` 的 `readEconEnv`（D77 的单一来源 ⇒ 本文件不出现那个 env 名）。 */
+  /* v1.7.127（用户 10-20：「测一下开关的差别」）：**训练侧也开送盾先验**（`EPIRUS_SUPPORT_PRIOR=0|1|2`）。
+   * 纪律与 `REGEN_SLICE` 一致：无 setter ⇒ exit 7；下达后**回读**；读不回也 exit 7（不许静默空转）。 */
+  {
+    const spReq = process.env.EPIRUS_SUPPORT_PRIOR;
+    if (spReq != null && String(spReq).trim() !== '') {
+      const v = Number(spReq);
+      if (!(v === 0 || v === 1 || v === 2)) {
+        console.error('[train-3p] ⛔ EPIRUS_SUPPORT_PRIOR 只能是 0/1/2（收到 ' + spReq + '）');
+        process.exit(7);
+      }
+      if (typeof T.setSupportPrior !== 'function' || typeof T.supportPriorOn !== 'function') {
+        console.error('[train-3p] ⛔ 下达了送盾先验但引擎没有 setSupportPrior/supportPriorOn ⇒ 拒绝静默空转');
+        process.exit(7);
+      }
+      T.setSupportPrior(v);
+      if (Number(T.supportPriorOn()) !== v) {
+        console.error('[train-3p] ⛔ 送盾先验=' + v + ' 未生效（读回 ' + T.supportPriorOn() + '）');
+        process.exit(7);
+      }
+      console.log('[train-3p] 送盾先验 = ' + v + '（读回一致）');
+    }
+  }
   {
     const chainReq = readEconEnv(process.env).bigtChainW;
     if (chainReq != null && String(chainReq).trim() !== '') {
