@@ -40,20 +40,37 @@ const idOf = t => {
 };
 const has = (t, re) => re.test(t);
 
-const cls = { md: [], src: [], log: [] };
+const cls = { md: [], src: [], log: [], cand: [] };
+/* v1.7.127（用户 10-20：把「有行为腿覆盖同一件事」做成可自动提示的启发式）：
+ *   ② 那族里有两种：**只有源码 pin**（没有替代品 ⇒ 留），和 **源码 pin + 行为腿**（可能重复 ⇒ 候选）。
+ *   这里只把后者**标出来**（只报告、不阻断），把 125 条人工分诊压成一张候选清单。
+ *   判据（故意宽）：同一个门体里既出现 `readFileSync(...).indexOf(...) >= 0` 这种 pin，
+ *   又出现 **至少一条 `eq(`/`is(`**（那是在比运行时值，不是比源码字符串）。 */
+const __pinRe = /indexOf\([^)]*\)\s*(?:>=|<)\s*0/g;
+const __behRe = /\n\s*(?:eq|is)\(/g;
+/* 更严的第二道：**必须真的跑引擎**。`eq(` 也可能在比源码解析出来的东西（第一版 77 条太宽）。 */
+const __runRe = /sb\.window|EpirusTrainer|EpirusPlay|EpirusBots|EpirusRules|EpirusState|EpirusResolve|autoGameN|oneGameN|policyChooserN|selfPlay\(|mirrorHealth\(/;
 for (const g of gates) {
   const id = idOf(lines[g.idx]);
   if (/readFileSync\([^)]*\.md['"]/.test(g.text) || /readFile\([^)]*\.md['"]/.test(g.text)) cls.md.push(id + '@' + g.at);
-  if (has(g.text, /readFileSync\(/) && has(g.text, /indexOf\([^)]*\)\s*>=\s*0/)) cls.src.push(id + '@' + g.at);
+  if (has(g.text, /readFileSync\(/) && has(g.text, /indexOf\([^)]*\)\s*>=\s*0/)) {
+    cls.src.push(id + '@' + g.at);
+    const pins = (g.text.match(__pinRe) || []).length;
+    const runs = __runRe.test(g.text);
+    if (pins > 0 && runs && (g.text.match(__behRe) || []).length > 0) cls.cand.push(id + '@' + g.at + '(' + pins + 'pin)');
+  }
   if (has(g.text, /\.(out|stdout|stderr)\b/) && /indexOf\(['"][^'"]*[\u4e00-\u9fff][^'"]*['"]\)\s*>=\s*0/.test(g.text)) cls.log.push(id + '@' + g.at);
 }
-const out = { gates: gates.length, md: cls.md.length, src: cls.src.length, log: cls.log.length, lists: cls };
+const out = { gates: gates.length, md: cls.md.length, src: cls.src.length, log: cls.log.length, cand: cls.cand.length, lists: cls };
 if (process.argv.includes('--json')) console.log(JSON.stringify(out, null, 2));
 else {
   console.log('门禁哨兵（规矩 1：只许测行为）· 门数 = ' + out.gates);
   console.log('  ① 读 .md 的门        = ' + out.md + (out.md ? '：' + cls.md.slice(0, 8).join(', ') + (out.md > 8 ? ' …' : '') : ' ✔'));
   console.log('  ② 对源码做正则的门    = ' + out.src + (out.src ? '：' + cls.src.slice(0, 8).join(', ') + (out.src > 8 ? ' …' : '') : ' ✔'));
   console.log('  ③ 匹配日志措辞的门    = ' + out.log + (out.log ? '：' + cls.log.slice(0, 8).join(', ') + (out.log > 8 ? ' …' : '') : ' ✔'));
+  console.log('  ④ **②的候选**（源码 pin + 同门行为腿 ⇒ 可能重复） = ' + out.cand +
+    (out.cand ? '：' + cls.cand.slice(0, 8).join(', ') + (out.cand > 8 ? ' …' : '') : ' ✔'));
+  console.log('     （④ 只提示不判死：人工只需看这 ' + out.cand + ' 条；其余 ' + (out.src - out.cand) + ' 条是「只有源码 pin」⇒ 没有行为替代，该留。）');
   console.log('  ⇒ 默认只报告（不红）；分诊完再开 --strict。见 docs/GATE-SHIFTS.md §八 口径 1。');
 }
 const strict = process.argv.includes('--strict');
