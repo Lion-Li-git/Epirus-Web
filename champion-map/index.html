@@ -3354,6 +3354,21 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   try {
   function T(name, cond, got) { if (cond) { nok++; out.push('PASS ' + name + (CHKDETAIL && got !== undefined && got !== null ? ' ‖ ' + got : '')); }
     else { nbad++; out.push('FAIL ' + name + (got === undefined || got === null ? '' : ' ‖ 实测 ' + got)); } }
+  /* §E674 一行**只读定标快照**（DS 10-20 §6.4 待查 #2 点名要的："给页面加一行打印当前 EPR() 域 + inWin 命中数"）。
+   *   走既有的 #check=1&detail=1 通道 ⇒ 出厂页与四视图复验都不多打一行；它**不是判据**
+   *   （行首是 INFO，shot.mjs 只数 PASS/FAIL ⇒ 不进分母、坏了也不会红）。
+   *   要它的理由就是今天这两格：画面与读数打架时，先要有一行说清"这张图吃的是哪一列、域是多少、位图是哪一态烘的"
+   *   —— §E672 那次我要靠临时写探针才问出来，下一班不该再付一次那个钱。 */
+  if (CHKDETAIL) {
+    var _fr0 = FR(), _cb0 = colBand(), _epr0 = EPR(), _nhp0 = NHP(), _nw = 0;
+    for (var _zi = 0; _zi < N; _zi++) if (inWin(P[_zi])) _nw++;
+    out.push('INFO 定标快照 ‖ 桌形=' + st.ftab + ' ‖ 颜色=' + st.color + ' ‖ T=' + st.T.toFixed(2)
+      + ' ‖ F 域 [' + _fr0[0].toFixed(4) + ', ' + _fr0[1].toFixed(4) + '] ‖ 窗口 flo/fhi=' + st.flo.toFixed(3) + '/' + st.fhi.toFixed(3)
+      + ' → [' + winLo().toFixed(4) + ', ' + winHi().toFixed(4) + '] ‖ inWin 命中 ' + _nw + '/' + N + ' ‖ 批次筛后 NVIS=' + NVIS
+      + ' ‖ 色带 colBand=' + (_cb0 ? '[' + _cb0.lo.toFixed(4) + ', ' + _cb0.med.toFixed(4) + ', ' + _cb0.hi.toFixed(4) + ' n=' + _cb0.n + ' ' + _cb0.mode + ']' : 'null')
+      + ' ‖ EPR 域=[' + _epr0[0].toFixed(1) + ', ' + _epr0[1].toFixed(1) + '] ‖ 页面口径有读数 ' + _nhp0 + '/' + N
+      + ' ‖ 位图 tab=' + (FL ? FL.tab : '—') + ' vis=' + (FL ? FL.vis : '—') + ' painted=' + (FL ? FL.painted : '—') + ' oob=' + (FL ? FL.oob : '—'));
+  }
   /* ===== §E372 装载完成时的"位图 vs CSS 盒"（用户 10-07：「3d 下点的位置与光标选定的坐标似乎有偏移，
    *   光标要在偏下的地方才能选中当前点；三维行为轴开过线曲面时也是」）=====
    *   ⚠ 这条必须跑在下面那句 fit0() **之前** —— fit0 会把位图重新对齐到当前盒子，跑在它后面永远量不到装载时的错位。

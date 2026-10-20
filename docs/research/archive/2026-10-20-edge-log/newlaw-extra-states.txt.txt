@@ -1,0 +1,7 @@
+### §E673 新法律在其余态的复验（默认即 log）
+mode=tree&elev=1           rc=0  断言：94 PASS ‖ 0 FAIL
+mode=tree&edges=hash       rc=0  断言：94 PASS ‖ 0 FAIL
+mode=tree&edges=off        rc=0  断言：94 PASS ‖ 0 FAIL
+mode=3db                   rc=0  断言：94 PASS ‖ 0 FAIL
+mode=1d&sortBy=time        rc=0  断言：94 PASS ‖ 0 FAIL
+mode=map&ftab=long&color=hp rc=0  断言：94 PASS ‖ 0 FAIL
