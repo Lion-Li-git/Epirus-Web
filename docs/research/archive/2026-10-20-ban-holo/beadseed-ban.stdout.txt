@@ -1,0 +1,44 @@
+[shipbigt] 未设旗标 ⇒ 走**引擎默认档** `BIGT_PUSH = 12`（v1.5.333 起默认开着 ⇒ 这一臂**不是**出厂形状，出厂形状要显式 `--shipbigt=0`）
+[support] 未设旗标 ⇒ 走**引擎默认档** `SUPPORT_PRIOR = 0`（0 = 引擎默认关；**页面另有默认，见 `js/ui/ui.js`**） ‖ knobs 默认 = pick=weighted skipP=0.6 minEp=3 ⇒ 这一臂不带动作先验
+=== 5 人局评测 ===
+主体: docs/artifacts/v7beadseed-82.bak
+meta: {"source":"server/train-server.mjs","n":5,"gens":250,"games":8,"pop":16,"opps":"random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,targeter,gunspam,snipespam,gunspam,guardspam,gunfocus,gunfocus","mode":"multi","rulesFingerprint":"be6c2195","styleOpps":"","styleW":0,"styleGames":0,"feasibility":{"ok":true,"fails":[],"notes":["第6道（输出密度/经济出口）**探针缺失** ⇒ 未判定（不等于过）"],"density":{"beadLoopClosed":null,"blocking":false},"seatSpread":18.6,"seatDecisive":0.72,"seatVerdict":"ok","seatBasis":"ok","seatPct":[11.6,18.6,30.2,20.9,18.6],"G":7.37,"Gkeys":12,"wallDmg":15.95,"wallPierce":319,"fieldA":0.222,"fieldADealt":1.95,"fieldBClears":3.9,"fieldBWinRate":1},"ecoOverride":"{\"target\":null,\"cap\":null,\"divW\":\"0.3\",\"divK\":null,\"divRoleW\":null,\"divCatW\":null,\"divForceGens\":null,\"wallFilter\":null,\"wallGames\":null,\"hoardOnLeftover\":null,\"convRatio\":null,\"hoardCapMult\":null,\"stockBonus\":null,\"convOffense\":null,\"blockW\":null,\"widthW\":null,\"bigcardW\":null,\"ringW\":null,\"s4W\":\"0.3\",\"beadW\":null}","fightOverride":"","fightEffective":"{\"whistlePen\":0,\"override\":0,\"dealW\":0.01,\"firstW\":0}","ecoEffective":"{\"targetOverride\":null,\"capOverride\":null,\"divW\":0.3,\"divK\":6,\"divRoleW\":0,\"divCatW\":0,\"K_role\":8,\"divForceGens\":0,\"wallFilter\":false,\"stockBonus\":0.05,\"hoardPen\":0.12,\"hoardOnLeftover\":false,\"convRatio\":false,\"convOffense\":false,\"hoardCapMult\":2,\"blockW\":0,\"widthW\":0,\"bigcardW\":0,\"wallGames\":3,\"ringW\":0.1,\"s4W\":0.3,\"beadW\":0.05,\"at3\":{\"target\":3,\"cap\":10},\"at5long\":{\"target\":5,\"cap\":20}}","ts":"2026-09-21T08:26:52.975Z","firstRate":0.5010822510822511,"top2Rate":0.6638528138528138,"seed":82,"fresh":false,"hotstartFrom":"8358c7b72b4d9dc8","seedEmbeddedFrom":null,"workers":16}
+对手池(7): random defend antidef wall farmer heavyfire deepsaver
+!! 模式 --mode=multi : 多人模式(3-5人)  hp=3  摄魂门槛 HP<=1
+对手场 = 4 个互不相同的脚本，全部 35 组合 × 200 局 = 7000 局；含深经济对手的组合 30/35
+随机基线（5 人局）: 1st 20.0% / top2 40.0% / top3 60.0%
+
+[shipbigt] ⚠ 检测到研究注入旗标 --ban ⇒ 已把引擎默认档**顶成 0（关）**，保证这条臂只有一个自由量（§E262~§E268 的读数都是在这个世界上量的）。要连着现网档一起量请显式给 `--shipbigt=N`
+[shipdrain] ⚠ 引擎默认档 = 1，但本臂 ε=0 ⇒ 这一档**永不触发**（钩子在 soft 探索支里）⇒ 与关档逐字相同。要量它必须带**探索剂量**：首选产品那张表 `--eps-tier=lv:regular`（页面默认档 0.1·斜坡），硬写 `--eps=0.2 --eps-mode=soft` 量的是**简单档**（§E283：3 血桌上每 4.3 局一张 ‖ 关档 0 张/200 局）。
+[消融·拿掉 holo] 1st=63.8% 严胜=63.3% 并列=0.5%  2nd=16.8%  3rd=11.3%  4th=5.9%  5th=2.3%   | top2=80.6% top3=91.8%
+    各座位 1st 率: P0=63.8% P1=64.1% P2=63.5% P3=65.1% P4=62.3%
+    前置条件: 主体场均承伤=1.93  平均回合=29.3  转移事件=1209  火焰伤害事件=78
+    机制: 自己的攻击被弹回=0.05 次/局  平局率=1%  终局血量=1.09
+    拆分: 含深经济对手 61.3%（6000 局）  vs  不含 78.8%（1000 局）  Δ=-17.5pt
+    拆分: 含反弹席(reflectspam) -（0 局）  vs  不含 63.8%（7000 局）  Δ=-
+[对照 pickRandom] 1st=8.8% 严胜=8.3% 并列=0.6%  2nd=14.4%  3rd=27.5%  4th=26.4%  5th=22.8%   | top2=23.3% top3=50.7%
+    各座位 1st 率: P0=9.7% P1=8.1% P2=8.9% P3=8.6% P4=8.9%
+    前置条件: 主体场均承伤=2.98  平均回合=36.7  转移事件=638  火焰伤害事件=147
+    机制: 自己的攻击被弹回=0.05 次/局  平局率=4%  终局血量=0.10
+    拆分: 含深经济对手 9.2%（6000 局）  vs  不含 6.6%（1000 局）  Δ=2.6pt
+    拆分: 含反弹席(reflectspam) -（0 局）  vs  不含 8.8%（7000 局）  Δ=-
+[消融自检] 决策 163334 次，其中被拿掉的技能在可负担集里 103581 次 = 63.4%   OK 消融有效
+
+=== 消融·拿掉 holo 的经济行为（这套指标才是"货架"的直接读数）===
+决策次数=163334  到达过的最高 ep=37  ep>=3 的决策占比=16.9%  cost>=3 出手占比=0.6%
+  决策时 ep 分带: 0-1=61.4%  2-4=27.3%  5-9=5.5%  10+=5.8%   ← 若 5+/10+ 占比高，则"钱不够"不是约束，问题是**买了什么**
+出手种类=16  分布（前 12）:
+  ジ          63.2%   费用=0
+  狙击枪        13.5%   费用=2
+  枪           7.3%   费用=1
+  激光剑         5.8%   费用=2
+  八卦阵         2.5%   费用=0
+  反弹          2.5%   费用=0
+  防御          2.5%   费用=0
+  蓄能          1.0%   费用=1
+  聚能环         0.6%   费用=3
+  原型制御        0.4%   费用=1
+  无极变速        0.4%   费用=1
+  金刚盾         0.4%   费用=1
+耗时 29.1s
+逐桌子命中数 → docs/research/archive/2026-10-20-ban-holo/beadseed-ban.per.txt（35 组 × 200 局）

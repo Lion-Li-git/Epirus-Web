@@ -1,0 +1,91 @@
+#eval5p-percombo
+#seed=77000
+#games=200
+#n=5
+#pool=core
+#mode=multi
+#every=1
+#field=-
+#file=docs/artifacts/v7wall-33.bak
+#bigtcost=factory
+#ban=-
+#bigtpush=0/5
+#bigttgt=-
+#pushkey=-
+#pushfloor=-
+#drainhp=1
+#shipbigt=0
+#shipdrain=1
+#eps=0
+#swap=-
+#arm	idx	names	games	first	strict
+subject	0	random,defend,antidef,wall	200	100	99
+subject	1	random,defend,antidef,farmer	200	84	84
+subject	2	random,defend,antidef,heavyfire	200	78	77
+subject	3	random,defend,antidef,deepsaver	200	69	69
+subject	4	random,defend,wall,farmer	200	181	178
+subject	5	random,defend,wall,heavyfire	200	119	117
+subject	6	random,defend,wall,deepsaver	200	102	100
+subject	7	random,defend,farmer,heavyfire	200	96	93
+subject	8	random,defend,farmer,deepsaver	200	91	90
+subject	9	random,defend,heavyfire,deepsaver	200	74	73
+subject	10	random,antidef,wall,farmer	200	98	97
+subject	11	random,antidef,wall,heavyfire	200	87	86
+subject	12	random,antidef,wall,deepsaver	200	77	75
+subject	13	random,antidef,farmer,heavyfire	200	78	78
+subject	14	random,antidef,farmer,deepsaver	200	75	75
+subject	15	random,antidef,heavyfire,deepsaver	200	72	72
+subject	16	random,wall,farmer,heavyfire	200	107	106
+subject	17	random,wall,farmer,deepsaver	200	153	152
+subject	18	random,wall,heavyfire,deepsaver	200	82	82
+subject	19	random,farmer,heavyfire,deepsaver	200	68	68
+subject	20	defend,antidef,wall,farmer	200	93	90
+subject	21	defend,antidef,wall,heavyfire	200	78	78
+subject	22	defend,antidef,wall,deepsaver	200	65	64
+subject	23	defend,antidef,farmer,heavyfire	200	66	64
+subject	24	defend,antidef,farmer,deepsaver	200	60	60
+subject	25	defend,antidef,heavyfire,deepsaver	200	58	57
+subject	26	defend,wall,farmer,heavyfire	200	98	98
+subject	27	defend,wall,farmer,deepsaver	200	92	91
+subject	28	defend,wall,heavyfire,deepsaver	200	64	64
+subject	29	defend,farmer,heavyfire,deepsaver	200	58	58
+subject	30	antidef,wall,farmer,heavyfire	200	67	67
+subject	31	antidef,wall,farmer,deepsaver	200	71	71
+subject	32	antidef,wall,heavyfire,deepsaver	200	60	59
+subject	33	antidef,farmer,heavyfire,deepsaver	200	54	53
+subject	34	wall,farmer,heavyfire,deepsaver	200	54	54
+ctrl	0	random,defend,antidef,wall	200	6	6
+ctrl	1	random,defend,antidef,farmer	200	6	7
+ctrl	2	random,defend,antidef,heavyfire	200	10	10
+ctrl	3	random,defend,antidef,deepsaver	200	14	14
+ctrl	4	random,defend,wall,farmer	200	48	28
+ctrl	5	random,defend,wall,heavyfire	200	28	26
+ctrl	6	random,defend,wall,deepsaver	200	8	5
+ctrl	7	random,defend,farmer,heavyfire	200	37	37
+ctrl	8	random,defend,farmer,deepsaver	200	32	31
+ctrl	9	random,defend,heavyfire,deepsaver	200	23	23
+ctrl	10	random,antidef,wall,farmer	200	1	1
+ctrl	11	random,antidef,wall,heavyfire	200	9	9
+ctrl	12	random,antidef,wall,deepsaver	200	11	11
+ctrl	13	random,antidef,farmer,heavyfire	200	12	11
+ctrl	14	random,antidef,farmer,deepsaver	200	13	13
+ctrl	15	random,antidef,heavyfire,deepsaver	200	23	23
+ctrl	16	random,wall,farmer,heavyfire	200	25	22
+ctrl	17	random,wall,farmer,deepsaver	200	4	4
+ctrl	18	random,wall,heavyfire,deepsaver	200	15	15
+ctrl	19	random,farmer,heavyfire,deepsaver	200	25	25
+ctrl	20	defend,antidef,wall,farmer	200	5	5
+ctrl	21	defend,antidef,wall,heavyfire	200	13	13
+ctrl	22	defend,antidef,wall,deepsaver	200	10	11
+ctrl	23	defend,antidef,farmer,heavyfire	200	12	11
+ctrl	24	defend,antidef,farmer,deepsaver	200	22	22
+ctrl	25	defend,antidef,heavyfire,deepsaver	200	30	30
+ctrl	26	defend,wall,farmer,heavyfire	200	30	26
+ctrl	27	defend,wall,farmer,deepsaver	200	10	8
+ctrl	28	defend,wall,heavyfire,deepsaver	200	28	27
+ctrl	29	defend,farmer,heavyfire,deepsaver	200	30	30
+ctrl	30	antidef,wall,farmer,heavyfire	200	10	10
+ctrl	31	antidef,wall,farmer,deepsaver	200	11	11
+ctrl	32	antidef,wall,heavyfire,deepsaver	200	20	20
+ctrl	33	antidef,farmer,heavyfire,deepsaver	200	21	21
+ctrl	34	wall,farmer,heavyfire,deepsaver	200	17	16
