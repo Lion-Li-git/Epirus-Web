@@ -611,7 +611,7 @@ var NRBASE = 0;   /* §E464 父指针仍然解析不到图上任何一枚的枚�
  *   ELOG = 0 只有一条判据会用（拿固定 alpha 当对照组做 A/B），不是用户开关。 */
 var ELOG = 1;
 var EPROBE = 0;   /* §E467b 页内判据设成"每 N 条留一条"的步长；0 = 不收集探针 */
-var EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [] };
+var EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [], inked: 0 };
 /* ===== §E363 / §E367 时间倒挂的父边（用户 10-06 点名：e35prod807 比现役还早，父却写着现役）=====
  *   §E363 当时我给的诊断是"槽位节点的 ts 是进槽时刻，边是真的" —— **那个诊断是错的**，§E367 查翻了：
  *   现役那份权重（d490dc13）自己 META.ts = 09-27T08:55Z，最早可证的 git 实体是提交 3c17e23 @09-27T10:42Z，
@@ -663,6 +663,9 @@ var NSEL = 0;
 (function () { for (var i = 0; i < N; i++) { var v = P[i].sc;
   if (v === null || v === undefined || !isFinite(v)) continue; NSEL++; } })();
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '', ftab: 'multi',
+  elaw: 'attr',       /* §E673 谱系图线条叠加的法律：'log' = 每条线静态 alpha + 像素累加之后过对数表 ‖ 'attr' = "密度压进属性"（旧）。
+                         ⚑ 默认仍是 'attr'：页内那条 §E467 判据量的是"密度律 vs 固定 alpha"两帧之差，在 log 档两帧同一张图 ⇒ 必红，
+                           换默认要先把那条判据改指到"累加之后的剂量-反应"上（改判据 = 用户裁）。看图请显式写 #elaw=log */
   lgPos: null,        /* §E462 图例被拖到哪儿（相对 #wrap 的 CSS px）；null = 出厂那角 */
   sortBy: 'F',          /* E399 DS：一维图的排序轴 —— 'F' = F 名次（默认）‖ 'time' = 训出时刻。 */
   flo: 0, fhi: 1,       /* §E371 强度窗口的两端，存成"占全库 F 值域的比例"⇒ 出厂 (0,1) 就是全范围 */
@@ -1788,6 +1791,34 @@ function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, daySt
  *   ⚠ 血统边只有 133/717 枚能连上：「hotstartFrom」是**权重哈希** —— 这段注释里不能出现反引号：本文件的整段 JS
  *     注释里出现反引号会把字符串截断（第一版就是这么崩的 SyntaxError）⇒ 这段以后统一用「」而不是反引号。
  *     父往往是"当时的现役冠军"、那一枚后来被覆写没留档 ⇒ 81% 的包共用同一个查无此人的祖先 d13d3c85（这条本身就是个结论）。*/
+/* ===== §E673 线条"真对数叠加"的累加器与色调映射表（用户 10-20 下午：「试一下做真对数叠加的线条显示（好像要用啥GL缓冲区来着）」）=====
+ *   为什么这张表能代替"把密度压进每条线的属性"：Canvas 的 source-over 是**透射率相乘**，
+ *   所以叠了若干层之后的 A 满足 1−A = Π(1−αi) ⇒ 光密度 D = −ln(1−A) = Σ −ln(1−αi) **逐像素相加、与顺序无关**。
+ *   这就是字面上的"对数叠加"，而且它发生在像素上而不是在线上 ⇒ 一条线不会"因为蹭到密格就整条被拉暗"，
+ *   也不会有沿程渐变（旧法律那 5 个 stop 按曲线参数算、却用弦上的 createLinearGradient 铺色，弯边根本对不齐）。
+ *   色调映射的形状是**量出来定的**：目标是"孤立一条线的墨与旧法律的全 alpha 持平"，而密处只许按压缩增长。
+ *   旧法律靠"把密处每条线压暗"做到过"堆比单线还淡"（实测 Δ墨 68 vs 93）—— 真累加**做不到那一件事**（累加只会变深），
+ *   所以换成一条比纯对数还缓的曲线：ink = EK·(ln(1+n))^EP，解 EK=0.3625 ‖ EP=0.53 使
+ *   n=1 → .30 ‖ n=10 → .56 ‖ n=50 → .75 ‖ n=200 → .87（纯对数 EP=1 时 n=50 已 1.14 ⇒ 直接顶满，那就是"糊成板"）。
+ *   ⚠ 累加器是 **8 位画布** ⇒ D 顶到 a=254 就取不回来：按 ELA1=0.06 折算约 n≈90 条当量之后进入平台
+ *     （表现是"不再更黑"，不是"糊成一块板"）。要越过这条上界就得换**浮点累加缓冲**（WebGL2 的 RGBA16F + 加法混合，
+ *     本目录 gl-mesh.js 那套后端已经为"壳"开过这条路）⇒ 本班先把法律换对并留好 A/B 闸，GL 缓冲留给看图之后的第二次决定。
+ *   开关只走 hash（#elaw=log|attr）：**不加下拉** —— 浮层面板面积有闸（§E671 实测把图例加长就顶红 15% 那条）。 */
+var ELA1 = 0.06, ELA2 = 0.12, ELK = 0.3625, ELP = 0.53, ELCAP = 0.9961;
+var ECV = null, ELUT = null;
+function edgeLut() {
+  if (ELUT) return ELUT;
+  var d1 = -Math.log(1 - ELA1), L = new Uint8Array(256);
+  for (var a = 0; a < 256; a++) { var A = a / 255; if (A > ELCAP) A = ELCAP;
+    var n = (-Math.log(1 - A)) / d1;                     /* n = 折算成"几条单线"的当量 */
+    L[a] = Math.round(255 * Math.min(1, ELK * Math.pow(Math.log(1 + n), ELP))); }
+  ELUT = L; return L;
+}
+function edgeCtx(w, h) {
+  if (!ECV) { ECV = document.createElement('canvas'); ECV.width = w; ECV.height = h; }
+  else if (ECV.width !== w || ECV.height !== h) { ECV.width = w; ECV.height = h; }   /* 改尺寸会重置画布状态 ⇒ 调用方每次自己赋 lineWidth */
+  return ECV.getContext('2d', { willReadFrequently: true });   /* 每帧要 getImageData：不声明这个，Chrome 会走 GPU 回读那条慢路 */
+}
 function drawTree(fr) {
   var w = cv.width, h = cv.height, i;
   clear(w, h);
@@ -1927,7 +1958,7 @@ function drawTree(fr) {
   var EA0 = 0.30, ED0 = 25, EMIN = 0.03, EGRID = Math.max(10, Math.round(22 * devicePixelRatio));
   var NINF = 0   /* §DS②：路径推断来源的父边条数（与槽位接替/倒挂同型）*/
 var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
-  EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [] };
+  EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [], inked: 0 };
   if (st.edges !== 'off') {
     var EL = [];
     for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
@@ -2002,6 +2033,12 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
      *   重合处出现肉眼可见的**断口**（用户 10-08 10:5x 直接否掉：「这版不行，现在线条重合的部分反而出现了中断」）。
      *   分桶是省 stroke 的手段，不能拿它去改单条线的连续性 —— 连续性优先，回到 726 次 stroke。 */
     g.lineWidth = 1 * devicePixelRatio;
+    /* §E673 两条法律共用这一段的几何与探针，只在"落在哪张画布、alpha 怎么定"上分岔：
+     *   'log'（默认）= 每条线**静态 alpha**，画进离屏累加器，循环结束后逐像素过对数表再合成回来；
+     *   'attr'（旧）= 沿线 5 格查密度、alpha = 基准×min(1,ED0/d)、渐变 strokeStyle，直接画在主画布。 */
+    var ELOG_ON = (st.elaw !== 'attr'), EX = null;
+    if (ELOG_ON) { EX = edgeCtx(w, h); EX.clearRect(0, 0, w, h); EX.lineWidth = 1 * devicePixelRatio; }
+    var GT = ELOG_ON ? EX : g;
     for (var e2 = 0; e2 < EL.length; e2++) { var A2 = EL[e2][0], B2 = EL[e2][1], C2 = EL[e2][2], bs = EL[e2][3], kd = EL[e2][4];
       /* §E467c 密度取在**曲线沿线的五个位置**上，一次 stroke 画完（渐变 strokeStyle）：
        *   上一版把整条边取一个均值 ⇒ 一条长线只要蹭到扇根那一格，整条被拉到地板（用户 10-08 11:0x：
@@ -2015,8 +2052,8 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
         var my = i0 * i0 * PA2[1] + 2 * i0 * t0 * PC2[1] + t0 * t0 * PB2[1];
         var mi = PCIX(mx, my);
         var dn = GC[mi] > 1 ? GC[mi] : 1;
-        var al2 = ELOG ? bs * Math.min(1, ED0 / dn) : bs;
-        if (al2 < EMIN) al2 = EMIN;   /* 地板只管"埋在堆里的那一段"；疏处的 alpha 由自己那一格的密度决定 */
+        var al2 = ELOG_ON ? (kd === 1 ? ELA2 : ELA1) : (ELOG ? bs * Math.min(1, ED0 / dn) : bs);
+        if (!ELOG_ON && al2 < EMIN) al2 = EMIN;   /* 地板只管"埋在堆里的那一段"；疏处的 alpha 由自己那一格的密度决定 */
         if (al2 < EDGR.amin) EDGR.amin = al2; if (al2 > EDGR.amax) EDGR.amax = al2;
         AL5.push(al2); }
       EDGR.segs++;
@@ -2037,17 +2074,25 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
           var vy = iu * iu * PA2[1] + 2 * iu * tu * PC2[1] + tu * tu * PB2[1];
           pp.push(ux, uy, GC[PCIX(vx, vy)]); }
         EDGR.probe.push({ pts: pp, al: AL5[2], al5: AL5.slice(), id: EL[e2][5] }); }
-      var gr = g.createLinearGradient(A2[0], A2[1], B2[0], B2[1]);
-      for (var s3 = 0; s3 < 5; s3++) gr.addColorStop(ST5[s3], 'rgba(' + col3 + ',' + AL5[s3].toFixed(3) + ')');
+      if (!ELOG_ON) { var gr = g.createLinearGradient(A2[0], A2[1], B2[0], B2[1]);
+        for (var s3 = 0; s3 < 5; s3++) gr.addColorStop(ST5[s3], 'rgba(' + col3 + ',' + AL5[s3].toFixed(3) + ')'); }
       /* §E363 倒挂边（父的 ts 晚于子）虚线 + 琥珀；§E378 接替边点线 + 灰：连的都是"槽位接替"，不是谁生了谁。
        *   §E487 融合的第二父边（kd=3，紫）**走实线**：它是一条真血统（这枚确实是那两枚的平均），
        *   只是"不是热启动" —— 用颜色分辨就够了，再加虚线会让人读成"这条更不可信"。 */
-      g.save();
-      if (kd && kd !== 3) g.setLineDash([4 * devicePixelRatio, 4 * devicePixelRatio]);   /* §DS②：只留一种虚线 */
-      g.strokeStyle = gr;
-      g.beginPath(); g.moveTo(A2[0], A2[1]); g.quadraticCurveTo(C2[0], C2[1], B2[0], B2[1]); g.stroke();
-      g.restore(); }
-    g.strokeStyle = 'rgba(120,200,255,' + EA0.toFixed(2) + ')'; }
+      GT.save();
+      if (kd && kd !== 3) GT.setLineDash([4 * devicePixelRatio, 4 * devicePixelRatio]);   /* §DS②：只留一种虚线 */
+      /* §E673 新法律：**一条线一个静态 alpha**（沿程不渐变 ⇒ 你点的"一根长线不同位置亮度不同"从根上去掉；
+       *   密不透的差别交给累加之后的那张对数表按**像素**处理，而不是按"这条线蹭到了哪一格"处理）*/
+      GT.strokeStyle = ELOG_ON ? ('rgba(' + col3 + ',' + AL5[0].toFixed(3) + ')') : gr;
+      GT.beginPath(); GT.moveTo(A2[0], A2[1]); GT.quadraticCurveTo(C2[0], C2[1], B2[0], B2[1]); GT.stroke();
+      GT.restore(); }
+    if (ELOG_ON && EX) {   /* 累加完了才压暗：逐像素 A → 对数表里的墨，再一次性合成回主画布 */
+      var EIM = EX.getImageData(0, 0, w, h), EPX = EIM.data, ELT = edgeLut(), NHIT = 0;
+      for (var q4 = 3; q4 < EPX.length; q4 += 4) { var av4 = EPX[q4]; if (av4) { EPX[q4] = ELT[av4]; NHIT++; } }
+      EX.putImageData(EIM, 0, 0);
+      EDGR.inked = NHIT;
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.drawImage(ECV, 0, 0); g.restore(); }
+    if (!ELOG_ON) g.strokeStyle = 'rgba(120,200,255,' + EA0.toFixed(2) + ')'; }
   /* §E464 这里原来是 §E442 那台「RUNNER-BASE 锚 + 467 条灰雾边」—— 它建在 §E314 的一条**错判**上：
    *   那遍 hunt 只按「文件里那份数组」的哈希找 d13d3c85，而训练服务记父时用的是**嵌入成 v7 之后**那份数组的
    *   指纹（FEAT_S 123→213 ⇒ 3337→5689 ⇒ 哈希必变）⇒ 找不着就判成「盘上无此包」。
@@ -3643,6 +3688,7 @@ var CHKDETAIL = 0;
     /* §E462 浮层位置也走深链 ⇒ 无头复验能钉住「图例被拖到 (x,y) 之后画面与判据都对」这一态（认不出就不动）*/
     if (kv[0] === 'lgpos' || kv[0] === 'cardpos' || kv[0] === 'sidepos') { var lp = kv[1].split(',');
       if (lp.length === 2 && isFinite(+lp[0]) && isFinite(+lp[1])) st[kv[0] === 'lgpos' ? 'lgPos' : kv[0] === 'cardpos' ? 'cardPos' : 'sidePos'] = [+lp[0], +lp[1]]; }
+    if (kv[0] === 'elaw' && (kv[1] === 'log' || kv[1] === 'attr')) st.elaw = kv[1];   /* §E673 A/B 用：#elaw=attr 回到旧法律 */
     if (kv[0] === 'edges' && (kv[1] === 'all' || kv[1] === 'hash' || kv[1] === 'off')) {
       st.edges = kv[1]; document.getElementById('edges').value = kv[1]; }
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
