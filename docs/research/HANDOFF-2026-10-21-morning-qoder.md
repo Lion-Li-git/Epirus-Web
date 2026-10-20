@@ -4,6 +4,9 @@
 > `git rev-parse --short research/prior-style-2026-10-20-qoder` ‖ `git status -sb`（本地 main 与 origin 是否同点）‖
 > CI：`mcp__githubdirect__actions_list {method:"list_workflow_runs", owner:"Lion-Li-git", repo:"Epirus-Web", workflow_runs_filter:{branch:"main"}}`
 > **分支已推**（`research/prior-style-2026-10-20-qoder`）；**main 我没推、没 promote、没动那两颗线上槽、没开 PR**。
+>
+> ⚑ **早班续（07:0x 起，用户新给的两条假设）= 日志 §E676**：前提尺已量（她第一句成立）、第二句的答案早在册（§E597），
+> 新加一根默认关的旋钮 `EPIRUS_TOOLKIT_OPPS` 并发 20 臂 ⇒ **两条干预的读数都没越过同档跨 seed 的地板**（详见 §五 的落点与 §三 第 5 条待裁）。
 
 ## 一、夜班做成了什么
 
@@ -36,7 +39,7 @@
 省下的东西确实没变成进攻（伤害/局 Δ 中位 ≤0.35），但也**没变成蓄能**（Δ 中位 0，多数臂 0.00）——它更像是**直接不做了**（戒盾）。
 如果还想追这个假设，下一步不在先验档上，而在"给训练一个**必须花掉这笔 ep**的理由"——那是规则/奖励层，超出我这晚的授权面。
 
-## 三、等你的裁定（4 条，都不长）
+## 三、等你的裁定（5 条，都不长）
 
 1. **T1 行带上界的牙**（你裁的 #8 后半）：**实测过没有牙**——我把 `BAND_DL_MAX` 放开到 60 且把 `BAND_DL` 设到 60，重烘后 `--part=ship-pool` 1/1 绿、页内自检 **94 PASS / 0 FAIL**（01:08）⇒ 现在这个钳**删掉也不会红**。方案是往页内自检加一条"ΔL\* ∈ [1,12.5]"（判行为不判实现），断言数 94→95，**门数不变**。要不要加？
 2. **T2 训练侧先验的牙**：`grep -rn EPIRUS_SUPPORT_PRIOR tools/gates/` = 零命中。**变异实测两半都做了**（01:1x，跑完已还原、`git status` 干净）：
@@ -47,8 +50,12 @@
    要么显式钉 0（与历史在册读数同口径），要么明确"门里就按产品档跑"（贴近线上但与旧读数断代）。这条我不敢替你选，它决定的是**以后所有在册读数的口径**。
 4. **窄窗口那条连线判据**（下午量的，00:36 又复现一次）：`--hash="mode=map&ftab=long&flo=0.715&fhi=0.887&check=1"` 下 **93 PASS / 1 FAIL**，全范围态是 94/0。
    分母问题（那一态只剩 94 条边），我倾向把它改成"判不动"而不是红；**要改判据语义，等你裁**。
+5. **早班新加的这根对手旋钮要不要给它一条腿**（§E676）：`EPIRUS_TOOLKIT_OPPS`（把杂货铺放上训练桌，默认关）现在**没有腿** ⇒ 改坏它不会红，
+   而同族的 `EPIRUS_COUNTER_OPPS`/`EPIRUS_ECON_OPPS` 各有自己的 `D130`/`D220`。判据形状四件都现成（默认关 ⇒ `OPPS` 一字不变 ‖ 份额印出来 ‖
+   产物 `recipe.toolkitOpps` 自证 ‖ 坏值 `exit 4`，全部已在 `archive/2026-10-21-toolkit-drop/arms/*.log.txt` 里复算过）。
+   按"加一条要删一条"，这一条与 T1/T2 一起裁 —— **我没加，等你点头**。
 
-## 四、给 DS 的四条（都验证过，不是猜）
+## 四、给 DS 的六条（都验证过，不是猜）
 
 1. **CHANGELOG 只印了 multi 那一档**：同一批产物里 long 档是 **Δ+3.27（6/10 正号）**，方向与 multi 相反。两档都在每份池桌表的机器可读行里 ⇒ 不是我没跑，是没印。合起来才是"判不动"的正解。
 2. **那批 A/B 的证据只在 `docs/artifacts/sp20/`（gitignore 下），且没写尺子名**：我已经把只读副本 + 分析器补进仓（`archive/2026-10-20-support-prior-ab/`），**原件与你的结论一个字没改**。
@@ -68,6 +75,9 @@
 - 读数与脚本：`docs/research/archive/2026-10-20-prior-style/`（`origins.tsv` 有 7 枚起点的 wid ‖ `per-pack-readings.tsv` 逐包绝对值 ‖ `strength-pool.tsv` 有同桌签名核对 ‖ `raw/` 是原始尺输出）
 - 训练产物与日志：`docs/artifacts/e675-out/`（**gitignore 里**，中间 band 产物我 00:5x 删了 282 个文件，理由见日志 §E675 补二那条 D191 红账）
 - 研究日志：`docs/research/logs/2026-10-18-beadseed82-qoder.md` 的 §E675 / §E675 补 / §E675 补二
+- **早班 §E676（07:0x 之后）**：读数与脚本在 `docs/research/archive/2026-10-21-toolkit-drop/`（`README.md` 带四条口径与两条已知限制 ‖
+  `raw/` 有前提尺、四张尺表、配对分析与去重点名行 ‖ `arms/` 是 20 份臂日志原件）‖ 产物在 `docs/artifacts/e676-out/`（gitignore）‖
+  正文在同一份日志的 **§E676 一~五**。
 - 门禁：**只跑改动面** ⇒ `--part=meta-repo` 12/12、`--part=meta-lint` 4/4、`--part=ship-pool` 1/1（工具原话都是"这不是全量门禁，不许当整轮全绿引用"）‖ 页内自检全范围态 94 PASS / 0 FAIL。
 - ⚠ **我这几笔没有整轮证据**：`.github/workflows/gates.yml:55-59` 的触发是 `push: branches:[main]` ‖ `pull_request` ‖ `workflow_dispatch` ⇒ **推 research 分支不跑 CI**，而我不开 PR、不自作主张起 `workflow_dispatch`（那是共享面板上看得见的动作）。
   要整轮认证只有两条路：① 你说一声我起一次 dispatch 指到这个分支；② 合并到 main 之后看 CI run 号。

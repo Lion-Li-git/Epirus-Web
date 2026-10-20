@@ -1,0 +1,4 @@
+2026-10-20T23:22:32.573Z	492b77d8516e82b6	docs/artifacts/v7beadseed-82.bak	docs/artifacts/e676-out/e676-beadseed-tk-s88011.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-10-20T23:22:55.020Z	03e49f1773bdbb6d	docs/artifacts/e675-out/beadseed-p2.js	docs/artifacts/e676-out/e676-beadseed-base-s88010.js	train-3p	未复制：同一粒权重已有真身
+2026-10-20T23:25:08.861Z	c6e9f4ec0ed55641	docs/artifacts/e675-out/teach-p2-s88011.js	docs/artifacts/e676-out/e676-teach-base-s88011.js	train-3p	未复制：同一粒权重已有真身
+2026-10-20T23:25:29.827Z	006d8023fd6adf19	docs/artifacts/e675-out/teach-p2.js	docs/artifacts/e676-out/e676-teach-base-s88010.js	train-3p	未复制：同一粒权重已有真身
