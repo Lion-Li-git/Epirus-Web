@@ -11,7 +11,7 @@
 | **某枚包的送盾体检** | `holo.tsv` | 列：`id ok H rank holoPerGame holoOther giftShare overCap` ‖ **`holoOtherPrior2` = 开档 2 的口径**（页面默认，`promscan` 优先用它） |
 | **某枚包能不能上槽** | `promote.tsv` | `--run-promote` 的落盘结果（`pass` / `block` + 原因） |
 | **某个包打起来是什么风格** | `e588-usage-*.tsv` | **每局出手次数**：`snipe defense defenseShare holo guard reflect bigT miniT gun railgun charge ring ji atkShare rounds`；四张 = `multi/long` × `ε=0/0.2` |
-| **池成员谁广、谁刷盾**（选池界面看不见的两列） | `pool-traits.tsv` | 每枚一行：`Hplong Geff distinctKeys holo裸包 holo开档2 charges rounds noThreatStance 广度过线 送盾偏高`。由 `node champion-map/pool-traits.mjs` 生成。**两列 holo 都印**（coords 的 `holo` 是裸包，产品开档 2 后走 `holoOtherPrior2`）—— 只印裸包会把 `v7beadseed-82` 读成 16 次/局（它开档后 5.4） |
+| **池成员谁广、谁刷盾**（选池界面看不见的两列） | `pool-traits.tsv` | 每枚一行：`Hplong Geff distinctKeys holo裸包 holo开档2 charges(蓄能，不是环) rounds noThreatStance 广度过线 送盾偏高`。由 `node champion-map/pool-traits.mjs` 生成。**两列 holo 都印**（coords 的 `holo` 是裸包，产品开档 2 后走 `holoOtherPrior2`）—— 只印裸包会把 `v7beadseed-82` 读成 16 次/局（它开档后 5.4） |
 | **攒 ep 的时机**（环/ジ 在什么局面用） | `usage-buckets-2026-10-20.tsv` | 四格 = **能不能开环（自己 ep≥3）× 这一回合挨没挨打**（挨打从事件流事后读，不猜）；每格给环/ジ 占比。由 `behavior-profile --buckets=1` 生成。**key 读数：long 档 `Pearson(环@有ep·安全, 混合桌胜率) = +0.76`，但对官方尺 `Hplong` 只有 +0.11（见 `FINDING-2026-10-20-ring-payoff-ds.md` §十的口径更正）** |
 | **考卷/尺的读数** | `eNNN-epsfull.tsv`、`eNNN-ruler*.tsv` | 按实验编号命名，**编号 = 研究日志里的 §E 编号** |
 | **对打结果** | `duel*.tsv` | `duel-run.mjs` 产出 |

@@ -44,7 +44,7 @@ for (const c of pm.slice(1)) {
   if (!g) { rows.push({ id: o.id, tier: o.tier, miss: true }); continue; }
   rows.push({
     id: o.id, tier: o.tier, holoP2: holoPrior2.has(o.id) ? holoPrior2.get(o.id) : null,
-    hplong: num(g.Hplong), geff: num(g.Geff), keys: num(g.distinctKeys),
+    hplong: num(g.Hplong), hp: num(g.Hp), geff: num(g.Geff), keys: num(g.distinctKeys),
     holo: num(g.holo), charges: num(g.charges), rounds: num(g.rounds), noThreat: num(g.noThreatStance),
     miss: false
   });
@@ -52,12 +52,17 @@ for (const c of pm.slice(1)) {
 const okRows = rows.filter(r => !r.miss && r.geff !== null);
 const gm = (k) => { const v = okRows.map(r => r[k]).filter(x => x !== null); return v.reduce((s, x) => s + x, 0) / v.length; };
 const GH = gm('holo'), GG = gm('geff');
-const H = ['id','tier','Hplong','Geff','distinctKeys','holo裸包','holo开档2','charges(环/局)','rounds','noThreatStance','广度过线','送盾偏高(按产品口径)'];
+/* v1.7.126（用户 10-20）：加 `gap = Hplong − Hp` —— **长/短程特化**的单一读数。
+ *   `G12H1` 是极端例：gap **+23.1**（Hp 44.8 → Hplong 67.9）。正 = 长程特化，负 = 短程特化。 */
+const H = ['id','tier','Hplong','Hp','gap(长−短)','特化','Geff','distinctKeys','holo裸包','holo开档2','charges(蓄能/局)','rounds','noThreatStance','广度过线','送盾偏高(按产品口径)'];
 const out = [H.join('\t')];
 for (const r of rows.sort((a, b) => (b.hplong ?? -1) - (a.hplong ?? -1))) {
   if (r.miss) { out.push([r.id, r.tier, '', '', '', '', '', '', '', '缺 coords', ''].join('\t')); continue; }
   out.push([r.id, r.tier,
-    r.hplong === null ? '' : r.hplong.toFixed(1), r.geff === null ? '' : r.geff.toFixed(2),
+    r.hplong === null ? '' : r.hplong.toFixed(1), r.hp === null ? '' : r.hp.toFixed(1),
+    (r.hplong === null || r.hp === null) ? '' : (r.hplong - r.hp).toFixed(1),
+    (r.hplong === null || r.hp === null) ? '' : ((r.hplong - r.hp) >= 8 ? '长程特化' : ((r.hplong - r.hp) <= -3 ? '短程特化' : '')),
+    r.geff === null ? '' : r.geff.toFixed(2),
     r.keys === null ? '' : r.keys.toFixed(1), r.holo === null ? '' : r.holo.toFixed(2),
     r.holoP2 === null ? '' : r.holoP2.toFixed(2),
     r.charges === null ? '' : r.charges.toFixed(2), r.rounds === null ? '' : r.rounds.toFixed(1),
