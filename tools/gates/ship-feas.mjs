@@ -321,17 +321,26 @@ t('D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证"band2 被 hil
   /* ⑦ 行为：迷你臂开栏 ⇒ 必须真跑出那一栏（默认关的逐位不变另有实测：HEAD 对照跑权重同为 f256cb100f） */
   const dir = mkdtempSync(join(tmpdir(), 'd124-'));
   const out = join(dir, 'tb-out.js');
+  const __t0 = Date.now();
   const run = spawnSync(process.execPath, ['tools/train-best.mjs', '1', '4'], {
     env: Object.assign({}, process.env, { EPIRUS_SEED: '31', EPIRUS_TB3P: '1', EPIRUS_TB3P_GAMES: '20', EPIRUS_TB_OUT: out, EPIRUS_ARM: 'd124' }),
     encoding: 'utf8', timeout: 600000,
   });
+  const __ms = Date.now() - __t0;
   const so = String(run.stdout || '') + String(run.stderr || '');
+  /* v1.7.124（千问 §E674「别起并发批去追，让它自己红一次带证据」）：红的时候**把全文落盘** ——
+   *   400 字尾巴只够判"崩了还是没跑"，判不了"崩在哪"。落到 gitignore 的 `docs/artifacts/` 下，不污染库。 */
+  if (run.status !== 0 && run.status !== 9) {
+    try { writeFileSync('docs/artifacts/feas-d124-last.txt', '## exit=' + run.status + (run.error ? ' error=' + run.error.code : '') + ' ms=' + __ms + '\n\n' + so); } catch (e) { void e; }
+  }
   /* 10-19 下午：这条腿在册的并发红（12/14）复现不出来，而它的失败文案只写"输出无该行"——**下一班拿不到任何东西**。
    *   真正有信息量的那条断言（下面 exit= 那行）永远轮不到跑：前面这条先红、整条腿就短路了。
    *   ⇒ 把 exit 码与输出尾巴挪进**这条**的文案里（只加文案，判据一字未动）。 */
   ok(/\[3P栏 n=20[\/]/.test(so), '开了 EPIRUS_TB3P 必须真跑 3P 栏并打印读数（实测输出无该行 = 又一处死作用点'
     + ' ‖ exit=' + run.status + (run.error ? ' ‖ error=' + run.error.code : '')
-    + ' ‖ stdout ' + String(run.stdout || '').length + ' 字 ‖ stderr 末尾：' + String(run.stderr || '').slice(-400) + '）');
+    + ' ‖ stdout ' + String(run.stdout || '').length + ' 字 ‖ 耗时 ' + __ms + 'ms'
+    + (run.status !== 0 && run.status !== 9 ? ' ‖ **全文已落 docs/artifacts/feas-d124-last.txt**' : '')
+    + ' ‖ stderr 末尾：' + String(run.stderr || '').slice(-400) + '）');
   ok(run.status === 0 || run.status === 9, '只许两种收场：0=有合格候选并择优、9=全否决响亮退出（实测 exit=' + run.status + '）\n' + so.slice(-500));
   /* v1.7.74 · gate-sentinel ③ 分诊：响亮 = **exit 9**（那半句判的就是它）；原钉的是解释那句话的措辞 ⇒ 改成「必须出声」。 */
   if (run.status === 9) ok(String(so).trim().length > 0, 'exit 9 时必须**出声**（响亮失败）；具体措辞不判');

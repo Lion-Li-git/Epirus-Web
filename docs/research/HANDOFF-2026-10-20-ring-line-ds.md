@@ -11,7 +11,7 @@
 | 2 | **实测同向**：强制连开 `G12H1` ⇒ 38.0→**52.5**(K=2)/**53.5**(K=3)，K=4 回落到 47.5 | `tools/probe-ring-curve.mjs --arm=streak` |
 | 3 | **收益是环特有的**：同一决策点换成ジ ⇒ 38.0→**9.5%**（−28.5pt） | `--arm=ji`（对照臂） |
 | 4 | **替它决定"何时起手"会崩**：按"上一回合没挨打 + ep≥3"强制起手 ⇒ 38.0→**17.5%**（−20.5pt） | `--arm=start` |
-| 5 | **⭐ 选池盲区**：`Pearson(环@有ep·安全, 胜率)`：multi **−0.150** ‖ long **+0.758**；而池按 multi 的 H 分档 ⇒ **hard 13 里 7 枚 long 环率 = 0%**，最高的 `v7bead3-82`(50%) 在 **soft** | `usage-buckets-2026-10-20.tsv` ‖ `promote-champion` 的 `[long·仅记录]` 行 |
+| 5 | **⭐ 选池盲区**：`Pearson(环@有ep·安全, 胜率)`：multi **−0.150** ‖ long **+0.758**；而池按 multi 的 H 分档 ⇒ **hard 13 里 7 枚 long 环率 = 0%**，最高的 `v7bead3-82`(50%) 在 **soft** ‖ ⚠ **口径更正（见 `FINDING-…ring-payoff-ds.md` §十）**：`+0.758` 是**混合桌胜率**上的；换成官方尺 `Hplong` 只有 **+0.110**，且 `SP-s30`（环 0%）Hplong 55.4 > `v7bead3-82`（环 50%）43.6 ⇒ **环率不是 `Hplong` 的解释变量** | `usage-buckets-2026-10-20.tsv` ‖ `promote-champion` 的 `[long·仅记录]` 行 |
 
 ## 二、为什么"连开"只对一枚有效
 
