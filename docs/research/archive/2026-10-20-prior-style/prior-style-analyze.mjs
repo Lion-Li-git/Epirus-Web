@@ -19,7 +19,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..', '..', '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const OUT = arg('out', join(HERE, 'prior-style-paired.tsv'));
-const SEEDS = ['88010', '88011'];
+const SEEDS = String(arg('seeds', '88010,88011,88012')).split(',');
 const ORIGINS = ['teach', 'beadseed', 'bead15', 'wall34', 'lctl', 'k1', 'gs82'];
 
 /* ---- champ-audit：列顺序照 tools/champ-audit.mjs:101-124 的打印顺序，逐格数出来 ---- */
@@ -30,7 +30,7 @@ const ORIGIN_KEY = { 'v7teach-32': 'teach-起点', 'v7beadseed-82': 'beadseed-�
 const normKey = (s) => { const k = s.replace('e675-out/', '').replace('docs/artifacts/', '').replace('eval-out/', '').replace(/\.(js|bak)$/, ''); return ORIGIN_KEY[k] || k; };
 function parseAudit(mode) {
   const out = {};
-  for (const fn of ['champ-audit-' + mode + '-18.txt', 'champ-audit-' + mode + '-origins.txt', 'champ-audit-' + mode + '-b2.txt', 'champ-audit-' + mode + '-big.txt']) {
+  for (const fn of ['champ-audit-' + mode + '-18.txt', 'champ-audit-' + mode + '-origins.txt', 'champ-audit-' + mode + '-b2.txt', 'champ-audit-' + mode + '-b3.txt', 'champ-audit-' + mode + '-big.txt']) {
     const f = join(HERE, 'raw', fn);
     if (!existsSync(f)) { console.log('⚠ 缺 ' + fn + ' ⇒ 这一路读数不进表'); continue; }
     for (const line of readFileSync(f, 'utf8').split(/\r?\n/)) {
@@ -48,7 +48,7 @@ function parseAudit(mode) {
 /* ---- gift-readout：同一份 tsv 里带"关档"与"开档 2"两把读数 ---- */
 function parseGift(mode) {
   const out = {};
-  for (const fn of ['gift-readout-' + mode + '-all.tsv', 'gift-readout-' + mode + '-b2.tsv']) {
+  for (const fn of ['gift-readout-' + mode + '-all.tsv', 'gift-readout-' + mode + '-b2.tsv', 'gift-readout-' + mode + '-b3.tsv']) {
     const f = join(HERE, fn);
     if (!existsSync(f)) { console.log('⚠ 缺 ' + fn + ' ⇒ 那一批的送盾读数不进表'); continue; }
     for (const line of readFileSync(f, 'utf8').replace(/^\uFEFF/, '').trim().split(/\r?\n/)) {
@@ -113,8 +113,11 @@ for (const m of ['multi', 'long']) {
         perOrigin.push({ o, v: median(ds), sign: allZero ? 0 : (allPos ? 1 : (allNeg ? -1 : 2)), detail: ds.map(x => (x > 0 ? '+' : '') + x.toFixed(2)).join('/'), spread: Math.max(...ds) - Math.min(...ds) });
       }
       for (const p of ['p0', 'p2']) {
-        const x = lookup(m, o, p, SEEDS[0], d), y = lookup(m, o, p, SEEDS[1], d);
-        if (x !== null && y !== null) drift.push(Math.abs(y - x));
+        /* 漂移要按**全部 seed 两两组合**量，不是只前两粒（第一版写死 SEEDS[0]/[1] ⇒ 加了第三粒后漂移被低估） */
+        for (let i = 0; i < SEEDS.length; i++) for (let j = i + 1; j < SEEDS.length; j++) {
+          const x = lookup(m, o, p, SEEDS[i], d), y = lookup(m, o, p, SEEDS[j], d);
+          if (x !== null && y !== null) drift.push(Math.abs(y - x));
+        }
       }
     }
     if (!perOrigin.length) { lines.push([d, 0, '读不出（分母 0）', '', '', '**读不出**', drift.length ? median(drift).toFixed(2) : ''].join('\t')); continue; }
@@ -126,9 +129,11 @@ for (const m of ['multi', 'long']) {
     const 松n = neg >= 3 && pos === 0 && mixed === 0;
     const verdict = 严 ? '**稳定上移（严档也过）**' : (松 ? '**稳定上移（只在松档：另有 ' + zero + ' 枚无位移）**'
       : 严n ? '**稳定下移（严档也过）**' : (松n ? '**稳定下移（只在松档：另有 ' + zero + ' 枚无位移）**'
-        : (pos + neg === 0 ? '无位移' : '判不动（反号 ' + neg + ' ‖ 两 seed 内部不一致 ' + mixed + '）')));
+        : (pos + neg === 0
+          ? (mixed > 0 ? '**判不动（每枚起点自己几粒 seed 就互相矛盾：' + mixed + ' 枚）**' : '无位移（' + zero + ' 枚全为 0）')
+          : '判不动（反号 ' + neg + ' ‖ 起点内部不一致 ' + mixed + ' ‖ 无位移 ' + zero + '）')));
     lines.push([d, avail, perOrigin.map(r => r.o + ' ' + (r.v > 0 ? '+' : '') + r.v.toFixed(2) + '[' + r.detail + ']').join(' ‖ '),
-      pos, neg + (mixed ? '（另有两 seed 不一致 ' + mixed + '）' : '') + (zero ? '（无位移 ' + zero + '）' : ''), verdict, drift.length ? median(drift).toFixed(2) : ''].join('\t'));
+      pos, neg + (mixed ? '（另有起点内部不一致 ' + mixed + '）' : '') + (zero ? '（无位移 ' + zero + '）' : ''), verdict, drift.length ? median(drift).toFixed(2) : ''].join('\t'));
   }
 }
 /* ---- 强度闸：池桌主体席的配对差（vs 同一参照），逐包 + 逐起点 ---- */
