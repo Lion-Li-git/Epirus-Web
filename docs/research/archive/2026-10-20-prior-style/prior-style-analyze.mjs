@@ -20,17 +20,18 @@ const ROOT = resolve(HERE, '..', '..', '..', '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const OUT = arg('out', join(HERE, 'prior-style-paired.tsv'));
 const SEEDS = String(arg('seeds', '88010,88011,88012')).split(',');
-const ORIGINS = ['teach', 'beadseed', 'bead15', 'wall34', 'lctl', 'k1', 'gs82'];
+const ORIGINS = ['teach', 'beadseed', 'bead15', 'wall34', 'lctl', 'k1', 'gs82', 'mix31', 'ss114', 'sty35', 't8s110', 'v7a31', 'v7ws1', 'v7f2t', 'v932'];
 
 /* ---- champ-audit：列顺序照 tools/champ-audit.mjs:101-124 的打印顺序，逐格数出来 ---- */
 const COLS = ['考卷1st', '严胜', '伤害/局', '重击/局', '盾/局(放)', '零伤害率', '平局率', '回合', '反弹墙1st',
   '摆架势', '被集火还手', 'F回合', '有效技能数', '种类', '座位极差', '反弹墙伤害/局', '蓄能/局', '珠浪费', '混合场', '对被动'];
 /* 起点包与产物包用同一套短名（否则两张表并不到一行） */
-const ORIGIN_KEY = { 'v7teach-32': 'teach-起点', 'v7beadseed-82': 'beadseed-起点', 'v7bead15-93': 'bead15-起点', 'v7wall-34': 'wall34-起点', 'win-Lctl': 'lctl-起点', 'Lctl': 'lctl-起点', 'e234-out/K1': 'k1-起点', 'e514-out/G-s82': 'gs82-起点' };
+const ORIGIN_KEY = { 'v7teach-32': 'teach-起点', 'v7beadseed-82': 'beadseed-起点', 'v7bead15-93': 'bead15-起点', 'v7wall-34': 'wall34-起点', 'win-Lctl': 'lctl-起点', 'Lctl': 'lctl-起点', 'e234-out/K1': 'k1-起点', 'e514-out/G-s82': 'gs82-起点',
+  'mix-31': 'mix31-起点', 'e521-out/S-s114': 'ss114-起点', 'sty-35': 'sty35-起点', 'e521-out/T-s110': 't8s110-起点', 'v7a-31': 'v7a31-起点', 'v7press3-31': 'v7ws1-起点', 'v7f2t-31': 'v7f2t-起点', 'v9-32': 'v932-起点' };
 const normKey = (s) => { const k = s.replace('e675-out/', '').replace('docs/artifacts/', '').replace('eval-out/', '').replace(/\.(js|bak)$/, ''); return ORIGIN_KEY[k] || k; };
 function parseAudit(mode) {
   const out = {};
-  for (const fn of ['champ-audit-' + mode + '-18.txt', 'champ-audit-' + mode + '-origins.txt', 'champ-audit-' + mode + '-b2.txt', 'champ-audit-' + mode + '-b3.txt', 'champ-audit-' + mode + '-big.txt']) {
+  for (const fn of readdirSync(join(HERE, 'raw')).filter(x => new RegExp('^champ-audit-' + mode + '-.*\\.txt$').test(x)).sort()) {
     const f = join(HERE, 'raw', fn);
     if (!existsSync(f)) { console.log('⚠ 缺 ' + fn + ' ⇒ 这一路读数不进表'); continue; }
     for (const line of readFileSync(f, 'utf8').split(/\r?\n/)) {
@@ -48,7 +49,7 @@ function parseAudit(mode) {
 /* ---- gift-readout：同一份 tsv 里带"关档"与"开档 2"两把读数 ---- */
 function parseGift(mode) {
   const out = {};
-  for (const fn of ['gift-readout-' + mode + '-all.tsv', 'gift-readout-' + mode + '-b2.tsv', 'gift-readout-' + mode + '-b3.tsv']) {
+  for (const fn of readdirSync(HERE).filter(x => new RegExp('^gift-readout-' + mode + '-.*\\.tsv$').test(x)).sort()) {
     const f = join(HERE, fn);
     if (!existsSync(f)) { console.log('⚠ 缺 ' + fn + ' ⇒ 那一批的送盾读数不进表'); continue; }
     for (const line of readFileSync(f, 'utf8').replace(/^\uFEFF/, '').trim().split(/\r?\n/)) {
