@@ -301,7 +301,18 @@ export function pickBestByExam(cands, opts) {
  *      否则这根键会在没有任何证据的情况下动判定，而下游只看得到"这臂跑过了"（= 永绿假守卫，§E198 同族）；
  *   ② 换人必须被记下来（`tieBrokenBy:'usage'`），门才钉得住"排序键真咬到"。
  * `usageOf(e)` 由调用点给（train-3p 用 `behavior-profile.fieldProfile`，与 `SEL_KEEP_CAL=plain` 同一把尺）。 */
-export function bandPickByUsage(entries, tolPt, usageOf) {
+/* v1.7.125（用户 10-20 裁定「带内不换人」）：**分差落进同分带就保留现役**，不再由 divNorm/usage 仲裁。
+ *   动因：`runs` 实测「加粒数只稳住榜、当选身份仍由带内那 7 枚的非-sc 仲裁决定」⇒ 仲裁规则才是抽签来源。
+ *   `incumbentId` 可选（旧调用点不传 = 行为逐字不变）。带内找不到现役 ⇒ 照旧按 usage/land 选。 */
+function __inBand(band, incumbentId) {
+  if (!incumbentId) return null;
+  for (const e of band) {
+    const k = e && (e.id != null ? e.id : (e.pack != null ? e.pack : e.name));
+    if (k != null && String(k) === String(incumbentId)) return e;
+  }
+  return null;
+}
+export function bandPickByUsage(entries, tolPt, usageOf, incumbentId) {
   const list = (entries || []).filter(function (e) { return !!e; });
   if (!list.length) return { best: null, band: [], top: 0, zeroDose: true, pickedUsage: 0, tieBrokenBy: 'none' };
   const u = function (e) {
@@ -314,6 +325,11 @@ export function bandPickByUsage(entries, tolPt, usageOf) {
   const byScore = band.slice().sort(function (a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); });
   const zeroDose = band.every(function (e) { return u(e) === 0; });
   let best = byScore[0] || null;
+  const inc = __inBand(band, incumbentId);
+  if (inc) {
+    return { best: inc, band: band, top: top, zeroDose: zeroDose, pickedUsage: u(inc),
+      usage: band.map(function (e) { return u(e); }), tieBrokenBy: 'incumbent' };
+  }
   if (!zeroDose) {
     const byUse = band.slice().sort(function (a, b) {
       if (u(b) !== u(a)) return u(b) - u(a);
@@ -328,7 +344,7 @@ export function bandPickByUsage(entries, tolPt, usageOf) {
   };
 }
 
-export function bandPickByLand(entries, tol) {
+export function bandPickByLand(entries, tol, incumbentId) {
 
   const list = (entries || []).filter(function (e) { return !!e; });
   if (!list.length) return { best: null, band: [], top: 0, dropped: 0, tieBrokenBy: 'none' };
@@ -347,10 +363,11 @@ export function bandPickByLand(entries, tol) {
     return (Number(b.score) || 0) - (Number(a.score) || 0);
   });
   const byScore = band.slice().sort(function (a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); });
-  const best = byLand[0] || null;
+  const inc = __inBand(band, incumbentId);
+  const best = inc || byLand[0] || null;
   return {
     best: best, band: band, top: top2, dropped: dropped, skipped: skipped,
     /* 只有"换人"才算被广度改判 —— 门 D127 钉这一格，防止排序键变成哑元素 */
-    tieBrokenBy: (best && byScore[0] && best !== byScore[0]) ? 'land' : 'score'
+    tieBrokenBy: inc ? 'incumbent' : ((best && byScore[0] && best !== byScore[0]) ? 'land' : 'score')
   };
 }

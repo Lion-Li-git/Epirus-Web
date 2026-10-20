@@ -16,6 +16,9 @@ const T3P_ENTRY = 'tools/train-3p.mjs';
 /* v1.7.123（千问 §E674 / DS 交班 §五 那条）：`[WRITE-DEFAULT]` 行**透传到 stdout**。
  *   门的 stdout 默认被 `np-test` 吞掉 ⇒ 开了 `EPIRUS_LOG_DEFAULT_OUT` 也捞不到 —— 点名器等于白装。
  *   只在**开了那个 env** 时才加班（默认零开销、零输出）。 */
+/* v1.7.125：**门里不许写 tracked 的别名表**（见 `champion-map/pack-guard.mjs` 的注释）。
+ *   `_ctx.mjs` 只在门里被加载 ⇒ 在这里设一次即可，且**手跑工具时不受影响**。 */
+if (!process.env.EPIRUS_ALIAS_TSV) process.env.EPIRUS_ALIAS_TSV = (process.env.TEMP || process.env.TMP || '.') + '/gate-pack-aliases.tsv';
 function __echoWriteDefault(r) {
   if (!process.env.EPIRUS_LOG_DEFAULT_OUT || !r || !r.stdout) return r;
   const s = String(r.stdout); if (s.indexOf('WRITE-DEFAULT') < 0) return r;

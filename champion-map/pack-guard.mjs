@@ -20,7 +20,11 @@ import { join, dirname, relative, sep, isAbsolute, resolve } from 'node:path';
 import { widOf } from './pack-id.mjs';
 
 const SCAN = ['docs/artifacts', 'd180-bands'];
-const ALIAS_REL = 'champion-map/pack-aliases.tsv';
+/* v1.7.125（用户 10-20 裁定「门写临时账」）：这份表是 **tracked** 的，而门每跑一轮会往里追加登记行 ⇒
+ *   跑完工作树就脏（幂等 ≠ 只读）。⇒ 在**门内**改道到 `%TEMP%`：`tools/gates/_ctx.mjs` 一加载就设
+ *   `EPIRUS_ALIAS_TSV`，所以门跑的写入不落 tracked 文件；**单独手跑**仍写正式表（没设那个 env）。
+ *   读者（`lineage.mjs` / `audit-parent-evidence.mjs`）不动 —— 它们读的仍是正式表，语义不变。 */
+const ALIAS_REL = process.env.EPIRUS_ALIAS_TSV || 'champion-map/pack-aliases.tsv';
 const ALIAS_COLS = ['ts', 'wid', 'canonical', 'wantedPath', 'tool', 'note'];
 const CACHE = new Map();   // (root + scope) → Map(wid → rel)
 
