@@ -26,7 +26,7 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 /* v1.7.69：只在**本文件是入口**时校验 —— 量具既可能被当 CLI 跑，也可能被别的门 `import` 当模块用；
  *   后者时 `process.argv` 是**调用方**的 argv（例如 gate runner 的 `--part=`），无条件校验会把整轮门禁打红。 */
 if (process.argv[1] && process.argv[1].endsWith("behavior-profile.mjs")) {
-  rejectUnknownFlags(process.argv.slice(2), ['belief', 'champion', 'eps', 'epsk', 'epsmode', 'field', 'gamemode', 'games', 'mirror', 'temp'], "behavior-profile");
+  rejectUnknownFlags(process.argv.slice(2), ['belief', 'buckets', 'champion', 'eps', 'epsk', 'epsmode', 'field', 'gamemode', 'games', 'mirror', 'temp'], "behavior-profile");
 }
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -36,6 +36,7 @@ const EPSK = Number(flag('epsk', 5));
 const EPSMODE = String(flag('epsmode', 'uniform')).split(',').filter(Boolean);   // uniform = v1.5.139 原口径 · soft = 探索不覆盖防御/环
 const TEMP = Number(flag('temp', 0.15));
 const GAMES = Number(flag('games', 60));
+const BUCKETS = String(flag('buckets', '0')) === '1';   /* v1.7.119：攒 ep 的时机分桶（默认关，零影响） */
 const MIRROR = Number(flag('mirror', 40));
 const CHAMPS = String(flag('champion', 'js/bundled-champion-3p.js')).split(',').filter(Boolean);
 const FIELD = flag('field', 'mixed');       // mixed = 1 冠军 + 4 脚本 · self = 5 席同包（DS §10.2 口径）
@@ -74,7 +75,10 @@ if (typeof T.setBeliefSearch === 'function' && BELIEF !== '0') {
  *   本仓"两份同构实现必漂移"已栽过四次，而"珠的三条去路 + 有珠时买不买得起炮"这几列是门禁断言的量，
  *   绝不允许在我的探针里另写一份初始化。函数体一字未动 ⇒ 本文件的既有行为与门禁读数不变。 */
 export function tally() {
-  return { acts: 0, def: 0, atk: 0, ring: 0, ji: 0, tgtActs: 0, focus: 0, voided: 0, endgameMultiOnly: 0, rounds: 0, wins: 0, decisive: 0, keys: {}, maxEp: 0,
+  return { acts: 0, def: 0, atk: 0, ring: 0, ji: 0, tgtActs: 0, focus: 0, voided: 0, endgameMultiOnly: 0, rounds: 0,
+    /* v1.7.119（用户 10-20）：**攒 ep 的时机**分桶。安全阶梯按「我的 hp 是否最高 × 有没有对手 ep≥3」切三层；
+     *   只在 `--buckets=1` 时累计（默认零影响：不加这个字段，其余读数逐字不变）。 */
+    bk: null, msg: 0, wins: 0, decisive: 0, keys: {}, maxEp: 0,
     /* §E164（09-30 03:1x）：`focusRate` 只量"**与上一次同落点**"（连段），它有一个已知盲区——
        一个"这一回合打最该死的那个、下一回合改打另一个最该死的"的策略，连段率会很低，但**整局的落点其实仍然集中**。
        ⇒ 为了不自欺，同一批出手再记两量：`tgtTopSum`=每局"最多吃到伤害的那个落点占本席全部带目标伤害的比例"之和、`tgtKindSum`=每局被打击的落点家数之和。
@@ -116,6 +120,15 @@ export function tallyPick(t, state, pid, pick, ctx, legal) {
     for (let i = 0; i < legal.length; i++) if (legal[i].key === SK.RAILGUN && legal[i].affordable) { afford = true; break; }
     if (!afford) t.beadBroke++;
     else if (k !== SK.RAILGUN) t.beadHeld++;
+  }
+  /* v1.7.119：分桶要在 **JI 那个早退之前**（否则只数到出手、数不到攒）。 */
+  if (BUCKETS) {
+    if (isNaN(t.msg)) t.msg = 0;
+    const me = state.p[pid]; let highEp = false, maxHp = 0;
+    for (let i = 0; i < state.p.length; i++) { const o = state.p[i]; if (i === pid || o.hp <= 0) continue; if (o.ep >= 3) highEp = true; if (o.hp > maxHp) maxHp = o.hp; }
+    const lvl = (me.hp > 1 && !highEp) ? (me.hp > maxHp ? 3 : 2) : 1;
+    if (!t.bk) t.bk = [null, { n: 0, ji: 0, ring: 0 }, { n: 0, ji: 0, ring: 0 }, { n: 0, ji: 0, ring: 0 }];
+    const b = t.bk[lvl]; b.n++; if (k === SK.JI) b.ji++; else if (k === SK.RING) b.ring++;
   }
   if (k === SK.JI) { t.ji++; return pick; }
   if (k === SK.RING) t.ring++;
@@ -214,7 +227,12 @@ if (RUN_AS_MAIN) for (const file of CHAMPS) {
       console.log('  ε=' + eps + ' ' + mode.padEnd(8) + '[' + fld + '/' + GAMEMODE + '·' + scope + '] ' +
         WATCH.map(function (w) { return w[1] + ' ' + ((t.keys[w[0]] || 0) / GAMES).toFixed(2) + '/局'; }).join(' ') +
         ' 最大ep ' + t.maxEp);
-      console.log('        防御 ' + share(t, 'def') + ' 攻击 ' + share(t, 'atk') + ' 环 ' + share(t, 'ring') + ' ジ ' + share(t, 'ji') +
+      if (BUCKETS && t.bk) {
+    /* v1.7.119：L3=最安全（hp 最高且无人 ep≥3）‖ L2=次安全 ‖ L1=危险。环/ジ 各按桶给占比。 */
+    const seg = (i) => { const b = t.bk[i]; return 'L' + i + ' n=' + (b ? b.n : 0) + ' 环=' + (b && b.n ? (100 * b.ring / b.n).toFixed(1) : '—') + '% ジ=' + (b && b.n ? (100 * b.ji / b.n).toFixed(1) : '—') + '%'; };
+    console.log('        [桶] ' + seg(3) + ' ‖ ' + seg(2) + ' ‖ ' + seg(1));
+  }
+  console.log('        防御 ' + share(t, 'def') + ' 攻击 ' + share(t, 'atk') + ' 环 ' + share(t, 'ring') + ' ジ ' + share(t, 'ji') +
         '  集火 ' + (t.tgtActs ? (100 * t.focus / t.tgtActs).toFixed(1) + '%' : '—') +
         '  集中 ' + (function () { const c = conc(t); return c ? c.top.toFixed(1) + '%／' + c.kinds.toFixed(2) + '家' : '—'; })() +
         '  昏手 ' + share(t, 'voided') + ' 残局 MULTI_ONLY 出手 ' + t.endgameMultiOnly +
