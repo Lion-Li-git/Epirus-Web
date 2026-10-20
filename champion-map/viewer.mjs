@@ -736,6 +736,8 @@ var INC = (function () {
   return { id: '@cohort:' + ANCH_TIER, name: '最强一批均值（池 ' + ANCH_TIER + ' 带 ' + mem.length + ' 枚）',
     Hp: mean(function (d) { return d.Hp; }), S: mean(function (d) { return d.S; }),
     rk: Math.round(mean(function (d) { return d.rk; })), hp: mean(function (d) { return d.hp; }),
+    /* 伪行也得带长程那一列：hpNow 现在两档各读 Hp / hpl2，只给 Hp 会让"最强一批均值"这条锚在长程档画成灰 */
+    hpl2: mean(function (d) { return d.hpl2; }),
     H: mean(function (d) { return d.H; }), pt: ANCH_TIER, ts: '', lin: false };
 })();
 function batchOf(d) { return d.ts ? String(d.ts).slice(0, 10) : ''; }
@@ -826,8 +828,19 @@ var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
 function Fv(d) {
   if (st.ftab === 'long') { if (d.fl !== null && isFinite(d.fl)) return d.fl; return d.Hp / 100 + st.T * d.S; }
   return d.Hp / 100 + st.T * d.S; }
-/* 页面口径那一档（颜色 'hp'）也跟着桌形走 —— 同一个"玩家拿到的夺1率"，两版各有读数；缺测回 null 走灰 */
-function hpNow(d) { return (st.ftab === 'long' && d.hpl2 !== null && isFinite(d.hpl2)) ? d.hpl2 : d.hp; }
+/* ===== 页面口径那一档（颜色 'hp'）：两个桌形**必须同一套取数**（用户 10-20 裁定）=====
+ *   默认桌读 coords 的「Hp」，长程桌读 coords 的「Hplong」（烘进页面叫「hpl2」）—— 同一台 eval-5p、同 seed 同档、
+ *   只换桌形，两列都是**全库**读数（各 803 枚）。
+ * ⚑ 原来默认桌读的是 d.hp（= epsagg.tsv 的 page 列，那张表只有 121 行 ⇒ 86% 落进"未测灰"），
+ *   长程桌却读全库列 ⇒ "长程档看着不一样"的真是原因是**一档读小表**，不是长程坏了（10-20 §E669 复核量出来的：
+ *   页面里 "hp" 出现 803 次其中 null=692 ‖ "hpl2" null=0 ‖ coords.Hp 全库有值）。
+ *   epsagg 那份"**两 seed 配对均值**"仍然只服务 Δε 那条腿（de）—— 它必须同批成对，不能换成 coords 的单批值。 */
+function hpNow(d) {
+  const v = (st.ftab === 'long') ? d.hpl2 : d.Hp;
+  return (v === null || v === undefined || !isFinite(v)) ? null : v;
+}
+/* 当前桌形这一档"有读数"的枚数：图例与页头都读它，**不再拿 NEPS 顶替**（NEPS 管的是 Δε 那条腿的分母）。 */
+function NHP() { let n = 0; for (let i = 0; i < N; i++) if (hpNow(P[i]) !== null) n++; return n; }
 /* 名次必须跟着尺重算：coords.tsv 的 rank 列是**考卷口径 + 出厂 T** 下算的，沿用就会把"第 N 名"读成旧尺。
  *   §E617 抽成函数：换桌形（st.ftab）之后名次要重排，否则卡片上那句"第 N 名"还是默认桌的。
  *   rkExam 只在**第一次**跑时从表里的 rank 抄走（那是出厂账），之后再跑不许覆盖 —— 否则第二遍抄的是自己算出来的数，
@@ -1168,7 +1181,7 @@ function tip(d) {
             : '（父指针未落档）')))) +
     (d.fl === null ? '\\n长程桌：没量（mode=long 那批没覆盖到这枚 ⇒ 不是 0）'
       : '\\n长程桌（同 seed 同档，只换桌形）：考卷 ' + d.hl2.toFixed(1) + '% ‖ 页面 ' + d.hpl2.toFixed(1) + '% ‖ F ' + d.fl.toFixed(2)
-        + (d.hp !== null && isFinite(d.hp) ? ('  ⇒ 与默认桌之差：Hp ' + (d.hpl2 - d.hp >= 0 ? '+' : '') + (d.hpl2 - d.hp).toFixed(1) + 'pt ‖ F ' + (d.fl - Fv(d) >= 0 ? '+' : '') + (d.fl - Fv(d)).toFixed(2)) : '')) +
+        + (isFinite(d.Hp) ? ('  ⇒ 与默认桌之差：Hp ' + (d.hpl2 - d.Hp >= 0 ? '+' : '') + (d.hpl2 - d.Hp).toFixed(1) + 'pt ‖ F ' + (d.fl - Fv(d) >= 0 ? '+' : '') + (d.fl - Fv(d)).toFixed(2)) : '')) +
     /* §E616 两版过线并排说：绿环那条是**在册那道闸**（混合桌：G主判/座位/场A/场B 在 multi，G2/墙/密度/蓄能 在 long），
      *   这一行是**全腿都搬上长程**之后同一道闸的裁决。两个都给，谁也不替谁 —— 换绿环的主语是待裁 #47。 */
     (d.okl === null ? '' : ('\\n过线（全腿长程）' + (d.okl === 1 ? ' ✓' : ' ✗' + (d.flongs ? '（' + d.flongs.slice(0, 52) + '）' : ''))
@@ -2729,7 +2742,7 @@ function drawBody() {
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚退回默认桌，一张图上混两把尺') + '）') : 'F = 默认桌(3血)') + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NEPS + ' 枚）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚退回默认桌，一张图上混两把尺') + '）') : 'F = 默认桌(3血)') + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
@@ -2802,7 +2815,8 @@ function paintLegend(fr) {
   if (st.color === 'fam' || st.color === 'seed') s1.textContent = '';
   var s2 = document.createElement('div'); s2.textContent = st.color === 'gl' ? ('G(long) 低 ' + GLR[0].toFixed(1) + '（蓝）· 闸要求 ≥3')
     : st.color === 'pm' ? ('⛔ 栽桩 ' + (NPRM - NPPASS) + ' 枚（红）· 灰 = 未测（' + (N - NPRM) + ' 枚）')
-    : st.color === 'hp' ? ('页面 1st 低 ' + EPR()[0].toFixed(1) + '%（蓝）· 灰 = 未测（' + (N - NEPS) + ' 枚）' + (st.ftab === 'long' ? ' ‖ 读的是长程桌那一版' : ''))
+    : st.color === 'hp' ? ('页面 1st 低 ' + EPR()[0].toFixed(1) + '%（蓝）· 灰 = 没读数（' + (N - NHP()) + ' 枚） ‖ 尺 = coords.'
+      + (st.ftab === 'long' ? 'Hplong（长程桌）' : 'Hp（默认桌）'))   /* 两档同一套取数：见上面 hpNow 那段 */
     : st.color === 'de' ? ('Δε −6pt（蓝 = 开了探索反而强）· 白 = 不敏感 · 灰 = 未测（' + (N - NEPS) + '）‖ 脆（≥3.41）' + NBRIT + ' 枚 ‖ 吃探索（<0）' + NSTRONG + ' 枚')
     : st.color === 'sc' ? ('当选键 低 ' + SCR()[0].toFixed(1) + '（蓝）· 灰 = 未测（' + (N - NSEL) + ' 枚）‖ 这一档画的是**绝对值**，不再对某一枚包取差')
     : (st.color === 'fam' || st.color === 'seed') ? ('（黄针 = ' + BANDLBL + '）')   /* §E431 用户 10-08：删掉「下 = 地板 ‖ 上 = 好」这种没用的说明，只留黄针那句（顺带让整块变窄）*/
@@ -2819,7 +2833,7 @@ function paintLegend(fr) {
     gl: 'G(long) = 长程自对局的技能广度，与过线判定同一道闸现跑（n=20）‖ 线 ≥3，低于 3 直接不过线',
     pm: '上槽体检 = ' + OKSRCJ + ' ‖ 灰 = 没测过，**不等于**没过',   /* §E492 样本量从表里派生，不许把数字抄在文案里 */
     hp: '每枚都是单批读数 ‖ 同档（120）换 4 批 eval seed 摆 2.2pt（30 档时同一枚摆 5.7pt）⇒ 颜色看水位；' +
-      '要排序就用这一档或「当选键」，§E600-A 起「对参照包决斗」那档已撤（A−B 不传递，METHODOLOGY 110）',
+      '要排序就用这一档或「当选键」，§E600-A 起「对参照包决斗」那档已撤（A−B 不传递，METHODOLOGY 110)',
     de: 'Δε = 考卷（ε=0）− 页面（默认档 lv:regular 的剂量：斜坡 0→0.05→0.1 ‖ k5 ‖ soft）· 两 eval seed · exam=120 局/组合 ‖ 发散带 0 在正中：红 = 一开探索就掉，蓝 = 开了反而强（§E597：默认档下全库 46% 的包落在"开了反而强"那一侧）',
     sc: 'Sc = 当选键**绝对值**（evalN · vs 脚本对 · 出厂 ε=0 · 8 粒 seedBase 取均值）‖ 域取窗内 p02..p98 ‖ ' +
       '§E600-A：原来这档画的是 Scd = 对某一枚参照包的配对差 —— 参照物退役后那个差没有主语，三列（Scd/Scs/Sch）留表里当账',
@@ -2971,7 +2985,9 @@ function relLines(d) {
   var out = [];
   out.push('vs 最强一批均值：F ' + (Fv(d) >= Fv(INC) ? '+' : '') + (Fv(d) - Fv(INC)).toFixed(3) +
     ' ‖ 名次 第 ' + d.rk + ' vs 第 ' + INC.rk + '（' + (d.rk < INC.rk ? '强 ' + (INC.rk - d.rk) + ' 位' : '落后 ' + (d.rk - INC.rk) + ' 位') + '）');
-  out.push('　　　　　页面口径 Hp ' + (d.Hp >= INC.Hp ? '+' : '') + (d.Hp - INC.Hp).toFixed(1) + 'pt' +
+  var hpd = hpNow(d), hpi = hpNow(INC);   /* 跟着当前桌形走：卡片上那句"页面口径"必须和点色是同一把尺 */
+  out.push('　　　　　页面口径' + (st.ftab === 'long' ? '（长程桌）' : '（默认桌）') + ' ' +
+    (hpd === null || hpi === null ? '这一档没读数' : (hpd >= hpi ? '+' : '') + (hpd - hpi).toFixed(1) + 'pt') +
     (d.hp === null || INC.hp === null ? '' : '（实测两 seed 均值 ' + (d.hp >= INC.hp ? '+' : '') + (d.hp - INC.hp).toFixed(1) + 'pt）'));
   /* §E600-A 两行一起撤：'当选键配对差'（对某一枚参照包取差）与 '对现役配对决斗'（同一族，且不传递）。
    *   绝对值 'Sc' 那行仍在特性剖面里给（'sc' 列本来就在剖面表里）。 */
