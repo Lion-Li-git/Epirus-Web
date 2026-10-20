@@ -666,6 +666,18 @@ if (!reParams || !reParams.length) { console.error('⛔ 自检失败：写出的
 const chk = (reJson && reJson.v === 7 && W.EpirusPolicy.checkPack) ? W.EpirusPolicy.checkPack(reJson) : { ok: true };
 if (reJson && reJson.v !== 7) console.log('   旧形状包（v' + reJson.v + '）：跳过 checkPack（只校验 v7 容器）⇒ 已用原生读取 + 长度自检');
 if (chk && chk.ok === false) { console.error('⛔ 自检失败：checkPack ' + JSON.stringify(chk) + '（已中止，未落盘）'); process.exit(5); }
+/* v1.7.121（10-20）：**长程能力在选池时是盲的** —— 实测 `Pearson(环@有ep·安全, 胜率)`：multi = −0.150 ‖ **long = +0.758**。
+ *   池按 multi 的 H 分档 ⇒ 会开环的粒（`v7bead3-82` 50% 环率、`G12H1` 58.5%）在选拔上没有压力。
+ *   ⇒ 这里**只记录**（不阻断、不进任何判据）：跑一次 long 档行为画像，印「环@有ep·安全」。
+ *   ⚠ 放在 `if (DRY)` **之前** —— 否则 pool-add 的 `--run-promote`（走 --dry）看不到这条。 */
+try {
+  const bp = spawnSync(process.execPath, ['tools/behavior-profile.mjs', '--champion=' + SRC,
+    '--buckets=1', '--gamemode=long', '--games=40', '--eps=0'], { cwd: ROOT, encoding: 'utf8', timeout: 600000 });
+  const bl = ((bp.stdout || '') + (bp.stderr || '')).split(/\r?\n/).find(function (l) { return l.indexOf('[桶]') >= 0; }) || '';
+  const m = /有ep·安全 n=(\d+) 环=([0-9.—]+)% ジ=([0-9.—]+)%/.exec(bl);
+  if (m) console.log('\n[long·仅记录] 环@有ep·安全 = ' + m[2] + '%（n=' + m[1] + '）‖ ジ = ' + m[3] + '%  ← 长程投资：安全窗口里开环的频率');
+  else console.log('\n[long·仅记录] 读不出（behavior-profile 没给 [桶] 行）');
+} catch (e) { console.log('\n[long·仅记录] 跳过：' + (e && e.message ? e.message.split('\n')[0] : e)); }
 if (DRY) {
   console.log('\n🧪 --dry：自检通过但**未写任何文件**（js/bundled-champion-3p.js 与 index.html 均未改动）');
 } else {
