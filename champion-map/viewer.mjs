@@ -1727,6 +1727,11 @@ var CHM = null;
  *   页内 93 条自检仍然全绿）。页内那条 inkLeft 的 150 门槛拦不住它 —— 带子横贯整行，被当成"最左边的墨"时两帧都返回
  *   x=0，位移差仍然是 80px ⇒ 断言照样过。⇒ 调它只能靠量像素或看图，别以为有门在管。 */
 var BAND_DL = 6;
+/* v1.7.124（用户 10-20 拍板「加上界 + 一条门」）：这个旋钮原来**没有任何上界** —— 10-19 变异实测设到 60 时
+ *   灰行亮到 rgb(156,162,175)、比左栏统计行的字还亮。上界取 **12**：与底色的 L* 差 ≈12 已经在 8 位色深里明显可读，
+ *   再往上就进入「比正文还亮」那一档。下界 1（0 等于关掉行带，那是另一个开关）。 */
+var BAND_DL_MIN = 1, BAND_DL_MAX = 12;
+function __clampDl(v) { var n = Number(v); if (!isFinite(n)) return BAND_DL; return Math.max(BAND_DL_MIN, Math.min(BAND_DL_MAX, n)); }
 function srgbL(v) { var s = v / 255, l = s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
   return l <= 0.008856 ? 903.3 * l : 116 * Math.pow(l, 1 / 3) - 16; }
 function lSrgb(L) { var l = L <= 7.9916 ? L / 903.3 : Math.pow((L + 16) / 116, 3);
@@ -1737,7 +1742,8 @@ function rgbOf(c) { var h = String(c || '000000'); if (h.charAt(0) === '#') h = 
   return [parseInt(h.slice(0, 2), 16) || 0, parseInt(h.slice(2, 4), 16) || 0, parseInt(h.slice(4, 6), 16) || 0]; }
 function bandFillFor(bg) {
   var c = rgbOf(bg), L = 0.2126 * srgbL(c[0]) + 0.7152 * srgbL(c[1]) + 0.0722 * srgbL(c[2]);
-  var dlt = lSrgb(L < 50 ? L + BAND_DL : L - BAND_DL) - lSrgb(L);
+  var __bdl = __clampDl(BAND_DL);   /* v1.7.124：**唯一使用点过钳**（上界 12） */
+      var dlt = lSrgb(L < 50 ? L + __bdl : L - __bdl) - lSrgb(L);
   /* 三通道同一个增量 ⇒ 深蓝/石板这些非中性底色不会把带子偏成灰白，档色线索留在字与点上 */
   function cl(v) { return Math.max(0, Math.min(255, v + dlt)); }
   return 'rgb(' + cl(c[0]) + ',' + cl(c[1]) + ',' + cl(c[2]) + ')'; }
