@@ -560,8 +560,10 @@ t('D229 §E340 全息屏障→原型制御 的映射档（v1.6.8）：默认 off
    *    要按映射后的行为上槽，前提是用户裁定"这一档成为包的属性"；在那之前门槛只看未映射的线上行为。
    *    另一半：硬门槛常量本身不许被这一档顺手改掉（改门槛是裁定，不是实现细节）。 */
   const AL = readFileSync('tools/audit-lib.mjs', 'utf8').replace(/\r\n/g, '\n');
-  ok(/HOLO_GIFT_MAX\s*=\s*6\b/.test(AL),
-    '⑧ 硬门槛常量不许被这一档顺手改掉（改门槛是裁定，不是实现细节）');
+  /* v1.7.124（用户 10-20 裁定「按 1.5 每席」）：`holoOtherPerGame` 是**每局全场合计** ⇒ 5 席 = 7.5。
+   *   这条牙**照旧钉「常量不许被顺手改」**，只是把钉的值换成裁定后的口径（1.5/席 × 5）。 */
+  ok(/HOLO_GIFT_PER_SEAT\s*=\s*1\.5\b/.test(AL) && /HOLO_GIFT_MAX\s*=\s*HOLO_GIFT_PER_SEAT\s*\*\s*5\b/.test(AL),
+    '⑧ 硬门槛常量不许被这一档顺手改掉（用户 10-20 裁定：1.5/席 ⇒ 5 席 7.5；改门槛是裁定，不是实现细节）');
   for (const f of ['tools/promote-champion.mjs', 'tools/eval-5p.mjs', 'tools/style-exam.mjs', 'js/ui/ui.js']) {
     ok(readFileSync(f, 'utf8').toLowerCase().indexOf('holo2proto') < 0,
       '⑧ ' + f + ' 不许读这一档（含 `EPIRUS_HOLO2PROTO` 与 `META.holo2proto`）⇒ 出厂面只按未映射行为判分');
