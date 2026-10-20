@@ -78,7 +78,7 @@ export function tally() {
   return { acts: 0, def: 0, atk: 0, ring: 0, ji: 0, tgtActs: 0, focus: 0, voided: 0, endgameMultiOnly: 0, rounds: 0,
     /* v1.7.119（用户 10-20）：**攒 ep 的时机**分桶。安全阶梯按「我的 hp 是否最高 × 有没有对手 ep≥3」切三层；
      *   只在 `--buckets=1` 时累计（默认零影响：不加这个字段，其余读数逐字不变）。 */
-    bk: null, msg: 0, wins: 0, decisive: 0, keys: {}, maxEp: 0,
+    bk: null, bkLog: null, msg: 0, wins: 0, decisive: 0, keys: {}, maxEp: 0,
     /* §E164（09-30 03:1x）：`focusRate` 只量"**与上一次同落点**"（连段），它有一个已知盲区——
        一个"这一回合打最该死的那个、下一回合改打另一个最该死的"的策略，连段率会很低，但**整局的落点其实仍然集中**。
        ⇒ 为了不自欺，同一批出手再记两量：`tgtTopSum`=每局"最多吃到伤害的那个落点占本席全部带目标伤害的比例"之和、`tgtKindSum`=每局被打击的落点家数之和。
@@ -122,13 +122,12 @@ export function tallyPick(t, state, pid, pick, ctx, legal) {
     else if (k !== SK.RAILGUN) t.beadHeld++;
   }
   /* v1.7.119：分桶要在 **JI 那个早退之前**（否则只数到出手、数不到攒）。 */
+  /* v1.7.120（用户 10-20：「说明你的判据有问题」）：不再用静态阶梯猜"安全"，改成**事后从事件流读事实** ——
+   *   记下"这次决定发生在事件流第几位"，局末再往回看：从我这一手到我下一手之前，我**到底挨没挨打**。
+   *   这是 `defense-quality.mjs` 同一套窗口口径（同回合内），不是自创的启发式。 */
   if (BUCKETS) {
-    if (isNaN(t.msg)) t.msg = 0;
-    const me = state.p[pid]; let highEp = false, maxHp = 0;
-    for (let i = 0; i < state.p.length; i++) { const o = state.p[i]; if (i === pid || o.hp <= 0) continue; if (o.ep >= 3) highEp = true; if (o.hp > maxHp) maxHp = o.hp; }
-    const lvl = (me.hp > 1 && !highEp) ? (me.hp > maxHp ? 3 : 2) : 1;
-    if (!t.bk) t.bk = [null, { n: 0, ji: 0, ring: 0 }, { n: 0, ji: 0, ring: 0 }, { n: 0, ji: 0, ring: 0 }];
-    const b = t.bk[lvl]; b.n++; if (k === SK.JI) b.ji++; else if (k === SK.RING) b.ring++;
+    if (!t.bkLog) t.bkLog = [];
+    t.bkLog.push([state.events ? state.events.length : 0, k, (state.p[pid].ep || 0) >= 3 ? 1 : 0]);
   }
   if (k === SK.JI) { t.ji++; return pick; }
   if (k === SK.RING) t.ring++;
@@ -175,6 +174,22 @@ export function fieldProfile(params, eps, mode, G, seed0, field, gamemode, oppFa
     for (let i = 0; i < N; i++) cs.push(field === 'self' || i === seat ? wrapped
       : (oppFactory ? oppFactory(g, i) : T.wrapBotN(SCRIPTS[(i + g) % SCRIPTS.length])));
     Play.autoGameN(st, cs);
+    /* v1.7.120：局末把每个决定贴标签 —— **这一手之后我挨没挨打**（同回合窗，与 `defense-quality` 同源）。
+     *   桶 = 能不能开环(ep≥3) × 挨没挨打 ⇒ 4 格，环/ジ 各给占比。 */
+    if (BUCKETS && t.bkLog) {
+      if (!t.bk) t.bk = [null, { n: 0, ji: 0, ring: 0 }, { n: 0, ji: 0, ring: 0 }, { n: 0, ji: 0, ring: 0 }, { n: 0, ji: 0, ring: 0 }];
+      for (const [idx, k, canRing] of t.bkLog) {
+        let dmg = 0, own = false;
+        for (let j = idx; j < (st.events || []).length; j++) {
+          const e = st.events[j];
+          if (e.type === 'action' && e.pid === seat) { if (!own) { own = true; continue; } break; }
+          if (e.type === 'damage' && e.to === seat) dmg += (e.amt || 0);
+        }
+        const lvl = (canRing ? 3 : 1) + (dmg > 0 ? 1 : 0);
+        const b = t.bk[lvl]; b.n++; if (k === SK.JI) b.ji++; else if (k === SK.RING) b.ring++;
+      }
+      t.bkLog = null;
+    }
     /* §E164 集中度：这一局本席带目标的伤害落点里，**最挨打的那个占多大份额**、以及**一共打了几家**。
        与 `focus`（连段率）配对读：连段率低 + 集中度高 = "换着最该死的打"；连段率低 + 集中度也低 = 真的在撒。 */
     tallyClose(t, ctx);
@@ -229,8 +244,9 @@ if (RUN_AS_MAIN) for (const file of CHAMPS) {
         ' 最大ep ' + t.maxEp);
       if (BUCKETS && t.bk) {
     /* v1.7.119：L3=最安全（hp 最高且无人 ep≥3）‖ L2=次安全 ‖ L1=危险。环/ジ 各按桶给占比。 */
-    const seg = (i) => { const b = t.bk[i]; return 'L' + i + ' n=' + (b ? b.n : 0) + ' 环=' + (b && b.n ? (100 * b.ring / b.n).toFixed(1) : '—') + '% ジ=' + (b && b.n ? (100 * b.ji / b.n).toFixed(1) : '—') + '%'; };
-    console.log('        [桶] ' + seg(3) + ' ‖ ' + seg(2) + ' ‖ ' + seg(1));
+    const nm = ['', '无ep·安全', '无ep·挨打', '有ep·安全', '有ep·挨打'];
+    const seg = (i) => { const b = t.bk[i]; return nm[i] + ' n=' + (b ? b.n : 0) + ' 环=' + (b && b.n ? (100 * b.ring / b.n).toFixed(1) : '—') + '% ジ=' + (b && b.n ? (100 * b.ji / b.n).toFixed(1) : '—') + '%'; };
+    console.log('        [桶] ' + seg(3) + ' ‖ ' + seg(4) + ' ‖ ' + seg(1) + ' ‖ ' + seg(2));
   }
   console.log('        防御 ' + share(t, 'def') + ' 攻击 ' + share(t, 'atk') + ' 环 ' + share(t, 'ring') + ' ジ ' + share(t, 'ji') +
         '  集火 ' + (t.tgtActs ? (100 * t.focus / t.tgtActs).toFixed(1) + '%' : '—') +
