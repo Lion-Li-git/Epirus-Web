@@ -31,6 +31,7 @@
 |---|---|
 | `attach-hp.mjs` | `Hp`（页面口径的夺冠率） |
 | `attach-hlong.mjs` | `Hlong/Hplong/Flong/okLong/failsLong`（长程考卷） |
+| ⚑ **`okLong` 的 `-`** | 它来自 `feas.mjs --allLong=1` 的分片表：`0`/`1` = 判过/判不过；**`-` = 介入实验臂**（`t5-*-ringon/ringoff` 那 5 枚），**不是候选包、按设计不跑可行性子集** —— 不是漏测，也不参与任何筛选 |
 | `attach-sc.mjs` | `sc`（当选面打分） |
 | `attach-kin.mjs` | 亲缘/父子边 |
 | `attach-path.mjs` | 谱系路径 |
