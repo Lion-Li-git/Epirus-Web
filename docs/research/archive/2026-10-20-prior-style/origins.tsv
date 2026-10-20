@@ -4,3 +4,8 @@ v7bead15-93	docs/artifacts/v7bead15-93.bak	822dfb4846cce5cd	16.07	4.34	60.1	67.0
 v7wall-34	docs/artifacts/v7wall-34.bak	ae496c39a2871259	19.90	5.76	46.4	44.9
 Lctl	docs/artifacts/eval-out/win-Lctl.bak	dfae5c38af537bb7	23.85	6.82	36.2	40.1
 v7teach-32	docs/artifacts/v7teach-32.bak	a21e867e46aa5378	80.90	3.32	33.1	39.0
+
+# 00:29 追加两枚独立起点（判据不变，见 PREREG §七事后登记）
+id	path	wid	holo_ε0	Geff	Hp	Hplong
+K1	docs/artifacts/e234-out/K1.js	ced8c61b2047da58	54.83	3.79	38.5	32.6
+G-s82	docs/artifacts/e514-out/G-s82.js	ec95478c2e3ddb5d	19.23	7.48	35.0	38.8

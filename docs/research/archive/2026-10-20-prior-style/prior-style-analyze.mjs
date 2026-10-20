@@ -20,17 +20,17 @@ const ROOT = resolve(HERE, '..', '..', '..', '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const OUT = arg('out', join(HERE, 'prior-style-paired.tsv'));
 const SEEDS = ['88010', '88011'];
-const ORIGINS = ['teach', 'beadseed', 'bead15', 'wall34', 'lctl'];
+const ORIGINS = ['teach', 'beadseed', 'bead15', 'wall34', 'lctl', 'k1', 'gs82'];
 
 /* ---- champ-audit：列顺序照 tools/champ-audit.mjs:101-124 的打印顺序，逐格数出来 ---- */
 const COLS = ['考卷1st', '严胜', '伤害/局', '重击/局', '盾/局(放)', '零伤害率', '平局率', '回合', '反弹墙1st',
   '摆架势', '被集火还手', 'F回合', '有效技能数', '种类', '座位极差', '反弹墙伤害/局', '蓄能/局', '珠浪费', '混合场', '对被动'];
 /* 起点包与产物包用同一套短名（否则两张表并不到一行） */
-const ORIGIN_KEY = { 'v7teach-32': 'teach-起点', 'v7beadseed-82': 'beadseed-起点', 'v7bead15-93': 'bead15-起点', 'v7wall-34': 'wall34-起点', 'win-Lctl': 'lctl-起点', 'Lctl': 'lctl-起点' };
+const ORIGIN_KEY = { 'v7teach-32': 'teach-起点', 'v7beadseed-82': 'beadseed-起点', 'v7bead15-93': 'bead15-起点', 'v7wall-34': 'wall34-起点', 'win-Lctl': 'lctl-起点', 'Lctl': 'lctl-起点', 'e234-out/K1': 'k1-起点', 'e514-out/G-s82': 'gs82-起点' };
 const normKey = (s) => { const k = s.replace('e675-out/', '').replace('docs/artifacts/', '').replace('eval-out/', '').replace(/\.(js|bak)$/, ''); return ORIGIN_KEY[k] || k; };
 function parseAudit(mode) {
   const out = {};
-  for (const fn of ['champ-audit-' + mode + '-18.txt', 'champ-audit-' + mode + '-origins.txt']) {
+  for (const fn of ['champ-audit-' + mode + '-18.txt', 'champ-audit-' + mode + '-origins.txt', 'champ-audit-' + mode + '-b2.txt', 'champ-audit-' + mode + '-big.txt']) {
     const f = join(HERE, 'raw', fn);
     if (!existsSync(f)) { console.log('⚠ 缺 ' + fn + ' ⇒ 这一路读数不进表'); continue; }
     for (const line of readFileSync(f, 'utf8').split(/\r?\n/)) {
@@ -47,12 +47,15 @@ function parseAudit(mode) {
 }
 /* ---- gift-readout：同一份 tsv 里带"关档"与"开档 2"两把读数 ---- */
 function parseGift(mode) {
-  const f = join(HERE, 'gift-readout-' + mode + '-all.tsv');
   const out = {};
-  for (const line of readFileSync(f, 'utf8').replace(/^\uFEFF/, '').trim().split(/\r?\n/)) {
-    const c = line.split('\t');
-    if (c.length < 9 || !/\.js$|\.bak$/.test(c[0])) continue;
-    out[normKey(c[0])] = { 放关: +c[3], 给别人关: +c[4], 给别人开2: +c[5], 挡关: c[7], 挡开2: c[8] };
+  for (const fn of ['gift-readout-' + mode + '-all.tsv', 'gift-readout-' + mode + '-b2.tsv']) {
+    const f = join(HERE, fn);
+    if (!existsSync(f)) { console.log('⚠ 缺 ' + fn + ' ⇒ 那一批的送盾读数不进表'); continue; }
+    for (const line of readFileSync(f, 'utf8').replace(/^\uFEFF/, '').trim().split(/\r?\n/)) {
+      const c = line.split('\t');
+      if (c.length < 9 || !/\.js$|\.bak$/.test(c[0])) continue;
+      out[normKey(c[0])] = { 放关: +c[3], 给别人关: +c[4], 给别人开2: +c[5], 挡关: c[7], 挡开2: c[8] };
+    }
   }
   return out;
 }
@@ -66,8 +69,10 @@ const DIMS = ['盾/局(放)', '给别人关', '给别人开2', '有效技能数'
 
 /* ---- 配对：Δ先验 = 同起点同 seed 的 p2 − p0 ‖ Δseed = 同起点同先验换 seed ---- */
 const get = (m, key, d) => { const r = PAIRS[m][key]; const v = r && r[d]; return (v === undefined || v === null || !isFinite(v)) ? null : v; };
-const keyOf = (o, p, s) => o + '-' + p;    /* 文件名去掉 seed 后缀的部分；seed 版带 -s88011 */
-const cellOf = (o, p, s) => s === SEEDS[0] ? keyOf(o, p) : keyOf(o, p) + '-s' + s;
+const keyOf = (o, p, s) => [o + '-' + p + '-s' + s, o + '-' + p];   /* 两种拼法都试：第一批的 88010 没带 seed 后缀，追加批一直带 */
+const cellOf = (o, p, s) => o + '-' + p + (s === SEEDS[0] ? '' : '-s' + s);
+const lookup = (m, o, p, s, d) => { for (const k of keyOf(o, p, s)) { const v = get(m, k, d); if (v !== null) return v; } return null; };
+const poolLookup = (o, p, s) => { for (const k of keyOf(o, p, s)) if (pool[k]) return pool[k]; return null; };
 const median = a => { if (!a.length) return NaN; const s = a.slice().sort((x, y) => x - y); return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
 
 /* ---- 逐包绝对读数（Δ=0 有两种：两边都 0 vs 两边都高 ⇒ 必须在同一张表里分得开）---- */
@@ -96,7 +101,7 @@ for (const m of ['multi', 'long']) {
     for (const o of ORIGINS) {
       const ds = [];
       for (const s of SEEDS) {
-        const a = get(m, cellOf(o, 'p0', s), d), b = get(m, cellOf(o, 'p2', s), d);
+        const a = lookup(m, o, 'p0', s, d), b = lookup(m, o, 'p2', s, d);
         if (a === null || b === null) continue;
         ds.push(b - a); avail++;
       }
@@ -108,7 +113,7 @@ for (const m of ['multi', 'long']) {
         perOrigin.push({ o, v: median(ds), sign: allZero ? 0 : (allPos ? 1 : (allNeg ? -1 : 2)), detail: ds.map(x => (x > 0 ? '+' : '') + x.toFixed(2)).join('/'), spread: Math.max(...ds) - Math.min(...ds) });
       }
       for (const p of ['p0', 'p2']) {
-        const x = get(m, cellOf(o, p, SEEDS[0]), d), y = get(m, cellOf(o, p, SEEDS[1]), d);
+        const x = lookup(m, o, p, SEEDS[0], d), y = lookup(m, o, p, SEEDS[1], d);
         if (x !== null && y !== null) drift.push(Math.abs(y - x));
       }
     }
@@ -157,7 +162,7 @@ for (const m of ['multi', 'long']) {
   for (const o of ORIGINS) {
     const ds = [];
     for (const s of SEEDS) {
-      const a = pool[`${o}-p0${s === SEEDS[0] ? '' : '-s' + s}`], b = pool[`${o}-p2${s === SEEDS[0] ? '' : '-s' + s}`];
+      const a = poolLookup(o, 'p0', s), b = poolLookup(o, 'p2', s);
       if (!a || !b || a.diff[m] == null || b.diff[m] == null) continue;
       ds.push(b.diff[m] - a.diff[m]);
     }
