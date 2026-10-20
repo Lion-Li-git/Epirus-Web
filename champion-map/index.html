@@ -250,9 +250,8 @@ var NSEL = 0;
 (function () { for (var i = 0; i < N; i++) { var v = P[i].sc;
   if (v === null || v === undefined || !isFinite(v)) continue; NSEL++; } })();
 var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '', ftab: 'multi',
-  elaw: 'attr',       /* §E673 谱系图线条叠加的法律：'log' = 每条线静态 alpha + 像素累加之后过对数表 ‖ 'attr' = "密度压进属性"（旧）。
-                         ⚑ 默认仍是 'attr'：页内那条 §E467 判据量的是"密度律 vs 固定 alpha"两帧之差，在 log 档两帧同一张图 ⇒ 必红，
-                           换默认要先把那条判据改指到"累加之后的剂量-反应"上（改判据 = 用户裁）。看图请显式写 #elaw=log */
+  elaw: 'log',        /* §E673 谱系图线条叠加的法律：'log' = 每条线静态 alpha + 像素累加之后过对数表（**默认，用户 10-20 下午点名换的**）
+                         ‖ 'attr' = 旧的"密度压进每条线的属性"，仍可达（#elaw=attr），页内那两条 §E467/§E469 判据各自钉的是它 */
   lgPos: null,        /* §E462 图例被拖到哪儿（相对 #wrap 的 CSS px）；null = 出厂那角 */
   sortBy: 'F',          /* E399 DS：一维图的排序轴 —— 'F' = F 名次（默认）‖ 'time' = 训出时刻。 */
   flo: 0, fhi: 1,       /* §E371 强度窗口的两端，存成"占全库 F 值域的比例"⇒ 出厂 (0,1) 就是全范围 */
@@ -4645,10 +4644,14 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *     改成数"到顶像素有几个"才是"板"的直测。三帧都带 NOPTS=1（一枚点都不画），判完立刻还原并补一帧。 */
   (function () {
     var SN = { elev: st.elev, yaw: st.yaw, pit: st.pit, tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy,
-      edges: st.edges, color: st.color, labels: st.labels, mode: st.mode };
+      edges: st.edges, color: st.color, labels: st.labels, mode: st.mode, elaw: st.elaw };
     function grab() { try { return g.getImageData(0, 0, cv.width, cv.height).data; } catch (E8) { return null; } }
     st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
     st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1;
+    /* §E673：这条判据量的是**旧法律内部的 A/B**（密度律帧 vs 固定 alpha 帧），所以它自己钉住 attr 档来跑 ——
+     *   默认换成 log 之后两帧会变成同一张图（那不是"压不住板"，是"这条判据够不到新法律"），
+     *   让它恒红或恒绿都是假信号；新法律的覆盖由下面那条 §E673 判据负责。 */
+    st.elaw = 'attr';
     st.edges = 'all'; st.color = 'fam'; st.labels = 'off'; NOPTS = 1;
     ELOG = 1; draw();
     var hub = EDGR.hub, hn = EDGR.hubn, amin = EDGR.amin, amax = EDGR.amax, nE = EDGR.n;
@@ -4736,11 +4739,16 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   根因是我自己那套法律的形式：密度格子按**画布坐标**取整（floor(y/EGRID)），平移 1px 就可能整体换格 ⇒
    *   同一条线的 alpha 离散跳档（实测中位跳幅见下面这条的读数），肉眼就是抽搐。旋转同理，而且更凶。
    *   判据读的是"同一条边在两个视图下的 alpha 差"，不读像素（像素上还有别的线压着，量不出这一条自己跳了多少）。
-   *   ⚠ 这条现在**是红的**，它钉的是还没做的事：把"压暗"从"每条线的属性"搬到"像素累加之后"
-   *     （离屏累加 + Reinhard/对数色调映射，用户转的 gemini 方案）⇒ 每条线的属性绝对静态，抽搐从根上消失。 */
+   *   当时它钉的是还没做的事：把"压暗"从"每条线的属性"搬到"像素累加之后"
+   *     （离屏累加 + Reinhard/对数色调映射，用户转的 gemini 方案）⇒ 每条线的属性绝对静态，抽搐从根上消失。
+   *   ⚑ **这条今天不红了**（10-20 实测 attr 档 93 PASS / 0 FAIL）：§E469 之后密度网格已搬到**纸面坐标**（见上面 EL.push 里那段 pap），
+   *     换视图不再整体换格 ⇒ 它钉的"alpha 不许随平移/缩放/旋转跳档"已经成立。
+   *   §E673 又补一层：默认法律换成 log（每条线**静态属性** + 累加之后压缩）⇒ 这一档下 al5 恒等，这条判据**没有牙**，
+   *     所以它自己钉住 attr 档跑（测它写得那套法律），新法律的牙在下面那条 §E673 判据上。 */
   (function () {
     var SN3 = { elev: st.elev, yaw: st.yaw, pit: st.pit, tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy,
-      edges: st.edges, color: st.color, labels: st.labels, mode: st.mode };
+      edges: st.edges, color: st.color, labels: st.labels, mode: st.mode, elaw: st.elaw };
+    st.elaw = 'attr';
     st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
     st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; st.edges = 'all'; st.color = 'fam'; st.labels = 'off';
     NOPTS = 1; ELOG = 1; EPROBE = Math.max(1, Math.round(EDGR.n / 24));
@@ -4755,11 +4763,47 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         for (var w = 0; w < 5; w++) { var dv = Math.abs(a5[w] - b5[w]); if (dv > m) { m = dv; ex = P0[q].id + ' ' + a5[w].toFixed(3) + '→' + b5[w].toFixed(3); } } }
       return [m, ex]; }
     var dP = dmax(A0p, A1p), dZ = dmax(A0p, A2p), dR = dmax(A0p, A3p);
-    T('平移/缩放/旋转一条线的 alpha 不许变（§E469 抽搐的根因 = 密度取在屏幕空间网格里 ⇒ 换格就跳档；这条现在该红）',
+    T('平移/缩放/旋转一条线的 alpha 不许变（§E469 根因 = 密度取在屏幕空间网格里 ⇒ 换格就跳档；§E673 起这条钉在 attr 档跑）',
       A0p.length >= 6 && dP[0] <= 0.02 && dZ[0] <= 0.02 && dR[0] <= 0.02,
       '探针 ' + A0p.length + ' 条边 × 5 个位置 ‖ 平移 3px 最大跳幅 ' + dP[0].toFixed(3) + (dP[1] ? '（' + dP[1] + '）' : '')
         + ' ‖ 缩放 ×1.03 ' + dZ[0].toFixed(3) + (dZ[1] ? '（' + dZ[1] + '）' : '')
         + ' ‖ 立体偏航 +0.05rad ' + dR[0].toFixed(3) + (dR[1] ? '（' + dR[1] + '）' : '') + '（三条都要 ≤0.02）');
+  })();
+  /* ===== §E673 新默认法律（像素累加 + 对数表）自己得有一条判据 =====
+   *   四个条件缺一条就红，各挡一种"看不见的死法"：
+   *   ① 累加器真被涂到（inked > 0）—— 挡"忘了合成 / 合成到别处"：那样画面上根本没有线，而其余判据一条都不会红；
+   *   ② 与 attr 帧**确有差别**（差 ≥6 墨的像素数 > 0）—— 挡"新法律写成空转，两档同一张图"（这正是 §E467 那条在 log 档失效的形状）；
+   *   ③ 扇根那块"到顶"像素数不许超过 attr 的 1.35 倍 —— 挡"把板又堆回去"；
+   *   ④ "有墨"像素数 ≥ attr 的 60% —— 挡"把线整个擦没"。
+   *   ⚑  为什么是"≤1.35 倍"而不是"必须更少"：**真累加只会让堆变深**（旧法律那种"堆比单线还淡"是靠压每条线的属性换来的，
+   *      累加律做不到那件事），所以这条钉的是"变深要有界"。读数由判据自己印，不抄在文案里。 */
+  (function () {
+    var SN4 = { elev: st.elev, yaw: st.yaw, pit: st.pit, tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy,
+      edges: st.edges, color: st.color, labels: st.labels, mode: st.mode, elaw: st.elaw };
+    function grab4() { try { return g.getImageData(0, 0, cv.width, cv.height).data; } catch (E9) { return null; } }
+    st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
+    st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; st.edges = 'all'; st.color = 'fam'; st.labels = 'off'; NOPTS = 1;
+    ELOG = 1; st.elaw = 'attr'; draw();
+    var hubA = EDGR.hub, hnA = EDGR.hubn, dAttr = grab4();
+    st.elaw = 'log'; draw(); var dLog = grab4(), inked = EDGR.inked;
+    st.edges = 'off'; draw(); var dOff4 = grab4();
+    for (var k5 in SN4) st[k5] = SN4[k5];
+    NOPTS = 0; recomputeVIS(); draw();
+    var ceilA = 0, ceilL = 0, covA = 0, covL = 0, dif = 0, R5 = Math.round(40 * devicePixelRatio);
+    if (dAttr && dLog && dOff4 && hubA) {
+      var x5 = Math.max(0, Math.round(hubA[0]) - R5), x6 = Math.min(cv.width - 1, Math.round(hubA[0]) + R5);
+      var y5 = Math.max(0, Math.round(hubA[1]) - R5), y6 = Math.min(cv.height - 1, Math.round(hubA[1]) + R5);
+      for (var yy5 = y5; yy5 <= y6; yy5++) for (var xx5 = x5; xx5 <= x6; xx5++) { var o5 = (yy5 * cv.width + xx5) * 4;
+        var iA = Math.max(Math.abs(dAttr[o5] - dOff4[o5]), Math.abs(dAttr[o5 + 1] - dOff4[o5 + 1]), Math.abs(dAttr[o5 + 2] - dOff4[o5 + 2]));
+        var iL = Math.max(Math.abs(dLog[o5] - dOff4[o5]), Math.abs(dLog[o5 + 1] - dOff4[o5 + 1]), Math.abs(dLog[o5 + 2] - dOff4[o5 + 2]));
+        var iD = Math.max(Math.abs(dAttr[o5] - dLog[o5]), Math.abs(dAttr[o5 + 1] - dLog[o5 + 1]), Math.abs(dAttr[o5 + 2] - dLog[o5 + 2]));
+        if (iA >= 200) ceilA++; if (iL >= 200) ceilL++;
+        if (iA >= 6) covA++; if (iL >= 6) covL++;
+        if (iD >= 6) dif++; } }
+    T('§E673 新默认法律（#elaw=log）有牙：累加器真被涂到 ‖ 与旧法律确有差别 ‖ 扇根变深要有界且不擦没',
+      inked > 0 && dif > 0 && covL >= 0.6 * covA && ceilL <= 1.35 * ceilA + 2,
+      '累加器涂到 ' + inked + ' 格（要 >0）‖ 与 attr 帧差别像素 ' + dif + '（要 >0）‖ 扇根窗 ±40px（那格压 ' + hnA + ' 条）'
+        + '到顶 attr ' + ceilA + ' → log ' + ceilL + '（线 ≤1.35×）‖ 有墨 ' + covA + ' → ' + covL + '（线 ≥60%）');
   })();
   /* ===== §E466 家族行序必须与"这一行真显示的那些枚"的训练时刻同向 =====
    *   用户 10-08：「怎么有几个后期的点飞到家族 1 去了，是不是哪里写错了」—— 写错的地方在 lineage.mjs 的聚类：

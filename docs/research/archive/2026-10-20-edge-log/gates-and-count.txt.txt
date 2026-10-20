@@ -1,0 +1,10 @@
+### §E673 换默认之后的点名门禁（工具原话：其余按跳过记账 ⇒ 不是整轮认证）
+--- --part=meta-repo
+N人测试：通过 12 / 12
+--- --part=meta-lint
+N人测试：通过 4 / 4
+--- --part=ship-pool
+N人测试：通过 1 / 1
+--- --part=probe-instruments
+N人测试：通过 33 / 33
+--- 页内自检：mode=tree/map/1d/3db 各 94 PASS / 0 FAIL（§E673 起从 93 变 94：新增一条钉住新默认法律）
