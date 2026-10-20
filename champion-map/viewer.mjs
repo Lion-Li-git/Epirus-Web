@@ -648,9 +648,10 @@ function backOf(d) {   /* 返回"父节点的 ts"，当且仅当它晚于本枚�
  *    因为挪它等于替历史读数改语义（§E314 加列不换语义那条）。挪不动的代价如实写在这：
  *    3.41 现在落在这张 121 枚表的第 94.2 百分位，其上只有 7 枚。*/
 var NEPS = 0, NBRIT = 0, NSTRONG = 0;
-/* §E615 长程桌那一档的计数：**只算有读数的枚**（缺测写 '-' → null，绝不进分母）*/
+/* §E615 长程桌那一档的计数：**只算有读数的枚**（缺测写 '-' → null，绝不进分母）
+ *   §E672 改成数 Hplong（原来数 fl）：长程 F 现在是**现算**的（Hplong/100 + T·S），烘死的 Flong 不再是分母的来源。 */
 var NHLONG = 0;
-(function () { for (var i = 0; i < N; i++) if (P[i].fl !== null && isFinite(P[i].fl)) NHLONG++; })();
+(function () { for (var i = 0; i < N; i++) if (P[i].hpl2 !== null && isFinite(P[i].hpl2)) NHLONG++; })();
 /* §E321 当选键那条腿的计数：NSEL = **有读数**的枚数（留空 = 这台仪器没测过，绝不当 0）。
  *   §E600-A：原来还分 NSELUP / NSELSOFT / NSELDOWN，判据是"与某一枚参照包的配对差 ≥+2pt 且 ≥6/8 同号"——
  *   参照物一退场这三个数就没有主语了，一并撤（'Scd/Scs/Sch' 三列留在表里当账，只是不再上色、不再进明细）。 */
@@ -825,8 +826,12 @@ var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
  *     （颜色 / 高度 / 排序比较器 / 标签 / 色带三端都走它），早先那个累加器 NFALL 会随拖动画布和拉滑块
  *     无上限上涨（用户 10-16 傍晚："缺测回默认桌 人次这个东西会随着拖动画布或调整滑块疯狂上涨"）
  *     ⇒ 一个只量"你动了多少下鼠标"的数不是读数，删。 */
+/* §E672 长程桌的 F 必须**现算**，不许回表里烘死的 Flong：那一列 = Hplong/100 + **0.10**·S（实测最大偏差 5e-5），
+ *   所以旧写法下这根 T 滑杆在长程档**根本不动 F**（前 400 枚 0/400 变），而默认档 393/400 变 ⇒ 两档不是同一套方法。
+ *   现在两档同式：H/100 + T·S，只差 H 读哪一列（Hp ‖ Hplong）。表里的 Flong 仍留着当历史账（图例/明细不再吃它）。 */
+function Fl(d) { return (d.hpl2 === null || d.hpl2 === undefined || !isFinite(d.hpl2)) ? null : d.hpl2 / 100 + st.T * d.S; }
 function Fv(d) {
-  if (st.ftab === 'long') { if (d.fl !== null && isFinite(d.fl)) return d.fl; return d.Hp / 100 + st.T * d.S; }
+  if (st.ftab === 'long') { var f = Fl(d); if (f !== null) return f; return d.Hp / 100 + st.T * d.S; }
   return d.Hp / 100 + st.T * d.S; }
 /* ===== 页面口径那一档（颜色 'hp'）：两个桌形**必须同一套取数**（用户 10-20 裁定）=====
  *   默认桌读 coords 的「Hp」，长程桌读 coords 的「Hplong」（烘进页面叫「hpl2」）—— 同一台 eval-5p、同 seed 同档、
@@ -1179,9 +1184,9 @@ function tip(d) {
         : (d.psrc === 'synthetic' ? '：合成锚点 —— 当时槽里那枚，盘上没留档（图上这一行是占位，不是漏记）'
           : (d.psrc === 'unresolved' ? '：不可考 —— 包里有热启动证据，但那份权重解不出来（这一类才要去补证据）'
             : '（父指针未落档）')))) +
-    (d.fl === null ? '\\n长程桌：没量（mode=long 那批没覆盖到这枚 ⇒ 不是 0）'
-      : '\\n长程桌（同 seed 同档，只换桌形）：考卷 ' + d.hl2.toFixed(1) + '% ‖ 页面 ' + d.hpl2.toFixed(1) + '% ‖ F ' + d.fl.toFixed(2)
-        + (isFinite(d.Hp) ? ('  ⇒ 与默认桌之差：Hp ' + (d.hpl2 - d.Hp >= 0 ? '+' : '') + (d.hpl2 - d.Hp).toFixed(1) + 'pt ‖ F ' + (d.fl - Fv(d) >= 0 ? '+' : '') + (d.fl - Fv(d)).toFixed(2)) : '')) +
+    (d.hpl2 === null ? '\\n长程桌：没量（mode=long 那批没覆盖到这枚 ⇒ 不是 0）'
+      : '\\n长程桌（同 seed 同档，只换桌形）：考卷 ' + d.hl2.toFixed(1) + '% ‖ 页面 ' + d.hpl2.toFixed(1) + '% ‖ F ' + Fl(d).toFixed(2) + '（按当下 T）'
+        + (isFinite(d.Hp) ? ('  ⇒ 与默认桌之差：Hp ' + (d.hpl2 - d.Hp >= 0 ? '+' : '') + (d.hpl2 - d.Hp).toFixed(1) + 'pt ‖ F ' + (Fl(d) - Fv(d) >= 0 ? '+' : '') + (Fl(d) - Fv(d)).toFixed(2)) : '')) +
     /* §E616 两版过线并排说：绿环那条是**在册那道闸**（混合桌：G主判/座位/场A/场B 在 multi，G2/墙/密度/蓄能 在 long），
      *   这一行是**全腿都搬上长程**之后同一道闸的裁决。两个都给，谁也不替谁 —— 换绿环的主语是待裁 #47。 */
     (d.okl === null ? '' : ('\\n过线（全腿长程）' + (d.okl === 1 ? ' ✓' : ' ✗' + (d.flongs ? '（' + d.flongs.slice(0, 52) + '）' : ''))
@@ -1434,6 +1439,12 @@ function buildBitmap(key, visSigNow) {
   var SHOWN = new Uint8Array(N), nShown = 0;
   for (var s9 = 0; s9 < N; s9++) { SHOWN[s9] = (VIS[s9] && inWin(P[s9])) ? 1 : 0; nShown += SHOWN[s9]; }
   var VIS_TB = (nShown === N) ? null : visKNN(nb, key + '@' + visSigNow, SHOWN);
+  /* §E672 场的被平均量 = **Fv**（当前桌形 + 当前 T），不再是硬编码的 Hp/100 + T·S。
+   *   旧写法在长程档画的是"默认桌的场"过"长程桌的色带"⇒ 两档不同向（实测全范围蓝 66.4% ‖ 高窗 89.3% 且 162/281 格钳到蓝端），
+   *   正是用户 10-20 下午指出的"长程偏灰蓝多得多、拉高窗整张全蓝没有红"。默认档逐字不变（Fv 就是同一式子）。
+   *   先烘成一张表：48 万次内循环里只查数组，不重复走函数与分支。 */
+  var FV9 = new Float64Array(N);
+  for (var f9 = 0; f9 < N; f9++) FV9[f9] = Fv(P[f9]);
   /* E389 DS：**不再**把覆盖度基准跟着可见集放大 —— 那会让远处的可见点把场拉成一片平均（用户：「暴力拉到无穷远」）。
    *   覆盖度基准保持全库 d12m 那一把尺 ⇒ 晕有固有尺度；配合下面的截断半径，远处自然回到底色。 */
   for (var i = 0; i < nb.gx * nb.gy; i++) {
@@ -1448,11 +1459,11 @@ function buildBitmap(key, visSigNow) {
      *   nShown === N ⇒ 用 buildNB 缓存好的全库表（两者逐字节相同）；否则现算可见表
      *   ⇒ 不再存在"候选全在窗外 ⇒ wsum=0 ⇒ 留空"的格子。 */
     var TB = VIS_TB || nb;
-    var bs9 = i * KF, wsum = 0, hsum9 = 0, ssum9 = 0;
+    var bs9 = i * KF, wsum = 0, fsum9 = 0;
     for (var u9 = 0; u9 < KF; u9++) { var pi9 = TB.idx[bs9 + u9]; if (pi9 < 0) break;
       if (nShown !== N && !SHOWN[pi9]) continue;
       var w9 = 1 / Math.pow(Math.max(TB.dst[bs9 + u9], 1e-6), KEXP);
-      wsum += w9; hsum9 += w9 * (P[pi9].Hp / 100); ssum9 += w9 * P[pi9].S; }
+      wsum += w9; fsum9 += w9 * FV9[pi9]; }
     if (!(wsum > 0)) continue;
     /* §E331 覆盖度换成**核权重和**，不用「到最近点的距离」。旧写法 1/(1+(DM/fscale)^4) 在两枚点中间
      *   必然下凹（DM 在 Voronoi 脊线上取局部极大）⇒ 底图上那一片"凹陷的接缝"就是脊线本身，跟数据无关，
@@ -1465,7 +1476,7 @@ function buildBitmap(key, visSigNow) {
     var fade = wsum / (wsum + kcov) * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
-    var Fav = (hsum9 + st.T * ssum9) / wsum;
+    var Fav = fsum9 / wsum;   /* §E672 = 可见点 Fv 的加权平均（原来写的是 (hsum9 + T·ssum9)/wsum，而 hsum9 硬编码 Hp）*/
     /* §E601：底图只有一条读法（全库分位 + 蓝→灰→红）。原来"只有切到第 6 档 rel 才用发散带 + 淡入"那一支已随整档删除。*/
     var tt = fCol(Fav);
     var rgb = rampRGB(tt);
@@ -1668,7 +1679,8 @@ function draw1(fr) {
     /* 分解条：蓝 = Hp（线上口径夺1率），黄 = T·S（广度）。谁靠哪一头站在这上面一眼可见。
        §E314：必须用 Hp 而不是 H —— 纵轴位置已经是 Hp + T·S，蓝条若还画 H 就变成"位置与分解两个口径"，
        那正是本仓反复踩的"图上画一个数、旁边一行另一个口径的数"。*/
-    var hh = (d.Hp / 100), ss = st.T * d.S, tot = hh + Math.abs(ss) || 1;
+    var hNow = hpNow(d);   /* §E672 分解条必须拆**当下这一档的 F**：原来两档都拆 Hp ⇒ 长程档那两条加起来不等于点所在的那个 F */
+    var hh = ((hNow === null || !isFinite(hNow)) ? d.Hp : hNow) / 100, ss = st.T * d.S, tot = hh + Math.abs(ss) || 1;
     var bh = 9 * devicePixelRatio;
     g.globalAlpha = al * 0.9;
     g.fillStyle = '#4c9ff5'; g.fillRect(x - dx * 0.42, base + 8 * devicePixelRatio, Math.max(1, dx * 0.84 * hh / tot), bh);
@@ -1680,7 +1692,7 @@ function draw1(fr) {
   for (i = 0; i < ls.length; i++) { var p = scr[ls[i].i]; if (!p) continue;
     putLabel(labOf(P[ls[i].i]), p[0], p[1], mustLabel(P[ls[i].i]), true, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-  g.fillText('一维：位置 = ' + (st.sortBy === 'time' ? '训出时刻' : (st.ftab === 'long' ? '长程桌 F 名次' : 'F 名次')) + '（下方蓝条 = Hp 线上口径夺1率，黄条 = T·S）· 悬停看明细 · 点一枚 = 选中（点空白取消）· 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
+  g.fillText('一维：位置 = ' + (st.sortBy === 'time' ? '训出时刻' : (st.ftab === 'long' ? '长程桌 F 名次' : 'F 名次')) + '（下方蓝条 = ' + (st.ftab === 'long' ? 'Hplong 长程桌夺1率' : 'Hp 线上口径夺1率') + '，黄条 = T·S）· 悬停看明细 · 点一枚 = 选中（点空白取消）· 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
 }
 
 /* §E332 把谱系图的**版式**（车道带 + 左栏家族名/统计 + 左右分界 + 日期竖线与刻度）烘成一张离屏画布。
