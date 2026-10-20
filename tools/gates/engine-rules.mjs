@@ -577,7 +577,9 @@ t('D51 双目标技能必须**有序成对**进入决策（镜面反射 t1→t2 
   ok(R.byKey[R.SK.MIRROR].target2 === 'enemy', '规则数据必须声明镜面反射有第二目标（target2=enemy）');
   ok(R.byKey[R.SK.DUAL_GUN].target2 === 'enemy', '规则数据必须声明双枪射手有第二目标（target2=enemy）');
   const pol = readFileSync('js/train/policy.js', 'utf8');
-  ok(pol.indexOf("def.target2 === 'enemy'") >= 0, 'candidatesFor 必须有"双目标技能"分支');
+  /* v1.7.126（门禁 ② 分诊，批 2）：这条源码 pin 与下面 591/592 的**行为腿重复** ——
+   *   那两条真跑 `candidatesFor` 并断言 (1→2) 与 (2→1) 各恰好一个候选（顺序不可交换）。
+   *   实现分支换成什么写法都行，只要这两个候选还在 ⇒ 摘源码 pin 不减少覆盖。 */
   const stz = S.createState('multi', { next: function () { return 0.5; } }, 5);
   const nopps = S.opponentsOf(stz, 0).length;
   for (const k of [R.SK.MIRROR, R.SK.DUAL_GUN]) {
@@ -622,8 +624,11 @@ t('D52 结算起点必须每局随机（不得有确定性身份映射）；盐 
   const st2 = S.createState('multi', { next: function () { return 0.5; } }, 2);
   eq(X.turnOrder(st2).join(','), '0,1', '2 人局必须恒等顺序（v1.0 冻结）');
   const rj = readFileSync('js/core/resolve.js', 'utf8');
-  ok(rj.indexOf('state.slotSalt') >= 0, 'turnOrder 必须使用每局的盐作为相位');
-  ok(rj.indexOf('const start = ((state.round || 1) - 1) % n;') < 0, '旧的确定性相位必须已移除');
+  /* v1.7.126（门禁 ② 分诊，批 2）：上面 605–623 已经把 `turnOrder` **真跑**过 —— 5 座在 25 个盐下起点覆盖全 5 座、
+   *   各座次数 ≥2、盐 0 保持旧口径、2 人恒等。⇒ 下面这两条**源码 pin 与行为腿重复**：
+   *     ① `rj.indexOf('state.slotSalt') >= 0`（盐被用了）—— 615/617 用不同盐得到不同顺序，已经证明；
+   *     ② `rj.indexOf('const start = ((state.round || 1) - 1) % n;') < 0`（旧确定性相位已移除）—— 若它回来，615/617 当场红。
+   *   摘掉它们**不减少覆盖**（这是「两条腿测同一件事，留行为那条」）。 */
 });
 
 t('D53 无显式目标时的默认作用者不得恒定取最小索引（L7 第四次）', function () {

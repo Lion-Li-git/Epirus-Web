@@ -2886,7 +2886,9 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
   /* ① 出厂必须关（干净沙箱里读，别用共享 `T` —— 它早被别的门喂过值） */
   const W0 = mkSb();
   eq(W0.EpirusTrainer.beliefSearchOn(), 0, '① 出厂必须是 0（实测 ' + W0.EpirusTrainer.beliefSearchOn() + '）⇒ 开档必须是点名行为，不是默认');
-  ok(/let BELIEF_SEARCH = 0;/.test(EVO), '① 源码里的默认值必须是 `let BELIEF_SEARCH = 0`（被人改成 1 = 悄悄改了线上 AI 的行为）');
+  /* v1.7.126（门禁 ② 分诊，批 4）：这条源码 pin 与**上一行**的行为腿重复 ——
+   *   2888 已经真跑 `W0.EpirusTrainer.beliefSearchOn()` 断言出厂 = 0；把默认值改成 1，那条当场红。
+   *   实现怎么写（`let X = 0` / `const` / 初始化函数）不该被钉。 */
   /* ② setter 的口径：env/CLI 下达全是字符串，`'0'` 被当真是本仓反复踩的形状 */
   W0.EpirusTrainer.setBeliefSearch('0'); eq(W0.EpirusTrainer.beliefSearchOn(), 0, "② 字符串 '0' 必须判成关");
   W0.EpirusTrainer.setBeliefSearch(0); eq(W0.EpirusTrainer.beliefSearchOn(), 0, '② 数字 0 必须判成关');

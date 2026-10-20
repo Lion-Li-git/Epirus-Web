@@ -181,7 +181,10 @@ t('D99 两处修正：原型制御 ≥3 转移（R24）+ 目标架势特征不�
     '挡住的同时必须**记账**（"伤害总数"= 可以生效且会被挡住的伤害之和 —— 用户口径）');
   ok(rs.indexOf('if (total >= 3)') >= 0 && rs.indexOf('if (it.source == null || it.source === to) continue;') >= 0,
     '决算：总数 ≥3 时反给施法者；**无来源的那几份（天火）计入总数但跳过**');
-  ok(rs.indexOf('protoReflectAll(state);  // v1.5.117') >= 0, '决算必须真的被调用（不是只定义 —— D28 的教训）');
+  /* v1.7.126（门禁 ② 分诊，批 1）：原来钉的是 `protoReflectAll(state);  // v1.5.117` —— **把版本注释也钉进判据**，
+   *   任何一次注释整理都会红，而行为一点没变。改成只钉**调用本身**（`protoReflectAll(state);`）。
+   *   这条腿要保的是「决算必须真被调用，不是只定义」（D28 的教训），不是那句注释还在不在。 */
+  ok(rs.indexOf('protoReflectAll(state);') >= 0, '决算必须真的被调用（不是只定义 —— D28 的教训）');
   ok(rs.indexOf("protoNote(state, v, null, 1, R.DMG.FIRE, 'firestorm')") >= 0,
     '天火那一份必须**计入总数**（用户口径：它会被挡住，所以算进总数；但无来源 ⇒ 不被反）');
   ok(rs.indexOf("reason: '原型制御·转移'") >= 0, '转移伤害必须有事件标记便于量具核对');
