@@ -10,7 +10,7 @@
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.7.125 （2~5 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.7.126 （2~5 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md</span>
   </header>
 
   <nav class="tabs">
@@ -137,29 +137,29 @@
 <div id="overlay-root" class="overlay hidden"><div class="card" id="overlay-card"></div></div>
 
 <!-- 引擎（加载顺序即依赖顺序） -->
-<script src="js/core/rules.js?v=mv9mdgpg"></script>
-<script src="js/core/state.js?v=mv9mdgpg"></script>
-<script src="js/core/resolve.js?v=mv9mdgpg"></script>
-<script src="js/core/play.js?v=mv9mdgpg"></script>
-<script src="js/train/bots.js?v=mv9mdgpg"></script>
-<script src="js/train/policy.js?v=mv9mdgpg"></script>
-<script src="js/train/evo.js?v=mv9mdgpg"></script>
-<script src="js/train/trainer.js?v=mv9mdgpg"></script>
-<script src="js/bundled-champion.js?v=mv9mdgpg"></script>
-    <script src="js/bundled-champion-3p.js?v=mv9mdgpg"></script>
-<script src="js/champion-pack.js?v=mv9mdgpg"></script>
-<script src="js/pool-draw.js?v=mv9mdgpg"></script>
-<script src="js/ui/skill-tip.js?v=mv9mdgpg"></script>
-<script src="js/ui/bead-choice.js?v=mv9mdgpg"></script>
-<script src="js/ui/ui.js?v=mv9mdgpg"></script>
+<script src="js/core/rules.js?v=mv9mdgq0"></script>
+<script src="js/core/state.js?v=mv9mdgq0"></script>
+<script src="js/core/resolve.js?v=mv9mdgq0"></script>
+<script src="js/core/play.js?v=mv9mdgq0"></script>
+<script src="js/train/bots.js?v=mv9mdgq0"></script>
+<script src="js/train/policy.js?v=mv9mdgq0"></script>
+<script src="js/train/evo.js?v=mv9mdgq0"></script>
+<script src="js/train/trainer.js?v=mv9mdgq0"></script>
+<script src="js/bundled-champion.js?v=mv9mdgq0"></script>
+    <script src="js/bundled-champion-3p.js?v=mv9mdgq0"></script>
+<script src="js/champion-pack.js?v=mv9mdgq0"></script>
+<script src="js/pool-draw.js?v=mv9mdgq0"></script>
+<script src="js/ui/skill-tip.js?v=mv9mdgq0"></script>
+<script src="js/ui/bead-choice.js?v=mv9mdgq0"></script>
+<script src="js/ui/ui.js?v=mv9mdgq0"></script>
 <!-- v1.6.63（§E590）冠军池：成员权重表，defer ⇒ 不挡首屏；第一次 AI 决策前必然已执行。
      真源 champion-map/pool-members.tsv，本文件由 tools/build-pool-bundle.mjs 生成，不要手改。
      ⚠ v1.7.1 订正读数：这里原写「744KB 的成员权重表」，那是池只有 7 枚时的尺寸；现测 **2,884KB**（27 枚 = hard 9 ‖ mid 7 ‖ soft 11，
        与 js/bundled-champion-pool.js 文件头的「源文件合计 2917 KB」同源）⇒ 改的只是这句注释，产物一字未动。 -->
-<script defer src="js/bundled-champion-pool.js?v=mv9mdgpg"></script>
+<script defer src="js/bundled-champion-pool.js?v=mv9mdgq0"></script>
 <!-- v1.6.66（§E599）**2P 池**：2P 原生包（用户 10-12 裁定：每局只要一个对手 ⇒ 成员不必多；种类 <5 的不要）。
      真源 champion-map/pool-members-2p.tsv，同一支 build-pool-bundle.mjs 生成（--table=/--key=EPIRUS_CHAMPION）。
      与 3P 池**分开**：§E286 那条"3P 包在 1v1 上是分布外"仍然成立，所以这里放的是 2P 考卷训出来的包。 -->
-<script defer src="js/bundled-champion-pool-2p.js?v=mv9mdgpg"></script>
+<script defer src="js/bundled-champion-pool-2p.js?v=mv9mdgq0"></script>
 </body>
 </html>

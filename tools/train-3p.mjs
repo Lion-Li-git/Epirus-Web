@@ -548,8 +548,13 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
   /* v1.7.127（用户 10-20：「测一下开关的差别」）：**训练侧也开送盾先验**（`EPIRUS_SUPPORT_PRIOR=0|1|2`）。
    * 纪律与 `REGEN_SLICE` 一致：无 setter ⇒ exit 7；下达后**回读**；读不回也 exit 7（不许静默空转）。 */
   {
-    const spReq = process.env.EPIRUS_SUPPORT_PRIOR;
-    if (spReq != null && String(spReq).trim() !== '') {
+    /* v1.7.128（用户 10-20 裁定「默认开」）：**训练侧默认 = 2**（与页面一致）。
+     *   依据：10 粒配对 A/B（120 代）强度 Δ −0.43pt (t=−0.14) ⇒ 无差别；
+     *   但 ⚠ 那批包送盾≈0%（`p0` 0.0%）⇒ **没覆盖「本来就爱送盾」的区间**，以后出现刷盾型起点包要重测。
+     *   要关掉就显式设 `EPIRUS_SUPPORT_PRIOR=0`（门里那些比对产物的腿应显式设 0，见 CHANGELOG）。 */
+    const spReq = (process.env.EPIRUS_SUPPORT_PRIOR != null && String(process.env.EPIRUS_SUPPORT_PRIOR).trim() !== '')
+      ? process.env.EPIRUS_SUPPORT_PRIOR : '2';
+    if (true) {
       const v = Number(spReq);
       if (!(v === 0 || v === 1 || v === 2)) {
         console.error('[train-3p] ⛔ EPIRUS_SUPPORT_PRIOR 只能是 0/1/2（收到 ' + spReq + '）');
