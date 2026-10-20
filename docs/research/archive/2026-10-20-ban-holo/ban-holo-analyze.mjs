@@ -24,6 +24,10 @@ const RNG = Number(flag('rng', 20261020));
 const FLIP = process.argv.indexOf('--flip') >= 0;
 const DROP = flag('drop', '');
 const PACKS = [['beadseed', 'v7beadseed-82'], ['wall', 'v7wall-33'], ['teach', 'v7teach-32'], ['expo', 'v7expo-34']];
+/* §E670 补：--tag=<mode>-<seed> 把整批指到某一层的原件上（ban-holo-2x2.mjs 补跑的 2 档 × 2 seed）；
+ *   不给 tag 就是最初那层（multi × 77000，文件名没后缀）。 */
+const TAG = flag('tag', '');
+function pf(k, arm) { return k + '-' + arm + (TAG ? '-' + TAG : '') + '.per.txt'; }
 const POOLS = ['antidef', 'deepsaver', 'farmer', 'heavyfire', 'random', 'wall', 'defend'];
 
 function readPer(f) {
@@ -53,7 +57,7 @@ const ALL = [];
 function gate(name, ok, extra) { console.log((ok ? '  闸 OK  ' : '  ⛔ 闸红 ') + name + (extra ? '   ' + extra : '')); if (!ok) nGateFail++; }
 
 for (const [k, id] of PACKS) {
-  let bare = readPer(k + '-bare.per.txt'), ban = readPer(k + '-ban.per.txt');
+  let bare = readPer(pf(k, 'bare')), ban = readPer(pf(k, 'ban'));
   if (FLIP) { const t = bare; bare = ban; ban = t; }
   if (DROP) { const w = DROP.split(':'); if (w[0] === k) { const di = +w[1]; ban = { head: ban.head, rows: ban.rows.filter(r => r.idx !== di) }; } }
   console.log('\n=== ' + id + '   （' + (FLIP ? '⚠ 翻标签对照' : '裸 − ban') + '）===');
