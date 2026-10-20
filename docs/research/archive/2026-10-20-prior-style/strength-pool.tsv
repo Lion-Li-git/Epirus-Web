@@ -1,0 +1,27 @@
+# 强度闸（tools/probe-pool.mjs --subject= ‖ 读数 = 被考夺1% − 参照夺1% · pts ‖ 参照 SHIPPED-Ldemo)
+# 产物 18 份的名单签名集合（大小 1）：4856e3af62be7bdc/c64af6b282ad087b  ⇒ 先验配对是同桌，可以并排比
+# 起点 5 份的名单签名集合（大小 2）：4856e3af62be7bdc/c64af6b282ad087b ‖ 0401244dca0e20f8/00b5dd99f374e9d0 ⇒ **起点侧不同桌**：subject 本身就是池成员的那枚会被摘出对手席 ⇒ roster 变小，起点数不许与产物并排读（只作旁证）
+包	multi 差	long 差
+bead15-p0	6.75	7.25
+bead15-p0-s88011	2.25	-1.08
+bead15-p2	8.08	16.33
+bead15-p2-s88011	11.75	8.17
+beadseed-p0	11.75	5.67
+beadseed-p2	9.17	2.5
+lctl-p0	3.58	1.33
+lctl-p0-s88011	7.08	4.08
+lctl-p2	6.17	-2
+lctl-p2-s88011	9.92	13.25
+origin-bead15	8.08	8.33
+origin-beadseed	13.17	5.75
+origin-lctl	7.25	3.08
+origin-teach	-4.42	-4.92
+origin-wall34	0.75	-1.92
+teach-p0	2.42	1.83
+teach-p0-s88011	9.33	8.5
+teach-p2	7.33	1.17
+teach-p2-s88011	5.5	2.5
+wall34-p0	8.08	18.25
+wall34-p0-s88011	13.17	13.58
+wall34-p2	3.67	5.58
+wall34-p2-s88011	15.75	15.83

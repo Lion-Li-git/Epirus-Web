@@ -11,7 +11,7 @@
  *   ‖ docs/research/archive/2026-10-20-prior-style/gift-readout-{multi,long}-all.tsv      ← 调 tools/audit-lib.mjs 的 selfPlay
  * 用法：node docs/research/archive/2026-10-20-prior-style/prior-style-analyze.mjs [--out=<tsv>]
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,18 +25,23 @@ const ORIGINS = ['teach', 'beadseed', 'bead15', 'wall34', 'lctl'];
 /* ---- champ-audit：列顺序照 tools/champ-audit.mjs:101-124 的打印顺序，逐格数出来 ---- */
 const COLS = ['考卷1st', '严胜', '伤害/局', '重击/局', '盾/局(放)', '零伤害率', '平局率', '回合', '反弹墙1st',
   '摆架势', '被集火还手', 'F回合', '有效技能数', '种类', '座位极差', '反弹墙伤害/局', '蓄能/局', '珠浪费', '混合场', '对被动'];
+/* 起点包与产物包用同一套短名（否则两张表并不到一行） */
+const ORIGIN_KEY = { 'v7teach-32': 'teach-起点', 'v7beadseed-82': 'beadseed-起点', 'v7bead15-93': 'bead15-起点', 'v7wall-34': 'wall34-起点', 'win-Lctl': 'lctl-起点', 'Lctl': 'lctl-起点' };
+const normKey = (s) => { const k = s.replace('e675-out/', '').replace('docs/artifacts/', '').replace('eval-out/', '').replace(/\.(js|bak)$/, ''); return ORIGIN_KEY[k] || k; };
 function parseAudit(mode) {
-  const f = join(HERE, 'raw', 'champ-audit-' + mode + '-18.txt');
-  if (!existsSync(f)) throw new Error('缺 ' + f + ' ⇒ 先跑那把尺，不许在这里补算');
   const out = {};
-  for (const line of readFileSync(f, 'utf8').split(/\r?\n/)) {
-    if (!/e675-out\/.*p[02]/.test(line)) continue;
-    const nm = line.slice(0, 42).trim().replace('e675-out/', '').replace('.js', '');
-    if (line.slice(42).indexOf('?') >= 0) { console.log('⚠ 行 ' + nm + ' 里有 "?"（那一格没读数）⇒ 整行丢弃，不按位置猜补'); continue; }
-    const toks = (line.slice(42).match(/-?\d[\d.]*/g) || []).map(Number);
-    if (toks.length < 20) { console.log('⚠ 行 ' + nm + ' 只数到 ' + toks.length + ' 个数（该 20）⇒ 整行丢弃并点名'); continue; }
-    const rec = {}; COLS.forEach((c, i) => rec[c] = toks[i]);
-    out[nm] = rec;
+  for (const fn of ['champ-audit-' + mode + '-18.txt', 'champ-audit-' + mode + '-origins.txt']) {
+    const f = join(HERE, 'raw', fn);
+    if (!existsSync(f)) { console.log('⚠ 缺 ' + fn + ' ⇒ 这一路读数不进表'); continue; }
+    for (const line of readFileSync(f, 'utf8').split(/\r?\n/)) {
+      if (!/e675-out\/.*p[02]|\.bak|Lctl/.test(line)) continue;
+      const nm = normKey(line.slice(0, 42).trim().replace('win-', 'win-'));
+      if (line.slice(42).indexOf('?') >= 0) { console.log('⚠ 行 ' + nm + ' 里有 "?"（那一格没读数）⇒ 整行丢弃，不按位置猜补'); continue; }
+      const toks = (line.slice(42).match(/-?\d[\d.]*/g) || []).map(Number);
+      if (toks.length < 20) { console.log('⚠ 行 ' + nm + ' 只数到 ' + toks.length + ' 个数（该 20）⇒ 整行丢弃并点名'); continue; }
+      const rec = {}; COLS.forEach((c, i) => rec[c] = toks[i]);
+      out[nm] = rec;
+    }
   }
   return out;
 }
@@ -47,8 +52,7 @@ function parseGift(mode) {
   for (const line of readFileSync(f, 'utf8').replace(/^\uFEFF/, '').trim().split(/\r?\n/)) {
     const c = line.split('\t');
     if (c.length < 9 || !/\.js$|\.bak$/.test(c[0])) continue;
-    const key = c[0].replace('e675-out/', '').replace('docs/artifacts/', '').replace('eval-out/', '').replace(/\.(js|bak)$/, '');
-    out[key === 'win-Lctl' ? 'lctl' : key] = { 放关: +c[3], 给别人关: +c[4], 给别人开2: +c[5], 挡关: c[7], 挡开2: c[8] };
+    out[normKey(c[0])] = { 放关: +c[3], 给别人关: +c[4], 给别人开2: +c[5], 挡关: c[7], 挡开2: c[8] };
   }
   return out;
 }
@@ -122,6 +126,51 @@ for (const m of ['multi', 'long']) {
       pos, neg + (mixed ? '（另有两 seed 不一致 ' + mixed + '）' : '') + (zero ? '（无位移 ' + zero + '）' : ''), verdict, drift.length ? median(drift).toFixed(2) : ''].join('\t'));
   }
 }
+/* ---- 强度闸：池桌主体席的配对差（vs 同一参照），逐包 + 逐起点 ---- */
+const rawDir = join(HERE, 'raw');
+const pool = {};
+const sigs = new Set();
+if (existsSync(rawDir)) {
+  for (const fn of readdirSync(rawDir)) {
+    if (!/^pool-.*\.txt$/.test(fn)) continue;
+    const name = fn.replace(/^pool-/, '').replace(/\.txt$/, '');
+    const txt = readFileSync(join(rawDir, fn), 'utf8');
+    const jl = txt.split(/\r?\n/).filter(l => l.trim().startsWith('{'))[0];
+    if (!jl) continue;   // 还在写 / 没跑成 ⇒ 不猜
+    let rec; try { rec = JSON.parse(jl); } catch (e) { console.log('⚠ pool-' + name + ' 的机器可读行解析失败 ⇒ 丢弃'); continue; }
+    const m = {}, sg = {};
+    for (const x of rec.perMode || []) { m[x.mode] = x.diff; sg[x.mode] = x.sig; sigs.add(x.mode + ':' + x.sig); }
+    pool[name] = { diff: m, sig: sg, ref: rec.ref, miss: (txt.indexOf('主体席尺') < 0 ? '无表' : '') };
+  }
+}
+const prodSigs = new Set(), originSigs = new Set();
+for (const k in pool) (k.startsWith('origin-') ? originSigs : prodSigs).add((pool[k].sig.multi || '?') + '/' + (pool[k].sig.long || '?'));
+const strength = ['# 强度闸（tools/probe-pool.mjs --subject= ‖ 读数 = 被考夺1% − 参照夺1% · pts ‖ 参照 ' + (Object.values(pool)[0] || { ref: '?' }).ref + ')',
+  '# 产物 18 份的名单签名集合（大小 ' + prodSigs.size + '）：' + Array.from(prodSigs).join(' ‖ ') + (prodSigs.size === 1 ? '  ⇒ 先验配对是同桌，可以并排比' : '  ⇒ ✗ 不同桌，Δ 作废'),
+  '# 起点 5 份的名单签名集合（大小 ' + originSigs.size + '）：' + Array.from(originSigs).join(' ‖ ') + (originSigs.size === 1 ? ' ⇒ 同桌' : ' ⇒ **起点侧不同桌**：subject 本身就是池成员的那枚会被摘出对手席 ⇒ roster 变小，起点数不许与产物并排读（只作旁证）'),
+  ['包', 'multi 差', 'long 差'].join('\t')];
+for (const k of Object.keys(pool).sort()) strength.push([k, pool[k].diff.multi ?? '', pool[k].diff.long ?? ''].join('\t'));
+writeFileSync(join(HERE, 'strength-pool.tsv'), strength.join('\r\n') + '\r\n', 'utf8');
+lines.push('## 强度闸（池桌配对差，pts）‖ 逐包绝对值见 strength-pool.tsv');
+for (const m of ['multi', 'long']) {
+  const perOrigin = [];
+  for (const o of ORIGINS) {
+    const ds = [];
+    for (const s of SEEDS) {
+      const a = pool[`${o}-p0${s === SEEDS[0] ? '' : '-s' + s}`], b = pool[`${o}-p2${s === SEEDS[0] ? '' : '-s' + s}`];
+      if (!a || !b || a.diff[m] == null || b.diff[m] == null) continue;
+      ds.push(b.diff[m] - a.diff[m]);
+    }
+    if (ds.length) { const allZero = ds.every(x => Math.abs(x) <= 0.05); perOrigin.push({ o, v: median(ds), sign: allZero ? 0 : (ds.every(x => x > 0.05) ? 1 : (ds.every(x => x < -0.05) ? -1 : 2)), detail: ds.map(x => (x > 0 ? '+' : '') + x.toFixed(1)).join('/') }); }
+  }
+  if (!perOrigin.length) { lines.push(['强度(' + m + ')', 0, '读不出（池桌表还没跑完）', '', '', '**读不出**', ''].join('\t')); continue; }
+  const pos = perOrigin.filter(r => r.sign === 1).length, neg = perOrigin.filter(r => r.sign === -1).length;
+  const mixed = perOrigin.filter(r => r.sign === 2).length, zero = perOrigin.filter(r => r.sign === 0).length;
+  const verdict = (pos >= 3 && neg === 0 && mixed === 0) ? '**稳定上移**' : (neg >= 3 && pos === 0 && mixed === 0) ? '**稳定下移（强度受损）**' : '判不动';
+  lines.push(['强度Δ先验(' + m + ')', perOrigin.length, perOrigin.map(r => r.o + ' ' + (r.v > 0 ? '+' : '') + r.v.toFixed(1) + '[' + r.detail + ']').join(' ‖ '),
+    pos, neg + (mixed ? '（不一致 ' + mixed + '）' : '') + (zero ? '（无位移 ' + zero + '）' : ''), verdict, ''].join('\t'));
+}
+
 writeFileSync(OUT, lines.join('\r\n') + '\r\n', 'utf8');
 console.log(lines.join('\n'));
 console.log('\n写 ' + OUT);
