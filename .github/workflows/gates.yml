@@ -116,7 +116,7 @@ jobs:
             echo "⛔ 有部分红了（或 plan 挂了）⇒ 整轮不成立。去上面 'part <名字>' 那些作业里看是哪一条门，别先重跑。"
             exit 1
           fi
-      - name: 并集守卫（16 个部分的并集必须 = 整轮；少跑一条就红）
+      - name: 并集守卫（全部部分的并集必须 = 整轮；少跑一条就红。条数由脚本现读 ⇒ 这里不写死）
         run: node tools/gate-parts-check.mjs
       - name: spec（2 人引擎 52 用例）
         run: node tools/spec-run.mjs

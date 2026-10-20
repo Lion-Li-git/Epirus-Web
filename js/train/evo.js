@@ -2453,6 +2453,10 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
       spRoleNorm: spRoleNorm, spRoleH: spRoleH, spMixNorm: spMixNorm, divRoleW: DIV_ROLE_W,
       spH: spH,
       spG: spG, gBonus: gBonus, fitGW: FIT_G_W, fitGF: FIT_G_FLOOR,   // v1.6.50（B）：这一维的读数栏（开档才非零）
+      /* §E659（10-20 夜班）：`fit` 的**六项**里只剩 `shapeBonus` 没随评分返回，而 D13/D15 那两条恒等式断言的
+       *   契约是"fit = 报告出来的各加项之和"（见 train-table.mjs 里 v1.5.71 那段：漏 seatPen 时"5 次里 1 次随机红"）。
+       *   补上它，契约才真的闭合 ⇒ 任何一项都能被审计，门不必靠"猜这档是关着的"来写恒等式。 */
+      shapeBonus: shapeBonus, s4W: S4_W,
       divBonus: divBonus,
       seatPen: seatPen, seatSpreadMirror: seatSpreadMir, seatMaxPct: seatMaxPct, mirrorDecisive: mirDec,
       divW: DIV_W,

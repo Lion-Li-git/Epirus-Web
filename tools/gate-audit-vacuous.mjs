@@ -26,7 +26,7 @@
  */
 import { readFileSync } from 'node:fs';
 /* v1.7.8：278 条门搬进 tools/gates/** ⇒ 源码面**只能**问 `gate-src.mjs` 要（继续读 tools/np-test.mjs 只看到 runner，
- *   而本工具默认只报告 ⇒ 它会静默变成"门数 0"。面 = runner + _ctx + 16 个部分，文件间有 `BOUNDARY` 分隔行，
+ *   而本工具默认只报告 ⇒ 它会静默变成"门数 0"。面 = runner + _ctx + 全部部分文件，文件间有 `BOUNDARY` 分隔行，
  *   门体因此不跨文件、坐标是 `文件:行号`）。消费者：无（不进 CI、也不被任何门 spawn）。 */
 import { gateBodyText, BOUNDARY } from './gate-src.mjs';
 

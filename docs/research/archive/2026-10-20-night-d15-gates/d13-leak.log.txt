@@ -1,0 +1,21 @@
+装载 25 次/轴 ‖ 门里那条恒等式（残差 < 1e-9 记为绿）
+① 现状（Math.random 抽权重）：恒等式红 **0/25** ‖ wallReject 触发 0/25 ‖ "追加不改池子分"这条红 0/25
+② 先播种再装配（25 个种子）：恒等式红 **0/25** ‖ fit 取值 25 种（>1 ⇒ 断言虽绿但读数随权重变）
+③ 泄漏档（前一条腿设了旋钮没复位 ⇒ runD13 开头 reset 之后立刻喂进去，跑一次看残差）：
+   wallFilter（破墙硬过滤）：fit(b)=-5.00000 ‖ wallReject=true ‖ 残差 b=5.85e+0 ‖ 残差 c=5.60e+0 ‖ 追加等式 成立 ⇒ **门会红**
+   divW=0.3（熵奖励开档）：fit(b)=1.11399 ‖ wallReject=false ‖ 残差 b=1.11e-16 ‖ 残差 c=5.55e-17 ‖ 追加等式 成立 ⇒ 绿
+   fitGW=0.2（广度罚开档）：fit(b)=0.85373 ‖ wallReject=false ‖ 残差 b=0.00e+0 ‖ 残差 c=2.78e-17 ‖ 追加等式 成立 ⇒ 绿
+js/train/evo.js:2413
+        : (() => { throw new Error('[shape] S4_W>0 但宿主未注入 __shapeScorer（worker/server 接线断了 ⇒ 不许静默跑）'); })())
+                         ^
+
+Error: [shape] S4_W>0 但宿主未注入 __shapeScorer（worker/server 接线断了 ⇒ 不许静默跑）
+    at js/train/evo.js:2413:26
+    at Object.scoreMemberN (js/train/evo.js:2413:106)
+    at runD13 (file:///D:/code/Epirus-Web/docs/research/archive/2026-10-20-night-d15-gates/d13-leak.mjs:50:15)
+    at file:///D:/code/Epirus-Web/docs/research/archive/2026-10-20-night-d15-gates/d13-leak.mjs:90:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.20.0
