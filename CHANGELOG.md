@@ -1,3 +1,31 @@
+## v1.7.124 — 10-20（DS）：送盾硬门槛按用户裁定重定成 **1.5/席**（5 席 = 7.5）。
+
+### ① 为什么改
+
+用户 10-20 拍板：「按 1.5 每席」。旧值 `HOLO_GIFT_MAX = 6` 是照「**5 席合计 / 20 局 / 短档镜像**」定的，
+而产品桌上一席每局只有 ~0.8 次 ⇒ **同一个数在两把尺上差约 6 倍**。
+
+### ② 口径先查清（这决定 1.5 要乘几）
+
+`holoOtherPerGame` 是**每局全场合计**：`evo.js:3371` 对每个 `holoSet && target !== self` 加一，再 `/G`。
+⇒ **1.5/席 = 5 席 7.5**（镜像体检固定 5 席）。
+
+```js
+export const HOLO_GIFT_PER_SEAT = 1.5;
+export const HOLO_GIFT_MAX = HOLO_GIFT_PER_SEAT * 5;   // = 7.5
+```
+
+### ③ 一条该跟着改的牙，改的是**钉的值**不是判据
+
+`tools/gates/train-econ.mjs` 原来钉 `HOLO_GIFT_MAX = 6`（原话「硬门槛常量不许被这一档顺手改掉」）。
+**那条牙留着**，只把钉的值换成裁定后的口径（`HOLO_GIFT_PER_SEAT = 1.5` 且 `HOLO_GIFT_MAX = PER_SEAT * 5`）
+⇒ 它以后仍然拦「顺手改门槛」，只是不再把这条裁定当成越权。
+
+### ④ 在册读数
+
+`--part=probe-instruments,ship-feas,ship-pool,train-econ` ⇒ **33/33 ‖ 14/14 ‖ 1/1 ‖ 11/11**（墙钟 197.2s）。
+（子集，不是整轮认证 —— 整轮 19 部分 279 条要看 CI run 号。）
+
 ## v1.7.123 — 10-20 晚（DS）：用户拍板的 **9 条裁决**落账 + `BAND_DL` 加上界。
 
 ### 已实现
