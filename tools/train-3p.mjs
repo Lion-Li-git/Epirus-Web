@@ -101,6 +101,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
+  'EPIRUS_TOOLKIT_OPPS',     // §E676（10-21 早班）：把杂货铺（计划层 P0~P7）放上训练桌（份数驱动，默认关 ⇒ OPPS 一字不变）
   'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）
   'EPIRUS_SEL_POOL',   // v1.7.92 §E635：把池成员**也放上选拔桌**（终局重验那张表；默认关 ⇒ `ALL_PAIRS` 一字不变）
   'EPIRUS_HALL_DEDUP', // v1.7.92 §E635：名人堂按 wid 去重（同一粒权重只占一席；默认关 ⇒ 榜的形状一字不变）
@@ -976,6 +977,36 @@ if (ECON_OPPS.length) {
   for (const o of ECON_OPPS) OPPS.push(o);
   console.log('[econ-ops] "会攒并且真兑现"的对手已进训练桌：' + ECON_OPPS.map(function (o) { return o.name; }).join(',') +
     ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（判据：产物的**决策时 ep 均值 / 大雷出手**，见日志 §E236 预注册）');
+}
+
+/* ===== §E676（qoder 10-21 早班）：把**杂货铺**放上训练桌 `EPIRUS_TOOLKIT_OPPS=<k>`（默认关）=====
+ * 动因（用户 10-21 07:0x 的假设）：「训练对应的脚本场并不会用连招 ⇒ 把杂货铺丢到训练里面」。
+ * 前提尺现量（同一批 picker 函数、5 席镜像桌、multi+long 各 200 局）三条：
+ *   ① **电磁炮（RAILGUN）在 800 场里出手 = 0**（9 只全零，加进 toolkit 那臂也仍是 0）⇒ "蓄能→炮"这条链在训练世界里根本不存在；
+ *   ② "攒到门槛再兑现"只有 `breakdef` 一只在做的（大雷 1.00~1.35/席/局 ‖ ep 最大 5），而 `farmer` 攒到 ep 最大 51~58
+ *      **一次都不花** ⇒ 训练桌缺的不是卡种数（`mix` 已有 23 种），是**攒-花这一链**；
+ *   ③ `st:toolkit` 是那批里唯一既攒到 6~7 又花出去的（过载 1.97~2.81 ‖ 环 0.55~1.21 ‖ 大雷 0.17~0.37 /席/局）。
+ * 纪律与 `EPIRUS_COUNTER_OPPS`/`EPIRUS_RING_OPPS`/`EPIRUS_ECON_OPPS` 逐字同形：
+ *   默认关 ⇒ `OPPS` 一字不变（历史臂仍可逐位复现）‖ `k` 不是非负整数 ⇒ **`exit 4`**（拒绝把打错的当成 0）
+ *   ‖ `EpirusBots.pickToolKit` 不是函数 ⇒ `exit 4`（少一个就是一根空枪）‖ 开了必印"OPPS 从 9 个变 N 个"与份额。
+ * ⚠ `k>1` 不是"多几席"而是**改这张桌的份额**（append k 份 ⇒ 轮换里占 k/(9+k)）⇒ 剂量是一根自变量，别顺手设。 */
+const TOOLKIT_N = Number(process.env.EPIRUS_TOOLKIT_OPPS || 0);
+if (!Number.isInteger(TOOLKIT_N) || TOOLKIT_N < 0) {
+  console.error('[train-3p] ⛔ `EPIRUS_TOOLKIT_OPPS` 要非负整数（收到 ' + JSON.stringify(process.env.EPIRUS_TOOLKIT_OPPS || '') +
+    '）⇒ 拒绝把它当 0');
+  process.exit(4);
+}
+if (TOOLKIT_N > 0) {
+  if (typeof Bots.pickToolKit !== 'function') {
+    console.error('[train-3p] ⛔ EPIRUS_TOOLKIT_OPPS 要的对手在 EpirusBots 里不存在：tk:toolkit ⇒ 拒绝静默少放对手');
+    process.exit(4);
+  }
+  for (let i = 0; i < TOOLKIT_N; i++) {
+    OPPS.push({ name: 'tk:toolkit' + (TOOLKIT_N > 1 ? '#' + (i + 1) : ''), sel: Bots.pickToolKit });
+  }
+  console.log('[toolkit-ops] 杂货铺（`st:toolkit` 的 `pickToolKit`，含计划层 P0~P7）已进训练桌 ' + TOOLKIT_N + ' 份' +
+    ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（桌内份额 ' + (100 * TOOLKIT_N / OPPS.length).toFixed(1) + '%）' +
+    '（判据：产物的**攒-花链**那一族，见日志 §E676 预注册）');
 }
 
 /* ===== v1.6.60（用户 10-10 提的方向，10-11 落成接线）：把**人类形状替身**放上训练桌 =====
@@ -2116,6 +2147,9 @@ const meta = {
     /* v1.5.325 §E237：这臂的训练桌上有没有"会攒并且真兑现"的深经济对手（默认关 ⇒ `null`，产物自证）。
      * ⚠️ 与 `counterOpps` 分开写是故意的：那三个是**行为门原型**（判"被龟壳打死"），这三个是**经济威胁**（判"攒钱值不值"）。 */
     econOpps: (ECON_OPPS.length ? ECON_OPPS.map(function (o) { return o.name; }) : null),
+    /* §E676（10-21 早班）：这臂的训练桌上有没有**杂货铺**（默认关 ⇒ `null`，一行都不留，与历史臂同形）。
+     * 记份数与上桌后的桌大小 —— 份数改的是**桌内份额**，不是"多几席"（份额不同就是不同的分布）。 */
+    toolkitOpps: (TOOLKIT_N ? { n: TOOLKIT_N, poolSize: OPPS.length } : null),
     /* v1.7.83 §E631：这臂的训练桌上有没有**池成员**（默认关 ⇒ `null`，一行都不留，与历史臂同形）。
      * 记 **wid + 被问到几次**而不是路径 —— 成员 `.bak` 有一批是 gitignore 的，路径在干净克隆里可能指空（那是 `D234` 的活）。 */
     poolOpps: (POOL_OPPS.length ? POOL_OPPS.map(function (o) { return { name: o.name, wid: o.sel.poolWid, asked: o.sel.asked() }; }) : null),
