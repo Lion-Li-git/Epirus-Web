@@ -53,13 +53,20 @@
 3. **手跑（不经门）训练仍会把别名写进 tracked 的 `pack-aliases.tsv`**：你的改道只在 `_ctx.mjs` 里设 env ⇒ 门里干净（我实测 `--part=ship-pool` 跑完 `git status` 空 ✔），但我这晚 42 臂手跑把它写脏过两次（都回滚了）。
    ⚠ 顺带一条**我一开始怀疑错、后来否证了**的：我以为这会让 `D191` 拿空账误报，实测 `EPIRUS_ALIAS_TSV` 指向不存在的文件与指向真账，`keep-artifact --aliases` 输出逐字相同 ⇒ **与该改道无关**。
 4. **`train-3p` 里那句 `if (true) {`**：这段永远执行，写法本身没错，但下一班会当"开关"读；另外 `EPIRUS_SUPPORT_PRIOR=""`（显式空串）被当"没设" ⇒ 取默认 2。脚本里 `env="$MAYBE"` 这种拼法会静默拿到 2，属于本仓"设了但被判成没设"那一族。
+5. **`champion-map/pool-traits.mjs` 我复算过：可复算 ✔**（同输入跑两次，`pool-traits.tsv` 逐字未变，`git status` 干净）。只有一处口径想请你确认是不是有意为之：
+   列头写"送盾偏高(**按产品口径**)"，但除数是 `GH = 裸包 holo 的池内均值`（0.814）⇒ 阈值实际是 1.63；
+   而唯一有产品读数的 `v7beadseed-82` 产品值 5.42 已被标"高"，若拿产品分布自比（现在 n=1 ⇒ 那个"均值"没意义）就不会标。
+   **眼下没有实际影响**（它是裸包榜首，两种算法都点它），但 `holo.tsv` 的 `holoOtherPrior2` 覆盖面（现在 24/718）一涨上来，这一列就变成混尺。
+   要么列头去掉"按产品口径"，要么等覆盖够了把 `GH` 换成同口径基线。
 
 ## 五、数据落点
 
 - 读数与脚本：`docs/research/archive/2026-10-20-prior-style/`（`origins.tsv` 有 7 枚起点的 wid ‖ `per-pack-readings.tsv` 逐包绝对值 ‖ `strength-pool.tsv` 有同桌签名核对 ‖ `raw/` 是原始尺输出）
 - 训练产物与日志：`docs/artifacts/e675-out/`（**gitignore 里**，中间 band 产物我 00:5x 删了 282 个文件，理由见日志 §E675 补二那条 D191 红账）
 - 研究日志：`docs/research/logs/2026-10-18-beadseed82-qoder.md` 的 §E675 / §E675 补 / §E675 补二
-- 门禁：**只跑改动面** ⇒ `--part=meta-repo` 12/12、`--part=meta-lint` 4/4、`--part=ship-pool` 1/1（工具原话都是"这不是全量门禁，不许当整轮全绿引用"）‖ 页内自检全范围态 94 PASS / 0 FAIL。整轮证据 = CI run 号（自己读上面那条命令）。
+- 门禁：**只跑改动面** ⇒ `--part=meta-repo` 12/12、`--part=meta-lint` 4/4、`--part=ship-pool` 1/1（工具原话都是"这不是全量门禁，不许当整轮全绿引用"）‖ 页内自检全范围态 94 PASS / 0 FAIL。
+- ⚠ **我这几笔没有整轮证据**：`.github/workflows/gates.yml:55-59` 的触发是 `push: branches:[main]` ‖ `pull_request` ‖ `workflow_dispatch` ⇒ **推 research 分支不跑 CI**，而我不开 PR、不自作主张起 `workflow_dispatch`（那是共享面板上看得见的动作）。
+  要整轮认证只有两条路：① 你说一声我起一次 dispatch 指到这个分支；② 合并到 main 之后看 CI run 号。
 
 ## 六、没做的
 
