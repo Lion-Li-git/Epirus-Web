@@ -235,7 +235,9 @@ const LSRC = legsSrcOf(['feas-long-s1.tsv', 'feas-long-s2.tsv', 'feas-long-s3.ts
   || 'coords.tsv 的 okLong 列（全腿长程；腿表分片不在仓里 ⇒ 口径按日志 §E616）';
 const MSRC = legsSrcOf(['feas-short-s1.tsv', 'feas-short-s2.tsv', 'feas-short-s3.tsv', 'feas-short-s4.tsv'], 'all-multi', '全腿短程')
   || 'coords.tsv 的 okShort 列（全腿短程；腿表分片不在仓里 ⇒ 先跑 feas.mjs --allMulti=1）';
-/* §E308 上槽体检（`promote --dry` 的实测裁决，由 promscan.mjs 从日志汇总）。
+/* §E308 进池体检（`promote --dry` 的实测裁决，由 promscan.mjs 从日志汇总）。§E677 改名：这一档**原来叫「上槽体检」**，
+ *   改名理由 = 它现在的活用途是"能不能自动进池"（D234③ 判 `promoteVerdict` 不许 block），而"上槽"那半件事只剩
+ *   两颗回退包的老路径（`docs/POOL-CONTRACT.md` §0③ 与第 16 行同时记着这两件）。旧名字请在本注释里查，别再去页面上找。
  *   为什么还要这一张表：绿环那条 `feasibilityOf` 只是**五道**，而真正决定能不能换包的是另外三条腿
  *   —— G4（不许被一行脚本打穿 >60%）‖ G5（面对"只防御不还手"必须清场 ≤25%）‖ 送盾硬门槛（不可 --force）。
  *   §E305/§E307 一枚一枚数出来的结论就是：F 前沿**系统性死在这三条腿上**，而它们在图上原本完全隐形。
@@ -247,10 +249,10 @@ if (existsSync(promP)) {
   const iId = p2h.indexOf('id'), iV = p2h.indexOf('verdict'), iB = p2h.indexOf('blocks');
   for (const l of pr2.slice(1)) { const c = l.split('\t'); if (!c[iId]) continue;
     PROM[c[iId]] = { pass: c[iV] === 'pass', b: String(c[iB] || '').slice(0, 150) }; }
-  console.log('上槽体检实测 ' + Object.keys(PROM).length + ' 枚（✅ ' +
+  console.log('进池体检实测 ' + Object.keys(PROM).length + ' 枚（✅ ' +
     Object.values(PROM).filter(function (x) { return x.pass; }).length + ' ‖  ' +
     Object.values(PROM).filter(function (x) { return !x.pass; }).length + '）');
-} else console.log('提示：没有 promote.tsv ⇒ "上槽体检"着色口径不可用（跑 node champion-map/promscan.mjs 生成）');
+} else console.log('提示：没有 promote.tsv ⇒ "进池体检"着色口径不可用（跑 node champion-map/promscan.mjs 生成）');
 /* §E590 冠军池（真源 pool-members.tsv，由 tools/pool-add.mjs 写）。
  *   为什么这张表必须上图：v1.6.63 之后"线上冠军"不再是一枚包而是**按难度档抽的池**（困难 7 ‖ 中 6 ‖ 低 7），
  *   而谱系图原来只有"这一枚强不强"的三条腿（过线 / 体检 / 决斗）⇒ 玩家问"我现在遇到的这枚在池里是哪一档、
@@ -651,7 +653,7 @@ function ringTally() { var k = 'ring#' + st.ftab; if (RKEY === k) return; RKEY =
   for (var i = 0; i < N; i++) { var o = RSUBJ(P[i]);
     if (o === 1 || o === 0) { nHas++; if (o === 1) { nPass++; OKL.push([P[i].x2, P[i].y2]); } } }
   POKJ = nHas; BASEP = nHas ? nPass / nHas : 0.15; }
-/* §E308 实测过上槽体检的枚数（分母只算实测过的，别把"没测"说成"没过"）*/
+/* §E308 实测过进池体检的枚数（分母只算实测过的，别把"没测"说成"没过"）*/
 var NPRM = 0, NPPASS = 0;
 /* §E314 → §E464 更正：这里原来写「584 枚的父指针解析不到实体 · 无实体」—— **那句是错的**，错在检索口径：
  *   §E314 那遍穷尽扫过盘上 1461 个 .bak + 593 个可达 blob + 4190 个对象库 blob，但逐枚算的是「文件里那份数组」的哈希，
@@ -1129,7 +1131,7 @@ function unmeasuredGray(d) { return (st.color === 'pm' && (d.pv === null || d.pv
     (st.color === 'de' && d.de === null) || (st.color === 'hp' && hpNow(d) === null) ||
     (st.color === 'sc' && (d.sc === null || d.sc === undefined || !isFinite(d.sc))); }
 function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
-  /* §E308 上槽体检口径下 705/718 枚是"没测过"⇒ 不压暗就找不到那 13 枚（灰压到 0.16，实测过的照旧）*/
+  /* §E308 进池体检口径下 705/718 枚是"没测过"⇒ 不压暗就找不到那 13 枚（灰压到 0.16，实测过的照旧）*/
   if (unmeasuredGray(d)) return 0.16;
   if (!n) return 1; return st.hi[gk(d)] ? 1 : 0.34; }
   /* §E338 用户 ④「点选中框会全部变暗」：非高亮那批原来压到 0.10 —— 24 个家族里点一家，
@@ -2896,7 +2898,7 @@ function drawBody() {
   ringTally();   /* §E677 表头要说得出"当前这圈环是哪把闸"，顺带把计数刷新（按桌形缓存 ⇒ 仍是状态的纯函数，§E622 那条判得住）*/
   document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚退回默认桌，一张图上混两把尺') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚退回默认桌，一张图上混两把尺') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
@@ -2985,7 +2987,7 @@ function paintLegend(fr) {
     F: '针的位置按**当下窗口**里' + BANDLBL + '的铺位比算 ‖ 灰 = 库内中位，不是"不好不坏"的绝对电平',
     rel: '只有这一档把带换成分散色标：0 = ' + BANDLBL + '那一档（灰），两侧各按本侧 p90 距归一 ⇒ 超出即钉在两端',
     gl: 'G(long) = 长程自对局的技能广度，与过线判定同一道闸现跑（n=20）‖ 线 ≥3，低于 3 直接不过线',
-    pm: '上槽体检 = ' + OKSRCJ + ' ‖ 灰 = 没测过，**不等于**没过',   /* §E492 样本量从表里派生，不许把数字抄在文案里 */
+    pm: '进池体检 = promote.tsv 三条腿实测（实测 ' + NPRM + ' 枚 ‖ ✅ ' + NPPASS + '）‖ 灰 = 没测过，**不等于**没过',   /* §E677 修一处接错线：这里原来印的是 OKSRCJ（**五道** feasibilityOf 那张表的判定源），可这一档颜色读的是 pv —— 来自 promote.tsv 的**三条腿**。两个源的样本量、判据、覆盖都不一样，印在一起等于把五道的口径挂到三条腿头上（§E492"口径由数据说"的同一族病）。 */
     hp: '每枚都是单批读数 ‖ 同档（120）换 4 批 eval seed 摆 2.2pt（30 档时同一枚摆 5.7pt）⇒ 颜色看水位；' +
       '要排序就用这一档或「当选键」，§E600-A 起「对参照包决斗」那档已撤（A−B 不传递，METHODOLOGY 110)',
     de: 'Δε = 考卷（ε=0）− 页面（默认档 lv:regular 的剂量：斜坡 0→0.05→0.1 ‖ k5 ‖ soft）· 两 eval seed · exam=120 局/组合 ‖ 发散带 0 在正中：红 = 一开探索就掉，蓝 = 开了反而强（§E597：默认档下全库 46% 的包落在"开了反而强"那一侧）',
@@ -3068,7 +3070,7 @@ function paintLegend(fr) {
   if (OKL.length && (st.color === 'fam' || st.color === 'seed')) {
     /* §E437：用户要求「逐枚过线」后面也换行再接计数（枚数现读，不抄第二份）。
      *   §E677：这句必须把**是哪把闸**印出来 —— 主语跟着桌形换，原来那句"训练侧五道检查"在长程档就是假账。 */
-    s2.innerHTML = '黄针 = ' + BANDLBL + ' · 绿环 = 过了' + RSUBNAME() + '（**不是换包闸**）<br>' + OKL.length + '/' + POKJ + ' ‖ 换桌形 = 换主语';
+    s2.innerHTML = '黄针 = ' + BANDLBL + ' · 绿环 = 过了' + RSUBNAME() + '（**不是进池闸**）<br>' + OKL.length + '/' + POKJ + ' ‖ 换桌形 = 换主语';
     s2.title = RSUBSRC();   /* §E492 口径由数据说：两把闸各有各的腿表，这句跟着主语换 */
     /* §E434 DS：§E432 那笔把 s1 整行清空了（用户当时说顶部有选项框、这行是重复），但**颜色的含义**也跟着没了 ——
      *   用户 10-08：「你刚才删的太多，现在图例颜色是啥没掉了，至少要保留这玩意是 F = Hp + T·S」。
@@ -3167,7 +3169,7 @@ function paintCard() {
      *   实测全库 why 最长 131 字符（R391）‖ pb 最长 128（v7tgt4-63）⇒ 折行后最多 4 行，装得下；
      *   而不截的话 v7seat24-31 那条本来读得出"四条腿各差多少"，截 60 就断成"场B 清场 0.20 < "（阈值那半句没了）。
      *   这张卡是"为什么这枚不能上槽"的唯一自证位，半句等于没写。*/
-    '上槽体检：' + (d.pv === 1 ? '✅ 三条腿全过（真能换包）' : (d.pv === 0 ? '⛔ ' + String(d.pb) : '未测')) +
+    '进池体检：' + (d.pv === 1 ? '✅ 三条腿全过（有进池资格；老 promote 上槽路径认同一条）' : (d.pv === 0 ? '⛔ ' + String(d.pb) : '未测')) +
     ' ‖ 过线判定（主语 = ' + RSUBNAME() + '）：' + RYESNO(RSUBJ(d)) + (RSUBWHY(d) ? '（栽在 ' + RSUBWHY(d) + '）' : '') +
     ' ‖ 另一把 ' + ROTHNAME() + '：' + RYESNO(ROTH(d)) + (RSUBJ(d) !== ROTH(d) ? ' ⇒ **这一枚两把翻脸**' : '') +
     /* §E590 池层（读 pool-members.tsv，不重算）：这一行回答的是"玩家现在这局会不会遇到它、遇上了算哪一档"。 */
@@ -3230,7 +3232,7 @@ function paintSide() {
     row('S 广度', function (d) { return d.S.toFixed(2); });
     row('当选键', function (d) { return d.sc === null || d.sc === undefined ? '未测' : d.sc.toFixed(1); });   /* §E600-A：原来是「当选键差」（对某一枚参照包取差），参照物退场后改画绝对值 */
     row('决斗差', function (d) { return d.dm === null || d.dm === undefined ? '未测' : (d.dm >= 0 ? '+' : '') + d.dm.toFixed(1); });
-    row('上槽体检', function (d) { return d.pv === 1 ? '过' : (d.pv === 0 ? '栽' : '未测'); });
+    row('进池体检', function (d) { return d.pv === 1 ? '过' : (d.pv === 0 ? '栽' : '未测'); });
     row('过线', function (d) { return RYESNO(RSUBJ(d)); });   /* 原来这行叫「最优」，可它印的是过/不过，不是名次 */
     row('珠/局', function (d) { return (d.chg === null || isNaN(d.chg)) ? '—' : d.chg.toFixed(2); });
     row('浪费ep', function (d) { return (d.waste === null || isNaN(d.waste)) ? '—' : d.waste.toFixed(2); });
@@ -6085,7 +6087,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
 '<span id="g2h" class="tbgrp" title="第二段：所有图通用的口径与筛选">通用</span>' +
 '<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp/F，796 行历史引用都指着它。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong = Hplong/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label>' +
-'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">上槽体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
+'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
 '<label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">批次 <select id="batch"></select></label>' +
 '<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label>' +
