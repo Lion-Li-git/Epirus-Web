@@ -55,7 +55,7 @@ export const LADDER_CLAIM = {
    *   ⇒ 差一个字符就是永久过期。手打派生值是这个仓最常犯的错之一。
    * §E609：签名尾巴多了一节（`poolMix`）—— 10-15 落地两带混抽时旧签名**逐字没变**，那张账明明换了抽法却还"有效"，
    *   ④a 就是抓不到。补上之后先复现了一次旧红（在册=旧串 vs 现算=新串），再按新串重测。 */
-  sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-:-:p0.8/s2/min1/st:toolkit+st:mix;lv:regular:champ:0.1:5:soft:1:mid:-:hard=0.5+soft=0.5|else=mid:p0.25/s1/min1/st:toolkit;lv:hard:champ:0.1:5:soft:1:hard:-:-:-',
+  sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-:-:p0.7/s2/min1/st:mix+st:toolkit;lv:regular:champ:0.1:5:soft:1:mid:-:hard=0.5+soft=0.5|else=mid:p0.1/s1/min1/st:toolkit;lv:hard:champ:0.1:5:soft:1:hard:-:-:-',
   source: '§E627（10-15 午 · 用户裁定 **C = `st:toolkit`+`st:mix`** = §E600-B 原装配之后）：node tools/probe-diff-ladder.mjs --pool=1 --tiers=lv:sparring,lv:regular,lv:hard --pairs=1 --games=1000 --seed=77000..77007 --mode=multi|long' +
     '（跑法与聚合 = `docs/artifacts/e608-out/recheck-mix2.mjs`，日志 `…/recheck-mix2/`、汇总 `…/recheck-mix2-summary.txt`；每跑两条守卫：抽法推导里 regular=按带加权 ‖ 掺席行必须是 `lv:sparring=2 席[st:toolkit,st:mix]`；跑法 = 6 路并发 + 容忍 probe 自带那道 1.5pt 闸 exit 1、只收 stdout 里的机器可读行，底稿 `docs/artifacts/e608-out/ladder-C-8seed-ds.txt`）‖' +
     '不带 `--pool=1` 的那两行是**故意的负对照**（同 seed 同盐、四席同一枚包、既无池也无掺席）⇒ 它的"不分"是设计，不是产品缺陷。' +
@@ -66,13 +66,13 @@ export const LADDER_CLAIM = {
   rule: '判"分得开" = |差| ≥ 2σ(配对)（不是 ≥2pt）。行按**档位表声明序**的相邻对记：`from` = 声明里更难那一档，`d` = 人类席夺冠率( to ) − 人类席夺冠率( from ) ⇒ **d 为负 = 实测把这一对的次序翻了**（不是抄错，是记账）。',
   measuredAt: '2026-10-21',
   /* ===== 10-21 概率掺批次（用户更正：脚本与冠军包一起抽，不是固定 k 席）=====
-   * 形状（按桌概率，整组掺）：简单 p=0.8/s2（toolkit+mix）‖ 普通 p=0.25/s1（toolkit）。
-   * 读数（n=5 · 8 seed × 1000 局/档 · 逐局配对）：
-   *   pool:multi 简单−普通 +1.08 ±0.43 = 2.5σ ‖ 普通−困难 +2.08 ±0.41 = 5.1σ
-   *   pool:long  简单−普通 +1.35 ±0.36 = 3.75σ ‖ 普通−困难 +2.30 ±0.47 = 4.9σ
+   * 形状（逐席独立、按声明 seats 封顶）：简单 p=0.7/s2（ids mix+toolkit，一席时给 mix）‖ 普通 p=0.1/s1（toolkit）。
+   * 读数（n=5 · 8 seed × 1000 局/档 · 逐局配对）：multi 17.85/15.95/13.89；long 17.57/14.65/13.05。
+   *   pool:multi 简单−普通 +1.90 ±0.69 = 2.75σ ‖ 普通−困难 +2.06 ±0.61 = 3.4σ
+   *   pool:long  +2.92 ±0.67 = 4.4σ ‖ +1.60 ±0.37 = 4.3σ
    *   single:*   与旧账同形（0.06/0.36 ‖ 0.51/0.44；hard−regular 0/0 恒等）
-   * ⚠ 逐席独立掷的版本已否证：它频繁抽到"只 1 席 toolkit"，把简单档压硬 2~4pt（D227④d 红）。
-   * ⚠ 6 seed 扫描（普通档 all-or-nothing p）：p=0.2 ⇒ 普通 16.75 ‖ p=0.3 16.58 ‖ p=0.4 16.17（不掺 ~16.8）；取 0.25。 */
+   * ⚠ 早先逐席版被否证的真因：cap 错写成 AI席−min（n=5 ⇒ 3 席），简单档能抽到 3~4 席脚本；按声明 seats 封顶后恢复。
+   * ⚠ 杂货铺抬难度的机制是**施压/隐性辅助**（逼对手应对、抬清场与反弹墙压力），不是本体强度 ⇒ 「只 1 席」也可能变硬，故一席给 mix。 */
   /* ⚠ §E623（10-15 早，S23 顺手量出来的**批条件边界**）：这张账的每一行都是"**那一批 8 个 seed 之内**的配对差"，
    *   它不承诺换一组种子还一样。而换一整组新种子（78000..78007 ‖ 同尺同装配同games口径）实测到的漂移是：
    *     multi 电平 简单 16.51→16.43 ‖ 普通 15.89→16.36 ‖ **困难 13.43→14.39**（困难档不掺席 ⇒ 这 0.96pt 纯粹是批）
@@ -153,16 +153,16 @@ export const LADDER_CLAIM = {
    */
   modes: {
     'pool:multi': [
-      { from: "lv:regular", to: "lv:sparring", d: 1.08, se: 0.43, sep: true },
-      { from: "lv:hard", to: "lv:regular", d: 2.08, se: 0.41, sep: true }
+      { from: "lv:regular", to: "lv:sparring", d: 1.90, se: 0.69, sep: true },
+      { from: "lv:hard", to: "lv:regular", d: 2.06, se: 0.61, sep: true }
     ],
     'pool:long': [
       /* ⚑ §E627（C = `toolkit`+`mix`）：这一对**回到"分不开"**（+0.17 ±0.41 = 0.43σ ⇒ `sep: false`）——
        *   也就是"**不再翻序，但也仍没有台阶**"。本班复算与 §E610 那一批（同一只 C 形状）**逐字相同**。
        *   ⚠ 而 §E623 记过跨批漂移 ~1pt ⇒ 幅度 <1pt 的行一律当**批条件读数**引，不许当稳态声称。
        *   （旧账里这一格曾是 `d: -1.20, sep: true` —— 那是 **A = 2×toolkit** 的形状，随 10-15 12:0x 的裁定一起作废。） */
-      { from: "lv:regular", to: "lv:sparring", d: 1.35, se: 0.36, sep: true },
-      { from: "lv:hard", to: "lv:regular", d: 2.30, se: 0.47, sep: true }
+      { from: "lv:regular", to: "lv:sparring", d: 2.92, se: 0.67, sep: true },
+      { from: "lv:hard", to: "lv:regular", d: 1.60, se: 0.37, sep: true }
     ],
     'single:multi': [
       { from: "lv:regular", to: "lv:sparring", d: 0.06, se: 0.36, sep: false },

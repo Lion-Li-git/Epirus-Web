@@ -307,7 +307,23 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
         '⑫c 档 ' + t.id + '：掺席只许盖位置、不许重排抽签 ⇒ 去掉脚本席之后的包序列必须与不掺时一致（不掺=' +
         packsNoMixSamePos.join(',') + ' ‖ 掺后=' + packsAfter.join(',') + '）');
       const nScript = r1.seats.filter(s => s.kind === 'script').length;
-      ok(nScript === mix.seats, '⑫a 档 ' + t.id + ' 组成里的脚本席数必须等于推导值（实测 ' + nScript + ' vs ' + mix.seats + '）');
+      if (typeof mix.p === 'number') {
+        /* 10-21 起 scriptMix 是**逐席概率**（最多 seats 席）⇒ 单次 compose 的席数是随机的：
+         *   ⑫a 改判"不许超过封顶"，再扫 200 个 salt 看分布：封顶不破、非退化、p=1 必满。 */
+        ok(nScript <= mix.seats, '⑫a 档 ' + t.id + ' 组成里的脚本席数不许超过声明席数（实测 ' + nScript + ' > ' + mix.seats + '）');
+        let maxN = 0, seen = {};
+        for (let s = 0; s < 200; s++) {
+          const rr = BPD.compose(BPD.byTier(fake, 'soft'), ai, BPD.rng(1000 + s), mix);
+          const nn = rr.seats.filter(x => x.kind === 'script').length;
+          if (nn > maxN) maxN = nn;
+          seen[nn] = 1;
+        }
+        ok(maxN <= mix.seats, '⑫a 档 ' + t.id + ' 在 200 个 salt 上都不许超过封顶（实测 max ' + maxN + ' vs ' + mix.seats + '）');
+        ok(Object.keys(seen).length >= 2, '⑫a 档 ' + t.id + ' 概率掺不许退化成固定席数（200 salt 只出现 ' + Object.keys(seen).join(',') + '，p=' + mix.p + '）');
+        if (mix.p === 1) ok(maxN === mix.seats, '⑫a 档 ' + t.id + ' p=1 时每个 salt 都必须满席（实测 max ' + maxN + ' vs ' + mix.seats + '）');
+      } else {
+        ok(nScript === mix.seats, '⑫a 档 ' + t.id + ' 组成里的脚本席数必须等于推导值（实测 ' + nScript + ' vs ' + mix.seats + '）');
+      }
       const two = BPD.scriptSeats(t, 1, BB.STYLES);
       ok(!two || !two.seats, '⑫a 只有 1 席 AI（2P 桌）时不许掺（会把池整个盖掉），实测 seats=' + (two ? two.seats : 'null'));
     }

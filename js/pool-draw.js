@@ -110,9 +110,12 @@
          *   掺就按声明的 seats 整组盖，不掺就整桌都是包。
          *   ⚠ 不是逐席独立掷：逐席会让"只掺到 1 席 toolkit"这种更硬的组合频繁出现（实测把简单档压硬 2~4pt，D227④d 直接红）。 */
         var pp = Math.max(0, Math.min(1, scriptMix.p));
-        var kk = Math.min(Math.max(0, scriptMix.seats | 0), Math.max(0, out.seats.length - Math.max(0, keep)));
-        if (rand() < pp && kk > 0) {
-          for (var z2 = 0; z2 < kk; z2++) { var at2 = order[z2]; out.seats[at2] = { id: sids[z2 % sids.length], wid: null, seat: at2, kind: 'script' }; made++; }
+        var cap = Math.min(Math.max(0, scriptMix.seats | 0), Math.max(0, out.seats.length - Math.max(0, keep)));
+        /* 用户口径（10-21）：**逐席独立**掷 p（脚本与冠军包一起抽），但**最多 seats 席**（简单 2、普通 1）。
+         *   之前那次逐席被否证，是因为 cap 错写成 AI席−min（n=5 时 3 席）⇒ 简单档能抽到 3~4 席脚本，
+         *   且常出现"只 1 席 toolkit"的硬组合。现在 cap=声明 seats，随机性保留（0/1/2 席都可能）。 */
+        for (var z2 = 0; z2 < order.length && made < cap; z2++) {
+          if (rand() < pp) { var at2 = order[z2]; out.seats[at2] = { id: sids[made % sids.length], wid: null, seat: at2, kind: 'script' }; made++; }
         }
       } else {
         var k = Math.min(Math.max(0, scriptMix.seats | 0), out.seats.length);
