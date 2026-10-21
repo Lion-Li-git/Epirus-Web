@@ -3139,7 +3139,7 @@ function buildFamBar() {
 /* ===== §E338 批次下拉 / 选中卡 / 冠军序列与对比表 ===== */
 function buildBatchSel() {
   var el = document.getElementById('batch'); if (!el) return; el.innerHTML = '';
-  var o0 = document.createElement('option'); o0.value = 'all'; o0.textContent = '全部（' + N + ' 枚 ‖ ' + BATCH.length + ' 批）'; el.appendChild(o0);
+  var o0 = document.createElement('option'); o0.value = 'all'; o0.textContent = '全部（' + N + ' 枚）'; el.appendChild(o0);
   for (var i = 0; i < BATCH.length; i++) { var b = BATCH[i], o = document.createElement('option');
     o.value = b.k; o.textContent = '第 ' + b.no + ' 批 · ' + b.k.slice(5) + ' · ' + b.n + ' 枚'; el.appendChild(o); }
   el.value = st.batch; }
@@ -6060,6 +6060,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
  *   修法不是去挪滑块（挪不动），是**把画出来的轨道缩到滑块中心真正走得到的那一段** ⇒ 拖到头 = 看上去到头。
  *   轨道色用 --dim：深浅两套底色下都看得见（用 --line 在深蓝底上几乎与面板同色，等于没有轨道）。 */
 '#bar .tbgrp{align-self:center;font-size:11px;color:var(--dim);border-left:1px solid var(--line);padding-left:9px;margin-left:4px;white-space:nowrap}\n' +
+'#bar > .tbgrp:first-child{border-left:0;padding-left:0;margin-left:0}\n' +
 'input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;border:none;padding:0;height:16px;cursor:pointer;min-width:60px}\n' +
 'input[type=range]::-webkit-slider-runnable-track{height:16px;background:linear-gradient(var(--dim),var(--dim)) no-repeat;' +
 'background-size:calc(100% - 14px) 4px;background-position:7px center;border-radius:2px}\n' +
@@ -6089,7 +6090,6 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '#selftest{display:none;position:fixed;left:14px;top:40%;background:#101a2c;border:1px solid #6f83a8;color:#dce6f5;padding:8px 10px;border-radius:6px;font-size:11px;white-space:pre;z-index:30}\n' +
 '</style></head><body>\n' +
 '<div id="bar">' +
-'<span class="tbgrp" title="第一段：换的是「看哪张图」">视图</span>' +
 '<label class="tbgrp" data-m="map" title="第一段：换的是「看哪张图」">视图 <select id="modeSel"><option value="1d">一维（F 排序带）</option><option value="map" selected>地图（缩放/平移）</option><option value="tree">谱系（时间 × 家族）</option><option value="3db">三维行为轴</option></select></label>' +
 '<button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button>' +
 '<button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button>' +
@@ -6103,7 +6103,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp/F，796 行历史引用都指着它。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong = Hplong/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label>' +
 '<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
-'<label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">批次 <select id="batch"></select></label>' +
+'<label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">训出批次 <select id="batch"></select></label>' +
 '<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label>' +
 '<span id="winpre" style="display:flex;gap:4px;align-items:center"></span>' +
 '<label id="edgerow" title="§E373（用户 10-07：「给一个连线开关不然可能会太多挡住了」）&#10;谱系图的热启动父边：全开 = 四种来路都画（hash/seedpack/arm/slot-at-time）；&#10;只实录 = 只画包自己记下的权重哈希那一级（§E367 之后最硬的一级）；&#10;关掉 = 一条都不画，点云本身不受影响。&#10;默认仍是全开：这一版的图就是按全开验收过的，改默认等于偷偷换读法。">连线 <select id="edges"><option value="all">全开</option><option value="hash">只实录</option><option value="off">关掉</option></select></label>' +
