@@ -11,8 +11,9 @@
  * 两臂吃同一个 `--evals` 总预算。**没有第三个自由量**（§E194 那条"一次对照只能有一个自由量"）。
  *
  * 自证（发臂前先跑，任一不过就 exit 2，不许开跑）：
- *   ① 退化 CEM（`--degenerate=1` ⇒ std=0，所有样本同一粒）的 bestFit 必须**逐字等于**起点那粒自己的 fit
- *      ⇒ 证明这台尺读的是同一件事，而不是 CEM 在偷偷换评估；
+ *   ① 同一粒、同一 (gen=0, idx=0) 连跑三遍 ⇒ fit 必须**逐字相同**（这才叫"两臂读同一件事"）；
+ *      顺手把"同一粒只换 idx 的散布"当**量具噪声底**打出来（10-22 实测 games=6·n=3：SD≈0.12–0.17 ⇒ `inLoopBest` 有一截是抽签）。
+ *      ⚠ 第一版这里写的是"退化臂 POP 个全同样本取 max 必须等于起点"——那是把"同源"错写成"与 idx 无关"，pop>1 时必然 FAIL。
  *   ② 起点分母必须报出来（seed 粒与随机粒各一次），否则"涨了多少"没有参照（记忆里那条"发臂前先量起点分母"）。
  *
  * 用法：node tools/probe-cem-arm.mjs --mode=ga|cem --evals=2000 [--pop=14] [--games=4] [--n=3]
@@ -21,7 +22,13 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sandbox, loadChamp } from './audit-lib.mjs';
+import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
+
+/* §E679 补（10-22）：这台量具原先**没有输入消毒层**（D218 那条门当场抓到，是我今夜建它时就漏的）。
+ * 拼错的旗标被静默忽略 = 读数按默认档跑完而没人知道 ⇒ 与"黑键"同族。名单跟着 `arg('…')` 走。 */
+const argv = process.argv.slice(2);
+rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
+  'start', 'out', 'quiet', 'trainMode', 'holdoutGames'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -83,15 +90,24 @@ console.log('起点分母：' + startLabel + ' fit=' + base.fit.toFixed(4) + ' �
   ' 随机粒 fit=' + rnd.fit.toFixed(4) + ' 夺1=' + (rnd.first * 100).toFixed(1) + '%');
 if (!(isFinite(base.fit) && isFinite(rnd.fit))) { console.error('⛔ 起点分母读不出（fit 非有限）⇒ 这台尺是死的，不开跑'); process.exit(2); }
 
-/* ===== ① 退化 CEM 自证：std=0 ⇒ 所有样本 = 起点粒 ⇒ bestFit 必须与起点逐字相同 ===== */
+/* ===== ① 退化 CEM 自证：同一粒、同一 (gen,idx) 跑几遍必须**逐字相同** =====
+ * ⚠ 10-22 凌晨改正了自己的判据形状。第一版写的是"std=0 ⇒ POP 个全同样本取 max 必须等于起点 fit"，
+ *   而 `idx` 是 `scoreMemberN` 的入参、**每格抽的桌不同** ⇒ 同一粒权重只换 idx 就能差出一大截
+ *   （实测 `idx-spread.mjs`：games=6 · n=3 · 同一粒只换 idx(8 个) ⇒ multi SD=0.167 极差 0.488 ‖ long SD=0.120 极差 0.341）。
+ *   ⇒ 那条 max 判据把"两臂同源"错写成"fit 与 idx 无关"，只要 pop>1 就必然 FAIL（本次 multi/long 都 FAIL 过 —— 判据错，不是产品错）。
+ *   真正的同源判据是**同格重复逐字相同**；idx 那一截不是 bug，是要**报出来的量具噪声底**。 */
 if (DEG) {
-  const r = rngFor(SEED); const samples = [];
-  for (let i = 0; i < POP; i++) samples.push(Float64Array.from(startParams));
-  const scored = samples.map(function (p, i) { return evalOne(p, 0, i); });
-  const best = Math.max.apply(null, scored.map(function (s) { return s.fit; }));
-  console.log('退化 CEM（std=0，' + POP + ' 个全同的样本）bestFit=' + best.toFixed(6) + ' ‖ 起点单粒 fit=' + base.fit.toFixed(6));
-  const same = Math.abs(best - base.fit) < 1e-12;
-  console.log(same ? 'PASS 退化臂逐字等于起点 ⇒ 评估口径两臂同源' : 'FAIL 不相等 ⇒ 预算/评估不同源，两臂对比作废');
+  const dup0a = evalOne(startParams, 0, 0), dup0b = evalOne(startParams, 0, 0);
+  const same = dup0a.fit === base.fit && dup0b.fit === base.fit;
+  const xs = [];
+  for (let i = 0; i < POP; i++) xs.push(evalOne(startParams, 0, i).fit);
+  const mean = xs.reduce(function (a, b) { return a + b; }, 0) / xs.length;
+  const sd = xs.length > 1 ? Math.sqrt(xs.reduce(function (a, b) { return a + (b - mean) ** 2; }, 0) / (xs.length - 1)) : 0;
+  console.log('同格重复（同一粒、gen=0、idx=0 共三遍）fit 逐字相同? ' + (same ? 'PASS' : 'FAIL'));
+  console.log('量具噪声底：同一粒只换 idx(前 ' + POP + ' 格) ⇒ 均值 ' + mean.toFixed(4) + ' ‖ SD ' + sd.toFixed(4) +
+    ' ‖ 极差 ' + (Math.max.apply(null, xs) - Math.min.apply(null, xs)).toFixed(4) +
+    ' ⇒ **inLoopBest 里有一截是 idx 抽签，不是权重变好**（跨臂只比固定场读数）');
+  console.log(same ? 'PASS 评估口径两臂同源' : 'FAIL 不同源 ⇒ 两臂对比作废');
   process.exit(same ? 0 : 1);
 }
 
@@ -146,6 +162,9 @@ if (MODE === 'ga') {
 }
 const ho = holdout(best);
 const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N, elite: ELITE, sig0: SIG0,
+  /* §E679 补（10-22）：回执里必须自带**桌形与终局读数局数** —— 批 D 的数当时只能从日志首行的打印抄，
+   *   而"哪台尺 + 哪种启动"是读数可不可比的一部分（记忆：记下用哪台尺与哪种启动）。 */
+  trainMode: TMODE, holdoutGames: HOLD,
   startFit: base.fit, inLoopBest: bestFit, holdoutFit: ho.fit, holdoutFirst: ho.first, holdoutTop2: ho.top2,
   curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel };
 if (OUT) {
