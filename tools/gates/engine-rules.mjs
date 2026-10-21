@@ -662,11 +662,29 @@ t('D53 无显式目标时的默认作用者不得恒定取最小索引（L7 第�
     oppSeen[t] = (oppSeen[t] || 0) + 1;
   }
   eq(Object.keys(oppSeen).length, 4, '有盐时 oppOf 必须覆盖 1..4 号对手（实测 ' + JSON.stringify(oppSeen) + '）');
-  const rj = readFileSync('js/core/resolve.js', 'utf8');
-  ok(rj.indexOf('return o.length ? o[0] : null;') < 0, 'oppOf 不得再有"恒定取最小索引"的兜底');
-  ok(rj.indexOf('t1 = opps.length ? opps[0] : null') < 0, 'mirrorRefs 的 t1 兜底不得再取最小索引');
-  ok(rj.indexOf('if (o !== t1) { t2 = o; break; }') < 0, 'mirrorRefs 的 t2 兜底不得再取最小索引');
-  ok(rj.indexOf('function saltPick(') >= 0, '必须存在 saltPick 助手');
+  /* §改（2026-10-22 千问）：这里原来四条全是钉文本 —— 三条"旧写法（`o[0]` / `opps[0]` / `t2 = o; break;`）
+   *   不许回来"+ 一条"`function saltPick(` 必须存在"。存在性那条本就多余（上面每条腿都在**调** `X.saltPick`，
+   *   导不出来早炸了）；三条兜底写法钉在 `oppOf` 上确实与 `oppSeen` 那条重复，但 **mirrorRefs 的 t1/t2
+   *   全仓没有任何行为面判过**（`grep -rn saltPick tools/gates/` 只命中本门与 ship-feas 的一句注释，
+   *   `tests/spec.js` 里没有镜像双目标的散布用例）⇒ 直接删 = 真丢覆盖。所以先补一条跑得出来的：
+   *   盐换了 ⇒ 被复制的招打到的人也得换（不恒定），且不能打到自己/复制来源。 */
+  const mirSeen = {};
+  for (let sd = 1; sd <= 40; sd++) {
+    const stM = S.createState('multi', { next: function () { return 0.5; } }, 5);
+    for (const p of stM.p) { p.ep = 99; p.hp = 8; }
+    X.startTurn(stM);
+    stM.slotSalt = sd * 2654435761 >>> 0; stM.round = (sd % 7) + 1;
+    S.attemptAction(stM, 0, R.SK.MIRROR, { target: 1 });          // 只给 t1，t2 留给兜底
+    S.attemptAction(stM, 1, R.SK.GUN, { target: 0 });
+    for (let i = 2; i < 5; i++) S.attemptAction(stM, i, R.SK.JI, {});
+    X.resolveActions(stM);
+    /* 谁是"被复制那招"的挨打者：2/3/4 号里血量掉了一点的（0 号那 1 点是 1 号的枪，2 号是复制来源） */
+    for (let i = 2; i <= 4; i++) if (stM.p[i].hp < 8) mirSeen[i] = (mirSeen[i] || 0) + 1;
+  }
+  ok(Object.keys(mirSeen).length >= 2, '镜面复制的第二目标必须**随盐变**（实测只打到 ' + JSON.stringify(mirSeen) +
+    '）—— 兜底若恒取最小索引，这里只会看到 2 号');
+  eq(Object.keys(mirSeen).length, 3, '第二目标要覆盖 2/3/4 三个候选（实测 ' + JSON.stringify(mirSeen) +
+    '）‖ 少一个就说明某一支被写死');
 });
 
 t('D20 狙击"被干扰"只认"狙击手本人被攻击"（多人局；v1.5.13 修用户报的 bug）', function () {
