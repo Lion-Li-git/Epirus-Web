@@ -51,7 +51,7 @@
 
 ## 五、边界
 
-只读：不编辑 `tools/**`、不动 `js/**`、不 promote、不新增门（她的裁定面）、不往共享产物池 `docs/artifacts/` 里写新 `.bak`
+只读：不编辑 `tools/**`、不动 `js/**`、不 promote、不新增门（用户的裁定面）、不往共享产物池 `docs/artifacts/` 里写新 `.bak`
 （落盘只进 `docs/research/archive/2026-10-20-ban-holo/`）。
 
 ## 六、产物清单（跑完填）

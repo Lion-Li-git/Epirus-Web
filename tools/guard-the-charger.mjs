@@ -56,7 +56,7 @@ const onTurn = (s2) => {
 function churnTarget(s2, pid, mode) {
   /* 挑人规则的三种口径（用来分解用户那句"快死了**而在憋大招**"里两个成分各自的权重）：
      'churn'      正在搓长招（ringStreak≥1 ∨ ep≥3），取 ep 最大        —— 只用"憋大招"
-     'weakchurn'  在搓长招 **且** hp≤1                                 —— 她的原话复合条件
+     'weakchurn'  在搓长招 **且** hp≤1                                 —— 用户的原话复合条件
      'churnnoweak' 在搓长招 **但** hp>1                                —— 只用"憋大招"、排除濒死 */
   let b = -1, be = -1;
   for (let i = 0; i < s2.p.length; i++) {
@@ -131,7 +131,7 @@ const onGame = (s2, seat) => {
   }
   SHAM = {};
   /* 无盾基线（每个 arm 都算，与送盾无关）：任一席**第一次进入搓招态**（ep≥3 ∨ ring≥1）之后，
-   * 是把招搓出来、还是先死、还是局终没搓完 ⇒ 她那句"显眼连招容易搞一半就死"在这套规则里的底数 */
+   * 是把招搓出来、还是先死、还是局终没搓完 ⇒ 用户那句"显眼连招容易搞一半就死"在这套规则里的底数 */
   for (let i = 0; i < s2.p.length; i++) {
     let w0 = -1;
     for (let w = 0; w < RS.length; w++) { const a = RS[w].acts[i]; if (a && (a.ep >= 3 || (a.ring | 0) >= 1)) { w0 = w; break; } }

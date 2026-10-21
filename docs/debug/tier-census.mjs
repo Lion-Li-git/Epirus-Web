@@ -282,7 +282,7 @@ for (const t of picked) {
         onGame: function (st, seat) { tally(cen, st, seat, kindRef()); } });
   }
   const sp = spectrum(cen);
-  /* §E626 逐局种类（"一桌一局能见到几种"）—— 并集那一格到 30 就饱和，分不开 2 席的臂 ⇒ 这一列才是她那句原话的量 */
+  /* §E626 逐局种类（"一桌一局能见到几种"）—— 并集那一格到 30 就饱和，分不开 2 席的臂 ⇒ 这一列才是用户那句原话的量 */
   const pga = pgStat(cen.pgAll, cen.games), pgs = pgStat(cen.pgSkill, cen.games);
   if (pga.bad || pgs.bad) { console.error('⛔ ' + t.id + ' 逐局种类不闭合：' + (pga.bad || pgs.bad) + ' ⇒ 本行作废'); process.exit(7); }
   if (pga.max > sp.distinct) { console.error('⛔ ' + t.id + ' 逐局最大 ' + pga.max + ' 超过整档并集 ' + sp.distinct + ' ⇒ 计数器接错对象，本行作废'); process.exit(7); }

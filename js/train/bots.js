@@ -361,14 +361,14 @@
    *   根因是配额**花错了时机**：`played` 数的是**所有**工具出手，而 ③ 在开局那几手攒珠的闲回合就把配额吃满，
    *   等 3 珠卡买得起时配额已归零 ⇒ 这条分支基本不落地。真要做该按"贵卡自己那批"计数、且排在 ③ 之前 —— 那是 v4，得单独测。
    *   留这段话是为了下一个人别再照原样把配额加回来。 */
-  /* ===== 计划层（P 系列 · 用户 10-13 上午给的六条推理形状，她原话抄在下面）=====
-   * 她的意思不是"再多几种卡"，是**脚本要看得懂局面**：「既然做脚本就可以搞一些有逻辑推理的部分…
+  /* ===== 计划层（P 系列 · 用户 10-13 上午给的六条推理形状，用户原话抄在下面）=====
+   * 用户的意思不是"再多几种卡"，是**脚本要看得懂局面**：「既然做脚本就可以搞一些有逻辑推理的部分…
    *   而不是为了堆广度随便浪费」。所以这一层排在 ③（闲时换新卡）**之前**：能读出局面就走计划，读不出来才回地板。
    * 花费结构全部从 `js/core/state.js` 的 `rawCost` 现读（不是照卡面文字猜）：
    *   · 聚能环：首次 3 珠、之后 **0 珠**（`resolve.js:733` 每次 +1/+2/+3，第 3 次起封顶 +3；断环即归零 `resolve.js:1239`）
    *     ⇒ 开环之后每一手都是**免费的钱**，代价是"这些回合不打人也不守"；
    *   · 过载炮：phase = `cannonCount % 3 + 1` —— 第1次 2 珠；第2次**清空全部珠**（且要求 ep≥1）；第3次清空全部珠**再自损 1 血**
-   *     ⇒ 她给的三条正好是"花费最小化"的三条：phase1 当普通攻击、phase2 只在 ep=1 时按（只付 1 珠）、phase3 只在 ep=0 时按（无珠可清，只付 1 血）；
+   *     ⇒ 用户给的三条正好是"花费最小化"的三条：phase1 当普通攻击、phase2 只在 ep=1 时按（只付 1 珠）、phase3 只在 ep=0 时按（无珠可清，只付 1 血）；
    *   · 天火：不需要选目标、打**全场**我贴出且 `age<=3` 的符咒，**引爆后符咒仍在**（`resolve.js:1070`）⇒ "贴3次然后连续引爆两次"的第二爆天然成立。
    * ⚠ 与整只脚本同一条纪律：**只读 state 现算**（ringStreak / cannonCount / stickers / ep / hp / elec），不存模块级状态
    *   ⇒ 同一颗种子必然同一串行为，`cloneState` / 并行 worker / 页面都不会串味。每条实际触发几次由 `docs/debug/plan-firing.mjs` 数。 */
@@ -392,13 +392,13 @@
       if (!s.some(function (x) { return x.owner === pid && x.age <= 3; })) out.push(i); }
     return out;
   }
-  function planHpNotBehind(state, pid) {              // 她那句"血多"的口径：我不比场上任何人血少
+  function planHpNotBehind(state, pid) {              // 用户那句"血多"的口径：我不比场上任何人血少
     const me = state.p[pid]; let mx = -Infinity;
     for (const i of mpOpps(state, pid)) if (state.p[i].hp > mx) mx = state.p[i].hp;
     return !isFinite(mx) || me.hp >= mx;
   }
   /* 我最近 k 手真正打出的招（事件序就是时间序 ⇒ 倒着捡本席的 action）。
-   *   被防御挡掉的那一手**也算"贴了一次"**：她的窗口说的是"连续贴三次"这个**出手次数**，
+   *   被防御挡掉的那一手**也算"贴了一次"**：用户的窗口说的是"连续贴三次"这个**出手次数**，
    *   而"到底落没落地"交给 `planMyStickers`（活符咒数）判 —— 两件事分开设判据，别混成一个。 */
   function planMySeq(state, pid, k) {
     const out = []; const evs = (state && state.events) || [];
@@ -408,7 +408,7 @@
     }
     return out;                                            // out[0] = 最近一手
   }
-  /* 她那句"保命也要看现场"的量化：能威胁我的程度计分 ——
+  /* 用户那句"保命也要看现场"的量化：能威胁我的程度计分 ——
    *   一个人有 5 珠或带雷珠 = 2 分（真能打死/大伤害），一人有 2~4 珠 = 1 分，没珠 = 0 分。
    *   门槛取 2 ⇒ "别人都没 ep"（0 分）与"只有一个人有一两 ep"（1 分）都**不守**，两人有点钱或一人能放大雷才守。 */
   function planThreatScore(state, pid) {
@@ -423,10 +423,10 @@
     const seq = planMySeq(state, pid, 6);   // 窗口最长要能看见"贴-ジ-贴-ジ-贴-爆"这种节奏 ⇒ 取 6 手
     let curseRun = 0, fireRun = 0;
     /* ⚠ "连续"的口径：**ジ 不算打断**。第一版按字面"相邻两手"数，于是 贴/ジ/贴/ジ/贴 永远数不满 3 次
-     *   （40 局实测最长连贴 2，窗口从未上膛）——而攒钱回合本来就该允许插一手ジ，她说的"连续3次"指的是这个计划的三次贴。 */
+     *   （40 局实测最长连贴 2，窗口从未上膛）——而攒钱回合本来就该允许插一手ジ，用户说的"连续3次"指的是这个计划的三次贴。 */
     for (const k of seq) { if (k === SK.JI) continue; if (k === SK.CURSE) curseRun++; else break; }
     for (const k of seq) { if (k === SK.JI) continue; if (k === SK.FIRESTORM) fireRun++; else break; }
-    /* P4-引爆（时序版，按她 10-13 那句改）：「贴贴是连续3次，未必要3枚，不然开头那个就过期了」
+    /* P4-引爆（时序版，按用户 10-13 那句改）：「贴贴是连续3次，未必要3枚，不然开头那个就过期了」
      *   ⇒ 判据是**连贴满 3 手**，不是"场上同时有 3 枚"（后者实测历史最大值只有 2 枚，条件永远凑不满）；
      *   「三回合只贴上1枚或是没有那也可以不引爆」⇒ 还要 `live >= 2` 才点，别把 2 珠烧在空场上；
      *   符咒引爆后仍在（`resolve.js:1070`）⇒ 刚点过一发就再点第二发，`fireRun < 2` 封顶，正是"连续引爆两次"。 */
@@ -452,7 +452,7 @@
     }
     /* P4-贴（**渐进式入口**）：不再要求"攒够 7 珠才进窗口"（那是理想方案，实测真装配里凑不齐 ⇒ 整桌只有 6 手贴贴），
      *   改成 4 珠起、五成概率**只投一枚试探**（1 珠成本），贴上了才按上面那条续到 3 手。
-     *   排在 P3 大雷**之后** ⇒ 保大雷使用率（她点名的担心）。 */
+     *   排在 P3 大雷**之后** ⇒ 保大雷使用率（用户点名的担心）。 */
     if (curseRun === 0 && fireRun === 0 && live === 0 && me.ep >= 4 && rnd(state) < 0.5 && mpAff(bk, SK.CURSE)) {
       const t = mpPickOne(state, planUnstickered(state, pid));
       if (t != null) return { key: SK.CURSE, target: t };
@@ -466,7 +466,7 @@
     if (me.ringStreak === 0 && me.ep < PLAN_SPEND && mpAff(bk, SK.RING) && planHpNotBehind(state, pid) && rnd(state) < 0.7) {
       return { key: SK.RING, target: null };
     }
-    /* P6-过载炮：三条按她的花费逻辑（phase1 随意 / phase2 只在 1ep / phase3 只在 0ep 且打最富的那个）*/
+    /* P6-过载炮：三条按用户的花费逻辑（phase1 随意 / phase2 只在 1ep / phase3 只在 0ep 且打最富的那个）*/
     if (mpAff(bk, SK.CANNON)) {
       const phase = (me.cannonCount % 3) + 1;
       if (phase === 1) { const t = mpLeader(state, pid); if (t != null) return { key: SK.CANNON, target: t }; }
@@ -514,7 +514,7 @@
       return f[Math.floor(rnd(state) * f.length) % f.length].key;
     };
     /* ① 保命窗口（RCT 里唯一普遍不亏的一格）：先把回合交给还没用过的**防御类**工具，其次才是别的工具。
-     *   ⚠ 10-13 她补了一条对的：「保命窗口你也要看现场情况，要是别人都没有ep或者只有一个人有一两ep那也没必要保命（他都不一定来打你）」
+     *   ⚠ 10-13 用户补了一条对的：「保命窗口你也要看现场情况，要是别人都没有ep或者只有一个人有一两ep那也没必要保命（他都不一定来打你）」
      *     ⇒ 加威胁门 `planThreatScore >= 2`（计分见上面那个 helper：一人 5 珠/带雷珠 = 2 分，一人 2~4 珠 = 1 分）；
      *     原来的无条件守，在"没人有钱"的回合是**白守一手**（表 B 那一格的收益前提是"真的有人要打我"）。 */
     if (state && state.p && state.p[pid] && state.p[pid].hp <= 1 && planThreatScore(state, pid) >= 2) {
@@ -533,10 +533,10 @@
     const bk = (typeof base === 'string') ? base : (base && base.key);
     /* ③ 地板这一手本来就是 ジ（这回合没有更值的事做）⇒ 换成还没用过的工具卡：不挤掉任何正招，广度就在这类便宜回合里长 */
     const idleTool = (bk === SK.JI) ? freshTool(aff) : null;
-    /* ★ P0 攒钱纪律 —— 她那五条计划的**前置**，是实测逼出来的（`docs/debug/plan-firing.mjs` 第一次跑：
+    /* ★ P0 攒钱纪律 —— 用户那五条计划的**前置**，是实测逼出来的（`docs/debug/plan-firing.mjs` 第一次跑：
      *   六条里四条一次都不触发；诊断脚本给出 20 局 2,640 次决策的珠数分布 = **0珠 50.9% ‖ 1珠 44.4% ‖ 2珠 4.7%，最大 2**）。
      *   原因很直白：③（见便宜工具就花）与地板（一有珠就开枪）会把珠随时花光 ⇒
-     *   她给的 3 珠开环、5 珠大雷、7 珠贴爆**永远够不到**；而 ep 的唯一收入是 `resolve.js` 的 `case SK.JI: me.ep += 1` ⇒
+     *   用户给的 3 珠开环、5 珠大雷、7 珠贴爆**永远够不到**；而 ep 的唯一收入是 `resolve.js` 的 `case SK.JI: me.ep += 1` ⇒
      *   不主动攒，就没有那条"血多连打 4-5 次聚能环"的经济基础。
      *   ⚠ 这正是本文件 `:507` 那条老教训的复刻（"ep>=3 开环…经济锁在 ep<=2，开环分支实测一次都没触发——堆分支不等于提吞吐量"）；
      *     我这次是靠 plan-firing 那把尺发现的，不是靠"分支写完了"。
