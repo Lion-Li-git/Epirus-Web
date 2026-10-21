@@ -655,7 +655,28 @@ mergeDefs(8, [9, 10, 11], '珠价/代数步进 B2（09-13～09-16：珠价/代�
 mergeDefs(12, [13, 14, 15], '多样性步进 C1（09-16：多样性 5→30）');
 mergeDefs(16, [17, 18], '对手池步进 C2（09-16～09-18：对手池 16/19）');
 mergeDefs(19, [20, 21], '对手池/珠价步进 C3（09-19～09-21：对手池 14→22）');
-mergeDefs(24, [27], '零散（老配置散枚 + 臂线零散）');
+/* 10-21 用户：零散别再单列一个最早桶（线会先飞上去再下来）⇒ 按各自训练配置/年代并进具体家族。 */
+{
+  const src = defs.filter(d => d.n === 24 || d.n === 27);
+  const prod = [];
+  for (const d of src) for (const r of d.g.rs) {
+    const t = String(r.ts).slice(0, 10);
+    let tgt = null;
+    if (r.id === 'long-33' || t <= '2026-09-14') tgt = defs.find(x => x.n === 8);            /* B2 */
+    else if (t <= '2026-09-18') tgt = defs.find(x => x.n === 16);                            /* C2 */
+    else if (t >= '2026-09-24' && t <= '2026-09-27') { prod.push(r); continue; }             /* 旧生产对照 */
+    else tgt = defs.find(x => x.n === 26);                                                   /* 臂线 */
+    if (tgt) { tgt.g.rs.push(r); FAM[r.id] = tgt; }
+  }
+  if (prod.length) {
+    const t0 = prod.map(r => r.ts).sort()[0], t1 = prod.map(r => r.ts).sort().slice(-1)[0];
+    const d = { n: 90, g: { sig: 'prod-old', rs: prod, t0: t0, t1: t1 },
+      label: '旧生产对照（09-25～09-27：e35/e39/seed80/seed81/cal-ctl/E51） ‖ ' + prod.length + ' 枚 ‖ ' + String(t0).slice(5, 10) + '→' + String(t1).slice(5, 10) };
+    defs.push(d); for (const r of prod) FAM[r.id] = d;
+  }
+  defs = defs.filter(d => d.n !== 24 && d.n !== 27);
+  for (const n of [8, 16, 26]) { const d = defs.find(x => x.n === n); if (d) { d.g.t0 = d.g.rs.map(r => r.ts).sort()[0]; d.g.t1 = d.g.rs.map(r => r.ts).sort().slice(-1)[0]; } }
+}
 mergeDefs(26, [28], '臂线·env 实验（COUNTER_OPPS / 纯续训）');
 function relabel(n, label) { const d = defs.find(x => x.n === n); if (!d) return; const rs = d.g.rs;
   const t0 = rs.map(r => r.ts).sort()[0] || '', t1 = rs.map(r => r.ts).sort().slice(-1)[0] || '';
@@ -664,6 +685,9 @@ relabel(22, '早期 env 臂（16 轴全空）');
 relabel(23, '现代基线（代数 400～1200）');
 relabel(25, '融合与续训');
 relabel(29, '臂线·COUNTER_OPPS=guardSpam');
+relabel(8, '珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类）');
+relabel(16, '对手池步进 C2（09-16～09-18：对手池 16/19 + 小类）');
+relabel(26, '臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂）');
 /* 10-21 用户：号从头排、不留空号 ⇒ 按 t0 排序后连续编号 1..N（0 留给旧槽位冠军） */
 defs.sort(function (a, b) { return String(a.g.t0 || '').localeCompare(String(b.g.t0 || '')); });
 defs.forEach(function (d, i) { d.n = i + 1; });
