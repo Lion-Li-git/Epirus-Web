@@ -68,7 +68,7 @@
 ## 四、门的物理拆分（**10-14 已经拆了**；本节原写"为什么没有拆"）
 
 > ⚠️ **v1.7.67 更正：本节原来的结论（"不要物理拆"）已被 10-14 的拆分推翻** —— 门体现在就住在 `tools/gates/` 的
-> **16 个部分文件**里（`_ctx.mjs` = 那份共享前导），CI 按 `--part=` 走 16 路矩阵并行。
+> **各部分文件**里（`_ctx.mjs` = 那份共享前导；段数用 `--list-parts` 现读 —— v1.7.67 写这段时是 16 段，2026-10-21 = 19 段），CI 按 `--part=` 走矩阵并行。
 >
 > 当时担心的两条都有了下文：① "注册数守卫的源码形状会改" ⇒ `np-test.mjs` 的 `ords↔t()` 计数守卫 + `gate-parts-check.mjs`
 > 的并集守卫接手（拆完**注册数 == 执行数 + 跳过数**这条仍在，且多了"16 个部分互不重叠、并集 = 全部"）。
@@ -83,7 +83,7 @@
 
 | 谁 | 跑什么 | 阻断吗 | 覆盖到哪 |
 |---|---|---|---|
-| **GitHub（每笔 push / PR）** | `.github/workflows/gates.yml`：`plan` 现读 `--list-parts --json` ⇒ **16 路 `--part=` 矩阵**（每部分一台机）+ 聚合作业里的 `spec-run` / 并集守卫 | ✅ 阻断 | np **整轮**（16 个部分的并集 = 全部门）+ spec ‖（v1.7.67 更正：原来是 `gate-all --np --no-browser` 的单机形状） |
+| **GitHub（每笔 push / PR）** | `.github/workflows/gates.yml`：`plan` 现读 `--list-parts --json` ⇒ **按 `--list-parts` 现读的 `--part=` 矩阵**（每部分一台机）+ 聚合作业里的 `spec-run` / 并集守卫 | ✅ 阻断 | np **整轮**（所有部分的并集 = 全部门）+ spec ‖（v1.7.67 更正：原来是 `gate-all --np --no-browser` 的单机形状） |
 | **GitHub 的 browser job** | `smoke.mjs` + `battle-test.mjs` + `champion-map/shot.mjs --check`（windows runner） | ⚠️ `continue-on-error` | 浏览器三道（§E365 起含演化页）；10-01 起是观察档（转阻断后 3 跑 2 红、根因未定，**转正判据 = 连续 5 次绿**） |
 | **本机收工前** | `node tools/gate-all.mjs --np` | —— | 五道全绿 = **认证那一遍**（CI 覆盖不到浏览器那三道的判定，所以"认证"这句话仍然只能说本机那一遍） |
 
@@ -158,7 +158,7 @@
 
 | 口径 | 现值 | 怎么算 | 用途 |
 |---|---|---|---|
-| **运行时注册数**（真源头）| **278** | `node tools/np-test.mjs --list-parts --json` 的 `total`（runner 现读；它的收尾注册守卫要求"注册数 = 执行 + 跳过"，`tools/gate-parts-check.mjs` 的 ② 再从并集那一侧钉一层）| **封顶就用这个数** ✔ |
+| **运行时注册数**（真源头）| **以现读为准（2026-10-21 = 279）** | `node tools/np-test.mjs --list-parts --json` 的 `total`（runner 现读；它的收尾注册守卫要求"注册数 = 执行 + 跳过"，`tools/gate-parts-check.mjs` 的 ② 再从并集那一侧钉一层）| **封顶就用这个数** ✔ |
 | ~~旧：`grep -c '^t(' tools/np-test.mjs`~~ | **0**（已失效）| ⚠ 10-14 把门体摊进 `tools/gates/` 的 16 个部分文件之后，`tools/np-test.mjs` 自己**一条 `^t(` 都没有** ⇒ 这个当年被明文指定为"唯一真源头"的命令**恒返回 0**。真源头的**载体**从"runner 文件"变成了"16 个部分文件的并集" | 不许再引 |
 | `gate-audit-vacuous.mjs` 口径 | 274 | 解析 `^t('…'` 字面量 ⇒ 少看 3 条（**疑为双引号标题 `t("…")`**，未验完）| 只用于**分类**（A/B/C/D），**不用于封顶** |
 | Claude 文档粗扫 | 279 | 正则估算、未逐条复核 | 只作参考 |

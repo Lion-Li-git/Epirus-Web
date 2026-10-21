@@ -96,7 +96,7 @@ async function main() {
    * 病（2026-10-10 实测）：这里原来是 `await sleep(1600)`，紧接着就断言 DOM。
    *   本机跑是 `SUMMARY: SMOKE OK`，而 CI 上**同一批页面代码两笔绿两笔红**（6864093 红 / 我两笔绿 / 7023bff 又红）
    *   ⇒ 纯等待竞态：页面初始化（解包冠军包 + 渲染 30 个技能钮 + 开新局）一旦超过 1.6 秒，第一段就整片红 ——
-   *   实测症状正是「对局页可见 & 技能按钮=30(28可用+2置灰)」/「多人专用技能置灰(≥2 disabled)」/
+   *   实测症状正是「对局页可见 & 技能按钮=30」/「多人专用技能置灰(≥2 disabled)」/
    *   「双方 HP 显示 3」/「点击出招:ジ」一起 FAIL，而「点击出招:防御」有时 PASS（= 初始化到一半）。
    * 改法：**先轮询到"30 个技能钮都渲染出来"再往下走**，上限 15 秒（就绪即刻返回 ⇒ 正常路径不拖慢）。
    *   ⚠️ 这不是放松判据：超时后下面的 `check` 照样判 FAIL，只是**先给它足够时间**。
@@ -119,7 +119,7 @@ async function main() {
   const check = (name, cond) => { checks.push([name, !!cond]); console.log((cond ? 'PASS' : 'FAIL') + ' ' + name); };
 
   // --- 对局页 ---
-  check('对局页可见 & 技能按钮=30(28可用+2置灰)', await evalJS(`document.querySelectorAll('.skillbtn').length === 30`));
+  check('对局页可见 & 技能按钮=30', await evalJS(`document.querySelectorAll('.skillbtn').length === 30`));
   check('多人专用技能置灰(≥2 disabled)', await evalJS(`document.querySelectorAll('.skillbtn:disabled').length >= 2`));
   check('双方 HP 显示 3', await evalJS(`[...document.querySelectorAll('.side .statbar .stat')].some(s=>s.textContent.includes('HP')&&s.textContent.includes('3'))`));
 

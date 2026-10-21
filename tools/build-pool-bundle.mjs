@@ -23,7 +23,7 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 /* v1.7.69：只在**本文件是入口**时校验 —— 量具既可能被当 CLI 跑，也可能被别的门 `import` 当模块用；
  *   后者时 `process.argv` 是**调用方**的 argv（例如 gate runner 的 `--part=`），无条件校验会把整轮门禁打红。 */
 if (process.argv[1] && process.argv[1].endsWith("build-pool-bundle.mjs")) {
-  rejectUnknownFlags(process.argv.slice(2), ['allow-empty', 'dry', 'global', 'key', 'out', 'table'], "build-pool-bundle");
+  rejectUnknownFlags(process.argv.slice(2), ['allow-empty', 'dry', 'global', 'key', 'out', 'srcKey', 'table'], "build-pool-bundle");
 }
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -37,6 +37,11 @@ const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=
 const absPath = p => (p.indexOf(':') >= 0 || p[0] === '/' || /^[A-Za-z]:[\/\\]/.test(p)) ? p : join(ROOT, p);
 const MAP = absPath(arg('table', 'champion-map/pool-members.tsv'));
 const KEY = arg('key', 'EPIRUS_CHAMPION_3P');
+/* 2026-10-21（用户裁定 A · 2P 软档掺多人包）：成员文件的**外壳键**可以与被嵌入的全局名不同 ——
+ *   2P 池里掺进来的成员是 3P 训练出来的包（外壳 `EPIRUS_CHAMPION_3P`），而页面只读 bundle 里的 `pack`（与外壳无关）。
+ *   `--srcKey=` 只决定"从成员文件里抽哪一段权重"，**不复制文件** ⇒ 同一粒权重只有一处真身
+ *   （D191 的血证：多存一份就多一个别名，"N 枚候选"会虚高）。默认 = `--key` ⇒ 旧调用逐字不变。 */
+const SRCKEY = arg('srcKey', KEY);
 /* ⚠ 全局名也必须参数化 —— §E599 的血证：第一版这里硬编码 `EPIRUS_CHAMPION_POOL`，
  *   于是 2P 池 bundle 写的是 **3P 那个全局**，按 `index.html` 的加载顺序它把 3P 池（27 枚）**顶成了 7 枚 2P 包**，
  *   而页面侧 `EPIRUS_CHAMPION_POOL_2P` 根本不存在 ⇒ 5 人桌静默用错池、2P 池不生效。
@@ -63,13 +68,18 @@ for (const r of rows) {
   if (!existsSync(abs)) { console.error('⛔ 成员 ' + r[h.id] + ' 的包文件不在盘上：' + rel); process.exit(2); }
   const txt = readFileSync(abs, 'utf8');
   /* 取权重数组：`.bak`/`.js` 外壳里那一个赋值（`packArr` 的坑注释解释了为什么不能裸 indexOf 名字） */
-  const KEYX = KEY;
+  /* 混装表（2P 原生 + 跨人数邀请）里成员的外壳键不统一 ⇒ 按 [srcKey, key] 依次试；
+   *   `EPIRUS_CHAMPION` 是 `EPIRUS_CHAMPION_3P` 的前缀，但后面那个 `^\s*=` 检查会把 `_3P`/`_META` 挡掉。 */
+  const KEYX = [SRCKEY, KEY].filter(function (x, i, a) { return a.indexOf(x) === i; });
   let o = null;
-  for (let k = txt.indexOf(KEYX); k >= 0; k = txt.indexOf(KEYX, k + 1)) {
-    if (!/^\s*=/.test(txt.slice(k + KEYX.length, k + KEYX.length + 4))) continue;
-    const c = braceObj(txt, k); if (c && Array.isArray(c.a)) { o = c; break; }
+  for (let ki = 0; ki < KEYX.length && !o; ki++) {
+    const kx = KEYX[ki];
+    for (let k = txt.indexOf(kx); k >= 0; k = txt.indexOf(kx, k + 1)) {
+      if (!/^\s*=/.test(txt.slice(k + kx.length, k + kx.length + 4))) continue;
+      const c = braceObj(txt, k); if (c && Array.isArray(c.a)) { o = c; break; }
+    }
   }
-  if (!o) { console.error('⛔ ' + rel + ' 解不出权重数组 ⇒ 这一枚不许进池（缺行 ≠ 相等）'); process.exit(2); }
+  if (!o) { console.error('⛔ ' + rel + ' 解不出权重数组（试过 ' + KEYX.join(' / ') + '）⇒ 这一枚不许进池（缺行 ≠ 相等）'); process.exit(2); }
   const w = widOfArr(o.a);
   if (w !== r[h.wid]) { console.error('⛔ 名字对、包不对：' + r[h.id] + ' 表里 wid=' + r[h.wid] + ' 而文件算出 ' + w + '（' + rel + '）'); process.exit(2); }
   members.push({
@@ -90,6 +100,7 @@ const body = '/* Epirus 冠军池：由 tools/build-pool-bundle.mjs 生成（真
   '})(typeof window !== \'undefined\' ? window : globalThis);\n';
 
 console.log('== 生成池 bundle ==');
+if (SRCKEY !== KEY) console.log('   外壳键 = ' + SRCKEY + '（嵌入全局 = ' + GLOBAL + '，输出键 = ' + KEY + '）');
 console.log('   成员 ' + members.length + ' 枚：' + JSON.stringify(byTier) + ' ‖ 每枚 wid 已逐条重算并核对 ✅');
 for (const m of members) {
   console.log('   · ' + (m.id + '              ').slice(0, 15) + m.tier + ' · 体检 ' + m.promoteVerdict +

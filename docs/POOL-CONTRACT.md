@@ -48,7 +48,7 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 | `id` | 池里的名字（与 `champion-map/coords.tsv` 同口径；**必须全等 join，不许子串**） | `D234` ① |
 | `wid` | 权重指纹 = `champion-map/pack-id.mjs` 的 `widOf`（sha1(权重数组) 前 16 位） | `D234` ②（bundle 里每条目的 wid 必须与表一致） |
 | `path` | 包文件相对路径 | `D234` ①：**必须 `git ls-files` 查得到**（否则 CI 与干净克隆里这枚根本不存在） |
-| `tier` | `hard` \| `mid` \| `soft`（§E596 起**三带**，与难度三档一一对应；⚠ 这里原写「三带 7/6/7」，那是 §E596 当时的形状 —— v1.7.1 现测真源 `champion-map/pool-members.tsv` 已是 **9/7/11**（hard/mid/soft，10-12 夜名册 20→27，`pool-add --audit` 现报 `members:27, tiers:{hard:9,mid:7,soft:11}`）；分带的键是"这一组凑到桌上的实测强度"，不是逐枚分数——理由与读数在 `docs/research/logs/2026-10-12-e596-three-tier.md`。名单在 `tools/pool-add.mjs:TIERS`，环色在 `champion-map/viewer.mjs:POOL_COL`，两处必须同时改） | 抽签按带取；页面池环按带着色 |
+| `tier` | `hard` \| `mid` \| `soft`（§E596 起**三带**，与难度三档一一对应；⚠ 这里原写「三带 7/6/7」，那是 §E596 当时的形状 —— v1.7.1 现测真源 `champion-map/pool-members.tsv` 以 `pool-add --audit` 现读为准（2026-10-21：`members:29, tiers:{hard:13,mid:0,soft:16}` —— `mid` 带在 §E609 拆带后清空；10-12 夜名册 20→27 时是 9/7/11）；分带的键是"这一组凑到桌上的实测强度"，不是逐枚分数——理由与读数在 `docs/research/logs/2026-10-12-e596-three-tier.md`。名单在 `tools/pool-add.mjs:TIERS`，环色在 `champion-map/viewer.mjs:POOL_COL`，两处必须同时改） | 抽签按带取；页面池环按带着色 |
 | `invited` | `1` = 用户点名（可越过行为门槛，但必须标警） ‖ `0` = 自动成员 | 沿用 DS 的分档门槛裁定（`docs/research/logs/2026-10-11-pool-screen-ds.md` §8） |
 | `promoteVerdict` | `pass` \| `block` \| `untested`（上槽体检：送盾/G4/G5，真源 `champion-map/promote.tsv`） | `D234` ③：自动成员不许 `block`，`untested` 必须显式印出来 |
 | `seatKill` | 人席否决的格数（`两批同号 ≥20pt`，判据在 `champion-map/seat-rule.mjs`，`seatgap.mjs`/`pool-add`/`pool-screen` 共用这一份）；**`-1` = 没量过（不是干净）**，`0` = 真量过且零格 | `D234` ③ 同上；⑧ 钉"喂进去的批表必须带基准行"；引用时必须带 §E587 的检出力脚注 |
@@ -206,8 +206,8 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 
 1. **2P 也有池，但是另一份**：真源 `champion-map/pool-members-2p.tsv`，产物 `js/bundled-champion-pool-2p.js`
    （同一支 `tools/build-pool-bundle.mjs --table= --key=EPIRUS_CHAMPION --global=EPIRUS_CHAMPION_POOL_2P` 生成）。
-   **不是**把 3P 池搬到 2 人桌 —— §E286 那条"3P 包在 1v1 上是分布外"实测仍然成立（3P 冠军塞进 2P 格 = `0%/平100%`，退化装配）。
-2. **每局只要一个对手 ⇒ 池不必大**（用户原话）。当前 7 枚（hard 2 ‖ mid 3 ‖ soft 2），全部是 2P 考卷（20 基准）训出来的包。
+   **不是**把 3P 池搬到 2 人桌 —— §E286 那条"3P 包在 1v1 上是分布外"实测仍然成立（3P 冠军塞进 2P 格 = `0%/平100%`，退化装配）。⚠ **例外只有一条：soft 带的"跨人数邀请"，见本节约 7**（2026-10-21 用户裁定 A）。
+2. **每局只要一个对手 ⇒ 池不必大**（用户原话）。当前 **9 枚**（hard 2 ‖ mid 3 ‖ soft 4；soft 里 **2 枚是 2026-10-21 的跨人数邀请**，见约 7；其余 7 枚仍是 2P 考卷（20 基准）训出来的包）。
 3. **成员门槛**：① 2P 考卷平均 ≥ `examMinBaseline`（现役 2P 冠军那枚的下限 0.825）‖
    ② **行为种类 ≥5**（用户原话「种类小于 5 的就丢掉」；种类 = `pick-best` 的 `div.distinct`）‖
    ③ 分带按**正面对决**（`probe-cross-mode --cells=2P --fields=vschamp --ref=js/bundled-champion.js`）实测强度，不按 Hp。
@@ -216,3 +216,9 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 5. **降级**（与 3P 同纪律，见 §4）：2P bundle 缺失/该档没配成员/成员解不开 ⇒ **退回那一枚 2P 冠军并说明原因**，不许静默。
 6. **现役 2P 槽的角色**：与 3P 槽同构 —— 池缺席时的回退；它自己也是池里的一枚（soft 带 · 钉住快照
    `docs/artifacts/e598-2p/SHIPPED-2P-2026-09-22.bak`，理由是"换包会移走参照物"）。
+7. **跨人数邀请（2026-10-21 用户裁定 A）—— 只管 soft 带**：
+   - **允许**把多人（3P）训练出来的包点名放进 **soft** 带：`invited=1` + `promoteVerdict=block` + `note` 里写明 2P 考卷分数与原因；**hard/mid 一律不许**（那里的"最强/中间"是 2P 考卷定的，掺 OOD 成员会把台阶弄反）。
+   - 动机（用户原话："2 人桌状态空间太少了，再怎么训练也搞不出什么来，最优解很固定，实在不行就丢一些多人的冠军进去分带"）：2P 原生 7 枚在 2P 考卷上 **98.1~99.3%**（考卷饱和，只能当门不能当排序），而**简单/普通两档防御类 0.0%** ⇒ 换强度无解，换形状。
+   - 代价（如实记录，不许写成"更强"）：这批成员在 2P 考卷上不过门（`3p-D4a` avg 49.2% / `3p-B5-10-31` 73.3%，对若干基准 0 胜），所以**只当地板**；它们买的是"会站防、会换牌"的可玩性。
+   - 入池后的档级读数（2880 局/档 × 两模式）与阶梯（单批 1000 局）见 `CHANGELOG.md` v1.7.127。
+   - 实现：`tools/build-pool-bundle.mjs --srcKey=` 让 2P bundle 能直接抽 3P 外壳成员的权重（**不复制文件** ⇒ 同一粒权重仍只有一处真身）。
