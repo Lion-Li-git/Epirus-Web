@@ -297,7 +297,14 @@ t('D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自�
    * 搬运是两条"改内存不改仓库"的路：① 装载 `evo.js` 前做字符串替换；② 装载后把沙箱里的 `EpirusTrainer.policyChooserN` 包一层。
    * ⇒ 最大风险不是数不对，是**没搬成功而两栏一样**（会被读成"口径无关"）。所以本门判的是"搬运有没有留下证据"，不是某个读数。 */
   const p = readFileSync('tools/probe-layer-caliber.mjs', 'utf8');
-  ok(p.indexOf('writeFileSync') < 0 && p.indexOf('appendFile') < 0, '量具必须只读（不许落任何产物）');
+  /* §改（2026-10-22 千问·第十批）：原来这条只 forbid 两个串（`writeFileSync` / `appendFile`）⇒ 换一种写盘方式就漏
+   *   （`createWriteStream`、`openSync`、`copyFileSync`…都不在串里）。换成一张清单，并**点名是哪个命中的**。
+   * 为什么这条不换成本事判据（"跑一遍再比 `git status` 增量必须为空"）：`--part` 在 CI 上是**并行**的，
+   *   别的部分瞬时落盘会让本条**假红**（抖动比漏报更难查）⇒ 这条要防的事实很窄（量具只读），清单判足够，
+   *   换判据的代价不划算。**这是一条有意留下的静态腿**，不是没看见。 */
+  const WRITE_APIS = ['writeFile', 'appendFile', 'createWriteStream', 'openSync', 'copyFileSync', 'renameFile', 'mkdir', 'rmSync', 'unlink', 'truncate'];
+  const hitWrite = WRITE_APIS.filter(function (t) { return p.indexOf(t) >= 0; });
+  ok(hitWrite.length === 0, '量具必须只读（不许落任何产物）⇒ 实测命中写盘类 API：' + JSON.stringify(hitWrite));
   ok(/process\.exit\(9\)/.test(p) && /SELF\.patched !== EVO_HARDWIRED \|\| SELF\.wrapper <= 0/.test(p),
     '必须有"两条路都自证生效否则作废"的自检（非零退出）—— 缺它时两栏相同会被当成"口径无关"');
   ok(/EVO_HARDWIRED = \(EVO_SRC\.match\(HARDWIRED\)/.test(p) && !/patched !== 4/.test(p),

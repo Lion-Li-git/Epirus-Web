@@ -321,6 +321,18 @@ CI 复核（本夜）：run for `1104b058`（v1.7.144）= **success** ⇒ 那两
 - 顺手留给下一班的一条（本轮没做）：`D150` 那条 `p.indexOf('writeFileSync') < 0 && indexOf('appendFile') < 0`（"量具必须只读"）
   有便宜的行为替法 —— **spawn 前后各跑一次 `git status --porcelain` 比增量**（增量必须为空）。
   比文字钉宽：换一种写文件的方式（`openSync`/`copyFileSync`）文字钉就漏，而增量跑不掉。
+  ⚑ **第十批真去试了这条**（我自己在 22) 里留的钩子）⇒ 结论是**不划算**：parts 在 CI 上并行 ⇒ 别的部分瞬时落盘会让它假红，
+  于是改成"加宽禁止清单 + 点名命中项"，判据与牙测见 **23)**。
+
+### 23) D150（probe-instruments）—— "量具必须只读"那条负向钉：两条串 ⇒ 一张清单（并写清为什么**不**换成本事判据）
+- 原来只 forbid `writeFileSync` / `appendFile` 两个串 ⇒ 换一种写盘方式就漏。换成一张清单
+  （`writeFile` ‖ `appendFile` ‖ `createWriteStream` ‖ `openSync` ‖ `copyFileSync` ‖ `renameFile` ‖ `mkdir` ‖ `rmSync` ‖ `unlink` ‖ `truncate`），
+  且判词**点名是哪个命中的**。
+- 牙测：给 `tools/probe-layer-caliber.mjs` 的 import 加上 `createWriteStream`（**旧那两个串在文件里仍然不存在**）
+  ⇒ 旧钉会绿，新腿红 `实测命中写盘类 API：["createWriteStream"]`；还原后 1/1 绿（单跑 13 s）‖ 回归面 `--part=probe-instruments` 全跑 **33 / 33**。
+- **为什么这条不换成"跑一遍再比 `git status` 增量"**：`--part` 在 CI 上是**并行**的，别的部分瞬时落盘会让这条**假红**；
+  抖动比漏报更难查，而这条要防的事实很窄（量具只读），清单判已经够 ⇒ **这是一条有意留下的静态腿**。
+  ⇒ 记这一条是因为我第一版就想"行为化"它，量到成本不对才退回静态 + 加宽：**能静态判且行为判会引入并发抖动的，就该留静态**。
 
 ## 三、普查各栏的处置（哪些是真案）
 
