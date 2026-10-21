@@ -61,7 +61,8 @@ if (DUMP) {
    *   也算进来了 ⇒ 报出 10/3，一个谁都没跑过的数。计数也要有出处。 */
   const lines = txt.split('\n').map(s => s.trim());
   const fails = lines.filter(s => /^FAIL\b/.test(s));
-  console.log('\n断言：' + lines.filter(s => /^PASS\b/.test(s)).length + ' PASS ‖ ' + fails.length + ' FAIL');
+  const skips = lines.filter(s => /^SKIP\b/.test(s)).length;
+  console.log('\n断言：' + lines.filter(s => /^PASS\b/.test(s)).length + ' PASS ‖ ' + fails.length + ' FAIL' + (skips ? ' / ' + skips + ' SKIP（判不动，见各行理由）' : ''));
   if (fails.length) console.log(fails.map(s => '  ' + s).join('\n'));
   if (!lines.some(s => /^(PASS|FAIL)\b/.test(s))) { console.error('⛔ 一条断言都没跑（这不是全绿）'); process.exit(2); }
   process.exit(fails.length ? 1 : 0);

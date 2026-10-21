@@ -185,7 +185,7 @@ t('D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + �
   const SEEDPACK = 'docs/artifacts/eval-out/win-Ldemo.bak';   // 与线上槽权重逐位相同（09-28 实测 d490dc136293）
   ok(existsSync(SEEDPACK), '用例需要一粒"起点包"当参照（缺了就只能造静默通过的假绿）');
   const armEnv = (name, extra) => Object.assign({
-    EPIRUS_HOTSTART: '1', EPIRUS_SEEDPACK: SEEDPACK, EPIRUS_SEED: '31', EPIRUS_ARM: name,
+    EPIRUS_HOTSTART: '1', EPIRUS_SEEDPACK: SEEDPACK, EPIRUS_SEED: '31', EPIRUS_ARM: name, EPIRUS_SUPPORT_PRIOR: '0',
     EPIRUS_BAND_DIR: dir + '/band-' + name, EPIRUS_T3P_OUT: dir + '/' + name + '.js'
   }, extra || {});
   const arm = (name, extra) => spawnSync(process.execPath, ['tools/train-3p.mjs', '60'], {

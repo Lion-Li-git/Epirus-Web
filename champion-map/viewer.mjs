@@ -1725,8 +1725,9 @@ var CHM = null;
  *     把低电平抬高的假象）。现在带子是**不透明色**，落点由 BAND_DL 这一个数说了算，与纸后面是什么无关。
  * ⚠ 10-19 变异实测过：BAND_DL 设到 60 ⇒ 灰行亮到 rgb(156,162,175)、比左栏统计行的字还亮，而页内自检全套仍然全绿。
  *   页内那条 inkLeft 的 150 门槛拦不住它 —— 带子横贯整行，被当成「最左边的墨」时两帧都返回
- *   x=0，位移差仍然是 80px ⇒ 断言照样过。⇒ 10-20 起代码里有了上界（下面 BAND_DL_MAX），但**门与页内自检仍然不管这个旋钮**：
- *   把它调回不设上界、或把上界改成 60，都不会红 ⇒ 调它只能靠量像素或看图，别以为有门在管。 */
+ *   x=0，位移差仍然是 80px ⇒ 断言照样过。⇒ 10-20 起代码里有了上界（下面 BAND_DL_MAX）；
+ *   10-21 起**页内自检有一条行为腿**（§E338 末尾那条"行带亮度"，判四档 ΔL* ∈ [1,12.5] 且旋钮调到 60 仍被钳）：
+ *   调回不设上界、或把上界改成 60，都会红。 */
 var BAND_DL = 6;
 /* v1.7.124（用户 10-20 拍板「加上界 + 一条门」）：这个旋钮原来**没有任何上界** —— 10-19 变异实测设到 60 时
  *   灰行亮到 rgb(156,162,175)、比左栏统计行的字还亮。上界取 **12**：与底色的 L* 差 ≈12 已经在 8 位色深里明显可读，
@@ -3766,7 +3767,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
  *   受控标签又常常没有视口（实测 canvas 1×1 ⇒ 布局数学整个是假的）。所以判据只能让页面自己算给自己看。
  *   ⚠ 每条都是"改坏了会红"的形状，不是打印读数。*/
 (function () { if ((location.hash || '').indexOf('check=1') < 0) return;
-  var out = [], nok = 0, nbad = 0;
+  var out = [], nok = 0, nbad = 0, nskip = 0;
   var el0 = document.getElementById('selftest');
   /* 自检自己也要有牙：跑挂了必须留下一行红字。空 div 与"0 PASS / 0 FAIL"是同一种假绿
    *   —— 看的人分不清"没跑"与"跑完没写"，而这两件事的处置完全相反。*/
@@ -3774,6 +3775,10 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   try {
   function T(name, cond, got) { if (cond) { nok++; out.push('PASS ' + name + (CHKDETAIL && got !== undefined && got !== null ? ' ‖ ' + got : '')); }
     else { nbad++; out.push('FAIL ' + name + (got === undefined || got === null ? '' : ' ‖ 实测 ' + got)); } }
+  /* §E338 的第三态「判不动」（10-21）：**不是**"可以忽略的红"，而是"这个态下量具够不到判据"
+   *   —— 判据自己印出够不到的理由，行首 SKIP ⇒ 不进 PASS/FAIL 分母，但 shot.mjs 与页眉都会把
+   *   SKIP 数报出来（数没报 = 静默吞掉）。纪律：能用"按当下窗口算期望"修的，不许直接降成判不动。 */
+  function TS(name, reason) { nskip++; out.push('SKIP ' + name + ' ‖ ' + reason); }
   /* §E674 一行**只读定标快照**（DS 10-20 §6.4 待查 #2 点名要的："给页面加一行打印当前 EPR() 域 + inWin 命中数"）。
    *   走既有的 #check=1&detail=1 通道 ⇒ 出厂页与四视图复验都不多打一行；它**不是判据**
    *   （行首是 INFO，shot.mjs 只数 PASS/FAIL ⇒ 不进分母、坏了也不会红）。
@@ -5107,13 +5112,20 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     for (var kk in SN) st[kk] = SN[kk];
     ELOG = 1; NOPTS = 0;
     recomputeVIS(); draw();   /* 还原 + 补一帧：后面还有读像素的判据，不许看到一张"只有边"的画布 */
-    T('连线太糊这条要真被压下去：扇根那块「板」的到顶像素必须塌掉一大截，而「有墨的像素」不能跟着塌（密度律 vs 固定 alpha，三帧互比）',
-      !!d0 && !!dL && !!dF && !!hub && ceilF >= 20 && ceilL <= ceilF * 0.4 && covL >= covF * 0.5,
+    var _boardName = '连线太糊这条要真被压下去：扇根那块「板」的到顶像素必须塌掉一大截，而「有墨的像素」不能跟着塌（密度律 vs 固定 alpha，三帧互比）';
+    /* 10-21 订正：窄窗口态只有 94 条边，这块窗里"到顶"像素只有 11 个 ⇒ 对照组本身不够 20，判据的文义
+     *   是"这块窗根本没板可言"（原判词自己写着）。那不是断口/压不住，是**量具够不到** ⇒ 判不动并印理由。
+     *   全范围态（出厂/四视图）到顶像素远大于 20，这条照旧有牙。 */
+    var _boardWhy = !(d0 && dL && dF && hub) ? '取不到三帧像素'
+      : (ceilF < 20 ? '这个窗口里没有板可量（固定 alpha 到顶像素 ' + ceilF + ' < 20 ‖ 全图 ' + nE + ' 条边，最密那一格压着 ' + hn + ' 条线）' : '');
+    if (_boardWhy) { TS(_boardName, _boardWhy); } else {
+    T(_boardName,
+      ceilL <= ceilF * 0.4 && covL >= covF * 0.5,
       '窗 = 最密那一格 ±40 CSS px（那一格压着 ' + hn + ' 条线 ‖ 全图 ' + nE + ' 条边，一条一次 stroke）‖ 整条 alpha '
         + amax.toFixed(3) + '~' + amin.toFixed(3) + ' ‖ **到顶**（墨 ≥200）的像素 固定 alpha ' + ceilF + ' → 对数 ' + ceilL
         + '（要 ≤ 40%，且对照组本身要 ≥20 个 —— 不然这块窗根本没板可言）‖ 有墨（≥6）像素 ' + covF + ' → ' + covL + '（要 ≥ 50%）'
-        + ' ‖ 参考：窗内最亮像素 ' + satF + ' → ' + satL + '（这条不拿它当判据：疏尾那条本来就该亮）'
-        + (d0 && dL && dF ? '' : ' ‖ 取不到三帧像素'));
+        + ' ‖ 参考：窗内最亮像素 ' + satF + ' → ' + satL + '（这条不拿它当判据：疏尾那条本来就该亮）');
+    }
   })();
   /* ===== §E467b 一条线**一路上不许断**（用户 10-08 10:5x 否掉上一版的原话：「现在线条重合的部分反而出现了中断」）=====
    *   上一版把每条边切成 8 段按密度分桶，同一条线在不同段上以不同 alpha 落笔 ⇒ 断口。
@@ -5808,7 +5820,28 @@ st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
     T('§E573 势场快路必须逐位等于独立暴力（' + ncmp + ' 项比对）', !bad, bad);
   })();
   var el = document.getElementById('selftest');
-  el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL\\n' + out.join('\\n');
+  /* ===== 10-21（用户 10-20 裁「BAND_DL 加上界 + 一条门」的后半）：行带亮度要有行为牙 =====
+   *   T1 变异实测过：BAND_DL 设到 60、上界改回 60，94 条自检全绿 ⇒ 这个钳坏了没人知道。
+   *   这条判「看得见的亮度差」：四档底色（纯黑/深蓝/石板/浅底）各算 ΔL*，当前档必须 ∈ [1,12.5]；
+   *   再把旋钮临时调到 60，输出仍必须被钳在 12.5 内（直接测钳，不钉函数名/常量名）。跑完原样放回。 */
+  (function () {
+    var bgs = ["#05070d", "#0f1522", "#212a3b", "#e6ebf5"], bad = [], det = [];
+    function Lc(c) { return 0.2126 * srgbL(c[0]) + 0.7152 * srgbL(c[1]) + 0.0722 * srgbL(c[2]); }
+    function Lof(hex) { return Lc(rgbOf(hex)); }
+    function dlOf(hex) { var b = String(bandFillFor(hex)).replace("rgb(", "").replace(")", ""); var q = b.split(","); return Math.abs(Lc([+q[0], +q[1], +q[2]]) - Lof(hex)); }
+    var saved = BAND_DL;
+    for (var q = 0; q < bgs.length; q++) {
+      BAND_DL = saved; var d0 = dlOf(bgs[q]);
+      if (!(d0 >= 1 && d0 <= 12.5)) bad.push(bgs[q] + " 当前档 ΔL*=" + d0.toFixed(2));
+      det.push(bgs[q] + " " + d0.toFixed(2));
+      BAND_DL = 60; var d60 = dlOf(bgs[q]);
+      if (!(d60 <= 12.5)) bad.push(bgs[q] + " 旋钮=60 时 ΔL*=" + d60.toFixed(2) + "（钳失效）");
+      BAND_DL = saved;
+    }
+    T("行带亮度：四档底色上的 ΔL* 必须肉眼可辨又不刺眼（当前档 ∈ [1,12.5]；旋钮临时调到 60 也必须被钳在 12.5 内）",
+      bad.length === 0, det.join(" ‖ ") + (bad.length ? " ‖ 越界：" + bad.join("；") : ""));
+  })();
+  el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL' + (nskip ? ' / ' + nskip + ' SKIP' : '') + '\\n' + out.join('\\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\\n已经跑到：\\n' + out.join('\\n'); nbad++; }
   st.sel = null; paintCard(); draw();
 })();

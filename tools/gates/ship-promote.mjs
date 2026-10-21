@@ -423,7 +423,7 @@ t('D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（�
     /* §E654：这条迷你臂原先只给 `EPIRUS_BAND_DIR`、没给落点 ⇒ 写的是 D123 的基线文件；
      *   而 10-19 它连基线都写不成了——§E589 守卫发现同一粒权重已在 `docs/artifacts/train-3p-out-band1.bak`（手跑残留）⇒ exit 9 ⇒ 本腿"必须跑通"必红。
      *   补上落点两件事一起解决：不再碰共享基线，也不再撞那条残留真身。 */
-    { env: Object.assign({}, process.env, { EPIRUS_XN2W: '1', EPIRUS_XN2G: '2', EPIRUS_BAND_DIR: dir, EPIRUS_ARM: 'nptest-arm', EPIRUS_T3P_OUT: join(dir, 'nptest-arm.js') }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_XN2W: '1', EPIRUS_XN2G: '2', EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_BAND_DIR: dir, EPIRUS_ARM: 'nptest-arm', EPIRUS_T3P_OUT: join(dir, 'nptest-arm.js') }), encoding: 'utf8', timeout: 300000 });
   ok(run.status === 0, '迷你臂必须跑通（exit=' + run.status + '）');
   const bands = readdirSync(dir).filter(function (f) { return /-band\d+\.bak$/.test(f); });
   ok(bands.length > 0, '带内候选必须落盘（实测 ' + bands.length + ' 个）');
@@ -434,7 +434,7 @@ t('D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（�
   const bandRoot = mkdtempSync(join(tmpdir(), 'xn2band2-'));
   const dir2 = join(bandRoot, 'deep', 'nested');
   const run2 = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
-    { env: Object.assign({}, process.env, { EPIRUS_XN2W: '1', EPIRUS_XN2G: '2', EPIRUS_BAND_DIR: dir2, EPIRUS_ARM: 'nptest-nodir', EPIRUS_T3P_OUT: join(bandRoot, 'out.js') }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_XN2W: '1', EPIRUS_XN2G: '2', EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_BAND_DIR: dir2, EPIRUS_ARM: 'nptest-nodir', EPIRUS_T3P_OUT: join(bandRoot, 'out.js') }), encoding: 'utf8', timeout: 300000 });
   eq(run2.status, 0, 'BAND_DIR 不存在时迷你臂仍须跑通（exit=' + run2.status + ' ' + String(run2.stderr || '').slice(0, 80) + '）');
   const bands2 = existsSync(dir2) ? readdirSync(dir2).filter(function (f) { return /-band\d+\.bak$/.test(f); }) : [];
   ok(bands2.length > 0, 'BAND_DIR 不存在 ⇒ 必须**自建嵌套目录**并落盘带内候选（实测目录在场=' + existsSync(dir2) + ' · 候选 ' + bands2.length + ' 个）——'

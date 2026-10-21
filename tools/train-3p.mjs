@@ -553,9 +553,15 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
      *   依据：10 粒配对 A/B（120 代）强度 Δ −0.43pt (t=−0.14) ⇒ 无差别；
      *   但 ⚠ 那批包送盾≈0%（`p0` 0.0%）⇒ **没覆盖「本来就爱送盾」的区间**，以后出现刷盾型起点包要重测。
      *   要关掉就显式设 `EPIRUS_SUPPORT_PRIOR=0`（门里那些比对产物的腿应显式设 0，见 CHANGELOG）。 */
-    const spReq = (process.env.EPIRUS_SUPPORT_PRIOR != null && String(process.env.EPIRUS_SUPPORT_PRIOR).trim() !== '')
-      ? process.env.EPIRUS_SUPPORT_PRIOR : '2';
-    if (true) {
+    /* 10-21（§E675 交班 B4）：显式空串**必须**按非法值处理（原来被当「没设」⇒ 静默取默认 2，
+     *   而脚本里 env="${MAYBE}" 那种拼法正是本仓「设了但被判成没设」的常见来源）。 */
+    const spRaw = process.env.EPIRUS_SUPPORT_PRIOR;
+    const spReq = spRaw == null ? '2' : String(spRaw).trim();
+    if (spReq === '') {
+      console.error('[train-3p] ⛔ EPIRUS_SUPPORT_PRIOR 被设成了空串 ⇒ 按非法值处理（要默认就**别设这个 env**）');
+      process.exit(7);
+    }
+    {
       const v = Number(spReq);
       if (!(v === 0 || v === 1 || v === 2)) {
         console.error('[train-3p] ⛔ EPIRUS_SUPPORT_PRIOR 只能是 0/1/2（收到 ' + spReq + '）');

@@ -390,7 +390,7 @@ t('D184 产物=起点读数（v1.5.276 · §E113）：正例喊、反例不喊�
   const arm = function (argv, extra) {
     return spawnSync(process.execPath, ['tools/train-3p.mjs'].concat(argv), {
       encoding: 'utf8', timeout: 600000,
-      env: Object.assign({}, process.env, extra, { EPIRUS_BAND_DIR: join(dir, 'b' + Math.random().toString(36).slice(2)) })
+      env: Object.assign({}, process.env, extra, { EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_BAND_DIR: join(dir, 'b' + Math.random().toString(36).slice(2)) })
     });
   };
   const metaOf = function (p) {
@@ -455,13 +455,13 @@ t('D185 起点补进重验池（v1.5.277 · §E114）：默认零行 + 只多候
   const arm = function (argv, extra) {
     return spawnSync(process.execPath, ['tools/train-3p.mjs'].concat(argv), {
       encoding: 'utf8', timeout: 600000,
-      env: Object.assign({}, process.env, extra, { EPIRUS_BAND_DIR: join(dir, 'b' + Math.random().toString(36).slice(2)) })
+      env: Object.assign({}, process.env, extra, { EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_BAND_DIR: join(dir, 'b' + Math.random().toString(36).slice(2)) })
     });
   };
   const fitsOf = function (txt) {
     return String(txt).split('\n').filter(function (l) { return /^\s+trainFit=[\d.]/.test(l); }).map(function (l) { return l.trim(); });
   };
-  const common = { EPIRUS_SEED: '5', EPIRUS_HOTSTART: '1', EPIRUS_ANCHOR: '0', EPIRUS_SEEDPACK: zeroSeed };
+  const common = { EPIRUS_SEED: '5', EPIRUS_HOTSTART: '1', EPIRUS_ANCHOR: '0', EPIRUS_SEEDPACK: zeroSeed, EPIRUS_SUPPORT_PRIOR: '0' };
   const offOut = join(dir, 'off.js'), onOut = join(dir, 'on.js');
   /* v1.5.281：off/on 两臂互相独立 ⇒ 一批并发（判据不变：下面仍比 `fitsOff.length` / 产物逐位 / 横幅有无） */
   const B185 = spawnBatch([

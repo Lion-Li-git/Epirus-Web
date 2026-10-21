@@ -1,5 +1,5 @@
 /*#np-part-header
-{"file":"tools/gates/train-env.mjs","part":"train-env","group":"train","ranges":[[6145,6209],[6222,6222],[8208,8254],[8644,8681],[9238,9264]],"gates":[6145,8208,8644,9238],"patched":[]}
+{"file":"tools/gates/train-env.mjs","part":"train-env","group":"train","ranges":[[6145,6209],[6222,6222],[8208,8254],[8644,8681],[9238,9264],[9265,9305]],"gates":[6145,8208,8644,9238,9265],"patched":[]}
 #np-part-header-end*/
 import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
@@ -8,7 +8,7 @@ const {
   mkdirSync, writeFileSync, rmSync, copyFileSync, tmpdir,
   join, createHash, _spawnSync, T3P_ENTRY, spawnSync,
   parsePairTable, makeGuardCost, resolveOutPath, loadSlotId, sigOf,
-  LADDER_CLAIM, pushTarget, hardwiredLine, widOfArr, seatRd,
+  LADDER_CLAIM, pushTarget, hardwiredLine, widOfArr, packWeightsOf, seatRd,
   seatKillIndex, pairHasBase, classifyDefenseWindow, defenseQuality, formatQuality,
   parseQuality, formatQualityRecord, AUDIT, PS, PF_FRONT,
   spawnCached, inputHash, cacheStats, cacheDir, spawnNC,
@@ -30,7 +30,7 @@ const {
   fnBody,
 } = makeCtx();
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
-export const ords = [6145, 8208, 8644, 9238];
+export const ords = [6145, 8208, 8644, 9238, 9265];
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 t('D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：已下达的键改用**空枪检测**）：train-3p 命中读不到的 EPIRUS_* ⇒ exit 6 + 静态钉住"引擎里字面读 env"的清单', function () {
@@ -226,5 +226,46 @@ t('D181 `EPIRUS_RING_W` 在 train-3p 可命令（v1.5.274 · §E91）：三处�
  * 这类"把合法输入拒了"和"把没生效的放过去"一样糟 ⇒ 三条一起钉：小数写法能过（修好了）·
  * **引擎拒收的值仍必须红**（`-5` 过不了 `setBeadReward` 的 `>=0` ⇒ 回执还是 0.05 ⇒ 必须 exit 7）·
  * 名字写错仍必须响（黑键闸没被吃掉）。后两条是防"为了修第一条把闸门拆了"。 */
+/* ===== D237（10-21 · 用户 10-20 裁「默认开」+ §E675 交班 B4）：训练侧送盾先验必须有牙 =====
+ * 病：默认档写死 '2'，而 grep tools/gates 对 EPIRUS_SUPPORT_PRIOR 零命中 ⇒ 把默认偷改回 0
+ *   （或把 setter 改名让读回恒真）没有任何门会红；而 §E675 那批 A/B 的可比性全系于这个默认值。
+ *   另：显式空串原来被当「没设」⇒ 静默取 2（设了但被判成没设那一族）。
+ * 形状（D129 同族·判行为不判文案）：① 不设 env 的产物 == 显式 =2（wid 逐位相同）
+ *   ② 显式 =0 必须与默认不同 ③ 非 0/1/2 与空串 ⇒ exit 7 且不产出。
+ * ⚠ 读 server/knob-guard.mjs 那套黑键闸（SELF_ENV_KEYS 与闭集）走同一条名单：这个 env 必须能被
+ *   本入口原样读回，而不是被当暗键吞掉。 */
+t('D237 训练侧送盾先验：默认档必须真等于 2 · 显式关闭必须真不同 · 非法/空串必须 exit 7（10-21）', function () {
+  const kg = readFileSync('server/knob-guard.mjs', 'utf8');
+  ok(/detectDarkKnobs|EPIRUS_ALLOW_DARK/.test(kg), '黑键闸必须在单一来源里（本门依赖它对未知键的拒绝行为）');
+  const dir = mkdtempSync(join(tmpdir(), 'd237-'));
+  const base = Object.assign({}, process.env); delete base.EPIRUS_SUPPORT_PRIOR;
+  /* ⚠ 预算取 8 代而不是 1：1 代臂上先验**改变不了任何决策**（实测 =0 与 =2 的产物 wid 相同），
+   *   那会让 ②b 永远红或永远绿；8 代实测两臂 wid 不同（d72e2b44… vs 9b6a22e1…），且单臂 ~40s。 */
+  const run = (name, extra) => spawnSync(process.execPath, ['tools/train-3p.mjs', '8', '3', '8', '8'], {
+    encoding: 'utf8', timeout: 420000, maxBuffer: 1 << 24,
+    env: Object.assign({}, base, { EPIRUS_SEED: '7', EPIRUS_ARM: name,
+      EPIRUS_BAND_DIR: join(dir, 'band-' + name), EPIRUS_T3P_OUT: join(dir, name + '.js') }, extra || {})
+  });
+  const wid = (name) => { const f = join(dir, name + '.js'); if (!existsSync(f)) return null; const arr = packWeightsOf(f); return arr ? widOfArr(arr) : null; };
+  try {
+    const a = run('d237def', null), b = run('d237def2', { EPIRUS_SUPPORT_PRIOR: '2' });
+    eq(a.status, 0, '①a 不设 env 的臂必须跑通：' + String(a.stderr || '').slice(0, 160));
+    eq(b.status, 0, '①b 显式 =2 的臂必须跑通：' + String(b.stderr || '').slice(0, 160));
+    const wa = wid('d237def'), wb = wid('d237def2');
+    ok(!!wa && !!wb, '①c 两臂都必须产出可算 wid 的包（实测 ' + wa + ' ‖ ' + wb + '）');
+    eq(wa, wb, '①d 不设 env 的产物必须与显式 =2 逐位相同（不同 ⇒ 默认不是 2，或默认与显式走了两条路）');
+    const c = run('d237off', { EPIRUS_SUPPORT_PRIOR: '0' });
+    eq(c.status, 0, '②a 显式 =0 的臂必须跑通：' + String(c.stderr || '').slice(0, 160));
+    ok(wid('d237off') !== wa, '②b 显式 =0 必须与默认产出不同（相同 ⇒ 这个默认从没作用到训练上，是纸面上的）');
+    const d = run('d237bad', { EPIRUS_SUPPORT_PRIOR: '3' });
+    eq(d.status, 7, '③a 非 0/1/2 必须 exit 7（实测 ' + d.status + '）');
+    ok(!existsSync(join(dir, 'd237bad.js')), '③b 被拒的臂不许落产物（拒了还写 = 半开）');
+    const e = run('d237empty', { EPIRUS_SUPPORT_PRIOR: '' });
+    eq(e.status, 7, '③c 显式空串必须 exit 7（原来被当「没设」⇒ 静默取默认 2）');
+    ok(!existsSync(join(dir, 'd237empty.js')), '③d 空串被拒的臂也不许落产物');
+  } finally {
+    try { rmSync(dir, { recursive: true, force: true }); } catch (e) { }
+  }
+});
 }
 

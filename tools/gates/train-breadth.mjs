@@ -90,14 +90,14 @@ t('D127 兑现广度（v1.5.167 · §N24 · 用户"G_eff 像刷分"）：mirrorH
   eq(r.skipped || 0, 0, '未提供 gateOk（旧调用点）⇒ 视为通过，行为与 v1.5.167 一致');
   const dirA = mkdtempSync(join(tmpdir(), 'd127a-')), dirB = mkdtempSync(join(tmpdir(), 'd127b-'));
   const off = spawnNC(['tools/train-3p.mjs', '3', '3', '6', '4'],
-    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127off', EPIRUS_BAND_DIR: dirA, EPIRUS_T3P_OUT: join(dirA, 'd127off.js') }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127off', EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_BAND_DIR: dirA, EPIRUS_T3P_OUT: join(dirA, 'd127off.js') }), encoding: 'utf8', timeout: 300000 });
   eq(off.status, 0, '默认关必须跑通');
   eq(wh(join(dirA, 'd127off.js')), CLI_ARM_BASELINE, '默认关的产物必须仍是那条基线（动了它 = 所有 CLI 臂的当选规则被偷改）');
   const on = spawnNC(['tools/train-3p.mjs', '3', '3', '6', '4'],
     /* §E654：这条臂原先**只改了 BAND_DIR 没改落点** ⇒ 它把 D123/D162 逐字比对的基线覆盖掉了
      *   （运行时台账抓到：`d127on` 于 14:50:38 与 06:50 那轮各写一次 `docs/artifacts/train-3p-out.js`，
      *   同一趟 D162 就报 `got≠want`）。孪生的 off 臂一直有 `EPIRUS_T3P_OUT`（上一行），on 臂是漏的那一条。 */
-    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127on', EPIRUS_SEL_LAND: '1', EPIRUS_BAND_DIR: dirB, EPIRUS_T3P_OUT: join(dirB, 'd127on.js') }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd127on', EPIRUS_SEL_LAND: '1', EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_BAND_DIR: dirB, EPIRUS_T3P_OUT: join(dirB, 'd127on.js') }), encoding: 'utf8', timeout: 300000 });
   eq(on.status, 0, '开开关也要跑通');
   ok(/\[兑现广度\].*G\(出手→落地\)/.test(String(on.stdout || '')), '开了必须印出每候选的两把尺（不印 = 又一根暗旋钮）');
   ok(/改判（排序键换人）|改判（是预筛选掉的|未改判/.test(String(on.stdout || '')),
@@ -176,7 +176,7 @@ t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a
   const D130OUT = join(dir, 'd130on.js'), D130ONE = join(dir, 'd130one.js');
   const metaOf = packMetaOf;   /* v1.7.67：实现只有一份（`_ctx.mjs`） */
   const on = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
-    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130on', EPIRUS_COUNTER_OPPS: '1', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: D130OUT }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130on', EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_COUNTER_OPPS: '1', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: D130OUT }), encoding: 'utf8', timeout: 300000 });
   eq(on.status, 0, '老口径 `=1` 要跑得通（历史臂逐位复现不能坏）');
   ok(/\[counter-ops\] 判据原型已进训练桌：cnt:guardSpam,cnt:gunSpam,cnt:snipeSpam/.test(String(on.stdout || '')),
     '必须印出进了哪三个（不印 = 又一根暗旋钮）');
@@ -187,7 +187,7 @@ t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a
     '产物要自带"这臂的训练桌上放了哪几个判据原型"（实测 ' + JSON.stringify(mt1.recipe && mt1.recipe.counterOpps) + '）');
   /* ③ §E500 的新牙口：名字表 ⇒ **单自由度**必须表达得出来（今晚 R1 的对照臂就靠这一格） */
   const one = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
-    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130one', EPIRUS_COUNTER_OPPS: 'snipeSpam', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: D130ONE }), encoding: 'utf8', timeout: 300000 });
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130one', EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_COUNTER_OPPS: 'snipeSpam', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: D130ONE }), encoding: 'utf8', timeout: 300000 });
   eq(one.status, 0, '只上狙击场要跑得通');
   ok(/\[counter-ops\][^\n]*cnt:snipeSpam[^\n]*OPPS 从 9 个变 10 个/.test(String(one.stdout || '')),
     '只上 `snipeSpam` ⇒ 必须**恰好进一个**（9→10；印成 9→12 = 名字表没接住，三个又被一把塞）');
