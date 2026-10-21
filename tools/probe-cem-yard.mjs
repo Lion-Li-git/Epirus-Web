@@ -47,6 +47,9 @@ for (const b of BATCHES) {
     ' ‖ 完成 ' + arms.length + ' 臂 ‖ 回执里的桌形=' + (arms[0].trainMode || '(旧回执无此字段)') + ' n=' + arms[0].n + '）==');
   if (arms[0].trainMode && arms[0].trainMode !== MODE) console.error('  ⚠ 回执桌形是 ' + arms[0].trainMode + '，而这把尺喂的是 ' + MODE + ' ⇒ 别把两边的数并排读');
   if (arms[0].n !== N) console.error('  ⚠ 回执人数 n=' + arms[0].n + '，而这把尺是 n=' + N + ' ⇒ 同上');
+  if (arms[0].startLabel && String(arms[0].startLabel).indexOf(START) < 0)
+    console.error('  ⛔ 回执的起点是「' + arms[0].startLabel + '」，而这把尺的 --start 是 ' + START +
+      ' ⇒ 场是用**另一粒**建的 ⇒ 这批"与起点差"是假的（10-22 实测：忘传 --start 会安静地把批 E 的臂用批 D 的场量）');
   const bySeed = {}, vs = [];
   for (const a of arms) {
     const pk = dir + '/pack-' + a.mode + '-' + a.seed + '.js';
@@ -85,4 +88,5 @@ for (const b of BATCHES) {
       ' ‖ 夺1 均值=' + (100 * arr.reduce((x, y) => x + y.y.first, 0) / arr.length).toFixed(1) + '%（起点 ' + (100 * start.first).toFixed(1) + '%）');
   }
 }
-console.log('\n⚠ 跨臂只比"固定场"那两列；inLoop / 臂内 holdout 都各自建场，不可并排读。独立起点只有一个 ⇒ 别写普适。');
+console.log('\n⚠ 跨臂只比"固定场"那两列；inLoop / 臂内 holdout 都各自建场，不可并排读。');
+console.log('⚠ 每个 --start 只是一个起点：同批内的"正号 n/m"是 seed 簇的自由度，不是起点的自由度 ⇒ 跨批（不同 --start）合读才算复现。');

@@ -7,7 +7,7 @@
  * 用法：node tools/probe-cem-paired.mjs --dir=<批次根> [--batches=d] [--trainMode=long] [--n=5] [--games=100] [--cells=12]
  *      （`--games` 是**每格**的局数；批 A–C 用 `--trainMode=multi --n=3`）
  */
-import { readdirSync, existsSync } from 'node:fs';
+import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 
 const argv = process.argv.slice(2);
@@ -52,6 +52,11 @@ for (const b of BATCHES) {
     if (p && p.length === P.paramCount()) packs[m[1] + '-' + m[2]] = Float64Array.from(p);
   });
   const seeds = Array.from(new Set(Object.keys(packs).map(k => k.split('-')[1]))).sort();
+  /* 起点一致性：配对场必须用**这批臂自己的起点**建 —— 忘传 `--start` 会安静地拿另一粒建场（10-22 实测踩到）*/
+  const armLog = readdirSync(dir).filter(x => /^arm-.*\.log$/.test(x))[0];
+  const lbl = armLog ? (/("startLabel":")([^"]+)/.exec(readFileSync(dir + '/' + armLog, 'utf8')) || [])[2] : '';
+  if (lbl && lbl.indexOf(START) < 0)
+    console.error('  ⛔ 回执的起点是「' + lbl + '」而配对场是用 ' + START + ' 建的 ⇒ 这批的配对差不可解读（请给 --start=<回执里那一枚>）');
   console.log('\n== 批 ' + b + '（产物 ' + Object.keys(packs).length + ' 枚 ‖ seeds ' + seeds.join(',') + '）==');
   const allD = [], allF = [];
   for (const s of seeds) {
@@ -71,6 +76,7 @@ for (const b of BATCHES) {
     console.log('  ⇒ 跨 seed 汇总 Δfit 均值=' + m.toFixed(4) + ' SE=' + se.toFixed(4) + ' ‖ |均值|/SE=' +
       (Math.abs(m) / se).toFixed(1) + ' ‖ 正号 ' + allD.filter(x => x > 0).length + '/' + allD.length +
       '（Δ夺1 均值=' + mean(allF).toFixed(2) + 'pt ‖ 正号 ' + allF.filter(x => x > 0).length + '/' + allF.length + '）');
-    console.log('  ⚠ 独立起点只有 1 个（都从 ' + START + ' 热启动）⇒ 这里涨的是**格子的自由度**，不是起点的自由度；方向句仍不许写"普适"。');
+    console.log('  ⚠ 这一批的所有对都从同一个 --start（' + START + '）热启动 ⇒ 起点自由度 = 1；' +
+      '格子只缩仪器误差，跨批合并才算第二个起点（每批各自的固定场不同，不许并排比数值）。');
   }
 }
