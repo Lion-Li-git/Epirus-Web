@@ -27,7 +27,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { join, isAbsolute } from 'node:path';
-import { sandbox, mulberry32, ROOT, extractJsonObject, rejectUnknownFlags } from './audit-lib.mjs';
+import { sandbox, mulberry32, ROOT, extractJsonObject, rejectUnknownFlags, loadChamp } from './audit-lib.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 import { loadChampParams } from '../server/opp-champs.mjs';
 
@@ -58,7 +58,14 @@ const paramsCustom = (PACK !== 'auto' && PACK !== '2p' && PACK !== '3p')
   ? (function () {
       const f = isAbsolute(PACK) ? PACK : join(ROOT, PACK);
       if (!existsSync(f)) { console.error('⛔ --pack=' + PACK + ' 不在盘上（`auto|2p|3p` 之外的值一律当**路径**处理）'); process.exit(2); }
-      return loadChampParams(POOL, f);
+      /* §E677：这里原来走 `opp-champs.loadChampParams` —— 它**只认 3P 外壳**（缺 EPIRUS_CHAMPION_3P 就抛），
+       *   于是 2P 池那 9 枚（2P 外壳 / .bak）一把都量不了。改用 `audit-lib.loadChamp`：它 v1.5.171 起就是
+       *   双格式（3P 外壳缺席才退回 2P 外壳，且避开 _META），与 `champ-audit` 同一个读取口。
+       *   ⚑ 只改**这把尺**，不动 `server/opp-champs.mjs` —— 那条路是训练侧 `champ:` 对手的入口，
+       *   放宽它等于让以前被拒的 2P 格式包能上训练桌，那是另一件事（要用户点名）。 */
+      const pc = loadChamp(W, f);
+      if (!pc) { console.error('⛔ --pack=' + PACK + ' 两种外壳都解不开（既不是 EPIRUS_CHAMPION_3P 也不是 EPIRUS_CHAMPION）⇒ 拒绝，不许静默换包'); process.exit(2); }
+      return pc;
     })()
   : null;
 let params2p = null;
