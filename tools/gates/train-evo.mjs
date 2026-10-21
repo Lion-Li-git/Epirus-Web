@@ -148,16 +148,32 @@ t('D224 §E271/§E273/§E274 大雷"每几局看得见一次"的档（v1.5.333 �
   const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
 
   /* ① 默认值在册（v1.5.333 起"默认开着"**就是**现网行为）+ 结构钉。
-   *    ⚠ 这一格从"默认必须是 0"翻成"默认必须是 8"是**用户裁定**（「你把 p=8 默认开吧」）⇒
-   *      连带后果是有意的：训练/评测/门禁现在也带着这一档跑，对照必须显式 `--shipbigt=0`。 */
-  const defM = /^\s*let BIGT_PUSH = ([0-9]+);$/m.exec(evoSrc);
-  ok(!!defM, '①a 默认值必须**写在 `evo.js` 里**（找不到 `let BIGT_PUSH = N;` ⇒ 现网行为没有唯一来源）');
-  eq(Number(defM[1]), 12, '①b 引擎默认必须是 **12**（用户 10-03 晚先要 8，看到 G5 后改口「那换 p=12 吧」；实测 ' + (defM ? defM[1] : '读不到') + '）');
-  ok(/if \(BIGT_PUSH >= 1\) \{/.test(evoSrc), '①c 钩子必须在 `BIGT_PUSH >= 1` 的短路后面');
-  ok(/function setBigTPush\(v\)/.test(evoSrc) && /setBigTPush[\s,}]/.test(evoSrc.slice(evoSrc.indexOf('global.EpirusTrainer'))),
-    '①d `setBigTPush` 必须导出到 `EpirusTrainer`（**要关必须能显式关**：评测的对照臂靠它）');
-  ok(uiSrc.indexOf('setBigTPush(') < 0,
-    '①e **页面里不许再有第二处开关**（v1.5.332 的 `ui.js` 显式调用已撤 ⇒ 两处开关必漂移；默认值只由 `evo.js` 那个常数表达。实测页面里出现=' + (uiSrc.indexOf('setBigTPush(') >= 0) + '）');
+   *    ⚠ 这一格从"默认必须是 0"翻成"默认必须是 12"是**用户裁定**（「你把 p=8 默认开吧」）⇒
+   *      连带后果是有意的：训练/评测/门禁现在也带着这一档跑，对照必须显式 `--shipbigt=0`。
+   *    v1.7.153（门禁审查第十一批）：这四格原来全是 `evo.js` 的正则 ⇒ 换成**引擎直读**。
+   *    `bigTPushOn()` 是引擎自己回读的 getter，而这份沙箱刚建好、一次 setter 都没调 ⇒ 读到的就是出厂那一格。
+   *    正则版的毛病不是"会漏"而是"会假红"：把 `let` 改成 `const`、或把常数挤到同一行的另一个写法，
+   *    现网默认一个字节都没变，门却红了 —— 而它当时也没在量"默认到底是几"，只在量那行字的形状。 */
+  const sbDef = sandbox(process.cwd());
+  const defEngine = sbDef.EpirusTrainer.bigTPushOn();
+  ok(typeof defEngine === 'number' && isFinite(defEngine) && defEngine >= 0,
+    '①a **默认档必须能从引擎读到**（实测 `bigTPushOn()`=' + JSON.stringify(defEngine) + '）⇒ 读不到就没有"唯一来源"这句话，页面/工具各自解释一遍必漂移');
+  eq(defEngine, 12, '①b 引擎默认必须是 **12**（用户 10-03 晚先要 8，看到 G5 后改口「那换 p=12 吧」；实测 ' + defEngine + '）');
+  /* ①c（**已删**）：原来钉 `if (BIGT_PUSH >= 1) {` 那行短路。判它有没有牙的做法是先摘腿再做变异：
+   *   把 `js/train/evo.js:812` 的守卫改成 `if (true) {`（其余一字不动）后整条 D224 **照旧绿** ——
+   *   因为 `bigTPushPick` 在 N=0 时走 `% 0`＝NaN、第一句就 `return null`，那个守卫**行为中性**（只省一次调用）。
+   *   一条"把它的反面写出来也不会红"的腿不配存在 ⇒ 删（判据见 R1 第二问）。 */
+  ok(typeof sbDef.EpirusTrainer.setBigTPush === 'function',
+    '①d `setBigTPush` 必须是**挂在 `EpirusTrainer` 上的函数**（**要关必须能显式关**：评测的对照臂靠它。实测 typeof=' + typeof sbDef.EpirusTrainer.setBigTPush + '，'
+    + '而下面 ⑫ 整段就是靠真调用它跑的 ⇒ 它不存在时 ⑫ 会直接抛，不会静默）');
+  const uiSet = uiSrc.split('\n').map(function (l, i) { return { n: i + 1, t: l.trim() }; })
+    .filter(function (o) { return /setBigTPush/.test(o.t); });
+  ok(uiSet.length === 0,
+    '①e **页面里不许再有第二处开关**（v1.5.332 的 `ui.js` 显式调用已撤 ⇒ 两处开关必漂移；默认值只由 `evo.js` 那个常数表达）。'
+    + '实测 `ui.js` 里含 `setBigTPush` ' + uiSet.length + ' 行'
+    + (uiSet.length ? '：' + uiSet.map(function (o) { return 'L' + o.n + ' `' + o.t.slice(0, 90) + '`'; }).join(' ‖ ') : '')
+    + '（v1.7.153 起扫的是**标识符本身**而不是 `setBigTPush(` 这个串 ⇒ `setBigTPush (v)`、取个别名再调都逃不掉；'
+    + '页面级常数那一半仍由 ⑩b 钉，两半合起来才是"只有一个来源"）');
 
   /* ② 坏输入 exit 2（工具侧旗标与引擎侧 setter 都要拒，不许静默降级）*/
   /* `runE` 见文件头那一份（v1.7.67 收拢：此前两处逐字相同） */
@@ -172,14 +188,18 @@ t('D224 §E271/§E273/§E274 大雷"每几局看得见一次"的档（v1.5.333 �
   const strip = function (s) { return s.split('\n').filter(function (l) {
     return l.indexOf('[shipbigt') !== 0 && l.indexOf('耗时') !== 0;
   }).join('\n'); };
-  const off0 = runE(['--shipbigt=0']), offNone = runE([]), off8 = runE(['--shipbigt=12']);
+  const off0 = runE(['--shipbigt=0']), offNone = runE([]), off8 = runE(['--shipbigt=' + defEngine]);
   eq(off0.code, 0, '③a `--shipbigt=0`（显式关掉）不该报错：' + off0.out.slice(0, 160));
-  eq(off8.code, 0, '③a2 `--shipbigt=12`（显式给默认值）不该报错：' + off8.out.slice(0, 160));
-  eq(strip(off8.out), strip(offNone.out), '③b **默认档必须等于 12**：`--shipbigt=8` 与不设旗标剥墙钟后逐字相同（不同 ⇒ "默认"与"旗标"走的是两条路）');
+  eq(off8.code, 0, '③a2 `--shipbigt=' + defEngine + '`（显式给默认值）不该报错：' + off8.out.slice(0, 160));
+  eq(strip(off8.out), strip(offNone.out), '③b **显式给"引擎默认值"必须逐字等于不设旗标**（' + defEngine + ' ‖ 不设）：剥墙钟后不同 ⇒ "默认"与"旗标"走的是两条路');
   ok(offNone.out.indexOf('[大雷用量]') >= 0, '③c 不设旗标时**也要**印用量行（默认开着 ⇒ "到底开没开"必须可观测；不印就退化成只能靠 banner 猜）');
   ok(off0.out.indexOf('[大雷用量]') < 0, '③d 显式关档不许印这一行（关档时工具侧一行都不许多动）');
   ok(strip(off0.out) !== strip(offNone.out), '③e **关掉档必须与默认不同**（相同 ⇒ 那个"默认"从没作用到判定上，是纸面上的）');
-  ok(/BIGT_PUSH = 12/.test(offNone.out), '③f 有效档要由**引擎回读**后印出来（实测读不到 `BIGT_PUSH = 12` ⇒ 那是工具按"旗标有没有出现"推断的，不是回读）');
+  const echoNone = /BIGT_PUSH = (\d+)/.exec(offNone.out);
+  ok(!!echoNone && Number(echoNone[1]) === defEngine,
+    '③f 不设旗标时印出的有效档必须**等于引擎刚装载时那一格**（实测印到 `' + (echoNone ? echoNone[1] : '这句没出现') + '` ‖ 引擎直读=' + defEngine + '）'
+    + '⇒ 读不到这句就是工具按"旗标有没有出现"推断的、不是回读；读到别的数就是常数被复制了第二份。'
+    + '⚠ 这一格与 ①b **不许各写一遍 12**（v1.7.153 前它钉的是字面串 `BIGT_PUSH = 12`，于是改默认档要改两处、漏一处就假红）');
 
   /* ④ 开档真改变行为，且**用量由引擎事件数**（`champ.use`），不是工具自己的计数器 ⇒ 剂量必须落到落点上 */
   const runP = function (extra) {
@@ -262,8 +282,11 @@ t('D224 §E271/§E273/§E274 大雷"每几局看得见一次"的档（v1.5.333 �
   const d3 = runE(['--shipbigt=3']);
   eq(d3.code, 0, '⑨a `--shipbigt=3` 不该报错：' + d3.out.slice(0, 160));
   const banner3 = (/^\[shipbigt\].*$/m.exec(d3.out) || ['(没有 banner 行)'])[0];
-  ok(banner3.indexOf('默认档回读为 12') >= 0,
-    '⑨b banner 必须报**引擎自己回读的默认档**（实测=' + banner3.slice(0, 150) + '）⇒ 把旗标值说成默认值，等于在日志里伪造"出厂形状"');
+  const mBanner3 = /默认档回读为 (\d+)/.exec(banner3);
+  ok(!!mBanner3 && Number(mBanner3[1]) === defEngine,
+    '⑨b banner 必须报**引擎自己回读的默认档**，且那个数要等于 ①b 直读到的默认（实测 banner 里回读到 `'
+    + (mBanner3 ? mBanner3[1] : '这句没出现') + '` ‖ 引擎直读=' + defEngine + '，banner 前 150 字=' + banner3.slice(0, 150) + '）'
+    + '⇒ 把旗标值说成默认值，等于在日志里伪造"出厂形状"');
   ok(banner3.indexOf('= 默认 3') < 0, '⑨c 不许出现"默认 3"这种由旗标值反推的说法（实测含=' + (banner3.indexOf('= 默认 3') >= 0) + '）');
 
   /* ⑩ §E278（文档与代码必须同侧）：DS 的 v1.6.0 条目原文写着"`js/ui/ui.js` 的 `EPIRUS_BIGT_PUSH_N` 可调"，
@@ -284,11 +307,13 @@ t('D224 §E271/§E273/§E274 大雷"每几局看得见一次"的档（v1.5.333 �
    *   所以这里既钉**行为**（关档透传 / 命中才动 / 不问意愿问牌 / 不吃随机流 / 剂量单调），也钉**接线与边界**（只有一个调用点、且只在多人；工具侧一次都不许用）。 */
   const sb12 = sandbox(process.cwd());
   const TE12 = sb12.EpirusTrainer, R12 = sb12.EpirusRules, S12 = sb12.EpirusState;
-  ok(typeof TE12.wrapBigTPush === 'function' && typeof TE12.bigTPushSalt === 'function',
-    '⑫a 外壳与散列都必须是**导出的**（否则门只能钉字符串，"只有一份实现"这句话钉不住）');
-  ok(/const hit = bigTPushPick\(state, pid, aff\);/.test(evoSrc) && (evoSrc.match(/% BIGT_PUSH/g) || []).length === 1,
+  ok(typeof TE12.wrapBigTPush === 'function' && typeof TE12.bigTPushSalt === 'function' && typeof TE12.bigTPushPick === 'function',
+    '⑫a 外壳、散列与**内部那条路 `bigTPushPick`** 都必须是导出的（否则门只能钉字符串，"只有一份实现"这句话钉不住 —— ⑫n 的逐格对照没有输入）');
+  ok((evoSrc.match(/% BIGT_PUSH/g) || []).length === 1,
     '⑫b 全仓 `evo.js` 里**只许有一处** `% BIGT_PUSH`（实测 ' + (evoSrc.match(/% BIGT_PUSH/g) || []).length + ' 处）'
-    + '⇒ 散列/档位一旦被抄第二份，就会"页面这档生效、考卷那档没生效"（§E274 的 G5 盲区换个位置复发）');
+    + '⇒ 散列/档位一旦被抄第二份，就会"页面这档生效、考卷那档没生效"（§E274 的 G5 盲区换个位置复发）。'
+    + '⚠ v1.7.153 起这一格**只剩这一句**：原来还并着一条 `const hit = bigTPushPick(state, pid, aff);` 的整行正则 —— '
+    + '那是钉措辞（把 `aff` 改名就假红），它想守的"只有一份实现"改由 ⑫n 逐格量。两处都要留：⑫n 抓**今天已经分叉**，⑫b 抓**第二份抄出来了但暂时行为相同**');
   const botPick = { key: R12.SK.JI, target: 1, target2: null, bead: null };
   const bot = function () { return botPick; };
   const mkSt = function (round, salt) {
@@ -359,40 +384,124 @@ t('D224 §E271/§E273/§E274 大雷"每几局看得见一次"的档（v1.5.333 �
     .map(function (f) { return readFileSync(f, 'utf8'); }).join('\n');
   ok(toolSrc.indexOf('wrapBigTPush') < 0,
     '⑫m **工具侧一次都不许用**（实测含=' + (toolSrc.indexOf('wrapBigTPush') >= 0) + '）⇒ 考卷/门禁里的脚本对手必须逐字不变，否则今晚之前所有配对读数全部作废');
+  /* ⑫n（v1.7.153 新增 · 由原来钉 `const hit = bigTPushPick(state, pid, aff);` 那一整行的腿改出来的本事判据）：
+   *   外壳与内部那条路必须**逐格交出同一手**。做法：同一份沙箱、同一个 N，对 40 回合 × 5 座位每一格，
+   *   拿 `bigTPushPick`（引擎自己那条路）与 `wrapBigTPush(bot)` 的输出比 key 与 target。
+   *   ⇒ 外壳里若抄了第二份散列 / 第二套挑目标规则 / 第二层价格判定，两百格里绝大多数会当场分叉；
+   *     而钉措辞那一版对这些**一个都抓不到**（它只看得见那行字在不在），却会把"把 `aff` 改名"判成红。 */
+  let swCells = 0, swFired = 0, swBad = 0, swBadEx = '';
+  for (let r = 1; r <= 40; r++) {
+    for (let pid = 0; pid < 5; pid++) {
+      const m = mkSt(r, 51877 + r * 131 + pid * 17);
+      const aff = LEGAL.filter(function (l) { return l.affordable; });
+      const inner = TE12.bigTPushPick(m.st, pid, aff);
+      const got = TE12.wrapBigTPush(bot)(m.st, pid, LEGAL);
+      swCells++;
+      if (inner) {
+        swFired++;
+        if (got && got.key === inner.key && got.target === inner.target) continue;
+        swBad++; if (!swBadEx) swBadEx = '第 ' + r + ' 回合·座位 ' + pid + '：内部给 `' + inner.key + '#' + inner.target + '` ‖ 外壳给 `' + (got ? got.key + '#' + got.target : botPick.key + '（没兑现）') + '`';
+      } else {
+        if (got === botPick) continue;
+        swBad++; if (!swBadEx) swBadEx = '第 ' + r + ' 回合·座位 ' + pid + '：内部判"不动" ‖ 外壳换成了 `' + (got ? got.key : String(got)) + '`';
+      }
+    }
+  }
+  ok(swBad === 0 && swFired > 0 && swFired < swCells,
+    '⑫n 两条路必须**逐格同意**（实测 ' + swCells + ' 格"回合 × 座位"：命中并交出大雷 ' + swFired + ' 格 ‖ 判"不动" ' + (swCells - swFired) + ' 格 ‖ 分叉 ' + swBad + ' 格'
+    + (swBad ? '，第一处分叉：' + swBadEx : '') + '）'
+    + '⇒ 命中数必须**既大于 0 又小于全部**，否则这批格子什么都没比（恒 0 = 外壳退化成透传，恒全 = 散列没接档位，正是本仓 ⑫j 抓过的那种夹具假绿）；'
+    + '而任何一处分叉都说明"实现只有一份"这句话已经假了');
 });
 
 t('D225 §E275/§E284 摄魂指法的"残血只在**探索里**软提升"档（evo.js 的 DRAIN_PUSH · v1.6.4 起**默认 1=开**）：默认值在册 · 不改规则可证 · 只在 ε>0 的 soft 分支生效 · 窗口与剂量用纯函数直读 · 贪心臂不许把"看不见"读成"没效果" · 与大雷对称的顶档纪律 · 落盘带两维', function () {
   const evoSrc = readFileSync('js/train/evo.js', 'utf8');
-  const coreState = readFileSync('js/core/state.js', 'utf8');
-  const coreRules = readFileSync('js/core/rules.js', 'utf8');
   const evSrc = readFileSync('tools/eval-5p.mjs', 'utf8');
+  /* v1.7.153（门禁审查第十一批）：本门开头**先建一份沙箱**，① 与 ② 都从引擎直读。
+   *   原来 ①a/①b 与 ②a/②b 全是源码正则（`let DRAIN_PUSH = 1;` ‖ `function setDrainPush(v)` ‖
+   *   `drainHpMax: 1` / `drainHpMax: 2`），判的是"那几行字在不在"，而门标题写的那两件事
+   *   （**默认是开着的** ‖ **它不改规则**）它一件都没量。`sandbox()` 只喂 `CORE` 那几份、刚建好且一次 setter 都没调 ⇒
+   *   读到的就是出厂形状。⚠ 顺序有讲究：①c 那把尺会 `setDrainPush(0/1)`，所以默认档必须在它之前读。 */
+  const SB25 = sandbox(process.cwd());
+  const TE = SB25.EpirusTrainer, R25 = SB25.EpirusRules, S25 = SB25.EpirusState, Play25 = SB25.EpirusPlay, P25 = SB25.EpirusPolicy;
 
-  /* ① 结构钉：默认关 + 钩子的**作用面**（探索分支内，不是决策入口） */
-  ok(/^\s*let DRAIN_PUSH = 1;$/m.test(evoSrc),
-    '①a `DRAIN_PUSH` 的默认必须是 **1（开）** ⇒ 用户 10-03 夜依 §E283 的**实机**读数裁定开（3 血桌上每 4.3 局一张 ‖ 关档 0 张/200 局 ‖ 代价 +0.08±0.09 ‖ +0.07±0.07pt 噪声内）。'
-    + '⚠ 形状翻转的安全性说明同 D224①b：只改这一格而忘了改下面的横幅/顶档腿，会红在 ⑨ 而不是静默放过');
-  ok(/function setDrainPush\(v\)/.test(evoSrc) && /setDrainPush[\s,}]/.test(evoSrc.slice(evoSrc.indexOf('global.EpirusTrainer'))),
-    '①b `setDrainPush` 必须导出到 `EpirusTrainer`（否则评测无法下达、"实装"就只剩注释）');
-  const hookAt = evoSrc.indexOf('if (drainPushWants(state, pid)) forced.push(R.SK.DRAIN);');
-  ok(hookAt > 0, '①c 钩子必须在（挂到 `forced` 那个 v1.5.142 的老口子上 ⇒ **并进探索集**，不是强行落子）');
-  const softAt = evoSrc.indexOf("if (epsMode === 'soft') {");
-  ok(hookAt > softAt && softAt > 0, '①d 钩子必须落在 `epsMode === \'soft\'` 的分支里 ⇒ 用户要的是"仅调整探索时"，训练/门禁 ε=0 走不到 ⇒ 既有读数逐字不变');
-  ok(hookAt < evoSrc.indexOf('pick = cands[keyIdx[top'), '①e 钩子必须在**抽键之前**（抽完再挂就是装饰）');
+  /* ① 默认值在册 + 钩子的**作用面**（探索分支内，不是决策入口） */
+  const defDrain = TE.drainPushOn();
+  eq(defDrain, 1, '①a 装载后引擎回读的默认档必须是 **1（开）**（用户 10-03 夜依 §E283 的**实机**读数裁定开：3 血桌上每 4.3 局一张 ‖ 关档 0 张/200 局 ‖ 代价 +0.08±0.09 ‖ +0.07±0.07pt 噪声内；实测 '
+    + defDrain + '）。⚠ 形状翻转的安全性说明同 D224①b：只改这一格而忘了改下面的横幅/顶档腿，会红在 ⑨ 而不是静默放过');
+  eq(typeof TE.setDrainPush, 'function',
+    '①b `setDrainPush` 必须是**挂在 `EpirusTrainer` 上的函数**（否则评测无法下达、"实装"就只剩注释。实测 typeof=' + typeof TE.setDrainPush + '）');
+  /* ①c（v1.7.153 新写，替代原来三条**位置钉** ①c/①d/①e：钩子那行必须存在、必须落在 `epsMode === \'soft\'` 里、必须在抽键之前）
+   *   ⇒ 判"作用面"的正确问法是：**这一档在 ε=0 的世界里必须一个字节都碰不到**。
+   *   做法：同一批真桌子（`createState` + `Play.legalActions` 拿合法表，不自己拼）、同一个 chooser，
+   *   把 `DRAIN_PUSH` 分别设成 0 与 1 各走 60 个决策点 ⇒ 两边的**出手必须逐格相同**。
+   *   钩子一旦被挪到决策入口/被挂到 ε 之外，这一格当场分叉；而"钩子整行被删"归 ⑥c 判（那里 N=4 与 N=1 会相等）。
+   *   ⚠ 正对照（记忆第十九条：这类腿在错夹具上是永绿装饰）：必须**真的数到窗口打开过**，否则"两臂相同"是因为压根没进窗口。 */
+  {
+    const mkD = function (round, salt) {
+      const st = S25.createState('multi', { next: function () { return 0.5; } }, 5);
+      st.round = round; st.slotSalt = salt >>> 0;
+      st.p[0].hp = 1;                                          // 用户裁定的窗口：自己残血（不是把牌的门槛改掉）
+      for (let i = 0; i < 5; i++) st.p[i].ep = i === 0 ? 6 : 2;
+      return st;
+    };
+    const hpBefore25 = R25.MODES.multi.drainHpMax;
+    const params25 = new Float64Array(P25.paramCount());
+    const chooser0 = TE.policyChooserN(params25, 0.15, 0, 5, 'soft');   // ε=0 = 训练/门禁那一臂的口径
+    TE.setDrainPush(1);
+    let openWin = 0, legalSeen = 0;
+    const picksOff = [], picksOn = [];
+    for (let r = 1; r <= 60; r++) {
+      const st = mkD(r, 90210 + r);
+      const lg = Play25.legalActions(st, 0);
+      if (lg.some(function (l) { return l.key === R25.SK.DRAIN && l.affordable; })) legalSeen++;
+      if (TE.drainPushWants(st, 0)) openWin++;
+      picksOn.push(chooser0(st, 0, lg));
+    }
+    TE.setDrainPush(0);
+    for (let r = 1; r <= 60; r++) {
+      const st = mkD(r, 90210 + r);
+      picksOff.push(chooser0(st, 0, Play25.legalActions(st, 0)));
+    }
+    TE.setDrainPush(defDrain);
+    let diff25 = -1;
+    for (let i = 0; i < picksOn.length; i++) {
+      if (diff25 < 0 && (picksOn[i].key !== picksOff[i].key || picksOn[i].target !== picksOff[i].target)) diff25 = i + 1;
+    }
+    ok(openWin > 0 && legalSeen > 0,
+      '①c′ 夹具前提：60 个决策点里必须**数得出**"窗口打开"（N=1 下实测 ' + openWin + ' 格）与"摄魂可付"（' + legalSeen + ' 格）'
+      + '⇒ 两个数都是 0 的话，下面那句"两臂相同"只是因为压根没进窗口（本门 ⑥ 的剂量-反应也白跑）');
+    eq(diff25, -1, '①c 这一档**只许在探索里**：ε=0 的 chooser 上 `DRAIN_PUSH` 开 ‖ 关 必须**逐格交出同一手**'
+      + '（实测 60 格：窗口打开 ' + openWin + ' 格 ‖ 分歧在第 ' + (diff25 < 0 ? '—（没有分歧）' : diff25 + ' 格') + '）'
+      + '⇒ 一旦分歧就是钩子漏到了决策入口，训练/门禁那批 ε=0 的历史读数全部要重算（用户裁的原话是"仅调整探索时"）');
+    eq(R25.MODES.multi.drainHpMax, hpBefore25,
+      '①c″ 跑完这 120 个决策点，`multi` 的 `drainHpMax` 必须**还是它自己**（前=' + hpBefore25 + ' ‖ 后=' + R25.MODES.multi.drainHpMax + '）'
+      + '⇒ 这是 ②c 那条静态钉的行为对偶：静态只能拦"写了这一行"，这里拦"真改了那个值"');
+  }
 
   /* ② "不改规则"必须是**可证的**，不是我说一句"我没碰 core"就算 */
-  ok(/drainHpMax/.test(coreState) && /R\.SK\.DRAIN/.test(coreState),
-    '②a `js/core/state.js` 里那张牌的合法性仍由 `mode.drainHpMax` 判 ⇒ 探索侧没有任何一行去改它');
-  ok(/drainHpMax: 1/.test(coreRules) && /drainHpMax: 2/.test(coreRules),
-    '②b `rules.js` 里 multi=≤1 / long=≤2 两个窗口值一字未动（改了它就是**改规则**，那是用户裁定级）');
+  eq(R25.MODES.multi.drainHpMax, 1,
+    '②a **引擎直读**：`multi` 那格的摄魂窗口必须是 ≤1（实测 ' + R25.MODES.multi.drainHpMax + '）'
+    + '⇒ 原来这条是 `rules.js` 里的正则 `drainHpMax: 1`，两刀它都判错：把冒号后写成 `drainHpMax: /* 裁定 */ 1` 它**假红**（值没变），'
+    + '而把 `multi` 那一行真改成 2 它**照样绿**（`multi4` 那行还留着 `drainHpMax: 1` ⇒ 字面钉读不出"那个 1 属于哪一格"）。两次都是实测（EQ-C / BRK-2）');
+  eq(R25.MODES.long.drainHpMax, 2,
+    '②b **引擎直读**：`long` 那格必须是 ≤2（实测 ' + R25.MODES.long.drainHpMax + '）⇒ 改了它就是**改规则**，那是用户裁定级');
   /* ⚠ 这里判的是"**写**了这个字段"，不是"提到了这个名字"——第一版我写成 `indexOf('drainHpMax') < 0`，
-   *   于是我自己在注释里写的那句"`mode.drainHpMax` 一个字都不改"当场把它判红（门被解释文本绊倒 = 假红，见 D224①e 的同族）。 */
-  ok(!/\.drainHpMax\s*=[^=]/.test(evoSrc) && !/delete\s+\S*\.drainHpMax/.test(evoSrc),
-    '②c `evo.js` 里**不许写** `drainHpMax`（赋值或删除）⇒ 一旦出现就是引擎在偷偷改牌的门槛，那是改规则');
+   *   于是我自己在注释里写的那句"`mode.drainHpMax` 一个字都不改"当场把它判红（门被解释文本绊倒 = 假红，见 D224①e 的同族）。
+   *   v1.7.153：形状从"两种"加宽成一张清单，且**点名命中的是哪一种**（同 D150 那批的口径）。 */
+  const reAssign = /\.drainHpMax\s*=[^=]/, reDelete = /delete\s+\S*\.drainHpMax/, reAssign2 = /\[\s*['"]drainHpMax['"]\s*\]\s*=/;
+  const hitWrite25 = [];
+  if (reAssign.test(evoSrc)) hitWrite25.push('赋值 `x.drainHpMax = …`');
+  if (reAssign2.test(evoSrc)) hitWrite25.push('下标赋值 `x["drainHpMax"] = …`');
+  if (reDelete.test(evoSrc)) hitWrite25.push('`delete x.drainHpMax`');
+  ok(hitWrite25.length === 0,
+    '②c `evo.js` 里**不许写** `drainHpMax`（赋值 ‖ 下标赋值 ‖ 删除，三种形状都扫）⇒ 一旦出现就是引擎在偷偷改牌的门槛，那是改规则。'
+    + '实测命中：' + JSON.stringify(hitWrite25) + '（行为对偶见 ①c″：那里拦"真把值改了"）');
 
   /* ③ 纯函数直读合成表（记忆第十九条：这类"名单/窗口"式的腿在短夹具上是永绿装饰 ⇒ 必须能在一次调用里判形状） */
-  const TE = sandbox(process.cwd()).EpirusTrainer;   // `sandbox()` 返回的就是 `sb.window`（`audit-lib.mjs:30`），CORE 里已含 evo.js
-  ok(typeof TE.drainPushWants === 'function' && typeof TE.setDrainPush === 'function',
-    '③a 窗口判定必须是**导出的纯函数**（否则门只能钉字符串，钉不住行为）');
+  ok(typeof TE.drainPushWants === 'function',
+    '③a 窗口判定必须是**导出的纯函数**（否则门只能钉字符串，钉不住行为。实测 typeof=' + typeof TE.drainPushWants + '）'
+    + '⇒ `setDrainPush` 那一半本门已在 ①b 判过，这里不再抄第二遍');
   const fake = function (hp, round, salt) { return { slotSalt: salt >>> 0, round: round, p: [{ hp: hp, ep: 3 }, { hp: 3, ep: 0 }] }; };
   TE.setDrainPush(0);
   ok(TE.drainPushWants(fake(1, 5, 7), 0) === false, '③b 关档 ⇒ 一律 false（默认值不是摆设）');
@@ -419,19 +528,39 @@ t('D225 §E275/§E284 摄魂指法的"残血只在**探索里**软提升"档（e
   eq(on.code, 0, '④b 页面口径（ε=0.2 soft）下的开档臂必须跑得通：' + on.out.slice(0, 200));
   ok(/\[shipdrain\] 引擎档 = 1/.test(on.out), '④c 必须印出**引擎回读**到的档（横幅文案改了就要红，因为"生效与否"只能由这一行证明）');
 
-  /* ⑤ 落盘身份：两维都必须在（配对尺靠 `#eps` 拒绝"贪心 vs 页面口径"跨世界配对） */
-  ok(/'#shipdrain=' \+ String\(DRAIN_EFFECTIVE\)/.test(evSrc), '⑤a `#shipdrain=` 必须进落盘（且写的是**回读值**）');
-  /* §E599（2026-10-12 DS 修）：本条原来是**源码字面**断言 `/'#eps=' \+ \(SHIP_EPS > 0/` ——
-   *   §E597 给 `eval-5p.mjs` 加 `--eps-tier=` 时，同一行被改成三元式
-   *   （`EPS_TIER ? 'tier:…' : (SHIP_EPS > 0 ? … : '0')`）⇒ **行为没坏、断言坏了**（钉文本不钉行为的又一例）。
-   *   改法：钉"落盘里真有一行 `#eps=`，且它的 ε 来路同时覆盖 `--eps=` 与 `--eps-tier=`" ⇒
-   *   以后往这一行加第三种来路不必改门，而**删掉/注释掉**这一维照样红（⑤b′ 的合成正对照咬这个）。 */
-  const epsTagLine = (evSrc.split('\n').filter(function (l) { return l.indexOf("'#eps='") >= 0; })[0] || '');
-  ok(epsTagLine && epsTagLine.indexOf('EPS_TIER') >= 0 && epsTagLine.indexOf('SHIP_EPS') >= 0,
-    '⑤b `#eps=` 必须进落盘、且这一维要同时覆盖 `--eps=` 与 `--eps-tier=` 两条来路 ⇒ 少了它，摄魂档的"必然相同"会被当成"测过没效果"'
-    + '（读到的那一行：' + (epsTagLine.trim().slice(0, 130) || '**没有 `#eps=` 那一行**') + '）');
-  ok(!!epsTagLine && !/^\s*\/\/.*#eps=/.test(epsTagLine) && !/if\s*\(\s*false\s*\)/.test(epsTagLine),
-    '⑤b′ 合成正对照：把那一维注释掉或塞进 `if (false)` ⇒ 本条必须红（否则它只是在门里抄了一遍源码）');
+  /* ⑤ 落盘身份：两维都必须在（配对尺靠 `#eps` 拒绝"贪心 vs 页面口径"跨世界配对）
+   *   v1.7.153：原来三条全打在 `eval-5p.mjs` 的源码上（`'#shipdrain=' + String(DRAIN_EFFECTIVE)` ‖
+   *   `#eps=` 那一行里必须同时出现 `EPS_TIER` 与 `SHIP_EPS` 两个变量名 ‖ "不许被注释掉"的合成正对照）。
+   *   §E599 已经为这一族记过账：**重构会悄悄把断言改红而行为没坏**（那一次就是同一行被改成三元式）。
+   *   现在让工具**真落一次盘**、门只读表头 ⇒ 判的是"这一维在不在落盘里、写的是不是引擎回读值"。
+   *   三臂各 1 局 × `--pool=core`（走文件头那个 `runE`，秒级），彼此只差旗标写法。 */
+  const dir25 = mkdtempSync(join(tmpdir(), 'd225-'));
+  const dumpOf = function (extra, tag) {
+    const f = join(dir25, tag + '.tsv');
+    const r = runE(extra.concat(['--dump-per=' + f]));
+    const head = existsSync(f) ? readFileSync(f, 'utf8').split('\n').filter(function (l) { return l[0] === '#'; }) : [];
+    return {
+      code: r.code, out: r.out,
+      line: function (p) { return head.filter(function (l) { return l.indexOf(p) === 0; })[0] || '**表头里没有 ' + p + ' 这一维**'; }
+    };
+  };
+  const drTop = dumpOf(['--pushkey=drain', '--eps=0.2', '--eps-mode=soft'], 'top');   /* 不给 `--shipdrain` ⇒ 引擎默认 1 被注入旗标顶成 0 */
+  const drFour = dumpOf(['--shipdrain=4', '--eps=0.2', '--eps-mode=soft'], 'four');   /* 显式给一档 */
+  const drTier = dumpOf(['--shipdrain=1', '--eps-tier=lv:sparring'], 'tier');         /* ε 的第二条来路（整组剂量交给产品那张表）*/
+  eq(drTop.code, 0, '⑤a0 顶档臂必须跑得通：' + drTop.out.slice(0, 200));
+  eq(drFour.code, 0, '⑤a1 `--shipdrain=4` 臂必须跑得通：' + drFour.out.slice(0, 200));
+  eq(drTier.code, 0, '⑤a2 `--eps-tier=` 臂必须跑得通：' + drTier.out.slice(0, 200));
+  eq(drTop.line('#shipdrain='), '#shipdrain=0',
+    '⑤a 表头里那一维必须是**引擎回读到的有效档**，不是"旗标有没有出现"（这一臂压根没给 `--shipdrain`，只给了摄魂侧的注入旗标 `--pushkey=drain`'
+    + ' ⇒ 按 ⑨e 那条纪律默认档 1 被顶成 0；实测表头 `' + drTop.line('#shipdrain=') + '`）'
+    + '⇒ 原来这条只钉源码里那句 `String(DRAIN_EFFECTIVE)`，把回读改成写旗标值它照样绿');
+  eq(drFour.line('#shipdrain='), '#shipdrain=4', '⑤a3 显式那一档也必须原样落盘（实测 `' + drFour.line('#shipdrain=') + '`）');
+  eq(drTop.line('#eps='), '#eps=0.2-soft-k5',
+    '⑤b `--eps=` 这一路必须把**整组剂量**写进表头（实测 `' + drTop.line('#eps=') + '`）⇒ 少了它，"贪心考卷"与"带探索的臂"两批落盘会被配成同一世界，'
+    + '而前者对摄魂档结构性失明（读数必然相同）——那是一副**静默的错配**');
+  eq(drTier.line('#eps='), '#eps=tier:lv:sparring',
+    '⑤b2 `--eps-tier=` 这一路也必须写得出（实测 `' + drTier.line('#eps=') + '`）⇒ 两条来路共用同一维，缺一种就会把两种世界配成同臂。'
+    + '⚠ 这一条正是 §E599 那次"行为没坏、断言坏了"的**替代判据**：以后加第三种来路不必改门（⑤b′ 那条合成正对照随之删除 —— 它的牙由"把表头那一行去掉 ⇒ ⑤a 当场红"这条外部变异代替）');
 
   /* ⑥ 兑现率必须真落在落点上（同 D224④ 那一族：判**密度**、判**两臂之差**，不判"出现过"）
    *    §E588：这里第 4 个位置参数（`eval-5p` 的包文件）从"缺省=活槽"改成**钉住的夹具包** ——
@@ -507,8 +636,12 @@ t('D225 §E275/§E284 摄魂指法的"残血只在**探索里**软提升"档（e
   /* ⚠ 三条 ⑨ 腿全部**只看 `[shipdrain` 自己那几行**：`--pushkey` 之类同时是两面的注入旗标，大雷那行也会印"顶成 0（关）"；
    *    拿全 stdout 找共同词 = 假绿（这条是被"关掉顶档"那一刀变异抓出来的，不是想出来的）。 */
   const dnOf = function (txt) { return txt.split('\n').filter(function (l) { return l.indexOf('[shipdrain') === 0; }).join('\n'); };
-  ok(/DRAIN_PUSH = 1|引擎默认档 = 1/.test(dnOf(dnPlain.out)),
-    '⑨b 默认档必须由**引擎回读**印在 `[shipdrain]` 自己那行里（实测该行=' + (dnOf(dnPlain.out).split('\n')[0] || '(没有 shipdrain 行)').slice(0, 110) + '）');
+  const dnLineTxt = dnOf(dnPlain.out);
+  const mDn = /(?:DRAIN_PUSH|引擎默认档) = (\d+)/.exec(dnLineTxt);
+  ok(!!mDn && Number(mDn[1]) === defDrain,
+    '⑨b 默认档必须由**引擎回读**印在 `[shipdrain]` 自己那行里，且那个数要等于 ①a 的直读（实测印到 `'
+    + (mDn ? mDn[1] : '这句没出现') + '` ‖ 引擎直读=' + defDrain + ' ‖ 该行=' + (dnLineTxt.split('\n')[0] || '(没有 shipdrain 行)').slice(0, 110) + '）'
+    + '⇒ v1.7.153 起这里不再写死 `= 1`：那个字面在门里出现过两次（①a 与这里），改默认档漏一处就是假红');
   ok(dnOf(dnPlain.out).indexOf('永不触发') >= 0,
     '⑨c 贪心臂（ε=0）必须**自己声明**这一档永不触发（实测没印 ⇒ 默认开着时的"逐字相同"会被读成"测过没效果"）');
   const dnInj = runE(['--pushkey=drain', '--pushminep=0']);
