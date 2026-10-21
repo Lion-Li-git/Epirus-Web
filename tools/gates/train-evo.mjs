@@ -2260,18 +2260,19 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
    *  · **座位不偏置**：用户 09-22 裁掉"每 8 局注入"那种恒落 `g=0` ⇒ 恒 0 号座的覆盖（`seat = g % n`）；
    *  · **不罚囤**：用户原话"囤一点 ep 放大招也是有好处的" ⇒ 陪练必须是**会抢收割**的 `pickKillSecure`，
    *    只攒不打的 farmer/deepsaver 不许上这条分支（那等于出一道没有反击的题）。 */
-  const evo = readFileSync('js/train/evo.js', 'utf8');
-  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
-  /* ① 静态：注入分支取的是注册表函数，且该分支里不许出现纯攒钱型 */
-  ok(evo.indexOf('Bots.pickKillSecure') >= 0, '注入必须直接取 Bots.pickKillSecure（不查 BOT_PICKS —— 那张表加键会改默认池）');
-  const br = /else if \(killSeatPid[\s\S]*?\n        \} else/.exec(evo);
-  ok(br, '收割席分支必须存在（v1.5.163 起它是唯一的注入分支）');
-  ok(!/farmer|deepsaver/.test(br[0]), '注入分支里不许出现 farmer/deepsaver（用户裁定：囤是有效打法，不许拿它当陪练罚）');
-  ok(evo.indexOf('KILL_STAT.fired++') >= 0 && typeof T.countKillSeats === 'function',
-    '必须有开火计数（§N12 教训：setter + 横幅读回证明不了作用点）');
-  /* v1.7.73 · gate-sentinel ③ 分诊：摘掉 `indexOf('本臂作废')` —— 那是**措辞**（换个说法门就红、行为没变）。
-   *   要保的语义是「一局未注 / 座位偏置 ⇒ **响亮失败**」，而响亮 = `exit 8`（上面那半句仍在判，且接口处真跑过）。 */
-  ok(t3.indexOf('process.exit(8)') >= 0, '一局未注 / 座位偏置 ⇒ 必须 exit 8 响亮（措辞不判：换成哪句话都一样要响）');
+  /* v1.7.154（第十二批）：**本门不再读任何源码文本**。原来那四条字面钉，逐条问"写坏了它会红吗"之后的处置：
+   *   · `evo.indexOf('Bots.pickKillSecure')` ⇒ **没牙**：这一串在 `evo.js` 里出现 2 次，其中一次在 `:79` 的注释里
+   *     ⇒ 把 `:125` 那行真代码换成别的 bot 它照样绿（删掉那条注释反过来会红 —— 判的是排版）。⇒ 换成下面 ②b 那层**注册表包装**数真调用。
+   *   · 抽取注入分支 + 分支里不许出现 farmer/deepsaver ⇒ 同一件事由 ②b 判（farmer/deepsaver 被这条路过叫才会红），
+   *     而且原来那个抽分支的正则 `\n        \} else` 连缩进都钉 ⇒ 重排缩进就假红。
+   *   · `evo.indexOf('KILL_STAT.fired++')` ⇒ 计没计数由 ④ 的"注入 N 局"与 ②b 的 `fired` 一起判；这里只留"接口存在"这半边（①a）。
+   *   · `t3.indexOf('process.exit(8)')` ⇒ **没牙**：这一串在 `train-3p.mjs` 里出现 **2 次**，而且两处都在这条 kill-field 路上
+   *     （`:2036` 一局未注 ‖ `:2040` 座位偏置）⇒ 摘掉其中**任意一处**，这条字面钉照样绿（它只问"文件里有没有 exit(8)"）。
+   *     这两件事各有各的行为判据：前者 = ⑤ 那条反证臂（真把密度调到 1e-9 并读到 exit 8），后者 = ④c 的覆盖座位数。
+   * ⚠ ④e 那句"注入名单"里的名字是 `KILL_STAT.names.killsecure`（`evo.js:2068`）**写死的标签**，不是从被调的那个函数推的
+   *   ⇒ 它只能判标签；这一族要真正闭合得让引擎记下实际那个函数的注册名，那是**改产品**（已进 §二 26) 与 NEXT，等裁）。 */
+  eq(typeof T.countKillSeats, 'function',
+    '①a 必须有**开火计数接口**（§N12 教训：setter + 横幅读回证明不了作用点发生）；计到了没有，交给 ②b/④ 真跑判');
   /* ② 单元：只注多人局 + 永不注到受评席自己 + 相位真的按代旋转（自建沙箱，别污染共享 T） */
   const sb2 = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
   sb2.window = sb2; sb2.globalThis = sb2;
@@ -2294,6 +2295,33 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
   const seen = new Set();
   for (let gen = 0; gen < 6; gen++) for (let g = 0; g < 8; g++) { const p = T2.killSeatFor(g, gen, g % 5, 5, 0); if (p >= 0) seen.add(g % 5); }
   ok(seen.size >= 3, '受评座位必须随代旋转（6 代里至少覆盖 3 个不同座位；实测 ' + seen.size + ' 个 [' + Array.from(seen).sort().join(',') + ']）');
+  /* ②b 把**注册表**包一层计数器，直接问"注入席到底调了谁"（替代原来那条 `evo.indexOf('Bots.pickKillSecure')`：
+   *    这一串在 `evo.js` 里出现 **2 次**、其中一次在 `:79` 的**注释**里 ⇒ 把真代码换掉它照样绿）。
+   *    `killSeatBot` 没导出，但它取的是属性 `Bots.pickKillSecure` ⇒ 在**本门自己的沙箱**里包一层就能数到真调用。
+   *    ⚠ 只包 `sb2` 里那份注册表，绝不碰共享的 `Bots`（那是别的门与被测产物共用的对象）。 */
+  {
+    const B2 = sb2.window.EpirusBots, P2 = sb2.window.EpirusPolicy;
+    sb2.Float64Array = Float64Array;
+    const WRAP = ['pickKillSecure', 'pickFarmer', 'pickDeepSaver'];
+    const calls2 = {}, miss = [];
+    for (const nm of WRAP) {
+      const orig = B2[nm];
+      if (typeof orig !== 'function') { miss.push(nm + '(' + typeof orig + ')'); continue; }
+      calls2[nm] = 0;
+      B2[nm] = function () { calls2[nm]++; return orig.apply(null, arguments); };
+    }
+    eq(miss.length, 0, '②b 夹具前提：三个候选 bot 都必须是函数（缺：' + (miss.join(',') || '无') + '）⇒ 名字写错会让"没被调到"读成"没走这条路"');
+    T2.setKillField(0.34);
+    const prm2 = new Float64Array(P2.paramCount());
+    T2.scoreMemberN(prm2, T2.buildOpps(prm2, 0.05), 12, 5, 3, 0, 0);
+    const ks2 = T2.countKillSeats();
+    ok(calls2.pickKillSecure > 0 && ks2.fired > 0,
+      '②b 注入席必须**真的**调注册表里那个 `pickKillSecure`（实测被调 ' + calls2.pickKillSecure + ' 次 ‖ 引擎记到注入 ' + ks2.fired + ' 局）'
+      + '⇒ 0 次 = 这条路换了别的 bot 或压根没注（两种都是真事故，而原字面钉两种都看不见）');
+    eq((calls2.pickFarmer || 0) + (calls2.pickDeepSaver || 0), 0,
+      '②b 纯攒钱型一次都不许被这条路过叫（farmer ' + (calls2.pickFarmer || 0) + ' ‖ deepsaver ' + (calls2.pickDeepSaver || 0) + '）'
+      + '⇒ 用户 09-22 原话"囤一点 ep 放大招也是有好处的" ⇒ 拿它当陪练等于出一道没有反击的题');
+  }
   T2.setKillField(0);
   /* ③ 行为 · 默认关 ⇒ 与登记产物**逐位相同**（seed 7 · 3 代 × 3 人 × 6 局 × 种群 4） */
   const wh = function (p) {
@@ -2330,7 +2358,15 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
   ok(fired, '必须打印开火计数（没有它 = 回到"横幅自证"的老病）');
   ok(Number(fired[1]) > 0, '注入了密度就必须真注到局（实测 0 局 ⇒ 死作用点，正是 §N11 那两臂的病）');
   ok(Number(fired[2]) >= 2, '注入覆盖的受评座位必须 ≥2 个（座位偏置 = 用户 09-22 裁掉的对象；实测 ' + fired[2] + '）');
-  ok(so.indexOf('注入名单 killsecure') >= 0, '名单只许 killsecure（出现别的 = 有人往这条路上加了罚囤陪练）');
+  /* 名单必须**解析出来比集合**，不是 `indexOf('注入名单 killsecure')` 那种子串：
+   *   子串版对"名单里多了一个人"是盲的（`killsecure,farmer` 里 `killsecure` 还在 ⇒ 绿），
+   *   而用户裁的恰恰是"**只许** killsecure 当陪练"（囤是有效打法，不许出一道没有反击的题）。 */
+  const roster = /注入名单 ([^（]*)（/.exec(so);
+  ok(!!roster, '④d 必须印出注入标签（实测 stdout 里没有 `注入名单 …（` 这一段 ⇒ 这一维没人自证，回到"横幅自证"）');
+  const rosterSet = String(roster ? roster[1] : '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+  eq(rosterSet.join(','), 'killsecure', '④e 引擎自报的注入标签必须**恰好**是 `killsecure`（实测解析出 ' + rosterSet.length + ' 枚：[' + rosterSet.join('|') + ']）'
+    + '⚠ 这条**只判标签**（名字来自 `KILL_STAT.names.killsecure`，`evo.js:2068` 写死的键）⇒ 换成别的 bot 它不会跟着变；'
+    + '"到底调了谁"由 ②b 那层注册表包装判。多一枚 = 有人往标签上加了陪练，少一枚 = 注入没发生（那 ④b 也该红）');
   /* ⑤ 反证 · 密度小到不可能开火 ⇒ 必须 exit 8（证明这道闸自己会响，而不是摆设） */
   const never = mini({ EPIRUS_KILL_FIELD: '1e-9' });
   eq(never.status, 8, 'EPIRUS_KILL_FIELD 小到一局未注时必须 exit 8（拒绝白跑；实测 exit=' + never.status + '）');
@@ -2367,22 +2403,79 @@ t('D129 训练模式可以在 CLI 上下达（v1.5.169 · §N28 · 用户"炼一
 
 t('D132 补贴率旋钮 `EPIRUS_REGEN_SLICE`（v1.5.177 · 双侧实验的前置）：默认 0.08 逐位不变 + 下达必须读回 + 拒静默空转', function () {
   /* 动因：全卡边际扫描证明"钱是系统性的墙"（long 59%/18%/3% 买得起 1/2/3 费；multi 0 张可测）
-   * ⇒ "给钱+教卡"的双侧实验**必须先能调"给多少钱"**，而它此前是硬编码常量 `REGEN_SLICE = 0.08`。 */
-  const ev = readFileSync('js/train/evo.js', 'utf8');
-  ok(ev.indexOf('let REGEN_SLICE = 0.08;') >= 0, '必须是 let（可下达）且默认 0.08（不下达 ⇒ 逐位等于旧行为）');
-  ok(ev.indexOf('function setRegenSlice(v)') >= 0 && ev.indexOf('function regenSlice()') >= 0, '必须有 setter 与回执');
-  ok(ev.indexOf('if (!isFinite(n) || n <= 0) return REGEN_SLICE;') >= 0, '非法值必须原样返回（宿主据此判"被拒"）');
-  ok(ev.indexOf('setRegenSlice, regenSlice,') >= 0, '必须导出（CLI/服务端两边都要能调）');
-  ok(ev.indexOf('const step = Math.max(2, Math.round(1 / REGEN_SLICE));') >= 0, '消费点必须真的读这个变量（不是只定义）');
-  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
-  ok(t3.indexOf('process.env.EPIRUS_REGEN_SLICE') >= 0, 'CLI 必须读这个 env');
-  ok(t3.indexOf('没有 setRegenSlice ⇒ 拒绝静默空转') >= 0 && t3.indexOf('process.exit(7)') >= 0,
-    '没有 setter 必须**响亮拒绝**（§N11/§N8 那一族：横幅读回不等于作用点发生）');
-  ok(t3.indexOf('消费点读回') >= 0, '下达后必须**读回消费点**的值');
-  ok(t3.indexOf('const reqSlice = Number(process.env.EPIRUS_REGEN_SLICE);') >= 0 &&
-    t3.indexOf('!isFinite(reqSlice)') >= 0,
-    '非数值必须被挡（**NaN 安全**：`Math.abs(got - NaN) > 1e-9` 恒 false ⇒ 我第一版 `abc` 实测 exit 0 静默跑完）');
+   * ⇒ "给钱+教卡"的双侧实验**必须先能调"给多少钱"**，而它此前是硬编码常量 `REGEN_SLICE = 0.08`。
+   * v1.7.154（门禁审查第十二批）：这扇门**原来 11 条断言全部是 `indexOf` 打在 `evo.js` 与 `train-3p.mjs` 的文本上，一条都没调用过引擎**
+   * —— 它判的四件事（默认几 ‖ 非法值怎么处理 ‖ 消费点读不读它 ‖ CLI 拒不拒空转）全都有能直接跑出来的对偶，于是全部换掉。
+   * ⚠ 用**本门自己的沙箱**：`setRegenSlice` 改的是模块级状态，借共享的 `sb` 会把档位漏给后面那些门（D162 用 try/finally 也是为这件事）。 */
+  const SB32 = sandbox(process.cwd());
+  const T32 = SB32.EpirusTrainer;
+  eq(typeof T32.regenSlice, 'function', '① 引擎必须给出**可回读的** `regenSlice()`（实测 typeof=' + typeof T32.regenSlice + '；原来钉的是源码里 `function regenSlice()` 那一行）');
+  const def32 = T32.regenSlice();
+  eq(def32, 0.08, '② 装载后引擎回读的默认补贴率必须是 **0.08**（不下达 ⇒ 逐位等于旧行为；实测 ' + def32 + '）');
+  /* ③ 非法值必须**原样返回**（宿主靠"返回的 != 请求的"判被拒）⇒ 逐个真调用，不钉那句 `if (!isFinite(n) …)` 的字面 */
+  eq(typeof T32.setRegenSlice, 'function', '③a 必须能下达（实测 typeof=' + typeof T32.setRegenSlice + '）');
+  const BAD32 = [0, -1, NaN, 'abc', undefined, null, ''];
+  const bad32 = [];
+  for (const v of BAD32) {
+    const before = T32.regenSlice();
+    const ret = T32.setRegenSlice(v);
+    if (!(ret === before && T32.regenSlice() === before)) bad32.push(JSON.stringify(v) + '→return ' + ret + ' ‖ 现在=' + T32.regenSlice());
+  }
+  eq(bad32.length, 0, '③b 非法值（0 ‖ 负数 ‖ NaN ‖ 非数字串 ‖ undefined ‖ null ‖ 空串）必须**一个都不许改状态、且原样返回**'
+    + '（清单 ' + BAD32.length + ' 枚，破的：' + (bad32.join(' ') || '无') + '）'
+    + '⇒ 这是"宿主据此判被拒"那条契约；`|| 默认` 那一族（把 0 当没写）在这条上会当场露出来');
+  /* ④ 越界要 clamp 而不是拒 —— 而且**夹到哪儿**必须可核对（旧门只钉了源码里那行 `Math.min(1, Math.max(0.01, n))`，从没读过结果） */
+  eq(T32.setRegenSlice(0.001), 0.01, '④a 下界：`0.001` 必须被夹到 **0.01**（实测 ' + T32.regenSlice() + '）');
+  eq(T32.setRegenSlice(5), 1, '④b 上界：`5` 必须被夹到 **1**（实测 ' + T32.regenSlice() + '）');
+  /* ⑤ 消费点必须**真的**按这个档发补贴 —— 用引擎自己的 `regenForGame` 数 120 局里几局带补贴（= 2），
+   *    这同时把 `step = Math.max(2, round(1/REGEN_SLICE))` 那个**地板**量出来了：0.5 与 1 必须给同一个密度（都是每 2 局一次）。 */
+  const dens32 = function (slice) {
+    T32.setRegenSlice(slice);
+    let hits = 0;
+    for (let g = 0; g < 120; g++) if (T32.regenForGame(g, 120, 0) === 2) hits++;
+    return hits;
+  };
+  const d08 = dens32(def32), d50 = dens32(0.5), d100 = dens32(1), d01 = dens32(0.01);
+  ok(d08 > 0 && d50 > d08 && d01 < d08,
+    '⑤a 密度必须**随档位单调落地**（120 局里带补贴的局数：' + def32 + '⇒' + d08 + ' ‖ 0.5⇒' + d50 + ' ‖ 0.01⇒' + d01 + '）'
+    + '⇒ 三档读出来一样 = 消费点根本没读这个变量（旧门那条 `const step = Math.max(2, …` 的字面钉对这件事是盲的：把 `1 / REGEN_SLICE` 写成 `1 / 0.08` 那行字还在、照样绿）');
+  eq(d100, d50, '⑤b `step` 的**地板 2** 必须真的兜住：slice=1 与 0.5 的密度必须相同（实测 ' + d100 + ' ‖ ' + d50 + '）'
+    + '⇒ 这一条是"再猛的补贴也不会每局都发"的容量上限，写死在字面里读不出来');
+  T32.setRegenSlice(def32);
+  eq(dens32(def32), d08, '⑤c 关回默认档之后密度必须**逐字回到** ' + d08 + '（不许留隐性状态）');
+  /* ⑥ CLI 侧：`abc` 那一臂必须**响亮拒绝**（真跑，读退出码）。这一臂在 setter 之前就把 env 交给引擎、再比对读回 ⇒
+   *    它同时证了三件原来分三条字面钉的事：键名真被读 ‖ 读回不符 ⇒ `exit 7` ‖ NaN 不会静默跑完整臂（我第一版栽过的那次）。
+   *    措辞照 D123/D162 的既有分诊**不判**（METHODOLOGY 第 89 条）。 */
+  {
+    const dir32 = mkdtempSync(join(tmpdir(), 'd132-'));
+    const arm32 = function (extraEnv) {
+      return spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '5', '1', '1'], {
+        cwd: process.cwd(), encoding: 'utf8', timeout: 120000,
+        env: Object.assign({}, process.env, { EPIRUS_ARM: 'nptest-d132', EPIRUS_SEED: '4242', EPIRUS_BAND_DIR: join(dir32, 'bands' + (extraEnv ? 'b' : 'a')), EPIRUS_T3P_OUT: join(dir32, 'O.js') }, extraEnv || {})
+      });
+    };
+    /* ⑥a0 前提（同一批位置参数、**不给这一枚 env**）：不许也是 7。
+     *     这一臂故意用最小参数，而最小参数在后面某处本来就会失败（实测非 7 的退出码）⇒ 有了这条对照，
+     *     ⑥a 那条"必须 7"才真的只可能来自这一枚旋钮，而不是我把参数写错了。 */
+    const base32 = arm32(null);
+    ok(base32.status !== 7, '⑥a0 不给 `EPIRUS_REGEN_SLICE` 时**不许** exit 7（实测 ' + base32.status + '）'
+      + '⇒ 若这里就是 7，那 ⑥a 判的其实是位置参数写错了，跟这枚旋钮无关（假守卫）');
+    const rc = arm32({ EPIRUS_REGEN_SLICE: 'abc' });
+    eq(rc.status, 7, '`EPIRUS_REGEN_SLICE=abc` 必须 exit 7 响亮拒绝（实测 ' + rc.status + ' ‖ 同一臂不给这枚 env 时是 ' + base32.status + '）'
+      + '⇒ 静默跑完整臂 = 一整批"双侧实验"读的是默认档');
+    ok(String(rc.stderr || '').trim().length > 0, '拒绝时必须**出声**（只给退出码什么都不说 = 半夜没人知道为什么这一臂没跑）');
+    eq(detectDarkKnobs({ EPIRUS_REGEN_SLICE: '0.2' }, { entry: 'tools/train-3p.mjs' }).dark.indexOf('EPIRUS_REGEN_SLICE'), -1,
+      'train-3p 必须被认成"**真读这个键**"（这是仓里那份守卫函数自己的判定，不是我在门里抄一遍 `process.env.…` 的字面）');
+  }
+  /* ⑦ 想过但**没加**的一条：这一枚键没进 `train-env` 的单一来源清单（`TEK` 实测不含 `EPIRUS_REGEN_SLICE`，
+   *    CLI 是直接读 `process.env` 的），而 `D123` 对 `EPIRUS_TRAIN_MODE` 钉的正是那张清单。
+   *    ⇒ 这是**既存口径不一致**，不是这批换判据换出来的；把它当新腿加进来等于夜班自己制造一条红，
+   *    要治得先决定"哪些旋钮必须走 train-env 名单"——那是口径级，等裁。 */
+  /* ⑧ 原来那两条"没有 setter ⇒ exit 7"与"下达后读回消费点"的**措辞钉已删**（METHODOLOGY 第 89 条）：
+   *    前者要触发得先把引擎的 setter 摘掉（那是把产品写坏了再验门，留给变异做，不留在每轮里跑），
+   *    后者的语义由 ③/④/⑤ 承担（读回 = 引擎回读，作用点 = 密度），而 ⑥ 那一臂走的是**同一句比较**。 */
 });
+
 
 t('D134 切片相位不许与座位轮换锁死（v1.5.186 · 复核 DS 交接 §3 坑#8）：承诺局/补贴局必须按代旋转，且示范要真覆盖各席', function () {
   /* 病（我实测到的，DS 只记了"注入偏向 0 号席，未结案"）：受评席 `seat = g % n`，而承诺局用 `g % 3`、补贴局用 `g % step`
