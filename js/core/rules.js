@@ -1,5 +1,5 @@
 /* Epirus 拍手游戏 — 技能/规则数据定义层（纯数据 + 分类表，无状态）
- * 语义裁定见 docs/RULES-2P.md（裁决 R1..R54）。本文档与代码一一对应。
+ * 语义裁定见 docs/RULES-2P.md（裁决 R1..R61）。本文档与代码一一对应。
  */
 (function (global) {
   'use strict';
@@ -57,7 +57,7 @@
     mk(SK.SHIFT, '无极变速', CAT.DEFENSE, 1, 3, 'self', { desc: '同两个回合的八卦阵', gesture: '一手伸平一手叉指于掌' }),
     mk(SK.JINSHIELD, '金刚盾', CAT.DEFENSE, 1, 3, 'self', { desc: '同防御；判定胜则攻击者受 1 点伤害', gesture: '双手握拳交叉于胸前' }),
     mk(SK.ARMOR, '藤甲', CAT.DEFENSE, 1, 3, 'enemy', { desc: '同反弹；贴在对手身上，使其下回合受火焰伤害+1', gesture: '手指交叉掌心向外' }),
-    mk(SK.PROTO, '原型制御', CAT.DEFENSE, 1, 3, 'self', { desc: '阻挡除地雷、转移伤害外的技能伤害', gesture: '双手握拳竖立于胸前' }),
+    mk(SK.PROTO, '原型制御', CAT.DEFENSE, 1, 3, 'self', { desc: '阻挡除地雷、转移伤害外的技能伤害；一次结算内被挡下的**有来源**伤害总额 ≥3 时，各份反给施法者（天火等无来源的计入总数但不反）', gesture: '双手握拳竖立于胸前' }),
     /* v1.5.4 规则修正（回到原始规则集 `D:\code\Epirus\README.md` 的「全息屏障」条目）：
      * 原文 = 「作用效果：给**被作用者**施加一个"原型制御"」+ 手势「双臂伸出挡住**被作用者**胸前」
      * ⇒ 它是**一张对别人用的盾**，不是自保卡。此前 `target: 'self'`（R18）把两张卡做成了同效果
@@ -77,9 +77,9 @@
     mk(SK.CURSE, '贴贴', CAT.SPECIAL, 1, 3, 'enemy', { desc: '给目标贴 1 枚符咒（可被防御类阻挡）', gesture: '掌心相贴划出' }),
     mk(SK.FIRESTORM, '天火', CAT.SPECIAL, 2, 3, 'self', { desc: '引爆自己贴出且停留≤3回合的符咒（**全场所有目标**，不需要选目标），每个目标每枚 1 火伤（可被原型制御挡）；符咒仍存', gesture: '一手竖直敲击掌心' }),
     mk(SK.MINE, '地雷', CAT.SPECIAL, 3, 0, 'self', { desc: '被非狙击枪攻击时，**除自己外全场其他角色**各受 1 点火伤；被打中的持雷者会间接触发（所有间接触发合并为一波，且不伤害间接触发者）；地雷伤害无来源', gesture: '握拳+左手托底' }),
-    mk(SK.TAUNT, '挑衅', CAT.SPECIAL, 2, 3, 'enemy', { desc: '目标下回合必须使用攻击类技能，否则 -1 血', gesture: '手背朝下回勾' }),
+    mk(SK.TAUNT, '挑衅', CAT.SPECIAL, 2, 3, 'enemy', { desc: '目标下回合必须**对挑衅者**使用攻击类技能，否则 -1 血', gesture: '手背朝下回勾' }),
     mk(SK.CANNON, '过载炮', CAT.SPECIAL, null, 3, 'enemy', { desc: '按使用次数循环：1 次 1伤；2 次 1伤+失ジ；3 次 1伤+失ジ+自损 1 血。**新规：可打穿防御与反弹，但会被任何攻击类技能抵消**', gesture: '握拳手背朝下' }),
-    mk(SK.PURIFY, '净化', CAT.SPECIAL, 3, 1, 'self', { desc: '清除自身**全部持续状态**（符咒/梦魇/挑衅/藤甲火弱/地雷/避雷针/大雷禁用），每枚符咒回复 1 血（n-1规则）', gesture: '双手正立相扣' }),
+    mk(SK.PURIFY, '净化', CAT.SPECIAL, 3, 1, 'self', { desc: '清除自身**全部持续状态**（符咒/梦魇/挑衅/藤甲火弱/地雷/避雷针/大雷禁用；增益也一起清），每清除 n 枚符咒回复 **n−1** 血', gesture: '双手正立相扣' }),
     // ---- 多人专用（2人局置灰）----
     mk(SK.DUAL_GUN, '双枪射手', CAT.ATTACK, 3, 3, 'enemy', { desc: '（多人）对两个角色同时使用“枪”', dmg: { amt: 1, type: DMG.NORMAL }, extra: { target2: 'enemy' } }),
     mk(SK.MIRROR, '镜面反射', CAT.SPECIAL, 3, 3, 'enemy', { desc: '（多人）复制目标 1 本回合的伤害技能，对目标 2 施加；复制双枪只算一枪', extra: { target2: 'enemy' } })

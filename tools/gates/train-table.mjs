@@ -1,5 +1,5 @@
 /*#np-part-header
-{"file":"tools/gates/train-table.mjs","part":"train-table","group":"train","ranges":[[1207,1597],[2404,2415],[2485,2591],[4758,4780],[5315,5332],[6764,6945]],"gates":[1207,1388,2404,2485,2499,2547,4758,5315,6764,6872],"patched":[]}
+{"file":"tools/gates/train-table.mjs","part":"train-table","group":"train","ranges":[[1207,1597],[2404,2415],[2485,2591],[4758,4780],[5315,5332],[6764,6945],[9266,9305]],"gates":[1207,1388,2404,2485,2499,2547,4758,5315,6764,6872,9266],"patched":[]}
 #np-part-header-end*/
 import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
@@ -31,7 +31,7 @@ const {
   fnBody,
 } = makeCtx();
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
-export const ords = [1207, 1388, 2404, 2485, 2499, 2547, 4758, 5315, 6764, 6872];
+export const ords = [1207, 1388, 2404, 2485, 2499, 2547, 4758, 5315, 6764, 6872, 9266];
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 t('D220 深经济对手必须能放上**训练桌**（v1.5.325 · §E237 · DS 交接 (W) 假设的可执行版本）：`EPIRUS_ECON_OPPS` 默认关 + 名字不认识必须响 + 开档产物自证', function () {
@@ -654,4 +654,37 @@ t('D136 示范归因（v1.5.189）：教师的手必须能从包自己的手里�
     '大雷必须至少在补贴局桶里有原生出手（今天的读数）；两桶都为 0 说明注入根本没发生');
 });
 
+/* ===== D238（10-21 · §E676 交班第 5 条）：杂货铺旋钮必须有牙 =====
+ * 病：`EPIRUS_TOOLKIT_OPPS` 默认关、改坏不会红；而同族 `COUNTER_OPPS`/`ECON_OPPS` 各有 D130/D220。
+ * 形状（同族）：默认关 ⇒ 一行不印 + 产物 `recipe.toolkitOpps` 为 null；开档 ⇒ OPPS 9→11 且 meta 自证；
+ *   坏值 ⇒ exit 4 且不落产物。判行为不判文案。 */
+t('D238 杂货铺上训练桌的旋钮：默认关必须一行不印 · 开档必须 OPPS 9→11 且产物自证 · 坏值 exit 4（10-21）', function () {
+  const src = readFileSync('tools/train-3p.mjs', 'utf8');
+  ok(src.indexOf("'EPIRUS_TOOLKIT_OPPS'") >= 0, '旋钮必须进 SELF_ENV_KEYS（否则黑键侦测会把它当「传了没人读」）');
+  const dir = mkdtempSync(join(tmpdir(), 'd238-'));
+  const base = Object.assign({}, process.env); delete base.EPIRUS_TOOLKIT_OPPS;
+  const run = (name, extra) => spawnSync(process.execPath, ['tools/train-3p.mjs', '1'], {
+    encoding: 'utf8', timeout: 300000, maxBuffer: 1 << 24,
+    env: Object.assign({}, base, { EPIRUS_SEED: '7', EPIRUS_ARM: name,
+      EPIRUS_BAND_DIR: join(dir, 'b-' + name), EPIRUS_T3P_OUT: join(dir, name + '.js') }, extra || {})
+  });
+  try {
+    const off = run('d238off', null);
+    eq(off.status, 0, '默认关的臂必须跑通：' + String(off.stderr || '').slice(0, 140));
+    ok(String(off.stdout || '').indexOf('[toolkit-ops]') < 0, '不设 env 时一行都不许印（默认关要有可见差别）');
+    const mt0 = packMetaOf(join(dir, 'd238off.js'));
+    ok(!!mt0 && !(mt0.recipe && mt0.recipe.toolkitOpps), '默认关 ⇒ 产物 recipe.toolkitOpps 必须是 null（不许留一行空对象）');
+    const on = run('d238on', { EPIRUS_TOOLKIT_OPPS: '2' });
+    eq(on.status, 0, '=2 的臂必须跑通：' + String(on.stderr || '').slice(0, 140));
+    ok(/\[toolkit-ops\][^\n]*OPPS 从 9 个变 11 个/.test(String(on.stdout || '')), '=2 ⇒ 必须印 OPPS 9→11（份数驱动，不是「多几席」）');
+    const mt = packMetaOf(join(dir, 'd238on.js'));
+    const tk = mt && mt.recipe && mt.recipe.toolkitOpps;
+    ok(!!tk && Number(tk.n) === 2 && Number(tk.poolSize) === 11, '产物 meta 必须自证 toolkitOpps = {n:2,poolSize:11}（实测 ' + JSON.stringify(tk) + '）');
+    const bad = run('d238bad', { EPIRUS_TOOLKIT_OPPS: 'abc' });
+    eq(bad.status, 4, '非整数必须 exit 4（拒绝把打错的当 0），实测 ' + bad.status);
+    ok(!existsSync(join(dir, 'd238bad.js')), '被拒的臂不许落产物');
+  } finally {
+    try { rmSync(dir, { recursive: true, force: true }); } catch (e) { }
+  }
+});
 }
