@@ -793,25 +793,18 @@ function tip(d) {
      *   原来这三种情况都印同一句「（父指针未落档）」⇒ 冷启动的臂、解不出来的实录、SLOT 合成锚点，读起来都像"数据漏了"。
      *   现在按 lineage.mjs 新记的 parentSrc 分开说（表里没有这三种值的旧表 ⇒ 退回原来那句，不瞎猜）。 */
     '\n热启动父 ' + (d.par || '—') + (d.pof ? ' = ' + d.pof
-      : (d.psrc === 'cold' ? '：无 —— 这枚是**冷启动**（包里没有热启动证据 ⇒ 这条边本来就不存在，不是漏记）'
-        : (d.psrc === 'synthetic' ? '：合成锚点 —— 当时槽里那枚，盘上没留档（图上这一行是占位，不是漏记）'
-          : (d.psrc === 'unresolved' ? '：不可考 —— 包里有热启动证据，但那份权重解不出来（这一类才要去补证据）'
-            : '（父指针未落档）')))) +
-    (d.hpl2 === null ? '\n长程桌：没量（mode=long 那批没覆盖到这枚 ⇒ 不是 0）'
-      : '\n长程桌（同 seed 同档，只换桌形）：考卷 ' + d.hl2.toFixed(1) + '% ‖ 页面 ' + d.hpl2.toFixed(1) + '% ‖ F ' + Fl(d).toFixed(2) + '（按当下 T）'
-        + (isFinite(d.Hp) ? ('  ⇒ 与默认桌之差：Hp ' + (d.hpl2 - d.Hp >= 0 ? '+' : '') + (d.hpl2 - d.Hp).toFixed(1) + 'pt ‖ F ' + (Fl(d) - Fv(d) >= 0 ? '+' : '') + (Fl(d) - Fv(d)).toFixed(2)) : '')) +
-    /* §E677 两把**纯桌**闸并排说：环只画当前桌形那把，但悬停必须把另一把一起给 ——
-     *   否则"这枚换个桌就不过"这件事在图上看不见。在册那把混合桌闸不在这一行里：
-     *   它既不是短程也不是长程，用户 2026-10-21 已把它从环与过线壳上撤下来。 */
-    '\n过线·全腿短程 ' + RYESNO(d.oks) + (d.oks === 0 && d.fshorts ? '（' + String(d.fshorts).slice(0, 52) + '）' : '')
-      + ' ‖ 过线·全腿长程 ' + RYESNO(d.okl) + (d.okl === 0 && d.flongs ? '（' + String(d.flongs).slice(0, 52) + '）' : '')
-      + ((d.oks === 0 || d.oks === 1) && (d.okl === 0 || d.okl === 1) && d.oks !== d.okl ? ' ⇒ **这一枚两把翻脸**' : '') +
-    (d.pof ? '\n父边来路 = ' + (d.psrc || '未标') : '') +
+      : (d.psrc === 'cold' ? '：冷启动（无父边，不是漏记）'
+        : (d.psrc === 'synthetic' ? '：合成锚点（盘上没留档，占位）'
+          : (d.psrc === 'unresolved' ? '：不可考（权重解不出 ⇒ 待补证据）' : '')))) +
+    (d.hpl2 === null ? '\n长程桌 未量' : '\n长程桌 ' + d.hl2.toFixed(1) + '% ‖ 页面 ' + d.hpl2.toFixed(1) + '% ‖ F ' + Fl(d).toFixed(2)
+      + (isFinite(d.Hp) ? '（ΔHp ' + (d.hpl2 - d.Hp >= 0 ? '+' : '') + (d.hpl2 - d.Hp).toFixed(1) + 'pt）' : '')) +
+    '\n环/过线：短程 ' + RYESNO(d.oks) + (d.oks === 0 && d.fshorts ? '（' + String(d.fshorts).slice(0, 44) + '）' : '')
+      + ' ‖ 长程 ' + RYESNO(d.okl) + (d.okl === 0 && d.flongs ? '（' + String(d.flongs).slice(0, 44) + '）' : '')
+      + ((d.oks === 0 || d.oks === 1) && (d.okl === 0 || d.okl === 1) && d.oks !== d.okl ? ' ⇒ 翻脸' : '')
+      + ' ‖ 混合闸 ' + RYESNO(d.ok) + (d.ok === 0 && d.why ? '（' + String(d.why).slice(0, 40) + '）' : '') +
     (d.pof2 ? '\n融合的另一粒父 ' + d.pof2 : '') +
-    (backOf(d) ? '\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts + '（来路 ' + (d.psrc || '未标') + '）' : '') +
-    (RSUBJ(d) === 1 ? '\n' + RSUBNAME() + ' ✓' : (RSUBJ(d) === 0 ? '\n' + RSUBNAME() + ' ✗' + (RSUBWHY(d) ? '（' + RSUBWHY(d) + '）' : '')
-      : '\n' + RSUBNAME() + ' 没量过（不是没过）')) +
-    '\n名次 ' + d.rk + '/' + N + '（页面 Hp · 出厂 T）‖ 考卷口径第 ' + d.rkExam + ' 名 ‖ exam=' + (d.examG === null ? '未标档' : d.examG) + ' 局/组合' +
+    (backOf(d) ? '\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts : '') +
+    '\n名次 ' + d.rk + '/' + N + ' ‖ 考卷第 ' + d.rkExam + ' 名 ‖ exam=' + (d.examG === null ? '未标档' : d.examG) + ' 局/组合' +
     (d.pv === null || d.pv === undefined ? '' : '\npromote --dry：' + (d.pv === 1 ? '✅ 三条腿全过' : '⛔ ' + d.pb)) +
     /* §E590 池层：只印读数，口径那句话（"两批同号 ≥20pt"）留给图例，卡片不写旁注（用户 10-10 的排版裁定）。 */
     (d.pt ? '\n冠军池 · ' + d.pt + ' 档' + (d.pi ? '（点名）' : '') +
