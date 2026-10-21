@@ -1,3 +1,18 @@
+## v1.7.142 — 10-21 夜（DS）：训练场 N 人多种子/多轮（用户裁定 C）
+
+### 根因
+- `js/ui/ui.js:1336` 一直发 `seeds/rounds`，但 `server/train-server.mjs` 的 n>2 分支**没把 `seedsN/roundsN` 传进 `runTrainN`**，而 `runTrainN` 自身是单种群单轮 ⇒ 页面只跑一个种子、不会进第二轮（最后改动 10-05）。
+
+### 实现
+- 原主体改名 `runTrainNOne`（保留终局评估/健康门/可行性/落盘）；新增 `cfg.noWrite`（只训练不落盘）、`cfg.paramsFixed`（跳过演化、用给定参数走评估+落盘）、`cfg.seedPack`（按种子指定热启动父）。
+- 新外层 `runTrainN`：`rounds × seeds` 循环；每轮每粒发 `roundStart/seedEval/lineage/roundDone`；轮末按 `firstRate` 排序、`keepN=ceil(sqrt(seeds))` 取父母；最后一轮最佳者用 `paramsFixed` 正式落盘；meta 记 `seeds/rounds/round/seedIdx`。
+- 单种子单轮直接走 `runTrainNOne` ⇒ 旧路径逐字不变；handler 的 n>2 分支把 `seedsN/roundsN` 传下去。
+
+### 验证（短轮，n=3 · gens=2 · pop=8 · seeds=2 · rounds=2 · fresh=1，产物写本机 Temp）
+- SSE：`start` 6 ‖ `roundStart` **2**（0/1）‖ `seedEval` 20 ‖ `multiObj` 4 ‖ `lineage` **2** ‖ `roundDone` **2** ‖ `feasibility` 1 ‖ `done` 1；49 秒跑完。
+- `done`：1st **50.5%**、前二 81.7%、`wrote:true`；meta `seeds:2 / rounds:2 / n:3 / round:1`（`gens` 记原始 gens=2）。
+
+---
 ## v1.7.141 — 10-21 夜（DS）：查看器标题/字号/底色下拉 + 主页面加入口
 
 - 页标题 `§E302 冠军进化查看器 · …` → **冠军进化查看器**。

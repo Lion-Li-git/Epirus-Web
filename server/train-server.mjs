@@ -405,8 +405,9 @@ function writeBundleMP(pack, meta) {
   bumpChampionVersion();   // 刷 index.html 的 ?v= 缓\u5b58\u6233
 }
 
-async function runTrainN(gens, cfg) {
+async function runTrainNOne(gens, cfg) {
   const SEED0 = Number(cfg.seed0 || 0);
+  const NO_WRITE = !!cfg.noWrite, FIXED = cfg.paramsFixed || null;
   /* v1.5.96：**这条路径以前完全没有 IMIT 接线** —— 所有 N 人臂（含本晚全部实验）都走这里，
    * 所以 `imitB ≡ 0`、整臂与对照**逐位相同**。现在与 `runTrain` 共用 `applyImitEnv`。 */
   applyImitEnv(gens);
@@ -493,7 +494,7 @@ async function runTrainN(gens, cfg) {
   const cap = wallCapOf(process.env);   // v1.5.200：语义收进 server/wall-cap.mjs（`0` = 关闭；此前 0 会当场超时）
   process.env.EPIRUS_SEED0 = String((SEED0 || 1) * 7919 + 13);   // worker 在下一行创建，必须在此之前设好
   const poolN = makeParallelEvalN(T);
-  const seedP = cfg.fresh ? null : loadSeedN();
+  const seedP = cfg.seedPack || (cfg.fresh ? null : loadSeedN());
   const hotstartFromN = seedP ? weightsId(seedP) : null;
   /* 工具链修复：播种。原先 policy.js 的 randn/crossover 直接用 Math.random，
    * 训练完全不可复现 ⇒ A/B 两轮无法配对。带上 ?seed=N 后同一 N 两次运行结果一致。 */
@@ -614,7 +615,7 @@ async function runTrainN(gens, cfg) {
   const POOL = oppNames.map(function (nm) { return resolveOpp(nm); });
   const PAIRS = [];
   for (let a = 0; a < POOL.length; a++) for (let b = a + 1; b < POOL.length; b++) PAIRS.push([POOL[a], POOL[b]]);
-  let finalParams = hall[0] ? hall[0].params : pop[0], ev = null;
+  let finalParams = FIXED || (hall[0] ? hall[0].params : pop[0]), ev = FIXED ? (cfg.evForFixed || null) : null;
   /* (c) 门槛常量（必须在 hall 循环之前声明，否则 TDZ——v1.3.17 就栽在这）。
    * ⚠ v1.3.54 实测修正：**默认门槛 = 0（关闭）**。
    *   tools/subsidy-diag.mjs 用配对设计测出：三人局里冠军即使被白给 ep=6（并正确重算
@@ -668,7 +669,9 @@ async function runTrainN(gens, cfg) {
       ' divNorm=' + pk.div.divNorm.toFixed(3) + ' 种类=' + pk.div.distinct +
       ' 1st=' + (pk.v.firstRate * 100).toFixed(1) + '%  补贴局: 前二=' + (pk.probe.top2Rate * 100).toFixed(1) + '% 深技能/局=' + pk.probe.deepCastPerGame.toFixed(2) + ' 种类=' + pk.probe.deepKinds);
   }
+  if (FIXED) finalParams = FIXED;
   const pack = P.pack(finalParams);
+  if (NO_WRITE) return { params: finalParams, ev: ev, pack: pack };
   /* ===== v1.5.19：**产物健康门槛（最后一道，无法绕过）** =====
    * 为什么必须放在落盘处：产物的冠军由内部多处提升路径共同决定（finishStep 的 bestChamp、
    * pickChampionByWinRate、上面的多目标择优），**任何一处漏改都会让门槛变成空操作** ——
@@ -765,7 +768,7 @@ async function runTrainN(gens, cfg) {
     runningN = false; poolN.close();
     return;
   }
-  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens, games, pop: popSize, opps: oppNames.join(','), mode: mode, rulesFingerprint: rulesFingerprint(), styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, feasibility: feasibleInfo, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), fightOverride: (fightSet ? JSON.stringify(fightEnv) : ''),
+  writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens: (cfg.metaGens != null ? cfg.metaGens : gens), games, pop: popSize, opps: oppNames.join(','), mode: mode, rulesFingerprint: rulesFingerprint(), styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, feasibility: feasibleInfo, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), fightOverride: (fightSet ? JSON.stringify(fightEnv) : ''),
     /* v1.5.11：把**实际生效**的奖励参数也记下来（哨声惩罚现在长程默认开、不靠 env ⇒ 只记 env 会漏） */
     fightEffective: (T.fightReward ? JSON.stringify(T.fightReward()) : ''),
     ecoEffective: (T.economyReward ? JSON.stringify(T.economyReward()) : ''),
@@ -774,10 +777,41 @@ async function runTrainN(gens, cfg) {
      * 于是从产物上既看不出是不是热启动、也看不出输入是哪一版冠军 —— 而浏览器的默认配置
      * 恰好就是热启动（index.html 的"从头训练"复选框默认不勾，ui.js 也就不发 fresh=1）。
      * 与 v1.3.50 给 CLI 定的规矩对齐：让"从哪个冠军长出来的"成为可复现输入。 */
-    seed: SEED0, fresh: !!cfg.fresh, hotstartFrom: hotstartFromN, seedEmbeddedFrom: seedLegacyFrom, workers: poolN.workers });
+    seed: SEED0, fresh: !!cfg.fresh, seeds: Number(cfg.seeds) || 1, rounds: Number(cfg.rounds) || 1, round: cfg.round || 0, seedIdx: cfg.seedIdx || 0, hotstartFrom: hotstartFromN, seedEmbeddedFrom: seedLegacyFrom, workers: poolN.workers });
   for (const c of clients) sse(c, { type: 'done', n: n, gens, firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0, secs: ((Date.now() - t0) / 1000).toFixed(1), champ: pack, health: healthInfo, healthReject: healthReject });
   runningN = false;
   poolN.close();
+}
+
+/* 10-21 C：完整多种子 N —— 每种子独立跑，每轮按真实胜率择优、轮间谱系继承。
+ * 单种子/单轮时直接走 runTrainNOne（逐位等于旧路径）；多种子时每轮每粒写 noWrite 的临时结果，
+ * 轮末取 1st 最高者当父代（keepN = ceil(sqrt(seeds))），最后用 paramsFixed 再走一次正式落盘。 */
+async function runTrainN(gens, cfg) {
+  cfg = cfg || {};
+  const SEEDS = Math.max(1, Math.min(8, Number(cfg.seeds) || 1));
+  const ROUNDS = Math.max(1, Math.min(20, Number(cfg.rounds) || 1));
+  if (SEEDS === 1 && ROUNDS === 1) return runTrainNOne(gens, cfg);
+  const t0 = Date.now();
+  let parents = null, last = null;
+  for (let r = 0; r < ROUNDS; r++) {
+    for (const c of clients) sse(c, { type: 'roundStart', round: r, rounds: ROUNDS, seeds: SEEDS });
+    const got = [];
+    for (let s = 0; s < SEEDS; s++) {
+      const sc = Object.assign({}, cfg, { seedIdx: s, round: r, noWrite: true, paramsFixed: null, evForFixed: null,
+        seed0: (Number(cfg.seed0) || 0) + s * 7919 + r * 104729,
+        seedPack: (r === 0 ? null : (parents && parents[s % parents.length])) });
+      const rr = await runTrainNOne(gens, sc);
+      got.push(rr);
+      for (const c of clients) sse(c, { type: 'seedEval', n: cfg.n, round: r, seed: s, firstRate: rr.ev ? rr.ev.firstRate : 0, top2Rate: rr.ev ? rr.ev.top2Rate : 0 });
+    }
+    got.sort(function (a, b) { return ((b.ev && b.ev.firstRate) || 0) - ((a.ev && a.ev.firstRate) || 0); });
+    const keepN = Math.min(got.length, Math.ceil(Math.sqrt(SEEDS)));
+    parents = got.slice(0, keepN).map(function (x) { return x.params; });
+    last = got[0];
+    for (const c of clients) sse(c, { type: 'lineage', round: r, kept: keepN, seeds: SEEDS });
+    for (const c of clients) sse(c, { type: 'roundDone', round: r, bestFirstRate: last.ev ? last.ev.firstRate : 0, secs: ((Date.now() - t0) / 1000).toFixed(1) });
+  }
+  return runTrainNOne(0, Object.assign({}, cfg, { noWrite: false, paramsFixed: last.params, evForFixed: last.ev, seedIdx: 0, round: ROUNDS - 1, metaGens: gens }));
 }
 
 const server = http.createServer((req, res) => {
@@ -809,10 +843,10 @@ const server = http.createServer((req, res) => {
       return;
     }
     if (nPlayers > 2) {
-      sse(res, { type: 'start', gens, pop, gpo, n: nPlayers, from: 0, fresh, mode: modeQ || 'multi' });
+      sse(res, { type: 'start', gens, pop, gpo, n: nPlayers, from: 0, fresh, mode: modeQ || 'multi', seeds: seedsN, rounds: roundsN });
       if (!runningN) {
         runningN = true;
-        runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh, seed0: seed0, opps: url.searchParams.get('opps'), mode: modeQ,
+        runTrainN(gens, { n: nPlayers, pop: Math.max(8, pop), games: Math.max(4, gpo), fresh: fresh, seed0: seed0, opps: url.searchParams.get('opps'), mode: modeQ, seeds: seedsN, rounds: roundsN,
           styleopps: url.searchParams.get('styleopps'), styleW: url.searchParams.get('stylew'), styleGames: url.searchParams.get('stylegames') })
           .catch(function (e) { for (const c of clients) sse(c, { type: 'error', msg: String(e && e.message || e) }); runningN = false; });
       } else {
