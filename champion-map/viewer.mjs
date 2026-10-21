@@ -212,6 +212,24 @@ if (FEAS_FILES.length) {
     if (id) { OKM[id] = { ok: c[iOk] === '1', fails: '' }; POK++; } }
   OKSRC = '包内历史 feasibility.ok（旧面板，覆盖不全且跨层）';
 }
+/* ===== §E677 第二把环的口径（用户 2026-10-21 裁「两个模式各自显示自己的绿环」）=====
+ *   绿环的主语现在跟着**桌形**换：默认(3血短程) = 上面那把在册闸（混合桌 4+4 腿），长程(5血) = coords.tsv
+ *   的 `okLong` 列 = 同一道闸的**全腿长程**版（`feas.mjs --allLong=1` 把 G主判/座位/场A/场B 也搬上 long）。
+ *   口径这句**从表里读**（`legsMode` 列），不抄第二份文案 —— 与上面 §E492 那条"样本量随行记录"同一条规矩：
+ *   哪天那批腿表被换掉，页面上这句会跟着变，而不是继续宣称一套已经不存在的桌形。 */
+let LSRC = '';
+{ const LF = ['feas-long-s1.tsv', 'feas-long-s2.tsv', 'feas-long-s3.tsv', 'feas-long-s4.tsv']
+    .filter(f => existsSync(join(HERE, f)));
+  const MODES = {};
+  for (const f of LF) {
+    const L = readFileSync(join(HERE, f), 'utf8').trim().split('\n');
+    const iM = L[0].split('\t').indexOf('legsMode'); if (iM < 0) continue;
+    for (const l of L.slice(1)) { const m = String(l.split('\t')[iM] || '').trim(); if (m) MODES[m] = (MODES[m] || 0) + 1; } }
+  const mk = Object.keys(MODES);
+  if (mk.length > 1) { console.error('⛔ 全腿长程的判定表里混了 ' + mk.length + ' 种腿表：' + mk.map(x => x + ' × ' + MODES[x]).join(' ‖ ') +
+    '\n       ⇒ 两把环里的那一把成了混尺。要么全库重跑到同一套腿表，要么把旧片移出扫描面。'); process.exit(2); }
+  LSRC = mk.length ? ('现跑同一道闸的全腿长程版（' + mk[0] + '）')
+    : 'coords.tsv 的 okLong 列（全腿长程；腿表分片不在仓里 ⇒ 口径按日志 §E616）'; }
 /* §E308 上槽体检（`promote --dry` 的实测裁决，由 promscan.mjs 从日志汇总）。
  *   为什么还要这一张表：绿环那条 `feasibilityOf` 只是**五道**，而真正决定能不能换包的是另外三条腿
  *   —— G4（不许被一行脚本打穿 >60%）‖ G5（面对"只防御不还手"必须清场 ≤25%）‖ 送盾硬门槛（不可 --force）。
@@ -432,7 +450,8 @@ const DATA = rows.map(r => ({
   hpl2: (r.Hplong === undefined || r.Hplong === '-' || r.Hplong === '') ? null : +r.Hplong,
   fl: (r.Flong === undefined || r.Flong === '-' || r.Flong === '') ? null : +r.Flong,
   /* §E616 全腿长程版的过线（`feas.mjs --allLong=1`）：`okl` = 1/0/null（null = 没量，**不是没过**）‖ `flongs` = 阻断原话。
-   *   绿环仍读在册 `ok`（混合桌那道闸）—— 换环的主语等于换判据，那是待裁 #47，不在这里顺手做。 */
+   *   §E677（用户 2026-10-21 裁「两个模式各自显示自己的绿环」）：环的主语**跟着桌形换** —— 短程档读这把、长程档读那把，
+   *   出口只有一个 `RSUBJ()`。这不是"换判据"：两把闸谁也没被废掉，页面一次只宣称其中一把（图例与表头都点名是哪把）。 */
   okl: (r.okLong === undefined || r.okLong === '-' || r.okLong === '') ? null : +r.okLong,
   flongs: String(r.failsLong || ''),
   why: OKM && (r.id in OKM) ? OKM[r.id].fails : '',
@@ -577,7 +596,7 @@ console.log('过线判定源 = ' + (OKSRC || '无 ⇒ 不标绿环')+ ' ‖ 判�
   const flipUp = both.filter(d => d.ok === 0 && d.okl === 1), flipDown = both.filter(d => d.ok === 1 && d.okl === 0);
   console.log('过线两版对照 = 全腿长程有判定 ' + DATA.filter(d => d.okl !== null).length + ' 枚（过 ' + DATA.filter(d => d.okl === 1).length +
     '）‖ 两版都有 ' + both.length + ' 枚 ‖ **翻脸 ' + (flipUp.length + flipDown.length) + ' 枚**（在册不过→长程过 ' + flipUp.length +
-    ' ‖ 在册过→长程不过 ' + flipDown.length + '）‖ 绿环仍按在册那道闸画（换主语 = 待裁 #47）' +
+    ' ‖ 在册过→长程不过 ' + flipDown.length + '）‖ 环的主语跟着桌形换（短程档=在册闸 ‖ 长程档=全腿长程闸，§E677）' +
     (flipUp.length ? ' ‖ 例：' + flipUp.slice(0, 5).map(d => d.id).join(' ') : '') + (flipDown.length ? ' ‖ 例：' + flipDown.slice(0, 5).map(d => d.id).join(' ') : '')); }
 
 /* E404 DS（D-3）：壳的 WebGL2 后端放在独立文件里，生成时内联（避开模板字面量的转义坑）。 */
@@ -594,9 +613,32 @@ var KEXP = 2.5;   /* §E330 IDW 核的指数：1/d^KEXP。**淡出的覆盖度�
 var EDGEK = 8;    /* §E331 位图外沿收口的格数。必须**小于**网格边距折算出来的格数（边距 10% ⇒ 约 19 格），
                      否则会把点云自己的晕切掉一刀 —— 那是"为了藏边而砍数据"。*/
 var OKL = [], POKJ = 0, PV = null;
+/* ===== §E677 绿环的主语 = 当前桌形那把闸（用户 2026-10-21 裁「两个模式各自显示自己的绿环」）=====
+ *   默认(3血短程) → ok  = 在册那道闸，混合桌（G主判/座位/场A/场B 在 multi ‖ G2/墙/密度/蓄能 在 long）
+ *   长程(5血)     → okl = 同一道闸的**全腿长程**版（那 4 条 multi 腿也搬上 long）
+ *   ⚠ 这两把**不是一道闸的两个档，是两套腿表** ⇒ 主语一换，环、过线壳、底率、"栽在哪条腿"必须一起换。
+ *   所以下面这些消费点一律走 RSUBJ / RSUBWHY，不许再直接读 d.ok —— 那是"环的主语是谁"这件事的唯一出口。 */
+function RLONG() { return (typeof st !== 'undefined' && st.ftab === 'long'); }
+function RSUBJ(d) { return RLONG() ? d.okl : d.ok; }
+function RSUBWHY(d) { return String(RLONG() ? (d.flongs || '') : (d.why || '')); }
+function RSUBNAME() { return RLONG() ? '全腿长程闸' : '在册闸（混合桌）'; }
+function ROTH(d) { return RLONG() ? d.ok : d.okl; }          /* 另一把闸的判定（卡片要两把并排印）*/
+function ROTHNAME() { return RLONG() ? '在册闸（混合桌）' : '全腿长程闸'; }
+function RYESNO(v) { return v === 1 ? '是' : (v === 0 ? '否' : '没量过'); }   /* 「没量」与「没过」不许同形 */
+function RSUBSRC() { return RLONG() ? (LSRCJ || '（没读到全腿长程的腿表）')
+  : (OKSRCJ || '包自己 META 里的历史 feasibility.ok（没有现跑的判定表）'); }
 (function () { var xa = [], ya = [];
-  for (var i = 0; i < N; i++) { xa.push(P[i].x2); ya.push(P[i].y2); if (P[i].ok !== null && P[i].ok !== undefined) { POKJ++; if (P[i].ok) OKL.push([P[i].x2, P[i].y2]); } }
+  for (var i = 0; i < N; i++) { xa.push(P[i].x2); ya.push(P[i].y2); }
   PV = { x0: pct(xa, .005), x1: pct(xa, .995), y0: pct(ya, .005), y1: pct(ya, .995) }; })();
+/* 环的计数（图例那串 N/M 与阈值标签上的底率共用**同一份**）：缓存键必须带桌形 —— 与 §E617 那条
+ *   "凡缓存由 Fv 导出的量，键就要带上 Fv 的每一个自由度"是同一条规矩。主语换了而缓存不换，
+ *   印出去的就是上一档桌的数（那正是用户 10-16 点名的"读数与状态脱钩"）。 */
+var RKEY = '';
+function ringTally() { var k = 'ring#' + st.ftab; if (RKEY === k) return; RKEY = k;
+  OKL = []; POKJ = 0; var nHas = 0, nPass = 0;
+  for (var i = 0; i < N; i++) { var o = RSUBJ(P[i]);
+    if (o === 1 || o === 0) { nHas++; if (o === 1) { nPass++; OKL.push([P[i].x2, P[i].y2]); } } }
+  POKJ = nHas; BASEP = nHas ? nPass / nHas : 0.15; }
 /* §E308 实测过上槽体检的枚数（分母只算实测过的，别把"没测"说成"没过"）*/
 var NPRM = 0, NPPASS = 0;
 /* §E314 → §E464 更正：这里原来写「584 枚的父指针解析不到实体 · 无实体」—— **那句是错的**，错在检索口径：
@@ -1196,7 +1238,8 @@ function tip(d) {
     (d.pof ? '\\n父边来路 = ' + (d.psrc || '未标') : '') +
     (d.pof2 ? '\\n融合的另一粒父 ' + d.pof2 : '') +
     (backOf(d) ? '\\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts + '（来路 ' + (d.psrc || '未标') + '）' : '') +
-    (d.ok === 1 ? '\\n训练侧五道检查 ✓' : (d.ok === 0 ? '\\n训练侧五道检查 ✗' + (d.why ? '（' + d.why + '）' : '') : '')) +
+    (RSUBJ(d) === 1 ? '\\n' + RSUBNAME() + ' ✓' : (RSUBJ(d) === 0 ? '\\n' + RSUBNAME() + ' ✗' + (RSUBWHY(d) ? '（' + RSUBWHY(d) + '）' : '')
+      : '\\n' + RSUBNAME() + ' 没量过（不是没过）')) +
     '\\n名次 ' + d.rk + '/' + N + '（页面 Hp · 出厂 T）‖ 考卷口径第 ' + d.rkExam + ' 名 ‖ exam=' + (d.examG === null ? '未标档' : d.examG) + ' 局/组合' +
     (d.pv === null || d.pv === undefined ? '' : '\\npromote --dry：' + (d.pv === 1 ? '✅ 三条腿全过' : '⛔ ' + d.pb)) +
     /* §E590 池层：只印读数，口径那句话（"两批同号 ≥20pt"）留给图例，卡片不写旁注（用户 10-10 的排版裁定）。 */
@@ -1227,10 +1270,8 @@ var NBK = {}, FL = null;
 var CHROMEVEC = 1;
 /* E401 DS（B 界面修法）：阈值标签把**底率**一起写出来 —— 用户不该自己猜这条线该定在哪。 */
 var BASEP = -1;
-function THRLBL() { if (BASEP < 0) { var a1 = 0, b1 = 0;
-  for (var q = 0; q < P.length; q++) { var o1 = P[q].ok; if (o1 === 1 || o1 === 0) { b1++; if (o1 === 1) a1++; } }
-  BASEP = b1 ? a1 / b1 : 0.15; }
-  return Math.round(st.isoT * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '%）'; }
+function THRLBL() { ringTally();
+  return Math.round(st.isoT * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '% · 主语 = ' + RSUBNAME() + '）'; }
 /* §E608 带宽旋钮的标签要说**生效值**而不是滑块的刻度：c 同时缩核宽、退 M0、退密度门，三个数都得看得见才知道现在这只壳是谁。 */
 function BWLBL(c) { c = (c === undefined || !isFinite(c)) ? st.isoBW : c;
   return c.toFixed(2) + (c >= 0.995 ? '（今天：M0 ' + DM0 + ' ‖ 门全开）'
@@ -1753,7 +1794,7 @@ function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, d
   t.font = ff(11);
   for (i = 0; i < fams.length; i++) {
     var f = fams[i], mem = P.filter(function (d, mi) { return d.fam === f && VIS[mi]; });
-    var nOk = mem.filter(function (d) { return d.ok === 1; }).length, nCh = mem.filter(function (d) { return d.lin; }).length;
+    var nOk = mem.filter(function (d) { return RSUBJ(d) === 1; }).length, nCh = mem.filter(function (d) { return d.lin; }).length;
     var best = Math.min.apply(null, mem.map(function (d) { return d.rk; }));
     t.fillStyle = i % 2 ? bandFillFor(st.bg) : 'rgba(255,255,255,.0)';
     t.fillRect(0, padT + i * rowH, w, rowH);
@@ -1763,7 +1804,7 @@ function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, d
     t.fillStyle = st.ink; t.textAlign = 'right'; t.font = ff(9);
     var ls = wrapLabel(t, '家族 ' + f + ' · ' + full, maxW, 2);
     t.fillText(ls[0], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.36);
-    var cnt = mem.length + ' 枚 · 五道检查 ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best;
+    var cnt = mem.length + ' 枚 · 过线' + (RLONG() ? '(长程)' : '(在册)') + ' ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best;
     t.fillStyle = st.dim; t.font = ff(9);
     if (ls[1]) t.fillText(ls[1], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.82);
     else if (t.measureText(cnt).width <= maxW) t.fillText(cnt, padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.82);
@@ -2116,8 +2157,8 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
     g.beginPath(); g.arc(p[0], p[1], rr, 0, 6.284);
     g.fillStyle = colOf(d); g.fill();   /* §E347：这里原来硬写 rampF(fCol(...))，等于**绕过颜色下拉**（切到「家族」也画成 F 色）⇒ 改走 colOf */
     if (d.lin && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.4; g.stroke(); }
-    if (d.ok === 1 && al > 0.3) { g.globalAlpha = al * 0.72; g.strokeStyle = '#39d98a'; g.lineWidth = 1.15 * devicePixelRatio;
-      g.beginPath(); g.arc(p[0], p[1], rr + 2.2 * st.size, 0, 6.284); g.stroke(); }
+    if (RSUBJ(d) === 1 && al > 0.3) { g.globalAlpha = al * 0.72; g.strokeStyle = '#39d98a'; g.lineWidth = 1.15 * devicePixelRatio;
+      g.beginPath(); g.arc(p[0], p[1], rr + 2.2 * st.size, 0, 6.284); g.stroke(); }   /* §E677 环 = 当前桌形那把闸过了 */
     /* §E590 池层环（环色 = 难度档，见图例/画布底那行提示）。画在"选中/对比"**之前** ⇒ 那两圈永远压得住它，
      *   不然选中一枚池成员会出现"金环被粉环盖住"这种读不出选中的情形。 */
     if (d.pt && POOL_COL[d.pt] && al > 0.3) { g.globalAlpha = Math.min(1, al * 0.95); g.strokeStyle = POOL_COL[d.pt];
@@ -2268,9 +2309,9 @@ function drawMap(fr) {
      *   顺带原来那圈点边也被挪到了 rr+5 上（选中的冠军比没选中的多一圈外移的墨边）。 */
     if (isC && al > 0.5) { g.beginPath(); g.arc(pr[i].x, pr[i].y, rr, 0, 6.284);
       g.strokeStyle = st.ink; g.lineWidth = 1.5; g.stroke(); }
-    /* §E302 过线**只**按逐枚真值标：绿环 = 这枚自己过了今天那道闸（113/718）。
+    /* §E302 过线**只**按逐枚真值标：绿环 = 这枚自己过了**当前主语**那道闸（枚数现读，印在右侧图例与表头，别抄进注释）。
      *   二维的"过线范围"已删（用户：绿区会把底图盖掉），为什么不该再画回去的理由写在 buildNB 末尾。*/
-    if (d.ok === 1 && al > 0.3) {
+    if (RSUBJ(d) === 1 && al > 0.3) {
       g.globalAlpha = al * 0.72; g.strokeStyle = '#39d98a'; g.lineWidth = 1.15 * devicePixelRatio;
       g.beginPath(); g.arc(pr[i].x, pr[i].y, rr + 2.2 * st.size, 0, 6.284); g.stroke(); }
     /* §E590 池层环（三维态与二维同一条规则：环色 = 档，画在选中环之前） */
@@ -2360,6 +2401,10 @@ function isoBuild(sig, thr, GN, field, bw) {
   for (i = 0; i < nbc; i++) cellStart[i + 1] += cellStart[i];
   var _cf = new Int32Array(nbc);
   for (i = 0; i < N; i++) { cellItem[cellStart[bidx[i]] + _cf[bidx[i]]++] = i; }
+  /* ⚠ 必须在下面 VF 预计算**之前**求值：vAt 是函数声明（提升 ⇒ 那行调得动），而它 'pot' 那支读 fr2
+   *   —— fr2 若还留在 VF 之后，var 提升只声明不赋值 ⇒ 切到「势」场整页抛 TypeError。
+   *   'ok' 那支不读 fr2 ⇒ 只有势场死，这就是它躲过页内自检的原因。 */
+  var fr2 = fRange(), fspan = (fr2[1] - fr2[0]) || 1;
   var VF = new Float64Array(N);
   for (i = 0; i < N; i++) VF[i] = vAt(i);   /* 内层不再重复调 vAt 闭包 */
   var F = new Float32Array(dims[0] * dims[1] * dims[2]);
@@ -2378,12 +2423,13 @@ function isoBuild(sig, thr, GN, field, bw) {
    *   既然'ok'场能给的诚实信息就这么多，再给一个不会空的场：同一套壳画在**势**上，回答"该往哪片形状继续训"。
    *   势场阈值 67% ⇒ 壳内 122 枚、纯度 28%，而**留一还有 21%**（底率 15.7%）⇒ 全场唯一"过了留一复核还站得住"的壳。
    *   ⚠ §E314 换尺后这一组数全部重扫过（旧势场是 64% / 68 枚 / 31% / 23%）—— 场的定义一动，默认值就必须重定。*/
-  var fr2 = fRange(), fspan = (fr2[1] - fr2[0]) || 1;
   /* 没判定的枚一律 NaN ⇒ 不进核、不进分母（旧写法 null 会被 isFinite 放进来当 0，是个静默偏置）*/
-  function vAt(m) { return field === 'pot' ? (Fv(P[m]) - fr2[0]) / fspan : (P[m].ok === 1 ? 1 : (P[m].ok === 0 ? 0 : NaN)); }
+  function vAt(m) { if (field === 'pot') return (Fv(P[m]) - fr2[0]) / fspan;
+    var r = RSUBJ(P[m]);   /* §E677 过线场吃**当前主语**那把闸（切到长程桌，壳圈的就是全腿长程过线的那批）*/
+    return r === 1 ? 1 : (r === 0 ? 0 : NaN); }
   var nOk = 0, sumV = 0, nV = 0, nHas = 0;
-  for (i = 0; i < N; i++) { var v0 = vAt(i);
-    if (P[i].ok === 1 || P[i].ok === 0) { nHas++; if (P[i].ok === 1) nOk++; }
+  for (i = 0; i < N; i++) { var v0 = vAt(i); var r0 = RSUBJ(P[i]);
+    if (r0 === 1 || r0 === 0) { nHas++; if (r0 === 1) nOk++; }
     if (isFinite(v0)) { nV++; sumV += v0; } }
   /* base = 全库过线率，**与场无关**：壳内纯度要跟它比才知道壳是不是白画的。
    *   'pot' 场的 p0 是"平均势"（59%），拿它当"底率"印出去会把人带沟里（截图第一版就印成 59%）。*/
@@ -2444,8 +2490,8 @@ function isoBuild(sig, thr, GN, field, bw) {
    *   ⇒ 只报含自己那列，就是拿点的自我照亮冒充"局部真的富集过线枚"。*/
   var cov = 0, ins = 0, covL = 0, insL = 0;
   for (i = 0; i < N; i++) { var vi = vAt(i); if (!isFinite(vi)) continue;
-    if (gfield(a[i], b[i], c[i], -1) >= thr) { ins++; if (P[i].ok === 1) cov++; }
-    if (gfield(a[i], b[i], c[i], i) >= thr) { insL++; if (P[i].ok === 1) covL++; } }
+    if (gfield(a[i], b[i], c[i], -1) >= thr) { ins++; if (RSUBJ(P[i]) === 1) cov++; }
+    if (gfield(a[i], b[i], c[i], i) >= thr) { insL++; if (RSUBJ(P[i]) === 1) covL++; } }
   /* §E608（DS 交接件 §1.6 第 4 条）：**两个错分开印**。原来只有"壳内 N 枚 / 里面几枚真过线"，
    *   而用户抱怨的两件事（过线密集区里的未过线点被包住、未过线密集区里的过线点不画）各是这两个数之一，
    *   不印出来就没法说"这只壳错了几个"，只能靠眼睛。漏画的分母 = nOk（全库有判定里过线那批）。*/
@@ -2809,9 +2855,10 @@ function drawBody() {
   if (st.side) { var _sp = document.getElementById('side'), _lg = document.getElementById('legend');
     if (_sp && _lg && _sp.style.display !== 'none') _sp.style.top = (_lg.offsetTop + _lg.offsetHeight + 10) + 'px'; }
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
+  ringTally();   /* §E677 表头要说得出"当前这圈环是哪把闸"，顺带把计数刷新（按桌形缓存 ⇒ 仍是状态的纯函数，§E622 那条判得住）*/
   document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚退回默认桌，一张图上混两把尺') + '）') : 'F = 默认桌(3血)') + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚退回默认桌，一张图上混两把尺') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('上槽体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
@@ -2906,7 +2953,7 @@ function paintLegend(fr) {
     de: 'Δε = 考卷（ε=0）− 页面（默认档 lv:regular 的剂量：斜坡 0→0.05→0.1 ‖ k5 ‖ soft）· 两 eval seed · exam=120 局/组合 ‖ 发散带 0 在正中：红 = 一开探索就掉，蓝 = 开了反而强（§E597：默认档下全库 46% 的包落在"开了反而强"那一侧）',
     sc: 'Sc = 当选键**绝对值**（evalN · vs 脚本对 · 出厂 ε=0 · 8 粒 seedBase 取均值）‖ 域取窗内 p02..p98 ‖ ' +
       '§E600-A：原来这档画的是 Scd = 对某一枚参照包的配对差 —— 参照物退役后那个差没有主语，三列（Scd/Scs/Sch）留表里当账',
-    champ: '这一档只标历代上槽那几枚 ‖ 针 = ' + BANDLBL + ' · 绿环 = 过了训练侧五道检查'
+    champ: '这一档只标历代上槽那几枚 ‖ 针 = ' + BANDLBL + ' · 绿环 = 过了' + RSUBNAME()
   };
   var _nt = LEG_NOTE[st.color];
   if (_nt) { s3h = document.createElement('div'); s3h.style.color = 'var(--dim)'; s3h.textContent = _nt; }
@@ -2979,10 +3026,12 @@ function paintLegend(fr) {
    *   ⇒ 这里把 s3/s4 **并进 s2 一行**、闸门那句移进 hover 提示（信息不丢）⇒ **五块变两块**。
    *   三次踩坑都记下：① 插在 paintLegend 函数外 ⇒ s2 不在该作用域 ⇒ 整块被跳过；② 替换区间吃掉函数收尾大括号 ⇒ 解析失败；
    *   ③ 上一版其实已经生效，却因为我校验时只截了 420 字符的 DOM 窗口而**误判为未生效**并把它撤掉了（校验方式本身有坑）。 */
+  ringTally();
   if (OKL.length && (st.color === 'fam' || st.color === 'seed')) {
-    /* §E437：用户要求「逐枚过线」后面也换行再接 185/901 */
-    s2.innerHTML = '黄针 = ' + BANDLBL + ' · 绿环 = 过了训练侧五道检查（**不是换包闸**）<br>' + OKL.length + '/' + POKJ;
-    s2.title = OKSRCJ || '包自己 META 里的历史 feasibility.ok（没有现跑的判定表）';   /* §E492 同上：口径由数据说 */
+    /* §E437：用户要求「逐枚过线」后面也换行再接计数（枚数现读，不抄第二份）。
+     *   §E677：这句必须把**是哪把闸**印出来 —— 主语跟着桌形换，原来那句"训练侧五道检查"在长程档就是假账。 */
+    s2.innerHTML = '黄针 = ' + BANDLBL + ' · 绿环 = 过了' + RSUBNAME() + '（**不是换包闸**）<br>' + OKL.length + '/' + POKJ + ' ‖ 换桌形 = 换主语';
+    s2.title = RSUBSRC();   /* §E492 口径由数据说：两把闸各有各的腿表，这句跟着主语换 */
     /* §E434 DS：§E432 那笔把 s1 整行清空了（用户当时说顶部有选项框、这行是重复），但**颜色的含义**也跟着没了 ——
      *   用户 10-08：「你刚才删的太多，现在图例颜色是啥没掉了，至少要保留这玩意是 F = Hp + T·S」。
      *   ⇒ 恢复简短版（不写点色 = 家族，那是选项框的事），正好填掉左上那块空白。 */
@@ -3081,7 +3130,8 @@ function paintCard() {
      *   而不截的话 v7seat24-31 那条本来读得出"四条腿各差多少"，截 60 就断成"场B 清场 0.20 < "（阈值那半句没了）。
      *   这张卡是"为什么这枚不能上槽"的唯一自证位，半句等于没写。*/
     '上槽体检：' + (d.pv === 1 ? '✅ 三条腿全过（真能换包）' : (d.pv === 0 ? '⛔ ' + String(d.pb) : '未测')) +
-    ' ‖ 过线判定：' + (d.ok === 1 ? '是' : (d.ok === 0 ? '否' : '未测')) + (d.why ? '（栽在 ' + String(d.why) + '）' : '') +
+    ' ‖ 过线判定（主语 = ' + RSUBNAME() + '）：' + RYESNO(RSUBJ(d)) + (RSUBWHY(d) ? '（栽在 ' + RSUBWHY(d) + '）' : '') +
+    ' ‖ 另一把 ' + ROTHNAME() + '：' + RYESNO(ROTH(d)) + (RSUBJ(d) !== ROTH(d) ? ' ⇒ **这一枚两把翻脸**' : '') +
     /* §E590 池层（读 pool-members.tsv，不重算）：这一行回答的是"玩家现在这局会不会遇到它、遇上了算哪一档"。 */
     (d.pt ? ' ‖ 冠军池：' + d.pt + ' 档' + (d.pi ? '（点名越过门槛）' : '') +
       ' · 人席否决 ' + (d.psk === null || d.psk < 0 ? '没量过' : d.psk + ' 格') : '')
@@ -3143,7 +3193,7 @@ function paintSide() {
     row('当选键', function (d) { return d.sc === null || d.sc === undefined ? '未测' : d.sc.toFixed(1); });   /* §E600-A：原来是「当选键差」（对某一枚参照包取差），参照物退场后改画绝对值 */
     row('决斗差', function (d) { return d.dm === null || d.dm === undefined ? '未测' : (d.dm >= 0 ? '+' : '') + d.dm.toFixed(1); });
     row('上槽体检', function (d) { return d.pv === 1 ? '过' : (d.pv === 0 ? '栽' : '未测'); });
-    row('最优', function (d) { return d.ok === 1 ? '是' : (d.ok === 0 ? '否' : '未测'); });
+    row('过线', function (d) { return RYESNO(RSUBJ(d)); });   /* 原来这行叫「最优」，可它印的是过/不过，不是名次 */
     row('珠/局', function (d) { return (d.chg === null || isNaN(d.chg)) ? '—' : d.chg.toFixed(2); });
     row('浪费ep', function (d) { return (d.waste === null || isNaN(d.waste)) ? '—' : d.waste.toFixed(2); });
     el.appendChild(tb);
@@ -3491,8 +3541,13 @@ function tick() {
  *   中间一段通用选项，最后是针对每个图特有的，并且切换到其他图的时候就不要显示」）=====
  *   第三段按视图显隐。表在这里，不在各处 if —— 免得下一件控件又漏一处（本仓"两处各写一个 6"栽过四次）。
  *   ⚠ 只动 display，不删节点：那几条判据（工具栏接线 / 复位视图 / 投影判据）是按 id 找控件的。 */
+/* §E677 bh 那颗（好在上⇅）原来挂在 ['1d','3db'] —— 那是**接反了**：它翻的是 st.goodTop，而 goodTop 只被
+ *   u01() 读（唯一出口），u01 的调用点只有两处：一维带（draw1d）与地图立体态的柱高（drawMap）。
+ *   三维行为轴的第三根轴是**行为**（cz = z3 线性映射，走 pt3，不经 u01）⇒ 在这个视图里点它只翻文案不翻几何。
+ *   ⇒ 改成 ['1d','map']：留在它管得着的一维，换到它管得着的立体态（与「平面⇄立体」那颗按钮同段相邻）。
+ *   ⚠ 这段在模板字符串里面，注释里不许写反引号（本文件 3549 行那条警告 + 门 D234⑩c 就是为这个坑立的）。 */
 var BAR_VIEW = { sortb: ['1d'], fitt: ['map', '1d', '3db'], edgerow: ['tree'], bside: ['map', 'tree'],
-  bisos: ['3db'], bh: ['1d', '3db'] };
+  bisos: ['3db'], bh: ['1d', 'map'] };
 function barVis() { for (var k in BAR_VIEW) { var el = document.getElementById(k); if (!el) continue;
   el.style.display = BAR_VIEW[k].indexOf(st.mode) >= 0 ? '' : 'none'; } }
 /* 段序：源码里壳的三行滑杆挨着壳开关（长说明和它管的旋钮必须写在一起才看得懂），
@@ -3563,7 +3618,7 @@ document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) %
   s.addEventListener('input', function () {
     var val = +this.value;
     if (st.isoField === 'pot') st.isoTpot = val; else st.isoTok = val;   /* 记住但**不动 st.isoT** ⇒ 不触发重建 */
-    if (v) v.textContent = Math.round(val * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '%）';
+    if (v) { ringTally(); v.textContent = Math.round(val * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '% · ' + RSUBNAME() + '）'; }
     clearTimeout(_isoTimer);
     _isoTimer = setTimeout(function () { st.isoT = val; if (v) v.textContent = THRLBL(); req(); }, 160);
   });
@@ -4838,12 +4893,20 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   })();
   /* c=0.2 是扫描表上的拐点（本机 GN=72：漏画 67→**0** ‖ 纯度 53%→85% ‖ 片数 7158 ‖ 建壳 45ms）。
    *   再往左（c≤0.05）解析读数说 170~173 枚在壳里、而网格只有 310（GN72）~150（GN128）片 ⇒ **画不出**：
-   *   那是网格的分辨率上限（小泡被退化片闸吃掉），不是场错了 ⇒ 滑轨下限停在 0.05，"同场"那条判据钉在 c=1 这一端。*/
-  T('壳：带宽真的改场（c=1 → 0.2 ⇒ 漏画归零、误包下降、读数不许塌成空，且必须与 c=1 不是同一个数）',
-    IS2.miss === 0 && IS2.cov === IS2.nOk && IS2.ins !== IS1.ins && IS2.bad < IS1.bad && IS2.quads.length > 0,
-    'c=0.2：壳内 ' + IS2.ins + ' ‖ 真过线 ' + IS2.cov + '/' + IS2.nOk + ' = ' + (IS2.ins ? (100 * IS2.cov / IS2.ins).toFixed(0) : '—') +
-    '% ‖ 误包 ' + IS2.bad + '（c=1 是 ' + IS1.bad + '）‖ 漏画 ' + IS2.miss + '（c=1 是 ' + IS1.miss + '）‖ 片数 ' + IS2.quads.length +
-    '（c=1 是 ' + IS1.quads.length + '）‖ 建壳 ' + IS2.ms.toFixed(0) + 'ms（c=1 是 ' + IS1.ms.toFixed(0) + 'ms）');
+   *   那是网格的分辨率上限（小泡被退化片闸吃掉），不是场错了 ⇒ 滑轨下限停在 0.05，"同场"那条判据钉在 c=1 这一端。
+   * ⚠ 这条的「漏画归零」与「cov === nOk」两半是**在过线概率场上标定的**（上面那次扫描就是 ok 场），而势场的壳
+   *   本来就不以"圈住全部过线枚"为目标（它答的是"哪片形状势高"）⇒ 拿**当下所选的场**判它 = 势场档必假红
+   *   （10-21 实测：pot 下漏画 133 > c=1 的 106，而"误包下降 56→30"与"不是同一个数"两半都成立）。
+   *   ⇒ 这里显式在 ok 场（用它自己那格的阈值 isoTok）重建两把壳，**判据语义一字不动**；
+   *     pot 场的壳由上面「壳内过线率 > 底率」与「同场」那两条覆盖，它们与选哪个场无关。*/
+  var BWF = 'ok', BWT = (st.isoField === 'ok' ? st.isoT : st.isoTok);
+  var _tbw1 = performance.now(); var BW1 = isoBuild(SIGVAL, BWT, st.isoGN, BWF, 1); BW1.ms = performance.now() - _tbw1;
+  var _tbw2 = performance.now(); var BW2 = isoBuild(SIGVAL, BWT, st.isoGN, BWF, 0.2); BW2.ms = performance.now() - _tbw2;
+  T('壳：带宽真的改场（c=1 → 0.2 ⇒ 漏画归零、误包下降、读数不许塌成空，且必须与 c=1 不是同一个数）‖ 钉在过线概率场上量（势场档不换主语）',
+    BW2.miss === 0 && BW2.cov === BW2.nOk && BW2.ins !== BW1.ins && BW2.bad < BW1.bad && BW2.quads.length > 0,
+    '场=' + BWF + ' thr=' + BWT.toFixed(2) + ' ‖ c=0.2：壳内 ' + BW2.ins + ' ‖ 真过线 ' + BW2.cov + '/' + BW2.nOk + ' = ' + (BW2.ins ? (100 * BW2.cov / BW2.ins).toFixed(0) : '—') +
+    '% ‖ 误包 ' + BW2.bad + '（c=1 是 ' + BW1.bad + '）‖ 漏画 ' + BW2.miss + '（c=1 是 ' + BW1.miss + '）‖ 片数 ' + BW2.quads.length +
+    '（c=1 是 ' + BW1.quads.length + '）‖ 建壳 ' + BW2.ms.toFixed(0) + 'ms（c=1 是 ' + BW1.ms.toFixed(0) + 'ms）');
   st.mode = SNISO.mode; st.iso = SNISO.iso; st.elev = SNISO.elev;
   st.flo = SNISO.flo; st.fhi = SNISO.fhi; recomputeVIS(); draw(); paintWin();
   /* ===== §E373 连线开关（用户："给一个连线开关不然可能会太多挡住了"）=====
@@ -5609,8 +5672,10 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
      *   不是「用户把它拖到现役上面也不许」。拖到哪是用户选的，不该由判据管（量完照旧还原）。*/
     st.lgPos = st.cardPos = st.sidePos = null;
     var worst = -1, worstId = '';
-    for (var wi5 = 0; wi5 < N; wi5++) { var wl = String(P[wi5].why || '').length + String(P[wi5].pb || '').length;
-      if (P[wi5].ok === 0 && wl > worst) { worst = wl; worstId = P[wi5].id; } }
+    /* §E677 这条挑的是「**当前主语**下栽得最难看的那枚」⇒ 过/不过与腿名都要跟着主语走
+     *   （原来它钉 d.ok + d.why = 在册那把，长程档下它量的还是上一把闸的账）。 */
+    for (var wi5 = 0; wi5 < N; wi5++) { var wl = RSUBWHY(P[wi5]).length + String(P[wi5].pb || '').length;
+      if (RSUBJ(P[wi5]) === 0 && wl > worst) { worst = wl; worstId = P[wi5].id; } }
     st.mode = 'map'; st.elev = 0; st.flo = 0; st.fhi = 1; st.labels = 'champ'; st.side = true;
     st.sel = worstId; recomputeVIS(); paintCard(); paintSide(); draw();
     var cvr = cv.getBoundingClientRect(), PAN = [];
@@ -5944,7 +6009,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>\n' +
 '<div id="tip"></div>\n' +
 '<div id="selftest"></div>\n' +
-'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var NRAW = ' + NRAW + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + '; var EPSG = ' + JSON.stringify(EPSG) + '; var POOLM = ' + JSON.stringify(POOLM) + '; var POOL_COL = ' + JSON.stringify(POOL_COL) + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
+'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var LSRCJ = ' + JSON.stringify(LSRC) + '; var NRAW = ' + NRAW + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + '; var EPSG = ' + JSON.stringify(EPSG) + '; var POOLM = ' + JSON.stringify(POOLM) + '; var POOL_COL = ' + JSON.stringify(POOL_COL) + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
 /* §E338 落盘之后**必须把内联脚本再解析一遍**（"写完不回读"这一族的第三种形态）：
  *   模板里写 '\n' 会被 Node 先吃成**真换行** ⇒ 写进页面就成了一条未闭合的字符串 ⇒ **整页脚本一条都不执行**，
  *   而构建照样打印"已写 xxx KB"、截图照样是一张画布（地板是 canvas 之外没画 ⇒ 看着像空的但没人报错）。
