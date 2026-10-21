@@ -2726,6 +2726,11 @@ function paintCard() {
     '进池体检：' + (d.pv === 1 ? '✅ 三条腿全过（有进池资格；老 promote 上槽路径认同一条）' : (d.pv === 0 ? '⛔ ' + String(d.pb) : '未测')) +
     ' ‖ 过线判定（主语 = ' + RSUBNAME() + '）：' + RYESNO(RSUBJ(d)) + (RSUBWHY(d) ? '（栽在 ' + RSUBWHY(d) + '）' : '') +
     ' ‖ 另一把 ' + ROTHNAME() + '：' + RYESNO(ROTH(d)) + (RSUBJ(d) !== ROTH(d) ? ' ⇒ **这一枚两把翻脸**' : '') +
+    /* §E677（用户 10-21 裁「混合闸写在卡片上也行」）：环上不留混合桌那把了，但它仍是 promote 实际用的那道闸
+     *   （promote-champion.mjs:29 与 server/train-server.mjs 共用 audit-lib 的 feasibilityOf）⇒ 卡片留一行，
+     *   免得"图上两把环都不是 promote 判的那把"这件事只能去翻腿表。它是**第三把**，不参与环与壳。
+     *   ⚠ 这段在模板字符串里面：注释里不许写反引号（10-21 一晚第三次栽，见本文件 3549 行那条警告）。 */
+    ' ‖ 五道混合闸（promote 用这把 ‖ 不是环）：' + RYESNO(d.ok) + (d.why ? '（栽在 ' + String(d.why) + '）' : '') +
     /* §E590 池层（读 pool-members.tsv，不重算）：这一行回答的是"玩家现在这局会不会遇到它、遇上了算哪一档"。 */
     (d.pt ? ' ‖ 冠军池：' + d.pt + ' 档' + (d.pi ? '（点名越过门槛）' : '') +
       ' · 人席否决 ' + (d.psk === null || d.psk < 0 ? '没量过' : d.psk + ' 格') : '')
