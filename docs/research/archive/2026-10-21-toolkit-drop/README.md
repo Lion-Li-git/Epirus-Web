@@ -11,8 +11,14 @@
 | `opp-spectrum.mjs` | 前提尺：训练桌那 9 只 picker 与 `pickToolKit` 各自的**出手谱 + 决策时握珠**（5 席镜像桌） | `node opp-spectrum.mjs --games=200 [--mode=long]` |
 | `e676-batch.sh` | 20 臂驱动（base / tk / drop × 4 起点 × 2 seed，4 路并发） | `bash e676-batch.sh`（**默认写 `*.rerun`**，覆盖原件要 `OVERWRITE=1`） |
 | `e676-analyze.mjs` | 配对分析：起点按产物 META 的 `hotstartFrom` 认、格按 `recipe.arm/h2p/toolkitOpps` 认；**先报地板再报 Δ** | `node e676-analyze.mjs` |
+| `e676b-batch.sh` | **加簇批**（tk 单格 × 4 枚新起点 × 2 seed = 8 臂，base 侧引 §E675 在册 p2 产物） | `bash e676b-batch.sh` |
+
+⚑ **本目录是"跑得出上面那张表"的最小集合**：`node e676-analyze.mjs`（不带旗标）读的就是 `raw/` 里这四张表 ⇒ 应当印出
+**43 枚 × 4 张尺、106 行判词、其中 104 行 `判不动`**（日志 §E676 补 的那句）。数对不上就是接线错了，不是"结论变了"。
+
 | `raw/opp-spec-{multi,long}.txt` | 前提尺原样输出（800 场里 RAILGUN = 0 那张表） | — |
-| `raw/usage-{multi,long}.tsv` | `tools/usage-probe.mjs --games=60 --eps=0` 的 27 枚谱（自盾族与兑现族都在列） | 见 README 末"重取读数" |
+| `raw/usage-{multi,long}.tsv` | `tools/usage-probe.mjs --games=60 --eps=0` 的 **43 枚**谱（自盾族与兑现族都在列；含加簇批） | 见 README 末"重取读数" |
+| `raw/audit-{multi,long}.txt` | `tools/champ-audit.mjs --games=60 --exam-games=20` 的 **43 枚**体检（两档；`audit2-*.txt` 是加簇批那 16 枚的单跑） | — |
 | `raw/e676-analyze.out` | 配对分析原样输出（地板 + 逐起点 Δ + 符号判/合地板判两栏） | — |
 | `raw/status.tsv` ‖ `raw/driver.log.txt` | 每臂退出码与时刻（发车 07:21:46 ‖ 收摊 07:28:42，`date` 实抄） | — |
 | `arms/*.log.txt` | 20 份臂日志原件（含 `[toolkit-ops]`/`决策期档已下达` 那两行与 §E589 去重点名行） | — |

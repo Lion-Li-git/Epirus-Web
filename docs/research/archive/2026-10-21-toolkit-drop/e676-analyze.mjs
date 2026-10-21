@@ -208,22 +208,37 @@ for (const [lab, src, DIMS] of [
     if (!linesByOrigin.length) { console.log('\n【' + cell + '】没有可配对的（base 缺失或产物没进尺表）⇒ 读不出'); continue; }
     console.log('\n【' + cell + ' vs base】配对 ' + pairs + ' 对');
     for (const l of linesByOrigin) console.log(l);
-    console.log('  ——判词——');
+    /* ⚑ 地板必须**按这一格参与的起点子集**现算：drop 只有 4 枚起点、tk 有 8 枚，
+     *   拿全库 base 的中位当共享地板 = 拿别的起点的散差给这一格定分母（分层读数的自检要能碰到那一格）。
+     *   而 `proto` 这类在部分起点上**结构性为 0** 的维度，全库中位会被那些 0 拖到 0.10 ⇒ "超地板"就失去意义。 */
+    const cellOrigins = Array.from(new Set([].concat.apply([], DIMS.map(d => perDim[d] || [])).map(r => r.o)));
+    const cellFloor = {}, cellFloorN = {};
+    for (const dim of DIMS) {
+      const vs = cellOrigins.map(o => (drift[o + '|base'] || {})[dim]).filter(Number.isFinite);
+      cellFloor[dim] = med(vs); cellFloorN[dim] = vs.length;
+    }
+    console.log('  ——判词（地板 = 这一格参与的 ' + cellOrigins.length + ' 枚起点的 base 跨 seed |Δ| 中位，不是全库中位）——');
     for (const dim of DIMS) {
       const arr = perDim[dim]; if (!arr.length) continue;
       if (/audit/.test(lab) && /long/.test(lab) && AUDIT_INV.has(dim)) continue;   // 同一测量不在 long 档再判一遍
       const pos = arr.filter(r => r.v > 0).length, neg = arr.filter(r => r.v < 0).length, zer = arr.filter(r => r.v === 0).length;
-      const floor = med((dRows[dim] || []));
-      const above = arr.filter(r => Math.abs(r.v) > floor).length;
+      const floor = cellFloor[dim];
+      const above = arr.filter(r => Number.isFinite(floor) && Math.abs(r.v) > floor).length;
       const signVerdict = (pos >= 3 && neg === 0) ? '稳定上移' : (neg >= 3 && pos === 0) ? '稳定下移' : (pos >= 3 && neg > 0 && neg <= 1) ? '偏上（有 ' + neg + ' 枚反号，不写结论）'
         : (neg >= 3 && pos > 0 && pos <= 1) ? '偏下（有 ' + pos + ' 枚反号，不写结论）' : '判不动';
       /* 两条判词**都要印**：符号条是 §E675 预注册那条（≥3 起点同号且 0 反号），地板条是同一节里那条结案规则
-       * （"效应小于同档换 seed 的漂移 ⇒ 判不动"）。只印符号条会把"漂移范围内的晃动"读成方向 —— 那正是昨晚 DS 踩的坑。 */
-      const gated = (signVerdict === '判不动' || !Number.isFinite(floor) || above === 0)
-        ? (signVerdict === '判不动' ? '判不动' : '判不动（符号够，但 Δ 中位**低于地板** ⇒ 按 §E675 结案规则不写方向）')
-        : (above < arr.length ? signVerdict + '（仅 ' + above + '/' + arr.length + ' 枚超地板）' : signVerdict);
+       * （"效应小于同档换 seed 的漂移 ⇒ 判不动"）。只印符号条会把"漂移范围内的晃动"读成方向 —— 那正是昨晚 DS 踩的坑。
+       * ⚑ 10-21 早班把自己这版又收紧了一次：地板条的主判据是**这一格的 Δ 中位本身要越过地板**，不是"有几枚超地板"。
+       *   第一版只数 `above` ⇒ 1/7 枚超地板也能挂着"稳定上移"，那是把"一枚碰巧大"当成"这一格的方向"。
+       *   收紧的实际效果：本批唯一还挂着方向词的 `tk ‖ 伤害`（Δ 中位 +0.30 < 地板 0.50）也降级成判不动 ⇒ 这条改的是判词，不是数据。 */
+      const medV = med(arr.map(x => x.v));
+      const passFloor = Number.isFinite(floor) && Number.isFinite(medV) && Math.abs(medV) > floor;
+      const gated = (signVerdict === '判不动') ? '判不动'
+        : !Number.isFinite(floor) ? signVerdict + '（这一维没有地板可核 ⇒ 不自证）'
+        : passFloor ? signVerdict + '（Δ 中位越过地板 ‖ 逐枚也越过的 ' + above + '/' + arr.length + '）'
+        : '判不动（符号够，但 Δ 中位 ' + f2(medV) + ' 低于地板 ' + f2(floor) + ' ⇒ 按 §E675 结案规则不写方向）';
       console.log('  ' + dim.padEnd(10) + '同+' + pos + ' 反-' + neg + ' 零' + zer + ' ‖ Δ中位 ' + f2(med(arr.map(x => x.v))) +
-        ' ‖ 地板 ' + f2(floor) + ' ‖ 超地板 ' + above + '/' + arr.length +
+        ' ‖ 地板 ' + f2(floor) + '（' + (cellFloorN[dim] || 0) + ' 个起点对' + (Number.isFinite(floor) && floor <= 0.05 ? ' ⇒ 这一维在多数起点上**结构性为 0**，地板几乎没有约束力' : '') + '）' + ' ‖ 超地板 ' + above + '/' + arr.length +
         ' ‖ 活度 ' + (alive[dim] ? (alive[dim].n - alive[dim].n0) + '/' + alive[dim].n + '枚非零·最大 ' + alive[dim].max.toFixed(1) : '—') +
         ' ‖ 符号判 ' + signVerdict + ' ‖ 合地板判 ' + gated);
     }
