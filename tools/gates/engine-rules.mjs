@@ -1157,23 +1157,34 @@ t('D50 对手槽位并列不得按 pid 升序（座位身份泄漏 ⇒ 0 号座�
     firsts.push(Pol.oppSlots(st, 1)[0]);
   }
   ok(new Set(firsts).size > 1, '不同回合下"槽位 0"不得恒为同一人（修前对 pid=1 恒为 0 号座）');
-  const pol = readFileSync('js/train/policy.js', 'utf8');
-  ok(pol.indexOf('slotRand(x, state) - slotRand(y, state)') >= 0, '并列排序必须用**不可预测的键**（slotRand(x,state)）');
+  /* §改（2026-10-22 千问，用户指令「门禁目标是功能实现而不是判文本」）：这里原来七条全在钉 `policy.js` 的写法
+   *   （`slotRand(x, state) - slotRand(y, state)` 那串在 / `__rng`·`state.rng`·`rng.next`·`_rot`·`SLOT_RAND`·
+   *   `return d !== 0 ? d : x - y;` 六串不许出现 / `__slotHash` 必须出现）。
+   *   它们想守的是两件可观测的事：**槽位键不许消耗随机流**（v1.5.51 借采样流 ⇒ 特征调用时机一变就扰动一切，
+   *   当年把 D22 踩红）与**同一个 state 连算必须给同一个序**（纯函数 ⇒ 决策内一致、可复现）⇒ 直接测这两件。
+   *   "座位夺冠不许恒偏"本身由 `ship-feas` 那条**座位极差**的行为腿判（判词里"修复前 73.5pt"就是它），本门不重复数夺冠。 */
   {
-    /* v1.5.52 反证型守门：槽位键**绝不能借用采样/游戏随机流** ——
-     * v1.5.51 借了策略的 __rng() ⇒ ① 消耗采样流；② 任何"特征调用时机/次数"变化都扰动它 ⇒
-     * 实测把 D22（蓄能珠类型不得泄漏）踩红。旧实现还曾从 state.rng 抽盐 ⇒ 改变对局行为（D26 红）。 */
-    const i0 = pol.indexOf('function slotRand(');
-    const i1 = pol.indexOf('function oppSlots(');
-    const seg = (i0 >= 0 && i1 > i0) ? pol.slice(i0, i1) : '';
-    ok(seg.length > 0, '必须能定位 slotRand 的实现段');
-    ok(seg.indexOf('__rng') < 0, '槽位键不得使用策略采样随机流 __rng');
-    ok(seg.indexOf('state.rng') < 0 && seg.indexOf('rng.next') < 0, '槽位键不得消耗对局随机流 state.rng');
-    ok(seg.indexOf('__slotHash') >= 0, '槽位键必须是纯函数哈希（决策内一致、可复现）');
+    const trace = function (callSlots) {
+      const st = S.createState('multi', { next: mulberry32(31337) }, 5);
+      X.startTurn(st);
+      if (callSlots) for (let i = 0; i < 8; i++) { Pol.oppSlots(st, i % 5); Pol.oppSlots(st, 1); }
+      const r = st.rng.next();
+      for (let i = 0; i < 3; i++) S.attemptAction(st, i, R.SK.JI, {});
+      X.resolveActions(st);
+      return r.toFixed(12) + '|' + st.p.map(function (q) { return q.hp; }).join(',');
+    };
+    const noCall = trace(false), withCall = trace(true), noCall2 = trace(false);
+    eq(noCall2, noCall, '①b 夹具自证：不调槽位的两遍必须逐字相同（不同 ⇒ 下面那条等式是拿噪声比噪声）');
+    eq(withCall, noCall, '① 算 16 次槽位序**不许消耗对局随机流**：调过之后 rng 的首个读数与本局回合结果必须逐字相同' +
+      '（实测 调过=' + withCall + ' ‖ 没调=' + noCall + '）—— v1.5.51 借采样流就是这一形');
+    const stP = S.createState('multi', { next: mulberry32(4242) }, 5);
+    X.startTurn(stP);
+    const once = Pol.oppSlots(stP, 1), twice = Pol.oppSlots(stP, 1);
+    eq(once.length, stP.p.length - 1, '②a 前置：`oppSlots(st, 1)` 必须给出**其余各席**的序（实测 ' + JSON.stringify(once) +
+      '，期望 ' + (stP.p.length - 1) + ' 个 ⇒ 它是"对手槽位"不是全员槽位）⇒ 读到半截就没法判纯不纯');
+    eq(JSON.stringify(twice), JSON.stringify(once), '② 槽位序必须是**纯函数**：同一个 state/pid 连算两次给同一个序（实测 ' +
+      JSON.stringify(once) + ' vs ' + JSON.stringify(twice) + '）‖ 不一致 = 键借了会变的流（旧 `SLOT_RAND` 缓存随机键那一族）');
   }
-  ok(pol.indexOf('_rot(x) - _rot(y)') < 0, '旧的"按回合起点轮转"必须已移除（它让回合起点占槽位 0 ⇒ 被集火）');
-  ok(pol.indexOf('SLOT_RAND') < 0, '不得再用"缓存随机键"的旧实现（v1.5.52 改为纯函数哈希 ⇒ 决策内天然一致）');
-  ok(pol.indexOf('return d !== 0 ? d : x - y;') < 0, '旧的"并列按 pid 升序"必须已移除');
 });
 
 
