@@ -110,6 +110,13 @@ docs/artifacts/e129-out/*
 #   ⇒ 上一轮给 `docs/artifacts/e287-out/` 开的那条 9 文件白名单作废、整目录重新回到"只在本机"。
 #   新目录本来就不在任何屏蔽规则里，不需要白名单。
 
+# §2026-10-21 夜：DS 临时研究脚本（误入过一次 v1.7.133，已清）⇒ 一律不进库
+_*-tmp.mjs
+_claim-*.mjs
+_pmix*.mjs
+_simplep*.mjs
+_seat*.mjs
+
 # §2026-10-08 一次性中间产物（无人引用 ⇒ 不再进库；文件仍在盘上）
 champion-map/_*.tsv
 champion-map/_*.txt
