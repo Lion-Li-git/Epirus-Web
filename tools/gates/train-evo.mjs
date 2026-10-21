@@ -28,7 +28,7 @@ const {
   S, X, Play, T, Bots,
   Pol, mulberry32, Skip, needArtifacts, FIXTURE_PACK,
   ok, eq, SEL_PIN, randChooser, CLI_ARM_BASELINE,
-  fnBody,
+  fnBody, fnMap,
 } = makeCtx();
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
 export const ords = [797, 884, 1598, 1820, 1993, 2363, 2433, 2447, 2592, 2776, 2920, 3001, 3437, 3472, 3501, 3572, 3609, 3731, 3798, 3821, 3846, 3934, 3953, 4201, 4239, 4258, 4540, 4685, 4797, 4812, 4820, 4843, 5006, 5042, 5127, 5183, 5228, 5263, 5333, 5680, 5745, 5772, 5798, 5820, 5947, 5965, 6223, 6568, 6652, 6713, 7060, 7087, 7235, 7929, 8889, 8922, 9176, 9300, 10514, 10652, 10699, 10733, 10898, 11709, 11799];
@@ -69,16 +69,36 @@ t('REPRO2 每个训练入口都必须**真的**播种（按 makeTrainer 调用�
   });
   eq(miss.length, 0, '以下训练入口未播种：' + miss.join(', '));
 
-  /* (b) 文件级存在性不够：server 的两个训练入口必须**各自**在函数体内播种
-   *（"文件里别处有"正是 v1.5.17 那个洞的形态）。 */
+  /* (b) 文件级存在性不够：每个训练入口必须**自己这条链上**有播种。
+   * §改（2026-10-22 千问，用户指令「改掉钉文本和函数名的门禁」）：原来这里写死了
+   *   `['runTrain','runTrainN']` 两个名字，并按"锚点 + 到下一个 async function"切体 ⇒
+   *   v1.7.142 把真身改名 `runTrainNOne`、外面只留一个 rounds×seeds 调度壳，它就当场红，
+   *   而它本该抓的那件事（这条入口没人播种）红的时候**并没有坏**。
+   *   现在两样名单都从文件里反查：**入口** = handler 里被调用的 `runTrain*`，
+   *   **受托者** = 函数体里同时出现 `__seedSandbox(` 与 `setRng(` 的那些函数。
+   *   入口要么自己播，要么调一个真播了种的兄弟 ⇒ 改名/搬家不红，而"整条链没人播"必红
+   *   （"文件里别处有播种"仍然不算数 —— 那正是 v1.5.17 的洞形：另一条入口里的播种救不了这条）。 */
   const srvSrc = readFileSync('server/train-server.mjs', 'utf8');
-  for (const fn of ['runTrain', 'runTrainN']) {
-    const i0 = srvSrc.indexOf('async function ' + fn + '(');
-    ok(i0 >= 0, 'server 里找不到训练入口 ' + fn);
-    const i1 = srvSrc.indexOf('\nasync function ', i0 + 1);
-    const body = srvSrc.slice(i0, i1 < 0 ? srvSrc.length : i1);
-    ok(body.indexOf('__seedSandbox') >= 0 && body.indexOf('setRng') >= 0,
-      fn + ' 的函数体内必须**自己**播种（__seedSandbox + setRng）—— 文件里别处有播种不算数');
+  const hStart = srvSrc.indexOf('http.createServer');
+  ok(hStart > 0, 'server 里找不到 handler ⇒ 入口反查没有起点');
+  const entryFns = Array.from(new Set((srvSrc.slice(hStart).match(/\brunTrain[A-Za-z0-9_]*(?=\s*\()/g) || [])));
+  ok(entryFns.length >= 2, '从 handler 反查到的训练入口只有 ' + entryFns.length + ' 个（实测 ' + entryFns.join(',') +
+    '）⇒ 反查失效，这条门已经看不见入口了');
+  const fmap = fnMap(srvSrc);
+  const seededOf = function (nm) {
+    const e2 = fmap.filter(function (x) { return x.name === nm; })[0];
+    return !!e2 && e2.body.indexOf('__seedSandbox(') >= 0 && e2.body.indexOf('setRng(') >= 0;
+  };
+  const hosts = fmap.filter(function (x) { return x.body.indexOf('__seedSandbox(') >= 0 && x.body.indexOf('setRng(') >= 0; })
+    .map(function (x) { return x.name; });
+  ok(hosts.length >= 1, '`train-server.mjs` 里没有任何函数体同时播种（`__seedSandbox` + `setRng`）⇒ 播种被整体掏空');
+  for (const en of entryFns) {
+    const e3 = fmap.filter(function (x) { return x.name === en; })[0];
+    ok(!!e3, '入口 ' + en + ' 的函数体取不出来（改名了？还是 handler 里那个名字是笔误）');
+    if (!e3) continue;
+    const delegates = hosts.filter(function (h) { return h !== en && e3.body.indexOf(h + '(') >= 0; });
+    ok(seededOf(en) || delegates.length > 0, en + ' 这条链必须有人播种：要么自己播，要么调用一个真播了种的同文件函数' +
+      '（实测委托到：' + (delegates.join(',') || '(无)') + ' ‖ 全文件播了种的函数：' + hosts.join(',') + '）');
   }
 });
 
@@ -1683,9 +1703,27 @@ t('D84 真示范（override）：默认关、只在教师动作**可负担**时�
    * `runTrainN` ⇒ N 人臂上 `imitB ≡ 0`、整臂与对照逐位相同。⇒ 两条路径必须**共用一份实现**。 */
   const sv = readFileSync('server/train-server.mjs', 'utf8');
   ok(sv.indexOf('function applyImitEnv(') >= 0, '必须抽成共用的 `applyImitEnv`（同一件事不许写两遍）');
-  ok((sv.match(/applyImitEnv\(/g) || []).length >= 3,
-    '`applyImitEnv` 必须被**两条训练路径**都调用（定义 1 + 调用 ≥2）—— 本轮事故正是"只写在 2 人路径"');
-  ok(/async function runTrainN\([\s\S]{0,400}applyImitEnv\(/.test(sv), '`runTrainN`（N 人路径）必须调用它（事故现场）');
+  /* §改（2026-10-22 千问）：原来两条分别是"数 `applyImitEnv(` 出现次数 ≥3"和
+   *   `/async function runTrainN\([\s\S]{0,400}applyImitEnv\(/`（锚点 + 400 字符窗）⇒ v1.7.142 把 N 人真身
+   *   改名 `runTrainNOne`、外面留个调度壳，窗口里就看不见调用了：门红的是"名字搬了"，不是"示范没接"。
+   *   现在按**调用链**判：入口名单从 handler 反查，受托者名单从函数体反查，
+   *   每个入口要么自己调，要么委托给一个真调了它的同文件函数。 */
+  const fmap84 = fnMap(sv);
+  const imitHosts = fmap84.filter(function (x) { return x.name !== 'applyImitEnv' && x.body.indexOf('applyImitEnv(') >= 0; })
+    .map(function (x) { return x.name; });
+  ok(imitHosts.length >= 2, '`applyImitEnv` 必须被**两条训练路径**都调用（实测调到它的函数：' + imitHosts.join(',') +
+    '）—— 本轮事故正是"只写在 2 人路径"');
+  const h84 = sv.indexOf('http.createServer');
+  const entryFns84 = Array.from(new Set((sv.slice(h84).match(/\brunTrain[A-Za-z0-9_]*(?=\s*\()/g) || [])));
+  ok(h84 > 0 && entryFns84.length >= 2, '从 handler 反查训练入口只拿到 ' + entryFns84.length + ' 个（' + entryFns84.join(',') +
+    '）⇒ 反查失效，这条门已经看不见入口');
+  for (const en of entryFns84) {
+    const b84 = (fmap84.filter(function (x) { return x.name === en; })[0] || {}).body || '';
+    const delegates = imitHosts.filter(function (h) { return h !== en && b84.indexOf(h + '(') >= 0; });
+    ok(b84.indexOf('applyImitEnv(') >= 0 || delegates.length > 0,
+      en + ' 这条链必须把示范参数下达出去（自己调 `applyImitEnv` 或委托给真调了它的函数 ‖ 实测委托到：' +
+      (delegates.join(',') || '(无)') + ' ‖ 全文件调了它的函数：' + imitHosts.join(',') + '）');
+  }
   ok(/\[imit\] 主线程生效值 gens=/.test(sv), '主线程必须打"生效值"回执（含 gens / frac / teacher / accepted / override / β(gen0)）');
   /* v1.5.96 补：名字解析不出来**必须响亮拒绝** —— `v7stock1` 就是 env 写了 `deepsaver`（不在 BOT_PICKS 里）
    * 而库里静默用默认教师 heavyfire，整臂**贴着错标签跑完**（回执打了 accepted=false，但没人拦）。 */

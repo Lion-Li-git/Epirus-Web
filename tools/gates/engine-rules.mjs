@@ -1210,16 +1210,32 @@ t('D91 被无效化的聚能环不得续计（v1.5.105：出招即计次 + 复�
    * ⚠️ 注意性质：这不是"没文档的事故" —— 旧行为被 `docs/RULES-2P.md:73` 的 R10 条款**文档化**过
    * （且那句话自相矛盾："计数已+1"与"不再连续"互斥）。用户 2026-09-18 裁定按"打断必须断链"改。
    * 这条门是**结构反证**；行为证据在 `tests/spec.js` 的 R10 新用例（旧实现读到 ep=5/streak=2）。 */
-  const rs = readFileSync('js/core/resolve.js', 'utf8');
-  ok(rs.indexOf('!a.voided && a.key === SK.RING') >= 0,
-    'endTurn 的连击复位必须与 actionOf 同口径（加 `!a.voided`）');
-  ok(rs.indexOf("if (!(a && a.outcome === 'ok' && a.key === SK.RING)) p.ringStreak = 0;") < 0,
-    '旧的"只看 outcome"复位**不得**回来 —— 那是本 bug 的成因');
-  /* （原判据里的"R10 条款必须同步"= 钉 RULES-2P 里那句整话，已于 v1.6.12 删除 ⇒ 见 METHODOLOGY 第 89 条）
-   *   上面两条钉的是**代码结构**（`!a.voided` 在 / 旧写法不许回来），那才是这条门真正的牙。 */
-  /* 边界：**过载炮**的"出招即计次"是 R43 的**用户裁定明文** ⇒ 不许被这次修复顺手波及。 */
-  ok(readFileSync('js/core/state.js', 'utf8').indexOf('if (key === R.SK.CANNON) p.cannonCount++;') >= 0,
-    '过载炮 R43（被无效化仍计次）不得被顺手改掉 —— 它与环是**两条不同的明文**');
+  /* §改（2026-10-22 千问，用户指令「大胆删掉没用的门禁 · 改掉钉文本的」）：原来三条全是钉源码 ——
+   *   ① `!a.voided && a.key === SK.RING` 在不在，② 旧写法字符串不许出现，③ `state.js` 里炮的计次那行不许动。
+   *   ①② 做过"摘腿后变异"：**摘掉 `!a.voided` 跑 `node tools/spec-run.mjs` ⇒ 54/55，点名的正是
+   *   `R10 被小雷无效化的聚能环不续计`** ⇒ 覆盖在 spec 里有一条会红的行为用例，门里那两条只是把写法钉死
+   *   （等价改写就红、真改坏由 spec 抓 ⇒ 属搬家不属丢覆盖，按 R6 记在这里）。
+   *   ③ 没有对应的行为用例 ⇒ **不删，换成跑对局**：环与炮这两条明文方向相反（废一手必须断环的续计，
+   *   但炮的"出招即计次"照旧），所以一次跑局就能同时判两边 —— 谁把炮也顺手"修"成按可决性计次，这条立刻红。 */
+  const mk = function (key, voided, seed) {
+    const st = S.createState('standard', { next: mulberry32(seed) }, 2);
+    st.p[0].ep = 9; st.p[0].boom = 1; st.p[0].cannonCount = 0; st.p[0].ringStreak = 2;
+    X.startTurn(st);
+    const opt = key === R.SK.CANNON ? { target: 1, bead: 'boom' } : {};
+    S.attemptAction(st, 0, key, opt);
+    if (voided) X.setVoid(st, 0, 1);
+    X.resolveActions(st);
+    X.endTurn(st);
+    return st;
+  };
+  const cKeep = mk(R.SK.CANNON, false, 4242), cVoid = mk(R.SK.CANNON, true, 4242);
+  eq(cKeep.p[0].cannonCount, 1, '前提：过载炮出招即计次（不废一手时实测 ' + cKeep.p[0].cannonCount + '）⇒ 读不出 1 说明夹具没打出去');
+  eq(cVoid.p[0].cannonCount, 1, 'R43：过载炮**被无效化也照样计次**（实测 ' + cVoid.p[0].cannonCount +
+    '）—— 这是明文裁定，不许被 R10 那次修复顺手改掉（方向与环相反：环要断，炮要留）');
+  const rKeep = mk(R.SK.RING, false, 4242), rVoid = mk(R.SK.RING, true, 4242);
+  ok(rKeep.p[0].ringStreak > rVoid.p[0].ringStreak,
+    'R10 同一把夹具的另一半：环被废就必须**断链**（实测 不废=' + rKeep.p[0].ringStreak + ' ‖ 被废=' + rVoid.p[0].ringStreak +
+    '）⇒ 两个读数一样说明 `voided` 那条复位又不生效了（就是本门标题里那个 bug）');
 });
 
 t('D102 R61 被无效化的一手不写 lastSkill（第三方复核 §2-1：与 R10 同族 · 打断不再白送激光眼连用）', function () {
@@ -1274,39 +1290,110 @@ t('D102 R61 被无效化的一手不写 lastSkill（第三方复核 §2-1：与 
 
 t('D92 R56 同层内资源型先结算（用户裁定：过载炮的清除须含目标本回合收入）', function () {
   /* 病（第十一轮复核 §10-4 实测）：同层原先按座位轮换序结算 ⇒ 同一发炮效果差 3 ジ ⇒ 座位红利。
-   * 用户 2026-09-18 裁定：资源型（ENERGY 类）先结算。 */
-  const rs = readFileSync('js/core/resolve.js', 'utf8');
-  ok(rs.indexOf('R.byKey[a0.key].cat === R.CAT.ENERGY') >= 0,
-    '资源型必须**从卡面声明推导**（`cat === CAT.ENERGY`）—— 不许写卡名清单（D81/D72 的教训）');
-  ok(rs.indexOf('const ord3 = (function ()') >= 0 && rs.indexOf('return inc.concat(oth);') >= 0,
-    '同层遍历顺序必须"先资源型、再其余"（两组各自保持轮换）');
-  ok(rs.indexOf('for (const i of ord3) {') >= 0, '那一层必须真的用新顺序遍历（别只造了数组不用）');
+   * 用户 2026-09-18 裁定：资源型（ENERGY 类）先结算。
+   * §改（2026-10-21 夜·千问，用户指令「改掉钉文本和函数名的门禁」）：原来三条钉的是 `resolve.js` 的**写法**
+   *   （`const ord3 = (function ()` ‖ `return inc.concat(oth);` ‖ `for (const i of ord3) {`）⇒ 换一种等价实现（行为一模一样）
+   *   照样红，而"同层先后又变成座位红利"这件真事它并不判。现在跑对局：
+   *   ① 目标本回合的收入必须被清除**一起吃掉**（终 ep 落 0）；② 这个结果不许随炮手座位变；
+   *   ③ 资源型按**声明**枚举（`cat === CAT.ENERGY`）⇒ 谁把卡名写死成ジ，环/蓄能那两行就会露出来。
+   * 牙（实测）：把顺序倒过来（`oth.concat(inc)`）⇒ ジ 的清除从 -6 变 -5、聚能环从 -3 变 -2，**目标终 ep 留下 1** ⇒ ①当场红。 */
+  const EN = [];
+  for (const k in R.skills) { const s2 = R.skills[k]; if (s2 && s2.cat === R.CAT.ENERGY) EN.push(s2.key); }
+  ok(EN.length >= 2, '③ 前置：按声明必须能数出资源型卡（实测 ' + EN.length + ' 枚：' + EN.join(',') + '）⇒ 数出 0 枚说明 cat 改了口径，下面两条是空跑');
+  const PRE = 5;
+  const shot = function (shooter, victim, ekey, phase3) {
+    const st = S.createState('multi', { next: mulberry32(5) }, 3);
+    for (const p of st.p) { p.ep = PRE; p.hp = 5; }
+    st.p[shooter].cannonCount = phase3 ? 2 : 0;
+    X.startTurn(st);
+    S.attemptAction(st, shooter, R.SK.CANNON, { target: victim });
+    S.attemptAction(st, victim, ekey, {});
+    const third = [0, 1, 2].filter(function (i) { return i !== shooter && i !== victim; })[0];
+    S.attemptAction(st, third, R.SK.JI, {});
+    X.resolveActions(st);
+    const clears = st.events.filter(function (e) { return e.reason === '过载炮' && e.pid === victim; });
+    return { ep: st.p.map(function (p) { return p.ep; }), cleared: clears.length ? clears[0].delta : null };
+  };
+  const ARR = [[0, 1], [1, 0], [2, 0]];
+  for (const ekey of EN) {
+    const keep = [];
+    for (const pair of ARR) {
+      const r = shot(pair[0], pair[1], ekey, true);
+      if (r.ep[pair[1]] !== 0) keep.push('炮手' + pair[0] + '/目标' + pair[1] + ' 终 ep=' + r.ep[pair[1]] + ' 清除=' + r.cleared);
+    }
+    eq(keep.join(' ‖ '), '', '① ' + ekey + '：目标本回合的收入必须被过载炮第 3 相的清除吃掉（三种座位安排下目标终 ep 都得落 0）—— ' +
+      '留下收入 = 同层先后又变成了座位红利（R56 的动因）。实测不合的：' + (keep.join(' ‖ ') || '(无)'));
+  }
+  /* ② 座位不变性单独判一次：把三种安排的"目标终 ep + 清除量"抄下来比对（不同 = 座位红利回来了） */
+  for (const ekey of EN) {
+    const sig = ARR.map(function (pair) { const r = shot(pair[0], pair[1], ekey, true); return r.ep[pair[1]] + '/' + r.cleared; });
+    eq(new Set(sig).size, 1, '② ' + ekey + '：三种座位安排必须给同一个结果（实测 ' + sig.join(' vs ') + '）⇒ 结果随座位变就是 R56 要防的那个红利');
+  }
+  /* 正对照：第 1 相的炮**不清除** ⇒ 目标必须留得住收入。这条挂了说明"终 ep=0"是因为整台机器不发 ep，而不是顺序对 */
+  const ctl = shot(0, 1, R.SK.JI, false);
+  ok(ctl.ep[1] > PRE - 2, '正对照：不清除时目标必须拿到本回合收入（实测 ep=' + ctl.ep.join(',') + ' ‖ 清除=' + ctl.cleared + '）' +
+    ' ⇒ 读不出收入说明这套夹具是死的，①② 两条等式都是空枪');
+  });
   /* §删（2026-10-08，用户转 Claude 复核 + METHODOLOGY 第 89 条）：这里原来钉的是「文档必须出现 R56」——
    *   那正是第 89 条禁止的**正向**钉法：删掉文档里那行字游戏照常跑，门却会红 ⇒ 门测的是记事本措辞，不是行为。
   /* §删（2026-10-09 DS 空转审计）：正向钉文档措辞（删掉那行字游戏照跑、门却会红）⇒ 违反 METHODOLOGY 第 89 条。¶ 原断言：*   教训仍然保留在 docs/METHODOLOGY.md 与 CHANGELOG 里（记忆归记忆、门归行为）。¶  */
-  });
 
 t('D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必须一致）', function () {
   /* 用户报的 UI bug：用天火时会弹目标选择 —— 根因是**卡面声明成 `target: 'enemy'`**
    * （UI 与 AI 都从声明推导），而引擎也只在选中的那一个目标上引爆。
    * 权威口径：README「你贴出的符咒引爆」·`RULES-2P:240`「**每个目标**每枚符咒受 1 火伤害」·
    * `RULES-NP:322` 列它进「仅空指」。 */
-  const ru = readFileSync('js/core/rules.js', 'utf8');
-  ok(ru.indexOf("mk(SK.FIRESTORM, '天火', CAT.SPECIAL, 2, 3, 'self',") >= 0,
-    '天火的卡面必须声明为**无目标**（`self`）—— UI 与 AI 都从这一处推导');
-  ok(ru.indexOf("mk(SK.FIRESTORM, '天火', CAT.SPECIAL, 2, 3, 'enemy',") < 0,
-    '旧的 `enemy` 声明**不得**回来 —— 那正是"用天火要选目标"的来源');
-  const rs = readFileSync('js/core/resolve.js', 'utf8');
-  ok(rs.indexOf('for (let v = 0; v < playerCount(state); v++)') >= 0 &&
-     rs.indexOf('const pg = guardOf(state, v);') >= 0,
-    '引擎必须**全场遍历**且**原型制御按每个受害者各自判定**（不许再只打 `state.p[t]`）');
-  ok(rs.indexOf("rawDamage(state, v, 1, '天火', 'firestorm', { type: R.DMG.FIRE });") >= 0,
-    '天火伤害必须是**无目标伤害**（不传 `source`）—— 用户裁定：天火无目标 ⇒ 不参与大雷连带传导');
-  ok(rs.indexOf("{ type: R.DMG.FIRE, source: i }") < 0, '天火不许带 `source`（v1.5.107 首版加过、被用户纠正）');
+  /* §改（2026-10-22 千问，用户指令「门禁目标是功能实现而不是判文本」）：原来五条全在钉源码 ——
+   *   `mk(SK.FIRESTORM, '天火', CAT.SPECIAL, 2, 3, 'self',` 这串字面量在不在、`'enemy'` 那串不许出现、
+   *   `for (let v = 0; v < playerCount(state); v++)` 在不在、`rawDamage(state, v, 1, …)` 那行在不在、
+   *   `{ type: R.DMG.FIRE, source: i }` 不许出现 ⇒ **卡面把 cost/名字/顺序挪一个字符它就红，
+   *   而"天火又只能打到一个人身上了"这件真事它判不到**（判不到是因为它没打过一局）。
+   *   现在摆状态跑一局，直接判 R57 那三句可观测的话：①不需要目标就能出 ②我贴给谁的各按枚数吃到火伤
+   *   （**全场遍历**）③伤害事件不许带 `source`（⇒ 不参与大雷连带传导）。
+   *   "符咒引爆后仍在""原型制御可挡"那两件事 `tests/spec.js` 的 R36/37 用例已经在判（2 人桌），不在这儿重做。 */
+  const mkFire = function (seed) {
+    const st = S.createState('multi', { next: mulberry32(seed) }, 3);
+    for (const p of st.p) { p.ep = 99; p.hp = 8; }
+    st.p[1].stickers.push({ owner: 0, age: 0 });
+    st.p[1].stickers.push({ owner: 0, age: 1 });      // 我给 1 号贴了两枚 ⇒ 该吃 2 点
+    st.p[2].stickers.push({ owner: 0, age: 0 });      // 给 2 号贴一枚 ⇒ 该吃 1 点
+    st.p[0].stickers.push({ owner: 2, age: 0 });      // 别人贴我的 ⇒ 我的天火不许引爆它
+    X.startTurn(st);
+    return st;
+  };
+  const st = mkFire(11);
+  /* ① 页面的"要不要弹目标选择"读的是**卡面声明的 `target` 字段**（`js/ui/ui.js:676` 的 `def.target === 'self'`
+   *   与 `:877` 的 `def.target !== 'self' && opps.length > 1` 是同一条判据）⇒ 这里照那条判据算一遍，
+   *   而不是去 grep 源码。实测教训：先版这里只判"不带 target 也出得来"，把卡面改回 `'enemy'` **门照样绿**
+   *   （state.js 有兜底目标），所以判据必须落在页面真正消费的那个值上。 */
+  const oppsAlive = st.p.filter(function (p, i) { return i !== 0 && p.hp > 0; }).length;
+  const wouldPickTarget = function (key) { const d = R.byKey[key]; return !!d && d.target !== 'self' && oppsAlive > 1; };
+  const defF = R.byKey[R.SK.FIRESTORM];
+  ok(!wouldPickTarget(R.SK.FIRESTORM), '① R57：按页面的判据，天火必须算出**不弹目标选择**（实测声明 target=' +
+    JSON.stringify(defF && defF.target) + ' ‖ 存活对手 ' + oppsAlive + ' 个）—— 用户报的 bug 就是弹了选择框');
+  ok(wouldPickTarget(R.SK.GUN), '① 正对照：同一把判据必须判出"枪要弹目标"（实测 ' + wouldPickTarget(R.SK.GUN) +
+    '）⇒ 判不出说明上面那条是恒真，没有判别力');
+  const legal = Play.legalActions(st, 0).filter(function (l) { return l.key === R.SK.FIRESTORM; })[0] || null;
+  ok(!!legal, '①b 前置：这一回合天火必须出得来（实测 legal 里' + (legal ? '有' : '**没有**') + '）');
+  const av = S.attemptAction(st, 0, R.SK.FIRESTORM, {});          /* 故意**不给** target */
+  ok(av && av.outcome === 'ok', '①b 引擎侧：天火不带 target 也必须出得来（实测 ' + JSON.stringify(av) + '）');
+  S.attemptAction(st, 1, R.SK.JI, {}); S.attemptAction(st, 2, R.SK.JI, {});
+  X.resolveActions(st);
+  const fire = st.events.filter(function (e) { return e.type === 'damage' && e.via === 'firestorm'; });
+  const hurt = {};
+  for (const e of fire) { hurt[e.pid == null ? e.to : e.pid] = (hurt[e.pid == null ? e.to : e.pid] || 0) + e.amt; }
+  eq((hurt[1] || 0) + '/' + (hurt[2] || 0) + '/' + (hurt[0] || 0), '2/1/0',
+    '② R57 全场遍历：我贴 1 号两枚、2 号一枚 ⇒ 只许 1 号吃 2 点、2 号吃 1 点、我自己 0 点' +
+    '（实测 ' + (hurt[1] || 0) + '/' + (hurt[2] || 0) + '/' + (hurt[0] || 0) + ' ‖ 全部火焰事件 ' + fire.length + ' 条）');
+  eq(fire.filter(function (e) { return e.source != null; }).length, 0,
+    '③ R57 的天火伤害不许带 `source` ⇒ 不参与大雷连带传导（用户裁定：无目标伤害没有"出手者"可传）‖ 实测带 source 的 ' +
+    fire.filter(function (e) { return e.source != null; }).length + ' 条');
+  ok(st.p[1].stickers.length > 0 || st.p[2].stickers.length > 0,
+    '④ 前置自证：引爆后符咒**仍在**（在册口径）⇒ 若这里读到 0 枚，说明上面 ② 的火伤是从别的路径来的，等式就不是 R57 的证据');
+  });
   /* §删（2026-10-08，用户转 Claude 复核 + METHODOLOGY 第 89 条）：这里原来钉的是「文档必须出现 R57」——
    *   那正是第 89 条禁止的**正向**钉法：删掉文档里那行字游戏照常跑，门却会红 ⇒ 门测的是记事本措辞，不是行为。
   /* §删（2026-10-09 DS 空转审计）：正向钉文档措辞（删掉那行字游戏照跑、门却会红）⇒ 违反 METHODOLOGY 第 89 条。¶ 原断言：*   教训仍然保留在 docs/METHODOLOGY.md 与 CHANGELOG 里（记忆归记忆、门归行为）。¶  */
-  });
 
 t('D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下回合结束）', function () {
   /* 旧文 R22「仅在下回合内有效」= 纯预置 debuff；用户 2026-09-18 要求多覆盖一回合。 */

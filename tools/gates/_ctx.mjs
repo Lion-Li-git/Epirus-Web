@@ -180,6 +180,22 @@ function fnBody(src, anchor) {
   }
   return src.slice(i);
 }
+/* v1.7.143（千问·门禁改造）：把"这个文件里有哪些具名函数、各自体是什么"一次扫出来。
+ * 门要判的是"**谁**真的做了这件事"，名单必须从文件里反查 ⇒ 不许把函数名写死在判据里。
+ * 直接动因：REPRO2/D84 写死了 `runTrainN`，v1.7.142 把真身改名 `runTrainNOne` 它们当场红，
+ * 而它们本该抓的那件事（这条入口没人播种 / 没接示范）在红的时候其实根本没坏 —— 典型的"判文本"。 */
+function fnMap(src) {
+  const out = [];
+  const re = /function ([A-Za-z0-9_]+)\s*\(/g;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    const nm = m[1];
+    if (out.some(function (x) { return x.name === nm; })) continue;
+    const body = fnBody(src, 'function ' + nm + '(');
+    if (body) out.push({ name: nm, body: body });
+  }
+  return out;
+}
 /* v1.5.201（审计：硬编码复制 D123/D127 各写一遍）：默认关的 CLI 臂产物基线只留**一处**。
  * 红了 = 默认关的产物变了（那等于偷偷改了所有 CLI 臂的分布）⇒ 先查是不是有意的；
  * 确认有意要重记，就只改这一行（别再去两个用例里各改一处）。
@@ -223,7 +239,7 @@ export function makeCtx() {
   S, X, Play, T, Bots,
   Pol, mulberry32, Skip, needArtifacts, FIXTURE_PACK,
   ok, eq, SEL_PIN, randChooser, CLI_ARM_BASELINE,
-  fnBody,
+  fnBody, fnMap,
   };
 }
 
