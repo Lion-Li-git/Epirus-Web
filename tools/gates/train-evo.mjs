@@ -769,10 +769,12 @@ t('D56 旧冠军嵌入 v7 后必须仍走旧口径（否则目标退化：实测
    * `shapeOf(params).legacy`（按 `params.length` 反推）判断 ⇒ 嵌入后 legacy=false ⇒ 被切到
    * **它从没训练过的** v7 候选口径（动作侧目标/珠权重为 0 ⇒ 分不出目标 ⇒ 目标退化成枚举顺序）
    * ⇒ 实测破墙伤害 12.25→7.70、穿透 242→152。修法：容器写 `lv`、读取挂到 params、chooser 认标记。 */
-  const src = readFileSync('js/train/policy.js', 'utf8');
-  ok(src.indexOf('function isLegacyChooser') >= 0, 'policy.js 必须导出 isLegacyChooser');
-  ok(src.indexOf('o.lv != null') >= 0, 'unpack 必须把容器 lv 标记挂到 params 上');
-  ok(src.indexOf('o.lv = p.legacyFrom') >= 0, 'pack 必须把标记写回容器');
+  /* §改（2026-10-22 千问·第六批）：这里原来三条是 `policy.js` 的**写法钉**
+   *   （`function isLegacyChooser` ‖ `o.lv != null` ‖ `o.lv = p.legacyFrom`）。
+   *   · 第一条与本门下面对 `Pol.isLegacyChooser(...)` 的**直接调用**重复 ⇒ 摘腿后变异：把函数改名（行为不变地全换名）
+   *     仍被调用那条抓到 ⇒ 纯冗余，删。
+   *   · 第二、三条钉的是"这一行在不在"，钉不住真正要防的洞（标记在存/读某一环丢掉 ⇒ 旧冠军被切到 v7 口径）。
+   *     下面换成跑一遍 **pack → unpack 往返**，写法改名不再误红。 */
   /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
    *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
    *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
@@ -786,6 +788,14 @@ t('D56 旧冠军嵌入 v7 后必须仍走旧口径（否则目标退化：实测
   emb.legacyFrom = 6;
   ok(Pol.isLegacyChooser(emb) === true, '带 lv 标记的嵌入包必须被判为旧口径');
   ok(Pol.isLegacyChooser(p7) === false, '纯 v7 包不得被判为旧口径');
+  /* 往返腿（替掉上面那两条 `o.lv` 写法钉）：标记必须能穿过"打包 → 解析"这一对而不丢。
+   * 用**游戏侧口径**（`unpack(o)` 不带 allowLegacy）—— 那正是载入旧冠军会走的那一支。 */
+  const contRT = Pol.pack(emb);
+  eq(contRT.lv, 6, 'pack 必须把 params 上的 `legacyFrom` 写回容器 `lv`（实测 ' + JSON.stringify(contRT.lv) +
+    '）⇒ 写丢 = 存一次盘标记就没了，下面那条跟着失守');
+  const backRT = Pol.unpack(contRT);
+  ok(backRT && Pol.isLegacyChooser(backRT) === true, 'unpack 必须把容器 `lv` 挂回 params（实测挂回后 isLegacyChooser=' +
+    (backRT ? Pol.isLegacyChooser(backRT) : 'unpack 返回 null') + '）⇒ 挂丢就是本门标题那个 12.25→7.70：旧冠军被切到它从没训练过的 v7 口径');
   const play = function (params, seed) {
     const st = S.createState('multi', { next: T.mulberry32(seed) }, 5);
     const ch = [];
@@ -1661,23 +1671,75 @@ t('D84 真示范（override）：默认关、只在教师动作**可负担**时�
   /* v1.5.96（承接第九轮复核 §5-2 的"价值估计病"）：v1.5.31 起的"教师模仿"其实**只做一致性计数**
    * （`_mt/_mm`），策略从来没走过教师那条线 ⇒ 跨回合后果（环先付 3 ジ、之后 +3/回合）没被体验过。
    * 这条门钉住补上的"真示范"的三个安全性质，以及"名字→函数"只在 evo.js 里写一遍。 */
-  const evo = readFileSync('js/train/evo.js', 'utf8');
-  ok(evo.indexOf('let IMIT_OVERRIDE = false;') >= 0, '真示范必须**默认关**（旧产物、旧读数仍可比）');
-  ok(evo.indexOf("if (IMIT_OVERRIDE && teacherFn && imitB > 0 && subOK && state.rng && typeof state.rng.next === 'function')") >= 0,
-    '覆盖必须门控在"有教师 + 退火期内 + 补贴局门槛 + 有 rng"条件下（v1.5.99 加了 subOK）');
-  ok(evo.indexOf('legal.some(function (l) { return l.key === ta.key && l.affordable; })') >= 0,
-    '只在教师动作**确实可负担**时才覆盖（否则示范会教成"白扔一回合"）');
-  ok(evo.indexOf('function teacherFull(') >= 0, '覆盖必须用带 target 的完整动作（teacherAction 只回 key）');
-  ok(evo.indexOf("if (n === 'antiring') return setAntiRingTeacher();") >= 0 &&
-    evo.indexOf('typeof BOT_PICKS[n] === \'function\'') >= 0,
-    '名字→函数映射必须在 evo.js 里（antiring 兼容 + bot 注册表），不许在 server/worker 各写一份');
+  /* §改（2026-10-22 千问·第六批）：这里原来三条都是 `evo.js` 的**写法钉**：
+   *   · `let IMIT_OVERRIDE = false;`（默认关）⇒ 换成跑出来的（下面那一块：新沙箱 + 只设教师和窗口，从不打开开关 ⇒
+   *     `countImitInject()` 必须 `fired=0` 且 `tries=0`，再拿"同一份沙箱把开关打开 ⇒ 必须真开火"当**正对照**）；
+   *   · `if (IMIT_OVERRIDE && teacherFn && imitB > 0 && subOK && state.rng && …)` 那一整句 ⇒ **删**：
+   *     同一个洞由 `D86:1811` 与 `D87:1842/1844/1845` 各钉了一份，本门这条只是把同一行源码**抄第二遍**（搬家不是丢覆盖）；
+   *   · `legal.some(l => l.key === ta.key && l.affordable)`（可负担才覆盖）⇒ **保留**，但换成跑出来的：
+   *     教师给一张**付不起**的卡 ⇒ `unaffordable` 必须涨而 `fired` 不涨（这是"示范不许教成白扔一回合"的可观测量）。 */
+  {
+    const W0 = sandbox(process.cwd());
+    const T0 = W0.EpirusTrainer, P0 = W0.EpirusPolicy;
+    T0.setTrainMode('multi');
+    T0.setImitUntil(100);
+    ok(T0.imitBetaForGen(0) > 0, '前置：β(gen0) 必须 >0（实测 ' + T0.imitBetaForGen(0) + '）⇒ 否则下面"没开火"是窗口关着的空枪');
+    const OPPS0 = [{ name: 'balanced', sel: W0.EpirusBots.pickBalanced }];
+    const score0 = function () { T0.scoreMemberN(P0.makePolicy(0.25), OPPS0, 8, 3, 0, 0, 0); };
+    eq(T0.setImitTeacherByName('heavyfire'), true, '前置：教师必须真设上了（否则 fired=0 什么都没判）');
+    T0.resetImitStat();
+    score0();
+    const c0 = T0.countImitInject();
+    eq(c0.fired, 0, '真示范必须**出厂默认关**（新沙箱里实测 fired=' + c0.fired + ' tries=' + c0.tries +
+      '）⇒ 默认开会让旧产物与新读数不可比（这条以前靠读 `let IMIT_OVERRIDE = false;` 那一行）');
+    eq(c0.tries, 0, '连"轮到示范"都不许发生（tries>0 = 门控那句已经被走过，只是没中概率）');
+    /* 正对照：把开关打开 ⇒ 这把尺**必须读得到开火**，否则上面两个 0 是"尺没接上"的形状 */
+    T0.setImitOverride(true);
+    T0.setImitTeacher(function () { return { key: R.SK.JI, target: null }; });   // ジ 恒可负担 ⇒ 一定会覆盖
+    T0.resetImitStat();
+    score0();
+    const c1 = T0.countImitInject();
+    ok(c1.fired > 0, '正对照：同一份沙箱把开关打开 ⇒ 必须**真开火**（实测 tries=' + c1.tries + ' fired=' + c1.fired +
+      '）⇒ 读不到开火就说明这把尺看不见注入，上面那条 fired=0 是空枪');
+    /* 可负担/合法门槛（替掉原来那条钉 `legal.some(l => l.key === ta.key && l.affordable)` 的字面钉）：
+     * 教师给的动作当回合**下不了手**（不在合法表里 / 付不起，同一条 `!okL` 分支）⇒ 只许记账，不许覆盖 */
+    T0.setImitTeacher(function () { return { key: '__no_such_card__', target: 1 }; });
+    T0.resetImitStat();
+    score0();
+    const c2 = T0.countImitInject();
+    ok(c2.tries > 0, '前置：这一趟必须真轮到过示范（实测 tries=' + c2.tries + '）⇒ 否则下面两条在读一个没走到的分支');
+    eq(c2.fired, 0, '教师动作**当回合下不了手**时必须不覆盖（实测 fired=' + c2.fired + ' unaffordable=' + c2.unaffordable +
+      '）⇒ 覆盖下去就是教它"白扔一回合"');
+    ok(c2.unaffordable > 0, '而且必须**记在账上**（实测 unaffordable=' + c2.unaffordable + '）⇒ 静默丢掉与"从没轮到"长得一样');
+    T0.setImitOverride(false);
+  }
+  /* §改（2026-10-22 千问·第六批）：这里原来是两条写法钉 ——
+   *   · `function teacherFull(` ⇒ 换成**直接调用**（下面那一组）：注入用的是"带 target 的完整动作"，
+   *     这件事本来就问得出答案，不必问源码长什么样；
+   *   · `if (n === 'antiring') return setAntiRingTeacher();` + `typeof BOT_PICKS[n] === 'function'` ⇒ **删**：
+   *     "名字→函数映射在这一份里"早已由下面三行 `T.setImitTeacherByName(...)` 真调着判
+   *     （`antiring` ‖ `heavyfire` ‖ 认不出的名字必须返回 false）⇒ 映射搬去 server/worker 或换个写法，调用那三条立刻红。
+   *     实测：把 `if (n === 'antiring')` 换成等价的 `if ('antiring' === n)` ⇒ 旧钉**红**、调用腿**绿**（这条钉只会为一次无害重排报错）。 */
+  {
+    const tfSt = S.createState('multi', { next: T.mulberry32(20261022) }, 5);
+    const tfLegal = Play.legalActions(tfSt, 0);
+    const tfFull = T.teacherFull(function () { return { key: R.SK.GUN, target: 2 }; }, tfSt, 0, tfLegal);
+    eq(tfFull && tfFull.target, 2, '注入必须走**带 target 的完整动作**（实测读到 ' + JSON.stringify(tfFull && tfFull.target) +
+      '）⇒ 丢了 target 的示范会教成"打错人"');
+    const tfKey = T.teacherFull(function () { return R.SK.GUN; }, tfSt, 0, tfLegal);
+    eq(tfKey && tfKey.key, R.SK.GUN, '教师只回 key 的旧形状也必须吃得下（`target` 由这一处补，不许每个调用方各补一遍）');
+  }
   /* 行为：真模块上设一次 / 复位；名字认不认 */
   eq(T.setImitOverride(true), true, 'setImitOverride(true) 必须回读 true');
   eq(T.setImitOverride(false), false, '复位必须回 false（别把状态泄漏给后面的用例）');
   eq(T.setImitTeacherByName('antiring'), true, 'antiring 必须仍被认（老命令不能变成空操作）');
   eq(T.setImitTeacherByName('heavyfire'), true, '必须能按名字取 `BOT_PICKS` 里的教师');
-  ok(evo.indexOf('global.EpirusBots') >= 0,
-    '环专精（`pickRingSpam`）不在 BOT_PICKS 里 ⇒ 必须留"全局注册表按函数名取"这条路（且不许往默认池加键）');
+  /* §改（2026-10-22 千问·第六批）：原来这条钉的是 evo.js 里出现 `global.EpirusBots` 那一串 ⇒ 换成**真走一遍那条路**：
+   *   按函数名取环专精当教师必须成功，且取到的**就是 `bots.js` 那个函数对象**（引用相等 ⇒ 抄一份副本会当场红）。
+   *   剩下半件"不许往默认池 `BOT_PICKS` 加键"没有便宜的运行时口径（那张表不对外导出）⇒ 仍写在注释与
+   *   `docs/GATE-SHIFTS.md` §廿一，判它的人一眼能看到；本轮不假装有腿。 */
+  eq(T.setImitTeacherByName('pickRingSpam'), true, '环专精不在 `BOT_PICKS` 里 ⇒ 必须仍能按**全局注册表的函数名**取到教师（实测 false ⇒ 那条路被摘了）');
+  ok(T.imitTeacher() === Bots.pickRingSpam, '按名字取到的必须**就是** `bots.js` 那个函数对象（引用相等 ⇒ 第二份实现/自己包一层都在这条上红）');
   eq(T.setImitTeacherByName('绝对不存在的名字'), false, '认不出的名字必须返回 false（不许静默当没设）');
   T.setImitTeacher(null);   // 复位成默认教师
   /* 接线：worker 必须读 ENV 并打回执 */

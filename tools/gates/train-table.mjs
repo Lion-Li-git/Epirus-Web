@@ -51,12 +51,14 @@ t('D220 深经济对手必须能放上**训练桌**（v1.5.325 · §E237 · DS �
   const rich = mk(9), richLegal = Play.legalActions(rich, 0).filter(x => x.affordable);
   ok(richLegal.some(x => x.key === R.SK.BIG_T) === true, '构造态：9 珠时大雷必须可负担（否则"兑现"这条空转）');
   eq(Bots.pickDeepSaver(rich, 0, richLegal).key, R.SK.BIG_T, '付得起就必须放大雷 ⇒ 这才叫"真兑现"的威胁来源');
-  /* ② 接线：默认关 ⇒ 源里走的是空串；开了 ⇒ 真推进 fitness 的对手表，并且**产物自带这臂上了谁** */
-  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
-  ok(t3.indexOf("EPIRUS_ECON_OPPS || ''") >= 0, '必须默认空（不设 ⇒ 一个对手都不加，历史臂逐位可复现）');
-  ok(t3.indexOf("'EPIRUS_ECON_OPPS'") >= 0, '必须进 SELF_ENV_KEYS（否则黑键侦测会判它"传了没人读"）');
-  ok(/EPIRUS_ECON_OPPS 里有不认识的名字[\s\S]{0,200}process\.exit\(4\)/.test(t3), '名字不在表里必须 exit 4（少一个 = 一根空枪）');
-  ok(t3.indexOf('for (const o of ECON_OPPS) OPPS.push(o)') >= 0, '开了必须真推进 `OPPS`（推进别处 = 死作用点）');
+  /* ② 接线：默认关 ⇒ 走的是空串；开了 ⇒ 真推进 fitness 的对手表，并且**产物自带这臂上了谁**。
+   * §改（2026-10-22 千问·第六批）：这里原来四条是 `train-3p.mjs` 的写法钉
+   *   （`EPIRUS_ECON_OPPS || ''` ‖ `'EPIRUS_ECON_OPPS'` 在 SELF_ENV_KEYS 里 ‖ "不认识的名字…exit(4)" 的正则窗 ‖
+   *    `for (const o of ECON_OPPS) OPPS.push(o)` 逐字）。下面 ②③④ 三档**真起子进程**各测一件：
+   *   开档必须 status 0 + 印出桌变大 + recipe 记两名 ‖ 写错名必须 exit 4 ‖ 关档必须一行不印 + recipe 写 null。
+   *   ⇒ 四次变异逐条判过（见 `docs/research/GATE-AUDIT-2026-10-22-qoder.md` §二 13)）：把默认值改成非空 / 把 exit(4) 改成静默跳过 /
+   *   把 push 改成推进别处 —— 三种写坏**都被行为腿抓到**，而第四条（SELF_ENV_KEYS）连"读不到"那一支也被
+   *   `train-3p` 自己的 `enforceKnobs` 拦住（键设了却没人读 ⇒ 非零退出 ⇒ ② 的 status 0 当场红）⇒ 四条一起摘。 */
   const dir = mkdtempSync(join(tmpdir(), 'd220-')), out = join(dir, 'arm.js');
   const on = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd220on', EPIRUS_ECON_OPPS: 'deepsaver,deadlineBurst', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: out, EPIRUS_PUBLISH: '' }), encoding: 'utf8', timeout: 300000 });

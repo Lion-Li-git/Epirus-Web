@@ -640,3 +640,30 @@ ok(readFileSync('server/opp-champs.mjs', 'utf8').true, '冠军对手必须走 po
 1. 普查那把尺**两向都误判过**（注释里的调用形、钉在断言消息里的源码片段）⇒ "只钉文本"的条数只能当排队用，
    判"该不该摘"一律回到读原文 + 造变异（细节见审计文档 §一）。
 2. `D13` / `D58` 那两处**不是漏，是 §十五 记过账的接受损失** ⇒ 别"顺手补上"；要动得先把它那条判据推翻。
+
+## 廿一、本班继续把 9 条"判文本/判写法"的门换成"判功能"（2026-10-22 凌晨续 · 千问 · 用户指令「大胆删 · 门禁目标是功能实现而不是判文本」）
+
+验收口径与 §二十 同：**(a) 等价改写（改名/搬家/换排版）不许红**；**(b) 把要防的东西真写坏了必须红**；
+判"腿冗余"一律用**摘腿后变异**（先把钉摘掉再跑同一个变异，否则钉自己先红、后面的行为腿被短路 ⇒ 什么也没证明）。
+明细与全部判词原文在 `docs/research/GATE-AUDIT-2026-10-22-qoder.md` §二 10)–19)。
+
+| 门 | 原来判的是 | 现在判的是 | (a) 等价改写 | (b) 写真坏 |
+|---|---|---|---|---|
+| `D50` | 七条 `policy.js` 写法钉（`slotRand(x, state) - slotRand(y, state)` 必须在 ‖ `__rng`/`state.rng`/`rng.next`/`_rot`/`SLOT_RAND`/`return d !== 0 ? d : x - y;` 六串不许在 ‖ `__slotHash` 必须在） | 两件事：① 算 16 次槽位序**不许消耗对局随机流**（调过与不调过：rng 首读数 + 回合结果逐字相同，并配"不调的两次也逐字相同"证这把尺本身确定）② 同一 `state/pid` 连算两次必须给同一个序（纯函数） | 绿（不再读源码） | **红**：`slotRand` 里塞一句 `state.rng.next()` ⇒ 判词给读数 `调过=0.186188 ‖ 没调=0.694490` |
+| `D53` | 四条钉文本（旧兜底那行不许出现 × 3 ‖ `function saltPick(` 必须存在） | 存在性那条**删**（每条腿都在调 `X.saltPick`）；`oppOf` 那条**删**（与既有 `oppSeen` 覆盖腿重复）；mirrorRefs 的 t1/t2 **不删**（`grep -rn saltPick tools/gates/` 只命中本门与一句注释 ⇒ 全仓没人判过，删=真丢覆盖）⇒ 换成跑得出来的：40 粒盐下"被复制那招"的挨打者必须覆盖 2/3/4 三个候选 | 绿 | **红**：t2 兜底退回 `rest[0]` ⇒ `实测只打到 {"2":40}`；`oppOf` 退回最小索引但**换成 `sort()[0]`** ⇒ 旧钉会绿、行为腿红 `{"1":30}` |
+| `D57` | `resolve.js.indexOf('dealtSum') >= 0`（判词写"全灭按累计伤害判胜"）+ `evo.js.indexOf('PASSIVE_EVERY') < 0` | ① **这条钉实测没牙** = 空门：把全灭判决整个退回 v1.5.65 前的 `state.winner = 'draw'` 它照样 1/1 绿（标识符还在、算了不用；而门里唯一那条场腿走的是"最后存活/回合上限"，碰不到全灭这一支 ⇒ **判词说 A、测的是 B**）。换成摆一个"三人同回合全灭 + 各有累计伤害"的场：前置 `over` 必须真成立 ‖ `winner` 必须是造伤害最多那席 ‖ 并列仍须 `'draw'` ② `PASSIVE_EVERY` 那条按两次变异判完**删** | `PASSIVE_EVERY`：只塞同族变量名（行为一字不变）旧钉**误红** ⇒ 该删 | ① 同一次"整个退回旧口径" ⇒ 新腿**当场红** `winner="draw" ‖ got=draw want=1`；② 真复活 `passiveFieldAt/setPassiveField` ⇒ 上面两条 `typeof === 'undefined'` 运行腿红 |
+| `D56` | 三条 `policy.js` 写法钉（`function isLegacyChooser` ‖ `o.lv != null` ‖ `o.lv = p.legacyFrom`） | 第一条与本门对 `Pol.isLegacyChooser(...)` 的直接调用重复 ⇒ 删；后两条换成**跑一遍 `pack → unpack` 往返**（游戏侧口径，不带 `allowLegacy`）：容器 `lv` 必须是 6 ‖ 读回来的 params 必须仍被判为旧口径 | 绿：`o.lv` → `o['lv']`（两处都改 ⇒ 两条旧钉的正向串在盘上 `grep -c` 都是 0） | **红**：摘 `unpack` 挂标记那行 ⇒ `挂丢就是本门标题那个 12.25→7.70`；摘 `pack` 写 `lv` 那行 ⇒ `实测 undefined want=6` |
+| `D103` | 两条源码正则（`/beadburst: 'pickBeadBurst'/` ‖ 它后面紧跟 `};`）+ G4 那一格的两条接线钉 | 那张表本来就 `export`（`P2_NAMES = Object.keys(P2_FNAME)`，`promote-champion2p.mjs:23` 在用，字符串键保持插入序）⇒ 门旁那句"运行时读不出是第几个"**是错的**。换成两条运行时判据：`P2_FNAME.beadburst === 'pickBeadBurst'` ‖ `P2_NAMES[末位] === 'beadburst'`。第三条（`Bots[表里的名字]` 必须是函数）**想过但没加**：本门开头 + 第一条已蕴含它 | 绿：`"beadburst":` 拆两行 + 加注释（旧两条按字面必然红） | **红**：挪到表中间 ⇒ `实测末项是 "defreflectgun"`；整条不登记 ⇒ `undefined`；值指到别家 ⇒ `"pickAggro"`。G4 那两条**保留**（`gate-drafts.mjs` 无导出、import 它就把工具跑了 ⇒ 行为上无法廉价复现，已在门里写明） |
+| `D220` | 四条 `train-3p.mjs` 写法钉（默认空串 ‖ 在 `SELF_ENV_KEYS` 名单里 ‖ "不认识的名字…exit(4)" 正则窗 ‖ `for (const o of ECON_OPPS) OPPS.push(o)` 逐字） | **四条全删**，本门原有的三档真跑子进程已覆盖：开档臂（status 0 + 印"桌变大" + `recipe.econOpps` 两名）‖ 写错名臂（`exit 4`）‖ 关档臂（一行不印 + `recipe` 写 null） | 见 (b) 的 M4：摘名单项连"行为"都没有 ⇒ 该钉只会误红 | M1 默认非空 ⇒ **红**（关档臂）；M2b 静默换一个对手继续跑 ⇒ **红** `不认识的卡名必须 exit 4（实测 0）`；M3 推进别处 ⇒ **红**；M5 "设了却没人读" ⇒ **红**（读数臂） |
+| `D130` | 四条 `train-3p.mjs` 写法钉（同一族的默认空 ‖ `OPPS.push(o)` ‖ 名单里那个带引号的串 ‖ `typeof o.sel !== 'function' … exit(4)`） | **四条全删**。这次的新事实是**钉的串根本不专属那一格**：`OPPS.push(o)` 在文件里出现 **6 次**（econ/counter/ring/toolkit/human/pool）、`typeof o.sel !== 'function'` 出现 **3 次** ⇒ counter 那整行删掉/那一支的退出禁掉，钉照样绿（K1/K2 实测）。"默认关 ⇒ 逐位不变"判在别处（`D127` 的基线哈希腿与 `D123③`），不在本门重复钉 | K2（把"要的对手不存在 ⇒ exit 4"那一支的退出禁掉）⇒ **整门绿**：这一支在门可见的世界里永不触发（开头三条 `typeof Bots.pickGuardSpam === 'function'` 已把前提钉住）⇒ 判为防御性文案，钉它零收益 + 改报错文案就误红 | K1（counter 静默不推进桌）⇒ 红的是行为腿 `只上 snipeSpam ⇒ 必须恰好进一个（9→10…）`，**四条钉全过**；K3（只摘名单项）⇒ 钉在时红的是钉自己（门短路、不算证据），**摘钉后重跑同一个 K3 ⇒ 绿** |
+| `D84` | 六条 `evo.js` 写法钉（`let IMIT_OVERRIDE = false;` ‖ 那一长串门控条件 ‖ `legal.some(l => l.key === ta.key && l.affordable)` ‖ `function teacherFull(` ‖ 名字→函数映射两处 ‖ `global.EpirusBots`） | 换成**跑示范**：新沙箱只设教师与退火窗、从不调 `setImitOverride` ⇒ `countImitInject()` 必须 `fired=0 且 tries=0`，配正对照（打开开关 ⇒ `fired>0`）‖ 教师给一个当回合下不了手的动作 ⇒ `tries>0 / fired=0 / unaffordable>0` ‖ `T.teacherFull(...)` 必须原样带 `target` ‖ `setImitTeacherByName('pickRingSpam')` 且 `T.imitTeacher() === Bots.pickRingSpam`（引用相等 ⇒ 第二份实现当场红）。门控那一长串**删**（`D86`/`D87` 各钉一份 ⇒ 本门是抄第二遍）；server/worker 那批**回执文案**钉**留**：替成行为要么起真 worker（全仓无先例，§十五 正是为此把 `D13` 判成接受损失），要么在门里重抄一份 server 逻辑 | N5 `if (n === 'antiring')` → `if ('antiring' === n)` ⇒ **绿** | N1 默认翻 `true` ⇒ 红 `fired=7 tries=7` ‖ N2 摘掉门控里的 `IMIT_OVERRIDE &&` ⇒ 红 `fired=12 tries=12` ‖ N3 拆掉 `okL` 的可负担检查 ⇒ 红 `fired=14 unaffordable=0` ‖ N4 `teacherFull` 丢 target ⇒ 红 ‖ N6 摘"按函数名取"那条路 ⇒ 红 `got=false want=true` |
+| `D127` | 两条 `train-3p.mjs` 写法钉（`EPIRUS_SEL_LAND \|\| 0` ‖ `bandPickByLand(` + `sel.best = lp.best`） | 换成**用本门已经在跑的那两趟**（不新增 spawn）：关档臂一行都不许印 ‖ "改判/未改判"那句必须与两臂产物的权重哈希**互相印证**（写之前先用 `d127-probe.mjs` 把剂量读清楚：本夹具印 `改判（是预筛选掉的）`，两臂哈希 `aa743488cc` vs `eb1de6334d` ⇒ 这条腿今天真有内容） | L3 `sel['best'] = lp.best` ⇒ **绿** | L1 摘掉赋值（算了不用）⇒ **红在新腿** `实测两臂相同? true` ‖ L2 默认偷改成 1 ⇒ 红（先抓住的是那条**已有**的基线哈希腿 `got=eb1de6334d want=aa743488cc` ⇒ 原钉 78 的覆盖面早就在门里） |
+
+⚠ 三条要留给下一班的实话：
+1. **正向钉必须问"这条串在这个文件里出现几次、专不专属那一格"** —— 同一族纪律在四处工具里逐字同形，
+   于是"必须出现 X"这种钉可以在那一格整个坏掉的情况下长绿（本轮 `D130` 的 K1/K2 就是这一型）。
+2. `server/knob-guard.mjs` 的暗键检测有**一条保守偏差**（实测 + 读实现给的出口，见审计文档 §二 15)）：
+   `scanKeysFromSource`（`:74`）剥注释后按 `/EPIRUS_[A-Z0-9_]+/g` 扫全文 ⇒ **名字只出现在报错文案的字符串里也算"本入口读得到"**，
+   于是"设了却没人读"那一族它拦不住（M5 的 status 仍是 0，红的是门的读数腿）。要治得改它自己的判据 ⇒ **等裁，本轮不动 `server/`**。
+3. 门数：**281 → 281**（`git grep -h -c "^t(" 5655158d^ -- 'tools/gates/*.mjs'` 与现状同）⇒ 这六批改的全是门**内部**的断言腿，
+   一条门没摘、一条门没新加。

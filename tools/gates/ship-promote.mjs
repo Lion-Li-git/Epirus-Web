@@ -2,6 +2,10 @@
 {"file":"tools/gates/ship-promote.mjs","part":"ship-promote","group":"ship","ranges":[[1184,1206],[2750,2775],[2964,3000],[4363,4387],[4572,4684],[4929,5005],[5426,5482],[6024,6076],[6109,6127],[7661,7743],[7787,7823],[8006,8051],[8078,8131],[8292,8337],[8682,8766],[8810,8888],[9574,9612],[11362,11418]],"gates":[1184,2750,2964,4363,4572,4929,4980,5426,6024,6109,7661,7787,8006,8078,8108,8292,8312,8682,8810,9574,11362],"patched":[8308]}
 #np-part-header-end*/
 import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
+/* §改（2026-10-22 千问·第六批）：D103 原来用正则钉 `p2-baselines.mjs` 的**源码字符串**判"有没有登记 beadburst / 是不是表尾"。
+ * 这张表本来就 `export`（`tools/promote-champion2p.mjs:23` 已在用它）⇒ 直接读运行时的表，写法/换行/注释怎么改都不误红。
+ * 与 `probe-libs.mjs:5` 同一种接法（门文件 import 工具模块，早有先例）。 */
+import { P2_FNAME, P2_NAMES } from '../p2-baselines.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
@@ -377,11 +381,21 @@ t('D103 「珠爆发」线必须同时在册（2P 考卷 + G4 克制表），且
   const rg = stG.events.filter(function (e) { return e.type === 'action' && e.pid === 0 && e.key === R.SK.RAILGUN; }).length;
   ok(rg > 0, '整条线必须真的转起来（对"只出ジ"的对手，脚本必须放得出电磁炮；第一版这里是 0）');
   /* ② 注册部分：2P 考卷**只能追加在表尾**（`p2-baselines.mjs:8-10`：顺序是行为输入）。
-   * 文本口径在这里是**有意**的 —— 它守的是"插入位置"这条纪律，运行时读不出"是第几个"。 */
-  const pb = readFileSync('tools/p2-baselines.mjs', 'utf8');
-  ok(/beadburst: 'pickBeadBurst'/.test(pb), '`tools/p2-baselines.mjs` 必须登记 beadburst（否则 2P 考卷量不到这个洞）');
-  ok(/beadburst: 'pickBeadBurst'\s*\n\};/.test(pb),
-    'beadburst 必须是**表尾最后一项** —— 插在中间会改掉后面每个对手的种子（`20260207 + i*977`）⇒ 历史考卷分全漂移');
+   * §改（2026-10-22 千问·第六批）：原来这里两条是源码正则（`/beadburst: 'pickBeadBurst'/` 与它后面紧跟 `};`）。
+   *   旁边那句"运行时读不出是第几个"**不成立** —— 这张表本来就 `export`（`P2_FNAME` / `P2_NAMES = Object.keys(...)`，
+   *   `promote-champion2p.mjs:23` 就在用），字符串键保持插入序 ⇒ 表尾是**读得出来的数据**。
+   *   换成两条运行时判据：登记在不在（且指的必须是这条线自己的名字）‖ 是不是末项。
+   *   ⇒ 换行/加注释/改缩进都不再误红，而"插到中间"仍然当场红。
+   *   牙测（`docs/research/GATE-AUDIT-2026-10-22-qoder.md` §二 14)）：把 beadburst 挪到表中间 ⇒ 末项那条红（实测读成 `defreflectgun`）；
+   *   整条不登记 ⇒ 第一条红（实测 `undefined`）；值指到别家 `pickAggro` ⇒ 第一条红（实测读到 `"pickAggro"`）；
+   *   **只改排版**（`"beadburst":` 拆两行 + 加注释，语义一字不变）⇒ 仍绿，而旧那两条正则**必然红**（它们要求 `beadburst: 'pickBeadBurst'` 逐字相邻再紧跟 `};`）。 */
+  ok(P2_FNAME.beadburst === 'pickBeadBurst', '2P 考卷必须登记 beadburst 且指向 `pickBeadBurst`（实测 ' + JSON.stringify(P2_FNAME.beadburst) + '）');
+  /* 注：本来还想加第三条"`Bots[P2_FNAME.beadburst]` 必须是函数"——**没加**：
+   *   本门第一行已经钉 `typeof Bots.pickBeadBurst === 'function'`，上面这条又钉 `P2_FNAME.beadburst === 'pickBeadBurst'`，
+   *   两条合起来已经蕴含它 ⇒ 单独摆一条只会让"腿数"看着像覆盖面（用户上限句：可以加，但尽量少加）。 */
+  eq(P2_NAMES[P2_NAMES.length - 1], 'beadburst',
+    'beadburst 必须是**表尾最后一项**（实测末项是 ' + JSON.stringify(P2_NAMES[P2_NAMES.length - 1]) + '，共 ' + P2_NAMES.length +
+    ' 项）—— 插在中间会改掉后面每个对手的种子（`20260207 + i*977`）⇒ 历史考卷分全漂移');
   /* ③ 单一来源：G4 那一格必须**复用** bots.js 的函数对象，不许抄第二份实现。 */
   const gd = readFileSync('tools/gate-drafts.mjs', 'utf8');
   ok(gd.indexOf("'珠爆发(ジ→蓄电珠→电磁炮/摄魂)': B.pickBeadBurst") >= 0,

@@ -132,6 +132,137 @@ CI 复核（本夜）：run for `1104b058`（v1.7.144）= **success** ⇒ 那两
   · 真把 `passiveFieldAt`/`setPassiveField` 复活 ⇒ 同门上面那两条 `typeof === 'undefined'` **运行腿当场红** ⇒ 它要防的事已有牙。
 - ⇒ 文字钉既不必要也会误红，删除；`--part=engine-fuzz 13/13` 复绿。
 
+### 13) D56（train-evo）—— 三条 `policy.js` 写法钉：一条纯冗余、两条换成"跑一遍 pack→unpack 往返"
+- 原判腿：`indexOf('function isLegacyChooser')` ‖ `indexOf('o.lv != null')` ‖ `indexOf('o.lv = p.legacyFrom')`。
+- 第一条本来就冗余：同一门里 787-788 行**直接调用** `Pol.isLegacyChooser(emb/p7)` ⇒ 函数改名或删掉，调用那条先红。
+- 第二、三条钉的是"这行在不在"，而不是"标记会不会丢"。换成运行时往返：
+  `Pol.pack(带 legacyFrom=6 的嵌入包)` ⇒ 容器 `lv` 必须等于 6 ‖ 再 `Pol.unpack(容器)`（**游戏侧口径**，不带 `allowLegacy`）
+  ⇒ `Pol.isLegacyChooser(读回来的 params)` 必须为真。判词直接把实测值印出来（`got=undefined want=6` 那一型）。
+- 三次变异（都跑 `--part=train-evo --only="D56 "`）：
+  · 摘掉 `policy.js:807`（unpack 挂标记那行）⇒ **红**，判词 `挂丢就是本门标题那个 12.25→7.70`；
+  · 摘掉 `:785`（pack 写 `lv` 那行）⇒ **红**，判词 `pack 必须把 legacyFrom 写回容器 lv（实测 undefined）`；
+  · **等价改写**（`o.lv` → `o['lv']`，两处都改 ⇒ 旧两条钉的正向串在盘上归零）⇒ 新腿**绿**（`grep -c` 两条旧串都是 0）。
+  ⇒ 这三条合起来才说明白：旧钉既抓不到"标记丢在另一环"，又会为一次无害的重写报错。
+
+### 14) D103（ship-promote）—— 2P 考卷的"登记 + 表尾"两条正则换成读运行时的表
+- 原判腿：`/beadburst: 'pickBeadBurst'/` 与 `/beadburst: 'pickBeadBurst'\s*\n\};/` 打在 `tools/p2-baselines.mjs` 源码上。
+- 门里旁边那句注释写着"插入位置运行时读不出" —— **这句是错的**：这张表 `export const P2_FNAME` 且
+  `P2_NAMES = Object.keys(P2_FNAME)`（`tools/promote-champion2p.mjs:23` 已经在 import 它），字符串键保持插入序 ⇒ 末项是**数据**。
+- 换成两条：`P2_FNAME.beadburst === 'pickBeadBurst'` ‖ `P2_NAMES[P2_NAMES.length-1] === 'beadburst'`。
+  第三条（`typeof Bots[P2_FNAME.beadburst] === 'function'`）**想过但没加** —— 本门第一行已钉 `typeof Bots.pickBeadBurst === 'function'`，
+  两条合起来蕴含它，摆着只增加"腿数"不增加覆盖面。
+- 四次变异（`teeth-d103.mjs`，每次跑完逐字还原并核对备份）：
+  · 把 beadburst 挪到表中间 ⇒ **红**（判词印 `实测末项是 "defreflectgun"，共 20 项`）；
+  · 整条不登记 ⇒ **红**（`实测 undefined`）；
+  · 值指到别家 `'pickAggro'` ⇒ **红**（`实测 "pickAggro"`）；
+  · **只改排版**（`"beadburst":` 拆两行 + 加注释，语义一字不变）⇒ 新腿**绿**（旧那两条正则按字面必然红：它们要求 `beadburst: 'pickBeadBurst'` 连排再紧跟 `};`）。
+- 一处自曝：我的变异脚本给 M-B 用的"落地标记"串里没写 `MUT-B` ⇒ 自证落地那一栏对 B 报了 `落地=false`（假报警）。
+  B 确实生效了 —— 门读到的是 `"pickAggro"`，这本身就是落地证据。**判落地要用被测值的改变，不要用我自己埋的注释串**。
+
+### 15) D220（train-table）—— 四条 `train-3p.mjs` 写法钉：全部换成"真起子进程"的腿，四次变异逐条判
+- 原判腿（②那一节）：`indexOf("EPIRUS_ECON_OPPS || ''")` ‖ `indexOf("'EPIRUS_ECON_OPPS'")`（在 `SELF_ENV_KEYS` 名单里）‖
+  `/EPIRUS_ECON_OPPS 里有不认识的名字[\s\S]{0,200}process\.exit\(4\)/` ‖ `indexOf('for (const o of ECON_OPPS) OPPS.push(o)')`。
+- 同一门**已经有**三档真跑：开档臂（status 0 + 印"桌变大" + 产物 `recipe.econOpps` 两名）‖ 写错名臂（`exit 4`）‖ 关档臂（一行不印 + `recipe` 写 null）。
+- 摘腿后变异（`mut-d220.mjs` + `run-d220.sh`，每次都还原并逐字核对备份；`--part=train-table --only="D220 "` 单跑 ≈64 s）：
+
+  | 变异 | 落到的坏法 | 结果 | 抓到它的那条腿（判词原文） |
+  |---|---|---|---|
+  | 摘钉后基线 | —— | **绿**（1/1） | 说明四条钉的覆盖面全在行为腿上 |
+  | M1 默认值改成非空 | "默认关"被偷改 | **红** | ④ 关档臂：关档不许印 `[econ-ops]` / recipe 不为 null |
+  | M2b 不认识的名字静默换一个对手继续跑 | "少放一个对手还照跑" | **红** | `不认识的卡名必须 exit 4（实测 0） got=0 want=4` |
+  | M3 推进别处（死作用点） | 开了却没上桌 | **红** | ② 的"印出进了哪几个、桌变大"那一类（判词原文见 §下） |
+  | M4 只从 `SELF_ENV_KEYS` 摘掉这一项 | —— | **绿** | ⇒ 这条写法钉**没有任何行为后果**（入口里那行真读还在，闭包扫得到） |
+  | M5 = M4 + 把那行真读改掉（键变成"设了没人读"） | 静默空转 | **红** | `必须印出进了哪几个、桌变大（不印 = 又一根暗旋钮）` |
+
+- **M4/M5 这两条合起来才是要记的新事实**（不是我原先猜的机制）：
+  · 摘掉名单项**不会**触发 `knob-guard`（M4 绿）⇒ 那条钉写的"否则黑键侦测会判它传了没人读"是**猜想**，实测不成立；
+  · 而"设了却没人读"这一整族，`train-3p` 的 `enforceKnobs`（`server/knob-guard.mjs:167`）**也没拦住**（M5 的 status 仍是 0，红的是本门的读数腿）。
+    读实现给的出口：`scanKeysFromSource`（`server/knob-guard.mjs:74`）是先 `stripComments`（`:36`）再拿 `/EPIRUS_[A-Z0-9_]+/g` 扫**全文** ⇒
+    M5 之后文件里仍有两处该串的**字符串字面量**（`console.error('… ⛔ EPIRUS_ECON_OPPS 里有不认识的名字…')` 那一行），于是"名字出现在报错文案里"被当成"本入口读得到" ⇒ 不判暗键。
+    ⇒ 这是 `knob-guard` 的一条**已知保守偏差**（宁可漏报不误报），不是我这笔改坏的；要治得改它 own 的判据（"只认 `process.env.<KEY>` 那几种读形"），属产品/工具面，**留给下一班裁**（本轮只登记，不动 `server/`）。
+- 处置：四条写法钉全摘；行为腿一条没动。⇒ 该门从此对"改缩进 / 换引号 / 挪注释"免疫，而对四种真坏法照红。
+
+### 16) D130（train-breadth）—— 同一个 `train-3p.mjs`，但这次的问题是**钉的串根本不专属那一格**
+- 原判腿（与 D220 逐字同族）：`/EPIRUS_COUNTER_OPPS \|\| ''/`（默认空）‖ `indexOf('OPPS.push(o)')`（真推进桌）‖
+  `indexOf("'EPIRUS_COUNTER_OPPS'")`（在 `SELF_ENV_KEYS` 名单里）‖ `/typeof o\.sel !== 'function'[\s\S]{0,200}process\.exit\(4\)/`（缺对手必须响）。
+- **新形状**：`OPPS.push(o)` 这个串在 `train-3p.mjs` 里出现 **6 次**（econ / counter / ring / toolkit / human / pool），
+  `typeof o.sel !== 'function'` 出现 **3 次** ⇒ 这两条"必须存在"的正向钉**不专属 counter 那一格**：
+  把 counter 的 push 整行删掉、把那一支的 `exit(4)` 禁掉，钉照样绿。
+- 摘腿前后各跑（`--part=train-breadth --only="D130 "`，`mut-d220.mjs` 的 K1/K2/K3）：
+
+  | 变异 | 钉还在时的结果 | 摘钉后的结果 |
+  |---|---|---|
+  | 基线（未变异） | 绿 | **绿** |
+  | K1 counter 静默不推进桌 | **红**，但红的是行为腿 `只上 snipeSpam ⇒ 必须恰好进一个（9→10…）` ⇒ 四条钉全过 = 它们什么都没判 | —— |
+  | K2 禁掉"要的对手不存在 ⇒ exit 4"那一支 | **整门绿**（钉绿、行为也绿：这一支在本门可见的世界里永不触发） | —— |
+  | K3 只摘名单项 | 红的是**钉自己**（那个带引号的串只在名单里出现一次）⇒ 门在钉那步短路，不算证据 | **绿** ⇒ 名单项对行为毫无后果（入口那行真读被闭包扫得到） |
+
+- ⇒ 四条全删。"默认关 ⇒ 逐位不变"这件事判在别处：本文件 `D127` 的基线哈希腿与 `D123③` 都跑无旋钮的 `train-3p`
+  并要求产物权重哈希等于 `CLI_ARM_BASELINE` ⇒ 默认值被偷改先在那儿现形（同一个坏法在 `D220` 的 M1 上实测过：红的是关档臂）。
+- K2 那条要留一句判词：**"缺一个对手必须响"这一支我这次没找到便宜的抓法** —— 它的触发前提是 `BOT_PICKS`/全局注册表里
+  那个名字不是函数，而本门开头三条 `typeof Bots.pickGuardSpam === 'function'` 已经把这条路堵死 ⇒
+  判为**防御性代码**（不是没人管的洞，是门看不见也无法制造的形状）。要真判它，得给 `train-3p` 加一个"注入坏表项"的自检夹具 ⇒ 属产品面，等裁。
+
+### 17) D84（train-evo）—— 六条 `evo.js` 写法钉换成"跑示范"，六次变异各抓各的那件
+- 原判腿：`let IMIT_OVERRIDE = false;` ‖ 那句一长串门控条件（`if (IMIT_OVERRIDE && teacherFn && imitB > 0 && subOK && state.rng && …)`）‖
+  `legal.some(function (l) { return l.key === ta.key && l.affordable; })` ‖ `function teacherFull(` ‖
+  `if (n === 'antiring') return setAntiRingTeacher();` + `typeof BOT_PICKS[n] === 'function'` ‖ `global.EpirusBots`。
+- 处置（分四类，各有各的理由）：
+  · **默认关** ⇒ 换成"新开一份沙箱、只设教师与退火窗、从不调 `setImitOverride` ⇒ 跑一局评分后 `countImitInject()` 必须 `fired=0 且 tries=0`"，
+    再配**正对照**（同一份沙箱把开关打开 ⇒ `fired>0`；不配这条，"读到 0"就可能是"尺根本没接上"）。
+    剂量是量出来的：`--imit-until 10 / games 2` 那档**连 tries 都是 0**（`imit-probe.mjs` 实测），拿它当"默认关"的证据等于没判 ⇒ 改成 `until=100 / games=8`。
+  · **门控条件那一长串** ⇒ **删**：同一个洞由 `D86:1811` 与 `D87:1842/1844/1845` 各钉了一份，本门这条只是把同一行源码**抄第二遍**（搬家不是丢覆盖）。
+  · **可负担/合法** ⇒ 换成"教师给一个当回合下不了手的动作 ⇒ `tries>0`、`fired=0`、`unaffordable>0`"（同一条 `!okL` 分支，覆盖"不在合法表"与"付不起"两种）。
+  · **teacherFull / 名字→函数** ⇒ 换成直接调用：`T.teacherFull(带 target 的教师)` 必须把 `target` 原样带过去、只回 key 的旧形状也必须吃得下；
+    `T.setImitTeacherByName('antiring'/'heavyfire'/'pickRingSpam')` 三条真调 + `T.imitTeacher() === Bots.pickRingSpam`（引用相等 ⇒ 抄第二份实现当场红）。
+- 牙测（`teeth-d84.mjs`，四例各写坏一处、跑完逐字还原并核对备份）：
+
+  | 变异 | 结果（判词首行） |
+  |---|---|
+  | N1 出厂默认翻成 `true` | **红** `真示范必须出厂默认关（新沙箱里实测 fired=7 tries=7）got=7 want=0` |
+  | N2 门控里摘掉 `IMIT_OVERRIDE &&` | **红** `… fired=12 tries=12` ⇒ 这条腿判的是"开关有没有被走过"，不是那行声明长什么样 |
+  | N3 拆掉 `okL` 的可负担检查 | **红** `教师动作当回合下不了手时必须不覆盖（实测 fired=14 unaffordable=0）` |
+  | N6 摘掉"全局注册表按函数名取"那条路 | **红** `…（实测 false）got=false want=true` |
+  | N4 让 `teacherFull` 丢 target | **红** `注入必须走带 target 的完整动作（实测读到 null）` |
+  | N5 等价改写 `if (n === 'antiring')` → `if ('antiring' === n)` | **绿**（旧写法钉在这一步会误红，实测过旧串已不在盘上） |
+
+- 保留没换的：`server/train-worker.mjs` / `paralleltrain.mjs` / `train-server.mjs` 那一批**回执文案**钉
+  （`[imit] worker 启动值`、`示范代数没在 worker 生效`、`[imit] 主线程生效值 gens=`、`教师名字解析失败`）。
+  判由：它们的牙是"工具必须说话"，替成行为要么得起真 worker（全仓没有一道门起过 —— `docs/GATE-SHIFTS.md` §十五 正是为此把 `D13` 判成**接受损失**），
+  要么在门里重抄一份 server 逻辑（第二份实现）。⇒ 留，并在这里写明"这一族不是漏改，是等一台新量具"。
+
+
+### 18) D127（train-breadth）—— 两条写法钉换成"用本门已经在跑的那两趟"
+- 原判腿：`indexOf("EPIRUS_SEL_LAND || 0")`（默认 0）‖ `indexOf('bandPickByLand(') && indexOf('sel.best = lp.best')`（接了要看结果）。
+- 先做的一件事是**把剂量读清楚**（`d127-probe.mjs` 逐字复现门里那两臂）：开档臂印的是
+  `改判（是预筛选掉的，不是排序键）`，两臂产物的权重哈希 `aa743488cc`（off）‖ `eb1de6334d`（on）⇒
+  **"归因 ⇔ 哈希互相印证"这条腿在今天是有内容的**（若这臂其实未改判，这条腿就退化成"相等"那种弱判据，必须先看一眼才能写）。
+- 换成两条（都不新增 spawn，用的就是本门已经在跑的那两趟）：
+  · **关档臂一行都不许印** `[\兑现广度\]`（默认值被偷改先在这儿现形）；
+  · **归因与两臂哈希互相印证**：说"改判"（两种）⇒ 两臂必须**不同**；说"都没换" ⇒ 两臂必须**逐字相同**。
+- 三次变异（`run-d127.sh`，`mut-d220.mjs` 的 L1/L2/L3）：
+  · L1 摘掉 `sel.best = lp.best`（算了不用）⇒ **红在新写的印证腿** `归因「预筛换池」与两臂产物的权重哈希必须互相印证（实测两臂相同? true）`；
+  · L2 默认值偷改成 1 ⇒ **红，但红的是那条已有的基线哈希腿** `默认关的产物必须仍是那条基线 got=eb1de6334d want=aa743488cc`
+    ⇒ 说明原钉 78 的覆盖面**早就在门里**（我的新腿是第二张网，不是唯一牙）；
+  · L3 **等价改写** `sel['best'] = lp.best`（语义一字不变，旧钉的正向串消失）⇒ **绿**。
+- 一句要说清的：`bandPickByLand` 这个函数名钉本来就抓不到"接了不看结果"——它只要求那两行字面都在；
+  真正的死作用点形状（赋值被摘）是**新腿**抓的，而它抓的方式是"嘴上说的与产物对不上"，不是"代码长什么样"。
+
+### 19) 第六+七批改完后的按改动面复跑（**不是整轮**，收尾行照工具原话引用）
+链在同一台机上顺序跑（`run-parts67.sh`，日志在 scratch 目录 `parts67/*.log.txt`），03:09:34 起、03:28:05 收尾：
+
+| 部分 | 结果（工具原话） | 墙钟 |
+|---|---|---|
+| `--part=train-breadth` | 通过 **4 / 4** | 3m45s |
+| `--part=train-table` | 通过 **11 / 11** | 5m16s |
+| `--part=ship-promote` | 通过 **21 / 21** | 1m17s |
+| `--part=train-evo` | 通过 **65 / 65** | 8m06s |
+| `--part=meta-repo` | 通过 **12 / 12**（含 D8 版本三方一致 ‖ 281 条门全部归组） | 0m07s |
+
+⇒ 这七批改动（含 `ship-promote` 新增的那条 `import`）没把同部分任何门碰坏；**这不等于整轮绿** ——
+整轮认证仍以 CI 为准（本机秒数与并发会互相污染，那条纪律在册）。
+门数 `281 → 281`（`grep -h -c "^t(" tools/gates/*.mjs` 求和 ‖ 与今晚第一笔前的 `git grep -h -c "^t(" 5655158d^` 相同）。
+
 ## 三、普查各栏的处置（哪些是真案）
 
 - **A 栏"干净克隆读不到输入"10 条 ⇒ 全部是假案或已处理**，逐条：

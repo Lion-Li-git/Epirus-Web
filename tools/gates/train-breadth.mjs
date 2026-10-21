@@ -73,10 +73,14 @@ t('D127 兑现广度（v1.5.167 · §N24 · 用户"G_eff 像刷分"）：mirrorH
   r = bandPickByLand([E(1.00, 4), E(0.99, 4)], 0.03);
   eq(r.tieBrokenBy, 'score', '落地相同则回到胜率，不许拿并列当理由乱换');
   eq(bandPickByLand([], 0.03).best, null, '空表 ⇒ best=null（调用方须自己响）');
-  /* ② 接线：默认关逐位不变（与 D123③ 同一基线哈希）；开 ⇒ 必须真打印两把尺并说改没改判 */
-  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
-  ok(t3.indexOf("EPIRUS_SEL_LAND || 0") >= 0, 'EPIRUS_SEL_LAND 必须默认 0');
-  ok(t3.indexOf('bandPickByLand(') >= 0 && t3.indexOf('sel.best = lp.best') >= 0, 'train-3p 当选面必须真用它（接了不看结果 = 死作用点）');
+  /* ② 接线：默认关逐位不变（与 D123③ 同一基线哈希）；开 ⇒ 必须真打印两把尺并说改没改判。
+   * §改（2026-10-22 千问·第六批）：这里原来两条是 `train-3p.mjs` 的写法钉（`EPIRUS_SEL_LAND || 0` ‖
+   *   `bandPickByLand(` + `sel.best = lp.best`）。两条都不必读源码就能判，而且**用的就是本门已经在跑的那两趟**（不新增 spawn）：
+   *   · 默认关 ⇒ **关档臂一行都不许印**（默认值被偷改成 1，先在这儿现形；配合下面那条基线哈希腿）；
+   *   · "接了不看结果 = 死作用点" ⇒ **归因那句话必须与两臂产物的权重哈希互相印证**：说"改判"而两臂逐字相同 ⇒ 就是算了不用。
+   *   实测（`docs/research/GATE-AUDIT-2026-10-22-qoder.md` §二 17)）：本夹具开档臂印的是
+   *   `改判（是预筛选掉的，不是排序键）`，两臂哈希 `aa743488cc` vs `eb1de6334d` ⇒ 不相等 ⇒ 这条腿今天真的有内容；
+   *   把 `sel.best = lp.best` 摘掉 ⇒ 两臂哈希相等而嘴上还说"改判" ⇒ 当场红。 */
   const wh = function (p2) {
     const m = /"a":\[([^\]]*)\]/.exec(readFileSync(p2, 'utf8'));
     return m ? createHash('sha1').update(m[1]).digest('hex').slice(0, 10) : 'NOPARSE';
@@ -102,6 +106,16 @@ t('D127 兑现广度（v1.5.167 · §N24 · 用户"G_eff 像刷分"）：mirrorH
   ok(/\[兑现广度\].*G\(出手→落地\)/.test(String(on.stdout || '')), '开了必须印出每候选的两把尺（不印 = 又一根暗旋钮）');
   ok(/改判（排序键换人）|改判（是预筛选掉的|未改判/.test(String(on.stdout || '')),
     '必须三分归因：排序键换人 / 预筛换池 / 都没换 —— 只报"未改判"会让人误以为与不开开关逐字相同');
+  const offOut = String(off.stdout || ''), onOut = String(on.stdout || '');
+  ok(!/\[兑现广度\]/.test(offOut), '关档臂**一行都不许印**（实测印了 ⇒ 默认值被偷改成"开"，旧产物的当选规则被换掉都不一定看得见）');
+  const attr127 = /\*\*改判（是预筛选掉的/.test(onOut) ? '预筛换池'
+    : /改判（排序键换人）/.test(onOut) ? '排序键换人'
+    : /未改判/.test(onOut) ? '都没换' : '(那句话没印)';
+  const hashSame127 = wh(join(dirA, 'd127off.js')) === wh(join(dirB, 'd127on.js'));
+  ok(attr127 !== '(那句话没印)', '开档臂必须说出三选一的归因（实测四种都不是）');
+  eq(hashSame127, attr127 === '都没换',
+    '归因「' + attr127 + '」与两臂产物的权重哈希必须互相印证（实测两臂相同? ' + hashSame127 +
+    '）⇒ 嘴上说"改判"而两臂逐字相同 = **算了不用**的死作用点；说"都没换"而两臂不同 = 有东西改了判却没说');
   /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
    *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
    *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
@@ -164,12 +178,23 @@ t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a
   ok(atk.length > 0, '构造态里必须**有**可出的攻击卡（否则"不还手"是白测）');
   const noRet = atk.every(function (k) { return Bots.pickGuardSpam(stG, 0, lgG) !== k; });
   ok(noRet, '手里有攻击卡也不许出 ⇒ 这才叫"不还手"原型');
-  /* ② 接线：默认关 ⇒ `OPPS` 逐字不变；开了 ⇒ 进桌且**产物自证** */
-  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
-  ok(/EPIRUS_COUNTER_OPPS \|\| ''/.test(t3), '默认必须是**空 ⇒ 关**（§E500 起这根是名字表，不再默认三个）');
-  ok(t3.indexOf('OPPS.push(o)') >= 0, '开了必须真推进 fitness 的对手表（推进别处 = 死作用点）');
-  ok(t3.indexOf("'EPIRUS_COUNTER_OPPS'") >= 0, '必须进 SELF_ENV_KEYS（否则黑键侦测会判它"传了没人读"）');
-  ok(/typeof o\.sel !== 'function'[\s\S]{0,200}process\.exit\(4\)/.test(t3), '缺一个对手必须 exit 4（少一个 = 一根空枪，不许静默少放）');
+  /* ② 接线：默认关 ⇒ `OPPS` 逐字不变；开了 ⇒ 进桌且**产物自证**。
+   * §删（2026-10-22 千问·第六批）：这里原来四条写法钉（`EPIRUS_COUNTER_OPPS || ''` 默认空 ‖ `OPPS.push(o)` ‖
+   *   `'EPIRUS_COUNTER_OPPS'` 在 SELF_ENV_KEYS 里 ‖ `typeof o.sel !== 'function' … process.exit(4)`），
+   *   摘腿后变异逐条判完（`mut-d220.mjs` 的 K1/K2/K3，跑 `--part=train-breadth --only="D130 "`，每次先还原并逐字核对备份）：
+   *   · **K1**（counter 那一格静默不推进桌）⇒ 红的**不是任何一条钉**（钉在门里排在前面，全过），
+   *     红的是行为腿 `只上 snipeSpam ⇒ 必须恰好进一个（9→10…）` ⇒ 钉 170 报的那件事早有腿在判。
+   *     且 `OPPS.push(o)` 这个串在 `train-3p.mjs` 里出现 **6 次**（econ/counter/ring/toolkit/human/pool 各一）⇒
+   *     它**不专属 counter 那一格**，counter 的 push 整行删掉它照样绿。
+   *   · **K2**（把"要的对手在 EpirusBots 里不存在 ⇒ exit 4"那一支的退出禁掉）⇒ **整门绿**：
+   *     那条正则也不专属（`typeof o.sel !== 'function'` 在文件里出现 **3 次**，econ/ring 两处的 `process.exit(4)` 紧跟着就把它喂绿），
+   *     而行为上抓不到是因为这一支在本门可见的世界里**永不触发** —— 门开头 `typeof Bots.pickGuardSpam === 'function'` 三条
+   *     已经把"sel 必须是函数"钉在真源上，表里只可能指到它们 ⇒ 判为**防御性文案**，钉它=零收益 + 改报错文案就误红。
+   *   · **K3**（只从 `SELF_ENV_KEYS` 名单里摘掉这一项）⇒ 钉在，门当场红在**钉自己**那句（那个带引号的串只在名单里出现一次）；
+   *     ⇒ 这不算证据（门在钉那一步就短路了）。**摘钉之后重跑同一个 K3 ⇒ 整门绿** ⇒ 名单项对行为毫无后果：
+   *     入口里那行真读（`process.env.EPIRUS_COUNTER_OPPS`）本身就被 `knob-guard` 的闭包扫得到 ⇒ 这条钉只会误红，判它删。
+   *   · "默认关 ⇒ 逐位不变"这件事判在**别处**：本文件 `D127:95` 与 `D123③` 都跑无旋钮的 `train-3p` 并要求产物权重哈希
+   *     等于 `CLI_ARM_BASELINE` ⇒ 默认值一旦被改成非空，那条先红（同一个坏法在 `D220` 的 M1 上实测过：红的是关档臂）。 */
   const dir = mkdtempSync(join(tmpdir(), 'd130-'));
   /* 2026-10-16：每个臂**各有各的落点**（原先都写默认落点 `docs/artifacts/train-3p-out.js`，靠"最后写的那个"
    *   被读到 —— 本机与别的部分并发时那个文件会被别人覆盖，所以 metaOf 现在收一个路径参数）。 */

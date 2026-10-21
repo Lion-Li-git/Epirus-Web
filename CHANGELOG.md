@@ -1,3 +1,59 @@
+## v1.7.149 — 10-22 凌晨（千问）：门禁审查第六+第七批 —— 哨兵④ 名单开工：六条门的写法钉，判完变异该删的删、该换成往返的换
+
+### 这批做的是"④ 候选"（源码 pin + 同门已有行为腿 ⇒ 可能重复）
+`node tools/gate-sentinel.mjs` 报 ④ = 22 条（D57 之后从 23 降到 22）。本轮读完整份名单，先做六条：`D56 D103 D220 D130 D84 D127`。
+**跳过 `D58`** —— `docs/GATE-SHIFTS.md` §十五 早把它判成**接受损失**（正经去处是页内仪器），"顺手补上"才是错。
+
+### 六条的处置（每条都跑了摘腿前后的变异）
+- `D56`：三条 `policy.js` 写法钉 ⇒ 一条与本门对 `Pol.isLegacyChooser(...)` 的直接调用重复（删）；两条换成**跑一遍 `pack → unpack` 往返**
+  （游戏侧口径，不带 `allowLegacy`）。三次变异：摘 `unpack` 挂标记那行 **红** ‖ 摘 `pack` 写 `lv` 那行 **红**（`实测 undefined want=6`）‖
+  **等价改写** `o.lv` → `o['lv']`（改完两条旧钉的正向串 `grep -c` 都是 0）**仍绿**。
+- `D103`：2P 考卷"登记 + 表尾"两条源码正则 ⇒ 换成读运行时那张**本来就 export** 的表（`P2_FNAME` / `P2_NAMES`）。
+  门旁原话"插入位置运行时读不出"是**错的**：字符串键保持插入序，`promote-champion2p.mjs:23` 早就在 import 它。
+  四次变异：挪到表中间 **红**（`实测末项是 "defreflectgun"`）‖ 不登记 **红**（`undefined`）‖ 值指到别家 **红**（`"pickAggro"`）‖ 只改排版 **绿**。
+  第三条（`Bots[表里的名字]` 必须是函数）**想过但没加** —— 本门开头那条 + 第一条已蕴含它，摆着只增腿数不增覆盖面。
+- `D220`：四条 `train-3p.mjs` 写法钉**全删**，本门原有三档真跑子进程已经覆盖（开档臂 ‖ 写错名臂 `exit 4` ‖ 关档臂一行不印）。
+  五次变异：M1 默认偷开 ⇒ 红（关档臂）‖ M2b 不认识的名字静默换一个对手继续跑 ⇒ 红 `不认识的卡名必须 exit 4（实测 0）` ‖
+  M3 推进别处（死作用点）⇒ 红 `必须印出进了哪几个、桌变大` ‖ **M4 只摘 `SELF_ENV_KEYS` 名单项 ⇒ 整门绿**（这条钉毫无行为后果，只会为重构误红）‖
+  M5 "设了却没人读" ⇒ 红（读数臂）。
+- `D130`：同一族的四条钉**全删**，而这批的新形状是**正向钉不专属那一格**：`OPPS.push(o)` 在 `train-3p.mjs` 里出现 **6 次**
+  （econ/counter/ring/toolkit/human/pool）、`typeof o.sel !== 'function'` 出现 **3 次** ⇒
+  K1 把 counter 的 push 整行删掉 ⇒ 钉全过、红的反而是行为腿（`只上 snipeSpam ⇒ 必须恰好进一个（9→10…）`）；
+  K2 把"缺对手必须 exit 4"那一支禁掉 ⇒ **整门绿**（判为防御性代码：本门开头三条 `typeof Bots.pickGuardSpam === 'function'` 已让它永不触发）；
+  K3 只摘名单项 ⇒ 钉在时红的是钉自己（门短路，不算证据），**摘钉后重跑同一个 K3 ⇒ 绿** ⇒ 名单项确实不判任何东西。
+
+### 第七批（同一晚续跑）：`D84` 与 `D127`
+- `D84`：六条 `evo.js` 写法钉 ⇒ 换成"跑示范"。**默认关**那条不再读那行声明，改成"新开一份沙箱、只设教师与退火窗、从不调
+  `setImitOverride` ⇒ `countImitInject()` 必须 `fired=0 且 tries=0`"，并配**正对照**（同一沙箱把开关打开 ⇒ `fired>0`）。
+  · 一台先自曝的剂量：我第一版写成 `until=10 / games=2`，`imit-probe.mjs` 实测那一档**连 `tries` 都是 0** ⇒
+    "读到 0"其实是"尺没接上"的形状 ⇒ 改成 `until=100 / games=8` 并把 `tries>0` 写成显式前置。
+  · 六次变异：N1 默认翻成 `true` ⇒ 红 `fired=7 tries=7` ‖ N2 门控里摘掉 `IMIT_OVERRIDE &&` ⇒ 红 `fired=12 tries=12` ‖
+    N3 拆掉 `okL` 的可负担检查 ⇒ 红 `fired=14 unaffordable=0` ‖ N4 让 `teacherFull` 丢 target ⇒ 红 `实测读到 null` ‖
+    N6 摘掉"全局注册表按函数名取"那条路 ⇒ 红 `got=false want=true` ‖ N5 **等价改写** `if (n === 'antiring')` ⇒ `if ('antiring' === n)` ⇒ **绿**。
+  · 门控条件那一长串**删**（`D86:1811` 与 `D87:1842/1844/1845` 各钉了一份，本门只是抄第二遍）；
+    `server/train-worker.mjs` / `paralleltrain.mjs` / `train-server.mjs` 那批**回执文案**钉**留着**，判由写在门体与审计文档里：
+    替成行为要么得起真 worker（全仓没有一道门起过 —— §十五 正是为此把 `D13` 判成接受损失），要么在门里重抄一份 server 逻辑。
+- `D127`：两条写法钉换成**用本门已经在跑的那两趟**（不新增 spawn）：关档臂一行都不许印 ‖ 归因那句话必须与两臂产物的权重哈希互相印证。
+  起点是先把剂量读清楚：`d127-probe.mjs` 复现两臂 ⇒ 开档臂印 `改判（是预筛选掉的，不是排序键）`，两臂哈希 `aa743488cc` vs `eb1de6334d` ⇒ 这条腿今天真有内容。
+  三次变异：L1 摘掉 `sel.best = lp.best`（算了不用）⇒ **红在新腿** `嘴上说"改判"而两臂逐字相同 got=true want=false` ‖
+  L2 默认值偷改成 1 ⇒ **红**（是那条**已有**的基线哈希腿先抓住：`got=eb1de6334d want=aa743488cc` ⇒ 说明原钉 78 的覆盖面早就在门里）‖
+  L3 等价改写 `sel['best'] = lp.best` ⇒ **绿**（旧钉在这一步会误红）。
+
+### 一条要交代的工具面事实（实测 + 读实现给的出口，不是猜）
+`server/knob-guard.mjs` 的暗键检测拦不住"设了却没人读"这一族：M5 之后 `train-3p` 的 status 仍是 0。
+读实现：`scanKeysFromSource`（`server/knob-guard.mjs:74`）先 `stripComments`（`:36`）再按 `/EPIRUS_[A-Z0-9_]+/g` 扫**全文** ⇒
+名字**只出现在报错文案的字符串里**也算"本入口读得到"（M5 保留的那行 `console.error('… ⛔ EPIRUS_ECON_OPPS 里有不认识的名字…')` 就是）。
+这是它自己的保守偏差（宁可漏报不误报），**不是我这笔改坏的**；要治得改它 own 的判据 ⇒ 属工具面，等裁，本轮不动 `server/`。
+
+### 验证（第六+第七批）
+定向复跑：`--only="D56 "` ‖ `--only="D103 "` ‖ `--only="D220 "` ‖ `--only="D130 "` ‖ `--only="D84 "` ‖ `--only="D127 "` 各 1/1（摘钉后的基线，逐条在上面的变异里都红过一轮）；
+每轮变异跑完都**逐字还原并核对备份**（`git status` 只剩我改的门文件）。
+按改动面逐部分复跑（**不是整轮**）：`train-breadth` ‖ `train-table` ‖ `ship-promote` ‖ `train-evo` ‖ `meta-repo` 的结果与秒数见审计文档 §二 19)。
+**门数 281 → 281**（`git grep -h -c "^t(" 5655158d^` 与现状同）⇒ 七批改的全是门**内部**的断言腿，一条门没摘、一条没新加。
+台账：审计文档 §二 补 13)-18)；`docs/GATE-SHIFTS.md` 新增 §廿一（把 3)-7) 五批的账一次记全 —— 上一批我漏记了，这里一起补）。
+
+---
+
 ## v1.7.148 — 10-22 凌晨（千问）：门禁审查第五批 —— 抓到一条**空门**：产品规则整个退回旧口径它照样绿（D57）
 
 ### 现场（这就是用户说的"改过很多次也没搞干净"的那一类）
@@ -10227,4 +10283,3 @@ v1.5.321 我据"`long` 里合法率涨了但入围率仍 ≈0"判 **(R)**；把�
 - §N8 臂产物点名（结案）：v7xn10a-31/2psh/band1..6、v7xn10b-31/2psh/band1..6（CLEAR_W 生效档=否证：退化龟包当选 ⇒ train-3p 当选面无退化闸）、v7xn10c-31/2psh/band1..6（作废档=第六例静默空转：train-3p 沙箱无 process ⇒ PASSIVE_FIELD 类 env 全黑）。详见 RESEARCH-LOG-2026-09-22-qoder-night.md §N8。
 - §N8 全名补点（D82 逐字 · 24h 窗口）：v7xfer44-2p、v7xfer44-3psh、v7xfer44b-2p、v7xfer44b-3psh、v7xfer44b-band1、v7xfer44c10-2p、v7xfer44c10-band1、v7xfer44c11-2p、v7xfer44c11-band1、v7xfer44c11b-2p、v7xfer44c11b-band1、v7xfer44c11b-band2、v7xfer44c12-2p、v7xfer44c12-band1、v7xfer44c12-band2、v7xfer44c12-band3、v7xfer44c13-2p、v7xfer44c13-band1、v7xfer44c13-band2、v7xfer44c13-band3、v7xfer44c6-2p、v7xfer44c6-band1、v7xfer44c7-2p、v7xfer44c7-band1、v7xfer44c7-band2、v7xfer44c7-band3、v7xfer44c8-2p、v7xfer44c8-band1、v7xfer44c9-2p、v7xfer44c9-3psh、v7xfer44c9-band1、v7xfer44c9-band2、v7xfer44d6w-2p、v7xfer44d6w-band1、v7xn10a-2psh、v7xn10a-31、v7xn10a-band1、v7xn10a-band2、v7xn10a-band3、v7xn10a-band4、v7xn10a-band5、v7xn10a-band6、v7xn10b-2psh、v7xn10b-31、v7xn10b-band1、v7xn10b-band2、v7xn10b-band3、v7xn10b-band4、v7xn10b-band5、v7xn10b-band6、v7xn10c-2psh、v7xn10c-31、v7xn10c-band1、v7xn10c-band2、v7xn10c-band3、v7xn10c-band4、v7xn10c-band5、v7xn10c-band6、v7xn2-31、v7xn2-31-band1、v7xn2-31-band2、v7xn2-31-band3、v7xn2-31-band4、v7xn2-31-band5、v7xn2-31-band6、v7xn6-2p、v7xn7a-31、v7xn7a-31-band1、v7xn7a-31-band2、v7xn7a-31-band3、v7xn7a-31-band4、v7xn7a-31-band5、v7xn7a-31-band6、v7xn7b-31、v7xn7b-31-band1、v7xn7b-31-band2、v7xn7b-31-band3、v7xn7b-31-band4、v7xn7b-31-band5、v7xn7b-31-band6、v7xn7c-31、v7xn7c-31-band1、v7xn7c-31-band2、v7xn7c-31-band3、v7xn7c-31-band4、v7xn7c-31-band5、v7xn7c-31-band6、v7xn8a-31、v7xn8a-31-band1、v7xn8a-31-band2、v7xn8a-31-band3、v7xn8a-31-band4、v7xn8a-31-band5、v7xn8a-31-band6、v7xn8b-31、v7xn8b-31-band1、v7xn8b-31-band2、v7xn8b-31-band3、v7xn8b-31-band4、v7xn8b-31-band5、v7xn8b-31-band6、v7xn8c-31、v7xn8c-31-band1、v7xn8c-31-band2、v7xn8c-31-band3、v7xn8c-31-band4、v7xn8c-31-band5、v7xn8c-31-band6、v7xn9c-31、v7xn9c-31-band1、v7xn9c-31-band2、v7xn9c-31-band3、v7xn9c-31-band4、v7xn9c-31-band5、v7xn9c-31-band6。
 - §N9 落地（D121）：train-3p 当选面退化闸（rejectDegenerateWinners 纯函数 + densityProfile 单一来源 + degenerateOnlyWinner meta）；真反例 xn10b 当选者 zeroAtkRate=100% 复验会被剔除、现役 0% 不误伤；np 168/168。本程无新产物（smoke band 走 /tmp）。
-
