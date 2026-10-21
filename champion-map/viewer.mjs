@@ -1174,6 +1174,23 @@ function famSummary(s) {
   if (num.length) out.push(num.join(' · '));
   return out.join(' · ') || items.join(' · ');
 }
+/* 10-21：左栏宽度自适应（用户合并家族后 29→10 家，固定 392px 会留死空、页内自检「栏宽 ≤ 最宽标签+60」会红）。
+ *   用与自检完全同一把尺（famSummary + 9px system-ui）量一遍，取 max+60，夹在 [220,520]。 */
+function fitTpad() {
+  var keys = (typeof LASTFAMS !== 'undefined' && LASTFAMS && LASTFAMS.length) ? LASTFAMS : Object.keys(FAMLAB);
+  try {
+    var c = document.createElement('canvas').getContext('2d');
+    c.font = (9 * devicePixelRatio) + 'px system-ui,sans-serif';
+    var mx = 0;
+    for (var i = 0; i < keys.length; i++) {
+      var fu = famSummary(famLab({ fam: keys[i] })) || ('家族 ' + keys[i]);
+      var w = c.measureText('家族 ' + keys[i] + ' · ' + fu).width / devicePixelRatio;
+      if (w > mx) mx = w;
+    }
+    if (!mx) mx = 260;
+    TPAD.l = Math.max(220, Math.min(520, Math.floor(mx + 60))) * devicePixelRatio;
+  } catch (e) { }
+}
 /* E396 DS：把家族名按「 · 」装箱成最多 max 行（超出的部分不进图，完整串在悬停提示里）。 */
 function wrapLabel(t, s, maxW, max) {
   var parts = String(s).split(' · '), lines = [], cur = '';
@@ -1915,7 +1932,7 @@ function drawTree(fr) {
   var tmin = Infinity, tmax = -Infinity;
   for (i = 0; i < N; i++) { if (!VIS[i]) continue; var tv = Date.parse(P[i].ts); if (isFinite(tv)) { if (tv < tmin) tmin = tv; if (tv > tmax) tmax = tv; } }
   if (!(tmax > tmin)) { g.fillStyle = st.dim; g.fillText('没有可用的 ts ⇒ 谱系图画不了（要 lineage.tsv）', 30 * devicePixelRatio, 60); return; }
-  var padL = TPAD.l, padR = 26 * devicePixelRatio, padT = TPAD.t, padB = 66 * devicePixelRatio;
+  fitTpad(); var padL = TPAD.l, padR = 26 * devicePixelRatio, padT = TPAD.t, padB = 66 * devicePixelRatio;
   var rowH = (h - padT - padB) / fams.length, X = function (tv) { return padL + (tv - tmin) / (tmax - tmin) * (w - padL - padR); };
   /* §E377 缩放**以数据区左上角为支点**（不是画布原点）‖ §E379 这套 WX/WY 从此**只在两个地方用**：
    *   贴那张纸的仿射、以及算每枚点的屏幕位置 —— 纸本身不带它（原来纸是带着它烘的，于是"哪些元素参与"

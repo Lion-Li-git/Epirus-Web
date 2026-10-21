@@ -567,7 +567,7 @@ console.log('方法/目标配置等价类 = ' + groups.length + ' 个（成员�
 const BIG = groups.filter(g => g.rs.length >= 6), SMALL = groups.filter(g => g.rs.length < 6);
 console.log('成员 ≥6 的类 ' + BIG.length + ' 个（覆盖 ' + BIG.reduce((s, g) => s + g.rs.length, 0) + ' 枚）‖ 并进零散的 ' + SMALL.length + ' 类 / ' + SMALL.reduce((s, g) => s + g.rs.length, 0) + ' 枚');
 let i = 0; const FAM = {};
-const defs = BIG.map(g => { i++; return { n: i, g, label: '' }; });
+let defs = BIG.map(g => { i++; return { n: i, g, label: '' }; });
 if (SMALL.length) defs.push({ n: i + 1, g: { sig: null, rs: SMALL.flatMap(s => s.rs) }, label: '零散实验（<6 枚的类合并）' });
 for (const d of defs) for (const r of d.g.rs) FAM[r.id] = d;
 /* 标签：说清"这一家相对上一家改了什么"，而不是把 16 个轴念一遍。*/
@@ -638,6 +638,30 @@ if (FUS.length) {
   console.log('§E554 臂家族：≥6 枚的线 ' + big.length + ' 个（覆盖 ' + big.reduce((s, g) => s + g.rs.length, 0) + ' 枚 ‖ ' +
     big.map(g => g.rs.length + ' 枚').join(' ‖ ') + '） ‖ 零散 ' + small.reduce((s, g) => s + g.rs.length, 0) +
     ' 枚 / ' + small.length + ' 个类 ‖ 家族号追加到 ' + an + '（在册各行的号一个没动）'); }
+/* ===== 10-21 用户：家族太多颜色难分 ⇒ 合并历史步进与零散桶（号保留最小号，不重排 22/23/25）===== */
+function mergeDefs(keep, drop, label) {
+  const kd = defs.find(d => d.n === keep); if (!kd) { console.log('⚠ 合并目标不存在：' + keep); return; }
+  const ds = defs.filter(d => drop.includes(d.n)); if (!ds.length) return;
+  const rs = kd.g.rs.concat(...ds.map(d => d.g.rs));
+  const t0 = rs.map(r => r.ts).sort()[0] || '', t1 = rs.map(r => r.ts).sort().slice(-1)[0] || '';
+  kd.g = { sig: kd.g.sig, rs: rs, t0: t0, t1: t1 };
+  kd.label = label + ' ‖ ' + rs.length + ' 枚 ‖ ' + String(t0).slice(5, 10) + '→' + String(t1).slice(5, 10);
+  for (const r of rs) FAM[r.id] = kd;
+  defs = defs.filter(d => !drop.includes(d.n));
+}
+mergeDefs(1, [2, 3, 4, 5], '历史配方步进 A（09-12～09-13：珠价/风格/对手池）');
+mergeDefs(6, [7, 8, 9, 10, 11], '历史配方步进 B（09-13～09-16：对手池/珠价/代数）');
+mergeDefs(12, [13, 14, 15, 16, 17, 18, 19, 20, 21], '历史配方步进 C（09-16～09-21：多样性/珠价/对手池）');
+mergeDefs(24, [27], '零散（老配置散枚 + 臂线零散）');
+mergeDefs(26, [28], '臂线·env 实验（COUNTER_OPPS / 纯续训）');
+function relabel(n, label) { const d = defs.find(x => x.n === n); if (!d) return; const rs = d.g.rs;
+  const t0 = rs.map(r => r.ts).sort()[0] || '', t1 = rs.map(r => r.ts).sort().slice(-1)[0] || '';
+  d.label = label + ' ‖ ' + rs.length + ' 枚 ‖ ' + String(t0).slice(5, 10) + '→' + String(t1).slice(5, 10); }
+relabel(22, '早期 env 臂（16 轴全空）');
+relabel(23, '现代基线（代数 400～1200）');
+relabel(25, '融合与续训');
+relabel(29, '臂线·COUNTER_OPPS=guardSpam');
+console.log('10-21 家族合并 → 在册 ' + defs.length + ' 个家族（号保留最小号）：' + defs.map(d => d.n).join(','));
 /* §E314 → §E464 更正：这里原来写的「无实体」是**错的**，错的是一台仪器的口径。
  *   §E314 那遍穷尽扫过盘上 1461 个 .bak + 593 个可达 blob + 4190 个对象库 blob，逐枚算权重指纹 ⇒ 没找到 `d13d3c85…`。
  *   但它算的是「文件里那份数组」的哈希，而训练服务记父走的是 `weightsId(loadAny(种子).params)`
