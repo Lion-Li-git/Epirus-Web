@@ -1,3 +1,33 @@
+## v1.7.143 — 10-22 凌晨（千问）：训练场多种子的 worker 池复用（线程泄漏）+ 中止收摊
+
+### 哪里漏的
+- v1.7.142 把 N 人主体改名 `runTrainNOne`、外面套了 `rounds × seeds` 的调度壳，但**每粒种子各建一个 worker 池**，
+  而壳用的 `cfg.noWrite` 那条提前 return（`train-server.mjs:674`）跳过了 `poolN.close()`（只在收尾与四条 abort 路径上有）。
+  页面默认「种子数 3 × 轮数 5」（`index.html:96-97`）⇒ 一次训练留下 **15 个不回收的池**，这台 18 核每池 16 线程。
+
+### 实测（隔离模式 `EPIRUS_BUNDLE_OUT` 写本机 Temp，绝不碰线上包；两边同一把尺）
+| 跑法 | 改前（干净克隆 `ec73c85`） | 改后 |
+|---|---|---|
+| seeds=3 rounds=1 gens=1 | 净增 **+45** 条线程（done 后 2 秒）‖ 62 秒后仍 **+44** | **+0** ‖ 62 秒后 **−4** |
+| seeds=2 rounds=1 | 净增 **+32** ‖ 62 秒后 **+29** | **+0** ‖ 62 秒后 **−4** |
+
+- **读数没动**（行为不变）：`seedEval` 的四个读数 9.90 / 12.99 / 15.73 / 16.70 改前改后**逐字相同**，事件计数（`start 4 ‖ gen 2 ‖ multiObj 2 ‖ lineage 1 ‖ roundDone 1 ‖ done 1`）同形。
+- **中止面**（顺手修的第二处）：改前一次中止发**两条** error —— 真因（`未知/缺失对手…`）之后跟一条 `Cannot read properties of undefined (reading 'ev')`
+  （调度壳把内层的 `undefined` 当读数用了）；改后只剩真因那一条，并补发 `done(wrote:false, aborted:true)` ——
+  v1.5.19 那条判例说过：中止处直接 return 会跳过 `done`，消费端只能干等到超时，而超时那句又把真因埋掉。
+
+### 撤掉的一条前提（我白天的判断错了，记下来）
+- 我曾说"跨种子共用池会抹掉种子作用"，依据是 `worker_threads` 的 `process.env` 是创建时拷贝（这条注释本身没错）。
+  **实测否证**：同一 pop / 同 gen / 同 idx，只把 seed0 从 111 换到 222/333/777 ⇒ worker 的分数**逐字不变**
+  ⇒ `train-worker.mjs:299` 那步 `__seedSandbox(S0*100003+…)` 对 `scoreMemberN` 的输出没有可观测影响（分数随 `gen/idx` 变，那是显式入参）。
+  种子的区分靠的是主线程 `setRng` + 主沙箱播种（决定 pop 的生成与交叉）。⇒ 为此加的"seed0 随消息下发"两处改动**已撤回**，
+  只留池复用这一件。顺带得到一个该记的事实：那条"按 (seed0,gen,个体下标) 播种"在打分上是装饰。
+
+### 验证（全部是定向，不是整轮认证）
+`--part=train-table 11/11` ‖ `train-env 5/5` ‖ `train-econ 11/11` ‖ `ship-feas 14/14` ‖ `ship-promote 21/21` ‖
+`meta-repo 12/12` ‖ `probe-instruments 33/33`。CI 当时红的那两条（REPRO2 / D84）属门禁面，见同日下一笔。
+
+---
 ## v1.7.142 — 10-21 夜（DS）：训练场 N 人多种子/多轮（用户裁定 C）
 
 ### 根因

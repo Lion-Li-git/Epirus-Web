@@ -408,6 +408,12 @@ function writeBundleMP(pack, meta) {
 async function runTrainNOne(gens, cfg) {
   const SEED0 = Number(cfg.seed0 || 0);
   const NO_WRITE = !!cfg.noWrite, FIXED = cfg.paramsFixed || null;
+  /* 10-21 夜（千问）：多种子/多轮**共用一个 worker 池** ⇒ 谁借来的池谁就不关（外层 `runTrainN` 的 finally 收）。
+   * 原来每粒种子各建一个池而 `NO_WRITE` 那条提前 return 又跳过回收 ⇒ 页面默认 3 种子 × 5 轮 = 15 个池悬着
+   * （这台 18 核每池 16 线程）。借用时也不许内层去动 `runningN`：那面旗归外层，内层一灭就等于"允许第二个
+   * 训练请求插进来和剩下的种子并发抢同一棵树"。 */
+  const BORROW = !!cfg.pool;
+  const relPass = function () { if (!BORROW) { runningN = false; poolN.close(); } };
   /* v1.5.96：**这条路径以前完全没有 IMIT 接线** —— 所有 N 人臂（含本晚全部实验）都走这里，
    * 所以 `imitB ≡ 0`、整臂与对照**逐位相同**。现在与 `runTrain` 共用 `applyImitEnv`。 */
   applyImitEnv(gens);
@@ -462,8 +468,8 @@ async function runTrainNOne(gens, cfg) {
   }
   if (unknownOpps.length) {
     for (const c of clients) sse(c, { type: 'error', msg: '未知/缺失对手: ' + unknownOpps.join(',') + '（脚本名可选: ' + Object.keys(BOT_FN_N).join(' ') + '；冠军对手写成 champ:<仓库相对路径>，例 champ:docs/artifacts/champion-5p-armB12f.bak）' });
-    runningN = false;
-    return;
+    if (!BORROW) runningN = false;
+    return { aborted: true, reason: '未知/缺失对手' };   // 这里池还没建，故不走 relPass
   }
   /* v1.5.2：装好风格切片（复合适应度）。worker 是独立沙箱 ⇒ 名单/权重/局数还要随消息再下发一次
    * （见 paralleltrain / train-worker）；这里这一份是给**串行回退路径**和终局评估用的。 */
@@ -492,8 +498,8 @@ async function runTrainNOne(gens, cfg) {
      * 一整份产物都不产出，破坏"同参数可复现"）。改成可关/可调：EPIRUS_WALL_MS=0 关闭（纯按代数收敛），
      * 默认仍是 30 分钟以保持既有行为。 */
   const cap = wallCapOf(process.env);   // v1.5.200：语义收进 server/wall-cap.mjs（`0` = 关闭；此前 0 会当场超时）
-  process.env.EPIRUS_SEED0 = String((SEED0 || 1) * 7919 + 13);   // worker 在下一行创建，必须在此之前设好
-  const poolN = makeParallelEvalN(T);
+  process.env.EPIRUS_SEED0 = String((SEED0 || 1) * 7919 + 13);   // 新建池时 worker 在下一行创建要读它；借用池时靠 evalN 消息里的 seed0
+  const poolN = BORROW ? cfg.pool : makeParallelEvalN(T);
   const seedP = cfg.seedPack || (cfg.fresh ? null : loadSeedN());
   const hotstartFromN = seedP ? weightsId(seedP) : null;
   /* 工具链修复：播种。原先 policy.js 的 randn/crossover 直接用 Math.random，
@@ -535,7 +541,7 @@ async function runTrainNOne(gens, cfg) {
       const bad = (res || []).filter(function (r) { return r && r.modeUsed && r.modeUsed !== mode; });
       if (bad.length) {
         for (const c of clients) sse(c, { type: 'error', msg: 'worker 没收到训练模式 ' + mode + '（回执=' + bad[0].modeUsed + '）—— 已中止，这份产物不能用' });
-        runningN = false; poolN.close(); return;
+        relPass(); return { aborted: true, reason: 'worker 模式回执不符' };
       }
       /* v1.5.11 自检：奖励覆盖必须与服务端一致，否则它会静默半开（服务端开、worker 关），
        * 产物少一份适应度且日志完全正常（与 mode 半开同型）。
@@ -548,7 +554,7 @@ async function runTrainNOne(gens, cfg) {
       });
       if (badFight.length) {
         for (const c of clients) sse(c, { type: 'error', msg: 'worker 的奖励覆盖与服务端不一致（worker=' + JSON.stringify(badFight[0].fight) + ' 服务端=' + JSON.stringify(wantFight) + '）—— 已中止，这份产物不能用' });
-        runningN = false; poolN.close(); return;
+        relPass(); return { aborted: true, reason: 'worker 奖励覆盖不符' };
       }
     }
     /* v1.5.2 自检：风格切片也要有回执。少了这一项，切片可能只在服务端那份生效、worker 照旧不算风格局
@@ -557,7 +563,7 @@ async function runTrainNOne(gens, cfg) {
       const badS = (res || []).filter(function (r) { return r && !r.styleGames; });
       if (badS.length) {
         for (const c of clients) sse(c, { type: 'error', msg: 'worker 没跑风格切片（回执 styleGames=' + (badS[0] ? badS[0].styleGames : 'n/a') + '，期望 ' + slice.games + '）—— 已中止' });
-        runningN = false; poolN.close(); return;
+        relPass(); return { aborted: true, reason: 'worker 风格切片没生效' };
       }
     }
     const scored = pop.map(function (params, i) { return { params: params, r: res[i] || { score: -1, firstRate: 0, top2Rate: 0 } }; });
@@ -575,7 +581,7 @@ async function runTrainNOne(gens, cfg) {
       hDist: hGenes.join(','),
       commitBest: (function () { let b = 0; for (let i = 0; i < scored.length; i++) { const r = scored[i].r; if (r && r.commitGames && r.commitFirstRate > b) b = r.commitFirstRate; } return b; })()
     } });
-    if (wallCapExceeded(cap, Date.now() - t0)) { for (const c of clients) sse(c, { type: 'error', msg: '\u8bad\u7ec3\u8d85\u65f6\u4e0a\u9650\uff0830 \u5206\u949f\uff09' }); runningN = false; poolN.close(); return; }
+    if (wallCapExceeded(cap, Date.now() - t0)) { for (const c of clients) sse(c, { type: 'error', msg: '\u8bad\u7ec3\u8d85\u65f6\u4e0a\u9650\uff0830 \u5206\u949f\uff09' }); relPass(); return { aborted: true, reason: '超时限中止' }; }
     const elite = scored.slice(0, 3).map(function (x) { return x.params; });
     /* (c) 分巢精英：每个 h 值额外保留它自己**承诺局夺 1 率**最高的那个个体。
      * 这是 h 真正参与选择的唯一机制——否则承诺局只记在诊断里，深承诺的权重
@@ -671,7 +677,7 @@ async function runTrainNOne(gens, cfg) {
   }
   if (FIXED) finalParams = FIXED;
   const pack = P.pack(finalParams);
-  if (NO_WRITE) return { params: finalParams, ev: ev, pack: pack };
+  if (NO_WRITE) { relPass(); return { params: finalParams, ev: ev, pack: pack }; }
   /* ===== v1.5.19：**产物健康门槛（最后一道，无法绕过）** =====
    * 为什么必须放在落盘处：产物的冠军由内部多处提升路径共同决定（finishStep 的 bestChamp、
    * pickChampionByWinRate、上面的多目标择优），**任何一处漏改都会让门槛变成空操作** ——
@@ -753,8 +759,8 @@ async function runTrainNOne(gens, cfg) {
      * 第一版在这里直接 return，把 done 一起跳过了，runner 只能干等到 15 分钟超时后报
      * "没有 done 事件"（真因被埋掉）。 */
     for (const c of clients) sse(c, { type: 'done', n: n, gens, firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0, secs: ((Date.now() - t0) / 1000).toFixed(1), champ: null, health: healthInfo, healthReject: healthReject, wrote: false });
-    runningN = false; poolN.close();
-    return;
+    relPass();
+    return { aborted: true, doneSent: true, reason: '产物体检未过 ⇒ 不落盘' };
   }
   /* ===== v1.5.86：落盘处也允许**阻断**（默认关；EPIRUS_FEASIBILITY_BLOCK=1 打开）=====
    * 起因：`v7divK-82` 在训练里被正常写出（G 4.42、多样性最好），但换包时才被拦 ✗ ——
@@ -765,8 +771,8 @@ async function runTrainNOne(gens, cfg) {
     for (const c of clients) sse(c, { type: 'done', n: n, gens: gens, firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0,
       secs: ((Date.now() - t0) / 1000).toFixed(1), champ: null, health: healthInfo, feasibility: feasibleInfo,
       feasibilityReject: true, wrote: false });
-    runningN = false; poolN.close();
-    return;
+    relPass();
+    return { aborted: true, doneSent: true, reason: '可行性未过 ⇒ 不落盘' };
   }
   writeBundleMP(pack, { source: 'server/train-server.mjs', n: n, gens: (cfg.metaGens != null ? cfg.metaGens : gens), games, pop: popSize, opps: oppNames.join(','), mode: mode, rulesFingerprint: rulesFingerprint(), styleOpps: styleNames.join(','), styleW: slice.w, styleGames: slice.games, feasibility: feasibleInfo, ecoOverride: (ecoSet ? JSON.stringify(ecoEnv) : ''), fightOverride: (fightSet ? JSON.stringify(fightEnv) : ''),
     /* v1.5.11：把**实际生效**的奖励参数也记下来（哨声惩罚现在长程默认开、不靠 env ⇒ 只记 env 会漏） */
@@ -779,8 +785,7 @@ async function runTrainNOne(gens, cfg) {
      * 与 v1.3.50 给 CLI 定的规矩对齐：让"从哪个冠军长出来的"成为可复现输入。 */
     seed: SEED0, fresh: !!cfg.fresh, seeds: Number(cfg.seeds) || 1, rounds: Number(cfg.rounds) || 1, round: cfg.round || 0, seedIdx: cfg.seedIdx || 0, hotstartFrom: hotstartFromN, seedEmbeddedFrom: seedLegacyFrom, workers: poolN.workers });
   for (const c of clients) sse(c, { type: 'done', n: n, gens, firstRate: ev ? ev.firstRate : 0, top2Rate: ev ? ev.top2Rate : 0, secs: ((Date.now() - t0) / 1000).toFixed(1), champ: pack, health: healthInfo, healthReject: healthReject });
-  runningN = false;
-  poolN.close();
+  relPass();
 }
 
 /* 10-21 C：完整多种子 N —— 每种子独立跑，每轮按真实胜率择优、轮间谱系继承。
@@ -792,26 +797,47 @@ async function runTrainN(gens, cfg) {
   const ROUNDS = Math.max(1, Math.min(20, Number(cfg.rounds) || 1));
   if (SEEDS === 1 && ROUNDS === 1) return runTrainNOne(gens, cfg);
   const t0 = Date.now();
+  /* 10-21 夜（千问）：**一池到底** —— 所有种子、所有轮共用一个 worker 池。
+   * 旧写法每粒种子各建一池，而 `NO_WRITE` 那条提前 return 又跳过回收 ⇒ 页面默认 3×5 跑完留下 15 个池；
+   * 收摊放 `finally`，中途中止时那十几条线程也不会留在进程里。 */
+  const shared = makeParallelEvalN(T);
   let parents = null, last = null;
-  for (let r = 0; r < ROUNDS; r++) {
-    for (const c of clients) sse(c, { type: 'roundStart', round: r, rounds: ROUNDS, seeds: SEEDS });
-    const got = [];
-    for (let s = 0; s < SEEDS; s++) {
-      const sc = Object.assign({}, cfg, { seedIdx: s, round: r, noWrite: true, paramsFixed: null, evForFixed: null,
-        seed0: (Number(cfg.seed0) || 0) + s * 7919 + r * 104729,
-        seedPack: (r === 0 ? null : (parents && parents[s % parents.length])) });
-      const rr = await runTrainNOne(gens, sc);
-      got.push(rr);
-      for (const c of clients) sse(c, { type: 'seedEval', n: cfg.n, round: r, seed: s, firstRate: rr.ev ? rr.ev.firstRate : 0, top2Rate: rr.ev ? rr.ev.top2Rate : 0 });
+  try {
+    for (let r = 0; r < ROUNDS; r++) {
+      for (const c of clients) sse(c, { type: 'roundStart', round: r, rounds: ROUNDS, seeds: SEEDS });
+      const got = [];
+      for (let s = 0; s < SEEDS; s++) {
+        const sc = Object.assign({}, cfg, { seedIdx: s, round: r, noWrite: true, paramsFixed: null, evForFixed: null, pool: shared,
+          seed0: (Number(cfg.seed0) || 0) + s * 7919 + r * 104729,
+          seedPack: (r === 0 ? null : (parents && parents[s % parents.length])) });
+        const rr = await runTrainNOne(gens, sc);
+        /* 中止（自检不符 / 超时 / 对手名写错）时内层只发 SSE 不回读数 ⇒ 必须当场收摊。
+         * 原来这里把 `undefined` 塞进 `got`，下一句 `rr.ev` 抛 TypeError ⇒ "这份产物不能用"的真话
+         * 被换成一句看不懂的崩溃（实测两条 error 并排：`未知/缺失对手…` + `Cannot read properties of undefined (reading 'ev')`）。
+         * 补发 `done`（wrote:false）：v1.5.19 那条判例 —— 中止处直接 return 会跳过 done，
+         * 消费端只能干等到超时，而超时那句又把真因埋掉。 */
+        if (!rr || rr.aborted) {
+          if (!rr || !rr.doneSent) {
+            for (const c of clients) sse(c, { type: 'done', n: cfg.n, gens: gens, firstRate: 0, top2Rate: 0,
+              secs: ((Date.now() - t0) / 1000).toFixed(1), champ: null, wrote: false, aborted: true, reason: (rr && rr.reason) || '内层中止' });
+          }
+          return { aborted: true, reason: (rr && rr.reason) || '内层中止' };
+        }
+        got.push(rr);
+        for (const c of clients) sse(c, { type: 'seedEval', n: cfg.n, round: r, seed: s, firstRate: rr.ev ? rr.ev.firstRate : 0, top2Rate: rr.ev ? rr.ev.top2Rate : 0 });
+      }
+      got.sort(function (a, b) { return ((b.ev && b.ev.firstRate) || 0) - ((a.ev && a.ev.firstRate) || 0); });
+      const keepN = Math.min(got.length, Math.ceil(Math.sqrt(SEEDS)));
+      parents = got.slice(0, keepN).map(function (x) { return x.params; });
+      last = got[0];
+      for (const c of clients) sse(c, { type: 'lineage', round: r, kept: keepN, seeds: SEEDS });
+      for (const c of clients) sse(c, { type: 'roundDone', round: r, bestFirstRate: last.ev ? last.ev.firstRate : 0, secs: ((Date.now() - t0) / 1000).toFixed(1) });
     }
-    got.sort(function (a, b) { return ((b.ev && b.ev.firstRate) || 0) - ((a.ev && a.ev.firstRate) || 0); });
-    const keepN = Math.min(got.length, Math.ceil(Math.sqrt(SEEDS)));
-    parents = got.slice(0, keepN).map(function (x) { return x.params; });
-    last = got[0];
-    for (const c of clients) sse(c, { type: 'lineage', round: r, kept: keepN, seeds: SEEDS });
-    for (const c of clients) sse(c, { type: 'roundDone', round: r, bestFirstRate: last.ev ? last.ev.firstRate : 0, secs: ((Date.now() - t0) / 1000).toFixed(1) });
+    return await runTrainNOne(0, Object.assign({}, cfg, { noWrite: false, paramsFixed: last.params, evForFixed: last.ev, seedIdx: 0, round: ROUNDS - 1, metaGens: gens, pool: shared }));
+  } finally {
+    shared.close();
+    runningN = false;
   }
-  return runTrainNOne(0, Object.assign({}, cfg, { noWrite: false, paramsFixed: last.params, evForFixed: last.ev, seedIdx: 0, round: ROUNDS - 1, metaGens: gens }));
 }
 
 const server = http.createServer((req, res) => {
