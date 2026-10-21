@@ -50,7 +50,7 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 | `path` | 包文件相对路径 | `D234` ①：**必须 `git ls-files` 查得到**（否则 CI 与干净克隆里这枚根本不存在） |
 | `tier` | `hard` \| `mid` \| `soft`（§E596 起**三带**，与难度三档一一对应；⚠ 这里原写「三带 7/6/7」，那是 §E596 当时的形状 —— v1.7.1 现测真源 `champion-map/pool-members.tsv` 以 `pool-add --audit` 现读为准（2026-10-21：`members:29, tiers:{hard:13,mid:0,soft:16}` —— `mid` 带在 §E609 拆带后清空；10-12 夜名册 20→27 时是 9/7/11）；分带的键是"这一组凑到桌上的实测强度"，不是逐枚分数——理由与读数在 `docs/research/logs/2026-10-12-e596-three-tier.md`。名单在 `tools/pool-add.mjs:TIERS`，环色在 `champion-map/viewer.mjs:POOL_COL`，两处必须同时改） | 抽签按带取；页面池环按带着色 |
 | `invited` | `1` = 用户点名（可越过行为门槛，但必须标警） ‖ `0` = 自动成员 | 沿用 DS 的分档门槛裁定（`docs/research/logs/2026-10-11-pool-screen-ds.md` §8） |
-| `promoteVerdict` | `pass` \| `block` \| `untested`（上槽体检：送盾/G4/G5，真源 `champion-map/promote.tsv`） | `D234` ③：自动成员不许 `block`，`untested` 必须显式印出来 |
+| `promoteVerdict` | `pass` \| `block` \| `untested`（进池体检：送盾/G4/G5，真源 `champion-map/promote.tsv`） | `D234` ③：自动成员不许 `block`，`untested` 必须显式印出来 |
 | `seatKill` | 人席否决的格数（`两批同号 ≥20pt`，判据在 `champion-map/seat-rule.mjs`，`seatgap.mjs`/`pool-add`/`pool-screen` 共用这一份）；**`-1` = 没量过（不是干净）**，`0` = 真量过且零格 | `D234` ③ 同上；⑧ 钉"喂进去的批表必须带基准行"；引用时必须带 §E587 的检出力脚注 |
 | `addedAt` | 入池那笔的 commit 时间（`git log -1 --format=%ai`，**不许估**） | 身份与谱系 |
 | `note` | 为什么进池（人读） | — |
@@ -172,7 +172,7 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 1. 新尺第一版读数的**定位**（只排序 vs 直接进换包判词）。
 2. 每档枚数与低档的脚本配比（DS 现在给的是困难 7 / 中 50 / 低 20 的池，装配用的子集还没定）。
    **10-12 01:2x 先填到"能装配"，01:4x 又按 §3.7 补了一轮**：困难 7 ‖ 中 6 ‖ 低 7 = **20 枚**，
-   每一枚都过完三道闸（卡死病 ‖ 上槽体检 ‖ 人席杀刀）且**都被人类形状席量过**（`--audit` 的 `seatUnknown:0`）。
+   每一枚都过完三道闸（卡死病 ‖ 进池体检 ‖ 人席杀刀）且**都被人类形状席量过**（`--audit` 的 `seatUnknown:0`）。
    ⚠ 这只是"够抽签 + 阵容真会变"，不是"配比定了"。
    **v1.7.1 补注**：上面那 20 枚（困难 7 ‖ 中 6 ‖ 低 7）在 10-12 夜长到 **27 枚（hard 9 ‖ mid 7 ‖ soft 11）**，
    下面那一段 §E600-B 就是那之后的裁定 ⇒ 读"20 枚"这个数时请连读这一句。
@@ -214,7 +214,7 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 4. **抽签**：`compose(members, 1, rng(slotSalt))` —— 只有 1 个 AI 席 ⇒ 契约 §3 的"逐席各抽一枚/可重复/**禁四席全同**"里，
    第三条在 2P **自动满足**（1 席无所谓全同），代码里也不再对该档报"四席全同"降级。
 5. **降级**（与 3P 同纪律，见 §4）：2P bundle 缺失/该档没配成员/成员解不开 ⇒ **退回那一枚 2P 冠军并说明原因**，不许静默。
-6. **现役 2P 槽的角色**：与 3P 槽同构 —— 池缺席时的回退；它自己也是池里的一枚（soft 带 · 钉住快照
+6. **现役 2P 槽的角色**：与 3P 槽同构 —— 池缺席时的回退；它自己也是池里的一枚（hard 带 · 钉住快照；§E677 两带化后从 soft 移来）
    `docs/artifacts/e598-2p/SHIPPED-2P-2026-09-22.bak`，理由是"换包会移走参照物"）。
 7. **跨人数邀请（2026-10-21 用户裁定 A）—— 只管 soft 带**：
    - **允许**把多人（3P）训练出来的包点名放进 **soft** 带：`invited=1` + `promoteVerdict=block` + `note` 里写明 2P 考卷分数与原因；**hard/mid 一律不许**（那里的"最强/中间"是 2P 考卷定的，掺 OOD 成员会把台阶弄反）。

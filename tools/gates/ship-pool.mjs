@@ -43,7 +43,7 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
   eq(A.untracked, 0, '① 有 ' + A.untracked + ' 枚成员的文件不在 git 里 ⇒ CI 里这枚不存在（最坏几处：' + JSON.stringify(A.bad) +
     '）⇒ 跑 `git add -f <那几枚>` 再重烘 bundle');
   eq(A.dupWid, 0, '① 同一粒权重占了 ' + A.dupWid + ' 个成员 ⇒ "池里有 N 枚"会虚高，而抽签会连着抽到同一颗（§E589：1443 文件 = 1130 粒）');
-  eq(A.blockedAuto, 0, '③ 自动成员里有 ' + A.blockedAuto + ' 枚被上槽体检判 block（送盾/G4/G5）⇒ 自动挑出来的包必须过体检，要点名请走 --invite');
+  eq(A.blockedAuto, 0, '③ 自动成员里有 ' + A.blockedAuto + ' 枚被进池体检判 block（送盾/G4/G5）⇒ 自动挑出来的包必须过体检，要点名请走 --invite');
   eq(A.seatKilledAuto, 0, '③ 自动成员里有 ' + A.seatKilledAuto + ' 枚被人席杀刀判死（§E531 两批同号 ≥20pt）⇒ 它已经给人类送分了');
   console.log('   ⚑ 池成员 ' + A.members + ' 枚 ' + JSON.stringify(A.tiers) +
     ' ‖ 体检没量过的自动成员 ' + A.untestedAuto + ' 枚 ‖ 人席没量过的 ' + A.seatUnknown + ' 枚（**没测 ≠ 过关**）');
