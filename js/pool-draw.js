@@ -91,24 +91,39 @@
     var idx = 0;
     out.seats = out.seats.map(function (m) { return { id: m.id, wid: m.wid, seat: idx++, kind: 'pack' }; });
     out.scriptSeats = 0;
-    /* §E600-B 掺脚本席：在**已经抽好的包阵容**上盖掉 k 席 ⇒ 同一个 salt 下包的阵容不随掺不掺而变
-     *   （否则"掺席"会把抽签整体重排，量具两侧的历史读数就没法配对了）。位置也用同一个 rand ⇒ 可复现。 */
+    /* §E600-B 掺脚本席：在**已经抽好的包阵容**上盖掉几席 ⇒ 同一个 salt 下包的阵容不随掺不掺而变
+     *   （否则"掺席"会把抽签整体重排，量具两侧的历史读数就没法配对了）。位置也用同一个 rand ⇒ 可复现。
+     * 10-21 用户更正：默认口径改成**概率掺**（scriptMix.p）—— 脚本与冠军包一起抽，每席独立以 p 变脚本；
+     *   不传 p 时仍走原来的固定 k 席（历史读数与在册账逐字不变）。 */
     var sids = (scriptMix && scriptMix.ids && scriptMix.ids.length) ? scriptMix.ids : null;
     if (sids) {
-      var k = Math.min(Math.max(0, scriptMix.seats | 0), out.seats.length);
-      if (k > 0) {
-        var order = [];
-        for (var q = 0; q < out.seats.length; q++) order.push(q);
-        for (var w = order.length - 1; w > 0; w--) {
-          var v = Math.floor(rand() * (w + 1)); var tmp = order[w]; order[w] = order[v]; order[v] = tmp;
+      var keep = (typeof scriptMix.min === 'number') ? scriptMix.min : 1;
+      var maxScript = Math.max(0, out.seats.length - Math.max(0, keep));
+      var order = [];
+      for (var q = 0; q < out.seats.length; q++) order.push(q);
+      for (var w = order.length - 1; w > 0; w--) {
+        var v = Math.floor(rand() * (w + 1)); var tmp = order[w]; order[w] = order[v]; order[v] = tmp;
+      }
+      var made = 0;
+      if (typeof scriptMix.p === 'number') {
+        /* 用户口径（10-21 再澄清）：脚本与冠军包**一起抽、不一定掺** ⇒ 先掷"这一桌掺不掺"（p），
+         *   掺就按声明的 seats 整组盖，不掺就整桌都是包。
+         *   ⚠ 不是逐席独立掷：逐席会让"只掺到 1 席 toolkit"这种更硬的组合频繁出现（实测把简单档压硬 2~4pt，D227④d 直接红）。 */
+        var pp = Math.max(0, Math.min(1, scriptMix.p));
+        var kk = Math.min(Math.max(0, scriptMix.seats | 0), Math.max(0, out.seats.length - Math.max(0, keep)));
+        if (rand() < pp && kk > 0) {
+          for (var z2 = 0; z2 < kk; z2++) { var at2 = order[z2]; out.seats[at2] = { id: sids[z2 % sids.length], wid: null, seat: at2, kind: 'script' }; made++; }
         }
+      } else {
+        var k = Math.min(Math.max(0, scriptMix.seats | 0), out.seats.length);
         for (var z = 0; z < k; z++) {
           var at = order[z];
           out.seats[at] = { id: sids[z % sids.length], wid: null, seat: at, kind: 'script' };
         }
-        out.scriptSeats = k;
-        if (k === out.seats.length) out.degraded = 'all-script';
+        made = k;
       }
+      out.scriptSeats = made;
+      if (made === out.seats.length) out.degraded = 'all-script';
     }
     return out;
   }
@@ -160,6 +175,14 @@
       return raw.length ? { seats: 0, ids: [], note: '声明了 scriptMix 但风格 id 全认不出 ⇒ 本档不掺脚本席' } : null;
     }
     var keep = (typeof sm.min === 'number') ? sm.min : 1;
+    /* 10-21：**概率掺** —— 每席以 p 变脚本、不保证一定掺；不传 p 时保持旧的固定席数（在册读数不变）。 */
+    if (sm.p !== undefined) {
+      var pv = Number(sm.p);
+      if (!isFinite(pv) || pv < 0 || pv > 1) return { seats: 0, ids: [], p: 0, note: 'scriptMix.p 必须是 0~1（收到 ' + sm.p + '）⇒ 本档不掺脚本席' };
+      var ks = Math.min(Math.max(0, sm.seats | 0), Math.max(0, aiSeats - keep));
+      if (pv === 0 || ks <= 0) return { seats: 0, ids: ids, p: 0, note: null };
+      return { p: pv, seats: Math.min(ks, ids.length), ids: ids, min: keep, note: dropped > 0 ? ('掺席里有 ' + dropped + ' 个风格 id 认不出，已跳过') : null };
+    }
     var k = Math.min(sm.seats | 0, Math.max(0, aiSeats - keep));
     if (k <= 0) return { seats: 0, ids: ids, note: 'AI 席只有 ' + aiSeats + ' 席 ⇒ 掺不动脚本（至少留 ' + keep + ' 席包）' };
     return { seats: Math.min(k, ids.length), ids: ids, note: dropped > 0 ? ('掺席里有 ' + dropped + ' 个风格 id 认不出，已跳过') : null };

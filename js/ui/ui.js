@@ -469,7 +469,7 @@
     if (!members.length) return null;
     const aiSeats = Math.max(1, n - 1);                   /* 2P ⇒ 1 席 */
     const mix = scriptMixFor(tier, aiSeats);
-    const draw = D.compose(members, aiSeats, D.rng((state && state.slotSalt >>> 0) || 1), mix && mix.seats ? mix : null, R.bandW);
+    const draw = D.compose(members, aiSeats, D.rng((state && state.slotSalt >>> 0) || 1), mix && (mix.seats || typeof mix.p === 'number') ? mix : null, R.bandW);
     if (draw && mix && mix.note) draw.mixNote = mix.note;
     if (draw && R.note) draw.bandNote = R.note;           /* 这张池表还没拆带 ⇒ 必须说出来，不许静默退回 mid */
     return draw;

@@ -256,16 +256,29 @@ if (USE_POOL) {
     if (MA !== '') {
       const parts = MA.split('>');
       if (parts.length !== 3) { console.error('⛔ --mixadd 的形状是 <档id>><席数>><id1,id2>，收到：' + MA); process.exit(2); }
-      const tid = parts[0].trim(), want = Number(parts[1]);
+      const tid = parts[0].trim(), spec = parts[1].trim();
       if (!LEVELS.some(l => l.id === tid && l.kind === 'champ')) { console.error('⛔ --mixadd 的档不在册或不是冠军档：' + tid); process.exit(2); }
-      if (!isFinite(want) || want < 0) { console.error('⛔ --mixadd 的席数必须是非负整数，收到：' + parts[1]); process.exit(2); }
+      /* 第二段：整数 = 固定席数；`p0.8:2` = 概率掺（这一桌有 0.8 概率整组掺 2 席）。
+       *   `p` 后面可跟 `:seats`（缺省 1）。不能写 `p=0.8`：flag() 是 split('=')[1]，值里的 = 会被截断（同 --epsover 的坑）。 */
+      const sp = spec.split(':');
+      const isP = sp[0].charAt(0) === 'p' && sp[0].length > 1;
+      const want = Number(isP ? sp[0].slice(1) : spec);
+      const pSeats = isP ? Math.max(1, Number(sp[1] || 1)) : 0;
+      if (!isFinite(want) || want < 0 || (isP && want > 1) || (isP && !Number.isInteger(pSeats))) { console.error('⛔ --mixadd 的第二段要么是非负整数席数、要么是 p0~1[:席数]，收到：' + spec); process.exit(2); }
       const ids = parts[2].split(',').filter(Boolean);
       const known = {}; (Bots.STYLES || []).forEach(s => { known[s.id] = 1; });
       const badId = ids.filter(x => !known[x]);
       if (!ids.length || badId.length) { console.error('⛔ --mixadd 里有不认识的风格 id：' + (badId.join(',') || '(空)') + '（在册：' + Object.keys(known).join(' ') + '）'); process.exit(2); }
-      const eff = Math.min(want, (N - 1) - 1, ids.length);
-      if (eff > 0) MIX_OF[tid] = { seats: eff, ids: ids };
-      console.log('# ⚑ 研究视图 --mixadd = ' + tid + '→' + eff + ' 席[' + ids.join(',') + ']（产品档位表没动；这一臂不是产品口径）');
+      if (isP) {
+        if (want > 0) MIX_OF[tid] = { p: want, seats: pSeats, min: 1, ids: ids };
+        else delete MIX_OF[tid];   /* p0 = 显式关掉这一档的脚本席（覆盖产品配置） */
+        console.log('# ⚑ 研究视图 --mixadd = ' + tid + '→p=' + want + '/s' + pSeats + '[' + ids.join(',') + ']（产品档位表没动；这一臂不是产品口径）');
+      } else {
+        const eff = Math.min(want, (N - 1) - 1, ids.length);
+        if (eff > 0) MIX_OF[tid] = { seats: eff, ids: ids };
+        else delete MIX_OF[tid];
+        console.log('# ⚑ 研究视图 --mixadd = ' + tid + '→' + eff + ' 席[' + ids.join(',') + ']（产品档位表没动；这一臂不是产品口径）');
+      }
     }
     /* §E611 研究旗标 `--mixseats=<N>`：把声明了 `scriptMix` 的那档**盖成 N 席**（同 `--banddef` 那族"不落盘量一种形状"）。
      *   `N=0` 就是"S10 之前那台机器"⇒ 用来做**闭合检查**：这一臂若复现 `recheck/` 那批（简单 17.66 ‖ 20.27），
@@ -287,13 +300,14 @@ if (USE_POOL) {
       const want = Number(MS);
       if (!isFinite(want) || want < 0) { console.error('⛔ --mixseats 必须是非负整数，收到：' + MS); process.exit(2); }
       for (const k of Object.keys(MIX_OF)) {
-        if (want === 0) delete MIX_OF[k];
-        else { MIX_OF[k] = Object.assign({}, MIX_OF[k]); MIX_OF[k].seats = Math.min(want, (N - 1) - 1); }
+        if (want === 0) { delete MIX_OF[k]; continue; }
+        const ids = MIX_OF[k].ids;
+        MIX_OF[k] = { seats: Math.min(want, (N - 1) - 1), ids: ids };
       }
       console.log('# ⚑ 研究视图 --mixseats = ' + want + '（产品档位表没动；这一臂不是产品口径）');
     }
     console.log('# 掺席 = ' + LEVELS.filter(l1 => l1.kind === 'champ')
-      .map(l1 => l1.id + '=' + (MIX_OF[l1.id] ? (MIX_OF[l1.id].seats + ' 席[' + MIX_OF[l1.id].ids.join(',') + ']') : '0 席')).join(' ‖ ') +
+      .map(l1 => { const m = MIX_OF[l1.id]; return l1.id + '=' + (m ? (typeof m.p === 'number' ? ('p=' + m.p + '[' + m.ids.join(',') + ']') : (m.seats + ' 席[' + m.ids.join(',') + ']')) : '0 席'); }).join(' ‖ ') +
       '（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）');
   }
 }
