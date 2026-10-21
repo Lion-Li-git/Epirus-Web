@@ -34,7 +34,7 @@ import { loadChampParams } from '../server/opp-champs.mjs';
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
 rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'extra',
   'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier', 'pairs', 'banddef',
-  'mixseats', 'mixids', 'epsover'], 'probe-diff-ladder');
+  'mixseats', 'mixids', 'mixadd', 'epsover'], 'probe-diff-ladder');
 
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const GAMES = Math.max(1, Number(flag('games', 1500)) || 1500);
@@ -249,6 +249,23 @@ if (USE_POOL) {
       const mx = (typeof PD.scriptSeats === 'function') ? PD.scriptSeats(lm, N - 1, Bots.STYLES) : null;
       if (mx && mx.seats) MIX_OF[lm.id] = mx;
       if (mx && mx.note) console.log('#   掺席降级 ' + lm.id + '：' + mx.note);
+    }
+    /* 10-21 研究旗标 --mixadd=<档id>><席数>><id1,id2>：给**本来不掺席**的档临时加一份 scriptMix（研究视图）。
+     *   用途 = 量「杂货铺进普通档」要几席/什么权重；产品档位表不动。席数会被 (N-1)-1 与 ids 长度封顶（与产品 scriptSeats 同 caps）。 */
+    const MA = flag('mixadd', '');
+    if (MA !== '') {
+      const parts = MA.split('>');
+      if (parts.length !== 3) { console.error('⛔ --mixadd 的形状是 <档id>><席数>><id1,id2>，收到：' + MA); process.exit(2); }
+      const tid = parts[0].trim(), want = Number(parts[1]);
+      if (!LEVELS.some(l => l.id === tid && l.kind === 'champ')) { console.error('⛔ --mixadd 的档不在册或不是冠军档：' + tid); process.exit(2); }
+      if (!isFinite(want) || want < 0) { console.error('⛔ --mixadd 的席数必须是非负整数，收到：' + parts[1]); process.exit(2); }
+      const ids = parts[2].split(',').filter(Boolean);
+      const known = {}; (Bots.STYLES || []).forEach(s => { known[s.id] = 1; });
+      const badId = ids.filter(x => !known[x]);
+      if (!ids.length || badId.length) { console.error('⛔ --mixadd 里有不认识的风格 id：' + (badId.join(',') || '(空)') + '（在册：' + Object.keys(known).join(' ') + '）'); process.exit(2); }
+      const eff = Math.min(want, (N - 1) - 1, ids.length);
+      if (eff > 0) MIX_OF[tid] = { seats: eff, ids: ids };
+      console.log('# ⚑ 研究视图 --mixadd = ' + tid + '→' + eff + ' 席[' + ids.join(',') + ']（产品档位表没动；这一臂不是产品口径）');
     }
     /* §E611 研究旗标 `--mixseats=<N>`：把声明了 `scriptMix` 的那档**盖成 N 席**（同 `--banddef` 那族"不落盘量一种形状"）。
      *   `N=0` 就是"S10 之前那台机器"⇒ 用来做**闭合检查**：这一臂若复现 `recheck/` 那批（简单 17.66 ‖ 20.27），
