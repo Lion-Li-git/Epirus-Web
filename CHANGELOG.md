@@ -1,3 +1,21 @@
+## v1.7.130 — 10-21（DS）：`okLong` 补 5 枚（803/803）· D191 本地 35 组重复归仓
+
+### ① okLong 补平（#47 的数据缺口关掉，判据主语仍未裁）
+- 5 枚 §E641 ring 实验臂（`t5-151-ringon/ringoff`、`t5-G12H1-ringon/ringoff`、`t5-T8-ringon`）此前没进 `feas.mjs --allLong=1` 的分片表 ⇒ `okLong` 一直缺这 5 枚。
+- 按 `feas.mjs` 的同一套配方（long 桌 · `G2=null` · `G2name='long'` · `legsMode='all-long'`）现量 ⇒ 5 行追加进 `champion-map/feas-long-s1.tsv`。结果：**`t5-151-ringoff` ok=1 ‖ `t5-T8-ringon` ok=1**，其余 3 枚 ok=0（`t5-151-ringon`：G 1.61<3 / 场B 清场 0；`t5-G12H1-ringon`：G 2.46 / 反弹墙 0 / 场B 0；`t5-G12H1-ringoff`：反弹墙 0 / 场B 0）。
+- `attach-hlong --table=epsfull-hlong-final-2026-10-19c.tsv` ⇒ `coords.tsv` 现读：考卷/页面 **803** ‖ 过线(全腿长程) **803** ‖ 无 **0**；`viewer.mjs` 重烘 1032KB。
+- ⚠ **#47 本身（绿环是否把主语换成 okLong）没有动**：绿环仍按在册 `ok` 画；这次只把"换主语要用的数据"补齐。
+
+### ② D191 本地 35 组重复归仓
+- `dedupe-artifacts --quarantine`：56 份移出仓到 `D:\code\Epirus-Web-artifacts-quarantine`（保留原相对路径，`--restore` 可一字不差搬回）；账本 `champion-map/dupes-manifest.tsv`（122 行）。
+- 有 8 份 tracked 冗余**没动**（默认不含 tracked）；移走的 56 份审计为 **0 份被下游表/门引用**。
+- `D191` 现读 **1/1**（clean clone 本来就不红，这是本机卫生）。
+
+### 自证
+- `--part=ship-pool`（D234）**1/1** ‖ `meta-lint` **4/4** ‖ `spec` **55/55** ‖ `smoke` **SMOKE OK**（无 JS 错）‖ `D191` **1/1**（移仓后本机绿）。
+
+---
+
 ## v1.7.129 — 10-21（DS）：卡面文案与代码对齐（净化 n−1 / 挑衅「对挑衅者」/ 原型制御 ≥3 反弹）· 规则指纹换代 9541e5a6 · 新门 D238（280→281）
 
 ### ① 三处卡面文案对齐代码（只改 desc 与注释）

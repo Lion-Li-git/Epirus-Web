@@ -1,5 +1,5 @@
 wid	role	path	canonical	metaTs	refs	tracked	quarantineTo
-d490dc136293cfc4	canonical	docs/artifacts/eval-out/win-Ldemo.bak	docs/artifacts/eval-out/win-Ldemo.bak	2026-09-27T08:55:34.724Z	77	git	
+d490dc136293cfc4	canonical	docs/artifacts/eval-out/win-Ldemo.bak	docs/artifacts/eval-out/win-Ldemo.bak	2026-09-27T08:55:34.724Z	74	git	
 d490dc136293cfc4	move	docs/artifacts/kept/eval-out__win-Ldemo.bak	docs/artifacts/eval-out/win-Ldemo.bak	2026-09-27T08:55:34.724Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/eval-out__win-Ldemo.bak
 d490dc136293cfc4	move	docs/artifacts/SHIPPED-Ldemo-2026-10-11-pre-T8s114.bak	docs/artifacts/eval-out/win-Ldemo.bak	2026-09-27T08:55:34.724Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SHIPPED-Ldemo-2026-10-11-pre-T8s114.bak
 b4d6a3e089563b4e	canonical	docs/artifacts/h2p-e593-out/bands/h2p-drop-1-band2.bak	docs/artifacts/h2p-e593-out/bands/h2p-drop-1-band2.bak	2026-10-13T15:55:24.403Z	0	disk	
@@ -45,13 +45,79 @@ da319285b773b065	canonical	docs/artifacts/h2p-e593-out/bands/h2p-proto-6-band6.b
 da319285b773b065	move	docs/artifacts/h2p-e593-out/h2p-proto-6.js	docs/artifacts/h2p-e593-out/bands/h2p-proto-6-band6.bak	2026-10-13T15:54:14.176Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/h2p-e593-out/h2p-proto-6.js
 3d7fca4e50920e03	canonical	docs/artifacts/kept/artifacts__E51-t8-713.bak	docs/artifacts/kept/artifacts__E51-t8-713.bak	2026-09-26T17:10:37.082Z	3	git	
 3d7fca4e50920e03	move	docs/artifacts/kept/e50-out__E51-t8-713.bak	docs/artifacts/kept/artifacts__E51-t8-713.bak	2026-09-26T17:10:37.082Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e50-out__E51-t8-713.bak
-ee82e7694b6eb4be	canonical	docs/artifacts/kept/e120-out__N5L-05.bak	docs/artifacts/kept/e120-out__N5L-05.bak	2026-09-27T22:37:05.923Z	6	git	
+ee82e7694b6eb4be	canonical	docs/artifacts/kept/e120-out__N5L-05.bak	docs/artifacts/kept/e120-out__N5L-05.bak	2026-09-27T22:37:05.923Z	5	git	
 ee82e7694b6eb4be	move	docs/artifacts/kept/e120-out__SQ2-15-31.bak	docs/artifacts/kept/e120-out__N5L-05.bak	2026-09-28T03:04:58.884Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e120-out__SQ2-15-31.bak
-f19bb211a8cb32cb	canonical	docs/artifacts/kept/e78-out__G08-31.bak	docs/artifacts/kept/e78-out__G08-31.bak	2026-09-27T20:13:46.206Z	24	git	
+f19bb211a8cb32cb	canonical	docs/artifacts/kept/e78-out__G08-31.bak	docs/artifacts/kept/e78-out__G08-31.bak	2026-09-27T20:13:46.206Z	17	git	
 f19bb211a8cb32cb	move	docs/artifacts/kept/e124-out__blk0t00-s31.bak	docs/artifacts/kept/e78-out__G08-31.bak	2026-09-28T08:13:21.636Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e124-out__blk0t00-s31.bak
-fbc3926b144ee593	canonical	docs/artifacts/kept/e78-out__G08-71.bak	docs/artifacts/kept/e78-out__G08-71.bak	2026-09-27T20:14:09.156Z	18	git	
+fbc3926b144ee593	canonical	docs/artifacts/kept/e78-out__G08-71.bak	docs/artifacts/kept/e78-out__G08-71.bak	2026-09-27T20:14:09.156Z	14	git	
 fbc3926b144ee593	move	docs/artifacts/kept/e124-out__blk0t00-s71.bak	docs/artifacts/kept/e78-out__G08-71.bak	2026-09-28T08:13:47.602Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e124-out__blk0t00-s71.bak
 67c0d06448e37b81	canonical	docs/artifacts/kept/e124-out__pre_edit.js	docs/artifacts/kept/e124-out__pre_edit.js	2026-09-28T08:01:44.006Z	0	git	
 67c0d06448e37b81	move	docs/artifacts/kept/e124-out__post_off.js	docs/artifacts/kept/e124-out__pre_edit.js	2026-09-28T08:07:59.222Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e124-out__post_off.js
-5727b5d25afffe2a	canonical	docs/artifacts/kept/e68-out__V2-71.bak	docs/artifacts/kept/e68-out__V2-71.bak	2026-09-27T17:29:38.947Z	15	git	
+5727b5d25afffe2a	canonical	docs/artifacts/kept/e68-out__V2-71.bak	docs/artifacts/kept/e68-out__V2-71.bak	2026-09-27T17:29:38.947Z	11	git	
 5727b5d25afffe2a	move	docs/artifacts/kept/e78-out__NOL24-71.bak	docs/artifacts/kept/e68-out__V2-71.bak	2026-09-27T20:19:04.373Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e78-out__NOL24-71.bak
+ab80b6b3c72c478f	canonical	docs/artifacts/sp-ab/b-p0-9801/sp-p0-s9801-band5.bak	docs/artifacts/sp-ab/b-p0-9801/sp-p0-s9801-band5.bak	2026-10-20T13:29:47.563Z	0	disk	
+ab80b6b3c72c478f	move	docs/artifacts/sp-ab/p0-s9801.js	docs/artifacts/sp-ab/b-p0-9801/sp-p0-s9801-band5.bak	2026-10-20T13:29:47.579Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp-ab/p0-s9801.js
+8e2a8542737cc2e8	canonical	docs/artifacts/sp-ab/b-p0-9802/sp-p0-s9802-band1.bak	docs/artifacts/sp-ab/b-p0-9802/sp-p0-s9802-band1.bak	2026-10-20T13:30:53.038Z	0	disk	
+8e2a8542737cc2e8	move	docs/artifacts/sp-ab/b-p0-9802/sp-p0-s9802-band5.bak	docs/artifacts/sp-ab/b-p0-9802/sp-p0-s9802-band1.bak	2026-10-20T13:30:54.853Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp-ab/b-p0-9802/sp-p0-s9802-band5.bak
+b7d5c524db3113b0	canonical	docs/artifacts/sp-ab/b-p0-9802/sp-p0-s9802-band2.bak	docs/artifacts/sp-ab/b-p0-9802/sp-p0-s9802-band2.bak	2026-10-20T13:30:54.844Z	0	disk	
+b7d5c524db3113b0	move	docs/artifacts/sp-ab/p0-s9802.js	docs/artifacts/sp-ab/b-p0-9802/sp-p0-s9802-band2.bak	2026-10-20T13:30:54.860Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp-ab/p0-s9802.js
+910a049246f70d4f	canonical	docs/artifacts/sp-ab/b-p0-9803/sp-p0-s9803-band2.bak	docs/artifacts/sp-ab/b-p0-9803/sp-p0-s9803-band2.bak	2026-10-20T13:31:51.886Z	0	disk	
+910a049246f70d4f	move	docs/artifacts/sp-ab/b-p0-9803/sp-p0-s9803-band6.bak	docs/artifacts/sp-ab/b-p0-9803/sp-p0-s9803-band2.bak	2026-10-20T13:31:51.897Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp-ab/b-p0-9803/sp-p0-s9803-band6.bak
+00ee0150d68cda92	canonical	docs/artifacts/sp-ab/b-p0-9803/sp-p0-s9803-band3.bak	docs/artifacts/sp-ab/b-p0-9803/sp-p0-s9803-band3.bak	2026-10-20T13:31:51.889Z	0	disk	
+00ee0150d68cda92	move	docs/artifacts/sp-ab/p0-s9803.js	docs/artifacts/sp-ab/b-p0-9803/sp-p0-s9803-band3.bak	2026-10-20T13:31:51.910Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp-ab/p0-s9803.js
+a88af5df2e452996	canonical	docs/artifacts/sp-ab/b-p2-9801/sp-p2-s9801-band2.bak	docs/artifacts/sp-ab/b-p2-9801/sp-p2-s9801-band2.bak	2026-10-20T13:32:54.343Z	0	disk	
+a88af5df2e452996	move	docs/artifacts/sp-ab/b-p2-9801/sp-p2-s9801-band6.bak	docs/artifacts/sp-ab/b-p2-9801/sp-p2-s9801-band2.bak	2026-10-20T13:32:54.352Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp-ab/b-p2-9801/sp-p2-s9801-band6.bak
+36144fe227c5d3ca	canonical	docs/artifacts/sp-ab/b-p2-9801/sp-p2-s9801-band3.bak	docs/artifacts/sp-ab/b-p2-9801/sp-p2-s9801-band3.bak	2026-10-20T13:32:54.346Z	0	disk	
+36144fe227c5d3ca	move	docs/artifacts/sp-ab/p2-s9801.js	docs/artifacts/sp-ab/b-p2-9801/sp-p2-s9801-band3.bak	2026-10-20T13:32:54.364Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp-ab/p2-s9801.js
+d478909e70cc17d5	canonical	docs/artifacts/sp-ab/b-p2-9802/sp-p2-s9802-band2.bak	docs/artifacts/sp-ab/b-p2-9802/sp-p2-s9802-band2.bak	2026-10-20T13:33:51.079Z	0	disk	
+d478909e70cc17d5	move	docs/artifacts/sp-ab/p2-s9802.js	docs/artifacts/sp-ab/b-p2-9802/sp-p2-s9802-band2.bak	2026-10-20T13:33:51.089Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp-ab/p2-s9802.js
+431c37449a90ff6e	canonical	docs/artifacts/sp-ab/b-p2-9803/sp-p2-s9803-band4.bak	docs/artifacts/sp-ab/b-p2-9803/sp-p2-s9803-band4.bak	2026-10-20T13:35:05.700Z	0	disk	
+431c37449a90ff6e	move	docs/artifacts/sp-ab/p2-s9803.js	docs/artifacts/sp-ab/b-p2-9803/sp-p2-s9803-band4.bak	2026-10-20T13:35:05.717Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp-ab/p2-s9803.js
+e4c4707be644529e	canonical	docs/artifacts/sp20/b-p0-9901/sp20-p0-s9901-band6.bak	docs/artifacts/sp20/b-p0-9901/sp20-p0-s9901-band6.bak	2026-10-20T13:41:32.783Z	0	disk	
+e4c4707be644529e	move	docs/artifacts/sp20/p0-s9901.js	docs/artifacts/sp20/b-p0-9901/sp20-p0-s9901-band6.bak	2026-10-20T13:41:32.789Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p0-s9901.js
+58ce31b9cbccc5cc	canonical	docs/artifacts/sp20/b-p0-9902/sp20-p0-s9902-band1.bak	docs/artifacts/sp20/b-p0-9902/sp20-p0-s9902-band1.bak	2026-10-20T13:41:09.808Z	0	disk	
+58ce31b9cbccc5cc	move	docs/artifacts/sp20/b-p0-9902/sp20-p0-s9902-band3.bak	docs/artifacts/sp20/b-p0-9902/sp20-p0-s9902-band1.bak	2026-10-20T13:41:12.289Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/b-p0-9902/sp20-p0-s9902-band3.bak
+cf47062f5d200f4f	canonical	docs/artifacts/sp20/b-p0-9902/sp20-p0-s9902-band2.bak	docs/artifacts/sp20/b-p0-9902/sp20-p0-s9902-band2.bak	2026-10-20T13:41:12.287Z	0	disk	
+cf47062f5d200f4f	move	docs/artifacts/sp20/p0-s9902.js	docs/artifacts/sp20/b-p0-9902/sp20-p0-s9902-band2.bak	2026-10-20T13:41:12.300Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p0-s9902.js
+0ddbf16b95e03c0a	canonical	docs/artifacts/sp20/b-p0-9903/sp20-p0-s9903-band2.bak	docs/artifacts/sp20/b-p0-9903/sp20-p0-s9903-band2.bak	2026-10-20T13:41:29.636Z	0	disk	
+0ddbf16b95e03c0a	move	docs/artifacts/sp20/p0-s9903.js	docs/artifacts/sp20/b-p0-9903/sp20-p0-s9903-band2.bak	2026-10-20T13:41:29.656Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p0-s9903.js
+fbe7a624bb5376d8	canonical	docs/artifacts/sp20/b-p0-9904/sp20-p0-s9904-band1.bak	docs/artifacts/sp20/b-p0-9904/sp20-p0-s9904-band1.bak	2026-10-20T13:41:45.721Z	0	disk	
+fbe7a624bb5376d8	move	docs/artifacts/sp20/p0-s9904.js	docs/artifacts/sp20/b-p0-9904/sp20-p0-s9904-band1.bak	2026-10-20T13:41:48.081Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p0-s9904.js
+6f4e347d2bb829da	canonical	docs/artifacts/sp20/b-p0-9905/sp20-p0-s9905-band3.bak	docs/artifacts/sp20/b-p0-9905/sp20-p0-s9905-band3.bak	2026-10-20T13:42:59.217Z	0	disk	
+6f4e347d2bb829da	move	docs/artifacts/sp20/p0-s9905.js	docs/artifacts/sp20/b-p0-9905/sp20-p0-s9905-band3.bak	2026-10-20T13:42:59.230Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p0-s9905.js
+d3b7aeb69a4c712f	canonical	docs/artifacts/sp20/b-p0-9906/sp20-p0-s9906-band2.bak	docs/artifacts/sp20/b-p0-9906/sp20-p0-s9906-band2.bak	2026-10-20T13:43:03.149Z	0	disk	
+d3b7aeb69a4c712f	move	docs/artifacts/sp20/b-p0-9906/sp20-p0-s9906-band4.bak	docs/artifacts/sp20/b-p0-9906/sp20-p0-s9906-band2.bak	2026-10-20T13:43:03.154Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/b-p0-9906/sp20-p0-s9906-band4.bak
+d3b7aeb69a4c712f	move	docs/artifacts/sp20/b-p0-9906/sp20-p0-s9906-band5.bak	docs/artifacts/sp20/b-p0-9906/sp20-p0-s9906-band2.bak	2026-10-20T13:43:03.156Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/b-p0-9906/sp20-p0-s9906-band5.bak
+d3b7aeb69a4c712f	move	docs/artifacts/sp20/p0-s9906.js	docs/artifacts/sp20/b-p0-9906/sp20-p0-s9906-band2.bak	2026-10-20T13:43:03.162Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p0-s9906.js
+95763316ce4893ba	canonical	docs/artifacts/sp20/b-p0-9907/sp20-p0-s9907-band4.bak	docs/artifacts/sp20/b-p0-9907/sp20-p0-s9907-band4.bak	2026-10-20T13:43:11.427Z	0	disk	
+95763316ce4893ba	move	docs/artifacts/sp20/p0-s9907.js	docs/artifacts/sp20/b-p0-9907/sp20-p0-s9907-band4.bak	2026-10-20T13:43:11.435Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p0-s9907.js
+af0ac738753655fb	canonical	docs/artifacts/sp20/b-p0-9908/sp20-p0-s9908-band2.bak	docs/artifacts/sp20/b-p0-9908/sp20-p0-s9908-band2.bak	2026-10-20T13:42:46.399Z	0	disk	
+af0ac738753655fb	move	docs/artifacts/sp20/p0-s9908.js	docs/artifacts/sp20/b-p0-9908/sp20-p0-s9908-band2.bak	2026-10-20T13:42:46.418Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p0-s9908.js
+933fb6f1fee5b8ae	canonical	docs/artifacts/sp20/b-p0-9909/sp20-p0-s9909-band2.bak	docs/artifacts/sp20/b-p0-9909/sp20-p0-s9909-band2.bak	2026-10-20T13:44:19.502Z	0	disk	
+933fb6f1fee5b8ae	move	docs/artifacts/sp20/p0-s9909.js	docs/artifacts/sp20/b-p0-9909/sp20-p0-s9909-band2.bak	2026-10-20T13:44:19.514Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p0-s9909.js
+1e0c475c2566ea82	canonical	docs/artifacts/sp20/b-p0-9910/sp20-p0-s9910-band5.bak	docs/artifacts/sp20/b-p0-9910/sp20-p0-s9910-band5.bak	2026-10-20T13:44:20.513Z	0	disk	
+1e0c475c2566ea82	move	docs/artifacts/sp20/p0-s9910.js	docs/artifacts/sp20/b-p0-9910/sp20-p0-s9910-band5.bak	2026-10-20T13:44:20.523Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p0-s9910.js
+489283636619fbff	canonical	docs/artifacts/sp20/b-p2-9901/sp20-p2-s9901-band6.bak	docs/artifacts/sp20/b-p2-9901/sp20-p2-s9901-band6.bak	2026-10-20T13:44:06.816Z	0	disk	
+489283636619fbff	move	docs/artifacts/sp20/p2-s9901.js	docs/artifacts/sp20/b-p2-9901/sp20-p2-s9901-band6.bak	2026-10-20T13:44:06.821Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p2-s9901.js
+c8075e847cb36304	canonical	docs/artifacts/sp20/b-p2-9902/sp20-p2-s9902-band5.bak	docs/artifacts/sp20/b-p2-9902/sp20-p2-s9902-band5.bak	2026-10-20T13:44:06.452Z	0	disk	
+c8075e847cb36304	move	docs/artifacts/sp20/p2-s9902.js	docs/artifacts/sp20/b-p2-9902/sp20-p2-s9902-band5.bak	2026-10-20T13:44:06.459Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p2-s9902.js
+d963c7455a15bf61	canonical	docs/artifacts/sp20/b-p2-9903/sp20-p2-s9903-band1.bak	docs/artifacts/sp20/b-p2-9903/sp20-p2-s9903-band1.bak	2026-10-20T13:45:42.571Z	0	disk	
+d963c7455a15bf61	move	docs/artifacts/sp20/p2-s9903.js	docs/artifacts/sp20/b-p2-9903/sp20-p2-s9903-band1.bak	2026-10-20T13:45:44.322Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p2-s9903.js
+0df51703cd01f0ec	canonical	docs/artifacts/sp20/b-p2-9903/sp20-p2-s9903-band4.bak	docs/artifacts/sp20/b-p2-9903/sp20-p2-s9903-band4.bak	2026-10-20T13:45:44.313Z	0	disk	
+0df51703cd01f0ec	move	docs/artifacts/sp20/b-p2-9903/sp20-p2-s9903-band6.bak	docs/artifacts/sp20/b-p2-9903/sp20-p2-s9903-band4.bak	2026-10-20T13:45:44.319Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/b-p2-9903/sp20-p2-s9903-band6.bak
+275dc04948a0e635	canonical	docs/artifacts/sp20/b-p2-9904/sp20-p2-s9904-band1.bak	docs/artifacts/sp20/b-p2-9904/sp20-p2-s9904-band1.bak	2026-10-20T13:45:37.701Z	0	disk	
+275dc04948a0e635	move	docs/artifacts/sp20/p2-s9904.js	docs/artifacts/sp20/b-p2-9904/sp20-p2-s9904-band1.bak	2026-10-20T13:45:39.553Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p2-s9904.js
+de1b737913a70a40	canonical	docs/artifacts/sp20/b-p2-9905/sp20-p2-s9905-band6.bak	docs/artifacts/sp20/b-p2-9905/sp20-p2-s9905-band6.bak	2026-10-20T13:45:08.984Z	0	disk	
+de1b737913a70a40	move	docs/artifacts/sp20/p2-s9905.js	docs/artifacts/sp20/b-p2-9905/sp20-p2-s9905-band6.bak	2026-10-20T13:45:08.988Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p2-s9905.js
+ec7a3b7013de0079	canonical	docs/artifacts/sp20/b-p2-9906/sp20-p2-s9906-band6.bak	docs/artifacts/sp20/b-p2-9906/sp20-p2-s9906-band6.bak	2026-10-20T13:45:36.405Z	0	disk	
+ec7a3b7013de0079	move	docs/artifacts/sp20/p2-s9906.js	docs/artifacts/sp20/b-p2-9906/sp20-p2-s9906-band6.bak	2026-10-20T13:45:36.408Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p2-s9906.js
+48a5c184167e1363	canonical	docs/artifacts/sp20/b-p2-9907/sp20-p2-s9907-band3.bak	docs/artifacts/sp20/b-p2-9907/sp20-p2-s9907-band3.bak	2026-10-20T13:46:57.898Z	0	disk	
+48a5c184167e1363	move	docs/artifacts/sp20/p2-s9907.js	docs/artifacts/sp20/b-p2-9907/sp20-p2-s9907-band3.bak	2026-10-20T13:46:57.909Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p2-s9907.js
+9313f5af78d51274	canonical	docs/artifacts/sp20/b-p2-9908/sp20-p2-s9908-band1.bak	docs/artifacts/sp20/b-p2-9908/sp20-p2-s9908-band1.bak	2026-10-20T13:46:48.022Z	0	disk	
+9313f5af78d51274	move	docs/artifacts/sp20/b-p2-9908/sp20-p2-s9908-band4.bak	docs/artifacts/sp20/b-p2-9908/sp20-p2-s9908-band1.bak	2026-10-20T13:46:49.871Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/b-p2-9908/sp20-p2-s9908-band4.bak
+9313f5af78d51274	move	docs/artifacts/sp20/p2-s9908.js	docs/artifacts/sp20/b-p2-9908/sp20-p2-s9908-band1.bak	2026-10-20T13:46:49.880Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p2-s9908.js
+db5d42faa122f931	canonical	docs/artifacts/sp20/b-p2-9909/sp20-p2-s9909-band5.bak	docs/artifacts/sp20/b-p2-9909/sp20-p2-s9909-band5.bak	2026-10-20T13:46:45.976Z	0	disk	
+db5d42faa122f931	move	docs/artifacts/sp20/p2-s9909.js	docs/artifacts/sp20/b-p2-9909/sp20-p2-s9909-band5.bak	2026-10-20T13:46:45.984Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p2-s9909.js
+b518b8a5c8e52d9f	canonical	docs/artifacts/sp20/b-p2-9910/sp20-p2-s9910-band4.bak	docs/artifacts/sp20/b-p2-9910/sp20-p2-s9910-band4.bak	2026-10-20T13:46:51.895Z	0	disk	
+b518b8a5c8e52d9f	move	docs/artifacts/sp20/b-p2-9910/sp20-p2-s9910-band5.bak	docs/artifacts/sp20/b-p2-9910/sp20-p2-s9910-band4.bak	2026-10-20T13:46:51.898Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/b-p2-9910/sp20-p2-s9910-band5.bak
+b518b8a5c8e52d9f	move	docs/artifacts/sp20/p2-s9910.js	docs/artifacts/sp20/b-p2-9910/sp20-p2-s9910-band4.bak	2026-10-20T13:46:51.905Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/sp20/p2-s9910.js
