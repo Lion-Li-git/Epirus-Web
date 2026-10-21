@@ -1,0 +1,22 @@
+[driver] 发车 07:21:46 ‖ 20 臂 ‖ 4 路并发
+[driver] e676-beadseed-tk-s88011 EXIT=9 07:22:32
+[driver] e676-beadseed-base-s88011 EXIT=0 07:22:43
+[driver] e676-beadseed-base-s88010 EXIT=9 07:22:55
+[driver] e676-beadseed-tk-s88010 EXIT=0 07:22:57
+[driver] e676-beadseed-drop-s88010 EXIT=0 07:23:50
+[driver] e676-bead15-tk-s88010 EXIT=0 07:24:03
+[driver] e676-bead15-tk-s88011 EXIT=0 07:24:11
+[driver] e676-beadseed-drop-s88011 EXIT=0 07:24:18
+[driver] e676-teach-base-s88011 EXIT=9 07:25:08
+[driver] e676-bead15-drop-s88010 EXIT=0 07:25:22
+[driver] e676-teach-base-s88010 EXIT=9 07:25:29
+[driver] e676-bead15-drop-s88011 EXIT=0 07:25:39
+[driver] e676-teach-tk-s88011 EXIT=0 07:26:33
+[driver] e676-teach-drop-s88011 EXIT=0 07:26:48
+[driver] e676-teach-drop-s88010 EXIT=0 07:26:56
+[driver] e676-teach-tk-s88010 EXIT=0 07:27:11
+[driver] e676-lctl-tk-s88010 EXIT=0 07:28:23
+[driver] e676-lctl-tk-s88011 EXIT=0 07:28:25
+[driver] e676-lctl-drop-s88010 EXIT=0 07:28:26
+[driver] e676-lctl-drop-s88011 EXIT=0 07:28:42
+[driver] 收摊 07:28:42 ‖ 发出 20 臂
