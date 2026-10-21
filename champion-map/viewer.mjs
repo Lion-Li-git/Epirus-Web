@@ -3748,7 +3748,7 @@ document.getElementById('labels').addEventListener('change', function () { st.la
 document.getElementById('size').addEventListener('input', function () { st.size = +this.value; req(); });
 document.getElementById('q').addEventListener('input', function () { st.q = this.value.trim().toLowerCase(); req(); });   /* §E453 归一下大小写，匹配两处都按小写比 */
 var _msel = document.getElementById('modeSel'); if (_msel) _msel.onchange = function () { setMode(this.value); }; else Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-m]'), function (b) { b.onclick = function () { setMode(b.getAttribute('data-m')); }; });
-Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-bg]'), function (b) { b.onclick = function () { var c = b.getAttribute('data-bg');
+var _bgSel = document.getElementById('bgSel'); if (_bgSel) _bgSel.onchange = function () { if (this.value === 'custom') { var _c = document.getElementById('bgc'); if (_c) _c.click(); } else setBg(this.value); }; Array.prototype.forEach.call(document.querySelectorAll('#bar button[data-bg]'), function (b) { b.onclick = function () { var c = b.getAttribute('data-bg');
   document.getElementById('bgc').value = c; setBg(c); }; });
 document.getElementById('bgc').addEventListener('input', function () { setBg(this.value); });
 /* §E372 位图必须跟着 CSS 盒走。fit0() 原来只在装载与 window resize 时跑，而**盒子还会因为别的理由变**
@@ -5660,21 +5660,19 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   wbs.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   /* 底色：这条不能拿"进入时的字色"当参照（深链 #bg=%23e6ebf5 进来时字色已经是浅底那份了），
    *   改成**两档各点一次互相比**，并且把语义也判掉：浅底上字必须比底暗、深蓝上字必须比底亮（否则就是"看不见字"）。 */
-  var wbg = document.querySelectorAll('#bar button[data-bg]'), wLite = null, wDark = null;
-  for (var bi = 0; bi < wbg.length; bi++) { var bv = String(wbg[bi].getAttribute('data-bg')).toLowerCase();
-    if (bv === '#e6ebf5') wLite = wbg[bi]; if (bv === '#0f1522') wDark = wbg[bi]; }
+  var wsel = document.getElementById('bgSel'), wLite = null, wDark = null;
+  for (var bi = 0; bi < (wsel ? wsel.options.length : 0); bi++) { var bv = String(wsel.options[bi].value).toLowerCase();
+    if (bv === '#e6ebf5') wLite = '#e6ebf5'; if (bv === '#0f1522') wDark = '#0f1522'; }
   var inkLite = '', inkDark = '';
-  if (wLite) { wLite.dispatchEvent(new MouseEvent('click', { bubbles: true })); inkLite = st.ink; }
-  if (wDark) { wDark.dispatchEvent(new MouseEvent('click', { bubbles: true })); inkDark = st.ink; }
-  if (!wLite || !wDark) btnBad.push('底色按钮里找不到「浅底」或「深蓝」那两粒（找到 ' + wbg.length + ' 粒）');
+  if (wLite) { wsel.value = wLite; wsel.dispatchEvent(new Event('change')); inkLite = st.ink; }
+  if (wDark) { wsel.value = wDark; wsel.dispatchEvent(new Event('change')); inkDark = st.ink; }
+  if (!wLite || !wDark) btnBad.push('底色下拉里找不到「浅底」或「深蓝」两项');
   else {
     if (inkLite === inkDark) btnBad.push('浅底与深蓝两档字色一模一样（' + inkLite + '）⇒ 换底色没换字色');
     if (hexSum(inkLite) >= hexSum('#e6ebf5')) btnBad.push('浅底上字比底还亮或同亮（ink ' + inkLite + '）⇒ 那一档等于看不见字');
     if (hexSum(inkDark) <= hexSum('#0f1522')) btnBad.push('深蓝上字比底还暗或同暗（ink ' + inkDark + '）⇒ 这一档等于看不见字'); }
-  var wBack = null;
-  for (var bi2 = 0; bi2 < wbg.length; bi2++)
-    if (String(wbg[bi2].getAttribute('data-bg')).toLowerCase() === String(SNAPI.bg).toLowerCase()) wBack = wbg[bi2];
-  if (wBack) wBack.dispatchEvent(new MouseEvent('click', { bubbles: true })); else setBg(SNAPI.bg);
+  var _preset = ['#0f1522', '#05070d', '#212a3b', '#e6ebf5'].indexOf(String(SNAPI.bg).toLowerCase()) >= 0;
+  if (wsel) { wsel.value = _preset ? SNAPI.bg : 'custom'; if (_preset) wsel.dispatchEvent(new Event('change')); else setBg(SNAPI.bg); }
   if (String(st.bg).toLowerCase() !== String(SNAPI.bg).toLowerCase()) btnBad.push('底色没还原成进来时那档（' + st.bg + ' ≠ ' + SNAPI.bg + '）');
   T('工具栏三个按钮：排序要真的换 1d 的顺序、冠军序列要真的出现、底色两档必须连字色一起翻（浅底深字 / 深底亮字）',
     btnBad.length === 0, btnBad.join(' ‖ ') || ('排序：最左 ' + idOf(leftA) + ' → ' + idOf(leftB)
@@ -6032,7 +6030,7 @@ st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
 })();
 `;
 
-const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>§E302 冠军进化查看器 · 一维 / 地图（平面⇄立体 · 过线逐枚绿环）/ 三维行为轴</title>\n' +
+const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>冠军进化查看器</title>\n' +
 '<style>\n' +
 ':root{--bg:#0f1522;--panel:#131a29;--btn:#1b2436;--ink:#dce6f5;--dim:#9fb0cc;--line:#33415c}\n' +
 'html,body{height:100%}\n' +
@@ -6061,6 +6059,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
  *   轨道色用 --dim：深浅两套底色下都看得见（用 --line 在深蓝底上几乎与面板同色，等于没有轨道）。 */
 '#bar .tbgrp{align-self:center;font-size:11px;color:var(--dim);border-left:1px solid var(--line);padding-left:9px;margin-left:4px;white-space:nowrap}\n' +
 '#bar > .tbgrp:first-child{border-left:0;padding-left:0;margin-left:0}\n' +
+'#bar select{font-size:12px}\n' +
 'input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;border:none;padding:0;height:16px;cursor:pointer;min-width:60px}\n' +
 'input[type=range]::-webkit-slider-runnable-track{height:16px;background:linear-gradient(var(--dim),var(--dim)) no-repeat;' +
 'background-size:calc(100% - 14px) 4px;background-position:7px center;border-radius:2px}\n' +
@@ -6111,8 +6110,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label>' +
 '<label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label>' +
 '<span style="color:var(--dim)">底色</span>' +
-'<button data-bg="#0f1522">深蓝</button><button data-bg="#05070d">纯黑</button>' +
-'<button data-bg="#212a3b">石板</button><button data-bg="#e6ebf5">浅底</button>' +
+'<label>底色 <select id="bgSel"><option value="#0f1522">深蓝</option><option value="#05070d">纯黑</option><option value="#212a3b">石板</option><option value="#e6ebf5">浅底</option><option value="custom">自定义…</option></select></label>' +
 '<input type="color" id="bgc" value="#0f1522" title="自定义底色"><span id="bgn" style="color:var(--dim);font-size:11px"></span>' +
 '<span id="g3h" class="tbgrp" title="第三段：只有当前这张图用得上的（换图就收起来，不占地方）">本图特有</span>' +
 '<button id="sortb">排序：F 名次</button>' +
