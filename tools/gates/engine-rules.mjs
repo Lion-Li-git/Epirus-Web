@@ -1423,23 +1423,55 @@ t('D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下
    *   ⇒ 这三条一条牙口都没少。 */
   });
 
-t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被触发」）+ 写入点只有一处', function () {
+t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被触发」）—— 数第几回合卸下，不数代码行', function () {
   /* 旧 R38 = 永久 ⇒ 实测"身上有雷还再敲"占 68%(多)/81%(长)（≈21/50 ジ每局纯浪费）；
    * 严格单回合又把牌打废（引爆 1.90→0.08 次/局）⇒ 用户裁定 3 回合。 */
-  const rs = readFileSync('js/core/resolve.js', 'utf8');
-  ok(rs.indexOf('function armMine(state, me, pid)') >= 0, '必须有一个统一的埋雷函数');
-  ok(rs.indexOf('me.mineTurns = 3;') >= 0, '埋雷必须记 3 回合（本回合 + 后两个回合）');
-  ok(rs.indexOf('case SK.MINE: armMine(state, me, m); break;') >= 0 &&
-     rs.indexOf('case SK.MINE: armMine(state, me, i); break;') >= 0,
-    '两个 `case SK.MINE` 都必须走 armMine（**写入只此一份** —— 环的"两处写入"就是 R10 bug 的温床）');
-  ok((rs.match(/me\.mineArmed = true;/g) || []).length === 1,
-    '直接置位 `me.mineArmed = true` 只允许出现在 armMine 里（一处）');
-  ok(rs.indexOf('state.p[v].mineArmed = false; state.p[v].mineTurns = 0;') >= 0 &&
-     rs.indexOf('state.p[i].mineArmed = false; state.p[i].mineTurns = 0;') >= 0,
-    '触发失效（直接/间接两条路）都必须同时清零计时');
-  ok(rs.indexOf('if (p.mineTurns > 0) {') >= 0 && rs.indexOf("type: 'mineExpire'") >= 0,
-    '回合末必须递减并在归零时卸下（并留事件便于量具核对）');
-  ok(readFileSync('js/core/state.js', 'utf8').indexOf('mineTurns: 0,') >= 0, 'state 必须有 mineTurns');
+  /* §改（2026-10-22 千问）：原来 8 条钉的是 `resolve.js`/`state.js` 的行（`function armMine` 存不存在、
+   *   `me.mineTurns = 3;` 那行、两个 `case SK.MINE` 都走 armMine、`me.mineArmed = true` 只许出现一次…）。
+   *   裁定那句话是**可数的**："本回合 + 后两个回合"⇒ 直接数第几回合卸下，比数代码行既准又不怕改写。
+   *   实测（固定 seed 的夹具）：埋雷当回合末 turns=2 → 再 1 回合 turns=1 → 再 1 回合 armed=false + mineExpire
+   *   ⇒ 存活正好 3 个回合（含埋雷那一回合）。被打那一路：armed 与 mineTurns **同时**归零。
+   *   ⚠ 覆盖边界：原来那条"`mineArmed = true` 只许写一处"防的是**第二个写入点漂移**（R10 那族），
+   *   本腿判不到"多写一处"这件事本身，判得到的是**玩家看得见的时效**（第二处若改了时效，这里就红；
+   *   若时效一致只多了份重复代码，那是可读性问题，不该由门付账 —— 按 R1 的问法：产品事实是哪一句？）。 */
+  const mkMine = function (seed) {
+    const st = S.createState('multi', { next: mulberry32(seed) }, 3);
+    for (const p of st.p) { p.ep = 99; p.hp = 8; }
+    X.startTurn(st);
+    return st;
+  };
+  const stM = mkMine(4242);
+  S.attemptAction(stM, 0, R.SK.MINE, {});
+  S.attemptAction(stM, 1, R.SK.JI, {}); S.attemptAction(stM, 2, R.SK.JI, {});
+  X.resolveActions(stM); X.endTurn(stM);
+  ok(stM.p[0].mineArmed === true, '前置：埋雷这一回合结束时必须是"带着雷"的（实测 armed=' + stM.p[0].mineArmed +
+    '）⇒ 挂不上说明下面的时效全是在数空气');
+  const seq = [{ t: 0, armed: stM.p[0].mineArmed, turns: stM.p[0].mineTurns }];
+  for (let t = 1; t <= 4; t++) {
+    X.startTurn(stM);
+    for (let i = 0; i < 3; i++) S.attemptAction(stM, i, R.SK.JI, {});
+    X.resolveActions(stM); X.endTurn(stM);
+    seq.push({ t: t, armed: stM.p[0].mineArmed, turns: stM.p[0].mineTurns });
+  }
+  const goneAt = seq.filter(function (r) { return r.armed === false; })[0];
+  eq(goneAt && goneAt.t, 2, '① R59：雷必须在"埋雷回合 + 后两个回合"之后的那一次回合末卸下（实测卸下于埋雷后再第 ' +
+    (goneAt ? goneAt.t : 'never') + ' 回合 ‖ 逐回合 ' + seq.map(function (r) { return r.t + ':' + r.armed + '/' + r.turns; }).join(' ') + '）');
+  ok(stM.events.some(function (e) { return e.type === 'mineExpire'; }),
+    '② 卸下必须留 `mineExpire` 事件（量具与页面都靠它核对时效；实测事件类型 ' +
+    Array.from(new Set(stM.events.map(function (e) { return e.type; }))).join(',') + '）');
+  /* ③ 触发那一路：被打之后 armed 与计时**同时**清零（原来钉的是两条 case 的文本，这里判可观测的那件事） */
+  const stT = mkMine(4243);
+  S.attemptAction(stT, 0, R.SK.MINE, {});
+  S.attemptAction(stT, 1, R.SK.JI, {}); S.attemptAction(stT, 2, R.SK.JI, {});
+  X.resolveActions(stT); X.endTurn(stT);
+  X.startTurn(stT);
+  S.attemptAction(stT, 1, R.SK.GUN, { target: 0 });
+  S.attemptAction(stT, 0, R.SK.JI, {}); S.attemptAction(stT, 2, R.SK.JI, {});
+  X.resolveActions(stT);
+  ok(stT.p[0].mineArmed === false && stT.p[0].mineTurns === 0,
+    '③ 雷被触发后必须**同时**清掉 armed 与计时（实测 armed=' + stT.p[0].mineArmed + ' ‖ mineTurns=' + stT.p[0].mineTurns +
+    '）—— 只清一个就是"下一回合凭空又有一颗带计时的雷"那一族');
+  ok(stT.events.some(function (e) { return e.type === 'mine'; }), '③ 前置：这一路必须真的触发了雷（实测没有 mine 事件）');
   /* ===== v1.5.143 门禁审计：一条**运行时**断言，替掉原先 9 条"钉 spec 用例标题 / 钉 CHANGELOG 短语"的断言 =====
    * 阳性对照（0921 实测）：把 spec 里 `R59 地雷时效` 改成 `R59 时效X` —— 行为逐字节没变、spec 仍 52/52，
    * 而 np-test 当场红一条 ⇒ 那类断言测的是**字符串**不是**行为**（还会误伤正常的用例改名：
@@ -1486,20 +1518,58 @@ t('D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被�
    *   白白让这条门被判成「读 .md 的门」（gate-sentinel ①）。死代码连同那次读一起摘掉，注释留着。 */
   });
 
-t('D96 R60 净化清除"自身全部持续状态"（含增益）+ 写入点只有一处', function () {
+t('D96 R60 净化清除"自身全部持续状态"（含增益）—— 正式与镜面两条路径都要清干净', function () {
   /* 用户裁定："藤甲与地雷既然成了 buff，就一并会被净化掉（还有避雷针、符咒、大雷禁用、梦魇）"。
    * 旧实现只清 stickers/nightmare/tauntPending，且**两个 case 各写一遍**（环/地雷同族隐患）。 */
-  const rs = readFileSync('js/core/resolve.js', 'utf8');
-  ok(rs.indexOf('function purgeSelf(state, me, pid)') >= 0, '必须有唯一的净化函数');
-  ok(rs.indexOf('me.fireWeakNow = false; me.fireWeakNext = false;') >= 0, '必须清藤甲火弱（R58 的两个标志）');
-  ok(rs.indexOf('me.mineArmed = false; me.mineTurns = 0;') >= 0, '必须清地雷（R59 含计时）');
-  ok(rs.indexOf('me.rodGuard = 0;') >= 0, '必须清避雷针（R31）');
-  ok(rs.indexOf('me.cooldown = {};') >= 0, '必须清大雷禁用（R29）');
-  ok(rs.indexOf('case SK.PURIFY: purgeSelf(state, me, m); break;') >= 0 &&
-     rs.indexOf('purgeSelf(state, state.p[i], i);') >= 0,
-    '两个 `case SK.PURIFY`（正式路径 + 镜面复制路径）都必须走 purgeSelf');
-  ok(rs.indexOf('me.stickers = []; me.nightmare = false; me.tauntPending = false;') < 0,
-    '旧的"两处各写一遍"写法不得回来');
+  /* §改（2026-10-22 千问，用户指令「门禁目标是功能实现而不是判文本」）：原来 7 条全在钉 `resolve.js` 的行
+   *   （purgeSelf 的定义、五条赋值语句、两个调用点、旧写法不许回来）⇒ 判的是代码长什么样，
+   *   而裁定说的是**净化之后这个人身上不该再有持续状态**。现在两条路径各跑一局：
+   *   ① 正式路径（自己出净化）‖ ② 镜面复制路径（别人镜面复制我的净化）——
+   *   后者正是原来那句结构钉要防的东西：两份实现一漂移，两条路径的残留清单就不一样，跑出来当场红。
+   *   ⚠ 覆盖边界（写清不藏）：残留是按下面这张字段表数的 ⇒ 新增的持续状态字段没进表就判不到
+   *   （旧的文字钉同样判不到新字段，而且它还判不到漂移）。 */
+  const FIELDS = ['fireWeakNow', 'fireWeakNext', 'mineArmed', 'mineTurns', 'rodGuard', 'nightmare', 'tauntPending'];
+  const arm = function (p) {
+    p.fireWeakNow = true; p.fireWeakNext = true; p.mineArmed = true; p.mineTurns = 3;
+    p.rodGuard = 2; p.nightmare = true; p.tauntPending = true; p.cooldown = { anyKey: 1 };
+    p.stickers.push({ owner: 2, age: 0 });
+  };
+  const leftover = function (p) {
+    const out = [];
+    for (const k of FIELDS) { const v = p[k]; if (v === true || (typeof v === 'number' && v !== 0)) out.push(k + '=' + JSON.stringify(v)); }
+    if (p.cooldown && Object.keys(p.cooldown).length) out.push('cooldown=' + Object.keys(p.cooldown).length);
+    if (p.stickers && p.stickers.length) out.push('stickers=' + p.stickers.length);
+    return out;
+  };
+  /* ① 正式路径 */
+  const stA = S.createState('multi', { next: mulberry32(9001) }, 3);
+  for (const p of stA.p) { p.ep = 99; p.hp = 8; }
+  X.startTurn(stA);
+  arm(stA.p[0]);
+  const armedA = leftover(stA.p[0]);
+  ok(armedA.length >= FIELDS.length + 2, '① 前置：夹具必须真的把持续状态挂上（实测挂上 ' + armedA.length + ' 条 ‖ ' + armedA.join(' ') +
+    '）⇒ 挂不满说明引擎改了字段名，这条门要看的新字段就得同步进 FIELDS');
+  S.attemptAction(stA, 0, R.SK.PURIFY, {});
+  S.attemptAction(stA, 1, R.SK.JI, {}); S.attemptAction(stA, 2, R.SK.JI, {});
+  X.resolveActions(stA);
+  eq(leftover(stA.p[0]).join(' '), '', '① R60：自己出净化之后，' + FIELDS.join('/') + ' 加 cooldown/stickers 必须**全部回到默认**' +
+    '（实测残留：' + (leftover(stA.p[0]).join(' ') || '(无)') + '）');
+  /* ② 镜面复制路径（0 号净化、1 号镜面复制 0 号 ⇒ 1 号也该被清干净） */
+  const stB = S.createState('multi', { next: mulberry32(555) }, 3);
+  for (const p of stB.p) { p.ep = 99; p.hp = 8; }
+  X.startTurn(stB);
+  arm(stB.p[0]); arm(stB.p[1]);
+  S.attemptAction(stB, 0, R.SK.PURIFY, {});
+  S.attemptAction(stB, 1, R.SK.MIRROR, { target: 0 });
+  S.attemptAction(stB, 2, R.SK.JI, {});
+  X.resolveActions(stB);
+  ok(stB.events.some(function (e) { return e.type === 'mirrorCopySelf'; }),
+    '② 前置：镜面复制这条路径必须真的触发（实测事件里' + (stB.events.some(function (e) { return e.type === 'mirrorCopySelf'; }) ? '有' : '**没有**') +
+    ' mirrorCopySelf）⇒ 没触发就说明下面那条等式压根没走到复制路径');
+  eq(leftover(stB.p[1]).join(' '), '', '② 镜面复制路径也必须清全部（实测 1 号残留：' + (leftover(stB.p[1]).join(' ') || '(无)') +
+    '）—— 两份实现漂移时红的就是这里（原来靠钉"两个 case 都调 purgeSelf"判，但改写法就红、真漂移却不一定红）');
+  ok(leftover(stB.p[0]).length === 0 && leftover(stB.p[1]).length === 0,
+    '③ 两条路径必须**同为干净**（0 号残留 ' + (leftover(stB.p[0]).join(' ') || '无') + ' ‖ 1 号残留 ' + (leftover(stB.p[1]).join(' ') || '无') + '）');
   /* §删（2026-10-08 起）：正向钉文档措辞已摘（违反 METHODOLOGY 第 89 条）；教训留在 METHODOLOGY/CHANGELOG。 */
   /* （原来还钉"rules.js 的卡面描述必须写着『清除自身全部持续状态』"那句整话 —— v1.6.12 删除：
    *   那是**措辞在册**，改一次文案就红，而真正防得住的是上面那条"两处各写一遍不得回来"的结构钉。） */
