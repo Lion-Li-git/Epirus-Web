@@ -176,16 +176,36 @@ t('D57 multi 的收缩必须落进回合上限内，且"全灭"必须按伤害�
    *    "4 席只ジ vs 1 席冠军"是 0 胜 / 40 平 ⇒ 严格胜率上限恒为 0，惩罚攒钱无从谈起。 */
   ok(R.MODES.multi.suddenDeath > 0, 'multi 必须显式设 suddenDeath（否则走全局 100 > 上限 60）');
   ok(R.MODES.multi.suddenDeath < R.MAX_ROUNDS, 'multi 的收缩起点必须 < MAX_ROUNDS（实测修前永不触发）');
-  const rj = readFileSync('js/core/resolve.js', 'utf8');
-  ok(rj.indexOf('dealtSum') >= 0, '全灭分支必须按累计造成伤害判胜');
+  /* §改（2026-10-22 千问）：原来这条是 `rj.indexOf('dealtSum') >= 0`（"全灭分支必须按累计造成伤害判胜"）。
+   * 实测它**没牙**：把 `state.winner` 整个退回 `'draw'`（旧口径）之后 D57 照样 1/1 绿 ——
+   * 因为标识符还在（只是算了不用），而下面那支"4 席只ジ vs 1 席冠军"的场腿走的是**最后存活/回合上限**，
+   * 碰不到全灭这一支。⇒ 直接摆一个"同回合全灭 + 各有累计伤害"的场，判赢的是造伤害最多那个人。 */
+  const allDead = function (dmg) {
+    const st = S.createState('multi', { next: T.mulberry32(606) }, 3);
+    for (const p of st.p) { p.ep = 0; p.hp = 0; }
+    for (let i = 0; i < dmg.length; i++) for (let k = 0; k < dmg[i]; k++) {
+      st.events.push({ type: 'damage', source: i, to: (i + 1) % 3, amt: 1, via: 'test', reason: '测试伤害' });
+    }
+    X.checkOver(st);
+    return st;
+  };
+  const stWin = allDead([1, 3, 2]);
+  eq(stWin.over, true, '前置：三人同回合全灭必须判为终局（实测 over=' + stWin.over + '）⇒ 否则下面两条都在读一个没结束的场');
+  eq(stWin.winner, 1, '全灭必须按**累计造成伤害**判胜（实测 1 号造 3 点、2 号 2 点、0 号 1 点 ⇒ winner=' +
+    JSON.stringify(stWin.winner) + '）—— v1.5.65 的裁定："不打"零代价、场 B 的严格胜率上限恒为 0 就是旧口径"全灭=平局"造成的');
+  const stTie = allDead([2, 2, 2]);
+  eq(stTie.winner, 'draw', '并列仍必须平局（实测 ' + JSON.stringify(stTie.winner) + '）—— 否则"随便打两下"就能赢，判据反过来错');
   /* 行为断言：4 席只ジ vs 1 席冠军 —— 修前 0/40 分出胜负、回合恒打满；修后必须出现胜者且不撞上限 */
   /* v1.5.163：这里原来钉的是 `passiveFieldAt` 的三条**正向**断言（"第 0 局必须是暴露局"）——
    * 而那条注入自 v1.5.65 起一局没开过火（消费点查 `BOT_PICKS` 不存在的键）。键与分支都已删除，
    * 断言随之**反向**：不许复活。复活一次就要再白跑一臂才看得见，那正是 §N11 的代价。 */
   eq(typeof T.passiveFieldAt, 'undefined', 'passiveFieldAt 必须已随 EPIRUS_PASSIVE_FIELD 一起删除');
   eq(typeof T.setPassiveField, 'undefined', 'setPassiveField 同上');
-  ok(readFileSync('js/train/evo.js', 'utf8').indexOf('PASSIVE_EVERY') < 0,
-    'evo.js 里不许留下该机制的残留变量（半删状态最坏： setter 还在、作用点没了）');
+  /* §删（2026-10-22 千问）：这里原来还有一条 `evo.js.indexOf('PASSIVE_EVERY') < 0`（"不许留下该机制的残留变量"）。
+   * 两次变异判完就删：
+   *   · 只塞一个**同族变量名**（没有 setter、没有消费者 ⇒ 行为一字不变）⇒ 这条钉**红**（误伤合法改写的形状）；
+   *   · 真把 `passiveFieldAt`/`setPassiveField` 复活（半删状态的实际形状）⇒ 上面两条 `typeof === 'undefined'`
+   *     的运行腿**当场红**。⇒ 文字钉既不必要也会误红，删。 */
   Pol.setRng(T.mulberry32(777));
   const pl = Pol.makePolicy(0.25);
   const ji = function () { return { key: R.SK.JI }; };
