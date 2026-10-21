@@ -641,11 +641,11 @@ ok(readFileSync('server/opp-champs.mjs', 'utf8').true, '冠军对手必须走 po
    判"该不该摘"一律回到读原文 + 造变异（细节见审计文档 §一）。
 2. `D13` / `D58` 那两处**不是漏，是 §十五 记过账的接受损失** ⇒ 别"顺手补上"；要动得先把它那条判据推翻。
 
-## 廿一、本班继续把 9 条"判文本/判写法"的门换成"判功能"（2026-10-22 凌晨续 · 千问 · 用户指令「大胆删 · 门禁目标是功能实现而不是判文本」）
+## 廿一、本班继续把 11 条"判文本/判写法"的门换成"判功能"（2026-10-22 凌晨续 · 千问 · 用户指令「大胆删 · 门禁目标是功能实现而不是判文本」）
 
 验收口径与 §二十 同：**(a) 等价改写（改名/搬家/换排版）不许红**；**(b) 把要防的东西真写坏了必须红**；
 判"腿冗余"一律用**摘腿后变异**（先把钉摘掉再跑同一个变异，否则钉自己先红、后面的行为腿被短路 ⇒ 什么也没证明）。
-明细与全部判词原文在 `docs/research/GATE-AUDIT-2026-10-22-qoder.md` §二 10)–19)。
+明细与全部判词原文在 `docs/research/GATE-AUDIT-2026-10-22-qoder.md` §二 10)–21)。
 
 | 门 | 原来判的是 | 现在判的是 | (a) 等价改写 | (b) 写真坏 |
 |---|---|---|---|---|
@@ -657,7 +657,9 @@ ok(readFileSync('server/opp-champs.mjs', 'utf8').true, '冠军对手必须走 po
 | `D220` | 四条 `train-3p.mjs` 写法钉（默认空串 ‖ 在 `SELF_ENV_KEYS` 名单里 ‖ "不认识的名字…exit(4)" 正则窗 ‖ `for (const o of ECON_OPPS) OPPS.push(o)` 逐字） | **四条全删**，本门原有的三档真跑子进程已覆盖：开档臂（status 0 + 印"桌变大" + `recipe.econOpps` 两名）‖ 写错名臂（`exit 4`）‖ 关档臂（一行不印 + `recipe` 写 null） | 见 (b) 的 M4：摘名单项连"行为"都没有 ⇒ 该钉只会误红 | M1 默认非空 ⇒ **红**（关档臂）；M2b 静默换一个对手继续跑 ⇒ **红** `不认识的卡名必须 exit 4（实测 0）`；M3 推进别处 ⇒ **红**；M5 "设了却没人读" ⇒ **红**（读数臂） |
 | `D130` | 四条 `train-3p.mjs` 写法钉（同一族的默认空 ‖ `OPPS.push(o)` ‖ 名单里那个带引号的串 ‖ `typeof o.sel !== 'function' … exit(4)`） | **四条全删**。这次的新事实是**钉的串根本不专属那一格**：`OPPS.push(o)` 在文件里出现 **6 次**（econ/counter/ring/toolkit/human/pool）、`typeof o.sel !== 'function'` 出现 **3 次** ⇒ counter 那整行删掉/那一支的退出禁掉，钉照样绿（K1/K2 实测）。"默认关 ⇒ 逐位不变"判在别处（`D127` 的基线哈希腿与 `D123③`），不在本门重复钉 | K2（把"要的对手不存在 ⇒ exit 4"那一支的退出禁掉）⇒ **整门绿**：这一支在门可见的世界里永不触发（开头三条 `typeof Bots.pickGuardSpam === 'function'` 已把前提钉住）⇒ 判为防御性文案，钉它零收益 + 改报错文案就误红 | K1（counter 静默不推进桌）⇒ 红的是行为腿 `只上 snipeSpam ⇒ 必须恰好进一个（9→10…）`，**四条钉全过**；K3（只摘名单项）⇒ 钉在时红的是钉自己（门短路、不算证据），**摘钉后重跑同一个 K3 ⇒ 绿** |
 | `D84` | 六条 `evo.js` 写法钉（`let IMIT_OVERRIDE = false;` ‖ 那一长串门控条件 ‖ `legal.some(l => l.key === ta.key && l.affordable)` ‖ `function teacherFull(` ‖ 名字→函数映射两处 ‖ `global.EpirusBots`） | 换成**跑示范**：新沙箱只设教师与退火窗、从不调 `setImitOverride` ⇒ `countImitInject()` 必须 `fired=0 且 tries=0`，配正对照（打开开关 ⇒ `fired>0`）‖ 教师给一个当回合下不了手的动作 ⇒ `tries>0 / fired=0 / unaffordable>0` ‖ `T.teacherFull(...)` 必须原样带 `target` ‖ `setImitTeacherByName('pickRingSpam')` 且 `T.imitTeacher() === Bots.pickRingSpam`（引用相等 ⇒ 第二份实现当场红）。门控那一长串**删**（`D86`/`D87` 各钉一份 ⇒ 本门是抄第二遍）；server/worker 那批**回执文案**钉**留**：替成行为要么起真 worker（全仓无先例，§十五 正是为此把 `D13` 判成接受损失），要么在门里重抄一份 server 逻辑 | N5 `if (n === 'antiring')` → `if ('antiring' === n)` ⇒ **绿** | N1 默认翻 `true` ⇒ 红 `fired=7 tries=7` ‖ N2 摘掉门控里的 `IMIT_OVERRIDE &&` ⇒ 红 `fired=12 tries=12` ‖ N3 拆掉 `okL` 的可负担检查 ⇒ 红 `fired=14 unaffordable=0` ‖ N4 `teacherFull` 丢 target ⇒ 红 ‖ N6 摘"按函数名取"那条路 ⇒ 红 `got=false want=true` |
-| `D127` | 两条 `train-3p.mjs` 写法钉（`EPIRUS_SEL_LAND \|\| 0` ‖ `bandPickByLand(` + `sel.best = lp.best`） | 换成**用本门已经在跑的那两趟**（不新增 spawn）：关档臂一行都不许印 ‖ "改判/未改判"那句必须与两臂产物的权重哈希**互相印证**（写之前先用 `d127-probe.mjs` 把剂量读清楚：本夹具印 `改判（是预筛选掉的）`，两臂哈希 `aa743488cc` vs `eb1de6334d` ⇒ 这条腿今天真有内容） | L3 `sel['best'] = lp.best` ⇒ **绿** | L1 摘掉赋值（算了不用）⇒ **红在新腿** `实测两臂相同? true` ‖ L2 默认偷改成 1 ⇒ 红（先抓住的是那条**已有**的基线哈希腿 `got=eb1de6334d want=aa743488cc` ⇒ 原钉 78 的覆盖面早就在门里） |
+| `D127` | 两条 `train-3p.mjs` 写法钉（`EPIRUS_SEL_LAND \|\| 0` ‖ `bandPickByLand(` + `sel.best = lp.best`） | 换成**用本门已经在跑的那两趟**（不新增 spawn）：关档臂一行都不许印 ‖ "改判/未改判"那句必须与两臂产物的权重哈希**互相印证**（写之前先把本门那两臂各跑一遍把剂量读清楚：本夹具印 `改判（是预筛选掉的）`，两臂哈希 `aa743488cc` vs `eb1de6334d` ⇒ 这条腿今天真有内容） | L3 `sel['best'] = lp.best` ⇒ **绿** | L1 摘掉赋值（算了不用）⇒ **红在新腿** `实测两臂相同? true` ‖ L2 默认偷改成 1 ⇒ 红（先抓住的是那条**已有**的基线哈希腿 `got=eb1de6334d want=aa743488cc` ⇒ 原钉 78 的覆盖面早就在门里） |
+| `D111` | 一条文字钉（`indexOf("epsMode === 'soft'")` && `indexOf('HOLD_MIN_EP')`），判词写的却是"规则**只作用于 soft**、缺省口径逐字不变" | 换成缺省口径真抽：不传 `epsMode` 抽 400 手 ⇒ `ep=1` 时探索集里**必须还抽得到贴贴**（实测缺省 `curse 75/400` ‖ `soft` 档 `0/400`） | 把 soft 分支整个摘掉以外的等价重排 ⇒ 绿（不读源码了） | **红**：`evo.js` 三处 `if (epsMode === 'soft')`（`:838/:872/:889`）改成无条件 ⇒ 缺省也 0/400；反向摘掉 soft 分支 ⇒ 本门既有 ① 那条红 |
+| `D166` | 三条接线钉：函数体内出现 `evText(e, list)` / `evText(e, events)` 逐字串 × 2 ‖ 全页面带事件表的调用点**恰好 2 处**（绝对计数） | 换成**数实参**：在 `logEvents`/`pushTranscript` 体内找所有 `evText(`，括号配对切实参表 ⇒ 每个调用点必须**两个实参**，并印出"扫到几个调用点"（覆盖面自己报数）。绝对计数那条**删**（"又开一条没并进来的渲染路径"由逐函数体那一问覆盖） | MUT-ii `evText(e, (list))`（语义一字不变，**旧两条正向串当场消失**）⇒ **绿** | MUT-i `evText(e)`（少传事件表）⇒ **红** `实测各调用点实参数 [1]` |
 
 ⚠ 三条要留给下一班的实话：
 1. **正向钉必须问"这条串在这个文件里出现几次、专不专属那一格"** —— 同一族纪律在四处工具里逐字同形，

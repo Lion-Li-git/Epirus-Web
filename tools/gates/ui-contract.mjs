@@ -193,9 +193,11 @@ t('D111 前台探索三条规则（v1.5.142 · ②③ 于 09-22 夜升级为序�
   /* 病（docs/research/logs/RESEARCH-LOG-2026-09-21-ds.md §10，DS 实测）：贴贴/蓄能只在 ε>0 时出现（ε=0 ⇒ 0.00/局、
      前台 ε.2 ⇒ 2.7/局），而**天火两档都是 0.00/局** ⇒ 探索只付铺垫成本、结构性地拿不到收尾。
      用户三条裁定 → 落在 `policyChooserN` 的 `epsMode==='soft'` 分支里。本门**行为式**验证。 */
-  const evoSrc = readFileSync('js/train/evo.js', 'utf8');
-  ok(evoSrc.indexOf("epsMode === 'soft'") >= 0 && evoSrc.indexOf('HOLD_MIN_EP') >= 0,
-    '规则必须只作用于 soft（缺省 epsMode 与 eps=0 的读数逐字不变）');
+  /* §改（2026-10-22 千问·第八批）：这里原来是一条文字钉 `indexOf("epsMode === 'soft'") >= 0 && indexOf('HOLD_MIN_EP') >= 0`
+   *   （钉"规则写在 soft 分支里"这个**形状**）。判据换成问它真正的那件事：**规则只许作用于 soft，
+   *   缺省口径必须逐字保持旧行为** ⇒ 见下面"缺省 epsMode 抽 400 手必须还抽得到贴贴"那一段（放在 KEYS/mk 定义之后）。
+   *   牙测：把 `js/train/evo.js:838/872` 两处 `if (epsMode === 'soft')` 改成无条件 ⇒ 新腿当场红；
+   *   反向（把 soft 分支整个摘掉）⇒ ① 那条 `ep=1 不许抽到贴贴/蓄能` 红 ⇒ 两问各抓一边，比文字钉宽。 */
   const params = loadChampParams(Pol, 'js/bundled-champion-3p.js');   // 线上 3P 包（S / R / T / mulberry32 用外层句柄）
   const draws = function (st, pid, key, n) {   // 用 ε=1（必探索）+ soft ⇒ 只测"探索集"本身
     const chooser = T.policyChooserN(params, 0.15, 1, 5, 'soft');
@@ -207,6 +209,17 @@ t('D111 前台探索三条规则（v1.5.142 · ②③ 于 09-22 夜升级为序�
   const mk = function () { return S.createState('multi', { next: mulberry32(11) }, 5); };
   const K = R.SK;
   const KEYS = [K.JI, K.CURSE, K.CHARGE, K.RAILGUN, K.FIRESTORM, K.GUN, K.SNIPE];
+  /* 缺省口径必须**不被这三条规则碰**（替掉原来那条钉 `epsMode === 'soft'` 的字面钉） */
+  {
+    const selDefault = T.policyChooserN(params, 0.15, 1, 5);   /* 不传 epsMode = 缺省口径 */
+    const stD = mk(); stD.p[0].ep = 1;
+    const legalD = KEYS.map(function (k) { return { key: k, affordable: true }; });
+    const hitD = {};
+    for (let i = 0; i < 400; i++) { const r = selDefault(stD, 0, legalD); hitD[r.key] = (hitD[r.key] || 0) + 1; }
+    ok((hitD[K.CURSE] || 0) + (hitD[K.CHARGE] || 0) > 0,
+      '缺省 `epsMode` 下 ep=1 仍须抽得到铺垫卡（实测贴贴 ' + (hitD[K.CURSE] || 0) + '/400 ‖ 蓄能 ' + (hitD[K.CHARGE] || 0) +
+      '/400）⇒ 抽不到就说明这三条规则漏到了缺省口径，训练/评测/门禁的读数会跟着一起变（文字钉判的是形状，这条判的是事实）');
+  }
   /* ① 低 ep（<3）：贴贴/蓄能**不许**进探索集 ⇒ 200 次抽样里一次都不该出现 */
   const st1 = mk(); st1.p[0].ep = 1;
   const h1 = draws(st1, 0, KEYS, 200);
@@ -324,12 +337,39 @@ t('D166 大雷连带**被挡下时 UI 不许说"造成伤害"**（v1.5.253 用�
     const j = src.indexOf('\n  function ', i + 10);
     return src.slice(i, j < 0 ? src.length : j);
   };
-  ok(String(evBody('logEvents') || '').indexOf('evText(e, list)') >= 0,
-    'D166 接线：`logEvents` 必须把整回合事件表传给 `evText`（实测 ' + (evBody('logEvents') === null ? '函数不见了' : '没有该调用') + '）');
-  ok(String(evBody('pushTranscript') || '').indexOf('evText(e, events)') >= 0,
-    'D166 接线：`pushTranscript`（回合行 → transcript 的那一处）必须把事件表传给 `evText`（实测 ' + (evBody('pushTranscript') === null ? '函数不见了' : '没有该调用') + '）');
-  eq((src.match(/evText\(e, (list|events)\)/g) || []).length, 2,
-    '页面里带事件表的 `evText` 调用点必须**恰好 2 处**（v1.6.6 起 2 人不再有自己的第三条渲染路径）；多一处 = 又开了一条没并进来的循环');
+  /* §改（2026-10-22 千问·第八批）：这里原来三条 —— 两条"函数体内必须出现 `evText(e, list)` / `evText(e, events)`
+   *   这个**逐字串**"，一条"全页面带事件表的调用点恰好 2 处"（绝对计数）。
+   *   换成**数实参**：在每个渲染函数的体内找出所有 `evText(` 调用点，括号配对切出实参表，要求每个都是**两个**实参；
+   *   并让覆盖面自己报数（"扫到几个调用点"印出来，别把"没扫到"读成"没问题"）。
+   *   ⇒ 换变量名（`list` → `turnEvents`）不再误红；而真正的病（少传一个实参 ⇒ 段窗口恒为 undefined、修了等于没修）
+   *     反而更抓得住（`evText(e, events.slice(0))` 那种写法旧钉看不见，新判据看）。
+   *   绝对计数那条**删**：它判的"没多没少"里，"又开了一条没并进来的渲染路径"这一半由**逐函数**那两问覆盖
+   *   （新函数体里少传 ⇒ 那条红；多传 ⇒ 不判，因为它本来就不是要防的事）。 */
+  const callArgCounts = function (body, fname) {
+    const out = [];
+    let i = -1;
+    while ((i = body.indexOf(fname + '(', i + 1)) >= 0) {
+      let d = 0, cur = '', args = [];
+      for (let j = i + fname.length + 1; j < body.length; j++) {
+        const c = body.charAt(j);
+        if (c === '(' || c === '[' || c === '{') { d++; cur += c; }
+        else if (c === ')' || c === ']' || c === '}') { if (d === 0) { args.push(cur); break; } d--; cur += c; }
+        else if (c === ',' && d === 0) { args.push(cur); cur = ''; }
+        else cur += c;
+      }
+      out.push(args.filter(function (x) { return x.trim().length > 0; }).length);
+    }
+    return out;
+  };
+  for (const fn of ['logEvents', 'pushTranscript']) {
+    const body = evBody(fn);
+    ok(body !== null, 'D166 接线前提变了：`' + fn + '` 抽不出来了（改名或挪走 ⇒ 这条与它要防的那件事一起失效，别让它默默不跑）');
+    const counts = callArgCounts(String(body), 'evText');
+    ok(counts.length > 0, 'D166 接线：`' + fn + '` 体内一个 `evText(` 都没扫到 ⇒ 判据看不见这条渲染路径（覆盖面自己报数）');
+    ok(counts.every(function (k) { return k === 2; }),
+      'D166 接线：`' + fn + '` 里每个 `evText(` 都必须传**两个**实参（事件 + 整回合事件表）⇒ 实测各调用点实参数 ' + JSON.stringify(counts) +
+      '；少一个 ⇒ `roundEvents` 恒为 undefined，段窗口退化成整回合（用户看到的那句假话就是这么来的）');
+  }
   ok(/case 'bigTChain': return bigTChainText\(e, roundEvents\);/.test(src),
     '`evText` 的 bigTChain 分支必须委托给 `bigTChainText`（不许再内联硬编码）');
 });
