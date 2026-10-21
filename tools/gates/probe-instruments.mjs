@@ -2,6 +2,12 @@
 {"file":"tools/gates/probe-instruments.mjs","part":"probe-instruments","group":"probe","ranges":[[3662,3696],[5111,5126],[5303,5314],[6946,7059],[7435,7472],[7531,7660],[7744,7786],[7824,7928],[8052,8077],[8462,8497],[9121,9175],[9332,9373],[9507,9553],[9680,9994],[10313,10390],[10418,10449],[10468,10489],[10507,10513],[10783,10897],[11242,11361],[11419,11525],[11855,12020]],"gates":[3662,5111,5303,6946,7015,7435,7531,7595,7637,7744,7824,7850,8052,8462,9121,9140,9332,9507,9680,9716,9921,9959,10313,10418,10468,10783,10875,11242,11262,11303,11419,11484,11855],"patched":[]}
 #np-part-header-end*/
 import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
+/* §改（2026-10-22 千问·第九批）：D178 原来用三条正则钉 `probe-human-seat.mjs` 的**源码形状**
+ * （必须 import duelAssembly ‖ 不许出现 autoGameN( ‖ 不许写 `pickDefend ||` 兜底链）。
+ * 换成**数值同一性**：门自己拿同一份 `duelAssembly` + 同一组 `humanPrototypes` 按同一参数再算一遍，
+ * 与工具打印的那 12 格逐格对 ⇒ "与 G4 同尺"这件事第一次是可核对的数，而不是"某行代码存在"。 */
+import { humanPrototypes } from '../audit-lib.mjs';
+import { duelAssembly } from '../v2v4-lib.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
@@ -663,10 +669,14 @@ t('D177 champ-audit 缺包必须点名 + 保留其余行 + exit 7（v1.5.270 · 
  * ② 同种子两次必须逐字相同（量具自己先要可复现）；③ 缺包必须点名 + 保留其余行 + 非零退出；
  * ④ 这一格必须有判别力（全行 0% = 尺子坏了，不许读成"冠军无敌"）。 */
 t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可复现 + 缺包点名 + 判别力', function () {
-  const src = readFileSync('tools/probe-human-seat.mjs', 'utf8');
-  ok(/import \{ duelAssembly \} from '\.\/v2v4-lib\.mjs'/.test(src), '① 必须 import v2v4-lib 的 duelAssembly（与 G4 同源）');
-  ok(!/autoGameN\(/.test(src), '① 不许自己写装配（第二份实现必然漂移，本仓栽过四次）');
-  ok(!/pickDefend \|\|/.test(src) && !/\|\| *B\.pick/.test(src), '① 人类原型不许写兜底链（把"名字写错"伪装成"这原型不赢"）');
+  /* §改（2026-10-22 千问·第九批）：这里原来三条是源码正则（必须 import `duelAssembly` ‖ 不许出现 `autoGameN(` ‖
+   *   不许 `pickDefend ||` / `|| B.pick` 兜底链）。三条判的都是"代码长什么样"，而门真正要的那件事是
+   *   **"它印出来的数，就是 G4 那份装配算出来的数"** ⇒ 换成下面的数值同一性（同一份 `duelAssembly` +
+   *   同一组 `humanPrototypes`、同参数再算一遍，与 12 格逐格对）。
+   *   强在哪：工具改成自己写循环 ⇒ 同一性立刻崩（旧第一条只要求那行 import 还在，哪怕它 import 了却不用）；
+   *   而**等价改写**（换变量名/换写法，只要仍走那份装配）不再误红 —— 旧第二条 `!autoGameN(` 会在"内部换了个实现名"时误红。
+   *   "不许写兜底链"那半件由本门既有的 ③ 覆盖：原型不是函数 ⇒ 工具 `exit 7` 点名（`typeof h[1] !== 'function'` 那段），
+   *   旧文字钉只是在旁边再看一眼源码。 */
   /* ⚑ 10-17 夜班（R3）：这条以前拿**活槽**当输入，且第三处把包名写死进判据（`/== js\/bundled-champion-3p\.js/`）⇒ 换包那天它找的还是旧名字。
    * 先在一次性 worktree 里真换真跑量过（`s79`，NP_NOCACHE=1，7.4s **绿**：六个"人类原型"都在、12 格齐、两遍逐字相同、判别力那条也在）⇒ 才落地。 */
   const run = (extra) => spawnSync(process.execPath, ['tools/probe-human-seat.mjs',
@@ -675,6 +685,38 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
   eq(r1.status, 0, '正常包必须 exit 0：' + String(r1.stderr || '').slice(0, 160));
   const nm = ['全程刷反弹', '全程只防御', '只攒不打(农民)', '只枪压制', '攒钱+反弹(会玩)', '重火力+反弹'];
   const out1 = String(r1.stdout);
+  /* ①′ **数值同一性**（替掉原来那三条源码正则）：门自己拿同一份 `duelAssembly` + 同一组 `humanPrototypes`
+   *   按同一参数（`--games=40`、缺省 `seed0=90210`、两模式）再算一遍 12 格，与工具印出来的**逐格对**。 */
+  {
+    const fp = loadChampParams(Pol, FIXTURE_PACK);
+    const HP = humanPrototypes(Bots);
+    const seen = {};
+    for (const line of out1.split('\n')) {
+      const m = /^ {2}(multi|long)\s+(.*)$/.exec(line);
+      if (!m) continue;
+      seen[m[1]] = m[2].split(' · ').map(function (c) {
+        const q = /^(.+?) ([\d.]+)%\(和(\d+)%\)$/.exec(c.trim());
+        return q ? { name: q[1], win: q[2], draw: q[3] } : null;
+      }).filter(Boolean);
+    }
+    eq(Object.keys(seen).sort().join(','), 'long,multi',
+      '①′ 拿不到两行（multi/long 各一行）⇒ 同一性无从对起（实测把 stdout 的键读成 ' + JSON.stringify(Object.keys(seen)) +
+      '）⇒ 工具的印表格式变了，本门要跟着重看，别让同一性静默空转');
+    for (const mode of ['multi', 'long']) {
+      const cells = seen[mode] || [];
+      eq(cells.length, 6, '①′ ' + mode + ' 那行必须 6 格（实测 ' + cells.length + '）');
+      for (let i = 0; i < cells.length; i++) {
+        const h = HP.filter(function (x) { return x[0] === cells[i].name; })[0];
+        ok(!!h, '①′ 工具印的"人类原型"「' + cells[i].name + '」不在 `audit-lib.humanPrototypes` 里 ⇒ 它在用另一组人（与 G4 不同尺，数不能并排读）');
+        if (!h) continue;
+        const r = duelAssembly({ S: S, Play: Play, T: T, R: R }, fp, { games: 40, mode: mode, seed0: 90210, scripted: h[1] });
+        eq(cells[i].win, r.winPct.toFixed(1), '①′ 同一性：' + mode + ' × ' + cells[i].name + ' 工具印 ' + cells[i].win +
+          '% 而那份装配算出 ' + r.winPct.toFixed(1) + '% ⇒ 它没走 `duelAssembly`（或偷偷改了参数）');
+        eq(cells[i].draw, r.drawPct.toFixed(0), '①′ 同一性：' + mode + ' × ' + cells[i].name + ' 的和棋率对不上（' +
+          cells[i].draw + ' vs ' + r.drawPct.toFixed(0) + '）');
+      }
+    }
+  }
   for (const k of nm) ok(out1.indexOf(k) >= 0, '② 六个"人类原型"必须都在（缺一个 = 那格静默消失）：' + k);
   ok(/multi/.test(out1) && /long/.test(out1), '② 两个模式都要印（与 G4 同规矩）');
   eq(String(r2.stdout), out1, '② 同 seed0 两次必须逐字相同（量具不可复现 = 读数无意义）');
