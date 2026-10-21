@@ -1,10 +1,10 @@
 id	wid	path	tier	invited	promoteVerdict	seatKill	addedAt	note
 tb77-band1	936e26f2c2bd062e	docs/artifacts/e598-2p/tb77-band1.bak	hard	0	2p-exam	-1	Mon Oct 12 2026 21:46:02 GMT+0800 (中国标准时间)	考卷 sc 0.934 · 种类 9 · divNorm 0.408 · 对现役 2P 冠军 79.5%
 tb43-band2	83a88bf455b0a3e5	docs/artifacts/e598-2p/tb43-band2.bak	hard	0	2p-exam	-1	Mon Oct 12 2026 21:46:02 GMT+0800 (中国标准时间)	考卷 sc 0.918 · 种类 5 · divNorm 0.243 · 73.5%
-tb65-cand2	e282935cd6a3ec87	docs/artifacts/e598-2p/tb65-cand2.bak	mid	0	2p-exam	-1	Mon Oct 12 2026 21:46:02 GMT+0800 (中国标准时间)	考卷 sc 0.866 · 种类 5 · divNorm 0.351 · 64.5%
-tb88-band1	be88bff136262113	docs/artifacts/e598-2p/tb88-band1.bak	mid	0	2p-exam	-1	Mon Oct 12 2026 21:46:02 GMT+0800 (中国标准时间)	考卷 sc 0.905 · 种类 8 · divNorm 0.429 · 61.0%
-tb21-cand2	988199bd55cf01da	docs/artifacts/e598-2p/tb21-cand2.bak	mid	0	2p-exam	-1	Mon Oct 12 2026 21:46:02 GMT+0800 (中国标准时间)	考卷 sc 0.854 · 种类 7 · divNorm 0.404 · 55.0%
-SHIPPED-2P-2026-09-22	ac6b53757ec279c3	docs/artifacts/e598-2p/SHIPPED-2P-2026-09-22.bak	soft	0	2p-exam	-1	Mon Oct 12 2026 21:46:02 GMT+0800 (中国标准时间)	2P 现役冠军钉住快照（examAt 2026-09-22）· 0.905 · 种类 6 · 0.350 · 镜子基准 39.5%
+tb65-cand2	e282935cd6a3ec87	docs/artifacts/e598-2p/tb65-cand2.bak	hard	0	2p-exam	-1	Mon Oct 12 2026 21:46:02 GMT+0800 (中国标准时间)	考卷 sc 0.866 · 种类 5 · divNorm 0.351 · 64.5%
+tb88-band1	be88bff136262113	docs/artifacts/e598-2p/tb88-band1.bak	hard	0	2p-exam	-1	Mon Oct 12 2026 21:46:02 GMT+0800 (中国标准时间)	考卷 sc 0.905 · 种类 8 · divNorm 0.429 · 61.0%
+tb21-cand2	988199bd55cf01da	docs/artifacts/e598-2p/tb21-cand2.bak	soft	0	2p-exam	-1	Mon Oct 12 2026 21:46:02 GMT+0800 (中国标准时间)	考卷 sc 0.854 · 种类 7 · divNorm 0.404 · 55.0%
+SHIPPED-2P-2026-09-22	ac6b53757ec279c3	docs/artifacts/e598-2p/SHIPPED-2P-2026-09-22.bak	hard	0	2p-exam	-1	Mon Oct 12 2026 21:46:02 GMT+0800 (中国标准时间)	2P 现役冠军钉住快照（examAt 2026-09-22）· 0.905 · 种类 6 · 0.350 · 镜子基准 39.5%
 tb77-band2	f7cdff06a3318610	docs/artifacts/e598-2p/tb77-band2.bak	soft	0	2p-exam	-1	Mon Oct 12 2026 21:46:02 GMT+0800 (中国标准时间)	考卷 sc 0.906 · 种类 8 · divNorm 0.454（最散）· 39.0%
 3p-D4a	5a60c8489990e8b6	docs/artifacts/e234-out/D4a.js	soft	1	block	-1	Wed Oct 21 2026 12:28:47 GMT+0800 (中国标准时间)	跨人数邀请 · 用户 2026-10-21 裁定 A（2P 软档掺多人包换口味）：2P 考卷 avg 49.2% / min 0（不过 0.825 门，属 invited 越过）· 2P 出手谱 19 种 / 防御类 52.0% / 20.4 回合（现有 soft 两枚防御类 0.0%）· 只进 soft，不许进 hard/mid
 3p-B5-10-31	ce3c6b4a3c527952	docs/artifacts/e100-out/B5-10-31.bak	soft	1	block	-1	Wed Oct 21 2026 12:28:47 GMT+0800 (中国标准时间)	跨人数邀请 · 同上（用户 2026-10-21 裁定 A）：2P 考卷 avg 73.3% / min 0（不过门）· 2P 出手谱 13 种 / 防御类 7.5% / 11.9 回合 · 只进 soft

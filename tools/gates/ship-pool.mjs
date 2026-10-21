@@ -324,8 +324,9 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
    *     ⑬a 真源 3P 表上声明了 `poolMix` 的档必须真的走到加权，且 **10000 场 × 4 席 = 40000 席**里 soft 份额落在 0.500±0.02。
    *          牙：把 `bandW` 传丢 ⇒ 退化成"整表均匀抽" ⇒ 份额就是 soft 占比 16/27 = **0.593**，当场出界（跑过，见 CHANGELOG v1.7.19）；
    *          40000 席下 p=0.5 的 SE = 0.0025 ⇒ ±0.02 是 8σ，不是"刚好绿"。
-   *     ⑬b **没拆带的表必须走退路并说话**：2P 那张（hard 2 ‖ mid 3 ‖ soft 2）上 `rosterFor` 必须给 `bandW=null` + 非空 `note`
-   *          + 非空成员 ⇒ 抓的是"拿 3P 的证据替 2P 决定归属"和"静默换抽法"两种坏。
+   *     ⑬b **抽法必须与表的形状一致并且说话**（§E677 起改成条件式）：2P 表里有 `mid` ⇒ 必须走退路（`bandW=null` + 非空 `note`）；
+   *          表里没有 `mid`（已拆两带）⇒ 必须给按带加权且覆盖整表。抓的仍是那两种坏："拿 3P 的证据替 2P 决定归属"与"静默换抽法"，
+   *          但不再把"哪一种是当前口径"写死在判据里 —— 改口径与把抽法弄坏，从此红在不同的话上。
    *     ⑬c `compose` 必须把生效的带比印出来（`out.bands`）⇒ 页面标签与判词有地方抄，不必自己再推一遍（第 134 条那一族）。
    *     ⑬d 页面与量具都必须调 `rosterFor(` ⇒ 同 ⑫e 那一族："配置在表里、接线断了"。 */
   {
@@ -361,9 +362,20 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
       const h2 = L2[0].split('\t'), i2 = h2.indexOf('tier'), id2 = h2.indexOf('id');
       const m2 = L2.slice(1).map(l => l.split('\t')).filter(r => r[id2]).map(r => ({ id: r[id2], wid: r[id2], tier: r[i2] }));
       const R2 = Q.rosterFor(m2, mixT[0]);
-      ok(!R2.bandW && !!R2.note && R2.members.length > 0,
-        '⑬b 2P 那张表还没拆带 ⇒ `rosterFor` 必须走退路（bandW=null + 说出 note）‖ 实测 bandW=' + JSON.stringify(R2.bandW) +
-        ' ‖ members ' + R2.members.length + ' 枚 ‖ note=' + (R2.note || '(空 = 静默降级)'));
+      /* §E677（用户 2026-10-21 裁 C3 ⇒ 2P 也拆成两带）：这条原来把状态写死成"2P 还没拆带 ⇒ 必须走退路"，
+       *   于是**改口径**与**静默换抽法**两种事都红在同一句话上 —— 读它的人分不出是哪种。
+       *   现在判的是**一致性**：表里有 `mid`（没拆带）⇒ 必须走退路且**说出 note**；表里没有 `mid`（已拆带）
+       *   ⇒ 必须给加权（`bandW` 非空）且成员覆盖整表。两种形状下"静默降级"都仍然红。 */
+      const hasMid2 = m2.some(r => r.tier === 'mid');
+      if (hasMid2) {
+        ok(!R2.bandW && !!R2.note && R2.members.length > 0,
+          '⑬b 2P 表还有 mid 带（未拆带）⇒ `rosterFor` 必须走退路（bandW=null + 说出 note）‖ 实测 bandW=' + JSON.stringify(R2.bandW) +
+          ' ‖ members ' + R2.members.length + ' 枚 ‖ note=' + (R2.note || '(空 = 静默降级)'));
+      } else {
+        ok(!!R2.bandW && R2.members.length === m2.length,
+          '⑬b 2P 表已拆成两带（无 mid）⇒ `rosterFor` 必须给**按带加权**且覆盖整表（不许静默退回单带）‖ 实测 bandW=' +
+          JSON.stringify(R2.bandW) + ' ‖ members ' + R2.members.length + '/' + m2.length + ' 枚');
+      }
     }
     const uiLines = String(readFileSync('js/ui/ui.js', 'utf8')).split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l));
     const ladLines = String(readFileSync('tools/probe-diff-ladder.mjs', 'utf8')).split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l));
