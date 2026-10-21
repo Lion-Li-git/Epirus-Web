@@ -212,24 +212,29 @@ if (FEAS_FILES.length) {
     if (id) { OKM[id] = { ok: c[iOk] === '1', fails: '' }; POK++; } }
   OKSRC = '包内历史 feasibility.ok（旧面板，覆盖不全且跨层）';
 }
-/* ===== §E677 第二把环的口径（用户 2026-10-21 裁「两个模式各自显示自己的绿环」）=====
- *   绿环的主语现在跟着**桌形**换：默认(3血短程) = 上面那把在册闸（混合桌 4+4 腿），长程(5血) = coords.tsv
- *   的 `okLong` 列 = 同一道闸的**全腿长程**版（`feas.mjs --allLong=1` 把 G主判/座位/场A/场B 也搬上 long）。
- *   口径这句**从表里读**（`legsMode` 列），不抄第二份文案 —— 与上面 §E492 那条"样本量随行记录"同一条规矩：
- *   哪天那批腿表被换掉，页面上这句会跟着变，而不是继续宣称一套已经不存在的桌形。 */
-let LSRC = '';
-{ const LF = ['feas-long-s1.tsv', 'feas-long-s2.tsv', 'feas-long-s3.tsv', 'feas-long-s4.tsv']
-    .filter(f => existsSync(join(HERE, f)));
+/* ===== §E677 两把纯桌闸的口径（用户 2026-10-21 裁「改成纯短程和纯长程两种，不要留混合桌环」）=====
+ *   环的主语跟着**桌形**换：默认(3血短程) = `okShort` 列（全腿短程），长程(5血) = `okLong` 列（全腿长程）。
+ *   两句话都**从腿表读**（`legsMode` 列），不抄第二份文案 —— 与上面 §E492 那条"样本量随行记录"同一条规矩：
+ *   哪天腿表被换掉，页面上这句会跟着变，而不是继续宣称一套已经不存在的桌形。
+ *   在册那把混合桌闸（`ok`）仍然烘进 DATA（promote 侧用的就是它），只是不当环、不当壳的过线场。 */
+function legsSrcOf(files, want, what) {
+  const present = files.filter(f => existsSync(join(HERE, f)));
+  if (!present.length) return '';
   const MODES = {};
-  for (const f of LF) {
+  for (const f of present) {
     const L = readFileSync(join(HERE, f), 'utf8').trim().split('\n');
     const iM = L[0].split('\t').indexOf('legsMode'); if (iM < 0) continue;
     for (const l of L.slice(1)) { const m = String(l.split('\t')[iM] || '').trim(); if (m) MODES[m] = (MODES[m] || 0) + 1; } }
   const mk = Object.keys(MODES);
-  if (mk.length > 1) { console.error('⛔ 全腿长程的判定表里混了 ' + mk.length + ' 种腿表：' + mk.map(x => x + ' × ' + MODES[x]).join(' ‖ ') +
-    '\n       ⇒ 两把环里的那一把成了混尺。要么全库重跑到同一套腿表，要么把旧片移出扫描面。'); process.exit(2); }
-  LSRC = mk.length ? ('现跑同一道闸的全腿长程版（' + mk[0] + '）')
-    : 'coords.tsv 的 okLong 列（全腿长程；腿表分片不在仓里 ⇒ 口径按日志 §E616）'; }
+  if (mk.length > 1) { console.error('⛔ ' + what + '的判定表里混了 ' + mk.length + ' 种腿表：' + mk.map(x => x + ' × ' + MODES[x]).join(' ‖ ') +
+    '\n       ⇒ 环的一把主语成了混尺。要么全库重跑到同一套腿表，要么把旧片移出扫描面。'); process.exit(2); }
+  if (mk.length && !mk[0].startsWith(want)) { console.error('⛔ ' + what + '的腿表 legsMode 不是 ' + want + ' 开头：' + mk[0] + ' ⇒ 挂错表'); process.exit(2); }
+  return mk.length ? ('现跑同一道闸（' + mk[0] + '）') : '';
+}
+const LSRC = legsSrcOf(['feas-long-s1.tsv', 'feas-long-s2.tsv', 'feas-long-s3.tsv', 'feas-long-s4.tsv'], 'all-long', '全腿长程')
+  || 'coords.tsv 的 okLong 列（全腿长程；腿表分片不在仓里 ⇒ 口径按日志 §E616）';
+const MSRC = legsSrcOf(['feas-short-s1.tsv', 'feas-short-s2.tsv', 'feas-short-s3.tsv', 'feas-short-s4.tsv'], 'all-multi', '全腿短程')
+  || 'coords.tsv 的 okShort 列（全腿短程；腿表分片不在仓里 ⇒ 先跑 feas.mjs --allMulti=1）';
 /* §E308 上槽体检（`promote --dry` 的实测裁决，由 promscan.mjs 从日志汇总）。
  *   为什么还要这一张表：绿环那条 `feasibilityOf` 只是**五道**，而真正决定能不能换包的是另外三条腿
  *   —— G4（不许被一行脚本打穿 >60%）‖ G5（面对"只防御不还手"必须清场 ≤25%）‖ 送盾硬门槛（不可 --force）。
@@ -450,10 +455,15 @@ const DATA = rows.map(r => ({
   hpl2: (r.Hplong === undefined || r.Hplong === '-' || r.Hplong === '') ? null : +r.Hplong,
   fl: (r.Flong === undefined || r.Flong === '-' || r.Flong === '') ? null : +r.Flong,
   /* §E616 全腿长程版的过线（`feas.mjs --allLong=1`）：`okl` = 1/0/null（null = 没量，**不是没过**）‖ `flongs` = 阻断原话。
-   *   §E677（用户 2026-10-21 裁「两个模式各自显示自己的绿环」）：环的主语**跟着桌形换** —— 短程档读这把、长程档读那把，
-   *   出口只有一个 `RSUBJ()`。这不是"换判据"：两把闸谁也没被废掉，页面一次只宣称其中一把（图例与表头都点名是哪把）。 */
+   *   §E677 全腿短程版（`feas.mjs --allMulti=1`，用户 2026-10-21 裁「改成纯短程和纯长程两种，不要留混合桌环」）：
+   *   `oks` / `fshorts` 同形。环的主语跟着桌形换，出口只有一个 `RSUBJ()` —— 而**两把都是纯桌**：
+   *   短程档读 `oks`（八条腿全在 3 血桌）‖ 长程档读 `okl`（八条腿全在 5 血桌）。
+   *   在册那把混合桌闸（`ok` / `why`，= `feasibilityOf` 的出厂腿序）**不再当环**，但它仍是 promote 侧用的那道闸，
+   *   所以两列都留在 DATA 里，只是页面不拿它当"过线"宣称。 */
   okl: (r.okLong === undefined || r.okLong === '-' || r.okLong === '') ? null : +r.okLong,
   flongs: String(r.failsLong || ''),
+  oks: (r.okShort === undefined || r.okShort === '-' || r.okShort === '') ? null : +r.okShort,
+  fshorts: String(r.failsShort || ''),
   why: OKM && (r.id in OKM) ? OKM[r.id].fails : '',
   dmg: +r.dmg, heavy: +r.heavy, holo: +r.holo, rounds: +r.rounds, draw: +r.drawRate, zero: +r.zeroRate,
   seat: +r.seatSpread, keys: +r.distinctKeys, chg: +r.charges, waste: +r.waste, stance: +r.noThreatStance, atk: +r.fieldAAtk, rw: +r.rwDmg
@@ -589,15 +599,17 @@ let NRAW = 0;   /* §E440 去重**之前**的面板行数（= 原始 tsv 行数�
 console.log('家族 ' + Object.keys(FAMLAB).length + ' 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 ' + DATA.filter(d => !d.fam && !d.famTop).length + ' 枚');
 /* §E440：这一行的三个数必须**同源**（都从去重之后的 DATA 数），不能再印 POK = OKM 的键数 ——
  *   那是"判定表里有 901 个 id"，与图上有几枚无关，混在一行里就是两条尺。 */
-console.log('过线判定源 = ' + (OKSRC || '无 ⇒ 不标绿环')+ ' ‖ 判定表里有 ' + POK + ' 个 id ‖ 图上（去重后）有判定 ' + DATA.filter(d => d.ok !== null).length + ' 枚 ‖ 判为过线 ' + DATA.filter(d => d.ok === 1).length +
-  ' 枚 ‖ 无判定 ' + DATA.filter(d => d.ok === null).length + ' 枚');
-/* §E616 两版过线的账（同一道闸，只差"剩下那 4 条腿在哪张桌上"）：**翻脸的枚数**才是要给用户看的那个数。 */
-{ const both = DATA.filter(d => d.okl !== null && (d.ok === 0 || d.ok === 1));
-  const flipUp = both.filter(d => d.ok === 0 && d.okl === 1), flipDown = both.filter(d => d.ok === 1 && d.okl === 0);
-  console.log('过线两版对照 = 全腿长程有判定 ' + DATA.filter(d => d.okl !== null).length + ' 枚（过 ' + DATA.filter(d => d.okl === 1).length +
-    '）‖ 两版都有 ' + both.length + ' 枚 ‖ **翻脸 ' + (flipUp.length + flipDown.length) + ' 枚**（在册不过→长程过 ' + flipUp.length +
-    ' ‖ 在册过→长程不过 ' + flipDown.length + '）‖ 环的主语跟着桌形换（短程档=在册闸 ‖ 长程档=全腿长程闸，§E677）' +
+/* §E677 环的两把主语都是**纯桌**闸 ⇒ 这一行报的是它们各自的覆盖与"翻脸"枚数（那才是要给用户看的数）。
+ *   在册那把混合桌闸另起一行报，主语写清它已经不是环了（promote 侧仍用它，别把两件事混成一句）。 */
+{ const nS = DATA.filter(d => d.oks !== null), pS = nS.filter(d => d.oks === 1);
+  const nL = DATA.filter(d => d.okl !== null), pL = nL.filter(d => d.okl === 1);
+  const both = DATA.filter(d => (d.oks === 0 || d.oks === 1) && (d.okl === 0 || d.okl === 1));
+  const flipUp = both.filter(d => d.oks === 0 && d.okl === 1), flipDown = both.filter(d => d.oks === 1 && d.okl === 0);
+  console.log('环的两把主语 = 全腿短程 过 ' + pS.length + '/' + nS.length + '（没量 ' + (DATA.length - nS.length) + '）‖ 全腿长程 过 ' + pL.length + '/' + nL.length + '（没量 ' + (DATA.length - nL.length) + '）' +
+    ' ‖ 两把都有读数 ' + both.length + ' 枚 ‖ **翻脸 ' + (flipUp.length + flipDown.length) + ' 枚**（短程不过→长程过 ' + flipUp.length +
+    ' ‖ 短程过→长程不过 ' + flipDown.length + '）‖ 环跟着桌形换主语（短程档=全腿短程 ‖ 长程档=全腿长程）' +
     (flipUp.length ? ' ‖ 例：' + flipUp.slice(0, 5).map(d => d.id).join(' ') : '') + (flipDown.length ? ' ‖ 例：' + flipDown.slice(0, 5).map(d => d.id).join(' ') : '')); }
+console.log('（在册混合桌闸 = ' + (OKSRC || '无') + ' ‖ 图上 ' + DATA.filter(d => d.ok === 1).length + '/' + DATA.filter(d => d.ok !== null).length + ' 过 ‖ 它仍是 promote 侧那道闸，只是不再当环）');
 
 /* E404 DS（D-3）：壳的 WebGL2 后端放在独立文件里，生成时内联（避开模板字面量的转义坑）。 */
 const GLJS = readFileSync(join(HERE, 'gl-mesh.js'), 'utf8');
@@ -613,20 +625,20 @@ var KEXP = 2.5;   /* §E330 IDW 核的指数：1/d^KEXP。**淡出的覆盖度�
 var EDGEK = 8;    /* §E331 位图外沿收口的格数。必须**小于**网格边距折算出来的格数（边距 10% ⇒ 约 19 格），
                      否则会把点云自己的晕切掉一刀 —— 那是"为了藏边而砍数据"。*/
 var OKL = [], POKJ = 0, PV = null;
-/* ===== §E677 绿环的主语 = 当前桌形那把闸（用户 2026-10-21 裁「两个模式各自显示自己的绿环」）=====
- *   默认(3血短程) → ok  = 在册那道闸，混合桌（G主判/座位/场A/场B 在 multi ‖ G2/墙/密度/蓄能 在 long）
- *   长程(5血)     → okl = 同一道闸的**全腿长程**版（那 4 条 multi 腿也搬上 long）
- *   ⚠ 这两把**不是一道闸的两个档，是两套腿表** ⇒ 主语一换，环、过线壳、底率、"栽在哪条腿"必须一起换。
+/* ===== §E677 绿环的主语 = 当前桌形那把**纯桌**闸（用户 2026-10-21 裁「改成纯短程和纯长程两种，不要留混合桌环」）=====
+ *   默认(3血短程) → oks = 全腿短程（八条腿全在 3 血桌上判）
+ *   长程(5血)     → okl = 全腿长程（八条腿全在 5 血桌上判）
+ *   在册那把混合桌闸（ok / why）从环上退下来了 —— 它既不是"短程"也不是"长程"，叫不出桌形名字。
+ *   ⚠ 两把**是两套腿表**，不是一道闸的两个档 ⇒ 主语一换，环、过线壳、底率、"栽在哪条腿"必须一起换。
  *   所以下面这些消费点一律走 RSUBJ / RSUBWHY，不许再直接读 d.ok —— 那是"环的主语是谁"这件事的唯一出口。 */
 function RLONG() { return (typeof st !== 'undefined' && st.ftab === 'long'); }
-function RSUBJ(d) { return RLONG() ? d.okl : d.ok; }
-function RSUBWHY(d) { return String(RLONG() ? (d.flongs || '') : (d.why || '')); }
-function RSUBNAME() { return RLONG() ? '全腿长程闸' : '在册闸（混合桌）'; }
-function ROTH(d) { return RLONG() ? d.ok : d.okl; }          /* 另一把闸的判定（卡片要两把并排印）*/
-function ROTHNAME() { return RLONG() ? '在册闸（混合桌）' : '全腿长程闸'; }
+function RSUBJ(d) { return RLONG() ? d.okl : d.oks; }
+function RSUBWHY(d) { return String(RLONG() ? (d.flongs || '') : (d.fshorts || '')); }
+function RSUBNAME() { return RLONG() ? '全腿长程闸' : '全腿短程闸'; }
+function ROTH(d) { return RLONG() ? d.oks : d.okl; }          /* 另一把纯桌闸的判定（卡片要两把并排印）*/
+function ROTHNAME() { return RLONG() ? '全腿短程闸' : '全腿长程闸'; }
 function RYESNO(v) { return v === 1 ? '是' : (v === 0 ? '否' : '没量过'); }   /* 「没量」与「没过」不许同形 */
-function RSUBSRC() { return RLONG() ? (LSRCJ || '（没读到全腿长程的腿表）')
-  : (OKSRCJ || '包自己 META 里的历史 feasibility.ok（没有现跑的判定表）'); }
+function RSUBSRC() { return RLONG() ? (LSRCJ || '（没读到全腿长程的腿表）') : (MSRCJ || '（没读到全腿短程的腿表）'); }
 (function () { var xa = [], ya = [];
   for (var i = 0; i < N; i++) { xa.push(P[i].x2); ya.push(P[i].y2); }
   PV = { x0: pct(xa, .005), x1: pct(xa, .995), y0: pct(ya, .005), y1: pct(ya, .995) }; })();
@@ -738,7 +750,8 @@ var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '', 
    *   ⚠ 这条**不动阈值**（DS 交接件 §1.5 把 t 也一起插值成 0.30+0.20c，那会吃掉用户自己那根阈值滑杆的所指，
    *     而且他 §1.5.1 与 §1.5.2/§1.6.1 对 c 的方向自相矛盾：一处说 c=0 是今天、三处说 c=1 是今天 ⇒ 按锚点那三条定）。
    *   配套退场的还有两个补丁：M0 与密度门都是给"稀疏区长假壳"打的，小带宽天然不需要它们 ⇒ 让它们随 c 线性退场。*/
-  isoBW: 1 };           /* §E312 壳的网格分辨率（沿最长轴的格数）：52 = 旧默认（棱面明显）‖ 72 ‖ 96 */
+  isoBW: 0.6 };        /* §E677（用户 2026-10-21 裁「默认改为 0.6 而不是 1.0」）：比较带宽 c 的**装载值**。
+                           c=1 仍然是"逐项回到原式"的那个恒等点（页内自检有一条钉它，走显式 isoBuild 不靠这个默认值）。 */
 var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三维行为轴与谱系图只能用颜色表示势 */
 /* ===== §E338（用户 01:4x 那批八条里的 1/2/3/4/5）=====
  *   ① 批次切换：谱系图 24 个家族 × 901 枚一起画，行带只剩 29px，左栏两行字必然叠（截图实测）。
@@ -1231,10 +1244,12 @@ function tip(d) {
     (d.hpl2 === null ? '\\n长程桌：没量（mode=long 那批没覆盖到这枚 ⇒ 不是 0）'
       : '\\n长程桌（同 seed 同档，只换桌形）：考卷 ' + d.hl2.toFixed(1) + '% ‖ 页面 ' + d.hpl2.toFixed(1) + '% ‖ F ' + Fl(d).toFixed(2) + '（按当下 T）'
         + (isFinite(d.Hp) ? ('  ⇒ 与默认桌之差：Hp ' + (d.hpl2 - d.Hp >= 0 ? '+' : '') + (d.hpl2 - d.Hp).toFixed(1) + 'pt ‖ F ' + (Fl(d) - Fv(d) >= 0 ? '+' : '') + (Fl(d) - Fv(d)).toFixed(2)) : '')) +
-    /* §E616 两版过线并排说：绿环那条是**在册那道闸**（混合桌：G主判/座位/场A/场B 在 multi，G2/墙/密度/蓄能 在 long），
-     *   这一行是**全腿都搬上长程**之后同一道闸的裁决。两个都给，谁也不替谁 —— 换绿环的主语是待裁 #47。 */
-    (d.okl === null ? '' : ('\\n过线（全腿长程）' + (d.okl === 1 ? ' ✓' : ' ✗' + (d.flongs ? '（' + d.flongs.slice(0, 52) + '）' : ''))
-      + (d.ok === 0 || d.ok === 1 ? ('  ‖ 在册（混合桌）' + (d.ok === 1 ? ' ✓' : ' ✗') + (d.ok !== d.okl ? ' ⇒ **这一枚两版翻脸**' : '')) : ''))) +
+    /* §E677 两把**纯桌**闸并排说：环只画当前桌形那把，但悬停必须把另一把一起给 ——
+     *   否则"这枚换个桌就不过"这件事在图上看不见。在册那把混合桌闸不在这一行里：
+     *   它既不是短程也不是长程，用户 2026-10-21 已把它从环与过线壳上撤下来。 */
+    '\\n过线·全腿短程 ' + RYESNO(d.oks) + (d.oks === 0 && d.fshorts ? '（' + String(d.fshorts).slice(0, 52) + '）' : '')
+      + ' ‖ 过线·全腿长程 ' + RYESNO(d.okl) + (d.okl === 0 && d.flongs ? '（' + String(d.flongs).slice(0, 52) + '）' : '')
+      + ((d.oks === 0 || d.oks === 1) && (d.okl === 0 || d.okl === 1) && d.oks !== d.okl ? ' ⇒ **这一枚两把翻脸**' : '') +
     (d.pof ? '\\n父边来路 = ' + (d.psrc || '未标') : '') +
     (d.pof2 ? '\\n融合的另一粒父 ' + d.pof2 : '') +
     (backOf(d) ? '\\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts + '（来路 ' + (d.psrc || '未标') + '）' : '') +
@@ -1274,7 +1289,7 @@ function THRLBL() { ringTally();
   return Math.round(st.isoT * 100) + '%（底率 ' + (BASEP * 100).toFixed(1) + '% · 主语 = ' + RSUBNAME() + '）'; }
 /* §E608 带宽旋钮的标签要说**生效值**而不是滑块的刻度：c 同时缩核宽、退 M0、退密度门，三个数都得看得见才知道现在这只壳是谁。 */
 function BWLBL(c) { c = (c === undefined || !isFinite(c)) ? st.isoBW : c;
-  return c.toFixed(2) + (c >= 0.995 ? '（今天：M0 ' + DM0 + ' ‖ 门全开）'
+  return c.toFixed(2) + (c >= 0.995 ? '（满带宽：M0 ' + DM0 + ' ‖ 门全开）'
     : '（核宽 ' + (c).toFixed(2) + 'σ ‖ M0 ' + (DM0 * c).toFixed(2) + ' ‖ 门 ' + (c * 100).toFixed(0) + '% ‖ 阈值不动）'); }
 var FRMS = 0, FRMA = [];
 var PERFON = 0;
@@ -2657,8 +2672,13 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
       GLRESIZE = performance.now() - _tR;
       /* E405 DS：**几何缓存**。原来每帧都重建 5k 个投影点 + 三个类型数组 ⇒ 这部分 CPU 成本顶掉了换后端
        *   的收益（E404 实测 GL 25.76 vs 2D 26.18 ms/帧）。相机/网格/画布任一变了才重算重传；否则逐帧只 drawElements。 */
+      /* ⚠ 这个键必须带上"这只壳是由什么导出的"**每一个**自由度 —— 与 §E619 给 isoEnsure 补 tab 那次同一条规矩。
+       *   原来它缺 m.bw 与 m.tab：换桌形时 CPU 侧 isoEnsure 会重建（那边判了 tab），而 GL 这侧的键没变
+       *   ⇒ **不重传 VBO**，屏幕上留的还是上一档桌的壳；用户 2026-10-21 报的"切短程/长程壳不立刻重画，
+       *   要等动了壳参数才重画"就是这个（动壳参数会改 thr/gn/field 里某一项，键才终于变）。
+       *   quads.length 挡不住这种 stale：换主语常常面数一样，不一样的只是里面是哪几枚。 */
       var _sig = [cb.r[0], cb.r[1], cb.r[2], cb.u[0], cb.u[1], cb.u[2], cb.f[0], cb.f[1], cb.f[2],
-        st.ox3, st.oy3, base, w, h, m.quads.length, m.gn, m.thr, m.field].join('|');
+        st.ox3, st.oy3, base, w, h, m.quads.length, m.gn, m.thr, m.field, m.bw, m.tab].join('|');
       if (_sig !== GLSIG) {
       GLSIG = _sig;
       var _tG = performance.now();
@@ -3623,7 +3643,7 @@ document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) %
     _isoTimer = setTimeout(function () { st.isoT = val; if (v) v.textContent = THRLBL(); req(); }, 160);
   });
 })();
-/* §E608 带宽滑轨（c = 核宽 / σ，c=1 = 今天）。用 **change**（松手才重建）而不是逐 tick 重建：
+/* §E608 带宽滑轨（c = 核宽 / σ；c=1 = 满带宽 = 恒等点，装载默认 §E677 起是 0.6）。用 **change**（松手才重建）而不是逐 tick 重建：
  *   isoBuild 一次 0.2~1.5 秒（GN 相关），拖动里每个 tick 都重建就是 E426 那次"拖一下卡一秒多"的重演。
  *   两个预设按钮是给用户的：用户问的是"从签名场拉到平滑壳"，来回拉比认刻度快。 */
 (function () { var w = document.getElementById('isobw'), wv2 = document.getElementById('isobwv');
@@ -3635,7 +3655,10 @@ document.getElementById('bisos').onclick = function () { st.iso = (st.iso + 1) %
     var a1 = document.getElementById('isobw'), a2 = document.getElementById('isogn');
     if (a1) a1.value = String(c); if (a2) a2.value = String(st.isoGN);
     if (wv2) wv2.textContent = BWLBL(); req(); }
-  var bt = document.getElementById('bwToday'); if (bt) bt.addEventListener('click', function () { setBw(1); });
+  /* §E677（用户 2026-10-21 裁）：这颗按钮的语义是**回到装载时那一档**，不是"回到 c=1"——
+   *   原来它写 setBw(1) 而文案叫「今天的壳」，两件事都随默认值过期。默认既然改成 0.6，它就设 0.6。
+   *   c=1（恒等点）仍然够得到：滑杆右端就是，页内自检那条"c=1 ⇒ 逐项回到原式"走显式 isoBuild，不靠这颗按钮。 */
+  var bt = document.getElementById('bwToday'); if (bt) bt.addEventListener('click', function () { setBw(0.6); });
   /* 预设停在 **0.20** 而不是 0.05：扫描实测 c=0.2 就是"漏画归零"的那一档（本机 67→0 ‖ 误包 91→30 ‖ 7158 片画得出来），
    *   而 c≤0.05 在**数值**上才是签名端（误包 3→0），画面上却看不见东西 —— GN=72 只剩 310 片、抬到 128 也只剩 1965 片亚像素小泡。
    *   所以按钮叫"贴簇"不叫"签名端"：它给的是"壳贴着过线簇长"，不是那个画不出来的极限。*/
@@ -3728,7 +3751,7 @@ var CHKDETAIL = 0;
     if (kv[0] === 'isot') { st.isoT = Math.max(0.15, Math.min(0.9, +kv[1])); HT_SEEN = 1; }
     /* §E312 壳分辨率 + 谱系图相机也走深链 ⇒ 无头复核能钉住这两个状态 */
     if (kv[0] === 'isogn') st.isoGN = Math.max(24, Math.min(128, +kv[1] || 72));
-    if (kv[0] === 'isobw') st.isoBW = Math.max(0.02, Math.min(1, +kv[1] || 1));   /* §E608 带宽（无头复核要用）*/
+    if (kv[0] === 'isobw') st.isoBW = Math.max(0.02, Math.min(1, +kv[1] || 0.6));   /* §E608 带宽（无头复核要用；缺省 = 装载默认 0.6，§E677）*/
     if (kv[0] === 'isof') st.isoField = (kv[1] === 'pot' ? 'pot' : 'ok');
     if (kv[0] === 'tkx') st.tKx = Math.max(0.4, Math.min(12, +kv[1] || 1));
     if (kv[0] === 'tky') st.tKy = Math.max(0.4, Math.min(12, +kv[1] || 1));
@@ -5625,7 +5648,10 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var nB0 = ISOBUILDS, iso0 = isoEnsure();
   wbw.value = '0.2'; fireEv(wbw, 'change');
   if (Math.abs(st.isoBW - 0.2) > 1e-9) c2Bad.push('带宽滑到 0.2 而 st.isoBW = ' + st.isoBW + ' ⇒ 监听没挂上');
-  if (bv && bv.textContent.indexOf('今天') >= 0) c2Bad.push('带宽改了而标签还写着「今天」（' + bv.textContent + '）');
+  /* §E677（用户裁「奇怪的钉措辞的门删掉」）：原来这句判的是"标签里不许还有『今天』两个字"——
+   *   它想证的事是真的（标签必须跟着生效值走），但它钉的是**散文**，于是给"今天的壳"那次改名埋了个雷。
+   *   换成钉标签开头的**生效值**：改名、改文案都不红，而标签冻在旧值上照样红。 */
+  if (bv && String(bv.textContent).slice(0, 4) !== '0.20') c2Bad.push('带宽滑到 0.2 而标签开头的生效值不是 0.20（印的是「' + bv.textContent + '」）');
   var iso2 = isoEnsure();
   if (iso2 === iso0) c2Bad.push('带宽改了而 isoEnsure 返同一个缓存对象 ⇒ bw 没进缓存键（滑块一动壳不动）');
   else if (iso2.ins === iso0.ins) c2Bad.push('重建了但壳内枚数与 c=1 一模一样（' + iso0.ins + '）⇒ bw 没传进 isoBuild');
@@ -5978,7 +6004,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button>' +
 '<button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button>' +
 '<label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label>' +
-'<label id="isobwrow" style="display:none" title="§E608 壳的**比较带宽** c = 核宽 / σ（σ = 显示度量第 6 近邻中位，现在印在下面那行读数里）。&#10;· c=1 = 今天这只壳：平滑的局部过线占比（M0 收缩 + 密度门都在）。&#10;· 往左收到 c→0 = 签名端：核里只剩自己那一枚 ⇒ 比值场退成 1-NN ⇒ 等值面就是 Voronoi 边界，每个过线点冒一个小泡、未过线一枚也不包（代价：壳碎成一片）。&#10;M0 与密度门跟着 c 线性退场 —— 它们是给「稀疏区一两个点就把比值抬到 1」打的补丁，小带宽天生不需要。&#10;⚠ 阈值这根滑杆不动（那是另一个所指）。⚠ 小 c 的泡比格子还小 ⇒ 要配 96~128 格，否则被退化片闸吃掉，看着像什么都没画。">带宽 <input type="range" id="isobw" min="0.05" max="1" step="0.01" value="1"><span id="isobwv">1.00（今天）</span><button id="bwToday" title="c=1 ‖ 今天的平滑局部占比壳（默认零剂量那一档）">今天的壳</button><button id="bwSign" title="c=0.20 ‖ 实测这一档漏画归零（67→0）、误包 91→30，壳碎成一坨一坨各自抱住过线簇。再往左（c≤0.05）数值上才是签名端（误包 3→0），但那些小泡比格子还小 ⇒ 画出来像什么都没画（GN=72 只剩 310 片）">贴簇 c=0.2</button></label>' +
+'<label id="isobwrow" style="display:none" title="§E608 壳的**比较带宽** c = 核宽 / σ（σ = 显示度量第 6 近邻中位，现在印在下面那行读数里）。&#10;· c=1 = 今天这只壳：平滑的局部过线占比（M0 收缩 + 密度门都在）。&#10;· 往左收到 c→0 = 签名端：核里只剩自己那一枚 ⇒ 比值场退成 1-NN ⇒ 等值面就是 Voronoi 边界，每个过线点冒一个小泡、未过线一枚也不包（代价：壳碎成一片）。&#10;M0 与密度门跟着 c 线性退场 —— 它们是给「稀疏区一两个点就把比值抬到 1」打的补丁，小带宽天生不需要。&#10;⚠ 阈值这根滑杆不动（那是另一个所指）。⚠ 小 c 的泡比格子还小 ⇒ 要配 96~128 格，否则被退化片闸吃掉，看着像什么都没画。">带宽 <input type="range" id="isobw" min="0.05" max="1" step="0.01" value="0.6"><span id="isobwv">1.00（今天）</span><button id="bwToday" title="c=0.60 ‖ 回到装载时那一档（§E677 用户裁的默认带宽）。要恒等点 c=1 就把滑杆拉到右端。">默认壳 c=0.6</button><button id="bwSign" title="c=0.20 ‖ 实测这一档漏画归零（67→0）、误包 91→30，壳碎成一坨一坨各自抱住过线簇。再往左（c≤0.05）数值上才是签名端（误包 3→0），但那些小泡比格子还小 ⇒ 画出来像什么都没画（GN=72 只剩 310 片）">贴簇 c=0.2</button></label>' +
 '<label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label>' +
 '<button id="reset">复位视图</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
@@ -6009,7 +6035,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>\n' +
 '<div id="tip"></div>\n' +
 '<div id="selftest"></div>\n' +
-'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var LSRCJ = ' + JSON.stringify(LSRC) + '; var NRAW = ' + NRAW + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + '; var EPSG = ' + JSON.stringify(EPSG) + '; var POOLM = ' + JSON.stringify(POOLM) + '; var POOL_COL = ' + JSON.stringify(POOL_COL) + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
+'<script>var DATA = ' + JSON.stringify(DATA) + '; var OKSRCJ = ' + JSON.stringify(OKSRC) + '; var LSRCJ = ' + JSON.stringify(LSRC) + '; var MSRCJ = ' + JSON.stringify(MSRC) + '; var NRAW = ' + NRAW + '; var PROJTSNE = ' + (PROJTSNE ? '1' : '0') + '; var EPSG = ' + JSON.stringify(EPSG) + '; var POOLM = ' + JSON.stringify(POOLM) + '; var POOL_COL = ' + JSON.stringify(POOL_COL) + ';\n' + GLJS + ' var FAMLAB = ' + JSON.stringify(FAMLAB) + ';\n' + JS + '</script></body></html>';
 /* §E338 落盘之后**必须把内联脚本再解析一遍**（"写完不回读"这一族的第三种形态）：
  *   模板里写 '\n' 会被 Node 先吃成**真换行** ⇒ 写进页面就成了一条未闭合的字符串 ⇒ **整页脚本一条都不执行**，
  *   而构建照样打印"已写 xxx KB"、截图照样是一张画布（地板是 canvas 之外没画 ⇒ 看着像空的但没人报错）。
