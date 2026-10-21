@@ -2640,10 +2640,12 @@ t('D140 击杀奖励规则库（v1.5.194 · 单一来源）：合成局面逐个
     try { KR.patchResolve('这是一段被改过的、没有锚点的 resolve.js'); } catch (e) { threw = 1; }
     eq(threw, 1, '锚点找不到必须**抛错**，不许静默返回原文');
     const patched = KR.patchResolve(readFileSync('js/core/resolve.js', 'utf8'));
-    ok(patched.indexOf('mineFrom:') >= 0 && patched.indexOf('fireFrom:') >= 0 && patched.indexOf('transferBy:') >= 0,
-      'resolve.js 补丁必须真的把三个归因字段接进事件（缺一个就有某类死亡回不了 ep）');
-    ok(patched.indexOf("source: (opts.source != null ? opts.source : null)") >= 0,
-      '**不许动 `source`**（R57：地雷/天火是无来源伤害，且 `source==null` 还是大雷连带与"终局收缩"哨兵的输入）');
+    /* v1.7.156（第十四批）：这里原来两条断言是**读补丁文本**（三个归因字段各在不在 ‖ `source: (opts.source …)` 那句逐字在不在）。
+     *   我先按"⑤⑥ 那些真跑腿早就判过了"把它们删了，然后做摘腿后变异 —— **两刀都不红**（抹掉模板里的 `mineFrom` ‖ 把 `source` 写死 0）。
+     *   原因很实在：⑤⑥ 喂给归因函数的事件是**手搓的**，从来没让补丁后的引擎自己吐过一个事件 ⇒ 那两条字面钉当时是**唯一接得住的判据**，我删错了。
+     *   正解不是把字面钉放回去，而是补上下面 ⑩ 那一格真调用（现在两刀都红了，见审计文档 §二 29)）。
+     *   `patched` 这一行留着：它跑的是"对真 resolve.js 打补丁不许抛"（锚点落空会抛，上面那条 `threw` 判的就是这件事）。 */
+    void patched;
   }
   /* ⑨ 补丁行为中性：打了补丁但不挂规则钩子 ⇒ 与未打补丁**逐位相同** */
   {
@@ -2674,6 +2676,28 @@ t('D140 击杀奖励规则库（v1.5.194 · 单一来源）：合成局面逐个
     };
     const a = play(boot(false)), b = play(boot(true));
     eq(a, b, 'mode 0（打了补丁、钩子不发）必须与未打补丁**逐位相同** —— 否则所有 Δ 都不是纯规则差');
+    /* ⑩ 「补丁真把三个归因字段接进事件」必须**跑出来**，不是读补丁文本读出来的（v1.7.156）。
+     *    原来这里两条断言是 `patched.indexOf('mineFrom:')>=0` 与那句 `source: (opts.source != null ? …)` 的逐字钉；
+     *    摘腿后变异（抹掉模板里的 `mineFrom` ‖ 把 `source` 写死成 0）**两次都不红** ⇒ 因为本门 ①~⑦ 喂给归因函数的事件是我手搓的，
+     *    从来没有让**补丁后的引擎**自己吐过一个事件。⇒ 结论：那两条字面钉当时确实接得住东西，删它是错的；
+     *    但正解不是把字面钉放回去，而是补上下面这一格真调用（它同时判"字段带上了"与"`source` 没被动"）。 */
+    const evAt = function (box, opts, to) {
+      const X = box.window.EpirusResolve, S3 = box.window.EpirusState;
+      const st = S3.createState('multi', { next: function () { return 0.5; } }, 5);
+      X.rawDamage(st, to, 2, '地雷', 'mine', opts);
+      return st.events.filter(function (e) { return e.type === 'damage'; }).pop() || {};
+    };
+    const e1 = evAt(boot(true), { mineFrom: 3, source: null }, 1);
+    eq(e1.mineFrom, 3, '⑩a 补丁后的 `rawDamage` 必须把 `mineFrom` 带进 damage 事件（实测 ' + JSON.stringify(e1.mineFrom) + '）⇒ 缺它就有一类死亡回不了 ep');
+    eq(e1.source, null, '⑩b 同一格**不许动 `source`**（R57：地雷/天火是无来源伤害，而 `source==null` 还是大雷连带与"终局收缩"哨兵的输入）实测 ' + JSON.stringify(e1.source) + '）');
+    eq(e1.fireFrom, null, '⑩c 没传的归因字段必须是 `null` 而不是 `undefined`/脏值（实测 ' + JSON.stringify(e1.fireFrom) + '）⇒ 下游按 `!= null` 判，脏值会变成假归因');
+    const e2 = evAt(boot(true), { fireFrom: 4, source: null }, 2);
+    eq(e2.fireFrom, 4, '⑩d `fireFrom` 同理（实测 ' + JSON.stringify(e2.fireFrom) + '）');
+    const e3 = evAt(boot(true), { transferBy: 0, source: null }, 3);
+    eq(e3.transferBy, 0, '⑩e `transferBy` 同理（实测 ' + JSON.stringify(e3.transferBy) + '）');
+    const e4 = evAt(boot(false), { mineFrom: 3, source: null }, 1);
+    ok(e4.mineFrom === undefined, '⑩f 对照：**未打补丁**那一格读不到 `mineFrom`（实测 ' + JSON.stringify(e4.mineFrom) + '）'
+      + '⇒ 读得到的话 ⑩a 就是恒绿装饰（这条是"正对照"的另一半：证明字段确实来自补丁，不是引擎本来就带）');
   }
 });
 
