@@ -72,8 +72,15 @@ guard 4正3反 ‖ reflect 4正3反 ‖ G 5正2反 ‖ 严胜 5正2反，106 行
 ② 地板条的主判据是**这一格的 Δ 中位越过地板**，不是"有几枚超地板"（否则 1/7 超地板也能挂着"稳定上移"）。
 
 **⚑ 两处自己的账（不藏着）**：① **纸面登记晚于发车** —— 设计与判据在发车前已定、且没有用过任何产物读数，但 `§E676` 正文写于 07:22、臂批 07:21:46 就发了 ⇒ 这一条不是"预注册"，已在文里明写。
-② **`np-test --parts` 不是旗标** ⇒ 静默把整轮开跑（记忆在册的那条，我又踩了一次），**1 秒内按 CommandLine 点名杀掉 PID 36888**，之后改从源码 `PARTS`/`PART_GROUPS` 读名单；随后只跑 `--part=train-table ‖ train-breadth ‖ meta-repo`。
+② **`np-test --parts` 不是旗标** ⇒ 静默把整轮开跑（记忆在册的那条，我又踩了一次），**1 秒内按 CommandLine 点名杀掉 PID 36888**，之后改从源码 `PARTS`/`PART_GROUPS` 读名单。
 
 **新增待裁（她裁，不是我加）**：`EPIRUS_TOOLKIT_OPPS` 目前没有门腿（同族的 `D130`/`D220` 各有一条）⇒ 坏了不会红；
-要补就按"加一条要删一条"与 T1/T2 一起裁。判据形状已备好：默认关 + 份额印出来 + 产物 `recipe.toolkitOpps` 自证 + 坏值 `exit 4`（四件都能在 `arms/*.log.txt` 里复算）。
+要补就按"加一条要删一条"与 T1/T2 一起裁。判据形状已备好：默认关 + 份额印出来 + 产物 `recipe.toolkitOpps` 自证 + 坏值 `exit 4`（四件都能在 `archive/…/arms/*.log.txt` 里复算）。
+
+**现场（收尾状态，08:05）**：28 份臂日志 + 四张尺表已进 `archive/2026-10-21-toolkit-drop/` ‖ 24 枚产物在 `docs/artifacts/e676-out/`（gitignore）‖
+中间 band 全在仓库外 `D:/wt-e676-scratch/`（归仓规矩第 8 条：不落共享产物池）⇒ `node tools/dedupe-artifacts.mjs --audit` 实测 `unregistered: 0`。
+手跑训练把 tracked 的 `champion-map/pack-aliases.tsv` 写脏过 4 行（都是去重点名行）⇒ **先把 4 行抄进 `raw/dedupe-alias-lines.txt` 再 `git checkout --` 还原**
+（DS 交接第 3 条那个已知行为，本班又复现一次，所以这次留了副本、不算丢证据）。
+改动面门禁（工具原话都是"这不是全量门禁，不许当整轮全绿引用"）：`--part=train-table` **10/10** ‖ `train-breadth` **4/4** ‖ `meta-repo` **12/12** ‖ `meta-lint` **4/4**（07:41→08:04 **串行**跑，没并发两台尺）。
+
 
