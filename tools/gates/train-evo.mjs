@@ -3183,8 +3183,7 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
      ⇒ 脚本必须**有规律**，否则"信念表有没有在工作"这件事根本测不到（§口径陷阱：反事实要先证明扰动进得去） */
   function batch(on, games, collect) {
     const W = mkSb(), T = W.EpirusTrainer, S = W.EpirusState, R = W.EpirusRules, P = W.EpirusPolicy, Play = W.EpirusPlay;
-    const mm = readFileSync('js/bundled-champion-3p.js', 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
-    const params = P.unpack(JSON.parse(mm[1]), true);
+    const params = AUDIT.loadChamp(W, 'js/bundled-champion-3p.js');   /* v1.7.155 单一来源解析器（audit-lib 的 loadChamp）—— 这个正则本门原来抄了 5 份 */
     if (!params) throw new Error('夹具读不到出厂 3P 包');
     T.setBeliefSearch(on ? 1 : 0);
     const scripted = function (s, pid, legal) {
@@ -3234,8 +3233,7 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
      页面把 AI 喂的是 `cloneState(B.state)` ⇒ 表必须能从"被 JSON 往返过的 state"里原样重建，否则浏览器里开了档等于没开。 */
   {
     const W = mkSb(), T = W.EpirusTrainer, S = W.EpirusState, P = W.EpirusPolicy, Play = W.EpirusPlay;
-    const mm3 = readFileSync('js/bundled-champion-3p.js', 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
-    const pp = P.unpack(JSON.parse(mm3[1]), true);
+    const pp = AUDIT.loadChamp(W, 'js/bundled-champion-3p.js');   /* v1.7.155 单一来源解析器（audit-lib 的 loadChamp）—— 这个正则本门原来抄了 5 份 */
     const st = S.createState('multi', { next: T.mulberry32(9021) }, 5);
     if (T.slotSaltFor) st.slotSalt = T.slotSaltFor(9021);
     const f = T.policyChooserBelief(pp, 0.15, 0.2, 5, 'soft');
@@ -3277,8 +3275,7 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
       '⑧ 工厂里不许出现 `candidatesFor`/`econBase`（候选口径只许有一份真源；今晚第一版就是在这里漂掉的）');
     const trace = function () {
       const W = mkSb(), T = W.EpirusTrainer, S = W.EpirusState, P = W.EpirusPolicy, Play = W.EpirusPlay;
-      const mm2 = readFileSync('js/bundled-champion-3p.js', 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
-      const pp = P.unpack(JSON.parse(mm2[1]), true);
+      const pp = AUDIT.loadChamp(W, 'js/bundled-champion-3p.js');   /* v1.7.155 单一来源解析器（audit-lib 的 loadChamp）—— 这个正则本门原来抄了 5 份 */
       const f = T.policyChooserBelief(pp, 0.15, 0);
       const others = function (s2, pid2, legal) { const lg = legal.filter(function (l) { return l.affordable; }); return lg.length ? lg[0].key : R.SK.JI; };
       const seen = [];
@@ -3307,8 +3304,7 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
     T.setBeliefPly('abc'); eq(T.beliefPly(), 1, '⑪ 非数值必须回到 1（NaN 传下去会让整局成 NaN）');
     const trace = function (ply) {
       const W2 = mkSb(), T2 = W2.EpirusTrainer, S2 = W2.EpirusState, P2 = W2.EpirusPolicy, Play2 = W2.EpirusPlay, R2 = W2.EpirusRules;
-      const mm4 = readFileSync('js/bundled-champion-3p.js', 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
-      const pp = P2.unpack(JSON.parse(mm4[1]), true);
+      const pp = AUDIT.loadChamp(W2, 'js/bundled-champion-3p.js');   /* v1.7.155 单一来源解析器（audit-lib 的 loadChamp）—— 这个正则本门原来抄了 5 份 */
       T2.setBeliefSearch(1); T2.setBeliefPly(ply);
       const f = T2.policyChooserBelief(pp, 0.15, 0.2, 5, 'soft');
       const others = function (s2, pid2, legal) { const lg = legal.filter(function (l) { return l.affordable; }); return lg.length ? lg[0].key : R2.SK.JI; };
@@ -3329,11 +3325,13 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
      出厂必须都是 0（= §E154~§E161 已认证的那把尺），且**每一档必须真的改判决**——
      不然"三列回没回来"是在一把没接到引擎的尺上量的（⑪ 同族的坑：旋钮印在 banner 上不等于进了决策）。 */
   {
-    const src12 = readFileSync('js/train/evo.js', 'utf8');
-    ok(/let BELIEF_TGT = 0;/.test(src12) && /let BELIEF_TIE = 0;/.test(src12),
-      '⑫ 源码默认值必须是 `BELIEF_TGT = 0` / `BELIEF_TIE = 0`（出厂 = 已量过那版）');
-    ok(src12.indexOf('else if (BELIEF_TIE === 1') >= 0,
-      '⑫ 平票那条支路必须**带 `BELIEF_TIE === 1` 守卫**（tie=0 时一次都不许多算 `P.value` ⇒ 默认形状逐字不变）');
+    /* v1.7.155：这里原来有两条**源码钉**（`/let BELIEF_TGT = 0;/` 与 `/let BELIEF_TIE = 0;/` ‖
+       `indexOf('else if (BELIEF_TIE === 1')`），判的两件事下面这些真读/真跑已经接住了：
+       ① 默认档由 `beliefTarget()`/`beliefTie()` 直接回读 ⇒ 把出厂值改成 1，本门当场红（实测判词 `出厂必须是 0（实测 1）`）；
+       ② "守卫在不在"由 ⑫ 那三趟 trace 接住 —— 摘掉守卫后 tie=0 的平票也交给 `P.value`，于是 tgt=1 那一档与基线**跑成同一串判决**，
+          红的是 `ok(trace12(1,0) !== base12)` 那一条（实测 `tgt=1 必须改判决（实测与基线同为 draw/47×6）`）。
+       ⚠ 我第一版把这条归因写成"由 `trace12(0,1) !== base12` 抓"，跑出来才发现接住的是**另一条** ⇒ 归因按实测改在这里。
+       三次变异都跑过（摘腿后跑），过程与判词见审计文档 §二 28)。 */
     const W12 = mkSb(), T12 = W12.EpirusTrainer;
     eq(T12.beliefTarget(), 0, '⑫ `beliefTarget()` 出厂必须是 0（实测 ' + T12.beliefTarget() + '）');
     eq(T12.beliefTie(), 0, '⑫ `beliefTie()` 出厂必须是 0（实测 ' + T12.beliefTie() + '）');
@@ -3345,8 +3343,7 @@ t('D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `
     T12.setBeliefTie(0); eq(T12.beliefTie(), 0, '⑫ 0 必须能关回去');
     const trace12 = function (tgt, tie) {
       const W2 = mkSb(), T2 = W2.EpirusTrainer, S2 = W2.EpirusState, P2 = W2.EpirusPolicy, Play2 = W2.EpirusPlay, R2 = W2.EpirusRules;
-      const mm4 = readFileSync('js/bundled-champion-3p.js', 'utf8').match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
-      const pp = P2.unpack(JSON.parse(mm4[1]), true);
+      const pp = AUDIT.loadChamp(W2, 'js/bundled-champion-3p.js');   /* v1.7.155 单一来源解析器（audit-lib 的 loadChamp）—— 这个正则本门原来抄了 5 份 */
       T2.setBeliefSearch(1); T2.setBeliefTarget(tgt); T2.setBeliefTie(tie);
       const f = T2.policyChooserBelief(pp, 0.15, 0.2, 5, 'soft');
       const others = function (s2, pid2, legal) { const lg = legal.filter(function (l) { return l.affordable; }); return lg.length ? lg[0].key : R2.SK.JI; };

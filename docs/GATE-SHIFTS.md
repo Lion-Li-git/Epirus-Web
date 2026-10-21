@@ -641,11 +641,11 @@ ok(readFileSync('server/opp-champs.mjs', 'utf8').true, '冠军对手必须走 po
    判"该不该摘"一律回到读原文 + 造变异（细节见审计文档 §一）。
 2. `D13` / `D58` 那两处**不是漏，是 §十五 记过账的接受损失** ⇒ 别"顺手补上"；要动得先把它那条判据推翻。
 
-## 廿一、本班继续把 16 条"判文本/判写法"的门换成"判功能"（2026-10-22 凌晨续 · 千问 · 用户指令「大胆删 · 门禁目标是功能实现而不是判文本」）
+## 廿一、本班继续把 17 条"判文本/判写法"的门换成"判功能"（2026-10-22 凌晨续 · 千问 · 用户指令「大胆删 · 门禁目标是功能实现而不是判文本」）
 
 验收口径与 §二十 同：**(a) 等价改写（改名/搬家/换排版）不许红**；**(b) 把要防的东西真写坏了必须红**；
 判"腿冗余"一律用**摘腿后变异**（先把钉摘掉再跑同一个变异，否则钉自己先红、后面的行为腿被短路 ⇒ 什么也没证明）。
-明细与全部判词原文在 `docs/research/GATE-AUDIT-2026-10-22-qoder.md` §二 10)–27)。
+明细与全部判词原文在 `docs/research/GATE-AUDIT-2026-10-22-qoder.md` §二 10)–28)。
 
 | 门 | 原来判的是 | 现在判的是 | (a) 等价改写 | (b) 写真坏 |
 |---|---|---|---|---|
@@ -665,6 +665,7 @@ ok(readFileSync('server/opp-champs.mjs', 'utf8').true, '冠军对手必须走 po
 | `D225` | 六条源码钉：①a `let DRAIN_PUSH = 1;` ‖ ①b `function setDrainPush(v)` + 导出表那个串 ‖ ①c/①d/①e 三条**位置钉**（钩子那行逐字在 ‖ 在 `epsMode === 'soft'` 之后 ‖ 在 `pick = cands[keyIdx[top` 之前）‖ ②a/②b `state.js`/`rules.js` 字面 ‖ ⑤a/⑤b/⑤b′ `eval-5p.mjs` 里那三行拼接与"不许注释掉"的合成正对照 | ①a/②a/②b ⇒ **引擎直读**（`drainPushOn()` ‖ `MODES.multi.drainHpMax === 1` ‖ `MODES.long.drainHpMax === 2`）‖ ①b ⇒ `typeof …setDrainPush`（`drainPushWants` 那一半归 ③a，两边不互抄）‖ 三条位置钉 ⇒ 新腿 **①c**：ε=0 的同一个 chooser，档设 1 与 0 各走 60 个真桌子决策点（合法表由 `Play.legalActions` 给），**逐格必须同一手**，判词带"窗口打开几格 ‖ 摄魂可付几格"当正对照 ‖ ①c″ 跑完再核 `drainHpMax` **还是它自己** ‖ ⑤ ⇒ 让工具**真落一次盘**读表头（顶档臂 ‖ 显式 4 ‖ `--eps-tier=`）‖ ⑨b 那句写死的 `= 1` ⇒ 抽数与 ①a 比 | **EQ-A** 常数行加空格 ⇒ 绿（旧①a 失配）‖ **EQ-B** 钩子改成 `{ const __dk = R.SK.DRAIN; forced.push(__dk); }` ⇒ 绿（旧①c/①d 失配）‖ **EQ-C** `rules.js` 冒号后插注释 ⇒ 绿（旧②b 失配）‖ **EQ-D** 表头那行换等价拼接 ⇒ 绿（旧⑤a 失配） | **BRK-2** `multi` 窗口 1⇒2 ⇒ 红在 ②a `got=2 want=1`，而**旧②b 照样绿**（`multi4` 那行还留着 `drainHpMax: 1` ⇒ 字面钉读不出那个 1 属于哪一格）‖ **BRK-4** 表头那一维注释掉 ⇒ 红在 ⑤a，而**旧⑤a 照样绿**（那串还在文件里，只是在 `/* */` 里）‖ **活的那一刀** 把钩子挂到决策入口 ⇒ 红在 ①c `分歧在第 1 格（窗口 60 格全打开）`，而**三条位置钉按字面全绿**（没动它们读的那三行）‖ **BRK-3** 只在永不执行的一行里写 `drainHpMax` ⇒ 红在静态 ②c、运行时 ①c″ 照旧绿 ⇒ 两条**不是重复**（静态拦"写了这一行"，运行时拦"真改了值"），这条判据写进了 ②c 的判词 |
 | `D132` | **11 条全是源码字面钉，一条引擎都没调用过**：`let REGEN_SLICE = 0.08;` ‖ `function setRegenSlice(v)`+`function regenSlice()` ‖ 非法值那句 `if (!isFinite(n) ‖ n <= 0) return REGEN_SLICE;` ‖ 导出表那串 ‖ 消费点 `const step = Math.max(2, Math.round(1 / REGEN_SLICE));` ‖ CLI 读 env 那句 ‖ 两句**中文措辞**（`没有 setRegenSlice ⇒ 拒绝静默空转` ‖ `消费点读回`）‖ `process.exit(7)` ‖ `reqSlice`+`!isFinite` 两行 | ① `typeof …regenSlice` ‖ ② **引擎直读**默认档 `0.08` ‖ ③ 七枚非法值（`0/-1/NaN/'abc'/undefined/null/''`）真调用判"原样返回且状态没动" ‖ ④ 判**夹到哪儿**（`0.001→0.01 ‖ 5→1`）‖ ⑤ 用 `regenForGame` 数 120 局里几局带补贴 ⇒ 三档必须**分层**（`0.08⇒10 ‖ 0.5⇒60 ‖ 0.01⇒2`）且回到默认后**逐字复原** ‖ ⑥ 真跑一支 `EPIRUS_REGEN_SLICE=abc` 的臂读**退出码**（7）+ 一条**不给这枚 env 的同臂对照**（非 7） | EQ1 `1 /`→`1.0 /` ⇒ 绿（旧⑤当场失配）‖ EQ2 只换那句措辞 ⇒ 绿（旧⑧**也没红**：`消费点读回` 在 `train-3p.mjs` 里出现 **8 次**，一刀只动一处 ⇒ 措辞钉连这都判不到） | BRK1 默认 0.08⇒0.16 ⇒ 红在 ② ‖ BRK2 单点摘地板 ⇒ **绿**（查出同一枚地板写在两处：`evo.js:2933` 与 `sliceHit` 的 `:110`）‖ **两点同时摘**才红 `⑤b 实测 120 ‖ 60` ‖ BRK3 消费点写死 12 局而**被钉那行原样留着** ⇒ 红在 ⑤a `0.08⇒10 ‖ 0.5⇒10 ‖ 0.01⇒10`，九枚旧钉全绿 ‖ BRK4 CLI 那条短路 ⇒ 红在 ⑥，四枚 CLI 旧钉全绿 |
 | `D123` | 四条字面钉：`evo.indexOf('Bots.pickKillSecure')` ‖ 抽分支的正则 `/else if \(killSeatPid[\s\S]*?\n        \} else/` + 那一体内不许有 farmer/deepsaver ‖ `evo.indexOf('KILL_STAT.fired++')` ‖ `t3.indexOf('process.exit(8)')` | **本门不再对源码做文本断言**（装载引擎去真跑、读产物去比哈希是另一回事）。新增 ②b **注册表包装**：在本门自己的沙箱里把 `pickKillSecure ‖ pickFarmer ‖ pickDeepSaver` 各包一层计数器，跑 12 局 × 5 人真评分臂 ⇒ 判"注入席到底调了谁"（今天 `90 ‖ 0 ‖ 0`）。`①a` 只留"计数接口存在"；计数本身由 ②b 与 ④ 判；两道闸分别由 ⑤ 反证臂（exit 8）与 ④c（覆盖座位数）判 | EQ 在 `process.exit(8);` 前插空格 ⇒ 新腿绿，而**旧③也绿**（子串匹配不挑缩进 ⇒ 只能说新腿不依赖缩进，不能说旧钉会假红）；被删的那条抽分支正则**按它自己的写法**要求 8 个空格 —— 静态核对：改 6 格它就不再匹配，而行为一字没变 | **换陪练那一刀**（`:125` 从 `pickKillSecure` 换成 `pickFarmer`）：旧字面钉**照样绿**（这一串在 `evo.js` 里 2 次，其中一次是 `:79` 的注释）‖ `fired` 仍 4 局 ‖ 覆盖不变 ‖ stdout 那句"注入名单"**仍印 killsecure**（来自 `KILL_STAT.names.killsecure`，`:2068` 写死的标签）‖ **只有 ②b 翻**：`killsecure 90→0 ‖ farmer 0→118` ⇒ 用户那条"不许拿纯攒钱型当陪练"此前**没有任何判据守着** |
+| `D204` | 五条源码钉 ＋ **五处逐字相同的"自己写一遍出厂包解析"**（`readFileSync('js/bundled-champion-3p.js').match(/window\.EPIRUS_CHAMPION_3P…/)` 配 `P.unpack(JSON.parse(…))`，散在 `batch`/⑩/⑪/⑫ 四个块里）‖ ⑫ 的 `/let BELIEF_TGT = 0;/`、`/let BELIEF_TIE = 0;/` 与 `indexOf('else if (BELIEF_TIE === 1')` | 解析全部改走仓里那一份 `AUDIT.loadChamp`（它已经处理过 2P 外壳退回与 `EPIRUS_CHAMPION_META` 那个坑）⇒ **换前换后逐字核过**：同一枚产物两边都读 5689 个参数、权重哈希同为 `38e33e3fd94d`。三条源码钉按**摘腿后变异**删（本门自己就真读：`beliefTarget()`/`beliefTie()` 出厂回读 + ⑫ 那三趟 trace 的判决差异） | 机械替换也算等价改写 ⇒ 必须跑：第一版脚本把两处按 `P2` 推成 `loadChamp(W, …)`（外层沙箱，块里应该是 `W2`），门当场报错/跑错世界；改成 `AUDIT.loadChamp(W2, …)` 才绿。**读一遍不够** | `BELIEF_TGT 0⇒1` 红在 `beliefTarget() 出厂必须是 0（实测 1）` ‖ `BELIEF_TIE 0⇒1` 红在 `beliefTie() 出厂必须是 0（实测 1）` ‖ 摘掉 tie 支路守卫 ⇒ 红在 ⑫ 的 trace 腿 `tgt=1 必须改判决（实测与基线同为 draw/47×6）`。⚑ 我先在注释里把第三条归因成"`trace12(0,1)` 与基线相等"，跑出来红的是**另一条**腿 ⇒ 结论没变、"哪条腿接住"只能实测（本仓"结果对、理由错"那一族，这次错的是我自己写的理由） |
 
 ⚠ 四条要留给下一班的实话：
 1. **正向钉必须问"这条串在这个文件里出现几次、专不专属那一格"** —— 同一族纪律在四处工具里逐字同形，
@@ -672,7 +673,7 @@ ok(readFileSync('server/opp-champs.mjs', 'utf8').true, '冠军对手必须走 po
 2. `server/knob-guard.mjs` 的暗键检测有**一条保守偏差**（实测 + 读实现给的出口，见审计文档 §二 15)）：
    `scanKeysFromSource`（`:74`）剥注释后按 `/EPIRUS_[A-Z0-9_]+/g` 扫全文 ⇒ **名字只出现在报错文案的字符串里也算"本入口读得到"**，
    于是"设了却没人读"那一族它拦不住（M5 的 status 仍是 0，红的是门的读数腿）。要治得改它自己的判据 ⇒ **等裁，本轮不动 `server/`**。
-3. 门数：**281 → 281**（`git grep -h -c "^t(" 5655158d^ -- 'tools/gates/*.mjs'` 与现状同）⇒ 本节这 14 条门改的全是门**内部**的断言腿，
+3. 门数：**281 → 281**（`git grep -h -c "^t(" 5655158d^ -- 'tools/gates/*.mjs'` 与现状同）⇒ 本节这 17 条门改的全是门**内部**的断言腿，
    一条门没摘、一条门没新加。
 4. **"页面那一层接在哪"这一族事实（`D224`①e/⑩b/⑫k/⑫l/⑫m）今晚治不了**：`tools/audit-lib.mjs:32` 的 `sandbox()` 只喂 `CORE` 那几份、
    没有 DOM ⇒ 门**加载不了 `js/ui/ui.js`**，只能钉文本。要换成行为判据得先做可装载夹具（给 `ui.js` 造 DOM 桩，
