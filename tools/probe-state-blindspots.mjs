@@ -87,8 +87,10 @@ console.log('自证①同形对照：重建两次必须逐格相同且同决策 
   (detBad ? ' ⇒ 探针不成立，下面的数一律别引' : ' PASS'));
 if (detBad) process.exit(2);
 let appBad = 0, rows = [];
+const flipOf = {};
 for (const [label, tw, tag] of PERTURB) {
   let feat = 0, act = 0, maxCells = 0, applied = 0; const samples = [];
+  flipOf[label] = [];
   for (let s = 1; s <= SEEDS; s++) {
     const base = mk(s, null), pert = mk(s, tw);
     if (snap(base) !== snap(pert)) applied++;
@@ -96,12 +98,24 @@ for (const [label, tw, tag] of PERTURB) {
     if (cells > 0) feat++;
     maxCells = Math.max(maxCells, cells);
     const d0 = decide(base), d1 = decide(pert);
-    if (d0 !== d1) act++;
+    const fl = d0 !== d1;
+    if (fl) act++;
+    flipOf[label].push(fl);
     if (s === 1) samples.push(d0 + '→' + d1);
   }
   if (applied !== SEEDS) appBad++;
   rows.push({ label, tag, feat, act, maxCells, applied, sample: samples[0] || '' });
 }
+/* 共翻诊断（--diag=1）：如果某些桌"改哪一维都翻"，那"反应率"量的就不是这一维的敏感度，而是**刀锋桌的占比**。
+ * 计数只用**对手 1 那一侧**的常规维（排除我自己 ep / round / 对手4 这三类"人人都可能翻"的扰动）。 */
+const opp1 = PERTURB.filter(function (x) { return !x[2] && /^对手1/.test(x[0]); }).map(x => x[0]);
+const hist = new Array(opp1.length + 1).fill(0);
+for (let s = 1; s <= SEEDS; s++) {
+  let k = 0; for (const lb of opp1) if (flipOf[lb][s - 1]) k++;
+  hist[Math.min(k, opp1.length)]++;
+}
+console.log('共翻诊断（每张桌在' + opp1.length + ' 个"对手1"常规维上翻了几次）：' +
+  hist.map((v, i) => i + '次:' + v).filter(x => !/:0$/.test(x)).join(' ‖ '));
 console.log('自证②落地对照：扰动必须真的改到 state ⇒ 没落地的扰动 ' + appBad + ' 条' + (appBad ? '（这些行的"看不见"不成立）' : ' 全 OK'));
 for (const r of rows) {
   const verdict = r.tag ? ('〔' + r.tag + '〕') : '';
