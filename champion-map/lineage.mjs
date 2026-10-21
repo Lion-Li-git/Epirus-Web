@@ -650,8 +650,11 @@ function mergeDefs(keep, drop, label) {
   defs = defs.filter(d => !drop.includes(d.n));
 }
 mergeDefs(1, [2, 3, 4, 5], '历史配方步进 A（09-12～09-13：珠价/风格/对手池）');
-mergeDefs(6, [7, 8, 9, 10, 11], '历史配方步进 B（09-13～09-16：对手池/珠价/代数）');
-mergeDefs(12, [13, 14, 15, 16, 17, 18, 19, 20, 21], '历史配方步进 C（09-16～09-21：多样性/珠价/对手池）');
+mergeDefs(6, [7], '对手池步进 B1（09-13：对手池 1→77）');
+mergeDefs(8, [9, 10, 11], '珠价/代数步进 B2（09-13～09-16：珠价/代数/对手池）');
+mergeDefs(12, [13, 14, 15], '多样性步进 C1（09-16：多样性 5→30）');
+mergeDefs(16, [17, 18], '对手池步进 C2（09-16～09-18：对手池 16/19）');
+mergeDefs(19, [20, 21], '对手池/珠价步进 C3（09-19～09-21：对手池 14→22）');
 mergeDefs(24, [27], '零散（老配置散枚 + 臂线零散）');
 mergeDefs(26, [28], '臂线·env 实验（COUNTER_OPPS / 纯续训）');
 function relabel(n, label) { const d = defs.find(x => x.n === n); if (!d) return; const rs = d.g.rs;
@@ -661,7 +664,10 @@ relabel(22, '早期 env 臂（16 轴全空）');
 relabel(23, '现代基线（代数 400～1200）');
 relabel(25, '融合与续训');
 relabel(29, '臂线·COUNTER_OPPS=guardSpam');
-console.log('10-21 家族合并 → 在册 ' + defs.length + ' 个家族（号保留最小号）：' + defs.map(d => d.n).join(','));
+/* 10-21 用户：号从头排、不留空号 ⇒ 按 t0 排序后连续编号 1..N（0 留给旧槽位冠军） */
+defs.sort(function (a, b) { return String(a.g.t0 || '').localeCompare(String(b.g.t0 || '')); });
+defs.forEach(function (d, i) { d.n = i + 1; });
+console.log('10-21 家族合并 → 在册 ' + defs.length + ' 家（连续 1..' + defs.length + '；0=旧槽位冠军）：' + defs.map(d => d.n + ':' + d.g.rs.length).join(' '));
 /* §E314 → §E464 更正：这里原来写的「无实体」是**错的**，错的是一台仪器的口径。
  *   §E314 那遍穷尽扫过盘上 1461 个 .bak + 593 个可达 blob + 4190 个对象库 blob，逐枚算权重指纹 ⇒ 没找到 `d13d3c85…`。
  *   但它算的是「文件里那份数组」的哈希，而训练服务记父走的是 `weightsId(loadAny(种子).params)`
