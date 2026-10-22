@@ -1,3 +1,10 @@
+## v1.8.4 — 10-22 夜（DS）：D131 补真页面腿（CDP 试点 ②）
+
+- 病：D131 的 ②③ 都判在源码/纯函数上——「ui.js 写了 `Tip.of(R, st, s)`」「index 加载了 skill-tip.js」只能证明接线文字在，证明不了**运行时页面真的按长程模式写出 ≤2**。
+- 改法：在门内加一条真页面腿（复用 `tools/page-chrome.mjs`）：页面加载后取 `window.EpirusSkillTip.of(window.EpirusRules, {mode: EpirusRules.MODES.long}, drain)`，断言含 `仅限 HP≤2` 且无 `≤3`；本机无 Chrome 时 `Skip`（不计红）。
+- 验证：`--part=ui-contract` **8/8**（本地有 Chrome，腿真跑）；文本钉保留（接线 + 单源两条仍在）。
+
+---
 ## v1.8.3 — 10-22 夜（DS）：修 CI 偶发——long 5 血格「有真实伤害」
 
 - 病：`gates 3622ee3` 的 browser job 只有这一条挂：`battle-test.mjs:321` 的 `dmg >= 3` 在 long 5 血格实测 **「伤害」2 次**（同轮 3 血格 15 次，其余全 PASS）。

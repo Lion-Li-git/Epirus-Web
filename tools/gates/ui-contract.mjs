@@ -187,6 +187,14 @@ t('D131 卡面提示必须说真话（v1.5.173 · 用户实测"摄魂 bug 没解
   ok(uiSrc.indexOf('Tip.of(R, st, s)') >= 0, 'ui.js 组卡面提示必须走 EpirusSkillTip（自己再抄一份数字 = 本仓那四次同型病）');
   ok(uiSrc.indexOf("仅限 HP≤") < 0, 'ui.js 里不许再出现写死的"仅限 HP≤N"');
   ok(readFileSync('index.html', 'utf8').indexOf('js/ui/skill-tip.js') >= 0, 'index.html 必须加载 skill-tip.js');
+  /* ⚑ 10-22（CDP 试点 ②）：文本钉只能证明「写了调用 / 加载了脚本」；这条真起页面，
+   *   用**页面自己加载的** EpirusSkillTip + 真 EpirusRules.MODES.long 组提示 ⇒ 证明运行时也写 ≤2、且没有 ≤3 残留。 */
+  const expr = `(()=>{const R=window.EpirusRules;const T=window.EpirusSkillTip;if(!T||!T.of)return 'NO_TIP';const d=R.skills.find(s=>s.key==='drain');return T.of(R,{mode:R.MODES.long},d)})()`;
+  const pr = spawnSync(process.execPath, ['tools/page-chrome.mjs', '--expr=' + expr], { encoding: 'utf8', timeout: 90000 });
+  if (pr.status === 4) throw new Skip('本机没有 Chrome ⇒ 卡面提示的页面行为腿跳过（环境限制，不是页面红）');
+  eq(pr.status, 0, '页面必须能起并求值 EpirusSkillTip.of：' + String(pr.stderr || '').slice(0, 160));
+  ok(/仅限 HP≤2/.test(String(pr.stdout)), '真页面 + 真长程模式，摄魂提示必须写 ≤2（实测 ' + String(pr.stdout).trim().slice(0, 80) + '）');
+  ok(!/仅限 HP≤3/.test(String(pr.stdout)), '真页面提示里不许残留上一代的 ≤3');
 });
 
 t('D111 前台探索三条规则（v1.5.142 · ②③ 于 09-22 夜升级为序列窗锁）：铺垫卡 ep 门槛 + 链上回合整锁', function () {
