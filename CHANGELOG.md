@@ -1,3 +1,19 @@
+## v1.7.163 — 10-22 下午（DS）：ui-contract 第一条 CDP 行为腿（试点）+ 活槽夹具逐条判读入账
+
+### ① `tools/page-chrome.mjs`（新）：真 Chrome 读页面运行时
+- 复用 `tools/cdp-boot.mjs` 的 `resolveChrome`，最小 CDP 客户端（与 `tools/ui-probe.mjs` 同形）：打开 `index.html`，等 `EpirusTrainer` 就绪，求值 `--expr=`，打 `RESULT <json>`；退出码 0/2/4（4 = 本机没有 Chrome，响亮且不冒充页面红）。
+- 实测：`--expr='window.EpirusTrainer.supportPriorOn()'` ⇒ `RESULT 2`（约 5 秒）。
+
+### ② D236 加行为腿（ui-contract）
+- 文本钉只能证明「写了 `setSupportPrior(2)`」；新腿真起页面读 `Trainer.supportPriorOn()`，断言 `RESULT 2`。
+- 没 Chrome 的环境抛 `Skip`（环境限制，不算绿也不算红）。`--part=ui-contract` **8/8**。
+
+### ③ GATE-AUDIT §三 逐条判读
+- 21 条代码级 reader：**换夹具 3 条**（D110/D183/D184，已随 v1.7.162 落地）、**保留活槽 12 条**（D41/D16/D168/D234/D219/D111/D153/D58/D185/D116/D226/D59/D124）、**待复核 5 条**（D67/D204/D139/D231/D141）。清单可复现：`node tools/gate-live-fixtures.mjs`。
+
+验证：`ui-contract` **8/8** ‖ `meta-repo` 见提交前读数。
+
+---
 ## v1.7.162 — 10-22 下午（DS）：三条解析型门从活槽换到在册夹具
 
 背景：GATE-AUDIT §三的「D 栏活槽夹具」——这些门读 `js/bundled-champion*.js` 只是取一份权重/包，**主语不是"线上那枚"**；一旦换包就会误红。按 R3/R9 换成在册夹具 `FIXTURE_PACK`（`docs/artifacts/eval-out/win-Ldemo.bak`，已入库）。

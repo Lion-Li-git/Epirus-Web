@@ -391,6 +391,12 @@ t('D236 页面必须把送盾先验开档 2 并且**不许静默吞**回读失�
   ok(/function setSupportPrior\(/.test(T) && /setSupportPrior,\s*supportPriorOn/.test(T),
     '引擎必须导出 `setSupportPrior`（页面的调用要真有落点，不能是死名）');
   ok(/supportPriorOn,/.test(T) || /supportPriorOn\s*,/.test(T), '引擎必须同时导出只读回读口 `supportPriorOn`（否则页面无法自证\'真的设成了 2\'）');
+  /* ⚑ 10-22 行为腿（CDP 试点）：文本钉只能证明「写了调用」，这条真起页面读 Trainer 的回读值 ——
+   *   证明「设成了 2」在运行时成立。工具：`tools/page-chrome.mjs`（cdp-boot + 最小 CDP 客户端）。 */
+  const pr = spawnSync(process.execPath, ['tools/page-chrome.mjs', '--expr=window.EpirusTrainer.supportPriorOn()'], { encoding: 'utf8', timeout: 90000 });
+  if (pr.status === 4) throw new Skip('本机没有 Chrome ⇒ 页面行为腿跳过（环境限制，不是页面红）');
+  eq(pr.status, 0, '页面必须能起并求值 `supportPriorOn()`：' + String(pr.stderr || '').slice(0, 160));
+  ok(/RESULT 2/.test(String(pr.stdout)), '真页面里 Trainer 的送盾先验必须**真回读成 2**（实测 ' + String(pr.stdout).trim().slice(0, 80) + '）');
 });
 
 }
