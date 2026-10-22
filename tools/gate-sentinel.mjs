@@ -75,16 +75,19 @@ for (const g of gates) {
   if (has(g.text, /\.(out|stdout|stderr)\b/) && /indexOf\(['"][^'"]*[\u4e00-\u9fff][^'"]*['"]\)\s*>=\s*0/.test(g.text)) cls.log.push(id + '@' + g.at);
 }
 const out = { gates: gates.length, md: cls.md.length, src: cls.src.length, log: cls.log.length, cand: cls.cand.length, allpin: cls.allpin.length, lists: cls };
+/* 10-22：分诊 ⑤ 时清单被截断到 10 条（"…"）⇒ 加 --full 打全名；不认识的参数响亮失败（仓规 v1.5.234）。 */
+const ARGS = process.argv.slice(2);
+const FULL = ARGS.includes('--full');
+for (const a of ARGS) if (['--json', '--full', '--strict'].indexOf(a) < 0) { console.error('⛔ 不认识的参数：' + a + '（在册：--json / --full / --strict）'); process.exit(2); }
+const show = function (list, n) { return list.length ? '：' + (FULL ? list.join(', ') : list.slice(0, n).join(', ') + (list.length > n ? ' …' : '')) : ' ✔'; };
 if (process.argv.includes('--json')) console.log(JSON.stringify(out, null, 2));
 else {
   console.log('门禁哨兵（规矩 1：只许测行为）· 门数 = ' + out.gates);
-  console.log('  ① 读 .md 的门        = ' + out.md + (out.md ? '：' + cls.md.slice(0, 8).join(', ') + (out.md > 8 ? ' …' : '') : ' ✔'));
-  console.log('  ② 对源码做正则的门    = ' + out.src + (out.src ? '：' + cls.src.slice(0, 8).join(', ') + (out.src > 8 ? ' …' : '') : ' ✔'));
-  console.log('  ③ 匹配日志措辞的门    = ' + out.log + (out.log ? '：' + cls.log.slice(0, 8).join(', ') + (out.log > 8 ? ' …' : '') : ' ✔'));
-  console.log('  ④ **②的候选**（源码 pin + 同门行为腿 ⇒ 可能重复） = ' + out.cand +
-    (out.cand ? '：' + cls.cand.slice(0, 8).join(', ') + (out.cand > 8 ? ' …' : '') : ' ✔'));
-  console.log('  ⑤ **全 pin 无行为腿**（pins>0 且门里一条 eq/is 都没有 ⇒ 必须逐条读门体，不许默认"该留"） = ' + out.allpin +
-    (out.allpin ? '：' + cls.allpin.slice(0, 10).join(', ') + (out.allpin > 10 ? ' …' : '') : ' ✔'));
+  console.log('  ① 读 .md 的门        = ' + out.md + show(cls.md, 8));
+  console.log('  ② 对源码做正则的门    = ' + out.src + show(cls.src, 8));
+  console.log('  ③ 匹配日志措辞的门    = ' + out.log + show(cls.log, 8));
+  console.log('  ④ **②的候选**（源码 pin + 同门行为腿 ⇒ 可能重复） = ' + out.cand + show(cls.cand, 8));
+  console.log('  ⑤ **全 pin 无行为腿**（pins>0 且门里一条 eq/is 都没有 ⇒ 必须逐条读门体，不许默认"该留"） = ' + out.allpin + show(cls.allpin, 10));
   console.log('     （④ 只提示不判死：人工只需看这 ' + out.cand + ' 条；⑤ 是 ④ 的盲区补集，别拿 "其余 = 该留" 当结论。）');
   console.log('  ⇒ 默认只报告（不红）；分诊完再开 --strict。见 docs/GATE-SHIFTS.md §八 口径 1。');
 }
