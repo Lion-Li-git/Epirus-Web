@@ -2573,34 +2573,44 @@ t('D134 切片相位不许与座位轮换锁死（v1.5.186 · 复核 DS 交接 �
   ok(top <= 0.8, '单个席位的占比不许超过 80%（修前实测 92% ⇒ 这条就是那次的反例）；实测 ' + (100 * top).toFixed(0) + '%');
 });
 
-t('D139 击杀奖励实验台（v1.5.193）：补丁必须真打上、破防场必须证明"奖励根本没发出去"、脚本池场必须证明"它能触发"', function () {
+t('D139 击杀奖励实验台（v1.5.193 · v1.8.14 换成与包无关的条件不变式）：补丁必须真打上、`发放=0 ⇒ 三档逐位相同`、脚本池场必须证明"它能触发"', function () {
   /* 这条门钉的不是游戏行为，是**实验台本身**的两件事（本仓吃过亏的形状）：
    *   ① 引擎补丁如果没打上（锚点漂了/CRLF），三档跑的是同一个引擎 ⇒ 整份对照是假的 ⇒ 工具必须**抛错**而不是静默跑；
    *   ② "胜率没变"必须能被区分成"没效果"还是"根本没触发" ⇒ 所以要同时钉**发放计数为 0**（破防场）与**> 0**（脚本池场）。
    * 实测结论（§N49）：破防场里现役包三档读数**逐位相同**且 `奖励发放 = 0.00 次/局` ——
    *   因为那场里 5 个座位全死、却没有一次死亡是"被某个有来源的伤害打死的"（都是反弹/自损）⇒
    *   **任何"按击杀归因"的奖励都碰不到龟缩场**。这条就是那个结论的钉子。 */
-  const run = spawnSync(process.execPath, ['tools/probe-kill-reward.mjs', '--games=40', '--fields=guardwall,pool', '--json'],
+  /* ⚑⚑ v1.8.14 自我更正（本轮实测把上一版的判断打掉了，写在这而不是悄悄改）：
+   *   10-23 早段我把这里剩下的四条腿判成"实验台判别力，不是包强弱"（`paid=0` + 三档逐位相同），并据此**保留**了它们。
+   *   换四枚 tracked 包重跑之后：**破龟群场里 `paid` 只有现役槽是 0，另外三枚是 0.15 / 0.325 / 0.925，且三档读数并不逐位相同**
+   *     ⇒ 那四条腿的成立**依赖于"拿这一枚包当探针"**，主语其实是"现任包在破龟群场打不死人"（一条产品事实），
+   *     我把它误判成了仪器性质 ⇒ 上一版那句"保留的是仪器判别力"**作废**（更正记在 CHANGELOG v1.8.14 与 `GATE-SHIFTS` §廿六）。
+   *   ⇒ 现在钉的是**与包无关的条件不变式**：`paid === 0 ⇒ 三档读数必须逐位相同`（没发放就不许有差别），
+   *     而"没有可归因死亡 ⇒ 发不出奖励"这条机制本身由 `D140` 用合成 state 确定性地钉（那里不需要任何真包）。 */
+  const FIX4 = [FIXTURE_PACK, 'docs/artifacts/v7aim3-93.bak', 'docs/artifacts/v7divK-31.bak', 'docs/artifacts/v7cmin4-82.bak'];
+  const run = spawnSync(process.execPath, ['tools/probe-kill-reward.mjs', '--games=40', '--fields=guardwall,pool',
+    '--json', '--packs=' + FIX4.join(',')],
     { encoding: 'utf8', timeout: 900000 });
   eq(run.status, 0, '实验台要跑得通；若报"锚点找不到"就是 play.js 改了而补丁没跟着改（' + String(run.stderr || '').slice(0, 160) + '）');
   const out = String(run.stdout || '');
   const j = JSON.parse(out.slice(out.lastIndexOf('{"games"')));
-  const wall = j.rows.filter(function (r) { return r.field === 'guardwall' && r.pack.indexOf('bundled-champion') === 0; })[0];
-  ok(wall, '必须有"破防场 × 现役包"这一格（它就是防龟的靶心）');
-  eq(wall.by[1].paid, 0, '破防场里**规则 1 的奖励发放必须是 0** —— 大于 0 就说明死亡归因变了，那条"没效果"的结论要重读');
-  eq(wall.by[2].paid, 0, '破防场里规则 2 同样发放 0 次');
-  eq(wall.by[1].first, wall.by[0].first, '破防场：规则 1 与现状的胜率必须**逐位相同**（没触发 ⇒ 不许有任何差别）');
-  eq(wall.by[2].rounds, wall.by[0].rounds, '破防场：规则 2 的局长也必须逐位相同');
+  const wallRows = j.rows.filter(function (r) { return r.field === 'guardwall'; });
+  eq(wallRows.length, FIX4.length, '破防场应当每枚输入包出一行（实测 ' + wallRows.length + ' 行 ‖ 输入 ' + FIX4.length + ' 枚）⇒ 少一行就是有包被静默跳过');
+  /* 不变式：`规则 1 发放 == 0` 的那些行，三档读数必须逐位相同（没发放 ⇒ 不许有任何差别）。
+   *   这一句对**任何包**都成立才叫仪器性质；上一版那句"必须为 0"只对一枚包成立 ⇒ 那是行为断言。 */
+  const quiet = wallRows.filter(function (r) { return r.by[1].paid === 0; });
+  const loud = wallRows.filter(function (r) { return r.by[1].paid > 0; });
+  const drift = quiet.filter(function (r) { return r.by[1].first !== r.by[0].first || r.by[2].rounds !== r.by[0].rounds; });
+  eq(drift.length, 0, '发放大于 0 却出现读数差别？不对 —— 反过来：`paid=0` 的行必须逐位相同（实测差别 ' + drift.map(function (r) { return r.pack; }).join(' ‖ ') + '）');
+  ok(quiet.length + loud.length === wallRows.length && wallRows.length > 0,
+    '本次破防场：' + quiet.length + ' 枚 `paid=0`（钉"没发放⇒无差别"） ‖ ' + loud.length + ' 枚 `paid>0`（只报数，不许拿来当"逐位相同"的证据）');
   /* §删（10-23 夜班 · 用户口径「冠军有什么表现该在入池时判，上线后的门只测引擎是否正常工作」）：
    *   原来这里还有一条 `ok(wall.by[0].draws === 1 && wall.by[0].first === 0, '破防场现役必须仍是 0% 胜 / 100% 平')`
    *   —— 主语是**现任包在那一格的战绩**（§N37/§N46 三次复现的产品事实）⇒ 删。
-   *   少掉的覆盖：现任包"破防场 0 胜 100% 平"今天没人判（入池侧的 G5 判的是"防席能不能清场"，不是这一格）。
-   *   上面那四条**保留**，因为它们判的是**实验台判别力**：`paid = 0`（奖励根本没发出去）+ 三档读数**逐位相同**
-   *   （没触发就不许有任何差别）—— 这两件事是关于工具与因果链的，不是关于哪只包强。 */
+   *   少掉的覆盖：现任包"破防场 0 胜 100% 平"今天没人判（入池侧的 G5 判的是"防席能不能清场"，不是这一格）。 */
   const poolRows = j.rows.filter(function (r) { return r.field === 'pool'; });
   const paidAny = poolRows.filter(function (r) { return r.by[1].paid > 0.3; });
-  ok(paidAny.length >= 2, '脚本池场里奖励必须**能触发**（≥2 格发放 >0.3 次/局）—— 否则这两条规则是死代码，' +
-    '上面那些"逐位相同"就只是"永远不发放"的同义反复；实测 ' + paidAny.length + ' 格');
+  ok(paidAny.length >= 2, '脚本池场里奖励必须**能触发**（≥2 格发放 >0.3 次/局）—— 否则"没发放⇒无差别"那条不变式就只是同义反复；实测 ' + paidAny.length + ' / ' + poolRows.length + ' 格');
   ok(/Δ胜率 vs 现状（同种子配对）/.test(out) && /噪声内 ±[\d.]+/.test(out),
     '必须印**配对**噪声（±1.96SE）—— 只印 Δ 百分点不印噪声，读表人就会把 ±5pt 的抖动当成结论（Q-9 同族病）');
 });

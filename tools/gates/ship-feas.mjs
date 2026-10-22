@@ -440,21 +440,31 @@ t('D141 破龟群栏（v1.5.195）：`归因伤害/局` 与 `终场存活` 必�
    * ⇒ 光有胜率会把"蹭一发"和"凿穿"排进同一档 ⇒ 必须并读幅值。这条门钉三件事：
    *   ① 两个新读数存在；② 归因口径与引擎判胜口径**同一个表达式**（不许自己抄一份 `source != null`）；
    *   ③ 读数**会动**（同一只包在头对头场 > 0 ⇒ 那个 0 不是死读数）—— 防"死读数当结论"（seam 2 那一族）。
-   *   ⚠ 10-23：原样还钉着"③ 现役在破龟群场 = 0"，那一格是**冠军行为**（产品事实），已按用户口径删掉，见 :452 的注。 */
+   *   ⚠ 10-23：原样还钉着"③ 现役在破龟群场 = 0"，那一格是**冠军行为**（产品事实），已按用户口径删掉（见本门下面那段 §删 注释）。 */
   const p = readFileSync('tools/probe-kill-reward.mjs', 'utf8');
   ok(/if \(e\.type === 'damage' && e\.source != null && dsum\[e\.source\] != null\) dsum\[e\.source\] \+= e\.amt;/.test(p),
     '受评席伤害累计必须按 `damage` 事件 + `e.source != null` 累加 —— 与 `resolve.js` 全灭判胜的表达式同形（换槽径）');
   ok(/deal: deal \/ games, alive: aliveEnd \/ games,/.test(p) && /if \(r\.state\.p\[seat\]\.hp > 0\) aliveEnd\+\+;/.test(p),
     '两栏都必须真累加并归一（`终场存活`判据 = 终场血量 > 0，**不是**"局长 < 回合上限"：那格是被收缩清场的，人人都会"提前"）');
   const run = spawnSync(process.execPath, ['tools/probe-kill-reward.mjs', '--games=40',
-    '--fields=guardwall,vs', '--opp=js/bundled-champion-3p.js', '--rules=0', '--json'],
+    /* v1.8.14（NEXT 里那条"活槽当载体"）：原来这两枚载体是 `js/bundled-champion-3p.js`（**活槽**）——
+     *   训练期间 bundle 会被备份/改写（本仓 `D16` 自己记着），于是这条门在训练日会拿着"今天盘上那枚"试一遍 ⇒ 误红与包名无关。
+     *   换成两枚 tracked 夹具：受评 = `FIXTURE_PACK`（win-Ldemo），对手 = `v7f5t-31.bak` ⇒ 真头对头（两侧不同包），且输入在干净克隆里读得到。
+     *   实测：同一枚夹具在 `guardwall` 场 `deal=0`、在 `vs` 场 `deal=1` ⇒ 这条"读数会动"的腿换夹具后**照样有判别力**（比原先更强：同一只包、两个场、一个 0 一个非 0）。 */
+    '--fields=guardwall,vs', '--opp=docs/artifacts/v7f5t-31.bak', '--rules=0', '--json', '--packs=' + FIXTURE_PACK],
     { encoding: 'utf8', timeout: 900000 });
   eq(run.status, 0, '实验台要跑得通（' + String(run.stderr || '').slice(0, 160) + '）');
   const out = String(run.stdout || '');
   const j = JSON.parse(out.slice(out.lastIndexOf('{"games"')));
-  const cell = function (f) { return j.rows.filter(function (r) { return r.field === f && r.pack.indexOf('bundled-champion') === 0; })[0]; };
+  /* 载体不再按包名过滤（改名/搬家就不必回来改这里），改成**按"输入几枚包就该出几行"判**：
+     少一行 = 有一枚包被静默跳过（那正是 `gate-landscape` 的 `(缺文件)` 那一族）。 */
+  const cell = function (f) {
+    const rows = j.rows.filter(function (r) { return r.field === f; });
+    eq(rows.length, 1, '场 `' + f + '` 应当恰好一行（实测 ' + rows.length + ' 行 ‖ 传入 --packs=' + FIXTURE_PACK + '）⇒ 行数不对就别读它的数');
+    return rows[0];
+  };
   const wall = cell('guardwall'), vs = cell('vs');
-  ok(wall && vs, '必须有"破龟群 × 现役包"和"头对头 × 现役包"两格');
+  ok(wall && vs, '必须有"破龟群 × 夹具包"和"头对头 × 夹具包"两格');
   eq(typeof wall.by[0].deal, 'number', '`归因伤害/局` 必须进 JSON 读数（不印出来的读数下次没人信）');
   eq(typeof wall.by[0].alive, 'number', '`终场存活` 必须进 JSON 读数');
   /* §删（10-23 夜班 · 用户口径「冠军有什么表现归入池时判，上线后的门只测引擎是否正常工作」）：
