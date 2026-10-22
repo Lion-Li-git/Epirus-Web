@@ -26,16 +26,20 @@
  *                       这一列存在的意义就是量"虚高多少"，因为 `policy.js` 的特征面能看见的只有代理那一维。
  *   `--cell=purify`   我自己身上挂着可清的负面（符咒 / 火弱 / 梦魇 / 挑衅义务 / 禁用 / 埋雷，逐项分开印）；来源 = 贴贴（`resolve.js:1082` 写符咒）
  *
- * 用法：node tools/probe-fire-weak-frequency.mjs [--cell=fireweak|guard|purify] [--games=200] [--n=5] [--arm=kit|champ|mix] [--seed=77000] [--quiet]
+ * 用法：node tools/probe-fire-weak-frequency.mjs [--cell=fireweak|guard|purify] [--games=200] [--n=5] [--mode=multi] [--arm=kit|champ|mix] [--seed=77000] [--quiet]
+ *   `--mode=` 是 §E701b 补的**桌形把手**（`multi`/`multi4`(4 血)/`long`(5 血)）：§E701 三格只在 `multi · n=5` 一具桌子上量过，
+ *   而"人数 × 血量"是用户 10-23 点名的另一条轴 ⇒ 同一格在别的桌子上分母可能完全不同（§E699 已证"反应率一半量的是桌子"）。
+ *   ⚑ **默认档（不带 `--mode`）的输出逐字不变**：只有非 `multi` 才多印一段"‖ 模式=…"，这样 §E698/§E701 的在册数字仍然可以直接 `diff` 复算。
  * 只读：不落任何文件。 */
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['games', 'n', 'arm', 'seed', 'quiet', 'cell'], 'probe-fire-weak-frequency');
+rejectUnknownFlags(argv, ['games', 'n', 'arm', 'seed', 'quiet', 'cell', 'mode'], 'probe-fire-weak-frequency');
 const arg = (k, d) => { const a = argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const GAMES = Number(arg('games', 200)), N = Number(arg('n', 5)), SEED0 = Number(arg('seed', 77000));
 const ARM = arg('arm', 'mix');
 const CELL = arg('cell', 'fireweak');
+const MODE = arg('mode', 'multi');
 const QUIET = argv.includes('--quiet');
 if (!(GAMES >= 20 && GAMES <= 5000)) { console.error('⛔ --games 要在 20~5000（实测 ' + GAMES + '）'); process.exit(2); }
 if (['kit', 'champ', 'mix'].indexOf(ARM) < 0) { console.error('⛔ --arm 只认 kit|champ|mix（实测 ' + ARM + '）'); process.exit(2); }
@@ -45,6 +49,7 @@ if (CELLS.indexOf(CELL) < 0) { console.error('⛔ --cell 只认 ' + CELLS.join('
 const W = sandbox();
 const T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay, R = W.EpirusRules, B = W.EpirusBots;
 const K = R.SK, GUARD = R.GUARD_FAMILY;
+if (!R.MODES[MODE]) { console.error('⛔ --mode 不是在册模式（' + Object.keys(R.MODES).join('|') + '），实测 ' + MODE + '）'); process.exit(2); }
 const PACK = 'js/bundled-champion-3p.js';
 const champ = loadChamp(W, PACK);
 if (!champ || champ.length !== W.EpirusPolicy.paramCount()) { console.error('⛔ 包读不出/维度不符：' + PACK); process.exit(2); }
@@ -161,7 +166,7 @@ const S_ = function (nm) {
   return stat.sides[nm];
 };
 function runGame(g) {
-  const st = S.createState('multi', { next: T.mulberry32(SEED0 + g * 977) }, N);
+  const st = S.createState(MODE, { next: T.mulberry32(SEED0 + g * 977) }, N);
   st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
   const choosers = [];
   for (let i = 0; i < N; i++) {
@@ -225,7 +230,8 @@ for (let g = 0; g < GAMES; g++) runGame(g);
 
 const pct = function (a, b) { return b ? (100 * a / b).toFixed(2) + '%' : '—'; };
 console.log('== ' + SPEC.title + '· ' + GAMES + ' 局 ‖ n=' + N + ' ‖ 装配=' + ARM +
-  '（' + (ARM === 'kit' ? '全脚本' : ARM === 'champ' ? '全冠军' : '偶数席冠军 / 奇数席杂货铺') + '）‖ seed0=' + SEED0 + ' ==');
+  '（' + (ARM === 'kit' ? '全脚本' : ARM === 'champ' ? '全冠军' : '偶数席冠军 / 奇数席杂货铺') + '）‖ seed0=' + SEED0 +
+  (MODE === 'multi' ? '' : ' ‖ 模式=' + MODE + '（血 ' + R.MODES[MODE].hp + '）') + ' ==');
 if (SPEC.caveat) console.log('\n   ' + SPEC.caveat);
 const sides = Object.keys(stat.sides);
 let totBoth = 0, totDec = 0, totSrc = 0, totSig = 0, totProxy = 0;
