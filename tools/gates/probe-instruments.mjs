@@ -758,9 +758,9 @@ t('D183 权重逐位对账工具（v1.5.276 · §E115）：比数组 + 判别力
   /* 用两份**门禁自带的 fixture** 造"一对不同"：线上包与 2P 壳/不同 seed 的产物结构不同 ⇒ 数组不同。
    * 为避免依赖 gitignore 的实验产物，这里现造两份临时包：把线上包原样复制一份（必同）与把它某维 +1（必不同）。 */
   const dir = mkdtempSync(join(tmpdir(), 'd183-'));
-  const live = readFileSync('js/bundled-champion-3p.js', 'utf8');
+  const live = readFileSync(FIXTURE_PACK, 'utf8');   /* ⚑ 10-22：主语=比较器 ⇒ 输入钉在册夹具，活槽换包不再误红 */
   const mm = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\});/.exec(live);
-  ok(!!mm, '① 前置：线上包里要能取到权重对象（取不到说明 fixture 变了，本门该红去修 fixture）');
+  ok(!!mm, '① 前置：在册夹具里要能取到权重对象（取不到说明 fixture 变了，本门该红去修 fixture）');
   const obj = JSON.parse(mm[1]);
   const bumped = JSON.parse(JSON.stringify(obj)); bumped.a[0] = (bumped.a[0] || 0) + 1;
   const same = join(dir, 'same.js'), same2 = join(dir, 'same2.js'), diffp = join(dir, 'diff.js');

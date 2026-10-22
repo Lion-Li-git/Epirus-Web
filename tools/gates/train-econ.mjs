@@ -380,9 +380,9 @@ t('D184 产物=起点读数（v1.5.276 · §E113）：正例喊、反例不喊�
     '① 名人堂重复席位必须标出来（今晚就是"两个（当选）"让我发现产物是起点）');
 
   const dir = mkdtempSync(join(tmpdir(), 'd184-'));
-  const live = readFileSync('js/bundled-champion-3p.js', 'utf8');
+  const live = readFileSync(FIXTURE_PACK, 'utf8');   /* ⚑ 10-22：主语=产物=起点读数 ⇒ 起点钉在册夹具，活槽换包不再误红 */
   const mm = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\});/.exec(live);
-  ok(!!mm, '① 前置：线上包要能取到权重对象（取不到 ⇒ fixture 变了，本门该红去修）');
+  ok(!!mm, '① 前置：在册夹具要能取到权重对象（取不到 ⇒ fixture 变了，本门该红去修）');
   const zeroObj = JSON.parse(mm[1]);
   zeroObj.a = zeroObj.a.map(function () { return 0; });
   const zeroSeed = join(dir, 'zero-seed.js');
@@ -402,7 +402,7 @@ t('D184 产物=起点读数（v1.5.276 · §E113）：正例喊、反例不喊�
    * 种子包用**线上包本身**（`EPIRUS_SEEDPACK` 指到不存在的文件会 exit 5，不是回退 ⇒ 不能给假路径）。 */
   const hot = arm(['1', '3', '2', '2'], {
     EPIRUS_ARM: 'd184-hot', EPIRUS_SEED: '5', EPIRUS_HOTSTART: '1', EPIRUS_ANCHOR: '50',
-    EPIRUS_SEEDPACK: 'js/bundled-champion-3p.js', EPIRUS_T3P_OUT: join(dir, 'hot.js')
+    EPIRUS_SEEDPACK: FIXTURE_PACK, EPIRUS_T3P_OUT: join(dir, 'hot.js')
   });
   eq(hot.status, 0, '① 正例迷你臂必须跑通（exit=' + hot.status + ' ' + String(hot.stderr || '').slice(0, 120) + '）');
   ok(/产物=起点/.test(String(hot.stderr)), '① 产物与起点逐位相同时必须**喊出来**（这条线六晚前只在注释里，无人读数 ⇒ 我今晚重新掉了一遍）');

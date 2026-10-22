@@ -1,3 +1,16 @@
+## v1.7.162 — 10-22 下午（DS）：三条解析型门从活槽换到在册夹具
+
+背景：GATE-AUDIT §三的「D 栏活槽夹具」——这些门读 `js/bundled-champion*.js` 只是取一份权重/包，**主语不是"线上那枚"**；一旦换包就会误红。按 R3/R9 换成在册夹具 `FIXTURE_PACK`（`docs/artifacts/eval-out/win-Ldemo.bak`，已入库）。
+
+- **D110（ship-promote）**：`X.extract(线上 3P bundle)` → `FIXTURE_PACK`；断言语义不动（slot=3p / 纯 JSON 逐字节相等 / 垃圾拒 / 2P 注释壳）。
+- **D183（probe-instruments）**：权重对账的输入换 `FIXTURE_PACK`（源码里取 banner 的正则对 .bak 同样生效，已先实测）；比较器五条断言不变。
+- **D184（train-econ）**：正例起点与全 0 反例的基线都从 `FIXTURE_PACK` 取；`EPIRUS_SEEDPACK` 改指夹具；三条读数断言（喊/不喊/null）不变。
+
+验证：`ship-promote` **21/21** ‖ `probe-instruments` **33/33** ‖ `train-econ` **11/11** ‖ `meta-repo` **12/12**。
+
+剩余 21 条 reader 里约 12 条是**战术型**（主语就是这枚包：D41 正对照、D16 指纹、D168 线上槽损坏容忍、D234 池 bundle、D219 六珠断崖、D111 现役 S 口径、D153 产品口径、D58 五座身份、D185 名人堂起点中性、D106/D178/D186 已换夹具），保留活槽；逐条理由下一轮补进审计文档。
+
+---
 ## v1.7.161 — 10-22 下午（DS）：活槽夹具清单入仓（`gate-live-fixtures`）+ NEXT 补 D157 判词
 
 - 千问审计 §三 的「20 条引用活槽文件」名单来路是一台**未入仓的 scratch 尺** ⇒ 下一班拿不到可复现清单。新增 `tools/gate-live-fixtures.mjs`：按门体扫描读完 `js/bundled-champion*.js` 的**代码行**（注释不算），打印门号/位置/命中行，并给粗分类（战术/跑引擎 · 解析型 · 仅提及）；现读 **21 条** reader。只提示、不判死。

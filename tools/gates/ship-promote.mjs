@@ -711,8 +711,8 @@ t('D110 冠军包解析单一来源：吃得下产物 .bak 外壳 / 纯 JSON / �
   vm.runInNewContext(src, box, { filename: 'js/champion-pack.js' });
   const X = box.EpirusChampionPack;
   ok(X && typeof X.extract === 'function', '必须导出 extract');
-  const a = X.extract(readFileSync('js/bundled-champion-3p.js', 'utf8'));
-  ok(a.ok && a.slot === '3p' && a.source === 'bundle', '真 3P bundle 必须解析成 slot=3p（实测 slot=' + a.slot + '）');
+  const a = X.extract(readFileSync(FIXTURE_PACK, 'utf8'));   /* ⚑ 10-22：主语=解析路径 ⇒ 输入钉在册夹具 */
+  ok(a.ok && a.slot === '3p' && a.source === 'bundle', '在册 3P 夹具必须解析成 slot=3p（实测 slot=' + a.slot + '）');
   const b = X.extract(JSON.stringify(a.pack));
   ok(b.ok && JSON.stringify(b.pack) === JSON.stringify(a.pack), '纯 JSON 形态必须与外壳形态逐字节相等（保真）');
   ok(X.extract('这不是包').ok === false, '垃圾文本必须被拒（不许塞个空 pack 进槽）');
