@@ -28,10 +28,15 @@ import { createHash } from 'node:crypto';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['games', 'n', 'kit', 'seed', 'arms', 'pack', 'quiet'], 'probe-plan-ablation');
+rejectUnknownFlags(argv, ['games', 'n', 'kit', 'seed', 'arms', 'pack', 'mode', 'opp', 'quiet'], 'probe-plan-ablation');
 const arg = (k, d) => { const a = argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const GAMES = Number(arg('games', 120)), N = Number(arg('n', 5)), KIT = Number(arg('kit', 1)), SEED0 = Number(arg('seed', 77000));
+const MODE = arg('mode', 'multi');
+const OPP = String(arg('opp', '')).split(/[^A-Za-z0-9]+/).filter(Boolean);
 const QUIET = argv.includes('--quiet');
+if (['standard', 'multi', 'multi4', 'long'].indexOf(MODE) < 0) {
+  console.error('⛔ --mode 只认 standard/multi/multi4/long（实测 ' + MODE + '）'); process.exit(2);
+}
 if (!(GAMES >= 20 && GAMES <= 5000)) { console.error('⛔ --games 要在 20~5000（实测 ' + arg('games', 120) + '）'); process.exit(2); }
 if (!(N >= 2 && N <= 5) || !(KIT >= 1 && KIT < N)) { console.error('⛔ 桌形要 2≤n≤5 且 1≤kit<n（实测 n=' + N + ' kit=' + KIT + '）'); process.exit(2); }
 
@@ -58,13 +63,27 @@ const W = sandbox();
 const T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay, R = W.EpirusRules, B = W.EpirusBots;
 const K = R.SK;
 const PACK = arg('pack', 'js/bundled-champion-3p.js');
-const champ = loadChamp(W, PACK);
-if (!champ) { console.error('⛔ 冠军包读不出：' + PACK); process.exit(2); }
-const params = Float64Array.from(champ);
+const USE_PACK = OPP.length === 0;
+const raw = USE_PACK ? loadChamp(W, PACK) : null;
+const params = USE_PACK ? Float64Array.from(raw || []) : null;
+if (USE_PACK && (!raw || params.length !== W.EpirusPolicy.paramCount())) {
+  console.error('⛔ 包读不出或维度不符：' + PACK + '（读出 ' + (raw ? raw.length : 'null') + ' ‖ paramCount=' + W.EpirusPolicy.paramCount() + '）');
+  process.exit(2);
+}
 if (typeof B.setPlanOff !== 'function' || typeof B.countPlanOff !== 'function') {
   console.error('⛔ 旋钮没导出（`EpirusBots.setPlanOff`/`countPlanOff` 不存在）⇒ 这台量具的腿没接上，读数一律作废');
   process.exit(3);
 }
+/* 对手那一侧的两个来源（包 ‖ 脚本），**不许同时给**（同时给就变成"我到底在跟谁打"说不清）。
+ *   脚本名不靠猜：从 `EpirusBots` 的导出里现扫 `pick*`，认不出来就 exit 2 点名（`eval-5p.mjs:212` 同一条纪律）。 */
+if (OPP.length && arg('pack', null) !== null) { console.error('⛔ --opp= 与 --pack= 只能给一个（这一桌的对手必须只有一个来源）'); process.exit(2); }
+const BOTFN = Object.keys(B).filter(function (k) { return /^pick[A-Z]/.test(k); });
+const oppFns = OPP.map(function (tok) {
+  const t = tok.toLowerCase().replace(/^pick/, '');
+  const hit = BOTFN.filter(function (k) { return k.slice(4).toLowerCase() === t; });
+  if (hit.length !== 1) { console.error('⛔ --opp= 里的 "' + tok + '" 认不出（匹配到 ' + hit.length + ' 个）⇒ 可用名（去 pick 前缀）：' + BOTFN.map(k => k.slice(4)).join(' ‖ ')); process.exit(2); }
+  return { name: hit[0], fn: B[hit[0]] };
+});
 
 /* 每局一条**有序**的"该席出手流"（`key#target` 逐手，再带终局名次）⇒ 任何一处行为不同都会换 hash。
  * （写成"每局一个计数表"是不行的：两局换了出手次序会算成同一个串，那种差别恰恰是我们要看的。） */
@@ -80,7 +99,7 @@ function armRun(spec, callSetter) {
      *   实测就是这个：换成 `win-Ldemo.bak` 当对手包时，第二臂（空串）与第一臂（出厂）**稳定地**不同 ——
      *   不是 `Math.random`（连跑三次同一串 hash），是那份漏下来的记忆。A5 这条腿就是为它加的。 */
     B.resetBotMem();
-    const st = S.createState('multi', { next: T.mulberry32(SEED0 + g * 977) }, N);
+    const st = S.createState(MODE, { next: T.mulberry32(SEED0 + g * 977) }, N);
     st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
     const stream = [];
     const kitWrap = function (state, pid, legal) {
@@ -90,7 +109,10 @@ function armRun(spec, callSetter) {
       return a;
     };
     const choosers = [];
-    for (let i = 0; i < N; i++) choosers.push(i < KIT ? kitWrap : T.policyChooserN(params, 0.15, 0.15));
+    for (let i = 0; i < N; i++) {
+      if (i < KIT) { choosers.push(kitWrap); continue; }
+      choosers.push(USE_PACK ? T.policyChooserN(params, 0.15, 0.15) : oppFns[(i - KIT) % oppFns.length].fn);
+    }
     Play.autoGameN(st, choosers);
     winFlags.push((st.winner !== 'draw' && st.winner != null && st.winner < KIT) ? 1 : 0);
     sink.rounds += st.round;
@@ -147,7 +169,8 @@ const anyLive = arms.slice(2).some(function (r) { return r.skipTotal > 0 && r.ha
 teeth.push(['A3 至少一臂"按住且真的改变行为"', anyLive, anyLive ? '有' : '**没有一臂改变行为 ⇒ 这个旋钮是装饰**']);
 const teethOK = teeth.every(function (t) { return t[1]; });
 
-console.log('== 计划线逐线消融（§E695）· 桌 = multi n=' + N + ' ‖ 杂货铺席 ' + KIT + ' 席 ‖ 对手 = ' + (N - KIT) + ' 席冠军（' + PACK + '，ε=0.15）==');
+console.log('== 计划线逐线消融（§E695）· 桌 = ' + MODE + ' n=' + N + ' ‖ 杂货铺席 ' + KIT + ' 席 ‖ 对手 = ' + (N - KIT) + ' 席' +
+  (USE_PACK ? '冠军（' + PACK + '，ε=0.15）' : '脚本（' + oppFns.map(o => o.name).join(' ‖ ') + '，按席位轮转）') + ' ==');
 console.log('   配对：' + GAMES + ' 局 × 每臂 ‖ seed0=' + SEED0 + '（同 seed 同 slotSalt ⇒ 除开关外逐字同装配）');
 console.log('   基线出手序列 hash = ' + baseline.hash);
 console.log('\n   线     含义                                        计数  hash        该侧胜率%   配对Δ(95%CI)          种类  出手/局  平均回合');
