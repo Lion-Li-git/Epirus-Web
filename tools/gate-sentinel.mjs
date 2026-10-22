@@ -7,14 +7,18 @@
  * 为什么默认**不红**（`--strict` 才红）：163 条"钉源码行"还没逐条分诊（删了会改行为 ⇒ 不一定该删），
  *   现在让 CI 变红等于用假红训练大家忽略红色 ✗。分诊完再开 `--strict`（一处开关）。
  *
- * 三个类（都按"门体行区间"近似：从 `^t(` 行到下一个 `^t(` 行之前）：
+ * 五个类（都按"门体行区间"近似：从 `^t(` 行到下一个 `^t(` 行之前）：
  *   ① 读 .md：门体里出现 readFileSync/readFile 且路径以 .md 结尾
  *   ② 源码正则：门体里同时出现 readFileSync 与 indexOf(...) >= 0（读到的东西被拿去比对）
  *   ③ 日志措辞：门体里出现 .out/.stdout/.stderr 与 indexOf(...) >= 0 且比对串含中文
+ *   ④ ②的候选：②里"同时也有行为腿"的那批 ⇒ 可能重复，人只看这批
+ *   ⑤ ②的盲区补集：**全是 pin、一条行为痕迹都没有** ⇒ 必须逐条读（当年 D132 就是这样从所有名单里漏掉的）
+ *   ⑤ 另带一张**分诊台账**（本文件 `TRIAGE`）：报"还剩几条要读"，不是报"⑤ 有几条"（见下面的签名说明）。
  *
- * 用法：node tools/gate-sentinel.mjs [--strict] [--json]
+ * 用法：node tools/gate-sentinel.mjs [--strict] [--json] [--full]（其它参数一律 exit 2，不静默吞）
  */
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 /* v1.7.8：278 条门搬进 tools/gates/** ⇒ 源码面**只能**问 `gate-src.mjs` 要（继续读 tools/np-test.mjs 会看到 0 条门，
  *   而默认档 exit 0 ⇒ CI 会全绿着变瞎）。面 = runner + _ctx + 16 个部分，文件之间有一行 `BOUNDARY` 分隔行
@@ -39,11 +43,17 @@ for (let k = 0; k < marks.length; k++) {
 }
 const idOf = t => {
   const m = /^t\(['"]([^'"]+)['"]/.exec(t);
-  return m ? (m[1].match(/^(D\d+[a-z]?)/) || ['—'])[0] : '—';
+  if (!m) return '—';
+  /* 10-22 晚（千问）：原来只认 `^D\d+` ⇒ 本仓 **15 条非 D 号门**（`L3`/`L5`…7 条 L 号、35 条 N 号、
+   *   `REPRO`/`autoGame`/`fuzz` 若干）在名单里全被打成 `—`。后果不是难看：分诊表是按门号排队的，
+   *   `—` 的门**进不了任何人的视线**（实测：⑤ 报"29 条全判完"，但那 29 条里 `L3`/`L5` 根本没有判词）。
+   *   现在取标题第一段：像门号（字母+数字）就原样用，不像就标 `(无号)<前 12 字>`，让"没号"这件事本身可见。 */
+  const first = m[1].split(/[\s(（：:]/)[0];
+  return /^[A-Za-z]+\d+[a-z]?$/.test(first) ? first : '(无号)' + m[1].slice(0, 12);
 };
 const has = (t, re) => re.test(t);
 
-const cls = { md: [], src: [], log: [], cand: [], allpin: [] };
+const cls = { md: [], src: [], log: [], cand: [], allpin: [], pin_status: {} };
 /* v1.7.127（用户 10-20：把「有行为腿覆盖同一件事」做成可自动提示的启发式）：
  *   ② 那族里有两种：**只有源码 pin**（没有替代品 ⇒ 留），和 **源码 pin + 行为腿**（可能重复 ⇒ 候选）。
  *   这里只把后者**标出来**（只报告、不阻断），把 125 条人工分诊压成一张候选清单。
@@ -56,6 +66,61 @@ const __behRe = /\n\s*(?:eq|is)\(/g;
  *   被漏进 ⑤（例：`D119` 真跑 `train-3p` 断 exit 5，却仍显示"全 pin 无行为腿"）。补齐这几个符号。
  * ⚠ 这把尺仍然只是**形状启发**：它认不出"调本文件里自己定义的 helper"，所以 ⑤ 的名单是候选、不是判词。 */
 const __runRe = /sb\.window|EpirusTrainer|EpirusPlay|EpirusBots|EpirusRules|EpirusState|EpirusResolve|EpirusPolicy|autoGameN|oneGameN|policyChooserN|selfPlay\(|mirrorHealth\(|spawnSync|spawnCached|spawnNC|execFileSync|execSync\(|runInNewContext|new vm\.|sandbox\(/;
+
+/* 10-22 晚（千问，用户点名要补的第二处）：**⑤ 的条数 ≠ 还有多少要读**。
+ *   两件事在旧口径下被混成一个数：
+ *     (a) 已经判"留"的（判词在 GATE-AUDIT §三′ 丙）——它们仍满足"全 pin 无行为腿"这个**形状**，所以还留在名单里；
+ *     (b) 已经**换成真调**的（`D61` v1.8.6 ‖ `D78` v1.8.5）——形状上也还留在名单里，因为这把尺认不出
+ *         "调 `_ctx` 递进来的领域函数"（`AUDIT.feasibilityOf(...)` 这类）：门文件里没有 `import`，绑定来自
+ *         `const { AUDIT, feasibilityOf, … } = makeCtx()` ⇒ 任何"看写法"的启发式都看不见它（我试过按 import 收集，
+ *         实测**换类 0 条**，纯盲）。
+ *   所以不再猜写法，改成**记账 + 签名过期**（仓里 `diff-ladder-claims.mjs` 同一种形状）：
+ *     判词抄进下面这张表（人写的，本工具不生产判词），签名 = 门体里所有 `indexOf(<串>)` 的被比对串（排序后 sha1 前 8 位 + 串数）。
+ *     改注释/挪行不动签名；**改判据（加减/替换被钉的串）签名就变 ⇒ 判词作废 ⇒ 自动回到"待读"**。
+ *   ⚠ 局限要说清：`j:'换'` 这条哨兵**无法自检**——腿被人摘掉而 pin 串没动的话，它还会显示"已换"。
+ *     它只保证"没人再为已判的门重复排队"，不保证判词永远成立（那仍是 R4 第③步的活）。 */
+const sigOf = function (text) {
+  const needles = [];
+  for (const m of text.matchAll(/indexOf\(([^)]*)\)\s*(?:>=|<)\s*0/g)) needles.push(m[1].trim());
+  return createHash('sha1').update(needles.slice().sort().join('\n')).digest('hex').slice(0, 8) + '/' + needles.length;
+};
+const TRIAGE = {
+  'D4':    { s: 'f1bc13c0/3',  j: '留', at: '§三′ 丙' },
+  'D117':  { s: '9cdb7266/8',  j: '留', at: '§三′ 丙' },
+  'D98':   { s: 'b1293b77/3',  j: '留', at: '§三′ 丙' },
+  'D82':   { s: '34dda06f/3',  j: '留', at: '§三′ 丙' },
+  'D44':   { s: '5ca8b1ed/2',  j: '留', at: '§三′ 丙' },
+  'D74':   { s: '4e297c3b/3',  j: '留', at: '§三′ 丙' },
+  'D75':   { s: '0da5882c/3',  j: '留', at: '§三′ 丙' },
+  'D76':   { s: '0d3c5c41/3',  j: '留', at: '§三′ 丙' },
+  'D97':   { s: 'abfe1369/3',  j: '留', at: '§三′ 丙' },
+  'D100':  { s: 'c9034ba8/5',  j: '留', at: '§三′ 丙' },
+  'D79':   { s: '6388dbb8/14', j: '留', at: '§三′ 丙' },
+  'D118':  { s: '18a0e522/7',  j: '留', at: '§三′ 丙' },
+  'D107':  { s: 'd4ef2cea/12', j: '留', at: '§三′ 丙' },
+  'D7':    { s: 'fda7fc00/2',  j: '留', at: '§三′ 丙' },
+  'D11':   { s: '68af7fa8/3',  j: '留', at: '§三′ 丙' },
+  'D13':   { s: 'ec824886/5',  j: '留', at: '§三′ 丙' },
+  'D65':   { s: '81eff325/2',  j: '留', at: '§三′ 丙' },
+  'D83':   { s: 'd395639b/8',  j: '留', at: '§三′ 丙' },
+  'D88':   { s: '6d010300/5',  j: '留', at: '§三′ 丙' },
+  'D27':   { s: 'c04ec7b9/8',  j: '留', at: '§三′ 丙' },
+  'D73':   { s: 'df05c7d0/4',  j: '留', at: '§三′ 丙' },
+  'D145':  { s: '4427698f/2',  j: '留', at: '§三′ 丙' },
+  'D37':   { s: 'f6e23b87/3',  j: '留', at: '§三′ 丙' },
+  'D38':   { s: '5e6bcf08/7',  j: '留', at: '§三′ 丙' },
+  'D70':   { s: '045f0533/8',  j: '留', at: '§三′ 丙' },
+  'D61':   { s: '9d761ad6/11', j: '换', at: 'v1.8.6 DS 补真调腿' },
+  'D78':   { s: '2b7724ba/23', j: '换', at: 'v1.8.5 DS 补真调腿' },
+  /* 这两条就是"门号只认 D"那个洞吃掉的分诊对象（旧版在名单里显示为 `—`）⇒ 判词见 GATE-AUDIT §三′ 丁 */
+  'L3':    { s: '462fbf28/6',  j: '留', at: '§三′ 丁(千问)' },
+  'L5':    { s: 'f22823e9/6',  j: '留', at: '§三′ 丁(千问)' }
+};
+const statusOf = function (id, sig) {
+  const c = TRIAGE[id];
+  if (!c) return '待读';
+  return c.s === sig ? (c.j === '换' ? '已换' : '已判留') : '判词过期';
+};
 for (const g of gates) {
   const id = idOf(lines[g.idx]);
   if (/readFileSync\([^)]*\.md['"]/.test(g.text) || /readFile\([^)]*\.md['"]/.test(g.text)) cls.md.push(id + '@' + g.at);
@@ -73,11 +138,20 @@ for (const g of gates) {
     if (pins > 0 && hasBeh) cls.cand.push(id + '@' + g.at + '(' + pins + 'pin)');
     /* 10-22（DS）：④ 只列"pin + 有行为腿"，于是**一条全是 pin、零行为腿的门反倒不进任何名单**（`D132` 就这样漏掉，
      *   靠逐条读门体才发现）⇒ 全 pin 无行为腿的门单独列一类，不许再当"只有源码 pin ⇒ 该留"默认放过。 */
-    if (pins > 0 && !hasBeh) cls.allpin.push(id + '@' + g.at + '(' + pins + 'pin)');
+    if (pins > 0 && !hasBeh) {
+      const st = statusOf(id, sigOf(g.text));
+      cls.allpin.push(id + '@' + g.at + '(' + pins + 'pin)' +
+        (st === '已判留' ? '[留·已判]' : st === '已换' ? '[换·已补腿]' : st === '判词过期' ? '[过期·待重读]' : '[待读]'));
+      cls.pin_status[id] = st;
+    }
   }
   if (has(g.text, /\.(out|stdout|stderr)\b/) && /indexOf\(['"][^'"]*[\u4e00-\u9fff][^'"]*['"]\)\s*>=\s*0/.test(g.text)) cls.log.push(id + '@' + g.at);
 }
-const out = { gates: gates.length, md: cls.md.length, src: cls.src.length, log: cls.log.length, cand: cls.cand.length, allpin: cls.allpin.length, lists: cls };
+const st_count = { 待读: 0, 已判留: 0, 已换: 0, 判词过期: 0 };
+for (const k of Object.keys(cls.pin_status)) st_count[cls.pin_status[k]]++;
+const pending = Object.keys(cls.pin_status).filter(k => cls.pin_status[k] === '待读' || cls.pin_status[k] === '判词过期');
+const out = { gates: gates.length, md: cls.md.length, src: cls.src.length, log: cls.log.length, cand: cls.cand.length,
+  allpin: cls.allpin.length, allpin_split: st_count, allpin_pending: pending, lists: cls };
 /* 10-22：分诊 ⑤ 时清单被截断到 10 条（"…"）⇒ 加 --full 打全名；不认识的参数响亮失败（仓规 v1.5.234）。 */
 const ARGS = process.argv.slice(2);
 const FULL = ARGS.includes('--full');
@@ -90,7 +164,14 @@ else {
   console.log('  ② 对源码做正则的门    = ' + out.src + show(cls.src, 8));
   console.log('  ③ 匹配日志措辞的门    = ' + out.log + show(cls.log, 8));
   console.log('  ④ **②的候选**（源码 pin + 同门行为腿 ⇒ 可能重复） = ' + out.cand + show(cls.cand, 8));
-  console.log('  ⑤ **全 pin 无行为腿**（pins>0 且门里一条 eq/is 都没有 ⇒ 必须逐条读门体，不许默认"该留"） = ' + out.allpin + show(cls.allpin, 10));
+  console.log('  ⑤ **全 pin 无行为腿**（pins>0 且门里一条行为痕迹都没有 ⇒ 必须逐条读门体，不许默认"该留"） = ' + out.allpin +
+    show(cls.allpin, 10));
+  console.log('     按分诊台账拆：**待读 ' + out.allpin_split.待读 + ' ‖ 判词过期 ' + out.allpin_split.判词过期 +
+    ' ‖ 已判"留" ' + out.allpin_split.已判留 + ' ‖ 已换真调腿 ' + out.allpin_split.已换 +
+    '** ⇒ 下一班的队列长度 = 待读 + 过期 = **' + pending.length + '**' +
+    (pending.length ? '（' + pending.join(' ') + '）' : ' ⇒ 空的') + '，不是 ' + out.allpin);
+  console.log('     （台账 = 本文件里的 `TRIAGE`，签名 = 门体被钉串的哈希 ⇒ 改判据自动作废、改注释不会。' +
+    '⚠ "已换"这条哨兵自检不了：把腿摘掉而串没动，它仍显示"已换"。）');
   console.log('     （④ 只提示不判死：人工只需看这 ' + out.cand + ' 条；⑤ 是 ④ 的盲区补集，别拿 "其余 = 该留" 当结论。）');
   console.log('  ⇒ 默认只报告（不红）；分诊完再开 --strict。见 docs/GATE-SHIFTS.md §八 口径 1。');
 }
