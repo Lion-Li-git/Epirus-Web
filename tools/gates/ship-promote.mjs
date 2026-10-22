@@ -146,6 +146,25 @@ t('D61 五道门槛是单一真源：落盘处与出厂换包都必须走 feasib
   ok(seg.indexOf('winRate <') < 0 && seg.indexOf('winRate >=') < 0, 'feasibilityOf 里不得有任何以胜率为准的比较');
   /* 缺值必须响亮：`!(NaN > 0.5)` 曾是本函数第一个 bug（把"探针没跑"读成"墙瘫了"，假红） */
   ok(seg.indexOf('探针缺失') >= 0, '探针缺失/无值必须显式判失败（不许静默通过，也不许静默判死）');
+  /* ⚑ 10-22（DS，⑤ 分诊）：上面判的是"阈值写在哪个函数里"；这条**真调 feasibilityOf**，证明五道各自能分好/坏，
+   *   且缺值会红。牙：把任一条阈值放宽/收紧到合取失效（例如 G 的 <3 改成 <1）⇒ 对应用例红。 */
+  const feas = function (o) { return AUDIT.feasibilityOf(o); };
+  const base = { seat: { verdict: 'ok', pct: [34, 33, 33] }, G: { effSkills: 4 }, wall: { dmgPerGame: 1.0 },
+    aggr: { fieldA: { atk: 0.5 }, fieldB: { clearedPerGame: 0.5 } } };
+  const good = feas(base);
+  ok(good.ok === true && good.fails.length === 0, '五道全好时必须 ok=true、fails 为空（实测 fails=' + JSON.stringify(good.fails) + '）');
+  const mut = function (patch, re, label) {
+    const o = JSON.parse(JSON.stringify(base)); patch(o);
+    const r = feas(o);
+    ok(r.ok === false && r.fails.some(function (l) { return re.test(l); }), label + '（实测 fails=' + JSON.stringify(r.fails) + '）');
+  };
+  mut(function (o) { o.wall.dmgPerGame = 0.3; }, /反弹墙/, '反弹墙伤害 ≤ 0.5/局（打不穿墙）必须红');
+  mut(function (o) { o.aggr.fieldA.atk = 0.1; }, /场A/, '场A 还手 < 20% 必须红');
+  mut(function (o) { o.aggr.fieldB.clearedPerGame = 0.2; }, /场B/, '场B 清场 < 0.3/局必须红');
+  mut(function (o) { o.G.effSkills = 2.5; }, /G/, 'G < 3 必须红');
+  mut(function (o) { o.seat.verdict = 'biased'; o.seat.pct = [60, 20, 20]; }, /座位偏座/, '座位偏座必须红');
+  const miss = feas({ seat: { verdict: 'ok' }, G: {}, wall: {}, aggr: { fieldA: {}, fieldB: {} } });
+  ok(miss.ok === false && miss.fails.some(function (l) { return l.indexOf('探针缺失') >= 0; }), '探针缺值必须显式红（不许静默通过）');
 });
 
 t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约（第七轮复核 §15-1）', function () {
