@@ -92,7 +92,7 @@
 - 第 6 件（`8c2a838c` 01:46:55，`git log` 原文）**§E694 · 剂量地板**：接着问"手里两台尺各能分辨到几 pt"，答案都是**不够**且原因不同——`probe-cross-mode` 的 `极` 列在缺省 40 局下是一局抖动（n=5 每席 8 局 ⇒ 粒度 12.5pt；冠军五格 `极8~25`，`v7w3c-93` 却全 `极0`，后者不等于"座位均衡"），纯镜像臂 120~300 局就有 9~11pt。
   ⇒ 把归因那一腿的**所需剂量算出来交给下一班**（每席 ~200 局 ⇒ 一格 ~800 局 ≈ 2 分钟），没有偷跑；顺带记下本晚我的一次浪费：第一次试归因时没先算组合数就 `--pool=all --every=1/3/7 --games=200` 放量，挂后台后杀掉（已确认无残余进程）。
 
-- 第 7 件（**时刻待补**）**§E695 · 计划线逐线消融**：新旋钮 `js/train/bots.js` 的 `setPlanOff/planOffOn/countPlanOff/resetPlanOffStat`
+- 第 7 件（`95636202` 02:18:33，`git log` 原文）**§E695 · 计划线逐线消融**：新旋钮 `js/train/bots.js` 的 `setPlanOff/planOffOn/countPlanOff/resetPlanOffStat`
   （形状照 `evo.js` 的 `setTrainEps/countTrainEps`：**引擎内不读 `process.env`、默认空集 ⇒ 出厂逐字不变**；写法上**条件与分支体照原样求值、只把 `return` 按住**
    ⇒ `rnd()`/`mpPickOne()` 消耗的随机数不变，这是"关掉一条从不触发的线 ⇒ 整批出手流必须逐字不变"那条对照能成立的前提）
   ‖ 新尺 `tools/probe-plan-ablation.mjs`（五条腿全部逐字比较，另加 A0 入口校验；两条腿各用一次变异实测有牙）。
