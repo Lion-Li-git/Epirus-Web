@@ -2819,13 +2819,51 @@ t('D162 训练/选择执行口径旋钮（v1.5.237 · E28）：默认关要**可
     'train-best 没接这个旋钮 ⇒ 必须被列为**暗键**并在握手前 exit 6（宁可响，不许"传了没人读"跑成一整臂 A/A —— D143 那一族栽过 9 次）');
   ok(readFileSync('tools/audit-lib.mjs', 'utf8').indexOf('EPIRUS_TRAIN_EPS') < 0,
     '作用范围必须**关在训练侧**：`audit-lib` 的 9 处写死不许经过这两个漏斗（否则门禁口径会被一个训练旋钮悄悄搬走）');
+  /* ===== ②b′（v1.7.157 第十五批）"真打到适应度"必须是**跑出来的** =====
+   * 上面那两条 `mhOn !== mhOff` / `fitOn !== fitOff` 判的是"读数变了"，**没判"变的是不是这一枚旋钮的因果"**：
+   * 把 `EPIRUS_TRAIN_EPS` 拿去喂另一个漏斗（例如让 ε 变成随机数），两条照样绿。（它们自己有没有牙：本班**没复测**，
+   *   原来的"很有牙（BRK 过）"是沿用旧批次记录，我不拿它当本批的验证。）
+   * 这里补一格端到端：在**本门自己的沙箱**里清零 ⇒ 设档 ⇒ 跑一批真评分 ⇒ 引擎自己的 `countTrainEps()` 必须非零 ⇒
+   *   再清零、关档 ⇒ 再跑一批必须**仍是 0**（"关档真关得掉"的作用点版本，同 D132 ⑤c 那一族）。
+   * ⚠ 计数点在 `fitChooser()` 的**构造**处（`evo.js:553`，不是每次决策），所以这一格判的是"每代评分这条路确实取过这一档"，
+   *   不承诺它等于决策次数 —— 别把这两个数拿去互相换算。
+   * ⚠ 我第一版在这里写了"计数是累计的、没有 reset 口，所以只能判'不再涨'"，那是**没读实现就写判据**：
+   *   `resetTrainEpsStat` 在 `evo.js:536` 就定义了、并且随 3537 那行一起导出。用清零版判据比"不再涨"强一档
+   *   （起点必须为 0 ⇒ 顺带判住"这个口真的清得掉"），而"不再涨"允许前面别的门留过脏计数。
+   * ⚠ 牙记在审计文档 §二 30)：μ1（关档分支也计数）红在本格的"仍是 0"；μ3（删计数行）红的是**已有的**那条
+   *   `c1.fitSeen > 0`（它排在前面、短路了本格）⇒ 本格的独立价值在"关档关得掉 + 干净起点"，不在"开档非零"。 */
+  {
+    const SB62 = sandbox(process.cwd());
+    const T62 = SB62.EpirusTrainer, P62 = SB62.EpirusPolicy;
+    const pr = new Float64Array(P62.paramCount());
+    T62.resetTrainEpsStat();
+    eq(T62.countTrainEps().fitSeen, 0, '②b′ 起点：`resetTrainEpsStat()` 之后 `fitSeen` 必须是 0（不是 0 ⇒ 这个漏斗的账不清，后面两格都没有基线）');
+    T62.setTrainEps(0.2, 5, 'soft', 0.15);
+    T62.scoreMemberN(pr, T62.buildOpps(pr, 0.05), 6, 5, 0, 0, 0);
+    const c1 = T62.countTrainEps();
+    ok(c1.fitSeen > 0, '②b′ 开档后跑一批真评分，`countTrainEps().fitSeen` 必须非零（实测 ' + c1.fitSeen + '）'
+      + '⇒ 为 0 就是这一档没经过适应度那条漏斗（上面两条"读数变了"判的是变化，不是归属）');
+    T62.setTrainEps(0);
+    T62.resetTrainEpsStat();
+    T62.scoreMemberN(pr, T62.buildOpps(pr, 0.05), 6, 5, 1, 0, 0);
+    const c2 = T62.countTrainEps();
+    eq(c2.fitSeen, 0, '②b′ 关档后再跑一批，`fitSeen` 必须**仍是 0**（实测 ' + c2.fitSeen + '）'
+      + '⇒ 不为 0 = 出厂那条路仍在取这一档，那"默认关 ⇒ 逐字不变"这句话只剩注释');
+    eq(c2.eps, 0, '②b′ 复位回执：`countTrainEps().eps` 必须是 0（实测 ' + c2.eps + '）⇒ 后面那些门共用引擎，本门不许把档留在开着的状态');
+  }
   /* ===== 并发臂的前提：产物必须能改道（用户 09-26 指令"别单核慢慢跑"）=====
    * 所有臂默认都写同一个 `docs/artifacts/train-3p-out.js` ⇒ 并发时互相覆盖，只能串行；而门禁里有两道门
    * 拿这个文件的哈希当 CLI 基线 ⇒ 并发臂还会把基线文件改脏。`EPIRUS_T3P_OUT`（与 `train-best` 的 `EPIRUS_TB_OUT` 同形）解决这两件事。 */
   {
-    const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
-    ok(/EPIRUS_T3P_OUT/.test(t3) && /EPIRUS_PUBLISH === '1'[\s\S]{0,220}EPIRUS_T3P_OUT/.test(t3),
-      'train-3p 必须支持产物改道（`EPIRUS_T3P_OUT`），且**顺序必须在 `EPIRUS_PUBLISH` 之后**（否则一个 env 就能把臂写进线下槽）');
+    /* v1.7.157 **删掉**这条文本钉（`ok(/EPIRUS_T3P_OUT/ && /EPIRUS_PUBLISH === '1'[\s\S]{0,220}EPIRUS_T3P_OUT/)`），理由是实测它**没牙**：
+     *   造一个语法合法、语义错序（`if (EPIRUS_T3P_OUT) return …; return EPIRUS_PUBLISH === '1' ? 出厂槽 : 默认`）的变体，
+     *   两条正则在变体上**仍匹配** ⇒ 它声称"顺序必须在 PUBLISH 之后"，但把顺序真写反它也不会红（脚本 `d224/teeth-orderpin.mjs`，
+     *   只在内存里改、跑完 `git checkout` 还原、工作树已确认干净）。
+     * 为什么不用行为判据替：这一格的唯一端到端跑法是同时给 `EPIRUS_PUBLISH=1` ⇒ 真往 `js/bundled-champion-3p.js` 落盘，
+     *   而 `train-3p.mjs:69` 那个兜底还原恰恰在 `PUBLISH=1` 时**不还原** ⇒ 一次"验证优先级"的门禁跑就是把线上冠军换掉。
+     *   ⇒ 优先级这一格在本仓**没有安全量法**，写成判据是自我安慰；真在管这件事的是产品自己那两层：
+     *     ① `OUT_PATH` 的三元次序（`train-3p.mjs:48`），② §E589 的进程级守卫（出厂槽被改 ⇒ exit 3 并还原）。
+     *   本门接着跑的那几格判的是能安全量的那一半：改道**真落盘**（`existsSync`）+ 默认基线**逐字节不动**（哈希）+ 收据那行（P3）。 */
     const def = 'docs/artifacts/train-3p-out.js';
     const before = createHash('sha1').update(readFileSync(def)).digest('hex');
     const dir = mkdtempSync(join(tmpdir(), 't3pout-'));
@@ -2837,7 +2875,26 @@ t('D162 训练/选择执行口径旋钮（v1.5.237 · E28）：默认关要**可
     ok(existsSync(join(dir, 'RR.js')), '产物必须写到 `EPIRUS_T3P_OUT` 指的地方');
     const after = createHash('sha1').update(readFileSync(def)).digest('hex');
     eq(after, before, '默认 CLI 产物**一个字节都不许动**（并发臂不得污染门禁比对的基线文件）');
-    ok(String(rr.stdout).indexOf('已写入 ' + def) < 0, '日志里不许出现"已写入默认路径"（改道要改彻底，含打印）');
+    /* v1.7.157 改判（正向化）：原来这条是 `indexOf('已写入 ' + def) < 0` —— 两个毛病：
+    *   ① 钉了措辞（"已写入"那三个字是工具自己的打印格式，METHODOLOGY 第 89 条禁的就是这个）；
+    *   ② 只判"没说谎"，不判"说了真话" ⇒ 工具哪天改成 `落点=` 或者干脆不打这行，这条**空转**而门仍绿。
+    * 现在拆两格，两格都以**我自己传进去的那个路径**为唯一数据源（不认任何中文措辞）：
+    *   P1 整段 stdout 里必须能找到实际落点 ⇒ 判"操作员读得到这次写到哪儿"；
+    *   P3 **收尾那一行**必须带实际落点 ⇒ 判"最后一行不许把默认落点当这次的目标"，这正是 `train-3p.mjs:60-64`
+    *      记的那次事故的形状（落盘改了道、末尾仍打硬编码默认路径 ⇒ 一次线上冠军覆写被这行掩盖掉）。
+    * ⚠ 两格都是 **stdout 级**判据，不承诺"逐行一致"：本班实测只删末尾那行的路径，P1 **仍绿**
+    *   —— 因为 `guardWrite` 那行 `[train-3p] 落盘：…（真实路径）` 也在 stdout 里 ⇒ 别把 P1 读成"打印=落盘同一口径"，
+    *   P1 的牙只在"两处都不打"时咬（我没能单独造出这一刀，所以 P1 只当可读性保底，真正有独立牙的是 P3）。
+    * ⚠ P3 有误红面（谁在末尾再补一行页脚就会红）。我认这个代价：那行是"这次落到哪儿"的收据，
+    *   要改它就得把收据一起搬过去。
+    * 分隔符归一：Windows 的 tmpdir 带反斜杠，工具原样打印 `OUT_PATH`（`train-3p.mjs:2225`），两边都归到 `/` 才不靠运气。 */
+    const norm = function (s) { return String(s).replace(/[\\/]+/g, '/'); };
+    const echoed = norm(rr.stdout);
+    const wantOut = norm(join(dir, 'RR.js'));
+    ok(echoed.indexOf(wantOut) >= 0, 'P1 改道后 stdout 里必须能找到**实际落点** `' + wantOut.slice(-40) + '`（找不到 ⇒ 改道这件事在日志里不可见）');
+    const tailLine = echoed.split(/\r?\n/).filter(function (l) { return l.trim().length > 0; }).pop() || '';
+    ok(tailLine.indexOf(wantOut) >= 0, 'P3 **收尾那一行**必须带实际落点（读到的是 `' + tailLine.slice(0, 70) + '`）'
+      + '⇒ 这一行是把"落盘到哪儿"交给操作员的收据；它写默认路径就是 §E589 那次掩盖线上覆写的那枚形状');
     /* 我自己 15:12 踩过的那一下：`train-3p --help` 曾被读成 `GENS=NaN` ⇒ 真开跑一支臂，
      * 默认落点就是上面那个被门禁比哈希的基线文件 ⇒ 一次打错的帮助页能污染正在跑的门禁。
      * **行为式**判定（真跑一遍看退出码），不判横幅。 */
