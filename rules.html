@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>规则说明 · Epirus 拍手游戏</title>
+<!-- 与 index.html 的区别：这里读的是**当前引擎里真正生效的那份常量**，不是文档摘录。
+     为什么 <script> 故意不带 ?v= 缓存戳：刷戳的 bumpChampionVersion()（server/train-server.mjs:110）
+     只改写 index.html ⇒ 若这里也写 ?v=，那个戳会永久停在第一次的值上（比无戳更危险：它伪装成"已失效"）。
+     代价是刚更新过站点时本页可能读到浏览器里的旧引擎副本 ⇒ 页脚明写"请硬刷新"。 -->
+<link rel="stylesheet" href="css/style.css">
+<style>
+  main{max-width:980px;margin:0 auto;padding:0 16px 40px}
+  h2{font-size:17px;margin:26px 0 6px;color:#cfe3ff;font-weight:600}
+  h3{font-size:15px;margin:18px 0 4px}
+  p,li{font-size:13.5px;line-height:1.85;color:#dfe7f3}
+  ul{margin:6px 0 0 18px;padding:0}
+  table{border-collapse:collapse;margin-top:10px;font-size:12.5px;width:100%}
+  th,td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+  th{color:var(--dim);font-weight:400;background:rgba(255,255,255,.03)}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  code{background:rgba(255,255,255,.07);padding:1px 5px;border-radius:3px;font-size:12px}
+  .tag{display:inline-block;font-size:11px;color:#9fd0a8;border:1px solid #2f5a3a;border-radius:10px;padding:0 7px;margin-left:6px}
+  .qa{border-left:2px solid var(--line);padding-left:14px;margin:14px 0}
+  .qa b{color:#cfe3ff}
+  .src{color:var(--dim);font-size:12px}
+  .back{display:inline-block;margin:14px 0 0;font-size:13px}
+  #warn{color:#ffcf8a;font-size:12.5px;margin-top:8px}
+</style>
+</head>
+<body>
+<div id="app">
+<header class="top">
+  <h1>规则说明 <span class="jp">Epirus</span></h1>
+  <span class="sub">这一页写的是<b>这个程序实际跑的那套规则</b> —— 下面的桌子参数、技能表与难度档都是本页现读引擎常量渲染的，不是文档摘录。</span>
+</header>
+
+<main>
+  <p class="src">规则文本的出处：本仓库 <code>docs/RULES-2P.md</code>（2 人，冻结在 v1.0.0）与 <code>docs/RULES-NP.md</code>（多人 N 人裁定清单，含 N1~N27）。
+    上游原始规则：国际拍手游戏规则制定协会 · 规则文档 v2.1.0 —— <a href="https://github.com/Lion-LiHaoyi/Epirus">Lion-LiHaoyi/Epirus</a>（本页实现的是它的<b>可运行子集</b>，凡两者不一致，以本仓库的裁定清单与引擎为准）。</p>
+  <p id="warn" hidden>⚠ 引擎脚本没加载成功 ⇒ 下面三张表会空。本页与对局页同级，直接用 <code>http(s)</code> 或 <code>file://</code> 打开都可以。</p>
+
+  <h2>一、桌子：人数 × 血量是两根正交的轴<span class="tag">N26 / N24</span></h2>
+  <div id="modes"></div>
+  <p>人数 2~5 与血量 3 / 4 / 5 各自是一根轴，上面这张表就是把两根轴钉在一起的那份配置（本页逐字段现读 <code>EpirusRules.MODES</code>，"回合硬上限"和"收缩起点"两格里空着的走全局 <code>MAX_ROUNDS</code> / <code>SUDDEN_DEATH</code>，读法与引擎一致）。
+     <b>4 血只是"多一格血"，不是第四套规则</b>：除血量与显示名外逐字段与 3 血多人格同值，这条设计决定由门禁 <code>D226</code>①c~①f 逐字段钉着，以后谁想给 4 血单配一套门槛，必须同时改判据（= 再过一次裁定）。
+     2 人局与 3 人以上共用同一套结算：优先级、相抵、目标口径同规，只是"第三方"相关的分支天然不触发。</p>
+  <p class="src">这张表读的是<b>模式配置</b>；对局页另有一个「终局收缩」输入框（缺省 <code>100</code>，会存进浏览器本机），每次建新局都<b>拿它覆盖模式自带的起点</b>（<code>ui.js:110</code> 把 <code>sdOpts()</code> 喂给 <code>createState</code>）。两张数要分开看：
+     <code>standard</code>（2 人 · 3 血）配置里就是全局 100，而它的硬上限是 60 ⇒ <b>实际进不了收缩</b>，长局由硬上限判；
+     多人桌配置里自带 <b>45</b>（3/4 血那两格），但页面缺省的 100 会盖掉它 ⇒ <b>你在浏览器里也几乎看不到收缩，除非把那格改成 45</b>。
+     考卷与门禁量的是模式自己的 45。长程那一格反过来：配置走全局 100、安全网 140，所以收缩正是它的主要终局。
+     <span style="color:#9fb6d6">（N25 把收缩从 "long 专属" 升级为全局规则时，只有 <code>multi</code> 用自己的字段把起点提前 —— v1.5.65。）</span></p>
+
+  <h2>二、一回合是怎么走完的<span class="tag">N2 / N3 / N4</span></h2>
+  <ul>
+    <li><b>同时选招</b>：所有人各自选一个技能 + 目标（架势/自增益类无目标），然后统一结算。</li>
+    <li><b>按优先级分层结算</b>：优先级 <code>5 → 4 → 3 → 2 → 1</code>，同优先级 = <b>同时结算</b>（层入口对全场行动拍快照，层内一律按快照判定，最后统一落地"作废"与伤害）。</li>
+    <li><b>相抵只在"互为目标"时成立</b>：A→B 与 B→A 同优先级 ⇒ 二者都作废；高优先级压制低优先级同样只在互为目标时成立。
+        <span class="src">所以"两家同时打同一个第三人"→ 两击都落地，不会互相抵消。攻击相抵意义上的环（A→B→C→A）按<b>逐边</b>处理，不做整环无效化（N4）——但<b>三家小雷连成环</b>是另一条规则，见第四节。</span></li>
+    <li><b>目标规则</b>：攻击/负面技能必须指定目标；<b>死者不能被指定为目标</b>；目标在本回合中途死亡时，尚未结算的攻击<b>落空（不转移）</b>。双枪射手要指定两个不同目标。</li>
+    <li><b>回合末</b>统一判定：死亡、挑衅义务、符咒老化、禁用递减。</li>
+    <li><b>胜负</b>：最后一名存活者获胜；同一回合全员死亡算平局（例外见第四节"回魂"）。打到回合上限则比<b>剩余血量</b>，并列才是平局。
+        <b>全员同时倒下</b>（收缩最容易造成这种场）不自动平局，而是取<b>累计造成伤害最多者</b>胜、并列才平局（v1.5.65：否则"谁都没打过人"也能被判胜，龟着拖是免费的）。
+        <span class="src">N12 / <code>resolve.js</code> 的 <code>checkOver</code></span></li>
+  </ul>
+
+  <h2>三、技能表<span class="tag">30 张，其中 3 张多人专用</span></h2>
+  <div id="skills"></div>
+  <p class="src">"费用"的单位是 ジ（能量），"目标"这一列引擎只对 <code>self</code> 分支（其余都必须指定别人）。费用里的 <code>—</code> 不是免费，而是<b>这张牌的费用不是固定数</b>（聚能环 / 过载炮 / 激光眼 这三张按"第几次用它"变价，条件写在"作用"那一列）。
+     除能量还要<b>蓄能珠</b>的牌会在费用格里标出来（珠由"蓄能"产生：电/爆自选、只保留到下一回合、同类最多 1 枚）。
+     <code>other</code> 这个目标值全表只有全息屏障一张在用，它是"这张牌的受益者是别人"的标记（v1.5.34 曾把它误做成"自己"，历史读数因此作废）。
+     标注"多人专用"的三张（双枪射手 / 镜面反射 / 全息屏障）在 2 人桌上不可用：<code>D226</code>④ 逐血量格（standard / multi4 / long）各判两件事 ——
+     <code>canUseSkillInMode</code> 说它不可用、且 UI 赖以画图的 <code>Play.legalActions</code> 那张合法表里也不出现它（"牌亮着而引擎拒"是明令要防的分裂），
+     另带"5 人局三张全亮"的正对照。</p>
+
+  <h2>四、常见问答</h2>
+  <div class="qa"><b>Q：小雷（雷击之枪）到底挡的是什么？</b><br>
+     它<b>无效化目标本回合的"攻击类"行动</b>，不阻止防御/架势；互用小雷（A↔B 互指）则双方该行动都作废。
+     <b>三家连成环（A→B→C→A）不是"各自成立"</b>：v1.5.138 起在指向图上游走找到环，环上成员<b>整体作废</b>（发一条 <code>thunderRing</code> 事件），
+     不打不成环的链仍按座位序逐边结算。另外<b>最基础的防御、反弹、原型制御不吃小雷</b>（豁免名单见 <code>MINI_T_IMMUNE</code>）。
+     <span class="src">N5（该节"按 pid 升序逐条结算"那句是 v1.5.138 之前的旧口径，本页按引擎现状写）；代价 2 ジ</span></div>
+  <div class="qa"><b>Q：大雷（真正的落雷）为什么是这游戏最重的一张？</b><br>
+     5 ジ，对目标 <b>2 点电伤</b> + 把它<b>正在用的那个技能禁用</b>（基数 4 回合）+ 非防御类技能无效化；目标若当回合出防御类，2 电可以全挡。
+     还有<b>连带伤害</b>：与本回合和目标发生过交互的第三方，吃<b>与直击同口径</b>的 2 点电伤、行动同样作废、禁用 3 回合（施法者自己不参与连带，否则等于自伤）。
+     <span class="src">N6 / N22 —— 早期文案写"连带 1 点"，与代码不符，已按裁定以代码为准（维持 2 点）</span></div>
+  <div class="qa"><b>Q：全息屏障是给自己套的盾吗？</b><br>
+     <b>不是，它是"给别人套的盾"</b>：目标必须是<b>其他</b>玩家，被套者当回合获得"原型制御"式架势（挡技能伤、≥3 点伤害各自转移给作用者、小雷豁免，但大雷的 3 回合禁用照旧）。
+     想拆掉这张盾，得去打<b>施放者</b>——屏障这个动作本身不在小雷豁免名单里。
+     <span class="src">N7（v1.5.4 修正；旧的"只护自己"语义下的全部历史读数已作废）</span></div>
+  <div class="qa"><b>Q：反弹能把大雷弹回去吗？</b><br>
+     <b>雷电不被反弹</b>；防御 / 金刚盾 / 原型制御可以挡。反弹族真正反弹的是"技能伤害"这一类。
+     <span class="src">N6 / N14（镜面反射，多人专用）</span></div>
+  <div class="qa"><b>Q：挑衅有什么强制力？</b><br>
+     被挑衅者<b>下回合</b>必须使出一个"算被满足"的攻击类技能（名单就是 <code>TAUNT_SATISFY</code>：枪 / 剑 / 坦克 / 狙击 / 摄魂 / 磁轨 / 加农 / 激光眼 / 双枪），
+     否则<b>回合末扣 1 血</b>。多人桌上可以同时压多个目标，各自独立结算义务。它是少数能改变别人出招的一张。
+     <span class="src">N10（<code>TAUNT_SATISFY</code> 是唯一来源，页面、引擎与门禁共用同一份名单）</span></div>
+  <div class="qa"><b>Q：铁索连环连环住之后会怎样？</b><br>
+     先说怎么连上：<b>同一回合互相使用摄魂指法</b>的一对玩家之间建立一条边（多人下链条是一张图，不是固定串）。
+     连上之后任一环上者受伤，<b>与它直接相连</b>的其他玩家各受<b>同量同类型</b>伤害，且<b>不递归</b>（连环伤害不再触发下一跳）。
+     最要紧的一条：<b>这条边是一次性的</b> —— 共享过一次后两侧立刻同时解除，要再连必须重新互勾一次摄魂。它曾被实现成"只有死亡才解除"的持久光环，v1.5.18 按原文改回。
+     <span class="src">N9；守门 <code>np-test N8</code> + <code>D30</code>（走真实摄魂路径，不是手搓事件）</span></div>
+  <div class="qa"><b>Q：地雷在多人桌上是 AoE 吗？</b><br>
+     是，而且分两种触发：<b>直接触发</b>（雷被攻击引爆）这一波<b>没有次数上限</b>，持有者自己被攻击的伤害照常结算；
+     因<b>吃到地雷伤害</b>而引爆自己已装雷的属于<b>间接触发</b>，同一波里所有间接触发<b>合并为 1 次伤害</b>，且这一下<b>不打各个间接触发者的雷</b>。
+     两个人都装了雷时会出现不对称：<b>持雷者各受 1 点、非持雷者受 2 点</b>。另有三条豁免：狙击枪那一次攻击不引爆该雷（只豁免那一次）、
+     火弱（藤甲 debuff）只让<b>挂了它的目标</b> +1、而且<b>地雷伤害没有来源</b>（<code>source = null</code>）⇒ 不被铁索共享、不被转移伤害转移、不被大雷传导。
+     <span class="src">N20；"无来源"这一条 v1.7.66 才真正落到链闸门上并补了牙（此前只在文档里成立）</span></div>
+  <div class="qa"><b>Q：激光眼能不能一发废掉一整套防御？</b><br>
+     <b>能。</b>旧实现要求两个激光眼才能破原型制御/全息屏障，用户裁定把它改成<b>单个激光眼即可失效所有防御类 + 转移伤害</b>
+     （判据只剩"目标行动属于 <code>GUARD_FAMILY</code>"一个分支，原来的 <code>laserNoEffect</code> 成死代码已清）。
+     反过来别忘了上一条：小雷<b>打不动</b>最基础的防御、反弹、原型制御 —— 这两张反制的覆盖面不一样。
+     <span class="src">N23（用户裁定 2026-09-11）</span></div>
+  <div class="qa"><b>Q：打到回合上限怎么办？</b><br>
+     不再是"硬截断"，而是<b>终局收缩</b>：过了收缩起点之后，<b>每回合末每个存活玩家各扣 1 血</b>，把"龟着不出手"变成一条会死的路线；硬上限只作安全网。
+     起点按模式配置（各格读数见第一节那张表：多人 3/4 血自带 45，长程走全局 100、安全网 140）。
+     三处细节值得知道：收缩<b>不挡</b>（防御 / 反弹 / 原型制御 / 金刚盾 / 全息都拦不住它，因为它不是攻击）、<b>不引爆地雷</b>、
+     而且<b>没有来源</b>（<code>source = null</code>）⇒ 它<b>不计入任何人的"造成伤害"</b>，所以"靠收缩熬死全场"不会把你抬成那个"累计伤害最多者"。
+     <span class="src">N25（用户裁定 2026-09-12 + v1.5.10 把它从 long 专属升级为全局规则）；守门 <code>D19</code></span></div>
+  <div class="qa"><b>Q："回魂"复活的当回合能立刻放技能吗？</b><br>
+     先说它怎么触发：<b>只有挑衅的施放者</b>在本回合末死亡才会回魂（下回合以 1 HP 复活、当回合一切花费为 0、回合结束立即死亡）；
+     被挑衅的那一个若死了不会复活，反而给施放者挂上<b>梦魇</b>。
+     复活回合<b>只免"花费"，不免"条件"</b>：省能量的照省，但需要前置状态（珠子 / 时机 / 目标）的技能仍然要满足条件才放得出来 ——
+     v1.5.166 追一个摄魂 bug 时在这里找到三处"无限能量"短路，逐处删掉了。
+     还有个少见的边界：回合结算后<b>全员 HP ≤ 0</b>，但其中一人挂着回魂（尚未确认死亡）⇒ <b>判他胜</b>，不算平局（实测约 2/1500 局，此时你会看到"你赢了"而血量显示 0）。
+     <span class="src">R48（<code>docs/RULES-2P.md</code> §回魂"一切花费为 0"；守门 <code>D126</code>）‖ 边界裁定 N12（2026-09-10 补）</span></div>
+  <div class="qa"><b>Q：为什么同一招连用会被看穿？</b><br>
+     桌面状态里带着<b>最近若干步的出招历史</b>，AI 的特征向量里有它；连用同一张牌会让"读招反制"那一类脚本对手命中反制。
+     这也是"随机性"被留在探索层、而不是留在结算层的原因。</div>
+
+  <h2>五、难度档<span class="tag">一根轴：同一颗冠军包上的探索剂量</span></h2>
+  <div id="tiers"></div>
+  <p>难度<b>不是</b>"换一批发度的对手"，而是<b>同一颗冠军包上改它的探索剂量</b>（ε / 抽牌温度 / 是否带退火斜坡），所以全人数共用一条阶梯，档位含义可迁移。
+     <span class="src">N27（<code>js/train/bots.js</code> 的 <code>DIFF_TIERS</code> 是唯一来源，页面与量具都读它）</span></p>
+  <ul>
+    <li>剂量之外还换了<b>牌桌</b>：弱档从 <code>champion-map/pool-members.tsv</code> 的 soft 带抽、困难档从 hard 带抽（"带"是池表里的字段，不是另一批人）；<b>简单档还会掺几席脚本对手</b>，掺的是"多见几张牌"而不是难度。</li>
+    <li><b>2 人桌换一颗冠军包</b>：人数 = 2 用 2P 那颗（v1.0 为 1v1 训的），≥3 人用多人那颗。理由是实测不是传统 —— 拿多人那颗跑 1v1，人类替身夺冠 <b>27.5%</b>，用 2P 那颗只有 <b>15.5%</b>（数字越大对手越软），而且<b>剂量梯反号</b>（ε=0 那格比 ε=0.5 还软）⇒ 用它当"困难"是个假档。
+        <span class="src">N27 第 2 条</span></li>
+    <li>下面那张<b>风格</b>表不排强度：v1.6.6 起"风格即档位"这句话作废，风格只是口味。依据是 §E286（<code>tools/probe-diff-ladder.mjs</code>，1500 局/格、同一批种子跨格配对）—— 四个风格在 5 人桌上<b>统计上并列</b>，而换一个桌形排名就重排（"激进快攻"5 人桌最硬、3 人桌掉到中游；"憋大招"反之）⇒ 强度是桌形的函数，不是它的属性。</li>
+    <li class="src">这一节两张表都直接读代码现状。要提醒一句：<code>docs/RULES-NP.md</code> 的 N27 那一节还写着它 2026-10-03 落笔时的五档阶梯（含"入门"和"极限 · 读招"）—— 那两档后来被合掉了（同带改剂量量不出台阶），"极限 · 读招"回到了风格组。<b>以本页读到的 <code>DIFF_TIERS</code> 为准。</b></li>
+  </ul>
+  <div id="styles"></div>
+
+  <h2>六、AI 看得见什么、看不见什么<span class="tag">公开它的短板比藏起来有用</span></h2>
+  <ul>
+    <li>常规桌面事实（各家血量/能量/珠子、上回合行动、防御与架势状态、威胁与穿透、回合数等）<b>都在它的输入里</b>，而且改动这些事实确实会让它换招。</li>
+    <li><b>对手的能量/新珠这类"手牌信息"故意不给</b>（早期版本泄漏过座位身份，被明确修掉了）⇒ 它不许靠读牌打。</li>
+    <li>已知的一条真短板，有数也有对照：在配对的合成桌上把"某个存活对手正连着开聚能环"这一格摆出来（两个世界只差这一枚事实，且<b>两边都付得起小雷</b>才进分母），
+        冠军<b>确实读它</b> —— <b>74.3%</b> 的桌子会因它换招，而"对手能量"那一维的换招率是 <b>0%</b>（说明它不是"数字一动就乱换"）；
+        但它换出来的那一手，<b>400 副里一次都不是小雷打断</b>。换一枚本来就"会攒钱"的包复跑，换招率掉到 25.0%、方向仍是 +0.0pt。
+        ⇒ 缺口既不在看不见、也不在"不会因环境改行为"，而在<b>那一支动作根本不在它的选择集里</b>。这是训练目标的问题，不是感知的问题。</li>
+  </ul>
+
+  <footer>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+      <symbol id="ghmark" viewBox="0 0 16 16"><path d="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656"/></symbol>
+    </defs></svg>
+    Epirus · 规则开源 CC BY-NC-SA · 本程序仅供学习娱乐。<br>
+    <a href="index.html">← 回到对局页</a> ·
+    <a href="https://github.com/Lion-Li-git/Epirus-Web" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><use href="#ghmark"/></svg>本仓库（含全部规则裁定与门禁）</a> ·
+    <a href="https://github.com/Lion-LiHaoyi/Epirus" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><use href="#ghmark"/></svg>上游原始规则仓库</a><br>
+    规则表由本页现读 <code>js/core/rules.js</code> / <code>js/train/bots.js</code> 渲染 ⇒ 刚更新过站点的话请按 <code>Ctrl+Shift+R</code> 硬刷新一次。
+  </footer>
+</main>
+</div>
+
+<script src="js/core/rules.js"></script>
+<script src="js/core/state.js"></script>
+<script src="js/core/play.js"></script>
+<script src="js/train/bots.js"></script>
+<script>
+(function () {
+  const R = window.EpirusRules, B = window.EpirusBots;
+  const esc = function (s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); };
+  if (!R || !R.skills || !R.skills.length) { document.getElementById('warn').hidden = false; return; }
+  const CAT = { energy: '能量', attack: '攻击', defense: '防御', special: '特殊' };
+  const TGT = { self: '自己（无需目标）', enemy: '其他玩家', other: '其他玩家（受益者是它）' };
+
+  /* ① 桌子参数：按 MODES 的在册顺序逐字段读，别处不抄第二份；两格空值走全局（与 resolve.js 的取法一致） */
+  let mh = '<table><tr><th>模式</th><th>初始血量</th><th>回合硬上限</th><th>终局收缩起点</th><th>收缩每回合扣血</th><th>摄魂窗口（自己血量≤）</th><th>可用技能数</th></tr>';
+  for (const k of Object.keys(R.MODES)) {
+    const m = R.MODES[k]; if (!m) continue;
+    const dash = function (v) { return v == null ? '—' : esc(v); };
+    mh += '<tr><td><b>' + esc(m.name || k) + '</b><br><span class="src">' + esc(k) + '</span></td>' +
+      '<td class="num">' + dash(m.hp) + '</td>' +
+      '<td class="num">' + dash(m.maxRounds == null ? R.MAX_ROUNDS : m.maxRounds) + '</td>' +
+      '<td class="num">' + dash(m.suddenDeath == null ? R.SUDDEN_DEATH : m.suddenDeath) + '</td>' +
+      '<td class="num">' + dash(m.suddenDeathDmg == null ? R.SUDDEN_DEATH_DMG : m.suddenDeathDmg) + '</td>' +
+      '<td class="num">' + dash(m.drainHpMax) + '</td>' +
+      '<td class="num">' + ((m.skills || []).length) + '</td></tr>';
+  }
+  mh += '</table>';
+  document.getElementById('modes').innerHTML = mh;
+
+  /* ② 技能表 */
+  let sh = '<table><tr><th>技能</th><th>类别</th><th>费用</th><th>优先级</th><th>目标</th><th>作用</th><th>多人专用</th></tr>';
+  for (const s of R.skills) {
+    const needs = s.energyNeeds || {};
+    const bead = Object.keys(needs).map(function (k) {
+      const lab = k === 'elec' ? '电珠' : k === 'boom' ? '爆珠' : k;
+      return '＋' + needs[k] + ' 枚' + lab;
+    }).join(' ');
+    const costStr = (s.cost === null || s.cost === '' || s.cost === undefined)
+      ? '<span class="src">—（非固定）</span>'
+      : esc(s.cost) + (bead ? '<br><span class="src">' + bead + '</span>' : '');
+    sh += '<tr><td><b>' + esc(s.name) + '</b></td><td>' + esc(CAT[s.cat] || s.cat) + '</td><td class="num">' + costStr + '</td><td class="num">' + esc(s.pri) + '</td><td>' + esc(TGT[s.target] || s.target || '—') +
+      '</td><td>' + esc(s.desc || '') + '</td><td>' + ((R.MULTI_ONLY || []).indexOf(s.key) >= 0 ? '<span class="tag">多人</span>' : '') + '</td></tr>';
+  }
+  sh += '</table>';
+  document.getElementById('skills').innerHTML = sh;
+
+  /* ③ 难度档与风格：读 DIFF_TIERS / STYLES 本身，不抄第二份 */
+  const plain = function (s) { return String(s == null ? '' : s).replace(/\*\*/g, '').replace(/`/g, ''); };
+  const brief = function (s, n) { const p = plain(s); return p.length <= n ? p : p.slice(0, n) + '…'; };
+  const tiers = (B && B.DIFF_TIERS) || [];
+  if (tiers.length) {
+    let th = '<table><tr><th>档位</th><th>探索剂量 ε</th><th>抽样数 k</th><th>噪声口径</th><th>退火斜坡</th><th>抽牌带</th><th>2 人桌 ε</th></tr>';
+    for (const t of tiers) {
+      th += '<tr><td><b>' + esc(t.name) + '</b><br><span class="src">' + esc(t.id) + '</span></td>' +
+        '<td class="num">' + esc(t.eps) + '</td><td class="num">' + esc(t.epsK) + '</td><td>' + esc(t.epsMode || '—') + '</td>' +
+        '<td>' + (t.ramp ? '有' : '—') + '</td><td>' + esc(t.pool || '—') + '</td>' +
+        '<td class="num">' + (typeof t.eps2 === 'number' ? esc(t.eps2) : '同上') + '</td></tr>';
+    }
+    th += '</table><p class="src">ε = 每一手有多少概率不看分数、从抽样里随机挑（"噪声口径" <code>soft</code> = 按分数加权，<code>uniform</code> = 纯均匀）；' +
+      'k = 每手抽几个候选；"退火斜坡" = 这一代的 ε 随代数爬升；两格 ε 之间的箭头表示 2 人桌走的是另一份剂量。' +
+      '每档的完整来历写在 <code>js/train/bots.js</code> 的 <code>DIFF_TIERS</code> 注释里，这里只摆玩家用得上的那几格。</p>';
+    document.getElementById('tiers').innerHTML = th;
+  } else {
+    document.getElementById('tiers').innerHTML = '<p class="src">难度档没读出来（<code>EpirusBots.DIFF_TIERS</code> 不在）—— 上面第四节的技术描述仍然有效。</p>';
+  }
+  const styles = (B && B.STYLES) || [];
+  if (styles.length) {
+    let sh2 = '<table><tr><th>风格</th><th>打法</th></tr>';
+    for (const s of styles) sh2 += '<tr><td><b>' + esc(s.name) + '</b><br><span class="src">' + esc(s.id) + '</span></td><td class="src">' + esc(brief(s.note, 120)) + '</td></tr>';
+    sh2 += '</table>';
+    document.getElementById('styles').innerHTML = sh2;
+  }
+})();
+</script>
+</body>
+</html>

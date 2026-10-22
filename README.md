@@ -3,13 +3,15 @@
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）
 重新实现的一整套 **2 人可玩、可自对战训练** 程序。
 
-> **当前版本：v1.7.166** · **人数 2~5 × 血量 3/4/5 两根正交轴**（2 人那一档规则仍冻结在 v1.0.0）+ **全人数共用一条难度阶梯** + **技能齐全 · AI 状态特征 v7，FEAT_S=213**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`（血量轴见 NP 的 **N26**，难度阶梯见 **N27**）。
+> **当前版本：v1.8.0** · **人数 2~5 × 血量 3/4/5 两根正交轴**（2 人那一档规则仍冻结在 v1.0.0）+ **全人数共用一条难度阶梯** + **技能齐全 · AI 状态特征 v7，FEAT_S=213**；规则见 `docs/RULES-2P.md` / `docs/RULES-NP.md`（血量轴见 NP 的 **N26**，难度阶梯见 **N27**）。
 >
 > ⚠️ 本文件**只留当前版本**：逐版改动、实测数字与门号**只记在** [`CHANGELOG.md`](CHANGELOG.md)（README 不是账本 —— 这里此前抄过四次、漂过四次，最长那次落后 63 条门）。
 > ⚠️ **老用户要点页面「用内置冠军」才会换到新包**（本机包优先：`localStorage['epirus.champion']` = 2P ‖ `['epirus.champion3p']` = 多人）。
 > ⚠️ 而且**只要本机包在场，冠军池整桌不生效**（判定只在一处：`js/ui/ui.js` 的 `poolPlan`，它会连带把席位标签一起改掉 ⇒ 不会出现"标签说池在跑、实际用你那枚"）—— 想打「每席随机抽一枚冠军」的桌子，先把本机包清掉。
 
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩，不需要装任何东西、不需要联网。
+- **在线版**：<https://lion-li-git.github.io/Epirus-Web/>（由 `.github/workflows/pages.yml` 发**白名单** `index.html ‖ rules.html ‖ css/ ‖ js/ ‖ champion-map/`，`docs/` `tools/` `server/` 不发）。
+  站点上的 **"训练"要另起本机服务**，在线只能玩对局与看冠军查看器。`rules.html` 是给玩家看的那一份规则：三张表由页面**现读引擎常量**渲染，不抄文档。
 - **训练部分可选**：另起一个 Node 服务（只用内置模块 `http` / `worker_threads` / `vm`），用于练出"冠军 AI"。
 
 ## 快速开始

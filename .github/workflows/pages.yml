@@ -3,7 +3,7 @@ name: pages
 # 为什么单独一个 workflow 而不塞进 gates.yml：gates 是**阻断档**（19 路 `--part=` 矩阵），
 # 发布站点的失败不该让某笔提交"红"，反过来门禁红也不该拖住发布 ⇒ 两条 job 链分开。
 #
-# 发布的是**白名单**，不是整棵树：`index.html + css/ + js/ + champion-map/`（实测 218 个文件 / 11 MB）。
+# 发布的是**白名单**，不是整棵树：`index.html + rules.html + css/ + js/ + champion-map/`（实测 218 个文件 / 11 MB）。
 # 故意不发的是 `docs/`（30 MB 研究台账与 .bak 产物）、`tools/`、`server/`、`tests/` —— 站点运行不需要它们，
 # 而发出去等于把 1114 份研究文件变成可下载的静态资源（仓库本身是 public，但"能被翻到"与"被索引成站点目录"是两回事）。
 #
@@ -16,6 +16,7 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'rules.html'
       - 'css/**'
       - 'js/**'
       - 'champion-map/**'
@@ -41,9 +42,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p _site
-          cp index.html _site/
+          cp index.html rules.html _site/
           cp -r css js champion-map _site/
           test -s _site/index.html                       # 空 index.html ⇒ 直接失败，不发一个白屏
+          test -s _site/rules.html                       # 规则页与对局页同级，白名单漏了它 ⇒ 页头那个链接就是 404
           for f in css/style.css js/core/rules.js js/ui/ui.js js/bundled-champion-3p.js champion-map/index.html; do
             test -s "_site/$f" || { echo "缺 $f ⇒ 白名单漏了东西，不发"; exit 1; }
           done
