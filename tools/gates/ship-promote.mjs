@@ -6,6 +6,8 @@ import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
  * 这张表本来就 `export`（`tools/promote-champion2p.mjs:23` 已在用它）⇒ 直接读运行时的表，写法/换行/注释怎么改都不误红。
  * 与 `probe-libs.mjs:5` 同一种接法（门文件 import 工具模块，早有先例）。 */
 import { P2_FNAME, P2_NAMES } from '../p2-baselines.mjs';
+/* v1.8.11（D107 换行为腿）：G4 装配的单一来源，门自己真跑它（与 `probe-instruments.mjs` 里 D178 的接法同一先例）。 */
+import { duelAssembly } from '../v2v4-lib.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
@@ -684,26 +686,38 @@ t('D163 防御质量三档（用户 09-26 裁定：白防 / 被穿透=半 / 有�
     '探针与 promote 必须共用同一个分类器（不许两处各写一遍"什么算打到我"）');
 });
 
-t('D107 G4「1 席脚本 vs 4 席被测」装配只许有一份实现（v1.5.133 收拢）', function () {
+t('D107 G4「1 席脚本 vs 4 席被测」装配只许有一份实现（v1.5.133 收拢 ‖ v1.8.11：八条文本 pin 换成真跑三个反事实钩子）', function () {
   /* 病：该装配原先**只写在 gate-drafts 内部** ⇒ 任何"想解剖 G4 到底输在哪"的探针只能抄一份
    * （本仓"同一规则两处维护必然漂移"栽过四次）。现在它在 `tools/v2v4-lib.mjs` 的 `duelAssembly()`，
    * gate-drafts 与 `probe-g4-anatomy.mjs` 共用。重构的验收 = G4 全表逐字不变（已对 `g4-check.log` 全部对账）。 */
+  /* v1.8.11（10-23 夜 · 千问 · 用户裁「门禁目标是功能实现而不是判文本」）：这里原本 9 条腿全是 `indexOf` 文本 pin。
+   *   "单一来源"这件事确实只能静态判 —— 但**静态只需要一条**（"装配本体不许再出现在 gate-drafts 里"，就是"不许有两份"那句话本身）；
+   *   其余八条真正要防的是"这份装配与那三个反事实钩子还在不在工作"，而那件事**可以真跑** ⇒ 换成下面四条腿。
+   *   换完的实测差别：把钩子函数体写坏 ⇒ 旧版全绿（字符串都还在），新版必红（本轮变异核过）。 */
   const gd = readFileSync('tools/gate-drafts.mjs', 'utf8');
-  ok(gd.indexOf("from './v2v4-lib.mjs'") >= 0, 'gate-drafts 必须从 v2v4-lib.mjs 导入（装配单一来源）');
-  ok(gd.indexOf('duelAssembly(') >= 0, ' 且真的调用它');
-  ok(gd.indexOf('function duel(') >= 0, ' 但保留 duel() 薄壳（调用点与判词一字不动）');
-  ok(gd.indexOf('h32(seed0 + g * 2246822519)') < 0, '装配本体不许再出现在 gate-drafts 里（否则又成两份）');
+  ok(gd.indexOf('h32(seed0 + g * 2246822519)') < 0, '装配本体不许再出现在 gate-drafts 里（"只许有一份"唯一能静态判的形式）');
+  const D = { S, Play, T, R };
+  const p = loadChampParams(Pol, FIXTURE_PACK);   // 在册夹具，不赌盘上那枚活槽（训练日会被改写）
+  const OPT = { games: 40, mode: 'multi', seed0: 90210, scripted: 'champ', countKeys: [R.SK.GUN] };
+  const base = duelAssembly(D, p, OPT);
+  ok(base.champDecisions > 0 && isFinite(base.champDmgPerGame) && base.champDmgPerGame > 0,
+    '装配基线必须真跑出决策与伤害（实测 决策=' + base.champDecisions + ' ‖ 冠军方伤害/局=' + base.champDmgPerGame.toFixed(2) + '）⇒ 为 0 就是这份实现空转');
+  const ft = duelAssembly(D, p, Object.assign({}, OPT, { forceTurtle: true }));
+  ok(ft.forced > 0 && ft.champDmgPerGame === 0,
+    'forceTurtle 必须开火且把冠军方伤害压到 0（实测 改判 ' + ft.forced + ' 次 ‖ 伤害/局=' + ft.champDmgPerGame.toFixed(2) + '）');
+  const fa = duelAssembly(D, p, Object.assign({}, OPT, { forceAttack: true }));
+  ok(fa.forced > 0 && fa.counts[R.SK.GUN] > base.counts[R.SK.GUN],
+    'forceAttack 必须开火且让枪的出手数高于基线（实测 改判 ' + fa.forced + ' ‖ 枪 ' + (fa.counts[R.SK.GUN] || 0) + ' vs 基线 ' + (base.counts[R.SK.GUN] || 0) + '）');
+  const ag = duelAssembly(D, p, Object.assign({}, OPT, { aimGunner: true }));
+  /* 这条只判"这根杠杆真开火并且改的是目标"，**不判方向**：
+   *   实测在 40 局镜子里 `dmgToScriptedPerGame` 会被那一席的血上限钉死（基线 3.23 ‖ 开钩 3.00 —— 因为"打它"最多只能打出它的 3 血），
+   *   而 `aliveScriptedEnd`（枪手终局存活率）随包变化 ⇒ 把方向写进门里就是一枚**会为一次正常换包误红**的判据。
+   *   "导火到底值多少分"是 `probe-g4-anatomy` §C 的读数（v1.5.134 那条 r=−0.82 就是从那儿来的），不该由门背。 */
+  ok(ag.forced > 0 && ag.champDmgPerGame > 0,
+    'aimGunner 必须开火（把伤害卡的目标改到脚本席）且这一桌仍在产出伤害（实测 改判 ' + ag.forced + ' 次 ‖ 冠军方伤害/局=' + ag.champDmgPerGame.toFixed(2) + '）');
+  /* 下面这三行是**旧静态腿**留下的、仍然成立的记账：装配的名字与出口只有一份，改判据时别忘了它们与上面的真跑是一件事。 */
   const lib = readFileSync('tools/v2v4-lib.mjs', 'utf8');
-  ok(lib.indexOf('export function duelAssembly') >= 0, 'v2v4-lib 必须导出 duelAssembly');
-  ok(lib.indexOf('forceAttack') >= 0 && lib.indexOf('forceTurtle') >= 0, ' 且带双向反事实钩子');
-  /* v1.5.134：这一轮真正的载重列是**伤害归属**（跨 13 个包 r = −0.82；"攒钱比例"只有 +0.23）
-   * ⇒ 钩子与那一列计数都得在，否则下次读 G4 又会退回到"看分数猜原因"。 */
-  ok(lib.indexOf('aimGunner') >= 0, ' 且带「只改目标」的单杠杆（v1.5.134 实测：主因是瞄准，不是花钱）');
-  ok(lib.indexOf('dmgToScriptedPerGame') >= 0, ' 且统计"打在脚本席（枪手）身上的伤害" —— 那一格相关性最强的一列');
-  const pg = readFileSync('tools/probe-g4-anatomy.mjs', 'utf8');
-  ok(pg.indexOf('dmgToScriptedPerGame') >= 0, '解剖探针必须打印"打在枪手身上 X/局"（否则看不到主因那一列）');
-  const pb = readFileSync('tools/probe-g4-anatomy.mjs', 'utf8');
-  ok(pb.indexOf("from './v2v4-lib.mjs'") >= 0, '解剖探针必须从单一来源导入装配');
+  ok(lib.indexOf('export function duelAssembly') >= 0, 'v2v4-lib 必须导出 duelAssembly（上面真跑的就是它，不是第二份）');
   /* §删（10-22 晚 · 千问 · 用户裁「所有钉现役的门禁都可以删掉或改成符合当前情况」）：这里原有**三条钉那台探针源码文本**的腿 ——
    *   ① `/EXPECT = \{ long: 38, multi: 35 \}/`（钉常量）‖ ② 探针旁边必须写"现役 `v7cmin4-31`…实测 38%/35%"（钉来历措辞）‖
    *   ③ `pb.indexOf('75%/62%') < 0`（钉一句历史数字不许出现）。
