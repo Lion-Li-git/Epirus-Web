@@ -321,6 +321,23 @@ t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一
   ok(readFileSync('server/opp-pool.mjs', 'utf8').indexOf("name: 'gunspam'") >= 0, 'gunspam 必须在对手注册表里');
   const T2 = readFileSync('server/opp-pool.mjs', 'utf8');
   ok(/OPP_DEFAULT = OPP_SPECS\.slice\(0, 9\)/.test(T2), '默认池仍取前 9 个 ⇒ 新增 specialist 不进默认基线');
+  /* ⚑ 10-22（DS，⑤ 分诊）：上面全是源码 pin；补一条**行为腿**——直接调 `AUDIT.feasibilityOf`，
+   *   证明「第 6 道在 `DENSITY_BLOCK=false` 时只进 notes、永不进 fails」，且坏密度也照样进 notes。
+   *   牙：把 `DENSITY_BLOCK` 翻成 true（或把 dens 判据塞进 fails）⇒ 第一条红。 */
+  const mkFeas = function (density) {
+    return AUDIT.feasibilityOf({
+      seat: { verdict: 'ok', pct: [34, 33, 33] }, G: { effSkills: 4 }, wall: { dmgPerGame: 3 },
+      aggr: { fieldA: { atk: 10 }, fieldB: { clearedPerGame: 5 } }, density: density
+    });
+  };
+  const badD = mkFeas({ gained: 0, spentRate: 0, expiredPerGame: 20 });
+  ok(!badD.fails.some(function (l) { return l.indexOf('第6道') >= 0; }),
+    '第 6 道在 DENSITY_BLOCK=false 时**不许进 fails**（实测 fails=' + JSON.stringify(badD.fails) + '）');
+  ok(badD.notes.some(function (l) { return l.indexOf('第6道') >= 0; }),
+    '坏密度必须**进 notes**（记录但不阻断；实测 notes=' + JSON.stringify(badD.notes) + '）');
+  const goodD = mkFeas({ gained: 10, spentRate: 0.5, expiredPerGame: 0 });
+  ok(goodD.notes.some(function (l) { return l.indexOf('第6道') >= 0; }),
+    '好密度也必须走 notes（同一条口径；实测 notes=' + JSON.stringify(goodD.notes) + '）');
 });
 
 t('D79 技能广度 S：定义明确 + 按 rules.js 声明的 cat 分层（**不按伤害加权**）+ 固定分母 + 只记录不阻断', function () {

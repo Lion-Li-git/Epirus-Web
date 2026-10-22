@@ -1,3 +1,18 @@
+## v1.8.5 — 10-22 夜（DS）：哨兵 ⑤ 可用了 + D78 行为腿（⑤ 首轮分诊）
+
+### 哨兵（`tools/gate-sentinel.mjs`）
+- `--full`：⑤ 清单原来截断到 10 条 + `…`，现在可打全 **29 条**；未知参数 `exit 2`（仓规 v1.5.234）。
+- 行号改成**文件内行号**（原来报跨文件总偏移：D4 报 1308、实际 553）⇒ 分诊可直接跳；实测 D4=`engine-rules.mjs:553`、D98=`engine-fuzz.mjs:339`。
+
+### D78 行为腿（⑤ 分诊第 1 条）
+- 原门 20 条全是源码 pin（`DENSITY_BLOCK = false`、`notes.push('第6道…')`、`feasibilityOf` 体内 pin…）。
+- 新增行为腿：直接调 `AUDIT.feasibilityOf` 合成候选，断言「第 6 道在 `DENSITY_BLOCK=false` 时只进 notes、不进 fails」；好/坏密度两档都走 notes。
+- 牙（实测）：把 `feasibilityOf` 的「未闭环」分支从 `notes.push` 改成 `fails.push` ⇒ **红在新增腿**（旧源码 pin 仍绿）；改回后 `--part=ship-promote` **21/21**。
+
+### ⑤ 首轮判读（3/29）
+- **D78 换 ✔**（上）；**D79 留**（产品契约：不许按伤害加权/固定分母，行为化要重跑广度统计、价值低）；**D107 留**（“G4 装配只许一份实现”是结构契约，行为面由 G4/D234 覆盖）。
+
+---
 ## v1.8.4 — 10-22 夜（DS）：D131 补真页面腿（CDP 试点 ②）
 
 - 病：D131 的 ②③ 都判在源码/纯函数上——「ui.js 写了 `Tip.of(R, st, s)`」「index 加载了 skill-tip.js」只能证明接线文字在，证明不了**运行时页面真的按长程模式写出 ≤2**。
