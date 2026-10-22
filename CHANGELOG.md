@@ -22,10 +22,20 @@
 并发组 `pages` + `cancel-in-progress` ⇒ 连推几笔只发最后一个。
 限额写在文件头注释里（官方：站点 ≤1 GB、软带宽 100 GB/月、10 构建/小时、部署 >10 分钟超时）。
 
-### 一条要交代的待办（不是我能做的）
-`actions/configure-pages` 不会替仓库打开 Pages 开关。**第一次要人在 Settings → Pages → Source 选 "GitHub Actions"**（或给我
-一个能调 `POST /repos/.../pages` 的授权），之后这条链就能自己跑。我推上去后会看第一次的日志：
-如果它红在"Pages 未启用"，那是**流程没通**，不是站点坏了（本地那盘白名单已经证明站点本身能跑）。
+### 两次实跑把"还差什么"钉死了（不是猜的）
+推上去两次，看的是 CI 的失败注解原文（`check-runs/<id>/annotations`）：
+
+| 跑 | 失败步 | 注解原文（截断） |
+|---|---|---|
+| 第 1 次 `039b09c4` | `组装站点产物` **成功** ⇒ 四条自证在 runner 上也过；红在 `configure-pages@v5` | `Get Pages site failed. Please verify that the repository has Pages enabled … or consider exploring the enablement parameter` |
+| 第 2 次 `8c04f8e1`（按提示加 `enablement: true` 之后） | 同一步 | `Create Pages site failed. Error: Resource not accessible by integration`（REST 指向 `POST /repos/.../pages`）|
+
+⇒ 结论：**"发什么"已经证明可行**（产物组装 + 断言在干净 runner 上通过；本地那盘白名单在真浏览器里跑通了 24 局镜像自评），
+**卡住的只有"仓库设置"** —— `GITHUB_TOKEN` 没有建 Pages 站点的权限（`GET /repos/.../pages` 至今 404）。
+两条解法（任一条即可，都需要人在仓库 Settings 里操作，我没有这个授权）：
+① **Settings → Pages → Source 选 "GitHub Actions"** —— 之后这条链自己就跑通，无需再改代码；
+② 或 **Settings → Actions → General → Workflow permissions 改成 "Read and write"** —— 那我加的 `enablement: true` 就有望自己把站点建出来（我会重推一次验证）。
+在开关被打开之前，`pages` 这条工作流会**在改动站点文件的推送上显示红 X**（不是门禁红、不是产品坏；`gates` 那条矩阵仍是另一件事）。
 
 ### 计数与验证（第十六批尾）
 门 **281 → 281**（只加 workflow 与文档，没动任何门）。版本号：CHANGELOG 顶 = README = index.html = **v1.7.166**（`--group=meta` 跑过再说）。
