@@ -15,16 +15,21 @@
  *   `M` 掩掉 bead 块（`setFeatMask`）⇒ 两个候选的 `actionFeatures` 必须**逐位相同**且 `p_boom` 必须 = 0.5（证明那一维是**唯一**差别）；
  *   `B` 与 §E701 咬合 ⇒ 真 chooser 交出的 `bead==='boom'` 次数单独印出来（若非 0，说明"爆珠 0/135,262"那行是尺子错）。
  *
- * 用法：node tools/probe-beadtype-gap.mjs [--games=300] [--n=5] [--arm=champ|mix|kit] [--seed=77000] [--temp=0.15] [--quiet]
+ * 用法：node tools/probe-beadtype-gap.mjs [--games=300] [--n=5] [--arm=champ|mix|kit] [--seed=77000] [--temp=0.15] [--pack=<路径>] [--quiet]
+ *   `--pack=` 是 §E703b 补的**跨包把手**：§E703 那句"权重级压倒"只在一枚包上量过 ⇒ 要分清它是"这枚包的习惯"还是"训练过程的整体性质"，
+ *   必须**在第二枚、第三枚包上复现**（记忆里那条"写推荐语前先在第二个对象上复现"）。缺文件 ⇒ 响亮 `exit 2`，不许静默回落到默认包。
+ *   ⚑ 默认档（不带 `--pack`）输出与 §E703 落盘时逐字相同 ⇒ 在册数字仍可 `diff` 复算。
  * 只读：不落任何文件；不动 `js/**`（`setFeatMask` 只在**自己 boot 的沙箱**里调，出厂面一行不碰）。 */
+import { existsSync } from 'node:fs';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['games', 'n', 'arm', 'seed', 'temp', 'quiet'], 'probe-beadtype-gap');
+rejectUnknownFlags(argv, ['games', 'n', 'arm', 'seed', 'temp', 'quiet', 'pack'], 'probe-beadtype-gap');
 const arg = (k, d) => { const a = argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const GAMES = Number(arg('games', 300)), N = Number(arg('n', 5)), SEED0 = Number(arg('seed', 77000));
 const ARM = arg('arm', 'champ');
 const TEMP = Number(arg('temp', 0.15));
+const PACK = arg('pack', 'js/bundled-champion-3p.js');
 const QUIET = argv.includes('--quiet');
 if (!(GAMES >= 20 && GAMES <= 5000)) { console.error('⛔ --games 要在 20~5000（实测 ' + GAMES + '）'); process.exit(2); }
 if (['kit', 'champ', 'mix'].indexOf(ARM) < 0) { console.error('⛔ --arm 只认 kit|champ|mix（实测 ' + ARM + '）'); process.exit(2); }
@@ -33,7 +38,7 @@ if (!(TEMP > 0 && TEMP <= 2)) { console.error('⛔ --temp 要在 (0,2]（实测 
 const W = sandbox();
 const T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay, R = W.EpirusRules, B = W.EpirusBots, P = W.EpirusPolicy;
 const K = R.SK;
-const PACK = 'js/bundled-champion-3p.js';
+if (!existsSync(PACK)) { console.error('⛔ --pack 指向的文件不存在：' + PACK + ' ⇒ 按失败处理（不许静默回落到默认包，那会把"换了枚包"读成"换了档"）'); process.exit(2); }
 const champ = loadChamp(W, PACK);
 if (!champ || champ.length !== P.paramCount()) { console.error('⛔ 包读不出/维度不符：' + PACK); process.exit(2); }
 const params = Float64Array.from(champ);
@@ -76,10 +81,13 @@ const zMasked = pairProbe(params);
 P.setFeatMask(null);
 const gapReal = pairProbe(params);
 if (!(Math.abs(zMasked - 0.5) < 1e-6)) { console.error('⛔ 自证 M2 没过：掩掉 bead 之后真权重的 p_boom=' + zMasked + '（应 0.5）⇒ 两候选还差在别处，或掩码没接到打分路径'); process.exit(3); }
-if (!(gapReal < 0.5)) { console.error('⛔ 自证 M2 的反面没过：真权重下 p_boom=' + gapReal + ' 不小于 0.5 ⇒ 与 §E701 的"爆珠 0"打脸，先查接线'); process.exit(3); }
+if (!(Math.abs(gapReal - 0.5) > 1e-9)) { console.error('⛔ 自证 M2 的反面没过：真权重下 p_boom=' + gapReal + ' 与 0.5 分不开 ⇒ 这一维对**这枚包**没有打分影响（要么尺接错，要么这枚包那两维权重相同）⇒ 本尺读不出"偏好"，只读得出"无差异"'); process.exit(3); }
+/* ⚑ 这里**不判方向**（§E703b 实测推翻了我原来写的"必须 <0.5"）：那条将一枚包的偏好烤成了仪器前提，
+ *   于是 `v7beadseed-82` 在这同一颗种子的合成局面上 `p_boom = 1.0`（爆珠**被偏好**）被自己的自证当成"接线错"挡掉。
+ *   仪器的自证只该问"这一维有没有影响"，不该问"影响朝哪边"——方向是被测对象的事实，归读数管。 */
 
 /* ---------- 真局采样：每个"蓄能可负担"的决策点数一次 ---------- */
-const stat = { dec: 0, chargeAff: 0, boomWins: 0, sumP: 0, pmax: 0, gaps: [], realPicks: { elec: 0, boom: 0, none: 0 }, games: 0 };
+const stat = { dec: 0, chargeAff: 0, boomWins: 0, sumP: 0, pmax: 0, gaps: [], realPicks: { elec: 0, boom: 0, none: 0 }, games: 0, nChg: 0, sumPChg: 0, boomWinsChg: 0 };
 function runGame(g) {
   const st = S.createState('multi', { next: T.mulberry32(SEED0 + g * 977) }, N);
   st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
@@ -96,6 +104,9 @@ function runGame(g) {
         const f = P.forwardCands(state, pid, twoCands(), params, { temp: TEMP });
         const pb = f.probs[1];
         stat.chargeAff++; stat.sumP += pb;
+        /* 拆两栏（§E703b）：**"蓄能可负担"** 的对内偏好 ≠ **"真交出蓄能那一刻"** 的对内偏好。
+         *   不拆就会把"这枚包在 boom 更强的局面上干脆不选蓄能"读成"boom 从没赢过"——那是两个不同的事实。 */
+        if (key === K.CHARGE) { stat.nChg++; stat.sumPChg += pb; if (pb > 0.5) stat.boomWinsChg++; }
         if (pb > stat.pmax) stat.pmax = pb;
         if (pb > 0.5) stat.boomWins++;
         stat.gaps.push(pb);
@@ -118,7 +129,8 @@ for (let g = 0; g < GAMES; g++) runGame(g);
 const srt = stat.gaps.slice().sort(function (a, b) { return a - b; });
 const q = function (p) { return srt.length ? srt[Math.min(srt.length - 1, Math.floor(p * srt.length))] : NaN; };
 const fmt = function (x) { return (x >= 1e-6 || x === 0) ? x.toExponential(2) : x.toExponential(2); };
-console.log('== 爆珠通道的分差尺（§E703）· ' + GAMES + ' 局 ‖ n=' + N + ' ‖ 装配=' + ARM + ' ‖ seed0=' + SEED0 + ' ‖ temp=' + TEMP + ' ==');
+console.log('== 爆珠通道的分差尺（§E703）· ' + GAMES + ' 局 ‖ n=' + N + ' ‖ 装配=' + ARM + ' ‖ seed0=' + SEED0 + ' ‖ temp=' + TEMP +
+  (PACK === 'js/bundled-champion-3p.js' ? '' : ' ‖ 包=' + PACK) + ' ==');
 console.log('   自证：Z 全零权重 p_boom=' + z.toFixed(6) + '（应 0.5）‖ M 掩 bead ⇒ 两候选特征逐位相同、未掩时差在维度 ' + JSON.stringify(diffDims) + '（特征面唯一差别）');
 console.log('   自证 M2：同一份**真权重**、掩掉 bead ⇒ p_boom=' + zMasked.toFixed(6) + '（应 0.5）‖ 不掩 ⇒ ' + gapReal.toExponential(2) + ' ⇒ 这不是恒零仪器');
 console.log('   决策点 ' + stat.dec + ' ‖ 其中"蓄能可负担"的冠军侧决策 ' + stat.chargeAff + ' 次');
@@ -129,6 +141,8 @@ console.log('   其中 p_boom > 0.5（爆珠赢过电珠）= ' + stat.boomWins +
   (q(0.5) > 0 && q(0.5) < 1 ? (TEMP * Math.log((1 - q(0.5)) / q(0.5))).toFixed(3) : '—') +
   ' ‖ **最小**（最接近平衡的那一次）= ' +
   (stat.pmax > 0 && stat.pmax < 1 ? (TEMP * Math.log((1 - stat.pmax) / stat.pmax)).toFixed(3) : '—'));
+console.log('   只在"**真交出蓄能**"的那些决策上（n=' + stat.nChg + '）：`p_boom` 均值 ' + fmt(stat.nChg ? stat.sumPChg / stat.nChg : 0) +
+  ' ‖ boom 胜出 ' + stat.boomWinsChg + ' 次 ⇒ 与上一行的分母**不同**（那行是"买得起蓄能"）');
 console.log('   chooser 交出蓄能时**显式给的**珠类型 = ' + JSON.stringify(stat.realPicks) +
   ' ‖ `none` = 不显式给 ⇒ 走引擎兜底 `play.js:69 beadOf`（相等时取电珠），所以脚本侧那一栏本来就不会有 boom');
 const verdict = stat.chargeAff === 0
