@@ -69,34 +69,27 @@ t('D58 L7 第七处：候选枚举顺序必须无身份（镜像对称 + 5 席�
   eq(lo[4], 10, '脚本"打最小索引"必须让最高 pid 通吃（实测 ' + lo.join('/') + '）');
   eq(hi[0], 10, '镜像规则"打最大索引"必须让最低 pid 通吃（实测 ' + hi.join('/') + '）⇒ 引擎镜像对称');
   /* ② 5 席同一策略：不得某座通吃（修前实测 v13-106 是 60/60 全给 0 号座）。
-   * 用**仓库内的线上包**（它经过候选枚举 ⇒ 正对着这条通道）；未训练策略几乎不出手、样本不足。
-   * 包在训练中会被临时改写（D16 已有该守卫）⇒ 这里读不到就跳过而不是误报。 */
-  let liveParams = null;
-  try {
-    const liveSrc = readFileSync('js/bundled-champion-3p.js', 'utf8');
-    const lm = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(liveSrc);
-    if (lm) liveParams = Pol.unpack(JSON.parse(lm[1]), true);
-  } catch (e) { liveParams = null; }
-  if (!liveParams) {
-    /* v1.5.201（门层审计 D58/D59）：**不可判必须红** —— 静默跳过等于把这条测量关掉，
-     * 而汇总仍显示全绿（"190/190"里完全看不见）。它守的正是"5 席通吃"这个产品级退化。 */
-    ok(false, '线上多人包必须可读（不可判 = 红，不允许静默跳过）：' +
-      (existsSync('js/bundled-champion-3p.js') ? '文件在但解析失败' : '文件不存在') +
-      ' —— 训练进行中请先停训练再跑门禁');
-  } else {
-    const win2 = [0, 0, 0, 0, 0];
-    let dec = 0;
-    for (let g = 0; g < 60; g++) {
-      const st = S.createState('multi', { next: T.mulberry32(12000 + g) }, 5);
-      st.slotSalt = ((Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0);
-      const base = T.policyChooserN(liveParams, 0.15);
-      Play.autoGameN(st, [base, base, base, base, base]);
-      if (st.winner !== 'draw' && st.winner != null) { win2[st.winner]++; dec++; }
-    }
-    ok(dec >= 20, '必须有足够多分出胜负的局（实测 ' + dec + '/60）');
-    ok(Math.max.apply(null, win2) <= Math.round(dec * 0.55),
-      '5 席同一策略时不得某座通吃（最高座 ' + Math.max.apply(null, win2) + '/' + dec + '：' + win2.join('/') + '）');
+   *   10-23 夜班（用户口径：上线后的门只测**引擎是否正常工作**，冠军表现归入池）：被测对象从**活槽**
+   *   换成**在册冻结夹具** `FIXTURE_PACK`（`docs/artifacts/eval-out/win-Ldemo.bak` · `git ls-files` 命中 ⇒ 干净克隆可读）。
+   *   为什么这条**不该删**：它判的是"同策略五席的座位对称性"——那是**引擎 + 选择通道**的性质（上面 ① 的两条合成脚本腿
+   *   证的是镜像两端各通吃一次 ⇒ 引擎对称；这条证的是"真包走候选枚举这条路时不出现某座通吃"），
+   *   不是"现任包强不强"那种产品读数。换成冻结夹具之后，它同时修掉一处**训练日误红**：
+   *   活槽在训练期间会被临时改写（:73 的旧注释自己承认过，`ship-promote.mjs:98-106` 也记着同一件事）
+   *   ⇒ 旧写法下"隔壁在训练"就能让本门红。"不可判 = 红"这条纪律**保留**（v1.5.201 的病：静默跳过仍显示全绿）。 */
+  const liveParams = loadChampParams(Pol, FIXTURE_PACK);
+  ok(!!liveParams, '夹具权重必须能 unpack（读不出 ⇒ 下面两条是空的，本门红，不许静默跳过）');
+  const win2 = [0, 0, 0, 0, 0];
+  let dec = 0;
+  for (let g = 0; g < 60; g++) {
+    const st = S.createState('multi', { next: T.mulberry32(12000 + g) }, 5);
+    st.slotSalt = ((Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0);
+    const base = T.policyChooserN(liveParams, 0.15);
+    Play.autoGameN(st, [base, base, base, base, base]);
+    if (st.winner !== 'draw' && st.winner != null) { win2[st.winner]++; dec++; }
   }
+  ok(dec >= 20, '必须有足够多分出胜负的局（实测 ' + dec + '/60；不足 ⇒ 不可判，红）');
+  ok(Math.max.apply(null, win2) <= Math.round(dec * 0.55),
+    '5 席同一策略时不得某座通吃（最高座 ' + Math.max.apply(null, win2) + '/' + dec + '：' + win2.join('/') + '）');
 });
 
 t('D45 全息屏障候选**不得含幻影"自己"**（这张卡本来就不能给自己）', function () {

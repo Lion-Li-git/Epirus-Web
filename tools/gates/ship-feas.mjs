@@ -246,8 +246,13 @@ t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草�
   const V2_LINE = 12;
   const G = 600, SEED = 7777;
   const DEP = { S: S, Play: Play, T: T, R: R, B: Bots };
-  const params = Pol.unpack(sb.window.EPIRUS_CHAMPION_3P, true);
-  ok(!!params, '线上 3P 包必须能解包（否则本门没有测量对象）');
+  /* 10-23 夜班（用户口径「上线后的门只测引擎是否正常工作；冠军有什么表现归入池时判」）：
+   *   被测对象从**活槽 `sb.window.EPIRUS_CHAMPION_3P`** 换成**在册冻结夹具** `FIXTURE_PACK` ——
+   *   本门留下的三条全是**仪器判据**（"量具给得出有限数"、"零权重常数策略必须落在地板下"、"学过的那一侧必须高过空白"），
+   *   它们需要一个"已知好"的样本，但**不必是现任包**（现任在训练期间会被改写 ⇒ 旧写法有训练日误红，同 D58/D59）。
+   *   删掉的那条是 `ok(o.V4 >= V4_MIN)` ——「现任包满桌同包互杀时每席 ≥10%」是产品读数，现在没人判（见本文件末尾与 OVERNIGHT 台账）。 */
+  const params = loadChampParams(Pol, FIXTURE_PACK);
+  ok(!!params, '夹具必须能解包（否则本门没有测量对象）');
   const meas = function (pp) {
     const m = measureAll(DEP, pp, { games: G, seed: SEED, countKey: null, ablate: false });
     return { V1: m.V1.rate, V2: m.V2.rate, V4: m.V4.rate };
@@ -256,14 +261,12 @@ t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草�
   const zero = new Float64Array(Pol.paramCount());     // 什么都不学的常数策略 = 本门的"地板参考"
   const z = meas(zero);
   ok(isFinite(o.V4) && isFinite(o.V2) && isFinite(z.V4), '量具必须给出有限数（V4=' + o.V4 + ' V2=' + o.V2 + '）');
-  /* ① 主判据：V4 地板 */
-  ok(o.V4 >= V4_MIN, 'V4（满桌同包 · 每席位胜率）必须 ≥ ' + V4_MIN + '%（实测 **' + o.V4.toFixed(1) +
-    '%** / 公平份额 20%）—— 低于它 = 这个包跟自己人互杀到没意义（v1.5.131 实测：6 个臂里 5 个只有 1.8~5.8%）');
-  /* ② **仪器必须能看见"坏"**（阳性对照；同族做法见 `probe-ring-ablate` 的"禁一张高频卡必须掉分"）：
-   *    零权重策略必须**被这条门挡住** —— 否则这条门的绿是"量具死了"，不是"包好"。 */
+  /* ① **仪器必须能看见"坏"**（阳性对照；同族做法见 `probe-ring-ablate` 的"禁一张高频卡必须掉分"）：
+   *    零权重策略必须**落在地板下** —— 否则本门的绿是"量具死了"，不是"包好"。 */
   ok(z.V4 < V4_MIN, '阳性对照：零权重常数策略的 V4 必须低于 ' + V4_MIN + '%（实测 **' + z.V4.toFixed(1) +
     '%**）⇒ 否则这条门只是"量具死了"');
-  ok(o.V4 > z.V4, '线上包的 V4 必须高于零权重策略（' + o.V4.toFixed(1) + '% vs ' + z.V4.toFixed(1) + '%）');
+  /* ② 判别力的另一侧：**学过的那一坨权重必须高过空白**（相对口径，不赌任何人的绝对读数） */
+  ok(o.V4 > z.V4, '夹具（学过）的 V4 必须高于零权重策略（' + o.V4.toFixed(1) + '% vs ' + z.V4.toFixed(1) + '%）⇒ 相等即量具无判别力');
   /* ③ V2：**记录不阻断**（昨夜一度升级成 15% 阈值门，今晨用实测证据回滚 —— 下面是两晚的完整标定账）。
    *    · 旧引擎 72a9c1b5（昨夜）：零 10.2 / 前任 10.0 / 现役 21.2 ⇒ 判"有判别力"、立 V2≥15 草案；
    *    · 新引擎 56402bbf（今晨指向盲三修后同口径复测）：零 **7.7** / 现役 **13.7** / v7n1-31 13.8 /
@@ -321,6 +324,10 @@ t('D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证"band2 被 hil
   /* ⑦ 行为：迷你臂开栏 ⇒ 必须真跑出那一栏（默认关的逐位不变另有实测：HEAD 对照跑权重同为 f256cb100f） */
   const dir = mkdtempSync(join(tmpdir(), 'd124-'));
   const out = join(dir, 'tb-out.js');
+  /* 10-23 夜班（用户口径"门禁目标是功能实现而不是判文本"）：本腿原先判的是 `so.indexOf('已写入 js/bundled-champion.js') < 0`
+   *   —— **反文案钉**（train-tool-dev 规约明令禁止的那种）：promote 哪天换一种说法（"已覆写 2P 槽"/"wrote js/…"），
+   *   即使真的写了槽，这条也照样绿。改成正面判据：**跑之前取 2P 槽的字节哈希，跑完比一次** ⇒ 写了必红，与措辞无关。 */
+  const before2p = createHash('sha1').update(readFileSync('js/bundled-champion.js')).digest('hex');
   const __t0 = Date.now();
   const run = spawnSync(process.execPath, ['tools/train-best.mjs', '1', '4'], {
     env: Object.assign({}, process.env, { EPIRUS_SEED: '31', EPIRUS_TB3P: '1', EPIRUS_TB3P_GAMES: '20', EPIRUS_TB_OUT: out, EPIRUS_ARM: 'd124' }),
@@ -342,10 +349,14 @@ t('D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证"band2 被 hil
     + (run.status !== 0 && run.status !== 9 ? ' ‖ **全文已落 docs/artifacts/feas-d124-last.txt**' : '')
     + ' ‖ stderr 末尾：' + String(run.stderr || '').slice(-400) + '）');
   ok(run.status === 0 || run.status === 9, '只许两种收场：0=有合格候选并择优、9=全否决响亮退出（实测 exit=' + run.status + '）\n' + so.slice(-500));
-  /* v1.7.74 · gate-sentinel ③ 分诊：响亮 = **exit 9**（那半句判的就是它）；原钉的是解释那句话的措辞 ⇒ 改成「必须出声」。 */
-  if (run.status === 9) ok(String(so).trim().length > 0, 'exit 9 时必须**出声**（响亮失败）；具体措辞不判');
-  else ok(existsSync(out), 'exit 0 时产物必须写在 EPIRUS_TB_OUT 指的位置');
-  ok(so.indexOf('已写入 js/bundled-champion.js') < 0, '改道跑时**一个字都不许碰 2P 槽**');
+  /* 10-23 夜班（清小毛病）：原来这里是 `if (run.status === 9) ok(so.trim().length > 0, 'exit 9 必须出声')` ——
+   *   **恒真腿**：上面 :347 那条已经要求 `so` 里必须匹配到 `[3P栏 n=20/`，走到这一支时 `so` 不可能为空。
+   *   "响亮失败"的真判据就是 **exit 码本身**（9 ≠ 0，且 :353 已把只许 0/9 两种收场钉住）⇒ 删掉这句假覆盖，
+   *   只留 exit 0 那一侧真正有内容的断言（产物必须落在改道位置）。 */
+  if (run.status === 0) ok(existsSync(out), 'exit 0 时产物必须写在 EPIRUS_TB_OUT 指的位置（实测 ' + out + ' 存在=' + existsSync(out) + '）');
+  /* 正面判据取代原反文案钉：改道跑**一个字都不许碰 2P 槽**（跑前后比字节哈希，与打印措辞无关） */
+  eq(createHash('sha1').update(readFileSync('js/bundled-champion.js')).digest('hex'), before2p,
+    '改道跑（EPIRUS_TB_OUT 已设）不许动 2P 线上槽 —— 动了就是写坏落盘路径，与本工具打印什么话无关');
 });
 
 t('D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测同一包两条路径读出 墙 17.85 vs 18.04）', function () {
@@ -428,7 +439,8 @@ t('D141 破龟群栏（v1.5.195）：`归因伤害/局` 与 `终场存活` 必�
    * 于是"破防 100%"只等价于"至少蹭到一发"，实测同为 100% 的两粒包幅值差 4 倍（2.17 vs 8.77 点/局）。
    * ⇒ 光有胜率会把"蹭一发"和"凿穿"排进同一档 ⇒ 必须并读幅值。这条门钉三件事：
    *   ① 两个新读数存在；② 归因口径与引擎判胜口径**同一个表达式**（不许自己抄一份 `source != null`）；
-   *   ③ 读数**会动**（现役在破龟群场 = 0，在头对头场 > 0）—— 防"死读数当结论"（seam 2 那一族）。 */
+   *   ③ 读数**会动**（同一只包在头对头场 > 0 ⇒ 那个 0 不是死读数）—— 防"死读数当结论"（seam 2 那一族）。
+   *   ⚠ 10-23：原样还钉着"③ 现役在破龟群场 = 0"，那一格是**冠军行为**（产品事实），已按用户口径删掉，见 :452 的注。 */
   const p = readFileSync('tools/probe-kill-reward.mjs', 'utf8');
   ok(/if \(e\.type === 'damage' && e\.source != null && dsum\[e\.source\] != null\) dsum\[e\.source\] \+= e\.amt;/.test(p),
     '受评席伤害累计必须按 `damage` 事件 + `e.source != null` 累加 —— 与 `resolve.js` 全灭判胜的表达式同形（换槽径）');
@@ -445,9 +457,15 @@ t('D141 破龟群栏（v1.5.195）：`归因伤害/局` 与 `终场存活` 必�
   ok(wall && vs, '必须有"破龟群 × 现役包"和"头对头 × 现役包"两格');
   eq(typeof wall.by[0].deal, 'number', '`归因伤害/局` 必须进 JSON 读数（不印出来的读数下次没人信）');
   eq(typeof wall.by[0].alive, 'number', '`终场存活` 必须进 JSON 读数');
-  eq(wall.by[0].deal, 0, '现役包在破龟群场必须仍是 **0.00 点/局**（23 次出手全被防御挡 ⇒ 一发都没落地）；实测 ' + wall.by[0].deal);
-  eq(wall.by[0].alive, 0, '现役包在那格必须**一局都没活着收场**');
-  ok(vs.by[0].deal > 0, '同一只包在头对头场必须有非 0 归因伤害（否则上面那个 0 是"死读数"而不是"那格打不穿"）；实测 ' + vs.by[0].deal);
+  /* §删（10-23 夜班 · 用户口径「冠军有什么表现归入池时判，上线后的门只测引擎是否正常工作」）：
+   *   原来这里有两条 `eq(wall.by[0].deal, 0)` 与 `eq(wall.by[0].alive, 0)` ——
+   *   主语是"**现任包在破龟群场一发都打不出伤害、一局都没活着收场**"（一条产品事实，§N37 那三复现的那格）。
+   *   ⇒ 少掉的覆盖：**这一格现任包的具体行为今天没人判**。入池侧确实没有"破龟群"这一轴
+   *     （`feasibilityOf` 只有反弹墙 `pickReflectSpam`（audit-lib.mjs:238-263）与场B 清场，没有 `pickGuardSpam` 那格）。
+   *   ⇒ 若要把这维找回来，正解是**加进入池侧**（给候选包量 `guardwall` 场的 归因伤害/局 与 终场存活，
+   *     并像 §31 那样先标定"已知好 vs 已知坏"两侧才许阻断），不是留一条每次 CI 都拿现任包试一遍的上线门。
+   *   下面那条 `vs.by[0].deal > 0` **保留**：它判的是"读数会动"（防"死读数当结论"，seam 2 那一族），属仪器判别力。 */
+  ok(vs.by[0].deal > 0, '同一只包在头对头场必须有非 0 归因伤害（否则 0 是"死读数"而不是"那格打不穿"）；实测 ' + vs.by[0].deal);
   ok(/归因伤害\/局.*终场存活/.test(out), '表头必须印出这两栏（读表人看得见才知道不能只看 1st）');
 });
 
@@ -530,8 +548,11 @@ t('D169 闭环判据的**分形态版**必须只在"贵卡真出手且余珠不�
   const LCTL = { gained: 404, spentRate: 0.092, bigCardPerGame: 5.58, leftoverPerGame: 0.05 };
   eq(PF_FRONT.isClosed(LCTL, 0.5, 100), false,
     '【实测反例】Lctl 的珠子经济（花珠率 9.2% · 过期 9.1/局）必须被判 ✘ —— 旧判据在这件事上是对的');
-  ok(/洗白/.test(readFileSync('tools/pool-frontier-lib.mjs', 'utf8')),
-    '`isClosedShaped` 的文档必须**留痕**这条反例（说明它为什么不能被采用）—— 不许后人看不出它被否过');
+  /* §删（10-23 夜班）：原来这里还有一条 `ok(/洗白/.test(readFileSync('tools/pool-frontier-lib.mjs','utf8')), '文档必须留痕这条反例')`
+   *   —— 它钉的是**另一份文件里的注释用词**，属 DS 自己在 v1.7.162 立的规矩里明令禁止的那一族
+   *   （"以后理由写在文档/CHANGELOG，不许再靠门钉注释"；反文案钉同禁）。
+   *   留痕本身还在（`tools/pool-frontier-lib.mjs:53` 那句"把烂的洗白"），只是不再由门守——
+   *   真正判住这个决定的上一条腿（`Lctl` 必须判 ✘ 的实测反例）没动。 */
 });
 
 t('D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 base 的局 seed 重叠 · 单粒必须逐字等于旧算式 · 非法粒数要响亮 · 分差 vs 噪声必须印出来（而 `=1` 那一档不许自证清白）· 两条入口都真在用它', function () {

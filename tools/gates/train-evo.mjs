@@ -969,32 +969,27 @@ t('D59 阈值式座位惩罚必须真的在 fit 里（让演化"看得见"偏置
   ok(ev.indexOf('- seatPen') >= 0, '座位惩罚必须真的减进 fit');
   ok(ev.indexOf('seatSpreadMirror') >= 0, '成员评分必须回报座位极差（供审计）');
   ok(ev.indexOf('seatWins: seatWins') >= 0, 'mirrorHealth 必须回报各座胜场');
-  /* 行为断言：mirrorHealth（5 席同策略）必须给出座位分布；线上包（已知均衡）极差应 <40pt。
-   * v1.5.104：样本 20 → 60 局（METHODOLOGY §31/§35 的第三次现身）。
-   * v1.5.115（第十二轮复核 §31 的第四次现身）：60 局仍不够 —— v1.5.114 换包后本门被新包打到 **43pt 红**，
-   * 但同一份包的极差随样本量单调收敛：n=20→57.1 · 60→43.2 · 80→39.0 · 120→37.0 · 160→34.1
-   * · 240→27.7 · 320→27.0 · 400→26.6pt ⇒ 真值约 27pt，43pt 是抽样噪声。
-   * 按 §31「判据要用够用的样本，而不是放宽阈值」⇒ n 提到 **400**（实测 3.5 秒，相对全套件可忽略），
-   * **阈值 40pt 一字不放宽**；分胜负守卫同比抬到 ≥120（不可判时必须红）。 */
+  /* 行为断言：`mirrorHealth`（5 席同策略）必须**给得出座位分布、且样本量够判**。
+   *   10-23 夜班（用户口径「冠军有什么表现该在入池时判；上线后的门只测引擎是否正常工作」）：
+   *   原来这段是拿**活槽 `js/bundled-champion-3p.js`** 当被测对象，并断言"线上包（已知均衡）5 席极差 <40pt"。
+   *   拆成两件事分别处置：
+   *     · **"现任包均不均衡"= 产品事实** ⇒ 从本门删。入池/换包侧判：`tools/audit-lib.mjs:646-651`（`feasibilityOf` 座位道，
+   *       `biased` 阻断 / `underpowered`、`unjudgeable` 只记录）+ `tools/pool-add.mjs:140-158` 入池真跑记账；
+   *       机制本身的判据是合成座位输入，在 `D62` / `D145`（那两条不赌任何人的包）。
+   *     · **"座位探针还活着吗"= 仪器判据** ⇒ 留，但被测对象从活槽换成**在册冻结夹具** `FIXTURE_PACK`
+   *       （`docs/artifacts/eval-out/win-Ldemo.bak`，`git ls-files` 命中 ⇒ 干净克隆可读；同 `train-table.mjs:327` 的 R3 迁移口径）。
+   *   这次换法顺手修掉一处**训练日误红**：旧写法读不出活槽时走 `ok(false, '…训练进行中请先停训练…')`（:986-990），
+   *   而活槽在训练期间本来就会被备份/改写（本仓 `ship-promote.mjs:98-106` 自己记着）⇒ 隔壁在训练就能让本门红。
+   *   "不可判 = 红"这条纪律**保留**（不许变成一句打印），只是载体换成夹具。
+   *   ⚠ 下面那条 400 局的剂量与 `<40pt` 的历史标定（v1.5.115：n=20→57.1 ‖ 400→26.6pt，真值约 27pt）一并撤出判据，
+   *     它属于"现任包的收敛表"；`n=400` 留着是因为**分胜负守卫 `seatDecisive >= 120` 需要同样的剂量**才判得动。 */
   const SEAT_N = 400;
-  let live = null;
-  try {
-    const src2 = readFileSync('js/bundled-champion-3p.js', 'utf8');
-    const lm2 = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src2);
-    if (lm2) live = Pol.unpack(JSON.parse(lm2[1]), true);
-  } catch (e) { live = null; }
-  if (!live) {
-    /* v1.5.201：同 D58 —— 这条是守 v1.5.114 "43pt 红"的哨兵，不许在读不出包时变成一句打印。 */
-    ok(false, '线上多人包必须可读（不可判 = 红，不允许静默跳过）：' +
-      (existsSync('js/bundled-champion-3p.js') ? '文件在但解析失败' : '文件不存在') +
-      ' —— 训练进行中请先停训练再跑门禁');
-  } else {
-    const mh = T.mirrorHealth(live, SEAT_N, 5, 'multi');
-    ok(Array.isArray(mh.seatWins) && mh.seatWins.length === 5, 'mirrorHealth 必须回报 5 个座位的胜场');
-    ok(mh.seatDecisive >= 120, '必须有足够多分出胜负的局（实测 ' + mh.seatDecisive + '/' + SEAT_N + '；<120 时极差不可判）');
-    ok(mh.seatSpread != null && mh.seatSpread < 40,
-      '线上包（已知均衡）的 5 席极差必须 <40pt（实测 ' + (mh.seatSpread == null ? '?' : mh.seatSpread.toFixed(0)) + 'pt，分布 ' + mh.seatWins.join('/') + '）');
-  }
+  const live = loadChampParams(Pol, FIXTURE_PACK);
+  ok(!!live, '夹具权重必须能 unpack（读不出 ⇒ 本门下面全是空的，先修量具）');
+  const mh = T.mirrorHealth(live, SEAT_N, 5, 'multi');
+  ok(Array.isArray(mh.seatWins) && mh.seatWins.length === 5, 'mirrorHealth 必须回报 5 个座位的胜场');
+  ok(mh.seatDecisive >= 120, '必须有足够多分出胜负的局（实测 ' + mh.seatDecisive + '/' + SEAT_N + '；<120 时极差不可判 ⇒ 红，不许静默跳过）');
+  ok(mh.seatSpread != null, '座位极差必须算得出来（实测 ' + mh.seatSpread + ' · 分布 ' + mh.seatWins.join('/') + '）');
 });
 
 t('D17 技能熵必须**只统计非ジ动作**（否则熵奖励会惩罚攒钱）', function () {
@@ -1397,14 +1392,24 @@ t('D41 E 新口径：只有"**没有大雷威胁时还一直摆架势**"才算�
     eq(wj.json.printSaysBlocked.join(','), wj.json.breadthBlocked.join(','),
       '② 打印侧 `_gBlocked` 必须与阻断侧**同源**（METHODOLOGY 44）：挡住 long 却不报是哪条挡的，与"只打印"一样坏');
   }
-  /* ③ 正对照：现役必须仍然放行，且**两类都不许有**（既没被误伤、打印也不许瞎报被挡） */
-  const cj = promoteJson('js/bundled-champion-3p.js');
-  eq(cj.status, 0, '③a 正对照：现役包 `--dry` 必须放行（实测 exit=' + cj.status + '）');
+  /* ③ 正对照：闸**不许把干净包误伤**（既没被误伤、打印也不许瞎报被挡）。
+   *   10-23 夜班（用户 10-22/23 裁定「上线后的测试只测引擎是否正常工作，冠军有什么表现该在入池时判」）：
+   *   被测对象从**活槽 `js/bundled-champion-3p.js`** 换成**在册冻结夹具** `FIXTURE_PACK`
+   *   （`docs/artifacts/eval-out/win-Ldemo.bak`，`git ls-files` 命中 ⇒ 干净克隆可读）。
+   *   为什么换而不是删：这条腿的本业是"**假阳性对照**"（上面 :1367 原话"反过来把现役自己误伤"）——
+   *     如果只留①的"坏证人必须被挡"，有人把闸做成**什么都挡**（例如 `classes` 恒非空）它照样绿 ⇒ 对比度就没了。
+ *     而"现任包今天过不过门"是**产品事实**，归入池侧判：`tools/pool-add.mjs:140-158` 入池时真跑 `promote --dry`
+   *     并把 pass/block 记进 `champion-map/promote.tsv`（`D234③` 复查那本账）⇒ 本门不再赌那格槽位的内容。
+   *   附带修掉一处**训练日误红**：活槽在训练期间会被备份/改写（本仓 `D16` 在 `ship-promote.mjs:98-106` 自己记着这件事），
+   *     拿它当正对照 ⇒ "隔壁在训练"就能让本门红（与 §E588 的夹具口径同类病，见 `train-feature.mjs` 与 `train-evo.mjs` 另两处）。
+   *   夹具自证（10-23 实测 `--games=20 --skip-gate-drafts --json`）：`blocked=false · classes=[] · breadthBlocked=[] · printSaysBlocked=[] · G=6.89 · G(long)=3.90`。 */
+  const cj = promoteJson(FIXTURE_PACK);
+  eq(cj.status, 0, '③a 正对照：在册夹具（干净包）`--dry` 必须放行——不许把干净包误伤（实测 exit=' + cj.status + '）');
   if (cj.json) {
-    eq(cj.json.classes.length, 0, '③b 现役不许有任何阻断类（实测 ' + JSON.stringify(cj.json.classes) + '）');
-    eq(cj.json.printSaysBlocked.length, 0, '③c 现役的打印侧也不许报"被挡"（实测 ' + JSON.stringify(cj.json.printSaysBlocked) + '）');
+    eq(cj.json.classes.length, 0, '③b 干净包不许有任何阻断类（实测 ' + JSON.stringify(cj.json.classes) + '）');
+    eq(cj.json.printSaysBlocked.length, 0, '③c 干净包的打印侧也不许报"被挡"（实测 ' + JSON.stringify(cj.json.printSaysBlocked) + '）');
   } else {
-    ok(false, '③ 现役那一遍也必须带结构化投影（拿不到 ⇒ promote --json 坏了）');
+    ok(false, '③ 正对照那一遍也必须带结构化投影（拿不到 ⇒ promote --json 坏了）');
   }
 });
 
@@ -2586,7 +2591,12 @@ t('D139 击杀奖励实验台（v1.5.193）：补丁必须真打上、破防场�
   eq(wall.by[2].paid, 0, '破防场里规则 2 同样发放 0 次');
   eq(wall.by[1].first, wall.by[0].first, '破防场：规则 1 与现状的胜率必须**逐位相同**（没触发 ⇒ 不许有任何差别）');
   eq(wall.by[2].rounds, wall.by[0].rounds, '破防场：规则 2 的局长也必须逐位相同');
-  ok(wall.by[0].draws === 1 && wall.by[0].first === 0, '破防场现役必须仍是 `0% 胜 / 100% 平`（这是 §N37/§N46 三次复现的那条形）');
+  /* §删（10-23 夜班 · 用户口径「冠军有什么表现该在入池时判，上线后的门只测引擎是否正常工作」）：
+   *   原来这里还有一条 `ok(wall.by[0].draws === 1 && wall.by[0].first === 0, '破防场现役必须仍是 0% 胜 / 100% 平')`
+   *   —— 主语是**现任包在那一格的战绩**（§N37/§N46 三次复现的产品事实）⇒ 删。
+   *   少掉的覆盖：现任包"破防场 0 胜 100% 平"今天没人判（入池侧的 G5 判的是"防席能不能清场"，不是这一格）。
+   *   上面那四条**保留**，因为它们判的是**实验台判别力**：`paid = 0`（奖励根本没发出去）+ 三档读数**逐位相同**
+   *   （没触发就不许有任何差别）—— 这两件事是关于工具与因果链的，不是关于哪只包强。 */
   const poolRows = j.rows.filter(function (r) { return r.field === 'pool'; });
   const paidAny = poolRows.filter(function (r) { return r.by[1].paid > 0.3; });
   ok(paidAny.length >= 2, '脚本池场里奖励必须**能触发**（≥2 格发放 >0.3 次/局）—— 否则这两条规则是死代码，' +

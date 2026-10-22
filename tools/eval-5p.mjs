@@ -683,7 +683,12 @@ if (REGEN) console.log('!! 经济补贴 regen=' + REGEN + ' ep/回合（全体�
 if (MODE) console.log('!! 模式 --mode=' + MODE + ' : ' + R.MODES[MODE].name + '  hp=' + R.MODES[MODE].hp + '  摄魂门槛 HP<=' + ((R.MODES[MODE].drainHpMax) || 1));
 console.log('对手场 = 4 个互不相同的脚本，全部 ' + combos.length + ' 组合 × ' + GAMES + ' 局 = ' +
   (combos.length * GAMES) + ' 局；含深经济对手的组合 ' + hasDeepInExam + '/' + combos.length);
-console.log('随机基线（5 人局）: 1st 20.0% / top2 40.0% / top3 60.0%');
+/* 10-23 夜班（千问）：这一行原来**写死 5 人局**（`随机基线（5 人局）: 1st 20.0% / top2 40.0% / top3 60.0%`），
+ *   于是 n=2/3/4 的格子也跟着印 20% ⇒ 读表人会拿"冠军 87.3%"去比 20%（差 4.4 倍），而 2 人桌的公平份额是 **50%**。
+ *   桌形矩阵那一批（`docs/research/logs/2026-10-23-table-matrix.log`，12 格）当场显形：12 格全印同一行。
+ *   随机策略的公平份额按席数推：1st = 100/N，topK = 100·K/N（封顶 100）。 */
+const chance = function (k) { return Math.min(100, 100 * k / N).toFixed(1); };
+console.log('随机基线（' + N + ' 人局 · 公平份额 1/N）: 1st ' + chance(1) + '% / top2 ' + chance(2) + '% / top3 ' + chance(3) + '%');
 console.log('');
 
 /* ===== 干净消融：同架构、只换"弹头" =====

@@ -480,7 +480,10 @@ t('D185 起点补进重验池（v1.5.277 · §E114）：默认零行 + 只多候
   const fitsOn = fitsOf(on.stdout);
   eq(fitsOn.length, 6, '② 开档的**训练打分**席仍必须只有 6 行（起点那行标 `trainFit=起点`，不许混进来）');
   eq(fitsOn.join('|'), fitsOff.join('|'), '② 六席读数必须**逐字相同** ⇒ 这个开关不动任何打分，只多一粒候选');
-  ok(/第 7 席 = 追加的起点 ⇒ 不另存/.test(String(on.stdout)), '② 追加的起点席不许写成带内候选（会让人以为训练挖出了一粒"等于现役"的料）');
+  /* §删（10-23 夜班 · 用户口径"门禁目标是功能实现而不是判文本"）：原来这里还钉一句打印措辞
+  *   `ok(/第 7 席 = 追加的起点 ⇒ 不另存/.test(on.stdout))`。它要防的**那件事**——"追加的起点席不许被当成带内候选另存"
+  *   ——已经有行为版：上面 `fitsOn.length === 6`（打分侧仍只有六席）+ 下面 `probe-pack-identity` 那条
+  *   "开/关产物逐位相同"（真没另存）。文本版留着只会造成一种假覆盖：措辞一改（同义改写）就红，而"另存了"这种真坏另有腿抓。 */
   const idp = spawnSync(process.execPath, ['tools/probe-pack-identity.mjs', offOut, onOut], { encoding: 'utf8', timeout: 120000 });
   eq(idp.status, 0, '② 起点是坏包时开/关的产物必须**逐位相同**（它是"多一粒候选"，不是"改判据"）：' + String(idp.stderr || '').slice(0, 120));
   const idem = arm(['1', '3', '2', '2'], {
