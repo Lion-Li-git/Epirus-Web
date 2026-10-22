@@ -180,8 +180,12 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
     'UNRUN 的处置必须是单一来源纯函数（v1.5.202：原来它从不进 fails ⇒ 基线退化的候选可零阻断通过）');
   ok(g.indexOf("'UNRUN' + (unrunKind") >= 0 && g.indexOf('unrunKind') >= 0,
     'gate-drafts 必须给 UNRUN 带上**方向**（弱/强/缺）—— 可判窗口把两个相反形状合并了');
-  ok(pc.indexOf('gateDrafts.unrun') >= 0 && pc.indexOf('不得当作通过') >= 0,
-    'UNRUN 必须被单独收集 + 醒目提示"不得当作通过"（否则它读起来就是"过"）');
+  /* v1.7.165 摘掉这一条的第二个合取项（`pc.indexOf('不得当作通过') >= 0`）：那一串在 `promote-champion.mjs` 里
+   *   **只出现在注释里**（剥掉注释后 0 次，实测），所以它声称的"醒目提示必须存在"其实判的是散文 ——
+   *   把提示语改掉/删掉打印，这条照样绿。同一件事的真判据在 D147（它把 UNRUN 真送进 `fails`，并跑子进程比退出码）
+   *   ⇒ 按 R6 这是"已有行为版"的重复文本版，摘掉不丢牙口。 */
+  ok(pc.indexOf('gateDrafts.unrun') >= 0,
+    'UNRUN 必须被单独收集（`gateDrafts.unrun`）—— 提示语与"不许当通过"的语义由 D147 的行为腿判');
   ok(gd.indexOf('最克「${worst[0]}」${worst[1]}%') >= 0,
     'G4 标题必须带"最克那一格"：原先标题只有基线 ⇒ FAIL 行读起来像"这条过了"（实测时连作者都被误导）');
   ok(gd.indexOf('实测防席夺冠 ${pct}%') >= 0, 'G5 标题必须带实测值而不是只有阈值');
@@ -246,8 +250,10 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
   const gsrc = readFileSync('tools/gate-drafts.mjs', 'utf8');
   ok(gsrc.indexOf('const G4_MAX = 60, G4_IDEAL = 45;') >= 0,
     'G4 阈值必须是**单一常量**（`G4_MAX`），理想线（`G4_IDEAL = 45`）分开存');
-  ok(gsrc.indexOf('在位包自己在 G4[long] 就是 65%') >= 0,
-    '必须写明标定理由：45% 是**现役包都达不到**的线（用户裁定 60%），否则下轮又会有人把它当"该回到 45%"');
+  /* v1.7.165 **删**：原来这条 `ok(gsrc.indexOf('在位包自己在 G4[long] 就是 65%') >= 0)` 钉的是 `gate-drafts.mjs` 里的一句**注释**
+   *   （实测：剥掉注释后该串 0 次，全文 1 次）⇒ 判据的标题写"必须写明标定理由"，它实际判的是"那段注释不许被顺手删"，
+   *   而标定数值本身由门 G4 的阈值 + D107 的 `EXPECT` 读数管着。按用户口径（门禁目标是功能实现，不是判文本）删；
+   *   想留住这句理由请写在文档里（`docs/research/GATE-AUDIT-2026-10-22-qoder.md`），不要靠一条门去守注释。 */
   ok(gsrc.indexOf('距理想线') >= 0, '过闸但未达理想线时，判词必须显式写出差距（别让绿灯冒充"已达理想"）');
   ok(/PASS\s+G5\[线上包\/(long|multi)\]/.test(out), '线上包 G5 必须 PASS（同上）');
   const anyFail = /^\s*FAIL\s+/m.test(out);
@@ -275,8 +281,11 @@ t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一
   /* v1.5.94（第九轮复核 §6）：复核要求"上闸"，我**部分不采纳**，理由必须钉在源码里 ——
    * 它点名的"密度门"是 `只枪(打最肥)` 那一格，而那一格**早就已经是阻断项**（G4，标定包 `v7f3-94` = 5%/5%）；
    * 本常量管的是**珠经济闭环**，过了它的两个包都是废包 ⇒ 翻了只会挡死所有候选。 */
-  ok(al.indexOf('v7f3-94') >= 0 && al.indexOf('已经是闸') >= 0,
-    '必须把"只枪格已由 G4 阻断、本常量管的是另一件事"写进源码注释（免得下轮又有人来翻它）');
+  /* v1.7.165 **删**掉这一条（`al.indexOf('v7f3-94') >= 0 && al.indexOf('已经是闸') >= 0`）：两条合取项实测都只存在于
+  *   `audit-lib.mjs` 的**块注释**里（剥注释后各 0 次）⇒ 它是"把上一班不采纳复核意见的理由钉住"那种形状，
+  *   判的是散文不是行为：把那整段注释删掉它会红，而**把代码写坏它不红**。
+  *   删它不丢覆盖：`DENSITY_BLOCK` 被翻成 `true` 这一刀，本门另有值钉 `export const DENSITY_BLOCK = false;` 接着
+  *   （那条才是这一格的牙），拒绝复核的**理由**改记在 `docs/research/GATE-AUDIT-2026-10-22-qoder.md`，不靠门守注释。 */
   /* v1.5.94（第九轮复核 §5-1）：**退化包**（自对局从不出手）必须能被判负，且走 fails */
   ok(al.indexOf('zeroAtkRate') >= 0 && al.indexOf('自对局零攻击局') >= 0 &&
     al.indexOf("fails.push('自对局零攻击局") >= 0,
@@ -582,7 +591,10 @@ t('D153 产品的探索口径必须钉住（temp0.15 + 档位表给的 ε/epsK/e
 t('D155 设防持续性栏必须**只记录不阻断**，且配对表的解析只有 defense-axis.mjs 一处', function () {
   const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
   const ax = readFileSync('tools/defense-axis.mjs', 'utf8');
-  ok(pc.indexOf('设防持续性栏') >= 0 && /EPIRUS_NO_GUARD/.test(pc), 'promote 必须印这一栏，且给一条能关掉省时间的开关');
+  /* v1.7.165：原来这条钉 `pc.indexOf('设防持续性栏') >= 0` —— 实测那一串在 `promote-champion.mjs` 里**只出现在 :317 的块注释**，
+   *   真正把这一栏打出来的是 `defense-axis.mjs:39` 的 `formatRecord` ⇒ 它声称"promote 必须印这一栏"却判着另一份文件的散文。
+   *   改成两格：开关仍在源码层判（它确实是 promote 消费的），**打印改判实际 stdout**（用下面 `on` 那次真跑的输出，不新增 spawn）。 */
+  ok(/EPIRUS_NO_GUARD/.test(pc), 'promote 必须认这枚省时间的开关（实测含=' + /EPIRUS_NO_GUARD/.test(pc) + '）');
   ok(pc.indexOf("from './defense-axis.mjs'") >= 0 && ax.indexOf('export function parsePairTable') >= 0,
     '解析必须单一来源：promote 里不许有第二份 parsePairTable（同 D150 的"搬运不许各写一份"）');
   ok(pc.indexOf('createState') < 0, 'promote 的新栏**不许自己仿真** —— 只 spawn 探针再解析（自己搭桌子必然与探针漂移）');
@@ -612,6 +624,11 @@ t('D155 设防持续性栏必须**只记录不阻断**，且配对表的解析�
   const on = spawnCached(['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'], { encoding: 'utf8' });
   const off = spawnCached(['tools/promote-champion.mjs', one, '--dry', '--skip-gate-drafts'], { encoding: 'utf8', env: Object.assign({}, process.env, { EPIRUS_NO_GUARD: '1' }) });
   eq(on.status, off.status, '退出码必须一致（实测 ' + on.status + ' vs ' + off.status + '）⇒ 这栏不许改变判定');
+  /* ③′ 这一栏必须真的在**输出**里：原来没有这一格时，下面的 `strip` 是空操作（两遍 stdout 里本来就没有那行可删），
+   *   "只记录不阻断"那两条等式就恒绿 ⇒ 补上"确实印了"这一格，等式才有内容可减。 */
+  ok(String(on.stdout + on.stderr).indexOf('设防持续性栏') >= 0,
+    '③′ 真跑一次 promote，那一栏必须出现在**实际输出**里（实测含=' + (String(on.stdout + on.stderr).indexOf('设防持续性栏') >= 0) + '）'
+    + '⇒ 打印住在 `defense-axis.mjs:39`，不在 promote 源码里（原来那条钉的是 promote 的注释）');
   const strip = x => String(x || '').split(/\r?\n/).filter(l => l.indexOf('设防持续性栏') < 0).join('\n');
   eq(strip(on.stdout + on.stderr), strip(off.stdout + off.stderr), '去掉这一行后两次的全部输出（含 stderr 里的阻断结论）必须逐字相同');
   ok((on.stdout + on.stderr).indexOf('G 有效技能数') >= 0 || on.status === 0, '顺带确认这次 dry-run 真走到了门结论（阻断文案在 stderr，别只拼 stdout）');

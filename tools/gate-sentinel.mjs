@@ -49,7 +49,10 @@ const cls = { md: [], src: [], log: [], cand: [], allpin: [] };
 const __pinRe = /indexOf\([^)]*\)\s*(?:>=|<)\s*0/g;
 const __behRe = /\n\s*(?:eq|is)\(/g;
 /* 更严的第二道：**必须真的跑引擎**。`eq(` 也可能在比源码解析出来的东西（第一版 77 条太宽）。 */
-const __runRe = /sb\.window|EpirusTrainer|EpirusPlay|EpirusBots|EpirusRules|EpirusState|EpirusResolve|autoGameN|oneGameN|policyChooserN|selfPlay\(|mirrorHealth\(/;
+/* v1.7.165：执行痕迹原来只认"引擎符号名"，**不认起子进程/起沙箱**那一族 ⇒ 一批"真 spawn 了量具/工具、只用 ok() 断言"的门
+ *   被漏进 ⑤（例：`D119` 真跑 `train-3p` 断 exit 5，却仍显示"全 pin 无行为腿"）。补齐这几个符号。
+ * ⚠ 这把尺仍然只是**形状启发**：它认不出"调本文件里自己定义的 helper"，所以 ⑤ 的名单是候选、不是判词。 */
+const __runRe = /sb\.window|EpirusTrainer|EpirusPlay|EpirusBots|EpirusRules|EpirusState|EpirusResolve|EpirusPolicy|autoGameN|oneGameN|policyChooserN|selfPlay\(|mirrorHealth\(|spawnSync|spawnCached|spawnNC|execFileSync|execSync\(|runInNewContext|new vm\.|sandbox\(/;
 for (const g of gates) {
   const id = idOf(lines[g.idx]);
   if (/readFileSync\([^)]*\.md['"]/.test(g.text) || /readFile\([^)]*\.md['"]/.test(g.text)) cls.md.push(id + '@' + g.at);
@@ -57,11 +60,17 @@ for (const g of gates) {
     cls.src.push(id + '@' + g.at);
     const pins = (g.text.match(__pinRe) || []).length;
     const runs = __runRe.test(g.text);
-    if (pins > 0 && runs && (g.text.match(__behRe) || []).length > 0) cls.cand.push(id + '@' + g.at + '(' + pins + 'pin)');
-    /* 10-22（DS）：④ 只列"pin + 有行为腿"，于是**一条全是 pin、零行为腿的门反倒不进任何名单**（D132 就这样漏掉，
-     *   靠逐条读门体才发现）⇒ 全 pin 无行为腿的门单独列一类，不许再当"只有源码 pin ⇒ 该留"默认放过。
-     *   判据故意宽：pins>0 且门里一条 eq/is 都没有（不要求它跑引擎——真跑引擎却只在比字符串的，更该看）。 */
-    if (pins > 0 && (g.text.match(__behRe) || []).length === 0) cls.allpin.push(id + '@' + g.at + '(' + pins + 'pin)');
+    const hasBeh = runs || (g.text.match(__behRe) || []).length > 0;
+    /* v1.7.165 口径更正（千问）：④/⑤ 原来把"有没有行为腿"等同于"门里有没有写过 `eq(`/`is(`"（`__behRe`，`:50`）。
+     *   但本仓大量门体是**真跑引擎/真起子进程、只用 `ok(...)` 断言**的形状（例：`ok(rr.status === 5)`），
+     *   这一类门在 ④ 里看不见自己（④ 要求 eq/is），又掉进 ⑤ 里被标成"全 pin 无行为腿" ⇒ 名单两头都不对。
+     *   正确口径：**行为腿 = 有执行痕迹（`__runRe`）或 有 eq/is 断言**；于是
+     *     ④ = 有 pin 且有行为腿（可能重复 ⇒ 人只需看这批）‖ ⑤ = 有 pin 且**一条行为痕迹都没有**（必须逐条读）。
+     *   两类互斥、且与 ② 的交集可核对（② = 读源码且正向钉命中）。默认仍只报告，不影响任何门的红绿。 */
+    if (pins > 0 && hasBeh) cls.cand.push(id + '@' + g.at + '(' + pins + 'pin)');
+    /* 10-22（DS）：④ 只列"pin + 有行为腿"，于是**一条全是 pin、零行为腿的门反倒不进任何名单**（`D132` 就这样漏掉，
+     *   靠逐条读门体才发现）⇒ 全 pin 无行为腿的门单独列一类，不许再当"只有源码 pin ⇒ 该留"默认放过。 */
+    if (pins > 0 && !hasBeh) cls.allpin.push(id + '@' + g.at + '(' + pins + 'pin)');
   }
   if (has(g.text, /\.(out|stdout|stderr)\b/) && /indexOf\(['"][^'"]*[\u4e00-\u9fff][^'"]*['"]\)\s*>=\s*0/.test(g.text)) cls.log.push(id + '@' + g.at);
 }
