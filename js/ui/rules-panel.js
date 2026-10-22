@@ -8,15 +8,16 @@
   function qa(q, a) { return '<div class="qa"><b>Q：' + q + '</b><br>' + a + '</div>'; }
   function renderModes(R) {
     var el = document.getElementById('rules-modes'); if (!el) return;
-    var t = '<table><tr><th>模式</th><th>初始血量</th><th>回合上限</th><th>终局收缩</th></tr>';
-    Object.keys(R.MODES).forEach(function (k) {
-      var m = R.MODES[k]; if (!m) return;
-      var maxR = m.maxRounds == null ? R.MAX_ROUNDS : m.maxRounds;
-      var sd = m.suddenDeath == null ? R.SUDDEN_DEATH : m.suddenDeath;
-      var sdShow = sd > maxR ? '—（回合上限先结束）' : ('第 ' + sd + ' 回合起，每回合末全员 -1');
-      t += '<tr><td><b>' + esc(m.name || k) + '</b></td><td>' + esc(m.hp) + '</td><td>' + esc(maxR) + '</td><td>' + sdShow + '</td></tr>';
+    var t = '<table><tr><th>桌型</th><th>初始血量</th><th>回合上限</th><th>终局收缩</th></tr>';
+    var sd = R.SUDDEN_DEATH;
+    var g = { 3: R.MAX_ROUNDS, 4: R.MAX_ROUNDS, 5: 140 };
+    [3, 4, 5].forEach(function (hp) {
+      var maxR = g[hp];
+      var sdShow = sd >= maxR ? '不触发（回合上限先结束）' : ('第 ' + sd + ' 回合起，每回合末全员 -1');
+      var label = hp === 5 ? '2~5 人 · 5 血（长程）' : ('2~5 人 · ' + hp + ' 血');
+      t += '<tr><td><b>' + label + '</b></td><td>' + hp + '</td><td>' + maxR + '</td><td>' + sdShow + '</td></tr>';
     });
-    el.innerHTML = t + '</table>';
+    el.innerHTML = t + '</table><p class="src">终局收缩的起点可以在对局设置里改；默认值下只有 5 血长程桌会在上限前进入收缩。</p>';
   }
   function renderSkills(R) {
     var el = document.getElementById('rules-skills'); if (!el) return;
@@ -32,16 +33,22 @@
   function renderTiers(B) {
     var el = document.getElementById('rules-tiers'); if (!el || !B) return;
     var play = { 'lv:sparring': '更常试新招，适合熟悉规则', 'lv:regular': '正常发挥（默认）', 'lv:hard': '几乎每手取最优，最难看穿' };
-    var t = '<table><tr><th>难度</th><th>说明</th></tr>';
-    (B.DIFF_TIERS || []).forEach(function (x) { t += '<tr><td><b>' + esc(x.name) + '</b></td><td>' + esc(play[x.id] || '') + '</td></tr>'; });
+    var who = function (x) {
+      if (x.poolMix) return '整个冠军池按力度加权抽';
+      if (x.pool === 'soft') return '最弱一批冠军' + (x.scriptMix ? '，另掺脚本对手' : '');
+      if (x.pool === 'hard') return '最强一批冠军';
+      return '';
+    };
+    var t = '<table><tr><th>难度</th><th>对手从哪来</th><th>说明</th></tr>';
+    (B.DIFF_TIERS || []).forEach(function (x) { t += '<tr><td><b>' + esc(x.name) + '</b></td><td>' + esc(who(x)) + '</td><td>' + esc(play[x.id] || '') + '</td></tr>'; });
     el.innerHTML = t + '</table>';
   }
   function renderStyles(B) {
     var el = document.getElementById('rules-styles'); if (!el || !B) return;
     var t = '<table><tr><th>风格</th><th>打法</th></tr>';
+    var hand = { 'st:aggro': '一有机会就压血，节奏快', 'st:breakdef': '先攒能量，等大牌', 'st:reflectmix': '爱用反弹与连招，出招有节奏', 'st:combocounter': '读你最近几次出招再反制', 'st:toolkit': '爱用低性价比卡与冷门卡', 'st:mix': '什么都用一点，不押单一套路' };
     (B.STYLES || []).forEach(function (x) {
-      var n = String(x.note || '').replace(/\*\*/g, '').replace(/\x60/g, '');
-      t += '<tr><td><b>' + esc(x.name) + '</b></td><td>' + esc(n.length > 70 ? n.slice(0, 70) + '…' : n) + '</td></tr>';
+      t += '<tr><td><b>' + esc(x.name) + '</b></td><td>' + esc(hand[x.id] || '') + '</td></tr>';
     });
     el.innerHTML = t + '</table>';
   }
@@ -50,7 +57,7 @@
     var R = window.EpirusRules, B = window.EpirusBots;
     if (!R || !R.skills) { box.innerHTML = '<p>规则数据没加载成功，请刷新页面。</p>'; return; }
     var h = '';
-    h += '<h2>怎么玩</h2><p>2~5 人对战：每人每回合同时选一个技能和一个目标，一起结算；活到最后的人赢。人数和血量是两根独立的轴——2~5 人都能配 3/4/5 血，4 血、5 血只是多几格血，规则不变。</p>';
+    h += '<h2>怎么玩</h2><p>2~5 人对战：每人每回合同时选一个技能和一个目标，一起结算；活到最后的人赢。人数和血量是两根独立的轴——2~5 人都能配 3/4/5 血；4 血主要多一格血，5 血（长程）回合上限更长、会进入终局收缩。</p>';
     h += '<h2>一回合怎么走</h2><ol>';
     h += '<li><b>同时选招</b>：所有人各选一个技能和目标（架势、自增益类不用选目标）。</li>';
     h += '<li><b>按优先级结算</b>：5 → 4 → 3 → 2 → 1；同一优先级同时生效。</li>';
@@ -71,7 +78,7 @@
     h += qa('地雷是范围伤害吗？', '是。被攻击引爆没有次数上限；因吃到地雷伤害而引爆的会合并成一次伤害。地雷伤害没有来源，不被铁索共享、不被转移。');
     h += qa('激光眼能一发破掉整套防御吗？', '能。单个激光眼即可让目标本回合所有防御类失效并转移伤害。');
     h += qa('回魂复活那回合能随便放技能吗？', '只免花费、不免条件：需要蓄能珠或前置状态的技能仍要满足条件。被挑衅者死亡不会复活，反而给施放者挂梦魇。');
-    h += '<h2>难度与风格</h2><p>难度不是换一批对手，而是同一颗冠军包上给多少“发挥空间”：简单档更常试新招、困难档几乎每手都选最优；2 人桌用专门为 1v1 训的冠军包。风格只是口味，不排强弱。</p><div id="rules-tiers"></div><div id="rules-styles"></div>';
+    h += '<h2>难度与风格</h2><p>难度由两件事一起决定：<b>桌上坐的是哪一批冠军</b>（冠军池按力度分带，简单档从最弱一批抽、困难档只从最强一批抽、普通档按力度加权抽），以及这枚冠军每手给多少“发挥空间”（越简单越常试新招）。简单档还会额外掺入脚本对手；2 人桌换用专门为 1v1 训的 2P 冠军池。风格只是口味，不排强弱。</p><div id="rules-tiers"></div><div id="rules-styles"></div>';
     box.innerHTML = h;
     renderModes(R); renderSkills(R); renderTiers(B); renderStyles(B);
   }

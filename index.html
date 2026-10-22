@@ -10,7 +10,7 @@
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.8.1 （2~5 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.8.2 （2~5 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
   </header>
 
   <nav class="tabs">
@@ -44,7 +44,7 @@
         </label>
         <label>难度
           <!-- v1.6.6（用户 10-03 夜指令 2「重新研究脚本难度…可以设计成冠军作为底层但脚本探索概率很高的版本」）：
-               全人数**共用一条阶梯**，难度 = 同一颗冠军包上的**探索剂量**（ε / epsK / epsMode），最高一档换成会读招的脚本。
+               全人数**共用一条阶梯**，难度 = **冠军池按力度分带取成员 + 探索剂量**（ε / epsK / epsMode；简单档还掺脚本对手；2 人桌换 2P 冠池）。
                旧的两条路（2 人「简单/中等/困难」+ 多人「五个风格 + 冠军」）按用户裁定作废；
                风格没删，退成阶梯下面那组"人格"（不排强度 —— §E286 实测四个风格在 5 人桌上统计上并列）。
                这里的静态列表只是首屏，真列表由 `ui.js:syncDiffOptions()` 从 `bots.js` 的 `DIFF_TIERS` 重建（单一来源，门 D227 钉）。
