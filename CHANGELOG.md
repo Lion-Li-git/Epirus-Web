@@ -1,3 +1,37 @@
+## v1.7.166 — 10-22 下午（千问）：加 GitHub Pages 发布链（白名单产物，不发 docs/tools/server）
+
+### 为什么先量再写
+`用户「那你先做一下 github pages 吧」` ⇒ 但这仓的"接上线"不是加个 workflow 就完事：站点要真的能跑、且不该把研究内部发出去。
+所以顺序是**先量、再发**：
+1. **子路径安全性**：`index.html` 与 `champion-map/index.html` 里没有任何绝对路径引用（`grep (href|src)="/…"` = 0 命中）
+   ⇒ Pages 的项目页挂在 `/Epirus-Web/` 下也不会 404。全部脚本都是本地相对路径，**没有 CDN、没有打包器**。
+2. **白名单是否自足**：把 `index.html + css/ + js/ + champion-map/` 拷进临时目录，用一条最小静态服务起在 `127.0.0.1:8137`，
+   在真浏览器里跑这盘**只有白名单**的站点：`EpirusRules/State/Resolve/Play/Bots/Policy/Trainer/UI` 八个全局都在、
+   44 个按钮 + 1 张 canvas、`EPIRUS_CHAMPION_3P` 解出 **5689** 个参数，并在页面里真跑一次镜像自评
+   （`EpirusTrainer.mirrorHealth(params, 24, 5, 'multi')` ⇒ `rounds=27 ‖ dmgPerGame=15.875 ‖ effSkills=8.08`）；
+   console **只有一条 info**（`[support-prior] 页面档 = 2 ‖ knobs 引擎回读 = …`），**没有任何 error/404**。
+3. **要故意不发的东西**：`docs/`（1114 份、被跟踪里就占 30.1 MB，含 `.bak` 产物与研究台账）、`tools/`（门禁与量具）、`server/`、`tests/`。
+   仓库本来就是 public，但"能被翻到"和"被发成静态站点目录"不是一回事。
+4. **页里唯一的 `fetch`**（`js/ui/ui.js` 连本机训练服务那一档）**只在用户点"连接"时才发**，且自带 1.5s 探测超时 + `catch`
+   ⇒ 在 Pages 上那一栏只会显示"服务未启动"，不会白屏（实测：页面加载后不发任何请求，console 无报错）。
+
+### 加了什么
+`.github/workflows/pages.yml`：`build`（拷白名单 → **四条断言自证**：`index.html` 非空 ‖ 五个关键文件逐个 `test -s` ‖ 产物里不许出现 `.env*` ‖ 文件数 ≤1000）
+→ `configure-pages` → `upload-pages-artifact`；`deploy` 用 `actions/deploy-pages`。
+只在这些路径变化时跑：`index.html ‖ css/** ‖ js/** ‖ champion-map/** ‖ 本文件`；`workflow_dispatch` 可手抖重跑。
+并发组 `pages` + `cancel-in-progress` ⇒ 连推几笔只发最后一个。
+限额写在文件头注释里（官方：站点 ≤1 GB、软带宽 100 GB/月、10 构建/小时、部署 >10 分钟超时）。
+
+### 一条要交代的待办（不是我能做的）
+`actions/configure-pages` 不会替仓库打开 Pages 开关。**第一次要人在 Settings → Pages → Source 选 "GitHub Actions"**（或给我
+一个能调 `POST /repos/.../pages` 的授权），之后这条链就能自己跑。我推上去后会看第一次的日志：
+如果它红在"Pages 未启用"，那是**流程没通**，不是站点坏了（本地那盘白名单已经证明站点本身能跑）。
+
+### 计数与验证（第十六批尾）
+门 **281 → 281**（只加 workflow 与文档，没动任何门）。版本号：CHANGELOG 顶 = README = index.html = **v1.7.166**（`--group=meta` 跑过再说）。
+本次实测数据：站点子集在**本地拷贝**上 282 文件 / 15 MB（含未跟踪的开发探针）；CI 里从 checkout 组装 ⇒ 只含被跟踪的 218 个文件 / 11 MB
+（`git ls-tree -l` 现算，最大单文件 `js/bundled-champion-pool.js` 3.03 MB ⇒ 远低于 Pages 单文件与总量上限）。
+
 ## v1.7.165 — 10-22 下午（千问）：先修哨兵 ⑤ 那把尺（误报 11 条），再摘 6 处"钉注释"的腿 ‖ E1 补一列反应面
 
 ### 一、修尺（`tools/gate-sentinel.mjs`，报告器，不参与红绿）

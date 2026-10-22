@@ -1,0 +1,68 @@
+name: pages
+
+# 为什么单独一个 workflow 而不塞进 gates.yml：gates 是**阻断档**（19 路 `--part=` 矩阵），
+# 发布站点的失败不该让某笔提交"红"，反过来门禁红也不该拖住发布 ⇒ 两条 job 链分开。
+#
+# 发布的是**白名单**，不是整棵树：`index.html + css/ + js/ + champion-map/`（实测 218 个文件 / 11 MB）。
+# 故意不发的是 `docs/`（30 MB 研究台账与 .bak 产物）、`tools/`、`server/`、`tests/` —— 站点运行不需要它们，
+# 而发出去等于把 1114 份研究文件变成可下载的静态资源（仓库本身是 public，但"能被翻到"与"被索引成站点目录"是两回事）。
+#
+# 限额（GitHub 官方，免费计划公共仓库）：站点 ≤1 GB、软带宽 100 GB/月、10 次构建/小时、单次部署 >10 分钟即超时。
+#
+# ⚠ 第一次跑要仓库里先把 Pages 的**构建来源**设成 "GitHub Actions"（Settings → Pages → Source）。
+#   `actions/configure-pages` 没被授权时不会替你点这个开关，它会在日志里点名；设好后本文件重跑一次即可。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'css/**'
+      - 'js/**'
+      - 'champion-map/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 组装站点产物（只拷白名单）
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp index.html _site/
+          cp -r css js champion-map _site/
+          test -s _site/index.html                       # 空 index.html ⇒ 直接失败，不发一个白屏
+          for f in css/style.css js/core/rules.js js/ui/ui.js js/bundled-champion-3p.js champion-map/index.html; do
+            test -s "_site/$f" || { echo "缺 $f ⇒ 白名单漏了东西，不发"; exit 1; }
+          done
+          if find _site -name '.env*' -print -quit | grep -q .; then echo "站点产物里出现了 .env ⇒ 停"; exit 1; fi
+          echo "文件数 = $(find _site -type f | wc -l) ‖ 体积 = $(du -sh _site | cut -f1)"
+          test "$(find _site -type f | wc -l)" -le 1000 # 与 itch.io 的 HTML5 上限留同一道习惯：一次数清楚
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.out.outputs.page_url }}
+    steps:
+      - id: out
+        uses: actions/deploy-pages@v4
