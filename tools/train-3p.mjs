@@ -2229,7 +2229,12 @@ console.log((GUARD.wrote ? '\n\u5df2\u5199\u5165 ' : '\n✘ 没写文件（§E58
  *   `max <= WIDTH_FLOOR(3)` ⇒ 这一项从来没付过钱 ⇒ "没效果"是恒零的必然，不是"奖励无效"。 */
 if (WIDTH_LAND_WANT > 0) {
   const vs = (T.economyReward() || {}).widthLandStat || {};
+  /* v1.8.16：括号里那句"覆盖率低"原来是**无条件**印的（实测 `blk=648 blkAttr=648` = 100% 覆盖时也照印"覆盖率低"）
+   *   ⇒ 与本晚 `gate-landscape` 那句"第一行是在位包"同一种病：**警告本身在说一件不一定是真的话**。
+   *   现在把百分比算出来，只有真的低（<50%）才带那句归因窗口错。 */
+  const cov = vs.blk ? vs.blkAttr / vs.blk : null;
   console.log('[width-land] 自证：games=' + vs.games + ' max=' + vs.max + ' paid=' + vs.paid +
     ' ‖ 归因覆盖：blk=' + vs.blk + ' blkAttr=' + vs.blkAttr +
-    '（覆盖率低 ⇒ 归因窗口错，不是饱和压没）');
+    '（覆盖率 ' + (cov == null ? '—' : (100 * cov).toFixed(0) + '%') +
+    (cov != null && cov < 0.5 ? ' ⇒ **低**：归因窗口错，不是饱和压没' : ' ⇒ 覆盖不缺 ⇒ 没付钱只可能是"没到那一格"') + '）');
 }
