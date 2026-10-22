@@ -76,12 +76,12 @@ t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、�
    * 拆成 `--temp/--eps` 之后又发现第二层：**【5】seatSymmetry 与【6】mirrorHealth 各自在内部建 Chooser**（audit-lib.mjs:403 / evo.js:403 都是
    * `policyChooserN(params, 0.15)`），所以 ε 扫描时那两行**逐字不变** —— 容易被读成"座位/广度对探索不敏感"，而真实原因是**它们没接到旋钮**。
    * ⇒ 钉三件：旋钮分开、调用点真用、不吃旋钮的行必须**在输出里自报口径**。 */
+  /* 10-22（DS）：把三条"读探针源码"的接线钉换成**输出侧行为腿**（D149 收尾，NEXT §二 1 推荐的那条便宜活）。
+   *   保留的源码钉只有"仍调单一真源"（seatSymmetry/mirrorHealth）与"指针行号现算"——那两条判的是"实现没被拆散"，
+   *   在输出里看不出来；"温度/探索率是两个旋钮 + 受评席四参数一起传 + 没有写死 0.15"这三件现在由三条差分腿判：
+   *   ① eps=0.2 的读数 ≠ 默认（否则 --eps 是空杆）② temp=0.05 的读数 ≠ 默认（否则 --temp 是空杆）
+   *   ③ 两个旋钮的读数互不相同（否则它们其实是一根杆）。 */
   const p = readFileSync('tools/probe-ideal-champion.mjs', 'utf8');
-  ok(/arg\('temp'/.test(p) && /arg\('eps'/.test(p),
-    '温度与探索率必须是**两个**参数（只有一个 0.15 时谁按交接做 E5 都会拉错杆）');
-  ok(/policyChooserN\(live, TEMP, EPS, EPSK, EPSMODE\)/.test(p),
-    '受评席的 Chooser 必须把四个参数一起传（只传 eps = 全候选均匀抽，那是 v1.5.139 被用户否掉的口径）');
-  ok(!/policyChooserN\(live, 0\.15\)/.test(p), '调用点不许再留写死的 0.15');
   const i5 = p.lastIndexOf('【5】'), i6 = p.lastIndexOf('【6】'), i7 = p.lastIndexOf('【7】');
   ok(i5 > 0 && i6 > i5 && i7 > i6, '【5】【6】【7】三条必须都在（用 lastIndexOf 定位打印行，头注释里也出现这些标号）');
   /* v1.5.223 契约**升级**（不是放宽）：原来这两行只能"自报不吃旋钮"；现在必须**两个口径都印出来**。
@@ -127,6 +127,17 @@ t('D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、�
   const out2 = String(r2.stdout || '');
   eq((out2.match(/极差 [\d.]+pt/g) || []).join('|'), n5, '【5】在 eps=0.2 与默认下必须逐字相同（它不吃旋钮 ⇒ 这条相等本身就是那处写死的证据）');
   eq((out2.match(/净兑现 G = [\d.]+/g) || []).join('|'), n6, '【6】同上 —— 若哪天这两行开始随 ε 动，说明单一真源被改散了，要重看钉法');
+  /* 行为腿（10-22）：受评席自己的读数必须随两个旋钮分别变，且两条轨迹不同。取【2】的出手份额差（Δpt）作指纹。 */
+  const fp2 = function (s) { return (s.match(/Δ\s*[-+]?\d+(?:\.\d+)?pt/g) || []).join('|'); };
+  const fA = fp2(out2), fB = fp2(out);
+  ok(fA.length > 0 && fB.length > 0, '【2】的 Δ 读数必须印出来（两臂指纹为空 ⇒ 这条差分腿量不到东西）');
+  ok(fB !== fA, 'eps 必须真的改到受评席的出手（eps=0.2 与默认读数相同 ⇒ --eps 是空杆）');
+  const rt = spawnSync(process.execPath, ['tools/probe-ideal-champion.mjs', '--games=8', '--temp=0.05', '--seat-n=60,120', '--mirror-n=120'],
+    { encoding: 'utf8', timeout: 600000 });
+  eq(rt.status, 0, '温度臂要跑得通（' + String(rt.stderr || '').slice(0, 160) + '）');
+  const fT = fp2(String(rt.stdout || ''));
+  ok(fT !== fA, '温度必须真的改到受评席的出手（temp=0.05 与默认读数相同 ⇒ --temp 是空杆）');
+  ok(fT !== fB, '温度与探索率必须是**两个**旋钮（两支读数完全相同 ⇒ 只有一根杆在动）');
 });
 
 t('D198 §E136 的配对判读有牙（v1.5.292）：配对不成立要拒、三个判读分支都走得到、逐桌子账要与汇总对得上、配对算术只有一份', function () {
