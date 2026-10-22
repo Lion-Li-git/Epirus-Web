@@ -303,7 +303,7 @@ async function main() {
   await evalJS(`(()=>{const s=document.getElementById('sel-diff'); s.value='lv:hard'; s.dispatchEvent(new Event('change'));})()`);
   const playSomeRounds = async function (label, shotName) {
     const errBefore = errors.length;
-    for (let i = 0; i < 25 && !(await over()); i++) {
+    const oneRound = async function () {
       let acted = false;
       for (const nm of ATK) {
         if (!(await click(nm))) continue;
@@ -313,9 +313,14 @@ async function main() {
       }
       if (!acted) { if (!(await click('蓄能'))) await click('ジ'); }
       await sleep(200);
-    }
-    const t = await logText();
-    const dmg = (t.match(/伤害/g) || []).length;
+    };
+    for (let i = 0; i < 25 && !(await over()); i++) await oneRound();
+    let t = await logText();
+    let dmg = (t.match(/伤害/g) || []).length;
+    /* v1.9.1：长程格偶发「25 回合只有 2 次伤害」——页面 RNG 未固定，硬档对手格挡/无效招会把伤害拖到 3 以下。
+     *   判据不放宽（仍 >=3），改成**继续打到够为止**（最多再 40 回合，或终局即止）。 */
+    for (let extra = 0; extra < 40 && dmg < 3 && !(await over()); extra++) { await oneRound(); if (extra % 5 === 4) { t = await logText(); dmg = (t.match(/伤害/g) || []).length; } }
+    t = await logText();
     const holo = (t.match(/全息屏障/g) || []).length;
     await shot(join(OUT, shotName));
     check(label + '：有真实伤害', dmg >= 3, '「伤害」' + dmg + ' 次');
