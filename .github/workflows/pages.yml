@@ -52,6 +52,13 @@ jobs:
           test "$(find _site -type f | wc -l)" -le 1000 # 与 itch.io 的 HTML5 上限留同一道习惯：一次数清楚
 
       - uses: actions/configure-pages@v5
+        # 第一次跑实测红在这里（原文）：
+        #   "Get Pages site failed. Please verify that the repository has Pages enabled and configured to build
+        #    using GitHub Actions, or consider exploring the `enablement` parameter for this action."
+        # ⇒ 用它的 `enablement: true` 让本工作流自己把 Pages 站点建出来（靠 jobs.<id>.permissions.pages: write 的 GITHUB_TOKEN，
+        #   不需要我去点 Settings；如果这个令牌的权限不够，日志会再响一次，那时才真的要点一下开关）。
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
