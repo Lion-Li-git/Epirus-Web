@@ -34,7 +34,7 @@ import { loadChampParams } from '../server/opp-champs.mjs';
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
 rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'extra',
   'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier', 'pairs', 'banddef',
-  'mixseats', 'mixids', 'mixadd', 'epsover'], 'probe-diff-ladder');
+  'mixseats', 'mixids', 'mixadd', 'epsover', 'livedose'], 'probe-diff-ladder');
 
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const GAMES = Math.max(1, Number(flag('games', 1500)) || 1500);
@@ -149,7 +149,20 @@ function makeLevelChooser(L, p) {
      *   10-12 下午顶点 0.2→0.1 之后就真的漂了：页面是 0/0.05/0.1，这份还是 0/0.1/0.1 ⇒ b5ceab1 的在册账量的是不存在的剂量。
      * ★ §E625：这里改成走 `tierEpsAt`（带人数）—— 原来这把尺在 2 人桌上直接吃 `tier.eps`，
      *   而产品那里吃的是 `tier.eps2`（简单 0.5 ‖ 困难 0）⇒ 它量的是**产品不喂的那份剂量**。同一族病，同一处治。 */
-    const e = Bots.tierEpsAt(L, state.p.length, state.round);
+    let e = Bots.tierEpsAt(L, state.p.length, state.round);
+    /* §E679 研究旋钮（10-22 夜·千问）：只在**这把尺**里生效，产品与出厂路径一字不动。
+     *   `--livedose=behind:<a>` ⇒ 按"这一席现在的血量份额"放大剂量：e' = clamp(e*(1+a*need), 0, 1)。
+     *   为什么值得单开一格：`tierEpsAt` 在册只条件在（档, 人数, 回合），从没条件在局面量上。
+     *   机制回执必须可见：DOSE 累计每次实际生效的 e，随读数打印均值 —— 两组均值一样就是条件化没落地。 */
+    if (!DOSE[L.id]) DOSE[L.id] = { sum: 0, n: 0 };
+    if (LIVE_DOSE) {
+      const me = state.p[pid];
+      const alive = state.p.filter(function (q) { return q.hp > 0; });
+      const best = alive.length ? Math.max.apply(null, alive.map(function (q) { return q.hp; })) : 1;
+      const need = best > 0 ? Math.max(0, Math.min(1, 1 - (me ? me.hp : 0) / best)) : 0;
+      e = Math.max(0, Math.min(1, e * (1 + LIVE_DOSE.a * need)));
+    }
+    DOSE[L.id].sum += e; DOSE[L.id].n++;
     return T.pickChampion(state, pid, affordableFirst(legal), p, 0.15, e, L.epsK, L.epsMode);
   };
 }
@@ -160,6 +173,14 @@ function makeLevelChooser(L, p) {
  *   口径：组成 = `js/pool-draw.js` 的 `compose(该档成员, N-1, rng(state.slotSalt))` —— **与页面同一份实现、同一个盐**
  *   （`st.slotSalt` 由本工具自己的 rng 逐局给，同 seed 同局序 ⇒ 跨档仍是逐局配对的，配对性质没丢）。
  *   风格档（`lv:hunter`）按契约 §3 **不带包**，两种模式下行为一致。 */
+/* §E679 研究旋钮：`--livedose=behind:<a>`（不传 = 关 ⇒ 行为与旧版逐位相同）‖ DOSE = 机制回执的累计器 */
+const LIVE_DOSE = (function () {
+  const v = flag('livedose', ''); if (!v) return null;
+  const m = /^(behind):([0-9.]+)$/.exec(v);
+  if (!m) { console.error('⛔ --livedose 只认 behind:<a>（实测 ' + v + '）'); process.exit(64); }
+  return { kind: m[1], a: Number(m[2]) };
+})();
+const DOSE = {};
 const USE_POOL = (flag('pool', '0') || '0') === '1';
 const POOL_TIER = (flag('pooltier', '') || '').trim();   /* 非空 = 把所有档钉在**同一批池成员**上 ⇒ 档间只剩剂量差 */
 const PD = W.EpirusPoolDraw;
@@ -360,7 +381,8 @@ for (const L of LEVELS) {
       if (e.key === R.SK.BIG_T) bigT++; else if (e.key === R.SK.DRAIN) drain++;
     }
   }
-  rows.push({ id: L.id, label: L.name, pct: 100 * wins / GAMES, avgR: sumR / GAMES, bigT: bigT / GAMES, drain: drain / GAMES });
+  const dz = DOSE[L.id] && DOSE[L.id].n ? DOSE[L.id].sum / DOSE[L.id].n : null;
+  rows.push({ id: L.id, label: L.name, pct: 100 * wins / GAMES, avgR: sumR / GAMES, bigT: bigT / GAMES, drain: drain / GAMES, dose: dz, doseN: DOSE[L.id] ? DOSE[L.id].n : 0 });
 }
 function pairedDiff(a, b) {
   const A = win[a], B = win[b], d = [];
@@ -380,7 +402,7 @@ const head = '难度阶梯 · 1 席人类替身(' + TGT + ') vs ' + (N - 1) + ' 
   ' · 包=' + pk.tag + ' · ' + GAMES + ' 局/档 · 同批种子（跨档逐局配对）· 上线档带大雷/摄魂注入 · 替身夺冠越低=越强';
 if (QUIET) {
   /* --quiet 只印机器可读的一行（门用它做"阶梯确实分级"的判定，不靠措辞） */
-  console.log(JSON.stringify({ n: N, mode: MODE, pack: pk.tag, games: GAMES, rows: rows.map(r => ({ id: r.id, pct: +r.pct.toFixed(2), avgR: +r.avgR.toFixed(1) })) }));
+  console.log(JSON.stringify({ n: N, mode: MODE, pack: pk.tag, games: GAMES, rows: rows.map(r => ({ id: r.id, pct: +r.pct.toFixed(2), avgR: +r.avgR.toFixed(1), dose: r.dose == null ? null : +r.dose.toFixed(4), doseN: r.doseN })) }));
 } else {
   console.log(head);
   const ref = (LEVELS.find(function (L) { return L.id === Bots.DIFF_DEFAULT; }) || {}).id || rows[0].id;
