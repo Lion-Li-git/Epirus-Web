@@ -32,7 +32,10 @@ for (let k = 0; k < marks.length; k++) {
   const s = marks[k];
   if (!/^t\(/.test(lines[s])) continue;
   const e = (k + 1 < marks.length ? marks[k + 1] : lines.length) - 1;
-  gates.push({ idx: s, at: fileOf(s) + ':' + (s + 1), text: lines.slice(s, e + 1).join('\n') });
+  /* 10-22：行号原来用**跨文件总偏移**（`s+1`）⇒ D4 报 1308 而它在文件里是 553，分诊时没法 grep。改成文件内行号：
+   *   `at` = 门体起点到本文件 BOUNDARY 行的距离（BOUNDARY 行本身是第 0 行，门体第一行 ⇒ 1）。 */
+  let __b = s; while (__b >= 0 && lines[__b].indexOf(BOUNDARY) !== 0) __b--;
+  gates.push({ idx: s, at: fileOf(s) + ':' + (s - __b), text: lines.slice(s, e + 1).join('\n') });
 }
 const idOf = t => {
   const m = /^t\(['"]([^'"]+)['"]/.exec(t);
