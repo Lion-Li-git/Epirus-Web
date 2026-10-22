@@ -3,11 +3,10 @@
 #np-part-header-end*/
 import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
 /* §改（2026-10-22 千问·第九批）：D178 原来用三条正则钉 `probe-human-seat.mjs` 的**源码形状**
- * （必须 import duelAssembly ‖ 不许出现 autoGameN( ‖ 不许写 `pickDefend ||` 兜底链）。
- * 换成**数值同一性**：门自己拿同一份 `duelAssembly` + 同一组 `humanPrototypes` 按同一参数再算一遍，
- * 与工具打印的那 12 格逐格对 ⇒ "与 G4 同尺"这件事第一次是可核对的数，而不是"某行代码存在"。 */
-import { humanPrototypes } from '../audit-lib.mjs';
-import { duelAssembly } from '../v2v4-lib.mjs';
+ * （必须 import duelAssembly ‖ 不许出现 autoGameN( ‖ 不许写 `pickDefend ||` 兜底链）⇒ 换成**数值同一性**。
+ * §再改（2026-10-23 千问·v1.8.18）：那"一遍重算"以前是在**门自己的进程**里做的 ⇒ 整轮里被前面某条门留在共享沙箱的
+ *   模块级状态污染（`--only="D178 "` 绿、整轮红）。现在重算在**干净子进程**里做（与工具同条件），
+ *   并加一条 ①″ 现取一份全新 boot 当出厂位、点名任何没复位的旋钮。两个 import 因此只出现在生成给子进程的那段源码里。 */
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
@@ -753,11 +752,13 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
   eq(r1.status, 0, '正常包必须 exit 0：' + String(r1.stderr || '').slice(0, 160));
   const nm = ['全程刷反弹', '全程只防御', '只攒不打(农民)', '只枪压制', '攒钱+反弹(会玩)', '重火力+反弹'];
   const out1 = String(r1.stdout);
-  /* ①′ **数值同一性**（替掉原来那三条源码正则）：门自己拿同一份 `duelAssembly` + 同一组 `humanPrototypes`
-   *   按同一参数（`--games=40`、缺省 `seed0=90210`、两模式）再算一遍 12 格，与工具印出来的**逐格对**。 */
+  /* ①′ **数值同一性**（v1.8.18 改：重算搬到**干净子进程**里做）。
+   *   原来这七行在门自己的进程里直接 `duelAssembly(...)` ⇒ 它比的是"**这台机器此刻的配置**算出来的数"对"子进程里出厂配置算出来的数"。
+   *   实测（10-23 整轮 279/280 的唯一红）：单跑 `--only="D178 "` 1/1 绿，全量轮里 `multi × 全程只防御` 门内算 5.0% 而工具印 0.0%
+   *   ⇒ 红的不是产品，是**前面某条门在共享沙箱里留了模块级状态**；而那条判词把"我这边机器不一样"写成了"它没走那份装配"（R8 那一族：算不出与算过且干净同形）。
+   *   ⇒ 判据问的还是同一件事（"工具印的数就是那份装配在同一参数下的数"），那就必须**同条件**比：两边都在干净进程里。
+   *   单一来源没破：子进程 import 的仍是 `v2v4-lib.duelAssembly` + `audit-lib.humanPrototypes` 那**一份**（不是第二份对局循环）。 */
   {
-    const fp = loadChampParams(Pol, FIXTURE_PACK);
-    const HP = humanPrototypes(Bots);
     const seen = {};
     for (const line of out1.split('\n')) {
       const m = /^ {2}(multi|long)\s+(.*)$/.exec(line);
@@ -770,20 +771,78 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
     eq(Object.keys(seen).sort().join(','), 'long,multi',
       '①′ 拿不到两行（multi/long 各一行）⇒ 同一性无从对起（实测把 stdout 的键读成 ' + JSON.stringify(Object.keys(seen)) +
       '）⇒ 工具的印表格式变了，本门要跟着重看，别让同一性静默空转');
+    const refDir = mkdtempSync(join(tmpdir(), 'd178ref-'));
+    let ref;
+    try {
+      const refTool = join(refDir, 'cells.mjs');
+      const u = function (p) { return new URL(p, import.meta.url).href; };
+      writeFileSync(refTool,
+        "import { sandbox, loadChamp, humanPrototypes } from '" + u('../audit-lib.mjs') + "';\n" +
+        "import { duelAssembly } from '" + u('../v2v4-lib.mjs') + "';\n" +
+        "const W = sandbox();\n" +
+        "const deps = { S: W.EpirusState, Play: W.EpirusPlay, T: W.EpirusTrainer, R: W.EpirusRules };\n" +
+        "const p = loadChamp(W, process.argv[2]);\n" +
+        "if (!p) { process.stderr.write('夹具读不出'); process.exit(9); }\n" +
+        "const HP = humanPrototypes(W.EpirusBots);\n" +
+        "for (const x of HP) { if (typeof x[1] !== 'function') { process.stderr.write('原型不是函数：' + x[0]); process.exit(9); } }\n" +
+        "const G = Number(process.argv[3]);\n" +
+        "const rows = [];\n" +
+        "for (const mode of ['multi', 'long']) { for (const h of HP) {\n" +
+        "  const r = duelAssembly(deps, p, { games: G, mode: mode, seed0: 90210, scripted: h[1] });\n" +
+        "  rows.push(mode + '\\t' + h[0] + '\\t' + r.winPct.toFixed(1) + '\\t' + r.drawPct.toFixed(0));\n" +
+        "} }\n" +
+        "process.stdout.write(rows.join('\\n') + '\\n');\n");
+      const rr = spawnSync(process.execPath, [refTool, FIXTURE_PACK, '40'], { encoding: 'utf8', timeout: 420000 });
+      eq(rr.status, 0, '①′ 参考（干净子进程）必须跑得通（status=' + rr.status + '）：' + String(rr.stderr || '').slice(0, 200));
+      ref = {};
+      for (const line of String(rr.stdout).split('\n')) {
+        const q = line.split('\t');
+        if (q.length === 4) ref[q[0] + '|' + q[1]] = { win: q[2], draw: q[3] };
+      }
+      eq(Object.keys(ref).length, 12, '①′ 参考必须给满 12 格（实测 ' + Object.keys(ref).length +
+        '）⇒ 子进程少跑了一档或原型表变短；同一性不许在缺格上"对得上"');
+    } finally { rmSync(refDir, { recursive: true, force: true }); }
     for (const mode of ['multi', 'long']) {
       const cells = seen[mode] || [];
       eq(cells.length, 6, '①′ ' + mode + ' 那行必须 6 格（实测 ' + cells.length + '）');
       for (let i = 0; i < cells.length; i++) {
-        const h = HP.filter(function (x) { return x[0] === cells[i].name; })[0];
-        ok(!!h, '①′ 工具印的"人类原型"「' + cells[i].name + '」不在 `audit-lib.humanPrototypes` 里 ⇒ 它在用另一组人（与 G4 不同尺，数不能并排读）');
-        if (!h) continue;
-        const r = duelAssembly({ S: S, Play: Play, T: T, R: R }, fp, { games: 40, mode: mode, seed0: 90210, scripted: h[1] });
-        eq(cells[i].win, r.winPct.toFixed(1), '①′ 同一性：' + mode + ' × ' + cells[i].name + ' 工具印 ' + cells[i].win +
-          '% 而那份装配算出 ' + r.winPct.toFixed(1) + '% ⇒ 它没走 `duelAssembly`（或偷偷改了参数）');
-        eq(cells[i].draw, r.drawPct.toFixed(0), '①′ 同一性：' + mode + ' × ' + cells[i].name + ' 的和棋率对不上（' +
-          cells[i].draw + ' vs ' + r.drawPct.toFixed(0) + '）');
+        const key = mode + '|' + cells[i].name;
+        ok(!!ref[key], '①′ 工具印的"人类原型"「' + cells[i].name + '」不在参考那 12 格里 ⇒ 它在用另一组人（与 G4 不同尺，数不能并排读）');
+        if (!ref[key]) continue;
+        eq(cells[i].win, ref[key].win, '①′ 同一性：' + mode + ' × ' + cells[i].name + ' 工具印 ' + cells[i].win +
+          '% 而同一份 `duelAssembly` 在**干净进程**里算出 ' + ref[key].win + '% ⇒ 它没走那份装配（或偷偷改了参数）');
+        eq(cells[i].draw, ref[key].draw, '①′ 同一性：' + mode + ' × ' + cells[i].name + ' 的和棋率对不上（' +
+          cells[i].draw + ' vs ' + ref[key].draw + '）');
       }
     }
+  }
+  /* ①″ **共享沙箱必须还在出厂位**（本晚那条"整轮红 / 单跑绿"的病根探测器，2026-10-23 千问）。
+   *   它判的产品事实只有一句：**门体里任何"在进程内重算"的腿，吃的机器必须与子进程工具同一台**。
+   *   默认值不写死在这里 —— 现取一份**全新 boot** 的沙箱当出厂位（`sandbox()` 每次都重跑 `CORE`，没有缓存）
+   *   ⇒ 将来加旋钮不必改这条，而"设了没复位"一定当场被点名（点名 = 这条腿的全部价值；静默放行就是 v1.8.17 之前那具样子）。
+   *   只比**原始值可读**的那几维：函数/对象身份在两份沙箱里天然不等，比了就是恒红装饰。 */
+  {
+    const W0 = sandbox();
+    const rd = function (E, P, Bo, Ru) {
+      const m = Ru.MODES.multi, fm = P.featMask();
+      return {
+        featMask: Object.keys(fm).sort().map(function (k) { return k + '=' + (fm[k] ? 1 : 0); }).join(','),
+        beliefSearch: E.beliefSearchOn(), beliefPly: E.beliefPly(), chargeMinEp: E.chargeMinEpOn(),
+        trainMode: E.trainMode(), subBead: E.subBeadOn(), beadSeed: E.beadSeedOn(), regenSlice: E.regenSlice(),
+        seatGames: E.seatGames(), planOff: Bo.planOffOn().join(','),
+        multiHp: [m.hp, m.drainHpMax, m.suddenDeath, m.maxRounds].join('/'),
+        multiOnly: Ru.MULTI_ONLY.length, guardFam: Ru.GUARD_FAMILY.length,
+        /* 再补四维：卡片表被改过、§E340 那档映射、两条全局默认档 —— 这些都会改"决策"，而不改上面任何一维 */
+        multiSkills: m.skills.length, skills: Ru.skills.length,
+        costTank: Ru.byKey[Ru.SK.TANK].cost, costBigT: Ru.byKey[Ru.SK.BIG_T].cost,
+        holo2Proto: P.holo2Proto(), suddenDeath: Ru.SUDDEN_DEATH, maxRounds: Ru.MAX_ROUNDS
+      };
+    };
+    const live = rd(T, Pol, Bots, R);
+    const base = rd(W0.EpirusTrainer, W0.EpirusPolicy, W0.EpirusBots, W0.EpirusRules);
+    const drift = Object.keys(base).filter(function (k) { return String(live[k]) !== String(base[k]); });
+    eq(drift.join(','), '', '①″ 共享沙箱里有模块级旋钮**不在出厂位**（前面某条门设过没复位 ⇒ "进程内重算"这类腿吃的不是出厂机器）：' +
+      drift.map(function (k) { return k + ' 进程内=' + live[k] + ' ‖ 出厂=' + base[k]; }).join(' ‖ '));
   }
   for (const k of nm) ok(out1.indexOf(k) >= 0, '② 六个"人类原型"必须都在（缺一个 = 那格静默消失）：' + k);
   ok(/multi/.test(out1) && /long/.test(out1), '② 两个模式都要印（与 G4 同规矩）');
