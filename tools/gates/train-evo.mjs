@@ -1351,8 +1351,9 @@ t('D41 E 新口径：只有"**没有大雷威胁时还一直摆架势**"才算�
   ok(pc.indexOf('fPass.noThreatStanceRate > 0.6') >= 0, 'promote-champion 的 E 门槛必须用新口径（noThreatStanceRate）');
   ok(pc.indexOf('fPass.stance > 0.85') < 0, '旧口径（stance > 0.85）必须已从门槛里移除');
   /* v1.5.62：F 的口径已整体换成"场 A 被集火还手率"（≥20%）—— 新契约由 D55 专管。
-   * 这里只留**反断言**：旧的 25%/35% 阈值写法都必须不存在（防止回退到"所有人靠 --force 过"的老路）。 */
-  ok(pc.indexOf('fAct.atk < 0.25') < 0, '旧的 F 门槛（25%）必须已移除（口径已换成场 A，见 D55）');
+   * v1.7.158 删掉这里那条 `fAct.atk < 0.25` 的反断言：它与 `ship-promote.mjs:72`（D55）里那条**同一文件、同一串、同一极性**
+   *   ⇒ 按 R6 那是"同一条判据的第二份抄写"，删一份不减少覆盖（真把旧 25% 写回去，红的是 D55 那条 + 它自己那条正向新契约钉）。
+   *   留下的 35% 那条**不重复**（全仓只有这里钉着），所以旧口径的两个阈值里仍有一个人守。 */
   ok(pc.indexOf('fAct.atk < 0.35') < 0, '旧的 F 门槛（35%）必须已移除');
   /* v1.5.28：**反弹墙穿透卡零命中 = 阻断**（第三方复核 §3-1 实测：v1.5.27 自对局激光剑命中 20 次、墙里 0 次） */
   ok(pc.indexOf('reflectWall') >= 0, 'promote-champion 必须调用 reflectWall（反弹墙探针）');
@@ -2269,8 +2270,10 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
    *   · `t3.indexOf('process.exit(8)')` ⇒ **没牙**：这一串在 `train-3p.mjs` 里出现 **2 次**，而且两处都在这条 kill-field 路上
    *     （`:2036` 一局未注 ‖ `:2040` 座位偏置）⇒ 摘掉其中**任意一处**，这条字面钉照样绿（它只问"文件里有没有 exit(8)"）。
    *     这两件事各有各的行为判据：前者 = ⑤ 那条反证臂（真把密度调到 1e-9 并读到 exit 8），后者 = ④c 的覆盖座位数。
-   * ⚠ ④e 那句"注入名单"里的名字是 `KILL_STAT.names.killsecure`（`evo.js:2068`）**写死的标签**，不是从被调的那个函数推的
-   *   ⇒ 它只能判标签；这一族要真正闭合得让引擎记下实际那个函数的注册名，那是**改产品**（已进 §二 26) 与 NEXT，等裁）。 */
+   * ✅ ④e 那句"注入名单"（v1.7.158 起）是引擎**从真被叫到的那个函数反查注册名**得来的，不再是写死的标签。
+   *   沿革（第十二批实测）：原形状 `KILL_STAT.names.killsecure = …`（旧 `evo.js:2068`）—— 把 `killSeatBot()` 换成
+   *   `pickFarmer` 之后名单**仍印 `killsecure`** ⇒ 那句"注入名单"是声明不是测量，用户那条裁定当时只有 ②b 那层包装接得住。
+   *   现在闭合靠两条：②c 直接量反查函数本身（含**别名那一支**）‖ ④e 在**子进程**里比名单集合。 */
   eq(typeof T.countKillSeats, 'function',
     '①a 必须有**开火计数接口**（§N12 教训：setter + 横幅读回证明不了作用点发生）；计到了没有，交给 ②b/④ 真跑判');
   /* ② 单元：只注多人局 + 永不注到受评席自己 + 相位真的按代旋转（自建沙箱，别污染共享 T） */
@@ -2322,6 +2325,26 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
       '②b 纯攒钱型一次都不许被这条路过叫（farmer ' + (calls2.pickFarmer || 0) + ' ‖ deepsaver ' + (calls2.pickDeepSaver || 0) + '）'
       + '⇒ 用户 09-22 原话"囤一点 ep 放大招也是有好处的" ⇒ 拿它当陪练等于出一道没有反击的题');
   }
+  /* ②c 反查函数**本身**（引擎直调，不 spawn）：注入名单这一格的来源必须是"身份"，而且别名不许被默默吃掉。
+   *    ⚠ 按 `===` 实测今天的注册表是 **53 个键 / 53 个不同函数 ⇒ 没有别名**，所以"别名那一支"不能靠赌注册表里有来测，
+   *    而是**在本门自己的沙箱里造一枚**（造完删掉，不漏给后面的门）。
+   *    ⚑ 这里也记一笔我自己差点写进去的假读数：第一版用 `byFn[函数对象] = …` 分组，量到"53 键 / 50 函数、两组别名"——
+   *    对象键会把函数**强转成源码字符串**，而 `makeRhythm([...])` 造出的几个闭包源码逐字相同 ⇒ 被并成一组。真别名只能 `===` 两两比。 */
+  {
+    const B3 = sb2.window.EpirusBots;
+    eq(typeof T2.botRegisteredName, 'function', '②c 引擎必须把"反查注册名"这件事**导出来**（否则门只能自己再写一份 = 第二份实现）');
+    eq(T2.botRegisteredName(B3.pickKillSecure), 'pickKillSecure',
+      '②c 注册表里没有别名时，反查必须给**那一个**注册名（实测 ' + T2.botRegisteredName(B3.pickKillSecure) + '）');
+    B3.__aliasProbe = B3.pickKillSecure;
+    ok(B3.__aliasProbe === B3.pickKillSecure, '②c 夹具自证：这枚别名与正身必须**是同一个函数对象**（不是的话下面那一格测的是别的分支）');
+    eq(T2.botRegisteredName(B3.pickKillSecure), '__aliasProbe+pickKillSecure',
+      '②c 有别名时必须**整组列出来**（实测 ' + T2.botRegisteredName(B3.pickKillSecure) + '）⇒ 默默取第一个就把"名单"变回"标签"');
+    delete B3.__aliasProbe;
+    eq(T2.botRegisteredName(B3.pickKillSecure), 'pickKillSecure', '②c 拆掉夹具之后必须回到单名（漏一个键就是给后面的门留脏状态）');
+    eq(T2.botRegisteredName(function () { }), 'anonymous',
+      '②c 没注册进表的手必须显式记成 `anonymous`（实测 ' + T2.botRegisteredName(function () { }) + '）⇒ 空标签或写死第一枚都不许');
+    eq(T2.botRegisteredName(null), 'anonymous', '②c 传空也走同一条（不许抛，也不许回 `undefined` 被下游读成"没人注入"）');
+  }
   T2.setKillField(0);
   /* ③ 行为 · 默认关 ⇒ 与登记产物**逐位相同**（seed 7 · 3 代 × 3 人 × 6 局 × 种群 4） */
   const wh = function (p) {
@@ -2364,9 +2387,17 @@ t('D123 收割席注入（v1.5.160 · §N13 · 用户裁定"场B 缺口走对手
   const roster = /注入名单 ([^（]*)（/.exec(so);
   ok(!!roster, '④d 必须印出注入标签（实测 stdout 里没有 `注入名单 …（` 这一段 ⇒ 这一维没人自证，回到"横幅自证"）');
   const rosterSet = String(roster ? roster[1] : '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-  eq(rosterSet.join(','), 'killsecure', '④e 引擎自报的注入标签必须**恰好**是 `killsecure`（实测解析出 ' + rosterSet.length + ' 枚：[' + rosterSet.join('|') + ']）'
-    + '⚠ 这条**只判标签**（名字来自 `KILL_STAT.names.killsecure`，`evo.js:2068` 写死的键）⇒ 换成别的 bot 它不会跟着变；'
-    + '"到底调了谁"由 ②b 那层注册表包装判。多一枚 = 有人往标签上加了陪练，少一枚 = 注入没发生（那 ④b 也该红）');
+  /* v1.7.158 起这一格是**端到端测量**而不是比标签：那个名字是引擎在计数那一刻从被调函数反查注册表得来的
+   *   （`botRegisteredName`，旧形状是写死的 `KILL_STAT.names.killsecure`）。⇒ 把 `killSeatBot()` 换成 `pickFarmer`
+   *   ⇒ 名单会印 `pickFarmer` ⇒ 这里当场红（第十二批时这一格对那一刀是**瞎的**，只有 ②b 那层包装接得住）。
+   * ⚠ 允许"一枚函数有多个注册名"那种别名（实测注册表 53 键 / 50 个不同函数，`pickReflectMix·pickReflectTank·pickDefReflectGun`
+   *   同一枚 ⇒ 反查会把它们 `+` 着全列出来，不默默取第一个）。所以这里判的是"这一组身份里含收割型那枚"，而不是逐字串。 */
+  eq(rosterSet.length, 1, '④e 注入名单必须**恰好一枚**（实测解析出 ' + rosterSet.length + ' 枚：[' + rosterSet.join('|') + ']）'
+    + '⇒ 多一枚 = 真注了两种手（用户裁的"只许"就是判这个）‖ 少一枚 = 注入没发生（那 ④b 也该红）');
+  const rIdent = String(rosterSet[0] || '').split('+').map(function (s) { return s.trim(); }).filter(Boolean);
+  ok(rIdent.indexOf('pickKillSecure') >= 0, '④e 实际被注入并被引擎记下的那枚必须**是** `pickKillSecure`'
+    + '（名单读到 [' + rosterSet.join('|') + '] ‖ 拆开后 [' + rIdent.join('|') + ']）'
+    + '⇒ 这不是标签：它是计数那一刻 `Bots` 里真被叫到的那个函数的注册名（换成 farmer 就会印 `pickFarmer`）');
   /* ⑤ 反证 · 密度小到不可能开火 ⇒ 必须 exit 8（证明这道闸自己会响，而不是摆设） */
   const never = mini({ EPIRUS_KILL_FIELD: '1e-9' });
   eq(never.status, 8, 'EPIRUS_KILL_FIELD 小到一局未注时必须 exit 8（拒绝白跑；实测 exit=' + never.status + '）');
@@ -2865,6 +2896,14 @@ t('D162 训练/选择执行口径旋钮（v1.5.237 · E28）：默认关要**可
      *     ① `OUT_PATH` 的三元次序（`train-3p.mjs:48`），② §E589 的进程级守卫（出厂槽被改 ⇒ exit 3 并还原）。
      *   本门接着跑的那几格判的是能安全量的那一半：改道**真落盘**（`existsSync`）+ 默认基线**逐字节不动**（哈希）+ 收据那行（P3）。 */
     const def = 'docs/artifacts/train-3p-out.js';
+    /* 三选一那道闸（`train-3p.mjs:1427`，实测**全仓唯一**声明点）里只有 `EPIRUS_T3P_BASELINE` 这一支谁都不钉：
+     *   `EPIRUS_PUBLISH` 有 D123/D139 那族、默认落点哈希有本门与 D123，而"我这次就是要写基线"这枚声明没有任何一条门
+     *   判它还在。名单被删掉一项时臂会退化成 exit 10（响亮拒绝，不静默）⇒ 不是事故，但**今天无人可判**。
+     *   ⇒ 补一条与 D200 同形的"名单完整性"腿（新增一条 `ok`，门数仍 281）。 */
+    const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+    ok(t3.indexOf('EPIRUS_T3P_OUT') >= 0 && t3.indexOf("EPIRUS_T3P_BASELINE !== '1'") >= 0,
+      '闸里那两个"允许写"的出口必须都还在：改道 `EPIRUS_T3P_OUT` ‖ 基线持有者声明 `EPIRUS_T3P_BASELINE`'
+      + '（实测 OUT=' + (t3.indexOf('EPIRUS_T3P_OUT') >= 0) + ' ‖ BASELINE=' + (t3.indexOf("EPIRUS_T3P_BASELINE !== '1'") >= 0) + '）');
     const before = createHash('sha1').update(readFileSync(def)).digest('hex');
     const dir = mkdtempSync(join(tmpdir(), 't3pout-'));
     const rr = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '5', '4', '4'], {

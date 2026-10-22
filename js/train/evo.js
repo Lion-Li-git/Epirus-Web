@@ -108,6 +108,8 @@
    *   原来"承诺局"这个概念在 `killSeatFor` 与 `scoreMemberN` 各写了一遍 `g % 3 === 0`，那正是本仓栽过四次的"两处各写一遍"。
    * ⚠️ 不传 `gen` ⇒ 相位 0 ⇒ 与旧版逐字相同（历史臂仍可复现）；调用点必须**显式把 gen 传进来**。 */
   function sliceHit(g, step, gen) {
+    /* ⚠ 这一行是全仓**唯一**的切片地板（"每局都补"不允许存在）：v1.7.158 起 `regenForGame` 不再自己夹一次。
+     *   要改这个下限只许改这里 —— 在调用方再夹一次 = 回到"摘一处不红"那枚形状（D132 的判据注释记着那次实测）。 */
     const s = Math.max(2, Number(step) || 2);
     return ((((g + (gen || 0)) % s) + s) % s) === 0;
   }
@@ -123,6 +125,23 @@
   }
   function killSeatBot() {
     return (Bots && typeof Bots.pickKillSecure === 'function') ? Bots.pickKillSecure : null;
+  }
+  /* v1.7.158：注入名单里的名字改成**从真被叫到的那个函数反查注册名**（原来 `KILL_STAT.names.killsecure` 那个键是写死的标签）。
+   * 动因（10-22 门禁审查第十二批实测）：把 `killSeatBot()` 换成 `pickFarmer` 之后，旧标签照旧印 `killsecure`，
+   * 而"注入席到底调了谁"这件事当时**只有**测试里那层注册表包装接得住 ⇒ 引擎自己的收据在说谎（或者说，它根本没在测量）。
+   * ⚠ 为什么要处理"同一个函数挂在两个键上"：按 `===` 实测今天的注册表是 **53 个键 / 53 个不同函数**（没有别名），
+   *   但"兼容用的第二个名字"在本仓是有先例的一类东西（`D191` 那条量具就是为此存在的）。
+   *   默默取第一个 = 把"名单"重新变成一枚标签 ⇒ 全部列出，让别名**看得见**而不是被选中。
+   * ⚑ 顺带记一笔我自己的坑：第一版我用 `byFn[functionObject] = …` 分组，得到"53 键 / 50 函数、两组别名"——那是**假读数**，
+   *   因为对象键会把函数**强转成它的源码字符串**，而 `makeRhythm([...])` 造出来的几个闭包源码逐字相同 ⇒ 被并成一组。
+   *   真别名要用 `===` 两两比（门里 ②c 那格改成"自己造一个别名再反查"，不去赌注册表里有没有别名）。 */
+  function botRegisteredName(fn) {
+    if (!fn || typeof fn !== 'function' || !Bots) return 'anonymous';
+    const hits = [];
+    for (const nm of Object.keys(Bots)) { if (Bots[nm] === fn) hits.push(nm); }
+    if (hits.length === 0) return 'anonymous';
+    if (hits.length === 1) return hits[0];
+    return hits.sort().join('+');
   }
 
   function mulberry32(seed) {
@@ -2065,7 +2084,8 @@ let WALL_GAMES = 3;
           choosers.push(wrapBotN(kb));
           KILL_STAT.fired++;
           KILL_STAT.seats[seat] = (KILL_STAT.seats[seat] || 0) + 1;
-          KILL_STAT.names.killsecure = (KILL_STAT.names.killsecure || 0) + 1;
+          const kbName = botRegisteredName(kb);
+          KILL_STAT.names[kbName] = (KILL_STAT.names[kbName] || 0) + 1;
         } else { choosers.push(wrapBotN(opps[oppSeatIndex(gen, g, ok++, opps.length, OPP_BLOCK)].sel)); }
       }
       OPP_BLOCK_STAT.fitGames++; if (OPP_BLOCK) OPP_BLOCK_STAT.blockedGames++;
@@ -2930,8 +2950,11 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   function regenForGen(gen) { return 0; }   // 兼容旧入口；回放切片按局索引走
   function setRegenTotal(n) { /* 保留兼容：回放切片不再依赖总代数 */ }
   function regenForGame(g, games, gen) {
-    const step = Math.max(2, Math.round(1 / REGEN_SLICE));
-    return sliceHit(g, step, gen) ? 2 : 0;   // v1.5.186：相位按代旋转（原来 `g % step` 与 `seat = g % n` 会锁死）
+    /* v1.7.158：地板只留**一处**（`sliceHit` 里那句 `Math.max(2, …)`，`:111`）。原来这里也夹一次 ⇒ 门禁审查第十二批的
+     *   变异实测："单点摘掉不红、两点同时摘才红" ⇒ 那枚地板看着有两条守门人，实际谁都不独占它（本仓"两处各写一遍"那一族）。
+     *   行为逐字不变：`setRegenSlice` 把切片夹在 [0.01,1] ⇒ `Math.round(1/切片)` ∈ [1,100]，只有切片=1 那一档落到地板（1⇒2），
+     *   而那一档两处算法给同一个数 ⇒ D132 的三档密度读数（0.08⇒10 ‖ 0.5⇒60 ‖ 0.01⇒2）与改前必须一模一样。 */
+    return sliceHit(g, Math.round(1 / REGEN_SLICE), gen) ? 2 : 0;   // v1.5.186：相位按代旋转（原来 `g % step` 与 `seat = g % n` 会锁死）
   }
 
   /* ===== 承诺级 ε（千问方案）=====
@@ -3518,7 +3541,7 @@ function countVariety(events, seat) {
     setPressReward, pressReward, countPressRounds,
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
     setBeadReward, beadReward, countBeadSpent,
-    setKillField, killField, countKillSeats, killSeatFor,   // v1.5.160 收割席注入（含**开火计数**，§N12 教训）
+    setKillField, killField, countKillSeats, killSeatFor, botRegisteredName,   // v1.5.160 收割席注入（含**开火计数**，§N12 教训）‖ v1.7.158 反查注册名（注入名单从"标签"变成"测量"）
     setOppTable, oppTable, oppSeatIndex,   // v1.5.279 §E124：整桌同原型（默认关；`oppSeatIndex` 是纯函数，门 D187 直接判它）
     setTargetReward, targetReward, countThreatHits, threatKeyList,
     setClearReward, clearReward, countClears,
