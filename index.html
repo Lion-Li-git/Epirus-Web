@@ -10,12 +10,13 @@
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.8.0 （2~5 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· 规则裁定见 docs/RULES-2P.md / docs/RULES-NP.md · <a href="rules.html" style="color:#7fb2ff">规则说明 + 问答 ↗</a> · <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v1.8.1 （2~5 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
   </header>
 
   <nav class="tabs">
     <button id="tab-battle" class="on">⚔ 对局</button>
     <button id="tab-train">🧪 训练场（自对战）</button>
+    <button id="tab-rules">📖 规则说明</button>
   </nav>
 
   <!-- ============ 对局 ============ -->
@@ -128,6 +129,12 @@
     训练结束自动保存冠军到本机；「困难·冠军策略」难度即使用它。冠军可导出 JSON 分享。</p>
   </section>
 
+  <!-- ============ 规则说明 ============ -->
+  <section id="page-rules" class="panel rules hidden">
+    <div id="rules-body"></div>
+    <p class="hint">内容由本程序现读引擎常量生成；技能数值以实际对局为准。</p>
+  </section>
+
   <footer>
     <!-- 那一枚 logo 走 symbol + use：同一条 path 只留一份（721 字符），两个链接各引一次 -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
@@ -136,7 +143,6 @@
     Epirus（Efficient power in real universe space）· 规则开源 CC BY-NC-SA · 本程序仅供学习娱乐。<br>
     技术栈：纯 HTML/CSS/JS，零依赖，双击 index.html 即玩。对局在浏览器本地跑；训练要另起本机服务（<code>node server/train-server.mjs</code> 或双击 <code>tools/start-train-server.cmd</code>），不联网、无后端。
     <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-size:13px">
-      <a href="rules.html" style="color:#7fb2ff">规则说明 · 这一版实际跑的那套（含问答）↗</a>
       <a href="https://github.com/Lion-Li-git/Epirus-Web" target="_blank" rel="noopener noreferrer" style="color:#7fb2ff;display:inline-flex;align-items:center;gap:6px">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><use href="#ghmark"/></svg>本仓库（代码 · 全部裁定 · 门禁）</a>
       <a href="https://github.com/Lion-LiHaoyi/Epirus" target="_blank" rel="noopener noreferrer" style="color:#7fb2ff;display:inline-flex;align-items:center;gap:6px">
@@ -163,6 +169,7 @@
 <script src="js/pool-draw.js?v=mv9mdgq2"></script>
 <script src="js/ui/skill-tip.js?v=mv9mdgq2"></script>
 <script src="js/ui/bead-choice.js?v=mv9mdgq2"></script>
+<script src="js/ui/rules-panel.js?v=mv9mdgq2"></script>
 <script src="js/ui/ui.js?v=mv9mdgq2"></script>
 <!-- v1.6.63（§E590）冠军池：成员权重表，defer ⇒ 不挡首屏；第一次 AI 决策前必然已执行。
      真源 champion-map/pool-members.tsv，本文件由 tools/build-pool-bundle.mjs 生成，不要手改。

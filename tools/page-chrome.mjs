@@ -14,7 +14,8 @@ import { resolveChrome } from './cdp-boot.mjs';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const A = process.argv.slice(2);
 const expr = (A.find(function (a) { return a.indexOf('--expr=') === 0; }) || '').slice(7);
-const url = 'file:///' + join(ROOT, 'index.html').replace(/\\/g, '/');
+const urlArg = (A.find(function (a) { return a.indexOf('--url=') === 0; }) || '').slice(6);
+const url = urlArg || ('file:///' + join(ROOT, 'index.html').replace(/\\/g, '/'));
 if (!expr) { console.error('⛔ 缺 --expr=...'); process.exit(2); }
 const RES = resolveChrome(process.env.EPIRUS_CHROME || undefined);
 const CHROME = RES && RES.path;
@@ -36,8 +37,9 @@ function send(method, params) { return new Promise(function (res) { const i = ++
 await new Promise(function (res, rej) { ws.addEventListener('open', res); ws.addEventListener('error', rej); });
 await send('Page.enable'); await send('Runtime.enable');
 await send('Page.navigate', { url: url });
-const wrapped = 'new Promise(function(r){var t=setInterval(function(){try{if(window.EpirusTrainer){clearInterval(t);r(' + expr + ');}}catch(e){clearInterval(t);r({error:String(e)});}},80);setTimeout(function(){clearInterval(t);r({timeout:true});},15000);})';
+const wrapped = 'new Promise(function(r){var t=setInterval(function(){if(document.readyState==="complete"){clearInterval(t);try{r(' + expr + ');}catch(e){r({error:String(e)});}}},80);setTimeout(function(){clearInterval(t);r({timeout:true});},15000);})';
 const out = await send('Runtime.evaluate', { expression: wrapped, awaitPromise: true, returnByValue: true });
+if (process.env.EPIRUS_DEBUG_CDP) console.log('RAW ' + JSON.stringify(out).slice(0, 500));
 const val = out && out.result && out.result.result ? out.result.result.value : undefined;
 console.log('RESULT ' + JSON.stringify(val === undefined ? null : val));
 killTree();

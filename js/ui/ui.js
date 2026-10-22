@@ -1178,9 +1178,12 @@
   function showTab(which) {
     $('tab-battle').classList.toggle('on', which === 'battle');
     $('tab-train').classList.toggle('on', which === 'train');
+    $('tab-rules').classList.toggle('on', which === 'rules');
     $('page-battle').classList.toggle('hidden', which !== 'battle');
     $('page-train').classList.toggle('hidden', which !== 'train');
+    $('page-rules').classList.toggle('hidden', which !== 'rules');
     if (which === 'train') { drawChart(); renderChampState(); }
+    if (which === 'rules' && window.EpirusRulesPanel) window.EpirusRulesPanel.render();
   }
 
   /* ---------- 训练场 ---------- */
@@ -1578,6 +1581,7 @@
   function bind() {
     $('tab-battle').onclick = function () { showTab('battle'); };
     $('tab-train').onclick = function () { showTab('train'); };
+  $('tab-rules').onclick = function () { showTab('rules'); };
     applyAxes();   // 首屏同步一次（人数/血量 → 模式键）
     $('btn-lastlog').onclick = showLastBattle;
     /* v1.6.5：两根轴各自的重开逻辑一样（换局），差别只在 `newGame` 里查出来的 modeKey 不同。 */
