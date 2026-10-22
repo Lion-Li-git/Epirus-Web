@@ -17,10 +17,20 @@
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['pack', 'seeds', 'round'], 'probe-state-blindspots');
+rejectUnknownFlags(argv, ['pack', 'seeds', 'round', 'n', 'mode'], 'probe-state-blindspots');
 const arg = (k, d) => { const a = argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const PACK = arg('pack', 'js/bundled-champion-3p.js');
 const SEEDS = Number(arg('seeds', 6)), ROUND = Number(arg('round', 9));
+/* v1.8.15（§E699）：加两维把手，让"看得见吗"这个问题能按**桌形**问（用户 10-23：「冠军在不同人数不同血量的适应度」）。
+ *   缺省 `n=5 / mode=multi` ⇒ 与在册 §E680 那批**逐字同输出**（改完拿默认跑一遍对过）。
+ *   ⚠ 换桌形 = 换分布不是换样本量（`MULTI_ONLY` 三张按存活人数过滤、4 血把血量特征整段平移）⇒ 两档的读数不许并排当同一条轴读。 */
+const N = Number(arg('n', 5)), MODE = arg('mode', 'multi');
+if (!(N >= 3 && N <= 5)) {
+  console.error('⛔ --n 要在 3~5（实测 ' + arg('n', 5) + '）⇒ 本尺的扰动表里有"对手1"与"最后一席对手"两组，'
+    + 'n=2 时它们是同一个人 ⇒ 标签会撞、`flipOf` 按标签建键会互相覆盖（那种"看起来跑了"的退化比报错更贵）。要量 2 人桌请另立一具尺。');
+  process.exit(2);
+}
+if (['standard', 'multi', 'multi4', 'long'].indexOf(MODE) < 0) { console.error('⛔ --mode 只认 standard/multi/multi4/long（实测 ' + MODE + '）'); process.exit(2); }
 
 const W = sandbox();
 const T = W.EpirusTrainer, P = W.EpirusPolicy, S = W.EpirusState, Play = W.EpirusPlay, R = W.EpirusRules;
@@ -31,9 +41,9 @@ const params = Float64Array.from(c);
 const sel = T.policyChooserN(params, 0);
 
 function mk(seed, tweak) {
-  const st = S.createState('multi', { next: T.mulberry32(seed * 7919 + 13) }, 5);
+  const st = S.createState(MODE, { next: T.mulberry32(seed * 7919 + 13) }, N);
   st.round = ROUND;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < N; i++) {
     const p = st.p[i];
     p.ep = 2 + (i % 3);
     p.hp = Math.max(2, p.hp - (i % 2));
@@ -73,11 +83,11 @@ const PERTURB = [
   ['对手1 lastSkill →GUN', st => { st.p[1].lastSkill = R.SK.GUN; st.p[1].lastTarget = 0; }, ''],
   ['对手1 rodGuard 0→3', st => { st.p[1].rodGuard = 3; }, ''],
   ['对手1 tauntPending 0→1', st => { st.p[1].tauntPending = 1; }, '恒零列'],
-  ['对手4 hp→0（阵亡）', st => { st.p[4].hp = 0; }, ''],
+  ['对手' + (N - 1) + ' hp→0（阵亡）', st => { st.p[N - 1].hp = 0; }, ''],
   ['我自己(0) ep 2→6', st => { st.p[0].ep = 6; }, ''],
   ['round 9→20', st => { st.round = 20; }, '']
 ];
-console.log('包=' + PACK + ' ‖ 桌=multi n=5 ‖ round=' + ROUND + ' ‖ ' + SEEDS + ' 份种子 ‖ chooser eps=0');
+console.log('包=' + PACK + ' ‖ 桌=' + MODE + ' n=' + N + ' ‖ round=' + ROUND + ' ‖ ' + SEEDS + ' 份种子 ‖ chooser eps=0');
 let detBad = 0;
 for (let s = 1; s <= SEEDS; s++) {
   const a = mk(s, null), b = mk(s, null);
