@@ -30,7 +30,7 @@
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { duelAssembly } from './v2v4-lib.mjs';
-import { rejectUnknownFlags } from './audit-lib.mjs';   /* v1.5.323：输入消毒层（仓规：不认识的 -- 参数必须响亮失败） */
+import { rejectUnknownFlags, extractJsonObject } from './audit-lib.mjs';   /* v1.5.323：输入消毒层（仓规：不认识的 -- 参数必须响亮失败）‖ 10-22 加 extractJsonObject：arm id 走仓里唯一那份解析器 */
 
 const REPO = process.env.EPIRUS_REPO || './';
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map };
@@ -84,28 +84,45 @@ function anatomyLine(tag, r) {
 }
 
 console.log('=== G4「只枪」解剖（口径与 gate-drafts 逐字一致 · ' + GAMES + ' 局/行 · seed0=' + SEED0 + '）===');
-/* 期望值 = 09-19 实测的线上包读数（`g4-check.log`）—— 复现不出就是量具坏了 */
-/* 自检的期望值必须跟着**在位包**走（09-24 实测校正）：
- *   原先这里硬写 `long: 75 / multi: 62` —— 那是 **v1.5.144 之前**那件线上包的读数；
- *   现役 `v7cmin4-31` 在同一装配、同一 seed、n=60 上是 **long 38% / multi 35%**（与 `gate-drafts` n=300 的 38%/35% 吻合）。
- *   ⇒ 常量不跟着换包走，后果不是"数字旧"，而是**每次跑都自证「⛔ 复现失败 ⇒ 下面的读数先别读」**
- *     —— 一个好量具被自己的记账废掉（交接 §5-6「从算式出发、不实测会错在量级」的同族，这次长在工具里）。
- *   换线上包时必须同时改这里与门 D1xx 的钉，并标 n / 日期，否则宁可让门红。 */
-const EXPECT = { long: 38, multi: 35 };   // 线上包 = js/bundled-champion-3p.js（v7cmin4-31）· n=60 · 09-24 实测
+/* 自检的期望值必须跟着**在位包**走 —— 但"在位"是一个会换主人的指针，所以这里绑的是**包自己 meta 里的 arm id**，不是人名。
+ *   旧写法把常量与包名一起抄在注释里（`const EXPECT = { long: 38, multi: 35 } // v7cmin4-31 · 09-24`），
+ *   于是换包两次都没人来改：v1.6.62（10-11）线上 3P 换成 `T8-s114`，v1.7.66（10-16）规则又换代
+ *   ⇒ 10-22 实测 §A **两个模式每次都自证「⛔ 复现失败」**（41.7% vs 38 ‖ 21.7% vs 35），
+ *     而门 `D107` 只读这台工具的源码文本，照样绿（⇒ 那三条腿已按实测删除，见门里的注）。
+ *   ⇒ 现在三态：arm 在表里 ⇒ 比数；arm **不在**表里 ⇒ 响亮"未登记 ⇒ 读数先别用"（换包漏重标会当场显形）；
+ *     读不到 arm（非槽位包）⇒ 跳过并说明为什么跳过。**没有"静默当通过"这一支**。
+ *   表里的值都是**同 seed0 / 同 n=60 实测**，不是外推：`T8-s114` 那行是 10-22 夜本机连跑两次逐字相同（41.7 / 21.7）
+ *   ‖ 规则指纹 `9541e5a6`（包 meta 里带的那枚）‖ 容差 ±2 沿用旧口径。 */
+const EXPECT_BY_ARM = {
+  'T8-s114':    { long: 42, multi: 22, at: '10-22 夜 n=60 连跑两次逐字相同 41.7/21.7 ‖ 规则指纹 9541e5a6' },
+  'v7cmin4-31': { long: 38, multi: 35, at: '09-24 实测（v1.5.144 上槽那件）‖ 与 gate-drafts n=300 吻合 ⇒ 历史档' }
+};
+/* arm id 从包的 META 里读，用仓里**唯一那份**解析器（`audit-lib.extractJsonObject`，带 `avoid` 那条前缀纪律）⇒ 不自己写第二份正则。 */
+const armOf = function (f) {
+  const src = readFileSync(REPO + f, 'utf8');
+  const mj = extractJsonObject(src, 'window.EPIRUS_CHAMPION_3P_META');
+  if (!mj) return null;
+  try { const j = JSON.parse(mj); return (j.recipe && j.recipe.arm) || j.arm || null; } catch (e) { return null; }
+};
 
 for (const f of FILES) {
   let p; try { p = load(f); } catch (e) { console.log('  跳过 ' + f + ': ' + e.message); continue; }
-  console.log('\n  包：' + f.split('/').pop() + '（meta 指纹 ' + ((p && p.meta && p.meta.rulesFingerprint) || '—') + '）');
+  const arm = armOf(f);
+  const exp = arm ? EXPECT_BY_ARM[arm] : null;
+  console.log('\n  包：' + f.split('/').pop() + '（arm=' + (arm || '(读不到)') + ' ‖ meta 指纹 ' + ((p && p.meta && p.meta.rulesFingerprint) || '—') + '）');
   for (const mode of ['long', 'multi']) {
     console.log('\n  ── 模式 ' + mode + ' ──');
     const base = duelAssembly(D, p, { games: GAMES, mode: mode, seed0: SEED0, scripted: 'champ', countKeys: KEYS });
     const gun = duelAssembly(D, p, { games: GAMES, mode: mode, seed0: SEED0, scripted: JI_LINE, countKeys: KEYS });
-    /* §A 自检：**线上包**必须复现已记录的 38%/35%（同 seed、同局数 ⇒ 理论上逐局相同）。
-     * 量别的候选包时跳过自检（否则每次都会喊"复现失败"，把一个好量具变成噪音）。 */
-    const isOnline = f === 'js/bundled-champion-3p.js';
-    const ok = !isOnline ? null : Math.abs(gun.winPct - EXPECT[mode]) <= 2;
-    console.log('  §A 自检  只枪线 vs ' + (isOnline ? '线上包' : '本包') + '：' + gun.winPct + '%（线上包应 ' + EXPECT[mode] + '%）' +
-      (ok === null ? '   （非线上包 ⇒ 跳过自检）' : (ok ? '   ✅ 装配对上了' : '   ⛔ **复现失败** ⇒ 下面的读数先别读，去查装配/包')));
+    /* §A 自检：**arm 在期望表里的包**必须复现记录值（同 seed、同局数 ⇒ 理论上逐局相同，实测两次逐字相同）。
+     *   换包而没重标 ⇒ 走"未登记"那一支（响亮，不等于过）；量别的候选包 ⇒ 明写跳过原因。 */
+    const ok = exp ? Math.abs(gun.winPct - exp[mode]) <= 2 : null;
+    console.log('  §A 自检  只枪线 vs ' + (arm ? (exp ? '在册包 ' + arm : '未登记包 ' + arm) : '本包') +
+      '：' + gun.winPct + '%' + (exp ? '（应 ' + exp[mode] + '%）' : '') +
+      (ok === null
+        ? (arm ? '   ⚠ **arm=' + arm + ' 未登记 ⇒ 读数先别用，去 EXPECT_BY_ARM 补一行实测值**'
+                : '   （非槽位包 ⇒ 跳过自检，原因：读不到 arm）')
+        : (ok ? '   ✅ 装配对上了' : '   ⛔ **复现失败** ⇒ 下面的读数先别读，去查装配/包')));
     console.log('  §B 解剖（同一 seed 序列，只换脚本席）');
     anatomyLine('基线(5 席同包)', base);
     anatomyLine('只枪(1 席脚本)', gun);
