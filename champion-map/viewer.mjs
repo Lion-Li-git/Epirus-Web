@@ -831,7 +831,8 @@ function winEps() { var r = FR(); return (r[1] - r[0]) * 1e-9; }   /* §E569：�
  *   ⇒ 分数往返会把上边压低约 5.55e-17（node 实测：wh − hi = -5.55e-17），
  *   于是**F 正好等于段上边的那一枚**（换档后实测是 SLOT-037b2f71，F=0.42565000）被踢出窗外 ⇒ 页检报"窗内 100 ‖ 段里 101"。
  *   修法只有一处：两边的边界判定共用同一个 epsilon，不靠运气对齐浮点。 */
-function inWin(d) { if (winFull()) return true; var v = Fv(d), e = winEps(); return v >= winLo() - e && v <= winHi() + e; }
+function inWin(d) { if (!fKnown(d)) return false;   /* v1.8.27：当前桌形这档没读数 ⇒ **不画**（旧行为是静默退回另一张桌） */
+  if (winFull()) return true; var v = Fv(d), e = winEps(); return v >= winLo() - e && v <= winHi() + e; }
 function recomputeVIS() { NVIS = 0;
   for (var i = 0; i < N; i++) { var d = P[i];
     /* 冠军与"加进对比的那几枚"**永远钉在图上**：切批次不能把参照物一起切没，
@@ -889,9 +890,18 @@ var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
  *   所以旧写法下这根 T 滑杆在长程档**根本不动 F**（前 400 枚 0/400 变），而默认档 393/400 变 ⇒ 两档不是同一套方法。
  *   现在两档同式：H/100 + T·S，只差 H 读哪一列（Hp ‖ Hplong）。表里的 Flong 仍留着当历史账（图例/明细不再吃它）。 */
 function Fl(d) { return (d.hpl2 === null || d.hpl2 === undefined || !isFinite(d.hpl2)) ? null : d.hpl2 / 100 + st.T * d.S; }
+/* ===== v1.8.27（用户 10-23：「缺少的值应该**不显示**而不是显示错的」）=====
+ *   旧写法在长程档遇到没量过 Hplong 的那几枚时**静默退回默认桌**（拿 Hp/100 + T·S 顶上），
+ *   页头只补一句"这些枚退回默认桌，一张图上混两把尺"就算了 ⇒ 用户看到的仍然是一个像长程桌的数。
+ *   §E491 对 Hp 空洞的立场本来就是"有空洞就是装错货、不留退路"⇒ 这里按同一条规矩改：
+ *   缺长程读数 ⇒ NaN，配合下面的支路：**不画（inWin=false）‖ 名次垫底 ‖ 色带给未测灰 ‖ 文案印"未测"**。
+ *   ⚠ 只改长程档；默认档（Hp）仍由 §E491 那道生成侧守卫保证全在册，走不到非有限这一支。
+ *   ⚑ 这段注释里不许出现反引号：本文件的注释嵌在模板字符串里，一个反引号就把生成器打断（v1.8.27 第一次生成就挂在这也）。 */
 function Fv(d) {
-  if (st.ftab === 'long') { var f = Fl(d); if (f !== null) return f; return d.Hp / 100 + st.T * d.S; }
+  if (st.ftab === 'long') { var f = Fl(d); return f === null ? NaN : f; }
   return d.Hp / 100 + st.T * d.S; }
+function fKnown(d) { var v = Fv(d); return v !== null && isFinite(v); }
+function Ftxt(d) { return fKnown(d) ? Fv(d).toFixed(3) : '未测'; }
 /* ===== 页面口径那一档（颜色 'hp'）：两个桌形**必须同一套取数**（用户 10-20 裁定）=====
  *   默认桌读 coords 的「Hp」，长程桌读 coords 的「Hplong」（烘进页面叫「hpl2」）—— 同一台 eval-5p、同 seed 同档、
  *   只换桌形，两列都是**全库**读数（各 803 枚）。
@@ -910,13 +920,17 @@ function NHP() { let n = 0; for (let i = 0; i < N; i++) if (hpNow(P[i]) !== null
  *   rkExam 只在**第一次**跑时从表里的 rank 抄走（那是出厂账），之后再跑不许覆盖 —— 否则第二遍抄的是自己算出来的数，
  *   "考卷口径第 N 名"那句话就变成"上一次换尺之后的名次"，历史账就没了。 */
 var RKX_DONE = false;
-function recalcRank() { var o = DATA.map(function (d, i) { return i; }).sort(function (a, b) { return Fv(DATA[b]) - Fv(DATA[a]); });
+/* v1.8.27：比较子先过一层 rkKey ⇒ 当前桌形**没读数**的那几枚垫到底，而不是让 NaN 把排序变成"维持原序"
+ *   （NaN 参与减法返回 NaN，sort 把它当 0 ⇒ 旧写法下这几枚会散落在中间，卡片却写"第 N 名"= 显示错的）。 */
+function rkKey(d) { var v = Fv(d); return isFinite(v) ? v : -Infinity; }
+function recalcRank() { var o = DATA.map(function (d, i) { return i; }).sort(function (a, b) { return rkKey(DATA[b]) - rkKey(DATA[a]); });
   for (var k = 0; k < o.length; k++) { if (!RKX_DONE) DATA[o[k]].rkExam = DATA[o[k]].rk; DATA[o[k]].rk = k + 1; } RKX_DONE = true; }
 recalcRank();
 function fRange() { var a = Infinity, b = -Infinity; for (var i = 0; i < N; i++) { var v = Fv(P[i]); if (v < a) a = v; if (v > b) b = v; } return [a, b]; }
 /* §E297：顶/底由用户选。**只翻高度方向，不翻颜色**（颜色恒为"红 = F 高"，与点色同向）：
  *   goodTop=true  ⇒ 高度 = F（能量高的在上，冠军在峰顶）；false ⇒ 高度 = F_max − F（冠军在阱底）。*/
-function u01(F, fr) { var rng = (fr[1] - fr[0]) || 1; return st.goodTop ? (F - fr[0]) / rng : (fr[1] - F) / rng; }
+function u01(F, fr) { var rng = (fr[1] - fr[0]) || 1; if (!isFinite(F)) return 0;   /* v1.8.27：没读数不许把 NaN 灌进几何（这批点在长程档本来就不画，这里只兜底） */
+  return st.goodTop ? (F - fr[0]) / rng : (fr[1] - F) / rng; }
 /* §E330 色带：**两端拉满、正中放中性灰**。旧表是青蓝 (24,150,196) → 紫灰 (131,102,126) → 红 (238,54,56)
  *   的单段线性插值，中段那个"偏紫的脏灰"正是用户点名"堆在灰色偏红、看不清"的底色之一。*/
 var LUT = (function () { var o = [],
@@ -1014,6 +1028,7 @@ function colBand() { var b = splitSets().vis, n = b.length;
   if (n < 2) return null;
   return { lo: b[0], hi: b[n - 1], med: (b[(n - 1) >> 1] + b[n >> 1]) / 2, n: n, mode: winFull() ? 'lib' : 'win' }; }
 function fCol(F) { var bd = colBand(); if (!bd) return 0.5;
+  if (!isFinite(F)) return 0.5;   /* v1.8.27：没读数不参与色标（色带那一档由 colOf 直接给未测灰，这里只防 NaN 走进 ramp） */
   var t = F <= bd.med ? (F - bd.lo) / ((bd.med - bd.lo) || 1e-9) * 0.5
     : 0.5 + (F - bd.med) / ((bd.hi - bd.med) || 1e-9) * 0.5;
   return Math.max(0, Math.min(1, t)); }
@@ -1090,6 +1105,7 @@ function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GR
   if (st.color === 'sc') { if (d.sc === null || d.sc === undefined || !isFinite(d.sc)) return '#5a6478';
     var sr = SCR(); return ramp(Math.max(0, Math.min(1, (d.sc - sr[0]) / (sr[1] - sr[0] || 1)))); }
   /* §E601（10-13 夜班 S4 · 用户：「这个红绿板块实际上变得只有红了，没有任何意义。整个删掉吧」）：第 6 档「rel」已**整档删除** ⇒ 点色只剩 LUT 一条读法。*/
+  if (!fKnown(d)) return '#5a6478';   /* v1.8.27：当前桌形这档没读数 ⇒ 未测灰（与 'sc'/'de'/'hp' 档同一支），不是"另一张桌的数" */
   return ramp(fCol(Fv(d))); }   /* 「F」档回到蓝→灰→红（§E338 之前那样），不再拿现役当中性灰 */
 /* §E313 页面口径 1st 的显示区间（实测枚数的 p02..p98，同 GLR 的取法）。
  *   §E371 分母换成**窗口内实测到的那一段** ⇒ 拉窗口时这条色标跟着用满
@@ -1556,7 +1572,7 @@ function buildBitmap(key, visSigNow) {
     for (var u9 = 0; u9 < KF; u9++) { var pi9 = TB.idx[bs9 + u9]; if (pi9 < 0) break;
       if (nShown !== N && !SHOWN[pi9]) continue;
       var w9 = 1 / Math.pow(Math.max(TB.dst[bs9 + u9], 1e-6), KEXP);
-      wsum += w9; fsum9 += w9 * FV9[pi9]; }
+      wsum += w9; if (isFinite(FV9[pi9])) fsum9 += w9 * FV9[pi9]; }   /* v1.8.27：没读数的点不许把整块底图均值染成 NaN */
     if (!(wsum > 0)) continue;
     /* §E331 覆盖度换成**核权重和**，不用「到最近点的距离」。旧写法 1/(1+(DM/fscale)^4) 在两枚点中间
      *   必然下凹（DM 在 Voronoi 脊线上取局部极大）⇒ 底图上那一片"凹陷的接缝"就是脊线本身，跟数据无关，
@@ -2908,7 +2924,7 @@ function drawBody() {
   ringTally();   /* §E677 表头要说得出"当前这圈环是哪把闸"，顺带把计数刷新（按桌形缓存 ⇒ 仍是状态的纯函数，§E622 那条判得住）*/
   document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚退回默认桌，一张图上混两把尺') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚在当前档**不画**，明细写"未测"（旧行为是静默退回默认桌 = 混两把尺，v1.8.27 已废）') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
@@ -3171,7 +3187,7 @@ function paintCard() {
    *   §E449 之后卡会自己折行 ⇒ "撑宽"这件事已经不会发生，但 700 字符折出来是二十行，所以总结式照用。*/
   var body = [head,
     '家族 ' + d.fam + '（' + (famSummary(famLab(d)) || '—') + '）· 批次 ' + (batchOf(d) || '无日期') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
-    'F = ' + Fv(d).toFixed(3) + '（' + BANDLBL + ' ' + Fv(INC).toFixed(3) + '）· Hp = ' + d.Hp.toFixed(1) + ' · H考卷 = ' + d.H.toFixed(1) + ' · S = ' + d.S.toFixed(2),
+    'F = ' + Ftxt(d) + '（' + BANDLBL + ' ' + Fv(INC).toFixed(3) + '）· Hp = ' + d.Hp.toFixed(1) + ' · H考卷 = ' + d.H.toFixed(1) + ' · S = ' + d.S.toFixed(2),
     /* §E449 这两处原来写 slice(0, 90) / slice(0, 60)：卡是 white-space:pre（不折行），长句会把卡撑到横贯画布，
      *   当时拿截断挡住那件事。现在卡改成 pre-wrap（400px 内自己折行、超高滚），截断就只剩坏处了：
      *   实测全库 why 最长 131 字符（R391）‖ pb 最长 128（v7tgt4-63）⇒ 折行后最多 4 行，装得下；
@@ -3221,7 +3237,7 @@ function paintSide() {
     b.textContent = (d.sh ? '' : '⚠') + labOf(d) +   /* §E463 序列里也标版本号（原来 16 枚全是 SLOT-8位哈希，读不懂）*/
       /* §E463 标签已经换成版本号的那几枚，第二栏就别再把同一个版本号抄一遍 ⇒ 让位给全 id（身份还在，只是排在可读名后面）*/
       ' ‖ ' + (labOf(d) === d.sv ? d.id : (d.sv || (d.sh ? '' : '未上槽'))) + ' ‖ ' + (d.sh ? d.sh.slice(5, 10) : (d.ts || '').slice(5, 10)) +
-      ' ‖ F ' + Fv(d).toFixed(3) + ' ‖ Hp ' + d.Hp.toFixed(1);
+      ' ‖ F ' + Ftxt(d) + ' ‖ Hp ' + d.Hp.toFixed(1);
     b.title = ('id ' + d.id + (d.wid ? ' ‖ 权重 ' + d.wid : '') + '\\n' + (d.sh ? '上线 ' + d.sh : 'git 里没找到上槽提交 ⇒ 按训出时刻 ' + (d.ts || '—') + ' 排（这枚从没真进过槽）')) +
       '\\n名次 第 ' + d.rk + ' ‖ H考卷 ' + d.H.toFixed(1) + ' ‖ S ' + d.S.toFixed(2) + ' ‖ Δε ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1);
     b.onclick = function () { var k = st.cmp.indexOf(d.id);
@@ -3237,8 +3253,8 @@ function paintSide() {
         td.textContent = d ? fn(d) : '—'; tr.appendChild(td); } tb.appendChild(tr); }
     row('上线', function (d) { return d.sh ? d.sh.slice(5, 10) : '未上槽'; });
     row('名次', function (d) { return '第' + d.rk; });
-    row('F', function (d) { return Fv(d).toFixed(3); });
-    row('ΔF vs 最强一批', function (d) { return (Fv(d) - Fv(INC) >= 0 ? '+' : '') + (Fv(d) - Fv(INC)).toFixed(3); });
+    row('F', function (d) { return Ftxt(d); });
+    row('ΔF vs 最强一批', function (d) { return fKnown(d) ? ((Fv(d) - Fv(INC) >= 0 ? '+' : '') + (Fv(d) - Fv(INC)).toFixed(3)) : '未测'; });
     row('Hp 页面', function (d) { return d.Hp.toFixed(1); });
     row('H 考卷', function (d) { return d.H.toFixed(1); });
     row('Δε', function (d) { return (d.De >= 0 ? '+' : '') + d.De.toFixed(1); });

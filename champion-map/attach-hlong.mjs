@@ -16,7 +16,8 @@
  *   ③ `Flong` 用的 `T` 与页面当前滑轨默认值**必须是同一个**（`viewer.mjs` 的 `T` 默认），否则两根轴不同尺。
  *   ④ 覆盖报数：量到 N ‖ 没量到 M（点名前 8 枚）—— 覆盖率本身就是要给用户看的数。
  *
- * 用法：node champion-map/attach-hlong.mjs [--check] [--table=epsfull-long-2026-10-16.tsv] [--t=0.10]
+ * 用法：node champion-map/attach-hlong.mjs **--table=<长程桌源表>** [--check] [--t=0.10]
+ *   ⚠ `--table` 从 v1.8.27 起**必给**（原来那个缺省表不含全部枚，静默吃它就是把缺枚打回 `-`）。
  *   幂等：列已存在则**原地回写**（不重复加列）。
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -26,7 +27,19 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const rd = f => readFileSync(join(HERE, f), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const CHECK = process.argv.includes('--check');
-const TAB = String(arg('table', 'epsfull-long-2026-10-16.tsv'));
+/* v1.8.27（用户 10-23 裁定「缺省直接关掉就行了」）：**这张缺省表已废除**。
+ *   为什么不能再留缺省：缺省那张 `epsfull-long-2026-10-16.tsv` 只有 798 行（`grep -c '^t5-'` = 0），
+ *   而 §E641 那 5 枚 ring 臂的读数在别的表里 ⇒ 链子按缺省跑一遍就把它们**静默写回 `-`**。
+ *   这已经发生两次（v1.7.130 于 10-21 补平、10-23 的重建又抹掉），而没有任何门会红。
+ *   ⇒ 现在必须显式交表；今天在册的完整表是 `epsfull-long-2026-10-23.tsv`（807 行 = 798 + 5 ring + 4 爆珠臂）。 */
+const TAB = String(arg('table', ''));
+if (!TAB) {
+  console.error('⛔ 必须显式给 `--table=<长程桌源表>`（缺省表已按用户 10-23 的裁定关掉）。\n'
+    + '   为什么不给缺省：缺省表不含全部枚 ⇒ 不给表就等于把缺枚的读数静默打回 `-`（这病 10-21 修过、10-23 又犯）。\n'
+    + '   现成可用：`--table=epsfull-long-2026-10-23.tsv`（807 枚在册）‖ 自己造一张：'
+    + '`node champion-map/eps-full.mjs --mode=long --only=<名单> --out=<表> --games=120 --epsTier=lv:regular`');
+  process.exit(2);
+}
 const T = Number(arg('t', 0.10));   /* 与 `viewer.mjs` 的 T 滑轨默认值同一个（判据 ③） */
 if (!isFinite(T) || T < 0) { console.error('⛔ --t 得是非负数'); process.exit(2); }
 
