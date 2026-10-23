@@ -45,12 +45,20 @@ const R = sb.window.EpirusRules, T = sb.window.EpirusTrainer, P = sb.window.Epir
 const XP = sb.window.EpirusChampionPack;   // v1.5.141 起的**剥壳单一来源**（不在此重写第二种正则）
 if (!XP || typeof XP.extract !== 'function') { console.error('⛔ 拿不到 EpirusChampionPack.extract（解析口径必须与页面导入同源）'); process.exit(2); }
 
-/* ===== 表头：模式格 × 对手环境 ===== */
+/* ===== 表头：模式格 × 对手环境 =====
+ * 10-23 夜班：补上 **4 血（`multi4`）** 那三格 —— 产品上"人数 2~5 × 血量 3/4/5"是两根正交轴，
+ *   但这台跨格尺以前只有 3 血与长程两档 ⇒ 4 血格从未被任何在册量具**成表**量过（§E691：n=4×multi4 全仓零读数）。
+ *   规则上 multi4 = multi + 一格血（`rules.js:139`，门 `D226`①c~①f 逐字段钉着）⇒ 这一格读数的正确用途是
+ *   **"如果读数和 3 血那格不一样，就说明等价性在某条路径上没成立"**，不是"多一档难度"。 */
 const ALL_CELLS = [
   { id: '2P', mode: 'standard', n: 2 },
   { id: '3P', mode: 'multi', n: 3 },
   { id: '4P', mode: 'multi', n: 4 },
   { id: '5P', mode: 'multi', n: 5 },
+  { id: '2P4血', mode: 'multi4', n: 2 },
+  { id: '3P4血', mode: 'multi4', n: 3 },
+  { id: '4P4血', mode: 'multi4', n: 4 },
+  { id: '5P4血', mode: 'multi4', n: 5 },
   { id: '长程', mode: 'long', n: Number(arg('long-n', 5)) }
 ];
 const CELLS = arg('cells', ALL_CELLS.map(function (c) { return c.id; }).join(',')).split(',').map(function (id) {

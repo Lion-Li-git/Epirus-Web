@@ -417,6 +417,34 @@
       if (o.ep >= 5 || (o.elec || 0) >= 1) s += 2; else if (o.ep >= 2) s += 1; }
     return s;
   }
+  /* ===== 计划线**消融开关**（研究旋钮，用户 10-23：「杂货铺里各种计划都算得上是可以学习（当然不是必须学习）的长程规划方案」）=====
+   * 规矩照本仓既有的旋钮形状（`evo.js` 的 `setTrainEps / trainEps / countTrainEps / resetTrainEpsStat`）：
+   *   **引擎内不读 `process.env`**，由调用方显式 `setPlanOff('P4,P7')` ⇒ 默认空集 ⇒ **出厂行为逐字不变**。
+   * 只关不加：开关只能把一条计划分支**按住不做**，不能凭空造招；按住之后按原次序落到下一条分支/地板（那正是"没有这条线它会怎么打"）。
+   * ⚠ 两处刻意的写法，都是为了"关掉之后读数没变"这句话有意义：
+   *   ① **条件与分支体照原样求值，只把 `return` 按住** ⇒ `rnd(state)` / `mpPickOne`（多候选时会 `state.rng.next()`）
+   *      消耗的次数与不关时**逐字相同**。否则"关掉一条从不触发的线"也会因为随机流错位而改变整局，那个对照就废了。
+   *   ② **按住才计数**（`countPlanOff()`）：计数只在"这一支的判据本来成立"时 +1 ⇒ 于是三种情形分得开：
+   *      关了且计数 >0（真的按住过）‖ 关了而计数 =0（这条线在本批样本里**从不触发**，读数不变是结构性的，不是接线错）‖
+   *      没关而计数 >0（不可能，出现了就是接错线）。§E692 已知 天火/过载炮/避雷针 在真自对局里 0 次 ⇒ 那一类必须靠这列分开。 */
+  let __planOff = {};
+  let __planOffCount = {};
+  function setPlanOff(spec) {
+    __planOff = {}; __planOffCount = {};
+    /* ⚠ **不改大小写**：线名是 `P1`/`P1a`/`P4c` 这种"大写带小写下标"的形状，`toUpperCase()` 会把 `P1a` 变成 `P1A`
+     *   ⇒ 于是"以为关上了、其实一个都没匹配上"（第一版就是这么写的，被消融尺的 A0 腿当场拦下：请求的 id 不在已知线清单）。 */
+    String(spec == null ? '' : spec).split(/[^A-Za-z0-9]+/).forEach(function (x) { if (x) __planOff[x] = 1; });
+    return Object.keys(__planOff).sort();
+  }
+  function planOffOn() { return Object.keys(__planOff).sort(); }
+  function countPlanOff() { return Object.assign({}, __planOffCount); }
+  function resetPlanOffStat() { __planOffCount = {}; }
+  /* 命中"整条线"（`P4`）或"单支"（`P4a`）都算按住；按住 = 记一次数并让调用方落到下一条。 */
+  function planSkipped(line, sub) {
+    if (!(__planOff[line] || __planOff[sub])) return false;
+    __planOffCount[sub] = (__planOffCount[sub] || 0) + 1;
+    return true;
+  }
   function planPick(state, pid, legal) {
     const bk = mpBk(legal), me = state.p[pid];
     const live = planMyStickers(state, pid);
@@ -431,7 +459,7 @@
      *   「三回合只贴上1枚或是没有那也可以不引爆」⇒ 还要 `live >= 2` 才点，别把 2 珠烧在空场上；
      *   符咒引爆后仍在（`resolve.js:1070`）⇒ 刚点过一发就再点第二发，`fireRun < 2` 封顶，正是"连续引爆两次"。 */
     if (live >= 2 && mpAff(bk, SK.FIRESTORM) && ((curseRun >= 3 && fireRun === 0) || fireRun === 1)) {
-      return { key: SK.FIRESTORM, target: null };
+      if (!planSkipped('P4', 'P4a')) return { key: SK.FIRESTORM, target: null };
     }
     /* P4-连贴（**渐进式的"确认后才加码"**，用户 10-13：「贴贴可以试一下渐进式窗口，但是我担心这样会拉低强度和大雷使用率」）：
      *   只有**上一手真的贴上了**（`live >= 1`）才继续补到 3 手；被防御挡掉（`live === 0`）就立刻止损回主线。
@@ -441,42 +469,44 @@
     if (curseRun >= 1 && curseRun < 3 && live >= 1 && mpAff(bk, SK.CURSE)) {
       const fresh = planUnstickered(state, pid);
       const t = mpPickOne(state, fresh.length ? fresh : mpOpps(state, pid));
-      if (t != null) return { key: SK.CURSE, target: t };
+      if (t != null && !planSkipped('P4', 'P4b')) return { key: SK.CURSE, target: t };
     }
     /* P3-大雷：「ep 达到 5 之后对着别的有 2ep 或血厚的角色打」——先收能一雷打死的，再打断攒钱的，最后压领先者。 */
     if (mpAff(bk, SK.BIG_T)) {
       const k2 = mpKillable(state, pid, 2);
       const rich = planRichest(state, pid, 2);
       const t = k2 != null ? k2 : (rich != null ? rich : mpLeader(state, pid));
-      if (t != null) return { key: SK.BIG_T, target: t };
+      if (t != null && !planSkipped('P3', 'P3')) return { key: SK.BIG_T, target: t };
     }
     /* P4-贴（**渐进式入口**）：不再要求"攒够 7 珠才进窗口"（那是理想方案，实测真装配里凑不齐 ⇒ 整桌只有 6 手贴贴），
      *   改成 4 珠起、五成概率**只投一枚试探**（1 珠成本），贴上了才按上面那条续到 3 手。
      *   排在 P3 大雷**之后** ⇒ 保大雷使用率（用户点名的担心）。 */
     if (curseRun === 0 && fireRun === 0 && live === 0 && me.ep >= 4 && rnd(state) < 0.5 && mpAff(bk, SK.CURSE)) {
       const t = mpPickOne(state, planUnstickered(state, pid));
-      if (t != null) return { key: SK.CURSE, target: t };
+      if (t != null && !planSkipped('P4', 'P4c')) return { key: SK.CURSE, target: t };
     }
     /* P1-续环：「血多可以连着打4-5次聚能环」——开环之后每手免费，所以只要没断、没到 5 手就续。
      *   ⚠ 加 `me.ep < PLAN_SPEND`（用户 10-13：「攒到 51ep 也太夸张了，到 20 都绰绰有余可以玩各种技能了」）⇒ 20 珠封顶，钱必须花出去。 */
-    if (me.ringStreak >= 1 && me.ringStreak < 5 && me.ep < PLAN_SPEND && mpAff(bk, SK.RING)) return { key: SK.RING, target: null };
+    if (me.ringStreak >= 1 && me.ringStreak < 5 && me.ep < PLAN_SPEND && mpAff(bk, SK.RING)) {
+      if (!planSkipped('P1', 'P1b')) return { key: SK.RING, target: null };
+    }
     /* P1-开环：首次 3 珠（`state.js:137` rawCost：`ringStreak===0 ⇒ ep 3`）、之后每手免费 +2/+3 ⇒ 开环就是这台经济器的入口。
      *   门槛只能到"买得起 + 我血不劣势"为止。⚠ 第一版写成 `ep>=5` 被实测打回来：40 局镜像**一段环都没开过**
      *   （这只脚本的珠从来没到 5）⇒ 连带 P3 大雷 0 次、P4 的 ep≥7 窗口 0 次 —— "要有钱才开环、开环才有钱"是自我锁死。 */
     if (me.ringStreak === 0 && me.ep < PLAN_SPEND && mpAff(bk, SK.RING) && planHpNotBehind(state, pid) && rnd(state) < 0.7) {
-      return { key: SK.RING, target: null };
+      if (!planSkipped('P1', 'P1a')) return { key: SK.RING, target: null };
     }
     /* P6-过载炮：三条按用户的花费逻辑（phase1 随意 / phase2 只在 1ep / phase3 只在 0ep 且打最富的那个）*/
     if (mpAff(bk, SK.CANNON)) {
       const phase = (me.cannonCount % 3) + 1;
-      if (phase === 1) { const t = mpLeader(state, pid); if (t != null) return { key: SK.CANNON, target: t }; }
-      if (phase === 2 && me.ep <= 1) { const t = mpLeader(state, pid); if (t != null) return { key: SK.CANNON, target: t }; }
-      if (phase === 3 && me.ep === 0 && me.hp > 1) { const t = planRichest(state, pid, 4); if (t != null) return { key: SK.CANNON, target: t }; }
+      if (phase === 1) { const t = mpLeader(state, pid); if (t != null && !planSkipped('P6', 'P6a')) return { key: SK.CANNON, target: t }; }
+      if (phase === 2 && me.ep <= 1) { const t = mpLeader(state, pid); if (t != null && !planSkipped('P6', 'P6b')) return { key: SK.CANNON, target: t }; }
+      if (phase === 3 && me.ep === 0 && me.hp > 1) { const t = planRichest(state, pid, 4); if (t != null && !planSkipped('P6', 'P6c')) return { key: SK.CANNON, target: t }; }
     }
     /* P2-避雷针：「看到有人蓄能或攒到 5ep 以上的时候倾向于使用」——电珠在手 = 电磁炮/大雷的入口，六成抬手 */
     if (mpAff(bk, SK.ROD) && rnd(state) < 0.6) {
       for (const i of mpOpps(state, pid)) { const o = state.p[i];
-        if (o.ep >= 5 || o.elec >= 1) return { key: SK.ROD, target: null }; }
+        if (o.ep >= 5 || o.elec >= 1) { if (planSkipped('P2', 'P2')) break; return { key: SK.ROD, target: null }; } }
     }
     /* P7-断环（用户 10-15 晚「断环加一下吧」；机制 = 小雷 void 掉对方的环 ⇒ 他 `ringStreak` 归零、得重花 3 珠重开，
      *   千问 `s35-ringbreak.mjs` 实测机制侧 **14/14 与 10/10 = 100% 生效**，且这条线**不需要任何新维**：
@@ -493,7 +523,7 @@
       let bt = -1, bs = PLAN_BREAK_NEED - 1;
       for (const i of mpOpps(state, pid)) { const o = state.p[i];
         if (o.hp > 0 && (o.ringStreak || 0) > bs) { bs = o.ringStreak || 0; bt = i; } }
-      if (bt >= 0) return { key: SK.MINI_T, target: bt };
+      if (bt >= 0 && !planSkipped('P7', 'P7')) return { key: SK.MINI_T, target: bt };
     }
     return null;
   }
@@ -545,7 +575,7 @@
     const spendKey = idleTool || (bk !== SK.JI ? bk : null);
     const spendCost = (spendKey && R.byKey[spendKey] && typeof R.byKey[spendKey].cost === 'number') ? R.byKey[spendKey].cost : 0;
     if (me && me.ep < PLAN_BANK && spendCost >= 1 && me.hp >= 2 && planHpNotBehind(state, pid) && rnd(state) < 0.6) {
-      return { key: SK.JI, target: null };
+      if (!planSkipped('P0', 'P0')) return { key: SK.JI, target: null };
     }
     if (idleTool) return idleTool;
     return base;
@@ -1443,6 +1473,7 @@
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
     pickReflectMix, pickReflectTank, pickDefReflectGun, pickToolKit, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, tierEpsAt, resetBotMem,
     snapshotBotMem, restoreBotMem,
+    setPlanOff, planOffOn, countPlanOff, resetPlanOffStat,   // 计划线消融旋钮（默认空集 ⇒ 出厂不变）＋**按住计数**（§E692 的下一步）
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,
     pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, pickBigTChain, bigtHubTarget, pickKillSecure,

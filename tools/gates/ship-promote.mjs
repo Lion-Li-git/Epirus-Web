@@ -6,6 +6,8 @@ import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
  * 这张表本来就 `export`（`tools/promote-champion2p.mjs:23` 已在用它）⇒ 直接读运行时的表，写法/换行/注释怎么改都不误红。
  * 与 `probe-libs.mjs:5` 同一种接法（门文件 import 工具模块，早有先例）。 */
 import { P2_FNAME, P2_NAMES } from '../p2-baselines.mjs';
+/* v1.8.11（D107 换行为腿）：G4 装配的单一来源，门自己真跑它（与 `probe-instruments.mjs` 里 D178 的接法同一先例）。 */
+import { duelAssembly } from '../v2v4-lib.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
@@ -34,31 +36,25 @@ const {
   fnBody,
 } = makeCtx();
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
-export const ords = [1184, 2750, 2964, 4363, 4572, 4929, 4980, 5426, 6024, 6109, 7661, 7787, 8006, 8078, 8108, 8292, 8312, 8682, 8810, 9574, 11362];
+/* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。
+ * 10-23 夜班：删掉 D219（整门，冠军经济行为 ⇒ 归入池侧）⇒ 首位的 `1184` 同批移除，数量与 t() 调用数对齐。 */
+export const ords = [2750, 2964, 4363, 4572, 4929, 4980, 5426, 6024, 6109, 7661, 7787, 8006, 8078, 8108, 8292, 8312, 8682, 8810, 9574, 11362];
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
-t('D219 「6 珠悬崖」回归护栏（v1.5.318）：现役冠军决策时 ep 的暴露面不许越过实测基线', function () {
-  /* 依据（千问 §16④ / §E232）：夺冠率对手里留多少珠是**一片平台 + 一道悬崖** ——
-   *   0.77~1.81 珠 => 14.9~20.9%（无差异区）；6.5~6.8 珠 => 1.6%；8.2~8.6 珠 => 0.1~0.3%。
-   * => 门禁/进化池要考经济判断，考的应当是会不会越过 6 珠，不是攒不攒。
-   * 这条曲线是**相关性**读数，合法用法只有两条：否证单调性 / 支持 theta=0 是局部最优（§16④ 的限定）。
-   * => 本门是**回归护栏**（别让暴露面变大），不是证明 6 珠以上必输。
-   * 夹具：60 局 multi/5（冠军席 + 4 脚本），固定种子；实测基线 ep>=6 = 1.95%（14/717 次）、峰值 12。 */
-  const ch = AUDIT.loadChamp(sb, 'js/bundled-champion-3p.js');
-  const pr = ch && ch.params ? ch.params : ch;
-  const OPPX = [Bots.pickBalanced, Bots.pickAggro, Bots.pickDefend, Bots.pickMix, Bots.pickFarmer];
-  let n = 0, ge6 = 0, peak = 0;
-  for (let g = 0; g < 60; g++) {
-    const st = S.createState('multi', { next: mulberry32(3100 + g * 7919) }, 5);
-    st.slotSalt = (Math.imul(g + 5, 0x9e3779b1) ^ 0x5f3779b9) >>> 0;
-    const base = T.policyChooserN(pr, 0.15, 0.15, 5);
-    const rec = function (state, pid, legal) { const ep = state.p[pid].ep || 0; n++; if (ep >= 6) ge6++; if (ep > peak) peak = ep; return base(state, pid, legal); };
-    Play.autoGameN(st, [rec, OPPX[0], OPPX[1], OPPX[2], OPPX[3]]);
-  }
-  ok(n >= 500, '夹具必须真的跑出足够决策（实测 ' + n + ' 次）—— 少了说明夹具坏了，不是冠军变好了');
-  ok(100 * ge6 / n <= 4, '决策时 ep>=6 的占比必须 <= 4%（实测 ' + (100 * ge6 / n).toFixed(2) + '%，基线 1.95%）');
-  ok(peak <= 14, '决策时 ep 峰值必须 <= 14（实测 ' + peak + '，基线 12）');
-});
+/* §删（10-23 夜班 · 用户 10-22/23 裁定「冠军有什么表现该在入池时判；上线后的门只测引擎是否正常工作」）：
+ *   这里原来是一条**整门** `D219「6 珠悬崖」回归护栏` —— 它拿**活槽现任冠军**跑 60 局 multi/5（固定种子），
+ *   断言"决策时 ep≥6 的占比 ≤4%、ep 峰值 ≤14"。主语完全是**现任包的经济行为**（一条产品事实），
+ *   与"引擎是否正常工作"无关 ⇒ 整门删除。同批把 `export const ords` 里属于它的那个原始行号 `1184` 一起删掉
+ *   （runner 按位置配对 `ords[i] ↔ register() 里第 i 次 t()`，`np-test.mjs:389-396` 会在数量不符时抛"拆分坏了"）。
+ * ⚠ 按 R6 点名**删了少掉什么**（这一格是真丢覆盖，不是搬家）：
+ *   · 丢的产品事实：**现任冠军在"对手留 0.77~1.81 珠"的平台区里不越 6 珠悬崖**。依据曲线是 §16④/§E232 的相关性读数
+ *     （0.77~1.81 珠 ⇒ 夺冠 14.9~20.9% 无差异区 ‖ 6.5~6.8 珠 ⇒ 1.6% ‖ 8.2~8.6 珠 ⇒ 0.1~0.3%）。
+ *   · 现在谁都不判：`tools/audit-lib.mjs:625-719` 的五道/六道里没有"决策时 ep 暴露面"这一维；
+ *     `tools/pool-add.mjs:140-158` 入池只记 `promote --dry` 的 pass/block。⇒ **入池侧也缺一维**。
+ *   · 若要把这维找回来，正解不是加回上线门，而是**加进入池侧**：给 `feasibilityOf` 添一道"决策时 ep≥6 占比 / 峰值"，
+ *     且按仓规先标定"已知好 vs 已知坏"两侧（现任包 1.95%/12 是一侧，还需要一只会攒爆的对照包）才许从 `notes` 翻成阻断。
+ *   · 这条删掉之后**门数 281 → 280**（`grep -c "^t(" tools/gates/*.mjs` 与 `--list-parts` 两口径同步）。 */
+
 
 t('D55 F 的口径必须是"场 A 被集火还手率"（考核依据修正），旧口径不得再作判据', function () {
   /* v1.5.62（用户裁定）：旧 F 的场地是"1 席进攻者 + 4 席冠军自己" ⇒ 量到的是自对局均衡；
@@ -221,49 +217,19 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
    * （v1.5.104：`GATE4_GAMES` 由 6 抬到 **60** —— n=6 的"哪一格最克 / 是否越线"本身就是小样本统计量
    *  （§31/§35 的同一条教训），拿它断言等于内置"偶发红"；仍**不**断言 `FAIL G4[线上包/long]`，
    *  因为在位包/候选的 long 读数会随包更替而变。） */
-  /* ===== v1.5.129（**用户裁定②**）：这一条从"硬红"改成"**已记录的例外**" =====
-   * 背景（v1.5.123 §3，如实记录过）：线上包 `v7press3-91` 是**用 `--force` 越过 G4** 换上的
-   * ⇒ 它两个模式都红 ⇒ 旧措辞（"线上包至少一个模式必须 PASS"）**会一直红**。
-   * "长期红"的代价不是"少一道网"，而是**以后的真红会被已知红淹没**（每次提交都要人肉分辨哪条是新的）。
-   * 现在的判据是**三分支**（口径 id 来自 gate-drafts 打印的 `G4POOL` 行，见其 `G4_POOL_ID`）：
-   *   ① 至少一个模式 PASS ⇒ 通过（原口径，锚还在）；
-   *   ② 两模式都红 **且** bundle 的 meta 里有一条**格式良好 + 口径匹配**的 G4 越线留痕 ⇒ 通过（已记录的例外）；
-   *   ③ 两模式都红 **且** 无留痕 / 留痕口径与当前克制表不一致 ⇒ **红**。
-   * ⇒ 安全网没丢：丢掉的只是"记过账的旧账"，留下的是"**没记的账**"与"**改了池子却没重记的账**"
-   *   （后者正是本次自己会踩的那一步：加了「珠爆发」一格 ⇒ 口径 id 变 ⇒ 旧留痕自动失效 ⇒ 必须重记）。 */
-  const refPassG4 = /PASS\s+G4\[线上包\/(long|multi)\]/.test(out);
-  const poolM = /G4POOL\s+([0-9a-f]{8})/.exec(out);
-  const curPool = poolM ? poolM[1] : null;
-  /* qoder-research 0920（RESEARCH-LOG §3-2 · 缝自曝于 v1.5.133 §5）：**实现身份双绑**。
-   * `G4IMPL` = 各格 chooser 源码 + `pT` 的 sha1 ⇒ **改格子行为不改键名**时它也变，旧例外失效。
-   * 在位包的留痕记于"实现身份"发明**之前**（meta 无 `impl` 字段）⇒ 给一条**冻结豁免**：
-   * 仅当"当前实现 == v1.5.134 那一版（`caecc92f`）"时放行；谁改了任何一格，豁免随 id 一起作废，
-   * 届时必须 `--force` 重记（新留痕会带 impl，走正常比对）。这是**一次性**的迁移垫脚，不是永久通道。 */
-  const G4IMPL_AT_EXCEPTION = G4FROZEN;   // v1.5.202：单一来源（原为手抄常量）
-  const implM = /G4IMPL\s+([0-9a-f]{8})/.exec(out);
-  const curImpl = implM ? implM[1] : null;
-  let meta3p = null;
-  try {
-    const m3 = /(window\.EPIRUS_CHAMPION_3P_META\s*=\s*)(\{[\s\S]*?\})(\s*;)/.exec(readFileSync('js/bundled-champion-3p.js', 'utf8'));
-    meta3p = m3 ? JSON.parse(m3[2]) : null;
-  } catch (e) { meta3p = null; }
-  const g4rec = (meta3p && meta3p.gate4Forced && typeof meta3p.gate4Forced === 'object') ? meta3p.gate4Forced : null;
-  /* ⚠️ 例外的**完整性**并进判据本身（而不是另立一条恒真断言）：
-   * `forced` 为真 + **口径 id 相等** + **带上被放过的具体行**，三者缺一 ⇒ 不认这条例外。
-   * 第三条（`lines`）不是排版洁癖：promote-champion 哪天只写 `forced` 而丢掉 `lines`，
-   * 例外就变成"记了账但不知道记了什么"—— 那时这条门必须**红**，而不是静默放行。 */
-  /* v1.5.202：判定搬进 pure function（\`tools/gate4-exception.mjs\`）。
-   * 原来这段被 \`refPassG4\` 短路 ⇒ 只要在位包 G4 有一个模式 PASS（常态）它就**从未被求值**，
-   * 第一次真正运行会发生在"正要发一只过不了门的冠军"的那次提交里 —— 那是最不能出错、却唯一没被验证过的时刻。
-   * 抽出来之后 D146 用**合成 meta** 把六种组合逐一跑过。语义一个字没改。 */
-  const g4recOk = g4ExceptionOk(curImpl, curPool, g4rec);
-  ok(refPassG4 || g4recOk,
-    refPassG4 ? '线上包 G4 **至少一个模式** PASS（"已知好"一侧成立）'
-      : (g4recOk ? '线上包 G4 两模式都红，但 meta 有**完整且口径匹配的 `--force` 留痕** ⇒ 已记录的例外（' +
-        String(g4rec.ts || '?') + ' · pool ' + g4rec.pool + ' · impl ' + (g4rec.impl || G4IMPL_AT_EXCEPTION + '(冻结豁免)') +
-        ' · ' + g4rec.lines.length + ' 行）'
-        : '线上包 G4 两模式都红，且 meta 里**没有可用的越线留痕**（缺失 / 未 `--force` / 口径 id 与当前克制表不一致' +
-          ' / **实现身份已变而例外未重记** / 留痕没带被放过的具体行）⇒ **必须重记**：node tools/promote-champion.mjs <源.bak> --force'));
+  /* §删（10-23 夜班 · 用户 10-22/23 裁定「冠军有什么表现该在入池时判，上线后的门只测引擎是否正常工作」）：
+   *   这里原有两条**拿现任包当被测对象**的腿 —— ① `ok(refPassG4 || g4recOk, '线上包 G4 至少一模式 PASS … 或有不符即红的 --force 留痕')`
+   *   （连同 `curPool`/`curImpl`/`meta3p`/`g4rec` 那一整段取值）与 ② `ok(/PASS\s+G5\[线上包\/(long|multi)\]/, '线上包 G5 必须 PASS')`。
+   * 为什么删它们**不丢牙口**（逐条对账，不是"看起来重复"）：
+   *   · "例外判定对不对"（pool 口径 / impl 身份 / 有没有带被放过的具体行 / 无 impl 字段的冻结豁免）
+   *     早就是 `tools/gate4-exception.mjs` 的纯函数，由 **D146** 用**合成 meta** 把十种组合逐一真跑（:785-796）⇒ 机制层面判定不依赖现任包。
+   *   · "现任包 G4/G5 到底过不过"是**产品事实** ⇒ 入池/换包侧判：`tools/pool-add.mjs:140-158` 入池时真跑 `promote --dry`
+   *     并把 pass/block 记进 `champion-map/promote.tsv`，`D234③` 复查那本账；`promote-champion` 出厂时 G4/G5 本来就是阻断项。
+   *   · 上面 v1.5.129 那段"三分支"的**记账防腐**（改了克制表却没重记 ⇒ 留痕自动失效）现在由谁判？
+   *     答：**下一次真出厂时由 promote 判**（口径 id 一变，纯函数返回不认 ⇒ 出厂当场红并要求 `--force` 重记）。
+   *     也就是说它从"每次 CI 都拿现任包试一遍"搬到了"必须动手换包时才试"——这正是用户要的分工。
+   * ⚠ 连带：D146 里那条"np-test 必须调用 `g4ExceptionOk(curImpl, curPool, g4rec)`"的**文本钉**同批删（它钉的主语没了），
+   *   D146 其余合成 meta 的十腿**不动** —— 它们是纯机制判据。`out`（gate-drafts 真跑输出）仍由上面 `G6[元测试]` 那条用着。 */
   /* v1.5.104（用户裁定）：G4 阈值 45% → 60%。**阈值必须有单一常量 + 标定理由**，
    * 否则它会像 `sed` 不匹配那样静默漂移；同时把"理想线 45%"单独留着，别让绿灯被读成"已达理想"。 */
   const gsrc = readFileSync('tools/gate-drafts.mjs', 'utf8');
@@ -274,7 +240,9 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
    *   而标定数值本身由门 G4 的阈值 + D107 的 `EXPECT` 读数管着。按用户口径（门禁目标是功能实现，不是判文本）删；
    *   想留住这句理由请写在文档里（`docs/research/GATE-AUDIT-2026-10-22-qoder.md`），不要靠一条门去守注释。 */
   ok(gsrc.indexOf('距理想线') >= 0, '过闸但未达理想线时，判词必须显式写出差距（别让绿灯冒充"已达理想"）');
-  ok(/PASS\s+G5\[线上包\/(long|multi)\]/.test(out), '线上包 G5 必须 PASS（同上）');
+  /* §删（10-23 夜班 · 同上门禁口径）：原来这里还有一条 `ok(/PASS\s+G5\[线上包\/(long|multi)\]/, '线上包 G5 必须 PASS')`
+   *   —— 主语是**现任包的考卷成绩**（产品事实），入池/换包侧已判：`tools/pool-add.mjs:182-186` 按上线档取 ≤40 的同一条闸，
+   *   `promote-champion` 出厂时 G5 本就是阻断项。G5 的**机制**判据不在这里，在 `D155`（防席持续性栏真输出腿）与 `gate-drafts` 自己的元测试。 */
   const anyFail = /^\s*FAIL\s+/m.test(out);
   eq(r.status, anyFail ? 1 : 0, '退出码必须与"是否存在 FAIL"一致（CI/promote 靠它判定）');
 });
@@ -718,26 +686,38 @@ t('D163 防御质量三档（用户 09-26 裁定：白防 / 被穿透=半 / 有�
     '探针与 promote 必须共用同一个分类器（不许两处各写一遍"什么算打到我"）');
 });
 
-t('D107 G4「1 席脚本 vs 4 席被测」装配只许有一份实现（v1.5.133 收拢）', function () {
+t('D107 G4「1 席脚本 vs 4 席被测」装配只许有一份实现（v1.5.133 收拢 ‖ v1.8.11：八条文本 pin 换成真跑三个反事实钩子）', function () {
   /* 病：该装配原先**只写在 gate-drafts 内部** ⇒ 任何"想解剖 G4 到底输在哪"的探针只能抄一份
    * （本仓"同一规则两处维护必然漂移"栽过四次）。现在它在 `tools/v2v4-lib.mjs` 的 `duelAssembly()`，
    * gate-drafts 与 `probe-g4-anatomy.mjs` 共用。重构的验收 = G4 全表逐字不变（已对 `g4-check.log` 全部对账）。 */
+  /* v1.8.11（10-23 夜 · 千问 · 用户裁「门禁目标是功能实现而不是判文本」）：这里原本 9 条腿全是 `indexOf` 文本 pin。
+   *   "单一来源"这件事确实只能静态判 —— 但**静态只需要一条**（"装配本体不许再出现在 gate-drafts 里"，就是"不许有两份"那句话本身）；
+   *   其余八条真正要防的是"这份装配与那三个反事实钩子还在不在工作"，而那件事**可以真跑** ⇒ 换成下面四条腿。
+   *   换完的实测差别：把钩子函数体写坏 ⇒ 旧版全绿（字符串都还在），新版必红（本轮变异核过）。 */
   const gd = readFileSync('tools/gate-drafts.mjs', 'utf8');
-  ok(gd.indexOf("from './v2v4-lib.mjs'") >= 0, 'gate-drafts 必须从 v2v4-lib.mjs 导入（装配单一来源）');
-  ok(gd.indexOf('duelAssembly(') >= 0, ' 且真的调用它');
-  ok(gd.indexOf('function duel(') >= 0, ' 但保留 duel() 薄壳（调用点与判词一字不动）');
-  ok(gd.indexOf('h32(seed0 + g * 2246822519)') < 0, '装配本体不许再出现在 gate-drafts 里（否则又成两份）');
+  ok(gd.indexOf('h32(seed0 + g * 2246822519)') < 0, '装配本体不许再出现在 gate-drafts 里（"只许有一份"唯一能静态判的形式）');
+  const D = { S, Play, T, R };
+  const p = loadChampParams(Pol, FIXTURE_PACK);   // 在册夹具，不赌盘上那枚活槽（训练日会被改写）
+  const OPT = { games: 40, mode: 'multi', seed0: 90210, scripted: 'champ', countKeys: [R.SK.GUN] };
+  const base = duelAssembly(D, p, OPT);
+  ok(base.champDecisions > 0 && isFinite(base.champDmgPerGame) && base.champDmgPerGame > 0,
+    '装配基线必须真跑出决策与伤害（实测 决策=' + base.champDecisions + ' ‖ 冠军方伤害/局=' + base.champDmgPerGame.toFixed(2) + '）⇒ 为 0 就是这份实现空转');
+  const ft = duelAssembly(D, p, Object.assign({}, OPT, { forceTurtle: true }));
+  ok(ft.forced > 0 && ft.champDmgPerGame === 0,
+    'forceTurtle 必须开火且把冠军方伤害压到 0（实测 改判 ' + ft.forced + ' 次 ‖ 伤害/局=' + ft.champDmgPerGame.toFixed(2) + '）');
+  const fa = duelAssembly(D, p, Object.assign({}, OPT, { forceAttack: true }));
+  ok(fa.forced > 0 && fa.counts[R.SK.GUN] > base.counts[R.SK.GUN],
+    'forceAttack 必须开火且让枪的出手数高于基线（实测 改判 ' + fa.forced + ' ‖ 枪 ' + (fa.counts[R.SK.GUN] || 0) + ' vs 基线 ' + (base.counts[R.SK.GUN] || 0) + '）');
+  const ag = duelAssembly(D, p, Object.assign({}, OPT, { aimGunner: true }));
+  /* 这条只判"这根杠杆真开火并且改的是目标"，**不判方向**：
+   *   实测在 40 局镜子里 `dmgToScriptedPerGame` 会被那一席的血上限钉死（基线 3.23 ‖ 开钩 3.00 —— 因为"打它"最多只能打出它的 3 血），
+   *   而 `aliveScriptedEnd`（枪手终局存活率）随包变化 ⇒ 把方向写进门里就是一枚**会为一次正常换包误红**的判据。
+   *   "导火到底值多少分"是 `probe-g4-anatomy` §C 的读数（v1.5.134 那条 r=−0.82 就是从那儿来的），不该由门背。 */
+  ok(ag.forced > 0 && ag.champDmgPerGame > 0,
+    'aimGunner 必须开火（把伤害卡的目标改到脚本席）且这一桌仍在产出伤害（实测 改判 ' + ag.forced + ' 次 ‖ 冠军方伤害/局=' + ag.champDmgPerGame.toFixed(2) + '）');
+  /* 下面这三行是**旧静态腿**留下的、仍然成立的记账：装配的名字与出口只有一份，改判据时别忘了它们与上面的真跑是一件事。 */
   const lib = readFileSync('tools/v2v4-lib.mjs', 'utf8');
-  ok(lib.indexOf('export function duelAssembly') >= 0, 'v2v4-lib 必须导出 duelAssembly');
-  ok(lib.indexOf('forceAttack') >= 0 && lib.indexOf('forceTurtle') >= 0, ' 且带双向反事实钩子');
-  /* v1.5.134：这一轮真正的载重列是**伤害归属**（跨 13 个包 r = −0.82；"攒钱比例"只有 +0.23）
-   * ⇒ 钩子与那一列计数都得在，否则下次读 G4 又会退回到"看分数猜原因"。 */
-  ok(lib.indexOf('aimGunner') >= 0, ' 且带「只改目标」的单杠杆（v1.5.134 实测：主因是瞄准，不是花钱）');
-  ok(lib.indexOf('dmgToScriptedPerGame') >= 0, ' 且统计"打在脚本席（枪手）身上的伤害" —— 那一格相关性最强的一列');
-  const pg = readFileSync('tools/probe-g4-anatomy.mjs', 'utf8');
-  ok(pg.indexOf('dmgToScriptedPerGame') >= 0, '解剖探针必须打印"打在枪手身上 X/局"（否则看不到主因那一列）');
-  const pb = readFileSync('tools/probe-g4-anatomy.mjs', 'utf8');
-  ok(pb.indexOf("from './v2v4-lib.mjs'") >= 0, '解剖探针必须从单一来源导入装配');
+  ok(lib.indexOf('export function duelAssembly') >= 0, 'v2v4-lib 必须导出 duelAssembly（上面真跑的就是它，不是第二份）');
   /* §删（10-22 晚 · 千问 · 用户裁「所有钉现役的门禁都可以删掉或改成符合当前情况」）：这里原有**三条钉那台探针源码文本**的腿 ——
    *   ① `/EXPECT = \{ long: 38, multi: 35 \}/`（钉常量）‖ ② 探针旁边必须写"现役 `v7cmin4-31`…实测 38%/35%"（钉来历措辞）‖
    *   ③ `pb.indexOf('75%/62%') < 0`（钉一句历史数字不许出现）。
@@ -794,8 +774,11 @@ t('D146 G4 `--force` 越线例外的判定必须是被**覆盖**的纯函数（v
   const old = { forced: true, pool: 'p1', lines: ['G4[foo/multi] x'], ts: 't' };
   ok(g4ExceptionOk(G4FROZEN, 'p1', old), '无 impl 字段的旧留痕 + 当前实现 == 冻结版 ⇒ 放行（一次性迁移垫脚）');
   ok(!g4ExceptionOk('deadbeef', 'p1', old), '无 impl 字段 + 当前实现已变 ⇒ 豁免作废');
-  const nt = npSourceAll();   /* v1.7.8：D67 的门体现住 tools/gates/** ⇒ 判据落在**全部门体文件**上 */
-  ok(nt.indexOf('g4ExceptionOk(curImpl, curPool, g4rec)') >= 0, 'D67 必须调用纯函数（判定的单一来源，不许再抄一份）');
+  /* §删（10-23 夜班）：原来这两行是
+   *   `const nt = npSourceAll(); ok(nt.indexOf('g4ExceptionOk(curImpl, curPool, g4rec)') >= 0, 'D67 必须调用纯函数（判定的单一来源，不许再抄一份）')`
+   *   —— 它钉的是"**D67 的门体里必须有那行调用**"。本批按用户口径把 D67 那两条"现任包 G4/G5 必须 PASS"的腿删掉了
+   *   （产品事实归入池侧判），被钉的主语随之消失 ⇒ 这条文本钉若留着就只是**锁住一段已经不存在的历史形状**。
+   *   机制层面的判定仍然由上面那十条合成 meta 真跑（:785-796）守着，不靠这行字。 */
 });
 
 t('D147 UNRUN 必须有**处置语义**且按方向分（v1.5.202）：原来它从不进 fails ⇒ 基线退化的候选可零阻断通过', function () {

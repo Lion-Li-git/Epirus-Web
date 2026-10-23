@@ -3,11 +3,10 @@
 #np-part-header-end*/
 import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
 /* §改（2026-10-22 千问·第九批）：D178 原来用三条正则钉 `probe-human-seat.mjs` 的**源码形状**
- * （必须 import duelAssembly ‖ 不许出现 autoGameN( ‖ 不许写 `pickDefend ||` 兜底链）。
- * 换成**数值同一性**：门自己拿同一份 `duelAssembly` + 同一组 `humanPrototypes` 按同一参数再算一遍，
- * 与工具打印的那 12 格逐格对 ⇒ "与 G4 同尺"这件事第一次是可核对的数，而不是"某行代码存在"。 */
-import { humanPrototypes } from '../audit-lib.mjs';
-import { duelAssembly } from '../v2v4-lib.mjs';
+ * （必须 import duelAssembly ‖ 不许出现 autoGameN( ‖ 不许写 `pickDefend ||` 兜底链）⇒ 换成**数值同一性**。
+ * §再改（2026-10-23 千问·v1.8.18）：那"一遍重算"以前是在**门自己的进程**里做的 ⇒ 整轮里被前面某条门留在共享沙箱的
+ *   模块级状态污染（`--only="D178 "` 绿、整轮红）。现在重算在**干净子进程**里做（与工具同条件），
+ *   并加一条 ①″ 现取一份全新 boot 当出厂位、点名任何没复位的旋钮。两个 import 因此只出现在生成给子进程的那段源码里。 */
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
@@ -127,16 +126,77 @@ t('D83 转化率探针：分母必须是"可负担的决策点"（**不得用使
   ok(p.indexOf('可负担 ≥10% 的决策点，却选中 <1%') >= 0, '转化拒绝的判据必须写清（可负担门槛 + 选中门槛）');
 });
 
-t('D88 门地形量具：挂科清单必须在第一个括号前截断（括号里是读数）+ 在位包单列参照 + 跳过 A 卷', function () {
-  /* v1.5.100：`promote-champion` 一次只看**一个**候选，而"门是否可达到"是**分布**问题 ⇒ 新增 `gate-landscape`。
-   * 这条门钉住三个容易出错的口径（第一版实现时我自己就踩了第一个）。 */
-  const s = readFileSync('tools/gate-landscape.mjs', 'utf8');
-  ok(s.indexOf("split('（')[0]") >= 0,
-    '挂科清单必须在**第一个括号之前**截断 —— 括号里是"座位 26.9pt · G 3.9 · …"这种读数，当成挂科会全表误判');
-  ok(s.indexOf('参照行') >= 0, '必须写明在位包是**参照行**（它自己过不了只枪格 G4，别读成"候选不行"）');
-  ok(s.indexOf('--exam-first=0') >= 0, '必须跳过 A 卷那 1400 局（五道门不依赖它，约 10~20s/包）');
-  ok(s.indexOf('五道全过 = ') >= 0 && s.indexOf('各门阻塞次数') >= 0, '必须汇总过门数与各门阻塞频次');
-  ok(s.indexOf('清场均值') >= 0, '必须给出"广度 vs 清场"的两组对照（它曾否掉一个假说）');
+t('D88 门地形量具：截断口径 / 分类完备 / 广度取数 / 参照行警告 —— 全部改成跑一遍再核它的 --json（v1.8.12）', function () {
+  /* v1.5.100 起这条原本是**五条源码文本钉**（"那个文件里必须有 `split('（')[0]`"、"必须有'参照行'这三个字"…）。
+   * v1.8.12（用户 10-23「门禁目标是功能实现而不是判文本」+「小东西也清掉」）换成跑工具：
+   *   跑的时候正好抓到两处**文本钉永远抓不到的静默腐烂**（都写进 `gate-landscape.mjs` 的注释并修了）：
+   *   ① `最大单卡占比 ([\d.]+)%` 跟不上标签变成 `最大单卡占比（**非ジ**）63.0%` ⇒ `mc` 恒 '—' ⇒ 最下面那组"广度 vs 清场"对照**一直是 0 个 / 0 个**，
+   *      而 stdout 的标题与两个标签照样印 ⇒ 旧那条"必须给出两组对照"的钉**一直绿着**；
+   *   ② `/G [\d.]+ < 3/` 跟不上挂科写法变成 `G(long) 2.38 < 3` ⇒ 那一行掉进 `(其它)`、`各门阻塞次数` 的 G<3 少计（实测 `v7w3c-93`）。
+   *   ⇒ 这两条旧钉的共同点：它们判的是"这行代码存在"，坏的是"这个数取不到"——**字符串没动，所以不会红**。 */
+  const dir = mkdtempSync(join(tmpdir(), 'd88-'));
+  const outJson = join(dir, 'gl.json');
+  /* 样本按"能不能咬住"来挑，不是随便挑两枚（**口径写在这，换样本要重核这几条不变式**）：
+   *   `v7f5t-92` = 陷阱已装填的那一枚（✗ 且 head 里没有"场B 清场"、读数里有 ⇒ 截断一坏就露形）
+   *   `v7w3c-93` = 旧版掉进 `(其它)` 的那一枚（G(long) 写法）
+   *   `FIXTURE_PACK` = ✅ 全过的那一枚（给 pass/rows 一个非平凡值） */
+  const SAMPLES = ['docs/artifacts/v7f5t-92.bak', 'docs/artifacts/v7w3c-93.bak', FIXTURE_PACK];
+  const run = spawnSync(process.execPath,
+    ['tools/gate-landscape.mjs'].concat(SAMPLES, ['--json=' + outJson]),
+    { encoding: 'utf8', timeout: 600000 });
+  eq(run.status, 0, 'gate-landscape 要跑得通（stderr=' + String(run.stderr || '').slice(0, 240) + '）');
+  ok(existsSync(outJson), '必须能导出 --json（否则这些不变式又只能靠肉眼读表）');
+  const J = JSON.parse(readFileSync(outJson, 'utf8'));
+  const GATES = ['座位偏座', 'G<3', '反弹墙', '场B 清场', '零攻击局'];
+  /* 腿①：输入不许被静默丢掉（缺文件那一支会少算一行，而旧版只印一行字就继续）。 */
+  eq(J.rows, SAMPLES.length, '逐行数下来的行数必须等于传入的包数（缺文件/被当路径的旗标都会让它少一行）：实测 rows=' + J.rows + ' ‖ 输入 ' + SAMPLES.length);
+  /* 腿②：分类完备 —— 任何 ✗ 行都不许掉进 `(其它)`（掉进去 = 有一种挂科写法这张表不认识，而汇总里看不见它）。 */
+  const other = J.rowsData.filter(function (d) { return d.blocked.indexOf('(其它)') >= 0; });
+  eq(other.length, 0, '不许有行掉进 `(其它)`（实测 ' + other.map(function (d) { return d.nm + '←' + d.head; }).join(' ‖ ') + '）⇒ 有新的挂科写法没被认进五道门');
+  /* 腿③：截断口径（这次是真的**非空**判据：陷阱那一行必须"读数里有场B、head 里没有" ⇒ 若把 split('（')[0] 摘掉，它就会多出 '场B'）。 */
+  const armed = J.rowsData.filter(function (d) { return !d.ok && !d.head.includes('场B') && /场B 清场 [\d.]+\/局/.test(d.full); });
+  ok(armed.length > 0, '⚠ 陷阱没装填 ⇒ **本批对"截断口径"没有判语权**（要换一个"✗ 且读数里有场B 清场"的包，别把这条当已过）：实测装填 ' + armed.length + ' 行');
+  /* 腿③'：**门自己按"第一个括号之前"再推一遍挂科标签，与工具给出的 `blocked` 逐行比对**。
+   *   这是刻意留的**第二份实现**（同 `state.js:opponentsOf` 那次的教训：两份不一致当场炸，比一条注释可靠）。
+   *   ⚑ 为什么不用"泄漏"那种单向检查：把 `.split('（')[0]` 摘掉之后，`head` 自己就含上了读数 ⇒
+   *     "读数里有、head 里没有"这个前提同时消失 ⇒ 泄漏判据恒假、只有"陷阱没装填"那条会响（实测就是这样）。
+   *     自己重推一遍才能在**同一具 mutation** 上给出准确的那一句。 */
+  const expectLabels = function (full) {
+    const h = String(full).split('：').slice(1).join('：').split('（')[0];
+    const e = [];
+    if (h.includes('座位偏座')) e.push('座位');
+    if (/G(?:\((?:long|multi)\))?[\s]*[\d.]+ < 3/.test(h)) e.push('G<3');
+    if (h.includes('反弹墙')) e.push('墙');
+    if (h.includes('场B 清场')) e.push('场B');
+    if (h.includes('零攻击局')) e.push('退化');
+    return e;
+  };
+  const mismatch = J.rowsData.filter(function (d) {
+    if (d.ok) return d.blocked.length > 0;
+    const e = expectLabels(d.full).slice().sort().join(',');
+    return e !== d.blocked.slice().sort().join(',');
+  });
+  eq(mismatch.length, 0, '逐行的阻塞标签必须与"按第一个括号之前重推一遍"的结果**逐字相等**（不等 = 截断口径变了/漏了一个标签）：实测 ' +
+    mismatch.map(function (d) { return d.nm + ' 工具=[' + d.blocked.join(',') + '] 重推=[' + expectLabels(d.full).join(',') + ']'; }).join(' ‖ '));
+  /* 腿④：广度取数不许恒空（就是抓 ① 那种腐烂：标签还在、数取不到 ⇒ 两组都是 0 个）。 */
+  ok(J.broadN + J.narrowN > 0, '广度分组的样本不许恒 0（`最大单卡占比` 那一列取不到数时两组都是 0 个，而 stdout 照样印标题）：实测 宽=' + J.broadN + ' ‖ 窄=' + J.narrowN);
+  /* 腿⑤：汇总自洽 —— pass + ✗ = rows，且 tally 之和 = 全部阻塞标签数（防"逐行判了但没计进汇总"）。 */
+  const failRows = J.rowsData.filter(function (d) { return !d.ok; });
+  eq(J.pass + failRows.length, J.rows, '汇总里"全过 + 未过"必须等于行数：实测 pass=' + J.pass + ' ‖ ✗=' + failRows.length + ' ‖ rows=' + J.rows);
+  const labelCount = J.rowsData.reduce(function (a, d) { return a + d.blocked.length; }, 0);
+  const tallySum = GATES.reduce(function (a, g) { return a + (J.tally[g] || 0); }, 0);
+  eq(tallySum, labelCount, '`各门阻塞次数` 之和必须等于逐行阻塞标签数（少一个就是有一道门的计数没接上）：实测 tally=' + tallySum + ' ‖ 标签=' + labelCount);
+  /* 腿⑥：参照行那句警告必须**按实际输入**出现（v1.8.12 之前它是无条件印的，传什么都说"第一行是在位包" ⇒ 那句话本身是假的）。 */
+  const so = String(run.stdout || '');
+  const firstIsIncumbent = ['js/bundled-champion-3p.js', 'js/bundled-champion.js'].indexOf(SAMPLES[0]) >= 0;
+  ok(firstIsIncumbent === (so.indexOf('**在位包（参照行）**') >= 0),
+    '第一枚是在位槽 ⇒ 必须印参照行警告；不是 ⇒ 必须明说"没有参照行"（实测 first=' + SAMPLES[0] + ' ‖ 印了参照行=' + (so.indexOf('**在位包（参照行）**') >= 0) + '）');
+  /* 腿⑦（唯一保留的静态钉，理由写在这）：`--exam-first=0` 是**传给子进程的旗标**，工具的输出里没有任何一列能区分"跳过了 A 卷"与"跑了 A 卷"
+   *   ⇒ 判它只能判"这行装配还在"。它是"输入必须真的带上这个参数"那一类（同 `audit-lib` 的 `readTrainEnv` 形状），不是判文案。
+   *   ⚠ 若哪天 promote 的输出里出现了"A 卷已跳过"这类可观测标记，这条应当立刻换成行为判据并删掉这里的注释。 */
+  ok(readFileSync('tools/gate-landscape.mjs', 'utf8').indexOf("'--exam-first=0'") >= 0,
+    '体检必须带 `--exam-first=0`（跳过 A 卷那 1400 局；五道门不依赖它）⇒ 没有可观测的输出能证明它带没带，所以这条只能静态判，已注明代价');
+  rmSync(dir, { recursive: true, force: true });
 });
 
 t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"除 2P"排序 · "读不出"必须分得出是算力还是钱墙（Q-9/Q-10）', function () {
@@ -692,11 +752,13 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
   eq(r1.status, 0, '正常包必须 exit 0：' + String(r1.stderr || '').slice(0, 160));
   const nm = ['全程刷反弹', '全程只防御', '只攒不打(农民)', '只枪压制', '攒钱+反弹(会玩)', '重火力+反弹'];
   const out1 = String(r1.stdout);
-  /* ①′ **数值同一性**（替掉原来那三条源码正则）：门自己拿同一份 `duelAssembly` + 同一组 `humanPrototypes`
-   *   按同一参数（`--games=40`、缺省 `seed0=90210`、两模式）再算一遍 12 格，与工具印出来的**逐格对**。 */
+  /* ①′ **数值同一性**（v1.8.18 改：重算搬到**干净子进程**里做）。
+   *   原来这七行在门自己的进程里直接 `duelAssembly(...)` ⇒ 它比的是"**这台机器此刻的配置**算出来的数"对"子进程里出厂配置算出来的数"。
+   *   实测（10-23 整轮 279/280 的唯一红）：单跑 `--only="D178 "` 1/1 绿，全量轮里 `multi × 全程只防御` 门内算 5.0% 而工具印 0.0%
+   *   ⇒ 红的不是产品，是**前面某条门在共享沙箱里留了模块级状态**；而那条判词把"我这边机器不一样"写成了"它没走那份装配"（R8 那一族：算不出与算过且干净同形）。
+   *   ⇒ 判据问的还是同一件事（"工具印的数就是那份装配在同一参数下的数"），那就必须**同条件**比：两边都在干净进程里。
+   *   单一来源没破：子进程 import 的仍是 `v2v4-lib.duelAssembly` + `audit-lib.humanPrototypes` 那**一份**（不是第二份对局循环）。 */
   {
-    const fp = loadChampParams(Pol, FIXTURE_PACK);
-    const HP = humanPrototypes(Bots);
     const seen = {};
     for (const line of out1.split('\n')) {
       const m = /^ {2}(multi|long)\s+(.*)$/.exec(line);
@@ -709,20 +771,78 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
     eq(Object.keys(seen).sort().join(','), 'long,multi',
       '①′ 拿不到两行（multi/long 各一行）⇒ 同一性无从对起（实测把 stdout 的键读成 ' + JSON.stringify(Object.keys(seen)) +
       '）⇒ 工具的印表格式变了，本门要跟着重看，别让同一性静默空转');
+    const refDir = mkdtempSync(join(tmpdir(), 'd178ref-'));
+    let ref;
+    try {
+      const refTool = join(refDir, 'cells.mjs');
+      const u = function (p) { return new URL(p, import.meta.url).href; };
+      writeFileSync(refTool,
+        "import { sandbox, loadChamp, humanPrototypes } from '" + u('../audit-lib.mjs') + "';\n" +
+        "import { duelAssembly } from '" + u('../v2v4-lib.mjs') + "';\n" +
+        "const W = sandbox();\n" +
+        "const deps = { S: W.EpirusState, Play: W.EpirusPlay, T: W.EpirusTrainer, R: W.EpirusRules };\n" +
+        "const p = loadChamp(W, process.argv[2]);\n" +
+        "if (!p) { process.stderr.write('夹具读不出'); process.exit(9); }\n" +
+        "const HP = humanPrototypes(W.EpirusBots);\n" +
+        "for (const x of HP) { if (typeof x[1] !== 'function') { process.stderr.write('原型不是函数：' + x[0]); process.exit(9); } }\n" +
+        "const G = Number(process.argv[3]);\n" +
+        "const rows = [];\n" +
+        "for (const mode of ['multi', 'long']) { for (const h of HP) {\n" +
+        "  const r = duelAssembly(deps, p, { games: G, mode: mode, seed0: 90210, scripted: h[1] });\n" +
+        "  rows.push(mode + '\\t' + h[0] + '\\t' + r.winPct.toFixed(1) + '\\t' + r.drawPct.toFixed(0));\n" +
+        "} }\n" +
+        "process.stdout.write(rows.join('\\n') + '\\n');\n");
+      const rr = spawnSync(process.execPath, [refTool, FIXTURE_PACK, '40'], { encoding: 'utf8', timeout: 420000 });
+      eq(rr.status, 0, '①′ 参考（干净子进程）必须跑得通（status=' + rr.status + '）：' + String(rr.stderr || '').slice(0, 200));
+      ref = {};
+      for (const line of String(rr.stdout).split('\n')) {
+        const q = line.split('\t');
+        if (q.length === 4) ref[q[0] + '|' + q[1]] = { win: q[2], draw: q[3] };
+      }
+      eq(Object.keys(ref).length, 12, '①′ 参考必须给满 12 格（实测 ' + Object.keys(ref).length +
+        '）⇒ 子进程少跑了一档或原型表变短；同一性不许在缺格上"对得上"');
+    } finally { rmSync(refDir, { recursive: true, force: true }); }
     for (const mode of ['multi', 'long']) {
       const cells = seen[mode] || [];
       eq(cells.length, 6, '①′ ' + mode + ' 那行必须 6 格（实测 ' + cells.length + '）');
       for (let i = 0; i < cells.length; i++) {
-        const h = HP.filter(function (x) { return x[0] === cells[i].name; })[0];
-        ok(!!h, '①′ 工具印的"人类原型"「' + cells[i].name + '」不在 `audit-lib.humanPrototypes` 里 ⇒ 它在用另一组人（与 G4 不同尺，数不能并排读）');
-        if (!h) continue;
-        const r = duelAssembly({ S: S, Play: Play, T: T, R: R }, fp, { games: 40, mode: mode, seed0: 90210, scripted: h[1] });
-        eq(cells[i].win, r.winPct.toFixed(1), '①′ 同一性：' + mode + ' × ' + cells[i].name + ' 工具印 ' + cells[i].win +
-          '% 而那份装配算出 ' + r.winPct.toFixed(1) + '% ⇒ 它没走 `duelAssembly`（或偷偷改了参数）');
-        eq(cells[i].draw, r.drawPct.toFixed(0), '①′ 同一性：' + mode + ' × ' + cells[i].name + ' 的和棋率对不上（' +
-          cells[i].draw + ' vs ' + r.drawPct.toFixed(0) + '）');
+        const key = mode + '|' + cells[i].name;
+        ok(!!ref[key], '①′ 工具印的"人类原型"「' + cells[i].name + '」不在参考那 12 格里 ⇒ 它在用另一组人（与 G4 不同尺，数不能并排读）');
+        if (!ref[key]) continue;
+        eq(cells[i].win, ref[key].win, '①′ 同一性：' + mode + ' × ' + cells[i].name + ' 工具印 ' + cells[i].win +
+          '% 而同一份 `duelAssembly` 在**干净进程**里算出 ' + ref[key].win + '% ⇒ 它没走那份装配（或偷偷改了参数）');
+        eq(cells[i].draw, ref[key].draw, '①′ 同一性：' + mode + ' × ' + cells[i].name + ' 的和棋率对不上（' +
+          cells[i].draw + ' vs ' + ref[key].draw + '）');
       }
     }
+  }
+  /* ①″ **共享沙箱必须还在出厂位**（本晚那条"整轮红 / 单跑绿"的病根探测器，2026-10-23 千问）。
+   *   它判的产品事实只有一句：**门体里任何"在进程内重算"的腿，吃的机器必须与子进程工具同一台**。
+   *   默认值不写死在这里 —— 现取一份**全新 boot** 的沙箱当出厂位（`sandbox()` 每次都重跑 `CORE`，没有缓存）
+   *   ⇒ 将来加旋钮不必改这条，而"设了没复位"一定当场被点名（点名 = 这条腿的全部价值；静默放行就是 v1.8.17 之前那具样子）。
+   *   只比**原始值可读**的那几维：函数/对象身份在两份沙箱里天然不等，比了就是恒红装饰。 */
+  {
+    const W0 = sandbox();
+    const rd = function (E, P, Bo, Ru) {
+      const m = Ru.MODES.multi, fm = P.featMask();
+      return {
+        featMask: Object.keys(fm).sort().map(function (k) { return k + '=' + (fm[k] ? 1 : 0); }).join(','),
+        beliefSearch: E.beliefSearchOn(), beliefPly: E.beliefPly(), chargeMinEp: E.chargeMinEpOn(),
+        trainMode: E.trainMode(), subBead: E.subBeadOn(), beadSeed: E.beadSeedOn(), regenSlice: E.regenSlice(),
+        seatGames: E.seatGames(), planOff: Bo.planOffOn().join(','),
+        multiHp: [m.hp, m.drainHpMax, m.suddenDeath, m.maxRounds].join('/'),
+        multiOnly: Ru.MULTI_ONLY.length, guardFam: Ru.GUARD_FAMILY.length,
+        /* 再补四维：卡片表被改过、§E340 那档映射、两条全局默认档 —— 这些都会改"决策"，而不改上面任何一维 */
+        multiSkills: m.skills.length, skills: Ru.skills.length,
+        costTank: Ru.byKey[Ru.SK.TANK].cost, costBigT: Ru.byKey[Ru.SK.BIG_T].cost,
+        holo2Proto: P.holo2Proto(), suddenDeath: Ru.SUDDEN_DEATH, maxRounds: Ru.MAX_ROUNDS
+      };
+    };
+    const live = rd(T, Pol, Bots, R);
+    const base = rd(W0.EpirusTrainer, W0.EpirusPolicy, W0.EpirusBots, W0.EpirusRules);
+    const drift = Object.keys(base).filter(function (k) { return String(live[k]) !== String(base[k]); });
+    eq(drift.join(','), '', '①″ 共享沙箱里有模块级旋钮**不在出厂位**（前面某条门设过没复位 ⇒ "进程内重算"这类腿吃的不是出厂机器）：' +
+      drift.map(function (k) { return k + ' 进程内=' + live[k] + ' ‖ 出厂=' + base[k]; }).join(' ‖ '));
   }
   for (const k of nm) ok(out1.indexOf(k) >= 0, '② 六个"人类原型"必须都在（缺一个 = 那格静默消失）：' + k);
   ok(/multi/.test(out1) && /long/.test(out1), '② 两个模式都要印（与 G4 同规矩）');

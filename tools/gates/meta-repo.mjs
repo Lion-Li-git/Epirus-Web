@@ -47,9 +47,12 @@ t('REPRO 训练路径不得出现裸 Math.random / Date.now（白名单见下）
    * 而 tools/train-*.mjs 三个 CLI 训练器完全没播种，研究数字多半出自它们。 */
   const files = ['server/train-server.mjs', 'server/train-worker.mjs', 'server/paralleltrain.mjs',
     'tools/train-fast.mjs', 'tools/train-best.mjs', 'tools/train-3p.mjs', 'js/train/evo.js'];
-  const bad = [];
-  for (const f of files) {
-    const src = readFileSync(f, 'utf8');
+  /* v1.8.13：把"扫一个文件"抽成一个函数，好让这条门能**自己喂自己一行坏代码**（下面三条自检）。
+   *   为什么必须有：这条门的白名单已经长到 9 条 `indexOf(...) >= 0 ⇒ continue`，
+   *   于是"白名单把真违规也一起吃掉"这件事**只会让它变绿、不会让它变红** ⇒ 没有正对照的扫描器就是装饰
+   *   （这正是本仓那条"跑 X 绿 ≠ 坏了 X 会红"，也是 §廿四/§廿五 同一个病根的第三种形状）。 */
+  const scanTrainRandom = function (f, src) {
+    const out = [];
     const lines = src.split('\n');
     for (let i = 0; i < lines.length; i++) {
       const L = lines[i];
@@ -71,10 +74,21 @@ t('REPRO 训练路径不得出现裸 Math.random / Date.now（白名单见下）
        * （千问倾向把这几处直接改成播种流；列白名单是我在预算内的折中，已记入 CHANGELOG。） */
       if (f === 'js/train/evo.js' && L.indexOf('Math.random(') >= 0) continue;
       if (f === 'js/train/bots.js' && L.indexOf('Math.random(') >= 0) continue;  // rnd() 兜底
-      bad.push(f + ':' + (i + 1) + '  ' + L.trim().slice(0, 70));
+      out.push(f + ':' + (i + 1) + '  ' + L.trim().slice(0, 70));
     }
-  }
+    return out;
+  };
+  const bad = [];
+  for (const f of files) { for (const b of scanTrainRandom(f, readFileSync(f, 'utf8'))) bad.push(b); }
   eq(bad.length, 0, '训练路径出现裸随机/时间源：\n    ' + bad.join('\n    '));
+  /* ===== 这条扫描器自己的三条腿（跑在同一份逻辑上，不读任何真实文件）===== */
+  const FAKE = 'server/__selftest__.mjs';
+  const hitRand = scanTrainRandom(FAKE, '  const jitter = Math.random();\n');
+  eq(hitRand.length, 1, '自检①（正对照）：扫描器必须抓到一行裸 `Math.random()` ⇒ 抓不到就是白名单把它吃掉了，这条门是装饰。实测抓到 ' + hitRand.length + ' 行');
+  const hitClock = scanTrainRandom(FAKE, '  const stamp = Date.now();\n');
+  eq(hitClock.length, 1, '自检②（正对照）：必须抓到低面钟的裸 `Date.now()`（变量名不是 t0 ⇒ 不在"纯计时"那一支）。实测抓到 ' + hitClock.length + ' 行');
+  const fp = scanTrainRandom(FAKE, '  const t0 = Date.now();\n  // Math.random() 写在注释里\n  /* Date.now() 写在块注释里 */\n');
+  eq(fp.length, 0, '自检③（不许误伤）：纯计时那一行与两处注释都不该报 ⇒ 报了就是白名单在拦正常代码，判据会被人整个拆掉。实测 ' + JSON.stringify(fp));
 });
 
 t('L2 事件字段名必须与发射端一致（筛错字段 => 把"没发生"当结论）', function () {

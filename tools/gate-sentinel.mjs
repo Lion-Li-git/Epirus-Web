@@ -65,7 +65,7 @@ const __behRe = /\n\s*(?:eq|is)\(/g;
 /* v1.7.165：执行痕迹原来只认"引擎符号名"，**不认起子进程/起沙箱**那一族 ⇒ 一批"真 spawn 了量具/工具、只用 ok() 断言"的门
  *   被漏进 ⑤（例：`D119` 真跑 `train-3p` 断 exit 5，却仍显示"全 pin 无行为腿"）。补齐这几个符号。
  * ⚠ 这把尺仍然只是**形状启发**：它认不出"调本文件里自己定义的 helper"，所以 ⑤ 的名单是候选、不是判词。 */
-const __runRe = /sb\.window|EpirusTrainer|EpirusPlay|EpirusBots|EpirusRules|EpirusState|EpirusResolve|EpirusPolicy|autoGameN|oneGameN|policyChooserN|selfPlay\(|mirrorHealth\(|spawnSync|spawnCached|spawnNC|execFileSync|execSync\(|runInNewContext|new vm\.|sandbox\(/;
+const __runRe = /sb\.window|EpirusTrainer|EpirusPlay|EpirusBots|EpirusRules|EpirusState|EpirusResolve|EpirusPolicy|autoGameN|oneGameN|policyChooserN|selfPlay\(|mirrorHealth\(|duelAssembly\(|spawnSync|spawnCached|spawnNC|execFileSync|execSync\(|runInNewContext|new vm\.|sandbox\(/;
 
 /* 10-22 晚（千问，用户点名要补的第二处）：**⑤ 的条数 ≠ 还有多少要读**。
  *   两件事在旧口径下被混成一个数：
@@ -76,7 +76,12 @@ const __runRe = /sb\.window|EpirusTrainer|EpirusPlay|EpirusBots|EpirusRules|Epir
  *         实测**换类 0 条**，纯盲）。
  *   所以不再猜写法，改成**记账 + 签名过期**（仓里 `diff-ladder-claims.mjs` 同一种形状）：
  *     判词抄进下面这张表（人写的，本工具不生产判词），签名 = 门体里所有 `indexOf(<串>)` 的被比对串（排序后 sha1 前 8 位 + 串数）。
- *     改注释/挪行不动签名；**改判据（加减/替换被钉的串）签名就变 ⇒ 判词作废 ⇒ 自动回到"待读"**。
+ *     改注释/挪行**通常**不动签名 —— 但 v1.8.11 给 D107 重签时发现两句太满了，实测两处局限：
+ *       ① 取串用 `[^)]*`，串内带括号的钉（`indexOf('h32(seed0 + …)') < 0`）**进不了签名** ⇒ 它是 pin 却不被哈希看见；
+ *       ② 同一串若写在**注释**里也会被算进去 ⇒ 只改一句史注也会让判词"过期"（假过期；方向安全：只会多排队，不会少排队）。
+ *       ③ **数组的** `.indexOf(x) >= 0`（如 `['a','b'].indexOf(SAMPLES[0]) >= 0` 这种成员判断）也会被当成"源码 pin"计入签名与 pin 数
+ *          ⇒ 所以 pin 数是**上界**，不是"有几条文本钉"的精确数（v1.8.12 换 `D88` 时现形：它 4 个"pin"里有一个是数组成员判断）。
+ *     ⇒ 签名是"排队提醒"，不是"判据等价的证明"：改判据后要**主动重签**，别等它报；判词本身是否仍成立仍是 R4 第③步的活。
  *   ⚠ 局限要说清：`j:'换'` 这条哨兵**无法自检**——腿被人摘掉而 pin 串没动的话，它还会显示"已换"。
  *     它只保证"没人再为已判的门重复排队"，不保证判词永远成立（那仍是 R4 第③步的活）。 */
 const sigOf = function (text) {
@@ -97,13 +102,13 @@ const TRIAGE = {
   'D100':  { s: 'c9034ba8/5',  j: '留', at: '§三′ 丙' },
   'D79':   { s: '6388dbb8/14', j: '留', at: '§三′ 丙' },
   'D118':  { s: '18a0e522/7',  j: '留', at: '§三′ 丙' },
-  'D107':  { s: 'd4ef2cea/12', j: '留', at: '§三′ 丙' },
+  'D107':  { s: '1380dba1/2',  j: '换', at: 'v1.8.11 八条文本 pin 换成真跑 duelAssembly 三个钩子（turtle 腿变异实测红）' },
   'D7':    { s: 'fda7fc00/2',  j: '留', at: '§三′ 丙' },
   'D11':   { s: '68af7fa8/3',  j: '留', at: '§三′ 丙' },
   'D13':   { s: 'ec824886/5',  j: '留', at: '§三′ 丙' },
   'D65':   { s: '81eff325/2',  j: '留', at: '§三′ 丙' },
   'D83':   { s: 'd395639b/8',  j: '留', at: '§三′ 丙' },
-  'D88':   { s: '6d010300/5',  j: '留', at: '§三′ 丙' },
+  'D88':   { s: 'aac85a93/4',  j: '换', at: 'v1.8.12 五条文本钉换成跑 gate-landscape 的 --json（三次变异实测红：M1 广度/M2 分类/M3 截断）' },
   'D27':   { s: 'c04ec7b9/8',  j: '留', at: '§三′ 丙' },
   'D73':   { s: 'df05c7d0/4',  j: '留', at: '§三′ 丙' },
   'D145':  { s: '4427698f/2',  j: '留', at: '§三′ 丙' },
@@ -139,9 +144,12 @@ for (const g of gates) {
     /* 10-22（DS）：④ 只列"pin + 有行为腿"，于是**一条全是 pin、零行为腿的门反倒不进任何名单**（`D132` 就这样漏掉，
      *   靠逐条读门体才发现）⇒ 全 pin 无行为腿的门单独列一类，不许再当"只有源码 pin ⇒ 该留"默认放过。 */
     if (pins > 0 && !hasBeh) {
-      const st = statusOf(id, sigOf(g.text));
+      const sg = sigOf(g.text);
+      const st = statusOf(id, sg);
+      /* v1.8.11：把**当前签名**一起印出来 ⇒ 改完判据要回 `TRIAGE` 更新时不必再猜/再写第二份计算器
+       *   （以前只能印"过期"，人就要么盲抄一个 sig、要么再抄一份 sigOf ⇒ 正是本仓"两份实现必漂移"那一族）。 */
       cls.allpin.push(id + '@' + g.at + '(' + pins + 'pin)' +
-        (st === '已判留' ? '[留·已判]' : st === '已换' ? '[换·已补腿]' : st === '判词过期' ? '[过期·待重读]' : '[待读]'));
+        (st === '已判留' ? '[留·已判]' : st === '已换' ? '[换·已补腿]' : st === '判词过期' ? '[过期·待重签 ' + sg + ']' : '[待读 ' + sg + ']'));
       cls.pin_status[id] = st;
     }
   }
