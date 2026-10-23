@@ -687,7 +687,7 @@ relabel(25, '融合与续训');
 relabel(29, '臂线·COUNTER_OPPS=guardSpam');
 relabel(8, '珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类）');
 relabel(16, '对手池步进 C2（09-16～09-18：对手池 16/19 + 小类）');
-relabel(26, '臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂）');
+relabel(26, '臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂）');
 /* 10-21 用户：号从头排、不留空号 ⇒ 按 t0 排序后连续编号 1..N（0 留给旧槽位冠军） */
 defs.sort(function (a, b) { return String(a.g.t0 || '').localeCompare(String(b.g.t0 || '')); });
 defs.forEach(function (d, i) { d.n = i + 1; });

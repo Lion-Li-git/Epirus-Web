@@ -1,3 +1,11 @@
+## v1.8.31 — 10-23（DS）：版本号规则成文 + 家族 11 标签补 E1/E2
+
+- `docs/METHODOLOGY.md` 新增「版本号规则」（用户两次纠正后成文）：补丁号 = 不扩产品能力面；次版本 = 玩家可感知的新东西；主版本 = 规则集换代；三处同步由 `D8` 守。
+- 家族 11 标签补「+ E1/E2 研究臂」；`lineage.mjs` 重生成 → `viewer.mjs` 重烘，页内自检 **96 PASS / 0 FAIL**。
+- 备查（本轮没动的）：`D131` 已有 CDP 行为腿（10-22 试点②）；`D87`/override 两条文本钉按千万 v1.8.28 记下的代价保留（要换需给 `evo.js` 加对外计数口，属产品面）。
+- `champion-map/packs/README.md` 一起入库（4 枚实验包的入库策略）。
+
+---
 ## v1.8.30 — 10-23（DS）：把 4 枚实验冠军搬进受控路径，干净克隆不再缺包
 
 - 病：`coords.tsv` / `bead-extra.tsv` / `bead-ruler.tsv` 里这 4 枚指向 `docs/artifacts/*.bak`，而整个 `docs/artifacts/` 被 gitignore ⇒ 干净克隆里图上的点没有权重，且没有门读这几个表 ⇒ 静默坏。
