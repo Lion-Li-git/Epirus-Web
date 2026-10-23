@@ -3119,3 +3119,16 @@ CI：`1104b058`（v1.7.144）run = **success** ⇒ 那两条红是修好的，�
   两条修法（代价差一个量级，**都没动，等裁**）：(a) 改 `attach-hlong.mjs:29` 的缺省表 ⇒ 从此不再回退，但会把**另外 802 枚**的 `Hlong` 一起换成 10-19 那张尺 ⇒ **混档**，要同日尺重烘才对得上；(b) **推荐**：按 §E652 现量这 5 枚再挂 ⇒ `node champion-map/eps-full.mjs --mode=long --only=e652-t5long-list.tsv --games=120 --epsTier=lv:regular --jobs=4`（`docs/research/archive/2026-10-19-e652-t5long/README.md` 实测 **5 枚合计 1.7 分钟 / 四趟 3 分 41 秒**）⇒ 不动其余 802 枚。
   我**没动图数据**：改 `coords.tsv` 等于替 DS 重烘 1610 行，而那条线是它在册的产出（同一条规矩：不擅自改别人正在跑的那条线的产物）。
 - 足迹与验证：本节**零仓库写入**（融合粒与冒烟产物都在仓库外 `C:/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/laser-xfer/`，先把它们从 `docs/artifacts/soup-out/` 搬了出来）‖ `eval-5p` 六跑 + `soup-pack` 三跑 + `train-3p` 冒烟均 `exit 0` ‖ 事后 `--group=meta` **16/16**、`D191` **1/1**、`git status` 干净 ‖ 门数不变（280）。
+
+## §E707 · 10-23 午 · 接班：把 DS 这条线整条吸进我的台账（用户决定「后续把 ds 的工作交给千问来做」）
+
+- **读了 DS 的哪些账**（不是读代码猜）：`docs/research/handoff/HANDOFF-FOR-QWEN-2026-10-22-afternoon-ds.md`（**写给我的交班**，五条留账）‖ `docs/research/EXPLORE-LINES-2026-10-22-ds.md`（E1 教师进回路设计 + 首轮 4 seed、E2 打断奖励设计）‖ `docs/research/BEAD-LASER-2026-10-23-ds.md`（今天的教师/梯度两臂）‖ `docs/research/TOOLKIT-REGULAR-2026-10-21-ds.md` ‖ `GATE-AUDIT-2026-10-22-qoder.md §三/§三′`（19 条活槽门判读 3 换 / 18 留 / 0 悬，DS 说可直接引用不必重读）‖ **今天五笔的 diff 逐笔读过**（v1.8.22 `84f77579` ‖ v1.8.23 `03c8c56f` ‖ v1.8.24 `53de0d09` ‖ v1.8.25 `72680faf` ‖ v1.8.26 `66c8f9bc`）。
+- **DS 的打法（我接手后照办，不是学措辞）**：判据/预注册**先落盘再跑**（`2026-10-11-opphuman-ds.md:3`「判据先落盘，结果出来前不改口」）‖ 跑前先估剂量与时长（`EXPLORE-LINES…:15`「先跑 2 seed 再决定放量」）‖ 产物写本机 Temp 不落仓 ‖ 新门当天做变异（`HANDOFF…:10` M1 变异红在指定腿）‖ 判词只用"判不动"、不许写成"没用" ‖ env 只走宿主 setter + 回读，`js/**` 不字面读 `process.env`（今天 v1.8.26 就是按这条修的）。
+- **三条我不照抄 DS 结论的地方**（都自己核过）：
+  ① `BEAD-LASER…:43` 那句"使用时 Δ夺1 = −12.7pt（se 2.2）⇒ 这个动作不是好手"是 DS **批内的相关量**（它两臂均值本来判不动：教师 +1.30±4.94 ‖ 梯度 +1.63±3.67），而且激光出手与广度同向塌 ⇒ 不许当因果；我这边的独立证据是 §E706 的融合三档（**三档全部低于两个父包、能力一次都没跟权重走**）。
+  ② v1.8.22 把 break-first **翻成出厂默认**，证据是 `champion-map/_planfiring.tsv`（`st:toolkit` · 200 局 · 17,506 决策）里 小雷 0.2%/2120 → 1.2%、大雷 98.2%→84.5%，强度 **+0.04pt（t=2.05）** ⇒ 幅度落在 DS 自己那条臂间地板（METHODOLOGY 104：考卷 4.44pt）之下，"强度中性"这句我会用配对臂重验；**次序改动本身是用户裁定，我不回退**。
+  ③ "这次翻默认让谱系图 807 行混档"这一说**不成立**（我核过 `server/opp-pool.mjs`）：`OPP_SPECS` 那 25 个对手里**没有 `toolkit`**（`random‖balanced‖aggro‖…‖deadlineburst`），`pickToolKit/planPick` 只被研究装配用 ⇒ `coords.tsv` 的读数没换世界。
+- **两个会静默坏人的东西**（都不擅自动）：① 四枚实验包被 `champion-map/coords.tsv` 与 `bead-extra.tsv:2` 指着，但 `.gitignore:137` 排掉整个 `docs/artifacts/` ⇒ **干净克隆里图上这四个点没有包**，而**没有任何门读** `bead-ruler/bead-extra`（grep 无）⇒ CI 不会响；② DS 今天把 **D86/D87 续成源码文本钉**（`tools/gates/train-evo.mjs:1987-1992 ‖ :2022` 全是 `evo.indexOf('…onlyOK(ta.key)…')`），运行腿只测单卡 `only` ⇒ **逗号列表解析没有行为覆盖** —— 这与用户 10-22「门禁目标是功能实现而不是判文本」正相反。
+- **CI 现状与我的第一条接手规矩**：`66c8f9bc` gates/pages **双绿**；此前 DS 连推三笔（`53de0d09 ‖ 1dfa3461 ‖ 72680faf`）gates **红**，到 v1.8.26 才修好 ⇒ 我这边**不推红进 main**（先按改动面跑 `--group=`，再推）。
+- **继承账 6 条已立进任务清单**（① ui-contract 7 条文本门 · 优先 D131 ‖ ② 哨兵 ⑤ 40 条全 pin ‖ ③ E2 打断奖励（第一步要动 `js/core/resolve.js` ⇒ **等点名**）‖ ④ D86/D87 换行为腿 ‖ ⑤ 4 枚实验包的可复现性（等裁）‖ ⑥ 激光眼定价/时机 + 热启动四臂批 ≈25~30 分钟（等点头））。
+- 我没动 DS 那棵树：接班账与 §E706 都落在独立 worktree `D:/wt-qoder-1023-laser`（分支 `research/laser-transfer-2026-10-23-qoder`），`D:/code/Epirus-Web` 全程停在 `main` 且 `git status` 干净。
