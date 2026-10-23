@@ -198,7 +198,7 @@ t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a
   const dir = mkdtempSync(join(tmpdir(), 'd130-'));
   /* 2026-10-16：每个臂**各有各的落点**（原先都写默认落点 `docs/artifacts/train-3p-out.js`，靠"最后写的那个"
    *   被读到 —— 本机与别的部分并发时那个文件会被别人覆盖，所以 metaOf 现在收一个路径参数）。 */
-  const D130OUT = join(dir, 'd130on.js'), D130ONE = join(dir, 'd130one.js');
+  const D130OUT = join(dir, 'd130on.js'), D130ONE = join(dir, 'd130one.js'), D130GF = join(dir, 'd130gf.js');
   const metaOf = packMetaOf;   /* v1.7.67：实现只有一份（`_ctx.mjs`） */
   const on = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130on', EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_COUNTER_OPPS: '1', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: D130OUT }), encoding: 'utf8', timeout: 300000 });
@@ -210,6 +210,14 @@ t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a
   const mt1 = metaOf(D130OUT);
   ok(mt1.recipe && Array.isArray(mt1.recipe.counterOpps) && mt1.recipe.counterOpps.length === 3,
     '产物要自带"这臂的训练桌上放了哪几个判据原型"（实测 ' + JSON.stringify(mt1.recipe && mt1.recipe.counterOpps) + '）');
+  /* ===== v1.8.32（10-24 夜 · 千问）：老口径**冻结**，新原型只许点名 =====
+   * 病因远端整轮红：表里加了第四个原型 `gunFocus` 之后，数字口径走 `Object.keys(表)` ⇒ `=1` 静默变"四个全上"，
+   *   而 `=1` 对历史臂的承诺是逐位可复现（`co1s1..9` ‖ `cbs1s2-band2` ‖ 10-05 实验组都用的它）。
+   * 这两条腿是一对，别摘其中一条：① 防"扩容毁约"（下面那句：`=1` 里不许出现 gunFocus）；
+   *   ② 防"扩容后进不去"（④ 那条：`gunFocus` 按名字必须真能上桌，否则它就是根暗旋钮，DS 的 g18 直接跑在空座上）。 */
+  ok(mt1.recipe && mt1.recipe.counterOpps.indexOf('cnt:gunFocus') < 0,
+    '① 数字老口径**不许**跟着表长：`=1` 里出现 cnt:gunFocus = 历史臂的"三个全上"被改成"四个全上"（实测 ' +
+    JSON.stringify(mt1.recipe && mt1.recipe.counterOpps) + '）');
   /* ③ §E500 的新牙口：名字表 ⇒ **单自由度**必须表达得出来（今晚 R1 的对照臂就靠这一格） */
   const one = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130one', EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_COUNTER_OPPS: 'snipeSpam', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: D130ONE }), encoding: 'utf8', timeout: 300000 });
@@ -220,6 +228,21 @@ t('D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a
   const mtOne = metaOf(D130ONE);
   ok(mtOne.recipe && mtOne.recipe.counterOpps.length === 1 && mtOne.recipe.counterOpps[0] === 'cnt:snipeSpam',
     '产物 meta 要落生效值（实测 ' + JSON.stringify(mtOne.recipe && mtOne.recipe.counterOpps) + '）');
+  /* ④ v1.8.32：`gunFocus`（G4 真口径·击杀优先）**按名字点名**必须真能上桌。
+   * DS 的 g18 命令原文用的就是 `EPIRUS_COUNTER_OPPS=guardSpam,gunFocus`（交班件 §5-1），
+   * 而 ① 把数字口径冻成三元组之后，这条是它唯一的通路 ⇒ 不钉它，新原型可能谁都到不了（暗旋钮）。 */
+  const gf = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
+    { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130gf', EPIRUS_SUPPORT_PRIOR: '0',
+      EPIRUS_COUNTER_OPPS: 'guardSpam,gunFocus', EPIRUS_BAND_DIR: dir, EPIRUS_T3P_OUT: D130GF }), encoding: 'utf8', timeout: 300000 });
+  eq(gf.status, 0, '④ `=guardSpam,gunFocus` 要跑得通（G4 真口径上不了桌 = g18 那条臂跑在空座上）：' + String(gf.stderr || '').slice(0, 120));
+  ok(/\[counter-ops\][^\n]*cnt:gunFocus[^\n]*OPPS 从 9 个变 11 个/.test(String(gf.stdout || '')),
+    '④ 点名两型 ⇒ 必须恰好进两个（9→11）并把 cnt:gunFocus 印出来（实测行：' +
+    String(gf.stdout || '').split('\n').filter(function (L) { return L.indexOf('[counter-ops]') >= 0; }).join(' / ') + '）');
+  const mtGf = metaOf(D130GF);
+  ok(mtGf.recipe && mtGf.recipe.counterOpps.length === 2
+    && mtGf.recipe.counterOpps.indexOf('cnt:gunFocus') >= 0 && mtGf.recipe.counterOpps.indexOf('cnt:gunSpam') < 0,
+    '④ 产物 meta 要落"点名到的那两型"，且不许夹带没点名的 gunSpam（实测 ' +
+    JSON.stringify(mtGf.recipe && mtGf.recipe.counterOpps) + '）');
   const bad = spawnSync(process.execPath, ['tools/train-3p.mjs', '2', '3', '4', '3'],
     { env: Object.assign({}, process.env, { EPIRUS_SEED: '7', EPIRUS_ARM: 'd130bad', EPIRUS_COUNTER_OPPS: 'snipeSpam2', EPIRUS_BAND_DIR: dir }), encoding: 'utf8', timeout: 300000 });
   eq(bad.status, 4, '写错名字必须 exit 4 点名（打错一个字母就"少放一个对手还照跑" = 空枪臂）');

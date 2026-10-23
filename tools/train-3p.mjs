@@ -915,16 +915,28 @@ const COUNTER_OPP_TABLE = {
   snipeSpam: { name: 'cnt:snipeSpam', sel: Bots.pickSnipeSpam }    // ≈「只狙击」
 };
 const COUNTER_RAW = String(process.env.EPIRUS_COUNTER_OPPS || '').trim();
-/* `1` / `2` 这类纯数字 = 老口径"全都要"；其余按名字表逐个点名。 */
+/* ⚑ v1.8.32（10-24 夜 · 千问）：**数字口径冻结成老三元组**，`all`/`*` 才等于全表。
+ * 病（远端 main 因此红了一整轮，D130）：DS 的 `71e2c0af` 给表里加了第四个原型 `gunFocus`（G4 真口径），
+ *   而数字/`all` 两条支共用 `Object.keys(COUNTER_OPP_TABLE)` ⇒ `EPIRUS_COUNTER_OPPS=1` 的含义
+ *   从"三个全上"**静默变成**"四个全上"。这根旋钮对历史臂的承诺是逐位可复现，不是"跟着表长"。
+ *   在册证据（逐条读过来处原文才写的）：`logs/RESEARCH-LOG-2026-09-23-qoder-night.md:346`（新键把三名推进 OPPS，9→12）
+ *   与 `:462`（`v7xn22a` 配方唯一变量 = `=1`）、`logs/RESEARCH-LOG-2026-09-24-qoder-night.md:102`（`co1s1..9`）
+ *   与 `:225`（K-12 出货臂 `cbs1s2-band2` = `=1` + `SEL_LAND=1` + 1500 代）、`logs/RESEARCH-LOG-2026-09-24-qoder-handoff.md:483`
+ *   （A/B/C/D 四臂里 B/D 用它）、`logs/OVERNIGHT-2026-10-05-qoder.md:874`（实验组 seed 77/78/79）、
+ *   `logs/OVERNIGHT-2026-10-09-qoder.md:23` 原话"原来一把塞 3 个对手（guard/gun/snipe，OPPS 9→12）"。
+ * ⇒ 数字 = 冻结三元组（**不含** gunFocus）；`all`/`*` = 全表；`gunFocus` 要上只能按名字点名
+ *   （DS 自己的 g18 命令原文就是 `EPIRUS_COUNTER_OPPS=guardSpam,gunFocus` ⇒ 这条路不受影响）。 */
+const COUNTER_LEGACY_TRIPLET = ['guardSpam', 'gunSpam', 'snipeSpam'];
 const COUNTER_WANT = !COUNTER_RAW || COUNTER_RAW === '0' ? []
-  : (/^\d+$/.test(COUNTER_RAW) || COUNTER_RAW === 'all' || COUNTER_RAW === '*')
-    ? Object.keys(COUNTER_OPP_TABLE)
-    : COUNTER_RAW.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+  : /^\d+$/.test(COUNTER_RAW) ? COUNTER_LEGACY_TRIPLET.slice()
+    : (COUNTER_RAW === 'all' || COUNTER_RAW === '*') ? Object.keys(COUNTER_OPP_TABLE)
+      : COUNTER_RAW.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
 const COUNTER_OPPS = COUNTER_WANT.map(function (nm) {
   const o = COUNTER_OPP_TABLE[nm];
   if (!o) {
     console.error('[train-3p] ⛔ EPIRUS_COUNTER_OPPS 里有不认识的名字：' + JSON.stringify(nm) +
-      '（合法的是 ' + Object.keys(COUNTER_OPP_TABLE).join(',') + ' ‖ 或数字/`all` = 三个全上，与历史臂同形）⇒ 拒绝静默少放对手');
+      '（合法的是 ' + Object.keys(COUNTER_OPP_TABLE).join(',') + ' ‖ 或数字 = 老三元组 ' + COUNTER_LEGACY_TRIPLET.join(',') +
+      '（**不含** gunFocus，与历史臂同形）‖ `all`/`*` = 全表 ' + Object.keys(COUNTER_OPP_TABLE).length + ' 个）⇒ 拒绝静默少放对手');
     process.exit(4);
   }
   if (typeof o.sel !== 'function') {
