@@ -1,3 +1,11 @@
+## v1.8.30 — 10-23（DS）：把 4 枚实验冠军搬进受控路径，干净克隆不再缺包
+
+- 病：`coords.tsv` / `bead-extra.tsv` / `bead-ruler.tsv` 里这 4 枚指向 `docs/artifacts/*.bak`，而整个 `docs/artifacts/` 被 gitignore ⇒ 干净克隆里图上的点没有权重，且没有门读这几个表 ⇒ 静默坏。
+- 改法：`.bak` 复制为 **`champion-map/packs/<id>.js`（入库，4 × ~110KB）**；三张表的 path/productRel 列同步改路径；`viewer.mjs` 重烘（页面自检 96/0）。
+- 验证：`champion-pack.extract` 对 4 个新路径均 `ok=true slot=3p`；`git check-ignore` 确认入库路径不被忽略；`shot.mjs --dump` 96 PASS / 0 FAIL。
+- 仍保留的原件在 `docs/artifacts/`（本机、gitignore）；要删可删，不影响复算。
+
+---
 ## v1.8.29 — 10-23（千问）：给**整个 `voided` 事件族**定价（用户把范围从"激光眼破防"扩到"失效技能都要给奖励"）
 
 - 用户裁定原文：「**失效技能应该都要给奖励。小雷失效成功且失效技能非ji的情况也给一样的奖励吧**」，
