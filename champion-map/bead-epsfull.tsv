@@ -1,0 +1,5 @@
+id	exam	page	d	hp_old	sec	examG	pageDose	mode
+e1-ctl-77000	58.40	58.00	0.40	0.00	13.1	120	tier:lv:regular	multi(默认)
+e2-teach-77000	56.10	51.70	4.40	0.00	13.2	120	tier:lv:regular	multi(默认)
+e2-grad-77002	53.90	52.70	1.20	0.00	13.4	120	tier:lv:regular	multi(默认)
+e1-teach-77003	54.00	53.70	0.30	0.00	14.3	120	tier:lv:regular	multi(默认)
