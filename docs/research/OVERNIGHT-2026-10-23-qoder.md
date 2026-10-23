@@ -87,6 +87,7 @@
 - **（10:44 交班 · 已合并 main）** 用户点名后把这条研究分支 `--no-ff` 合进 `main`（合并提交 `09b35a19`）⇒ **这正好补上上面那条"文档面没被整轮看过"的债**：`main` push 会触发 `gates.yml`（研究分支根本不会有 run，触发器只有 main / PR / dispatch），所以合完之后整轮认证由 CI 在合并 tips 上做，不必再起本地第七遍。
   合前本地只在合并后的树上跑了 `--group=meta` **16/16**（`META_EXIT=0`，工具原话"只跑了 16 / 280 条 ⇒ 不许当整轮全绿引用"）；CI 那条 run 的结果**别引用我这里的裸状态**，下一班自己查：
   `curl -sS -H 'Accept: application/vnd.github+json' 'https://api.github.com/repos/Lion-Li-git/Epirus-Web/actions/runs?per_page=3'`（⚠ 三个 CDP 步骤是 `continue-on-error`，"gates 绿"不等于页面腿跑成）。
+  ✅ **债已结（12:20 查那次 REST 的原文）**：`gates` run **#384** 在合并 tips `09b35a19` 上 `completed / success`（同 sha 的 `pages` run #13 也 success）⇒ "最后四笔文档面没被整轮看过"这条**不再挂着**；本班的整轮次数于是是**本机六遍 + CI 一遍**（第七遍跑在 GitHub runner 上，不是本机，秒数不可与本机并排）。
 - （历史）`D178`①′ 的跨进程同一性改造 + 18 维旋钮回读 ⇒ 见第 17/18 件；**病根未定位**那部分照写在 NEXT 9，不要引用成"已修好"。
 - （历史 · §E690 落 `03081cef` ‖ §E692 落 `154dfa8a`）第 4 段两半都已交第一批：**火弱三格 §E690** ‖ **计划层触发率 + 病因 §E692**。剩下的都是"要动 `js/train` 才能做"的下一步（逐线消融 / 新旋钮），本晚不做半成品。
 
