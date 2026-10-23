@@ -493,6 +493,14 @@ function rcptEq(a, b) {
     }
     console.log('[train-3p] econ 族通用下达：' + JSON.stringify(payload) + ' ⇒ 逐键回执一致 ✓');
   }
+  /* v1.8.23（爆珠臂）：激光眼命中奖励。不属 econ 族，单独下达；回执不一致就响亮退出。 */
+  if (process.env.EPIRUS_LASER_W && typeof T.setLaserReward === 'function') {
+    const got = T.setLaserReward(Number(process.env.EPIRUS_LASER_W));
+    if (!(got >= 0) || Math.abs(got - Number(process.env.EPIRUS_LASER_W)) > 1e-9) {
+      console.error('[train-3p] ⛔ EPIRUS_LASER_W 下达后回执不一致：' + got); process.exit(7);
+    }
+    console.log('[train-3p] 激光眼奖励 LASER_W=' + got);
+  }
 }
 
 /* ===== v1.5.160（qoder §N13 · 用户 09-22 裁定"场B 缺口走对手池"）：收割席注入 `EPIRUS_KILL_FIELD` =====

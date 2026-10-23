@@ -1500,6 +1500,9 @@ function supportPriorRand(state, pid, salt) {
     return true;
   }
   function makeEconChooser(inner, agg, teacherFn, imitB, onlyKey, subFlag) {
+    /* v1.8.23：onlyKey 也可写成逗号列表（爆珠链要同时教 charge 与 laserEye）。 */
+    const onlySet = onlyKey ? String(onlyKey).split(',').map(function (s) { return s.trim(); }).filter(Boolean) : null;
+    const onlyOK = function (k) { return !onlySet || onlySet.indexOf(k) >= 0; };
     /* v1.5.189：`rec.imit` = 本局**教师替该席下过的手**（按卡名计数，懒创建 ⇒ 示范关时零开销）。
      * 为什么必须有：override 是直接 `return ta`，事件流里"教师那一手"与"包自己那一手"**长得一模一样**
      * ⇒ 一切"示范到底学会了什么"的读数都混着教师的手（今天靠"示范全关"的单变量对照才看出来）。
@@ -1519,7 +1522,7 @@ function supportPriorRand(state, pid, salt) {
        * 理由（v1.5.98 §3 的机制结论）：原生经济里示范"开环"≡ 对"攒"征税（逼它把攒的 ep 花掉）；
        * 补贴局里花的是**白来的 ep**（`regenForGame`/承诺局）⇒ 不构成对"攒"的惩罚。
        * 只对**设了 `onlyKey`** 的示范生效 ⇒ 段1（教攒、不设 only）**不受影响**。 */
-      const subOK = (!IMIT_SUB_ONLY || !onlyKey || !!subFlag);
+      const subOK = (!IMIT_SUB_ONLY || !onlySet || !!subFlag);
       if (IMIT_OVERRIDE && teacherFn && imitB > 0 && subOK && state.rng && typeof state.rng.next === 'function') {
         if (state.rng.next() < imitB) {
           IMIT_STAT.tries++;                     // v1.5.181：轮到了（rng 过）
@@ -1529,7 +1532,7 @@ function supportPriorRand(state, pid, salt) {
            * v1.5.181：这里同时记下**没开火的原因**，好把"没注入 / 没被选择"分开。 */
           if (!ta || !ta.key) { IMIT_STAT.noTeacherAction++; }
           else if (!okL) { IMIT_STAT.unaffordable++; }
-          else if (onlyKey && ta.key !== onlyKey) { IMIT_STAT.filteredByOnly++; }
+          else if (!onlyOK(ta.key)) { IMIT_STAT.filteredByOnly++; }
           else {
             if (agg) { agg.use[ta.key] = (agg.use[ta.key] || 0) + 1; }
             IMIT_STAT.fired++;
@@ -1556,7 +1559,7 @@ function supportPriorRand(state, pid, salt) {
           /* v1.5.98：`onlyKey` 过滤**也适用奖励计数** —— 只对"教师真要教的那张卡"计一致性；
            * 否则"与教师的 fallback（蓄能/ジ）一致"会白拿奖励，正是抹掉"攒"的那股力。
            * v1.5.99：`IMIT_SUB_ONLY` 同理也适用计数（否则奖励侧仍在原生局里推它花掉攒的 ep）。 */
-          if (tk != null && (!onlyKey || tk === onlyKey) && subOK) {
+          if (tk != null && onlyOK(tk) && subOK) {
             agg._mt = (agg._mt || 0) + 1; if (a.key === tk) agg._mm = (agg._mm || 0) + 1;
           }
         }
@@ -2006,7 +2009,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     /* v1.6.50（用户裁定 B）：广度惩罚项**不是每局项** —— 它要的是"这一员的动作分布有多宽"，
      * 而 `spUse` 要打完全部局才攒齐 ⇒ 只能在跨局聚合那一层加（`fitAgg`）。
@@ -2186,6 +2189,7 @@ let WALL_GAMES = 3;
       const beadBonus = BEAD_W * Math.min(1, beadSpent / 2);
       /* v1.5.79（第七轮复核 §15-1）：**优先打威胁**（反狙击/反环）。两次封顶，与其它窄奖励同尺度。 */
       const tgtBonus = TGT_W * Math.min(1, threatHits / 1);
+      const laserBonus = LASER_W * Math.min(1, laserHits / 1);
       /* v1.5.103（v1.5.100 §20）：**清场计数**奖励 —— 补上第二个"门禁在量、选择看不见"的量。
        * 门禁要 `场B 清场 ≥ 0.3/局`（**收缩开始前真把对手打死**，不是胜率），而训练侧 `fit` 里
        * **一项都没有** ⇒ 新规则下"打 1 点就能在全灭判胜里赢"⇒ 演化没有理由去长这个能力
@@ -2239,7 +2243,7 @@ let WALL_GAMES = 3;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + bigBonus + costlyBonus + chainBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + laserBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + bigBonus + costlyBonus + chainBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -2269,6 +2273,7 @@ let WALL_GAMES = 3;
         if (DOSE_ON) beadSpent += countBeadSpent(r.state.events, seat);
         /* v1.5.79（复核 §15-1）：把"优先打威胁者"当能力奖（默认关，实验臂用 EPIRUS_TGT_W 打开）。 */
         if (DOSE_ON) threatHits += countThreatHits(r.state.events, seat);
+        if (DOSE_ON) laserHits += countLaserHits(r.state.events, seat);
         /* v1.5.103（v1.5.100 §20）：**清场**（收缩开始前把对手打死）—— 与门禁 `场B 清场` 同口径。 */
         if (DOSE_ON) clears += countClears(r.state.events, seat);
         /* v1.5.121（第十三轮复核 §23 的 **E4**）：**挡下伤害**（真的挡掉/弹走，**不认摆架势**）。
@@ -2840,9 +2845,11 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   let IMIT_ONLY = null;
   function setImitOnly(k) {
     if (k == null || k === '') { IMIT_ONLY = null; return null; }
-    const key = String(k).trim();
-    if (!R.byKey[key]) throw new Error('[imit] EPIRUS_IMIT_ONLY 不是一张合法的卡：' + key);
-    IMIT_ONLY = key;
+    /* v1.8.23：也接受逗号列表（爆珠链同时教 charge 与 laserEye）。 */
+    const keys = String(k).split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!keys.length) { IMIT_ONLY = null; return null; }
+    for (const key of keys) if (!R.byKey[key]) throw new Error('[imit] EPIRUS_IMIT_ONLY 不是一张合法的卡：' + key);
+    IMIT_ONLY = keys.join(',');
     return IMIT_ONLY;
   }
   function imitOnlyForGen(gen) {
@@ -3028,6 +3035,13 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
     }).map(function (sd) { return sd.key; });
   }
   /* 纯函数：数我用穿透卡**落地命中**的次数（便于守门做行为断言） */
+  function countLaserHits(events, seat) {
+    let n = 0;
+    for (const e of (events || [])) {
+      if (e.type === 'damage' && e.source === seat && e.via === R.SK.LASER_EYE) n++;
+    }
+    return n;
+  }
   function countPierceHits(events, seat) {
     const pk = pierceKeyList();
     let n = 0;
@@ -3056,6 +3070,13 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
    * 计分 = 我这一回合**打在威胁者身上**的**不同受击者数**（`e.source === seat`，两次封顶 ⇒ 奖励广度而非堆叠）。 */
   let TGT_W = 0;                       // 默认关：实验臂用 EPIRUS_TGT_W 打开
   function setTargetReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) TGT_W = v; return TGT_W; }
+  /* v1.8.23（10-23 用户裁定「爆珠两个都可以试试」）：**激光眼命中**奖励（默认 0，实验臂用 EPIRUS_LASER_W 开）。
+   *   口径 = 本局 laserEye **造成的光伤次数**（非防御时就是 1 点；防御时 0 伤害但无效化仍由 D100 族记账）。
+   *   标度同 TGT：/1 封顶 ⇒ 0 次 0 分、1 次吃满，方差大 ⇒ 真有梯度。 */
+  /* 初值也从 env 读（`EPIRUS_LASER_W`）——暗键守卫的读集按 import 闭包里的字面量算，不写这行 CLI 臂会被 exit 6 拒。 */
+  let LASER_W = (function () { const v = Number((typeof process !== 'undefined' && process.env.EPIRUS_LASER_W) || 0); return isFinite(v) && v >= 0 ? v : 0; })();
+  function setLaserReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) LASER_W = v; return LASER_W; }
+  function laserReward() { return LASER_W; }
   /* ===== v1.5.103（v1.5.100 §20）：**清场计数**奖励（默认关，实验臂用 `EPIRUS_CLEAR_W` 打开）=====
    * 口径**必须与门禁同源**（`tools/audit-lib.mjs` 场B 那一段）：
    *   ① 分界是**收缩开始** —— 收缩的伤 `source == null`（不可格挡），它之后的死者**不算**清场；
@@ -3543,7 +3564,7 @@ function countVariety(events, seat) {
     setBeadReward, beadReward, countBeadSpent,
     setKillField, killField, countKillSeats, killSeatFor, botRegisteredName,   // v1.5.160 收割席注入（含**开火计数**，§N12 教训）‖ v1.7.158 反查注册名（注入名单从"标签"变成"测量"）
     setOppTable, oppTable, oppSeatIndex,   // v1.5.279 §E124：整桌同原型（默认关；`oppSeatIndex` 是纯函数，门 D187 直接判它）
-    setTargetReward, targetReward, countThreatHits, threatKeyList,
+    setTargetReward, targetReward, countThreatHits, threatKeyList, setLaserReward, laserReward, countLaserHits,
     setClearReward, clearReward, countClears,
     blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）
     widthReward,                // v1.5.124 §28a：广度收益项（权重走 econ-env 的 widthW）

@@ -87,6 +87,9 @@ if (T.setImitUntil) T.setImitUntil(Number(process.env.EPIRUS_IMIT_GENS || 0));
 if (T.setTargetReward && process.env.EPIRUS_TGT_W) {
   console.log('[tgt] 威胁靶向奖励权重 = ' + T.setTargetReward(Number(process.env.EPIRUS_TGT_W)));
 }
+if (T.setLaserReward && process.env.EPIRUS_LASER_W) {
+  console.log('[laser] 激光眼命中奖励权重 = ' + T.setLaserReward(Number(process.env.EPIRUS_LASER_W)));
+}
 if (T.setRingForceUntil) T.setRingForceUntil(Number(process.env.EPIRUS_RING_FORCE_UNTIL || 0));
 if (T.setRingForceEps) {
   const _eps = T.setRingForceEps(Number(process.env.EPIRUS_RING_FORCE_EPS || 0));

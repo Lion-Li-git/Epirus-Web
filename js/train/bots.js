@@ -1487,6 +1487,24 @@
   /* v1.6.6 删除 `DIFFICULTY`（2 人那三档 简单/中等/困难）：页面的 2 人分支已并进 `DIFF_TIERS`，
    * 全库再无消费者（实测：只剩 ui.js 那一行 `Bots.DIFFICULTY.easy.pick`）。旧档名"简单/普通"按用户裁定不再保留。 */
 
+  /* ===== v1.8.23（10-23 用户裁定「爆珠两个都可以试试」）教师：蓄爆珠 → 交激光眼 =====
+   * 链条：charge(bead:'boom') → laserEye。激光眼的“对手有没有防御”本就不该被观测
+   *   （用户：不可知 ⇒ 用 1 点光伤做非防御补偿；2ep 换 1 伤是普通水平，不算亏）。
+   * ⚠ 只在教师通道里用（EPIRUS_IMIT_TEACHER=pickLaserBead），不进对手池。 */
+  function pickLaserBead(state, pid, legal) {
+    const bk = mpBk(legal), me = state.p[pid];
+    if (!me) return { key: SK.JI, target: null };
+    const foes = [];
+    for (let q = 0; q < state.p.length; q++) if (q !== pid && state.p[q] && state.p[q].hp > 0) foes.push(q);
+    if (!foes.length) return { key: SK.JI, target: null };
+    if (me.boom > 0 && me.lastSkill !== SK.LASER_EYE && mpAff(bk, SK.LASER_EYE)) {
+      const ld = mpLeader(state, pid);
+      return { key: SK.LASER_EYE, target: ld == null ? foes[0] : ld };
+    }
+    if (me.boom < 1 && mpAff(bk, SK.CHARGE)) return { key: SK.CHARGE, target: null, bead: 'boom' };
+    return pickAimDefender(state, pid, legal);
+  }
+
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
@@ -1494,7 +1512,7 @@
     snapshotBotMem, restoreBotMem,
     setPlanOff, planOffOn, countPlanOff, resetPlanOffStat,   // 计划线消融旋钮（默认空集 ⇒ 出厂不变）＋**按住计数**（§E692 的下一步）
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
-    pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,
+    pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst, pickLaserBead,
     pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, pickBigTChain, bigtHubTarget, pickKillSecure,
     pickDeadlineBurst, pickEarlyPressure, getEconB, setEconB, setBreakFirst: function (on) { PLAN_BREAK_FIRST = !!on; return PLAN_BREAK_FIRST; }, setBreakBank: function (n) { const v = Number(n); PLAN_BREAK_BANK = isFinite(v) && v >= 0 ? v : 5; return PLAN_BREAK_BANK; },
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
