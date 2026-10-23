@@ -3073,8 +3073,9 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   /* v1.8.23（10-23 用户裁定「爆珠两个都可以试试」）：**激光眼命中**奖励（默认 0，实验臂用 EPIRUS_LASER_W 开）。
    *   口径 = 本局 laserEye **造成的光伤次数**（非防御时就是 1 点；防御时 0 伤害但无效化仍由 D100 族记账）。
    *   标度同 TGT：/1 封顶 ⇒ 0 次 0 分、1 次吃满，方差大 ⇒ 真有梯度。 */
-  /* 初值也从 env 读（`EPIRUS_LASER_W`）——暗键守卫的读集按 import 闭包里的字面量算，不写这行 CLI 臂会被 exit 6 拒。 */
-  let LASER_W = (function () { const v = Number((typeof process !== 'undefined' && process.env.EPIRUS_LASER_W) || 0); return isFinite(v) && v >= 0 ? v : 0; })();
+  /* 默认 0；宿主（train-server / train-worker / train-3p）读 `EPIRUS_LASER_W` 后走 setter 注入。
+   *   ⚠ 不许在 js/ 里字面读 `process.env.*`（D122 的暗键守卫：js 只许字面读声明过的引擎键）。 */
+  let LASER_W = 0;
   function setLaserReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) LASER_W = v; return LASER_W; }
   function laserReward() { return LASER_W; }
   /* ===== v1.5.103（v1.5.100 §20）：**清场计数**奖励（默认关，实验臂用 `EPIRUS_CLEAR_W` 打开）=====

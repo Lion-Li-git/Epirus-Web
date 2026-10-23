@@ -1,3 +1,10 @@
+## v1.8.26 — 10-23（DS）：修 CI 红 D122 —— js 侧不许字面读 env
+
+- 病：v1.8.23 在 `js/train/evo.js` 里给 `LASER_W` 加了初值 `process.env.EPIRUS_LASER_W` 字面读 ⇒ D122「js 里字面读 env 的文件清单必须与声明一致」红。
+- 改法：`let LASER_W = 0;`；宿主（`train-server` / `train-worker` / `train-3p`）本来就会读 env 再走 `setLaserReward` 注入，js 侧不需要也不许自己读。
+- 验证：`--part=train-env` **5/5**（含 D122）。
+
+---
 ## v1.8.25 — 10-23（DS）：四枚实验冠军补齐短程/长程闸与长程 eps
 
 - 短程：`feas --allMulti=1` 补量 4 枚并入 `feas-short-s1.tsv` ⇒ `okShort` 覆盖 **807/807**（四枚均 `ok=0`）。
