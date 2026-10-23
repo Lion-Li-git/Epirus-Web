@@ -204,3 +204,7 @@ t5-151-ringoff	1	0		3.19		8.4	0.304	1.01	ok	14.3	0			0	n=20/aggr100/seat100	all-
 t5-G12H1-ringon	0	3	G 2.46 < 3；反弹墙伤害 0.00 ≤ 0.5/局；场B 清场 0.00 < 0.3/局	2.46		0	0.352	0	ok	8.4	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
 t5-G12H1-ringoff	0	2	反弹墙伤害 0.00 ≤ 0.5/局；场B 清场 0.00 < 0.3/局	3.84		0	0.311	0	ok	12	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
 t5-T8-ringon	1	0		4.91		2	0.404	3.94	ok	16.2	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
+e1-teach-77003	0	1	G 1.00 < 3	1		3.4	0.249	4	ok	10	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
+e1-ctl-77000	0	1	G 2.50 < 3	2.5		17.9	0.402	4	ok	8.4	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
+e2-grad-77002	0	1	G 1.86 < 3	1.86		3.5	0.352	4	ok	7.1	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
+e2-teach-77000	0	2	G 2.39 < 3；场B 清场 0.00 < 0.3/局	2.39		17.95	0.327	0	ok	19.8	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)

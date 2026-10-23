@@ -1,3 +1,13 @@
+## v1.8.25 — 10-23（DS）：四枚实验冠军补齐短程/长程闸与长程 eps
+
+- 短程：`feas --allMulti=1` 补量 4 枚并入 `feas-short-s1.tsv` ⇒ `okShort` 覆盖 **807/807**（四枚均 `ok=0`）。
+- 长程：`feas --allLong=1` 并入 `feas-long-s1.tsv`；`eps-full --mode=long --games=120 --epsTier=lv:regular` 补 `Hlong/Hplong/Flong`，`attach-hlong` 回填 ⇒ `okLong` 807/807。
+- 四枚读数：
+  `e1-teach-77003` 短 `G 1.00<3` / 长 `G 1.00<3`；`e1-ctl-77000` `G 2.40<3` / `G 2.50<3`；
+  `e2-grad-77002` `G 1.94<3` / `G 1.86<3`；`e2-teach-77000` `G 1.90<3；场B 0.00<0.3` / `G 2.39<3；场B 0.00<0.3`。
+- 页面重烘 **96 PASS / 0 FAIL**；`Hlong/Hplong` 已覆盖 802/807（5 枚 ring 臂仍缺，另记）。
+
+---
 ## v1.8.24 — 10-23（DS）：把 E1/E2 四枚实验冠军放进演化图
 
 - 选点（2×2：教师有效/无效 × 爆珠梯度有效/无效）：`e1-teach-77003`（55.2）‖ `e1-ctl-77000`（51.9）‖ `e2-grad-77002`（51.6，产物激光眼 2.28%）‖ `e2-teach-77000`（46.9，训练注入 laserEye 2–4 千次但产物 0%）。
