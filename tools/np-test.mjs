@@ -297,7 +297,11 @@ const GROUP = (process.argv.find(a => a.startsWith('--group=')) || '').slice(8) 
 if (GROUP && !(GROUP in CUM)) {
   console.error('⛔ `--group=' + GROUP + '` 不认识（可选：' + Object.keys(CUM).join('/') + '）。含糊拼写不许当"没写"。');
   process.exit(2); }
-const RUNSET = GROUP ? new Set(CUM[GROUP].reduce((a, g) => a.concat(g === 'engine' ? Object.keys(GRP).flatMap(x => GRP[x].split(' ')) : GRP[g].split(' ')), [])) : null;
+/* `engine: null` 在 CUM 里表示**全部**（:280 那句"engine 是'全部'"），而 :293 与 :460 两处都按这个约定做了三元守卫，
+ * 唯独这里没做 ⇒ `--group=engine` 是一个"名单承认、跑起来必炸"的选项
+ *   （实测 10-23：`TypeError: Cannot read properties of null (reading 'reduce')` 落在**第一条门之前**，
+ *    所以它不是"某条门红了"，是 runner 自己没跑成 ⇒ 这类形状别当成产品的账）。 */
+const RUNSET = GROUP ? new Set((CUM[GROUP] || Object.keys(GRP)).reduce((a, g) => a.concat(g === 'engine' ? Object.keys(GRP).flatMap(x => GRP[x].split(' ')) : GRP[g].split(' ')), [])) : null;
 /*#np-keep-end*/
 
 /* ===== `--part=<部分>`（2026-10-14 DS）：只跑**某一个部分文件**里的门 =====

@@ -19,7 +19,13 @@
   M3 把 `voids≠ji` 的限制摘掉 ⇒ ③ 红 ‖ M4 摘掉"同回合别人打中"的连接 ⇒ ② 红 ‖
   M5 把计数门从 `DOSE_ON` 改回 `if (VOID_W > 0)` ⇒ `D179` 红在指定句 ‖ M6 把 `VOID_IDEAL_W` 从族或里删掉 ⇒ 红在运行级那句 ③′（不是靠源码正则）。
 - 验证（**全部定向，不是整轮认证**）：`--part=engine-rules` 62/62 ‖ `--only="D39 "` 1/1 ‖ `--only="D179 "` 1/1 ‖ `--part=train-evo` 65/65 ‖ `--part=meta-lint` 4/4（D206 的"两处 SENT 夹具都不送"那条要求新键必须有哨兵，已在 `probe-econ-reset-audit.mjs` 补）‖ `node tools/probe-econ-reset-audit.mjs` 29/29 键"设得进、读得回、reset 可逆" ‖ 冒烟臂 `EPIRUS_VOID_W=0.05 EPIRUS_VOID_IDEAL_W=0.10` ⇒ `[train-3p] econ 族通用下达：{…} ⇒ 逐键回执一致 ✓`。
-- 三臂 × 两 seed 的冷启动批（A 对照 ‖ B `VOID_W=0.05` ‖ C 再加 `VOID_IDEAL_W=0.10`）**判据写在读数之前**，见 `docs/research/logs/2026-10-18-beadseed82-qoder.md` §E709；读数补在该节末。
+- 三臂 × 两 seed 的冷启动批（A 对照 ‖ B `VOID_W=0.05` ‖ C 再加 `VOID_IDEAL_W=0.10`）**判据写在读数之前**，见 `docs/research/logs/2026-10-18-beadseed82-qoder.md` §E709；读数已补在该节末。
+  结论两句话：**用户点名的那一格（激光眼破防）六枚产物全部 `激光/局 = 0.0000`**（前件是空集：那张牌要爆珠，同 §E708）；
+  而计价确实咬住了这一族的**另一条路**——`MINI_T_IMMUNE` 只挡防御族三支（`rules.js:108`），所以小雷能废八卦阵，B‖77000 的 `失效/局` 从对照 0.010 抬到 **0.430**（12 次全是八卦阵）。
+  强度侧**反号**（77000 低 8.5/10.5pt ‖ 77001 高 12.5/12.0pt）⇒ 判不动，只写"判不动"。
+- 顺带修一处**门禁 runner 自己的病**（不是产品的账）：`--group=engine` 是名单承认的选项（`:282` 用 `engine: null` 表示"全部"，`:293/:460` 两处都按这个约定做了三元守卫），
+  唯独 `:300` 直接 `CUM[GROUP].reduce(...)` ⇒ 落进"⛔ 不认识"的合法性检查之后、**第一条门之前**就 `TypeError: Cannot read properties of null`。
+  实测（改前）跑一次即炸、改后 `--group=engine --only="D39 "` 正常跑 1/1 并响亮印出"累计含 全部"。CI 走的是 `--part=` 矩阵，所以这处一直没人碰到。
 
 ---
 ## v1.8.28 — 10-23（千问）：`D86` 的逗号 `only` 补成**真跑的行为腿**（文本钉抓不到解析退化）
