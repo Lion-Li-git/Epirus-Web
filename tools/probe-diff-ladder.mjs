@@ -34,7 +34,7 @@ import { loadChampParams } from '../server/opp-champs.mjs';
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
 rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'extra',
   'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier', 'pairs', 'banddef',
-  'mixseats', 'mixids', 'mixadd', 'epsover', 'livedose'], 'probe-diff-ladder');
+  'mixseats', 'mixids', 'mixadd', 'epsover', 'livedose', 'breakbank', 'breakfirst'], 'probe-diff-ladder');
 
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
 const GAMES = Math.max(1, Number(flag('games', 1500)) || 1500);
@@ -50,6 +50,9 @@ const machine = (flag('machine', '0') || '0') === '1';
 const W = sandbox(ROOT);
 const R = W.EpirusRules, S = W.EpirusState, Play = W.EpirusPlay, Bots = W.EpirusBots, T = W.EpirusTrainer;
 const POOL = W.EpirusPolicy;
+const BREAK_BANK = Number(flag('breakbank', '5'));
+if (Bots.setBreakBank) Bots.setBreakBank(BREAK_BANK);
+if (Bots.setBreakFirst) Bots.setBreakFirst(flag('breakfirst', '1') !== '0');
 const params3p = loadChampParams(POOL, join(ROOT, 'js/bundled-champion-3p.js'));
 /* §E588（千问 10-11）：`--pack=<相对路径>` —— 让这把尺能指到**钉住的某一枚**。
  *   理由与 `duel-run --ref=` 同一件事：`auto` 指的是活槽，而活槽会换主人 ⇒

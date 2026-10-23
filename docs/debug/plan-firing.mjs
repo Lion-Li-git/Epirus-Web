@@ -29,7 +29,7 @@ import * as slotIdentity from '../../champion-map/slot-identity.mjs';   /* §E60
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
-rejectUnknownFlags(process.argv.slice(2), ['ids', 'paths', 'games', 'n', 'mode', 'out', 'seed', 'eps', 'self-test'], 'plan-firing');
+rejectUnknownFlags(process.argv.slice(2), ['ids', 'paths', 'games', 'n', 'mode', 'out', 'seed', 'eps', 'breakbank', 'breakfirst', 'self-test'], 'plan-firing');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const GAMES = Number(arg('games', 40)) || 40;
 const N = Number(arg('n', 5));
@@ -42,6 +42,9 @@ const PATHS = String(arg('paths', '')).split(',').map(s => s.trim()).filter(Bool
 const W = sandbox(ROOT);
 const R = W.EpirusRules, S = W.EpirusState, P = W.EpirusPlay, BT = W.EpirusBots;
 const SK = R.SK;
+/* 10-23：P7 断环启动 ep 的 A/B（出厂 5） */
+if (BT.setBreakBank) BT.setBreakBank(Number(arg('breakbank', '5')));
+if (BT.setBreakFirst) BT.setBreakFirst(arg('breakfirst', '1') !== '0');
 const NAME = {}; (R.skills || Object.keys(R.byKey).map(k => R.byKey[k])).forEach(s => { NAME[s.key] = s.name || s.key; });
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const SEED = Number(process.env.EPIRUS_SEED || 20261013);

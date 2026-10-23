@@ -346,6 +346,11 @@
   /* 计划层的经济门槛：开一次聚能环要 3 珠（`state.js:137` rawCost 的 `ringStreak===0 ⇒ ep 3`），
    * 所以"手里不够 3 珠就别花钱"是 P1/P3/P4 能不能存在的前提（P0 那条纪律用的就是它）。*/
   const PLAN_BANK = 5;
+  /* 10-23（用户提议）：P7-断环的「启动 ep」可调 —— 出厂仍 5；研究臂用 `setBreakBank(3|4)` 看
+   *   「断环被大雷的 5 珠门槛卡住」能不能靠提前一点断环解开（v1.7.46 的 −0.225 是在 2 珠硬花那一格量的，不是这一格）。 */
+  let PLAN_BREAK_BANK = 5;
+  /* 10-23（用户）：「把断环放到大雷前面」—— 默认 true（产品）；A/B 用 setBreakFirst(false) 回旧次序。 */
+  let PLAN_BREAK_FIRST = true;
   /* ★ P7-断环的阈值（用户 10-15 晚「断环加一下吧」）＝ 对手连环到几我才用小雷断他。
    *   取 **1**（"他刚开环就断"）而不是 2：千问实测（`s35-ringbreak.mjs` ‖ v1.7.45/46）NEED=1 的机会更多
    *   （0.437 vs 0.360 次/局），而对我的贵招挤压更小（≥3 费出牌 −12.7% vs NEED=2 的 **−0.225 = >3σ**）。 */
@@ -445,6 +450,15 @@
     __planOffCount[sub] = (__planOffCount[sub] || 0) + 1;
     return true;
   }
+  function planBreakRing(state, pid, bk, me) {
+    if (PLAN_BREAK_NEED > 0 && me.ep >= PLAN_BREAK_BANK && mpAff(bk, SK.MINI_T)) {
+      let bt = -1, bs = PLAN_BREAK_NEED - 1;
+      for (const i of mpOpps(state, pid)) { const o = state.p[i];
+        if (o.hp > 0 && (o.ringStreak || 0) > bs) { bs = o.ringStreak || 0; bt = i; } }
+      if (bt >= 0 && !planSkipped('P7', 'P7')) return { key: SK.MINI_T, target: bt };
+    }
+    return null;
+  }
   function planPick(state, pid, legal) {
     const bk = mpBk(legal), me = state.p[pid];
     const live = planMyStickers(state, pid);
@@ -471,6 +485,9 @@
       const t = mpPickOne(state, fresh.length ? fresh : mpOpps(state, pid));
       if (t != null && !planSkipped('P4', 'P4b')) return { key: SK.CURSE, target: t };
     }
+    /* 10-23（用户）：「用环的对手应该挺多的，只是概率不高」⇒ 断环排到大雷**之前**：先读局面里有没有环可断，
+     *   有就断（仍要 me.ep >= PLAN_BREAK_BANK，避免把开环/大雷的预算花光）。旧次序可用 setBreakFirst(false) 回滚。 */
+    if (PLAN_BREAK_FIRST) { const b = planBreakRing(state, pid, bk, me); if (b) return b; }
     /* P3-大雷：「ep 达到 5 之后对着别的有 2ep 或血厚的角色打」——先收能一雷打死的，再打断攒钱的，最后压领先者。 */
     if (mpAff(bk, SK.BIG_T)) {
       const k2 = mpKillable(state, pid, 2);
@@ -514,12 +531,14 @@
      *   ⚠ 两条刻意的保守（都按他的证据，不是我拍的）：
      *     ① **钱只能来自"已经攒够的那份"**：`me.ep >= PLAN_BANK` 才断 —— v1.7.46 实测"在他连到 2 环那格硬花这 2 珠"
      *        会把我的 ≥3 费出牌从 0.470 打到 0.245（−0.225 ±0.066，>3σ，而胜负分不开）⇒ 不许从开环/大雷的预算里挪钱。
-     *     ② 排在**计划层最后**（P2 之后）⇒ 只在"没有别的计划线要做"时才断，不抢 P1/P3/P4/P6 的原子性。
+     *     ② 10-23 用户裁定「断环放到大雷前面」⇒ 现在排在 **P3 之前**（旧次序可用 `setBreakFirst(false)` 回滚）。
+     *        A/B（8 seed × 1000 局）：小雷抓取 0.2% → **1.2%**（26/2196）；大雷抓取 98.2% → **84.5%**（被挤掉 14 次/200 局）；
+     *        简单档强度 ±0.04pt（t=2.05，边界）⇒ 买到的是**行为多样性**，不是强度。
      *   ⚠ 免疫：小雷对**这一回合亮出 防御/反弹/原型**的对手会被 void（`resolve.js:827` + `rules.js:108`）；
      *     我在这里**不预测**（那一回合还没亮的牌本来就不知道）—— 他的实测里真出牌时 14/14 全成功 ⇒ 实践中罕见。
      *   ⇒ 若这条线在真装配里几乎不触发，那结论是"**墙是钱**"（他量的：每局 3.56 次机会里只有 0.23 次买得起那 2 珠），
      *     要真跑起来得先动经济学那一族（P0 攒钱剂量 / `PLAN_BANK`），而不是继续调这里的阈值。 */
-    if (PLAN_BREAK_NEED > 0 && me.ep >= PLAN_BANK && mpAff(bk, SK.MINI_T)) {
+    if (!PLAN_BREAK_FIRST && PLAN_BREAK_NEED > 0 && me.ep >= PLAN_BREAK_BANK && mpAff(bk, SK.MINI_T)) {
       let bt = -1, bs = PLAN_BREAK_NEED - 1;
       for (const i of mpOpps(state, pid)) { const o = state.p[i];
         if (o.hp > 0 && (o.ringStreak || 0) > bs) { bs = o.ringStreak || 0; bt = i; } }
@@ -1477,7 +1496,7 @@
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst,
     pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, pickBigTChain, bigtHubTarget, pickKillSecure,
-    pickDeadlineBurst, pickEarlyPressure, getEconB, setEconB,
+    pickDeadlineBurst, pickEarlyPressure, getEconB, setEconB, setBreakFirst: function (on) { PLAN_BREAK_FIRST = !!on; return PLAN_BREAK_FIRST; }, setBreakBank: function (n) { const v = Number(n); PLAN_BREAK_BANK = isFinite(v) && v >= 0 ? v : 5; return PLAN_BREAK_BANK; },
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',
     BOT_REFLECTSPAM: 'reflectspam', BOT_GUARDSPAM: 'guardspam', BOT_BAGUASPAM: 'baguaspam', BOT_COMBOTCOUNTER: 'combocounter', BOT_MIX: 'mix'
