@@ -736,6 +736,80 @@ function supportPriorRand(state, pid, salt) {
     h = Math.imul(h ^ (h >>> 15), 0x2C1B3C6D) >>> 0;
     return (h ^ (h >>> 12)) >>> 0;
   }
+  /* ===== v1.8.33（10-24 夜 · 千问 · **默认 0 = 关 ⇒ 出厂行为逐字不变**）：序列窗锁的"窄锁"档 =====
+   * 病（§E712 实测，不是推论）：用户 10-13 裁过三条软注入（`evo.js:903-934` 的 ①②③），
+   *   其中 ②「持珠/上手蓄能 ⇒ 把电磁炮、激光眼并进探索集」与 ③「有我方符咒/上手贴贴 ⇒ 并进天火、继续贴」
+   *   的**触发条件**，与 10 天后加的序列窗锁 `seqLockedTurn`（`evo.js:510-521`：持珠 ‖ 上手 CHARGE ‖ 有我方符咒）
+   *   是**同一批条件**；而 soft 分支的顺序是"锁上 ⇒ `pick = 贪心`"，后面那段并入代码在 `if (!pick)` 里 ⇒ **走不到**。
+   *   量具直接量交集（250 局 × 5 席）：② 的窗口 100% 被锁、③ 的窗口 100% 被锁 ⇒ 这两条通道自 v1.5.149 起是死的，
+   *   这解释了"天火在近乎全表的探索池（k=20）里仍然 0.000/局"（§E711 表）：不是 rank 问题，是**两裁定互相抵消**。
+   * 这一档做的事：锁上时**不再作废探索**，而是把探索集**限制成链内键** ⇒
+   *   v1.5.149 的原意（"不许在链中途撒手"）仍然成立（探索只许在链内的招里换），v1.5.142 的通道恢复；
+   *   链内一张都可付都没有 ⇒ 回退贪心（绝不撒手到链外，也不凭空造非法动作）。
+   * 默认 0：这是**新的线上（浏览器口径）行为**，要不要开是产品裁定 ⇒ 只搭台、量价，不动出厂。
+   * ⚠ 与 `drainPush` 同一族纪律：钩子只挂在 `epsMode==='soft' && eps>0` 的分支里 ⇒ 训练/考卷/门禁（eps=0）**逐字不变**。 */
+  let LOCK_NARROW = 0;
+  const LOCK_NARROW_STAT = { windows: 0, narrowed: 0, greedyFallback: 0, picks: {} };
+  function setLockNarrow(v) {
+    const n = (v == null || v === '') ? 0 : Number(v);
+    if (!(n === 0 || n === 1)) throw new Error('setLockNarrow: 只能是 0 或 1（0 = 出厂：锁上即作废本回合探索；1 = 锁上只许在链内键里探索）；收到 `' + v + '`');
+    LOCK_NARROW = n; return LOCK_NARROW;
+  }
+  function lockNarrowOn() { return LOCK_NARROW; }
+  function lockNarrowStat() { return { windows: LOCK_NARROW_STAT.windows, narrowed: LOCK_NARROW_STAT.narrowed, greedyFallback: LOCK_NARROW_STAT.greedyFallback, picks: LOCK_NARROW_STAT.picks }; }
+  function resetLockNarrowStat() { LOCK_NARROW_STAT.windows = 0; LOCK_NARROW_STAT.narrowed = 0; LOCK_NARROW_STAT.greedyFallback = 0; LOCK_NARROW_STAT.picks = {}; }
+  /* 纯函数：这一格的"链内键"。条件与 `seqLockedTurn` **同一批**（不另起一份判据 ⇒ 否则又是一个"两处各写一遍"）。 */
+  function chainKeysOf(state, pid) {
+    const out = [];
+    const me = (state && state.p && state.p[pid]) ? state.p[pid] : null;
+    if (!me) return out;
+    if ((me.elec || 0) > 0 || (me.boom || 0) > 0 || me.lastSkill === R.SK.CHARGE) { out.push(R.SK.RAILGUN); out.push(R.SK.LASER_EYE); }
+    let cursing = me.lastSkill === R.SK.CURSE;
+    if (!cursing && state.p) {
+      for (let zi = 0; zi < state.p.length && !cursing; zi++) {
+        const zs = state.p[zi].stickers || [];
+        for (let zj = 0; zj < zs.length; zj++) if (zs[zj] && zs[zj].owner === pid) { cursing = true; break; }
+      }
+    }
+    if (cursing) { out.push(R.SK.FIRESTORM); out.push(R.SK.CURSE); }
+    return out;
+  }
+  /* ===== v1.8.33（10-24 夜 · 用户点名「研究一下类似于摄魂的高 ep 下软注入方案，测一下会出现什么变化」）=====
+   * 贴贴的**探索期软注入**：照 `setDrainPush` 那一族的形状 —— 只把牌**并进探索集**（不强落子、不改规则、不消耗 `state.rng`），
+   * 窗口 = **自己 ep ≥ 3**（与 v1.5.142 裁定① 的 `HOLD_MIN_EP[CURSE]=3` 同一条线，不另立门槛），
+   * 剂量 = 每 N 个窗口一次（avalanche 散列），钩子只挂在 `epsMode==='soft' && eps>0` 的分支 ⇒ 训练/考卷/门禁（eps=0）逐字不变。
+   * 为什么需要它（§E711/§E712 实测）：现役包在产品口径 `k=5` 下贴贴 **0.000/局**（250 局 0 手），
+   *   把 K 放到 12 才有 0.124/局 ⇒ 挡它的是"探索只看前 5 个键"；窄锁档能救"贴上之后的续手/天火"，
+   *   但救不了"第一手都抽不到" ⇒ 这两档是**互补的两半**，所以要一起测（2×2）。
+   * 默认 **0 = 关**：这是线上（浏览器口径）的新行为 ⇒ 只搭台量价，要不要开等用户裁。 */
+  let CURSE_PUSH = 0;
+  const CURSE_PUSH_EP = 3;                 // 与 HOLD_MIN_EP[CURSE] 同一条（v1.5.142 裁定①），不在这里重设门槛
+  const CURSE_PUSH_STAT = { windows: 0, applied: 0 };
+  function setCursePush(v) {
+    const n = (v == null || v === '') ? 0 : Number(v);
+    if (!(n === 0 || (Number.isInteger(n) && n >= 1 && n <= 12))) {
+      throw new Error('setCursePush: 只能是 0 或 1..12（0 = 关；N = 每 N 个窗口软注入一次）；收到 `' + v + '`');
+    }
+    CURSE_PUSH = n; return CURSE_PUSH;
+  }
+  function cursePushOn() { return CURSE_PUSH; }
+  function cursePushStat() { return { windows: CURSE_PUSH_STAT.windows, applied: CURSE_PUSH_STAT.applied }; }
+  function resetCursePushStat() { CURSE_PUSH_STAT.windows = 0; CURSE_PUSH_STAT.applied = 0; }
+  function cursePushWants(state, pid) {
+    if (!(CURSE_PUSH >= 1)) return false;
+    const me = (state && state.p && state.p[pid]) ? state.p[pid] : null;
+    if (!me) return false;
+    if ((me.ep | 0) < CURSE_PUSH_EP) return false;                // 用户 09-21 裁定①：低 ep 不许进探索集
+    const want = (cursePushSalt(state, pid) % CURSE_PUSH) === 0;
+    if (want) CURSE_PUSH_STAT.windows++;
+    return want;
+  }
+  function cursePushSalt(state, pid) {
+    /* 与 bigTPushSalt / drainPushSalt 同族：三段 avalanche，**不消耗 state.rng**（加法散列在本仓实测打不开，§E265 #9）。 */
+    let h = ((((state && state.slotSalt) | 0)) ^ Math.imul((state && state.round) | 0, 0x49E07B55) ^ Math.imul(pid | 0, 0x1F83D9AB)) >>> 0;
+    h = Math.imul(h ^ (h >>> 13), 0x9E3779B1) >>> 0;
+    return (h ^ (h >>> 11)) >>> 0;
+  }
   /* 目标 = 威胁最大的人：**ep 最高**（下一手最能打出东西）⇒ 平手取**血少**的 ⇒ 再平手取**座位号小**的（不做随机 ⇒ §E215 那一族）。 */
   function bigTPushTarget(state, pid) {
     const opps = S.opponentsOf(state, pid);
@@ -841,6 +915,7 @@ function supportPriorRand(state, pid, salt) {
        *   降到 ~30 回合、100% 决胜），又把昏手率压到近零（5 席空爆/局：全候选 0.77 → top5 键 0.07）。
        * `epsK` 默认 5；只在**浏览器运行时**（ui 传 eps>0）生效，训练/评测/门禁 eps=0 ⇒ 读数逐字不变。 */
       let pick;
+      let chainOnly = null;   // v1.8.33 窄锁档：非 null = 本回合被锁且开了 LOCK_NARROW，探索集只许这些键
       const greedyOf = function () {
         /* v1.5.305：开档时**只有"贪心那一支"换成搜索**，探索支一字不动 ⇒ ε 的 rng 消耗与关档逐字相同。
            （门 D204⑧ 一开始就是为这条而红的：我先前把钩子挂在 ε 之前、又在搜索里自己抽了一次 ε ⇒
@@ -857,9 +932,11 @@ function supportPriorRand(state, pid, salt) {
         if (epsMode === 'soft') {
           /* v1.5.149-night 序列窗锁：**状态在链上（持珠/上手蓄能/有我方符咒）⇒ 本回合作废探索**，
            * 直接走贪心 —— 判据挂状态而非挂"贪心采样结果"（D115 首版证明采样后判锁会漏 (1−q)·ε）。
-           * 与 v1.5.139-141 的"防御/环豁免"同族：那只管"这一手的类型"，这条管"这一手在不在序列上"。 */
+           * 与 v1.5.139-141 的"防御/环豁免"同族：那只管"这一手的类型"，这条管"这一手在不在序列上"。
+           * ⚑ v1.8.33：`LOCK_NARROW=1` 时这一格改成"**窄锁**"——不作废探索，只把探索集限制成链内键（见 `chainKeysOf`）。 */
           if (seqLockedTurn(state, pid)) {
-            pick = greedyOf();
+            if (LOCK_NARROW >= 1) { chainOnly = chainKeysOf(state, pid); LOCK_NARROW_STAT.windows++; }
+            else pick = greedyOf();
           } else {
             const g = greedyOf();
             const gcat = R.byKey[g.key] && R.byKey[g.key].cat;
@@ -932,13 +1009,28 @@ function supportPriorRand(state, pid, salt) {
              *   窗口与剂量都在 `drainPushWants` 里（自己 hp≤1 + avalanche % N），而"这张牌此刻可不可付"照旧由引擎判
              *   （下面那行要求 `keys.indexOf(...) >= 0` ⇒ 长程桌的 `drainHpMax=2` 一个字都没改）。 */
             if (drainPushWants(state, pid)) forced.push(R.SK.DRAIN);
+            /* v1.8.33（§E711/§E712 · 默认关）：贴贴的高 ep 软注入 —— 走同一个 `forced` 口子（并集，不强落子）。 */
+            if (cursePushWants(state, pid)) forced.push(R.SK.CURSE);
             for (let fi = 0; fi < forced.length; fi++) {
               /* 只在**可负担**（= 真在 keys 里）时并入；已在集里的不重复。 */
-              if (keys.indexOf(forced[fi]) >= 0 && smart.indexOf(forced[fi]) < 0) smart.push(forced[fi]);
+              if (keys.indexOf(forced[fi]) >= 0 && smart.indexOf(forced[fi]) < 0) {
+                smart.push(forced[fi]);
+                if (forced[fi] === R.SK.CURSE && CURSE_PUSH >= 1) CURSE_PUSH_STAT.applied++;
+              }
             }
             if (smart.length) top.length = 0, Array.prototype.push.apply(top, smart);   // 兜底：绝不让集合变空
           }
-          pick = cands[keyIdx[top[Math.floor(state.rng.next() * top.length)]]];
+          /* ===== v1.8.33 窄锁档（默认关 ⇒ 这一段整体不进）=====
+           * 被锁的那一回合：探索只在**链内键 ∩ 可付**里换招（v1.5.149 的"不许撒手到链外"照旧成立）；
+           * 链内一张都可付都没有 ⇒ 回退贪心（绝不落到链外，也绝不凭空造一个非法动作）。 */
+          if (chainOnly) {
+            const inChain = [];
+            for (let ci = 0; ci < chainOnly.length; ci++)
+              if (keys.indexOf(chainOnly[ci]) >= 0 && inChain.indexOf(chainOnly[ci]) < 0) inChain.push(chainOnly[ci]);
+            if (!inChain.length) { LOCK_NARROW_STAT.greedyFallback++; pick = greedyOf(); }
+            else { top.length = 0; Array.prototype.push.apply(top, inChain); LOCK_NARROW_STAT.narrowed++; }
+          }
+          if (!pick) pick = cands[keyIdx[top[Math.floor(state.rng.next() * top.length)]]];
         }
       } else {
         pick = greedyOf();
@@ -3663,6 +3755,11 @@ function countVariety(events, seat) {
     setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt, wrapBigTPush,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认值只由上面那个常数表达，门 D224 钉）· v1.6.3 §E282：外面那层给脚本席用
     setSupportPrior, supportPriorOn, supportPriorTarget, setSupportPriorKnobs, supportPriorKnobs,   // §E646（路线 B）：送盾的部署层先验，**默认 0=关**；自证在 `tools/probe-support-prior.mjs`
     setDrainPush, drainPushOn, drainPushWants, drainPushSalt,              // v1.5.334 §E275：摄魂"残血只在探索里软提升"（默认 0=关，门 D225 钉）
+    /* v1.8.33（§E712）：序列窗锁的"窄锁"档（默认 0 ⇒ 出厂逐字不变）。`chainKeysOf` 是纯函数 ⇒ 门/量具可直读，
+     * 三个 stat 口用来证明"开档真的改变了行为"（否则"开了但没生效"与"没开"同形，§E83 那一族）。 */
+    setLockNarrow, lockNarrowOn, lockNarrowStat, resetLockNarrowStat, chainKeysOf,
+    /* v1.8.33 同一笔：贴贴的高 ep 软注入（默认 0=关；`cursePushWants` 是纯函数 ⇒ 门/量具可直读）。 */
+    setCursePush, cursePushOn, cursePushWants, cursePushSalt, cursePushStat, resetCursePushStat,
     setBeliefSearch, beliefSearchOn, policyChooserBelief, beliefObserve, setBeliefPly, beliefPly,
     setBeliefTarget, beliefTarget, setBeliefTie, beliefTie,
     setBeliefBead, beliefBead, setBeliefRingPrice, beliefRingPrice, setBeliefBeadRedeemable, beliefBeadRedeemable,
