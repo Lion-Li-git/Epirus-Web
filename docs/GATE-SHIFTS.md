@@ -854,3 +854,15 @@ ok(readFileSync('server/opp-champs.mjs', 'utf8').true, '冠军对手必须走 po
   ⇒ 后果：我给 ④ 判过的条目**不会自动出队**，下一班只能靠读 GATE-SHIFTS 这段散文才知道"D226 已抽查"（而这正是本仓最怕的"账与实现脱钩"的形状）。
   修法两条（**等裁**，都不大）：(a) 让 ④ 也接 `TRIAGE`（复用 `sigOf`，队列报"待读 = 83 − 已判"）；(b) 把"已抽查"落成在册读数（例如哨兵多印一行 `已判清单`）。
   本班**没有**动 `gate-sentinel.mjs` 的判据 —— 那会把一条"只报告不判死"的工具改成有状态的东西，值得单独一班做。
+
+## 廿九、`D86`：逗号 `only` 从"源码文本钉"补成**真跑的行为腿**（2026-10-23 午 · 千问 · v1.8.28）
+
+- 触发点（用户 10-22 那条授权 + 今天接手时核到的一处新账）：DS 今天 v1.8.23 把 `EPIRUS_IMIT_ONLY` 扩成逗号列表（`charge,laserEye`），而 `D86`/`D87` 的判据**随之被续成源码文本钉**（`tools/gates/train-evo.mjs:1987-1992 ‖ :2022` 全是 `evo.indexOf('…onlyOK(ta.key)…')` 这类）—— 文本钉能钉住"改名字/删分支"，**钉不住解析退化**：把 `evo.js:1504` 的 `String(onlyKey).split(',')` 写成整串比较，那一行源码一个字都没改，而产物侧的坏法与"教师没开火"完全同形。
+- 改了什么（**只动门，不动产品**）：`D86` 里加了一段行为腿，照本文件 `D84`（`:1810` 起）那台注入板：新开 `sandbox()`（`IMIT_OVERRIDE/IMIT_ONLY` 是模块级状态，蹭共享沙箱会改掉后面门的读数）⇒ `setImitOverride(true)` + 教师固定交 ジ + `scoreMemberN(...)` 跑三趟，读 `countImitInject()`：
+  ① `only=ji` ⇒ `fired>0`（**正对照**：读不到开火就说明这台板看不见注入，下面两条的 0 都不算数）；
+  ② `only=ji,guard` ⇒ `fired>0 ‖ filteredByOnly=0`（这就是 `split(',')` 的牙）；
+  ③ `only=laserEye,firestorm` ⇒ `fired=0 ‖ filteredByOnly>0`（拦下来还**必须记账**，否则"被过滤"与"没触发"同形）；
+  ④ `setImitOnly('ji,不是一张卡')` ⇒ 必须抛错（列表里**每一项**都过校验；只校验第一项 = 把拼错的卡名静默当成"这张卡从不被示范"）。
+- 牙实测（一刀，按仓规"跑 X 绿"要问"坏了 X 会不会红"）：把 `evo.js:1504` 临时改成 `const onlySet = onlyKey ? [String(onlyKey).trim()] : null;` ⇒ `NP_NOCACHE=1 --only="D86 "` **0 / 1 红**，红在我新写的那句上（`逗号列表 only=ji,guard 且教师交 ジ ⇒ 也必须真覆盖`）；`git checkout -- js/train/evo.js` 复原 ⇒ 该行回到 `split(',')` 原文、`git status` 只剩门文件、`--only="D86 "` 1/1 绿 ‖ `--part=train-evo` **65 / 65** 绿。
+- ⚠ **两条文本钉我没删，也不是偷懒**：`:1987`（override 侧 `!onlyOK(ta.key)`）与 `:2022`（**奖励计数**侧 `onlyOK(tk) && subOK`）钉的是 chooser 内部另一条路径。本腿的注入板能观测到 override 侧，但**奖励计数那一处要跑到 `:1562` 才可见**（它喂的是"与 fallback 一致"那份奖励，产物侧不产生独立可观测信号），所以那条仍然只能靠写法钉 + 它自己的历史理由（`GATE-SHIFTS §十四`，v1.5.181）守着。要把它也换成行为腿，得给 evo.js 加一个"示范命中/被过滤"的对外计数口 —— 那是**改产品面**，等裁（也符合"能加但尽量少加"的上限）。
+- 门数不变：**280**（零新增门，只是给在册的 `D86` 加腿）。

@@ -2011,6 +2011,53 @@ t('D86 只示范目标卡（only）：override 与奖励计数**都**过滤 + �
   eq(T.imitOnlyForGen(10), null, '段1（无 only）不设过滤');
   eq(T.imitOnlyForGen(90), 'ring', '段2 必须按段生效 only=ring');
   eq(T.setImitPlanByName('', 0), 0, '复位计划');
+  /* ===== v1.8.28（用户 10-23「门禁目标是功能实现而不是判文本」）：逗号列表的**行为腿** =====
+   *   上面那几条只证明"设得上、按段读得回"，而 DS 10-23 把 only 扩成逗号列表（`charge,laserEye`）时，
+   *   真正会坏的那一行在 `makeEconChooser` 里面（`evo.js:1504` 的 `String(onlyKey).split(',')` 与 `:1505` 的 `onlyOK`）——
+   *   源码文本钉能钉住"改名字"，钉不住"解析退化成一枚整串比较"（那样 `onlyOK('charge')` 恒假 ⇒ 示范被**全量过滤掉**，
+   *   而这一族坏法在产物侧与"教师没开火"完全同形）。所以这里照 `D84`（本文件 :1810 起）那台注入板真跑三趟。
+   *   ⚠ 新开一份 `sandbox()`：`IMIT_OVERRIDE / IMIT_ONLY` 是模块级状态，蹭共享沙箱会把后面门的读数改掉。 */
+  {
+    const W1 = sandbox(process.cwd());
+    const T1 = W1.EpirusTrainer, P1 = W1.EpirusPolicy;
+    T1.setTrainMode('multi');
+    T1.setImitUntil(100);
+    ok(T1.imitBetaForGen(0) > 0, '前置：β(gen0) 必须 >0（实测 ' + T1.imitBetaForGen(0) + '）⇒ 否则下面的 0 是窗口关着的空枪');
+    T1.setImitOverride(true);
+    const OPPS1 = [{ name: 'balanced', sel: W1.EpirusBots.pickBalanced }];
+    const score1 = function () { T1.scoreMemberN(P1.makePolicy(0.25), OPPS1, 8, 3, 0, 0, 0); };
+    const runWith = function (onlyKey, teacherKey) {
+      T1.setImitOnly(onlyKey);
+      T1.setImitTeacher(function () { return { key: teacherKey, target: null }; });
+      T1.resetImitStat();
+      score1();
+      return T1.countImitInject();
+    };
+    /* ① 单卡（旧形状）必须仍然开火 ⇒ 逗号改造不许把老配方打死 */
+    const s1 = runWith('ji', R.SK.JI);
+    ok(s1.tries > 0, '前置：这一趟必须真轮到过示范（实测 tries=' + s1.tries + '）');
+    ok(s1.fired > 0, '单卡 only=ji 且教师交 ジ ⇒ 必须真覆盖（实测 fired=' + s1.fired +
+      ' filtered=' + s1.filteredByOnly + '）⇒ 这是下面两条的**正对照**，读不到开火就说明这台板看不见注入');
+    /* ② 逗号列表里**含**教师那张卡 ⇒ 仍然要开火。这一条就是 `split(',')` 的牙：解析退化（整串比较 / 只取第一段）
+     *    ⇒ `onlyOK('ji')` 变假 ⇒ fired=0 ⇒ 红。文本钉抓不到这种坏法（那一行源码一个字都没改）。 */
+    const s2 = runWith('ji,guard', R.SK.JI);
+    ok(s2.fired > 0, '逗号列表 only=ji,guard 且教师交 ジ ⇒ 也必须真覆盖（实测 fired=' + s2.fired +
+      ' tries=' + s2.tries + ' filtered=' + s2.filteredByOnly + '）⇒ 列表被解析成"一枚叫 `ji,guard` 的卡"就是这里红');
+    eq(s2.filteredByOnly, 0, '在列表里的卡不许被记成"被 only 过滤"（实测 ' + s2.filteredByOnly + '）');
+    /* ③ 逗号列表里**不含**教师那张卡 ⇒ 必须不覆盖、且**记在账上**（静默丢掉与"从没轮到"同形） */
+    const s3 = runWith('laserEye,firestorm', R.SK.JI);
+    ok(s3.tries > 0, '前置：这一趟也必须真轮到过（实测 tries=' + s3.tries + '）⇒ 否则下一条在读一个没走到的分支');
+    eq(s3.fired, 0, 'only=laserEye,firestorm 而教师交 ジ ⇒ 不许覆盖（实测 fired=' + s3.fired +
+      '）⇒ "只示范列表里那几张"是这条通道的全部意义');
+    ok(s3.filteredByOnly > 0, '而且必须记在 filteredByOnly 上（实测 ' + s3.filteredByOnly +
+      '）⇒ 拦下来却不记账，事后没人分得清"被过滤"与"没触发"');
+    /* ④ 列表里的**每一项**都要过合法性校验（DS 那次改动把校验从单卡扩到逐项） */
+    let threw1 = null;
+    try { T1.setImitOnly('ji,不是一张卡'); } catch (e) { threw1 = String((e && e.message) || e); }
+    ok(threw1 && threw1.indexOf('不是一张合法的卡') >= 0,
+      '逗号列表里第二项是非法卡名也必须抛错（实测：' + threw1 + '）⇒ 只校验第一项 = 把拼错的卡名静默当成"这张卡从不被示范"');
+    T1.setImitOnly(null); T1.setImitOverride(false);
+  }
 });
 
 t('D87 只在补贴局里示范目标卡（subOnly）：只对设了 only 的示范生效、值随消息下发', function () {
