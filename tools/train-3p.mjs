@@ -950,7 +950,10 @@ if (COUNTER_OPPS.length) {
   console.log('[counter-ops] 判据原型已进训练桌：' + COUNTER_OPPS.map(function (o) { return o.name; }).join(',') +
     ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个' +
     (COUNTER_OPPS.length === 1 ? '（**单自由度**：这一臂只改了一型对手，读得动"是谁在施压"）'
-      : '（老口径：' + COUNTER_OPPS.length + ' 个一起上 ⇒ 本臂**不能**归因到某一型对手）'));
+      : COUNTER_LEGACY_TRIPLET.length === COUNTER_OPPS.length &&
+        COUNTER_OPPS.every(function (o) { return COUNTER_LEGACY_TRIPLET.indexOf(o.name.replace(/^cnt:/, '')) >= 0; })
+        ? '（老口径：' + COUNTER_OPPS.length + ' 个一起上 ⇒ 本臂**不能**归因到某一型对手）'
+          : '（点名 ' + COUNTER_OPPS.length + ' 型：' + COUNTER_WANT.join(',') + ' ⇒ 不是老口径，但这批仍不能归因到某一型）'));
 }
 
 /* ===== §E127（v1.5.285 · Qoder 通宵班）：把 `ringspam` 放上训练桌（`EPIRUS_RING_OPPS=1`，默认关）=====
