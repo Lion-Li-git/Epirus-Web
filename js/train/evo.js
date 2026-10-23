@@ -1796,8 +1796,13 @@ let WALL_GAMES = 3;
     if (!ECON_DEFAULTS && !o.reset) {
       /* v1.5.299（DS）：**这份快照是字面量列表**（注释里说"不抄字面量"其实不成立）⇒ 加新键必须同时补这里，
        * 否则 `setEconomyReward({reset:true})` 抹不掉它 —— 我的 `fitCal` 就是这么被 D175 抓到的（门是对的）。 */
-      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W, fitCal: FIT_CAL_EXCESS, fitGW: FIT_G_W, fitGF: FIT_G_FLOOR };
+      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W, fitCal: FIT_CAL_EXCESS, fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, voidW: VOID_W, voidIdealW: VOID_IDEAL_W };
     }
+    /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」）：`voidW` / `voidIdealW` 走 econ-env 单一来源
+     *   （不设 ⇒ null ⇒ 两个 W 原样 0 ⇒ 严格不加项、逐位不变）。
+     * ⚠ 放在函数**开头**不是排版洁癖：接线检查按前 1200 字符扫 `if (o.<键> != null)`（:3094 记着实测踩过的坑）。 */
+    if (o.voidW != null) setVoidReward(o.voidW);
+    if (o.voidIdealW != null) setVoidIdealReward(o.voidIdealW);
     /* qoder-research 0920（RESEARCH-LOG §5b）：环奖励权重接进 econ-env 单一来源（默认不设 ⇒ RING_W 原样 0.10）。
      * setRingReward 自带 `isFinite && >=0` 校验；调用发生在模块求值之后 ⇒ 无 TDZ 问题（RING_W 声明在 :1955）。 */
     if (o.ringW != null) setRingReward(o.ringW);
@@ -1841,6 +1846,10 @@ let WALL_GAMES = 3;
         DIV_FORCE_GENS = ECON_DEFAULTS.divForceGens; COSTLY_W = ECON_DEFAULTS.costlyW;
         if (ECON_DEFAULTS.fitCal != null) FIT_CAL_EXCESS = !!ECON_DEFAULTS.fitCal;   // v1.5.299：新键也要能复位
         if (ECON_DEFAULTS.fitGW != null) FIT_G_W = ECON_DEFAULTS.fitGW;              // v1.6.50：B 的两个键同样要能复位
+        /* v1.8.29：D77 的运行时往返会喂**每个键**的哨兵再 reset ⇒ 新键漏在这里 = 哨兵泄漏给后续门
+         *   （`s4W` 那次泄漏的直接后果是"后续任何 scoreMemberN 都活在假世界里"）。走快照，不抄字面量。 */
+        if (ECON_DEFAULTS.voidW != null) VOID_W = ECON_DEFAULTS.voidW;
+        if (ECON_DEFAULTS.voidIdealW != null) VOID_IDEAL_W = ECON_DEFAULTS.voidIdealW;
         if (ECON_DEFAULTS.fitGF != null) FIT_G_FLOOR = ECON_DEFAULTS.fitGF;
       }
     }
@@ -1857,6 +1866,8 @@ let WALL_GAMES = 3;
       /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
        * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
       beadW: BEAD_W,
+      /* v1.8.29：同一条 D77 契约 —— `ECON_REWARD_KEYS` 里每个键都要"设得进、读得回"。 */
+      voidW: VOID_W, voidIdealW: VOID_IDEAL_W,
       at3: economyTargets(3, 'multi'), at5long: economyTargets(5, 'long') };
   }
 
@@ -2011,6 +2022,8 @@ let WALL_GAMES = 3;
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
     let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
+    /* v1.8.29：失效成功 / 理想情况（激光眼破防且同回合别人打中）——两个计数一起攒，见 voidScan。 */
+    let voidWins = 0, voidIdeal = 0;
     /* v1.6.50（用户裁定 B）：广度惩罚项**不是每局项** —— 它要的是"这一员的动作分布有多宽"，
      * 而 `spUse` 要打完全部局才攒齐 ⇒ 只能在跨局聚合那一层加（`fitAgg`）。
      * ⚠️ 我第一版把它塞进每局的 `gFit` 求和里，当场被 D175 的探针抓住：
@@ -2027,7 +2040,10 @@ let WALL_GAMES = 3;
      *   没被下达的兄弟也能当**对照组**读；全 0 时没有任何杠杆需要否证 ⇒ 直接不算、逐位不变、零成本。
      * 收益项（`pressBonus` 等，:1553~:1582）**仍各自按自己的 W 门控** ⇒ `fit` 一字不变。 */
     const DOSE_ON = PRESS_W > 0 || PIERCE_W > 0 || BEAD_W > 0 || TGT_W > 0 || CLEAR_W > 0 ||
-      BLOCK_W > 0 || WIDTH_W > 0 || WIDTH_LAND_W > 0 || BIGCARD_W > 0 || COSTLY_W > 0 || BIGT_CHAIN_W > 0 || ringWeightAt(gen) > 0;
+      BLOCK_W > 0 || WIDTH_W > 0 || WIDTH_LAND_W > 0 || BIGCARD_W > 0 || COSTLY_W > 0 || BIGT_CHAIN_W > 0 || ringWeightAt(gen) > 0 ||
+      /* v1.8.29：失效定价的两个 W 也必须进这一族 —— 漏了它，`gen≤125`（`ringWeightAt` 为 0）且其余杠杆全关时
+       * 计数器根本不算 ⇒ 臂上读到"void 成功 0 次"与"这根杠杆没生效"同形（§E83 那条病）。 */
+      VOID_W > 0 || VOID_IDEAL_W > 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
      * 此前它是每局随机抽的噪声（30% 的局抽 h∈1..4）：个体不携带它 ⇒ 选择压力
      * 作用不到它 ⇒ "走通连续攒钱长轨迹"的能力没有任何机制被保留下来。
@@ -2190,6 +2206,13 @@ let WALL_GAMES = 3;
       /* v1.5.79（第七轮复核 §15-1）：**优先打威胁**（反狙击/反环）。两次封顶，与其它窄奖励同尺度。 */
       const tgtBonus = TGT_W * Math.min(1, threatHits / 1);
       const laserBonus = LASER_W * Math.min(1, laserHits / 1);
+      /* v1.8.29（用户 10-23 两条裁定）：
+       *   ① 「失效技能应该都要给奖励」⇒ 每一次**可归因的失效成功**（破防/破转移/废掉非 ジ 的卡）付 `VOID_W`；
+       *   ② 「激光眼打中防御同时刚好有另一个人攻击……给比一般命中更高的奖励」⇒ 理想情况在①之上**再加**
+       *     `VOID_IDEAL_W`（不是替换），所以它必然比一次普通失效付得多，而一次普通失效仍有钱。
+       * 标度沿用 v1.5.79 那条"0 次得 0、1 次吃满"（这两个事件比穿防更稀，用 /2 会几乎恒为 0）。 */
+      const voidBonus = VOID_W * Math.min(1, voidWins / 1);
+      const voidIdealBonus = VOID_IDEAL_W * Math.min(1, voidIdeal / 1);
       /* v1.5.103（v1.5.100 §20）：**清场计数**奖励 —— 补上第二个"门禁在量、选择看不见"的量。
        * 门禁要 `场B 清场 ≥ 0.3/局`（**收缩开始前真把对手打死**，不是胜率），而训练侧 `fit` 里
        * **一项都没有** ⇒ 新规则下"打 1 点就能在全灭判胜里赢"⇒ 演化没有理由去长这个能力
@@ -2243,7 +2266,7 @@ let WALL_GAMES = 3;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + laserBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + bigBonus + costlyBonus + chainBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + laserBonus + voidBonus + voidIdealBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + bigBonus + costlyBonus + chainBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -2274,6 +2297,9 @@ let WALL_GAMES = 3;
         /* v1.5.79（复核 §15-1）：把"优先打威胁者"当能力奖（默认关，实验臂用 EPIRUS_TGT_W 打开）。 */
         if (DOSE_ON) threatHits += countThreatHits(r.state.events, seat);
         if (DOSE_ON) laserHits += countLaserHits(r.state.events, seat);
+        /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」）：一次扫描出两个数（失效成功 / 其中理想情况），
+         * 与上面同族 ⇒ 也走 `DOSE_ON`（收益项仍各自按自己的 W 付钱 ⇒ 关着时 `fit` 逐位不变）。 */
+        if (DOSE_ON) { const vsc = voidScan(r.state.events, seat); voidWins += vsc.wins; voidIdeal += vsc.ideal; }
         /* v1.5.103（v1.5.100 §20）：**清场**（收缩开始前把对手打死）—— 与门禁 `场B 清场` 同口径。 */
         if (DOSE_ON) clears += countClears(r.state.events, seat);
         /* v1.5.121（第十三轮复核 §23 的 **E4**）：**挡下伤害**（真的挡掉/弹走，**不认摆架势**）。
@@ -2471,6 +2497,12 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
       threatEv: doseEv(threatHits), threatPerGame: dosePer(threatHits),
       clearEv: doseEv(clears), clearPerGame: dosePer(clears),
       blockEv: doseEv(blocks), blockPerGame: dosePer(blocks),
+      /* v1.8.29：失效定价这一族的两格读数（同 §E83 的规矩 —— 未量必须 `null`，不许与"真没做到"同形）。
+       * 顺带补 `laserEv`：v1.8.23 那根激光眼杠杆的计数一直在算，却**没随评分返回** ⇒
+       * 臂上分不清"LASER_W 没生效"与"这一粒真没打中"，正是本族要消灭的那个混淆。 */
+      laserEv: doseEv(laserHits), laserPerGame: dosePer(laserHits),
+      voidEv: doseEv(voidWins), voidPerGame: dosePer(voidWins),
+      voidIdealEv: doseEv(voidIdeal), voidIdealPerGame: dosePer(voidIdeal),
       varietyMaxEv: doseEv(varietyMax), doseOn: DOSE_ON,
       styleGames: styleGames, styleFirst: styleFirst, styleRate: styleRate, styleWeight: STYLE_W,
       divNorm: divNorm,
@@ -3078,6 +3110,60 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   let LASER_W = 0;
   function setLaserReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) LASER_W = v; return LASER_W; }
   function laserReward() { return LASER_W; }
+  /* ===== v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」+「激光眼打中防御同时刚好有另一个人攻击，
+   *   给比一般命中更高的奖励，看看冠军能不能摸索出这个」）=====
+   * 两个计数全部从事件推导，不猜卡名：
+   *   · 一次**失效成功** = `voided` 且 `byPid === 我`（第 4 参本来就是 v1.5.37 为归因加的）
+   *     且**被废的不是 ジ**（`voids` = 本次新落的字段，写入点只有 `resolve.js` 里 `setVoid` 那一处）
+   *     ⇒ 激光眼破防、激光眼破转移、小雷废掉对面的攻击卡都算；小雷废掉一张 ジ 不算（用户明确排除）。
+   *   · **理想情况** = 这次废掉的是**防御族**（`R.GUARD_FAMILY`，从 rules.js 取表 ⇒ 规则改了自动跟着变），
+   *     且**同一回合**该目标还挨了**别人**一刀（`damage.source ∉ {null, 我}`）⇒ 我把盾敲掉、别人的伤真落地。
+   *     只认落地的 `damage`、不认 `blocked`：那一刀被挡掉说明我的破防什么也没换来。
+   * ⚠ 回合边界沿用 `countThreatHits` 的既有口径（**同一个 pid 再次 `action` = 新回合**）；连接必须**两趟**：
+   *   破防与别人的那刀谁先落在流里不固定（按优先级结算），所以先攒齐整回合再判 —— 单趟边扫边判会漏掉
+   *   "我先破防、后面那一刀才落地"这一半，而那正是用户点名的形状。
+   * ⚠ 权重**默认 0** ⇒ 不加项、逐位不变；env `EPIRUS_VOID_W` / `EPIRUS_VOID_IDEAL_W` 走
+   *   `server/econ-env.mjs` 单一来源 ⇒ 服务进程与 16 个 worker 同时生效。
+   *   （**不学 v1.8.23 的激光眼**：它在 train-server / train-worker / train-3p 各读一次 env，
+   *    正是这个文件开头记载的"A/A 事故"形状的第 N 次复发。） */
+  let VOID_W = 0, VOID_IDEAL_W = 0;
+  function setVoidReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) VOID_W = v; return VOID_W; }
+  function setVoidIdealReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) VOID_IDEAL_W = v; return VOID_IDEAL_W; }
+  function voidReward() { return { w: VOID_W, idealW: VOID_IDEAL_W }; }
+  /* 单趟扫描攒齐回合、末尾连接 ⇒ 两个计数一次算齐（两份"重建回合"= 两套口径，这里只留一处写入）。 */
+  function voidScan(events, seat) {
+    const rounds = [];
+    const hits = [];
+    let seen = {}, cur = -1;
+    for (const e of (events || [])) {
+      if (e.type === 'action') {
+        if (cur < 0) cur = 0;
+        else if (seen[e.pid] !== undefined) { seen = {}; cur++; }
+        seen[e.pid] = true;
+        if (!rounds[cur]) rounds[cur] = {};
+      } else if (e.type === 'damage') {
+        if (cur < 0 || e.to == null || e.source == null) continue;
+        if (!rounds[cur]) rounds[cur] = {};
+        const rr = rounds[cur][e.to] || (rounds[cur][e.to] = {});
+        rr[e.source] = (rr[e.source] || 0) + (e.amt || 0);
+      } else if (e.type === 'voided') {
+        if (e.byPid !== seat) continue;
+        const v = e.voids;
+        if (!v || v === R.SK.JI) continue;
+        hits.push({ r: cur, to: e.pid, guard: R.GUARD_FAMILY.indexOf(v) >= 0 });
+      }
+    }
+    let ideal = 0;
+    for (const h of hits) {
+      if (!h.guard || h.r < 0) continue;
+      const d = rounds[h.r] && rounds[h.r][h.to];
+      if (!d) continue;
+      for (const q in d) if (Number(q) !== seat && d[q] > 0) { ideal++; break; }
+    }
+    return { wins: hits.length, ideal: ideal };
+  }
+  function countVoidWins(events, seat) { return voidScan(events, seat).wins; }
+  function countVoidIdeal(events, seat) { return voidScan(events, seat).ideal; }
   /* ===== v1.5.103（v1.5.100 §20）：**清场计数**奖励（默认关，实验臂用 `EPIRUS_CLEAR_W` 打开）=====
    * 口径**必须与门禁同源**（`tools/audit-lib.mjs` 场B 那一段）：
    *   ① 分界是**收缩开始** —— 收缩的伤 `source == null`（不可格挡），它之后的死者**不算**清场；
@@ -3566,6 +3652,8 @@ function countVariety(events, seat) {
     setKillField, killField, countKillSeats, killSeatFor, botRegisteredName,   // v1.5.160 收割席注入（含**开火计数**，§N12 教训）‖ v1.7.158 反查注册名（注入名单从"标签"变成"测量"）
     setOppTable, oppTable, oppSeatIndex,   // v1.5.279 §E124：整桌同原型（默认关；`oppSeatIndex` 是纯函数，门 D187 直接判它）
     setTargetReward, targetReward, countThreatHits, threatKeyList, setLaserReward, laserReward, countLaserHits,
+    /* v1.8.29：失效成功定价（计数是纯函数 ⇒ 门可以直接喂事件序列断言，不必跑一整局）。 */
+    setVoidReward, setVoidIdealReward, voidReward, countVoidWins, countVoidIdeal, voidScan,
     setClearReward, clearReward, countClears,
     blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）
     widthReward,                // v1.5.124 §28a：广度收益项（权重走 econ-env 的 widthW）

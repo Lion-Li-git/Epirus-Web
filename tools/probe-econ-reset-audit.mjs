@@ -36,7 +36,10 @@ const SENT = {
   /* v1.6.50（用户裁定 B）：闸的广度折进适应度那两个键也要有哨兵 ——
    *   这一段的检查是**名单驱动**的（从 `ECON_REWARD_KEYS` 反推），加了键却忘了给哨兵值，
    *   探针会印"下达 undefined 读回仍=…"。那不算漏但会盖住真话（本次实测就是这么印的）。 */
-  fitGW: 0.5, fitGF: 5
+  fitGW: 0.5, fitGF: 5,
+  /* v1.8.29（失效成功定价）：名单驱动的检查 ⇒ 新键不给哨兵就会印"下达 undefined 读回仍=…"，
+   *   而 D206 ⑥ 直接判"这个键两处测试夹具都不送（新登记的键没人验过它真能到达作用点）"。 */
+  voidW: 0.5, voidIdealW: 0.5
 };
 /* 下达名 ≠ 读回名的两处（第一版把这两处误报成"setter 不吃键"，故显式映射并注释） */
 const readKey = k => (k === 'target' ? 'targetOverride' : (k === 'cap' ? 'capOverride' : k));

@@ -33,7 +33,11 @@
         const fp = acted.fireWeakPrev, victim = state.p[fp.pid];
         if (victim) { victim.fireWeakNow = fp.now; victim.fireWeakNext = fp.next; }
       }
-      const e = { type: 'voided', pid, by };
+      /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」）：事件里补**被作废的是哪张卡**（`voids`）。
+       * 为什么必须落在 `setVoid` 这一处而不是各调用点：这里是全仓**唯一**发 `voided` 的地方
+       *   （miniT / 激光眼 / 成环 / 避雷针 / 狙击被干扰 都走它），分开写必然漏。
+       * 训练侧要它才能把"破了对面一张防御"与"废了对面的 ジ"分成两档价钱（后者用户明确不奖）。 */
+      const e = { type: 'voided', pid, by, voids: acted.key };
       if (byPid != null) e.byPid = byPid;
       ev(state, e);
     }
@@ -1052,13 +1056,15 @@
         }
         case SK.LASER_EYE: {
           const ta = actionOf(state, t);
+          /* v1.8.29：两条无效化都补第 4 参 `byPid = i`（施法者席）——与 miniT（:847）同口径。
+           * 不传的话"我用激光眼破了谁的防"在事件层不可归因，奖励只能记在别人头上。 */
           if (ta && ta.key === SK.TRANSFER) {
-            setVoid(state, t, SK.LASER_EYE); // 无效化转移伤害
+            setVoid(state, t, SK.LASER_EYE, i); // 无效化转移伤害
           } else if (ta && R.GUARD_FAMILY.indexOf(ta.key) >= 0) {
             /* N23（用户裁定 2026-09-11）：原实现要求**两个**激光眼才能破原型制御/全息，
              * 用户认为"单个激光眼还打不破原型制御有点拉了" ⇒ 改为**单发即失效整个防御族**。
              * 防御类专用反制因此回到与其它防御技**同费(2 ジ)**、单发生效。 */
-            setVoid(state, t, SK.LASER_EYE);
+            setVoid(state, t, SK.LASER_EYE, i);
           } else {
             deliverDamage(state, { amt: 1, type: R.DMG.LIGHT, source: i, via: SK.LASER_EYE }, t, { reason: '激光眼' });
           }

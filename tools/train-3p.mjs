@@ -145,7 +145,11 @@ const CLI_ECON_REWARD_KEYS = ['bigtChainW', 'fitTailW', 'fitTailQ', 'widthW', 'd
   /* v1.6.0（DS · 千问 §1.3 点名的黑键）：补 `divK` —— 它此前在 `ECON_REWARD_KEYS`（引擎）与 env 名单里都齐，
    * 唯独**不在这个 CLI 白名单**里 ⇒ 从本入口调 `--divK` 会撞「检测到本入口读不到的旋钮 ⇒ exit 6」（千问 10-03 00:2x 实测）。
    * 照 v1.5.274 补 `ringW` 的同一次做法：补进来，并让 D218 的登记腿跟着扫。 */
-  'divK'];
+  'divK',
+  /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」）：失效成功 / 理想情况两档价钱的**投递名单**。
+   * 缺这一处的症状与 ringW/divK 那两次逐字相同：`ECON_ENV_KEYS`+`ECON_REWARD_KEYS` 都齐，
+   * 但 `extendSelfWithCliEcon()` 推不出"本入口认得它" ⇒ 一上臂就撞黑键闸（整臂 `exit 6`，一秒响）。 */
+  'voidW', 'voidIdealW'];
 (function extendSelfWithCliEcon() {
   for (const k of ECON_ENV_KEYS) {
     /* v1.5.254：**同一个 env 名要试两种取值** —— 数值档喂 `0.5`、布尔档喂 `'1'`。
@@ -1546,7 +1550,11 @@ for (let gen = 0; gen < GENS; gen++) {
        * 而那正是本条要消灭的混淆）。 */
       (r.doseOn ? ' 剂量[/局]' + ' 环打=' + nf3(r.ringBreakPerGame) + ' 压=' + nf3(r.pressPerGame) +
         ' 穿=' + nf3(r.piercePerGame) + ' 珠=' + nf3(r.beadPerGame) + ' 威=' + nf3(r.threatPerGame) +
-        ' 场=' + nf3(r.clearPerGame) + ' 挡=' + nf3(r.blockPerGame) + ' 广max=' + (r.varietyMaxEv === null ? '未量' : r.varietyMaxEv)
+        ' 场=' + nf3(r.clearPerGame) + ' 挡=' + nf3(r.blockPerGame) + ' 广max=' + (r.varietyMaxEv === null ? '未量' : r.varietyMaxEv) +
+        /* v1.8.29：失效这一族 + 激光眼那一格（补 v1.8.23"只算不报"的欠账）。
+         * 用户 10-23 给这条杠杆定的验收就是**次数**（"出现频率可以比大雷更低，只要有学会就行"）⇒
+         * 这两格必须逐代可见，否则臂跑完只能事后重新量。 */
+        ' 激光=' + nf3(r.laserPerGame) + ' 失效=' + nf3(r.voidPerGame) + ' 失效理=' + nf3(r.voidIdealPerGame)
         : ''));
   }
   /* v1.5.189：归因**逐代**印（不塞进那条 20 代的块里）—— "示范有没有转成原生行为"是随代数变化的问题，

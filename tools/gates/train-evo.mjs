@@ -1287,6 +1287,77 @@ t('D39 环奖励必须**可归因**（复核 §5-1：voided 不记施法者 ⇒ 
   eq(T.setRingReward(0), 0, 'setRingReward(0) 必须能关掉');
   eq(T.setRingRamp(0, 1).g1, 1, 'setRingRamp 必须可调');
   T.setRingReward(0.10);
+  /* ===== v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」+「激光眼打中防御同时刚好有另一个人攻击，
+   *   给比一般命中更高的奖励」）：同一个 `voided` 事件族的**第二根杠杆**，主语仍然只是"归因" =====
+   * 为什么这几条必须用**真引擎**跑出来的事件流，而不是像上面五条那样合成：
+   *   新字段 `voids`（被废的是哪张卡）与激光眼那条第 4 参 `byPid` 都由 `resolve.js` 写；
+   *   喂合成事件只能证明计数器认字段，证明不了**引擎真的把字段写出来**（D39 当年判的就是"事件里没这个东西"）。 */
+  const mkSt = function (seed) {
+    const st = S.createState('multi', { next: mulberry32(seed) }, 3);
+    /* 首次激光眼要 1 枚爆珠（`state.js` 的 `p.boom < 1` 那一支）⇒ 不给珠的话这一格**结构性不可达**，
+     * 门会红在"前置"上而不是判据上（10-23 实测踩过：不给 boom 时 ① 直接空转成 wins=0）。 */
+    for (let i = 0; i < 3; i++) { st.p[i].ep = 9; st.p[i].boom = 1; }
+    return st;
+  };
+  const vdOf = function (st, seat) {
+    return { w: T.countVoidWins(st.events, seat), i: T.countVoidIdeal(st.events, seat) };
+  };
+  /* ① 理想情况：0 号破 1 号的防御，2 号**同回合**把 1 号打中 ⇒ 失效 1 次、其中理想 1 次 */
+  let sv = mkSt(61);
+  S.attemptAction(sv, 0, R.SK.LASER_EYE, { target: 1 });
+  S.attemptAction(sv, 1, R.SK.GUARD, {});
+  S.attemptAction(sv, 2, R.SK.GUN, { target: 1 });
+  X.resolveActions(sv);
+  ok(sv.events.some(function (e) { return e.type === 'voided' && e.voids === R.SK.GUARD && e.byPid === 0; }),
+    '① 前置：真引擎必须把 `voids`（被废的卡）与激光眼的 `byPid`（施法者席）都写进事件（实测 ' +
+    JSON.stringify(sv.events.filter(function (e) { return e.type === 'voided'; })) + '）');
+  eq(vdOf(sv, 0).w, 1, '① 我破防 ⇒ 失效成功计 1 次');
+  eq(vdOf(sv, 0).i, 1, '① 同回合别人把该目标打中 ⇒ 算理想情况（用户点名要单独加价的那一格）');
+  eq(vdOf(sv, 2).w, 0, '① 只出枪、没作废任何人的席 ⇒ 0（归因不许漏到旁观者头上）');
+  eq(vdOf(sv, 2).i, 0, '① 同上，理想情况也不许记到打手头上');
+  /* ② 破防了，但那一回合**没人**打他 ⇒ 失效仍算、理想不算（这条是"理想"那档的牙：摘掉同回合连接 ⇒ 恒 0） */
+  sv = mkSt(62);
+  S.attemptAction(sv, 0, R.SK.LASER_EYE, { target: 1 });
+  S.attemptAction(sv, 1, R.SK.GUARD, {});
+  S.attemptAction(sv, 2, R.SK.JI, {});
+  X.resolveActions(sv);
+  eq(vdOf(sv, 0).w, 1, '② 破防本身就要给钱（用户：失效技能应该都要给奖励）');
+  eq(vdOf(sv, 0).i, 0, '② 没人跟进那一刀 ⇒ 不是理想情况');
+  /* ②′ 激光眼另一支：废掉对面的**转移伤害** ⇒ 同样算失效成功，但不是"破防" ⇒ 不吃理想那一档。
+   *   这一支单独有一条腿的原因是它是**引擎里另一个 setVoid 调用点**（`resolve.js` 的 LASER_EYE 两支各写一次
+   *   第 4 参）：只测防御那支的话，把转移那支的 `byPid` 删掉门照样绿 ⇒ 这根杠杆静默少一半。 */
+  sv = mkSt(67);
+  S.attemptAction(sv, 0, R.SK.LASER_EYE, { target: 1 });
+  S.attemptAction(sv, 1, R.SK.TRANSFER, { target: 2 });
+  S.attemptAction(sv, 2, R.SK.JI, {});
+  X.resolveActions(sv);
+  ok(sv.events.some(function (e) { return e.type === 'voided' && e.voids === R.SK.TRANSFER && e.byPid === 0; }),
+    '②′ 前置：激光眼废转移这一支也必须带 `voids` + `byPid`（实测 ' +
+    JSON.stringify(sv.events.filter(function (e) { return e.type === 'voided'; })) + '）');
+  eq(vdOf(sv, 0).w, 1, '②′ 废掉转移伤害 ⇒ 算一次失效成功');
+  eq(vdOf(sv, 0).i, 0, '②′ 转移不属于防御族 ⇒ 不算理想（判据取的是 `R.GUARD_FAMILY`，不是"激光眼打中任何东西"）');
+  /* ③ 小雷废掉一张 ジ ⇒ 用户明确排除（废掉对面一次收入不值"破防"这个价） */
+  sv = mkSt(63);
+  S.attemptAction(sv, 0, R.SK.MINI_T, { target: 1 });
+  S.attemptAction(sv, 1, R.SK.JI, {});
+  S.attemptAction(sv, 2, R.SK.JI, {});
+  X.resolveActions(sv);
+  eq(sv.events.filter(function (e) { return e.type === 'voided'; }).length, 1, '③ 前置：小雷确实作废了对面那张卡');
+  eq(vdOf(sv, 0).w, 0, '③ 废掉的若是 ジ ⇒ 不计（这一条就是"非 ji"那个限制的唯一牙）');
+  /* ④ 小雷废掉一张**枪** ⇒ 计失效、不计理想（枪不是防御族 ⇒ 破的不是盾） */
+  sv = mkSt(64);
+  S.attemptAction(sv, 0, R.SK.MINI_T, { target: 1 });
+  S.attemptAction(sv, 1, R.SK.GUN, { target: 2 });
+  S.attemptAction(sv, 2, R.SK.JI, {});
+  X.resolveActions(sv);
+  eq(vdOf(sv, 0).w, 1, '④ 小雷废掉非 ジ 的卡 ⇒ 同样给钱（用户："也给一样的奖励"）');
+  eq(vdOf(sv, 0).i, 0, '④ 但废的不是防御 ⇒ 不吃理想那一档');
+  /* ⑤ 出厂必须两个权重都是 0 ⇒ 不开臂时 `fit` 逐字不变（与 D179 的"逐位不变"同一条规矩） */
+  eq(T.voidReward().w, 0, '⑤ VOID_W 出厂必须 0（默认关）');
+  eq(T.voidReward().idealW, 0, '⑤ VOID_IDEAL_W 出厂必须 0（默认关）');
+  eq(T.setVoidReward(-1), 0, '⑤ 负权重必须被拒（不许把 fit 做成减项）');
+  eq(T.setVoidReward(0.2), 0.2, '⑤ setter 必须回显生效值（臂上要靠这行证明下达成功）');
+  T.setVoidReward(0); T.setVoidIdealReward(0);
 });
 
 t('D40 训练信号：惩罚被动（只奖"打中了且这一回合没挨打"的回合）', function () {
@@ -3084,6 +3155,15 @@ t('D179 整族行为剂量（v1.5.272 · §E83）：计数按族算 + 收益按�
       '① ' + c[0] + ' 不许再跟着自己那根的 W（假零结果的形状）');
   }
   ok(/const DOSE_ON = PRESS_W > 0 \|\| PIERCE_W > 0/.test(ev), '① DOSE_ON 必须**存在**且按族取或');
+  /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」）：失效定价是这一族的**新杠杆**，同两条规矩。
+   * 为什么写成单独三条而不是塞进上面的 CNT/BON 模板：它的计数形状是"一次扫描出两个数"
+   *   （`voidScan` 同时给失效成功与其中的理想情况），套不进 `if (DOSE_ON) X += countY(` 那一句；
+   *   而模板一旦为它改成宽松正则，上面 8 条腿就一起没了牙。 */
+  ok(/if \(DOSE_ON\) \{ const vsc = voidScan\(/.test(ev), '① 失效计数必须在整族 `DOSE_ON` 里算（跟着自己的 W 就是假零结果的形状）');
+  ok(!/if \(VOID_W > 0\) voidWins/.test(ev) && !/if \(VOID_IDEAL_W > 0\) voidIdeal/.test(ev),
+    '① 两根新 W 不许各自重新接管计数门（摘腿实测：把这一句改回 `if (VOID_W > 0)` 必须红在上一行）');
+  ok(/const voidBonus = VOID_W \* Math\.min/.test(ev) && /const voidIdealBonus = VOID_IDEAL_W \* Math\.min/.test(ev),
+    '② 两档收益仍各自按自己的 W 付钱（这是"关着 ⇒ fit 逐位不变"的结构保证）');
   const BON = [['pressBonus', 'PRESS_W', 'pressRounds'], ['pierceBonus', 'PIERCE_W', 'pierceHits'],
     ['beadBonus', 'BEAD_W', 'beadSpent'], ['tgtBonus', 'TGT_W', 'threatHits'], ['clearBonus', 'CLEAR_W', 'clears'],
     ['blockBonus', 'BLOCK_W', 'blocks'], ['ringBonus', 'ringWeightAt\\(gen\\)', 'ringBreaks']];
@@ -3098,7 +3178,10 @@ t('D179 整族行为剂量（v1.5.272 · §E83）：计数按族算 + 收益按�
   T.setPressReward(Math.max(0.01, w0.press));
   const params = Pol.unpack(sb.window.EPIRUS_CHAMPION_3P, true);
   const opps = [{ name: 'balanced', sel: Bots.pickBalanced }, { name: 'defend', sel: Bots.pickDefend }];
-  const KEYS = ['ringBreakEv', 'pressEv', 'pierceEv', 'beadEv', 'threatEv', 'clearEv', 'blockEv', 'varietyMaxEv'];
+  const KEYS = ['ringBreakEv', 'pressEv', 'pierceEv', 'beadEv', 'threatEv', 'clearEv', 'blockEv', 'varietyMaxEv',
+    /* v1.8.29：失效这一族的两格 + 激光眼那一格。`laserEv` 是补的既存欠账：v1.8.23 那根杠杆的计数
+     * 一直在算却**没随评分返回** ⇒ 臂上分不清"LASER_W 没生效"与"这一粒真没打中"（正是本门要消灭的形状）。 */
+    'laserEv', 'voidEv', 'voidIdealEv'];
   const dOn = T.scoreMemberN(params, opps, 4, 3, 0, 0, 0);
   eq(dOn.doseOn, true, '③ 族里有一根被下达 ⇒ `doseOn` 必须为 true');
   for (const k of KEYS) {
@@ -3106,7 +3189,22 @@ t('D179 整族行为剂量（v1.5.272 · §E83）：计数按族算 + 收益按�
   }
   ok(dOn.varietyMaxEv > 0, '③ **WIDTH_W=0 的兄弟也必须真的在数** —— 旧形状下 varietyMax 恒 0，这一条就是"修法生效"的证据');
   T.setPierceReward(0); T.setPressReward(0); T.setTargetReward(0); T.setClearReward(0);
-  T.setEconomyReward({ ringW: 0, beadW: 0, blockW: 0, widthW: 0, bigcardW: 0, costlyW: 0, bigtChainW: 0 });
+  T.setEconomyReward({ ringW: 0, beadW: 0, blockW: 0, widthW: 0, bigcardW: 0, costlyW: 0, bigtChainW: 0, voidW: 0, voidIdealW: 0 });
+  /* v1.8.29 的运行级正证（**这一条才是"新 W 忘了进族或"的行为判据**，源码正则只是它的影子，已删）：
+   * 只下达两根里的一根 ⇒ 整族必须被点亮、两格读数都必须是数字（没下达的那根当对照组）。
+   * 为什么不能只靠上面 ③：③ 用的是出厂就开着的 `pressW`，看不见"只有失效这一根被下达"这一格，
+   *   而实验臂恰恰只下达这一根（M6 实测：把 `VOID_IDEAL_W > 0` 从族或里删掉 ⇒ 本条红在指定句）。 */
+  T.setVoidIdealReward(0.05);
+  const dIdeal = T.scoreMemberN(params, opps, 4, 3, 0, 0, 0);
+  eq(dIdeal.doseOn, true, '③′ 只下达 VOID_IDEAL_W 也必须点亮整族（漏进 `DOSE_ON` 的族或 ⇒ 这一格红）');
+  ok(typeof dIdeal.voidEv === 'number' && typeof dIdeal.voidIdealEv === 'number',
+    '③′ 只开理想那一档时两格读数必须都是数字（基础那档是没下达的兄弟，也必须给出数）');
+  T.setVoidIdealReward(0); T.setVoidReward(0.05);
+  const dBase = T.scoreMemberN(params, opps, 4, 3, 0, 0, 0);
+  eq(dBase.doseOn, true, '③′ 只下达 VOID_W 同样必须点亮整族');
+  ok(typeof dBase.laserEv === 'number',
+    '③′ 激光眼那一格也必须随族给出数（v1.8.23 那根杠杆"只算不报"的欠账在这里补上：D179 的 KEYS 现在有它）');
+  T.setVoidReward(0);
   const dOff = T.scoreMemberN(params, opps, 4, 3, 0, 0, 0);
   eq(dOff.doseOn, false, '④ 整族全 0 ⇒ 不必否证任何杠杆 ⇒ 不算');
   for (const k of KEYS) {
@@ -3114,7 +3212,7 @@ t('D179 整族行为剂量（v1.5.272 · §E83）：计数按族算 + 收益按�
   }
   T.setPressReward(w0.press); T.setPierceReward(w0.pierce); T.setTargetReward(w0.tgt); T.setClearReward(w0.clear);
   T.setEconomyReward({ ringW: er0.ringW, beadW: er0.beadW, blockW: er0.blockW, widthW: er0.widthW,
-    bigcardW: er0.bigcardW, costlyW: er0.costlyW, bigtChainW: er0.bigtChainW });
+    bigcardW: er0.bigcardW, costlyW: er0.costlyW, bigtChainW: er0.bigtChainW, voidW: er0.voidW, voidIdealW: er0.voidIdealW });
   const back = { pierce: T.pierceReward().w, press: T.pressReward().w, tgt: T.targetReward().w, clear: T.clearReward().w, er: T.economyReward() };
   /* ⚠ 复位检查走各自的 getter，**不走 `economyReward()` 的快照**：那四根里有些键根本不在快照里，
    * `eq(undefined, undefined)` 会当"通过"印出来（本仓最怕的形状之一就是恒真断言）。 */

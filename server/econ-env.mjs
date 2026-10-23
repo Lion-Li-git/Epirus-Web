@@ -69,13 +69,19 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
    * ⇒ 现在这条"逐局求平均"的目标函数**看不见地板**，所以每轮都选不到"换地形还会打"的那一粒。
    * 不设 ⇒ null ⇒ evo 原样 0 ⇒ 逐位不变；必须走这条单一来源，否则会重演"臂上开了开关、
    * fitness 却在另一份模块里读默认值"的 A/A 事故（附录 D 臂 K）。 */
-  'EPIRUS_FIT_TAIL_W', 'EPIRUS_FIT_TAIL_Q'];
+  'EPIRUS_FIT_TAIL_W', 'EPIRUS_FIT_TAIL_Q',
+  /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」+「激光眼打中防御同时刚好有另一个人攻击，给比一般
+   * 命中更高的奖励」）：**失效成功**与其中**理想情况**两档价钱。
+   * 为什么走这里而不是照 v1.8.23 的 `EPIRUS_LASER_W` 那样在宿主里各读一次 env：
+   *   那个键现在在 `train-server` / `train-worker` / `train-3p` **三处**各自 `process.env` ——
+   *   正是本文件开头记载的"服务进程生效、worker 仍是默认值 ⇒ A/B 其实是 A/A"的形状。 */
+  'EPIRUS_VOID_W', 'EPIRUS_VOID_IDEAL_W'];
 
 /* 与 `js/train/evo.js` 的 `setEconomyReward(o)` / `economyReward()` 字段名对齐
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
 export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
   'hoardOnLeftover', 'convRatio', 'convOffense', 'hoardCapMult', 'stockBonus',
-  'blockW', 'widthW', 'bigcardW', 'costlyW', 'fitCal', 'fitGW', 'fitGF', 'bigtChainW', 'ringW', 's4W', 'beadW', 'fitTailW', 'fitTailQ'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W / 0921 DS 珠奖励标度 / 0923 qoder 大雷连带（与 setter 逐字对齐 ⇒ D77 盯得住） / 09-26 夜班 §E49 尾部聚合
+  'blockW', 'widthW', 'bigcardW', 'costlyW', 'fitCal', 'fitGW', 'fitGF', 'bigtChainW', 'ringW', 's4W', 'beadW', 'fitTailW', 'fitTailQ', 'voidW', 'voidIdealW'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W / 0921 DS 珠奖励标度 / 0923 qoder 大雷连带（与 setter 逐字对齐 ⇒ D77 盯得住） / 09-26 夜班 §E49 尾部聚合 / v1.8.29 失效成功 + 理想情况
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -135,7 +141,10 @@ export function readEconEnv(env) {
     /* §E49 尾部聚合：`W` = 混进 fit 的权重（0~1），`Q` = 取最差多少分（0.05~1）。
      * 两个键各自只映射一个奖励键 ⇒ `train-3p` 的"env ⇒ 唯一键"派生判定才认它不是暗键。 */
     fitTailW: nv(e.EPIRUS_FIT_TAIL_W),
-    fitTailQ: nv(e.EPIRUS_FIT_TAIL_Q)
+    fitTailQ: nv(e.EPIRUS_FIT_TAIL_Q),
+    /* v1.8.29：两档失效价钱各只映射**一个**奖励键（`train-3p` 的"env ⇒ 唯一键"派生判定靠这个）。 */
+    voidW: nv(e.EPIRUS_VOID_W),
+    voidIdealW: nv(e.EPIRUS_VOID_IDEAL_W)
   };
 }
 

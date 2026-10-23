@@ -1,3 +1,27 @@
+## v1.8.29 — 10-23（千问）：给**整个 `voided` 事件族**定价（用户把范围从"激光眼破防"扩到"失效技能都要给奖励"）
+
+- 用户裁定原文：「**失效技能应该都要给奖励。小雷失效成功且失效技能非ji的情况也给一样的奖励吧**」，
+  以及「激光眼是一个使用后必中的技能，打防御和攻击都有效果……给"激光眼打中防御同时刚好有另一个人攻击"这种理想情况给比一般命中更高的奖励，看看冠军能不能摸索出这个」。
+- 病（v1.8.23 那根 `LASER_W` 的一处结构性缺陷，实测读代码读出来的）：`laserBonus = LASER_W × min(1, laserHits)`，
+  而 `laserHits` 只数 `damage.via=laserEye` ⇒ **激光眼破防那一支根本不掉血**（`resolve.js` 的 GUARD_FAMILY 分支只调 `setVoid`），
+  所以旧口径给"打中无防御的人 1 点"付钱、给"打掉对面的盾"付 **0** ——方向与用户这句话正好相反。
+- 引擎侧（**唯一一处写入**）：`js/core/resolve.js` 的 `setVoid` 给 `voided` 事件补 `voids: acted.key`（被废的是哪张卡）；
+  `LASER_EYE` 的两条无效化（破转移 ‖ 破防御族）各补第 4 参 `byPid = i`。
+  ⚠ 这是**观测面**扩展：旧事件的形状只加字段、不改字段，`ui.js` 与全部在册消费者按 `type/by/byPid/pid` 过滤 ⇒ 不受影响（`--part=engine-rules` 62/62）。
+- 训练侧：`voidScan(events, seat)` 一趟扫出两格 —— `失效成功`（`voided ∧ byPid===我 ∧ voids ∧ voids≠ji`）‖
+  `理想情况`（这一废的卡 ∈ **`R.GUARD_FAMILY`**（从 `rules.js` 取表）∧ **同回合**该目标还挨了别人的**落地** `damage`，不认 `blocked`）。
+  两档权重 `VOID_W` / `VOID_IDEAL_W` **默认 0** ⇒ 不开臂时 `fit` 逐字不变；理想档在基础价之上**再加**（所以"更高"是结构保证，不靠我拍数）。
+- 接线走 `server/econ-env.mjs` 单一来源（新 env `EPIRUS_VOID_W` / `EPIRUS_VOID_IDEAL_W`）+ `train-3p` 的投递名单（缺第三处的症状是整臂 `exit 6`，与 `ringW`/`divK` 那两次逐字相同）。
+  ⚑ **没有照抄 v1.8.23 激光眼那条**：`EPIRUS_LASER_W` 现在在 server/worker/3p **三处**各读一次 env，正是 econ-env 文件开头记载的 A/A 事故形状。
+- 顺手补一条既存欠账：`laserEv/laserPerGame` 之前**只算不报** ⇒ 现在随剂量表返回并进 `D179` 的 KEYS（"这根杠杆没生效"与"这粒真没打中"不能再同形）。
+- 门数不变 **280**（零新增，只给在册门加腿）‖ 六次变异各自红在指定腿：
+  M1 删 `voids` ⇒ `D39` ① 前置红 ‖ M2a 删破防那支的 `byPid` ⇒ ① 红、②′ 绿 ‖ M2b 删转移那支的 `byPid` ⇒ ②′ 红、① 绿（**两条支各有一根牙，不是共享一根**）‖
+  M3 把 `voids≠ji` 的限制摘掉 ⇒ ③ 红 ‖ M4 摘掉"同回合别人打中"的连接 ⇒ ② 红 ‖
+  M5 把计数门从 `DOSE_ON` 改回 `if (VOID_W > 0)` ⇒ `D179` 红在指定句 ‖ M6 把 `VOID_IDEAL_W` 从族或里删掉 ⇒ 红在运行级那句 ③′（不是靠源码正则）。
+- 验证（**全部定向，不是整轮认证**）：`--part=engine-rules` 62/62 ‖ `--only="D39 "` 1/1 ‖ `--only="D179 "` 1/1 ‖ `--part=train-evo` 65/65 ‖ `--part=meta-lint` 4/4（D206 的"两处 SENT 夹具都不送"那条要求新键必须有哨兵，已在 `probe-econ-reset-audit.mjs` 补）‖ `node tools/probe-econ-reset-audit.mjs` 29/29 键"设得进、读得回、reset 可逆" ‖ 冒烟臂 `EPIRUS_VOID_W=0.05 EPIRUS_VOID_IDEAL_W=0.10` ⇒ `[train-3p] econ 族通用下达：{…} ⇒ 逐键回执一致 ✓`。
+- 三臂 × 两 seed 的冷启动批（A 对照 ‖ B `VOID_W=0.05` ‖ C 再加 `VOID_IDEAL_W=0.10`）**判据写在读数之前**，见 `docs/research/logs/2026-10-18-beadseed82-qoder.md` §E709；读数补在该节末。
+
+---
 ## v1.8.28 — 10-23（千问）：`D86` 的逗号 `only` 补成**真跑的行为腿**（文本钉抓不到解析退化）
 
 - 病：DS 今天 v1.8.23 把 `EPIRUS_IMIT_ONLY` 扩成逗号列表，`D86`/`D87` 的判据**随之被续成源码文本钉**（`tools/gates/train-evo.mjs:1987-1992 ‖ :2022` 全是 `evo.indexOf('…onlyOK(ta.key)…')`）——写法钉钉得住"改名字/删分支"，**钉不住解析退化**：把 `evo.js:1504` 的 `String(onlyKey).split(',')` 改成整串比较，那一行一个字都没改，而产物侧的坏法与"教师没开火"同形（示范被全量过滤掉）。
