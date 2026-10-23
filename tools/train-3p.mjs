@@ -2,7 +2,8 @@
  * 用法：node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
  * 产出：js/bundled-champion-3p.js（window.EPIRUS_CHAMPION_3P）
  */
-import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 import { loadPool, makeMimic } from './human-pool.mjs';   // v1.6.60：人类形状对手的**单一来源**（§E152e/§E155/§E168 的产物；别再抄一份采样器）
 import { guardWrite, declareCopy } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
@@ -98,7 +99,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
   'EPIRUS_SEL_GIFT_VETO', 'EPIRUS_SEL_GIFT_VETO_GAMES',   // §E650（千问）：送盾当选 veto + 它的测量长度（默认关 ⇒ `gateOk` 那一次测量也不跑）
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
-  'EPIRUS_COUNTER_OPPS',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
+  'EPIRUS_COUNTER_OPPS', 'EPIRUS_SEL_COUNTER',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
   'EPIRUS_TOOLKIT_OPPS',     // §E676（10-21 早班）：把杂货铺（计划层 P0~P7）放上训练桌（份数驱动，默认关 ⇒ OPPS 一字不变）
@@ -910,6 +911,7 @@ const OPPS = [
 const COUNTER_OPP_TABLE = {
   guardSpam: { name: 'cnt:guardSpam', sel: Bots.pickGuardSpam },   // = gate-drafts 的「只防御(不还手)」
   gunSpam: { name: 'cnt:gunSpam', sel: Bots.pickGunSpam },         // ≈「只枪(1ジ压制)」
+  gunFocus: { name: 'cnt:gunFocus', sel: Bots.pickGunFocus },     // G4 实际的「只枪·击杀优先」（10-23 发现 gunSpam 是打最肥，口径不对）
   snipeSpam: { name: 'cnt:snipeSpam', sel: Bots.pickSnipeSpam }    // ≈「只狙击」
 };
 const COUNTER_RAW = String(process.env.EPIRUS_COUNTER_OPPS || '').trim();
@@ -1635,7 +1637,11 @@ if (SEL_POOL && POOL_OPPS.length === 0) {
     ' ⇒ 要开就 `EPIRUS_SEL_POOL=1 EPIRUS_POOL_OPPS=<k>` 一起下达');
   process.exit(4);
 }
-const SEL_TABLE = SEL_POOL ? POOL.concat(POOL_OPPS.map(function (o) { return o.sel; })) : POOL;
+/* 10-23：`EPIRUS_SEL_COUNTER=1` 把**对抗原型**也放进选拔桌（各两份 ⇒ 允许同原型两两成对）。
+ * 病：只把对抗原型放训练桌、不放选拔桌 ⇒ 当选仍按脚本/池分数挑，G4/G5 只在最后否决、全灭就保留原当选。 */
+const SEL_COUNTER = process.env.EPIRUS_SEL_COUNTER === '1';
+const SEL_CNT_SELS = SEL_COUNTER ? COUNTER_OPPS.reduce(function (acc, o) { return acc.concat([o.sel, o.sel]); }, []) : [];
+const SEL_TABLE = (SEL_POOL ? POOL.concat(POOL_OPPS.map(function (o) { return o.sel; })) : POOL).concat(SEL_CNT_SELS);
 const SEL_PAIRS = [];
 for (let a = 0; a < SEL_TABLE.length; a++) for (let b = a + 1; b < SEL_TABLE.length; b++) SEL_PAIRS.push([SEL_TABLE[a], SEL_TABLE[b]]);
 
@@ -2057,6 +2063,52 @@ if (KILL_REQ > 0) {
   }
 }
 
+/* ===== 10-23（用户裁定）：G4/G5 最坏格否决（EPIRUS_SEL_G45=1，默认关） =====
+ * 病：训练/选拔池里只有 9 个脚本，G4 的「只枪·击杀优先」与 G5 的「四席纯防」都是池外桌形 ⇒
+ *   强度再高也会被这两种形状打穿（g14-h2-77001：只枪 98%/92%）。这里在**当选面**补一刀：
+ *   按名人堂顺序逐粒写临时包、跑 tools/gate-drafts.mjs，G4/G5 任一 FAIL ⇒ 该粒不许当选；
+ *   取第一粒全过的；全过不了就保留原当选并打 selG45AllFail（不静默）。
+ * 默认关：不设 EPIRUS_SEL_G45=1 时一行都不跑，历史臂逐字可复现。最多试前 3 粒（成本约束）。 */
+let SEL_G45_LOG = null, SEL_G45_CHANGED = false, SEL_G45_ALLFAIL = false;
+if (process.env.EPIRUS_SEL_G45 === '1') {
+  const cands = [];
+  for (const h of hall) {
+    if (!cands.some(function (c) { return c.params === h.params; })) cands.push(h);
+  }
+  if (seedParams && !cands.some(function (c) { return c.params === seedParams; })) cands.push({ params: seedParams, fit: null });
+  cands.sort(function (a, b) { return (a.params === bestParams ? -1 : b.params === bestParams ? 1 : 0); });
+  const gd = function (params, i) {
+    /* ⚠ 路径必须**相对仓库根**：gate-drafts 会把参数按 ROOT 拼（绝对路径会被拼成 ROOT\C:\… ⇒ ENOENT）。 */
+    const f = '.g45-' + process.pid + '-' + i + '.bak';
+    writeFileSync(f, '/* g45 veto */\nwindow.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(params)) + ';\n');
+    const gr = spawnSync(process.execPath, ['tools/gate-drafts.mjs', f], { cwd: process.cwd(), encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
+    const txt = String(gr.stdout || '') + String(gr.stderr || '');
+    const fails = (txt.match(/^\s*FAIL\s+(G[45]\[[^\n]*)/gm) || []).map(function (s) { return s.trim(); })
+      .filter(function (s) { return !/线上包|元测试/.test(s); });
+    /* 关键：**没跑到** ≠ 通过（v1.8.x 的教训：exit 64/ENOENT 时 FAIL 行一条都没有，旧写法会误判 PASS）。 */
+    const ran = gr.status === 0 && /G4\[/.test(txt) && /G5\[/.test(txt);
+    try { unlinkSync(f); } catch (e) {}
+    return { fails: fails, ran: ran, status: gr.status };
+  };
+  const rows = [];
+  let chosen = null;
+  for (let i = 0; i < Math.min(cands.length, 3); i++) {
+    const r = gd(cands[i].params, i);
+    rows.push({ i: i + 1, fails: r.fails, ran: r.ran, status: r.status });
+    if (r.ran && !r.fails.length) { chosen = cands[i]; break; }
+  }
+  SEL_G45_LOG = rows;
+  if (chosen) {
+    if (chosen.params !== bestParams) {
+      bestParams = chosen.params;
+      const e = hallEntries.find(function (x) { return x.ref.params === bestParams; });
+      if (e) ev = e.ev;
+      SEL_G45_CHANGED = true;
+    }
+  } else { SEL_G45_ALLFAIL = true; }
+  console.log('[G4/G5 否决] ' + rows.map(function (r) { return '#' + r.i + (r.fails.length ? ' FAIL(' + r.fails.length + ')' : ' PASS'); }).join(' ‖ ') +
+    (chosen ? (SEL_G45_CHANGED ? ' ⇒ 换成通过者' : ' ⇒ 原当选者通过，不换') : ' ⇒ 全部候选都过不了，保留原当选并标记 selG45AllFail'));
+}
 /* ===== 带内候选落盘（v1.5.150 · 移植自 `tools/train-best.mjs` 的 band-save）=====
  * 病：本工具的终局是"名人堂里用新种子重验、只取最优"，**其余候选全被丢掉** ⇒ 一旦重验选中热启动点，
  *     整臂的工作就没了（`v7xn1-31.bak` 与现役**逐字节相同**就是这么来的：候选连看都看不到）。

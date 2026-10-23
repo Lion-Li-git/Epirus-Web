@@ -673,6 +673,8 @@ export function feasibilityOf(o) {
   if (isFinite(dens.jiShare)) dRec.jiShare = _n(dens.jiShare, 3);
   if (isFinite(dens.gained)) dRec.beadGained = _n(dens.gained, 0);
   if (isFinite(dens.spentRate)) dRec.beadSpentRate = _n(dens.spentRate, 3);
+  if (isFinite(dens.spentElec)) dRec.beadSpentElec = _n(dens.spentElec, 0);
+  if (isFinite(dens.spentBoom)) dRec.beadSpentBoom = _n(dens.spentBoom, 0);
   if (isFinite(dens.expiredPerGame)) dRec.beadExpiredPerGame = _n(dens.expiredPerGame, 2);
   /* ===== v1.5.101（第十轮复核 §4-2）：**布尔判据会被"最小非零"刷分** =====
    * 复核实测：候选② `v7wall1-93` 得珠 835 / **花掉 1**（花/得 **0.12%**）就点亮了"闭环 ✓"，
@@ -701,7 +703,7 @@ export function feasibilityOf(o) {
   else if (dRec.beadLoopClosed) notes.push('第6道（输出密度/经济出口）：珠经济**闭环** ✓（得珠 ' +
     dRec.beadGained + '、花珠率 ' + dRec.beadSpentRate + '，每回合出手伤害 ' + dRec.dmgPerRound +
     '、按ジ占比 ' + dRec.jiShare + '）⇒ "经济动作有出口"的第一个形态（**目前只记录不阻断**）');
-  else notes.push('第6道（输出密度/经济出口）：珠经济**未闭环**（花珠率 ' + dRec.beadSpentRate +
+  else notes.push('第6道（输出密度/经济出口）：珠经济**未闭环**（花珠率 ' + dRec.beadSpentRate + '（电 ' + (dRec.beadSpentElec != null ? dRec.beadSpentElec : '?') + ' / 爆 ' + (dRec.beadSpentBoom != null ? dRec.beadSpentBoom : '?') + '）' +
     '，按ジ占比 ' + dRec.jiShare + '）⇒ 记录不阻断 —— 连线上包都没过它（所以它现在没有判别力）');
   return {
     ok: fails.length === 0, fails: fails, notes: notes,
@@ -776,7 +778,7 @@ export function densityProfile(W, params, mode, GAMES) {
 export function chargeProfile(W, params, mode, GAMES) {
   const S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay, R = W.EpirusRules;
   const G = GAMES || 20;
-  let charges = 0, gained = 0, expired = 0, spent = 0, games = 0, rounds = 0;
+  let charges = 0, gained = 0, expired = 0, spent = 0, spentElec = 0, spentBoom = 0, games = 0, rounds = 0;
   const bySeat = [0, 0, 0, 0, 0];
   for (let g = 0; g < G; g++) {
     const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(13000 + g) }, 5);
@@ -788,7 +790,8 @@ export function chargeProfile(W, params, mode, GAMES) {
       if (e.type === 'action' && e.key === R.SK.CHARGE && e.outcome === 'ok') {
         charges++; if (typeof e.pid === 'number' && bySeat[e.pid] != null) bySeat[e.pid]++;
       } else if (e.type === 'bead') {
-        if (e.delta > 0) gained += e.delta; else spent += Math.abs(e.delta);
+        /* 10-23：花珠**按种类分列**（电/爆）——旧口径已把爆珠算进 spent，只是没打印，容易被读成"只认电磁炮"。 */
+        if (e.delta > 0) gained += e.delta; else { spent += Math.abs(e.delta); if (e.kind === 'boom') spentBoom += Math.abs(e.delta); else spentElec += Math.abs(e.delta); }
       } else if (e.type === 'beadExpire') {
         expired += (e.delta != null ? Math.abs(e.delta) : 1);
       }
@@ -796,7 +799,7 @@ export function chargeProfile(W, params, mode, GAMES) {
   }
   return {
     games: games, charges: charges, chargesPerGame: charges / Math.max(1, games),
-    gained: gained, spent: spent, expired: expired,
+    gained: gained, spent: spent, spentElec: spentElec, spentBoom: spentBoom, expired: expired,
     wasteRate: gained ? expired / gained : 0, spentRate: gained ? spent / gained : 0,
     roundsPerGame: rounds / Math.max(1, games), bySeat: bySeat
   };
