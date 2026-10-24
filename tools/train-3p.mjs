@@ -913,7 +913,14 @@ const COUNTER_OPP_TABLE = {
   guardSpam: { name: 'cnt:guardSpam', sel: Bots.pickGuardSpam },   // = gate-drafts 的「只防御(不还手)」
   gunSpam: { name: 'cnt:gunSpam', sel: Bots.pickGunSpam },         // ≈「只枪(1ジ压制)」
   gunFocus: { name: 'cnt:gunFocus', sel: Bots.pickGunFocus },     // G4 实际的「只枪·击杀优先」（10-23 发现 gunSpam 是打最肥，口径不对）
-  snipeSpam: { name: 'cnt:snipeSpam', sel: Bots.pickSnipeSpam }    // ≈「只狙击」
+  snipeSpam: { name: 'cnt:snipeSpam', sel: Bots.pickSnipeSpam },  // ≈「只狙击」
+  /* 10-24（ZCode · 用户点名"训练场难出坦克，查怎么调整"）：永久反弹席上训练桌。
+   * 病（§六/§十二 冷启动批实测）：默认 9 席里 `pickWall` 只在 1/3 回合弹、`pickDefend` 是防御系 ⇒
+   * 桌面防御压力 >> 反弹压力 ⇒ 坦克（穿防御）压过激光剑（被防御挡）——冷启动 6 枚产物里 3 枚坦克 76~95%，
+   * 与用户口径"基础训练一般出激光剑（穿反弹）"相反。`pickReflectSpam`（bots.js 既有导出，本为 2P 基准造的
+   * "永久反弹"）从没上过 3P 训练桌 ⇒ 反弹的惩罚在训练分布里结构性缺位。
+   * ⚠ 只按名字点名（`EPIRUS_COUNTER_OPPS=reflectWall`）；数字老口径已冻结为三元组（v1.8.32）⇒ 不受本项影响。 */
+  reflectWall: { name: 'cnt:reflectWall', sel: Bots.pickReflectSpam }  // 永久反弹：枪/坦克每一发都被弹回
 };
 const COUNTER_RAW = String(process.env.EPIRUS_COUNTER_OPPS || '').trim();
 /* ⚑ v1.8.32（10-24 夜 · 千问）：**数字口径冻结成老三元组**，`all`/`*` 才等于全表。
