@@ -158,9 +158,11 @@ export function rejectDegenerateWinners(entries, thr) {
 
 /** §E650（千问 · 预注册 `docs/research/PREREG-2026-10-19-gift-veto-qoder.md`，**默认关** ⇒ `EPIRUS_SEL_GIFT_VETO` 不设时没人调它）：
  * **把"裸包送盾超线"从"不许参与带内换人"升成"不许当选"**。
- * 为什么不在这儿再写一个数：阈值已有单一来源（`audit-lib.HOLO_GIFT_MAX = 6`），而**判定结果**也早有人算过 ——
- *   `train-3p.mjs:1624` 写 `e.gateOk = mh.holoOtherPerGame <= HOLO_GIFT_MAX`，可它的消费者只有 `bandPickByLand`（本文件 :309，只挡带内换人）
- *   ⇒ 本函数**只吃 `gateOk`**：不开新阈值、不复制那个 6（"两处各写一遍"是本仓反复犯的那件事）。
+ * 为什么不在这儿再写一个数：阈值已有单一来源（`audit-lib.HOLO_GIFT_MAX`，**现值 = 1.5/席 × 5 席 = 7.5**；
+ *   旧值 6 在 10-20 由用户裁定换掉，见 `117c9028` 与 `audit-lib.mjs:561` 的说明 —— `train-econ` 的门钉着 `1.5`），
+ *   而**判定结果**也早有人算过 ——
+ *   `train-3p.mjs:1759` 写 `e.gateOk = (mh.holoOtherPerGame || 0) <= HOLO_GIFT_MAX`，可它的消费者只有 `bandPickByLand`（本文件 `:349` 起，只挡带内换人）
+ *   ⇒ 本函数**只吃 `gateOk`**：不开新阈值、不复制那个数（"两处各写一遍"是本仓反复犯的那件事）。
  * 与 `rejectDegenerateWinners` / `rejectNarrowWinners` 同规矩：**全不合格 ⇒ `allRejected=true`，调用方必须响亮**，
  *   不许静默退回"不过滤"。可跑自证在 `tools/probe-gift-veto.mjs`（三条都要能在被改坏时红）。 */
 export function rejectGiftSpamWinners(entries) {
