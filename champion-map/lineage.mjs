@@ -27,6 +27,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const ART = join(ROOT, 'docs', 'artifacts');
 const SURVEY = process.argv.includes('--survey');
+/* v1.8.34：把**下面那张 10-21 合并/改名表生效之前**的家族表打到 stdout 然后退出（不写文件）。
+ *   为什么要有这台读数：那张表历史上是"按号点家族"的，而号来自按 t0 排的原始聚类 ⇒ 往表里加几枚新点
+ *   就能让整张表**悄悄指向别的家族**（10-24 实测：`8e39c13e` 加 6 枚之后，标签「融合与续训」压在了一枚 SOUP 都没有的
+ *   40 枚家上，而真融合那 6 枚散进别家；「旧生产对照」那一行整个消失 ⇒ 用户看图抓到"点飞到天上去了"）。
+ *   现在那张表改成按**锚枚 id** 点家族，锚枚就取自这份读数 ⇒ 要换/加锚，先跑 `--dumpdefs` 看清原始聚类长什么样。 */
+const DUMPDEFS = process.argv.includes('--dumpdefs');
 
 /* ⚠ 读表一律先把 CRLF 归一成 LF：本仓工作树是 CRLF，`split('\n')` 会把**末列**留成带裸 \r 的串
  *   ⇒ `indexOf('path')` 返回 −1（path 恰好就是 coords.tsv 的末列，实测被 git checkout 兜一圈后就是这样）。*/
@@ -568,7 +574,7 @@ const BIG = groups.filter(g => g.rs.length >= 6), SMALL = groups.filter(g => g.r
 console.log('成员 ≥6 的类 ' + BIG.length + ' 个（覆盖 ' + BIG.reduce((s, g) => s + g.rs.length, 0) + ' 枚）‖ 并进零散的 ' + SMALL.length + ' 类 / ' + SMALL.reduce((s, g) => s + g.rs.length, 0) + ' 枚');
 let i = 0; const FAM = {};
 let defs = BIG.map(g => { i++; return { n: i, g, label: '' }; });
-if (SMALL.length) defs.push({ n: i + 1, g: { sig: null, rs: SMALL.flatMap(s => s.rs) }, label: '零散实验（<6 枚的类合并）' });
+if (SMALL.length) defs.push({ n: i + 1, small: 1, g: { sig: null, rs: SMALL.flatMap(s => s.rs) }, label: '零散实验（<6 枚的类合并）' });
 for (const d of defs) for (const r of d.g.rs) FAM[r.id] = d;
 /* 标签：说清"这一家相对上一家改了什么"，而不是把 16 个轴念一遍。*/
 const CH = { divW: '珠价 divW', divK: 'divK', divRoleW: '角色多样性权', divCatW: '类别多样性权', stockBonus: '囤珠奖励',
@@ -630,7 +636,7 @@ if (FUS.length) {
       t0: rs.map(x => x.ts).sort()[0] || '', t1: rs.map(x => x.ts).sort().slice(-1)[0] || '' }); }
   all.sort((a, b) => (a.t0 < b.t0 ? -1 : a.t0 > b.t0 ? 1 : b.rs.length - a.rs.length));
   for (const g of all) {
-    const d = { n: ++an, g: { sig: g.merged ? null : g.s, rs: g.rs, t0: g.t0, t1: g.t1 },
+    const d = { n: ++an, small: g.merged ? 2 : 0, g: { sig: g.merged ? null : g.s, rs: g.rs, t0: g.t0, t1: g.t1 },
       label: g.merged ? ('臂线·零散（<6 枚的旋钮类合并） ‖ ' + g.rs.length + ' 枚 ‖ ' +
         String(g.t0).slice(5, 10) + '→' + String(g.t1).slice(5, 10) + ' ‖ ' + g.merged +
         ' 个旋钮类（veto 单自由度、示范锚那一族）') : lab(g) };
@@ -639,55 +645,125 @@ if (FUS.length) {
     big.map(g => g.rs.length + ' 枚').join(' ‖ ') + '） ‖ 零散 ' + small.reduce((s, g) => s + g.rs.length, 0) +
     ' 枚 / ' + small.length + ' 个类 ‖ 家族号追加到 ' + an + '（在册各行的号一个没动）'); }
 /* ===== 10-21 用户：家族太多颜色难分 ⇒ 合并历史步进与零散桶（号保留最小号，不重排 22/23/25）===== */
-function mergeDefs(keep, drop, label) {
-  const kd = defs.find(d => d.n === keep); if (!kd) { console.log('⚠ 合并目标不存在：' + keep); return; }
-  const ds = defs.filter(d => drop.includes(d.n)); if (!ds.length) return;
-  const rs = kd.g.rs.concat(...ds.map(d => d.g.rs));
-  const t0 = rs.map(r => r.ts).sort()[0] || '', t1 = rs.map(r => r.ts).sort().slice(-1)[0] || '';
-  kd.g = { sig: kd.g.sig, rs: rs, t0: t0, t1: t1 };
-  kd.label = label + ' ‖ ' + rs.length + ' 枚 ‖ ' + String(t0).slice(5, 10) + '→' + String(t1).slice(5, 10);
-  for (const r of rs) FAM[r.id] = kd;
-  defs = defs.filter(d => !drop.includes(d.n));
+if (DUMPDEFS) {
+  console.log('--dumpdefs ‖ 合并表生效**之前**的家族表（号 = 此刻的 d.n，下面那张表以前点的就是这些号）');
+  for (const d of defs) console.log('DEF ' + d.n + ' ‖ t0=' + String(d.g.t0).slice(0, 10) + ' ‖ n=' + d.g.rs.length +
+    ' ‖ ' + d.g.rs.map(r => r.id).join(' '));
+  process.exit(0);
 }
-mergeDefs(1, [2, 3, 4, 5], '历史配方步进 A（09-12～09-13：珠价/风格/对手池）');
-mergeDefs(6, [7], '对手池步进 B1（09-13：对手池 1→77）');
-mergeDefs(8, [9, 10, 11], '珠价/代数步进 B2（09-13～09-16：珠价/代数/对手池）');
-mergeDefs(12, [13, 14, 15], '多样性步进 C1（09-16：多样性 5→30）');
-mergeDefs(16, [17, 18], '对手池步进 C2（09-16～09-18：对手池 16/19）');
-mergeDefs(19, [20, 21], '对手池/珠价步进 C3（09-19～09-21：对手池 14→22）');
-/* 10-21 用户：零散别再单列一个最早桶（线会先飞上去再下来）⇒ 按各自训练配置/年代并进具体家族。 */
+/* ===== v1.8.34（10-24）：这张表从「按号点家族」改成「按**锚枚 id** 点家族」=====
+ *   为什么必须改（`8e39c13e` 实测，用户看图抓到"点飞到天上去了"）：号来自上面那次"按 t0 排 + ≥6 独立成家"的
+ *   原始聚类 ⇒ **往表里加几枚新点就能让整段号往后挪**。这一次加的 6 枚激光眼与 E1/E2 那 4 枚同签名，
+ *   把那一类从 4 枚推过「≥6」那条线 ⇒ 零散桶 24→25、融合 25→26、臂线整段 +1，于是
+ *     · `relabel(25,'融合与续训')` 压在「零散实验」那一桶上（40 枚、**一枚 SOUP 都没有**），
+ *     · 真融合那 6 枚被 `relabel(26)` 改名成"臂线·env 实验"，
+ *     · 「旧生产对照」那一行整个消失（seed80 / e35prod 这批 09-25 的点跑到最上面那一行 = 用户看到的那一幕）。
+ *   后果是 **333/807 枚的家族号被无声换掉**，而 280 条门与页内 96 条自检全绿 —— 因为没有任何一条判
+ *   "这张表点的还是不是当初那个家族"。锚枚 id 的签名不会变 ⇒ **号会变、锚不会**；锚找不到就 exit 2 点名。
+ *   ⚠ 换/加锚之前先跑 `node champion-map/lineage.mjs --dumpdefs` 看清此刻的原始聚类，别照旧表猜号。 */
+function defOf(anchor, why) {
+  const d = FAM[anchor];
+  if (!d) { console.error('⛔ v1.8.34 家族表的锚枚 `' + anchor + '`（' + why + '）在聚类里找不到 ⇒ 这一行点不到家族，不敢猜。\n'
+    + '   先看此刻原始聚类长什么样：node champion-map/lineage.mjs --dumpdefs'); process.exit(2); }
+  return d;
+}
+function touch(d) { d.g.t0 = d.g.rs.map(r => r.ts).sort()[0] || ''; d.g.t1 = d.g.rs.map(r => r.ts).sort().slice(-1)[0] || ''; }
+/* 点名把若干枚搬成**单独一行**（与 §E490 摘融合、§E466 摘旧槽位冠军同一套路，只是主语换成一份 id 名单）。 */
+function carve(ids, label) {
+  const rs = [];
+  for (const id of ids) {
+    const d = defOf(id, '点名家族「' + label + '」');
+    const hit = d.g.rs.filter(x => x.id === id);
+    if (hit.length !== 1) { console.error('⛔ 锚枚 `' + id + '` 在它自己的家族里查到 ' + hit.length + ' 行 ⇒ 聚类结构变了，不敢猜'); process.exit(2); }
+    d.g.rs = d.g.rs.filter(x => x.id !== id);
+    rs.push(hit[0]); FAM[id] = null;
+  }
+  for (const d of defs) touch(d);
+  defs = defs.filter(d => d.g.rs.length);
+  const t0 = rs.map(r => r.ts).sort()[0] || '', t1 = rs.map(r => r.ts).sort().slice(-1)[0] || '';
+  const d = { n: -1, g: { sig: 'named:' + label, rs: rs, t0: t0, t1: t1 },
+    label: label + ' ‖ ' + rs.length + ' 枚 ‖ ' + String(t0).slice(5, 10) + '→' + String(t1).slice(5, 10) };
+  defs.push(d); for (const r of rs) FAM[r.id] = d;
+  console.log('v1.8.34 点名成行：' + rs.length + ' 枚 → 「' + d.label + '」');
+  return d;
+}
+/* 把若干枚搬进锚枚所在那一行（10-23 那份账面的位置）。 */
+function moveTo(ids, anchor) {
+  const kd = defOf(anchor, '搬入目标');
+  let n = 0;
+  for (const id of ids) { const d = defOf(id, '待搬枚');
+    if (d === kd) continue;
+    const hit = d.g.rs.filter(x => x.id === id);
+    if (hit.length !== 1) { console.error('⛔ 待搬枚 `' + id + '` 查到 ' + hit.length + ' 行 ⇒ 不敢猜'); process.exit(2); }
+    d.g.rs = d.g.rs.filter(x => x.id !== id);
+    kd.g.rs.push(hit[0]); FAM[id] = kd; n++; }
+  for (const d of defs) touch(d);
+  defs = defs.filter(d => d.g.rs.length);
+  console.log('v1.8.34 搬回在册那一行：' + n + ' 枚 → 「' + kd.label + '」');
+}
+/* ===== 10-24（用户：「激光眼线如果搞出了有用的冠军，就把这一条训练链里有用的几个点都放到演化图里面」）=====
+ *   这 6 枚是**一条链**（g12→g14→g15→g16→g17→g18，逐枚热启动上一枚），不是"某个配置等价类里的一撮"：
+ *   留在签名聚类里它会和 E1/E2 那 4 枚并成一行（16 根在册轴全空 ⇒ 签名相同），而那一行读不出链条。 */
+carve(['g12-keep-77000', 'g14-h2-77001', 'g15-long-77001', 'g16-77001', 'g17-77000', 'g18-77001'],
+  '激光眼线 g12→g18（10-23：失效定价臂 + 选拔桌 G4/G5 否决 ‖ 千问）');
+/* E1/E2 那 4 枚搬回 10-23 在册那一行（标签里本来就写着"+ E1/E2 研究臂"）：上面那 6 枚与它们同签名，
+ *   把这一类推过「≥6」⇒ 它们不再落零散桶，于是下面那段"零散按年代搬进具体家族"这一次**不会**再捞到它们。 */
+moveTo(['e1-teach-77003', 'e1-ctl-77000', 'e2-grad-77002', 'e2-teach-77000'], 'R-s107');
+function mergeDefs(keepAnchor, dropAnchors, label) {
+  const kd = defOf(keepAnchor, '合并 keep');
+  const ds = [];
+  for (const a of dropAnchors) { const d = defOf(a, '合并 drop');
+    if (d === kd) { console.error('⛔ 合并表把 `' + keepAnchor + '` 与 `' + a + '` 当成两个家族，而它们此刻已是同一个（' + kd.label + '）⇒ 名单要更新，不敢静默跳过'); process.exit(2); }    ds.push(d); }
+  if (!ds.length) return;
+  const rs = kd.g.rs.concat(...ds.map(d => d.g.rs));
+  kd.g = { sig: kd.g.sig, rs: rs, t0: '', t1: '' }; touch(kd);
+  kd.label = label + ' ‖ ' + rs.length + ' 枚 ‖ ' + String(kd.g.t0).slice(5, 10) + '→' + String(kd.g.t1).slice(5, 10);
+  for (const r of rs) FAM[r.id] = kd;
+  defs = defs.filter(d => !ds.includes(d));
+}
+mergeDefs('mix-31', ['sty-31', 'eco-31', 'def-31', 'fstA-31'], '历史配方步进 A（09-12～09-13：珠价/风格/对手池）');
+mergeDefs('v7a-31', ['v11-61'], '对手池步进 B1（09-13：对手池 1→77）');
+mergeDefs('v7attr-31', ['v12-81', 'v7f2-31', 'v7f2b-31'], '珠价/代数步进 B2（09-13～09-16：珠价/代数/对手池）');
+mergeDefs('v7curri1-31', ['v7role5-31', 'v7role1-31', 'v7clear2-31'], '多样性步进 C1（09-16：多样性 5→30）');
+mergeDefs('v7w3r1-31', ['v7fix1-31', 'v7l2a-81'], '对手池步进 C2（09-16～09-18：对手池 16/19）');
+mergeDefs('r61fix-31', ['v7aim1-31', 'v7aim2-31'], '对手池/珠价步进 C3（09-19～09-21：对手池 14→22）');
+/* 10-21 用户：零散别再单列一个最早桶（线会先飞上去再下来）⇒ 按各自训练配置/年代并进具体家族。
+ *   v1.8.34：这两只桶原来按号点（24 / 27），现在按**创建时打的 `small` 标**点 ⇒ 加多少枚都不会捞错。 */
 {
-  const src = defs.filter(d => d.n === 24 || d.n === 27);
+  const src = defs.filter(d => d.small);
   const prod = [];
   for (const d of src) for (const r of d.g.rs) {
     const t = String(r.ts).slice(0, 10);
     let tgt = null;
-    if (r.id === 'long-33' || t <= '2026-09-14') tgt = defs.find(x => x.n === 8);            /* B2 */
-    else if (t <= '2026-09-18') tgt = defs.find(x => x.n === 16);                            /* C2 */
-    else if (t >= '2026-09-24' && t <= '2026-09-27') { prod.push(r); continue; }             /* 旧生产对照 */
-    else tgt = defs.find(x => x.n === 26);                                                   /* 臂线 */
+    if (r.id === 'long-33' || t <= '2026-09-14') tgt = defOf('v7attr-31', '零散→B2');           /* B2 */
+    else if (t <= '2026-09-18') tgt = defOf('v7w3r1-31', '零散→C2');                             /* C2 */
+    else if (t >= '2026-09-24' && t <= '2026-09-27') { prod.push(r); continue; }                 /* 旧生产对照 */
+    else tgt = defOf('R-s107', '零散→臂线');                                                     /* 臂线 */
     if (tgt) { tgt.g.rs.push(r); FAM[r.id] = tgt; }
   }
   if (prod.length) {
-    const t0 = prod.map(r => r.ts).sort()[0], t1 = prod.map(r => r.ts).sort().slice(-1)[0];
-    const d = { n: 90, g: { sig: 'prod-old', rs: prod, t0: t0, t1: t1 },
-      label: '旧生产对照（09-25～09-27：e35/e39/seed80/seed81/cal-ctl/E51） ‖ ' + prod.length + ' 枚 ‖ ' + String(t0).slice(5, 10) + '→' + String(t1).slice(5, 10) };
+    const d = { n: 90, g: { sig: 'prod-old', rs: prod, t0: '', t1: '' }, label: '' }; touch(d);
+    d.label = '旧生产对照（09-25～09-27：e35/e39/seed80/seed81/cal-ctl/E51） ‖ ' + prod.length + ' 枚 ‖ ' + String(d.g.t0).slice(5, 10) + '→' + String(d.g.t1).slice(5, 10);
     defs.push(d); for (const r of prod) FAM[r.id] = d;
   }
-  defs = defs.filter(d => d.n !== 24 && d.n !== 27);
-  for (const n of [8, 16, 26]) { const d = defs.find(x => x.n === n); if (d) { d.g.t0 = d.g.rs.map(r => r.ts).sort()[0]; d.g.t1 = d.g.rs.map(r => r.ts).sort().slice(-1)[0]; } }
+  defs = defs.filter(d => !d.small);
+  for (const a of ['v7attr-31', 'v7w3r1-31', 'R-s107']) touch(defOf(a, '零散搬入后重算 t0/t1'));
 }
-mergeDefs(26, [28], '臂线·env 实验（COUNTER_OPPS / 纯续训）');
-function relabel(n, label) { const d = defs.find(x => x.n === n); if (!d) return; const rs = d.g.rs;
-  const t0 = rs.map(r => r.ts).sort()[0] || '', t1 = rs.map(r => r.ts).sort().slice(-1)[0] || '';
-  d.label = label + ' ‖ ' + rs.length + ' 枚 ‖ ' + String(t0).slice(5, 10) + '→' + String(t1).slice(5, 10); }
-relabel(22, '早期 env 臂（16 轴全空）');
-relabel(23, '现代基线（代数 400～1200）');
-relabel(25, '融合与续训');
-relabel(29, '臂线·COUNTER_OPPS=guardSpam');
-relabel(8, '珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类）');
-relabel(16, '对手池步进 C2（09-16～09-18：对手池 16/19 + 小类）');
-relabel(26, '臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂）');
+/* 臂线两行合一：snipeSpam 那一组（10 枚）与"纯续训/锚点"那一组（27 枚）。
+ *   ⚠ 名单里**不含**「臂线·零散」那 9 枚 —— 它们已经由上面那段按年代搬进来了（10-21 那版靠号点，
+ *   把 27/28 当成两个原始组；今天按锚枚点，这条被上面那道"两个锚已是同一个家族"的检查挡下来，
+ *   所以我按它的提示把名单改短，而不是拿 `⚠ 跳过` 糊过去）。 */
+mergeDefs('R-s107', ['P-s22'], '臂线·env 实验（COUNTER_OPPS / 纯续训）');
+function relabel(anchor, label) { const d = defOf(anchor, '改名'); const rs = d.g.rs;
+  touch(d);
+  d.label = label + ' ‖ ' + rs.length + ' 枚 ‖ ' + String(d.g.t0).slice(5, 10) + '→' + String(d.g.t1).slice(5, 10); }
+relabel('BIG0', '早期 env 臂（16 轴全空）');
+relabel('B0-111', '现代基线（代数 400～1200）');
+relabel('SOUP-KE-l60', '融合与续训');
+relabel('G-s72', '臂线·COUNTER_OPPS=guardSpam');
+relabel('v7attr-31', '珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类）');
+relabel('v7w3r1-31', '对手池步进 C2（09-16～09-18：对手池 16/19 + 小类）');
+relabel('R-s107', '臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂）');
 /* 10-21 用户：号从头排、不留空号 ⇒ 按 t0 排序后连续编号 1..N（0 留给旧槽位冠军） */
 defs.sort(function (a, b) { return String(a.g.t0 || '').localeCompare(String(b.g.t0 || '')); });
 defs.forEach(function (d, i) { d.n = i + 1; });

@@ -1852,6 +1852,27 @@ function bandFillFor(bg) {
   function cl(v) { return Math.max(0, Math.min(255, v + dlt)); }
   return 'rgb(' + cl(c[0]) + ',' + cl(c[1]) + ',' + cl(c[2]) + ')'; }
 function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep) {
+  /* ===== v1.8.34（用户 10-24：「放大缩小的时候字体会跟着拉伸，容易变成很诡异的情况」）=====
+   *   这张纸上的字原来跟着"纸面 → 屏幕"那道仿射**各向异性**地长，而那台相机是横纵分开的
+   *   （§E314：滚轮管横轴、Shift+滚轮管纵轴）⇒ 只滚横轴时家族名被拉成 3 倍宽 1 倍高，只按 Shift 就反过来。
+   *   现在：字号只跟**两个倍率里较小的那个**等比长（S = min(a, d)），日期刻度那一排再夹一道
+   *   min(1, S)（用户：「坐标轴的字可以偏小但不能偏大」）。
+   *   落点仍然走原仿射 ⇒ 页内那条"左栏与数据走同一个矩阵"量的是位移，一个字都不必改。
+   *   装箱/溢出判断**不动**（仍按纸面名义字号量）⇒ 换行结果与缩放档无关：屏幕上那一格变宽时字不会
+   *   趁机多装一行，所以"字变大了"这件事只剩等比那一种可能，页内那条新判据才读得干净。
+   *   ⚠ 只在矩阵**正交**（无剪切/旋转）时换成等比：立体态要的就是字躺在倾斜那块板上
+   *     （用户 10-24 点名"切换到立体投影旋转的时候不用改，保持目前紧贴图片的投影剪切"）⇒ 那一路照旧走纸面坐标。 */
+  var M = (t.getTransform ? t.getTransform() : null);
+  var FLATX = !!M && Math.abs(M.b) < 1e-9 && Math.abs(M.c) < 1e-9 && M.a > 0 && M.d > 0;
+  var SZ = FLATX ? Math.min(M.a, M.d) : 1;
+  function put(txt, x, y, size, capUnit) {
+    if (!FLATX) { t.font = ff(size); t.fillText(txt, x, y); return; }
+    var s = capUnit ? Math.min(1, SZ) : SZ;
+    t.save(); t.setTransform(1, 0, 0, 1, 0, 0);
+    t.font = (size * devicePixelRatio * s) + 'px system-ui,sans-serif';
+    t.fillText(txt, M.a * x + M.e, M.d * y + M.f);
+    t.restore();
+  }
   t.font = ff(11);
   for (i = 0; i < fams.length; i++) {
     var f = fams[i], mem = P.filter(function (d, mi) { return d.fam === f && VIS[mi]; });
@@ -1859,19 +1880,22 @@ function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, d
     var best = Math.min.apply(null, mem.map(function (d) { return d.rk; }));
     t.fillStyle = i % 2 ? bandFillFor(st.bg) : 'rgba(255,255,255,.0)';
     t.fillRect(0, padT + i * rowH, w, rowH);
-    /* E396 DS：名字优先（最多 2 行），装得下才在第二行带计数 —— 不硬塞、不溢出。 */
+    /* E396 DS：名字优先（最多 2 行），装得下才在第二行带计数 —— 不硬塞、不溢出。
+     *   ⚠ 装箱与"装得下"都按**纸面名义字号**量（与改前逐字同一把尺）⇒ 换行结果与缩放档无关，
+     *   而画出来那个字号由 put 走等比，所以"字变宽了"这件事只剩等比那一种可能，页内那条判据才读得干净。 */
     var maxW = padL - 24 * devicePixelRatio;
     var full = famSummary(famLab({ fam: f })) || ('家族 ' + f);
     t.fillStyle = st.ink; t.textAlign = 'right'; t.font = ff(9);
     var ls = wrapLabel(t, '家族 ' + f + ' · ' + full, maxW, 2);
-    t.fillText(ls[0], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.36);
+    put(ls[0], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.36, 9, false);
     var cnt = mem.length + ' 枚 · 过线' + (RLONG() ? '(长程)' : '(在册)') + ' ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best;
     t.fillStyle = st.dim; t.font = ff(9);
-    if (ls[1]) t.fillText(ls[1], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.82);
-    else if (t.measureText(cnt).width <= maxW) t.fillText(cnt, padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.82);
+    if (ls[1]) put(ls[1], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.82, 9, false);
+    else if (t.measureText(cnt).width <= maxW) put(cnt, padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.82, 9, false);
     t.font = ff(11);
   }
   t.textAlign = 'left';
+  t.fillStyle = st.dim;   /* 日期刻度那一排（put 只管字体与落点，颜色留在这里给）*/
   t.strokeStyle = 'rgba(159,176,204,.22)'; t.lineWidth = 1;
   t.beginPath(); t.moveTo(padL - 6, 0); t.lineTo(padL - 6, h); t.stroke();
   for (var tt2 = Math.ceil(tmin / dayStep) * dayStep; tt2 <= tmax; tt2 += dayStep) {
@@ -1881,8 +1905,7 @@ function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, d
      *   §E377 那句"9/14 往左的分度消失"根因不在这道门上，在"门读的是屏幕坐标而平移是屏幕空间的"那一层：
      *   纸与数据现在同进同退，这道门就变回它本来的意思（纸内的版式规则）。 */
     if (xx >= padL - 6) { t.beginPath(); t.moveTo(xx, padT); t.lineTo(xx, h - padB); t.stroke(); }
-    t.fillStyle = st.dim; t.font = (10 * devicePixelRatio) + 'px system-ui,sans-serif';
-    t.fillText(new Date(tt2).toISOString().slice(5, 10), xx + 3, h - padB + 16 * devicePixelRatio);
+    put(new Date(tt2).toISOString().slice(5, 10), xx + 3, h - padB + 16 * devicePixelRatio, 10, true);
   }
 }
 function treeChrome(w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, dayStep, SS) {
@@ -4443,6 +4466,53 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     pivBad9 === '', pivBad9 || pivEx9.join(' ‖ '));
   st.tKx = SNAPV9.kx; st.tKy = SNAPV9.ky; st.tX = SNAPV9.tx; st.tY = SNAPV9.ty;
   st.elev = SNAPV9.e; st.yaw = SNAPV9.y; st.pit = SNAPV9.p; draw();
+  /* ===== v1.8.34（用户 10-24：「放大缩小的时候字体会跟着拉伸，容易变成很诡异的情况。我的建议是缩放的时候
+   *   字体只跟着缩放相对小的那个比例缩放而不是横竖分开缩放，坐标轴的字可以偏小但不能偏大」）=====
+   *   钉"左栏那排字**等比**长"。量的是**最终画布**的墨（与上面那条同一台尺、同一个 150 阈值），两个主语：
+   *     ① 一列里**最长的一段连续竖墨** = 一个字的高（行距怎么拉开都读不到它头上）；
+   *     ② 左栏里**最靠左的那笔墨**的 x = 整排字往左长了多少（字被横向吹大，它必然往左顶出去）。
+   *   四档对照：基线 (1,1) ‖ 只拉横 (2,1) ‖ 只拉纵 (1,2) ‖ 均匀 (2,2)。
+   *     改前实测：只拉一根轴 ⇒ 那一向被拉成 ≈2.0 倍 / 往左顶 ≈ 一整行字宽（就是用户说的"诡异"）；
+   *     改后：两档都 ≈1.0 倍、横移 ≤ 一个锚点差。均匀那一档**必须** ≈2.0 倍 —— 它是这条判据的对照腿：
+   *     有人把字号焊成"永远不跟缩放"，前三条照样绿，只有这一条会红。
+   *   ⚠ 倍数取 2 不取 3：3 档上日期刻度那一排会顶出可读区，读成"没墨"而不是"拉大了"（墨数 −1 与 0 同形）。
+   *   ⚠ 只取画布**上部 30%**：页脚那两行说明是屏幕坐标、字长不随缩放变，混进来会把主语 ① 钉成一个常数。
+   *   ⚠ 主语 ① 只量竖墨：横着量"最长一段连续墨"实测不可用 —— 9px 那档相邻字的抗锯齿边在阈值 150 上**连成一片**，
+   *     放大到 18px 反而断开，读数会给出 0.59× 这种反号（本班第一版就栽在这儿，改成量"往左顶了多少"）。 */
+  function inkRuns() {
+    var x1 = Math.max(24, Math.round(TPAD.l - 14 * devicePixelRatio));
+    var y0 = Math.round(TPAD.t), y1 = Math.round(TPAD.t + 0.30 * (cv.height - TPAD.t));
+    var W = x1, H = y1 - y0, px;
+    try { px = g.getImageData(0, y0, W, H).data; } catch (E1) { return null; }
+    var BGS = hexSum(st.bg), n = W * H, ink = new Uint8Array(n);
+    for (var q = 0; q < n; q++) { var o = q * 4;
+      ink[q] = (Math.abs(px[o] + px[o + 1] + px[o + 2] - BGS) > 150) ? 1 : 0; }
+    var vr = 0, run, xl = -1;
+    for (var x2 = 0; x2 < W; x2++) { run = 0; var any = 0;
+      for (var y2 = 0; y2 < H; y2++) { var v = ink[y2 * W + x2]; run = v ? run + 1 : 0; if (run > vr) vr = run; if (v) any = 1; }
+      if (any && xl < 0) xl = x2; }
+    return (vr && xl >= 0) ? [vr, xl] : null;
+  }
+  var SNAPF = { m: st.mode, kx: st.tKx, ky: st.tKy, tx: st.tX, ty: st.tY, e: st.elev, y: st.yaw, p: st.pit };
+  st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit; st.tX = 0; st.tY = 0;
+  var fBase = null, fEx = [], fBad = '';
+  for (var zf = 0; zf < 4; zf++) {
+    var ka = [1, 2, 1, 2][zf], kd = [1, 1, 2, 2][zf];
+    st.tKx = ka; st.tKy = kd; draw();
+    var bb = inkRuns();
+    if (!bb) { fBad = '左栏读不到墨（' + ka + '/' + kd + ' 那一档）⇒ 仪器瞎了，不敢报绿'; break; }
+    if (!fBase) fBase = bb;
+    var ry = bb[0] / fBase[0], dx = bb[1] - fBase[1];
+    fEx.push('(tkx=' + ka + ',tky=' + kd + ') 字高 ' + ry.toFixed(2) + '× ‖ 最左那笔墨横移 ' + dx + 'px');
+    if (ka === 1 && kd === 2 && ry > 1.45) fBad = '只拉纵轴时字高被拉成 ' + ry.toFixed(2) + ' 倍 ⇒ 各向异性拉伸（要的是跟 min(横,纵)=1）';
+    if (ka === 2 && kd === 1 && ry > 1.45) fBad = '只拉横轴时字高跟着变了 ' + ry.toFixed(2) + ' 倍 ⇒ 两轴没各走各的这件事被破坏';
+    if (ka === 2 && kd === 1 && dx < -40 * devicePixelRatio) fBad = '只拉横轴时那排字往左长出去了 ' + (-dx) + 'px ⇒ 字被横向吹大（旧病：字号乘在纸面上，再被仿射各向异性拉一遍）';
+    if (ka === 2 && kd === 2 && ry < 1.4) fBad = '均匀 2× 时字只长了 ' + ry.toFixed(2) + ' 倍 ⇒ 字号压根不跟缩放了（那是把旋钮焊死，不是等比）';
+  }
+  T('左栏字号要等比跟缩放：只拉一根轴时字号不跟着那根轴长，均匀缩放时又必须真的长（用户 10-24）',
+    fBad === '', (fBad ? fBad + ' ‖ ' : '') + fEx.join(' ‖ '));
+  st.mode = SNAPF.m; st.elev = SNAPF.e; st.yaw = SNAPF.y; st.pit = SNAPF.p;
+  st.tKx = SNAPF.kx; st.tKy = SNAPF.ky; st.tX = SNAPF.tx; st.tY = SNAPF.ty; draw();
   /* §E379 立体态平移**必须跟着光标**：把图转到"离正俯视 45°"那一档（默认 yaw = FLAT.yaw = −π/2，
    *   所以取 FLAT.yaw + π/4 —— 用户报的"转 90 度就完全不对"就是这类非轴对齐角度），派一次真左键拖动，
    *   要求画面走的**向量**等于鼠标走的向量（±4px）。
