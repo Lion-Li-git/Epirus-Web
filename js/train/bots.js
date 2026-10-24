@@ -1505,6 +1505,34 @@
     return pickAimDefender(state, pid, legal);
   }
 
+  /* ===== 10-25 夜班（§E744/§E745）：会**为激光存下那 1 ジ**的教师 =====
+   * 病是取样取到的，不是推论（`scratch/night/probe-laser-why.mjs`）：上面那支 `pickLaserBead` 有 **41.8% 的决策身上带着爆破珠**、
+   * 激光也一直在合法表里，但那些决策的 `ep=0` ⇒ 表里那一行 `affordable=false` ⇒ **30 局一手激光都没打**。
+   * 机制：它"没珠就蓄能"，之后落回 `pickAimDefender` **把 ep 花光**，而首次激光眼 = **1 ジ + 1 爆珠**
+   * （`js/core/state.js:152-153`）且**珠子回合末未用即清空**（`state.js:13`，只供下一回合）
+   * ⇒ 永远是"拿到珠的那一手买不起，买得起的那一手没珠"。
+   * 这一支把顺序钉死：`ep<3 ⇒ 只出 ジ（存）` ‖ `ep≥3 且没珠 ⇒ 蓄能取爆珠` ‖ `有珠且买得起 ⇒ 打激光（血最厚的活席）`
+   * ‖ 其余情况交回基础贪心（**不**改它别的行为）⇒ 示范出来的动作与"破防"这个状态相关，而不是与"兜里有 1 ジ"相关。
+   * ⚠ 默认**不进任何池、不参与训练、不当对手**：只有 `EPIRUS_IMIT_TEACHER=pickLaserBank` 点名时才被调用
+   *   （走 `evo.js:2931` 那条"全局注册表函数名"的路，与环专精同一先例 ⇒ `BOT_PICKS` 那张对手表一字不动）。
+   * 值不值这一手由 **§E745** 量（同一批 seed 的配对四臂/剂量曲线：单席专家就能显著压低防席夺冠，
+   * 镜像场里"打激光"比"只存钱不打"高一个可检出的量级）⇒ 具体数字只在那一节里报，注释不抄读数的快照。*/
+  function pickLaserBank(state, pid, legal) {
+    const bk = mpBk(legal), me = state.p[pid];
+    if (!me) return { key: SK.JI, target: null };
+    const foes = [];
+    for (let q = 0; q < state.p.length; q++) if (q !== pid && state.p[q] && state.p[q].hp > 0) foes.push(q);
+    const boom = (me.boom | 0) >= 1;
+    if (boom && mpAff(bk, SK.LASER_EYE)) {
+      let best = -1, bestHp = -1;
+      for (const q of foes) if (state.p[q].hp > bestHp) { bestHp = state.p[q].hp; best = q; }
+      if (best >= 0) return { key: SK.LASER_EYE, target: best, target2: null };
+    }
+    if (!boom && (me.ep | 0) >= 3 && mpAff(bk, SK.CHARGE)) return { key: SK.CHARGE, target: null, bead: 'boom' };
+    if (!boom && (me.ep | 0) < 3 && mpAff(bk, SK.JI)) return { key: SK.JI, target: null };
+    return foes.length ? pickAimDefender(state, pid, legal) : { key: SK.JI, target: null };
+  }
+
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
@@ -1512,7 +1540,7 @@
     snapshotBotMem, restoreBotMem,
     setPlanOff, planOffOn, countPlanOff, resetPlanOffStat,   // 计划线消融旋钮（默认空集 ⇒ 出厂不变）＋**按住计数**（§E692 的下一步）
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
-    pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst, pickLaserBead,
+    pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst, pickLaserBead, pickLaserBank,
     pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, pickBigTChain, bigtHubTarget, pickKillSecure,
     pickDeadlineBurst, pickEarlyPressure, getEconB, setEconB, setBreakFirst: function (on) { PLAN_BREAK_FIRST = !!on; return PLAN_BREAK_FIRST; }, setBreakBank: function (n) { const v = Number(n); PLAN_BREAK_BANK = isFinite(v) && v >= 0 ? v : 5; return PLAN_BREAK_BANK; },
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
