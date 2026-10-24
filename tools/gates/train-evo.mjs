@@ -928,21 +928,27 @@ t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励
       T.setEconomyReward({ reset: true });   // 无论本腿断到哪一条，档都还给出厂
     }
   }
-  /* 2026-10-24 夜班：贴贴两档**已改成出厂开** ⇒ 补两条腿（同一族病：SUPPORT_PRIOR 当时"在现网路径上而门里零命中"）。
-   *   ① 出厂值钉住（谁翻回去就红，翻档是产品裁定不是随手改）；② **ε=0 的装配上开/关必须逐字同**
-   *      —— 这是"钩子只挂 soft 分支"那句承诺的**行为**版本（训练/考卷/门禁全走 ε=0，它红了就是污染了全部基线）。 */
+  /* 2026-10-24 夜班补、2026-10-25 夜班按用户裁定改回（同一族病：SUPPORT_PRIOR 当时"在现网路径上而门里零命中"）。
+   *   ① 出厂值钉住；② **ε=0 的装配上开/关必须逐字同** —— 这是"钩子只挂 soft 分支"那句承诺的**行为**版本
+   *      （训练/考卷/门禁全走 ε=0，它红了就是污染了全部基线）。
+   * ⚑ 10-25 00:4x：上一班把出厂翻成"开"，用户判据纠正为「**有效**才开；两 seed × 三枚包上贴贴确实露脸但
+   *   **天火 0.00%** ⇒ 没出现引爆就没必要开」⇒ 常数回 0（见 `evo.js:756/795` 与 §E738）。
+   *   ⚠ 腿跟着换方向：原来是"出厂开 ⇒ 与显式关比"，若只把常数改回 0 而不动这条腿，两次跑的就是**同一个设置**
+   *     （自反对照，恒真）。现在显式两边：先按出厂（关）读一趟，再强行开档读一趟。 */
   {
     const nFactory = T.lockNarrowOn(), pFactory = T.cursePushOn();
-    ok(nFactory === 1 && pFactory === 1 && typeof T.setLockNarrow === 'function' && typeof T.setCursePush === 'function',
-      '出厂档必须是 `LOCK_NARROW=1 ‖ CURSE_PUSH=1`（实测 ' + nFactory + '/' + pFactory + '）⇒ 这是 2026-10-24 夜按"两 seed × 三枚包 × 10500 局"的代价实测开的，回退要走裁定，不许静默改常数');
+    ok(typeof T.setLockNarrow === 'function' && typeof T.setCursePush === 'function', '两档的 setter 必须在');
+    eq(nFactory, 0, '出厂 `LOCK_NARROW` 必须是 **0（关）**（实测 ' + nFactory + '）⇒ 开它的前提是先读到场上真的走完一次引爆（§E738），翻档走裁定、不许静默改常数');
+    eq(pFactory, 0, '出厂 `CURSE_PUSH` 必须是 **0（关）**（实测 ' + pFactory + '）⇒ 同上');
     Pol.setRng(T.mulberry32(4242));
     const pN = Pol.makePolicy(0.25);
-    const onMirror = T.mirrorHealth(pN, 8, 5, 'multi');
-    T.setLockNarrow(0); T.setCursePush(0);
     const offMirror = T.mirrorHealth(pN, 8, 5, 'multi');
+    T.setLockNarrow(1); T.setCursePush(1);
+    const onMirror = T.mirrorHealth(pN, 8, 5, 'multi');
     T.setLockNarrow(nFactory); T.setCursePush(pFactory);   // 立刻复位，别污染后面的用例
     eq(offMirror.dmgPerGame, onMirror.dmgPerGame, 'ε=0 的镜像装配上两档开/关必须逐字同（伤害）——实测 关 ' + offMirror.dmgPerGame + ' vs 开 ' + onMirror.dmgPerGame);
     eq(offMirror.effSkills, onMirror.effSkills, '同上（G 有效技能数）⇒ 不一致就是钩子漏进了贪心分支，训练与全部在册基线一起废');
+    ok(offMirror.dmgPerGame !== null && onMirror.dmgPerGame !== null, '两条读数都必须真的读出来（空值时上面两条 eq 会假绿）');
   }
   T.setEconomyReward({ reset: true });   // 复位，别污染后面的用例
 });

@@ -59,26 +59,51 @@ t('D38 结算事件行的**显示顺序**（防御→中立→攻击→镜像；
   /* 用户第三次澄清（v1.5.22）："防御优先"说的是**回合日志里结算事件行的显示顺序**，且明确"与后端实现无关"。
    * 三条规则：① 防御类先于攻击类 ② 被无效的先于使其无效的 ③ 原技能先于镜面反射复制出来的。
    * 这条钉住：实现存在 + 只排渲染副本（不许给 state.events 排序）+ 同档稳定。 */
-  const ui = readFileSync('js/ui/ui.js', 'utf8');
-  ok(/function evDisplayRank\(e\)/.test(ui), '必须有 evDisplayRank()：事件 → 显示档 (tier, sub)');
-  ok(/function orderEventsForDisplay\(list\)/.test(ui), '必须有 orderEventsForDisplay()：稳定排序');
+  const ui = readFileSync('js/ui/ui.js', 'utf8').split('\r\n').join('\n');
+  /* ===== 行为腿（10-25 夜班·#40 第二批）：照 D166 那招**从真源码切出函数再跑** =====
+   *   原来这 11 条全是 `ui.js` 的写法钉（表在不在、`list.map(` 在不在、`a.i - b.i` 在不在、
+   *   `if (e.type === 'death') return [2, 1];` 一字不差）。那种钉改名就误红，而真正会坏的四族
+   *   ——① 同档丢子档（"先看到挡下、后看到摆出"，用户实机 R9/R10/R23）② 死亡跑到伤害前
+   *   ③ 使其无效的排到被无效的前面 ④ **就地排序把引擎事件数组打乱**——一条都读不到
+   *   （它们四族全是"返回值顺序"这一件事，而那件事根本不需要浏览器）。 */
+  const d38i0 = ui.indexOf('const EV_TIER_DEF');
+  const d38i1 = ui.indexOf('function logEvents');
+  ok(d38i0 >= 0 && d38i1 > d38i0, 'ui.js 里必须能切出"显示顺序"那一段（锚点 `const EV_TIER_DEF` … `function logEvents`；'
+    + '切不到 = 这段被搬走或改名，本门要跟着改，不许静默变成读空气）');
+  const D38 = new Function(ui.slice(d38i0, d38i1) + '\nreturn { evDisplayRank: evDisplayRank, orderEventsForDisplay: orderEventsForDisplay };')();
+  ok(typeof D38.orderEventsForDisplay === 'function' && typeof D38.evDisplayRank === 'function',
+    '切出来的两个函数必须可调用（实测 ' + typeof D38.orderEventsForDisplay + ' ‖ ' + typeof D38.evDisplayRank + '）');
+  /* 一张**故意把所有规则都踩一遍**的事件表（下标即引擎发射顺序：挡下早于摆出、伤害早于死亡） */
+  const L38 = [{ id: 'cancel', type: 'cancel' }, { id: 'blocked', type: 'blocked' }, { id: 'd2', type: 'damage' },
+    { id: 'death', type: 'death' }, { id: 'guard', type: 'guardSet' }, { id: 'ep', type: 'ep' },
+    { id: 'mirror', type: 'mirror' }, { id: 'd1', type: 'damage' }];
+  const order38 = function (arr) { return D38.orderEventsForDisplay(arr).map(function (e) { return e.id; }); };
+  const want38 = ['guard', 'blocked', 'ep', 'cancel', 'd2', 'd1', 'death', 'mirror'];
+  const before38 = L38.map(function (e) { return e.id; });
+  eq(order38(L38).join(','), want38.join(','),
+    '显示顺序必须一次满足四条：摆出(guard)先于挡下(blocked) ‖ 被无效(ep)先于使其无效(cancel) ‖ '
+    + '伤害(d2,d1 —— 同档还须保持发射顺序)先于死亡(death) ‖ 镜像(mirror)压轴（实测 ' + order38(L38).join(',') + '）');
+  eq(L38.map(function (e) { return e.id; }).join(','), before38.join(','),
+    '**入参数组必须一个字节都没被改**（排序只许发生在渲染副本上；实测前 ' + before38.join(',') + ' 后 '
+    + L38.map(function (e) { return e.id; }).join(',') + '）⇒ 给 `state.events` 排序 = 改引擎事实');
+  ok(D38.orderEventsForDisplay(L38) !== L38, '必须返回**新数组**（同对象返回 ⇒ 上面那条"没改入参"是假的）');
+  eq(D38.evDisplayRank({ type: 'blocked' })[0], 0, '挡下必须落在防御档（[0,*]，实测 ' + JSON.stringify(D38.evDisplayRank({ type: 'blocked' })) + '）');
+  eq(D38.evDisplayRank({ type: 'guardSet' })[1], 0, '摆出在防御档内的 sub=0（实测 ' + JSON.stringify(D38.evDisplayRank({ type: 'guardSet' })) + '）⇒ sub 丢了就是"先果后因"复现');
+  eq(D38.evDisplayRank({ type: 'blocked' })[1], 1, '挡下在防御档内的 sub=1（实测 ' + JSON.stringify(D38.evDisplayRank({ type: 'blocked' })) + '）');
+  /* ⚠ 稳定序这一条**本机量不到**（μ4 实测：把 `(a.i - b.i)` 从 comparator 里摘掉，`git diff` 确认那一行真改了 -1/+1，
+   *   本门**仍绿** ⇒ 因为 V8 的 `Array#sort` 自 ES2019 起规范保证稳定，tiebreaker 是第二道保险而不是那一格的牙）。
+   *   所以下面留的那条 `!/list\.sort\(/` 与本腿的"入参逐字节不变"才是这一族的真守门人。 */
   ok(ui.indexOf('for (const e of orderEventsForDisplay(list))') >= 0,
-    'logEvents 必须渲染**排序后的副本**（否则显示顺序规则等于没做）');
-  ok(ui.indexOf('EV_TIER_DEF') >= 0 && ui.indexOf('EV_TIER_ATK') >= 0 && ui.indexOf('EV_TIER_MIRROR') >= 0,
-    '三个档位表必须存在：防御 / 攻击 / 镜像复制');
-  ok(ui.indexOf('EV_SUB_VOIDER') >= 0, '必须有"使其无效"子档（cancel/clash/thunderRing）');
-  const at = ui.indexOf('function orderEventsForDisplay(list)');
-  const fn = ui.slice(at, at + 400);
-  ok(fn.indexOf('list.map(') >= 0, 'orderEventsForDisplay 必须先 map 出副本（不许就地排序）');
-  ok(!/list\.sort\(/.test(fn), 'orderEventsForDisplay 不许对入参 list 直接 sort（会打乱引擎事件数组）');
-  ok(fn.indexOf('a.i - b.i') >= 0, '同档必须用原始下标做**稳定**排序（否则无关事件被打乱）');
-  ok(ui.indexOf("if (e.type === 'death') return [2, 1];") >= 0,
-    '**死亡结算必须排在伤害之后**（用户实测：第一版把 death 当中立 ⇒ 先死再掉血，很搞笑）');
-  /* v1.5.140（用户实机 R9/R10/R23 抓到"挡下先于摆出"）：防御档内部必须再分子档——
-   * 摆出架势类（guardSet/holoSet/rod）sub=0，其结果类（blocked/reflect/voidImmune/curseBlock/rodBlock）sub=1。 */
-  ok(ui.indexOf('EV_SUB_RESULT') >= 0, '必须有"架势结果"子档表 EV_SUB_RESULT（blocked/reflect/…排在摆出之后）');
-  ok(/EV_TIER_DEF\[e\.type\]\) return \[0, EV_SUB_RESULT\[e\.type\] \? 1 : 0\]/.test(ui),
-    'evDisplayRank 的防御档必须按 EV_SUB_RESULT 分 [0,0]/[0,1]（一律 [0,0] = 老 bug 复现）');
+    'logEvents 必须渲染**排序后的副本**（否则上面那一整套顺序规则等于没做；这条是"接线"，行为腿看不见）');
+  { const fn = ui.slice(ui.indexOf('function orderEventsForDisplay(list)'), ui.indexOf('function orderEventsForDisplay(list)') + 400);
+    ok(!/list\.sort\(/.test(fn), 'orderEventsForDisplay 不许对入参 list 直接 sort（会打乱引擎事件数组）'); }
+  /* （§删 · 10-25 夜班 #40：这里原来还有 8 条写法钉 —— `function evDisplayRank\(e\)` /
+   *   `function orderEventsForDisplay\(list\)` 两条正则（上面的切片锚点已经替代，且红时消息明写"本门要跟着改"）、
+   *   三个档位表存在 ‖ `EV_SUB_VOIDER` 存在 ‖ `list.map(` ‖ `a.i - b.i` ‖ `death` 那行字面 ‖
+   *   `EV_TIER_DEF\[e\.type\]\) return \[0, EV_SUB_RESULT…` 那行字面 —— 全部由上面的**返回值**判据接管。
+   *   摘腿后变异实测 μ1/μ2/μ3/μ5 见 §E738；μ4 判为"本机量不到"，如实留一条文本钉。） */
+  /* ⚑ 10-22（CDP 试点②）+ 10-24 第一批：真页面腿在这里**不加**——`orderEventsForDisplay` 没挂到 window，
+   *   而起页面重跑一整套日志渲染与 `tools/smoke.mjs`（12 组合真页面）重叠。行为腿用真源码已足够。 */
 });
 
 t('D28 模式入口一致性：两根轴都在页面上、每档下拉都被映射表接住（v1.6.5 起「模式」下拉已删，入口 = 人数 × 血量）', function () {
