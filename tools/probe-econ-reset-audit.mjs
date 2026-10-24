@@ -39,7 +39,9 @@ const SENT = {
   fitGW: 0.5, fitGF: 5,
   /* v1.8.29（失效成功定价）：名单驱动的检查 ⇒ 新键不给哨兵就会印"下达 undefined 读回仍=…"，
    *   而 D206 ⑥ 直接判"这个键两处测试夹具都不送（新登记的键没人验过它真能到达作用点）"。 */
-  voidW: 0.5, voidIdealW: 0.5
+  voidW: 0.5, voidIdealW: 0.5,
+  /* v1.8.36（夜班 #58）：开局爆珠塑形出厂是 0 ⇒ 哨兵取 0.55（明显不是出厂值），D206⑥ 要求两处夹具都送。 */
+  beadSeed: 0.55
 };
 /* 下达名 ≠ 读回名的两处（第一版把这两处误报成"setter 不吃键"，故显式映射并注释） */
 const readKey = k => (k === 'target' ? 'targetOverride' : (k === 'cap' ? 'capOverride' : k));

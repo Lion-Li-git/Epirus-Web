@@ -748,7 +748,12 @@ function supportPriorRand(state, pid, salt) {
    *   链内一张都可付都没有 ⇒ 回退贪心（绝不撒手到链外，也不凭空造非法动作）。
    * 默认 0：这是**新的线上（浏览器口径）行为**，要不要开是产品裁定 ⇒ 只搭台、量价，不动出厂。
    * ⚠ 与 `drainPush` 同一族纪律：钩子只挂在 `epsMode==='soft' && eps>0` 的分支里 ⇒ 训练/考卷/门禁（eps=0）**逐字不变**。 */
-  let LOCK_NARROW = 0;
+  /* 2026-10-24 夜班（用户条件式授权「如果确实没什么代价你就开了」）：**开** ⇒ 出厂 1。
+   *   代价实测（两 seed × 三枚 hard/线上包 · 产品口径 `--eps-tier=lv:regular` · 10500 局/臂，见夜班日志 §E730）：
+   *     强度最大 −0.30pt（= 0.6 倍单臂 SE 0.48pt），第二 seed 上 −0.30 → 0.00；**大雷/电磁炮/聚能环出手占比逐档不动**（≤0.1pt）；
+   *     收益 = 贴贴从 0.00% 抬到出手占比 0.3~0.4%（但**天火仍 0.00%** ⇒ 注入端买不到引爆，那一句已写进交班）。
+   *   出厂值一改，页面臂的 `Hp/Hplong` 就是要重测的那两列（同批进行中）；训练/考卷/门禁（ε=0）不受影响。 */
+  let LOCK_NARROW = 1;
   const LOCK_NARROW_STAT = { windows: 0, narrowed: 0, greedyFallback: 0, picks: {} };
   function setLockNarrow(v) {
     const n = (v == null || v === '') ? 0 : Number(v);
@@ -782,7 +787,10 @@ function supportPriorRand(state, pid, salt) {
    *   把 K 放到 12 才有 0.124/局 ⇒ 挡它的是"探索只看前 5 个键"；窄锁档能救"贴上之后的续手/天火"，
    *   但救不了"第一手都抽不到" ⇒ 这两档是**互补的两半**，所以要一起测（2×2）。
    * 默认 **0 = 关**：这是线上（浏览器口径）的新行为 ⇒ 只搭台量价，要不要开等用户裁。 */
-  let CURSE_PUSH = 0;
+  /* 2026-10-24 夜班：**开** ⇒ 出厂 1（每窗口都并一次，最密的剂量）。依据同上（§E730）：
+   *   三枚包 × 两 seed 上强度最大 −0.30pt（0.6SE）、贵卡占比不动、贴贴出现在场上（0.1~0.4% 出手占比）。
+   *   ⚠ 同批量的坏消息一起记：**天火在所有臂上都是 0.00%** ⇒ 单靠顺位注入到不了"引爆"，那一维要回到定价/前置件。 */
+  let CURSE_PUSH = 1;
   const CURSE_PUSH_EP = 3;                 // 与 HOLD_MIN_EP[CURSE] 同一条（v1.5.142 裁定①），不在这里重设门槛
   const CURSE_PUSH_STAT = { windows: 0, applied: 0 };
   function setCursePush(v) {
@@ -1888,7 +1896,7 @@ let WALL_GAMES = 3;
     if (!ECON_DEFAULTS && !o.reset) {
       /* v1.5.299（DS）：**这份快照是字面量列表**（注释里说"不抄字面量"其实不成立）⇒ 加新键必须同时补这里，
        * 否则 `setEconomyReward({reset:true})` 抹不掉它 —— 我的 `fitCal` 就是这么被 D175 抓到的（门是对的）。 */
-      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W, fitCal: FIT_CAL_EXCESS, fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, voidW: VOID_W, voidIdealW: VOID_IDEAL_W };
+      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W, fitCal: FIT_CAL_EXCESS, fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, voidW: VOID_W, voidIdealW: VOID_IDEAL_W, beadSeed: BEAD_SEED };
     }
     /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」）：`voidW` / `voidIdealW` 走 econ-env 单一来源
      *   （不设 ⇒ null ⇒ 两个 W 原样 0 ⇒ 严格不加项、逐位不变）。
@@ -1915,6 +1923,11 @@ let WALL_GAMES = 3;
     /* v1.6.50（用户裁定 B）：把闸的广度折进适应度。两个键一起收口（只给 W 不给下界 ⇒ 用默认下界 3，与闸同线）。 */
     if (o.fitGW != null) FIT_G_W = Math.max(0, Number(o.fitGW) || 0);
     if (o.fitGF != null) FIT_G_FLOOR = Math.max(0, Number(o.fitGF) || 0);
+    /* v1.8.36（夜班 #58）：开局爆珠塑形 `BEAD_SEED` 走 econ-env 单一来源（不设 ⇒ null ⇒ 原样 0 ⇒ 逐位不变）。
+     *   为什么现在才接：这个键自 v1.5.143 就在引擎里（`setBeadSeed`/`beadSeedOn`），但**从没进过任何投递名单**
+     *   ⇒ 臂上设 `EPIRUS_BEAD_SEED` 会撞黑键闸（train-3p `exit 6`），绕过去手设则只有服务进程那份生效 ——
+     *   正是本仓附录 D 臂 K 那种"A/B 其实跑成 A/A"的形状。放在开头同样不是排版洁癖（上面那条 1200 字符纪律）。 */
+    if (o.beadSeed != null) setBeadSeed(Number(o.beadSeed));
     if (o.hoardCapMult != null) HOARD_CAP_MULT = Number(o.hoardCapMult) || 1; if (o.stockBonus != null) STOCK_BONUS = Number(o.stockBonus) || 0;
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
@@ -1943,13 +1956,14 @@ let WALL_GAMES = 3;
         if (ECON_DEFAULTS.voidW != null) VOID_W = ECON_DEFAULTS.voidW;
         if (ECON_DEFAULTS.voidIdealW != null) VOID_IDEAL_W = ECON_DEFAULTS.voidIdealW;
         if (ECON_DEFAULTS.fitGF != null) FIT_G_FLOOR = ECON_DEFAULTS.fitGF;
+        if (ECON_DEFAULTS.beadSeed != null) setBeadSeed(ECON_DEFAULTS.beadSeed);   // v1.8.36：D77 的哨兵喂完 0.5 要能抹回去
       }
     }
     return economyReward();
   }
   function economyReward() {
     return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divCatW: DIV_ROLE_W, K_role: K_ROLE,
-      fitGW: FIT_G_W, fitGF: FIT_G_FLOOR,
+      fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, beadSeed: BEAD_SEED,
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,

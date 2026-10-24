@@ -928,6 +928,22 @@ t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励
       T.setEconomyReward({ reset: true });   // 无论本腿断到哪一条，档都还给出厂
     }
   }
+  /* 2026-10-24 夜班：贴贴两档**已改成出厂开** ⇒ 补两条腿（同一族病：SUPPORT_PRIOR 当时"在现网路径上而门里零命中"）。
+   *   ① 出厂值钉住（谁翻回去就红，翻档是产品裁定不是随手改）；② **ε=0 的装配上开/关必须逐字同**
+   *      —— 这是"钩子只挂 soft 分支"那句承诺的**行为**版本（训练/考卷/门禁全走 ε=0，它红了就是污染了全部基线）。 */
+  {
+    const nFactory = T.lockNarrowOn(), pFactory = T.cursePushOn();
+    ok(nFactory === 1 && pFactory === 1 && typeof T.setLockNarrow === 'function' && typeof T.setCursePush === 'function',
+      '出厂档必须是 `LOCK_NARROW=1 ‖ CURSE_PUSH=1`（实测 ' + nFactory + '/' + pFactory + '）⇒ 这是 2026-10-24 夜按"两 seed × 三枚包 × 10500 局"的代价实测开的，回退要走裁定，不许静默改常数');
+    Pol.setRng(T.mulberry32(4242));
+    const pN = Pol.makePolicy(0.25);
+    const onMirror = T.mirrorHealth(pN, 8, 5, 'multi');
+    T.setLockNarrow(0); T.setCursePush(0);
+    const offMirror = T.mirrorHealth(pN, 8, 5, 'multi');
+    T.setLockNarrow(nFactory); T.setCursePush(pFactory);   // 立刻复位，别污染后面的用例
+    eq(offMirror.dmgPerGame, onMirror.dmgPerGame, 'ε=0 的镜像装配上两档开/关必须逐字同（伤害）——实测 关 ' + offMirror.dmgPerGame + ' vs 开 ' + onMirror.dmgPerGame);
+    eq(offMirror.effSkills, onMirror.effSkills, '同上（G 有效技能数）⇒ 不一致就是钩子漏进了贪心分支，训练与全部在册基线一起废');
+  }
   T.setEconomyReward({ reset: true });   // 复位，别污染后面的用例
 });
 
@@ -1797,7 +1813,7 @@ t('D77 经济/熵奖励 env 只能有**一个**读取点（server/econ-env.mjs�
    *   （我为它连红四次）；③ 抓不到"读了但没生效"。下面喂值读回：**更强、且与排版无关**。 */
   const SENT = { target: 7, cap: 33, divW: 0.123, divK: 9, divRoleW: 0.25, divCatW: 0.25, divForceGens: 5, wallFilter: true, fitCal: true,
     wallGames: 4, hoardOnLeftover: true, convRatio: true, convOffense: true, hoardCapMult: 5, stockBonus: 0.11,
-    blockW: 0.22, widthW: 0.33, bigcardW: 0.44 };
+    blockW: 0.22, widthW: 0.33, bigcardW: 0.44, beadSeed: 0.55 };
   const ALIAS = { target: 'targetOverride', cap: 'capOverride' };
   const notOk = [];
   try {
