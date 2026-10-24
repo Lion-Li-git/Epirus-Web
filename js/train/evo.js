@@ -2479,7 +2479,12 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
     /* v1.6.50（用户裁定 B）：与闸同源的有效技能数 G = exp(熵)（`mirrorHealth` 的 `effSkills` 同一算式），
      * 并按 FIT_G_W 只罚下界。`FIT_G_W = 0` ⇒ gBonus 恒 0 ⇒ fit 逐位不变（默认关的形状照 D173 那族）。 */
     const spG = spTot > 0 ? Math.exp(spH) : 0;
-    gBonus = FIT_G_W > 0 ? (FIT_G_W * Math.max(0, FIT_G_FLOOR - spG)) : 0;   /* 赋值（非声明）⇒ 给最终 fit 用 */
+    /* 2026-10-24（ZCode · 用户点名）：符号修复 —— 修前是 `FIT_G_W × max(0, FLOOR − spG)` **加进** fit，
+     * 即"越塌缩加分越多"，与 v1.6.50 裁定「只罚下界」正好相反（证据链见
+     * docs/research/reviews/REVIEW-2026-10-24-fitg-sign-coldstart-zcode.md §三；
+     * 恒等式门 train-table/train-evo 用的是返回值本身 ⇒ 取负后自动保持）。
+     * ⚠ 方向腿（spG < FLOOR ⇒ gBonus ≤ 0）尚未进门体，留给下一班。 */
+    gBonus = FIT_G_W > 0 ? (-FIT_G_W * Math.max(0, FIT_G_FLOOR - spG)) : 0;   /* 赋值（非声明）⇒ 给最终 fit 用 */
     const spDivNorm = spTot > 0 ? (spH / Math.log(DIV_K)) : 0;
     /* v1.5.93（用户裁定）：类间广度 —— 同一份 `spUse`，只按 `roleOf` 再聚合一层（8 个功能角色）。
      * 分层熵恒等式 `S = S_role + S_within` ⇒ 这里只需单独算 `S_role`，角色内由减法得到，不必重算。 */
