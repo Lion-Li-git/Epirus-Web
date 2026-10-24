@@ -137,14 +137,44 @@ t('D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5
   const src = readFileSync('js/ui/ui.js', 'utf8');
   ok(src.indexOf('B.picking = { key: key, bead: bead }') >= 0, '目标弹窗必须登记待选状态 picking');
   ok(src.indexOf('function cancelPick()') >= 0, '必须有 cancelPick');
-  ok(src.indexOf("ev.key === 'Escape' && B.picking") >= 0, 'Esc 必须能取消（只在有待选状态时拦截）');
-  ok(src.indexOf("$('modal-root').onclick") >= 0 && src.indexOf('B.picking) cancelPick()') >= 0, '点遮罩也要能取消');
+  /* §删（10-24 千问 · #40 第一批）：这里原来有两条文本钉
+   *   `src.indexOf("ev.key === 'Escape' && B.picking") >= 0` ‖ `src.indexOf("$('modal-root').onclick") >= 0 && …`，
+   *   下面那条**派真事件的页面行为腿判的是同一件事**（真监听器有没有接上、按下去取不取消），而且它判的是被消费的那个状态，
+   *   不是那行字的写法（把 `addEventListener` 折成两行会让文本钉红、页面却好好的 —— 本仓第八批 D111 就是那么改的）。
+   *   摘腿后变异自证：摘掉 `ui.js` 那行 Esc 监听 ⇒ 只靠行为腿仍然红（见 `docs/GATE-SHIFTS.md` 本次那条）。 */
   ok(src.indexOf('选择目标（Esc') >= 0, '弹窗开着时提示必须写"选择目标"');
   ok(src.indexOf('你刚才的点击没有生效') >= 0, '结算期间点击必须明确告知（不再静默丢弃）');
   ok(src.indexOf('已放弃【') >= 0, '改主意/误触必须留痕');
   ok(src.indexOf('取消', src.indexOf('label:')) >= 0 || src.indexOf('↩ 取消') >= 0, '弹窗必须提供「取消」按钮');
   ok(src.indexOf('B.aiKey = null; B.picking = null;') >= 0, '新局必须重置待选状态');
   ok(src.indexOf('请出招') >= 0, '回合开始的"请出招"提示必须保留（只改弹窗开着时的提示）');
+  /* ⚑ 10-24（#40 第一批 · 千问）：上面那 11 条**全是 `indexOf` 文本钉** —— 把 `cancelPick` 换个名、把那行
+   *   `addEventListener` 折成两行，门就红，而"玩家按 Esc 到底取不取消得了"这件事一条都没判到
+   *   （本仓判过的同型病：D86/D87 的"逗号 only"、D131 的 CDP 试点 ②）。
+   *   这条腿**派真事件**：真页面起一局 ⇒ 造一个待选状态并把遮罩打开 ⇒ 在 document 上派发真 `keydown(Escape)`
+   *   ⇒ 读回 `B.picking` 必须被清空、遮罩必须回到 `hidden`；遮罩那一下同理派真 `click`。
+   *   主语是 `ui.js:1165/1166` 注册的那两个真监听器（不是去调 `cancelPick` 自己 —— 那是"自己算自己"）。
+   *   ⚠ 没有 Chrome ⇒ `Skip`（与 D131 的 CDP 腿同一纪律：环境限制不算页面红）。 */
+  const cancelExpr = '(async()=>{const U=window.EpirusUI;if(!U||!U.B)return "NO_UI";U.newGame();'
+    + 'const B=U.B;const mr=document.getElementById("modal-root");if(!mr)return "NO_MODAL_ROOT";'
+    + 'B.picking={key:"holo",bead:null};mr.classList.remove("hidden");'
+    + 'document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));'
+    + 'const esc=(B.picking===null)&&mr.classList.contains("hidden");'
+    + 'B.picking={key:"holo",bead:null};mr.classList.remove("hidden");'
+    + 'mr.dispatchEvent(new MouseEvent("click",{bubbles:true}));'
+    + 'const clk=(B.picking===null)&&mr.classList.contains("hidden");'
+    + 'return JSON.stringify({esc:esc,click:clk});})()';
+  const cp = spawnSync(process.execPath, ['tools/page-chrome.mjs', '--expr=' + cancelExpr], { encoding: 'utf8', timeout: 90000 });
+  if (cp.status === 4) throw new Skip('本机没有 Chrome ⇒ 弹窗取消的页面行为腿跳过（环境限制，不是页面红）');
+  eq(cp.status, 0, '页面必须能起并派发真事件：' + String(cp.stderr || '').slice(0, 160));
+  let cval = null;
+  /* `page-chrome` 打的是 `RESULT <JSON of value>`，而表达式返回的是**字符串** ⇒ 解出来还是一层字符串，要再解一次
+   *   （实测第一次跑就栽在这儿：读到的是字符串 "{"esc":true,...}"，被下面那条"必须读出对象"当场拦下）。 */
+  try { cval = JSON.parse(String((cp.stdout || '').split('RESULT ').slice(-1)[0] || '').trim());
+    if (typeof cval === 'string') cval = JSON.parse(cval); } catch (e) { cval = null; }
+  ok(cval && typeof cval === 'object' && !cval.error, '页面腿必须读出对象（读到 ' + JSON.stringify(cval) + ' ⇒ 表达式或页面挂了）');
+  eq(cval.esc, true, '真页面 + 有待选状态时派真 keydown(Escape) ⇒ 待选必须被清空、遮罩必须回 hidden（实测 ' + JSON.stringify(cval) + '）');
+  eq(cval.click, true, '真页面 + 有待选状态时点遮罩本体 ⇒ 同样要取消（实测 ' + JSON.stringify(cval) + '）');
 });
 
 t('D131 卡面提示必须说真话（v1.5.173 · 用户实测"摄魂 bug 没解决"追到的成因）：门槛按模式取真值，文案不许自己抄一份数字', function () {

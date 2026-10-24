@@ -909,3 +909,27 @@ ok(readFileSync('server/opp-champs.mjs', 'utf8').true, '冠军对手必须走 po
 - ⚑ 记一条**地位说明**，免得下一班误判冗余：正常运行下 M1（把数字改回 `Object.keys`）红在**旧的那条文本钉**（它排在 ① 之前），
   所以 ① 平时不显形。摘腿实验证明它独立成立 ⇒ 若将来按 T1 分诊把文本钉 `必须印出进了哪三个` 摘掉，**① 就是这条口径唯一的牙**，别把它当装饰删。
 - 门数不变：**280**。本地 `--part=train-breadth` 4/4（定向，不是整轮认证）；远端整轮按用户 10-24 的规矩**不守**，有空再读。
+
+---
+
+## 三十二、`D70`：11 条文本钉里摘掉 2 条，换成一条**派真事件**的页面行为腿（2026-10-24 午 · 千问 · #40 第一批）
+
+- 为什么现在动它：`#40` 那一队（ui-contract 剩 7 条文本门）逐条读下来，`D70` 是**整条门 11 个断言全住在 `src.indexOf(...)` 上**、
+  没有一条判"玩家按下去到底发生什么"的那一种。而同一队里 `D131` 已经示范过修法（10-22 的 CDP 试点 ②：`tools/page-chrome.mjs` 起真页面求值），
+  所以这次照同一台尺补腿，**不新增门**（门数仍 280）。
+- 新腿的形状（关键在**不直接调 `cancelPick`**，那是"自己算自己"）：真页面 `newGame()` ⇒ 造一个待选状态并把遮罩打开 ⇒
+  在 `document` 上派发真 `KeyboardEvent('keydown',{key:'Escape'})` ⇒ 读回 `B.picking === null` 且遮罩回到 `hidden`；
+  遮罩那一下同理在 `#modal-root` **本体**上派真 `click`（`ev.target === this` 才成立，所以派在子节点上不算数）。
+  `window.EpirusUI`（`ui.js:939` 那行导出）是这一腿能读到 `B` 的唯一入口 —— 没有它这条腿写不出来。
+- 摘掉的两条文本钉：`src.indexOf("ev.key === 'Escape' && B.picking")` ‖ `src.indexOf("$('modal-root').onclick") && …`。
+  留着的九条**不是冗余**，各自还判着新腿判不到的东西（`B.picking = { key: key, bead: bead }` 那半句尤其：
+  新腿是**自己造**待选状态，所以"真点一张要选目标的卡会不会登记 picking"这件事仍只有文本钉在管 ⇒ 要摘它得先把腿改成走真点击路径）。
+- ⭐ 摘腿后变异（两次分开做，为的就是证明两条腿各自独立）：
+  - **M1** 删 `ui.js:1166` 那行 `addEventListener('keydown', …)` ⇒ D70 **红**，页面腿读回 `{"esc":false,"click":true}`；
+  - **M2** 删 `ui.js:1165` 那行 `$('modal-root').onclick = …` ⇒ D70 **红**，页面腿读回 `{"esc":true,"click":false}`。
+  两次都先 `grep` 自证那一行真的没了（[[feedback-verify-by-running]] 那条"变异必须先自证改了行"），跑完逐字还原（`git diff --stat js/ui/ui.js` 空 = 还原成立）。
+  M1 只红 esc 腿、M2 只红 click 腿 ⇒ 这两条不是同一件事写两遍（本仓 10-22 那次"两条腿同形"的错，形状上防掉了）。
+- 没有 Chrome  ⇒ `Skip`（与 `D131` 的 CDP 腿同一纪律：环境限制不许冒充页面红）。⚠ 这条腿因此**在 CI 上可能是跳过的**：
+  三个 CDP 步骤是 `continue-on-error` ⇒ "CI 绿"不等于这条页面腿跑成，引用时要么贴本机读数，要么先查那一步有没有真跑。
+- 门数不变：**280**。本地定向（**不是整轮认证**）：`--only="D70 "` 1/1 ‖ `--group=ui` 见 CHANGELOG v1.8.34 ‖
+  另 `--group=meta` 16/16 ‖ `--group=ship` 52/52 ‖ `--group=probe` 197/197（累计含 probe+train+ship+meta）。
