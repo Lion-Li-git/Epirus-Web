@@ -9,6 +9,7 @@ import { loadPool, makeMimic } from './human-pool.mjs';   // v1.6.60：人类形
 import { guardWrite, declareCopy } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
 import { widOf, widOfArr } from '../champion-map/pack-id.mjs';   /* 2026-10-12 DS：`hotstartFrom` 记权重身份（wid）而不是路径 —— 与 server 的 weightsId 同式 */
 import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
+import { duelAssembly } from './v2v4-lib.mjs';   // 10-24 G4long 逐格否决（EPIRUS_SEL_G4LONG）用的同一份装配（纯 lib、import 无副作用）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
 import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, rejectNarrowWinners, rejectGiftSpamWinners,
@@ -2123,6 +2124,49 @@ if (process.env.EPIRUS_SEL_G45 === '1') {
   } else { SEL_G45_ALLFAIL = true; }
   console.log('[G4/G5 否决] ' + rows.map(function (r) { return '#' + r.i + (r.fails.length ? ' FAIL(' + r.fails.length + ')' : ' PASS'); }).join(' ‖ ') +
     (chosen ? (SEL_G45_CHANGED ? ' ⇒ 换成通过者' : ' ⇒ 原当选者通过，不换') : ' ⇒ 全部候选都过不了，保留原当选并标记 selG45AllFail'));
+}
+
+/* ===== 10-24（用户点名 (b)，DS §5-2 的便宜形状）：G4 long 逐格否决（EPIRUS_SEL_G4LONG=1，默认关） =====
+ * 病：SEL_G45 只试 top-3 且跑整份 gate-drafts（四格，贵）⇒ top-3 全灭就 allFail 放弃（g19 两臂正是这样）。
+ * 这里只跑**最坏的那一格**（G4 long：1 席只枪 vs 4 席候选），**逐粒走深到 8 粒**，且**进程内**直接调
+ * `duelAssembly`（不起子进程、不写临时包 ⇒ 每粒 ~150 局 ≈ 20 秒级）。只枪试两只口径：
+ * `gunFocus`（G4 真口径·击杀优先）与 `gunSpam`（打最肥；g19 实测最克的那只）——任一胜率 >60% ⇒ 否决。
+ * 与 SEL_G45 的组合：本块排在它**之后** ⇒ G45 已选中通过者时本块 #1 必过（它过了整份 G4 就过这一格）；
+ * G45 allFail 时本块才有机会走深。默认关：不设 EPIRUS_SEL_G4LONG=1 时一行不跑，历史臂逐字可复现。 */
+let SEL_G4LONG_LOG = null, SEL_G4LONG_CHANGED = false, SEL_G4LONG_ALLFAIL = false;
+if (process.env.EPIRUS_SEL_G4LONG === '1') {
+  const G4L_GAMES = 150;   /* 与 gate-drafts 的 300 局同分布、半剂量 ⇒ SE≈±4pt，60% 阈值贴线时判语要带这一点 */
+  const deps4 = { S: sb.window.EpirusState, Play: sb.window.EpirusPlay, T: T, R: sb.window.EpirusRules };
+  const guns4 = [['gunFocus', Bots.pickGunFocus], ['gunSpam', Bots.pickGunSpam]].filter(function (g2) { return typeof g2[1] === 'function'; });
+  if (!guns4.length) { console.error('[train-3p] ⛔ EPIRUS_SEL_G4LONG=1 但两只只枪原型都不在 EpirusBots 里 ⇒ 拒绝空转'); process.exit(6); }
+  const cell4 = function (params) {
+    let worst = { name: '-', rate: -1 };
+    for (let gi = 0; gi < guns4.length; gi++) {
+      const r2 = duelAssembly(deps4, params, { games: G4L_GAMES, mode: 'long', seed0: 77000, scripted: guns4[gi][1] });
+      if (r2.winRate > worst.rate) worst = { name: guns4[gi][0], rate: r2.winRate };
+    }
+    return worst;   /* rate = 只枪席胜率%（>60 ⇒ 这一粒被否决） */
+  };
+  const cands4 = [];
+  for (const h of hall) { if (!cands4.some(function (c) { return c.params === h.params; })) cands4.push(h); }
+  if (seedParams && !cands4.some(function (c) { return c.params === seedParams; })) cands4.push({ params: seedParams, fit: null });
+  cands4.sort(function (a, b) { return (a.params === bestParams ? -1 : b.params === bestParams ? 1 : 0); });
+  const rows4 = [];
+  let chosen4 = null;
+  for (let i = 0; i < Math.min(cands4.length, 8); i++) {
+    const w4 = cell4(cands4[i].params);
+    rows4.push({ i: i + 1, worst: w4.name, gunWinPct: Math.round(w4.rate * 10) / 10 });
+    console.log('[G4long 否决] #' + (i + 1) + ' 最克=' + w4.name + ' ' + (Math.round(w4.rate * 10) / 10) + '%（阈值 60 ‖ ' + G4L_GAMES + '局）');
+    if (w4.rate <= 60) { chosen4 = cands4[i]; break; }
+  }
+  SEL_G4LONG_LOG = rows4;
+  if (chosen4) {
+    if (chosen4.params !== bestParams) { bestParams = chosen4.params; SEL_G4LONG_CHANGED = true; }
+    console.log('[G4long 否决] 采纳 #' + rows4.length + (SEL_G4LONG_CHANGED ? '（换了原当选）' : '（原当选者通过，不换）'));
+  } else {
+    SEL_G4LONG_ALLFAIL = true;
+    console.log('[G4long 否决] 走满 ' + rows4.length + ' 粒全 >60% ⇒ 保留原当选并标记 selG4LongAllFail（不静默）');
+  }
 }
 /* ===== 带内候选落盘（v1.5.150 · 移植自 `tools/train-best.mjs` 的 band-save）=====
  * 病：本工具的终局是"名人堂里用新种子重验、只取最优"，**其余候选全被丢掉** ⇒ 一旦重验选中热启动点，
