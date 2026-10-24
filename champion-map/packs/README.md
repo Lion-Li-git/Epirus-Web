@@ -10,8 +10,8 @@
 
 原件仍在 `docs/artifacts/{e1,e2}-*.bak`（本机、gitignore），删不删都不影响复算。
 
-⚠ 10-24 补一句（千问复核 `8e39c13e` 时量到的）：**入池那一枚会有两份**。`g18-77001` 除了这里的管线件，
-`pool-members.tsv` 的 `path` 列还指着 `docs/artifacts/g18-77001.bak`（池装配的既有口径 = 成员一律指
-`docs/artifacts/…`，与它同表的另外 29 枚一样），而那枚 `.bak` 因此也得跟着入库，否则干净克隆里 `build-pool-bundle` 造不出池。
-⇒ 这不是"策略漂了"，是**两个消费者各有自己的路径口径**：图走 `champion-map/packs/`，池走 `docs/artifacts/`。
-要收成一个得先改 `pool-members.tsv` 的路径口径（那会牵动 D234 的"成员必须在册"那条腿），是另一件要裁的事。
+⚠ 10-24 补一条口径（千问，随 `g18-77001` 出池写）：**一枚包可以同时在两个消费者名下，但两份路径各有规矩**——
+图走 `champion-map/packs/<id>.js`（管线输入，本目录），池走 `pool-members.tsv` 的 `path` 列（既有口径 = 成员一律指
+`docs/artifacts/…`，与表里其余成员一样）。**一枚只在图上的包不该在 `docs/artifacts/` 里再存一份入库拷贝**：
+那份拷贝当初只是为了让干净克隆能造池 bundle（`build-pool-bundle` 按 `path` 读盘），出池之后它就没有消费者了 ⇒ 已 `git rm --cached`。
+反过来，若哪天要把它再放回池，得同时把 `.bak` 重新点名入库，否则 CI 与干净克隆里池会少一枚而退出码仍是 0（§E591 那族病）。
