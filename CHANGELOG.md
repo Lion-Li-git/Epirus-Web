@@ -1,3 +1,19 @@
+## v1.8.33 — 10-24（DS）：g18-77001 入 hard 池 + 激光眼链进图
+
+### 入池
+- `g18-77001`（激光眼风格冠军）入 **hard** 池：`invited=1 / promoteVerdict=block`（G4 multi 63.3% 差 3.3pt，用户裁定「只枪差一点没什么问题」）⇒ 池 30 枚，bundle 3207KB，`?v=mv9mdgq3`。
+- 依据：eval-5p 55.5%/13 种/激光 1.0%；真池 subject（hard 池 · 3 批×60 局）multi **35.56%** vs 参照 17.22%（+18.33pt，t=4.76）、long **40.00%** vs 22.22%（+17.78，t=32）。
+
+### 图上链
+- 加 6 枚：`g12-keep-77000` → `g14-h2-77001` → `g15-long-77001` → `g16-77001` → `g17-77000` → `g18-77001`（`champion-map/packs/` 入库 + `bead-extra.tsv` + `bead-ruler/eps/eps-long`）。
+- `coords.tsv` **807 → 813 枚**；`Hp/De/Hlong/okLong/okShort` 全覆盖；`lineage.tsv` 归入家族 10（臂线·env 实验）。
+- 页内自检 **96 PASS / 0 FAIL**。
+
+### 踩过的坑（记录）
+- `rebuild-coords` 不产出 `okShort/failsShort`（那是 `attach-hshort` 事后挂的）⇒ 重建后必须补挂，否则页检红。
+- `feas` 补测必须带 `--allMulti=1` / `--allLong=1`；混入 `as-shipped` 行会让 viewer 直接 `EXIT=2`（“判定表混了两种腿表”）。
+
+---
 ## v1.8.32 — 10-24 夜（千问）：修远端 main 的红 —— 计数原型的**老口径冻结**，第四个原型只许点名
 
 - 红是谁造成的：DS 的 `71e2c0af`（他自己在交班件里标了"已实现、**未验证**"）给 `COUNTER_OPP_TABLE` 加了第四个原型 `gunFocus`（G4 真口径·击杀优先），

@@ -1,5 +1,11 @@
 id	exam	page	d	hp_old	sec	examG	pageDose	mode
-e2-teach-77000	65.40	64.30	1.10	56.10	22.0	120	tier:lv:regular	long
-e2-grad-77002	59.40	60.80	-1.40	53.90	21.8	120	tier:lv:regular	long
-e1-ctl-77000	62.00	64.60	-2.60	58.40	22.5	120	tier:lv:regular	long
-e1-teach-77003	65.60	66.20	-0.60	54.00	23.3	120	tier:lv:regular	long
+e2-teach-77000	65.40	64.30	1.10	56.10	25.7	120	tier:lv:regular	long
+e2-grad-77002	59.40	60.80	-1.40	53.90	25.2	120	tier:lv:regular	long
+e1-ctl-77000	62.00	64.60	-2.60	58.40	26.3	120	tier:lv:regular	long
+e1-teach-77003	65.60	66.20	-0.60	54.00	27.3	120	tier:lv:regular	long
+g12-keep-77000	62.80	64.80	-2.00	0.00	25.6	120	tier:lv:regular	long
+g14-h2-77001	60.10	62.90	-2.80	0.00	28.0	120	tier:lv:regular	long
+g15-long-77001	69.50	69.80	-0.30	0.00	28.1	120	tier:lv:regular	long
+g16-77001	57.70	60.40	-2.70	0.00	28.6	120	tier:lv:regular	long
+g17-77000	42.00	44.50	-2.50	0.00	22.3	120	tier:lv:regular	long
+g18-77001	60.70	58.70	2.00	0.00	22.3	120	tier:lv:regular	long

@@ -3,3 +3,9 @@ champion-map/packs/e1-teach-77003.js	e1-teach-77003	实验臂·教师狙击
 champion-map/packs/e1-ctl-77000.js	e1-ctl-77000	实验臂·对照
 champion-map/packs/e2-grad-77002.js	e2-grad-77002	实验臂·激光眼梯度
 champion-map/packs/e2-teach-77000.js	e2-teach-77000	实验臂·爆珠教师
+champion-map/packs/g12-keep-77000.js	g12-keep-77000	激光眼链·G12 热启动自 e2-grad
+champion-map/packs/g14-h2-77001.js	g14-h2-77001	激光眼链·G14 自 g12 +clear0.1
+champion-map/packs/g15-long-77001.js	g15-long-77001	激光眼链·G15 long+池+SEL_G45
+champion-map/packs/g16-77001.js	g16-77001	激光眼链·G16 对抗原型上训练桌
+champion-map/packs/g17-77000.js	g17-77000	激光眼链·G17 gunFocus 口径
+champion-map/packs/g18-77001.js	g18-77001	激光眼链·G18 SEL_COUNTER（入池）
