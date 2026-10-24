@@ -216,7 +216,10 @@ t('D131 卡面提示必须说真话（v1.5.173 · 用户实测"摄魂 bug 没解
   const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
   ok(uiSrc.indexOf('Tip.of(R, st, s)') >= 0, 'ui.js 组卡面提示必须走 EpirusSkillTip（自己再抄一份数字 = 本仓那四次同型病）');
   ok(uiSrc.indexOf("仅限 HP≤") < 0, 'ui.js 里不许再出现写死的"仅限 HP≤N"');
-  ok(readFileSync('index.html', 'utf8').indexOf('js/ui/skill-tip.js') >= 0, 'index.html 必须加载 skill-tip.js');
+  /* §删（10-25 夜班·#40）：这里原来钉 `index.html 必须包含 js/ui/skill-tip.js`。
+   *   下面那条真页面腿读的就是**页面自己加载出来的** `window.EpirusSkillTip` ⇒ 脚本没加载时它是 `NO_TIP`/空串，
+   *   那条腿直接红（实测：摘掉 index.html 里的 `<script src>` ⇒ 红在"真页面 + 真长程模式，摄魂提示必须写 ≤2"）。
+ *   ⇒ 文本钉与行为腿判的是同一件事，摘钉不丢覆盖（改加载方式——比如合并打包——就不再误红）。 */
   /* ⚑ 10-22（CDP 试点 ②）：文本钉只能证明「写了调用 / 加载了脚本」；这条真起页面，
    *   用**页面自己加载的** EpirusSkillTip + 真 EpirusRules.MODES.long 组提示 ⇒ 证明运行时也写 ≤2、且没有 ≤3 残留。 */
   const expr = `(()=>{const R=window.EpirusRules;const T=window.EpirusSkillTip;if(!T||!T.of)return 'NO_TIP';const d=R.skills.find(s=>s.key==='drain');return T.of(R,{mode:R.MODES.long},d)})()`;
