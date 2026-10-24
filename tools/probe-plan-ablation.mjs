@@ -28,7 +28,8 @@ import { createHash } from 'node:crypto';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['games', 'n', 'kit', 'seed', 'arms', 'pack', 'mode', 'opp', 'quiet'], 'probe-plan-ablation');
+rejectUnknownFlags(argv, ['games', 'n', 'kit', 'seed', 'arms', 'pack', 'mode', 'opp', 'quiet',
+  'breakbank', 'breakfirst'], 'probe-plan-ablation');
 const arg = (k, d) => { const a = argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const GAMES = Number(arg('games', 120)), N = Number(arg('n', 5)), KIT = Number(arg('kit', 1)), SEED0 = Number(arg('seed', 77000));
 const MODE = arg('mode', 'multi');
@@ -73,6 +74,22 @@ if (USE_PACK && (!raw || params.length !== W.EpirusPolicy.paramCount())) {
 if (typeof B.setPlanOff !== 'function' || typeof B.countPlanOff !== 'function') {
   console.error('⛔ 旋钮没导出（`EpirusBots.setPlanOff`/`countPlanOff` 不存在）⇒ 这台量具的腿没接上，读数一律作废');
   process.exit(3);
+}
+/* ===== v1.8.34（#50 断环线）：把 P7 自己那两道门也做成可设的档，好把"代价"量出来 =====
+ *   `--breakbank=` 是 P7 那条线**自己加的攒钱门槛**（出厂 5，不是小雷的卡价 2 —— 见 §E705 那条"引用一行代码要把
+ *     每个子句都说一遍"的教训），`--breakfirst=` 是它与 P3 大雷的次序（出厂 true = 10-23 用户裁定的"断环放到大雷前面"）。
+ *   ⚠ 这两个旗标量出来的读数**不是产品口径**，与 `probe-diff-ladder` 那三个研究视图旗标同一条纪律：不进在册账。
+ *   ⚠ 旋钮没导出就 exit 3 —— 不许把"根本没设上"读成"设了没效果"（那是把仪器故障写成产品结论）。 */
+const BREAK_BANK = Number(arg('breakbank', '5'));
+const BREAK_FIRST = arg('breakfirst', '1') !== '0';
+if (!(BREAK_BANK >= 0 && BREAK_BANK <= 12)) { console.error('⛔ --breakbank 要在 0~12（实测 ' + arg('breakbank', '5') + '）'); process.exit(2); }
+if (typeof B.setBreakBank !== 'function' || typeof B.setBreakFirst !== 'function') {
+  console.error('⛔ 断环那两个旋钮没导出（`setBreakBank`/`setBreakFirst`）⇒ 不敢把"没设上"当"设了没效果"');
+  process.exit(3);
+}
+if (B.setBreakBank(BREAK_BANK) !== BREAK_BANK || B.setBreakFirst(BREAK_FIRST) !== BREAK_FIRST) {
+  console.error('⛔ 旋钮回读与给定值不符（bank=' + B.setBreakBank(BREAK_BANK) + ' first=' + B.setBreakFirst(BREAK_FIRST) +
+    '）⇒ setter 自己有问题，本批作废'); process.exit(3);
 }
 /* 对手那一侧的两个来源（包 ‖ 脚本），**不许同时给**（同时给就变成"我到底在跟谁打"说不清）。
  *   脚本名不靠猜：从 `EpirusBots` 的导出里现扫 `pick*`，认不出来就 exit 2 点名（`eval-5p.mjs:212` 同一条纪律）。 */
@@ -172,6 +189,9 @@ const teethOK = teeth.every(function (t) { return t[1]; });
 console.log('== 计划线逐线消融（§E695）· 桌 = ' + MODE + ' n=' + N + ' ‖ 杂货铺席 ' + KIT + ' 席 ‖ 对手 = ' + (N - KIT) + ' 席' +
   (USE_PACK ? '冠军（' + PACK + '，ε=0.15）' : '脚本（' + oppFns.map(o => o.name).join(' ‖ ') + '，按席位轮转）') + ' ==');
 console.log('   配对：' + GAMES + ' 局 × 每臂 ‖ seed0=' + SEED0 + '（同 seed 同 slotSalt ⇒ 除开关外逐字同装配）');
+console.log('   ⚑ 断环档（研究旗标，不是产品口径）：P7 自加的攒钱门槛 bank=' + BREAK_BANK + '（出厂 5 ‖ 小雷卡价 2）' +
+  ' ‖ 次序 breakfirst=' + (BREAK_FIRST ? 'true（P7 在 P3 前，出厂）' : 'false（旧次序：P3 在前）') +
+  ((BREAK_BANK === 5 && BREAK_FIRST) ? ' ⇒ 本批是出厂档' : ' ⇒ **本批动过出厂档，不许当产品读数引用**'));
 console.log('   基线出手序列 hash = ' + baseline.hash);
 console.log('\n   线     含义                                        计数  hash        该侧胜率%   配对Δ(95%CI)          种类  出手/局  平均回合');
 for (const r of arms) {
