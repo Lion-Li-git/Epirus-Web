@@ -894,6 +894,40 @@ t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励
   ok(Math.abs(r.divBonus - r.divW * r.spDivNorm) < 1e-9,
     'divBonus 必须 = divW × spDivNorm（实测 ' + r.divBonus.toFixed(5) + ' vs ' + (r.divW * r.spDivNorm).toFixed(5) + '）');
   ok(r.avgStock != null, '必须回报 avgStock（攒钱分）便于诊断');
+  /* v1.8.36（夜班·千问 #55）：**方向**腿 —— 上面那条恒等式盖不到符号。
+   *   病（在册）：v1.6.50 裁的是「只罚下界」，而 `evo.js:2487` 写的是 `+ (FIT_G_W × max(0, FLOOR − spG))`
+   *   ⇒ 越塌缩加分越多，**符号装反活了 14 天没有任何一条腿红**：恒等式吃的是返回值 `gBonus` 本身，反了照样成立；
+   *   v1.6.50 当年的"作用点实测"只验**指纹不同**（方向不敏感）‖ 哨兵只验 setter 往返。
+   *   ⇒ 三条各咬一头：关档恒 0 ‖ 低于下界必须 ≤0 且数值等于带负号的线性式 ‖ 达到下界一分不得。
+   *   加的是 D15 的**一条腿**（门数 280 不变）；只在这一处做，不在 train-table 的 D13 里抄第二份。 */
+  {
+    /* ⚠ 本腿会把 `fitGW/fitGF` 改成非出厂值再复位 ⇒ **必须 try/finally**：
+     *   中途断言抛错时如果留着脏档，同一个进程里后面的用例会以 D13/D15 那两次红的同一种方式翻。 */
+    Pol.setRng(T.mulberry32(4242));
+    const pG = Pol.makePolicy(0.25);
+    const OPPS_G = [{ name: 'random', sel: Bots.pickRandom }];
+    try {
+      const gOff = T.scoreMemberN(pG, OPPS_G, 2, 3, 1, 0, 0);
+      eq(gOff.fitGW, 0, '出厂 FIT_G_W 必须是 0（本腿的前提；漂了说明默认档被人动过，要重算期望）');
+      ok(gOff.gBonus === 0, '关档 ⇒ gBonus 必须恒 0（这是"fit 逐位不变"的保证，实测 ' + gOff.gBonus + '）');
+      /* 把下界顶到 20 ⇒ 任何包都落在下界之下 ⇒ 罚的那一支必须被走到（不走到本腿就是空枪） */
+      T.setEconomyReward({ fitGW: 1.0, fitGF: 20 });
+      Pol.setRng(T.mulberry32(4242));
+      const gPen = T.scoreMemberN(pG, OPPS_G, 2, 3, 1, 0, 0);
+      ok(gPen.spG < 20, '夹具必须真的落在下界之下（实测 spG=' + gPen.spG.toFixed(3) + ' ⇒ 顶不到就说明这把尺又在空转）');
+      ok(gPen.gBonus <= 0, '方向：spG < FLOOR ⇒ gBonus 必须 ≤ 0（修前这里恰好是正的 = "越塌缩加分越多"，实测 ' + gPen.gBonus.toFixed(5) + '）');
+      eq(gPen.gBonus, -1.0 * Math.max(0, 20 - gPen.spG),
+        '线性只罚下界、且带负号（实测 ' + gPen.gBonus.toFixed(5) + ' vs 期望 ' + (-Math.max(0, 20 - gPen.spG)).toFixed(5) + '）');
+      /* 达到下界 ⇒ 一分不得（反过来奖励"比下界更宽"是 v1.6.50 明写不要的形状：那会把臂往"什么都用一点"推） */
+      T.setEconomyReward({ fitGW: 1.0, fitGF: Math.floor(gPen.spG) });
+      Pol.setRng(T.mulberry32(4242));
+      const gOk = T.scoreMemberN(pG, OPPS_G, 2, 3, 1, 0, 0);
+      eq(gOk.spG, gPen.spG, '同种子同策略重跑必须逐位同（漂了 ⇒ 下面那条"一分不得"读不出意义）');
+      ok(gOk.gBonus === 0, 'spG ≥ FLOOR ⇒ 一分不得（实测 ' + gOk.gBonus.toFixed(5) + ' ‖ FLOOR=' + gOk.fitGF + ' ‖ spG=' + gOk.spG.toFixed(3) + '）');
+    } finally {
+      T.setEconomyReward({ reset: true });   // 无论本腿断到哪一条，档都还给出厂
+    }
+  }
   T.setEconomyReward({ reset: true });   // 复位，别污染后面的用例
 });
 
