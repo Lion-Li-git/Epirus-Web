@@ -1286,6 +1286,11 @@ for (const k of sorted.slice(0, TOPCARDS)) {
   const nm = R.byKey[k] ? R.byKey[k].name : k;
   const c = S.computeCost(S.createState('multi', { next: T.mulberry32(7) }, N), 0, k);
   console.log('  ' + nm.padEnd(10) + (champ.use[k] / tot * 100).toFixed(1).padStart(5) + '%' +
+    /* ⚑ 10-25 夜班：这一列印的是**一位小数**的占比 ⇒ 0.04% 会读成 `0.0%`，而本班正是这样把
+     *   "天火 0.0%" 当成了"天火没出现过"（§E740：真剂量是 0.03~0.06 次引爆/局）。
+     *   ⇒ 占比后面必须跟着**绝对次数**：`0.0%  次数=171` 与 `0.0%  次数=0` 长得一样，但判的是两件事。
+     *   （同族在册：`分母为 0 的 0%` 与真 0 同形 ‖ §E271 早已定过"用量要报成用户手里的单位"。） */
+    '  次数=' + champ.use[k] +
     '   费用=' + ((c && c.ok) ? c.ep : '?'));
 }
 console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
