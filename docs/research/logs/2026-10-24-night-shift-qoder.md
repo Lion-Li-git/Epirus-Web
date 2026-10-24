@@ -573,5 +573,5 @@ H4 要不要修（让闸门也排掉自己名下）属于 `js/train/evo.js` 的�
   `有珠且买得起 ⇒ 打激光眼（先打血最厚的活席）` ‖ 其余交回基础贪心。
   它**不进 `BOT_PICKS` 对手表**（走 `evo.js:2931` 那条"全局注册表函数名"的路，与环专精同一先例 ⇒ 默认训练一字不动），
   冒烟自证：400 局镜像里**激光落地 1366 次（3.42/局）**，`setImitTeacherByName('pickLaserBank')` 返回 true。
-- **§E746 四臂批已开跑**（02:0x，`scratch/night/bs4/`）：`T1=真示范(OVERRIDE=1)+only=laserEye` ‖ `T2=只奖励一致性(OVERRIDE=0)`，
+- **§E746 四臂批已开跑**（01:5x 起，`scratch/night/bs4/`）：`T1=真示范(OVERRIDE=1)+only=laserEye` ‖ `T2=只奖励一致性(OVERRIDE=0)`，
   各两粒 seed，底座/代数与 §E741 的 A0 四粒逐字同 ⇒ **那四粒就是同 seed 的 null**（120 局镜像里激光眼出现 0 次）。
