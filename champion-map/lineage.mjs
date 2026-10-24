@@ -713,7 +713,18 @@ function mergeDefs(keepAnchor, dropAnchors, label) {
   const kd = defOf(keepAnchor, '合并 keep');
   const ds = [];
   for (const a of dropAnchors) { const d = defOf(a, '合并 drop');
-    if (d === kd) { console.error('⛔ 合并表把 `' + keepAnchor + '` 与 `' + a + '` 当成两个家族，而它们此刻已是同一个（' + kd.label + '）⇒ 名单要更新，不敢静默跳过'); process.exit(2); }    ds.push(d); }
+    /* 2026-10-24（ZCode · 修 CI 红 D233）：本机（数据全）撞这条 = 合并表过期，照旧 exit 2。
+     * 但**干净克隆**上签名轴退化（在册轴全空 ⇒ 大类并拢）会让好名单也撞这里，且先于 §E503 薄图分支 ⇒
+     * 带 `--soup-thin-ok`（= 承认这台机器就是要一张薄图）时降级为**响亮警告 + 跳过这一条**：
+     * d === kd 本身说明两族已被聚类并成一家，跳过的只是"再并一次"的空操作，语义无损；默认口径一字不动。 */
+    if (d === kd) {
+      if (process.argv.includes('--soup-thin-ok')) {
+        console.log('⚠ §E503 薄图模式（`--soup-thin-ok`）：合并表把 `' + keepAnchor + '` 与 `' + a +
+          '` 当成两个家族，而退化聚类已把它们并成同一个（' + kd.label + '）⇒ 这一条按"已并"跳过（默认口径在此仍 exit 2）');
+        continue;
+      }
+      console.error('⛔ 合并表把 `' + keepAnchor + '` 与 `' + a + '` 当成两个家族，而它们此刻已是同一个（' + kd.label + '）⇒ 名单要更新，不敢静默跳过'); process.exit(2);
+    }    ds.push(d); }
   if (!ds.length) return;
   const rs = kd.g.rs.concat(...ds.map(d => d.g.rs));
   kd.g = { sig: kd.g.sig, rs: rs, t0: '', t1: '' }; touch(kd);
@@ -739,7 +750,11 @@ mergeDefs('r61fix-31', ['v7aim1-31', 'v7aim2-31'], '对手池/珠价步进 C3（
     else if (t <= '2026-09-18') tgt = defOf('v7w3r1-31', '零散→C2');                             /* C2 */
     else if (t >= '2026-09-24' && t <= '2026-09-27') { prod.push(r); continue; }                 /* 旧生产对照 */
     else tgt = defOf('R-s107', '零散→臂线');                                                     /* 臂线 */
-    if (tgt) { tgt.g.rs.push(r); FAM[r.id] = tgt; }
+    /* 2026-10-24（ZCode · 修 CI 红 D233 续）：干净克隆上退化聚类可能把目标锚也落进 small 桶 ⇒
+     * tgt === d（正在迭代的那只）⇒ 往活迭代器里 push 自己，数组长到 2^32 抛 RangeError（修前这就是
+     * "过了 exit-2 之后死在写表前"的真凶）。目标即当前桶 ⇒ 行已在桶里，只改 FAM 归属、不 push。 */
+    if (tgt && tgt !== d) { tgt.g.rs.push(r); FAM[r.id] = tgt; }
+    else if (tgt && tgt === d) { FAM[r.id] = tgt; }
   }
   if (prod.length) {
     const d = { n: 90, g: { sig: 'prod-old', rs: prod, t0: '', t1: '' }, label: '' }; touch(d);
