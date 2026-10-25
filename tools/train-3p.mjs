@@ -623,6 +623,33 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
       console.log('[train-3p] 送盾先验 = ' + v + '（读回一致）');
     }
   }
+  /* ===== §E764（10-26 夜班 · 千问）：`EPIRUS_SUB_BEAD` 在**本入口**也要真下达（三条纪律照上面那族）=====
+   * 病是实测出来的，不是推论：我把这个 env 名补进白名单之后跑了四臂，回来对**权重哈希**发现
+   *   `N0`（对照）与 `N1`（+`EPIRUS_SUB_BEAD=1` +珠种 boom）**逐位同一粒**（wid 都是 114287e505d9f6d4），
+   *   `N2` 与 `N3` 也是同一粒（2cfcce34515b19f1）⇒ 带不带补贴档，训练轨迹一点没动。
+   *   根因：这根布尔此前只由 `server/paralleltrain.mjs:131` 随 **worker 消息**投递，
+   *   而 `train-3p` 单进程那条路上**没人读它** ⇒ 白名单收下它、`meta.recipe.env` 记下它，
+   *   引擎里却是出厂的 false。这就是 D175 / D206 那一族「通过黑键闸却从没送到作用点」的又一次实付，
+   *   只是这次是我自己补的白名单把它藏得更像"已登记"。
+   * ⇒ 三条硬规矩照旧：**没有 setter 就 exit 7**（拒静默空转）‖ 下达后**读回消费点** ‖ 不一致 exit 7。
+   * ⚠ 珠种那根（`EPIRUS_SUB_BEAD_KIND`）走 econ 单一来源，由上面那句「econ 族通用下达 … 逐键回执一致」自证；
+   *   两根都在场时日志里应各印一行，**缺一行就是有一根没落地**。 */
+  {
+    const sbReq = process.env.EPIRUS_SUB_BEAD;
+    if (sbReq !== undefined && String(sbReq).trim() !== '') {
+      const wantSb = String(sbReq).trim() === '1';
+      if (typeof T.setSubBead !== 'function' || typeof T.subBeadOn !== 'function') {
+        console.error('[train-3p] ⛔ 下达了 EPIRUS_SUB_BEAD 但引擎没有 setSubBead/subBeadOn ⇒ 拒绝静默空转');
+        process.exit(7);
+      }
+      T.setSubBead(wantSb);
+      if (T.subBeadOn() !== wantSb) {
+        console.error('[train-3p] ⛔ 补贴局补珠=' + wantSb + ' 未生效（读回 ' + T.subBeadOn() + '）');
+        process.exit(7);
+      }
+      console.log('[train-3p] 补贴局补珠 = ' + wantSb + '（消费点读回一致 ‖ 珠种见上面那行 econ 回执）');
+    }
+  }
   {
     const chainReq = readEconEnv(process.env).bigtChainW;
     if (chainReq != null && String(chainReq).trim() !== '') {
