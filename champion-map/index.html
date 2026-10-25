@@ -42,7 +42,7 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 #side th{color:var(--dim);font-weight:400;text-align:left}
 #selftest{display:none;position:fixed;left:14px;top:40%;background:#101a2c;border:1px solid #6f83a8;color:#dce6f5;padding:8px 10px;border-radius:6px;font-size:11px;white-space:pre;z-index:30}
 </style></head><body>
-<div id="bar"><label class="tbgrp" data-m="map" title="第一段：换的是「看哪张图」">视图 <select id="modeSel"><option value="1d">一维（F 排序带）</option><option value="map" selected>地图（缩放/平移）</option><option value="tree">谱系（时间 × 家族）</option><option value="3db">三维行为轴</option></select></label><button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button><button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button><button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button><label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label><label id="isobwrow" style="display:none" title="§E608 壳的**比较带宽** c = 核宽 / σ（σ = 显示度量第 6 近邻中位，现在印在下面那行读数里）。&#10;· c=1 = 今天这只壳：平滑的局部过线占比（M0 收缩 + 密度门都在）。&#10;· 往左收到 c→0 = 签名端：核里只剩自己那一枚 ⇒ 比值场退成 1-NN ⇒ 等值面就是 Voronoi 边界，每个过线点冒一个小泡、未过线一枚也不包（代价：壳碎成一片）。&#10;M0 与密度门跟着 c 线性退场 —— 它们是给「稀疏区一两个点就把比值抬到 1」打的补丁，小带宽天生不需要。&#10;⚠ 阈值这根滑杆不动（那是另一个所指）。⚠ 小 c 的泡比格子还小 ⇒ 要配 96~128 格，否则被退化片闸吃掉，看着像什么都没画。">带宽 <input type="range" id="isobw" min="0.05" max="1" step="0.01" value="0.6"><span id="isobwv">1.00（今天）</span><button id="bwToday" title="c=0.60 ‖ 回到装载时那一档（§E677 用户裁的默认带宽）。要恒等点 c=1 就把滑杆拉到右端。">默认壳 c=0.6</button><button id="bwSign" title="c=0.20 ‖ 实测这一档漏画归零（67→0）、误包 91→30，壳碎成一坨一坨各自抱住过线簇。再往左（c≤0.05）数值上才是签名端（误包 3→0），但那些小泡比格子还小 ⇒ 画出来像什么都没画（GN=72 只剩 310 片）">贴簇 c=0.2</button></label><label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label><button id="reset">复位视图</button><label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label><span id="g2h" class="tbgrp" title="第二段：所有图通用的口径与筛选">通用</span><label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp/F，796 行历史引用都指着它。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong = Hplong/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label><label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label><label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label><label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">训出批次 <select id="batch"></select></label><label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label><span id="winpre" style="display:flex;gap:4px;align-items:center"></span><label id="edgerow" title="§E373（用户 10-07：「给一个连线开关不然可能会太多挡住了」）&#10;谱系图的热启动父边：全开 = 四种来路都画（hash/seedpack/arm/slot-at-time）；&#10;只实录 = 只画包自己记下的权重哈希那一级（§E367 之后最硬的一级）；&#10;关掉 = 一条都不画，点云本身不受影响。&#10;默认仍是全开：这一版的图就是按全开验收过的，改默认等于偷偷换读法。">连线 <select id="edges"><option value="all">全开</option><option value="hash">只实录</option><option value="off">关掉</option></select></label><button id="bside" title="历代冠军按**上线时刻**排的一列（上线时刻由 ship-scan.mjs 逐提交算槽文件权重指纹抽出，不是按提交标题点名）。点一枚加入对比">冠军序列 ⇄</button><label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label><label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label><span style="color:var(--dim)">底色</span><label>底色 <select id="bgSel"><option value="#0f1522">深蓝</option><option value="#05070d">纯黑</option><option value="#212a3b">石板</option><option value="#e6ebf5">浅底</option><option value="custom">自定义…</option></select></label><input type="color" id="bgc" value="#0f1522" title="自定义底色"><span id="bgn" style="color:var(--dim);font-size:11px"></span><span id="g3h" class="tbgrp" title="第三段：只有当前这张图用得上的（换图就收起来，不占地方）">本图特有</span><button id="sortb">排序：F 名次</button><button id="fitt">投影判据 ⓘ</button></div>
+<div id="bar"><label class="tbgrp" data-m="map" title="第一段：换的是「看哪张图」">视图 <select id="modeSel"><option value="1d">一维（F 排序带）</option><option value="map" selected>地图（缩放/平移）</option><option value="tree">谱系（时间 × 家族）</option><option value="3db">三维行为轴</option></select></label><button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button><button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button><button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button><label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label><label id="isobwrow" style="display:none" title="§E608 壳的**比较带宽** c = 核宽 / σ（σ = 显示度量第 6 近邻中位，现在印在下面那行读数里）。&#10;· c=1 = 今天这只壳：平滑的局部过线占比（M0 收缩 + 密度门都在）。&#10;· 往左收到 c→0 = 签名端：核里只剩自己那一枚 ⇒ 比值场退成 1-NN ⇒ 等值面就是 Voronoi 边界，每个过线点冒一个小泡、未过线一枚也不包（代价：壳碎成一片）。&#10;M0 与密度门跟着 c 线性退场 —— 它们是给「稀疏区一两个点就把比值抬到 1」打的补丁，小带宽天生不需要。&#10;⚠ 阈值这根滑杆不动（那是另一个所指）。⚠ 小 c 的泡比格子还小 ⇒ 要配 96~128 格，否则被退化片闸吃掉，看着像什么都没画。">带宽 <input type="range" id="isobw" min="0.05" max="1" step="0.01" value="0.6"><span id="isobwv">1.00（今天）</span><button id="bwToday" title="c=0.60 ‖ 回到装载时那一档（§E677 用户裁的默认带宽）。要恒等点 c=1 就把滑杆拉到右端。">默认壳 c=0.6</button><button id="bwSign" title="c=0.20 ‖ 实测这一档漏画归零（67→0）、误包 91→30，壳碎成一坨一坨各自抱住过线簇。再往左（c≤0.05）数值上才是签名端（误包 3→0），但那些小泡比格子还小 ⇒ 画出来像什么都没画（GN=72 只剩 310 片）">贴簇 c=0.2</button></label><label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label><button id="reset">复位视图</button><label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label><span id="g2h" class="tbgrp" title="第二段：所有图通用的口径与筛选">通用</span><label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp/F，796 行历史引用都指着它。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong = Hplong/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label><label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label><label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label><label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">训出批次 <select id="batch"></select></label><label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label><span id="winpre" style="display:flex;gap:4px;align-items:center"></span><label id="edgerow" title="§E373（用户 10-07：「给一个连线开关不然可能会太多挡住了」）&#10;谱系图的热启动父边：全开 = 四种来路都画（hash/seedpack/arm/slot-at-time）；&#10;只实录 = 只画包自己记下的权重哈希那一级（§E367 之后最硬的一级）；&#10;关掉 = 一条都不画，点云本身不受影响。&#10;默认仍是全开：这一版的图就是按全开验收过的，改默认等于偷偷换读法。">连线 <select id="edges"><option value="all">全开</option><option value="hash">只实录</option><option value="off">关掉</option></select></label><button id="bside" title="历代冠军按**上线时刻**排的一列（上线时刻由 ship-scan.mjs 逐提交算槽文件权重指纹抽出，不是按提交标题点名）。点一枚加入对比">冠军序列 ⇄</button><button id="chainb" class="on" title="§E763（用户 10-26 00:3x 提、00:5x 收窄）：选中一枚 ⇒ 沿父边一路追溯到根，画成**有向**的一条链（箭头指向子代那一端），链上每一枚都强制上名。&#10;主语只有这三张图：一维带 / 地图 / 三维行为轴。&#10;**谱系图没有这个开关**——它本来就把全部父边画出来（顶上那个「连线」管那一层），再叠一条就是同一件事画两遍。&#10;边与谱系图同源（lineage.tsv 的 parentOf / 融合的第二父），所以这里不会长出第二种血缘。&#10;父子叠在同一个像素上时那一跳不画（画不出方向，不硬涂一团）；父边指向图上没有的那一枚时会数进按钮那句"另有 N 处"。">追溯链：开</button><label>点大小 <input type="range" id="size" min="0.6" max="2.2" step="0.1" value="1"></label><label>找 <input type="search" id="q" size="12" placeholder="包名片段"></label><span style="color:var(--dim)">底色</span><label>底色 <select id="bgSel"><option value="#0f1522">深蓝</option><option value="#05070d">纯黑</option><option value="#212a3b">石板</option><option value="#e6ebf5">浅底</option><option value="custom">自定义…</option></select></label><input type="color" id="bgc" value="#0f1522" title="自定义底色"><span id="bgn" style="color:var(--dim);font-size:11px"></span><span id="g3h" class="tbgrp" title="第三段：只有当前这张图用得上的（换图就收起来，不占地方）">本图特有</span><button id="sortb">排序：F 名次</button><button id="fitt">投影判据 ⓘ</button></div>
 <div id="wrap"><canvas id="cv"></canvas><div id="stat"></div><div id="legend"></div><div id="card"></div><div id="side"></div><div id="fit" style="display:none">本图坐标与判据（fit.tsv ← e287-fit.mjs 实测，随机排点当地板）：<br>dims · method · Spearman · recall@k · r2_mean_raw · excess_r2_mean · excess_cols_gt0.1 · excess_r2_H · excess_r2_S&lt;br>2 · rand · -0.0256 · 1.96 · 0.0475 ·  · 0 ·  · &lt;br>2 · pca · 0.6582 · 11.70 · 0.1208 · 0.0733 · 5 · 0.1227 · 0.1281&lt;br>2 · pls · 0.2968 · 7.51 · -0.0160 · -0.0635 · 0 · 0.0422 · -0.0360&lt;br>2 · smacof · 0.6981 · 11.37 · 0.1241 · 0.0766 · 5 · 0.1014 · 0.1814&lt;br>2 · force · 0.7008 · 16.33 · 0.1698 · 0.1223 · 5 · 0.1067 · 0.3062&lt;br>3 · rand · 0.0090 · 1.95 · 0.0810 ·  · 0 ·  · &lt;br>3 · pca · 0.7537 · 16.95 · 0.2254 · 0.1444 · 10 · 0.1528 · 0.1788&lt;br>3 · pls · 0.2968 · 7.51 · -0.0159 · -0.0969 · 0 · 0.0516 · -0.0739&lt;br>3 · smacof · 0.7767 · 17.18 · 0.2213 · 0.1403 · 10 · 0.1560 · 0.1858&lt;br>3 · force · 0.7683 · 29.15 · 0.3381 · 0.2571 · 10 · 0.2255 · 0.4177</div></div>
 <div id="fam"></div>
 <div id="err" style="display:none;position:fixed;right:14px;bottom:60px;background:#5b1620;border:1px solid #ff6b6b;color:#ffd9d9;padding:8px 12px;border-radius:6px;font-size:12px;z-index:20"></div>
@@ -281,6 +281,9 @@ var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '', 
   sortBy: 'F',          /* E399 DS：一维图的排序轴 —— 'F' = F 名次（默认）‖ 'time' = 训出时刻。 */
   flo: 0, fhi: 1,       /* §E371 强度窗口的两端，存成"占全库 F 值域的比例"⇒ 出厂 (0,1) 就是全范围 */
   edges: 'all',         /* §E373 谱系图父边：'all' 全开 ‖ 'hash' 只画实录级 ‖ 'off' 一条不画（默认全开 = 已验收的那张图） */
+  chain: 1,             /* §E763（用户 10-26 00:3x「其他三张图加上一个可开关的链条，只显示选中点的链，同时要显示链上点的标签」）
+                         *   主语 = 一维带 / 地图 / 三维行为轴 这三张；**谱系图不在内**（它本来就把父边全画出来，那是 #edges 那一层）。
+                         *   默认开 = 用户描述的"选中一个点之后可以显示"这件事必须第一次就成立；关掉是给嫌挤的人的退路。 */
   iso: 0, isoT: 0.30,   /* §E306 过线曲面：0=关 1=半透壳 2=只描边；isoT = 局部占比阈值。
                             §E312 默认从 0.5 降到 0.35：实测收缩后场的峰值只有 40%，50% 是"正确地什么都不画"，
                             默认值必须落在有东西可画的那一段，否则用户第一次开壳就看到空图。*/
@@ -1266,11 +1269,19 @@ function isLabOn(d) { return d.lin === '历代上槽' || !!d.pt; }
  *   （牙口：复原避让之后页检当场红在搜索框那条 —— 片段「eco2」命中 6 枚只上了 4 个名字）。 */
 function pinLabel(d) {
   if (d.id === st.sel || st.cmp.indexOf(d.id) >= 0) return true;
+  /* §E763：链上的每一枚都算"用户自己点名的那批"——用户要的是"看到训练的变化"，链上点没名字就等于只画了根线。 */
+  if (st.chain && LCH && LCH.deep[d.id] !== undefined) return true;
   if (st.q && String(d.id).toLowerCase().indexOf(st.q) >= 0) return true;   /* §E453 搜索不分大小写：包名里有 v7FGta / SLOT-AB12 这种混写 */
   return !!st.hi[gk(d)];
 }
 function mustLabel(d) { return isLabOn(d) || pinLabel(d); }
 function wantLabel(d) {
+  /* §E763 的"链上点一定上名"住在 pinLabel 里（与"选中/对比/搜索命中"同一档），**不越过"不标"这一档**：
+   *   第一版我在这里加过一条压在 labels==='off' 之前的覆盖，页检当场在三条无关判据上红 ——
+   *   那三条（指针往返 ‖ 边走一圈 ‖ 池环）为了 isolate 几何，都会自己把标签钉成"不标"，
+   *   而我那条覆盖等于替用户否决了它们的前提 ⇒ 覆盖别人测量环境的"功能"不是功能，是污染。
+   *   现在：档位在" champ/pool/all" 时链上成员全部上名（pinLabel 已经把它们算作用户点名的那批），
+   *   档位="off" 时尊重 off。 */
   if (st.labels === 'off') return false;
   if (pinLabel(d)) return true;
   /* §E556（用户 10-09 08:5x：「按家族高亮的时候，历代冠军的标签并不会暗掉，很容易导致混淆」）：
@@ -1295,6 +1306,94 @@ function labelSet() {
 }
 
 /* ---- ④ 一维：F 排序带（718 枚全可数、零重叠）+ 下面一条 H / T·S 分解 ---- */
+/* ===== §E763（用户 10-26 00:3x 提、00:5x 收窄）：选中一枚 ⇒ 沿父边一路追溯到根 =====
+ *   「设置一个开关，选中一个点之后可以显示其一路追溯父节点的链条，用来显示训练的变化。
+ *     这个箭头可以用类似谱系图里连线渲染方式不过要做成有向的」
+ *   ‖「我是说演化图的链条，谱系图就不用链条了本来就有，其他三张图加上一个可开关的链条，
+ *     只显示选中点的链，同时要显示链上点的标签」
+ *   ⇒ 三件事写死在这里：① 主语是 一维带/地图/三维行为轴（tree 完全不碰）；② 只有选中那一枚的链；
+ *     ③ 链上每一枚都要上名（连"不标"那一档也标 ⇒ 见 wantLabel 顶上那条）。
+ *   边的数据**只有一个来源**：lineage.tsv 经 LIN join 落到每枚的 pof / pof2（融合的第二父）
+ *     ⇒ 与谱系图那张线是同一批边，不存在第二套血缘账（同一件事两处各写一遍 = 本仓反复踩的那族病）。
+ *   方向：箭头指向**子代**（读的是"训练往下长"的那一边；追溯是往上走，画出来是一路往下）。
+ *   画法照谱系图那一族（二次贝塞尔 + 侧向弓开），但一条链 ≤24 跳 ⇒ 不需要 §E467 那套按局部密度压 alpha 的法律。
+ *   ⚠ 落笔次序：点在先、链在中、标签在后 —— 链压着点会读不出箭头，被标签盖住则链断掉可见性。
+ *   ⚠ 名字定成「追溯链」而不是「父链」：页头那句统计里早就有"父链 N 枚"，它数的是 kin==='父链'
+ *     （续训来路的分类，与"选中一枚往上追"完全是两件事）。同名会让读者以为按钮在数那 N 枚。
+ *   ⚑ 命名记一笔（第一版就死在这）：这一层原来叫 CH —— 而本页早有 var CH = champList()（冠军序列两处）
+ *     与 var CW = cv.width, CH = cv.height（立体几何），于是我这只"全局 CH"一写就把别人的账改了，
+ *     页检当场在**三条与本功能无关**的判据上红（指针往返 ‖ 边走一圈 ‖ 差分里链色只占 37%）。
+ *     ⇒ 在这个六千行的单文件里加全局，先 grep 同名，再谈功能。 */
+var LCH = null, LCHKEY = '';
+function chainOf(id) {
+  var out = { deep: {}, ed: [], orphan: 0 };
+  if (!id) return out;
+  var seen = {}, Q = [[id, 0]];
+  while (Q.length) {
+    var it = Q.shift(), cur = it[0], dep = it[1];
+    if (seen[cur] !== undefined) continue;
+    seen[cur] = dep; out.deep[cur] = dep;
+    var i = nOf(cur); if (i < 0) continue;
+    var d = P[i], ps = [];
+    if (d.pof) ps.push([d.pof, d.psrc || '']);
+    if (d.pof2) ps.push([d.pof2, d.psrc2 || 'soup']);   /* 融合粒两个父都追（两条边是同一种关系，§E490）*/
+    for (var k = 0; k < ps.length; k++) {
+      var pid = ps[k][0];
+      if (!pid || seen[pid] !== undefined) continue;
+      if (nOf(pid) < 0) { out.orphan++; continue; }   /* 父边写着图上没有的那一粒 ⇒ 响亮数出来，不静默少画一根 */
+      out.ed.push([cur, pid, ps[k][1]]);
+      if (dep < 24) Q.push([pid, dep + 1]);
+    }
+  }
+  return out;
+}
+/* 选中改了或开关翻了才重算（纯查表，≤24 跳）；平移/缩放复用同一份拓扑，每帧只重取坐标。 */
+function ensureChain() {
+  var k = (st.chain ? '1' : '0') + '|' + (st.sel || '');
+  if (k !== LCHKEY) { LCH = (st.chain && st.sel) ? chainOf(st.sel) : null; LCHKEY = k; }
+  return LCH;
+}
+var LCH_COL = '#ff8f4d';   /* 与选中环(#ffd166)、对比环(#7fd1ff)、谱系图父边(淡蓝/红)都不同族的一支橙 */
+function drawChain() {
+  var c = ensureChain();
+  if (!c || !c.ed.length || !scr) return 0;
+  var dpr = devicePixelRatio, n = 0, i;
+  for (i = 0; i < c.ed.length; i++) {
+    var a = scr[nOf(c.ed[i][1])], b = scr[nOf(c.ed[i][0])];   /* a = 父，b = 子（箭头指着 b） */
+    if (!a || !b) continue;
+    var vx = b[0] - a[0], vy = b[1] - a[1], L = Math.sqrt(vx * vx + vy * vy) || 1;
+    if (L < 2 * dpr) continue;                                 /* 父子叠在同一个像素上 ⇒ 这一跳画不出方向，不硬涂一团 */
+    var bow = Math.min(34 * dpr, L * 0.18);
+    var cx = (a[0] + b[0]) / 2 - (vy / L) * bow, cy = (a[1] + b[1]) / 2 + (vx / L) * bow;
+    g.globalAlpha = 1; g.strokeStyle = LCH_COL; g.lineWidth = 1.9 * dpr;
+    g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo(cx, cy, b[0], b[1]); g.stroke();
+    /* 箭头落在离子点 7.5px 之外：压着选中环就读不出"这枚是我点的"与"这枚是链上的" */
+    var t = Math.max(0.35, 1 - (7.5 * dpr) / L), s = 1 - t;
+    var hx = s * s * a[0] + 2 * s * t * cx + t * t * b[0];
+    var hy = s * s * a[1] + 2 * s * t * cy + t * t * b[1];
+    var tx = 2 * s * (cx - a[0]) + 2 * t * (b[0] - cx), ty = 2 * s * (cy - a[1]) + 2 * t * (b[1] - cy);
+    var tl = Math.sqrt(tx * tx + ty * ty) || 1; tx /= tl; ty /= tl;
+    var ah = 7 * dpr;
+    g.beginPath();
+    g.moveTo(hx + tx * ah, hy + ty * ah);
+    g.lineTo(hx - ty * ah * 0.62 - tx * ah * 0.35, hy + tx * ah * 0.62 - ty * ah * 0.35);
+    g.lineTo(hx + ty * ah * 0.62 - tx * ah * 0.35, hy - tx * ah * 0.62 - ty * ah * 0.35);
+    g.closePath(); g.fillStyle = LCH_COL; g.fill();
+    n++;
+  }
+  g.globalAlpha = 1;
+  return n;
+}
+/* 一句话给页脚/按钮用：这条链有几级、有没有断在"图上没这枚"的地方。 */
+function chainNote() {
+  var c = ensureChain();
+  if (!st.chain) return '追溯链：关';
+  if (!st.sel) return '追溯链：开（先点一枚才画）';
+  if (!c || !c.ed.length) return '追溯链：开（这枚没有可画的父边' + (c && c.orphan ? ' ‖ 断在图上没有的父 ' + c.orphan + ' 处' : '') + '）';
+  var lv = 0; for (var k in c.deep) if (c.deep[k] > lv) lv = c.deep[k];
+  return '追溯链：开（' + Object.keys(c.deep).length + ' 枚 ‖ 深 ' + lv + ' 级' + (c.orphan ? ' ‖ 另有 ' + c.orphan + ' 处父边在图上没有' : '') + '）';
+}
+
 function draw1(fr) {
   var w = cv.width, h = cv.height, i;
   clear(w, h);
@@ -1352,6 +1451,7 @@ function draw1(fr) {
     g.fillStyle = '#f2c94c'; g.fillRect(x - dx * 0.42 + Math.max(1, dx * 0.84 * hh / tot), base + 8 * devicePixelRatio, Math.max(1, dx * 0.84 * Math.abs(ss) / tot), bh);
     g.globalAlpha = 1;
   }
+  drawChain();   /* §E763：一维带上这条链是"名次之间那一级训练关系"——横向间距不表示先后，所以箭头必须自己说方向 */
   labelReset(); g.fillStyle = st.ink;
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var p = scr[ls[i].i]; if (!p) continue;
@@ -1963,6 +2063,7 @@ function drawMap(fr) {
     g.globalAlpha = 1;
     scr[pr[i].i] = [pr[i].x, pr[i].y];
   }
+  drawChain();   /* §E763 地图（平面⇄立体同一台相机）：链跟着点走，缩放/平移每帧重取坐标 */
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
@@ -2442,6 +2543,7 @@ function draw3b(fr) {
     scr[pr[i][6]] = [pr[i][0], pr[i][1]];
     g.globalAlpha = 1;
   }
+  drawChain();   /* §E763 三维行为轴：链画在投影后的屏幕上（与点同一套 z 排序之后的层），不跟随立柱 */
   labelReset();
   var ls = labelSet();
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
@@ -2494,6 +2596,7 @@ function drawBody() {
   var fr = fRange();
   if (st.mode === '1d') draw1(fr); else if (st.mode === 'map') drawMap(fr); else if (st.mode === 'tree') drawTree(fr); else draw3b(fr);
   paintLegend(fr);
+  paintChainBtn();   /* §E763：按钮那句"几枚/深几级"是**状态**，必须跟着每帧重算的那份链走（深链 sel= 进来时没人点过按钮，也要说得出话） */
   /* 图例的内容是**每帧重画**的（口径不同行数不同），所以冠军序列那条"让开图例"的位置也得每帧跟一次；
    *   只在 paintSide 里算一次会拿到的还没撑开的旧高度 ⇒ 实测压住图例下面两行字。
    *   这里只挪 top，不重建 DOM（重建 = 每帧重画几十个按钮 + 一张表，拖动会卡）。 */
@@ -3011,6 +3114,16 @@ buildWinPre();
 paintWin();
 document.getElementById('bside').onclick = function () { st.side = !st.side; this.classList.toggle('on', !!st.side); paintSide(); };
 document.getElementById('edges').addEventListener('change', function () { st.edges = this.value; req(); });
+/* ===== §E763 追溯链开关（只有那三张图吃它，见 chainOf 上面那段主语声明）===== */
+function paintChainBtn() { var b = document.getElementById('chainb'); if (!b) return;
+  var cls = st.chain ? 'on' : '', s = chainNote();
+  /* 只在真的变了才写 DOM：这句挂在 drawBody 末尾，每帧都会经过（拖一次平移 = 几十帧）。 */
+  if (b.className !== cls) b.className = cls;
+  if (b.textContent !== s) b.textContent = s; }
+document.getElementById('chainb').addEventListener('click', function () {
+  st.chain = st.chain ? 0 : 1; LCHKEY = '#reset';   /* 拓扑缓存随开关作废，否则翻回来还是上一份 */
+  paintChainBtn(); req(); });
+paintChainBtn();   /* 出厂那句必须与 st.chain 一致（写死在模板里的"追溯链：开"只是初值，真状态由这里覆盖） */
 buildBatchSel();
 /* ⑤ 底色模块：预设 + 取色器，按亮度翻墨色（亮底必须深字，否则对比度就是用户说的那个问题）*/
 function lum(c) { var r = parseInt(c.slice(1, 3), 16) / 255, gg = parseInt(c.slice(3, 5), 16) / 255, b = parseInt(c.slice(5, 7), 16) / 255;
@@ -3133,7 +3246,7 @@ cv.addEventListener('click', function (e) {
   if (dragMoved > 4) return;
   var hit = pickAt(mx, my);
   st.sel = hit >= 0 ? (st.sel === P[hit].id ? null : P[hit].id) : null;
-  paintCard(); req();
+  paintCard(); paintChainBtn(); req();   /* §E763：按钮那句"几枚/深几级"必须跟着这一下点选变，否则它是一句写死的话 */
 });
 cv.addEventListener('wheel', function (e) { e.preventDefault();
   var f = e.deltaY < 0 ? 1.12 : 1 / 1.12;
@@ -3198,13 +3311,14 @@ function tick() {
  *   ⇒ 改成 ['1d','map']：留在它管得着的一维，换到它管得着的立体态（与「平面⇄立体」那颗按钮同段相邻）。
  *   ⚠ 这段在模板字符串里面，注释里不许写反引号（本文件 3549 行那条警告 + 门 D234⑩c 就是为这个坑立的）。 */
 var BAR_VIEW = { sortb: ['1d'], fitt: ['map', '1d', '3db'], edgerow: ['tree'], bside: ['map', 'tree'],
+  chainb: ['1d', 'map', '3db'],   /* §E763：链条的主语只有这三张（谱系图已有全套父边，见 edgerow） */
   bisos: ['3db'], bh: ['1d', 'map'] };
 function barVis() { for (var k in BAR_VIEW) { var el = document.getElementById(k); if (!el) continue;
   el.style.display = BAR_VIEW[k].indexOf(st.mode) >= 0 ? '' : 'none'; } }
 /* 段序：源码里壳的三行滑杆挨着壳开关（长说明和它管的旋钮必须写在一起才看得懂），
  *   所以"立体/好在上/过线曲面/连线/冠军序列"这几件天然落在了第一段中间。装配时挪一次节点把它们放到第三段。
  *   ⚠ 挪的是节点，不改任何文案；DOM 源序保持按功能家族相邻。 */
-var BAR_G3 = ['b3dt', 'bh', 'bisos', 'isorow', 'isobwrow', 'isognrow', 'edgerow', 'bside'];
+var BAR_G3 = ['b3dt', 'bh', 'bisos', 'isorow', 'isobwrow', 'isognrow', 'edgerow', 'bside', 'chainb'];
 function barGroup() { var bar = document.getElementById('bar'); if (!bar) return;
   var g2 = document.getElementById('g2h'), g3 = document.getElementById('g3h'), anchor = document.getElementById('sortb');
   if (!g2 || !g3 || !anchor) return;
@@ -3400,6 +3514,8 @@ var CHKDETAIL = 0;
     /* §E338 无头复验要能钉住"选中那枚"和"冠军序列开着"这两个状态（不点开就永远截不到新面板）*/
     if (kv[0] === 'side') st.side = +kv[1] ? true : false;
     if (kv[0] === 'sel') st.sel = decodeURIComponent(kv[1]);
+    /* §E763 追溯链开关也走深链 ⇒ 无头复验能钉住"开着链 + 选中那一枚"这一态（关掉 = chain=0，认不出的值不动）。 */
+    if (kv[0] === 'chain') { st.chain = (+kv[1] ? 1 : 0); LCHKEY = '#reset'; }
     /* §E449 补 edges：§E442 那节记过一条"edges= 不是 hash 参数 ⇒ 无头复验没法深链到'只实录'那一档，
      *   只能靠代码路径的守卫"——  RUNNER-BASE 那条雾边到底在 'hash' 档不画、在 'all' 档画，之前只有页内断言能证，
      *   截不到图给人看。三档都收，认不出的值不动（默认是 all）。*/
@@ -4550,6 +4666,73 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       T('桌形开关：这条判据自己跑挂了（不许静默少一条）', false, String(E && E.message || E).slice(0, 120));
     }
   })();
+  /* ===== §E763（用户 10-26 00:3x 提、00:5x 收窄主语）：追溯链这一层与它那句"链上点要上名" =====
+   *   两条腿各自独立，因为它们是两件事：
+   *   ① 几何腿 —— 开关 ON vs OFF 的两帧差分必须数得到墨，且差分那批像素里**过半要是链色那一支**。
+   *      门槛写 ≥50% 而不是 ≥90%（实测 62%）：差的不是"画错了色"，是抗锯齿边与背景混合、
+   *      以及链压过去重新上色的那圈点边/过线绿环——这些像素本来就不属于链色族，把它们算进"不合格"是苛求仪器。
+   *      再加一条 OFF 连画两帧差分必须 = 0（否则 ① 量的是动画/抖动，§E449 那族病）。
+   *      ⚑ 这一腿**必须把标签钉成"不标"再取样**：不是偷懒，是我第一版反过来被这件事教育过 ——
+   *        第一版让链上成员越过"不标"档强制上名，页检当场在三条**与本功能无关**的判据上红
+   *        （指针往返 / 边走一圈 / 池环，它们都靠"不标"来 isolate 几何）。⇒ 覆盖别人测量环境的功能是污染。
+   *   ② 标签腿 —— 用户原话「同时要显示链上点的标签」：把档位放回"历代上槽 + 池"，整条链必须都在 labelSet 里。
+   *   找不到"自己与父都有位置且相距 ≥4px"的点 ⇒ 响亮 SKIP（分母为 0 的"0 FAIL"不是绿，R8 那条）。
+   *   ⚠ 谱系图算 SKIP 不算绿：它本来就把全部父边画出来，这一层的主语只有那三张图。 */
+  (function () {
+    if (st.mode === 'tree') { TS('§E763 追溯链层跟着开关进出画布（几何腿 ‖ 标签腿）',
+      '链条的主语 = 一维带/地图/三维行为轴；谱系图那套父边由 #edges 管，这里不叠第二套'); return; }
+    var bakSel = st.sel, bakChain = st.chain, bakLabels = st.labels, bakTw = tw;
+    function restore() { st.sel = bakSel; st.chain = bakChain; st.labels = bakLabels; tw = bakTw; LCHKEY = '#reset'; draw(); }
+    try {
+      tw = null; st.labels = 'off';
+      var idPick = '', i, j;
+      for (i = 0; i < N; i++) {
+        var d = P[i]; if (!d.pof) continue;
+        j = nOf(d.pof); if (j < 0) continue;
+        st.sel = d.id; st.chain = 1; LCHKEY = '#reset'; draw();
+        if (!scr || !scr[i] || !scr[j]) continue;
+        var dx0 = scr[i][0] - scr[j][0], dy0 = scr[i][1] - scr[j][1];
+        if (Math.sqrt(dx0 * dx0 + dy0 * dy0) < 4 * devicePixelRatio) continue;   /* 父子叠在一起 ⇒ 这一枚不是合格分母 */
+        idPick = d.id; break;
+      }
+      if (!idPick) { TS('§E763 追溯链层跟着开关进出画布（几何腿 ‖ 标签腿）',
+        '这张图里找不到一枚"自己与父都有位置且相距 ≥4px"的点 ⇒ 分母为 0'); restore(); return; }
+      function grab() { try { return new Uint8ClampedArray(g.getImageData(0, 0, cv.width, cv.height).data); } catch (E) { return null; } }
+      st.sel = idPick; st.chain = 0; LCHKEY = '#reset'; draw(); var OFF1 = grab(); var OFF2 = (draw(), grab());
+      st.chain = 1; draw(); var ON1 = grab();
+      if (!OFF1 || !OFF2 || !ON1) { T('§E763 追溯链层几何腿', false, 'getImageData 被拒 ⇒ 量不到画布'); restore(); return; }
+      var nDiff = 0, nAmber = 0, offShake = 0;
+      for (var p = 0; p < ON1.length; p += 4) {
+        var samed = OFF1[p] === ON1[p] && OFF1[p + 1] === ON1[p + 1] && OFF1[p + 2] === ON1[p + 2] && OFF1[p + 3] === ON1[p + 3];
+        if (OFF1[p] !== OFF2[p] || OFF1[p + 1] !== OFF2[p + 1] || OFF1[p + 2] !== OFF2[p + 2] || OFF1[p + 3] !== OFF2[p + 3]) offShake++;
+        if (samed) continue;
+        nDiff++;
+        var r = ON1[p], gg = ON1[p + 1], bb = ON1[p + 2];
+        if (r > 150 && gg > 60 && r > gg + 35 && bb < 150 && bb < gg + 30) nAmber++;   /* #ff8f4d 那一支（含抗锯齿边） */
+      }
+      T('§E763 追溯链层跟着开关进出画布（几何腿：差分有墨 ‖ 墨是链色 ‖ 关掉不抖）',
+        nDiff > 500 && nAmber * 2 >= nDiff && offShake === 0,
+        '选中 ' + idPick + ' ‖ ON−OFF 差分 ' + nDiff + ' 颗（>500）‖ 其中链色 ' + nAmber + ' 颗（' +
+        (nDiff ? (100 * nAmber / nDiff).toFixed(0) : '-') + '%，要求 ≥50%）‖ OFF 连画两帧差 ' + offShake + ' 颗（要求 =0）');
+      /* ② 标签腿：档位回到"历代上槽 + 池"，整条链都要在 labelSet 里。
+       *    ⚑ 这里必须自己调 ensureChain()，不许依赖"刚才那次 draw 顺带算好了 LCH"——
+       *      变异 MUT-1（把 drawChain 改成整层空转、连 ensureChain 都不走）时这一腿是直接抛 null 的，
+       *      说明我把判据接在了实现细节上；判据要能独立于"那一层到底画没画"来问"名字给没给"。 */
+      st.labels = 'champ'; st.sel = idPick; st.chain = 1; LCHKEY = '#reset';
+      var myChain = ensureChain(); draw();
+      var have = {}, lsa = labelSet();
+      for (i = 0; i < lsa.length; i++) have[lsa[i].i] = 1;
+      var miss = [], nChain = 0;
+      for (var k in myChain.deep) { var ii = nOf(k); if (ii < 0 || !scr[ii]) continue; nChain++; if (!have[ii]) miss.push(k); }
+      T('§E763 链上每一枚都要上名（labelSet 收得下整条链）',
+        nChain >= 2 && miss.length === 0,
+        '链上可画的 ' + nChain + ' 枚（含选中自己）‖ 缺席 ' + miss.length + ' 枚' + (miss.length ? ' [' + miss.slice(0, 3).join(',') + ']' : ''));
+      restore();
+    } catch (E) {
+      restore();
+      T('§E763 追溯链层：这条判据自己跑挂了（不许静默少一条）', false, String(E && E.message || E).slice(0, 120));
+    }
+  })();
   /* ===== §E620 工具栏分三段（用户 10-16 傍晚："上方的选项太多了…前面几个是不同图选项，后面先一段通用选项，
    *   最后是针对每个图特有的选项，并且在切换到其他图的时候就不要显示"）=====
    *   这条钉的是**登记完整性**，不是件数（用户同一批话里否掉了钉绝对枚数的那类门）。
@@ -4810,12 +4993,16 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     return n >= 6 && DCD >= (isCh ? 50 : 20) ? [sx / n, sy / n, n] : null;
   }
   function roundTrip(setup) {
-    var bak = { mode: st.mode, e: st.elev, z: st.zoom3, k: st.k, iso: st.iso, labels: st.labels };
+    var bak = { mode: st.mode, e: st.elev, z: st.zoom3, k: st.k, iso: st.iso, labels: st.labels, chain: st.chain };
     /* §E449 标签钉成"不标"：这条的派发点是从**选中环的像素**反算出来的，而 labels=all 时近处点的名字会把选中环糊掉半圈
      *   ⇒ 可见弧的质心不再等于点心（实测三枚全错位，环心与 scr 差 +7/+5/-7px，按质心点下去选中了邻居）。
      *   这个病是真的，但它归"被别人的名字压住的点"那条量（上一段，出厂档实测 cov），不归指针换算这条：
      *   本条要证的是 rect / dpr / CSS 压扁这一层换算对不对，把两件事记进同一本账，红了不知道该修哪个。 */
     st.labels = 'off';
+    /* §E763 追加同一类隔离：追溯链那一层也是"选中之后多出来的墨"，而这条判据的派发点是**从选中环的像素反算**的。
+     *   不关掉它，差分里混进整条链 ⇒ 环心质心被拖走（实测指针往返四张图全红、"落点离环心 -1px"）。
+     *   ⇒ 这条不是绕过红，是把"这一层不参与本次测量"写进测量条件；链自己的两帧差分由 §E763 那条判据管。 */
+    st.chain = 0; LCHKEY = '#reset';
     setup();
     var rr = cv.getBoundingClientRect(), lo = -1, hi = -1, loY = -12, hiY = 1e9, fails = [], n = 0, dd = [];
     var loC = -1, loCY = -12;   /* 最靠下的那枚冠军（专门给它留一个名额，见下面 §E449 那段） */
@@ -4870,6 +5057,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     }
     st.sel = null; st.mode = bak.mode; st.elev = bak.e; st.zoom3 = bak.z; st.k = bak.k; st.iso = bak.iso;
     st.labels = bak.labels;
+    st.chain = bak.chain; LCHKEY = '#reset';   /* §E763：与上面那条隔离成对，不许把链留在关掉的状态离开这条判据 */
     recomputeVIS(); draw();
     return { ok: fails.length === 0 && n >= 2 && nLinp >= 1,
       msg: (fails.length ? fails.join(' ‖ ')
