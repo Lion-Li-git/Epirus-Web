@@ -71,7 +71,7 @@ export function realizableOf(rows, envs, bestIn, picks, metric, fallbackPack) {
     const pe = picks[e];
     const pack = pe ? bestIn[pe] : null;
     const used = pack || fallbackPack;
-    if (pack && pack !== fallbackPack) switched++;
+    if (switchedEnv(pack, fallbackPack)) switched++;
     const v = cellOf(find(used), e, m);
     if (v !== null) list.push(v);
   }
@@ -79,6 +79,13 @@ export function realizableOf(rows, envs, bestIn, picks, metric, fallbackPack) {
 }
 
 export function chanceOf(nEnvs) { return 1 / Math.max(1, nEnvs); }
+
+/** 「这一格路由器**真的换了包**」的唯一定义：有票（预测到了环境并且那环境有最佳包），且挑出来的包**不是**那一招鲜。
+ *  ⚠ 为什么要有这一个函数：本仓曾有三处各写一遍这个判断（这里的计数 ‖ `probe-regime-identifiability` 屏上那份名单
+ *   ‖ 它 `--dump` 的逐格字段），其中两处漏了 `!== fallbackPack` ⇒ "投了一票，而投的正好是一招鲜"被算成换包，
+ *   于是同一次运行里屏上能印出 `实际换包 0/8：random`（数与名单自相矛盾），dump 与 json 也对不上。
+ *   D193⑨′ 红就红在这里 ⇒ 计数只许从这里出。 */
+export function switchedEnv(predPack, fallbackPack) { return !!(predPack && fallbackPack && predPack !== fallbackPack); }
 
 /** 签名有没有分辨力：**跟随机与 placebo 比**，不比绝对值（27 类时 13% 已经是有信息，见下面的规则缺陷记录） */
 export function isInformative(acc, chance, placebo) {
