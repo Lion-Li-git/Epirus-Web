@@ -41,7 +41,11 @@ const SENT = {
    *   而 D206 ⑥ 直接判"这个键两处测试夹具都不送（新登记的键没人验过它真能到达作用点）"。 */
   voidW: 0.5, voidIdealW: 0.5,
   /* v1.8.36（夜班 #58）：开局爆珠塑形出厂是 0 ⇒ 哨兵取 0.55（明显不是出厂值），D206⑥ 要求两处夹具都送。 */
-  beadSeed: 0.55
+  beadSeed: 0.55,
+  /* v1.8.37（千问 10-25 夜班修 D175）：珠种档是**枚举键**（出厂 'elec'）⇒ 哨兵必须喂另一个合法值。
+   * 缺这一行的症状是探针 ① 印「本次下达 30 个 ‖ 下达了但读回没变：beadSeedKind（下达 undefined 读回仍="elec"）」
+   * 并 exit 7 —— 那不是"setter 不吃键"，是没下达；补上之后这一行才真的验到"枚举键能到达作用点"。 */
+  beadSeedKind: 'boom'
 };
 /* 下达名 ≠ 读回名的两处（第一版把这两处误报成"setter 不吃键"，故显式映射并注释） */
 const readKey = k => (k === 'target' ? 'targetOverride' : (k === 'cap' ? 'capOverride' : k));
