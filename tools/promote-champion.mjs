@@ -246,7 +246,19 @@ if (ss.verdict === 'biased') {
 } else {
   console.log('  座位对称性 OK：极差 ' + ss.spread.toFixed(0) + 'pt（' + ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '）');
 }
-if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) + ' < 3（打法坍缩到两三张卡）');
+/* ===== 2026-10-25（用户裁定「广度取 b」）：阻断吃**两把量具里更严的那一个** =====
+ *   旧口径（10-10/11 那次裁定）只把 `selfPlay` 的 `effSkills` 送进阻断，而同一份体检里另一把熵量具
+ *   `breadthProfile` 的 `G_eff` **只打印不判** ⇒ 出现"骑线"：`selfPlay long G=3.93 过 ‖ breadthProfile long G_eff=2.64 不过`
+ *   （实测原件 `night-T1-77002`，2026-10-25 16:32 的体检）。用户今天把这一问裁成"取严的"。
+ *   ⚠ 两把都要**先算出来**才能取 min ⇒ 这两行从原来的打印区搬到这里（搬动不改剂量：仍是 `EPIRUS_BREADTH_GAMES || 20` 局）。
+ *   ⚠ 与 `sp`/`spL` 同模式配对：multi 比 `sp.effSkills` 与 `brdM.G_eff`，long 比 `spL.effSkills` 与 `brd.G_eff`
+ *     ——**不许跨模式取 min**（那会把"长程塌缩"和"短程不塌"混成一根轴，正是 §v1.5.145 那次病 shape）。 */
+const brd = breadthProfile(W, params, 'long', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
+const brdM = breadthProfile(W, params, 'multi', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
+const G_M = Math.min(Number(sp.effSkills), Number(brdM.G_eff));
+const G_L = Math.min(Number(spL.effSkills), Number(brd.G_eff));
+if (G_M < 3) fails.push('G 有效技能数 ' + G_M.toFixed(2) + ' < 3（取两把里更严的：selfPlay ' +
+  Number(sp.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brdM.G_eff).toFixed(2) + ' ⇒ 打法坍缩到两三张卡）');
 /* v1.6.49（2026-10-10/11 用户裁定「long 也该阻断」）：**long 的广度同样进阻断**，线沿用同一条 3。
  * 动因：这条腿自 v1.5.145 起只被"打印 + feasibility 第四道"记录，**从未挡过任何候选**（见上面 `spL` 处的更正），
  *   而 long（5 血，产品常用模式）恰恰是玩家会遇到的赛程 —— 「multi 过门、long 塌成两三张卡」这形状
@@ -254,7 +266,8 @@ if (sp.effSkills < 3) fails.push('G 有效技能数 ' + sp.effSkills.toFixed(2) 
  * ⚠️ 打印那侧（`_gBlocked`）也要跟着改：它原来只认前缀 `indexOf('G 有效技能数') === 0`（**只覆盖 multi 那一条**，
  *   而本条以 `G(long)` 开头 ⇒ 它**认不到**）⇒ 已把 `_gBlocked` 改成两条前缀都收的 `fails.filter(...)`，
  *   标题同步改成「门判 multi **与** long」（打印与阻断同源，规矩 44）。 */
-if (spL.effSkills < 3) fails.push('G(long) 有效技能数 ' + spL.effSkills.toFixed(2) + ' < 3（长程打法坍缩到两三张卡）');
+if (G_L < 3) fails.push('G(long) 有效技能数 ' + G_L.toFixed(2) + ' < 3（取两把里更严的：selfPlay ' +
+  Number(spL.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brd.G_eff).toFixed(2) + ' ⇒ 长程打法坍缩到两三张卡）');
 /* ===== v1.5.71（第五轮复核 §4-6）：**出厂换包也写一份 feasibility 记录** =====
  * 病：线上包的 meta 里没有 `feasibility` —— 它是经 tools/upgrade-pack.mjs 换回来的、绕过了训练落盘
  * 那一步 ⇒ "这个包当年怎么过的五道门"在产物上不可查。
@@ -270,6 +283,13 @@ const feas = feasibilityOf({ seat: ss, G: sp, G2: spL, G2name: 'long', wall: rw,
     expiredPerGame: chgE.games ? chgE.expired / chgE.games : 0,
     zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
 console.log('   可行性（与训练落盘同源 · 样本量 ' + FEAS_N.tag + '）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
+  /* ⚠ 2026-10-25「广度取 b」之后，这一行与下面的"广度"栏**可能不同判**：`feasibilityOf` 是**训练落盘口径**（吃 selfPlay 的 G），
+   *   而 promote 的阻断 10-25 起改吃**两把量具取严**。两者不一致时必须在这里点名，否则读体检的人会拿"五道全过"当"能出厂"
+   *   （本仓规矩 44：打印机必须打印门所判的那个量 —— 这条就是它的新变体：**两道口径都要印**）。 */
+  (feas.ok && (G_M < 3 || G_L < 3)
+    ? ' —— ⚠ **但 promote 侧的"广度取严"另判**：G(multi)=' + G_M.toFixed(2) + ' ‖ G(long)=' + G_L.toFixed(2) + '（线 3）' +
+      ' ⇒ **本候选仍被挡**（`feasibilityOf` 那五道不吃取严那条，它是训练落盘的口径）'
+    : '') +
   '（座位 ' + feas.seatSpread + 'pt/' + feas.seatVerdict + ' · G(multi) ' + feas.G +
   (feas.G2 != null ? ' · **G(' + feas.G2name + ') ' + feas.G2 + '**' : '') +
   /* v1.5.167（§N24）：门禁那把 G 只数"发起了几种" ⇒ 与"打得出血几种"**并排印**。
@@ -362,15 +382,15 @@ if (process.env.EPIRUS_NO_DEFQ !== '1') {
   }));
 }
 
-const brd = breadthProfile(W, params, 'long', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
+/* `brd`（long）与 `brdM`（multi）已在上面"取严的进阻断"那一段算出来了（2026-10-25 用户裁定「广度取 b」）；
+ *   这里只复用它们做打印，**不再各算一遍**（同一份体检里跑两遍 `breadthProfile` 会让 n 翻倍而读数不变，白花钱）。 */
 /* ===== v1.5.145（用户追问"这个包在不探索的时候技能广度非常差，是怎么通过门禁上线的？"）=====
  * 实情（**当时**）：**阻断项 `G` 取自 `selfPlay(..., 'multi', G)`，而本行打印的是 `breadthProfile(..., 'long')`**
  *   ⇒ 同一份体检里出现**两个模式**的广度：门判 multi（现役 4.44 ⇒ 过），用户玩 long（现役 **G_eff 2.79 < 3** ⇒ 不过）。
  * ⇒ 违反本仓老规矩"**打印机必须打印门所判的那个量**"（METHODOLOGY 第 44 条）。
  * v1.5.145 那笔**只补打印、没动判据**（阻断当时仍是 multi 的 `sp.G`，逐字不变）；把 long 的 G 与它和门的差**并列报出来**，
  *   并把"哪边是门"写清楚 —— 否则读体检的人会把只记录的那一栏当成门。
- * ⚠️ **上面这段是历史，不是现状**：自 2026-10-10/11 用户裁定起，long 的 `spL.effSkills` **也进阻断**（同一条线 3）。 */
-const brdM = breadthProfile(W, params, 'multi', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
+ * ⚠️ **上面那段是历史，不是现状**：10-10/11 起 long 也进阻断；**2026-10-25 起两个模式都改吃"两把量具里更严的那一个"**（用户裁定「广度取 b」）。 */
 /* §2026-10-10 DS（Claude 整改建议 §训练侧建议 1「修好 promote --dry 打印与阻断不一致后重跑一遍」· U-s202）
  *   ⇒ §2026-10-10/11 用户裁定「long 也该阻断」，所以这条注释里的"门只判 multi"**已作废**，按下面重写。
  *   来时路（留着，别当成现状）：`U-s202` 那次的病是**打印与阻断不同源** —— 同一份体检里 `U-s202` 印了
@@ -381,16 +401,13 @@ const brdM = breadthProfile(W, params, 'multi', Number(process.env.EPIRUS_BREADT
  *     而 `G(long) 有效技能数 …` 以 `G(long)` 开头 ⇒ **不会**被那个前缀认到（它只覆盖 multi 那一条）
  *     ⇒ 标题不再能说"门只判 multi"，改成"已阻断（哪几条）"并列印。 */
 const _gBlocked = fails.filter(function (f) { return f.indexOf('G 有效技能数') === 0 || f.indexOf('G(long) 有效技能数') === 0; });
-console.log('   广度（**门判 multi 与 long**（用户裁定 10-10/11 · 两条同线 3）：' +
-  (_gBlocked.length ? '已阻断 —— ' + _gBlocked.join(' ‖ ') : '两条都未阻断') + '）：multi 有效技能数=' + Number(sp.effSkills).toFixed(2) +
-  '（selfPlay）· **long（= 长程，产品常用模式）** 有效技能数=' + Number(spL.effSkills).toFixed(2) + '（selfPlay）· ' +
-  '（另两个熵量具作对照：multi G_eff=' + brdM.G_eff.toFixed(2) + '（n=' + brdM.N + '）· long G_eff=' + brd.G_eff.toFixed(2) +
-  '（n=' + brd.N + '）—— 同模式不同量具/样本会有差，属已知的样本敏感性' +
-  ((feas.G2 != null && Number(feas.G2) >= 3 && brd.G_eff < 3)
-    ? ' ⇒ ⚠️ **同一模式两量具分歧**（long）：门用的 selfPlay long G=' + Number(feas.G2).toFixed(2) +
-      ' ≥3 过，而 breadthProfile long G_eff=' + brd.G_eff.toFixed(2) + ' <3 不过 ⇒ 这条线恰好骑在门槛上。' +
-      '**long 已是阻断项**（用户裁定），但门吃的是 selfPlay 那一个量；要不要让门**取更严的那个**' +
-      '（即把 breadthProfile 也接进阻断）**仍请用户裁定**'
+console.log('   广度（**门判 multi 与 long，两个模式各取两把量具里更严的那一个**（10-10/11「long 也阻断」‖ **2026-10-25 用户裁定「广度取 b」**· 两条同线 3）：' +
+  (_gBlocked.length ? '已阻断 —— ' + _gBlocked.join(' ‖ ') : '两条都未阻断') + '）：multi 有效技能数=' + G_M.toFixed(2) +
+  '（取严 = min(selfPlay ' + Number(sp.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brdM.G_eff).toFixed(2) + '）' +
+  ' · **long（= 长程，产品常用模式）** 有效技能数=' + G_L.toFixed(2) +
+  '（取严 = min(selfPlay ' + Number(spL.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brd.G_eff).toFixed(2) + '）' +
+  ((sp.effSkills !== G_M || spL.effSkills !== G_L)
+    ? ' ⇒ ⚠️ **两把量具在同一个模式上分歧过，被"取严"这一条兜住了**（旧口径只看 selfPlay ⇒ 这种骑线会一路放行到出厂）'
     : '') + '）');
 console.log('   技能广度 S（n=' + brd.N + ' 个非ジ出手 · ' + brd.games + ' 局自对局）：S=' + brd.S.toFixed(3) +
   ' = 类间 ' + brd.S_cat.toFixed(3) + ' + 类内 ' + brd.S_within.toFixed(3) +

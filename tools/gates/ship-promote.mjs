@@ -327,13 +327,16 @@ t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一
     '好密度也必须走 notes（同一条口径；实测 notes=' + JSON.stringify(goodD.notes) + '）');
 });
 
-t('D79 技能广度 S：定义明确 + 按 rules.js 声明的 cat 分层（**不按伤害加权**）+ 固定分母 + 只记录不阻断', function () {
+t('D79 技能广度 S：定义明确 + 按 rules.js 声明的 cat 分层（**不按伤害加权**）+ 固定分母 + **两个模式各取两把量具里更严的那一个进阻断**', function () {
   /* v1.5.91（用户裁定）：用户要的目标形状是 `H + T·S`（H = 与胜率相关的强度、S = 技能广度、T = 交换率）。
    * 这条守门盯的是**用户明确否定过的东西**，免得以后又走回去：
    *   ① 不得按"落地伤害"加权 —— 那样梯度会全给最便宜的枪，而且防御类卡伤害恒 0 ⇒ 量不出防御技能的使用；
    *      更根本：任何"按卡打分"的权重都会给某张卡一个**专属梯度**（v1.3.7 的 hold+conv 就是活例）；
    *   ② 分母不得来自"当时可负担的技能数"（v1.5.86 那个可以靠"把菜单变穷"刷分的洞）；
-   *   ③ 不得悄悄变成阻断项（它现在**只测量**；上闸是独立决策，且要先有判别力）。 */
+   *   ③ 不得**悄悄**变成阻断项 —— 上闸是独立决策。原来这一条落成"广度不得进 fails（只测量）"的负钉，
+   *      因为那时"要不要接 breadthProfile 进阻断"**还没裁**；
+   *      **2026-10-25 用户裁「广度取 b」**= 两个模式各吃"更严的那一把" ⇒ 负钉作废，换成下面的正钉
+   *      （同一句话的两种形状：从"不许上闸"改成"必须按取严上闸"，量的还是那一维）。 */
   const al = readFileSync('tools/audit-lib.mjs', 'utf8');
   ok(al.indexOf('export function breadthProfile(') >= 0, '必须有广度的权威定义 breadthProfile');
   const seg = al.slice(al.indexOf('export function breadthProfile('));
@@ -349,8 +352,17 @@ t('D79 技能广度 S：定义明确 + 按 rules.js 声明的 cat 分层（**不
   ok(pc.indexOf('breadthProfile(W, params') >= 0 && pc.indexOf('技能广度 S（n=') >= 0,
     '体检必须打印 S，且**与 n 一起打**（S 对样本量敏感 —— METHODOLOGY 22）');
   ok(pc.indexOf('目标 = H + T·S') >= 0, '打印里必须写清目标形状（用户要求"S 怎么算"必须明确）');
-  ok(pc.indexOf("fails.push('广度") < 0 && pc.indexOf('fails.push("广度') < 0,
-    '广度**不得**进 fails（只测量；要上闸是独立决策）');
+  /* ---- 正钉（用户裁定「广度取 b」）：两个模式必须各取两把量具里更严的那一个 ----
+   * 会红的情形（牙）：把 `G_M` 改回 `sp.effSkills`（只吃 selfPlay）⇒ 第一条红；只接 multi 不接 long ⇒ 第二条红；
+   *   跨模式取 min（`sp` 配 `brd`）⇒ 第三、四条红。⇒ 这一组**不是**只钉字符串：钉的是"哪两把、按哪个模式配"。 */
+  ok(/const G_M = Math\.min\(Number\(sp\.effSkills\), Number\(brdM\.G_eff\)\)/.test(pc),
+    'multi 的阻断必须是 min(`sp.effSkills`, `brdM.G_eff`)（两个量具**同模式**配对）');
+  ok(/const G_L = Math\.min\(Number\(spL\.effSkills\), Number\(brd\.G_eff\)\)/.test(pc),
+    'long 的阻断必须是 min(`spL.effSkills`, `brd.G_eff`)（只接一边 = "b" 没落全）');
+  ok(/if \(G_M < 3\) fails\.push/.test(pc) && /if \(G_L < 3\) fails\.push/.test(pc),
+    '两个取严值都必须真的进 `fails`（只算不推 = 打印与阻断又不同源）');
+  ok(pc.indexOf('取两把里更严的') >= 0,
+    '阻断消息里必须写出"取严"与两把各自的读数（否则后来人看不出这条红是哪把尺判的）');
 });
 
 t('D103 「珠爆发」线必须同时在册（2P 考卷 + G4 克制表），且 G4 **复用同一份实现**', function () {
