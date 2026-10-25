@@ -575,8 +575,23 @@ t('D135 大雷连带收益项（v1.5.187 接线 · v1.5.188 换**率形**）：�
   const out2 = String(run2.stdout || '');
   const castLines = (out2.match(/出手=(\d+)/g) || []).map(function (s) { return Number(s.split('=')[1]); });
   ok(castLines.length > 0, '对照臂也必须印分母（不印 = 这项在没示范时根本不看数据）');
-  eq(Math.max.apply(null, castLines), 0, '没有示范 ⇒ 该席大雷出手必须恒 0（实测最大 ' + Math.max.apply(null, castLines) + '）');
-  ok(!/连带=([1-9]\d*) 条/.test(out2), '没有示范 ⇒ 一条链都不许出现（出现就说明分子数到了别人/注入之外的东西）');
+  /* ⚑ R62（2026-10-25 · 天火阶梯计价）漂移账：原断言是 `eq(Math.max(castLines), 0, '没有示范 ⇒ 该席大雷出手必须恒 0')`
+   *   ‖ `ok(!/连带=([1-9]\d*) 条/.test(out2), …)`——那是个**经验性零值**（60 代冷进化从不自己出大雷），不是结构不变量：
+   *   R62 把天火首下价 2→1 ⇒ 脚本启发式与候选费用特征整体微移 ⇒ 轨迹漂移 ⇒ 手跑实测 4 个世代点里有一代
+   *   `出手=3 ‖ 连带=1 条`（其余三代仍 0），且同 seed 下示范臂的散发出手也漂到 1 ⇒ **任何"控制臂 vs 示范臂的出手差"
+   *   都不再是稳定断言**。注入机制本身没动。修法（等 Qoder/DS 复核）：锚到**结构性数字**——
+   *   ① 对照臂根本不许出现示范注入统计行（没教师 ⇒ 注入结构性为零）；
+   *   ② 对照臂的散发出手必须**远少于**示范臂的注入开火数 fired（注入仍是这一项压倒性的加量源）；
+   *   ③ 对照臂的连带条数 ≤ 自己的大雷出手数（每条链至少要有一发出手 ⇒ 归因口径没漂）。 */
+  ok(!/示范注入统计/.test(out2), '没有示范 ⇒ 不许出现注入统计行（教师缺席 ⇒ 注入结构性为零）');
+  const firedM = /fired=(\d+)/.exec(String(run.stdout || ''));
+  ok(!!firedM, '示范臂必须印注入开火数 fired（对照腿的锚，见上 ⚑）');
+  const ctrlMax = Math.max.apply(null, castLines);
+  ok(ctrlMax < Number(firedM && firedM[1] || 0), '没有示范 ⇒ 该席大雷出手必须远少于示范臂的注入开火数（控制臂最大 ' +
+    ctrlMax + ' ‖ 示范臂 fired=' + (firedM && firedM[1]) + '）—— R62 漂移后"恒 0"不再是结构不变量，锚换到注入计数');
+  const ctrlChains = (out2.match(/连带=(\d+) 条/g) || []).map(function (s) { return Number(s.replace(/[^\d]/g, '')); });
+  ok(ctrlChains.reduce(function (a, b) { return a + b; }, 0) <= castLines.reduce(function (a, b) { return a + b; }, 0),
+    '对照臂的连带条数不得超过自己的大雷出手数（每条链至少要有一发出手 ⇒ 归因没漂）');
 });
 
 t('D136 示范归因（v1.5.189）：教师的手必须能从包自己的手里分出来，且**没有注入的局也照样计数**、**不进 fit**、**按经济口径分桶**', function () {

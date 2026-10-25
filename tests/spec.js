@@ -337,6 +337,28 @@
     eq(st2.p[1].hp, 3, '原型制御挡天火');
   });
 
+  t('R62 天火阶梯计价：首下 1ジ ‖ 连续使用 2ジ ‖ 隔开重置 1ジ', function () {
+    const st = game(); setEp(st, 9, 9);
+    st.p[1].hp = 9; st.p[0].hp = 9;                      // 抬血防提前死亡干扰
+    st.p[1].stickers = [{ owner: 0, age: 0 }];           // 有符咒可引（也验：无符时同样按阶梯扣费）
+    play(st, SK.FIRESTORM, SK.JI);
+    eq(st.p[0].ep, 8, '首下扣 1（9→8）');
+    play(st, SK.FIRESTORM, SK.JI);                       // 上一手也是天火 ⇒ 连用价
+    eq(st.p[0].ep, 6, '连续使用扣 2（8→6）');
+    play(st, SK.JI, SK.JI);                              // 隔一手 ジ ⇒ 重置
+    eq(st.p[0].ep, 7, '中间出 ジ 攒回 1');
+    play(st, SK.FIRESTORM, SK.JI);
+    eq(st.p[0].ep, 6, '隔开后回到首下价 1（7→6）');
+    /* 负对照：2ジ 买不起连用价时必须 invalid，而不是按 1ジ 放行 */
+    const st2 = game(); setEp(st2, 1, 9);
+    st2.p[1].stickers = [{ owner: 0, age: 0 }];
+    st2.p[0].lastSkill = SK.FIRESTORM;                   // 直接构造"上一手是天火"
+    st2.events = [];
+    X.startTurn(st2);
+    const r = S.attemptAction(st2, 0, SK.FIRESTORM, {});
+    eq(r.outcome, 'insufficient', '只有 1ジ 时连用价 2ジ 必须买不起（不静默按首下价放行）');
+  });
+
   t('R54 挑衅：不攻击则回合末-1；攻击则无事', function () {
     const st = game(); setEp(st, 0, 5);
     st.p[1].tauntActive = true; st.p[1].tauntBy = [0];   // v1.5.138：义务要带"必须打谁"（2P=对面）

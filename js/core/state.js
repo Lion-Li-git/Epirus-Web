@@ -156,6 +156,11 @@
       if (p.elec < 1) return { ok: false, reason: '电磁炮需 1 枚电珠' };
       return { ok: true, ep: 2, hp: 0, beads: { elec: 1 } };
     }
+    if (key === R.SK.FIRESTORM) {
+      /* R62（2026-10-25 用户裁定）：首下 1ジ；连续使用（上一手也是天火）2ジ；隔开（出过任何别的招）重置 1ジ。
+       * 连续的判定与 R32 激光眼同一支 lastSkill。 */
+      return { ok: true, ep: p.lastSkill === R.SK.FIRESTORM ? 2 : 1, hp: 0, beads: null };
+    }
     if (key === R.SK.DRAIN) {   // R25 + v1.4.0：门槛按模式可配（默认仍是 HP≤1）；v1.5.174 长程 3 → 2（用户裁定，见 rules.js 本字段注释）
       /* v1.5.174：原来是 `|| 1` ⇒ **写 0 会静默变成 1**，"想关掉这张卡"这条语义根本不存在
        * （我做"永不可用"对照组时就被它骗过：`drainHpMax:0` 跑出来与 `≤1` 逐位相同才发现）。

@@ -198,6 +198,7 @@
       case R.SK.CANNON: return '相位:2ジ→全ジ→全ジ+1血';
       case R.SK.LASER_EYE: return '首1ジ+爆珠 · 连用2ジ';
       case R.SK.RAILGUN: return '2ジ+电珠';
+      case R.SK.FIRESTORM: return '首1ジ · 连用2ジ';   /* R62 */
       default: return (s.cost === 0 ? '免费' : s.cost + 'ジ');
     }
   }
