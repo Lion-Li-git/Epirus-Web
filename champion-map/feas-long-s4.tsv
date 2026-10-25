@@ -198,3 +198,7 @@ v9-34	0	1	G 1.09 < 3	1.09		18.35	0.312	4	ok	10.7	0			15	n=20/aggr100/seat100	all
 v9-43	0	2	座位偏座（极差≥21.0pt(该 n 的零分布 p99)）：7%/19%/33%/24%/18%；G 2.15 < 3	2.15		19.3	0.308	3.85	biased	25.9	0			15	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
 W31	1	0		5.87		1	0.423	3.98	ok	10.3	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
 clone-79101	1	0		5.71		2.25	0.23	4	ok	4	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
+night-T1-77002	1	0		4.05		16.9	0.41	4	ok	7	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
+night-A0-77001	0	1	场B 清场 0.00 < 0.3/局	5.6		13.05	0.398	0	ok	7.7	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
+night-T3-77002	1	0		5.86		14.5	0.405	0.3	ok	10	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
+night-T3-77000	1	0		4.35		18.8	0.318	2	ok	11	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
