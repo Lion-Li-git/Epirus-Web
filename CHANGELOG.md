@@ -1,4 +1,14 @@
-## v1.8.36 — 10-25（ZCode）：R62 天火阶梯计价（用户裁定）‖ 并入夜班 24 笔 ‖ D135 对照腿漂移修
+## v1.8.37 — 10-25 晚（ZCode · 分支 `research/laser-boomshaping-2026-10-25-zcode`）：激光眼移植批的三根旋钮（判据与账在 REVIEW §二十一）
+
+- **触发**（用户 10-25 晚）：「这一轮的目标是激光眼，而最后搞出来几个过门的全是没有激光眼的」。诊断：五根被否证的杠杆全是奖励/注入侧，全都默认"分母已存在"——而爆珠分母在原生训练分布里结构性缺位；电磁炮当年成牌靠的是 **v1.5.143 BEAD_SEED 电珠塑形给分母**（v1.5.144 即出首枚成牌）+ **v1.5.130 珠爆发线进默认对手池给梯度**，激光线一件都没搬（BEAD_SEED 只发电珠、pickLaser* 只进教师通道）。
+- **`EPIRUS_BEAD_SEED_KIND`**（econ-env 单一来源；缺省 'elec' = v1.5.143 原义逐字不变；'boom' = 同一钩子改发爆珠 ⇒ 激光眼 gen0 就有可打窗口；setter 对非法值响亮拒）。三处名单齐（ECON_ENV_KEYS / ECON_REWARD_KEYS / CLI 投递名单），D77 往返含新键。
+- **`COUNTER_OPP_TABLE.laserBank`**（`EPIRUS_COUNTER_OPPS=laserBank` 按名点名，pickLaserBank 当**对手**上桌；数字口径冻结三元组不受影响，`all` 语义与 gunFocus/reflectWall 同族）。
+- **`EPIRUS_SEQ_KIND`**（序列奖励珠种档；'boom' = 蓄爆珠→激光眼 +W ep，内存经济，本批不开臂留给下一班）。判定零改引擎：charge 事件本来就带 `kind:'boom'`，激光眼出手即 `action.key='laserEye'`。
+- **D77 哨兵表**为枚举键单独喂字符串哨兵 `'boom'`（⚑ 待千问/DS 复核）；**注释更正三处**：BEAD_SEED 的"爆珠塑形"字样改回电珠（钩子给的是电珠，防再误读）。⚠ 教训入注释：数组区注释里不给值加单引号——D77 的数组正则会把 `'elec'`/`'boom'` 当成 env 名误报（第一版就是这么红的）。
+- 验证（定向，不是整轮认证）：`node --check` ×5 ‖ D77 1/1 ‖ D130 1/1 ‖ seq-lib 单元三臂 ‖ 3 代 A/B（boom 臂原生激光眼 1+3 手 vs 电珠臂 0+1，econ 回执含 `beadSeedKind:"boom"`）。
+- 批（§二十一 预注册在跑批前落盘）：S1 纯塑形 ‖ S2 塑形+对手桌 ‖ S3 全栈（+教师）× seeds 77000/77002/77003，热启 v7beadseed-82、300 代、5 人 24/24；主判据 = ε=0 镜像两模式激光眼**原生出手 ≥1**。未动池、未 promote、未碰 `js/core/**`、指纹不变（evo.js 不在 FINGERPRINT_FILES）。
+
+
 
 - **本笔先并了 `research/night-2026-10-24-qoder`（24 笔）**：#55 `FIT_G_W` 方向腿进 D15 ‖ D37/D38/D86/D87/D131 文本钉换行为腿 ‖ 贴贴线收口（§E738 出厂回 0 ‖ §E740 引爆剂量/价值量清，定价留裁）‖ 激光线五杠杆全否证 + T3 四粒配对（抗龟候选 `T3-77002`/`T3-77000`/`A0-77001`，详账在 `docs/research/logs/2026-10-24-night-shift-qoder.md` 与 `HANDOFF-2026-10-25-morning-qoder.md`）。夜班自己没记版本号——本笔的 v1.8.36 同时收它的账。
 - **R62（用户 2026-10-25 裁定，取代"天火 2ジ"）**：天火阶梯计价——**首下 1ジ；连续使用（上一手也是天火）2ジ；隔开重置 1ジ**（连续判定与 R32 激光眼同支 `lastSkill`）。裁定原文与理由拆解在 `docs/RULES-2P.md` R62；实现 `state.js` rawCost 分支 + `rules.js` 卡面（cost 基数 1）+ `ui.js` 费用标签；新增 spec 用例（首下 1 ‖ 连用 2 ‖ 隔开重置 ‖ 1ジ 买不起连用价必须 insufficient）。**用户明示不触发全库重测**（没有任何冠军用这张卡）。

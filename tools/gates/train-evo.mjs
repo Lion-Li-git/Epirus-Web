@@ -1819,7 +1819,9 @@ t('D77 经济/熵奖励 env 只能有**一个**读取点（server/econ-env.mjs�
    *   （我为它连红四次）；③ 抓不到"读了但没生效"。下面喂值读回：**更强、且与排版无关**。 */
   const SENT = { target: 7, cap: 33, divW: 0.123, divK: 9, divRoleW: 0.25, divCatW: 0.25, divForceGens: 5, wallFilter: true, fitCal: true,
     wallGames: 4, hoardOnLeftover: true, convRatio: true, convOffense: true, hoardCapMult: 5, stockBonus: 0.11,
-    blockW: 0.22, widthW: 0.33, bigcardW: 0.44, beadSeed: 0.55 };
+    /* v1.8.37（10-25 ZCode ⚑ 待千问/DS 复核）：`beadSeedKind` 是**枚举键**（'elec'/'boom'），
+     * 缺省数字哨兵 0.5 会被 setter 响亮拒 ⇒ 单独喂字符串哨兵（setter 对非法值抛错本就是它该有的牙）。 */
+    blockW: 0.22, widthW: 0.33, bigcardW: 0.44, beadSeed: 0.55, beadSeedKind: 'boom' };
   const ALIAS = { target: 'targetOverride', cap: 'capOverride' };
   const notOk = [];
   try {

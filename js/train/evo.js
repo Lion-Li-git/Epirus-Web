@@ -1901,7 +1901,7 @@ let WALL_GAMES = 3;
     if (!ECON_DEFAULTS && !o.reset) {
       /* v1.5.299（DS）：**这份快照是字面量列表**（注释里说"不抄字面量"其实不成立）⇒ 加新键必须同时补这里，
        * 否则 `setEconomyReward({reset:true})` 抹不掉它 —— 我的 `fitCal` 就是这么被 D175 抓到的（门是对的）。 */
-      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W, fitCal: FIT_CAL_EXCESS, fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, voidW: VOID_W, voidIdealW: VOID_IDEAL_W, beadSeed: BEAD_SEED };
+      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W, fitCal: FIT_CAL_EXCESS, fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, voidW: VOID_W, voidIdealW: VOID_IDEAL_W, beadSeed: BEAD_SEED, beadSeedKind: BEAD_SEED_KIND };
     }
     /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」）：`voidW` / `voidIdealW` 走 econ-env 单一来源
      *   （不设 ⇒ null ⇒ 两个 W 原样 0 ⇒ 严格不加项、逐位不变）。
@@ -1928,11 +1928,18 @@ let WALL_GAMES = 3;
     /* v1.6.50（用户裁定 B）：把闸的广度折进适应度。两个键一起收口（只给 W 不给下界 ⇒ 用默认下界 3，与闸同线）。 */
     if (o.fitGW != null) FIT_G_W = Math.max(0, Number(o.fitGW) || 0);
     if (o.fitGF != null) FIT_G_FLOOR = Math.max(0, Number(o.fitGF) || 0);
-    /* v1.8.36（夜班 #58）：开局爆珠塑形 `BEAD_SEED` 走 econ-env 单一来源（不设 ⇒ null ⇒ 原样 0 ⇒ 逐位不变）。
+    /* v1.8.36（夜班 #58）：开局珠塑形 `BEAD_SEED` 走 econ-env 单一来源（不设 ⇒ null ⇒ 原样 0 ⇒ 逐位不变）。
+     *   ⚑ v1.8.37 更正一笔：本注释与 `server/econ-env.mjs` 的头注原先都把这键写成"**爆珠**塑形"——
+     *   钩子给的一直是**电珠**（v1.5.143 原义，为电磁炮）；爆珠档要到下面这行 `beadSeedKind` 才存在。
      *   为什么现在才接：这个键自 v1.5.143 就在引擎里（`setBeadSeed`/`beadSeedOn`），但**从没进过任何投递名单**
      *   ⇒ 臂上设 `EPIRUS_BEAD_SEED` 会撞黑键闸（train-3p `exit 6`），绕过去手设则只有服务进程那份生效 ——
      *   正是本仓附录 D 臂 K 那种"A/B 其实跑成 A/A"的形状。放在开头同样不是排版洁癖（上面那条 1200 字符纪律）。 */
     if (o.beadSeed != null) setBeadSeed(Number(o.beadSeed));
+    /* v1.8.37（10-25 ZCode · 激光眼移植批 §二十一）：`BEAD_SEED` 的**珠种档**（'elec' 缺省 = v1.5.143 原义 ⇒ 逐字不变；
+     * 'boom' = 同一钩子改发爆珠）。动机：§E744/§E759 已钉死"激光眼缺的是分母与时机"，而 §E734 否证的
+     *   BEAD_SEED=0.5 那根给的是**电珠**——爆珠档从未被试过。电磁炮先例（v1.5.143 电珠塑形 → v1.5.144 首个成牌）
+     *   的镜像移植。走同一单一来源 ⇒ 16 个 worker 同步生效。 */
+    if (o.beadSeedKind != null) setBeadSeedKind(o.beadSeedKind);
     if (o.hoardCapMult != null) HOARD_CAP_MULT = Number(o.hoardCapMult) || 1; if (o.stockBonus != null) STOCK_BONUS = Number(o.stockBonus) || 0;
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
@@ -1950,6 +1957,7 @@ let WALL_GAMES = 3;
        *   一并收进 reset。 */
       S4_W = 0; setRingReward(0.10); setBeadReward(0.05); WALL_FILTER_ON = false; WALL_GAMES = 3;
       FIT_TAIL_W = 0; FIT_TAIL_Q = 0.25;   // 09-26 夜班 §E49：D77 往返的哨兵必须在这里抹掉，否则 0.5 泄漏给后续门
+      setBeadSeedKind('elec');             // v1.8.37：D77 会喂 'boom' 哨兵，reset 必须能抹回电珠档
       /* v1.5.265（§E65b）：这五个键以前**不在** reset 名单里（手写名单漏的）。走出厂值快照，不抄字面量。 */
       if (ECON_DEFAULTS) {
         DIV_W = ECON_DEFAULTS.divW; DIV_K = ECON_DEFAULTS.divK; DIV_ROLE_W = ECON_DEFAULTS.divRoleW;
@@ -1962,13 +1970,14 @@ let WALL_GAMES = 3;
         if (ECON_DEFAULTS.voidIdealW != null) VOID_IDEAL_W = ECON_DEFAULTS.voidIdealW;
         if (ECON_DEFAULTS.fitGF != null) FIT_G_FLOOR = ECON_DEFAULTS.fitGF;
         if (ECON_DEFAULTS.beadSeed != null) setBeadSeed(ECON_DEFAULTS.beadSeed);   // v1.8.36：D77 的哨兵喂完 0.5 要能抹回去
+        if (ECON_DEFAULTS.beadSeedKind != null) setBeadSeedKind(ECON_DEFAULTS.beadSeedKind);   // v1.8.37：同上
       }
     }
     return economyReward();
   }
   function economyReward() {
     return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divCatW: DIV_ROLE_W, K_role: K_ROLE,
-      fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, beadSeed: BEAD_SEED,
+      fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, beadSeed: BEAD_SEED, beadSeedKind: BEAD_SEED_KIND,
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
@@ -2243,7 +2252,7 @@ let WALL_GAMES = 3;
           for (let i = 0; i < state.p.length; i++) {
             const q = state.p[i];
             if (!q || q.hp <= 0) continue;
-            if (!q.elec && !q.boom) q.elec = 1;
+            if (!q.elec && !q.boom) { if (BEAD_SEED_KIND === 'boom') q.boom = 1; else q.elec = 1; }   // v1.8.37：珠种档（默认 elec = v1.5.143 原义）
             if (q.ep < 2) q.ep = 2;
           }
         }
@@ -3035,6 +3044,19 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
     return BEAD_SEED;
   }
   function beadSeedOn() { return BEAD_SEED; }
+  /* ===== v1.8.37（10-25 ZCode · 激光眼移植批 §二十一）：珠塑形的**珠种档**（默认 'elec' ⇒ 逐字不变）=====
+   * 病：`BEAD_SEED` 自 v1.5.143 起只发**电珠**——它成牌的是电磁炮（v1.5.144 首例）；
+   * 激光眼的前置件是**爆珠**（首次 = 1ジ + 1 爆珠，state.js:152-153），电珠塑形对它连分母都不给
+   * ⇒ §E734 否证的"BEAD_SEED=0.5"那一根，否的是电珠档；爆珠档从未被试过。
+   * 语义：kind='boom' 时同一钩子同一概率改发爆珠（ep 抬到 ≥2 不变、全席对称不变、rng 消耗不变）。
+   * 只认 'elec' / 'boom' 两个值，别的**响亮拒**（与 TRAIN_MODE 的 exit 7 纪律同族：不许静默落回默认档）。 */
+  let BEAD_SEED_KIND = 'elec';
+  function setBeadSeedKind(k) {
+    if (k !== 'elec' && k !== 'boom') throw new Error('setBeadSeedKind: 只认 \'elec\'/\'boom\'，收到 ' + JSON.stringify(k));
+    BEAD_SEED_KIND = k;
+    return BEAD_SEED_KIND;
+  }
+  function beadSeedKind() { return BEAD_SEED_KIND; }
   function imitBetaForGen(gen) {
     if (IMIT_PLAN) {
       const s = imitPlanSegment(gen);

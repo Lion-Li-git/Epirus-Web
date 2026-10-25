@@ -1,4 +1,7 @@
 /* 序列奖励（"蓄能[电珠] → 下一回合电磁炮"完成时给 W ep）—— v1.5.229 · 用户批准的方案 (a)
+ * v1.8.37（10-25 ZCode · §二十一 激光眼移植批）：加**珠种档** `kind`（'elec' 缺省 = 原义逐字不变；
+ * 'boom' = "蓄爆珠 → 激光眼"）。判定不用动引擎：charge 事件本来就带 `kind:'boom'`（`opt.bead`），
+ * 激光眼打出去也是 `{type:'action', key:'laserEye', outcome:'ok'}` ⇒ 只是换了两个匹配字面量。
  *
  * ## 为什么是"内存里"的
  * 与 `tools/kill-reward-lib.mjs` 同一族：**仓库文件一字不动 ⇒ 规则指纹不变**，默认关（`EPIRUS_SEQ_W=0`）时行为逐字不变。
@@ -17,7 +20,7 @@
  * ## 语义（与"珠子只活一回合"的规则对齐）
  * 电珠在**下一回合**可用、之后失效 ⇒ "能打出电磁炮"本身就意味着"该席**上一回合自己充过电珠**"
  *   （`p.elec` 每回合末清空，电磁炮又必须持有电珠）⇒ 判定用**事件顺序**即可：见 `bead(elec,pid)` 挂起，
- *   随后该席真的打出 `railgun` 就付钱。
+ *   随后该席真的打出 `railgun` 就付钱。爆珠档同构：见 `bead(boom,pid)` 挂起，随后 `laserEye` 打出去付钱。
  * ⚠️ 我试过再加一层"恰好隔一回合"的严格校验（`state.round === pend+1`），结果发放从 71 次**掉到 0** ——
  *   因为 `tick` 跑在**回合动作结算之前**（决策点），回合号比较恒不成立 ⇒ 那是**时机 bug**，不是严格性。
  *   已回退：现有判定的误差方向是**漏付**（tick 没夹在中间时少付，实测 71/86 ≈ 83%），不是多付。
@@ -26,12 +29,15 @@
  * 付款发生在**下一个决策点**（任意席位）而不是结算那一刻 —— 于是它只影响**后续**决策的可负担性（这正是我们要的），
  * 且不依赖任何引擎内部钩子。`__seqCur`/`__seqPend` 都挂在 `state` 上 ⇒ 天然按局隔离。
  */
-export function makeSeqReward(R, W) {
+export function makeSeqReward(R, W, kind) {
   const w = Number(W) || 0;
   if (!w) return null;
-  const KR = R.SK.RAILGUN;
+  const BOOM = kind === 'boom';                       // v1.8.37：缺省/undefined/'elec' 都走电珠原义
+  const BEAD_KIND = BOOM ? 'boom' : 'elec';
+  const TERM = BOOM ? R.SK.LASER_EYE : R.SK.RAILGUN;
+  const REASON = BOOM ? '序列奖励(蓄爆珠→激光眼)' : '序列奖励(蓄能→电磁炮)';
   return {
-    w: w, paid: 0, events: 0, granted: [], charges: 0, firstCharge: -1, firstPayRound: -1,   // granted：给谁、第几局，便于自证
+    w: w, kind: BEAD_KIND, paid: 0, events: 0, granted: [], charges: 0, firstCharge: -1, firstPayRound: -1,   // granted：给谁、第几局，便于自证
     /** 每个决策点调一次。**幂等**：同一事件不会被处理两次（cursor 记账）。 */
     tick: function (state) {
       const evs = state.events, n = evs.length;
@@ -39,11 +45,11 @@ export function makeSeqReward(R, W) {
       const pend = state.__seqPend || (state.__seqPend = {});
       for (; k < n; k++) {
         const e = evs[k];
-        if (e.type === 'bead' && e.kind === 'elec' && e.pid != null) { pend[e.pid] = 1; this.charges++; if (this.firstCharge < 0) this.firstCharge = state.round; }
-        else if (e.type === 'action' && e.outcome === 'ok' && !e.voided && e.key === KR && e.pid != null && pend[e.pid]) {
+        if (e.type === 'bead' && e.kind === BEAD_KIND && e.pid != null) { pend[e.pid] = 1; this.charges++; if (this.firstCharge < 0) this.firstCharge = state.round; }
+        else if (e.type === 'action' && e.outcome === 'ok' && !e.voided && e.key === TERM && e.pid != null && pend[e.pid]) {
           delete pend[e.pid];
           state.p[e.pid].ep += w;
-          state.events.push({ type: 'ep', pid: e.pid, delta: w, reason: '序列奖励(蓄能→电磁炮)' });
+          state.events.push({ type: 'ep', pid: e.pid, delta: w, reason: REASON });
           this.paid += w; this.events++;
           this.granted.push(e.pid); if (this.firstPayRound < 0) this.firstPayRound = state.round;
         }

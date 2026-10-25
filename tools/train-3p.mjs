@@ -113,6 +113,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
+  'EPIRUS_SEQ_KIND',   // v1.8.37（10-25 ZCode · §二十一）：序列奖励的**珠种档**（'elec' 缺省 = 电磁炮原义；'boom' = 蓄爆珠→激光眼）
   'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
   'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
   'EPIRUS_HOLO2PROTO',   // v1.7.4（10-13 夜班 S2a）：训练期把"送盾"改写成"给自己上原型制御"（决策期档，`policy.js` 的 `setHolo2Proto`）
@@ -152,9 +153,13 @@ const CLI_ECON_REWARD_KEYS = ['bigtChainW', 'fitTailW', 'fitTailQ', 'widthW', 'd
    * 缺这一处的症状与 ringW/divK 那两次逐字相同：`ECON_ENV_KEYS`+`ECON_REWARD_KEYS` 都齐，
    * 但 `extendSelfWithCliEcon()` 推不出"本入口认得它" ⇒ 一上臂就撞黑键闸（整臂 `exit 6`，一秒响）。 */
   'voidW', 'voidIdealW',
-  /* v1.8.36（夜班 #58）：开局爆珠塑形 `beadSeed` 的**投递名单**（缺这处的症状与 voidW/divK 那两次逐字相同：
+  /* v1.8.36（夜班 #58）：开局珠塑形 `beadSeed` 的**投递名单**（缺这处的症状与 voidW/divK 那两次逐字相同：
    *   `ECON_ENV_KEYS`+`ECON_REWARD_KEYS` 都齐，但本入口的"我认得哪些奖励键"推不出它 ⇒ 一上臂就撞黑键闸 `exit 6`）。 */
-  'beadSeed'];
+  'beadSeed',
+  /* v1.8.37（10-25 ZCode · 激光眼移植批 §二十一）：珠种档（枚举键 elec/boom；缺这处同样撞黑键闸。
+   * ⚠ 派生探针喂 0.5 时 `readEconEnv` 透传非空值 ⇒ 能认出；真正的值校验在 evo.js 的 setter（响亮拒）。
+   * 注释里不给值加单引号（D77/登记腿那族正则会把引号串当键名）。 */
+  'beadSeedKind'];
 (function extendSelfWithCliEcon() {
   for (const k of ECON_ENV_KEYS) {
     /* v1.5.254：**同一个 env 名要试两种取值** —— 数值档喂 `0.5`、布尔档喂 `'1'`。
@@ -383,24 +388,34 @@ for (const f of [
  *   返回的每个 chooser 都先 tick ⇒ 一次覆盖 mirrorHealth / 评估 / 真桌**所有**路径（含 evo.js 内部调用）。
  * 默认 0 ⇒ 不包、行为逐字不变。⭐ 用了它训出来的包是在**另一套经济**下长大的，`meta.recipe.env` 会自动记下。 */
 const SEQ_W = Number(process.env.EPIRUS_SEQ_W || 0);
+/* v1.8.37（10-25 ZCode · §二十一 激光眼移植批）：序列奖励的**珠种档**。
+ * 'elec'（缺省）= v1.5.229 原义（蓄电珠→电磁炮，历史臂逐字可复现）；'boom' = 蓄爆珠→激光眼（`resolve.js`
+ * 的 charge 事件本来就用 `opt.bead` 带 `kind:'boom'` ⇒ 判定不用动引擎）。别的值响亮拒（exit 6）。 */
+const SEQ_KIND = String(process.env.EPIRUS_SEQ_KIND || 'elec');
 let SEQ = null;
 if (!(SEQ_W >= 0 && SEQ_W <= 10)) {
   console.error('[train-3p] ⛔ EPIRUS_SEQ_W=' + process.env.EPIRUS_SEQ_W + ' 不是合法档（只认 0~10 的数字，0=关）');
   process.exit(6);
 }
+if (SEQ_KIND !== 'elec' && SEQ_KIND !== 'boom') {
+  console.error('[train-3p] ⛔ EPIRUS_SEQ_KIND=' + process.env.EPIRUS_SEQ_KIND + ' 不是合法档（只认 elec/boom，缺省 elec）');
+  process.exit(6);
+}
 if (SEQ_W > 0) {
-  SEQ = makeSeqReward(sb.window.EpirusRules, SEQ_W);
+  SEQ = makeSeqReward(sb.window.EpirusRules, SEQ_W, SEQ_KIND);
   /* 关键：把 SEQ 挂成**沙箱全局** —— `patchEvoChooser` 插进 evo.js 的包装层读的就是 `__SEQ`。 */
   sb.__SEQ = SEQ;
   sb.window.EpirusTrainer.policyChooserN = SEQ.wrapChooserFactory(sb.window.EpirusTrainer.policyChooserN);
-  console.log('[序列奖励] EPIRUS_SEQ_W=' + SEQ_W + ' ⇒ **在内存里**给"蓄能[电珠] → 下一回合电磁炮"每次完成 +' + SEQ_W +
+  console.log('[序列奖励] EPIRUS_SEQ_W=' + SEQ_W + ' EPIRUS_SEQ_KIND=' + SEQ_KIND + ' ⇒ **在内存里**给"' +
+    (SEQ_KIND === 'boom' ? '蓄爆珠 → 激光眼' : '蓄能[电珠] → 下一回合电磁炮') + '"每次完成 +' + SEQ_W +
     ' ep（仓库文件一字不动 ⇒ 规则指纹不变；本臂产物**不是**现状规则下的冠军，`meta.recipe.env` 会记下）');
   /* v1.5.229：收尾必须印**实际付了多少** —— 否则"奖励没效果"分不清是"代际太短"还是"训练场里这个事件根本不发生"
    * （后者意味着奖励永远付不出去，梯度为零 ⇒ 与击杀奖励"付得太少"同族，但更极端）。 */
   process.on('exit', function () {
-    console.log('[序列奖励·结账] 本臂共发放 ' + SEQ.events + ' 次 · ' + SEQ.paid + ' ep（分母：充到电珠 ' + SEQ.charges +
+    console.log('[序列奖励·结账] 本臂共发放 ' + SEQ.events + ' 次 · ' + SEQ.paid + ' ep（分母：充到' +
+      (SEQ_KIND === 'boom' ? '爆珠' : '电珠') + ' ' + SEQ.charges +
       ' 次 · 首次第 ' + SEQ.firstCharge + ' 回合 · 首次付款第 ' + SEQ.firstPayRound + ' 回合；每股 ' + (SEQ.events / Math.max(1, GENS * GAMES * POP)).toFixed(4) + ' 次）' +
-      (SEQ.charges === 0 ? '  ⛔ **训练场里连一次电珠都没充过** ⇒ 不是奖励的问题，是课程/热启动的问题' : (SEQ.events === 0 ? '  ⛔ 充了珠但一次没转化 ⇒ 奖励付不出去' : '')));
+      (SEQ.charges === 0 ? '  ⛔ **训练场里连一次珠都没充过** ⇒ 不是奖励的问题，是课程/热启动的问题' : (SEQ.events === 0 ? '  ⛔ 充了珠但一次没转化 ⇒ 奖励付不出去' : '')));
   });
 }
 let KR_REQ = 0, KR_PAID_PROBE = -1;
@@ -923,7 +938,15 @@ const COUNTER_OPP_TABLE = {
    * 与用户口径"基础训练一般出激光剑（穿反弹）"相反。`pickReflectSpam`（bots.js 既有导出，本为 2P 基准造的
    * "永久反弹"）从没上过 3P 训练桌 ⇒ 反弹的惩罚在训练分布里结构性缺位。
    * ⚠ 只按名字点名（`EPIRUS_COUNTER_OPPS=reflectWall`）；数字老口径已冻结为三元组（v1.8.32）⇒ 不受本项影响。 */
-  reflectWall: { name: 'cnt:reflectWall', sel: Bots.pickReflectSpam }  // 永久反弹：枪/坦克每一发都被弹回
+  reflectWall: { name: 'cnt:reflectWall', sel: Bots.pickReflectSpam },  // 永久反弹：枪/坦克每一发都被弹回
+  /* v1.8.37（10-25 ZCode · §二十一 激光眼移植批）：**会打激光序列的席**上训练桌（`EPIRUS_COUNTER_OPPS=laserBank`）。
+   * 动机 = 电磁炮先例的第一块：珠爆发线 v1.5.130 进**默认池**的理由是"训练要看得见自己最大的洞"
+   * （evo.js:179-188 在册）——而激光这条线，五个被否证的杠杆全是奖励/注入侧，**没有任何一臂的对手席
+   * 真的做过"存 3ジ→蓄爆珠→下一回合激光"** ⇒ 梯度结构性缺位，与当年反弹缺位（reflectWall 那条）同形。
+   * `pickLaserBank`（bots.js §E744/§E745 夜班造的教师，默认不进任何池）在这里只当**对手**上桌，
+   * 不动教师通道。⚠ 只按名字点名；数字口径已冻结为三元组（v1.8.32）不受影响；`all`/`*` = 全表会带上它（与
+   * gunFocus/reflectWall 同一既有语义，不另开特例）。 */
+  laserBank: { name: 'cnt:laserBank', sel: Bots.pickLaserBank }
 };
 const COUNTER_RAW = String(process.env.EPIRUS_COUNTER_OPPS || '').trim();
 /* ⚑ v1.8.32（10-24 夜 · 千问）：**数字口径冻结成老三元组**，`all`/`*` 才等于全表。
