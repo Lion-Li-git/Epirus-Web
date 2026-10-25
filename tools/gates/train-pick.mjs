@@ -369,12 +369,17 @@ t('D165 尾部聚合适应度开关（v1.5.251 · 夜班 §E49）：默认关要
 
   /* ---- ④ 臂上真跑（同种子 2 代 × 3 粒，只换开关）---- */
   const dir = mkdtempSync(join(tmpdir(), 'd165-'));
-  const runArm = (name, extra) => spawnSync(process.execPath, ['tools/train-3p.mjs', '2'], {
+  const runArm = (name, extra, gens) => spawnSync(process.execPath, ['tools/train-3p.mjs', String(gens || 2)], {
     encoding: 'utf8', timeout: 240000,
     env: Object.assign({}, process.env, { EPIRUS_ARM: name, EPIRUS_T3P_OUT: dir + '/' + name + '.js', EPIRUS_BAND_DIR: dir + '/band' }, extra || {})
   });
   try {
     const rU = runArm('d165u'), rZ = runArm('d165z', { EPIRUS_FIT_TAIL_W: '0' }), rK = runArm('d165k', { EPIRUS_FIT_TAIL_W: '0.4' });
+    /* ⚑ R62（2026-10-25 · 天火阶梯计价）漂移账：原判别臂是 `rK`（W=0.4）对 `rU`——2 代迷你臂里
+     *   尾部聚合的排序差被 R62 的轨迹漂移抹平（同权重产出 ⇒ 那条"开关流入选拔"的腿假红）。
+     *   修法（等 Qoder/DS 复核）：保留 rK 管派发回执（0.4 是在册剂量），**判别臂另起 `rM`（W=1.0 满档）**——
+     *   手跑实测：2 代下 W=1.0 仍同权重（聚合改的是分值不是排序），**5 代**下权重恢复不同 ⇒ 判别臂用 5 代。判据语义不变：仍证"开关在这条臂的路上不是空转"。 */
+    const rM = runArm('d165m', { EPIRUS_FIT_TAIL_W: '1.0' }, 5);
     eq(rU.status, 0, '对照臂必须成功（' + String(rU.stderr || '').slice(0, 90) + '）');
     eq(rZ.status, 0, '`W=0` 臂必须成功');
     eq(rK.status, 0, '`W=0.4` 臂必须成功');
@@ -385,9 +390,10 @@ t('D165 尾部聚合适应度开关（v1.5.251 · 夜班 §E49）：默认关要
     ok(!/fitTailW/.test(String(rU.stdout)), '不设 ⇒ 派发与回执里都不许出现这个键（"开了但没生效"与"没开"要看得见差别）');
     const wtOf = f => { const m = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(readFileSync(f, 'utf8')); return m ? JSON.stringify((JSON.parse(m[1]) || {}).a) : null; };
     const wU = wtOf(dir + '/d165u.js'), wZ = wtOf(dir + '/d165z.js'), wK = wtOf(dir + '/d165k.js');
-    ok(wU && wZ && wK, '三臂产物都要能读出权重（读到的是**数组本体**，不是"数组有几个"那种形状签名 —— 建门时我自己先踩过一次假通过）');
+    const wM = wtOf(dir + '/d165m.js');
+    ok(wU && wZ && wK && wM, '四臂产物都要能读出权重（读到的是**数组本体**，不是"数组有几个"那种形状签名 —— 建门时我自己先踩过一次假通过）');
     ok(wU === wZ, '【P3 门票】不设 vs 显式 0 ⇒ 产物权重必须**逐位相同**（不同 ⇒ 这根开关改了出厂训练结果，那"默认关"是假的）');
-    ok(wU !== wK, '开档臂必须训出**不同的**权重（相同 ⇒ 开关在臂这条路上是空转的）');
+    ok(wU !== wM, '开档臂（W=1.0 满档 ‖ 5 代判别臂，见上 ⚑）必须训出**不同的**权重（相同 ⇒ 开关在臂这条路上是空转的）');
     const rBad = runArm('d165bad', { EPIRUS_FIT_TAIL_W: 'abc' });
     eq(rBad.status, 7, '非数值必须 exit 7（读回不相等就算被拒），实际 ' + rBad.status);
     const rOver = runArm('d165over', { EPIRUS_FIT_TAIL_W: '5' });
