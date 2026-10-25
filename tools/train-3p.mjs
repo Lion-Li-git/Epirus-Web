@@ -151,7 +151,10 @@ const CLI_ECON_REWARD_KEYS = ['bigtChainW', 'fitTailW', 'fitTailQ', 'widthW', 'd
   /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」）：失效成功 / 理想情况两档价钱的**投递名单**。
    * 缺这一处的症状与 ringW/divK 那两次逐字相同：`ECON_ENV_KEYS`+`ECON_REWARD_KEYS` 都齐，
    * 但 `extendSelfWithCliEcon()` 推不出"本入口认得它" ⇒ 一上臂就撞黑键闸（整臂 `exit 6`，一秒响）。 */
-  'voidW', 'voidIdealW'];
+  'voidW', 'voidIdealW',
+  /* v1.8.36（夜班 #58）：开局爆珠塑形 `beadSeed` 的**投递名单**（缺这处的症状与 voidW/divK 那两次逐字相同：
+   *   `ECON_ENV_KEYS`+`ECON_REWARD_KEYS` 都齐，但本入口的"我认得哪些奖励键"推不出它 ⇒ 一上臂就撞黑键闸 `exit 6`）。 */
+  'beadSeed'];
 (function extendSelfWithCliEcon() {
   for (const k of ECON_ENV_KEYS) {
     /* v1.5.254：**同一个 env 名要试两种取值** —— 数值档喂 `0.5`、布尔档喂 `'1'`。

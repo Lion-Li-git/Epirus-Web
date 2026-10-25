@@ -40,45 +40,188 @@ t('D37 页面回合列表/导出：死人不许出ジ、观战回合必须显示
    * ③ 同处只写"第 N 回合（观战）"，不显示任何人用了什么技能。
    * 修法是把"拼回合行 / 追加 transcript"抽成**单一真源**（roundLineParts / pushTranscript），
    * 正常回合与观战回合共用。这条用源码级断言钉住"不许再退回各写一份"。 */
-  const ui = readFileSync('js/ui/ui.js', 'utf8');
-  ok(/function roundLineParts\(\)/.test(ui), '必须有 roundLineParts()：回合行的单一真源');
-  ok(/function pushTranscript\(/.test(ui), '必须有 pushTranscript()：transcript 的单一真源');
-  ok(ui.indexOf("p.name + '=【已淘汰】'") >= 0, '死且本回合没出手的玩家必须显示【已淘汰】（不许再出ジ）');
-  const spec = ui.slice(ui.indexOf('function autoRunRest()'), ui.indexOf('function autoRunRest()') + 1600);
-  ok(spec.indexOf('roundLineParts()') >= 0, '观战回合必须走 roundLineParts()（显示技能行）');
-  ok(spec.indexOf('pushTranscript(') >= 0, '观战回合必须 pushTranscript()（否则导出只到玩家死前）');
-  ok(spec.indexOf('persistBattle()') >= 0, '观战回合必须 persistBattle()（上局记录也要完整）');
+  /* ===== 行为腿（10-25 夜班·#61，照 D38/D166 那招切真源码再跑）=====
+   *   原来这 8 条里 6 条是 `ui.js` 的字面钉（`'=【已淘汰】'` 在不在、`const sdOrder = R.skills.map(...)`
+   *   一字不差、`const SD_GRP =` 不许出现、两条函数名正则）。它们**两头都错**：改个措辞（【已淘汰】→【阵亡】）
+   *   就误红，而这条门真正该守的事一条都读不到 ——
+   *     ⓐ 本回合**刚死但出过手**的人仍要显示他用了什么：把 `!(a && a.key) && p.hp <= 0` 写成只看 hp
+   *        就是"死人一律打叉"的回归，而旧钉**照样绿**（它只钉住了"死人显示已淘汰"那一半）；
+   *     ⓑ 四种 outcome 后缀（未发动 ‖ 禁用无效 ‖ 无效 ‖ 无后缀）；
+   *     ⓒ transcript 那一行的字段（round / line / human / ai / 剥 HTML / 空事件不许留成 null）
+   *        —— "导出对局记录"读的就是这些字段，旧钉只钉"有没有调用"；
+   *     ⓓ 两条路都不许**手抄**一份回合行（`=【` 只许出现在 roundLineParts 里）。
+   *   这些都不需要浏览器。`tools/smoke.mjs` 起真页面跑的是 12 组合"能否打完"，**不读 transcript/回合行**
+   *   （10-25 现 grep：smoke.mjs 里没有 roundLineParts / pushTranscript / transcript 的任何一个消费者）
+   *   ⇒ 本腿不与它重叠，不是"再来一遍"。 */
+  const ui = readFileSync('js/ui/ui.js', 'utf8').split('\r\n').join('\n');
+  const fSkill37 = fnBody(ui, 'function skillName(');
+  const fRound37 = fnBody(ui, 'function roundLineParts(');
+  const fPush37 = fnBody(ui, 'function pushTranscript(');
+  ok(fSkill37.length > 10 && fRound37.length > 40 && fPush37.length > 40,
+    '切片前置：skillName ‖ roundLineParts ‖ pushTranscript 三个函数体都要按名字切得到（实测 '
+    + fSkill37.length + ' ‖ ' + fRound37.length + ' ‖ ' + fPush37.length + ' 字符）'
+    + '⇒ 切不到 = 改名或被搬走，本门要跟着改，不许静默变成读空气');
+  const B37 = { state: null, transcript: [] };
+  const D37 = new Function('B', 'R', 'evText',
+    fSkill37 + '\n' + fRound37 + '\n' + fPush37 +
+    '\nreturn { roundLineParts: roundLineParts, pushTranscript: pushTranscript };')(
+      B37, R, function (e) { return (!e || e.html == null) ? null : { html: e.html }; });
+  const NM37 = function (k) { return R.byKey[k].name; };
+  /* 把座位表装进 B.state 再跑**真函数**：seats = [{hp, a}]，`a` 缺省 ⇒ 本回合没出手 */
+  const line37 = function (seats) {
+    B37.state = {
+      round: 7,
+      p: seats.map(function (s, i) { return { name: '席' + i, hp: s.hp }; }),
+      actions: seats.map(function (s) { return s.a; })
+    };
+    return D37.roundLineParts();
+  };
+  const one37 = function (a) { return line37([{ hp: 3, a: a }])[0]; };
+  /* --- ⓐ 死人的两半：没出手 ⇒ 已淘汰；出过手 ⇒ 仍然要说他用了什么 --- */
+  const deadIdle37 = line37([{ hp: 3, a: { key: R.SK.GUN, outcome: 'ok' } }, { hp: 0 }])[1];
+  eq(deadIdle37, '席1=【已淘汰】',
+    '① 死且本回合没出手 ⇒ 只许【已淘汰】，不许出现技能名或ジ（用户实测报的 bug①；实测 ' + deadIdle37 + '）');
+  const deadActed37 = line37([{ hp: 3, a: { key: R.SK.GUN, outcome: 'ok' } }, { hp: 0, a: { key: R.SK.SWORD, outcome: 'ok' } }])[1];
+  ok(deadActed37.indexOf(NM37(R.SK.SWORD)) >= 0 && deadActed37.indexOf('已淘汰') < 0,
+    '① **本回合刚死但出过手**的人仍要显示他用了什么（旧 8 条读不到的那一半：只看 hp 的写法当场红，'
+    + '而"『=【已淘汰】』这个字面还在不在"照样绿；实测 ' + deadActed37 + '）');
+  eq(one37(undefined), '席0=【' + NM37(R.SK.JI) + '】',
+    '① 活着但本回合没出手 ⇒ 照规则显示ジ（【已淘汰】只属于死人；实测 ' + one37(undefined) + '）');
+  /* --- ⓑ 四种失效后缀（以前只能钉字面，现在直接看返回值） --- */
+  ok(one37({ key: R.SK.GUN, outcome: 'ok' }).indexOf('（') < 0,
+    '② outcome=ok ⇒ 不许挂任何后缀括号（实测 ' + one37({ key: R.SK.GUN, outcome: 'ok' }) + '）');
+  ok(one37({ key: R.SK.GUN, outcome: 'insufficient' }).indexOf('（ジ不足·未发动）') >= 0,
+    '② ジ不足要说"未发动"，不能只写"无效"（玩家要分得清"没放成"和"放出去被挡"；实测 '
+    + one37({ key: R.SK.GUN, outcome: 'insufficient' }) + '）');
+  ok(one37({ key: R.SK.GUN, outcome: 'banned' }).indexOf('（禁用无效）') >= 0,
+    '② 禁用中的卡要写"禁用无效"（实测 ' + one37({ key: R.SK.GUN, outcome: 'banned' }) + '）');
+  const voided37 = one37({ key: R.SK.GUN, outcome: 'voided' });
+  ok(voided37.indexOf('（无效）') >= 0 && voided37.indexOf('未发动') < 0,
+    '② 其余失效只写"无效"，不许和ジ不足混成同一格（实测 ' + voided37 + '）');
+  /* --- 目标与占位 --- */
+  const aim37 = line37([{ hp: 3, a: { key: R.SK.GUN, outcome: 'ok', target: 1 } }, { hp: 3 }])[0];
+  ok(aim37.indexOf('→席1') >= 0, '③ 打了别人 ⇒ 回合行必须显出打到谁（实测 ' + aim37 + '）');
+  const self37 = one37({ key: R.SK.JI, outcome: 'ok', target: 0 });
+  eq(self37, '席0=【' + NM37(R.SK.JI) + '】', '③ 目标是自己 ⇒ 不许画箭头（实测 ' + self37 + '）');
+  const allDead37 = line37([{ hp: 0 }, { hp: 0 }, { hp: 0 }, { hp: 3 }, { hp: 3 }]);
+  eq(allDead37.length, 5, '③ 回合行必须**每席一格**（含死人）——"死亡席不占位"是 2 人旧路径的漏项，'
+    + 'v1.6.6 合并两条路时才补上；实测 ' + allDead37.length + ' 格 ‖ ' + allDead37.join(' '));
+  /* --- ⓒ transcript 的字段（"导出对局记录"读的就是这一行） --- */
+  const p37 = line37([{ hp: 3, a: { key: R.SK.GUN, outcome: 'ok', target: 1 } }, { hp: 0 }]);
+  B37.transcript = [];
+  D37.pushTranscript(p37, [{ html: '<b>你</b>出枪' }, { html: null }, { html: '<i>伤害 1</i>' }]);
+  eq(B37.transcript.length, 1, '④ 每次调用必须且只追加一行（实测 ' + B37.transcript.length + ' 行）');
+  const row37 = B37.transcript[0];
+  eq(row37.round, 7, '④ 行里必须带回合号（否则导出看不出这段属于第几回合；实测 ' + row37.round + '）');
+  eq(row37.line, p37.join('  '), '④ line 必须就是**上面那套回合行**（观战与正常路共用 ⇒ 实测 ' + row37.line + '）');
+  eq(row37.human, p37[0], '④ human 段 = 第一席（实测 ' + row37.human + '）');
+  eq(row37.ai, p37.slice(1).join(' '), '④ ai 段 = 其余各席，3~5 人都在这段（实测 ' + row37.ai + '）');
+  eq(row37.lines.join('|'), '你出枪|伤害 1',
+    '④ 事件行必须**剥掉 HTML 标签**、且 evText 判为空的事件**不许留成 null/空串**（实测 '
+    + JSON.stringify(row37.lines) + '）');
+  /* --- ⓓ 接线：两条路都必须用上面那套，且都不许自己手抄一份 --- */
+  const fMain37 = fnBody(ui, 'function doPickMulti(');
+  const fSpect37 = fnBody(ui, 'function autoRunRest(');
+  ok(fMain37.length > 40 && fSpect37.length > 40, '⑤ 切片前置：两条出手/结算循环都要按名字切得到（实测 '
+    + fMain37.length + ' ‖ ' + fSpect37.length + ' 字符）⇒ 就是 D142 认定的那两条路（v1.6.6 起页面只有这两条）');
+  ok(fSpect37.indexOf('roundLineParts()') >= 0, '⑤ 观战循环必须走 roundLineParts()（用户报的 bug③：以前只写"第 N 回合（观战）"、不显示任何人用了什么）');
+  ok(fSpect37.indexOf('pushTranscript(') >= 0, '⑤ 观战循环必须 pushTranscript()（用户报的 bug②：导出只到玩家死前）');
+  ok(fSpect37.indexOf('persistBattle()') >= 0, '⑤ 观战循环必须 persistBattle()（上局记录也要完整）');
+  ok(fMain37.indexOf('roundLineParts()') >= 0 && fMain37.indexOf('pushTranscript(') >= 0,
+    '⑤ 主循环 doPickMulti 同样必须走这两个单一真源（只接一条 = 修一半）');
+  ok(fMain37.indexOf("'=【") < 0 && fSpect37.indexOf("'=【") < 0,
+    '⑤ 两条路都不许**自己手抄**一份回合行（`=【` 只许出现在 roundLineParts 里；实测主循环 '
+    + (fMain37.match(/'=【/g) || []).length + ' 处 ‖ 观战 ' + (fSpect37.match(/'=【/g) || []).length + ' 处）');
   /* ⚠️ 用户第三次澄清（v1.5.22）：**技能格按钮**用规则顺序（能量在最上）；
    * "防御优先"指的是**回合日志的显示顺序**，与格子无关 —— 前两轮把它错用在格子上，各错一次。 */
-  ok(ui.indexOf('const SD_GRP =') < 0, '技能格按钮**不得**再做"防御优先"重排（用户已明确：格子用规则顺序）');
-  ok(/const sdOrder = R\.skills\.map\(function \(s, i\) \{ return \{ s: s, i: i \}; \}\);/.test(ui),
-    '技能格按钮必须用 R.skills 的规则声明顺序（能量 → 攻击 → 防御 → 特殊）');
+  /* --- ⓔ 技能格的**渲染顺序**：假 DOM 跑 buildSkillGrid，读按钮出现的先后 ---
+   *   旧门在这里钉的是两条写法（`const SD_GRP =` 不许出现 + `const sdOrder = R.skills.map(...)` 一字不差）。
+   *   后者改个变量名/换种写法就误红；前者更糟：一个**没人用的死常量**也会让它红，而它要防的那件事
+   *   （**再排一次序**）现在直接读得出来。 */
+  const fCost37 = fnBody(ui, 'function costLabel(');
+  const fGrid37 = fnBody(ui, 'function buildSkillGrid(');
+  ok(fCost37.length > 10 && fGrid37.length > 40, '⑥ 切片前置：costLabel ‖ buildSkillGrid 都要按名字切得到（实测 '
+    + fCost37.length + ' ‖ ' + fGrid37.length + ' 字符）');
+  const mk37el = function () {
+    return { className: '', textContent: '', title: '', disabled: false, kids: [],
+      appendChild: function (c) { this.kids.push(c); } };
+  };
+  const grid37 = { innerHTML: '', kids: [], appendChild: function (c) { this.kids.push(c); } };
+  new Function('$', 'B', 'Play', 'S', 'R', 'document', 'CAT_NM', 'Tip', 'pickSkill',
+    fCost37 + '\n' + fGrid37 + '\nbuildSkillGrid();')(
+      function () { return grid37; },
+      { state: { over: false, p: [{ cooldown: {} }] } },
+      { legalActions: function () { return []; } },
+      { canUseSkillInMode: function () { return true; } },
+      R, { createElement: mk37el }, {}, { of: function () { return ''; } }, function () { });
+  const btn37 = grid37.kids.map(function (b) {
+    const nm = b.kids.filter(function (c) { return c.className === 'nm'; })[0];
+    return nm ? nm.textContent : '?';
+  });
+  eq(btn37.join(','), R.skills.map(function (s) { return s.name; }).join(','),
+    '⑥ 技能格必须**逐位等于 `R.skills` 的声明顺序**（能量 → 攻击 → 防御 → 特殊；实测 ' + btn37.join(',') + '）'
+    + '⇒ 再排一次序（防御优先 ‖ 按 pri ‖ 按名字）红的是这一条，而不是"某个变量名的写法还在不在"');
+  const guardAt37 = btn37.indexOf(NM37(R.SK.GUARD));
+  ok(guardAt37 > 2, '⑥ 防御类不许浮到能量类三格之上（用户原话"能量类跑到防御类下面了，不符合直觉"；'
+    + '实测「防御」在第 ' + (guardAt37 + 1) + ' 格，能量三格是 ' + btn37.slice(0, 3).join('/') + '）');
+  /* （§删 · 10-25 夜班 #61：这里原来还有两条 —— `function roundLineParts\(\)` / `function pushTranscript\(`
+   *   两条正则（上面的**切片前置**接管，且红时消息明写"本门要跟着改"，不会再被误读成"实现错了"）、
+   *   `p.name + '=【已淘汰】'` 字面钉（ⓐ 接管，且旧钉只守得住"死人打叉"那一半、守不住"刚死但出过手"）；
+   *   `const sdOrder = R.skills.map(...)` 一字不差与 `const SD_GRP =` 不许出现（ⓔ 接管；后者原本还会被一个
+   *   **没人用的死常量**触发，那是误红而不是回归）。
+   *   ⚠ 留着的那 5 条"有没有调用"（⑤）不是遗漏：**接线事实行为腿看不见** —— 与 D38 留
+   *   `for (const e of orderEventsForDisplay(list))` 同理。 */
 });
 
 t('D38 结算事件行的**显示顺序**（防御→中立→攻击→镜像；被无效先于使其无效）+ 不得改动引擎事件数组', function () {
   /* 用户第三次澄清（v1.5.22）："防御优先"说的是**回合日志里结算事件行的显示顺序**，且明确"与后端实现无关"。
    * 三条规则：① 防御类先于攻击类 ② 被无效的先于使其无效的 ③ 原技能先于镜面反射复制出来的。
    * 这条钉住：实现存在 + 只排渲染副本（不许给 state.events 排序）+ 同档稳定。 */
-  const ui = readFileSync('js/ui/ui.js', 'utf8');
-  ok(/function evDisplayRank\(e\)/.test(ui), '必须有 evDisplayRank()：事件 → 显示档 (tier, sub)');
-  ok(/function orderEventsForDisplay\(list\)/.test(ui), '必须有 orderEventsForDisplay()：稳定排序');
+  const ui = readFileSync('js/ui/ui.js', 'utf8').split('\r\n').join('\n');
+  /* ===== 行为腿（10-25 夜班·#40 第二批）：照 D166 那招**从真源码切出函数再跑** =====
+   *   原来这 11 条全是 `ui.js` 的写法钉（表在不在、`list.map(` 在不在、`a.i - b.i` 在不在、
+   *   `if (e.type === 'death') return [2, 1];` 一字不差）。那种钉改名就误红，而真正会坏的四族
+   *   ——① 同档丢子档（"先看到挡下、后看到摆出"，用户实机 R9/R10/R23）② 死亡跑到伤害前
+   *   ③ 使其无效的排到被无效的前面 ④ **就地排序把引擎事件数组打乱**——一条都读不到
+   *   （它们四族全是"返回值顺序"这一件事，而那件事根本不需要浏览器）。 */
+  const d38i0 = ui.indexOf('const EV_TIER_DEF');
+  const d38i1 = ui.indexOf('function logEvents');
+  ok(d38i0 >= 0 && d38i1 > d38i0, 'ui.js 里必须能切出"显示顺序"那一段（锚点 `const EV_TIER_DEF` … `function logEvents`；'
+    + '切不到 = 这段被搬走或改名，本门要跟着改，不许静默变成读空气）');
+  const D38 = new Function(ui.slice(d38i0, d38i1) + '\nreturn { evDisplayRank: evDisplayRank, orderEventsForDisplay: orderEventsForDisplay };')();
+  ok(typeof D38.orderEventsForDisplay === 'function' && typeof D38.evDisplayRank === 'function',
+    '切出来的两个函数必须可调用（实测 ' + typeof D38.orderEventsForDisplay + ' ‖ ' + typeof D38.evDisplayRank + '）');
+  /* 一张**故意把所有规则都踩一遍**的事件表（下标即引擎发射顺序：挡下早于摆出、伤害早于死亡） */
+  const L38 = [{ id: 'cancel', type: 'cancel' }, { id: 'blocked', type: 'blocked' }, { id: 'd2', type: 'damage' },
+    { id: 'death', type: 'death' }, { id: 'guard', type: 'guardSet' }, { id: 'ep', type: 'ep' },
+    { id: 'mirror', type: 'mirror' }, { id: 'd1', type: 'damage' }];
+  const order38 = function (arr) { return D38.orderEventsForDisplay(arr).map(function (e) { return e.id; }); };
+  const want38 = ['guard', 'blocked', 'ep', 'cancel', 'd2', 'd1', 'death', 'mirror'];
+  const before38 = L38.map(function (e) { return e.id; });
+  eq(order38(L38).join(','), want38.join(','),
+    '显示顺序必须一次满足四条：摆出(guard)先于挡下(blocked) ‖ 被无效(ep)先于使其无效(cancel) ‖ '
+    + '伤害(d2,d1 —— 同档还须保持发射顺序)先于死亡(death) ‖ 镜像(mirror)压轴（实测 ' + order38(L38).join(',') + '）');
+  eq(L38.map(function (e) { return e.id; }).join(','), before38.join(','),
+    '**入参数组必须一个字节都没被改**（排序只许发生在渲染副本上；实测前 ' + before38.join(',') + ' 后 '
+    + L38.map(function (e) { return e.id; }).join(',') + '）⇒ 给 `state.events` 排序 = 改引擎事实');
+  ok(D38.orderEventsForDisplay(L38) !== L38, '必须返回**新数组**（同对象返回 ⇒ 上面那条"没改入参"是假的）');
+  eq(D38.evDisplayRank({ type: 'blocked' })[0], 0, '挡下必须落在防御档（[0,*]，实测 ' + JSON.stringify(D38.evDisplayRank({ type: 'blocked' })) + '）');
+  eq(D38.evDisplayRank({ type: 'guardSet' })[1], 0, '摆出在防御档内的 sub=0（实测 ' + JSON.stringify(D38.evDisplayRank({ type: 'guardSet' })) + '）⇒ sub 丢了就是"先果后因"复现');
+  eq(D38.evDisplayRank({ type: 'blocked' })[1], 1, '挡下在防御档内的 sub=1（实测 ' + JSON.stringify(D38.evDisplayRank({ type: 'blocked' })) + '）');
+  /* ⚠ 稳定序这一条**本机量不到**（μ4 实测：把 `(a.i - b.i)` 从 comparator 里摘掉，`git diff` 确认那一行真改了 -1/+1，
+   *   本门**仍绿** ⇒ 因为 V8 的 `Array#sort` 自 ES2019 起规范保证稳定，tiebreaker 是第二道保险而不是那一格的牙）。
+   *   所以下面留的那条 `!/list\.sort\(/` 与本腿的"入参逐字节不变"才是这一族的真守门人。 */
   ok(ui.indexOf('for (const e of orderEventsForDisplay(list))') >= 0,
-    'logEvents 必须渲染**排序后的副本**（否则显示顺序规则等于没做）');
-  ok(ui.indexOf('EV_TIER_DEF') >= 0 && ui.indexOf('EV_TIER_ATK') >= 0 && ui.indexOf('EV_TIER_MIRROR') >= 0,
-    '三个档位表必须存在：防御 / 攻击 / 镜像复制');
-  ok(ui.indexOf('EV_SUB_VOIDER') >= 0, '必须有"使其无效"子档（cancel/clash/thunderRing）');
-  const at = ui.indexOf('function orderEventsForDisplay(list)');
-  const fn = ui.slice(at, at + 400);
-  ok(fn.indexOf('list.map(') >= 0, 'orderEventsForDisplay 必须先 map 出副本（不许就地排序）');
-  ok(!/list\.sort\(/.test(fn), 'orderEventsForDisplay 不许对入参 list 直接 sort（会打乱引擎事件数组）');
-  ok(fn.indexOf('a.i - b.i') >= 0, '同档必须用原始下标做**稳定**排序（否则无关事件被打乱）');
-  ok(ui.indexOf("if (e.type === 'death') return [2, 1];") >= 0,
-    '**死亡结算必须排在伤害之后**（用户实测：第一版把 death 当中立 ⇒ 先死再掉血，很搞笑）');
-  /* v1.5.140（用户实机 R9/R10/R23 抓到"挡下先于摆出"）：防御档内部必须再分子档——
-   * 摆出架势类（guardSet/holoSet/rod）sub=0，其结果类（blocked/reflect/voidImmune/curseBlock/rodBlock）sub=1。 */
-  ok(ui.indexOf('EV_SUB_RESULT') >= 0, '必须有"架势结果"子档表 EV_SUB_RESULT（blocked/reflect/…排在摆出之后）');
-  ok(/EV_TIER_DEF\[e\.type\]\) return \[0, EV_SUB_RESULT\[e\.type\] \? 1 : 0\]/.test(ui),
-    'evDisplayRank 的防御档必须按 EV_SUB_RESULT 分 [0,0]/[0,1]（一律 [0,0] = 老 bug 复现）');
+    'logEvents 必须渲染**排序后的副本**（否则上面那一整套顺序规则等于没做；这条是"接线"，行为腿看不见）');
+  { const fn = ui.slice(ui.indexOf('function orderEventsForDisplay(list)'), ui.indexOf('function orderEventsForDisplay(list)') + 400);
+    ok(!/list\.sort\(/.test(fn), 'orderEventsForDisplay 不许对入参 list 直接 sort（会打乱引擎事件数组）'); }
+  /* （§删 · 10-25 夜班 #40：这里原来还有 8 条写法钉 —— `function evDisplayRank\(e\)` /
+   *   `function orderEventsForDisplay\(list\)` 两条正则（上面的切片锚点已经替代，且红时消息明写"本门要跟着改"）、
+   *   三个档位表存在 ‖ `EV_SUB_VOIDER` 存在 ‖ `list.map(` ‖ `a.i - b.i` ‖ `death` 那行字面 ‖
+   *   `EV_TIER_DEF\[e\.type\]\) return \[0, EV_SUB_RESULT…` 那行字面 —— 全部由上面的**返回值**判据接管。
+   *   摘腿后变异实测 μ1/μ2/μ3/μ5 见 §E738；μ4 判为"本机量不到"，如实留一条文本钉。） */
+  /* ⚑ 10-22（CDP 试点②）+ 10-24 第一批：真页面腿在这里**不加**——`orderEventsForDisplay` 没挂到 window，
+   *   而起页面重跑一整套日志渲染与 `tools/smoke.mjs`（12 组合真页面）重叠。行为腿用真源码已足够。 */
 });
 
 t('D28 模式入口一致性：两根轴都在页面上、每档下拉都被映射表接住（v1.6.5 起「模式」下拉已删，入口 = 人数 × 血量）', function () {
@@ -216,7 +359,10 @@ t('D131 卡面提示必须说真话（v1.5.173 · 用户实测"摄魂 bug 没解
   const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
   ok(uiSrc.indexOf('Tip.of(R, st, s)') >= 0, 'ui.js 组卡面提示必须走 EpirusSkillTip（自己再抄一份数字 = 本仓那四次同型病）');
   ok(uiSrc.indexOf("仅限 HP≤") < 0, 'ui.js 里不许再出现写死的"仅限 HP≤N"');
-  ok(readFileSync('index.html', 'utf8').indexOf('js/ui/skill-tip.js') >= 0, 'index.html 必须加载 skill-tip.js');
+  /* §删（10-25 夜班·#40）：这里原来钉 `index.html 必须包含 js/ui/skill-tip.js`。
+   *   下面那条真页面腿读的就是**页面自己加载出来的** `window.EpirusSkillTip` ⇒ 脚本没加载时它是 `NO_TIP`/空串，
+   *   那条腿直接红（实测：摘掉 index.html 里的 `<script src>` ⇒ 红在"真页面 + 真长程模式，摄魂提示必须写 ≤2"）。
+ *   ⇒ 文本钉与行为腿判的是同一件事，摘钉不丢覆盖（改加载方式——比如合并打包——就不再误红）。 */
   /* ⚑ 10-22（CDP 试点 ②）：文本钉只能证明「写了调用 / 加载了脚本」；这条真起页面，
    *   用**页面自己加载的** EpirusSkillTip + 真 EpirusRules.MODES.long 组提示 ⇒ 证明运行时也写 ≤2、且没有 ≤3 残留。 */
   const expr = `(()=>{const R=window.EpirusRules;const T=window.EpirusSkillTip;if(!T||!T.of)return 'NO_TIP';const d=R.skills.find(s=>s.key==='drain');return T.of(R,{mode:R.MODES.long},d)})()`;

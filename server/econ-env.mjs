@@ -75,13 +75,20 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
    * 为什么走这里而不是照 v1.8.23 的 `EPIRUS_LASER_W` 那样在宿主里各读一次 env：
    *   那个键现在在 `train-server` / `train-worker` / `train-3p` **三处**各自 `process.env` ——
    *   正是本文件开头记载的"服务进程生效、worker 仍是默认值 ⇒ A/B 其实是 A/A"的形状。 */
-  'EPIRUS_VOID_W', 'EPIRUS_VOID_IDEAL_W'];
+  'EPIRUS_VOID_W', 'EPIRUS_VOID_IDEAL_W',
+  /* v1.8.36（夜班 #58）：**开局爆珠塑形** `BEAD_SEED`（`evo.js:3012` 的 `setBeadSeed`，出厂 0 ⇒ 逐位不变）。
+   * 语义（在册 v1.5.143）：开局第一回合以概率 p **全席对称**地补 1 枚电珠（既无电珠也无雷珠者）并把 ep 抬到 ≥2
+   *   ⇒ 它不改任何一张卡的价钱，只改"这一维有没有分母"——激光眼/电磁炮/天火这类要先付前置件的动作，
+   *     在冷启动种群里从 gen0 就偶有可打窗口，选择压才有东西可挑。
+   * 为什么必须走这里：这个键此前**不在任何投递名单**里 ⇒ 设 `EPIRUS_BEAD_SEED` 要么撞黑键闸（`exit 6`），
+   *   要么手设进服务进程自己那份模块 ⇒ 16 个 worker 仍是默认值（附录 D 臂 K 的 A/A 事故形状）。 */
+  'EPIRUS_BEAD_SEED'];
 
 /* 与 `js/train/evo.js` 的 `setEconomyReward(o)` / `economyReward()` 字段名对齐
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
 export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
   'hoardOnLeftover', 'convRatio', 'convOffense', 'hoardCapMult', 'stockBonus',
-  'blockW', 'widthW', 'bigcardW', 'costlyW', 'fitCal', 'fitGW', 'fitGF', 'bigtChainW', 'ringW', 's4W', 'beadW', 'fitTailW', 'fitTailQ', 'voidW', 'voidIdealW'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W / 0921 DS 珠奖励标度 / 0923 qoder 大雷连带（与 setter 逐字对齐 ⇒ D77 盯得住） / 09-26 夜班 §E49 尾部聚合 / v1.8.29 失效成功 + 理想情况
+  'blockW', 'widthW', 'bigcardW', 'costlyW', 'fitCal', 'fitGW', 'fitGF', 'bigtChainW', 'ringW', 's4W', 'beadW', 'fitTailW', 'fitTailQ', 'voidW', 'voidIdealW', 'beadSeed'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W / 0921 DS 珠奖励标度 / 0923 qoder 大雷连带（与 setter 逐字对齐 ⇒ D77 盯得住） / 09-26 夜班 §E49 尾部聚合 / v1.8.29 失效成功 + 理想情况
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -144,7 +151,8 @@ export function readEconEnv(env) {
     fitTailQ: nv(e.EPIRUS_FIT_TAIL_Q),
     /* v1.8.29：两档失效价钱各只映射**一个**奖励键（`train-3p` 的"env ⇒ 唯一键"派生判定靠这个）。 */
     voidW: nv(e.EPIRUS_VOID_W),
-    voidIdealW: nv(e.EPIRUS_VOID_IDEAL_W)
+    voidIdealW: nv(e.EPIRUS_VOID_IDEAL_W),
+    beadSeed: nv(e.EPIRUS_BEAD_SEED)   // v1.8.36（夜班 #58）：开局爆珠塑形（只映射一个奖励键 ⇒ train-3p 的"env ⇒ 唯一键"派生判定认它）
   };
 }
 

@@ -894,6 +894,62 @@ t('D15 ep 奖罚门槛必须按 (人数,模式) 走（用户锚点）+ 熵奖励
   ok(Math.abs(r.divBonus - r.divW * r.spDivNorm) < 1e-9,
     'divBonus 必须 = divW × spDivNorm（实测 ' + r.divBonus.toFixed(5) + ' vs ' + (r.divW * r.spDivNorm).toFixed(5) + '）');
   ok(r.avgStock != null, '必须回报 avgStock（攒钱分）便于诊断');
+  /* v1.8.36（夜班·千问 #55）：**方向**腿 —— 上面那条恒等式盖不到符号。
+   *   病（在册）：v1.6.50 裁的是「只罚下界」，而 `evo.js:2487` 写的是 `+ (FIT_G_W × max(0, FLOOR − spG))`
+   *   ⇒ 越塌缩加分越多，**符号装反活了 14 天没有任何一条腿红**：恒等式吃的是返回值 `gBonus` 本身，反了照样成立；
+   *   v1.6.50 当年的"作用点实测"只验**指纹不同**（方向不敏感）‖ 哨兵只验 setter 往返。
+   *   ⇒ 三条各咬一头：关档恒 0 ‖ 低于下界必须 ≤0 且数值等于带负号的线性式 ‖ 达到下界一分不得。
+   *   加的是 D15 的**一条腿**（门数 280 不变）；只在这一处做，不在 train-table 的 D13 里抄第二份。 */
+  {
+    /* ⚠ 本腿会把 `fitGW/fitGF` 改成非出厂值再复位 ⇒ **必须 try/finally**：
+     *   中途断言抛错时如果留着脏档，同一个进程里后面的用例会以 D13/D15 那两次红的同一种方式翻。 */
+    Pol.setRng(T.mulberry32(4242));
+    const pG = Pol.makePolicy(0.25);
+    const OPPS_G = [{ name: 'random', sel: Bots.pickRandom }];
+    try {
+      const gOff = T.scoreMemberN(pG, OPPS_G, 2, 3, 1, 0, 0);
+      eq(gOff.fitGW, 0, '出厂 FIT_G_W 必须是 0（本腿的前提；漂了说明默认档被人动过，要重算期望）');
+      ok(gOff.gBonus === 0, '关档 ⇒ gBonus 必须恒 0（这是"fit 逐位不变"的保证，实测 ' + gOff.gBonus + '）');
+      /* 把下界顶到 20 ⇒ 任何包都落在下界之下 ⇒ 罚的那一支必须被走到（不走到本腿就是空枪） */
+      T.setEconomyReward({ fitGW: 1.0, fitGF: 20 });
+      Pol.setRng(T.mulberry32(4242));
+      const gPen = T.scoreMemberN(pG, OPPS_G, 2, 3, 1, 0, 0);
+      ok(gPen.spG < 20, '夹具必须真的落在下界之下（实测 spG=' + gPen.spG.toFixed(3) + ' ⇒ 顶不到就说明这把尺又在空转）');
+      ok(gPen.gBonus <= 0, '方向：spG < FLOOR ⇒ gBonus 必须 ≤ 0（修前这里恰好是正的 = "越塌缩加分越多"，实测 ' + gPen.gBonus.toFixed(5) + '）');
+      eq(gPen.gBonus, -1.0 * Math.max(0, 20 - gPen.spG),
+        '线性只罚下界、且带负号（实测 ' + gPen.gBonus.toFixed(5) + ' vs 期望 ' + (-Math.max(0, 20 - gPen.spG)).toFixed(5) + '）');
+      /* 达到下界 ⇒ 一分不得（反过来奖励"比下界更宽"是 v1.6.50 明写不要的形状：那会把臂往"什么都用一点"推） */
+      T.setEconomyReward({ fitGW: 1.0, fitGF: Math.floor(gPen.spG) });
+      Pol.setRng(T.mulberry32(4242));
+      const gOk = T.scoreMemberN(pG, OPPS_G, 2, 3, 1, 0, 0);
+      eq(gOk.spG, gPen.spG, '同种子同策略重跑必须逐位同（漂了 ⇒ 下面那条"一分不得"读不出意义）');
+      ok(gOk.gBonus === 0, 'spG ≥ FLOOR ⇒ 一分不得（实测 ' + gOk.gBonus.toFixed(5) + ' ‖ FLOOR=' + gOk.fitGF + ' ‖ spG=' + gOk.spG.toFixed(3) + '）');
+    } finally {
+      T.setEconomyReward({ reset: true });   // 无论本腿断到哪一条，档都还给出厂
+    }
+  }
+  /* 2026-10-24 夜班补、2026-10-25 夜班按用户裁定改回（同一族病：SUPPORT_PRIOR 当时"在现网路径上而门里零命中"）。
+   *   ① 出厂值钉住；② **ε=0 的装配上开/关必须逐字同** —— 这是"钩子只挂 soft 分支"那句承诺的**行为**版本
+   *      （训练/考卷/门禁全走 ε=0，它红了就是污染了全部基线）。
+   * ⚑ 10-25 00:4x：上一班把出厂翻成"开"，用户判据纠正为「**有效**才开；两 seed × 三枚包上贴贴确实露脸但
+   *   **天火 0.00%** ⇒ 没出现引爆就没必要开」⇒ 常数回 0（见 `evo.js:756/795` 与 §E738）。
+   *   ⚠ 腿跟着换方向：原来是"出厂开 ⇒ 与显式关比"，若只把常数改回 0 而不动这条腿，两次跑的就是**同一个设置**
+   *     （自反对照，恒真）。现在显式两边：先按出厂（关）读一趟，再强行开档读一趟。 */
+  {
+    const nFactory = T.lockNarrowOn(), pFactory = T.cursePushOn();
+    ok(typeof T.setLockNarrow === 'function' && typeof T.setCursePush === 'function', '两档的 setter 必须在');
+    eq(nFactory, 0, '出厂 `LOCK_NARROW` 必须是 **0（关）**（实测 ' + nFactory + '）⇒ 开它的前提是先读到场上真的走完一次引爆（§E738），翻档走裁定、不许静默改常数');
+    eq(pFactory, 0, '出厂 `CURSE_PUSH` 必须是 **0（关）**（实测 ' + pFactory + '）⇒ 同上');
+    Pol.setRng(T.mulberry32(4242));
+    const pN = Pol.makePolicy(0.25);
+    const offMirror = T.mirrorHealth(pN, 8, 5, 'multi');
+    T.setLockNarrow(1); T.setCursePush(1);
+    const onMirror = T.mirrorHealth(pN, 8, 5, 'multi');
+    T.setLockNarrow(nFactory); T.setCursePush(pFactory);   // 立刻复位，别污染后面的用例
+    eq(offMirror.dmgPerGame, onMirror.dmgPerGame, 'ε=0 的镜像装配上两档开/关必须逐字同（伤害）——实测 关 ' + offMirror.dmgPerGame + ' vs 开 ' + onMirror.dmgPerGame);
+    eq(offMirror.effSkills, onMirror.effSkills, '同上（G 有效技能数）⇒ 不一致就是钩子漏进了贪心分支，训练与全部在册基线一起废');
+    ok(offMirror.dmgPerGame !== null && onMirror.dmgPerGame !== null, '两条读数都必须真的读出来（空值时上面两条 eq 会假绿）');
+  }
   T.setEconomyReward({ reset: true });   // 复位，别污染后面的用例
 });
 
@@ -1763,7 +1819,7 @@ t('D77 经济/熵奖励 env 只能有**一个**读取点（server/econ-env.mjs�
    *   （我为它连红四次）；③ 抓不到"读了但没生效"。下面喂值读回：**更强、且与排版无关**。 */
   const SENT = { target: 7, cap: 33, divW: 0.123, divK: 9, divRoleW: 0.25, divCatW: 0.25, divForceGens: 5, wallFilter: true, fitCal: true,
     wallGames: 4, hoardOnLeftover: true, convRatio: true, convOffense: true, hoardCapMult: 5, stockBonus: 0.11,
-    blockW: 0.22, widthW: 0.33, bigcardW: 0.44 };
+    blockW: 0.22, widthW: 0.33, bigcardW: 0.44, beadSeed: 0.55 };
   const ALIAS = { target: 'targetOverride', cap: 'capOverride' };
   const notOk = [];
   try {
@@ -2063,8 +2119,10 @@ t('D86 只示范目标卡（only）：override 与奖励计数**都**过滤 + �
     '**奖励计数也必须被 only 与 subOK 过滤** —— 否则"与 fallback 一致"白拿奖励，正是抹掉"攒"的那股力（v1.8.23：onlyOK）');
   ok(evo.indexOf('function imitOnlyForGen(gen)') >= 0 && evo.indexOf('imitB, imitOnlyForGen(gen)') >= 0,
     '取值必须按当前代数走 imitOnlyForGen（计划里可**按段**设 only）');
-  ok(evo.indexOf('(?:\\s*:\\s*([A-Za-z_][A-Za-z0-9_]*|\\*))?$/.exec(parts[i])') >= 0,
-    '计划片段必须支持第三段 `:卡名`（或 `:*` = 不过滤）');
+  /* §删（10-25 夜班·继承账④）：这里原来是一条钉正则字面量原文的文本钉
+   *   （`'(?:\\s*:\\s*([A-Za-z_][A-Za-z0-9_]*|\\*))?$/.exec(parts[i])'`）。
+   *   实测（μE，10-25 00:3x）：把那个 alternation 换成等价字符类 `[A-Za-z0-9_*]+`（**行为逐字不变**）
+   *   它就红 ⇒ 典型的"钉写法不钉行为"。上面两条 `:*` 往返腿接住了同一语义（μD 摘掉 `*` 支持时它们红）。 */
   const sv = readFileSync('server/train-server.mjs', 'utf8');
   ok(sv.indexOf('T.setImitOnly(process.env.EPIRUS_IMIT_ONLY || null)') >= 0, '主线程必须设 only');
   ok(readFileSync('server/paralleltrain.mjs', 'utf8').indexOf('imitOnly: process.env.EPIRUS_IMIT_ONLY || null') >= 0,
@@ -2081,6 +2139,13 @@ t('D86 只示范目标卡（only）：override 与奖励计数**都**过滤 + �
   eq(T.setImitPlanByName('pickDeepSaver:0.5,pickRingSpam:0.5:ring', 100), 2, '第三段形式的计划必须能解析');
   eq(T.imitOnlyForGen(10), null, '段1（无 only）不设过滤');
   eq(T.imitOnlyForGen(90), 'ring', '段2 必须按段生效 only=ring');
+  eq(T.setImitPlanByName('', 0), 0, '复位计划');
+  /* §加（10-25 夜班·继承账④）：`*` = "这一段显式不过滤" 这条**语义**原来只有一条源码文本钉（钉正则字面量），
+   *   正则换个等价写法（字符类 `[A-Za-z0-9_*]+` 替掉 `([A-Za-z_][A-Za-z0-9_]*|\*)`）它就误红，而"段里写 `*`
+   *   结果读回一张叫 `*` 的卡"这种真坏法它反倒抓不到（它只认那串字符在不在）。⇒ 补这条往返，把文本钉换掉。 */
+  eq(T.setImitPlanByName('pickDeepSaver:0.5,pickRingSpam:0.5:*', 100), 2, '第三段写 `*` 的计划必须能解析');
+  eq(T.imitOnlyForGen(90), null, '第三段 `*` ⇒ 读回必须是 **null（不过滤）**，不许把 `*` 当成一张卡（实测 ' +
+    JSON.stringify(T.imitOnlyForGen(90)) + '）⇒ 当成卡名的话 `onlyOK` 恒假 = 这一段的示范被静默全砍');
   eq(T.setImitPlanByName('', 0), 0, '复位计划');
   /* ===== v1.8.28（用户 10-23「门禁目标是功能实现而不是判文本」）：逗号列表的**行为腿** =====
    *   上面那几条只证明"设得上、按段读得回"，而 DS 10-23 把 only 扩成逗号列表（`charge,laserEye`）时，
@@ -2137,9 +2202,12 @@ t('D87 只在补贴局里示范目标卡（subOnly）：只对设了 only 的示
   const evo = readFileSync('js/train/evo.js', 'utf8');
   ok(evo.indexOf('let IMIT_SUB_ONLY = false;') >= 0 && evo.indexOf('function setImitSubOnly(on)') >= 0,
     '必须有 subOnly 开关且默认 false（不影响旧行为）');
-  ok(evo.indexOf('const subOK = (!IMIT_SUB_ONLY || !onlySet || !!subFlag);') >= 0,
-    '门槛必须**只对设了 onlyKey 的示范**生效（段1 教攒不受影响；v1.8.23：onlySet）');
-  ok(evo.indexOf('imitB > 0 && subOK && state.rng') >= 0, 'override 必须被 subOK 门控');
+  /* §改（10-25 夜班·继承账④）：这里原来两条源码钉 ——
+   *   `const subOK = (!IMIT_SUB_ONLY || !onlySet || !!subFlag);` 与 `imitB > 0 && subOK && state.rng`
+   *   钉的是"这一行在不在"，改名/换写法就误红，而真正会坏的两族（丢掉 `!onlySet` ⇒ 段1 被砍、
+   *   实现成"示范整个关掉" ⇒ ⑵那个 0 变空枪）它们都读不到。下面换成跑注入板的行为腿（摘腿后变异实测见 §E735）。
+   *   ⚠ 保留 `&& subOK) {` 那条：它管的是**奖励计数侧**（`_mt/_mm`），与 override 侧是两处不同的 if，
+   *     行为腿读的是 `IMIT_ATTR`（只记覆盖），奖励侧坏了这把尺看不见 ⇒ 不是冗余。 */
   ok(evo.indexOf('&& subOK) {') >= 0,
     '**奖励计数也必须被 subOK 门控**（否则奖励侧仍在原生局里推它花掉攒的 ep）');
   ok(evo.indexOf('const regenThisGame = commitGame ? 2 : regenForGame(g, games, gen);') >= 0 &&
@@ -2169,6 +2237,61 @@ t('D87 只在补贴局里示范目标卡（subOnly）：只对设了 only 的示
   eq(T.subBeadOn(), false, '默认必须是关（不设 EPIRUS_SUB_BEAD ⇒ 旧行为逐位不变）');
   eq(T.setSubBead(true), true, '可打开');
   eq(T.setSubBead(false), false, '可关回');
+  /* ===== 继承账④（10-25 夜班）：subOnly 的**行为腿**（照 D86 v1.8.28 那台注入板）=====
+   *   上面那串源码钉钉的是"这一行在不在"，钉不住真正会坏的洞：`subOK` 这一支被写成
+   *   `(!IMIT_SUB_ONLY || !!subFlag)`（丢掉 `!onlySet`）⇒ 段1"教攒、不设 only"的示范会被静默砍掉一半局，
+   *   而这在产物侧与"教师今天没开火"同形；反过来把 subOnly 实现成"把示范整个关掉"，源码钉全绿。
+   *   ⇒ 判三件事：⑴ 不设 only 时开关**两头读数逐字相同**（段1 不受影响，这是那条 `!onlySet` 的牙）；
+   *      ⑵ 设了 only 且开关打开 ⇒ **原生局（无补贴）里一次都不许注入**；⑶ 补贴局里必须照常注入（⑵ 的正对照）。
+   *   ⚠ 新开一份 `sandbox()`（同 D86 的教训：IMIT_* 与 REGEN_SLICE 是模块级状态）。
+   *   ⚠ 这把尺看得见"注入落在哪一类局"靠的是 `tagImitActions` 的 sub/econ 分桶（`evo.js:1567`）——
+   *      分桶坏了 ⑵⑶ 会同形失败，所以先把两桶**都非零**的前置读出来再判。 */
+  {
+    const W2 = sandbox(process.cwd());
+    const T2 = W2.EpirusTrainer, P2 = W2.EpirusPolicy;
+    T2.setTrainMode('multi');
+    T2.setImitUntil(100);
+    ok(T2.imitBetaForGen(0) > 0, '前置：β(gen0) 必须 >0（实测 ' + T2.imitBetaForGen(0) + '）⇒ 否则下面所有 0 是窗口关着的空枪');
+    T2.setImitOverride(true);
+    const s0 = T2.regenSlice();
+    T2.setRegenSlice(0.5);                 // 默认 0.08 ⇒ 每 13 局才 1 局补贴，8 局的板子里只有 g=0 一发；抬到 0.5 让两桶都有量
+    const OPPS2 = [{ name: 'balanced', sel: W2.EpirusBots.pickBalanced }];
+    /* ⚠ §E660 同族病（本仓 10-18 那条日志就写着"写在后面等于白种"）：`makePolicy` 里的 randn() 读的是
+     *   `js/train/policy.js:465` 那个模块级 `__rng`，新沙箱里它默认是 `Math.random` ⇒ 不播种则这四次跑用的是
+     *   **四个不同的个体**，"逐字相同/必须为 0"这类比较就成了随环境抖的骰子
+     *   （实测：同一份代码两次跑，前置的 sub 桶从 >0 抖到 0 —— 看着像变异被抓，其实是腿自己没钉住夹具）。 */
+    P2.setRng(T2.mulberry32(905501));
+    const P2FIX = P2.makePolicy(0.25);     // 权重只造一次 ⇒ 四次跑的**个体**相同
+    const run2 = function (subOnly, onlyKey) {
+      T2.setImitSubOnly(subOnly);
+      T2.setImitOnly(onlyKey);
+      T2.setImitTeacher(function () { return { key: R.SK.JI, target: null }; });
+      T2.resetImitStat();
+      /* (gen0, idx0) ⇒ `seedOfGen` 那串局内种子与模块 rng 无关 ⇒ 四次跑打的是**同一批局**，只差 subOK 这一支 */
+      T2.scoreMemberN(P2FIX, OPPS2, 8, 3, 0, 0, 0);
+      const inj = T2.countImitInject();
+      const at = T2.imitAttribution();
+      const k = at.keys[R.SK.JI] || { imit: 0, native: 0, imitSub: 0, imitEcon: 0 };
+      return { fired: inj.fired, sub: k.imitSub, econ: k.imitEcon };
+    };
+    const aOff = run2(false, null);
+    ok(aOff.fired > 0 && aOff.econ > 0 && aOff.sub > 0,
+      '前置：subOnly 关、不设 only ⇒ 注入必须**同时出现在补贴局与原生局**（实测 fired=' + aOff.fired +
+      ' sub=' + aOff.sub + ' econ=' + aOff.econ + '）⇒ 读不到两桶就说明这把尺看不见"注入落在哪一类局"，下面 ⑵⑶ 全是空枪');
+    const aOn = run2(true, null);
+    eq(aOn.fired, aOff.fired, '⑴ 没设 only ⇒ subOnly 开了也必须**逐字不改**（实测 ' + aOn.fired + ' vs ' + aOff.fired +
+      '）⇒ 段1（教攒、不设 only）被补贴门砍掉就是这里红');
+    eq(aOn.econ, aOff.econ, '⑴ 同上，按桶读：原生局注入数不许变（实测 ' + aOn.econ + ' vs ' + aOff.econ + '）');
+    const bOff = run2(false, 'ji');
+    ok(bOff.econ > 0, '⑶ 前置：only=ji 且 subOnly 关 ⇒ 原生局必须确实注入过（实测 econ=' + bOff.econ +
+      ' fired=' + bOff.fired + '）⇒ 这条读 0 的话下面那条 0 就是接错线');
+    const bOn = run2(true, 'ji');
+    eq(bOn.econ, 0, '⑵ only=ji 且 subOnly 开 ⇒ 原生局（花的是自己攒的 ep）里**一次都不许覆盖**（实测 econ=' + bOn.econ +
+      '）⇒ 这正是 v1.5.99 的全部理由：原生经济里示范"开环"≡对"攒"征税');
+    ok(bOn.sub > 0, '⑶ 而补贴局必须照常注入（实测 sub=' + bOn.sub + ' tries 侧 fired=' + bOn.fired +
+      '）⇒ 把 subOnly 实现成"示范整个关掉"也能过上一条 0，这条把它抓住');
+    T2.setImitOnly(null); T2.setImitSubOnly(false); T2.setImitOverride(false); T2.setRegenSlice(s0);
+  }
 });
 
 t('D90 清场计数奖励：口径必须与门禁同源（收缩分界 + 归因）且默认关', function () {

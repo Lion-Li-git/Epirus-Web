@@ -36,7 +36,8 @@ for (const a of process.argv.slice(2)) {
  *   `--eps-mode` 用连字符 ⇒ 若这里写成 `drainhp`/`epsmode`，这道守卫就会在**正确用法**上 exit 2（我第一版就这么错了，实测抓回）。
  *   `file` 不在名单里：落盘的 `#file=` 来自位置参数，不是旗标。 */
 const IDENTITY_FLAGS = ['shipbigt', 'shipdrain', 'support', 'supportpick', 'supportskip', 'supportminep', 'eps', 'eps-tier', 'epsk', 'eps-mode', 'bigtpush', 'bigttgt',
-  'pushrank', 'pushfloor', 'pushkey', 'pushminep', 'bigtcost', 'ban', 'drainHp', 'mode', 'swap', 'pool', 'every'];
+  'pushrank', 'pushfloor', 'pushkey', 'pushminep', 'bigtcost', 'ban', 'drainHp', 'mode', 'swap', 'pool', 'every',
+  'locknarrow', 'cursepush', 'topcards'];
 const IDENTITY_BY_LOWER = {};
 for (const k of IDENTITY_FLAGS) IDENTITY_BY_LOWER[k.toLowerCase()] = k;
 /* 连字符也算量具的一部分（`--epsMode` / `--epsmode` 都读不到 `FLAG['eps-mode']`）⇒ 比对前先抹掉大小写与 `-`。
@@ -57,6 +58,12 @@ const N = Number(ARGV[1] || 5);
 const SEED = Number(ARGV[2] || 77000);
 const FILE = ARGV[3] || 'js/bundled-champion-3p.js';
 const POOL_MODE = FLAG.pool || 'core';
+/* `--topcards=<n>`（默认 12 ⇒ 打印与历史逐字同）：贴贴线要看的 `贴贴/天火/电磁炮` 都排在 12 名之后，
+ *   截在前 12 就**看不见本次干预买到的东西**（2026-10-24 夜班 §E730：两开那臂出手种类 20→23，多的三种全在尾巴上）。 */
+const TOPCARDS = FLAG.topcards == null ? 12 : Number(FLAG.topcards);
+if (FLAG.topcards != null && !(Number.isInteger(TOPCARDS) && TOPCARDS >= 1 && TOPCARDS <= 60)) {
+  console.error('⛔ --topcards 必须是 1..60 的整数（收到 `' + FLAG.topcards + '`）'); process.exit(2);
+}
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, window: {} };
 sb.globalThis = sb;
@@ -502,6 +509,61 @@ if (SHIPDRAIN_RAW != null) {
       + '硬写 `--eps=0.2 --eps-mode=soft` 量的是**简单档**，不是页面默认档（对照臂同样要给）。');
     process.exit(2);
   }
+}
+/* ===== 2026-10-24 夜班（千问 #56）：`--locknarrow=<0|1>` ‖ `--cursepush=<0|1..12>` = 贴贴/天火那两档进**强度尺** =====
+ * 病：这两档（v1.8.32/33 落的 `LOCK_NARROW`/`CURSE_PUSH`，钩子在 `evo.js` 的 `epsMode==='soft' && eps>0` 那一支）
+ *   此前**只有机制尺** `tools/probe-sticker-injection.mjs` 打得开 ⇒ 强度尺吃不到 ⇒ "开档有没有代价"这一问**根本没有入口**
+ *   （§E729 预注册的第 0 步：没有这一步，任何"没代价"的说法都是拿机制尺的数冒充强度尺的数）。
+ * 形状逐字照上面的 `--shipdrain`：setter 不存在 ⇒ 拒跑 ‖ 设了必须回读一致 ‖ **开了而 ε 不在场 ⇒ exit 2**
+ *   （ε=0 跑出来必然与关档逐字相同 = 一根静默失效的旗标 ⇒ 那一格只能记"读不出"，不许记成"没代价"）。
+ * 两个旗标都不设 ⇒ 一行都不多跑，出厂逐位不变（`LOCK_NARROW=0`/`CURSE_PUSH=0` 是出厂档）。 */
+const LOCKNARROW_RAW = FLAG.locknarrow, CURSEPUSH_RAW = FLAG.cursepush;
+const LOCKNARROW = LOCKNARROW_RAW == null ? null : Number(LOCKNARROW_RAW);
+const CURSEPUSH = CURSEPUSH_RAW == null ? null : Number(CURSEPUSH_RAW);
+if (LOCKNARROW_RAW != null && !(LOCKNARROW === 0 || LOCKNARROW === 1)) {
+  console.error('⛔ --locknarrow 只能是 0（出厂：锁上即作废本回合探索）或 1（锁上只许在链内键里探索）；收到 `' + LOCKNARROW_RAW + '`'); process.exit(2);
+}
+if (CURSEPUSH_RAW != null && !(CURSEPUSH === 0 || (Number.isInteger(CURSEPUSH) && CURSEPUSH >= 1 && CURSEPUSH <= 12))) {
+  console.error('⛔ --cursepush 只能是 0 或 1..12（0 = 关；N = 每 N 个 ep≥3 窗口把贴贴**并入探索集**一次，不强推落子）；收到 `' + CURSEPUSH_RAW + '`'); process.exit(2);
+}
+if ((LOCKNARROW_RAW != null || CURSEPUSH_RAW != null) && (typeof T.setLockNarrow !== 'function' || typeof T.setCursePush !== 'function')) {
+  console.error('⛔ 引擎没导出 `setLockNarrow`/`setCursePush` ⇒ 这两根旗标没有生效对象，拒跑'); process.exit(2);
+}
+const STICKER_DEFAULT = {
+  narrow: (typeof T.lockNarrowOn === 'function') ? T.lockNarrowOn() : null,
+  push: (typeof T.cursePushOn === 'function') ? T.cursePushOn() : null
+};
+if (LOCKNARROW_RAW != null) {
+  try { T.setLockNarrow(LOCKNARROW); } catch (e) { console.error('⛔ 窄锁档被引擎拒：' + e.message); process.exit(2); }
+  if (T.lockNarrowOn() !== LOCKNARROW) {
+    console.error('⛔ `--locknarrow=' + LOCKNARROW + '` 没生效：引擎回读 `LOCK_NARROW = ' + T.lockNarrowOn() + '`'); process.exit(2);
+  }
+}
+if (CURSEPUSH_RAW != null) {
+  try { T.setCursePush(CURSEPUSH); } catch (e) { console.error('⛔ 软注入档被引擎拒：' + e.message); process.exit(2); }
+  if (T.cursePushOn() !== CURSEPUSH) {
+    console.error('⛔ `--cursepush=' + CURSEPUSH + '` 没生效：引擎回读 `CURSE_PUSH = ' + T.cursePushOn() + '`'); process.exit(2);
+  }
+}
+const STICKER_EFF = { narrow: (typeof T.lockNarrowOn === 'function') ? T.lockNarrowOn() : 0, push: (typeof T.cursePushOn === 'function') ? T.cursePushOn() : 0 };
+if (LOCKNARROW_RAW != null || CURSEPUSH_RAW != null) {
+  console.log('[sticker] 已按旗标改引擎档（现网路径，不是工具外挂）：`LOCK_NARROW = ' + STICKER_EFF.narrow + '`（出厂 ' + STICKER_DEFAULT.narrow + '）'
+    + ' ‖ `CURSE_PUSH = ' + STICKER_EFF.push + '`（出厂 ' + STICKER_DEFAULT.push + '）'
+    + '· 机制 = 窄锁只改"锁上之后允许在链内键里探索"；软注入只在 ε 分支里把贴贴**并入探索集**（不强推）'
+    + '· 本臂 ε=' + (EPS_TIER ? '档位 ' + EPS_TIER + ' 给的剂量' : SHIP_EPS + (SHIP_EPMODE ? '/' + SHIP_EPMODE : '')));
+  if ((STICKER_EFF.narrow >= 1 || STICKER_EFF.push >= 1) && !EPS_ACTIVE) {
+    console.error('⛔ 贴贴两档开了（narrow=' + STICKER_EFF.narrow + ' push=' + STICKER_EFF.push + '）而 ε 不在场 ⇒ 钩子在 `epsMode===soft && eps>0` 那一支，'
+      + '这一臂必然与关档**逐字相同**（= 一根静默失效的旗标）。**要量代价就得给带探索的剂量**：首选产品那张表 `--eps-tier=lv:regular`（页面默认档）。');
+    process.exit(2);
+  }
+  /* 统计计数器复位 ⇒ 本臂的 `windows/applied/narrowed` 不被上一臂污染（机制尺那边同一纪律） */
+  if (typeof T.resetLockNarrowStat === 'function') T.resetLockNarrowStat();
+  if (typeof T.resetCursePushStat === 'function') T.resetCursePushStat();
+} else {
+  console.log('[sticker] 未设旗标 ⇒ 走**出厂档** `LOCK_NARROW = ' + STICKER_DEFAULT.narrow + '` ‖ `CURSE_PUSH = ' + STICKER_DEFAULT.push + '`'
+    + (STICKER_DEFAULT.narrow === 1 || STICKER_DEFAULT.push >= 1
+      ? '（2026-10-24 夜班起两档已开出厂 ⇒ 这一臂**就是**开档的形状；要量"关档"给 `--locknarrow=0 --cursepush=0`）'
+      : '（两档默认 0 ⇒ 逐位不变）'));
 }
 if (MODE && !R.MODES[MODE]) { console.error('--mode 未知: ' + MODE + '（可选: ' + Object.keys(R.MODES).join(' ') + '）'); process.exit(1); }
 if (DRAINHP > 0) { R.MODES[MODE || 'multi'].drainHpMax = DRAINHP; }
@@ -1219,11 +1281,16 @@ console.log('  决策时 ep 分带: 0-1=' + champ.pct(champ.epBands[0], champ.de
   '   ← 若 5+/10+ 占比高，则"钱不够"不是约束，问题是**买了什么**');
 const tot = Object.keys(champ.use).reduce(function (a, k) { return a + champ.use[k]; }, 0);
 const sorted = Object.keys(champ.use).sort(function (x, y) { return champ.use[y] - champ.use[x]; });
-console.log('出手种类=' + sorted.length + '  分布（前 12）:');
-for (const k of sorted.slice(0, 12)) {
+console.log('出手种类=' + sorted.length + '  分布（前 ' + TOPCARDS + '）:');
+for (const k of sorted.slice(0, TOPCARDS)) {
   const nm = R.byKey[k] ? R.byKey[k].name : k;
   const c = S.computeCost(S.createState('multi', { next: T.mulberry32(7) }, N), 0, k);
   console.log('  ' + nm.padEnd(10) + (champ.use[k] / tot * 100).toFixed(1).padStart(5) + '%' +
+    /* ⚑ 10-25 夜班：这一列印的是**一位小数**的占比 ⇒ 0.04% 会读成 `0.0%`，而本班正是这样把
+     *   "天火 0.0%" 当成了"天火没出现过"（§E740：真剂量是 0.03~0.06 次引爆/局）。
+     *   ⇒ 占比后面必须跟着**绝对次数**：`0.0%  次数=171` 与 `0.0%  次数=0` 长得一样，但判的是两件事。
+     *   （同族在册：`分母为 0 的 0%` 与真 0 同形 ‖ §E271 早已定过"用量要报成用户手里的单位"。） */
+    '  次数=' + champ.use[k] +
     '   费用=' + ((c && c.ok) ? c.ep : '?'));
 }
 console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');

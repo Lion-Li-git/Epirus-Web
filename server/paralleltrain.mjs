@@ -8,6 +8,7 @@ import { Worker } from 'node:worker_threads';
 import { cpus } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { readEconEnv } from './econ-env.mjs';   // v1.8.36（夜班 #58）：爆珠塑形那个 env 的读取点收敛到单一来源（原先本文件直接读 ⇒ D77① 抓到两处读取）
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -131,7 +132,7 @@ export function makeParallelEvalN(T, opts) {
         /* v1.5.143（千问 0921 午班）：**状态分布塑形**（`EPIRUS_BEAD_SEED=0.5` ⇒ 一半普通训练局开局带珠+2ジ）。
          * 与 `subBead` 分家：那条只作用于**补贴局**（示范通道），这条作用于**非补贴局** ⇒
          * 让"放炮"的回报**当场**进 fit，检验"两回合序列的信用分配"是不是珠线真正的瓶颈（DS §5 提案未跑）。 */
-        beadSeed: process.env.EPIRUS_BEAD_SEED || null,
+        beadSeed: readEconEnv(process.env).beadSeed || null,
         /* v1.5.143：蓄能门槛（默认 2 = v1.5.82 原裁定；抬到 3 ⇒ 蓄完仍 ≥2 ジ，珠才可能当场花掉 */
         chargeMinEp: process.env.EPIRUS_CHARGE_MIN_EP || null,
         /* v1.5.102：**训练侧座位探针局数**也随消息下发（0/缺省 = 不改，保持 `SEAT_GAMES = 6` 的旧行为）。

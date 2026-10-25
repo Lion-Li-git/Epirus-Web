@@ -5,9 +5,18 @@
  * 三格分岔：(a) K 太小把它挡在外面 ‖ (b) `seqLockedTurn`（有符咒/持珠/上手蓄能）整回合取消探索 ‖ (c) 这张牌此刻根本不合法/买不起。
  * 用法：node tools/probe-sticker-injection.mjs [--packs=f1,f2] [--games=200] [--mode=multi|long]
  *        [--narrow=0|1] [--push=0..12] [--product=1]
+ *        [--narrow=0|1] [--push=0..12] [--product=1] [--forcefire=0|1] [--seed0=9100]
  *   例（复现 §E712 的 2×2 里"两半同开"那一格）：
  *     node tools/probe-sticker-injection.mjs --games=250 --product=1 --narrow=1 --push=1
- * 读数住在：`docs/research/logs/2026-10-24-sticker-injection-qoder.md` §E711（分母与交集）‖ §E712（2×2 与自证）。
+ *   ⚑ 10-25 夜班加的两件（用户裁定「至少研究出有出现引爆再说开注入的问题」）：
+ *     · 引爆读数**拆成 n≥1 / n=0**：`js/core/resolve.js:1127` 那条 `ev({type:'firestorm', pid, n})` 是
+ *       **每次结算天火都发**（`n` 才是真引爆了几枚）⇒ 旧版把"发了这条事件"读成"真的引爆了"，空爆会被记成收益。
+ *       这条拆分是为了让"能不能出现引爆"有一个不会说谎的读数：量具不该依赖"被测量自己不会空爆"（菜单闸门是
+ *       **另一处代码**在挡，它哪天放宽，旧读数就静默把空爆记成收益）。
+ *     · `--forcefire=1` = 只给 **0 号席**的反事实臂：菜单里天火**可付**（= 闸门开着，自己名下有 age≤3 的符咒）
+ *       ⇒ 直接选天火。用来量"收益端值不值 2 ジ"；它不越过闸门 ⇒ 不会人造空爆。
+ * 读数住在：`docs/research/logs/2026-10-24-sticker-injection-qoder.md` §E711（分母与交集）‖ §E712（2×2 与自证）
+ *           ‖ 本轮"引爆能不能出现"记在 `docs/research/logs/2026-10-24-night-shift-qoder.md` §E740。
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -17,9 +26,11 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 /* ROOT 自解析（不写死机器路径 —— `tools/reachability.mjs` 10-18 归仓时立的同一形状，`WT=<路径>` 可指到别的工作树）。 */
 const REPO = (process.env.WT || path.resolve(fileURLToPath(import.meta.url), '../..')) + '/';
 /* 仓规（门 D218）：进 `tools/` 的脚本必须有旗标消毒层 ⇒ 读不到的旗标一律 `exit 64`，别静默吞掉。 */
-rejectUnknownFlags(process.argv.slice(2), ['games', 'mode', 'packs', 'narrow', 'push', 'product'], 'probe-sticker-injection');
+rejectUnknownFlags(process.argv.slice(2), ['games', 'mode', 'packs', 'narrow', 'push', 'product', 'forcefire', 'seed0'], 'probe-sticker-injection');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const GAMES = Number(arg('games', 200)), MODE = arg('mode', 'multi'), NARROW = Number(arg('narrow', 0)), PUSH = Number(arg('push', 0));
+const FORCEFIRE = String(arg('forcefire', '0')) === '1';
+const SEED0 = Number(arg('seed0', 9100));   // 换这一枚 = 换一批局（配对比较时两臂要用**同一个** seed0）
 const ONLY_PRODUCT = String(arg('product', '0')) === '1';
 /* 默认只量**在册可复算**的那一枚（线上 3P 包）。第二枚 `docs/artifacts/g16-77001.bak` 是 gitignore 的本机产物
  *   ⇒ 想复现 §E711/§E712 那两包对照，得自己带上它（读不到会响亮印"读包失败"，不会静默少一格）。 */
@@ -37,7 +48,8 @@ const W = mk(), R = W.EpirusRules, S = W.EpirusState, X = W.EpirusResolve, Play 
 T.setTrainMode(MODE === 'long' ? 'long' : 'multi');
 T.setLockNarrow(NARROW);   // v1.8.33：0 = 出厂（锁上即作废本回合探索）‖ 1 = 窄锁（只许在链内键里探索）
 T.setCursePush(PUSH);      // v1.8.33：0 = 关 ‖ N = 每 N 个 ep≥3 窗口把贴贴并进探索集一次（不强落子）
-console.log('LOCK_NARROW = ' + T.lockNarrowOn() + '（' + (NARROW ? '窄锁档' : '出厂：锁上作废探索') + '） ‖ CURSE_PUSH = ' + T.cursePushOn());
+console.log('LOCK_NARROW = ' + T.lockNarrowOn() + '（' + (NARROW ? '窄锁档' : '出厂：锁上作废探索') + '） ‖ CURSE_PUSH = ' + T.cursePushOn()
+  + ' ‖ forcefire(0 号席) = ' + (FORCEFIRE ? '开' : '关') + ' ‖ seed0 = ' + SEED0);
 function loadAny(src) {
   const slot = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/.exec(src);
   if (slot) return P.unpack(JSON.parse(slot[1]), true);
@@ -55,8 +67,12 @@ for (const pf of packs) {
   for (const [label, eps, k] of CELLS_RUN) {
     let deton = 0, curseCast = 0, fireCast = 0, gamesWithRun2 = 0, dec = 0, curseLegal = 0, fireLegal = 0, locked = 0, ep2 = 0;
     let dec3 = 0, w2 = 0, w2lock = 0, w3 = 0, w3lock = 0;
+    /* 本轮新加的读数（§E740）：窗口 = "自己名下有 age≤3 的符咒"（与 `evo.js:461-465` 同判据）；
+     * 真引爆 = `firestorm` 事件里 `n>=1`；空爆 = 同一事件 `n===0`。分开数是因为量具不该依赖
+     * "菜单闸门恰好没放行空爆"——那是另一处代码的行为。 */
+    let winOpen = 0, winFireOk = 0, winSelfOnly = 0, castSelfOnly = 0, detonReal = 0, detonZero = 0, stickerBlown = 0, fireDmg = 0, first0 = 0, roundsSum = 0;
     for (let g = 0; g < GAMES; g++) {
-      const st = S.createState(MODE === 'long' ? 'long' : 'multi', { next: mul(9100 + g * 13) }, 5);
+      const st = S.createState(MODE === 'long' ? 'long' : 'multi', { next: mul(SEED0 + g * 13) }, 5);
       const ch = [];
       const inner = T.policyChooserN(params, 0.15, eps, k, 'soft');
       for (let pid = 0; pid < 5; pid++) {
@@ -99,18 +115,49 @@ for (const pf of packs) {
           if (holdBead) { w2++; if (lk) w2lock++; }
           if (cursing) { w3++; if (lk) w3lock++; }
           if ((me.ep | 0) >= 2) ep2++;
-          return inner(state, p2, legal);
+          /* ===== §E740：引爆的"窗口"与反事实臂 =====
+           * `myLive` 用与 `evo.js:461-465` **逐字同**的判据（owner 是我 && age≤3），
+           * 因为菜单闸门 `econBase` 就是在这一格里把天火从候选摘掉的；`winFireOk` 才是"这一刻真的可以引爆"。
+           * ⚠ 只给 **0 号席**强落子（其余席照原策略）⇒ 这一臂与对照臂的差别只在"那一只手"，
+           *    而 0 号席的 1st% 就是"值不值 2 ジ"的直接读数（五席同包镜像，基准线是同一枚包）。 */
+          let myLive = 0, myLiveOther = 0;
+          for (let vi = 0; vi < state.p.length; vi++) {
+            const vs = state.p[vi].stickers || [];
+            for (let vj = 0; vj < vs.length; vj++) if (vs[vj].owner === p2 && vs[vj].age <= 3) {
+              myLive++;
+              if (vi !== p2) myLiveOther++;     // 引爆那一圈第一行就 `if (v === i) continue`（resolve.js:1109）⇒ 贴在自己身上的**永远炸不到**
+            }
+          }
+          if (myLive > 0) winOpen++;
+          const selfOnly = (myLive > 0 && myLiveOther === 0);
+          if (selfOnly) winSelfOnly++;
+          if (myLive > 0 && lf) { winFireOk++; if (FORCEFIRE && p2 === 0) return { key: R.SK.FIRESTORM, target: null, target2: null }; }
+          /* 上面那段自锁：`lf` 问的是"这张牌付得起吗"（合法表里的 `affordable`），而**闸门**问的是"有货吗"——
+           * 两者用的集合不一样（闸门 `evo.js:462` 数到自己名下，引爆那一圈 `resolve.js:1109` 第一行就 `if (v === i) continue`）
+           * ⇒ 在 `selfOnly` 这一格里打了天火**结构上必然 0 引爆**。这里数出"真打了几个"，才能和空爆计数对齐。
+           * ⚠ 这一格放在 forcefire **之后** ⇒ C 臂的语义与 §E740 那张表跑的时候逐字相同（强落子照样落，照样空爆）。 */
+          const pick38 = inner(state, p2, legal);
+          if (selfOnly && pick38 && pick38.key === R.SK.FIRESTORM) castSelfOnly++;
+          return pick38;
         });
       }
       Play.autoGameN(st, ch);
       let run = 0, run2 = false;
       for (const e of st.events) {
-        if (e.type === 'firestorm') deton++;   // 引擎在天火真的引爆时发这条事件 ⇒ 这是"收益端"，不是出手数
+        if (e.type === 'firestorm') {
+          deton++;
+          /* ⚑ 旧版在这一格只写 `deton++`（把"发了 firestorm 事件"读成"真引爆"）——
+           *   `resolve.js:1127` 是**每次结算天火都发**这条，`n` 才是引爆枚数 ⇒ 现在分开数。 */
+          if ((e.n | 0) >= 1) { detonReal++; stickerBlown += (e.n | 0); } else detonZero++;
+        }
+        if (e.type === 'damage' && e.via === 'firestorm') fireDmg += (e.amt || 0);
         if (e.type === 'action' && e.outcome === 'ok' && e.key === R.SK.CURSE) { curseCast++; run++; if (run >= 2) run2 = true; }
         else if (e.type === 'action' && e.outcome === 'ok' && e.key === R.SK.FIRESTORM) fireCast++;
         else if (e.type === 'action' && e.outcome === 'ok') run = 0;
       }
       if (run2) gamesWithRun2++;
+      if (st.winner === 0) first0++;
+      roundsSum += (st.round | 0);
     }
     console.log('  ' + label.padEnd(24) + (curseCast / GAMES).toFixed(3) + '    ' + (fireCast / GAMES).toFixed(3) + '    ' +
       (100 * gamesWithRun2 / GAMES).toFixed(1) + '%          ' +
@@ -118,6 +165,18 @@ for (const pf of packs) {
       (100 * locked / dec).toFixed(1) + '%    ' + (100 * ep2 / dec).toFixed(1) + '%   (分母 ' + dec + ' 个决策点)');
     console.log('    └ 收益端：天火**真引爆** ' + deton + ' 次（' + (deton / GAMES).toFixed(3) + '/局） ‖ 窄锁档统计 ' + JSON.stringify(T.lockNarrowStat()) +
       ' ‖ 贴贴软注入 ' + JSON.stringify(T.cursePushStat()));
+    /* §E740 那一问的正面读数：引爆到底出没出现、以及在"能引爆的那一刻"有多少次真的打了天火 */
+    console.log('    └ §E740：窗口开(名下有 age≤3 符咒) ' + winOpen + ' 个决策点（' + (100 * winOpen / Math.max(1, dec)).toFixed(2)
+      + '% of ' + dec + '） ‖ 其中天火**可付** ' + winFireOk + '（' + (100 * winFireOk / Math.max(1, winOpen)).toFixed(1) + '% of 窗口）'
+      + ' ‖ 天火出手 ' + fireCast + ' ‖ 出手即窗口 = ' + (100 * fireCast / Math.max(1, winFireOk)).toFixed(1) + '%');
+    console.log('       真引爆(n≥1) ' + detonReal + ' = ' + (detonReal / GAMES).toFixed(3) + '/局 ‖ 空爆(n=0) ' + detonZero
+      + ' ‖ 引爆枚数合计 ' + stickerBlown + ' ‖ 天火伤害合计 ' + fireDmg.toFixed(1)
+      + ' ‖ 0 号席 1st ' + (100 * first0 / GAMES).toFixed(1) + '% ‖ 平均回合 ' + (roundsSum / GAMES).toFixed(1)
+      + (FORCEFIRE ? '   【反事实臂：窗口开着且付得起 ⇒ 0 号席必打天火】' : ''));
+    /* 空爆归因（§E743）：`selfOnly` 那一格 = 闸门认为有货、payload 结构上必然炸不到 */
+    console.log('       空爆归因：名下**只贴在自己身上**的窗口 ' + winSelfOnly + ' 个（占开窗 ' + (100 * winSelfOnly / Math.max(1, winOpen)).toFixed(1)
+      + '%） ‖ 其中真打了天火 ' + castSelfOnly + ' 次 ‖ 实测空爆 ' + detonZero + ' 次'
+      + (castSelfOnly === detonZero ? '  ⇒ 两数相等：本批空爆**全部**由这一格解释' : '  ⇒ 两数不等：还有别的来源（未归因 ' + Math.abs(detonZero - castSelfOnly) + ' 次）'));
     console.log('    └ v1.5.142 那两条软注入的窗口 vs 序列窗锁：②持珠/蓄能窗口 ' + w2 + ' 个（其中被锁 ' + w2lock +
       ' = ' + (w2 ? (100 * w2lock / w2).toFixed(0) : '-') + '%） ‖ ③有符咒/刚贴过窗口 ' + w3 + ' 个（其中被锁 ' + w3lock +
       ' = ' + (w3 ? (100 * w3lock / w3).toFixed(0) : '-') + '%） ‖ 窗口占决策点 ' +
