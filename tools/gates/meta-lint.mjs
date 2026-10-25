@@ -209,7 +209,14 @@ t('D194 `--only` 复跑单道门不许伪装成全绿（v1.5.288）：跳过的�
     '② "注册数 vs 执行数"那道守卫必须把**被 --only 跳过的**也计进去（否则加了开关就等于把守卫拆了）');
   const one = spawnSync(process.execPath, ['tools/np-test.mjs', '--only=D193'], { cwd: process.cwd(), encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 24 });
   const o1 = String(one.stdout || '');
-  ok(one.status === 0 && /通过 1 \/ 1/.test(o1), '③ `--only=D193` 应当正好跑 1 道并绿（实测 exit=' + one.status + '，输出尾部 ' + o1.slice(-90).replace(/\n/g, ' ') + '）');
+  /* ⚑ 10-25（D193⑨′ 那次真红把本门也点着之后改的）：这里原来钉的是**「`--only=D193` 必须 exit 0 且通过 1/1」**
+   *   ⇒ 等于把本门接在**另一道门的健康度**上：一个原因（D193 红）亮两盏灯，而本门真正要判的是 **runner 诚不诚实**，
+   *   不是被探针那道门判成了什么。改成钉**自洽**：报绿与退出码必须同真同假（探针那道门红着时本门照过，
+   *   而 runner 若"通过 1/1 却 exit=1"或"exit=0 却 0/1"就当场红）。下面那三条计数腿一字未动。 */
+  const tally1 = (o1.match(/通过 (\d+) \/ (\d+)/) || []);
+  ok(tally1.length === 3 && Number(tally1[2]) === 1 && ((one.status === 0) === (Number(tally1[1]) === 1)),
+    '③ 探针那一道的"通过 N / M"必须与退出码**自洽**、且 M 必须是 1（实测 exit=' + one.status + ' ‖ 报的是 "' +
+    (tally1[1] === undefined ? '（没印计数行）' : tally1[1] + ' / ' + tally1[2]) + '"）⇒ 计数与退出码各说各话就是 runner 在撒谎');
   const m = o1.match(/只跑了 (\d+) \/ (\d+) 条\*\*（跳过 (\d+) 条）/);
   ok(!!m, '③ 必须响亮印出"只跑了 N / M 条（跳过 K 条）"——**没有这一行就是静默少跑**');
   if (m) {

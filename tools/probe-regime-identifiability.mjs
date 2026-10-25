@@ -26,7 +26,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { sandbox, rejectUnknownFlags, mulberry32 } from './audit-lib.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { poolFromSpecs, heldFromNames, HELDOUT } from './regime-panel.mjs';
-import { bestInByEnv, routingReadings, matrixComplaint, metricOrThrow, bestSingleOf, medianOf, shareOf, decideSwitch, nearestDistinct } from './routing-gain-lib.mjs';
+import { bestInByEnv, routingReadings, matrixComplaint, metricOrThrow, bestSingleOf, medianOf, shareOf, decideSwitch, nearestDistinct, switchedEnv } from './routing-gain-lib.mjs';
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(('--' + k + '=').length) : d; };
 rejectUnknownFlags(process.argv.slice(2), ['matrix', 'games', 'k', 'n', 'seed', 'json', 'quiet', 'exclude', 'metric', 'dump', 'abstain']);
@@ -242,8 +242,12 @@ console.log('  歧义样本（最近邻在**不同环境之间逐位并列** ⇒
 if (ABSTAIN_ON) {
   /* ⚠ 列出来的是"**真的换了包**"的环境。早先这行印的是 `canSwitch` 的名单，而 `canSwitch` 只看距离门槛——
    * 一个环境可以"门槛过了但根本没有票"（§E131 修完并列判歧义之后大面积出现），那时它走的是**落回一招鲜**那条路。
-   * 印错会让"换包 1 个 / 名单 26 个"这种自相矛盾直接进交接件。 */
-  const sw = envsForScore.filter(e => switchInfo[e].canSwitch && switchInfo[e].predicted);
+   * 印错会让"换包 1 个 / 名单 26 个"这种自相矛盾直接进交接件。
+   * ⚑ 10-25 同一族的**第二半**（D193⑨′ 红暴露的）：光有票还不够——**投的正好是那一招鲜**也不算换包。
+   *   原来这里写的是 `canSwitch && predicted`，于是屏上能印出 `实际换包 0/8：random`（数取自 lib，名单没减掉那一格）。
+   *   现在数与名单都走 lib 的 `switchedEnv` 这一个定义 ⇒ 不可能再各说各话。 */
+  const packOfEnv = (e) => { const pe = predOf[e]; return pe && bestIn[pe] ? bestIn[pe] : null; };
+  const sw = envsForScore.filter(e => switchInfo[e].canSwitch && switchedEnv(packOfEnv(e), FALLBACK));
   console.log('  弃权闸 **' + ABSTAIN + '**：τ = ' + (TAU === null ? '—' : TAU.toFixed(4))
     + '（同原型两两签名距离的中位数，' + withinD.length + ' 对）· 实际换包 ' + RD.switched + '/' + envsForScore.length + ' 个环境'
     + (sw.length ? '：' + sw.join(', ') : ' ⇒ **一个都不换**'));
@@ -295,7 +299,11 @@ if (arg('dump', '')) {
     const val = (p, mt) => { const r = rows.find(x => x.pack === p); return r && r.per[e] ? r.per[e][mt] : null; };
     const bs = rows.find(x => x.pack === RD.bestSinglePack);
     const si = switchInfo[e] || {};
-    return { env: e, predEnv: pe, oracleOfPred: pack, switched: !!usedPack && !!pack && can,
+    return { env: e, predEnv: pe, oracleOfPred: pack,
+      /* 10-25（D193⑨′）：这里原来是 `!!usedPack && !!pack && can`——**没有减掉"投的就是那一招鲜"**，
+       * 于是 `env=random` 那一格 `switched=true`，而 json 的 `meta.switched`（lib 的口径）数是 0 ⇒ 同一进程两套账。
+       * 现在逐格字段与 lib 的计数共用 `switchedEnv` 这一个定义（屏上名单也是），三处不可能再分叉。 */
+      switched: switchedEnv(can ? pack : null, FALLBACK),
       chosenPack: usedPack,
       abstain: { mode: ABSTAIN, canSwitch: can === true, nnMed: si.nnMed == null ? null : +si.nnMed.toFixed(4), share: si.share == null ? null : +si.share.toFixed(3) },
       chosen: { fit: val(usedPack, 'fit'), win: val(usedPack, 'win') },
