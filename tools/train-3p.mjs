@@ -113,6 +113,13 @@ const SELF_ENV_KEYS = [
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
+  /* v1.5.141（DS）留到今天的一根**没人能从本入口开**的杠杆：补贴局给受评席每回合补一颗珠（`SUB_BEAD`）。
+   * 它的**读取点在 worker**（`server/paralleltrain.mjs:131` 从继承的 env 读 → `server/train-worker.mjs:228`
+   * 调 `T.setSubBead(...)` 并**回显生效值**「[imit] worker 消息subBead 生效 = true」⇒ 不是"设了没人读"，
+   * 而是本入口的白名单从来没登记它（实测 10-26 01:2x 冒烟：`⛔ 检测到本入口读不到的旋钮：EPIRUS_SUB_BEAD` ⇒ exit 6，
+   * 一秒响、零成本，这正是这条闸该有的样子）。登记之后 `EFFECTIVE_ENV` 会自动把它写进产物的 `meta.recipe.env`。
+   * ⚑ 与 v1.8.37 夜班续的 `EPIRUS_SUB_BEAD_KIND`（珠种，走 econ 单一来源）**要一起设**：只设珠种 = 钩子不进。 */
+  'EPIRUS_SUB_BEAD',
   'EPIRUS_SEQ_KIND',   // v1.8.37（10-25 ZCode · §二十一）：序列奖励的**珠种档**（'elec' 缺省 = 电磁炮原义；'boom' = 蓄爆珠→激光眼）
   'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
   'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
@@ -159,7 +166,12 @@ const CLI_ECON_REWARD_KEYS = ['bigtChainW', 'fitTailW', 'fitTailQ', 'widthW', 'd
   /* v1.8.37（10-25 ZCode · 激光眼移植批 §二十一）：珠种档（枚举键 elec/boom；缺这处同样撞黑键闸。
    * ⚠ 派生探针喂 0.5 时 `readEconEnv` 透传非空值 ⇒ 能认出；真正的值校验在 evo.js 的 setter（响亮拒）。
    * 注释里不给值加单引号（D77/登记腿那族正则会把引号串当键名）。 */
-  'beadSeedKind'];
+  'beadSeedKind',
+  /* v1.8.37 夜班续（10-26 千问 §E763）：**补贴局的珠种**（枚举 elec/boom）与**按珠种拆开的珠奖励**。
+   * 缺这两处的症状与 beadSeedKind/voidW/divK 那几次逐字相同：`ECON_ENV_KEYS` + `ECON_REWARD_KEYS` 都齐，
+   * 但本入口的"我认得哪些奖励键"推不出它们 ⇒ 一上臂就撞黑键闸 `exit 6`。
+   * ⚠ 注释里不给值加单引号（D77/登记腿那族正则会把引号串当键名）。 */
+  'subBeadKind', 'beadBoomW'];
 (function extendSelfWithCliEcon() {
   for (const k of ECON_ENV_KEYS) {
     /* v1.5.254：**同一个 env 名要试两种取值** —— 数值档喂 `0.5`、布尔档喂 `'1'`。

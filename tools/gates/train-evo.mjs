@@ -1821,7 +1821,10 @@ t('D77 经济/熵奖励 env 只能有**一个**读取点（server/econ-env.mjs�
     wallGames: 4, hoardOnLeftover: true, convRatio: true, convOffense: true, hoardCapMult: 5, stockBonus: 0.11,
     /* v1.8.37（10-25 ZCode ⚑ 待千问/DS 复核）：`beadSeedKind` 是**枚举键**（'elec'/'boom'），
      * 缺省数字哨兵 0.5 会被 setter 响亮拒 ⇒ 单独喂字符串哨兵（setter 对非法值抛错本就是它该有的牙）。 */
-    blockW: 0.22, widthW: 0.33, bigcardW: 0.44, beadSeed: 0.55, beadSeedKind: 'boom' };
+    blockW: 0.22, widthW: 0.33, bigcardW: 0.44, beadSeed: 0.55, beadSeedKind: 'boom',
+    /* v1.8.37 夜班续（10-26 千问 §E763）：新登记的**补贴局珠种**（枚举 ⇒ 同样要喂字符串）与
+     * **按珠种拆开的珠奖励**（数字 ⇒ 0.5 合法）。缺哨兵的后果不是红，是**这条往返从没验过这两个键**。 */
+    subBeadKind: 'boom', beadBoomW: 0.5 };
   const ALIAS = { target: 'targetOverride', cap: 'capOverride' };
   const notOk = [];
   try {

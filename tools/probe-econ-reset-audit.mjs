@@ -45,7 +45,11 @@ const SENT = {
   /* v1.8.37（千问 10-25 夜班修 D175）：珠种档是**枚举键**（出厂 'elec'）⇒ 哨兵必须喂另一个合法值。
    * 缺这一行的症状是探针 ① 印「本次下达 30 个 ‖ 下达了但读回没变：beadSeedKind（下达 undefined 读回仍="elec"）」
    * 并 exit 7 —— 那不是"setter 不吃键"，是没下达；补上之后这一行才真的验到"枚举键能到达作用点"。 */
-  beadSeedKind: 'boom'
+  beadSeedKind: 'boom',
+  /* v1.8.37 夜班续（10-26 千问 §E763）：又是这两处名单里的**第二处**（上一笔 D175 的红就是"门侧补了、探针漏了"）。
+   *   subBeadKind 是枚举 ⇒ 喂合法的另一档；beadBoomW 出厂 0 ⇒ 哨兵 0.5 明显不是出厂值。
+   *   ⚠ 这两个键出厂都是"关"，所以探针这一段的**读回变了**才算它们接得上（不是"读到默认值"就算过）。 */
+  subBeadKind: 'boom', beadBoomW: 0.5
 };
 /* 下达名 ≠ 读回名的两处（第一版把这两处误报成"setter 不吃键"，故显式映射并注释） */
 const readKey = k => (k === 'target' ? 'targetOverride' : (k === 'cap' ? 'capOverride' : k));

@@ -1901,7 +1901,7 @@ let WALL_GAMES = 3;
     if (!ECON_DEFAULTS && !o.reset) {
       /* v1.5.299（DS）：**这份快照是字面量列表**（注释里说"不抄字面量"其实不成立）⇒ 加新键必须同时补这里，
        * 否则 `setEconomyReward({reset:true})` 抹不掉它 —— 我的 `fitCal` 就是这么被 D175 抓到的（门是对的）。 */
-      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W, fitCal: FIT_CAL_EXCESS, fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, voidW: VOID_W, voidIdealW: VOID_IDEAL_W, beadSeed: BEAD_SEED, beadSeedKind: BEAD_SEED_KIND };
+      ECON_DEFAULTS = { divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divForceGens: DIV_FORCE_GENS, costlyW: COSTLY_W, fitCal: FIT_CAL_EXCESS, fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, voidW: VOID_W, voidIdealW: VOID_IDEAL_W, beadSeed: BEAD_SEED, beadSeedKind: BEAD_SEED_KIND, subBeadKind: SUB_BEAD_KIND, beadBoomW: BEAD_BOOM_W };
     }
     /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」）：`voidW` / `voidIdealW` 走 econ-env 单一来源
      *   （不设 ⇒ null ⇒ 两个 W 原样 0 ⇒ 严格不加项、逐位不变）。
@@ -1940,6 +1940,11 @@ let WALL_GAMES = 3;
      *   BEAD_SEED=0.5 那根给的是**电珠**——爆珠档从未被试过。电磁炮先例（v1.5.143 电珠塑形 → v1.5.144 首个成牌）
      *   的镜像移植。走同一单一来源 ⇒ 16 个 worker 同步生效。 */
     if (o.beadSeedKind != null) setBeadSeedKind(o.beadSeedKind);
+    /* v1.8.37 夜班续（千问 §E763）：**补贴局的珠种**与**按珠种拆开的珠奖励**。
+     *   `subBeadKind` 是枚举键（与 `beadSeedKind` 同一族 ⇒ 非法值由 setter 响亮拒）；
+     *   `beadBoomW` 缺省 0 ⇒ 不开臂时 fit 逐字不变（这条是本仓新杠杆的出厂不变量，D175 探针往返盯着它）。 */
+    if (o.subBeadKind != null) setSubBeadKind(o.subBeadKind);
+    if (o.beadBoomW != null) setBeadBoomW(o.beadBoomW);
     if (o.hoardCapMult != null) HOARD_CAP_MULT = Number(o.hoardCapMult) || 1; if (o.stockBonus != null) STOCK_BONUS = Number(o.stockBonus) || 0;
     if (o.target != null) ECO_T = Math.max(1, Number(o.target));
     if (o.cap != null) ECO_C = Math.max(1, Number(o.cap));
@@ -1958,6 +1963,8 @@ let WALL_GAMES = 3;
       S4_W = 0; setRingReward(0.10); setBeadReward(0.05); WALL_FILTER_ON = false; WALL_GAMES = 3;
       FIT_TAIL_W = 0; FIT_TAIL_Q = 0.25;   // 09-26 夜班 §E49：D77 往返的哨兵必须在这里抹掉，否则 0.5 泄漏给后续门
       setBeadSeedKind('elec');             // v1.8.37：D77 会喂 'boom' 哨兵，reset 必须能抹回电珠档
+      setSubBeadKind('elec');              // v1.8.37 夜班续（§E763）：同上，补贴局的珠种也要抹得回
+      BEAD_BOOM_W = 0;                     // v1.8.37 夜班续：新杠杆的哨兵 0.5 不许泄漏给后续门
       /* v1.5.265（§E65b）：这五个键以前**不在** reset 名单里（手写名单漏的）。走出厂值快照，不抄字面量。 */
       if (ECON_DEFAULTS) {
         DIV_W = ECON_DEFAULTS.divW; DIV_K = ECON_DEFAULTS.divK; DIV_ROLE_W = ECON_DEFAULTS.divRoleW;
@@ -1971,6 +1978,8 @@ let WALL_GAMES = 3;
         if (ECON_DEFAULTS.fitGF != null) FIT_G_FLOOR = ECON_DEFAULTS.fitGF;
         if (ECON_DEFAULTS.beadSeed != null) setBeadSeed(ECON_DEFAULTS.beadSeed);   // v1.8.36：D77 的哨兵喂完 0.5 要能抹回去
         if (ECON_DEFAULTS.beadSeedKind != null) setBeadSeedKind(ECON_DEFAULTS.beadSeedKind);   // v1.8.37：同上
+        if (ECON_DEFAULTS.subBeadKind != null) setSubBeadKind(ECON_DEFAULTS.subBeadKind);       // v1.8.37 夜班续：走快照
+        if (ECON_DEFAULTS.beadBoomW != null) BEAD_BOOM_W = ECON_DEFAULTS.beadBoomW;             // v1.8.37 夜班续：同上
       }
     }
     return economyReward();
@@ -1978,6 +1987,8 @@ let WALL_GAMES = 3;
   function economyReward() {
     return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divCatW: DIV_ROLE_W, K_role: K_ROLE,
       fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, beadSeed: BEAD_SEED, beadSeedKind: BEAD_SEED_KIND,
+      subBeadKind: SUB_BEAD_KIND,   // v1.8.37 夜班续：D77 往返要求 ECON_REWARD_KEYS 每个键都"设得进、读得回"
+      beadBoomW: BEAD_BOOM_W,       // 同上（按珠种拆开的那半笔珠奖励）
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
@@ -2140,7 +2151,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, beadBoomSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     /* v1.8.29：失效成功 / 理想情况（激光眼破防且同回合别人打中）——两个计数一起攒，见 voidScan。 */
     let voidWins = 0, voidIdeal = 0;
@@ -2159,7 +2170,7 @@ let WALL_GAMES = 3;
      *   **这一族里只要有一个 W 非零，就把 8 个计数全部算出来** ⇒ 被下达的那根能看到剂量，
      *   没被下达的兄弟也能当**对照组**读；全 0 时没有任何杠杆需要否证 ⇒ 直接不算、逐位不变、零成本。
      * 收益项（`pressBonus` 等，:1553~:1582）**仍各自按自己的 W 门控** ⇒ `fit` 一字不变。 */
-    const DOSE_ON = PRESS_W > 0 || PIERCE_W > 0 || BEAD_W > 0 || TGT_W > 0 || CLEAR_W > 0 ||
+    const DOSE_ON = PRESS_W > 0 || PIERCE_W > 0 || BEAD_W > 0 || BEAD_BOOM_W > 0 || TGT_W > 0 || CLEAR_W > 0 ||
       BLOCK_W > 0 || WIDTH_W > 0 || WIDTH_LAND_W > 0 || BIGCARD_W > 0 || COSTLY_W > 0 || BIGT_CHAIN_W > 0 || ringWeightAt(gen) > 0 ||
       /* v1.8.29：失效定价的两个 W 也必须进这一族 —— 漏了它，`gen≤125`（`ringWeightAt` 为 0）且其余杠杆全关时
        * 计数器根本不算 ⇒ 臂上读到"void 成功 0 次"与"这根杠杆没生效"同形（§E83 那条病）。 */
@@ -2241,7 +2252,9 @@ let WALL_GAMES = 3;
        * 只补受评席（`seat`）；`regen=0` 的原生局完全不走这条 ⇒ 真实强度读数量不到差别。 */
       const subBeadHook = (SUB_BEAD && regen > 0) ? function (state) {
         const me = state.p[seat];
-        if (me && me.hp > 0 && !me.elec && !me.boom) me.elec = 1;
+        /* v1.8.37 夜班续（§E763）：珠种档。缺省 elec ⇒ 这一行与 v1.5.141 逐字相同；
+         * boom ⇒ 补的是爆珠 ⇒ "激光眼随时可负担"进入补贴局那条评分路径。 */
+        if (me && me.hp > 0 && !me.elec && !me.boom) { if (SUB_BEAD_KIND === 'boom') me.boom = 1; else me.elec = 1; }
       } : undefined;
       /* v1.5.143：状态分布塑形（**只在非补贴局**、**只在开局那一回合**、**全席对称**）—— 见 setBeadSeed 的长注释。
        * 抛硬币用**本局自己的 rng**（不是 Math.random）⇒ 同一 seed 序列可复现；`BEAD_SEED=0` 时短路 ⇒ 不消耗随机数、逐字不变。 */
@@ -2323,6 +2336,9 @@ let WALL_GAMES = 3;
        * 而珠子消费卡（电磁炮/天火）都要 2 ジ ⇒ 蓄能常发生在 ep=1 ⇒ 下回合必然凑不出。
        * 既没有信号、也没有经济余量 ⇒ 闭环学不出来。这里补**信号**那半边。 */
       const beadBonus = BEAD_W * Math.min(1, beadSpent / 2);
+      /* v1.8.37 夜班续（§E763）：**只给花掉的爆珠**定价的那一半（两次封顶，与 beadBonus 同尺度）。
+       * 缺省 BEAD_BOOM_W=0 ⇒ 这一项恒 0 ⇒ `gFit` 逐字不变（出厂不变量，D175 探针的往返盯着它）。 */
+      const beadBoomBonus = BEAD_BOOM_W * Math.min(1, beadBoomSpent / 2);
       /* v1.5.79（第七轮复核 §15-1）：**优先打威胁**（反狙击/反环）。两次封顶，与其它窄奖励同尺度。 */
       const tgtBonus = TGT_W * Math.min(1, threatHits / 1);
       const laserBonus = LASER_W * Math.min(1, laserHits / 1);
@@ -2386,7 +2402,7 @@ let WALL_GAMES = 3;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + tgtBonus + laserBonus + voidBonus + voidIdealBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + bigBonus + costlyBonus + chainBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + beadBoomBonus + tgtBonus + laserBonus + voidBonus + voidIdealBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + bigBonus + costlyBonus + chainBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -2414,6 +2430,8 @@ let WALL_GAMES = 3;
         if (DOSE_ON) pierceHits += countPierceHits(r.state.events, seat);
         /* v1.5.76（P1，用户实测"蓄能 100% 浪费"逼出来的）：**珠子闭环**奖励。 */
         if (DOSE_ON) beadSpent += countBeadSpent(r.state.events, seat);
+        /* v1.8.37 夜班续（§E763）：同一趟事件里另数"花掉的**爆珠**"（只在开了那根杠杆时扫，关着零成本）。 */
+        if (DOSE_ON && BEAD_BOOM_W > 0) beadBoomSpent += countBeadSpent(r.state.events, seat, 'boom');
         /* v1.5.79（复核 §15-1）：把"优先打威胁者"当能力奖（默认关，实验臂用 EPIRUS_TGT_W 打开）。 */
         if (DOSE_ON) threatHits += countThreatHits(r.state.events, seat);
         if (DOSE_ON) laserHits += countLaserHits(r.state.events, seat);
@@ -2619,6 +2637,7 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
       pressEv: doseEv(pressRounds), pressPerGame: dosePer(pressRounds),
       pierceEv: doseEv(pierceHits), piercePerGame: dosePer(pierceHits),
       beadEv: doseEv(beadSpent), beadPerGame: dosePer(beadSpent),
+      beadBoomEv: doseEv(beadBoomSpent), beadBoomPerGame: dosePer(beadBoomSpent),   // v1.8.37 夜班续：花掉的爆珠单独可读
       threatEv: doseEv(threatHits), threatPerGame: dosePer(threatHits),
       clearEv: doseEv(clears), clearPerGame: dosePer(clears),
       blockEv: doseEv(blocks), blockPerGame: dosePer(blocks),
@@ -3051,6 +3070,19 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
    * 语义：kind='boom' 时同一钩子同一概率改发爆珠（ep 抬到 ≥2 不变、全席对称不变、rng 消耗不变）。
    * 只认 'elec' / 'boom' 两个值，别的**响亮拒**（与 TRAIN_MODE 的 exit 7 纪律同族：不许静默落回默认档）。 */
   let BEAD_SEED_KIND = 'elec';
+  /* ===== v1.8.37 夜班续（10-26 千问 §E763）：补贴局的**珠种** =====
+   * 缺省 elec ⇒ `subBeadHook` 逐字保持 v1.5.141 的行为（DS 当年为电磁炮铺的是电珠）。
+   * boom 那一档把同一颗珠换成爆珠 ⇒ 激光眼（首次 1ジ + 1 爆珠）在**补贴局**里随时可负担，
+   *   而补贴局正是示范通道（`IMIT_OVERRIDE` 只在那里覆盖受评席）能落到"打出去"的那一段。
+   * ⚠ 与 `EPIRUS_SUB_BEAD` 那根布尔分家：布尔走 worker 消息、珠种走 econ 单一来源 ⇒
+   *   **只设珠种不设布尔 = 钩子不进**（读回照样印 boom，所以"读到"不等于"生效"，臂上要看 `subBeadOn()`）。 */
+  let SUB_BEAD_KIND = 'elec';
+  function setSubBeadKind(k) {
+    if (k !== 'elec' && k !== 'boom') throw new Error('setSubBeadKind: 只认 \'elec\'/\'boom\'，收到 ' + JSON.stringify(k));
+    SUB_BEAD_KIND = k;
+    return SUB_BEAD_KIND;
+  }
+  function subBeadKind() { return SUB_BEAD_KIND; }
   function setBeadSeedKind(k) {
     if (k !== 'elec' && k !== 'boom') throw new Error('setBeadSeedKind: 只认 \'elec\'/\'boom\'，收到 ' + JSON.stringify(k));
     BEAD_SEED_KIND = k;
@@ -3224,10 +3256,12 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   /* 纯函数：数我**花掉**蓄能珠的次数（v1.5.76 P1）。
    * 真源 = `{type:'bead', pid, kind:'elec'|'boom', delta}`：得珠 `delta:+1`、花掉 `delta:-1`
    * （state.js 的扣珠处与蓄能得珠处各发一条）。**只认花掉** —— 攒着不用、让它过期，都不记分。 */
-  function countBeadSpent(events, seat) {
+  function countBeadSpent(events, seat, kind) {
     let n = 0;
     for (const e of (events || [])) {
-      if (e.type === 'bead' && e.pid === seat && (e.delta || 0) < 0) n++;
+      /* v1.8.37 夜班续：`kind` 给了就只数那一种珠（花费侧 `js/core/state.js:227/228` 两条事件都自带 kind ⇒
+       * 读现成字段，不改 core）。不给 = 数全部 = v1.5.76 原义逐字不变。 */
+      if (e.type === 'bead' && e.pid === seat && (e.delta || 0) < 0 && (!kind || e.kind === kind)) n++;
     }
     return n;
   }
@@ -3474,6 +3508,12 @@ function countVariety(events, seat) {
 
   /* v1.5.76（P1）：珠子闭环奖励权重（默认 0.05，两次封顶）。窄条件 + 可归因 + 事件派生。 */
   let BEAD_W = 0.05;
+  /* ===== v1.8.37 夜班续（10-26 千问 §E763）：把"花掉珠子"这笔钱**按珠种拆开** =====
+   * 病根（ZCode §二十一·九/十 的结账行）：`发放 0 次 · 充到爆珠 8 次` ⇒ **免费珠让种群从不自己造珠**，
+   * 而 `BEAD_W` 不分珠种 ⇒ 蓄电珠与蓄爆珠拿同一笔钱，序列奖励（`SEQ_KIND=boom`）永远付不出去。
+   * 本键只给**花掉的爆珠**定价（缺省 0 ⇒ 不加项 ⇒ fit 逐字不变，与 `bigtChainW` 那族同一口径）。 */
+  let BEAD_BOOM_W = 0;
+  function setBeadBoomW(w) { const v = Number(w); if (isFinite(v) && v >= 0) BEAD_BOOM_W = v; return BEAD_BOOM_W; }
   function setBeadReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) BEAD_W = v; return BEAD_W; }
   function beadReward() { return { w: BEAD_W }; }
 
@@ -3787,6 +3827,9 @@ function countVariety(events, seat) {
     setPressReward, pressReward, countPressRounds,
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
     setBeadReward, beadReward, countBeadSpent,
+    /* v1.8.37 夜班续（§E763）：补贴局的珠种（枚举 setter，非法值响亮拒）+ 按珠种拆的珠奖励 setter。
+     * `beadBoomW` 的值走 `economyReward()` 读回（D77 的往返契约只认那条路），这里不另开一个 getter。 */
+    setSubBeadKind, subBeadKind, setBeadBoomW,
     setKillField, killField, countKillSeats, killSeatFor, botRegisteredName,   // v1.5.160 收割席注入（含**开火计数**，§N12 教训）‖ v1.7.158 反查注册名（注入名单从"标签"变成"测量"）
     setOppTable, oppTable, oppSeatIndex,   // v1.5.279 §E124：整桌同原型（默认关；`oppSeatIndex` 是纯函数，门 D187 直接判它）
     setTargetReward, targetReward, countThreatHits, threatKeyList, setLaserReward, laserReward, countLaserHits,

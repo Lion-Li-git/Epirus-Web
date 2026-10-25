@@ -87,13 +87,26 @@ export const ECON_ENV_KEYS = ['EPIRUS_ECO_TARGET', 'EPIRUS_ECO_CAP', 'EPIRUS_ECO
   /* v1.8.37（10-25 ZCode · 激光眼移植批 §二十一）：珠塑形的**珠种档**（elec 缺省 = v1.5.143 原义 ⇒ 逐字不变；
    * boom = 同一钩子改发**爆珠** ⇒ 激光眼（首次 1ジ+1爆珠）在 gen0 就有可打窗口）。只映射一个奖励键。
    * ⚠ 注释里**不许给值加单引号**：D77 用 `/'([^']+)'/g` 从本数组区抓 env 名，引号里的值会被当成键名误报。 */
-  'EPIRUS_BEAD_SEED_KIND'];
+  'EPIRUS_BEAD_SEED_KIND',
+  /* v1.8.37 夜班续（10-26 千问 §E763 · 激光眼线"变密"那一问）：**补贴局的珠种**。
+   * 背景（在册 v1.5.141）：EPIRUS_SUB_BEAD=1 让**补贴局**里受评席每回合持 1 枚珠，写死发的是**电珠**（为电磁炮铺的分母）。
+   * 本键把那一步改成发**爆珠** ⇒ 激光眼（首次 1ジ + 1 爆珠）在评分路径里高频可负担。
+   *   elec 缺省 = v1.5.141 原义逐字不变 ‖ boom = 同一钩子改发爆珠。只映射一个奖励键。
+   * ⚠ 两条通道分家：布尔那根走 **worker 消息**（paralleltrain:131），
+   *   珠种这根走 **econ 单一来源**（本表 ⇒ D77 往返 / D206 三处名单 / D218 登记腿都自动覆盖它）。
+   *   开臂时两根要**一起**设，只设珠种不设布尔 = 什么都不发生（读回仍会印 boom，别把"读到"当"生效"）。
+   * ⚠ 同上一条规矩：注释里不给值加单引号（D77 的数组正则会把引号串当 env 名误报）。 */
+  'EPIRUS_SUB_BEAD_KIND',
+  /* v1.8.37 夜班续：把"花掉珠子"的奖励**按珠种拆**（缺省 0 = 不加项 ⇒ fit 逐字不变）。
+   * 对着 F/G 批那句病根写的：`发放 0 次 · 充到爆珠 8 次` ⇒ 免费珠让种群从不自己造珠，
+   * 而 beadW 不分珠种 ⇒ 蓄电珠与蓄爆珠拿同一笔钱。本键只给**花掉爆珠**定价。 */
+  'EPIRUS_BEAD_BOOM_W'];
 
 /* 与 `js/train/evo.js` 的 `setEconomyReward(o)` / `economyReward()` 字段名对齐
  * （D77 拿这份去比"读到的键"与"setter 认的键"，漏一个就红）。 */
 export const ECON_REWARD_KEYS = ['target', 'cap', 'divW', 'divK', 'divRoleW', 'divCatW', 'divForceGens', 'wallFilter', 'wallGames',
   'hoardOnLeftover', 'convRatio', 'convOffense', 'hoardCapMult', 'stockBonus',
-  'blockW', 'widthW', 'bigcardW', 'costlyW', 'fitCal', 'fitGW', 'fitGF', 'bigtChainW', 'ringW', 's4W', 'beadW', 'fitTailW', 'fitTailQ', 'voidW', 'voidIdealW', 'beadSeed', 'beadSeedKind'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W / 0921 DS 珠奖励标度 / 0923 qoder 大雷连带（与 setter 逐字对齐 ⇒ D77 盯得住） / 09-26 夜班 §E49 尾部聚合 / v1.8.29 失效成功 + 理想情况 / v1.8.37 珠种档
+  'blockW', 'widthW', 'bigcardW', 'costlyW', 'fitCal', 'fitGW', 'fitGF', 'bigtChainW', 'ringW', 's4W', 'beadW', 'fitTailW', 'fitTailQ', 'voidW', 'voidIdealW', 'beadSeed', 'beadSeedKind', 'subBeadKind', 'beadBoomW'];   // v1.5.121 E4 / v1.5.124 §28a / v1.5.126 贵卡 / 0920 qoder 环权重+形状 s4W / 0921 DS 珠奖励标度 / 0923 qoder 大雷连带（与 setter 逐字对齐 ⇒ D77 盯得住） / 09-26 夜班 §E49 尾部聚合 / v1.8.29 失效成功 + 理想情况 / v1.8.37 珠种档 / v1.8.37 夜班续 补贴局珠种 + 按珠种拆的珠奖励
 
 /* "未设"与"设成空串"都算**未设**：`EPIRUS_DIV_W=` 不能被当成 divW=0 这个真实取值
  * （旧代码用 `!= null`，空串会静默变成 0 ⇒ 一个手滑的启动命令就能改掉训练口径）。
@@ -160,7 +173,11 @@ export function readEconEnv(env) {
     beadSeed: nv(e.EPIRUS_BEAD_SEED),   // v1.8.36（夜班 #58）：开局珠塑形（只映射一个奖励键 ⇒ train-3p 的"env ⇒ 唯一键"派生判定认它）
     /* v1.8.37：珠种档（字符串 elec/boom，校验在 evo.js 的 setter 里**响亮拒**；只映射一个奖励键）。
      * ⚠ 与上面一族不同：这是**枚举键**，D77 的数字哨兵 0.5 到了 setter 会抛错 ⇒ 门侧 SENT 表已单独喂 'boom'。 */
-    beadSeedKind: nv(e.EPIRUS_BEAD_SEED_KIND)
+    beadSeedKind: nv(e.EPIRUS_BEAD_SEED_KIND),
+    /* v1.8.37 夜班续（§E763）：补贴局的珠种（枚举 elec/boom，校验在 evo.js 的 setter 里响亮拒）
+     * ‖ 按珠种拆开的"花掉珠子"奖励（缺省不设 ⇒ 0 ⇒ fit 逐字不变）。各只映射一个奖励键。 */
+    subBeadKind: nv(e.EPIRUS_SUB_BEAD_KIND),
+    beadBoomW: nv(e.EPIRUS_BEAD_BOOM_W)
   };
 }
 
