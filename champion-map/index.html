@@ -1354,15 +1354,16 @@ function ensureChain() {
   return LCH;
 }
 var LCH_COL = '#ff8f4d';   /* 与选中环(#ffd166)、对比环(#7fd1ff)、谱系图父边(淡蓝/红)都不同族的一支橙 */
-/* §E784（用户 10-26 10:5x：「现在的追溯链条完全不透明而且很粗，看着很杂乱。用谱系图连线一样的半透明模式」）：
- *   主语是这层**怎么落墨**，不是几何 ⇒ 曲率与箭头位置一律不动，只把线换成谱系图那一档：
- *   线宽 1.9*dpr 改成 1*dpr（与 drawTree 里那句 lineWidth = 1 * devicePixelRatio 同一条），
- *   alpha 从 1 改成 0.30（= 谱系图实线的基准常数 EA0，同样在 drawTree 里）。
+/* §E784 追溯链这一层的"落墨"档位（主语是样子，不是几何 ⇒ 曲率与箭头位置一律不动）：
+ *   10-26 10:5x 用户「完全不透明而且很粗，看着很杂乱。用谱系图连线一样的半透明模式」⇒ 一次压到 1px / alpha 0.30
+ *   （就是 drawTree 里父边那条 lineWidth = 1 * devicePixelRatio 与实线基准常数 EA0）。
+ *   11:1x 用户回看：「现在又太淡了很难看得见，折中一下，例如 1.5px alpha=0.6」⇒ 停在中间这一档。
+ *   ⇒ 两句话合起来读：这层的 alpha 不是"越像谱系图越好"，而是要**在点位堆里仍能被追出来**；
+ *     0.30 是谱系图那一档的起点，但那张图背景干净、这张图底下是 822 枚的密度图 ⇒ 同一档 alpha 在两张图上不等价。
  *   ⚠ 注释里不许写反引号：本页整段源码是包在模板字面量里烘出去的，反引号会把模板截断（本笔第一次就烘挂了）。
- * ⚠ 箭头单独给 0.60，不跟着 0.30：这层的信息量全在"箭头指着子代"那一件事上（用户原话要"有向"），
- *   压到 0.30 时箭头在深色底上退化成一小块看不清形状的斑 ⇒ 方向读不出来。线淡、箭头稍重，
- *   是这层唯一保留的一点"比线更醒目"，不是漏掉的不透明。 */
-var LCH_A = 0.30, LCH_AA = 0.60;
+ * ⚠ 箭头仍留 0.60：线抬到 0.60 之后它不再"比线重"，方向靠的是三角形那点面积差，不是 alpha 差。
+ *   （alpha 若再往回压，先动 LCH_A、别动这个数 —— 箭头是这层唯一承载"有向"的部件。） */
+var LCH_A = 0.60, LCH_AA = 0.60;
 function drawChain() {
   var c = ensureChain();
   if (!c || !c.ed.length || !scr) return 0;
@@ -1374,7 +1375,7 @@ function drawChain() {
     if (L < 2 * dpr) continue;                                 /* 父子叠在同一个像素上 ⇒ 这一跳画不出方向，不硬涂一团 */
     var bow = Math.min(34 * dpr, L * 0.18);
     var cx = (a[0] + b[0]) / 2 - (vy / L) * bow, cy = (a[1] + b[1]) / 2 + (vx / L) * bow;
-    g.globalAlpha = LCH_A; g.strokeStyle = LCH_COL; g.lineWidth = 1 * dpr;
+    g.globalAlpha = LCH_A; g.strokeStyle = LCH_COL; g.lineWidth = 1.5 * dpr;
     g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo(cx, cy, b[0], b[1]); g.stroke();
     /* 箭头落在离子点 7.5px 之外：压着选中环就读不出"这枚是我点的"与"这枚是链上的" */
     var t = Math.max(0.35, 1 - (7.5 * dpr) / L), s = 1 - t;
