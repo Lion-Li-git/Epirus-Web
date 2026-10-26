@@ -72,7 +72,11 @@ function syncChart() {
     + (line ? '：' + line : String(r.stderr || '').trim().slice(0, 160))
     + '\n      手跑：node champion-map/pool-sync.mjs（D234⑩ 会在 CI 上因此判红）');
 }
-const trackedSet = () => new Set(execSync('git ls-files docs/artifacts', { cwd: ROOT, maxBuffer: 1 << 26 }).toString().trim().split('\n').filter(Boolean));
+/* v1.8.38 后续（DS §四 · 用户 10-26 裁"小问题顺手做"）：这一度闸原来只 `git ls-files docs/artifacts`
+ * ⇒ 住在 `champion-map/packs/` 的包**即使已跟踪也被报"不在 git 里"**，而它给的补救提示 `git add -f <PACK>`
+ * 对那个路径又不生效（不在同一个 `ls-files` 输出域）⇒ 死路，逼人去造第二份 `.bak`。
+ * `packs/README.md` 的原话是"只在图上的包不该再存一份入库拷贝"，入池成员本来就住 `packs/` ⇒ 该修的是这道闸。 */
+const trackedSet = () => new Set(execSync('git ls-files docs/artifacts champion-map/packs', { cwd: ROOT, maxBuffer: 1 << 26 }).toString().trim().split('\n').filter(Boolean));
 const WARNED = new Set();   /* `--refresh` 会对每枚成员调一次 seatKillOf ⇒ 同一对坏表只吼一次，别刷 13 遍屏 */
 
 /* 人席杀刀的**参照物**（§E598 · 2026-10-12 用户裁定 A）：

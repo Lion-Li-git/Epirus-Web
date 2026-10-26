@@ -1666,7 +1666,12 @@ for (let gen = 0; gen < GENS; gen++) {
        * 整族都没下达时不印（读数会是 null=未量，绝不能印成 0 —— 0 会被读成"这粒真没做出该行为"，
        * 而那正是本条要消灭的混淆）。 */
       (r.doseOn ? ' 剂量[/局]' + ' 环打=' + nf3(r.ringBreakPerGame) + ' 压=' + nf3(r.pressPerGame) +
-        ' 穿=' + nf3(r.piercePerGame) + ' 珠=' + nf3(r.beadPerGame) + ' 威=' + nf3(r.threatPerGame) +
+        ' 穿=' + nf3(r.piercePerGame) + ' 珠=' + nf3(r.beadPerGame) +
+        /* v1.8.38 后续（DS §六 · 用户 10-26 裁"顺手做"）：`beadBoomPerGame` 自 v1.8.37 起在引擎侧算得出
+         * 但没人打印 ⇒ "花掉的爆珠"只能事后重量。纯打印、零判据（不看不涨也不红）。
+         * 未量不许印成 0：这一族若没被下达，`null` 要显式印"未量"（同 `广max` 那格的规矩）。 */
+        ' 爆珠花=' + (r.beadBoomPerGame === null || r.beadBoomPerGame === undefined ? '未量' : nf3(r.beadBoomPerGame)) +
+        ' 威=' + nf3(r.threatPerGame) +
         ' 场=' + nf3(r.clearPerGame) + ' 挡=' + nf3(r.blockPerGame) + ' 广max=' + (r.varietyMaxEv === null ? '未量' : r.varietyMaxEv) +
         /* v1.8.29：失效这一族 + 激光眼那一格（补 v1.8.23"只算不报"的欠账）。
          * 用户 10-23 给这条杠杆定的验收就是**次数**（"出现频率可以比大雷更低，只要有学会就行"）⇒
