@@ -1798,6 +1798,15 @@ function ensureChain() {
   return LCH;
 }
 var LCH_COL = '#ff8f4d';   /* 与选中环(#ffd166)、对比环(#7fd1ff)、谱系图父边(淡蓝/红)都不同族的一支橙 */
+/* §E784（用户 10-26 10:5x：「现在的追溯链条完全不透明而且很粗，看着很杂乱。用谱系图连线一样的半透明模式」）：
+ *   主语是这层**怎么落墨**，不是几何 ⇒ 曲率与箭头位置一律不动，只把线换成谱系图那一档：
+ *   线宽 1.9*dpr 改成 1*dpr（与 drawTree 里那句 lineWidth = 1 * devicePixelRatio 同一条），
+ *   alpha 从 1 改成 0.30（= 谱系图实线的基准常数 EA0，同样在 drawTree 里）。
+ *   ⚠ 注释里不许写反引号：本页整段源码是包在模板字面量里烘出去的，反引号会把模板截断（本笔第一次就烘挂了）。
+ * ⚠ 箭头单独给 0.60，不跟着 0.30：这层的信息量全在"箭头指着子代"那一件事上（用户原话要"有向"），
+ *   压到 0.30 时箭头在深色底上退化成一小块看不清形状的斑 ⇒ 方向读不出来。线淡、箭头稍重，
+ *   是这层唯一保留的一点"比线更醒目"，不是漏掉的不透明。 */
+var LCH_A = 0.30, LCH_AA = 0.60;
 function drawChain() {
   var c = ensureChain();
   if (!c || !c.ed.length || !scr) return 0;
@@ -1809,7 +1818,7 @@ function drawChain() {
     if (L < 2 * dpr) continue;                                 /* 父子叠在同一个像素上 ⇒ 这一跳画不出方向，不硬涂一团 */
     var bow = Math.min(34 * dpr, L * 0.18);
     var cx = (a[0] + b[0]) / 2 - (vy / L) * bow, cy = (a[1] + b[1]) / 2 + (vx / L) * bow;
-    g.globalAlpha = 1; g.strokeStyle = LCH_COL; g.lineWidth = 1.9 * dpr;
+    g.globalAlpha = LCH_A; g.strokeStyle = LCH_COL; g.lineWidth = 1 * dpr;
     g.beginPath(); g.moveTo(a[0], a[1]); g.quadraticCurveTo(cx, cy, b[0], b[1]); g.stroke();
     /* 箭头落在离子点 7.5px 之外：压着选中环就读不出"这枚是我点的"与"这枚是链上的" */
     var t = Math.max(0.35, 1 - (7.5 * dpr) / L), s = 1 - t;
@@ -1822,7 +1831,7 @@ function drawChain() {
     g.moveTo(hx + tx * ah, hy + ty * ah);
     g.lineTo(hx - ty * ah * 0.62 - tx * ah * 0.35, hy + tx * ah * 0.62 - ty * ah * 0.35);
     g.lineTo(hx + ty * ah * 0.62 - tx * ah * 0.35, hy - tx * ah * 0.62 - ty * ah * 0.35);
-    g.closePath(); g.fillStyle = LCH_COL; g.fill();
+    g.closePath(); g.globalAlpha = LCH_AA; g.fillStyle = LCH_COL; g.fill();
     n++;
   }
   g.globalAlpha = 1;
@@ -5151,8 +5160,14 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         if (OFF1[p] !== OFF2[p] || OFF1[p + 1] !== OFF2[p + 1] || OFF1[p + 2] !== OFF2[p + 2] || OFF1[p + 3] !== OFF2[p + 3]) offShake++;
         if (samed) continue;
         nDiff++;
-        var r = ON1[p], gg = ON1[p + 1], bb = ON1[p + 2];
-        if (r > 150 && gg > 60 && r > gg + 35 && bb < 150 && bb < gg + 30) nAmber++;   /* #ff8f4d 那一支（含抗锯齿边） */
+        /* §E784 这一腿的"墨是链色"从**绝对取色**换成**差分方向**：链改成 alpha=0.30 之后，深色底上合成出来的
+         *   橙只有 R88/G52/B40 那一档，原来那句"r 大于 150"会把真画出来的链读成"没画"（那是尺没跑成，不是功能坏了）。
+         *   新问法是：这个像素因为链而多出来的那点墨，增量是不是偏橙（R 的增量最大，且明显大于 G 与 B 的增量）。
+         *   ⚠ 这不是恒真腿——它照样能被反证：把 LCH_COL 换成谱系图那支淡蓝(120,200,255)或纯白，
+         *     增量方向就不再满足 dR 大于 dG+6 且 dR 大于 dB+6 ⇒ 当场红（本笔真跑了这两次染色复验，见日志 §E784）。
+         *   注释里同样不许出现反引号：这一整段是包在模板字面量里烘出去的。 */
+        var dR = ON1[p] - OFF1[p], dG = ON1[p + 1] - OFF1[p + 1], dB = ON1[p + 2] - OFF1[p + 2];
+        if (dR > 12 && dR > dG + 6 && dR > dB + 6) nAmber++;
       }
       T('§E763 追溯链层跟着开关进出画布（几何腿：差分有墨 ‖ 墨是链色 ‖ 关掉不抖）',
         nDiff > 500 && nAmber * 2 >= nDiff && offShake === 0,
