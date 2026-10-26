@@ -10,8 +10,8 @@
 > ⚠️ 而且**只要本机包在场，冠军池整桌不生效**（判定只在一处：`js/ui/ui.js` 的 `poolPlan`，它会连带把席位标签一起改掉 ⇒ 不会出现"标签说池在跑、实际用你那枚"）—— 想打「每席随机抽一枚冠军」的桌子，先把本机包清掉。
 
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩，不需要装任何东西、不需要联网。
-- **在线版**：<https://lion-li-git.github.io/Epirus-Web/>（由 `.github/workflows/pages.yml` 发**白名单** `index.html ‖ rules.html ‖ css/ ‖ js/ ‖ champion-map/`，`docs/` `tools/` `server/` 不发）。
-  站点上的 **"训练"要另起本机服务**，在线只能玩对局与看冠军查看器。`rules.html` 是给玩家看的那一份规则：三张表由页面**现读引擎常量**渲染，不抄文档。
+- **在线版**：<https://lion-li-git.github.io/Epirus-Web/>（由 `.github/workflows/pages.yml` 发**白名单** `index.html ‖ css/ ‖ js/ ‖ champion-map/`，`docs/` `tools/` `server/` 不发）。
+  站点上的 **"训练"要另起本机服务**，在线只能玩对局与看冠军查看器。规则的玩家向说明在**对局页第三个 tab「📖 规则说明」**（v1.8.1 起 `rules.html` 已删、不再单独发一页）：三张表由 `js/ui/rules-panel.js` **现读引擎常量**渲染，不抄文档。
 - **训练部分可选**：另起一个 Node 服务（只用内置模块 `http` / `worker_threads` / `vm`），用于练出"冠军 AI"。
 
 ## 快速开始
