@@ -104,14 +104,22 @@ const SELF_ENV_KEYS = [
   'EPIRUS_COUNTER_OPPS', 'EPIRUS_SEL_COUNTER',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   /* §E797（10-27 夜班）：`EPIRUS_BLOCK_W` = **挡下/反弹**计数的奖励权重（`js/train/evo.js:3357` 的 `countBlocks`
    * 同时认 `blocked` 与 `reflect` ⇒ 这根确实付反弹）。投递走通用 econ 回路（`blockW` 在单一来源
-   * `ECON_REWARD_KEYS` 里 ⇒ `tools/train-3p.mjs:557` 那句「econ 族通用下达 … 逐键回执一致」就是证据）。
-   * ⚠ 本条登记的**因果我没能证实**：00:50 两臂传这个键撞黑键闸 `exit 6`（`%TEMP%/epi-e797/log-B3.txt` 原文在），
-   *   但 01:1x 拿 `git show HEAD:tools/train-3p.mjs` 的副本、带**同一个键**冒烟 ⇒ `rc=0` 且回执一致。
-   *   ⇒ 所以"exit 6 是因为白名单漏登记"这句话**没被复现支持**，这里登记它只是与 `EPIRUS_SUB_BEAD*` 同先例
-   *   （经单一来源读的 econ 键在本入口显式声明一遍），真正让我信"投递成立"的是**冒烟里的回执行**，不是这道闸。
-   *   那两次 exit 6 的机制留作待查（§E797 五）——它比漏登记危险：一道会把**真能投递的键**报成暗键的闸，会让人误判"这根杠杆没用"。
-   *   默认不设 ⇒ `BLOCK_W` 仍是引擎默认 0，历史臂逐字不变。 */
-  'EPIRUS_BLOCK_W',
+   * `ECON_REWARD_KEYS` 里 ⇒ 下面 `T.setEconomyReward(payload)` 那一块与它的逐键回执比对就是证据）。
+   *   ⚠ 写这段注释**不许复述那句下达横幅的原文**：门 `D174` 用那个字符串在本文件里的**首次出现位置**去判
+   *   "下达块在 `const T = sb.window.EpirusTrainer` 之后"，在这里复述一次就把那条腿撞红（10-27 02:0x 实测撞到）。
+   * ⚑ 为什么这个键**不能**登记进本数组，只能显式 `EPIRUS_ALLOW_DARK=1` 放行（机制已查清，不是猜）：
+   *   ① `knob-guard.repoKnobUniverse` 把 `tools/**` 整个扫进"有人读的键"全集，**包括门体目录** ⇒
+   *     `tools/gates/train-evo.mjs` 里 D77 的正文提到这个键名，就把它拉进全集；而读集刻意跳过名单模块
+   *     （`ENV_LIST_MODULE`，`server/econ-env.mjs` 是名单）⇒ 于是"全集有它、读集没有它"⇒ 本入口判它暗键 `exit 6`。
+   *   ② 想按 ① 的暗示去登记 ⇒ 就是在本数组写它的字面量 ⇒ 又被 D77（"econ 键名只许出现在 econ-env 的非注释行"）撞红。
+   *     ⇒ **两条门的意图互斥**（02:0x 实测两轮：登记 ⇒ `train-evo` 红；不登记 ⇒ 臂 `exit 6`）。
+   *   ③ 我先前那句"HEAD 副本冒烟证明不登记也能过"是**错的对照**：`enforceKnobs` 的 `entry` 是硬编码路径
+   *     `'tools/train-3p.mjs'`，副本照样扫**工作树里那一份已改的文件** ⇒ 那次"过闸"其实是白名单行的功劳。
+   *     ⇒ 与 [[feedback-cross-process-readings-must-share-conditions]] 同族：换文件跑 ≠ 换条件跑。
+   *   ④ 为什么 `voidW`/`beadBoomW` 不受影响：它们的名字在全仓只出现在 econ-env 里 ⇒ 进不了全集 ⇒ 闸看不见它们。
+   *     ⇒ 也就是说这条闸的"活键"判定会被**门体文本**驱动；要真修，方向是 D77 放过声明行、或守卫区分"门体提到"与"入口读到"。留给早班（§E800 三）。
+   *   ⇒ 用 `EPIRUS_ALLOW_DARK=1` 的臂必须自己补回证据：看到通用 econ 下达那行的**逐键回执一致 ✓** 与剂量行 `挡=` 列，才算这根杠杆进了这臂。
+   *   默认不设 ⇒ 引擎默认 0，历史臂逐字不变。 */
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
   'EPIRUS_TOOLKIT_OPPS',     // §E676（10-21 早班）：把杂货铺（计划层 P0~P7）放上训练桌（份数驱动，默认关 ⇒ OPPS 一字不变）
@@ -133,6 +141,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SUB_BEAD',
   'EPIRUS_SEQ_KIND',   // v1.8.37（10-25 ZCode · §二十一）：序列奖励的**珠种档**（'elec' 缺省 = 电磁炮原义；'boom' = 蓄爆珠→激光眼）
   'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
+  'EPIRUS_FAMILY_FIELD',   // §E798（10-27 夜班）：训练桌形状（k 席被测家族副本 + 其余脚本，k=3 即考卷形状）⇒ 同样带作用计数
   'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
   'EPIRUS_HOLO2PROTO',   // v1.7.4（10-13 夜班 S2a）：训练期把"送盾"改写成"给自己上原型制御"（决策期档，`policy.js` 的 `setHolo2Proto`）
                          //   ⇒ 与 TRAIN_MODE 同一条纪律：引擎没 setter / 读回不等于下达值就 exit 7；生效值进 `meta.recipe.h2p`
@@ -581,6 +590,7 @@ function rcptEq(a, b) {
  * 一局未注 ⇒ `exit 8`）。§N11 的教训就是"横幅读回 0.34 ✓ 而作用点 0 局"烧掉两臂 ⇒ 横幅只能证明**变量**到位，
  * 证明不了**效果**发生。语义与三条设计约束见 `js/train/evo.js` 的 `killSeatFor` 注释。 */
 let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null, BIGT_CHAIN_REQ = 0, H2P_REQ = null;   // 兑现广度当选的账（写进 meta，事后能查这臂到底改没改判）
+let FAMILY_REQ = 0, FAMILY_REC = null;   // §E798：训练桌形状（k 席家族副本）的下达与**作用计数**账
 let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注入"的归因（必须在下达块之前声明 —— 那里要赋值）
 {
   const trainEnv = readTrainEnv(process.env);
@@ -597,6 +607,39 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
     KILL_REQ = Number(got);
     console.log('[train-3p] 收割席注入已下达：killField=' + got + ' ⇒ 消费点读回 ' + T.killField() +
       '（每 ' + Math.max(2, Math.round(1 / got)) + ' 局注 **1 席** pickKillSecure · 相位按代旋转 · 只注多人局 · 避开承诺局）');
+  }
+  /* ===== §E798（10-27 夜班 · 千问）：训练桌形状 `EPIRUS_FAMILY_FIELD=<k>`（默认关 ⇒ 历史臂逐字不变）=====
+   * k = 每局里"被测自己的副本"占几席（其余非受评席仍是脚本对手，且**至少留 1 席外部人**）⇒ `k=3` 就是考卷那张桌。
+   * 动因与三条边界写在 `js/train/evo.js` 的 `familySeatSet` 头上（只动适应度桌，三把评测尺不动）。
+   * 纪律照 `TOOLKIT_OPPS` ‖ `KILL_FIELD`：非整数/负数 ⇒ `exit 4`（拒绝把打错的当 0）‖ 没 setter ⇒ `exit 7` ‖
+   * 下达后必须**读回消费点** ‖ 收口带**作用计数**（一局未注 ⇒ `exit 8`，见下面 §N11 那一段旁边）。 */
+  const FAMILY_RAW = process.env.EPIRUS_FAMILY_FIELD;
+  if (FAMILY_RAW !== undefined && FAMILY_RAW !== '') {
+    const kf = Number(FAMILY_RAW);
+    if (!Number.isInteger(kf) || kf < 0) {
+      console.error('[train-3p] ⛔ `EPIRUS_FAMILY_FIELD` 要非负整数（收到 ' + JSON.stringify(FAMILY_RAW) +
+        '）⇒ 拒绝把它当 0');
+      process.exit(4);
+    }
+    if (kf > 0) {
+      if (typeof T.setFamilyField !== 'function') {
+        console.error('[train-3p] ⛔ 传了 EPIRUS_FAMILY_FIELD 但引擎没有 setFamilyField ⇒ 拒绝静默空转');
+        process.exit(7);
+      }
+      const got = Number(T.setFamilyField(kf));
+      if (!(got >= 1)) {
+        console.error('[train-3p] ⛔ EPIRUS_FAMILY_FIELD=' + kf + ' 被 setter 拒绝（读回 ' + got + '）');
+        process.exit(7);
+      }
+      const echo = (typeof T.familyField === 'function') ? Number(T.familyField()) : NaN;
+      if (echo !== got) {
+        console.error('[train-3p] ⛔ 桌形下达后消费点读回不一致：' + echo + ' ≠ ' + got + ' ⇒ 拒绝对着没接通的桌子跑臂');
+        process.exit(7);
+      }
+      FAMILY_REQ = got;
+      console.log('[train-3p] 训练桌形状已下达：familyField=' + got + ' ⇒ 每局 ' + got + ' 席是被测自己的副本' +
+        '（其余非受评席仍是脚本 · 必留 ≥1 席外部人 · 席位按代旋转）‖ 评测尺 `evalEconProbe`/`evalSubsidyProbe`/`evalN` 不受影响');
+    }
   }
   /* ===== v1.5.177（DS）：**补贴率下达** `EPIRUS_REGEN_SLICE` =====
    * 动因（数据）：全卡边际扫描显示"钱是**系统性**的墙"（long 只有 59%/18%/3% 的回合买得起 1/2/3 费；
@@ -2227,6 +2270,25 @@ if (seedParams) {
   }
 }
 
+/* ===== §E798：桌形注入的**作用计数**收口 =====
+ * 同 §N11/§N12 那条规矩：横幅读回证明不了作用点发生。两条硬闸：一局未注 ⇒ `exit 8`；
+ * 家族席只落在 1 个席位 ⇒ 相位按代旋转没生效（v1.5.186 那条"与 `g % n` 锁死"的病）⇒ 同样 `exit 8`。 */
+if (FAMILY_REQ > 0) {
+  const ff = (typeof T.countFamilyField === 'function') ? T.countFamilyField() : { games: -1, seats: -1, bySeat: {} };
+  const seatKeys = Object.keys(ff.bySeat || {}).sort();
+  FAMILY_REC = { req: FAMILY_REQ, games: ff.games, seats: ff.seats, bySeat: seatKeys };
+  console.log('[family] 作用计数：注入 ' + ff.games + ' 局 · 家族席共 ' + ff.seats + ' 席次 · 覆盖席位 [' +
+    seatKeys.join(',') + ']（familyField=' + FAMILY_REQ + '）');
+  if (!(ff.games > 0)) {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_FAMILY_FIELD=' + FAMILY_REQ + ' 却**一局未注** ⇒ 本臂作废（作用点没开火）');
+    process.exit(8);
+  }
+  if (seatKeys.length < 2) {
+    console.error('[train-3p] ⛔ 家族席只落在 ' + seatKeys.length + ' 个席位 ⇒ 相位旋转没生效（座位锁死，v1.5.186 同族）⇒ 本臂作废');
+    process.exit(8);
+  }
+}
+
 /* ===== v1.5.160（qoder §N13）：**开火计数**——作用点自证，不接受"横幅说下达了所以一定生效" =====
  * 两条硬闸都来自用户 09-22 的裁定：一局未注 ⇒ 本臂作废（exit 8，别再白跑一整臂）；
  * 注入只覆盖 1 个受评座位 ⇒ 座位偏置没消掉（v1.5.65 那条注入的默认 1/8 在 `GAMES=8` 下恒落 `g=0` ⇒ 恒 0 号座，
@@ -2442,7 +2504,7 @@ const meta = {
      * 记 `games` 是硬要求：§E649 实测这条判定随抽样长度翻（20 局 6.15 / 100 局 4.94），**没带长度的送盾读数不许被引用**。 */
     selGiftVeto: (SEL_GIFT_VETO > 0 ? SEL_GIFT_VETO : null), giftVeto: GIFT_VETO_LOG, giftVetoAllSpam: GIFT_VETO_ALL_SPAM,
     selKeepCastKeys: (SEL_KEEP > 0 ? SEL_KEEP_CAST_KEYS : null),   // v1.5.266：出手口径名单（环/蓄能不打血）
-    kill: KILL_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
+    kill: KILL_REC, family: FAMILY_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     /* v1.7.4 S2a：训练期那档决策期改写也要记账 —— 只记"下达值"不够（本仓的教训：横幅证明变量、证明不了效果）。
      * ⇒ 两个都记：下达的 `h2p` 与写 meta 时消费点仍读到的 `h2pEffective`；两者不等 = 中途被改回去，产物不可信。 */
     h2p: H2P_REQ, h2pEffective: (typeof P.holo2Proto === 'function' ? P.holo2Proto() : null),

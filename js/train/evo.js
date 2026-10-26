@@ -86,6 +86,43 @@
    *      （步长 3 与 games=8 / n=5 互质）、注的席位由 `(gen+g)` 决定并**避开受评席本身**、且**跳过承诺局**。
    * **默认 0 = 一个都不注 ⇒ 历史臂逐位不变 ✓**（这路方向是新语义，必须显式下达）。
    * `countKillSeats()` 是 §N12 的教训的机器化：**setter + 横幅读回证明不了作用点开火**，必须有开火计数。 */
+  /* ===== §E798（10-27 夜班 · 千问）：训练桌形状 `EPIRUS_FAMILY_FIELD=<k>`（默认 0 ⇒ 历史臂逐字不变）=====
+   * 语义：每局 `n-1` 个非受评席里，**k 席换成受评个体自己的副本**（同一个 `params`、同一个适应度用的 chooser），
+   *   其余席仍是脚本对手 ⇒ `k=3`（5 人桌）就是考卷那张桌的形状：**4 席同包 + 1 席外部人**。
+   * 动因（09-19 的 v1.5.133 预注册留下的后半句，从没跑过；原文见 `js/train/bots.js:967` 那段注释尾）：
+   *   训练桌"1 候选 vs 4 外部"里枪手子弹只有约 1/4 落在我方，考卷"4 席被测 vs 1 席枪手"里全落在被测家族；
+   *   ⇒ "时机性反弹 / 破防当回合有人兑现"这种**条件于对手类型**的行为，在没有"我方被集中打"经验的桌上长不出来。
+   *   今夜段一（§E797）的外生证据：把这条规则硬写进决策（"最近真被枪打过才弹"）能把 8 个只枪格全部压进 ≤60%，
+   *   而 `BLOCK_W` 两臂连反弹次数都没抬 ⇒ 缺的可能是**经验分布**，不是权重。本旋钮就是去量这一件事。
+   * ⚠ 三条边界：① 只动**适应度桌**（主训练路 + 风格切片两处）；三把评测尺 `evalEconProbe` ‖ `evalSubsidyProbe` ‖
+   *   `evalN` 一字不动 —— 否则考卷跟着桌子一起变，"无短板"就不再是同一件事；② 家族席**不进 econ 包装**
+   *   （不吃补贴、不吃强迫、不吃模仿），它们是"同一个策略的副本"，不是"另一个被喂的个体"；
+   *   ③ 席位按代旋转（`(g+gen)` 起算）且必留 1 席外部人，照 v1.5.186 `sliceHit` 那条教训 —— 相位不旋转就会与
+   *   `g % n` 锁死，把座位运气读成策略差异。作用计数照 §N12/`KILL_FIELD` 先例：`countFamilyField()` 报注了几局几席，
+   *   CLI 侧 0 局 ⇒ `exit 8`（横幅读回 ≠ 作用点开火）。 */
+  let FAMILY_FIELD = 0;
+  const FAM_STAT = { games: 0, seats: 0, bySeat: {} };
+  function setFamilyField(v) {
+    const k = Number(v);
+    FAMILY_FIELD = (isFinite(k) && k >= 1) ? Math.floor(k) : 0;
+    return FAMILY_FIELD;
+  }
+  function familyField() { return FAMILY_FIELD; }
+  function countFamilyField() {
+    return { field: FAMILY_FIELD, games: FAM_STAT.games, seats: FAM_STAT.seats, bySeat: Object.assign({}, FAM_STAT.bySeat) };
+  }
+  /** 本局哪些非受评席走家族副本 ⇒ Set。默认关（或桌子放不下）⇒ 空集，旧路径一行不多跑。 */
+  function familySeatSet(g, gen, n, seat, k) {
+    const out = new Set();
+    if (!k || k <= 0 || n < 3) return out;
+    const others = [];
+    for (let pid = 0; pid < n; pid++) if (pid !== seat) others.push(pid);
+    const kk = Math.min(k, others.length - 1);      // 至少留 1 席外部人
+    if (kk <= 0) return out;
+    const off = ((((g + (gen || 0)) % others.length) + others.length) % others.length);
+    for (let i = 0; i < kk; i++) out.add(others[(off + i) % others.length]);
+    return out;
+  }
   let KILL_FIELD = 0, KILL_EVERY = 0;
   const KILL_STAT = { fired: 0, seats: {}, names: {} };
   function setKillField(v) {
@@ -2207,6 +2244,9 @@ let WALL_GAMES = 3;
       /* v1.5.99：本局是否"补贴局"（补贴 = 白来的 ep）—— 给"只教目标卡"的示范当门槛（见 makeEconChooser）。 */
       const regenThisGame = commitGame ? 2 : regenForGame(g, games, gen);
       const subThisGame = regenThisGame > 0;
+      /* §E798：本局的家族席（默认关 ⇒ null ⇒ 下面那支一行都不跑） */
+      const famSet = FAMILY_FIELD > 0 ? familySeatSet(g, gen, n, seat, FAMILY_FIELD) : null;
+      if (famSet && famSet.size) FAM_STAT.games++;
       let econ = null;
       for (let pid = 0; pid < n; pid++) {
         if (pid === seat) {
@@ -2236,6 +2276,11 @@ let WALL_GAMES = 3;
           KILL_STAT.seats[seat] = (KILL_STAT.seats[seat] || 0) + 1;
           const kbName = botRegisteredName(kb);
           KILL_STAT.names[kbName] = (KILL_STAT.names[kbName] || 0) + 1;
+        } else if (famSet && famSet.has(pid)) {
+          /* §E798 家族副本席：同一个 `params` 走适应度用的那个 chooser（不吃补贴/强迫/模仿 ⇒ 它是"副本"不是"另一个被喂的个体"）。
+           *   ⚠ 不消耗 `ok` 索引 ⇒ 脚本对手的轮换序列与不开本旋钮时逐字相同（否则等于偷偷改了对手份额，读数就说不清是谁施压）。 */
+          choosers.push(fitChooser(params));
+          FAM_STAT.seats++; FAM_STAT.bySeat[pid] = (FAM_STAT.bySeat[pid] || 0) + 1;
         } else { choosers.push(wrapBotN(opps[oppSeatIndex(gen, g, ok++, opps.length, OPP_BLOCK)].sel)); }
       }
       OPP_BLOCK_STAT.fitGames++; if (OPP_BLOCK) OPP_BLOCK_STAT.blockedGames++;
@@ -2577,8 +2622,15 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
         const seat = g % n;
         const choosers = [];
         let ok = 0;   // v1.5.279：风格切片同样受 `EPIRUS_OPP_BLOCK` 管（两条训练路要同形，否则"环境"只在一半训练里存在）
+        /* §E798：风格切片同一形 —— 家族副本席按同一规则注入，否则桌形只在一半训练里存在（上面那条教训的原话） */
+        const famSet = FAMILY_FIELD > 0 ? familySeatSet(g, gen, n, seat, FAMILY_FIELD) : null;
+        if (famSet && famSet.size) FAM_STAT.games++;
         for (let pid = 0; pid < n; pid++) {
           if (pid === seat) choosers.push(trainChooser(params));
+          else if (famSet && famSet.has(pid)) {
+            choosers.push(trainChooser(params));
+            FAM_STAT.seats++; FAM_STAT.bySeat[pid] = (FAM_STAT.bySeat[pid] || 0) + 1;
+          }
           else { choosers.push(wrapBotN(STYLE_OPPS[oppSeatIndex(gen, g, ok++, STYLE_OPPS.length, OPP_BLOCK)].sel)); }
         }
         OPP_BLOCK_STAT.styleGames++; if (OPP_BLOCK) OPP_BLOCK_STAT.styleBlocked++;
@@ -3831,6 +3883,7 @@ function countVariety(events, seat) {
      * `beadBoomW` 的值走 `economyReward()` 读回（D77 的往返契约只认那条路），这里不另开一个 getter。 */
     setSubBeadKind, subBeadKind, setBeadBoomW,
     setKillField, killField, countKillSeats, killSeatFor, botRegisteredName,   // v1.5.160 收割席注入（含**开火计数**，§N12 教训）‖ v1.7.158 反查注册名（注入名单从"标签"变成"测量"）
+    setFamilyField, familyField, countFamilyField, familySeatSet,   // §E798（10-27 夜班）：训练桌形状（k 席家族副本 + 其余脚本）‖ 同样带**作用计数**，注了 0 局要响亮失败
     setOppTable, oppTable, oppSeatIndex,   // v1.5.279 §E124：整桌同原型（默认关；`oppSeatIndex` 是纯函数，门 D187 直接判它）
     setTargetReward, targetReward, countThreatHits, threatKeyList, setLaserReward, laserReward, countLaserHits,
     /* v1.8.29：失效成功定价（计数是纯函数 ⇒ 门可以直接喂事件序列断言，不必跑一整局）。 */
