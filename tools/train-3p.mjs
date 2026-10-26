@@ -8,7 +8,7 @@ import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来�
 import { loadPool, makeMimic } from './human-pool.mjs';   // v1.6.60：人类形状对手的**单一来源**（§E152e/§E155/§E168 的产物；别再抄一份采样器）
 import { guardWrite, declareCopy } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
 import { widOf, widOfArr } from '../champion-map/pack-id.mjs';   /* 2026-10-12 DS：`hotstartFrom` 记权重身份（wid）而不是路径 —— 与 server 的 weightsId 同式 */
-import { densityProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）
+import { densityProfile, aggressionProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）‖ §E787 清场地板用同一个 `aggressionProfile`（官方 场A/场B 口径，与门禁 `fieldB.clearedPerGame` 同源 ⇒ 不加新尺）
 import { duelAssembly } from './v2v4-lib.mjs';   // 10-24 G4long 逐格否决（EPIRUS_SEL_G4LONG）用的同一份装配（纯 lib、import 无副作用）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
@@ -17,7 +17,7 @@ import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, rejectNarrowW
 import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
 /* v1.5.269（§E77）：载重 veto 的**同口径量具** —— `behavior-profile` 的 `fieldProfile`（ε=0 · temp 0.15 · 5 席同包）。
  * 该模块的主体被 `if (RUN_AS_MAIN)` 守着 ⇒ **import 无副作用**（只会多装载一次引擎，实测 ~0.5 秒）。 */
-import { fieldProfile } from './behavior-profile.mjs';
+import { fieldProfile, WIN } from './behavior-profile.mjs';   // §E787：`WIN` = 那个模块已经装载好的引擎沙箱 ⇒ 清场地板直接复用，不再 sandbox() 第二次
 /* v1.5.194（qoder 0924 夜）：击杀奖励规则的**单一来源**实现（与 `probe-kill-reward.mjs` 共用同一份 ⇒
  * 不会出现"训出来的冠军和量出来的冠军不是一套规则"）*/
 import { patchResolve as krPatchResolve, patchPlay as krPatchPlay, makeKR as krMakeKR } from './kill-reward-lib.mjs';
@@ -100,6 +100,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
   'EPIRUS_SEL_GIFT_VETO', 'EPIRUS_SEL_GIFT_VETO_GAMES',   // §E650（千问）：送盾当选 veto + 它的测量长度（默认关 ⇒ `gateOk` 那一次测量也不跑）
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
+  'EPIRUS_SEL_CLEAR', 'EPIRUS_SEL_CLEAR_GAMES',   // §E787（10-26 夜班后追加，用户裁"加上开跑"）：当选面的**场B 清场地板**（veto，不进 fit）+ 它的测量局数（默认 40 = 官方口径）
   'EPIRUS_COUNTER_OPPS', 'EPIRUS_SEL_COUNTER',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
@@ -337,6 +338,32 @@ if (!(SEL_KEEP >= 0 && SEL_KEEP <= 1)) {
     ' —— 非数值/越界一律拒，不许 clamp 之后谎称"开过了"');
   process.exit(7);
 }
+/* ===== §E787（用户 10-26 11:5x 裁"加上开跑"）：当选面的**场B 清场地板** =====
+ * 动因（§E786 四格，同包反事实给的因果）：`U2`/`N2`/`Q4` 在官方 场B（calm 桌）上清场 **0.00**、每局伤害 1.00，
+ *   而引擎自带的 `forceAttack`（选ジ而当回合枪买得起 ⇒ 改判成枪）把 `U2` 的场B 清场抬到 **3.00/4.00**
+ *   ⇒ **能力在包里，是当选出来的那个策略选择不打**（苟赢：靠"没人死 + 血量排名"100% 胜）。
+ * 为什么是 veto 而不是奖励：`CLEAR_W` 已在册否证（`js/train/evo.js:75` 引 §N8 `xn10b`："奖励一生效，
+ *   带内最高分被**纯ジ龟包**拿走 ⇒ 奖励收割 ≠ 学会收割"）⇒ 地板**不进目标函数**，没有可被收割的对象，
+ *   恰是那次的对症药。**不加新尺**（`aggressionProfile` = 门禁 `fieldB.clearedPerGame` 同源）、**不新增门**。
+ * 取严：`multi` 与 `long` 两桌各量一次、取**更差**的那一桌当判据（与 v1.5.268"两模式都判"、
+ *   10-25"广度取严"同一规矩；单桌当判据会被另一桌打脸——§E75 那次就是 multi 过而 long 反向）。 */
+const SEL_CLEAR = Number(process.env.EPIRUS_SEL_CLEAR || 0);
+const SEL_CLEAR_GAMES = Number(process.env.EPIRUS_SEL_CLEAR_GAMES || 40);
+let SEL_CLEAR_LOG = null;
+if (!(SEL_CLEAR >= 0) || !isFinite(SEL_CLEAR)) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_CLEAR 必须是 ≥0 的数（0=关）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_CLEAR) +
+    ' —— 非数值/负数一律拒，不许 clamp 之后谎称"开过了"');
+  process.exit(7);
+}
+if (SEL_CLEAR_GAMES < 10) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_CLEAR_GAMES=' + SEL_CLEAR_GAMES + ' 太短（<10 局 ⇒ 清场这种"整局才一次"的事件量不出稳定读数）');
+  process.exit(7);
+}
+if (SEL_CLEAR > 4) {
+  console.log('[train-3p] ⚠ EPIRUS_SEL_CLEAR=' + SEL_CLEAR + ' 高于 场B 的物理上限（4 席全打死 = 4.00/局）⇒ 这是**恒假判据**，' +
+    '跑完会全剔并标 selClearAllDropped；确认这不是你想要的剂量再往下跑');
+}
+
 const ANCHOR = Number(process.env.EPIRUS_ANCHOR || 0);   // v1.5.153：锚定正则 λ（0=关，逐字不变）
 const XN2G = Number(process.env.EPIRUS_XN2G || Math.max(4, (GAMES / 2) | 0));
 
@@ -1973,6 +2000,60 @@ for (const h of hall) {
       sel.clean = kept; sel.best = best;
     }
   }
+  /* ===== §E787：场B 清场地板（当选 veto）—— 位置在载重 veto **之后**、兑现广度**之前** =====
+   * 顺序要说清：载重 veto 问"这粒还打不打那张关键卡"，这根问"它打不打得死人"。两根都过才进排序。
+   * 三条纪律照 `SEL_KEEP`：① **空转要响亮**（地板一格都没咬到 ⇒ 明说"这根等于没开"，不许读成"筛过了"）；
+   *   ② 必须印**逐粒读数 + 改没改判 + 胜负分差**（排序键不咬 = 没接线，§N12）；
+   *   ③ 生效值与账写进 `meta.recipe.selClear`（关档 ⇒ null，一行都不跑，与历史臂逐字相同）。 */
+  if (SEL_CLEAR > 0 && sel.clean && sel.clean.length) {
+    const cacheC = new Map();
+    const clearOf = function (p) {
+      let v = cacheC.get(p);
+      if (!v) {
+        const byMode = {};
+        for (const md of ['multi', 'long']) byMode[md] = Number(aggressionProfile(WIN, p, SEL_CLEAR_GAMES, { mode: md }).fieldB.clearedPerGame);
+        v = { byMode: byMode, worst: Math.min(byMode.multi, byMode.long) };
+        cacheC.set(p, v);
+      }
+      return v;
+    };
+    const rows = [], kept = [], dropped = [];
+    for (const e of sel.clean) {
+      const c = clearOf(e.ref.params);
+      rows.push(e);
+      (c.worst >= SEL_CLEAR ? kept : dropped).push({ e: e, c: c });
+    }
+    console.log('[清场地板] 口径 = 官方 `aggressionProfile` 的 `fieldB.clearedPerGame`（场B = calm 桌，与门禁同源）· ' +
+      SEL_CLEAR_GAMES + ' 局/桌 · 两桌取严 ｜ 线 ≥' + SEL_CLEAR.toFixed(2) + '/局');
+    console.log('[清场地板] 候选 ' + sel.clean.length + ' 粒逐粒（multi ‖ long ⇒ 取严）：' +
+      rows.map(function (e) { const c = clearOf(e.ref.params);
+        return c.byMode.multi.toFixed(2) + '‖' + c.byMode.long.toFixed(2) + '⇒' + c.worst.toFixed(2) + (e === sel.best ? '(当选)' : ''); }).join('  '));
+    SEL_CLEAR_LOG = { line: SEL_CLEAR, games: SEL_CLEAR_GAMES, cal: 'aggressionProfile.fieldB.clearedPerGame', modes: ['multi', 'long'], rule: 'worst-of-two',
+      of: sel.clean.length, dropped: dropped.length,
+      readings: rows.map(function (e) { const c = clearOf(e.ref.params); return { score: Number(e.score.toFixed(4)), multi: Number(c.byMode.multi.toFixed(3)), long: Number(c.byMode.long.toFixed(3)), worst: Number(c.worst.toFixed(3)) }; }),
+      allRejected: false, changedWinner: false, bitNothing: false };
+    if (!kept.length) {
+      SEL_CLEAR_LOG.allRejected = true;
+      console.error('[清场地板] ⛔ 名人堂**全部**低于线 ' + SEL_CLEAR.toFixed(2) + ' ⇒ 产物照写并标 selClearAllDropped；' +
+        '按 §E786 的预注册这**不是**"地板没用"，而是"这一支里没粒能收场" ⇒ 别拿这粒去换包，去看下面那条改判/未改判行');
+    } else {
+      if (!dropped.length) {
+        SEL_CLEAR_LOG.bitNothing = true;
+        console.log('[清场地板] ⚠ 线 ' + SEL_CLEAR.toFixed(2) + ' **一格都没咬到**（' + kept.length + '/' + kept.length + ' 粒本来就达标）' +
+          '⇒ 这根在本臂等于没开，不许读成"筛过了"（要它咬东西就把线抬到读数之上）');
+      }
+      let best = kept[0].e;
+      for (const k of kept) if (k.e.score > best.score) best = k.e;
+      SEL_CLEAR_LOG.changedWinner = best !== sel.best;
+      const cb = clearOf(best.ref.params);
+      console.log('[清场地板] 剔 ' + dropped.length + '/' + sel.clean.length + ' 粒（被剔读数：' +
+        dropped.map(function (d) { return d.c.worst.toFixed(2); }).join('/') + '）' +
+        (SEL_CLEAR_LOG.changedWinner ? ' ⇒ **改判**：换成清场 ' + cb.worst.toFixed(2) + '（multi ' + cb.byMode.multi.toFixed(2) +
+          ' ‖ long ' + cb.byMode.long.toFixed(2) + '）的粒，胜负分差 ' + ((best.score - sel.best.score) * 100).toFixed(1) + 'pt' +
+          '（veto 换人本来就是拿胜负分换能力）' : ' ⇒ 未改判（原当选者本来就达标，清场 ' + cb.worst.toFixed(2) + '）'));
+      sel.clean = kept.map(function (k) { return k.e; }); sel.best = best;
+    }
+  }
   /* v1.5.167（§N24）：兑现广度参与当选（默认关）。量具 = `mirrorHealth.effSkillsLand`（同一套熵，把"出手次数"换成"落地次数"）；
    * 必须打印「换没换人」(`tieBrokenBy`)——排序键不咬就等于没接线（§N12 的教训：判作用点，不判有没有配置）。 */
   if (SEL_LAND > 0 && sel.clean && sel.clean.length) {
@@ -2323,6 +2404,7 @@ const meta = {
   ...(/^[0-9a-f]{16}$/.test(hotstartFrom || '') ? { hotstartFrom: hotstartFrom } : {}),
   selLand: SEL_LAND_LOG,
   selKeep: SEL_KEEP_LOG,   // v1.5.265b（§E66）：载重 veto 的账（参照/线/剔了谁/改没改判）—— 事后能从产物自证
+  selClear: SEL_CLEAR_LOG,   // §E787：场B 清场地板的账（线/逐粒读数/剔几粒/改没改判/**一格没咬到**）；关档 ⇒ null，一行都不跑
   /* v1.5.169：产物自带配方。§N11 的教训是"读日志才知道这臂开了什么"，而日志会滚走、`.bak` 会留下来——
    * 于是事后复盘（和 DS 那边跑对照）只能靠文件名猜。把**下达值 + 开火计数**一起写进 meta，
    * 让每一粒产物能自证"我当时是在什么分布下选出来的"。只加字段，不改任何判定。 */
@@ -2337,6 +2419,7 @@ const meta = {
     oppBlock: (typeof T.oppTable === 'function' ? T.oppTable() : null),   // §E124：桌形 + 开火计数（下达值不够，要看真发生了多少局）
     xn2w: XN2W, xn2g: XN2G, selLand: SEL_LAND, selLandGames: SEL_LAND_GAMES, selLandTol: SEL_LAND_TOL,
     selKeep: SEL_KEEP, selKeepKeys: (SEL_KEEP > 0 ? SEL_KEEP_KEYS : null),
+    selClear: SEL_CLEAR, selClearGames: (SEL_CLEAR > 0 ? SEL_CLEAR_GAMES : null),   // §E787：下达值 + 测量长度（关档 ⇒ 只留 0，读数与历史臂逐字相同）
     /* v1.5.326 §E249：这根排序键**有没有真的换人**必须写在产物里（`{changedWinner, zeroDose, usage…}`）。
      * 关档 ⇒ `null`（一行都不跑，与历史臂逐字相同）。`zeroDose:true` 那一臂**不许**被读成"测过且无效"。 */
     selBigT: SEL_BIGT_LOG,
