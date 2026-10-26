@@ -102,6 +102,16 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
   'EPIRUS_SEL_CLEAR', 'EPIRUS_SEL_CLEAR_GAMES',   // §E787（10-26 夜班后追加，用户裁"加上开跑"）：当选面的**场B 清场地板**（veto，不进 fit）+ 它的测量局数（默认 40 = 官方口径）
   'EPIRUS_COUNTER_OPPS', 'EPIRUS_SEL_COUNTER',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
+  /* §E797（10-27 夜班）：`EPIRUS_BLOCK_W` = **挡下/反弹**计数的奖励权重（`js/train/evo.js:3357` 的 `countBlocks`
+   * 同时认 `blocked` 与 `reflect` ⇒ 这根确实付反弹）。投递走通用 econ 回路（`blockW` 在单一来源
+   * `ECON_REWARD_KEYS` 里 ⇒ `tools/train-3p.mjs:557` 那句「econ 族通用下达 … 逐键回执一致」就是证据）。
+   * ⚠ 本条登记的**因果我没能证实**：00:50 两臂传这个键撞黑键闸 `exit 6`（`%TEMP%/epi-e797/log-B3.txt` 原文在），
+   *   但 01:1x 拿 `git show HEAD:tools/train-3p.mjs` 的副本、带**同一个键**冒烟 ⇒ `rc=0` 且回执一致。
+   *   ⇒ 所以"exit 6 是因为白名单漏登记"这句话**没被复现支持**，这里登记它只是与 `EPIRUS_SUB_BEAD*` 同先例
+   *   （经单一来源读的 econ 键在本入口显式声明一遍），真正让我信"投递成立"的是**冒烟里的回执行**，不是这道闸。
+   *   那两次 exit 6 的机制留作待查（§E797 五）——它比漏登记危险：一道会把**真能投递的键**报成暗键的闸，会让人误判"这根杠杆没用"。
+   *   默认不设 ⇒ `BLOCK_W` 仍是引擎默认 0，历史臂逐字不变。 */
+  'EPIRUS_BLOCK_W',
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
   'EPIRUS_TOOLKIT_OPPS',     // §E676（10-21 早班）：把杂货铺（计划层 P0~P7）放上训练桌（份数驱动，默认关 ⇒ OPPS 一字不变）
