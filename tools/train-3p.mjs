@@ -149,7 +149,8 @@ const SELF_ENV_KEYS = [
   'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W',
   'EPIRUS_WIDTH_LAND_W',
   'EPIRUS_WALL_BREAK_W',
-  'EPIRUS_REFLECT_W'
+  'EPIRUS_REFLECT_W',
+  'EPIRUS_BEAD_WASTE_W'
 ];
 /* v1.5.187：**大雷连带收益权重**（`evo.js` 的 `BIGT_CHAIN_W`，DS 交接 §2b 的唯一待做）走 econ 族，
  * 而它的 env 名按 D77 只许出现在 `server/econ-env.mjs` ⇒ 这里**不写字面量**，
@@ -1463,6 +1464,24 @@ if (REFLECT_WANT > 0) {
     process.exit(7);
   }
   console.log('[reflect] 反射奖励已下达：' + JSON.stringify({ reflectW: gotRF }) + ' ⇒ 只给"我把伤害弹回去"的那一下付钱（按弹回量 /2，1 点起有梯度）');
+}
+/* ===== 12:5x（千问 · PREREG §二十九）：**过期珠**惩罚 `EPIRUS_BEAD_WASTE_W`（默认关）=====
+ * 病（§E807）：`BEAD_W` 撤回默认能把珠买到线内（87%→23%）却把 珍 0.38 卖到 0.045 —— 它买的是"量"不是"花法"。
+ *   本项只惩罚**浪费本身**（{type:'beadExpire', pid} 事件数 /4 封顶），不碰花费侧的奖励。
+ * 纪律与 WALL_BREAK_W/REFLECT_W 逐字相同：读回消费点、不等就 exit 7；没开就一行不印。 */
+const BEAD_WASTE_WANT = Number(process.env.EPIRUS_BEAD_WASTE_W || 0);
+if (BEAD_WASTE_WANT > 0) {
+  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_BEAD_WASTE_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
+    process.exit(7);
+  }
+  T.setEconomyReward({ beadWasteW: BEAD_WASTE_WANT });
+  const gotBW = (T.economyReward() || {}).beadWasteW;
+  if (Number(gotBW) !== BEAD_WASTE_WANT) {
+    console.error('[train-3p] ⛔ EPIRUS_BEAD_WASTE_W=' + BEAD_WASTE_WANT + ' 读回 ' + JSON.stringify(gotBW) + ' ⇒ 没生效，退出（不许跑出以为开了的臂）');
+    process.exit(7);
+  }
+  console.log('[bead-waste] 过期珠惩罚已下达：' + JSON.stringify({ beadWasteW: gotBW }) + ' ⇒ 只给"珠过期没用掉"扣分（事件数 /4 封顶，不碰花费奖励）');
 }
 
 /* ===== §N6 修正（v1.5.150 · DS 09-22）：**2P 切片的对手必须是 2P 强参照，不能是多人池** =====
