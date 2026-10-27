@@ -435,7 +435,21 @@ t('D205 门号纪律（DS 清单 B8 · 09-30 夜班）：D 号不许撞车，且
   const top = String(readFileSync('CHANGELOG.md', 'utf8').split(/^## /m)[1] || '');
   const zone = String(readFileSync('CHANGELOG.md', 'utf8').split('\n## v1.5.')[0] || '');
   const idSet = new Set(gateIds);
-  const claimOf = function (text) { return [...new Set([...text.matchAll(/\bD([0-9]+)(?![0-9])/g)].map(m => 'D' + m[1]))]; };
+  /* v1.8.41（2026-10-27）：**"删除/换号"的记录不算"声称门在"**。
+   * 病：本轮删了 108 条训练门（+ D206）之后，CHANGELOG 必须能写"删掉 D206 / D204→D205"，
+   *   而旧写法会把这两句读成"声称 D206/D204 在册" ⇒ 每次删门都逼着人**不许提被删的门号**，
+   *   正好和"口径变了就删旧门禁"那条规矩打架。判据改成语义：同一行含「删/移除」⇒ 整行按记账读；
+   *   `Dx → Dy` 里的**左边**也按"换号记账"读（右边照常查，它是**现在**在册的那个）。
+   * ⚠ 仍保留了它要防的那件事：任何一行只要**没写删**、又提到一个不在册的 D 号 ⇒ 照样红。 */
+  const claimOf = function (text) {
+    const out = new Set();
+    for (const line of String(text).split(/\r?\n/)) {
+      if (/删|移除/.test(line)) continue;
+      const mappedSrc = new Set([...line.matchAll(/\bD([0-9]+)\s*→/g)].map(m => 'D' + m[1]));
+      for (const m of line.matchAll(/\bD([0-9]+)(?![0-9])/g)) { const id = 'D' + m[1]; if (!mappedSrc.has(id)) out.add(id); }
+    }
+    return [...out];
+  };
   const claims = claimOf(top);
   ok(claimOf(zone).length >= 10, '④ 抽取式自证：整段 v1.6.x 至少该数出 10 个不同门号（实测 ' + claimOf(zone).length +
     ' ‖ 区段长 ' + zone.length + ' 字符）⇒ 数到 0 就是正则或"到 v1.5 为止"那道边界被改坏，下面 ⑤ 会跟着假绿');
