@@ -32,9 +32,7 @@
             <option value="5">5 人</option>
           </select>
         </label>
-        <!-- v1.6.5（用户 10-03 夜裁定「把 2 人合并进多人，变成选人数 × 3血/5血正交，4 血也可以上」）：
-             原来那根「模式」下拉把**人数**和**血量**两件事捆在一根轴上（standard=2人3血 / multi=3-5人3血 / long=3-5人5血），
-             于是"2 人 · 5 血""4 血"这类组合根本点不出来。现在两根轴各自一个下拉，模式键由 `ui.js` 的查表算出来。 -->
+        <!-- 人数与血量是两根独立下拉；模式键由 ui.js 的查表算出来。 -->
         <label>血量
           <select id="sel-hp">
             <option value="3" selected>3 血</option>
@@ -43,12 +41,7 @@
           </select>
         </label>
         <label>难度
-          <!-- v1.6.6（用户 10-03 夜指令 2「重新研究脚本难度…可以设计成冠军作为底层但脚本探索概率很高的版本」）：
-               全人数**共用一条阶梯**，难度 = **冠军池按力度分带取成员 + 探索剂量**（ε / epsK / epsMode；简单档还掺脚本对手；2 人桌换 2P 冠池）。
-               旧的两条路（2 人「简单/中等/困难」+ 多人「五个风格 + 冠军」）按用户裁定作废；
-               风格没删，退成阶梯下面那组"人格"（不排强度 —— §E286 实测四个风格在 5 人桌上统计上并列）。
-               这里的静态列表只是首屏，真列表由 `ui.js:syncDiffOptions()` 从 `bots.js` 的 `DIFF_TIERS` 重建（单一来源，门 D227 钉）。
-               ⚠ 2026-10-21 对账：这里原来还留着 §E596 已删的 `lv:novice` / `lv:hunter`，且缺 `st:toolkit` ⇒ 已按 `DIFF_TIERS` + `STYLES` 现状重列（运行时仍以重建结果为准）。 -->
+          <!-- 全人数共用一条难度阶梯：冠军池按力度分带取成员 + 探索剂量（ε / epsK / epsMode；简单/普通档另按桌概率掺脚本席）；2 人桌换 2P 冠池。静态列表只是首屏，真列表由 ui.js:syncDiffOptions() 从 bots.js 的 DIFF_TIERS 重建（单一来源）。 -->
           <select id="sel-diff">
             <option value="lv:sparring">简单 · 陪练</option>
             <option value="lv:regular" selected>普通（默认）</option>
@@ -144,7 +137,7 @@
     技术栈：纯 HTML/CSS/JS，零依赖，双击 index.html 即玩。对局在浏览器本地跑；训练要另起本机服务（<code>node server/train-server.mjs</code> 或双击 <code>tools/start-train-server.cmd</code>），不联网、无后端。
     <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-size:13px">
       <a href="https://github.com/Lion-Li-git/Epirus-Web" target="_blank" rel="noopener noreferrer" style="color:#7fb2ff;display:inline-flex;align-items:center;gap:6px">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><use href="#ghmark"/></svg>本仓库（代码 · 全部裁定 · 门禁）</a>
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><use href="#ghmark"/></svg>本仓库（代码 · 文档 · 门禁）</a>
       <a href="https://github.com/Lion-LiHaoyi/Epirus" target="_blank" rel="noopener noreferrer" style="color:#7fb2ff;display:inline-flex;align-items:center;gap:6px">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><use href="#ghmark"/></svg>上游原始规则仓库（规则文档 v2.1.0）</a>
     </div>
@@ -171,15 +164,9 @@
 <script src="js/ui/bead-choice.js?v=79fdee82"></script>
 <script src="js/ui/rules-panel.js?v=79fdee82"></script>
 <script src="js/ui/ui.js?v=79fdee82"></script>
-<!-- v1.6.63（§E590）冠军池：成员权重表，defer ⇒ 不挡首屏；第一次 AI 决策前必然已执行。
-     真源 champion-map/pool-members.tsv，本文件由 tools/build-pool-bundle.mjs 生成，不要手改。
-     ⚠ v1.7.1 订正读数：这里原写「744KB 的成员权重表」，那是池只有 7 枚时的尺寸；**体积与枚数以 bundle 现数为准**（2026-10-21：29 枚 ≈ 3,100KB = hard 13 ‖ mid 0 ‖ soft 16；v1.7.1 时是 27 枚 ≈ 2,884KB）⇒ 改的只是这句注释，产物一字未动。 -->
+<!-- 冠军池：成员权重表，defer（不挡首屏；第一次 AI 决策前必然已执行）。真源 champion-map/pool-members.tsv，由 tools/build-pool-bundle.mjs 生成，不要手改。 -->
 <script defer src="js/bundled-champion-pool.js?v=79fdee82"></script>
-<!-- v1.6.66（§E599）**2P 池**：2P 原生包（用户 10-12 裁定：每局只要一个对手 ⇒ 成员不必多；种类 <5 的不要）。
-     真源 champion-map/pool-members-2p.tsv，同一支 build-pool-bundle.mjs 生成（--table=/--key=EPIRUS_CHAMPION）。
-     与 3P 池**分开**：§E286 那条"3P 包在 1v1 上是分布外"仍然成立 ⇒ **hard/mid 只放 2P 考卷训出来的包**。
-     ⚠ 2026-10-21（用户裁定 A）：**soft 带掺了 2 枚多人包**（`3p-D4a` ‖ `3p-B5-10-31`，invited=1、2P 考卷不过门）—— 买的是"会站防/会换牌"的形状，不是强度；契约 §9.7。
-     构建：build-pool-bundle.mjs --table=champion-map/pool-members-2p.tsv --key=EPIRUS_CHAMPION --global=EPIRUS_CHAMPION_POOL_2P --srcKey=EPIRUS_CHAMPION_3P --out=js/bundled-champion-pool-2p.js -->
+<!-- 2P 池：2P 原生包。真源 champion-map/pool-members-2p.tsv，同一支 build-pool-bundle.mjs 生成（--table=/--key=EPIRUS_CHAMPION）。与多人池分开：hard/mid 只放 2P 考卷训出来的包（3P 包在 1v1 上是分布外）。构建：build-pool-bundle.mjs --table=champion-map/pool-members-2p.tsv --key=EPIRUS_CHAMPION --global=EPIRUS_CHAMPION_POOL_2P --srcKey=EPIRUS_CHAMPION_3P --out=js/bundled-champion-pool-2p.js -->
 <script defer src="js/bundled-champion-pool-2p.js?v=79fdee82"></script>
 </body>
 </html>
