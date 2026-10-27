@@ -946,7 +946,7 @@ ok(readFileSync('server/opp-champs.mjs', 'utf8').true, '冠军对手必须走 po
 
 - 用户原文：「所有训练测的门禁全部删掉，训练的问题要在训练时候搞完而不是出现在产品门禁里」。
 - 删除：`train-evo`(65) ‖ `train-econ`(11) ‖ `train-table`(10) ‖ `train-pick`(6) ‖ `train-env`(4) ‖ `train-feature`(4) ‖ `train-breadth`(4) ‖ `train-chooser`(2) = **108 条 / 8 个文件**；`tools/np-test.mjs` 同时删掉对应 import、PARTS、PART_GROUPS、GRP、CUM 与 15 条归属规则。
-- 门数：**280 → 172**（`--list-parts --json` 的 total；CI 的 part 矩阵从它现推，不抄名单）。
+- 门数：**280 → 171**（108 条训练门 + D206）（`--list-parts --json` 的 total；CI 的 part 矩阵从它现推，不抄名单）。
 - 连带修：D205 的反装饰下限 150→90、合成正对照 `D204`→`D205`（D204 是被删的训练门）；**D206 整条删除**（它判的正是训练键送达，且第一个 SENT 夹具住在被删的 `train-evo.mjs` 里）。
 - 训练侧现在的凭据：开臂回执 `⇒ 逐键回执一致 ✓` + 逐代剂量行（`失效=` / `失效理=` 等）+ 13 行尺；不再由产品门禁代判。
 - ⚠ 这次的覆盖损失是**有意的**：奖励接线/剂量、env 送达、特征与候选形状、对手表、当选键、广度/兑现、并发跑器、池前沿 —— 全部交回训练时发现。
