@@ -1212,14 +1212,25 @@ function fitTpad() {
 }
 /* E396 DS：把家族名按「 · 」装箱成最多 max 行（超出的部分不进图，完整串在悬停提示里）。 */
 function wrapLabel(t, s, maxW, max) {
-  var parts = String(s).split(' · '), lines = [], cur = '';
-  for (var i = 0; i < parts.length; i++) {
-    var cand = cur ? (cur + ' · ' + parts[i]) : parts[i];
-    if (!cur || t.measureText(cand).width <= maxW) cur = cand;
-    else { lines.push(cur); if (lines.length >= max) return lines; cur = parts[i]; }
+  /* §E826（用户 10-27「家族13的排版也出问题了」）：改成**按字符** greedy —— 原来只按 ' · ' 分段，
+   *   单个 part 比列宽时整段落到下一行（家族 13 的尾巴就是一大段）⇒ 第二行冲出左栏/压到日期刻度。
+   *   现在：逐字符填行（行数上限 max），最后一行放不下的用 '…' 收尾 —— 版式只保证"不出栏"；
+   *   完整串仍在悬停提示里（E396 原话）。 */
+  var clip = function (x) {
+    if (t.measureText(x).width <= maxW) return x;
+    var lo = 0, hi = x.length;
+    while (lo < hi) { var m = (lo + hi + 1) >> 1; if (t.measureText(x.slice(0, m) + '…').width <= maxW) lo = m; else hi = m - 1; }
+    return x.slice(0, lo) + '…';
+  };
+  var str = String(s), lines = [], i = 0;
+  while (i < str.length && lines.length < max) {
+    var lo = 0, hi = str.length - i;
+    while (lo < hi) { var m = (lo + hi + 1) >> 1; if (t.measureText(str.slice(i, i + m)).width <= maxW) lo = m; else hi = m - 1; }
+    if (lo <= 0) lo = 1;
+    lines.push(str.slice(i, i + lo)); i += lo;
   }
-  if (cur) lines.push(cur);
-  return lines.slice(0, max);
+  if (i < str.length) lines[lines.length - 1] = clip(lines[lines.length - 1] + str.slice(i));
+  return lines;
 }
 function famShort(d, n) { var s = String(famLab(d)).split(' ‖ ')[0] || ('家族 ' + d.fam);
   return s.length > (n || 26) ? s.slice(0, n || 26) + '…' : s; }
@@ -1987,7 +1998,20 @@ function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, d
   var FLATX = !!M && Math.abs(M.b) < 1e-9 && Math.abs(M.c) < 1e-9 && M.a > 0 && M.d > 0;
   var SZ = FLATX ? Math.min(M.a, M.d) : 1;
   function put(txt, x, y, size, capUnit) {
-    if (!FLATX) { t.font = ff(size); t.fillText(txt, x, y); return; }
+    if (!FLATX) {
+      /* §E826（用户 10-27：「现在又变成分别缩放了」）：立体态**保留倾斜**（用户 10-24 点名"字要躺在倾斜的板上了"），
+       *   但字号不再被横纵两个倍率各拉一遍：把两个基向量**各自归一化到同一长度 s=min(|colX|,|colY|)**，
+       *   方向不变（剪切/旋转还在）、长度统一；锚点用 (x·lx/s, y·ly/s) 落回真 M(x,y)。
+       *   ⇒ 与正交分支同一条规则（字号只跟 min 倍率；轴字 capUnit 再夹 min(1,·)），只是多保留板子的方向。 */
+      var lx = Math.sqrt(M.a * M.a + M.b * M.b) || 1, ly = Math.sqrt(M.c * M.c + M.d * M.d) || 1;
+      var s0 = Math.min(lx, ly), s = capUnit ? Math.min(1, s0) : s0;
+      t.save();
+      t.setTransform(M.a / lx * s, M.b / lx * s, M.c / ly * s, M.d / ly * s, M.e, M.f);
+      t.font = ff(size);
+      t.fillText(txt, x * lx / s, y * ly / s);
+      t.restore();
+      return;
+    }
     var s = capUnit ? Math.min(1, SZ) : SZ;
     t.save(); t.setTransform(1, 0, 0, 1, 0, 0);
     t.font = (size * devicePixelRatio * s) + 'px system-ui,sans-serif';
@@ -2007,7 +2031,10 @@ function paintChrome(t, w, h, fams, rowH, padL, padT, padB, tmin, tmax, X, ff, d
     var maxW = padL - 24 * devicePixelRatio;
     var full = famSummary(famLab({ fam: f })) || ('家族 ' + f);
     t.fillStyle = st.ink; t.textAlign = 'right'; t.font = ff(9);
-    var ls = wrapLabel(t, '家族 ' + f + ' · ' + full, maxW, 2);
+    /* §E826（用户 10-27「家族13的排版也出问题了」）：名字**只占一行**（超宽用 '…' 收），第二行永远留给计数。
+     *   原来允许名字占 2 行 ⇒ 长标签（家族 13）把计数挤没、而且第二行会压到底部日期刻度那一排。
+     *   完整标签仍在悬停提示里（E396 原话："完整串在悬停提示里"）。 */
+    var ls = wrapLabel(t, '家族 ' + f + ' · ' + full, maxW, 1);
     put(ls[0], padL - 12 * devicePixelRatio, padT + i * rowH + rowH * 0.36, 9, false);
     var cnt = mem.length + ' 枚 · 过线' + (RLONG() ? '(长程)' : '(在册)') + ' ' + nOk + ' · 冠军 ' + nCh + ' · 最好名次 ' + best;
     t.fillStyle = st.dim; t.font = ff(9);
