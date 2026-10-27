@@ -148,7 +148,8 @@ const SELF_ENV_KEYS = [
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
   'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W',
   'EPIRUS_WIDTH_LAND_W',
-  'EPIRUS_WALL_BREAK_W'
+  'EPIRUS_WALL_BREAK_W',
+  'EPIRUS_REFLECT_W'
 ];
 /* v1.5.187：**大雷连带收益权重**（`evo.js` 的 `BIGT_CHAIN_W`，DS 交接 §2b 的唯一待做）走 econ 族，
  * 而它的 env 名按 D77 只许出现在 `server/econ-env.mjs` ⇒ 这里**不写字面量**，
@@ -1443,6 +1444,25 @@ if (WALL_BREAK_WANT > 0) {
   }
   const wbk = (T.wallBreakReward && T.wallBreakReward().keys) || null;
   console.log('[wall-break] 破反弹墙奖励已下达：' + JSON.stringify({ wallBreakW: gotWB, keys: wbk }) + ' ⇒ 只给穿反弹卡（激光剑/狙击枪/电磁炮）的落地付钱，坦克不算');
+}
+
+/* ===== 11:5x（千问 · 用户「这几个都可以」· PREREG §二十六 条款 4）：**反射** `EPIRUS_REFLECT_W`（默认关）=====
+ * 病（§E805 的 GB2 = 11/13 只差 G4+珠）：`G4` 长程只枪 84% —— `BLOCK_W` 抬档会连墙/G5/强一起卖（它同时给 blocked 与 reflect 付钱）；
+ *   本项**只给真反射出去的那一下**付钱（事件 `{type:'reflect', to, amt}`，纯训练侧计数，不动 js/core）。
+ * 纪律与 WALL_BREAK_W 逐字相同：读回消费点、不等就 exit 7；没开就一行不印。 */
+const REFLECT_WANT = Number(process.env.EPIRUS_REFLECT_W || 0);
+if (REFLECT_WANT > 0) {
+  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_REFLECT_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
+    process.exit(7);
+  }
+  T.setEconomyReward({ reflectW: REFLECT_WANT });
+  const gotRF = (T.economyReward() || {}).reflectW;
+  if (Number(gotRF) !== REFLECT_WANT) {
+    console.error('[train-3p] ⛔ EPIRUS_REFLECT_W=' + REFLECT_WANT + ' 读回 ' + JSON.stringify(gotRF) + ' ⇒ 没生效，退出（不许跑出以为开了的臂）');
+    process.exit(7);
+  }
+  console.log('[reflect] 反射奖励已下达：' + JSON.stringify({ reflectW: gotRF }) + ' ⇒ 只给"我把伤害弹回去"的那一下付钱（按弹回量 /2，1 点起有梯度）');
 }
 
 /* ===== §N6 修正（v1.5.150 · DS 09-22）：**2P 切片的对手必须是 2P 强参照，不能是多人池** =====
