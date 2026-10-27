@@ -1737,8 +1737,12 @@ function wantLabel(d) {
    *   而我那条覆盖等于替用户否决了它们的前提 ⇒ 覆盖别人测量环境的"功能"不是功能，是污染。
    *   现在：档位在" champ/pool/all" 时链上成员全部上名（pinLabel 已经把它们算作用户点名的那批），
    *   档位="off" 时尊重 off。 */
-  if (st.labels === 'off') return false;
+  /* §E827（用户 10-27）：「不标」= **默认不标，但选中点与追溯链的标签仍要显示**。
+   *   内部另有「none」（全不标）只给页内自检隔离几何用 —— 那几条（指针往返 / 链差分 / 池环）
+   *   必须把"选中/链上多出来的墨"完全拿掉才量得准，所以它们钉 none 而不是用户档 off。 */
+  if (st.labels === 'none') return false;
   if (pinLabel(d)) return true;
+  if (st.labels === 'off') return false;
   /* §E556（用户 10-09 08:5x：「按家族高亮的时候，历代冠军的标签并不会暗掉，很容易导致混淆」）：
    *   被点选 / 加进对比 / 搜索命中的**一定标**（这是用户自己指定的，不能被高亮规则挤掉）。 */
   /* §E556：高亮态下常驻名单那几条**让位给高亮** —— 压暗的是标签，不是数据，取消高亮全回来。 */
@@ -5185,7 +5189,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     var bakSel = st.sel, bakChain = st.chain, bakLabels = st.labels, bakTw = tw;
     function restore() { st.sel = bakSel; st.chain = bakChain; st.labels = bakLabels; tw = bakTw; LCHKEY = '#reset'; draw(); }
     try {
-      tw = null; st.labels = 'off';
+      tw = null; st.labels = 'none';
       var idPick = '', i, j;
       for (i = 0; i < N; i++) {
         var d = P[i]; if (!d.pof) continue;
@@ -5508,7 +5512,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
      *   ⇒ 可见弧的质心不再等于点心（实测三枚全错位，环心与 scr 差 +7/+5/-7px，按质心点下去选中了邻居）。
      *   这个病是真的，但它归"被别人的名字压住的点"那条量（上一段，出厂档实测 cov），不归指针换算这条：
      *   本条要证的是 rect / dpr / CSS 压扁这一层换算对不对，把两件事记进同一本账，红了不知道该修哪个。 */
-    st.labels = 'off';
+    st.labels = 'none';
     /* §E763 追加同一类隔离：追溯链那一层也是"选中之后多出来的墨"，而这条判据的派发点是**从选中环的像素反算**的。
      *   不关掉它，差分里混进整条链 ⇒ 环心质心被拖走（实测指针往返四张图全红、"落点离环心 -1px"）。
      *   ⇒ 这条不是绕过红，是把"这一层不参与本次测量"写进测量条件；链自己的两帧差分由 §E763 那条判据管。 */
@@ -5612,7 +5616,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
      *   默认换成 log 之后两帧会变成同一张图（那不是"压不住板"，是"这条判据够不到新法律"），
      *   让它恒红或恒绿都是假信号；新法律的覆盖由下面那条 §E673 判据负责。 */
     st.elaw = 'attr';
-    st.edges = 'all'; st.color = 'fam'; st.labels = 'off'; NOPTS = 1;
+    st.edges = 'all'; st.color = 'fam'; st.labels = 'none'; NOPTS = 1;
     ELOG = 1; draw();
     var hub = EDGR.hub, hn = EDGR.hubn, amin = EDGR.amin, amax = EDGR.amax, nE = EDGR.n;
     st.edges = 'off'; draw(); var d0 = grab();
@@ -5659,7 +5663,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     function grab2() { try { return g.getImageData(0, 0, cv.width, cv.height).data; } catch (E9) { return null; } }
     st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
     st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1;
-    st.edges = 'all'; st.color = 'fam'; st.labels = 'off'; NOPTS = 1; ELOG = 1;
+    st.edges = 'all'; st.color = 'fam'; st.labels = 'none'; NOPTS = 1; ELOG = 1;
     /* 步长要**按当下的边数算**（先空跑一帧拿 EDGR.n）：写死 60 在出厂态（726 条）取到 12 条探针，
      *   而 #flo=0.3 那一态只剩 184 条 ⇒ 只收到 4 条，红的是"探针不够"不是"线断了"。 */
     EPROBE = 0; draw(); var nEd = EDGR.n;
@@ -5717,7 +5721,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       edges: st.edges, color: st.color, labels: st.labels, mode: st.mode, elaw: st.elaw };
     st.elaw = 'attr';
     st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
-    st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; st.edges = 'all'; st.color = 'fam'; st.labels = 'off';
+    st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; st.edges = 'all'; st.color = 'fam'; st.labels = 'none';
     NOPTS = 1; ELOG = 1; EPROBE = Math.max(1, Math.round(EDGR.n / 24));
     draw(); var A0p = EDGR.probe.slice();
     st.tX = -3 * devicePixelRatio; draw(); var A1p = EDGR.probe.slice();
@@ -5749,7 +5753,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       edges: st.edges, color: st.color, labels: st.labels, mode: st.mode, elaw: st.elaw };
     function grab4() { try { return g.getImageData(0, 0, cv.width, cv.height).data; } catch (E9) { return null; } }
     st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
-    st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; st.edges = 'all'; st.color = 'fam'; st.labels = 'off'; NOPTS = 1;
+    st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; st.edges = 'all'; st.color = 'fam'; st.labels = 'none'; NOPTS = 1;
     ELOG = 1; st.elaw = 'attr'; draw();
     var hubA = EDGR.hub, hnA = EDGR.hubn, dAttr = grab4();
     st.elaw = 'log'; draw(); var dLog = grab4(), inked = EDGR.inked;
@@ -6441,7 +6445,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<span id="g2h" class="tbgrp" title="第二段：所有图通用的口径与筛选">通用</span>' +
 '<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp/F，796 行历史引用都指着它。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong = Hplong/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label>' +
 '<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
-'<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标</option></select></label>' +
+'<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标（选中点/追溯链仍标）</option></select></label>' +
 '<label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">训出批次 <select id="batch"></select></label>' +
 '<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label>' +
 '<span id="winpre" style="display:flex;gap:4px;align-items:center"></span>' +
