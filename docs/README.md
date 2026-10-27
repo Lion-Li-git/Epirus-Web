@@ -33,6 +33,8 @@
 
 顶层另有一张**跨班状态表**（不是流水，不参与"收工搬 `archive/`"）：[`research/LIVE-LINES.md`](research/LIVE-LINES.md) —— 谁在哪条线、在哪个工作树、动的是哪一面、状态是活/parked/已并，以及"主工作树常驻 `main`、实验自开 worktree"这四条规矩。
 
+当前专题交接：[`research/CHAMPION-2.0-RESEARCH-2026-10-27.md`](research/CHAMPION-2.0-RESEARCH-2026-10-27.md) —— 规则基线、v7 包结构、跨 2–10 人/血量的瓶颈与 2.0 研究方向（研究记录，非实施裁定）。
+
 还有三个**产物目录**不属于"文档"：`docs/artifacts/`（臂产物 `.bak` 与仪器脚本 —— 门 D82 读它）‖ `docs/debug/` ‖ `docs/screenshots/`。
 
 ## 三、引用规矩（本仓栽过的形状，逐条对着防）
@@ -54,6 +56,8 @@
 | `docs/REVIEW-*.md` ‖ `docs/AUDIT-RESPONSE-*.md` ‖ `docs/DECISIONS-*.md` ‖ `docs/PROPOSAL-*.md` ‖ `docs/SUMMARY-*.md` ‖ `docs/RESEARCH-QUEUE-*.md` ‖ `docs/PARAMS-PLAN.md` ‖ `docs/OPTIMIZATION-ep-cliff.md` ‖ `docs/REVIEW-3P.md` | `docs/research/reviews/…` | 10-06（§E356） |
 | `docs/logs/` ‖ `docs/archive/` | `docs/research/logs/` ‖ `docs/research/archive/` | 10-06（§E356） |
 | 更早在 `docs/archive/README.md` 里记的那批（10-05 §E339 的 19 + 16 份） | 同上，再套一层 | 10-05 / 10-06 |
+| `docs/research/` 顶层 2026-10-17～26 的 `HANDOFF/HANDOVER/NEXT/OVERNIGHT/PLAN/DOING/BRANCH/BRIEF`（27 份过程账） | `docs/research/archive/` 同名文件 | 10-27（v1.8 收尾；硬引用面零命中，历史软引用不改写） |
+| `CHANGELOG.md` 里 **v1.6.69 及更早**的逐字条目 | `docs/research/archive/CHANGELOG-v1.5.320-v1.6.69-full.md`；根文件保留 v1.7.0 起正文、v1.5.320～333 门边界与索引 | 10-27（v1.8 收尾；沿用 v1.7.0 的压缩边界） |
 | `CHANGELOG.md` 里 **v1.5.319 及更早**的逐字条目 | 同一文件末尾那份「历史版本索引」里的一行摘要（全文 `git log -p CHANGELOG.md`） | 10-13（v1.7.0 · 用户要求「把旧的 changelog 压缩一下」；**界限抬到 v1.5.320 是为了保住 `## v1.5.` 这道门自己在用的抽取式边界** —— `D224⑩a` ‖ `D205④`） |
 | `CHANGELOG.md` 里 v1.5.129 及更早的逐字条目 | 同上（第一次压缩留下的那一段索引，现在并成一份 384 行） | v1.5.145（DS） |
 | `champion-map/*.tsv` ‖ `*.txt` 里**没有任何人按文件名点名**的 77 张点数据表 | 同一目录下那份单文件容器 `champion-map/point-data.tsv`（读法：`node champion-map/point-data.mjs` 的 `rows(batch)` / `valueOf(batch,id,metric)` / `reconstruct('<旧表名>')`） | 10-13（v1.7.4 · §E593 夜班 S1；**判据在 v1.7.6 改过一次** —— "文件名被源码点名"的表**一律留盘，注释里点名也算**，所以 `epsfull-tier-*`、`cont1200-*` 这 6 张又回到了盘上） |
