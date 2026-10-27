@@ -150,6 +150,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_WIDTH_LAND_W',
   'EPIRUS_WALL_BREAK_W',
   'EPIRUS_REFLECT_W',
+  'EPIRUS_GUARD_HIT_W',
   'EPIRUS_BEAD_WASTE_W'
 ];
 /* v1.5.187：**大雷连带收益权重**（`evo.js` 的 `BIGT_CHAIN_W`，DS 交接 §2b 的唯一待做）走 econ 族，
@@ -1464,6 +1465,25 @@ if (REFLECT_WANT > 0) {
     process.exit(7);
   }
   console.log('[reflect] 反射奖励已下达：' + JSON.stringify({ reflectW: gotRF }) + ' ⇒ 只给"我把伤害弹回去"的那一下付钱（按弹回量 /2，1 点起有梯度）');
+}
+/* ===== 17:5x（A 案 · §E816）：**打龟**奖励 `EPIRUS_GUARD_HIT_W`（默认关）=====
+ * 动机（§E816 的否证）：把龟放上训练桌反而让网络学成"自己也摆盾" ⇒ 问题不在分布，在**收益归属**：
+ *   自由混战里"打龟"的收益全桌共享 ⇒ 单席理性是不打。本项把它改成"**谁打谁拿**"：
+ *   只数 damage 事件 source===本席 且 to===X、**同一回合** X 的 action ∈ GUARD_FAMILY（只认 outcome ok、只认落地）。
+ * 纪律与 WALL_BREAK_W/REFLECT_W 逐字相同：读回消费点、不等就 exit 7；没开就一行不印。 */
+const GUARD_HIT_WANT = Number(process.env.EPIRUS_GUARD_HIT_W || 0);
+if (GUARD_HIT_WANT > 0) {
+  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_GUARD_HIT_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
+    process.exit(7);
+  }
+  T.setEconomyReward({ guardHitW: GUARD_HIT_WANT });
+  const gotGH = (T.economyReward() || {}).guardHitW;
+  if (Number(gotGH) !== GUARD_HIT_WANT) {
+    console.error('[train-3p] ⛔ EPIRUS_GUARD_HIT_W=' + GUARD_HIT_WANT + ' 读回 ' + JSON.stringify(gotGH) + ' ⇒ 没生效，退出（不许跑出以为开了的臂）');
+    process.exit(7);
+  }
+  console.log('[guard-hit] 打龟奖励已下达：' + JSON.stringify({ guardHitW: gotGH }) + ' ⇒ 只给"打在本回合正在摆防御的目标身上"的落地伤害付钱（按伤害量 /2）');
 }
 /* ===== 12:5x（千问 · PREREG §二十九）：**过期珠**惩罚 `EPIRUS_BEAD_WASTE_W`（默认关）=====
  * 病（§E807）：`BEAD_W` 撤回默认能把珠买到线内（87%→23%）却把 珍 0.38 卖到 0.045 —— 它买的是"量"不是"花法"。

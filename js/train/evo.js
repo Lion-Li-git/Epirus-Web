@@ -1796,6 +1796,13 @@ const WIDTH_LAND_STAT = { games: 0, max: 0, paid: 0, blk: 0, blkAttr: 0 };
    * 形状 `min(1, amt/2)`：与 `beadBonus`/`beadBoomBonus` 同尺度；反射一下 1~3 点，/2 才有梯度（同 WALL_BREAK 的 /4 理由）。 */
   let REFLECT_W = 0;
   const REFLECT_STAT = { games: 0, max: 0, paid: 0 };
+  /* v1.8.42（A 案 · §E816）：打到"**本回合正在摆防御的目标**"身上的**落地伤害**单独付钱（默认 0 ⇒ 逐位不变）。
+   * 动机（§E816 的否证）：自由混战里"打龟"的收益是**全桌共享**的 ⇒ 单席理性是不打（V5 甚至学成"自己也摆盾"）。
+   * 本条把收益改成"**谁打谁拿**"：只数 damage 事件里 source===本席、to===X，且**同一回合** X 的 action ∈ GUARD_FAMILY。
+   * 口径：只认 outcome==='ok' 的行动；只认**落地** damage（被挡/被弹都没有 damage 事件 ⇒ 天然排除）。
+   * 形状 min(1, amt/2)：与 beadBonus/reflectBonus 同尺度。 */
+  let GUARD_HIT_W = 0;
+  const GUARD_HIT_STAT = { games: 0, max: 0, paid: 0 };
   /* 12:5x（千问 · PREREG §二十九）：**过期珠**惩罚 `BEAD_WASTE_W`（默认 0 ⇒ 逐位不变）。
    * 病（§E807）：`BEAD_W` 撤回默认能把珠买到线内（87%→23%），代价是 珍 0.38→0.045 —— 它买的是**量**不是**花法**。
    * 本项只惩罚**浪费本身**：事件 `{type:'beadExpire', pid, kind, n}`（js/core/resolve.js:1302 本来就在发），
@@ -1982,7 +1989,7 @@ let WALL_GAMES = 3;
     if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;
     else if (o.divCatW != null) DIV_ROLE_W = Number(o.divCatW) || 0;
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
-    if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.widthLandW != null) WIDTH_LAND_W = Math.max(0, Number(o.widthLandW) || 0); if (o.wallBreakW != null) WALL_BREAK_W = Math.max(0, Number(o.wallBreakW) || 0); if (o.reflectW != null) REFLECT_W = Math.max(0, Number(o.reflectW) || 0); if (o.beadWasteW != null) BEAD_WASTE_W = Math.max(0, Number(o.beadWasteW) || 0); if (o.costlyW != null) COSTLY_W = Math.max(0, Number(o.costlyW)); if (o.bigtChainW != null) BIGT_CHAIN_W = Math.max(0, Number(o.bigtChainW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
+    if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.widthLandW != null) WIDTH_LAND_W = Math.max(0, Number(o.widthLandW) || 0); if (o.wallBreakW != null) WALL_BREAK_W = Math.max(0, Number(o.wallBreakW) || 0); if (o.reflectW != null) REFLECT_W = Math.max(0, Number(o.reflectW) || 0); if (o.guardHitW != null) GUARD_HIT_W = Math.max(0, Number(o.guardHitW) || 0); if (o.beadWasteW != null) BEAD_WASTE_W = Math.max(0, Number(o.beadWasteW) || 0); if (o.costlyW != null) COSTLY_W = Math.max(0, Number(o.costlyW)); if (o.bigtChainW != null) BIGT_CHAIN_W = Math.max(0, Number(o.bigtChainW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
     if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover; if (o.convRatio != null) CONV_RATIO = !!o.convRatio; if (o.convOffense != null) CONV_OFFENSE = !!o.convOffense;
     if (o.fitCal != null) FIT_CAL_EXCESS = !!(o.fitCal && String(o.fitCal) !== '0' && o.fitCal !== 0);
     /* v1.6.50（用户裁定 B）：把闸的广度折进适应度。两个键一起收口（只给 W 不给下界 ⇒ 用默认下界 3，与闸同线）。 */
@@ -2014,7 +2021,7 @@ let WALL_GAMES = 3;
     if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));
     if (o.reset) {
       ECO_T = null; ECO_C = null;
-      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0; BIGCARD_W = 0; BIGT_CHAIN_W = 0; WALL_BREAK_W = 0; REFLECT_W = 0; BEAD_WASTE_W = 0;
+      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0; BIGCARD_W = 0; BIGT_CHAIN_W = 0; WALL_BREAK_W = 0; REFLECT_W = 0; GUARD_HIT_W = 0; BEAD_WASTE_W = 0;
       /* qoder-research 0920：D77 的运行时往返会喂**每个键**的哨兵再 reset —— ringW/s4W 是后加的键，
        * 漏在这里会把 0.5 的哨兵泄漏给后续门（s4W 泄漏 = 后续 scoreMemberN 直接抛错）。
        * ⚠️ D109 第一次跑红还顺带抓出一个**既存泄漏**：`wallFilter` 的哨兵 true 从没被 reset 抹掉
@@ -2052,7 +2059,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, widthLandW: WIDTH_LAND_W, widthLandStat: { games: WIDTH_LAND_STAT.games, max: WIDTH_LAND_STAT.max, paid: WIDTH_LAND_STAT.paid, blk: WIDTH_LAND_STAT.blk, blkAttr: WIDTH_LAND_STAT.blkAttr }, wallBreakW: WALL_BREAK_W, wallBreakStat: { games: WALL_BREAK_STAT.games, max: WALL_BREAK_STAT.max, paid: WALL_BREAK_STAT.paid }, reflectW: REFLECT_W, reflectStat: { games: REFLECT_STAT.games, max: REFLECT_STAT.max, paid: REFLECT_STAT.paid }, beadWasteW: BEAD_WASTE_W, beadWasteStat: { games: BEAD_WASTE_STAT.games, max: BEAD_WASTE_STAT.max, paid: BEAD_WASTE_STAT.paid }, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, fitCal: FIT_CAL_EXCESS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
+      blockW: BLOCK_W, widthW: WIDTH_W, widthLandW: WIDTH_LAND_W, widthLandStat: { games: WIDTH_LAND_STAT.games, max: WIDTH_LAND_STAT.max, paid: WIDTH_LAND_STAT.paid, blk: WIDTH_LAND_STAT.blk, blkAttr: WIDTH_LAND_STAT.blkAttr }, wallBreakW: WALL_BREAK_W, wallBreakStat: { games: WALL_BREAK_STAT.games, max: WALL_BREAK_STAT.max, paid: WALL_BREAK_STAT.paid }, reflectW: REFLECT_W, reflectStat: { games: REFLECT_STAT.games, max: REFLECT_STAT.max, paid: REFLECT_STAT.paid }, guardHitW: GUARD_HIT_W, guardHitStat: { games: GUARD_HIT_STAT.games, max: GUARD_HIT_STAT.max, paid: GUARD_HIT_STAT.paid }, beadWasteW: BEAD_WASTE_W, beadWasteStat: { games: BEAD_WASTE_STAT.games, max: BEAD_WASTE_STAT.max, paid: BEAD_WASTE_STAT.paid }, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, fitCal: FIT_CAL_EXCESS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
       fitTailW: FIT_TAIL_W, fitTailQ: FIT_TAIL_Q,   // 09-26 §E49：ECON_REWARD_KEYS 里每个键都要"设得进、读得回"（D77 往返）
       /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
        * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
@@ -2211,7 +2218,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, beadBoomSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0, wallBreakHits = 0, wallBreakDmg = 0, reflectAmt = 0, beadExpired = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, beadBoomSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0, wallBreakHits = 0, wallBreakDmg = 0, reflectAmt = 0, guardHitAmt = 0, beadExpired = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     /* v1.8.29：失效成功 / 理想情况（激光眼破防且同回合别人打中）——两个计数一起攒，见 voidScan。 */
     let voidWins = 0, voidIdeal = 0;
@@ -2231,7 +2238,7 @@ let WALL_GAMES = 3;
      *   没被下达的兄弟也能当**对照组**读；全 0 时没有任何杠杆需要否证 ⇒ 直接不算、逐位不变、零成本。
      * 收益项（`pressBonus` 等，:1553~:1582）**仍各自按自己的 W 门控** ⇒ `fit` 一字不变。 */
     const DOSE_ON = PRESS_W > 0 || PIERCE_W > 0 || BEAD_W > 0 || BEAD_BOOM_W > 0 || TGT_W > 0 || CLEAR_W > 0 ||
-      BLOCK_W > 0 || WIDTH_W > 0 || WIDTH_LAND_W > 0 || WALL_BREAK_W > 0 || REFLECT_W > 0 || BEAD_WASTE_W > 0 || BIGCARD_W > 0 || COSTLY_W > 0 || BIGT_CHAIN_W > 0 || ringWeightAt(gen) > 0 ||
+      BLOCK_W > 0 || WIDTH_W > 0 || WIDTH_LAND_W > 0 || WALL_BREAK_W > 0 || REFLECT_W > 0 || GUARD_HIT_W > 0 || BEAD_WASTE_W > 0 || BIGCARD_W > 0 || COSTLY_W > 0 || BIGT_CHAIN_W > 0 || ringWeightAt(gen) > 0 ||
       /* v1.8.29：失效定价的两个 W 也必须进这一族 —— 漏了它，`gen≤125`（`ringWeightAt` 为 0）且其余杠杆全关时
        * 计数器根本不算 ⇒ 臂上读到"void 成功 0 次"与"这根杠杆没生效"同形（§E83 那条病）。 */
       VOID_W > 0 || VOID_IDEAL_W > 0;
@@ -2404,6 +2411,9 @@ let WALL_GAMES = 3;
       /* 11:5x（PREREG §二十六 条款 4）：只给**真反射出去**的那一下付钱（amt = 被弹回去的伤害）。 */
       const reflectBonus = REFLECT_W > 0 ? (REFLECT_W * Math.min(1, reflectAmt / 2)) : 0;
       if (REFLECT_W > 0) { REFLECT_STAT.games++; if (reflectAmt > REFLECT_STAT.max) REFLECT_STAT.max = reflectAmt; if (reflectBonus > 0) REFLECT_STAT.paid++; }
+      /* v1.8.42（A 案）：打在**正在摆防御的目标**身上的落地伤害（谁打谁拿）。 */
+      const guardHitBonus = GUARD_HIT_W > 0 ? (GUARD_HIT_W * Math.min(1, guardHitAmt / 2)) : 0;
+      if (GUARD_HIT_W > 0) { GUARD_HIT_STAT.games++; if (guardHitAmt > GUARD_HIT_STAT.max) GUARD_HIT_STAT.max = guardHitAmt; if (guardHitBonus > 0) GUARD_HIT_STAT.paid++; }
       /* 过期珠 = 纯损失：给负分（形状 min(1, 事件数/4)，与其它窄项同尺度）。 */
       const beadWastePenalty = BEAD_WASTE_W > 0 ? (BEAD_WASTE_W * Math.min(1, beadExpired / 4)) : 0;
       if (BEAD_WASTE_W > 0) { BEAD_WASTE_STAT.games++; if (beadExpired > BEAD_WASTE_STAT.max) BEAD_WASTE_STAT.max = beadExpired; if (beadWastePenalty > 0) BEAD_WASTE_STAT.paid++; }
@@ -2479,7 +2489,7 @@ let WALL_GAMES = 3;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + beadBoomBonus + tgtBonus + laserBonus + voidBonus + voidIdealBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + wallBreakBonus + reflectBonus - beadWastePenalty + bigBonus + costlyBonus + chainBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + beadBoomBonus + tgtBonus + laserBonus + voidBonus + voidIdealBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + wallBreakBonus + reflectBonus + guardHitBonus - beadWastePenalty + bigBonus + costlyBonus + chainBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -2508,6 +2518,7 @@ let WALL_GAMES = 3;
         /* v1.8.39：同一趟事件里另数「穿反弹卡落地」（DOSE 族：开了才扫）。 */
         if (DOSE_ON) wallBreakHits += countWallBreakHits(r.state.events, seat);
         if (DOSE_ON && REFLECT_W > 0) reflectAmt += countReflectAmt(r.state.events, seat);
+        if (DOSE_ON && GUARD_HIT_W > 0) guardHitAmt += countGuardHits(r.state.events, seat).amt;
         if (DOSE_ON && BEAD_WASTE_W > 0) beadExpired += countBeadExpiredEvents(r.state.events, seat);
         if (DOSE_ON) wallBreakDmg += wallBreakDamage(r.state.events, seat);
         /* v1.5.76（P1，用户实测"蓄能 100% 浪费"逼出来的）：**珠子闭环**奖励。 */
@@ -3347,6 +3358,31 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
     for (const e of (events || [])) { if (e.type === 'reflect' && e.to === seat) d += (e.amt || 0); }
     return d;
   }
+  /* 纯函数（A 案）：数"我打在**本回合正在摆防御的目标**身上的落地伤害"。
+   * 回合切法沿用 voidScan：同一个 pid 再次 action = 新回合；只认 outcome==='ok' 的行动。 */
+  function countGuardHits(events, seat) {
+    let cur = -1; let seen = {}; const rounds = [];
+    for (const e of (events || [])) {
+      if (e.type === 'action') {
+        if (cur < 0) cur = 0;
+        else if (seen[e.pid] !== undefined) { seen = {}; cur++; }
+        seen[e.pid] = true;
+        if (!rounds[cur]) rounds[cur] = { guard: {}, dmg: {} };
+        if (e.outcome === 'ok' && R.GUARD_FAMILY.indexOf(e.key) >= 0) rounds[cur].guard[e.pid] = true;
+      } else if (e.type === 'damage') {
+        if (cur < 0 || e.to == null || e.source !== seat) continue;
+        if (!rounds[cur]) rounds[cur] = { guard: {}, dmg: {} };
+        rounds[cur].dmg[e.to] = (rounds[cur].dmg[e.to] || 0) + (e.amt || 0);
+      }
+    }
+    let hits = 0, amt = 0;
+    for (const r of rounds) {
+      if (!r) continue;
+      for (const k in r.dmg) if (r.guard[k]) { hits++; amt += r.dmg[k]; }
+    }
+    return { hits: hits, amt: amt };
+  }
+  function guardHitReward() { return { w: GUARD_HIT_W, stat: { games: GUARD_HIT_STAT.games, max: GUARD_HIT_STAT.max, paid: GUARD_HIT_STAT.paid } }; }
   function countWallBreakHits(events, seat) {
     const wk = wallBreakKeyList();
     let n = 0;
@@ -3952,7 +3988,7 @@ function countVariety(events, seat) {
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
     setPressReward, pressReward, countPressRounds,
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
-    setWallBreakReward, wallBreakReward, countWallBreakHits, wallBreakDamage, wallBreakKeyList, reflectReward, countReflectAmt, beadWasteReward, countBeadExpiredEvents,
+    setWallBreakReward, wallBreakReward, countWallBreakHits, wallBreakDamage, wallBreakKeyList, reflectReward, countReflectAmt, guardHitReward, countGuardHits, beadWasteReward, countBeadExpiredEvents,
     setBeadReward, beadReward, countBeadSpent,
     /* v1.8.37 夜班续（§E763）：补贴局的珠种（枚举 setter，非法值响亮拒）+ 按珠种拆的珠奖励 setter。
      * `beadBoomW` 的值走 `economyReward()` 读回（D77 的往返契约只认那条路），这里不另开一个 getter。 */
