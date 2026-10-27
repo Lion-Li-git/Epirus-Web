@@ -147,7 +147,8 @@ const SELF_ENV_KEYS = [
                          //   ⇒ 与 TRAIN_MODE 同一条纪律：引擎没 setter / 读回不等于下达值就 exit 7；生效值进 `meta.recipe.h2p`
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
   'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W',
-  'EPIRUS_WIDTH_LAND_W'
+  'EPIRUS_WIDTH_LAND_W',
+  'EPIRUS_WALL_BREAK_W'
 ];
 /* v1.5.187：**大雷连带收益权重**（`evo.js` 的 `BIGT_CHAIN_W`，DS 交接 §2b 的唯一待做）走 econ 族，
  * 而它的 env 名按 D77 只许出现在 `server/econ-env.mjs` ⇒ 这里**不写字面量**，
@@ -1422,6 +1423,26 @@ if (WIDTH_LAND_WANT > 0) {
   }
   console.log('[width-land] 广度奖励改为**按落地**：' + JSON.stringify({ widthLandW: gotWL, floor: 3, target: 7 }) +
     '（形状与 widthW 同形，度量 = damage.via 里的真卡名）');
+}
+
+/* ===== v1.8.39（DS · 10-27 早 · 用户裁「做一下 A」）：**破反弹墙** `EPIRUS_WALL_BREAK_W`（默认关）=====
+ * 病（10-27 早四臂）：F 的 13 行只剩两行 —— 反弹墙 0.00/局 ‖ G5 51/35，而它们是同一件事：对不还手/摆架势的桌打不进去。
+ *   现有 PIERCE_W 早已被坦克打成常数（min(1,hits/2)），所以这里只给**穿反弹**的三张卡（激光剑/狙击/电磁炮）付钱。
+ * 纪律照 §N35/D174：下达后**读回消费点**、不等就 exit 7；没开就一行不印。 */
+const WALL_BREAK_WANT = Number(process.env.EPIRUS_WALL_BREAK_W || 0);
+if (WALL_BREAK_WANT > 0) {
+  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_WALL_BREAK_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
+    process.exit(7);
+  }
+  T.setEconomyReward({ wallBreakW: WALL_BREAK_WANT });
+  const gotWB = (T.economyReward() || {}).wallBreakW;
+  if (Number(gotWB) !== WALL_BREAK_WANT) {
+    console.error('[train-3p] ⛔ EPIRUS_WALL_BREAK_W=' + WALL_BREAK_WANT + ' 读回 ' + JSON.stringify(gotWB) + ' ⇒ 没生效，退出（不许跑出以为开了的臂）');
+    process.exit(7);
+  }
+  const wbk = (T.wallBreakReward && T.wallBreakReward().keys) || null;
+  console.log('[wall-break] 破反弹墙奖励已下达：' + JSON.stringify({ wallBreakW: gotWB, keys: wbk }) + ' ⇒ 只给穿反弹卡（激光剑/狙击枪/电磁炮）的落地付钱，坦克不算');
 }
 
 /* ===== §N6 修正（v1.5.150 · DS 09-22）：**2P 切片的对手必须是 2P 强参照，不能是多人池** =====
