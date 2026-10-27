@@ -1408,12 +1408,17 @@ t('D39 环奖励必须**可归因**（复核 §5-1：voided 不记施法者 ⇒ 
   X.resolveActions(sv);
   eq(vdOf(sv, 0).w, 1, '④ 小雷废掉非 ジ 的卡 ⇒ 同样给钱（用户："也给一样的奖励"）');
   eq(vdOf(sv, 0).i, 0, '④ 但废的不是防御 ⇒ 不吃理想那一档');
-  /* ⑤ 出厂必须两个权重都是 0 ⇒ 不开臂时 `fit` 逐字不变（与 D179 的"逐位不变"同一条规矩） */
-  eq(T.voidReward().w, 0, '⑤ VOID_W 出厂必须 0（默认关）');
-  eq(T.voidReward().idealW, 0, '⑤ VOID_IDEAL_W 出厂必须 0（默认关）');
-  eq(T.setVoidReward(-1), 0, '⑤ 负权重必须被拒（不许把 fit 做成减项）');
+  /* ⑤ 出厂**默认开**（用户 10-27 15:5x 裁定：「这玩意早就要开了，应该先开着再找激光眼」）——
+   *   奖励必须先于行为存在，否则偶然出现的激光眼拿不到梯度、又被训练磨掉。
+   *   ⚠ 与"关着就逐位不变"并不矛盾：**两档一起设 0** 才是对照臂，这条腿同时验它。 */
+  eq(T.voidReward().w, 0.05, '⑤ VOID_W 出厂必须开着（=0.05，用户 10-27 裁定）');
+  eq(T.voidReward().idealW, 0.10, '⑤ VOID_IDEAL_W 出厂必须开着（=0.10，基础价的 2× ⇒ 结构上更高）');
+  eq(T.setVoidReward(-1), 0.05, '⑤ 负权重必须被拒（保持原值，不许把 fit 做成减项）');
   eq(T.setVoidReward(0.2), 0.2, '⑤ setter 必须回显生效值（臂上要靠这行证明下达成功）');
   T.setVoidReward(0); T.setVoidIdealReward(0);
+  eq(T.voidReward().w, 0, '⑤ 两档设 0 ⇒ 必须真的关掉（对照臂/逐位不变的唯一开关）');
+  eq(T.voidReward().idealW, 0, '⑤ 同上（理想档）');
+  T.setVoidReward(0.05); T.setVoidIdealReward(0.10);
 });
 
 t('D40 训练信号：惩罚被动（只奖"打中了且这一回合没挨打"的回合）', function () {

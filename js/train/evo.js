@@ -3419,11 +3419,12 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
    * ⚠ 回合边界沿用 `countThreatHits` 的既有口径（**同一个 pid 再次 `action` = 新回合**）；连接必须**两趟**：
    *   破防与别人的那刀谁先落在流里不固定（按优先级结算），所以先攒齐整回合再判 —— 单趟边扫边判会漏掉
    *   "我先破防、后面那一刀才落地"这一半，而那正是用户点名的形状。
-   * ⚠ 权重**默认 0** ⇒ 不加项、逐位不变；env `EPIRUS_VOID_W` / `EPIRUS_VOID_IDEAL_W` 走
-   *   `server/econ-env.mjs` 单一来源 ⇒ 服务进程与 16 个 worker 同时生效。
+   * ⚠ **出厂默认 = `VOID_W 0.05` / `VOID_IDEAL_W 0.10`**（用户 10-27 15:5x：「这玩意早就要开了，应该先开着再找
+   *   激光眼，不然偶然出现的激光眼没有奖励就又训练没了」）⇒ 奖励必须**先于行为存在**，否则稀事件拿不到梯度。
+   *   env `EPIRUS_VOID_W` / `EPIRUS_VOID_IDEAL_W` 仍可覆盖；**两档都设 0 ⇒ 与 v1.8.40 逐位相同**（对照臂用）。
    *   （**不学 v1.8.23 的激光眼**：它在 train-server / train-worker / train-3p 各读一次 env，
    *    正是这个文件开头记载的"A/A 事故"形状的第 N 次复发。） */
-  let VOID_W = 0, VOID_IDEAL_W = 0;
+  let VOID_W = 0.05, VOID_IDEAL_W = 0.10;
   function setVoidReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) VOID_W = v; return VOID_W; }
   function setVoidIdealReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) VOID_IDEAL_W = v; return VOID_IDEAL_W; }
   function voidReward() { return { w: VOID_W, idealW: VOID_IDEAL_W }; }
