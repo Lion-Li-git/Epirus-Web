@@ -5206,11 +5206,19 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       st.sel = idPick; st.chain = 0; LCHKEY = '#reset'; draw(); var OFF1 = grab(); var OFF2 = (draw(), grab());
       st.chain = 1; draw(); var ON1 = grab();
       if (!OFF1 || !OFF2 || !ON1) { T('§E763 追溯链层几何腿', false, 'getImageData 被拒 ⇒ 量不到画布'); restore(); return; }
-      var nDiff = 0, nInk = 0, offShake = 0;
+      var nDiff = 0, nInk = 0, offShake = 0, nAny = 0;
       for (var p = 0; p < ON1.length; p += 4) {
         var samed = OFF1[p] === ON1[p] && OFF1[p + 1] === ON1[p + 1] && OFF1[p + 2] === ON1[p + 2] && OFF1[p + 3] === ON1[p + 3];
         if (OFF1[p] !== OFF2[p] || OFF1[p + 1] !== OFF2[p + 1] || OFF1[p + 2] !== OFF2[p + 2] || OFF1[p + 3] !== OFF2[p + 3]) offShake++;
         if (samed) continue;
+        nAny++;
+        var dR = ON1[p] - OFF1[p], dG = ON1[p + 1] - OFF1[p + 1], dB = ON1[p + 2] - OFF1[p + 2];
+        /* v1.8.42（DS 10-27 晚 · 3db 视图实测 49.97% 卡在 50% 门槛上）：**分母只收有量的墨** —— 任一通道 |Δ| >= 8。
+         *   病：分母原来是"任何 1 级变化"，把抗锯齿/深度混色的 1~3 级微差也算进去；分子却要求 dG > 12 ⇒ 比值被稀释。
+         *   3db 那格实测 10060/20130 = 49.97%，离门槛差 10 颗像素 ⇒ 这条腿变成"挑视图抽签"，而不是"这层画没画对色"。
+         *   ⚠ 判据一个字没动（链色仍须过半、差分仍须 > 500、OFF 仍须零抖）；改的只是分子分母从此用**同一个量级门槛**。
+         *   ⚠ 仍不是恒真腿：把链染成淡蓝或纯白，|Δ| 再大也不满足 dG 最强 ⇒ 当场红（§E784 三 真跑过两次）。 */
+        if (Math.max(Math.abs(dR), Math.abs(dG), Math.abs(dB)) < 8) continue;
         nDiff++;
         /* §E784 这一腿的"墨是链色"从**绝对取色**换成**差分方向**：链改成半透明之后，深色底上合成出来的墨
          *   只有原来那一档的几成（橙那版是 R88/G52/B40），原来那句"r 大于 150"会把真画出来的链读成"没画"
@@ -5221,13 +5229,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
          *   ⚠ 这也不是恒真腿：把链染成谱系图那支淡蓝或纯白，增量方向就不再满足 dG 最强 ⇒ 当场红
          *     （橙那版真跑过这两次染色：淡蓝 0 颗、纯白 10%，见日志 §E784 三；换色后本笔再跑一次）。
          *   注释里不许出现反引号：这一整段是包在模板字面量里烘出去的。 */
-        var dR = ON1[p] - OFF1[p], dG = ON1[p + 1] - OFF1[p + 1], dB = ON1[p + 2] - OFF1[p + 2];
+
         if (dG > 12 && dG > dR + 6 && dG > dB + 6) nInk++;
       }
       T('§E763 追溯链层跟着开关进出画布（几何腿：差分有墨 ‖ 墨是链色 ‖ 关掉不抖）',
         nDiff > 500 && nInk * 2 >= nDiff && offShake === 0,
-        '选中 ' + idPick + ' ‖ ON−OFF 差分 ' + nDiff + ' 颗（>500）‖ 其中链色 ' + nInk + ' 颗（' +
-        (nDiff ? (100 * nInk / nDiff).toFixed(0) : '-') + '%，要求 ≥50%）‖ OFF 连画两帧差 ' + offShake + ' 颗（要求 =0）');
+        '选中 ' + idPick + ' ‖ ON−OFF 差分 ' + nDiff + ' 颗（>500 的"有量"像素 ‖ 含 1~7 级微差共 ' + nAny + ' 颗）‖ 其中链色 ' + nInk + ' 颗（' +
+        (nDiff ? (100 * nInk / nDiff).toFixed(2) : '-') + '%，要求 ≥50%）‖ OFF 连画两帧差 ' + offShake + ' 颗（要求 =0）');
       /* ② 标签腿：档位回到"历代上槽 + 池"，整条链都要在 labelSet 里。
        *    ⚑ 这里必须自己调 ensureChain()，不许依赖"刚才那次 draw 顺带算好了 LCH"——
        *      变异 MUT-1（把 drawChain 改成整层空转、连 ensureChain 都不走）时这一腿是直接抛 null 的，

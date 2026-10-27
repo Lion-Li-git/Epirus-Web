@@ -2021,7 +2021,7 @@ let WALL_GAMES = 3;
     if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));
     if (o.reset) {
       ECO_T = null; ECO_C = null;
-      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0; BIGCARD_W = 0; BIGT_CHAIN_W = 0; WALL_BREAK_W = 0; REFLECT_W = 0; GUARD_HIT_W = 0; BEAD_WASTE_W = 0;
+      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0; WIDTH_LAND_W = 0; BIGCARD_W = 0; BIGT_CHAIN_W = 0; WALL_BREAK_W = 0;   /* v1.8.42（DS · 10-27 晚）：WIDTH_LAND_W 是 train-selftest ① 抓出来的漏网（reset 后 0.5 泄漏） */ REFLECT_W = 0; GUARD_HIT_W = 0; BEAD_WASTE_W = 0;
       /* qoder-research 0920：D77 的运行时往返会喂**每个键**的哨兵再 reset —— ringW/s4W 是后加的键，
        * 漏在这里会把 0.5 的哨兵泄漏给后续门（s4W 泄漏 = 后续 scoreMemberN 直接抛错）。
        * ⚠️ D109 第一次跑红还顺带抓出一个**既存泄漏**：`wallFilter` 的哨兵 true 从没被 reset 抹掉
