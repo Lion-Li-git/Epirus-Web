@@ -23,17 +23,11 @@ import { existsSync, readFileSync, readdirSync, statSync, mkdtempSync, mkdirSync
 import { makeCtx, NP_GATE_FILES } from './gates/_ctx.mjs';
 import * as PART0 from './gates/engine-rules.mjs';
 import * as PART1 from './gates/engine-fuzz.mjs';
-import * as PART2 from './gates/train-evo.mjs';
-import * as PART3 from './gates/train-chooser.mjs';
-import * as PART4 from './gates/train-feature.mjs';
-import * as PART5 from './gates/train-env.mjs';
-/* §E659（10-20 夜班 #51）：原 `train-runner`（31 条 ‖ CI 上一个部分顶住整趟 97%）按**语义族**拆成四个部分
- *   —— 用户 23:1x 口径「拆门禁要尽量保证其基本逻辑，而不是单纯为了快而拆」⇒ 不是按耗时对半切。
- *   族表在 docs/research/archive/2026-10-20-night-d15-gates/families.json，搬门体由 tools/gate-resplit.mjs 做（带四条自证）。 */
-import * as PART6 from './gates/train-table.mjs';
-import * as PART17 from './gates/train-pick.mjs';
-import * as PART18 from './gates/train-econ.mjs';
-import * as PART19 from './gates/train-breadth.mjs';
+/* ===== 2026-10-27（用户裁定）：**训练组整组移出产品门禁** =====
+ * 用户原话：「所有训练测的门禁全部删掉，训练的问题要在训练时候搞完而不是出现在产品门禁里」。
+ * ⇒ `train-evo / train-chooser / train-feature / train-env / train-table / train-pick / train-econ / train-breadth`
+ *   八个部分（108 条）连同门体文件一起删；训练侧的口径由**开臂时的读数**判，不再由产品门禁代判。
+ *   历史上那次（10-25）只删了 D135/D165 两条腿，这次按用户的口径扩到整组。 */
 import * as PART7 from './gates/ship-feas.mjs';
 import * as PART8 from './gates/ship-pool.mjs';
 import * as PART9 from './gates/ship-promote.mjs';
@@ -52,14 +46,6 @@ const { cacheStats } = makeCtx();   /* runner 侧只借这一件：收尾的缓�
 const PARTS = [
   { part: 'engine-rules', group: 'engine', file: 'tools/gates/engine-rules.mjs', mod: PART0 },   /* 62 条 */
   { part: 'engine-fuzz', group: 'engine', file: 'tools/gates/engine-fuzz.mjs', mod: PART1 },   /* 13 条 */
-  { part: 'train-evo', group: 'train', file: 'tools/gates/train-evo.mjs', mod: PART2 },   /* 65 条 */
-  { part: 'train-chooser', group: 'train', file: 'tools/gates/train-chooser.mjs', mod: PART3 },   /* 2 条 */
-  { part: 'train-feature', group: 'train', file: 'tools/gates/train-feature.mjs', mod: PART4 },   /* 4 条 */
-  { part: 'train-env', group: 'train', file: 'tools/gates/train-env.mjs', mod: PART5 },   /* 4 条 */
-  { part: 'train-table', group: 'train', file: 'tools/gates/train-table.mjs', mod: PART6 },   /* 10 条：训练桌与对手（原 train-runner 的 C 族） */
-  { part: 'train-pick', group: 'train', file: 'tools/gates/train-pick.mjs', mod: PART17 },   /* 6 条：当选键与 veto（A 族） */
-  { part: 'train-econ', group: 'train', file: 'tools/gates/train-econ.mjs', mod: PART18 },   /* 11 条：econ 下达 · 起点 · 缓存（D 族） */
-  { part: 'train-breadth', group: 'train', file: 'tools/gates/train-breadth.mjs', mod: PART19 },   /* 4 条：广度与兑现（B 族） */
   { part: 'ship-feas', group: 'ship', file: 'tools/gates/ship-feas.mjs', mod: PART7 },   /* 14 条 */
   { part: 'ship-pool', group: 'ship', file: 'tools/gates/ship-pool.mjs', mod: PART8 },   /* 1 条 */
   { part: 'ship-promote', group: 'ship', file: 'tools/gates/ship-promote.mjs', mod: PART9 },   /* 21 条 */
@@ -72,7 +58,6 @@ const PARTS = [
 ];
 const PART_GROUPS = {
   engine: ['engine-rules', 'engine-fuzz'],
-  train: ['train-evo', 'train-chooser', 'train-feature', 'train-env', 'train-table', 'train-pick', 'train-econ', 'train-breadth'],
   ship: ['ship-feas', 'ship-pool', 'ship-promote', 'ship-artifact'],
   probe: ['probe-instruments', 'probe-libs'],
   meta: ['meta-repo', 'meta-lint'],
@@ -154,27 +139,6 @@ const MAP_RULES = [
   ['path', /^js\/core\//, 'engine-rules', 'js/core/** 引擎语义'],
   ['path', /^tests\//, 'engine-rules', 'tests/** 引擎用例'],
   ['path', /^(rules|state|resolve|play)\.js$/, 'engine-rules', '裸名核心引擎件'],
-  /* §E659 语义族规则**必须排在所有 train 组的路径规则之前**：一条门常常同时读 `js/train/evo.js` 与
-   *   `tools/train-3p.mjs`，按路径分根本分不开（那会把同一族拆散、把不同族混在一起）⇒ 归属按**门号名单**判。
-   *   ⚠ 往这四个部分里**新加一条门**必须同时把它加进下面对应的那串门号，否则它落到下面的路径规则上 ⇒
-   *   `tools/gate-parts-check.mjs` 的判据④（文件成员数 ≠ 归属条数）当场红，不会静默。 */
-  ['sig', /^t\('D(?:221|104|114|176|213|165)\b/, 'train-pick', 'A 族：当选键与 veto'],
-  ['sig', /^t\('D(?:127|128|130|159)\b/, 'train-breadth', 'B 族：广度与兑现'],
-  ['sig', /^t\('D(?:220|223|7|11|12|72|89|13|135|136)\b/, 'train-table', 'C 族：训练桌与对手'],
-  ['sig', /^t\('D(?:185|184|180|175|174|120|144|157|229|222|119)\b/, 'train-econ', 'D 族：econ 下达 · 起点 · 缓存'],
-  ['path', /^js\/train\/evo\.js$/, 'train-evo', 'js/train/evo.js'],
-  ['path', /^(evo|trainer)\.js$/, 'train-evo', '裸名 evo / trainer'],
-  ['path', /^js\/train\/policy\.js$/, 'train-feature', 'js/train/policy.js'],
-  ['path', /^policy\.js$/, 'train-feature', '裸名 policy'],
-  ['path', /^js\/train\/bots\.js$/, 'train-chooser', 'js/train/bots.js'],
-  ['path', /^bots\.js$/, 'train-chooser', '裸名 bots'],
-  ['path', /^js\/train\//, 'train-table', 'js/train/** 其余（原 train-runner 的路径规则 ⇒ 拆族后归到训练桌族，新门要靠上面的门号名单登记）'],
-  ['path', /^server\/(train-env|econ-env|knob-guard|wall-cap|fight-env)\.mjs$/, 'train-env', 'server 旋钮表'],
-  ['path', /^(train-env|econ-env|knob-guard|wall-cap|fight-env)\.mjs$/, 'train-env', '裸名旋钮表'],
-  ['path', /^server\/(train-server|train-worker|paralleltrain)\.mjs$/, 'train-table', 'server 训练跑器（原 train-runner 的路径规则 ⇒ 拆族后归到训练桌族，新门要靠上面的门号名单登记）'],
-  ['path', /^(train-server|train-worker|paralleltrain)\.mjs$/, 'train-table', '裸名训练跑器（原 train-runner 的路径规则 ⇒ 拆族后归到训练桌族，新门要靠上面的门号名单登记）'],
-  ['path', /^tools\/(train-3p|train-best|train-fast|eval-5p|pick-5p|ring2-run|diag|style-exam)\.mjs$/, 'train-table', 'tools 训练入口（原 train-runner 的路径规则 ⇒ 拆族后归到训练桌族，新门要靠上面的门号名单登记）'],
-  ['path', /^(train-3p|train-best|train-fast|eval-5p|pick-5p|ring2-run|diag|style-exam)\.mjs$/, 'train-table', '裸名训练入口（原 train-runner 的路径规则 ⇒ 拆族后归到训练桌族，新门要靠上面的门号名单登记）'],
   ['path', /^champion-map\/feas/, 'ship-feas', 'champion-map/feas*'],
   ['path', /^champion-map\/ruler-/, 'ship-feas', 'champion-map/ruler-*'],
   ['path', /^tools\/champ-audit\.mjs$/, 'ship-feas', 'tools/champ-audit.mjs'],
@@ -272,14 +236,13 @@ let __skipped = 0;
 const GRP = {
   meta: 'REPRO L1 L2 L3 L7 L6 L5 D218 D8 D82 D189 D191 D194 D205 D206 D230',   // 仓库纪律：只读源码/CHANGELOG/README/门号
   ui: 'D37 D38 D28 D70 D131 D111 D166 D236',                                    // 页面与前端契约
-  ship: 'D219 D55 D16 D35 D27 D49 D60 D61 D62 D67 D73 D78 D79 D103 D105 D116 D118 D124 D125 D141 D153 D155 D163 D107 D110 D121 D145 D146 D147 D168 D169 D170 D190 D197 D210 D228 D234',   // 出厂面：可行性闸 / 当选 / promote / 线上槽 / 池装配契约
-  train: 'REPRO2 L4 D217 D220 D221 D222 D223 D224 D225 D226 D227 D229 D5 D7 D9 D10 D11 D12 D13 D15 D56 D58 D59 D17 D24 D25 D26 D33b D33 D36 D39 D40 D41 D42 D43 D44 D45 D47 D48 D65 D66 D68 D72 D74 D75 D76 D77 D80 D81 D84 D85 D86 D87 D89 D90 D104 D97 D99 D100 D101 D108 D109 D112 D113 D114 D119 D122 D123 D127 D128 D129 D130 D132 D134 D135 D136 D139 D140 D115 D162 D120 D143 D144 D157 D159 D167 D172 D173 D174 D175 D176 D179 D181 D180 D182 D184 D185 D213 D164 D165 D187 D188 D201 D204 D231 D232 D237 D238',   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
+  ship: 'D219 D55 D16 D35 D27 D49 D60 D61 D62 D67 D73 D78 D79 D103 D105 D116 D118 D124 D125 D141 D153 D155 D163 D107 D110 D121 D145 D146 D147 D168 D169 D170 D190 D197 D210 D228 D234',   // 出厂面：可行性闸 / 当选 / promote / 线上槽 / 池装配契约   // 训练侧：evo.js / chooser / 特征 / env 旋钮 / 并发跑器
   probe: 'D34 D64 D83 D88 D137 D138 D148 D149 D150 D151 D152 D154 D160 D161 D106 D158 D177 D178 D183 D186 D192 D193 D195 D196 D198 D200 D199 D212 D214 D202 D203 D207 D208 D209 D211 D216 D233',   // 研究量具自身的牙
   engine: 'N1 N2 目标：attemptAction N3 N3b N10 N10b N10c N8 N14 N14b N15 N16 N17 N18 N19 N4 N4b N4c N12 N12b N6 N6b 目标反锁：上回合与某对手互为目标而相抵 目标选择：能一击必杀先杀；否则打血量最高的领先者 fuzz：3/4/5 autoGame N20a N20b N20c N20d N20e N21 N22 N22b N22c N23 D1 D2 D3 D4 D6 D51 D52 D53 D54 D57 D18 D19 D20 D21 D22 D14 D23 D29 D30 D31 D46 D50 D63 D91 D102 D92 D93 D94 D95 D96 D98 D71 D117 D126 D142',   // 引擎与规则语义（改这里 ⇒ 只能全跑）
 };
 /* 累计依赖：跑一个组 = 跑它自己 + 它所依赖的更浅的组。engine 是"全部"。 */
-const CUM = { meta: ['meta'], ship: ['ship', 'meta'], ui: ['ui', 'train', 'ship', 'meta'],
-  train: ['train', 'ship', 'meta'], probe: ['probe', 'train', 'ship', 'meta'], engine: null };
+const CUM = { meta: ['meta'], ship: ['ship', 'meta'], ui: ['ui', 'ship', 'meta'],
+  probe: ['probe', 'ship', 'meta'], engine: null };
 const KEY2G = {}; const __CLASH = [];
 for (const g in GRP) for (const k of GRP[g].split(' ')) {
   if (KEY2G[k] && KEY2G[k] !== g) __CLASH.push(k + '（' + KEY2G[k] + ' / ' + g + '）');

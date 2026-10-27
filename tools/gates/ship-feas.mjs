@@ -682,7 +682,7 @@ t('D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 b
   ok(firstSpawn > 0 && pinAt < firstSpawn, '⑧ 包装必须定义在**第一处 spawn 之前**（写在后面 = 前面那几处已经按 4 粒跑完了）');
   ok(npCode.indexOf('function spawnSync(') < firstSpawn, '⑧ 包装本体要在第一处 spawn 之前（否则那些调用拿到的是原始 import）');
   const nSpawn = (npCode.match(/spawnSync\(process\.execPath, \['tools\/train-3p\.mjs'/g) || []).length;
-  ok(nSpawn >= 20, '⑧ 本文件里 `spawn train-3p` 的处数（实测 ' + nSpawn + '）——这条是给"处数"那句注释兜底的：'
+  ok(nSpawn >= 5, '⑧ 训练组 108 条删除后（2026-10-27）本套只剩这几处 `spawn train-3p`（实测 ' + nSpawn + '）——这条是给"处数"那句注释兜底的：'
     + '我一度以为是 5 处、实为 28 处，靠单点改动去提速会漏掉大半 ⇒ 有人加腿/删腿时这里要响，别让人凭印象写注释');
   /* 包装"显式给了就尊重"这条也得有牙，否则 ⑦ 会被静默压回 1 粒、而 ⑦ 看起来还是绿的 */
   ok(/env\.EPIRUS_SEL_EVAL_SEEDS === undefined/.test(npCode), '⑧ 包装必须**只补缺省**（腿自己写了粒数就得听腿的，不然 ⑦ 永远测不到 3 粒那一档）');

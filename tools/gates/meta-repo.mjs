@@ -422,7 +422,7 @@ t('D205 门号纪律（DS 清单 B8 · 09-30 夜班）：D 号不许撞车，且
   const gateIds = [...own.matchAll(/^t\('([A-Za-z]+[0-9]+[a-z]?)/gm)].map(m => m[1]);
   const dupOf = function (list) { const c = {}; for (const x of list) c[x] = (c[x] || 0) + 1; return Object.keys(c).filter(k => c[k] > 1); };
   const dOnly = gateIds.filter(x => /^D[0-9]/.test(x));
-  ok(dOnly.length >= 150, '① 反装饰守卫：本文件应扫到 ≥150 道 D 类门（实测 ' + dOnly.length + '）⇒ 抽取式一旦被改空，这条要响亮失败，不许变成"永远通过');
+  ok(dOnly.length >= 90, '① 反装饰守卫（2026-10-27 训练组 108 条删除后重定下限）：本文件应扫到 ≥90 道 D 类门（实测 ' + dOnly.length + '）⇒ 抽取式一旦被改空，这条要响亮失败，不许变成"永远通过');
   ok(dupOf(dOnly).length === 0, '② D 号撞车：' + dupOf(dOnly).join(' ') + ' ⇒ 撞号的那道会被"已插入"判据静默吞掉，记录里却写着有这道门');
   ok(dupOf(['D204', 'D204', 'D205']).length === 1, '③ 合成正对照：判据函数对明知重复的输入必须响（没响 ⇒ 上面那条是装饰）');
   /* ④ 改判（§E443，用户 10-08 裁：「不要为了过门禁而过，现在的版本是好的，你可以反思一下红的门禁是不是写的有什么问题」）
@@ -443,7 +443,7 @@ t('D205 门号纪律（DS 清单 B8 · 09-30 夜班）：D 号不许撞车，且
   ok(ghost.length === 0, '⑤ 记账说门在、门不在：最新一版提到 ' + claims.length + ' 道门' +
     (claims.length ? '（' + claims.join(' / ') + '）' : '（本版一个门号都没提 ⇒ ⑤ 无可判，按上面 ④ 的说明这是**允许**的）') +
     (ghost.length ? '，其中 ' + ghost.join(' / ') + ' 在 np-test 里**没有注册**' : ''));
-  ok(claimOf('新增门 D99999 与 D204').filter(c => !idSet.has(c)).join() === 'D99999',
+  ok(claimOf('新增门 D99999 与 D205').filter(c => !idSet.has(c)).join() === 'D99999',
     '⑥ 合成正对照：给判据一段"声称有 D99999"的文本，它必须把 D99999 抓出来（抓不到 ⇒ ⑤ 是假的）');
 });
 

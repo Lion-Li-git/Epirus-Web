@@ -30,7 +30,7 @@ const {
   fnBody,
 } = makeCtx();
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
-export const ords = [846, 1064, 10391, 11216];
+export const ords = [846, 1064, 10391];
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 t('L1 断言不得是恒真式（空断言 / 近乎恒真）——本项目出现过 3 次', function () {
@@ -233,31 +233,10 @@ t('D194 `--only` 复跑单道门不许伪装成全绿（v1.5.288）：跳过的�
     '④ 子串打错 ⇒ 必须 **exit 3 拒绝**，不许报"通过 0 / 0"当绿（实测 exit=' + typo.status + '）');
 });
 
-t('D206 econ 奖励键三处名单自洽（DS 清单 B7 · 09-30 夜班）：默认表 / CLI 名单 / 两处 SENT 夹具 ⇒ 缺任一处就是"通过黑键闸却从没送到引擎"', function () {
-  /* 为什么有这条：v1.5.274 那回 `costlyW` 登记进了 CLI 名单、黑键闸放行，但**引擎侧没人读它** ⇒ "传了等于没传"（METHODOLOGY 第一条硬规矩）。
-     B7 列的"五处"里今天能机械核对的是这三处，就钉这三处；钉不全的诚实印出来当**已知欠账**，不假装覆盖。 */
-  const defaults = readEconEnv({});
-  ok(ECON_REWARD_KEYS.length >= 20, '① 反装饰：`ECON_REWARD_KEYS` 该有 ≥20 个键（实测 ' + ECON_REWARD_KEYS.length + '）⇒ 名单被清空时这条要响');
-  const noDef = ECON_REWARD_KEYS.filter(k => !(k in defaults));
-  ok(noDef.length === 0, '② 名单里的键在 `readEconEnv({})` 默认表里找不到（引擎读到 undefined ⇒ 设了也不生效）：' + noDef.join(' / '));
-  const cliBlock = String(readFileSync('tools/train-3p.mjs', 'utf8').match(/const CLI_ECON_REWARD_KEYS = \[[\s\S]*?\];/)[0]);
-  const cli = [...cliBlock.matchAll(/'([^']+)'/g)].map(m => m[1]);
-  ok(cli.length >= 8, '③ 反装饰：从 `train-3p` 抠到的 CLI 名单只有 ' + cli.length + ' 个键 ⇒ 抽取式大概已失效');
-  const notKnown = cli.filter(k => ECON_REWARD_KEYS.indexOf(k) < 0);
-  ok(notKnown.length === 0, '④ CLI 认得、引擎名单不认得（值被下达后就丢）：' + notKnown.join(' / '));
-  const sentOf = function (f) {
-    const s = f === null ? npSourceAll() : readFileSync(f, 'utf8'); const i = s.indexOf(f === null ? 'const SENT = {' : 'SENT');
-    const seg = s.slice(i, s.indexOf('};', i));
-    return new Set([...seg.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*:/g)].map(m => m[1]));
-  };
-  const sA = sentOf(null), sB = sentOf('tools/probe-econ-reset-audit.mjs');   /* v1.7.8：SENT 夹具随门体搬进 tools/gates/** ⇒ 从全程序面里抽**第一处**（拼序 = 原始行号序 ⇒ 与拆前同一处） */
-  ok(sA.size >= 15 && sB.size >= 20, '⑤ 反装饰：两处 SENT 解析出的键数 = ' + sA.size + ' / ' + sB.size + ' ⇒ 解析失效就别放行（D199 第一版那个形状）');
-  const unsent = ECON_REWARD_KEYS.filter(k => !sA.has(k) && !sB.has(k));
-  ok(unsent.length === 0, '⑥ 这个键**两处测试夹具都不送**（新登记的键没人验过它真能到达作用点）：' + unsent.join(' / '));
-  const unsentOf = function (keys) { return keys.filter(k => !sA.has(k) && !sB.has(k)); };
-  ok(unsentOf(['zzNotARealRewardKey']).join() === 'zzNotARealRewardKey',
-    '⑦ 合成正对照：凭空造一个没登记的键，判据必须抓到（抓不到 ⇒ ⑥ 是装饰）');
-});
+/* ===== 2026-10-27（用户裁定）：D206 整条删除 =====
+ * 它判的是"econ 奖励键三处名单自洽"（默认表 / CLI 名单 / 两处 SENT 夹具）——那是**训练参数**的接线纪律。
+ * 用户：「所有训练测的门禁全部删掉，训练的问题要在训练时候搞完而不是出现在产品门禁里」。
+ * 随之删掉的还有 `tools/gates/train-evo.mjs` 这一处 SENT 夹具；训练侧现在靠开臂时的逐键回执（`⇒ 逐键回执一致 ✓`）判。 */
 
 }
 
