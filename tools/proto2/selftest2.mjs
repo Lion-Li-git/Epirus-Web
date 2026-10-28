@@ -12,6 +12,7 @@
  */
 import { sandbox, loadChamp } from '../audit-lib.mjs';
 import { install, layout, paramCount, make, verifyWired } from './arch2.mjs';
+import { encode as obs3Encode } from './obs3.mjs';
 
 const W = sandbox();
 const P = W.EpirusPolicy, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
@@ -301,6 +302,34 @@ const O3 = await import('./obs3.mjs');
   const mutated = beadC.filter((c) => !Number.isFinite(P.value(st15, 0, c.key, REF_V7, c.bead || null, c))).length;
   ok(!!REF_V7 && dropped === 0 && beadC.length === 2 && mutated === beadC.length,
     'T15 标签面==比赛面：候选 ' + c15.length + ' 枚 ‖ 正确调用下被静默丢掉 ' + dropped + ' 枚 ‖ 蓄能珠候选在场 ' + beadC.length + '/2 ‖ 变异（bead 塞形状位）变 NaN ' + mutated + '/' + beadC.length + ' ⇒ 两面同形且这条腿有牙');
+}
+
+{
+  /* T16（10-29 05:4x · 第十七段那格"并列集合恒等于 3"欠下的腿）：**"死维度"有两种，旧闸只看得见一种**。
+   *   段 B 的死维闸查的是"每一维在不在动"；这一条查的是"**两枚候选的特征是否逐维全等**"——
+   *   后者是**构造性天花板**：v7 那 22 维 `actionFeatures` 把 `guard≡reflect≡bagua`、`shift≡jinshield≡proto`、
+   *   `transfer≡taunt`、`mine≡purify` 压成同格 ⇒ 任何只吃这一面的头**根本分不开它们**，与训练配方无关
+   *   （10-29 实测：S1 臂的并列集合 2.98 枚 ‖ 随机起点 3.00 枚 ⇒ 训练前后同一个数，就是这个天花板在说话）。
+   *   判据形状 = **两条互相咬**：① obs3 必须做到 **30 键 → 30 格（0 撞车）**；
+   *   ② 且**严格优于**同一局面上 v7 那面的格数 ⇒ 谁把 obs3 的身份段弄丢，格数立刻掉到 ≤24，这条当场红（不用另做变异样本）。
+   *   ⚠ 这一条不判"谁更强"，只判"输入面读不读得到"——分辨率是结构承诺，不是经验结论。 */
+  const st16 = mkState(5);
+  const keys16 = R.skills.map((s) => s.key);
+  const clsOf = (f) => {
+    const g = {};
+    for (const k of keys16) {
+      const v = f(k).map((x) => Number(x).toFixed(4)).join(',');
+      (g[v] || (g[v] = [])).push(k);
+    }
+    const groups = Object.values(g).filter((v) => v.length > 1);
+    return { n: Object.keys(g).length, groups };
+  };
+  const a16 = clsOf((k) => Array.from(P.actionFeatures(st16, 0, k, { key: k, target: null, target2: null, bead: null })));
+  const b16 = clsOf((k) => Array.from(obs3Encode(W, st16, 0, { key: k, target: null, target2: null, bead: null })));
+  ok(b16.n === keys16.length && b16.n > a16.n,
+    'T16 输入面分辨率（跨候选撞车）‖ v7 那 22 维：' + keys16.length + ' 键 → **' + a16.n + ' 格**（撞车 ' + a16.groups.length + ' 组：'
+    + a16.groups.map((v) => v.join('≡')).join(' ‖ ') + '）‖ obs3 那 ' + obs3Encode(W, st16, 0, { key: keys16[0], target: null, target2: null, bead: null }).length
+    + ' 维：' + keys16.length + ' 键 → **' + b16.n + ' 格**（撞车 ' + b16.groups.length + ' 组）⇒ S1o 的分辨率承诺成立且严格优于 S1 那面');
 }
 
 console.log(fails.length ? '\n⛔ 自证未过 ' + fails.length + ' 条 ⇒ 结构不进下一环' : '\n⇒ ' + done + ' 条自证全过：2.0 原型可以进训练环');
