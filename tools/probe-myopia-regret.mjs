@@ -31,13 +31,14 @@
  * 只读 `js/**`，不改引擎、不加门、不动冠军槽。
  */
 import { writeFileSync } from 'node:fs';
+import { encode as obs2Encode, MANIFEST as OBS2_MANIFEST, dims as obs2Dims } from './proto2/obs2.mjs';
 import { sandbox, mulberry32, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 import { poolFromSpecs } from './regime-panel.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'dumpsx', 'pack', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'dumpsx', 'dumpobs', 'pack', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -148,6 +149,8 @@ function settleVec(st, pid, cand, salt) {
  *   ⇒ 逐流数组留着是为了算**教师自己的分半一致率**（= 可学性的天花板；没有它我会把"教师噪声"误读成"脸不行"）。
  * ⚠ 只读引擎、不改任何出厂路径；默认关（不带旗标 ⇒ 一行都不写）。 */
 const DUMPCOVER = arg('dumpcover', '');
+const DUMPOBS = arg('dumpobs', '');   /* 2026-10-28 DS：2.0 观测集（obs2.mjs）的逐候选 dump */
+const OBSROWS = [];
 const CROWS = [];
 const ROWS = [];
 
@@ -351,6 +354,16 @@ function runArm(arm, selfCheck) {
                *   两边挑到同一手的比例 = 这份标签到底把"哪手更好"定死了没有）。只加字段，默认分析器不读 ⇒ 旧读数逐字不变。 */
               winS: sr[i].win,
               x: xs.concat(P.actionFeatures(state, pid, pool[i].c.key, pool[i].c)).map(v => Math.round(v * 1e4) / 1e4) }));
+          }
+        }
+        if (DUMPOBS && !selfCheck) {
+          for (let i = 0; i < pool.length; i++) {
+            const xo = obs2Encode(W, state, pid, pool[i].c);
+            OBSROWS.push(JSON.stringify({ seed: SEED, arm: arm.key, env: env.name, g, n, round: state.round,
+              pk: env.name + '#' + g + '#' + n, i, key: pool[i].c.key,
+              target: pool[i].c.target == null ? null : pool[i].c.target,
+              net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop,
+              x: xo.map(v => Math.round(v * 1e4) / 1e4) }));
           }
         }
         if (DUMPSX && !selfCheck) {
@@ -738,6 +751,10 @@ console.log('· ②递交的动作被引擎记进当回合动作栏（`state.act
   + (chk.applied === chk.nApplied ? ' ✔' : ' ⇒ ⛔ 有 ' + (chk.nApplied - chk.applied) + ' 次覆盖没被接受，oracle 那手可能根本没打出来'));
 console.log('· ③候选数均值 ' + (rows[0].candSum / Math.max(1, rows[0].decisions)).toFixed(1) + '、采样 ' + rows.reduce((p, q) => p + q.decisions, 0) + ' 个'
   + (rows[0].candSum / Math.max(1, rows[0].decisions) > 1.5 ? ' ✔（有选择余地）' : ' ⇒ ⛔ 没有余地，regret 无从谈起'));
+if (DUMPOBS) {
+  writeFileSync(DUMPOBS, OBSROWS.join('\n') + '\n');
+  console.log('· [obs2] 导出 **' + OBSROWS.length + ' 行**（决策 × 候选）到 `' + DUMPOBS + '` ‖ 维 ' + obs2Dims());
+}
 if (DUMP) {
   writeFileSync(DUMP, ROWS.join('\n') + '\n');
   console.log('· 导出 **' + ROWS.length + ' 行**（决策 × 候选）到 `' + DUMP + '` ‖ 每行 x 长度 ' + (ROWS.length ? JSON.parse(ROWS[0]).x.length : 0));
