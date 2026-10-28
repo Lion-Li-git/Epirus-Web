@@ -326,10 +326,48 @@ const O3 = await import('./obs3.mjs');
   };
   const a16 = clsOf((k) => Array.from(P.actionFeatures(st16, 0, k, { key: k, target: null, target2: null, bead: null })));
   const b16 = clsOf((k) => Array.from(obs3Encode(W, st16, 0, { key: k, target: null, target2: null, bead: null })));
-  ok(b16.n === keys16.length && b16.n > a16.n,
-    'T16 输入面分辨率（跨候选撞车）‖ v7 那 22 维：' + keys16.length + ' 键 → **' + a16.n + ' 格**（撞车 ' + a16.groups.length + ' 组：'
-    + a16.groups.map((v) => v.join('≡')).join(' ‖ ') + '）‖ obs3 那 ' + obs3Encode(W, st16, 0, { key: keys16[0], target: null, target2: null, bead: null }).length
-    + ' 维：' + keys16.length + ' 键 → **' + b16.n + ' 格**（撞车 ' + b16.groups.length + ' 组）⇒ S1o 的分辨率承诺成立且严格优于 S1 那面');
+  /* ③ **第二目标（`target2`）那一格的可见性**（10-29 06:0x 实测进来的，原件 `scratch/target-resolution.mjs`）：
+   *    S1 的候选侧只拼 `c.target` 那一段席位嵌入（`arch2.mjs:211`），**从不拼 `target2`**
+   *    ⇒ 同一手上、只差第二目标的两枚候选在 S1 里**逐位相等**（随机起点也是 ⇒ 是构造，不是训练）；
+   *    S1o 的目标身份 = `h_t1 ⊕ h_t2` ⇒ 分得开。
+   *    牙按 clause 分别验：**S1 必须"全等"、S1o 必须"有差"** 两条一起才说明差在 `target2` 那一段，
+   *    而不是我这把尺本身量不出差别（只断言"S1o 分得开"的话，一条坏掉的尺也能给它绿灯）。 */
+  let t2grp = 0, t2flatS1 = 0, t2diffS1o = 0;
+  {
+    const st17 = mkState(5);
+    st17.p[0].ep = 8;                                     /* 第二目标只有带 source/output 的那几手才有（双枪/镜面…），要付得起 */
+    /* ⚑ 这一条**必须拿非对称的桌子**测：`createState` 出来的四方 hp/ep 逐字相同 ⇒ 席位嵌入天生全等 ⇒ 两档都会"分不开目标"，
+     *   那读数是桌子的对称性给的，不是结构的死维（第一版就在这儿红了，症状像"S1o 也看不见 target2"）。
+     *   所以这里把四方的 hp/ep 各自拨开，让"目标身份"在状态里真的有信息。 */
+    for (let i = 1; i < 5; i++) { st17.p[i].hp = 10 + i * 2; st17.p[i].ep = i; }
+    const c17 = P.candidatesFor(st17, 0, T.econBase(st17, 0, Play.legalActions(st17, 0)), { lockTarget: false }) || [];
+    const groups = {};
+    for (let i = 0; i < c17.length; i++) {
+      const c = c17[i];
+      if (c.target == null || c.target2 == null) continue;
+      const k = c.key + '/t=' + c.target;
+      (groups[k] || (groups[k] = [])).push(i);
+    }
+    const multi = Object.values(groups).filter((v) => v.length > 1);
+    if (multi.length) {
+      const A16a = install(W, Object.assign({ mutMode: 'seg' }, cfg)); A16a.rngRef.r = rng;
+      const lgS1 = Array.from(P.forwardCands(st17, 0, c17, Float64Array.from(P.makePolicy(0.25)), { temp: 0.001 }).logits);
+      A16a.restore();
+      const A16b = install(W, Object.assign({ input: 'obs3', mutMode: 'seg' }, cfg)); A16b.rngRef.r = rng;
+      const lgS1o = Array.from(P.forwardCands(st17, 0, c17, Float64Array.from(P.makePolicy(0.25)), { temp: 0.001 }).logits);
+      A16b.restore();
+      for (const v of multi) {
+        t2grp++;
+        if (v.every((i) => Math.abs(lgS1[i] - lgS1[v[0]]) < 1e-12)) t2flatS1++;
+        if (v.some((i) => Math.abs(lgS1o[i] - lgS1o[v[0]]) > 1e-12)) t2diffS1o++;
+      }
+    } else console.log('  ⚠ T16③ 这一格**没造出只差第二目标的候选对** ⇒ 那一条判据分母为 0，不许当成过了（要换成真实中局夹具再扫）');
+  }
+  ok(b16.n === keys16.length && b16.n > a16.n && t2grp > 0 && t2flatS1 === t2grp && t2diffS1o === t2grp,
+    'T16 输入面分辨率 ‖ ① 无目标候选：v7 那 22 维 ' + keys16.length + ' 键 → **' + a16.n + ' 格**（撞车 ' + a16.groups.length + ' 组：'
+    + a16.groups.map((v) => v.join('≡')).join(' ‖ ') + '）↔ obs3 ' + b16.n + ' 格（0 撞车 ⇒ S1o 的承诺成立且严格优于 S1 那面）'
+    + ' ‖ ② 只差 `target2` 的候选对：' + t2grp + ' 组 ‖ **S1 逐位全等 ' + t2flatS1 + '/' + t2grp + '**（`arch2.mjs:211` 从不拼 `target2` ⇒ 构造性死维）'
+    + ' ‖ **S1o 分得开 ' + t2diffS1o + '/' + t2grp + '**（`h_t1 ⊕ h_t2`）');
 }
 
 console.log(fails.length ? '\n⛔ 自证未过 ' + fails.length + ' 条 ⇒ 结构不进下一环' : '\n⇒ ' + done + ' 条自证全过：2.0 原型可以进训练环');
