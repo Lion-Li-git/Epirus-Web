@@ -2,7 +2,7 @@
 
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）实现的网页版：2~5 人对局 + 可选的自训练冠军 AI。
 
-> **当前版本：v1.8.43** · 人数 2~5 × 血量 3/4/5 两根独立轴 · 全人数共用一条难度阶梯 · AI 状态特征 v7（FEAT_S=213）
+> **当前版本：v1.8.44** · 人数 2~5 × 血量 3/4/5 两根独立轴 · 全人数共用一条难度阶梯 · AI 状态特征 v7（FEAT_S=213）
 > 规则见 [`docs/RULES-2P.md`](docs/RULES-2P.md) / [`docs/RULES-NP.md`](docs/RULES-NP.md)；逐版改动只记 [`CHANGELOG.md`](CHANGELOG.md)。
 
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩（推荐 Chrome / Edge），不需要安装、不需要联网。

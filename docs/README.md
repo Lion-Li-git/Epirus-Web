@@ -35,6 +35,8 @@
 
 当前专题交接：[`research/CHAMPION-2.0-RESEARCH-2026-10-27.md`](research/CHAMPION-2.0-RESEARCH-2026-10-27.md) —— 规则基线、v7 包结构、跨 2–10 人/血量的瓶颈与 2.0 研究方向（研究记录，非实施裁定）。
 
+冠军验收线的**人话版**（同一话题的另一半：门槛本身怎么写、每条量的是哪种能力、哪些该摘哪些该加）：[`research/ACCEPTANCE-LINES-2026-10-28-qoder.md`](research/ACCEPTANCE-LINES-2026-10-28-qoder.md)。判据分层 = 单包只判「任何风格都不该有的缺陷」，能力覆盖归整池。
+
 还有三个**产物目录**不属于"文档"：`docs/artifacts/`（臂产物 `.bak` 与仪器脚本 —— 门 D82 读它）‖ `docs/debug/` ‖ `docs/screenshots/`。
 
 ## 三、引用规矩（本仓栽过的形状，逐条对着防）
