@@ -301,9 +301,30 @@ function softmax(arr, temp) {
 }
 function scoreSet(params, groups, logitsOf) {
   let reg = 0, pairOk = 0, pairTot = 0, hit = 0, hitVal = 0, hitSet = 0, myTieSum = 0, refTieSum = 0, tie = 0, n = 0, ce = 0;
+  let skN = 0, skFlat = 0, skRefN = 0, skRefFlat = 0;          /* 第十九段那一列的出厂化：同目标、只差技能的**逐对**分不开率 ‖ 后两个是同一批对上的标签同分率 */
   for (const g of groups) {
     const lg = logitsOf ? logitsOf(g) : P.forwardCands(g.state, g.pid, g.cands, params, { temp: 0.5 }).logits;
     if (!lg || lg.length !== g.cands.length) throw new Error('rankfit：logits 长度 ' + (lg && lg.length) + ' ≠ 候选数 ' + g.cands.length);
+    {                                                          /* ⭐ "技能身份分辨力"（**逐对**统计，不是"整桶相等"）
+                                                              *   第一版写成"同一目标那一桶里**全部**逐位相等才算一组"⇒ 而 `target=null` 那桶里
+                                                              *   本来就装着 `ji` 与三手防御，ji 与它们**该有**差别 ⇒ 那条判据恒假 ⇒ 读出 0% 的**假干净**
+                                                              *   （10-29 06:3x 与 `scratch/head-ablation.mjs` 对表时才撞出来）。
+                                                              *   现在按对算：同目标(同珠)的候选两两一对，分数逐位相等 ⇒ 那一对分不开。 */
+      const byT = {};
+      for (let i = 0; i < lg.length; i++) {
+        const c = g.cands[i], k = (c.target == null ? '-' : c.target) + '|' + (c.bead || '-');
+        (byT[k] || (byT[k] = [])).push({ i, key: c.key + '|' + (c.bead || '-') });
+      }
+      for (const v of Object.values(byT)) {
+        if (v.length < 2 || new Set(v.map((x) => x.key)).size < 2) continue;
+        for (let a = 0; a < v.length; a++) for (let b = a + 1; b < v.length; b++) {
+          skN++;
+          if (Math.abs(lg[v[a].i] - lg[v[b].i]) < 1e-12) skFlat++;
+          skRefN++;
+          if (Math.abs(g.tgt[v[a].i] - g.tgt[v[b].i]) < 1e-12) skRefFlat++;
+        }
+      }
+    }
     let a = 0; for (let i = 1; i < lg.length; i++) if (lg[i] > lg[a]) a = i;
     if (a === g.refPick) hit++;
     /* ⚑ **并列破号**这条必须在 2.0 上单独量：头的 logits 常常几枚完全相等（同技能不同目标），
@@ -346,7 +367,7 @@ function scoreSet(params, groups, logitsOf) {
     }
     n++;
   }
-  return { regret: reg / Math.max(1, n), pair: pairOk / Math.max(1, pairTot), top1: hit / Math.max(1, n), hitVal: hitVal / Math.max(1, n), hitSet: hitSet / Math.max(1, n), myTie: myTieSum / Math.max(1, n), refTie: refTieSum / Math.max(1, n), tie: tie / Math.max(1, n), ce: ce / Math.max(1, n), n };
+  return { regret: reg / Math.max(1, n), pair: pairOk / Math.max(1, pairTot), top1: hit / Math.max(1, n), hitVal: hitVal / Math.max(1, n), hitSet: hitSet / Math.max(1, n), myTie: myTieSum / Math.max(1, n), refTie: refTieSum / Math.max(1, n), tie: tie / Math.max(1, n), ce: ce / Math.max(1, n), skillFlat: skFlat / Math.max(1, skN), skillPairs: skN, skillPairsLabelFlat: skRefFlat / Math.max(1, skRefN), n };
 }
 
 /* ===== 自证三条（跑前定死，坏了就停，不带病出数）===== */
@@ -429,7 +450,8 @@ for (let it = 0; it < ITER; it++) {
 const tr = scoreSet(best, train), ho = scoreSet(best, hold), ho0 = scoreSet(base, hold);
 console.log('  训练轨迹 CE：' + hist.map((h) => h.it + ':' + h.ce.toFixed(3)).join(' '));
 console.log('  当选粒 ‖ 训练 regret=' + tr.regret.toFixed(3) + ' ‖ 配对序=' + (100 * tr.pair).toFixed(1) + '% ‖ top-1=' + (100 * tr.top1).toFixed(1) + '%（同分 ' + (100 * tr.hitVal).toFixed(1) + '%）‖ CE=' + tr.ce.toFixed(4));
-console.log('  当选粒 ‖ **留出** regret=' + ho.regret.toFixed(3) + ' ‖ 配对序=' + (100 * ho.pair).toFixed(1) + '% ‖ top-1=' + (100 * ho.top1).toFixed(1) + '%（同分 ' + (100 * ho.hitVal).toFixed(1) + '%）‖ CE=' + ho.ce.toFixed(4) + ' ‖ 地板：H=' + Htgt.toFixed(3) + ' / ln n=' + lnN.toFixed(3));
+console.log('  当选粒 ‖ **留出** regret=' + ho.regret.toFixed(3) + ' ‖ 配对序=' + (100 * ho.pair).toFixed(1) + '% ‖ top-1=' + (100 * ho.top1).toFixed(1) + '%（同分 ' + (100 * ho.hitVal).toFixed(1) + '%）‖ CE=' + ho.ce.toFixed(4) + ' ‖ 地板：H=' + Htgt.toFixed(3) + ' / ln n=' + lnN.toFixed(3)
+  + ' ‖ ⭐ 同目标只差技能却**逐位全等**的对 = ' + (100 * ho.skillFlat).toFixed(1) + '%（' + ho.skillPairs + ' 对 ‖ 同一批对上标签自己也是全等的 ' + (100 * ho.skillPairsLabelFlat).toFixed(1) + '% ‖ 我方最大并列集合平均 ' + ho.myTie.toFixed(2) + ' 枚 ‖ 标签并列 ' + ho.refTie.toFixed(2) + ' 枚）');
 console.log('  随机基线粒 ‖ 留出 regret=' + ho0.regret.toFixed(3) + ' ‖ 配对序=' + (100 * ho0.pair).toFixed(1) + '% ‖ top-1=' + (100 * ho0.top1).toFixed(1) + '%（同分 ' + (100 * ho0.hitVal).toFixed(1) + '%）‖ CE=' + ho0.ce.toFixed(4));
 const dTop = 100 * (ho.top1 - ho0.top1), dPair = 100 * (ho.pair - ho0.pair);
 console.log('  ⇒ 留出上的净变化：Δtop-1 ' + (dTop >= 0 ? '+' : '') + dTop.toFixed(1) + 'pt ‖ Δ配对序 ' + (dPair >= 0 ? '+' : '') + dPair.toFixed(1) + 'pt（每组成员候选数中位 ' +
