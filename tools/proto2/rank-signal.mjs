@@ -134,6 +134,44 @@ function pick(arr, sc) { let best = -Infinity, at = 0; arr.forEach((r, i) => { c
 function regret(arr, at) { const us = arr.map((r) => Number(r[LABEL])); return Math.max(...us) - us[at]; }
 function randRegret(arr) { const us = arr.map((r) => Number(r[LABEL])); const mu = us.reduce((a, b) => a + b, 0) / us.length; return Math.max(...us) - mu; }
 
+/* ===== 标签噪声地板（--ceiling）：用 winS 的逐流 0/1，把流分成两半 =====
+ * 做法：用 A 半挑一手、在 B 半上评 ⇒ 这是「即使完美知道 A 半，也会因为标签噪声吃到的 regret」。
+ * 它给出一个**可达下限**：head 的 0.313 要跟这个地板比，而不是跟 0（oracle）比。
+ * 缺 winS 的组整组跳过（旧 dump 没有逐流数组）。 */
+if (argv.includes('--ceiling')) {
+  const rows = [];
+  for (const arr of G.g.values()) {
+    const s0 = arr[0].winS;
+    if (!Array.isArray(s0) || s0.length < 4) continue;
+    const m = s0.length, half = Math.floor(m / 2);
+    const uA = []; const uB = [];
+    for (const r of arr) {
+      const s = r.winS;
+      let a = 0, b = 0;
+      for (let i = 0; i < half; i++) a += Number(s[i]);
+      for (let i = half; i < m; i++) b += Number(s[i]);
+      uA.push(a / half); uB.push(b / (m - half));
+    }
+    const uFull = arr.map((r) => Number(r[LABEL]));
+    const iA = uA.indexOf(Math.max(...uA));
+    const iFull = uFull.indexOf(Math.max(...uFull));
+    rows.push({ pickB: Math.max(...uB) - uB[iA], pickFull: Math.max(...uFull) - uFull[iA],
+      pickFullOnFull: Math.max(...uFull) - uFull[iFull],
+      randB: Math.max(...uB) - uB.reduce((x, y) => x + y, 0) / uB.length,
+      randFull: Math.max(...uFull) - uFull.reduce((x, y) => x + y, 0) / uFull.length });
+  }
+  const meanOf2 = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  const regB = rows.map((r) => r.pickB), randB = rows.map((r) => r.randB);
+  console.log('标签噪声地板（' + rows.length + ' 组，每手 winS 分半）：');
+  console.log('  用 A 半挑、在 B 半上评 = ' + meanOf2(regB).toFixed(3) + 'pt（这是**可达下限**：完美知道 A 半也躲不开的 regret）');
+  console.log('  随机挑、在 B 半上评 = ' + meanOf2(randB).toFixed(3) + 'pt');
+  console.log('  —— 同一把尺换成"全流标签"（与 head 的 regret 同口径）——');
+  console.log('  用 A 半挑、在**全流**上评 = ' + meanOf2(rows.map((r) => r.pickFull)).toFixed(3) + 'pt（4 条流标签下的可达下限）');
+  console.log('  用全流 oracle 挑（=同一标签的 oracle）= ' + meanOf2(rows.map((r) => r.pickFullOnFull)).toFixed(3) + 'pt（恒 0，自证）');
+  console.log('  随机挑、在全流上评 = ' + meanOf2(rows.map((r) => r.randFull)).toFixed(3) + 'pt');
+  console.log('  ⇒ 可学空间 = 随机 − 地板 = ' + (meanOf2(randB) - meanOf2(regB)).toFixed(3) + 'pt；head 的读数要与这条线比，不是与 0 比');
+  process.exit(0);
+}
 const stats = { head: [], net: [], rand: [] };
 let usedGroups = 0, inSample = null;
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; }
