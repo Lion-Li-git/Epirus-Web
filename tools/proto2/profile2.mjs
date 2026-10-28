@@ -46,6 +46,14 @@ let refParams = loadChamp(W, refSrc, '');
 if (!refParams) { console.error('⛔ 参照包读不出（' + refSrc + '）⇒ 对手表无法固定'); process.exit(2); }
 refParams = Float64Array.from(refParams);
 
+/* ⚑ 对手表必须在**装 2.0 档之前**造好（10-29 02:3x 抓到）：装完档再 `buildOpps`，"装的是哪一档"会改变对手表本身
+ *   ⇒ 连**参照行（v7 自己的包）**都跟着换考卷（实测：同一枚 v7 参照，装 S1 时那行夺1 25.8%，装 S1o 时 0.0% ‖ 活到终局 0.0%）。
+ *   跨结构比较要的就是"参照行不随被测档动"，所以顺序是判据的一部分，不是风格。 */
+const POOL = buildPoolSeeded(20261029);
+const POOL_FP = poolFingerprint(POOL);
+const POOL_FP2 = poolFingerprint(buildPoolSeeded(20261029));
+if (POOL_FP !== POOL_FP2) { console.error('⛔ 对手表定标失败：同一枚种子两次指纹 ' + POOL_FP + ' vs ' + POOL_FP2); process.exit(2); }
+
 const A = installArch2(W, cfg);
 const params = Float64Array.from(P.unpack(raw, true));
 if (!params || params.length !== P.paramCount()) { console.error('⛔ 包形状不对：读出 ' + params.length + ' ‖ 当前结构要 ' + P.paramCount()); process.exit(7); }
@@ -67,13 +75,25 @@ function buildPoolSeeded(seedVal) {
   try { Math.random = rr; return T.buildOpps(refParams, 0.05); } finally { Math.random = real; }
 }
 function poolFingerprint(PL) {
-  let h = 2166136261;
-  for (const o of PL) { const s = (o.name || '') + ':' + Array.from(o.params || []).slice(0, 6).map((x) => x.toFixed(3)).join(','); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } }
-  return (h >>> 0).toString(16);
+  /* ⚑ 指纹要覆盖**真正影响行为的东西**：只数 `o.params` 前 6 条会在"脚本型对手根本没有 params"时退化成名字列表
+   *   （这就是为什么它先前在 S1 / S1o 两档下报出同一个 9f189883，而参照行其实已经从 25.8% 掉到 0.0%）。
+   *   ⇒ 现在把每个对手的全部数值字段 + 键名一起混进哈希，并额外记 `pool.numeric` 总数当"有没有牙"的证据。 */
+  let h = 2166136261, nums = 0;
+  const mix = (s) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } };
+  for (const o of PL) {
+    mix('name=' + (o.name || '') + '|');
+    const walk = (v, depth) => {
+      if (depth > 3 || v == null) return;
+      if (typeof v === 'number') { nums++; mix('n' + Math.round(v * 1e6)); return; }
+      if (typeof v !== 'object') { mix('s' + String(v)); return; }
+      if (Array.isArray(v)) { mix('[' + v.length); for (const q of v) walk(q, depth + 1); mix(']'); return; }
+      for (const k of Object.keys(v).sort()) { mix('{' + k); walk(v[k], depth + 1); mix('}'); }
+    };
+    walk(o, 0);
+  }
+  return (h >>> 0).toString(16) + '/' + nums;
 }
-let POOL = buildPoolSeeded(20261029), POOL_FP = poolFingerprint(POOL);
-const POOL_FP2 = poolFingerprint(buildPoolSeeded(20261029));
-if (POOL_FP !== POOL_FP2) { console.error('⛔ 对手表定标失败：同一枚种子两次指纹 ' + POOL_FP + ' vs ' + POOL_FP2); process.exit(2); }
+/* （对手表已移到装档之前——见上面那条 ⚑） */
 const STYLES = ['breakdef', 'wall', 'tankline', 'guardgun', 'protowall', 'reflectmix', 'beadburst', 'aggro'];
 const CELLS = [];
 for (const n of [3, 5]) for (const nm of STYLES) { const i = POOL.findIndex((o) => o.name === nm); if (i >= 0) CELLS.push({ n, name: nm, idx: i }); }
@@ -163,7 +183,12 @@ for (const cell of CELLS) {
   /* ⚑ 第三行 = **参照包自己**（默认 v7 现役冠军）。加它的原因很具体：段 D′ 用"模仿 v7"当货币训出来的粒，
    *   只跟随机起点比是**判不出值不值**的（模仿得再像也只是像），必须同场读"离 v7 还差多少"。
    *   三行共用同一格同一局号 ⇒ 分母天然相等（下面那条分母对账会当场抓不平）。 */
-  const c = row('参照包', refParams, cell, 1000 + cell.n * 97 + cell.idx);
+  const c = row('参照包⚠', refParams, cell, 1000 + cell.n * 97 + cell.idx);
+  /* ⚑⚑ 这一行**不是**产品级的 v7 基线（10-29 02:4x 抓到）：装了 2.0 档之后再让 v7 当 seat 0，它自己会变——
+   *   装 S1 时夺1 25.8%、装 S1o 时 1.2%，而**什么都不装**的同一套格同一套局号是 **40.3%**（`tools/proto2/ref-baseline.mjs`）。
+   *   ⇒ 参照行只能当"同一档内的相对刻度"，任何"2.0 打赢/打输现役冠军"的句子都不许由它出，必须由 ref-baseline 那边对表。
+   *   为什么会变还没查到底（覆盖表是 paramCount/makePolicy/…/forwardCands/chooseCandidates/shapeOf/value 这 11 个入口，
+   *   v7 的 chooser 走 `P.choose`→本地 forward，理论上不经过被覆盖的那几个），挂在待查。 */
   S.pF += a.first; S.pG += a.games; S.pT += a.top2; S.rF += b.first; S.rG += b.games; S.rT += b.top2;
   S.vF += c.first; S.vG += c.games; S.vT += c.top2;
 }

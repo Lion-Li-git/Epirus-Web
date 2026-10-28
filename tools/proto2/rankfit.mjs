@@ -37,6 +37,10 @@ const OUT = arg('out', '');
  *   ①标签出在冠军的局面上、被评者自己会走到别的局面（分布漂移），还是 ②v7 的强度根本不在组内 argmax 里。
  *   `--playtemp` 只在 dagger 下有意义（那枚粒走局时的采样温度；对局级读数请用 profile2 而不是这里）。 */
 const DAGGER = arg('dagger', '');
+/* ⚑ `--warm=<2.0 包>`：**只热启动、不走自己的局**（标签仍出在 v7 走出来的局面上）。
+ *   这是 H1 那条读数的对照组：H1 同时换了"起点"和"标签分布"两件事 ⇒ 单看它分不清是哪一件买到的强度。
+ *   W = warm(同起点 + v7 局面标签)，H = dagger(同起点 + 自己局面标签) ⇒ 两臂只差"标签出在谁的局面上"。 */
+const WARM = arg('warm', '');
 const PLAYTEMP = Number(arg('playtemp', 0.6)) || 0.6;
 
 const W = sandbox();
@@ -163,6 +167,14 @@ if (DAGGER) {
   console.log('  ⚑ 把它和"在 v7 走出来的局面上"的同一读数并排（F1 是 66.9%/83.3%/1.458）⇒ **两个数之差就是分布漂移的价钱**');
   theta0 = Float64Array.from(learner);
 }
+if (WARM) {
+  const obj = JSON.parse(readFileSync(WARM, 'utf8').replace(/^window\.EPIRUS_CHAMPION_3P\s*=\s*/, '').replace(/;\s*$/, ''));
+  if (obj.a.length !== L.n) { console.error('⛔ warm 的粒与当前档不符：' + obj.a.length + ' vs ' + L.n); process.exit(2); }
+  theta0 = Float64Array.from(obj.a);
+  const wb = scoreSet(theta0, hold);
+  console.log('# warm ‖ 起点=' + WARM + '（标签仍出在 **v7 走出来的局面**上 ⇒ 这一臂是 H 的对照组：只差"标签出在谁的局面上"）');
+  console.log('  起点在 v7 局面留出集上：top-1=' + (100 * wb.top1).toFixed(1) + '% ‖ 配对序=' + (100 * wb.pair).toFixed(1) + '% ‖ CE=' + wb.ce.toFixed(4));
+}
 
 /* ===== 打分：组内 regret（v7 单位）‖ 配对序正确率 ‖ top-1 一致 ‖ 交叉熵 =====
  * ⚑⚑ 10-29 02:2x 这里犯过一次**流式归一化**的错：`pr = tgt.map(x => { Zr += e; return e / Zr })`
@@ -278,7 +290,7 @@ if (pos0rate > 0.2) { console.error('⛔ T-F1 候选顺序没打乱开（v7 当�
   if (maxDiff > 1e-6) { console.error('⛔ T-F2 结构对候选顺序敏感（最大偏离 ' + maxDiff.toExponential(2) + '）⇒ "集合编码顺序无关"这条设计断言不成立，先改结构再谈训练'); process.exit(8); }
 }
 console.log('  同场自证：对手表指纹 ' + fpPool + '（跑两遍一致）‖ 标签指纹 ' + fpLabels + ' ‖ 起点两次评估逐字同 ‖ 变异→货币动（T-A/B/C PASS）');
-console.log('  起点：训练集 regret=' + s1.regret.toFixed(3) + ' ‖ 配对序=' + (100 * s1.pair).toFixed(1) + '% ‖ top-1=' + (100 * s1.top1).toFixed(1) + '% ‖ CE=' + s1.ce.toFixed(4));
+console.log('  随机基线粒（base' + ((WARM || DAGGER) ? ' ‖ ⚑ 本臂真正起点是上面那枚 warm/dagger 粒，不是这枚' : '') + '）：训练集 regret=' + s1.regret.toFixed(3) + ' ‖ 配对序=' + (100 * s1.pair).toFixed(1) + '% ‖ top-1=' + (100 * s1.top1).toFixed(1) + '% ‖ CE=' + s1.ce.toFixed(4));
 
 /* ===== (μ+λ)-ES：货币 = 训练半批的**负交叉熵**（稠密；regret 与 top-1 只报不选）===== */
 let theta = Float64Array.from(theta0 || base), best = Float64Array.from(theta0 || base);
@@ -304,7 +316,7 @@ const tr = scoreSet(best, train), ho = scoreSet(best, hold), ho0 = scoreSet(base
 console.log('  训练轨迹 CE：' + hist.map((h) => h.it + ':' + h.ce.toFixed(3)).join(' '));
 console.log('  当选粒 ‖ 训练 regret=' + tr.regret.toFixed(3) + ' ‖ 配对序=' + (100 * tr.pair).toFixed(1) + '% ‖ top-1=' + (100 * tr.top1).toFixed(1) + '%（同分 ' + (100 * tr.hitVal).toFixed(1) + '%）‖ CE=' + tr.ce.toFixed(4));
 console.log('  当选粒 ‖ **留出** regret=' + ho.regret.toFixed(3) + ' ‖ 配对序=' + (100 * ho.pair).toFixed(1) + '% ‖ top-1=' + (100 * ho.top1).toFixed(1) + '%（同分 ' + (100 * ho.hitVal).toFixed(1) + '%）‖ CE=' + ho.ce.toFixed(4) + ' ‖ 地板：H=' + Htgt.toFixed(3) + ' / ln n=' + lnN.toFixed(3));
-console.log('  起点粒 ‖ 留出 regret=' + ho0.regret.toFixed(3) + ' ‖ 配对序=' + (100 * ho0.pair).toFixed(1) + '% ‖ top-1=' + (100 * ho0.top1).toFixed(1) + '%（同分 ' + (100 * ho0.hitVal).toFixed(1) + '%）‖ CE=' + ho0.ce.toFixed(4));
+console.log('  随机基线粒 ‖ 留出 regret=' + ho0.regret.toFixed(3) + ' ‖ 配对序=' + (100 * ho0.pair).toFixed(1) + '% ‖ top-1=' + (100 * ho0.top1).toFixed(1) + '%（同分 ' + (100 * ho0.hitVal).toFixed(1) + '%）‖ CE=' + ho0.ce.toFixed(4));
 const dTop = 100 * (ho.top1 - ho0.top1), dPair = 100 * (ho.pair - ho0.pair);
 console.log('  ⇒ 留出上的净变化：Δtop-1 ' + (dTop >= 0 ? '+' : '') + dTop.toFixed(1) + 'pt ‖ Δ配对序 ' + (dPair >= 0 ? '+' : '') + dPair.toFixed(1) + 'pt（每组成员候选数中位 ' +
   fixtures.map((f) => f.cands.length).sort((a, b) => a - b)[Math.floor(fixtures.length / 2)] + ' ⇒ 随机 top-1 约 ' +
@@ -312,7 +324,9 @@ console.log('  ⇒ 留出上的净变化：Δtop-1 ' + (dTop >= 0 ? '+' : '') + 
 const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
 const out = OUT || ('scratch/arms/' + stamp + '-rankfit-' + (ARCH === 'obs3' ? 'S1o' : 'S1') + '-s' + SEED + '.bak');
 writeFileSync(out, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(best)) + ';\n');
-writeFileSync(out + '.meta.json', JSON.stringify({ tool: 'rankfit', arch: ARCH === 'obs3' ? 'S1o' : 'S1', seed: SEED, groups: fixtures.length, train: train.length, hold: hold.length,
-  poolFp: fpPool, labelFp: fpLabels, pop: POP, elite: ELITE, iters: ITER, sig: SIG,
+writeFileSync(out + '.meta.json', JSON.stringify({ tool: 'rankfit', arch: ARCH === 'obs3' ? 'S1o' : 'S1', seed: SEED,
+  dagger: DAGGER || null, warm: WARM || null, playTemp: DAGGER ? PLAYTEMP : null,
+  groups: fixtures.length, train: train.length, hold: hold.length,
+  poolFp: fpPool, labelFp: fpLabels, pop: POP, elite: ELITE, iters: ITER, sig: SIG, targetTemp: 8, modelTemp: 8, momentMatch: true,
   holdoutStart: ho0, holdoutBest: ho, deltaTop1Pt: dTop, deltaPairPt: dPair, paramCount: P.paramCount(), v7ref: 'js/bundled-champion-3p.js' }, null, 1));
 console.log('  产物 ' + out + ' ‖ ' + out + '.meta.json');
