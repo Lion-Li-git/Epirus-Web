@@ -645,20 +645,27 @@ export function feasibilityOf(o) {
   if (miss.length) fails.push('探针缺失/无值：' + miss.join('、') + '（无法判定 ⇒ 视为未过，先修探针）');
   if (s.verdict === 'biased') {
     fails.push('座位偏座（' + (s.basis || '') + '）：' +
-      (s.pct || []).map(function (x) { return Number(x).toFixed(0) + '%'; }).join('/'));
+      (s.pct || []).map(function (x) { return Number(x).toFixed(0) + '%'; }).join('/') +
+      ' ——【公平：坐哪个位置都一样能打】不成立〔原机器名：座〕');
   }
   if (s.verdict === 'underpowered') notes.push('座位探针 ' + (s.basis || 'underpowered') + ' ⇒ **未判定**（不等于均衡）');
   if (s.verdict === 'unjudgeable') notes.push('座位探针不可判（' + (s.basis || '') + '）—— 别当"均衡"');
   if (!miss.length) {
-    if (Number(g.effSkills) < 3) fails.push('G ' + Number(g.effSkills).toFixed(2) + ' < 3');
-    /* v1.5.145（用户裁定"两个模式都判"）：第二模式（默认 long）同一条线 3。 */
+    /* ===== 2026-10-28（用户：「把机器名和场名都写成人话」）=====
+     * 每条阻断文案改成 `【这条在判什么】人话结论〔原机器名〕` 三段：
+     *   - `G<3` / `反弹墙` / `场A 还手` / `场B 清场` 这些**原 token 一字不动地留在〔〕里**，
+     *     因为它们是解析契约（`champion-map/feas.mjs`、`train-best`、`score13`、
+     *     `tools/gates/{ship-feas,ship-promote,probe-instruments,engine-fuzz}.mjs` 都按子串抓）；
+     *   - 换 token 是另一件事，要连着改那 6 个消费者 + 门，本次只做"读得懂"，不做"改名"。 */
+    if (Number(g.effSkills) < 3) fails.push('G ' + Number(g.effSkills).toFixed(2) + ' < 3（短程有效技能数只有 ' + Number(g.effSkills).toFixed(2) + '，线 3） ——【会用的招不止两三种】不成立〔原机器名：广〕');
+    /* v1.5.145（用户裁定"两个模式都判"）：第二模式（默认 long = 长程，产品常用模式）同一条线 3。 */
     if (g2) {
       if (!isFinite(g2.effSkills)) fails.push('第二模式（' + g2n + '）G 探针缺失/无值 ⇒ 无法判定（视为未过）');
-      else if (Number(g2.effSkills) < 3) fails.push('G(' + g2n + ') ' + Number(g2.effSkills).toFixed(2) + ' < 3');
+      else if (Number(g2.effSkills) < 3) fails.push('G(' + g2n + ') ' + Number(g2.effSkills).toFixed(2) + ' < 3（长程有效技能数只有 ' + Number(g2.effSkills).toFixed(2) + '，线 3） ——【会用的招不止两三种】不成立〔原机器名：广·长程〕');
     }
-    if (Number(w.dmgPerGame) <= 0.5) fails.push('反弹墙伤害 ' + Number(w.dmgPerGame).toFixed(2) + ' ≤ 0.5/局');
-    if (Number(fA.atk) < 0.20) fails.push('场A 还手 ' + (100 * Number(fA.atk)).toFixed(1) + '% < 20%');
-    if (Number(fB.clearedPerGame) < 0.3) fails.push('场B 清场 ' + Number(fB.clearedPerGame).toFixed(2) + ' < 0.3/局');
+    if (Number(w.dmgPerGame) <= 0.5) fails.push('反弹墙伤害 ' + Number(w.dmgPerGame).toFixed(2) + ' ≤ 0.5/局（4 席都摆反弹时它主动伤害只有这么点） ——【对面都摆反弹时不是一枪不发】不成立〔原机器名：墙〕');
+    if (Number(fA.atk) < 0.20) fails.push('场A 还手 ' + (100 * Number(fA.atk)).toFixed(1) + '% < 20%（被四席围殴时的还手率） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕');
+    if (Number(fB.clearedPerGame) < 0.3) fails.push('场B 清场 ' + Number(fB.clearedPerGame).toFixed(2) + ' < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕');
   }
   /* ===== v1.5.90（第八轮复核 §8-3/§8-4）：第 6 道判据 = **输出密度 / 经济出口** =====
    * 口径：① 珠经济**双向闭环**（得珠 > 0 且 **花掉** > 0 —— 单向"浪费率低"会被"把行为删掉"刷绿，

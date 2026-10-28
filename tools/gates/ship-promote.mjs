@@ -179,7 +179,11 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
   const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
   ok(pc.indexOf("['tools/gate-drafts.mjs', SRC]") >= 0, 'promote-champion 必须调用量具');
   ok(pc.indexOf('/^G4\\[/.test(nm) || /^G5\\[/.test(nm)') >= 0, '只有 G4/G5 进阻断面（G3/G6 只记录）');
-  ok(pc.indexOf('行为门未过') >= 0 && pc.indexOf('meta.gateDrafts') >= 0, '阻断结论必须留痕（meta）');
+  /* 2026-10-28：这条原先钉的是判词文本 `'行为门未过'`，而那一行**换成了人话**（「【行为门：…】未过」）
+   *   ⇒ 文本钉假红（字符串动了、行为没动）。本条真正要判的是「阻断结论进了 meta」⇒ 改钉**功能锚点**：
+   *   名字进 `gateDrafts.blocking` + meta 里落 `gateDrafts`。措辞以后再换也不会再红一次。 */
+  ok(pc.indexOf('gateDrafts.blocking.push(nm)') >= 0 && pc.indexOf('meta.gateDrafts') >= 0,
+    '阻断结论必须留痕（行为锚点：进 blocking 名单 + 写进 meta，不看判词措辞）');
   /* v1.5.89：本轮实测发现的三处**判词缺陷**，各留一条"能失败"的断言（都与 v1.5.78 的原病根同族）：
    * 原病根 = "把没跑 / 没判的当成过了"。这三个缺陷是它的三种变体：主语错位、判词不可读、缺第三态。 */
   const gd = readFileSync('tools/gate-drafts.mjs', 'utf8');

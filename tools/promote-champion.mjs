@@ -152,13 +152,13 @@ const spL = selfPlay(W, params, 'long', G);
 const fPass = fieldRate(W, params, 'passive', 'multi');
 const fAct = fieldRate(W, params, 'active', 'multi');
 const dpg = sp.dmgPerGame, drawRate = sp.drawRate;
-console.log('   自对局（5 座同一冠军 ×' + G + '）：伤害/局 = ' + dpg.toFixed(1) +
+console.log('   〔一局里真打得出伤害 · 这局收得了场〕自对局（5 座同一冠军 ×' + G + '）：伤害/局 = ' + dpg.toFixed(1) +
   '，平局率 = ' + (drawRate * 100).toFixed(0) + '%，回合 = ' + sp.rounds.toFixed(1) +
   '，全息屏障/局 = ' + sp.holoPerGame.toFixed(1) + '，有效技能数 = ' + sp.effSkills.toFixed(2));
 console.log('   穿透卡落地命中（自对局）：' + (sp.pierceKeys || []).map(function (k) {
   return ((W.EpirusRules.byKey[k] || {}).name || k) + '=' + ((sp.landByKey || {})[k] || 0);
 }).join('  '));
-console.log('   E 被动场：旧口径摆架势率 = ' + (fPass.stance * 100).toFixed(0) + '%   ' +
+console.log('   〔没人威胁时不是一直摆架势〕E 被动场：旧口径摆架势率 = ' + (fPass.stance * 100).toFixed(0) + '%   ' +
   '**新口径·无威胁(对手ジ<5)时摆架势 = ' + (fPass.noThreatStanceRate * 100).toFixed(0) + '%**' +
   '（无威胁回合 ' + fPass.noThreatRounds + '，最长无威胁连摆 ' + fPass.maxNoThreatRun + '）' +
   '   F 活跃场进攻率 = ' + (fAct.atk * 100).toFixed(0) + '%');
@@ -170,8 +170,8 @@ if (G < 20) console.warn('   ⚠️ 自对局只有 ' + G + ' 局：G（有效�
  * 现在 6 项全部是**阻断条件**；确实要越过就 `--force`，但会在 meta 里留痕（auditFails/auditForced）。 */
 const FORCE = process.argv.includes('--force');
 const fails = [];
-if (dpg < 5) fails.push('伤害/局 ' + dpg.toFixed(1) + ' < 5（很可能是"熬"型冠军：考卷分会被熬骗）');
-if (drawRate > 0.2) fails.push('平局率 ' + (drawRate * 100).toFixed(0) + '% > 20%（自对局打不起来）');
+if (dpg < 5) fails.push('伤害/局 ' + dpg.toFixed(1) + ' < 5（很可能是"熬"型冠军：考卷分会被熬骗） ——【一局里真打得出伤害】不成立〔原机器名：伤〕');
+if (drawRate > 0.2) fails.push('平局率 ' + (drawRate * 100).toFixed(0) + '% > 20%（五席同一冠军也打不起来） ——【这局收得了场】不成立〔原机器名：平〕');
 /* v1.5.37（复核 §2-1 + 用户裁定）：**撤掉旧的 ">2 次/局" 普通条件**。
  * 理由：全息屏障**本来就不能给自己**（自保用原型制御）⇒ "把盾送给别人"是**这张卡的定义**，不是 bug；
  * 真正的问题是**用得太频繁**。故只保留下面那条**硬门槛**（套给别人 > 6 次/局，不可 --force），
@@ -184,7 +184,7 @@ const holoSoftNote = sp.holoPerGame;   // 仅留档，不再作为阻断条件
  * 规则：**每一张能穿反弹/穿防御的攻击卡**（规则数据推导：激光剑/坦克/狙击枪/电磁炮）在自对局里
  * 必须至少落地命中 1 次；一张都没有 ⇒ 阻断（要越过就 --force，并留痕）。 */
 const rw = reflectWall(W, params, 'long', G);
-console.log('   反弹墙（4 席 reflectspam · 长程 · ' + G + ' 局）：主动伤害 ' + rw.dmgPerGame.toFixed(2) + '/局' +
+console.log('   〔对面都摆反弹时不是一枪不发 → 反弹墙〕（4 席 reflectspam · 长程 · ' + G + ' 局）：主动伤害 ' + rw.dmgPerGame.toFixed(2) + '/局' +
   '，零伤害局 ' + (rw.zeroDamageRate * 100).toFixed(0) + '%' +
   '，穿透卡命中 ' + rw.pierceLand + '（' + rw.pierceKeys.map(function (k) {
     return ((W.EpirusRules.byKey[k] || {}).name || k) + '=' + (rw.landByKey[k] || 0);
@@ -194,7 +194,7 @@ console.log('   反弹墙（4 席 reflectspam · 长程 · ' + G + ' 局）：�
 if (rw.pierceLand === 0) {
   fails.push('反弹墙里穿透卡零命中（' + rw.pierceKeys.map(function (k) {
     return ((W.EpirusRules.byKey[k] || {}).name || k);
-  }).join('/') + '）⇒ 面对 4 面反弹墙一枪未发（D 列会归零）');
+  }).join('/') + '）⇒ 面对 4 面反弹墙一枪未发（D 列会归零） ——【对面都摆反弹时不是一枪不发】不成立');
 }
 /* ⚠️ v1.5.28 实测：审计 §4-2b 建议的"每张穿透卡在**自对局**里 ≥1 命中"**不能当阻断条件** ——
  * 坦克与电磁炮是**所有冠军（含历史最好的 eco-34）都没用过**的卡 ⇒ 照字面做会把所有人挡在门外
@@ -210,7 +210,7 @@ if (sp.pierceMissing && sp.pierceMissing.length) {
  * —— 也就是说旧口径把"有威胁时才防"和"无威胁也一直防"混为一谈了。
  * 门槛 60%：实测病态样本 v7anneal-34 = 100%（挡），健康样本 1%~46%（放行）。 */
 if (fPass.noThreatStanceRate > 0.6) fails.push('E 无威胁时摆架势 ' + (fPass.noThreatStanceRate * 100).toFixed(0) +
-  '% > 60%（对手ジ还没到 5、没有大雷威胁时，它也一直摆架势）');
+  '% > 60%（对手ジ还没到 5、没有大雷威胁时，它也一直摆架势） ——【没人威胁时不是一直摆架势】不成立〔原机器名：架〕');
 /* v1.5.27（用户裁定）：F 门槛 35% → **25%**。
  * 数据：实测所有冠军的 F 都在 22%~35%（v7f-35 34%、v7anneal-34 35%、v7press-36 32%、eco-34 22%）
  * ⇒ 35% 属于"阈值定在噪声带里"，连**现役冠军自己都过不了**（当年是 --force 推上去的）。
@@ -227,11 +227,11 @@ const agg = aggressionProfile(W, params, FEAS_N.aggr);
  *   ⇒ 只印点估计会诱导读者把「19.8 与 20.6」当成能分开的两件事（实测不能：见 `docs/artifacts/e470-out/fielda-margin.mjs`
  *     的 n=40/100/200/400 阶梯，同一份实现、同一串种子）。抬样本会改判定（属换口径，等用户裁），这里先把噪声印出来。 */
 const FA_SE95 = 1.96 * Math.sqrt(Math.max(agg.fieldA.atk * (1 - agg.fieldA.atk), 1e-9) / (FEAS_N.aggr || 40)) * 100;
-console.log('  场A 被集火还手率 = ' + (agg.fieldA.atk * 100).toFixed(1) + '% ±' + FA_SE95.toFixed(1) + 'pt(n=' + (FEAS_N.aggr || 40) + ', 1.96SE)（造成伤害 ' + agg.fieldA.dealtPerGame.toFixed(2) +
+console.log('  〔被围殴时会不会还手 → 场A〕被集火还手率 = ' + (agg.fieldA.atk * 100).toFixed(1) + '% ±' + FA_SE95.toFixed(1) + 'pt(n=' + (FEAS_N.aggr || 40) + ', 1.96SE)（造成伤害 ' + agg.fieldA.dealtPerGame.toFixed(2) +
   '/局，承受 ' + agg.fieldA.takenPerGame.toFixed(2) + '/局，胜率 ' + (agg.fieldA.winRate * 100).toFixed(0) + '%）' +
-  '  场B 无压进攻 = ' + (agg.fieldB.atk * 100).toFixed(0) + '%（伤害 ' + agg.fieldB.dealtPerGame.toFixed(2) + '/局）' +
+  '  〔对面只攒钱不动 → 场B〕无压进攻 = ' + (agg.fieldB.atk * 100).toFixed(0) + '%（伤害 ' + agg.fieldB.dealtPerGame.toFixed(2) + '/局）' +
   '  [旧口径 F=' + (fAct.atk * 100).toFixed(0) + '%，仅作历史对照]');
-if (agg.fieldA.atk < 0.20) fails.push('F 被集火还手率 ' + (agg.fieldA.atk * 100).toFixed(1) + '% < 20%（被 4 席猛攻时不还手）');
+if (agg.fieldA.atk < 0.20) fails.push('F 被集火还手率 ' + (agg.fieldA.atk * 100).toFixed(1) + '% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕');
 /* v1.5.57（第五轮复核 §6）：**座位对称性**必须进上线体检。
  * 实测：上线包（v7wall-31）5 席同策略时 long 0 号座 84%、multi 58%（极差 82pt/51pt）——
  * 玩家真正遇到的对手严重偏座；而此前所有体检项都看不见这件事。
@@ -240,11 +240,11 @@ if (agg.fieldA.atk < 0.20) fails.push('F 被集火还手率 ' + (agg.fieldA.atk 
 const ss = seatSymmetry(W, params, 'multi', FEAS_N.seat);
 if (ss.verdict === 'biased') {
   fails.push('座位对称性：5 席同策略下某座胜率极差 ' + ss.spread.toFixed(0) + 'pt（≥30pt）⇒ 偏座（' +
-    ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '，判胜 ' + ss.decisive + ' 局）');
+    ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '，判胜 ' + ss.decisive + ' 局） ——【坐哪个位置都一样能打】不成立〔原机器名：座〕');
 } else if (ss.verdict === 'unjudgeable') {
   console.warn('  ⚠ 座位对称性不可判：分出胜负仅 ' + (ss.decisiveRate * 100).toFixed(0) + '%（平局过多）—— 不计入阻断，但别把它当"均衡"');
 } else {
-  console.log('  座位对称性 OK：极差 ' + ss.spread.toFixed(0) + 'pt（' + ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '）');
+  console.log('  〔坐哪个位置都一样能打〕座位对称性 OK：极差 ' + ss.spread.toFixed(0) + 'pt（' + ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '）');
 }
 /* ===== 2026-10-25（用户裁定「广度取 b」）：阻断吃**两把量具里更严的那一个** =====
  *   旧口径（10-10/11 那次裁定）只把 `selfPlay` 的 `effSkills` 送进阻断，而同一份体检里另一把熵量具
@@ -258,7 +258,7 @@ const brdM = breadthProfile(W, params, 'multi', Number(process.env.EPIRUS_BREADT
 const G_M = Math.min(Number(sp.effSkills), Number(brdM.G_eff));
 const G_L = Math.min(Number(spL.effSkills), Number(brd.G_eff));
 if (G_M < 3) fails.push('G 有效技能数 ' + G_M.toFixed(2) + ' < 3（取两把里更严的：selfPlay ' +
-  Number(sp.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brdM.G_eff).toFixed(2) + ' ⇒ 打法坍缩到两三张卡）');
+  Number(sp.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brdM.G_eff).toFixed(2) + ' ⇒ 打法坍缩到两三张卡） ——【会用的招不止两三种】不成立〔原机器名：广〕');
 /* v1.6.49（2026-10-10/11 用户裁定「long 也该阻断」）：**long 的广度同样进阻断**，线沿用同一条 3。
  * 动因：这条腿自 v1.5.145 起只被"打印 + feasibility 第四道"记录，**从未挡过任何候选**（见上面 `spL` 处的更正），
  *   而 long（5 血，产品常用模式）恰恰是玩家会遇到的赛程 —— 「multi 过门、long 塌成两三张卡」这形状
@@ -267,7 +267,7 @@ if (G_M < 3) fails.push('G 有效技能数 ' + G_M.toFixed(2) + ' < 3（取两�
  *   而本条以 `G(long)` 开头 ⇒ 它**认不到**）⇒ 已把 `_gBlocked` 改成两条前缀都收的 `fails.filter(...)`，
  *   标题同步改成「门判 multi **与** long」（打印与阻断同源，规矩 44）。 */
 if (G_L < 3) fails.push('G(long) 有效技能数 ' + G_L.toFixed(2) + ' < 3（取两把里更严的：selfPlay ' +
-  Number(spL.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brd.G_eff).toFixed(2) + ' ⇒ 长程打法坍缩到两三张卡）');
+  Number(spL.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brd.G_eff).toFixed(2) + ' ⇒ 长程打法坍缩到两三张卡） ——【会用的招不止两三种】不成立〔原机器名：广·长程〕');
 /* ===== v1.5.71（第五轮复核 §4-6）：**出厂换包也写一份 feasibility 记录** =====
  * 病：线上包的 meta 里没有 `feasibility` —— 它是经 tools/upgrade-pack.mjs 换回来的、绕过了训练落盘
  * 那一步 ⇒ "这个包当年怎么过的五道门"在产物上不可查。
@@ -282,7 +282,7 @@ const feas = feasibilityOf({ seat: ss, G: sp, G2: spL, G2name: 'long', wall: rw,
   density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chgE.gained, spentRate: chgE.spentRate,
     expiredPerGame: chgE.games ? chgE.expired / chgE.games : 0,
     zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
-console.log('   可行性（与训练落盘同源 · 样本量 ' + FEAS_N.tag + '）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
+console.log('   可行性〔五道地板：会几招 / 反弹墙 / 被围殴会还手 / 不偏座 / 收得了场〕（与训练落盘同源 · 样本量 ' + FEAS_N.tag + '）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
   /* ⚠ 2026-10-25「广度取 b」之后，这一行与下面的"广度"栏**可能不同判**：`feasibilityOf` 是**训练落盘口径**（吃 selfPlay 的 G），
    *   而 promote 的阻断 10-25 起改吃**两把量具取严**。两者不一致时必须在这里点名，否则读体检的人会拿"五道全过"当"能出厂"
    *   （本仓规矩 44：打印机必须打印门所判的那个量 —— 这条就是它的新变体：**两道口径都要印**）。 */
@@ -400,9 +400,9 @@ if (process.env.EPIRUS_NO_DEFQ !== '1') {
  *   现在：**两处 G 都进 `fails`**（multi 与 long，同一条线 3）⇒ 打印仍然只认前缀 `G 有效技能数`，
  *     而 `G(long) 有效技能数 …` 以 `G(long)` 开头 ⇒ **不会**被那个前缀认到（它只覆盖 multi 那一条）
  *     ⇒ 标题不再能说"门只判 multi"，改成"已阻断（哪几条）"并列印。 */
-const _gBlocked = fails.filter(function (f) { return f.indexOf('G 有效技能数') === 0 || f.indexOf('G(long) 有效技能数') === 0; });
+const _gBlocked = fails.filter(function (f) { return f.includes('G 有效技能数') || f.includes('G(long) 有效技能数'); });
 console.log('   广度（**门判 multi 与 long，两个模式各取两把量具里更严的那一个**（10-10/11「long 也阻断」‖ **2026-10-25 用户裁定「广度取 b」**· 两条同线 3）：' +
-  (_gBlocked.length ? '已阻断 —— ' + _gBlocked.join(' ‖ ') : '两条都未阻断') + '）：multi 有效技能数=' + G_M.toFixed(2) +
+  (_gBlocked.length ? '已阻断 —— ' + _gBlocked.join(' ‖ ') : '两条都未阻断') + '）〔会用的招不止两三种〕：multi 有效技能数=' + G_M.toFixed(2) +
   '（取严 = min(selfPlay ' + Number(sp.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brdM.G_eff).toFixed(2) + '）' +
   ' · **long（= 长程，产品常用模式）** 有效技能数=' + G_L.toFixed(2) +
   '（取严 = min(selfPlay ' + Number(spL.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brd.G_eff).toFixed(2) + '）' +
@@ -442,7 +442,7 @@ console.log('   狙击场（1 席狙击 + 3 席被动 · ' + snf.games + ' 局�
  * 而整条珠经济（蓄能 → 电磁炮/天火）在四代包里一次都没闭环过 ⇒ 只看 `wasteRate` 它永远绿。
  * ⇒ 同时报"花珠率"（花掉/得珠）：**只有"得珠 > 0 且花珠率 > 0"才算闭环**，与复核 §11 的建议一致。 */
 const chg = chgE;   // v1.5.90：这次调用已提到 `feasibilityOf` 之前（第 6 道判据要用它的 gained/spentRate）⇒ 此处复用，别重复跑
-console.log('   珠经济（' + chg.games + ' 局）：蓄能 ' + chg.chargesPerGame.toFixed(2) + '/局 · 得珠 ' + chg.gained +
+console.log('   〔攒下来的珠有没有囤成过期废物〕珠经济（' + chg.games + ' 局）：蓄能 ' + chg.chargesPerGame.toFixed(2) + '/局 · 得珠 ' + chg.gained +
   ' · 过期 ' + chg.expired + ' · **花掉 ' + chg.spent + '** · 浪费率 ' + (100 * chg.wasteRate).toFixed(0) +
   '% · **花珠率 ' + (100 * chg.spentRate).toFixed(1) + '%** · 过期 ' + (chg.games ? (chg.expired / chg.games).toFixed(1) : '—') + '/局' +
   /* v1.5.101（第十轮复核 §4-2）：判据与 `feasibilityOf` 的**双条件**对齐 ——
@@ -482,7 +482,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
          * ⇒ "⛔ 体检未过（N 项阻断）"在"有阻断型 UNRUN"的候选上依旧翻倍。补成与 FAIL 分支同形。 */
         if (uD.blocking && gateDrafts.blocking.indexOf(uName) < 0) {
           gateDrafts.blocking.push(uName);
-          fails.push('行为门不可判且按判红处置（UNRUN:' + (uKind || '?') + '）：' + uName + ' —— ' + uD.why);
+          fails.push('行为门不可判且按判红处置（UNRUN:' + (uKind || '?') + '）：' + uName + ' —— ' + uD.why + '〔量具读不出这一格，不是包过了这一格〕');
         }
         const uLine = (uD.blocking ? '【阻断】' : '【只记录】') + 'UNRUN:' + (uKind || '?') + ' ' + uName + ' —— ' + uD.why;
         if (gateDrafts.unrun.indexOf(uLine) < 0) gateDrafts.unrun.push(uLine);
@@ -504,7 +504,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
          *   ⇒ 是 **gate-drafts 自己重复打印**（工具侧待修，见 §F-1 的后续；promote 侧先按名字去重，保证计数可信）。 */
         if (gateDrafts.blocking.indexOf(nm) < 0) {
           gateDrafts.blocking.push(nm);
-          fails.push('行为门未过：' + nm);
+          fails.push('行为门未过：' + nm + ' ——【一套固定操作能不能稳赢它 / 纯防御能不能收场】不成立');
         }
       } else if (isRef && m[1] === 'FAIL') {
         if (gateDrafts.recorded.indexOf('参照(不阻断) FAIL ' + nm) < 0) gateDrafts.recorded.push('参照(不阻断) FAIL ' + nm);
@@ -610,8 +610,8 @@ console.log('   全息屏障（自对局）：' + sp.holoPerGame.toFixed(1) + ' 
 /* 阈值标定（实测）：**病态 18.7/局**（v7wall-33，100% 送人、用户手感异常）vs **偶发 2.0/局**（v7wall-31）
  * ⇒ 硬门槛取 **>6**，只挡"把套盾当主业"的产物；>2 仍留在普通条件里（可 --force）。
  * 教训同源：阈值不能定在噪声带里（E/F/holo 三次同型）。 */
-if (hOther > HOLO_GIFT_MAX) hardFails.push('全息屏障套给别人 ' + hOther.toFixed(1) + ' 次/局 > ' + HOLO_GIFT_MAX + '（把原型制御白送对手当主业）');
-if (sp.pierceLand !== undefined && sp.pierceLand === 0) hardFails.push('自对局穿透卡零命中');
+if (hOther > HOLO_GIFT_MAX) hardFails.push('全息屏障套给别人 ' + hOther.toFixed(1) + ' 次/局 > ' + HOLO_GIFT_MAX + ' ——【别把"给对手套盾"当主业】不成立〔原机器名：送盾硬门槛〕');
+if (sp.pierceLand !== undefined && sp.pierceLand === 0) hardFails.push('自对局穿透卡零命中 ——【穿得开防的一发都没打上】');
 if (hardFails.length) {
   console.log('⛔ 硬门槛未过（**--force 也不放行**）：');
   for (const h of hardFails) console.log('   · ' + h);
