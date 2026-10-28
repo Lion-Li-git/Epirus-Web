@@ -131,6 +131,39 @@ function logitsOf(pack, fx) {
 }
 
 const CAT = {}; R.skills.forEach((s) => { CAT[s.key] = s.cat; });
+
+/* ===== 第十七段那条口径的出厂实现：臂行自带"**并列集合大小**" =====
+ * 病（#145 今夜闭合的那格）：同一份 logits，"取第一个最大"与"在并列集合里抽样"读出的夺1 差 **21.1pt**
+ *   ⇒ 只报引擎那条 chooser 会把"**头分不开**"读成"头会打"。所以这条读数要跟着臂一起出厂，不能事后拿 scratch 补救。
+ * 三条形状纪律：
+ *   ① 包装在**接线自证之后** ⇒ 自证那两次打分不许混进账（不然计数虚高、下面的对账就白做）；
+ *   ② 按"当前在跑哪一行"归账（`TIE2.cur`），行与行之间不串；
+ *   ③ **覆盖式接入必须自证真被调用**：拿 arch2 自己的 `CNT.forwards` 增量与计数对账，
+ *      对不上（>1%）就硬失败 ⇒ 否则这条列会像 §E824 那次一样"看着有数，其实量的是空气"。 */
+/* 装在哪一层是**试出来的**，不是想当然：第一版包 `P.forwardCands` ⇒ 计数 0 而对账用的 `CNT.forwards` 涨 4365，
+ *   当场红（这就是那条"覆盖式接入要自证真被调用"在起作用）。
+ *   原因是 arch2 的 `chooseCandidates` 闭包里直接调**它自己那份** `forwardCands`（`arch2.mjs:420`），
+ *   而引擎那条路走的是 `P.chooseCandidates` ⇒ 要拦就得拦 `chooseCandidates`，再用导出的 `P.__arch2.forwardCands` 复算一次 logits
+ *   （纯函数、不抽 rng ⇒ 只多花一次打分，不改变被评者的选择）。 */
+const TIE2 = { cur: null, by: {} };
+const ARCH2 = P.__arch2;
+const FC_BEFORE = ARCH2 && ARCH2.CNT ? ARCH2.CNT.forwards : 0;
+const prevCC2 = P.chooseCandidates;
+P.chooseCandidates = function (state, pid, cands, params2, opts2) {
+  const r = prevCC2.apply(null, arguments);
+  const t = TIE2.cur;
+  if (t && ARCH2 && params2 && params2.length === P.paramCount() && cands && cands.length) {
+    const f = ARCH2.forwardCands(state, pid, cands, params2,
+      { temp: opts2 && opts2.temp != null ? opts2.temp : 0.5 });
+    if (f && f.logits && f.logits.length === cands.length) {
+      const b = TIE2.by[t] || (TIE2.by[t] = { n: 0, sum: 0, worst: 0, uniq: 0 });
+      let mx = -Infinity; for (let i = 0; i < f.logits.length; i++) if (f.logits[i] > mx) mx = f.logits[i];
+      let k = 0; for (let i = 0; i < f.logits.length; i++) if (Math.abs(f.logits[i] - mx) < 1e-9) k++;
+      b.n++; b.sum += k; if (k > b.worst) b.worst = k; if (k === 1) b.uniq++;
+    }
+  }
+  return r;
+};
 function playCell(pack, cell, seed) {
   const acc = { games: 0, first: 0, top2: 0, rounds: 0, acts: 0, cat: {}, guard: 0, charge: 0, bead: 0, voidedOnMe: 0, survived: 0 };
   for (let g = 0; g < GAMES; g++) {
@@ -166,7 +199,9 @@ function playCell(pack, cell, seed) {
 const pct = (a, b) => b ? (100 * a / b).toFixed(1) + '%' : '—';
 const per = (a, b) => b ? (a / b).toFixed(2) : '—';
 function row(tag, pack, cell, seed) {
+  TIE2.cur = tag;
   const a = playCell(pack, cell, seed);
+  TIE2.cur = null;
   const cats = ['energy', 'attack', 'defense', 'special'].map((k) => k[0] + ':' + pct(a.cat[k] || 0, a.acts)).join(' ');
   console.log('  ' + tag.padEnd(9) + ' ‖ 局 ' + a.games + ' ‖ 夺1 ' + pct(a.first, a.games) + ' ‖ 前2 ' + pct(a.top2, a.games) +
     ' ‖ 活到终局 ' + pct(a.survived, a.games) + ' ‖ 局长 ' + per(a.rounds, a.games) + ' ‖ 出手/局 ' + per(a.acts, a.games) +
@@ -191,6 +226,28 @@ for (const cell of CELLS) {
    *   v7 的 chooser 走 `P.choose`→本地 forward，理论上不经过被覆盖的那几个），挂在待查。 */
   S.pF += a.first; S.pG += a.games; S.pT += a.top2; S.rF += b.first; S.rG += b.games; S.rT += b.top2;
   S.vF += c.first; S.vG += c.games; S.vT += c.top2;
+}
+/* ===== 并列集合那一条读数（附"这条列真的在量东西"的对账）===== */
+{
+  const FC_AFTER = ((P.__arch2 && P.__arch2.CNT) || A.CNT || { forwards: 0 }).forwards;
+  const delta = FC_AFTER - FC_BEFORE;
+  const counted = ['2.0包', '随机起点'].reduce((s, t) => s + ((TIE2.by[t] && TIE2.by[t].n) || 0), 0);
+  P.chooseCandidates = prevCC2;                       /* 复算用的那层壳当场摘掉，别留给后面的读数 */
+  /* 对账为什么是 `delta = 2 × counted`：引擎每走一次 `chooseCandidates`，arch2 内部打一次分（+1），
+   *   我这层为量并列集合**再复算一次**（+1）。所以两次都该被 `CNT.forwards` 记到 ⇒ 若包装被绕过，`counted` 会是 0 而 delta 涨
+   *   （第一版就是这么红的）；若我复算漏了几枚，2× 这条关系也会破。 */
+  console.log('   ⭐ 并列集合大小（同一份 logits 里"最大"有几枚并列；对局里这些枚由**引擎抽样**决定 ⇒ 大 = 头分不开，不是头会打）：');
+  for (const t of ['2.0包', '随机起点', '参照包⚠']) {
+    const b = TIE2.by[t];
+    if (!b || !b.n) { console.log('     · ' + t + ' ‖ **读不出**（0 次逐候选打分 ⇒ 这一行没经过 2.0 前向；参照包那行本来就走 v7 自己的路）'); continue; }
+    console.log('     · ' + t + ' ‖ 平均 ' + (b.sum / b.n).toFixed(2) + ' 枚 ‖ 最坏 ' + b.worst + ' ‖ "唯一最大"占 ' + (100 * b.uniq / b.n).toFixed(1) + '% ‖ 打分 ' + b.n + ' 次');
+  }
+  console.log('     ✔ 对账：本段内 arch2 自报 `CNT.forwards` 增 ' + delta + ' ‖ 我的计数 ' + counted + ' × 2（引擎一次 + 复算一次）⇒ '
+    + (delta > 0 && counted > 0 && Math.abs(delta - 2 * counted) <= 0.01 * delta ? '**这条列量的是真被调用的那批打分**' : '**对不上 ⇒ 上面那两行读数作废，先查包装点**'));
+  if (delta <= 0 || counted <= 0 || Math.abs(delta - 2 * counted) > 0.01 * delta) {
+    console.error('⛔ 并列集合那条列没被自证（forwards 增 ' + delta + ' vs 2×计数 ' + (2 * counted) + '）⇒ 覆盖式接入被绕过了，尺不出数');
+    process.exit(7);
+  }
 }
 const dFirst = 100 * (S.pF / S.pG - S.rF / S.rG), dTop2 = 100 * (S.pT / S.pG - S.rT / S.rG);
 console.log('⇒ 汇总 ' + CELLS.length + ' 格 ‖ 各 ' + GAMES + ' 局 ‖ 共 ' + S.pG + ' 局：夺1 ' + pct(S.pF, S.pG) + ' vs 随机 ' + pct(S.rF, S.rG) +
