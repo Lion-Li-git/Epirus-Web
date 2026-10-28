@@ -129,20 +129,15 @@ function selfSeq(state, pid, R) {
   return out;
 }
 
-/** 结构化部件（10-29 加）—— 一份真源两种装配：
- *    · `encode()` 把它摊平成定长向量 ⇒ 给离线尺（rank-signal / rank-inter / dimgate）用；
- *    · arch2 直接吃部件：**逐席**进共享 seat encoder、**目标身份用那一席的隐向量 h_t**，不再把目标标量抄第二遍。
- *  ⚠ 这两条路径共用同一个事实源；改这里必须同时改 `encode` 的装配，并由 selftest2 的"flatten(parts) === encode"那条腿钉住。 */
-export function parts(W, state, pid, cand) {
-  const S = W.EpirusState, R = W.EpirusRules;
+/** 局面侧部件（与候选无关 ⇒ 一次决策只算一遍；arch2 的逐席集合编码与池化都从这里取） */
+export function scene(W, state, pid) {
+  const R = W.EpirusRules;
   const me = state.p[pid];
   const modeHp = (state.mode && state.mode.hp) || 3;
   const maxR = R.MAX_ROUNDS || 60;
   const alive = state.p.filter((q) => q.hp > 0);
   const g = [state.n / 6, alive.length / 6, modeHp / 6, state.round / maxR, Math.min(state.epRegen || 0, 4) / 4];
   const priv = [Math.min(me.elec || 0, 2) / 2, Math.min(me.boom || 0, 2) / 2];
-
-  /* 逐席（含自己）：22 公开 + 5 关系(相对我) + 1 isSelf ⇒ 28 */
   const seats = [];
   let sumSt = 0;
   for (const q of alive) {
@@ -155,24 +150,26 @@ export function parts(W, state, pid, cand) {
       if (q.lastTarget === pid) rel[4] = 1;
       sumSt += (q.stickers || []).length;
     }
-    const v = seatVec(q, pid, modeHp, R);
-    seats.push({ id: q.id, vec: v, rel, isSelf: q.id === pid ? 1 : 0, p: q });
+    seats.push({ id: q.id, public: seatVec(q, pid, modeHp, R), rel, isSelf: q.id === pid ? 1 : 0, p: q });
   }
   const sums = [Math.min(sumSt, 12) / 12, seats.length / 6];
-  const seq = selfSeq(state, pid, R);
-
-  /* 候选侧：与局面无关的动作事实 + 由局面决定的派生量（**不含目标标量**，目标走 h_t） */
+  return { W, R, state, pid, me, modeHp, maxR, alive, g, priv, seats, sums, seq: selfSeq(state, pid, R), SEAT_W: SEAT_N + 6 };
+}
+/** 由 scene 派生一个候选的部件（目标走 h_t ⇒ 这里**不再**给目标标量，除非装配平面向量） */
+export function candOf(sc, cand) {
+  const S = sc.W.EpirusState, R = sc.R, me = sc.me;
   const def = R.byKey[cand.key] || {};
-  const cost = S.computeCost(state, pid, cand.key);
+  const cost = S.computeCost(sc.state, sc.pid, cand.key);
   const c = typeof cost.ep === 'number' ? cost.ep : (def.cost || 0);
   const ci = SKILL_CLASS.indexOf(def.cat);
   const isAoe = def.target === 'all' || cand.key === R.SK.FIRESTORM || cand.key === R.SK.MINE || cand.key === R.SK.BIG_T;
   const twoTgt = !!(cand.target2 != null || def.target2 === 'enemy');
   const dmg = (def.dmg && def.dmg.amt) || 0;
-  const t1 = cand.target != null ? state.p[cand.target] : null;
-  const t2 = cand.target2 != null ? state.p[cand.target2] : null;
+  const t1 = cand.target != null ? sc.state.p[cand.target] : null;
+  const t2 = cand.target2 != null ? sc.state.p[cand.target2] : null;
   const beadAfford = cand.bead === 'elec' ? Math.min(me.elec || 0, 1) : cand.bead === 'boom' ? Math.min(me.boom || 0, 1) : (def.energyNeeds ? 0 : 1);
   const hiddenReady = ((me.chains || []).length > 0 && cand.key === R.SK.DRAIN) || (me.hp <= 1 && (me.vampire || me.nightmare));
+  const oppN = sc.seats.length - 1;
   const base = [Math.min(c, 6) / 6, (def.pri || 0) / 5,
     ci === 0 ? 1 : 0, ci === 1 ? 1 : 0, ci === 2 ? 1 : 0, ci === 3 ? 1 : 0,
     (!def.target && !isAoe) ? 1 : 0, def.target === 'self' ? 1 : 0, (!isAoe && !twoTgt && def.target) ? 1 : 0, (twoTgt && !isAoe) ? 1 : 0, isAoe ? 1 : 0,
@@ -181,44 +178,52 @@ export function parts(W, state, pid, cand) {
     cost.ok ? 1 : 0, Math.max(-1, Math.min(1, (me.ep - c) / 4)), beadAfford,
     !!(t1 && dmg > 0 && dmg >= t1.hp) ? 1 : 0, dmg > 0 ? 1 : 0,
     !!(t1 && def.pierce && (t1.baguaExtra || t1.tauntActive) && def.pierce.defense) ? 1 : 0,
-    isAoe ? (seats.length - 1) / 5 : 0, isAoe ? Math.min(sumSt, 12) / 12 : 0,
-    (alive.length <= 2 || state.round >= maxR - 4) ? 1 : 0, hiddenReady ? 1 : 0,
+    isAoe ? oppN / 5 : 0, isAoe ? Math.min(sc.sums[0] * 12, 12) / 12 : 0,
+    (sc.alive.length <= 2 || sc.state.round >= sc.maxR - 4) ? 1 : 0, hiddenReady ? 1 : 0,
     (twoTgt && cand.key === R.SK.MIRROR) ? 1 : 0, (twoTgt && cand.key !== R.SK.MIRROR) ? 1 : 0];
-  const oneOf = (t) => t ? [
-    Math.max(0, t.hp) / modeHp, Math.min(t.ep, 12) / 12, (t.elec || t.boom) ? 1 : 0,
-    Math.min((t.stickers || []).length, 4) / 4, (t.baguaExtra || t.fireWeakNow || t.tauntActive) ? 1 : 0,
-    t.fireWeakNow ? 1 : 0, t.tauntActive ? 1 : 0,
-    (alive.length > 1 && t.hp === Math.min(...alive.map((q) => q.hp))) ? 1 : 0, (t.lastTarget === pid) ? 1 : 0,
-  ] : new Array(9).fill(0);
   const idOne = new Array(R.skills.length).fill(0);
   const at = R.skills.findIndex((s) => s.key === cand.key);
   if (at >= 0) idOne[at] = 1; else idOne[idOne.length - 1] = 1;
-  return { g, priv, seats, sums, seq, base, idOne, t1, t2, oneOf, SEAT_W: SEAT_N + 6, BASE_W: base.length, ID_W: idOne.length };
+  return { def, c, dmg, t1, t2, base, idOne, isAoe, twoTgt, BASE_W: base.length, ID_W: idOne.length };
+}
+/** 目标槽标量（只给**平面向量**用；arch2 走 h_t，不吃这些） */
+function targetScalars(sc, q) {
+  return q ? [
+    Math.max(0, q.hp) / sc.modeHp, Math.min(q.ep, 12) / 12, (q.elec || q.boom) ? 1 : 0,
+    Math.min((q.stickers || []).length, 4) / 4, (q.baguaExtra || q.fireWeakNow || q.tauntActive) ? 1 : 0,
+    q.fireWeakNow ? 1 : 0, q.tauntActive ? 1 : 0,
+    (sc.alive.length > 1 && q.hp === Math.min(...sc.alive.map((x) => x.hp))) ? 1 : 0, (q.lastTarget === sc.pid) ? 1 : 0,
+  ] : new Array(9).fill(0);
 }
 
-/** 编码一个候选：返回长度 = dims(R) 的数组（离线尺用；arch2 走 `parts`） */
+/** 结构化部件（= scene + candOf 的合并视图；离线尺与回归测试用它比对 flatten 一致性） */
+export function parts(W, state, pid, cand) {
+  const sc = scene(W, state, pid), cp = candOf(sc, cand);
+  return { g: sc.g, priv: sc.priv, seats: sc.seats, sums: sc.sums, seq: sc.seq, base: cp.base, idOne: cp.idOne, t1: cp.t1, t2: cp.t2, oneOf: (q) => targetScalars(sc, q), SEAT_W: sc.SEAT_W, BASE_W: cp.BASE_W, ID_W: cp.ID_W };
+}
+
+/** 编码一个候选：返回长度 = dims(R) 的数组（离线尺用；arch2 走 scene/candOf） */
 export function encode(W, state, pid, cand) {
   const R = W.EpirusRules;
   const M = manifest(R);
-  const P = parts(W, state, pid, cand);
+  const sc = scene(W, state, pid), cp = candOf(sc, cand);
   const out = [];
   const push = (...v) => { for (const x of v) out.push(Number.isFinite(x) ? x : 0); };
-  push(...P.g);
-  const selfSeat = P.seats.find((s) => s.isSelf) || P.seats[0];
-  push(...selfSeat.vec, ...P.priv);
-  const opps = P.seats.filter((s) => !s.isSelf);
+  push(...sc.g);
+  const selfSeat = sc.seats.find((s) => s.isSelf) || sc.seats[0];
+  push(...selfSeat.public, ...sc.priv);
+  const opps = sc.seats.filter((s) => !s.isSelf);
   const mean = new Array(SEAT_N).fill(0), max = new Array(SEAT_N).fill(0);
-  for (const s of opps) { for (let j = 0; j < SEAT_N; j++) { mean[j] += s.vec[j] / Math.max(1, opps.length); if (s.vec[j] > max[j]) max[j] = s.vec[j]; } }
-  push(...mean, ...max, ...P.sums);
-  /* 关系：平摊版按"逐对池化取 any"（与 parts 里那 5 枚同定义，只是不逐席带） */
+  for (const s of opps) { for (let j = 0; j < SEAT_N; j++) { mean[j] += s.public[j] / Math.max(1, opps.length); if (s.public[j] > max[j]) max[j] = s.public[j]; } }
+  push(...mean, ...max, ...sc.sums);
   const relAny = [0, 0, 0, 0, 0];
   for (const s of opps) for (let j = 0; j < 5; j++) if (s.rel[j]) relAny[j] = 1;
   push(...relAny);
-  push(...P.seq);
-  push(...P.base);
-  push(P.t1 ? 1 : 0, ...P.oneOf(P.t1));
-  push(P.t2 ? 1 : 0, ...P.oneOf(P.t2), (P.t1 && P.t2) ? Math.abs(P.t1.hp - P.t2.hp) / ((state.mode && state.mode.hp) || 3) : 0);
-  push(...P.idOne);
+  push(...sc.seq);
+  push(...cp.base);
+  push(cp.t1 ? 1 : 0, ...targetScalars(sc, cp.t1));
+  push(cp.t2 ? 1 : 0, ...targetScalars(sc, cp.t2), (cp.t1 && cp.t2) ? Math.abs(cp.t1.hp - cp.t2.hp) / sc.modeHp : 0);
+  push(...cp.idOne);
   if (out.length !== M.length) throw new Error('obs3 布局不自洽：拼出 ' + out.length + ' 列 ‖ MANIFEST 声明 ' + M.length + ' 列 ⇒ 差 ' + (out.length - M.length) + '（这条就是 1584 死权重那次的守卫）');
   return out;
 }

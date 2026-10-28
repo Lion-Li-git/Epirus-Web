@@ -90,7 +90,7 @@ const HOLD = Number(arg('holdoutGames', 60));
 if (process.env.EPIRUS_ARCH2) {
   const parts = String(process.env.EPIRUS_ARCH2).split(':');
   const cfg = { mutMode: String(process.env.EPIRUS_MUT_MODE || 'seg') };
-  if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) cfg[e[0].trim()] = Number(e[1]); });
+  if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) cfg[e[0].trim()] = (e[0].trim() === 'input') ? e[1].trim() : Number(e[1]); });
   const A2 = installArch2(W, cfg);
   if (T.mulberry32) A2.rngRef.r = T.mulberry32((SEED * 7919 + 13) >>> 0);
   /* ⚑ **开臂前的接线自证**（10-28 晚三波读数作废换来的闸）：打一局量一下 `forwardCands` 有没有被叫到。

@@ -189,5 +189,58 @@ let MID = null;
   ok(modeNow === 'multi', 'T9b 接线自证**没把桌形改走**（用完还原 ⇒ 现在 ' + modeNow + '）');
 }
 
+/* ---- T10/T11/T12（10-29 夜加）：obs3 输入面、S1o 接线、以及**相对步长**的两侧对账 ----
+ * 加这三条的动因：obs3 与 arch2 是两个文件，宽度各写一遍就会**静默错位**（1584 死权重那一族的跨文件版本）；
+ *   而 mutRel 这条如果只测"新口径有界"，就看不出我是不是顺手把旧口径也改了 ⇒ 旧病理必须仍然在，才算没偷改。 */
+const O3 = await import('./obs3.mjs');
+{
+  const FX = MID || D;
+  const Lo = layout(Object.assign({ input: 'obs3', skills: R.skills.length }, cfg));
+  const enc = O3.encode(W, FX.st, 0 /* 焦点席 */, FX.cands[0]);
+  const sc = O3.scene(W, FX.st, 0 /* 焦点席 */), cp = O3.candOf(sc, FX.cands[0]);
+  ok(enc.length === O3.blocks(R).length, 'T10a obs3：encode 长度 === MANIFEST（' + enc.length + ' ‖ dims()=' + O3.dims(R) + '）');
+  ok(cp.base.length + cp.idOne.length === Lo.actIn, 'T10b 跨文件对账：obs3 的 base+身份(' + cp.base.length + '+' + cp.idOne.length + ') === S1o.actIn(' + Lo.actIn + ')');
+  ok(sc.seats[0].public.length + 6 === Lo.seatIn, 'T10c 跨文件对账：obs3 逐席(22+5关系+isSelf) === S1o.seatIn(' + Lo.seatIn + ')');
+  const sp = sc.g.length + sc.priv.length + sc.seq.length + sc.sums.length;
+  ok(sp === Lo.selfDim, 'T10d 跨文件对账：obs3 局面侧(5+2+48+2=' + sp + ') === S1o.selfDim(' + Lo.selfDim + ')');
+}
+{
+  /* T11：S1o 装进真训练环打一局 ⇒ 前向被叫到；同 params 跑两遍 ⇒ 逐位相同 */
+  const A2o = install(W, Object.assign({ input: 'obs3', mutMode: 'seg' }, cfg));
+  A2o.rngRef.r = rng;
+  const Lo = A2o.L || layout(Object.assign({ input: 'obs3', skills: R.skills.length }, cfg));
+  let wired = null, err = '';
+  try { wired = verifyWired(W, A2o, { mode: 'multi', n: 5, games: 1 }); } catch (e) { err = String(e && e.message || e); }
+  ok(!!(wired && wired.forwards > 0 && wired.chooseCandidatesCalls > 0) && P.paramCount() === Lo.n,
+    'T11a S1o 接线：paramCount=' + P.paramCount() + ' ‖ 打一局 forwardCands ' + (wired ? wired.forwards : 0) + ' 次 ‖ chooseCandidates ' + (wired ? wired.chooseCandidatesCalls : 0) + ' 次' + (err ? ' ‖ 抛了：' + err : ''));
+  const FX = MID || D;
+  const pp = P.makePolicy(0.25);
+  const a1 = P.forwardCands(FX.st, 0 /* 焦点席 */, FX.cands, pp, { temp: 0.5 });
+  const a2 = P.forwardCands(FX.st, 0 /* 焦点席 */, FX.cands, pp, { temp: 0.5 });
+  ok(Array.from(a1.logits).join(',') === Array.from(a2.logits).join(','), 'T11b S1o 确定性：同 params 同局面跑两遍 ⇒ 逐位相同');
+  A2o.restore();
+}
+{
+  /* T12：mutRel 的两侧对账 —— 新口径有界，旧口径的病理**必须仍然存在** */
+  const Ld = layout(cfg), Lo = layout(Object.assign({ input: 'obs3', skills: R.skills.length }, cfg));
+  const worstOf = (segL, rel) => {
+    const A = install(W, Object.assign({ mutMode: 'seg', mutRel: rel ? 1 : 0, input: segL.input }, cfg));
+    A.rngRef.r = rng;
+    const p = P.makePolicy(0.25), q = P.mutatePolicy(p, 0.2);
+    if (q.length !== p.length || p.length !== segL.n) { A.restore(); return NaN; }   // 几何必须与量的那块一致，否则是比错段
+    let w = 0;
+    for (const s of segL.seg) {
+      const std = segL.initScale / Math.sqrt(Math.max(1, segL.fanIn[s.name]));
+      for (let i = s.off; i < s.off + s.len; i++) w = Math.max(w, Math.abs(q[i] - p[i]) / std);
+    }
+    A.restore();
+    return w;
+  };
+  const wRel = worstOf(Lo, 1), wOld = worstOf(Ld, 0);
+  ok(wRel < 14, 'T12a mutRel：最坏坐标 |Δ| = ' + wRel.toFixed(1) + '× 自身 init 尺度（σ=0.2，高斯尾部 ⇒ 该有界）');
+  ok(wOld > 14, 'T12b 旧口径的病理仍在：最坏 |Δ| = ' + wOld.toFixed(1) + '×（偏置段拿原 σ）⇒ 我没有偷偷改掉以前 12 臂的口径');
+  console.log('  · 两边实测：mutRel 最坏 ' + wRel.toFixed(1) + '× ‖ 旧口径最坏 ' + wOld.toFixed(1) + '×（S1 旧口径平均 |Δ| 0.0216 / S1o 相对口径 0.0048 见台账）');
+}
+
 console.log(fails.length ? '\n⛔ 自证未过 ' + fails.length + ' 条 ⇒ 结构不进下一环' : '\n⇒ ' + done + ' 条自证全过：2.0 原型可以进训练环');
 process.exit(fails.length ? 8 : 0);
