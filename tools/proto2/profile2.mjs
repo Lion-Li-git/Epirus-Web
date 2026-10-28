@@ -24,6 +24,11 @@ const argv = process.argv.slice(2);
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const PACK = arg('pack', '');
 const GAMES = Math.max(4, Number(arg('games', 24)) || 24);
+/* ⚑ 采样温度必须**三行同一条**：v7 那条走 `P.choose`，`opts.temp` 缺省是 0.6（policy.js:701 `opts.temp || 0.6`），
+ *   而 2.0 的 `chooseCandidates` 缺省写的是 0.5（arch2.mjs:418）⇒ 不显式传就等于"两行两套噪声档"，
+ *   Δ夺1 里就混进"谁更敢按分差下注"。这里默认钉 0.6 并把同一枚 temp 交给三行。 */
+const TEMP = Number(arg('temp', 0.6));
+if (!(TEMP > 0)) { console.error('⛔ --temp 要正数'); process.exit(2); }
 if (!PACK) { console.error('⛔ 需要 --pack=<2.0 的 .bak>'); process.exit(2); }
 
 const W = sandbox();
@@ -46,7 +51,22 @@ const params = Float64Array.from(P.unpack(raw, true));
 if (!params || params.length !== P.paramCount()) { console.error('⛔ 包形状不对：读出 ' + params.length + ' ‖ 当前结构要 ' + P.paramCount()); process.exit(7); }
 P.setRng(T.mulberry32(4242));
 const randParams = Float64Array.from(P.makePolicy(0.25));
-const POOL = T.buildOpps(refParams, 0.05);
+/* ⚑ 对手表必须**定标**（10-29 02:2x 抓到：同一份命令跑两遍 Δ夺1 从 −12.03pt 漂到 −9.84pt、随机行从 16.5% 跳到 14.3%
+ *   ⇒ 漂的不是包，是 `T.buildOpps()` 里那枚没播种的 `Math.random()`）。
+ *   做法：只在造表期间临时顶掉 Math.random，出来立刻还原；并打印对手表指纹，两遍不一致就当场停。 */
+function buildPoolSeeded(seedVal) {
+  const real = Math.random;
+  const rr = (() => { let a = seedVal >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
+  try { Math.random = rr; return T.buildOpps(refParams, 0.05); } finally { Math.random = real; }
+}
+function poolFingerprint(PL) {
+  let h = 2166136261;
+  for (const o of PL) { const s = (o.name || '') + ':' + Array.from(o.params || []).slice(0, 6).map((x) => x.toFixed(3)).join(','); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } }
+  return (h >>> 0).toString(16);
+}
+let POOL = buildPoolSeeded(20261029), POOL_FP = poolFingerprint(POOL);
+const POOL_FP2 = poolFingerprint(buildPoolSeeded(20261029));
+if (POOL_FP !== POOL_FP2) { console.error('⛔ 对手表定标失败：同一枚种子两次指纹 ' + POOL_FP + ' vs ' + POOL_FP2); process.exit(2); }
 const STYLES = ['breakdef', 'wall', 'tankline', 'guardgun', 'protowall', 'reflectmix', 'beadburst', 'aggro'];
 const CELLS = [];
 for (const n of [3, 5]) for (const nm of STYLES) { const i = POOL.findIndex((o) => o.name === nm); if (i >= 0) CELLS.push({ n, name: nm, idx: i }); }
@@ -90,7 +110,7 @@ function playCell(pack, cell, seed) {
     const seat = g % cell.n;
     const choosers = [];
     for (let pid = 0; pid < cell.n; pid++) {
-      if (pid === seat) choosers.push(T.policyChooserN(pack));
+      if (pid === seat) choosers.push(T.policyChooserN(pack, TEMP));
       else choosers.push(POOL[(cell.idx + 1 + pid) % POOL.length].sel);
     }
     const rm = T.oneGameN(choosers, seed + g * 7919, cell.n, { regen: 0, mode: 'multi' });
@@ -127,17 +147,25 @@ function row(tag, pack, cell, seed) {
   return a;
 }
 console.log('# 2.0 行为剖面 ‖ 包 ' + PACK + ' ‖ 结构 ' + archTag + ' ‖ paramCount=' + P.paramCount() +
-  ' ‖ 每格 ' + GAMES + ' 局 ‖ 对手表固定自 ' + refSrc + ' ‖ ⚑ 只与同结构随机起点比（2.0 从随机起点训练，绝对值不与热启动 v7 臂并排）');
-const S = { pF: 0, pG: 0, pT: 0, rF: 0, rT: 0, rG: 0 };
+  ' ‖ 每格 ' + GAMES + ' 局 ‖ **三行同 temp=' + TEMP + '** ‖ 对手表固定自 ' + refSrc + '（定标指纹 ' + POOL_FP + ' ‖ 同种子两遍一致已验） ‖ 三行同格同局号（2.0包 ‖ 同结构随机起点 ‖ **参照包**）⇒ 既读"离随机起点多远"，也读"离参照包多远"');
+const S = { pF: 0, pG: 0, pT: 0, rF: 0, rT: 0, rG: 0, vF: 0, vT: 0, vG: 0 };
 for (const cell of CELLS) {
   console.log('· 格 ' + cell.name + ' ‖ n=' + cell.n);
   const a = row('2.0包', params, cell, 1000 + cell.n * 97 + cell.idx);
   const b = row('随机起点', randParams, cell, 1000 + cell.n * 97 + cell.idx);
+  /* ⚑ 第三行 = **参照包自己**（默认 v7 现役冠军）。加它的原因很具体：段 D′ 用"模仿 v7"当货币训出来的粒，
+   *   只跟随机起点比是**判不出值不值**的（模仿得再像也只是像），必须同场读"离 v7 还差多少"。
+   *   三行共用同一格同一局号 ⇒ 分母天然相等（下面那条分母对账会当场抓不平）。 */
+  const c = row('参照包', refParams, cell, 1000 + cell.n * 97 + cell.idx);
   S.pF += a.first; S.pG += a.games; S.pT += a.top2; S.rF += b.first; S.rG += b.games; S.rT += b.top2;
+  S.vF += c.first; S.vG += c.games; S.vT += c.top2;
 }
 const dFirst = 100 * (S.pF / S.pG - S.rF / S.rG), dTop2 = 100 * (S.pT / S.pG - S.rT / S.rG);
 console.log('⇒ 汇总 ' + CELLS.length + ' 格 ‖ 各 ' + GAMES + ' 局 ‖ 共 ' + S.pG + ' 局：夺1 ' + pct(S.pF, S.pG) + ' vs 随机 ' + pct(S.rF, S.rG) +
-  ' ⇒ **Δ夺1 ' + dFirst.toFixed(2) + 'pt** ‖ Δ前2 ' + dTop2.toFixed(2) + 'pt');
+  ' vs 参照 ' + pct(S.vF, S.vG) + ' ⇒ **Δ夺1( vs 随机) ' + dFirst.toFixed(2) + 'pt** ‖ Δ前2 ' + dTop2.toFixed(2) + 'pt');
+const dV = 100 * (S.pF / S.pG - S.vF / S.vG);
+const seV = 100 * Math.sqrt((S.pF / S.pG) * (1 - S.pF / S.pG) / S.pG + (S.vF / S.vG) * (1 - S.vF / S.vG) / S.vG);
+console.log('   ⇒ **Δ夺1( vs 参照包) ' + dV.toFixed(2) + 'pt ‖ 合并 SE ≈ ' + seV.toFixed(2) + '**（|Δ| < ' + (2 * seV).toFixed(1) + 'pt 只能写"分不开"）');
 const se = 100 * Math.sqrt((S.pF / S.pG) * (1 - S.pF / S.pG) / S.pG + (S.rF / S.rG) * (1 - S.rF / S.rG) / S.rG);
 console.log('   合并 SE ≈ ' + se.toFixed(2) + 'pt ⇒ |Δ| < ' + (2 * se).toFixed(1) + 'pt 只能写"分不开"（本轮' + (Math.abs(dFirst) > 2 * se ? '过线' : '**不过线**') + '）');
 console.log('   ⚑ 「前2」在 n=3 的**随机基线就是 66.7%**、n=5 是 40% ⇒ 它只当"别死太早"的粗读数，判别力主要看夺1；' +

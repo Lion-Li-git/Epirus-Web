@@ -218,6 +218,21 @@ const O3 = await import('./obs3.mjs');
   const a1 = P.forwardCands(FX.st, 0 /* 焦点席 */, FX.cands, pp, { temp: 0.5 });
   const a2 = P.forwardCands(FX.st, 0 /* 焦点席 */, FX.cands, pp, { temp: 0.5 });
   ok(Array.from(a1.logits).join(',') === Array.from(a2.logits).join(','), 'T11b S1o 确定性：同 params 同局面跑两遍 ⇒ 逐位相同');
+  /* T13：容器的 arch 标签必须由**实际布局**写 —— 硬写 'S1' 那版会把 5650 条的 S1o 包打成 S1，
+   *   下游按 arch 选输入面的尺（profile2）就拿错脸读。判"消费者真读得到"：两侧各打一次包再回读。 */
+  const pkO = P.pack(P.makePolicy(0.25));
+  ok(pkO.arch === 'S1o', 'T13a S1o 打包标签 = ' + pkO.arch + '（' + pkO.a.length + ' 条 ‖ input=' + (pkO.dims && pkO.dims.input) + '）');
+  const backO = P.unpack(pkO);
+  ok(!!backO && backO.length === Lo.n, 'T13b S1o 同档回读成功（' + (backO ? backO.length : 0) + '）‖ checkPack=' + JSON.stringify(P.checkPack(pkO)));
+  /* 真包的跨档读会被**长度**先挡住（5650≠5258）⇒ 那证不到 arch 这条腿。这里造一枚"长度刚好骗过长度检查、
+   *   但 arch 标错"的构造样本（现在两档长度不同所以盘上不会出现，可这正是要防的潜在形状：以后调 seatH 就可能撞等长）。 */
+  const wrongTag = (() => {
+    const A1 = install(W, Object.assign({ mutMode: 'seg' }, cfg)); A1.rngRef.r = rng;
+    const fake = { v: 90, arch: 'S1o', dims: { seatH: A1.L.seatH, actH: A1.L.actH, hid: A1.L.hid, hid2: A1.L.hid2 }, a: new Array(A1.L.n).fill(0), n: A1.L.n };
+    const r = P.checkPack(fake); const rr = P.unpack(fake); A1.restore(); return { r, rr };
+  })();
+  ok(wrongTag.r.ok === false && wrongTag.r.reason === 'arch' && wrongTag.rr === null,
+    'T13c 跨档拒读（构造样本：长度合、arch 标反）⇒ checkPack=' + JSON.stringify(wrongTag.r) + ' ‖ unpack=' + wrongTag.rr + '（宁可读不出，不许静默错切）');
   A2o.restore();
 }
 {

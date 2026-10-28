@@ -467,12 +467,16 @@ export function install(W, opts) {
     return c;
   }
 
-  /* ---- 容器：显式带 arch + dims（**不再从长度反推形状** —— 那是 v7 的 shapeOf 病） ---- */
+  /* ---- 容器：显式带 arch + dims（**不再从长度反推形状** —— 那是 v7 的 shapeOf 病） ----
+   * ⚑ 10-29 01:5x 抓到：这里原先硬写 `arch: 'S1'`，S1o（吃 obs3，5650 条）产出的包也被打成 S1
+   *   ⇒ 下游按 `arch` 选输入面的尺（profile2）会拿错的那张脸去读。长度不同（5258≠5650）只挡住了"unpack 成功"，
+   *   挡不住"有人照 arch 装错档再按长度报错"这种绕路。⇒ 标签一律**由实际布局写**，读的时候当场对账。 */
   function pack(p) {
-    return { v: 90, arch: 'S1', dims: { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2 }, a: Array.from(p), n: L.n };
+    return { v: 90, arch: L.arch, dims: { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input }, a: Array.from(p), n: L.n };
   }
   function unpack(o) {
     if (!o || !Array.isArray(o.a) || o.a.length !== L.n || o.v !== 90) return null;
+    if (o.arch && o.arch !== L.arch) return null;            /* 标签对不上 ⇒ 宁可读不出，不要静默错切 */
     const q = new Float64Array(L.n);
     for (let i = 0; i < L.n; i++) q[i] = o.a[i];
     return q;
@@ -481,6 +485,7 @@ export function install(W, opts) {
     if (!o || !Array.isArray(o.a)) return { ok: false, reason: 'missing' };
     if (o.v !== 90) return { ok: false, reason: 'version', got: o.v, want: 90 };
     if (o.a.length !== L.n) return { ok: false, reason: 'length', got: o.a.length, want: L.n };
+    if (o.arch && o.arch !== L.arch) return { ok: false, reason: 'arch', got: o.arch, want: L.arch };
     return { ok: true };
   }
 
