@@ -256,6 +256,14 @@ if (PACKS.length) {
         + ladderRes[0].win.toFixed(1) + '% ‖ v7 参照 ' + (v7Row ? v7Row.win.toFixed(1) : '—') + '% ‖ 均匀乱选 ' + (randRow ? randRow.win.toFixed(1) : '—') + '%');
     }
     A.restore();
+    /* ⭐ 第十七段那条口径的**提醒**（只打印、不阻断——差大未必坏：R1 那 7.2pt 是出厂大雷给的真东西，
+     *   而 B8 那 21.1pt 是"头只有 3 个分不开的出口"。判语必须靠"并列集合大小"，不是靠差值本身） */
+    const dCal = r2.win - r1.win;
+    if (Math.abs(dCal) > 8) {
+      console.log('     ⚑ 两口径差 **' + dCal.toFixed(1) + 'pt**（>8pt）⇒ 这一行的夺1 有相当一部分由"怎么破并列"决定，'
+        + '不是由排序决定。别拿任何一行单独下判语，先跑 `node scratch/bigt-gap.mjs --packs=' + pk + ' --games=10` 读那一列并列集合大小'
+        + '（‖ 出厂列：`profile2` 现在自带 ⭐ 那三行）。');
+    }
   }
   console.log('   ⚠ 口径：臂行走"贪心 argmax +' + (ENGINE_FACE ? '引擎同口径候选面' : '宽候选面') + '"，'
     + '与 `profile2`（引擎自己的两级 softmax）不是同一条执行路，**必须逐枚对表**（旧宽面时实测 R1 差 6.8pt ‖ B8 差 21pt）：'
