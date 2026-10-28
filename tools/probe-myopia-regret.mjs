@@ -37,7 +37,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'dumpsx', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'dumpsx', 'pack', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -151,8 +151,14 @@ const DUMPCOVER = arg('dumpcover', '');
 const CROWS = [];
 const ROWS = [];
 
+/* §E818（10-28 下午）：`--pack=<路径>` ⇒ 让这台仪器能指到**训练臂刚产出的那枚包**上量组内排序，
+ *   而不是只能量线上槽。缺省值 = 原来那句 `'js/bundled-champion-3p.js'`（逐字未动）⇒
+ *   不带旗标时本仪器输出与在册 §E195~§E205 那批同源可比（实测：加旗标前后 `--games=2 --seed=4100` 的 stdout 逐字相同）。 */
+const CHAMP_PACK = arg('pack', 'js/bundled-champion-3p.js');
 const W = sandbox(), S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, P = W.EpirusPolicy, B = W.EpirusBots;
-const params = (function () { const p = loadChamp(W, 'js/bundled-champion-3p.js'); return p && p.params ? p.params : p; })();
+const params = (function () { const p = loadChamp(W, CHAMP_PACK); return p && p.params ? p.params : p; })();
+if (!params) { console.error('⛔ `--pack` 指的那枚包读不出：' + CHAMP_PACK); process.exit(2); }
+if (argv.some(a => a === '--pack' || a.startsWith('--pack='))) console.log('[selfcheck] 本机现测：本遍的被测包 = ' + CHAMP_PACK + '（不带 `--pack` 时 = 线上槽，与 §E195~§E205 同源可比）');
 const { pool: POOL } = poolFromSpecs(B, OPP_SPECS);
 const ENVS = ENV_PICK.map(n => { const q = POOL.find(z => z.name === n); if (!q) { console.error('⛔ 环境 `' + n + '` 不在原型池'); process.exit(2); } return q; });
 const HB = loadPool(W, 'human');

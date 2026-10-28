@@ -23,9 +23,44 @@ import { readFileSync } from 'node:fs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['train', 'trainsx', 'test', 'testsx', 'lam'], 'probe-settle-capture');
+rejectUnknownFlags(argv, ['train', 'trainsx', 'test', 'testsx', 'single', 'lam'], 'probe-settle-capture');
 const arg = (k, d) => { const a = argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const LAM = Number(arg('lam', 1));
+/* `--single=<jsonl>`：**只量一台包自己的组内排序质量**（不拟合任何头）⇒ 训练臂只需要这个，
+ *   省掉"同一枚包再跑一趟训练 seed"的那笔钱。打印：`regret(net)` ‖ `regret(随机参照)` ‖ 分半一致率。 */
+const SINGLE = arg('single', '');
+if (SINGLE) {
+  const rows = readFileSync(SINGLE, 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+  const by = new Map();
+  /* ⚠ 组键必须带 `arm`：`pk` 只是 `env#g#n`，而一次跑里有 A0/B1/B2 三副对手桌 ⇒ 不带 arm 就把三臂的同格合成一组
+   *   （§E205 那条"pk 不带 seed 撞键"的同族第二次实付：这里第一版就因此报出 82 组 / 平均 15 候选，与主模式的 231 组 / 5.3 不符）。 */
+  for (const r of rows) { const g = r.arm + '|' + r.pk + '|' + r.round; if (!by.has(g)) by.set(g, []); by.get(g).push(r); }
+  let rn = 0, rr = 0, n = 0, agree = 0, na = 0, candSum = 0;
+  for (const idx of by.values()) {
+    if (idx.length < 2) continue;
+    n++; candSum += idx.length;
+    let io = 0; for (let k = 1; k < idx.length; k++) if (idx[k].win > idx[io].win) io = k;
+    let iNet = 0; for (let k = 1; k < idx.length; k++) if (idx[k].net > idx[iNet].net) iNet = k;
+    const det = (r) => { let h = (r.seed * 73856093) ^ (r.g * 19349663) ^ (r.n * 83492791) ^ (r.round * 2654435761) ^ (r.i * 40503); h = (h >>> 0) / 4294967296; return h; };
+    let ir = 0; for (let k = 1; k < idx.length; k++) if (det(idx[k]) > det(idx[ir])) ir = k;   /* 与主模式的 randScore 取 argmax 同一口径 */
+    rn += idx[io].win - idx[iNet].win; rr += idx[io].win - idx[ir].win;
+    if (idx[0].winS && idx[0].winS.length >= 4) {
+      const H = idx[0].winS.length, mid = H / 2 | 0;
+      const A = idx.map(r => { let s = 0; for (let k = 0; k < mid; k++) s += r.winS[k]; return s / mid; });
+      const B = idx.map(r => { let s = 0; for (let k = mid; k < H; k++) s += r.winS[k]; return s / (H - mid); });
+      const ia = A.indexOf(Math.max.apply(null, A)); let ib = 0;
+      for (let k = 0; k < B.length; k++) if (B[k] > B[ib]) ib = k;
+      na++; if (ia === ib) agree++;
+    }
+  }
+  if (!n) { console.error('⛔ 一个组都没凑到（每组≥2 候选）⇒ 分母为 0，不许出判语'); process.exit(2); }
+  console.log('# 组内排序质量（单文件模式，不拟合头）‖ 文件 ' + SINGLE + ' ‖ 行 ' + rows.length + ' ‖ 组 ' + n + ' ‖ 平均候选 ' + (candSum / n).toFixed(1));
+  console.log('  regret(net) = **' + (rn / n * 100).toFixed(2) + ' pt** ‖ regret(随机参照) = ' + (rr / n * 100).toFixed(2) + ' pt'
+    + ' ‖ **Δ(net − 随机) = ' + ((rn - rr) / n * 100).toFixed(2) + ' pt**（负 = 比随机好）');
+  console.log('  标签分半一致率 = ' + (na ? (agree / na * 100).toFixed(1) + '%（' + na + ' 组）' : '读不出（winS 缺失）') + ' ‖ 随机基线 ≈ ' + (100 / (candSum / n)).toFixed(1) + '%');
+  console.log('  ⚠ 口径：只在被 dump 的 top-K 短名单内部比较；标签 = 一手偏离 + 现有策略延续的模拟赢率（§E195 限制 1）。');
+  process.exit(0);
+}
 const F = ['train', 'trainsx', 'test', 'testsx'];
 for (const k of F) if (!arg(k, '')) { console.error('⛔ 缺 `--' + k + '=<jsonl>`'); process.exit(2); }
 const load = p => readFileSync(p, 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
@@ -114,7 +149,8 @@ console.log('\n## 参照线（分母健康检查）');
 const rNet = regret(EV, netScore), rRand = regret(EV, randScore);
 console.log('  现役 net 挑：regret = **' + rNet.regret.toFixed(2) + ' pt** ‖ 组 ' + rNet.groups + ' ‖ 平均候选 ' + rNet.candAvg.toFixed(1) + ' ‖ oracle 赢率 ' + rNet.oracleWin.toFixed(1) + '%');
 console.log('  随机挑一手：regret = ' + rRand.regret.toFixed(2) + ' pt'
-  + (rNet.regret > rRand.regret ? '（net 比随机好 ⇒ 分母为正 ✓）' : ' ⇒ ⚠ net 不比随机好，capture 的分母符号要先解释，本表只作观察'));
+  + (rNet.regret < rRand.regret ? '（net 的 regret 更小 ⇒ net 比随机好，capture 分母为正 ✓）'
+    : ' ⇒ ⚠ **net 的 regret 比随机参照还大**（现役打分在组内不比随机好使）；分母 `regret(net)` 仍为正，capture 可以算，但**不许**把 capture 的正负读成"net 有基线优势"'));
 const fx = fit(TR, 'x'), fsx = fit(TR, 'sx'), fb = fit(TR, 'both');
 const px = fit(TR, 'x', 991), psx = fit(TR, 'sx', 991), pb = fit(TR, 'both', 991);
 const cases = [['head(x)  现役 235 维', fx, px], ['head(sx)  只喂结算摘要', fsx, psx], ['head(x+sx) 加进输入', fb, pb]];
