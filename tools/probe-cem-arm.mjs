@@ -29,7 +29,7 @@ import { install as installArch2 } from './proto2/arch2.mjs';   // §E821：默�
  * 拼错的旗标被静默忽略 = 读数按默认档跑完而没人知道 ⇒ 与"黑键"同族。名单跟着 `arg('…')` 走。 */
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
-  'start', 'out', 'quiet', 'trainMode', 'holdoutGames'], 'probe-cem-arm');
+  'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -47,6 +47,11 @@ const ELITE = Number(arg('elite', 4));
 const SIG0 = Number(arg('sig', 0.2));
 const SIG_FLOOR = 0.01;
 const DEG = arg('degenerate', '') === '1';
+/* ===== §E822（10-28 傍晚 · 千问）：`--targetGames=` ⇒ **按计数器停，不按记账停** =====
+ * 为什么必须加：实测同一 GA 的"每代真打几局"**不是常数**（60 evals 校准时 ≈8 局/代，6000 evals 真跑时 ≈2 局/代
+ *   ⇒ 因为 `EpirusTrainer.step` 每代评估的新粒数随精英/移民/σ 退火变）。所以"把 `--evals` 配平等预算"这条路
+ *   本身就不可行 —— 唯一可靠的货币是**数出来的局数**。给了这个旗标就忽略 `--evals`（后者只当"计划剂量"印着）。 */
+const TARGET_G = Number(arg('targetGames', 0)) || 0;
 const QUIET = process.argv.includes('--quiet');
 const START_PACK = arg('start', 'docs/artifacts/eval-out/win-Ldemo.bak');
 if (!/^[a-zA-Z0-9._/-]+.(bak|js)$/.test(START_PACK)) { console.error('⛔ --start 要一个仓库内包文件（实测 ' + START_PACK + '）'); process.exit(64); }
@@ -144,6 +149,7 @@ let GAMES_PLAYED = 0;
 const gamesIn = function () { return GAMES_PLAYED; };
 let best = startParams, bestFit = -Infinity, used = 0, curve = [];
 const checkpoints = [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return f * EVALS; });
+const cpG = TARGET_G ? [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return Math.round(f * TARGET_G); }) : [];
 
 if (MODE === 'ga') {
   const tr = T.makeTrainer({ popSize: POP, gamesPerOpp: GAMES });
@@ -152,13 +158,16 @@ if (MODE === 'ga') {
   T.seedChampion(tr, startParams);
   const seededOk = tr.pop[0] && tr.pop[0].params.length === DIM;
   if (!seededOk) { console.error('⛔ GA 播种没落地 ⇒ 两臂起点不同，对比作废'); process.exit(2); }
-  const gens = Math.max(1, Math.floor(EVALS / POP));
+  const gens = TARGET_G ? 1000000 : Math.max(1, Math.floor(EVALS / POP));
   if (T.setSeed) T.setSeed(SEED);
   for (let g = 0; g < gens; g++) {
     const st = T.step(tr);
     used += POP;
     if (st && st.best != null && st.best > bestFit) { bestFit = st.best; }
-    while (checkpoints.length && used >= checkpoints[0]) { curve.push({ evals: used, best: bestFit }); checkpoints.shift(); }
+    if (TARGET_G) {
+      if (gamesIn() >= TARGET_G) break;
+      while (cpG.length && gamesIn() >= cpG[0]) { curve.push({ games: gamesIn(), best: bestFit }); cpG.shift(); }
+    } else while (checkpoints.length && used >= checkpoints[0]) { curve.push({ evals: used, best: bestFit }); checkpoints.shift(); }
   }
   best = Float64Array.from(tr.champion);
 } else {
@@ -166,7 +175,7 @@ if (MODE === 'ga') {
   let mean = Float64Array.from(startParams);
   let sd = new Float64Array(DIM).fill(SIG0);
   const r = rngFor(SEED);
-  const iters = Math.max(1, Math.floor(EVALS / POP));
+  const iters = TARGET_G ? 1000000 : Math.max(1, Math.floor(EVALS / POP));
   for (let it = 0; it < iters; it++) {
     const cand = [], scored = [];
     for (let i = 0; i < POP; i++) {
@@ -187,19 +196,31 @@ if (MODE === 'ga') {
     const bf = scored[keep[0]].fit; if (bf > bestFit) { bestFit = bf; best = cand[keep[0]]; }
     mean = nm; sd = ns;
     used += POP;
-    while (checkpoints.length && used >= checkpoints[0]) { curve.push({ evals: used, best: bestFit }); checkpoints.shift(); }
+    if (TARGET_G) {
+      if (gamesIn() >= TARGET_G) break;
+      while (cpG.length && gamesIn() >= cpG[0]) { curve.push({ games: gamesIn(), best: bestFit }); cpG.shift(); }
+    } else while (checkpoints.length && used >= checkpoints[0]) { curve.push({ evals: used, best: bestFit }); checkpoints.shift(); }
   }
 }
 const gLoop = gamesIn();
+/* §E822：**同场起点基线** —— 终局那把尺必须先在同一批桌上量一次"起点粒"，否则 6.5% / 13.0% 这种数没有地板
+ *   （第一波只印了 `起点分母 fit=… 夺1=50.0%`，那是 **2 局**的读数，拿来当参照就是把噪声当地板）。 */
+const hoStart = holdout(startParams);
+const gStart = gamesIn() - gLoop;
 const ho = holdout(best);
-const gHold = gamesIn() - gLoop;
+const gHold = gamesIn() - gLoop - gStart;
 const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N, elite: ELITE, sig0: SIG0,
   /* §E822：**实际局数**（计数器数出来的）与"标称预算"并列印 ⇒ 谁想拿 `evals` 当等预算，先看见这两个数 */
-  gamesPlanned: used * GAMES, gamesActualLoop: gLoop, gamesActualHoldout: gHold,
+  gamesPlanned: used * GAMES, gamesActualLoop: gLoop, gamesActualHoldout: gHold, gamesActualStartHoldout: gStart,
+  targetGames: TARGET_G || null,
   /* §E679 补（10-22）：回执里必须自带**桌形与终局读数局数** —— 批 D 的数当时只能从日志首行的打印抄，
    *   而"哪台尺 + 哪种启动"是读数可不可比的一部分（记忆：记下用哪台尺与哪种启动）。 */
   trainMode: TMODE, holdoutGames: HOLD,
   startFit: base.fit, inLoopBest: bestFit, holdoutFit: ho.fit, holdoutFirst: ho.first, holdoutTop2: ho.top2,
+  /* §E822 同场起点基线：与上面三个 `holdout*` 走**同一函数、同一批桌** ⇒ `dFirst/dTop2` 才是这趟训练买到的东西
+   *   （第一波只印了 2 局的"起点分母"，那不是地板，是噪声）。 */
+  holdoutStartFit: hoStart.fit, holdoutStartFirst: hoStart.first, holdoutStartTop2: hoStart.top2,
+  dFirst: ho.first - hoStart.first, dTop2: ho.top2 - hoStart.top2,
   curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel };
 if (OUT) {
   mkdirSync(dirname(OUT), { recursive: true });
