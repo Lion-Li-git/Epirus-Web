@@ -24,6 +24,10 @@ export const MANIFEST = (() => {
   ["lastSkill", "tgtSelf", "tgtMe", "tgtOther", "outHit", "outBlocked", "outNull", "outNone"].forEach((n) => add(n, "S2.hist"));
   ["tauntBy", "chained", "targetedMe", "mirrored"].forEach((n) => add(n, "L2"));
   ["cost", "cat", "atk", "guard", "light", "dmg", "pierceDef", "pierceRef", "pierceTrans", "tgtEnemy", "tgtSelf", "continuous", "beadElec", "beadBoom", "costOk", "epMargin"].forEach((n) => add(n, "L3"));
+  ["tNone", "tSelf", "tOne", "tTwo", "tAll"].forEach((n) => add(n, "T"));
+  ["roleSource", "hp", "ep", "hasBead", "stickers", "isLowest", "bagua"].forEach((n) => add(n, "T.s1"));
+  ["roleSource", "hp", "ep", "hasBead", "stickers", "isLowest", "bagua"].forEach((n) => add(n, "T.s2"));
+  ["allCount", "allSumHp", "allSumStickers"].forEach((n) => add(n, "T.all"));
   ["afford", "beadAfford", "kills", "pierceVsVisible", "aoe", "endgame", "hiddenTrig"].forEach((n) => add(n, "L4"));
   return m;
 })();
@@ -114,8 +118,25 @@ export function encode(W, state, pid, cand) {
     def.target === 'enemy' ? 1 : 0, def.target === 'self' ? 1 : 0, def.continuous ? 1 : 0,
     cand.bead === 'elec' ? 1 : 0, cand.bead === 'boom' ? 1 : 0, cost.ok ? 1 : 0,
     Math.max(-1, Math.min(1, (me.ep - c) / 12)));
+  /* T 目标块：类型 5 + 两槽各 7 + 全场 3 */
+  const AOE = [R.SK.FIRESTORM, R.SK.MINE];
+  const isAoe = AOE.indexOf(cand.key) >= 0;
+  const t1 = (cand.target != null && state.p[cand.target]) ? state.p[cand.target] : null;
+  const t2 = (cand.target2 != null && state.p[cand.target2]) ? state.p[cand.target2] : null;
+  let minOppHp = Infinity;
+  for (const q of state.p) if (q.id !== pid && q.hp > 0 && q.hp < minOppHp) minOppHp = q.hp;
+  const slotOf = (q, roleSource) => q ? [roleSource ? 1 : 0, q.hp / maxHp, Math.min(q.ep, 12) / 12,
+    (q.elec || q.boom) ? 1 : 0, Math.min((q.stickers || []).length, 4) / 4, (q.hp === minOppHp) ? 1 : 0, q.baguaExtra ? 1 : 0] : [0, 0, 0, 0, 0, 0, 0];
+  const twoTgt = def.target2 === 'enemy';
+  const typeBits = [(!def.target && !isAoe) ? 1 : 0, (!isAoe && def.target === 'self') ? 1 : 0,
+    (!isAoe && !twoTgt && (def.target === 'enemy' || def.target === 'other')) ? 1 : 0,
+    (!isAoe && twoTgt && t1 && t2) ? 1 : 0, isAoe ? 1 : 0];
+  const role1 = (twoTgt && cand.key === R.SK.MIRROR) ? 1 : 0;   /* 镜面反射：槽1 = 被复制对象(source) */
+  let sumHp = 0, sumSt = 0, cnt = 0;
+  for (const q of state.p) if (q.id !== pid && q.hp > 0) { sumHp += q.hp; sumSt += (q.stickers || []).length; cnt++; }
+  out.push(...typeBits, ...slotOf(t1, role1), ...slotOf(t2, 0), cnt / 5, sumHp / (maxHp * 5), Math.min(sumSt, 12) / 12);
   /* L4 派生 */
-  const target = (cand.target != null && state.p[cand.target]) ? state.p[cand.target] : null;
+  const target = t1;
   const kills = (target && dmg > 0 && dmg >= target.hp) ? 1 : 0;
   const pierceVs = (target && target.baguaExtra && def.pierce && def.pierce.defense) ? 1 : 0;
   const beadAfford = cand.bead === 'elec' ? Math.min(me.elec, 1) : cand.bead === 'boom' ? Math.min(me.boom, 1) : 1;
