@@ -200,6 +200,7 @@ export function install(W, opts) {
     let q = params[qOff + L.hid]; for (let j = 0; j < L.hid; j++) q += params[qOff + j] * hctx[j];
 
     const n = cands.length, logits = new Float64Array(n);
+    const phis = (opts2 && opts2.wantPhi) ? new Array(n) : null;   /* 蒸馏旁路：默认不建，零开销 */
     const afbuf = BUF.af, ci = BUF.ci, ae = BUF.ae, zeroSeat = BUF.zeroSeat;
     for (let i = 0; i < n; i++) {
       const c = cands[i];
@@ -216,6 +217,7 @@ export function install(W, opts) {
           ' 列而声明 candIn=' + L.candIn + ' ⇒ 差 ' + Math.abs(L.candIn - hctx.length - ae.length - te.length) + ' 列**死权重**（白占参数还白算）');
       }
       const hc = encode(params, ci, L.candIn, L.hid2, candBias, BUF.hc);
+      if (phis) phis[i] = Float64Array.from(hc);
       let v = params[headOff + L.hid2];
       for (let j = 0; j < L.hid2; j++) v += params[headOff + j] * hc[j];
       logits[i] = v;
@@ -242,7 +244,9 @@ export function install(W, opts) {
     }
     let arg = 0, best = -1e9;
     for (let i = 0; i < n; i++) if (logits[i] > best) { best = logits[i]; arg = i; }
-    return { probs, argmax: arg, cand: cands[arg] || null, logits, q };
+    let phiRet = null;
+    if (phis) { phiRet = new Float64Array(n * L.hid2); for (let i = 0; i < n; i++) phiRet.set(phis[i], i * L.hid2); }
+    return { probs, argmax: arg, cand: cands[arg] || null, logits, q, phi: phiRet };
   }
 
   /* ===== obs3 输入面（`--input=obs3` ⇒ arch 标成 `S1o`）=====
@@ -292,6 +296,7 @@ export function install(W, opts) {
     let q = params[qOff + L.hid]; for (let j = 0; j < L.hid; j++) q += params[qOff + j] * hctx[j];
 
     const n = cands.length, logits = new Float64Array(n);
+    const phis = (opts2 && opts2.wantPhi) ? new Array(n) : null;   /* 蒸馏旁路：默认不建，零开销 */
     const afbuf = new Float64Array(L.actIn), ci = new Float64Array(L.candIn), zeroSeat = BUF.zeroSeat;
     for (let i = 0; i < n; i++) {
       const cp = obs3CandOf(sc, cands[i]);
@@ -310,6 +315,7 @@ export function install(W, opts) {
           ' 列而声明 candIn=' + L.candIn + ' ⇒ 差 ' + Math.abs(L.candIn - hctx.length - ae.length - te1.length - te2.length) + ' 列**死权重**');
       }
       const hc = encode(params, ci, L.candIn, L.hid2, candBias, BUF.hc);
+      if (phis) phis[i] = Float64Array.from(hc);
       let v = params[headOff + L.hid2];
       for (let j = 0; j < L.hid2; j++) v += params[headOff + j] * hc[j];
       logits[i] = v;
@@ -338,10 +344,72 @@ export function install(W, opts) {
     }
     let arg = 0, best = -1e9;
     for (let i = 0; i < n; i++) if (logits[i] > best) { best = logits[i]; arg = i; }
-    return { probs, argmax: arg, cand: cands[arg] || null, logits, q };
+    let phiRet = null;
+    if (phis) { phiRet = new Float64Array(n * L.hid2); for (let i = 0; i < n; i++) phiRet.set(phis[i], i * L.hid2); }
+    return { probs, argmax: arg, cand: cands[arg] || null, logits, q, phi: phiRet };
   }
   function forwardCands(state, pid, cands, params, opts2) {
     return L.input === 'obs3' ? forwardObs3(state, pid, cands, params, opts2) : forwardV7(state, pid, cands, params, opts2);
+  }
+
+  /* ===== 蒸馏旁路：把 v7 的策略**装进 2.0 的最后一层**（fit2.mjs 用；10-29 夜）=====
+   * 只拟合 policyHead（含偏置），上游四段全冻 ⇒ 闭式岭回归，不写反传、不动任何已验证的算术。
+   * 它回答的是**容量**而不是"训练效果"：装不下 ⇒ 结构要改；装得下 ⇒ 优化器臂终于有一个非随机起点。
+   * ⚑ 目标 logits 取 `P.forward`（v7 那条，2.0 从没覆盖它）⇒ 参照就是现役冠军自己那台打分器，不是我重写的一份。 */
+  function distillHead(states, params, o) {
+    const opts3 = o || {};
+    const TR = W.EpirusTrainer;
+    const l2 = Math.max(1e-6, Number(opts3.l2) || 1e-2);
+    /* 目标 = v7 的**逐候选**分数。⚑ 不能用 `P.forward`：那条回的是"动作键层"的 probs（~22 个槽，
+     *   `ACT_KEYS` 口径），拿它按下标跟候选列表比 = 苹果对橘子（10-29 01:1x 我就差一点把 94% 的假一致率当真）。
+     *   逐候选的口径是 `P.value(state,pid,key,params,bead,cand)`（`probe-myopia-regret` 用的就是它，
+     *   §E815 也对过账）。 */
+    const v7Centered = (state, pid, cands) => {
+      const raw = [], keep = [];
+      for (let i = 0; i < cands.length; i++) {
+        const c = cands[i];
+        const v = P.value(state, pid, c.key, opts3.v7, c.bead || null, c);
+        if (!Number.isFinite(v)) continue;                 /* ⚑ 丢**这一枚候选**，不丢整组（第一版 return null 把整组扔掉 ⇒ 分母从万级掉到 1227） */
+        raw.push(v); keep.push(i);
+      }
+      if (keep.length < 2) return null;
+      let mu = 0; for (let i = 0; i < raw.length; i++) mu += raw[i] / raw.length;
+      return { tgt: raw.map((x) => x - mu), keep };
+    };
+    const rows = [], ys = [];
+    for (const fx of states) {
+      const cands = P.candidatesFor(fx.state, fx.pid, TR.econBase(fx.state, fx.pid, fx.legal), { lockTarget: false });
+      if (!cands || cands.length < 2) continue;
+      const f2 = forwardCands(fx.state, fx.pid, cands, params, { temp: 0.5, wantPhi: true });
+      const t = v7Centered(fx.state, fx.pid, cands);
+      if (!f2.phi || !t) continue;
+      for (let i = 0; i < t.keep.length; i++) {
+        const ci = t.keep[i];
+        rows.push(f2.phi.subarray(ci * L.hid2, (ci + 1) * L.hid2));
+        ys.push(t.tgt[i]);
+      }
+    }
+    if (!rows.length) return { ok: false, why: '没有可用行（候选 <2 或 phi/target 取不到）' };
+    const D = L.hid2 + 1, n = rows.length;
+    const A = Array.from({ length: D }, () => new Float64Array(D + 1));
+    for (let i = 0; i < n; i++) {
+      const z = new Float64Array(D); for (let j = 0; j < L.hid2; j++) z[j] = rows[i][j]; z[L.hid2] = 1;
+      for (let p = 0; p < D; p++) { A[p][D] += z[p] * ys[i]; for (let q = 0; q < D; q++) A[p][q] += z[p] * z[q]; }
+    }
+    for (let p = 0; p < D; p++) A[p][p] += l2 * n;
+    for (let c = 0; c < D; c++) {
+      let piv = c; for (let r = c + 1; r < D; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
+      if (Math.abs(A[piv][c]) < 1e-12) continue;
+      const t = A[c]; A[c] = A[piv]; A[piv] = t;
+      const d = A[c][c]; for (let k = c; k <= D; k++) A[c][k] /= d;
+      for (let r = 0; r < D; r++) { if (r === c) continue; const f = A[r][c]; if (!f) continue; for (let k = c; k <= D; k++) A[r][k] -= f * A[c][k]; }
+    }
+    const out = Float64Array.from(params);
+    const headOff = L.seg[4].off;
+    for (let j = 0; j < L.hid2; j++) out[headOff + j] = A[j][D];
+    out[headOff + L.hid2] = A[L.hid2][D];
+    /* ⚑ 这里**不自评**：拟合的人顺手打分就是"在训练集上报一致率"。判定一律交给调用方的留出半批（fit2）。 */
+    return { ok: true, params: out, rows: n };
   }
 
   function chooseCandidates(state, pid, cands, params, opts2) {
@@ -448,7 +516,7 @@ export function install(W, opts) {
     }
     return prev.value.apply(null, arguments);
   };
-  P.__arch2 = { L, OPT, rngRef, CNT, forwardCands, chooseCandidates, restore() { for (const k of OVERRIDES) P[k] = prev[k]; delete P.__arch2; } };
+  P.__arch2 = { L, OPT, rngRef, CNT, forwardCands, chooseCandidates, distillHead, restore() { for (const k of OVERRIDES) P[k] = prev[k]; delete P.__arch2; } };
   return P.__arch2;
 }
 
