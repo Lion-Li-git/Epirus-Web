@@ -153,6 +153,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W',
   'EPIRUS_WIDTH_LAND_W',
   'EPIRUS_WALL_BREAK_W',
+  'EPIRUS_PAIRED',   /* 2026-10-28（DS）：配对评估 —— 同代所有个体吃同一批局（common random numbers），默认关 */
   'EPIRUS_REFLECT_W',
   'EPIRUS_GUARD_HIT_W',
   'EPIRUS_BEAD_WASTE_W'
@@ -1466,6 +1467,21 @@ if (WIDTH_LAND_WANT > 0) {
     '（形状与 widthW 同形，度量 = damage.via 里的真卡名）');
 }
 
+/* ===== 2026-10-28（DS · 2.0 重构前）：`EPIRUS_PAIRED=1` ⇒ **配对评估** =====
+ * 为什么现在加：千问 §E822 量出「同代个体各自抽桌 ⇒ 名人堂 1↔2 名差 0.05pt 而自身极差 7.9pt ⇒ 基本是抽签」。
+ *   配对之后，同一代所有个体吃同一批局（同对手、同局面、同随机流），适值差里不再混「哪桌好打」的运气。
+ * 口径（引用必带）：① 默认关；② 打开后**跨代**仍换桌；③ 它只改「谁跟谁吃同一批局」，不改局的条数与任何判据。 */
+if (process.env.EPIRUS_PAIRED) {
+  if (typeof T.setPairedEval !== "function" || typeof T.evalSeedOf !== "function") {
+    console.error("[train-3p] ⛔ 下达了 EPIRUS_PAIRED 但引擎没有 setPairedEval/evalSeedOf ⇒ 拒绝静默空转");
+    process.exit(7);
+  }
+  T.setPairedEval(true);
+  if (T.pairedEvalOn() !== true) { console.error("[train-3p] ⛔ EPIRUS_PAIRED 读回不是 true ⇒ 退出"); process.exit(7); }
+  const s0 = T.evalSeedOf(7, 0), s3 = T.evalSeedOf(7, 3);
+  if (s0 !== s3) { console.error("[train-3p] ⛔ 配对评估没生效（同代两个下标的种子不同：" + s0 + " vs " + s3 + "）"); process.exit(7); }
+  console.log("[paired] 配对评估已开：同代所有个体吃同一批局（gen7 种子 " + s0 + " ‖ idx 0/3 相同）");
+}
 /* ===== v1.8.39（DS · 10-27 早 · 用户裁「做一下 A」）：**破反弹墙** `EPIRUS_WALL_BREAK_W`（默认关）=====
  * 病（10-27 早四臂）：F 的 13 行只剩两行 —— 反弹墙 0.00/局 ‖ G5 51/35，而它们是同一件事：对不还手/摆架势的桌打不进去。
  *   现有 PIERCE_W 早已被坦克打成常数（min(1,hits/2)），所以这里只给**穿反弹**的三张卡（激光剑/狙击/电磁炮）付钱。

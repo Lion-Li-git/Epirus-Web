@@ -310,6 +310,18 @@
       { name: 'defend', w: 2.2, sel: BOT_PICKS.defend }
     ];
   }
+  /* ===== 2026-10-28（DS · 2.0 重构前的那一格）：**配对评估**（common random numbers）=====
+   * 病（千问 §E822 实测）：同代内每个个体各自抽桌（`seedOfGen(gen, idx, ...)` 混了 idx）⇒
+   *   两个个体吃的是**不同的局**，适值差里混着「这一桌好不好打」的运气 ⇒ 种群开到 48 时
+   *   名人堂自判「1↔2 名差 0.05pt ‖ 自身极差 7.9pt ⇒ 基本是抽签」。
+   * 修法：`EPIRUS_PAIRED=1` 时种子**只跟代数与局号走、与个体下标无关** ⇒ 同代所有个体面对
+   *   同一批局（同对手、同局面、同随机流），适值差就是权重差。
+   * ⚠ 默认关 ⇒ 逐位回到旧口径（历史臂的读数仍可比）；打开后**跨代**仍换桌，不会把一整轮固定成一张桌。
+   * ⚠ 与 `:2263` 那条「轮换只跟代数走」是同一件事的两个部分：那条配对的是**对手**，这里配对的是**局面随机流**。 */
+  let PAIRED_EVAL = false;
+  function setPairedEval(v) { PAIRED_EVAL = !!v; }
+  function pairedEvalOn() { return PAIRED_EVAL; }
+  function evalSeedOf(gen, idx, tag) { return seedOfGen(gen, PAIRED_EVAL ? 0 : idx, tag || 'n'); }
   function seedOfGen(gen, idx, tag) {
     let h = 17;
     /* ⚠ 已知 bug（2026-10-17 实测，**没修**，理由写在下面）：这里只混 `tag.length` ⇒ `champion` / `breakdef` /
@@ -2258,7 +2270,7 @@ let WALL_GAMES = 3;
     let mirrorRan = 0;                  // v1.5.19：本个体实际跑了多少局自对局（可观测）
     for (let g = 0; g < games; g++) {
       const seat = g % n;                                   // 座位轮换
-      const seed = seedOfGen(gen, idx, 'n') + g * 7919;
+      const seed = evalSeedOf(gen, idx, 'n') + g * 7919;
       const choosers = [];
       /* v1.4.1 修正（我 v1.3.60 改错了）：轮换**必须与个体下标无关**。
        * v1.3.60 我用 `(g*5 + idx) % opps.length` 去解决"池子大于窗口时尾部对手轮不到"，
@@ -2587,7 +2599,7 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
     const mirDec = seatDec;
     if (MIRROR_GAMES > 0) {
       for (let g = 0; g < MIRROR_GAMES; g++) {
-        const seed = seedOfGen(gen, idx, 'mir') + g * 6151;
+        const seed = evalSeedOf(gen, idx, 'mir') + g * 6151;
         const chs = [];
         for (let pid = 0; pid < n; pid++) chs.push(makeEconChooser(fitChooser(params), agg, null, 0));
         const rm = oneGameN(chs, seed, n, { regen: 0, mode: TRAIN_MODE });
@@ -4005,6 +4017,7 @@ function countVariety(events, seat) {
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
+  setPairedEval, pairedEvalOn, evalSeedOf,
     setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt, wrapBigTPush,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认值只由上面那个常数表达，门 D224 钉）· v1.6.3 §E282：外面那层给脚本席用
     setSupportPrior, supportPriorOn, supportPriorTarget, setSupportPriorKnobs, supportPriorKnobs,   // §E646（路线 B）：送盾的部署层先验，**默认 0=关**；自证在 `tools/probe-support-prior.mjs`
     setDrainPush, drainPushOn, drainPushWants, drainPushSalt,              // v1.5.334 §E275：摄魂"残血只在探索里软提升"（默认 0=关，门 D225 钉）
