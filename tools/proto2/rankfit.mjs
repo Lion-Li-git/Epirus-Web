@@ -308,7 +308,7 @@ function scoreSet(params, groups, logitsOf) {
     {                                                          /* ⭐ "技能身份分辨力"（**逐对**统计，不是"整桶相等"）
                                                               *   第一版写成"同一目标那一桶里**全部**逐位相等才算一组"⇒ 而 `target=null` 那桶里
                                                               *   本来就装着 `ji` 与三手防御，ji 与它们**该有**差别 ⇒ 那条判据恒假 ⇒ 读出 0% 的**假干净**
-                                                              *   （10-29 06:3x 与 `scratch/head-ablation.mjs` 对表时才撞出来）。
+                                                              *   （10-29 05:2x 与 `scratch/head-ablation.mjs` 对表时才撞出来）。
                                                               *   现在按对算：同目标(同珠)的候选两两一对，分数逐位相等 ⇒ 那一对分不开。 */
       const byT = {};
       for (let i = 0; i < lg.length; i++) {
