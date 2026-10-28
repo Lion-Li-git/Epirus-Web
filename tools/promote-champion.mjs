@@ -464,7 +464,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
   try {
     const gr = spawnSync(process.execPath, ['tools/gate-drafts.mjs', SRC], { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
     const outTxt = String(gr.stdout || '') + String(gr.stderr || '');
-    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [] };
+    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], band: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [] };
     for (const ln of outTxt.split('\n')) {
       /* v1.5.89③：`UNRUN` = 该格**跑不了 / 不可判**（量具自己报的第三态，见 gate-drafts 的 gate()）。
        * 它既不是 FAIL、更不是 PASS ⇒ 单独收集并**醒目打印**（"不得当作通过"）。 */
@@ -496,6 +496,15 @@ if (!process.argv.includes('--skip-gate-drafts')) {
        * 若把参照行也当阻断：① 任何候选都被连坐（换包实际只能靠 --force）；② 会把"候选不行"这个
        * **错误结论**传给人 —— 与 v1.5.78 想治的"把没过的当成过了"是同一类错误的反向版本。 */
       const isRef = /^G[3-6]\[(线上包|元测试)/.test(nm);
+      /* v1.8.44（10-28 午后 · DS 复查挖出来的）：**带档行以前既不进阻断、也从不打印** ⇒ 用 `promote --dry`
+       * 复跑 G5 的人**输出里根本没有 40 档那一格**（DS 就是这样把 ZCode 的"带档 49%"判成"复现不出来"的，
+       * 它读到的 30% 是**关档**那一行）。根因是阻断正则 `/^G5\[/` 匹配不到 `G5带档[` ⇒ 那一行只落到
+       * `recorded`，而 `recorded` 从不在控制台出现。⇒ 这里把它单独收集并**印出来**。
+       * ⚠ 只加可见性，**阻断集合一字不动**：带档要不要升成阻断、以及用户 10-12「按上线档算」那条裁定
+       * 怎么在代码里表达，都在待裁里（ACCEPTANCE-LINES §四⑧），不由这次措辞/可见性改动代裁。 */
+      if (!isRef && /^G5带档\[/.test(nm)) {
+        if (gateDrafts.band.indexOf(nm) < 0) gateDrafts.band.push(m[1] + ' ' + nm);
+      }
       if (m[1] === 'FAIL' && !isRef && (/^G4\[/.test(nm) || /^G5\[/.test(nm))) {
         /* v1.5.283（DS · Qoder §F-1 点名交给我）：**同一格会被印两遍** ⇒ 旧代码把阻断**数两遍**，
          * 于是 "⛔ 体检未过（N 项阻断）" 里的 N 不可信（判定不受影响，但人会被数字误导）。
@@ -536,6 +545,8 @@ if (!process.argv.includes('--skip-gate-drafts')) {
     }
     console.log('   G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：' +
       (gateDrafts.blocking.length ? '✗ ' + gateDrafts.blocking.join('；') : '✅ 候选自己全过'));
+    console.log('   G5 带上线档（= **玩家实际遇到的形状**，阈值 ≤40；上面那条阻断判的是关掉上线档的 ≤25 ‖ **这一行只记录、不阻断**）：' +
+      (gateDrafts.band.length ? gateDrafts.band.join('；') : '（没解析到带档行 ⇒ 这一格**读不出**，不许当"带档没问题"）'));
     const refFails = gateDrafts.recorded.filter(function (x) { return x.indexOf('参照(不阻断) FAIL') === 0; });
     if (refFails.length) {
       console.log('   ⚠ 参照行（**不阻断**）：' + refFails.length + ' 条 —— **在位包自己没过** ⇒ 这是"该换包"的信号，\n      ' +
