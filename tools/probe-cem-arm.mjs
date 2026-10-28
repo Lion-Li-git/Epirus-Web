@@ -128,6 +128,20 @@ if (DEG) {
 }
 
 const t0 = Date.now();
+/* ===== §E822（10-28 傍晚）：**实际局数计数器** =====
+ * 动因（实测，不是猜）：三臂标称都是 `--evals=600 --games=2`，但 GA 用了 35.8s、CEM 用了 113.3s ⇒
+ *   "评估次数"这一口径在两个模式里**不是同一笔钱**（GA 的 `makeTrainer` 走精英保留 + shaped 适应度，
+ *   每代真正打出去的局数与 `POP×GAMES×iters` 不等）。拿它当"同预算"报，就是把**记账口径**当成**干预强度**
+ *   （[[feedback-cross-process-readings-must-share-conditions]] 同族）。
+ * 修法：在沙箱外面给 `EpirusPlay.autoGameN` 包一层计数器（只数、不改行为），把**实际局数**印进每臂读数。
+ *   ⇒ 之后横比只认这个数；标称 evals 仍印着，但它只是"计划剂量"。 */
+let GAMES_PLAYED = 0;
+{
+  const Play = W.EpirusPlay;
+  const origN = Play.autoGameN;
+  Play.autoGameN = function () { GAMES_PLAYED++; return origN.apply(null, arguments); };
+}
+const gamesIn = function () { return GAMES_PLAYED; };
 let best = startParams, bestFit = -Infinity, used = 0, curve = [];
 const checkpoints = [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return f * EVALS; });
 
@@ -176,8 +190,12 @@ if (MODE === 'ga') {
     while (checkpoints.length && used >= checkpoints[0]) { curve.push({ evals: used, best: bestFit }); checkpoints.shift(); }
   }
 }
+const gLoop = gamesIn();
 const ho = holdout(best);
+const gHold = gamesIn() - gLoop;
 const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N, elite: ELITE, sig0: SIG0,
+  /* §E822：**实际局数**（计数器数出来的）与"标称预算"并列印 ⇒ 谁想拿 `evals` 当等预算，先看见这两个数 */
+  gamesPlanned: used * GAMES, gamesActualLoop: gLoop, gamesActualHoldout: gHold,
   /* §E679 补（10-22）：回执里必须自带**桌形与终局读数局数** —— 批 D 的数当时只能从日志首行的打印抄，
    *   而"哪台尺 + 哪种启动"是读数可不可比的一部分（记忆：记下用哪台尺与哪种启动）。 */
   trainMode: TMODE, holdoutGames: HOLD,
@@ -191,4 +209,6 @@ if (OUT) {
 if (!QUIET) console.log(JSON.stringify(row));
 else console.log('RESULT ' + JSON.stringify(row));
 console.log('⚠ inLoopBest 是各臂**循环内部**的分（GA 走 shaped/内部择优，CEM 走原始 fit）⇒ 跨臂不可比；跨臂只比 holdoutFit / holdoutFirst（同一函数同一场）。');
+console.log('⚑ 实际局数（计数器数的，含起点分母与 holdout 之外的循环）：循环 ' + gLoop + ' 局 ‖ holdout ' + gHold + ' 局 ‖' +
+  ' 而标称 `evals×games` = ' + (used * GAMES) + ' ⇒ **横比只认这个数**；两臂循环局数不等 ⇒ "同预算"这句话不成立（§E822 实测 GA 与 CEM 差 3 倍）');
 if (OUT) { mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT + '.meta.json', JSON.stringify(row, null, 1), 'utf8'); }
