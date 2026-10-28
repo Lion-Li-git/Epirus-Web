@@ -500,8 +500,21 @@ export function install(W, opts) {
   P.pack = pack;
   P.unpack = unpack;
   P.checkPack = checkPack;
-  P.forwardCands = forwardCands;
-  P.chooseCandidates = chooseCandidates;
+  /* ⚑⚑ **长度守卫**（10-29 03:0x 确诊的一条大修）：`shapeOf(v7)` 回的是 `{v:7, legacy:false}` ⇒
+   *   `evo.js:21` 的 `LEGACY()` 判 false ⇒ 选择器走**现代分支** = `P.chooseCandidates` + `P.forwardCands`。
+   *   我把这两个入口换成 2.0 实现之后，**v7 的包也被路由进来按 5258/5650 的偏移切它那 5689 条权重**
+   *   （`scratch/route-check.mjs`：3 局 v7 自对局就打了 423 次 2.0 forward）。
+   *   后果面：`profile2` 的参照行与**整张对手表**、`probe-cem-arm` 的 FIX_OPPS 与 holdout 对手、
+   *   以及 rankfit 里"`policyChooserN(v7)` 走出来的轨迹"——**全都是被切坏的文在打的**，不是真冠军。
+   *   ⇒ 规矩补成对称的一条：**长度不是本档的 params，一律交回原实现**（与 `value` 那条"2.0 向量当场抛"配成对）。 */
+  P.forwardCands = function (state, pid, cands, params, opts2) {
+    if (!params || params.length !== L.n) return prev.forwardCands.apply(null, arguments);
+    return forwardCands(state, pid, cands, params, opts2);
+  };
+  P.chooseCandidates = function (state, pid, cands, params, opts2) {
+    if (!params || params.length !== L.n) return prev.chooseCandidates.apply(null, arguments);   /* 引擎自己那份在 policy.js:732（exported 878）⇒ 交回它 */
+    return chooseCandidates(state, pid, cands, params, opts2);
+  };
   /* ⭐ **接线这一格是今天栽回去的地方**（10-28 晚，三波读数作废换来的）：
    *   `evo.js:21` 的 `LEGACY(params)` 写的是 `const sh = P.shapeOf(params); return !sh || sh.legacy === true;`
    *   ⇒ 2.0 的向量长度在 v7 的 `shapeOf` 表里查不到 ⇒ 返回 null ⇒ **判成"旧包"走旧口径**

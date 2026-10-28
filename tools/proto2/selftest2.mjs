@@ -10,12 +10,14 @@
  *   T5 确定性：同一份 params 同一份局面跑两遍 ⇒ 逐位相同。
  *   T6 牙（非恒真）：动 `cand` 段一个权重 ⇒ logits 必须变；全零 params ⇒ logits 必须全等（退化基线）。
  */
-import { sandbox } from '../audit-lib.mjs';
+import { sandbox, loadChamp } from '../audit-lib.mjs';
 import { install, layout, paramCount, make, verifyWired } from './arch2.mjs';
 
 const W = sandbox();
 const P = W.EpirusPolicy, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
 const R = W.EpirusRules;
+/* ⚑ T14 要的参照包：**装任何档之前**读（装完之后 `unpack` 只认 v:90 ⇒ 会读成 null） */
+const REF_V7 = (() => { const o = loadChamp(W, 'js/bundled-champion-3p.js', ''); return o ? Float64Array.from(o) : null; })();
 
 const args = process.argv.slice(2);
 const arg = (k, d) => { const a = args.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -222,6 +224,30 @@ const O3 = await import('./obs3.mjs');
    *   下游按 arch 选输入面的尺（profile2）就拿错脸读。判"消费者真读得到"：两侧各打一次包再回读。 */
   const pkO = P.pack(P.makePolicy(0.25));
   ok(pkO.arch === 'S1o', 'T13a S1o 打包标签 = ' + pkO.arch + '（' + pkO.a.length + ' 条 ‖ input=' + (pkO.dims && pkO.dims.input) + '）');
+  /* T14：**装档不许把 v7 的包接走**（10-29 03:0x 确诊的大修）。`shapeOf(v7)` 是 `{v:7, legacy:false}` ⇒
+   *   `evo.js:21` 的 LEGACY 判 false ⇒ 选择器走现代分支 = `P.chooseCandidates/forwardCands`；
+   *   那两个入口一旦被 2.0 覆盖而**没有长度守卫**，v7 的 5689 条权重就会按 5258/5650 的偏移被切着打
+   *   （实测 3 局 v7 自对局打了 423 次 2.0 forward ⇒ profile2 的参照行、整张对手表、probe-cem-arm 的 FIX_OPPS 全被污染）。
+   *   ⇒ 这条腿判的就是"守卫还在不在"：拿 v7 打一局，2.0 的计数器必须**一次都不涨**。摘掉守卫它就红。 */
+  {
+    const A7 = install(W, Object.assign({ mutMode: 'seg' }, cfg));
+    A7.rngRef.r = rng;
+    const refParams = REF_V7;
+    const f0 = A7.CNT.forwards, c0 = A7.CNT.cands;
+    let routeErr = '';
+    if (refParams && refParams.length !== A7.L.n) {
+      try {
+        const sel = T.policyChooserN(refParams, 0.001);
+        const cs = []; for (let pid = 0; pid < 3; pid++) cs.push(sel);
+        T.oneGameN(cs, 555, 3, { regen: 0, mode: 'multi' });
+      } catch (e) { routeErr = String(e && e.message || e); }
+      const df = A7.CNT.forwards - f0, dc = A7.CNT.cands - c0;
+      ok(df === 0 && dc === 0 && !routeErr, 'T14 v7 不被接走：打一局 2.0 forwardCands 涨 ' + df + ' ‖ 候选打分涨 ' + dc + (routeErr ? ' ‖ 抛了：' + routeErr : ''));
+    } else {
+      ok(false, 'T14 v7 不被接走：没拿到参照包（长度 ' + (refParams && refParams.length) + ' ‖ 本档要 ' + A7.L.n + '）⇒ 这条腿没跑成，不许当过');
+    }
+    A7.restore();
+  }
   const backO = P.unpack(pkO);
   ok(!!backO && backO.length === Lo.n, 'T13b S1o 同档回读成功（' + (backO ? backO.length : 0) + '）‖ checkPack=' + JSON.stringify(P.checkPack(pkO)));
   /* 真包的跨档读会被**长度**先挡住（5650≠5258）⇒ 那证不到 arch 这条腿。这里造一枚"长度刚好骗过长度检查、

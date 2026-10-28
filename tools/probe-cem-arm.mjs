@@ -29,7 +29,7 @@ import { install as installArch2, verifyWired as verifyArch2Wired } from './prot
  * 拼错的旗标被静默忽略 = 读数按默认档跑完而没人知道 ⇒ 与"黑键"同族。名单跟着 `arg('…')` 走。 */
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
-  'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive'], 'probe-cem-arm');
+  'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -81,6 +81,22 @@ const TMODE = arg('trainMode', 'multi');
 if (T.setTrainMode) T.setTrainMode(TMODE);
 if (T.trainMode && T.trainMode() !== TMODE) { console.error('⛔ 桌形没生效（要 ' + TMODE + ' 读到 ' + (T.trainMode && T.trainMode()) + '）⇒ 记下来的口径是假的'); process.exit(2); }
 const HOLD = Number(arg('holdoutGames', 60));
+/* ===== `--playtemp=`（10-29 02:4x 千问，任务 #142 那一格的开关）=====
+ * 动因是量出来的两条：① 2.0 头的 logits 间距只有 ~0.3，而 v7 的分差是 ~50 ⇒ **同一个绝对 temp 下 2.0 打得近似掷硬币**
+ *   （同一粒在 16 格上：temp=0.6 读 18.1%、temp=0.001 读 33.6%）；② v7 自己那两条路的 softmax 是饱和的 ⇒ 它**本来就是贪心**。
+ *   ⇒ 拿"高熵的 2.0"去比"贪心的 v7 对手"，整局货币当然平。这一档把评估/考核的温度显式压低（只动研究量具，`js/**` 不改）。
+ * ⚑ 自证：设完必须回读 `trainEps().temp`，读到不算数就当场停——"接上了"和"生效了"是两件事（§E822 那族的教训）。
+ * ⚠ 开了它，**适应度的刻度就换了**（贪心赢面 ≠ 抽样赢面）⇒ 只能与同档的臂互比，也不许与 dFirst<原档> 那批并排引用。 */
+const PLAYTEMP = arg('playtemp', '');
+if (PLAYTEMP !== '') {
+  const t = Number(PLAYTEMP);
+  if (!(t > 0)) { console.error('⛔ --playtemp 要正数（收到 ' + PLAYTEMP + '）'); process.exit(2); }
+  const cur = T.trainEps ? T.trainEps() : null;
+  T.setTrainEps(cur ? cur.eps : 0, cur ? cur.k : 5, cur ? cur.mode : 'soft', t);
+  const back = T.trainEps ? T.trainEps() : {};
+  if (back.temp !== t) { console.error('⛔ --playtemp 没生效（设 ' + t + ' 回读 ' + back.temp + '）'); process.exit(2); }
+  console.log('[cem-arm] ⚙ 评估温度钉成 temp=' + t + '（回读 trainEps()=' + JSON.stringify(back) + '）‖ ⚠ 这一档换了适应度刻度，只与同档臂互比');
+}
 /* ===== §E821（10-28 傍晚 · 千问）：`EPIRUS_ARCH2` ⇒ 两臂都训在 **2.0 结构**上 =====
  * 与 `tools/train-3p.mjs` 那处同一手法（覆盖沙箱里的导出入口，`js/**` 不动 ⇒ 规则指纹不变），
  *   所以 GA / CEM 两个模式**天然吃到同一份 DIM 与同一套算子** —— 这正是"优化器 × 新结构"要的同场对照。
