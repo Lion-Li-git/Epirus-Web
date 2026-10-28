@@ -32,8 +32,28 @@ N、alive、maxHp、round/maxRounds（**只归一这一次**）、shrinkStart、
 | 块 | 维 | 内容 | 公开性 |
 |---|---:|---|---|
 | 资源 | 4 | hp、ep、**持珠（类型未知，1）**、**上一手是否蓄能（1）**；**自己**的席位把后两位替换成 电珠枚数、爆珠枚数 | hp/ep 公开；珠类型私有 |
-| 持续状态 | 18 | guardNext、baguaExtra、copiedGuard、fireWeakNow、fireWeakNext、tauntActive、tauntPending、nightmare、vampire、vampHeal>0、reviveNext、infiniteEnergy、mineArmed、mineTurns（归一）、rodGuard（归一）、ringStreak（归一）、cannonPhase、chains 数 | 公开 |
-| 大雷禁用 | 1 | cooldown 剩余（归一） | 公开 |
+| 持续状态 | **13** | 见表下逐条（每条一个规则依据；已把 v1 的 18 收紧：合并列、剔掉只在结算回合存在的瞬态位、把归属类挪去 L2） | 公开 |
+| 大雷禁用 | 1 | cooldown 剩余（归一，R29） | 公开 |
+
+**持续状态 13 维逐条**（编码：二值 / 0..k 有序）：
+
+| # | 维 | 规则 | 它改变什么 | 编码 |
+|---|---|---|---|---|
+| 1 | guardNext | R21 | 本回合是否有防御架势（挡哪些卡） | 二值 |
+| 2 | baguaExtra | R21（无极变速第二回合） | 八卦架势是否延续 | 二值 |
+| 3 | fireWeak | R22/R18 | 藤甲：火伤 +1（0=无，1=本回合，2=下回合） | 0..2 |
+| 4 | tauntObligation | R41/R54 | 义务期：必须打挑衅者（0=无，1=pending，2=active） | 0..2 |
+| 5 | nightmare | R50 | 梦魇状态 | 二值 |
+| 6 | vampire | R47 | 吸血鬼（命中回血） | 二值 |
+| 7 | reviveNext | R48 | 回魂（下次死亡触发） | 二值 |
+| 8 | infiniteEnergy | R32/隐藏技能 | 本回合资源无限（费用判定改写） | 二值 |
+| 9 | mineTurns | R38/R59 | 地雷剩余回合（0=无雷；>0 时被打触发 AOE） | 0..3 |
+| 10 | rodGuard | R31 | 避雷针免雷剩余次数 | 0..3 |
+| 11 | ringStreak | R10 | 聚能环连击（决定下一发是否免费/可连） | 0..3 归一 |
+| 12 | cannonPhase | R42 | 过载炮档位（0/1/2/3，费用与自损随档变） | 0..3 |
+| 13 | stickers | R34/R44 | 身上符咒枚数（天火引爆的分母） | 0..3 归一 |
+
+**从 v1 的 18 里删掉/合并的 5 个**：`fireWeakNow/Next` 合成 1 个有序量 ‖ `tauntActive/Pending` 合成 1 个有序量 ‖ `mineArmed` 并入 `mineTurns`（0 就是无雷）‖ `copiedGuard` **删**（N14 复制的架势只在"结算它的那个回合"存在，决策时刻不可见）‖ `chains 数` **删**（归属在 L2 的 `chained` 逐对表达，计数是它的求和，重复）‖ `vampHeal>0` **删**（是上一回合结算的派生量，序列结果位已含）。
 | **事件序列** | **K×3 → 编码器** | 近 K=6 个事件：**技能 id（嵌入）+ 目标（自己/我/其他人）+ 结果（ok / 被挡 / 被弹 / 空放 / 无效）**，用**逐席共享的小序列编码器**（embedding + mean 或 GRU）压成 1 个向量 | 公开（`lastSkill/lastTarget` + 事件流） |
 
 ⇒ 每席 = 4 + 18 + 1 + 序列向量。**不再有**"六族占比""上一手类别""结果记忆"三个手写块——它们都是这个序列的函数，重复。
