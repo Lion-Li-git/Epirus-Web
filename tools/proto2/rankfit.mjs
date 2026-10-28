@@ -18,7 +18,7 @@
  *                                     [--sig=0.3] [--elite=4] [--seed=7] [--l2head=1e-3] [--out=scratch/arms/...]
  * 只读 js/**；产物落 scratch/arms/（不入库、不进冠军槽、不动产品门）。
  */
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 import { sandbox, loadChamp } from '../audit-lib.mjs';
 import { install as installArch2, layout } from './arch2.mjs';
 
@@ -32,6 +32,12 @@ const ELITE = Math.max(1, Number(arg('elite', 4)) || 4);
 const SIG = Number(arg('sig', 0.3));
 const SEED = Number(arg('seed', 7));
 const OUT = arg('out', '');
+/* ⚑ `--dagger=<2.0 包>`：**走局用那枚粒自己**（标签仍来自 v7），起点也从它出发 ⇒ 这就是 DAgger 那一轮。
+ *   判的是第五段留下的那格：模仿到 66.9% 组内 top-1 却不兑现成强度，到底是
+ *   ①标签出在冠军的局面上、被评者自己会走到别的局面（分布漂移），还是 ②v7 的强度根本不在组内 argmax 里。
+ *   `--playtemp` 只在 dagger 下有意义（那枚粒走局时的采样温度；对局级读数请用 profile2 而不是这里）。 */
+const DAGGER = arg('dagger', '');
+const PLAYTEMP = Number(arg('playtemp', 0.6)) || 0.6;
 
 const W = sandbox();
 const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState;
@@ -61,60 +67,77 @@ function poolFingerprint(POOL) {
 const POOL = buildPoolSeeded(fnv('pool' + SEED));
 const fpPool = poolFingerprint(POOL);
 
-/* ===== ① 抓决策点 + 冻结标签（此段完全不知道 2.0 存在）===== */
+/* ===== ① 抓决策点 + 冻结标签 =====
+ *   缺省：轨迹由 **v7 自己**走 ⇒ 标签出在"冠军会去到的局面"上。
+ *   `--dagger=<2.0 包>`：轨迹改由**那枚粒自己**走，标签仍是 v7 的逐候选分 ⇒ 判"分布漂移 vs v7 强度不住在组内 argmax"。
+ *   ⚠ 开了 dagger 就**没有**"两档同场"（每档照自己的粒走局）⇒ 跨档只各自对 v7 读数，不许互比绝对值。 */
 const gstream = mulberry(fnv('game' + SEED));
-const fixtures = [];
-function walk(sb, n) {
-  const choosers = [];
-  for (let p = 0; p < n; p++) choosers.push(T.policyChooserN(v7));
-  const probe = (st, p, legal) => {
-    if (fixtures.length < NG && legal && legal.length >= 2 && (p % n) === 0) {
-      const cl = S.cloneState(st);
-      cl.rng = { next: mulberry(fnv('fx' + fixtures.length + 'g' + sb + 'p' + p)) };
-      const cands = P.candidatesFor(cl, p, T.econBase(cl, p, legal), { lockTarget: false });
-      if (cands && cands.length >= 3) {
-        const raw = [], keep = [];
-        for (let i = 0; i < cands.length; i++) {
-          const cd = cands[i];
-          const val = P.value(cl, p, cd.key, v7, cd.bead || null, cd);
-          if (Number.isFinite(val)) { raw.push(val); keep.push(i); }
-        }
-        if (keep.length >= 3) {
-          const mu = raw.reduce((a, b) => a + b, 0) / raw.length;
-          let rp = 0; for (let i = 1; i < raw.length; i++) if (raw[i] > raw[rp]) rp = i;
-          /* ⚑ **逐组打乱候选顺序**（用该组自己的独立流）。下标空间要说清楚：
-          *   `keep[t]` = 第 t 枚**留下候选**在原候选表里的下标；`raw[t]`/`rp` 都在"留下候选表"这个空间里；
-          *   `ord` 是 [0..K−1] 的一个置换 ⇒ 新表第 k 位 = cands[keep[ord[k]]]，标签 = raw[ord[k]]，
-          *   新的当选位置 = ord 里值为 rp 的那个 k。**不要**把原下标和留下下标混进同一次运算（上一版就在这里错）。
-          *   打乱的理由：引擎候选表本身有次序含义（实测"v7 当选落在位置 0"≈50%），不打乱 ⇒ 稠密货币会奖励"背枚举顺序"；
-          *   顺带一层用处：这条货币只在结构对候选顺序无关时干净 ⇒ 顺序不变性另立一条腿 T-F 当场量。 */
-          const K = keep.length;
-          const ord = Array.from({ length: K }, (_, t) => t);
-          for (let i = K - 1; i > 0; i--) { const j = Math.floor(cl.rng.next() * (i + 1)); const t = ord[i]; ord[i] = ord[j]; ord[j] = t; }
-          fixtures.push({ state: cl, pid: p,
-            cands: ord.map((t) => cands[keep[t]]),
-            ref: ord.map((t) => raw[t]),
-            tgt: ord.map((t) => raw[t] - mu), mu,
-            refPick: ord.indexOf(rp) });
+function collect(learnerArr) {
+  const fixtures = [];
+  const lsel = learnerArr ? T.policyChooserN(learnerArr, PLAYTEMP) : null;
+  function walk(sb, n) {
+    const choosers = [];
+    for (let p = 0; p < n; p++) choosers.push(T.policyChooserN(v7));
+    const probe = (st, p, legal) => {
+      if (fixtures.length < NG && legal && legal.length >= 2 && (p % n) === 0) {
+        const cl = S.cloneState(st);
+        cl.rng = { next: mulberry(fnv('fx' + fixtures.length + 'g' + sb + 'p' + p + (lsel ? 'd' : ''))) };
+        const cands = P.candidatesFor(cl, p, T.econBase(cl, p, legal), { lockTarget: false });
+        /* ⚑ 口径缺口（10-29 02:1x 记下，**没修**）：比赛那条路用的是
+         *   `candidatesFor(state, pid, base, { lockTarget: lastCancelOther(state, pid) })`（`js/train/evo.js:953`）
+         *   ⇒ 上回合与本席"相抵"的对手会被**踢出目标池**。我这里固定 `lockTarget:false` ⇒ 标签面比比赛面**宽**。
+         *   影响面：只在该席存在相抵对手时少一枚目标候选 ⇒ 组内 top-1/CE 会略微高估"像 v7"，
+         *   但**强度读数是 profile2 走比赛那条路量的**，所以第五/六段的对局级判语不受这条影响。
+         *   要修就把 `lastCancelOther` 导出或从 chooser 回调里直接捕获 (state,pid,cands)（后者更准，代价是包一层钩子）。 */
+        if (cands && cands.length >= 3) {
+          const raw = [], keep = [];
+          for (let i = 0; i < cands.length; i++) {
+            const cd = cands[i];
+            const val = P.value(cl, p, cd.key, v7, cd.bead || null, cd);
+            if (Number.isFinite(val)) { raw.push(val); keep.push(i); }
+          }
+          if (keep.length >= 3) {
+            const mu = raw.reduce((a, b) => a + b, 0) / raw.length;
+            let rp = 0; for (let i = 1; i < raw.length; i++) if (raw[i] > raw[rp]) rp = i;
+            /* ⚑ **逐组打乱候选顺序**（用该组自己的独立流）。下标空间要说清楚：
+            *   `keep[t]` = 第 t 枚**留下候选**在原候选表里的下标；`raw[t]`/`rp` 都在"留下候选表"这个空间里；
+            *   `ord` 是 [0..K−1] 的一个置换 ⇒ 新表第 k 位 = cands[keep[ord[k]]]，标签 = raw[ord[k]]，
+            *   新的当选位置 = ord 里值为 rp 的那个 k。**不要**把原下标和留下下标混进同一次运算（上一版就在这里错）。
+            *   打乱的理由：引擎候选表本身有次序含义（实测"v7 当选落在位置 0"≈50%），不打乱 ⇒ 稠密货币会奖励"背枚举顺序"；
+            *   顺带一层用处：这条货币只在结构对候选顺序无关时干净 ⇒ 顺序不变性另立一条腿 T-F 当场量。 */
+            const K = keep.length;
+            const ord = Array.from({ length: K }, (_, t) => t);
+            for (let i = K - 1; i > 0; i--) { const j = Math.floor(cl.rng.next() * (i + 1)); const t = ord[i]; ord[i] = ord[j]; ord[j] = t; }
+            fixtures.push({ state: cl, pid: p,
+              cands: ord.map((t) => cands[keep[t]]),
+              ref: ord.map((t) => raw[t]),
+              tgt: ord.map((t) => raw[t] - mu), mu,
+              refPick: ord.indexOf(rp) });
+          }
         }
       }
-    }
-    return POOL[(p + 1) % POOL.length].sel(st, p, legal);
-  };
-  const cs = choosers.slice(); cs[0] = probe;
-  T.oneGameN(cs, sb, n, { regen: 0, mode: 'multi' });
+      return lsel ? lsel(st, p, legal) : POOL[(p + 1) % POOL.length].sel(st, p, legal);
+    };
+    const cs = choosers.slice(); cs[0] = probe;
+    T.oneGameN(cs, sb, n, { regen: 0, mode: 'multi' });
+  }
+  let gg = 0;
+  while (fixtures.length < NG && gg < 4000) { walk(70000 + gg * 17, gg % 2 ? 5 : 3); gg++; }
+  if (fixtures.length < 200) throw new Error('只抓到 ' + fixtures.length + ' 组 ⇒ 分母不足');
+  return fixtures;
 }
-let gg = 0;
-while (fixtures.length < NG && gg < 4000) { walk(70000 + gg * 17, gg % 2 ? 5 : 3); gg++; }
-if (fixtures.length < 200) { console.error('⛔ 只抓到 ' + fixtures.length + ' 组 ⇒ 分母不足，不做'); process.exit(2); }
-/* 同场指纹：标签 + 参照分（与后面装哪档无关）*/
-let fpL = 2166136261;
-for (const fx of fixtures) { const s = fx.cands.map((c) => c.key + '/' + (c.bead || '-')).join(',') + '|' + fx.refPick + '|' + fx.tgt.map((x) => x.toFixed(4)).join(','); for (let i = 0; i < s.length; i++) { fpL ^= s.charCodeAt(i); fpL = Math.imul(fpL, 16777619) >>> 0; } }
-const fpLabels = (fpL >>> 0).toString(16);
+function labelFp(list) {
+  let h = 2166136261;
+  for (const fx of list) { const s = fx.cands.map((c) => c.key + '/' + (c.bead || '-')).join(',') + '|' + fx.refPick + '|' + fx.tgt.map((x) => x.toFixed(4)).join(','); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } }
+  return (h >>> 0).toString(16);
+}
+let fixtures = DAGGER ? [] : collect(null);
+let fpLabels = DAGGER ? '(dagger：每档各走各的局)' : labelFp(fixtures);
 
 /* 训练半批 / 留出半批（按**组号**奇偶分，不是按池顺序 ⇒ 两半的桌形分布同构）*/
 const train = [], hold = [];
-fixtures.forEach((fx, i) => (i % 2 === 0 ? train : hold).push(fx));
+function splitInto(list) { train.length = 0; hold.length = 0; list.forEach((fx, i) => (i % 2 === 0 ? train : hold).push(fx)); }
+if (!DAGGER) splitInto(fixtures);
 
 /* ===== 装档（这时才允许覆盖 P.*）===== */
 const A = installArch2(W, { mutMode: 'seg', input: ARCH === 'obs3' ? 'obs3' : undefined });
@@ -122,8 +145,24 @@ const L = layout({ input: ARCH === 'obs3' ? 'obs3' : 'v7', skills: W.EpirusRules
 let ps = fnv('init' + SEED); const istring = mulberry(ps);
 A.rngRef.r = istring;
 const base = Float64Array.from(P.makePolicy(0.25));
+let theta0 = null;                             /* dagger 时改成"从那枚粒继续"，否则随机起点 */
 const mutStream = mulberry(fnv('mut' + SEED));
 A.rngRef.r = mutStream;                       /* 变异用第三条流，不再碰 init 流 */
+let learner = null, learnerBefore = null;
+if (DAGGER) {
+  const obj = JSON.parse(readFileSync(DAGGER, 'utf8').replace(/^window\.EPIRUS_CHAMPION_3P\s*=\s*/, '').replace(/;\s*$/, ''));
+  if (obj.a.length !== L.n) { console.error('⛔ dagger 的粒与当前档不符：' + obj.a.length + ' 条 vs ' + L.n + ' 条（包内 arch=' + obj.arch + ' ‖ 当前=' + L.arch + '）'); process.exit(2); }
+  learner = Float64Array.from(obj.a);
+  fixtures = collect(learner);
+  fpLabels = labelFp(fixtures);
+  splitInto(fixtures);
+  learnerBefore = scoreSet(learner, hold);
+  console.log('# dagger ‖ 走局用的就是这枚粒（' + DAGGER + ' ‖ 标签仍来自 v7）⇒ **没有"两档同场"**，跨档只各自对 v7 读数');
+  console.log('  这枚粒在**它自己走出来的局面**上的留出读数：top-1=' + (100 * learnerBefore.top1).toFixed(1) + '%（同分 ' + (100 * learnerBefore.hitVal).toFixed(1) + '% ‖ **集合内 ' + (100 * learnerBefore.hitSet).toFixed(1) + '%**）‖ 配对序=' + (100 * learnerBefore.pair).toFixed(1) + '% ‖ CE=' + learnerBefore.ce.toFixed(4) + ' ‖ regret=' + learnerBefore.regret.toFixed(3) +
+    ' ‖ ⚑ 我方最大集合平均大小 ' + learnerBefore.myTie.toFixed(2) + ' ‖ v7 自己的 ' + learnerBefore.refTie.toFixed(2) + '（前者大 ⇒ "序对了但选错枚"，对局里就是随机目标）');
+  console.log('  ⚑ 把它和"在 v7 走出来的局面上"的同一读数并排（F1 是 66.9%/83.3%/1.458）⇒ **两个数之差就是分布漂移的价钱**');
+  theta0 = Float64Array.from(learner);
+}
 
 /* ===== 打分：组内 regret（v7 单位）‖ 配对序正确率 ‖ top-1 一致 ‖ 交叉熵 =====
  * ⚑⚑ 10-29 02:2x 这里犯过一次**流式归一化**的错：`pr = tgt.map(x => { Zr += e; return e / Zr })`
@@ -140,12 +179,23 @@ function softmax(arr, temp) {
   return e.map((v) => v / Z);                                /* ⚑ 两趟：分母是**总和**，不是前缀和 */
 }
 function scoreSet(params, groups, logitsOf) {
-  let reg = 0, pairOk = 0, pairTot = 0, hit = 0, hitVal = 0, tie = 0, n = 0, ce = 0;
+  let reg = 0, pairOk = 0, pairTot = 0, hit = 0, hitVal = 0, hitSet = 0, myTieSum = 0, refTieSum = 0, tie = 0, n = 0, ce = 0;
   for (const g of groups) {
     const lg = logitsOf ? logitsOf(g) : P.forwardCands(g.state, g.pid, g.cands, params, { temp: 0.5 }).logits;
     if (!lg || lg.length !== g.cands.length) throw new Error('rankfit：logits 长度 ' + (lg && lg.length) + ' ≠ 候选数 ' + g.cands.length);
     let a = 0; for (let i = 1; i < lg.length; i++) if (lg[i] > lg[a]) a = i;
     if (a === g.refPick) hit++;
+    /* ⚑ **并列破号**这条必须在 2.0 上单独量：头的 logits 常常几枚完全相等（同技能不同目标），
+     *   严格 `>` 取"第一个最大" ⇒ top-1 读数是靠下标蒙的；而对局里 `chooseCandidates` 是在**并列集合内抽样**。
+     *   ⇒ 另记两条：hitSet = "v7 的首选落在我方最大集合里"的组占比（=序对了但可能选错枚），
+     *     myTie = 我方最大集合的平均大小（越大 ⇒ 头分不开的那些候选在对局里就是随机目标）。 */
+    const mxLg = lg[a];
+    let tieN = 0, inSet = false;
+    for (let i = 0; i < lg.length; i++) if (Math.abs(lg[i] - mxLg) < 1e-9) { tieN++; if (i === g.refPick) inSet = true; }
+    if (inSet) hitSet++;
+    myTieSum += tieN;
+    let tieR = 0; for (let i = 0; i < g.tgt.length; i++) if (Math.abs(g.tgt[i] - g.tgt[g.refPick]) < 1e-9) tieR++;
+    refTieSum += tieR;
     /* ⚑ **并列**是这里的常态不是边角：v7 常给好几枚候选一模一样的分（实测 -392.433 重复出现）。
      *   top-1 严格按位置破号 ⇒ "喂它自己目标"的腿也只有 84.7%，那 15% 全是并列，不是接错线。
      *   ⇒ 另记一条 hitVal（选中的那枚与 v7 首选**同分**就算对），校准腿判它，报数时两条都摆出来。 */
@@ -175,7 +225,7 @@ function scoreSet(params, groups, logitsOf) {
     }
     n++;
   }
-  return { regret: reg / Math.max(1, n), pair: pairOk / Math.max(1, pairTot), top1: hit / Math.max(1, n), hitVal: hitVal / Math.max(1, n), tie: tie / Math.max(1, n), ce: ce / Math.max(1, n), n };
+  return { regret: reg / Math.max(1, n), pair: pairOk / Math.max(1, pairTot), top1: hit / Math.max(1, n), hitVal: hitVal / Math.max(1, n), hitSet: hitSet / Math.max(1, n), myTie: myTieSum / Math.max(1, n), refTie: refTieSum / Math.max(1, n), tie: tie / Math.max(1, n), ce: ce / Math.max(1, n), n };
 }
 
 /* ===== 自证三条（跑前定死，坏了就停，不带病出数）===== */
@@ -231,7 +281,7 @@ console.log('  同场自证：对手表指纹 ' + fpPool + '（跑两遍一致�
 console.log('  起点：训练集 regret=' + s1.regret.toFixed(3) + ' ‖ 配对序=' + (100 * s1.pair).toFixed(1) + '% ‖ top-1=' + (100 * s1.top1).toFixed(1) + '% ‖ CE=' + s1.ce.toFixed(4));
 
 /* ===== (μ+λ)-ES：货币 = 训练半批的**负交叉熵**（稠密；regret 与 top-1 只报不选）===== */
-let theta = Float64Array.from(base), best = Float64Array.from(base);
+let theta = Float64Array.from(theta0 || base), best = Float64Array.from(theta0 || base);
 let bestCe = s1.ce, curCe = s1.ce, hist = [];
 for (let it = 0; it < ITER; it++) {
   const kids = [], fits = [];

@@ -50,7 +50,14 @@ const A = installArch2(W, cfg);
 const params = Float64Array.from(P.unpack(raw, true));
 if (!params || params.length !== P.paramCount()) { console.error('⛔ 包形状不对：读出 ' + params.length + ' ‖ 当前结构要 ' + P.paramCount()); process.exit(7); }
 P.setRng(T.mulberry32(4242));
+/* ⚑ 随机起点粒**必须定标**（10-29 02:2x 抓到）：`P.makePolicy` 在装 2.0 档之后走的是 arch2 的 `rngRef.r`，
+ *   而 `P.setRng` 只管引擎自己那条流 ⇒ 我原先"每条臂同场跑一枚随机起点"其实是**每次换一枚粒**，
+ *   对照行自己就在漂（实测两遍 17.0% vs 13.4% 夺1，3.6pt 全在对照身上）。
+ *   修法：装档后把 rngRef 也换成定标流，并打印这枚起点的短指纹，两遍不一致就停。 */
+if (P.__arch2) P.__arch2.rngRef.r = T.mulberry32(4242);
 const randParams = Float64Array.from(P.makePolicy(0.25));
+let fpRand = 2166136261;
+for (let i = 0; i < randParams.length; i++) { const v = Math.round(randParams[i] * 1e6); fpRand = (Math.imul(fpRand ^ v, 16777619) >>> 0); }
 /* ⚑ 对手表必须**定标**（10-29 02:2x 抓到：同一份命令跑两遍 Δ夺1 从 −12.03pt 漂到 −9.84pt、随机行从 16.5% 跳到 14.3%
  *   ⇒ 漂的不是包，是 `T.buildOpps()` 里那枚没播种的 `Math.random()`）。
  *   做法：只在造表期间临时顶掉 Math.random，出来立刻还原；并打印对手表指纹，两遍不一致就当场停。 */
@@ -147,7 +154,7 @@ function row(tag, pack, cell, seed) {
   return a;
 }
 console.log('# 2.0 行为剖面 ‖ 包 ' + PACK + ' ‖ 结构 ' + archTag + ' ‖ paramCount=' + P.paramCount() +
-  ' ‖ 每格 ' + GAMES + ' 局 ‖ **三行同 temp=' + TEMP + '** ‖ 对手表固定自 ' + refSrc + '（定标指纹 ' + POOL_FP + ' ‖ 同种子两遍一致已验） ‖ 三行同格同局号（2.0包 ‖ 同结构随机起点 ‖ **参照包**）⇒ 既读"离随机起点多远"，也读"离参照包多远"');
+  ' ‖ 每格 ' + GAMES + ' 局 ‖ **三行同 temp=' + TEMP + '** ‖ 随机起点粒指纹 ' + (fpRand >>> 0).toString(16) + ' ‖ 对手表固定自 ' + refSrc + '（定标指纹 ' + POOL_FP + ' ‖ 同种子两遍一致已验） ‖ 三行同格同局号（2.0包 ‖ 同结构随机起点 ‖ **参照包**）⇒ 既读"离随机起点多远"，也读"离参照包多远"');
 const S = { pF: 0, pG: 0, pT: 0, rF: 0, rT: 0, rG: 0, vF: 0, vT: 0, vG: 0 };
 for (const cell of CELLS) {
   console.log('· 格 ' + cell.name + ' ‖ n=' + cell.n);
