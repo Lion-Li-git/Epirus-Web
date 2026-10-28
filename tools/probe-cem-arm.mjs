@@ -29,7 +29,7 @@ import { install as installArch2, verifyWired as verifyArch2Wired } from './prot
  * 拼错的旗标被静默忽略 = 读数按默认档跑完而没人知道 ⇒ 与"黑键"同族。名单跟着 `arg('…')` 走。 */
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
-  'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames'], 'probe-cem-arm');
+  'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -41,6 +41,11 @@ if (MODE !== 'ga' && MODE !== 'cem' && MODE !== 'esa') {
 const EVALS = Number(arg('evals', 2000));
 const POP = Number(arg('pop', 14));
 const GAMES = Number(arg('games', 4));
+/* `--fxSelect=1`：ES 的当选改到**冻结桌**上判（gen=500，与终局读数 gen=999 那批桌**不是同一批** ⇒ 没在考卷上选答案） */
+const FXSEL = Number(arg('fxSelect', 0)) > 0;
+/* `--fxGames=`：当选用的冻结桌**每格打几局**。默认跟 `--games` 同档，但 10-29 的读数是：
+ *   6 局的冻结桌读数自己就比父子差还吵 ⇒ 接受/拒绝成了掷硬币。要当筛子就得把这一档抬到几十局。 */
+const FXG = Math.max(0, Number(arg('fxGames', 0)) || 0);   /* 0 = 沿用 --games（别让 Math.max(1,…) 把默认变成 1 局） */
 const N = Number(arg('n', 3));
 const SEED = Number(arg('seed', 7));
 const ELITE = Number(arg('elite', 4));
@@ -98,7 +103,25 @@ if (process.env.EPIRUS_ARCH2) {
     ' ‖ 变异算子=' + cfg.mutMode + ' ‖ 起点=随机（v7 夹具包读不进 2.0 ⇒ 两臂同起点、只差算子）' +
     ' ‖ **接线自证 PASS**：校准局里 forwardCands ' + wired.forwards + ' 次 ‖ chooseCandidates(2.0 版) ' + wired.chooseCandidatesCalls + ' 次 ‖ fit=' + (wired.fit == null ? 'n/a' : wired.fit.toFixed(3)));
 }
+/* ===== 2026-10-29（千问）：把 DS 的**配对评估**接进臂里（`EPIRUS_PAIRED=1`）=====
+ * §E822 的病：同代每个个体各抽各的桌 ⇒ 适值差里混着"这桌好不好打"，两臂 ES 因此在**选择噪声上爬坡**
+ *   （inLoopBest 涨、固定桌 holdoutFit 反跌）。配对之后同代所有个体吃同一批局 ⇒ 差就是权重差。
+ * ⚑ 光把开关拨上不算数（DS 的 `preflight2` ③ 只验了 `evalSeedOf` 这个**函数**，那与"评估路径真走它"同形差别）：
+ *   这里除读回 + 同代两个下标种子相同之外，再加一条**记账**：把开/关两侧的"同代种子集合"当场打出来，
+ *   跑完的人在回执里能直接看到臂到底配对没配对，不用信我说。 */
+if (process.env.EPIRUS_PAIRED) {
+  if (typeof T.setPairedEval !== 'function' || typeof T.evalSeedOf !== 'function') {
+    console.error('⛔ 下达了 EPIRUS_PAIRED 但引擎没有 setPairedEval/evalSeedOf ⇒ 拒绝静默空转'); process.exit(7);
+  }
+  T.setPairedEval(true);
+  if (T.pairedEvalOn() !== true) { console.error('⛔ EPIRUS_PAIRED 读回不是 true'); process.exit(7); }
+  const s0 = T.evalSeedOf(7, 0), s3 = T.evalSeedOf(7, 3), s0b = T.evalSeedOf(8, 0), s3b = T.evalSeedOf(8, 3);
+  if (s0 !== s3 || s0b !== s3b) { console.error('⛔ 配对没生效（gen7 idx0/idx3 = ' + s0 + '/' + s3 + ' ‖ gen8 = ' + s0b + '/' + s3b + '）'); process.exit(7); }
+  if (s0 === s0b) { console.error('⛔ 跨代没换桌（gen7 与 gen8 种子相同 ⇒ 整轮钉死一张桌，那不是配对，是过拟合同一批局）'); process.exit(7); }
+  console.log('[cem-arm] ⚙ **配对评估开**：同代同局号 = 同种子（gen7 idx0=idx3=' + s0 + ' ‖ gen8=' + s0b + ' ⇒ 跨代仍换桌）‖ 每评估 ' + GAMES + ' 局');
+}
 const DIM = P.paramCount();
+
 /* 起点粒：用**在册的 3P 夹具包**而不是活槽（R3：会换主人的指针不配当夹具）。读不出来就退回固定种子随机粒。 */
 let startParams = null, startLabel = '';
 const c = loadChamp(W, START_PACK, HERE + '/..');
@@ -150,8 +173,8 @@ function evalOne(params, gen, idx) {
   const r = T.scoreMemberN(params, opps, GAMES, N, gen, idx, 0);
   return { fit: r.fit == null ? -1 : r.fit, first: r.firstRate == null ? 0 : r.firstRate, top2: r.top2Rate == null ? 0 : r.top2Rate };
 }
-function evalFixed(params, gen, idx) {   /* 固定对手表 ⇒ 跨臂配对；games 用 HOLD 的那一档做终局读数 */
-  const r = T.scoreMemberN(params, FIX_OPPS, gen === 999 ? HOLD : GAMES, N, gen, idx, 0);
+function evalFixed(params, gen, idx, gamesOverride) {   /* 固定对手表 ⇒ 跨臂配对；games 用 HOLD 的那一档做终局读数 */
+  const r = T.scoreMemberN(params, FIX_OPPS, gamesOverride || (gen === 999 ? HOLD : GAMES), N, gen, idx, 0);
   return { fit: r.fit == null ? -1 : r.fit, first: r.firstRate == null ? 0 : r.firstRate, top2: r.top2Rate == null ? 0 : r.top2Rate };
 }
 const holdout = function (params) {      /* 终局读数：固定场（同一批桌 + 同一 idx/gen） */
@@ -210,25 +233,62 @@ const cpG = TARGET_G ? [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return Mat
 
 if (MODE === 'esa') {
   /* (1+λ)-ES：**全部算子都由本工具拥有**（父代 + λ 个子代各过一遍 `P.mutatePolicy`）
-   *   ⇒ `EPIRUS_MUT_MODE=flat|seg` 第一次成为真正的干预（内部 GA 那条路不调这些算子，见上面 ③ 的自检）。 */
+   *   ⇒ `EPIRUS_MUT_MODE=flat|seg` 第一次成为真正的干预（内部 GA 那条路不调这些算子，见上面 ③ 的自检）。
+   * ===== `--fxSelect=1`：把"当选"从**每代换桌的最大值**改成**同一批冻结桌上的改进**（10-29 段 C 的直接处方）=====
+   * 病（10-29 00:3x 四臂实测）：配对评估开与不开，三条 ES 臂都是 `inLoopBest` 一路涨（0.79~1.09），
+   *   而固定桌留出的 dFirst 是 −3.5 / −0.5 / −0.3pt ⇒ 配对只把**同代**个体配平了，
+   *   而这里的最优是**跨迭代棘轮**——每次换一批桌取 max，涨的是"哪代桌好打"，不是权重。
+   * 处方：廉价环内读数只做**预选**；要真的换父代，必须在**同一批冻结桌**上把父子各评一遍，比的是同格配对差。
+   * ⚠ 代价要说清：每接受一次改进就多花 `FX_GAMES` 局 ⇒ 同样的 targetGames 预算下迭代数会变少（读数里能看见）。 */
   let parent = Float64Array.from(startParams);
   let pf = evalOne(parent, 0, 0).fit; bestFit = pf; best = parent;
+  let parentFix = FXSEL ? evalFixed(parent, 500, 0, FXG || undefined).fit : 0;
   const r = rngFor(SEED + 17);
   void r;
   const iters = TARGET_G ? 1000000 : Math.max(1, Math.floor(EVALS / POP));
+  let accepted = 0, screened = 0;
+  /* ===== `--sigmaAdaptive=1`：Rechenberg 的 **1/5 成功律**（10-29 段 C 的第二个旋钮）=====
+   * 为什么现在加：两波读数合起来看，问题不在"当选在哪批桌上判"，而在**步长**——
+   *   `--fxSelect=1` 把棘轮砍掉了（inLoopBest 0.98→0.765），可 6000 局里只接受了 3~4 次改进
+   *   ⇒ σ=0.2 固定一步到底，搜索基本在原地随机游走。1/5 律让 σ 自己找尺度：
+   *   近 10λ 次尝试里成功率 >1/5 ⇒ σ×1.22；<1/5 ⇒ σ÷1.22。窗口与判定都写死在这里，别事后调。 */
+  const ADAPT = Number(arg('sigmaAdaptive', 0)) > 0;
+  const WIN = Math.max(10, POP * 3);
+  const hist = [];
+  let sig = SIG0, sigTraj = [SIG0];
   for (let it = 0; it < iters; it++) {
     for (let i = 0; i < POP; i++) {
-      const child = P.mutatePolicy(parent, SIG0);
+      const child = P.mutatePolicy(parent, sig);
       const e = evalOne(child, it, i);
       used += 1;
-      if (e.fit > bestFit) { bestFit = e.fit; best = child; }
+      let ok = false;
+      if (e.fit > bestFit) {
+        screened++;
+        if (!FXSEL) { bestFit = e.fit; best = child; ok = true; }
+        else {
+          const cf = evalFixed(child, 500, 0, FXG || undefined);
+          if (cf.fit > parentFix) { parentFix = cf.fit; parent = Float64Array.from(child); bestFit = e.fit; best = child; accepted++; ok = true; }
+        }
+      }
+      if (ADAPT) {
+        hist.push(ok ? 1 : 0); if (hist.length > WIN) hist.shift();
+        if (hist.length === WIN) {
+          const rate = hist.reduce(function (a, b) { return a + b; }, 0) / WIN;
+          sig = rate > 0.2 ? sig * 1.22 : sig / 1.22;
+          sig = Math.min(2.0, Math.max(1e-4, sig));
+          sigTraj.push(Math.round(sig * 1e5) / 1e5);
+          hist.length = 0;
+        }
+      }
       while (cpG.length && gamesIn() >= cpG[0]) { curve.push({ games: gamesIn(), best: bestFit }); cpG.shift(); }
       if (TARGET_G && gamesIn() >= TARGET_G) break;
     }
-    if (best !== parent) { parent = Float64Array.from(best); pf = bestFit; }
+    if (!FXSEL && best !== parent) { parent = Float64Array.from(best); pf = bestFit; }
     if (!TARGET_G) { used += 0; while (checkpoints.length && used >= checkpoints[0]) { curve.push({ evals: used, best: bestFit }); checkpoints.shift(); } }
     if (TARGET_G && gamesIn() >= TARGET_G) break;
   }
+  if (ADAPT) console.log('[cem-arm] ⚑ 1/5 律自适应 σ：起 ' + SIG0 + ' → 终 ' + sig.toFixed(5) + ' ‖ 轨迹样本 ' + sigTraj.length + ' 点 ‖ 窗口 ' + WIN + ' 次尝试');
+  if (FXSEL) console.log('[cem-arm] ⚑ 冻结桌当选：环内预选 ' + screened + ' 次 ‖ 在冻结桌上真打过父代 ' + accepted + ' 次 ‖ 每次验证花 ' + (FXG || GAMES) + ' 局（fxGames=' + FXG + ' ‖ 预算被这块吃掉，迭代数会少）');
 } else if (MODE === 'ga') {
   const tr = T.makeTrainer({ popSize: POP, gamesPerOpp: GAMES });
   /* 两臂必须**从同一粒起步**，否则比的不是算子而是起点。GA 侧用仓库自己的热启动 API

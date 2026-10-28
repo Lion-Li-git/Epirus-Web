@@ -32,13 +32,14 @@
  */
 import { writeFileSync } from 'node:fs';
 import { encode as obs2Encode, MANIFEST as OBS2_MANIFEST, dims as obs2Dims } from './proto2/obs2.mjs';
+import { encode as obs3Encode } from './proto2/obs3.mjs';
 import { sandbox, mulberry32, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 import { poolFromSpecs } from './regime-panel.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'dumpsx', 'dumpobs', 'pack', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'dumpsx', 'dumpobs', 'dumpobs3', 'pack', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -150,6 +151,8 @@ function settleVec(st, pid, cand, salt) {
  * ⚠ 只读引擎、不改任何出厂路径；默认关（不带旗标 ⇒ 一行都不写）。 */
 const DUMPCOVER = arg('dumpcover', '');
 const DUMPOBS = arg('dumpobs', '');   /* 2026-10-28 DS：2.0 观测集（obs2.mjs）的逐候选 dump */
+const DUMPOBS3 = arg('dumpobs3', ''); /* 2026-10-29 千问：obs3（"可知信息全覆盖 + 无死维"第三版）的逐候选 dump */
+const O3ROWS = [];
 const OBSROWS = [];
 const CROWS = [];
 const ROWS = [];
@@ -364,6 +367,16 @@ function runArm(arm, selfCheck) {
               target: pool[i].c.target == null ? null : pool[i].c.target,
               net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop,
               x: xo.map(v => Math.round(v * 1e4) / 1e4) }));
+          }
+        }
+        if (DUMPOBS3 && !selfCheck) {
+          for (let i = 0; i < pool.length; i++) {
+            const x3 = obs3Encode(W, state, pid, pool[i].c);
+            O3ROWS.push(JSON.stringify({ seed: SEED, arm: arm.key, env: env.name, g, n, round: state.round,
+              pk: env.name + '#' + g + '#' + n, i, key: pool[i].c.key,
+              target: pool[i].c.target == null ? null : pool[i].c.target,
+              net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop, winS: res[i].winS,
+              x: x3.map(v => Math.round(v * 1e4) / 1e4) }));
           }
         }
         if (DUMPSX && !selfCheck) {
@@ -754,6 +767,10 @@ console.log('· ③候选数均值 ' + (rows[0].candSum / Math.max(1, rows[0].de
 if (DUMPOBS) {
   writeFileSync(DUMPOBS, OBSROWS.join('\n') + '\n');
   console.log('· [obs2] 导出 **' + OBSROWS.length + ' 行**（决策 × 候选）到 `' + DUMPOBS + '` ‖ 维 ' + obs2Dims());
+}
+if (DUMPOBS3) {
+  writeFileSync(DUMPOBS3, O3ROWS.join('\n') + '\n');
+  console.log('· [obs3] 导出 **' + O3ROWS.length + ' 行**（决策 × 候选）到 `' + DUMPOBS3 + '` ‖ 维 ' + (O3ROWS.length ? JSON.parse(O3ROWS[0]).x.length : 0) + '（MANIFEST 见 tools/proto2/obs3.mjs）');
 }
 if (DUMP) {
   writeFileSync(DUMP, ROWS.join('\n') + '\n');
