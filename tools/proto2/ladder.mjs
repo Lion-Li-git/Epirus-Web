@@ -10,13 +10,15 @@
  *   这里摆五种：只按架势 ‖ 只开枪ジ ‖ 只蓄能 ‖ 均匀乱选合法候选 ‖ 参照包 v7（同场当上限刻度）。
  *
  * ⚠ 三条口径声明：
- *   ① 固定打法走的是**我这里的候选面**（`lockTarget:false`），与引擎比赛那条路的 `lastCancelOther` 目标锁不同 ⇒
- *      与 `profile2`/`mixprobe` 的臂行并排读**绝对值**时，把这半格差记住（mixprobe 第一次就栽在这里：q=1 差过 6.8pt）。
+ *   ① 缺省走**引擎那条候选面**（`{lockTarget: cancelOtherLocal(...)}`，照 `evo.js:404` 逐字复制，因为那个函数没导出）⇒
+ *      臂行与固定打法在同一把尺上，且臂行可被 `profile2` 对表。要退回旧的宽面用 `--face=wide`（只为对照，别拿去出判语）。
  *   ② `temp` 只影响 v7 那一行（其余是确定性/自带定标流），所以阶梯内可比、跨 temp 不可比。
  *   ③ 每个策略都跑**同一批局号**（`1000 + n*97 + idx + g*7919`）⇒ 分母逐字相等，不做"各自换一批桌"。
  * 用法：node tools/proto2/ladder.mjs [--games=120] [--temp=0.001] [--only=guard,ji,charge,rand,v7]
  */
+import { readFileSync } from 'node:fs';
 import { sandbox, loadChamp } from '../audit-lib.mjs';
+import { install as installArch2 } from './arch2.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -27,9 +29,27 @@ const ONLY = String(arg('only', 'guard,ji,charge,rand,v7')).split(',').filter(Bo
  *   动因（04:0x）：rollout 货币那批臂读出 Δ夺1 +8pt 而剖面是 `d:99.5%`——但"只按架势"这一条固定打法只有 6.8%，
  *   所以真正要问的是**"有没有哪一枚单技能固定打法本来就值 26%"**：有的话，那 8pt 就不是"标签教出来的"，是"退化成那一枚技能"。 */
 const SWEEP = arg('sweep', '') === 'keys';
-
+/* `--pack=a.bak,b.bak` ⇒ 把 2.0 的臂**放到同一把尺上**（同一个手搓候选面 + 贪心 argmax），
+ *   然后报它在"30 枚单技能固定打法"里的**名次/百分位**。
+ *   为什么不直接拿 profile2 的夺1来排：两把尺的候选面不同（`lockTarget:false` vs 引擎的 `lastCancelOther`），
+ *   今夜在 mixprobe 上实测这一格差值 **6.8pt** ⇒ 跨口径排位次会把臂排高/排低一整格。
+ *   ⇒ 臂在这里的行与固定打法**完全同口径**，可与 ladder 排序对照；与 profile2 的那一行不许混着引。 */
+const PACKS = String(arg('pack', '')).split(',').map((x) => x.trim()).filter(Boolean);
 const W = sandbox();
 const P = W.EpirusPolicy, T = W.EpirusTrainer, R = W.EpirusRules, Play = W.EpirusPlay;
+/* ⚑⚑ **大雷"看得见"那一档（`evo.js:648` `BIGT_PUSH = 12`，v1.5.333 起出厂默认开着）必须在尺上关掉**：
+ *   它是引擎 chooser **内部**的覆盖（命中就把这一手交给大雷），而我这里的固定打法根本不走 chooser ⇒
+ *   开着它比 = "带一次免费大雷的策略 vs 不带大雷的策略"，不是同一条尺。
+ *   实测这一档的价（同一枚 v7、同一批局号）见下面 `--bigt=12` 那行；臂行也一样，两档都印。 */
+/* 缺省 **12 = 出厂档**（`evo.js:648` `BIGT_PUSH = 12`，v1.5.333 起默认开着）——
+ *   这样臂行与 `profile2` 同口径（实测 R1：bigt=0 引擎 chooser 15.5% ‖ bigt=12 **23.8%** ‖ `profile2` 21.9%）。
+ *   ⚠ 固定打法那一列**不吃这一档**（它们不走 chooser，是自己递交动作）⇒ 阶梯里"固定打法 vs 臂"是
+ *     **"无注入 vs 有注入"**的不对称，方向对臂有利 ⇒ "臂只值某枚单技能那一格"这类判语只算**下界**。
+ *   `--bigt=0` 用来量这一档本身的价（v7：40.2 ‖ 40.4 两档实测）。 */
+const BIGT = Number(arg('bigt', 12));
+if (typeof T.setBigTPush === 'function') T.setBigTPush(BIGT);
+else { console.error('⛔ 引擎没有 `setBigTPush` ⇒ 无法把大雷那一档对齐，尺不许出数'); process.exit(2); }
+
 let ref = loadChamp(W, 'js/bundled-champion-3p.js', '');
 if (!ref) { console.error('⛔ 参照包读不出'); process.exit(2); }
 ref = Float64Array.from(ref);
@@ -40,8 +60,28 @@ const CELLS = [];
 for (const n of [3, 5]) for (const nm of STYLES) { const i = POOL.findIndex((o) => o.name === nm); if (i >= 0) CELLS.push({ n, name: nm, idx: i }); }
 const GUARD = R.GUARD_FAMILY || [];
 
+/* ⚑ 候选面必须与**引擎自己那条路**同口径，否则臂与固定打法不在一把尺上（今夜实测：`lockTarget:false` 那面
+ *   把 B8 从 26.8% 读成 5.7% ‖ R1 从 21.9% 读成 15.1% ⇒ 21pt / 6.8pt 的纯口径差）。
+ *   比赛走的是 `evo.js:203/953` 的 `{ lockTarget: lastCancelOther(state, pid) }`，而那个函数**没导出** ⇒
+ *   这里照 `js/train/evo.js:404-412` 逐字复制一份（只读 `state.events` 的 `cancel` 事件，不写任何东西）。
+ * ⚠ 但**换面并没有把口径对上**（04:2x 实测，`scratch/LADDER-bigt0.log`）：R1 在这里读 15.1%（贪心）/ 15.5%（引擎 chooser），
+ *   而 `profile2` 同一枚粒同一批局号读 **21.9%**；B8 更夸张——**同一台 ladder 里**贪心读 5.7% 而引擎 chooser 读 25.9%。
+ *   ⇒ 大雷那一档（bigt=0/12 两档 v7 都只从 40.4 动到 40.2）与候选面都不是解释，**执行口径还差一格没查明，登记在任务 #145**；
+ *   在查明之前，本文件的**臂行只用于"落在哪一格"的量级判断，不许与 `profile2` 那行互换，也不许据臂行下任何判语**。
+ *   验收：换完这一面之后，臂行必须复现 `profile2` 那行（`--expect` 式对表；今夜 R1=21.9 ‖ B8=26.8 ‖ AB-pre=0.7 ‖ N2=14.1）。 */
+function cancelOtherLocal(state, pid) {
+  for (let i = state.events.length - 1; i >= 0; i--) {
+    const e = state.events[i];
+    if (e.type === 'cancel' && e.round === state.round - 1 && e.pids && e.pids.indexOf(pid) >= 0) {
+      return e.pids[0] === pid ? e.pids[1] : e.pids[0];
+    }
+  }
+  return null;
+}
+const ENGINE_FACE = !argv.includes('--face=wide');
 function candsOf(state, pid, legal) {
-  return P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
+  const lock = ENGINE_FACE ? cancelOtherLocal(state, pid) : false;
+  return P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: lock }) || [];
 }
 /* 各固定打法的"选哪一枚"规则（找不到目标动作就退回ジ） */
 function pickBy(pred) {
@@ -127,7 +167,11 @@ if (hi && lo) console.log('  ⇒ 这只尺的可用区间是 [' + lo.win.toFixed
  *      跑出这个带说明对手表或落子逻辑变了，而不是"策略变强了"）。
  * ⚠ `--selfcheck=0` 只用于"我要看形状、不想被拦"，日常别关。 */
 const SELFCHECK = !argv.includes('--selfcheck=0');
-const V7_TRUE = 40.3, RAND_BAND = [12, 24];
+/* 参照真值分两档：`bigt=12`（出厂档，走 chooser）在册 **40.3%**（`ref-baseline.mjs`）；
+ * `bigt=0`（本尺缺省，与固定打法同口径）由本尺自己量出来后钉在这里 = **38.3%**（16 格×120 局，原件 scratch/LADDER-bigt0.log）。 */
+/* 两档各自的锚（都是本尺 16 格×120 局实测，原件 `scratch/LADDER-bigt0.log` ‖ `scratch/LADDER-sweep.log`）：
+ * bigt=12（出厂档）v7 = **40.4** ≈ `ref-baseline` 在册 40.3 ‖ bigt=0 v7 = **40.2**。 */
+const V7_TRUE = BIGT === 0 ? 40.2 : 40.3, RAND_BAND = [12, 24];
 if (SELFCHECK) {
   const g7 = tot.filter((t) => t.key === 'v7')[0], gr = tot.filter((t) => t.key === 'rand')[0];
   const bad = [];
@@ -137,18 +181,74 @@ if (SELFCHECK) {
   if (bad.length) { console.log('⛔ 阶梯自检红：' + bad.join(' ‖ ') + '\n   ⇒ 这把尺现在的读数**不可比**，先修尺再谈臂。'); process.exit(3); }
   console.log('  ✔ 阶梯自检：v7 行 ' + (g7 ? g7.win.toFixed(1) : '—') + '%（对在册 ' + V7_TRUE + '%）‖ 均匀乱选 ' + (gr ? gr.win.toFixed(1) : '—') + '%（带 ' + RAND_BAND.join('~') + '）');
 }
-if (SWEEP) {
-  console.log('\n# 逐技能固定打法（每枚都跑同一批 16 格 × ' + GAMES + ' 局）');
+function runKeySweep() {
   const res = [];
   for (const sk of R.skills) {
     const sel = pickBy((c) => c.key === sk.key);
     let F = 0;
     for (let i = 0; i < CELLS.length; i++) F += playCell(sel, CELLS[i], null).f;
     res.push({ key: sk.key, cat: sk.cat, win: 100 * F / (CELLS.length * GAMES) });
-    console.log('  ' + sk.key.padEnd(10) + ' (' + sk.cat[0] + ') ‖ 夺1 ' + res[res.length - 1].win.toFixed(1) + '%');
   }
   res.sort((a, b) => b.win - a.win);
+  return res;
+}
+if (SWEEP) {
+  console.log('\n# 逐技能固定打法（每枚都跑同一批 16 格 × ' + GAMES + ' 局）');
+  const res = runKeySweep();
+  res.forEach((r) => console.log('  ' + r.key.padEnd(10) + ' (' + r.cat[0] + ') ‖ 夺1 ' + r.win.toFixed(1) + '%'));
   console.log('⇒ 单技能阶梯（前 8）：' + res.slice(0, 8).map((r) => r.key + ' ' + r.win.toFixed(1) + '%').join('  ‖  '));
   console.log('   末 3：' + res.slice(-3).map((r) => r.key + ' ' + r.win.toFixed(1) + '%').join('  ‖  '));
   console.log('   ⚑ 用法：把某枚臂的 Δ夺1 与这条阶梯并排——**臂的读数若落在某枚单技能附近，就不能说"标签教出了强度"**，只能说"它退化成那一枚"。');
+}
+/* ===== 臂放进同一把尺（`--pack=a.bak,b.bak`）：贪心 argmax、同一个手搓候选面 ⇒ 与阶梯同口径 ===== */
+if (PACKS.length) {
+  const ladderRes = runKeySweep();          // 同一进程、同一跑序里取阶梯 ⇒ 名次可比（跑序漂 1.4pt 那条只在跨批之间才成立）
+  const v7Row = tot.filter((t) => t.key === 'v7')[0];
+  const randRow = tot.filter((t) => t.key === 'rand')[0];
+  console.log('\n# 臂（2.0 的 .bak）放进同一把尺 ‖ 贪心 argmax ‖ 候选面与固定打法逐字相同（temp=' + TEMP + '）');
+  for (const pk of PACKS) {
+    let raw;
+    try { raw = JSON.parse(readFileSync(pk, 'utf8').replace(/^[^{]*/, '').replace(/;?\s*$/, '')); }
+    catch (e) { console.log('  ⛔ 读不到/解不开 ' + pk + '：' + e.message); continue; }
+    if (raw.v !== 90) { console.log('  ⛔ ' + pk + ' 不是 2.0 容器（v=' + raw.v + '）⇒ 这条模式只吃 2.0 的包'); continue; }
+    const cfg = { mutMode: 'seg', ...(raw.dims || {}) };
+    if ((raw.arch || 'S1') === 'S1o') cfg.input = 'obs3';
+    const A = installArch2(W, cfg);
+    const pp = P.unpack(raw, true);
+    if (!pp || pp.length !== P.paramCount()) { console.log('  ⛔ ' + pk + ' 形状不对：' + (pp && pp.length) + ' vs ' + P.paramCount()); A.restore(); continue; }
+    const head = Float64Array.from(pp);
+    const sel = function (state, pid, legal) {
+      const cs = candsOf(state, pid, legal);
+      if (!cs.length) return { key: R.SK.JI };
+      const f = P.forwardCands(state, pid, cs, head, { temp: TEMP });
+      const c = (f && f.cand) || cs[0];
+      return { key: c.key, target: c.target == null ? null : c.target, target2: c.target2 == null ? null : c.target2, bead: c.bead || null };
+    };
+    const rowsOf = (sel, tag) => {
+    let F = 0, T2 = 0, SV = 0, RD = 0, AC = 0, CT = {};
+    const CAT = {}; R.skills.forEach((s) => { CAT[s.key] = s.cat; });
+    for (let i = 0; i < CELLS.length; i++) {
+      const a = playCell(sel, CELLS[i], null);
+      F += a.f; T2 += a.t2; SV += a.sv; RD += a.rd; AC += a.acts;
+      for (const k in a.cat) CT[k] = (CT[k] || 0) + a.cat[k];
+    }
+    const G = CELLS.length * GAMES, win = 100 * F / G;
+    return { tag, win, top2: 100 * T2 / G, sv: 100 * SV / G, rd: RD / G, ac: AC / G, fam: ['energy', 'attack', 'defense', 'special'].map((k) => k[0] + ':' + (100 * (CT[k] || 0) / Math.max(1, AC)).toFixed(1) + '%').join(' ') };
+    };
+    const r1 = rowsOf(sel, '贪心 argmax');
+    const r2 = rowsOf(T.policyChooserN(head, TEMP), '引擎 chooser');
+    for (const r of [r1, r2]) {
+      const win = r.win;
+      const better = ladderRes.filter((x) => x.win > win).length;
+      const pct = 100 * (1 - better / (ladderRes.length + 1));
+      console.log('  ' + pk.replace(/^scratch\/arms\//, '') + ' ‖ ' + (raw.arch || 'S1') + ' ‖ ' + r.tag + ' ‖ 夺1 ' + win.toFixed(1) + '% ‖ 前2 '
+        + r.top2.toFixed(1) + '% ‖ 活到终局 ' + r.sv.toFixed(1) + '% ‖ 局长 ' + r.rd.toFixed(1) + ' ‖ 族 ' + r.fam);
+      console.log('     ⇒ 在 30 枚单技能固定打法里排 **第 ' + (better + 1) + '/31**（百分位 ' + pct.toFixed(0) + '）‖头顶 `' + ladderRes[0].key + '` '
+        + ladderRes[0].win.toFixed(1) + '% ‖ v7 参照 ' + (v7Row ? v7Row.win.toFixed(1) : '—') + '% ‖ 均匀乱选 ' + (randRow ? randRow.win.toFixed(1) : '—') + '%');
+    }
+    A.restore();
+  }
+  console.log('   ⚠ 口径：臂行走"贪心 argmax +' + (ENGINE_FACE ? '引擎同口径候选面' : '宽候选面') + '"，'
+    + '与 `profile2`（引擎自己的两级 softmax）不是同一条执行路，**必须逐枚对表**（旧宽面时实测 R1 差 6.8pt ‖ B8 差 21pt）：'
+    + ' ‖ 另一条：臂的行跑在阶梯之后，而脚本型对手带**跨局记忆**（本尺没 `resetBotMem`）⇒ 同一只固定打法换个跑序实测漂 1.4pt ⇒ 名次读**格**、不读小数。');
 }
