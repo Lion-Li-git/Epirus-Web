@@ -21,10 +21,23 @@
 import { writeFileSync, readFileSync } from 'node:fs';
 import { sandbox, loadChamp } from '../audit-lib.mjs';
 import { install as installArch2, layout } from './arch2.mjs';
+import { encode as obs3Encode } from './obs3.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const ARCH = arg('arch', 'S1') === 'S1o' ? 'obs3' : 'v7';
+/* ===== §E824（10-29 03:1x · #143 换路）：`--fromdump=<jsonl>` ⇒ **夹具与标签都由仪器落盘** =====
+ * 为什么不再在本地打 rollout：`playRollout` 家族的续局语义只许有一份（本仓七台下游仪器全部"读 dump、不自采"）。
+ * 上游 = `node tools/probe-myopia-regret.mjs --dumpfx=<jsonl> --arm=A0`（每行一个采样决策：整只状态 + top-KEEP 名单 + 逐流赢率）。
+ * ⇒ 于是这里的货币从"模仿 v7 的组内序"换成"**rollout 赢率的组内序**"——它才是与强度同向的那一类稠密标签。
+ * ⚠ 复现不是"看起来一样"：**逐候选拿 v7 的 `P.value` 复算 `net`（≤1e-9）并拿同一个 obs3 编码器复算 `x3`（≤1e-4）**，
+ *   任何一条对不上就硬失败 ⇒ 对不上时我量的是两个世界的标签（"覆盖式接入要自证真被调用"同族）。 */
+const FROM = arg('fromdump', '');
+const FXARM = arg('fxarm', 'A0');
+const FXMAX = Math.max(50, Number(arg('fxmax', 2000)) || 2000);
+/* 标签面掉候选的计数器（`collect` 里 ++，出来就判）+ 显式逃生阀 ⇒ 默认响亮拒绝，不静默 */
+let LAB_DROP = 0, LABDROPTOT = 0;
+const ALLOW_DROP = argv.includes('--allowdroplabels');
 const NG = Math.max(200, Number(arg('groups', 1600)) || 1600);
 const POP = Math.max(4, Number(arg('pops', 16)) || 16);
 const ITER = Math.max(5, Number(arg('iters', 120)) || 120);
@@ -44,10 +57,21 @@ const WARM = arg('warm', '');
 const PLAYTEMP = Number(arg('playtemp', 0.6)) || 0.6;
 
 const W = sandbox();
-const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState;
+const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay;
 let v7 = loadChamp(W, 'js/bundled-champion-3p.js', '');
 if (!v7) { console.error('⛔ v7 参照包读不出'); process.exit(2); }
 v7 = Float64Array.from(v7);
+/* ⚑ 目标分布的**锐度旋钮**：v7 分数是几十上百的量纲 ⇒ temp 8 刚好；rollout 赢率组内标准化后是 1 个标准差的量纲 ⇒ temp 1。
+ *   这条不是"调参让它好看"：H（目标自熵）与 ln n（平坦地板）**都跟着 TT 一起重算**，
+ *   所以"这条货币值多少信息"永远是相对自己地板来判的（记进 meta 的 tgtTemp 列）。 */
+const TT = Number(arg('tgttemp', FROM ? 1 : 8)) || (FROM ? 1 : 8);
+if (FROM && DAGGER) { console.error('⛔ `--fromdump` 与 `--dagger` 互斥（前者的局面由仪器走完，后者要本地走局）'); process.exit(2); }
+/* 上游那枚参照包的短指纹（与 `probe-myopia-regret.mjs` 里同一算法逐字一致 ⇒ 换包会当场抓住） */
+function pfpOf(a) {
+  let h = 2166136261;
+  for (let i = 0; i < a.length; i++) { const v = Math.round(a[i] * 1e6); h = (h ^ (v & 255)) >>> 0; h = Math.imul(h, 16777619) >>> 0; h = (h ^ ((v >> 8) & 255)) >>> 0; h = Math.imul(h, 16777619) >>> 0; }
+  return (h >>> 0).toString(16) + '/' + a.length;
+}
 
 /* ===== 定标随机源 ===== */
 function mulberry(seedVal) {
@@ -77,6 +101,7 @@ const fpPool = poolFingerprint(POOL);
  *   ⚠ 开了 dagger 就**没有**"两档同场"（每档照自己的粒走局）⇒ 跨档只各自对 v7 读数，不许互比绝对值。 */
 const gstream = mulberry(fnv('game' + SEED));
 function collect(learnerArr) {
+  LAB_DROP = 0;
   const fixtures = [];
   const lsel = learnerArr ? T.policyChooserN(learnerArr, PLAYTEMP) : null;
   function walk(sb, n) {
@@ -97,8 +122,15 @@ function collect(learnerArr) {
           const raw = [], keep = [];
           for (let i = 0; i < cands.length; i++) {
             const cd = cands[i];
-            const val = P.value(cl, p, cd.key, v7, cd.bead || null, cd);
-            if (Number.isFinite(val)) { raw.push(val); keep.push(i); }
+            /* ⚑⚑ **形参位置**（10-29 03:2x 由 §E824 的夹具复现门当场抓出）：`P.value(state,pid,key,params,sh,cand)` 的
+            *   第 5 形参是**形状对象**（`policy.js:485` 里读 `sh.featS/featN/featA`），**不是 bead**。
+            *   我原来写的是 `cd.bead || null` ⇒ 两枚蓄能候选（`charge/elec`、`charge/boom`）拿到 `sh='elec'/'boom'`
+            *   → 三个宽度全 `undefined` → 循环一次不跑 → **NaN** → 被下面那句 `Number.isFinite` **静默丢掉**。
+            *   后果：今夜所有"模仿 v7"的组内标签**从来没有蓄能这一手**（分母少 2 枚、CE 地板与 top-1 都跟着变），
+            *   而对局里蓄能照常在候选表上 ⇒ 训练面与比赛面差着一整个技能。
+            *   正确形状照 `probe-myopia-regret.mjs:354`：第 5 形参传 `null`（用默认 v7 形状），bead 走第 6 形参的 `cand`。 */
+            const val = P.value(cl, p, cd.key, v7, null, cd);
+            if (Number.isFinite(val)) { raw.push(val); keep.push(i); } else LAB_DROP++;
           }
           if (keep.length >= 3) {
             const mu = raw.reduce((a, b) => a + b, 0) / raw.length;
@@ -128,15 +160,92 @@ function collect(learnerArr) {
   let gg = 0;
   while (fixtures.length < NG && gg < 4000) { walk(70000 + gg * 17, gg % 2 ? 5 : 3); gg++; }
   if (fixtures.length < 200) throw new Error('只抓到 ' + fixtures.length + ' 组 ⇒ 分母不足');
+  /* ⚑ **两面同形闸**（§E824 那条蓄能形参错位欠下的）：标签面每掉一枚候选，比赛面却照旧带着它 ⇒ 训练面少一整族动作，
+   *   而**任何一条既有读数都不会红**。所以这里不许静默：掉过就必须显式认。 */
+  if (LAB_DROP > 0 && !ALLOW_DROP) {
+    console.error('⛔ 标签面与比赛面**不同形**：本遍有 ' + LAB_DROP + ' 枚候选因分数不有限被静默丢掉（§E824 那条病的形状）。'
+      + '先查是不是又踩了形参/口径，确认无害才加 `--allowdroplabels=1`。');
+    process.exit(10);
+  }
+  LABDROPTOT = LAB_DROP;
   return fixtures;
 }
+/* ===== §E824：从仪器落的夹具重建（**这一步必须在装档之前**，用的全是 v7 原版算子）===== */
+function collectFromDump() {
+  const raw = readFileSync(FROM, 'utf8').split('\n').filter(Boolean).map((s) => JSON.parse(s));
+  const rows = raw.filter((r) => r.arm === FXARM).slice(0, FXMAX);
+  const FXMIN = Math.max(20, Number(arg('fxmin', 120)) || 120);
+  if (rows.length < FXMIN) { console.error('⛔ `--fromdump` 里 arm=' + FXARM + ' 只有 ' + rows.length + ' 个决策（文件共 ' + raw.length + ' 行）< 地板 ' + FXMIN + ' ⇒ 分母不足，判"读不出"不判"无响应"'); process.exit(2); }
+  const pfp = rows[0].pfp;
+  if (pfp !== pfpOf(v7)) { console.error('⛔ 参照包换了：dump 落盘时是 ' + pfp + ' ‖ 本地 `js/bundled-champion-3p.js` 是 ' + pfpOf(v7) + ' ⇒ `net` 复算与标签都不可比'); process.exit(2); }
+  if (rows.some((r) => r.pfp !== pfp)) { console.error('⛔ 同一份 dump 里混了不止一枚参照包 ⇒ 标签不可配对'); process.exit(2); }
+  const fresh = rows.every((r) => r.freshrng === 'ON');
+  if (!fresh) console.log('  ⚠ 这批标签是在 **freshrng=off**（rollout 会从母局那条流抽数）下落的 ⇒ 与在册 ON 那批不可并排引');
+  const out = [];
+  let netMax = 0, x3Max = 0, bad = null, nCand = 0;
+  for (const r of rows) {
+    const st = r.st;
+    st.rng = { next: mulberry(fnv('fxr' + r.pk + '|' + r.arm)) };   /* 母局那条流在序列化时是闭包 ⇒ JSON 里掉了，这里挂一条**定标**的 */
+    const legal = Play.legalActions(st, r.pid);
+    const cands = P.candidatesFor(st, r.pid, T.econBase(st, r.pid, legal), { lockTarget: false });
+    const scored = cands.map((c) => ({ c, v: P.value(st, r.pid, c.key, v7, null, c) })).filter((x) => Number.isFinite(x.v));   /* 第 5 形参 = 形状，传 null ⇒ 与上游 `probe-myopia-regret:354` 逐字同口径 */
+    scored.sort((a, b) => b.v - a.v);
+    const take = scored.slice(0, Math.min(r.keep, scored.length));
+    if (take.length !== r.pool.length) { bad = bad || (r.pk + '：名单长度 ' + take.length + ' ≠ dump ' + r.pool.length); continue; }
+    let stop = false;
+    for (let i = 0; i < take.length; i++) {
+      const d = take[i], s = r.pool[i];
+      if (d.c.key !== s.key || (d.c.target == null ? null : d.c.target) !== s.target
+        || (d.c.target2 == null ? null : d.c.target2) !== s.target2
+        || (d.c.bead || null) !== (s.bead || null)) { bad = bad || (r.pk + '#' + i + '：身份对不上（复算 ' + d.c.key + '/' + d.c.bead + ' ‖ dump ' + s.key + '/' + s.bead + '）'); stop = true; break; }
+      const dn = Math.abs(d.v - s.net);
+      if (!(dn <= 1e-9)) { bad = bad || (r.pk + '#' + i + '：`net` 复算不上（差 ' + dn.toExponential(2) + '）⇒ 状态没原地复现'); stop = true; break; }
+      const xo = obs3Encode(W, st, r.pid, d.c);
+      let dm = 0; for (let k = 0; k < xo.length; k++) { const e = Math.abs(xo[k] - s.x3[k]); if (e > dm) dm = e; }
+      if (!(dm <= 1.01e-4)) { bad = bad || (r.pk + '#' + i + '：obs3 `x` 复算不上（最大 ' + dm.toExponential(2) + '）⇒ 特征面漂移，不是同一批夹具'); stop = true; break; }
+      if (dn > netMax) netMax = dn; if (dm > x3Max) x3Max = dm;
+    }
+    if (stop) continue;
+    /* 标签 = **组内标准化**的 rollout 赢率（与强度同向；量纲与 v7 分数不同 ⇒ 用 z 而不是原值，见 TT 那段） */
+    const win = take.map((x, i) => r.pool[i].win), hp = take.map((x, i) => r.pool[i].hpTop);
+    let rp = 0; for (let i = 1; i < win.length; i++) if (win[i] > win[rp] || (win[i] === win[rp] && hp[i] > hp[rp])) rp = i;
+    const mu = win.reduce((a, b) => a + b, 0) / win.length;
+    const sd = Math.sqrt(win.reduce((a, b) => a + (b - mu) * (b - mu), 0) / win.length);
+    const ctr = win.map((x) => x - mu);
+    const tgt = sd > 1e-12 ? ctr.map((x) => x / sd) : ctr.map(() => 0);
+    /* 逐组打乱候选顺序（该组自己的独立流）——上游的名单是**按 v7 的分**排好序的，不打乱 ⇒ 稠密货币会奖励"背 v7 的枚举顺序" */
+    const K = take.length, ord = Array.from({ length: K }, (_, t) => t);
+    for (let i = K - 1; i > 0; i--) { const j = Math.floor(st.rng.next() * (i + 1)); const t = ord[i]; ord[i] = ord[j]; ord[j] = t; }
+    out.push({ state: st, pid: r.pid, pk: r.pk, env: r.env, round: r.round,
+      cands: ord.map((t) => take[t].c),
+      ref: ord.map((t) => win[t]),            /* 原始赢率 ⇒ regret 报"赢率单位"（不是 v7 单位）*/
+      tgt: ord.map((t) => tgt[t]), winS: ord.map((t) => r.pool[t].winS), mu,
+      refPick: ord.indexOf(rp), pre0: rp === 0 ? 1 : 0 });
+    nCand += K;
+  }
+  if (bad) { console.error('⛔ 夹具复现失败（第一处）：' + bad + ' ⇒ 整批作废，不要用这批标签出数'); process.exit(9); }
+  /* 这条货币**有没有牙**：组内赢率全等的组根本没有序可言（分母，不是缺陷）；分半一致率 = 标签自己把"哪手更好"定死了多少 */
+  let flat = 0, hsOk = 0, hsN = 0, pre0 = 0;
+  for (const f of out) {
+    if (f.tgt.every((x) => x === 0)) flat++;
+    if (f.pre0) pre0++;
+    const half = f.winS[0].length >> 1;
+    if (half >= 1 && f.winS.length > 1) {
+      const pick = (arr, off, len) => { let b = 0; for (let i = 1; i < arr.length; i++) { const s1 = arr[i].slice(off, off + len).reduce((a, x) => a + x, 0), s0 = arr[b].slice(off, off + len).reduce((a, x) => a + x, 0); if (s1 > s0) b = i; } return b; };
+      hsN++; if (pick(f.winS, 0, half) === pick(f.winS, half, half)) hsOk++;
+    }
+  }
+  FXREP = { groups: out.length, candAvg: nCand / Math.max(1, out.length), flatRate: flat / Math.max(1, out.length), hsAgree: hsN ? hsOk / hsN : NaN, hsN, pre0rate: pre0 / Math.max(1, out.length), netMax, x3Max, pfp, freshrng: fresh ? 'ON' : 'off', arm: FXARM, cfg: rows[0].cfg, keep: rows[0].keep, rep: rows[0].rep, src: FROM };
+  return out;
+}
+let FXREP = null;
 function labelFp(list) {
   let h = 2166136261;
   for (const fx of list) { const s = fx.cands.map((c) => c.key + '/' + (c.bead || '-')).join(',') + '|' + fx.refPick + '|' + fx.tgt.map((x) => x.toFixed(4)).join(','); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } }
   return (h >>> 0).toString(16);
 }
-let fixtures = DAGGER ? [] : collect(null);
-let fpLabels = DAGGER ? '(dagger：每档各走各的局)' : labelFp(fixtures);
+let fixtures = FROM ? collectFromDump() : (DAGGER ? [] : collect(null));
+let fpLabels = (DAGGER && !FROM) ? '(dagger：每档各走各的局)' : labelFp(fixtures);
 
 /* 训练半批 / 留出半批（按**组号**奇偶分，不是按池顺序 ⇒ 两半的桌形分布同构）*/
 const train = [], hold = [];
@@ -176,7 +285,7 @@ if (WARM) {
   console.log('  起点在 v7 局面留出集上：top-1=' + (100 * wb.top1).toFixed(1) + '% ‖ 配对序=' + (100 * wb.pair).toFixed(1) + '% ‖ CE=' + wb.ce.toFixed(4));
 }
 
-/* ===== 打分：组内 regret（v7 单位）‖ 配对序正确率 ‖ top-1 一致 ‖ 交叉熵 =====
+/* ===== 打分：组内 regret（**单位跟着货币走**：缺省 = v7 分数，`--fromdump` = 赢率 0~1）‖ 配对序正确率 ‖ top-1 一致 ‖ 交叉熵 =====
  * ⚑⚑ 10-29 02:2x 这里犯过一次**流式归一化**的错：`pr = tgt.map(x => { Zr += e; return e / Zr })`
  *   把"前缀和"当分母 ⇒ pr[0] 恒等于 1、q[0] 恒等于 1 ⇒ CE 那一项对下标 0 永远是 0，
  *   于是优化器真正学到的是"**把靠后的候选压低**"这种纯位置偏置 —— CE 从 1.76 掉到 0.34 全是这个来的。
@@ -215,7 +324,7 @@ function scoreSet(params, groups, logitsOf) {
     let nTop = 0; for (let i = 0; i < g.tgt.length; i++) if (Math.abs(g.tgt[i] - g.tgt[g.refPick]) < 1e-9) nTop++;
     if (nTop > 1) tie++;
     reg += g.ref[g.refPick] - g.ref[a];
-    const pr = softmax(g.tgt, 8);
+    const pr = softmax(g.tgt, TT);
     /* ⚑ 货币判的是**序**，不是胆量：把模型 logits 做矩对齐（减均值除标准差，再乘回目标的标准差），
      *    这样"排序完全对但尺度任意"的粒能拿到理论下界 CE = H(目标分布)。
      *    上一版没做这一步，"完美模仿者"（直接用 v7 的分数当 logits）反而比恒定输出差（5.08 vs 3.13）——
@@ -226,7 +335,7 @@ function scoreSet(params, groups, logitsOf) {
     const tm = g.tgt.reduce((a, x) => a + x, 0) / g.tgt.length;   /* ⚑ tgt 已经减过组均值 ⇒ 它自己的均值≈0，**不能**再拿 g.mu 去算标准差（上一版这么写把 tSd 抬成 sqrt(sd²+mu²)，把"喂目标"那条腿拉尖了 ⇒ CE 2.80 ≠ 自熵 1.01） */
     const tSd = Math.sqrt(g.tgt.reduce((a, x) => a + (x - tm) * (x - tm), 0) / g.tgt.length) || 1;
     const z = lga.map((x) => tm + ((x - mm) / sd) * tSd);
-    const qq = softmax(z, 8);
+    const qq = softmax(z, TT);
     let ceSum = 0;                                            /* ⚑ 每组必须清零（上一版把它提到了组外 ⇒ CE 随组数线性涨，整条读数作废） */
     for (let i = 0; i < pr.length; i++) if (pr[i] > 1e-12) ceSum += -pr[i] * Math.log(Math.max(1e-12, qq[i]));
     ce += ceSum;                                              /* 每组报**整组 nats**，与候选数无关（ln 候选数 是平坦下界） */
@@ -252,7 +361,10 @@ if (poolFingerprint(pool2) !== fpPool) { console.error('⛔ T-B 对手表没定�
   if (Math.abs(sj.ce - s1.ce) < 1e-9) { console.error('⛔ T-C 接线坏：参数动了而货币不动 ⇒ 这粒参数根本没被前向吃到'); process.exit(7); }
 }
 
-console.log('# rankfit ‖ arch=' + (ARCH === 'obs3' ? 'S1o(obs3)' : 'S1(v7)') + ' ‖ paramCount=' + P.paramCount() + ' ‖ 组 ' + fixtures.length + '（训练 ' + train.length + ' ‖ 留出 ' + hold.length + '）');
+console.log('# rankfit ‖ arch=' + (ARCH === 'obs3' ? 'S1o(obs3)' : 'S1(v7)') + ' ‖ paramCount=' + P.paramCount() + ' ‖ 组 ' + fixtures.length + '（训练 ' + train.length + ' ‖ 留出 ' + hold.length + '）‖ 货币=' + (FROM ? ('组内 rollout 赢率的标准分 ‖ 源=' + FROM + ' ‖ arm=' + FXARM) : '组内 v7 分数的标准分') + ' ‖ 标签面被丢掉的动作候选 ' + LABDROPTOT + ' 枚' + (ALLOW_DROP ? '（⚠ `--allowdroplabels` 开着 ⇒ 这条闸被人为放行）' : ''));
+if (FXREP) console.log('  §E824 夹具复现自证 ‖ 参照包指纹 ' + FXREP.pfp + ' ‖ freshrng=' + FXREP.freshrng + ' ‖ cfg=' + FXREP.cfg + ' keep=' + FXREP.keep + ' rep=' + FXREP.rep +
+  ' ‖ net 最大差 ' + FXREP.netMax.toExponential(2) + ' ‖ x3 最大差 ' + FXREP.x3Max.toExponential(2) +
+  '\n  ⇒ 这批标签**有没有牙**：组内赢率零方差占比 ' + (100 * FXREP.flatRate).toFixed(1) + '% ‖ 分半一致率 ' + (100 * FXREP.hsAgree).toFixed(1) + '%（' + FXREP.hsN + ' 组，每半 ' + (FXREP.rep / 2) + ' 条流）');
 /* ===== 校准腿（三条，跑前定死该落在哪）=====
  *   完美模仿者 = 直接把 v7 自己的分组内中心化分数当 logits ⇒ CE 必须最低、top-1 必须 100%；
  *   恒定输出   ⇒ top-1 应等于"v7 当选落在位置 0 的比例"（这就是那条**假高分**的来源，必须显式摆在桌上）；
@@ -263,7 +375,7 @@ const calPos = scoreSet(base, train, (g) => g.tgt.map((x, i) => -i));
 const pos0rate = fixtures.filter((f) => f.refPick === 0).length / fixtures.length;
 /* 两条解析地板：**喂给它自己的目标** ⇒ CE 必须正好等于目标分布自身的熵；**恒定输出** ⇒ CE 必须正好等于平均 ln(候选数)
  *   这两条都是"尺自己该落在哪"的对照，任何一条不中就是 CE 那条算式错，而不是被评的粒差。 */
-const Htgt = train.reduce((a, g) => { const pr = softmax(g.tgt, 8); return a - pr.reduce((s, q) => s + (q > 1e-12 ? q * Math.log(q) : 0), 0); }, 0) / train.length;
+const Htgt = train.reduce((a, g) => { const pr = softmax(g.tgt, TT); return a - pr.reduce((s, q) => s + (q > 1e-12 ? q * Math.log(q) : 0), 0); }, 0) / train.length;
 const lnN = train.reduce((a, g) => a + Math.log(g.cands.length), 0) / train.length;
 console.log('  校准：目标自熵 H=' + Htgt.toFixed(4) + ' ‖ 喂目标的 CE=' + calPerfect.ce.toFixed(4) + '（top-1=' + (100 * calPerfect.top1).toFixed(1) + '% ‖ 同分口径 hitVal=' + (100 * calPerfect.hitVal).toFixed(1) + '%）‖ 平坦下界 ln n=' + lnN.toFixed(4) + ' ‖ 恒定输出 CE=' + calFlat.ce.toFixed(4) + '（top-1=' + (100 * calFlat.top1).toFixed(1) + '%）‖ 纯位置 CE=' + calPos.ce.toFixed(4));
 console.log('  （v7 当选落在位置 0 的比例 = ' + (100 * pos0rate).toFixed(1) + '% ‖ **并列组占比 = ' + (100 * calFlat.tie).toFixed(1) + '%** ⇒ top-1 一律对着 hitVal 看）');
@@ -271,8 +383,10 @@ if (calPerfect.hitVal < 0.995) { console.error('⛔ T-D 校准坏：喂 v7 自�
 if (Math.abs(calPerfect.ce - Htgt) > 0.05) { console.error('⛔ T-D1 校准坏：CE=' + calPerfect.ce.toFixed(4) + ' ≠ 目标自熵 ' + Htgt.toFixed(4) + ' ⇒ softmax/矩对齐那一段算式错'); process.exit(8); }
 if (Math.abs(calFlat.ce - lnN) > 0.05) { console.error('⛔ T-D2 校准坏：恒定输出 CE=' + calFlat.ce.toFixed(4) + ' ≠ ln(候选数) ' + lnN.toFixed(4) + ' ⇒ 归一化仍没接对'); process.exit(8); }
 if (calPos.ce < calFlat.ce - 0.02) { console.error('⛔ T-E 这条货币能靠**候选下标**刷（纯位置 CE ' + calPos.ce.toFixed(4) + ' < 恒定 ' + calFlat.ce.toFixed(4) + '）⇒ 监督排序臂作废'); process.exit(8); }
-/* T-F①：打乱必须**真的生效** ⇒ "v7 当选落在位置 0"的比例要从 ~50% 掉到 ~1/候选数（覆盖式改动要自证被调用） */
-if (pos0rate > 0.2) { console.error('⛔ T-F1 候选顺序没打乱开（v7 当选落位置 0 占 ' + (100 * pos0rate).toFixed(1) + '%）⇒ 上面那条位置地板是假的'); process.exit(8); }
+/* T-F①：打乱必须**真的生效** ⇒ "v7 当选落在位置 0"的比例要从 ~50% 掉到 ~1/候选数（覆盖式改动要自证被调用）
+ *   `--fromdump` 那批的地板本来不是 v7 而是 rollout 最优，但上游名单仍**按 v7 的分**排序 ⇒ 判据形状一样，阈值放宽到 35%
+ *   （实测从 'FXREP.pre0rate' 掉到 pos0rate；打印两个数就是为了让人看见这一档确实掉下来了）。 */
+if (pos0rate > (FROM ? 0.35 : 0.2)) { console.error('⛔ T-F1 候选顺序没打乱开（当选落位置 0 占 ' + (100 * pos0rate).toFixed(1) + '% ‖ 打乱前 ' + (100 * (FXREP ? FXREP.pre0rate : NaN)).toFixed(1) + '%）⇒ 上面那条位置地板是假的'); process.exit(8); }
 /* T-F②：结构对候选顺序无关是这条货币干净的前提 ⇒ 当场量：同一组换序再评，逐位 logits 必须回到同一枚候选 */
 {
   const perm = mulberry(fnv('permcheck' + SEED));
@@ -327,6 +441,8 @@ writeFileSync(out, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(best))
 writeFileSync(out + '.meta.json', JSON.stringify({ tool: 'rankfit', arch: ARCH === 'obs3' ? 'S1o' : 'S1', seed: SEED,
   dagger: DAGGER || null, warm: WARM || null, playTemp: DAGGER ? PLAYTEMP : null,
   groups: fixtures.length, train: train.length, hold: hold.length,
-  poolFp: fpPool, labelFp: fpLabels, pop: POP, elite: ELITE, iters: ITER, sig: SIG, targetTemp: 8, modelTemp: 8, momentMatch: true,
+  poolFp: fpPool, labelFp: fpLabels, pop: POP, elite: ELITE, iters: ITER, sig: SIG, targetTemp: TT, modelTemp: TT, momentMatch: true,
+  labelKind: FROM ? 'rollout-win' : 'v7-distill', from: FROM || null, fx: FXREP, regretUnit: FROM ? 'winRate01' : 'v7score',
+  labelDrops: LABDROPTOT, allowDropLabels: ALLOW_DROP,
   holdoutStart: ho0, holdoutBest: ho, deltaTop1Pt: dTop, deltaPairPt: dPair, paramCount: P.paramCount(), v7ref: 'js/bundled-champion-3p.js' }, null, 1));
 console.log('  产物 ' + out + ' ‖ ' + out + '.meta.json');

@@ -283,5 +283,25 @@ const O3 = await import('./obs3.mjs');
   console.log('  · 两边实测：mutRel 最坏 ' + wRel.toFixed(1) + '× ‖ 旧口径最坏 ' + wOld.toFixed(1) + '×（S1 旧口径平均 |Δ| 0.0216 / S1o 相对口径 0.0048 见台账）');
 }
 
+{
+  /* T15（10-29 03:4x · #142 续 · §E824 那条形参错位欠下的腿）：**标签面候选集必须与比赛面同形**。
+   *   那条病坏的时候**一片绿灯**：`P.value` 第 5 形参被塞进珠类型 ⇒ 蓄能两枚拿 `sh='elec'` ⇒ 宽度 undefined ⇒ 分数 NaN
+   *   ⇒ 被紧随其后的 `Number.isFinite` **静默丢掉** ⇒ 每组少一整族动作，而比赛时那一族照旧在候选表上。
+   *   没有任何一条既有读数会因此变红 ⇒ 只能靠一条"两面同形"的断言钉住。
+   *   按"可以加，但尽量少加"的上限句，**一条腿判三件事**：
+   *     ① 正确调用下每一枚候选的 v7 分都**有限**（没有候选被静默丢掉）；
+   *     ② 名单里**真的有蓄能那两枚珠候选**（`ep≥2` ⇒ `charge/elec`、`charge/boom` 在场 ⇒ 分母不是自己缩出来的）；
+   *     ③ **把 bead 塞进形状位这一变异必须当场变 NaN**（摘腿后变异：不验这条，① 就是恒真的装饰）。 */
+  const st15 = mkState(5);
+  st15.p[0].ep = 6;                                     /* 蓄能被菜单闸门留着（`evo.js:501` 的 ①"ep<2 不蓄能"）*/
+  const c15 = P.candidatesFor(st15, 0, T.econBase(st15, 0, Play.legalActions(st15, 0)), { lockTarget: false });
+  const beadC = c15.filter((c) => c.key === (R.SK && R.SK.CHARGE ? R.SK.CHARGE : 'charge'));
+  let dropped = 0;
+  for (const c of c15) if (!Number.isFinite(P.value(st15, 0, c.key, REF_V7, null, c))) dropped++;
+  const mutated = beadC.filter((c) => !Number.isFinite(P.value(st15, 0, c.key, REF_V7, c.bead || null, c))).length;
+  ok(!!REF_V7 && dropped === 0 && beadC.length === 2 && mutated === beadC.length,
+    'T15 标签面==比赛面：候选 ' + c15.length + ' 枚 ‖ 正确调用下被静默丢掉 ' + dropped + ' 枚 ‖ 蓄能珠候选在场 ' + beadC.length + '/2 ‖ 变异（bead 塞形状位）变 NaN ' + mutated + '/' + beadC.length + ' ⇒ 两面同形且这条腿有牙');
+}
+
 console.log(fails.length ? '\n⛔ 自证未过 ' + fails.length + ' 条 ⇒ 结构不进下一环' : '\n⇒ ' + done + ' 条自证全过：2.0 原型可以进训练环');
 process.exit(fails.length ? 8 : 0);

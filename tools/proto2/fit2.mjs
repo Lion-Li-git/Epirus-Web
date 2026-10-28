@@ -75,7 +75,7 @@ for (const fx of test) {
    *   读不出有限值的候选**丢掉但保留这一组**（丢整组会让分母从万级掉到千级，10-29 01:0x 犯过） */
   const keep = [], rv = [];
   for (let i = 0; i < cands.length; i++) {
-    const c = cands[i], v = P.value(fx.state, fx.pid, c.key, v7, c.bead || null, c);
+    const c = cands[i], v = P.value(fx.state, fx.pid, c.key, v7, null, c);   /* ⚑ 第 5 形参是**形状 `sh`**不是 bead ⇒ 传 null；bead 走第 6 形参的 `c`（照 `probe-myopia-regret.mjs:354`） */
     if (Number.isFinite(v)) { keep.push(i); rv.push(v); }
   }
   if (keep.length < 2) continue;

@@ -426,7 +426,7 @@
 
 ---
 
-# 第八段（10-29 02:5x → 03:2x）· 双峰的机制露出来了 + **obs3 的 dump 一直没有标签**（修完）
+# 第八段（10-29 02:4x → 02:5x ‖ commit `fa26bcdd` 02:56）· 双峰的机制露出来了 + **obs3 的 dump 一直没有标签**（修完）
 
 ## 醒来先读这一屏（交接位）
 
@@ -499,3 +499,119 @@ js/train/policy.js:738  const r = state.rng.next();   → TypeError: state.rng.n
 `RNGCUR` 还在 **`tools/probe-myopia-regret.mjs:483` 的 `mkMimic`** 里被读（`(FRESHRNG && RNGCUR ? RNGCUR : st).rng.next()`），`deepFlag` 全文有 **14 处**。
 ⇒ 所以要搬就得**整族搬**（`playRollout` + `outcomeOf2` + 这两个全局一起），不能只搬 `playRollout`——只搬一半会出现"两套栈"，比现在更坏。
 ⇒ 这条改动我**不在凌晨三点动**（牙口已经写好：抽取前后各跑一次 `--dumpobs3` 小样本逐行比 `winS`，不一致就是搬错）。留在 #143。
+
+# 第十段（10-29 03:0x → 03:2x）· #143 换路：**不搬 rollout，改成让仪器把"可复现的夹具"落盘**
+
+## 醒来先读这一屏（第十段交接位）
+
+第九段那条"要搬就整族搬"的结论**没有作废**，但搬这件事被三行代码否掉了：
+状态本来就是整只可 JSON 序列化的、`legal` 从状态算得出、obs3 编码器是可 import 的独立模块。
+⇒ 于是 #143 的形状从"抽 lib"换成"**instrument 落夹具+标签，下游读 JSONL**"——这正是本仓七台下游仪器一直在用的形状。
+rollout 的算术仍然只有一份，而且**一份都不用搬**。
+
+## 三条代码级事实（都是我自己去核的，不是推的）
+
+1. `js/core/state.js:241` ⇒ `cloneState = JSON.parse(JSON.stringify(s)); c.rng = s.rng`
+   —— 状态除 `rng` 那只闭包外**整只可序列化**，而 rankfit 早就会给克隆体重挂一条自己的定标流。
+2. `js/core/play.js:9` 的 `legalActions(state, pid)` 挂在 `EpirusPlay` 上 ⇒ `T.econBase(st, pid, legal)`（`js/train/evo.js:501`）
+   要的 `legal` **从状态本身算得出**，不需要保留母局的调用栈。
+3. `obs3Encode` = `import { encode } from './proto2/obs3.mjs'`（`tools/probe-myopia-regret.mjs:35`）⇒ 复算校验用的是**同一份编码器**。
+
+## 为什么"抽 lib"是错的路（记下来，免得下次又想去搬）
+
+本仓对"rollout 只能有一份"的既有解法**不是公共库，是落盘**：
+`probe-distill-learnability` ‖ `probe-label-resolution` ‖ `probe-settle-capture` ‖ `probe-value-head-ceiling` ‖ `proto2/rank-signal` ‖ `proto2/audit-dims` ‖ `proto2/obs2-from-v7`
+**七台**下游全部读 `probe-myopia-regret --dump*/` 的 JSONL，注释里写的理由逐字相同（"rollout 的算术只能有一份，所以不另写采集器"）。
+反过来说：搬 lib 要动的是一台**被 D214 门 spawn 的仪器**的控制流（`tools/gates/probe-instruments.mjs:1399/1404` 各跑一次真进程），
+风险换不到任何好处 ⇒ 撤。
+
+## 设计（新旗标 `--dumpfx=<path>`，默认关 ⇒ 一行不写 ⇒ 既有读数逐字不变）
+
+一行 = 一个**采样决策**（不是候选）：
+
+| 字段 | 装什么 | 为什么 |
+| --- | --- | --- |
+| `st` | 整只状态（`rng` 置 `null`） | 下游能原地重建，不必复现母局走法 |
+| `pid` | 焦点席 | 现在恒为 `FOCUS=1`，写出来免得以后变了读不出 |
+| `pool[]` | `key/target/target2/bead` + `net` + `win` + `hpTop` + `rounds` + **逐流 `winS`** | 身份够匹配、标签够算 CE，逐流留着算教师自己的分半一致率 |
+| `cfg/seed/arm/env/g/n/round/pk/keep/rep/freshrng` | 口径列 | "记下用哪台尺与哪种启动"那条规矩 |
+
+下游（`rankfit --fromdump=<path>`）：重建状态 ⇒ 挂定标 rng ⇒ `legalActions` ⇒ `candidatesFor(..., {lockTarget:false})` ⇒ 按 `(key,target,target2,bead)` **匹配**回 dump 里那一只候选。
+
+**⚑ 牙口（这条臂值不值得信，全看它）：每只匹配上的候选，用同一个 `obs3.mjs` 编码器把 `x` 复算一遍，与 dump 里的 `x` 逐元素比（容差 1e-4，就是落盘时的取整精度）；任何一只复算不上或对不上 ⇒ 硬失败退出。**
+复算 == 原值 才叫"夹具复现成功"——否则我量的是两个世界的标签（"覆盖式接入要自证真被调用"同族）。
+
+## 口径条款（先写下来，别到时候互相引错）
+
+- **① 名单仍是 v7 的 top-`KEEP`** ⇒ 天花板是"短名单内排对"，不是"全候选里排对"。放宽用现成旗标 `--keep=`，代价按候选数**线性**涨 rollout。
+- **② 标签里的 `win` 是"A0 延续 + `rep` 条流"下的期望赢率** ⇒ 换 `--arm=` 就换口径，两批**不许互引**。
+- **③ 桌形/种子/环境由 dump 自己带**（`cfg`/`seed`/`env` 列）⇒ rankfit 不许再自己挑一遍。
+
+## 预登记的停止线与判语
+
+1. 冒烟：`--games=2 --rep=2 --keep=6 --dumpfx=…`，**≤5 分钟**且复算门全绿才算仪器成立；分母（决策数/候选数）落文件。
+2. 一批真 dump（决策数 ≥ 冒烟的 10 倍，写清分母）⇒ **两臂**（S1 与 S1o 各一，同一份 dump、同一剂量）。
+3. 判语**只看一个数**：`profile2 --temp=0.001` 的 **Δ夺1(2.0 − 随机起点)**（SE≈1.0）。
+   \> +2pt ⇒ "稠密且与强度同向的货币"这条路成立，再谈结构；
+   < −2pt 且 `e:98` 那一行崩 ⇒ 换**目标**（序列级），不换结构。
+4. 不做的事：不搬 rollout、不动 `--dumpobs3` 的字段、不碰 D214 钉的那几处文本。
+
+# 第十一段（10-29 03:1x → 03:2x）· 夹具复现门**当场抓出一个我自己的形参错位**：今夜所有模仿标签从来没有蓄能
+
+## 醒来先读这一屏（第十一段交接位）
+
+`--dumpfx`（仪器落夹具）+ `--fromdump`（rankfit 原地重建）**已经跑通**，牙口按预登记的样子写进去了，
+而且**第一次跑就咬到东西**——咬的不是新路线，是我自己昨夜四处复用的一个错形参：
+`P.value(state,pid,key,params,sh,cand)` 的第 5 形参是**形状对象**，我在四个工具里传的是**珠类型字符串**。
+⇒ **今夜所有"模仿 v7"的组内标签里，`charge/elec` 与 `charge/boom` 这两枚候选是被静默丢掉的**（分数变 NaN → 被 `Number.isFinite` 滤掉）。
+
+## 仪器这条：落盘 vs 抽 lib，以及它怎么自证
+
+| 环节 | 落点 | 读数（第一次真跑） |
+| --- | --- | --- |
+| 上游 | `tools/probe-myopia-regret.mjs --dumpfx=<jsonl>`（新旗标，默认关 ⇒ 既有导出逐字不动） | 145 个决策 ‖ 778 条候选标签 ‖ 2.2MB ‖ 60 秒 |
+| 复现 | `tools/proto2/rankfit.mjs --fromdump=<jsonl>` | **`net` 最大差 `0.00e+0`（逐位相同）‖ obs3 `x` 最大差 `4.44e-5`（= 落盘取整精度）** |
+| 参照包钉死 | 每行带 `pfp`（参数短指纹 + 长度） | `a0c2c403/5689` ‖ 换包 ⇒ 硬失败 exit 2 |
+
+复现路径：`st`（JSON 里 `rng` 那只闭包自动掉）⇒ 挂定标流 ⇒ `Play.legalActions(st,pid)` ⇒ `T.econBase` ⇒ `P.candidatesFor(…,{lockTarget:false})` ⇒ 按 v7 分排序取 top-`keep` ⇒ 与 dump 里的名单**逐枚对身份 + 对 `net` + 对 `x`**，任何一处对不上整批作废（exit 9）。
+
+## 咬到的那一口（这是本段的正文，不是插曲）
+
+现场：`aggro#4#6` 报 `身份对不上（复算 guard/null ‖ dump charge/elec）`。
+诊断脚本 `scratch/fxdiag.mjs` 打出来的是——同一枚 `charge/elec`，**上游算出 21.176，我这边算出 NaN**。
+
+机制（`js/train/policy.js:485` 逐字）：
+
+```
+function value(state, pid, key, params, sh, cand) {
+  const S_ = sh ? sh.featS : FEAT_S;   // 我传的 sh = 'elec' ⇒ sh.featS === undefined
+```
+
+⇒ 宽度变 `undefined` ⇒ 两层循环一次不跑 ⇒ `B1 = HID * undefined = NaN` ⇒ `params[NaN] = undefined` ⇒ **分数 NaN**。
+非珠候选 `bead` 本来是 `null` ⇒ 落回默认形状 ⇒ 一直是对的 ⇒ 所以**只有蓄能的两枚被精确地、无声地删掉**。
+
+我错在**注释比代码自信**：四处都写了"照 `probe-myopia-regret` 的口径"，但没逐形参核；
+上游真实那句是 `P.value(state, pid, c.key, params, null, c)`（`tools/probe-myopia-regret.mjs:354`，第 5 形参给的就是 `null`）。
+
+## 影响面点名（哪些在册读数要打折、哪些不受影响）
+
+| 受影响（标签面少了整族动作） | 不受影响 |
+| --- | --- |
+| 段 D′ 的 F1（top-1 66.9% ‖ hitVal 83.3% ‖ CE 1.458）——**每组成员候选数少 2**，配对序少了一整族对 | `profile2` / `ref-baseline` 的**夺1/前2/活到终局**（强度读数不走标签面） |
+| 段 D″ 的 H1/H2、第六段 dagger 三臂的 top-1 与 CE | 十四条臂的 `\|dFirst\| ≤ 1.16pt`（那是整局货币的排序，不读标签） |
+| §E815/§E816 那批蒸馏读数（`fit2.mjs:78`、`capacity.mjs:58` 同一处错） | `#135` 宽池复核（用的是 `--dump` 的上游标签，本来就对） |
+| `arch2.mjs:371` 的蒸馏目标 `v7Centered`（同一处错 ⇒ 蒸馏头也从没被教过蓄能） | 今晚**方向性**判语"模仿不兑现成强度"（结论由强度读数支撑，与标签面无关） |
+
+⇒ 写死一句：**"新结构学不会蓄能"这个说法作废**，实况是"**从没把蓄能教过它**"。
+这给第八段那个"头塌成蓄能/能量先验、防御 0%"换了一个**更机械的解释**：不是学不会，是训练面上那一族动作压根不存在，
+比赛时却照旧出现在候选表里 ⇒ 未受教的动作靠网络外推随机乱选。
+
+## 这一段欠下的两条重跑（便宜，但要真跑）
+
+1. **修好后重跑 F1 那一格**（`rankfit --arch=S1`，同一 seed/剂量）⇒ 把 66.9%/83.3%/1.458 换成新数。这是"同一把尺修好了再量一遍"，不是新结论。
+2. `#142` 的温度/尺度约定那条腿里，**顺带把"标签面候选集与比赛面候选集是否同形"做成一条断言**（现在就差这一条：这次是 NaN 过滤，下次可能是别的静默丢）。
+
+## 仪器条款（进记忆，不进代码注释就算没发生）
+
+**"形参名字像、位置不同"的错位，只有拿另一个已知正确的调用逐位对账才抓得住。**
+自我检查里"我照的是 X 的口径"这句话不算对账——要把 X 那一行**贴过来比**，或者干脆像这次一样拿真值反算（`net` 逐位相等才算复现）。

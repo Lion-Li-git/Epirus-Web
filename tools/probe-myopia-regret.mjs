@@ -39,7 +39,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'dumpsx', 'dumpobs', 'dumpobs3', 'pack', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'dumpsx', 'dumpobs', 'dumpobs3', 'dumpfx', 'pack', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -152,6 +152,17 @@ function settleVec(st, pid, cand, salt) {
 const DUMPCOVER = arg('dumpcover', '');
 const DUMPOBS = arg('dumpobs', '');   /* 2026-10-28 DS：2.0 观测集（obs2.mjs）的逐候选 dump */
 const DUMPOBS3 = arg('dumpobs3', ''); /* 2026-10-29 千问：obs3（"可知信息全覆盖 + 无死维"第三版）的逐候选 dump */
+/* ===== §E824（2026-10-29 03:1x · 千问 · 任务 #143）：**夹具落盘**（`--dumpfx=<path>`，默认关 ⇒ 一行不写）=====
+ * 为什么是"落盘"而不是"把 rollout 抽成公共库"：本仓对"rollout 的算术只能有一份"的既有解法一直是
+ *   **instrument 落标签、下游读 JSONL**（`probe-distill-learnability` ‖ `probe-label-resolution` ‖ `probe-settle-capture`
+ *   ‖ `probe-value-head-ceiling` ‖ `proto2/rank-signal` ‖ `proto2/audit-dims` ‖ `proto2/obs2-from-v7` 七台同形）。
+ *   抽 lib 要动的是一台**被 D214 门 spawn 的仪器**的控制流 ⇒ 风险换不到好处。
+ * 为什么下游能原地重建（三行代码级事实）：`js/core/state.js:241` 的 cloneState 本身就是 JSON 往返（只有 `rng` 那只闭包要外挂）‖
+ *   `js/core/play.js:9` 的 `legalActions(state,pid)` 挂在 `EpirusPlay` 上 ⇒ `T.econBase` 要的 `legal` 从状态算得出 ‖
+ *   候选身份 = `{key,target,target2,bead}` 四元组且**无其他字段**（`policy.js:607-672`）⇒ 匹配得回引擎那一只。
+ * ⇒ 只加这一段、不加别的字段；`--dumpobs3` 那些既有导出**逐字不动**。 */
+const DUMPFX = arg('dumpfx', '');
+const FXROWS = [];
 const O3ROWS = [];
 const OBSROWS = [];
 const CROWS = [];
@@ -165,6 +176,9 @@ const W = sandbox(), S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer
 const params = (function () { const p = loadChamp(W, CHAMP_PACK); return p && p.params ? p.params : p; })();
 if (!params) { console.error('⛔ `--pack` 指的那枚包读不出：' + CHAMP_PACK); process.exit(2); }
 if (argv.some(a => a === '--pack' || a.startsWith('--pack='))) console.log('[selfcheck] 本机现测：本遍的被测包 = ' + CHAMP_PACK + '（不带 `--pack` 时 = 线上槽，与 §E195~§E205 同源可比）');
+/* §E824：`--dumpfx` 的每一行都带这枚参照包的短指纹 ⇒ 下游能断定"我复算 `net` 用的就是落盘时那枚粒"。
+ *   （不加这一列，标签面与参照面换了包会**同形**：读到的还是同一个字段名。） */
+const PARAMS_FP = (function () { const a = Float64Array.from(params || []); let h = 2166136261; for (let i = 0; i < a.length; i++) { const v = Math.round(a[i] * 1e6); h = (h ^ (v & 255)) >>> 0; h = Math.imul(h, 16777619) >>> 0; h = (h ^ ((v >> 8) & 255)) >>> 0; h = Math.imul(h, 16777619) >>> 0; } return (h >>> 0).toString(16) + '/' + a.length; })();
 const { pool: POOL } = poolFromSpecs(B, OPP_SPECS);
 const ENVS = ENV_PICK.map(n => { const q = POOL.find(z => z.name === n); if (!q) { console.error('⛔ 环境 `' + n + '` 不在原型池'); process.exit(2); } return q; });
 const HB = loadPool(W, 'human');
@@ -383,6 +397,23 @@ function runArm(arm, selfCheck) {
               winS: sr[i].win,
               x: x3.map(v => Math.round(v * 1e4) / 1e4) }));
           }
+        }
+        if (DUMPFX && !selfCheck) {
+          /* 一行 = **一个采样决策**（不是候选）：整只状态 + 焦点席 + top-`KEEP` 名单的身份与标签。
+           * ⚠ `st` 里的 `rng` 是闭包 ⇒ `JSON.stringify` 自动丢掉它 ⇒ 下游必须自己挂一条**定标流**（不许抽母局的流）。
+           * ⚠ 标签口径跟着这批走：`arm`/`cfg`/`keep`/`rep`/`freshrng` 一并写进每一行，
+           *   否则换一枚旗标就换了一次口径，而下游读到的还是同一个字段名（本仓栽过太多次）。 */
+          FXROWS.push(JSON.stringify({
+            seed: SEED, arm: arm.key, env: env.name, g, n, round: state.round,
+            pk: env.name + '#' + g + '#' + n,
+            cfg: CFG, seats: N, keep: KEEP, rep: REP, freshrng: (FRESHRNG ? 'ON' : 'off'), focus: FOCUS,
+            pid: pid, st: state, pfp: PARAMS_FP,
+            pool: pool.map(function (s, ii) { return {
+              key: s.c.key, target: s.c.target == null ? null : s.c.target,
+              target2: s.c.target2 == null ? null : s.c.target2, bead: s.c.bead || null,
+              net: s.v, win: res[ii].win, hpTop: res[ii].hpTop, rounds: res[ii].rounds, winS: sr[ii].win,
+              x3: obs3Encode(W, state, pid, s.c).map(function (v) { return Math.round(v * 1e4) / 1e4; }) }; })
+          }));
         }
         if (DUMPSX && !selfCheck) {
           for (let i = 0; i < pool.length; i++) {
@@ -780,6 +811,15 @@ if (DUMPOBS3) {
 if (DUMP) {
   writeFileSync(DUMP, ROWS.join('\n') + '\n');
   console.log('· 导出 **' + ROWS.length + ' 行**（决策 × 候选）到 `' + DUMP + '` ‖ 每行 x 长度 ' + (ROWS.length ? JSON.parse(ROWS[0]).x.length : 0));
+}
+if (DUMPFX) {
+  const txt = FXROWS.join('\n') + '\n';
+  writeFileSync(DUMPFX, txt);
+  let candN = 0; for (const s of FXROWS) candN += JSON.parse(s).pool.length;
+  console.log('· §E824 夹具导出 **' + FXROWS.length + ' 个决策**（候选标签 ' + candN + ' 条 ‖ 均值 '
+    + (candN / Math.max(1, FXROWS.length)).toFixed(1) + '/决策）到 `' + DUMPFX + '` ‖ ' + (txt.length / 1024).toFixed(0) + 'KB'
+    + ' ‖ 标签口径 arm=' + ARMS.join(',') + ' cfg=' + CFG + ' keep=' + KEEP + ' rep=' + REP
+    + ' freshrng=' + (FRESHRNG ? 'ON' : 'off'));
 }
 if (DUMPSX) {
   writeFileSync(DUMPSX, SXROWS.join('\n') + '\n');

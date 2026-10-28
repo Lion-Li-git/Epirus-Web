@@ -362,13 +362,15 @@ export function install(W, opts) {
     const l2 = Math.max(1e-6, Number(opts3.l2) || 1e-2);
     /* 目标 = v7 的**逐候选**分数。⚑ 不能用 `P.forward`：那条回的是"动作键层"的 probs（~22 个槽，
      *   `ACT_KEYS` 口径），拿它按下标跟候选列表比 = 苹果对橘子（10-29 01:1x 我就差一点把 94% 的假一致率当真）。
-     *   逐候选的口径是 `P.value(state,pid,key,params,bead,cand)`（`probe-myopia-regret` 用的就是它，
-     *   §E815 也对过账）。 */
+     *   ⚑⚑ 形参顺序（10-29 03:2x 由 §E824 夹具复现门当场纠正）：`P.value(state,pid,key,params,sh,cand)` 的**第 5 形参是形状对象**，
+     *   不是 bead（`policy.js:485` 读 `sh.featS/featN/featA`；我上一版在这里写 `c.bead || null` ⇒ 蓄能两枚拿到
+     *   `sh='elec'` → 宽度全 undefined → 分数 NaN → 被下面那句静默丢掉 ⇒ 蒸馏目标里**从来没有蓄能**）。
+     *   bead 走第 6 形参的 `cand` —— 逐字照 `probe-myopia-regret.mjs:354`。 */
     const v7Centered = (state, pid, cands) => {
       const raw = [], keep = [];
       for (let i = 0; i < cands.length; i++) {
         const c = cands[i];
-        const v = P.value(state, pid, c.key, opts3.v7, c.bead || null, c);
+        const v = P.value(state, pid, c.key, opts3.v7, null, c);
         if (!Number.isFinite(v)) continue;                 /* ⚑ 丢**这一枚候选**，不丢整组（第一版 return null 把整组扔掉 ⇒ 分母从万级掉到 1227） */
         raw.push(v); keep.push(i);
       }

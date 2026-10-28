@@ -55,7 +55,7 @@ function walk(sb, n) {
         const raw = [], keep = [];
         for (let i = 0; i < cands.length; i++) {
           const cd = cands[i];
-          const v = P.value(cl, p, cd.key, v7, cd.bead || null, cd);
+          const v = P.value(cl, p, cd.key, v7, null, cd);   /* ⚑ 第 5 形参 = 形状（`sh`），**不是 bead**；照 `probe-myopia-regret.mjs:354` 传 null，bead 走第 6 形参的 `cd` */
           if (Number.isFinite(v)) { raw.push(v); keep.push(i); }
         }
         if (keep.length >= 2) {
