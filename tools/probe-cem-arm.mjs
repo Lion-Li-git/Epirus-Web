@@ -23,6 +23,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
+import { install as installArch2 } from './proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
 
 /* §E679 补（10-22）：这台量具原先**没有输入消毒层**（D218 那条门当场抓到，是我今夜建它时就漏的）。
  * 拼错的旗标被静默忽略 = 读数按默认档跑完而没人知道 ⇒ 与"黑键"同族。名单跟着 `arg('…')` 走。 */
@@ -57,6 +58,21 @@ const TMODE = arg('trainMode', 'multi');
 if (T.setTrainMode) T.setTrainMode(TMODE);
 if (T.trainMode && T.trainMode() !== TMODE) { console.error('⛔ 桌形没生效（要 ' + TMODE + ' 读到 ' + (T.trainMode && T.trainMode()) + '）⇒ 记下来的口径是假的'); process.exit(2); }
 const HOLD = Number(arg('holdoutGames', 60));
+/* ===== §E821（10-28 傍晚 · 千问）：`EPIRUS_ARCH2` ⇒ 两臂都训在 **2.0 结构**上 =====
+ * 与 `tools/train-3p.mjs` 那处同一手法（覆盖沙箱里的导出入口，`js/**` 不动 ⇒ 规则指纹不变），
+ *   所以 GA / CEM 两个模式**天然吃到同一份 DIM 与同一套算子** —— 这正是"优化器 × 新结构"要的同场对照。
+ * ⚠ 结构换成 2.0 之后，`--start` 那枚在册 v7 夹具包**读不进来**（本工具的 `unpack` 已被覆盖 ⇒ 走它本来就有的
+ *   "退回固定种子随机粒"那条腿）⇒ 起点标签会印 `makePolicy(0.25)`，**这是设计而非事故**：
+ *   2.0 没有热启动来源，两臂同起点随机、只差算子。 */
+if (process.env.EPIRUS_ARCH2) {
+  const parts = String(process.env.EPIRUS_ARCH2).split(':');
+  const cfg = { mutMode: String(process.env.EPIRUS_MUT_MODE || 'seg') };
+  if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) cfg[e[0].trim()] = Number(e[1]); });
+  const A2 = installArch2(W, cfg);
+  if (T.mulberry32) A2.rngRef.r = T.mulberry32((SEED * 7919 + 13) >>> 0);
+  console.log('[cem-arm] ⚙ 架构 = 2.0 原型 `' + process.env.EPIRUS_ARCH2 + '`（§E821） ‖ paramCount=' + P.paramCount() +
+    ' ‖ 变异算子=' + cfg.mutMode + ' ‖ 起点=随机（v7 夹具包读不进 2.0 ⇒ 两臂同起点、只差算子）');
+}
 const DIM = P.paramCount();
 /* 起点粒：用**在册的 3P 夹具包**而不是活槽（R3：会换主人的指针不配当夹具）。读不出来就退回固定种子随机粒。 */
 let startParams = null, startLabel = '';

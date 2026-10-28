@@ -27,6 +27,9 @@ import { makeSeqReward, patchEvoChooser as seqPatchEvoChooser } from './seq-rewa
 /* v1.5.200：黑键 / 已删键的判定搬进**单一来源**（原先只有本工具自己一份 IIFE ⇒ 别的入口没有这道闸）。
  * v1.5.226：同一个读集还用来把**实际生效的配方**写进 meta（见下面的 EFFECTIVE_ENV）。 */
 import { enforceKnobs, readKeysOf } from '../server/knob-guard.mjs';
+/* §E821（10-28 傍晚 · 2.0 架构原型）：与 `seq-reward-lib` 同一手法 —— **只覆盖沙箱里的导出入口**，
+ * `js/**` 一字不动 ⇒ 规则指纹不变；默认关（不带 `EPIRUS_ARCH2` 时这一行只是把一个函数引进来）。 */
+import { install as installArch2 } from './proto2/arch2.mjs';
 
 /* ===== v1.5.244：本入口只吃**位置参数** ⇒ 任何 `--…` 一律 exit 64（仓规 v1.5.234 的延长线）=====
  * 起因是我自己 15:12 亲手踩的：`node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
@@ -94,6 +97,7 @@ const POP = Number(process.argv[5] || 12);
  *   （与 D119/D120 的"要了开关不许静默"同一条规矩）。有意为之的情形用 `EPIRUS_ALLOW_DARK=1` 放行。 */
 const SELF_ENV_KEYS = [
   'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
+  'EPIRUS_ARCH2', 'EPIRUS_MUT_MODE',   // §E821（10-28 傍晚 · 千问）：2.0 架构原型 + 段感知/扁平变异算子档（默认关 ⇒ 逐字回到 v7）
   'EPIRUS_SEL_EVAL_SEEDS',   // §E322（v1.6.7）：当选键重验用几粒 seedBase 取均值（默认 4；=1 逐字回到旧行为）
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
   'EPIRUS_HALL_SEED',   // v1.5.277 §E114：把起点补进终局重验的候选池（默认关）
@@ -514,6 +518,34 @@ if (P.setRng && sb.window.EpirusTrainer.mulberry32) P.setRng(sb.window.EpirusTra
 
 const Bots = sb.window.EpirusBots;
 const T = sb.window.EpirusTrainer;
+
+/* ===== §E821（10-28 傍晚 · 千问 · 研究分支）：`EPIRUS_ARCH2` ⇒ 本进程换成 **2.0 结构** =====
+ * 为什么是"覆盖导出入口"而不是改 `js/train/policy.js`：
+ *   ① `js/**` 一字未动 ⇒ **规则指纹不变**（policy.js 在 `tools/rules-fingerprint.mjs` 的指纹文件表里，
+ *      动它会让 D16/N19/D34/D234 一起翻，而这一格现在要测的是结构、不是门禁搬家）；
+ *   ② 发局 / 座位轮转 / playoff / 名人堂全部沿用 `T.scoreMemberN` / `T.evalN` ⇒ **不存在第二套评估算术**
+ *      （本仓"两份同构实现必漂移"是老病，`tools/probe-settle-capture.mjs` 头上就写着）；
+ *   ③ 只活在这个训练进程里 ⇒ 产品、页面、评测装配看不到 2.0。
+ * ⚠ 三条代价（写在这里，不许偷偷吃）：
+ *   · 2.0 **没有热启动**：v7 包在 2.0 的 `unpack` 下必 null ⇒ 带 `EPIRUS_HOTSTART=1` 会当场 `exit 5`
+ *     （这是好事：宁可退出也不静默冷启动，09-22 臂 7/8 的教训按同一条规矩执行）。
+ *     ⇒ 本批只能与"同为随机起点的 2.0 臂"互比，**不许**拿夺一率去横比 §E818 那五枚 v7 臂。
+ *   · 前向比 v7 贵 ⇒ 横比只比**评估次数**，不比墙钟（在册条款）。
+ *   · `EPIRUS_MUT_MODE=seg|flat` 换的是**优化器算子**（段感知 σ / 段级交叉 vs 逐位均匀），与结构正交
+ *     ⇒ 这一对正交旋钮就是本波要测的"哪种优化器配这种结构"。
+ */
+if (process.env.EPIRUS_ARCH2) {
+  const spec = String(process.env.EPIRUS_ARCH2);
+  const parts = spec.split(':');
+  const cfg = { mutMode: String(process.env.EPIRUS_MUT_MODE || 'seg') };
+  if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) cfg[e[0].trim()] = Number(e[1]); });
+  const A2 = installArch2(sb.window, cfg);
+  /* 变异/初始化必须走**同一颗播种 RNG**（与上面 `P.setRng(mulberry32(...))` 同源），否则"同 seed 同配置 ⇒ 产物一致"这条在册证据就断了 */
+  if (T.mulberry32) A2.rngRef.r = T.mulberry32((__SEED * 7919 + 13) >>> 0);
+  console.log('[train-3p] ⚙ **架构 = 2.0 原型 `' + spec + '`**（§E821，`tools/proto2/arch2.mjs` 覆盖 paramCount/makePolicy/mutatePolicy/crossover/forwardCands/chooseCandidates/pack/unpack）' +
+    ' ‖ paramCount=' + P.paramCount() + ' ‖ 变异算子=' + cfg.mutMode + ' ‖ 热启动=不可能（v7 包读不进）');
+  console.log('[train-3p]   ⚠ 可比性：与本文件任何 v7 历史读数**不同源**（起点是随机、维度是新结构）⇒ 只在 2.0 臂之间横比，且只比评估次数');
+}
 
 /* ===== §E275（v1.5.334）：**部署档的 CLI 把手**（大雷 `BIGT_PUSH` / 摄魂 `DRAIN_PUSH`）=====
  * 为什么必须有：v1.5.333 起大雷那档是**引擎默认**，于是"训练桌"也带着它跑 ⇒
