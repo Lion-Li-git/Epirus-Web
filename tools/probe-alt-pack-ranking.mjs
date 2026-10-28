@@ -6,7 +6,11 @@
  *   逐臂只换"打分器"⇒ 组内 top-1 与 regret 的差就只剩包本身。
  * 不需要重跑引擎：dump 每行的 `x` 就是当时那份 235 维（213 状态 ‖ 22 动作），
  *   而 v7 的前向是 `b2 + Σ_j W2_j·ReLU(W1_j·x + b1_j)`（`js/train/policy.js:494-502`）⇒ 纯数组运算即可复算，
- *   ⚠ 复算必须与引擎 `value` 逐位相同才算数 ⇒ 本尺自带一条对账腿（拿 dump 里的 `net` 比，不等就 exit 8）。
+ *   ⚠ 复算必须与引擎在同一份 `x` 上对得上账才算数 ⇒ 本尺自带一条对账腿（拿 dump 里的 `net` 比）。
+ *   ⚑ **对账用相对容差，不用全等**：dump 把 `x` 存成四位小数 ⇒ 任何一枚包都不可能"逐位"复现 `net`
+ *     （第一版我写 1e-9 全等 ⇒ **六枚全判不出主人**，症状像尺接错、其实是判据错）。主人应当是唯一那枚
+ *     偏差只来自四舍五入的（实测 ~1e-4 ‖ 最多 1.8e-2、且 ≤5% 行超 2e-3），非主人差 2~8 个数量级。
+ *     反向自检：拿 `U2` 喂它自己的 dump ⇒ 0/400 超容差、判出主人 ✓（这条不恒真，换错包就红）。
  * 用法：node tools/probe-alt-pack-ranking.mjs --dump=<jsonl> --packs=<a,b,...> [--labels=<名,...>]
  * 只读 JSONL 与包文件，不改引擎、不加门、不动冠军槽。
  */
@@ -27,7 +31,7 @@ const groups = new Map();
 for (let i = 0; i < rows.length; i++) { const g = rows[i].arm + '|' + rows[i].pk + '|' + rows[i].round; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(i); }
 console.log('# §E819b 同一批决策格上的配对组内排序 ‖ dump ' + DUMP + ' ‖ 行 ' + rows.length + ' ‖ 组 ' + groups.size
   + ' ‖ 平均候选 ' + (rows.length / Math.max(1, groups.size)).toFixed(1));
-console.log('# 形状 FEAT_S=' + FS + ' ‖ FEAT_A=' + FA + ' ‖ HID=' + HID + '（复算前向，与 dump 里的 net 逐位对账）');
+console.log('# 形状 FEAT_S=' + FS + ' ‖ FEAT_A=' + FA + ' ‖ HID=' + HID + '（复算前向，与 dump 里的 net 按相对容差对账 ⇒ 见头部那条条款）');
 
 function score(params, x) {
   const B1 = HID * FN, W2 = B1 + HID;
@@ -78,7 +82,7 @@ for (let k = 0; k < PACKS.length; k++) {
     + (rg - base.rand >= 0 ? '+' : '') + (rg - base.rand).toFixed(2) + ' pt ‖ 复算 vs dump.net：超 2e-3 的 ' + mism + '/400 行 ‖ 最大相对偏差 ' + worst.toExponential(1)
     + (mism ? '' : '  ⇒ **这一枚就是 dump 的主人 ✓**'));
 }
-if (!anyMatch) { console.log('⛔ 没有一枚包能逐位复现 dump 里的 net ⇒ **我的复算前向与引擎不等**，本表全部不引（先修尺）。'); process.exit(8); }
+if (!anyMatch) { console.log('⛔ 没有一枚包能在容差内复现 dump 里的 net ⇒ **我的复算前向与引擎对不上账**，本表全部不引（先修尺，别修数据）。'); process.exit(8); }
 /* 噪声底（配对用）：把组按"局号奇偶"切成不交的两半，逐臂各算一次 regret ⇒ 半间摆幅就是这条量的噪声尺度。
  *   只有**大于半间摆幅**的臂间差才可读；小于它的只能记"分不开"。（不是置换检验：置换会把标签打散成无意义量） */
 function regretOfOn(scoreOf, keep) {
