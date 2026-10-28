@@ -37,7 +37,7 @@ import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'dumpsx', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -117,6 +117,31 @@ if (!argv.includes('--freshrng') && ALLOW_LEAK) FRESHRNG = false;   /* 显式要
  *     而"上限能不能被一个可学的头拿到"必须用**同一批标签**来问，否则两边的 regret 不可比。
  *   ⚠ 只在非自检遍里落行（自检遍会把 A0 再跑一遍，行会重复）。 */
 const DUMP = arg('dump', '');
+/* ===== §E817（10-28 下午 · 2.0 架构研究）：把**结算摘要**并进同一批行（`--dumpsx=<path>`，默认不写）=====
+ * 为什么并在这里而不是另起一台采集器：与 §E197 同一条理由 —— **rollout 的算术只能有一份**，
+ *   而"把落点变成输入能不能多兑现上限"必须用**同一批标签**问，否则两边的 regret 不可比。
+ * ⇒ 本文件输出的默认路径**一字不变**（这段只在 `--dumpsx` 开着时执行）。
+ * ⚠ rng 隔离是**硬要求**：`js/core/state.js:241` 的 `cloneState` 是 `c.rng = s.rng`（**共享**同一条流），
+ *   而本仪器自己在 §E204 就栽过这条 ⇒ `settleVec` 先给克隆换一条**独立**流再 resolve，
+ *   否则"算一次落点"会抽掉母局的随机数 ⇒ 整批 rollout 标签被扰动（症状：采样数/赢率漂，且不可复现）。
+ * 落点定义 = **solo 1-ply**（只递交焦点席这一手、过 `resolveActions`，不过 `endTurn`）：
+ *   决策时刻他人的这一手还不存在（`js/core/play.js:56-71` 先收齐 picks 才 resolve）⇒ 这是唯一算得出的形状。 */
+const DUMPSX = arg('dumpsx', '');
+const SXROWS = [];
+const aliveN = (p) => { let k = 0; for (let i = 0; i < p.length; i++) if (p[i].hp > 0) k++; return k; };
+function settleVec(st, pid, cand, salt) {
+  const q = S.cloneState(st);
+  let h = (salt * 2654435761) >>> 0;
+  q.rng = { next: function () { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; } };   /* 换流：母局那条一个字都不许被抽走 */
+  try { S.attemptAction(q, pid, cand.key, { bead: cand.bead, target: cand.target, target2: cand.target2 }); } catch (e) { return null; }
+  try { W.EpirusResolve.resolveActions(q); } catch (e) { return null; }
+  let dealt = 0, selfLoss = st.p[0].hp - q.p[0].hp;
+  for (let i = 0; i < st.p.length; i++) if (i !== 0) dealt += st.p[i].hp - q.p[i].hp;
+  const t = cand.target == null ? null : cand.target;
+  return [dealt, selfLoss, aliveN(st.p) - aliveN(q.p), q.p[0].ep, q.p[0].elec + q.p[0].boom,
+    q.p[0].guardNext ? 1 : 0, q.over ? 1 : 0, (q.winner === pid) ? 1 : 0,
+    t == null ? 0 : q.p[t].hp, t == null ? 0 : q.p[t].ep - st.p[t].ep];
+}
 /* ===== §E223 的原料：把**教师标签**落盘（`--dumpcover=<path>`，默认不写）=====
  * 为什么不另写一台采集器：rollout 的算术只能有一份（本仓"两份同构实现必漂移"的老病），而"搜索的偏好能不能被这张脸学到"
  * 必须用**同一批标签**来问。每行 = 一个采样决策：状态向量存一份 + 每候选一份动作向量 + 该候选的模拟赢率均值 + 逐流 0/1。
@@ -320,6 +345,17 @@ function runArm(arm, selfCheck) {
                *   两边挑到同一手的比例 = 这份标签到底把"哪手更好"定死了没有）。只加字段，默认分析器不读 ⇒ 旧读数逐字不变。 */
               winS: sr[i].win,
               x: xs.concat(P.actionFeatures(state, pid, pool[i].c.key, pool[i].c)).map(v => Math.round(v * 1e4) / 1e4) }));
+          }
+        }
+        if (DUMPSX && !selfCheck) {
+          for (let i = 0; i < pool.length; i++) {
+            const sv = settleVec(state, pid, pool[i].c, (g * 131 + n * 17 + i + 1));
+            if (!sv) continue;
+            SXROWS.push(JSON.stringify({ seed: SEED, arm: arm.key, env: env.name, g, n, round: state.round,
+              pk: env.name + '#' + g + '#' + n, i, key: pool[i].c.key,
+              target: pool[i].c.target == null ? null : pool[i].c.target,
+              net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop,
+              sx: sv.map(v => Math.round(v * 1e4) / 1e4) }));
           }
         }
         let bi = 0; for (let i = 1; i < res.length; i++) if (res[i].win > res[bi].win || (res[i].win === res[bi].win && res[i].hpTop > res[bi].hpTop)) bi = i;
@@ -699,6 +735,12 @@ console.log('· ③候选数均值 ' + (rows[0].candSum / Math.max(1, rows[0].de
 if (DUMP) {
   writeFileSync(DUMP, ROWS.join('\n') + '\n');
   console.log('· 导出 **' + ROWS.length + ' 行**（决策 × 候选）到 `' + DUMP + '` ‖ 每行 x 长度 ' + (ROWS.length ? JSON.parse(ROWS[0]).x.length : 0));
+}
+if (DUMPSX) {
+  writeFileSync(DUMPSX, SXROWS.join('\n') + '\n');
+  console.log('· §E817 结算摘要导出 **' + SXROWS.length + ' 行** 到 `' + DUMPSX + '` ‖ 每行 sx 长度 '
+    + (SXROWS.length ? JSON.parse(SXROWS[0]).sx.length : 0)
+    + '（= dealt ‖ selfLoss ‖ kills ‖ epAfter ‖ beads ‖ guardOn ‖ over ‖ iWin ‖ tgtHp ‖ tgtEpDelta）');
 }
 if (DUMPCOVER) {
   if (!COVER) { console.error('⛔ `--dumpcover` 必须与 `--cover` 同开（教师标签来自全表 rollout，不开 cover 就没有标签可写）'); process.exit(64); }
