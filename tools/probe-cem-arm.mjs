@@ -23,7 +23,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
-import { install as installArch2 } from './proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
+import { install as installArch2, verifyWired as verifyArch2Wired } from './proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
 
 /* §E679 补（10-22）：这台量具原先**没有输入消毒层**（D218 那条门当场抓到，是我今夜建它时就漏的）。
  * 拼错的旗标被静默忽略 = 读数按默认档跑完而没人知道 ⇒ 与"黑键"同族。名单跟着 `arg('…')` 走。 */
@@ -34,8 +34,8 @@ rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite',
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const MODE = arg('mode', '');
-if (MODE !== 'ga' && MODE !== 'cem') {
-  console.error('⛔ --mode 只认 ga|cem（实测 ' + (MODE || '(空)') + '）。本工具只吃 --旗标，不吃位置参数。');
+if (MODE !== 'ga' && MODE !== 'cem' && MODE !== 'esa') {
+  console.error('⛔ --mode 只认 ga|cem|esa（实测 ' + (MODE || '(空)') + '）。本工具只吃 --旗标，不吃位置参数。');
   process.exit(64);
 }
 const EVALS = Number(arg('evals', 2000));
@@ -88,8 +88,15 @@ if (process.env.EPIRUS_ARCH2) {
   if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) cfg[e[0].trim()] = Number(e[1]); });
   const A2 = installArch2(W, cfg);
   if (T.mulberry32) A2.rngRef.r = T.mulberry32((SEED * 7919 + 13) >>> 0);
+  /* ⚑ **开臂前的接线自证**（10-28 晚三波读数作废换来的闸）：打一局量一下 `forwardCands` 有没有被叫到。
+   *   没叫到 ⇒ 训练环在走 v7/旧口径分支（`evo.js:21` 的 `LEGACY(params)` 把认不出形状的包判成旧包），
+   *   这时整批臂的 `fit` 照样出数、臂照样跑完 ⇒ "没崩"与"接上了"同形。宁可开不了臂。 */
+  let wired;
+  try { wired = verifyArch2Wired(W, A2, { mode: TMODE, n: N, games: 1 }); }
+  catch (e) { console.error('⛔ ' + String(e && e.message || e)); process.exit(7); }
   console.log('[cem-arm] ⚙ 架构 = 2.0 原型 `' + process.env.EPIRUS_ARCH2 + '`（§E821） ‖ paramCount=' + P.paramCount() +
-    ' ‖ 变异算子=' + cfg.mutMode + ' ‖ 起点=随机（v7 夹具包读不进 2.0 ⇒ 两臂同起点、只差算子）');
+    ' ‖ 变异算子=' + cfg.mutMode + ' ‖ 起点=随机（v7 夹具包读不进 2.0 ⇒ 两臂同起点、只差算子）' +
+    ' ‖ **接线自证 PASS**：校准局里 forwardCands ' + wired.forwards + ' 次 ‖ chooseCandidates(2.0 版) ' + wired.chooseCandidatesCalls + ' 次 ‖ fit=' + (wired.fit == null ? 'n/a' : wired.fit.toFixed(3)));
 }
 const DIM = P.paramCount();
 /* 起点粒：用**在册的 3P 夹具包**而不是活槽（R3：会换主人的指针不配当夹具）。读不出来就退回固定种子随机粒。 */
@@ -98,20 +105,57 @@ const c = loadChamp(W, START_PACK, HERE + '/..');
 if (c && c.length === DIM) { startParams = Float64Array.from(c); startLabel = '夹具包 ' + START_PACK; }
 if (!startParams) { P.setRng(T.mulberry32(SEED)); startParams = P.makePolicy(0.25); startLabel = 'makePolicy(0.25)'; }
 startParams = Float64Array.from(startParams);
+/* §E822 起手三件固定动作（都是被"读数看着正常"逼出来的）：
+ *   ① 只读副本 `START_COPY` —— 内部 GA 会**就地改**传进去的数组，起点基线绝不能再吃 `startParams`；
+ *   ② 固定对手表 `FIX_OPPS`（用起点粒造一次）⇒ 起点与冠军吃**同一批桌**，跨臂才是配对比较；
+ *   ③ 算子真实性自检：同一父代、同一条随机流，`seg` 与 `flat` 两档变异**必须产出不同的子代**，
+ *      否则"我在比算子"这句话是空的（今天 GA 两臂 md5 相同就是这么来的）。 */
+/* 固定对手表（**必须在任何读数之前建好**；用 `var` 声明在这里、真正赋值在下面 `START_COPY` 之后，
+ *   因为造它要用到 `T.buildOpps` 而那时 `startParams` 才刚定下来） */
+var FIX_OPPS = null;
+const START_COPY = Float64Array.from(startParams);
+FIX_OPPS = T.buildOpps(START_COPY, 0.05);
+{
+  const mk = function (mode) {
+    const bak = P.mutatePolicy;
+    const before = P.__arch2 ? P.__arch2.OPT.mutMode : null;
+    if (P.__arch2) P.__arch2.OPT.mutMode = mode;
+    const r = bak(START_COPY, 0.2);
+    if (P.__arch2) P.__arch2.OPT.mutMode = before;
+    return r;
+  };
+  if (P.__arch2) {
+    const a = mk('flat'), b = mk('seg');
+    let same = true; for (let i = 0; i < a.length; i++) { if (a[i] !== b[i]) { same = false; break; } }
+    if (same) { console.error('⛔ 算子档没生效：seg 与 flat 产出**同一个子代** ⇒ "比算子"是空的（今天 GA 两臂 md5 相同的同一个病）'); process.exit(7); }
+    console.log('[cem-arm] ✔ 算子真实性自检：seg 与 flat 对同一父代产出**不同**子代（逐位比对第一个差异在第 ' + (() => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return i; return -1; })() + ' 个坐标）');
+  }
+}
 /* 每臂一条自己的随机流：同一 seed 两臂可配对（起点相同、预算相同，只差算子） */
 function rngFor(s) { let x = (s >>> 0) || 1; return function () { x = (x + 0x6D2B79F5) | 0; let t = Math.imul(x ^ (x >>> 15), 1 | x); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const gauss = function (r) { const u = Math.max(r(), 1e-12), v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
 
 /* 评估口径两臂共用同一个 opps 构造函数（同一份对手 = E6 那条"与验收同场"的教训） */
+/* ===== §E822（10-28 晚，三处"看着正常"的读数一起修）=====
+ *   ① `T.buildOpps(params, …)` 里有一部分对手是**按被评的这粒权重**造的 ⇒ 不同臂的"同一函数"其实吃了不同的桌 ⇒
+ *      跨臂比读数必须先钉住一份**固定对手表**（用起点粒造一次，之后所有读数都用它）。
+ *   ② GA 侧会**就地改**传进去的数组 ⇒ "同场起点基线"若复用 `startParams`，量到的是冠军自己（今天就是这样：
+ *      报表起点 fit 与冠军逐字相同，而我另起一次量到的起点是 0.337 vs 报表 0.399）。⇒ 起手前先 `slice()` 一份只读副本。
+ *   ③ 内部 GA（`T.makeTrainer`/`step`）不调 `EpirusPolicy.mutatePolicy` ⇒ 我那两档"算子"跑出来是**同一份权重**（md5 相同）。
+ *      ⇒ 加一条工具自己拥有的进化策略 `--mode=esa`：父代 + λ 个子代全走 `P.mutatePolicy`/`P.crossover`，
+ *      `EPIRUS_MUT_MODE=seg|flat` 才第一次真的改变干预。 */
+/* （`FIX_OPPS` 在上面 `START_COPY` 那一节声明并赋值 —— 必须先于任何读数） */
 function evalOne(params, gen, idx) {
   const opps = T.buildOpps(params, 0.05);
   const r = T.scoreMemberN(params, opps, GAMES, N, gen, idx, 0);
   return { fit: r.fit == null ? -1 : r.fit, first: r.firstRate == null ? 0 : r.firstRate, top2: r.top2Rate == null ? 0 : r.top2Rate };
 }
-const holdout = function (params) {   /* 终局读数：固定 idx/gen ⇒ 两臂同一把尺 */
-  const opps = T.buildOpps(params, 0.05);
-  const r = T.scoreMemberN(params, opps, HOLD, N, 999, 0, 0);
-  return { fit: r.fit, first: r.firstRate, top2: r.top2Rate };
+function evalFixed(params, gen, idx) {   /* 固定对手表 ⇒ 跨臂配对；games 用 HOLD 的那一档做终局读数 */
+  const r = T.scoreMemberN(params, FIX_OPPS, gen === 999 ? HOLD : GAMES, N, gen, idx, 0);
+  return { fit: r.fit == null ? -1 : r.fit, first: r.firstRate == null ? 0 : r.firstRate, top2: r.top2Rate == null ? 0 : r.top2Rate };
+}
+const holdout = function (params) {      /* 终局读数：固定场（同一批桌 + 同一 idx/gen） */
+  return evalFixed(params, 999, 0);
 };
 
 /* ===== ② 起点分母（必须先报，否则"涨了多少"没有参照）===== */
@@ -164,7 +208,28 @@ let best = startParams, bestFit = -Infinity, used = 0, curve = [];
 const checkpoints = [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return f * EVALS; });
 const cpG = TARGET_G ? [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return Math.round(f * TARGET_G); }) : [];
 
-if (MODE === 'ga') {
+if (MODE === 'esa') {
+  /* (1+λ)-ES：**全部算子都由本工具拥有**（父代 + λ 个子代各过一遍 `P.mutatePolicy`）
+   *   ⇒ `EPIRUS_MUT_MODE=flat|seg` 第一次成为真正的干预（内部 GA 那条路不调这些算子，见上面 ③ 的自检）。 */
+  let parent = Float64Array.from(startParams);
+  let pf = evalOne(parent, 0, 0).fit; bestFit = pf; best = parent;
+  const r = rngFor(SEED + 17);
+  void r;
+  const iters = TARGET_G ? 1000000 : Math.max(1, Math.floor(EVALS / POP));
+  for (let it = 0; it < iters; it++) {
+    for (let i = 0; i < POP; i++) {
+      const child = P.mutatePolicy(parent, SIG0);
+      const e = evalOne(child, it, i);
+      used += 1;
+      if (e.fit > bestFit) { bestFit = e.fit; best = child; }
+      while (cpG.length && gamesIn() >= cpG[0]) { curve.push({ games: gamesIn(), best: bestFit }); cpG.shift(); }
+      if (TARGET_G && gamesIn() >= TARGET_G) break;
+    }
+    if (best !== parent) { parent = Float64Array.from(best); pf = bestFit; }
+    if (!TARGET_G) { used += 0; while (checkpoints.length && used >= checkpoints[0]) { curve.push({ evals: used, best: bestFit }); checkpoints.shift(); } }
+    if (TARGET_G && gamesIn() >= TARGET_G) break;
+  }
+} else if (MODE === 'ga') {
   const tr = T.makeTrainer({ popSize: POP, gamesPerOpp: GAMES });
   /* 两臂必须**从同一粒起步**，否则比的不是算子而是起点。GA 侧用仓库自己的热启动 API
    * （`T.seedChampion` ⇒ 0 号位放种子粒、其余围绕它变异），不自己改种群内部结构。 */
@@ -218,7 +283,7 @@ if (MODE === 'ga') {
 const gLoop = gamesIn();
 /* §E822：**同场起点基线** —— 终局那把尺必须先在同一批桌上量一次"起点粒"，否则 6.5% / 13.0% 这种数没有地板
  *   （第一波只印了 `起点分母 fit=… 夺1=50.0%`，那是 **2 局**的读数，拿来当参照就是把噪声当地板）。 */
-const hoStart = holdout(startParams);
+const hoStart = holdout(START_COPY);
 const gStart = gamesIn() - gLoop;
 const ho = holdout(best);
 const gHold = gamesIn() - gLoop - gStart;

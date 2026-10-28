@@ -29,7 +29,7 @@ import { makeSeqReward, patchEvoChooser as seqPatchEvoChooser } from './seq-rewa
 import { enforceKnobs, readKeysOf } from '../server/knob-guard.mjs';
 /* §E821（10-28 傍晚 · 2.0 架构原型）：与 `seq-reward-lib` 同一手法 —— **只覆盖沙箱里的导出入口**，
  * `js/**` 一字不动 ⇒ 规则指纹不变；默认关（不带 `EPIRUS_ARCH2` 时这一行只是把一个函数引进来）。 */
-import { install as installArch2 } from './proto2/arch2.mjs';
+import { install as installArch2, verifyWired as verifyArch2Wired } from './proto2/arch2.mjs';
 
 /* ===== v1.5.244：本入口只吃**位置参数** ⇒ 任何 `--…` 一律 exit 64（仓规 v1.5.234 的延长线）=====
  * 起因是我自己 15:12 亲手踩的：`node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
@@ -540,6 +540,12 @@ if (process.env.EPIRUS_ARCH2) {
   const cfg = { mutMode: String(process.env.EPIRUS_MUT_MODE || 'seg') };
   if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) cfg[e[0].trim()] = Number(e[1]); });
   const A2 = installArch2(sb.window, cfg);
+  /* ⚑ 开臂前的**接线自证**（10-28 晚三波作废读数换来的）：打一局看 `forwardCands` 有没有被叫到。
+   *   根因写在 arch2 里：`evo.js:21` 的 `LEGACY(params)` 把"形状认不出来"的包判成旧包 ⇒ 走旧口径 ⇒
+   *   覆盖的入口一次都没被调用，而 `fit` 照样出数、臂照样跑完 ⇒ **"没崩"与"接上了"同形**。 */
+  let WIRED;
+  try { WIRED = verifyArch2Wired(sb.window, A2, { mode: (process.env.EPIRUS_TRAIN_MODE || 'multi'), n: N, games: 1 }); }
+  catch (e) { console.error('[train-3p] ⛔ ' + String(e && e.message || e)); process.exit(7); }
   /* 变异/初始化必须走**同一颗播种 RNG**（与上面 `P.setRng(mulberry32(...))` 同源），否则"同 seed 同配置 ⇒ 产物一致"这条在册证据就断了 */
   if (T.mulberry32) A2.rngRef.r = T.mulberry32((__SEED * 7919 + 13) >>> 0);
   console.log('[train-3p] ⚙ **架构 = 2.0 原型 `' + spec + '`**（§E821，`tools/proto2/arch2.mjs` 覆盖 paramCount/makePolicy/mutatePolicy/crossover/forwardCands/chooseCandidates/pack/unpack）' +

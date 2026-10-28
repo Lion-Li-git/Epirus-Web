@@ -287,7 +287,8 @@ export function install(W, opts) {
   }
 
   const prev = {};
-  const OVERRIDES = ['paramCount', 'makePolicy', 'mutatePolicy', 'crossover', 'pack', 'unpack', 'checkPack', 'forwardCands', 'chooseCandidates'];
+  const OVERRIDES = ['paramCount', 'makePolicy', 'mutatePolicy', 'crossover', 'pack', 'unpack', 'checkPack',
+    'forwardCands', 'chooseCandidates', 'shapeOf', 'value'];
   for (const k of OVERRIDES) prev[k] = P[k];
   P.paramCount = () => L.n;
   P.makePolicy = (scale) => make(L, rngRef.r, scale);
@@ -298,6 +299,55 @@ export function install(W, opts) {
   P.checkPack = checkPack;
   P.forwardCands = forwardCands;
   P.chooseCandidates = chooseCandidates;
+  /* ⭐ **接线这一格是今天栽回去的地方**（10-28 晚，三波读数作废换来的）：
+   *   `evo.js:21` 的 `LEGACY(params)` 写的是 `const sh = P.shapeOf(params); return !sh || sh.legacy === true;`
+   *   ⇒ 2.0 的向量长度在 v7 的 `shapeOf` 表里查不到 ⇒ 返回 null ⇒ **判成"旧包"走旧口径**
+   *     （`P.choose` + 脚本 `pickTargetN` 选目标），我覆盖的 `chooseCandidates/forwardCands` 一次都没被叫到，
+   *     而 `fit` 照样出数、臂照样跑完 ⇒ "没崩"与"接上了"同形。
+   *   修法：给 2.0 形状一个**显式**的 shapeOf（`legacy:false` ⇒ 走现代分支 = 候选体系），
+   *   并把 `P.value` 这种"按 v7 偏移切片"的入口对 2.0 向量**当场抛**（宁可崩，不要静默错切）。 */
+  P.shapeOf = function (params) {
+    if (params && params.length === L.n) return { featS: L.selfDim, featA: L.actH, featN: L.ctxDim, legacy: false, arch2: true };
+    return prev.shapeOf ? prev.shapeOf(params) : null;
+  };
+  P.value = function () {
+    const params = arguments[3];
+    if (params && params.length === L.n) {
+      throw new Error('2.0 结构没有 v7 那种 (s,a) 单点 value()：请用 EpirusPolicy.forwardCands（逐候选集合打分）。' +
+        '走到这里说明有代码在按 v7 偏移切 2.0 权重 ⇒ 宁可当场抛，不许静默错切。');
+    }
+    return prev.value.apply(null, arguments);
+  };
   P.__arch2 = { L, OPT, rngRef, CNT, forwardCands, chooseCandidates, restore() { for (const k of OVERRIDES) P[k] = prev[k]; delete P.__arch2; } };
   return P.__arch2;
+}
+
+/* ===== 接线自证（今天最贵的一格，写成一条可复跑的闸）=====
+ * 只验"装上了、没崩"是不够的：三波作废的读数全都"没崩"。这条要的是**证据**：
+ *   真打一局 ⇒ 2.0 的 forwardCands 必须被叫到（CNT 增加），且 `P.chooseCandidates` 走的是我这版。
+ * 任何一处不成立 ⇒ 抛（训练工具里调用它 ⇒ 直接开不了臂，比跑完 40 分钟再发现强）。 */
+export function verifyWired(W, A, opts) {
+  const o = opts || {};
+  const T = W.EpirusTrainer, P = W.EpirusPolicy, Play = W.EpirusPlay, R = W.EpirusRules, S = W.EpirusState;
+  const before = A.CNT.forwards;
+  let seed = 991;
+  const rng = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const p = P.makePolicy(0.25);
+  let ccCalls = 0;
+  const realCC = P.chooseCandidates;
+  P.chooseCandidates = function () { ccCalls++; return realCC.apply(this, arguments); };
+  /* 校准局**不许改变桌形**：先读回、用完还原（否则"验一下接线"这件事本身会把臂的口径挪走） */
+  const modeWas = T.trainMode ? T.trainMode() : null;
+  if (o.mode && T.setTrainMode) T.setTrainMode(o.mode);
+  const r = T.scoreMemberN(p, T.buildOpps(p, 0.05), Number(o.games || 1), Number(o.n || 5), 0, 0, 0);
+  if (modeWas && T.setTrainMode) T.setTrainMode(modeWas);
+  P.chooseCandidates = realCC;
+  const dForwards = A.CNT.forwards - before;
+  const out = { forwards: dForwards, chooseCandidatesCalls: ccCalls, fit: r && r.fit };
+  if (!(dForwards > 0 && ccCalls > 0)) {
+    throw new Error('2.0 接线没生效：跑了一局但 forwardCands 被叫 ' + dForwards + ' 次、chooseCandidates ' + ccCalls +
+      ' 次 ⇒ 训练环在走 v7/旧口径分支 ⇒ **本批不许开跑**（今天三波作废读数的同一个根因，见 arch2 里 shapeOf 那条注释）。');
+  }
+  void S; void Play; void R;
+  return out;
 }

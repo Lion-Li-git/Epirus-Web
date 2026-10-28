@@ -11,7 +11,7 @@
  *   T6 牙（非恒真）：动 `cand` 段一个权重 ⇒ logits 必须变；全零 params ⇒ logits 必须全等（退化基线）。
  */
 import { sandbox } from '../audit-lib.mjs';
-import { install, layout, paramCount, make } from './arch2.mjs';
+import { install, layout, paramCount, make, verifyWired } from './arch2.mjs';
 
 const W = sandbox();
 const P = W.EpirusPolicy, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
@@ -175,6 +175,18 @@ let MID = null;
   try { P.forwardCands(FX.st, 0, FX.cands, p1, { temp: 0.5 }); } catch (e) { clean = false; }
   ok(clean, 'T8b 正常形状下不抛（声明宽度 === 真拼进去的宽度）');
   console.log('  · 现在的形状：paramCount=' + L.n + ' ‖ 段 ' + L.seg.map(function (s) { return s.name + '(' + s.len + ')'; }).join(' ‖ '));
+}
+
+/* ---- T9：**接线自证**（10-28 晚三波读数作废换来的这一条必须常驻）----
+ * 只验"装上了、跑着没崩"是不够的：作废的那几波全都"没崩"。真凭据是训练环里 **2.0 的 forwardCands 被叫到**。 */
+{
+  let out = null, err = null;
+  try { out = verifyWired(W, A2, { mode: 'long', n: 5, games: 1 }); } catch (e) { err = String(e && e.message || e); }
+  ok(!!out && out.forwards > 0 && out.chooseCandidatesCalls > 0,
+    'T9 接线：打一局 ⇒ forwardCands ' + (out ? out.forwards : 'n/a') + ' 次 ‖ 2.0 版 chooseCandidates ' + (out ? out.chooseCandidatesCalls : 'n/a') + ' 次' +
+    (err ? '（抛：' + err.slice(0, 70) + '）' : '') + ' ⇒ 训练环真走在 2.0 上（此前这里是 **0 次**，而 fit 照样出数）');
+  const modeNow = T.trainMode ? T.trainMode() : null;
+  ok(modeNow === 'multi', 'T9b 接线自证**没把桌形改走**（用完还原 ⇒ 现在 ' + modeNow + '）');
 }
 
 console.log(fails.length ? '\n⛔ 自证未过 ' + fails.length + ' 条 ⇒ 结构不进下一环' : '\n⇒ ' + done + ' 条自证全过：2.0 原型可以进训练环');
