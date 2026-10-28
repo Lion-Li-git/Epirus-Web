@@ -55,7 +55,20 @@ const TARGET_G = Number(arg('targetGames', 0)) || 0;
 const QUIET = process.argv.includes('--quiet');
 const START_PACK = arg('start', 'docs/artifacts/eval-out/win-Ldemo.bak');
 if (!/^[a-zA-Z0-9._/-]+.(bak|js)$/.test(START_PACK)) { console.error('⛔ --start 要一个仓库内包文件（实测 ' + START_PACK + '）'); process.exit(64); }
-const OUT = arg('out', '');
+const OUT = arg('out', '') || defaultOut();
+/* ===== §E822（用户 10-28 傍晚裁定：「以后给一个默认落盘路径吧」）=====
+ * 病（今天我自己踩的）：`--out` 缺省为空 ⇒ 三臂跑完**权重没落盘**，事后任何别的尺都量不到它们
+ *   （组内判别力、12 行、演化图……全都要重新训一遍才能问）。臂的产物本身就是读数的一部分。
+ * 默认落点选 `scratch/arms/` 而不是 `docs/artifacts/`：后者是门禁比哈希的活文件夹，
+ *   研究臂默认往里撒 `.bak` 会当场吃 `D191`（未登记重复）——这条提醒写在 `tools/train-3p.mjs:2493-2500`。
+ *   要入库/进图的包仍由人**显式**点名搬到 `docs/artifacts/`（默认值不该替人做入库决定）。 */
+function defaultOut() {
+  const d = new Date();
+  const p = (x) => String(x).padStart(2, '0');
+  const tag = process.env.EPIRUS_ARCH2 ? String(process.env.EPIRUS_ARCH2).split(':')[0] : 'v7';
+  return 'scratch/arms/' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes())
+    + '-' + tag + '-' + MODE + '-' + (process.env.EPIRUS_MUT_MODE || 'x') + '-s' + SEED + '.bak';
+}
 
 const W = sandbox(HERE + '/..');
 const T = W.EpirusTrainer, P = W.EpirusPolicy, R = W.EpirusRules;
@@ -213,6 +226,9 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
   /* §E822：**实际局数**（计数器数出来的）与"标称预算"并列印 ⇒ 谁想拿 `evals` 当等预算，先看见这两个数 */
   gamesPlanned: used * GAMES, gamesActualLoop: gLoop, gamesActualHoldout: gHold, gamesActualStartHoldout: gStart,
   targetGames: TARGET_G || null,
+  /* §E822 吞吐记账（2.0 才有 ⇒ 不带 EPIRUS_ARCH2 时为 null）：横比与"要不要上 GPU"都得先看这两个数 */
+  netForwards: P.__arch2 ? P.__arch2.CNT.forwards : null,
+  netCandScores: P.__arch2 ? P.__arch2.CNT.cands : null,
   /* §E679 补（10-22）：回执里必须自带**桌形与终局读数局数** —— 批 D 的数当时只能从日志首行的打印抄，
    *   而"哪台尺 + 哪种启动"是读数可不可比的一部分（记忆：记下用哪台尺与哪种启动）。 */
   trainMode: TMODE, holdoutGames: HOLD,
@@ -232,4 +248,10 @@ else console.log('RESULT ' + JSON.stringify(row));
 console.log('⚠ inLoopBest 是各臂**循环内部**的分（GA 走 shaped/内部择优，CEM 走原始 fit）⇒ 跨臂不可比；跨臂只比 holdoutFit / holdoutFirst（同一函数同一场）。');
 console.log('⚑ 实际局数（计数器数的，含起点分母与 holdout 之外的循环）：循环 ' + gLoop + ' 局 ‖ holdout ' + gHold + ' 局 ‖' +
   ' 而标称 `evals×games` = ' + (used * GAMES) + ' ⇒ **横比只认这个数**；两臂循环局数不等 ⇒ "同预算"这句话不成立（§E822 实测 GA 与 CEM 差 3 倍）');
+if (P.__arch2) {
+  const c = P.__arch2.CNT;
+  console.log('⚑ 吞吐（2.0 前向自己的账）：决策打分 ' + c.forwards + ' 次 ‖ 候选打分 ' + c.cands + ' 个 ‖' +
+    ' 每局平均 ' + (c.forwards / Math.max(1, gLoop + gHold + gStart)).toFixed(1) + ' 次决策 ⇒' +
+    ' **"局数相等"不等于"算力相等"：赢面高的包局更长、决策更多**（这一格以前没人印过）');
+}
 if (OUT) { mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT + '.meta.json', JSON.stringify(row, null, 1), 'utf8'); }

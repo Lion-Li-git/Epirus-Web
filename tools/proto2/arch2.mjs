@@ -42,8 +42,13 @@ export function layout(opts) {
   const hid = Math.max(1, Number(o.hid) || 32);
   const hid2 = Math.max(1, Number(o.hid2) || 24);
   const selfDim = BASE + 3;                              // base(63) + 桌子形状三条（存活数/席位数/回合）
-  const ctxDim = selfDim + 2 * seatH;                    // 池化 = concat(mean, max)
-  const candIn = ctxDim + actH + seatH;                  // 逐候选：上下文 ‖ 动作编码 ‖ 目标席位编码
+  const ctxDim = selfDim + 2 * seatH;                    // 池化 = concat(mean, max) —— 这是 **ctx 层**的输入宽
+  /* ⚠ 10-28 18:4x 自己抓到的布局 bug（字节对账逼出来的，不是看代码看出的）：
+   *   原先写的是 `ctxDim + actH + seatH`，而真正喂进逐候选层的只有 **[hctx(hid) ‖ ae(actH) ‖ te(seatH)]**
+   *   ⇒ 每单位多出 `selfDim + 2*seatH - hid` 列**恒零输入的死权重**（S1 默认档 = 66×24 ≈ 1584 个参数白占白算）。
+   *   旧版每候选新建数组 ⇒ 尾部天然为 0，看不出来；改成复用缓冲后残留值让两次结果不一致，才把它照出来。
+   *   ⇒ 宽度一律**由实际拼接项算**，并在 selftest 里加一条"尾列必须有牙"的构造对照（T8）。 */
+  const candIn = hid + actH + seatH;
   const seg = [
     { name: 'seatEnc', off: 0, len: seatH * SEAT_DIM + seatH },
     { name: 'actEnc', off: 0, len: actH * 22 + actH },
@@ -84,6 +89,7 @@ export function install(W, opts) {
   if (!P || !P.features) throw new Error('install: 沙箱里没有 EpirusPolicy.features');
   const L = layout(opts);
   const OPT = { mutMode: String((opts && opts.mutMode) || 'seg'), temp: 0.6 };
+  const CNT = { forwards: 0, cands: 0 };   // 吞吐记账（见 forwardCands 那条注释）
   const rngRef = { r: Math.random };
   const gauss = () => { let u = 0, v = 0; while (u === 0) u = rngRef.r(); while (v === 0) v = rngRef.r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
 
@@ -108,19 +114,39 @@ export function install(W, opts) {
     return out;
   }
 
-  function encode(L_, p, x, inDim, outDim, biasOff) {
-    const h = new Float64Array(outDim);
+  /* 写进调用方给的缓冲（**逐条与旧版同序同加法** ⇒ 输出必须逐位相同；这条由 `--targetGames` 前后对账验）
+   * 为什么要省掉分配：一次决策要打分 40–80 个候选，旧版每个候选新建 3 个 Float64Array ⇒
+   *   一局几百次决策 × 每臂两千局 = 纯垃圾回收。吞吐那一格的第一个便宜项就在这里。 */
+  function encode(p, x, inDim, outDim, biasOff, out) {
     for (let j = 0; j < outDim; j++) {
       let s = p[biasOff + j];
       const base = j * inDim;
       for (let i = 0; i < inDim; i++) s += p[base + i] * x[i];
-      h[j] = relu(s);
+      out[j] = s > 0 ? s : 0;   // ReLU
     }
-    return h;
+    return out;
   }
+
+  /* 每次决策复用的缓冲（省分配；不改任何算术顺序） */
+  const BUF = {
+    seat: new Float64Array(L.seatH),
+    mean: new Float64Array(L.seatH),
+    mx: new Float64Array(L.seatH),
+    self: new Float64Array(L.selfDim),
+    xin: new Float64Array(L.ctxDim),
+    hctx: new Float64Array(L.hid),
+    af: new Float64Array(22),
+    ae: new Float64Array(L.actH),
+    ci: new Float64Array(L.candIn),
+    hc: new Float64Array(L.hid2),
+    zeroSeat: new Float64Array(L.seatH),
+  };
 
   /* 逐候选打分 + Q(s)；返回与 v7 同形状的 {probs, argmax, cand, logits, q} */
   function forwardCands(state, pid, cands, params, opts2) {
+    /* §E822 吞吐记账：横比的货币应该是**决策数与候选打分次数**，不是"局数"——
+     *   赢面越高的包局越长（实测同 2000 局，GA 臂墙钟是 CEM 的 30 倍），只报局数会把"变强"读成"变慢"。 */
+    CNT.forwards++; CNT.cands += cands.length;
     const fs = P.features(state, pid, P.FEAT_S);
     const seats = seatVecs(state, pid, fs);
     const seatBias = L.seg[0].off + L.seatH * SEAT_DIM;
@@ -129,41 +155,51 @@ export function install(W, opts) {
     const candBias = L.seg[3].off + L.hid2 * L.candIn;
     const headOff = L.seg[4].off, qOff = L.seg[5].off;
 
-    /* (A) 席位各自过**同一个** encoder ⇒ 池化（mean + max）—— 与顺序无关 */
+    /* (A) 席位各自过**同一个** encoder ⇒ 池化（mean + max）—— 与顺序无关。
+     *     每个席位仍要一份自己的编码（不能复用同一块缓冲：池化要留着逐席读）。 */
     const enc = new Map();
-    let mean = new Float64Array(L.seatH), mx = new Float64Array(L.seatH);
+    const mean = BUF.mean.fill(0), mx = BUF.mx.fill(0);
+    const seatBufs = [];
     for (let s = 0; s < seats.length; s++) {
-      const e = encode(L, params, seats[s].v, SEAT_DIM, L.seatH, seatBias);
-      enc.set(seats[s].pid, e);
+      const e = new Float64Array(L.seatH);
+      encode(params, seats[s].v, SEAT_DIM, L.seatH, seatBias, e);
+      enc.set(seats[s].pid, e); seatBufs.push(e);
       for (let j = 0; j < L.seatH; j++) { mean[j] += e[j]; if (e[j] > mx[j]) mx[j] = e[j]; }
     }
     const kk = Math.max(1, seats.length);
     for (let j = 0; j < L.seatH; j++) mean[j] /= kk;
 
     /* 上下文（不含动作）⇒ Q(s) 与两头的公共前缀 */
-    const self = new Float64Array(L.selfDim);
+    const self = BUF.self;
     for (let i = 0; i < BASE; i++) self[i] = fs[i];
     let nAlive = 0; for (let i = 0; i < state.p.length; i++) if (state.p[i].hp > 0) nAlive++;
     self[BASE] = nAlive / 10; self[BASE + 1] = (seats.length - 1) / 4; self[BASE + 2] = Math.min(1, (state.round || 0) / 12);
-    const xin = new Float64Array(L.ctxDim);
+    const xin = BUF.xin;
     for (let i = 0; i < L.selfDim; i++) xin[i] = self[i];
     for (let j = 0; j < L.seatH; j++) { xin[L.selfDim + j] = mean[j]; xin[L.selfDim + L.seatH + j] = mx[j]; }
-    const hctx = encode(L, params, xin, L.ctxDim, L.hid, ctxBias);
+    const hctx = encode(params, xin, L.ctxDim, L.hid, ctxBias, BUF.hctx);
+    /* ⚑ **布局自洽不变量**（10-28 傍晚那次死权重事故之后，这条是硬要求，不是注释）：
+     *   声明宽度必须等于真正拼进去的长度 —— 差一列就是"白占 + 白算 + 静默错位"。 */
+    if (xin.length !== L.ctxDim) throw new Error('布局不自洽：ctx 层拼进 ' + xin.length + ' 而声明 ' + L.ctxDim);
     let q = params[qOff + L.hid]; for (let j = 0; j < L.hid; j++) q += params[qOff + j] * hctx[j];
 
     const n = cands.length, logits = new Float64Array(n);
-    const afbuf = new Float64Array(22);
+    const afbuf = BUF.af, ci = BUF.ci, ae = BUF.ae, zeroSeat = BUF.zeroSeat;
     for (let i = 0; i < n; i++) {
       const c = cands[i];
       const af = P.actionFeatures(state, pid, c.key, c);
       for (let j = 0; j < 22; j++) afbuf[j] = j < af.length ? af[j] : 0;
-      const ae = encode(L, params, afbuf, 22, L.actH, actBias);
+      encode(params, afbuf, 22, L.actH, actBias, ae);
       /* (A 的兑现) 目标身份是**一段席位编码**，不是 v7 那几个"目标 hp/ep"标量 */
       const tpid = c.target == null ? null : c.target;
-      const te = tpid != null && enc.has(tpid) ? enc.get(tpid) : new Float64Array(L.seatH);
-      const ci = new Float64Array(L.candIn);
+      const te = tpid != null && enc.has(tpid) ? enc.get(tpid) : zeroSeat;
       ci.set(hctx, 0); ci.set(ae, L.hid); ci.set(te, L.hid + L.actH);
-      const hc = encode(L, params, ci, L.candIn, L.hid2, candBias);
+      /* ⚑ 就是这一条抓到了 1584 个死权重（声明 122 列、真正拼进去 56 列）⇒ 缺它就得重犯。 */
+      if (hctx.length + ae.length + te.length !== L.candIn) {
+        throw new Error('布局不自洽：逐候选层拼进 ' + (hctx.length + ae.length + te.length) +
+          ' 列而声明 candIn=' + L.candIn + ' ⇒ 差 ' + Math.abs(L.candIn - hctx.length - ae.length - te.length) + ' 列**死权重**（白占参数还白算）');
+      }
+      const hc = encode(params, ci, L.candIn, L.hid2, candBias, BUF.hc);
       let v = params[headOff + L.hid2];
       for (let j = 0; j < L.hid2; j++) v += params[headOff + j] * hc[j];
       logits[i] = v;
@@ -262,6 +298,6 @@ export function install(W, opts) {
   P.checkPack = checkPack;
   P.forwardCands = forwardCands;
   P.chooseCandidates = chooseCandidates;
-  P.__arch2 = { L, OPT, rngRef, forwardCands, chooseCandidates, restore() { for (const k of OVERRIDES) P[k] = prev[k]; delete P.__arch2; } };
+  P.__arch2 = { L, OPT, rngRef, CNT, forwardCands, chooseCandidates, restore() { for (const k of OVERRIDES) P[k] = prev[k]; delete P.__arch2; } };
   return P.__arch2;
 }

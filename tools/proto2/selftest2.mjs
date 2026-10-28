@@ -22,7 +22,8 @@ const arg = (k, d) => { const a = args.find(x => x.startsWith('--' + k + '=')); 
 const cfg = { seatH: Number(arg('seatH', 16)), actH: Number(arg('actH', 8)), hid: Number(arg('hid', 32)), hid2: Number(arg('hid2', 24)) };
 
 const fails = [];
-const ok = (cond, msg) => { console.log((cond ? '  ✔ ' : '  ✖ ') + msg); if (!cond) fails.push(msg); };
+let done = 0;
+const ok = (cond, msg) => { done++; console.log((cond ? '  ✔ ' : '  ✖ ') + msg); if (!cond) fails.push(msg); };
 
 let seed = 12345;
 const rng = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
@@ -160,5 +161,21 @@ let MID = null;
   ok(Array.from(f0.logits).every(v => v === 0), 'T6d 退化基线：全零 params ⇒ logits 全为 0（与 T6a 合起来才说明 logits 是算出来的）');
 }
 
-console.log(fails.length ? '\n⛔ 自证未过 ' + fails.length + ' 条 ⇒ 结构不进下一环' : '\n⇒ 六条全过：2.0 原型可以进训练环');
+/* ---- T8：**布局不变量自己有没有牙**（10-28 傍晚那次 1584 列死权重事故的守卫）----
+ * 判据形状照"摘腿后变异"：把声明宽度故意改大 1 列 ⇒ `forwardCands` 必须抛；改回来 ⇒ 必须不抛。
+ * 只验"现在没抛"是不够的 —— 那与"这条检查根本没接上"同形。 */
+{
+  const FX = MID || D;
+  let threw = false, msg = '';
+  const realIn = L.candIn;
+  try { L.candIn = realIn + 1; P.forwardCands(FX.st, 0, FX.cands, p1, { temp: 0.5 }); } catch (e) { threw = true; msg = String(e && e.message || e); }
+  L.candIn = realIn;
+  ok(threw && /死权重/.test(msg), 'T8a 牙：把 candIn 改大 1 列 ⇒ 必须抛（实测 ' + (threw ? '抛了：' + msg.slice(0, 40) + '…' : '**没抛 ⇒ 这条守卫是摆设**') + '）');
+  let clean = true;
+  try { P.forwardCands(FX.st, 0, FX.cands, p1, { temp: 0.5 }); } catch (e) { clean = false; }
+  ok(clean, 'T8b 正常形状下不抛（声明宽度 === 真拼进去的宽度）');
+  console.log('  · 现在的形状：paramCount=' + L.n + ' ‖ 段 ' + L.seg.map(function (s) { return s.name + '(' + s.len + ')'; }).join(' ‖ '));
+}
+
+console.log(fails.length ? '\n⛔ 自证未过 ' + fails.length + ' 条 ⇒ 结构不进下一环' : '\n⇒ ' + done + ' 条自证全过：2.0 原型可以进训练环');
 process.exit(fails.length ? 8 : 0);
