@@ -375,7 +375,12 @@ function runArm(arm, selfCheck) {
             O3ROWS.push(JSON.stringify({ seed: SEED, arm: arm.key, env: env.name, g, n, round: state.round,
               pk: env.name + '#' + g + '#' + n, i, key: pool[i].c.key,
               target: pool[i].c.target == null ? null : pool[i].c.target,
-              net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop, winS: res[i].winS,
+              net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop, rounds: res[i].rounds,
+              /* ⚑ `--dumpobs3` 的 `winS` 一直是**空字段**（10-29 03:0x 抓到）：这里写的是 `res[i].winS`，
+              *   而 `res` 是 `sr.map(x => ({win, hpTop, rounds}))` 的产物 ⇒ `winS` 恒 undefined ⇒ JSON 里连键都不留。
+              *   后果：`a6w-*-obs3.jsonl` 这些 210 维 dump **从来没有 rollout 标签**，所以"稠密且与强度同向"那条臂昨夜做不了。
+              *   逐流数组在 `sr[i].win` 上（与上面 ROWS 那条同一口径），不是 `res[i]` 上。 */
+              winS: sr[i].win,
               x: x3.map(v => Math.round(v * 1e4) / 1e4) }));
           }
         }
