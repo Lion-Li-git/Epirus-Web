@@ -120,6 +120,23 @@ console.log('⇒ 阶梯（夺1 从高到低）：' + tot.map((t) => t.label + ' 
 const lo = tot[tot.length - 1], hi = tot.filter((t) => t.key === 'v7')[0];
 if (hi && lo) console.log('  ⇒ 这只尺的可用区间是 [' + lo.win.toFixed(1) + '%（' + lo.label + '） … ' + hi.win.toFixed(1) + '%（v7）]'
   + ' ‖ 任何臂落进这个带的**下半段**时，先问它是不是退化了，再问它学了什么');
+/* ⚑ **两条硬自检**（新尺必须能失败，不许"跑了没红"当过）：
+ *   ① `v7` 那一行要对得上"参照真值尺"（`ref-baseline.mjs` 在册 40.3% @ 16 格×120 局）⇒ 差 >2.5pt 就是 **arena 漂了**，
+ *      今夜所有 `profile2` 的 Δ 读数一起作废。（这条腿的存在理由：mixprobe 第一版因候选面口径差出 6.8pt，当时没人发现。）
+ *   ② `均匀乱选` 要落在 [12, 24]% 带内（各格机会水平 n=3 是 33%、n=5 是 20%，混起来应在 25% 以下；
+ *      跑出这个带说明对手表或落子逻辑变了，而不是"策略变强了"）。
+ * ⚠ `--selfcheck=0` 只用于"我要看形状、不想被拦"，日常别关。 */
+const SELFCHECK = !argv.includes('--selfcheck=0');
+const V7_TRUE = 40.3, RAND_BAND = [12, 24];
+if (SELFCHECK) {
+  const g7 = tot.filter((t) => t.key === 'v7')[0], gr = tot.filter((t) => t.key === 'rand')[0];
+  const bad = [];
+  if (!g7 || !gr) bad.push('两条锚有一档**没跑**（`--only` 里要同时含 `v7` 与 `rand`，否则这条自检是空的）');
+  if (g7 && Math.abs(g7.win - V7_TRUE) > 2.5) bad.push('v7 行读 ' + g7.win.toFixed(1) + '% ‖ 在册参照真值 ' + V7_TRUE + '% ⇒ arena 或对手表漂了');
+  if (gr && (gr.win < RAND_BAND[0] || gr.win > RAND_BAND[1])) bad.push('均匀乱选行读 ' + gr.win.toFixed(1) + '% ‖ 该落在 [' + RAND_BAND.join(',') + ']');
+  if (bad.length) { console.log('⛔ 阶梯自检红：' + bad.join(' ‖ ') + '\n   ⇒ 这把尺现在的读数**不可比**，先修尺再谈臂。'); process.exit(3); }
+  console.log('  ✔ 阶梯自检：v7 行 ' + (g7 ? g7.win.toFixed(1) : '—') + '%（对在册 ' + V7_TRUE + '%）‖ 均匀乱选 ' + (gr ? gr.win.toFixed(1) : '—') + '%（带 ' + RAND_BAND.join('~') + '）');
+}
 if (SWEEP) {
   console.log('\n# 逐技能固定打法（每枚都跑同一批 16 格 × ' + GAMES + ' 局）');
   const res = [];
