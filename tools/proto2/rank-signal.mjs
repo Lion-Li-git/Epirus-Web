@@ -160,7 +160,8 @@ let seed = 987654321; const rnd = () => { seed = (seed * 1664525 + 1013904223) >
 function boot(diff) { const B = []; for (let t = 0; t < 2000; t++) { let s = 0; for (let i = 0; i < diff.length; i++) s += diff[(rnd() * diff.length) | 0]; B.push(s / diff.length); } B.sort((a, b) => a - b); return { mean: meanOf(diff), lo: B[50], hi: B[1950] }; }
 const dHead = stats.head.map((v, i) => v - stats.rand[i]);
 const dNet = stats.net.map((v, i) => v - stats.rand[i]);
-const bHead = boot(dHead), bNet = boot(dNet);
+const dHeadNet = stats.head.map((v, i) => v - stats.net[i]);
+const bHead = boot(dHead), bNet = boot(dNet), bHeadNet = boot(dHeadNet);
 const out = { F, groups: usedGroups, folds: FOLDS, topK: TOPK, mean: { head: meanOf(stats.head), net: meanOf(stats.net), rand: meanOf(stats.rand) }, inSample, headVsRand: bHead, netVsRand: bNet };
 if (JSONOUT) { console.log(JSON.stringify(out)); process.exit(0); }
 console.log('特征 ' + F + ' 维 ‖ 组 ' + usedGroups + (FOLDS >= 2 ? '（' + FOLDS + ' 折 CV）' : '（单次切分）') + (TOPK ? ' ‖ topK=' + TOPK : '') + ' ‖ 组内平均变化列 ' + meanVary.toFixed(1) + '/' + F + ' ‖ 训练侧 in-sample regret ≈ ' + inSample.toFixed(3) + 'pt（应明显低于随机，否则拟合器坏了）');
@@ -168,6 +169,7 @@ console.log('test 组平均 regret（越小越好，0 = 每手都挑到 oracle�
 console.log('  线性头 = ' + out.mean.head.toFixed(3) + 'pt ‖ 现役 net = ' + out.mean.net.toFixed(3) + 'pt ‖ 随机 = ' + out.mean.rand.toFixed(3) + 'pt');
 console.log('  线性头 − 随机 = ' + bHead.mean.toFixed(3) + 'pt  [95% ' + bHead.lo.toFixed(3) + ', ' + bHead.hi.toFixed(3) + ']');
 console.log('  现役net − 随机 = ' + bNet.mean.toFixed(3) + 'pt  [95% ' + bNet.lo.toFixed(3) + ', ' + bNet.hi.toFixed(3) + ']');
+console.log('  线性头 − 现役net = ' + bHeadNet.mean.toFixed(3) + 'pt  [95% ' + bHeadNet.lo.toFixed(3) + ', ' + bHeadNet.hi.toFixed(3) + ']（负 = 线性头更好）');
 if (bHead.hi < 0 && bNet.hi < 0) console.log('  ⇒ 两者都**显著好于随机**：这份输入里存在可学的组内信号（现役头已吃到一部分，线性头没吃到更多）');
 else if (bHead.hi < 0) console.log('  ⇒ **线性头显著好于随机**：输入里有可学信号（现役头没吃到）');
 else if (bNet.hi < 0) console.log('  ⇒ 现役头显著好于随机、线性头不显著：信号存在但线性读法抓不到');
