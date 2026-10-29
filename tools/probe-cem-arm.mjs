@@ -24,12 +24,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 import { install as installArch2, verifyWired as verifyArch2Wired } from './proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
+import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   // 10-29 夜：扩表考卷（--arena2=1 才开）
 
 /* §E679 补（10-22）：这台量具原先**没有输入消毒层**（D218 那条门当场抓到，是我今夜建它时就漏的）。
  * 拼错的旗标被静默忽略 = 读数按默认档跑完而没人知道 ⇒ 与"黑键"同族。名单跟着 `arg('…')` 走。 */
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
-  'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp'], 'probe-cem-arm');
+  'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
+  'arena2', 'arenaTemp', 'arenaHold'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -97,6 +99,22 @@ if (PLAYTEMP !== '') {
   if (back.temp !== t) { console.error('⛔ --playtemp 没生效（设 ' + t + ' 回读 ' + back.temp + '）'); process.exit(2); }
   console.log('[cem-arm] ⚙ 评估温度钉成 temp=' + t + '（回读 trainEps()=' + JSON.stringify(back) + '）‖ ⚠ 这一档换了适应度刻度，只与同档臂互比');
 }
+/* ===== `--arena2=1`（10-29 夜 · 用户裁定「扩 arena 之后再训练一批」）=====
+ * 换掉 `scoreMemberN` 那套 shaped 适应度：每评估仍只打 GAMES 局（`--targetGames` 的记账口径不变），
+ *   但**对手席**从扩表（20 脚本 bot + 30 单技能固定打法 + 均匀随机）轮换、**桌形**从 11 格（2/3/5/8/10 人 × 3/4/5 血）轮换。
+ * 货币是**净胜** `(wv−1/n)/(1−1/n)`（胜 1 / 平 0.5 / 负 0）而不是 shaped fit ⇒ 与旧臂的 `fit` 数值不可比，
+ *   跨臂只比同一 arena2 档的读数。终局读数走 `--arenaHold=` 局/桌形（缺省 20）；`--fxSelect` 的冻结验证也走全桌形固定局号。
+ * ⚠ v7 参照必须在 `installArch2` **之前**读出（arch2 的 unpack 只认 v90）；本工具用它与 profile2/ladder 同一张对手表。 */
+const ARENA2 = arg('arena2', '') === '1';
+const ARENA_HOLD = Math.max(2, Number(arg('arenaHold', 20)) || 20);
+const ARENA_TEMP = (function () { const x = Number(arg('arenaTemp', arg('playtemp', 0.15))); return x > 0 ? x : 0.15; })();
+let ARENA_REF = null;
+if (ARENA2) {
+  const c0 = loadChamp(W, 'js/bundled-champion-3p.js', HERE + '/..');
+  if (!c0) { console.error('⛔ --arena2 需要 v7 参照包来固定对手表，但读不出 js/bundled-champion-3p.js'); process.exit(2); }
+  ARENA_REF = Float64Array.from(c0);
+  if (MODE === 'ga') { console.error('⛔ --arena2 没接 GA 的内部 trainer（它走 T.makeTrainer/step，不吃本工具的 evalOne）⇒ 拒绝静默按旧口径跑'); process.exit(7); }
+}
 /* ===== §E821（10-28 傍晚 · 千问）：`EPIRUS_ARCH2` ⇒ 两臂都训在 **2.0 结构**上 =====
  * 与 `tools/train-3p.mjs` 那处同一手法（覆盖沙箱里的导出入口，`js/**` 不动 ⇒ 规则指纹不变），
  *   所以 GA / CEM 两个模式**天然吃到同一份 DIM 与同一套算子** —— 这正是"优化器 × 新结构"要的同场对照。
@@ -148,6 +166,23 @@ const c = loadChamp(W, START_PACK, HERE + '/..');
 if (c && c.length === DIM) { startParams = Float64Array.from(c); startLabel = '夹具包 ' + START_PACK; }
 if (!startParams) { P.setRng(T.mulberry32(SEED)); startParams = P.makePolicy(0.25); startLabel = 'makePolicy(0.25)'; }
 startParams = Float64Array.from(startParams);
+/* arena2 只在起点粒定下来之后建表；它用 v7 参照固定对手表，与起点粒无关（起点不参与建桌）。 */
+var ARENA = null;
+if (ARENA2) {
+  try { ARENA = createArena2(W, { refParams: ARENA_REF, temp: ARENA_TEMP }); }
+  catch (e) { console.error('⛔ arena2 建表失败：' + String(e && e.message || e)); process.exit(7); }
+  console.log('[cem-arm] ⚙ 扩表 arena2 开：指纹 ' + ARENA.fp);
+  console.log('   ‖ 桌形 ' + ARENA2_SHAPES.length + '（' + ARENA.shapes.map(function (s) { return s.n + ':' + s.mode; }).join(',') + '）' +
+    ' ‖ 对手表 ' + ARENA.roster.length + ' 项（' + ARENA.pool.length + ' 脚本 bot + ' + (ARENA.roster.length - ARENA.pool.length - 1) + ' 单技能 + 均匀随机）' +
+    ' ‖ 货币=净胜 ‖ temp=' + ARENA_TEMP + ' ‖ 终局 holdout=' + ARENA_HOLD + ' 局/桌形');
+  if (P.__arch2) {
+    const w = ARENA.verifyWired(startParams, { temp: ARENA_TEMP });
+    if (!w.ok) { console.error('⛔ arena2 接线没生效（forwardCands +' + w.forwards + ' ‖ chooseCandidates ' + w.chooseCandidatesCalls + '）⇒ 开不了臂'); process.exit(7); }
+    console.log('   ‖ **接线自证 PASS**：校准局里 forwardCands +' + w.forwards + ' 次 ‖ chooseCandidates ' + w.chooseCandidatesCalls + ' 次');
+  } else {
+    console.log('   ‖ ⚠ 没装 arch2 ⇒ 这是 v7 包的 arena2 读数（不验 2.0 接线）');
+  }
+}
 /* §E822 起手三件固定动作（都是被"读数看着正常"逼出来的）：
  *   ① 只读副本 `START_COPY` —— 内部 GA 会**就地改**传进去的数组，起点基线绝不能再吃 `startParams`；
  *   ② 固定对手表 `FIX_OPPS`（用起点粒造一次）⇒ 起点与冠军吃**同一批桌**，跨臂才是配对比较；
@@ -157,7 +192,7 @@ startParams = Float64Array.from(startParams);
  *   因为造它要用到 `T.buildOpps` 而那时 `startParams` 才刚定下来） */
 var FIX_OPPS = null;
 const START_COPY = Float64Array.from(startParams);
-FIX_OPPS = T.buildOpps(START_COPY, 0.05);
+if (!ARENA) FIX_OPPS = T.buildOpps(START_COPY, 0.05);
 {
   const mk = function (mode) {
     const bak = P.mutatePolicy;
@@ -191,15 +226,27 @@ const gauss = function (r) { const u = Math.max(r(), 1e-12), v = r(); return Mat
  *      `EPIRUS_MUT_MODE=seg|flat` 才第一次真的改变干预。 */
 /* （`FIX_OPPS` 在上面 `START_COPY` 那一节声明并赋值 —— 必须先于任何读数） */
 function evalOne(params, gen, idx) {
+  if (ARENA) {
+    const r = ARENA.evalParams(params, { phase: 'loop', gen: gen, games: GAMES, temp: ARENA_TEMP });
+    return { fit: r.score, first: r.first, top2: r.top2, draw: r.draw, games: r.games };
+  }
   const opps = T.buildOpps(params, 0.05);
   const r = T.scoreMemberN(params, opps, GAMES, N, gen, idx, 0);
   return { fit: r.fit == null ? -1 : r.fit, first: r.firstRate == null ? 0 : r.firstRate, top2: r.top2Rate == null ? 0 : r.top2Rate };
 }
 function evalFixed(params, gen, idx, gamesOverride) {   /* 固定对手表 ⇒ 跨臂配对；games 用 HOLD 的那一档做终局读数 */
+  if (ARENA) {
+    const r = ARENA.evalParams(params, { phase: 'frozen', gamesPerShape: Math.max(8, FXG || 0), temp: ARENA_TEMP });
+    return { fit: r.score, first: r.first, top2: r.top2, draw: r.draw, games: r.games };
+  }
   const r = T.scoreMemberN(params, FIX_OPPS, gamesOverride || (gen === 999 ? HOLD : GAMES), N, gen, idx, 0);
   return { fit: r.fit == null ? -1 : r.fit, first: r.firstRate == null ? 0 : r.firstRate, top2: r.top2Rate == null ? 0 : r.top2Rate };
 }
 const holdout = function (params) {      /* 终局读数：固定场（同一批桌 + 同一 idx/gen） */
+  if (ARENA) {
+    const r = ARENA.evalParams(params, { phase: 'holdout', gamesPerShape: ARENA_HOLD, temp: ARENA_TEMP });
+    return { fit: r.score, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard, byShape: r.byShape };
+  }
   return evalFixed(params, 999, 0);
 };
 
@@ -208,10 +255,20 @@ const base = evalOne(startParams, 0, 0);
 P.setRng(T.mulberry32(SEED + 1));
 const randParams = Float64Array.from(P.makePolicy(0.25));
 const rnd = evalOne(randParams, 0, 0);
-console.log('桌形 trainMode=' + TMODE + ' ‖ 人数 n=' + N + ' ‖ 每评估局数 games=' + GAMES + ' ‖ 终局读数 holdoutGames=' + HOLD);
+console.log('桌形 trainMode=' + TMODE + ' ‖ 人数 n=' + N + ' ‖ 每评估局数 games=' + GAMES + ' ‖ 终局读数 ' +
+  (ARENA ? 'arena2 ' + ARENA_HOLD + ' 局/桌形 × ' + ARENA2_SHAPES.length + ' 桌形' : 'holdoutGames=' + HOLD));
 console.log('起点分母：' + startLabel + ' fit=' + base.fit.toFixed(4) + ' 夺1=' + (base.first * 100).toFixed(1) + '% ‖' +
   ' 随机粒 fit=' + rnd.fit.toFixed(4) + ' 夺1=' + (rnd.first * 100).toFixed(1) + '%');
 if (!(isFinite(base.fit) && isFinite(rnd.fit))) { console.error('⛔ 起点分母读不出（fit 非有限）⇒ 这台尺是死的，不开跑'); process.exit(2); }
+/* arena2：上面那两条是 **4 局**的循环读数（噪声大），真正的起点地板要走 holdout 全桌形。 */
+function fmtCard(c) { return c ? (c.key + ' ' + (100 * c.share).toFixed(1) + '%') : '—'; }
+if (ARENA) {
+  const bA = ARENA.evalParams(startParams, { phase: 'holdout', gamesPerShape: ARENA_HOLD, temp: ARENA_TEMP });
+  const rA = ARENA.evalParams(randParams, { phase: 'holdout', gamesPerShape: ARENA_HOLD, temp: ARENA_TEMP });
+  console.log('起点分母（arena2 holdout ' + ARENA_HOLD + ' 局/桌形 × ' + ARENA2_SHAPES.length + ' 桌形 = ' + bA.games + ' 局）：' +
+    startLabel + ' 夺1=' + (bA.first * 100).toFixed(1) + '% 净胜=' + bA.score.toFixed(3) + ' 平局=' + (bA.draw * 100).toFixed(1) + '% 单卡=' + fmtCard(bA.maxCard) +
+    ' ‖ 随机粒 夺1=' + (rA.first * 100).toFixed(1) + '% 净胜=' + rA.score.toFixed(3) + ' 平局=' + (rA.draw * 100).toFixed(1) + '%');
+}
 
 /* ===== ① 退化 CEM 自证：同一粒、同一 (gen,idx) 跑几遍必须**逐字相同** =====
  * ⚠ 10-22 凌晨改正了自己的判据形状。第一版写的是"std=0 ⇒ POP 个全同样本取 max 必须等于起点 fit"，
@@ -222,6 +279,13 @@ if (!(isFinite(base.fit) && isFinite(rnd.fit))) { console.error('⛔ 起点分�
 if (DEG) {
   const dup0a = evalOne(startParams, 0, 0), dup0b = evalOne(startParams, 0, 0);
   const same = dup0a.fit === base.fit && dup0b.fit === base.fit;
+  if (ARENA) {
+    /* arena2 的桌号只跟 (gen,g) 走、与 idx 无关（配对）⇒ 旧的"idx 散布"在这一档**结构性为 0**，
+     *   拿它当噪声底会把"已配对"读成"没有噪声"⇒ 这里只验同格重复逐字相同，并把这一点印出来。 */
+    console.log('同格重复（arena2：同一粒、gen=0 的 ' + GAMES + ' 局）逐字相同? ' + (same ? 'PASS' : 'FAIL') +
+      ' ‖ ⚠ 已配对 ⇒ idx 不换桌，旧 idx 散布自检在这一档是空的（不是 0 噪声）');
+    process.exit(same ? 0 : 1);
+  }
   const xs = [];
   for (let i = 0; i < POP; i++) xs.push(evalOne(startParams, 0, i).fit);
   const mean = xs.reduce(function (a, b) { return a + b; }, 0) / xs.length;
@@ -310,7 +374,8 @@ if (MODE === 'esa') {
     if (TARGET_G && gamesIn() >= TARGET_G) break;
   }
   if (ADAPT) console.log('[cem-arm] ⚑ 1/5 律自适应 σ：起 ' + SIG0 + ' → 终 ' + sig.toFixed(5) + ' ‖ 轨迹样本 ' + sigTraj.length + ' 点 ‖ 窗口 ' + WIN + ' 次尝试');
-  if (FXSEL) console.log('[cem-arm] ⚑ 冻结桌当选：环内预选 ' + screened + ' 次 ‖ 在冻结桌上真打过父代 ' + accepted + ' 次 ‖ 每次验证花 ' + (FXG || GAMES) + ' 局（fxGames=' + FXG + ' ‖ 预算被这块吃掉，迭代数会少）');
+  if (FXSEL) console.log('[cem-arm] ⚑ 冻结桌当选：环内预选 ' + screened + ' 次 ‖ 在冻结桌上真打过父代 ' + accepted + ' 次 ‖ 每次验证花 ' +
+    (ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES)) + ' 局（fxGames=' + FXG + (ARENA ? '，arena2 每桌形' + Math.max(8, FXG || 0) : '') + ' ‖ 预算被这块吃掉，迭代数会少）');
 } else if (MODE === 'ga') {
   const tr = T.makeTrainer({ popSize: POP, gamesPerOpp: GAMES });
   /* 两臂必须**从同一粒起步**，否则比的不是算子而是起点。GA 侧用仓库自己的热启动 API
@@ -384,6 +449,12 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
    *   （第一波只印了 2 局的"起点分母"，那不是地板，是噪声）。 */
   holdoutStartFit: hoStart.fit, holdoutStartFirst: hoStart.first, holdoutStartTop2: hoStart.top2,
   dFirst: ho.first - hoStart.first, dTop2: ho.top2 - hoStart.top2,
+  /* arena2（--arena2=1）：上面所有 holdout* 都是 **arena2 的 holdout**（净胜 + 原始夺1），不是旧 scoreMemberN。
+   *   `currency` 标明这一格 ⇒ 与旧臂的 fit 数值不可比。`maxCard` 是终局那一把的单卡占比（判退化用）。 */
+  currency: ARENA ? 'arena2.net' : 'scoreMemberN.fit',
+  arena: ARENA ? { fp: ARENA.fp, temp: ARENA_TEMP, shapes: ARENA2_SHAPES.length, roster: ARENA.roster.length, pool: ARENA.pool.length,
+    holdGamesPerShape: ARENA_HOLD, holdGames: ho.games, draw: ho.draw,
+    bestMaxCard: ho.maxCard, startMaxCard: hoStart.maxCard, bestByShape: ho.byShape } : null,
   curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel };
 if (OUT) {
   mkdirSync(dirname(OUT), { recursive: true });
@@ -393,6 +464,13 @@ if (OUT) {
 if (!QUIET) console.log(JSON.stringify(row));
 else console.log('RESULT ' + JSON.stringify(row));
 console.log('⚠ inLoopBest 是各臂**循环内部**的分（GA 走 shaped/内部择优，CEM 走原始 fit）⇒ 跨臂不可比；跨臂只比 holdoutFit / holdoutFirst（同一函数同一场）。');
+if (ARENA) {
+  console.log('⚑ arena2 终局：净胜 ' + ho.fit.toFixed(3) + '（起点 ' + hoStart.fit.toFixed(3) + ' ⇒ Δ ' + (ho.fit - hoStart.fit).toFixed(3) + '）' +
+    ' ‖ 夺1 ' + (100 * ho.first).toFixed(1) + '%（起点 ' + (100 * hoStart.first).toFixed(1) + '%）' +
+    ' ‖ 平局 ' + (100 * ho.draw).toFixed(1) + '%（起点 ' + (100 * hoStart.draw).toFixed(1) + '%）' +
+    ' ‖ 单卡 ' + fmtCard(ho.maxCard) + '（起点 ' + fmtCard(hoStart.maxCard) + '）');
+  console.log('   逐桌形夺1：' + Object.keys(ho.byShape).map(function (k) { return k + ' ' + (100 * ho.byShape[k].first).toFixed(1) + '%'; }).join(' ‖ '));
+}
 console.log('⚑ 实际局数（计数器数的，含起点分母与 holdout 之外的循环）：循环 ' + gLoop + ' 局 ‖ holdout ' + gHold + ' 局 ‖' +
   ' 而标称 `evals×games` = ' + (used * GAMES) + ' ⇒ **横比只认这个数**；两臂循环局数不等 ⇒ "同预算"这句话不成立（§E822 实测 GA 与 CEM 差 3 倍）');
 if (P.__arch2) {
