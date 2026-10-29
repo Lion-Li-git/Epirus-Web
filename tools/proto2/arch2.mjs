@@ -59,6 +59,18 @@ export function layout(opts) {
    *   旧版每候选新建数组 ⇒ 尾部天然为 0，看不出来；改成复用缓冲后残留值让两次结果不一致，才把它照出来。
    *   ⇒ 宽度一律**由实际拼接项算**，并在 selftest 里加一条"尾列必须有牙"的构造对照（T8）。 */
   const candIn = hid + actH + (input === 'obs3' ? 2 * seatH : seatH);
+  /* ===== 交互头（10-30 凌晨，ZCode；用户假说"层数不足"的可测形态）=====
+   * `inter=K`：**rank-K 双线性通道**——logit += Σ_k g_k·tanh((u_k·ae)·(v_k·hctx) + b_k)。
+   * 动因：`rank-inter` 在 v7 编码上读到"无一阶 state×action 奖品"（容量文档 §二），而"对第 k 威胁者"这类
+   *   条件项是逐候选侧与桌面侧的**乘法**关系；S1o 的 cand 层虽是 ReLU 隐层（原理上能凑出乘积），
+   *   但那条路要靠 ES 从加法特征里自己撞出来——显式双线性通道把这一格变成可训练、可置零、可验收的段。
+   * 三条硬规矩：① **默认 K=0 = 段不存在** ⇒ 布局/参数量/前向与旧口径逐位同（老包照读，历史臂照比）；
+   *   ② 段追加在 seg 表**末尾** ⇒ 既有段偏移一字不动；③ **全零段 ⇒ 前向逐位等于 K=0**（tanh(b) 项被 g=0 压死
+   *   的前提是 g 也在段里 ⇒ 段全零时 u·ae=0 且贡献=g·tanh(0)=0，两条都成立）⇒ 蒸馏起点可以安全带零段。
+   * ⚠ 只接 obs3 面：v7 面是被 12 臂读数验证过的老路，不往里塞分支（与 forwardV7/forwardObs3 分函数同理）。 */
+  const interK = input === 'obs3' ? Math.max(0, Math.floor(Number(o.inter) || 0)) : 0;
+  if (Number(o.inter) > 0 && input !== 'obs3') throw new Error('layout: inter 只接 obs3 输入面（input=' + input + '）；v7 面是老路，不许加分支');
+  const interStride = actH + hid + 2;                    // 每通道：u(actH) ‖ v(hid) ‖ g ‖ b
   /* obs3 档把**两个目标槽**都拼进逐候选层（规则的target 上限就是 2，且镜面反射要区分 source/output）
    * ⇒ 目标身份 = 那一席自己的隐向量 h_t1 ⊕ h_t2，不再抄目标标量。 */
   const seg = [
@@ -69,13 +81,14 @@ export function layout(opts) {
     { name: 'policyHead', off: 0, len: hid2 + 1 },
     { name: 'qHead', off: 0, len: hid + 1 },
   ];
+  if (interK > 0) seg.push({ name: 'inter', off: 0, len: interK * interStride });
   let off = 0;
   for (const s of seg) { s.off = off; off += s.len; }
   return {
     arch: input === 'obs3' ? 'S1o' : 'S1', input, skills, seatIn, actIn, initScale: INIT_SCALE,
-    seatH, actH, hid, hid2, selfDim, ctxDim, candIn, seg, n: off,
+    seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, seg, n: off,
     /* 每段的"扇入"—— 段感知变异要用它给 σ 定标（扇入越大、同样 σ 造成的输出扰动越大） */
-    fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, qHead: hid },
+    fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, qHead: hid, inter: hid },
   };
 }
 
@@ -311,6 +324,15 @@ export function install(W, opts) {
     const n = cands.length, logits = new Float64Array(n);
     const phis = (opts2 && opts2.wantPhi) ? new Array(n) : null;   /* 蒸馏旁路：默认不建，零开销 */
     const afbuf = new Float64Array(L.actIn), ci = new Float64Array(L.candIn), zeroSeat = BUF.zeroSeat;
+    /* 交互头的决策级因子（inter=K）：v_k·hctx 每决策一次、g/b 偏移提前算好 ⇒ 逐候选只剩 u_k·ae 与 tanh */
+    const ctxFac = L.interK > 0 ? new Float64Array(L.interK) : null;
+    const iS0 = L.interK > 0 ? L.seg[6].off : 0;
+    if (ctxFac) for (let k = 0; k < L.interK; k++) {
+      const v0 = iS0 + k * L.interStride + L.actH;
+      let vh = 0;
+      for (let j = 0; j < L.hid; j++) vh += params[v0 + j] * hctx[j];
+      ctxFac[k] = vh;
+    }
     for (let i = 0; i < n; i++) {
       const cp = obs3CandOf(sc, cands[i]);
       let m2 = 0;
@@ -331,6 +353,14 @@ export function install(W, opts) {
       if (phis) phis[i] = Float64Array.from(hc);
       let v = params[headOff + L.hid2];
       for (let j = 0; j < L.hid2; j++) v += params[headOff + j] * hc[j];
+      /* 交互头（inter=K）：logit += Σ_k g_k·tanh((u_k·ae)·(v_k·hctx) + b_k)。段全零 ⇒ u·ae=0 且 g=0 ⇒ 贡献恒 0
+       *   （g 也在段里，"只清 u 不清 g"不构成等价对照——有牙自检必须清**整段**）。 */
+      if (ctxFac) for (let k = 0; k < L.interK; k++) {
+        const u0 = iS0 + k * L.interStride;
+        let ua = 0;
+        for (let j = 0; j < L.actH; j++) ua += params[u0 + j] * ae[j];
+        v += params[u0 + L.actH + L.hid] * Math.tanh(ua * ctxFac[k] + params[u0 + L.actH + L.hid + 1]);
+      }
       logits[i] = v;
     }
     /* 两级 softmax：**逐字抄 v7 那条尾**（技能层用 bestOf 归一，再在技能内部 softmax）。
@@ -507,7 +537,7 @@ export function install(W, opts) {
    *   ⇒ 下游按 `arch` 选输入面的尺（profile2）会拿错的那张脸去读。长度不同（5258≠5650）只挡住了"unpack 成功"，
    *   挡不住"有人照 arch 装错档再按长度报错"这种绕路。⇒ 标签一律**由实际布局写**，读的时候当场对账。 */
   function pack(p) {
-    return { v: 90, arch: L.arch, dims: { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input }, a: Array.from(p), n: L.n };
+    return { v: 90, arch: L.arch, dims: { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0 }, a: Array.from(p), n: L.n };
   }
   function unpack(o) {
     if (!o || !Array.isArray(o.a) || o.a.length !== L.n || o.v !== 90) return null;

@@ -34,6 +34,10 @@ const OUT = arg('out', '');
 /* `--hid2=`（ZCode · 10-30 夜，容量臂 E1 的配套）：2.0 候选层宽度。缺省 24 = 原口径逐字不变；
  *   容量臂要的是"同源闭式起点只差宽度" ⇒ 蒸馏必须能按目标宽度出包，否则臂只能退随机起点（换两个变量）。 */
 const HID2 = Math.max(1, Number(arg('hid2', 0)) || 0);
+/* `--inter=`（ZCode · 10-30 凌晨，交互头臂的配套）：蒸馏可带 rank-K 交互通道出包。
+ * ⚑ 交互段**必须显式清零**：makePolicy 给它的是随机值 ⇒ 不清零的"inter 蒸馏起点"就带了随机交互通道，
+ *   与 inter=0 的蒸馏起点不再是同源对照（起点与结构两个自由量）。清零 ⇒ 逐位等于 inter=0 起点，ES 自己把它长出来。 */
+const INTER = Math.max(0, Number(arg('inter', 0)) || 0);
 
 const W = sandbox();
 const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState;
@@ -71,13 +75,20 @@ function walk(seedBase, n) {
 for (let g = 0; fixtures.length < NDEC && g < 900; g++) walk(90000 + g * 13, g % 2 ? 5 : 3);
 if (fixtures.length < 60) { console.error('⛔ 只抓到 ' + fixtures.length + ' 个决策 ⇒ 蒸馏不做（分母不足）'); process.exit(2); }
 
-const A = installArch2(W, { mutMode: 'seg', input: INPUT === 'obs3' ? 'obs3' : undefined, ...(HID2 ? { hid2: HID2 } : {}) });
+const A = installArch2(W, { mutMode: 'seg', input: INPUT === 'obs3' ? 'obs3' : undefined, ...(HID2 ? { hid2: HID2 } : {}), ...(INTER ? { inter: INTER } : {}) });
 A.rngRef.r = rnd;
 const L = layout({ input: INPUT === 'obs3' ? 'obs3' : 'v7', skills: W.EpirusRules.skills.length });
 const start = Float64Array.from(P.makePolicy(0.25));
 const cut = Math.floor(fixtures.length / 2);
 const fit = A.distillHead(fixtures.slice(0, cut), start, { v7, l2: L2 });
 if (!fit.ok) { console.error('⛔ 蒸馏失败：' + fit.why); process.exit(2); }
+if (INTER) {
+  const LIf = layout({ input: INPUT === 'obs3' ? 'obs3' : 'v7', ...(HID2 ? { hid2: HID2 } : {}), inter: INTER });
+  const segI = LIf.seg.find((s) => s.name === 'inter');
+  if (!segI) { console.error('⛔ inter 段没找到（layout 与 install 的 dims 不一致？）'); process.exit(2); }
+  fit.params.fill(0, segI.off, segI.off + segI.len);
+  console.log('[fit2] ⚙ 交互段已清零（' + segI.len + ' 参数，rank-K=' + INTER + '）⇒ 起点与 inter=0 蒸馏逐位同源');
+}
 
 /* 留出半批上的读数（自己算，不再调 distillHead ⇒ 不会把测试集喂回拟合） */
 const test = fixtures.slice(cut);
