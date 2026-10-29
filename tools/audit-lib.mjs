@@ -160,6 +160,40 @@ export function loadChamp(W, file, root) {
   return W.EpirusPolicy.unpack(JSON.parse(m[1]), true);
 }
 
+/* ===== 对手表定标 + 指纹（2.0 那两把尺共用 · 千问 · 10-29 11:2x） =====
+ * 为什么必须**同源**而不各抄一份：`profile2` 要把臂的夺1放进 `ladder` 那条"30 枚单技能固定打法"的阶梯里排名次，
+ *   而两把尺只有在**同一张对手表**上跑才可比。第一版两边各写一遍 `buildPoolSeeded` ⇒ 任何一边改了种子或混合函数
+ *   都不会报错，只会安静地把名次算歪（本仓最怕的"看着有数、其实量的是空气"那一族）。
+ *   ⇒ 指纹（`poolFingerprint`）因此是**可比的**：不一致就是"锚过期"，而不是"两份哈希实现不同"。
+ * ⚠ 这里的 mulberry 与上面 `mulberry32` **不是同一个流**（`>>> 0` vs `| 0`、最后一步 `+` vs `^`），
+ *   所以不许换用：换了种子同一、池子就不同，`profile2`/`ladder` 在册的读数全部作废。 */
+export function poolMulberry(seedVal) {
+  let a = seedVal >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+/** 只在造表期间临时顶掉 `Math.random`，出来立刻还原（`T.buildOpps` 内部直接用它，没有种子形参）。 */
+export function buildPoolSeeded(T, refParams, seedVal, aggr = 0.05) {
+  const real = Math.random;
+  try { Math.random = poolMulberry(seedVal); return T.buildOpps(refParams, aggr); } finally { Math.random = real; }
+}
+/** 覆盖每个对手的**全部数值字段 + 键名**（只数前 6 条会在"脚本型对手没有 params"时退化成名字列表）。 */
+export function poolFingerprint(PL) {
+  let h = 2166136261, nums = 0;
+  const mix = (s) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } };
+  for (const o of PL) {
+    mix('name=' + (o.name || '') + '|');
+    const walk = (v, depth) => {
+      if (depth > 3 || v == null) return;
+      if (typeof v === 'number') { nums++; mix('n' + Math.round(v * 1e6)); return; }
+      if (typeof v !== 'object') { mix('s' + String(v)); return; }
+      if (Array.isArray(v)) { mix('[' + v.length); for (const q of v) walk(q, depth + 1); mix(']'); return; }
+      for (const k of Object.keys(v).sort()) { mix('{' + k); walk(v[k], depth + 1); mix('}'); }
+    };
+    walk(o, 0);
+  }
+  return (h >>> 0).toString(16) + '/' + nums;
+}
+
 /* A. 外部考卷（沿用 canonical eval-5p，默认 20 局） */
 export function exam(file, extra, EXG, root) {
   const R = root || ROOT;

@@ -14,10 +14,10 @@
  *      臂行与固定打法在同一把尺上，且臂行可被 `profile2` 对表。要退回旧的宽面用 `--face=wide`（只为对照，别拿去出判语）。
  *   ② `temp` 只影响 v7 那一行（其余是确定性/自带定标流），所以阶梯内可比、跨 temp 不可比。
  *   ③ 每个策略都跑**同一批局号**（`1000 + n*97 + idx + g*7919`）⇒ 分母逐字相等，不做"各自换一批桌"。
- * 用法：node tools/proto2/ladder.mjs [--games=120] [--temp=0.001] [--only=guard,ji,charge,rand,v7]
+ * 用法：node tools/proto2/ladder.mjs [--games=120] [--temp=0.001] [--only=guard,ji,charge,rand,v7] [--anchors=scratch/ladder-anchor.json]
  */
-import { readFileSync } from 'node:fs';
-import { sandbox, loadChamp } from '../audit-lib.mjs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { sandbox, loadChamp, buildPoolSeeded, poolFingerprint } from '../audit-lib.mjs';
 import { install as installArch2 } from './arch2.mjs';
 
 const argv = process.argv.slice(2);
@@ -35,6 +35,13 @@ const SWEEP = arg('sweep', '') === 'keys';
  *   今夜在 mixprobe 上实测这一格差值 **6.8pt** ⇒ 跨口径排位次会把臂排高/排低一整格。
  *   ⇒ 臂在这里的行与固定打法**完全同口径**，可与 ladder 排序对照；与 profile2 的那一行不许混着引。 */
 const PACKS = String(arg('pack', '')).split(',').map((x) => x.trim()).filter(Boolean);
+/* `--anchors=<path>` ⇒ 把这条阶梯**落成锚文件**给 `profile2` 读（#146 那条"出厂列"的第二半）。
+ *   为什么要有文件而不是让 profile2 自己去跑一遍阶梯：31 格 × 16 格桌 × N 局是**臂本身成本的 31 倍**，
+ *   而它量的是"这把尺的刻度"，只要 arena/对手表/剂量没变就一直能用 ⇒ 一次落盘、每枚臂都免费读到名次。
+ *   ⚠ 代价是锚会**过期**：所以文件里带 `poolFp + cells + games + temp + bigt`，profile2 逐条回读，
+ *     对不上就只印"锚过期"、**不印名次**（宁可少一条读数，不要一条接错刻度的读数）。
+ *   用法：`node tools/proto2/ladder.mjs --games=40 --sweep=keys --anchors=scratch/ladder-anchor.json` */
+const ANCHORS = arg('anchors', '');
 const W = sandbox();
 const P = W.EpirusPolicy, T = W.EpirusTrainer, R = W.EpirusRules, Play = W.EpirusPlay;
 /* ⚑⚑ **大雷"看得见"那一档（`evo.js:648` `BIGT_PUSH = 12`，v1.5.333 起出厂默认开着）必须在尺上关掉**：
@@ -54,7 +61,11 @@ let ref = loadChamp(W, 'js/bundled-champion-3p.js', '');
 if (!ref) { console.error('⛔ 参照包读不出'); process.exit(2); }
 ref = Float64Array.from(ref);
 function mulberry(sv) { let a = sv >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const POOL = (function () { const real = Math.random; try { Math.random = mulberry(20261029); return T.buildOpps(ref, 0.05); } finally { Math.random = real; } })();
+/* ⚑ 对手表与 `profile2` **同源**（10-29 11:2x 抽进 audit-lib）：锚要把臂摆进这条阶梯排名次，
+ *   两把尺各造一遍池子时，"指纹对不上"分不清是池子真变了还是哈希实现漂了 ⇒ 现在两边调同一只函数。
+ *   种子 20261029 与 `profile2:52` 逐字同一；参照包也是同一份 `js/bundled-champion-3p.js`。 */
+const POOL = buildPoolSeeded(T, ref, 20261029);
+const POOL_FP = poolFingerprint(POOL);
 const STYLES = ['breakdef', 'wall', 'tankline', 'guardgun', 'protowall', 'reflectmix', 'beadburst', 'aggro'];
 const CELLS = [];
 for (const n of [3, 5]) for (const nm of STYLES) { const i = POOL.findIndex((o) => o.name === nm); if (i >= 0) CELLS.push({ n, name: nm, idx: i }); }
@@ -140,7 +151,9 @@ function playCell(selFn, cell, rstream) {
   }
   return { f, t2, sv, rd, acts, cat };
 }
-console.log('# 笨策略阶梯 ‖ ' + CELLS.length + ' 格 × ' + GAMES + ' 局（同批局号）‖ temp=' + TEMP + ' ‖ 候选面 lockTarget:false（与引擎比赛那条路差半格，见文件头 ①）');
+console.log('# 笨策略阶梯 ‖ ' + CELLS.length + ' 格 × ' + GAMES + ' 局（同批局号）‖ temp=' + TEMP + ' ‖ bigt=' + BIGT +
+  ' ‖ 候选面 ' + (ENGINE_FACE ? '引擎同口径（lockTarget=lastCancelOther）' : '宽面 lockTarget:false（--face=wide，只为对照）') +
+  ' ‖ 对手表定标指纹 ' + POOL_FP + '（与 `profile2` 同源，锚对它）');
 const tot = [];
 for (const key of ONLY) {
   const pol = POLICIES[key];
@@ -201,9 +214,13 @@ function runKeySweep() {
   res.sort((a, b) => b.win - a.win);
   return res;
 }
+/* 阶梯只跑**一次**：`--sweep` / `--pack` / `--anchors` 三个模式共用同一批局号与同一跑序
+ *   （脚本型对手带跨局记忆，跑序变了读数会漂 1.4pt ⇒ 同一进程里跑两遍还叫"同一条阶梯"是自欺）。 */
+let LADDER_CACHE = null;
+function ladderSweep() { if (!LADDER_CACHE) LADDER_CACHE = runKeySweep(); return LADDER_CACHE; }
 if (SWEEP) {
   console.log('\n# 逐技能固定打法（每枚都跑同一批 16 格 × ' + GAMES + ' 局）');
-  const res = runKeySweep();
+  const res = ladderSweep();
   res.forEach((r) => console.log('  ' + r.key.padEnd(10) + ' (' + r.cat[0] + ') ‖ 夺1 ' + r.win.toFixed(1) + '%'));
   console.log('⇒ 单技能阶梯（前 8）：' + res.slice(0, 8).map((r) => r.key + ' ' + r.win.toFixed(1) + '%').join('  ‖  '));
   console.log('   末 3：' + res.slice(-3).map((r) => r.key + ' ' + r.win.toFixed(1) + '%').join('  ‖  '));
@@ -211,7 +228,7 @@ if (SWEEP) {
 }
 /* ===== 臂放进同一把尺（`--pack=a.bak,b.bak`）：贪心 argmax、同一个手搓候选面 ⇒ 与阶梯同口径 ===== */
 if (PACKS.length) {
-  const ladderRes = runKeySweep();          // 同一进程、同一跑序里取阶梯 ⇒ 名次可比（跑序漂 1.4pt 那条只在跨批之间才成立）
+  const ladderRes = ladderSweep();          // 同一进程、同一跑序里取阶梯 ⇒ 名次可比（跑序漂 1.4pt 那条只在跨批之间才成立）
   const v7Row = tot.filter((t) => t.key === 'v7')[0];
   const randRow = tot.filter((t) => t.key === 'rand')[0];
   console.log('\n# 臂（2.0 的 .bak）放进同一把尺 ‖ 贪心 argmax ‖ 候选面与固定打法逐字相同（temp=' + TEMP + '）');
@@ -268,4 +285,44 @@ if (PACKS.length) {
   console.log('   ⚠ 口径：臂行走"贪心 argmax +' + (ENGINE_FACE ? '引擎同口径候选面' : '宽候选面') + '"，'
     + '与 `profile2`（引擎自己的两级 softmax）不是同一条执行路，**必须逐枚对表**（旧宽面时实测 R1 差 6.8pt ‖ B8 差 21pt）：'
     + ' ‖ 另一条：臂的行跑在阶梯之后，而脚本型对手带**跨局记忆**（本尺没 `resetBotMem`）⇒ 同一只固定打法换个跑序实测漂 1.4pt ⇒ 名次读**格**、不读小数。');
+}
+/* ===== `--anchors=<path>`：把这条阶梯**落成锚文件**给 `profile2` 读 =====
+ * 锚里带的每一行都是"profile2 会不会拿它排名次"的**前置条件**，不是元数据装饰：
+ *   · `poolFp`/`cells` ⇒ 对手表与桌形（同源于 audit-lib，所以对得上就是真对得上）
+ *   · `bigt` ⇒ 大雷那一档（出厂 12，命中时把这一手整个交给大雷 ⇒ 它是**注入**不是排序）
+ *   · `temp`/`engineFace` ⇒ 采样温度与候选面
+ *   · `gamesPerCell` ⇒ 剂量：锚的 rung 是"每格多少局"平均出来的，读数噪声与它相关，profile2 要按它算 SE
+ * ⚠ 写入位置在**两条自检之后**：自检红时脚本已经 exit 3 ⇒ 坏尺落不出锚（这条顺序本身就是判据，别挪）。 */
+if (ANCHORS) {
+  const res = ladderSweep();
+  const rowOf = (k) => tot.filter((t) => t.key === k)[0];
+  const randRow = rowOf('rand'), v7Row = rowOf('v7');
+  const anchor = {
+    tool: 'tools/proto2/ladder.mjs',
+    /* 本地时刻**带偏移**（不用 `toISOString()`：那串是 UTC，看日志的人会把它当本地读，差 8 小时——本仓的时刻类病就是这么来的；
+     *   也不用 `toString()`：那串跟着系统语言变，中文机器上会带"中国标准时间"，跨机器对账时是噪声）。 */
+    generatedAt: (function () {
+      const now = new Date(), pad = (x) => String(x).padStart(2, '0');
+      const off = -now.getTimezoneOffset();
+      return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':'
+        + pad(now.getSeconds()) + ' ' + (off >= 0 ? '+' : '-') + pad(Math.floor(Math.abs(off) / 60)) + ':' + pad(Math.abs(off) % 60);
+    })(),
+    gamesPerCell: GAMES, cellCount: CELLS.length, totalGames: CELLS.length * GAMES,
+    temp: TEMP, bigt: BIGT, engineFace: ENGINE_FACE,
+    poolFp: POOL_FP, refPack: 'js/bundled-champion-3p.js',
+    cells: CELLS.map((c) => c.n + ':' + c.name + ':' + c.idx).join(','),
+    rungs: res.map((r) => ({ key: r.key, cat: r.cat, win: Math.round(r.win * 1000) / 1000 })),
+    randWin: randRow ? Math.round(randRow.win * 1000) / 1000 : null,
+    v7Win: v7Row ? Math.round(v7Row.win * 1000) / 1000 : null,
+    caliber: '阶梯 31 格都是**不走 chooser 的固定打法**（不吃大雷注入）；profile2 的臂行走引擎 chooser（吃注入）'
+      + ' ⇒ 名次只算**下界**，且必须与并列集合大小一起读（第十七段那条口径）。',
+  };
+  if (anchor.randWin == null || anchor.v7Win == null || !res.length) {
+    console.log('     ⚠ 这一份锚**缺地板/上限/阶梯其中一行**（只有 `--selfcheck=0` 或 `--only` 漏项能走到这里）⇒ profile2 照样能印名次，但"离地板多远"读不出。');
+  }
+  writeFileSync(ANCHORS, JSON.stringify(anchor, null, 2) + '\n');
+  console.log('\n  ✔ 阶梯锚已落 **' + ANCHORS + '** ‖ ' + res.length + ' 枚单技能 ‖ 地板（均匀乱选）'
+    + anchor.randWin + '% ‖ 上限（v7）' + anchor.v7Win + '% ‖ 每格 ' + GAMES + ' 局 × ' + CELLS.length
+    + ' 格 ‖ bigt=' + BIGT + ' ‖ temp=' + TEMP + ' ‖ 对手表 ' + POOL_FP);
+  console.log('     ⇒ 读它：`node tools/proto2/profile2.mjs --pack=…`（默认吃 ' + ANCHORS + '，剂量/指纹对不上就只印"锚过期"）');
 }

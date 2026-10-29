@@ -12,12 +12,12 @@
  *      要么被测包就是那枚随机粒（会印出来），要么 chooser 根本没吃到它 ⇒ 后者当场 exit 7，不许继续印剖面。
  *   ③ 对手表由**参照包**造（`T.buildOpps(refParams)`），不用被测包自己造 ⇒ 避免"对手随被评粒变化"那条病。
  *
- * 用法：node tools/proto2/profile2.mjs --pack=scratch/arms/xxx.bak [--games=24] [--ref=js/bundled-champion-3p.js]
+ * 用法：node tools/proto2/profile2.mjs --pack=scratch/arms/xxx.bak [--games=24] [--ref=js/bundled-champion-3p.js] [--anchor=scratch/ladder-anchor.json]
  *   · 包里的 `arch` 字段决定输入面（`S1`=吃 v7 切片 ‖ `S1o`=吃 obs3）⇒ 不需要手对齐，读错会当场抛。
  *   · 只读，不改引擎、不 promote、不进产品门。
  */
-import { readFileSync } from 'node:fs';
-import { sandbox, loadChamp } from '../audit-lib.mjs';
+import { readFileSync, existsSync } from 'node:fs';
+import { sandbox, loadChamp, buildPoolSeeded, poolFingerprint } from '../audit-lib.mjs';
 import { install as installArch2 } from './arch2.mjs';
 
 const argv = process.argv.slice(2);
@@ -49,9 +49,9 @@ refParams = Float64Array.from(refParams);
 /* ⚑ 对手表必须在**装 2.0 档之前**造好（10-29 02:3x 抓到）：装完档再 `buildOpps`，"装的是哪一档"会改变对手表本身
  *   ⇒ 连**参照行（v7 自己的包）**都跟着换考卷（实测：同一枚 v7 参照，装 S1 时那行夺1 25.8%，装 S1o 时 0.0% ‖ 活到终局 0.0%）。
  *   跨结构比较要的就是"参照行不随被测档动"，所以顺序是判据的一部分，不是风格。 */
-const POOL = buildPoolSeeded(20261029);
+const POOL = buildPoolSeeded(T, refParams, 20261029);
 const POOL_FP = poolFingerprint(POOL);
-const POOL_FP2 = poolFingerprint(buildPoolSeeded(20261029));
+const POOL_FP2 = poolFingerprint(buildPoolSeeded(T, refParams, 20261029));
 if (POOL_FP !== POOL_FP2) { console.error('⛔ 对手表定标失败：同一枚种子两次指纹 ' + POOL_FP + ' vs ' + POOL_FP2); process.exit(2); }
 
 const A = installArch2(W, cfg);
@@ -69,31 +69,10 @@ for (let i = 0; i < randParams.length; i++) { const v = Math.round(randParams[i]
 /* ⚑ 对手表必须**定标**（10-29 02:2x 抓到：同一份命令跑两遍 Δ夺1 从 −12.03pt 漂到 −9.84pt、随机行从 16.5% 跳到 14.3%
  *   ⇒ 漂的不是包，是 `T.buildOpps()` 里那枚没播种的 `Math.random()`）。
  *   做法：只在造表期间临时顶掉 Math.random，出来立刻还原；并打印对手表指纹，两遍不一致就当场停。 */
-function buildPoolSeeded(seedVal) {
-  const real = Math.random;
-  const rr = (() => { let a = seedVal >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
-  try { Math.random = rr; return T.buildOpps(refParams, 0.05); } finally { Math.random = real; }
-}
-function poolFingerprint(PL) {
-  /* ⚑ 指纹要覆盖**真正影响行为的东西**：只数 `o.params` 前 6 条会在"脚本型对手根本没有 params"时退化成名字列表
-   *   （这就是为什么它先前在 S1 / S1o 两档下报出同一个 9f189883，而参照行其实已经从 25.8% 掉到 0.0%）。
-   *   ⇒ 现在把每个对手的全部数值字段 + 键名一起混进哈希，并额外记 `pool.numeric` 总数当"有没有牙"的证据。 */
-  let h = 2166136261, nums = 0;
-  const mix = (s) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } };
-  for (const o of PL) {
-    mix('name=' + (o.name || '') + '|');
-    const walk = (v, depth) => {
-      if (depth > 3 || v == null) return;
-      if (typeof v === 'number') { nums++; mix('n' + Math.round(v * 1e6)); return; }
-      if (typeof v !== 'object') { mix('s' + String(v)); return; }
-      if (Array.isArray(v)) { mix('[' + v.length); for (const q of v) walk(q, depth + 1); mix(']'); return; }
-      for (const k of Object.keys(v).sort()) { mix('{' + k); walk(v[k], depth + 1); mix('}'); }
-    };
-    walk(o, 0);
-  }
-  return (h >>> 0).toString(16) + '/' + nums;
-}
-/* （对手表已移到装档之前——见上面那条 ⚑） */
+/* 这两只函数于 10-29 11:2x 抽进 `tools/audit-lib.mjs` 与 `ladder.mjs` **同源**：
+ *   profile2 现在要把臂的夺1摆进 ladder 那条"30 枚单技能固定打法"的阶梯里排名次，两边各抄一份的话
+ *   "指纹对不上"就分不清是**池子真变了**还是**哈希实现漂了**（后者会把过期的锚当成好锚）。
+ *   ⚠ 那边用的 mulberry 与 `audit-lib.mulberry32` 不是同一个流，替换会把在册读数全部作废——所以它是复制、不是重写。 */
 const STYLES = ['breakdef', 'wall', 'tankline', 'guardgun', 'protowall', 'reflectmix', 'beadburst', 'aggro'];
 const CELLS = [];
 for (const n of [3, 5]) for (const nm of STYLES) { const i = POOL.findIndex((o) => o.name === nm); if (i >= 0) CELLS.push({ n, name: nm, idx: i }); }
@@ -228,6 +207,7 @@ for (const cell of CELLS) {
   S.vF += c.first; S.vG += c.games; S.vT += c.top2;
 }
 /* ===== 并列集合那一条读数（附"这条列真的在量东西"的对账）===== */
+let armTie = null;                                  /* 臂的并列集合平均枚数，留给下面阶梯那行一起印 */
 {
   const FC_AFTER = ((P.__arch2 && P.__arch2.CNT) || A.CNT || { forwards: 0 }).forwards;
   const delta = FC_AFTER - FC_BEFORE;
@@ -240,6 +220,7 @@ for (const cell of CELLS) {
   for (const t of ['2.0包', '随机起点', '参照包⚠']) {
     const b = TIE2.by[t];
     if (!b || !b.n) { console.log('     · ' + t + ' ‖ **读不出**（0 次逐候选打分 ⇒ 这一行没经过 2.0 前向；参照包那行本来就走 v7 自己的路）'); continue; }
+    if (t === '2.0包') armTie = b.sum / b.n;
     console.log('     · ' + t + ' ‖ 平均 ' + (b.sum / b.n).toFixed(2) + ' 枚 ‖ 最坏 ' + b.worst + ' ‖ "唯一最大"占 ' + (100 * b.uniq / b.n).toFixed(1) + '% ‖ 打分 ' + b.n + ' 次');
   }
   console.log('     ✔ 对账：本段内 arch2 自报 `CNT.forwards` 增 ' + delta + ' ‖ 我的计数 ' + counted + ' × 2（引擎一次 + 复算一次）⇒ '
@@ -260,4 +241,63 @@ console.log('   合并 SE ≈ ' + se.toFixed(2) + 'pt ⇒ |Δ| < ' + (2 * se).to
 console.log('   ⚑ 「前2」在 n=3 的**随机基线就是 66.7%**、n=5 是 40% ⇒ 它只当"别死太早"的粗读数，判别力主要看夺1；' +
   '混合两档时前2 的分母不是同一个 ⇒ 不许单独引它下判语');
 console.log('   ⚑ 两行分母必须相等（同格同局号）：' + S.pG + ' vs ' + S.rG + (S.pG === S.rG ? ' ✔' : ' ⇒ 剖面作废'));
+/* ===== 阶梯名次（#146 第二半 · 锚由 `ladder.mjs --anchors=` 落） =====
+ * 为什么这条必须在**出厂**而不是 scratch：今夜两次读歪都出自同一个缺口——臂的夺1只有一个数，
+ *   而"这个数值多少"要靠**下限锚**（均匀乱选）与**笨蛋刻度**（30 枚单技能固定打法）。
+ *   V 波那批臂涨的 8pt 后来被证明是"退化成只按架势"，就是因为当时没这两个锚。
+ * 三条形状纪律：
+ *   ① **锚过期就不印名次**：对手表指纹 / 桌形 / 大雷档 / 候选面 四条里任何一条对不上 ⇒ 只印过期原因。
+ *      （宁可少一条读数，也不要一条接错刻度的读数——§E824 那族"看着有数、其实量的是空气"。）
+ *   ② 剂量与 temp **不同不阻断**，但要把两边的 SE 一起印出来，并把"与臂分不开的单技能"逐枚列名
+ *      ⇒ 名次读**格**不读小数（脚本型对手带跨局记忆，跑序本身漂 1.4pt）。
+ *   ③ 这一行必须与上面的"并列集合平均"并排读：阶梯那 31 格**不走 chooser、不吃大雷注入**，
+ *      臂这行走引擎那条路（吃注入）⇒ 名次是**下界**；并列集合大 ⇒ 名次里有破号运气。 */
+{
+  const ANCH = arg('anchor', 'scratch/ladder-anchor.json');
+  const armWin = 100 * S.pF / S.pG;
+  const line = '   · 阶梯名次';
+  if (!existsSync(ANCH)) {
+    console.log(line + ' ‖ **读不出**：没有锚文件 `' + ANCH + '` ⇒ 生成一次：'
+      + '`node tools/proto2/ladder.mjs --games=120 --sweep=keys --anchors=' + ANCH + '`（实测全程 95 秒，之后每枚臂免费复用）');
+  } else {
+    let an = null, err = null;
+    try { an = JSON.parse(readFileSync(ANCH, 'utf8')); } catch (e) { err = e.message; }
+    const cellsNow = CELLS.map((c) => c.n + ':' + c.name + ':' + c.idx).join(',');
+    const bigtNow = typeof T.bigTPushOn === 'function' ? T.bigTPushOn() : null;
+    const bad = [];
+    if (!an) bad.push('锚解不开（' + err + '）');
+    else {
+      if (an.poolFp !== POOL_FP) bad.push('对手表指纹：锚 ' + an.poolFp + ' ‖ 本轮 ' + POOL_FP + '（锚的参照包 ' + an.refPack + ' ‖ 本轮 ' + refSrc + '）');
+      if (an.cells !== cellsNow) bad.push('桌形/格序：锚 ' + an.cells + ' ‖ 本轮 ' + cellsNow);
+      if (an.bigt !== bigtNow) bad.push('大雷档：锚 bigt=' + an.bigt + ' ‖ 本轮 ' + bigtNow);
+      if (an.engineFace !== true) bad.push('锚跑在宽候选面上（`--face=wide`）⇒ 不与引擎那条路同尺');
+      if (!Array.isArray(an.rungs) || !an.rungs.length) bad.push('锚里没有阶梯格');
+    }
+    if (bad.length) {
+      console.log(line + ' ‖ ⛔ **锚过期 ⇒ 不印名次**：' + bad.join(' ‖ ') + '\n     ⇒ 重落一次：`node tools/proto2/ladder.mjs --games='
+        + (an ? an.gamesPerCell : 40) + ' --sweep=keys --anchors=' + ANCH + '`');
+    } else {
+      const nArm = S.pG, nRung = an.totalGames;
+      const seArm = 100 * Math.sqrt((armWin / 100) * (1 - armWin / 100) / nArm);
+      const seRungOf = (w) => 100 * Math.sqrt((w / 100) * (1 - w / 100) / nRung);
+      const better = an.rungs.filter((r) => r.win > armWin).length;
+      const rank = better + 1, slots = an.rungs.length + 1;
+      const near = an.rungs.filter((r) => Math.abs(r.win - armWin) < 2 * Math.sqrt(seArm * seArm + seRungOf(r.win) ** 2));
+      const top = an.rungs[0], bot = an.rungs[an.rungs.length - 1];
+      console.log(line + ' ‖ 臂夺1 ' + armWin.toFixed(1) + '%（' + nArm + ' 局 ‖ SE ±' + seArm.toFixed(1) + '）‖ **排第 ' + rank + '/' + slots
+        + '**（' + an.rungs.length + ' 枚单技能 + 臂自己）‖ 头顶 `' + top.key + '` ' + top.win.toFixed(1) + '% ‖ 末位 `' + bot.key + '` ' + bot.win.toFixed(1)
+        + '% ‖ 地板（均匀乱选）' + an.randWin.toFixed(1) + '% ‖ 上限（v7，锚里 temp=' + an.temp + '）' + an.v7Win.toFixed(1) + '%');
+      console.log('     ‖ 并列集合平均 ' + (armTie == null ? '读不出' : armTie.toFixed(2) + ' 枚') + ' ‖ 锚的剂量 ' + an.gamesPerCell
+        + ' 局/格（本轮 ' + GAMES + '）‖ 本轮 temp=' + TEMP + ' ‖ 生成于 ' + an.generatedAt);
+      /* ⚑ 阶梯那 31 格**不抽样本**（固定打法），所以 `temp` 只动锚里的 v7 上限那一行；**臂这一行的夺1 自己随 temp 动**
+       *   （10-29 实测同一枚 B8：temp 0.001 → 夺1 27.3% ‖ temp 0.6 → 18.5%，8.8pt 全在执行口径身上）
+       *   ⇒ 换 temp 就是换名次，跨 temp 的两条臂行不许并排。 */
+      console.log('     ⚑ 本轮 temp=' + TEMP + ' ⇒ 臂这行的夺1**随 temp 动**（在册：B8 0.001→27.3% ‖ 0.6→18.5%）'
+        + ' ‖ 阶梯那 31 格是固定打法（不抽样，temp 只动锚里的 v7 上限行）⇒ 名次只在**同 temp 的两条臂行之间**可比。');
+      console.log('     ⚑ 名次读**格**不读小数：与臂**分不开**（|Δ|<2SE）的单技能有 ' + near.length + ' 枚'
+        + (near.length ? ' → `' + near.map((r) => r.key + ' ' + r.win.toFixed(1)).join('‖') + '`' : '')
+        + ' ⇒ 落在这些格附近只能说"值这么多"，不能说"学到了这么多"。' + an.caliber);
+    }
+  }
+}
 process.exit(S.pG === S.rG ? 0 : 2);
