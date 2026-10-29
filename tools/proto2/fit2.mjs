@@ -31,6 +31,9 @@ if (ABLOCK.length && INPUT !== 'obs3') { console.error('⛔ `--ablock` 只作用
 const L2 = Number(arg('l2', 0.01));
 const V7 = arg('v7', 'js/bundled-champion-3p.js');
 const OUT = arg('out', '');
+/* `--hid2=`（ZCode · 10-30 夜，容量臂 E1 的配套）：2.0 候选层宽度。缺省 24 = 原口径逐字不变；
+ *   容量臂要的是"同源闭式起点只差宽度" ⇒ 蒸馏必须能按目标宽度出包，否则臂只能退随机起点（换两个变量）。 */
+const HID2 = Math.max(1, Number(arg('hid2', 0)) || 0);
 
 const W = sandbox();
 const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState;
@@ -68,7 +71,7 @@ function walk(seedBase, n) {
 for (let g = 0; fixtures.length < NDEC && g < 900; g++) walk(90000 + g * 13, g % 2 ? 5 : 3);
 if (fixtures.length < 60) { console.error('⛔ 只抓到 ' + fixtures.length + ' 个决策 ⇒ 蒸馏不做（分母不足）'); process.exit(2); }
 
-const A = installArch2(W, { mutMode: 'seg', input: INPUT === 'obs3' ? 'obs3' : undefined });
+const A = installArch2(W, { mutMode: 'seg', input: INPUT === 'obs3' ? 'obs3' : undefined, ...(HID2 ? { hid2: HID2 } : {}) });
 A.rngRef.r = rnd;
 const L = layout({ input: INPUT === 'obs3' ? 'obs3' : 'v7', skills: W.EpirusRules.skills.length });
 const start = Float64Array.from(P.makePolicy(0.25));
