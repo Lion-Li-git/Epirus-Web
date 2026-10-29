@@ -104,7 +104,15 @@ export function install(W, opts) {
   const o2 = Object.assign({}, opts || {});
   if (!o2.skills) o2.skills = (R.skills && R.skills.length) || 27;
   const L = layout(o2);
-  const OPT = { mutMode: String((opts && opts.mutMode) || 'seg'), temp: 0.6, mutRel: Number(opts && opts.mutRel) > 0 ? 1 : 0 };
+  const OPT = { mutMode: String((opts && opts.mutMode) || 'seg'), temp: 0.6, mutRel: Number(opts && opts.mutRel) > 0 ? 1 : 0,
+    /* `mutOnly=<段名,段名>`（10-29 P2）：只在这几段上变异/交叉，其余**逐字保持不变**。
+     *   动因：DS 的 P2 要"闭式解热启动 + ES 只动最后一层"——主干不动才谈得上"不是 ES 把主干压扁了"。
+     *   ⚠ 名单里的段名认错就抛（不许"以为冻结了其实没冻"）。 */
+    mutOnly: (function (v) {
+      if (v == null || v === '') return null;
+      const a = Array.isArray(v) ? v.map(String) : String(v).split(/[,+]/).map((x) => x.trim()).filter(Boolean);
+      return a.length ? a : null;
+    })(opts && opts.mutOnly) };
   const CNT = { forwards: 0, cands: 0 };   // 吞吐记账（见 forwardCands 那条注释）
   const rngRef = { r: Math.random };
   const gauss = () => { let u = 0, v = 0; while (u === 0) u = rngRef.r(); while (v === 0) v = rngRef.r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
@@ -436,9 +444,24 @@ export function install(W, opts) {
     const outDim = { seatEnc: L.seatH, actEnc: L.actH, ctx: L.hid, cand: L.hid2, policyHead: 1, qHead: 1 };
     return outDim[s.name] || 1;
   }
+  /* 段名白名单：只在**第一次真要变异时**校验（那时 L 一定已就绪），认错就抛 */
+  let MUT_ONLY = null, MUT_CHECKED = false;
+  function mutMask() {
+    if (MUT_CHECKED) return MUT_ONLY;
+    MUT_CHECKED = true;
+    if (!OPT.mutOnly) return null;
+    const names = L.seg.map((s) => s.name);
+    const bad = OPT.mutOnly.filter((n) => names.indexOf(n) < 0);
+    if (bad.length) throw new Error('mutOnly 里有不存在的段名：' + bad.join(',') + '（可选：' + names.join(',') + '）');
+    MUT_ONLY = new Set(OPT.mutOnly);
+    return MUT_ONLY;
+  }
   function mutatePolicy(p, sigma) {
     const q = p.slice();
-    if (OPT.mutMode === 'flat') { for (let i = 0; i < q.length; i++) q[i] += gauss() * sigma; return q; }
+    if (OPT.mutMode === 'flat') {
+      if (OPT.mutOnly) throw new Error('mutOnly 与 mutMode=flat 互斥（flat 没有段的概念）⇒ 用 mutMode=seg');
+      for (let i = 0; i < q.length; i++) q[i] += gauss() * sigma; return q;
+    }
     /* ⭐ `mutRel=1`（10-29 加）：**σ 变成"相对初始化尺度的步长"**，对每个坐标都用它自己那一段的 init std 定标。
      * 动因（B1 的实测，不是推测）：60000 局、`fxGames=30` 的那条臂里，1/5 律把 σ 从 0.2 一路缩到 **0.0001**
      *   才停下 ⇒ 因为旧口径下**偏置**段拿的是原 σ（0.2）而它的初始化尺度只有 0.25/√fanIn ≈ 0.02
@@ -447,8 +470,10 @@ export function install(W, opts) {
      *   权重段却只有 0.8× ⇒ 有一段被反复打散。**注意这一步是"为什么 σ 会崩"的解释**（B1 只给了 σ 崩 + 6/30 接受这两个事实，
      *   没给"打散偏置导致适应度不涨"的证据 ⇒ 这条要由 mutRel 那条臂来判，别提前当结论引用）。
      *   权重段虽然有 1/√fanIn 定标，但 σ 与"当前权重量级"无关，训练后期权重长大了同 σ 的相对扰动就越来越小。 */
+    const only = mutMask();
     if (OPT.mutRel) {
       for (const s of L.seg) {
+        if (only && !only.has(s.name)) continue;
         const k = (L.initScale / Math.sqrt(Math.max(1, L.fanIn[s.name]))) * sigma;
         for (let i = s.off; i < s.off + s.len; i++) q[i] += gauss() * k;
       }
@@ -457,6 +482,7 @@ export function install(W, opts) {
     /* 权重按 1/sqrt(fanIn) 定标、偏置用原 σ ⇒ "同样一个 σ"在各段造成的输出扰动才同量级
      * （flat 变异在混结构上会被大扇入段 dominate —— 这正是本波要测的差）。 */
     for (const s of L.seg) {
+      if (only && !only.has(s.name)) continue;
       const k = sigma / Math.sqrt(Math.max(1, L.fanIn[s.name]));
       const biasStart = s.off + s.len - biasLen(s);
       for (let i = s.off; i < s.off + s.len; i++) q[i] += gauss() * (i >= biasStart ? sigma : k);
@@ -467,6 +493,8 @@ export function install(W, opts) {
     const c = new Float64Array(a.length);
     if (OPT.mutMode === 'flat') { for (let i = 0; i < c.length; i++) c[i] = rngRef.r() < 0.5 ? a[i] : b[i]; return c; }
     /* 段级交叉：整段继承某一方 ⇒ 保留"每段各自已校准的尺度"，不打散结构 */
+    const onlyC = mutMask();
+    c.set(a);
     for (const s of L.seg) {
       const from = rngRef.r() < 0.5 ? a : b;
       for (let i = s.off; i < s.off + s.len; i++) c[i] = from[i];

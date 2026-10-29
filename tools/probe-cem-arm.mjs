@@ -106,7 +106,11 @@ if (PLAYTEMP !== '') {
 if (process.env.EPIRUS_ARCH2) {
   const parts = String(process.env.EPIRUS_ARCH2).split(':');
   const cfg = { mutMode: String(process.env.EPIRUS_MUT_MODE || 'seg') };
-  if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) cfg[e[0].trim()] = (e[0].trim() === 'input') ? e[1].trim() : Number(e[1]); });
+  if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) {
+    const k0 = e[0].trim();
+    /* `mutOnly=` 是**段名表**（P2 的"只动最后一层"）⇒ 不许过 Number()，多段用 `+` 连（`,` 已是 kv 分隔符） */
+    cfg[k0] = (k0 === 'input') ? e[1].trim() : (k0 === 'mutOnly') ? e[1].trim() : Number(e[1]);
+  } });
   const A2 = installArch2(W, cfg);
   if (T.mulberry32) A2.rngRef.r = T.mulberry32((SEED * 7919 + 13) >>> 0);
   /* ⚑ **开臂前的接线自证**（10-28 晚三波读数作废换来的闸）：打一局量一下 `forwardCands` 有没有被叫到。
@@ -116,7 +120,7 @@ if (process.env.EPIRUS_ARCH2) {
   try { wired = verifyArch2Wired(W, A2, { mode: TMODE, n: N, games: 1 }); }
   catch (e) { console.error('⛔ ' + String(e && e.message || e)); process.exit(7); }
   console.log('[cem-arm] ⚙ 架构 = 2.0 原型 `' + process.env.EPIRUS_ARCH2 + '`（§E821） ‖ paramCount=' + P.paramCount() +
-    ' ‖ 变异算子=' + cfg.mutMode + ' ‖ 起点=随机（v7 夹具包读不进 2.0 ⇒ 两臂同起点、只差算子）' +
+    ' ‖ 变异算子=' + cfg.mutMode + (cfg.mutOnly ? '（**只动 ' + cfg.mutOnly + '**）' : '') + ' ‖ 起点=' + (process.argv.some(x => x.startsWith('--start=')) ? '--start 指定的 2.0 包' : '随机（makePolicy 0.25）') +
     ' ‖ **接线自证 PASS**：校准局里 forwardCands ' + wired.forwards + ' 次 ‖ chooseCandidates(2.0 版) ' + wired.chooseCandidatesCalls + ' 次 ‖ fit=' + (wired.fit == null ? 'n/a' : wired.fit.toFixed(3)));
 }
 /* ===== 2026-10-29（千问）：把 DS 的**配对评估**接进臂里（`EPIRUS_PAIRED=1`）=====
@@ -158,9 +162,11 @@ FIX_OPPS = T.buildOpps(START_COPY, 0.05);
   const mk = function (mode) {
     const bak = P.mutatePolicy;
     const before = P.__arch2 ? P.__arch2.OPT.mutMode : null;
-    if (P.__arch2) P.__arch2.OPT.mutMode = mode;
+    /* `mutOnly` 与 flat 互斥（flat 没有段）⇒ 这条**自检**要临时把它摘掉再比；比完原样放回 */
+    const onlyBefore = P.__arch2 ? P.__arch2.OPT.mutOnly : null;
+    if (P.__arch2) { P.__arch2.OPT.mutMode = mode; if (mode === 'flat') P.__arch2.OPT.mutOnly = null; }
     const r = bak(START_COPY, 0.2);
-    if (P.__arch2) P.__arch2.OPT.mutMode = before;
+    if (P.__arch2) { P.__arch2.OPT.mutMode = before; P.__arch2.OPT.mutOnly = onlyBefore; }
     return r;
   };
   if (P.__arch2) {
