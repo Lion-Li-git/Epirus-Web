@@ -110,11 +110,16 @@ export function createArena2(W, opts) {
   const stratified = !!o.stratified;
   const PREDATORS = ['bigT', 'reflect', 'snipe', 'guard'].filter((k) => R.skills.some((s) => s.key === k));
   if (stratified && !PREDATORS.length) throw new Error('createArena2: stratified=1 但捕食者键一个都不存在');
+  /* 减毒（10-29 深夜）：满编分层场每局塞 min(席位,4) 个捕食者 ⇒ v7 干净净胜被打到 −0.003（机会线），
+   *   场比被测对象还强、"进步"会被场强掩盖。`stratCap` 限每局捕食者数、`stratMix` 限多少比例的局用分层场
+   *   （其余局退回平均场）⇒ 天敌仍每局/隔局在场，但不再一局四只。 */
+  const stratCap = Math.max(1, Math.floor(Number(o.stratCap) || PREDATORS.length));
+  const stratMix = Math.min(1, Math.max(0, o.stratMix == null ? 1 : Number(o.stratMix)));
   const fp = ['arena2.v' + ARENA2_VERSION, 'pool=' + poolFp, 'poolSeed=' + poolSeed,
     'shapes=' + shapes.map((s) => s.n + ':' + s.mode).join(','),
     'roster=' + roster.map((r) => r.name).join(','),
     highNW > 1 ? 'highN=' + highNW + '（仅训练环）' : 'highN=1',
-    stratified ? 'stratified=' + PREDATORS.join('+') : 'stratified=0'].join('|');
+    stratified ? 'stratified=' + PREDATORS.join('+') + '~cap' + stratCap + '~mix' + stratMix : 'stratified=0'].join('|');
   const fixedByKey = {};
   for (const r of roster) if (r.kind === 'fixed') fixedByKey[r.name.slice(5)] = r.sel;
   const fixed = (k) => fixedByKey[k];
@@ -128,7 +133,8 @@ export function createArena2(W, opts) {
     choosers[seat] = sel; classes[seat] = '@me';
     const oppPids = [];
     for (let pid = 0; pid < n; pid++) if (pid !== seat) oppPids.push(pid);
-    const predN = stratified ? Math.min(oppPids.length, PREDATORS.length) : 0;
+    const stratHere = stratified && ((gameSeq * 2654435761 ^ shapeIdx * 40503 ^ (salt | 0)) >>> 0) % 1000 < Math.round(stratMix * 1000);
+    const predN = stratHere ? Math.min(oppPids.length, stratCap) : 0;
     const predStart = gameSeq % Math.max(1, PREDATORS.length);
     for (let pi = 0; pi < oppPids.length; pi++) {
       const pid = oppPids[pi];
@@ -258,7 +264,7 @@ export function createArena2(W, opts) {
     return { win: 100 * w / Math.max(1, g), games: g, cells: cells.length };
   }
   return {
-    version: ARENA2_VERSION, fp, temp, pool, poolFp, roster, shapes, poolSeed, highN: highNW, loopShapes, stratified, predators: PREDATORS,
+    version: ARENA2_VERSION, fp, temp, pool, poolFp, roster, shapes, poolSeed, highN: highNW, loopShapes, stratified, predators: PREDATORS, stratCap, stratMix,
     fixed, evalChooser, evalParams, verifyWired, legacyCheck,
     chooserOf: (params, t) => T.policyChooserN(params, t == null ? temp : t),
     rosterNames: () => roster.map((r) => r.name),
@@ -280,7 +286,10 @@ function main() {
   const TEMPS = String(arg('temps', '')).split(',').map(Number).filter((x) => x > 0);
   const LEGACY = Math.max(0, Number(arg('legacy-check', 0)) || 0);
   const POOLSEED = Number(arg('poolSeed', POOL_SEED));
-  const STRAT = arg('strat', '') === '1';
+  const STRAT_ARG = String(arg('strat', ''));
+  const STRAT = STRAT_ARG === '1' || STRAT_ARG === 'full' || STRAT_ARG === 'mild';
+  const STRAT_CAP = arg('stratCap', STRAT_ARG === 'mild' ? '2' : '');
+  const STRAT_MIX = arg('stratMix', STRAT_ARG === 'mild' ? '0.5' : '');
   const JSON_OUT = arg('json', '');
   const REF = arg('ref', REF_PACK);
   if (!(TEMP > 0)) { console.error('⛔ --temp 要正数'); process.exit(2); }
@@ -292,10 +301,10 @@ function main() {
   if (!ref) { console.error('⛔ 参照包读不出（' + REF + '）⇒ 对手表无法固定'); process.exit(2); }
   const refParams = Float64Array.from(ref);
   if (typeof T.setBigTPush === 'function') T.setBigTPush(12);
-  const A = createArena2(W, { refParams, temp: TEMP, poolSeed: POOLSEED, stratified: STRAT });
+  const A = createArena2(W, { refParams, temp: TEMP, poolSeed: POOLSEED, stratified: STRAT, stratCap: STRAT_CAP || undefined, stratMix: STRAT_MIX || undefined });
   console.log('# arena2 扩表考卷 ‖ 指纹 ' + A.fp + ' ‖ 桌形 ' + A.shapes.length + '（' + A.shapes.map((s) => s.n + ':' + s.mode).join(',') + '）' +
     ' ‖ 对手表 ' + A.roster.length + ' 项（' + A.pool.length + ' 脚本 bot + ' + (A.roster.length - A.pool.length - 1) + ' 单技能 + 均匀随机）' +
-    (A.stratified ? ' ‖ **分层场**（每局优先塞 ' + A.predators.join('/') + '）' : '') +
+    (A.stratified ? ' ‖ **分层场**（' + A.predators.join('/') + ' · 每局 ≤' + A.stratCap + ' 只 · ' + (100 * A.stratMix).toFixed(0) + '% 的局用分层场）' : '') +
     ' ‖ 每格 ' + GPS + ' 局 ‖ ' + (TEMPS.length ? '温度扫描 ' + TEMPS.join('/') : 'temp=' + TEMP));
 
   if (LEGACY) {

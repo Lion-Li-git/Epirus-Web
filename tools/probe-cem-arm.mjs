@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -53,6 +53,16 @@ const SEED = Number(arg('seed', 7));
 const ELITE = Number(arg('elite', 4));
 const SIG0 = Number(arg('sig', 0.2));
 const SIG_FLOOR = 0.01;
+/* P4（10-29 深夜）：s11 的 1/5 律把 σ 一路除到 0.0001、全臂只接受 4 次 ⇒ 步长塌了还继续按老规矩缩短。
+ *   `--sigFloor=`：自适应 σ 的下限（0 = 维持旧的 1e-4）；`--sigRestart=N`：触底且连续 N 个窗口零接受 ⇒ σ 回 SIG0（只回步长，不动父代）。 */
+const SIG_FLOOR_ESA = Math.max(0, Number(arg('sigFloor', 0)) || 0);
+const SIG_RESTART = Math.max(0, Math.floor(Number(arg('sigRestart', 0)) || 0));
+/* `--arenaPen=λ`（10-29 深夜，DS §九.5 的处方）：冻结验证的**当选分**改成
+ *   `fit − λ·max(0, 单卡占比 − 0.5)`。
+ *   动机：Pareto 带（divTol/divDelta）三次都没咬住（41 次探针 0 次接受）；这里直接给"单卡 >50%"明码扣分，
+ *   但**只影响当选**，终局仍报未罚的干净净胜（罚项买了多少，看两列差）。
+ *   λ=0（缺省）与旧行为逐字相同。 */
+const ARENA_PEN = Math.max(0, Number(arg('arenaPen', 0)) || 0);
 const DEG = arg('degenerate', '') === '1';
 /* ===== §E822（10-28 傍晚 · 千问）：`--targetGames=` ⇒ **按计数器停，不按记账停** =====
  * 为什么必须加：实测同一 GA 的"每代真打几局"**不是常数**（60 evals 校准时 ≈8 局/代，6000 evals 真跑时 ≈2 局/代
@@ -125,9 +135,13 @@ const DIV_TRIGGER = Math.min(1, Math.max(0, Number(arg('divTrigger', 0.5)) || 0.
 /* `--arenaHighN=3`：**高人数课程**，只把训练环里 n≥8 的桌形重复 3 次（终局仍均匀 11 格）。
  * 用来判 8P/10P 的弱是"训练里见得少"还是"表示/池化不行"；不改变读数口径。 */
 const ARENA_HIGH_N = Math.max(1, Math.floor(Number(arg('arenaHighN', 1)) || 1));
-/* `--arenaStrat=1`（DS P1）：分层场——每局非被测席优先塞 bigT/reflect/snipe/guard 轮换，
- *   让"只一招"每局都见到天敌，平均分不再被 51 项 roster 稀释。终局也用同一分层场（DS 提交的口径）。 */
-const ARENA_STRAT = arg('arenaStrat', '') === '1';
+/* `--arenaStrat=1|full|mild`（DS P1）：分层场——每局非被测席优先塞 bigT/reflect/snipe/guard 轮换，
+ *   让"只一招"每局都见到天敌，平均分不再被 51 项 roster 稀释。终局也用同一分层场（DS 提交的口径）。
+ *   `mild` = 每局 ≤2 只捕食者、50% 的局用分层场（满编场把 v7 打到机会线 ⇒ 减毒）。 */
+const ARENA_STRAT_ARG = String(arg('arenaStrat', ''));
+const ARENA_STRAT = ARENA_STRAT_ARG === '1' || ARENA_STRAT_ARG === 'full' || ARENA_STRAT_ARG === 'mild';
+const ARENA_STRAT_CAP = arg('arenaStratCap', ARENA_STRAT_ARG === 'mild' ? '2' : '') || undefined;
+const ARENA_STRAT_MIX = arg('arenaStratMix', ARENA_STRAT_ARG === 'mild' ? '0.5' : '') || undefined;
 if (ARENA_DIV && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaDiverse 需要 --arena2=1 且 --fxSelect=1（多样性只读冻结验证那一把）'); process.exit(7); }
 let ARENA_REF = null;
 if (ARENA2) {
@@ -190,7 +204,7 @@ startParams = Float64Array.from(startParams);
 /* arena2 只在起点粒定下来之后建表；它用 v7 参照固定对手表，与起点粒无关（起点不参与建桌）。 */
 var ARENA = null;
 if (ARENA2) {
-  try { ARENA = createArena2(W, { refParams: ARENA_REF, temp: ARENA_TEMP, highN: ARENA_HIGH_N, stratified: ARENA_STRAT }); }
+  try { ARENA = createArena2(W, { refParams: ARENA_REF, temp: ARENA_TEMP, highN: ARENA_HIGH_N, stratified: ARENA_STRAT, stratCap: ARENA_STRAT_CAP, stratMix: ARENA_STRAT_MIX }); }
   catch (e) { console.error('⛔ arena2 建表失败：' + String(e && e.message || e)); process.exit(7); }
   console.log('[cem-arm] ⚙ 扩表 arena2 开：指纹 ' + ARENA.fp);
   console.log('   ‖ 桌形 ' + ARENA2_SHAPES.length + '（' + ARENA.shapes.map(function (s) { return s.n + ':' + s.mode; }).join(',') + '）' +
@@ -339,6 +353,7 @@ let best = startParams, bestFit = -Infinity, used = 0, curve = [];
 const checkpoints = [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return f * EVALS; });
 const cpG = TARGET_G ? [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return Math.round(f * TARGET_G); }) : [];
 let ESA_DIV_STAT = null;
+let ESA_SIG_STAT = null;
 
 if (MODE === 'esa') {
   /* (1+λ)-ES：**全部算子都由本工具拥有**（父代 + λ 个子代各过一遍 `P.mutatePolicy`）
@@ -352,11 +367,13 @@ if (MODE === 'esa') {
   let parent = Float64Array.from(startParams);
   let pf = evalOne(parent, 0, 0).fit; bestFit = pf; best = parent;
   /* FXSEL：父代在冻结桌上的**净胜 + 单卡占比**一起记（多样性当选要拿它当起点）。 */
-  let parentFix = 0, parentShare = 0;
+  let parentFix = 0, parentShare = 0, parentPen = 0;
+  const penOf = function (fit, share) { return fit - ARENA_PEN * Math.max(0, share - 0.5); };
   if (FXSEL) {
     const pe = evalFixed(parent, 500, 0, FXG || undefined);
     parentFix = pe.fit;
     parentShare = pe.maxCard ? pe.maxCard.share : 0;
+    parentPen = penOf(parentFix, parentShare);
   }
   const r = rngFor(SEED + 17);
   void r;
@@ -371,7 +388,7 @@ if (MODE === 'esa') {
   const ADAPT = Number(arg('sigmaAdaptive', 0)) > 0;
   const WIN = Math.max(10, POP * 3);
   const hist = [];
-  let sig = SIG0, sigTraj = [SIG0];
+  let sig = SIG0, sigTraj = [SIG0], sigMin = SIG0, sigRestarts = 0, zeroStreak = 0;
   for (let it = 0; it < iters; it++) {
     for (let i = 0; i < POP; i++) {
       const child = P.mutatePolicy(parent, sig);
@@ -388,10 +405,10 @@ if (MODE === 'esa') {
         else {
           const cf = evalFixed(child, 500, 0, FXG || undefined);
           const cfShare = cf.maxCard ? cf.maxCard.share : 0;
-          const byScore = cf.fit > parentFix;
+          const byScore = ARENA_PEN > 0 ? penOf(cf.fit, cfShare) > parentPen : cf.fit > parentFix;
           const byDiv = DIV && cf.fit >= parentFix - DIV_TOL && cfShare < parentShare - DIV_DELTA;
           if (byScore || byDiv) {
-            parentFix = cf.fit; parent = Float64Array.from(child); parentShare = cfShare;
+            parentFix = cf.fit; parent = Float64Array.from(child); parentShare = cfShare; parentPen = penOf(cf.fit, cfShare);
             if (e.fit > bestFit) bestFit = e.fit;
             best = child; accepted++; ok = true;
             if (byScore) accScore++; else accDiv++;
@@ -403,7 +420,14 @@ if (MODE === 'esa') {
         if (hist.length === WIN) {
           const rate = hist.reduce(function (a, b) { return a + b; }, 0) / WIN;
           sig = rate > 0.2 ? sig * 1.22 : sig / 1.22;
-          sig = Math.min(2.0, Math.max(1e-4, sig));
+          const sigLo = SIG_FLOOR_ESA > 0 ? SIG_FLOOR_ESA : 1e-4;
+          sig = Math.min(2.0, Math.max(sigLo, sig));
+          /* 触底 + 连续零接受 ⇒ 步长回 SIG0（只回步长，父代仍是最优；`--sigRestart=0` 时关掉） */
+          if (SIG_FLOOR_ESA > 0 && sig <= sigLo * 1.0001) {
+            zeroStreak = rate === 0 ? zeroStreak + 1 : 0;
+            if (SIG_RESTART > 0 && zeroStreak >= SIG_RESTART) { sig = SIG0; zeroStreak = 0; sigRestarts++; sigTraj.push('restart'); }
+          } else zeroStreak = 0;
+          sigMin = Math.min(sigMin, sig);
           sigTraj.push(Math.round(sig * 1e5) / 1e5);
           hist.length = 0;
         }
@@ -415,7 +439,9 @@ if (MODE === 'esa') {
     if (!TARGET_G) { used += 0; while (checkpoints.length && used >= checkpoints[0]) { curve.push({ evals: used, best: bestFit }); checkpoints.shift(); } }
     if (TARGET_G && gamesIn() >= TARGET_G) break;
   }
-  if (ADAPT) console.log('[cem-arm] ⚑ 1/5 律自适应 σ：起 ' + SIG0 + ' → 终 ' + sig.toFixed(5) + ' ‖ 轨迹样本 ' + sigTraj.length + ' 点 ‖ 窗口 ' + WIN + ' 次尝试');
+  if (ADAPT) console.log('[cem-arm] ⚑ 1/5 律自适应 σ：起 ' + SIG0 + ' → 终 ' + sig.toFixed(5) + ' ‖ 最小 ' + sigMin.toFixed(5) +
+    ' ‖ 下限 ' + (SIG_FLOOR_ESA > 0 ? SIG_FLOOR_ESA : 1e-4) + ' ‖ 重启 ' + sigRestarts + ' 次 ‖ 轨迹样本 ' + sigTraj.length + ' 点 ‖ 窗口 ' + WIN + ' 次尝试');
+  ESA_SIG_STAT = ADAPT ? { start: SIG0, final: sig, min: sigMin, floor: SIG_FLOOR_ESA > 0 ? SIG_FLOOR_ESA : 1e-4, restarts: sigRestarts } : null;
   if (FXSEL) console.log('[cem-arm] ⚑ 冻结桌当选：环内预选 ' + screened + ' 次 ‖ 在冻结桌上真打过父代 ' + accepted + ' 次（按净胜 ' + accScore +
     (DIV ? ' ‖ 按多样性 ' + accDiv + '（探针 ' + divProbes + ' 次；触发 >' + DIV_TRIGGER + '，净胜带 ±' + DIV_TOL + '，单卡需降 ≥' + DIV_DELTA + '）' : '') +
     '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '% ‖ 每次验证花 ' +
@@ -480,6 +506,7 @@ const gStart = gamesIn() - gLoop;
 const ho = holdout(best);
 const gHold = gamesIn() - gLoop - gStart;
 const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N, elite: ELITE, sig0: SIG0,
+  sigFloor: SIG_FLOOR_ESA, sigRestart: SIG_RESTART, esaSig: ESA_SIG_STAT, arenaPen: ARENA_PEN,
   /* §E822：**实际局数**（计数器数出来的）与"标称预算"并列印 ⇒ 谁想拿 `evals` 当等预算，先看见这两个数 */
   gamesPlanned: used * GAMES, gamesActualLoop: gLoop, gamesActualHoldout: gHold, gamesActualStartHoldout: gStart,
   targetGames: TARGET_G || null,
@@ -499,6 +526,7 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
   currency: ARENA ? ('arena2.' + ARENA_CUR + (ARENA_DIV ? '+div' : '')) : 'scoreMemberN.fit',
   arena: ARENA ? { fp: ARENA.fp, temp: ARENA_TEMP, shapes: ARENA2_SHAPES.length, roster: ARENA.roster.length, pool: ARENA.pool.length,
     holdGamesPerShape: ARENA_HOLD, holdGames: ho.games, draw: ho.draw, cur: ARENA_CUR, diverse: ARENA_DIV, highN: ARENA_HIGH_N, stratified: ARENA_STRAT,
+    stratCap: ARENA.stratCap, stratMix: ARENA.stratMix,
     divTol: DIV_TOL, divDelta: DIV_DELTA, divEvery: DIV_EVERY, divTrigger: DIV_TRIGGER, esa: ESA_DIV_STAT,
     bestMaxCard: ho.maxCard, startMaxCard: hoStart.maxCard, bestByShape: ho.byShape } : null,
   curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel };
