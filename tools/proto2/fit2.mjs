@@ -33,7 +33,7 @@ const V7 = arg('v7', 'js/bundled-champion-3p.js');
 const OUT = arg('out', '');
 /* `--hid2=`（ZCode · 10-30 夜，容量臂 E1 的配套）：2.0 候选层宽度。缺省 24 = 原口径逐字不变；
  *   容量臂要的是"同源闭式起点只差宽度" ⇒ 蒸馏必须能按目标宽度出包，否则臂只能退随机起点（换两个变量）。 */
-const HID2 = Math.max(1, Number(arg('hid2', 0)) || 0);
+const HID2 = Math.max(0, Number(arg('hid2', 0)) || 0);   /* 0 = 不改宽度（Math.max(1,…) 会把缺省顶成 hid2=1 的雷，10-30 修） */
 /* `--inter=`（ZCode · 10-30 凌晨，交互头臂的配套）：蒸馏可带 rank-K 交互通道出包。
  * ⚑ 交互段**必须显式清零**：makePolicy 给它的是随机值 ⇒ 不清零的"inter 蒸馏起点"就带了随机交互通道，
  *   与 inter=0 的蒸馏起点不再是同源对照（起点与结构两个自由量）。清零 ⇒ 逐位等于 inter=0 起点，ES 自己把它长出来。 */
@@ -79,15 +79,26 @@ const A = installArch2(W, { mutMode: 'seg', input: INPUT === 'obs3' ? 'obs3' : u
 A.rngRef.r = rnd;
 const L = layout({ input: INPUT === 'obs3' ? 'obs3' : 'v7', skills: W.EpirusRules.skills.length });
 const start = Float64Array.from(P.makePolicy(0.25));
+/* ⚑ 交互段清零必须在**拟合之前**（对 start 清，不是对 fit.params）：makePolicy 的流里 inter 段排最后
+ *   ⇒ 前缀与 inter=0 蒸馏逐位同；拟合期交互通道死着 ⇒ 闭式头不会被随机 inter 噪声污染 ⇒
+ *   整条轨迹（fixtures→主干→头）与 inter=0 蒸馏逐位同源（预登记 §七 的声明靠这条成立）。 */
+if (INTER) {
+  /* ⚑ layout 必须**带引擎的 skills 数**：install() 用 R.skills.length（30）算 actIn ⇒ 裸 layout（默认 27）
+   *   的段偏移全体偏 24，清零会错切到 qHead 尾、inter 段尾留非零（10-30 首版就栽在这）。 */
+  const LIs = layout({ input: INPUT === 'obs3' ? 'obs3' : 'v7', skills: W.EpirusRules.skills.length, ...(HID2 ? { hid2: HID2 } : {}), inter: INTER });
+  const segS = LIs.seg.find((s) => s.name === 'inter');
+  if (!segS) { console.error('⛔ inter 段没找到（layout 与 install 的 dims 不一致？）'); process.exit(2); }
+  start.fill(0, segS.off, segS.off + segS.len);
+  console.log('[fit2] ⚙ 交互段在拟合前清零（off=' + segS.off + ' len=' + segS.len + '，rank-K=' + INTER + '）⇒ 起点与 inter=0 蒸馏逐位同源');
+}
 const cut = Math.floor(fixtures.length / 2);
 const fit = A.distillHead(fixtures.slice(0, cut), start, { v7, l2: L2 });
 if (!fit.ok) { console.error('⛔ 蒸馏失败：' + fit.why); process.exit(2); }
 if (INTER) {
-  const LIf = layout({ input: INPUT === 'obs3' ? 'obs3' : 'v7', ...(HID2 ? { hid2: HID2 } : {}), inter: INTER });
+  const LIf = layout({ input: INPUT === 'obs3' ? 'obs3' : 'v7', skills: W.EpirusRules.skills.length, ...(HID2 ? { hid2: HID2 } : {}), inter: INTER });
   const segI = LIf.seg.find((s) => s.name === 'inter');
-  if (!segI) { console.error('⛔ inter 段没找到（layout 与 install 的 dims 不一致？）'); process.exit(2); }
-  fit.params.fill(0, segI.off, segI.off + segI.len);
-  console.log('[fit2] ⚙ 交互段已清零（' + segI.len + ' 参数，rank-K=' + INTER + '）⇒ 起点与 inter=0 蒸馏逐位同源');
+  fit.params.fill(0, segI.off, segI.off + segI.len);   /* 双保险：distillHead 若触及非 head 段也压回零 */
+  console.log('[fit2] ⚙ 交互段已清零（off=' + segI.off + ' len=' + segI.len + '）');
 }
 
 /* 留出半批上的读数（自己算，不再调 distillHead ⇒ 不会把测试集喂回拟合） */
