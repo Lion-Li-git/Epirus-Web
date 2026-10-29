@@ -427,19 +427,26 @@ console.log('     功能角色（' + brd.K_role + ' 个）：类间 ' + brd.S_ro
 console.log('     角色占比：' + Object.keys(brd.roleShares).map(function (r2) {
   return r2 + ' ' + (100 * brd.roleShares[r2]).toFixed(1) + '%';
 }).join(' · '));
-/* ===== 2026-10-29（DS · 强度尺修复）：**反退化门**（单卡占比） =====
- * 病：只镜面反射的笨蛋在 16 格考卷上 66.7% > v7 40.4% ⇒ 退化档会被读成强。
- * 标定（20 局/包）：在册健康包 v7 23.4% ‖ K2 20.5% ‖ U2 30.8% ⇒ 阈值 60% 有足够余量。
- * 判据：非ジ出手里出现最多的那张卡 ≥ 60% ⇒ 这枚包是「只会一招」⇒ 阻断（可用 --force 越过并记账）。
- * 样本 < 100 个非ジ出手 ⇒ 判「不判」（样本不足不是合格）。 */
-const dg = degeneracyVerdict(brd);
-if (dg.level === 'degenerate') {
-  fails.push('单卡占比 ' + (100 * dg.share).toFixed(1) + '% ≥ ' + (100 * dg.maxShare) + '%（出现最多的是 ' + (dg.key || '?') + '） ——【不是只会一招】不成立〔原机器名：反退化〕');
-} else if (dg.level === 'underpowered' || dg.level === 'unknown') {
-  console.log('   ⚠ 反退化门：' + dg.reason);
-}
-console.log('   反退化门（非ジ单卡占比 ≥ ' + (100 * dg.maxShare) + '% 即阻断）：' + (dg.fail ? '✗ ' : '✓ ')
-  + (dg.level === 'unknown' ? '读不出' : (100 * dg.share).toFixed(1) + '%（' + (dg.key || '—') + '） ⇒ ' + dg.level));
+/* ===== 2026-10-29（DS 落的反退化门 · 千问 13:4x 按实测改成**记录栏**，升阻断等用户点名） =====
+ * 病是真的，而且尺上有数：一只"只镜面反射"的笨蛋在这套 arena 上夺1 **65.3% > v7 40.4%**
+ *   （锚 `scratch/ladder-anchor.json` ‖ `node tools/proto2/ladder.mjs --guard=…` 现在正确红，exit 4）。
+ *   ⚠ DS 原注释写 66.7%、锚里是 65.3%——我 13:4x 一度判它"引错了尺"，那是**我的归因错**：
+ *     同一枚尺上 reflect 夺1 = 20 局/格 64.7% ‖ 40 局/格 66.6% ‖ 120 局/格 65.3% ⇒ 那个区间是**剂量**给的，引用要带剂量。
+ * 但"60% 这条线当阻断"现在站不住，两条都是这一次量出来的（`docs/research/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）：
+ *   ① **池里就有人在上面**：全池 30 枚同口径（long ‖ multi 各 20 局）扫，≥60% 的有 **5 枚**
+ *      `G12H1 66.4‖72.3 · R-s123 71.0 · N5L-30 66.6 · v7l2c-101 63.0‖63.1 · SHIPPED-Ldemo 63.0`
+ *      ⇒ 门一上就否掉 1/6 个在册成员。而"只会一招"属哪一层，是你 10-28 那句裁度（单包只判"任何风格都不该有的缺陷"、能力覆盖归整池），不是我能从数里推的。
+ *   ② **门自己的剂量不够**：promote 缺省 20 局/模式 ⇒ 同一枚包 20 局读 63.0%、60 局读 **51.9%**（`SHIPPED-Ldemo`），
+ *      带内跨档摆动最大 12.6pt ⇒ 这条线在缺省剂量下**跨批可翻**，红绿量的不是包，是剂量。
+ * ⇒ 所以现在**只打印、不阻断**；接线保留"两模式各判、取更严的那个"（与上面"广度取严的进阻断"同形，10-25 用户裁定）。
+ *   要升阻断：用户点名后在本段末尾补 `fails.push(...)`，并把 `EPIRUS_BREADTH_GAMES` 缺省抬到 60——否则 ② 会让同一枚包判出两个结果。
+ *   样本 < 100 个非ジ出手 ⇒ 判"不判"（样本不足不是合格），这条留 DS 的原形状；本轮全池最小 n = 482，没有一枚走这条路。 */
+const dgL = degeneracyVerdict(brd), dgM = degeneracyVerdict(brdM);
+const dgStrict = (dgM.share || 0) > (dgL.share || 0) ? dgM : dgL;      /* 取严 = 两模式里占比更高的那一个 */
+const fmtDg = (dg) => (isFinite(dg.share) ? (100 * dg.share).toFixed(1) + '%（' + (dg.key || '—') + ' · n=' + dg.N + '）' : '读不出（' + dg.reason + '）');
+console.log('   反退化栏（非ジ最大单卡占比 ‖ 两模式各判、取更严 ‖ **只记录，不阻断**）：long ' + fmtDg(dgL) + ' ‖ multi ' + fmtDg(dgM)
+  + ' ⇒ 取严判 `' + dgStrict.level + '`（阈值 ' + (100 * dgStrict.maxShare) + '% ‖ 剂量 ' + Number(process.env.EPIRUS_BREADTH_GAMES || 20)
+  + ' 局/模式 ‖ 这一档跨档摆动实测最大 12.6pt）' + (dgStrict.fail ? ' ‖ 若升阻断这一枚会被拒（等用户裁）' : ''));
 /* ===== v1.5.71（第五轮复核 §4-2）：**狙击场探针** —— 只记录，**暂不阻断** =====
  * 标定（40~60 局/包）把复核建议的判据否掉了：复核建议"靶向率 ≥20%"，但**它没有判别力** ——
  * 种子冠军 45.3% / eco-34 47.7% / 线上包 43.8%，全都远高于均匀 25% ⇒ 谁也分不开。

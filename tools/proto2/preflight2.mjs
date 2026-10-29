@@ -81,7 +81,10 @@ const hasTarget = src.indexOf('targetGames') >= 0;
 const hasActual = /实际局数|gamesActual|ACTUAL/.test(src);
 chk(hasTarget && hasActual, '⑥ 预算：臂的运行器按「实际局数」停并打印它（标称 evals 与真实局数可差 15 倍）', 'targetGames=' + hasTarget + ' ‖ 实际局数回执=' + hasActual);
 
-/* ⑦ 强度尺防退化（2026-10-29 DS）：两道纯函数门必须能红、且不许误红 */
+/* ⑦ 强度尺防退化（2026-10-29 DS 落 ‖ 千问 13:4x 把接线改成记录栏）：**两道纯函数门必须能红、且不许误红**
+ *   ⚠ 这条判的是**函数本身有没有牙**，不是"promote 现在阻断不阻断"——
+ *      ① 在 promote 里 10-29 起**只打印**（全池 30 枚有 5 枚 ≥60%、且 20 局那一档跨档能摆 12.6pt ⇒ 阈值+剂量待用户裁），
+ *      ② 走研究侧硬失败（`ladder --guard` exit 4，且它现在还比锚的新鲜度）。 */
 const dgBad = degeneracyVerdict({ maxCardShare: 0.95, maxCardKey: 'reflect', N: 400 });
 const dgGood = degeneracyVerdict({ maxCardShare: 0.234, maxCardKey: 'gun', N: 400 });
 const dgSmall = degeneracyVerdict({ maxCardShare: 0.9, maxCardKey: 'reflect', N: 40 });

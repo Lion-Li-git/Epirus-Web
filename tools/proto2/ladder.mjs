@@ -22,21 +22,8 @@ import { install as installArch2 } from './arch2.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
-/* ===== 2026-10-29（DS · 强度尺修复）：`--guard=<锚文件>` ⇒ **arena 可判性门** =====
- * 判据（可失败）：任何一枚固定单技能打法的夺1 ≥ 参照包 v7 ⇒ 这套 arena 不能当强度尺（退化会被读成进步）。
- * 今晚实测：只镜面反射 66.7% ≥ v7 40.4% ⇒ 这道门现在**必须是红的**——这正是它的用途。
- * 读锚文件而不重跑：31 格 × 16 桌 × N 局 ≈ 臂成本的 31 倍，锚落一次就能反复用。
- * 退出码：0 = arena 有下限刻度；4 = arena 失效（缺行/缺 v7 行也算 4，不许当绿）。 */
-const GUARD_ANCHOR = arg('guard', '');
-if (GUARD_ANCHOR) {
-  let anc = null;
-  try { anc = JSON.parse(readFileSync(GUARD_ANCHOR, 'utf8')); } catch (e) { console.error('⛔ --guard 读不出锚文件 ' + GUARD_ANCHOR + '：' + String(e && e.message || e)); process.exit(4); }
-  const g = arenaGuardVerdict(anc);
-  if (g.level === 'unknown') { console.error('⛔ ' + g.reason); process.exit(4); }
-  console.log('[arena-guard] ' + g.reason);
-  console.log('  提示：' + (g.fail ? '⇒ 拿这套 arena 当适应度会把「只一招」读成强；先换/加列再训臂' : '⇒ 这道门是绿的，可以拿它当强度尺'));
-  process.exit(g.fail ? 4 : 0);
-}
+/* `--guard=<锚文件>` 那道 arena 可判性门**搬到这里之后**（`CELLS`/`POOL_FP`/`BIGT`/`ENGINE_FACE` 都在下面），
+ *   因为它要先能把锚的新鲜度读出来才能判——判据原文在文件末尾附近。 */
 const GAMES = Math.max(4, Number(arg('games', 120)) || 120);
 const TEMP = Number(arg('temp', 0.001));
 const ONLY = String(arg('only', 'guard,ji,charge,rand,v7')).split(',').filter(Boolean);
@@ -114,6 +101,39 @@ function cancelOtherLocal(state, pid) {
   return null;
 }
 const ENGINE_FACE = !argv.includes('--face=wide');
+/* ===== 2026-10-29（DS · 强度尺修复 ‖ 千问 13:3x 补上"锚必须新鲜"那一半）：`--guard=<锚文件>` ⇒ arena 可判性门 =====
+ * 判据（可失败）：任何一枚固定单技能打法的夺1 ≥ 参照包 v7 ⇒ 这套 arena 不能当强度尺（退化会被读成进步）。
+ * 真锚实测：只 `reflect` **65.3% ≥ v7 40.4%**（`scratch/ladder-anchor.json`）⇒ 这道门现在**必须是红的**，这正是它的用途。
+ *   （DS 原注释写 66.7%、本锚是 65.3%——我 13:4x 判它"引错了尺"，**那是我的归因错**：同一枚尺实测
+ *     reflect 夺1 = 20 局/格 64.7% ‖ 40 局/格 66.6% ‖ 120 局/格 65.3% ⇒ 那个区间是**剂量**给的，不是两把尺给的。
+ *     ⇒ 由此多立一条本尺条款：**rung 的读数要带 `gamesPerCell`**，跨剂量的 rung 差（此格 ±2pt）不许当判语。）
+ * 读锚而不重跑：31 格 × 16 桌 × N 局 ≈ 臂成本的 31 倍，锚落一次能反复判。
+ * ⚑ **新鲜度前置**（DS 的 P0 第 2 条）：锚量的是"刻度"，而刻度随 对手表 / 桌形 / 大雷档 / 候选面 / temp 变
+ *   ⇒ 这五条任一条对不上就 exit 4 报"锚过期"，**不去读那条会误导人的 verdict**（与 `profile2` 同一套判据、同一个同源来源）。
+ *   ⚠ 剂量不参与"过期"判定（名次与比较是尺度无关的），但会印出来：`--games=4` 那种锚的 rung 自身 SE 就有 ±5pt。
+ * 退出码：0 = arena 有下限刻度 ‖ 4 = arena 失效、锚过期、或锚里缺行（缺行也算 4，不许当绿）。 */
+const GUARD_ANCHOR = arg('guard', '');
+if (GUARD_ANCHOR) {
+  let anc = null;
+  try { anc = JSON.parse(readFileSync(GUARD_ANCHOR, 'utf8')); } catch (e) { console.error('⛔ --guard 读不出锚文件 ' + GUARD_ANCHOR + '：' + String(e && e.message || e)); process.exit(4); }
+  const cellsNow = CELLS.map((c) => c.n + ':' + c.name + ':' + c.idx).join(',');
+  const stale = [];
+  if (anc.poolFp !== POOL_FP) stale.push('对手表指纹：锚 ' + anc.poolFp + ' ‖ 本轮 ' + POOL_FP);
+  if (anc.cells !== cellsNow) stale.push('桌形/格序：锚 ' + anc.cells + ' ‖ 本轮 ' + cellsNow);
+  if (Number(anc.bigt) !== BIGT) stale.push('大雷档：锚 ' + anc.bigt + ' ‖ 本轮 ' + BIGT);
+  if (anc.engineFace !== ENGINE_FACE) stale.push('候选面：锚 ' + anc.engineFace + ' ‖ 本轮 ' + ENGINE_FACE);
+  if (Number(anc.temp) !== TEMP) stale.push('temp：锚 ' + anc.temp + ' ‖ 本轮 ' + TEMP + '（锚里的 v7 上限行随 temp 动）');
+  if (stale.length) {
+    console.error('⛔ 锚过期 ⇒ 不判 arena：' + stale.join(' ‖ ') + '\n   ⇒ 重落一次：node tools/proto2/ladder.mjs --games='
+      + (anc.gamesPerCell || 120) + ' --sweep=keys --anchors=' + GUARD_ANCHOR);
+    process.exit(4);
+  }
+  const g = arenaGuardVerdict(anc);
+  if (g.level === 'unknown') { console.error('⛔ ' + g.reason); process.exit(4); }
+  console.log('[arena-guard] ' + g.reason + ' ‖ 锚：' + anc.gamesPerCell + ' 局/格 × ' + anc.cellCount + ' 格 ‖ 指纹 ' + anc.poolFp + ' ‖ 生成于 ' + anc.generatedAt);
+  console.log('  提示：' + (g.fail ? '⇒ 拿这套 arena 当适应度会把「只一招」读成强；先换/加列再训臂' : '⇒ 这道门是绿的，可以拿它当强度尺'));
+  process.exit(g.fail ? 4 : 0);
+}
 function candsOf(state, pid, legal) {
   const lock = ENGINE_FACE ? cancelOtherLocal(state, pid) : false;
   return P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: lock }) || [];

@@ -979,7 +979,9 @@ export function aggressionProfile(W, params, GAMES, opts) {
  *                  分层带来的不是新总量，而是**可读性**：S 低到底是"只敢用一类"，还是"每类只薅一张"。
  *   S_norm    = S / ln(K_menu) ∈ [0,1]（**固定分母** ⇒ 不能靠"把菜单变穷"刷分，v1.5.86/DIV_K 的教训）
  *   G_eff     = exp(S)  —— 与历史的 `G 有效技能数` **同值**（口径不变 ⇒ 历史读数仍可比）
- *   maxCardShare = 出现最多的那张卡的占比（**反 spam 守卫**，只打印、不参与判定）
+ *   maxCardShare = 出现最多的那张卡的占比（**反 spam 守卫**）
+ *     ‖ 10-29 现状：`degeneracyVerdict` 吃它，`promote` 里**只打印不阻断**（升阻断等用户裁，理由见下面那只函数的注释）
+ *     ‖ ⚠ 它比 S/G_eff 更**剂量敏感**：同一枚包 20 局 63.0% ‖ 60 局 51.9%（`docs/research/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）
  *   catsUsed  = 占比 ≥1% 的类数（给人读的"覆盖了几类"）
  * ⚠️ 样本敏感（`docs/METHODOLOGY.md` 规则 22）：同一个包 n5=3.08 / n10=2.99 / n20=4.24 / n40=4.54
  *   ⇒ 返回值**必须带 N 与 games**，打印时一起报；小样本之间的 S 差**不可比**。
@@ -1070,13 +1072,19 @@ export function breadthProfile(W, params, mode, GAMES) {
   };
 }
 
-/* ===== 2026-10-29（DS · 强度尺修复）：反退化门 =====
- * 病（千问 10-29 夜）：一只「只镜面反射」的笨蛋在 16 格考卷上 66.7%，参照包 v7 只有 40.4%
- *   ⇒ 谁拿这套 arena 当适应度，就会被推向「单技能退化」，而读数会把它读成「进步」。
- * 两道**可失败**的门（纯函数 ⇒ 门可以喂合成输入验它）：
- *   ① degeneracyVerdict(brd)：单卡占比 ≥ 阈值 ⇒ 这枚包是退化档；
+/* ===== 2026-10-29（DS · 强度尺修复 ‖ 千问 13:4x 按实测改接线）：反退化门（纯函数） =====
+ * 病：一只「只镜面反射」的笨蛋在这 16 格 arena 上夺1 **65.3%**，参照包 v7 只有 **40.4%**
+ *   （锚 `scratch/ladder-anchor.json` ‖ `ladder --guard` 判红 exit 4）。
+ *   ⚠ 这一格 DS 写的是 66.7%、锚里是 65.3%——我 13:4x 一度判它"引错了尺"，**那是我的归因错**：
+ *     同一枚尺实测 reflect 夺1 = 20 局/格 **64.7%** ‖ 40 局/格 **66.6%** ‖ 120 局/格 **65.3%**
+ *     ⇒ 区间是**剂量**给的，不是两把尺给的 ⇒ 引用这格必须带剂量（ rung 自身 ±2pt 的剂量敏感性也是新量到的一格）。
+ * 两道**可失败**的门（纯函数 ⇒ 可以喂合成输入验它有没有牙，`preflight2` ⑦ 就干这件事）：
+ *   ① degeneracyVerdict(brd)：非ジ最大单卡占比 ≥ 阈值 ⇒ 判退化；
  *   ② arenaGuardVerdict(anchor)：任何一枚固定单技能打法的夺1 ≥ 参照包 ⇒ 这套 arena 不能当强度尺。
- */
+ * ⚑ **接线现状（10-29 改）**：② 走研究侧硬失败（`ladder --guard` exit 4）✔；① 在产品侧 `promote` **只记录不阻断**——
+ *   理由量出来了两条：全池 30 枚同口径有 **5 枚 ≥60%**（含硬档 `G12H1`、`R-s123`），且 20 局那一档同一枚包跨到 60 局能摆 12.6pt
+ *   （`docs/research/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）⇒ 阈值+剂量都还没定，升阻断等用户点名。
+ *   ⇒ 返回值里 `maxShare` / `minN` **每一格都带**（早先只在正常路径带 ⇒ 打印方一判 underpowered 就拿到 undefined，显示成 NaN%）。 */
 export function degeneracyVerdict(brd, opts) {
   const o = opts || {};
   const maxShare = (typeof o.maxShare === "number") ? o.maxShare : 0.60;
@@ -1084,8 +1092,8 @@ export function degeneracyVerdict(brd, opts) {
   const share = Number(brd && brd.maxCardShare);
   const N = Number(brd && brd.N);
   const key = (brd && brd.maxCardKey) || null;
-  if (!isFinite(share)) return { level: "unknown", fail: false, reason: "读不出 maxCardShare（探针缺失）" };
-  if (isFinite(N) && N > 0 && N < minN) return { level: "underpowered", fail: false, share, key, N, reason: "非ジ出手只有 " + N + " < " + minN + " ⇒ 不判（样本不足，不是合格）" };
+  if (!isFinite(share)) return { level: "unknown", fail: false, share: NaN, key, N, maxShare, minN, reason: "读不出 maxCardShare（探针缺失）" };
+  if (isFinite(N) && N > 0 && N < minN) return { level: "underpowered", fail: false, share, key, N, maxShare, minN, reason: "非ジ出手只有 " + N + " < " + minN + " ⇒ 不判（样本不足，不是合格）" };
   const fail = share >= maxShare;
   return { level: fail ? "degenerate" : "ok", fail, share, key, N, maxShare, minN };
 }
