@@ -203,6 +203,21 @@ export function parts(W, state, pid, cand) {
 }
 
 /** 编码一个候选：返回长度 = dims(R) 的数组（离线尺用；arch2 走 scene/candOf） */
+/* ===== 消融开关（第二十一段"哪几块承重"的账用的；**默认关** ⇒ 在册读数逐字不变）=====
+ * 语义：把 MANIFEST 里属于这些**块**的维全写成 0（宽度不变 ⇒ 布局/死维闸/接线自证全不用改）。
+ * 三条形状纪律：① 只许在装档之前设，且必须能关回去（`setAblate(null)` ⇒ 与从头到尾没开过逐字相同，selftest2 的 T17 钉这条）；
+ *   ② 认不出来的块名**当场抛**（不许静默吞 ⇒ "我以为在消融、其实什么也没关"是⑩–⑯那一族病）；
+ *   ③ 打印义务：任何开了它的读数都要把块名一起落盘（fit2 的 meta 里有 `ablock`）。 */
+let ABLATE = null;
+export function setAblate(names) {
+  if (!names || !names.length) { ABLATE = null; return null; }
+  ABLATE = new Set(names);
+  return [...ABLATE];
+}
+export function ablateOn() { return ABLATE ? [...ABLATE] : null; }
+export function isAblated(b) { return !!ABLATE && ABLATE.has(b); }
+export function ablatableBlocks(R) { return [...new Set(manifest(R).map((r) => r.block))]; }
+
 export function encode(W, state, pid, cand) {
   const R = W.EpirusRules;
   const M = manifest(R);
@@ -224,7 +239,12 @@ export function encode(W, state, pid, cand) {
   push(cp.t1 ? 1 : 0, ...targetScalars(sc, cp.t1));
   push(cp.t2 ? 1 : 0, ...targetScalars(sc, cp.t2), (cp.t1 && cp.t2) ? Math.abs(cp.t1.hp - cp.t2.hp) / sc.modeHp : 0);
   push(...cp.idOne);
-  if (out.length !== M.length) throw new Error('obs3 布局不自洽：拼出 ' + out.length + ' 列 ‖ MANIFEST 声明 ' + M.length + ' 列 ⇒ 差 ' + (out.length - M.length) + '（这条就是 1584 死权重那次的守卫）');
+  if (out.length !== M.length) throw new Error('obs3 布局不自洽：拼出 ' + out.length + ' 列 ‖ MANIFEST 声明 ' + M.length + ' 列 ⇒ 差 ' + (out.length - M.length) + ' 列（这条就是 1584 死权重那次的守卫）');
+  if (ABLATE) {
+    const seen = {};
+    for (let i = 0; i < out.length; i++) { const b = M[i].block; if (ABLATE.has(b)) { out[i] = 0; seen[b] = (seen[b] || 0) + 1; } }
+    for (const b of ABLATE) if (!seen[b]) throw new Error('消融的块名 `' + b + '` 在 MANIFEST 里不存在 ⇒ 这一路根本没关任何东西（别拿"关掉后没变化"当结论）');
+  }
   return out;
 }
 export { SEAT_N };

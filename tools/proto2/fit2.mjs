@@ -17,17 +17,29 @@
 import { writeFileSync } from 'node:fs';
 import { sandbox, loadChamp } from '../audit-lib.mjs';
 import { install as installArch2, layout } from './arch2.mjs';
+import { setAblate, ablateOn, ablatableBlocks } from './obs3.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const NDEC = Math.max(60, Number(arg('decisions', 1200)) || 1200);
 const INPUT = arg('input', 'v7') === 'obs3' ? 'obs3' : 'v7';
+/* ⭐ `--ablock=C.id,P.opp`（第二十一段"哪几块承重"的账）：**只关 obs3 面的整块**（写成 0，宽度不变）。
+ *   三条硬规矩：① 只许 `--input=obs3`（关 v7 面是另一台仪器，别混）；② 块名认错就抛（不许"以为关了其实没关"）；
+ *   ③ 开没开必须落进 meta 与打印行 ⇒ 任何引用这条数的人都看得见它关过什么。默认关 = 与旧读数逐字同。 */
+const ABLOCK = String(arg('ablock', '')).split(',').map((s) => s.trim()).filter(Boolean);
+if (ABLOCK.length && INPUT !== 'obs3') { console.error('⛔ `--ablock` 只作用于 obs3 输入面（`--input=obs3`）⇒ 否则这一路是空操作'); process.exit(2); }
 const L2 = Number(arg('l2', 0.01));
 const V7 = arg('v7', 'js/bundled-champion-3p.js');
 const OUT = arg('out', '');
 
 const W = sandbox();
 const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState;
+if (ABLOCK.length) {
+  const ok = new Set(ablatableBlocks(W.EpirusRules));
+  const bad = ABLOCK.filter((b) => !ok.has(b));
+  if (bad.length) { console.error('⛔ `--ablock` 里这些块名不存在：' + bad.join(',') + ' ⇒ 可用：' + [...ok].join(',')); process.exit(2); }
+  setAblate(ABLOCK);
+}
 /* ⚑ 老规矩：**先**读 v7 参照包（装 2.0 之后 unpack 只认 v:90 ⇒ 会静默读成 null） */
 let v7 = loadChamp(W, V7, '');
 if (!v7) { console.error('⛔ v7 参照包读不出：' + V7); process.exit(2); }
@@ -108,7 +120,8 @@ for (const fx of test) {
 const agree = hit / Math.max(1, nT), rho = rhoD ? rhoN / rhoD : 0;
 let baseTop1 = 0, bt = 0;
 for (const fx of test) { const c = P.candidatesFor(fx.state, fx.pid, T.econBase(fx.state, fx.pid, fx.legal), { lockTarget: false }); if (c && c.length >= 2) { bt++; baseTop1 += 1 / c.length; } }
-console.log('# 蒸馏 v7 → 2.0（' + (INPUT === 'obs3' ? 'S1o 吃 obs3' : 'S1 吃 v7 切片') + ' ‖ paramCount=' + P.paramCount() + '）');
+console.log('# 蒸馏 v7 → 2.0（' + (INPUT === 'obs3' ? 'S1o 吃 obs3' : 'S1 吃 v7 切片') + ' ‖ paramCount=' + P.paramCount()
+  + '）' + (ablateOn() ? ' ‖⭐ **消融开着**：关掉 ' + ablateOn().join('+') + '（宽度不变，那几块全写 0）' : ''));
 console.log('  决策 ' + fixtures.length + ' ‖ 拟合用前 ' + cut + ' ‖ **留出后 ' + (fixtures.length - cut) + '**（' + nT + ' 组有 ≥2 候选）');
 console.log('  拟合行数 ' + fit.rows + ' ‖ 组内 top-1 与 v7 一致率（留出）= ' + (100 * agree).toFixed(1) + '% ‖ 随机该是 ' + (100 * baseTop1 / Math.max(1, bt)).toFixed(1) + '%');
 const pairRate = pairTot ? pairOk / pairTot : 0;

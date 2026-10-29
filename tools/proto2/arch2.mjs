@@ -25,7 +25,7 @@
  *   ④ **评估次数**是预算，不是墙钟 —— 2.0 的前向比 v7 贵，同 evals 下更慢，横比只比 evals。
  */
 import { readFileSync } from 'node:fs';
-import { scene as obs3Scene, candOf as obs3CandOf } from './obs3.mjs';
+import { scene as obs3Scene, candOf as obs3CandOf, isAblated } from './obs3.mjs';
 
 /* ---- 特征切片（一律从 `P.features` 切，不自己重算）----
  * FEAT_S 213 = base(63) ‖ 对手槽 4×10 ‖ 历史(我 4 + 对手 4×4) ‖ T 5×4 ‖ B 5×14
@@ -271,9 +271,10 @@ export function install(W, opts) {
     const mean = BUF.mean.fill(0), mx = BUF.mx.fill(0);
     for (const s of sc.seats) {
       let k = 0;
-      for (let j = 0; j < 22; j++) svBuf[k++] = s.public[j];
-      for (let j = 0; j < 5; j++) svBuf[k++] = s.rel[j];
-      svBuf[k++] = s.isSelf;
+      const seatOff = s.isSelf ? isAblated('S.self') : isAblated('P.opp');
+      for (let j = 0; j < 22; j++) svBuf[k++] = seatOff ? 0 : s.public[j];
+      for (let j = 0; j < 5; j++) svBuf[k++] = (seatOff || isAblated('R2')) ? 0 : s.rel[j];
+      svBuf[k++] = seatOff ? 0 : s.isSelf;
       if (k !== L.seatIn) throw new Error('布局不自洽：逐席拼进 ' + k + ' 列而声明 seatIn=' + L.seatIn);
       const e = new Float64Array(L.seatH);
       encode(params, svBuf, L.seatIn, L.seatH, seatBias, e);
@@ -285,12 +286,16 @@ export function install(W, opts) {
 
     const xin = new Float64Array(L.ctxDim);
     let p = 0;
-    for (let i = 0; i < sc.g.length; i++) xin[p++] = sc.g[i];
-    for (let i = 0; i < sc.priv.length; i++) xin[p++] = sc.priv[i];
-    for (let i = 0; i < sc.seq.length; i++) xin[p++] = sc.seq[i];
-    for (let i = 0; i < sc.sums.length; i++) xin[p++] = sc.sums[i];
-    for (let j = 0; j < L.seatH; j++) xin[p++] = mean[j];
-    for (let j = 0; j < L.seatH; j++) xin[p++] = mx[j];
+    /* ⭐ 消融开关必须接在**网络这条路**上（10-29 11:3x 实测抓到的：只接在 `obs3.encode()` 里 ⇒ 七种消融全给出同一批数，
+     *   因为 S1o 的前向自己拼 `xin/afbuf`，**不经过 encode()**）。块名与 obs3 的 MANIFEST 同一套 ⇒ 离线尺与网络同一语义。 */
+    const ABL = { g: isAblated('G'), priv: isAblated('S.private'), seq: isAblated('Q.seq'), out: isAblated('Q.out'), sums: isAblated('P.add'), pool: isAblated('P.opp') };
+    for (let i = 0; i < sc.g.length; i++) xin[p++] = ABL.g ? 0 : sc.g[i];
+    for (let i = 0; i < sc.priv.length; i++) xin[p++] = ABL.priv ? 0 : sc.priv[i];
+    const SEQ_CUT = sc.seq.length - 16;                       /* obs3 的 48 维序列块 = 32 维 `Q.seq` ‖ 16 维 `Q.out`（末段） */
+    for (let i = 0; i < sc.seq.length; i++) xin[p++] = (ABL.seq || (i >= SEQ_CUT && ABL.out)) ? 0 : sc.seq[i];
+    for (let i = 0; i < sc.sums.length; i++) xin[p++] = ABL.sums ? 0 : sc.sums[i];
+    for (let j = 0; j < L.seatH; j++) xin[p++] = ABL.pool ? 0 : mean[j];
+    for (let j = 0; j < L.seatH; j++) xin[p++] = ABL.pool ? 0 : mx[j];
     if (p !== L.ctxDim) throw new Error('布局不自洽：ctx 拼进 ' + p + ' 而声明 ' + L.ctxDim + '（seatH 改动后 selfDim 账要重算）');
     const hctx = encode(params, xin, L.ctxDim, L.hid, ctxBias, BUF.hctx);
     let q = params[qOff + L.hid]; for (let j = 0; j < L.hid; j++) q += params[qOff + j] * hctx[j];
@@ -301,8 +306,8 @@ export function install(W, opts) {
     for (let i = 0; i < n; i++) {
       const cp = obs3CandOf(sc, cands[i]);
       let m2 = 0;
-      for (let j = 0; j < cp.base.length; j++) afbuf[m2++] = cp.base[j];
-      for (let j = 0; j < cp.idOne.length; j++) afbuf[m2++] = cp.idOne[j];
+      for (let j = 0; j < cp.base.length; j++) afbuf[m2++] = isAblated('C.cand') ? 0 : cp.base[j];
+      for (let j = 0; j < cp.idOne.length; j++) afbuf[m2++] = isAblated('C.id') ? 0 : cp.idOne[j];
       if (m2 !== L.actIn) throw new Error('布局不自洽：actEnc 拼进 ' + m2 + ' 而声明 actIn=' + L.actIn + ' ⇒ 差 ' + Math.abs(L.actIn - m2) + ' 列**死权重**（skills=' + L.skills + '）');
       const ae = encode(params, afbuf, L.actIn, L.actH, actBias, BUF.ae);
       const t1 = cands[i].target == null ? null : cands[i].target;
