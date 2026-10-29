@@ -104,10 +104,17 @@ export function createArena2(W, opts) {
     const reps = (shapes[i].n >= 8 ? highNW : 1);
     for (let k = 0; k < reps; k++) loopShapes.push({ idx: i, n: shapes[i].n, mode: shapes[i].mode });
   }
+  /* `stratified=1`（DS P1）：每局非被测席**优先塞捕食者**（bigT/reflect/snipe/guard 轮换），
+   *   剩余席位再走 roster 轮换 ⇒ 同一条单技能不能靠"51 项里天敌只占 1 席"刷平均分。
+   *   座位不够时（n=2/3）按 gameSeq 轮换捕食者，跨局覆盖。名单来自 battery 的实测对位，不靠猜。 */
+  const stratified = !!o.stratified;
+  const PREDATORS = ['bigT', 'reflect', 'snipe', 'guard'].filter((k) => R.skills.some((s) => s.key === k));
+  if (stratified && !PREDATORS.length) throw new Error('createArena2: stratified=1 但捕食者键一个都不存在');
   const fp = ['arena2.v' + ARENA2_VERSION, 'pool=' + poolFp, 'poolSeed=' + poolSeed,
     'shapes=' + shapes.map((s) => s.n + ':' + s.mode).join(','),
     'roster=' + roster.map((r) => r.name).join(','),
-    highNW > 1 ? 'highN=' + highNW + '（仅训练环）' : 'highN=1'].join('|');
+    highNW > 1 ? 'highN=' + highNW + '（仅训练环）' : 'highN=1',
+    stratified ? 'stratified=' + PREDATORS.join('+') : 'stratified=0'].join('|');
   const fixedByKey = {};
   for (const r of roster) if (r.kind === 'fixed') fixedByKey[r.name.slice(5)] = r.sel;
   const fixed = (k) => fixedByKey[k];
@@ -117,13 +124,24 @@ export function createArena2(W, opts) {
     const n = shape.n;
     const seed = ((salt + gameSeq * 104729 + shapeIdx * 7919 + n * 97) >>> 0) || 1;
     const seat = gameSeq % n;
-    const choosers = [], classes = [];
-    for (let pid = 0; pid < n; pid++) {
-      if (pid === seat) { choosers.push(sel); classes.push('@me'); continue; }
-      const ri = (gameSeq * 7 + pid * 11 + shapeIdx * 13 + salt) % roster.length;
-      const e = roster[ri];
-      choosers.push(e.kind === 'random' ? randChooser(P, T, (seed ^ (pid * 2654435761)) >>> 0, R.SK.JI) : e.sel);
-      classes.push(e.name);
+    const choosers = new Array(n), classes = new Array(n);
+    choosers[seat] = sel; classes[seat] = '@me';
+    const oppPids = [];
+    for (let pid = 0; pid < n; pid++) if (pid !== seat) oppPids.push(pid);
+    const predN = stratified ? Math.min(oppPids.length, PREDATORS.length) : 0;
+    const predStart = gameSeq % Math.max(1, PREDATORS.length);
+    for (let pi = 0; pi < oppPids.length; pi++) {
+      const pid = oppPids[pi];
+      let e;
+      if (pi < predN) {
+        const k = PREDATORS[(predStart + pi) % PREDATORS.length];
+        e = { name: 'only:' + k, kind: 'fixed', sel: fixedByKey[k] };
+      } else {
+        const ri = (gameSeq * 7 + pid * 11 + shapeIdx * 13 + salt) % roster.length;
+        e = roster[ri];
+      }
+      choosers[pid] = e.kind === 'random' ? randChooser(P, T, (seed ^ (pid * 2654435761)) >>> 0, R.SK.JI) : e.sel;
+      classes[pid] = e.name;
     }
     const rm = T.oneGameN(choosers, seed, n, { regen: 0, mode: shape.mode });
     const st = rm.state;
@@ -240,7 +258,7 @@ export function createArena2(W, opts) {
     return { win: 100 * w / Math.max(1, g), games: g, cells: cells.length };
   }
   return {
-    version: ARENA2_VERSION, fp, temp, pool, poolFp, roster, shapes, poolSeed, highN: highNW, loopShapes,
+    version: ARENA2_VERSION, fp, temp, pool, poolFp, roster, shapes, poolSeed, highN: highNW, loopShapes, stratified, predators: PREDATORS,
     fixed, evalChooser, evalParams, verifyWired, legacyCheck,
     chooserOf: (params, t) => T.policyChooserN(params, t == null ? temp : t),
     rosterNames: () => roster.map((r) => r.name),
@@ -262,6 +280,7 @@ function main() {
   const TEMPS = String(arg('temps', '')).split(',').map(Number).filter((x) => x > 0);
   const LEGACY = Math.max(0, Number(arg('legacy-check', 0)) || 0);
   const POOLSEED = Number(arg('poolSeed', POOL_SEED));
+  const STRAT = arg('strat', '') === '1';
   const JSON_OUT = arg('json', '');
   const REF = arg('ref', REF_PACK);
   if (!(TEMP > 0)) { console.error('⛔ --temp 要正数'); process.exit(2); }
@@ -273,9 +292,10 @@ function main() {
   if (!ref) { console.error('⛔ 参照包读不出（' + REF + '）⇒ 对手表无法固定'); process.exit(2); }
   const refParams = Float64Array.from(ref);
   if (typeof T.setBigTPush === 'function') T.setBigTPush(12);
-  const A = createArena2(W, { refParams, temp: TEMP, poolSeed: POOLSEED });
+  const A = createArena2(W, { refParams, temp: TEMP, poolSeed: POOLSEED, stratified: STRAT });
   console.log('# arena2 扩表考卷 ‖ 指纹 ' + A.fp + ' ‖ 桌形 ' + A.shapes.length + '（' + A.shapes.map((s) => s.n + ':' + s.mode).join(',') + '）' +
     ' ‖ 对手表 ' + A.roster.length + ' 项（' + A.pool.length + ' 脚本 bot + ' + (A.roster.length - A.pool.length - 1) + ' 单技能 + 均匀随机）' +
+    (A.stratified ? ' ‖ **分层场**（每局优先塞 ' + A.predators.join('/') + '）' : '') +
     ' ‖ 每格 ' + GPS + ' 局 ‖ ' + (TEMPS.length ? '温度扫描 ' + TEMPS.join('/') : 'temp=' + TEMP));
 
   if (LEGACY) {
@@ -329,13 +349,23 @@ function main() {
   }
   if (TEMPS.length && packParams) {
     const ps = rows.filter((r) => r.tag.indexOf(packTag) === 0);
+    const vs = rows.filter((r) => r.tag.indexOf('参照v7') === 0);
     const bn = ps.slice().sort((a, b) => b.score - a.score)[0];
     const bc = ps.slice().sort((a, b) => b.cleanScore - a.cleanScore)[0];
+    /* P5（DS 10-29 夜）：**温度留出**——在 2P+3P 上选温度，在 5P/8P/10P 上评。
+     * 全桌形最佳温度是"选温 + 评价同一批桌"的乐观值，不能单独当结论（§十二 实测差 0.103）。 */
+    const shapeN = (k) => parseInt(k.split(':')[0], 10);
+    const meanClean = (r, pred) => { let s = 0, c = 0; for (const k in r.byShape) if (pred(shapeN(k))) { s += r.byShape[k].cleanScore; c++; } return c ? s / c : NaN; };
+    const lowN = (r) => meanClean(r, (n) => n <= 3);
+    const highN = (r) => meanClean(r, (n) => n >= 5);
+    const bl = ps.slice().sort((a, b) => lowN(b) - lowN(a))[0];
+    const vlc = vs.length ? vs.slice().sort((a, b) => lowN(b) - lowN(a))[0] : null;
     console.log('\n⇒ 被测包最佳温度：按净胜 **t=' + bn.temp + '**（' + bn.score.toFixed(3) + ' / 夺1 ' + pct(bn.first) + '）‖ 按干净净胜 **t=' + bc.temp + '**（' + bc.cleanScore.toFixed(3) + ' / 夺1 ' + pct(bc.first) + '）');
+    console.log('   **温度留出**（2P+3P 选温 → 5P/8P/10P 评价）：选温 t=' + bl.temp + '，留出高 n 干净净胜 **' + highN(bl).toFixed(3) + '**' +
+      (vlc ? ' ‖ v7 同规则：选温 t=' + vlc.temp + '，留出 ' + highN(vlc).toFixed(3) + ' ⇒ 差 ' + (highN(bl) - highN(vlc)).toFixed(3) : ''));
     if (RUN_V7) {
-      const vs = rows.filter((r) => r.tag.indexOf('参照v7') === 0);
       const vc = vs.slice().sort((a, b) => b.cleanScore - a.cleanScore)[0];
-      console.log('   参照 v7 最佳干净净胜 ' + vc.cleanScore.toFixed(3) + '（t=' + vc.temp + '）⇒ 差距 ' + (bc.cleanScore - vc.cleanScore).toFixed(3) + ' 干净净胜');
+      console.log('   参照 v7 最佳干净净胜 ' + vc.cleanScore.toFixed(3) + '（t=' + vc.temp + '）⇒ 全桌形差距 ' + (bc.cleanScore - vc.cleanScore).toFixed(3) + '（**这是选温乐观值**）');
     }
   }
   const rungs = rows.filter((r) => r.tag.indexOf('only:') === 0).sort((a, b) => b.first - a.first);
