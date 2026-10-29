@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -71,6 +71,13 @@ const ARENA_PEN = Math.max(0, Number(arg('arenaPen', 0)) || 0);
  * 判据（预登记，HANDOFF §四 P0-2）：8P/10P 每格 ≥ v7−3pt ‖ 总干净胜 ≥ 同起点标量臂最佳(0.211)−2pt ‖ 3 种子最小值 ≥ v7 同场 ≈0.10。
  * ⚠ 与 `--arenaPen` 互斥：两者都换 byScore 的判据，同时开 = 一次对照两个自由量。 */
 const ARENA_LEX = arg('arenaLex', '') === '1';
+/* ===== `--arenaFloorPen=λ`（10-30 凌晨，#161 的预登记落点）：**标量 + 分格地板罚项** =====
+ * 预登记（HANDOFF §四 P0-2）："任一条不过 ⇒ 词典序不成立，回标量 + 分格罚项" ⇒ 这就是那条回退路。
+ * 当选分 = `fit − λ·Σ_k max(0, v7地板_k − 格分_k)`（连续版词典序：低于地板的格按差额扣分，不设跳变）；
+ * 与词典序的区别：允许"低一格买两格"的交易（词典序先数格数不许交易），λ 控制汇率。
+ * 判据沿用 P0-2 同一套三条（8P/10P 每格 ≥ v7−3pt ‖ 总 ≥ 0.211−2pt ‖ 3 种子最小 ≥ v7 同场）。
+ * ⚠ 与 --arenaLex / --arenaPen 互斥（都换 byScore 判据）。 */
+const ARENA_FPEN = Math.max(0, Number(arg('arenaFloorPen', 0)) || 0);
 const DEG = arg('degenerate', '') === '1';
 /* ===== §E822（10-28 傍晚 · 千问）：`--targetGames=` ⇒ **按计数器停，不按记账停** =====
  * 为什么必须加：实测同一 GA 的"每代真打几局"**不是常数**（60 evals 校准时 ≈8 局/代，6000 evals 真跑时 ≈2 局/代
@@ -153,6 +160,8 @@ const ARENA_STRAT_MIX = arg('arenaStratMix', ARENA_STRAT_ARG === 'mild' ? '0.5' 
 if (ARENA_DIV && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaDiverse 需要 --arena2=1 且 --fxSelect=1（多样性只读冻结验证那一把）'); process.exit(7); }
 if (ARENA_LEX && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaLex 需要 --arena2=1 且 --fxSelect=1（词典序只换冻结桌的接受判据）'); process.exit(7); }
 if (ARENA_LEX && ARENA_PEN > 0) { console.error('⛔ --arenaLex 与 --arenaPen 互斥（都换 byScore 的判据，一次对照只许一个自由量）'); process.exit(7); }
+if (ARENA_FPEN > 0 && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaFloorPen 需要 --arena2=1 且 --fxSelect=1（地板罚项只换冻结桌的接受判据）'); process.exit(7); }
+if (ARENA_FPEN > 0 && (ARENA_LEX || ARENA_PEN > 0)) { console.error('⛔ --arenaFloorPen 与 --arenaLex/--arenaPen 互斥（都换 byScore 的判据）'); process.exit(7); }
 let ARENA_REF = null;
 if (ARENA2) {
   const c0 = loadChamp(W, 'js/bundled-champion-3p.js', HERE + '/..');
@@ -232,11 +241,11 @@ if (ARENA2) {
 /* P0-2（#161）：词典序地板 = v7 在**同一张冻结桌**上的逐格读数，必须在开臂前量好存底。
  * 同 salt 同局号 ⇒ 之后每个子代的冻结评估与它**逐局配对**，"低于地板"比的是权重差不是抽桌差。 */
 var V7_FLOOR = null;
-if (ARENA && ARENA_LEX) {
+if (ARENA && (ARENA_LEX || ARENA_FPEN > 0)) {
   const fr = ARENA.evalParams(ARENA_REF, { phase: 'frozen', gamesPerShape: Math.max(8, FXG || 0), temp: ARENA_TEMP, cur: ARENA_CUR });
   V7_FLOOR = fr.byShape;
   const cellOf = function (bs, k) { return ARENA_CUR === 'clean' ? bs[k].cleanScore : bs[k].score; };
-  console.log('[cem-arm] ⚙ **词典序当选开**（#161）：地板 = v7 冻结桌逐格（' + Object.keys(V7_FLOOR).length + ' 格 × ' + Math.max(8, FXG || 0) + ' 局/格，货币=' + ARENA_CUR + '，与子代同局配对）');
+  console.log('[cem-arm] ⚙ **' + (ARENA_LEX ? '词典序当选开' : '地板罚项当选开') + '**（#161）：地板 = v7 冻结桌逐格（' + Object.keys(V7_FLOOR).length + ' 格 × ' + Math.max(8, FXG || 0) + ' 局/格，货币=' + ARENA_CUR + '，与子代同局配对）' + (ARENA_FPEN > 0 ? ' ‖ λ=' + ARENA_FPEN : ''));
   console.log('   地板：' + Object.keys(V7_FLOOR).map(function (k) { return k + ' ' + cellOf(V7_FLOOR, k).toFixed(3); }).join(' ‖ '));
 }
 /* §E822 起手三件固定动作（都是被"读数看着正常"逼出来的）：
@@ -375,6 +384,7 @@ const cpG = TARGET_G ? [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return Mat
 let ESA_DIV_STAT = null;
 let ESA_SIG_STAT = null;
 let ESA_LEX_STAT = null;   /* P0-2：词典序终态元组（esa 分支里赋值，row 里引用） */
+let ESA_FPEN_STAT = null;  /* P0-2 回退：地板罚项终态（同上） */
 
 if (MODE === 'esa') {
   /* (1+λ)-ES：**全部算子都由本工具拥有**（父代 + λ 个子代各过一遍 `P.mutatePolicy`）
@@ -402,12 +412,21 @@ if (MODE === 'esa') {
     return { below: below, worst: worst };
   };
   let parentLex = null;
+  /* --arenaFloorPen：地板罚项分（连续版词典序）。 */
+  const floorGapSum = function (bs) {
+    let s = 0;
+    for (const k in V7_FLOOR) { const g = cellOf(V7_FLOOR, k) - cellOf(bs, k); if (g > 0) s += g; }
+    return s;
+  };
+  const fpenOf = function (fx) { return fx.fit - ARENA_FPEN * floorGapSum(fx.byShape); };
+  let parentFpen = 0, parentGap = 0;
   if (FXSEL) {
     const pe = evalFixed(parent, 500, 0, FXG || undefined);
     parentFix = pe.fit;
     parentShare = pe.maxCard ? pe.maxCard.share : 0;
     parentPen = penOf(parentFix, parentShare);
     if (ARENA_LEX) parentLex = lexTupleOf(pe.byShape);
+    if (ARENA_FPEN > 0) { parentGap = floorGapSum(pe.byShape); parentFpen = pe.fit - ARENA_FPEN * parentGap; }
   }
   const r = rngFor(SEED + 17);
   void r;
@@ -440,15 +459,17 @@ if (MODE === 'esa') {
           const cf = evalFixed(child, 500, 0, FXG || undefined);
           const cfShare = cf.maxCard ? cf.maxCard.share : 0;
           const candLex = ARENA_LEX ? lexTupleOf(cf.byShape) : null;
-          /* byScore 三档：词典序（#161）‖ 罚项（--arenaPen）‖ 标量净胜（原口径）——一次只许开一档 */
+          /* byScore 四档：词典序（#161）‖ 地板罚项（预登记回退）‖ 罚项（--arenaPen）‖ 标量净胜（原口径）——一次只许开一档 */
           const byScore = ARENA_LEX
             ? (candLex.below !== parentLex.below ? candLex.below < parentLex.below
               : (Math.abs(candLex.worst - parentLex.worst) > 1e-12 ? candLex.worst > parentLex.worst : cf.fit > parentFix))
-            : (ARENA_PEN > 0 ? penOf(cf.fit, cfShare) > parentPen : cf.fit > parentFix);
+            : (ARENA_FPEN > 0 ? fpenOf(cf) > parentFpen
+              : (ARENA_PEN > 0 ? penOf(cf.fit, cfShare) > parentPen : cf.fit > parentFix));
           const byDiv = DIV && cf.fit >= parentFix - DIV_TOL && cfShare < parentShare - DIV_DELTA;
           if (byScore || byDiv) {
             parentFix = cf.fit; parent = Float64Array.from(child); parentShare = cfShare; parentPen = penOf(cf.fit, cfShare);
             if (ARENA_LEX) parentLex = candLex;
+            if (ARENA_FPEN > 0) { parentGap = floorGapSum(cf.byShape); parentFpen = fpenOf(cf); }
             if (e.fit > bestFit) bestFit = e.fit;
             best = child; accepted++; ok = true;
             if (byScore) accScore++; else accDiv++;
@@ -489,6 +510,9 @@ if (MODE === 'esa') {
   if (ARENA_LEX && parentLex) { console.log('[cem-arm] ⚑ **词典序终态**（#161）：低于地板格数 ' + parentLex.below + '/' + Object.keys(V7_FLOOR).length +
     ' ‖ 最差格余量 ' + parentLex.worst.toFixed(3) + ' ‖ 冻结桌总分 ' + parentFix.toFixed(3) + '（货币=' + ARENA_CUR + '）');
   ESA_LEX_STAT = { below: parentLex.below, worst: parentLex.worst, floorCells: Object.keys(V7_FLOOR).length }; }
+  if (ARENA_FPEN > 0) { console.log('[cem-arm] ⚑ **地板罚项终态**（λ=' + ARENA_FPEN + '）：地板缺口和 ' + parentGap.toFixed(3) +
+    ' ‖ 罚后分 ' + parentFpen.toFixed(3) + ' ‖ 冻结桌总分 ' + parentFix.toFixed(3));
+  ESA_FPEN_STAT = { lam: ARENA_FPEN, gap: parentGap, after: parentFpen, total: parentFix }; }
   ESA_DIV_STAT = { accepted: accepted, byScore: accScore, byDiv: accDiv, divProbes: divProbes, parentShare: parentShare };
 } else if (MODE === 'ga') {
   const tr = T.makeTrainer({ popSize: POP, gamesPerOpp: GAMES });
@@ -572,6 +596,7 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
     stratCap: ARENA.stratCap, stratMix: ARENA.stratMix,
     divTol: DIV_TOL, divDelta: DIV_DELTA, divEvery: DIV_EVERY, divTrigger: DIV_TRIGGER, esa: ESA_DIV_STAT,
     lex: ESA_LEX_STAT,
+    fpen: ESA_FPEN_STAT,
     bestMaxCard: ho.maxCard, startMaxCard: hoStart.maxCard, bestByShape: ho.byShape } : null,
   curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel };
 if (OUT) {
