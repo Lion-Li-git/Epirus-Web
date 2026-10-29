@@ -156,7 +156,11 @@ const POLICIES = {
   guard: { label: '只按架势', sel: pickBy((c) => GUARD.indexOf(c.key) >= 0) },
   ji: { label: '只开枪ジ', sel: pickBy((c) => c.key === R.SK.JI) },
   charge: { label: '只蓄能', sel: pickBy((c) => c.key === R.SK.CHARGE) },
-  reflect: { label: '只镜面反射', sel: pickBy((c) => c.key === 'reflect') },
+  /* ⚑ 术语更正（10-29 用户点出）：`reflect` 是**反弹**（`rules.js:55`，cost=0 后手防御，只反弹枪/坦克），
+   *   **不是镜面反射**。镜面反射是另一枚 `mirror`（`rules.js:87`，cost=3、SPECIAL、复制目标伤害打目标2）。
+   *   我把前者错标成"只镜面反射"并据此写了 65.3% 的判语 ⇒ 两枚分开列，名字按 `rules.js` 的 name 来。 */
+  reflect: { label: '只反弹', sel: pickBy((c) => c.key === 'reflect') },
+  mirror: { label: '只镜面反射', sel: pickBy((c) => c.key === 'mirror') },
   armor: { label: '只装甲', sel: pickBy((c) => c.key === 'armor') },
   rand: { label: '均匀乱选', sel: null },   /* 用这一格自己的定标流抽 */
   v7: { label: '参照包 v7', sel: T.policyChooserN(ref, TEMP) },
