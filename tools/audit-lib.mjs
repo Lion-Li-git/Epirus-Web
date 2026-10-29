@@ -1070,6 +1070,44 @@ export function breadthProfile(W, params, mode, GAMES) {
   };
 }
 
+/* ===== 2026-10-29（DS · 强度尺修复）：反退化门 =====
+ * 病（千问 10-29 夜）：一只「只镜面反射」的笨蛋在 16 格考卷上 66.7%，参照包 v7 只有 40.4%
+ *   ⇒ 谁拿这套 arena 当适应度，就会被推向「单技能退化」，而读数会把它读成「进步」。
+ * 两道**可失败**的门（纯函数 ⇒ 门可以喂合成输入验它）：
+ *   ① degeneracyVerdict(brd)：单卡占比 ≥ 阈值 ⇒ 这枚包是退化档；
+ *   ② arenaGuardVerdict(anchor)：任何一枚固定单技能打法的夺1 ≥ 参照包 ⇒ 这套 arena 不能当强度尺。
+ */
+export function degeneracyVerdict(brd, opts) {
+  const o = opts || {};
+  const maxShare = (typeof o.maxShare === "number") ? o.maxShare : 0.60;
+  const minN = (typeof o.minN === "number") ? o.minN : 100;
+  const share = Number(brd && brd.maxCardShare);
+  const N = Number(brd && brd.N);
+  const key = (brd && brd.maxCardKey) || null;
+  if (!isFinite(share)) return { level: "unknown", fail: false, reason: "读不出 maxCardShare（探针缺失）" };
+  if (isFinite(N) && N > 0 && N < minN) return { level: "underpowered", fail: false, share, key, N, reason: "非ジ出手只有 " + N + " < " + minN + " ⇒ 不判（样本不足，不是合格）" };
+  const fail = share >= maxShare;
+  return { level: fail ? "degenerate" : "ok", fail, share, key, N, maxShare, minN };
+}
+
+export function arenaGuardVerdict(anchor, opts) {
+  const o = opts || {};
+  const margin = (typeof o.margin === "number") ? o.margin : 0;
+  const rungs = (anchor && Array.isArray(anchor.rungs)) ? anchor.rungs : [];
+  const v7 = Number(anchor && anchor.v7Win);
+  const fixed = rungs.filter(function (r) { return r && r.key !== "v7" && r.key !== "rand" && isFinite(Number(r.win)); });
+  if (!fixed.length || !isFinite(v7)) return { level: "unknown", fail: false, reason: "锚里缺固定打法行或 v7 行 ⇒ 读不出（不是合格）" };
+  let best = fixed[0];
+  fixed.forEach(function (r) { if (Number(r.win) > Number(best.win)) best = r; });
+  const bestWin = Number(best.win), bestKey = best.key;
+  const fail = bestWin >= v7 - margin;
+  /* ⚠ 口径：ladder 锚里的 win/v7Win 是**百分点数**（65.26 = 65.26%），不是 0..1 比例 ⇒ 打印不许再乘 100
+   *   （第一版乘了 100，输出「6526.0%」——这就是"口径写错"的活例，留在这里当反例）。 */
+  return { level: fail ? "broken-arena" : "ok", fail, bestWin, bestKey, v7Win: v7, margin,
+    reason: fail ? ("固定打法「只" + bestKey + "」" + bestWin.toFixed(1) + "% ≥ 参照包 v7 " + v7.toFixed(1) + "% ⇒ 这套 arena 会把退化读成进步")
+                 : ("最好的固定打法「只" + bestKey + "」" + bestWin.toFixed(1) + "% < v7 " + v7.toFixed(1) + "% ⇒ arena 有下限刻度") };
+}
+
 /** v1.5.234：**不认识的 `--` 参数必须响亮失败**（仓规：静默忽略 = 假读数）。
  * 病：我今天两次栽在这里 —— `probe-ep-reach --cost=3`（该工具没有这个参数）与
  *   `probe-bead-loop --fields=mirror`（**头注写了、代码没实现**）⇒ 两次读数都照旧出来，

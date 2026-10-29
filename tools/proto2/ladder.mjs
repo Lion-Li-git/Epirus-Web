@@ -17,11 +17,26 @@
  * 用法：node tools/proto2/ladder.mjs [--games=120] [--temp=0.001] [--only=guard,ji,charge,rand,v7] [--anchors=scratch/ladder-anchor.json]
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { sandbox, loadChamp, buildPoolSeeded, poolFingerprint } from '../audit-lib.mjs';
+import { sandbox, loadChamp, buildPoolSeeded, poolFingerprint, arenaGuardVerdict } from '../audit-lib.mjs';
 import { install as installArch2 } from './arch2.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
+/* ===== 2026-10-29（DS · 强度尺修复）：`--guard=<锚文件>` ⇒ **arena 可判性门** =====
+ * 判据（可失败）：任何一枚固定单技能打法的夺1 ≥ 参照包 v7 ⇒ 这套 arena 不能当强度尺（退化会被读成进步）。
+ * 今晚实测：只镜面反射 66.7% ≥ v7 40.4% ⇒ 这道门现在**必须是红的**——这正是它的用途。
+ * 读锚文件而不重跑：31 格 × 16 桌 × N 局 ≈ 臂成本的 31 倍，锚落一次就能反复用。
+ * 退出码：0 = arena 有下限刻度；4 = arena 失效（缺行/缺 v7 行也算 4，不许当绿）。 */
+const GUARD_ANCHOR = arg('guard', '');
+if (GUARD_ANCHOR) {
+  let anc = null;
+  try { anc = JSON.parse(readFileSync(GUARD_ANCHOR, 'utf8')); } catch (e) { console.error('⛔ --guard 读不出锚文件 ' + GUARD_ANCHOR + '：' + String(e && e.message || e)); process.exit(4); }
+  const g = arenaGuardVerdict(anc);
+  if (g.level === 'unknown') { console.error('⛔ ' + g.reason); process.exit(4); }
+  console.log('[arena-guard] ' + g.reason);
+  console.log('  提示：' + (g.fail ? '⇒ 拿这套 arena 当适应度会把「只一招」读成强；先换/加列再训臂' : '⇒ 这道门是绿的，可以拿它当强度尺'));
+  process.exit(g.fail ? 4 : 0);
+}
 const GAMES = Math.max(4, Number(arg('games', 120)) || 120);
 const TEMP = Number(arg('temp', 0.001));
 const ONLY = String(arg('only', 'guard,ji,charge,rand,v7')).split(',').filter(Boolean);

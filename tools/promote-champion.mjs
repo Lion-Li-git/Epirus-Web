@@ -26,7 +26,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX, extractJsonObject, parseMetaTolerant } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX, extractJsonObject, parseMetaTolerant, degeneracyVerdict } from './audit-lib.mjs';
 /* v1.5.152（DS 09-22 · 用户裁定"把真桌 ε=0.2 接进体检，只记录不阻断"）：
  * **产品代理栏** —— 单一来源：借 `behavior-profile.mjs` 的 `fieldProfile`（不抄第二份实现；该模块被 import 时不跑 main）。
  * 依据（`docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §7）：同一包同一 ε=0，**镜像**装配电磁炮 4.30 每局、
@@ -427,6 +427,19 @@ console.log('     功能角色（' + brd.K_role + ' 个）：类间 ' + brd.S_ro
 console.log('     角色占比：' + Object.keys(brd.roleShares).map(function (r2) {
   return r2 + ' ' + (100 * brd.roleShares[r2]).toFixed(1) + '%';
 }).join(' · '));
+/* ===== 2026-10-29（DS · 强度尺修复）：**反退化门**（单卡占比） =====
+ * 病：只镜面反射的笨蛋在 16 格考卷上 66.7% > v7 40.4% ⇒ 退化档会被读成强。
+ * 标定（20 局/包）：在册健康包 v7 23.4% ‖ K2 20.5% ‖ U2 30.8% ⇒ 阈值 60% 有足够余量。
+ * 判据：非ジ出手里出现最多的那张卡 ≥ 60% ⇒ 这枚包是「只会一招」⇒ 阻断（可用 --force 越过并记账）。
+ * 样本 < 100 个非ジ出手 ⇒ 判「不判」（样本不足不是合格）。 */
+const dg = degeneracyVerdict(brd);
+if (dg.level === 'degenerate') {
+  fails.push('单卡占比 ' + (100 * dg.share).toFixed(1) + '% ≥ ' + (100 * dg.maxShare) + '%（出现最多的是 ' + (dg.key || '?') + '） ——【不是只会一招】不成立〔原机器名：反退化〕');
+} else if (dg.level === 'underpowered' || dg.level === 'unknown') {
+  console.log('   ⚠ 反退化门：' + dg.reason);
+}
+console.log('   反退化门（非ジ单卡占比 ≥ ' + (100 * dg.maxShare) + '% 即阻断）：' + (dg.fail ? '✗ ' : '✓ ')
+  + (dg.level === 'unknown' ? '读不出' : (100 * dg.share).toFixed(1) + '%（' + (dg.key || '—') + '） ⇒ ' + dg.level));
 /* ===== v1.5.71（第五轮复核 §4-2）：**狙击场探针** —— 只记录，**暂不阻断** =====
  * 标定（40~60 局/包）把复核建议的判据否掉了：复核建议"靶向率 ≥20%"，但**它没有判别力** ——
  * 种子冠军 45.3% / eco-34 47.7% / 线上包 43.8%，全都远高于均匀 25% ⇒ 谁也分不开。

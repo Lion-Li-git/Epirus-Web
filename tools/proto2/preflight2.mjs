@@ -14,7 +14,7 @@
  * ⚠ 它只读 js/** 与 tools/**，装 2.0 之后用 restore() 还原 ⇒ 不留任何口径。
  */
 import { readFileSync } from 'node:fs';
-import { sandbox } from '../audit-lib.mjs';
+import { sandbox, degeneracyVerdict, arenaGuardVerdict } from '../audit-lib.mjs';
 import * as A2 from './arch2.mjs';
 
 const argv = process.argv.slice(2);
@@ -81,7 +81,18 @@ const hasTarget = src.indexOf('targetGames') >= 0;
 const hasActual = /实际局数|gamesActual|ACTUAL/.test(src);
 chk(hasTarget && hasActual, '⑥ 预算：臂的运行器按「实际局数」停并打印它（标称 evals 与真实局数可差 15 倍）', 'targetGames=' + hasTarget + ' ‖ 实际局数回执=' + hasActual);
 
+/* ⑦ 强度尺防退化（2026-10-29 DS）：两道纯函数门必须能红、且不许误红 */
+const dgBad = degeneracyVerdict({ maxCardShare: 0.95, maxCardKey: 'reflect', N: 400 });
+const dgGood = degeneracyVerdict({ maxCardShare: 0.234, maxCardKey: 'gun', N: 400 });
+const dgSmall = degeneracyVerdict({ maxCardShare: 0.9, maxCardKey: 'reflect', N: 40 });
+const arBad = arenaGuardVerdict({ rungs: [{ key: 'reflect', win: 65.3 }, { key: 'snipe', win: 39.2 }], v7Win: 40.4 });
+const arGood = arenaGuardVerdict({ rungs: [{ key: 'reflect', win: 20.0 }], v7Win: 40.4 });
+const guardOk = dgBad.fail && !dgGood.fail && !dgSmall.fail && arBad.fail && !arGood.fail;
+chk(guardOk, '⑦ 强度尺：单卡 ≥60% 必须红 ‖ 坏 arena（固定打法 ≥ v7）必须红 ‖ 样本不足不许判 ‖ 健康包/好 arena 不许误红',
+  '退化包=' + (dgBad.fail ? '红✓' : '未红✗') + ' ‖ 健康包=' + (dgGood.fail ? '误红✗' : '绿✓') + ' ‖ 样本不足=' + (dgSmall.fail ? '误判✗' : '不判✓')
+  + ' ‖ 坏arena=' + (arBad.fail ? '红✓' : '未红✗') + ' ‖ 好arena=' + (arGood.fail ? '误红✗' : '绿✓'));
+
 const bad = rows.filter((r) => !r.ok);
 if (JSONOUT) console.log(JSON.stringify({ rows, n: L.n, need }));
-else console.log('\n⇒ ' + (bad.length ? '⛔ ' + bad.length + ' 项红：不许开臂（' + bad.map((r) => r.name.split('：')[0]).join(' / ') + '）' : '✅ 六项全过：可以开臂'));
+else console.log('\n⇒ ' + (bad.length ? '⛔ ' + bad.length + ' 项红：不许开臂（' + bad.map((r) => r.name.split('：')[0]).join(' / ') + '）' : '✅ 七项全过：可以开臂'));
 process.exit(bad.length ? 1 : 0);
