@@ -122,6 +122,10 @@ export function createArena2(W, opts) {
     const win = rm.winner === seat;
     const draw = rm.winner === 'draw';
     const wv = win ? 1 : (draw ? 0.5 : 0);
+    const scoreNet = (wv - 1 / n) / (1 - 1 / n);
+    /* 干净胜货币（10-29 夜 (a) 臂）：只有 winner=我 **且 hp>0** 才算那一局的"胜"，平局/死者胜都按 0 记。
+     * 动因：段 29 的 65.3% 里有一截是"hp≤0 仍判胜"；净胜把死者胜算赢 ⇒ 换这一档看它还值多少。 */
+    const scoreClean = (((win && hp > 0) ? 1 : 0) - 1 / n) / (1 - 1 / n);
     let ahead = 0;
     for (let i = 0; i < n; i++) {
       if (i === seat) continue;
@@ -134,19 +138,19 @@ export function createArena2(W, opts) {
     return {
       shape: shape.n + ':' + shape.mode, n, mode: shape.mode,
       win, draw, clean: win && hp > 0, top2: ahead <= 1,
-      score: (wv - 1 / n) / (1 - 1 / n), hp, rounds: rm.rounds || 0, acts, cat, classes,
+      scoreNet, scoreClean, hp, rounds: rm.rounds || 0, acts, cat, classes,
     };
   }
 
   function emptyAgg() {
-    return { games: 0, win: 0, draw: 0, clean: 0, top2: 0, scoreSum: 0, rounds: 0, acts: 0, cat: {}, byShape: {}, byClass: {} };
+    return { games: 0, win: 0, draw: 0, clean: 0, top2: 0, scoreSum: 0, cleanScoreSum: 0, rounds: 0, acts: 0, cat: {}, byShape: {}, byClass: {} };
   }
   function addRow(agg, r) {
     agg.games++; agg.win += r.win ? 1 : 0; agg.draw += r.draw ? 1 : 0; agg.clean += r.clean ? 1 : 0;
-    agg.top2 += r.top2 ? 1 : 0; agg.scoreSum += r.score; agg.rounds += r.rounds; agg.acts += r.acts;
+    agg.top2 += r.top2 ? 1 : 0; agg.scoreSum += r.scoreNet; agg.cleanScoreSum += r.scoreClean; agg.rounds += r.rounds; agg.acts += r.acts;
     for (const k in r.cat) agg.cat[k] = (agg.cat[k] || 0) + r.cat[k];
-    const sh = agg.byShape[r.shape] || (agg.byShape[r.shape] = { w: 0, g: 0, draw: 0, scoreSum: 0 });
-    sh.g++; sh.w += r.win ? 1 : 0; sh.draw += r.draw ? 1 : 0; sh.scoreSum += r.score;
+    const sh = agg.byShape[r.shape] || (agg.byShape[r.shape] = { w: 0, g: 0, draw: 0, scoreSum: 0, cleanScoreSum: 0 });
+    sh.g++; sh.w += r.win ? 1 : 0; sh.draw += r.draw ? 1 : 0; sh.scoreSum += r.scoreNet; sh.cleanScoreSum += r.scoreClean;
     for (const c of r.classes) {
       const x = agg.byClass[c] || (agg.byClass[c] = { w: 0, g: 0, draw: 0 });
       x.g++; x.w += r.win ? 1 : 0; x.draw += r.draw ? 1 : 0;
@@ -157,12 +161,12 @@ export function createArena2(W, opts) {
     let mx = 0, key = null, nonji = 0;
     for (const k in agg.cat) { if (k !== R.SK.JI) { nonji += agg.cat[k]; if (agg.cat[k] > mx) { mx = agg.cat[k]; key = k; } } }
     const byShape = {};
-    for (const k in agg.byShape) { const x = agg.byShape[k]; byShape[k] = { games: x.g, first: x.w / x.g, draw: x.draw / x.g, score: x.scoreSum / x.g }; }
+    for (const k in agg.byShape) { const x = agg.byShape[k]; byShape[k] = { games: x.g, first: x.w / x.g, draw: x.draw / x.g, score: x.scoreSum / x.g, cleanScore: x.cleanScoreSum / x.g }; }
     const byClass = {};
     for (const k in agg.byClass) { const x = agg.byClass[k]; byClass[k] = { games: x.g, first: x.w / x.g, draw: x.draw / x.g }; }
     return {
       games: agg.games, first: agg.win / g, draw: agg.draw / g, clean: agg.clean / g, top2: agg.top2 / g,
-      score: agg.scoreSum / g, rounds: agg.rounds / g, acts: agg.acts / g,
+      score: agg.scoreSum / g, cleanScore: agg.cleanScoreSum / g, rounds: agg.rounds / g, acts: agg.acts / g,
       maxCard: key == null ? null : { key, share: mx / Math.max(1, nonji), nonji },
       cat: agg.cat, byShape, byClass,
     };
@@ -184,7 +188,10 @@ export function createArena2(W, opts) {
       const salt = phase === 'holdout' ? SALT.hold : SALT.frozen;
       for (let s = 0; s < shapes.length; s++) for (let g = 0; g < per; g++) addRow(agg, playOne(sel, s, base + s * 1000 + g, salt));
     } else throw new Error('evalChooser: phase 只认 loop|holdout|frozen（收到 ' + phase + '）');
-    return finish(agg);
+    const out = finish(agg);
+    out.cur = c.cur === 'clean' ? 'clean' : 'net';
+    if (out.cur === 'clean') out.score = out.cleanScore;
+    return out;
   }
   function evalParams(params, cfg) {
     const t = (cfg && cfg.temp != null) ? Number(cfg.temp) : temp;
@@ -202,7 +209,7 @@ export function createArena2(W, opts) {
     try { r = playOne(T.policyChooserN(params, (cfg && cfg.temp != null) ? Number(cfg.temp) : temp), 0, 7, SALT.loop); }
     finally { P.chooseCandidates = realCC; }
     const d = A.CNT.forwards - before;
-    return { ok: d > 0 && cc > 0, forwards: d, chooseCandidatesCalls: cc, score: r && r.score };
+    return { ok: d > 0 && cc > 0, forwards: d, chooseCandidatesCalls: cc, score: r && r.scoreNet };
   }
   /* 出生证明：用**旧 ladder 原样**（旧 20 项对手表 + 8 旋转 × n∈{3,5}）跑一条固定打法。
    * 40 局/格 在册 ≈66.6%、120 局/格 = 65.3% —— 对不上就说明构造漂了，本尺的数不许引用。 */
@@ -290,7 +297,7 @@ function main() {
   }
   const pct = (x) => (100 * x).toFixed(1) + '%';
   for (const r of rows) {
-    console.log('· ' + String(r.tag).padEnd(26) + ' ‖ 夺1 ' + pct(r.first) + ' ‖ 净胜 ' + r.score.toFixed(3) + ' ‖ 平局 ' + pct(r.draw) +
+    console.log('· ' + String(r.tag).padEnd(26) + ' ‖ 夺1 ' + pct(r.first) + ' ‖ 净胜 ' + r.score.toFixed(3) + ' ‖ 干净净胜 ' + r.cleanScore.toFixed(3) + ' ‖ 平局 ' + pct(r.draw) +
       ' ‖ 干净胜 ' + pct(r.clean) + ' ‖ 前2 ' + pct(r.top2) + ' ‖ 单卡 ' + (r.maxCard ? r.maxCard.key + ' ' + (100 * r.maxCard.share).toFixed(1) + '%（非ジ ' + r.maxCard.nonji + ' 手）' : '—'));
     if (r.tag.indexOf('2.0包') === 0) {
       console.log('   逐桌形夺1：' + Object.keys(r.byShape).map((k) => k + ' ' + pct(r.byShape[k].first)).join(' ‖ '));

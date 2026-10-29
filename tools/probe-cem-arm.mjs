@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -108,6 +108,18 @@ if (PLAYTEMP !== '') {
 const ARENA2 = arg('arena2', '') === '1';
 const ARENA_HOLD = Math.max(2, Number(arg('arenaHold', 20)) || 20);
 const ARENA_TEMP = (function () { const x = Number(arg('arenaTemp', arg('playtemp', 0.15))); return x > 0 ? x : 0.15; })();
+/* `--arenaCur=net|clean`（10-29 夜 (a) 臂）：把训练货币从"净胜"换成"干净胜"（winner=我 且 hp>0；平/死者胜都按 0）。
+ * 只换货币，别的一字不动 ⇒ 与同种子同预算的纯净胜臂是一变量对照。 */
+const ARENA_CUR = String(arg('arenaCur', 'net'));
+if (ARENA_CUR !== 'net' && ARENA_CUR !== 'clean') { console.error('⛔ --arenaCur 只认 net|clean（收到 ' + ARENA_CUR + '）'); process.exit(2); }
+/* `--arenaDiverse=1`（10-29 夜 (b) 臂）：净胜货币不变，**当选**加一条 Pareto 带：
+ * 冻结验证里若 `净胜 ≥ 父代 − divTol` 且 `单卡占比 ≤ 父代 − divDelta` ⇒ 也接受（同分带选单卡低的）。
+ * 为了不让"只反弹"父代把整轮卡死，父代单卡 >0.5 时每 divEvery 个子代无条件送一次冻结验证。 */
+const ARENA_DIV = arg('arenaDiverse', '') === '1';
+const DIV_TOL = Math.max(0, Number(arg('divTol', 0.02)) || 0.02);
+const DIV_DELTA = Math.max(0.01, Number(arg('divDelta', 0.10)) || 0.10);
+const DIV_EVERY = Math.max(1, Math.floor(Number(arg('divEvery', 10)) || 10));
+if (ARENA_DIV && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaDiverse 需要 --arena2=1 且 --fxSelect=1（多样性只读冻结验证那一把）'); process.exit(7); }
 let ARENA_REF = null;
 if (ARENA2) {
   const c0 = loadChamp(W, 'js/bundled-champion-3p.js', HERE + '/..');
@@ -174,7 +186,7 @@ if (ARENA2) {
   console.log('[cem-arm] ⚙ 扩表 arena2 开：指纹 ' + ARENA.fp);
   console.log('   ‖ 桌形 ' + ARENA2_SHAPES.length + '（' + ARENA.shapes.map(function (s) { return s.n + ':' + s.mode; }).join(',') + '）' +
     ' ‖ 对手表 ' + ARENA.roster.length + ' 项（' + ARENA.pool.length + ' 脚本 bot + ' + (ARENA.roster.length - ARENA.pool.length - 1) + ' 单技能 + 均匀随机）' +
-    ' ‖ 货币=净胜 ‖ temp=' + ARENA_TEMP + ' ‖ 终局 holdout=' + ARENA_HOLD + ' 局/桌形');
+    ' ‖ 货币=' + ARENA_CUR + (ARENA_DIV ? '+多样性当选' : '') + ' ‖ temp=' + ARENA_TEMP + ' ‖ 终局 holdout=' + ARENA_HOLD + ' 局/桌形');
   if (P.__arch2) {
     const w = ARENA.verifyWired(startParams, { temp: ARENA_TEMP });
     if (!w.ok) { console.error('⛔ arena2 接线没生效（forwardCands +' + w.forwards + ' ‖ chooseCandidates ' + w.chooseCandidatesCalls + '）⇒ 开不了臂'); process.exit(7); }
@@ -227,8 +239,8 @@ const gauss = function (r) { const u = Math.max(r(), 1e-12), v = r(); return Mat
 /* （`FIX_OPPS` 在上面 `START_COPY` 那一节声明并赋值 —— 必须先于任何读数） */
 function evalOne(params, gen, idx) {
   if (ARENA) {
-    const r = ARENA.evalParams(params, { phase: 'loop', gen: gen, games: GAMES, temp: ARENA_TEMP });
-    return { fit: r.score, first: r.first, top2: r.top2, draw: r.draw, games: r.games };
+    const r = ARENA.evalParams(params, { phase: 'loop', gen: gen, games: GAMES, temp: ARENA_TEMP, cur: ARENA_CUR });
+    return { fit: r.score, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard };
   }
   const opps = T.buildOpps(params, 0.05);
   const r = T.scoreMemberN(params, opps, GAMES, N, gen, idx, 0);
@@ -236,16 +248,16 @@ function evalOne(params, gen, idx) {
 }
 function evalFixed(params, gen, idx, gamesOverride) {   /* 固定对手表 ⇒ 跨臂配对；games 用 HOLD 的那一档做终局读数 */
   if (ARENA) {
-    const r = ARENA.evalParams(params, { phase: 'frozen', gamesPerShape: Math.max(8, FXG || 0), temp: ARENA_TEMP });
-    return { fit: r.score, first: r.first, top2: r.top2, draw: r.draw, games: r.games };
+    const r = ARENA.evalParams(params, { phase: 'frozen', gamesPerShape: Math.max(8, FXG || 0), temp: ARENA_TEMP, cur: ARENA_CUR });
+    return { fit: r.score, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard, cleanScore: r.cleanScore };
   }
   const r = T.scoreMemberN(params, FIX_OPPS, gamesOverride || (gen === 999 ? HOLD : GAMES), N, gen, idx, 0);
   return { fit: r.fit == null ? -1 : r.fit, first: r.firstRate == null ? 0 : r.firstRate, top2: r.top2Rate == null ? 0 : r.top2Rate };
 }
 const holdout = function (params) {      /* 终局读数：固定场（同一批桌 + 同一 idx/gen） */
   if (ARENA) {
-    const r = ARENA.evalParams(params, { phase: 'holdout', gamesPerShape: ARENA_HOLD, temp: ARENA_TEMP });
-    return { fit: r.score, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard, byShape: r.byShape };
+    const r = ARENA.evalParams(params, { phase: 'holdout', gamesPerShape: ARENA_HOLD, temp: ARENA_TEMP, cur: ARENA_CUR });
+    return { fit: r.score, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard, byShape: r.byShape, cleanScore: r.cleanScore };
   }
   return evalFixed(params, 999, 0);
 };
@@ -263,9 +275,9 @@ if (!(isFinite(base.fit) && isFinite(rnd.fit))) { console.error('⛔ 起点分�
 /* arena2：上面那两条是 **4 局**的循环读数（噪声大），真正的起点地板要走 holdout 全桌形。 */
 function fmtCard(c) { return c ? (c.key + ' ' + (100 * c.share).toFixed(1) + '%') : '—'; }
 if (ARENA) {
-  const bA = ARENA.evalParams(startParams, { phase: 'holdout', gamesPerShape: ARENA_HOLD, temp: ARENA_TEMP });
-  const rA = ARENA.evalParams(randParams, { phase: 'holdout', gamesPerShape: ARENA_HOLD, temp: ARENA_TEMP });
-  console.log('起点分母（arena2 holdout ' + ARENA_HOLD + ' 局/桌形 × ' + ARENA2_SHAPES.length + ' 桌形 = ' + bA.games + ' 局）：' +
+  const bA = ARENA.evalParams(startParams, { phase: 'holdout', gamesPerShape: ARENA_HOLD, temp: ARENA_TEMP, cur: ARENA_CUR });
+  const rA = ARENA.evalParams(randParams, { phase: 'holdout', gamesPerShape: ARENA_HOLD, temp: ARENA_TEMP, cur: ARENA_CUR });
+  console.log('起点分母（arena2 holdout ' + ARENA_HOLD + ' 局/桌形 × ' + ARENA2_SHAPES.length + ' 桌形 = ' + bA.games + ' 局，货币=' + ARENA_CUR + '）：' +
     startLabel + ' 夺1=' + (bA.first * 100).toFixed(1) + '% 净胜=' + bA.score.toFixed(3) + ' 平局=' + (bA.draw * 100).toFixed(1) + '% 单卡=' + fmtCard(bA.maxCard) +
     ' ‖ 随机粒 夺1=' + (rA.first * 100).toFixed(1) + '% 净胜=' + rA.score.toFixed(3) + ' 平局=' + (rA.draw * 100).toFixed(1) + '%');
 }
@@ -316,6 +328,7 @@ const gamesIn = function () { return GAMES_PLAYED; };
 let best = startParams, bestFit = -Infinity, used = 0, curve = [];
 const checkpoints = [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return f * EVALS; });
 const cpG = TARGET_G ? [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return Math.round(f * TARGET_G); }) : [];
+let ESA_DIV_STAT = null;
 
 if (MODE === 'esa') {
   /* (1+λ)-ES：**全部算子都由本工具拥有**（父代 + λ 个子代各过一遍 `P.mutatePolicy`）
@@ -328,11 +341,18 @@ if (MODE === 'esa') {
    * ⚠ 代价要说清：每接受一次改进就多花 `FX_GAMES` 局 ⇒ 同样的 targetGames 预算下迭代数会变少（读数里能看见）。 */
   let parent = Float64Array.from(startParams);
   let pf = evalOne(parent, 0, 0).fit; bestFit = pf; best = parent;
-  let parentFix = FXSEL ? evalFixed(parent, 500, 0, FXG || undefined).fit : 0;
+  /* FXSEL：父代在冻结桌上的**净胜 + 单卡占比**一起记（多样性当选要拿它当起点）。 */
+  let parentFix = 0, parentShare = 0;
+  if (FXSEL) {
+    const pe = evalFixed(parent, 500, 0, FXG || undefined);
+    parentFix = pe.fit;
+    parentShare = pe.maxCard ? pe.maxCard.share : 0;
+  }
   const r = rngFor(SEED + 17);
   void r;
   const iters = TARGET_G ? 1000000 : Math.max(1, Math.floor(EVALS / POP));
-  let accepted = 0, screened = 0;
+  let accepted = 0, screened = 0, accScore = 0, accDiv = 0, divProbes = 0;
+  const DIV = ARENA && ARENA_DIV;
   /* ===== `--sigmaAdaptive=1`：Rechenberg 的 **1/5 成功律**（10-29 段 C 的第二个旋钮）=====
    * 为什么现在加：两波读数合起来看，问题不在"当选在哪批桌上判"，而在**步长**——
    *   `--fxSelect=1` 把棘轮砍掉了（inLoopBest 0.98→0.765），可 6000 局里只接受了 3~4 次改进
@@ -348,12 +368,24 @@ if (MODE === 'esa') {
       const e = evalOne(child, it, i);
       used += 1;
       let ok = false;
-      if (e.fit > bestFit) {
+      /* 多样性探针（(b) 臂）：父代还退化时，每 DIV_EVERY 个子代**无条件**送一次冻结验证，
+       *   否则"只反弹"父代的等分带永远轮不到一个更低单卡的子代。 */
+      const probe = DIV && parentShare > 0.5 && (i % DIV_EVERY === 0);
+      if (probe) divProbes++;
+      if (e.fit > bestFit || probe) {
         screened++;
         if (!FXSEL) { bestFit = e.fit; best = child; ok = true; }
         else {
           const cf = evalFixed(child, 500, 0, FXG || undefined);
-          if (cf.fit > parentFix) { parentFix = cf.fit; parent = Float64Array.from(child); bestFit = e.fit; best = child; accepted++; ok = true; }
+          const cfShare = cf.maxCard ? cf.maxCard.share : 0;
+          const byScore = cf.fit > parentFix;
+          const byDiv = DIV && cf.fit >= parentFix - DIV_TOL && cfShare < parentShare - DIV_DELTA;
+          if (byScore || byDiv) {
+            parentFix = cf.fit; parent = Float64Array.from(child); parentShare = cfShare;
+            if (e.fit > bestFit) bestFit = e.fit;
+            best = child; accepted++; ok = true;
+            if (byScore) accScore++; else accDiv++;
+          }
         }
       }
       if (ADAPT) {
@@ -374,8 +406,11 @@ if (MODE === 'esa') {
     if (TARGET_G && gamesIn() >= TARGET_G) break;
   }
   if (ADAPT) console.log('[cem-arm] ⚑ 1/5 律自适应 σ：起 ' + SIG0 + ' → 终 ' + sig.toFixed(5) + ' ‖ 轨迹样本 ' + sigTraj.length + ' 点 ‖ 窗口 ' + WIN + ' 次尝试');
-  if (FXSEL) console.log('[cem-arm] ⚑ 冻结桌当选：环内预选 ' + screened + ' 次 ‖ 在冻结桌上真打过父代 ' + accepted + ' 次 ‖ 每次验证花 ' +
+  if (FXSEL) console.log('[cem-arm] ⚑ 冻结桌当选：环内预选 ' + screened + ' 次 ‖ 在冻结桌上真打过父代 ' + accepted + ' 次（按净胜 ' + accScore +
+    (DIV ? ' ‖ 按多样性 ' + accDiv + '（探针 ' + divProbes + ' 次；净胜带 ±' + DIV_TOL + '，单卡需降 ≥' + DIV_DELTA + '）' : '') +
+    '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '% ‖ 每次验证花 ' +
     (ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES)) + ' 局（fxGames=' + FXG + (ARENA ? '，arena2 每桌形' + Math.max(8, FXG || 0) : '') + ' ‖ 预算被这块吃掉，迭代数会少）');
+  ESA_DIV_STAT = { accepted: accepted, byScore: accScore, byDiv: accDiv, divProbes: divProbes, parentShare: parentShare };
 } else if (MODE === 'ga') {
   const tr = T.makeTrainer({ popSize: POP, gamesPerOpp: GAMES });
   /* 两臂必须**从同一粒起步**，否则比的不是算子而是起点。GA 侧用仓库自己的热启动 API
@@ -451,9 +486,10 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
   dFirst: ho.first - hoStart.first, dTop2: ho.top2 - hoStart.top2,
   /* arena2（--arena2=1）：上面所有 holdout* 都是 **arena2 的 holdout**（净胜 + 原始夺1），不是旧 scoreMemberN。
    *   `currency` 标明这一格 ⇒ 与旧臂的 fit 数值不可比。`maxCard` 是终局那一把的单卡占比（判退化用）。 */
-  currency: ARENA ? 'arena2.net' : 'scoreMemberN.fit',
+  currency: ARENA ? ('arena2.' + ARENA_CUR + (ARENA_DIV ? '+div' : '')) : 'scoreMemberN.fit',
   arena: ARENA ? { fp: ARENA.fp, temp: ARENA_TEMP, shapes: ARENA2_SHAPES.length, roster: ARENA.roster.length, pool: ARENA.pool.length,
-    holdGamesPerShape: ARENA_HOLD, holdGames: ho.games, draw: ho.draw,
+    holdGamesPerShape: ARENA_HOLD, holdGames: ho.games, draw: ho.draw, cur: ARENA_CUR, diverse: ARENA_DIV,
+    divTol: DIV_TOL, divDelta: DIV_DELTA, divEvery: DIV_EVERY, esa: ESA_DIV_STAT,
     bestMaxCard: ho.maxCard, startMaxCard: hoStart.maxCard, bestByShape: ho.byShape } : null,
   curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel };
 if (OUT) {
@@ -465,7 +501,7 @@ if (!QUIET) console.log(JSON.stringify(row));
 else console.log('RESULT ' + JSON.stringify(row));
 console.log('⚠ inLoopBest 是各臂**循环内部**的分（GA 走 shaped/内部择优，CEM 走原始 fit）⇒ 跨臂不可比；跨臂只比 holdoutFit / holdoutFirst（同一函数同一场）。');
 if (ARENA) {
-  console.log('⚑ arena2 终局：净胜 ' + ho.fit.toFixed(3) + '（起点 ' + hoStart.fit.toFixed(3) + ' ⇒ Δ ' + (ho.fit - hoStart.fit).toFixed(3) + '）' +
+  console.log('⚑ arena2 终局（货币=' + ARENA_CUR + (ARENA_DIV ? '+多样性当选' : '') + '）：' + (ARENA_CUR === 'clean' ? '干净净胜' : '净胜') + ' ' + ho.fit.toFixed(3) + '（起点 ' + hoStart.fit.toFixed(3) + ' ⇒ Δ ' + (ho.fit - hoStart.fit).toFixed(3) + '）' +
     ' ‖ 夺1 ' + (100 * ho.first).toFixed(1) + '%（起点 ' + (100 * hoStart.first).toFixed(1) + '%）' +
     ' ‖ 平局 ' + (100 * ho.draw).toFixed(1) + '%（起点 ' + (100 * hoStart.draw).toFixed(1) + '%）' +
     ' ‖ 单卡 ' + fmtCard(ho.maxCard) + '（起点 ' + fmtCard(hoStart.maxCard) + '）');
