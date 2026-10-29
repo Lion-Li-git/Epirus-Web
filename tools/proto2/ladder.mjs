@@ -44,6 +44,10 @@ const PACKS = String(arg('pack', '')).split(',').map((x) => x.trim()).filter(Boo
  *     对不上就只印"锚过期"、**不印名次**（宁可少一条读数，不要一条接错刻度的读数）。
  *   用法：`node tools/proto2/ladder.mjs --games=40 --sweep=keys --anchors=scratch/ladder-anchor.json` */
 const ANCHORS = arg('anchors', '');
+/* `--opp=<固定打法键>` ⇒ **所有非被测席**换成同一条固定打法（DS 的 P0 第 1 条：先把"退化打法当对手"做成**刻度**，不写通过线）。
+ *   为什么不新写一把尺：候选面/局号/temp/bigt 全在这一处，换一把就要再对一次口径（第 ①节那 21pt 的教训）。
+ *   ⚠ 换了对手桌，v7/rand 那两个自检锚量的是**原对手表** ⇒ `--opp≠pool` 时自检只印不判（下面 SELFCHECK 那段）。 */
+const OPP = String(arg('opp', 'pool'));
 const W = sandbox();
 const P = W.EpirusPolicy, T = W.EpirusTrainer, R = W.EpirusRules, Play = W.EpirusPlay;
 /* ⚑⚑ **大雷"看得见"那一档（`evo.js:648` `BIGT_PUSH = 12`，v1.5.333 起出厂默认开着）必须在尺上关掉**：
@@ -157,6 +161,21 @@ const POLICIES = {
   rand: { label: '均匀乱选', sel: null },   /* 用这一格自己的定标流抽 */
   v7: { label: '参照包 v7', sel: T.policyChooserN(ref, TEMP) },
 };
+/* 见文件头那条 `--opp=`：这里只做校验与取值，不改任何候选面 */
+let OPP_SEL = null, OPP_LABEL = '池（8 型脚本bot）';
+if (OPP !== 'pool') {
+  /* `--opp=skill:<键>` ⇒ 那**一枚技能**当整桌对手（30 枚技能键都能当；只认 POLICIES 里那几枚是不够的，
+   *   DS 点名的 `snipe` 就不在 POLICIES 里——这条别名让它不用再加一份固定打法表） */
+  if (OPP.indexOf('skill:') === 0) {
+    const sk = OPP.slice(6);
+    if (!R.skills.some((x) => x.key === sk)) { console.error('⛔ --opp=skill:' + sk + ' 不是合法技能键（先看 `R.skills`）'); process.exit(2); }
+    OPP_SEL = pickBy((c) => c.key === sk); OPP_LABEL = '**全 ' + sk + '**（整桌对手都只打这一枚技能）';
+  } else {
+    const p = POLICIES[OPP];
+    if (!p || !p.sel) { console.error('⛔ --opp=' + OPP + ' 不可用（可选：pool ‖ skill:<技能键> ‖ ' + Object.keys(POLICIES).filter((k) => POLICIES[k].sel).join(',') + '）'); process.exit(2); }
+    OPP_SEL = p.sel; OPP_LABEL = '**全 ' + p.label + '**（整桌对手都用这条固定打法）';
+  }
+}
 const SHOW_CELLS = argv.includes('--cells=1');
 function playCell(selFn, cell, rstream) {
   let f = 0, t2 = 0, sv = 0, rd = 0, acts = 0, cat = {};
@@ -165,7 +184,7 @@ function playCell(selFn, cell, rstream) {
     const seat = g % cell.n;
     const choosers = [];
     for (let pid = 0; pid < cell.n; pid++) {
-      if (pid !== seat) { choosers.push(POOL[(cell.idx + 1 + pid) % POOL.length].sel); continue; }
+      if (pid !== seat) { choosers.push(OPP_SEL || POOL[(cell.idx + 1 + pid) % POOL.length].sel); continue; }
       if (rstream) choosers.push(function (st, p, legal) {
         const cs = candsOf(st, p, legal);
         if (!cs.length) return { key: R.SK.JI };
@@ -188,7 +207,7 @@ function playCell(selFn, cell, rstream) {
 }
 console.log('# 笨策略阶梯 ‖ ' + CELLS.length + ' 格 × ' + GAMES + ' 局（同批局号）‖ temp=' + TEMP + ' ‖ bigt=' + BIGT +
   ' ‖ 候选面 ' + (ENGINE_FACE ? '引擎同口径（lockTarget=lastCancelOther）' : '宽面 lockTarget:false（--face=wide，只为对照）') +
-  ' ‖ 对手表定标指纹 ' + POOL_FP + '（与 `profile2` 同源，锚对它）');
+  ' ‖ 对手表 ' + (OPP === 'pool' ? '池（8 型脚本bot，定标指纹 ' + POOL_FP + '）' : OPP_LABEL + ' ⇒ 退化对手刻度，不写通过线') + '（与 `profile2` 同源）');
 const tot = [];
 for (const key of ONLY) {
   const pol = POLICIES[key];
@@ -229,7 +248,9 @@ const SELFCHECK = !argv.includes('--selfcheck=0');
 /* 两档各自的锚（都是本尺 16 格×120 局实测，原件 `scratch/LADDER-bigt0.log` ‖ `scratch/LADDER-sweep.log`）：
  * bigt=12（出厂档）v7 = **40.4** ≈ `ref-baseline` 在册 40.3 ‖ bigt=0 v7 = **40.2**。 */
 const V7_TRUE = BIGT === 0 ? 40.2 : 40.3, RAND_BAND = [12, 24];
-if (SELFCHECK) {
+if (SELFCHECK && OPP !== 'pool') {
+  console.log('  ⚑ 自检跳过：`--opp=' + OPP + '` 换了对手桌 ⇒ v7/rand 那两个锚量的是**原对手表**，在这里不适用（不是"跑过了"）');
+} else if (SELFCHECK) {
   const g7 = tot.filter((t) => t.key === 'v7')[0], gr = tot.filter((t) => t.key === 'rand')[0];
   const bad = [];
   if (!g7 || !gr) bad.push('两条锚有一档**没跑**（`--only` 里要同时含 `v7` 与 `rand`，否则这条自检是空的）');
