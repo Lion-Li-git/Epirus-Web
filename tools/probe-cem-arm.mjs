@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -119,6 +119,9 @@ const ARENA_DIV = arg('arenaDiverse', '') === '1';
 const DIV_TOL = Math.max(0, Number(arg('divTol', 0.02)) || 0.02);
 const DIV_DELTA = Math.max(0.01, Number(arg('divDelta', 0.10)) || 0.10);
 const DIV_EVERY = Math.max(1, Math.floor(Number(arg('divEvery', 10)) || 10));
+/* `--divTrigger=`：父代单卡占比**超过它才开探针**（缺省 0.5 = 只在明显退化时）。
+ * 组合臂从 CLEAN-s7（单卡 49%）出发 ⇒ 用 0.40 让多样性真正开始工作；纯 net 臂维持 0.5。 */
+const DIV_TRIGGER = Math.min(1, Math.max(0, Number(arg('divTrigger', 0.5)) || 0.5));
 if (ARENA_DIV && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaDiverse 需要 --arena2=1 且 --fxSelect=1（多样性只读冻结验证那一把）'); process.exit(7); }
 let ARENA_REF = null;
 if (ARENA2) {
@@ -370,7 +373,7 @@ if (MODE === 'esa') {
       let ok = false;
       /* 多样性探针（(b) 臂）：父代还退化时，每 DIV_EVERY 个子代**无条件**送一次冻结验证，
        *   否则"只反弹"父代的等分带永远轮不到一个更低单卡的子代。 */
-      const probe = DIV && parentShare > 0.5 && (i % DIV_EVERY === 0);
+      const probe = DIV && parentShare > DIV_TRIGGER && (i % DIV_EVERY === 0);
       if (probe) divProbes++;
       if (e.fit > bestFit || probe) {
         screened++;
@@ -407,7 +410,7 @@ if (MODE === 'esa') {
   }
   if (ADAPT) console.log('[cem-arm] ⚑ 1/5 律自适应 σ：起 ' + SIG0 + ' → 终 ' + sig.toFixed(5) + ' ‖ 轨迹样本 ' + sigTraj.length + ' 点 ‖ 窗口 ' + WIN + ' 次尝试');
   if (FXSEL) console.log('[cem-arm] ⚑ 冻结桌当选：环内预选 ' + screened + ' 次 ‖ 在冻结桌上真打过父代 ' + accepted + ' 次（按净胜 ' + accScore +
-    (DIV ? ' ‖ 按多样性 ' + accDiv + '（探针 ' + divProbes + ' 次；净胜带 ±' + DIV_TOL + '，单卡需降 ≥' + DIV_DELTA + '）' : '') +
+    (DIV ? ' ‖ 按多样性 ' + accDiv + '（探针 ' + divProbes + ' 次；触发 >' + DIV_TRIGGER + '，净胜带 ±' + DIV_TOL + '，单卡需降 ≥' + DIV_DELTA + '）' : '') +
     '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '% ‖ 每次验证花 ' +
     (ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES)) + ' 局（fxGames=' + FXG + (ARENA ? '，arena2 每桌形' + Math.max(8, FXG || 0) : '') + ' ‖ 预算被这块吃掉，迭代数会少）');
   ESA_DIV_STAT = { accepted: accepted, byScore: accScore, byDiv: accDiv, divProbes: divProbes, parentShare: parentShare };
@@ -489,7 +492,7 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
   currency: ARENA ? ('arena2.' + ARENA_CUR + (ARENA_DIV ? '+div' : '')) : 'scoreMemberN.fit',
   arena: ARENA ? { fp: ARENA.fp, temp: ARENA_TEMP, shapes: ARENA2_SHAPES.length, roster: ARENA.roster.length, pool: ARENA.pool.length,
     holdGamesPerShape: ARENA_HOLD, holdGames: ho.games, draw: ho.draw, cur: ARENA_CUR, diverse: ARENA_DIV,
-    divTol: DIV_TOL, divDelta: DIV_DELTA, divEvery: DIV_EVERY, esa: ESA_DIV_STAT,
+    divTol: DIV_TOL, divDelta: DIV_DELTA, divEvery: DIV_EVERY, divTrigger: DIV_TRIGGER, esa: ESA_DIV_STAT,
     bestMaxCard: ho.maxCard, startMaxCard: hoStart.maxCard, bestByShape: ho.byShape } : null,
   curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel };
 if (OUT) {
