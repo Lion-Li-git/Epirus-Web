@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -84,6 +84,13 @@ const ARENA_FPEN = Math.max(0, Number(arg('arenaFloorPen', 0)) || 0);
  * 本旗标让**每个子代都上冻结桌验证**（预选门短路；预算照记 ⇒ 迭代数会掉一个量级，只做诊断不做常规训练）。
  * 判读：同预算下接受数若显著高于带门版（s7@6k = 5 次）⇒ 门是阻塞点；接近 ⇒ 区域贫瘠。 */
 const FXALL = arg('fxAll', '') === '1';
+/* ===== `--preSel=parent`（10-30 晨，坏种子机制的处方刀）：预选门从"≥全局 best"换成"≥父代" =====
+ * 机制（10-30 fxAll 诊断）：坏种子起步深负，全局 bestFit 被好种子的动力学定标 ⇒ 坏种子的子代循环分
+ *   几乎永远过不了门 ⇒ 冻结桌验证被饿死（6k 只验 60 次、接受 5 次）。fxAll 证明区域不贫瘠，但 fxAll
+ *   把生成量全卖了（好种子塌）。parent 门是中间点：子代循环分 ≥ 父代循环分就送验（循环分是 4 局噪声，
+ *   ≈40-50% 通过率）⇒ 生成量保留大半、验证密度翻 ~3 倍。
+ * ⚠ 只改预选门这一格；接受判据/多样性带/终局读数不动。判读见回执 §九（预登记先于开臂）。 */
+const PRESEL = String(arg('preSel', 'best'));
 const DEG = arg('degenerate', '') === '1';
 /* ===== §E822（10-28 傍晚 · 千问）：`--targetGames=` ⇒ **按计数器停，不按记账停** =====
  * 为什么必须加：实测同一 GA 的"每代真打几局"**不是常数**（60 evals 校准时 ≈8 局/代，6000 evals 真跑时 ≈2 局/代
@@ -169,6 +176,9 @@ if (ARENA_LEX && ARENA_PEN > 0) { console.error('⛔ --arenaLex 与 --arenaPen �
       if (ARENA_FPEN > 0 && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaFloorPen 需要 --arena2=1 且 --fxSelect=1（地板罚项只换冻结桌的接受判据）'); process.exit(7); }
       if (ARENA_FPEN > 0 && (ARENA_LEX || ARENA_PEN > 0)) { console.error('⛔ --arenaFloorPen 与 --arenaLex/--arenaPen 互斥（都换 byScore 的判据）'); process.exit(7); }
       if (FXALL && (!FXSEL || !ARENA2)) { console.error('⛔ --fxAll 需要 --fxSelect=1 且 --arena2=1（它拆的是冻结桌预选门）'); process.exit(7); }
+      if (PRESEL !== 'best' && PRESEL !== 'parent') { console.error('⛔ --preSel 只认 best|parent（收到 ' + PRESEL + '）'); process.exit(7); }
+      if (PRESEL === 'parent' && (!FXSEL || !ARENA2)) { console.error('⛔ --preSel=parent 需要 --fxSelect=1 且 --arena2=1（它换的是冻结桌预选门）'); process.exit(7); }
+      if (PRESEL === 'parent' && FXALL) { console.error('⛔ --preSel=parent 与 --fxAll 互斥（都改预选门，一次对照一个自由量）'); process.exit(7); }
 let ARENA_REF = null;
 if (ARENA2) {
   const c0 = loadChamp(W, 'js/bundled-champion-3p.js', HERE + '/..');
@@ -404,6 +414,7 @@ if (MODE === 'esa') {
    * ⚠ 代价要说清：每接受一次改进就多花 `FX_GAMES` 局 ⇒ 同样的 targetGames 预算下迭代数会变少（读数里能看见）。 */
   let parent = Float64Array.from(startParams);
   let pf = evalOne(parent, 0, 0).fit; bestFit = pf; best = parent;
+  let parentLoopFit = pf;   /* --preSel=parent 的门基准（接受子代时更新为它的循环分） */
   /* FXSEL：父代在冻结桌上的**净胜 + 单卡占比**一起记（多样性当选要拿它当起点）。 */
   let parentFix = 0, parentShare = 0, parentPen = 0;
   const penOf = function (fit, share) { return fit - ARENA_PEN * Math.max(0, share - 0.5); };
@@ -459,7 +470,8 @@ if (MODE === 'esa') {
        *   否则"只反弹"父代的等分带永远轮不到一个更低单卡的子代。 */
       const probe = DIV && parentShare > DIV_TRIGGER && (i % DIV_EVERY === 0);
       if (probe) divProbes++;
-      if (e.fit > bestFit || probe || FXALL) {
+      const preSelGate = PRESEL === 'parent' ? (e.fit > parentLoopFit) : (e.fit > bestFit);
+      if (preSelGate || probe || FXALL) {
         screened++;
         if (!FXSEL) { bestFit = e.fit; best = child; ok = true; }
         else {
@@ -475,6 +487,7 @@ if (MODE === 'esa') {
           const byDiv = DIV && cf.fit >= parentFix - DIV_TOL && cfShare < parentShare - DIV_DELTA;
           if (byScore || byDiv) {
             parentFix = cf.fit; parent = Float64Array.from(child); parentShare = cfShare; parentPen = penOf(cf.fit, cfShare);
+            parentLoopFit = e.fit;   /* parent 门的新基准 = 刚接受的这个子代自己的循环分 */
             if (ARENA_LEX) parentLex = candLex;
             if (ARENA_FPEN > 0) { parentGap = floorGapSum(cf.byShape); parentFpen = fpenOf(cf); }
             if (e.fit > bestFit) bestFit = e.fit;
@@ -511,6 +524,7 @@ if (MODE === 'esa') {
     ' ‖ 下限 ' + (SIG_FLOOR_ESA > 0 ? SIG_FLOOR_ESA : 1e-4) + ' ‖ 重启 ' + sigRestarts + ' 次 ‖ 轨迹样本 ' + sigTraj.length + ' 点 ‖ 窗口 ' + WIN + ' 次尝试');
   ESA_SIG_STAT = ADAPT ? { start: SIG0, final: sig, min: sigMin, floor: SIG_FLOOR_ESA > 0 ? SIG_FLOOR_ESA : 1e-4, restarts: sigRestarts } : null;
   if (FXSEL) console.log('[cem-arm] ⚑ 冻结桌当选：环内预选 ' + screened + ' 次 ‖ 在冻结桌上真打过父代 ' + accepted + ' 次（按净胜 ' + accScore +
+    (PRESEL === 'parent' ? ' ‖ **预选门=parent**（子代循环分 ≥ 父代即送验）' : '') +
     (DIV ? ' ‖ 按多样性 ' + accDiv + '（探针 ' + divProbes + ' 次；触发 >' + DIV_TRIGGER + '，净胜带 ±' + DIV_TOL + '，单卡需降 ≥' + DIV_DELTA + '）' : '') +
     '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '% ‖ 每次验证花 ' +
     (ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES)) + ' 局（fxGames=' + FXG + (ARENA ? '，arena2 每桌形' + Math.max(8, FXG || 0) : '') + ' ‖ 预算被这块吃掉，迭代数会少）');
