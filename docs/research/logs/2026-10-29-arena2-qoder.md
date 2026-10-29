@@ -192,3 +192,65 @@ EPIRUS_ARCH2=S1o:input=obs3 EPIRUS_MUT_MODE=seg node tools/probe-cem-arm.mjs --m
   --start=scratch/arms/CLEAN-s7.bak --targetGames=6000 --games=4 --seed=7 --arenaHold=20 \
   --sigmaAdaptive=1 --fxSelect=1 --fxGames=8 --out=scratch/arms/COMBO2-s7.bak
 ```
+
+## 十、温度标定 + 24k 长臂 + 高人数课程（10-29 22:3x–23:0x）
+
+### 10.1 温度标定：同一名义 temp ≠ 同一熵
+
+`arena2 --temps=` 落盘（原件 `scratch/ARENA2-tempsweep.log`）。v7 在 0.001~0.6 几乎不动（夺1 46.6~47.0、干净净胜 0.194）；2.0 依包而动（COMBO-s11 最佳 0.05 = 0.165，0.15 只有 0.135；COMBO-s7 最佳 0.15 = 0.057）。
+⇒ 之前统一 0.15 比，等于用 v7 的饱和 softmax 对 2.0 的高熵采样 ⇒ **0.15 把 2.0 读低了一截**。现在 arena2 会为每枚包打印“按净胜/按干净净胜”的最佳温度与对 v7 的差距。
+
+### 10.2 24k 长臂（temp 0.05、clean+div、同 A1 起点）
+
+| 臂 | 种子 | 最佳温度 | 夺1 | 净胜 | 干净净胜 | 干净胜 | 单卡（非ジ） | 8P/10P |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `LONG-s7` | 7 | 0.15 | 45.1% | 0.271 | **0.216** | **42.6%** | reflect 49.7% | 11.3 / 12.5 |
+| `LONG-s11` | 11 | 0.02 | 38.9% | 0.176 | 0.118 | 35.7% | gun 78.7% | 12.5 / 7.5 |
+| `LONG-s13` | 13 | 0.15 | 43.2% | 0.244 | 0.180 | 40.2% | gun 74.8% | 17.5 / 12.5 |
+| v7 参照 | — | 0.15 / 0.3 | 48.5 / 48.9% | 0.335 / 0.340 | 0.207 / **0.215** | 42.6 / 43.2% | gun 36.7% | 27.5 / 23.8 |
+
+（LONG-s7 与 v7 的 8P/10P 取自 **80 局/桌形**那一次；其余行是 40 局/桌形。）
+
+- **干净胜打平**：LONG-s7 @0.15、80 局/桌形 = **42.6%**，v7 = **42.6%**；干净净胜 **0.216 vs 0.215**（v7 最佳 t=0.3）⇒ 差距 **0.000**。
+- **raw 仍低 3.4pt、净胜低 0.064**：v7 raw−clean = **5.9pt（死者胜）**、LONG-s7 = **2.5pt** ⇒ raw 那 3.4pt 差几乎正好是死者胜差；v7 还多 **3.1pt 平局**（5.9 vs 2.8）⇒ 净胜 0.064 主要是死者胜 + 平局/不输能力，不是干净胜。
+- **行为是三线混合**：`reflect 34.9% ‖ ji 29.8% ‖ gun 28.6% ‖ bagua 6.1%`（全部出手）⇒ 不是反射单卡；非ジ单卡 49.7%（<60）。
+- **剖面是“低 n 赢回来、高 n 输掉”**：LONG-s7 @0.15 在 2P 多数格高于 v7（71.3/73.8/80.0 vs 76.3/66.3/71.3），3P 互有，5P 互有；8P **11.3 vs 27.5**、10P **12.5 vs 23.8**。
+- **1/3 种子**：s11 0.118、s13 0.180；s11 的 σ 崩到 0.0001、只接受 4 次 ⇒ **优化器/种子稳健性**是当前训练方法的主问题。
+
+### 10.3 高人数课程（n≥8 训练权重 ×3；终局仍均匀 11 格）
+
+`HIGN-s7`（同 A1、同 24k、同 temp 0.05）：最佳 0.15，干净胜 40.5%、干净净胜 0.176、gun 70.3%；**8P 20.0（11.3→20.0）**、**10P 15.0（12.5→15.0）**。
+⇒ **高 n 至少一部分是数据频率**：多喂 3 倍就能把 8P 从 11.3 拉到 20.0，不是纯表示/池化。但 ×3 的代价是总干净净胜 0.208→0.176、gun 70.3 ⇒ 简单加权把低 n 卖掉了，也会被单卡目标拐走。
+
+### 10.4 判语
+
+1. **“所有包都不如 v7”在干净胜上不成立**：24k + 各自最佳温度，LONG-s7 的干净胜与 v7 打平；6k + 固定 0.15 是旧口径，把 2.0 读低了。
+2. **但 raw/净胜仍差 3.4pt / 0.064**：拆开是 v7 的死者胜（5.9 vs 2.5）与平局/不输（5.9 vs 2.8）⇒ 下一步要的是“不输/收尾”，不是更多干净击杀。
+3. **剩下的训练问题**：① 种子稳健性（1/3；σ 崩）；② 高 n 数据/课程（×3 有效但卖低 n）；③ 单卡拐走（s13/s11/HIGN 的 gun 70~79%）。**输入维度不是瓶颈**：目标可分 504/504、死维闸过；高 n 靠课程能买回。
+4. **头容量/池化暂不动**：先用平衡课程 + 优化器稳健性 + 按桌形目标。
+
+### 10.5 下一格
+
+- **平衡课程**（`--arenaHighN=2` 或按桌形分组权重）+ **σ 下限/重启**，两粒种子；判据：总干净胜不掉 >2pt、8P/10P ≥18、非ジ单卡 <60。
+- **目标**：把“最差桌形”或“不输/平局”纳入货币（现在净胜 draw=0.5 已在，但训练用干净胜；可试 clean + draw credit 的组合）。
+- 头容量/池化：上面两步仍差再动；**输入维不加**。
+
+## 十一、长臂/课程可复跑命令
+
+```
+# 温度标定（每枚包按自己的最佳温度读数）
+node tools/proto2/arena2.mjs --pack=scratch/arms/COMBO-s11.bak --v7=1 --gamesPerShape=40 \
+  --temps=0.001,0.02,0.05,0.1,0.15,0.3 --json=scratch/ARENA2-<包>-sweep.json
+
+# 24k 长臂（种子 7/11/13；本轮种子 7 打到 v7 干净胜水平）
+EPIRUS_ARCH2=S1o:input=obs3 EPIRUS_MUT_MODE=seg node tools/probe-cem-arm.mjs --mode=esa --arena2=1 \
+  --arenaCur=clean --arenaDiverse=1 --divEvery=3 --divTol=0.02 --divTrigger=0.40 --arenaTemp=0.05 \
+  --start=scratch/arms/P2-A1-fit2-S1o.bak --targetGames=24000 --games=4 --seed=7 --arenaHold=20 \
+  --sigmaAdaptive=1 --fxSelect=1 --fxGames=8 --out=scratch/arms/LONG-s7.bak
+
+# 高人数课程（只改训练环的桌形权重）
+EPIRUS_ARCH2=S1o:input=obs3 EPIRUS_MUT_MODE=seg node tools/probe-cem-arm.mjs --mode=esa --arena2=1 \
+  --arenaCur=clean --arenaDiverse=1 --divEvery=3 --divTol=0.02 --divTrigger=0.40 --arenaTemp=0.05 --arenaHighN=3 \
+  --start=scratch/arms/P2-A1-fit2-S1o.bak --targetGames=24000 --games=4 --seed=7 --arenaHold=20 \
+  --sigmaAdaptive=1 --fxSelect=1 --fxGames=8 --out=scratch/arms/HIGN-s7.bak
+```

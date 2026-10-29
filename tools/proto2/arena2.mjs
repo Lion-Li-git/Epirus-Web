@@ -96,9 +96,18 @@ export function createArena2(W, opts) {
   const shapes = (o.shapes && o.shapes.length ? o.shapes : SHAPES).slice();
   const temp = o.temp == null ? TEMP_DEFAULT : Number(o.temp);
   if (!(temp > 0)) throw new Error('createArena2: temp 要正数（收到 ' + o.temp + '）');
+  /* `highN=`（10-29 夜）：**高人数课程**。只改**训练环**的桌形抽样权重（n≥8 每格重复 highN 次），
+   *   终局/冻结验证仍用**均匀的 11 格**（读数口径不能被课程改掉）。用来判 8P/10P 的弱是"训练里见得少"还是"表示/池化不行"。 */
+  const highNW = Math.max(1, Math.floor(Number(o.highN) || 1));
+  const loopShapes = [];
+  for (let i = 0; i < shapes.length; i++) {
+    const reps = (shapes[i].n >= 8 ? highNW : 1);
+    for (let k = 0; k < reps; k++) loopShapes.push({ idx: i, n: shapes[i].n, mode: shapes[i].mode });
+  }
   const fp = ['arena2.v' + ARENA2_VERSION, 'pool=' + poolFp, 'poolSeed=' + poolSeed,
     'shapes=' + shapes.map((s) => s.n + ':' + s.mode).join(','),
-    'roster=' + roster.map((r) => r.name).join(',')].join('|');
+    'roster=' + roster.map((r) => r.name).join(','),
+    highNW > 1 ? 'highN=' + highNW + '（仅训练环）' : 'highN=1'].join('|');
   const fixedByKey = {};
   for (const r of roster) if (r.kind === 'fixed') fixedByKey[r.name.slice(5)] = r.sel;
   const fixed = (k) => fixedByKey[k];
@@ -180,7 +189,8 @@ export function createArena2(W, opts) {
       const gen = c.gen | 0;
       for (let g = 0; g < games; g++) {
         const gameSeq = gen * games + g;
-        addRow(agg, playOne(sel, gameSeq % shapes.length, gameSeq, SALT.loop));
+        const slot = loopShapes[gameSeq % loopShapes.length];
+        addRow(agg, playOne(sel, slot.idx, gameSeq, SALT.loop));
       }
     } else if (phase === 'holdout' || phase === 'frozen') {
       const per = Math.max(1, c.gamesPerShape | 0);
@@ -230,7 +240,7 @@ export function createArena2(W, opts) {
     return { win: 100 * w / Math.max(1, g), games: g, cells: cells.length };
   }
   return {
-    version: ARENA2_VERSION, fp, temp, pool, poolFp, roster, shapes, poolSeed,
+    version: ARENA2_VERSION, fp, temp, pool, poolFp, roster, shapes, poolSeed, highN: highNW, loopShapes,
     fixed, evalChooser, evalParams, verifyWired, legacyCheck,
     chooserOf: (params, t) => T.policyChooserN(params, t == null ? temp : t),
     rosterNames: () => roster.map((r) => r.name),
@@ -246,6 +256,10 @@ function main() {
   const RUNGS = arg('rungs', 'none');
   const GPS = Math.max(2, Number(arg('gamesPerShape', 8)) || 8);
   const TEMP = Number(arg('temp', TEMP_DEFAULT));
+  /* `--temps=0.001,0.02,0.05,...`：**温度标定**（10-29 夜）。v7 的 softmax 饱和、几乎不随 temp 动；
+   *   2.0 的头 logits 尺度小、最佳温度依包而异（COMBO-s11 在 0.05，COMBO-s7 在 0.15）。
+   *   ⇒ 每枚包必须按**自己的最佳温度**报读数，否则"同一名义 temp"不是同一个熵。 */
+  const TEMPS = String(arg('temps', '')).split(',').map(Number).filter((x) => x > 0);
   const LEGACY = Math.max(0, Number(arg('legacy-check', 0)) || 0);
   const POOLSEED = Number(arg('poolSeed', POOL_SEED));
   const JSON_OUT = arg('json', '');
@@ -262,7 +276,7 @@ function main() {
   const A = createArena2(W, { refParams, temp: TEMP, poolSeed: POOLSEED });
   console.log('# arena2 扩表考卷 ‖ 指纹 ' + A.fp + ' ‖ 桌形 ' + A.shapes.length + '（' + A.shapes.map((s) => s.n + ':' + s.mode).join(',') + '）' +
     ' ‖ 对手表 ' + A.roster.length + ' 项（' + A.pool.length + ' 脚本 bot + ' + (A.roster.length - A.pool.length - 1) + ' 单技能 + 均匀随机）' +
-    ' ‖ 每格 ' + GPS + ' 局 ‖ temp=' + TEMP);
+    ' ‖ 每格 ' + GPS + ' 局 ‖ ' + (TEMPS.length ? '温度扫描 ' + TEMPS.join('/') : 'temp=' + TEMP));
 
   if (LEGACY) {
     const r = A.legacyCheck(A.fixed('reflect'), LEGACY);
@@ -290,17 +304,38 @@ function main() {
   }
 
   const rows = [];
-  if (RUN_V7) rows.push({ tag: '参照v7', ...A.evalParams(refParams, { phase: 'holdout', gamesPerShape: GPS, temp: TEMP }) });
-  if (packParams) rows.push({ tag: '2.0包 ' + PACK.replace(/^.*[\\/]/, ''), arch: packArch, ...A.evalParams(packParams, { phase: 'holdout', gamesPerShape: GPS, temp: TEMP }) });
-  if (RUNGS === 'all') {
-    for (const s of R.skills) rows.push({ tag: 'only:' + s.key, key: s.key, ...A.evalChooser(A.fixed(s.key), { phase: 'holdout', gamesPerShape: GPS }) });
+  const packTag = '2.0包 ' + PACK.replace(/^.*[\\/]/, '');
+  if (TEMPS.length) {
+    /* 温度扫描：只跑被测包与 v7（阶梯不吃温度 ⇒ 与 --rungs=all 互斥，避免 30×N 行放大成本） */
+    if (RUNGS === 'all') { console.error('⛔ --temps 与 --rungs=all 不同时用（阶梯是固定打法，不吃温度）'); process.exit(2); }
+    for (const t of TEMPS) {
+      if (RUN_V7) rows.push({ tag: '参照v7 t=' + t, temp: t, ...A.evalParams(refParams, { phase: 'holdout', gamesPerShape: GPS, temp: t }) });
+      if (packParams) rows.push({ tag: packTag + ' t=' + t, temp: t, arch: packArch, ...A.evalParams(packParams, { phase: 'holdout', gamesPerShape: GPS, temp: t }) });
+    }
+  } else {
+    if (RUN_V7) rows.push({ tag: '参照v7', ...A.evalParams(refParams, { phase: 'holdout', gamesPerShape: GPS, temp: TEMP }) });
+    if (packParams) rows.push({ tag: packTag, arch: packArch, ...A.evalParams(packParams, { phase: 'holdout', gamesPerShape: GPS, temp: TEMP }) });
+    if (RUNGS === 'all') {
+      for (const s of R.skills) rows.push({ tag: 'only:' + s.key, key: s.key, ...A.evalChooser(A.fixed(s.key), { phase: 'holdout', gamesPerShape: GPS }) });
+    }
   }
   const pct = (x) => (100 * x).toFixed(1) + '%';
   for (const r of rows) {
     console.log('· ' + String(r.tag).padEnd(26) + ' ‖ 夺1 ' + pct(r.first) + ' ‖ 净胜 ' + r.score.toFixed(3) + ' ‖ 干净净胜 ' + r.cleanScore.toFixed(3) + ' ‖ 平局 ' + pct(r.draw) +
       ' ‖ 干净胜 ' + pct(r.clean) + ' ‖ 前2 ' + pct(r.top2) + ' ‖ 单卡 ' + (r.maxCard ? r.maxCard.key + ' ' + (100 * r.maxCard.share).toFixed(1) + '%（非ジ ' + r.maxCard.nonji + ' 手）' : '—'));
-    if (r.tag.indexOf('2.0包') === 0) {
+    if (!TEMPS.length && r.tag.indexOf('2.0包') === 0) {
       console.log('   逐桌形夺1：' + Object.keys(r.byShape).map((k) => k + ' ' + pct(r.byShape[k].first)).join(' ‖ '));
+    }
+  }
+  if (TEMPS.length && packParams) {
+    const ps = rows.filter((r) => r.tag.indexOf(packTag) === 0);
+    const bn = ps.slice().sort((a, b) => b.score - a.score)[0];
+    const bc = ps.slice().sort((a, b) => b.cleanScore - a.cleanScore)[0];
+    console.log('\n⇒ 被测包最佳温度：按净胜 **t=' + bn.temp + '**（' + bn.score.toFixed(3) + ' / 夺1 ' + pct(bn.first) + '）‖ 按干净净胜 **t=' + bc.temp + '**（' + bc.cleanScore.toFixed(3) + ' / 夺1 ' + pct(bc.first) + '）');
+    if (RUN_V7) {
+      const vs = rows.filter((r) => r.tag.indexOf('参照v7') === 0);
+      const vc = vs.slice().sort((a, b) => b.cleanScore - a.cleanScore)[0];
+      console.log('   参照 v7 最佳干净净胜 ' + vc.cleanScore.toFixed(3) + '（t=' + vc.temp + '）⇒ 差距 ' + (bc.cleanScore - vc.cleanScore).toFixed(3) + ' 干净净胜');
     }
   }
   const rungs = rows.filter((r) => r.tag.indexOf('only:') === 0).sort((a, b) => b.first - a.first);
@@ -315,7 +350,7 @@ function main() {
     }
   }
   if (JSON_OUT) {
-    writeFileSync(JSON_OUT, JSON.stringify({ tool: 'tools/proto2/arena2.mjs', fp: A.fp, temp: TEMP, gamesPerShape: GPS, poolSeed: POOLSEED, rows }, null, 1) + '\n');
+    writeFileSync(JSON_OUT, JSON.stringify({ tool: 'tools/proto2/arena2.mjs', fp: A.fp, temp: TEMP, temps: TEMPS.length ? TEMPS : null, gamesPerShape: GPS, poolSeed: POOLSEED, rows }, null, 1) + '\n');
     console.log('\n✔ 已写 ' + JSON_OUT);
   }
   process.exit(0);

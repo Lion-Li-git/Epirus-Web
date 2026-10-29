@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -122,6 +122,9 @@ const DIV_EVERY = Math.max(1, Math.floor(Number(arg('divEvery', 10)) || 10));
 /* `--divTrigger=`：父代单卡占比**超过它才开探针**（缺省 0.5 = 只在明显退化时）。
  * 组合臂从 CLEAN-s7（单卡 49%）出发 ⇒ 用 0.40 让多样性真正开始工作；纯 net 臂维持 0.5。 */
 const DIV_TRIGGER = Math.min(1, Math.max(0, Number(arg('divTrigger', 0.5)) || 0.5));
+/* `--arenaHighN=3`：**高人数课程**，只把训练环里 n≥8 的桌形重复 3 次（终局仍均匀 11 格）。
+ * 用来判 8P/10P 的弱是"训练里见得少"还是"表示/池化不行"；不改变读数口径。 */
+const ARENA_HIGH_N = Math.max(1, Math.floor(Number(arg('arenaHighN', 1)) || 1));
 if (ARENA_DIV && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaDiverse 需要 --arena2=1 且 --fxSelect=1（多样性只读冻结验证那一把）'); process.exit(7); }
 let ARENA_REF = null;
 if (ARENA2) {
@@ -184,12 +187,13 @@ startParams = Float64Array.from(startParams);
 /* arena2 只在起点粒定下来之后建表；它用 v7 参照固定对手表，与起点粒无关（起点不参与建桌）。 */
 var ARENA = null;
 if (ARENA2) {
-  try { ARENA = createArena2(W, { refParams: ARENA_REF, temp: ARENA_TEMP }); }
+  try { ARENA = createArena2(W, { refParams: ARENA_REF, temp: ARENA_TEMP, highN: ARENA_HIGH_N }); }
   catch (e) { console.error('⛔ arena2 建表失败：' + String(e && e.message || e)); process.exit(7); }
   console.log('[cem-arm] ⚙ 扩表 arena2 开：指纹 ' + ARENA.fp);
   console.log('   ‖ 桌形 ' + ARENA2_SHAPES.length + '（' + ARENA.shapes.map(function (s) { return s.n + ':' + s.mode; }).join(',') + '）' +
     ' ‖ 对手表 ' + ARENA.roster.length + ' 项（' + ARENA.pool.length + ' 脚本 bot + ' + (ARENA.roster.length - ARENA.pool.length - 1) + ' 单技能 + 均匀随机）' +
-    ' ‖ 货币=' + ARENA_CUR + (ARENA_DIV ? '+多样性当选' : '') + ' ‖ temp=' + ARENA_TEMP + ' ‖ 终局 holdout=' + ARENA_HOLD + ' 局/桌形');
+    ' ‖ 货币=' + ARENA_CUR + (ARENA_DIV ? '+多样性当选' : '') + (ARENA_HIGH_N > 1 ? '+高人数×' + ARENA_HIGH_N : '') +
+    ' ‖ temp=' + ARENA_TEMP + ' ‖ 终局 holdout=' + ARENA_HOLD + ' 局/桌形');
   if (P.__arch2) {
     const w = ARENA.verifyWired(startParams, { temp: ARENA_TEMP });
     if (!w.ok) { console.error('⛔ arena2 接线没生效（forwardCands +' + w.forwards + ' ‖ chooseCandidates ' + w.chooseCandidatesCalls + '）⇒ 开不了臂'); process.exit(7); }
@@ -491,7 +495,7 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
    *   `currency` 标明这一格 ⇒ 与旧臂的 fit 数值不可比。`maxCard` 是终局那一把的单卡占比（判退化用）。 */
   currency: ARENA ? ('arena2.' + ARENA_CUR + (ARENA_DIV ? '+div' : '')) : 'scoreMemberN.fit',
   arena: ARENA ? { fp: ARENA.fp, temp: ARENA_TEMP, shapes: ARENA2_SHAPES.length, roster: ARENA.roster.length, pool: ARENA.pool.length,
-    holdGamesPerShape: ARENA_HOLD, holdGames: ho.games, draw: ho.draw, cur: ARENA_CUR, diverse: ARENA_DIV,
+    holdGamesPerShape: ARENA_HOLD, holdGames: ho.games, draw: ho.draw, cur: ARENA_CUR, diverse: ARENA_DIV, highN: ARENA_HIGH_N,
     divTol: DIV_TOL, divDelta: DIV_DELTA, divEvery: DIV_EVERY, divTrigger: DIV_TRIGGER, esa: ESA_DIV_STAT,
     bestMaxCard: ho.maxCard, startMaxCard: hoStart.maxCard, bestByShape: ho.byShape } : null,
   curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel };
