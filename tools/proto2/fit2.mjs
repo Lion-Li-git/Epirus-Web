@@ -78,7 +78,7 @@ if (!fit.ok) { console.error('⛔ 蒸馏失败：' + fit.why); process.exit(2); 
 
 /* 留出半批上的读数（自己算，不再调 distillHead ⇒ 不会把测试集喂回拟合） */
 const test = fixtures.slice(cut);
-let hit = 0, rhoN = 0, rhoD = 0, nT = 0, flat = 0, pairOk = 0, pairTot = 0;
+let hit = 0, hitVal = 0, myTieSum = 0, refTieSum = 0, rhoN = 0, rhoD = 0, nT = 0, flat = 0, pairOk = 0, pairTot = 0;
 for (const fx of test) {
   const cands = P.candidatesFor(fx.state, fx.pid, T.econBase(fx.state, fx.pid, fx.legal), { lockTarget: false });
   if (!cands || cands.length < 2) continue;
@@ -101,6 +101,10 @@ for (const fx of test) {
     const dx = mine[ci] - am, dy = rv[i] - bm; sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
   }
   nT++; if (a === keep[bI]) hit++;
+  /* ⭐ 同分口径 + 并列集合大小（第二十二段补的：只有 top-1 会把"并列变多 ⇒ 靠下标蒙对"读成"学好了"） */
+  if (Math.abs(rv[a] - rv[keep[bI]]) < 1e-9) hitVal++;
+  { const mxM = mine[a]; let km = 0; for (let i = 0; i < keep.length; i++) if (Math.abs(mine[keep[i]] - mxM) < 1e-9) km++; myTieSum += km;
+    const mxR = rv[keep[bI]]; let kr = 0; for (let i = 0; i < keep.length; i++) if (Math.abs(rv[keep[i]] - mxR) < 1e-9) kr++; refTieSum += kr; }
   if (sxx < 1e-9) flat++;                                  /* 头输出在这组里几乎恒定 ⇒ top-1 是靠下标破号来的，不算学出来 */
   for (let i = 0; i < keep.length; i++) for (let j = i + 1; j < keep.length; j++) {
     const dm = mine[keep[i]] - mine[keep[j]], dr = rv[i] - rv[j];
@@ -126,7 +130,9 @@ console.log('  决策 ' + fixtures.length + ' ‖ 拟合用前 ' + cut + ' ‖ *
 console.log('  拟合行数 ' + fit.rows + ' ‖ 组内 top-1 与 v7 一致率（留出）= ' + (100 * agree).toFixed(1) + '% ‖ 随机该是 ' + (100 * baseTop1 / Math.max(1, bt)).toFixed(1) + '%');
 const pairRate = pairTot ? pairOk / pairTot : 0;
 console.log('  组内 logits 秩相关（留出，均值）= ' + rho.toFixed(3) + ' ‖ **配对序一致率 = ' + (100 * pairRate).toFixed(1) + '%**（0.5 = 没有信息；分母 ' + pairTot + ' 对）');
-console.log('  ⚑ 头输出恒定的组（这类 top-1 是靠下标破号蒙的，不算学出来）：' + flat + '/' + nT);
+console.log('  ⚑ 头输出恒定的组（这类 top-1 是靠下标破号蒙的，不算学出来）：' + flat + '/' + nT
+  + ' ‖ ⭐ **同分口径 hitVal = ' + (100 * hitVal / Math.max(1, nT)).toFixed(1) + '%** ‖ 我方最大并列集合平均 '
+  + (myTieSum / Math.max(1, nT)).toFixed(2) + ' 枚 ‖ 标签(v7) 自己 ' + (refTieSum / Math.max(1, nT)).toFixed(2) + ' 枚');
 const verdict = (pairRate > 0.85 && agree > 0.8) ? '⇒ **装得下**：冻结上游 + 一层线性头就能复现现役冠军的组内序 ⇒ 结构没丢东西，热启动可用'
   : (pairRate > 0.62 ? '⇒ **部分装得下**（配对序一致 ' + (100 * pairRate).toFixed(1) + '%）：容量在，但"只拟合最后一层"不够 ⇒ 蒸馏要连隐层一起训'
     : '⇒ **这一层装不下**（配对序一致 ' + (100 * pairRate).toFixed(1) + '% ≈ 瞎猜）：冻结的随机投影没保留 v7 排序所依赖的方向 ⇒ 不能拿这粒当热启动');

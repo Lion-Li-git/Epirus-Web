@@ -12,7 +12,7 @@
  */
 import { sandbox, loadChamp } from '../audit-lib.mjs';
 import { install, layout, paramCount, make, verifyWired } from './arch2.mjs';
-import { encode as obs3Encode } from './obs3.mjs';
+import { encode as obs3Encode, setAblate } from './obs3.mjs';
 
 const W = sandbox();
 const P = W.EpirusPolicy, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
@@ -368,6 +368,29 @@ const O3 = await import('./obs3.mjs');
     + a16.groups.map((v) => v.join('≡')).join(' ‖ ') + '）↔ obs3 ' + b16.n + ' 格（0 撞车 ⇒ S1o 的承诺成立且严格优于 S1 那面）'
     + ' ‖ ② 只差 `target2` 的候选对：' + t2grp + ' 组 ‖ **S1 逐位全等 ' + t2flatS1 + '/' + t2grp + '**（`arch2.mjs:211` 从不拼 `target2` ⇒ 构造性死维）'
     + ' ‖ **S1o 分得开 ' + t2diffS1o + '/' + t2grp + '**（`h_t1 ⊕ h_t2`）');
+}
+
+{
+  /* T17（10-29 11:2x · 第二十二段"表示块消融开关"欠的三条牙）：**开关必须接在网络那条路上**。
+   *   立这条的理由是现场事故：第一版只把开关接在 `obs3.encode()` 里 ⇒ 七种消融全给出同一批数
+   *   （S1o 的前向自己拼 `xin/afbuf`，**不经过 `encode()`**）——与⑭/㊲同族（"覆盖式接入要自证真被调用"）。
+   *   ① 默认关 ⇒ 网络 logits 逐位不变（两次取同一串）；② 开 `C.id` ⇒ logits **必须变**（不变就是接错层）；
+   *   ③ 关一个不存在的块名 ⇒ 必须抛（不许"以为关了其实没关"）。一条腿判三件事，按"可以加但尽量少加"。 */
+  const A17 = install(W, Object.assign({ input: 'obs3', mutMode: 'seg' }, cfg));
+  A17.rngRef.r = rng;
+  const st17 = mkState(5); st17.p[0].ep = 8;
+  const c17 = P.candidatesFor(st17, 0, T.econBase(st17, 0, Play.legalActions(st17, 0)), { lockTarget: false });
+  const p17 = Float64Array.from(P.makePolicy(0.25));
+  const lgOf = () => Array.from(P.forwardCands(st17, 0, c17, p17, { temp: 0.5 }).logits).join(',');
+  setAblate(null); const off1 = lgOf();
+  setAblate(['C.id']); const onId = lgOf();
+  setAblate(null); const off2 = lgOf();
+  let threw17 = false;
+  try { setAblate(['NO_SUCH_BLOCK']); obs3Encode(W, st17, 0, c17[0]); } catch (e) { threw17 = true; } finally { setAblate(null); }
+  ok(off1 === off2 && onId !== off1 && threw17,
+    'T17 消融开关接在网络路上 ‖ 关着两次逐字同 ' + (off1 === off2 ? '✔' : '✖') + ' ‖ 开 `C.id` logits 变化 '
+    + (onId !== off1 ? '✔' : '**✖ 接错层了（encode 不是网络那条路）**') + ' ‖ 未知块名当场抛 ' + (threw17 ? '✔' : '✖'));
+  A17.restore();
 }
 
 console.log(fails.length ? '\n⛔ 自证未过 ' + fails.length + ' 条 ⇒ 结构不进下一环' : '\n⇒ ' + done + ' 条自证全过：2.0 原型可以进训练环');
