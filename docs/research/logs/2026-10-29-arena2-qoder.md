@@ -254,3 +254,38 @@ EPIRUS_ARCH2=S1o:input=obs3 EPIRUS_MUT_MODE=seg node tools/probe-cem-arm.mjs --m
   --start=scratch/arms/P2-A1-fit2-S1o.bak --targetGames=24000 --games=4 --seed=7 --arenaHold=20 \
   --sigmaAdaptive=1 --fxSelect=1 --fxGames=8 --out=scratch/arms/HIGN-s7.bak
 ```
+
+## 十二、审 DS 夜建议 + 两处复跑（10-29 23:0x）
+
+### 12.1 2P 单挑矩阵：主结论复现，一处要更正
+
+用 arena2 的固定打法构造 + 同 `oneGameN` 协议，40 局/对换边（`scratch/DS-2P-VERIFY.log`）：
+
+- `drain vs bigT 0/100`、`vs gun/sword/tank 100/0`、`vs reflect/guard 100% 和`、`vs snipe 70/30` ⇒ **DS 的主结论复现**（snipe 70 vs 他的 65，剂量/种子差）。
+- **更正**：DS 的“bigT 对 guard/proto 全胜”不成立——我们读到 `bigT vs guard 100% 和`、`bigT vs proto 100% 和`；bigT 只对 `snipe 83/18`、`transfer 100/0` 是赢。⇒ “bigT 几乎通吃”应改成“**bigT 克 drain/snipe/transfer，对 guard/proto 只能拖和**”。这会影响分层场的捕食者名单：不能把“防御类”当成 bigT 的天敌。
+
+### 12.2 P5 温度留出：DS 的批评成立，且比他说的更硬
+
+用 `ARENA2-LONG-s7-sweep.json` 的 `byShape.cleanScore`：在 **2P+3P（6 格）**上选温度，在 **5P/8P/10P（5 格）**上评（`scratch/DS-P5-TEMPHOLDOUT.log`）：
+
+| 行 | 选温集最佳 t | 留出高 n 干净净胜 | 全桌形干净净胜 |
+| --- | --- | --- | --- |
+| LONG-s7 | 0.1 | **−0.010** | 0.204 |
+| v7 | 0.3 | **0.093** | 0.213 |
+
+⇒ **“全桌形打平”是低 n + 同场选温的乐观值**；在留出的高 n 上，包仍低于机会线，差 **0.103**。以后强度声明必须写清“选温集/评价集”，不能拿全桌形最佳温度当结论。
+
+### 12.3 对 DS 建议的裁断
+
+- **同意**：① 平均场会把天敌稀释（2P 矩阵 + 51 项 roster 的 bigT 只占 1/51）；② `battery` 只做**诊断**、不做终局门（几乎每枚都有 0% 对位，min 门会恒红）；③ 分层场当训练场；④ P2 补“不输/收尾”；⑤ P3 平衡高人数课程（不是固定 ×3）；⑥ P4 σ 下限/重启、3 粒种子报最小值；⑦ P5 温度留出；⑧ 不再用 Pareto 带做多样性（三次都没咬住）。
+- **不一致（需 DS 收口）**：RECOMMEND 的 P0 正文仍写“终局门”，但 §二b 与提交 `df4595f3` 已改成“诊断/分层场输入”；P1 写“只当训练场、不当终局尺”，而提交信息写“终局门仍是分层场的 arenaGuard”。**二选一**：分层场同时当训练场与终局尺（推荐，电池只诊断），或终局仍用平均场（那 `arenaGuardVerdict` 仍红）。
+- **冲突（需用户裁）**：P6 想把单卡 ≥60% 重新升阻断（他倾向“两模式都 ≥60%”，2/30），这与用户 10-25「只记录不阻断」及 10-29 撤 60% 阻断的决定相冲；**不建议自行重开**。
+- **DS 的 §九 第 1 条**“加 drain 天敌直到最好的固定打法 < v7”与 P1 同向；但捕食者名单要按 battery 实测，不能按“防御类克 bigT”猜（见 12.1）。
+
+### 12.4 我建议的下一步顺序（等裁）
+
+1. **E1 battery 诊断**（v7/drain，2P 40 局/对，min/mean/p10）——只用于生成分层场的捕食者名单；
+2. **E5 温度留出规则写死**：每枚包报“选温集 / 评价集”，全桌形最佳温度不再单独当结论；
+3. **P1 分层场**：n≥5 每局至少含 bigT + reflect/snipe/guard 轮换；n=2/3 只能跨局轮换（座位不够，DS 的“每局各一枚”在 2/3P 做不到）；先 6000 局 E3；
+4. **P3 highN=2 或按地板分位** + **P4 σ 下限**，24k 两粒种子；
+5. **P2 不输项**（survival / 小 draw credit，防 stall）最后加。
