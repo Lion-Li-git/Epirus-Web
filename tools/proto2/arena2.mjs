@@ -31,7 +31,8 @@ import { resolve } from 'node:path';
 import { sandbox, loadChamp, buildPoolSeeded, poolFingerprint } from '../audit-lib.mjs';
 import { install as installArch2 } from './arch2.mjs';
 
-export const ARENA2_VERSION = 1;
+/* v2（ZCode · 10-30 夜，P0-1）：每局前重置 bot 跨局记忆（见 createArena2 内 ⚑ 注释）⇒ 读数与 v1 不可比，指纹换轨 */
+export const ARENA2_VERSION = 2;
 export const POOL_SEED = 20261029;
 export const TEMP_DEFAULT = 0.15;
 export const REF_PACK = 'js/bundled-champion-3p.js';
@@ -123,8 +124,17 @@ export function createArena2(W, opts) {
   const fixedByKey = {};
   for (const r of roster) if (r.kind === 'fixed') fixedByKey[r.name.slice(5)] = r.sel;
   const fixed = (k) => fixedByKey[k];
+  const resetBotMem = W.EpirusBots && typeof W.EpirusBots.resetBotMem === 'function' ? W.EpirusBots.resetBotMem : null;
+  if (!resetBotMem) throw new Error('createArena2: W.EpirusBots.resetBotMem 不存在 ⇒ 无法保证逐局确定性（sandbox 没载 bots.js？）');
 
   function playOne(sel, shapeIdx, gameSeq, salt) {
+    /* ⚑ P0-1（ZCode · 10-30 夜）：每局前重置 bot 跨局记忆。bots.js 的 `__mem` 是模块级、全体 bot 共享，
+     *   注释里的设计意图是"每局(round==1)重置"，但重置只挂在 `noteOpp` 上 ⇒ 读它却不先走 noteOpp 的
+     *   bot 路径会把**上一局的残迹**带进下一局（diag-diff 实测：440 局里 3 局漂、全是脚本 bot 在场；
+     *   `EpirusBots.resetBotMem()` 一调就逐局回到干净态）。修在 playOne 门口 = 本尺每一局同一起点
+     *   ⇒ 同一行连评两次逐位相同、holdout 与全量嵌套。修在尺侧而非 oneGameN：训练局的跨局记忆
+     *   是另一笔账（动它 = 换训练动力学），今晚不动。 */
+    resetBotMem();
     const shape = shapes[shapeIdx];
     const n = shape.n;
     const seed = ((salt + gameSeq * 104729 + shapeIdx * 7919 + n * 97) >>> 0) || 1;
@@ -265,7 +275,7 @@ export function createArena2(W, opts) {
   }
   return {
     version: ARENA2_VERSION, fp, temp, pool, poolFp, roster, shapes, poolSeed, highN: highNW, loopShapes, stratified, predators: PREDATORS, stratCap, stratMix,
-    fixed, evalChooser, evalParams, verifyWired, legacyCheck,
+    fixed, evalChooser, evalParams, verifyWired, legacyCheck, playOne,
     chooserOf: (params, t) => T.policyChooserN(params, t == null ? temp : t),
     rosterNames: () => roster.map((r) => r.name),
   };
