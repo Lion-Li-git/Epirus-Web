@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -78,6 +78,12 @@ const ARENA_LEX = arg('arenaLex', '') === '1';
  * 判据沿用 P0-2 同一套三条（8P/10P 每格 ≥ v7−3pt ‖ 总 ≥ 0.211−2pt ‖ 3 种子最小 ≥ v7 同场）。
  * ⚠ 与 --arenaLex / --arenaPen 互斥（都换 byScore 判据）。 */
 const ARENA_FPEN = Math.max(0, Number(arg('arenaFloorPen', 0)) || 0);
+/* ===== `--fxAll=1`（10-30 凌晨，坏种子诊断刀）：**拆掉环内预选门** =====
+ * 病（10-30 剂量-响应实测）：坏种子（s7/s17）的接受率 ≈3.7%（预选 246 次只过 9 次），24k 预算 s17 零接受。
+ * 问：是"循环分门把能过冻结桌的子代挡在外面"，还是"那片区域真的贫瘠"？
+ * 本旗标让**每个子代都上冻结桌验证**（预选门短路；预算照记 ⇒ 迭代数会掉一个量级，只做诊断不做常规训练）。
+ * 判读：同预算下接受数若显著高于带门版（s7@6k = 5 次）⇒ 门是阻塞点；接近 ⇒ 区域贫瘠。 */
+const FXALL = arg('fxAll', '') === '1';
 const DEG = arg('degenerate', '') === '1';
 /* ===== §E822（10-28 傍晚 · 千问）：`--targetGames=` ⇒ **按计数器停，不按记账停** =====
  * 为什么必须加：实测同一 GA 的"每代真打几局"**不是常数**（60 evals 校准时 ≈8 局/代，6000 evals 真跑时 ≈2 局/代
@@ -160,8 +166,9 @@ const ARENA_STRAT_MIX = arg('arenaStratMix', ARENA_STRAT_ARG === 'mild' ? '0.5' 
 if (ARENA_DIV && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaDiverse 需要 --arena2=1 且 --fxSelect=1（多样性只读冻结验证那一把）'); process.exit(7); }
 if (ARENA_LEX && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaLex 需要 --arena2=1 且 --fxSelect=1（词典序只换冻结桌的接受判据）'); process.exit(7); }
 if (ARENA_LEX && ARENA_PEN > 0) { console.error('⛔ --arenaLex 与 --arenaPen 互斥（都换 byScore 的判据，一次对照只许一个自由量）'); process.exit(7); }
-if (ARENA_FPEN > 0 && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaFloorPen 需要 --arena2=1 且 --fxSelect=1（地板罚项只换冻结桌的接受判据）'); process.exit(7); }
-if (ARENA_FPEN > 0 && (ARENA_LEX || ARENA_PEN > 0)) { console.error('⛔ --arenaFloorPen 与 --arenaLex/--arenaPen 互斥（都换 byScore 的判据）'); process.exit(7); }
+      if (ARENA_FPEN > 0 && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaFloorPen 需要 --arena2=1 且 --fxSelect=1（地板罚项只换冻结桌的接受判据）'); process.exit(7); }
+      if (ARENA_FPEN > 0 && (ARENA_LEX || ARENA_PEN > 0)) { console.error('⛔ --arenaFloorPen 与 --arenaLex/--arenaPen 互斥（都换 byScore 的判据）'); process.exit(7); }
+      if (FXALL && (!FXSEL || !ARENA2)) { console.error('⛔ --fxAll 需要 --fxSelect=1 且 --arena2=1（它拆的是冻结桌预选门）'); process.exit(7); }
 let ARENA_REF = null;
 if (ARENA2) {
   const c0 = loadChamp(W, 'js/bundled-champion-3p.js', HERE + '/..');
@@ -452,7 +459,7 @@ if (MODE === 'esa') {
        *   否则"只反弹"父代的等分带永远轮不到一个更低单卡的子代。 */
       const probe = DIV && parentShare > DIV_TRIGGER && (i % DIV_EVERY === 0);
       if (probe) divProbes++;
-      if (e.fit > bestFit || probe) {
+      if (e.fit > bestFit || probe || FXALL) {
         screened++;
         if (!FXSEL) { bestFit = e.fit; best = child; ok = true; }
         else {
