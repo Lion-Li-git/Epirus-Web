@@ -875,6 +875,7 @@ if (MODE === 'esa') {
   const r = rngFor(SEED);
   const iters = TARGET_G ? 1000000 : Math.max(1, Math.floor(EVALS / POP));
   let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
+  let bestFitPasser = -Infinity;   /* 勘误二：达标者产物棘轮（产物只从过门候选里出） */
   for (let it = 0; it < iters; it++) {
     auditsBefore = MASTERY_STAT.audits;
     const cand = [], scored = [];
@@ -884,8 +885,11 @@ if (MODE === 'esa') {
       cand.push(v); scored.push(evalOne(v, it, i));
     }
     const order = scored.map(function (s, i) { return i; }).sort(function (a, b) { return scored[b].fit - scored[a].fit; });
-    /* mastery 门 · elite 档：精英只吃达标者（按 fit 降序审计；<2 个达标 ⇒ 退回纯 fit 并记 starved） */
-    let keep;
+    /* mastery 门 · elite 档：精英只吃达标者（按 fit 降序审计；<2 个达标 ⇒ 退回纯 fit 并记 starved）。
+     * ⚑ 勘误二（10-31 00:4x）：产物只从**达标者**里棘轮（bestFitPasser 独立记账）——
+     *   第一轮的教训：4 局循环分棘轮会把产物冻结在早期幸运子代上（往往是饿退代的纯 fit 顶），
+     *   门塑形了种群（合格率 87%）却管不到产物（正式尺 0.0/局）。饿退代一律不更新产物。 */
+    let keep, passerTop = null;
     if (MASTERY_ON && MASTERY_GATE === 'elite') {
       const passers = [];
       for (const k of order) {
@@ -894,8 +898,10 @@ if (MODE === 'esa') {
         const r = masteryRate(cand[k]);
         if (r != null && r >= MASTERY_LINE) passers.push(k);
       }
-      if (passers.length >= 2) keep = passers.slice(0, Math.max(2, ELITE));
-      else { MASTERY_STAT.starved++; keep = order.slice(0, Math.max(2, ELITE)); }
+      if (passers.length >= 2) {
+        keep = passers.slice(0, Math.max(2, ELITE));
+        passerTop = keep[0];
+      } else { MASTERY_STAT.starved++; keep = order.slice(0, Math.max(2, ELITE)); }
     } else keep = order.slice(0, Math.max(2, ELITE));
     const nm = new Float64Array(DIM), ns = new Float64Array(DIM);
     for (let d = 0; d < DIM; d++) {
@@ -907,7 +913,13 @@ if (MODE === 'esa') {
     }
     /* mastery 门 · best 档：产物必须达标（top-fit 不达标沿 fit 降序往下审；elite 档下 keep 已全达标，直落）。 */
     const bf = scored[keep[0]].fit;
-    if (MASTERY_ON && MASTERY_GATE === 'best') {
+    if (MASTERY_ON && MASTERY_GATE === 'elite') {
+      /* 勘误二：elite 档产物只从达标者棘轮；饿退代（passerTop 空）不更新产物 */
+      if (passerTop != null && scored[passerTop].fit > bestFitPasser) {
+        bestFitPasser = scored[passerTop].fit; best = cand[passerTop];
+        if (bestFitPasser > bestFit) bestFit = bestFitPasser;
+      }
+    } else if (MASTERY_ON && MASTERY_GATE === 'best') {
       for (const k of order) {
         if (MASTERY_STAT.audits - auditsBefore >= MASTERY_CAP) break;
         if (scored[k].fit <= bestFit) break;   /* 再往下审计也超不过现役 best */
