@@ -19,7 +19,8 @@
  * 用法：node tools/probe-cem-arm.mjs --mode=ga|cem --evals=2000 [--pop=14] [--games=4] [--n=3]
  *        [--seed=7] [--elite=4] [--sig=0.2] [--degenerate=1] [--out=<pack 落点>] [--quiet]
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
@@ -311,8 +312,11 @@ const DIM = P.paramCount();
 
 /* 起点粒：用**在册的 3P 夹具包**而不是活槽（R3：会换主人的指针不配当夹具）。读不出来就退回固定种子随机粒。 */
 let startParams = null, startLabel = '';
+/* 谱系（DS · 10-30 晚，用户要画冠军演化图）：起点是谁、哈希多少、产物代与哈希都进 meta。 */
+let startHash = null;
 const c = loadChamp(W, START_PACK, HERE + '/..');
-if (c && c.length === DIM) { startParams = Float64Array.from(c); startLabel = '夹具包 ' + START_PACK; }
+if (c && c.length === DIM) { startParams = Float64Array.from(c); startLabel = '夹具包 ' + START_PACK;
+  try { startHash = createHash('md5').update(readFileSync(START_PACK)).digest('hex'); } catch (e) { startHash = null; } }
 if (!startParams) {
   /* ⚑ 读不出必须点名**是哪个闸**拦的（代 1 的包 / 长度 / arch / dof），不许一句"退回随机粒"就翻篇——
    *   否则下一班会把"起点其实是随机"读成"起点是那枚冠军"，整条臂的解释就反了。 */
@@ -873,7 +877,12 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
     lex: ESA_LEX_STAT,
     fpen: ESA_FPEN_STAT,
     bestMaxCard: ho.maxCard, startMaxCard: hoStart.maxCard, bestByShape: ho.byShape } : null,
-  curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel };
+  curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel,
+  /* 谱系（给演化图用）：parent 是起点包或 random；outHash/gen 是产物身份。recipe 只收与"选法"有关的开关。 */
+  lineage: { parent: startLabel.indexOf('夹具包') === 0 ? START_PACK : 'random', parentHash: startHash,
+    outHash: OUT ? (function () { try { return createHash('md5').update(JSON.stringify(P.pack(best))).digest('hex'); } catch (e) { return null; } })() : null,
+    gen: OUT ? (function () { try { const vv = P.pack(best).v; return vv === 91 ? 2 : (vv === 90 ? 1 : null); } catch (e) { return null; } })() : null,
+    seed: SEED, recipe: { arenaLex: ARENA_LEX, arenaPerN: ARENA_PER_N, boN: BO_N, shapeCap: SHAPE_CAP, shapePick: SHAPE_PICK, warmShape: WARM_SHAPE } } };
 /* 打分健康度（2.0 臂才量：v7 那档没有“逐候选打分退化”这一格病，别把两件事混在一条读数里） */
 if (P.__arch2) {
   try {

@@ -120,3 +120,15 @@ S1o 声明 5650 条，**2688 条（47.6%）任何前向都不参与决策**（�
   （`createHash` 只在 `tools/repro-check.mjs`，且只覆盖 v7 路径）⇒ 那句目前是自述而非闸。代 2 用
   `selftest2` T18 + `tools/proto2/pack2-audit.mjs`（B 段逐下标覆盖、C 段逐段有牙、D 段逐维可见性，自带夹具）补成能跑的闸。
 
+## 九、代 2 之后：本轮结论的适用范围（按千问 `PACK2-CONTRACT` §九.1 建议）
+
+- 10-30 白天六组实验（boN / 行为表 / 形状 v1·v2 / 两阶段 / 归档终选 / 每 N 地板）**全部跑在代 1**（`f996c2a3`，含 47.6% 死权重）上；
+- **强度 / 形状 / 选择类读数仍有效**——它们量的是"选了谁、分布长什么样"，与权重有没有被读到无关；
+- **结构类结论不再算数**（容量墙、段感知变异、交互头、池化 `mean` 含 isSelf、参数覆盖）——以 `PACK2-CONTRACT-2026-10-30-qoder.md` 的代 2 为准；
+- 代 2 之后要重跑的三件：① 起点可行性（t=0.05 形状）② 形状闸/终选 ③ 每 N 地板（并用 `--verifGate` 防"零送验"）。
+
+## 十、代 2 的"从头开始"与谱系（10-30 晚，用户裁定）
+
+- 用户：「不用管代 1 的具体问题；代 1 的数据留下来做冠军演化图；新的接口调到代 2；没有起点就从头开始练」。
+- 已落：`probe-cem-arm` 的 meta 新增 **`lineage`**（`parent` / `parentHash` / `outHash` / `gen` / `seed` / `recipe`），`game-record` 与 `behavior-batch` 都改走 `readPack2 → packCfgExit → packInstallCfg` 唯一出口；
+- 代 2 的第一批：随机起点（`makePolicy(0.25)`）+ `--arenaLex --fxSelect --verifGate --headGate`，产物 `scratch/arms/G2-s{7,11,13}.bak`（`lineage.parent=random`）。
