@@ -166,6 +166,15 @@ export function layout(opts) {
   const interK = isO3 ? Math.max(0, Math.floor(Number(o.inter) || 0)) : 0;
   if (Number(o.inter) > 0 && !isO3) throw new Error('layout: inter 只接 obs3/obs3b 输入面（input=' + input + '）；v7 面是老路，不许加分支');
   const interStride = actH + hid + 2;                    // 每通道：u(actH) ‖ v(hid) ‖ g ‖ b
+  /* ===== 目标交互头（勘误十二，10-31 07:1x，ZCode）=====
+   * `tinter=K`：**act×target 双线性通道**——logit += Σ_k g_k·tanh((u_k·ae)·(w_k·te1) + b_k)。
+   * 动因：miniT 可见性检验（§十一末）——对手键身份已在特征里，但"对着 bigT 用户放小雷"是候选×目标的
+   *   乘法关系，cand 层要从 te1 嵌入里解出身份需要显式通道（inter 头是 act×ctx，管不到目标侧）。
+   * 三条硬规矩与 inter 同款：① 默认 K=0 段不存在 ⇒ 逐位不变；② 段追加 seg 表**末尾**（inter 之后）；
+   *   ③ 无目标 ⇒ te1=zeroSeat ⇒ 项退化为常数 g·tanh(b)（可学习压零）。 */
+  const tinterK = isO3 ? Math.max(0, Math.floor(Number(o.tinter) || 0)) : 0;
+  if (Number(o.tinter) > 0 && !isO3) throw new Error('layout: tinter 只接 obs3/obs3b 输入面（input=' + input + '）');
+  const tinterStride = actH + seatH + 2;                 // 每通道：u(actH) ‖ w(seatH) ‖ g ‖ b
   /* obs3 档把**两个目标槽**都拼进逐候选层（规则的target 上限就是 2，且镜面反射要区分 source/output）
    * ⇒ 目标身份 = 那一席自己的隐向量 h_t1 ⊕ h_t2，不再抄目标标量。 */
   const seg = [
@@ -177,14 +186,15 @@ export function layout(opts) {
     { name: 'qHead', off: 0, len: hid + 1 },
   ];
   if (interK > 0) seg.push({ name: 'inter', off: 0, len: interK * interStride });
+  if (tinterK > 0) seg.push({ name: 'tinter', off: 0, len: tinterK * tinterStride });
   let off = 0;
   for (const s of seg) { s.off = off; off += s.len; }
   return {
     arch: isO3 ? 'S1o' : 'S1', input, gen, skills, seatIn, actIn, initScale: INIT_SCALE,
     poolN,
-    seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, seg, n: off,
+    seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, tinterK, tinterStride, seg, n: off,
     /* 每段的"扇入"—— 段感知变异要用它给 σ 定标（扇入越大、同样 σ 造成的输出扰动越大） */
-    fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, qHead: hid, inter: hid },
+    fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, qHead: hid, inter: hid, tinter: seatH },
   };
 }
 
@@ -484,6 +494,18 @@ export function install(W, opts) {
         for (let j = 0; j < L.actH; j++) ua += params[u0 + j] * ae[j];
         v += params[u0 + L.actH + L.hid] * Math.tanh(ua * ctxFac[k] + params[u0 + L.actH + L.hid + 1]);
       }
+      /* 目标交互头（tinter=K，勘误十二）：logit += Σ_k g_k·tanh((u_k·ae)·(w_k·te1) + b_k)。
+       *   无目标 ⇒ te1=zeroSeat ⇒ (u·ae)·0=0 ⇒ 项=g·tanh(b)（常数，可学习压零）。 */
+      if (L.tinterK > 0) {
+        const tS0 = segOff('tinter');
+        for (let k = 0; k < L.tinterK; k++) {
+          const u0 = tS0 + k * L.tinterStride;
+          let ua = 0, wt = 0;
+          for (let j = 0; j < L.actH; j++) ua += params[u0 + j] * ae[j];
+          for (let j = 0; j < L.seatH; j++) wt += params[u0 + L.actH + j] * te1[j];
+          v += params[u0 + L.actH + L.seatH] * Math.tanh(ua * wt + params[u0 + L.actH + L.seatH + 1]);
+        }
+      }
       logits[i] = v;
     }
     /* 两级 softmax：**逐字抄 v7 那条尾**（技能层用 bestOf 归一，再在技能内部 softmax）。
@@ -691,7 +713,7 @@ export function install(W, opts) {
    *   ⇒ 下游按 `arch` 选输入面的尺（profile2）会拿错的那张脸去读。长度不同（5258≠5650）只挡住了"unpack 成功"，
    *   挡不住"有人照 arch 装错档再按长度报错"这种绕路。⇒ 标签一律**由实际布局写**，读的时候当场对账。 */
   function packDims() {
-    const d = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0, gen: L.gen };
+    const d = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0, tinter: L.tinterK || 0, gen: L.gen };
     if (isO3Input(L.input)) d.dof = obs3Dims(R, L.input);     /* 观测面维数由引擎卡表算，不让调用方手填（obs3b=505）*/
     return d;
   }

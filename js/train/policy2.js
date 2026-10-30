@@ -210,7 +210,7 @@
     const d = o.dims;
     const isB = d.input === 'obs3b';
     const L = {
-      input: d.input, seatH: d.seatH, actH: d.actH, hid: d.hid, hid2: d.hid2, interK: d.inter || 0, skills,
+      input: d.input, seatH: d.seatH, actH: d.actH, hid: d.hid, hid2: d.hid2, interK: d.inter || 0, tinterK: d.tinter || 0, skills,
       seatIn: isB ? SEAT_IN_B : SEAT_IN, actIn: CAND_BASE + skills, selfDim: isB ? SELF_DIM_B : SELF_DIM, poolN: POOL_BLOCKS,
       pubN: isB ? 81 : 22,
     };
@@ -225,6 +225,7 @@
       { name: 'qHead', len: L.hid + 1 },
     ];
     if (L.interK > 0) seg.push({ name: 'inter', len: L.interK * (L.actH + L.hid + 2) });
+    if (L.tinterK > 0) seg.push({ name: 'tinter', len: L.tinterK * (L.actH + L.seatH + 2) });   // 勘误十二：act×target
     let off = 0;
     for (const s of seg) { s.off = off; off += s.len; }
     L.seg = seg; L.n = off;
@@ -361,6 +362,17 @@
       encode(params, ci, L.candIn, L.hid2, WK, candBias, hc);
       let v = params[headOff + L.hid2];
       for (let j = 0; j < L.hid2; j++) v += params[headOff + j] * hc[j];
+      /* 目标交互头（tinter=K）：与 arch2 逐字同式（勘误十二） */
+      if (L.tinterK > 0) {
+        const tS0 = L.seg.find((s) => s.name === 'tinter').off;
+        for (let k = 0; k < L.tinterK; k++) {
+          const u0 = tS0 + k * (L.actH + L.seatH + 2);
+          let ua = 0, wt = 0;
+          for (let j = 0; j < L.actH; j++) ua += params[u0 + j] * ae[j];
+          for (let j = 0; j < L.seatH; j++) wt += params[u0 + L.actH + j] * te1[j];
+          v += params[u0 + L.actH + L.seatH] * Math.tanh(ua * wt + params[u0 + L.actH + L.seatH + 1]);
+        }
+      }
       logits[i] = v;
     }
     /* 两级 softmax：与 arch2 / v7 同式（技能层用 bestOf 归一，再在该技能内部 softmax）*/
