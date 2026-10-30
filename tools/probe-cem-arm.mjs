@@ -34,7 +34,7 @@ import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } 
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap', 'masterySem',
+  'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap', 'masterySem', 'masteryMax',
   'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -189,6 +189,9 @@ const MASTERY_CAP = Math.max(2, Number(arg('masteryCap', 16)) || 16);
 /* `--masterySem=1`（勘误六）：达标数从"出手率"换"语义命中数/局"（laserEye→打防席、miniT→打 ring/bigT/railgun
  * 用户、cannon→第3下打ep顶的三连；auditCells 的 sem/chains 计数，不加第二套）。动机：LASER1 的用量-语义反比。 */
 const MASTERY_SEM = Number(arg('masterySem', 0)) > 0;
+/* `--masteryMax=`（勘误八）：防滥刷上界——cheap 审计该键超过上界 ⇒ 记 spam、不进达标者（0=关）。
+ * 动机：桶内 clean 双峰，上枝=门 shaped 后滑进刷分区（大雷 3~5/局）。 */
+const MASTERY_MAX = Number(arg('masteryMax', 0)) || 0;
 const MASTERY_ON = !!(MASTERY_KEY && MASTERY_KEY !== 'off' && MASTERY_GATE !== 'off');
 const HEAD_FIX = Math.max(2, Number(arg('headFixtures', 12)) || 12);
 const HEAD_TEMP = Number(arg('headTemp', 0.15)) || 0.15;
@@ -384,7 +387,7 @@ if (ARENA2) {
 }
 /* mastery 门的审计桌：与 ARENA 同一 refParams/temp（同一对手表同一温度），多要一份 wantEvents 事件流。 */
 var MAST_ARENA = null;
-const MASTERY_STAT = { audits: 0, pass: 0, starved: 0, bestGatedFail: 0, bestAccepted: 0, lastRate: null };
+const MASTERY_STAT = { audits: 0, pass: 0, spam: 0, starved: 0, bestGatedFail: 0, bestAccepted: 0, lastRate: null };
 if (MASTERY_ON) {
   if (!ARENA2) { console.error('⛔ --masteryKey 需要 --arena2=1（审计必须骑同一张 arena2 对手表）'); process.exit(7); }
   try { MAST_ARENA = createArena2(W, { refParams: ARENA_REF, temp: ARENA_TEMP, wantEvents: 1 }); }
@@ -404,6 +407,12 @@ const masteryRate = function (params) {
   else if (MASTERY_SEM && MASTERY_KEY === 'miniT') rate = st.sem.miniTHit / Math.max(1, st.games);
   else if (MASTERY_SEM && MASTERY_KEY === 'cannon') rate = st.chains.cannonEpMax / Math.max(1, st.games);
   else rate = (st.okUses[MASTERY_KEY] || 0) / Math.max(1, st.games);
+  /* 上界门：超过 masteryMax 记 spam 不算达标（返回原 rate，由 elite 档的 >=MASTERY_LINE 判断前先看 spam 标记） */
+  if (MASTERY_MAX > 0 && rate > MASTERY_MAX) {
+    MASTERY_STAT.spam = (MASTERY_STAT.spam || 0) + 1;
+    MASTERY_STAT.lastRate = rate;
+    return null;   /* null = 不达标（与审计失败同形，但计数分列） */
+  }
   if (rate >= MASTERY_LINE) MASTERY_STAT.pass++;
   MASTERY_STAT.lastRate = rate;
   return rate;
@@ -1027,8 +1036,9 @@ if (!QUIET) console.log(JSON.stringify(row));
 else console.log('RESULT ' + JSON.stringify(row));
 /* mastery 门自证（patch-must-prove-invoked）：开着但 0 审计 ⇒ 没接电，响亮退出；顺带印终态计数 */
 if (MASTERY_ON) {
-  console.log('[cem-arm] ⚑ mastery 门终态（' + MASTERY_KEY + ' ≥' + MASTERY_LINE + '/局 ' + MASTERY_GATE + ' 档）：审计 ' + MASTERY_STAT.audits +
+  console.log('[cem-arm] ⚑ mastery 门终态（' + MASTERY_KEY + ' ≥' + MASTERY_LINE + '/局 ' + MASTERY_GATE + ' 档' + (MASTERY_MAX > 0 ? '，上界 ' + MASTERY_MAX : '') + '）：审计 ' + MASTERY_STAT.audits +
     ' ‖ 达标 ' + MASTERY_STAT.pass + '（' + (100 * MASTERY_STAT.pass / Math.max(1, MASTERY_STAT.audits)).toFixed(1) + '%）' +
+    (MASTERY_MAX > 0 ? ' ‖ 上界拦 spam ' + (MASTERY_STAT.spam || 0) : '') +
     ' ‖ 精英饿退 ' + MASTERY_STAT.starved + ' 代 ‖ best 档拒 ' + MASTERY_STAT.bestGatedFail + ' ‖ 末次审计率 ' + (MASTERY_STAT.lastRate == null ? '-' : MASTERY_STAT.lastRate.toFixed(3)) + '/局');
   if (MASTERY_STAT.audits === 0) { console.error('⛔ mastery 门开着但 0 次审计 ⇒ 门没接电，本臂作废'); process.exit(7); }
 }
