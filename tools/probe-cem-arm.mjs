@@ -542,7 +542,8 @@ if (MODE === 'esa') {
     const cfShare = cf.maxCard ? cf.maxCard.share : 0;
     /* 形状可行性：单卡过线 ⇒ 这一子代不进候选（词典序第一关键字）。 */
     /* 形状可行性（二版）：在**报告条件**（锐温度）下单独评一次 frozen，多键同时判。 */
-    if (SHAPE_CAP > 0 || DEF_CAP > 0 || JI_CAP > 0) {
+    /* --arenaShapePick 时**跳过闸**：搜索不因形状拒子，形状只在终选时用（否则归档＝被闸筛过的轨迹，测的仍是约束）。 */
+    if (!SHAPE_PICK && (SHAPE_CAP > 0 || DEF_CAP > 0 || JI_CAP > 0)) {
       const sh = ARENA.evalParams(child, { phase: 'frozen', gamesPerShape: SHAPE_GAMES, temp: SHAPE_TEMP, cur: ARENA_CUR });
       const acts = Math.max(1, sh.acts * sh.games);
       const share = sh.maxCard ? sh.maxCard.share : 0;
