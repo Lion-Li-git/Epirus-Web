@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -86,6 +86,16 @@ const BO_N_K = Math.max(1, Math.floor(Number(arg('boNK', 1)) || 1));
  *   所以单卡在 2.0 训练里没有任何扣分；而 1.8 的 DIV_W=0.06 自身也远小于胜负项（见 evo.js:2462）。
  * 形状约束把「下限」写成硬条件：先保证不退化，再在可行域里比强度。 */
 const SHAPE_CAP = Math.max(0, Math.min(1, Number(arg('arenaShapeCap', 0)) || 0));
+/* 10-30 二版：形状读数**测在报告条件**（锐温度）+ 多键。
+ * 病（一版）：约束在 frozen@0.15 上读，报告在 holdout@最佳温度上读 ⇒ s11 训练 36%、报告 81%。
+ * 修：形状单独评一次 frozen，用 `--arenaShapeTemp`（缺省 0.05，最锐）与 `--arenaShapeGames`（每格 4 局=44 局）；
+ *    同时卡 防御占比（--arenaDefCap）与 ji 占比（--arenaJiCap），防「把一招换成 ji」稀释。 */
+const SHAPE_TEMP = Number(arg('arenaShapeTemp', 0.05));
+const SHAPE_GAMES = Math.max(2, Math.floor(Number(arg('arenaShapeGames', 4)) || 4));
+const DEF_CAP = Math.max(0, Math.min(1, Number(arg('arenaDefCap', 0)) || 0));
+const JI_CAP = Math.max(0, Math.min(1, Number(arg('arenaJiCap', 0)) || 0));
+const DEF_KEYS = ['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'proto', 'armor', 'holo'];
+let lastShapeStat = null;
 /* ===== `--arenaLex=1`（#161，ZCode · 10-30 夜）：**分格无权词典序当选** =====
  * 动因：6k 包 2P 65~75% vs 10P 28% 的剖面被标量平均吞掉。冻结桌上的接受判据从标量改成 (n,hp) 格词典序：
  *   先比「低于地板的格数」（少者优先），再比「最差格余量」（大者优先），最后才比总分。
@@ -506,7 +516,17 @@ if (MODE === 'esa') {
     verifications++;
     const cfShare = cf.maxCard ? cf.maxCard.share : 0;
     /* 形状可行性：单卡过线 ⇒ 这一子代不进候选（词典序第一关键字）。 */
-    if (SHAPE_CAP > 0 && cfShare > SHAPE_CAP + 1e-9) { shapeBlocked++; return false; }
+    /* 形状可行性（二版）：在**报告条件**（锐温度）下单独评一次 frozen，多键同时判。 */
+    if (SHAPE_CAP > 0 || DEF_CAP > 0 || JI_CAP > 0) {
+      const sh = ARENA.evalParams(child, { phase: 'frozen', gamesPerShape: SHAPE_GAMES, temp: SHAPE_TEMP, cur: ARENA_CUR });
+      const acts = Math.max(1, sh.acts * sh.games);
+      const share = sh.maxCard ? sh.maxCard.share : 0;
+      let defN = 0; for (const k of DEF_KEYS) defN += (sh.cat && sh.cat[k]) || 0;
+      const defShare = defN / acts, jiShare = ((sh.cat && sh.cat[R.SK.JI]) || 0) / acts;
+      lastShapeStat = { share, defShare, jiShare, temp: SHAPE_TEMP };
+      const bad = (SHAPE_CAP > 0 && share > SHAPE_CAP + 1e-9) || (DEF_CAP > 0 && defShare > DEF_CAP + 1e-9) || (JI_CAP > 0 && jiShare > JI_CAP + 1e-9);
+      if (bad) { shapeBlocked++; return false; }
+    }
     const candLex = ARENA_LEX ? lexTupleOf(cf.byShape) : null;
     /* byScore 四档：词典序（#161）‖ 地板罚项（预登记回退）‖ 罚项（--arenaPen）‖ 标量净胜（原口径）——一次只许开一档 */
     const byScore = ARENA_LEX
@@ -638,7 +658,7 @@ if (MODE === 'esa') {
   if (FXSEL) console.log('[cem-arm] ⚑ 冻结桌当选：环内预选 ' + screened + ' 次 ‖ 在冻结桌上真打过父代 ' + accepted + ' 次（按净胜 ' + accScore +
     (PRESEL === 'parent' ? ' ‖ **预选门=parent**（子代循环分 ≥ 父代即送验）' : '') +
     (DIV ? ' ‖ 按多样性 ' + accDiv + '（探针 ' + divProbes + ' 次；触发 >' + DIV_TRIGGER + '，净胜带 ±' + DIV_TOL + '，单卡需降 ≥' + DIV_DELTA + '）' : '') +
-    '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '%' + (SHAPE_CAP > 0 ? ' ‖ **形状上限 ' + (100 * SHAPE_CAP).toFixed(0) + '%**（挡下 ' + shapeBlocked + ' 个送验）' : '') + ' ‖ 每次验证花 ' +
+    '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '%' + (SHAPE_CAP > 0 || DEF_CAP > 0 || JI_CAP > 0 ? ' ‖ **形状约束@t' + SHAPE_TEMP + '**（单卡≤' + (100 * SHAPE_CAP).toFixed(0) + '% ‖ 防御≤' + (100 * DEF_CAP).toFixed(0) + '% ‖ ji≤' + (100 * JI_CAP).toFixed(0) + '%，挡下 ' + shapeBlocked + ' 个送验）' : '') + ' ‖ 每次验证花 ' +
     (ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES)) + ' 局（fxGames=' + FXG + (ARENA ? '，arena2 每桌形' + Math.max(8, FXG || 0) : '') + ' ‖ 预算被这块吃掉，迭代数会少）');
   if (ARENA_LEX && parentLex) { console.log('[cem-arm] ⚑ **词典序终态**（#161）：低于地板格数 ' + parentLex.below + '/' + Object.keys(V7_FLOOR).length +
     ' ‖ 最差格余量 ' + parentLex.worst.toFixed(3) + ' ‖ 冻结桌总分 ' + parentFix.toFixed(3) + '（货币=' + ARENA_CUR + '）');
