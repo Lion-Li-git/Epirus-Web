@@ -171,3 +171,13 @@
   --masteryMax=0.8`（上界 = 正式线 0.2 的 4 倍，只拦刷分不拦达标），24k；
 - **FARM 臂**：赢家邻域——起点 = `BIGT1-s23.bak`（已全过）× s7/s11/s13，`--masteryKey=bigT --masteryLine=0.1`，
   24k——检验"赢家邻域里 clean 不塌且 mastery 保持"的粒密度（③ 选项的第一手数据）。
+
+### 勘误九（10-31 01:5x，货币错位诊断 + clean 货币臂预登记）
+
+**UG 判定**：2/8（与无上界同）⇒ **双峰是适应度地形内禀，上界门假设否定**（spam 拦截 7~44 次/臂照常工作）。
+**FARM 判定**：赢家邻域 mastery 饱和（3/3 过 mastery+短程，最高 102.5%/局）但 **clean 全部低于赢家起点**
+（0.051~0.207 vs BIGT1-s23 的 0.415）——邻域 CEM 每步在用 clean 换 loop-fit。
+**诊断**：训练循环 fit = **net 货币**，桶的键是 clean ⇒ **货币错位**是双峰的根源假说。
+**CLEAN 货币臂**：CEM48c-s7 起点 × s7/s11/s13/s23，`--arenaCur=clean`（训练循环直接优化 clean）
++ `--masteryKey=bigT --masteryLine=0.1`，24k。判定：≥3/4 粒全过（mastery ∧ clean ≥0.365 ∧ 短程）
+⇒ 货币对齐成立、进配方；否则错位假说否定，clean 键回到"等用户裁"状态。
