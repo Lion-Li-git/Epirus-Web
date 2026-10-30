@@ -530,11 +530,15 @@ export function install(W, opts) {
       return { tgt: raw.map((x) => x - mu), keep };
     };
     const rows = [], ys = [];
+    /* `opts3.labelOf(state,pid,cands) -> {tgt:[…],keep:[…]}`：**可换目标**（10-30 夜加，给"链克隆"用）。
+     * 缺省 = 原路（v7 逐候选分数）⇒ 旧读数逐字不变；换目标的人必须自己给 `tgt` 的**组内中心化**结果
+     *   （distillHead 只做岭回归，不做中心化）。 */
+    const targetOf = (typeof opts3.labelOf === 'function') ? opts3.labelOf : v7Centered;
     for (const fx of states) {
       const cands = P.candidatesFor(fx.state, fx.pid, TR.econBase(fx.state, fx.pid, fx.legal), { lockTarget: false });
       if (!cands || cands.length < 2) continue;
       const f2 = forwardCands(fx.state, fx.pid, cands, params, { temp: 0.5, wantPhi: true });
-      const t = v7Centered(fx.state, fx.pid, cands);
+      const t = targetOf(fx.state, fx.pid, cands);
       if (!f2.phi || !t) continue;
       for (let i = 0; i < t.keep.length; i++) {
         const ci = t.keep[i];
@@ -544,9 +548,22 @@ export function install(W, opts) {
     }
     if (!rows.length) return { ok: false, why: '没有可用行（候选 <2 或 phi/target 取不到）' };
     const D = L.hid2 + 1, n = rows.length;
+    /* `opts3.standardize`（10-30 夜加，**默认关 = 旧读数逐字不变**）：岭回归对列尺度敏感 ——
+     *   φ 的量级随上游初始化漂（随机起点包的 ReLU 大量压在 0 附近 ⇒ φ ~1e-3），此时 `l2·n` 把解压成 ≈0
+     *   ⇒ 一致率塌到 0%，那不是"装不下"，是**拟合器被尺度骗了**。开了就按列标准化后再解，并把解**精确变回**原坐标
+     *   （y = Σ w_j z_j + b，z_j=(φ_j−μ_j)/σ_j ⇒ 权重 w_j/σ_j、偏置 b−Σ w_j μ_j/σ_j ⇒ 预测逐字不变）。 */
+    const STD = !!opts3.standardize;
+    let mu = null, sd = null;
+    if (STD) {
+      mu = new Float64Array(L.hid2); sd = new Float64Array(L.hid2);
+      for (let i = 0; i < n; i++) for (let j = 0; j < L.hid2; j++) mu[j] += rows[i][j] / n;
+      for (let i = 0; i < n; i++) for (let j = 0; j < L.hid2; j++) sd[j] += (rows[i][j] - mu[j]) * (rows[i][j] - mu[j]) / n;
+      for (let j = 0; j < L.hid2; j++) sd[j] = Math.sqrt(sd[j]);
+    }
     const A = Array.from({ length: D }, () => new Float64Array(D + 1));
     for (let i = 0; i < n; i++) {
-      const z = new Float64Array(D); for (let j = 0; j < L.hid2; j++) z[j] = rows[i][j]; z[L.hid2] = 1;
+      const z = new Float64Array(D); for (let j = 0; j < L.hid2; j++) z[j] = STD ? (sd[j] > 1e-9 ? (rows[i][j] - mu[j]) / sd[j] : 0) : rows[i][j];
+      z[L.hid2] = 1;
       for (let p = 0; p < D; p++) { A[p][D] += z[p] * ys[i]; for (let q = 0; q < D; q++) A[p][q] += z[p] * z[q]; }
     }
     for (let p = 0; p < D; p++) A[p][p] += l2 * n;
@@ -559,8 +576,18 @@ export function install(W, opts) {
     }
     const out = Float64Array.from(params);
     const headOff = L.seg[4].off;
-    for (let j = 0; j < L.hid2; j++) out[headOff + j] = A[j][D];
-    out[headOff + L.hid2] = A[L.hid2][D];
+    if (!STD) {
+      for (let j = 0; j < L.hid2; j++) out[headOff + j] = A[j][D];
+      out[headOff + L.hid2] = A[L.hid2][D];
+    } else {
+      let b = A[L.hid2][D];
+      for (let j = 0; j < L.hid2; j++) {
+        const w = sd[j] > 1e-9 ? A[j][D] / sd[j] : 0;
+        out[headOff + j] = w;
+        if (sd[j] > 1e-9) b -= A[j][D] * mu[j] / sd[j];
+      }
+      out[headOff + L.hid2] = b;
+    }
     /* ⚑ 这里**不自评**：拟合的人顺手打分就是"在训练集上报一致率"。判定一律交给调用方的留出半批（fit2）。 */
     return { ok: true, params: out, rows: n };
   }
