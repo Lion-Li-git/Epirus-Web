@@ -150,3 +150,14 @@
 - **小雷桶探索臂**：起点 CEM48b-s13（miniT 40%/局但语义 1/35——用量有、语义无），`--masteryKey=miniT
   --masterySem=1 --masteryLine=0.1`（语义命中 ≥0.1/局 = 用户线 0.2×1/2 的 cheap 折算），种子 s7/s11/s13，24k；
   正式尺终判全条（0.2/局 ∧ 语义 ≥1/2 ∧ clean ≥0.365 ∧ 短程）。
+
+### 勘误七（10-31 01:3x，能见度审计——语义门 0% 的架构解释）
+
+**MINIT1 判定**：语义门 0%（三粒各 1008 审计全零、63/125 代饿退）。追到观测面：**obs3 席位向量只编码
+对手 lastSkill 的类别**（attack/defense/energy/special 四个 one-hot + 有无 bit，`obs3.mjs:93`），不编码具体键 ⇒
+- laserEye"打防席"：**类别位可见** ⇒ LASER1 里 s11 真做到 70% 语义（判据可学，已证）；
+- miniT"打 ring/bigT/railgun 用户"：**身份不可见**——ring 用户只有 ringStreak 间接可见，bigT 用户的
+  3 回合禁用（cooldown）与 railgun 用户的电珠（elec）都不在席位向量里 ⇒ 语义线在当前观测面**学不了**；
+- cannon"第3下打 ep 顶"：ep 可见 ⇒ 可学（探索臂验证中）。
+**给用户的题**：miniT 语义线二选一——①加 2 维观测（opp.cooldown[bigT]>0 ‖ opp.elec>0；`js/**` 改动要用户点头）；
+②改写成可见代理线（如"上回合 ep 掉 ≥3 的席"≈刚放过技的席）。**判据先过能见度审计再开臂**（今晚学费）。
