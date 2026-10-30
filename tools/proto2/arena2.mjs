@@ -211,7 +211,7 @@ export function createArena2(W, opts) {
       games: agg.games, first: agg.win / g, draw: agg.draw / g, clean: agg.clean / g, top2: agg.top2 / g,
       score: agg.scoreSum / g, cleanScore: agg.cleanScoreSum / g, rounds: agg.rounds / g, acts: agg.acts / g,
       maxCard: key == null ? null : { key, share: mx / Math.max(1, nonji), nonji },
-      cat: agg.cat, byShape, byClass,
+      cat: agg.cat, byShape, byClass, perGame: agg.perGameVec || null,
     };
   }
   function evalChooser(sel, cfg) {
@@ -230,7 +230,18 @@ export function createArena2(W, opts) {
       const per = Math.max(1, c.gamesPerShape | 0);
       const base = phase === 'holdout' ? 100000 : 200000;
       const salt = phase === 'holdout' ? SALT.hold : SALT.frozen;
-      for (let s = 0; s < shapes.length; s++) for (let g = 0; g < per; g++) addRow(agg, playOne(sel, s, base + s * 1000 + g, salt));
+      /* `perGame=1`：把**逐局**得分按 (桌形, 局号) 顺序交出去。冻结桌的局号只由 `base + s*1000 + g` 决定，
+       *   与"这个 chooser 是谁"无关 ⇒ 父子拿到的是**同一批局**，可以配对做差（E8：把判定力的标准误
+       *   从"两批桌各自抖"降到"逐局差的抖"）。v2 起每局重置 bot 记忆，所以同局号确实同局面。 */
+      const wantVec = !!c.perGame;
+      const cleanCur = c.cur === 'clean';
+      const vec = wantVec ? [] : null;
+      for (let s = 0; s < shapes.length; s++) for (let g = 0; g < per; g++) {
+        const row = playOne(sel, s, base + s * 1000 + g, salt);
+        addRow(agg, row);
+        if (wantVec) vec.push(cleanCur ? row.scoreClean : row.scoreNet);
+      }
+      if (wantVec) agg.perGameVec = vec;
     } else throw new Error('evalChooser: phase 只认 loop|holdout|frozen（收到 ' + phase + '）');
     const out = finish(agg);
     out.cur = c.cur === 'clean' ? 'clean' : 'net';
