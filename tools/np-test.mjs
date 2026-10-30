@@ -21,6 +21,7 @@
 import { existsSync, readFileSync, readdirSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, copyFileSync } from 'node:fs';
 /* 共享前导（原 L1..L205）：沙箱 / 断言助手 / 库 / 常量 —— 全在这一个文件里装载（ESM 单实例）。 */
 import { makeCtx, NP_GATE_FILES } from './gates/_ctx.mjs';
+import { rejectUnknownFlags } from './audit-lib.mjs';
 import * as PART0 from './gates/engine-rules.mjs';
 import * as PART1 from './gates/engine-fuzz.mjs';
 /* ===== 2026-10-27（用户裁定）：**训练组整组移出产品门禁** =====
@@ -286,6 +287,11 @@ if (PART && GROUP) {
  *   `--part=` 的值是空串 ⇒ `PART = null` ⇒ 筛选**当成没给** ⇒ 我以为在跑 8 段，实际跑了整轮 278 条，退出码还是 0）。
  *   整轮本身不是错，错在"以为自己在跑分段"——这一类静默降级与 D218 那条"拼错的旗标被忽略"是同一种病。
  *   要跑多段请分别调用（一次一个 `--part=<名>`）。 */
+/* 10-30 傍晚补：**不认识的 `--` 旗标要响亮失败**（仓规同 `probe-ep-reach --cost` 那两条）。
+ * 触发场景不是我猜的：10-30 有人把 `--groups`（少个 `list-` 前缀、多个 s）当列组命令传进来 ⇒ 旧版**静默忽略**，
+ * 于是"我想列一下分组"变成"把整轮 171 条开跑"，280 秒后才被 kill（`--help` 那一族在册，这是它的兄弟）。
+ * 名单 = 全仓实际用过的旗标（`--only/--part/--group/--list-parts/--list-groups/--list-order/--json/--explain=`）。 */
+rejectUnknownFlags(process.argv.slice(2), ['list-parts', 'list-order', 'list-groups', 'explain', 'only', 'group', 'part', 'json'], 'np-test');
 const STRAY = process.argv.slice(2).filter(function (a) { return a[0] !== '-'; });
 if (STRAY.length) {
   console.error('⛔ 不认识裸参数：' + STRAY.join(' ') + ' ⇒ 本工具只认 `--flag=值`。' +
