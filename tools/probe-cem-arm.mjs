@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -71,6 +71,14 @@ const ARENA_PEN = Math.max(0, Number(arg('arenaPen', 0)) || 0);
  *   开档时接受条件加一条 `配对 z ≥ --fxPairedK`（缺省 1）；缺省关档 ⇒ 逐字旧行为。 */
 const FX_PAIRED = Number(arg('fxPaired', 0)) > 0;
 const FX_PAIRED_K = Math.max(0, Number(arg('fxPairedK', 1)) || 1);
+/* ===== `--boN=1`（DS · 10-30）：**best-of-generation 当选**，对照棘轮门 =====
+ * 病（E7/E8，10-30）：每次接受都是 88 局读数、SE≈0.075，而父子分差 0.011~0.067 ⇒ 6 次接受全在噪声带内；
+ *   加更严的统计（配对门）只是换一批种子翻好。⇒ 换的是**信息怎么花**：不逐个「过门才送验」，
+ *   而是**一代所有子代在同一批环内局上排一次序，只把最好的那一个送 88 局确认**（送验次数≈代数）。
+ *   环内局号 = gen*games+g（arena2 loop 相位，与 idx 无关）⇒ 同代子代本来就吃同一批局，排序是同批比较。
+ * 默认关 ⇒ 旧路径逐字不变（已用 --boN=0 的 md5 复现腿验过）。 */
+const BO_N = arg('boN', '') === '1';
+const BO_N_K = Math.max(1, Math.floor(Number(arg('boNK', 1)) || 1));
 /* ===== `--arenaLex=1`（#161，ZCode · 10-30 夜）：**分格无权词典序当选** =====
  * 动因：6k 包 2P 65~75% vs 10P 28% 的剖面被标量平均吞掉。冻结桌上的接受判据从标量改成 (n,hp) 格词典序：
  *   先比「低于地板的格数」（少者优先），再比「最差格余量」（大者优先），最后才比总分。
@@ -184,6 +192,8 @@ if (ARENA_LEX && ARENA_PEN > 0) { console.error('⛔ --arenaLex 与 --arenaPen �
       if (ARENA_FPEN > 0 && (!ARENA2 || !FXSEL)) { console.error('⛔ --arenaFloorPen 需要 --arena2=1 且 --fxSelect=1（地板罚项只换冻结桌的接受判据）'); process.exit(7); }
       if (ARENA_FPEN > 0 && (ARENA_LEX || ARENA_PEN > 0)) { console.error('⛔ --arenaFloorPen 与 --arenaLex/--arenaPen 互斥（都换 byScore 的判据）'); process.exit(7); }
       if (FXALL && (!FXSEL || !ARENA2)) { console.error('⛔ --fxAll 需要 --fxSelect=1 且 --arena2=1（它拆的是冻结桌预选门）'); process.exit(7); }
+if (BO_N && (!FXSEL || !ARENA2)) { console.error('⛔ --boN=1 需要 --fxSelect=1 且 --arena2=1（它换的是冻结桌当选形状）'); process.exit(7); }
+if (BO_N && (FXALL || arg('fxQuota', '') !== '' || PRESEL === 'parent' || (Number(arg('arenaDiverse', 0)) > 0))) { console.error('⛔ --boN 与 fxAll/fxQuota/preSel=parent/arenaDiverse 互斥（一次只换一个自由量）'); process.exit(7); }
       if (PRESEL !== 'best' && PRESEL !== 'parent') { console.error('⛔ --preSel 只认 best|parent（收到 ' + PRESEL + '）'); process.exit(7); }
       if (PRESEL === 'parent' && (!FXSEL || !ARENA2)) { console.error('⛔ --preSel=parent 需要 --fxSelect=1 且 --arena2=1（它换的是冻结桌预选门）'); process.exit(7); }
       if (PRESEL === 'parent' && FXALL) { console.error('⛔ --preSel=parent 与 --fxAll 互斥（都改预选门，一次对照一个自由量）'); process.exit(7); }
@@ -528,9 +538,52 @@ if (MODE === 'esa') {
   const WIN = Math.max(10, POP * 3);
   const hist = [];
   let sig = SIG0, sigTraj = [SIG0], sigMin = SIG0, sigRestarts = 0, zeroStreak = 0;
+  /* 1/5 律的推进抽成闭包：旧路径与 --boN 路径共用同一段（否则两条路会各写一份 σ 规则）。 */
+  const adaptPush = function (ok) {
+    hist.push(ok ? 1 : 0); if (hist.length > WIN) hist.shift();
+    if (hist.length === WIN) {
+      const rate = hist.reduce(function (a, b) { return a + b; }, 0) / WIN;
+      sig = rate > 0.2 ? sig * 1.22 : sig / 1.22;
+      const sigLo = SIG_FLOOR_ESA > 0 ? SIG_FLOOR_ESA : 1e-4;
+      sig = Math.min(2.0, Math.max(sigLo, sig));
+      /* 触底 + 连续零接受 ⇒ 步长回 SIG0（只回步长，父代仍是最优；`--sigRestart=0` 时关掉） */
+      if (SIG_FLOOR_ESA > 0 && sig <= sigLo * 1.0001) {
+        zeroStreak = rate === 0 ? zeroStreak + 1 : 0;
+        if (SIG_RESTART > 0 && zeroStreak >= SIG_RESTART) { sig = SIG0; zeroStreak = 0; sigRestarts++; sigTraj.push('restart'); }
+      } else zeroStreak = 0;
+      sigMin = Math.min(sigMin, sig);
+      sigTraj.push(Math.round(sig * 1e5) / 1e5);
+      hist.length = 0;
+    }
+  };
   for (let it = 0; it < iters; it++) {
     const iterBuf = [];   /* --fxQuota 的候选缓冲（本代未送验的子代） */
     let verThisIter = 0;
+    /* ===== --boN=1：一代所有子代在同一批环内局上排序，只把最好的送冻结桌确认 =====
+     * 与棘轮门的唯一差别是"信息怎么花"：旧路径=逐个过门才送验（送验次数由门的历史决定）；
+     *   boN=每代固定 1 次送验（--boNK 可放前 k 个）。环内局号只由 it 决定 ⇒ 同代同批，排序是无偏比较。 */
+    if (BO_N) {
+      if (!ARENA) { console.error('⛔ --boN 需要 arena2 真建起来（ARENA 为空）'); process.exit(7); }
+      const kids = [];
+      for (let i = 0; i < POP; i++) {
+        const child = P.mutatePolicy(parent, sig);
+        const e = evalOne(child, it, i);
+        used += 1;
+        kids.push({ p: child, fit: e.fit });
+        if (TARGET_G && gamesIn() >= TARGET_G) break;
+      }
+      kids.sort(function (a, b) { return b.fit - a.fit; });
+      let ok = false;
+      for (let k = 0; k < BO_N_K && k < kids.length; k++) {
+        screened++; verThisIter++;
+        if (verifyChild(kids[k].p, kids[k].fit)) { ok = true; break; }
+        if (TARGET_G && gamesIn() >= TARGET_G) break;
+      }
+      if (ADAPT) adaptPush(ok);
+      while (cpG.length && gamesIn() >= cpG[0]) { curve.push({ games: gamesIn(), best: bestFit }); cpG.shift(); }
+      if (TARGET_G && gamesIn() >= TARGET_G) break;
+      continue;
+    }
     for (let i = 0; i < POP; i++) {
       const child = P.mutatePolicy(parent, sig);
       const e = evalOne(child, it, i);
@@ -551,23 +604,7 @@ if (MODE === 'esa') {
           ok = verifyChild(child, e.fit);
         }
       }
-      if (ADAPT) {
-        hist.push(ok ? 1 : 0); if (hist.length > WIN) hist.shift();
-        if (hist.length === WIN) {
-          const rate = hist.reduce(function (a, b) { return a + b; }, 0) / WIN;
-          sig = rate > 0.2 ? sig * 1.22 : sig / 1.22;
-          const sigLo = SIG_FLOOR_ESA > 0 ? SIG_FLOOR_ESA : 1e-4;
-          sig = Math.min(2.0, Math.max(sigLo, sig));
-          /* 触底 + 连续零接受 ⇒ 步长回 SIG0（只回步长，父代仍是最优；`--sigRestart=0` 时关掉） */
-          if (SIG_FLOOR_ESA > 0 && sig <= sigLo * 1.0001) {
-            zeroStreak = rate === 0 ? zeroStreak + 1 : 0;
-            if (SIG_RESTART > 0 && zeroStreak >= SIG_RESTART) { sig = SIG0; zeroStreak = 0; sigRestarts++; sigTraj.push('restart'); }
-          } else zeroStreak = 0;
-          sigMin = Math.min(sigMin, sig);
-          sigTraj.push(Math.round(sig * 1e5) / 1e5);
-          hist.length = 0;
-        }
-      }
+      if (ADAPT) adaptPush(ok);
       while (cpG.length && gamesIn() >= cpG[0]) { curve.push({ games: gamesIn(), best: bestFit }); cpG.shift(); }
       if (TARGET_G && gamesIn() >= TARGET_G) break;
     }
