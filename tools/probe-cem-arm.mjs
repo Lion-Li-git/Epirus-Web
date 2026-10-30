@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -450,6 +450,45 @@ if (MODE === 'esa') {
   void r;
   const iters = TARGET_G ? 1000000 : Math.max(1, Math.floor(EVALS / POP));
   let accepted = 0, screened = 0, accScore = 0, accDiv = 0, divProbes = 0;
+  /* ===== `--fxQuota=N`（E7，10-30 上午）：把每臂的**冻结桌送验次数钉住** =====
+   * 病（只读已有 meta 量出来的，`scratch/budget-split.mjs`）：送验只有两个口子——棘轮门 `循环分 > 历史最高`
+   *   与多样性探针（父代单卡 > 0.4 才探）。环内分只打 4 局 ⇒ 满分 1.0，**摸到 1.0 门就永久关闭**；
+   *   于是 6k 预算的去向在种子间差 15 倍（MILD-s13 送验 4 次/5.9% ‖ MILD-s7 送验 62 次/90.9%），
+   *   而且**剂量与"形状干净"反着来**（单卡低 ⇒ 不探针 ⇒ 饿死）。不钉住剂量，跨种子比较量的就是剂量不是配方。
+   * 做法：每代末若送验次数不到配额，按环内分**补送该代最优的未验子代**；承兑规则与门内**同一段函数**，
+   *   不另写一套。`N=0`（缺省）⇒ 逐字旧行为。⚠ 补送发生在代末，不进 1/5 律的成功窗口（那条只数门内尝试）。 */
+  const QUOTA = Math.max(0, Math.floor(Number(arg('fxQuota', 0)) || 0));
+  const QUOTA_PER_ITER = Math.max(1, Math.floor(Number(arg('fxQuotaPerIter', 2)) || 2));
+  let verifications = 0, quotaTopups = 0, quotaAccepted = 0;
+  const acceptDeltas = [];
+  /* 一次送验 = 冻结桌评一遍 + 走同一套承兑判据（棘轮门/探针/配额补送共用，保证"补送"不是第二套规则）。 */
+  const verifyChild = function (child, loopFit, isTopup) {
+    const cf = evalFixed(child, 500, 0, FXG || undefined);
+    verifications++;
+    const cfShare = cf.maxCard ? cf.maxCard.share : 0;
+    const candLex = ARENA_LEX ? lexTupleOf(cf.byShape) : null;
+    /* byScore 四档：词典序（#161）‖ 地板罚项（预登记回退）‖ 罚项（--arenaPen）‖ 标量净胜（原口径）——一次只许开一档 */
+    const byScore = ARENA_LEX
+      ? (candLex.below !== parentLex.below ? candLex.below < parentLex.below
+        : (Math.abs(candLex.worst - parentLex.worst) > 1e-12 ? candLex.worst > parentLex.worst : cf.fit > parentFix))
+      : (ARENA_FPEN > 0 ? fpenOf(cf) > parentFpen
+        : (ARENA_PEN > 0 ? penOf(cf.fit, cfShare) > parentPen : cf.fit > parentFix));
+    const byDiv = DIV && cf.fit >= parentFix - DIV_TOL && cfShare < parentShare - DIV_DELTA;
+    if (byScore || byDiv) {
+      /* 判定力记账：这次接受到底赢了多少冻结桌分？88 局一次读数的 SE ≈ 0.07（两点分布估），
+       *   所以差值 <2SE 的"接受"其实是噪声带内的翻牌——不记下来就没人知道当选面在量什么。 */
+      acceptDeltas.push({ d: cf.fit - parentFix, via: byDiv && !byScore ? 'div' : (ARENA_LEX ? 'lex' : 'score'), topup: !!isTopup });
+      parentFix = cf.fit; parent = Float64Array.from(child); parentShare = cfShare; parentPen = penOf(cf.fit, cfShare);
+      parentLoopFit = loopFit;   /* parent 门的新基准 = 刚接受的这个子代自己的循环分 */
+      if (ARENA_LEX) parentLex = candLex;
+      if (ARENA_FPEN > 0) { parentGap = floorGapSum(cf.byShape); parentFpen = fpenOf(cf); }
+      if (loopFit > bestFit) bestFit = loopFit;
+      best = child; accepted++;
+      if (byScore) accScore++; else accDiv++;
+      return true;
+    }
+    return false;
+  };
   const DIV = ARENA && ARENA_DIV;
   /* ===== `--sigmaAdaptive=1`：Rechenberg 的 **1/5 成功律**（10-29 段 C 的第二个旋钮）=====
    * 为什么现在加：两波读数合起来看，问题不在"当选在哪批桌上判"，而在**步长**——
@@ -461,11 +500,14 @@ if (MODE === 'esa') {
   const hist = [];
   let sig = SIG0, sigTraj = [SIG0], sigMin = SIG0, sigRestarts = 0, zeroStreak = 0;
   for (let it = 0; it < iters; it++) {
+    const iterBuf = [];   /* --fxQuota 的候选缓冲（本代未送验的子代） */
+    let verThisIter = 0;
     for (let i = 0; i < POP; i++) {
       const child = P.mutatePolicy(parent, sig);
       const e = evalOne(child, it, i);
       used += 1;
       let ok = false;
+      if (QUOTA > 0 && FXSEL) iterBuf.push({ p: Float64Array.from(child), fit: e.fit, done: false });
       /* 多样性探针（(b) 臂）：父代还退化时，每 DIV_EVERY 个子代**无条件**送一次冻结验证，
        *   否则"只反弹"父代的等分带永远轮不到一个更低单卡的子代。 */
       const probe = DIV && parentShare > DIV_TRIGGER && (i % DIV_EVERY === 0);
@@ -475,25 +517,9 @@ if (MODE === 'esa') {
         screened++;
         if (!FXSEL) { bestFit = e.fit; best = child; ok = true; }
         else {
-          const cf = evalFixed(child, 500, 0, FXG || undefined);
-          const cfShare = cf.maxCard ? cf.maxCard.share : 0;
-          const candLex = ARENA_LEX ? lexTupleOf(cf.byShape) : null;
-          /* byScore 四档：词典序（#161）‖ 地板罚项（预登记回退）‖ 罚项（--arenaPen）‖ 标量净胜（原口径）——一次只许开一档 */
-          const byScore = ARENA_LEX
-            ? (candLex.below !== parentLex.below ? candLex.below < parentLex.below
-              : (Math.abs(candLex.worst - parentLex.worst) > 1e-12 ? candLex.worst > parentLex.worst : cf.fit > parentFix))
-            : (ARENA_FPEN > 0 ? fpenOf(cf) > parentFpen
-              : (ARENA_PEN > 0 ? penOf(cf.fit, cfShare) > parentPen : cf.fit > parentFix));
-          const byDiv = DIV && cf.fit >= parentFix - DIV_TOL && cfShare < parentShare - DIV_DELTA;
-          if (byScore || byDiv) {
-            parentFix = cf.fit; parent = Float64Array.from(child); parentShare = cfShare; parentPen = penOf(cf.fit, cfShare);
-            parentLoopFit = e.fit;   /* parent 门的新基准 = 刚接受的这个子代自己的循环分 */
-            if (ARENA_LEX) parentLex = candLex;
-            if (ARENA_FPEN > 0) { parentGap = floorGapSum(cf.byShape); parentFpen = fpenOf(cf); }
-            if (e.fit > bestFit) bestFit = e.fit;
-            best = child; accepted++; ok = true;
-            if (byScore) accScore++; else accDiv++;
-          }
+          if (iterBuf.length) iterBuf[iterBuf.length - 1].done = true;
+          verThisIter++;
+          ok = verifyChild(child, e.fit);
         }
       }
       if (ADAPT) {
@@ -516,6 +542,17 @@ if (MODE === 'esa') {
       while (cpG.length && gamesIn() >= cpG[0]) { curve.push({ games: gamesIn(), best: bestFit }); cpG.shift(); }
       if (TARGET_G && gamesIn() >= TARGET_G) break;
     }
+    /* --fxQuota 补送：本代末若送验次数不到配额，按环内分从高到低补送未验过的子代（同一套承兑规则）。 */
+    if (QUOTA > 0 && FXSEL) {
+      iterBuf.sort(function (a, b) { return b.fit - a.fit; });
+      for (let k = 0; k < iterBuf.length && verifications < QUOTA && verThisIter < QUOTA_PER_ITER; k++) {
+        if (TARGET_G && gamesIn() >= TARGET_G) break;
+        const c = iterBuf[k];
+        if (c.done) continue;
+        c.done = true; verThisIter++; quotaTopups++;
+        if (verifyChild(c.p, c.fit, true)) quotaAccepted++;
+      }
+    }
     if (!FXSEL && best !== parent) { parent = Float64Array.from(best); pf = bestFit; }
     if (!TARGET_G) { used += 0; while (checkpoints.length && used >= checkpoints[0]) { curve.push({ evals: used, best: bestFit }); checkpoints.shift(); } }
     if (TARGET_G && gamesIn() >= TARGET_G) break;
@@ -534,7 +571,19 @@ if (MODE === 'esa') {
   if (ARENA_FPEN > 0) { console.log('[cem-arm] ⚑ **地板罚项终态**（λ=' + ARENA_FPEN + '）：地板缺口和 ' + parentGap.toFixed(3) +
     ' ‖ 罚后分 ' + parentFpen.toFixed(3) + ' ‖ 冻结桌总分 ' + parentFix.toFixed(3));
   ESA_FPEN_STAT = { lam: ARENA_FPEN, gap: parentGap, after: parentFpen, total: parentFix }; }
-  ESA_DIV_STAT = { accepted: accepted, byScore: accScore, byDiv: accDiv, divProbes: divProbes, parentShare: parentShare };
+  if (QUOTA > 0 && FXSEL) console.log('[cem-arm] ⚑ **验证配额**（E7）：目标 ' + QUOTA + ' 次 ‖ 实送 ' + verifications + ' 次' +
+    '（门内/探针 ' + (verifications - quotaTopups) + ' ‖ 代末补送 ' + quotaTopups + '，其中被接受 ' + quotaAccepted + '）‖ 每代补送上限 ' + QUOTA_PER_ITER +
+    ' ‖ 验证吃掉约 ' + (100 * verifications * (ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES)) / Math.max(1, gamesIn())).toFixed(1) + '% 的循环预算');
+  ESA_DIV_STAT = { accepted: accepted, byScore: accScore, byDiv: accDiv, divProbes: divProbes, parentShare: parentShare,
+    acceptDeltas: acceptDeltas, verifications: verifications, quota: QUOTA, quotaPerIter: QUOTA_PER_ITER, quotaTopups: quotaTopups, quotaAccepted: quotaAccepted };
+  if (acceptDeltas.length) {
+    const ds = acceptDeltas.map(function (x) { return x.d; }).sort(function (a, b) { return a - b; });
+    const perVerifyGames = ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES);
+    console.log('[cem-arm] ⚑ **接受事件的判定力**：' + ds.length + ' 次接受的冻结桌分差 最小 ' + ds[0].toFixed(3) +
+      ' ‖ 中位 ' + ds[Math.floor(ds.length / 2)].toFixed(3) + ' ‖ 最大 ' + ds[ds.length - 1].toFixed(3) +
+      ' ‖ 其中 <2SE 的 ' + ds.filter(function (x) { return x < 2 * 0.7 / Math.sqrt(perVerifyGames); }).length + ' 次' +
+      '（每次验证 ' + perVerifyGames + ' 局 ⇒ 单次读数 SE≈' + (0.7 / Math.sqrt(perVerifyGames)).toFixed(3) + '，两点分布估）');
+  }
 } else if (MODE === 'ga') {
   const tr = T.makeTrainer({ popSize: POP, gamesPerOpp: GAMES });
   /* 两臂必须**从同一粒起步**，否则比的不是算子而是起点。GA 侧用仓库自己的热启动 API
