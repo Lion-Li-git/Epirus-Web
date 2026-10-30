@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -96,6 +96,11 @@ const DEF_CAP = Math.max(0, Math.min(1, Number(arg('arenaDefCap', 0)) || 0));
 const JI_CAP = Math.max(0, Math.min(1, Number(arg('arenaJiCap', 0)) || 0));
 const DEF_KEYS = ['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'proto', 'armor', 'holo'];
 let lastShapeStat = null;
+/* `--arenaPerN=1`（DS · 10-30，用户「跨环境适应」）：词典序的**聚合层从 (n,hp) 格换成 N 组**。
+ * 病：验收是 11 格平均 ⇒ 2P/3P 的强项盖住 8P/10P 的塌方（v7 自己 2P 0.300 / 8P 0.086 / 10P −0.028）。
+ * 做法：同一 N 的各 hp 模式取平均，比较「candN − v7N」：先比低于地板的 N 数，再比最差 N 余量，最后比总分。
+ * 默认 0 = 旧的 (n,hp) 词典序。 */
+const ARENA_PER_N = Number(arg('arenaPerN', 0)) > 0;
 /* ===== `--arenaWarmShape=N`（DS · 10-30，方案 A 两阶段）=====
  * 前 N 局只做**形状闸**、不按强度强化（接受条件退成 `fit ≥ 父代 − --arenaWarmTol`，缺省 0.05 的宽带），
  * N 局之后恢复原来的词典序/配对/罚项。目的：先把种群移进形状可行域，再在可行域里强化度。
@@ -484,6 +489,19 @@ if (MODE === 'esa') {
   const cellOf = function (bs, k) { return ARENA_CUR === 'clean' ? bs[k].cleanScore : bs[k].score; };
   const lexTupleOf = function (bs) {
     let below = 0, worst = Infinity;
+    /* --arenaPerN：先按 N 聚合（同 N 的 hp 模式取平均），再比「低于地板的 N 数 / 最差 N 余量」。 */
+    if (ARENA_PER_N) {
+      const byN = {};
+      for (const k in V7_FLOOR) {
+        const n = String(k).split(':')[0];
+        const c = cellOf(bs, k), f = cellOf(V7_FLOOR, k);
+        const g = (bs[k] && bs[k].games) || 1;
+        (byN[n] = byN[n] || { c: 0, f: 0, w: 0 });
+        byN[n].c += c * g; byN[n].f += f * g; byN[n].w += g;
+      }
+      for (const n in byN) { const x = byN[n]; const d = x.c / x.w - x.f / x.w; if (d < 0) below++; if (d < worst) worst = d; }
+      return { below: below, worst: worst };
+    }
     for (const k in V7_FLOOR) {
       const m = cellOf(bs, k) - cellOf(V7_FLOOR, k);
       if (m < 0) below++;
@@ -699,7 +717,7 @@ if (MODE === 'esa') {
     (DIV ? ' ‖ 按多样性 ' + accDiv + '（探针 ' + divProbes + ' 次；触发 >' + DIV_TRIGGER + '，净胜带 ±' + DIV_TOL + '，单卡需降 ≥' + DIV_DELTA + '）' : '') +
     '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '%' + (WARM_SHAPE > 0 ? ' ‖ **两阶段**（前 ' + WARM_SHAPE + ' 局只形状、容差 ' + WARM_TOL + '）' : '') + (SHAPE_CAP > 0 || DEF_CAP > 0 || JI_CAP > 0 ? ' ‖ **形状约束@t' + SHAPE_TEMP + '**（单卡≤' + (100 * SHAPE_CAP).toFixed(0) + '% ‖ 防御≤' + (100 * DEF_CAP).toFixed(0) + '% ‖ ji≤' + (100 * JI_CAP).toFixed(0) + '%，挡下 ' + shapeBlocked + ' 个送验：单卡 ' + shapeBlockKeys.share + ' ‖ 防御 ' + shapeBlockKeys.def + ' ‖ ji ' + shapeBlockKeys.ji + '）' : '') + ' ‖ 每次验证花 ' +
     (ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES)) + ' 局（fxGames=' + FXG + (ARENA ? '，arena2 每桌形' + Math.max(8, FXG || 0) : '') + ' ‖ 预算被这块吃掉，迭代数会少）');
-  if (ARENA_LEX && parentLex) { console.log('[cem-arm] ⚑ **词典序终态**（#161）：低于地板格数 ' + parentLex.below + '/' + Object.keys(V7_FLOOR).length +
+  if (ARENA_LEX && parentLex) { console.log('[cem-arm] ⚑ **词典序终态**（#161' + (ARENA_PER_N ? '·每 N 聚合' : '') + '）：' + (ARENA_PER_N ? '低于地板 N 数 ' : '低于地板格数 ') + parentLex.below + '/' + (ARENA_PER_N ? new Set(Object.keys(V7_FLOOR).map(function (k) { return String(k).split(':')[0]; })).size : Object.keys(V7_FLOOR).length) +
     ' ‖ 最差格余量 ' + parentLex.worst.toFixed(3) + ' ‖ 冻结桌总分 ' + parentFix.toFixed(3) + '（货币=' + ARENA_CUR + '）');
   ESA_LEX_STAT = { below: parentLex.below, worst: parentLex.worst, floorCells: Object.keys(V7_FLOOR).length }; }
   if (ARENA_FPEN > 0) { console.log('[cem-arm] ⚑ **地板罚项终态**（λ=' + ARENA_FPEN + '）：地板缺口和 ' + parentGap.toFixed(3) +
