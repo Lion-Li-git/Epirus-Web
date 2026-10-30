@@ -300,4 +300,16 @@ console.log('   ⚑ 两行分母必须相等（同格同局号）：' + S.pG + '
     }
   }
 }
+/* 单局记录指路（DS · 10-30）：profile2 只出聚合剖面，讨论"这包具体怎么打"时要有一局原文可看。
+ * 记录由 `tools/proto2/game-record.mjs` 生成（与 Web UI 导出同形），落在 `results/<包名>/`（results 被 gitignore，本地件）。
+ * 这里只**指路**、不现场生成：profile2 一次调用只该干一件事，生成记录会改文件系统、也会把 440 局的读数与"一局"混在一起。 */
+if (PACK) {
+  const base = PACK.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '');
+  const rec = 'results/' + base + '/5p-seed777.txt';
+  const fsx = await import('node:fs');
+  console.log(fsx.existsSync(rec)
+    ? '· 单局记录（5P seed777）：`' + rec + '`'
+    : '· 单局记录：**没生成** ⇒ `node tools/proto2/game-record.mjs --pack=' + PACK + ' --temp=' + TEMP + ' --out=' + rec + '`');
+}
+
 process.exit(S.pG === S.rG ? 0 : 2);

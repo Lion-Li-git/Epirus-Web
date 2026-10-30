@@ -657,6 +657,8 @@ if (MODE === 'esa') {
   } else if (FX_PAIRED) {
     console.log('[cem-arm] ⚑ **配对判定**（E8，K=' + FX_PAIRED_K + '）：零次接受 ‖ 被配对噪声挡下 ' + pairedBlocked + ' 次 ⇒ 这一臂一次父代都没换（噪声门把臂关死了）');
   }
+  if (OUT) console.log("[cem-arm] ⚑ 单局记录（复盘用）：node tools/proto2/game-record.mjs --pack=" + OUT +
+    " --temp=" + ARENA_TEMP + " --mode=" + TMODE + " --n=" + N + " --out=results/<包名>/5p-seed777.txt");
 } else if (MODE === 'ga') {
   const tr = T.makeTrainer({ popSize: POP, gamesPerOpp: GAMES });
   /* 两臂必须**从同一粒起步**，否则比的不是算子而是起点。GA 侧用仓库自己的热启动 API
