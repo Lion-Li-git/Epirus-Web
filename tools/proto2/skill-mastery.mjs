@@ -61,20 +61,30 @@ function balancedJson(s, at) {
 }
 function loadPackParams(W, packPath) {
   if (packPath === 'v7') return Float64Array.from(loadChamp(W, 'js/bundled-champion-3p.js'));
-  let params = null;
-  { const v7 = loadChamp(W, packPath); if (v7 && v7.length) params = v7; }
-  if (params) return Float64Array.from(params);
+  /* ⚑ 10-31 00:5x 修（diag-gate-vs-formal 抓到）：**先判容器再信 loadChamp**。
+   *   病：v7 的 unpack 不做版本门 ⇒ 新沙箱上 loadChamp 把 v:91 容器当壳吃掉，返回 6122 维参数
+   *   灌进 5689 维的 v7 网（截断重解释）——此前所有 v:91 包的"正式尺"读数都是错网。
+   *   面对账：probe 门内审计（env 显式装 obs3）与 packCfgExit 面在产物上逐局一致 ⇒ 门没病，尺有病。 */
   const srcTxt = readFileSync(packPath, 'utf8');
   const at = srcTxt.indexOf('EPIRUS_CHAMPION_3P ');
-  const jsonTxt = at >= 0 ? balancedJson(srcTxt, at) : null;
-  if (!jsonTxt) throw new Error('读不出包：' + packPath);
-  const raw = JSON.parse(jsonTxt);
-  const got = packCfgExit(raw, packPath); /* 代闸：代 1 的包不许按新网络读 */
-  installArch2(W, got.cfg);
-  if (W.EpirusPolicy.__arch2) W.EpirusPolicy.__arch2.rngRef.r = W.EpirusTrainer.mulberry32(4242);
-  params = Float64Array.from(W.EpirusPolicy.unpack(raw, true));
-  if (!params || params.length !== W.EpirusPolicy.paramCount()) throw new Error('包形状不对：' + packPath);
-  return params;
+  if (at >= 0) {
+    const jsonTxt = balancedJson(srcTxt, at);
+    if (jsonTxt) {
+      const raw = JSON.parse(jsonTxt);
+      if (raw && raw.dims) {   /* 2.0 容器标记 ⇒ 必须走 packCfgExit 单一出口（代闸 + 按包重建面） */
+        const got = packCfgExit(raw, packPath);
+        installArch2(W, got.cfg);
+        if (W.EpirusPolicy.__arch2) W.EpirusPolicy.__arch2.rngRef.r = W.EpirusTrainer.mulberry32(4242);
+        const params = Float64Array.from(W.EpirusPolicy.unpack(raw, true));
+        if (!params || params.length !== W.EpirusPolicy.paramCount()) throw new Error('包形状不对：' + packPath + '（' + (params && params.length) + ' vs ' + W.EpirusPolicy.paramCount() + '）');
+        return params;
+      }
+    }
+  }
+  /* v7 原生 / 2P 外壳 / 池代表（v:7, a:[...]） */
+  const v7 = loadChamp(W, packPath);
+  if (v7 && v7.length) return Float64Array.from(v7);
+  throw new Error('读不出包：' + packPath);
 }
 
 /* ---------- 事件级审计：包装 chooser（零扰动）+ 游标窗口 ---------- */
