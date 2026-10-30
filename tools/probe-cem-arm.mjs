@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -102,6 +102,19 @@ let lastShapeStat = null;
  * N=0（缺省）⇒ 逐字旧行为。 */
 const WARM_SHAPE = Math.max(0, Math.floor(Number(arg('arenaWarmShape', 0)) || 0));
 const WARM_TOL = Math.max(0, Number(arg('arenaWarmTol', 0.05)) || 0.05);
+/* `--arenaShapeRel=e`（DS · 10-30，相对约束）：子代每键 ≤ 父代 + e ⇒ **起点永远可行**，且父代变好时约束自动收紧。
+ * 绝对 cap 的教训：起点 t=0.05 单卡 44.1%，cap 0.50 只留 6pp；实测 43 次送验里单卡挡 28、防御挡 25、ji 挡 6 ⇒ 可行域几乎空。
+ * 默认 0 = 关；三键各一个容差（share/def/ji）。 */
+const SHAPE_REL = Math.max(0, Number(arg('arenaShapeRel', 0)) || 0);
+const REL_DEF = Math.max(0, Number(arg('arenaShapeRelDef', 0.08)) || 0.08);
+const REL_JI = Math.max(0, Number(arg('arenaShapeRelJi', 0.08)) || 0.08);
+let parentShapeStat = null;
+/* `--arenaShapePick=1`（DS · 10-30，归档 + 终选）：**搜索不变**（不因形状拒绝任何子代），
+ * 但每次接受时把候选（含起点）连同形状一起存进 archive；终局时在**形状合格**的归档里挑 fit 最高的一枚作为产物。
+ * 这样既不会把搜索饿死（v2 的教训：43 次送验只有 5 个过形状闸），又保证产物在报告相位上形状合格。
+ * 形状合格线用同一组 `--arenaShapeCap/DefCap/JiCap`（在 SHAPE_TEMP 上读）。默认 0 = 关。 */
+const SHAPE_PICK = Number(arg('arenaShapePick', 0)) > 0;
+const shapeArchive = [];
 /* ===== `--arenaLex=1`（#161，ZCode · 10-30 夜）：**分格无权词典序当选** =====
  * 动因：6k 包 2P 65~75% vs 10P 28% 的剖面被标量平均吞掉。冻结桌上的接受判据从标量改成 (n,hp) 格词典序：
  *   先比「低于地板的格数」（少者优先），再比「最差格余量」（大者优先），最后才比总分。
@@ -489,6 +502,12 @@ if (MODE === 'esa') {
   let parentFpen = 0, parentGap = 0;
   if (FXSEL) {
     const pe = evalFixed(parent, 500, 0, FXG || undefined, FX_PAIRED);
+    if (SHAPE_REL > 0 && ARENA) {
+      const sh0 = ARENA.evalParams(parent, { phase: 'frozen', gamesPerShape: SHAPE_GAMES, temp: SHAPE_TEMP, cur: ARENA_CUR });
+      const acts0 = Math.max(1, sh0.acts * sh0.games);
+      let d0 = 0; for (const k of DEF_KEYS) d0 += (sh0.cat && sh0.cat[k]) || 0;
+      parentShapeStat = { share: sh0.maxCard ? sh0.maxCard.share : 0, def: d0 / acts0, ji: ((sh0.cat && sh0.cat[R.SK.JI]) || 0) / acts0 };
+    }
     parentFix = pe.fit;
     parentShare = pe.maxCard ? pe.maxCard.share : 0;
     parentPen = penOf(parentFix, parentShare);
@@ -514,7 +533,7 @@ if (MODE === 'esa') {
    *   不另写一套。`N=0`（缺省）⇒ 逐字旧行为。⚠ 补送发生在代末，不进 1/5 律的成功窗口（那条只数门内尝试）。 */
   const QUOTA = Math.max(0, Math.floor(Number(arg('fxQuota', 0)) || 0));
   const QUOTA_PER_ITER = Math.max(1, Math.floor(Number(arg('fxQuotaPerIter', 2)) || 2));
-  let verifications = 0, quotaTopups = 0, quotaAccepted = 0, pairedBlocked = 0, shapeBlocked = 0;
+  let verifications = 0, quotaTopups = 0, quotaAccepted = 0, pairedBlocked = 0, shapeBlocked = 0, shapeBlockKeys = { share: 0, def: 0, ji: 0 };
   const acceptDeltas = [];
   /* 一次送验 = 冻结桌评一遍 + 走同一套承兑判据（棘轮门/探针/配额补送共用，保证"补送"不是第二套规则）。 */
   const verifyChild = function (child, loopFit, isTopup) {
@@ -530,8 +549,13 @@ if (MODE === 'esa') {
       let defN = 0; for (const k of DEF_KEYS) defN += (sh.cat && sh.cat[k]) || 0;
       const defShare = defN / acts, jiShare = ((sh.cat && sh.cat[R.SK.JI]) || 0) / acts;
       lastShapeStat = { share, defShare, jiShare, temp: SHAPE_TEMP };
-      const bad = (SHAPE_CAP > 0 && share > SHAPE_CAP + 1e-9) || (DEF_CAP > 0 && defShare > DEF_CAP + 1e-9) || (JI_CAP > 0 && jiShare > JI_CAP + 1e-9);
-      if (bad) { shapeBlocked++; return false; }
+      const badShare = (SHAPE_CAP > 0 && share > SHAPE_CAP + 1e-9) || (SHAPE_REL > 0 && parentShapeStat && share > parentShapeStat.share + SHAPE_REL + 1e-9);
+      const badDef = (DEF_CAP > 0 && defShare > DEF_CAP + 1e-9) || (SHAPE_REL > 0 && parentShapeStat && defShare > parentShapeStat.def + REL_DEF + 1e-9);
+      const badJi = (JI_CAP > 0 && jiShare > JI_CAP + 1e-9) || (SHAPE_REL > 0 && parentShapeStat && jiShare > parentShapeStat.ji + REL_JI + 1e-9);
+      if (badShare) shapeBlockKeys.share++;
+      if (badDef) shapeBlockKeys.def++;
+      if (badJi) shapeBlockKeys.ji++;
+      if (badShare || badDef || badJi) { shapeBlocked++; return false; }
     }
     const candLex = ARENA_LEX ? lexTupleOf(cf.byShape) : null;
     /* byScore 四档：词典序（#161）‖ 地板罚项（预登记回退）‖ 罚项（--arenaPen）‖ 标量净胜（原口径）——一次只许开一档 */
@@ -554,6 +578,13 @@ if (MODE === 'esa') {
       acceptDeltas.push({ d: cf.fit - parentFix, z: pz ? Number(pz.z.toFixed(2)) : null, via: byDiv && !byScore ? 'div' : (ARENA_LEX ? 'lex' : 'score'), topup: !!isTopup });
       parentFix = cf.fit; parent = Float64Array.from(child); parentShare = cfShare; parentPen = penOf(cf.fit, cfShare);
       if (FX_PAIRED) parentVec = cf.perGame;
+      if (SHAPE_REL > 0 && lastShapeStat) parentShapeStat = { share: lastShapeStat.share, def: lastShapeStat.defShare, ji: lastShapeStat.jiShare };
+      if (SHAPE_PICK) {
+        const shp = ARENA.evalParams(child, { phase: 'frozen', gamesPerShape: SHAPE_GAMES, temp: SHAPE_TEMP, cur: ARENA_CUR });
+        const actsP = Math.max(1, shp.acts * shp.games);
+        let dP = 0; for (const k of DEF_KEYS) dP += (shp.cat && shp.cat[k]) || 0;
+        shapeArchive.push({ pack: Float64Array.from(child), fit: cf.fit, share: shp.maxCard ? shp.maxCard.share : 0, def: dP / actsP, ji: ((shp.cat && shp.cat[R.SK.JI]) || 0) / actsP });
+      }
       parentLoopFit = loopFit;   /* parent 门的新基准 = 刚接受的这个子代自己的循环分 */
       if (ARENA_LEX) parentLex = candLex;
       if (ARENA_FPEN > 0) { parentGap = floorGapSum(cf.byShape); parentFpen = fpenOf(cf); }
@@ -665,7 +696,7 @@ if (MODE === 'esa') {
   if (FXSEL) console.log('[cem-arm] ⚑ 冻结桌当选：环内预选 ' + screened + ' 次 ‖ 在冻结桌上真打过父代 ' + accepted + ' 次（按净胜 ' + accScore +
     (PRESEL === 'parent' ? ' ‖ **预选门=parent**（子代循环分 ≥ 父代即送验）' : '') +
     (DIV ? ' ‖ 按多样性 ' + accDiv + '（探针 ' + divProbes + ' 次；触发 >' + DIV_TRIGGER + '，净胜带 ±' + DIV_TOL + '，单卡需降 ≥' + DIV_DELTA + '）' : '') +
-    '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '%' + (WARM_SHAPE > 0 ? ' ‖ **两阶段**（前 ' + WARM_SHAPE + ' 局只形状、容差 ' + WARM_TOL + '）' : '') + (SHAPE_CAP > 0 || DEF_CAP > 0 || JI_CAP > 0 ? ' ‖ **形状约束@t' + SHAPE_TEMP + '**（单卡≤' + (100 * SHAPE_CAP).toFixed(0) + '% ‖ 防御≤' + (100 * DEF_CAP).toFixed(0) + '% ‖ ji≤' + (100 * JI_CAP).toFixed(0) + '%，挡下 ' + shapeBlocked + ' 个送验）' : '') + ' ‖ 每次验证花 ' +
+    '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '%' + (WARM_SHAPE > 0 ? ' ‖ **两阶段**（前 ' + WARM_SHAPE + ' 局只形状、容差 ' + WARM_TOL + '）' : '') + (SHAPE_CAP > 0 || DEF_CAP > 0 || JI_CAP > 0 ? ' ‖ **形状约束@t' + SHAPE_TEMP + '**（单卡≤' + (100 * SHAPE_CAP).toFixed(0) + '% ‖ 防御≤' + (100 * DEF_CAP).toFixed(0) + '% ‖ ji≤' + (100 * JI_CAP).toFixed(0) + '%，挡下 ' + shapeBlocked + ' 个送验：单卡 ' + shapeBlockKeys.share + ' ‖ 防御 ' + shapeBlockKeys.def + ' ‖ ji ' + shapeBlockKeys.ji + '）' : '') + ' ‖ 每次验证花 ' +
     (ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES)) + ' 局（fxGames=' + FXG + (ARENA ? '，arena2 每桌形' + Math.max(8, FXG || 0) : '') + ' ‖ 预算被这块吃掉，迭代数会少）');
   if (ARENA_LEX && parentLex) { console.log('[cem-arm] ⚑ **词典序终态**（#161）：低于地板格数 ' + parentLex.below + '/' + Object.keys(V7_FLOOR).length +
     ' ‖ 最差格余量 ' + parentLex.worst.toFixed(3) + ' ‖ 冻结桌总分 ' + parentFix.toFixed(3) + '（货币=' + ARENA_CUR + '）');
@@ -692,6 +723,23 @@ if (MODE === 'esa') {
       ' ‖ 最大 ' + Math.max.apply(null, zs).toFixed(2) + ' ‖ 被配对噪声挡下的送验 ' + pairedBlocked + ' 次');
   } else if (FX_PAIRED) {
     console.log('[cem-arm] ⚑ **配对判定**（E8，K=' + FX_PAIRED_K + '）：零次接受 ‖ 被配对噪声挡下 ' + pairedBlocked + ' 次 ⇒ 这一臂一次父代都没换（噪声门把臂关死了）');
+  }
+  if (SHAPE_PICK) {
+    /* 起点也进归档（它本身就是形状合格线内的一枚，保证归档非空）。 */
+    const shS = ARENA.evalParams(startParams, { phase: 'frozen', gamesPerShape: SHAPE_GAMES, temp: SHAPE_TEMP, cur: ARENA_CUR });
+    const actsS = Math.max(1, shS.acts * shS.games);
+    let dS = 0; for (const k of DEF_KEYS) dS += (shS.cat && shS.cat[k]) || 0;
+    shapeArchive.push({ pack: Float64Array.from(startParams), fit: base.fit, share: shS.maxCard ? shS.maxCard.share : 0, def: dS / actsS, ji: ((shS.cat && shS.cat[R.SK.JI]) || 0) / actsS });
+    const okShape = function (x) { return (SHAPE_CAP <= 0 || x.share <= SHAPE_CAP + 1e-9) && (DEF_CAP <= 0 || x.def <= DEF_CAP + 1e-9) && (JI_CAP <= 0 || x.ji <= JI_CAP + 1e-9); };
+    const feas = shapeArchive.filter(okShape);
+    if (feas.length) {
+      feas.sort(function (a, b) { return b.fit - a.fit; });
+      const pick = feas[0];
+      parent = Float64Array.from(pick.pack); best = pick.pack; parentFix = pick.fit;
+      console.log('[cem-arm] ⚑ **形状终选**（归档 ' + shapeArchive.length + ' 枚，合格 ' + feas.length + ' 枚）：选中 fit=' + pick.fit.toFixed(3) + ' ‖ 单卡 ' + (100 * pick.share).toFixed(1) + '% ‖ 防御 ' + (100 * pick.def).toFixed(1) + '% ‖ ji ' + (100 * pick.ji).toFixed(1) + '%');
+    } else {
+      console.log('[cem-arm] ⚑ **形状终选**：归档 ' + shapeArchive.length + ' 枚**没有一枚合格** ⇒ 退回 fit 最高的那枚（产物形状不合格，必须写明）');
+    }
   }
   if (OUT) console.log("[cem-arm] ⚑ 单局记录（复盘用）：node tools/proto2/game-record.mjs --pack=" + OUT +
     " --temp=" + ARENA_TEMP + " --mode=" + TMODE + " --n=" + N + " --out=results/<包名>/5p-seed777.txt");
