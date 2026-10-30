@@ -19,7 +19,7 @@
  * 用法：node tools/probe-cem-arm.mjs --mode=ga|cem --evals=2000 [--pop=14] [--games=4] [--n=3]
  *        [--seed=7] [--elite=4] [--sig=0.2] [--degenerate=1] [--out=<pack 落点>] [--quiet]
  */
-import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, appendFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -179,24 +179,27 @@ let OUT = arg('out', '');       // 缺省时由 `defaultOut()` 在**起点定下
  * 默认落点选 `scratch/arms/` 而不是 `docs/artifacts/`：后者是门禁比哈希的活文件夹，
  *   研究臂默认往里撒 `.bak` 会当场吃 `D191`（未登记重复）——这条提醒写在 `tools/train-3p.mjs:2493-2500`。
  *   要入库/进图的包仍由人**显式**点名搬到 `docs/artifacts/`（默认值不该替人做入库决定）。 */
-/* ===== 落盘名字的规则（用户 10-30 晚点名"设得有规律一些"）=====
- * 格式（字段顺序固定，可 `split('-')` 也可整串正则）：
- *   scratch/arms/<代>-<label>-<mode>p<pop>-<预算>-<父本>-s<seed>-<MMDD-HHMM>.bak
- *   代 = G2（装过 arch2）/ V7（没装）‖ label = `--label=`（缺省 x）‖ 预算 = 24kG（按局停）或 1120ev（按评估停）
- *   父本 = 被**接受**的起点包文件名去扩展名，随机起点写 `rnd`（这一格以前只能从 meta 的 `lineage.parent` 反查）
- * ⚑ 为什么在 `defaultOut()` 里拼而不在调用处拼：名字必须带上"起点是否真被接受"这个事实——
- *   在起点判定之前拼，热启动失败的那批就会拿到一个声称自己从某枚包起跑的名字（那是本仓最怕的"名字比读数会说话"）。 */
-const LABEL = String(arg('label', '')).replace(/[^A-Za-z0-9+._]/g, '').slice(0, 24) || 'x';
-function defaultOut() {
-  const d = new Date();
-  const p = (x) => String(x).padStart(2, '0');
-  const gen = P.__arch2 ? ('G' + (P.__arch2.L && P.__arch2.L.gen || 2)) : 'V7';
-  const budget = TARGET_G ? (Math.round(TARGET_G / 100) / 10) + 'kG' : (EVALS + 'ev');
-  let parent = 'rnd';
-  try { if (startParams && startLabel && startLabel.indexOf('夹具包') === 0) parent = String(START_PACK).replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, ''); } catch (e) { }
-  return 'scratch/arms/' + gen + '-' + LABEL + '-' + MODE + 'p' + POP + '-' + budget + '-' + parent + '-s' + SEED
-    + '-' + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.bak';
+/* ===== 落盘名字的规则 v2（用户 10-30 晚两次点名："设得有规律一些" → "太长了，进演化图是灾难"）=====
+ * **名字只当身份证，描述全进索引**：
+ *   文件名 = `<label>-<n>.bak`，`n` = 该 label 现有最大序号 +1（扫目录得 ⇒ 无状态文件、不撞名）
+ *   其余字段（代/预算/父本/seed/起点分/终点分/agree/集中度/单卡/秒数/内容 hash）进 `scratch/arms/index.tsv`
+ *     —— 一臂一行、制表符分隔、追加写；分析与演化图都读这张表，**不许再解析文件名**
+ *     （v1 那串长名字在图里既不可读也不可比较：那是我把"要有规律"错做成了"把所有字段塞进名字"）。
+ * ⚑ 名字里刻意**不写父本**：写了就会在"起点被拒 ⇒ 其实从随机粒起跑"的那批臂上，
+ *   留下一个声称自己有父本的文件名（"名字比读数会说话"是本仓最怕的那一族）。父本只进 `lineage.parent` 与索引列。 */
+const LABEL = String(arg('label', '')).replace(/[^A-Za-z0-9+]/g, '').slice(0, 14) || 'arm';
+function nextSeq(dir, label) {
+  let mx = 0;
+  const rx = new RegExp('^' + label + '-(\\d+)\\.bak$');
+  try { for (const f of readdirSync(dir)) { const m = rx.exec(f); if (m) mx = Math.max(mx, Number(m[1])); } } catch (e) { /* 目录还没有 ⇒ 从 1 开始 */ }
+  return mx + 1;
 }
+function defaultOut() {
+  const dir = 'scratch/arms';
+  return dir + '/' + LABEL + '-' + nextSeq(dir, LABEL) + '.bak';
+}
+/** 短 ID = 文件名去扩展名 ⇒ 演化图的节点键；父本引用也用同一套键 */
+function armId(o) { return String(o || '').replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, ''); }
 
 const W = sandbox(HERE + '/..');
 const T = W.EpirusTrainer, P = W.EpirusPolicy, R = W.EpirusRules;
@@ -338,7 +341,7 @@ if (!startParams) {
   P.setRng(T.mulberry32(SEED)); startParams = P.makePolicy(0.25); startLabel = 'makePolicy(0.25)';
 }
 startParams = Float64Array.from(startParams);
-if (!OUT) OUT = defaultOut();   // 起点定下来之后才拼名字（父本那一格要说真话）
+if (!OUT) OUT = defaultOut();   // 缺省名要扫目录取号 ⇒ 只能在起点判定之后拼（父本只进索引，不进名字）
 /* arena2 只在起点粒定下来之后建表；它用 v7 参照固定对手表，与起点粒无关（起点不参与建桌）。 */
 var ARENA = null;
 if (ARENA2) {
@@ -891,6 +894,7 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
     bestMaxCard: ho.maxCard, startMaxCard: hoStart.maxCard, bestByShape: ho.byShape } : null,
   curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel,
   /* 谱系（给演化图用）：parent 是起点包或 random；outHash/gen 是产物身份。recipe 只收与"选法"有关的开关。 */
+  id: armId(OUT), parent: (startLabel.indexOf('夹具包') === 0 ? armId(START_PACK) : ''),
   lineage: { parent: startLabel.indexOf('夹具包') === 0 ? START_PACK : 'random', parentHash: startHash,
     outHash: OUT ? (function () { try { return createHash('md5').update(JSON.stringify(P.pack(best))).digest('hex'); } catch (e) { return null; } })() : null,
     gen: OUT ? (function () { try { const vv = P.pack(best).v; return vv === 91 ? 2 : (vv === 90 ? 1 : null); } catch (e) { return null; } })() : null,
@@ -970,7 +974,40 @@ if (row.arena && row.arena.esa) {
   console.log('[cem-arm] ⚠ `--verifGate=1` 已传但**本臂没有 esa 计数**（mode=' + row.mode + '）⇒ 这条闸**不判**，不是"判过了"。' +
     '⇒ CEM 每代整池评估 ⇒ 要判"搜索有没有被考卷回答"请看 `verifications` 之外的口径（如 冻结桌当选次数），或改用 ESA。');
 }
-if (OUT) { mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT + '.meta.json', JSON.stringify(row, null, 1), 'utf8'); }
+
+/* ===== 索引 `scratch/arms/index.tsv`：名字瘦下去之后，"规律"住在这一层 =====
+ * 列固定、制表符分隔、追加写 ⇒ 分析用 awk/TSV、演化图按 `id`/`parent` 连边。
+ * 读不出的格一律写 `-`：空串会让列错位，而列错位是本仓表格的老病（分隔符现算，别在源码里写字面制表符）。 */
+function appendIndex(o, row) {
+  const TAB = String.fromCharCode(9), NL = String.fromCharCode(10);
+  const f = 'scratch/arms/index.tsv';
+  const head = ['id', 'file', 'gen', 'parent', 'mode', 'pop', 'seed', 'evals', 'targetGames',
+    'startFit', 'fit', 'dFit', 'startFirst', 'first', 'agree', 'conc', 'singleCard', 'cardShare',
+    'secs', 'outHash', 'headGate', 'verifGate', 'time'].join(TAB) + NL;
+  const hv = (x) => (x === null || x === undefined || !Number.isFinite(Number(x)) ? '-'
+    : (typeof x === 'number' ? Number(x).toFixed(4) : String(x)));
+  try {
+    const hh = row.headHealth && row.headHealth.pack ? row.headHealth.pack : {};
+    const mc = row.arena && row.arena.bestMaxCard ? row.arena.bestMaxCard : null;
+    const line = [armId(o), o, (row.lineage && row.lineage.gen != null ? row.lineage.gen : (P.__arch2 ? 2 : 0)),
+      row.parent || '-', row.mode, row.pop, row.seed, row.evals,
+      row.targetGames == null ? '-' : row.targetGames,
+      hv(row.holdoutStartFit), hv(row.holdoutFit),
+      hv((typeof row.holdoutFit === 'number' && typeof row.holdoutStartFit === 'number') ? row.holdoutFit - row.holdoutStartFit : NaN),
+      hv(row.holdoutStartFirst), hv(row.holdoutFirst), hv(hh.agreeRandom), hv(hh.concMed),
+      mc ? mc.key : '-', hv(mc ? mc.share : NaN), hv(row.secs),
+      (row.lineage && row.lineage.outHash) ? String(row.lineage.outHash).slice(0, 8) : '-',
+      /* 闸的读数在 meta 里是一整句话；索引这一列只留**词**（TSV 里塞整句会把 awk 的读者惹毛，也让图例没法画） */
+      (function (x) { const t = String(x || '-'); return t.indexOf('绿') === 0 ? '绿' : t.indexOf('红') === 0 ? '红' : t.indexOf('不适用') === 0 ? '不适用' : t.indexOf('未开闸') === 0 ? '未开闸' : t.slice(0, 6); })(row.headGate),
+      (function (x) { const t = String(x || '-'); return t.indexOf('绿') === 0 ? '绿' : t.indexOf('红') === 0 ? '红' : t.indexOf('不适用') === 0 ? '不适用' : t.indexOf('未开闸') === 0 ? '未开闸' : t.slice(0, 6); })(row.verifGate),
+      new Date().toISOString().slice(5, 16).replace('T', ' ')].join(TAB) + NL;
+    if (!existsSync(f)) writeFileSync(f, head, 'utf8');
+    appendFileSync(f, line, 'utf8');
+  } catch (e) {
+    console.log('[cem-arm] ⚠ 索引没写上（' + String((e && e.message) || e).slice(0, 60) + '）——臂本身已落盘，但**这一臂在图里会缺席**，补索引或重跑');
+  }
+}
+if (OUT) { mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT + '.meta.json', JSON.stringify(row, null, 1), 'utf8'); appendIndex(OUT, row); }
 /* `--headGate=1` 的红要真的把批挡住 ⇒ 非零退出（产物已落盘，事后仍可复盘，但**回执不许被当合格臂引用**）。
    缺省不开闸 ⇒ 历史臂与不带这个旗标的批次逐字不变。 */
 if (HEAD_GATE && row.headGate === '红') process.exit(9);
