@@ -184,6 +184,9 @@ export function createArena2(W, opts) {
       shape: shape.n + ':' + shape.mode, n, mode: shape.mode,
       win, draw, clean: win && hp > 0, top2: ahead <= 1,
       scoreNet, scoreClean, scoreFirst, hp, rounds: rm.rounds || 0, acts, cat, classes,
+      /* ⚑ skill-mastery（ZCode · 10-30 深夜）：审计尺要局后回放事件窗口 ⇒ `wantEvents=1` 时把
+       *   本局事件流捎回来（默认关 = 现有调用逐字不变；events 数组逐局即弃，无累积）。 */
+      ...(o.wantEvents ? { evs: st.events || [] } : {}),
     };
   }
 
