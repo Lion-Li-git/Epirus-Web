@@ -134,7 +134,7 @@ function build(rm, label) {
   txt += "模式=" + MODE + "(" + (st.mode && st.mode.hp) + "血)  对手表=arena2 v2 " + (FIELD === "strat" ? "分层场" : "平均场") + "  温度=" + TEMP + "\n";
   txt += "包=" + PACK.replace(/^.*[\\/]/, "") + "  种子=" + SEED + "  被测席=" + (FOCUS + 1) + "\n";
   const seats = [];
-  for (let i = 0; i < N; i++) seats.push((i === FOCUS ? "【被测】" : "对手") + nameOf(i, st));
+  for (let i = 0; i < N; i++) seats.push((i === FOCUS ? "" : "") + nameOf(i, st) + "(" + (seatNames[i] || "?") + ")");
   txt += "坐席=" + seats.join(" ‖ ") + "\n\n";
   const maxRound = tagged.reduce((m, t) => Math.max(m, t.round), 0);
   for (let r = 1; r <= maxRound; r++) {
@@ -161,13 +161,15 @@ function build(rm, label) {
 
 const SALT2 = 5077;
 const choosers = [];
+const seatNames = [];
 for (let pid = 0; pid < N; pid++) {
-  if (pid === FOCUS) { choosers.push(pk); continue; }
+  if (pid === FOCUS) { choosers.push(pk); seatNames.push('【被测】' + PACK.replace(/^.*[\\/]/, '')); continue; }
   const gameSeq = 90000;
   let ri = (gameSeq * 7 + pid * 11 + shapeIdx * 13 + SALT) % A.roster.length;
   let e = A.roster[ri];
   while (e.kind === "random") { ri = (ri + 1) % A.roster.length; e = A.roster[ri]; }
   choosers.push(e.sel);
+  seatNames.push(e.name);
 }
 const rm = T.oneGameN(choosers, SEED, N, { regen: 0, mode: MODE });
 const txt = build(rm, PACK);
