@@ -34,7 +34,7 @@ import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } 
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap',
+  'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap', 'masterySem',
   'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -186,6 +186,9 @@ const MASTERY_GAMES = Math.max(2, Number(arg('masteryGames', 12)) || 12);
 const MASTERY_N = Math.max(2, Number(arg('masteryN', 3)) || 3);
 const MASTERY_TABLE = arg('masteryTable', 'long');
 const MASTERY_CAP = Math.max(2, Number(arg('masteryCap', 16)) || 16);
+/* `--masterySem=1`（勘误六）：达标数从"出手率"换"语义命中数/局"（laserEye→打防席、miniT→打 ring/bigT/railgun
+ * 用户、cannon→第3下打ep顶的三连；auditCells 的 sem/chains 计数，不加第二套）。动机：LASER1 的用量-语义反比。 */
+const MASTERY_SEM = Number(arg('masterySem', 0)) > 0;
 const MASTERY_ON = !!(MASTERY_KEY && MASTERY_KEY !== 'off' && MASTERY_GATE !== 'off');
 const HEAD_FIX = Math.max(2, Number(arg('headFixtures', 12)) || 12);
 const HEAD_TEMP = Number(arg('headTemp', 0.15)) || 0.15;
@@ -386,7 +389,7 @@ if (MASTERY_ON) {
   if (!ARENA2) { console.error('⛔ --masteryKey 需要 --arena2=1（审计必须骑同一张 arena2 对手表）'); process.exit(7); }
   try { MAST_ARENA = createArena2(W, { refParams: ARENA_REF, temp: ARENA_TEMP, wantEvents: 1 }); }
   catch (e) { console.error('⛔ mastery 审计桌建表失败：' + String(e && e.message || e)); process.exit(7); }
-  console.log('[cem-arm] ⚙ mastery 门开：key=' + MASTERY_KEY + ' ≥' + MASTERY_LINE + '/局 ‖ gate=' + MASTERY_GATE +
+  console.log('[cem-arm] ⚙ mastery 门开：key=' + MASTERY_KEY + ' ≥' + MASTERY_LINE + '/局 ‖ gate=' + MASTERY_GATE + (MASTERY_SEM ? '+sem' : '') +
     ' ‖ cheap 审计 ' + MASTERY_GAMES + ' 局 n=' + MASTERY_N + ':' + MASTERY_TABLE + ' t=' + ARENA_TEMP +
     ' ‖ 每代审计上限 ' + MASTERY_CAP + ' ‖ 指纹 ' + MAST_ARENA.fp);
 }
@@ -396,7 +399,11 @@ const masteryRate = function (params) {
   const { cells } = auditCells(W, MAST_ARENA, ch, [{ n: MASTERY_N, table: MASTERY_TABLE }], MASTERY_GAMES, 101);
   MASTERY_STAT.audits++;
   const st = cells[0];
-  const rate = (st.okUses[MASTERY_KEY] || 0) / Math.max(1, st.games);
+  let rate;
+  if (MASTERY_SEM && MASTERY_KEY === 'laserEye') rate = st.sem.laserEyeHit / Math.max(1, st.games);
+  else if (MASTERY_SEM && MASTERY_KEY === 'miniT') rate = st.sem.miniTHit / Math.max(1, st.games);
+  else if (MASTERY_SEM && MASTERY_KEY === 'cannon') rate = st.chains.cannonEpMax / Math.max(1, st.games);
+  else rate = (st.okUses[MASTERY_KEY] || 0) / Math.max(1, st.games);
   if (rate >= MASTERY_LINE) MASTERY_STAT.pass++;
   MASTERY_STAT.lastRate = rate;
   return rate;
