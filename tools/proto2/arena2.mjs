@@ -29,7 +29,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { sandbox, loadChamp, buildPoolSeeded, poolFingerprint } from '../audit-lib.mjs';
-import { install as installArch2 } from './arch2.mjs';
+import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 
 /* v2（ZCode · 10-30 夜，P0-1）：每局前重置 bot 跨局记忆（见 createArena2 内 ⚑ 注释）⇒ 读数与 v1 不可比，指纹换轨 */
 export const ARENA2_VERSION = 2;
@@ -338,12 +338,14 @@ function main() {
   let packParams = null, packArch = null;
   if (PACK) {
     let raw;
-    try { raw = JSON.parse(readFileSync(PACK, 'utf8').replace(/^[^{]*/, '').replace(/;?\s*$/, '')); }
+    try { raw = readPack2(PACK); }
     catch (e) { console.error('⛔ 读不到/解不开 ' + PACK + '：' + String(e && e.message || e)); process.exit(2); }
-    if (raw.v !== 90) { console.error('⛔ ' + PACK + ' 不是 2.0 容器（v=' + raw.v + '）'); process.exit(2); }
     packArch = raw.arch || 'S1';
-    const cfg = { mutMode: 'seg', ...(raw.dims || {}) };
-    if (packArch === 'S1o') cfg.input = 'obs3';
+    /* 代闸与装载参数**只有这一个出口**（以前九个工具各写一遍 `raw.v !== 90`，换代就要漏改一处）：
+     *   它同时验 v / dims.gen / 长度 / arch 与 dims.input 自洽 / 观测面 dof，任一不对就响亮退出。 */
+    const got = packCfgExit(raw, PACK);
+    const cfg = got.cfg;
+    console.log('[容器代] ' + got.era + ' ‖ arch=' + packArch + ' ‖ 观测面 dof=' + (raw.dims && raw.dims.dof) + ' ‖ 参数 ' + raw.a.length + ' 条');
     installArch2(W, cfg);
     if (P.__arch2) P.__arch2.rngRef.r = T.mulberry32(4242);
     packParams = Float64Array.from(P.unpack(raw, true));

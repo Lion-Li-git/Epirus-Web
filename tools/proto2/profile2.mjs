@@ -18,7 +18,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { sandbox, loadChamp, buildPoolSeeded, poolFingerprint } from '../audit-lib.mjs';
-import { install as installArch2 } from './arch2.mjs';
+import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -33,11 +33,10 @@ if (!PACK) { console.error('⛔ 需要 --pack=<2.0 的 .bak>'); process.exit(2);
 
 const W = sandbox();
 const P = W.EpirusPolicy, T = W.EpirusTrainer, R = W.EpirusRules;
-const raw = JSON.parse(readFileSync(PACK, 'utf8').replace(/^[^{]*/, '').replace(/;?\s*$/, ''));
-if (raw.v !== 90) { console.error('⛔ 这不是 2.0 容器（v=' + raw.v + ' ⇒ 只认 v:90）'); process.exit(2); }
+const raw = readPack2(PACK);
+const got = packCfgExit(raw, PACK);
 const archTag = raw.arch || 'S1';
-const cfg = { mutMode: 'seg', ...(raw.dims || {}) };
-if (archTag === 'S1o') cfg.input = 'obs3';
+const cfg = got.cfg;
 
 /* ⚑ 顺序要紧：**先**用原生 `unpack` 把 v7 参照包读出来，**再**装 2.0 覆盖。
  *   装完之后再读 v7 ⇒ `unpack` 只认 v:90 ⇒ 返回 null（我第一版就栽在这里，报的还是"参照包读不出"这种指错方向的话）。 */

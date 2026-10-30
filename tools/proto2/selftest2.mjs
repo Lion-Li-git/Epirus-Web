@@ -11,7 +11,7 @@
  *   T6 牙（非恒真）：动 `cand` 段一个权重 ⇒ logits 必须变；全零 params ⇒ logits 必须全等（退化基线）。
  */
 import { sandbox, loadChamp } from '../audit-lib.mjs';
-import { install, layout, paramCount, make, verifyWired } from './arch2.mjs';
+import { install, layout, paramCount, make, verifyWired, V_FOR_GEN, packInstallCfg, genOf } from './arch2.mjs';
 import { encode as obs3Encode, setAblate } from './obs3.mjs';
 
 const W = sandbox();
@@ -205,7 +205,7 @@ const O3 = await import('./obs3.mjs');
   ok(cp.base.length + cp.idOne.length === Lo.actIn, 'T10b 跨文件对账：obs3 的 base+身份(' + cp.base.length + '+' + cp.idOne.length + ') === S1o.actIn(' + Lo.actIn + ')');
   ok(sc.seats[0].public.length + 6 === Lo.seatIn, 'T10c 跨文件对账：obs3 逐席(22+5关系+isSelf) === S1o.seatIn(' + Lo.seatIn + ')');
   const sp = sc.g.length + sc.priv.length + sc.seq.length + sc.sums.length;
-  ok(sp === Lo.selfDim, 'T10d 跨文件对账：obs3 局面侧(5+2+48+2=' + sp + ') === S1o.selfDim(' + Lo.selfDim + ')');
+  ok(sp === Lo.selfDim, 'T10d 跨文件对账：obs3 局面侧(' + sc.g.length + '+' + sc.priv.length + '+' + sc.seq.length + '+' + sc.sums.length + '=' + sp + ') === S1o.selfDim(' + Lo.selfDim + ')');
 }
 {
   /* T11：S1o 装进真训练环打一局 ⇒ 前向被叫到；同 params 跑两遍 ⇒ 逐位相同 */
@@ -252,14 +252,22 @@ const O3 = await import('./obs3.mjs');
   const backO = P.unpack(pkO);
   ok(!!backO && backO.length === Lo.n, 'T13b S1o 同档回读成功（' + (backO ? backO.length : 0) + '）‖ checkPack=' + JSON.stringify(P.checkPack(pkO)));
   /* 真包的跨档读会被**长度**先挡住（5650≠5258）⇒ 那证不到 arch 这条腿。这里造一枚"长度刚好骗过长度检查、
-   *   但 arch 标错"的构造样本（现在两档长度不同所以盘上不会出现，可这正是要防的潜在形状：以后调 seatH 就可能撞等长）。 */
+   *   但 arch 标错"的构造样本（现在两档长度不同所以盘上不会出现，可这正是要防的潜在形状：以后调 seatH 就可能撞等长）。
+   *   ⚑ 代 2 起样本必须带 `v=V_FOR_WIRE[2]` 与 `dims.wire`，否则先撞 version 闸 ⇒ arch 那条又变成没跑的装饰；
+   *   同时补一枚"戳自相矛盾"（v 说代 2、dims.wire 说代 1）⇒ 那一格单独判 `reason:'wire'`。 */
   const wrongTag = (() => {
     const A1 = install(W, Object.assign({ mutMode: 'seg' }, cfg)); A1.rngRef.r = rng;
-    const fake = { v: 90, arch: 'S1o', dims: { seatH: A1.L.seatH, actH: A1.L.actH, hid: A1.L.hid, hid2: A1.L.hid2 }, a: new Array(A1.L.n).fill(0), n: A1.L.n };
-    const r = P.checkPack(fake); const rr = P.unpack(fake); A1.restore(); return { r, rr };
+    const dims2 = { seatH: A1.L.seatH, actH: A1.L.actH, hid: A1.L.hid, hid2: A1.L.hid2, gen: 2 };
+    const fake = { v: V_FOR_GEN[2], arch: 'S1o', dims: dims2, a: new Array(A1.L.n).fill(0), n: A1.L.n };
+    const badGen = { v: V_FOR_GEN[2], arch: 'S1', dims: { seatH: A1.L.seatH, actH: A1.L.actH, hid: A1.L.hid, hid2: A1.L.hid2, gen: 1 }, a: new Array(A1.L.n).fill(0), n: A1.L.n };
+    const r = P.checkPack(fake); const rr = P.unpack(fake);
+    const rw = P.checkPack(badGen); const rwr = P.unpack(badGen);
+    A1.restore(); return { r, rr, rw, rwr };
   })();
   ok(wrongTag.r.ok === false && wrongTag.r.reason === 'arch' && wrongTag.rr === null,
-    'T13c 跨档拒读（构造样本：长度合、arch 标反）⇒ checkPack=' + JSON.stringify(wrongTag.r) + ' ‖ unpack=' + wrongTag.rr + '（宁可读不出，不许静默错切）');
+    'T13c 跨档拒读（构造样本：长度合、v 合、gen 合，只有 arch 标反）⇒ checkPack=' + JSON.stringify(wrongTag.r) + ' ‖ unpack=' + wrongTag.rr + '（宁可读不出，不许静默错切）');
+  ok(wrongTag.rw.ok === false && wrongTag.rw.reason === 'gen' && wrongTag.rwr === null,
+    'T13d 结构代拒读（v=91 却标 dims.gen=1 的自相矛盾样本）⇒ checkPack=' + JSON.stringify(wrongTag.rw) + ' ‖ unpack=' + wrongTag.rwr + ' ⇒ 两代是两张网络，不许互读');
   A2o.restore();
 }
 {
@@ -391,6 +399,94 @@ const O3 = await import('./obs3.mjs');
     'T17 消融开关接在网络路上 ‖ 关着两次逐字同 ' + (off1 === off2 ? '✔' : '✖') + ' ‖ 开 `C.id` logits 变化 '
     + (onId !== off1 ? '✔' : '**✖ 接错层了（encode 不是网络那条路）**') + ' ‖ 未知块名当场抛 ' + (threw17 ? '✔' : '✖'));
   A17.restore();
+}
+
+{
+  /* T18（代 2 · 10-30 下午）：**段权重可达性 + 池化分离** —— 前面 34 条腿查的都是**宽度**，这一条查**位置**。
+   *   代 1 的账（原件 `scratch/qoder-1030-probe8.mjs` / `probe9.mjs` / `qoder-1030-arena40.json`）：
+   *   `encode()` 的权重下标漏加段偏移 ⇒ S1o 声明 5650、**任何前向都不读 2688（47.6%）**，段表≠功能层；
+   *   而旧 T6c 当时已经印出"cand 段抽 45 个权重 ⇒ 1 个能动输出"，判据写的却是 `>0` ⇒ 报警没咬住。
+   *   一条腿判三件事（按用户"可以加，但尽量少加"的上限句，门数不变只加这一条）：
+   *   ① **活区**：每个功能段（seatEnc/actEnc/ctx/cand）把自己的**权重区**整块换成独立随机数 ⇒ logits 必须变；
+   *   ② **死区对照（这条腿的牙）**：`qHead` 整块灌 ±50 ⇒ logits 必须**逐位不变**（两头分离是结构承诺）；
+   *      ⇒ 若这把尺看不出"一整块都不影响输出"，① 就是恒真的装饰——注入死区没被点名 ⇒ 这条腿自己不合格；
+   *   ③ **池化分离**：obs3 档代 2 是"自己单列 h_self ‖ 池只算对手" ⇒ 用构造网络两侧各读一条路，
+   *      要求 h_self 只对**自己**的血反应、mean 只对**对手**的血反应（代 1 把自己也平均进去了，
+   *      于是这两侧互相污染，离线平面向量 `pool.mean.*`（不含自己）与网络（含自己）读的不是同一个量）。 */
+  const FX = MID || D;
+  const modeHp3 = (FX.st.mode && FX.st.mode.hp) || 3;
+  const regionLeg = (tag, opts) => {
+    const Ai = install(W, Object.assign({ mutMode: 'seg' }, opts, cfg));
+    Ai.rngRef.r = rng;
+    const Li = Ai.L, sgI = {}; for (const s of Li.seg) sgI[s.name] = s;
+    const dimOf = { seatEnc: [Li.seatH, Li.seatIn], actEnc: [Li.actH, Li.actIn], ctx: [Li.hid, Li.ctxDim], cand: [Li.hid2, Li.candIn] };
+    const lgOf = (pp) => Array.from(P.forwardCands(FX.st, 0, FX.cands, pp, { temp: 0.5 }).logits).join(',');
+    const base = Float64Array.from(P.makePolicy(0.25));
+    const b = lgOf(base);
+    const liveReport = {};
+    for (const nm of Object.keys(dimOf)) {
+      const s = sgI[nm], wLen = dimOf[nm][0] * dimOf[nm][1];
+      const p = Float64Array.from(base);
+      for (let i = 0; i < wLen; i++) p[s.off + i] = rng() - 0.5;         /* 只换权重区，bias 区不动 */
+      liveReport[nm] = lgOf(p) !== b;
+    }
+    const sq = sgI.qHead, pq = Float64Array.from(base);
+    for (let i = 0; i < sq.len; i++) pq[sq.off + i] = (rng() - 0.5) * 100;
+    const qInert = lgOf(pq) === b;
+    Ai.restore();
+    return { liveReport, qInert, n: Li.n };
+  };
+  const o3 = regionLeg('S1o', { input: 'obs3' });
+  const o1 = regionLeg('S1', {});
+  const dead3 = Object.keys(o3.liveReport).filter((k) => !o3.liveReport[k]);
+  const dead1 = Object.keys(o1.liveReport).filter((k) => !o1.liveReport[k]);
+  /* ③ 池化分离的构造网络 */
+  const A3 = install(W, Object.assign({ input: 'obs3', mutMode: 'seg' }, cfg));
+  A3.rngRef.r = rng;
+  const Li = A3.L, sgI = {}; for (const s of Li.seg) sgI[s.name] = s;
+  const seatW = (j, i) => sgI.seatEnc.off + j * Li.seatIn + i;
+  const ctxW = (j, i) => sgI.ctx.off + j * Li.ctxDim + i;
+  const candW = (j, i) => sgI.cand.off + j * Li.candIn + i;
+  const headW = (j) => sgI.policyHead.off + j;
+  const HSELF = Li.selfDim, HMEAN = Li.selfDim + Li.seatH;
+  const buildNet = (ctxCol) => {
+    const p = new Float64Array(Li.n);
+    p[seatW(0, 0)] = 1;                       /* 每席 e0 = relu(hp/modeHp) */
+    p[ctxW(0, ctxCol)] = 1;                   /* hctx0 = relu(读那一条池化路) */
+    p[candW(0, 0)] = 1; p[headW(0)] = 1;      /* logit = hc0 */
+    return p;
+  };
+  const lgOnce = (p) => Number(P.forwardCands(FX.st, 0, FX.cands, p, { temp: 0.5 }).logits[0]);
+  const st18 = FX.st, mePid = 0;
+  const oppPids = st18.p.map((q, i) => i).filter((i) => i !== mePid && st18.p[i].hp > 0);
+  const oppPid = oppPids[0];
+  const saveHp = st18.p.map((q) => q.hp);
+  const setHp = (pid, v) => { if (pid >= 0) st18.p[pid].hp = v; };
+  const setAllOpp = (v) => { for (const i of oppPids) st18.p[i].hp = v; };
+  const pSelf = buildNet(HSELF), pMean = buildNet(HMEAN);
+  setHp(mePid, 1); setAllOpp(modeHp3);
+  const s1 = lgOnce(pSelf), s2 = lgOnce(pSelf);
+  setHp(mePid, 2); const s3 = lgOnce(pSelf);
+  setHp(mePid, 1); setHp(oppPid, 1); const s4 = lgOnce(pSelf);
+  /* 期望：mean 路 = 所有对手 e0 的平均（每个对手 relu(hp/modeHp)），所以全员满血 ⇒ 1.0；
+   *   把一个对手打到 1 血 ⇒ 平均变成 1 − (1 − 1/3)/对手数，必须与 1.0 不同 */
+  setHp(oppPid, modeHp3); const m1 = lgOnce(pMean);
+  setHp(mePid, 2); const m2 = lgOnce(pMean);
+  setHp(mePid, 1); setHp(oppPid, 1); const m3 = lgOnce(pMean);
+  const mExp = 1 - (1 - 1 / modeHp3) / Math.max(1, oppPids.length);
+  for (let i = 0; i < st18.p.length; i++) st18.p[i].hp = saveHp[i];
+  A3.restore();
+  const near = (a, b2) => Math.abs(a - b2) < 1e-9;
+  ok(dead3.length === 0 && dead1.length === 0 && o3.qInert && o1.qInert &&
+    near(s1, 1 / modeHp3) && near(s3, 2 / modeHp3) && near(s2, s1) && near(s4, s1) &&
+    near(m1, 1) && near(m2, m1) && !near(m3, m1) && near(m3, mExp),
+    'T18 段权重可达性 ‖ ① S1o(' + o3.n + ') 四段换权重区全部改变 logits：' + (dead3.length === 0 ? '✔' : '✘ 死区 ' + dead3.join(',')) +
+    ' ‖ S1(' + o1.n + ')：' + (dead1.length === 0 ? '✔' : '✘ 死区 ' + dead1.join(',')) +
+    ' ‖ ② 死区对照 qHead 整块灌 ±50 ⇒ logits 逐位不变：' + (o3.qInert && o1.qInert ? '✔（尺看得见死区 ⇒ ① 不是恒真）' : '✘ 这把尺是瞎的') +
+    ' ‖ ③ 池化分离（对手 ' + oppPids.length + ' 席）：h_self 读到自己 hp ' + s1.toFixed(4) + '→' + s3.toFixed(4) +
+    '（理论 ' + (1 / modeHp3).toFixed(4) + '→' + (2 / modeHp3).toFixed(4) + '）且改对手血不动 ' + near(s4, s1) +
+    ' ‖ mean 路满血 ' + m1.toFixed(4) + '、改自己血不动 ' + near(m2, m1) + '、改一个对手血 → ' + m3.toFixed(4) +
+    '（理论 ' + mExp.toFixed(4) + '）' + (near(m3, mExp) ? ' ✔' : ' ✘'));
 }
 
 console.log(fails.length ? '\n⛔ 自证未过 ' + fails.length + ' 条 ⇒ 结构不进下一环' : '\n⇒ ' + done + ' 条自证全过：2.0 原型可以进训练环');

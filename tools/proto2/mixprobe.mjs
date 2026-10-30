@@ -15,7 +15,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { sandbox, loadChamp } from '../audit-lib.mjs';
-import { install as installArch2 } from './arch2.mjs';
+import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -27,10 +27,9 @@ if (!PACK) { console.error('⛔ 需要 --pack=<2.0 的 .bak>'); process.exit(2);
 
 const W = sandbox();
 const P = W.EpirusPolicy, T = W.EpirusTrainer;
-const raw = JSON.parse(readFileSync(PACK, 'utf8').replace(/^[^{]*/, '').replace(/;?\s*$/, ''));
-if (raw.v !== 90) { console.error('⛔ 这不是 2.0 容器（v=' + raw.v + '）'); process.exit(2); }
-const cfg = { mutMode: 'seg', ...(raw.dims || {}) };
-if ((raw.arch || 'S1') === 'S1o') cfg.input = 'obs3';
+const raw = readPack2(PACK);
+const got = packCfgExit(raw, PACK);
+const cfg = got.cfg;
 
 /* 参照包与对手表都在**装档之前**建好（§E824 那条病的另一半：装完档再读 v7 会读成另一张脸） */
 let refParams = loadChamp(W, 'js/bundled-champion-3p.js', '');

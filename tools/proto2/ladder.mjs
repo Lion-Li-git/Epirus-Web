@@ -18,7 +18,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { sandbox, loadChamp, buildPoolSeeded, poolFingerprint, arenaGuardVerdict } from '../audit-lib.mjs';
-import { install as installArch2 } from './arch2.mjs';
+import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -294,12 +294,11 @@ if (PACKS.length) {
   console.log('\n# 臂（2.0 的 .bak）放进同一把尺 ‖ 贪心 argmax ‖ 候选面与固定打法逐字相同（temp=' + TEMP + '）');
   for (const pk of PACKS) {
     let raw;
-    try { raw = JSON.parse(readFileSync(pk, 'utf8').replace(/^[^{]*/, '').replace(/;?\s*$/, '')); }
+    try { raw = readPack2(pk); }
     catch (e) { console.log('  ⛔ 读不到/解不开 ' + pk + '：' + e.message); continue; }
-    if (raw.v !== 90) { console.log('  ⛔ ' + pk + ' 不是 2.0 容器（v=' + raw.v + '）⇒ 这条模式只吃 2.0 的包'); continue; }
-    const cfg = { mutMode: 'seg', ...(raw.dims || {}) };
-    if ((raw.arch || 'S1') === 'S1o') cfg.input = 'obs3';
-    const A = installArch2(W, cfg);
+    const got = packCfgExit(raw, pk);
+    const cfg = got.cfg;
+        const A = installArch2(W, cfg);
     const pp = P.unpack(raw, true);
     if (!pp || pp.length !== P.paramCount()) { console.log('  ⛔ ' + pk + ' 形状不对：' + (pp && pp.length) + ' vs ' + P.paramCount()); A.restore(); continue; }
     const head = Float64Array.from(pp);

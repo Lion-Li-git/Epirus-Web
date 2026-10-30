@@ -16,7 +16,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { sandbox, loadChamp } from '../audit-lib.mjs';
-import { install as installArch2 } from './arch2.mjs';
+import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 
 const argv = process.argv.slice(2);
@@ -60,9 +60,9 @@ if (!packParams) {
   const jsonTxt = at >= 0 ? balancedJson(srcTxt, at) : null;
   if (!jsonTxt) { console.error("⛔ 读不出包（既不是 v7 可读形状，也不是 EPIRUS_CHAMPION_3P 容器）"); process.exit(7); }
   const raw = JSON.parse(jsonTxt);
-  if (raw.v !== 90) { console.error("⛔ 容器版本不是 v:90（v=" + raw.v + "）"); process.exit(7); }
-  const cfg = { mutMode: 'seg', ...(raw.dims || {}) };
-  if ((raw.arch || "S1") === "S1o") cfg.input = "obs3";
+  const got = packCfgExit(raw, PACK);            /* 代闸：代 1 的包不许按新网络读 */
+  console.error("[容器代] " + got.era + " ‖ dof=" + (raw.dims && raw.dims.dof) + "（记录正文走 stdout，这行只进 stderr）");
+  const cfg = got.cfg;
   installArch2(W, cfg);
   if (P.__arch2) P.__arch2.rngRef.r = T.mulberry32(4242);
   packParams = Float64Array.from(P.unpack(raw, true));

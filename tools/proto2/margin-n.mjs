@@ -6,7 +6,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { sandbox, loadChamp, buildPoolSeeded } from '../audit-lib.mjs';
-import { install as installArch2 } from './arch2.mjs';
+import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const PACKS = arg('packs', 'scratch/arms/COMBO-s7.bak,scratch/arms/LONG-s7.bak,scratch/arms/N2-fx-S1o.bak').split(',');
@@ -30,9 +30,8 @@ function probeEnv(params, isV7) {
   const P = W.EpirusPolicy, T = W.EpirusTrainer;
   let arch = null;
   if (!isV7) {
-    const raw = params.raw, cfg = { mutMode: 'seg', ...(raw.dims || {}) };
-    if ((raw.arch || 'S1') === 'S1o') cfg.input = 'obs3';
-    arch = installArch2(W, cfg);
+    const raw = params.raw, cfg = packCfgExit(raw, '2.0 包').cfg;
+        arch = installArch2(W, cfg);
   }
   return { W, P, T, POOL: freshPool(), arch };
 }
@@ -90,13 +89,12 @@ function probePack(tag, params, isV7) {
 /* v7 必须最先量（它自己的沙箱，无 arch2 覆盖） */
 if (WITH_V7) probePack('v7(线上包)', Float64Array.from(loadChamp(sandbox(), 'js/bundled-champion-3p.js', '')), true);
 for (const p of PACKS) {
-  const raw = JSON.parse(readFileSync(p, 'utf8').replace(/^[^{]*/, '').replace(/;?\s*$/, ''));
-  if (raw.v !== 90) { console.log('== ' + p + ' ⛔ 非 2.0 容器(v=' + raw.v + ')'); continue; }
+  const raw = readPack2(p);
+  const got = packCfgExit(raw, p);
   const Wp = sandbox();
   const Pp = Wp.EpirusPolicy;
-  const cfg = { mutMode: 'seg', ...(raw.dims || {}) };
-  if ((raw.arch || 'S1') === 'S1o') cfg.input = 'obs3';
-  installArch2(Wp, cfg);
+  const cfg = got.cfg;
+    installArch2(Wp, cfg);
   const params = Float64Array.from(Pp.unpack(raw, true));
   params.raw = raw;
   probePack(p.split('/').pop(), params, false);

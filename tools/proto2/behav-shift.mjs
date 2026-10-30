@@ -21,7 +21,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { sandbox, loadChamp } from '../audit-lib.mjs';
-import { install as installArch2 } from './arch2.mjs';
+import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 
 const argv = process.argv.slice(2);
@@ -46,11 +46,10 @@ const FAMILY = (k) => { const c = R.byKey[k] && R.byKey[k].cat; return c === R.C
 /* 每个"被测对象"独立 sandbox 安装（2.0 包互不覆盖） */
 function ctxFor(packPath) {
   if (packPath === 'v7') return { params: refParams, tag: 'v7' };
-  const raw = JSON.parse(readFileSync(packPath, 'utf8').replace(/^[^{]*/, '').replace(/;?\s*$/, ''));
-  if (raw.v !== 90) throw new Error(packPath + ' 不是 2.0 容器');
-  const cfg = { mutMode: 'seg', ...(raw.dims || {}) };
-  if ((raw.arch || 'S1') === 'S1o') cfg.input = 'obs3';
-  installArch2(W, cfg);
+  const raw = readPack2(packPath);
+  const got = packCfgExit(raw, packPath);   /* 代闸：代 1 的产物不许在新尺上出数 */
+  const cfg = got.cfg;
+    installArch2(W, cfg);
   return { params: Float64Array.from(W.EpirusPolicy.unpack(raw, true)), tag: packPath.replace(/^.*[\\/]/, '').replace(/\.bak$/, '') };
 }
 /* 固定打法的下限参照走 arena2 自己的 fixed()（同一构造，不另写一份） */

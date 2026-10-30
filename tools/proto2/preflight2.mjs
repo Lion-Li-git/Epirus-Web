@@ -55,17 +55,20 @@ if (T.setPairedEval && T.evalSeedOf) {
 }
 chk(pairSame && pairDiff, '③ 配对：开 ⇒ 同代不同下标同种子；关 ⇒ 至少一代不同（有牙对照）', '开=' + pairSame + ' ‖ 关有差=' + pairDiff);
 
-/* ④ 容器版本：v:90 + dims 必须被 shapeOf 判成现代分支（LEGACY 那条病根） */
-let cont = null, sh = null, rt = false;
+/* ④ 容器：v/代 + dims 必须被 shapeOf 判成现代分支（LEGACY 那条病根）。
+ *   ⚑ 代闸不在这里各写一遍数字——交给 `packInstallCfg` 这一个出口（它验 v / dims.gen / dof，任一不合就抛）。 */
+let cont = null, sh = null, rt = false, contErr = '';
 try {
   const w = P.makePolicy(0.2);
   sh = P.shapeOf ? P.shapeOf(w) : null;
   cont = P.pack ? P.pack(w) : null;
   const w2 = (cont && P.unpack) ? P.unpack(cont) : null;
-  rt = !!(cont && cont.v === 90 && cont.dims && w2 && w2.length === w.length);
-} catch (e) { sh = { err: String((e && e.message) || e) }; }
-chk(!!(sh && sh.arch2 === true && sh.legacy === false) && rt, '④ 容器：v:90 + dims，且 shapeOf 必须判成现代分支（legacy=false）',
-  sh ? ('shapeOf=' + JSON.stringify({ arch2: sh.arch2, legacy: sh.legacy }) + ' ‖ 容器往返=' + rt + (cont ? ' ‖ v=' + cont.v : '')) : 'pack/shapeOf 不可用');
+  const g = A2.packInstallCfg(cont).gen;
+  const needDof = cont.dims && cont.dims.input === 'obs3';
+  rt = !!(g === 2 && cont.dims && (!needDof || cont.dims.dof) && w2 && w2.length === w.length);
+} catch (e) { sh = { err: String((e && e.message) || e) }; contErr = String((e && e.message) || e); }
+chk(!!(sh && sh.arch2 === true && sh.legacy === false) && rt, '④ 容器：代 2 戳（v + dims.gen + dims.dof）齐、且 shapeOf 必须判成现代分支（legacy=false）',
+  sh ? ('shapeOf=' + JSON.stringify({ arch2: sh.arch2, legacy: sh.legacy }) + ' ‖ 容器往返=' + rt + (cont ? ' ‖ v=' + cont.v + ' ‖ dims=' + JSON.stringify(cont.dims) : '') + (contErr ? ' ‖ 抛：' + contErr.slice(0, 70) : '')) : 'pack/shapeOf 不可用');
 
 if (A && A.restore) A.restore();   /* 预检不许把口径留在 2.0 */
 

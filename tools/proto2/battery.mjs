@@ -16,7 +16,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { sandbox, loadChamp } from '../audit-lib.mjs';
-import { install as installArch2 } from './arch2.mjs';
+import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 
 function main() {
@@ -53,12 +53,11 @@ function main() {
   let packName = null;
   if (PACK) {
     let raw;
-    try { raw = JSON.parse(readFileSync(PACK, 'utf8').replace(/^[^{]*/, '').replace(/;?\s*$/, '')); }
+    try { raw = readPack2(PACK); }
     catch (e) { console.error('⛔ 读不到/解不开 ' + PACK + '：' + String(e && e.message || e)); process.exit(2); }
-    if (raw.v !== 90) { console.error('⛔ ' + PACK + ' 不是 2.0 容器（v=' + raw.v + '）'); process.exit(2); }
-    const cfg = { mutMode: 'seg', ...(raw.dims || {}) };
-    if ((raw.arch || 'S1') === 'S1o') cfg.input = 'obs3';
-    installArch2(W, cfg);
+    const got = packCfgExit(raw, PACK);
+    const cfg = got.cfg;
+        installArch2(W, cfg);
     if (P.__arch2) P.__arch2.rngRef.r = T.mulberry32(4242);
     const pp = Float64Array.from(P.unpack(raw, true));
     if (!pp || pp.length !== P.paramCount()) { console.error('⛔ 包形状不对：' + (pp && pp.length) + ' vs ' + P.paramCount()); process.exit(7); }

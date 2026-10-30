@@ -16,8 +16,21 @@
  * 第 8 维直接写成 `1/3`，L2 的 `mirrored` 自己注释成"占位"恒 0；另外它给对手席编码了 `elec`/`boom` ⇒ **泄漏私有信息**。
  *
  * 布局（`MANIFEST` 与 `encode` 的 push 顺序逐位对应；`dims()` 给总长）：
- *   G 5 ‖ 席位(共享) 22×自己 1 ‖ self-only 2 ‖ 池化 mean 22 + max 22 + 按人头 2 ‖ 关系 5
- *   ‖ 自己事件序列 K=4 × 12 ‖ 候选 46(+技能身份 one-hot K_SK)
+ *   G 5（n ‖ alive ‖ modeHp ‖ round ‖ shrink，人数族统一 /10、/5）
+ *   ‖ 席位(共享编码器) 22 ‖ self-only 珠 2 ‖ 池化 mean 22 + max 22（**只算对手**）+ 全场符咒合计 1
+ *   ‖ 关系 5 ‖ 自己事件序列 K=4 × 12（=Q.seq 32 + Q.out 16）
+ *   ‖ 候选 51（基础 30 + 目标一 10 + 目标二 11）+ 技能身份 one-hot 30 ⇒ **合计 208**
+ *
+ * ⚑ **代 2（10-30 下午，接线换代同批）**改的四处，都是"文档口径 ≠ 真写出来的东西"：
+ *   ① `round` 分母从写死 60 改成 `state.mode.maxRounds`（long=140）——旧值在 long 局读到 1.72（量程出界）；
+ *   ② `endgame` 旧写法是 `round>=60-4`，实测 long 局 46.5% 的决策被判终局、multi 局真收缩时反而 0%（原件
+ *      `scratch/qoder-1030-endgame.mjs`）；现按"只剩两人 / 逼近本模式上限 / 已进入收缩"三条判，并新增 `G.shrink`；
+ *   ③ 删 `epRegen`（产品与 arena2 都没有任何路径写 regen ⇒ 构造性恒零；`createState(...,{regen})` 才置位，
+ *      全仓 grep 无调用点）与 `tgt.none`（30 张牌 `target` 全非空：self 13 / enemy 16 / other 1 ⇒ 恒零）；
+ *   ④ 头数族以前有四种写法三种分母（`n/6`、`alive/6`、`pool.count=seats/6` 含自己、`aoeCount=opp/5` 不含自己），
+ *      现统一到 `/10`（2.0 的目标人数上限）并删掉与 `alive` 重复的 `pool.count`；
+ *      `pierceVsVisible`/`t1stance` 里混进的 `tauntActive`（义务，不是盾）与 `fireWeakNow`（各维已单列）删掉，
+ *      `t1stance`→`t1guard`（只读 `baguaExtra`：决策时刻唯一真存在的架势力，见 `resolve.js:172`）。
  */
 
 const SKILL_CLASS = ['energy', 'attack', 'defense', 'special'];
@@ -35,7 +48,7 @@ function manifest(R) {
   const m = [];
   const add = (name, block, note) => m.push({ i: m.length, name, block, note: note || '' });
 
-  ['n', 'alive', 'modeHp', 'round', 'epRegen'].forEach((n) => add(n, 'G'));
+  ['n', 'alive', 'modeHp', 'round', 'shrink'].forEach((n) => add(n, 'G'));
   const SEAT = ['hp', 'ep', 'ringStreak', 'cannonCount', 'rodGuard', 'mineTurns', 'baguaExtra', 'fireWeakNow',
     'tauntActive', 'nightmare', 'vampire', 'infiniteEnergy', 'stickers', 'stickerMaxAge',
     'lsEnergy', 'lsAttack', 'lsDefense', 'lsSpecial', 'lsNone',
@@ -44,19 +57,19 @@ function manifest(R) {
   ['ownElec', 'ownBoom'].forEach((n) => add(n, 'S.private'));     /* ⚑ 只有自己可见的两枚 ⇒ 独立块，不进共享编码器 */
   SEAT.forEach((n) => add('pool.mean.' + n, 'P.opp'));
   SEAT.forEach((n) => add('pool.max.' + n, 'P.opp'));
-  ['pool.sumStickers', 'pool.count'].forEach((n) => add(n, 'P.add'));
+  ['pool.sumStickers'].forEach((n) => add(n, 'P.add'));
   ['rel.mustHit', 'rel.tauntsMe', 'rel.chained', 'rel.mirroredMe', 'rel.targetedMe'].forEach((n) => add(n, 'R2'));
   for (let k = 0; k < 4; k++) {
     add('seq' + k + '.cat.energy', 'Q.seq'); add('seq' + k + '.cat.attack', 'Q.seq'); add('seq' + k + '.cat.defense', 'Q.seq'); add('seq' + k + '.cat.special', 'Q.seq');
     add('seq' + k + '.fam.atk', 'Q.seq'); add('seq' + k + '.fam.guard', 'Q.seq'); add('seq' + k + '.fam.thunder', 'Q.seq'); add('seq' + k + '.fam.reflectable', 'Q.seq');
     add('seq' + k + '.out.landed', 'Q.out'); add('seq' + k + '.out.blocked', 'Q.out'); add('seq' + k + '.out.nullified', 'Q.out'); add('seq' + k + '.out.none', 'Q.out');
   }
-  ['cost', 'pri', 'cat.energy', 'cat.attack', 'cat.defense', 'cat.special', 'tgt.none', 'tgt.self', 'tgt.one', 'tgt.two', 'tgt.all',
+  ['cost', 'pri', 'cat.energy', 'cat.attack', 'cat.defense', 'cat.special', 'tgt.self', 'tgt.one', 'tgt.two', 'tgt.all',
     'dmg', 'pierceDef', 'pierceRef', 'pierceTrans', 'continuous', 'needBead', 'beadIsElec', 'beadIsBoom',
     'affordOk', 'epMargin', 'beadAfford', 'killsTarget', 'reducesTarget', 'pierceVsVisible', 'aoeCount', 'aoeSumStickers',
     'endgame', 'hiddenReady', 'role1Source', 'role2Source',
-    't1present', 't1hp', 't1ep', 't1bead', 't1stickers', 't1stance', 't1fireWeak', 't1obligation', 't1lowest', 't1targetedMe',
-    't2present', 't2hp', 't2ep', 't2bead', 't2stickers', 't2stance', 't2fireWeak', 't2obligation', 't2lowest', 't2targetedMe', 't2hpDiff'].forEach((n) => add(n, 'C.cand'));
+    't1present', 't1hp', 't1ep', 't1bead', 't1stickers', 't1guard', 't1fireWeak', 't1obligation', 't1lowest', 't1targetedMe',
+    't2present', 't2hp', 't2ep', 't2bead', 't2stickers', 't2guard', 't2fireWeak', 't2obligation', 't2lowest', 't2targetedMe', 't2hpDiff'].forEach((n) => add(n, 'C.cand'));
   R.skills.forEach((s) => add('skill.' + s.key, 'C.id'));       /* 动作身份：one-hot 在**本模式卡表全集**上 ⇒ 恒有一枚为 1，不与其他维重复 */
   _MAN = m;
   return m;
@@ -65,6 +78,7 @@ export function dims(R) { return manifest(R || { skills: [] }).length; }
 export function blocks(R) { return manifest(R || { skills: [] }); }
 
 /* ---- 席位 22 维（**公开可读**；mePid<0 ⇒ lastTgtMe 自然全 0）---- */
+const NMAX = 10;              /* 2.0 的目标上限（用户 2.0 目标里写死 2–10 人）⇒ 人数族一律 /10，值域 ⊆ [0,1] */
 function seatVec(p, mePid, modeHp, R) {
   const cat = p.lastSkill && R.byKey[p.lastSkill] ? R.byKey[p.lastSkill].cat : null;
   const ci = SKILL_CLASS.indexOf(cat);
@@ -134,9 +148,14 @@ export function scene(W, state, pid) {
   const R = W.EpirusRules;
   const me = state.p[pid];
   const modeHp = (state.mode && state.mode.hp) || 3;
-  const maxR = R.MAX_ROUNDS || 60;
+  /* ⚑ 分母必须走**本模式**的回合上限（引擎在 `resolve.js:1421` 读的就是 `state.mode.maxRounds`）：
+   *   写死 `R.MAX_ROUNDS`=60 时，long 局里 `round` 这一维能读到 1.72（量程出界），
+   *   而 `shrink` 这一维根本没有——10-30 实测 long 局 46.5% 的决策被旧 `endgame` 判成终局、真收缩只占 3.7%。 */
+  const maxR = (state.mode && state.mode.maxRounds) || R.MAX_ROUNDS || 60;
+  const sd = (state.mode && state.mode.suddenDeath != null) ? state.mode.suddenDeath : (R.SUDDEN_DEATH || 0);
   const alive = state.p.filter((q) => q.hp > 0);
-  const g = [state.n / 6, alive.length / 6, modeHp / 6, state.round / maxR, Math.min(state.epRegen || 0, 4) / 4];
+  const g = [state.n / NMAX, alive.length / NMAX, modeHp / 5, Math.min(1, state.round / maxR),
+    sd > 0 ? Math.min(1, state.round / sd) : 0];
   const priv = [Math.min(me.elec || 0, 2) / 2, Math.min(me.boom || 0, 2) / 2];
   const seats = [];
   let sumSt = 0;
@@ -152,8 +171,8 @@ export function scene(W, state, pid) {
     }
     seats.push({ id: q.id, public: seatVec(q, pid, modeHp, R), rel, isSelf: q.id === pid ? 1 : 0, p: q });
   }
-  const sums = [Math.min(sumSt, 12) / 12, seats.length / 6];
-  return { W, R, state, pid, me, modeHp, maxR, alive, g, priv, seats, sums, seq: selfSeq(state, pid, R), SEAT_W: SEAT_N + 6 };
+  const sums = [Math.min(sumSt, 12) / 12];
+  return { W, R, state, pid, me, modeHp, maxR, sd, alive, g, priv, seats, sums, seq: selfSeq(state, pid, R), SEAT_W: SEAT_N + 6 };
 }
 /** 由 scene 派生一个候选的部件（目标走 h_t ⇒ 这里**不再**给目标标量，除非装配平面向量） */
 export function candOf(sc, cand) {
@@ -172,14 +191,18 @@ export function candOf(sc, cand) {
   const oppN = sc.seats.length - 1;
   const base = [Math.min(c, 6) / 6, (def.pri || 0) / 5,
     ci === 0 ? 1 : 0, ci === 1 ? 1 : 0, ci === 2 ? 1 : 0, ci === 3 ? 1 : 0,
-    (!def.target && !isAoe) ? 1 : 0, def.target === 'self' ? 1 : 0, (!isAoe && !twoTgt && def.target) ? 1 : 0, (twoTgt && !isAoe) ? 1 : 0, isAoe ? 1 : 0,
+    def.target === 'self' ? 1 : 0, (!isAoe && !twoTgt && def.target) ? 1 : 0, (twoTgt && !isAoe) ? 1 : 0, isAoe ? 1 : 0,
     Math.min(dmg, 3) / 3, def.pierce && def.pierce.defense ? 1 : 0, def.pierce && def.pierce.reflect ? 1 : 0, def.pierce && def.pierce.transfer ? 1 : 0,
     def.continuous ? 1 : 0, def.energyNeeds ? 1 : 0, cand.bead === 'elec' ? 1 : 0, cand.bead === 'boom' ? 1 : 0,
     cost.ok ? 1 : 0, Math.max(-1, Math.min(1, (me.ep - c) / 4)), beadAfford,
     !!(t1 && dmg > 0 && dmg >= t1.hp) ? 1 : 0, dmg > 0 ? 1 : 0,
-    !!(t1 && def.pierce && (t1.baguaExtra || t1.tauntActive) && def.pierce.defense) ? 1 : 0,
-    isAoe ? oppN / 5 : 0, isAoe ? Math.min(sc.sums[0] * 12, 12) / 12 : 0,
-    (sc.alive.length <= 2 || sc.state.round >= sc.maxR - 4) ? 1 : 0, hiddenReady ? 1 : 0,
+    /* ⚑ `pierceVsVisible` 只该看**决策时刻真存在的盾**：`baguaExtra` 是上回合架势过到本回合的唯一一位
+     *   （`resolve.js:172` 的 `p.baguaExtra = !!p.guardNext`，而 `guardNext` 只由无极变速写）。
+     *   旧写法把 `tauntActive`（挑衅义务）也算进"可见盾"——那不是盾，且它在 `t?obligation` 里已经各写一遍。 */
+    !!(t1 && def.pierce && def.pierce.defense && t1.baguaExtra) ? 1 : 0,
+    isAoe ? Math.max(0, oppN) / NMAX : 0, isAoe ? Math.min(sc.sums[0] * 12, 12) / 12 : 0,
+    /* `endgame` = 本局真的进终局了：只剩两人 / 逼近**本模式**回合上限 / 已进入收缩掉血段 */
+    (sc.alive.length <= 2 || sc.state.round >= sc.maxR - 4 || (sc.sd > 0 && sc.state.round >= sc.sd)) ? 1 : 0, hiddenReady ? 1 : 0,
     (twoTgt && cand.key === R.SK.MIRROR) ? 1 : 0, (twoTgt && cand.key !== R.SK.MIRROR) ? 1 : 0];
   const idOne = new Array(R.skills.length).fill(0);
   const at = R.skills.findIndex((s) => s.key === cand.key);
@@ -190,7 +213,7 @@ export function candOf(sc, cand) {
 function targetScalars(sc, q) {
   return q ? [
     Math.max(0, q.hp) / sc.modeHp, Math.min(q.ep, 12) / 12, (q.elec || q.boom) ? 1 : 0,
-    Math.min((q.stickers || []).length, 4) / 4, (q.baguaExtra || q.fireWeakNow || q.tauntActive) ? 1 : 0,
+    Math.min((q.stickers || []).length, 4) / 4, q.baguaExtra ? 1 : 0,
     q.fireWeakNow ? 1 : 0, q.tauntActive ? 1 : 0,
     (sc.alive.length > 1 && q.hp === Math.min(...sc.alive.map((x) => x.hp))) ? 1 : 0, (q.lastTarget === sc.pid) ? 1 : 0,
   ] : new Array(9).fill(0);

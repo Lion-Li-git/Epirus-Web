@@ -25,7 +25,7 @@
  *   ④ **评估次数**是预算，不是墙钟 —— 2.0 的前向比 v7 贵，同 evals 下更慢，横比只比 evals。
  */
 import { readFileSync } from 'node:fs';
-import { scene as obs3Scene, candOf as obs3CandOf, isAblated } from './obs3.mjs';
+import { scene as obs3Scene, candOf as obs3CandOf, isAblated, dims as obs3Dims } from './obs3.mjs';
 
 /* ---- 特征切片（一律从 `P.features` 切，不自己重算）----
  * FEAT_S 213 = base(63) ‖ 对手槽 4×10 ‖ 历史(我 4 + 对手 4×4) ‖ T 5×4 ‖ B 5×14
@@ -36,13 +36,92 @@ const OFF_T = BASE + OPP_SLOTS * OPP_BLK + HIST_ME + OPP_SLOTS * 4;   // = 123
 const OFF_B = OFF_T + PLAYER_SLOTS * T_BLK;             // = 143
 const SEAT_DIM = OPP_BLK + T_BLK + B_BLK + 1;           // +1 = isSelf 标记 ⇒ 29
 
-/* obs3 输入面的宽度（与 `tools/proto2/obs3.mjs` 同源：22 公开 + 5 关系 + 1 isSelf ‖ 5 全局 + 2 私有 + 48 序列 + 2 池化附加）*/
-const SEAT3 = 22 + 5 + 1, SELF3_EXTRA = 5 + 2 + 48 + 2;
+/* obs3 输入面的宽度（与 `tools/proto2/obs3.mjs` 同源代 2：22 公开 + 5 关系 + 1 isSelf ‖ 全局 5 + 私有 2 + 序列 48 + 全场合计 1）*/
+const SEAT3 = 22 + 5 + 1, SELF3_EXTRA = 5 + 2 + 48 + 1;
+const CAND3_BASE = 30;                      /* obs3 候选侧基础段（代 2 删掉恒零的 `tgt.none`）*/
 /* 初始化尺度**只允许一处定义**：`make` 与"相对变异"都要读它，两边各写一个数就会静默错位（10-29 加）。 */
 const INIT_SCALE = 0.25;
+/* ===== 结构代 `gen`（10-30 下午换代）=====
+ * **代 1**（10-28~10-30 的全部臂）：`encode()` 的权重下标是 `j*inDim + i`，**没加段偏移**
+ *   ⇒ 除第一段（seatEnc，段偏移本来是 0）之外，每一层都从参数向量**开头**取权重；声明在各自段里的
+ *   权重大半从不被读。实测（原件 `scratch/qoder-1030-probe8.mjs` / `probe9.mjs`）：S1o 声明 5650，
+ *   任何前向都不读 **2688（47.6%）**；把 2688 格全灌 999 ⇒ 输出逐位不变，动 `p[100]` ⇒ 变。
+ *   后果不是"AI 坏了"（它照样能打赢），而是**段表 ≠ 功能层**：段感知变异、`mutOnly`、段级交叉、
+ *   `fanIn` 定标、`paramCount`、容量臂（hid2 24→48 加的是 1120 个不读的下标）解释的都是段表，不是那张网络。
+ * **代 2**（本文件现在的实现）：每层权重从 `seg.off + j*inDim + i` 读 ⇒ 段表就是功能层；
+ *   同时观测面换代（obs3 代 2：208 维、`shrink` 维、池化只算对手 + 自己单列 `h_self`）。
+ * ⚑ **代 1 不提供运行时开关**：它的输入面维度、池化口径、段偏移都和代 2 不同形，"只切偏移"会造出
+ *   一个既不是代 1 也不是代 2 的第三种对象——那正是这仓反复栽的"半旧口径"陷阱。
+ *   要复算代 1 的读数：`git checkout f996c2a3`（代 1 冻结点，10-30 13:30 交班那一笔）用当时那份尺跑。
+ *   本代只做一件事：**拒读**代 1 的包，绝不静默按新网络解释旧权重。 */
+const GEN_LATEST = 2;
+const GEN_FROZEN_COMMIT = 'f996c2a3';
+const V_FOR_GEN = { 1: 90, 2: 91 };
+export { V_FOR_GEN };
+/** 包里的结构代；代 1 的产物没有 `dims.gen` ⇒ 缺省认成 1 */
+export function genOf(o) {
+  const g = o && o.dims && o.dims.gen;
+  if (g == null || g === '') return 1;
+  return Number(g);
+}
+/** CLI 装载入口：从解开的包算出该装哪一代，并把时代交回给调用方去打印。
+ * 代 1 直接抛——不是"读不出就算了"，而是**有人正拿旧包在新尺上求平均**，那种读数会一路绿着骗人。 */
+export function packInstallCfg(raw, extra) {
+  if (!raw || typeof raw !== 'object') throw new Error('packInstallCfg: 包是空的');
+  const gen = genOf(raw);
+  if (!raw.dims && (typeof raw.v !== 'number' || raw.v < 90)) {
+    throw new Error('这不是 2.0 容器（v=' + raw.v + ' ⇒ ' + (raw.v === 7 ? 'v7 那套"单标量头 + 4 槽补零"的包，浏览器与尺都另有通路' : '认不出的容器') +
+      '）。2.0 的容器形状：v:91 + dims{input, gen:2, dof}。');
+  }
+  if (gen !== GEN_LATEST) {
+    throw new Error('packInstallCfg: 这是**代 ' + gen + '** 的产物（v=' + raw.v + '，dims.gen=' + (raw.dims && raw.dims.gen) + '），' +
+      '与当前尺（代 ' + GEN_LATEST + '）的输入面/池化/段偏移都不同形 ⇒ 不许装载。' +
+      '要复算代 1 的读数：`git checkout ' + GEN_FROZEN_COMMIT + '` 用当时那份尺跑（原件在 scratch/arms/，未入库）。');
+  }
+  if (raw.v !== V_FOR_GEN[gen]) throw new Error('packInstallCfg: v=' + raw.v + ' 与 dims.gen=' + gen + ' 不自洽（该是 v=' + V_FOR_GEN[gen] + '）');
+  const cfg = Object.assign({ mutMode: 'seg' }, raw.dims || {}, { gen }, extra || {});
+  return { cfg, gen, era: '代 ' + gen + '（段偏移修正 + obs3 代 2 观测面）' };
+}
+/** CLI 侧的装载：解析 `.bak`、按代闸拦下旧产物、失败就响亮退出。
+ *  `.bak` 是 JS 壳（`window.X_META = {...}; window.X = {...};`），所以"从第一个 `{` 起正则截尾"那种写法
+ *    会把 META 那段当成容器 ⇒ 报出 "JSON at position 681" 这种指错方向的话（10-30 实测起点包就是 v7 壳）。
+ *  ⇒ 这里只认**最后一个** `EPIRUS_CHAMPION_3P =` 赋值、并按花括号配对取对象；找不到就说清"这不是 2.0 容器"。 */
+export function readPack2(src) {
+  if (typeof src !== 'string') return src;
+  const txt = readFileSync(src, 'utf8');
+  const key = 'EPIRUS_CHAMPION_3P';
+  let at = -1;
+  for (let i = txt.indexOf(key); i >= 0; i = txt.indexOf(key, i + 1)) {
+    if (txt.slice(i + key.length, i + key.length + 5).indexOf('_META') === 0) continue;    /* 跳过 META 赋值 */
+    at = i;
+  }
+  if (at < 0) throw new Error(src + ' 里没有 `' + key + ' = {…}` 赋值 ⇒ **不是 2.0 容器**（v7 的包也是 .bak，但它是 `window.EPIRUS_CHAMPION_3P=[…]` 那种形状）');
+  const ob = txt.indexOf('{', at);
+  if (ob < 0) throw new Error(src + ' 的容器赋值后面没有对象');
+  let depth = 0, end = -1, inStr = false, esc = false;
+  for (let i = ob; i < txt.length; i++) {
+    const ch = txt[i];
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }
+  }
+  if (end < 0) throw new Error(src + ' 的容器对象花括号没配平');
+  return JSON.parse(txt.slice(ob, end + 1));
+}
+export function packCfgExit(raw, tag) {
+  let r;
+  try { r = packInstallCfg(raw); } catch (e) {
+    console.error('⛔ ' + (tag || '包') + '：' + (e && e.message || e));
+    process.exit(2);
+  }
+  return r;
+}
 
 export function layout(opts) {
   const o = opts || {};
+  const gen = o.gen == null ? GEN_LATEST : Number(o.gen);
+  if (gen !== GEN_LATEST) throw new Error('layout: 只实现代 ' + GEN_LATEST + '（收到 gen=' + gen + '）；代 1 请 checkout ' + GEN_FROZEN_COMMIT + ' 跑旧尺，不要在这里装半旧档');
   const input = o.input === 'obs3' ? 'obs3' : 'v7';
   const skills = Math.max(1, Number(o.skills) || 27);
   const seatH = Math.max(1, Number(o.seatH) || 16);
@@ -50,9 +129,16 @@ export function layout(opts) {
   const hid = Math.max(1, Number(o.hid) || 32);
   const hid2 = Math.max(1, Number(o.hid2) || 24);
   const seatIn = input === 'obs3' ? SEAT3 : SEAT_DIM;
-  const actIn = input === 'obs3' ? (31 + skills) : 22;
-  const selfDim = input === 'obs3' ? SELF3_EXTRA : BASE + 3;   // v7：base(63)+桌子形状三条 ‖ obs3：全局+私有+序列+池化附加
-  const ctxDim = selfDim + 2 * seatH;                    // 池化 = concat(mean, max) —— 这是 **ctx 层**的输入宽
+  const actIn = input === 'obs3' ? (CAND3_BASE + skills) : 22;
+  const selfDim = input === 'obs3' ? SELF3_EXTRA : BASE + 3;   // v7：base(63)+桌子形状三条 ‖ obs3：全局+私有+序列+全场合计
+  /* 池化段的拼接项：obs3 档是 **h_self ‖ mean(对手) ‖ max(对手)**（三块），v7 档是 mean ‖ max（两块，
+   *   因为 base(63) 本来就把自己的资源/冷却/架势写全了，再拼一份 h_self 就是同一事实写两遍）。
+   * ⚑ 两档都**不把你自己算进池化**——旧代码把 `sc.seats`（含 isSelf 那一席）一起平均，于是
+   *   ① 与设计文档 L1.5 的 `mean_{i≠self}` 不符，② 与离线平面向量 `obs3.encode` 的 `pool.mean.*`（只算对手）
+   *   不是同一个量 ⇒ 离线路尺（dimgate/fit2/rankfit）关于"哪一列值多少"的账，跟训练时真吃的那一列对不上。
+   *   obs3 档的 xin 里原本没有任何"自己"的席位列（只有 g/priv/seq/sums），所以直接排除会把你弄丢 ⇒ 补 h_self。 */
+  const poolN = input === 'obs3' ? 3 : 2;
+  const ctxDim = selfDim + poolN * seatH;
   /* ⚠ 10-28 18:4x 自己抓到的布局 bug（字节对账逼出来的，不是看代码看出的）：
    *   原先写的是 `ctxDim + actH + seatH`，而真正喂进逐候选层的只有 **[hctx(hid) ‖ ae(actH) ‖ te(seatH)]**
    *   ⇒ 每单位多出 `selfDim + 2*seatH - hid` 列**恒零输入的死权重**（S1 默认档 = 66×24 ≈ 1584 个参数白占白算）。
@@ -85,7 +171,8 @@ export function layout(opts) {
   let off = 0;
   for (const s of seg) { s.off = off; off += s.len; }
   return {
-    arch: input === 'obs3' ? 'S1o' : 'S1', input, skills, seatIn, actIn, initScale: INIT_SCALE,
+    arch: input === 'obs3' ? 'S1o' : 'S1', input, gen, skills, seatIn, actIn, initScale: INIT_SCALE,
+    poolN,
     seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, seg, n: off,
     /* 每段的"扇入"—— 段感知变异要用它给 σ 定标（扇入越大、同样 σ 造成的输出扰动越大） */
     fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, qHead: hid, inter: hid },
@@ -153,16 +240,21 @@ export function install(W, opts) {
 
   /* 写进调用方给的缓冲（**逐条与旧版同序同加法** ⇒ 输出必须逐位相同；这条由 `--targetGames` 前后对账验）
    * 为什么要省掉分配：一次决策要打分 40–80 个候选，旧版每个候选新建 3 个 Float64Array ⇒
-   *   一局几百次决策 × 每臂两千局 = 纯垃圾回收。吞吐那一格的第一个便宜项就在这里。 */
-  function encode(p, x, inDim, outDim, biasOff, out) {
+   *   一局几百次决策 × 每臂两千局 = 纯垃圾回收。吞吐那一格的第一个便宜项就在这里。
+   * ⚑ `wOff` = 本层权重块的起点 = **该段的段偏移**。代 1 的原始版本这里是 `j*inDim`（漏加段偏移）⇒
+   *   除第一段外每层都从向量开头读权重，段表里的权重区大半没人读（实测 47.6% 永不参与前向）。
+   *   偏移按"每次决策取一次"读 `L.seg` ⇒ 自检腿可以当场改段偏移来验这条尺有没有牙。 */
+  function encode(p, x, inDim, outDim, wOff, biasOff, out) {
     for (let j = 0; j < outDim; j++) {
       let s = p[biasOff + j];
-      const base = j * inDim;
+      const base = wOff + j * inDim;
       for (let i = 0; i < inDim; i++) s += p[base + i] * x[i];
       out[j] = s > 0 ? s : 0;   // ReLU
     }
     return out;
   }
+  /* 每层的权重起点（=段起点）与 bias 起点（代 1 只有 bias 加了偏移，所以 bias 一直是对的） */
+  function segOff(nm) { const s = L.seg.find((x) => x.name === nm); if (!s) throw new Error('segOff: 段名 `' + nm + '` 不在段表里 ⇒ 不许静默按 0 读'); return s.off; }
 
   /* 每次决策复用的缓冲（省分配；不改任何算术顺序） */
   const BUF = {
@@ -191,19 +283,25 @@ export function install(W, opts) {
     const ctxBias = L.seg[2].off + L.hid * L.ctxDim;
     const candBias = L.seg[3].off + L.hid2 * L.candIn;
     const headOff = L.seg[4].off, qOff = L.seg[5].off;
+    /* 权重起点每次决策取一次（不在逐候选循环里查段表） */
+    const WS = segOff('seatEnc'), WA = segOff('actEnc'), WC = segOff('ctx'), WK = segOff('cand');
 
     /* (A) 席位各自过**同一个** encoder ⇒ 池化（mean + max）—— 与顺序无关。
-     *     每个席位仍要一份自己的编码（不能复用同一块缓冲：池化要留着逐席读）。 */
+     *     ⚑ 代 2：池子**只算对手**（`slot===0` 是自己）。旧版把自己也平均进去，于是
+     *     "最脆的对手"这类量被自己的血量污染，且与设计文档 L1.5 的 `mean_{i≠self}` 不符。
+     *     v7 档不需要补 h_self：`base(63)` 里自己的资源/冷却/架势本来就在。 */
     const enc = new Map();
     const mean = BUF.mean.fill(0), mx = BUF.mx.fill(0);
-    const seatBufs = [];
+    let poolN = 0;
     for (let s = 0; s < seats.length; s++) {
       const e = new Float64Array(L.seatH);
-      encode(params, seats[s].v, SEAT_DIM, L.seatH, seatBias, e);
-      enc.set(seats[s].pid, e); seatBufs.push(e);
+      encode(params, seats[s].v, SEAT_DIM, L.seatH, WS, seatBias, e);
+      enc.set(seats[s].pid, e);
+      if (seats[s].slot === 0) continue;
+      poolN++;
       for (let j = 0; j < L.seatH; j++) { mean[j] += e[j]; if (e[j] > mx[j]) mx[j] = e[j]; }
     }
-    const kk = Math.max(1, seats.length);
+    const kk = Math.max(1, poolN);
     for (let j = 0; j < L.seatH; j++) mean[j] /= kk;
 
     /* 上下文（不含动作）⇒ Q(s) 与两头的公共前缀 */
@@ -214,7 +312,7 @@ export function install(W, opts) {
     const xin = BUF.xin;
     for (let i = 0; i < L.selfDim; i++) xin[i] = self[i];
     for (let j = 0; j < L.seatH; j++) { xin[L.selfDim + j] = mean[j]; xin[L.selfDim + L.seatH + j] = mx[j]; }
-    const hctx = encode(params, xin, L.ctxDim, L.hid, ctxBias, BUF.hctx);
+    const hctx = encode(params, xin, L.ctxDim, L.hid, WC, ctxBias, BUF.hctx);
     /* ⚑ **布局自洽不变量**（10-28 傍晚那次死权重事故之后，这条是硬要求，不是注释）：
      *   声明宽度必须等于真正拼进去的长度 —— 差一列就是"白占 + 白算 + 静默错位"。 */
     if (xin.length !== L.ctxDim) throw new Error('布局不自洽：ctx 层拼进 ' + xin.length + ' 而声明 ' + L.ctxDim);
@@ -227,7 +325,7 @@ export function install(W, opts) {
       const c = cands[i];
       const af = P.actionFeatures(state, pid, c.key, c);
       for (let j = 0; j < 22; j++) afbuf[j] = j < af.length ? af[j] : 0;
-      encode(params, afbuf, 22, L.actH, actBias, ae);
+      encode(params, afbuf, 22, L.actH, WA, actBias, ae);
       /* (A 的兑现) 目标身份是**一段席位编码**，不是 v7 那几个"目标 hp/ep"标量 */
       const tpid = c.target == null ? null : c.target;
       const te = tpid != null && enc.has(tpid) ? enc.get(tpid) : zeroSeat;
@@ -237,7 +335,7 @@ export function install(W, opts) {
         throw new Error('布局不自洽：逐候选层拼进 ' + (hctx.length + ae.length + te.length) +
           ' 列而声明 candIn=' + L.candIn + ' ⇒ 差 ' + Math.abs(L.candIn - hctx.length - ae.length - te.length) + ' 列**死权重**（白占参数还白算）');
       }
-      const hc = encode(params, ci, L.candIn, L.hid2, candBias, BUF.hc);
+      const hc = encode(params, ci, L.candIn, L.hid2, WK, candBias, BUF.hc);
       if (phis) phis[i] = Float64Array.from(hc);
       let v = params[headOff + L.hid2];
       for (let j = 0; j < L.hid2; j++) v += params[headOff + j] * hc[j];
@@ -286,10 +384,13 @@ export function install(W, opts) {
     const ctxBias = L.seg[2].off + L.hid * L.ctxDim;
     const candBias = L.seg[3].off + L.hid2 * L.candIn;
     const headOff = L.seg[4].off, qOff = L.seg[5].off;
+    /* 权重起点每次决策取一次（不在逐候选循环里查段表） */
+    const WS = segOff('seatEnc'), WA = segOff('actEnc'), WC = segOff('ctx'), WK = segOff('cand');
 
     const svBuf = new Float64Array(L.seatIn);
     const enc = new Map();
     const mean = BUF.mean.fill(0), mx = BUF.mx.fill(0);
+    let hSelf = BUF.zeroSeat, poolN = 0;
     for (const s of sc.seats) {
       let k = 0;
       const seatOff = s.isSelf ? isAblated('S.self') : isAblated('P.opp');
@@ -298,11 +399,16 @@ export function install(W, opts) {
       svBuf[k++] = seatOff ? 0 : s.isSelf;
       if (k !== L.seatIn) throw new Error('布局不自洽：逐席拼进 ' + k + ' 列而声明 seatIn=' + L.seatIn);
       const e = new Float64Array(L.seatH);
-      encode(params, svBuf, L.seatIn, L.seatH, seatBias, e);
+      encode(params, svBuf, L.seatIn, L.seatH, WS, seatBias, e);
       enc.set(s.id, e);
+      /* ⚑ 代 2：**自己单列 h_self，池子只算对手**（与设计文档 L1.5 的 `mean/max_{i≠self}` 以及
+       *   离线平面向量 `obs3.encode` 的 `pool.mean.*` 对齐）。旧版把 isSelf 那一席也平均进去 ⇒
+       *   两把尺读的不是同一个量，而 obs3 档的 xin 里当时**没有**任何一列是"你自己"，去掉就把自己弄丢。 */
+      if (s.isSelf) { hSelf = e; continue; }
+      poolN++;
       for (let j = 0; j < L.seatH; j++) { mean[j] += e[j]; if (e[j] > mx[j]) mx[j] = e[j]; }
     }
-    const kk = Math.max(1, sc.seats.length);
+    const kk = Math.max(1, poolN);
     for (let j = 0; j < L.seatH; j++) mean[j] /= kk;
 
     const xin = new Float64Array(L.ctxDim);
@@ -315,10 +421,12 @@ export function install(W, opts) {
     const SEQ_CUT = sc.seq.length - 16;                       /* obs3 的 48 维序列块 = 32 维 `Q.seq` ‖ 16 维 `Q.out`（末段） */
     for (let i = 0; i < sc.seq.length; i++) xin[p++] = (ABL.seq || (i >= SEQ_CUT && ABL.out)) ? 0 : sc.seq[i];
     for (let i = 0; i < sc.sums.length; i++) xin[p++] = ABL.sums ? 0 : sc.sums[i];
+    /* h_self ‖ mean(对手) ‖ max(对手) —— 三块，与 layout 的 poolN=3 一致 */
+    for (let j = 0; j < L.seatH; j++) xin[p++] = isAblated('S.self') ? 0 : hSelf[j];
     for (let j = 0; j < L.seatH; j++) xin[p++] = ABL.pool ? 0 : mean[j];
     for (let j = 0; j < L.seatH; j++) xin[p++] = ABL.pool ? 0 : mx[j];
     if (p !== L.ctxDim) throw new Error('布局不自洽：ctx 拼进 ' + p + ' 而声明 ' + L.ctxDim + '（seatH 改动后 selfDim 账要重算）');
-    const hctx = encode(params, xin, L.ctxDim, L.hid, ctxBias, BUF.hctx);
+    const hctx = encode(params, xin, L.ctxDim, L.hid, WC, ctxBias, BUF.hctx);
     let q = params[qOff + L.hid]; for (let j = 0; j < L.hid; j++) q += params[qOff + j] * hctx[j];
 
     const n = cands.length, logits = new Float64Array(n);
@@ -339,7 +447,7 @@ export function install(W, opts) {
       for (let j = 0; j < cp.base.length; j++) afbuf[m2++] = isAblated('C.cand') ? 0 : cp.base[j];
       for (let j = 0; j < cp.idOne.length; j++) afbuf[m2++] = isAblated('C.id') ? 0 : cp.idOne[j];
       if (m2 !== L.actIn) throw new Error('布局不自洽：actEnc 拼进 ' + m2 + ' 而声明 actIn=' + L.actIn + ' ⇒ 差 ' + Math.abs(L.actIn - m2) + ' 列**死权重**（skills=' + L.skills + '）');
-      const ae = encode(params, afbuf, L.actIn, L.actH, actBias, BUF.ae);
+      const ae = encode(params, afbuf, L.actIn, L.actH, WA, actBias, BUF.ae);
       const t1 = cands[i].target == null ? null : cands[i].target;
       const t2 = cands[i].target2 == null ? null : cands[i].target2;
       const te1 = t1 != null && enc.has(t1) ? enc.get(t1) : zeroSeat;
@@ -349,7 +457,7 @@ export function install(W, opts) {
         throw new Error('布局不自洽：逐候选层拼进 ' + (hctx.length + ae.length + te1.length + te2.length) +
           ' 列而声明 candIn=' + L.candIn + ' ⇒ 差 ' + Math.abs(L.candIn - hctx.length - ae.length - te1.length - te2.length) + ' 列**死权重**');
       }
-      const hc = encode(params, ci, L.candIn, L.hid2, candBias, BUF.hc);
+      const hc = encode(params, ci, L.candIn, L.hid2, WK, candBias, BUF.hc);
       if (phis) phis[i] = Float64Array.from(hc);
       let v = params[headOff + L.hid2];
       for (let j = 0; j < L.hid2; j++) v += params[headOff + j] * hc[j];
@@ -532,25 +640,44 @@ export function install(W, opts) {
     return c;
   }
 
-  /* ---- 容器：显式带 arch + dims（**不再从长度反推形状** —— 那是 v7 的 shapeOf 病） ----
+  /* ---- 容器：显式带 arch + dims + **结构代 gen** + **观测面维数 dof**（不再从长度反推形状 —— 那是 v7 的 shapeOf 病） ----
+   * ⚑ 代 2 补 `gen` 的理由：同一份权重在两种接线下是**两张不同的网络**（代 1 每层从向量开头读权重）。
+   *   长度对得上、arch 对得上，也不代表读出来是同一张网 ⇒ 必须单独一栏、对不上就拒读。
+   * ⚑ `dof` 补的是另一半：obs3 换代（210→208 维、`shrink`、池化只算对手）时 `n` 不一定变，
+   *   但**喂进去的向量含义变了** ⇒ 包必须自证它吃哪张脸，尺读的时候当场对账，别让旧包在新观测面上出数。
    * ⚑ 10-29 01:5x 抓到：这里原先硬写 `arch: 'S1'`，S1o（吃 obs3，5650 条）产出的包也被打成 S1
    *   ⇒ 下游按 `arch` 选输入面的尺（profile2）会拿错的那张脸去读。长度不同（5258≠5650）只挡住了"unpack 成功"，
    *   挡不住"有人照 arch 装错档再按长度报错"这种绕路。⇒ 标签一律**由实际布局写**，读的时候当场对账。 */
+  function packDims() {
+    const d = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0, gen: L.gen };
+    if (L.input === 'obs3') d.dof = obs3Dims(R);          /* 观测面维数由引擎卡表算，不让调用方手填 */
+    return d;
+  }
   function pack(p) {
-    return { v: 90, arch: L.arch, dims: { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0 }, a: Array.from(p), n: L.n };
+    return { v: V_FOR_GEN[L.gen], arch: L.arch, dims: packDims(), a: Array.from(p), n: L.n,
+      /* 参数块的**标注**：段表 + 每段"权重区/bias 区"的确切下标 ⇒ 任何下游（变异、冻结、蒸馏、审计）
+        照这张表算，不必再各自复制一遍偏移算术（10-30 那条事故的根因就是"两处各写一遍下标"） */
+      layout: { seg: L.seg.map((s) => ({ name: s.name, off: s.off, len: s.len })), fanIn: L.fanIn, n: L.n } };
   }
   function unpack(o) {
-    if (!o || !Array.isArray(o.a) || o.a.length !== L.n || o.v !== 90) return null;
-    if (o.arch && o.arch !== L.arch) return null;            /* 标签对不上 ⇒ 宁可读不出，不要静默错切 */
+    if (!o || !Array.isArray(o.a) || o.a.length !== L.n) return null;
+    if (o.v !== V_FOR_GEN[L.gen]) return null;
+    if (genOf(o) !== L.gen) return null;                  /* 代对不上 ⇒ 宁可读不出 */
+    if (o.arch && o.arch !== L.arch) return null;         /* 标签对不上 ⇒ 宁可读不出，不要静默错切 */
+    if (L.input === 'obs3' && o.dims && o.dims.dof != null && o.dims.dof !== obs3Dims(R)) return null;
     const q = new Float64Array(L.n);
     for (let i = 0; i < L.n; i++) q[i] = o.a[i];
     return q;
   }
   function checkPack(o) {
     if (!o || !Array.isArray(o.a)) return { ok: false, reason: 'missing' };
-    if (o.v !== 90) return { ok: false, reason: 'version', got: o.v, want: 90 };
+    if (o.v !== V_FOR_GEN[L.gen]) return { ok: false, reason: 'version', got: o.v, want: V_FOR_GEN[L.gen] };
     if (o.a.length !== L.n) return { ok: false, reason: 'length', got: o.a.length, want: L.n };
+    if (genOf(o) !== L.gen) return { ok: false, reason: 'gen', got: genOf(o), want: L.gen };
     if (o.arch && o.arch !== L.arch) return { ok: false, reason: 'arch', got: o.arch, want: L.arch };
+    if (L.input === 'obs3' && o.dims && o.dims.dof != null && o.dims.dof !== obs3Dims(R)) {
+      return { ok: false, reason: 'dof', got: o.dims.dof, want: obs3Dims(R) };
+    }
     return { ok: true };
   }
 

@@ -27,7 +27,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { sandbox, loadChamp, buildPoolSeeded, poolFingerprint } from '../audit-lib.mjs';
-import { install as installArch2 } from './arch2.mjs';
+import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -47,11 +47,10 @@ const P = W.EpirusPolicy, T = W.EpirusTrainer, R = W.EpirusRules;
 const badMode = MODES.filter((m) => !R.MODES[m]);
 if (badMode.length) { console.error('⛔ 模式名不在 `R.MODES` 里：' + badMode.join(',') + '（可用：' + Object.keys(R.MODES).join(',') + '）⇒ 不许静默退回默认档'); process.exit(2); }
 
-const raw = JSON.parse(readFileSync(PACK, 'utf8').replace(/^[^{]*/, '').replace(/;?\s*$/, ''));
-if (raw.v !== 90) { console.error('⛔ 这不是 2.0 容器（v=' + raw.v + '）'); process.exit(2); }
+const raw = readPack2(PACK);
+const got = packCfgExit(raw, PACK);
 const archTag = raw.arch || 'S1';
-const cfg = { mutMode: 'seg', ...(raw.dims || {}) };
-if (archTag === 'S1o') cfg.input = 'obs3';
+const cfg = got.cfg;
 
 /* 参照包只用来**造对手表**（与 profile2/ladder 同源同种子 ⇒ 同一张桌），不参与任何判语 */
 const refSrc = arg('ref', 'js/bundled-champion-3p.js');

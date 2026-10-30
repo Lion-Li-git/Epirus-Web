@@ -23,7 +23,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
-import { install as installArch2, verifyWired as verifyArch2Wired } from './proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
+import { install as installArch2, verifyWired as verifyArch2Wired, readPack2 } from './proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
 import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   // 10-29 夜：扩表考卷（--arena2=1 才开）
 
 /* §E679 补（10-22）：这台量具原先**没有输入消毒层**（D218 那条门当场抓到，是我今夜建它时就漏的）。
@@ -294,7 +294,15 @@ const DIM = P.paramCount();
 let startParams = null, startLabel = '';
 const c = loadChamp(W, START_PACK, HERE + '/..');
 if (c && c.length === DIM) { startParams = Float64Array.from(c); startLabel = '夹具包 ' + START_PACK; }
-if (!startParams) { P.setRng(T.mulberry32(SEED)); startParams = P.makePolicy(0.25); startLabel = 'makePolicy(0.25)'; }
+if (!startParams) {
+  /* ⚑ 读不出必须点名**是哪个闸**拦的（代 1 的包 / 长度 / arch / dof），不许一句"退回随机粒"就翻篇——
+   *   否则下一班会把"起点其实是随机"读成"起点是那枚冠军"，整条臂的解释就反了。 */
+  let why = '';
+  try { const raw0 = readPack2(START_PACK); why = 'checkPack=' + JSON.stringify(P.checkPack ? P.checkPack(raw0) : { reason: 'no-checkPack' }); }
+  catch (e) { why = '解不开文件：' + String((e && e.message) || e); }
+  console.log('[cem-arm] ⚠ 起点 **' + START_PACK + ' 没被接受** ⇒ ' + why + ' ⇒ 本臂起点 = 随机粒（不是那枚包！）');
+  P.setRng(T.mulberry32(SEED)); startParams = P.makePolicy(0.25); startLabel = 'makePolicy(0.25)';
+}
 startParams = Float64Array.from(startParams);
 /* arena2 只在起点粒定下来之后建表；它用 v7 参照固定对手表，与起点粒无关（起点不参与建桌）。 */
 var ARENA = null;
@@ -849,8 +857,24 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
   curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel };
 if (OUT) {
   mkdirSync(dirname(OUT), { recursive: true });
-  writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(best)) + ';\n', 'utf8');
+  const packed = P.pack(best);
+  writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
   row.wrote = OUT;
+  /* 代 2 补的标注：**产物自己说自己是哪一代理出来的**（容器字段 + 段表 + 每段权重区/bias 区 + 参数量）。
+   * 为什么放这儿：以前读一枚包要照 `arch` 猜输入面、照长度猜形状，两处各写一遍下标就会静默错位
+   *   （10-30 那笔事故：S1o 声明 5650、任何前向都不读 2688）。标注由 `pack()` 一次算出来 ⇒ 只有这一个真源。 */
+  if (P.__arch2) {
+    const LL = P.__arch2.L;
+    row.container = {
+      v: packed.v, arch: packed.arch, gen: LL.gen, dims: packed.dims, n: LL.n,
+      seg: LL.seg.map(function (s) {
+        const inDim = { seatEnc: LL.seatIn, actEnc: LL.actIn, ctx: LL.ctxDim, cand: LL.candIn }[s.name];
+        const rows = { seatEnc: LL.seatH, actEnc: LL.actH, ctx: LL.hid, cand: LL.hid2, policyHead: LL.hid2, qHead: LL.hid }[s.name];
+        return inDim ? { name: s.name, off: s.off, len: s.len, weight: [s.off, s.off + rows * inDim], bias: [s.off + rows * inDim, s.off + s.len], fanIn: LL.fanIn[s.name] }
+          : { name: s.name, off: s.off, len: s.len, weight: [s.off, s.off + s.len], bias: null, fanIn: LL.fanIn[s.name] };
+      })
+    };
+  }
 }
 if (!QUIET) console.log(JSON.stringify(row));
 else console.log('RESULT ' + JSON.stringify(row));
