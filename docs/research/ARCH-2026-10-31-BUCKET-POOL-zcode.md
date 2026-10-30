@@ -197,3 +197,12 @@
 （miniT/cannon 都死在"语义不可达"），LASER2-s7 恰是第一个语义命中有量的区域 ⇒
 **LASER2B 臂**：同起点同种子，`--masteryKey=laserEye --masterySem=1 --masteryLine=0.1`（语义命中 ≥0.1/局）。
 判定：语义比例 ≥1/2 的粒出现 ⇒ 语义门有效（写进配方）；否则语义要在验收端硬判（cheap 门只管频率）。
+
+### 勘误十二（10-31 07:1x，目标交互头 tinter 预登记）
+
+miniT 可见性检验（§十一末）指向的结构候选：**act×target 双线性通道 `--tinter=K`**——
+`logit += Σ_k g_k·tanh((u_k·ae)·(w_k·te1) + b_k)`（te1 = 目标席隐向量；无目标 ⇒ te1=0 ⇒ 项退化为常数 g·tanh(b)，可学习压零）。
+三条硬规矩与 inter 头同款：① 默认 K=0 段不存在 ⇒ 逐位不变；② 段追加 seg 表**末尾**（inter 之后）⇒ 既有偏移不动；
+③ 段全零 ⇒ 前向逐位等于 K=0。policy2 镜像 + browser-parity 加腿。
+**试验臂**：OB3C3-s11 起点 + `--masteryKey=miniT --masterySem=1 --masteryLine=0.1 --tinter=2`，种子 s7/s11，24k。
+判读：产物 miniT 语义比例显著 >0/10（对照无 tinter 的 0/10）且≥1/3 ⇒ 结构候选成立（白天按桶配方放大）；否则记录否定。
