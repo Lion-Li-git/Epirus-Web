@@ -31,7 +31,7 @@ import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   /
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -79,6 +79,13 @@ const FX_PAIRED_K = Math.max(0, Number(arg('fxPairedK', 1)) || 1);
  * 默认关 ⇒ 旧路径逐字不变（已用 --boN=0 的 md5 复现腿验过）。 */
 const BO_N = arg('boN', '') === '1';
 const BO_N_K = Math.max(1, Math.floor(Number(arg('boNK', 1)) || 1));
+/* ===== `--arenaShapeCap=x`（DS · 10-30，用户裁定「必须先有多样性再考虑强度」）=====
+ * 把「形状」做成**可行性约束**（词典序第一关键字），而不是 0.06 那样的小奖励：
+ *   子代的非ジ单卡占比 > x ⇒ 直接不可接受（不管 fit 涨多少）。x=0（缺省）= 关，逐字旧行为。
+ * 理由：2.0 的臂走 arena2 的 clean/net 分，**根本不经过 evo.js 的 F=H+T·G**（那条只在非 arena2 路径里），
+ *   所以单卡在 2.0 训练里没有任何扣分；而 1.8 的 DIV_W=0.06 自身也远小于胜负项（见 evo.js:2462）。
+ * 形状约束把「下限」写成硬条件：先保证不退化，再在可行域里比强度。 */
+const SHAPE_CAP = Math.max(0, Math.min(1, Number(arg('arenaShapeCap', 0)) || 0));
 /* ===== `--arenaLex=1`（#161，ZCode · 10-30 夜）：**分格无权词典序当选** =====
  * 动因：6k 包 2P 65~75% vs 10P 28% 的剖面被标量平均吞掉。冻结桌上的接受判据从标量改成 (n,hp) 格词典序：
  *   先比「低于地板的格数」（少者优先），再比「最差格余量」（大者优先），最后才比总分。
@@ -491,13 +498,15 @@ if (MODE === 'esa') {
    *   不另写一套。`N=0`（缺省）⇒ 逐字旧行为。⚠ 补送发生在代末，不进 1/5 律的成功窗口（那条只数门内尝试）。 */
   const QUOTA = Math.max(0, Math.floor(Number(arg('fxQuota', 0)) || 0));
   const QUOTA_PER_ITER = Math.max(1, Math.floor(Number(arg('fxQuotaPerIter', 2)) || 2));
-  let verifications = 0, quotaTopups = 0, quotaAccepted = 0, pairedBlocked = 0;
+  let verifications = 0, quotaTopups = 0, quotaAccepted = 0, pairedBlocked = 0, shapeBlocked = 0;
   const acceptDeltas = [];
   /* 一次送验 = 冻结桌评一遍 + 走同一套承兑判据（棘轮门/探针/配额补送共用，保证"补送"不是第二套规则）。 */
   const verifyChild = function (child, loopFit, isTopup) {
     const cf = evalFixed(child, 500, 0, FXG || undefined, FX_PAIRED);
     verifications++;
     const cfShare = cf.maxCard ? cf.maxCard.share : 0;
+    /* 形状可行性：单卡过线 ⇒ 这一子代不进候选（词典序第一关键字）。 */
+    if (SHAPE_CAP > 0 && cfShare > SHAPE_CAP + 1e-9) { shapeBlocked++; return false; }
     const candLex = ARENA_LEX ? lexTupleOf(cf.byShape) : null;
     /* byScore 四档：词典序（#161）‖ 地板罚项（预登记回退）‖ 罚项（--arenaPen）‖ 标量净胜（原口径）——一次只许开一档 */
     const byScore = ARENA_LEX
@@ -629,7 +638,7 @@ if (MODE === 'esa') {
   if (FXSEL) console.log('[cem-arm] ⚑ 冻结桌当选：环内预选 ' + screened + ' 次 ‖ 在冻结桌上真打过父代 ' + accepted + ' 次（按净胜 ' + accScore +
     (PRESEL === 'parent' ? ' ‖ **预选门=parent**（子代循环分 ≥ 父代即送验）' : '') +
     (DIV ? ' ‖ 按多样性 ' + accDiv + '（探针 ' + divProbes + ' 次；触发 >' + DIV_TRIGGER + '，净胜带 ±' + DIV_TOL + '，单卡需降 ≥' + DIV_DELTA + '）' : '') +
-    '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '% ‖ 每次验证花 ' +
+    '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '%' + (SHAPE_CAP > 0 ? ' ‖ **形状上限 ' + (100 * SHAPE_CAP).toFixed(0) + '%**（挡下 ' + shapeBlocked + ' 个送验）' : '') + ' ‖ 每次验证花 ' +
     (ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES)) + ' 局（fxGames=' + FXG + (ARENA ? '，arena2 每桌形' + Math.max(8, FXG || 0) : '') + ' ‖ 预算被这块吃掉，迭代数会少）');
   if (ARENA_LEX && parentLex) { console.log('[cem-arm] ⚑ **词典序终态**（#161）：低于地板格数 ' + parentLex.below + '/' + Object.keys(V7_FLOOR).length +
     ' ‖ 最差格余量 ' + parentLex.worst.toFixed(3) + ' ‖ 冻结桌总分 ' + parentFix.toFixed(3) + '（货币=' + ARENA_CUR + '）');
