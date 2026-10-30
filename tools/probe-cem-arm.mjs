@@ -32,7 +32,7 @@ import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } 
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -161,6 +161,12 @@ const QUIET = process.argv.includes('--quiet');
  *   实测后果是“换一枚包，对局记录逐字相同”（随机初始化包也打出同一局）⇒ 分数却照样能当选。
  *   缺省 0 ⇒ 只量不判、逐字不改历史臂；判据阈值只在 head-health.mjs 一处。 */
 const HEAD_GATE = Number(arg('headGate', 0)) > 0;
+/* `--verifGate=1`（10-30 傍晚 · 训练侧专用，**不进发布门禁**，按用户 10-30 裁定）：
+ *   病（今天抓到的）：`--arenaPerN=1` + 弱/随机起点下，整臂可以 `accepted=0 verifications=0` 跑完 1120 次评估
+ *     而 **fit、曲线、holdout、健康度照样全部出数** ⇒ 读起来像"训练没效果"，实际是"子代根本没被送去验证"
+ *     （搜索全程没问过考卷，只在起点重测里抖）。代 1 的三臂同配方也是 0 ⇒ 这条与换代无关，是配方的病。
+ *   判据只钉"有没有被问过"这一件可机器判的事；"该问几次"依配方而变，不写死。 */
+const VERIF_GATE = Number(arg('verifGate', 0)) > 0;
 const HEAD_FIX = Math.max(2, Number(arg('headFixtures', 12)) || 12);
 const HEAD_TEMP = Number(arg('headTemp', 0.15)) || 0.15;
 const START_PACK = arg('start', 'docs/artifacts/eval-out/win-Ldemo.bak');
@@ -281,7 +287,7 @@ if (process.env.EPIRUS_ARCH2) {
   try { wired = verifyArch2Wired(W, A2, { mode: TMODE, n: N, games: 1 }); }
   catch (e) { console.error('⛔ ' + String(e && e.message || e)); process.exit(7); }
   console.log('[cem-arm] ⚙ 架构 = 2.0 原型 `' + process.env.EPIRUS_ARCH2 + '`（§E821） ‖ paramCount=' + P.paramCount() +
-    ' ‖ 变异算子=' + cfg.mutMode + (cfg.mutOnly ? '（**只动 ' + cfg.mutOnly + '**）' : '') + ' ‖ 起点=' + (process.argv.some(x => x.startsWith('--start=')) ? '--start 指定的 2.0 包' : '随机（makePolicy 0.25）') +
+    ' ‖ 变异算子=' + cfg.mutMode + (cfg.mutOnly ? '（**只动 ' + cfg.mutOnly + '**）' : '') + ' ‖ 起点=' + (process.argv.some(x => x.startsWith('--start=')) ? '--start 已给（**这一行不判接受与否** ⇒ 看下面的 `起点分母：…` 或那条 ⚠）' : '随机（makePolicy 0.25）') +
     ' ‖ **接线自证 PASS**：校准局里 forwardCands ' + wired.forwards + ' 次 ‖ chooseCandidates(2.0 版) ' + wired.chooseCandidatesCalls + ' 次 ‖ fit=' + (wired.fit == null ? 'n/a' : wired.fit.toFixed(3)));
 }
 /* ===== 2026-10-29（千问）：把 DS 的**配对评估**接进臂里（`EPIRUS_PAIRED=1`）=====
@@ -924,7 +930,20 @@ if (P.__arch2) {
     ' 每局平均 ' + (c.forwards / Math.max(1, gLoop + gHold + gStart)).toFixed(1) + ' 次决策 ⇒' +
     ' **"局数相等"不等于"算力相等"：赢面高的包局更长、决策更多**（这一格以前没人印过）');
 }
+/* ===== `--verifGate=1` 的判语（在落 meta 之前算，事后拿 .meta.json 也能复查这一格）===== */
+if (row.arena && row.arena.esa) {
+  const vv = row.arena.esa.verifications, aa = row.arena.esa.accepted;
+  if (VERIF_GATE && vv === 0) {
+    console.error('\n⛔ --verifGate=1：整臂 **verifications=0**（accepted=' + aa + ' ‖ evals=' + row.evals + ' ‖ 循环 ' + row.gamesActualLoop + ' 局）' +
+      ' ⇒ 搜索一次都没把子代送去验证 ⇒ 这条臂的 Δ 全部是"同一起点重测"的抖动，不是训练的效果。' +
+      '\n   这不是"训练没用"，是"训练没被问过"。10-30 实测：同预算换 `--arenaLex=1`+冻结桌验证 ⇒ accepted=5 ‖ verifications=104 ⇒ 头能醒（一致率 57.9%）。' +
+      '\n   （本闸按用户 10-30 裁定**只住训练侧**，不接发布门禁。）');
+    row.verifGate = '红';
+  } else if (VERIF_GATE) row.verifGate = '绿（verifications=' + vv + ' ‖ accepted=' + aa + '）';
+  else row.verifGate = '未开闸';
+}
 if (OUT) { mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT + '.meta.json', JSON.stringify(row, null, 1), 'utf8'); }
 /* `--headGate=1` 的红要真的把批挡住 ⇒ 非零退出（产物已落盘，事后仍可复盘，但**回执不许被当合格臂引用**）。
    缺省不开闸 ⇒ 历史臂与不带这个旗标的批次逐字不变。 */
 if (HEAD_GATE && row.headGate === '红') process.exit(9);
+if (VERIF_GATE && row.verifGate === '红') process.exit(9);
