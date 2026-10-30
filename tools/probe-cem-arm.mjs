@@ -25,13 +25,14 @@ import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 import { install as installArch2, verifyWired as verifyArch2Wired, readPack2 } from './proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
 import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   // 10-29 夜：扩表考卷（--arena2=1 才开）
+import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } from './proto2/head-health.mjs';   // 10-30 傍晚：打分有没有牙
 
 /* §E679 补（10-22）：这台量具原先**没有输入消毒层**（D218 那条门当场抓到，是我今夜建它时就漏的）。
  * 拼错的旗标被静默忽略 = 读数按默认档跑完而没人知道 ⇒ 与"黑键"同族。名单跟着 `arg('…')` 走。 */
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -155,6 +156,13 @@ const DEG = arg('degenerate', '') === '1';
  *   本身就不可行 —— 唯一可靠的货币是**数出来的局数**。给了这个旗标就忽略 `--evals`（后者只当"计划剂量"印着）。 */
 const TARGET_G = Number(arg('targetGames', 0)) || 0;
 const QUIET = process.argv.includes('--quiet');
+/* `--headGate=1`（10-30 傍晚，用户“也可以”）：**平头包不许当冠军**。
+ *   动因：代 2 短臂在同一批真局上集中度 max(p)×K 只有 2.02（v7 是 27.00、熵占比 0.000），
+ *   实测后果是“换一枚包，对局记录逐字相同”（随机初始化包也打出同一局）⇒ 分数却照样能当选。
+ *   缺省 0 ⇒ 只量不判、逐字不改历史臂；判据阈值只在 head-health.mjs 一处。 */
+const HEAD_GATE = Number(arg('headGate', 0)) > 0;
+const HEAD_FIX = Math.max(2, Number(arg('headFixtures', 12)) || 12);
+const HEAD_TEMP = Number(arg('headTemp', 0.15)) || 0.15;
 const START_PACK = arg('start', 'docs/artifacts/eval-out/win-Ldemo.bak');
 if (!/^[a-zA-Z0-9._/-]+.(bak|js)$/.test(START_PACK)) { console.error('⛔ --start 要一个仓库内包文件（实测 ' + START_PACK + '）'); process.exit(64); }
 const OUT = arg('out', '') || defaultOut();
@@ -238,11 +246,15 @@ if (BO_N && (FXALL || arg('fxQuota', '') !== '' || PRESEL === 'parent' || (Numbe
       if (PRESEL !== 'best' && PRESEL !== 'parent') { console.error('⛔ --preSel 只认 best|parent（收到 ' + PRESEL + '）'); process.exit(7); }
       if (PRESEL === 'parent' && (!FXSEL || !ARENA2)) { console.error('⛔ --preSel=parent 需要 --fxSelect=1 且 --arena2=1（它换的是冻结桌预选门）'); process.exit(7); }
       if (PRESEL === 'parent' && FXALL) { console.error('⛔ --preSel=parent 与 --fxAll 互斥（都改预选门，一次对照一个自由量）'); process.exit(7); }
+/* 健康度量的 v7 参照：**必须在装 2.0 档之前**读（装完之后 `P.unpack` 只认 2.0 容器 ⇒ 那时再读就是 null，
+  这条纪律在册是 selftest2 的 T14 教的）。--arena2 已经读过一次，没开 arena2 的臂这里补读。 */
+let V7_HEALTH_REF = null;
 let ARENA_REF = null;
 if (ARENA2) {
   const c0 = loadChamp(W, 'js/bundled-champion-3p.js', HERE + '/..');
   if (!c0) { console.error('⛔ --arena2 需要 v7 参照包来固定对手表，但读不出 js/bundled-champion-3p.js'); process.exit(2); }
   ARENA_REF = Float64Array.from(c0);
+  V7_HEALTH_REF = Float64Array.from(c0);
   if (MODE === 'ga') { console.error('⛔ --arena2 没接 GA 的内部 trainer（它走 T.makeTrainer/step，不吃本工具的 evalOne）⇒ 拒绝静默按旧口径跑'); process.exit(7); }
 }
 /* ===== §E821（10-28 傍晚 · 千问）：`EPIRUS_ARCH2` ⇒ 两臂都训在 **2.0 结构**上 =====
@@ -259,6 +271,7 @@ if (process.env.EPIRUS_ARCH2) {
     /* `mutOnly=` 是**段名表**（P2 的"只动最后一层"）⇒ 不许过 Number()，多段用 `+` 连（`,` 已是 kv 分隔符） */
     cfg[k0] = (k0 === 'input') ? e[1].trim() : (k0 === 'mutOnly') ? e[1].trim() : Number(e[1]);
   } });
+  if (!ARENA2) { const c9 = loadChamp(W, 'js/bundled-champion-3p.js', HERE + '/..'); if (c9) V7_HEALTH_REF = Float64Array.from(c9); }   /* 没开 arena2 也要有 v7 参照：装档之后就读不出了 */
   const A2 = installArch2(W, cfg);
   if (T.mulberry32) A2.rngRef.r = T.mulberry32((SEED * 7919 + 13) >>> 0);
   /* ⚑ **开臂前的接线自证**（10-28 晚三波读数作废换来的闸）：打一局量一下 `forwardCands` 有没有被叫到。
@@ -855,6 +868,23 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
     fpen: ESA_FPEN_STAT,
     bestMaxCard: ho.maxCard, startMaxCard: hoStart.maxCard, bestByShape: ho.byShape } : null,
   curve: curve, secs: Number(((Date.now() - t0) / 1000).toFixed(1)), startLabel: startLabel };
+/* 打分健康度（2.0 臂才量：v7 那档没有“逐候选打分退化”这一格病，别把两件事混在一条读数里） */
+if (P.__arch2) {
+  try {
+    const fx = collectFixtures(W, { perShape: HEAD_FIX }).fixtures;
+    const hPack = agreeVsRandom(W, Float64Array.from(best), fx, HEAD_TEMP, headHealth(W, Float64Array.from(best), fx, HEAD_TEMP));
+    const hRef = headHealth(W, ARENA_REF || V7_HEALTH_REF, fx, HEAD_TEMP);   /* v7 只并报刻度：架构不同，拿它比“随机起点包”没意义 */
+    row.headHealth = { temp: HEAD_TEMP, states: hPack.states, pack: hPack, v7: hRef, flatLineAgreePct: Number((100 * HEAD_FLAT_AGREE).toFixed(0)), calib: '随机起点彼此 93~97% ‖ v7 5%（60 个真局决策点，原件 scratch/qoder-1030-headcalib2.mjs）', gate: HEAD_GATE ? '开' : '关（只报不判）' };
+    console.log('\n⚑ 打分有没有牙（判据 = 同一串骰子下与随机起点包打同一手的比率，平头线 ' + (HEAD_FLAT_AGREE * 100).toFixed(0) + '% ‖ 并报刻度：集中度 max(p)×K、熵占比）：');
+    console.log(fmtHead('本臂最优粒', hPack));
+    if (hRef && hRef.states) console.log(fmtHead('v7 参照 同t', hRef));
+    if (HEAD_GATE && hPack.flat) {
+      console.error('\n⛔ --headGate=1：**平头包不许当冠军** ⇒ 与随机起点包同骰一致 ' + hPack.agreeRandom + '% ≥ 平头线 ' + (HEAD_FLAT_AGREE * 100).toFixed(0) + '%（随机彼此实测 93~97% ‖ v7 只有 5%）' +
+        '（同批 ' + hPack.states + ' 个真局决策点）。产物已落盘但不算合格臂；要放开就别带这个旗标。');
+      row.headGate = '红';
+    } else row.headGate = HEAD_GATE ? '绿' : '未开闸';
+  } catch (e) { row.headHealth = { err: String((e && e.message) || e) }; console.log('⚠ 健康度量失败（不影响臂本身）：' + row.headHealth.err); }
+}
 if (OUT) {
   mkdirSync(dirname(OUT), { recursive: true });
   const packed = P.pack(best);
@@ -895,3 +925,6 @@ if (P.__arch2) {
     ' **"局数相等"不等于"算力相等"：赢面高的包局更长、决策更多**（这一格以前没人印过）');
 }
 if (OUT) { mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT + '.meta.json', JSON.stringify(row, null, 1), 'utf8'); }
+/* `--headGate=1` 的红要真的把批挡住 ⇒ 非零退出（产物已落盘，事后仍可复盘，但**回执不许被当合格臂引用**）。
+   缺省不开闸 ⇒ 历史臂与不带这个旗标的批次逐字不变。 */
+if (HEAD_GATE && row.headGate === '红') process.exit(9);

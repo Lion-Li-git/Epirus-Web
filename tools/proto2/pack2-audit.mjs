@@ -23,7 +23,7 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { sandbox } from '../audit-lib.mjs';
+import { sandbox, loadChamp } from '../audit-lib.mjs';
 import { install as installArch2, readPack2, packCfgExit, V_FOR_GEN } from './arch2.mjs';
 import * as O3 from './obs3.mjs';
 
@@ -50,6 +50,8 @@ catch (e) { console.error('⛔ 读不到/解不开 ' + PACK + '：' + String((e 
 const got = packCfgExit(raw, PACK);
 console.log('# 2.0 包参数与接口自证 ‖ ' + PACK);
 console.log('  容器：' + got.era + ' ‖ v=' + raw.v + ' ‖ arch=' + (raw.arch || '?') + ' ‖ dims=' + JSON.stringify(raw.dims) + ' ‖ 权重 ' + (raw.a && raw.a.length) + ' 条');
+/* ⚑ 参照包必须在**装档之前**读：装完之后 `unpack` 只认代 2 容器 ⇒ 现在读会拿到 null（selftest2 的 T14 同一课）*/
+const REF7 = (() => { const o = loadChamp(W, 'js/bundled-champion-3p.js', ''); return o ? Float64Array.from(o) : null; })();
 const A = installArch2(W, got.cfg);
 const L = A.L;
 const sg = {}; for (const s of L.seg) sg[s.name] = s;
@@ -92,56 +94,9 @@ for (const s of L.seg) {
 }
 
 /* ---------- 取真局夹具（自己打，不吃临时件） ---------- */
-const keysSeen = new Set();   /* 这批夹具真打出过哪些键（覆盖率自证）*/
-function collectFixtures(perShape) {
-  const fx = [];
-  /* 阵容 = **卡表全集**（手写一张子集会静默决定"哪些持续状态永远不出现"，于是恒零清单读起来像包的病、
-   *   其实是阵容的病——第一版就卡在这：19 个键的名单让避雷针/过载炮/激光眼一类永远上不了桌）。 */
-  const keys = R.skills.map((s) => s.key);
-  const shapes = [{ n: 2, m: 'multi' }, { n: 3, m: 'long' }, { n: 5, m: 'multi' }, { n: 5, m: 'long' }, { n: 8, m: 'multi' }, { n: 10, m: 'multi' }];
-  const cancelOtherLocal = (state, pid) => {
-    for (let i = state.events.length - 1; i >= 0; i--) {
-      const e = state.events[i];
-      if (e.type === 'cancel' && e.round === state.round - 1 && e.pids && e.pids.indexOf(pid) >= 0) return e.pids[0] === pid ? e.pids[1] : e.pids[0];
-    }
-    return null;
-  };
-  /* ⚑ 每个桌形各自配额，**不许被前一桌形填满**（第一版就是这样：24 个夹具全来自 2:multi，
-   *   于是 8P/10P 的池化/量程维一次都没进分母，恒零清单读起来像"包的问题"其实是抽样问题）。 */
-  for (const shape of shapes) {
-    let got = 0;
-    for (let g = 0; g < 12 && got < perShape; g++) {
-      const st = S.createState(shape.m, { next: rng }, shape.n);
-      st.rng = { next: rng };
-      const ch = [];
-      for (let pid = 0; pid < shape.n; pid++) {
-        /* 每席**每回合换一张**（固定一张要等合法窗口，整局往往只出 ジ ⇒ 覆盖率反而更低，10-30 实测
-         *   30 键名单比 19 键名单恒零维更多就是这件事）。轮换才把持续状态逼出来。 */
-        const sel = function (state, p, legal) {
-          const cs = P.candidatesFor(state, p, T.econBase(state, p, legal), { lockTarget: cancelOtherLocal(state, p) }) || [];
-          if (!cs.length) return { key: R.SK.JI };
-          const want = keys[(state.round * 3 + pid * 7 + g) % keys.length];
-          for (const c of cs) if (c.key === want) return { key: c.key, target: c.target == null ? null : c.target, target2: c.target2 == null ? null : c.target2, bead: c.bead || null };
-          const ji = cs.filter((c) => c.key === R.SK.JI)[0]; return ji ? { key: ji.key } : cs[0];
-        };
-        ch.push((s, p, legal) => {
-          const cs = P.candidatesFor(s, p, T.econBase(s, p, legal), { lockTarget: cancelOtherLocal(s, p) }) || [];
-          if (cs.length > 1 && s.round >= 3 && got < perShape) {
-            const q = S.cloneState(s); q.rng = { next: rng };
-            for (const e of (s.events || [])) if (e.type === 'action' && e.key) keysSeen.add(e.key);
-            fx.push({ st: q, pid: p, cands: P.candidatesFor(q, p, T.econBase(q, p, legal), { lockTarget: cancelOtherLocal(q, p) }) || [], shape: shape.n + ':' + shape.m });
-            got++;
-          }
-          return sel(s, p, legal);
-        });
-      }
-      try { Play.autoGameN(st, ch); } catch (e) { /* 有的桌形造不出某些手，跳过就行 */ }
-    }
-    if (!fx.some((f) => f.shape === shape.n + ':' + shape.m)) console.log('  ⚠ 桌形 ' + shape.n + ':' + shape.m + ' **一个夹具都没造出来** ⇒ 该桌形不在本次分母里');
-  }
-  return fx;
-}
-const FXS = collectFixtures(Math.max(2, Number(arg('perShape', 120))));
+import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } from './head-health.mjs';
+const FX = collectFixtures(W, { perShape: Math.max(2, Number(arg('perShape', 120))) });
+const FXS = FX.fixtures, keysSeen = FX.keysSeen;      /* keysSeen = 这批夹具真打出过哪些键（覆盖率自证）*/
 const shapeCount = {};
 for (const f of FXS) shapeCount[f.shape] = (shapeCount[f.shape] || 0) + 1;
 console.log('  夹具：真局 mid-game 决策点 ' + FXS.length + ' 个 ‖ 阵容覆盖：真打出过 ' + keysSeen.size + '/' + R.skills.length + ' 张键 ‖ 逐桌形 ' + Object.entries(shapeCount).map(([k, v]) => k + '=' + v).join(' '));
@@ -195,6 +150,23 @@ if (L.input === 'obs3') {
   if (rare.length) console.log('     ⇒ 稀有清单：' + rare.join(' ‖ '));
 } else {
   console.log('  · D 跳过：这枚包吃的是 v7 输入面（' + L.arch + '），逐维扫描只对 obs3 档有意义');
+}
+
+/* ---------- E 打分有没有牙（专治“平头包靠抽卡也能当选”） ---------- */
+{
+  const paramsE = P.unpack(raw);
+  if (!paramsE) console.log('  · E 跳过：这枚包在当前档解不出（checkPack=' + JSON.stringify(P.checkPack(raw)) + '）');
+  else {
+    const tE = Math.max(0.001, Number(arg('teethTemp', 0.15)) || 0.15);
+    const hPack = agreeVsRandom(W, paramsE, FXS, tE, headHealth(W, paramsE, FXS, tE));   /* 判据 = 与随机起点包的同骰一致率 */
+    console.log(fmtHead('被测包 t=' + tE, hPack));
+    if (REF7) console.log(fmtHead('v7 参照 同t', headHealth(W, REF7, FXS, tE)));
+    const want = arg('requireTeeth', '') === '1';
+    ok(!want || !hPack.flat,
+      'E 打分有没有牙：与随机起点包同骰一致 ' + hPack.agreeRandom + '%（对照 ' + hPack.agreeRefs + ' 枚随机起点包 ‖ 平头线 ' + (HEAD_FLAT_AGREE * 100).toFixed(0) + '% ‖ 标定：随机彼此 93~97%、v7 5%）‖ 集中度 ' +
+      hPack.concMed + ' ‖ 熵占比 ' + hPack.entShareMed + ' ‖ ' + (hPack.flat ? '**平头：换一枚包≈换不出不同出手，这批读数别当风格证据**' : '有牙') +
+      (want ? '（--requireTeeth=1 ⇒ 平头判红）' : '（只报不判；要当闸请加 --requireTeeth=1）'));
+  }
 }
 
 /* ---------- 汇总与下一步 ---------- */
