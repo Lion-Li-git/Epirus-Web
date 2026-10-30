@@ -51,9 +51,17 @@ function balancedJson(s, at) {
 }
 const srcTxt = readFileSync(PACK, "utf8");
 let packParams = null;
+/* ⚑ 10-31 凌晨（ZCode，skill-mastery 同款洞）：**先判容器再信 loadChamp**——v7 的 unpack 不做版本门，
+ *   新沙箱上 v:91 容器会被当 v7 壳吃掉（6122 维灌 5689 维 v7 网，截断重解释 ⇒ 复盘记录是错网的局）。
+ *   判别标记 = 容器 JSON 带 `dims` ⇒ 必须走 packCfgExit 单一出口。 */
 {
-  const v7 = loadChamp(W, PACK);
-  if (v7 && v7.length) packParams = v7;
+  const at0 = srcTxt.indexOf("EPIRUS_CHAMPION_3P ");
+  const j0 = at0 >= 0 ? balancedJson(srcTxt, at0) : null;
+  const raw0 = j0 ? JSON.parse(j0) : null;
+  if (!(raw0 && raw0.dims)) {
+    const v7 = loadChamp(W, PACK);
+    if (v7 && v7.length) packParams = v7;
+  }
 }
 if (!packParams) {
   const at = srcTxt.indexOf("EPIRUS_CHAMPION_3P ");

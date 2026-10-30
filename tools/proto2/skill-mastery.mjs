@@ -22,7 +22,7 @@
  *   node tools/proto2/skill-mastery.mjs --selftest [--pack=a.bak]   # 三腿自证，任一挂 exit 1
  *   pack 位置支持 'v7'（bundled 参照）与 'fixed:<key>'（only:* 阳性/阴性对照）。
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { sandbox, loadChamp, chargeProfile } from '../audit-lib.mjs';
 import { install as installArch2, packCfgExit } from './arch2.mjs';
@@ -412,7 +412,39 @@ function selftest() {
       console.log('  ⛔ 第二遍：' + canon(a2).slice(0, 400));
     }
   }
-  console.log(fail === 0 ? '[自证] 三腿全过 ✔' : '[自证] ⛔ ' + fail + ' 腿挂 ⇒ 尺作废，先修再测');
+  console.log('[自证·D 容器装载] v:91 包必须走 packCfgExit 面（10-31 错网 bug 的回归腿）');
+  {
+    /* 病史：v7 unpack 不做版本门，loadChamp 在新沙箱把 v:91 容器吃成参数数组灌 v7 网（截断重解释）。
+     * 腿：容器包装载后 params.length === 容器声明 n，且 W 已装 arch2（没走 v7 截断路径）。找不到容器包 ⇒ 跳过不判。 */
+    const fs = { readdirSync, readFileSync };
+    let cand = null;
+    for (const f of fs.readdirSync('scratch/arms')) {
+      if (!f.endsWith('.bak')) continue;
+      const p = 'scratch/arms/' + f;
+      try {
+        const src = fs.readFileSync(p, 'utf8');
+        const at = src.indexOf('EPIRUS_CHAMPION_3P ');
+        if (at < 0) continue;
+        const raw = JSON.parse(balancedJson(src, at));
+        /* packCfgExit 的代闸是 process.exit 不是 throw（故意的：响亮拒读）⇒ 本腿自己先按版本过滤，
+         * 只尝试 v:91（代 2）容器；代 1 的留证包直接跳过，不触发那个 exit。 */
+        if (!raw || raw.v !== 91 || !raw.dims) continue;
+        cand = p; break;
+      } catch (e) { /* JSON 坏的跳过 */ }
+    }
+    if (!cand) {
+      console.log('  – 跳过（scratch/arms 下没有容器包）');
+    } else {
+      const W = sandbox();
+      const params = loadPackParams(W, cand);
+      const src = fs.readFileSync(cand, 'utf8');
+      const rawN = JSON.parse(balancedJson(src, src.indexOf('EPIRUS_CHAMPION_3P '))).n;
+      const ok = params.length === rawN && !!W.EpirusPolicy.__arch2;
+      console.log('  ' + (ok ? '✔' : '✘') + ' ' + cand + '：装载 ' + params.length + ' 维（容器声明 ' + rawN + '）‖ arch2 已装 = ' + !!W.EpirusPolicy.__arch2);
+      if (!ok) fail++;
+    }
+  }
+  console.log(fail === 0 ? '[自证] 四腿全过 ✔' : '[自证] ⛔ ' + fail + ' 腿挂 ⇒ 尺作废，先修再测');
   return fail === 0 ? 0 : 1;
 }
 
