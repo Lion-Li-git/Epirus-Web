@@ -25,7 +25,11 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const CORE = ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/policy.js', 'js/train/bots.js', 'js/train/evo.js',
+  'js/train/policy.js',
+  /* 10-30 晚：冠军包 2.0 的浏览器侧打分器（v:91 容器 ⇒ EpirusPolicy2；v7 路径一行未动）。
+     量具与产品跑同一份，`tools/proto2/browser-parity.mjs` 逐位对账的就是这两个实现。 */
+  'js/train/policy2.js',
+  'js/train/bots.js', 'js/train/evo.js',
   /* §E590 池抽签：产品与量具跑**同一份**（契约 `docs/POOL-CONTRACT.md` §3 ⇒ 这里的顺序就是 `index.html` 里的加载顺序）*/
   'js/pool-draw.js'];
 

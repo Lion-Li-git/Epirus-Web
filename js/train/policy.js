@@ -334,6 +334,16 @@
   ];
   function paramsOf(featS, featA) { return HID * (featS + featA) + HID + HID + 1; }
   function shapeOf(params) {
+    /* ===== 冠军包 2.0（v:91）的**版本门控分派**（10-30 晚，千问）=====
+     * 只有 `o.v === 91` 的容器 / 带 `params.p2` 的张量才走 `EpirusPolicy2`，其余路径**一行算术都不改**（v7 逐字不变）。
+     * ⚑ 为什么连 `shapeOf` 都要认：`evo.js` 的 `LEGACY(params)` 写的是 `!sh || sh.legacy === true` ⇒
+     *   6122 长的 2.0 张量在这里返回 null 就会被判成"旧包"，于是走 v7 那台**键 + 启发式目标**的打分器：
+     *   症状不是崩，而是"AI 照打、打的不是这枚包"（本仓最贵的那一族：坏了不红）。验收见 `tools/proto2/browser-parity.mjs`。 */
+    if (params && params.p2) {
+      const P2 = global.EpirusPolicy2;
+      if (!P2) throw new Error('params 是 2.0 张量（带 p2 布局）但 `js/train/policy2.js` 没加载 ⇒ 不许退回 v7 打分器');
+      return { v: P2.V_GEN2, featS: 0, featA: 0, featN: 0, legacy: false, p2: true };
+    }
     const n = params.length;
     if (n === paramCount()) return { v: PACK_VERSION, featS: FEAT_S, featA: FEAT_A, featN: FEAT_N, legacy: false };
     for (let i = 0; i < VER_SHAPES.length; i++) {
@@ -675,6 +685,11 @@
 
   /* 候选打分 → softmax → 返回 {probs, argmax, cand} */
   function forwardCands(state, pid, cands, params, opts) {
+    if (params && params.p2) {                                  // 2.0 张量 ⇒ 整条前向交给 EpirusPolicy2（v7 那台的算术一行不走）
+      const P2 = global.EpirusPolicy2;
+      if (!P2) throw new Error('params 是 2.0 张量（带 p2 布局）但 `js/train/policy2.js` 没加载 ⇒ 不许退回 v7 打分器');
+      return P2.forwardCands(global, state, pid, cands, params, opts || {});
+    }
     opts = opts || {};
     const sh = shapeOf(params);
     const h0 = statePre(state, pid, params, sh);      // 状态段只算一次（v7 候选多了 5 倍）
@@ -763,6 +778,11 @@
    * 返回 {ok:true} 或 {ok:false, reason, got, want}。reason 取值：
    *   missing / no-version / version / length / feature / hidden */
   function checkPack(o) {
+    if (o && o.v === 91) {                                   // 2.0 容器 ⇒ 交给它那一个出口判（代闸/段表/dof 都在那边）
+      const P2 = global.EpirusPolicy2;
+      const c = P2 ? P2.checkPack(o, global) : { ok: false, reason: 'no-policy2-module' };
+      return { ok: !!c.ok, reason: c.reason, got: c.got, want: c.want, detail: c.detail };
+    }
     if (!o || !Array.isArray(o.a)) return { ok: false, reason: 'missing' };
     if (typeof o.v !== 'number') return { ok: false, reason: 'no-version', got: o.v, want: PACK_VERSION };
     if (o.v !== PACK_VERSION) return { ok: false, reason: 'version', got: o.v, want: PACK_VERSION };
@@ -792,6 +812,10 @@
   /* allowLegacy=true 仅工具/评测用：按包内长度反推形状重建，**游戏侧绝不使用**。
    * 这样五次失败实验的存档重新可读，A/B 证据链不再是一次性的。 */
   function unpack(o, allowLegacy) {
+    if (o && o.v === 91) {
+      const P2 = global.EpirusPolicy2;
+      return P2 ? P2.unpack(o, global) : null;      // 模块没加载 ⇒ 读不出（宁可不玩，也不许按 v7 的偏移去切 2.0 的权重）
+    }
     if (allowLegacy) {
       if (!o || !Array.isArray(o.a)) return null;
       const featN = (o.a.length - HID - HID - 1) / HID;
