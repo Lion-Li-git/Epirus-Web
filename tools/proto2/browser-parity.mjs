@@ -167,4 +167,27 @@ if (!sameSeq) {
   process.exit(8);
 }
 
+/* ---- P6 产品侧的"别静默错切"守卫：`value`/`forward` 吃 2.0 张量必须当场抛，吃 v7 必须照旧 ----
+ * 训练侧这句话由 `arch2.mjs:724` 说；**产品侧没有 arch2**，所以必须由 `policy.js` 自己说。
+ * ⚑ 会走到这两条路的真实调用者：`evo.js` 信念搜索的 beam 截断（候选数 > `BELIEF_BEAM`）与 `BELIEF_TIE=1` 的平票裁决。
+ *   今晚那次 myopia 跑（`--games=25`）没抛，是因为 TIE=0 且候选均值 11.5~36.4 没越过 beam ⇒ "没抛"不等于"没这条缝"。 */
+{
+  const st = Wb.EpirusState.createState('multi', { next: Wb.EpirusTrainer.mulberry32(31337) }, 5);
+  st.rng = { next: Wb.EpirusTrainer.mulberry32(31337) };
+  const legal = Wb.EpirusPlay.legalActions(st, 0);
+  const k0 = (legal.find((l) => l.affordable) || legal[0]).key;
+  const v7Params = loadChamp(Wb, 'js/bundled-champion-3p.js', '');
+  if (!v7Params) { console.error('⛔ P6：读不出 v7 参照包 ⇒ 这一条没跑成'); process.exit(8); }
+  const cand = { key: k0, target: null, target2: null, bead: null };
+  let threwV = '', threwF = '';
+  try { Wb.EpirusPolicy.value(st, 0, k0, bp2, null, cand); threwV = '没抛！读出 ' + Wb.EpirusPolicy.value(st, 0, k0, bp2, null, cand); }
+  catch (e) { threwV = '抛了：' + String(e.message).slice(0, 22) + '…'; }
+  try { Wb.EpirusPolicy.forward(st, 0, legal, bp2, {}); threwF = '没抛'; } catch (e) { threwF = '抛了 ✔'; }
+  let v7ok = false, v7err = '';
+  try { const vv = Wb.EpirusPolicy.value(st, 0, k0, v7Params, null, cand); v7ok = Number.isFinite(vv); } catch (e) { v7err = String(e && e.message || e).slice(0, 40); }
+  console.log('P6 产品侧守卫：`value(2.0)` ⇒ ' + threwV + ' ‖ `forward(2.0)` ⇒ ' + threwF +
+    ' ‖ `value(v7)` 仍给有限分=' + v7ok + (v7err ? '（抛了：' + v7err + '）' : ''));
+  if (/^没抛/.test(threwV) || threwF !== '抛了 ✔' || !v7ok) { console.error('⛔ P6 不过：2.0 张量能被 v7 打分器静默切开，或 v7 那台被打坏'); process.exit(8); }
+}
+
 console.log('\n⇒ 浏览器侧与训练侧对同一枚 2.0 包**逐位同分**，且四种拒读都有牙。包=' + PACK + ' ‖ 观测面 dof=' + (raw.dims && raw.dims.dof) + ' ‖ 参数 ' + raw.a.length + ' 条');

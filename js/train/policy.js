@@ -493,6 +493,9 @@
    * v7：`sh.featA` 决定动作段宽度（v5/v6 = 14、v7 = 22）；`cand` 提供目标/珠类型。
    * 不传 `cand` 时新维度恒 0 ⇒ 旧口径（2P 路径 / 老工具）读数逐位不变。 */
   function value(state, pid, key, params, sh, cand) {
+    if (params && params.p2) throw new Error('2.0 结构没有 v7 这种 (s,a) 单点 value()：请走 forwardCands/chooseCandidates（逐候选集合打分）。' +
+      '走到这里说明有代码在按 v7 偏移切 2.0 权重（信念搜索的 beam/`BELIEF_TIE=1` 两条路都会到这里）⇒ 宁可当场抛，不许静默错切。' +
+      '训练侧同一句话由 tools/proto2/arch2.mjs 说；产品侧这份由本文件说，两处同文由 browser-parity 的 P6 对账。');
     const S_ = sh ? sh.featS : FEAT_S;
     const N = sh ? sh.featN : FEAT_N;
     const A_ = sh ? sh.featA : FEAT_A;
@@ -552,6 +555,7 @@
 
   /* 对合法动作集合打分 → softmax → 返回 {probs(按 ACT_KEYS 索引), argmaxKey} */
   function forward(state, pid, legal, params, opts) {
+    if (params && params.p2) throw new Error('`forward` 是 v7 的"动作键层"打分器，2.0 张量请走 forwardCands（逐候选集合）⇒ 当场拒，不许按 v7 偏移切。');
     opts = opts || {};
     const sh = shapeOf(params);   // P0：形状自适应（v5/v6 存档共存）
     const mask = new Array(A).fill(false);

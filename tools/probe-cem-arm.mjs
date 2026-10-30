@@ -33,7 +33,7 @@ import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } 
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -172,19 +172,30 @@ const HEAD_FIX = Math.max(2, Number(arg('headFixtures', 12)) || 12);
 const HEAD_TEMP = Number(arg('headTemp', 0.15)) || 0.15;
 const START_PACK = arg('start', 'docs/artifacts/eval-out/win-Ldemo.bak');
 if (!/^[a-zA-Z0-9._/-]+.(bak|js)$/.test(START_PACK)) { console.error('⛔ --start 要一个仓库内包文件（实测 ' + START_PACK + '）'); process.exit(64); }
-const OUT = arg('out', '') || defaultOut();
+let OUT = arg('out', '');       // 缺省时由 `defaultOut()` 在**起点定下来之后**拼（名字要带得上父本，见下）
 /* ===== §E822（用户 10-28 傍晚裁定：「以后给一个默认落盘路径吧」）=====
  * 病（今天我自己踩的）：`--out` 缺省为空 ⇒ 三臂跑完**权重没落盘**，事后任何别的尺都量不到它们
  *   （组内判别力、12 行、演化图……全都要重新训一遍才能问）。臂的产物本身就是读数的一部分。
  * 默认落点选 `scratch/arms/` 而不是 `docs/artifacts/`：后者是门禁比哈希的活文件夹，
  *   研究臂默认往里撒 `.bak` 会当场吃 `D191`（未登记重复）——这条提醒写在 `tools/train-3p.mjs:2493-2500`。
  *   要入库/进图的包仍由人**显式**点名搬到 `docs/artifacts/`（默认值不该替人做入库决定）。 */
+/* ===== 落盘名字的规则（用户 10-30 晚点名"设得有规律一些"）=====
+ * 格式（字段顺序固定，可 `split('-')` 也可整串正则）：
+ *   scratch/arms/<代>-<label>-<mode>p<pop>-<预算>-<父本>-s<seed>-<MMDD-HHMM>.bak
+ *   代 = G2（装过 arch2）/ V7（没装）‖ label = `--label=`（缺省 x）‖ 预算 = 24kG（按局停）或 1120ev（按评估停）
+ *   父本 = 被**接受**的起点包文件名去扩展名，随机起点写 `rnd`（这一格以前只能从 meta 的 `lineage.parent` 反查）
+ * ⚑ 为什么在 `defaultOut()` 里拼而不在调用处拼：名字必须带上"起点是否真被接受"这个事实——
+ *   在起点判定之前拼，热启动失败的那批就会拿到一个声称自己从某枚包起跑的名字（那是本仓最怕的"名字比读数会说话"）。 */
+const LABEL = String(arg('label', '')).replace(/[^A-Za-z0-9+._]/g, '').slice(0, 24) || 'x';
 function defaultOut() {
   const d = new Date();
   const p = (x) => String(x).padStart(2, '0');
-  const tag = process.env.EPIRUS_ARCH2 ? String(process.env.EPIRUS_ARCH2).split(':')[0] : 'v7';
-  return 'scratch/arms/' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes())
-    + '-' + tag + '-' + MODE + '-' + (process.env.EPIRUS_MUT_MODE || 'x') + '-s' + SEED + '.bak';
+  const gen = P.__arch2 ? ('G' + (P.__arch2.L && P.__arch2.L.gen || 2)) : 'V7';
+  const budget = TARGET_G ? (Math.round(TARGET_G / 100) / 10) + 'kG' : (EVALS + 'ev');
+  let parent = 'rnd';
+  try { if (startParams && startLabel && startLabel.indexOf('夹具包') === 0) parent = String(START_PACK).replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, ''); } catch (e) { }
+  return 'scratch/arms/' + gen + '-' + LABEL + '-' + MODE + 'p' + POP + '-' + budget + '-' + parent + '-s' + SEED
+    + '-' + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.bak';
 }
 
 const W = sandbox(HERE + '/..');
@@ -327,6 +338,7 @@ if (!startParams) {
   P.setRng(T.mulberry32(SEED)); startParams = P.makePolicy(0.25); startLabel = 'makePolicy(0.25)';
 }
 startParams = Float64Array.from(startParams);
+if (!OUT) OUT = defaultOut();   // 起点定下来之后才拼名字（父本那一格要说真话）
 /* arena2 只在起点粒定下来之后建表；它用 v7 参照固定对手表，与起点粒无关（起点不参与建桌）。 */
 var ARENA = null;
 if (ARENA2) {
