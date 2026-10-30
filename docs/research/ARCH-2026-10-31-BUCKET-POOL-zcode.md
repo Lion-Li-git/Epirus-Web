@@ -60,6 +60,20 @@
 - **诚实边界**：①的"各格都要"含 n=5，链条产物 n=5 行为可能不同于 n=3（缺口地图 v7 就是 n=3 miniT 0.6/n=5 0.0 的分裂例）；
   两格读数都会印全表，不挑格。
 
+### 勘误（10-31 00:2x，开臂前落盘）
+
+§四写的"accept 事件加第三道闸"在 CEM 路径上**不存在对应物**——实查 `probe-cem-arm` 的 `--mode=cem`
+走裸 CEM 循环（采样→精英重拟合→best），没有 ESA 那套 verifyChild/棘轮（顺带发现：CEM48c meta 里
+`recipe.arenaLex=true` 在这条路是**死旗**，与千问 §九 verifGate 静默跳过同族）。门落两处，都是"验收收紧进选择"：
+
+- **elite 档（本臂用）**：精英重拟合只吃 cheap 审计达标的候选（按 fit 降序审，攒满 ELITE 或审计预算 16 次/代；
+  <2 个达标 ⇒ 该代退回纯 fit 精英并记 starved——搜索不饿死，压力按代记账）；
+- **best 档**：产物 best 必须达标（备用，本臂不开）。
+- 开关：`--masteryKey=bigT --masteryLine=0.1 --masteryGate=elite --masteryGames=12 --masteryN=3 --masteryTable=long`；
+  审计骑 `skill-mastery.auditCells`（与正式尺同一段代码，只差局数）；meta 带 `mastery.stat`，audits=0 响亮失败。
+- **冒烟读数（2.4k 局）**：门 90 审计 23.3% 达标、3/8 代饿退——起点包本体 bigT 0.0/局，但 σ=0.2 邻域 23% 的
+  突变能过 0.1/局 ⇒ 门可达、不饿死。环境补记：链条配方 = `EPIRUS_ARCH2=1:input=obs3 EPIRUS_PAIRED=1`。
+
 ## 五、proto/transfer 观测桶（用户指定方向，今晚已录基线）
 
 - 基线（缺口地图 §三）：现役包 proto = 优势锁定型（ep顶旗 154 vs 被集火旗 1）；transfer 0 次真转出去。

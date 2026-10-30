@@ -23,6 +23,7 @@
  *   pack 位置支持 'v7'（bundled 参照）与 'fixed:<key>'（only:* 阳性/阴性对照）。
  */
 import { readFileSync, writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { sandbox, loadChamp, chargeProfile } from '../audit-lib.mjs';
 import { install as installArch2, packCfgExit } from './arch2.mjs';
 import { createArena2, ARENA2_VERSION } from './arena2.mjs';
@@ -77,7 +78,7 @@ function loadPackParams(W, packPath) {
 }
 
 /* ---------- 事件级审计：包装 chooser（零扰动）+ 游标窗口 ---------- */
-function makeAuditor() {
+export function makeAuditor() {
   const games = [];
   let cur = null;
   return {
@@ -107,7 +108,7 @@ function makeAuditor() {
 }
 
 /* 局后回放：picks[i] 的回合窗口 = [marks[i], marks[i+1])（本回合结算 + 下回合开局前的全部事件） */
-function replay(audGame, evs) {
+export function replay(audGame, evs) {
   const rows = [];
   for (let i = 0; i < audGame.picks.length; i++) {
     const pk = audGame.picks[i];
@@ -164,23 +165,36 @@ function auditOne(spec, opts) {
     chooser = T.policyChooserN(params, TEMP);
     label = spec;
   }
+  const { cells } = auditCells(W, A, chooser, NCELLS.map((n) => ({ n, table: TABLE })), GAMES, SALT);
+  /* 珠经济单源（PREREG §二；fixed 对照没有 params → 跳过并标 n/a） */
+  let bead = null;
+  if (params) bead = chargeProfile(W, params, 'long', 20);
+  const fp = A.fp;
+  return { label, spec, table: TABLE, cells, bead, fp, gamesPerCell: GAMES, temp: TEMP };
+}
+
+/* ---------- 审计核心（模块出口：probe-cem-arm 的 mastery 门复用同一段，不另写第二套） ----------
+ * cellsSpec: [{n, table}]；在给定 arena2 实例上跑 games 局/格并按判据口径累计。 */
+export function auditCells(W, A, chooser, cellsSpec, games, salt) {
+  const R = W.EpirusRules;
   const aud = makeAuditor();
   const wrapped = aud.wrap(chooser);
   const cells = [];
-  for (const n of NCELLS) {
-    const idx = A.shapes.findIndex((s) => s.n === n && s.mode === TABLE);
-    if (idx < 0) throw new Error('没有桌形 ' + n + ':' + TABLE + '（可用 ' + A.shapes.map((s) => s.n + ':' + s.mode).join(',') + '）');
+  for (const spec of cellsSpec) {
+    const n = spec.n, table = spec.table;
+    const idx = A.shapes.findIndex((s) => s.n === n && s.mode === table);
+    if (idx < 0) throw new Error('没有桌形 ' + n + ':' + table + '（可用 ' + A.shapes.map((s) => s.n + ':' + s.mode).join(',') + '）');
     const st = {
-      n, table: TABLE, games: 0, rounds: 0, win: 0, clean: 0,
+      n, table, games: 0, rounds: 0, win: 0, clean: 0,
       okUses: {}, attempts: {},
       ringRuns: [],                       /* 本格全部 ok-ring 连段长度（诊断用） */
       chains: { ring: 0, cannon: 0, cannonEpMax: 0 },
       sem: { laserEyeHit: 0, laserEyeN: 0, miniTHit: 0, miniTN: 0 },
       obs: { proto: 0, transfer: 0, transferHit: 0, transferAmt: 0, holo: 0, protoHeat: 0, protoLead: 0, protoLow: 0, tHeat: 0, tLead: 0, tLow: 0, holoTargets: {} },
     };
-    for (let g = 0; g < GAMES; g++) {
+    for (let g = 0; g < games; g++) {
       aud.begin();
-      const r = A.playOne(wrapped, idx, g, SALT);
+      const r = A.playOne(wrapped, idx, g, salt);
       const evs = r.evs || [];
       const rows = replay(aud.games[aud.games.length - 1], evs);
       st.games++; st.rounds += r.rounds || 0; st.win += r.win ? 1 : 0; st.clean += r.clean ? 1 : 0;
@@ -241,14 +255,10 @@ function auditOne(spec, opts) {
       flushCannon(st, cannonRun);
       for (const L of gRuns) { st.ringRuns.push(L); if (L >= 3) st.chains.ring++; }
     }
-    /* 一格 = GAMES 局的聚合（此前误放在局循环里 ⇒ 同一对象推 N 遍，表尾重复行） */
+    /* 一格 = games 局的聚合 */
     cells.push(st);
   }
-  /* 珠经济单源（PREREG §二；fixed 对照没有 params → 跳过并标 n/a） */
-  let bead = null;
-  if (params) bead = chargeProfile(W, params, 'long', 20);
-  const fp = A.fp;
-  return { label, spec, table: TABLE, cells, bead, fp, gamesPerCell: GAMES, temp: TEMP };
+  return { cells, aud };
 }
 function flushCannon(st, run) {
   /* 三连 = 连续三回合 phase 1→2→3；非重叠扫三元组 */
@@ -416,4 +426,5 @@ function main() {
     console.log('\n[JSON] ' + out);
   }
 }
-main();
+/* CLI 与模块双用：直接执行才跑 main；被 import（probe-cem-arm 的 mastery 门）时只出 auditCells/verdictOf 等 */
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

@@ -26,6 +26,7 @@ import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 import { install as installArch2, verifyWired as verifyArch2Wired, readPack2 } from './proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
 import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   // 10-29 夜：扩表考卷（--arena2=1 才开）
+import { auditCells } from './proto2/skill-mastery.mjs';                      // 10-31 凌晨：mastery 门骑同一把审计尺
 import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } from './proto2/head-health.mjs';   // 10-30 傍晚：打分有没有牙
 
 /* §E679 补（10-22）：这台量具原先**没有输入消毒层**（D218 那条门当场抓到，是我今夜建它时就漏的）。
@@ -33,6 +34,7 @@ import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } 
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
+  'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap',
   'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -168,6 +170,23 @@ const HEAD_GATE = Number(arg('headGate', 0)) > 0;
  *     （搜索全程没问过考卷，只在起点重测里抖）。代 1 的三臂同配方也是 0 ⇒ 这条与换代无关，是配方的病。
  *   判据只钉"有没有被问过"这一件可机器判的事；"该问几次"依配方而变，不写死。 */
 const VERIF_GATE = Number(arg('verifGate', 0)) > 0;
+
+/* ===== `--masteryKey=`（ZCode · 10-31 凌晨，P4 大雷桶）：CEM 路径的 mastery 验收门 =====
+ * 结构出处：ARCH-2026-10-31-BUCKET-POOL（分桶专家池）——"验收收紧进选择"。
+ * CEM 路径本来**没有 accept/verify 事件**（CEM48c meta 里 arenaLex=true 实为死旗，本日查明）⇒ 门落在两处：
+ *   elite 档（缺省）：精英重拟合只吃"行为达标"的候选——按 fit 降序逐个 cheap 审计（同批固定局号=配对），
+ *     攒满 ELITE 个达标者或审计预算（--masteryCap，缺省 16 次/代）用尽为止；
+ *     达标者 <2 ⇒ 本代退回纯 fit 精英并记 starved（搜索不饿死，压力按代记账）。
+ *   best 档：产物 best 必须达标——top-fit 不达标就沿 fit 降序往下审，审到的第一个达标且超 bestFit 者当产物。
+ * 审计 = skill-mastery 的 auditCells（**同一段代码**，正式尺只差局数）：long n=3 × 12 局 × t=ARENA_TEMP。 */
+const MASTERY_KEY = arg('masteryKey', '');
+const MASTERY_GATE = arg('masteryGate', 'elite');   /* elite | best | off */
+const MASTERY_LINE = Number(arg('masteryLine', 0.1));
+const MASTERY_GAMES = Math.max(2, Number(arg('masteryGames', 12)) || 12);
+const MASTERY_N = Math.max(2, Number(arg('masteryN', 3)) || 3);
+const MASTERY_TABLE = arg('masteryTable', 'long');
+const MASTERY_CAP = Math.max(2, Number(arg('masteryCap', 16)) || 16);
+const MASTERY_ON = !!(MASTERY_KEY && MASTERY_KEY !== 'off' && MASTERY_GATE !== 'off');
 const HEAD_FIX = Math.max(2, Number(arg('headFixtures', 12)) || 12);
 const HEAD_TEMP = Number(arg('headTemp', 0.15)) || 0.15;
 const START_PACK = arg('start', 'docs/artifacts/eval-out/win-Ldemo.bak');
@@ -360,6 +379,28 @@ if (ARENA2) {
     console.log('   ‖ ⚠ 没装 arch2 ⇒ 这是 v7 包的 arena2 读数（不验 2.0 接线）');
   }
 }
+/* mastery 门的审计桌：与 ARENA 同一 refParams/temp（同一对手表同一温度），多要一份 wantEvents 事件流。 */
+var MAST_ARENA = null;
+const MASTERY_STAT = { audits: 0, pass: 0, starved: 0, bestGatedFail: 0, bestAccepted: 0, lastRate: null };
+if (MASTERY_ON) {
+  if (!ARENA2) { console.error('⛔ --masteryKey 需要 --arena2=1（审计必须骑同一张 arena2 对手表）'); process.exit(7); }
+  try { MAST_ARENA = createArena2(W, { refParams: ARENA_REF, temp: ARENA_TEMP, wantEvents: 1 }); }
+  catch (e) { console.error('⛔ mastery 审计桌建表失败：' + String(e && e.message || e)); process.exit(7); }
+  console.log('[cem-arm] ⚙ mastery 门开：key=' + MASTERY_KEY + ' ≥' + MASTERY_LINE + '/局 ‖ gate=' + MASTERY_GATE +
+    ' ‖ cheap 审计 ' + MASTERY_GAMES + ' 局 n=' + MASTERY_N + ':' + MASTERY_TABLE + ' t=' + ARENA_TEMP +
+    ' ‖ 每代审计上限 ' + MASTERY_CAP + ' ‖ 指纹 ' + MAST_ARENA.fp);
+}
+const masteryRate = function (params) {
+  if (!MASTERY_ON) return null;
+  const ch = T.policyChooserN(params, ARENA_TEMP);
+  const { cells } = auditCells(W, MAST_ARENA, ch, [{ n: MASTERY_N, table: MASTERY_TABLE }], MASTERY_GAMES, 101);
+  MASTERY_STAT.audits++;
+  const st = cells[0];
+  const rate = (st.okUses[MASTERY_KEY] || 0) / Math.max(1, st.games);
+  if (rate >= MASTERY_LINE) MASTERY_STAT.pass++;
+  MASTERY_STAT.lastRate = rate;
+  return rate;
+};
 /* P0-2（#161）：词典序地板 = v7 在**同一张冻结桌**上的逐格读数，必须在开臂前量好存底。
  * 同 salt 同局号 ⇒ 之后每个子代的冻结评估与它**逐局配对**，"低于地板"比的是权重差不是抽桌差。 */
 var V7_FLOOR = null;
@@ -833,7 +874,9 @@ if (MODE === 'esa') {
   let sd = new Float64Array(DIM).fill(SIG0);
   const r = rngFor(SEED);
   const iters = TARGET_G ? 1000000 : Math.max(1, Math.floor(EVALS / POP));
+  let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
   for (let it = 0; it < iters; it++) {
+    auditsBefore = MASTERY_STAT.audits;
     const cand = [], scored = [];
     for (let i = 0; i < POP; i++) {
       const v = new Float64Array(DIM);
@@ -841,7 +884,19 @@ if (MODE === 'esa') {
       cand.push(v); scored.push(evalOne(v, it, i));
     }
     const order = scored.map(function (s, i) { return i; }).sort(function (a, b) { return scored[b].fit - scored[a].fit; });
-    const keep = order.slice(0, Math.max(2, ELITE));
+    /* mastery 门 · elite 档：精英只吃达标者（按 fit 降序审计；<2 个达标 ⇒ 退回纯 fit 并记 starved） */
+    let keep;
+    if (MASTERY_ON && MASTERY_GATE === 'elite') {
+      const passers = [];
+      for (const k of order) {
+        if (passers.length >= Math.max(2, ELITE)) break;
+        if (MASTERY_STAT.audits - auditsBefore >= MASTERY_CAP) break;
+        const r = masteryRate(cand[k]);
+        if (r != null && r >= MASTERY_LINE) passers.push(k);
+      }
+      if (passers.length >= 2) keep = passers.slice(0, Math.max(2, ELITE));
+      else { MASTERY_STAT.starved++; keep = order.slice(0, Math.max(2, ELITE)); }
+    } else keep = order.slice(0, Math.max(2, ELITE));
     const nm = new Float64Array(DIM), ns = new Float64Array(DIM);
     for (let d = 0; d < DIM; d++) {
       let m = 0; for (const k of keep) m += cand[k][d]; m /= keep.length; nm[d] = m;
@@ -850,7 +905,17 @@ if (MODE === 'esa') {
       let v = 0; for (const k of keep) { const e = cand[k][d] - nm[d]; v += e * e; } v /= keep.length;
       ns[d] = Math.sqrt(v) < SIG_FLOOR ? SIG_FLOOR : Math.sqrt(v);
     }
-    const bf = scored[keep[0]].fit; if (bf > bestFit) { bestFit = bf; best = cand[keep[0]]; }
+    /* mastery 门 · best 档：产物必须达标（top-fit 不达标沿 fit 降序往下审；elite 档下 keep 已全达标，直落）。 */
+    const bf = scored[keep[0]].fit;
+    if (MASTERY_ON && MASTERY_GATE === 'best') {
+      for (const k of order) {
+        if (MASTERY_STAT.audits - auditsBefore >= MASTERY_CAP) break;
+        if (scored[k].fit <= bestFit) break;   /* 再往下审计也超不过现役 best */
+        const r = masteryRate(cand[k]);
+        if (r != null && r >= MASTERY_LINE) { bestFit = scored[k].fit; best = cand[k]; MASTERY_STAT.bestAccepted++; break; }
+        MASTERY_STAT.bestGatedFail++;
+      }
+    } else if (bf > bestFit) { bestFit = bf; best = cand[keep[0]]; }
     mean = nm; sd = ns;
     used += POP;
     if (TARGET_G) {
@@ -898,7 +963,9 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
   lineage: { parent: startLabel.indexOf('夹具包') === 0 ? START_PACK : 'random', parentHash: startHash,
     outHash: OUT ? (function () { try { return createHash('md5').update(JSON.stringify(P.pack(best))).digest('hex'); } catch (e) { return null; } })() : null,
     gen: OUT ? (function () { try { const vv = P.pack(best).v; return vv === 91 ? 2 : (vv === 90 ? 1 : null); } catch (e) { return null; } })() : null,
-    seed: SEED, recipe: { arenaLex: ARENA_LEX, arenaPerN: ARENA_PER_N, boN: BO_N, shapeCap: SHAPE_CAP, shapePick: SHAPE_PICK, warmShape: WARM_SHAPE } } };
+    seed: SEED, recipe: { arenaLex: ARENA_LEX, arenaPerN: ARENA_PER_N, boN: BO_N, shapeCap: SHAPE_CAP, shapePick: SHAPE_PICK, warmShape: WARM_SHAPE } },
+  /* mastery 门（ARCH-2026-10-31-BUCKET-POOL §四）：开着就必带计数，audits=0 视为没接电（见下方自证） */
+  mastery: MASTERY_ON ? { key: MASTERY_KEY, gate: MASTERY_GATE, line: MASTERY_LINE, games: MASTERY_GAMES, n: MASTERY_N, table: MASTERY_TABLE, cap: MASTERY_CAP, stat: MASTERY_STAT } : null };
 /* 打分健康度（2.0 臂才量：v7 那档没有“逐候选打分退化”这一格病，别把两件事混在一条读数里） */
 if (P.__arch2) {
   try {
@@ -939,6 +1006,13 @@ if (OUT) {
 }
 if (!QUIET) console.log(JSON.stringify(row));
 else console.log('RESULT ' + JSON.stringify(row));
+/* mastery 门自证（patch-must-prove-invoked）：开着但 0 审计 ⇒ 没接电，响亮退出；顺带印终态计数 */
+if (MASTERY_ON) {
+  console.log('[cem-arm] ⚑ mastery 门终态（' + MASTERY_KEY + ' ≥' + MASTERY_LINE + '/局 ' + MASTERY_GATE + ' 档）：审计 ' + MASTERY_STAT.audits +
+    ' ‖ 达标 ' + MASTERY_STAT.pass + '（' + (100 * MASTERY_STAT.pass / Math.max(1, MASTERY_STAT.audits)).toFixed(1) + '%）' +
+    ' ‖ 精英饿退 ' + MASTERY_STAT.starved + ' 代 ‖ best 档拒 ' + MASTERY_STAT.bestGatedFail + ' ‖ 末次审计率 ' + (MASTERY_STAT.lastRate == null ? '-' : MASTERY_STAT.lastRate.toFixed(3)) + '/局');
+  if (MASTERY_STAT.audits === 0) { console.error('⛔ mastery 门开着但 0 次审计 ⇒ 门没接电，本臂作废'); process.exit(7); }
+}
 console.log('⚠ inLoopBest 是各臂**循环内部**的分（GA 走 shaped/内部择优，CEM 走原始 fit）⇒ 跨臂不可比；跨臂只比 holdoutFit / holdoutFirst（同一函数同一场）。');
 if (ARENA) {
   console.log('⚑ arena2 终局（货币=' + ARENA_CUR + (ARENA_DIV ? '+多样性当选' : '') + (ARENA_STRAT ? '+分层场' : '') + '）：' + (ARENA_CUR === 'clean' ? '干净净胜' : '净胜') + ' ' + ho.fit.toFixed(3) + '（起点 ' + hoStart.fit.toFixed(3) + ' ⇒ Δ ' + (ho.fit - hoStart.fit).toFixed(3) + '）' +
