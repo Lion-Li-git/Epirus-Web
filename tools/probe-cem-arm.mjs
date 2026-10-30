@@ -950,6 +950,13 @@ if (row.arena && row.arena.esa) {
     row.verifGate = '红';
   } else if (VERIF_GATE) row.verifGate = '绿（verifications=' + vv + ' ‖ accepted=' + aa + '）';
   else row.verifGate = '未开闸';
+} else if (VERIF_GATE) {
+  /* ⚑ 10-30 晚补：GA/CEM 路径**没有 `arena.esa` 这个块** ⇒ 上面那段整个跳过 ⇒ 传了 `--verifGate=1` 也既不判也不印。
+   *   "闸没跑成"与"闸过了"同形是本仓最怕的那一族（今天 DS 的 9 枚 CEM 臂 meta 里就一格 `verifGate` 都没有）。
+   *   这里明写"不适用"，不许留空。 */
+  row.verifGate = '不适用（本臂 mode=' + row.mode + ' 没有 esa 计数 ⇒ 这条闸只判 ESA/精英接受口径）';
+  console.log('[cem-arm] ⚠ `--verifGate=1` 已传但**本臂没有 esa 计数**（mode=' + row.mode + '）⇒ 这条闸**不判**，不是"判过了"。' +
+    '⇒ CEM 每代整池评估 ⇒ 要判"搜索有没有被考卷回答"请看 `verifications` 之外的口径（如 冻结桌当选次数），或改用 ESA。');
 }
 if (OUT) { mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT + '.meta.json', JSON.stringify(row, null, 1), 'utf8'); }
 /* `--headGate=1` 的红要真的把批挡住 ⇒ 非零退出（产物已落盘，事后仍可复盘，但**回执不许被当合格臂引用**）。
