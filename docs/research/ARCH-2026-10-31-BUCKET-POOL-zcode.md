@@ -181,3 +181,11 @@
 **CLEAN 货币臂**：CEM48c-s7 起点 × s7/s11/s13/s23，`--arenaCur=clean`（训练循环直接优化 clean）
 + `--masteryKey=bigT --masteryLine=0.1`，24k。判定：≥3/4 粒全过（mastery ∧ clean ≥0.365 ∧ 短程）
 ⇒ 货币对齐成立、进配方；否则错位假说否定，clean 键回到"等用户裁"状态。
+
+### 勘误十（10-31 02:0x，B 层矩阵补格）
+
+能见度矩阵（勘误七）剩一格未测：**B 层（可见语义）× 有珠经济的强起点**——EX1 的失败归因是"无珠"
+（CEM48c-s7 蓄能 0/局），而 CEM48c-s11 有珠经济（蓄能 3.6/局、浪费 91.7%、花珠率 8.3%）且 clean 0.205。
+**LASER2 臂**：起点 CEM48c-s11 + `--masteryKey=laserEye --masteryLine=0.2`，种子 s7/s11/s13，24k。
+判读：若 mastery 达标且 clean ≥ 起点−0.05（=0.155，起点相对线；池级 0.365 对这条链太远）⇒ B 层"起点须有珠经济"
+结论闭合；若 mastery 仍不可达 ⇒ 珠经济也不是充分条件，laserEye 桶只剩 CH3 系路线。
