@@ -196,8 +196,11 @@
     if (p.hp <= 0) return fail('invalid', '已淘汰（无法行动）');
 
     function fail(outcome, reason) {
-      state.actions[pid] = { key, voided: true, outcome, target: tg, target2: tg2 };
-      ev2({ type: 'action', pid, key, outcome, reason });
+      state.actions[pid] = { key, voided: true, outcome, reason, target: tg, target2: tg2 };
+      /* ⚑ 10-31 凌晨（ZCode，obs3b 面配套）：事件补 `target/target2`——手势是公开信息，但此前事件流
+       *   不带目标 ⇒ "过去几回合谁把目标指向谁"在局后重建不出来（state.actions 每回合清空、
+       *   p.lastTarget 只剩上一手）。纯增字段，现有读者都按字段名取值 ⇒ 不受影响；D16 指纹会变（预期内）。 */
+      ev2({ type: 'action', pid, key, outcome, reason, target: tg, target2: tg2 });
       return { skill: key, outcome, reason };
     }
 
@@ -233,7 +236,7 @@
       key, voided: false, outcome: 'ok', opt: opt || null, target: tg, target2: tg2,
       phase: cost.cannonPhase || null
     };
-    ev2({ type: 'action', pid, key, outcome: 'ok' });
+    ev2({ type: 'action', pid, key, outcome: 'ok', target: tg, target2: tg2 });
     return { skill: key, outcome: 'ok' };
   }
 
