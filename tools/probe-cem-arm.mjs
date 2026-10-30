@@ -221,7 +221,7 @@ const ARENA_TEMP = (function () { const x = Number(arg('arenaTemp', arg('playtem
 /* `--arenaCur=net|clean`（10-29 夜 (a) 臂）：把训练货币从"净胜"换成"干净胜"（winner=我 且 hp>0；平/死者胜都按 0）。
  * 只换货币，别的一字不动 ⇒ 与同种子同预算的纯净胜臂是一变量对照。 */
 const ARENA_CUR = String(arg('arenaCur', 'net'));
-if (ARENA_CUR !== 'net' && ARENA_CUR !== 'clean') { console.error('⛔ --arenaCur 只认 net|clean（收到 ' + ARENA_CUR + '）'); process.exit(2); }
+if (ARENA_CUR !== 'net' && ARENA_CUR !== 'clean' && ARENA_CUR !== 'first') { console.error('⛔ --arenaCur 只认 net|clean|first（收到 ' + ARENA_CUR + '）'); process.exit(2); }
 /* `--arenaDiverse=1`（10-29 夜 (b) 臂）：净胜货币不变，**当选**加一条 Pareto 带：
  * 冻结验证里若 `净胜 ≥ 父代 − divTol` 且 `单卡占比 ≤ 父代 − divDelta` ⇒ 也接受（同分带选单卡低的）。
  * 为了不让"只反弹"父代把整轮卡死，父代单卡 >0.5 时每 divEvery 个子代无条件送一次冻结验证。 */
@@ -351,7 +351,7 @@ var V7_FLOOR = null;
 if (ARENA && (ARENA_LEX || ARENA_FPEN > 0)) {
   const fr = ARENA.evalParams(ARENA_REF, { phase: 'frozen', gamesPerShape: Math.max(8, FXG || 0), temp: ARENA_TEMP, cur: ARENA_CUR });
   V7_FLOOR = fr.byShape;
-  const cellOf = function (bs, k) { return ARENA_CUR === 'clean' ? bs[k].cleanScore : bs[k].score; };
+  const cellOf = function (bs, k) { return ARENA_CUR === 'first' ? bs[k].firstScore : (ARENA_CUR === 'clean' ? bs[k].cleanScore : bs[k].score); };
   console.log('[cem-arm] ⚙ **' + (ARENA_LEX ? '词典序当选开' : '地板罚项当选开') + '**（#161）：地板 = v7 冻结桌逐格（' + Object.keys(V7_FLOOR).length + ' 格 × ' + Math.max(8, FXG || 0) + ' 局/格，货币=' + ARENA_CUR + '，与子代同局配对）' + (ARENA_FPEN > 0 ? ' ‖ λ=' + ARENA_FPEN : ''));
   console.log('   地板：' + Object.keys(V7_FLOOR).map(function (k) { return k + ' ' + cellOf(V7_FLOOR, k).toFixed(3); }).join(' ‖ '));
 }
@@ -517,7 +517,7 @@ if (MODE === 'esa') {
   };
   const penOf = function (fit, share) { return fit - ARENA_PEN * Math.max(0, share - 0.5); };
   /* P0-2：词典序的元组与比较器（below = 低于地板格数，worst = 最差格余量，total = 冻结桌总分）。 */
-  const cellOf = function (bs, k) { return ARENA_CUR === 'clean' ? bs[k].cleanScore : bs[k].score; };
+  const cellOf = function (bs, k) { return ARENA_CUR === 'first' ? bs[k].firstScore : (ARENA_CUR === 'clean' ? bs[k].cleanScore : bs[k].score); };
   const lexTupleOf = function (bs) {
     let below = 0, worst = Infinity;
     /* --arenaPerN：先按 N 聚合（同 N 的 hp 模式取平均），再比「低于地板的 N 数 / 最差 N 余量」。 */

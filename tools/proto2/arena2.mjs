@@ -166,6 +166,8 @@ export function createArena2(W, opts) {
     const draw = rm.winner === 'draw';
     const wv = win ? 1 : (draw ? 0.5 : 0);
     const scoreNet = (wv - 1 / n) / (1 - 1 / n);
+    /* 夺1 货币（DS · 10-30 晚，用户问"夺1 要不要调"）：只看 win，hp 不管（与 clean 的区别只在死者胜）。 */
+    const scoreFirst = ((win ? 1 : 0) - 1 / n) / (1 - 1 / n);
     /* 干净胜货币（10-29 夜 (a) 臂）：只有 winner=我 **且 hp>0** 才算那一局的"胜"，平局/死者胜都按 0 记。
      * 动因：段 29 的 65.3% 里有一截是"hp≤0 仍判胜"；净胜把死者胜算赢 ⇒ 换这一档看它还值多少。 */
     const scoreClean = (((win && hp > 0) ? 1 : 0) - 1 / n) / (1 - 1 / n);
@@ -181,19 +183,19 @@ export function createArena2(W, opts) {
     return {
       shape: shape.n + ':' + shape.mode, n, mode: shape.mode,
       win, draw, clean: win && hp > 0, top2: ahead <= 1,
-      scoreNet, scoreClean, hp, rounds: rm.rounds || 0, acts, cat, classes,
+      scoreNet, scoreClean, scoreFirst, hp, rounds: rm.rounds || 0, acts, cat, classes,
     };
   }
 
   function emptyAgg() {
-    return { games: 0, win: 0, draw: 0, clean: 0, top2: 0, scoreSum: 0, cleanScoreSum: 0, rounds: 0, acts: 0, cat: {}, byShape: {}, byClass: {} };
+    return { games: 0, win: 0, draw: 0, clean: 0, top2: 0, scoreSum: 0, cleanScoreSum: 0, firstScoreSum: 0, rounds: 0, acts: 0, cat: {}, byShape: {}, byClass: {} };
   }
   function addRow(agg, r) {
     agg.games++; agg.win += r.win ? 1 : 0; agg.draw += r.draw ? 1 : 0; agg.clean += r.clean ? 1 : 0;
-    agg.top2 += r.top2 ? 1 : 0; agg.scoreSum += r.scoreNet; agg.cleanScoreSum += r.scoreClean; agg.rounds += r.rounds; agg.acts += r.acts;
+    agg.top2 += r.top2 ? 1 : 0; agg.scoreSum += r.scoreNet; agg.cleanScoreSum += r.scoreClean; agg.firstScoreSum += r.scoreFirst; agg.rounds += r.rounds; agg.acts += r.acts;
     for (const k in r.cat) agg.cat[k] = (agg.cat[k] || 0) + r.cat[k];
-    const sh = agg.byShape[r.shape] || (agg.byShape[r.shape] = { w: 0, g: 0, draw: 0, scoreSum: 0, cleanScoreSum: 0 });
-    sh.g++; sh.w += r.win ? 1 : 0; sh.draw += r.draw ? 1 : 0; sh.scoreSum += r.scoreNet; sh.cleanScoreSum += r.scoreClean;
+    const sh = agg.byShape[r.shape] || (agg.byShape[r.shape] = { w: 0, g: 0, draw: 0, scoreSum: 0, cleanScoreSum: 0, firstScoreSum: 0 });
+    sh.g++; sh.w += r.win ? 1 : 0; sh.draw += r.draw ? 1 : 0; sh.scoreSum += r.scoreNet; sh.cleanScoreSum += r.scoreClean; sh.firstScoreSum += r.scoreFirst;
     for (const c of r.classes) {
       const x = agg.byClass[c] || (agg.byClass[c] = { w: 0, g: 0, draw: 0 });
       x.g++; x.w += r.win ? 1 : 0; x.draw += r.draw ? 1 : 0;
@@ -204,12 +206,12 @@ export function createArena2(W, opts) {
     let mx = 0, key = null, nonji = 0;
     for (const k in agg.cat) { if (k !== R.SK.JI) { nonji += agg.cat[k]; if (agg.cat[k] > mx) { mx = agg.cat[k]; key = k; } } }
     const byShape = {};
-    for (const k in agg.byShape) { const x = agg.byShape[k]; byShape[k] = { games: x.g, first: x.w / x.g, draw: x.draw / x.g, score: x.scoreSum / x.g, cleanScore: x.cleanScoreSum / x.g }; }
+    for (const k in agg.byShape) { const x = agg.byShape[k]; byShape[k] = { games: x.g, first: x.w / x.g, draw: x.draw / x.g, score: x.scoreSum / x.g, cleanScore: x.cleanScoreSum / x.g, firstScore: x.firstScoreSum / x.g }; }
     const byClass = {};
     for (const k in agg.byClass) { const x = agg.byClass[k]; byClass[k] = { games: x.g, first: x.w / x.g, draw: x.draw / x.g }; }
     return {
       games: agg.games, first: agg.win / g, draw: agg.draw / g, clean: agg.clean / g, top2: agg.top2 / g,
-      score: agg.scoreSum / g, cleanScore: agg.cleanScoreSum / g, rounds: agg.rounds / g, acts: agg.acts / g,
+      score: agg.scoreSum / g, cleanScore: agg.cleanScoreSum / g, firstScore: agg.firstScoreSum / g, rounds: agg.rounds / g, acts: agg.acts / g,
       maxCard: key == null ? null : { key, share: mx / Math.max(1, nonji), nonji },
       cat: agg.cat, byShape, byClass, perGame: agg.perGameVec || null,
     };
@@ -235,17 +237,19 @@ export function createArena2(W, opts) {
        *   从"两批桌各自抖"降到"逐局差的抖"）。v2 起每局重置 bot 记忆，所以同局号确实同局面。 */
       const wantVec = !!c.perGame;
       const cleanCur = c.cur === 'clean';
+      const firstCur = c.cur === 'first';
       const vec = wantVec ? [] : null;
       for (let s = 0; s < shapes.length; s++) for (let g = 0; g < per; g++) {
         const row = playOne(sel, s, base + s * 1000 + g, salt);
         addRow(agg, row);
-        if (wantVec) vec.push(cleanCur ? row.scoreClean : row.scoreNet);
+        if (wantVec) vec.push(firstCur ? row.scoreFirst : (cleanCur ? row.scoreClean : row.scoreNet));
       }
       if (wantVec) agg.perGameVec = vec;
     } else throw new Error('evalChooser: phase 只认 loop|holdout|frozen（收到 ' + phase + '）');
     const out = finish(agg);
-    out.cur = c.cur === 'clean' ? 'clean' : 'net';
+    out.cur = c.cur === 'first' ? 'first' : (c.cur === 'clean' ? 'clean' : 'net');
     if (out.cur === 'clean') out.score = out.cleanScore;
+    if (out.cur === 'first') out.score = out.firstScore;
     return out;
   }
   function evalParams(params, cfg) {
