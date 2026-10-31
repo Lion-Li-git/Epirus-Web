@@ -1016,6 +1016,18 @@ if (OUT) {
   const packed = P.pack(best);
   writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
   row.wrote = OUT;
+  /* ⚑ 空臂标记（10-31）：产物与起点**逐字节相同** ⇒ 这一臂什么都没接受。
+   *   动因是实测：`OB3S-BIGT-s7.bak` 与 `OB3S-BIGT-s11.bak` 的 md5 与父本 `OB3S-C2-s7.bak` 全等
+   *   （各吃 24k 局、0 次接受），而它们在建表时算"两条子代"⇒ 演化图上是两条**假分叉**。
+   *   只在起点是真包时判（随机起点没有父本可对）；哈希口径 = md5(pack JSON)，
+   *   与 `parentHash`（md5 文件字节）**不同源不可互相对账**，所以这里现算两边。 */
+  if (startLabel.indexOf('夹具包') === 0) {
+    try {
+      const hOf = (arr) => createHash('md5').update(JSON.stringify(P.pack(arr))).digest('hex');
+      row.lineage.noOp = hOf(best) === hOf(START_COPY);
+      if (row.lineage.noOp) console.log('⚑ **空臂**：产物与起点 `' + START_PACK + '` 逐字节相同 ⇒ 整轮零次接受，别把它当分叉画进演化图。');
+    } catch (e) { row.lineage.noOp = null; }
+  }
   /* 代 2 补的标注：**产物自己说自己是哪一代理出来的**（容器字段 + 段表 + 每段权重区/bias 区 + 参数量）。
    * 为什么放这儿：以前读一枚包要照 `arch` 猜输入面、照长度猜形状，两处各写一遍下标就会静默错位
    *   （10-30 那笔事故：S1o 声明 5650、任何前向都不读 2688）。标注由 `pack()` 一次算出来 ⇒ 只有这一个真源。 */

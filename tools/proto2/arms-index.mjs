@@ -21,16 +21,26 @@ const hv = (x) => (x === null || x === undefined || !Number.isFinite(Number(x)) 
 const word = (x) => { const t = String(x || '-'); return t.indexOf('绿') === 0 ? '绿' : t.indexOf('红') === 0 ? '红' : t.indexOf('不适用') === 0 ? '不适用' : t.indexOf('未开闸') === 0 ? '未开闸' : t.slice(0, 6); };
 const armId = (f) => String(f).replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, '');
 
-const baks = readdirSync(DIR).filter((f) => f.endsWith('.bak')).map((f) => [f, statSync(DIR + '/' + f).mtimeMs]).sort((a, b) => a[1] - b[1]);
+/* 产物清单 = 现役 `.bak` + **作废归档目录里的同名产物**（10-31：obs3b 505 面瘦身后的 27 枚旧产物读不出、
+ *   已移进 `voided-obs3b505/`，但它们的 meta（读数）留在 `scratch/arms/` ⇒ 行必须还在，`file` 列指向归档路径，
+ *   这样"只剩读数"这件事在表上是看得见的，而不是悄悄少 27 行。 */
+const VOID = DIR + '/voided-obs3b505';
+const hasVoid = existsSync(VOID) ? readdirSync(VOID) : [];
+const baks = readdirSync(DIR).filter((f) => f.endsWith('.bak')).map((f) => [f, statSync(DIR + '/' + f).mtimeMs]);
+for (const f of hasVoid) if (f.endsWith('.bak') && existsSync(DIR + '/' + f) === false && existsSync(DIR + '/' + f + '.meta.json')) baks.push([f, statSync(VOID + '/' + f).mtimeMs]);
+baks.sort((a, b) => a[1] - b[1]);
 const rows = [], noMeta = [];
 for (const [f, mt] of baks) {
   const id = armId(f);
+  const inVoid = !existsSync(DIR + '/' + f);
   let m = null;
   try { m = JSON.parse(readFileSync(DIR + '/' + f + '.meta.json', 'utf8')); } catch (e) { noMeta.push(id); }
   const L = m && m.lineage ? m.lineage : {};
   const hh = m && m.headHealth && m.headHealth.pack ? m.headHealth.pack : {};
   const mc = m && m.arena && m.arena.bestMaxCard ? m.arena.bestMaxCard : null;
-  rows.push([id, DIR + '/' + f, L.gen != null ? L.gen : (m && m.container && m.container.gen != null ? m.container.gen : '-'),
+  /* `file` 列保持"纯路径"（别往路径里塞说明文字 ⇒ 下游按路径 join 的都会被咬）：
+   *   作废产物靠目录名 `voided-obs3b505/` 自证。 */
+  rows.push([id, (inVoid ? VOID : DIR) + '/' + f, L.gen != null ? L.gen : (m && m.container && m.container.gen != null ? m.container.gen : '-'),
     m && m.parent ? m.parent : (L.parent && L.parent !== 'random' ? armId(L.parent) : '-'),
     m ? m.mode : '-', m ? m.pop : '-', m ? m.seed : '-', m ? m.evals : '-', m && m.targetGames != null ? m.targetGames : '-',
     hv(m ? m.holdoutStartFit : NaN), hv(m ? m.holdoutFit : NaN),
