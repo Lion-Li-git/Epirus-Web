@@ -206,3 +206,18 @@ miniT 可见性检验（§十一末）指向的结构候选：**act×target 双�
 ③ 段全零 ⇒ 前向逐位等于 K=0。policy2 镜像 + browser-parity 加腿。
 **试验臂**：OB3C3-s11 起点 + `--masteryKey=miniT --masterySem=1 --masteryLine=0.1 --tinter=2`，种子 s7/s11，24k。
 判读：产物 miniT 语义比例显著 >0/10（对照无 tinter 的 0/10）且≥1/3 ⇒ 结构候选成立（白天按桶配方放大）；否则记录否定。
+
+## 搬家账（D 件，10-31 深夜 ZCode 按 PLAN-2026-10-31-NIGHT2 §二D 钉）
+
+**哪些桶线读数属于哪一代、复算入口在哪**（代 2/v:91 退役后，现役尺读不出 ⇒ 这些数字在引用前必须注明"代 2 读数"）：
+
+| 桶线 | 产物（代 2） | 复算入口 | 参数量 |
+|---|---|---|---|
+| 大雷 bigT | `BIGT1-s7.bak` / `BIGT1-s23.bak`（v:91 · obs3b 415 面） | `git worktree add --detach ../Epirus-gen2-edff808e edff808e`（删 qHead 前最后一代 2 尺）或 checkout 该笔跑当时尺；afterwards `supfit-gd --keySplit=1` 显式砍 qHead 搬运（6122→6089） | 6122 → 6089 |
+| 激光眼 laserEye | `CH3/CH2` 系（v:91 · obs3b） | 同上 | 同上 |
+| 电磁炮 railgun | **代 3 现役**：`gd3b-ks-sb.bak`（桶级 5/5，研究卷 +47.3%） | 现役尺直接读 | 7993 |
+
+- **结论口径**：凡引用 bigT/laserEye 桶的"桶专家已产出"读数，必须带"代 2 读数"前缀；池级表（pool-check）在代 3 候选集上
+  这两桶 **0/5** 不是"没产出过"，是"产物读不进现役尺"（`POOLCHECK-GEN3.json` 原件 + `skill-mastery` ⛔ 回执）。
+- Stage C 裁决依赖：删 obs3 双轨 = 这两桶的**唯一搬运通路**（`supfit-gd` 的显式砍 qHead 路线吃 obs3 面参数）
+  变成"必须重训"——代价挂在 `RESULTS-2026-10-31-OBS3B-SWITCH-qoder.md` §二十一 第 3 条，等用户裁。

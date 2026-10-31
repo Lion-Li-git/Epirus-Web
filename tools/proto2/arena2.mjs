@@ -88,12 +88,22 @@ export function createArena2(W, opts) {
   if (!o.refParams) throw new Error('createArena2: 需要 refParams（v7 参照，必须在 installArch2 **之前**读出）');
   const ref = Float64Array.from(o.refParams);
   const poolSeed = o.poolSeed == null ? POOL_SEED : Number(o.poolSeed);
-  const pool = buildPoolSeeded(T, ref, poolSeed);
+  /* `o.roster`（ZCode · 10-31 深夜，考卷搬迁备料）：**整表换对手池**（产品形状卷用：`OPP_SPECS` 的 7 脚本经
+   *   `makeAsChooser` 包好传入）。不给 ⇒ `buildPoolSeeded` 原路，逐字不变（默认路径回归腿：同包同旗标重跑读数逐字同）。
+   *   行形状 = {name, kind:'bot', sel}；指纹走 poolFingerprint（函数按源码散列 ⇒ 确定性）。 */
+  const pool = (o.roster && o.roster.length) ? o.roster : buildPoolSeeded(T, ref, poolSeed);
+  for (const x of (o.roster || [])) {
+    if (!x || typeof x.name !== 'string' || typeof x.sel !== 'function') throw new Error('createArena2: o.roster 行要 {name:string, sel:function}（收到 ' + JSON.stringify(x && x.name) + '）');
+  }
   const poolFp = poolFingerprint(pool);
   const roster = [];
-  for (const x of pool) roster.push({ name: x.name, kind: 'bot', sel: x.sel });
-  for (const s of R.skills) roster.push({ name: 'only:' + s.key, kind: 'fixed', sel: fixedChooser(P, T, R, s.key) });
-  roster.push({ name: 'random', kind: 'random', sel: null });
+  for (const x of pool) roster.push({ name: x.name, kind: x.kind || 'bot', sel: x.sel });
+  /* 整表换池时 **only:/random 两类行不再追加**：产品卷的抽签就该只在产品池里转（加回 only:* 会让
+   *   `ri % roster.length` 把单技能行又混进来 = 考卷没搬干净）。代价：stratified 的 fixedByKey 空 ⇒ 响亮拒。 */
+  if (!(o.roster && o.roster.length)) {
+    for (const s of R.skills) roster.push({ name: 'only:' + s.key, kind: 'fixed', sel: fixedChooser(P, T, R, s.key) });
+    roster.push({ name: 'random', kind: 'random', sel: null });
+  }
   const shapes = (o.shapes && o.shapes.length ? o.shapes : SHAPES).slice();
   const temp = o.temp == null ? TEMP_DEFAULT : Number(o.temp);
   if (!(temp > 0)) throw new Error('createArena2: temp 要正数（收到 ' + o.temp + '）');
@@ -111,6 +121,9 @@ export function createArena2(W, opts) {
   const stratified = !!o.stratified;
   const PREDATORS = ['bigT', 'reflect', 'snipe', 'guard'].filter((k) => R.skills.some((s) => s.key === k));
   if (stratified && !PREDATORS.length) throw new Error('createArena2: stratified=1 但捕食者键一个都不存在');
+  /* 整表换池 + stratified ⇒ 捕食者的 fixedByKey 必空（only:* 行没进 roster）⇒ 游戏时才炸 = 静默半开；
+   *   在门口响亮拒（产品卷本来就不分层，eval-5p 同形）。 */
+  if (o.roster && o.roster.length && stratified) throw new Error('createArena2: o.roster 整表换池时 stratified 必须关（捕食者行不在自选池里；分层是研究卷的旋钮）');
   /* 减毒（10-29 深夜）：满编分层场每局塞 min(席位,4) 个捕食者 ⇒ v7 干净净胜被打到 −0.003（机会线），
    *   场比被测对象还强、"进步"会被场强掩盖。`stratCap` 限每局捕食者数、`stratMix` 限多少比例的局用分层场
    *   （其余局退回平均场）⇒ 天敌仍每局/隔局在场，但不再一局四只。 */

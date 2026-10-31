@@ -16,9 +16,11 @@ import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi } from './pg-lib.mjs';
 import { pickChain } from './chain-lib.mjs';
+import { OPP_SPECS } from '../../server/opp-pool.mjs';            // 考卷搬迁：产品 7 脚本的单一来源
+import { makeAsChooser } from '../bot-chooser-lib.mjs';             // 同款包装（评测同款；文件在 tools/ 根不在 proto2/）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'arenaPool', 'arenaShapes'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -77,7 +79,19 @@ const up = (() => {
 if (!up || up.length !== P.paramCount()) { console.error('⛔ 上游读不出/参数数不符：' + UP + '（' + (up ? up.length : 'null') + ' vs ' + P.paramCount() + '）'); process.exit(2); }
 const ly = layoutOf(P);
 if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 ⇒ pg-lib 拒跑'); process.exit(2); }
-const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: true, stratCap: 2, stratMix: 0.5 });
+/* `--arenaPool=product`（考卷搬迁，ZCode · 10-31 深夜）：采集卷整表换产品 7 脚本 + 产品形状（缺省 3:multi,5:multi）。
+ *   搬了就**不分层**（产品卷同形）；不搬 ⇒ 原 mild 分层档逐字不变。 */
+const A2_ROSTER = String(arg('arenaPool', '')) === 'product' ? (() => {
+  const PRODUCT7 = ['random', 'defend', 'antidef', 'wall', 'farmer', 'heavyfire', 'deepsaver'];
+  const asC = makeAsChooser({ T: T, R: W.EpirusRules });
+  return OPP_SPECS.filter((x) => PRODUCT7.indexOf(x.name) >= 0).map((x) => {
+    const fn = W.EpirusBots[x.fn];
+    if (typeof fn !== 'function') { console.error('⛔ 产品池缺函数：' + x.fn); process.exit(2); }
+    return { name: x.name, kind: 'bot', sel: asC(fn) };
+  });
+})() : null;
+const A2_SHAPES = A2_ROSTER ? String(arg('arenaShapes', '3:multi,5:multi')).split(',').map((x) => { const m = /^(\d+):([a-z0-9]+)$/i.exec(x.trim()); if (!m) { console.error('⛔ --arenaShapes 格式 n:mode（收到 ' + x + '）'); process.exit(2); } return { n: Number(m[1]), mode: m[2] }; }) : null;
+const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: !A2_ROSTER, stratCap: A2_ROSTER ? undefined : 2, stratMix: A2_ROSTER ? undefined : 0.5, roster: A2_ROSTER || undefined, shapes: A2_SHAPES || undefined });
 
 /* ---- 收集：与 chain-supfit 逐字同流（seed 20261030 LCG、同 salt/局号、同教师、同克隆）----
  * ⚑ `--dagger=R`（默认 0）：round 0 = 教师自访（= A 臂原样，局号 300000+/盐 4242）；
@@ -91,6 +105,19 @@ const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 42
  *   v7 读数走 fit2 的同款入口 `P.value(state,pid,key,params,sh,cand)`（形参次序有在册勘误，别动）。
  *   默认 `chain` 逐字不变（回归腿：`--teacher=chain` 产物与已登记 md5 对表）。 */
 const TEACHER = String(arg('teacher', 'chain'));
+/* `--teacher=toolkit`（ZCode · 10-31 深夜，用户点名的主线）：教师 = **杂货铺脚本本体**（`EpirusBots.pickToolKit`，
+ *   全能地板 + 计划层 P0~P7：聚能环 3 珠链 / 避雷针 / 大雷三层选靶 / 贴贴渐进 / 过载炮 phase / 断环）。
+ *   用户原话：v7 当年"克隆杂货铺之后训练"出了很会聚能环+大雷的包——问的是新网络能不能学得**更充分**、别的技能也会用。
+ *   与 chain/v7mix 的本质区别：这是**每手都有标签的多技能教师**（不是只会弃权的单链），广度来自地板（pickMix 系）。
+ *   key→候选映射：蓄能两枚珠种里**优先电珠**（链线教训：电珠是炮与避雷针的门票；键层 keySplit 已把珠种抬进键层）。
+ *   ⚑ pickToolKit 读 `state.events`（"这局用过什么"）——cloneState 是 JSON 往返、events 在 ⇒ 克隆态重标不漂。 */
+const keyToCand = (cs, key) => {
+  if (!key) return null;
+  const hit = cs.filter((c) => c.key === key);
+  if (!hit.length) return null;
+  if (key === R.SK.CHARGE) { const e = hit.find((c) => (c.bead || '') === 'elec'); if (e) return e; }
+  return hit[0];
+};
 const v7Pick = (state, pid, cs) => {
   let bi = -1, bv = -Infinity;
   for (let i = 0; i < cs.length; i++) {
@@ -102,6 +129,10 @@ const v7Pick = (state, pid, cs) => {
 };
 const teacherPick = TEACHER === 'v7mix'
   ? (state, pid, cs) => pickChain(state, pid, cs, R) || v7Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : TEACHER === 'toolkit'
+    ? (state, pid, cs, legal) => keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+    : TEACHER === 'chainmix'
+    ? (state, pid, cs, legal) => pickChain(state, pid, cs, R) || keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0 };
 /* 打出去的那一手 vs 教师（只在学生自访轮里量）——与 `LABEL`（克隆态 argmax 口径）是**两个不同的数** */
@@ -113,11 +144,11 @@ function collectInto(dst, srcParams, idBase) {
     if (!(legal && legal.length >= 2)) return;
     const cs = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
     if (cs.length < 2) return;
-    const t0 = teacherPick(state, pid, cs);
+    const t0 = teacherPick(state, pid, cs, legal);
     if (!t0) return;
     const cl = S.cloneState(state); cl.rng = { next: rnd };
     const cs2 = P.candidatesFor(cl, pid, T.econBase(cl, pid, legal), { lockTarget: false }) || [];
-    const again = teacherPick(cl, pid, cs2);
+    const again = teacherPick(cl, pid, cs2, legal);
     if (!again || !cs2.length) { LABEL.gone++; return; }
     /* tape 的输入与参数无关 ⇒ 收集时算一次，之后任意参数重放（单源：arch2 wantTape） */
     const fr = P.forwardCands(cl, pid, cs2, up, { temp: 1, wantTape: 1 });
@@ -137,7 +168,7 @@ function collectInto(dst, srcParams, idBase) {
     play = (state, pid, legal) => {
       if (dst.length < NGRP) record(state, pid, legal);
       const cs3 = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
-      const a = teacherPick(state, pid, cs3);
+      const a = teacherPick(state, pid, cs3, legal);
       return a ? { key: a.key, target: a.target == null ? null : a.target, target2: a.target2 == null ? null : a.target2, bead: a.bead || null } : { key: R.SK.JI };
     };
   } else {
@@ -151,7 +182,7 @@ function collectInto(dst, srcParams, idBase) {
        *   （教师从不），若这条也 100% 就是我自己的读数接错线。 */
       {
         const csP = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
-        const t = teacherPick(state, pid, csP);
+        const t = teacherPick(state, pid, csP, legal);
         if (t && csP.length >= 2) {
           PLAY.n++;
           const same = act && act.key === t.key && (t.bead || null) === (act.bead || null);

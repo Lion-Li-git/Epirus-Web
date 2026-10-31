@@ -27,7 +27,9 @@ import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 import { install as installArch2, verifyWired as verifyArch2Wired, readPack2 } from './proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
 import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   // 10-29 夜：扩表考卷（--arena2=1 才开）
 import { auditCells } from './proto2/skill-mastery.mjs';                      // 10-31 凌晨：mastery 门骑同一把审计尺
-import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } from './proto2/head-health.mjs';   // 10-30 傍晚：打分有没有牙
+import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } from './proto2/head-health.mjs';
+import { OPP_SPECS } from '../server/opp-pool.mjs';               // 考卷搬迁：产品 7 脚本的单一来源
+import { makeAsChooser } from './bot-chooser-lib.mjs';             // 同款包装（评测同款）
 
 /* §E679 补（10-22）：这台量具原先**没有输入消毒层**（D218 那条门当场抓到，是我今夜建它时就漏的）。
  * 拼错的旗标被静默忽略 = 读数按默认档跑完而没人知道 ⇒ 与"黑键"同族。名单跟着 `arg('…')` 走。 */
@@ -35,7 +37,7 @@ const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
   'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap', 'masterySem', 'masteryMax',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames', 'arenaPool', 'arenaShapes'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -329,6 +331,8 @@ if (BO_N && (FXALL || arg('fxQuota', '') !== '' || PRESEL === 'parent' || (Numbe
 /* 健康度量的 v7 参照：**必须在装 2.0 档之前**读（装完之后 `P.unpack` 只认 2.0 容器 ⇒ 那时再读就是 null，
   这条纪律在册是 selftest2 的 T14 教的）。--arena2 已经读过一次，没开 arena2 的臂这里补读。 */
 let V7_HEALTH_REF = null;
+let ARENA_ROSTER = null;   /* --arenaPool=product 时 = 产品 7 脚本的 chooser 表（考卷搬迁） */
+let ARENA_SHAPES = null;   /* --arenaShapes 覆盖（缺省 = 产品两格 3:multi,5:multi） */
 let ARENA_REF = null;
 if (ARENA2) {
   const c0 = loadChamp(W, 'js/bundled-champion-3p.js', HERE + '/..');
@@ -336,6 +340,23 @@ if (ARENA2) {
   ARENA_REF = Float64Array.from(c0);
   V7_HEALTH_REF = Float64Array.from(c0);
   if (MODE === 'ga') { console.error('⛔ --arena2 没接 GA 的内部 trainer（它走 T.makeTrainer/step，不吃本工具的 evalOne）⇒ 拒绝静默按旧口径跑'); process.exit(7); }
+  /* `--arenaPool=product`（ZCode · 10-31 深夜，考卷搬迁）：对手池整表换成**产品 7 脚本**（eval-5p 的 CORE 池；
+   *   单一来源 = server/opp-pool.mjs `OPP_SPECS` + tools/bot-chooser-lib.mjs `makeAsChooser`——评测同款包装）。
+   *   `--arenaShapes=3:multi,5:multi`（缺省 = 产品两格）。⚑ 分层在自选池上被 arena2 响亮拒（捕食者行不在池里）。 */
+  const ARENA_POOL_ARG = String(arg('arenaPool', ''));
+  if (ARENA_POOL_ARG && ARENA_POOL_ARG !== 'product') { console.error('⛔ --arenaPool 只认 product（收到 ' + ARENA_POOL_ARG + '）'); process.exit(2); }
+  if (ARENA_POOL_ARG === 'product') {
+    const PRODUCT7 = ['random', 'defend', 'antidef', 'wall', 'farmer', 'heavyfire', 'deepsaver'];
+    const asC = makeAsChooser({ T: T, R: W.EpirusRules });
+    ARENA_ROSTER = OPP_SPECS.filter((x) => PRODUCT7.indexOf(x.name) >= 0).map((x) => {
+      const fn = W.EpirusBots[x.fn];
+      if (typeof fn !== 'function') { console.error('⛔ 产品池缺函数：' + x.fn + '（核对 server/opp-pool.mjs 与 js/train/bots.js）'); process.exit(2); }
+      return { name: x.name, kind: 'bot', sel: asC(fn) };
+    });
+    if (ARENA_ROSTER.length !== PRODUCT7.length) { console.error('⛔ 产品池 7 脚本没凑齐（得到 ' + ARENA_ROSTER.length + '）'); process.exit(2); }
+    const SHP = String(arg('arenaShapes', '3:multi,5:multi'));
+    ARENA_SHAPES = SHP.split(',').map((s) => { const m = /^(\d+):([a-z0-9]+)$/i.exec(s.trim()); if (!m) { console.error('⛔ --arenaShapes 格式 n:mode（收到 ' + s + '）'); process.exit(2); } return { n: Number(m[1]), mode: m[2] }; });
+  }
 }
 /* ===== §E821（10-28 傍晚 · 千问）：`EPIRUS_ARCH2` ⇒ 两臂都训在 **2.0 结构**上 =====
  * 与 `tools/train-3p.mjs` 那处同一手法（覆盖沙箱里的导出入口，`js/**` 不动 ⇒ 规则指纹不变），
@@ -404,7 +425,7 @@ if (!OUT) OUT = defaultOut();   // 缺省名要扫目录取号 ⇒ 只能在起�
 /* arena2 只在起点粒定下来之后建表；它用 v7 参照固定对手表，与起点粒无关（起点不参与建桌）。 */
 var ARENA = null;
 if (ARENA2) {
-  try { ARENA = createArena2(W, { refParams: ARENA_REF, temp: ARENA_TEMP, highN: ARENA_HIGH_N, stratified: ARENA_STRAT, stratCap: ARENA_STRAT_CAP, stratMix: ARENA_STRAT_MIX }); }
+  try { ARENA = createArena2(W, { refParams: ARENA_REF, temp: ARENA_TEMP, highN: ARENA_HIGH_N, stratified: ARENA_STRAT, stratCap: ARENA_STRAT_CAP, stratMix: ARENA_STRAT_MIX, roster: ARENA_ROSTER || undefined, shapes: ARENA_SHAPES || undefined }); }
   catch (e) { console.error('⛔ arena2 建表失败：' + String(e && e.message || e)); process.exit(7); }
   console.log('[cem-arm] ⚙ 扩表 arena2 开：指纹 ' + ARENA.fp);
   console.log('   ‖ 桌形 ' + ARENA2_SHAPES.length + '（' + ARENA.shapes.map(function (s) { return s.n + ':' + s.mode; }).join(',') + '）' +
