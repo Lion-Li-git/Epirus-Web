@@ -18,7 +18,7 @@ import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi } from '.
 import { pickChain } from './chain-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -38,7 +38,10 @@ if (OBJ !== 'key' && OBJ !== 'cand') { console.error('⛔ --objective 只认 key
 /* DAgger（§十三 边界②的正解）：轮数默认 0 ⇒ 只有教师自访，路径与 A 臂逐字同 */
 const DAG = Math.max(0, Math.min(6, Number(arg('dagger', 0)) || 0));
 const DAG_TEMP = Number(arg('dagtemp', 0.15));
-const POOL = Math.max(NGRP, Number(arg('pool', 1200)) || 1200);   /* 训练池上限（教师 600 永远保留，学生态按新旧裁） */
+const POOL = Math.max(NGRP, Number(arg('pool', 1200)) || 1200);
+/* `--shapeBal=1`：把采集配额**摊到全部桌形**（默认 0 = 现役顺序档：够 NGRP 就停 ⇒ 800 组只落在前 2 个桌形里，
+ *   这是 10-31 夜里查出来的采集覆盖洞：考场 11 个桌形、采集只见 2 个）。 */
+const SHAPEBAL = Number(arg('shapeBal', 0)) ? 1 : 0;   /* 训练池上限（教师 600 永远保留，学生态按新旧裁） */
 
 const W0 = sandbox();
 const refParams = Float64Array.from(loadChamp(W0, 'js/bundled-champion-3p.js', ''));
@@ -61,8 +64,11 @@ let seed = 20261030;
 const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 const teacherPick = (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0 };
+/* 打出去的那一手 vs 教师（只在学生自访轮里量）——与 `LABEL`（克隆态 argmax 口径）是**两个不同的数** */
+const PLAY = { n: 0, hit: 0, stuckCharge: 0, missCharge: 0, missFire: 0 };
 
 function collectInto(dst, srcParams, idBase) {
+  let curShp = -1;   /* 当前桌形（覆盖自证用） */
   const record = (state, pid, legal) => {
     if (!(legal && legal.length >= 2)) return;
     const cs = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
@@ -79,7 +85,7 @@ function collectInto(dst, srcParams, idBase) {
     /* 教师那一枚在候选表里的下标（pickChain 返回的是 cs2 里的对象本身 ⇒ 按身份找，不按 key 找） */
     const wIdx = cs2.indexOf(again);
     if (OBJ === 'cand' && wIdx < 0) { LABEL.gone++; return; }
-    dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: again.key, want0: t0.key,
+    dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: again.key, want0: t0.key, shp: curShp,
       wantIdx: wIdx, wantBead: again.bead || null });
     LABEL.keys++;
     if (again.key !== t0.key) LABEL.moved++; else LABEL.ok++;
@@ -96,16 +102,47 @@ function collectInto(dst, srcParams, idBase) {
     const ch = A2.chooserOf(srcParams, DAG_TEMP);
     play = (state, pid, legal) => {
       if (dst.length < NGRP) record(state, pid, legal);
-      return ch(state, pid, legal);
+      const act = ch(state, pid, legal);
+      /* ⚑ Played-action 一致率（10-31 夜里加，因为"自访留出 100%"与考场读数打脸才补的这条）：
+       *   留出一致率量的是**克隆态上的 argmax**；这一条量的是**真正打出去的那一手**。
+       *   两者分开才能分清"包不认教师"与"包认教师但走漏"——OB3CH 起点那粒 92% 的蓄能打在 ep=2 上
+       *   （教师从不），若这条也 100% 就是我自己的读数接错线。 */
+      {
+        const csP = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
+        const t = teacherPick(state, pid, csP);
+        if (t && csP.length >= 2) {
+          PLAY.n++;
+          const same = act && act.key === t.key && (t.bead || null) === (act.bead || null);
+          if (same) PLAY.hit++;
+          else {
+            if (act && act.key === R.SK.CHARGE && t.key === R.SK.JI) PLAY.stuckCharge++;   // 教师弃权、包去蓄
+            if (act && act.key === R.SK.JI && t.key === R.SK.CHARGE) PLAY.missCharge++;    // 教师让蓄、包弃权
+            if (act && act.key === R.SK.JI && t.key === R.SK.RAILGUN) PLAY.missFire++;     // 窗口开着、包不放
+          }
+        }
+      }
+      return act;
     };
   }
-  for (let s = 0; s < A2.shapes.length && dst.length < NGRP; s++) {
-    for (let g = 0; g < 60 && dst.length < NGRP; g++) A2.playOne(play, s, idBase + s * 1000 + g, 4242);
+  if (SHAPEBAL) {
+    /* 配额摊在**组**上（第一版摊在局上 ⇒ 800 组的上限在前 2 形就撞掉，等于没改——这条已用 `覆盖 x/11 形` 自证堵死） */
+    const q = Math.max(2, Math.ceil(NGRP / A2.shapes.length));
+    for (let s = 0; s < A2.shapes.length; s++) {
+      curShp = s;
+      const before = dst.length;
+      for (let g = 0; g < 60 && dst.length - before < q; g++) { if (dst.length >= NGRP) break; A2.playOne(play, s, idBase + s * 1000 + g, 4242); }
+    }
+  } else {
+    for (let s = 0; s < A2.shapes.length && dst.length < NGRP; s++) {
+      curShp = s;
+      for (let g = 0; g < 60 && dst.length < NGRP; g++) A2.playOne(play, s, idBase + s * 1000 + g, 4242);
+    }
   }
 }
 
 const groups = [];
 collectInto(groups, null, 300000);
+function shapeCov(list) { const m = {}; for (const g of list) m[g.shp] = (m[g.shp] || 0) + 1; const ks = Object.keys(m); return ks.length + '/' + A2.shapes.length + ' 形（逐形 ' + ks.map((k) => m[k]).join(',') + '）'; }
 if (groups.length < 60) { console.error('⛔ 只抓到 ' + groups.length + ' 组 ⇒ 不做'); process.exit(2); }
 const cut = Math.floor(groups.length * 0.75);
 const train0 = groups.slice(0, cut), test = groups.slice(cut);
@@ -148,6 +185,7 @@ const t0 = Date.now();
 const base = like(up, test);
 console.log('# supfit-gd（Adam+反传） ‖ 目标=' + OBJ + ' ‖ 轮=' + DAG + ' ‖ 上游 ' + UP.replace(/^.*[\\/]/, '') + ' ‖ 面=' + (got.cfg.input || '?') +
   ' ‖ 组 ' + groups.length + '（训 ' + train0.length + ' ‖ 测 ' + test.length + '）');
+console.log('  ⚑ 采集覆盖（教师自访，shapeBal=' + SHAPEBAL + '）：' + shapeCov(groups));
 console.log('  ⚑ 标签对账（克隆态重算后）：未变 ' + LABEL.ok + ' ‖ 变了 ' + LABEL.moved + ' ‖ 作废 ' + LABEL.gone + '（分母 ' + LABEL.keys + '）');
 console.log('  起点：加权似然 ' + base.ll.toFixed(4) + ' ‖ ' + (OBJ === 'cand' ? '同枚 top-1' : '同键 top-1') + ' ' + (100 * base.agree).toFixed(1) + '% ‖ 加权一致率 ' + (100 * base.wAgree).toFixed(1) + '%');
 
@@ -210,6 +248,9 @@ for (let r = 1; r <= DAG; r++) {
   trainList = train0.concat(stuTrain);
   pvCur = adamFit(pvCur, trainList, like(pvCur, test).ll, r);
   const tr = like(pvCur, test), ts = like(pvCur, stuTest);
+  console.log('  轮 ' + r + ' ‖ 学生态采集覆盖（shapeBal=' + SHAPEBAL + '）：' + shapeCov(gS));
+  console.log('  轮 ' + r + ' ‖ 打出去的手 vs 教师：一致 ' + (100 * PLAY.hit / Math.max(1, PLAY.n)).toFixed(1) + '%（' + PLAY.n + ' 手）' +
+    ' ‖ 教师弃权包去蓄 ' + PLAY.stuckCharge + ' ‖ 教师让蓄包弃权 ' + PLAY.missCharge + ' ‖ 有窗不放 ' + PLAY.missFire);
   console.log('  轮 ' + r + ' ‖ 学生态 +' + gS.length + ' 组（池 ' + trainList.length + ' ‖ 标签对账 ' + (LABEL.keys - before.keys) + '，作废 ' + (LABEL.gone - before.gone) + '）' +
     ' ‖ 教师留出 ' + (100 * tr.agree).toFixed(1) + '% ‖ **学生自访留出 ' + (100 * ts.agree).toFixed(1) + '%（' + ts.n + ' 组）**');
   ROUNDS.push({ round: r, studentG: gS.length, trainG: trainList.length, teacherAgree: tr.agree, teacherLl: tr.ll, studentAgree: ts.agree, studentLl: ts.ll, studentN: ts.n });
@@ -241,7 +282,8 @@ const packed = P.pack(finalPv);
 writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
-  objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL,
+  objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL,
+  playedAgree: { n: PLAY.n, hit: PLAY.hit, stuckCharge: PLAY.stuckCharge, missCharge: PLAY.missCharge, missFire: PLAY.missFire },
   label: LABEL, supfitGd: { objective: OBJ, dagger: DAG, rounds: ROUNDS, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n,
     studentAgree: finStudent ? finStudent.agree : null, studentN: finStudent ? finStudent.n : 0,
     byKey: Object.keys(fin.byKey).map((k) => ({ key: k, n: fin.byKey[k].n, hit: fin.byKey[k].hit })), verdict },

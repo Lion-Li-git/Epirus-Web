@@ -72,7 +72,7 @@ function withCensus(W, sel, rec) {
     if (has(R.SK.CHARGE)) rec.chargeOffered++;
     if (has(R.SK.BIG_T)) rec.bigTOffered++;
     if (has(R.SK.RING)) rec.ringOffered++;
-    if (me.lastSkill === R.SK.CHARGE) { rec.afterCharge++; if (me.elec > 0) rec.afterChargeBead++; }
+    if (me.lastSkill === R.SK.CHARGE) { rec.afterCharge++; if (me.elec > 0) rec.afterChargeBead++; if (me.elec > 0 && me.ep >= 2) rec.afterChargeWindow++; }
     if (me.ringStreak >= 2) rec.ringStreak2++;
     const pick = sel(state, pid, legal);
     /* ⚑ 键内自由度（10-31 午后补）：`policy.js:680` 给「蓄能」**两枚同键候选**（bead='elec'/'boom'），
@@ -82,12 +82,13 @@ function withCensus(W, sel, rec) {
     const pk = pick && typeof pick === 'object' ? pick : (typeof pick === 'string' ? { key: pick } : null);
     if (pk && pk.key === R.SK.CHARGE) {
       if (pk.bead === 'elec') rec.chargeElec++; else if (pk.bead === 'boom') rec.chargeBoom++; else rec.chargeNoBead++;
+      rec.chargeAtEp[Math.min(9, me.ep | 0)]++;   /* 蓄前 ep：教师只在 ep≥3 蓄 ⇒ 这张直方图直接读出"会不会在快饿的时候花本钱包" */
     }
     return pick;
   };
 }
 function newCensus() {
-  return { decisions: 0, elecBead: 0, epGe2: 0, fireWindow: 0, railgunOffered: 0, chargeOffered: 0, bigTOffered: 0, ringOffered: 0, afterCharge: 0, afterChargeBead: 0, ringStreak2: 0, chargeElec: 0, chargeBoom: 0, chargeNoBead: 0 };
+  return { decisions: 0, elecBead: 0, epGe2: 0, fireWindow: 0, railgunOffered: 0, chargeOffered: 0, bigTOffered: 0, ringOffered: 0, afterCharge: 0, afterChargeBead: 0, afterChargeWindow: 0, ringStreak2: 0, chargeElec: 0, chargeBoom: 0, chargeNoBead: 0, chargeAtEp: new Array(10).fill(0) };
 }
 
 /* ===== 逐局跑一行：返回聚合 + 逐技能出手/共现 +  conditional 胜负 ===== */
@@ -199,14 +200,17 @@ for (const r of lines) {
 console.log('\n（括号里 = 出过手/至少出过一次这种手的**局数**，分母 = ' + lines[0].games + ' 局）');
 
 console.log('\n## 链的窗口普查（冠军席**每一次决策**上的分母；口径与 `evo.js chainKeysOf` 同字段：`me.elec` ‖ `me.lastSkill===charge`）');
-console.log('行 ‖ 决策 ‖ 持电珠 ‖ ep≥2 ‖ **开火窗=珠+2ジ** ‖ 炮进表 ‖ 蓄进表 ‖ 大雷进表 ‖ 环进表 ‖ 上手蓄能→这拍还有珠 ‖ **蓄的珠=电/爆/无**');
+console.log('行 ‖ 决策 ‖ 持电珠 ‖ ep≥2 ‖ **开火窗=珠+2ジ** ‖ 炮进表 ‖ 蓄进表 ‖ 大雷进表 ‖ 环进表 ‖ 上手蓄能→这拍还有珠 ‖ **蓄的珠=电/爆/无** ‖ 蓄→下一拍成窗 ‖ 蓄前ep 2/3/4/≥5');
 for (const r of lines) {
   const c = r.census;
+  const ce = c.chargeAtEp;
   console.log(r.label.padEnd(26) + ' ‖ ' + c.decisions + ' ‖ ' + (100 * c.elecBead / Math.max(1, c.decisions)).toFixed(1) + '%' +
     ' ‖ ' + (100 * c.epGe2 / Math.max(1, c.decisions)).toFixed(1) + '% ‖ ' + c.fireWindow + '(' + (100 * c.fireWindow / Math.max(1, c.decisions)).toFixed(1) + '%)' +
     ' ‖ ' + c.railgunOffered + ' ‖ ' + c.chargeOffered + ' ‖ ' + c.bigTOffered + ' ‖ ' + c.ringOffered +
     ' ‖ ' + c.afterChargeBead + '/' + c.afterCharge +
-    ' ‖ ' + c.chargeElec + '/' + c.chargeBoom + '/' + c.chargeNoBead);
+    ' ‖ ' + c.chargeElec + '/' + c.chargeBoom + '/' + c.chargeNoBead +
+    ' ‖ ' + c.afterChargeWindow + '/' + c.afterChargeBead +
+    ' ‖ ' + (ce[2] || 0) + '/' + (ce[3] || 0) + '/' + (ce[4] || 0) + '/' + ce.slice(5).reduce((x, y) => x + y, 0));
 }
 
 const shapeKeys = Object.keys(lines[0].byShape);
