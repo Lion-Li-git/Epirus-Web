@@ -25,7 +25,7 @@
  *   ④ **评估次数**是预算，不是墙钟 —— 2.0 的前向比 v7 贵，同 evals 下更慢，横比只比 evals。
  */
 import { readFileSync } from 'node:fs';
-import { scene as obs3Scene, candOf as obs3CandOf, isAblated, dims as obs3Dims } from './obs3.mjs';
+import { scene as obs3Scene, candOf as obs3CandOf, isAblated, dims as obs3Dims, seqLayout as obs3SeqLayout } from './obs3.mjs';
 
 /* ---- 特征切片（一律从 `P.features` 切，不自己重算）----
  * FEAT_S 213 = base(63) ‖ 对手槽 4×10 ‖ 历史(我 4 + 对手 4×4) ‖ T 5×4 ‖ B 5×14
@@ -223,6 +223,9 @@ export function install(W, opts) {
   const o2 = Object.assign({}, opts || {});
   if (!o2.skills) o2.skills = (R.skills && R.skills.length) || 27;
   const L = layout(o2);
+  /* 序列区的块归属从 MANIFEST 拿（10-31：从前这里按硬编码偏移切 `i<32/[32,48)`，obs3 交错发射 ⇒ 切错段）。
+   *   布局不自洽就当场抛，不许静默切错 —— 切错的消融读数比没有读数更坏。 */
+  if (isO3Input(L.input)) L.seqBlocks = obs3SeqLayout(R, L.input);
   const OPT = { mutMode: String((opts && opts.mutMode) || 'seg'), temp: 0.6, mutRel: Number(opts && opts.mutRel) > 0 ? 1 : 0,
     /* `mutOnly=<段名,段名>`（10-29 P2）：只在这几段上变异/交叉，其余**逐字保持不变**。
      *   动因：DS 的 P2 要"闭式解热启动 + ES 只动最后一层"——主干不动才谈得上"不是 ES 把主干压扁了"。
@@ -435,19 +438,18 @@ export function install(W, opts) {
     let p = 0;
     /* ⭐ 消融开关必须接在**网络这条路**上（10-29 11:3x 实测抓到的：只接在 `obs3.encode()` 里 ⇒ 七种消融全给出同一批数，
      *   因为 S1o 的前向自己拼 `xin/afbuf`，**不经过 encode()**）。块名与 obs3 的 MANIFEST 同一套 ⇒ 离线尺与网络同一语义。 */
-    const ABL = { g: isAblated('G'), priv: isAblated('S.private'), seq: isAblated('Q.seq'), bag: isAblated('Q.bag'), out: isAblated('Q.out'), sums: isAblated('P.add'), pool: isAblated('P.opp') };
+    const ABL = { g: isAblated('G'), priv: isAblated('S.private'), sums: isAblated('P.add'), pool: isAblated('P.opp') };
+    /* Q.* 这些块逐个问 `isAblated`（块名从 MANIFEST 来 ⇒ 面加了新 Q 块也不必回来改这里）*/
+    const SB = L.seqBlocks;
+    for (let z = 0; z < SB.length; z++) { const bn = SB[z]; if (!(bn in ABL)) ABL[bn] = isAblated(bn); }
     for (let i = 0; i < sc.g.length; i++) xin[p++] = ABL.g ? 0 : sc.g[i];
     for (let i = 0; i < sc.priv.length; i++) xin[p++] = ABL.priv ? 0 : sc.priv[i];
-    /* 序列块的切分：obs3 = [Q.seq 32 ‖ Q.out 16]；obs3b = [Q.seq 32 ‖ Q.out 16 ‖ Q.bag 30]（全连续，见 selfSeq）
-     *   两面的 out 都占 [32,48)；obs3b 的 bag 占 [48,78)。 */
+    /* 序列块切分**按 MANIFEST 逐列判**（10-31 修）：从前写死 `i<32→Q.seq ‖ [32,48)→Q.out`，
+     *   而 obs3 发射是按回合交错（每回合 cat8+out4）⇒ "关 Q.out"只打掉 16 位里的 8 位、还多清 8 位类别/族。
+     *   列数对不上就抛（发射改了、manifest 没改 = 静默切错，比没读数更坏）。 */
     const SEQ_LEN = sc.seq.length;
-    for (let i = 0; i < SEQ_LEN; i++) {
-      let zero;
-      if (i < 32) zero = ABL.seq;
-      else if (i < 48) zero = ABL.out;
-      else zero = ABL.bag;                        /* 只有 obs3b 有尾段 bag；obs3 的 SEQ_LEN=48 循环到此为止 */
-      xin[p++] = zero ? 0 : sc.seq[i];
-    }
+    if (SB.length !== SEQ_LEN) throw new Error('序列区块表 ' + SB.length + ' 列与发射 ' + SEQ_LEN + ' 列不符（input=' + L.input + '）⇒ 消融会切错段');
+    for (let i = 0; i < SEQ_LEN; i++) xin[p++] = ABL[SB[i]] ? 0 : sc.seq[i];
     for (let i = 0; i < sc.sums.length; i++) xin[p++] = ABL.sums ? 0 : sc.sums[i];
     /* h_self ‖ mean(对手) ‖ max(对手) —— 三块，与 layout 的 poolN=3 一致 */
     for (let j = 0; j < L.seatH; j++) xin[p++] = isAblated('S.self') ? 0 : hSelf[j];

@@ -12,7 +12,7 @@
  */
 import { sandbox, loadChamp } from '../audit-lib.mjs';
 import { install, layout, paramCount, make, verifyWired, V_FOR_GEN, packInstallCfg, genOf } from './arch2.mjs';
-import { encode as obs3Encode, setAblate } from './obs3.mjs';
+import { encode as obs3Encode, setAblate, seqLayout } from './obs3.mjs';
 
 const W = sandbox();
 const P = W.EpirusPolicy, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
@@ -395,9 +395,35 @@ const O3 = await import('./obs3.mjs');
   setAblate(null); const off2 = lgOf();
   let threw17 = false;
   try { setAblate(['NO_SUCH_BLOCK']); obs3Encode(W, st17, 0, c17[0]); } catch (e) { threw17 = true; } finally { setAblate(null); }
-  ok(off1 === off2 && onId !== off1 && threw17,
+  /* ④ 序列区的块归属必须**从 MANIFEST 取**，不许前向自己写死偏移（10-31 修）。
+   *    病根（在册账）：obs3 的序列是按回合**交错**发射的（每回合 cat8 + out4），而 S1o 从前按
+   *    `i<32→Q.seq ‖ [32,48)→Q.out` 切 ⇒ "关 Q.out"只打掉 16 位真 out 里的 8 位、还顺带清了 8 位类别/族
+   *    （10-29 §第二十一段那两格"块承重"读数的块语义因此是**索引区间**，实测指纹：修复前 67b4f8bd / 修复后 dbf21b7c）。
+   *    这条腿判四件事：a) 装档必须带出 `L.seqBlocks`；b) 它逐字等于 `seqLayout(R, face)`；
+   *    c) obs3 是交错型（第一个 Q.out 在第 8 列，不在 32）；d) 带历史的中局快照上，不开/关 Q.out/关 Q.seq 三者互不相同
+   *    （若哪天有人把消融接成空操作，(d) 立刻红）。 */
+  const sb17 = A17.L && A17.L.seqBlocks;
+  const want17 = seqLayout(R, 'obs3');
+  const firstOut17 = want17.indexOf('Q.out');
+  let mid17 = null;
+  if (MID) {
+    setAblate(null); const m0 = (() => Array.from(P.forwardCands(MID.st, 0, MID.cands, p17, { temp: 0.5 }).logits).join(','))();
+    setAblate(['Q.out']); const mOut = (() => Array.from(P.forwardCands(MID.st, 0, MID.cands, p17, { temp: 0.5 }).logits).join(','))();
+    setAblate(['Q.seq']); const mSeq = (() => Array.from(P.forwardCands(MID.st, 0, MID.cands, p17, { temp: 0.5 }).logits).join(','))();
+    setAblate(null); mid17 = (m0 !== mOut && m0 !== mSeq && mOut !== mSeq);
+  }
+  /* obs3b 那一面是**连续**块（Q.seq 32 ‖ Q.out 16 ‖ Q.bag 30）⇒ 同一个真源在两面各给一个形状，两边都不许手写 */
+  const A17b = install(W, Object.assign({ input: 'obs3b', mutMode: 'seg' }, cfg));
+  const sb17b = A17b.L && A17b.L.seqBlocks;
+  const shape17b = sb17b ? (function (a) { const o = []; let last = null; for (const x of a) { if (x !== last) o.push(x); last = x; } return o.join('|'); })(sb17b) : 'none';
+  const outAt17b = sb17b ? sb17b.indexOf('Q.out') : -1;
+  A17b.restore();
+  ok(!!sb17 && sb17.join(',') === want17.join(',') && firstOut17 === 8 && mid17 === true
+    && !!sb17b && sb17b.length === 78 && shape17b === 'Q.seq|Q.out|Q.bag' && outAt17b === 32,
     'T17 消融开关接在网络路上 ‖ 关着两次逐字同 ' + (off1 === off2 ? '✔' : '✖') + ' ‖ 开 `C.id` logits 变化 '
-    + (onId !== off1 ? '✔' : '**✖ 接错层了（encode 不是网络那条路）**') + ' ‖ 未知块名当场抛 ' + (threw17 ? '✔' : '✖'));
+    + (onId !== off1 ? '✔' : '**✖ 接错层了（encode 不是网络那条路）**') + ' ‖ 未知块名当场抛 ' + (threw17 ? '✔' : '✖')
+    + ' ‖⭐ 序列切段来自 MANIFEST：obs3 第一个 out 在第 ' + firstOut17 + ' 列（交错=8 ✔）‖ obs3b 在 ' + outAt17b + ' 列、段型 ' + shape17b
+    + ' ‖ 中局快照上 不开/关Q.out/关Q.seq 三者互不相同 ' + (mid17 === true ? '✔' : '✖'));
   A17.restore();
 }
 

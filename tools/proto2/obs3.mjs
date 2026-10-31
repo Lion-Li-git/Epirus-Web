@@ -119,6 +119,15 @@ function manifest(R, ver) {
 }
 export function dims(R, ver) { return manifest(R || { skills: [] }, ver).length; }
 export function blocks(R, ver) { return manifest(R || { skills: [] }, ver); }
+/** 序列区（`sc.seq`）每一列属于哪个块 —— 只由 MANIFEST 这一份真源推出来（10-31 修）。
+ *  为什么要它：`arch2` 的 ctx 拼接从前**按偏移**切块（`i<32→Q.seq ‖ [32,48)→Q.out`），
+ *  而 obs3 的序列是**按回合交错**发射的（每回合 cat8+out4）⇒ 那把"消融 Q.out"的开关实际打掉了
+ *  16 位真 out 里的 8 位，还顺带清了 8 位类别/族（10-29 §第二十一段那两格读数的"块"是索引区间，不是语义块）。
+ *  obs3b 改成块连续后两种口径巧合一致，但巧合不是保证：面一改，硬编码偏移就静默切错。 */
+export function seqLayout(R, ver) {
+  return manifest(R || { skills: [] }, ver).filter(function (e) { return e.block && e.block.charAt(0) === 'Q'; })
+    .map(function (e) { return e.block; });
+}
 
 /* ---- 席位向量（obs3=22 维 / obs3b=81 维；**公开可读**；mePid<0 ⇒ lastTgtMe 自然全 0）---- */
 const NMAX = 10;              /* 2.0 的目标上限（用户 2.0 目标里写死 2–10 人）⇒ 人数族一律 /10，值域 ⊆ [0,1] */

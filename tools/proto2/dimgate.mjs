@@ -27,6 +27,51 @@ const ARM = arg('arm', '');
 const MIN_ROWS = Number(arg('min-rows', 400)) || 400;
 const MIN_GROUPS = Number(arg('min-groups', 40)) || 40;
 const MUT = arg('mutate', '');
+/* ===== 新模式：`--face=obs3|obs3b` ⇒ **可知必进**对账（千问 · 10-31 补 §十一④ 的欠账）=====
+ * 这把尺管的不是"有没有死维"（那是下面的 dump 路），而是**反方向**：该进来的信息进来了没有。
+ * 立它的理由是那笔在册账：obs3 把对手上一手写成了**类别**（`lsEnergy…lsSpecial`），于是
+ *   "对面那位是不是大雷用户"这类语义判据**在原理上不可学**——臂跑满 24k 局也只给出 0%，
+ *   而当时每个环节都把 0% 读成"训练不够"。判据可以先写、面可能装不下 ⇒ 开臂前必须过这张表。
+ * 通道按**每条技能键**逐一查（名单来自引擎 `R.skills`，不是我抄一份）：
+ *   ① 候选身份  `skill.<key>`（C.id）           ⇒ "这张牌现在可不可能选"
+ *   ② 自己上一手 `self.lsKey.<key>`（S.self）    ⇒ "我刚用过它"
+ *   ③ 对手上一手 `pool.mean/self.lsKey.<key>`（P.opp）⇒ "场上有没有人刚用过它"（池化后的存在性）
+ *   ④ 自己序列 bag `selfSeqBag.<key>`（Q.bag）    ⇒ "我最近几拍用过它"（多回合计划的第一段）
+ * `--require=②③④…` 点名的通道缺 ⇒ **红**（exit 1）；没点名只报数。
+ * 牙：`--mutate=dropkey` 从派生名单里抹掉一枚键的 ②⇒ 必须把**那一枚**报成缺，否则这把尺是摆设。 */
+const FACE = arg('face', '');
+if (FACE) {
+  const { sandbox } = await import('../audit-lib.mjs');
+  const { blocks } = await import('./obs3.mjs');
+  if (FACE !== 'obs3' && FACE !== 'obs3b') { console.error('⛔ --face 只认 obs3|obs3b（收到 ' + FACE + '）'); process.exit(2); }
+  const W = sandbox(); const R = W.EpirusRules;
+  const M = blocks(R, FACE);
+  const names = new Set(M.map((e) => e.name));
+  const REQ = { cand: '① 候选身份', own: '② 自己上一手', pool: '③ 对手上一手(池化存在性)', bag: '④ 自己序列 bag' };
+  /* 名字口径从盘面取（我第一版按'池化名带 self. 前缀'猜 ⇒ 把好通道报成缺，尺比没有还坏）：
+   *   S.self 里是 `self.lsKey.<key>`，池化侧是 `pool.mean.lsKey.<key>` / `pool.max.lsKey.<key>`。 */
+  const pat = { cand: (k) => 'skill.' + k, own: (k) => 'self.lsKey.' + k, pool: (k) => 'pool.mean.lsKey.' + k, bag: (k) => 'selfSeqBag.' + k };
+  const patMax = (k) => 'pool.max.lsKey.' + k;
+  if (arg('mutate', '') === 'dropkey') { const victim = R.skills[R.skills.length - 1].key; names.delete(pat.own(victim)); console.log('  ⚠ 变异：抹掉 ② 的 `' + pat.own(victim) + '`'); }
+  const miss = {}; for (const c of Object.keys(REQ)) miss[c] = R.skills.map((s) => s.key).filter((k) => !names.has(pat[c](k)));
+  console.log('# 可知必进对账 ‖ 面=' + FACE + ' ‖ 维 ' + M.length + ' ‖ 技能键 ' + R.skills.length + ' 枚');
+  for (const c of Object.keys(REQ)) {
+    const n = R.skills.length - miss[c].length;
+    console.log('  ' + REQ[c].padEnd(26) + ' 覆盖 ' + n + '/' + R.skills.length + (n === R.skills.length ? ' ✔' : ' ✘ 缺：' + miss[c].slice(0, 6).join(',') + (miss[c].length > 6 ? '…' : '')));
+  }
+  const missMax = R.skills.map((s2) => s2.key).filter((k) => !names.has(patMax(k)));
+  console.log('  3b 同一件事的 max 路：' + (R.skills.length - missMax.length) + '/' + R.skills.length + (missMax.length ? ' 缺 ' + missMax.slice(0, 6).join(',') : ' 全'));
+  console.log('  资源类（自身 ep/电珠/爆珠）：' + ['ownElec', 'ownBoom'].every((x) => names.has(x)) + ' ‖ 目标**席身份**：' + (M.some((e) => /tgtSeat|target\d?\.id/.test(e.name)) ? '在' : '不在（只有方向三档 self/me/other）') + ' ‖ 对手**席位级**身份：不在（池化按设计抹掉"谁"）');
+  const REQUIRE = String(arg('require', '')).split(',').map((x) => x.trim()).filter(Boolean);
+  const redChannels = REQUIRE.filter((c) => REQ[c] && miss[c].length);
+  if (arg('mutate', '') === 'dropkey') {
+    const victim = R.skills[R.skills.length - 1].key;
+    if (miss.own.indexOf(victim) < 0) { console.error('⛔ 牙：注入的 dropkey 没被抓到 ⇒ 这把尺是摆设'); process.exit(3); }
+    console.log('  ✔ 牙：dropkey 被抓到（' + victim + ' 报成缺）');
+  }
+  if (redChannels.length) { console.error('⛔ 要求的通道缺：' + redChannels.map((c) => REQ[c]).join(' ‖ ') + ' ⇒ 相关语义判据**先别开臂**（面上看不见）。'); process.exit(1); }
+  process.exit(0);
+}
 if (!DUMPS.length) { console.error('⛔ 需要 --dump=a.jsonl[,b.jsonl]'); process.exit(2); }
 let rows = [];
 for (const p of DUMPS) for (const l of readFileSync(p, 'utf8').split('\n').filter(Boolean)) { const r = JSON.parse(l); if (!ARM || r.arm === ARM) rows.push(r); }
