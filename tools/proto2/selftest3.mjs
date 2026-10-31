@@ -10,7 +10,14 @@ import { sandbox, loadChamp } from '../audit-lib.mjs';
 import { install, readPack2, packInstallCfg } from './arch2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP } from './pg-lib.mjs';
 
-const PACK = process.argv[2] || 'scratch/arms/OB3CH-s7.bak';
+/* ⚑ 包参数**必填**（10-31 晚改）：默认曾指向 `scratch/arms/OB3CH-s7.bak`，代 2（v:91）退役后裸跑必撞代闸。
+ *   scratch/ 不入库 ⇒ 没有可进 git 的默认 gen-3 包；与其埋一个会过期的默认值，不如响亮要参数。
+ *   本机现成代 3 包：`scratch/arms/gd3b-ks-sb.bak`（电磁炮桶专家，电磁炮线产物都在它下游）。 */
+const PACK = process.argv[2];
+if (!PACK) {
+  console.error('⛔ selftest3 需要 --包路径（代 3 容器）。例：node tools/proto2/selftest3.mjs scratch/arms/gd3b-ks-sb.bak（scratch/ 不入库，盘上没有就先跑一发 supfit-gd/pg-train 冒烟产出）。');
+  process.exit(2);
+}
 const W = sandbox();
 const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay, R = W.EpirusRules;
 loadChamp(W, 'js/bundled-champion-3p.js');

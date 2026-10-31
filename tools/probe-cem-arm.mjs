@@ -287,6 +287,14 @@ const ARENA_TEMP = (function () { const x = Number(arg('arenaTemp', arg('playtem
  * 只换货币，别的一字不动 ⇒ 与同种子同预算的纯净胜臂是一变量对照。 */
 const ARENA_CUR = String(arg('arenaCur', 'net'));
 if (ARENA_CUR !== 'net' && ARENA_CUR !== 'clean' && ARENA_CUR !== 'first') { console.error('⛔ --arenaCur 只认 net|clean|first（收到 ' + ARENA_CUR + '）'); process.exit(2); }
+/* ⚑ 响亮闸（ZCode · 10-31 晚，P-P5 首遍发臂当场栽的）：arena2 只在 `--arena2=1` 时建表，不带它 ⇒
+ *   `evalOne` 静默掉进 `T.scoreMemberN` 内部对手表，而 `--arenaCur/--arenaStrat/…` 那一族在那条路上
+ *   **全部不生效**（meta 里 `arena:null` / `currency:"scoreMemberN.fit"` 是事后才看得见的报警）。
+ *   点了 arena 族旗标却不给 `--arena2=1` ⇒ 当场拒跑。 */
+if (!ARENA2 && ['arenaCur', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'arenaHold', 'arenaHighN', 'arenaDiverse']
+    .some((k) => argv.some((x) => x === '--' + k || x.startsWith('--' + k + '=')))) {
+  console.error('⛔ 点了 arena2 族旗标却没给 `--arena2=1` ⇒ arena2 桌不会建、这族旗标会静默掉进 scoreMemberN 内部对手表（10-31 晚 P-P5 首遍就是这么废的）。要么加 `--arena2=1`，要么去掉这族旗标。'); process.exit(2);
+}
 /* `--arenaDiverse=1`（10-29 夜 (b) 臂）：净胜货币不变，**当选**加一条 Pareto 带：
  * 冻结验证里若 `净胜 ≥ 父代 − divTol` 且 `单卡占比 ≤ 父代 − divDelta` ⇒ 也接受（同分带选单卡低的）。
  * 为了不让"只反弹"父代把整轮卡死，父代单卡 >0.5 时每 divEvery 个子代无条件送一次冻结验证。 */
