@@ -18,7 +18,7 @@ import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi } from '.
 import { pickChain } from './chain-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -41,17 +41,22 @@ const DAG_TEMP = Number(arg('dagtemp', 0.15));
 const POOL = Math.max(NGRP, Number(arg('pool', 1200)) || 1200);
 /* `--shapeBal=1`：把采集配额**摊到全部桌形**（默认 0 = 现役顺序档：够 NGRP 就停 ⇒ 800 组只落在前 2 个桌形里，
  *   这是 10-31 夜里查出来的采集覆盖洞：考场 11 个桌形、采集只见 2 个）。 */
-const SHAPEBAL = Number(arg('shapeBal', 0)) ? 1 : 0;   /* 训练池上限（教师 600 永远保留，学生态按新旧裁） */
+const SHAPEBAL = Number(arg('shapeBal', 0)) ? 1 : 0;
+/* `--keySplit=1`：把上游按**代 3**（v:92，键层按决策键分组）装载并出货 ⇒ 用来直接检验 Stage A：
+ *   同一个**键级**目标，旧口径下珠种靠起点抽签、新口径下珠种进入键层。参数量不变（DK 只改分组）。 */
+const KS = Number(arg('keySplit', 0)) ? 1 : 0;   /* 训练池上限（教师 600 永远保留，学生态按新旧裁） */
 
 const W0 = sandbox();
 const refParams = Float64Array.from(loadChamp(W0, 'js/bundled-champion-3p.js', ''));
 const raw = readPack2(UP);
 const got = packCfgExit(raw, UP);
 const W = sandbox();
-installArch2(W, Object.assign({ mutMode: 'seg' }, got.cfg));
+installArch2(W, Object.assign({ mutMode: 'seg' }, got.cfg, (KS ? { gen: 3, keySplit: 1 } : {})));
 const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState, R = W.EpirusRules;
-const up = P.unpack(raw, true);
-if (!up) { console.error('⛔ 上游读不出：' + UP); process.exit(2); }
+/* 上游是代 2、下游要代 3 时**不能让装载器自己放行**（版本门正是拿来挡"两个含义共用一个形状"的）：
+ *   这里显式取原始参数数组重解释 ⇒ 谁在改语义写在明面上。两代之间参数量不变（keySplit 只改分组，不加维、不动段表）。 */
+const up = KS ? Float64Array.from(raw.a || []) : P.unpack(raw, true);
+if (!up || up.length !== P.paramCount()) { console.error('⛔ 上游读不出/参数数不符：' + UP + '（' + (up ? up.length : 'null') + ' vs ' + P.paramCount() + '）'); process.exit(2); }
 const ly = layoutOf(P);
 if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 ⇒ pg-lib 拒跑'); process.exit(2); }
 const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: true, stratCap: 2, stratMix: 0.5 });
@@ -78,14 +83,16 @@ function collectInto(dst, srcParams, idBase) {
     const cl = S.cloneState(state); cl.rng = { next: rnd };
     const cs2 = P.candidatesFor(cl, pid, T.econBase(cl, pid, legal), { lockTarget: false }) || [];
     const again = teacherPick(cl, pid, cs2);
-    const keys = cs2.map((c) => c.key);
-    if (!again || !cs2.length || keys.indexOf(again.key) < 0) { LABEL.gone++; return; }
+    if (!again || !cs2.length) { LABEL.gone++; return; }
     /* tape 的输入与参数无关 ⇒ 收集时算一次，之后任意参数重放（单源：arch2 wantTape） */
     const fr = P.forwardCands(cl, pid, cs2, up, { temp: 1, wantTape: 1 });
+    /* ⚑ 键层分组从 **tape 里拿**（arch2 的 DK 是决策键的唯一实现）⇒ 训练目标与部署 softmax 同一套键。
+     *   原来这里自造 `cs2.map(c => c.key)`，代 3 开了 keySplit 就会变成苹果对橘子（键数都不一样）。 */
+    const keys = fr.tape.keys;
     /* 教师那一枚在候选表里的下标（pickChain 返回的是 cs2 里的对象本身 ⇒ 按身份找，不按 key 找） */
     const wIdx = cs2.indexOf(again);
-    if (OBJ === 'cand' && wIdx < 0) { LABEL.gone++; return; }
-    dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: again.key, want0: t0.key, shp: curShp,
+    if (wIdx < 0 || !keys[wIdx]) { LABEL.gone++; return; }
+    dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: keys[wIdx], want0: t0.key, shp: curShp,
       wantIdx: wIdx, wantBead: again.bead || null });
     LABEL.keys++;
     if (again.key !== t0.key) LABEL.moved++; else LABEL.ok++;
@@ -287,7 +294,7 @@ writeFileSync(OUT + '.meta.json', JSON.stringify({
   label: LABEL, supfitGd: { objective: OBJ, dagger: DAG, rounds: ROUNDS, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n,
     studentAgree: finStudent ? finStudent.agree : null, studentN: finStudent ? finStudent.n : 0,
     byKey: Object.keys(fin.byKey).map((k) => ({ key: k, n: fin.byKey[k].n, hit: fin.byKey[k].hit })), verdict },
-  container: { v: packed.v != null ? packed.v : null, input: got.cfg.input, dof: got.cfg.dof },
+  container: { v: packed.v != null ? packed.v : null, input: (got.cfg.input || 'v7'), dof: got.cfg.dof, gen: (KS ? 3 : (got.cfg.gen || 2)), keySplit: KS },
   lineage: { parent: UP, gen: 2, recipe: { teacher: 'chain-lib.pickChain', objective: (OBJ === 'cand' ? 'weighted candidate log-likelihood log pi(teacher action), class=key#bead (temp=1)' : 'weighted key log-likelihood (temp=1)'), solver: 'Adam+analytic backprop (pg-lib)' + (DAG ? ' + DAgger x' + DAG : '') } },
 }, null, 1), 'utf8');
 console.log('  产物 → ' + OUT);

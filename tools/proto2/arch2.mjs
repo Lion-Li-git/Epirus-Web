@@ -59,9 +59,10 @@ const INIT_SCALE = 0.25;
  *   一个既不是代 1 也不是代 2 的第三种对象——那正是这仓反复栽的"半旧口径"陷阱。
  *   要复算代 1 的读数：`git checkout f996c2a3`（代 1 冻结点，10-30 13:30 交班那一笔）用当时那份尺跑。
  *   本代只做一件事：**拒读**代 1 的包，绝不静默按新网络解释旧权重。 */
-const GEN_LATEST = 2;
+const GEN_LATEST = 2;      /* ⚠ Stage C 之前不翻默认：翻了 ⇒ 现有尺读不了 v:91（那是最后一步，删除清单见任务 #18） */
+const GEN_NEW = 3;         /* 代 3 = v:92：键层按决策键分组（keySplit）⇒ 新臂显式 gen=3 才走这条路 */
 const GEN_FROZEN_COMMIT = 'f996c2a3';
-const V_FOR_GEN = { 1: 90, 2: 91 };
+const V_FOR_GEN = { 1: 90, 2: 91, 3: 92 };
 export { V_FOR_GEN };
 /** 包里的结构代；代 1 的产物没有 `dims.gen` ⇒ 缺省认成 1 */
 export function genOf(o) {
@@ -78,7 +79,7 @@ export function packInstallCfg(raw, extra) {
     throw new Error('这不是 2.0 容器（v=' + raw.v + ' ⇒ ' + (raw.v === 7 ? 'v7 那套"单标量头 + 4 槽补零"的包，浏览器与尺都另有通路' : '认不出的容器') +
       '）。2.0 的容器形状：v:91 + dims{input, gen:2, dof}。');
   }
-  if (gen !== GEN_LATEST) {
+  if (gen !== GEN_LATEST && gen !== GEN_NEW) {
     throw new Error('packInstallCfg: 这是**代 ' + gen + '** 的产物（v=' + raw.v + '，dims.gen=' + (raw.dims && raw.dims.gen) + '），' +
       '与当前尺（代 ' + GEN_LATEST + '）的输入面/池化/段偏移都不同形 ⇒ 不许装载。' +
       '要复算代 1 的读数：`git checkout ' + GEN_FROZEN_COMMIT + '` 用当时那份尺跑（原件在 scratch/arms/，未入库）。');
@@ -129,7 +130,14 @@ export function packCfgExit(raw, tag) {
 export function layout(opts) {
   const o = opts || {};
   const gen = o.gen == null ? GEN_LATEST : Number(o.gen);
-  if (gen !== GEN_LATEST) throw new Error('layout: 只实现代 ' + GEN_LATEST + '（收到 gen=' + gen + '）；代 1 请 checkout ' + GEN_FROZEN_COMMIT + ' 跑旧尺，不要在这里装半旧档');
+  /* ⚑ Stage A（10-31 夜）· 键内自由度上提到键层：`keySplit` ⇒ 两级 softmax 的**键层按决策键分组**。
+   *   「蓄能」在候选表里本来就是两枚同键不同珠（policy.js:680 的 bead='elec'/'boom'）。旧口径下键层取
+   *   bestOf ⇒ **任何键级目标/门/审计都看不见珠种**，包只能继承起点的抽签（今晚实测：OB3S 起点键级蒸馏
+   *   576 次蓄成爆珠 ⇒ 开火窗 0.2%、净分 −21.6%）。拆成 charge#elec / charge#boom 之后珠种进入"选哪个动作"这一层。
+   *   三条硬规矩与 inter/tinter 同款：① 代 2 默认 0 ⇒ 现役包逐位不变；② **不加观测维、不动参数量**
+   *   （C.cand 里本来就有 beadIsElec/beadIsBoom）；③ 段表不变 ⇒ 变异/蒸馏/冻结的账全部照旧。 */
+  const keySplit = (o.keySplit == null) ? (gen >= GEN_NEW ? 1 : 0) : (Number(o.keySplit) > 0 ? 1 : 0);
+  if (gen !== GEN_LATEST && gen !== GEN_NEW) throw new Error('layout: 只实现代 ' + GEN_LATEST + '/' + GEN_NEW + '（收到 gen=' + gen + '）；代 1 请 checkout ' + GEN_FROZEN_COMMIT + ' 跑旧尺，不要在这里装半旧档');
   const input = o.input === 'obs3' || o.input === 'obs3b' ? o.input : 'v7';
   const isO3 = input === 'obs3' || input === 'obs3b';
   const skills = Math.max(1, Number(o.skills) || 27);
@@ -192,7 +200,7 @@ export function layout(opts) {
   return {
     arch: isO3 ? 'S1o' : 'S1', input, gen, skills, seatIn, actIn, initScale: INIT_SCALE,
     poolN,
-    seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, tinterK, tinterStride, seg, n: off,
+    seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, tinterK, tinterStride, seg, n: off, keySplit,
     /* 每段的"扇入"—— 段感知变异要用它给 σ 定标（扇入越大、同样 σ 造成的输出扰动越大） */
     fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, qHead: hid, inter: hid, tinter: seatH },
   };
@@ -223,6 +231,9 @@ export function install(W, opts) {
   const o2 = Object.assign({}, opts || {});
   if (!o2.skills) o2.skills = (R.skills && R.skills.length) || 27;
   const L = layout(o2);
+  /* 决策键的**唯一实现**（两条前向尾 + wantTape 的 keys 全走这里 ⇒ 工具读 tape.keys 就不会长出第二份口径） */
+  const CHARGE_KEY = (W.EpirusRules && W.EpirusRules.SK && W.EpirusRules.SK.CHARGE) || 'charge';
+  const DK = (c) => (c && L.keySplit && c.key === CHARGE_KEY && c.bead) ? (c.key + '#' + c.bead) : (c ? c.key : null);
   /* 序列区的块归属从 MANIFEST 拿（10-31：从前这里按硬编码偏移切 `i<32/[32,48)`，obs3 交错发射 ⇒ 切错段）。
    *   布局不自洽就当场抛，不许静默切错 —— 切错的消融读数比没有读数更坏。 */
   if (isO3Input(L.input)) L.seqBlocks = obs3SeqLayout(R, L.input);
@@ -367,7 +378,7 @@ export function install(W, opts) {
     const temp = (opts2 && opts2.temp) || OPT.temp;
     const bestOf = {}, kSum = {}, kProb = {}, keys = [];
     for (let i = 0; i < n; i++) {
-      const k = cands[i].key;
+      const k = DK(cands[i]);
       if (!(k in bestOf)) { bestOf[k] = -1e9; kSum[k] = 0; keys.push(k); }
       if (logits[i] > bestOf[k]) bestOf[k] = logits[i];
     }
@@ -376,10 +387,10 @@ export function install(W, opts) {
     let ktot = 0;
     for (const k of keys) { kProb[k] = Math.exp((bestOf[k] - kmax) / temp); ktot += kProb[k]; }
     for (const k of keys) kProb[k] = ktot > 0 ? kProb[k] / ktot : 0;
-    for (let i = 0; i < n; i++) { const k = cands[i].key; kSum[k] += Math.exp((logits[i] - bestOf[k]) / temp); }
+    for (let i = 0; i < n; i++) { const k = DK(cands[i]); kSum[k] += Math.exp((logits[i] - bestOf[k]) / temp); }
     const probs = new Float64Array(n);
     for (let i = 0; i < n; i++) {
-      const k = cands[i].key;
+      const k = DK(cands[i]);
       const within = kSum[k] > 0 ? Math.exp((logits[i] - bestOf[k]) / temp) / kSum[k] : 1 / n;
       probs[i] = kProb[k] * within;
     }
@@ -495,7 +506,7 @@ export function install(W, opts) {
       }
       const hc = encode(params, ci, L.candIn, L.hid2, WK, candBias, BUF.hc);
       if (phis) phis[i] = Float64Array.from(hc);
-      if (TP) { TP.afs.push(Float64Array.from(afbuf)); TP.t1.push(t1); TP.t2.push(t2); TP.keys.push(cands[i].key); }
+      if (TP) { TP.afs.push(Float64Array.from(afbuf)); TP.t1.push(t1); TP.t2.push(t2); TP.keys.push(DK(cands[i])); }
       let v = params[headOff + L.hid2];
       for (let j = 0; j < L.hid2; j++) v += params[headOff + j] * hc[j];
       /* 交互头（inter=K）：logit += Σ_k g_k·tanh((u_k·ae)·(v_k·hctx) + b_k)。段全零 ⇒ u·ae=0 且 g=0 ⇒ 贡献恒 0
@@ -526,7 +537,7 @@ export function install(W, opts) {
     const temp = (opts2 && opts2.temp) || OPT.temp;
     const bestOf = {}, kSum = {}, kProb = {}, keys = [];
     for (let i = 0; i < n; i++) {
-      const k = cands[i].key;
+      const k = DK(cands[i]);
       if (!(k in bestOf)) { bestOf[k] = -1e9; kSum[k] = 0; keys.push(k); }
       if (logits[i] > bestOf[k]) bestOf[k] = logits[i];
     }
@@ -535,10 +546,10 @@ export function install(W, opts) {
     let ktot = 0;
     for (const k of keys) { kProb[k] = Math.exp((bestOf[k] - kmax) / temp); ktot += kProb[k]; }
     for (const k of keys) kProb[k] = ktot > 0 ? kProb[k] / ktot : 0;
-    for (let i = 0; i < n; i++) { const k = cands[i].key; kSum[k] += Math.exp((logits[i] - bestOf[k]) / temp); }
+    for (let i = 0; i < n; i++) { const k = DK(cands[i]); kSum[k] += Math.exp((logits[i] - bestOf[k]) / temp); }
     const probs = new Float64Array(n);
     for (let i = 0; i < n; i++) {
-      const k = cands[i].key;
+      const k = DK(cands[i]);
       const within = kSum[k] > 0 ? Math.exp((logits[i] - bestOf[k]) / temp) / kSum[k] : 1 / n;
       probs[i] = kProb[k] * within;
     }
@@ -726,6 +737,7 @@ export function install(W, opts) {
    *   挡不住"有人照 arch 装错档再按长度报错"这种绕路。⇒ 标签一律**由实际布局写**，读的时候当场对账。 */
   function packDims() {
     const d = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0, tinter: L.tinterK || 0, gen: L.gen };
+    if (L.keySplit) d.keySplit = L.keySplit;   /* 关着就不写 ⇒ 代 2 的容器形状与在册产物逐位不变（否则每次重跑都对不上 md5，回归腿等于废掉） */
     if (isO3Input(L.input)) d.dof = obs3Dims(R, L.input);     /* 观测面维数由引擎卡表算，不让调用方手填（obs3b=505）*/
     return d;
   }

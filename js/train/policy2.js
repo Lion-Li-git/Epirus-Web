@@ -16,6 +16,7 @@
   'use strict';
 
   const V_GEN2 = 91;                       // 与 arch2 的 V_FOR_GEN[2] 同值（两处都要改时由 browser-parity 当场红）
+  const V_GEN3 = 92;                       // 代 3 = v:92（键层按决策键分组；与 arch2 的 V_FOR_GEN[3] 同值）
   const GEN = 2;
   const SEAT_IN = 22 + 5 + 1;              // obs3 逐席：22 公开 ‖ 5 关系 ‖ 1 isSelf
   const SEAT_IN_B = 81 + 5 + 1;            // obs3b 逐席：81 公开（14 状态+30 键身份+1 none+3 目标+30 键 bag+3 目标 bag）
@@ -214,7 +215,10 @@
   function layoutOfPack(o, skills) {
     const d = o.dims;
     const isB = d.input === 'obs3b';
-    const L = {
+    /* 代 3：`keySplit` ⇒ 键层按决策键分组（charge 的 elec/boom 上提到键层）。DK 住在 forwardCands 里（那里有 R），
+     *   与 arch2 同式；两边不一致会被 selftest3 腿 E（镜像 parity）+ browser-parity 当场红，不靠人记。 */
+    const keySplit = (o.dims.keySplit || 0) > 0 ? 1 : 0;
+    const L = { keySplit,
       input: d.input, seatH: d.seatH, actH: d.actH, hid: d.hid, hid2: d.hid2, interK: d.inter || 0, tinterK: d.tinter || 0, skills,
       seatIn: isB ? SEAT_IN_B : SEAT_IN, actIn: CAND_BASE + skills, selfDim: isB ? SELF_DIM_B : SELF_DIM, poolN: POOL_BLOCKS,
       pubN: isB ? 81 : 22,
@@ -250,9 +254,10 @@
   function checkPack(o, W) {
     const R = W.EpirusRules;
     if (!o || !Array.isArray(o.a)) return { ok: false, reason: 'missing' };
-    if (o.v !== V_GEN2) return { ok: false, reason: 'version', got: o.v, want: V_GEN2 };
+    if (o.v !== V_GEN2 && o.v !== V_GEN3) return { ok: false, reason: 'version', got: o.v, want: V_GEN2 + '/' + V_GEN3 };
     if (!o.dims) return { ok: false, reason: 'no-dims' };
-    if (o.dims.gen !== GEN) return { ok: false, reason: 'gen', got: o.dims.gen, want: GEN };
+    if (o.dims.gen !== GEN && o.dims.gen !== 3) return { ok: false, reason: 'gen', got: o.dims.gen, want: GEN + '|3' };
+    if ((o.dims.keySplit || 0) > 0 && o.dims.gen < 3) return { ok: false, reason: 'keySplit-on-old-gen', got: o.dims.keySplit, want: 0 };
     if (o.dims.input !== 'obs3' && o.dims.input !== 'obs3b') return { ok: false, reason: 'input', got: o.dims.input, want: 'obs3|obs3b' };
     const skills = R.skills.length;
     const L = layoutOfPack(o, skills);
@@ -282,8 +287,8 @@
     if (!L) throw new Error('EpirusPolicy2.pack: 这枚 params 不是 2.0 张量（没有 p2 布局）');
     const R = W.EpirusRules;
     return {
-      v: V_GEN2, arch: 'S1o', n: L.n,
-      dims: { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK, gen: GEN, dof: DOF[L.input] || 208 },
+      v: (L.keySplit ? V_GEN3 : V_GEN2), arch: 'S1o', n: L.n,
+      dims: { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK, gen: (L.keySplit ? 3 : GEN), keySplit: L.keySplit || 0, dof: DOF[L.input] || 208 },
       layout: { seg: L.seg.map((s) => ({ name: s.name, off: s.off, len: s.len })), n: L.n },
       a: Array.from(p), skills: R.skills.length,
     };
@@ -306,6 +311,9 @@
     const L = params && params.p2;
     if (!L) throw new Error('EpirusPolicy2.forwardCands: params 不是 2.0 张量 ⇒ 该走 v7 那条路');
     const R = W.EpirusRules;
+    /* Stage A：决策键的唯一实现（与 arch2 的 DK 同式）——键层分组决定"目标函数与门看得见什么" */
+    const CHARGE_KEY = (R.SK && R.SK.CHARGE) || 'charge';
+    const DK = (c) => (c && L.keySplit && c.key === CHARGE_KEY && c.bead) ? (c.key + '#' + c.bead) : (c ? c.key : null);
     const sc = scene(W, state, pid, L.input);
     const seatBias = L.seg[0].off + L.seatH * L.seatIn;
     const actBias = L.seg[1].off + L.actH * L.actIn;
@@ -364,7 +372,7 @@
       encode(params, afbuf, L.actIn, L.actH, WA, actBias, ae);
       const t1 = cands[i].target == null ? null : cands[i].target;
       const t2 = cands[i].target2 == null ? null : cands[i].target2;
-      if (TP) { TP.afs.push(Float64Array.from(afbuf)); TP.t1.push(t1); TP.t2.push(t2); TP.keys.push(cands[i].key); }
+      if (TP) { TP.afs.push(Float64Array.from(afbuf)); TP.t1.push(t1); TP.t2.push(t2); TP.keys.push(DK(cands[i])); }
       const te1 = t1 != null && enc.has(t1) ? enc.get(t1) : zeroSeat;
       const te2 = t2 != null && enc.has(t2) ? enc.get(t2) : zeroSeat;
       ci.set(hctx, 0); ci.set(ae, L.hid); ci.set(te1, L.hid + L.actH); ci.set(te2, L.hid + L.actH + L.seatH);
@@ -389,7 +397,7 @@
     const temp = (opts2 && opts2.temp) || 0.6;
     const bestOf = {}, kSum = {}, kProb = {}, keys = [];
     for (let i = 0; i < n; i++) {
-      const k = cands[i].key;
+      const k = DK(cands[i]);
       if (!(k in bestOf)) { bestOf[k] = -1e9; kSum[k] = 0; keys.push(k); }
       if (logits[i] > bestOf[k]) bestOf[k] = logits[i];
     }
@@ -398,10 +406,10 @@
     let ktot = 0;
     for (const k of keys) { kProb[k] = Math.exp((bestOf[k] - kmax) / temp); ktot += kProb[k]; }
     for (const k of keys) kProb[k] = ktot > 0 ? kProb[k] / ktot : 0;
-    for (let i = 0; i < n; i++) { const k = cands[i].key; kSum[k] += Math.exp((logits[i] - bestOf[k]) / temp); }
+    for (let i = 0; i < n; i++) { const k = DK(cands[i]); kSum[k] += Math.exp((logits[i] - bestOf[k]) / temp); }
     const probs = new Float64Array(n);
     for (let i = 0; i < n; i++) {
-      const k = cands[i].key;
+      const k = DK(cands[i]);
       const within = kSum[k] > 0 ? Math.exp((logits[i] - bestOf[k]) / temp) / kSum[k] : 1 / n;
       probs[i] = kProb[k] * within;
     }
