@@ -106,3 +106,11 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 # CI（远端 main）：
 #   gh api repos/Lion-Li-git/Epirus-Web/actions/runs?per_page=3   ‖ 或 mcp__githubdirect__actions_list
 ```
+
+## 11-01 夜班 2 追记（ZCode；全文 `RESULTS-2026-11-01-NIGHT2-zcode.md` ‖ 交接 `HANDOFF-2026-11-01-to-qoder-night2-zcode.md`）
+
+- **第一枚产品卷超 v7 的 2.0 包**：`RB2P-*`（强链蒸馏起点 + 产品形状卷 first 货币 CEM 24k）五种子 53.6/60.0/61.4/61.0/64.0（v7=56.9，4/5 超）；电磁炮桶审计同过线。⛔ 晋升等用户点名。
+- **广而可玩正主**：`BROAD-tkCH-s7`（杂货铺教师→mild CEM）15 种技能、产品 40.5%、研究 +28.4%、电磁炮桶成员——用户问"新网络能不能学得比 v7 克隆线充分"的答案=是（v7 克隆线缩到 2~3 种）。
+- 考卷搬迁落地：`createArena2 o.roster`（整表换池）+ `--arenaPool/--arenaShapes` 进双工具；两卷体检 ρ 族内 0.60 / 含 v7 锚 0.06。
+- 广度↔强度前沿成形：纯链 43.6~64.0(广3) ↔ 杂货铺系 22.9~40.5(广11~18)；一轮 CEM 是甜点；产品卷 CEM 收益非单调（弱↑中↓强平）。
+- miniT 稀有事件语义墙钉死：用法装得进、选靶装不进（1/34、4/57），DAgger 稀释；下一步=靶向采集。
