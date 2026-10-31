@@ -16,6 +16,7 @@ import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi } from './pg-lib.mjs';
 import { pickChain } from './chain-lib.mjs';
+import { scanChargeRounds } from './skill-mastery.mjs';             // miniT 预示式代理的单一来源（千问 §二十三）
 import { OPP_SPECS } from '../../server/opp-pool.mjs';            // 考卷搬迁：产品 7 脚本的单一来源
 import { makeAsChooser } from '../bot-chooser-lib.mjs';             // 同款包装（评测同款；文件在 tools/ 根不在 proto2/）
 
@@ -118,6 +119,29 @@ const keyToCand = (cs, key) => {
   if (key === R.SK.CHARGE) { const e = hit.find((c) => (c.bead || '') === 'elec'); if (e) return e; }
   return hit[0];
 };
+
+/* miniT 预示式教师（换道后的小雷路线，ZCode · 11-01 深夜）：对 [ep≥2 ∧ 最近 4 回合内 ok 蓄过珠] 的席出小雷
+ *   （判据=千问 §二十三 的新代理，precision→railgun 87.99%×7.62）；无这样的席 ⇒ 回落链（保强底盘）。
+ *   回合计数与打分尺同源（scanChargeRounds，newturn 进格）。 */
+const miniTPick = (state, pid, cs) => {
+  const chargeRound = {};
+  for (const z of scanChargeRounds(state.events || [], R)) chargeRound[z.pid] = z.round;
+  const now = state.round || 1;
+  let best = null, bestEp = -1;
+  for (let i = 0; i < (state.p || []).length; i++) {
+    const o = state.p[i];
+    if (!o || i === pid || (o.hp || 0) <= 0) continue;
+    if ((o.ep || 0) < 2) continue;
+    const cr = chargeRound[i];
+    if (cr == null) continue;
+    const gap = now - cr;
+    if (!(gap >= 0 && gap <= 4)) continue;
+    if ((o.ep || 0) > bestEp) { bestEp = o.ep; best = i; }
+  }
+  if (best == null) return null;
+  const hit = cs.filter((c) => c.key === R.SK.MINI_T && c.target === best);
+  return hit.length ? hit[0] : null;
+};
 const v7Pick = (state, pid, cs) => {
   let bi = -1, bv = -Infinity;
   for (let i = 0; i < cs.length; i++) {
@@ -131,7 +155,9 @@ const teacherPick = TEACHER === 'v7mix'
   ? (state, pid, cs) => pickChain(state, pid, cs, R) || v7Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'toolkit'
     ? (state, pid, cs, legal) => keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-    : TEACHER === 'chainmix'
+    : TEACHER === 'minit'
+    ? (state, pid, cs) => miniTPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : TEACHER === 'chainmix'
     ? (state, pid, cs, legal) => pickChain(state, pid, cs, R) || keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0 };
