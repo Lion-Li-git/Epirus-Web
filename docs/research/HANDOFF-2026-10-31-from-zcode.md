@@ -256,3 +256,13 @@ clean 0.415/夺1 63.4% 不低于起点 + 短程迁移 0.225；BIGT1-s7：0.65/�
 - 新件：`tools/proto2/pg-lib.mjs`（tape 重放前向/反传/两级 softmax 尾导数）‖ `tools/proto2/supfit-gd.mjs`（A 臂）‖ `tools/proto2/pg-train.mjs`（B 臂）‖ `tools/proto2/selftest3.mjs`（六腿：probs 复刻/前向重放/数值梯度/尾同源/浏览器镜像 parity/键级导数）‖ `arch2.mjs`+`js/train/policy2.js` 加 `wantTape` 旁路（默认关零开销，selftest2 36 腿回归全绿）。
 - 流程事故（已修+三道响亮闸，照记不藏）：`d.G` 笔误 + **JS NaN 是 falsy** ⇒ 首轮 8 臂静默 no-op；抓到它的信号 = λ 臂与 λ=0 臂产物 md5 逐位同。废轮产物 `scratch/arms/voided-pgnan-round1/`。
 - **保守替代路线现成可跑**（不动训练环）：`supfit-gd1` 当千问课程门起点（`probe-cem-arm --start=scratch/arms/supfit-gd1.bak --masteryKey=railgun --masteryLine=0.15 --masteryGate=best --targetGames=24000`，种子 7/13/41），SUPTUNE 的拆链由门常驻挡。
+
+## 十四、晚段（19:0x–20:3x，用户裁"那你开始做吧"）：复现过线、产品卷翻转
+
+全文 `RESULTS-2026-10-31-REPRO-PRODUCT-zcode.md`（预登记 `PREREG-2026-10-31-REPRO-PRODUCT-zcode.md`）。一段话版：
+- **P-R1 过线**：keySplit+shapeBal+key 配方三起点 +37.8/+41.6/+47.3（窗全 ≈18.7%）——**配方性质坐实**。
+- **P-P1 不过线**：gd3b 产品卷 1st=43.6% vs v7 56.9%（3P 更悬殊 41.4 vs 71.2）。画像 = **"永远第二"**（3P top2 95%：打得动、死不了、不收头）+ 缺口集中深经济对手（Δ−19.2pt）。根因方向：研究卷货币 scoreNet ≠ 产品卷货币 1st——这条链线**从未用 1st 货币训过**。
+- v7mix 教师追补臂（P-P4）：出手种类 3→9 但产品卷 41.4%（更低）⇒ 教师风格不是唯一约束，20 秒蒸馏保真度接不住 v7。
+- 晋升不发生，v7 仍为线上冠军；gd3b-ks-sb 改定位**电磁炮桶专家**（桶级史上最强）。
+- 下一臂已备好等点头：gd3b 起点 + `ARENA_CUR=first`（在册开关首次上这条线）× 2 种子 × 24k。
+- 工程：eval-5p 补 policy2 装载点（第五装载点）；supfit-gd 加 `--teacher=`（默认逐字不变，md5 回归腿绿）。

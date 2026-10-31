@@ -18,7 +18,7 @@ import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi } from '.
 import { pickChain } from './chain-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -85,7 +85,24 @@ const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: true, 
  *   默认路径（R=0）不碰任何一局学生自访、不改变 RNG 消耗次序 ⇒ 产物必须与 `supfit-gd1.bak` 逐位同（这条是回归腿）。 */
 let seed = 20261030;
 const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-const teacherPick = (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
+/* `--teacher=v7mix`（ZCode · 10-31 晚，产品卷反差的一号修法）：链覆写（pickChain 优先）+ **其余全交 v7 价值 argmax**。
+ *   为什么：产品考卷（eval-5p 420 局）实测纯链教师的学生"出手种类=3"（ジ/蓄/炮）、含深经济对手 Δ=−19.2pt ——
+ *   忠实的攒够链模仿物是**桶专家**不是全能冠军；教师里只会弃权（ji）的那一格，学生原样学成"除了链什么都不做"。
+ *   v7 读数走 fit2 的同款入口 `P.value(state,pid,key,params,sh,cand)`（形参次序有在册勘误，别动）。
+ *   默认 `chain` 逐字不变（回归腿：`--teacher=chain` 产物与已登记 md5 对表）。 */
+const TEACHER = String(arg('teacher', 'chain'));
+const v7Pick = (state, pid, cs) => {
+  let bi = -1, bv = -Infinity;
+  for (let i = 0; i < cs.length; i++) {
+    const c = cs[i];
+    const v = P.value(state, pid, c.key, refParams, null, c);
+    if (Number.isFinite(v) && v > bv) { bv = v; bi = i; }
+  }
+  return bi >= 0 ? cs[bi] : null;
+};
+const teacherPick = TEACHER === 'v7mix'
+  ? (state, pid, cs) => pickChain(state, pid, cs, R) || v7Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0 };
 /* 打出去的那一手 vs 教师（只在学生自访轮里量）——与 `LABEL`（克隆态 argmax 口径）是**两个不同的数** */
 const PLAY = { n: 0, hit: 0, stuckCharge: 0, missCharge: 0, missFire: 0 };
@@ -307,7 +324,7 @@ const packed = P.pack(finalPv);
 writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
-  objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL,
+  objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, teacher: TEACHER, keySplit: KS,
   playedAgree: { n: PLAY.n, hit: PLAY.hit, stuckCharge: PLAY.stuckCharge, missCharge: PLAY.missCharge, missFire: PLAY.missFire },
   label: LABEL, supfitGd: { objective: OBJ, dagger: DAG, rounds: ROUNDS, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n,
     studentAgree: finStudent ? finStudent.agree : null, studentN: finStudent ? finStudent.n : 0,
