@@ -11,7 +11,7 @@
  *   2 bigT    ≥0.2 次/局（各格都要）
  *   3 railgun ≥0.35 次/局（各格）∧ chargeProfile('long').wasteRate<50%（珠经济单源，long 才判）
  *   4 laserEye≥0.2 次/局（各格）∧ ≥1/2 打"防席"（目标 lastSkill∈GUARD_FAMILY=rules.js:108）
- *   5 miniT   ≥0.2 次/局（各格）∧ ≥1/2 打 lastSkill∈{ring,bigT,railgun}
+ *   5 miniT   ≥0.2 次/局（各格）∧ ≥1/2 打 [ep≥2 ∧ 最近 4 回合内 ok 蓄过珠] 的席（**预示式代理**，见下面 MINIT_ERA）
  *   6 cannon  "第3下打 ep 顶的三连"（复合事件，按用户原文字面）≥0.1 次/局（各格）
  * 观测列（不判线）：proto/transfer 出手率+时机旗（上回合被≥2源打/ep顶/hp最低）、transfer 命中率、
  *                   holo 出手率+目标分布（暂缓只记录）。
@@ -41,7 +41,14 @@ const PACKS = arg('pack', '').split(',').map((s) => s.trim()).filter(Boolean);
 
 /* rules.js:108 的 GUARD_FAMILY（内部常量，key 镜像 + 启动自守；rules.js 若动这里会响） */
 const GUARD_FAMILY = ['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'armor', 'proto', 'holo'];
-const MINIT_TARGETS = ['ring', 'bigT', 'railgun'];
+/* ⚑ 口径换代（10-31 深夜，`RESULTS-2026-10-31-OBS3B-SWITCH-qoder.md` §二十二）：旧线『miniT 打 lastSkill∈{ring,bigT,railgun} 的用户』
+ *   实测**方向反了**——按 900+ 个真局决策点量，那种目标『随后 ≤2 回合真放 railgun』的 precision = **0.00%（×0.00）**，比随机选目标还差：
+ *   railgun 开完珠就空、bigT 落完 ep 归零 ⇒『刚用过这些键的人』＝此刻没有威胁的人。新线换成**预示式代理**：
+ *   目标 ep≥2（开炮的硬条件之一，面内可见）∧ 该目标在最近 `MINIT_WINDOW` 回合内有过一次 ok 的 charge（出珠动作）。
+ *   同法量的 precision→railgun = **87.99%（×7.62）** / 对照阵容 30.53%（×10.42）。旧口径的在册 miniT 语义读数属换代前，**不许与新线横比**。 */
+const MINIT_ERA = 'predictive-2026-10-31';
+const MINIT_EP_MIN = 2;
+const MINIT_WINDOW = 4;
 const LONG_LINES = { bigT: 0.2, railgun: 0.35, laserEye: 0.2, miniT: 0.2, cannon: 0.1 };
 const SHORT_LINES = { bigT: 0.05, railgun: 0.09, laserEye: 0.05, miniT: 0.05 }; /* 长线 ×1/4（PREREG §四） */
 const FREQ_KEYS = ['ring', 'bigT', 'railgun', 'laserEye', 'miniT', 'cannon', 'proto', 'transfer', 'holo'];
@@ -132,7 +139,7 @@ export function replay(audGame, evs) {
       if (e.type === 'damage' && e.to === pk.pid && e.amt > 0) dmgToMe.push({ src: e.source == null ? null : e.source, amt: e.amt });
     }
     rows.push({
-      pick: pk,
+      pick: pk, lo,
       outcome: attempt ? attempt.outcome : 'no-attempt',
       attemptedKey: attempt ? attempt.key : null,
       ok: !!attempt && attempt.outcome === 'ok' && !voided,
@@ -209,11 +216,16 @@ export function auditCells(W, A, chooser, cellsSpec, games, salt) {
       const rows = replay(aud.games[aud.games.length - 1], evs);
       st.games++; st.rounds += r.rounds || 0; st.win += r.win ? 1 : 0; st.clean += r.clean ? 1 : 0;
 
+      /* ⚑ 语义要看**所有人**的蓄珠，不是只看被审计那一席：从事件流里扫出每次 ok charge 的 (事件位, 回合, pid)，
+       *   再按行的事件位推进游标 ⇒ 判定只看"这次决策之前已经发生"的事实，不偷看未来。 */
+      const chargeLog = scanChargeRounds(evs, R);
+      const chargeRound = {}; let cCur = 0;
       let ringRun = 0;
       const gRuns = [];                    /* 本局的 ok-ring 连段（断在失败/换招/死亡都算闭合） */
       let cannonRun = [];                  /* 连续 ok cannon 的 {phase, target, opps} */
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i], pk = row.pick;
+        while (cCur < chargeLog.length && chargeLog[cCur].at < row.lo) { const z = chargeLog[cCur++]; chargeRound[z.pid] = z.round; }
         st.attempts[pk.key] = (st.attempts[pk.key] || 0) + 1;
         if (!row.ok) {
           /* 断连段也要先落账：run 被"失败的一手"打断仍是已完成的连段 */
@@ -237,7 +249,7 @@ export function auditCells(W, A, chooser, cellsSpec, games, salt) {
         }
         if (pk.key === R.SK.MINI_T) {
           st.sem.miniTN++;
-          if (isTargetWith(pk, MINIT_TARGETS)) st.sem.miniTHit++;
+          if (miniTPredictive(pk, chargeRound, pk.round)) st.sem.miniTHit++;
         }
         /* 观测列：时机旗（对任何出手都算旗，报告时只看 proto/transfer 的） */
         const flags = riskFlags(row, rows, i);
@@ -290,6 +302,29 @@ function isTargetWith(pk, keyList) {
   const o = pk.opps.find((x) => x.pid === pk.target);
   return !!o && keyList.indexOf(o.lastSkill) >= 0;
 }
+/* 从事件流扫出每手 **ok 的 charge** 发生在第几回合（`newturn` 进一格）。抽出来是为了能单测：
+ *   在册实测这张桌上 charge 极稀有（4 局里只有 1 次 ok charge ⇒ `scratch/ev-shape.mjs`），
+ *   所以"集成对照"在这种池子上永远拿不到正例——拿它当腿就等于一条不会红的装饰。 */
+export function scanChargeRounds(evs, R) {
+  const log = []; let rr = 1;
+  for (let j = 0; j < evs.length; j++) {
+    const e = evs[j];
+    if (e.type === 'newturn') rr++;
+    else if (e.type === 'action' && e.outcome === 'ok' && e.key === R.SK.CHARGE) log.push({ at: j, round: rr, pid: e.pid });
+  }
+  return log;
+}
+/** miniT 语义（预示式代理，`MINIT_ERA`）：目标 ep≥2 ∧ 目标在最近 MINIT_WINDOW 回合内有过一次 ok charge。
+ *   只读决策时刻的快照（`pk.opps`）与**已发生**的 charge 回合 ⇒ 同一行内如果目标这一回合还没行动，那条事实不偷看。 */
+function miniTPredictive(pk, chargeRound, roundNow) {
+  if (pk.target == null) return false;
+  const o = (pk.opps || []).find((x) => x.pid === pk.target);
+  if (!o || (o.ep || 0) < MINIT_EP_MIN) return false;
+  const cr = chargeRound[pk.target];
+  if (cr == null) return false;
+  const gap = roundNow - cr;              /* 0 = 同一回合里更早的一手（事件顺序已保证不是未来） */
+  return gap >= 0 && gap <= MINIT_WINDOW;
+}
 /* 时机旗：heat=上一回合被 ≥2 个不同 source 打过；lead=我 ep 为存活(并列)最高；low=我 hp 为存活最低 */
 function riskFlags(row, rows, i) {
   const heat = i > 0 && (new Set(rows[i - 1].dmgToMe.filter((d) => d.src != null && d.src !== row.pick.pid).map((d) => d.src))).size >= 2;
@@ -318,7 +353,12 @@ function verdictOf(a) {
   v.bigT = { pass: minRate('bigT') >= L.bigT, actual: pct(minRate('bigT')) + '/局', line: L.bigT + '/局（各格）' };
   v.railgun = { pass: minRate('railgun') >= L.railgun && (isShort || (waste != null && waste < 0.5)), actual: pct(minRate('railgun')) + '/局' + (isShort || waste == null ? '' : '，浪费 ' + pct(waste)), line: L.railgun + '/局（各格）' + (isShort ? '' : ' ∧ 珠浪费<50%') };
   v.laserEye = { pass: minRate('laserEye') >= L.laserEye && (isShort || (leN > 0 && leH / leN >= 0.5)), actual: pct(minRate('laserEye')) + '/局，打防席 ' + leH + '/' + leN, line: L.laserEye + '/局（各格）' + (isShort ? '（语义只记录）' : ' ∧ 打防席≥1/2') };
-  v.miniT = { pass: minRate('miniT') >= L.miniT && (isShort || (mtN > 0 && mtH / mtN >= 0.5)), actual: pct(minRate('miniT')) + '/局，反制 ' + mtH + '/' + mtN, line: L.miniT + '/局（各格）' + (isShort ? '（语义只记录）' : ' ∧ 打 ring/bigT/railgun 用户≥1/2') };
+  /* ⚑ mtN=0 时不许写成『反制 0/0 = 0%』——那与『真的每次都打错』同形（分母为 0 的 0% 在册规矩）。 */
+  v.miniT = { pass: minRate('miniT') >= L.miniT && (isShort || (mtN > 0 && mtH / mtN >= 0.5)),
+    unreadable: !isShort && mtN === 0,
+    actual: pct(minRate('miniT')) + '/局，' + (mtN === 0 ? '语义**读不出**（这格一次 miniT 都没出手 ⇒ 分母 0，不是 0%）' : '预示代理命中 ' + mtH + '/' + mtN),
+    line: L.miniT + '/局（各格）' + (isShort ? '（语义只记录）' : ' ∧ 打 [ep≥2 ∧ 最近 ' + MINIT_WINDOW + ' 回合蓄过珠] 的席≥1/2'),
+    semEra: MINIT_ERA };
   v.cannon = { pass: isShort ? canAll >= 1 : minCannonRate(a) >= L.cannon, actual: (isShort ? canAll + ' 段' : pct(minCannonRate(a)) + '/局（对 ep 顶 ' + canEp + ' 段）'), line: isShort ? '批内≥1 段' : L.cannon + '/局（各格，第3下打ep顶）' };
   if (isShort) v.ring = { pass: chainsAll >= 1, actual: chainsAll + ' 段三连', line: '批内≥1（不许归零）' };
   return v;
@@ -331,7 +371,7 @@ function minCannonRate(a) {
 function printPack(a) {
   const head = ['桌 ' + a.table + ' × n=' + NCELLS.join('/'), GAMES + ' 局/格', 't=' + a.temp, 'arena2.v' + ARENA2_VERSION, a.fp.split('|').slice(0, 2).join('|')].join(' ‖ ');
   console.log('\n=== ' + a.label + '（' + (a.spec.startsWith('fixed:') ? '对照' : a.spec) + '） ===');
-  console.log('[' + head + ']');
+  console.log('[' + head + '] ‖ miniT 语义口径 = ' + MINIT_ERA + '（预示式代理；旧口径读数属换代前，不横比）');
   const cols = FREQ_KEYS;
   console.log('  ' + '格'.padEnd(7) + cols.map((k) => k.slice(0, 8).padStart(8)).join('') + '   胜%  净胜%  回合/局  三连(ring/can/canEp)');
   for (const st of a.cells) {
@@ -391,6 +431,33 @@ function selftest() {
     console.log('  ' + (ok ? '✔' : '✘') + ' ' + a.label + '：' + key + ' ' + rate.toFixed(2) + '/局' + (key === 'ring' ? '，三连 ' + st.chains.ring + ' 段' : '') + (key === 'miniT' ? '（语义计数 n=' + st.sem.miniTN + '）' : ''));
     if (!ok) fail++;
   }
+  console.log('[自证·E miniT 语义方向] 判定式 + 事件流扫描的**已知答案单测**（不靠桌上有没有人蓄珠）');
+  {
+    const R0 = sandbox().EpirusRules;
+    const cell = (ep, gap, tgt) => miniTPredictive(
+      { pid: 0, target: tgt === undefined ? 1 : tgt, opps: [{ pid: 1, ep: ep }] },
+      tgt === null ? {} : { 1: 40 - gap }, 40);
+    const units = [
+      ['ep≥2 ∧ 上一回合蓄过珠 ⇒ 命中', cell(MINIT_EP_MIN, 1) === true],
+      ['ep 不够 ⇒ 不算命中', cell(MINIT_EP_MIN - 1, 1) === false],
+      ['窗口内最远一格 ⇒ 算命中', cell(MINIT_EP_MIN, MINIT_WINDOW) === true],
+      ['超出窗口一格 ⇒ 不算命中', cell(MINIT_EP_MIN, MINIT_WINDOW + 1) === false],
+      ['没锁目标 ⇒ 不算命中', cell(MINIT_EP_MIN + 3, 1, null) === false],
+      ['目标从没蓄过珠 ⇒ 不算命中', miniTPredictive({ pid: 0, target: 1, opps: [{ pid: 1, ep: 9 }] }, {}, 40) === false],
+    ];
+    /* 扫描式：ok 才算、失败不算、newturn 才进格；同一 pid 取最近一次 */
+    /* ⚠ pid 用 `|| 1` 兜底会把 **pid 0** 悄悄变成 1（0 是 falsy）——这条单测自己就会因此判错，先把它写对。 */
+    const mk = (k, out, extra) => ({ type: 'action', pid: (extra && extra.pid != null) ? extra.pid : 1, key: k, outcome: out });
+    const scan = scanChargeRounds([
+      mk(R0.SK.CHARGE, 'ok'),
+      { type: 'newturn' }, mk('guard', 'ok'), mk(R0.SK.CHARGE, 'fail'),
+      { type: 'newturn' }, { type: 'newturn' }, mk(R0.SK.CHARGE, 'ok', { pid: 0, }),
+    ], R0);
+    const scanOk = scan.length === 2 && scan[0].round === 1 && scan[0].pid === 1 && scan[1].round === 4 && scan[1].pid === 0;
+    units.push(['扫描：只认 ok 的 charge、回合按 newturn 进格、失败那手不记', scanOk]);
+    let bad = 0;
+    for (const [nm, ok] of units) { console.log('  ' + (ok ? '✔' : '✘') + ' ' + nm); if (!ok) bad++; }
+  }
   console.log('[自证·B 阴性] fixed:gun —— 六条全 ✘');
   {
     const a = auditOne('fixed:gun', { games: 12 });
@@ -412,7 +479,7 @@ function selftest() {
       console.log('  ⛔ 第二遍：' + canon(a2).slice(0, 400));
     }
   }
-  console.log('[自证·D 容器装载] v:91 包必须走 packCfgExit 面（10-31 错网 bug 的回归腿）');
+  console.log('[自证·D 容器装载] 代 3 容器必须走 packCfgExit 面，且改标 v:91 的样本必须被拒（10-31 错网 bug 的回归腿）');
   {
     /* 病史：v7 unpack 不做版本门，loadChamp 在新沙箱把 v:91 容器吃成参数数组灌 v7 网（截断重解释）。
      * 腿：容器包装载后 params.length === 容器声明 n，且 W 已装 arch2（没走 v7 截断路径）。找不到容器包 ⇒ 跳过不判。 */
@@ -428,7 +495,7 @@ function selftest() {
         const raw = JSON.parse(balancedJson(src, at));
         /* packCfgExit 的代闸是 process.exit 不是 throw（故意的：响亮拒读）⇒ 本腿自己先按版本过滤，
          * 只尝试 v:91（代 2）容器；代 1 的留证包直接跳过，不触发那个 exit。 */
-        if (!raw || raw.v !== 91 || !raw.dims) continue;
+        if (!raw || raw.v !== 92 || !raw.dims) continue;   /* 代 3 唯一 ⇒ 本腿挑代 3 容器（v:91 已被代闸响亮拒读） */
         cand = p; break;
       } catch (e) { /* JSON 坏的跳过 */ }
     }
@@ -439,12 +506,17 @@ function selftest() {
       const params = loadPackParams(W, cand);
       const src = fs.readFileSync(cand, 'utf8');
       const rawN = JSON.parse(balancedJson(src, src.indexOf('EPIRUS_CHAMPION_3P '))).n;
-      const ok = params.length === rawN && !!W.EpirusPolicy.__arch2;
-      console.log('  ' + (ok ? '✔' : '✘') + ' ' + cand + '：装载 ' + params.length + ' 维（容器声明 ' + rawN + '）‖ arch2 已装 = ' + !!W.EpirusPolicy.__arch2);
+      /* 顺手把"旧代进不来"钉在本腿里（不靠 packCfgExit 的 process.exit，那条会直接终止自证）：
+       *   拿这枚代 3 容器改一枚"v 说代 2"的样本 ⇒ checkPack 必须 reason:'version' 拒读。 */
+      const stale = JSON.parse(balancedJson(src, src.indexOf('EPIRUS_CHAMPION_3P '))); stale.v = 91;
+      const chk91 = W.EpirusPolicy.checkPack(stale, W);
+      const ok = params.length === rawN && !!W.EpirusPolicy.__arch2 && chk91.ok === false && chk91.reason === 'version';
+      console.log('  ' + (ok ? '✔' : '✘') + ' ' + cand + '：装载 ' + params.length + ' 维（容器声明 ' + rawN + '）‖ arch2 已装 = ' + !!W.EpirusPolicy.__arch2 +
+        ' ‖ 同一容器改标 v:91 ⇒ ' + JSON.stringify(chk91) + '（代 2 进不来）');
       if (!ok) fail++;
     }
   }
-  console.log(fail === 0 ? '[自证] 四腿全过 ✔' : '[自证] ⛔ ' + fail + ' 腿挂 ⇒ 尺作废，先修再测');
+  console.log(fail === 0 ? '[自证] 五腿全过 ✔（A 阳性 / B 阴性 / C 确定性 / D 容器装载 / E miniT 语义方向）' : '[自证] ⛔ ' + fail + ' 项挂 ⇒ 尺作废，先修再测');
   return fail === 0 ? 0 : 1;
 }
 

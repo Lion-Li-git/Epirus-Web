@@ -212,7 +212,7 @@ const MASTERY_GAMES = Math.max(2, Number(arg('masteryGames', 12)) || 12);
 const MASTERY_N = Math.max(2, Number(arg('masteryN', 3)) || 3);
 const MASTERY_TABLE = arg('masteryTable', 'long');
 const MASTERY_CAP = Math.max(2, Number(arg('masteryCap', 16)) || 16);
-/* `--masterySem=1`（勘误六）：达标数从"出手率"换"语义命中数/局"（laserEye→打防席、miniT→打 ring/bigT/railgun
+/* `--masterySem=1`（勘误六）：达标数从"出手率"换"语义命中数/局"（laserEye→打防席、miniT→打 [ep≥2 ∧ 最近 4 回合蓄过珠]
  * 用户、cannon→第3下打ep顶的三连；auditCells 的 sem/chains 计数，不加第二套）。动机：LASER1 的用量-语义反比。 */
 const MASTERY_SEM = Number(arg('masterySem', 0)) > 0;
 /* `--masteryMax=`（勘误八）：防滥刷上界——cheap 审计该键超过上界 ⇒ 记 spam、不进达标者（0=关）。
