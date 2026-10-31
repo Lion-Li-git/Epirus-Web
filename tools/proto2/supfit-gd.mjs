@@ -200,8 +200,13 @@ function weightOf(list) {
 let WKEY = weightOf(train0);
 
 /* ---- 评测（`key` = 与 chain-supfit 同口径：temp=1、键级、1/类频加权；`cand` = 教师那一枚候选的似然）---- */
+/* ⚑ 留出集里出现**训练集没有的类**时（10-31 晚 v7mix 的 holo 键触发），`1/类频` 权重根本不存在：
+ *   旧写法照旧 `nW += WKEY[c]` ⇒ nW 被毒成 NaN，而 JS 里 **NaN 是 falsy** ⇒ `ll` 静默落回哨兵 −99，
+ *   打印看着像"这枚包差到读不出"，其实是分母被吃掉了（与 pg-train 那笔 NaN 事故同族）。
+ *   现在：这类组不进加权均值、单独计数并响亮印出（带计入分母）。 */
 function like(pv, list) {
-  let llW = 0, nW = 0, hit = 0, n = 0;
+  let llW = 0, nW = 0, hit = 0, n = 0, noW = 0;
+  const noWKeys = {};
   const byKey = {};
   for (const gr of list) {
     const act = tapeForward(gr.tape, pv, ly);
@@ -209,7 +214,9 @@ function like(pv, list) {
     const p = OBJ === 'cand' ? t.probs[gr.wantIdx] : t.kProb[gr.wantKey];
     if (!(p > 0)) continue;
     const c = cls(gr);
-    n++; llW += WKEY[c] * Math.log(Math.max(1e-12, p)); nW += WKEY[c];
+    const w = WKEY[c];
+    if (!(w > 0)) { noW++; noWKeys[c] = (noWKeys[c] || 0) + 1; continue; }
+    n++; llW += w * Math.log(Math.max(1e-12, p)); nW += w;
     let bi = 0; for (let i = 1; i < t.probs.length; i++) if (t.probs[i] > t.probs[bi]) bi = i;
     const ok = OBJ === 'cand' ? (bi === gr.wantIdx) : (gr.keys[bi] === gr.wantKey);
     if (ok) hit++;
@@ -220,8 +227,11 @@ function like(pv, list) {
   /* wAgree = 1/类频加权一致率（每键的组内一致率按 1/类频加权平均） */
   let wHit = 0, wTot = 0;
   for (const k in byKey) { const w = WKEY[k] != null ? WKEY[k] : 1; wTot += byKey[k].n * w; wHit += byKey[k].hit * w; }
-  return { ll: nW ? llW / nW : -99, agree: n ? hit / n : 0, wAgree: wTot ? wHit / wTot : 0, n, byKey };
+  return { ll: nW ? llW / nW : -99, agree: n ? hit / n : 0, wAgree: wTot ? wHit / wTot : 0, n, noW, noWKeys, byKey };
 }
+/* 印出被吃掉的类（带分母），−99 从此只可能真的是"整批读不出" */
+const noWLine = (tag, r) => (r.noW ? ('  \u2691 ' + tag + '有 ' + r.noW + ' 组落在训练集没有的类 ⇒ 未计入加权似然（计入分母 n=' +
+  r.n + '）：' + Object.entries(r.noWKeys).map(([k, v]) => k + '×' + v).join(' ‖ ') + '\n') : '');
 
 const t0 = Date.now();
 const base = like(up, test);
@@ -308,6 +318,7 @@ const secs = (Date.now() - t0) / 1000;
 console.log('  终（训 ' + trainList.length + ' 组上 ll 最高的粒）：留出加权似然 ' + fin.ll.toFixed(4) + '（起点 ' + base.ll.toFixed(4) + '）' +
   ' ‖ ' + (OBJ === 'cand' ? '同枚' : '同键') + ' top-1 ' + (100 * fin.agree).toFixed(1) + '%（起点 ' + (100 * base.agree).toFixed(1) + '%）' +
   ' ‖ 加权一致率 ' + (100 * fin.wAgree).toFixed(1) + '%（起点 ' + (100 * base.wAgree).toFixed(1) + '%）');
+process.stdout.write(noWLine('起点（留出卷）', base) + noWLine('终评（留出卷）', fin));
 console.log('  逐' + (OBJ === 'cand' ? '类(键#珠)' : '键') + '（留出）：' + byKeyLine);
 if (finStudent) console.log('  ⚑ 学生自访留出（自己走出来的态）：' + (OBJ === 'cand' ? '同枚' : '同键') + ' top-1 ' + (100 * finStudent.agree).toFixed(1) + '%（' + finStudent.n + ' 组）' +
   ' ‖ 逐类 ' + Object.keys(finStudent.byKey).filter((k) => finStudent.byKey[k].n >= 3).sort((x, y) => finStudent.byKey[y].n - finStudent.byKey[x].n).slice(0, 8)
@@ -326,7 +337,7 @@ writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
   objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, teacher: TEACHER, keySplit: KS,
   playedAgree: { n: PLAY.n, hit: PLAY.hit, stuckCharge: PLAY.stuckCharge, missCharge: PLAY.missCharge, missFire: PLAY.missFire },
-  label: LABEL, supfitGd: { objective: OBJ, dagger: DAG, rounds: ROUNDS, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n,
+  label: LABEL, supfitGd: { objective: OBJ, dagger: DAG, rounds: ROUNDS, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n, testClassNotInTrain: fin.noW || 0, startClassNotInTrain: base.noW || 0,
     studentAgree: finStudent ? finStudent.agree : null, studentN: finStudent ? finStudent.n : 0,
     byKey: Object.keys(fin.byKey).map((k) => ({ key: k, n: fin.byKey[k].n, hit: fin.byKey[k].hit })), verdict },
   container: { v: packed.v != null ? packed.v : null, input: (got.cfg.input || 'v7'), dof: got.cfg.dof, gen: (KS ? 3 : (got.cfg.gen || 2)), keySplit: KS },

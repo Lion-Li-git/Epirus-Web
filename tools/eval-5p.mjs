@@ -1201,12 +1201,18 @@ const subjectLabel = (RANK && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN &&
 const champ = runSubject(subjectSel, subjectLabel);
 const ctrl = runSubject(function () { return asChooser(Bots.pickRandom); }, '对照 pickRandom');
 
+/* 名次格按**这张桌实际有几人**印（同 `style-exam.mjs` 里 `N >= 4 ?` 那条口径）。
+ *   旧写法固定印 4th/5th ⇒ 3P 档上 `s.ranks[3]` 是 undefined ⇒ 打成 `4th=NaN%`；
+ *   而 `top3` 在 3P 恒等于 100% —— 一格没有信息量的读数印在表里，比不印更容易被误读。 */
+const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
 for (const s of [champ, ctrl]) {
+  const rk = [];
+  for (let i = 1; i < Math.min(N, ORD.length); i++) rk.push('  ' + ORD[i] + '=' + s.pct(s.ranks[i], s.total));
   console.log('[' + s.label + '] 1st=' + s.pct(s.ranks[0], s.total) +
     ' 严胜=' + s.pct(s.strictFirst, s.total) + ' 并列=' + s.pct(s.tieOnlyFirst, s.total) +
-    '  2nd=' + s.pct(s.ranks[1], s.total) + '  3rd=' + s.pct(s.ranks[2], s.total) +
-    '  4th=' + s.pct(s.ranks[3], s.total) + '  5th=' + s.pct(s.ranks[4], s.total) +
-    '   | top2=' + s.pct(s.ranks[0] + s.ranks[1], s.total) + ' top3=' + s.pct(s.ranks[0] + s.ranks[1] + s.ranks[2], s.total));
+    rk.join('') +
+    '   | top2=' + (N >= 3 ? s.pct(s.ranks[0] + s.ranks[1], s.total) : '（2 人桌恒 100%，不印）') +
+    (N >= 4 ? ' top3=' + s.pct(s.ranks[0] + s.ranks[1] + s.ranks[2], s.total) : ''));
   console.log('    各座位 1st 率: ' + s.seatGames.map(function (g, i) { return 'P' + i + '=' + s.pct(s.seatFirst[i], g); }).join(' '));
   console.log('    前置条件: 主体场均承伤=' + s.takenPerGame.toFixed(2) + '  平均回合=' + s.avgRounds.toFixed(1) + '  转移事件=' + s.transferEv + '  火焰伤害事件=' + s.fireEv);
   console.log('    机制: 自己的攻击被弹回=' + s.reflectSelfPerGame.toFixed(2) + ' 次/局  平局率=' + (s.drawRate * 100).toFixed(0) + '%  终局血量=' + s.hpEnd.toFixed(2));
