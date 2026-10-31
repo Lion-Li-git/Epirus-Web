@@ -37,7 +37,7 @@ const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
   'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap', 'masterySem', 'masteryMax',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames', 'arenaPool', 'arenaShapes'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames', 'arenaPool', 'arenaShapes', 'arenaDivK'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -288,6 +288,7 @@ const ARENA_TEMP = (function () { const x = Number(arg('arenaTemp', arg('playtem
 /* `--arenaCur=net|clean`（10-29 夜 (a) 臂）：把训练货币从"净胜"换成"干净胜"（winner=我 且 hp>0；平/死者胜都按 0）。
  * 只换货币，别的一字不动 ⇒ 与同种子同预算的纯净胜臂是一变量对照。 */
 const ARENA_CUR = String(arg('arenaCur', 'net'));
+const ARENA_DIVK = Number(arg('arenaDivK', 0)) || 0;   /* 0 = 关；>0 时与 mastery 门互斥（见下） */
 if (ARENA_CUR !== 'net' && ARENA_CUR !== 'clean' && ARENA_CUR !== 'first') { console.error('⛔ --arenaCur 只认 net|clean|first（收到 ' + ARENA_CUR + '）'); process.exit(2); }
 /* ⚑ 响亮闸（ZCode · 10-31 晚，P-P5 首遍发臂当场栽的）：arena2 只在 `--arena2=1` 时建表，不带它 ⇒
  *   `evalOne` 静默掉进 `T.scoreMemberN` 内部对手表，而 `--arenaCur/--arenaStrat/…` 那一族在那条路上
@@ -527,7 +528,11 @@ const gauss = function (r) { const u = Math.max(r(), 1e-12), v = r(); return Mat
 function evalOne(params, gen, idx) {
   if (ARENA) {
     const r = ARENA.evalParams(params, { phase: 'loop', gen: gen, games: GAMES, temp: ARENA_TEMP, cur: ARENA_CUR });
-    return { fit: r.score, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard };
+    /* `--arenaDivK=`（ZCode · 11-01 凌晨，'广而强'合成实验）：fit += DivK × 非 ji 出手种类数。
+     *   只住 CEM 路的 loop 评估；与 mastery 门同开时在门口拒跑（门与正则共用一个 fit 会互相说不清）。 */
+    let dvFit = r.score;
+    if (ARENA_DIVK > 0 && r.cat) { let dvc = 0; for (const k in r.cat) if (k !== R.SK.JI) dvc++; dvFit += ARENA_DIVK * dvc; }
+    return { fit: dvFit, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard };
   }
   const opps = T.buildOpps(params, 0.05);
   const r = T.scoreMemberN(params, opps, GAMES, N, gen, idx, 0);
@@ -966,9 +971,11 @@ if (MODE === 'esa') {
   let sd = new Float64Array(DIM).fill(SIG0);
   const r = rngFor(SEED);
   const iters = TARGET_G ? 1000000 : Math.max(1, Math.floor(EVALS / POP));
-  let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
+  if (MASTERY_ON && ARENA_DIVK > 0) { console.error('⛔ --arenaDivK 与 --masteryKey 同开 ⇒ 两个判据共用一个 fit 说不清，拒跑'); process.exit(2); }
+let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
   let bestFitPasser = -Infinity;   /* 勘误二：达标者产物棘轮（产物只从过门候选里出） */
   for (let it = 0; it < iters; it++) {
+    if (MASTERY_ON && ARENA_DIVK > 0) { console.error("⛔ --arenaDivK 与 --masteryKey 同开（CEM 路）⇒ 两个判据共用一个 fit 说不清，拒跑"); process.exit(2); }
     auditsBefore = MASTERY_STAT.audits;
     const cand = [], scored = [];
     for (let i = 0; i < POP; i++) {

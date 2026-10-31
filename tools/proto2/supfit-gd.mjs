@@ -21,7 +21,7 @@ import { OPP_SPECS } from '../../server/opp-pool.mjs';            // 考卷搬�
 import { makeAsChooser } from '../bot-chooser-lib.mjs';             // 同款包装（评测同款；文件在 tools/ 根不在 proto2/）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'arenaPool', 'arenaShapes'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -160,7 +160,12 @@ const teacherPick = TEACHER === 'v7mix'
   : TEACHER === 'chainmix'
     ? (state, pid, cs, legal) => pickChain(state, pid, cs, R) || keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
-const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0 };
+/* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
+ *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
+const RARE = String(arg('rareOnly', '')).split(',').filter(Boolean);
+const RARE_FRAC = Math.min(0.95, Math.max(0, Number(arg('rareFrac', 0)) || 0));
+if (RARE.length && !(RARE_FRAC > 0)) { console.error('⛔ --rareOnly 要配 --rareFrac>0'); process.exit(2); }
+const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0, rare: 0 };
 /* 打出去的那一手 vs 教师（只在学生自访轮里量）——与 `LABEL`（克隆态 argmax 口径）是**两个不同的数** */
 const PLAY = { n: 0, hit: 0, stuckCharge: 0, missCharge: 0, missFire: 0 };
 
@@ -184,6 +189,7 @@ function collectInto(dst, srcParams, idBase) {
     /* 教师那一枚在候选表里的下标（pickChain 返回的是 cs2 里的对象本身 ⇒ 按身份找，不按 key 找） */
     const wIdx = cs2.indexOf(again);
     if (wIdx < 0 || !keys[wIdx]) { LABEL.gone++; return; }
+    if (srcParams == null && RARE.length && dst.length >= Math.floor(NGRP * (1 - RARE_FRAC)) && RARE.indexOf(again.key) < 0) { LABEL.rare++; return; }   /* 稀有期：只收稀有键组 */
     dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: keys[wIdx], want0: t0.key, shp: curShp,
       wantIdx: wIdx, wantBead: again.bead || null });
     LABEL.keys++;
@@ -223,18 +229,20 @@ function collectInto(dst, srcParams, idBase) {
       return act;
     };
   }
+  /* 稀有期的每形局数上限放宽（60 ⇒ 2500）：稀有标签要靠局数堆出来 */
+  const GCAP = RARE.length ? 2500 : 60;
   if (SHAPEBAL) {
     /* 配额摊在**组**上（第一版摊在局上 ⇒ 800 组的上限在前 2 形就撞掉，等于没改——这条已用 `覆盖 x/11 形` 自证堵死） */
     const q = Math.max(2, Math.ceil(NGRP / A2.shapes.length));
     for (let s = 0; s < A2.shapes.length; s++) {
       curShp = s;
       const before = dst.length;
-      for (let g = 0; g < 60 && dst.length - before < q; g++) { if (dst.length >= NGRP) break; A2.playOne(play, s, idBase + s * 1000 + g, 4242); }
+      for (let g = 0; g < GCAP && dst.length - before < q; g++) { if (dst.length >= NGRP) break; A2.playOne(play, s, idBase + s * 1000 + g, 4242); }
     }
   } else {
     for (let s = 0; s < A2.shapes.length && dst.length < NGRP; s++) {
       curShp = s;
-      for (let g = 0; g < 60 && dst.length < NGRP; g++) A2.playOne(play, s, idBase + s * 1000 + g, 4242);
+      for (let g = 0; g < GCAP && dst.length < NGRP; g++) A2.playOne(play, s, idBase + s * 1000 + g, 4242);
     }
   }
 }
@@ -392,7 +400,7 @@ const packed = P.pack(finalPv);
 writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
-  objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, teacher: TEACHER, keySplit: KS,
+  objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, teacher: TEACHER, keySplit: KS, rareOnly: RARE.length ? RARE.join(",") : null, rareFrac: RARE_FRAC || null,
   playedAgree: { n: PLAY.n, hit: PLAY.hit, stuckCharge: PLAY.stuckCharge, missCharge: PLAY.missCharge, missFire: PLAY.missFire },
   label: LABEL, supfitGd: { objective: OBJ, dagger: DAG, rounds: ROUNDS, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n, testClassNotInTrain: fin.noW || 0, startClassNotInTrain: base.noW || 0,
     studentAgree: finStudent ? finStudent.agree : null, studentN: finStudent ? finStudent.n : 0,
