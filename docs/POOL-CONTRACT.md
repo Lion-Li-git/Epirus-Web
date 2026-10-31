@@ -207,7 +207,8 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 ## §9 2P 池（§E599 · 2026-10-12 用户裁定）
 
 1. **2P 也有池，但是另一份**：真源 `champion-map/pool-members-2p.tsv`，产物 `js/bundled-champion-pool-2p.js`
-   （同一支 `tools/build-pool-bundle.mjs --table= --key=EPIRUS_CHAMPION --global=EPIRUS_CHAMPION_POOL_2P` 生成）。
+   （同一支 `tools/build-pool-bundle.mjs --table=champion-map/pool-members-2p.tsv --key=EPIRUS_CHAMPION --srcKey=EPIRUS_CHAMPION_3P --global=EPIRUS_CHAMPION_POOL_2P` 生成。
+   ⚠ `--srcKey` 不能省：2P 池里掺的成员是 **3P 外壳**的包，省了会红在 `D4a.js 解不出权重数组`（10-31 发 v1.8.44 时照抄本行踩过）。）
    **不是**把 3P 池搬到 2 人桌 —— §E286 那条"3P 包在 1v1 上是分布外"实测仍然成立（3P 冠军塞进 2P 格 = `0%/平100%`，退化装配）。⚠ **例外只有一条：soft 带的"跨人数邀请"，见本节约 7**（2026-10-21 用户裁定 A）。
 2. **每局只要一个对手 ⇒ 池不必大**（用户原话）。当前 **9 枚**（hard 5 ‖ soft 4，§E677 用户裁 C3 拆成两带；soft 里 **2 枚是 2026-10-21 的跨人数邀请**，见约 7；其余 7 枚仍是 2P 考卷（20 基准）训出来的包）。
 3. **成员门槛**：① 2P 考卷平均 ≥ `examMinBaseline`（现役 2P 冠军那枚的下限 0.825）‖
