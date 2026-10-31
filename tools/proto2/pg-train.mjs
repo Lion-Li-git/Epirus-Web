@@ -16,7 +16,7 @@ import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'criticLr', 'probe', 'rollbackTol', 'criticWarm', 'criticProbe', 'ridgeL2', 'ridgeFeat'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
@@ -28,13 +28,13 @@ const LAMF = Number(arg('lamF', 0.05)) || 0;
 const TEMP = Number(arg('temp', 0.5)) || 0.5;
 const OUT = String(arg('out', 'scratch/arms/PG1-s' + SEED + '.bak'));
 const TAG = String(arg('tag', ''));
-/* ===== C3（PREREG-2026-10-31-FUNNEL-COVERAGE §二乙）：把 `qHead` 从死区接成状态价值基线 =====
- * `mean`（默认）= 现役常数基线（批内均值），逐字不变；`qhead` = 优势用 G − V(s)，
- *   critic 只训 qHead 那一段（selftest3 腿 G 证：非该段梯度逐位为 0 ⇒ 策略与基线在参数空间正交）。
- * ⚠ 机制量 R² = 1 − Var(G−V)/Var(G−mu) 必须 >0，否则净分再高也不许归因给 AC（预登记条款）。 */
+/* ===== C3（PREREG-2026-10-31-FUNNEL-COVERAGE §二乙）：状态价值基线 =====
+ * `mean`（默认）= 现役常数基线（批内均值），逐字不变；`ridge` = 优势用 G − V(x)，V 是训练器里的闭式岭回归（不进包）。
+ * ⚠ 机制量 R² = 1 − Var(G−V)/Var(G−mu) 必须 >0，否则净分再高也不许归因给基线（预登记条款）。
+ * ⚑ 原来的 `qhead` 档（用网络内的 qHead 段当 V）随价值头一起在代 3 删除：10-31 深夜实测线性基线只解释 ~9% 方差、
+ *   六枚 24k 臂三档互差 ≤1.0pt，而那个头作为死段让每个下游都要为它写一条豁免 ⇒ 结构与这条档一起删（§十九）。 */
 const BASELINE = String(arg('baseline', 'mean'));
-if (BASELINE !== 'mean' && BASELINE !== 'qhead' && BASELINE !== 'ridge') { console.error('⛔ --baseline 只认 mean|qhead|ridge（收到 ' + BASELINE + '）'); process.exit(2); }
-const CLRP = Number(arg('criticLr', 0.05)) || 0.05;
+if (BASELINE !== 'mean' && BASELINE !== 'ridge') { console.error('⛔ --baseline 只认 mean|ridge（收到 ' + BASELINE + '）'); process.exit(2); }
 const PROBE = Math.max(0, Number(arg('probe', 0)) || 0);
 const RBTOL = Number(arg('rollbackTol', 0.05)) || 0.05;
 const PROBE_TEMP = 0.15;   /* 探针一律按部署温度，与验收同档 */
@@ -56,8 +56,8 @@ if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 �
 const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: true, stratCap: 2, stratMix: 0.5, wantEvents: 1 });
 
 /* ===== 价值容量探针 `--criticProbe=1`：先问"装得下吗"，再问"训得熟吗" =====
- * 同一批 (状态, return-to-go) 上，用岭回归（闭式解，带 2 折留出）量两种读出的**可达** R²：
- *   hctx = 策略压缩后的 32 维（现役 qHead 的输入）‖ xin = ctx 层的输入（G/私有/序列/池化都在里面，ep·珠·回合是原样字段）
+ * 同一批 (状态, return-to-go) 上，用岭回归（闭式解，带 2 折**按局**切）量两种读出的**可达** R²：
+ *   hctx = 策略压缩后的 32 维（网络内部最"近"的表示）‖ xin = ctx 层的输入（G/私有/序列/池化都在里面，ep·珠·回合是原样字段）
  * ⇒ 若两者都 ≈0，说明"状态价值"根本不在这台网络的线性可达范围里，得改结构而不是调 lr。 */
 let GIDS = [];
 /* 2 折留出一律**按局**分（同一局的决策进两折 = 泄漏：前一版按决策奇偶切，把 R² 抬到 0.279） */
@@ -226,16 +226,11 @@ function collector(state, pid, legal) {
 const t0 = Date.now();
 const DIM = pv.length;
 const adam = { m: new Float64Array(DIM), v: new Float64Array(DIM), t: 0 };
-const Q0 = ly.qHead, QN = ly.L.hid + 1;          /* qHead 段 = hid 个权重 + 1 个偏置 */
-const cadam = { m: new Float64Array(QN), v: new Float64Array(QN), t: 0 };
-let criticZero = 0, rbCount = 0, probeGames = 0, bestProbe = -Infinity, bestSnap = Float64Array.from(pv);
+let rbCount = 0, probeGames = 0, bestProbe = -Infinity, bestSnap = Float64Array.from(pv);
 let lastR2 = 0;   /* meta 在循环外，逐步留痕要用外层变量 */
-const WARM = arg('criticWarm', '1') !== '0';   /* critic 从批均值起步（qHead 原本是死区，里面是上游随机/未训的值 ⇒ 不热身则 V 的偏置离 G 的尺度很远，Adam 归一步长爬不回来） */
-const VOF = (d, mu) => (BASELINE === 'qhead' ? d.q : BASELINE === 'ridge' ? (d.qR == null ? mu : d.qR) : mu);
-let capDone = false, warmed = false, vDiag = { mv: 0, sv: 0, mg: 0, sg: 0 };
+const VOF = (d, mu) => (BASELINE === 'ridge' ? (d.qR == null ? mu : d.qR) : mu);
+let capDone = false, vDiag = { mv: 0, sv: 0, mg: 0, sg: 0 };
 if (BASELINE === 'ridge') console.log('  ⚑ 基线 = 观测侧闭式岭回归 V(xin)（住在训练器里，不进包 ‖ l2 ' + RL2 + ' ‖ 每批重拟合 ‖ 采集用上一次拟合 ⇒ 不自家打分自家）');
-if (BASELINE === 'qhead') console.log('  ⚑ 基线 = 状态价值 V(s)（qHead 段 ‖ critic lr ' + CLRP + ' ‖ 探针 ' +
-  (PROBE ? PROBE + ' 局/25 步，seq 空间 gen=1e6+step（从不用于训练）' : '关') + ' ‖ 每步报 R²）');
 let games = 0, upd = 0, zeroGrad = 0;
 const stat = { score: 0, fire: 0, charge: 0, ent: 0, decs: 0, snap8k: false };
 const ZIP = { games: 0, bad: 0 };
@@ -304,20 +299,9 @@ while (games < GAMES) {
   }
   lastR2 = r2;
   if (PROBE_CAP && CAP.length >= 200 && !capDone) { capDone = true; CAPR2 = valueCapacity(A2, P, ly, [{ ds: CAP }]) || null; }
-  /* 优势的分母用**残差自己的**标准差。⚑ 这不是口味问题：`mean` 档里 残差=G−mu ⇒ 它与原来的 sd 是同一个数
-   *   （逐位同，默认路径不变）；而 `qhead` 档若仍按 G 的 sd 归一，critic 还没学好时 G−V 可以远大于 sd
-   *   ⇒ 策略步长被没训熟的 V 顶暴（10-31 深夜实测 R²=−3.1 那一格就是这么炸的，回滚闸兜住了）。 */
-  if (BASELINE === 'qhead' && WARM && !warmed) {
-    warmed = true;
-    for (let k = 0; k < QN - 1; k++) pv[Q0 + k] = 0;
-    pv[Q0 + QN - 1] = mu;
-    for (const { d } of decsBatch) d.q = mu;
-    console.log('  ⚑ critic 热身：qHead 权重清零、偏置置成首批均值 ' + mu.toFixed(3) + ' ⇒ 第一步的优势 = 现役常数基线（不靠这个热身不会动）');
-    ssRes = ssTot; lastR2 = 0; vDiag = { mv: mu, sv: 0, mg: mu, sg: vDiag.sg };
-  }
-  let sdUse = sd;
-  if (BASELINE === 'qhead') { const v0 = ssRes / Math.max(1, decsBatch.length); sdUse = Math.sqrt(v0 > 0 ? v0 : 0) || 1; }
-  let cmax = 0;
+  /* 优势的分母 = 批内 **G 的标准差**（`mean` 档残差即 G−mu ⇒ 与现役逐字同；在册的 6 枚 ridge 臂吃的也是这个分母，
+   *   删掉可微 critic 档后不再有"残差分母"那套热身/兜底逻辑——见 §十九：那条路判不采纳，结构也一起删了）。 */
+  const sdUse = sd;
   for (const { d, G } of decsBatch) {
     const V = VOF(d, mu);
     const A = (G - V) / sdUse;
@@ -326,21 +310,13 @@ while (games < GAMES) {
     const t = tailOf(act.logits, d.tape.keys, TEMP);
     const g = dLogPi(d.idx, act.logits, d.tape.keys, TEMP, t);
     for (let j = 0; j < g.length; j++) g[j] *= A;
-    /* critic 的上游 = d(V−G)²/dV = 2(V−G)（mean 档传 0 ⇒ 与现役逐字同） */
-    const uq = BASELINE === 'qhead' ? 2 * (V - G) : 0;
-    tapeBackward(d.tape, pv, ly, act, g, grad, uq, 0);
-  }
-  if (BASELINE === 'qhead') {
-    for (let k = 0; k < QN; k++) { const av = Math.abs(grad[Q0 + k]); if (av > cmax) cmax = av; }
-    if (cmax === 0) { criticZero++; if (criticZero >= 3) { console.error('⛔ critic 梯度连续 ' + criticZero + ' 步全零 ⇒ 价值通路没接电，拒绝静默训练'); process.exit(9); } }
-    else criticZero = 0;
+    tapeBackward(d.tape, pv, ly, act, g, grad);
   }
   { let mx = 0; for (let q = 0; q < DIM; q++) { const a = Math.abs(grad[q]); if (a > mx) mx = a; }
     if (mx === 0) { zeroGrad++; if (zeroGrad >= 3) { console.error('⛔ 连续 ' + zeroGrad + ' 步 grad 全零 ⇒ 训练在空转，拒绝继续'); process.exit(9); } }
     else zeroGrad = 0; }
   adam.t++;
   for (let d = 0; d < DIM; d++) {
-    if (d >= Q0 && d < Q0 + QN) continue;    /* 这段梯度归 critic（mean 档这里恒 0 ⇒ 逐位不变） */
     const gg = grad[d] / Math.max(1, decsBatch.length);
     adam.m[d] = 0.9 * adam.m[d] + 0.1 * gg;
     adam.v[d] = 0.999 * adam.v[d] + 0.001 * gg * gg;
@@ -352,17 +328,6 @@ while (games < GAMES) {
     for (const { d, G } of decsBatch) { const xf = RFEAT === 'small' ? d.feat : d.xinArr; if (xf) { Xs.push(xf); ys.push(G); } }
     if (Xs.length < 100) { console.error('⛔ ridge 基线样本不足（' + Xs.length + '）⇒ xinArr 没接上，拒绝按常数基线假装是 AC'); process.exit(9); }
     RFIT = ridgeFit(Xs, ys, RL2); XsN = Xs.length;
-  }
-  if (BASELINE === 'qhead') {
-    cadam.t++;
-    const cn = Math.max(1, decsBatch.length);
-    for (let k2 = 0; k2 < QN; k2++) {
-      const gc = grad[Q0 + k2] / cn;
-      cadam.m[k2] = 0.9 * cadam.m[k2] + 0.1 * gc;
-      cadam.v[k2] = 0.999 * cadam.v[k2] + 0.001 * gc * gc;
-      const mh2 = cadam.m[k2] / (1 - Math.pow(0.9, cadam.t)), vh2 = cadam.v[k2] / (1 - Math.pow(0.999, cadam.t));
-      pv[Q0 + k2] -= CLRP * mh2 / (Math.sqrt(vh2) + 1e-8);
-    }
   }
   /* 回滚闸：在**从未用于训练的 seq 空间**（gen=1e6+step）上探针，劣化超阈值就退回最好快照 */
   if (PROBE > 0 && upd % 25 === 0) {
@@ -394,15 +359,15 @@ console.log('  终：局 ' + games + ' ‖ 平均净分 ' + (stat.score / Math.m
   ' ‖ 炮/局 ' + (stat.fire / Math.max(1, games)).toFixed(3) + ' ‖ 纪律蓄/局 ' + (stat.charge / Math.max(1, games)).toFixed(3) +
   ' ‖ zip 坏 ' + ZIP.bad + '/' + ZIP.games + ' ‖ 耗时 ' + secs.toFixed(0) + 's');
 savePack(OUT);
+const packed = P.pack(pv);   /* 容器形状从**产物自己**读，不在 meta 里写死代/v（Stage A 之后 91/92 两代同时在盘上） */
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'pg-train', tag: TAG || null, parent: UP, seed: SEED, games, batch: BATCH, lr: LR, temp: TEMP,
   lamC: LAMC, lamF: LAMF, cur: 'net', updates: upd, wallSecs: Math.round(secs),
-  criticDiag: BASELINE === 'qhead' ? { warm: WARM, last: vDiag } : null,
-  baseline: BASELINE, ridgeFeat: BASELINE === 'ridge' ? RFEAT : null, ridgeFitN: BASELINE === 'ridge' ? XsN : null, valueCapacityR2: CAPR2, ridgeL2: BASELINE === 'ridge' ? RL2 : null, ridgeDim: BASELINE === 'ridge' ? (RFIT ? RFIT.m : 0) : null, criticLr: BASELINE === 'qhead' ? CLRP : null, probe: PROBE || null, rollbackTol: RBTOL,
+  baseline: BASELINE, ridgeFeat: BASELINE === 'ridge' ? RFEAT : null, ridgeFitN: BASELINE === 'ridge' ? XsN : null, valueCapacityR2: CAPR2, ridgeL2: BASELINE === 'ridge' ? RL2 : null, ridgeDim: BASELINE === 'ridge' ? (RFIT ? RFIT.m : 0) : null, probe: PROBE || null, rollbackTol: RBTOL,
   rollbackCount: rbCount, probeGames, bestProbeScore: Number.isFinite(bestProbe) ? +bestProbe.toFixed(4) : null,
-  critic: BASELINE === 'qhead' ? { qHeadOff: Q0, qHeadLen: QN, advDenom: 'sd(残差)', lastR2: +lastR2.toFixed(4) } : null,
+  lastR2: BASELINE === 'mean' ? null : +lastR2.toFixed(4),
   loop: { meanScore: stat.score / Math.max(1, games), firePerGame: stat.fire / Math.max(1, games), discChargePerGame: stat.charge / Math.max(1, games), entropy: stat.ent / Math.max(1, stat.decs), zipBad: ZIP.bad },
-  container: { v: 91, input: got.cfg.input, dof: got.cfg.dof },
-  lineage: { parent: UP, gen: 2, recipe: { objective: (LAMC || LAMF) ? 'scoreNet + λc·discCharge + λf·railgun (resident)' : 'scoreNet only (λ=0 negative control)', solver: 'REINFORCE+Adam (pg-lib, selftest3 7 legs)', baseline: BASELINE } },
+  container: { v: packed.v, input: got.cfg.input, dof: got.cfg.dof, gen: packed.dims.gen, keySplit: packed.dims.keySplit || 0, n: packed.n },
+  lineage: { parent: UP, gen: packed.dims.gen, recipe: { objective: (LAMC || LAMF) ? 'scoreNet + λc·discCharge + λf·railgun (resident)' : 'scoreNet only (λ=0 negative control)', solver: 'REINFORCE+Adam (pg-lib, selftest3 6 legs)', baseline: BASELINE } },
 }, null, 1), 'utf8');
 console.log('  产物 → ' + OUT);

@@ -1047,7 +1047,7 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
   id: armId(OUT), parent: (startLabel.indexOf('夹具包') === 0 ? armId(START_PACK) : ''),
   lineage: { parent: startLabel.indexOf('夹具包') === 0 ? START_PACK : 'random', parentHash: startHash,
     outHash: OUT ? (function () { try { return createHash('md5').update(JSON.stringify(P.pack(best))).digest('hex'); } catch (e) { return null; } })() : null,
-    gen: OUT ? (function () { try { const vv = P.pack(best).v; return vv === 91 ? 2 : (vv === 90 ? 1 : null); } catch (e) { return null; } })() : null,
+    gen: OUT ? (function () { try { const vv = P.pack(best).v; return vv === 92 ? 3 : (vv === 91 ? 2 : (vv === 90 ? 1 : null)); } catch (e) { return null; } })() : null,
     seed: SEED, recipe: { arenaLex: ARENA_LEX, arenaPerN: ARENA_PER_N, boN: BO_N, shapeCap: SHAPE_CAP, shapePick: SHAPE_PICK, warmShape: WARM_SHAPE } },
   /* mastery 门（ARCH-2026-10-31-BUCKET-POOL §四）：开着就必带计数，audits=0 视为没接电（见下方自证） */
   mastery: MASTERY_ON ? { key: MASTERY_KEY, gate: MASTERY_GATE, line: MASTERY_LINE, games: MASTERY_GAMES, n: MASTERY_N, table: MASTERY_TABLE, cap: MASTERY_CAP, stat: MASTERY_STAT } : null,
@@ -1096,7 +1096,7 @@ if (OUT) {
       v: packed.v, arch: packed.arch, gen: LL.gen, dims: packed.dims, n: LL.n,
       seg: LL.seg.map(function (s) {
         const inDim = { seatEnc: LL.seatIn, actEnc: LL.actIn, ctx: LL.ctxDim, cand: LL.candIn }[s.name];
-        const rows = { seatEnc: LL.seatH, actEnc: LL.actH, ctx: LL.hid, cand: LL.hid2, policyHead: LL.hid2, qHead: LL.hid }[s.name];
+        const rows = { seatEnc: LL.seatH, actEnc: LL.actH, ctx: LL.hid, cand: LL.hid2, policyHead: LL.hid2 }[s.name];
         return inDim ? { name: s.name, off: s.off, len: s.len, weight: [s.off, s.off + rows * inDim], bias: [s.off + rows * inDim, s.off + s.len], fanIn: LL.fanIn[s.name] }
           : { name: s.name, off: s.off, len: s.len, weight: [s.off, s.off + s.len], bias: null, fanIn: LL.fanIn[s.name] };
       })

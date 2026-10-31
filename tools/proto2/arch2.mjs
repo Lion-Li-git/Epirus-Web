@@ -59,10 +59,12 @@ const INIT_SCALE = 0.25;
  *   一个既不是代 1 也不是代 2 的第三种对象——那正是这仓反复栽的"半旧口径"陷阱。
  *   要复算代 1 的读数：`git checkout f996c2a3`（代 1 冻结点，10-30 13:30 交班那一笔）用当时那份尺跑。
  *   本代只做一件事：**拒读**代 1 的包，绝不静默按新网络解释旧权重。 */
-const GEN_LATEST = 2;      /* ⚠ Stage C 之前不翻默认：翻了 ⇒ 现有尺读不了 v:91（那是最后一步，删除清单见任务 #18） */
-const GEN_NEW = 3;         /* 代 3 = v:92：键层按决策键分组（keySplit）⇒ 新臂显式 gen=3 才走这条路 */
+/* ⚑ **代 2（v:91）已在 Stage B 退役**：代 3 删掉了 qHead 那 33 个参数 ⇒ 段表与旧容器不同形，
+ *   再留一个"gen=2 也能写"的口子，写出来的 v:91 就同时指两种网络（正是版本门要挡的那件事）。
+ *   读侧同理：只认 gen 3。旧包（8026 条）在这里**响亮拒读**，跨代搬运由调用方显式做（见 supfit-gd 的 ⚑ 跨代搬运）。 */
+const GEN_LATEST = 3;        /* 代 3 = v:92：键层按决策键分组（keySplit）+ 无价值头 */
 const GEN_FROZEN_COMMIT = 'f996c2a3';
-const V_FOR_GEN = { 1: 90, 2: 91, 3: 92 };
+const V_FOR_GEN = { 1: 90, 2: 91, 3: 92 };   /* 1/2 只留着把"旧代"翻译成 v 写给报错看，没有任何路径再写它们 */
 export { V_FOR_GEN };
 /** 包里的结构代；代 1 的产物没有 `dims.gen` ⇒ 缺省认成 1 */
 export function genOf(o) {
@@ -71,18 +73,18 @@ export function genOf(o) {
   return Number(g);
 }
 /** CLI 装载入口：从解开的包算出该装哪一代，并把时代交回给调用方去打印。
- * 代 1 直接抛——不是"读不出就算了"，而是**有人正拿旧包在新尺上求平均**，那种读数会一路绿着骗人。 */
+ * 旧代直接抛——不是"读不出就算了"，而是**有人正拿旧包在新尺上求平均**，那种读数会一路绿着骗人。 */
 export function packInstallCfg(raw, extra) {
   if (!raw || typeof raw !== 'object') throw new Error('packInstallCfg: 包是空的');
   const gen = genOf(raw);
   if (!raw.dims && (typeof raw.v !== 'number' || raw.v < 90)) {
     throw new Error('这不是 2.0 容器（v=' + raw.v + ' ⇒ ' + (raw.v === 7 ? 'v7 那套"单标量头 + 4 槽补零"的包，浏览器与尺都另有通路' : '认不出的容器') +
-      '）。2.0 的容器形状：v:91 + dims{input, gen:2, dof}。');
+      '）。2.0 的容器形状：v:92 + dims{input, gen:3, dof}。');
   }
-  if (gen !== GEN_LATEST && gen !== GEN_NEW) {
+  if (gen !== GEN_LATEST) {
     throw new Error('packInstallCfg: 这是**代 ' + gen + '** 的产物（v=' + raw.v + '，dims.gen=' + (raw.dims && raw.dims.gen) + '），' +
-      '与当前尺（代 ' + GEN_LATEST + '）的输入面/池化/段偏移都不同形 ⇒ 不许装载。' +
-      '要复算代 1 的读数：`git checkout ' + GEN_FROZEN_COMMIT + '` 用当时那份尺跑（原件在 scratch/arms/，未入库）。');
+      '当前尺只实现代 ' + GEN_LATEST + '（段表里没有 qHead ⇒ 与代 2 的 8026 条不同形）⇒ 不许装载。' +
+      '要复算代 1/代 2 的读数：`git checkout ' + GEN_FROZEN_COMMIT + '` 或删 qHead 前那一笔，用当时那份尺跑（原件在 scratch/arms/，未入库）。');
   }
   if (raw.v !== V_FOR_GEN[gen]) throw new Error('packInstallCfg: v=' + raw.v + ' 与 dims.gen=' + gen + ' 不自洽（该是 v=' + V_FOR_GEN[gen] + '）');
   const cfg = Object.assign({ mutMode: 'seg' }, raw.dims || {}, { gen }, extra || {});
@@ -134,10 +136,12 @@ export function layout(opts) {
    *   「蓄能」在候选表里本来就是两枚同键不同珠（policy.js:680 的 bead='elec'/'boom'）。旧口径下键层取
    *   bestOf ⇒ **任何键级目标/门/审计都看不见珠种**，包只能继承起点的抽签（今晚实测：OB3S 起点键级蒸馏
    *   576 次蓄成爆珠 ⇒ 开火窗 0.2%、净分 −21.6%）。拆成 charge#elec / charge#boom 之后珠种进入"选哪个动作"这一层。
-   *   三条硬规矩与 inter/tinter 同款：① 代 2 默认 0 ⇒ 现役包逐位不变；② **不加观测维、不动参数量**
-   *   （C.cand 里本来就有 beadIsElec/beadIsBoom）；③ 段表不变 ⇒ 变异/蒸馏/冻结的账全部照旧。 */
-  const keySplit = (o.keySplit == null) ? (gen >= GEN_NEW ? 1 : 0) : (Number(o.keySplit) > 0 ? 1 : 0);
-  if (gen !== GEN_LATEST && gen !== GEN_NEW) throw new Error('layout: 只实现代 ' + GEN_LATEST + '/' + GEN_NEW + '（收到 gen=' + gen + '）；代 1 请 checkout ' + GEN_FROZEN_COMMIT + ' 跑旧尺，不要在这里装半旧档');
+   *   三条硬规矩（Stage A 时写的，其中①已被 Stage B 改掉）：① 代 2 默认 0 ⇒ 现役包逐位不变〔代 2 已退役，见上〕；
+   *   ② **不加观测维、不动参数量**（C.cand 里本来就有 beadIsElec/beadIsBoom）；③ 段表不变 ⇒ 变异/蒸馏/冻结的账全部照旧。
+   *   ⚑ 代 3 唯一 ⇒ `keySplit` 缺省开（与在册的代 3 产物一致），并且**无条件写进 dims**：
+   *     旧写法"只在非零时写"是为了让代 2 容器逐位不变；现在代 2 没了，留着就等于"读回来的默认可能与写出去的不同"。 */
+  const keySplit = (o.keySplit == null) ? 1 : (Number(o.keySplit) > 0 ? 1 : 0);
+  if (gen !== GEN_LATEST) throw new Error('layout: 只实现代 ' + GEN_LATEST + '（收到 gen=' + gen + '）；代 1 请 checkout ' + GEN_FROZEN_COMMIT + ' 跑旧尺、代 2 请 checkout 删 qHead 前那一笔，不要在这里装半旧档');
   const input = o.input === 'obs3' || o.input === 'obs3b' ? o.input : 'v7';
   const isO3 = input === 'obs3' || input === 'obs3b';
   const skills = Math.max(1, Number(o.skills) || 27);
@@ -191,7 +195,6 @@ export function layout(opts) {
     { name: 'ctx', off: 0, len: hid * ctxDim + hid },
     { name: 'cand', off: 0, len: hid2 * candIn + hid2 },
     { name: 'policyHead', off: 0, len: hid2 + 1 },
-    { name: 'qHead', off: 0, len: hid + 1 },
   ];
   if (interK > 0) seg.push({ name: 'inter', off: 0, len: interK * interStride });
   if (tinterK > 0) seg.push({ name: 'tinter', off: 0, len: tinterK * tinterStride });
@@ -202,7 +205,7 @@ export function layout(opts) {
     poolN,
     seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, tinterK, tinterStride, seg, n: off, keySplit,
     /* 每段的"扇入"—— 段感知变异要用它给 σ 定标（扇入越大、同样 σ 造成的输出扰动越大） */
-    fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, qHead: hid, inter: hid, tinter: seatH },
+    fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, inter: hid, tinter: seatH },
   };
 }
 
@@ -304,7 +307,7 @@ export function install(W, opts) {
     zeroSeat: new Float64Array(L.seatH),
   };
 
-  /* 逐候选打分 + Q(s)；返回与 v7 同形状的 {probs, argmax, cand, logits, q} */
+  /* 逐候选打分；返回 {probs, argmax, cand, logits}（Q(s) 头已于代 3 删除 ⇒ 段表里不存在没人读的参数） */
   function forwardV7(state, pid, cands, params, opts2) {
     /* §E822 吞吐记账：横比的货币应该是**决策数与候选打分次数**，不是"局数"——
      *   赢面越高的包局越长（实测同 2000 局，GA 臂墙钟是 CEM 的 30 倍），只报局数会把"变强"读成"变慢"。 */
@@ -315,7 +318,7 @@ export function install(W, opts) {
     const actBias = L.seg[1].off + L.actH * 22;
     const ctxBias = L.seg[2].off + L.hid * L.ctxDim;
     const candBias = L.seg[3].off + L.hid2 * L.candIn;
-    const headOff = L.seg[4].off, qOff = L.seg[5].off;
+    const headOff = L.seg[4].off;
     /* 权重起点每次决策取一次（不在逐候选循环里查段表） */
     const WS = segOff('seatEnc'), WA = segOff('actEnc'), WC = segOff('ctx'), WK = segOff('cand');
 
@@ -349,7 +352,6 @@ export function install(W, opts) {
     /* ⚑ **布局自洽不变量**（10-28 傍晚那次死权重事故之后，这条是硬要求，不是注释）：
      *   声明宽度必须等于真正拼进去的长度 —— 差一列就是"白占 + 白算 + 静默错位"。 */
     if (xin.length !== L.ctxDim) throw new Error('布局不自洽：ctx 层拼进 ' + xin.length + ' 而声明 ' + L.ctxDim);
-    let q = params[qOff + L.hid]; for (let j = 0; j < L.hid; j++) q += params[qOff + j] * hctx[j];
 
     const n = cands.length, logits = new Float64Array(n);
     const phis = (opts2 && opts2.wantPhi) ? new Array(n) : null;   /* 蒸馏旁路：默认不建，零开销 */
@@ -398,7 +400,7 @@ export function install(W, opts) {
     for (let i = 0; i < n; i++) if (logits[i] > best) { best = logits[i]; arg = i; }
     let phiRet = null;
     if (phis) { phiRet = new Float64Array(n * L.hid2); for (let i = 0; i < n; i++) phiRet.set(phis[i], i * L.hid2); }
-    return { probs, argmax: arg, cand: cands[arg] || null, logits, q, phi: phiRet };
+    return { probs, argmax: arg, cand: cands[arg] || null, logits, phi: phiRet };
   }
 
   /* ===== obs3 输入面（`--input=obs3` ⇒ arch 标成 `S1o`）=====
@@ -416,7 +418,7 @@ export function install(W, opts) {
     const actBias = L.seg[1].off + L.actH * L.actIn;
     const ctxBias = L.seg[2].off + L.hid * L.ctxDim;
     const candBias = L.seg[3].off + L.hid2 * L.candIn;
-    const headOff = L.seg[4].off, qOff = L.seg[5].off;
+    const headOff = L.seg[4].off;
     /* 权重起点每次决策取一次（不在逐候选循环里查段表） */
     const WS = segOff('seatEnc'), WA = segOff('actEnc'), WC = segOff('ctx'), WK = segOff('cand');
 
@@ -474,7 +476,6 @@ export function install(W, opts) {
     if (p !== L.ctxDim) throw new Error('布局不自洽：ctx 拼进 ' + p + ' 而声明 ' + L.ctxDim + '（seatH 改动后 selfDim 账要重算）');
     if (TP) TP.xin = Float64Array.from(xin);
     const hctx = encode(params, xin, L.ctxDim, L.hid, WC, ctxBias, BUF.hctx);
-    let q = params[qOff + L.hid]; for (let j = 0; j < L.hid; j++) q += params[qOff + j] * hctx[j];
 
     const n = cands.length, logits = new Float64Array(n);
     const phis = (opts2 && opts2.wantPhi) ? new Array(n) : null;   /* 蒸馏旁路：默认不建，零开销 */
@@ -557,7 +558,7 @@ export function install(W, opts) {
     for (let i = 0; i < n; i++) if (logits[i] > best) { best = logits[i]; arg = i; }
     let phiRet = null;
     if (phis) { phiRet = new Float64Array(n * L.hid2); for (let i = 0; i < n; i++) phiRet.set(phis[i], i * L.hid2); }
-    return { probs, argmax: arg, cand: cands[arg] || null, logits, q, phi: phiRet, ...(TP ? { tape: TP } : {}) };
+    return { probs, argmax: arg, cand: cands[arg] || null, logits, phi: phiRet, ...(TP ? { tape: TP } : {}) };
   }
   function forwardCands(state, pid, cands, params, opts2) {
     return L.input === 'v7' ? forwardV7(state, pid, cands, params, opts2) : forwardObs3(state, pid, cands, params, opts2);
@@ -666,7 +667,7 @@ export function install(W, opts) {
   /* ---- 段感知变异 / 交叉（优化器×结构这一格的主角）---- */
   function biasLen(s) {
     /* 每段末尾是 bias 向量（head 段是 1 个标量） ⇒ 长度 = 该段输出维 */
-    const outDim = { seatEnc: L.seatH, actEnc: L.actH, ctx: L.hid, cand: L.hid2, policyHead: 1, qHead: 1 };
+    const outDim = { seatEnc: L.seatH, actEnc: L.actH, ctx: L.hid, cand: L.hid2, policyHead: 1 };
     return outDim[s.name] || 1;
   }
   /* 段名白名单：只在**第一次真要变异时**校验（那时 L 一定已就绪），认错就抛 */
@@ -691,7 +692,7 @@ export function install(W, opts) {
      * 动因（B1 的实测，不是推测）：60000 局、`fxGames=30` 的那条臂里，1/5 律把 σ 从 0.2 一路缩到 **0.0001**
      *   才停下 ⇒ 因为旧口径下**偏置**段拿的是原 σ（0.2）而它的初始化尺度只有 0.25/√fanIn ≈ 0.02
      *   算出来的比值：`make` 给**每个**坐标（含偏置）的 init std = 0.25/√fanIn，而旧变异给偏置的是**原 σ**
-     *   ⇒ σ=0.2 时偏置一步 = 自身 init 尺度的 0.8·√fan 倍（ctx 段 fan=113 ⇒ 8.5× ‖ qHead 4.5× ‖ policyHead 3.9×），
+     *   ⇒ σ=0.2 时偏置一步 = 自身 init 尺度的 0.8·√fan 倍（ctx 段 fan=113 ⇒ 8.5× ‖ policyHead 3.9×），
      *   权重段却只有 0.8× ⇒ 有一段被反复打散。**注意这一步是"为什么 σ 会崩"的解释**（B1 只给了 σ 崩 + 6/30 接受这两个事实，
      *   没给"打散偏置导致适应度不涨"的证据 ⇒ 这条要由 mutRel 那条臂来判，别提前当结论引用）。
      *   权重段虽然有 1/√fanIn 定标，但 σ 与"当前权重量级"无关，训练后期权重长大了同 σ 的相对扰动就越来越小。 */
@@ -736,8 +737,7 @@ export function install(W, opts) {
    *   ⇒ 下游按 `arch` 选输入面的尺（profile2）会拿错的那张脸去读。长度不同（5258≠5650）只挡住了"unpack 成功"，
    *   挡不住"有人照 arch 装错档再按长度报错"这种绕路。⇒ 标签一律**由实际布局写**，读的时候当场对账。 */
   function packDims() {
-    const d = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0, tinter: L.tinterK || 0, gen: L.gen };
-    if (L.keySplit) d.keySplit = L.keySplit;   /* 关着就不写 ⇒ 代 2 的容器形状与在册产物逐位不变（否则每次重跑都对不上 md5，回归腿等于废掉） */
+    const d = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0, tinter: L.tinterK || 0, gen: L.gen, keySplit: L.keySplit };
     if (isO3Input(L.input)) d.dof = obs3Dims(R, L.input);     /* 观测面维数由引擎卡表算，不让调用方手填（obs3b=505）*/
     return d;
   }

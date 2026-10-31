@@ -3,7 +3,7 @@
  *
  * 为什么要有这条：浏览器侧那份（`js/train/policy2.js`）是从训练侧（`tools/proto2/{obs3,arch2}.mjs`）**移植**的。
  *   本仓的死法一直是"两份同构算术必漂移"（1584 死权重、跨文件宽度各写一遍、代 1 的段偏移…）。
- *   移植对不对不能靠我读一遍说"我照抄了"，只能靠**逐位对账**：同一批真局决策点 ⇒ logits/probs/argmax/Q(s) 全等。
+ *   移植对不对不能靠我读一遍说"我照抄了"，只能靠**逐位对账**：同一批真局决策点 ⇒ logits/probs/argmax 全等。
  *
  * 判据（任何一条不过 ⇒ exit 8；每条都带"摘腿后变异"，防恒真）：
  *   P1 逐位相同：N 个真局决策点上，`policy2.forwardCands` 与 arch2 的 `P.forwardCands` 的 logits/probs/argmax/q **逐元素相等**。
@@ -65,15 +65,14 @@ for (const t of TEMPS) {
       if (a.probs[i] !== b.probs[i]) { bad.push('probs[' + i + '] t=' + t + ' 不同'); break; }
     }
     if (a.argmax !== b.argmax) bad.push('argmax 不同 t=' + t + '（' + a.argmax + ' vs ' + b.argmax + '）');
-    if (a.q !== b.q) bad.push('Q(s) 不同 t=' + t + '（' + a.q + ' vs ' + b.q + '）');
     if (bad.length) break;
   }
   if (bad.length) break;
 }
-console.log('P1 逐位对账：' + cmpCells + ' 个决策点 × 2 个温度 ‖ logits/probs/argmax/Q(s) ' + (bad.length ? '有差 ⇒ 移植漂了' : '**逐位相同**'));
+console.log('P1 逐位对账：' + cmpCells + ' 个决策点 × 2 个温度 ‖ logits/probs/argmax ' + (bad.length ? '有差 ⇒ 移植漂了' : '**逐位相同**'));
 if (bad.length) { for (const x of bad.slice(0, 6)) console.log('   ✖ ' + x); process.exit(8); }
 
-/* ---- P2 有牙：**逐段把整块权重区换成独立随机值** ⇒ 功能段必须动 logits，qHead 必须不动 ----
+/* ---- P2 有牙：**逐段把整块权重区换成独立随机值** ⇒ 段表里每一段都必须动 logits（代 3 起没有豁免段）----
  * ⚑ 为什么不是"抽一个下标 +1"：单点扰动会被 ReLU 直接夹掉（pre-activation 还是负 ⇒ 那一维恒 0 ⇒ 输出逐位不变），
  *   于是"没变"既可能是"这段没接上"也可能是"这一维被夹了"—— 训练侧那条腿（selftest2 T18）当初就是靠**整段换**才判得动。
  *   这里与它同形，两边才谈得上"同一把尺"。 */
@@ -90,22 +89,16 @@ function swapSeg(name, scale) {
 }
 const probe = [];
 for (const s of br.p2.seg) {
-  if (s.name === 'qHead') continue;                  // qHead 不参与组内排序是**结构承诺** ⇒ 它另列一条对照
   const b = P2.forwardCands(W, F0.st, F0.pid, F0.cands, swapSeg(s.name), { temp: 0.15 });
   probe.push({ seg: s.name, moved: Array.from(b.logits).join(',') !== baseKey });
 }
-const qq = swapSeg('qHead', 30);
-const bq = P2.forwardCands(W, F0.st, F0.pid, F0.cands, qq, { temp: 0.15 });
-const qDead = Array.from(bq.logits).join(',') === baseKey && bq.q !== base0.q;
-console.log('P2 牙：逐段换权重区 ⇒ ' + probe.map((p) => p.seg + (p.moved ? '✔' : '✖')).join(' ‖ ') +
-  ' ‖ qHead 对照（换整段 logits 不许变而 Q(s) 必须变）：' + (qDead ? '成立 ✔' : '**不成立**（logits ' + (Array.from(bq.logits).join(',') === baseKey ? '不变' : '变了！') + ' ‖ Q(s) ' + (bq.q !== base0.q ? '变了' : '没变') + '）'));
+console.log('P2 牙：逐段换权重区 ⇒ ' + probe.map((p) => p.seg + (p.moved ? '✔' : '✖')).join(' ‖ '));
 const deadSegs = probe.filter((p) => !p.moved);
 if (deadSegs.length) { console.error('⛔ 这些段整块换掉都抽不动输出：' + deadSegs.map((d) => d.seg).join(', ') + ' ⇒ 浏览器侧那段没接上（或它的输入列在夹具里恒 0）'); process.exit(8); }
-if (!qDead) { console.error('⛔ qHead 那条对照不过 ⇒ 两头分离没实现（logits 被 Q 头污染，或 Q 头根本没读）'); process.exit(8); }
 
 /* ---- P3 拒读三例 ---- */
 const v7chk = P2.checkPack(v7Fake, W);
-const gen1 = JSON.parse(JSON.stringify(raw)); gen1.dims.gen = 1;                 // v 保持 91 ⇒ 只能被**代闸**拦（不能靠 version 蒙对）
+const gen1 = JSON.parse(JSON.stringify(raw)); gen1.dims.gen = 1;                 // v 保持这枚包的 92 ⇒ 只能被**代闸**拦（不能靠 version 蒙对）
 const g1chk = P2.checkPack(gen1, W);
 const v90 = JSON.parse(JSON.stringify(raw)); v90.v = 90;                          // 真·代 1 容器的 v ⇒ 版本闸
 const v90chk = P2.checkPack(v90, W);

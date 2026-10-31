@@ -85,7 +85,8 @@ for (const p of PACKS) {
     if (installed) installed.restore();
     installed = installArch2(W, Object.assign({ mutMode: 'seg' }, got.cfg));
     const pp = W.EpirusPolicy.unpack(raw, true);
-    if (!pp) { console.log('⚠ ' + p + ' unpack 不出 ⇒ 跳过'); continue; }
+    /* ⚑ 旧写法"⚠ 跳过 ⇒ continue"会让表格里少一行而退出码照 0（10-31 Stage B 之后旧代包全走这条路）⇒ 响亮拒收。 */
+    if (!pp) { console.error('⛔ ' + p + ' unpack 不出（v=' + raw.v + ' ‖ dims.gen=' + (raw.dims && raw.dims.gen) + ' ‖ 长度 ' + (raw.a && raw.a.length) + ' ‖ 本尺只实现代 3）⇒ 少一行就是假对照，整表不交'); process.exit(7); }
     A = createArena2(W, { refParams, temp: TEMP, highN: 1, stratified: true, stratCap: 2, stratMix: 0.5 });
     const wi = A.verifyWired(pp, { temp: TEMP });
     if (!wi.ok) { console.error('⛔ ' + p + ' 接线没生效 ⇒ 不量'); process.exit(7); }
@@ -129,7 +130,7 @@ function drawKids(pp, L, K, sig, seedBase) {
   for (let i = 0; i < K; i++) {
     const v = Float64Array.from(pp);
     for (const sg of L.seg) {
-      const biasLen = { seatEnc: L.seatH, actEnc: L.actH, ctx: L.hid, cand: L.hid2, policyHead: 1, qHead: 1, inter: L.hid }[sg.name] || 1;
+      const biasLen = { seatEnc: L.seatH, actEnc: L.actH, ctx: L.hid, cand: L.hid2, policyHead: 1, inter: L.hid }[sg.name] || 1;
       const biasStart = sg.off + sg.len - biasLen, k = sig / Math.sqrt(Math.max(1, L.fanIn[sg.name]));
       for (let d = sg.off; d < sg.off + sg.len; d++) v[d] += (d >= biasStart ? sig : k) * gauss();
     }

@@ -6,7 +6,8 @@
  *   T2 **偏移不是猜的**：把两个对手的血互换 ⇒ 特征里那两段 10 维对手块必须跟着换（证明我切的 OPP 偏移真的是"槽位=血量升序"）。
  *   T3 **死席不进集合**：把某对手 hp 设成 0 但其余字段填**垃圾** ⇒ 打分必须与"该对手字段全 0"逐位相同
  *      （v7 是按槽补零，这条对它是绿的；对 2.0 它是"集合编码"的定义性判据 —— 一旦我把死席漏进池化就当场红）。
- *   T4 **Q(s) 头不参与组内排序**：把 qHead 整段灌大随机数 ⇒ logits/argmax 必须逐位不变（两头分离是结构承诺，不是措辞）。
+ *   T4 **段表里没有"没人读的段"**：逐段整块灌大随机数 ⇒ logits 必须变；反向对照往段表追加一段前向不读的参数 ⇒ 必须点名它
+ *      （代 3 起 qHead 已随价值头删除，旧"两头分离"那条承诺连同它的豁免一起不在了）。
  *   T5 确定性：同一份 params 同一份局面跑两遍 ⇒ 逐位相同。
  *   T6 牙（非恒真）：动 `cand` 段一个权重 ⇒ logits 必须变；全零 params ⇒ logits 必须全等（退化基线）。
  */
@@ -94,15 +95,36 @@ ok(bitSame, 'T1 pack/unpack 逐位往返（容器显式带 arch+dims ⇒ 不再�
   ok(Array.from(fAlive.logits).join(',') !== logitsDead, 'T3 反向：把同一位复活 ⇒ 打分必须变（否则 T3 是恒真）');
 }
 
-/* ---- T4：Q(s) 不参与排序 ---- */
+/* ---- T4：段表里不许有"没人读的段"，而且这把尺要分得清"读"与"不读" ----
+ *   代 3 起 qHead 已删（它那 33 个参数没有任何目标函数读 ⇒ 每个下游都得为它写一条豁免，那就是屎山的形状）。
+ *   ① 每段整块灌 ±500 ⇒ logits 必须变（无豁免段；整块换而非抽一点，是因为单点扰动会被 ReLU 夹掉成假阴）；
+ *   ② 这条腿的牙（取代旧「灌 qHead ⇒ logits 不许变」）：往段表**追加**一段 33 个参数（前向只按它认识的那几个偏移读，
+ *      多出来的这段没人接）⇒ ① 必须把它点名为死段。这正是代 1 的病形状（声明 5650、2688 个参数任何前向都不读）。
+ *      没有这条反向对照，① 那一排 ✔ 完全可能是恒真的装饰。 */
 {
-  const before = P.forwardCands(D.st, 0, D.cands, p1, { temp: 0.5 });
-  const q = L.seg[5];
-  for (let i = q.off; i < q.off + q.len; i++) p1[i] = (rng() - 0.5) * 1000;
-  const after = P.forwardCands(D.st, 0, D.cands, p1, { temp: 0.5 });
-  const sameLogits = Array.from(before.logits).join(',') === Array.from(after.logits).join(',');
-  ok(sameLogits, 'T4 qHead 灌 ±500 ⇒ logits/argmax 逐位不变（argmax ' + before.argmax + ' → ' + after.argmax + '）');
-  ok(after.q !== before.q, 'T4 反向：同一处扰动确实改了 Q(s)（' + before.q.toFixed(3) + ' → ' + after.q.toFixed(3) + '）⇒ 不是"那段根本没被读"');
+  const lgOf = (pp) => Array.from(P.forwardCands(D.st, 0, D.cands, pp, { temp: 0.5 }).logits).join(',');
+  const before = lgOf(p1);
+  const liveOf = (pp, segs) => {
+    const r = {};
+    for (const sg of segs) {
+      const q = Float64Array.from(pp);
+      for (let i = sg.off; i < sg.off + sg.len; i++) q[i] = (rng() - 0.5) * 1000;
+      r[sg.name] = lgOf(q) !== before;
+    }
+    return r;
+  };
+  const live = liveOf(p1, L.seg);
+  const inert = Object.keys(live).filter((k) => !live[k]);
+  ok(inert.length === 0, 'T4① 每段整块灌 ±500 ⇒ logits 必须变（段表 ' + L.seg.map((x) => x.name).join('/') + '，无豁免段）：' +
+    (inert.length ? '✘ 没人读的段 ' + inert.join(',') : '✔ 全部有牙'));
+  const n0 = L.n;
+  L.n = n0 + 33;
+  L.seg.push({ name: '__fake_unread__', off: n0, len: 33 });
+  const ext = new Float64Array(L.n);
+  ext.set(p1, 0);
+  const fakeLive = liveOf(ext, L.seg)['__fake_unread__'];
+  L.seg.pop(); L.n = n0;
+  ok(fakeLive === false, 'T4② 反向对照：段表里追加一段前向不读的参数 ⇒ 打分逐位不变 ⇒ 这把尺看得见"不读"（① 不是恒真）');
 }
 
 /* ---- T5：确定性 ---- */
@@ -251,23 +273,23 @@ const O3 = await import('./obs3.mjs');
   }
   const backO = P.unpack(pkO);
   ok(!!backO && backO.length === Lo.n, 'T13b S1o 同档回读成功（' + (backO ? backO.length : 0) + '）‖ checkPack=' + JSON.stringify(P.checkPack(pkO)));
-  /* 真包的跨档读会被**长度**先挡住（5650≠5258）⇒ 那证不到 arch 这条腿。这里造一枚"长度刚好骗过长度检查、
+  /* 真包的跨档读会被**长度**先挡住（S1o 6089 ≠ S1 5225）⇒ 那证不到 arch 这条腿。这里造一枚"长度刚好骗过长度检查、
    *   但 arch 标错"的构造样本（现在两档长度不同所以盘上不会出现，可这正是要防的潜在形状：以后调 seatH 就可能撞等长）。
-   *   ⚑ 代 2 起样本必须带 `v=V_FOR_WIRE[2]` 与 `dims.wire`，否则先撞 version 闸 ⇒ arch 那条又变成没跑的装饰；
-   *   同时补一枚"戳自相矛盾"（v 说代 2、dims.wire 说代 1）⇒ 那一格单独判 `reason:'wire'`。 */
+   *   ⚑ 样本必须带**当前代的 v 与 dims.gen**，否则先撞 version/代闸 ⇒ arch 那条变成没跑的装饰（10-31 Stage B 就红过一次）。
+   *   另补一枚"代对不上"（v:92 却标 dims.gen=2）⇒ 那一格单独判 `reason:'gen'`：代 2 退役之后，旧包唯一的归宿就是这里。 */
   const wrongTag = (() => {
     const A1 = install(W, Object.assign({ mutMode: 'seg' }, cfg)); A1.rngRef.r = rng;
-    const dims2 = { seatH: A1.L.seatH, actH: A1.L.actH, hid: A1.L.hid, hid2: A1.L.hid2, gen: 2 };
-    const fake = { v: V_FOR_GEN[2], arch: 'S1o', dims: dims2, a: new Array(A1.L.n).fill(0), n: A1.L.n };
-    const badGen = { v: V_FOR_GEN[2], arch: 'S1', dims: { seatH: A1.L.seatH, actH: A1.L.actH, hid: A1.L.hid, hid2: A1.L.hid2, gen: 1 }, a: new Array(A1.L.n).fill(0), n: A1.L.n };
+    const dimsNow = { seatH: A1.L.seatH, actH: A1.L.actH, hid: A1.L.hid, hid2: A1.L.hid2, gen: 3 };
+    const fake = { v: V_FOR_GEN[3], arch: 'S1o', dims: dimsNow, a: new Array(A1.L.n).fill(0), n: A1.L.n };
+    const badGen = { v: V_FOR_GEN[3], arch: 'S1', dims: { seatH: A1.L.seatH, actH: A1.L.actH, hid: A1.L.hid, hid2: A1.L.hid2, gen: 2 }, a: new Array(A1.L.n).fill(0), n: A1.L.n };
     const r = P.checkPack(fake); const rr = P.unpack(fake);
     const rw = P.checkPack(badGen); const rwr = P.unpack(badGen);
     A1.restore(); return { r, rr, rw, rwr };
   })();
   ok(wrongTag.r.ok === false && wrongTag.r.reason === 'arch' && wrongTag.rr === null,
-    'T13c 跨档拒读（构造样本：长度合、v 合、gen 合，只有 arch 标反）⇒ checkPack=' + JSON.stringify(wrongTag.r) + ' ‖ unpack=' + wrongTag.rr + '（宁可读不出，不许静默错切）');
+    'T13c 跨档拒读（构造样本：长度合、v=92 合、gen=3 合，只有 arch 标反）⇒ checkPack=' + JSON.stringify(wrongTag.r) + ' ‖ unpack=' + wrongTag.rr + '（宁可读不出，不许静默错切）');
   ok(wrongTag.rw.ok === false && wrongTag.rw.reason === 'gen' && wrongTag.rwr === null,
-    'T13d 结构代拒读（v=91 却标 dims.gen=1 的自相矛盾样本）⇒ checkPack=' + JSON.stringify(wrongTag.rw) + ' ‖ unpack=' + wrongTag.rwr + ' ⇒ 两代是两张网络，不许互读');
+    'T13d 结构代拒读（v:92 却标 dims.gen=2 的自相矛盾样本 ⇒ 代 2 已随 qHead 退役）⇒ checkPack=' + JSON.stringify(wrongTag.rw) + ' ‖ unpack=' + wrongTag.rwr + ' ⇒ 两代是两张网络，不许互读');
   A2o.restore();
 }
 {
@@ -434,8 +456,8 @@ const O3 = await import('./obs3.mjs');
    *   而旧 T6c 当时已经印出"cand 段抽 45 个权重 ⇒ 1 个能动输出"，判据写的却是 `>0` ⇒ 报警没咬住。
    *   一条腿判三件事（按用户"可以加，但尽量少加"的上限句，门数不变只加这一条）：
    *   ① **活区**：每个功能段（seatEnc/actEnc/ctx/cand）把自己的**权重区**整块换成独立随机数 ⇒ logits 必须变；
-   *   ② **死区对照（这条腿的牙）**：`qHead` 整块灌 ±50 ⇒ logits 必须**逐位不变**（两头分离是结构承诺）；
-   *      ⇒ 若这把尺看不出"一整块都不影响输出"，① 就是恒真的装饰——注入死区没被点名 ⇒ 这条腿自己不合格；
+   *   ② 旧「qHead 死区对照」随价值头一起在代 3 删除；这条尺"看得见不读"的反向对照搬到 **T4②**（往段表追加一段
+   *      前向不读的参数 ⇒ 必须点名为死段），构造性死维另有 T16（S1 面 target2 逐位全等）；
    *   ③ **池化分离**：obs3 档代 2 是"自己单列 h_self ‖ 池只算对手" ⇒ 用构造网络两侧各读一条路，
    *      要求 h_self 只对**自己**的血反应、mean 只对**对手**的血反应（代 1 把自己也平均进去了，
    *      于是这两侧互相污染，离线平面向量 `pool.mean.*`（不含自己）与网络（含自己）读的不是同一个量）。 */
@@ -456,11 +478,8 @@ const O3 = await import('./obs3.mjs');
       for (let i = 0; i < wLen; i++) p[s.off + i] = rng() - 0.5;         /* 只换权重区，bias 区不动 */
       liveReport[nm] = lgOf(p) !== b;
     }
-    const sq = sgI.qHead, pq = Float64Array.from(base);
-    for (let i = 0; i < sq.len; i++) pq[sq.off + i] = (rng() - 0.5) * 100;
-    const qInert = lgOf(pq) === b;
     Ai.restore();
-    return { liveReport, qInert, n: Li.n };
+    return { liveReport, n: Li.n };
   };
   const o3 = regionLeg('S1o', { input: 'obs3' });
   const o1 = regionLeg('S1', {});
@@ -503,12 +522,12 @@ const O3 = await import('./obs3.mjs');
   for (let i = 0; i < st18.p.length; i++) st18.p[i].hp = saveHp[i];
   A3.restore();
   const near = (a, b2) => Math.abs(a - b2) < 1e-9;
-  ok(dead3.length === 0 && dead1.length === 0 && o3.qInert && o1.qInert &&
+  ok(dead3.length === 0 && dead1.length === 0 &&
     near(s1, 1 / modeHp3) && near(s3, 2 / modeHp3) && near(s2, s1) && near(s4, s1) &&
     near(m1, 1) && near(m2, m1) && !near(m3, m1) && near(m3, mExp),
     'T18 段权重可达性 ‖ ① S1o(' + o3.n + ') 四段换权重区全部改变 logits：' + (dead3.length === 0 ? '✔' : '✘ 死区 ' + dead3.join(',')) +
     ' ‖ S1(' + o1.n + ')：' + (dead1.length === 0 ? '✔' : '✘ 死区 ' + dead1.join(',')) +
-    ' ‖ ② 死区对照 qHead 整块灌 ±50 ⇒ logits 逐位不变：' + (o3.qInert && o1.qInert ? '✔（尺看得见死区 ⇒ ① 不是恒真）' : '✘ 这把尺是瞎的') +
+    ' ‖ ②（旧 qHead 死区对照随价值头一起删除 ⇒ 这条腿的反向对照在 T4②）' +
     ' ‖ ③ 池化分离（对手 ' + oppPids.length + ' 席）：h_self 读到自己 hp ' + s1.toFixed(4) + '→' + s3.toFixed(4) +
     '（理论 ' + (1 / modeHp3).toFixed(4) + '→' + (2 / modeHp3).toFixed(4) + '）且改对手血不动 ' + near(s4, s1) +
     ' ‖ mean 路满血 ' + m1.toFixed(4) + '、改自己血不动 ' + near(m2, m1) + '、改一个对手血 → ' + m3.toFixed(4) +

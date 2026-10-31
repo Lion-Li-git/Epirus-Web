@@ -20,7 +20,6 @@ export function layoutOf(P) {
     L,
     seatIn: L.seatIn, seatH: L.seatH, ctxDim: L.ctxDim, hid: L.hid, actIn: L.actIn, actH: L.actH, candIn: L.candIn, hid2: L.hid2,
     WS: segOf('seatEnc'), WA: segOf('actEnc'), WC: segOf('ctx'), WK: segOf('cand'), headOff: segOf('policyHead'),
-    qHead: segOf('qHead'),
     seatBias: L.seg[0].off + L.seatH * L.seatIn, actBias: L.seg[1].off + L.actH * L.actIn,
     ctxBias: L.seg[2].off + L.hid * L.ctxDim, candBias: L.seg[3].off + L.hid2 * L.candIn,
   };
@@ -98,7 +97,6 @@ export function dLogKeyP(k, logits, keys, temp, t) {
  *   xin 尾块（hSelf/mean/max）从 e 重算（反传要这两条路）；前块（g/priv/seq/sums）直接抄 tape。 */
 export function tapeForward(tape, params, ly) {
   const { seatIn, seatH, ctxDim, hid, actIn, actH, candIn, hid2, WS, WA, WC, WK, headOff, seatBias, actBias, ctxBias, candBias } = ly;
-  const qOff = ly.qHead;
   const head = ctxDim - 3 * seatH;
   if (!tape.xin || tape.xin.length !== ctxDim) throw new Error('tapeForward: tape.xin 缺/宽不对');
   const e = new Map(), eArr = [];
@@ -139,13 +137,7 @@ export function tapeForward(tape, params, ly) {
     for (let j = 0; j < hid2; j++) v += params[headOff + j] * hc[j];
     aes.push(ae); hcs.push(hc); te1s.push(te1); te2s.push(te2); logits[i] = v;
   }
-  /* ⚑ 状态价值 q（10-31 深夜接上）：`arch2` 的两条前向一直在算它并 return，但**没有任何目标函数读它**
-   *   （selftest2 T18 ② 还拿 qHead 当"死区对照"）。actor-critic 的基线要用它，就得连它的导数一起给。
-   *   逐字照 arch2:341：q = b + Σ_j w_j·hctx_j ⇒ dq/dw_j = hctx_j、dq/db = 1、dq/dhctx_j = w_j。 */
-  let q = params[qOff + hid];
-  for (let j = 0; j < hid; j++) q += params[qOff + j] * hctx[j];
-  if (!Number.isFinite(q)) throw new Error('tapeForward: q 非有限 ⇒ qHead 段或 hctx 有洞');
-  return { e, eArr, selfIdx, hSelf, mean, mx, xin, hctx, aes, te1s, te2s, hcs, logits, q };
+  return { e, eArr, selfIdx, hSelf, mean, mx, xin, hctx, aes, te1s, te2s, hcs, logits };
 }
 
 /* 反传：upstream（对 logit 的梯度）⇒ 累加进 grad（Float64Array(DIM)）。act = tapeForward 的产物。
@@ -155,9 +147,8 @@ export function tapeForward(tape, params, ly) {
  *     · dhctx 掩 hctx>0（ctx 输出）——在 ctx 聚合处
  *     · dSeat 是"对 e_s（seatEnc 的 ReLU 输出）的梯度"，四条路（hSelf/mean/max/te1·te2）**都不掩**，
  *       统一在 seatEnc 聚合处掩 e_s>0 —— 掩两次 = 把别的路也清了（第一版就栽在这里）。 */
-export function tapeBackward(tape, params, ly, act, upstream, grad, upstreamQ, qTrunk) {
+export function tapeBackward(tape, params, ly, act, upstream, grad) {
   const { seatIn, seatH, ctxDim, hid, actIn, actH, candIn, hid2, WS, WA, WC, WK, headOff, seatBias, actBias, ctxBias, candBias } = ly;
-  const qOff = ly.qHead;
   const head = ctxDim - 3 * seatH;
   const n = act.hcs.length;
   const dhctxTot = new Float64Array(hid);
@@ -207,16 +198,6 @@ export function tapeBackward(tape, params, ly, act, upstream, grad, upstreamQ, q
       const base = WA + j * actIn, af = tape.afs[i];
       for (let t2 = 0; t2 < actIn; t2++) grad[base + t2] += d * af[t2];
     }
-  }
-  /* 价值通路（uq = dL/dq）：qHead 自己的梯度 + 把 dq/dhctx = w 汇进 dhctxTot（**必须在 ctx 层掩码之前**，
-   *   这样 hctx 的 ReLU 掩码、ctx 权重、xin 尾块、席编码四条路全部自动接上——与策略路共用同一次反传） */
-  if (upstreamQ) {
-    if (Number.isNaN(upstreamQ)) throw new Error('tapeBackward: upstreamQ 是 NaN ⇒ 拒绝静默跳过');
-    /* 默认**只动 qHead 那一段**（selftest2 T18 ② 的"灌 qHead 不动 logits"因此仍然成立 ⇒ 策略与基线在参数空间正交，
-       *   critic 不会把共享 trunk 拖走）。要 critic 也回传进 trunk 才传第 8 个参数 qTrunk=1。 */
-    for (let j = 0; j < hid; j++) grad[qOff + j] += upstreamQ * act.hctx[j];
-    grad[qOff + hid] += upstreamQ;
-    if (qTrunk) for (let j = 0; j < hid; j++) dhctxTot[j] += upstreamQ * params[qOff + j];
   }
   /* ctx 层（权重/偏置全宽 + dxin 尾块；第一版漏了尾块 48 列的权重梯度——数值腿抓的） */
   const dxinTail = new Float64Array(3 * seatH);

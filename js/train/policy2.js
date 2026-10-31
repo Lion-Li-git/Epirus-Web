@@ -15,9 +15,10 @@
 (function (global) {
   'use strict';
 
-  const V_GEN2 = 91;                       // 与 arch2 的 V_FOR_GEN[2] 同值（两处都要改时由 browser-parity 当场红）
-  const V_GEN3 = 92;                       // 代 3 = v:92（键层按决策键分组；与 arch2 的 V_FOR_GEN[3] 同值）
-  const GEN = 2;
+  const V_GEN3 = 92;                       // 代 3 = v:92（键层按决策键分组 + 无价值头；与 arch2 的 V_FOR_GEN[3] 同值）
+  /* ⚑ 代 2（v:91）随 qHead 一起在 Stage B 退役：段表变了 ⇒ 同一个 v 会指两种网络，那正是版本门要挡的形状。
+   *   旧包在这里**拒读**（reason 'version'/'gen'），要复算旧读数就 checkout 删 qHead 前那一笔用当时的尺跑。 */
+  const GEN = 3;
   const SEAT_IN = 22 + 5 + 1;              // obs3 逐席：22 公开 ‖ 5 关系 ‖ 1 isSelf
   const SEAT_IN_B = 81 + 5 + 1;            // obs3b 逐席：81 公开（14 状态+30 键身份+1 none+3 目标+30 键 bag+3 目标 bag）
   const SELF_DIM = 5 + 2 + 48 + 1;         // obs3 局面侧：G(5) ‖ 私有(2) ‖ 序列(48) ‖ 全场合计(1，代 2 删了 pool.count)
@@ -231,7 +232,6 @@
       { name: 'ctx', len: L.hid * L.ctxDim + L.hid },
       { name: 'cand', len: L.hid2 * L.candIn + L.hid2 },
       { name: 'policyHead', len: L.hid2 + 1 },
-      { name: 'qHead', len: L.hid + 1 },
     ];
     if (L.interK > 0) seg.push({ name: 'inter', len: L.interK * (L.actH + L.hid + 2) });
     if (L.tinterK > 0) seg.push({ name: 'tinter', len: L.tinterK * (L.actH + L.seatH + 2) });   // 勘误十二：act×target
@@ -254,10 +254,9 @@
   function checkPack(o, W) {
     const R = W.EpirusRules;
     if (!o || !Array.isArray(o.a)) return { ok: false, reason: 'missing' };
-    if (o.v !== V_GEN2 && o.v !== V_GEN3) return { ok: false, reason: 'version', got: o.v, want: V_GEN2 + '/' + V_GEN3 };
+    if (o.v !== V_GEN3) return { ok: false, reason: 'version', got: o.v, want: V_GEN3 };
     if (!o.dims) return { ok: false, reason: 'no-dims' };
-    if (o.dims.gen !== GEN && o.dims.gen !== 3) return { ok: false, reason: 'gen', got: o.dims.gen, want: GEN + '|3' };
-    if ((o.dims.keySplit || 0) > 0 && o.dims.gen < 3) return { ok: false, reason: 'keySplit-on-old-gen', got: o.dims.keySplit, want: 0 };
+    if (o.dims.gen !== GEN) return { ok: false, reason: 'gen', got: o.dims.gen, want: GEN };
     if (o.dims.input !== 'obs3' && o.dims.input !== 'obs3b') return { ok: false, reason: 'input', got: o.dims.input, want: 'obs3|obs3b' };
     const skills = R.skills.length;
     const L = layoutOfPack(o, skills);
@@ -287,8 +286,8 @@
     if (!L) throw new Error('EpirusPolicy2.pack: 这枚 params 不是 2.0 张量（没有 p2 布局）');
     const R = W.EpirusRules;
     return {
-      v: (L.keySplit ? V_GEN3 : V_GEN2), arch: 'S1o', n: L.n,
-      dims: { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK, gen: (L.keySplit ? 3 : GEN), keySplit: L.keySplit || 0, dof: DOF[L.input] || 208 },
+      v: V_GEN3, arch: 'S1o', n: L.n,
+      dims: { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK, gen: GEN, keySplit: L.keySplit, dof: DOF[L.input] || 208 },
       layout: { seg: L.seg.map((s) => ({ name: s.name, off: s.off, len: s.len })), n: L.n },
       a: Array.from(p), skills: R.skills.length,
     };
@@ -319,7 +318,7 @@
     const actBias = L.seg[1].off + L.actH * L.actIn;
     const ctxBias = L.seg[2].off + L.hid * L.ctxDim;
     const candBias = L.seg[3].off + L.hid2 * L.candIn;
-    const headOff = L.seg[4].off, qOff = L.seg[5].off;
+    const headOff = L.seg[4].off;
     const WS = L.seg[0].off, WA = L.seg[1].off, WC = L.seg[2].off, WK = L.seg[3].off;
 
     const svBuf = new Float64Array(L.seatIn);
@@ -359,7 +358,6 @@
     if (q2 !== L.ctxDim) throw new Error('布局不自洽：ctx 拼进 ' + q2 + ' 而声明 ' + L.ctxDim);
     if (TP) TP.xin = Float64Array.from(xin);
     const hctx = encode(params, xin, L.ctxDim, L.hid, WC, ctxBias, new Float64Array(L.hid));
-    let qv = params[qOff + L.hid]; for (let j = 0; j < L.hid; j++) qv += params[qOff + j] * hctx[j];
 
     const n = cands.length, logits = new Float64Array(n);
     const afbuf = new Float64Array(L.actIn), ci = new Float64Array(L.candIn), ae = new Float64Array(L.actH), hc = new Float64Array(L.hid2);
@@ -415,7 +413,7 @@
     }
     let arg = 0, best = -1e9;
     for (let i = 0; i < n; i++) if (logits[i] > best) { best = logits[i]; arg = i; }
-    return { probs, argmax: arg, cand: cands[arg] || null, logits, q: qv, ...(TP ? { tape: TP } : {}) };
+    return { probs, argmax: arg, cand: cands[arg] || null, logits, ...(TP ? { tape: TP } : {}) };
   }
 
   function chooseCandidates(W, state, pid, cands, params, opts2) {
@@ -430,7 +428,7 @@
   }
 
   global.EpirusPolicy2 = {
-    V_GEN2, GEN, is2Params, checkPack, unpack, pack, forwardCands, chooseCandidates, layoutOfPack,
+    V_GEN3, GEN, is2Params, checkPack, unpack, pack, forwardCands, chooseCandidates, layoutOfPack,
     paramCount: (o, W) => (o && o.a ? o.a.length : null),
   };
 })(typeof window !== 'undefined' ? window : globalThis);

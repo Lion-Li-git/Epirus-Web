@@ -87,17 +87,40 @@ function analyticGrad(pt, idx) {
   tapeBackward(fr.tape, params, ly, act, g, grad);
   return grad;
 }
-let cN = 0, cBad = 0, cSkip = 0, worst = 0;
+let cN = 0, cBad = 0, cSkip = 0, cFloor = 0, cRes = 0, cFull = 0, cFullRes = 0, worst = 0;
 const EPS = 1e-6;
+/* ⚑ 全扫点（逐坐标查）挑的不是"最好看"的格子，而是**这条腿自己分得出真假**的格子：
+ *   ① 该候选 π∈[0.05,0.95]（政策在这一格没决定死 ⇒ 梯度不是 1e-51 那种纯噪声）；
+ *   ② 解析梯度 |∂|>1e-6 的坐标数 ≥300（否则全扫 7993 格里大半贴地板，等于白扫）。
+ *   找不到 ⇒ 当场判红（"分母不足"），不许用绿色交差。
+ *   动因（10-31 注入测）：旧版三处各抽 4% ⇒ 删掉 policyHead 偏置那一格的梯度**照样绿**；
+ *   第一版改成"逐坐标全扫 pts[3]"也照样绿——因为那一格 π=1.000 ⇒ 全网络梯度都是 1e-51，全扫也是在扫噪声。 */
+let fullPt = null, fullIdx = -1, fullPi = NaN;
+for (const pt of pts) {
+  const fr = P.forwardCands(pt.st, pt.pid, pt.cands, params, { temp: 0.15 });
+  for (let i = 0; i < fr.probs.length; i++) {
+    if (fr.probs[i] < 0.05 || fr.probs[i] > 0.95) continue;
+    const ag = analyticGrad(pt, i);
+    let res = 0; for (let k = 0; k < ag.length; k++) if (Math.abs(ag[k]) > 1e-6) res++;
+    if (res > cFullRes) { cFullRes = res; fullPt = pt; fullIdx = i; fullPi = fr.probs[i]; }
+    if (cFullRes >= 300) break;
+  }
+  if (cFullRes >= 300) break;
+}
+if (cFullRes < 300) { cBad++; console.log('   ✘ 全扫夹具不足：可分辨坐标最多的一格只有 ' + cFullRes + ' 个（要 ≥300）⇒ 这条腿在这枚包上分不出真假'); }
 outer:
-for (const pt of [pts[3], pts[11], pts[29]]) {
+for (const [pi, cell] of [[0, fullPt ? { pt: fullPt, idx: fullIdx } : null],
+                          [1, { pt: pts[3], idx: -1 }], [2, { pt: pts[11], idx: -1 }]]) {
+  const pt = cell && cell.pt;
   if (!pt) break;
   const fr = P.forwardCands(pt.st, pt.pid, pt.cands, params, { temp: 0.15 });
-  /* chosen = 随机候选（覆盖多键） */
-  const idx = Math.floor(rnd() * fr.probs.length);
+  /* 抽样点里 chosen = 随机候选（覆盖多键）；全扫点用上面挑定的那一个 */
+  const idx = cell.idx >= 0 ? cell.idx : Math.floor(rnd() * fr.probs.length);
   const ag = analyticGrad(pt, idx);
+  const FULL = (pi === 0);
+  if (FULL) cFull = params.length;
   const probe = [];
-  for (let k = 0; k < params.length; k++) if (rnd() < 120 / params.length) probe.push(k);
+  for (let k = 0; k < params.length; k++) if (FULL || rnd() < 300 / params.length) probe.push(k);
   for (const k of probe) {
     const p2 = Float64Array.from(params), m2 = Float64Array.from(params);
     p2[k] += EPS; m2[k] -= EPS;
@@ -107,14 +130,25 @@ for (const pt of [pts[3], pts[11], pts[29]]) {
     if (!Number.isFinite(num) || !Number.isFinite(ana)) { cSkip++; continue; }
     const err = Math.abs(num - ana) / Math.max(1e-8, Math.abs(num), Math.abs(ana));
     const adiff = Math.abs(num - ana);
-    /* 中心差分的舍入下限 ≈ 1e-16·|f|/ε ≈ 1e-10·|f|：两边都贴 0 时的"相对误差 1"是假阳性 ⇒ 绝对+相对混合容差 */
-    if (adiff > 1e-8 + 1e-3 * Math.max(Math.abs(num), Math.abs(ana))) { cBad++; if (cBad <= 5) console.log('   ✘ 参数 ' + k + ' 解析 ' + ana.toExponential(3) + ' vs 数值 ' + num.toExponential(3) + ' (rel ' + err.toExponential(2) + ')'); }
-    if (adiff > 1e-8 + 1e-3 * Math.max(Math.abs(num), Math.abs(ana)) && err > worst) worst = err;
+    /* 中心差分的**分辨率下限 = ulp(f)/ε**（不是拍脑袋的 1e-8）：|logπ| 到 160 量级时（饱和包的弃选候选 π≈1e-70），
+     *   ulp(f)≈3e-14 ⇒ 地板 1.4e-8 —— 10-31 实测：这种格的 num 随 ε 缩小而**等比放大**（1e-3→1.4e-11、1e-8→1.4e-6），
+     *   是纯舍入噪声不是漏项（原件 scratch/c-leg-probe.mjs 的分诊输出），旧地板把整批好格子判成红。
+     * ⚑ 第二条豁免按**训练尺度**而不是按噪声：|num| 与 |ana| 都 < 1e-5 的格子直接不进判定（记进 cFloor 的分母）。
+     *   理由：temp=0.15 把 logits 侧 1e-15 量级的舍入放大成 logπ 侧 ~1e-8，而 Adam 眼里 1e-8 的梯度与 0 是同一回事；
+     *   真漏项（与训练梯度同量级，O(1e-2)）远在这条线之上 ⇒ 牙还在（注入测 M1/M2/M3 全红，见 §二十）。 */
+    const floor = 4 * Number.EPSILON * Math.max(Math.abs(lp), Math.abs(lm), 1) / EPS;
+    const tiny = Math.max(Math.abs(num), Math.abs(ana)) < 1e-5;
+    const tol = floor + 1e-3 * Math.max(Math.abs(num), Math.abs(ana));
+    if (!tiny && adiff > tol) { cBad++; if (cBad <= 5) console.log('   ✘ 参数 ' + k + ' 解析 ' + ana.toExponential(3) + ' vs 数值 ' + num.toExponential(3) + ' (rel ' + err.toExponential(2) + ' ‖ 地板 ' + floor.toExponential(2) + ')'); }
+    if (!tiny && adiff > tol && err > worst) worst = err;
+    if (tiny || Math.max(Math.abs(num), Math.abs(ana)) <= floor) cFloor++; else cRes++;
     cN++;
     if (cBad > 8) { console.log('   …错太多，停'); break outer; }
   }
 }
-console.log('腿C 数值梯度:   ' + (cBad === 0 ? '✔ ' : '✘ ') + cN + ' 个参数对账，最坏相对误差 ' + worst.toExponential(2) + (cSkip ? '（跳过非有限 ' + cSkip + '）' : ''));
+const cResolvable = cRes;
+console.log('腿C 数值梯度:   ' + (cBad === 0 ? '✔ ' : '✘ ') + cN + ' 个参数对账 ‖ 全扫点 π=' + fullPi.toFixed(3) + '（逐坐标 ' + cFull + ' 里可分辨 ' + cFullRes + '）‖ 判定 ' + cResolvable + ' ‖ 不进判定 ' + cFloor + '（训练尺度 <1e-5 或被 ulp(logπ)/ε 盖住）‖ 最坏相对误差 ' + worst.toExponential(2) + (cSkip ? ' ‖ 跳过非有限 ' + cSkip : ''));
+if (cResolvable < 60) { cBad++; console.log('   ✘ 可分辨格不足 60 ⇒ 这条腿在这枚包上分不出真假，不许当过（换未饱和的起点再跑）'); }
 
 /* —— 腿 D：部署栈对账（chooser 的真实 probs 与 tailOf 同源）—— */
 let dBad = 0;
@@ -185,46 +219,7 @@ let fBad = 0, fN = 0;
 }
 console.log('腿F 键级导数:   ' + (fBad === 0 ? '✔ ' + fN + ' 对账' : '✘ ' + fBad));
 
-/* —— 腿 G：价值通路（q）的数值梯度 + "只动 qHead"的正交性 —— */
-let gBad = 0, gN = 0, gLeak = 0, worstG = 0;
-{
-  const hid = ly.L.hid, qOff = ly.qHead, qLen = hid + 1;
-  for (const pt of [pts[5], pts[19], pts[33]]) {
-    if (!pt) continue;
-    const fr = P.forwardCands(pt.st, pt.pid, pt.cands, params, { temp: 0.15, wantTape: 1 });
-    const act = tapeForward(fr.tape, params, ly);
-    /* 解析：dq/dθ = tapeBackward(上游=0, upstreamQ=1) */
-    const gradA = new Float64Array(params.length);
-    const zeros = new Float64Array(fr.logits.length);
-    /* ⚑ 上游系数不许取 1：取 1 时"忘了乘上游"这种写错与正确写法**同数**（10-31 深夜的变异测出来的空档） */
-    const UQ = 2.5;
-    tapeBackward(fr.tape, params, ly, act, zeros, gradA, UQ, 0);
-    /* 正交性：非 qHead 段必须逐位为 0（否则 critic 更新会拖走策略算术，T18 ② 那条"死区"承诺就破了） */
-    for (let k = 0; k < params.length; k++) {
-      const inQ = k >= qOff && k < qOff + qLen;
-      if (!inQ && gradA[k] !== 0) gLeak++;
-    }
-    /* 数值：中心差分 tapeForward(...).q（只探 qHead 段，偏置与权重各若干） */
-    const probe = [];
-    for (let k = qOff; k < qOff + qLen; k++) if (rnd() < 40 / qLen) probe.push(k);
-    for (const k of probe) {
-      const p2v = Float64Array.from(params), m2v = Float64Array.from(params);
-      p2v[k] += EPS; m2v[k] -= EPS;
-      const num = UQ * (tapeForward(fr.tape, p2v, ly).q - tapeForward(fr.tape, m2v, ly).q) / (2 * EPS);
-      const ana = gradA[k];
-      const adiff = Math.abs(num - ana);
-      gN++;
-      if (adiff > 1e-8 + 1e-3 * Math.max(Math.abs(num), Math.abs(ana))) { gBad++; if (gBad <= 4) console.log('   ✘ qHead 参数 ' + k + ' 解析 ' + ana.toExponential(3) + ' vs 数值 ' + num.toExponential(3)); }
-      if (adiff > worstG) worstG = adiff;
-    }
-    /* q 本身要与 arch2 前向返回的 q 逐位同（否则我重放的是另一套算术） */
-    if (act.q !== fr.q) { gBad++; console.log('   ✘ 重放 q ' + act.q + ' ≠ 前向 q ' + fr.q); }
-  }
-  console.log('腿G 价值通路:   ' + (gBad === 0 && gLeak === 0 ? '✔ ' : '✘ ') + gN + ' 个 qHead 参数对账（最坏绝对差 ' + worstG.toExponential(2) +
-    '）‖ 非 qHead 段泄漏 ' + gLeak + (gLeak ? ' ⇒ critic 会拖走策略算术' : ' ⇒ 策略/基线在参数空间正交'));
-}
-
-const ok = badA === 0 && badB === 0 && cBad === 0 && dBad === 0 && eBad === 0 && fBad === 0 && gBad === 0 && gLeak === 0;
+const ok = badA === 0 && badB === 0 && cBad === 0 && dBad === 0 && eBad === 0 && fBad === 0;
 console.log(ok ? '# selftest3 全绿 ✔（pg 臂允许开）' : '# selftest3 红 ⇒ pg 臂不许开');
 if (!ok) process.exit(8);
 

@@ -175,16 +175,18 @@ const W2 = sandbox(ROOT);
 let installed = null;
 for (const p of PACKS) {
   let raw;
-  try { raw = readPack2(p); } catch (e) { console.log('\n⚠ 读不出 ' + p + '：' + String(e && e.message).slice(0, 70)); continue; }
+  try { raw = readPack2(p); } catch (e) { console.error('⛔ 读不出 ' + p + '：' + String(e && e.message).slice(0, 90) + ' ⇒ 少一行表格就是假对照，整桌不交'); process.exit(7); }
   const got = packCfgExit(raw, p);
   if (installed) installed.restore();
   installed = install(W2, Object.assign({ mutMode: 'seg' }, got.cfg));
   const pp = W2.EpirusPolicy.unpack(raw, true);
-  if (!pp) { console.log('\n⚠ ' + p + '：unpack 不出 ⇒ 跳过'); installed.restore(); installed = null; continue; }
+  if (!pp) { console.error('⛔ ' + p + '：unpack 不出（v=' + raw.v + ' ‖ dims.gen=' + (raw.dims && raw.dims.gen) + ' ‖ 长度 ' + (raw.a && raw.a.length) + ' ‖ 本尺段表 ' + W2.EpirusPolicy.paramCount() + ' 条，代 3 已删 qHead）⇒ 这一行不能印，整桌不交。旧尺子的读数请用登记在册的原件，或 checkout 删 qHead 前那一笔重跑。'); installed.restore(); process.exit(7); }
   const A2 = createArena2(W2, { refParams: refParams, temp: TEMP, highN: 1, stratified: STRAT_ON, stratCap: STRAT_CAP, stratMix: STRAT_MIX });
   const w = A2.verifyWired(pp, { temp: TEMP });
   if (!w.ok) { console.error('⛔ ' + p + ' 接线没生效（forwardCands +' + w.forwards + ' ‖ chooseCandidates ' + w.chooseCandidatesCalls + '）⇒ 这一行不能印'); process.exit(7); }
-  lines.push(rowRun(A2, W2, '代 2 ‖ ' + p.replace(/^.*[\\/]/, '').replace('.bak', ''), A2.chooserOf(pp, TEMP)));
+  /* 行标签里的"代"从**容器自己**读（写死 2 会把代 3 的包标成代 2，跨代对账时就是假对照） */
+  const genTag = (raw && raw.dims && raw.dims.gen) || '?';
+  lines.push(rowRun(A2, W2, '代 ' + genTag + ' ‖ ' + p.replace(/^.*[\\/]/, '').replace('.bak', ''), A2.chooserOf(pp, TEMP)));
   lines[lines.length - 1].wired = '+' + w.forwards + '/' + w.chooseCandidatesCalls;
 }
 if (installed) installed.restore();
@@ -241,7 +243,7 @@ console.log('   v7 长程三件套同批出手/局：炮 ' + v7r.per.railgun.cas
   v7r.per.bigT.castPerGame.toFixed(2) + ' ‖ 环 ' + v7r.per.ring.castPerGame.toFixed(2) + ' ‖ 蓄 ' + v7r.per.charge.castPerGame.toFixed(2));
 console.log('\n## 逐包「出过长程手的那局 vs 没出的那局」夺1 差（⚠观察量、有位置混杂，不是因果）');
 console.log('行 ‖ ' + KEYS.map((k) => k + '(出/没出 局数)').join(' ‖ '));
-for (const r of lines.filter((x) => x.label.indexOf('代 2') === 0 || x.label.indexOf('参照包') === 0)) {
+for (const r of lines.filter((x) => /^代 /.test(x.label) || x.label.indexOf('参照包') === 0)) {
   console.log(r.label.padEnd(24) + ' ‖ ' + KEYS.map((k) => {
     const c = r.cond[k];
     if (!c.winWithCast && !c.winWithout) return '-';

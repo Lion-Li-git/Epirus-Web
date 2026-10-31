@@ -13,7 +13,8 @@
  * 四段判语，任何一段不合格 ⇒ exit 8（不允许"跑了没红"当通过）：
  *   A 容器自洽：v / dims.gen / dims.dof / arch 与 dims.input 四者互相对账；
  *   B 参数全覆盖：段表里**每一个下标**都被某层的权重区或 bias 区覆盖（代 1 的形状会在这里露出来）；
- *   C 每段有牙：逐段把**权重区**整块换成独立随机数 ⇒ logits 必须变；qHead 整块灌大 ⇒ logits 必须不变（死区对照）；
+ *   C 每段有牙：逐段把**权重区**整块换成独立随机数 ⇒ logits 必须变（代 3 起段表里没有豁免段——原 qHead 死区对照随价值头一起删除，
+ *     而且删前已退化成恒真：那一块只是 base 的副本。"这把尺看得见不读"改由 selftest2 T4② 的合成死段承担）；
  *   D 逐维可见性：真局逐候选编码，报"恒零维"清单与出现率——**分母一起印**，0 次不等于不可能。
  *
  * 用法：
@@ -55,29 +56,32 @@ const REF7 = (() => { const o = loadChamp(W, 'js/bundled-champion-3p.js', ''); r
 const A = installArch2(W, got.cfg);
 const L = A.L;
 const sg = {}; for (const s of L.seg) sg[s.name] = s;
-const rowsOf = { seatEnc: L.seatH, actEnc: L.actH, ctx: L.hid, cand: L.hid2, policyHead: 1, qHead: 1 };
-const inDimOf = { seatEnc: L.seatIn, actEnc: L.actIn, ctx: L.ctxDim, cand: L.candIn, policyHead: L.hid2, qHead: L.hid };
+const rowsOf = { seatEnc: L.seatH, actEnc: L.actH, ctx: L.hid, cand: L.hid2, policyHead: 1 };
+const inDimOf = { seatEnc: L.seatIn, actEnc: L.actIn, ctx: L.ctxDim, cand: L.candIn, policyHead: L.hid2 };
 
 /* ---------- A 容器自洽 ---------- */
 {
-  const dimsDof = L.input === 'obs3' ? O3.dims(R) : null;
+  /* ⚑ 面与 dof 都按**这枚包自己那张脸**对账。旧写法 `L.input !== 'obs3' || …` 让 obs3b 的包在 dof 这一格
+   *   恒过（= 一条不咬的判据），旧 `inputOk` 也只比"是不是 obs3"而不比是不是同一张面。 */
+  const isO3 = L.input === 'obs3' || L.input === 'obs3b';
+  const dimsDof = isO3 ? O3.dims(R, L.input) : null;
   const vOk = raw.v === V_FOR_GEN[got.gen];
   const archOk = raw.arch === L.arch;
-  const inputOk = (raw.dims && raw.dims.input) ? ((raw.dims.input === 'obs3') === (L.input === 'obs3')) : false;
-  const dofOk = L.input !== 'obs3' || (raw.dims && raw.dims.dof === dimsDof);
+  const inputOk = !!(raw.dims && raw.dims.input === L.input);
+  const dofOk = !isO3 || (raw.dims && raw.dims.dof === dimsDof);
   const cp = P.checkPack(raw);
   ok(vOk && archOk && inputOk && dofOk && cp.ok === true,
     'A 容器自洽：v=' + raw.v + '（该是 ' + V_FOR_GEN[got.gen] + '）‖ arch=' + raw.arch + '↔装成 ' + L.arch +
-    ' ‖ dims.input=' + (raw.dims && raw.dims.input) + ' ‖ dof=' + (raw.dims && raw.dims.dof) + '↔当前 obs3 ' + dimsDof +
+    ' ‖ dims.input=' + (raw.dims && raw.dims.input) + '↔装成 ' + L.input + ' ‖ dof=' + (raw.dims && raw.dims.dof) + '↔当前尺 ' + (dimsDof == null ? '（v7 面无 dof 这一格）' : dimsDof) +
     ' ‖ checkPack=' + JSON.stringify(cp));
-  if (!dofOk) console.log('     ⇒ 这枚包吃的观测面与当前尺不是同一张脸（代 2 是 ' + dimsDof + ' 维）。要按它自己那代跑，得换回当时的尺。');
+  if (!dofOk) console.log('     ⇒ 这枚包吃的观测面与当前尺不是同一张脸（本档 ' + L.input + ' = ' + dimsDof + ' 维）。要按它自己那代跑，得换回当时的尺。');
 }
 
 /* ---------- B 参数全覆盖：每个下标都被某层读吗 ---------- */
 const covered = new Uint8Array(L.n);
 for (const s of L.seg) {
   const inDim = inDimOf[s.name];
-  const wLen = s.name === 'policyHead' ? L.hid2 : (s.name === 'qHead' ? L.hid : rowsOf[s.name] * inDim);
+  const wLen = s.name === 'policyHead' ? L.hid2 : rowsOf[s.name] * inDim;
   for (let i = s.off; i < s.off + s.len; i++) covered[i] = 1;      /* 段表声明的范围，代 2 下全部被权重区+bias 区覆盖 */
   if (s.name === 'inter') continue;
 }
@@ -86,7 +90,7 @@ for (const s of L.seg) {
   for (let i = 0; i < L.n; i++) if (!covered[i]) { holes++; if (first < 0) first = i; }
   const segTxt = L.seg.map((s) => {
     const inDim = inDimOf[s.name];
-    const wLen = s.name === 'policyHead' ? L.hid2 : (s.name === 'qHead' ? L.hid : rowsOf[s.name] * inDim);
+    const wLen = s.name === 'policyHead' ? L.hid2 : rowsOf[s.name] * inDim;
     return s.name + ' 权重[' + s.off + ',' + (s.off + wLen) + ') bias[' + (s.off + wLen) + ',' + (s.off + s.len) + ')';
   }).join('\n     ');
   console.log('     段表：\n     ' + segTxt);
@@ -101,14 +105,13 @@ const shapeCount = {};
 for (const f of FXS) shapeCount[f.shape] = (shapeCount[f.shape] || 0) + 1;
 console.log('  夹具：真局 mid-game 决策点 ' + FXS.length + ' 个 ‖ 阵容覆盖：真打出过 ' + keysSeen.size + '/' + R.skills.length + ' 张键 ‖ 逐桌形 ' + Object.entries(shapeCount).map(([k, v]) => k + '=' + v).join(' '));
 
-/* ---------- C 每段有牙（+ qHead 死区对照） ---------- */
+/* ---------- C 每段有牙（无豁免段） ---------- */
 {
   const lgAll = (pp) => FXS.map((f) => Array.from(P.forwardCands(f.st, f.pid, f.cands, pp, { temp: 0.5 }).logits).join(',')).join('|');
   const base = Float64Array.from(raw.a.length === L.n ? Float64Array.from(raw.a) : P.makePolicy(0.25));
   const b = lgAll(base);
   const perSeg = {};
   for (const s of L.seg) {
-    if (s.name === 'qHead') continue;
     const inDim = inDimOf[s.name];
     const wLen = s.name === 'policyHead' ? L.hid2 : rowsOf[s.name] * inDim;
     const p = Float64Array.from(base);
@@ -116,24 +119,23 @@ console.log('  夹具：真局 mid-game 决策点 ' + FXS.length + ' 个 ‖ 阵
     perSeg[s.name] = lgAll(p) !== b;
   }
   const inert = Object.keys(perSeg).filter((k) => !perSeg[k]);
-  const pq = Float64Array.from(base);
-  for (let i = 0; i < sg.qHead.len; i++) pq[sg.qHead.off + i] = (rng() - 0.5) * 100;
-  const qInert = lgAll(pq) === b;
-  ok(inert.length === 0 && qInert,
-    'C 每段有牙：' + Object.entries(perSeg).map(([k, v]) => k + (v ? '✔' : '✘')).join(' ') +
-    ' ‖ 死区对照 qHead 整块灌 ±50 ⇒ logits 逐位不变 ' + (qInert ? '✔（尺看得见死区 ⇒ 上面那些 ✔ 不是恒真）' : '✘ 两头没分离'));
+  ok(inert.length === 0,
+    'C 每段有牙：' + Object.entries(perSeg).map(([k, v]) => k + (v ? '✔' : '✘')).join(' '));
   if (inert.length) console.log('     ⇒ 这些段的权重区换掉后输出一点不动 = 它们没接上前向（代 1 的形状就是这个）。');
 }
 
 /* ---------- D 逐维可见性（在真局分布上扫，分母一起印） ---------- */
-const M = O3.blocks(R);
+/* ⚑ 面从**被测包**读：obs3(208) 与 obs3b(415) 两张 MANIFEST 都要扫。旧代码写死 `=== 'obs3'` ⇒
+ *   obs3b 的包在这里静默跳过（打印"吃的是 v7 输入面"却带着 S1o），逐维死列那类病就量不到了。 */
+const O3FACE = L.input === 'obs3' || L.input === 'obs3b' ? L.input : null;
+const M = O3.blocks(R, O3FACE || 'obs3');
 const D = M.length;
 const nz = new Array(D).fill(0);
 let candCount = 0;
-if (L.input === 'obs3') {
+if (O3FACE) {
   for (const f of FXS) for (const c of f.cands) {
     let v;
-    try { v = O3.encode(W, f.st, f.pid, c); } catch (e) { console.log('  ✖ 编码抛：' + String((e && e.message) || e)); fails.push('obs3 encode 抛'); break; }
+    try { v = O3.encode(W, f.st, f.pid, c, O3FACE); } catch (e) { console.log('  ✖ 编码抛：' + String((e && e.message) || e)); fails.push('obs3 encode 抛'); break; }
     if (v.length !== D) { console.log('  ✖ 编码长度 ' + v.length + ' ≠ MANIFEST ' + D); fails.push('编码长度与 MANIFEST 不符'); break; }
     candCount++;
     for (let i = 0; i < D; i++) if (v[i] !== 0) nz[i]++;
@@ -149,7 +151,7 @@ if (L.input === 'obs3') {
   if (dead.length) console.log('     ⇒ 恒零清单：' + dead.join(' ‖ '));
   if (rare.length) console.log('     ⇒ 稀有清单：' + rare.join(' ‖ '));
 } else {
-  console.log('  · D 跳过：这枚包吃的是 v7 输入面（' + L.arch + '），逐维扫描只对 obs3 档有意义');
+  console.log('  · D 跳过：这枚包吃的是 v7 输入面（arch ' + L.arch + ' ‖ input ' + L.input + '），逐维扫描只对 obs3/obs3b 档有意义');
 }
 
 /* ---------- E 打分有没有牙（专治“平头包靠抽卡也能当选”） ---------- */

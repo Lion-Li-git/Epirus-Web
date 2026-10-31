@@ -49,13 +49,31 @@ const KS = Number(arg('keySplit', 0)) ? 1 : 0;   /* 训练池上限（教师 600
 const W0 = sandbox();
 const refParams = Float64Array.from(loadChamp(W0, 'js/bundled-champion-3p.js', ''));
 const raw = readPack2(UP);
-const got = packCfgExit(raw, UP);
+/* ⚑ 跨代搬运（Stage B 之后唯一的一条搬运路）：代 2 的容器段表里带 `qHead`（33 个没有任何目标函数读的参数），
+ *   而代 3 的尺只认代 3 ⇒ `packCfgExit` 的代闸会把旧包**响亮拒读**（那正是它的作用，不是障碍）。
+ *   所以要吃旧包就必须把"我在重解释"写在明面上：cfg 从 dims 手拼 + 参数数组砍掉 qHead 那一段。
+ *   砍掉它不改变策略算出的任何一手 —— 这条不是嘴上说的，验收见 §二十（前后 7993 个参数逐位同）。 */
+const srcSegQ = ((raw.layout && raw.layout.seg) || []).find((x) => x.name === 'qHead');
+const srcDims = raw.dims || {};
+const got = srcSegQ
+  ? { cfg: { mutMode: 'seg', seatH: srcDims.seatH, actH: srcDims.actH, hid: srcDims.hid, hid2: srcDims.hid2,
+             input: srcDims.input, inter: srcDims.inter || 0, tinter: srcDims.tinter || 0, gen: 3, keySplit: KS },
+      gen: 3, era: '代 ' + (srcDims.gen || '?') + ' → 代 3（显式砍 qHead ' + srcSegQ.len + ' 个参数）', carried: srcSegQ }
+  : packCfgExit(raw, UP);
 const W = sandbox();
 installArch2(W, Object.assign({ mutMode: 'seg' }, got.cfg, (KS ? { gen: 3, keySplit: 1 } : {})));
 const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState, R = W.EpirusRules;
-/* 上游是代 2、下游要代 3 时**不能让装载器自己放行**（版本门正是拿来挡"两个含义共用一个形状"的）：
- *   这里显式取原始参数数组重解释 ⇒ 谁在改语义写在明面上。两代之间参数量不变（keySplit 只改分组，不加维、不动段表）。 */
-const up = KS ? Float64Array.from(raw.a || []) : P.unpack(raw, true);
+const up = (() => {
+  if (got.carried) {
+    console.log('  ⚑ 跨代搬运：从源容器去掉 qHead 段 [' + got.carried.off + ',' + (got.carried.off + got.carried.len) + ') 共 ' + got.carried.len + ' 个参数（代 3 无价值头）');
+    const a = Float64Array.from(raw.a || []);
+    const t = new Float64Array(a.length - got.carried.len);
+    t.set(a.subarray(0, got.carried.off), 0);
+    t.set(a.subarray(got.carried.off + got.carried.len), got.carried.off);
+    return t;
+  }
+  return P.unpack(raw, true);
+})();
 if (!up || up.length !== P.paramCount()) { console.error('⛔ 上游读不出/参数数不符：' + UP + '（' + (up ? up.length : 'null') + ' vs ' + P.paramCount() + '）'); process.exit(2); }
 const ly = layoutOf(P);
 if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 ⇒ pg-lib 拒跑'); process.exit(2); }
