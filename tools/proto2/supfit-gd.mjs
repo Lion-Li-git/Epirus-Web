@@ -18,7 +18,7 @@ import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi } from '.
 import { pickChain } from './chain-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -35,6 +35,10 @@ const TAG = String(arg('tag', ''));
  *   `cand` = 候选级似然 `log π(教师那一枚)`（dLogPi，selftest3 腿 C 已数值对账）⇒ 珠种/目标都在标签里。 */
 const OBJ = String(arg('objective', 'key'));
 if (OBJ !== 'key' && OBJ !== 'cand') { console.error('⛔ --objective 只认 key|cand（收到 ' + OBJ + '）'); process.exit(2); }
+/* DAgger（§十三 边界②的正解）：轮数默认 0 ⇒ 只有教师自访，路径与 A 臂逐字同 */
+const DAG = Math.max(0, Math.min(6, Number(arg('dagger', 0)) || 0));
+const DAG_TEMP = Number(arg('dagtemp', 0.15));
+const POOL = Math.max(NGRP, Number(arg('pool', 1200)) || 1200);   /* 训练池上限（教师 600 永远保留，学生态按新旧裁） */
 
 const W0 = sandbox();
 const refParams = Float64Array.from(loadChamp(W0, 'js/bundled-champion-3p.js', ''));
@@ -49,57 +53,72 @@ const ly = layoutOf(P);
 if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 ⇒ pg-lib 拒跑'); process.exit(2); }
 const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: true, stratCap: 2, stratMix: 0.5 });
 
-/* ---- 收集：与 chain-supfit 逐字同流（seed 20261030 LCG、同 salt/局号、同教师、同克隆）---- */
+/* ---- 收集：与 chain-supfit 逐字同流（seed 20261030 LCG、同 salt/局号、同教师、同克隆）----
+ * ⚑ `--dagger=R`（默认 0）：round 0 = 教师自访（= A 臂原样，局号 300000+/盐 4242）；
+ *   之后每轮换**学生自己走出来的状态**再标一次教师（`--dagTemp` 部署温度）⇒ 正面治 §十三 边界②"协变量漂移"。
+ *   默认路径（R=0）不碰任何一局学生自访、不改变 RNG 消耗次序 ⇒ 产物必须与 `supfit-gd1.bak` 逐位同（这条是回归腿）。 */
 let seed = 20261030;
 const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 const teacherPick = (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
-const groups = [];
 const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0 };
-{
-  const sel = (state, pid, legal) => {
-    if (groups.length < NGRP && legal && legal.length >= 2) {
-      const cs = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
-      if (cs.length >= 2) {
-        const t0 = teacherPick(state, pid, cs);
-        if (t0) {
-          const cl = S.cloneState(state); cl.rng = { next: rnd };
-          const cs2 = P.candidatesFor(cl, pid, T.econBase(cl, pid, legal), { lockTarget: false }) || [];
-          const again = teacherPick(cl, pid, cs2);
-          const keys = cs2.map((c) => c.key);
-          if (!again || !cs2.length || keys.indexOf(again.key) < 0) LABEL.gone++;
-          else {
-            /* tape 的输入与参数无关 ⇒ 收集时算一次，之后任意参数重放（单源：arch2 wantTape） */
-            const fr = P.forwardCands(cl, pid, cs2, up, { temp: 1, wantTape: 1 });
-            /* 教师那一枚在候选表里的下标（pickChain 返回的是 cs2 里的对象本身 ⇒ 按身份找，不按 key 找） */
-            const wIdx = cs2.indexOf(again);
-            if (OBJ === 'cand' && wIdx < 0) { LABEL.gone++; }
-            else {
-              groups.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: again.key, want0: t0.key,
-                wantIdx: wIdx, wantBead: again.bead || null });
-              LABEL.keys++;
-              if (again.key !== t0.key) LABEL.moved++; else LABEL.ok++;
-            }
-          }
-        }
-      }
-    }
-    const cs3 = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
-    const a = teacherPick(state, pid, cs3);
-    return a ? { key: a.key, target: a.target == null ? null : a.target, target2: a.target2 == null ? null : a.target2, bead: a.bead || null } : { key: R.SK.JI };
+
+function collectInto(dst, srcParams, idBase) {
+  const record = (state, pid, legal) => {
+    if (!(legal && legal.length >= 2)) return;
+    const cs = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
+    if (cs.length < 2) return;
+    const t0 = teacherPick(state, pid, cs);
+    if (!t0) return;
+    const cl = S.cloneState(state); cl.rng = { next: rnd };
+    const cs2 = P.candidatesFor(cl, pid, T.econBase(cl, pid, legal), { lockTarget: false }) || [];
+    const again = teacherPick(cl, pid, cs2);
+    const keys = cs2.map((c) => c.key);
+    if (!again || !cs2.length || keys.indexOf(again.key) < 0) { LABEL.gone++; return; }
+    /* tape 的输入与参数无关 ⇒ 收集时算一次，之后任意参数重放（单源：arch2 wantTape） */
+    const fr = P.forwardCands(cl, pid, cs2, up, { temp: 1, wantTape: 1 });
+    /* 教师那一枚在候选表里的下标（pickChain 返回的是 cs2 里的对象本身 ⇒ 按身份找，不按 key 找） */
+    const wIdx = cs2.indexOf(again);
+    if (OBJ === 'cand' && wIdx < 0) { LABEL.gone++; return; }
+    dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: again.key, want0: t0.key,
+      wantIdx: wIdx, wantBead: again.bead || null });
+    LABEL.keys++;
+    if (again.key !== t0.key) LABEL.moved++; else LABEL.ok++;
   };
-  for (let s = 0; s < A2.shapes.length && groups.length < NGRP; s++) {
-    for (let g = 0; g < 60 && groups.length < NGRP; g++) A2.playOne(sel, s, 300000 + s * 1000 + g, 4242);
+  let play;
+  if (srcParams == null) {
+    play = (state, pid, legal) => {
+      if (dst.length < NGRP) record(state, pid, legal);
+      const cs3 = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
+      const a = teacherPick(state, pid, cs3);
+      return a ? { key: a.key, target: a.target == null ? null : a.target, target2: a.target2 == null ? null : a.target2, bead: a.bead || null } : { key: R.SK.JI };
+    };
+  } else {
+    const ch = A2.chooserOf(srcParams, DAG_TEMP);
+    play = (state, pid, legal) => {
+      if (dst.length < NGRP) record(state, pid, legal);
+      return ch(state, pid, legal);
+    };
+  }
+  for (let s = 0; s < A2.shapes.length && dst.length < NGRP; s++) {
+    for (let g = 0; g < 60 && dst.length < NGRP; g++) A2.playOne(play, s, idBase + s * 1000 + g, 4242);
   }
 }
+
+const groups = [];
+collectInto(groups, null, 300000);
 if (groups.length < 60) { console.error('⛔ 只抓到 ' + groups.length + ' 组 ⇒ 不做'); process.exit(2); }
 const cut = Math.floor(groups.length * 0.75);
-const train = groups.slice(0, cut), test = groups.slice(cut);
+const train0 = groups.slice(0, cut), test = groups.slice(cut);
 /* 1/类频 权重：`key` 路径按 wantKey（与 chain-supfit 同式，逐字不变）；
  *   `cand` 路径按"键#珠"伪类 ⇒ 让 `charge#elec` 不被 `charge#boom` 的数量吃掉（ji 本来占 6 成）。 */
 const cls = (gr) => (OBJ === 'cand' ? gr.wantKey + (gr.wantBead ? '#' + gr.wantBead : '') : gr.wantKey);
-const cnt = {};
-for (const gr of train) { const c = cls(gr); cnt[c] = (cnt[c] || 0) + 1; }
-const WKEY = {}; for (const k in cnt) WKEY[k] = 1 / cnt[k];
+function weightOf(list) {
+  const c = {};
+  for (const gr of list) { const k = cls(gr); c[k] = (c[k] || 0) + 1; }
+  const w = {}; for (const k in c) w[k] = 1 / c[k];
+  return w;
+}
+let WKEY = weightOf(train0);
 
 /* ---- 评测（`key` = 与 chain-supfit 同口径：temp=1、键级、1/类频加权；`cand` = 教师那一枚候选的似然）---- */
 function like(pv, list) {
@@ -127,56 +146,90 @@ function like(pv, list) {
 
 const t0 = Date.now();
 const base = like(up, test);
-console.log('# supfit-gd（Adam+反传） ‖ 目标=' + OBJ + ' ‖ 上游 ' + UP.replace(/^.*[\\/]/, '') + ' ‖ 面=' + (got.cfg.input || '?') +
-  ' ‖ 组 ' + groups.length + '（训 ' + train.length + ' ‖ 测 ' + test.length + '）');
+console.log('# supfit-gd（Adam+反传） ‖ 目标=' + OBJ + ' ‖ 轮=' + DAG + ' ‖ 上游 ' + UP.replace(/^.*[\\/]/, '') + ' ‖ 面=' + (got.cfg.input || '?') +
+  ' ‖ 组 ' + groups.length + '（训 ' + train0.length + ' ‖ 测 ' + test.length + '）');
 console.log('  ⚑ 标签对账（克隆态重算后）：未变 ' + LABEL.ok + ' ‖ 变了 ' + LABEL.moved + ' ‖ 作废 ' + LABEL.gone + '（分母 ' + LABEL.keys + '）');
 console.log('  起点：加权似然 ' + base.ll.toFixed(4) + ' ‖ ' + (OBJ === 'cand' ? '同枚 top-1' : '同键 top-1') + ' ' + (100 * base.agree).toFixed(1) + '% ‖ 加权一致率 ' + (100 * base.wAgree).toFixed(1) + '%');
 
-/* ---- Adam + 反传（全批）---- */
-const DIM = up.length;
-const pv = Float64Array.from(up);
-const m = new Float64Array(DIM), v = new Float64Array(DIM);
+/* ---- Adam + 反传（全批）：`--dagger>0` 时同一函数按轮续跑（池子换、动量重开）---- */
 const B1 = 0.9, B2 = 0.999, EPSA = 1e-8;
-let best = { ll: base.ll, agree: base.agree, wAgree: base.wAgree, pv: Float64Array.from(up) };
-for (let it = 1; it <= STEPS; it++) {
-  const grad = new Float64Array(DIM);
-  let ll = 0;
-  for (const gr of train) {
-    const act = tapeForward(gr.tape, pv, ly);
-    const t = tailOf(act.logits, gr.keys, 1);
-    const p = OBJ === 'cand' ? t.probs[gr.wantIdx] : t.kProb[gr.wantKey];
-    if (!(p > 0)) continue;
-    const w = WKEY[cls(gr)];
-    ll -= w * Math.log(Math.max(1e-12, p));
-    const u = (OBJ === 'cand' ? dLogPi(gr.wantIdx, act.logits, gr.keys, 1, t) : dLogKeyP(gr.wantKey, act.logits, gr.keys, 1, t));
-    for (let j = 0; j < u.length; j++) u[j] *= -w;
-    tapeBackward(gr.tape, pv, ly, act, u, grad);
+function adamFit(pvStart, trainList, sentinelLl, roundTag) {
+  WKEY = weightOf(trainList);
+  const DIM = pvStart.length;
+  const pvR = Float64Array.from(pvStart);
+  const m = new Float64Array(DIM), v = new Float64Array(DIM);
+  let best = { ll: sentinelLl, pv: Float64Array.from(pvStart) };
+  for (let it = 1; it <= STEPS; it++) {
+    const grad = new Float64Array(DIM);
+    for (const gr of trainList) {
+      const act = tapeForward(gr.tape, pvR, ly);
+      const t = tailOf(act.logits, gr.keys, 1);
+      const p = OBJ === 'cand' ? t.probs[gr.wantIdx] : t.kProb[gr.wantKey];
+      if (!(p > 0)) continue;
+      const w = WKEY[cls(gr)];
+      const u = (OBJ === 'cand' ? dLogPi(gr.wantIdx, act.logits, gr.keys, 1, t) : dLogKeyP(gr.wantKey, act.logits, gr.keys, 1, t));
+      for (let j = 0; j < u.length; j++) u[j] *= -w;
+      tapeBackward(gr.tape, pvR, ly, act, u, grad);
+    }
+    const denom = Math.max(1, trainList.length);
+    for (let d = 0; d < DIM; d++) {
+      const g = grad[d] / denom;
+      m[d] = B1 * m[d] + (1 - B1) * g;
+      v[d] = B2 * v[d] + (1 - B2) * g * g;
+      const mh = m[d] / (1 - Math.pow(B1, it)), vh = v[d] / (1 - Math.pow(B2, it));
+      pvR[d] -= LR * mh / (Math.sqrt(vh) + EPSA);
+    }
+    if (it % 50 === 0 || it === STEPS) {
+      const tr = like(pvR, trainList);
+      if (tr.ll > best.ll) { best = { ll: tr.ll, pv: Float64Array.from(pvR) }; }
+      console.log('  步 ' + it + (roundTag ? '（轮 ' + roundTag + '）' : '') + ' ‖ 训练加权似然 ' + tr.ll.toFixed(4) + ' ‖ 训练' + (OBJ === 'cand' ? '同枚' : '同键') + ' top-1 ' + (100 * tr.agree).toFixed(1) + '%');
+    }
   }
-  const denom = Math.max(1, train.length);
-  for (let d = 0; d < DIM; d++) {
-    const g = grad[d] / denom;
-    m[d] = B1 * m[d] + (1 - B1) * g;
-    v[d] = B2 * v[d] + (1 - B2) * g * g;
-    const mh = m[d] / (1 - Math.pow(B1, it)), vh = v[d] / (1 - Math.pow(B2, it));
-    pv[d] -= LR * mh / (Math.sqrt(vh) + EPSA);
-  }
-  if (it % 50 === 0 || it === STEPS) {
-    const tr = like(pv, train);
-    if (tr.ll > best.ll) { best = { ll: tr.ll, pv: Float64Array.from(pv) }; }
-    console.log('  步 ' + it + ' ‖ 训练加权似然 ' + tr.ll.toFixed(4) + ' ‖ 训练' + (OBJ === 'cand' ? '同枚' : '同键') + ' top-1 ' + (100 * tr.agree).toFixed(1) + '%');
-  }
+  return Float64Array.from(best.pv);
+}
+
+let pvCur = Float64Array.from(up);
+let trainList = train0.slice();
+let stuTrain = [], stuTest = [];
+const ROUNDS = [];
+pvCur = adamFit(pvCur, trainList, base.ll, 0);
+{
+  const r0 = like(pvCur, test);
+  ROUNDS.push({ round: 0, trainG: trainList.length, teacherAgree: r0.agree, teacherLl: r0.ll, studentAgree: null, studentN: 0 });
+}
+for (let r = 1; r <= DAG; r++) {
+  const before = { keys: LABEL.keys, gone: LABEL.gone, moved: LABEL.moved };
+  const gS = [];
+  collectInto(gS, pvCur, 500000 + r * 1000);
+  if (gS.length < 60) { console.log('  ⚑ 轮 ' + r + ' 学生自访只抓到 ' + gS.length + ' 组 ⇒ 停在第 ' + (r - 1) + ' 轮'); break; }
+  const c = Math.floor(gS.length * 0.75);
+  stuTrain = stuTrain.concat(gS.slice(0, c));
+  stuTest = stuTest.concat(gS.slice(c));
+  const cap = Math.max(0, POOL - train0.length);
+  if (stuTrain.length > cap) stuTrain = stuTrain.slice(stuTrain.length - cap);
+  trainList = train0.concat(stuTrain);
+  pvCur = adamFit(pvCur, trainList, like(pvCur, test).ll, r);
+  const tr = like(pvCur, test), ts = like(pvCur, stuTest);
+  console.log('  轮 ' + r + ' ‖ 学生态 +' + gS.length + ' 组（池 ' + trainList.length + ' ‖ 标签对账 ' + (LABEL.keys - before.keys) + '，作废 ' + (LABEL.gone - before.gone) + '）' +
+    ' ‖ 教师留出 ' + (100 * tr.agree).toFixed(1) + '% ‖ **学生自访留出 ' + (100 * ts.agree).toFixed(1) + '%（' + ts.n + ' 组）**');
+  ROUNDS.push({ round: r, studentG: gS.length, trainG: trainList.length, teacherAgree: tr.agree, teacherLl: tr.ll, studentAgree: ts.agree, studentLl: ts.ll, studentN: ts.n });
 }
 /* 终评：按**训练似然最好**的那份粒报留出（lr 挑档不许偷看 test 的纪律同一源头） */
-const finalPv = best.pv;
+const finalPv = pvCur;
 const fin = like(finalPv, test);
-const finTrain = like(finalPv, train);
+const finTrain = like(finalPv, trainList);
+const finStudent = stuTest.length ? like(finalPv, stuTest) : null;
 const byKeyLine = Object.keys(fin.byKey).filter((k) => fin.byKey[k].n >= 3).sort((x, y) => fin.byKey[y].n - fin.byKey[x].n).slice(0, 8)
   .map((k) => k + ' ' + (100 * fin.byKey[k].hit / fin.byKey[k].n).toFixed(0) + '%(' + fin.byKey[k].n + ')').join(' ‖ ');
 const secs = (Date.now() - t0) / 1000;
-console.log('  终（训 ' + train.length + ' 组上 ll 最高的粒）：留出加权似然 ' + fin.ll.toFixed(4) + '（起点 ' + base.ll.toFixed(4) + '）' +
+console.log('  终（训 ' + trainList.length + ' 组上 ll 最高的粒）：留出加权似然 ' + fin.ll.toFixed(4) + '（起点 ' + base.ll.toFixed(4) + '）' +
   ' ‖ ' + (OBJ === 'cand' ? '同枚' : '同键') + ' top-1 ' + (100 * fin.agree).toFixed(1) + '%（起点 ' + (100 * base.agree).toFixed(1) + '%）' +
   ' ‖ 加权一致率 ' + (100 * fin.wAgree).toFixed(1) + '%（起点 ' + (100 * base.wAgree).toFixed(1) + '%）');
 console.log('  逐' + (OBJ === 'cand' ? '类(键#珠)' : '键') + '（留出）：' + byKeyLine);
+if (finStudent) console.log('  ⚑ 学生自访留出（自己走出来的态）：' + (OBJ === 'cand' ? '同枚' : '同键') + ' top-1 ' + (100 * finStudent.agree).toFixed(1) + '%（' + finStudent.n + ' 组）' +
+  ' ‖ 逐类 ' + Object.keys(finStudent.byKey).filter((k) => finStudent.byKey[k].n >= 3).sort((x, y) => finStudent.byKey[y].n - finStudent.byKey[x].n).slice(0, 8)
+    .map((k) => k + ' ' + (100 * finStudent.byKey[k].hit / finStudent.byKey[k].n).toFixed(0) + '%(' + finStudent.byKey[k].n + ')').join(' ‖ ') +
+    '（**这一行才是"实战走得动"的前导读数**，教师留出 100% 已经两次被证明不等于走得动）');
 console.log('  耗时 ' + secs.toFixed(1) + 's ‖ 步数 ' + STEPS + ' ‖ lr ' + LR + ' ‖ 对表基准 supfit-w1：留出 75.5% ‖ railgun 39/39');
 const verdict = OBJ === 'cand'
   ? '⇒ P-A1 只对 key 路径预登记；cand 路径的验收在实战尺（chain-price 的窗/珠/净分）'
@@ -188,9 +241,11 @@ const packed = P.pack(finalPv);
 writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
-  objective: OBJ,
-  label: LABEL, supfitGd: { objective: OBJ, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n, byKey: Object.keys(fin.byKey).map((k) => ({ key: k, n: fin.byKey[k].n, hit: fin.byKey[k].hit })), verdict },
+  objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL,
+  label: LABEL, supfitGd: { objective: OBJ, dagger: DAG, rounds: ROUNDS, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n,
+    studentAgree: finStudent ? finStudent.agree : null, studentN: finStudent ? finStudent.n : 0,
+    byKey: Object.keys(fin.byKey).map((k) => ({ key: k, n: fin.byKey[k].n, hit: fin.byKey[k].hit })), verdict },
   container: { v: packed.v != null ? packed.v : null, input: got.cfg.input, dof: got.cfg.dof },
-  lineage: { parent: UP, gen: 2, recipe: { teacher: 'chain-lib.pickChain', objective: (OBJ === 'cand' ? 'weighted candidate log-likelihood log pi(teacher action), class=key#bead (temp=1)' : 'weighted key log-likelihood (temp=1)'), solver: 'Adam+analytic backprop (pg-lib)' } },
+  lineage: { parent: UP, gen: 2, recipe: { teacher: 'chain-lib.pickChain', objective: (OBJ === 'cand' ? 'weighted candidate log-likelihood log pi(teacher action), class=key#bead (temp=1)' : 'weighted key log-likelihood (temp=1)'), solver: 'Adam+analytic backprop (pg-lib)' + (DAG ? ' + DAgger x' + DAG : '') } },
 }, null, 1), 'utf8');
 console.log('  产物 → ' + OUT);

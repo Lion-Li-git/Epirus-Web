@@ -35,7 +35,7 @@ const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
   'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap', 'masterySem', 'masteryMax',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -47,6 +47,10 @@ if (MODE !== 'ga' && MODE !== 'cem' && MODE !== 'esa') {
 const EVALS = Number(arg('evals', 2000));
 const POP = Number(arg('pop', 14));
 const GAMES = Number(arg('games', 4));
+/* ⚑ 漏斗式两阶段选择（用户 10-31 晚裁“可以做，只要效果好”）：默认 0 = 现役 flat（每候选 GAMES 局）逐字不变；
+ *   >0 ⇒ 同代先给每粒 FUNNEL_S1 局，前 FUNNEL 粒补到 GAMES 局，精英按**补完后的总均值**排⇒ 同预算把局数花在分得开的人身上。 */
+const FUNNEL = Math.max(0, Number(arg('funnel', 0)) || 0);
+const FUNNEL_S1 = Math.max(1, Number(arg('funnelGames', 2)) || 2);
 /* `--fxSelect=1`：ES 的当选改到**冻结桌**上判（gen=500，与终局读数 gen=999 那批桌**不是同一批** ⇒ 没在考卷上选答案） */
 const FXSEL = Number(arg('fxSelect', 0)) > 0;
 /* `--fxGames=`：当选用的冻结桌**每格打几局**。默认跟 `--games` 同档，但 10-29 的读数是：
@@ -517,6 +521,27 @@ const holdout = function (params) {      /* 终局读数：固定场（同一批
 };
 
 /* ===== ② 起点分母（必须先报，否则"涨了多少"没有参照）===== */
+if (MODE === 'cem' && FUNNEL > 0) {
+  if (!ARENA) { console.error('⛔ --funnel 只接 arena2 那条评估路（要 --arena2=1）⇒ 拒绝静默按旧口径跑'); process.exit(7); }
+  if (FUNNEL < ELITE) console.error('⛔ --funnel=' + FUNNEL + ' 少于 elite(' + ELITE + ') ⇒ 精英数超过决赛数');
+  console.log('  ⚑ **选择结构=漏斗**：每代先 ' + FUNNEL_S1 + ' 局粗筛 ' + POP + ' 粒 → 前 ' + FUNNEL + ' 粒补到 ' + GAMES +
+    ' 局（两批桌互不相交，精英只从决赛者里出）⇒ 每代实际局数 ' + (POP * FUNNEL_S1 + FUNNEL * Math.max(0, GAMES - FUNNEL_S1)) +
+    ' vs flat 的 ' + (POP * GAMES) + ' ⇒ 同 --targetGames 下漏斗臂会**多跑代**（横比看 [budget] 与 meta.funnel，不许按名义口径混说）' +
+    (FUNNEL === ELITE ? ' ‖ ⚠ funnel=elite ⇒ **选谁完全由粗筛决定**（决赛补的局只动 σ/产物棘轮）' : ''));
+}
+const FUNNEL_REF = 100000;   /* 决赛段的 gen 偏移：环内局号 = gen*games+g ⇒ 大偏移保证决赛桌与粗筛桌**永不撞**，且每代自换桌 */
+function coarseOne(v, it) {
+  const r = ARENA.evalParams(v, { phase: 'loop', gen: it, games: FUNNEL_S1, temp: ARENA_TEMP, cur: ARENA_CUR });
+  return { fit: r.score, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard, coarse: true };
+}
+function refineInto(prev, v, it) {
+  /* 只补"多出来的那几局"，与粗筛桌拼成 GAMES 局的**总均值**（两批桌互不相交 ⇒ 这 GAMES 局是一个干净的均值，不是拿新桌的分替换旧桌） */
+  const n2 = Math.max(0, GAMES - FUNNEL_S1);
+  if (!n2) return { fit: prev.fit, first: prev.first, top2: prev.top2, draw: prev.draw, games: prev.games, maxCard: prev.maxCard, refined: false };
+  const r = ARENA.evalParams(v, { phase: 'loop', gen: FUNNEL_REF + it, games: n2, temp: ARENA_TEMP, cur: ARENA_CUR });
+  return { fit: (prev.fit * FUNNEL_S1 + r.score * n2) / GAMES, first: r.first, top2: r.top2, draw: r.draw,
+    games: GAMES, maxCard: r.maxCard, refined: true };
+}
 const base = evalOne(startParams, 0, 0);
 P.setRng(T.mulberry32(SEED + 1));
 const randParams = Float64Array.from(P.makePolicy(0.25));
@@ -920,9 +945,19 @@ if (MODE === 'esa') {
     for (let i = 0; i < POP; i++) {
       const v = new Float64Array(DIM);
       for (let d = 0; d < DIM; d++) v[d] = mean[d] + sd[d] * gauss(r);
-      cand.push(v); scored.push(evalOne(v, it, i));
+      cand.push(v); scored.push(FUNNEL > 0 ? coarseOne(v, it) : evalOne(v, it, i));
     }
-    const order = scored.map(function (s, i) { return i; }).sort(function (a, b) { return scored[b].fit - scored[a].fit; });
+    let order;
+    if (FUNNEL > 0) {
+      /* 粗筛（每粒只有 FUNNEL_S1 局）→ 前 FUNNEL 粒补到 GAMES 局 → **精英只从决赛者里出**（successive rejecting）。
+       *   非决赛者按粗筛分排在后面 ⇒ mastery 门在决赛者全不达标时仍能按序退回审计（口径与 flat 臂同一条队列）。 */
+      const co = scored.map(function (x, i) { return i; }).sort(function (a, b) { return scored[b].fit - scored[a].fit; }).slice(0, Math.min(FUNNEL, POP));
+      for (const i of co) scored[i] = refineInto(scored[i], cand[i], it);
+      const finSet = new Set(co);
+      const rest = scored.map(function (x, i) { return i; }).filter(function (i) { return !finSet.has(i); })
+        .sort(function (a, b) { return scored[b].fit - scored[a].fit; });
+      order = co.sort(function (a, b) { return scored[b].fit - scored[a].fit; }).concat(rest);
+    } else order = scored.map(function (s, i) { return i; }).sort(function (a, b) { return scored[b].fit - scored[a].fit; });
     /* mastery 门 · elite 档：精英只吃达标者（按 fit 降序审计；<2 个达标 ⇒ 退回纯 fit 并记 starved）。
      * ⚑ 勘误二（10-31 00:4x）：产物只从**达标者**里棘轮（bestFitPasser 独立记账）——
      *   第一轮的教训：4 局循环分棘轮会把产物冻结在早期幸运子代上（往往是饿退代的纯 fit 顶），
@@ -1015,7 +1050,9 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
     gen: OUT ? (function () { try { const vv = P.pack(best).v; return vv === 91 ? 2 : (vv === 90 ? 1 : null); } catch (e) { return null; } })() : null,
     seed: SEED, recipe: { arenaLex: ARENA_LEX, arenaPerN: ARENA_PER_N, boN: BO_N, shapeCap: SHAPE_CAP, shapePick: SHAPE_PICK, warmShape: WARM_SHAPE } },
   /* mastery 门（ARCH-2026-10-31-BUCKET-POOL §四）：开着就必带计数，audits=0 视为没接电（见下方自证） */
-  mastery: MASTERY_ON ? { key: MASTERY_KEY, gate: MASTERY_GATE, line: MASTERY_LINE, games: MASTERY_GAMES, n: MASTERY_N, table: MASTERY_TABLE, cap: MASTERY_CAP, stat: MASTERY_STAT } : null };
+  mastery: MASTERY_ON ? { key: MASTERY_KEY, gate: MASTERY_GATE, line: MASTERY_LINE, games: MASTERY_GAMES, n: MASTERY_N, table: MASTERY_TABLE, cap: MASTERY_CAP, stat: MASTERY_STAT } : null,
+  funnel: (MODE === 'cem' && FUNNEL > 0) ? { take: FUNNEL, coarseGames: FUNNEL_S1, totalGames: GAMES,
+    gamesFirstStage: POP * FUNNEL_S1, gamesSecondStage: FUNNEL * Math.max(0, GAMES - FUNNEL_S1) } : null };
 /* 打分健康度（2.0 臂才量：v7 那档没有“逐候选打分退化”这一格病，别把两件事混在一条读数里） */
 if (P.__arch2) {
   try {

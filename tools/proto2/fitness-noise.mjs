@@ -20,7 +20,7 @@ import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['packs', 'gens', 'games', 'topK', 'cur', 'quiet', 'mode', 'mutPop', 'mutSig'], 'fitness-noise');
+rejectUnknownFlags(argv, ['packs', 'gens', 'games', 'topK', 'cur', 'quiet', 'mode', 'mutPop', 'mutSig', 'pops', 'truthGames'], 'fitness-noise');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const GENS = Math.max(8, Number(arg('gens', 60)) || 60);
 const GAMES = Math.max(2, Number(arg('games', 4)) || 4);
@@ -120,6 +120,105 @@ if (installed) installed.restore();
   }
 }
 
+/* 子代撒法（与训练环同一口径：权重段按 1/√fanIn 定标，偏置段吃原 σ）——**单源**给 mutants 与 funnel 两档共用 */
+function drawKids(pp, L, K, sig, seedBase) {
+  let sd = seedBase;
+  const rnd2 = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
+  const gauss = () => { const u = rnd2() || 1e-9, v = rnd2(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const kids = [];
+  for (let i = 0; i < K; i++) {
+    const v = Float64Array.from(pp);
+    for (const sg of L.seg) {
+      const biasLen = { seatEnc: L.seatH, actEnc: L.actH, ctx: L.hid, cand: L.hid2, policyHead: 1, qHead: 1, inter: L.hid }[sg.name] || 1;
+      const biasStart = sg.off + sg.len - biasLen, k = sig / Math.sqrt(Math.max(1, L.fanIn[sg.name]));
+      for (let d = sg.off; d < sg.off + sg.len; d++) v[d] += (d >= biasStart ? sig : k) * gauss();
+    }
+    kids.push(v);
+  }
+  return kids;
+}
+
+if (MODE === 'funnel') {
+  /* ===== 漏斗式两阶段选择的**离线仿真**（10-31 晚，用户点头"漏斗可以做，只要效果好"）=====
+   * 要回答的问题：同样每代 192 局，"48 粒各 4 局"与"先 2 局筛出 8 粒再补 12 局"哪个选得到的精英真好。
+   * ⚑ 三条设计纪律：
+   *   ① **配对**：所有结构用**同一批桌**（同一列 seq 的分数切片），结构之间的差只来自选择规则，不来自抽桌运气；
+   *   ② **不重叠**：前 28 局专供"选择用的短估"（最宽的漏斗C 要 2+24=26 张），真值取后 192 局 ⇒ 短估与真值零共享局（否则是自反对照，量不出噪声）；
+   *   ③ **重复单位是"群"不是"代"**：一个群 = 一次独立撒 48 粒（不同 seedBase）⇒ 只加 seed 不减群，等于没复现。 */
+  const P1 = PACKS[0];
+  const raw = readPack2(P1), got = packCfgExit(raw, P1);
+  const Wm = sandbox();
+  const Am = createArena2(Wm, { refParams, temp: TEMP, highN: 1, stratified: true, stratCap: 2, stratMix: 0.5 });
+  const inst = installArch2(Wm, Object.assign({ mutMode: 'seg' }, got.cfg));
+  const pp = Wm.EpirusPolicy.unpack(raw, true);
+  if (!pp) { console.error('⛔ 父代读不出：' + P1); process.exit(2); }
+  const L = Wm.EpirusPolicy.__arch2.L;
+  const POPS = Math.max(1, Number(arg('pops', 3)) || 3);
+  const NSHORT = 28, NTRUTH = Math.max(60, Number(arg('truthGames', 192)) || 192);
+  const KID = Math.max(12, Number(arg('mutPop', 48)) || 48);
+  const mean = (a) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
+  const rank = (arr) => { const ix = arr.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]); const o = new Array(arr.length); ix.forEach((p, pos) => { o[p[1]] = pos + 1; }); return o; };
+  const ST = [
+    { name: '现役 flat 48×4（192 局）', c: 4, fin: 0, G: 4 },
+    { name: '漏斗A 2→8 补到 14（192 局）', c: 2, fin: 8, G: 14 },
+    { name: '漏斗B 1→8 补到 19（192 局）', c: 1, fin: 8, G: 19 },
+    { name: '漏斗D 2→16 补到 8（192 局）', c: 2, fin: 16, G: 8 },
+    { name: '漏斗E 2→4 补到 14（144 局，fun=elite 退化档）', c: 2, fin: 4, G: 14 },
+    { name: '漏斗F 2→8 补到 4（112 局，只花 58% 预算）', c: 2, fin: 8, G: 4 },
+    { name: '满估 48×24（1152 局 = 6× 预算）', c: 24, fin: 0, G: 24 },
+  ];
+  const agg = ST.map((s) => ({ name: s.name, ov: [], lost: [], sel: [], rho: [] }));
+  console.log('# 漏斗仿真 ‖ 父代 ' + P1.replace(/^.*[\\/]/, '') + ' ‖ σ=' + MUT_SIG + ' ‖ 每群 ' + KID + ' 粒 ‖ ' + POPS + ' 个独立群' +
+    ' ‖ 短估桌 = seq 0..' + (NSHORT - 1) + ' ‖ 真值桌 = seq ' + NSHORT + '..' + (NSHORT + NTRUTH - 1) + '（零共享）‖ 货币=' + CUR);
+  for (let pop = 0; pop < POPS; pop++) {
+    const kids = drawKids(pp, L, KID, MUT_SIG, 20261031 + pop * 7919);
+    const per = [];
+    for (let i = 0; i < kids.length; i++) {
+      const sel = Am.chooserOf(kids[i], TEMP);
+      const sc = new Float64Array(NSHORT + NTRUTH);
+      for (let q = 0; q < NSHORT + NTRUTH; q++) sc[q] = of(Am.playOne(sel, q % Am.shapes.length, q, SALT_LOOP));
+      let t = 0; for (let q = NSHORT; q < sc.length; q++) t += sc[q];
+      per.push({ id: 'k' + i, short: sc.subarray(0, NSHORT), truth: t / NTRUTH });
+    }
+    const tTop = [...per].sort((a, b) => b.truth - a.truth);
+    const K = 4;
+    const trueTop = new Set(tTop.slice(0, K).map((r) => r.id));
+    const truthBest = mean(tTop.slice(0, K).map((r) => r.truth));
+    console.log('\n  群 ' + (pop + 1) + ' ‖ 真值跨度 ' + (tTop[0].truth - tTop[tTop.length - 1].truth).toFixed(3) + ' ‖ 真值前 4 均值 ' + truthBest.toFixed(3));
+    ST.forEach((s, si) => {
+      /* 与 `probe-cem-arm` 的实现**同一语义**：粗筛 c 局 → 前 fin 粒补到 G 局（总均值）→ **精英只从决赛者里出** */
+      const e1 = per.map((r) => mean(Array.from(r.short.slice(0, s.c))));
+      let key = e1.slice(), pool = per.map((r, i) => i), note = '';
+      if (s.fin > 0) {
+        const fin = per.map((r, i) => i).sort((a, b) => e1[b] - e1[a]).slice(0, s.fin);
+        key = e1.slice();
+        for (const i of fin) key[i] = mean(Array.from(per[i].short.slice(0, s.G)));
+        pool = fin; note = '（精英只从 ' + s.fin + ' 个决赛者里出）';
+      }
+      const chosen = pool.slice().sort((a, b) => key[b] - key[a]).slice(0, K);
+      const selTruth = mean(chosen.map((i) => per[i].truth));
+      const ov = chosen.filter((i) => trueTop.has(per[i].id)).length;
+      const rT = rank(per.map((r) => r.truth)), rK = rank(key);
+      let d2 = 0; for (let i = 0; i < per.length; i++) { const d = rT[i] - rK[i]; d2 += d * d; }
+      const rho = 1 - 6 * d2 / (per.length * (per.length * per.length - 1));
+      agg[si].ov.push(ov); agg[si].lost.push(100 * (truthBest - selTruth)); agg[si].sel.push(selTruth); agg[si].rho.push(rho);
+      console.log('    ' + s.name.padEnd(38) + ' ‖ 前 4 重合 ' + ov + '/4 ‖ 选中精英真值 ' + selTruth.toFixed(3) +
+        ' ‖ 每代白丢 ' + (100 * (truthBest - selTruth)).toFixed(1) + 'pt ‖ ρ=' + rho.toFixed(2) + note);
+    });
+  }
+  inst.restore();
+  console.log('\n## 汇总（' + POPS + ' 个群；**中位/最好/最差**，均值会吞掉群间差异）');
+  console.log('结构（预算=每代局数） ‖ 前4重合(各群) ‖ 重合中位 ‖ 每代白丢pt(各群) ‖ 白丢中位 ‖ 白丢最差 ‖ ρ 中位');
+  for (const a of agg) {
+    const srt = (x) => [...x].sort((p, q) => p - q);
+    const med = (x) => srt(x)[Math.floor(x.length / 2)];
+    console.log(a.name.padEnd(38) + ' ‖ ' + a.ov.join('/') + ' ‖ ' + med(a.ov).toFixed(0) +
+      ' ‖ ' + a.lost.map((x) => x.toFixed(1)).join('/') + ' ‖ ' + med(a.lost).toFixed(1) + ' ‖ ' + Math.max(...a.lost).toFixed(1) + ' ‖ ' + med(a.rho).toFixed(2));
+  }
+  console.log('\n判读口径：白丢 = 按该规则选出的精英 4 粒，与"按真值选 4 粒"的真值差（pt）。**只有当漏斗的白丢中位显著低于现役 flat（差 > 群间散布）才值得改训练环**。');
+  process.exit(0);
+}
+
 if (MODE === 'mutants') {
   const P1 = PACKS[0];
   const raw = readPack2(P1), got = packCfgExit(raw, P1);
@@ -129,19 +228,7 @@ if (MODE === 'mutants') {
   const pp = Wm.EpirusPolicy.unpack(raw, true);
   if (!pp) { console.error('⛔ 父代读不出：' + P1); process.exit(2); }
   const L = Wm.EpirusPolicy.__arch2.L;
-  let sd = 20261031;
-  const rnd2 = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
-  const gauss = () => { const u = rnd2() || 1e-9, v = rnd2(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
-  const kids = [];
-  for (let i = 0; i < MUT_K; i++) {
-    const v = Float64Array.from(pp);
-    for (const sg of L.seg) {                        /* 与训练环同一口径：权重段按 1/√fanIn 定标，偏置段吃原 σ */
-      const biasLen = { seatEnc: L.seatH, actEnc: L.actH, ctx: L.hid, cand: L.hid2, policyHead: 1, qHead: 1, inter: L.hid }[sg.name] || 1;
-      const biasStart = sg.off + sg.len - biasLen, k = MUT_SIG / Math.sqrt(Math.max(1, L.fanIn[sg.name]));
-      for (let d = sg.off; d < sg.off + sg.len; d++) v[d] += (d >= biasStart ? MUT_SIG : k) * gauss();
-    }
-    kids.push(v);
-  }
+  const kids = drawKids(pp, L, MUT_K, MUT_SIG, 20261031);
   const rowsK = [];
   for (let i = 0; i < kids.length; i++) {
     const sel = Am.chooserOf(kids[i], TEMP);
