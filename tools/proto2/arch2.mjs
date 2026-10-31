@@ -41,7 +41,7 @@ const SEAT_DIM = OPP_BLK + T_BLK + B_BLK + 1;           // +1 = isSelf 标记 �
  *   obs3b = 81 公开（14 状态 + 30 lastSkill 身份 + 1 none + 3 目标 + 30 键 bag + 3 目标 bag）+ 5 + 1
  *           ‖ 全局 5 + 私有 2 + 序列 168（32 Q.seq + 120 Q.id + 16 Q.out）+ 全场合计 1（505 维）*/
 const SEAT3 = 22 + 5 + 1, SELF3_EXTRA = 5 + 2 + 48 + 1;
-const SEAT3B = 81 + 5 + 1, SELF3B_EXTRA = 5 + 2 + 168 + 1;
+const SEAT3B = 81 + 5 + 1, SELF3B_EXTRA = 5 + 2 + 78 + 1;   /* obs3b 序列 78 = 32 Q.seq + 30 Q.bag + 16 Q.out */
 const CAND3_BASE = 30;                      /* obs3 候选侧基础段（代 2 删掉恒零的 `tgt.none`）*/
 const isO3Input = (s) => s === 'obs3' || s === 'obs3b';   /* 两个 2.0 观测面共用同一条结构路 */
 /* 初始化尺度**只允许一处定义**：`make` 与"相对变异"都要读它，两边各写一个数就会静默错位（10-29 加）。 */
@@ -435,14 +435,17 @@ export function install(W, opts) {
     let p = 0;
     /* ⭐ 消融开关必须接在**网络这条路**上（10-29 11:3x 实测抓到的：只接在 `obs3.encode()` 里 ⇒ 七种消融全给出同一批数，
      *   因为 S1o 的前向自己拼 `xin/afbuf`，**不经过 encode()**）。块名与 obs3 的 MANIFEST 同一套 ⇒ 离线尺与网络同一语义。 */
-    const ABL = { g: isAblated('G'), priv: isAblated('S.private'), seq: isAblated('Q.seq'), id: isAblated('Q.id'), out: isAblated('Q.out'), sums: isAblated('P.add'), pool: isAblated('P.opp') };
+    const ABL = { g: isAblated('G'), priv: isAblated('S.private'), seq: isAblated('Q.seq'), bag: isAblated('Q.bag'), out: isAblated('Q.out'), sums: isAblated('P.add'), pool: isAblated('P.opp') };
     for (let i = 0; i < sc.g.length; i++) xin[p++] = ABL.g ? 0 : sc.g[i];
     for (let i = 0; i < sc.priv.length; i++) xin[p++] = ABL.priv ? 0 : sc.priv[i];
-    /* 序列块的切分：obs3 = [Q.seq 32 ‖ Q.out 16]；obs3b = [Q.seq 32 ‖ Q.id 120 ‖ Q.out 16]（块连续，见 selfSeq） */
-    const SEQ_LEN = sc.seq.length, OUT_CUT = SEQ_LEN - 16;
-    const ID_CUT = L.input === 'obs3b' ? 32 : OUT_CUT;        /* obs3b 的 Q.id 占 [32, 152) */
+    /* 序列块的切分：obs3 = [Q.seq 32 ‖ Q.out 16]；obs3b = [Q.seq 32 ‖ Q.out 16 ‖ Q.bag 30]（全连续，见 selfSeq）
+     *   两面的 out 都占 [32,48)；obs3b 的 bag 占 [48,78)。 */
+    const SEQ_LEN = sc.seq.length;
     for (let i = 0; i < SEQ_LEN; i++) {
-      const zero = (i < 32 && ABL.seq) || (i >= ID_CUT && i < OUT_CUT && ABL.id) || (i >= OUT_CUT && ABL.out);
+      let zero;
+      if (i < 32) zero = ABL.seq;
+      else if (i < 48) zero = ABL.out;
+      else zero = ABL.bag;                        /* 只有 obs3b 有尾段 bag；obs3 的 SEQ_LEN=48 循环到此为止 */
       xin[p++] = zero ? 0 : sc.seq[i];
     }
     for (let i = 0; i < sc.sums.length; i++) xin[p++] = ABL.sums ? 0 : sc.sums[i];

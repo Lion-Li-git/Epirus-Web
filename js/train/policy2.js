@@ -20,8 +20,8 @@
   const SEAT_IN = 22 + 5 + 1;              // obs3 逐席：22 公开 ‖ 5 关系 ‖ 1 isSelf
   const SEAT_IN_B = 81 + 5 + 1;            // obs3b 逐席：81 公开（14 状态+30 键身份+1 none+3 目标+30 键 bag+3 目标 bag）
   const SELF_DIM = 5 + 2 + 48 + 1;         // obs3 局面侧：G(5) ‖ 私有(2) ‖ 序列(48) ‖ 全场合计(1，代 2 删了 pool.count)
-  const SELF_DIM_B = 5 + 2 + 168 + 1;      // obs3b 局面侧：序列 168 = 32 Q.seq + 120 Q.id + 16 Q.out
-  const DOF = { obs3: 208, obs3b: 505 };   // 观测面总维（与训练侧 obs3.dims(R, ver) 同账，由 browser-parity 当场红）
+  const SELF_DIM_B = 5 + 2 + 78 + 1;       // obs3b 局面侧：序列 78 = 32 Q.seq + 30 Q.bag（自身键 bag）+ 16 Q.out
+  const DOF = { obs3: 208, obs3b: 415 };   // 观测面总维（与训练侧 obs3.dims(R, ver) 同账，由 browser-parity 当场红）
   const CAND_BASE = 30;                    // obs3 候选侧基础段（代 2 删了恒零的 `tgt.none`）
   const POOL_BLOCKS = 3;                   // h_self ‖ mean ‖ max
   const SKILL_CLASS = ['energy', 'attack', 'defense', 'special'];
@@ -151,25 +151,30 @@
     const per = [];
     for (let k = 0; k < 4; k++) {
       const a = acts[k];
-      if (!a) { per.push([[0, 0, 0, 0, 0, 0, 0, 0], b ? new Array(R.skills.length).fill(0) : null, [0, 0, 0, 1]]); continue; }
+      if (!a) { per.push([[0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 1]]); continue; }
       const def = R.byKey[a.key] || {};
       const ci = SKILL_CLASS.indexOf(def.cat);
       const ob = outcomeBits(a.key);
       const landed = ob ? ob[0] : 0, blocked = ob ? (ob[1] || ob[2] || ob[3] || ob[4]) : 0;
-      const catFam = [ci === 0 ? 1 : 0, ci === 1 ? 1 : 0, ci === 2 ? 1 : 0, ci === 3 ? 1 : 0,
+      per.push([[ci === 0 ? 1 : 0, ci === 1 ? 1 : 0, ci === 2 ? 1 : 0, ci === 3 ? 1 : 0,
         R.ATK_EFFECT.indexOf(a.key) >= 0 ? 1 : 0, R.GUARD_FAMILY.indexOf(a.key) >= 0 ? 1 : 0,
-        R.LIGHTNING.indexOf(a.key) >= 0 ? 1 : 0, R.REFLECTABLE.indexOf(a.key) >= 0 ? 1 : 0];
-      const keyOne = b ? (() => { const v = new Array(R.skills.length).fill(0); const at = R.skills.findIndex((s) => s.key === a.key); if (at >= 0) v[at] = 1; return v; })() : null;
-      per.push([catFam, keyOne, [landed, blocked, ob && ob[4] ? 1 : 0, (!landed && !blocked) ? 1 : 0]]);
+        R.LIGHTNING.indexOf(a.key) >= 0 ? 1 : 0, R.REFLECTABLE.indexOf(a.key) >= 0 ? 1 : 0],
+        [landed, blocked, ob && ob[4] ? 1 : 0, (!landed && !blocked) ? 1 : 0]]);
     }
     if (!b) {
       const out = [];
-      for (const [cf, , o] of per) out.push(...cf, ...o);
+      for (const [cf, o] of per) out.push(...cf, ...o);
       return out;
     }
-    const s1 = [], s2 = [], s3 = [];
-    for (const [cf, ki, o] of per) { s1.push(...cf); s2.push(...ki); s3.push(...o); }
-    return [...s1, ...s2, ...s3];
+    const s1 = [], s3 = [];
+    for (const [cf, o] of per) { s1.push(...cf); s3.push(...o); }
+    const ordered = new Array(R.skills.length).fill(0);
+    for (let k = 0; k < acts.length; k++) {
+      const at = R.skills.findIndex((s) => s.key === acts[k].key);
+      if (at >= 0) ordered[at] += Math.pow(2, -k) / 1.875;
+    }
+    /* ⚑ obs3b 块序 = [Q.seq 32 ‖ Q.out 16 ‖ Q.bag 30]（与训练侧 manifest 严格同序） */
+    return [...s1, ...s3, ...ordered];
   }
 
   /* ---- 候选侧：base(30) ⊕ 技能身份 one-hot ---- */

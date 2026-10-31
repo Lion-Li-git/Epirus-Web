@@ -37,13 +37,14 @@ const SKILL_CLASS = ['energy', 'attack', 'defense', 'special'];
 
 /* 观测面版本（ZCode · 10-31 凌晨，用户裁定"信息都给到 + 重构期直接做到位"）：
  *   'obs3'  = 在册 208 维（**逐字不变**，所有旧包/旧读数走它）；
- *   'obs3b' = 505 维 —— 补"过去几回合的实际使用技能与目标"（用户 10-31 03:0x 原话）：
+ *   'obs3b' = 415 维（07:2x 用户拍板瘦身：Q.id 120 → 自身键 bag 30）——补"过去几回合的实际使用技能与目标"：
  *     ① 席位 lastSkill：类别 5 位 → **键身份 one-hot 30 + lsNone**（v7 的 policy.js:233 给过
  *        `idxOf(op.lastSkill)`，obs3 把它降成了类别 ⇒ 这里恢复并按正交纪律替换类别位）；
  *     ② 席位加 **最近 K=4 回合键 bag 30**（2^-age 衰减、/1.875 归一）——池化 mean/max 后直接回答
  *        "对手群里最近谁用过 bigT/railgun"＝miniT/laserEye/railgun 桶语义判据的共同信号源；
  *     ③ 席位加 **最近 K=4 回合目标方向 bag 3**（同衰减）；
- *     ④ 自己的 Q.seq 每回合加 **键身份 one-hot 30**（新块 Q.id）。
+ *     ④ 自己序列加 **Q.selfBag 30**（与席位 bag 同公式、直进 ctx 的专线；原 Q.id 120 全量身份
+ *        被它替换——用户指出膨胀，参数账 80% 在它身上，且连段/循环已有 ringStreak/cannonCount 计数器）。
  *   双面并存：容器 `dims.input` 是版本字段，arch2/policy2 按它分派 ⇒ 旧包照读，新臂选 obs3b。 */
 export const OBS_VERSIONS = ['obs3', 'obs3b'];
 const BAG_K = 4, BAG_NORM = 1.875;   /* 1 + 1/2 + 1/4 + 1/8 */
@@ -89,11 +90,22 @@ function manifest(R, ver) {
   SEAT_ALL.forEach((n) => add('pool.max.' + n, 'P.opp'));
   ['pool.sumStickers'].forEach((n) => add(n, 'P.add'));
   ['rel.mustHit', 'rel.tauntsMe', 'rel.chained', 'rel.mirroredMe', 'rel.targetedMe'].forEach((n) => add(n, 'R2'));
-  for (let k = 0; k < 4; k++) {
-    add('seq' + k + '.cat.energy', 'Q.seq'); add('seq' + k + '.cat.attack', 'Q.seq'); add('seq' + k + '.cat.defense', 'Q.seq'); add('seq' + k + '.cat.special', 'Q.seq');
-    add('seq' + k + '.fam.atk', 'Q.seq'); add('seq' + k + '.fam.guard', 'Q.seq'); add('seq' + k + '.fam.thunder', 'Q.seq'); add('seq' + k + '.fam.reflectable', 'Q.seq');
-    if (b) R.skills.forEach((s) => add('seq' + k + '.key.' + s.key, 'Q.id'));   /* ⚑ obs3b：自己序列的键身份 */
-    add('seq' + k + '.out.landed', 'Q.out'); add('seq' + k + '.out.blocked', 'Q.out'); add('seq' + k + '.out.nullified', 'Q.out'); add('seq' + k + '.out.none', 'Q.out');
+  if (b) {
+    /* ⚑ obs3b：三段全连续（消融按索引段表达）——[Q.seq 32 ‖ Q.out 16 ‖ Q.bag 30] */
+    for (let k = 0; k < 4; k++) {
+      add('seq' + k + '.cat.energy', 'Q.seq'); add('seq' + k + '.cat.attack', 'Q.seq'); add('seq' + k + '.cat.defense', 'Q.seq'); add('seq' + k + '.cat.special', 'Q.seq');
+      add('seq' + k + '.fam.atk', 'Q.seq'); add('seq' + k + '.fam.guard', 'Q.seq'); add('seq' + k + '.fam.thunder', 'Q.seq'); add('seq' + k + '.fam.reflectable', 'Q.seq');
+    }
+    for (let k = 0; k < 4; k++) {
+      add('seq' + k + '.out.landed', 'Q.out'); add('seq' + k + '.out.blocked', 'Q.out'); add('seq' + k + '.out.nullified', 'Q.out'); add('seq' + k + '.out.none', 'Q.out');
+    }
+    R.skills.forEach((s) => add('selfSeqBag.' + s.key, 'Q.bag'));   /* ⚑ 自己键 bag 30（直进 ctx，替代 Q.id 120） */
+  } else {
+    for (let k = 0; k < 4; k++) {
+      add('seq' + k + '.cat.energy', 'Q.seq'); add('seq' + k + '.cat.attack', 'Q.seq'); add('seq' + k + '.cat.defense', 'Q.seq'); add('seq' + k + '.cat.special', 'Q.seq');
+      add('seq' + k + '.fam.atk', 'Q.seq'); add('seq' + k + '.fam.guard', 'Q.seq'); add('seq' + k + '.fam.thunder', 'Q.seq'); add('seq' + k + '.fam.reflectable', 'Q.seq');
+      add('seq' + k + '.out.landed', 'Q.out'); add('seq' + k + '.out.blocked', 'Q.out'); add('seq' + k + '.out.nullified', 'Q.out'); add('seq' + k + '.out.none', 'Q.out');
+    }
   }
   ['cost', 'pri', 'cat.energy', 'cat.attack', 'cat.defense', 'cat.special', 'tgt.self', 'tgt.one', 'tgt.two', 'tgt.all',
     'dmg', 'pierceDef', 'pierceRef', 'pierceTrans', 'continuous', 'needBead', 'beadIsElec', 'beadIsBoom',
@@ -201,8 +213,8 @@ function outcomeBits(state, pid, key) {
 
 /** 自己最近 K=4 次出手。obs3：按回合交错发射 [cat4 fam4 out4]×4（**旧路逐字不动**——尽管它与 manifest 的
  *   Q.seq|Q.out 连续块声明不对齐，那是在册消融读数的语义，动它 = 破坏可比性，账记在 10-31 回执）。
- *  obs3b：**块连续**发射 [cat4 fam4]×4 ‖ [key30]×4 ‖ [out4]×4 ⇒ 与 manifest 的 Q.seq|Q.id|Q.out 严格对齐
- *   （消融/dimgate 按 block 清零时清的才是语义上那一块）。 */
+ *  obs3b：**块连续**发射 [cat4 fam4]×4 ‖ 自身键 bag 30（2^-age 衰减，与席位 bag 同公式）‖ [out4]×4
+ *   ⇒ 与 manifest 的 Q.seq|Q.bag|Q.out 严格对齐（Q.id 120 全量身份被 bag 替换——用户 07:2x 拍板瘦身）。 */
 function selfSeq(state, pid, R, ver) {
   const b = ver === 'obs3b';
   const ev = state.events || [];
@@ -211,25 +223,32 @@ function selfSeq(state, pid, R, ver) {
   const per = [];   /* 每回合的三段 */
   for (let k = 0; k < 4; k++) {
     const a = acts[k];
-    if (!a) { per.push([[0, 0, 0, 0, 0, 0, 0, 0], b ? new Array(R.skills.length).fill(0) : null, [0, 0, 0, 1]]); continue; }
+    if (!a) { per.push([[0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 1]]); continue; }
     const def = R.byKey[a.key] || {};
     const ci = SKILL_CLASS.indexOf(def.cat);
     const ob = outcomeBits(state, pid, a.key);
     const landed = ob ? ob[0] : 0, blocked = ob ? (ob[1] || ob[2] || ob[3] || ob[4]) : 0;
-    const catFam = [ci === 0 ? 1 : 0, ci === 1 ? 1 : 0, ci === 2 ? 1 : 0, ci === 3 ? 1 : 0,
-      R.ATK_EFFECT.indexOf(a.key) >= 0 ? 1 : 0, R.GUARD_FAMILY.indexOf(a.key) >= 0 ? 1 : 0,
-      R.LIGHTNING.indexOf(a.key) >= 0 ? 1 : 0, R.REFLECTABLE.indexOf(a.key) >= 0 ? 1 : 0];
-    const keyOne = b ? (() => { const v = new Array(R.skills.length).fill(0); const at = R.skills.findIndex((s) => s.key === a.key); if (at >= 0) v[at] = 1; return v; })() : null;
-    per.push([catFam, keyOne, [landed, blocked, ob && ob[4] ? 1 : 0, (!landed && !blocked) ? 1 : 0]]);
+    per.push([
+      [ci === 0 ? 1 : 0, ci === 1 ? 1 : 0, ci === 2 ? 1 : 0, ci === 3 ? 1 : 0,
+        R.ATK_EFFECT.indexOf(a.key) >= 0 ? 1 : 0, R.GUARD_FAMILY.indexOf(a.key) >= 0 ? 1 : 0,
+        R.LIGHTNING.indexOf(a.key) >= 0 ? 1 : 0, R.REFLECTABLE.indexOf(a.key) >= 0 ? 1 : 0],
+      [landed, blocked, ob && ob[4] ? 1 : 0, (!landed && !blocked) ? 1 : 0],
+    ]);
   }
   if (!b) {
     const out = [];
-    for (const [cf, , o] of per) out.push(...cf, ...o);
+    for (const [cf, o] of per) out.push(...cf, ...o);
     return out;
   }
-  const s1 = [], s2 = [], s3 = [];
-  for (const [cf, ki, o] of per) { s1.push(...cf); s2.push(...ki); s3.push(...o); }
-  return [...s1, ...s2, ...s3];
+  const s1 = [], s3 = [];
+  for (const [cf, o] of per) { s1.push(...cf); s3.push(...o); }
+  const ordered = new Array(R.skills.length).fill(0);
+  for (let k = 0; k < acts.length; k++) {
+    const at = R.skills.findIndex((s) => s.key === acts[k].key);
+    if (at >= 0) ordered[at] += Math.pow(2, -k) / BAG_NORM;
+  }
+  /* ⚑ obs3b 块序 = [Q.seq 32 ‖ Q.out 16 ‖ Q.bag 30]（与 manifest 严格同序） */
+  return [...s1, ...s3, ...ordered];
 }
 
 /** 局面侧部件（与候选无关 ⇒ 一次决策只算一遍；arch2 的逐席集合编码与池化都从这里取）
