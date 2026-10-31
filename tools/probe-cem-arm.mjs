@@ -152,6 +152,28 @@ const FXALL = arg('fxAll', '') === '1';
  *   ≈40-50% 通过率）⇒ 生成量保留大半、验证密度翻 ~3 倍。
  * ⚠ 只改预选门这一格；接受判据/多样性带/终局读数不动。判读见回执 §九（预登记先于开臂）。 */
 const PRESEL = String(arg('preSel', 'best'));
+
+/* ===== 响亮失败第二型（10-31 千问）：**旗标认识、但这条路上不生效** =====
+ * 起因是实测：我给 `--mode=cem` 的臂带了 `--arenaLex=1 --fxSelect=1 --arenaDefCap=… --arenaShapeCap=…`，
+ *   结果两臂与不带这些旗标的臂**逐位相同**（净胜 −0.013 / −0.080、达标 2 / 1 一模一样）——因为这些闸全都住在
+ *   `verifyChild()`（ESA 那条路的冻结桌送验）里，CEM 分支根本不经过它。
+ *   `rejectUnknownFlags` 拦不住这种（旗标名是对的），而回执里写一句"这臂开了词典序"就是假话。
+ * ⚑ 另一头的对称事实（同一处审计查出来的）：`--masteryKey` 的**行为门只在 CEM 分支**实现
+ *   ⇒ "既要行为门、又要形状闸"这一格**当前没有一条路能跑**，要跑得先接线，不是加旗标。 */
+/* 名单 = **实测**出来的，不是我读码猜的（同一颗小预算 pop8/evals40/seed5，产物 md5 逐个对）：
+ *   不生效：fxSelect ‖ fxGames ‖ fxAll ‖ arenaPen ‖ arenaFloorPen ‖ arenaDiverse ‖ boN ‖ arenaShapeCap ‖ arenaDefCap ‖
+ *           arenaJiCap ‖ arenaShapeRel ‖ arenaWarmShape ‖ arenaShapePick ‖ arenaPerN ‖ preSel（全部与不带的基线 md5 `6b3d954b` 相同）
+ *   **生效、不许 warn**：arenaCur（换货币 ⇒ md5 `b5ac3976`）‖ arenaHighN（改训练环桌形权重 ⇒ md5 `ca380954`）
+ *   `--arenaLex` 由它自己的闸硬拦（"需要 --fxSelect=1"），所以不在此列。
+ *   证据文件：`scratch/FLZ-*.err` ‖ 产物 md5 对照见本次提交说明。 */
+const IGNORED_IN_CEM = (MODE === 'cem') ? ['--fxSelect', '--fxGames', '--fxAll', '--arenaPen', '--arenaFloorPen',
+  '--arenaDiverse', '--boN', '--arenaShapeCap', '--arenaDefCap', '--arenaJiCap', '--arenaShapeRel',
+  '--arenaWarmShape', '--arenaShapePick', '--arenaPerN', '--preSel']
+  .filter((f) => { const k = f.slice(2); const v = arg(k, ''); return v !== '' && v !== '0' && v !== 'parent'; }) : [];
+if (IGNORED_IN_CEM.length) {
+  console.log('⚠ **这几个旗标只住在 `mode=esa` 那条路（`verifyChild` 的冻结桌送验）里 ⇒ 本臂是 cem，它们一概不生效**：' + IGNORED_IN_CEM.join(' ‖ '));
+  console.log('   （实测依据：同一 seed 带与不带这些旗标，产物逐位相同。引用本臂时**不许**写"它开了词典序/形状闸"。）');
+}
 const DEG = arg('degenerate', '') === '1';
 /* ===== §E822（10-28 傍晚 · 千问）：`--targetGames=` ⇒ **按计数器停，不按记账停** =====
  * 为什么必须加：实测同一 GA 的"每代真打几局"**不是常数**（60 evals 校准时 ≈8 局/代，6000 evals 真跑时 ≈2 局/代
@@ -959,7 +981,7 @@ const hoStart = holdout(START_COPY);
 const gStart = gamesIn() - gLoop;
 const ho = holdout(best);
 const gHold = gamesIn() - gLoop - gStart;
-const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N, elite: ELITE, sig0: SIG0,
+const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N, elite: ELITE, sig0: SIG0, ignoredFlags: IGNORED_IN_CEM.length ? IGNORED_IN_CEM : null,
   sigFloor: SIG_FLOOR_ESA, sigRestart: SIG_RESTART, esaSig: ESA_SIG_STAT, arenaPen: ARENA_PEN,
   /* §E822：**实际局数**（计数器数出来的）与"标称预算"并列印 ⇒ 谁想拿 `evals` 当等预算，先看见这两个数 */
   gamesPlanned: used * GAMES, gamesActualLoop: gLoop, gamesActualHoldout: gHold, gamesActualStartHoldout: gStart,

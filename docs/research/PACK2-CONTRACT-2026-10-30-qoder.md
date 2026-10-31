@@ -684,6 +684,9 @@ done; wait
    纯克隆把包打烂（55.7→25.2）仍不开炮；混合克隆保住分数（+38.7）但链一点没进来（蓄 0.04 < 上游 0.07）。
 
 ### D. E3：从混合克隆出发跑 24k 局 CEM（`chainstart-2`，DS 配方同款：pop48/elite4/games4 `--arenaLex=1 --fxSelect=1 --arenaStrat=mild`）
+- ⚑ **10-31 纠正这一句**：`--arenaLex` 与 `--fxSelect` 住在 ESA 那条路的 `verifyChild()` 里，`--mode=cem` **不经过它**
+  ⇒ 本臂（以及 `chainkeep-1`）真正生效的只有 pop/elite/games/arena2/分层 mild/targetGames 那几项。
+  实测依据（同 seed 带与不带这些旗标，产物 md5 全等）与响亮警告的落码见 `RESULTS-2026-10-31-OBS3B-SWITCH-qoder.md` §九 A。
 - 起点（220 局 holdout）：夺1 **53.6%**、净胜 **0.368**；跑完：**45.5% / 0.285**（Δ首名 **−8.2pt**），单卡从 gun 41.6% 变 **gun 84.5%**。
 - 440 局复核（`scratch/chain-price-chainstart.log`）：蓄/炮/环/大雷 **全 0**、开火窗 **0/10115**、gun 9.06/局。
 ⇒ 两条判语：

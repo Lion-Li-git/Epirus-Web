@@ -173,13 +173,21 @@ for (let r = 1; r <= DAGGER; r++) {
     let b = 0; for (let i = 1; i < lg.length; i++) if (lg[i] > lg[b]) b = i;
     return cands[b].key !== a.key;
   });
-  train = train.concat(newFx);
   const f2 = A.distillHead(train, fit.params, { labelOf, l2: L2, standardize: STD });
   if (!f2.ok) { console.error('⛔ DAgger r' + r + ' 拟合失败：' + f2.why); break; }
+  /* ⭐ 诊断格（10-31 上午加）：**同一份头**在"教师分布"与"它自己走出来的分布"上各准不准？
+   *   两栏之差 = 行为克隆的复合误差本身（之前只有教师留出栏，"实战 0 窗"只能靠猜）。
+   *   首测读数（obs3b 上游 OB3S-C2-s7）：自身状态 全部 47.1% / 出手组 66.7% ‖ 教师留出 59.6% / 73.1%
+   *   ⇒ **塌的不只是"开不开炮"，更是"该不该停手攒钱"那一档**（全部栏 47.1% 才是真上限）。 */
+  const onSelf = evalAgree(fit.params, add);
   fit = f2; cur = evalAgree(fit.params, testFx);
-  rows.push({ round: r, fx: train.length, add: newFx.length, all: cur.agree, act: cur.agreeAct, base: cur.base, daggerStates: add.length });
-  console.log('  [r' + r + ' DAgger] 采到 ' + add.length + ' 个自身状态 ⇒ 其中与脚本不一致 ' + newFx.length +
-    ' ⇒ 训练行 ' + train.length + ' ‖ 留出：全部组 ' + (100 * cur.agree).toFixed(1) + '% ‖ 出手组 ' + (100 * cur.agreeAct).toFixed(1) + '%');
+  rows.push({ round: r, fx: train.length, add: newFx.length, selfStates: add.length,
+    selfAgree: onSelf.agree, selfAgreeAct: onSelf.agreeAct, selfN: onSelf.n, selfNAct: onSelf.nAct,
+    all: cur.agree, act: cur.agreeAct });
+  console.log('  [r' + r + ' DAgger] 采到 ' + add.length + ' 个自身状态（与脚本不一致 ' + newFx.length + '）‖ ' +
+    '**旧头在这些状态上**同键 top-1：全部 ' + (100 * onSelf.agree).toFixed(1) + '%（' + onSelf.n + ' 组）‖ 出手组 ' +
+    (100 * onSelf.agreeAct).toFixed(1) + '%（' + onSelf.nAct + ' 组）‖ 重拟合后教师留出：全部 ' + (100 * cur.agree).toFixed(1) +
+    '% ‖ 出手组 ' + (100 * cur.agreeAct).toFixed(1) + '%');
 }
 
 const lift = cur.agree - before.agree;

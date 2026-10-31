@@ -137,3 +137,33 @@
 2. **obs3b 链在 mild 上重走**（含无门对照），把"新面 vs 旧面"与"新卷 vs 旧卷"两个变量拆开——现在混在一起。
 3. 承重消融在 obs3b 上重跑（修好的切段第一次真正用上）。
 4. 待用户裁：obs3 链顶在 mild 上是 55.7%，obs3b 目前 29% ⇒ 要不要在新面上重投一整条四代链（约 8 臂 × 2–3 分钟）。
+
+## 九、11:3x–11:5x 又挖出两件（都改了代码，不是只记账）
+
+### A. 一批"认识但不生效"的旗标 ⇒ 现在响亮警告（`probe-cem-arm`）
+- 触发：我给 CEM 臂带了 `--arenaLex=1 --fxSelect=1 --arenaDefCap=0.12 --arenaShapeCap=0.40`，
+  结果与不带的臂**产物逐位相同**（md5 − 同 seed 对照：净胜 −0.013 / −0.080、门达标 2 / 1 一模一样）。
+  根因：这些闸全住在 `verifyChild()`（**ESA 那条路的冻结桌送验**）里，CEM 分支根本不经过它。
+- **名单是实测出来的**（`pop8/evals40/seed5`，逐个 md5 对基线 `6b3d954b`）：
+  不生效 = `fxSelect ‖ fxGames ‖ fxAll ‖ arenaPen ‖ arenaFloorPen ‖ arenaDiverse ‖ boN ‖ arenaShapeCap ‖ arenaDefCap ‖
+  arenaJiCap ‖ arenaShapeRel ‖ arenaWarmShape ‖ arenaShapePick ‖ arenaPerN ‖ preSel`；
+  **不许警告**（确实生效）= `arenaCur`（换货币 ⇒ `b5ac3976`）‖ `arenaHighN`（改训练环桌形权重 ⇒ `ca380954`）；
+  `arenaLex` 有它自己的硬闸（"需要 --fxSelect=1"）。
+- 落码：CEM 臂启动时逐条点名 + 写进 meta `ignoredFlags`。`rejectUnknownFlags` 拦不住这种（旗标名是对的），
+  而回执里写"这臂开了词典序/形状闸"就是假话——**我昨天就写过**（见下条纠正）。
+- ⚑ **对我自己此前读数的纠正**：`chainstart-1/2`、`chainkeep-1`、今天所有 `--mode=cem` 臂都带了 `--arenaLex=1 --fxSelect=1`
+  ⇒ 那句"同 DS 配方（pop48/elite4/arenaLex/fxSelect/mild）"里 **arenaLex 与 fxSelect 两项其实没生效**，
+  真正生效的只有 pop/elite/games/arena2/分层 mild/targetGames。已在 `PACK2-CONTRACT` §十九 D 的引用处记这一条。
+
+### B. "行为门"与"形状闸"**不在同一条路上** ⇒ 我的"管住乱出手"假设现在测不了
+- `--masteryKey`（行为门）只实现于 CEM 分支；`--arenaDefCap/--arenaShapeCap/--arenaLex`（形状与词典序闸）只实现于 ESA 分支。
+  ⇒ **"既要链的行为、又要压制乱出手"这一格当前没有一条路能跑**，要跑得先接线（把 mastery 检查接进 `verifyChild` 的承兑判据，
+  或把形状闸接进 CEM 的 accept 路径），不是加旗标。这是待裁事项，不擅自改训练环。
+
+### C. 行为克隆为什么走不动链，这次有了**机制级**读数（不是猜）
+- 在克隆自己的轨迹上采 1500 个决策点，问"教师在这些点上真要出手吗"：**只有 3~4 个**（教师自己的分布上是 197/500 ≈ 40%）。
+- 而旧头在**它自己的状态**上，出手组的同键 top-1 仍有 66.7%（教师留出 73.1%）。
+  ⇒ **塌的不是"那一手怎么排"，是资源轨迹本身**：钱从来攒不到"ep≥3 且无珠"那一步，所以教师根本不会被问到要不要出手。
+- 与 §六 的门读数合起来看，缺的技能具体化为**"停手/攒钱"这一档**：
+  全部组一致率（含"该等"）59.6% 才是真上限，而教师的全部栏赢面来自"只做三件事、别的都不做"（出手/局 20.05、局长 26.5，全场最短）。
+  ⇒ 所以下一步不该问"怎么让它多开炮"（门已证明买得到 0.08~0.78/局），该问**"怎么让它不乱花钱"**。
