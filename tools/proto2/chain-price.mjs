@@ -31,15 +31,27 @@ import { makeScripts } from './chain-lib.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['gamesPerShape', 'packs', 'keys', 'temp', 'quiet'], 'chain-price');
+rejectUnknownFlags(argv, ['gamesPerShape', 'packs', 'keys', 'temp', 'quiet', 'strat', 'phase'], 'chain-price');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const GPS = Math.max(1, Number(arg('gamesPerShape', 6)) || 6);
 const TEMP = Number(arg('temp', 0.15)) || 0.15;
 const KEYS = String(arg('keys', 'railgun,charge,ring,bigT,gun,guard,miniT')).split(',').filter(Boolean);
+/* `--strat=0|full|mild`（默认 mild = 现役 obs3 臂的卷）：臂的 `arena.fp` 里写着它当时是哪张场，
+ *   拿这尺横比必须**先把场对**——obs3b 那条 OB3S 链是在 `stratified=false` 上训的（39.5% 夺1），
+ *   在 mild 上同一枚包我量到 23.9%，差的不是包，是考卷。
+ * `--phase=frozen|holdout`：局号批次（frozen=200000+s*1000+g 盐 5077 ‖ holdout=100000+… 盐 90001）
+ *   ⇒ 想复现臂 meta 里的 `holdoutFirst` 就切 holdout。 */
+const STRAT = String(arg('strat', 'mild'));
+const PHASE = String(arg('phase', 'frozen'));
+if (['0', 'full', 'mild'].indexOf(STRAT) < 0) { console.error('⛔ --strat 只认 0|full|mild（收到 ' + STRAT + '）'); process.exit(2); }
+if (['frozen', 'holdout'].indexOf(PHASE) < 0) { console.error('⛔ --phase 只认 frozen|holdout（收到 ' + PHASE + '）'); process.exit(2); }
+const STRAT_ON = STRAT !== '0';
+const STRAT_CAP = STRAT === 'mild' ? 2 : undefined;
+const STRAT_MIX = STRAT === 'mild' ? 0.5 : undefined;
+const SALT = PHASE === 'frozen' ? 5077 : 90001;
+const BASE = PHASE === 'frozen' ? 200000 : 100000;
 const PACKS = String(arg('packs', 'scratch/arms/CEM48-s7.bak,scratch/arms/CH2-s7-s7.bak,scratch/arms/CEM48c-s7.bak,scratch/arms/CH3-CH2-s11-s7-s17.bak')).split(',').filter(Boolean);
 
-const SALT_FROZEN = 5077;              /* 与 arena2 内部 SALT.frozen 同值；对账腿专门验这一条 */
-const BASE = 200000;                   /* 与 arena2 frozen 桌的 gameSeq 编号同式：base + s*1000 + g */
 
 /* ===== 窗口普查：在冠军席**每一次决策**上记"链的窗口有没有开过"（分母先于结论）=====
  * 判据字段与在册 `evo.js chainKeysOf`（v1.5.149-night 那条"在链上"的定义）用**同一批真字段**：
@@ -78,7 +90,7 @@ function rowRun(A, W, label, sel) {
   let acts = 0, rounds = 0, win = 0, clean = 0, firstSum = 0;
   for (let s = 0; s < nS; s++) {
     for (let g = 0; g < GPS; g++) {
-      const r = A.playOne(sel, s, BASE + s * 1000 + g, SALT_FROZEN);
+      const r = A.playOne(sel, s, BASE + s * 1000 + g, SALT);
       perGame.push({ shape: r.shape, win: r.win, acts: r.acts, cat: r.cat });
       acts += r.acts; rounds += r.rounds; win += r.win ? 1 : 0; clean += r.clean ? 1 : 0; firstSum += r.scoreFirst;
       for (const k in r.cat) catSum[k] = (catSum[k] || 0) + r.cat[k];
@@ -117,8 +129,8 @@ const W = sandbox(ROOT);
 const v7 = loadChamp(W, 'js/bundled-champion-3p.js', '');
 const refParams = Float64Array.from(v7);
 
-const A = createArena2(W, { refParams, temp: TEMP, highN: 1, stratified: true, stratCap: 2, stratMix: 0.5 });
-console.log('# chain-price ‖ 装配指纹 ' + A.fp.split('|').slice(0, 1).join('') + ' ‖ ' + A.fp.match(/stratified=[^|]+/)[0] + ' ‖ temp=' + A.temp);
+const A = createArena2(W, { refParams, temp: TEMP, highN: 1, stratified: STRAT_ON, stratCap: STRAT_CAP, stratMix: STRAT_MIX });
+console.log('# chain-price ‖ 装配指纹 ' + A.fp.split('|').slice(0, 1).join('') + ' ‖ ' + A.fp.match(/stratified=[^|]+/)[0] + ' ‖ temp=' + A.temp + ' ‖ 场=' + STRAT + ' ‖ 批次=' + PHASE + (PHASE === 'frozen' ? '（臂的终局冻结桌）' : '（臂的 holdout，可与 meta 的 holdoutFirst 对表）'));
 console.log('   ‖ 桌形 ' + A.shapes.length + ' × ' + GPS + ' 局 = ' + (A.shapes.length * GPS) + ' 局/行 ‖ 参照包 v7（线上冠军）');
 
 const S = makeScripts(W);
@@ -137,8 +149,8 @@ lines.push(rowRun(A, W, '参照包 v7', A.chooserOf(refParams, TEMP)));
 /* —— 同批自证：逐局聚合必须等于 arena2 自己的 frozen 读数 —— */
 const idx = (t) => lines.findIndex((r) => r.label.indexOf(t) === 0);
 const g = (t) => { const i = idx(t); if (i < 0) { console.error('⛔ 找不到行「' + t + '」⇒ 行标签漂了，判据不印。'); process.exit(9); } return lines[i]; };
-const chkScript = A.evalChooser(S.chain.sel, { phase: 'frozen', gamesPerShape: GPS, cur: 'first' });
-const chkV7 = A.evalParams(refParams, { phase: 'frozen', gamesPerShape: GPS, cur: 'first' });
+const chkScript = A.evalChooser(S.chain.sel, { phase: PHASE, gamesPerShape: GPS, cur: 'first' });
+const chkV7 = A.evalParams(refParams, { phase: PHASE, gamesPerShape: GPS, cur: 'first' });
 const d1 = Math.abs(chkScript.firstScore - g('天真链：').firstScore);
 const d2 = Math.abs(chkV7.firstScore - g('参照包 v7').firstScore);
 console.log('\n[同批自证] 逐局 vs `evalChooser(frozen)`：链行差 ' + d1.toExponential(2) + ' ‖ v7 行差 ' + d2.toExponential(2) +
@@ -159,7 +171,7 @@ for (const p of PACKS) {
   installed = install(W2, Object.assign({ mutMode: 'seg' }, got.cfg));
   const pp = W2.EpirusPolicy.unpack(raw, true);
   if (!pp) { console.log('\n⚠ ' + p + '：unpack 不出 ⇒ 跳过'); installed.restore(); installed = null; continue; }
-  const A2 = createArena2(W2, { refParams: refParams, temp: TEMP, highN: 1, stratified: true, stratCap: 2, stratMix: 0.5 });
+  const A2 = createArena2(W2, { refParams: refParams, temp: TEMP, highN: 1, stratified: STRAT_ON, stratCap: STRAT_CAP, stratMix: STRAT_MIX });
   const w = A2.verifyWired(pp, { temp: TEMP });
   if (!w.ok) { console.error('⛔ ' + p + ' 接线没生效（forwardCands +' + w.forwards + ' ‖ chooseCandidates ' + w.chooseCandidatesCalls + '）⇒ 这一行不能印'); process.exit(7); }
   lines.push(rowRun(A2, W2, '代 2 ‖ ' + p.replace(/^.*[\\/]/, '').replace('.bak', ''), A2.chooserOf(pp, TEMP)));

@@ -39,7 +39,11 @@ const L2 = Number(arg('l2', 0.01));
  *   `--standardize=0` 留着复现旧口径（默认开这件事必须落进 meta 与启动行）。 */
 const STD = String(arg('standardize', '1')) !== '0';
 const BLEND = Math.min(1, Math.max(0, Number(arg('blend', 0)) || 0));
-const DAGGER = Math.max(0, Math.floor(Number(arg('dagger', 2)) || 0));
+/* `--dagger=` 默认 **0**（10-31 实测把它关掉）：朴素 DAgger 在这条链上是**反效果**的——
+ *   obs3 上游：出手组 44.2% → 38.6% → 38.1%；obs3b 上游：73.1% → **0.0%**（r1 一次加 793 个自身状态）。
+ *   机制：从"当前头自己走出来的分布"采到的状态绝大多数是"没珠没钱"的普通拍 ⇒ 标签几乎全是"该等（ジ）"，
+ *   未做类别配平就把正例淹掉了。要用它得按类采样/加权，那是另一件事，别拿默认值替人做决定。 */
+const DAGGER = Math.max(0, Math.floor(Number(arg('dagger', 0)) || 0));
 const OUT = String(arg('out', 'scratch/arms/chainclone-a3.bak'));
 const TEMP = Number(arg('temp', 0.15)) || 0.15;
 const MAXDEC = Math.max(60, Number(arg('decisions', 1500)) || 1500);
