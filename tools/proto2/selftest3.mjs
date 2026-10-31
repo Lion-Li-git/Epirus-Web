@@ -185,7 +185,46 @@ let fBad = 0, fN = 0;
 }
 console.log('腿F 键级导数:   ' + (fBad === 0 ? '✔ ' + fN + ' 对账' : '✘ ' + fBad));
 
-const ok = badA === 0 && badB === 0 && cBad === 0 && dBad === 0 && eBad === 0 && fBad === 0;
+/* —— 腿 G：价值通路（q）的数值梯度 + "只动 qHead"的正交性 —— */
+let gBad = 0, gN = 0, gLeak = 0, worstG = 0;
+{
+  const hid = ly.L.hid, qOff = ly.qHead, qLen = hid + 1;
+  for (const pt of [pts[5], pts[19], pts[33]]) {
+    if (!pt) continue;
+    const fr = P.forwardCands(pt.st, pt.pid, pt.cands, params, { temp: 0.15, wantTape: 1 });
+    const act = tapeForward(fr.tape, params, ly);
+    /* 解析：dq/dθ = tapeBackward(上游=0, upstreamQ=1) */
+    const gradA = new Float64Array(params.length);
+    const zeros = new Float64Array(fr.logits.length);
+    /* ⚑ 上游系数不许取 1：取 1 时"忘了乘上游"这种写错与正确写法**同数**（10-31 深夜的变异测出来的空档） */
+    const UQ = 2.5;
+    tapeBackward(fr.tape, params, ly, act, zeros, gradA, UQ, 0);
+    /* 正交性：非 qHead 段必须逐位为 0（否则 critic 更新会拖走策略算术，T18 ② 那条"死区"承诺就破了） */
+    for (let k = 0; k < params.length; k++) {
+      const inQ = k >= qOff && k < qOff + qLen;
+      if (!inQ && gradA[k] !== 0) gLeak++;
+    }
+    /* 数值：中心差分 tapeForward(...).q（只探 qHead 段，偏置与权重各若干） */
+    const probe = [];
+    for (let k = qOff; k < qOff + qLen; k++) if (rnd() < 40 / qLen) probe.push(k);
+    for (const k of probe) {
+      const p2v = Float64Array.from(params), m2v = Float64Array.from(params);
+      p2v[k] += EPS; m2v[k] -= EPS;
+      const num = UQ * (tapeForward(fr.tape, p2v, ly).q - tapeForward(fr.tape, m2v, ly).q) / (2 * EPS);
+      const ana = gradA[k];
+      const adiff = Math.abs(num - ana);
+      gN++;
+      if (adiff > 1e-8 + 1e-3 * Math.max(Math.abs(num), Math.abs(ana))) { gBad++; if (gBad <= 4) console.log('   ✘ qHead 参数 ' + k + ' 解析 ' + ana.toExponential(3) + ' vs 数值 ' + num.toExponential(3)); }
+      if (adiff > worstG) worstG = adiff;
+    }
+    /* q 本身要与 arch2 前向返回的 q 逐位同（否则我重放的是另一套算术） */
+    if (act.q !== fr.q) { gBad++; console.log('   ✘ 重放 q ' + act.q + ' ≠ 前向 q ' + fr.q); }
+  }
+  console.log('腿G 价值通路:   ' + (gBad === 0 && gLeak === 0 ? '✔ ' : '✘ ') + gN + ' 个 qHead 参数对账（最坏绝对差 ' + worstG.toExponential(2) +
+    '）‖ 非 qHead 段泄漏 ' + gLeak + (gLeak ? ' ⇒ critic 会拖走策略算术' : ' ⇒ 策略/基线在参数空间正交'));
+}
+
+const ok = badA === 0 && badB === 0 && cBad === 0 && dBad === 0 && eBad === 0 && fBad === 0 && gBad === 0 && gLeak === 0;
 console.log(ok ? '# selftest3 全绿 ✔（pg 臂允许开）' : '# selftest3 红 ⇒ pg 臂不许开');
 if (!ok) process.exit(8);
 
