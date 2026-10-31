@@ -414,6 +414,10 @@ export function install(W, opts) {
     const mean = BUF.mean.fill(0), mx = BUF.mx.fill(0);
     let hSelf = BUF.zeroSeat, poolN = 0;
     const PUBN = sc.seatN;                            /* obs3=22 ‖ obs3b=81（席位公开段宽，随面走） */
+    /* 梯度旁路（ZCode · 10-31，PREREG-2026-10-31-PG-TRAIN §三1）：wantTape=1 时把**反传需要的全部输入**捎出去
+     *   （逐席 sv / xin / 逐候选 af / te1·te2 席号 / keys）。特征构造仍单源——pg-lib 从 tape 重放前向，
+     *   逐位对不上就红（selftest3 腿）。默认关 ⇒ 现有调用逐字不变。 */
+    const TP = (opts2 && opts2.wantTape) ? { svs: [], afs: [], t1: [], t2: [], keys: [], xin: null } : null;
     for (const s of sc.seats) {
       let k = 0;
       const seatOff = s.isSelf ? isAblated('S.self') : isAblated('P.opp');
@@ -424,6 +428,7 @@ export function install(W, opts) {
       const e = new Float64Array(L.seatH);
       encode(params, svBuf, L.seatIn, L.seatH, WS, seatBias, e);
       enc.set(s.id, e);
+      if (TP) TP.svs.push({ id: s.id, sv: Float64Array.from(svBuf) });
       /* ⚑ 代 2：**自己单列 h_self，池子只算对手**（与设计文档 L1.5 的 `mean/max_{i≠self}` 以及
        *   离线平面向量 `obs3.encode` 的 `pool.mean.*` 对齐）。旧版把 isSelf 那一席也平均进去 ⇒
        *   两把尺读的不是同一个量，而 obs3 档的 xin 里当时**没有**任何一列是"你自己"，去掉就把自己弄丢。 */
@@ -456,6 +461,7 @@ export function install(W, opts) {
     for (let j = 0; j < L.seatH; j++) xin[p++] = ABL.pool ? 0 : mean[j];
     for (let j = 0; j < L.seatH; j++) xin[p++] = ABL.pool ? 0 : mx[j];
     if (p !== L.ctxDim) throw new Error('布局不自洽：ctx 拼进 ' + p + ' 而声明 ' + L.ctxDim + '（seatH 改动后 selfDim 账要重算）');
+    if (TP) TP.xin = Float64Array.from(xin);
     const hctx = encode(params, xin, L.ctxDim, L.hid, WC, ctxBias, BUF.hctx);
     let q = params[qOff + L.hid]; for (let j = 0; j < L.hid; j++) q += params[qOff + j] * hctx[j];
 
@@ -489,6 +495,7 @@ export function install(W, opts) {
       }
       const hc = encode(params, ci, L.candIn, L.hid2, WK, candBias, BUF.hc);
       if (phis) phis[i] = Float64Array.from(hc);
+      if (TP) { TP.afs.push(Float64Array.from(afbuf)); TP.t1.push(t1); TP.t2.push(t2); TP.keys.push(cands[i].key); }
       let v = params[headOff + L.hid2];
       for (let j = 0; j < L.hid2; j++) v += params[headOff + j] * hc[j];
       /* 交互头（inter=K）：logit += Σ_k g_k·tanh((u_k·ae)·(v_k·hctx) + b_k)。段全零 ⇒ u·ae=0 且 g=0 ⇒ 贡献恒 0
@@ -539,7 +546,7 @@ export function install(W, opts) {
     for (let i = 0; i < n; i++) if (logits[i] > best) { best = logits[i]; arg = i; }
     let phiRet = null;
     if (phis) { phiRet = new Float64Array(n * L.hid2); for (let i = 0; i < n; i++) phiRet.set(phis[i], i * L.hid2); }
-    return { probs, argmax: arg, cand: cands[arg] || null, logits, q, phi: phiRet };
+    return { probs, argmax: arg, cand: cands[arg] || null, logits, q, phi: phiRet, ...(TP ? { tape: TP } : {}) };
   }
   function forwardCands(state, pid, cands, params, opts2) {
     return L.input === 'v7' ? forwardV7(state, pid, cands, params, opts2) : forwardObs3(state, pid, cands, params, opts2);

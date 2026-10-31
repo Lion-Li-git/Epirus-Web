@@ -247,3 +247,12 @@ clean 0.415/夺1 63.4% 不低于起点 + 短程迁移 0.225；BIGT1-s7：0.65/�
 - slim 面复测：链迁移成立（12k→24k 达 **39.5%**）；bigT 门两种子饿退（0/2——单种子方差，505 面上 1/2 塑形的
   结论保留，415 面复测待多种子）；miniT 可见性结论不变（信息在、交互结构欠）；
 - ⚠ 旧 obs3b（505）产物 10 枚随面迭代作废（冒烟/链/试点，无训练投资损失）。
+
+## 十三、午后加段（10-31 13:2x–15:4x，用户裁"试一下，不行可调结构"）：梯度化训练首轮
+
+全文 `RESULTS-2026-10-31-PG-TRAIN-zcode.md`（判据 `PREREG-2026-10-31-PG-TRAIN-zcode.md`）。一段话版：
+- **A 臂过线**：蒸馏求解器 CEM→Adam+精确反传（同数据同指标），留出 75.5%→**100%**、加权似然 −1.429→−0.0002、25 秒。产物 `scratch/arms/supfit-gd1.bak`（自访分布：炮 0.05/局、窗 24——比 supfit-w1 的 1/16637 窗质变）。
+- **B/B2/N 按预登记判据全败**：朴素 REINFORCE 在这张双峰卷上三种子全劣化/全塌（蓄能滥用 250/局、浪费 97.5%）；λ=0 对照也塌 ⇒ 分数梯度本身出盆。机制三条 + 下一版配方（值基线/势函数塑形/锚）写在 RESULTS §三/§五，**等点名**。
+- 新件：`tools/proto2/pg-lib.mjs`（tape 重放前向/反传/两级 softmax 尾导数）‖ `tools/proto2/supfit-gd.mjs`（A 臂）‖ `tools/proto2/pg-train.mjs`（B 臂）‖ `tools/proto2/selftest3.mjs`（六腿：probs 复刻/前向重放/数值梯度/尾同源/浏览器镜像 parity/键级导数）‖ `arch2.mjs`+`js/train/policy2.js` 加 `wantTape` 旁路（默认关零开销，selftest2 36 腿回归全绿）。
+- 流程事故（已修+三道响亮闸，照记不藏）：`d.G` 笔误 + **JS NaN 是 falsy** ⇒ 首轮 8 臂静默 no-op；抓到它的信号 = λ 臂与 λ=0 臂产物 md5 逐位同。废轮产物 `scratch/arms/voided-pgnan-round1/`。
+- **保守替代路线现成可跑**（不动训练环）：`supfit-gd1` 当千问课程门起点（`probe-cem-arm --start=scratch/arms/supfit-gd1.bak --masteryKey=railgun --masteryLine=0.15 --masteryGate=best --targetGames=24000`，种子 7/13/41），SUPTUNE 的拆链由门常驻挡。

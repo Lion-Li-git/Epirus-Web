@@ -320,6 +320,8 @@
     const zeroSeat = new Float64Array(L.seatH);
     let hSelf = zeroSeat, poolN = 0;
     const PUBN = L.pubN;                      /* obs3=22 ‖ obs3b=81（席位公开段宽，随面走） */
+    /* 梯度旁路（ZCode · 10-31）：wantTape=1 捎反传输入，与 arch2 forwardObs3 同位同序（selftest3 parity 腿钉） */
+    const TP = (opts2 && opts2.wantTape) ? { svs: [], afs: [], t1: [], t2: [], keys: [], xin: null } : null;
     for (const s of sc.seats) {
       let k = 0;
       for (let j = 0; j < PUBN; j++) svBuf[k++] = s.public[j];
@@ -329,6 +331,7 @@
       const e = new Float64Array(L.seatH);
       encode(params, svBuf, L.seatIn, L.seatH, WS, seatBias, e);
       enc.set(s.id, e);
+      if (TP) TP.svs.push({ id: s.id, sv: Float64Array.from(svBuf) });
       if (s.isSelf) { hSelf = e; continue; }
       poolN++;
       for (let j = 0; j < L.seatH; j++) { mean[j] += e[j]; if (e[j] > mx[j]) mx[j] = e[j]; }
@@ -346,6 +349,7 @@
     for (let j = 0; j < L.seatH; j++) xin[q2++] = mean[j];
     for (let j = 0; j < L.seatH; j++) xin[q2++] = mx[j];
     if (q2 !== L.ctxDim) throw new Error('布局不自洽：ctx 拼进 ' + q2 + ' 而声明 ' + L.ctxDim);
+    if (TP) TP.xin = Float64Array.from(xin);
     const hctx = encode(params, xin, L.ctxDim, L.hid, WC, ctxBias, new Float64Array(L.hid));
     let qv = params[qOff + L.hid]; for (let j = 0; j < L.hid; j++) qv += params[qOff + j] * hctx[j];
 
@@ -360,6 +364,7 @@
       encode(params, afbuf, L.actIn, L.actH, WA, actBias, ae);
       const t1 = cands[i].target == null ? null : cands[i].target;
       const t2 = cands[i].target2 == null ? null : cands[i].target2;
+      if (TP) { TP.afs.push(Float64Array.from(afbuf)); TP.t1.push(t1); TP.t2.push(t2); TP.keys.push(cands[i].key); }
       const te1 = t1 != null && enc.has(t1) ? enc.get(t1) : zeroSeat;
       const te2 = t2 != null && enc.has(t2) ? enc.get(t2) : zeroSeat;
       ci.set(hctx, 0); ci.set(ae, L.hid); ci.set(te1, L.hid + L.actH); ci.set(te2, L.hid + L.actH + L.seatH);
@@ -402,7 +407,7 @@
     }
     let arg = 0, best = -1e9;
     for (let i = 0; i < n; i++) if (logits[i] > best) { best = logits[i]; arg = i; }
-    return { probs, argmax: arg, cand: cands[arg] || null, logits, q: qv };
+    return { probs, argmax: arg, cand: cands[arg] || null, logits, q: qv, ...(TP ? { tape: TP } : {}) };
   }
 
   function chooseCandidates(W, state, pid, cands, params, opts2) {
