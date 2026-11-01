@@ -22,9 +22,10 @@
    （改 holdout 挑粒/早停需新预登记）；②蒸馏分布缺镜像自对弈态（学生只在富桌/脚表态走线）；
    ③或绕开蒸馏：ration6 标签喂 GA 的 IMIT/示范通道，或直接当 GA 对照对手席。
    仪器全在库：`--teacher=ration6` + `--arenaShapes=…:rN`（穷富混桌）+ 冒烟闸（exit 12/14）。
-2. **Phase 4 终局臂读数**（臂在跑，05:0x 前后完成；`scratch/night3/phase4-review.log`）：
-   GD3-SWORD 起点 × GATE4b 配方（WIDE_FINAL+HALL_TRACE）× 3P×3 种子 + **8P×2 种子**，全程干预全关。
-   终审 = 5P 四骰×4seed 干净口径 + 8P 量具 + 宽复读 + 镜 + mastery。
+2. **Phase 4 终局臂读数（02:4x 已完成，`scratch/night3/phase4-review.log` / RESULTS §五）**：
+   五臂宽门槛 **5/5 ✔**；本夜最佳 = **GD3ALL-G5-8p-s41**（5P 54.8 ‖ 3P 65.2 ‖ 8P 45.1，但 0 桶线）；
+   s13 = 宽+3 线但 31.9；s7/s41 复刻"宽-强不相容"。**在册双强未易主**（GA2R 5P 64.0 / GA-ration-s41 8P 56.9）。
+   **坦克/狙击自发涌现证实**（8p-s41 干净 report：狙 8.1%+坦 5.7%）⇒ 兜底条款不触发；**双枪 8P 不自动解开**（0.000）。
 3. **双枪 8P 观察**（用户点题）：8P 臂产物跑一份 `skill-report`（8P 表）看双枪是否自发解开；
    坦克/狙击零使用兜底条款：若干净 skill report 仍全零 ⇒ 训练桌补短程对局重蒸（不特训）。
 
