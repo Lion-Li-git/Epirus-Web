@@ -103,7 +103,8 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
   'EPIRUS_HALL_SEED',   // v1.5.277 §E114：把起点补进终局重验的候选池（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
-  'EPIRUS_GA_GATE', 'EPIRUS_GA_GATE_GAMES', 'EPIRUS_GA_BAND', 'EPIRUS_STALL_ABORT',   // 千问 §十一 C：演化期健康门槛（形状搬自 `evo.js:3952`）+ 它的测量长度 + 带内取宽的带宽 ‖ GA 臂级空转终止（`EPIRUS_STALL_ABORT` 已在 §六② 实现，名单此前漏登记）
+  'EPIRUS_GA_GATE', 'EPIRUS_GA_GATE_GAMES', 'EPIRUS_GA_BAND', 'EPIRUS_STALL_ABORT',
+  'EPIRUS_HALL_TRACE', 'EPIRUS_HALL_TRACE_OUT',   // 11-01 晚（ZCode · 千问交接 §五.3）：逐代名人堂/门槛指纹落盘（默认关 ⇒ 一条行为不变）   // 千问 §十一 C：演化期健康门槛（形状搬自 `evo.js:3952`）+ 它的测量长度 + 带内取宽的带宽 ‖ GA 臂级空转终止（`EPIRUS_STALL_ABORT` 已在 §六② 实现，名单此前漏登记）
   'EPIRUS_SEL_GIFT_VETO', 'EPIRUS_SEL_GIFT_VETO_GAMES',   // §E650（千问）：送盾当选 veto + 它的测量长度（默认关 ⇒ `gateOk` 那一次测量也不跑）
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
   'EPIRUS_SEL_CLEAR', 'EPIRUS_SEL_CLEAR_GAMES',   // §E787（10-26 夜班后追加，用户裁"加上开跑"）：当选面的**场B 清场地板**（veto，不进 fit）+ 它的测量局数（默认 40 = 官方口径）
@@ -288,6 +289,19 @@ const GA_GATE = Math.max(0, Number(process.env.EPIRUS_GA_GATE || 0));
  *     <3（旧 §十一 用过 4/6）⇒ 只影响"更严"的那一侧，绝不放宽。每代打印都带有效下限，不接受"悄悄退回默认档"。 */
 const GA_KINDS = Math.max(3, GA_GATE);
 const GA_GATE_GAMES = Math.max(2, Number(process.env.EPIRUS_GA_GATE_GAMES || 6) || 6);
+
+/* ===== 11-01 晚（ZCode · 千问交接件 §五.3）：逐代名人堂/门槛指纹 =====
+ * 病：§廿五 那条"末代 top-3 过线粒 ≠ 产物"目前靠门槛自检打印 + 产物重读**夹出来**，没有逐代个体指纹
+ *   ⇒ "终局当选从名人堂挑了另一粒"只是推断。本开关把每一代的 {top3 指纹, 门槛读数, 准入后名人堂} 追加落 JSONL，
+ *   终局当选时再补一行 final（当选粒指纹 + 名人堂全家）⇒ 机制可以从"推断"升成"账面"。
+ * 默认关：一个 env 读取 + 一个 if ⇒ 逐字原行为（回归腿：默认关轨迹逐字同）。 */
+const HALL_TRACE = Number(process.env.EPIRUS_HALL_TRACE || 0);
+const HALL_TRACE_OUT = String(process.env.EPIRUS_HALL_TRACE_OUT || ('scratch/hall-trace/' + (process.env.EPIRUS_ARM || 'arm') + '.jsonl'));
+if (HALL_TRACE) {
+  try { mkdirSync(HALL_TRACE_OUT.split(/[\\/]/).slice(0, -1).join('/') || '.', { recursive: true }); } catch (eTrace) {}
+  try { unlinkSync(HALL_TRACE_OUT); } catch (eTrace2) {}
+  console.log('[hall-trace] 每代指纹 → ' + HALL_TRACE_OUT + '（EPIRUS_HALL_TRACE=1；指纹 = widOfArr，与名人堂去重同式）');
+}
 const GA_BAND = Math.max(0, Number(process.env.EPIRUS_GA_BAND || 0));
 const GA_STAT = { audits: 0, healthyGens: 0, starvedGens: 0, swapped: 0, eff1Sum: 0, lastEff1: '', noRef: 0 };
 /* §十四 判据换掉（v2 被 Goodhart，见 PREREG §十三）：门槛**不自己数键**，改用两条在册判据的合取——
@@ -1911,6 +1925,7 @@ for (let gen = 0; gen < GENS; gen++) {
    *   所以现在只算一次健康读、产出一个**优选次序 `gateRank`**，同时喂给"父母抽取"与"名人堂准入"；
    *   `bestFit/bestParams` 那对仍按纯 fit 走（门槛塑形搜索，不动产物记账）。 */
   let gateRank = null;
+  let gateReads = null;   /* hall-trace 用：本代 top-3 的门槛读数（hall-trace 关时为 null） */
   if (GA_GATE > 0) {
     if (GA_INC === undefined) GA_INC = seedParams ? wideMetricsOf(seedParams) : null;
     if (!GA_INC) GA_STAT.noRef++;
@@ -1925,6 +1940,7 @@ for (let gen = 0; gen < GENS; gen++) {
     }
     GA_STAT.lastEff1 = reads.map((r) => r.m.gMulti.toFixed(1) + '/' + r.m.gLong.toFixed(1) +
       'G ‖ ' + r.m.landMulti.toFixed(2) + '/' + r.m.landLong.toFixed(2) + '兑').join('  ');
+    gateReads = reads;
     let rank = reads.filter((r) => r.m.wide);
     const nWide = rank.length;
     if (GA_BAND > 0 && rank.length > 1) {
@@ -1947,6 +1963,16 @@ for (let gen = 0; gen < GENS; gen++) {
   } else {
   addHall(scored[0].params, scored[0].r.fit);
   addHall(scored[1].params, scored[1].r.fit);
+  }
+  if (HALL_TRACE) {
+    const rec = { gen: gen, bestFit: +(scored[0].r.fit.toFixed(4)),
+      top3: scored.slice(0, 3).map(function (x, i) { return { gi: i, wid: widOfArr(x.params), fit: +(x.r.fit.toFixed(4)) }; }),
+      hall: hall.map(function (h) { return h.wid || widOfArr(h.params); }) };
+    if (gateReads) rec.gate = { kinds: GA_KINDS, rank: gateRank,
+      reads: gateReads.map(function (r) { return { gi: r.gi, wid: widOfArr(scored[r.gi].params), fit: +(r.fit.toFixed(4)),
+        gMulti: +r.m.gMulti.toFixed(2), gLong: +r.m.gLong.toFixed(2),
+        landMulti: +r.m.landMulti.toFixed(2), landLong: +r.m.landLong.toFixed(2), wide: !!r.m.wide, wideScore: +r.wideScore.toFixed(2) }; }) };
+    try { appendFileSync(HALL_TRACE_OUT, JSON.stringify(rec) + '\n'); } catch (eT3) { console.error('[hall-trace] ⛔ 写不出：' + eT3.message); }
   }
   if (gen % 20 === 0 || gen === GENS - 1) {
     const r = scored[0].r;
@@ -2519,6 +2545,7 @@ for (const h of hall) {
     }
   }
   if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; }
+  if (HALL_TRACE) { try { appendFileSync(HALL_TRACE_OUT, JSON.stringify({ type: 'final', pickedWid: widOfArr(finalParams), hall: hall.map(function (h) { return h.wid || widOfArr(h.params); }) }) + '\n'); } catch (eT4) {} }
   else if (hallEntries.length) {
     DEGENERATE_ONLY = true;
     console.error('⛔ [退化闸] 名人堂**全部退化**——产物仍写盘但标 degenerateOnlyWinner；promote 会拒收，别拿它换包');
