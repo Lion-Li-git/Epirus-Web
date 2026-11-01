@@ -387,6 +387,7 @@ let pvCur = Float64Array.from(up);
 let trainList = train0.slice();
 let stuTrain = [], stuTest = [];
 const ROUNDS = [];
+const ROUNDS_MOVED = [];   /* 每轮『粒子真的动了』的坐标级自证 */
 pvCur = adamFit(pvCur, trainList, base.ll, 0);
 {
   const r0 = like(pvCur, test);
@@ -403,7 +404,19 @@ for (let r = 1; r <= DAG; r++) {
   const cap = Math.max(0, POOL - train0.length);
   if (stuTrain.length > cap) stuTrain = stuTrain.slice(stuTrain.length - cap);
   trainList = train0.concat(stuTrain);
-  pvCur = adamFit(pvCur, trainList, like(pvCur, test).ll, r);
+  const pvBefore = Float64Array.from(pvCur);
+  /* 哨兵必须与 adamFit 内部比较的量**同源**（都是 trainList 上的 train ll）。原先传的是 like(pvCur, test).ll：
+   * r>=1 的起点粒子在 test 上已经接近 0，训练侧 checkpoint 想超过它全凭巧合 =
+   * `--dagger` 有时静默返回起点粒（11-01 实测 GD3-BIGT 与 GD3-BIGT2 的 md5 逐位相同 = 整轮空转），
+   * 有时又真的换粒（昨夜 mt-dag 与 mt-OB3S-rich 的 md5 不同）⇒ 生效与否取决于口径错配，这是仪器缺陷。 */
+  pvCur = adamFit(pvCur, trainList, like(pvCur, trainList).ll, r);
+  { let nMoved = 0, first = -1;
+    for (let i = 0; i < pvBefore.length; i++) if (pvBefore[i] !== pvCur[i]) { nMoved++; if (first < 0) first = i; }
+    console.log('  轮 ' + r + ' ‖ ⭐ 粒子自证：改变 ' + nMoved + '/' + pvBefore.length + ' 个坐标'
+      + (nMoved === 0 ? '（无差异 ⇒ 这一轮没进产物）' : '（首个差异在第 ' + first + ' 个）'));
+    if (nMoved === 0) { console.error('⛔ DAgger 轮 ' + r + ' 没改变粒子 ⇒ 这一档是空转，不许当成 DAgger 无效的读数'); process.exit(7); }
+    ROUNDS_MOVED.push({ round: r, moved: nMoved, firstDiff: first, dim: pvBefore.length });
+  }
   const tr = like(pvCur, test), ts = like(pvCur, stuTest);
   console.log('  轮 ' + r + ' ‖ 学生态采集覆盖（shapeBal=' + SHAPEBAL + '）：' + shapeCov(gS));
   console.log('  轮 ' + r + ' ‖ 打出去的手 vs 教师：一致 ' + (100 * PLAY.hit / Math.max(1, PLAY.n)).toFixed(1) + '%（' + PLAY.n + ' 手）' +
@@ -442,7 +455,7 @@ writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
   objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, teacher: TEACHER, keySplit: KS, rareOnly: RARE.length ? RARE.join(",") : null, rareFrac: RARE_FRAC || null,
   playedAgree: { n: PLAY.n, hit: PLAY.hit, stuckCharge: PLAY.stuckCharge, missCharge: PLAY.missCharge, missFire: PLAY.missFire },
-  label: LABEL, supfitGd: { objective: OBJ, dagger: DAG, rounds: ROUNDS, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n, testClassNotInTrain: fin.noW || 0, startClassNotInTrain: base.noW || 0,
+  label: LABEL, supfitGd: { objective: OBJ, dagger: DAG, rounds: ROUNDS, roundsMoved: ROUNDS_MOVED, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n, testClassNotInTrain: fin.noW || 0, startClassNotInTrain: base.noW || 0,
     studentAgree: finStudent ? finStudent.agree : null, studentN: finStudent ? finStudent.n : 0,
     byKey: Object.keys(fin.byKey).map((k) => ({ key: k, n: fin.byKey[k].n, hit: fin.byKey[k].hit })), verdict },
   container: { v: packed.v != null ? packed.v : null, input: (got.cfg.input || 'v7'), dof: got.cfg.dof, gen: (KS ? 3 : (got.cfg.gen || 2)), keySplit: KS },
