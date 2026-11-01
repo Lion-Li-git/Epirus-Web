@@ -317,6 +317,101 @@ const ration5Pick = (state, pid, cs) => {
   }
   return pickChain(state, pid, cs, R);
 };
+/* ===== ration6（ZCode · 11-02 夜，NIGHT3 Phase 3）：ration5 完全体 = 长程骨架 + 珠锁两格 + 批2 连招块 + 批3 防御块 =====
+ * 语义全部按 11-01 深夜用户纠正后的口径核过（每格的引擎出处）：
+ *   藤甲 = **双面**（resolve.js:1152：目标吃 fireWeakNow+Next，同时施放者自己进 guardSet 反弹族）；
+ *   摄魂 = **自保回血**（用户裁：不是终结技。引擎门 = 目标 HP≤drainHpMax，教师门再加"自身缺血"）；
+ *   全息 = 给**被作用者**套一回合原型制御（README 理想形态）。FFA 桌上的用法 = "均势盾"：
+ *   保住将被强敌终结的最弱席（队伍模式里同一动作 = 给队友送盾——语义同源，注释留档）；
+ *   挑衅→转移/制御 = 挑衅者知道"谁欠我一刀"（resolve.js:1135 `you.tauntByPending.push(i)` ⇒ 目标.tauntBy += 施放者）。
+ * 干预全关协议：本教师供 GD3-ALL 训练 ⇒ 训练侧四键必须 0；教师标签不依赖任何引擎注入。
+ * 剂量：DOSE6 每格每局上限（连招/功能卡全部窄剂量，让配给骨架管经济、门管语义）。 */
+const DOSE6 = { firestorm: 1, curse: 2, armor: 2, taunt: 1, transfer: 1, proto: 1, mine: 1, rod: 1, holo: 1, cannon: 2 };
+const highestHpEnemy = (state, pid, cs, key) => {
+  let best = null;
+  for (const c of cs) {
+    if (!c || c.key !== key) continue;
+    const o = state.p[c.target];
+    if (!o || o.hp <= 0) continue;
+    if (!best || o.hp > state.p[best.target].hp) best = c;
+  }
+  return best;
+};
+const myStickersOn = (state, pid) => {   /* 我贴出去、还挂着的符咒数（resolve.js:1088 sticker={owner,age}） */
+  let n = 0;
+  for (const q of state.p) {
+    if (!q || q.hp <= 0) continue;
+    for (const s of (q.stickers || [])) if (s.owner === pid) n++;
+  }
+  return n;
+};
+const ration6Pick = (state, pid, cs) => {
+  const me = state.p[pid] || {};
+  /* —— 长程骨架（ration5 原样：激光眼防席门 → 大雷配给 → 电磁炮 → 攥着等 → 蓄能）—— */
+  const laser = cs.filter((c) => c.key === R.SK.LASER_EYE)
+    .find((x) => { const o = state.p[x.target]; return o && GUARD_FAMILY.indexOf(o.lastSkill) >= 0; });
+  if (laser && castCount(state, pid, R.SK.LASER_EYE) < RATION.laserEye) return laser;
+  const bt = pickKey(cs, R.SK.BIG_T);
+  if (bt && castCount(state, pid, R.SK.BIG_T) < RATION.bigT) return bt;
+  const rg = pickKey(cs, R.SK.RAILGUN, 'elec') || pickKey(cs, R.SK.RAILGUN);
+  if (rg) return rg;
+  const hasBead = ((me.elec || 0) > 0) || ((me.boom || 0) > 0);
+  if (hasBead && me.ep < 3) return cs.find((c) => c.key === R.SK.JI) || null;
+  if (!hasBead && me.ep >= 2) { const ch = pickKey(cs, R.SK.CHARGE, 'elec') || pickKey(cs, R.SK.CHARGE); if (ch) return ch; }
+  /* —— 批2 ① 贴贴→天火：手里有我贴的符咒就引爆（天火全场 AoE、不需选目标）；没弹先贴（剂量 2，符咒可被防御挡）—— */
+  const fsm = pickKey(cs, R.SK.FIRESTORM);
+  if (fsm && myStickersOn(state, pid) >= 1 && castCount(state, pid, R.SK.FIRESTORM) < DOSE6.firestorm) return fsm;
+  const cu = pickKey(cs, R.SK.CURSE);
+  if (cu && castCount(state, pid, R.SK.CURSE) < DOSE6.curse) return cu;
+  /* —— 批2 ② 藤甲→坦克集火：目标已火弱 ⇒ 坦克（火伤+1、穿防、转移不走）；否则先贴（血最高者=最大威胁）—— */
+  const tkWeak = cs.find((c) => c.key === R.SK.TANK && state.p[c.target] && state.p[c.target].fireWeakNow);
+  if (tkWeak) return tkWeak;
+  const ar = highestHpEnemy(state, pid, cs, R.SK.ARMOR);
+  if (ar && castCount(state, pid, R.SK.ARMOR) < DOSE6.armor) return ar;
+  /* —— 批2 ③ 挑衅→转移/制御：有人欠我一刀（我挑衅过、还没打回来）⇒ 优先转移给血最高的第三者，转移没货就原型制御全挡 —— */
+  const owes = state.p.some((q) => q && q.hp > 0 && (q.tauntBy || []).indexOf(pid) >= 0);
+  if (owes) {
+    const tr = highestHpEnemy(state, pid, cs, R.SK.TRANSFER);
+    if (tr && castCount(state, pid, R.SK.TRANSFER) < DOSE6.transfer) return tr;
+    const pr = pickKey(cs, R.SK.PROTO);
+    if (pr && castCount(state, pid, R.SK.PROTO) < DOSE6.proto) return pr;
+  }
+  const tn = highestHpEnemy(state, pid, cs, R.SK.TAUNT);
+  if (tn && castCount(state, pid, R.SK.TAUNT) < DOSE6.taunt) return tn;   /* 连招前半：给最大威胁挂必打义务 */
+  /* —— 批2 ④⑤ 地雷/避雷针：布防窄剂量。避雷针门 = 桌上有买得起大雷的敌人（ep≥5）—— */
+  const mn = pickKey(cs, R.SK.MINE);
+  if (mn && castCount(state, pid, R.SK.MINE) < DOSE6.mine) return mn;
+  const rodThreat = state.p.some((q) => q && q.hp > 0 && (q.ep || 0) >= 5);
+  const rd = pickKey(cs, R.SK.ROD);
+  if (rd && rodThreat && castCount(state, pid, R.SK.ROD) < DOSE6.rod) return rd;
+  /* —— 批3 全息（均势盾/队友盾）：将死之席（hp≤1）且**别的敌人**上一手正打它 ⇒ 送盾否认终结；
+   *      队伍模式下这就是"给队友送盾"（README 理想形态同一张卡，目标选择差在桌制）。 —— */
+  const finishingOn = (t) => state.p.some((q) => q && q.hp > 0 && q.id !== t.id &&
+    q.lastTarget === t.id && q.lastSkill && R.byKey[q.lastSkill] && R.byKey[q.lastSkill].cat === 'attack');
+  const holo = (castCount(state, pid, R.SK.HOLO) < DOSE6.holo)
+    ? cs.find((c) => c && c.key === R.SK.HOLO && state.p[c.target] &&
+        state.p[c.target].hp <= 1 && finishingOn(state.p[c.target]))
+    : null;
+  if (holo) return holo;
+  /* —— 批3 过载炮：目标上的是**反弹**（激光眼管别的防席；炮穿防穿反弹但会被攻击抵消）—— */
+  const cn = cs.find((c) => c.key === R.SK.CANNON && state.p[c.target] && state.p[c.target].lastSkill === R.SK.REFLECT);
+  if (cn && castCount(state, pid, R.SK.CANNON) < DOSE6.cannon) return cn;
+  /* —— 批3 防御系保底（横切）：自己缺血、没人欠我刀、环也不急 ⇒ 原型制御挡一手 —— */
+  if (me.hp < (state.mode && state.mode.hp || 3) && castCount(state, pid, R.SK.PROTO) < DOSE6.proto) {
+    const pr2 = pickKey(cs, R.SK.PROTO);
+    if (pr2) return pr2;
+  }
+  /* —— 环 + 短程（ration 骨架尾）—— */
+  const ring = pickKey(cs, R.SK.RING);
+  if (ring && (me.ringStreak > 0 || castCount(state, pid, R.SK.RING) < RATION.ring)) return ring;
+  if (canAffordLater(state, pid)) {
+    const sw = lowestHpEnemy(state, pid, cs, R.SK.SWORD);
+    if (sw && castCount(state, pid, R.SK.SWORD) < SHORT_DOSE.sword) return sw;
+    const gn = lowestHpEnemy(state, pid, cs, R.SK.GUN);
+    if (gn && castCount(state, pid, R.SK.GUN) < SHORT_DOSE.gun) return gn;
+  }
+  return pickChain(state, pid, cs, R);
+};
 const teacherPick = TEACHER === 'v7mix'
   ? (state, pid, cs) => pickChain(state, pid, cs, R) || v7Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'toolkit'
@@ -337,6 +432,8 @@ const teacherPick = TEACHER === 'v7mix'
     ? (state, pid, cs) => ration4Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'ration5'
     ? (state, pid, cs) => ration5Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : TEACHER === 'ration6'
+    ? (state, pid, cs) => ration6Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'ringchain'
     ? (state, pid, cs) => ringChainPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'ring'
@@ -347,7 +444,7 @@ const teacherPick = TEACHER === 'v7mix'
     ? (state, pid, cs) => laserPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把它拖回电珠/电磁炮那一维 */
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'allround'];
+const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + '（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
