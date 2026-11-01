@@ -298,17 +298,17 @@ const GA_GATE_GAMES = Math.max(2, Number(process.env.EPIRUS_GA_GATE_GAMES || 6) 
  *   ⇒ "终局当选从名人堂挑了另一粒"只是推断。本开关把每一代的 {top3 指纹, 门槛读数, 准入后名人堂} 追加落 JSONL，
  *   终局当选时再补一行 final（当选粒指纹 + 名人堂全家）⇒ 机制可以从"推断"升成"账面"。
  * 默认关：一个 env 读取 + 一个 if ⇒ 逐字原行为（回归腿：默认关轨迹逐字同）。 */
+const HALL_PROBE = Number(process.env.EPIRUS_HALL_TRACE_PROBE || 0);
+let PROBE_INC;   /* 探针参照：种子包同口径量一次（与 GA_INC 同式；GA_GATE 关时也成立） */
 const WIDE_FINAL = Number(process.env.EPIRUS_WIDE_FINAL || 0);
-if (WIDE_FINAL && GA_GATE <= 0) {
-  console.error('[wide-final] ⛔ EPIRUS_WIDE_FINAL 要与 EPIRUS_GA_GATE 同开——同一把尺的参照（GA_INC，起点同 n 读数）来自门槛；单开没有"同尺"可讲');
+if (WIDE_FINAL && GA_GATE <= 0 && !HALL_PROBE) {
+  console.error('[wide-final] ⛔ EPIRUS_WIDE_FINAL 要与 EPIRUS_GA_GATE 同开（或 HALL_TRACE_PROBE=1 由探针喂同一把尺的参照）；单开没有"同尺"可讲');
   process.exit(2);
 }
 let bestWideSeen = null;   /* v4：全程最宽粒快照（参数拷贝 ⇒ 育种变异不穿透） */
 let WIDE_FINAL_PICK = null;
 const FITGW = Number(process.env.EPIRUS_FITGW || 0);
 if (FITGW > 0 && GA_GATE <= 0) { console.error('[fitgw] ⛔ EPIRUS_FITGW 复用门槛读数，要与 EPIRUS_GA_GATE 同开'); process.exit(2); }
-const HALL_PROBE = Number(process.env.EPIRUS_HALL_TRACE_PROBE || 0);
-let PROBE_INC;   /* 探针参照：种子包同口径量一次（与 GA_INC 同式；GA_GATE 关时也成立） */
 const HALL_TRACE = Number(process.env.EPIRUS_HALL_TRACE || 0);
 const HALL_TRACE_OUT = String(process.env.EPIRUS_HALL_TRACE_OUT || ('scratch/hall-trace/' + (process.env.EPIRUS_ARM || 'arm') + '.jsonl'));
 if (HALL_TRACE) {
@@ -2005,10 +2005,19 @@ for (let gen = 0; gen < GENS; gen++) {
       const pr = [];
       for (let pi = 0; pi < Math.min(3, scored.length); pi++) {
         const pm = wideMetricsOf(scored[pi].params);
-        pr.push({ gi: pi, wid: widOfArr(scored[pi].params),
+        pr.push({ gi: pi, wid: widOfArr(scored[pi].params), fit: +scored[pi].r.fit.toFixed(4), wideScore: +(pm.landMulti + pm.landLong).toFixed(2),
           gMulti: +pm.gMulti.toFixed(2), gLong: +pm.gLong.toFixed(2),
           landMulti: +pm.landMulti.toFixed(2), landLong: +pm.landLong.toFixed(2),
           wide: (pm.gMulti >= 3 && pm.gLong >= 3) && (PROBE_INC ? isWideVs(pm, PROBE_INC) : true) });
+      }
+      if (WIDE_FINAL) {
+        for (const r of pr) {
+          if (!r.wide) continue;
+          if (!bestWideSeen || r.fit > bestWideSeen.fit) {
+            bestWideSeen = { params: Float64Array.from(scored[r.gi].params), wid: r.wid,
+            gen: gen, fit: r.fit, wideScore: r.wideScore, gMulti: r.gMulti, gLong: r.gLong, landMulti: r.landMulti, landLong: r.landLong };
+          }
+        }
       }
       rec.probe = { ref: PROBE_INC ? { lm: +PROBE_INC.landMulti.toFixed(2), ll: +PROBE_INC.landLong.toFixed(2) } : null, reads: pr };
     }
@@ -2602,8 +2611,9 @@ if (WIDE_FINAL) {
   const cands = (sel.clean && sel.clean.length) ? sel.clean : (sel.best ? [sel.best] : []);
   const wreads = [];
   for (const e of cands) {
-    const m = wideMetricsOf(e.ref.params);
-    m.wide = (m.gMulti >= GA_KINDS && m.gLong >= GA_KINDS) && (GA_INC ? isWideVs(m, GA_INC) : true);
+      const m = wideMetricsOf(e.ref.params);
+      const INC = GA_INC || PROBE_INC;   /* v4/2b：参照 = 门槛或探针（同一函数同一定义，谁开用谁） */
+      m.wide = (m.gMulti >= GA_KINDS && m.gLong >= GA_KINDS) && (INC ? isWideVs(m, INC) : true);
     wreads.push({ e: e, m: m });
     console.log('[wide-final]   候选 trainFit=' + (typeof e.ref.fit === 'number' ? e.ref.fit.toFixed(3) : '追加') +
       ' → ' + m.gMulti.toFixed(1) + '/' + m.gLong.toFixed(1) + 'G ‖ ' + m.landMulti.toFixed(2) + '/' + m.landLong.toFixed(2) + '兑 ' + (m.wide ? '宽✔' : '窄✘'));
