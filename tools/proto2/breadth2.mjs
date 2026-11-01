@@ -31,7 +31,16 @@ function rowOf(label, params, container) {
   return {
     pack: label, container: container, games: GAMES, n: N,
     landedTotal: mh.landedTotal, landedKeys: mh.landedKeys, effSkillsLand: mh.effSkillsLand,
-    distinctCast: castK.length, maxCastKey: (function () { let k = null, c = 0; for (const x of castK) if (mh.castByKey[x] > c) { c = mh.castByKey[x]; k = x; } return k; })(),
+    distinctCast: castK.length,
+    /* 有效种类（用户 11-01：先在中途杀超低种类，**然后才判有效出手种类**）：非ジ 且出手占比 ≥ t 的键数。
+     *   用 mirrorHealth 的 `castByKey` **全量**直方图算 —— 从考卷文本的「分布（前 12）」解析会截断尾部，
+     *   13~15 键的包会被系统性低估（11-01 我那版池对照表就踩了这个坑）。 */
+    effKinds: (function () {
+      let tot = 0; for (const k of castK) tot += mh.castByKey[k];
+      const o = {};
+      for (const t of [1, 2, 5]) o[t] = tot ? castK.filter((k) => mh.castByKey[k] / tot >= t / 100).length : 0;
+      return o;
+    })(), maxCastKey: (function () { let k = null, c = 0; for (const x of castK) if (mh.castByKey[x] > c) { c = mh.castByKey[x]; k = x; } return k; })(),
     maxCastShare: (function () { const t = castK.reduce((a, x) => a + mh.castByKey[x], 0); let c = 0; for (const x of castK) c = Math.max(c, mh.castByKey[x]); return t ? c / t : 0; })(),
     /* ⚑ 分母为 0 不许与『没塌缩』同形：一次伤害都没落地 ⇒ 份额**读不出**（null），不是 0.0%（11-01 池表抓到）。 */
     maxLandShare: ls.total > 0 ? ls.share : null, maxLandKey: ls.key, landReadable: ls.total > 0, pierceMissing: mh.pierceMissing,
@@ -43,8 +52,18 @@ out.push(rowOf('v7（锚·同尺同档）', refParams, 'v7 5689'));
 let installed = null;
 for (const p of PACKS) {
   if (p === 'v7') { out[0].pack = 'v7'; continue; }   // 锚行就是 v7 同尺同档，不重复跑一遍
-  let raw;
-  try { raw = readPack2(p); } catch (e) { console.log('⚠ 读不出 ' + p + '：' + String(e && e.message).slice(0, 70)); continue; }
+  let raw = null;
+  try { raw = readPack2(p); } catch (e) { raw = null; }
+  if (raw && raw.v !== 92) raw = null;   /* 容器 v7（池成员 30 枚都是这一代）⇒ 走下面的 v7 装载，不去碰代闸（packCfgExit 会当场拒） */
+  if (!raw) {
+    /* 容器读不出 ⇒ 退回 **v7 束/老包**装载路径（池成员 30 枚都是 .js/.bak 的容器 v7，代 3 装载器读不了它们）。
+     *   读得出 params 就照常量（同一把 mirrorHealth ⇒ 两侧同档可并排），只是容器标注换成 v7 <len>。 */
+    if (installed) { installed.restore(); installed = null; }   /* ⚑ 先解装：装着 arch2 时 P.unpack 只认代 3 容器 ⇒ 不还原就会把 v7 束误报成"读不出" */
+    const c7 = loadChamp(W, p);
+    if (!c7) { console.log('⚠ 读不出 ' + p + '（既不是代 3 容器，也读不出 v7 束）'); continue; }
+    out.push(rowOf(p.replace(/^.*[\\/]/, ''), Float64Array.from(c7), 'v7 ' + c7.length));
+    continue;
+  }
   const got = packCfgExit(raw, p);
   if (installed) installed.restore();
   installed = installArch2(W, Object.assign({ mutMode: 'seg' }, got.cfg));
@@ -56,10 +75,11 @@ for (const p of PACKS) {
 
 const pct = (x) => (x == null ? '—' : (100 * x).toFixed(1) + '%');
 console.log('=== 塌缩/宽度（mirrorHealth ' + GAMES + ' 局 · n=' + N + ' · multi · 归属=audit-lib.landShareOf 单源）===');
-console.log('包'.padEnd(28) + '容器'.padEnd(24) + '落地'.padEnd(6) + '种'.padEnd(4) + 'G落地'.padEnd(8) + '出手种'.padEnd(8) + '最大落地卡'.padEnd(16) + '份额'.padEnd(8) + '最大出手卡份额');
+console.log('包'.padEnd(28) + '容器'.padEnd(24) + '落地'.padEnd(6) + '种'.padEnd(4) + 'G落地'.padEnd(8) + '出手种'.padEnd(8) + '有效种类'.padEnd(14) + '最大落地卡'.padEnd(16) + '份额'.padEnd(8) + '最大出手卡份额');
 for (const r of out) {
   console.log(r.pack.padEnd(28) + String(r.container).padEnd(24) + String(r.landedTotal).padEnd(6) +
     String(r.landedKeys).padEnd(4) + (r.effSkillsLand == null ? '—' : r.effSkillsLand.toFixed(2)).padEnd(8) +
+    (('t1/' + (r.effKinds ? r.effKinds[1] : '?') + ' t2/' + (r.effKinds ? r.effKinds[2] : '?') + ' t5/' + (r.effKinds ? r.effKinds[5] : '?')).padEnd(17)) +
     String(r.distinctCast).padEnd(8) + String(r.maxLandKey || '—').padEnd(16) + pct(r.maxLandShare).padEnd(8) + pct(r.maxCastShare));
 }
 const anchor = out[0];

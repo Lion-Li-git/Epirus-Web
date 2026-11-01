@@ -36,7 +36,7 @@ const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
   'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap', 'masterySem', 'masteryMax',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames', 'arenaPool', 'arenaShapes', 'arenaDivK', 'selCap'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames', 'arenaPool', 'arenaShapes', 'arenaDivK', 'selCap', 'killKinds', 'killStreak'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -292,13 +292,20 @@ const ARENA_DIVK = Number(arg('arenaDivK', 0)) || 0;   /* 0 = 关；>0 时与 ma
  *   只读 arena2 已经交出的 `maxCard.share` ⇒ 零新测量、零新代码路径。默认 0 = 关（逐字不变，回归腿对在册产物）。
  *   零通过的那一代：不入精英、不更新产物，只计数；整轮一次都没过 ⇒ 末尾响亮报 + meta 记 passed=0（不许静默退回无 cap 的 best）。 */
 const SEL_CAP = Number(arg('selCap', 0)) || 0;
+/* `--killKinds=` / `--killStreak=`（千问 · 11-01，PREREG-2026-11-01-KILL-NARROW）：**训练中途的超低出手种类淘汰**。
+ *   代指标 = 该代**最高分粒子**（按 fit，未经任何 veto）的非ジ 不同键数；连续 KILL_STREAK 代 < KILL_KINDS ⇒ 当场终止、**不写产物**
+ *   （省下的预算才是这条线的收益）。种类直接取 arena2 已经交出的 `cat` ⇒ 零新测量、零额外一局。
+ *   立线依据：现役池 30 枚的 raw 出手种类最小 6（中位 12）⇒ 4/5 都不杀现役成员。 */
+const KILL_KINDS = Math.max(0, Number(arg('killKinds', 0)) || 0);
+const KILL_STREAK = Math.max(2, Number(arg('killStreak', 5)) || 5);
+let lowKindRun = 0, KILLED = null;
 const SEL_STAT = { checked: 0, blocked: 0, starvedIter: 0, accepted: 0, worstSeen: 0 };
 if (ARENA_CUR !== 'net' && ARENA_CUR !== 'clean' && ARENA_CUR !== 'first') { console.error('⛔ --arenaCur 只认 net|clean|first（收到 ' + ARENA_CUR + '）'); process.exit(2); }
 /* ⚑ 响亮闸（ZCode · 10-31 晚，P-P5 首遍发臂当场栽的）：arena2 只在 `--arena2=1` 时建表，不带它 ⇒
  *   `evalOne` 静默掉进 `T.scoreMemberN` 内部对手表，而 `--arenaCur/--arenaStrat/…` 那一族在那条路上
  *   **全部不生效**（meta 里 `arena:null` / `currency:"scoreMemberN.fit"` 是事后才看得见的报警）。
  *   点了 arena 族旗标却不给 `--arena2=1` ⇒ 当场拒跑。 */
-if (!ARENA2 && ['arenaCur', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'arenaHold', 'arenaHighN', 'arenaDiverse', 'arenaPool', 'arenaShapes', 'arenaDivK']
+if (!ARENA2 && ['arenaCur', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'arenaHold', 'arenaHighN', 'arenaDiverse', 'arenaPool', 'arenaShapes', 'arenaDivK', 'killKinds', 'killStreak']
     .some((k) => argv.some((x) => x === '--' + k || x.startsWith('--' + k + '=')))) {
   console.error('⛔ 点了 arena2 族旗标却没给 `--arena2=1` ⇒ arena2 桌不会建、这族旗标会静默掉进 scoreMemberN 内部对手表（10-31 晚 P-P5 首遍就是这么废的）。要么加 `--arena2=1`，要么去掉这族旗标。'); process.exit(2);
 }
@@ -528,7 +535,8 @@ function evalOne(params, gen, idx) {
      *   只住 CEM 路的 loop 评估；与 mastery 门同开时在门口拒跑（门与正则共用一个 fit 会互相说不清）。 */
     let dvFit = r.score;
     if (ARENA_DIVK > 0 && r.cat) { let dvc = 0; for (const k in r.cat) if (k !== R.SK.JI) dvc++; dvFit += ARENA_DIVK * dvc; }
-    return { fit: dvFit, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard };
+    let kindN = 0; for (const k in r.cat) if (k !== R.SK.JI && r.cat[k] > 0) kindN++;
+    return { fit: dvFit, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard, kindN };
   }
   const opps = T.buildOpps(params, 0.05);
   const r = T.scoreMemberN(params, opps, GAMES, N, gen, idx, 0);
@@ -990,6 +998,15 @@ let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
         .sort(function (a, b) { return scored[b].fit - scored[a].fit; });
       order = co.sort(function (a, b) { return scored[b].fit - scored[a].fit; }).concat(rest);
     } else order = scored.map(function (s, i) { return i; }).sort(function (a, b) { return scored[b].fit - scored[a].fit; });
+    if (KILL_KINDS > 0) {
+      const topFit = order.length ? order[0] : null;
+      const kn = topFit == null ? null : scored[topFit].kindN;
+      if (kn != null && kn < KILL_KINDS) {
+        lowKindRun++;
+        console.log('  ⚑ 低种类代 ' + lowKindRun + '/' + KILL_STREAK + '（第 ' + (it + 1) + ' 代最高分粒子出手种类=' + kn + ' ‖ 线 ' + KILL_KINDS + '）');
+        if (lowKindRun >= KILL_STREAK) { KILLED = { atIter: it + 1, kindN: kn, streak: KILL_STREAK, gamesSpent: gamesIn() }; break; }
+      } else lowKindRun = 0;
+    }
     /* 一整代全被 cap 挡下时：σ/均值照旧重拟合（否则搜索直接饿死），但**产物一格不许动** ⇒ 11-01 第一版没写这条，
      *   把 keep 清空后在 `scored[keep[0]]` 上当场炸。 */
     let capStarved = false;
@@ -1127,9 +1144,11 @@ if (P.__arch2) {
 if (SEL_CAP > 0) row.selCap = { cap: SEL_CAP, passed: SEL_STAT.accepted, checked: SEL_STAT.checked, blocked: SEL_STAT.blocked, starvedIter: SEL_STAT.starvedIter, worstSeen: SEL_STAT.worstSeen };
 if (OUT) {
   mkdirSync(dirname(OUT), { recursive: true });
-  const packed = P.pack(best);
-  writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
-  row.wrote = OUT;
+  if (KILLED) { console.log('\n⛔ **本臂被中途淘汰判据杀掉**：连续 ' + KILLED.streak + ' 代最高分粒子出手种类 ' + KILLED.kindN +
+    ' < ' + KILL_KINDS + '（第 ' + KILLED.atIter + ' 代，已花 ' + KILLED.gamesSpent + ' 局）⇒ **产物不写**（PREREG-2026-11-01-KILL-NARROW K-1）。'); }
+  else { const packed = P.pack(best);
+  writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8'); }
+  if (!KILLED) row.wrote = OUT;
   /* ⚑ 空臂标记（10-31）：产物与起点**逐字节相同** ⇒ 这一臂什么都没接受。
    *   动因是实测：`OB3S-BIGT-s7.bak` 与 `OB3S-BIGT-s11.bak` 的 md5 与父本 `OB3S-C2-s7.bak` 全等
    *   （各吃 24k 局、0 次接受），而它们在建表时算"两条子代"⇒ 演化图上是两条**假分叉**。
@@ -1236,6 +1255,7 @@ function appendIndex(o, row) {
     console.log('[cem-arm] ⚠ 索引没写上（' + String((e && e.message) || e).slice(0, 60) + '）——臂本身已落盘，但**这一臂在图里会缺席**，补索引或重跑');
   }
 }
+row.killKinds = KILL_KINDS > 0 ? { kinds: KILL_KINDS, streak: KILL_STREAK, killed: KILLED } : null;
 if (OUT) { mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT + '.meta.json', JSON.stringify(row, null, 1), 'utf8'); appendIndex(OUT, row); }
 /* `--headGate=1` 的红要真的把批挡住 ⇒ 非零退出（产物已落盘，事后仍可复盘，但**回执不许被当合格臂引用**）。
    缺省不开闸 ⇒ 历史臂与不带这个旗标的批次逐字不变。 */
