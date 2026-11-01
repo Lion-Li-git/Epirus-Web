@@ -4,6 +4,7 @@
  */
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { isWideVs, LAND_TOL } from './pool-frontier-lib.mjs';   // §十四：门槛不自造判据——两条都指到在册出处（种类那条 = 产品门 L1 `broad`，净兑现那条 = 池级前沿尺 `isWideVs`）
 import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
 import { loadPool, makeMimic } from './human-pool.mjs';   // v1.6.60：人类形状对手的**单一来源**（§E152e/§E155/§E168 的产物；别再抄一份采样器）
 import { guardWrite, declareCopy } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
@@ -277,13 +278,34 @@ const BREADTH_FLOOR = Number(process.env.EPIRUS_BREADTH_FLOOR || 0);
 /* ===== §十一 C（千问 · 11-01 傍晚，用户"开一下"）：把**演化期**健康门槛搬进 GA（不是终局筛）=====
  * 形状搬自线上 trainer（`js/train/evo.js:3952`）：不过自对局健康门槛 ⇒ 不许进容差带 / 不配当选，
  *   然后"先按分数取带、带内取覆盖熵最高者"。与在册 `EPIRUS_BREADTH_FLOOR` 的区别：那根作用在**终局 `sel.clean`**
- *   （train-3p.mjs 里那处），正是 §十三 我批评过的"事后否决不塑形"；这两根作用在**每代的名人堂准入**上。
- * 成本明说：每代只检 top-3 候选 × `GA_GATE_GAMES` 局镜 ⇒ 默认 6 局时预算增量约 +28%（臂账里如实写，别当免费）。
+ *   （train-3p.mjs 里那处），正是我在 `RESULTS-2026-11-01-DAY` §十 批评过的"终局 veto 不塑形搜索"；这两根作用在**每代的父母抽取 + 名人堂准入**上（§十二 勘误后）。
+ * 成本明说：每代只检 top-3 候选 × **两桌** × `GA_GATE_GAMES` 局镜 ⇒ 默认档增量 = 36 局 vs 原生 POP×GAMES = 64 局 ≈ **+56%**（臂账里如实写，别当免费；§十一 那句"+28%"是单桌时代的数，作废）。
  * 全代都不过线 ⇒ **饿退**：照收原生前两粒并计数（`--selCap` v1 把整代挡空后当场炸的那笔教训）。 */
 const GA_GATE = Math.max(0, Number(process.env.EPIRUS_GA_GATE || 0));
+/* 旗标语义（§十四 同源化后必须说清，否则"多档产物 md5 全等"又会被当成"没接电"）：
+ *   判据里"两种模式各 ≥3 种"这条住在 `isWideVs` 内部、**调不下来**；本旗标只能**往上加严**。
+ *   ⇒ 有效种类下限 = `max(3, GA_GATE)`：=3 ⇒ 与产品门 `broad` 的**种类那条**齐平（净兑现那条另加，严于门）；=99 ⇒ 必然全饿退（= 饿退对照腿）；
+ *     <3（旧 §十一 用过 4/6）⇒ 只影响"更严"的那一侧，绝不放宽。每代打印都带有效下限，不接受"悄悄退回默认档"。 */
+const GA_KINDS = Math.max(3, GA_GATE);
 const GA_GATE_GAMES = Math.max(2, Number(process.env.EPIRUS_GA_GATE_GAMES || 6) || 6);
 const GA_BAND = Math.max(0, Number(process.env.EPIRUS_GA_BAND || 0));
-const GA_STAT = { audits: 0, healthyGens: 0, starvedGens: 0, swapped: 0, eff1Sum: 0, lastEff1: '' };
+const GA_STAT = { audits: 0, healthyGens: 0, starvedGens: 0, swapped: 0, eff1Sum: 0, lastEff1: '', noRef: 0 };
+/* §十四 判据换掉（v2 被 Goodhart，见 PREREG §十三）：门槛**不自己数键**，改用两条在册判据的合取——
+ *   ① 种类：`两模式 effSkills ≥3` —— 与产品门 L1 `broad` 的 `pass` 逐字同一条（`champion-gate.mjs:80-85`，
+ *      它的 `src` 写着"两把尺里取更严的那把"，我这边只喂 `selfPlay` 那一把 ⇒ **这一条我和门并不同尺**，见 PREREG §十四③）；
+ *   ② 出血：`两模式 effSkillsLand ≥ 参照 − LAND_TOL(0.10)` —— 这条**不在** `broad` 里，住在池级前沿尺
+ *      `pool-frontier-lib.isWideVs`（消费者 `probe-pool-frontier.mjs:76`）⇒ 门槛比产品门**严**一条。
+ *   为什么要第②条：v2 只数"出手种类"，而镜里反弹/防御/贴贴这些**不打血**的键几乎无代价可按压
+ *   （`GATE2-s7` 出手 6 种而**落地种 1**、最大落地份额 100.0%、5P 掉 24.7pt）——就是 Goodhart。
+ *   参照 = 本臂的热启动起点（量一次，与候选同 n ⇒ 配对；绝对线自带样本量依赖，见 `pool-frontier-lib` v1.5.254 注释）。
+ *   ⚠ 参照**对象**与门不同：门判"入池新包 vs 现役池成员"，这里判"候选 vs 自己的起点" ⇒ 这根只保证"别把出发时的宽和出血丢掉"。
+ *   代价：两模式 × 每代 top-3 ⇒ 增量 = 3×2×GA_GATE_GAMES 局镜 vs 原生 POP×GAMES 局 ⇒ 默认档 ≈ **+56%**，臂账里如实写。 */
+function wideMetricsOf(params) {
+  const a = T.mirrorHealth(params, GA_GATE_GAMES, 5, 'multi');
+  const b = T.mirrorHealth(params, GA_GATE_GAMES, 5, 'long');
+  return { gMulti: a.effSkills, gLong: b.effSkills, landMulti: a.effSkillsLand, landLong: b.effSkillsLand };
+}
+let GA_INC;   // undefined = 还没量；null = 没有参照（无热启动）
 let BREADTH_LOG = null, BREADTH_ALL_NARROW = false;
 /* ===== §E650（千问 · 预注册 `docs/research/PREREG-2026-10-19-gift-veto-qoder.md` · **默认 0 ⇒ 行为逐字不变**）=====
  * 送盾 veto：把"裸包送盾超线"从**只挡带内换人**（`bandPickByLand` 吃 `gateOk`）升成**也挡当选**。
@@ -1890,29 +1912,31 @@ for (let gen = 0; gen < GENS; gen++) {
    *   `bestFit/bestParams` 那对仍按纯 fit 走（门槛塑形搜索，不动产物记账）。 */
   let gateRank = null;
   if (GA_GATE > 0) {
+    if (GA_INC === undefined) GA_INC = seedParams ? wideMetricsOf(seedParams) : null;
+    if (!GA_INC) GA_STAT.noRef++;
     const reads = [];
     for (let gi = 0; gi < Math.min(3, scored.length); gi++) {
-      const mh = T.mirrorHealth(scored[gi].params, GA_GATE_GAMES, Math.max(2, N), T.trainMode());
-      const ck = Object.keys(mh.castByKey || {});
-      let tot = 0, mx = 0; for (const k of ck) { tot += mh.castByKey[k]; if (mh.castByKey[k] > mx) mx = mh.castByKey[k]; }
-      let H = 0;
-      for (const k of ck) { const p = tot ? mh.castByKey[k] / tot : 0; if (p > 0) H -= p * Math.log(p); }
-      reads.push({ gi: gi, fit: scored[gi].r.fit, eff1: tot ? ck.filter((k) => mh.castByKey[k] / tot >= 0.01).length : 0, ent: H });
+      const m = wideMetricsOf(scored[gi].params);
+      /* 参照缺（无热启动）⇒ 只判种类、不判净兑现，并且**必须打印这件事**：静默退回绝对线就是"判据被换掉而输出看不出来" */
+      m.wide = (m.gMulti >= GA_KINDS && m.gLong >= GA_KINDS) &&
+        (GA_INC ? isWideVs(m, GA_INC) : true);
+      reads.push({ gi: gi, fit: scored[gi].r.fit, m: m, wideScore: m.landMulti + m.landLong });
       GA_STAT.audits++;
     }
-    GA_STAT.lastEff1 = reads.map((r) => r.eff1).join('/');
-    const ok = reads.filter((r) => r.eff1 >= GA_GATE);
-    let rank = ok.slice();
+    GA_STAT.lastEff1 = reads.map((r) => r.m.gMulti.toFixed(1) + '/' + r.m.gLong.toFixed(1) +
+      'G ‖ ' + r.m.landMulti.toFixed(2) + '/' + r.m.landLong.toFixed(2) + '兑').join('  ');
+    let rank = reads.filter((r) => r.m.wide);
+    const nWide = rank.length;
     if (GA_BAND > 0 && rank.length > 1) {
       const tf = rank[0].fit;
       const band = rank.filter((r) => r.fit >= tf - GA_BAND);
       const rest = rank.filter((r) => band.indexOf(r) < 0);
-      band.sort(function (a, b) { return b.ent - a.ent; });
+      band.sort(function (a, b) { return b.wideScore - a.wideScore; });   // 带内取"打得出血的宽"更大者（不再是出手熵）
       rank = band.concat(rest);
     }
-    rank.push.apply(rank, reads.filter((r) => ok.indexOf(r) < 0));   // 不过线的排最后（仍可当父母，但轮不到优先）
+    rank.push.apply(rank, reads.filter((r) => !r.m.wide));   // 不宽者排最后（仍可当父母，但轮不到优先）
     gateRank = rank.map((r) => r.gi);
-    if (ok.length) { GA_STAT.healthyGens++; GA_STAT.eff1Sum += ok[0].eff1; if (gateRank[0] !== 0) GA_STAT.swapped++; }
+    if (nWide) { GA_STAT.healthyGens++; GA_STAT.eff1Sum += rank[0].m.gMulti; if (gateRank[0] !== 0) GA_STAT.swapped++; }
     else GA_STAT.starvedGens++;
   }
   if (gateRank) {
@@ -2020,11 +2044,17 @@ for (let gen = 0; gen < GENS; gen++) {
 /* §十一 C 的自证收尾：开档必须真审计过（`patch-must-prove-invoked` 的在册教训——覆盖式接入要自证"真被调用"）。 */
 if (GA_GATE > 0) {
   if (GA_STAT.audits === 0) { console.error('⛔ --EPIRUS_GA_GATE 开着（=' + GA_GATE + '）但一次健康读都没跑 ⇒ 门槛没接电，这臂等于白跑：**不写产物**。'); process.exit(15); }
-  console.log('[GA 门槛] 线 eff1 ≥ ' + GA_GATE + ' ‖ 测量 ' + GA_GATE_GAMES + ' 局镜 × 每代 top-3 ‖ 带内取宽 ' + (GA_BAND > 0 ? GA_BAND : '（关）') +
-    '：审计 ' + GA_STAT.audits + ' 次 ‖ 过线代 ' + GA_STAT.healthyGens + '/' + GENS + ' ‖ 饿退代 ' + GA_STAT.starvedGens +
-    ' ‖ 因门槛换粒进席 ' + GA_STAT.swapped + ' 次 ‖ 末代 top-3 eff1 = ' + GA_STAT.lastEff1 +
-    ' ‖ 过线者平均 eff1 = ' + (GA_STAT.healthyGens ? (GA_STAT.eff1Sum / GA_STAT.healthyGens).toFixed(2) : '—') +
-    (GA_STAT.healthyGens === 0 ? '  ⚠ 一代都没过线 ⇒ 全程走饿退 = 这根等于没开（不许当"测过了"引用）' : ''));
+  console.log('[GA 宽门槛] 判据 = 两条在册判据的合取（不自造）：种类那条同产品门 L1 `broad`（两模式 effSkills≥' + GA_KINDS +
+    '，`champion-gate.mjs` 的 `broad.pass`）‖ 净兑现那条来自池级前沿尺 `pool-frontier-lib.isWideVs`（两模式 effSkillsLand ≥ 参照−' + LAND_TOL + '）' +
+    ' ‖ 旗标=' + GA_GATE + ' ⇒ 有效种类下限=' + GA_KINDS +
+    (GA_GATE === 3 ? '（与产品门 broad 的种类那条齐平）' : GA_GATE < 3 ? '（旗标低于 3 已被夹回 3：**本门槛不可能比产品门更宽**）' : '（⚠ 种类那条被加严到 ' + GA_GATE + ' 种：这一臂严于产品门' + (GA_GATE >= 99 ? '，是饿退对照腿' : '') + '）') +
+    ' ‖ 参照 = ' + (GA_INC ? '热启动起点（G ' + GA_INC.gMulti.toFixed(1) + '/' + GA_INC.gLong.toFixed(1) + ' ‖ 兑 ' +
+      GA_INC.landMulti.toFixed(2) + '/' + GA_INC.landLong.toFixed(2) + '，同一 n=' + GA_GATE_GAMES + ' 局）' : '⚠ 无热启动参照 ⇒ 只判种类（净兑现那条没参与）') +
+    ' ‖ 每代取 top-3 × 两模式 × ' + GA_GATE_GAMES + ' 局 ‖ 带内取宽 ' + (GA_BAND > 0 ? GA_BAND : '（关）') + '：' +
+    '审计 ' + GA_STAT.audits + ' 次 ‖ 宽代 ' + GA_STAT.healthyGens + '/' + GENS + ' ‖ 饿退代 ' + GA_STAT.starvedGens +
+    ' ‖ 换粒进席 ' + GA_STAT.swapped + ' 次' + (GA_STAT.noRef ? ' ‖ ⚠ 无参照的代 ' + GA_STAT.noRef : '') +
+    ' ‖ 末代 top-3 = ' + GA_STAT.lastEff1 +
+    (GA_STAT.healthyGens === 0 ? '  ⚠ 一代都不宽 ⇒ 全程饿退 = 这根等于没开（不许当"测过了"引用）' : ''));
 }
 
 const POOL = [Bots.pickRandom, Bots.pickAggro, Bots.pickDefend, Bots.pickBalanced,
@@ -2754,7 +2784,9 @@ const meta = {
     selGiftVeto: (SEL_GIFT_VETO > 0 ? SEL_GIFT_VETO : null), giftVeto: GIFT_VETO_LOG, giftVetoAllSpam: GIFT_VETO_ALL_SPAM,
     selKeepCastKeys: (SEL_KEEP > 0 ? SEL_KEEP_CAST_KEYS : null),   // v1.5.266：出手口径名单（环/蓄能不打血）
     /* §十一 C：演化期健康门槛的开没开、审了多少次、饿退几代 —— 关档时整条 null（与历史臂同形）。 */
-    gaGate: (GA_GATE > 0 ? { line: GA_GATE, games: GA_GATE_GAMES, band: GA_BAND, audits: GA_STAT.audits,
+    gaGate: (GA_GATE > 0 ? { caliber: '两模式 effSkills≥' + GA_KINDS + '（种类那条 = 产品门 broad）∧ 两模式 effSkillsLand≥参照−' + LAND_TOL + '（那条 = pool-frontier-lib.isWideVs）', kindsFloor: GA_KINDS, sameAsBroadKinds: GA_GATE === 3, switch: GA_GATE, games: GA_GATE_GAMES, band: GA_BAND,
+      ref: GA_INC ? { gMulti: GA_INC.gMulti, gLong: GA_INC.gLong, landMulti: GA_INC.landMulti, landLong: GA_INC.landLong } : null,
+      noRefGens: GA_STAT.noRef, audits: GA_STAT.audits,
       healthyGens: GA_STAT.healthyGens, starvedGens: GA_STAT.starvedGens, swapped: GA_STAT.swapped,
       eff1Mean: GA_STAT.healthyGens ? Number((GA_STAT.eff1Sum / GA_STAT.healthyGens).toFixed(2)) : null,
       lastEff1: GA_STAT.lastEff1, gens: GENS } : null),

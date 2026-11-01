@@ -11,7 +11,7 @@
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { sandbox, loadChamp, rejectUnknownFlags } from '../audit-lib.mjs';
+import { sandbox, loadChamp, rejectUnknownFlags, chargeProfile } from '../audit-lib.mjs';   // chargeProfile = 珠账的单一来源（与门 `bead`、mastery 同一量具）
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi } from './pg-lib.mjs';
@@ -663,11 +663,21 @@ if (SMOKE > 0) {
     console.error('⛔ 冒烟红：非ジ出手 ' + nk + ' 种、决胜率 ' + (100 * (1 - draws / SMOKE)).toFixed(1) + '% ⇒ 这一档教师蒸出来的是空转包，**不写产物**（省下后面的考卷腿）。');
     process.exit(12);
   }
-  /* 只攒不放（ration4 实测：得珠 1324、花 0、过期 1324 = 100% 浪费，而我直到 mastery 才看见）：
-   *   ⚠ 分母闸门——一次珠都没得到的包不在这一条管辖内（那是"进不了菜单"那一类，另说），别把"读不出"判成"违规"。 */
-  if (beadGot >= 50 && waste != null && waste >= 0.9) {
-    console.error('⛔ 冒烟红：得到 ' + beadGot + ' 颗珠却几乎全过期（浪费 ' + (100 * waste).toFixed(1) + '%、花了 ' + beadSpent + '）' +
-      ' ⇒ 珠经济被打破 = 这一档教师只教会"攒"没教会"用"，**不写产物**。');
+  /* 珠账判据**不自己发明**：调产品门 `bead` 的同一条（`champion-gate.mjs` L1「攒下来的珠没有被囤成一堆过期废物」
+   *   = 过期 **≤5 颗/局（绝对量，不看比率）** ‖ **得珠 = 0 ⇒ 不适用**（不走珠经济是风格，不是缺陷）），
+   *   量具也共用 `audit-lib.chargeProfile`（长程 n=40）。
+   *   我上一版写的是"浪费率 ≥90%"的**比率**判据 ⇒ 那会把"攒得极少"与"囤死"判成同一件事
+   *   （`pool-frontier-lib` 的 `isClosedShaped` 注释记录的正是这个病：两种形态被同一根率混掉）。 */
+  const beadProf = (typeof chargeProfile === 'function') ? chargeProfile(W, Float64Array.from(finalPv), 'long', 40) : null;
+  const expPerGame = beadProf && beadProf.games ? beadProf.expired / beadProf.games : null;
+  if (beadProf) console.log('  ⚑ 珠账（与门 bead 同尺：chargeProfile long n=40）：得 ' + beadProf.gained + ' 花 ' + beadProf.spent +
+    ' 过期 ' + beadProf.expired + ' ⇒ ' + (expPerGame == null ? '—' : expPerGame.toFixed(1)) + ' 颗/局（线 ≤5）' +
+    (beadProf.gained === 0 ? ' ‖ 判：不适用（得珠 0 ⇒ 不走珠经济）' : (expPerGame > 5 ? ' ‖ 判：⛔ 超线' : ' ‖ 判：✔')) +
+    ' ‖ 花珠率 ' + (100 * (beadProf.spentRate || 0)).toFixed(1) + '%' +
+    ' ‖（镜里自查，只记录：得 ' + beadGot + ' 花 ' + beadSpent + ' 过期 ' + beadExp + (waste == null ? '' : ' ⇒ 浪费率 ' + (100 * waste).toFixed(1) + '%') + '）');
+  if (beadProf && beadProf.gained > 0 && expPerGame != null && expPerGame > 5) {
+    console.error('⛔ 冒烟红（门 bead 同尺）：过期 ' + expPerGame.toFixed(1) + ' 颗/局 > 5 且得珠 ' + beadProf.gained +
+      ' ⇒ 只教会"攒"没教会"用"，**不写产物**（省下后面的考卷腿）。');
     process.exit(14);
   }
 }
