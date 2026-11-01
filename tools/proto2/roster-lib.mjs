@@ -47,13 +47,15 @@ export function rosterFromArg(W, T, s, tag) {
   process.exit(2);
 }
 
-/* 桌形串（`3:multi,5:multi`）⇒ {n,mode} 列表；空串 ⇒ null（沿用 arena2 默认 11 格）。 */
+/* 桌形串（`3:multi,5:multi`）⇒ {n,mode} 列表；空串 ⇒ null（沿用 arena2 默认 11 格）。
+ * `:rN` 后缀（ZCode · 11-02 夜）= **逐形经济补贴**（该形每回合每席 +N ep；缺省 = arena 级 regen）：
+ *   蒸馏采集要穷富混装——穷桌教攒钱/短程，富桌才能演示大雷(5ジ)/激光眼/投资块（11-02 两次冒烟红的修法）。 */
 export function shapesFromArg(str, tag, dflt) {
   const s = String(str == null || str === '' ? (dflt || '') : str);
   if (!s) return null;
   return s.split(',').map((x) => {
-    const m = /^(\d+):([a-z0-9]+)$/i.exec(x.trim());
-    if (!m) { console.error('⛔ ' + tag + '：--arenaShapes 只认 n:mode（收到 "' + x + '"）'); process.exit(2); }
-    return { n: Number(m[1]), mode: m[2] };
+    const m = /^(\d+):([a-z0-9]+)(?::r(\d+))?$/i.exec(x.trim());
+    if (!m) { console.error('⛔ ' + tag + '：--arenaShapes 只认 n:mode[:rN]（收到 "' + x + '"）'); process.exit(2); }
+    return { n: Number(m[1]), mode: m[2], regen: m[3] == null ? null : Number(m[3]) };
   });
 }

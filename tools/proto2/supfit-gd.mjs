@@ -20,7 +20,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -84,7 +84,7 @@ if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 �
 const A2_POOL_ARG = String(arg('arenaPool', ''));
 const A2_ROSTER = rosterFromArg(W, T, A2_POOL_ARG, 'supfit-gd');
 const A2_SHAPES = shapesFromArg(arg('arenaShapes', A2_POOL_ARG ? '3:multi,5:multi' : ''), 'supfit-gd');
-const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: !A2_ROSTER, stratCap: A2_ROSTER ? undefined : 2, stratMix: A2_ROSTER ? undefined : 0.5, roster: A2_ROSTER || undefined, shapes: A2_SHAPES || undefined });
+const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: !A2_ROSTER, stratCap: A2_ROSTER ? undefined : 2, stratMix: A2_ROSTER ? undefined : 0.5, roster: A2_ROSTER || undefined, shapes: A2_SHAPES || undefined, regen: Number(arg('regen', 0)) || 0 });
 
 /* ---- 收集：与 chain-supfit 逐字同流（seed 20261030 LCG、同 salt/局号、同教师、同克隆）----
  * ⚑ `--dagger=R`（默认 0）：round 0 = 教师自访（= A 臂原样，局号 300000+/盐 4242）；
@@ -326,7 +326,9 @@ const ration5Pick = (state, pid, cs) => {
  *   挑衅→转移/制御 = 挑衅者知道"谁欠我一刀"（resolve.js:1135 `you.tauntByPending.push(i)` ⇒ 目标.tauntBy += 施放者）。
  * 干预全关协议：本教师供 GD3-ALL 训练 ⇒ 训练侧四键必须 0；教师标签不依赖任何引擎注入。
  * 剂量：DOSE6 每格每局上限（连招/功能卡全部窄剂量，让配给骨架管经济、门管语义）。 */
-const DOSE6 = { firestorm: 1, curse: 2, armor: 2, taunt: 1, transfer: 1, proto: 1, mine: 1, rod: 1, holo: 1, cannon: 2 };
+const DOSE6 = { firestorm: 1, curse: 2, armor: 2, taunt: 1, transfer: 1, proto: 1, mine: 1, rod: 1, holo: 1, cannon: 2, railgun: 2 };
+/* ⚑ railgun 也要配额：富桌（:r2）上无配额的炮会单线吃满标签（11-02 shake3 实测 103/240），
+ *   后面的收割/投资块全部饿死。配额超了就让位——"分配"住在教师里，与 ration 的哲学同一族。 */
 const highestHpEnemy = (state, pid, cs, key) => {
   let best = null;
   for (const c of cs) {
@@ -354,21 +356,20 @@ const ration6Pick = (state, pid, cs) => {
   const bt = pickKey(cs, R.SK.BIG_T);
   if (bt && castCount(state, pid, R.SK.BIG_T) < RATION.bigT) return bt;
   const rg = pickKey(cs, R.SK.RAILGUN, 'elec') || pickKey(cs, R.SK.RAILGUN);
-  if (rg) return rg;
+  if (rg && castCount(state, pid, R.SK.RAILGUN) < DOSE6.railgun) return rg;
   const hasBead = ((me.elec || 0) > 0) || ((me.boom || 0) > 0);
   if (hasBead && me.ep < 3) return cs.find((c) => c.key === R.SK.JI) || null;
   if (!hasBead && me.ep >= 2) { const ch = pickKey(cs, R.SK.CHARGE, 'elec') || pickKey(cs, R.SK.CHARGE); if (ch) return ch; }
-  /* —— 批2 ① 贴贴→天火：手里有我贴的符咒就引爆（天火全场 AoE、不需选目标）；没弹先贴（剂量 2，符咒可被防御挡）—— */
+  /* —— 收割块（时敏：转化**已有**投资，过期作废 ⇒ 保持在前；都是窄门，不破蓄钱阶梯）——
+   * ① 天火：引爆自己贴的符咒（符咒停留 ≤3 回合，过期白贴）；
+   * ② 坦克集火：目标已被藤甲贴（fireWeakNow）⇒ 火伤+1 穿防转移不走；
+   * ③ 挑衅回收：有人欠我一刀（我挑衅过还没打回）⇒ 转移给血最高第三者，转移没货就原型制御全挡；
+   * ④ 全息（均势盾/队友盾）：将死之席（hp≤1）且**别的敌人**上一手正打它 ⇒ 送盾否认终结
+   *    （队伍模式 = 给队友送盾；README 理想形态同一张卡，目标选择差在桌制）。 */
   const fsm = pickKey(cs, R.SK.FIRESTORM);
   if (fsm && myStickersOn(state, pid) >= 1 && castCount(state, pid, R.SK.FIRESTORM) < DOSE6.firestorm) return fsm;
-  const cu = pickKey(cs, R.SK.CURSE);
-  if (cu && castCount(state, pid, R.SK.CURSE) < DOSE6.curse) return cu;
-  /* —— 批2 ② 藤甲→坦克集火：目标已火弱 ⇒ 坦克（火伤+1、穿防、转移不走）；否则先贴（血最高者=最大威胁）—— */
   const tkWeak = cs.find((c) => c.key === R.SK.TANK && state.p[c.target] && state.p[c.target].fireWeakNow);
   if (tkWeak) return tkWeak;
-  const ar = highestHpEnemy(state, pid, cs, R.SK.ARMOR);
-  if (ar && castCount(state, pid, R.SK.ARMOR) < DOSE6.armor) return ar;
-  /* —— 批2 ③ 挑衅→转移/制御：有人欠我一刀（我挑衅过、还没打回来）⇒ 优先转移给血最高的第三者，转移没货就原型制御全挡 —— */
   const owes = state.p.some((q) => q && q.hp > 0 && (q.tauntBy || []).indexOf(pid) >= 0);
   if (owes) {
     const tr = highestHpEnemy(state, pid, cs, R.SK.TRANSFER);
@@ -376,16 +377,6 @@ const ration6Pick = (state, pid, cs) => {
     const pr = pickKey(cs, R.SK.PROTO);
     if (pr && castCount(state, pid, R.SK.PROTO) < DOSE6.proto) return pr;
   }
-  const tn = highestHpEnemy(state, pid, cs, R.SK.TAUNT);
-  if (tn && castCount(state, pid, R.SK.TAUNT) < DOSE6.taunt) return tn;   /* 连招前半：给最大威胁挂必打义务 */
-  /* —— 批2 ④⑤ 地雷/避雷针：布防窄剂量。避雷针门 = 桌上有买得起大雷的敌人（ep≥5）—— */
-  const mn = pickKey(cs, R.SK.MINE);
-  if (mn && castCount(state, pid, R.SK.MINE) < DOSE6.mine) return mn;
-  const rodThreat = state.p.some((q) => q && q.hp > 0 && (q.ep || 0) >= 5);
-  const rd = pickKey(cs, R.SK.ROD);
-  if (rd && rodThreat && castCount(state, pid, R.SK.ROD) < DOSE6.rod) return rd;
-  /* —— 批3 全息（均势盾/队友盾）：将死之席（hp≤1）且**别的敌人**上一手正打它 ⇒ 送盾否认终结；
-   *      队伍模式下这就是"给队友送盾"（README 理想形态同一张卡，目标选择差在桌制）。 —— */
   const finishingOn = (t) => state.p.some((q) => q && q.hp > 0 && q.id !== t.id &&
     q.lastTarget === t.id && q.lastSkill && R.byKey[q.lastSkill] && R.byKey[q.lastSkill].cat === 'attack');
   const holo = (castCount(state, pid, R.SK.HOLO) < DOSE6.holo)
@@ -393,15 +384,7 @@ const ration6Pick = (state, pid, cs) => {
         state.p[c.target].hp <= 1 && finishingOn(state.p[c.target]))
     : null;
   if (holo) return holo;
-  /* —— 批3 过载炮：目标上的是**反弹**（激光眼管别的防席；炮穿防穿反弹但会被攻击抵消）—— */
-  const cn = cs.find((c) => c.key === R.SK.CANNON && state.p[c.target] && state.p[c.target].lastSkill === R.SK.REFLECT);
-  if (cn && castCount(state, pid, R.SK.CANNON) < DOSE6.cannon) return cn;
-  /* —— 批3 防御系保底（横切）：自己缺血、没人欠我刀、环也不急 ⇒ 原型制御挡一手 —— */
-  if (me.hp < (state.mode && state.mode.hp || 3) && castCount(state, pid, R.SK.PROTO) < DOSE6.proto) {
-    const pr2 = pickKey(cs, R.SK.PROTO);
-    if (pr2) return pr2;
-  }
-  /* —— 环 + 短程（ration 骨架尾）—— */
+  /* —— 环 + 短程（ration 骨架尾，canAffordLater 经济门原样）—— */
   const ring = pickKey(cs, R.SK.RING);
   if (ring && (me.ringStreak > 0 || castCount(state, pid, R.SK.RING) < RATION.ring)) return ring;
   if (canAffordLater(state, pid)) {
@@ -409,6 +392,31 @@ const ration6Pick = (state, pid, cs) => {
     if (sw && castCount(state, pid, R.SK.SWORD) < SHORT_DOSE.sword) return sw;
     const gn = lowestHpEnemy(state, pid, cs, R.SK.GUN);
     if (gn && castCount(state, pid, R.SK.GUN) < SHORT_DOSE.gun) return gn;
+  }
+  /* —— 投资块（批2/批3 新开投资：全部挂 canAffordLater 经济门——穷拍一律攒钱，
+   *    这是 11-02 00:5x 全量冒烟红的修法：v1 把这些插在环之前，1ジ 收入每一拍被花光 ⇒
+   *    大雷/电磁炮的蓄钱窗口永不出现（2400 组开火线标签=0、珠浪费 100%）。 —— */
+  if (canAffordLater(state, pid)) {
+    const cu = pickKey(cs, R.SK.CURSE);                                        /* 给天火备弹 */
+    if (cu && castCount(state, pid, R.SK.CURSE) < DOSE6.curse) return cu;
+    const ar = highestHpEnemy(state, pid, cs, R.SK.ARMOR);                     /* 贴最大威胁：自得反弹 + 目标火弱 */
+    if (ar && castCount(state, pid, R.SK.ARMOR) < DOSE6.armor) return ar;
+    const tn = highestHpEnemy(state, pid, cs, R.SK.TAUNT);                     /* 连招前半：挂必打义务 */
+    if (tn && castCount(state, pid, R.SK.TAUNT) < DOSE6.taunt) return tn;
+    const mn = pickKey(cs, R.SK.MINE);
+    if (mn && castCount(state, pid, R.SK.MINE) < DOSE6.mine) return mn;
+    const rodThreat = state.p.some((q) => q && q.hp > 0 && (q.ep || 0) >= 5);  /* 桌上有买得起大雷的敌人 */
+    const rd = pickKey(cs, R.SK.ROD);
+    if (rd && rodThreat && castCount(state, pid, R.SK.ROD) < DOSE6.rod) return rd;
+    const cn = cs.find((c) => c.key === R.SK.CANNON && state.p[c.target] && state.p[c.target].lastSkill === R.SK.REFLECT);
+    if (cn && castCount(state, pid, R.SK.CANNON) < DOSE6.cannon) return cn;    /* 炮穿防穿反弹（激光眼管其余防席） */
+  }
+  /* —— 防御系保底（横切，用户裁"防御类不能完全没有"）：缺血就挡一手；
+   *      穷拍豁口 = hp≤1 的绝望挡（保命优先于攒钱），其余照经济门。 —— */
+  if (me.hp < ((state.mode && state.mode.hp) || 3) && castCount(state, pid, R.SK.PROTO) < DOSE6.proto &&
+      (me.hp <= 1 || canAffordLater(state, pid))) {
+    const pr2 = pickKey(cs, R.SK.PROTO);
+    if (pr2) return pr2;
   }
   return pickChain(state, pid, cs, R);
 };

@@ -107,6 +107,11 @@ export function createArena2(W, opts) {
   const shapes = (o.shapes && o.shapes.length ? o.shapes : SHAPES).slice();
   const temp = o.temp == null ? TEMP_DEFAULT : Number(o.temp);
   if (!(temp > 0)) throw new Error('createArena2: temp 要正数（收到 ' + o.temp + '）');
+  /* `regen=`（ZCode · 11-02 夜）：**采集桌经济补贴**（每回合每席 +N ep，透传 oneGameN 的 GOPT.regen）。
+   * 为什么要有：穷桌（1ジ/回合）上教师永远演示不出大雷(5ジ)/激光眼(爆珠)/投资块——11-02 00:5x 两次蒸馏冒烟红
+   *   （2400 组开火线标签=0）的诊断就是这一格。默认 0 ⇒ 全部既有调用逐字不变（GA 适配度桌不动）。
+   * ⚠ 补贴桌量出的分数**不可与补贴前横比** ⇒ 进指纹，跨口径对表当场可见。 */
+  const REGEN = Math.max(0, Math.floor(Number(o.regen) || 0));
   /* `highN=`（10-29 夜）：**高人数课程**。只改**训练环**的桌形抽样权重（n≥8 每格重复 highN 次），
    *   终局/冻结验证仍用**均匀的 11 格**（读数口径不能被课程改掉）。用来判 8P/10P 的弱是"训练里见得少"还是"表示/池化不行"。 */
   const highNW = Math.max(1, Math.floor(Number(o.highN) || 1));
@@ -130,9 +135,10 @@ export function createArena2(W, opts) {
   const stratCap = Math.max(1, Math.floor(Number(o.stratCap) || PREDATORS.length));
   const stratMix = Math.min(1, Math.max(0, o.stratMix == null ? 1 : Number(o.stratMix)));
   const fp = ['arena2.v' + ARENA2_VERSION, 'pool=' + poolFp, 'poolSeed=' + poolSeed,
-    'shapes=' + shapes.map((s) => s.n + ':' + s.mode).join(','),
+    'shapes=' + shapes.map((s) => s.n + ':' + s.mode + (s.regen != null ? ':r' + s.regen : '')).join(','),
     'roster=' + roster.map((r) => r.name).join(','),
     highNW > 1 ? 'highN=' + highNW + '（仅训练环）' : 'highN=1',
+    'regen=' + REGEN,
     stratified ? 'stratified=' + PREDATORS.join('+') + '~cap' + stratCap + '~mix' + stratMix : 'stratified=0'].join('|');
   const fixedByKey = {};
   for (const r of roster) if (r.kind === 'fixed') fixedByKey[r.name.slice(5)] = r.sel;
@@ -172,7 +178,7 @@ export function createArena2(W, opts) {
       choosers[pid] = e.kind === 'random' ? randChooser(P, T, (seed ^ (pid * 2654435761)) >>> 0, R.SK.JI) : e.sel;
       classes[pid] = e.name;
     }
-    const rm = T.oneGameN(choosers, seed, n, { regen: 0, mode: shape.mode });
+    const rm = T.oneGameN(choosers, seed, n, { regen: shape.regen != null ? shape.regen : REGEN, mode: shape.mode });
     const st = rm.state;
     const hp = st.p[seat] ? Math.max(0, st.p[seat].hp) : 0;
     const win = rm.winner === seat;
