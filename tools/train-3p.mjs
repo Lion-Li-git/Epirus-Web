@@ -105,6 +105,8 @@ const SELF_ENV_KEYS = [
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
   'EPIRUS_GA_GATE', 'EPIRUS_GA_GATE_GAMES', 'EPIRUS_GA_BAND', 'EPIRUS_STALL_ABORT',
   'EPIRUS_HALL_TRACE', 'EPIRUS_HALL_TRACE_OUT',
+  'EPIRUS_HALL_TRACE_PROBE',   // ⤵ 11-01 深：M-1 连续下限罚（默认 0）
+  'EPIRUS_FITGW',   // 11-01 深（PREREG-MERGER §一）：指纹行加 top-3 只测不选的宽读数（默认关）
   'EPIRUS_WIDE_FINAL',   // 11-01 深（ZCode · PREREG-2026-11-01-WIDE-FINAL）：v4 终局同尺（默认关）   // 11-01 晚（ZCode · 千问交接 §五.3）：逐代名人堂/门槛指纹落盘（默认关 ⇒ 一条行为不变）   // 千问 §十一 C：演化期健康门槛（形状搬自 `evo.js:3952`）+ 它的测量长度 + 带内取宽的带宽 ‖ GA 臂级空转终止（`EPIRUS_STALL_ABORT` 已在 §六② 实现，名单此前漏登记）
   'EPIRUS_SEL_GIFT_VETO', 'EPIRUS_SEL_GIFT_VETO_GAMES',   // §E650（千问）：送盾当选 veto + 它的测量长度（默认关 ⇒ `gateOk` 那一次测量也不跑）
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
@@ -303,6 +305,10 @@ if (WIDE_FINAL && GA_GATE <= 0) {
 }
 let bestWideSeen = null;   /* v4：全程最宽粒快照（参数拷贝 ⇒ 育种变异不穿透） */
 let WIDE_FINAL_PICK = null;
+const FITGW = Number(process.env.EPIRUS_FITGW || 0);
+if (FITGW > 0 && GA_GATE <= 0) { console.error('[fitgw] ⛔ EPIRUS_FITGW 复用门槛读数，要与 EPIRUS_GA_GATE 同开'); process.exit(2); }
+const HALL_PROBE = Number(process.env.EPIRUS_HALL_TRACE_PROBE || 0);
+let PROBE_INC;   /* 探针参照：种子包同口径量一次（与 GA_INC 同式；GA_GATE 关时也成立） */
 const HALL_TRACE = Number(process.env.EPIRUS_HALL_TRACE || 0);
 const HALL_TRACE_OUT = String(process.env.EPIRUS_HALL_TRACE_OUT || ('scratch/hall-trace/' + (process.env.EPIRUS_ARM || 'arm') + '.jsonl'));
 if (HALL_TRACE) {
@@ -1958,7 +1964,16 @@ for (let gen = 0; gen < GENS; gen++) {
         }
       }
     }
-    let rank = reads.filter((r) => r.m.wide);
+    let rank;
+    if (FITGW > 0 && GA_INC) {
+      /* M-1（PREREG-MERGER §五）：连续下限罚进排序键——窄粒在父母面直接丢 fit，宽粒不必等二元 wide-first 恰好有候选 */
+      const FLOOR_LAND = (GA_INC.landMulti + GA_INC.landLong) / 2 - 0.10;
+      const pen = function (r) { return r.fit - FITGW * Math.max(0, FLOOR_LAND - (r.m.landMulti + r.m.landLong) / 2); };
+      rank = reads.slice().sort(function (a, b) { return pen(b) - pen(a); });
+      if (gen % 40 === 0) console.log('[fitgw] gen ' + gen + ' 排序键（罚后）: ' + rank.map(function (r) { return 'gi' + r.gi + '=' + pen(r).toFixed(3); }).join(' ‖ '));
+    } else {
+      rank = reads.filter((r) => r.m.wide);
+    }
     const nWide = rank.length;
     if (GA_BAND > 0 && rank.length > 1) {
       const tf = rank[0].fit;
@@ -1985,6 +2000,18 @@ for (let gen = 0; gen < GENS; gen++) {
     const rec = { gen: gen, bestFit: +(scored[0].r.fit.toFixed(4)),
       top3: scored.slice(0, 3).map(function (x, i) { return { gi: i, wid: widOfArr(x.params), fit: +(x.r.fit.toFixed(4)) }; }),
       hall: hall.map(function (h) { return h.wid || widOfArr(h.params); }) };
+    if (HALL_PROBE) {
+      if (PROBE_INC === undefined) PROBE_INC = seedParams ? wideMetricsOf(seedParams) : null;
+      const pr = [];
+      for (let pi = 0; pi < Math.min(3, scored.length); pi++) {
+        const pm = wideMetricsOf(scored[pi].params);
+        pr.push({ gi: pi, wid: widOfArr(scored[pi].params),
+          gMulti: +pm.gMulti.toFixed(2), gLong: +pm.gLong.toFixed(2),
+          landMulti: +pm.landMulti.toFixed(2), landLong: +pm.landLong.toFixed(2),
+          wide: (pm.gMulti >= 3 && pm.gLong >= 3) && (PROBE_INC ? isWideVs(pm, PROBE_INC) : true) });
+      }
+      rec.probe = { ref: PROBE_INC ? { lm: +PROBE_INC.landMulti.toFixed(2), ll: +PROBE_INC.landLong.toFixed(2) } : null, reads: pr };
+    }
     if (gateReads) rec.gate = { kinds: GA_KINDS, rank: gateRank,
       reads: gateReads.map(function (r) { return { gi: r.gi, wid: widOfArr(scored[r.gi].params), fit: +(r.fit.toFixed(4)),
         gMulti: +r.m.gMulti.toFixed(2), gLong: +r.m.gLong.toFixed(2),
