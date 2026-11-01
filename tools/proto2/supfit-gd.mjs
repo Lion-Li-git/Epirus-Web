@@ -326,7 +326,7 @@ const ration5Pick = (state, pid, cs) => {
  *   挑衅→转移/制御 = 挑衅者知道"谁欠我一刀"（resolve.js:1135 `you.tauntByPending.push(i)` ⇒ 目标.tauntBy += 施放者）。
  * 干预全关协议：本教师供 GD3-ALL 训练 ⇒ 训练侧四键必须 0；教师标签不依赖任何引擎注入。
  * 剂量：DOSE6 每格每局上限（连招/功能卡全部窄剂量，让配给骨架管经济、门管语义）。 */
-const DOSE6 = { firestorm: 1, curse: 2, armor: 2, taunt: 1, transfer: 1, proto: 1, mine: 1, rod: 1, holo: 1, cannon: 2, railgun: 2 };
+const DOSE6 = { firestorm: 1, curse: 2, armor: 2, taunt: 1, transfer: 1, proto: 1, mine: 1, rod: 1, holo: 1, cannon: 2, railgun: 3 };
 /* ⚑ railgun 也要配额：富桌（:r2）上无配额的炮会单线吃满标签（11-02 shake3 实测 103/240），
  *   后面的收割/投资块全部饿死。配额超了就让位——"分配"住在教师里，与 ration 的哲学同一族。 */
 const highestHpEnemy = (state, pid, cs, key) => {
@@ -359,7 +359,9 @@ const ration6Pick = (state, pid, cs) => {
   if (rg && castCount(state, pid, R.SK.RAILGUN) < DOSE6.railgun) return rg;
   const hasBead = ((me.elec || 0) > 0) || ((me.boom || 0) > 0);
   if (hasBead && me.ep < 3) return cs.find((c) => c.key === R.SK.JI) || null;
-  if (!hasBead && me.ep >= 2) { const ch = pickKey(cs, R.SK.CHARGE, 'elec') || pickKey(cs, R.SK.CHARGE); if (ch) return ch; }
+  /* 蓄能天花板（03:4x，珠账闸修法）：富余（ep>4）不再教蓄——无限蓄能标签把产物教成"只攒不花"
+   *   （floor 版冒烟：决胜 62.5% ✔ 但 long chargeProfile 238.8 颗/局全过期）。 */
+  if (!hasBead && me.ep >= 2 && me.ep <= 4) { const ch = pickKey(cs, R.SK.CHARGE, 'elec') || pickKey(cs, R.SK.CHARGE); if (ch) return ch; }
   /* —— 收割块（时敏：转化**已有**投资，过期作废 ⇒ 保持在前；都是窄门，不破蓄钱阶梯）——
    * ① 天火：引爆自己贴的符咒（符咒停留 ≤3 回合，过期白贴）；
    * ② 坦克集火：目标已被藤甲贴（fireWeakNow）⇒ 火伤+1 穿防转移不走；
@@ -384,9 +386,14 @@ const ration6Pick = (state, pid, cs) => {
         state.p[c.target].hp <= 1 && finishingOn(state.p[c.target]))
     : null;
   if (holo) return holo;
-  /* —— 环 + 短程（ration 骨架尾，canAffordLater 经济门原样）—— */
+  /* —— 环 + 短程（ration 骨架尾）—— */
   const ring = pickKey(cs, R.SK.RING);
   if (ring && (me.ringStreak > 0 || castCount(state, pid, R.SK.RING) < RATION.ring)) return ring;
+  /* ⚑ 穷桌攻击地板（03:3x，M-3 翻案修法）：枪 2/局**不挂经济门**——节俭不能节成僵局
+   *   （03:1x 全镜像实验证明：canAffordLater 全门控 ⇒ 教师穷镜像零攻击输出 ⇒ 产物镜像决胜 0%；
+   *    gun 是 1ジ 的最便宜输出，配 2 发地板既保攻击样本又不破"ep≥3 才谈剑/投资"的蓄钱阶梯）。 */
+  const gnFloor = lowestHpEnemy(state, pid, cs, R.SK.GUN);
+  if (gnFloor && castCount(state, pid, R.SK.GUN) < 2) return gnFloor;
   if (canAffordLater(state, pid)) {
     const sw = lowestHpEnemy(state, pid, cs, R.SK.SWORD);
     if (sw && castCount(state, pid, R.SK.SWORD) < SHORT_DOSE.sword) return sw;
