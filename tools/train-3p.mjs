@@ -102,6 +102,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
   'EPIRUS_HALL_SEED',   // v1.5.277 §E114：把起点补进终局重验的候选池（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
+  'EPIRUS_GA_GATE', 'EPIRUS_GA_GATE_GAMES', 'EPIRUS_GA_BAND', 'EPIRUS_STALL_ABORT',   // 千问 §十一 C：演化期健康门槛（形状搬自 `evo.js:3952`）+ 它的测量长度 + 带内取宽的带宽 ‖ GA 臂级空转终止（`EPIRUS_STALL_ABORT` 已在 §六② 实现，名单此前漏登记）
   'EPIRUS_SEL_GIFT_VETO', 'EPIRUS_SEL_GIFT_VETO_GAMES',   // §E650（千问）：送盾当选 veto + 它的测量长度（默认关 ⇒ `gateOk` 那一次测量也不跑）
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
   'EPIRUS_SEL_CLEAR', 'EPIRUS_SEL_CLEAR_GAMES',   // §E787（10-26 夜班后追加，用户裁"加上开跑"）：当选面的**场B 清场地板**（veto，不进 fit）+ 它的测量局数（默认 40 = 官方口径）
@@ -273,6 +274,16 @@ const HALL_SEED = Number(process.env.EPIRUS_HALL_SEED || 0) > 0 ? 1 : 0;
  * 标定（`mirrorHealth(20,5,'multi')` 实测）：现役 `2.66（3 种）` · 2P 槽 `2.98（3 种）` · §N28 三粒塌缩冠军 `1.00~1.24` · 最宽那粒 `1.75（3 种）`
  * ⇒ 线画在 1.5 只砍"塌成一种卡"，不砍"宽但兑现率低"。默认关，开了必须自己说剔了几粒。 */
 const BREADTH_FLOOR = Number(process.env.EPIRUS_BREADTH_FLOOR || 0);
+/* ===== §十一 C（千问 · 11-01 傍晚，用户"开一下"）：把**演化期**健康门槛搬进 GA（不是终局筛）=====
+ * 形状搬自线上 trainer（`js/train/evo.js:3952`）：不过自对局健康门槛 ⇒ 不许进容差带 / 不配当选，
+ *   然后"先按分数取带、带内取覆盖熵最高者"。与在册 `EPIRUS_BREADTH_FLOOR` 的区别：那根作用在**终局 `sel.clean`**
+ *   （train-3p.mjs 里那处），正是 §十三 我批评过的"事后否决不塑形"；这两根作用在**每代的名人堂准入**上。
+ * 成本明说：每代只检 top-3 候选 × `GA_GATE_GAMES` 局镜 ⇒ 默认 6 局时预算增量约 +28%（臂账里如实写，别当免费）。
+ * 全代都不过线 ⇒ **饿退**：照收原生前两粒并计数（`--selCap` v1 把整代挡空后当场炸的那笔教训）。 */
+const GA_GATE = Math.max(0, Number(process.env.EPIRUS_GA_GATE || 0));
+const GA_GATE_GAMES = Math.max(2, Number(process.env.EPIRUS_GA_GATE_GAMES || 6) || 6);
+const GA_BAND = Math.max(0, Number(process.env.EPIRUS_GA_BAND || 0));
+const GA_STAT = { audits: 0, healthyGens: 0, starvedGens: 0, swapped: 0, eff1Sum: 0, lastEff1: '' };
 let BREADTH_LOG = null, BREADTH_ALL_NARROW = false;
 /* ===== §E650（千问 · 预注册 `docs/research/PREREG-2026-10-19-gift-veto-qoder.md` · **默认 0 ⇒ 行为逐字不变**）=====
  * 送盾 veto：把"裸包送盾超线"从**只挡带内换人**（`bandPickByLand` 吃 `gateOk`）升成**也挡当选**。
@@ -1871,8 +1882,44 @@ for (let gen = 0; gen < GENS; gen++) {
   scored.sort(function (a, b) { return b.r.fit - a.r.fit; });
   if (scored[0].r.fit > bestFit) { bestFit = scored[0].r.fit; bestParams = scored[0].params; sigStall = 0; noProg = 0; }
   else { sigStall++; noProg++; }
+  if (GA_GATE > 0) {
+    /* 每代对 top-3 做镜里健康读（`mirrorHealth.castByKey` 与在册各尺同源：它**只数成功非ジ出手**），
+     *   eff1 = 占比 ≥1% 的键数（§十七 的档线口径），带内按覆盖熵挑那两粒进名人堂。 */
+    const reads = [];
+    for (let gi = 0; gi < Math.min(3, scored.length); gi++) {
+      const mh = T.mirrorHealth(scored[gi].params, GA_GATE_GAMES, Math.max(2, N), T.trainMode());
+      const ck = Object.keys(mh.castByKey || {});
+      let tot = 0, mx = 0; for (const k of ck) { tot += mh.castByKey[k]; if (mh.castByKey[k] > mx) mx = mh.castByKey[k]; }
+      let H = 0;
+      for (const k of ck) { const p = tot ? mh.castByKey[k] / tot : 0; if (p > 0) H -= p * Math.log(p); }
+      reads.push({ gi: gi, fit: scored[gi].r.fit, eff1: tot ? ck.filter((k) => mh.castByKey[k] / tot >= 0.01).length : 0,
+        ent: H, maxShare: tot ? mx / tot : 0 });
+      GA_STAT.audits++;
+    }
+    GA_STAT.lastEff1 = reads.map((r) => r.eff1).join('/');
+    let ok = reads.filter((r) => r.eff1 >= GA_GATE);
+    if (GA_BAND > 0 && ok.length > 1) {
+      const tf = ok[0].fit;
+      const band = ok.filter((r) => r.fit >= tf - GA_BAND);
+      band.sort(function (a, b) { return b.ent - a.ent; });
+      ok = band.concat(ok.filter(function (x) { return band.indexOf(x) < 0; }));
+    }
+    if (ok.length) {
+      GA_STAT.healthyGens++;
+      GA_STAT.eff1Sum += ok[0].eff1;
+      if (ok[0].gi !== 0) GA_STAT.swapped++;
+      const second = ok.length > 1 ? ok[1] : (ok[0].gi === 0 ? reads[1] : reads[0]);
+      addHall(scored[ok[0].gi].params, ok[0].fit);
+      if (second) addHall(scored[second.gi].params, second.fit);
+    } else {
+      GA_STAT.starvedGens++;
+      addHall(scored[0].params, scored[0].r.fit);
+      addHall(scored[1].params, scored[1].r.fit);
+    }
+  } else {
   addHall(scored[0].params, scored[0].r.fit);
   addHall(scored[1].params, scored[1].r.fit);
+  }
   if (gen % 20 === 0 || gen === GENS - 1) {
     const r = scored[0].r;
     const nf3 = function (v) { return v === null || v === undefined ? '未量' : v.toFixed(3); };
@@ -1959,6 +2006,16 @@ for (let gen = 0; gen < GENS; gen++) {
       + '产物**不写**：这一支等于什么都没练出来。');
     process.exit(13);
   }
+}
+
+/* §十一 C 的自证收尾：开档必须真审计过（`patch-must-prove-invoked` 的在册教训——覆盖式接入要自证"真被调用"）。 */
+if (GA_GATE > 0) {
+  if (GA_STAT.audits === 0) { console.error('⛔ --EPIRUS_GA_GATE 开着（=' + GA_GATE + '）但一次健康读都没跑 ⇒ 门槛没接电，这臂等于白跑：**不写产物**。'); process.exit(15); }
+  console.log('[GA 门槛] 线 eff1 ≥ ' + GA_GATE + ' ‖ 测量 ' + GA_GATE_GAMES + ' 局镜 × 每代 top-3 ‖ 带内取宽 ' + (GA_BAND > 0 ? GA_BAND : '（关）') +
+    '：审计 ' + GA_STAT.audits + ' 次 ‖ 过线代 ' + GA_STAT.healthyGens + '/' + GENS + ' ‖ 饿退代 ' + GA_STAT.starvedGens +
+    ' ‖ 因门槛换粒进席 ' + GA_STAT.swapped + ' 次 ‖ 末代 top-3 eff1 = ' + GA_STAT.lastEff1 +
+    ' ‖ 过线者平均 eff1 = ' + (GA_STAT.healthyGens ? (GA_STAT.eff1Sum / GA_STAT.healthyGens).toFixed(2) : '—') +
+    (GA_STAT.healthyGens === 0 ? '  ⚠ 一代都没过线 ⇒ 全程走饿退 = 这根等于没开（不许当"测过了"引用）' : ''));
 }
 
 const POOL = [Bots.pickRandom, Bots.pickAggro, Bots.pickDefend, Bots.pickBalanced,
@@ -2687,6 +2744,11 @@ const meta = {
      * 记 `games` 是硬要求：§E649 实测这条判定随抽样长度翻（20 局 6.15 / 100 局 4.94），**没带长度的送盾读数不许被引用**。 */
     selGiftVeto: (SEL_GIFT_VETO > 0 ? SEL_GIFT_VETO : null), giftVeto: GIFT_VETO_LOG, giftVetoAllSpam: GIFT_VETO_ALL_SPAM,
     selKeepCastKeys: (SEL_KEEP > 0 ? SEL_KEEP_CAST_KEYS : null),   // v1.5.266：出手口径名单（环/蓄能不打血）
+    /* §十一 C：演化期健康门槛的开没开、审了多少次、饿退几代 —— 关档时整条 null（与历史臂同形）。 */
+    gaGate: (GA_GATE > 0 ? { line: GA_GATE, games: GA_GATE_GAMES, band: GA_BAND, audits: GA_STAT.audits,
+      healthyGens: GA_STAT.healthyGens, starvedGens: GA_STAT.starvedGens, swapped: GA_STAT.swapped,
+      eff1Mean: GA_STAT.healthyGens ? Number((GA_STAT.eff1Sum / GA_STAT.healthyGens).toFixed(2)) : null,
+      lastEff1: GA_STAT.lastEff1, gens: GENS } : null),
     kill: KILL_REC, family: FAMILY_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     /* v1.7.4 S2a：训练期那档决策期改写也要记账 —— 只记"下达值"不够（本仓的教训：横幅证明变量、证明不了效果）。
      * ⇒ 两个都记：下达的 `h2p` 与写 meta 时消费点仍读到的 `h2pEffective`；两者不等 = 中途被改回去，产物不可信。 */
