@@ -48,7 +48,7 @@ const sb = {
 };
 sb.globalThis = sb;
 for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) {
+  'js/train/bots.js', 'js/train/policy.js', 'js/train/policy2.js', 'js/train/evo.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
 const file = CHAMP_FILE || (N > 2 ? 'js/bundled-champion-3p.js' : 'js/bundled-champion.js');
