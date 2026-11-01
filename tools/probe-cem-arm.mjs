@@ -36,7 +36,7 @@ const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
   'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap', 'masterySem', 'masteryMax',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames', 'arenaPool', 'arenaShapes', 'arenaDivK', 'selCap', 'killKinds', 'killStreak'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames', 'arenaPool', 'arenaShapes', 'arenaDivK', 'selCap', 'killKinds', 'killStreak', 'bandEntropy'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -299,13 +299,19 @@ const SEL_CAP = Number(arg('selCap', 0)) || 0;
 const KILL_KINDS = Math.max(0, Number(arg('killKinds', 0)) || 0);
 const KILL_STREAK = Math.max(2, Number(arg('killStreak', 5)) || 5);
 let lowKindRun = 0, KILLED = null;
+/* `--bandEntropy=<相对带宽>`（千问 · 11-01，PREREG-2026-11-01-ECON-LOCK §二）：**当选面**的覆盖熵tie-break。
+ *   先按 fit 降序，把 `fit ≥ topFit − 带宽×|topFit|` 的同带粒子改按非ジ出手熵降序排 ⇒ 同分带里"更宽"的那粒当选。
+ *   形状抄线上 trainer（`evo.js:3952`：健康门槛不过 ⇒ 压到所有健康候选之下、不许进容差带；然后胜率容差带内取覆盖熵最高者）。
+ *   ⛔ **不进 fit**（先例 `--selCap`/`BREADTH_FLOOR`：进 fit 就是"买分布卖强度"，§十三 实测过）。默认 0=关，关时一行都不许多走。 */
+const BAND_ENT = Math.max(0, Number(arg('bandEntropy', 0)) || 0);
+const BAND_STAT = { gens: 0, movedGens: 0, swaps: 0, bandSizes: [], soloGens: 0, topG: 0 };
 const SEL_STAT = { checked: 0, blocked: 0, starvedIter: 0, accepted: 0, worstSeen: 0 };
 if (ARENA_CUR !== 'net' && ARENA_CUR !== 'clean' && ARENA_CUR !== 'first') { console.error('⛔ --arenaCur 只认 net|clean|first（收到 ' + ARENA_CUR + '）'); process.exit(2); }
 /* ⚑ 响亮闸（ZCode · 10-31 晚，P-P5 首遍发臂当场栽的）：arena2 只在 `--arena2=1` 时建表，不带它 ⇒
  *   `evalOne` 静默掉进 `T.scoreMemberN` 内部对手表，而 `--arenaCur/--arenaStrat/…` 那一族在那条路上
  *   **全部不生效**（meta 里 `arena:null` / `currency:"scoreMemberN.fit"` 是事后才看得见的报警）。
  *   点了 arena 族旗标却不给 `--arena2=1` ⇒ 当场拒跑。 */
-if (!ARENA2 && ['arenaCur', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'arenaHold', 'arenaHighN', 'arenaDiverse', 'arenaPool', 'arenaShapes', 'arenaDivK', 'killKinds', 'killStreak']
+if (!ARENA2 && ['arenaCur', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'arenaHold', 'arenaHighN', 'arenaDiverse', 'arenaPool', 'arenaShapes', 'arenaDivK', 'killKinds', 'killStreak', 'bandEntropy']
     .some((k) => argv.some((x) => x === '--' + k || x.startsWith('--' + k + '=')))) {
   console.error('⛔ 点了 arena2 族旗标却没给 `--arena2=1` ⇒ arena2 桌不会建、这族旗标会静默掉进 scoreMemberN 内部对手表（10-31 晚 P-P5 首遍就是这么废的）。要么加 `--arena2=1`，要么去掉这族旗标。'); process.exit(2);
 }
@@ -536,7 +542,15 @@ function evalOne(params, gen, idx) {
     let dvFit = r.score;
     if (ARENA_DIVK > 0 && r.cat) { let dvc = 0; for (const k in r.cat) if (k !== R.SK.JI) dvc++; dvFit += ARENA_DIVK * dvc; }
     let kindN = 0; for (const k in r.cat) if (k !== R.SK.JI && r.cat[k] > 0) kindN++;
-    return { fit: dvFit, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard, kindN };
+    /* `--bandEntropy=` 的排序键（千问 · 11-01，PREREG-2026-11-01-ECON-LOCK §二）：非ジ出手分布的熵（nats）。
+     *   与 `kindN` 同一份 `r.cat` 单源 ⇒ 两把读数不许互相打架；`catG=exp(H)` 是"等效种类数"，只供打印。 */
+    let catEnt = 0;
+    if (r.cat) {
+      let tot = 0; const ks = [];
+      for (const k in r.cat) if (k !== R.SK.JI && r.cat[k] > 0) { tot += r.cat[k]; ks.push(k); }
+      if (tot > 0) for (const k of ks) { const p = r.cat[k] / tot; catEnt -= p * Math.log(p); }
+    }
+    return { fit: dvFit, first: r.first, top2: r.top2, draw: r.draw, games: r.games, maxCard: r.maxCard, kindN, catEnt, catG: Math.exp(catEnt) };
   }
   const opps = T.buildOpps(params, 0.05);
   const r = T.scoreMemberN(params, opps, GAMES, N, gen, idx, 0);
@@ -998,6 +1012,27 @@ let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
         .sort(function (a, b) { return scored[b].fit - scored[a].fit; });
       order = co.sort(function (a, b) { return scored[b].fit - scored[a].fit; }).concat(rest);
     } else order = scored.map(function (s, i) { return i; }).sort(function (a, b) { return scored[b].fit - scored[a].fit; });
+    /* 当选面 tie-break（PREREG §二）：同容差带内改按非ジ出手熵降序 ⇒ 带宽 0 时这段一行都不走。
+     *   ⚠ 只改**次序**不改 fit ⇒ σ/均值照旧按 fit 拟合（这是"约束"而不是"惩罚"的那条界线，越界就变成 §十三 的 selCap）。 */
+    if (BAND_ENT > 0 && order.length > 1) {
+      const topFit0 = scored[order[0]].fit;
+      /* 带宽 = **fit 绝对点**（勘误：第一版写成 `×|topFit|` 的相对带宽 ⇒ 在 fit≈0.31~0.5 的量级上
+       *   0.005~0.05 折成 0.0016~0.025 的点，比一代内的分差还窄 ⇒ 四档产物逐字节相同（11-01 实测，白跑一批）。
+       *   现在直接给点，并把"带内粒子数"打印出来——窄到只剩 1 粒会当场报警，不再静默等于没开。 */
+      const bandLo = topFit0 - BAND_ENT;
+      const inBand = []; const outBand = [];
+      for (const i of order) { if (scored[i].fit >= bandLo) inBand.push(i); else outBand.push(i); }
+      if (inBand.length > 1) inBand.sort(function (a, b) { return (scored[b].catEnt || 0) - (scored[a].catEnt || 0); });
+      const reordered = inBand.concat(outBand);
+      let swaps = 0;
+      for (let k = 0; k < reordered.length; k++) if (reordered[k] !== order[k]) swaps++;
+      BAND_STAT.gens++;
+      if (swaps > 0) { BAND_STAT.movedGens++; BAND_STAT.swaps += swaps; }
+      BAND_STAT.bandSizes.push(inBand.length);
+      if (inBand.length <= 1) BAND_STAT.soloGens++;
+      BAND_STAT.topG = scored[reordered[0]].catG || 0;
+      order = reordered;
+    }
     if (KILL_KINDS > 0) {
       const topFit = order.length ? order[0] : null;
       const kn = topFit == null ? null : scored[topFit].kindN;
@@ -1144,10 +1179,14 @@ if (P.__arch2) {
 if (SEL_CAP > 0) row.selCap = { cap: SEL_CAP, passed: SEL_STAT.accepted, checked: SEL_STAT.checked, blocked: SEL_STAT.blocked, starvedIter: SEL_STAT.starvedIter, worstSeen: SEL_STAT.worstSeen };
 if (OUT) {
   mkdirSync(dirname(OUT), { recursive: true });
+  /* ⚑ `packed` 的可见性有牙：11-01 我把产物写进 `if/else` 的 else 分支后，下面的容器标注还在引用它
+   *   ⇒ 每条 gen-3 臂**写完产物就当场 ReferenceError**（`.bak` 在、`.bak.meta.json` 从没落盘）。
+   *   现在把快照提到外层作用域，并且空臂/被杀臂时为 null（标注改判"读不出"而不是崩）。 */
+  let PACKED_SNAP = null;
   if (KILLED) { console.log('\n⛔ **本臂被中途淘汰判据杀掉**：连续 ' + KILLED.streak + ' 代最高分粒子出手种类 ' + KILLED.kindN +
     ' < ' + KILL_KINDS + '（第 ' + KILLED.atIter + ' 代，已花 ' + KILLED.gamesSpent + ' 局）⇒ **产物不写**（PREREG-2026-11-01-KILL-NARROW K-1）。'); }
   else { const packed = P.pack(best);
-  writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8'); }
+  writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8'); PACKED_SNAP = packed; }
   if (!KILLED) row.wrote = OUT;
   /* ⚑ 空臂标记（10-31）：产物与起点**逐字节相同** ⇒ 这一臂什么都没接受。
    *   动因是实测：`OB3S-BIGT-s7.bak` 与 `OB3S-BIGT-s11.bak` 的 md5 与父本 `OB3S-C2-s7.bak` 全等
@@ -1164,10 +1203,10 @@ if (OUT) {
   /* 代 2 补的标注：**产物自己说自己是哪一代理出来的**（容器字段 + 段表 + 每段权重区/bias 区 + 参数量）。
    * 为什么放这儿：以前读一枚包要照 `arch` 猜输入面、照长度猜形状，两处各写一遍下标就会静默错位
    *   （10-30 那笔事故：S1o 声明 5650、任何前向都不读 2688）。标注由 `pack()` 一次算出来 ⇒ 只有这一个真源。 */
-  if (P.__arch2) {
+  if (P.__arch2 && PACKED_SNAP) {
     const LL = P.__arch2.L;
     row.container = {
-      v: packed.v, arch: packed.arch, gen: LL.gen, dims: packed.dims, n: LL.n,
+      v: PACKED_SNAP.v, arch: PACKED_SNAP.arch, gen: LL.gen, dims: PACKED_SNAP.dims, n: LL.n,
       seg: LL.seg.map(function (s) {
         const inDim = { seatEnc: LL.seatIn, actEnc: LL.actIn, ctx: LL.ctxDim, cand: LL.candIn }[s.name];
         const rows = { seatEnc: LL.seatH, actEnc: LL.actH, ctx: LL.hid, cand: LL.hid2, policyHead: LL.hid2 }[s.name];
@@ -1189,6 +1228,13 @@ if (MASTERY_ON) {
 }
 console.log('⚠ inLoopBest 是各臂**循环内部**的分（GA 走 shaped/内部择优，CEM 走原始 fit）⇒ 跨臂不可比；跨臂只比 holdoutFit / holdoutFirst（同一函数同一场）。');
 if (ARENA) {
+  if (BAND_ENT > 0) {
+    const bsMean = BAND_STAT.bandSizes.length ? BAND_STAT.bandSizes.reduce((a, b) => a + b, 0) / BAND_STAT.bandSizes.length : 0;
+    console.log('⚑ 当选面覆盖熵 tie-break（带宽 ' + BAND_ENT + '）：跑 ' + BAND_STAT.gens + ' 代 ‖ 换过序 ' + BAND_STAT.movedGens +
+      ' 代 ‖ 累计换位 ' + BAND_STAT.swaps + ' ‖ 带内平均粒子数 ' + bsMean.toFixed(1) + ' ‖ 末代当选粒 G(非ジ出手)=' + BAND_STAT.topG.toFixed(2) +
+      ' ‖ 带内只剩 1 粒的代 ' + BAND_STAT.soloGens + '/' + BAND_STAT.gens +
+      (BAND_STAT.swaps === 0 ? '  ⚠ 一次都没换 ⇒ 带宽太窄，这一档等于白开（不许当"测过了"引用）' : ''));
+  }
   console.log('⚑ arena2 终局（货币=' + ARENA_CUR + (ARENA_DIV ? '+多样性当选' : '') + (ARENA_STRAT ? '+分层场' : '') + '）：' + (ARENA_CUR === 'clean' ? '干净净胜' : '净胜') + ' ' + ho.fit.toFixed(3) + '（起点 ' + hoStart.fit.toFixed(3) + ' ⇒ Δ ' + (ho.fit - hoStart.fit).toFixed(3) + '）' +
     ' ‖ 夺1 ' + (100 * ho.first).toFixed(1) + '%（起点 ' + (100 * hoStart.first).toFixed(1) + '%）' +
     ' ‖ 平局 ' + (100 * ho.draw).toFixed(1) + '%（起点 ' + (100 * hoStart.draw).toFixed(1) + '%）' +
@@ -1256,6 +1302,12 @@ function appendIndex(o, row) {
   }
 }
 row.killKinds = KILL_KINDS > 0 ? { kinds: KILL_KINDS, streak: KILL_STREAK, killed: KILLED } : null;
+/* 当选面熵tie-break 的自证（关=整条 null；开必报"换过序的代数"，一次都没换=带宽太窄、这档等于白开） */
+row.bandEntropy = BAND_ENT > 0 ? {
+  band: BAND_ENT, gens: BAND_STAT.gens, movedGens: BAND_STAT.movedGens, swaps: BAND_STAT.swaps,
+  bandSizeMean: BAND_STAT.bandSizes.length ? Number((BAND_STAT.bandSizes.reduce((a, b) => a + b, 0) / BAND_STAT.bandSizes.length).toFixed(2)) : null,
+  finalTopG: Number(BAND_STAT.topG.toFixed(3))
+} : null;
 if (OUT) { mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT + '.meta.json', JSON.stringify(row, null, 1), 'utf8'); appendIndex(OUT, row); }
 /* `--headGate=1` 的红要真的把批挡住 ⇒ 非零退出（产物已落盘，事后仍可复盘，但**回执不许被当合格臂引用**）。
    缺省不开闸 ⇒ 历史臂与不带这个旗标的批次逐字不变。 */
