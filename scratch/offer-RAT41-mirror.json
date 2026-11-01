@@ -1,0 +1,66 @@
+{
+  "ts": "2026-11-01T07:28:55.233Z",
+  "rows": [
+    {
+      "pack": "scratch/ga-arms/GA-ration-s41.js",
+      "container": "v:92 gen3 obs3b n=7993",
+      "field": "mirror",
+      "eps": 0,
+      "epsK": 5,
+      "epsMode": "soft",
+      "temp": 0.15,
+      "games": 30,
+      "n": 5,
+      "mode": "multi",
+      "dec": 1321,
+      "roundsMean": 12.033333333333333,
+      "drawRate": 0.06666666666666667,
+      "epHistogram": {
+        "0": 231,
+        "1": 232,
+        "2": 289,
+        "3": 240,
+        "4": 179,
+        "5": 150
+      },
+      "beads": {
+        "none": 1269,
+        "e": 52
+      },
+      "offered": {
+        "charge": 1090,
+        "ring": 569,
+        "railgun": 49,
+        "bigT": 150,
+        "sword": 858,
+        "gun": 1090
+      },
+      "chosenWhenOffered": {
+        "charge": 57,
+        "ring": 0,
+        "railgun": 49,
+        "bigT": 150,
+        "sword": 0,
+        "gun": 0
+      },
+      "chosenWhenNotOffered": {
+        "charge": 0,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 0
+      },
+      "pickKeys": {
+        "ji": 1049,
+        "bigT": 150,
+        "charge": 57,
+        "railgun": 49,
+        "miniT": 9,
+        "drain": 3,
+        "taunt": 4
+      },
+      "nonJiKinds": 6
+    }
+  ]
+}

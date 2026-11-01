@@ -1,0 +1,64 @@
+{
+  "ts": "2026-11-01T07:28:54.890Z",
+  "rows": [
+    {
+      "pack": "scratch/ga-arms/GA2R-sword-s13.js",
+      "container": "v:92 gen3 obs3b n=7993",
+      "field": "mirror",
+      "eps": 0.2,
+      "epsK": 5,
+      "epsMode": "soft",
+      "temp": 0.15,
+      "games": 30,
+      "n": 5,
+      "mode": "multi",
+      "dec": 1672,
+      "roundsMean": 17.6,
+      "drawRate": 0,
+      "epHistogram": {
+        "0": 768,
+        "1": 773,
+        "2": 81,
+        "3": 40,
+        "6": 10
+      },
+      "beads": {
+        "none": 1672
+      },
+      "offered": {
+        "charge": 904,
+        "ring": 68,
+        "railgun": 0,
+        "bigT": 10,
+        "sword": 131,
+        "gun": 904
+      },
+      "chosenWhenOffered": {
+        "charge": 0,
+        "ring": 55,
+        "railgun": 0,
+        "bigT": 8,
+        "sword": 44,
+        "gun": 661
+      },
+      "chosenWhenNotOffered": {
+        "charge": 0,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 0
+      },
+      "pickKeys": {
+        "ji": 901,
+        "gun": 661,
+        "sword": 44,
+        "snipe": 2,
+        "ring": 55,
+        "bigT": 8,
+        "cannon": 1
+      },
+      "nonJiKinds": 6
+    }
+  ]
+}

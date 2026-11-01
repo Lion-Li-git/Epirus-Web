@@ -27,7 +27,11 @@ const TEMP = Number(arg('temp', 0.15));
 const MODE = arg('mode', 'multi');
 const N = Math.max(2, Number(arg('n', 5)) || 5);
 const SEED = Number(arg('seed', 777));
-const FIELD = arg('field', 'strat') === 'avg' ? 'avg' : 'strat';
+const FIELDRAW = arg('field', 'strat');
+const FIELD = FIELDRAW === 'mirror' ? 'mirror' : (FIELDRAW === 'avg' ? 'avg' : 'strat');
+const EPS = Number(arg('eps', 0));
+const EPSK = Number(arg('epsK', 5));
+const EPSMODE = arg('epsMode', 'soft');
 const OUT = arg('out', '');
 const FOCUS = Math.max(0, Number(arg('focus', 0)) || 0);
 
@@ -80,7 +84,7 @@ const A = createArena2(W, { refParams: Float64Array.from(ref), temp: TEMP, strat
 const shapeIdx = A.shapes.findIndex((s) => s.n === N && s.mode === MODE);
 if (shapeIdx < 0) { console.error("⛔ 没有桌形 " + N + ":" + MODE + "（可用：" + A.shapes.map((s) => s.n + ":" + s.mode).join(",") + "）"); process.exit(2); }
 const SALT = 101;   /* arena2 的 SALT.loop */
-const pk = T.policyChooserN(packParams, TEMP);
+const pk = T.policyChooserN(packParams, TEMP, EPS, EPSK, EPSMODE);
 
 const nameOf = (pid, st) => (st.p[pid] && st.p[pid].name) || ("玩家" + (pid + 1));
 const skillName = (k) => (R.byKey[k] && R.byKey[k].name) || k;
@@ -139,7 +143,7 @@ function build(rm, label) {
   const st = rm.state;
   const tagged = tagRounds(st.events || []);
   let txt = "Epirus 拍手游戏 对局记录（研究·自动生成）\n";
-  txt += "模式=" + MODE + "(" + (st.mode && st.mode.hp) + "血)  对手表=arena2 v2 " + (FIELD === "strat" ? "分层场" : "平均场") + "  温度=" + TEMP + "\n";
+  txt += "模式=" + MODE + "(" + (st.mode && st.mode.hp) + "血)  对手表=" + (FIELD === "mirror" ? "镜像（全席同包=mirrorHealth 档）" : "arena2 v2 " + (FIELD === "strat" ? "分层场" : "平均场")) + "  温度=" + TEMP + "  ε=" + EPS + (EPS ? " k=" + EPSK + " " + EPSMODE : "") + "\n";
   txt += "包=" + PACK.replace(/^.*[\\/]/, "") + "  种子=" + SEED + "  被测席=" + (FOCUS + 1) + "\n";
   const seats = [];
   for (let i = 0; i < N; i++) seats.push((i === FOCUS ? "" : "") + nameOf(i, st) + "(" + (seatNames[i] || "?") + ")");
@@ -170,6 +174,13 @@ function build(rm, label) {
 const SALT2 = 5077;
 const choosers = [];
 const seatNames = [];
+if (FIELD === 'mirror') {
+  /* 镜像场 = `mirrorHealth` 那张桌（全席同包）：把"经济锁死"这类现象落成逐回合可读的记录。 */
+  for (let pid = 0; pid < N; pid++) {
+    choosers.push(pk);
+    seatNames.push(pid === FOCUS ? '【被测·镜像】' + PACK.replace(/^.*[\\/]/, '') : '【镜像同包】');
+  }
+} else
 for (let pid = 0; pid < N; pid++) {
   if (pid === FOCUS) { choosers.push(pk); seatNames.push('【被测】' + PACK.replace(/^.*[\\/]/, '')); continue; }
   const gameSeq = 90000;
