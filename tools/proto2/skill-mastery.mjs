@@ -39,8 +39,9 @@ const TEMP = Number(arg('temp', 0.15));
 const SALT = 101; /* arena2 的 SALT.loop */
 const PACKS = arg('pack', '').split(',').map((s) => s.trim()).filter(Boolean);
 
-/* rules.js:108 的 GUARD_FAMILY（内部常量，key 镜像 + 启动自守；rules.js 若动这里会响） */
-const GUARD_FAMILY = ['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'armor', 'proto', 'holo'];
+/* rules.js:108 的 GUARD_FAMILY（内部常量，key 镜像 + 启动自守；rules.js 若动这里会响）
+ * ⚑ 导出给 `supfit-gd --teacher=lasereye` 用（11-01）：同一个"防席"名单不许在两处各写一遍。 */
+export const GUARD_FAMILY = ['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'armor', 'proto', 'holo'];
 /* ⚑ 口径换代（10-31 深夜，`RESULTS-2026-10-31-OBS3B-SWITCH-qoder.md` §二十二）：旧线『miniT 打 lastSkill∈{ring,bigT,railgun} 的用户』
  *   实测**方向反了**——按 900+ 个真局决策点量，那种目标『随后 ≤2 回合真放 railgun』的 precision = **0.00%（×0.00）**，比随机选目标还差：
  *   railgun 开完珠就空、bigT 落完 ep 归零 ⇒『刚用过这些键的人』＝此刻没有威胁的人。新线换成**预示式代理**：

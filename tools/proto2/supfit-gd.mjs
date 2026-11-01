@@ -15,8 +15,8 @@ import { sandbox, loadChamp, rejectUnknownFlags } from '../audit-lib.mjs';
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi } from './pg-lib.mjs';
-import { pickChain } from './chain-lib.mjs';
-import { scanChargeRounds } from './skill-mastery.mjs';             // miniT 预示式代理的单一来源（千问 §二十三）
+import { pickChain, pickKey } from './chain-lib.mjs';
+import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预示式代理 + 防席名单的单一来源（千问 §二十三/11-01）
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
@@ -143,6 +143,23 @@ const v7Pick = (state, pid, cs) => {
   }
   return bi >= 0 ? cs[bi] : null;
 };
+/* 桶线重训教师（千问 · 11-01，用户裁"大雷/激光眼在新网络上重训，不死守旧包"）：
+ *   `bigt` = chain-lib `saveBigT` 的口径（够 5 就落雷；⚑ 只在**环已连着⇒续环免费**时白捡环，绝不开新环——
+ *            上一版让它在 ep≥3 开环，每局把ジ喂给环 9.9 次、一次都攒不到 5，那是脚本的经济错误不是引擎没窗口）。
+ *   `lasereye` = 有激光眼就打"上一手是防御族"的席（桶线语义=破防），否则回落链。 */
+const bigTPick = (state, pid, cs) => keyToCand(cs, R.SK.BIG_T)
+  || (state.p[pid] && state.p[pid].ringStreak > 0 ? keyToCand(cs, R.SK.RING) : null);
+const laserPick = (state, pid, cs) => {
+  /* 激光眼的门是**手里有爆珠**（play.js:50：电磁炮需电珠 / 激光眼需爆珠）⇒ 没爆珠的这一拍就攒爆珠。
+   * ⭐ 这正是 Stage A（keySplit）要的那一格：`charge#boom` 在代 3 是独立决策键，旧口径下它是"键内自由度"，
+   *    任何键级目标都看不见它 ⇒ 现役包的蓄珠 100% 电珠、爆珠 0 ⇒ 激光眼**从来没进过菜单**。 */
+  const hits = cs.filter((c) => c.key === R.SK.LASER_EYE);
+  if (hits.length) {
+    const guard = hits.find((x) => { const o = state.p[x.target]; return o && GUARD_FAMILY.indexOf(o.lastSkill) >= 0; });
+    return guard || hits[0];
+  }
+  return pickKey(cs, R.SK.CHARGE, 'boom');
+};
 const teacherPick = TEACHER === 'v7mix'
   ? (state, pid, cs) => pickChain(state, pid, cs, R) || v7Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'toolkit'
@@ -151,7 +168,14 @@ const teacherPick = TEACHER === 'v7mix'
     ? (state, pid, cs) => miniTPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'chainmix'
     ? (state, pid, cs, legal) => pickChain(state, pid, cs, R) || keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : TEACHER === 'bigt'
+    ? (state, pid, cs) => bigTPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : TEACHER === 'lasereye'
+    ? (state, pid, cs) => laserPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
+/* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
+const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye'];
+if (TEACHER_KNOWN.indexOf(TEACHER) < 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + '（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
 const RARE = String(arg('rareOnly', '')).split(',').filter(Boolean);

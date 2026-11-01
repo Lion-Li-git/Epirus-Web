@@ -51,11 +51,26 @@ for (const p of POOL) {
   packs.push({ pack: p, mastery: (m.packs && m.packs[0]) || null, cli, cliNote });
 }
 
+/* ---------- 广度下限（PREREG-2026-11-01-BREADTH-FLOOR §三 B-1：当选面 veto，不进 fit）----------
+ * 一次 breadth2 调用读整池（内含 v7 同尺同档锚）。数值线沿用 tools/pick-best.mjs 的 COLLAPSE_LINE=0.60。 */
+const COLLAPSE_LINE = 0.60;
+const breadth = {};
+try {
+  const bJson = ROOT + '/results/mastery/poolcheck-breadth.json';
+  sh('node', ['tools/proto2/breadth2.mjs', '--pack=' + POOL.join(','), '--out=' + bJson]);
+  const bj = JSON.parse(sh('node', ['-e', 'const fs=require("fs");console.log(fs.readFileSync(process.argv[1],"utf8"))', bJson]));
+  for (const r of (bj.rows || [])) { const k0 = String(r.pack).replace(/^.*[\\/]/, ''); breadth[/^v7/.test(k0) ? 'v7' : k0] = r; }
+  for (const x of packs) x.breadth = breadth[x.pack.split('/').pop()] || null;
+} catch (e) {
+  console.error('[pool-check] ⚠ 广度轴没读到：' + String(e && e.message).slice(0, 90) + ' ⇒ 整列记"读不出"（不许留空当过线）');
+  for (const x of packs) x.breadth = null;
+}
+
 /* ---------- 汇总 ---------- */
 const CRIT = { ring: '会聚能环', bigT: '会大雷', railgun: '会电磁炮', laserEye: '会激光眼', miniT: '会小雷', cannon: '会过载炮' };
 const NEED = { ring: 0.5, bigT: 0.5, railgun: 0.5, laserEye: 0.2, miniT: 0.2, cannon: 0.2 };
 console.log('\n=== 池级快查（⚠ 分母 = 显式候选集 ' + packs.length + ' 枚，不produce 池级判词；PREREG §三） ===');
-console.log('[尺] skill-mastery ' + GAMES + ' 局/格 t=' + TEMP + ' ‖ arena2 CLI mild 40 局/桌形 t=' + TEMP + '（快查单温度档）');
+console.log('[尺] skill-mastery ' + GAMES + ' 局/格 t=' + TEMP + ' ‖ arena2 CLI mild 40 局/桌形 t=' + TEMP + '（快查单温度档） ‖ breadth2 训练镜 120 局 n=5（落地归属=audit-lib.landShareOf 单源）');
 for (const k of Object.keys(CRIT)) {
   const oks = packs.filter((x) => x.mastery && x.mastery.verdict && x.mastery.verdict[k] && x.mastery.verdict[k].pass);
   console.log('  ' + CRIT[k].padEnd(5) + ' 会者 ' + oks.length + '/' + packs.length + '（' + pct(oks.length / packs.length) + '；目标 ≥' + NEED[k] * 100 + '%）' + (oks.length ? '  ← ' + oks.map((x) => x.pack.split('/').pop()).join(', ') : ''));
@@ -69,13 +84,20 @@ if (wasteN) {
   const w = wasteSum / wasteN, s = spentSum / spentN;
   console.log('  珠健康（池均，有珠经济 ' + wasteN + ' 枚）：浪费率 ' + pct(w) + '（线 <40% ' + (w < 0.4 ? '✔' : '✘') + '）‖ 花珠率 ' + pct(s) + '（线 ≥60% ' + (s >= 0.6 ? '✔' : '✘') + '）');
 }
+const bshare = (x) => (x && x.breadth && x.breadth.maxLandShare != null ? (100 * x.breadth.maxLandShare).toFixed(1) + '%' : '读不出');
+const bmiss = packs.filter((x) => !x.breadth).length;
+const bpass = packs.filter((x) => x.breadth && x.breadth.maxLandShare <= COLLAPSE_LINE);
+console.log('  广度下限 B-1（最大单卡落地份额 ≤' + (COLLAPSE_LINE * 100).toFixed(0) + '%，锚 v7 同尺 ' +
+  (breadth['v7'] ? (100 * breadth['v7'].maxLandShare).toFixed(1) + '%' : '读不出') + '）：过 ' + bpass.length + '/' + packs.length +
+  (bpass.length ? '  ← ' + bpass.map((x) => x.pack.split('/').pop()).join(', ') : ' （**全被筛掉**）') +
+  (bmiss ? ' ‖⚠ 读不出 ' + bmiss + ' 枚（不许当过线）' : ''));
 console.log('  —— 每包快查列 ——');
 for (const x of packs) {
   const name = x.pack.split('/').pop();
   const v = x.mastery && x.mastery.verdict;
   const ncrit = v ? Object.keys(v).filter((k) => v[k].pass).length : 0;
   const c = x.cli;
-  console.log('  ' + name.padEnd(28) + ' 判据 ' + ncrit + '/6 ‖ 夺1 ' + (c && c.first != null ? pct(c.first) : '-') + ' ‖ clean ' + (c && c.cleanScore != null ? c.cleanScore.toFixed(3) : '-') + ' ‖ 单卡 ' + (c && c.maxCard ? c.maxCard.key + ' ' + pct(c.maxCard.share) : '-') + (x.cliNote || ''));
+  console.log('  ' + name.padEnd(28) + ' 判据 ' + ncrit + '/6 ‖ 夺1 ' + (c && c.first != null ? pct(c.first) : '-') + ' ‖ clean ' + (c && c.cleanScore != null ? c.cleanScore.toFixed(3) : '-') + ' ‖ 单卡 ' + (c && c.maxCard ? c.maxCard.key + ' ' + pct(c.maxCard.share) : '-') + ' ‖ 落地份额 ' + bshare(x) + (x.breadth ? '(' + (x.breadth.maxLandKey || '-') + (x.breadth.maxLandShare <= COLLAPSE_LINE ? ' ✔' : ' ✘塌缩') + ')' : '') + (x.cliNote || ''));
 }
 if (OUT) {
   writeFileSync(OUT, JSON.stringify({ meta: { tool: 'pool-check', games: GAMES, temp: TEMP, note: '快查单温度档；分母=显式候选集' }, packs }, null, 1));
