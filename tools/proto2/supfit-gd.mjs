@@ -156,6 +156,31 @@ const allRoundPick = (state, pid, cs) => {
  * `chain` 教师（兑现优先）拿到 5P 43.6~64 但大雷 0（每拍先花电珠 ⇒ ep 攒不到 5）。这一档是把两者串在一条
  * 去向上：**能兑现就兑现，兑现不了才开环** ⇒ 问的是『收入去向』能不能同时给出桶线与强度。 */
 const ringChainPick = (state, pid, cs) => pickKey(cs, R.SK.BIG_T) || pickKey(cs, R.SK.RING) || pickChain(state, pid, cs, R);
+/* 定量配给的混合教师（千问 · 11-01，用户 11-01：『用一堆大雷本来就没有什么用处，我给大雷要求才 0.2，
+ *   你剩下的资源不就可以拿去分配给电磁炮等等了吗』+『不能纯靠单一教师』）。
+ * 形状：每条贵线**只用到桶线下限的若干倍**，超了就把它的地盘还给兑现链——剂量上限住在教师里，
+ *   这样标签本身就在教『分配』，而不是教『某条线打到满』。
+ * ⚑ 与 §十 的三档单线教师（ring / ringchain / bigt）的区别：那三档各自收敛到一条线且 5P 全在 15~16，
+ *   说明问题不是顺序而是**剂量**。计数器读 state.events（与 scanChargeRounds 同一口径：ok 才算一次）。 */
+const RATION = { bigT: 1, laserEye: 1, ring: 1 };
+const castCount = (state, pid, key) => {
+  let n = 0;
+  for (const e of (state.events || [])) if (e.type === 'action' && e.outcome === 'ok' && e.pid === pid && e.key === key) n++;
+  return n;
+};
+const rationPick = (state, pid, cs) => {
+  const laser = cs.filter((c) => c.key === R.SK.LASER_EYE)
+    .find((x) => { const o = state.p[x.target]; return o && GUARD_FAMILY.indexOf(o.lastSkill) >= 0; });
+  if (laser && castCount(state, pid, R.SK.LASER_EYE) < RATION.laserEye) return laser;
+  const bt = pickKey(cs, R.SK.BIG_T);
+  if (bt && castCount(state, pid, R.SK.BIG_T) < RATION.bigT) return bt;
+  const rg = pickKey(cs, R.SK.RAILGUN, 'elec') || pickKey(cs, R.SK.RAILGUN);
+  if (rg) return rg;
+  const me = state.p[pid] || {};
+  const ring = pickKey(cs, R.SK.RING);
+  if (ring && (me.ringStreak > 0 || castCount(state, pid, R.SK.RING) < RATION.ring)) return ring;
+  return pickChain(state, pid, cs, R);
+};
 const v7Pick = (state, pid, cs) => {
   let bi = -1, bv = -Infinity;
   for (let i = 0; i < cs.length; i++) {
@@ -192,6 +217,8 @@ const teacherPick = TEACHER === 'v7mix'
     ? (state, pid, cs, legal) => pickChain(state, pid, cs, R) || keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'allround'
     ? (state, pid, cs) => allRoundPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : TEACHER === 'ration'
+    ? (state, pid, cs) => rationPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'ringchain'
     ? (state, pid, cs) => ringChainPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'ring'
@@ -202,7 +229,7 @@ const teacherPick = TEACHER === 'v7mix'
     ? (state, pid, cs) => laserPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把它拖回电珠/电磁炮那一维 */
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'allround'];
+const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'ration', 'allround'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + '（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
