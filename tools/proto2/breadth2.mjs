@@ -75,7 +75,7 @@ for (const p of PACKS) {
 
 const pct = (x) => (x == null ? '—' : (100 * x).toFixed(1) + '%');
 console.log('=== 塌缩/宽度（mirrorHealth ' + GAMES + ' 局 · n=' + N + ' · multi · 归属=audit-lib.landShareOf 单源）===');
-console.log('包'.padEnd(28) + '容器'.padEnd(24) + '落地'.padEnd(6) + '种'.padEnd(4) + 'G落地'.padEnd(8) + '出手种'.padEnd(8) + '有效种类'.padEnd(14) + '最大落地卡'.padEnd(16) + '份额'.padEnd(8) + '最大出手卡份额');
+console.log('包'.padEnd(28) + '容器'.padEnd(24) + '落地'.padEnd(6) + '种'.padEnd(4) + 'G落地'.padEnd(8) + '有效种类'.padEnd(15) + '出手种'.padEnd(8) + '最大落地卡'.padEnd(16) + '份额'.padEnd(8) + '最大出手卡份额');
 for (const r of out) {
   console.log(r.pack.padEnd(28) + String(r.container).padEnd(24) + String(r.landedTotal).padEnd(6) +
     String(r.landedKeys).padEnd(4) + (r.effSkillsLand == null ? '—' : r.effSkillsLand.toFixed(2)).padEnd(8) +
