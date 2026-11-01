@@ -1241,6 +1241,29 @@ if (COUNTER_OPPS.length) {
           : '（点名 ' + COUNTER_OPPS.length + ' 型：' + COUNTER_WANT.join(',') + ' ⇒ 不是老口径，但这批仍不能归因到某一型）'));
 }
 
+/* =====（ZCode · 11-02 夜）`EPIRUS_PACK_OPP=<包路径>`：把一枚**包**放上训练桌当对手席（默认关）=====
+ * 目的（M-3 线索③后半）：进化中的包在桌上直接面对 ration6 产物（会全息/藤甲/挑衅/地雷/坦狙的用户），
+ *   从**防守侧**覆盖批 2/3 技能——脚本对手永远不会出这些牌，宽门槛与配给教师都教不会"怎么应对它们"。
+ * 纪律：① 只在 2.0 臂可用（gen-3 包走 P.unpack 原生路；v7 模式拒跑——混代是评测能力不是训练能力）；
+ *   ② 读不出 ⇒ exit 4（拒静默少放对手，同 COUNTER_OPPS 的规矩）；③ 回执印参数长度与 OPPS 计数。 */
+const PACK_OPP = process.env.EPIRUS_PACK_OPP || '';
+if (PACK_OPP) {
+  if (!process.env.EPIRUS_ARCH2) {
+    console.error('[train-3p] ⛔ EPIRUS_PACK_OPP 只在 EPIRUS_ARCH2 2.0 臂可用（gen-3 包席；v7 模式不收）'); process.exit(4);
+  }
+  try {
+    const poSrc = readFileSync(PACK_OPP, 'utf8');
+    const poM = poSrc.match(/window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/);
+    if (!poM) throw new Error('没有 EPIRUS_CHAMPION 外壳');
+    const poParams = P.unpack(JSON.parse(poM[1]), true);
+    if (!poParams || !poParams.length) throw new Error('解包失败');
+    OPPS.push({ name: 'pack:' + PACK_OPP.split(/[\\/]/).pop().replace(/\.[^.]+$/, ''), sel: T.policyChooserN(poParams, 0.15) });
+    console.log('[pack-opp] 包席上桌：' + PACK_OPP + '（params ' + poParams.length + ' ‖ OPPS → ' + OPPS.length + ' 个）');
+  } catch (e) {
+    console.error('[train-3p] ⛔ EPIRUS_PACK_OPP 读不出：' + (e && e.message || e) + ' ⇒ 拒静默少放对手'); process.exit(4);
+  }
+}
+
 /* ===== §E127（v1.5.285 · Qoder 通宵班）：把 `ringspam` 放上训练桌（`EPIRUS_RING_OPPS=1`，默认关）=====
  * 病（DS 清单第 4 条的前提，本班修正过）：`ringspam` 在 `server/opp-pool.mjs:42` 的 `OPP_SPECS` 里，
  *   但**不在本文件运行时的 9 条 `OPPS` 里** ⇒ 训练桌上没人施放聚能环 ⇒ `ringW`（出厂 0.10，权重量级最大的一根）
