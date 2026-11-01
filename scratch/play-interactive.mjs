@@ -16,7 +16,8 @@ const argv = process.argv.slice(2);
 const arg = (k, d) => { const f = argv.find((x) => x.startsWith('--' + k + '=')); return f ? f.slice(k.length + 3) : d; };
 const MOVES = String(arg('moves', '')).split(',').map(s => s.trim()).filter(Boolean);
 const OPPS = arg('opps', 'champ');
-const N = 3, TEMP = 0.15, MODE = 'multi', SEED = Number(arg('seed', 77001)) || 77001;
+const N = Math.max(2, Number(arg('n', 3)) || 3);
+const TEMP = 0.15, MODE = 'multi', SEED = Number(arg('seed', 77001)) || 77001;
 const OUT = arg('out', '');
 
 const W = sandbox();
@@ -51,7 +52,17 @@ function readPackAny(path) {
 }
 const CHAMP = readPackAny("js/bundled-champion-3p.js");
 const S41 = readPackAny("scratch/ga-arms/GA-ration-s41.js");
-const OPP_LABEL = { champ: [CHAMP, CHAMP], s41: [S41, S41], mix: [CHAMP, S41] }[OPPS] || [CHAMP, CHAMP];
+const S13P = readPackAny("scratch/ga-arms/GA2R-sword-s13.js");
+const G4P = readPackAny("scratch/ga-arms/GATE4b-s13.js");
+const FILLER = [W.EpirusBots.pickRandom, W.EpirusBots.pickAggro, W.EpirusBots.pickDefend, W.EpirusBots.pickWall, W.EpirusBots.pickFarmer, W.EpirusBots.pickMix, W.EpirusBots.pickGunSpam];
+function oppSeats(){
+  const base = { champ: [CHAMP, CHAMP], s41: [S41, S41], s13: [S13P, S13P], g4b: [G4P, G4P], mix: [CHAMP, S41], scripts: [] }[OPPS] || [CHAMP, CHAMP];
+  const out = base.slice();
+  let fi = 0;
+  while (out.length < N - 1) out.push({ params: null, label: 'script' + fi, script: FILLER[fi++ % FILLER.length] });
+  return out.slice(0, N - 1);
+}
+const OPP_LABEL = oppSeats();
 
 const skillName = (k) => (R.byKey[k] && R.byKey[k].name) || k;
 const keyByName = {};
@@ -97,10 +108,10 @@ const myQueue = { i: 0, list: MOVES, tgt: null, fell: [] };
 const meChooser = humanChooser(myQueue);
 
 const ME = arg("me", "human");
-const meLabel = ME === "champ" ? CHAMP.label + "(AI代打)" : (ME === "s41" ? S41.label + "(AI代打)" : "【真人】我");
-const meChooserReal = ME === "champ" ? T.policyChooserN(CHAMP.params, TEMP) : (ME === "s41" ? T.policyChooserN(S41.params, TEMP) : meChooser);
+const meLabel = ME === "champ" ? CHAMP.label + "(AI代打)" : (ME === "s41" ? S41.label + "(AI代打)" : (ME === "s13" ? S13P.label + "(AI代打)" : (ME === "g4b" ? G4P.label + "(AI代打)" : "【真人】我")));
+const meChooserReal = ME === "champ" ? T.policyChooserN(CHAMP.params, TEMP) : (ME === "s41" ? T.policyChooserN(S41.params, TEMP) : (ME === "s13" ? T.policyChooserN(S13P.params, TEMP) : (ME === "g4b" ? T.policyChooserN(G4P.params, TEMP) : meChooser)));
 const choosers = [meChooserReal];
-for (const op of OPP_LABEL) choosers.push(T.policyChooserN(op.params, TEMP));
+for (const op of OPP_LABEL) choosers.push(op.script ? op.script : T.policyChooserN(op.params, TEMP));
 
 const seatNames = [meLabel, OPP_LABEL[0].label, OPP_LABEL[1].label];
 const rm = T.oneGameN(choosers, SEED, N, { regen: 0, mode: MODE });
