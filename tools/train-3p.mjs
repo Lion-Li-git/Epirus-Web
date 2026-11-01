@@ -1882,9 +1882,14 @@ for (let gen = 0; gen < GENS; gen++) {
   scored.sort(function (a, b) { return b.r.fit - a.r.fit; });
   if (scored[0].r.fit > bestFit) { bestFit = scored[0].r.fit; bestParams = scored[0].params; sigStall = 0; noProg = 0; }
   else { sigStall++; noProg++; }
+  /* ===== §十二（11-01 傍晚的位置勘误）：门槛必须接在**父母抽取处**，不是名人堂准入 =====
+   * 第一批（判据 §十一）把钩子接在 `addHall` 上，结果三粒产物与对照**权重逐位同**
+   *   （`GATE-s7/s13/s41.js` vs `GA2R-sword-s*.js` 的 `"a":[` 摘要相同），而门槛自检明明审计了 1200 次、换粒 180 次
+   *   ⇒ 因为这条 GA 里**名人堂是只写不读的旁路**（只当终局候选池），下一代的父母来自 `scored.slice(0, 3)`（下面 `elite`）。
+   *   所以现在只算一次健康读、产出一个**优选次序 `gateRank`**，同时喂给"父母抽取"与"名人堂准入"；
+   *   `bestFit/bestParams` 那对仍按纯 fit 走（门槛塑形搜索，不动产物记账）。 */
+  let gateRank = null;
   if (GA_GATE > 0) {
-    /* 每代对 top-3 做镜里健康读（`mirrorHealth.castByKey` 与在册各尺同源：它**只数成功非ジ出手**），
-     *   eff1 = 占比 ≥1% 的键数（§十七 的档线口径），带内按覆盖熵挑那两粒进名人堂。 */
     const reads = [];
     for (let gi = 0; gi < Math.min(3, scored.length); gi++) {
       const mh = T.mirrorHealth(scored[gi].params, GA_GATE_GAMES, Math.max(2, N), T.trainMode());
@@ -1892,30 +1897,29 @@ for (let gen = 0; gen < GENS; gen++) {
       let tot = 0, mx = 0; for (const k of ck) { tot += mh.castByKey[k]; if (mh.castByKey[k] > mx) mx = mh.castByKey[k]; }
       let H = 0;
       for (const k of ck) { const p = tot ? mh.castByKey[k] / tot : 0; if (p > 0) H -= p * Math.log(p); }
-      reads.push({ gi: gi, fit: scored[gi].r.fit, eff1: tot ? ck.filter((k) => mh.castByKey[k] / tot >= 0.01).length : 0,
-        ent: H, maxShare: tot ? mx / tot : 0 });
+      reads.push({ gi: gi, fit: scored[gi].r.fit, eff1: tot ? ck.filter((k) => mh.castByKey[k] / tot >= 0.01).length : 0, ent: H });
       GA_STAT.audits++;
     }
     GA_STAT.lastEff1 = reads.map((r) => r.eff1).join('/');
-    let ok = reads.filter((r) => r.eff1 >= GA_GATE);
-    if (GA_BAND > 0 && ok.length > 1) {
-      const tf = ok[0].fit;
-      const band = ok.filter((r) => r.fit >= tf - GA_BAND);
+    const ok = reads.filter((r) => r.eff1 >= GA_GATE);
+    let rank = ok.slice();
+    if (GA_BAND > 0 && rank.length > 1) {
+      const tf = rank[0].fit;
+      const band = rank.filter((r) => r.fit >= tf - GA_BAND);
+      const rest = rank.filter((r) => band.indexOf(r) < 0);
       band.sort(function (a, b) { return b.ent - a.ent; });
-      ok = band.concat(ok.filter(function (x) { return band.indexOf(x) < 0; }));
+      rank = band.concat(rest);
     }
-    if (ok.length) {
-      GA_STAT.healthyGens++;
-      GA_STAT.eff1Sum += ok[0].eff1;
-      if (ok[0].gi !== 0) GA_STAT.swapped++;
-      const second = ok.length > 1 ? ok[1] : (ok[0].gi === 0 ? reads[1] : reads[0]);
-      addHall(scored[ok[0].gi].params, ok[0].fit);
-      if (second) addHall(scored[second.gi].params, second.fit);
-    } else {
-      GA_STAT.starvedGens++;
-      addHall(scored[0].params, scored[0].r.fit);
-      addHall(scored[1].params, scored[1].r.fit);
-    }
+    rank.push.apply(rank, reads.filter((r) => ok.indexOf(r) < 0));   // 不过线的排最后（仍可当父母，但轮不到优先）
+    gateRank = rank.map((r) => r.gi);
+    if (ok.length) { GA_STAT.healthyGens++; GA_STAT.eff1Sum += ok[0].eff1; if (gateRank[0] !== 0) GA_STAT.swapped++; }
+    else GA_STAT.starvedGens++;
+  }
+  if (gateRank) {
+    /* 准入次序跟着门槛走（与父母同一份读，不再另算一遍镜局） */
+    const g0 = gateRank[0], g1 = gateRank.length > 1 ? gateRank[1] : gateRank[0];
+    addHall(scored[g0].params, scored[g0].r.fit);
+    addHall(scored[g1].params, scored[g1].r.fit);
   } else {
   addHall(scored[0].params, scored[0].r.fit);
   addHall(scored[1].params, scored[1].r.fit);
@@ -1960,7 +1964,12 @@ for (let gen = 0; gen < GENS; gen++) {
    * 20 代一跳就把"前期靠教师、退火后归零"这条曲线糊成两个点。 */
   if (IMIT_ON) { const attr = attrLine(); if (attr) console.log('  gen ' + gen + ' ' + attr); }
   const breedRng = T.mulberry32 ? T.mulberry32(__SEED * 100003 + gen) : Math.random;
-  const elite = scored.slice(0, 3).map(function (x) { return x.params; });
+  /* 父母抽取：门槛开时按 `gateRank` 的优选次序取前三（不过线的排最后 ⇒ 仍可被抽到，但轮不到优先），
+     *   ⇒ 这样门槛才真的**塑形搜索**；接在 addHall 上时三粒产物与对照逐位同（§十二 的位置勘误）。 */
+  const elite = (gateRank ? gateRank.slice(0, 3) : [0, 1, 2])
+    .filter(function (ix, k, arr) { return ix != null && arr.indexOf(ix) === k; })
+    .map(function (ix) { return scored[ix] ? scored[ix].params : null; }).filter(Boolean);
+  if (elite.length < 3) for (let ei = 0; ei < Math.min(3, scored.length) && elite.length < 3; ei++) { if (elite.indexOf(scored[ei].params) < 0) elite.push(scored[ei].params); }
   /* (c) 分巢精英：每个 h 值保留它自己承诺局夺 1 率最高的个体（h 参与选择的唯一机制）。 */
   const byH = {};
   for (let i = 0; i < scored.length; i++) {
