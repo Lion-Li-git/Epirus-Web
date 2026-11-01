@@ -60,6 +60,28 @@ const W = sb.window, R = W.EpirusRules, S = W.EpirusState, T = W.EpirusTrainer, 
 const champ = P.unpack(W[gname], true);   // v7：允许历史形状（保持原生形状，旧包走旧口径）
 if (!champ) throw new Error('冠军解包失败：' + file);
 
+/* ===== 11-01 深夜（用户裁定「3 代训练和考试把引擎的干预先关掉」）：干预档把手 =====
+ * 背景：BIGT_PUSH 是**硬兑现**且 v1.5.333 起引擎默认开（evo.js:648），挂在 policyChooserN 的 eps 分支**之前**
+ *   ⇒ 本报告的冠军 chooser（makeSel → T.policyChooserN）**一直带着它跑** ⇒ bigT 的"实际使用率"混了引擎强塞的那部分。
+ * 纪律照 eval-5p §E271：不设旗标 = 引擎默认档（历史读数口径不动）；要干净读数必须**显式** `--shipbigt=0`（+ `--shipdrain=0`），
+ *   下达后引擎回读逐键比对，不一致 ⇒ 拒跑（拒静默空转）。摄魂/贴贴 push 是 eps>0 soft 分支专属（节点侧到不了），
+ *   这里只收 bigT 一档就够量干净使用率——但把手做成两个，考试口径要双显式关时一个不缺。 */
+(function applyReportKnobs() {
+  const KN = [['shipbigt', 'setBigTPush', 'bigTPushOn'], ['shipdrain', 'setDrainPush', 'drainPushOn']];
+  for (const [flag, setter, getter] of KN) {
+    if (FLAG[flag] == null) continue;
+    if (typeof T[setter] !== 'function' || typeof T[getter] !== 'function') {
+      console.error('⛔ --' + flag + ' 下达了，但引擎没有 `' + setter + '` ⇒ 黑键，拒跑'); process.exit(6);
+    }
+    T[setter](Number(FLAG[flag]));
+    const back = Number(T[getter]());
+    if (back !== Number(FLAG[flag])) {
+      console.error('⛔ --' + flag + '=' + FLAG[flag] + ' 没生效：引擎回读 ' + back + ' ⇒ 拒静默空转'); process.exit(7);
+    }
+    console.log('[干预档] --' + flag + ' ⇒ ' + back);
+  }
+})();
+
 /* v1.5.0：模式缺省**跟随冠军产物自己的 meta.mode**（长程冠军 ⇒ 自动按 5 血测），可用 --mode= 覆盖。
  * 为什么必须做：此前本报告只按 multi(3 血) 建局，对 5 血冠军给出的其实是"3 血下的读数"，
  * 而报告里没有一处标明口径 ⇒ 极易误读（该项目已经因为"口径不明"栽过多次）。 */

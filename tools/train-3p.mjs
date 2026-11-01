@@ -633,7 +633,12 @@ if (process.env.EPIRUS_ARCH2) {
  *   ② 下达后**由引擎回读**逐键比对，不一致 ⇒ `exit 7`（v1.5.262 那次"过了黑键闸却从没送给引擎"的同一族病）；
  *   ③ 不设 ⇒ 一行都不动 ⇒ 现网默认形状逐字不变。 */
 (function applyDeployKnobs() {
-  const KN = [['EPIRUS_BIGT_PUSH', 'setBigTPush', 'bigTPushOn'], ['EPIRUS_DRAIN_PUSH', 'setDrainPush', 'drainPushOn']];
+  /* 11-01 深夜（用户裁定「3 代训练和考试把引擎干预全关」）：名单从两键扩到四键——
+   *   大雷(硬兑现,默认12=开) / 摄魂(eps软注入,默认1,节点侧到不了也显式关) /
+   *   贴贴(eps软注入,默认0=关) / 送盾先验(全息屏障部署层先验,默认0=关)。
+   * 后两个默认本来就是 0 ⇒ 不设环境变量时逐字不变；显式设 0 是把"关"落成**回执**（拒"应该关着吧"这种口头关法）。 */
+  const KN = [['EPIRUS_BIGT_PUSH', 'setBigTPush', 'bigTPushOn'], ['EPIRUS_DRAIN_PUSH', 'setDrainPush', 'drainPushOn'],
+    ['EPIRUS_CURSE_PUSH', 'setCursePush', 'cursePushOn'], ['EPIRUS_SUPPORT_PRIOR', 'setSupportPrior', 'supportPriorOn']];
   for (const [envName, setter, getter] of KN) {
     const raw = process.env[envName];
     if (raw == null || raw === '') continue;
