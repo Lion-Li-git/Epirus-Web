@@ -152,12 +152,12 @@ const bigTPick = (state, pid, cs) => keyToCand(cs, R.SK.BIG_T)
 const laserPick = (state, pid, cs) => {
   /* 激光眼的门是**手里有爆珠**（play.js:50：电磁炮需电珠 / 激光眼需爆珠）⇒ 没爆珠的这一拍就攒爆珠。
    * ⭐ 这正是 Stage A（keySplit）要的那一格：`charge#boom` 在代 3 是独立决策键，旧口径下它是"键内自由度"，
-   *    任何键级目标都看不见它 ⇒ 现役包的蓄珠 100% 电珠、爆珠 0 ⇒ 激光眼**从来没进过菜单**。 */
+   *    任何键级目标都看不见它 ⇒ 现役包的蓄珠 100% 电珠、爆珠 0 ⇒ 激光眼**从来没进过菜单**。
+   * ⚑ v2（11-01，读完 v1 的起点分母之后）：**没人防御就不放**（v1 是 hits[0] 兜底 ⇒ 10.8 次/局但只有 28% 打防席，
+   *    桶线要 ≥1/2 ⇒ 教师的行为必须等于桶线的定义，而不是只等于"有牌就打"）。 */
   const hits = cs.filter((c) => c.key === R.SK.LASER_EYE);
-  if (hits.length) {
-    const guard = hits.find((x) => { const o = state.p[x.target]; return o && GUARD_FAMILY.indexOf(o.lastSkill) >= 0; });
-    return guard || hits[0];
-  }
+  const guard = hits.find((x) => { const o = state.p[x.target]; return o && GUARD_FAMILY.indexOf(o.lastSkill) >= 0; });
+  if (guard) return guard;
   return pickKey(cs, R.SK.CHARGE, 'boom');
 };
 const teacherPick = TEACHER === 'v7mix'
@@ -168,13 +168,15 @@ const teacherPick = TEACHER === 'v7mix'
     ? (state, pid, cs) => miniTPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'chainmix'
     ? (state, pid, cs, legal) => pickChain(state, pid, cs, R) || keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : TEACHER === 'ring'
+    ? (state, pid, cs) => pickKey(cs, R.SK.RING) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 环优先：代 3 上环的提供率只有 2.8% ⇒ 先让教师自己肯开环 */
   : TEACHER === 'bigt'
     ? (state, pid, cs) => bigTPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'lasereye'
-    ? (state, pid, cs) => laserPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+    ? (state, pid, cs) => laserPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把它拖回电珠/电磁炮那一维 */
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye'];
+const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + '（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
@@ -205,7 +207,10 @@ function collectInto(dst, srcParams, idBase) {
     /* 教师那一枚在候选表里的下标（pickChain 返回的是 cs2 里的对象本身 ⇒ 按身份找，不按 key 找） */
     const wIdx = cs2.indexOf(again);
     if (wIdx < 0 || !keys[wIdx]) { LABEL.gone++; return; }
-    if (srcParams == null && RARE.length && dst.length >= Math.floor(NGRP * (1 - RARE_FRAC)) && RARE.indexOf(again.key) < 0) { LABEL.rare++; return; }   /* 稀有期：只收稀有键组 */
+    /* 稀有期：只收教师选中稀有键的决策点。⚑ 11-01 千问：**学生自访轮也要过同一道筛**
+     *   （原先带 `srcParams == null` 条件 ⇒ DAgger 轮不受筛，稀有类被自访态淹掉——昨夜 mt-dag 的
+     *    "DAgger 稀释稀有类"就是这个条件造成的，不是 DAgger 本身的错）。 */
+    if (RARE.length && dst.length >= Math.floor(NGRP * (1 - RARE_FRAC)) && RARE.indexOf(again.key) < 0) { LABEL.rare++; return; }   /* 稀有期：只收稀有键组 */
     dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: keys[wIdx], want0: t0.key, shp: curShp,
       wantIdx: wIdx, wantBead: again.bead || null });
     LABEL.keys++;

@@ -122,8 +122,9 @@ for (const p of PACKS_20) {
   const A2 = install(W2, Object.assign({ mutMode: 'seg' }, got.cfg));
   const pp = W2.EpirusPolicy.unpack(raw, true);
   if (!pp) { console.log('⚠ ' + p + ' unpack 不出 ⇒ 跳过'); A2.restore(); continue; }
-  run('代 2 ‖ ' + p.replace(/^.*[\\/]/, '').replace('.bak', ''), W2, pp, true);
+  run('代 ' + ((raw.dims && raw.dims.gen) || '?') + ' ‖ ' + p.replace(/^.*[\\/]/, '').replace('.bak', ''), W2, pp, true);
   A2.restore();
 }
+console.log('\n⚑ 提供率这一列**不是包级读数**：夹具由"旋转键 chooser"（`lateFix` 与 `collectFixtures` 里的 `R.skills[(round*5+pid*3+g)%K]`）走出，与被测包无关 ⇒ 各包提供率**必然同形**（11-01 实测 4 枚包都是 ring 15.6% ‖ bigT 0.0% ‖ laserEye 0.0%）。包级的信息只在"提供时名次 / 排第一 / greedy 会选谁"那几列。⇒ 判"某个包自己走不到某一手"要引 `skill-mastery` 的出手账（含珠账本电/爆），不要引这一列');
 console.log('\n判读口径：①提供率=0 ⇒ 卡引擎经济闸门（与训练无关）；②提供率>0 而"排第一"≈0 ⇒ 打分/信用分配的事（训练的事）；' +
   '③"排第一"高但实战不出手 ⇒ 是采样温度/探索，不是能力。名次是**同表内**名次，绝对值不横比。');
