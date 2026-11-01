@@ -35,7 +35,12 @@
 ## 三、臂与判据（先于臂）
 
 **RICH 组**（4 枚）：`--arena2=1 --arenaPool=names:<下表> --arenaShapes=3:multi,5:multi --arenaCur=first --arenaHold=60`，24k、flat 48×4、无门。
-席位 = 产品 7 + **targeter, gunspam, ringspam, earlypressure, deadlineburst, minespam**（共 13 席；全是在册脚本，零新代码）。
+席位 = 产品 7 + **targeter, gunspam, ringspam, earlypressure, deadlineburst, protomine**（共 13 席；全是在册脚本，零新代码）。
+⚑ 勘误（发臂当场被自己的闸拦下，11-01）：第一版把 `minespam` 写进了席位 ⇒ `roster-lib` 响亮拒（"对手名不在册"）。
+根因不是笔误而是**两条册面**：`focusfire / minespam / cursestorm` 住在 `tools/eval-5p.mjs` 的 `EVAL_ONLY` 里，
+头注写明"**它们故意不进训练池**"（它们是**前置条件提供者**：集火喂转移、铺雷喂藤甲火弱、咒火喂天火）。
+⇒ 今晚训练席位换成同样会铺雷的在册 `protomine`；而 §二 那两格（`focusfire` 0.0% / `minespam` 2.5% 只打在 BROAD-tkCH-s41 身上）
+是**考卷侧事实**，要不要把 EVAL_ONLY 三席搬进训练池是**新的边界决定**，等用户裁，我不擅自破。
 起点两枚：`BROAD-tkCH-s41`（现役**唯一**过广度下限的包，落地份额 59.0%）与 `gd3repro-OB3RB2s23`（强链、塌缩 100%）。种子 7/13。
 **对照组 CTRL**（2 枚）：同起点同预算，但 `--arenaPool=product`（只有 7 席，没有新压力）⇒ 一变量=对手面。
 

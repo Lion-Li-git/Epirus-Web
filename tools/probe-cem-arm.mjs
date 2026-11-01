@@ -25,11 +25,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 import { install as installArch2, verifyWired as verifyArch2Wired, readPack2 } from './proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
-import { createArena2, SHAPES as ARENA2_SHAPES } from './proto2/arena2.mjs';   // 10-29 夜：扩表考卷（--arena2=1 才开）
+import { createArena2 } from './proto2/arena2.mjs';   // 10-29 夜：扩表考卷（--arena2=1 才开）
 import { auditCells } from './proto2/skill-mastery.mjs';                      // 10-31 凌晨：mastery 门骑同一把审计尺
 import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } from './proto2/head-health.mjs';
-import { OPP_SPECS } from '../server/opp-pool.mjs';               // 考卷搬迁：产品 7 脚本的单一来源
-import { makeAsChooser } from './bot-chooser-lib.mjs';             // 同款包装（评测同款）
+import { rosterFromArg, shapesFromArg } from './proto2/roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 /* §E679 补（10-22）：这台量具原先**没有输入消毒层**（D218 那条门当场抓到，是我今夜建它时就漏的）。
  * 拼错的旗标被静默忽略 = 读数按默认档跑完而没人知道 ⇒ 与"黑键"同族。名单跟着 `arg('…')` 走。 */
@@ -294,7 +293,7 @@ if (ARENA_CUR !== 'net' && ARENA_CUR !== 'clean' && ARENA_CUR !== 'first') { con
  *   `evalOne` 静默掉进 `T.scoreMemberN` 内部对手表，而 `--arenaCur/--arenaStrat/…` 那一族在那条路上
  *   **全部不生效**（meta 里 `arena:null` / `currency:"scoreMemberN.fit"` 是事后才看得见的报警）。
  *   点了 arena 族旗标却不给 `--arena2=1` ⇒ 当场拒跑。 */
-if (!ARENA2 && ['arenaCur', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'arenaHold', 'arenaHighN', 'arenaDiverse']
+if (!ARENA2 && ['arenaCur', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'arenaHold', 'arenaHighN', 'arenaDiverse', 'arenaPool', 'arenaShapes', 'arenaDivK']
     .some((k) => argv.some((x) => x === '--' + k || x.startsWith('--' + k + '=')))) {
   console.error('⛔ 点了 arena2 族旗标却没给 `--arena2=1` ⇒ arena2 桌不会建、这族旗标会静默掉进 scoreMemberN 内部对手表（10-31 晚 P-P5 首遍就是这么废的）。要么加 `--arena2=1`，要么去掉这族旗标。'); process.exit(2);
 }
@@ -341,23 +340,13 @@ if (ARENA2) {
   ARENA_REF = Float64Array.from(c0);
   V7_HEALTH_REF = Float64Array.from(c0);
   if (MODE === 'ga') { console.error('⛔ --arena2 没接 GA 的内部 trainer（它走 T.makeTrainer/step，不吃本工具的 evalOne）⇒ 拒绝静默按旧口径跑'); process.exit(7); }
-  /* `--arenaPool=product`（ZCode · 10-31 深夜，考卷搬迁）：对手池整表换成**产品 7 脚本**（eval-5p 的 CORE 池；
-   *   单一来源 = server/opp-pool.mjs `OPP_SPECS` + tools/bot-chooser-lib.mjs `makeAsChooser`——评测同款包装）。
-   *   `--arenaShapes=3:multi,5:multi`（缺省 = 产品两格）。⚑ 分层在自选池上被 arena2 响亮拒（捕食者行不在池里）。 */
+  /* `--arenaPool`（千问 · 11-01 收敛到 `roster-lib` 单源）：`product` = 产品 7 脚本；
+   *   `names:a,b,…` = 摆**已登记但两个训练池都没在用**的对手（targeter/gunspam/snipespam/ringspam/…）；
+   *   空 = 不换池（研究卷原路）。`--arenaShapes` 与换池**正交**（原先写在 product 分支里会被静默吞掉）。
+   *   ⚑ 分层在自选池上被 arena2 响亮拒（捕食者行不在池里）。 */
   const ARENA_POOL_ARG = String(arg('arenaPool', ''));
-  if (ARENA_POOL_ARG && ARENA_POOL_ARG !== 'product') { console.error('⛔ --arenaPool 只认 product（收到 ' + ARENA_POOL_ARG + '）'); process.exit(2); }
-  if (ARENA_POOL_ARG === 'product') {
-    const PRODUCT7 = ['random', 'defend', 'antidef', 'wall', 'farmer', 'heavyfire', 'deepsaver'];
-    const asC = makeAsChooser({ T: T, R: W.EpirusRules });
-    ARENA_ROSTER = OPP_SPECS.filter((x) => PRODUCT7.indexOf(x.name) >= 0).map((x) => {
-      const fn = W.EpirusBots[x.fn];
-      if (typeof fn !== 'function') { console.error('⛔ 产品池缺函数：' + x.fn + '（核对 server/opp-pool.mjs 与 js/train/bots.js）'); process.exit(2); }
-      return { name: x.name, kind: 'bot', sel: asC(fn) };
-    });
-    if (ARENA_ROSTER.length !== PRODUCT7.length) { console.error('⛔ 产品池 7 脚本没凑齐（得到 ' + ARENA_ROSTER.length + '）'); process.exit(2); }
-    const SHP = String(arg('arenaShapes', '3:multi,5:multi'));
-    ARENA_SHAPES = SHP.split(',').map((s) => { const m = /^(\d+):([a-z0-9]+)$/i.exec(s.trim()); if (!m) { console.error('⛔ --arenaShapes 格式 n:mode（收到 ' + s + '）'); process.exit(2); } return { n: Number(m[1]), mode: m[2] }; });
-  }
+  ARENA_ROSTER = rosterFromArg(W, T, ARENA_POOL_ARG, 'cem-arm');
+  ARENA_SHAPES = shapesFromArg(arg('arenaShapes', ARENA_POOL_ARG === 'product' ? '3:multi,5:multi' : ''), 'cem-arm');
 }
 /* ===== §E821（10-28 傍晚 · 千问）：`EPIRUS_ARCH2` ⇒ 两臂都训在 **2.0 结构**上 =====
  * 与 `tools/train-3p.mjs` 那处同一手法（覆盖沙箱里的导出入口，`js/**` 不动 ⇒ 规则指纹不变），
@@ -429,8 +418,10 @@ if (ARENA2) {
   try { ARENA = createArena2(W, { refParams: ARENA_REF, temp: ARENA_TEMP, highN: ARENA_HIGH_N, stratified: ARENA_STRAT, stratCap: ARENA_STRAT_CAP, stratMix: ARENA_STRAT_MIX, roster: ARENA_ROSTER || undefined, shapes: ARENA_SHAPES || undefined }); }
   catch (e) { console.error('⛔ arena2 建表失败：' + String(e && e.message || e)); process.exit(7); }
   console.log('[cem-arm] ⚙ 扩表 arena2 开：指纹 ' + ARENA.fp);
-  console.log('   ‖ 桌形 ' + ARENA2_SHAPES.length + '（' + ARENA.shapes.map(function (s) { return s.n + ':' + s.mode; }).join(',') + '）' +
-    ' ‖ 对手表 ' + ARENA.roster.length + ' 项（' + ARENA.pool.length + ' 脚本 bot + ' + (ARENA.roster.length - ARENA.pool.length - 1) + ' 单技能 + 均匀随机）' +
+  console.log('   ‖ 桌形 ' + ARENA.shapes.length + '（' + ARENA.shapes.map(function (s) { return s.n + ':' + s.mode; }).join(',') + '）' +
+    ' ‖ 对手表 ' + ARENA.roster.length + ' 项（脚本 bot ' + ARENA.roster.filter(function (r) { return r.kind === 'bot'; }).length +
+    ' ‖ 单技能 ' + ARENA.roster.filter(function (r) { return r.kind === 'fixed'; }).length +
+    ' ‖ 均匀随机 ' + ARENA.roster.filter(function (r) { return r.kind === 'random'; }).length + '）' +
     ' ‖ 货币=' + ARENA_CUR + (ARENA_DIV ? '+多样性当选' : '') + (ARENA_HIGH_N > 1 ? '+高人数×' + ARENA_HIGH_N : '') + (ARENA_STRAT ? '+分层场' : '') +
     ' ‖ temp=' + ARENA_TEMP + ' ‖ 终局 holdout=' + ARENA_HOLD + ' 局/桌形');
   if (P.__arch2) {
@@ -581,7 +572,7 @@ P.setRng(T.mulberry32(SEED + 1));
 const randParams = Float64Array.from(P.makePolicy(0.25));
 const rnd = evalOne(randParams, 0, 0);
 console.log('桌形 trainMode=' + TMODE + ' ‖ 人数 n=' + N + ' ‖ 每评估局数 games=' + GAMES + ' ‖ 终局读数 ' +
-  (ARENA ? 'arena2 ' + ARENA_HOLD + ' 局/桌形 × ' + ARENA2_SHAPES.length + ' 桌形' : 'holdoutGames=' + HOLD));
+  (ARENA ? 'arena2 ' + ARENA_HOLD + ' 局/桌形 × ' + ARENA.shapes.length + ' 桌形' : 'holdoutGames=' + HOLD));
 console.log('起点分母：' + startLabel + ' fit=' + base.fit.toFixed(4) + ' 夺1=' + (base.first * 100).toFixed(1) + '% ‖' +
   ' 随机粒 fit=' + rnd.fit.toFixed(4) + ' 夺1=' + (rnd.first * 100).toFixed(1) + '%');
 if (!(isFinite(base.fit) && isFinite(rnd.fit))) { console.error('⛔ 起点分母读不出（fit 非有限）⇒ 这台尺是死的，不开跑'); process.exit(2); }
@@ -590,7 +581,7 @@ function fmtCard(c) { return c ? (c.key + ' ' + (100 * c.share).toFixed(1) + '%'
 if (ARENA) {
   const bA = ARENA.evalParams(startParams, { phase: 'holdout', gamesPerShape: ARENA_HOLD, temp: ARENA_TEMP, cur: ARENA_CUR });
   const rA = ARENA.evalParams(randParams, { phase: 'holdout', gamesPerShape: ARENA_HOLD, temp: ARENA_TEMP, cur: ARENA_CUR });
-  console.log('起点分母（arena2 holdout ' + ARENA_HOLD + ' 局/桌形 × ' + ARENA2_SHAPES.length + ' 桌形 = ' + bA.games + ' 局，货币=' + ARENA_CUR + '）：' +
+  console.log('起点分母（arena2 holdout ' + ARENA_HOLD + ' 局/桌形 × ' + ARENA.shapes.length + ' 桌形 = ' + bA.games + ' 局，货币=' + ARENA_CUR + '）：' +
     startLabel + ' 夺1=' + (bA.first * 100).toFixed(1) + '% 净胜=' + bA.score.toFixed(3) + ' 平局=' + (bA.draw * 100).toFixed(1) + '% 单卡=' + fmtCard(bA.maxCard) +
     ' ‖ 随机粒 夺1=' + (rA.first * 100).toFixed(1) + '% 净胜=' + rA.score.toFixed(3) + ' 平局=' + (rA.draw * 100).toFixed(1) + '%');
 }
@@ -900,7 +891,7 @@ if (MODE === 'esa') {
     (PRESEL === 'parent' ? ' ‖ **预选门=parent**（子代循环分 ≥ 父代即送验）' : '') +
     (DIV ? ' ‖ 按多样性 ' + accDiv + '（探针 ' + divProbes + ' 次；触发 >' + DIV_TRIGGER + '，净胜带 ±' + DIV_TOL + '，单卡需降 ≥' + DIV_DELTA + '）' : '') +
     '）‖ 父代单卡终值 ' + (100 * parentShare).toFixed(1) + '%' + (WARM_SHAPE > 0 ? ' ‖ **两阶段**（前 ' + WARM_SHAPE + ' 局只形状、容差 ' + WARM_TOL + '）' : '') + (SHAPE_CAP > 0 || DEF_CAP > 0 || JI_CAP > 0 ? ' ‖ **形状约束@t' + SHAPE_TEMP + '**（单卡≤' + (100 * SHAPE_CAP).toFixed(0) + '% ‖ 防御≤' + (100 * DEF_CAP).toFixed(0) + '% ‖ ji≤' + (100 * JI_CAP).toFixed(0) + '%，挡下 ' + shapeBlocked + ' 个送验：单卡 ' + shapeBlockKeys.share + ' ‖ 防御 ' + shapeBlockKeys.def + ' ‖ ji ' + shapeBlockKeys.ji + '）' : '') + ' ‖ 每次验证花 ' +
-    (ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES)) + ' 局（fxGames=' + FXG + (ARENA ? '，arena2 每桌形' + Math.max(8, FXG || 0) : '') + ' ‖ 预算被这块吃掉，迭代数会少）');
+    (ARENA ? Math.max(8, FXG || 0) * ARENA.shapes.length : (FXG || GAMES)) + ' 局（fxGames=' + FXG + (ARENA ? '，arena2 每桌形' + Math.max(8, FXG || 0) : '') + ' ‖ 预算被这块吃掉，迭代数会少）');
   if (ARENA_LEX && parentLex) { console.log('[cem-arm] ⚑ **词典序终态**（#161' + (ARENA_PER_N ? '·每 N 聚合' : '') + '）：' + (ARENA_PER_N ? '低于地板 N 数 ' : '低于地板格数 ') + parentLex.below + '/' + (ARENA_PER_N ? new Set(Object.keys(V7_FLOOR).map(function (k) { return String(k).split(':')[0]; })).size : Object.keys(V7_FLOOR).length) +
     ' ‖ 最差格余量 ' + parentLex.worst.toFixed(3) + ' ‖ 冻结桌总分 ' + parentFix.toFixed(3) + '（货币=' + ARENA_CUR + '）');
   ESA_LEX_STAT = { below: parentLex.below, worst: parentLex.worst, floorCells: Object.keys(V7_FLOOR).length }; }
@@ -909,13 +900,13 @@ if (MODE === 'esa') {
   ESA_FPEN_STAT = { lam: ARENA_FPEN, gap: parentGap, after: parentFpen, total: parentFix }; }
   if (QUOTA > 0 && FXSEL) console.log('[cem-arm] ⚑ **验证配额**（E7）：目标 ' + QUOTA + ' 次 ‖ 实送 ' + verifications + ' 次' +
     '（门内/探针 ' + (verifications - quotaTopups) + ' ‖ 代末补送 ' + quotaTopups + '，其中被接受 ' + quotaAccepted + '）‖ 每代补送上限 ' + QUOTA_PER_ITER +
-    ' ‖ 验证吃掉约 ' + (100 * verifications * (ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES)) / Math.max(1, gamesIn())).toFixed(1) + '% 的循环预算');
+    ' ‖ 验证吃掉约 ' + (100 * verifications * (ARENA ? Math.max(8, FXG || 0) * ARENA.shapes.length : (FXG || GAMES)) / Math.max(1, gamesIn())).toFixed(1) + '% 的循环预算');
   ESA_DIV_STAT = { accepted: accepted, byScore: accScore, byDiv: accDiv, divProbes: divProbes, parentShare: parentShare,
     acceptDeltas: acceptDeltas, verifications: verifications, quota: QUOTA, quotaPerIter: QUOTA_PER_ITER, quotaTopups: quotaTopups, quotaAccepted: quotaAccepted,
     paired: FX_PAIRED ? { k: FX_PAIRED_K, blocked: pairedBlocked } : null };
   if (acceptDeltas.length) {
     const ds = acceptDeltas.map(function (x) { return x.d; }).sort(function (a, b) { return a - b; });
-    const perVerifyGames = ARENA ? Math.max(8, FXG || 0) * ARENA2_SHAPES.length : (FXG || GAMES);
+    const perVerifyGames = ARENA ? Math.max(8, FXG || 0) * ARENA.shapes.length : (FXG || GAMES);
     console.log('[cem-arm] ⚑ **接受事件的判定力**：' + ds.length + ' 次接受的冻结桌分差 最小 ' + ds[0].toFixed(3) +
       ' ‖ 中位 ' + ds[Math.floor(ds.length / 2)].toFixed(3) + ' ‖ 最大 ' + ds[ds.length - 1].toFixed(3) +
       ' ‖ 其中 <2SE 的 ' + ds.filter(function (x) { return x < 2 * 0.7 / Math.sqrt(perVerifyGames); }).length + ' 次' +
@@ -1071,7 +1062,7 @@ const row = { mode: MODE, seed: SEED, evals: used, pop: POP, games: GAMES, n: N,
   /* arena2（--arena2=1）：上面所有 holdout* 都是 **arena2 的 holdout**（净胜 + 原始夺1），不是旧 scoreMemberN。
    *   `currency` 标明这一格 ⇒ 与旧臂的 fit 数值不可比。`maxCard` 是终局那一把的单卡占比（判退化用）。 */
   currency: ARENA ? ('arena2.' + ARENA_CUR + (ARENA_DIV ? '+div' : '')) : 'scoreMemberN.fit',
-  arena: ARENA ? { fp: ARENA.fp, temp: ARENA_TEMP, shapes: ARENA2_SHAPES.length, roster: ARENA.roster.length, pool: ARENA.pool.length,
+  arena: ARENA ? { fp: ARENA.fp, temp: ARENA_TEMP, shapes: ARENA.shapes.length, roster: ARENA.roster.length, pool: ARENA.pool.length,
     holdGamesPerShape: ARENA_HOLD, holdGames: ho.games, draw: ho.draw, cur: ARENA_CUR, diverse: ARENA_DIV, highN: ARENA_HIGH_N, stratified: ARENA_STRAT,
     stratCap: ARENA.stratCap, stratMix: ARENA.stratMix,
     divTol: DIV_TOL, divDelta: DIV_DELTA, divEvery: DIV_EVERY, divTrigger: DIV_TRIGGER, esa: ESA_DIV_STAT,

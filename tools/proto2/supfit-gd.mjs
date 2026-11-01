@@ -17,8 +17,7 @@ import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi } from './pg-lib.mjs';
 import { pickChain } from './chain-lib.mjs';
 import { scanChargeRounds } from './skill-mastery.mjs';             // miniT 预示式代理的单一来源（千问 §二十三）
-import { OPP_SPECS } from '../../server/opp-pool.mjs';            // 考卷搬迁：产品 7 脚本的单一来源
-import { makeAsChooser } from '../bot-chooser-lib.mjs';             // 同款包装（评测同款；文件在 tools/ 根不在 proto2/）
+import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac'], 'supfit-gd');
@@ -80,18 +79,11 @@ const up = (() => {
 if (!up || up.length !== P.paramCount()) { console.error('⛔ 上游读不出/参数数不符：' + UP + '（' + (up ? up.length : 'null') + ' vs ' + P.paramCount() + '）'); process.exit(2); }
 const ly = layoutOf(P);
 if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 ⇒ pg-lib 拒跑'); process.exit(2); }
-/* `--arenaPool=product`（考卷搬迁，ZCode · 10-31 深夜）：采集卷整表换产品 7 脚本 + 产品形状（缺省 3:multi,5:multi）。
- *   搬了就**不分层**（产品卷同形）；不搬 ⇒ 原 mild 分层档逐字不变。 */
-const A2_ROSTER = String(arg('arenaPool', '')) === 'product' ? (() => {
-  const PRODUCT7 = ['random', 'defend', 'antidef', 'wall', 'farmer', 'heavyfire', 'deepsaver'];
-  const asC = makeAsChooser({ T: T, R: W.EpirusRules });
-  return OPP_SPECS.filter((x) => PRODUCT7.indexOf(x.name) >= 0).map((x) => {
-    const fn = W.EpirusBots[x.fn];
-    if (typeof fn !== 'function') { console.error('⛔ 产品池缺函数：' + x.fn); process.exit(2); }
-    return { name: x.name, kind: 'bot', sel: asC(fn) };
-  });
-})() : null;
-const A2_SHAPES = A2_ROSTER ? String(arg('arenaShapes', '3:multi,5:multi')).split(',').map((x) => { const m = /^(\d+):([a-z0-9]+)$/i.exec(x.trim()); if (!m) { console.error('⛔ --arenaShapes 格式 n:mode（收到 ' + x + '）'); process.exit(2); } return { n: Number(m[1]), mode: m[2] }; }) : null;
+/* `--arenaPool`（千问 · 11-01 收敛到 `roster-lib` 单源）：`product` = 产品 7 脚本；`names:a,b,…` = 摆已登记的
+ *   任意对手（含两个训练池都没在用的 specialist）；空 = 研究卷 mild 分层原路。搬了池就**不分层**（产品卷同形）。 */
+const A2_POOL_ARG = String(arg('arenaPool', ''));
+const A2_ROSTER = rosterFromArg(W, T, A2_POOL_ARG, 'supfit-gd');
+const A2_SHAPES = shapesFromArg(arg('arenaShapes', A2_POOL_ARG ? '3:multi,5:multi' : ''), 'supfit-gd');
 const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: !A2_ROSTER, stratCap: A2_ROSTER ? undefined : 2, stratMix: A2_ROSTER ? undefined : 0.5, roster: A2_ROSTER || undefined, shapes: A2_SHAPES || undefined });
 
 /* ---- 收集：与 chain-supfit 逐字同流（seed 20261030 LCG、同 salt/局号、同教师、同克隆）----
