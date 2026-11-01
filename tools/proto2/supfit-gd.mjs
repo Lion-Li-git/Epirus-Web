@@ -151,6 +151,11 @@ const allRoundPick = (state, pid, cs) => {
   return pickKey(cs, R.SK.CHARGE, 'elec');
 };
 
+/* 环+链双兑现教师（千问 · 11-01，接 §九 的机制读数）：落雷 > 开环 > 链底盘（`pickChain`，它自带『无珠且 ep≥3 才蓄』的经济规则）。
+ * 动机：`ring` 教师（环优先）拿到环 ✔ + 大雷 ✔ 但 5P 只有 15.7（收入全喂环、不兑现）；
+ * `chain` 教师（兑现优先）拿到 5P 43.6~64 但大雷 0（每拍先花电珠 ⇒ ep 攒不到 5）。这一档是把两者串在一条
+ * 去向上：**能兑现就兑现，兑现不了才开环** ⇒ 问的是『收入去向』能不能同时给出桶线与强度。 */
+const ringChainPick = (state, pid, cs) => pickKey(cs, R.SK.BIG_T) || pickKey(cs, R.SK.RING) || pickChain(state, pid, cs, R);
 const v7Pick = (state, pid, cs) => {
   let bi = -1, bv = -Infinity;
   for (let i = 0; i < cs.length; i++) {
@@ -187,6 +192,8 @@ const teacherPick = TEACHER === 'v7mix'
     ? (state, pid, cs, legal) => pickChain(state, pid, cs, R) || keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'allround'
     ? (state, pid, cs) => allRoundPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : TEACHER === 'ringchain'
+    ? (state, pid, cs) => ringChainPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'ring'
     ? (state, pid, cs) => pickKey(cs, R.SK.RING) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 环优先：代 3 上环的提供率只有 2.8% ⇒ 先让教师自己肯开环 */
   : TEACHER === 'bigt'
@@ -195,7 +202,7 @@ const teacherPick = TEACHER === 'v7mix'
     ? (state, pid, cs) => laserPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把它拖回电珠/电磁炮那一维 */
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'allround'];
+const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'allround'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + '（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */

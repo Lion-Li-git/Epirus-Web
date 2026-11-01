@@ -85,8 +85,8 @@ if (wasteN) {
   console.log('  珠健康（池均，有珠经济 ' + wasteN + ' 枚）：浪费率 ' + pct(w) + '（线 <40% ' + (w < 0.4 ? '✔' : '✘') + '）‖ 花珠率 ' + pct(s) + '（线 ≥60% ' + (s >= 0.6 ? '✔' : '✘') + '）');
 }
 const bshare = (x) => (x && x.breadth && x.breadth.maxLandShare != null ? (100 * x.breadth.maxLandShare).toFixed(1) + '%' : '读不出');
-const bmiss = packs.filter((x) => !x.breadth).length;
-const bpass = packs.filter((x) => x.breadth && x.breadth.maxLandShare <= COLLAPSE_LINE);
+const bmiss = packs.filter((x) => !x.breadth || x.breadth.maxLandShare == null).length;
+const bpass = packs.filter((x) => x.breadth && x.breadth.maxLandShare != null && x.breadth.maxLandShare <= COLLAPSE_LINE);
 console.log('  广度下限 B-1（最大单卡落地份额 ≤' + (COLLAPSE_LINE * 100).toFixed(0) + '%，锚 v7 同尺 ' +
   (breadth['v7'] ? (100 * breadth['v7'].maxLandShare).toFixed(1) + '%' : '读不出') + '）：过 ' + bpass.length + '/' + packs.length +
   (bpass.length ? '  ← ' + bpass.map((x) => x.pack.split('/').pop()).join(', ') : ' （**全被筛掉**）') +
@@ -97,7 +97,7 @@ for (const x of packs) {
   const v = x.mastery && x.mastery.verdict;
   const ncrit = v ? Object.keys(v).filter((k) => v[k].pass).length : 0;
   const c = x.cli;
-  console.log('  ' + name.padEnd(28) + ' 判据 ' + ncrit + '/6 ‖ 夺1 ' + (c && c.first != null ? pct(c.first) : '-') + ' ‖ clean ' + (c && c.cleanScore != null ? c.cleanScore.toFixed(3) : '-') + ' ‖ 单卡 ' + (c && c.maxCard ? c.maxCard.key + ' ' + pct(c.maxCard.share) : '-') + ' ‖ 落地份额 ' + bshare(x) + (x.breadth ? '(' + (x.breadth.maxLandKey || '-') + (x.breadth.maxLandShare <= COLLAPSE_LINE ? ' ✔' : ' ✘塌缩') + ')' : '') + (x.cliNote || ''));
+  console.log('  ' + name.padEnd(28) + ' 判据 ' + ncrit + '/6 ‖ 夺1 ' + (c && c.first != null ? pct(c.first) : '-') + ' ‖ clean ' + (c && c.cleanScore != null ? c.cleanScore.toFixed(3) : '-') + ' ‖ 单卡 ' + (c && c.maxCard ? c.maxCard.key + ' ' + pct(c.maxCard.share) : '-') + ' ‖ 落地份额 ' + bshare(x) + (x.breadth ? '(' + (x.breadth.maxLandKey || '—') + (x.breadth.maxLandShare == null ? ' ⚠读不出：一次落地都没有' : (x.breadth.maxLandShare <= COLLAPSE_LINE ? ' ✔' : ' ✘塌缩')) + ')' : '') + (x.cliNote || ''));
 }
 if (OUT) {
   writeFileSync(OUT, JSON.stringify({ meta: { tool: 'pool-check', games: GAMES, temp: TEMP, note: '快查单温度档；分母=显式候选集' }, packs }, null, 1));

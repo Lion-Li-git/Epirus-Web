@@ -33,7 +33,8 @@ function rowOf(label, params, container) {
     landedTotal: mh.landedTotal, landedKeys: mh.landedKeys, effSkillsLand: mh.effSkillsLand,
     distinctCast: castK.length, maxCastKey: (function () { let k = null, c = 0; for (const x of castK) if (mh.castByKey[x] > c) { c = mh.castByKey[x]; k = x; } return k; })(),
     maxCastShare: (function () { const t = castK.reduce((a, x) => a + mh.castByKey[x], 0); let c = 0; for (const x of castK) c = Math.max(c, mh.castByKey[x]); return t ? c / t : 0; })(),
-    maxLandShare: ls.share, maxLandKey: ls.key, pierceMissing: mh.pierceMissing,
+    /* ⚑ 分母为 0 不许与『没塌缩』同形：一次伤害都没落地 ⇒ 份额**读不出**（null），不是 0.0%（11-01 池表抓到）。 */
+    maxLandShare: ls.total > 0 ? ls.share : null, maxLandKey: ls.key, landReadable: ls.total > 0, pierceMissing: mh.pierceMissing,
   };
 }
 
