@@ -1119,7 +1119,19 @@ const COUNTER_OPP_TABLE = {
    * `pickLaserBank`（bots.js §E744/§E745 夜班造的教师，默认不进任何池）在这里只当**对手**上桌，
    * 不动教师通道。⚠ 只按名字点名；数字口径已冻结为三元组（v1.8.32）不受影响；`all`/`*` = 全表会带上它（与
    * gunFocus/reflectWall 同一既有语义，不另开特例）。 */
-  laserBank: { name: 'cnt:laserBank', sel: Bots.pickLaserBank }
+  laserBank: { name: 'cnt:laserBank', sel: Bots.pickLaserBank },
+
+  /* ---- 11-01（ZCode · PREREG-2026-11-01-LONGSHORT b 部分）：RICH 压力席进 GA 训练桌（**加法，默认关**）----
+   *   名单与 server/opp-pool.mjs 的 OPP_SPECS 同源同名（fn 逐字同引用）；不点 EPIRUS_COUNTER_OPPS 时一条行为不变
+   *   （回归腿：v7 1 代小跑逐代轨迹逐字同）。RICH-13 的 6 个压力源 + 产品 7 里原生表没有的 heavyfire/deepsaver。
+   *   gunspam 与表里既有 gunSpam 是同一函数（OPP_SPECS 的 fn 名），两个键只是别名，别重复加席。 */
+  heavyfire: { name: 'cnt:heavyfire', sel: Bots.pickHeavyFire },
+  deepsaver: { name: 'cnt:deepsaver', sel: Bots.pickDeepSaver },
+  protomine: { name: 'cnt:protomine', sel: Bots.pickProtoMine },
+  ringspam: { name: 'cnt:ringspam', sel: Bots.pickRingSpam },
+  targeter: { name: 'cnt:targeter', sel: Bots.pickTargeter },
+  deadlineburst: { name: 'cnt:deadlineburst', sel: Bots.pickDeadlineBurst },
+  earlypressure: { name: 'cnt:earlypressure', sel: Bots.pickEarlyPressure }
 };
 const COUNTER_RAW = String(process.env.EPIRUS_COUNTER_OPPS || '').trim();
 /* ⚑ v1.8.32（10-24 夜 · 千问）：**数字口径冻结成老三元组**，`all`/`*` 才等于全表。
