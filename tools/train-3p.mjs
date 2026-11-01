@@ -104,7 +104,8 @@ const SELF_ENV_KEYS = [
   'EPIRUS_HALL_SEED',   // v1.5.277 §E114：把起点补进终局重验的候选池（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
   'EPIRUS_GA_GATE', 'EPIRUS_GA_GATE_GAMES', 'EPIRUS_GA_BAND', 'EPIRUS_STALL_ABORT',
-  'EPIRUS_HALL_TRACE', 'EPIRUS_HALL_TRACE_OUT',   // 11-01 晚（ZCode · 千问交接 §五.3）：逐代名人堂/门槛指纹落盘（默认关 ⇒ 一条行为不变）   // 千问 §十一 C：演化期健康门槛（形状搬自 `evo.js:3952`）+ 它的测量长度 + 带内取宽的带宽 ‖ GA 臂级空转终止（`EPIRUS_STALL_ABORT` 已在 §六② 实现，名单此前漏登记）
+  'EPIRUS_HALL_TRACE', 'EPIRUS_HALL_TRACE_OUT',
+  'EPIRUS_WIDE_FINAL',   // 11-01 深（ZCode · PREREG-2026-11-01-WIDE-FINAL）：v4 终局同尺（默认关）   // 11-01 晚（ZCode · 千问交接 §五.3）：逐代名人堂/门槛指纹落盘（默认关 ⇒ 一条行为不变）   // 千问 §十一 C：演化期健康门槛（形状搬自 `evo.js:3952`）+ 它的测量长度 + 带内取宽的带宽 ‖ GA 臂级空转终止（`EPIRUS_STALL_ABORT` 已在 §六② 实现，名单此前漏登记）
   'EPIRUS_SEL_GIFT_VETO', 'EPIRUS_SEL_GIFT_VETO_GAMES',   // §E650（千问）：送盾当选 veto + 它的测量长度（默认关 ⇒ `gateOk` 那一次测量也不跑）
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
   'EPIRUS_SEL_CLEAR', 'EPIRUS_SEL_CLEAR_GAMES',   // §E787（10-26 夜班后追加，用户裁"加上开跑"）：当选面的**场B 清场地板**（veto，不进 fit）+ 它的测量局数（默认 40 = 官方口径）
@@ -295,6 +296,13 @@ const GA_GATE_GAMES = Math.max(2, Number(process.env.EPIRUS_GA_GATE_GAMES || 6) 
  *   ⇒ "终局当选从名人堂挑了另一粒"只是推断。本开关把每一代的 {top3 指纹, 门槛读数, 准入后名人堂} 追加落 JSONL，
  *   终局当选时再补一行 final（当选粒指纹 + 名人堂全家）⇒ 机制可以从"推断"升成"账面"。
  * 默认关：一个 env 读取 + 一个 if ⇒ 逐字原行为（回归腿：默认关轨迹逐字同）。 */
+const WIDE_FINAL = Number(process.env.EPIRUS_WIDE_FINAL || 0);
+if (WIDE_FINAL && GA_GATE <= 0) {
+  console.error('[wide-final] ⛔ EPIRUS_WIDE_FINAL 要与 EPIRUS_GA_GATE 同开——同一把尺的参照（GA_INC，起点同 n 读数）来自门槛；单开没有"同尺"可讲');
+  process.exit(2);
+}
+let bestWideSeen = null;   /* v4：全程最宽粒快照（参数拷贝 ⇒ 育种变异不穿透） */
+let WIDE_FINAL_PICK = null;
 const HALL_TRACE = Number(process.env.EPIRUS_HALL_TRACE || 0);
 const HALL_TRACE_OUT = String(process.env.EPIRUS_HALL_TRACE_OUT || ('scratch/hall-trace/' + (process.env.EPIRUS_ARM || 'arm') + '.jsonl'));
 if (HALL_TRACE) {
@@ -1941,6 +1949,15 @@ for (let gen = 0; gen < GENS; gen++) {
     GA_STAT.lastEff1 = reads.map((r) => r.m.gMulti.toFixed(1) + '/' + r.m.gLong.toFixed(1) +
       'G ‖ ' + r.m.landMulti.toFixed(2) + '/' + r.m.landLong.toFixed(2) + '兑').join('  ');
     gateReads = reads;
+    if (WIDE_FINAL) {
+      for (const r of reads) {
+        if (!r.m.wide) continue;
+        if (!bestWideSeen || r.wideScore > bestWideSeen.wideScore) {
+          bestWideSeen = { params: Float64Array.from(scored[r.gi].params), wid: widOfArr(scored[r.gi].params),
+            gen: gen, wideScore: r.wideScore, gMulti: r.m.gMulti, gLong: r.m.gLong, landMulti: r.m.landMulti, landLong: r.m.landLong };
+        }
+      }
+    }
     let rank = reads.filter((r) => r.m.wide);
     const nWide = rank.length;
     if (GA_BAND > 0 && rank.length > 1) {
@@ -2151,6 +2168,13 @@ if (HALL_SEED > 0 && seedParams) {
   } else {
     console.log('[hall-seed] 起点本来就在名人堂里（' + hall.filter(function (h) { return h.params === seedParams; }).length + ' 席）⇒ 不重复追加');
   }
+}
+let WIDE_FINAL_APPENDED = false;
+if (WIDE_FINAL && bestWideSeen && !hall.some(function (h) { return (HALL_DEDUP && h.wid === bestWideSeen.wid) || h.params === bestWideSeen.params; })) {
+  hall.push({ params: bestWideSeen.params, fit: null, wid: bestWideSeen.wid });
+  WIDE_FINAL_APPENDED = true;
+  console.log('[wide-final] 全程最宽粒入终局池：gen ' + bestWideSeen.gen + ' wideScore ' + bestWideSeen.wideScore.toFixed(2) +
+    '（' + bestWideSeen.gMulti.toFixed(1) + '/' + bestWideSeen.gLong.toFixed(1) + 'G ‖ ' + bestWideSeen.landMulti.toFixed(2) + '/' + bestWideSeen.landLong.toFixed(2) + '兑）wid ' + bestWideSeen.wid.slice(0, 10));
 }
 const hallEntries = [];
 /* §E322（v1.6.7）：当选键**不再只吃一粒 seedBase**。默认 4 粒取均值（`EPIRUS_SEL_EVAL_SEEDS=1` 逐字回到旧行为）。
@@ -2544,6 +2568,33 @@ for (const h of hall) {
       if (nb) sel.best = nb;
     }
   }
+/* ===== v4（PREREG-2026-11-01-WIDE-FINAL）：终局同一把宽尺 =====
+ * 对幸存候选用与演化门槛**同一把尺**（wideMetricsOf ‖ 同参照 GA_INC ‖ 同谓词 kinds≥3 ∧ isWideVs）
+ * ⇒ 宽中取重验分最高者为产物；无宽粒 ⇒ 保留原产物 + wideFinalAllNarrow 响亮。只换"最后一句话谁说"，训练侧零变化。 */
+if (WIDE_FINAL) {
+  const cands = (sel.clean && sel.clean.length) ? sel.clean : (sel.best ? [sel.best] : []);
+  const wreads = [];
+  for (const e of cands) {
+    const m = wideMetricsOf(e.ref.params);
+    m.wide = (m.gMulti >= GA_KINDS && m.gLong >= GA_KINDS) && (GA_INC ? isWideVs(m, GA_INC) : true);
+    wreads.push({ e: e, m: m });
+    console.log('[wide-final]   候选 trainFit=' + (typeof e.ref.fit === 'number' ? e.ref.fit.toFixed(3) : '追加') +
+      ' → ' + m.gMulti.toFixed(1) + '/' + m.gLong.toFixed(1) + 'G ‖ ' + m.landMulti.toFixed(2) + '/' + m.landLong.toFixed(2) + '兑 ' + (m.wide ? '宽✔' : '窄✘'));
+  }
+  const wides = wreads.filter(function (r) { return r.m.wide; });
+  if (wides.length) {
+    wides.sort(function (a, b) { return b.e.score - a.e.score; });
+    const w0 = wides[0];
+    const changed = sel.best !== w0.e;
+    if (changed) console.log('[wide-final] **换人**：宽粒（score ' + w0.e.score.toFixed(3) + '，wideScore ' + w0.m.landMulti.toFixed(2) + '+' + w0.m.landLong.toFixed(2) + '）取代原当选');
+    else console.log('[wide-final] 原当选本来就是宽粒 ⇒ 不换人');
+    sel.best = w0.e;
+    WIDE_FINAL_PICK = { wideN: wides.length, of: cands.length, changed: changed, allNarrow: false };
+  } else {
+    console.error('[wide-final] ⛔ 终局池无一宽粒（wideFinalAllNarrow）⇒ 保留原产物，这粒按预注册不许当"宽产物"引用');
+    WIDE_FINAL_PICK = { wideN: 0, of: cands.length, changed: false, allNarrow: true };
+  }
+}
   if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; }
   if (HALL_TRACE) { try { appendFileSync(HALL_TRACE_OUT, JSON.stringify({ type: 'final', pickedWid: widOfArr(finalParams), hall: hall.map(function (h) { return h.wid || widOfArr(h.params); }) }) + '\n'); } catch (eT4) {} }
   else if (hallEntries.length) {
