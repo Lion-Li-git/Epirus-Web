@@ -20,7 +20,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -354,7 +354,7 @@ if (TEACHER_KNOWN.indexOf(TEACHER) < 0) { console.error('⛔ --teacher 只认 ' 
 const RARE = String(arg('rareOnly', '')).split(',').filter(Boolean);
 const RARE_FRAC = Math.min(0.95, Math.max(0, Number(arg('rareFrac', 0)) || 0));
 if (RARE.length && !(RARE_FRAC > 0)) { console.error('⛔ --rareOnly 要配 --rareFrac>0'); process.exit(2); }
-const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0, rare: 0 };
+const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0, rare: 0, byKey: {} };
 /* 打出去的那一手 vs 教师（只在学生自访轮里量）——与 `LABEL`（克隆态 argmax 口径）是**两个不同的数** */
 const PLAY = { n: 0, hit: 0, stuckCharge: 0, missCharge: 0, missFire: 0 };
 
@@ -385,6 +385,7 @@ function collectInto(dst, srcParams, idBase) {
     dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: keys[wIdx], want0: t0.key, shp: curShp,
       wantIdx: wIdx, wantBead: again.bead || null });
     LABEL.keys++;
+    LABEL.byKey[again.key] = (LABEL.byKey[again.key] || 0) + 1;
     if (again.key !== t0.key) LABEL.moved++; else LABEL.ok++;
   };
   let play;
@@ -601,6 +602,76 @@ const verdict = OBJ === 'cand'
 console.log('  判：' + verdict);
 
 mkdirSync(dirname(OUT), { recursive: true });
+/* 教师标签**塌缩**闸（用户 11-01 提"连续 n 代一样就该报错终止"后接的第一格，成本最低的一格）：
+ *   ration5 那臂蒸完标签只剩 `ji + charge#elec` 两类（meta 里逐键可见），产物是"47 回合谁都不死、5P 0.7%"的
+ *   永远在攒包 ⇒ 而我直到跑完 4 条考卷腿才发现。这里**在建臂之前就拒**，不写产物。
+ *   ⚠ 只在 `--objective=key` 的标签上判（`cand` 目标下 byKey 同口径，不动）。 */
+const LABEL_KINDS_MIN = Math.max(0, Number(arg('labelKindsMin', 0)) || 0);
+/* 支持数闸（11-01 傍晚，我自己上一条"只剩两类标签"的误读逼出来的：那是**留出**样本薄，整份采集有 3 类）：
+ *   真正会静默废掉一条线的是"这一格在采集里只有 1 个样本"——ration5 的电磁炮标签 1/800（0.1%），
+ *   于是蒸出"只蓄能不开炮、47 回合谁都不死、5P 0.7%"的包，而我跑到第 4 条考卷腿才发现。 */
+const SUPPORT_MIN = Math.max(0, Number(arg('labelSupportMin', 0)) || 0);
+const FIRE_KEYS = [R.SK.RAILGUN, R.SK.BIG_T, R.SK.LASER_EYE];
+{
+  const ks = Object.keys(LABEL.byKey);
+  const nonJi = ks.filter((k) => k !== R.SK.JI);
+  const hist = ks.map((k) => (R.byKey[k] && R.byKey[k].name || k) + '=' + LABEL.byKey[k]).sort((a, b) => b.split('=')[1] - a.split('=')[1]).join(' ‖ ');
+  console.log('  ⚑ 教师标签的种类：共 ' + ks.length + ' 键（非ジ ' + nonJi.length + ' 类）‖ ' + hist);
+  const rare = nonJi.length ? nonJi.reduce((a, k) => (LABEL.byKey[k] < LABEL.byKey[a] ? k : a), nonJi[0]) : null;
+  console.log('  ⚑ 最稀有的非ジ标签 = ' + (rare ? (R.byKey[rare] && R.byKey[rare].name || rare) + ' ' + LABEL.byKey[rare] + '/' + LABEL.keys +
+    '（' + (100 * LABEL.byKey[rare] / LABEL.keys).toFixed(2) + '%）' : '读不出（非ジ类为 0）') +
+    ' ‖ 开火线支持数：' + FIRE_KEYS.map((k) => (R.byKey[k] && R.byKey[k].name || k) + '=' + (LABEL.byKey[k] || 0)).join(' '));
+  if (LABEL_KINDS_MIN > 0 && nonJi.length < LABEL_KINDS_MIN) {
+    console.error('⛔ 教师标签非ジ种类 ' + nonJi.length + ' < --labelKindsMin=' + LABEL_KINDS_MIN + ' ⇒ 当场拒、不写产物。');
+    process.exit(9);
+  }
+  if (SUPPORT_MIN > 0 && rare && LABEL.byKey[rare] < SUPPORT_MIN) {
+    console.error('⛔ 最稀有非ジ标签只有 ' + LABEL.byKey[rare] + ' 个样本 < --labelSupportMin=' + SUPPORT_MIN +
+      ' ⇒ 这条线在采集里几乎不存在，网络学不到它（别拿"留出里没出现"当"教过了"）。**不写产物**。');
+    process.exit(11);
+  }
+  if (nonJi.length <= 2) console.log('  ⚠ 非ジ标签只剩 ' + nonJi.length + ' 类 ⇒ 产物大概率一维/空转；要拒请给 --labelKindsMin=3');
+}
+
+/* 行为冒烟（`--smoke=<局数>`，默认 0=关）：蒸完先在镜像桌上打几局，只问两件事——
+ *   ① 非ジ出手种类还剩几种 ② 有没有一局能**分出胜负**。ration5 那臂两条都会红（1 种 / 决胜率 0%），
+ *   而它当时骗过了我，因为我先跑的是考卷桌（420 局）而不是这张 30 秒的镜。 */
+const SMOKE = Math.max(0, Number(arg('smoke', 0)) || 0);
+if (SMOKE > 0) {
+  const ch = T.policyChooserN(Float64Array.from(finalPv), 0.15);
+  let kinds = {}, draws = 0, rounds = 0, beadGot = 0, beadSpent = 0, beadExp = 0;
+  for (let g = 0; g < SMOKE; g++) {
+    const st = W.EpirusState.createState('multi', { next: T.mulberry32(9000 + g) }, 5);
+    st.slotSalt = ((Math.imul(g + 3, 0x85ebca6b) ^ 0x27d4eb2f) >>> 0);
+    W.EpirusPlay.autoGameN(st, [ch, ch, ch, ch, ch]);
+    rounds += st.round;
+    if (st.winner === 'draw' || st.winner == null) draws++;
+    for (const e of st.events) {
+      if (e.type === 'action' && e.outcome === 'ok' && e.key && e.key !== R.SK.JI) kinds[e.key] = (kinds[e.key] || 0) + 1;
+      /* 珠账按**被测席**算（镜像桌上五席同包 ⇒ 与 mastery 的 chargeProfile 同口径但那是 long 桌，这里量 multi 镜） */
+      else if (e.type === 'bead') { if (e.delta > 0) beadGot += e.delta; else beadSpent += -e.delta; }
+      else if (e.type === 'beadExpire') beadExp += (e.delta != null ? Math.abs(e.delta) : 1);
+    }
+  }
+  const nk = Object.keys(kinds).length;
+  const waste = beadGot ? beadExp / beadGot : null;
+  console.log('  ⚑ 行为冒烟（镜像 ' + SMOKE + ' 局 ‖ n=5 ‖ ε=0）：非ジ出手 ' + nk + ' 种（' +
+    Object.keys(kinds).sort((a, b) => kinds[b] - kinds[a]).slice(0, 6).map((k) => (R.byKey[k] && R.byKey[k].name || k) + '=' + kinds[k]).join(' ') + '）' +
+    ' ‖ 局均回合 ' + (rounds / SMOKE).toFixed(1) + ' ‖ 决胜率 ' + (100 * (1 - draws / SMOKE)).toFixed(1) + '%' +
+    ' ‖ 珠账 得 ' + beadGot + ' 花 ' + beadSpent + ' 过期 ' + beadExp + (waste == null ? '（**没得到过珠 ⇒ 浪费率读不出，不是 0%**）' : ' ⇒ 浪费率 ' + (100 * waste).toFixed(1) + '%'));
+  if (nk <= 1 || draws === SMOKE) {
+    console.error('⛔ 冒烟红：非ジ出手 ' + nk + ' 种、决胜率 ' + (100 * (1 - draws / SMOKE)).toFixed(1) + '% ⇒ 这一档教师蒸出来的是空转包，**不写产物**（省下后面的考卷腿）。');
+    process.exit(12);
+  }
+  /* 只攒不放（ration4 实测：得珠 1324、花 0、过期 1324 = 100% 浪费，而我直到 mastery 才看见）：
+   *   ⚠ 分母闸门——一次珠都没得到的包不在这一条管辖内（那是"进不了菜单"那一类，另说），别把"读不出"判成"违规"。 */
+  if (beadGot >= 50 && waste != null && waste >= 0.9) {
+    console.error('⛔ 冒烟红：得到 ' + beadGot + ' 颗珠却几乎全过期（浪费 ' + (100 * waste).toFixed(1) + '%、花了 ' + beadSpent + '）' +
+      ' ⇒ 珠经济被打破 = 这一档教师只教会"攒"没教会"用"，**不写产物**。');
+    process.exit(14);
+  }
+}
+
 const packed = P.pack(finalPv);
 writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
 writeFileSync(OUT + '.meta.json', JSON.stringify({

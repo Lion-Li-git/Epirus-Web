@@ -1730,7 +1730,12 @@ let sigma = 0.18;
 const SIG_FLOOR = Number(process.env.EPIRUS_SIGMA_FLOOR || 0.06);
 const SIG_DECAY = Number(process.env.EPIRUS_SIGMA_DECAY || 0.995);
 const SIG_STALL = Number(process.env.EPIRUS_SIGMA_STALL || 0);
-let sigStall = 0, sigBumps = 0;
+let sigStall = 0, sigBumps = 0, noProg = 0;
+/* EPIRUS_STALL_ABORT=<K>（用户 11-01 傍晚提的"连续 n 代完全一样就提前报错终止"，GA 侧）：
+ *   在册的 EPIRUS_SIGMA_STALL 已经在数"连续几代 bestFit 没进步"，但它的动作是**抬 σ 继续跑**（恢复）。
+ *   这条复用同一个"没进步"计数器（只在真进步时归零，抬 σ 不算进步），超过 K 代就整个终止 ⇒ 一支注定没动静的臂
+ *   不再把 400 代 × 25k 局跑满。默认 0=关（关时今天的形状一字不变）。 */
+const STALL_ABORT = Math.max(0, Number(process.env.EPIRUS_STALL_ABORT || 0));
 if (process.env.EPIRUS_SIGMA_FLOOR || process.env.EPIRUS_SIGMA_DECAY || process.env.EPIRUS_SIGMA_STALL) {
   console.log('[sigma 档] floor=' + SIG_FLOOR + ' decay=' + SIG_DECAY + ' stall=' + SIG_STALL +
     '（默认档是 floor=0.06 decay=0.995 stall=0 ‖ 而 `evo.js:2464` 那份写的是 0.10/0.999 —— 两份口径的账记在日志 E2）');
@@ -1864,8 +1869,8 @@ for (let gen = 0; gen < GENS; gen++) {
     return { params: params, r: r };
   });
   scored.sort(function (a, b) { return b.r.fit - a.r.fit; });
-  if (scored[0].r.fit > bestFit) { bestFit = scored[0].r.fit; bestParams = scored[0].params; sigStall = 0; }
-  else sigStall++;
+  if (scored[0].r.fit > bestFit) { bestFit = scored[0].r.fit; bestParams = scored[0].params; sigStall = 0; noProg = 0; }
+  else { sigStall++; noProg++; }
   addHall(scored[0].params, scored[0].r.fit);
   addHall(scored[1].params, scored[1].r.fit);
   if (gen % 20 === 0 || gen === GENS - 1) {
@@ -1947,6 +1952,12 @@ for (let gen = 0; gen < GENS; gen++) {
     const up = Math.min(0.18, sigma * 1.25);
     if (up > sigma + 1e-9) { sigma = up; sigBumps++; }
     sigStall = 0;
+  }
+  if (STALL_ABORT > 0 && noProg >= STALL_ABORT) {
+    console.log('\n⛔ **臂级空转终止（GA）**：连续 ' + noProg + ' 代 bestFit 没有进步（≥ EPIRUS_STALL_ABORT=' + STALL_ABORT + '）'
+      + ' ⇒ 第 ' + gen + ' 代收摊，不再把剩下的 ' + (GENS - gen - 1) + ' 代跑满（已花约 ' + ((gen + 1) * POP * GAMES * 1) + ' 局）。'
+      + '产物**不写**：这一支等于什么都没练出来。');
+    process.exit(13);
   }
 }
 

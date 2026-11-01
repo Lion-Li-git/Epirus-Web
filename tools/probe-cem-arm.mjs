@@ -36,7 +36,7 @@ const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
   'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap', 'masterySem', 'masteryMax',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames', 'arenaPool', 'arenaShapes', 'arenaDivK', 'selCap', 'killKinds', 'killStreak', 'bandEntropy'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames', 'arenaPool', 'arenaShapes', 'arenaDivK', 'selCap', 'killKinds', 'killStreak', 'bandEntropy', 'stall'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -307,6 +307,17 @@ const BAND_ENT = Math.max(0, Number(arg('bandEntropy', 0)) || 0);
 const BAND_STAT = { gens: 0, movedGens: 0, swaps: 0, prodSwaps: 0, bandSizes: [], soloGens: 0, topG: 0 };
 /* 两套当选面机制同时开就说不清是谁换的产物 ⇒ 当场拒（先例：--arenaDivK 与 mastery 门互斥） */
 if (BAND_ENT > 0 && MASTERY_ON) { console.error('⛔ --bandEntropy 与 mastery 门不能同开：两者都要改"产物是谁"，同时开就分不清是熵换的还是门挡的。'); process.exit(2); }
+/* `--stall=<N>`（用户 11-01 傍晚："连续 n 代完全一样就提前整个报错终止"）：**臂级空转终止**。
+ *   签名 = 产物粒子的参数指纹 ‖ 本代精英的 fit 多重集（排序后逐字比）。连续 N 代签名不变 ⇒ 搜索在原地转，
+ *   当场 exit 13、**不写产物**（先例：`--killKinds` 的 KILLED 与 `--dagger` 的空转闸 exit 7）。
+ *   为什么值得这条：今天的 ration5 臂与 `BAND-*` 第一批都是"跑完了、读数出来才发现什么都没发生"。
+ *   ⚠ 默认 0=关（开档必须自带一次"关档逐字节同"回归腿）。 */
+const STALL_N = Math.max(0, Number(arg('stall', 0)) || 0);
+let stallRun = 0, STALLED = null, LAST_SIG = '';
+const sigOf = (params, sc, keepIdx) => {
+  const h = createHash('md5').update(Buffer.from(params.buffer, params.byteOffset, params.byteLength)).digest('hex').slice(0, 12);
+  return h + '|' + keepIdx.map((k) => (sc[k] && sc[k].fit != null ? sc[k].fit.toFixed(6) : 'x')).sort().join(',');
+};
 const SEL_STAT = { checked: 0, blocked: 0, starvedIter: 0, accepted: 0, worstSeen: 0 };
 if (ARENA_CUR !== 'net' && ARENA_CUR !== 'clean' && ARENA_CUR !== 'first') { console.error('⛔ --arenaCur 只认 net|clean|first（收到 ' + ARENA_CUR + '）'); process.exit(2); }
 /* ⚑ 响亮闸（ZCode · 10-31 晚，P-P5 首遍发臂当场栽的）：arena2 只在 `--arena2=1` 时建表，不带它 ⇒
@@ -1112,6 +1123,20 @@ let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
       best = cand[keep[0]]; bestEnt = candEnt; BAND_STAT.prodSwaps++;
       if (SEL_CAP > 0) SEL_STAT.accepted++;
     } else if (bf > bestFit) { bestFit = bf; best = cand[keep[0]]; bestEnt = candEnt == null ? bestEnt : candEnt; if (SEL_CAP > 0) SEL_STAT.accepted++; }
+    /* 臂级空转终止（`--stall=`）：签名 = 产物参数指纹 ‖ 本代精英 fit 多重集；连续 N 代一模一样就报错收摊。
+     *   关档时这段一行都不走（回归腿：`--stall` 不给 ⇒ 产物逐字节同）。 */
+    if (STALL_N > 0) {
+      const sig = sigOf(best, scored, keep);
+      if (sig === LAST_SIG) {
+        stallRun++;
+        if (stallRun >= STALL_N) {
+          STALLED = { atIter: it + 1, run: stallRun, gamesSpent: gamesIn() };
+          console.log('\n⛔ **臂级空转**：连续 ' + stallRun + ' 代签名完全相同（产物参数指纹 + 精英 fit 多重集）' +
+            ' ⇒ 搜索在原地转，第 ' + (it + 1) + ' 代终止（已花 ' + STALLED.gamesSpent + ' 局）。**产物不写**。');
+          break;
+        }
+      } else { stallRun = 0; LAST_SIG = sig; }
+    }
     mean = nm; sd = ns;
     used += POP;
     if (TARGET_G) {
@@ -1196,9 +1221,12 @@ if (OUT) {
   let PACKED_SNAP = null;
   if (KILLED) { console.log('\n⛔ **本臂被中途淘汰判据杀掉**：连续 ' + KILLED.streak + ' 代最高分粒子出手种类 ' + KILLED.kindN +
     ' < ' + KILL_KINDS + '（第 ' + KILLED.atIter + ' 代，已花 ' + KILLED.gamesSpent + ' 局）⇒ **产物不写**（PREREG-2026-11-01-KILL-NARROW K-1）。'); }
+  else if (STALLED) { console.log('\n⛔ **空转终止臂不写产物**（要留产物请换预算/换桌形/去掉 --stall，并在日志里注明这一次没有产物）。'); }
   else { const packed = P.pack(best);
   writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8'); PACKED_SNAP = packed; }
-  if (!KILLED) row.wrote = OUT;
+  if (!KILLED && !STALLED) row.wrote = OUT;
+  row.stall = STALL_N > 0 ? { n: STALL_N, run: stallRun, stalled: STALLED } : null;
+  if (STALLED) process.exitCode = 13;
   /* ⚑ 空臂标记（10-31）：产物与起点**逐字节相同** ⇒ 这一臂什么都没接受。
    *   动因是实测：`OB3S-BIGT-s7.bak` 与 `OB3S-BIGT-s11.bak` 的 md5 与父本 `OB3S-C2-s7.bak` 全等
    *   （各吃 24k 局、0 次接受），而它们在建表时算"两条子代"⇒ 演化图上是两条**假分叉**。
