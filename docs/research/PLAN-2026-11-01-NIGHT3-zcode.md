@@ -6,17 +6,16 @@
 ## Phase 0（23:15~23:30）计划成文 + B 设计自检
 - 读全 `featuresV7` 内部（per-seat 块写入器在 250~330 段），确定单源抽取方案。
 
-## Phase 1（23:30~01:00）B 路线：set-streaming features
-事实基础（§十九）：**架构已是集合制**（seat-encoder + mean/max 池化，权重与人 数无关），堵点只在
-`featuresV7` 的定长 fs 布局（5 席偏移字面写死）。⇒ 改法 = **加一个流式出口，不改任何现有输出**：
-- B-1 `policy.js`：新增 `featuresSeats(state, pid)` —— 与 featuresV7 **单源共用席块计算器**，
-  返回 `{self:[…], seats:[{pid, opp[10], t[4], b[14]}…对全部存活席]}`；`features()` 输出一字不变（v7 面不动）。
-- B-2 `arch2.mjs`：`seatVecs` 优先吃 `featuresSeats`（同 SEAT_DIM、同 oppSlots 排序、同剔除规则），
-  fs 回退保留（v7 面与旧路径不动）；≤5P 时向量序列必须与旧路径**逐位相同**。
-- B-3 `policy2.js` 浏览器镜像同步 + browser-parity 腿。
-- B-4 回归腿（全绿才进 Phase 2）：v7 小跑轨迹逐字同 ‖ 代 3 三强包 5P/3P 四骰**逐字节同**（≤5P 零行为变化）‖
-  selftest2/3 全绿 ‖ 8P 探针显示 7 对手全可见（盲区消除）。
-- B-5 指纹翻动记档（policy.js 在指纹表里，obs3b 换代先例流程）。
+## Phase 1（23:30~00:4x，**00:2x 以"零改动"提前收口**）B 路线：set-streaming features
+**结论：B 路线在 obs3b 里天生成立，js/ 一个字节不用动，指纹不翻。**
+- 验证（scratch/probe-obs3b-seats.mjs，走真路径）：`obs3Scene`（obs3.mjs:283）对 alive **全量发席**——
+  2P=2 席 / 3P=3 / 5P=5 / **8P=8（自己 + 7 对手全进 mean/max 池）**；`forwardObs3`（arch2.mjs:414）池化循环无闸；
+  人数族归一 `/NMAX=10`（obs3.mjs:133，2.0 目标本写 2–10 人）；8P 真前向 sane（argmax=ji）、8P 整局跑完。
+- **病根记账**：00:0x 的探针（scratch/probe-seats.cjs）量的是 `P.oppSlots`——那是 **v7 面**（policy.js）的助手，
+  "8P 截 5 席"是 v7 面的事实，被错推广到了 gen-3 头上。gen-3 从第一天起就是全可见。
+- 回归腿：selftest2 **36/36 绿** ‖ selftest3 全绿（腿 A–F）‖ js/ 未动 ⇒ v7 轨迹与 gen-3 5P/3P 逐字节不变**按构造成立**。
+- 原 B-1~B-5（featuresSeats/seatVecs/policy2 镜像/指纹翻动）**全部作废**——只有当 gen-3 要**上浏览器**时
+  才需要把 obs3b 面移植进 policy2.js（记入交接件，是发货任务不是今晚的训练堵点）。
 
 ## Phase 2（01:00~02:00）8P 训练桌与评测
 - 8P 形状进训练面（`scoreMemberN` N=8 验证）+ `eval-8p` 量具（包 + 7 脚本组合，40 局档）。
