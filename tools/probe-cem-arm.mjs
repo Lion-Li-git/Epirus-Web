@@ -36,7 +36,7 @@ const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['mode', 'evals', 'pop', 'games', 'n', 'seed', 'elite', 'sig', 'degenerate',
   'start', 'out', 'quiet', 'trainMode', 'holdoutGames', 'targetGames', 'fxSelect', 'fxGames', 'sigmaAdaptive', 'playtemp',
   'masteryKey', 'masteryGate', 'masteryLine', 'masteryGames', 'masteryN', 'masteryTable', 'masteryCap', 'masterySem', 'masteryMax',
-  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames', 'arenaPool', 'arenaShapes', 'arenaDivK'], 'probe-cem-arm');
+  'arena2', 'arenaTemp', 'arenaHold', 'arenaCur', 'arenaDiverse', 'divTol', 'divDelta', 'divEvery', 'divTrigger', 'arenaHighN', 'arenaStrat', 'arenaStratCap', 'arenaStratMix', 'sigFloor', 'sigRestart', 'arenaPen', 'arenaLex', 'arenaFloorPen', 'fxAll', 'preSel', 'fxQuota', 'fxQuotaPerIter', 'fxPaired', 'fxPairedK', 'boN', 'boNK', 'arenaShapeCap', 'arenaShapeTemp', 'arenaShapeGames', 'arenaDefCap', 'arenaJiCap', 'arenaWarmShape', 'arenaWarmTol', 'arenaShapeRel', 'arenaShapeRelDef', 'arenaShapeRelJi', 'arenaShapePick', 'arenaPerN', 'headGate', 'headFixtures', 'headTemp', 'verifGate', 'label', 'funnel', 'funnelGames', 'arenaPool', 'arenaShapes', 'arenaDivK', 'selCap'], 'probe-cem-arm');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -288,6 +288,11 @@ const ARENA_TEMP = (function () { const x = Number(arg('arenaTemp', arg('playtem
  * 只换货币，别的一字不动 ⇒ 与同种子同预算的纯净胜臂是一变量对照。 */
 const ARENA_CUR = String(arg('arenaCur', 'net'));
 const ARENA_DIVK = Number(arg('arenaDivK', 0)) || 0;   /* 0 = 关；>0 时与 mastery 门互斥（见下） */
+/* `--selCap=`（千问 · 11-01，PREREG-2026-11-01-SELECT-FLOOR）：当选面的**单键出手占比上限**（veto，不进 fit）。
+ *   只读 arena2 已经交出的 `maxCard.share` ⇒ 零新测量、零新代码路径。默认 0 = 关（逐字不变，回归腿对在册产物）。
+ *   零通过的那一代：不入精英、不更新产物，只计数；整轮一次都没过 ⇒ 末尾响亮报 + meta 记 passed=0（不许静默退回无 cap 的 best）。 */
+const SEL_CAP = Number(arg('selCap', 0)) || 0;
+const SEL_STAT = { checked: 0, blocked: 0, starvedIter: 0, accepted: 0, worstSeen: 0 };
 if (ARENA_CUR !== 'net' && ARENA_CUR !== 'clean' && ARENA_CUR !== 'first') { console.error('⛔ --arenaCur 只认 net|clean|first（收到 ' + ARENA_CUR + '）'); process.exit(2); }
 /* ⚑ 响亮闸（ZCode · 10-31 晚，P-P5 首遍发臂当场栽的）：arena2 只在 `--arena2=1` 时建表，不带它 ⇒
  *   `evalOne` 静默掉进 `T.scoreMemberN` 内部对手表，而 `--arenaCur/--arenaStrat/…` 那一族在那条路上
@@ -985,6 +990,21 @@ let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
         .sort(function (a, b) { return scored[b].fit - scored[a].fit; });
       order = co.sort(function (a, b) { return scored[b].fit - scored[a].fit; }).concat(rest);
     } else order = scored.map(function (s, i) { return i; }).sort(function (a, b) { return scored[b].fit - scored[a].fit; });
+    /* 一整代全被 cap 挡下时：σ/均值照旧重拟合（否则搜索直接饿死），但**产物一格不许动** ⇒ 11-01 第一版没写这条，
+     *   把 keep 清空后在 `scored[keep[0]]` 上当场炸。 */
+    let capStarved = false;
+    if (SEL_CAP > 0) {
+      const ordCap = [];
+      for (const k of order) {
+        SEL_STAT.checked++;
+        const mc = scored[k] && scored[k].maxCard;
+        const sh = mc ? mc.share : null;
+        if (sh != null && sh > SEL_CAP) { SEL_STAT.blocked++; if (sh > SEL_STAT.worstSeen) SEL_STAT.worstSeen = sh; continue; }
+        ordCap.push(k);
+      }
+      if (!ordCap.length) { SEL_STAT.starvedIter++; capStarved = true; }
+      else order = ordCap;
+    }
     /* mastery 门 · elite 档：精英只吃达标者（按 fit 降序审计；<2 个达标 ⇒ 退回纯 fit 并记 starved）。
      * ⚑ 勘误二（10-31 00:4x）：产物只从**达标者**里棘轮（bestFitPasser 独立记账）——
      *   第一轮的教训：4 局循环分棘轮会把产物冻结在早期幸运子代上（往往是饿退代的纯 fit 顶），
@@ -1013,7 +1033,8 @@ let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
     }
     /* mastery 门 · best 档：产物必须达标（top-fit 不达标沿 fit 降序往下审；elite 档下 keep 已全达标，直落）。 */
     const bf = scored[keep[0]].fit;
-    if (MASTERY_ON && MASTERY_GATE === 'elite') {
+    if (capStarved) { /* 这一代没有过 cap 的粒子 ⇒ 产物棘轮不动（计数已记 starvedIter） */ }
+    else if (MASTERY_ON && MASTERY_GATE === 'elite') {
       /* 勘误二：elite 档产物只从达标者棘轮；饿退代（passerTop 空）不更新产物 */
       if (passerTop != null && scored[passerTop].fit > bestFitPasser) {
         bestFitPasser = scored[passerTop].fit; best = cand[passerTop];
@@ -1027,7 +1048,7 @@ let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
         if (r != null && r >= MASTERY_LINE) { bestFit = scored[k].fit; best = cand[k]; MASTERY_STAT.bestAccepted++; break; }
         MASTERY_STAT.bestGatedFail++;
       }
-    } else if (bf > bestFit) { bestFit = bf; best = cand[keep[0]]; }
+    } else if (bf > bestFit) { bestFit = bf; best = cand[keep[0]]; if (SEL_CAP > 0) SEL_STAT.accepted++; }
     mean = nm; sd = ns;
     used += POP;
     if (TARGET_G) {
@@ -1035,6 +1056,12 @@ let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
       while (cpG.length && gamesIn() >= cpG[0]) { curve.push({ games: gamesIn(), best: bestFit }); cpG.shift(); }
     } else while (checkpoints.length && used >= checkpoints[0]) { curve.push({ evals: used, best: bestFit }); checkpoints.shift(); }
   }
+}
+if (SEL_CAP > 0) {
+  console.log('[cem-arm] ⚑ **当选面上限** selCap=' + SEL_CAP + ' ‖ 查 ' + SEL_STAT.checked + ' 次 ‖ 挡下 ' + SEL_STAT.blocked +
+    '（' + (100 * SEL_STAT.blocked / Math.max(1, SEL_STAT.checked)).toFixed(1) + '%）‖ 零通过代 ' + SEL_STAT.starvedIter +
+    ' ‖ 产物按 cap 更新 ' + SEL_STAT.accepted + ' 次 ‖ 见过的最大单键占比 ' + (100 * SEL_STAT.worstSeen).toFixed(1) + '%' +
+    (SEL_STAT.accepted === 0 && SEL_STAT.starvedIter > 0 ? ' ⇒ ⚠ **整轮没有一个粒子过 cap**（产物未按 cap 筛，meta 记 passed=0）' : ''));
 }
 const gLoop = gamesIn();
 /* §E822：**同场起点基线** —— 终局那把尺必须先在同一批桌上量一次"起点粒"，否则 6.5% / 13.0% 这种数没有地板
@@ -1097,6 +1124,7 @@ if (P.__arch2) {
     } else row.headGate = HEAD_GATE ? '绿' : '未开闸';
   } catch (e) { row.headHealth = { err: String((e && e.message) || e) }; console.log('⚠ 健康度量失败（不影响臂本身）：' + row.headHealth.err); }
 }
+if (SEL_CAP > 0) row.selCap = { cap: SEL_CAP, passed: SEL_STAT.accepted, checked: SEL_STAT.checked, blocked: SEL_STAT.blocked, starvedIter: SEL_STAT.starvedIter, worstSeen: SEL_STAT.worstSeen };
 if (OUT) {
   mkdirSync(dirname(OUT), { recursive: true });
   const packed = P.pack(best);
