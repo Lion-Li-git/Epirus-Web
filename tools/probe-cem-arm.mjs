@@ -304,7 +304,9 @@ let lowKindRun = 0, KILLED = null;
  *   形状抄线上 trainer（`evo.js:3952`：健康门槛不过 ⇒ 压到所有健康候选之下、不许进容差带；然后胜率容差带内取覆盖熵最高者）。
  *   ⛔ **不进 fit**（先例 `--selCap`/`BREADTH_FLOOR`：进 fit 就是"买分布卖强度"，§十三 实测过）。默认 0=关，关时一行都不许多走。 */
 const BAND_ENT = Math.max(0, Number(arg('bandEntropy', 0)) || 0);
-const BAND_STAT = { gens: 0, movedGens: 0, swaps: 0, bandSizes: [], soloGens: 0, topG: 0 };
+const BAND_STAT = { gens: 0, movedGens: 0, swaps: 0, prodSwaps: 0, bandSizes: [], soloGens: 0, topG: 0 };
+/* 两套当选面机制同时开就说不清是谁换的产物 ⇒ 当场拒（先例：--arenaDivK 与 mastery 门互斥） */
+if (BAND_ENT > 0 && MASTERY_ON) { console.error('⛔ --bandEntropy 与 mastery 门不能同开：两者都要改"产物是谁"，同时开就分不清是熵换的还是门挡的。'); process.exit(2); }
 const SEL_STAT = { checked: 0, blocked: 0, starvedIter: 0, accepted: 0, worstSeen: 0 };
 if (ARENA_CUR !== 'net' && ARENA_CUR !== 'clean' && ARENA_CUR !== 'first') { console.error('⛔ --arenaCur 只认 net|clean|first（收到 ' + ARENA_CUR + '）'); process.exit(2); }
 /* ⚑ 响亮闸（ZCode · 10-31 晚，P-P5 首遍发臂当场栽的）：arena2 只在 `--arena2=1` 时建表，不带它 ⇒
@@ -657,6 +659,7 @@ let GAMES_PLAYED = 0;
 }
 const gamesIn = function () { return GAMES_PLAYED; };
 let best = startParams, bestFit = -Infinity, used = 0, curve = [];
+let bestEnt = -1;   /* 产物那粒的非ジ出手熵（`--bandEntropy` 的同带取宽用它比较；关档时不参与任何判断） */
 const checkpoints = [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return f * EVALS; });
 const cpG = TARGET_G ? [0.1, 0.25, 0.5, 0.75, 1.0].map(function (f) { return Math.round(f * TARGET_G); }) : [];
 let ESA_DIV_STAT = null;
@@ -1085,6 +1088,7 @@ let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
     }
     /* mastery 门 · best 档：产物必须达标（top-fit 不达标沿 fit 降序往下审；elite 档下 keep 已全达标，直落）。 */
     const bf = scored[keep[0]].fit;
+    const candEnt = scored[keep[0]] ? scored[keep[0]].catEnt : null;
     if (capStarved) { /* 这一代没有过 cap 的粒子 ⇒ 产物棘轮不动（计数已记 starvedIter） */ }
     else if (MASTERY_ON && MASTERY_GATE === 'elite') {
       /* 勘误二：elite 档产物只从达标者棘轮；饿退代（passerTop 空）不更新产物 */
@@ -1100,7 +1104,14 @@ let auditsBefore = 0;   /* mastery 门的本代审计起点（每代重置） */
         if (r != null && r >= MASTERY_LINE) { bestFit = scored[k].fit; best = cand[k]; MASTERY_STAT.bestAccepted++; break; }
         MASTERY_STAT.bestGatedFail++;
       }
-    } else if (bf > bestFit) { bestFit = bf; best = cand[keep[0]]; if (SEL_CAP > 0) SEL_STAT.accepted++; }
+    } else if (BAND_ENT > 0 && candEnt != null && bf >= bestFit - BAND_ENT && candEnt > bestEnt + 1e-9) {
+      /* 产物棘轮的**同带取宽**（PREREG §二 v2）。v1 只在配对池里重排 ⇒ 够不到产物：
+       *   棘轮原本只认"严格刷新 fit"，125 代里破纪录那几代顶上没有并列，四档产物逐字节同（11-01 实测）。
+       *   现在：与现役产物相差 ≤ 带宽 的粒子，出手熵更高就取代它（带宽 = fit 绝对点）。 */
+      if (bf > bestFit) bestFit = bf;
+      best = cand[keep[0]]; bestEnt = candEnt; BAND_STAT.prodSwaps++;
+      if (SEL_CAP > 0) SEL_STAT.accepted++;
+    } else if (bf > bestFit) { bestFit = bf; best = cand[keep[0]]; bestEnt = candEnt == null ? bestEnt : candEnt; if (SEL_CAP > 0) SEL_STAT.accepted++; }
     mean = nm; sd = ns;
     used += POP;
     if (TARGET_G) {
@@ -1231,7 +1242,8 @@ if (ARENA) {
   if (BAND_ENT > 0) {
     const bsMean = BAND_STAT.bandSizes.length ? BAND_STAT.bandSizes.reduce((a, b) => a + b, 0) / BAND_STAT.bandSizes.length : 0;
     console.log('⚑ 当选面覆盖熵 tie-break（带宽 ' + BAND_ENT + '）：跑 ' + BAND_STAT.gens + ' 代 ‖ 换过序 ' + BAND_STAT.movedGens +
-      ' 代 ‖ 累计换位 ' + BAND_STAT.swaps + ' ‖ 带内平均粒子数 ' + bsMean.toFixed(1) + ' ‖ 末代当选粒 G(非ジ出手)=' + BAND_STAT.topG.toFixed(2) +
+      ' 代 ‖ 累计换位 ' + BAND_STAT.swaps + ' ‖ **产物被换宽 ' + BAND_STAT.prodSwaps + ' 次**（这才是要落到 .bak 的那一格）' +
+      ' ‖ 带内平均粒子数 ' + bsMean.toFixed(1) + ' ‖ 末代当选粒 G(非ジ出手)=' + BAND_STAT.topG.toFixed(2) +
       ' ‖ 带内只剩 1 粒的代 ' + BAND_STAT.soloGens + '/' + BAND_STAT.gens +
       (BAND_STAT.swaps === 0 ? '  ⚠ 一次都没换 ⇒ 带宽太窄，这一档等于白开（不许当"测过了"引用）' : ''));
   }
@@ -1305,6 +1317,7 @@ row.killKinds = KILL_KINDS > 0 ? { kinds: KILL_KINDS, streak: KILL_STREAK, kille
 /* 当选面熵tie-break 的自证（关=整条 null；开必报"换过序的代数"，一次都没换=带宽太窄、这档等于白开） */
 row.bandEntropy = BAND_ENT > 0 ? {
   band: BAND_ENT, gens: BAND_STAT.gens, movedGens: BAND_STAT.movedGens, swaps: BAND_STAT.swaps,
+  prodSwaps: BAND_STAT.prodSwaps, soloGens: BAND_STAT.soloGens,
   bandSizeMean: BAND_STAT.bandSizes.length ? Number((BAND_STAT.bandSizes.reduce((a, b) => a + b, 0) / BAND_STAT.bandSizes.length).toFixed(2)) : null,
   finalTopG: Number(BAND_STAT.topG.toFixed(3))
 } : null;
