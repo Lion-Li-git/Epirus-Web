@@ -539,8 +539,18 @@ if (process.env.EPIRUS_ARCH2) {
   const spec = String(process.env.EPIRUS_ARCH2);
   const parts = spec.split(':');
   const cfg = { mutMode: String(process.env.EPIRUS_MUT_MODE || 'seg') };
-  if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) cfg[e[0].trim()] = Number(e[1]); });
+  /* ⚑ 11-01（ZCode）修**静默落 v7 面**：原先所有 spec 值一律过 `Number()` ⇒ `input=obs3b` 变 NaN
+   *   ⇒ `layout` 落回 'v7'（实测冒烟：paramCount=5225 而不是 7993，横幅却照样印着 obs3b 的 spec 串）。
+   *   修法：数字键才 Number，字符串键（input 等）原样保留；并在横幅印**解析后的面**，
+   *   再加一条硬闸——spec 串里写了 obs3/obs3b 而解析结果不是它 ⇒ 当场退（这一类"横幅与实际不一致"不许再藏）。 */
+  if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) { const v = e[1].trim(); cfg[e[0].trim()] = /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v; } });
   const A2 = installArch2(sb.window, cfg);
+  const __wantFace = (String(spec).match(/input=(obs3b?|v7)/) || [])[1];
+  if (__wantFace && A2.L && A2.L.input !== __wantFace) {
+    console.error('[train-3p] ⛔ EPIRUS_ARCH2 spec 写了 input=' + __wantFace + ' 但实际装出的面是 ' + A2.L.input +
+      '（横幅与实际不一致 = 静默错结构，11-01 冒烟抓到的形状）⇒ 拒绝开跑');
+    process.exit(7);
+  }
   /* ⚑ 开臂前的**接线自证**（10-28 晚三波作废读数换来的）：打一局看 `forwardCands` 有没有被叫到。
    *   根因写在 arch2 里：`evo.js:21` 的 `LEGACY(params)` 把"形状认不出来"的包判成旧包 ⇒ 走旧口径 ⇒
    *   覆盖的入口一次都没被调用，而 `fit` 照样出数、臂照样跑完 ⇒ **"没崩"与"接上了"同形**。 */
@@ -550,7 +560,8 @@ if (process.env.EPIRUS_ARCH2) {
   /* 变异/初始化必须走**同一颗播种 RNG**（与上面 `P.setRng(mulberry32(...))` 同源），否则"同 seed 同配置 ⇒ 产物一致"这条在册证据就断了 */
   if (T.mulberry32) A2.rngRef.r = T.mulberry32((__SEED * 7919 + 13) >>> 0);
   console.log('[train-3p] ⚙ **架构 = 2.0 原型 `' + spec + '`**（§E821，`tools/proto2/arch2.mjs` 覆盖 paramCount/makePolicy/mutatePolicy/crossover/forwardCands/chooseCandidates/pack/unpack）' +
-    ' ‖ paramCount=' + P.paramCount() + ' ‖ 变异算子=' + cfg.mutMode + ' ‖ 热启动=不可能（v7 包读不进）');
+    ' ‖ paramCount=' + P.paramCount() + ' ‖ **解析后的面=' + A2.L.input + '**（与 spec 串分开印——11-01 冒烟：串写 obs3b 实际落 v7，别再让横幅说谎）' +
+    ' ‖ 变异算子=' + cfg.mutMode + ' ‖ 热启动=只认 v:92 包（v7 包读不进 ⇒ exit 5）');
   console.log('[train-3p]   ⚠ 可比性：与本文件任何 v7 历史读数**不同源**（起点是随机、维度是新结构）⇒ 只在 2.0 臂之间横比，且只比评估次数');
 }
 
@@ -1580,7 +1591,10 @@ function champChooser(params) {
   return function (s, pl, legal) { return T.pickChampion(s, pl, legal, params, 0.15, 0, 5, 'soft'); };
 }
 const XN2_OPPS = [];
-for (const rp of XN2REF_PATHS) {
+/* ⚑ 11-01（ZCode）：参照包装载**只在 XN2W>0 时做**。原先无条件装载 ⇒ EPIRUS_ARCH2 臂全灭在起跑线
+ *   （arch2.unpack 拒读 v7 2P 包 ⇒ exit 2），而 XN2_OPPS 在 XN2W=0 时根本不会被用到——纯白拦。
+ *   XN2W>0 的 2.0 臂：`EPIRUS_XN2REF` 指到 v:92 包即可（loadPackParamsAny 走的就是当前 P.unpack）。 */
+for (const rp of (XN2W > 0 ? XN2REF_PATHS : [])) {
   /* v1.5.150 追加（DS 09-22 臂 3 的教训）：`exam` = **直接用 2P 考卷那 20 个基准**当切片对手
    * （单一来源 `tools/p2-baselines.mjs`，与 `promote-champion2p`/`train-best.evalChamp` 同表）。
    * 为什么需要：臂 3（冠军 + 9 个多人池脚本）把信号**平均稀释**掉了 ⇒ 退回 0%；而考卷基准全部是
@@ -1626,7 +1640,11 @@ if (process.env.EPIRUS_HOTSTART === '1') {
     const src = readFileSync(srcPath, 'utf8');
     const m = src.match(/window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/);
     if (m) {
-      const raw = P.unpack(JSON.parse(m[1]), true); seedParams = raw ? P.embedLegacy(raw) : null;
+      const raw = P.unpack(JSON.parse(m[1]), true);
+      /* ⚑ 11-01（ZCode）：2.0 热启动**不过 embedLegacy**——那是 v7 的 3337→5689 加宽语义，arch2 没覆盖它，
+       *   会把 v:92 的 7993 参数折成 5689（冒烟实测：种子包 7993 ⇒ seedParams 5689 ⇒ 被我的长度闸拦下）。
+       *   2.0 的 unpack 输出就是参数本身（Float64Array，长度恒 = 布局长）。 */
+      seedParams = raw ? (process.env.EPIRUS_ARCH2 ? raw : P.embedLegacy(raw)) : null;
       hotstartPath = srcPath;
       /* ===== 2026-10-12 DS：`hotstartFrom` 记**权重身份（wid）**，不再记文件路径 =====
        * 依据：① `server/train-server.mjs:289` 一直记的是 `weightsId(seedPack)`；
@@ -1643,6 +1661,14 @@ if (process.env.EPIRUS_HOTSTART === '1') {
   if (!ok) {
     console.error('[train-3p] ⛔ EPIRUS_HOTSTART=1 但读不出种子包：' + srcPath +
       '（拒绝静默冷启动 —— 白跑一整臂正是 09-22 臂 7/8 的教训）');
+    process.exit(5);
+  }
+  /* ⚑ 11-01（ZCode）：2.0 热启动的**长度闸**——种子包参数长必须等于装出的布局长。
+   *   11-01 冒烟：spec 串 `input=obs3b` 被 `Number()` 静默落 v7 面（paramCount=5225 ≠ 包 7993），
+   *   若没有这道闸，热启动会"成功"读包然后整臂在错误结构上白跑。v7 侧不加（embedLegacy 有合法的加宽语义）。 */
+  if (process.env.EPIRUS_ARCH2 && seedParams && seedParams.length !== P.paramCount()) {
+    console.error('[train-3p] ⛔ 2.0 热启动种子包参数长 ' + seedParams.length + ' ≠ 当前布局 ' + P.paramCount() +
+      '（spec 与包结构不一致 —— 拒绝在错误结构上开跑）');
     process.exit(5);
   }
 }
