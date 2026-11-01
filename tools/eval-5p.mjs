@@ -601,7 +601,14 @@ const FIELDS = {
    * mix4 = **4 个不同风格同时在场**（最接近"人来打"的构造；A 考卷一局只面对 1~2 个脚本 ⇒ 对这类退化完全无感）；
    * farmerwall = **4 席只按ジ**（"面对不还手的对手它自己也不动手"这个从 v1.5.17 就存在的空洞，此前没有任何指标覆盖）。 */
   mix4:       ['aggro', 'defend', 'wall', 'farmer'],
-  farmerwall: ['farmer', 'farmer', 'farmer', 'farmer']
+  farmerwall: ['farmer', 'farmer', 'farmer', 'farmer'],
+  /* 千问 · 11-01（用户命题"纯靠环+大雷的冠军会被短包快速杀掉，等不到用大雷的时候"）：
+   *   gunwall = 4 席主攻枪（`gunspam`：1 ジ 的枪、压血量最高者，v1.5.90 实测能把线上冠军打死 65%）；
+   *   snipegun = 2 席狙击专精 + 2 席主攻枪（两条**短程**线混合，都不需要攒东西）。
+   * 两枚都用已登记脚本（`OPP_SPECS` ⇒ `ALL`），零新代码；这一档量的不是"胜率好不好"，
+   *   而是**死之前那一手有没有轮到**（看输出里的 平均回合 与 出手分布里大雷/环的次数）。 */
+  gunwall:    ['gunspam', 'gunspam', 'gunspam', 'gunspam'],
+  snipegun:   ['snipespam', 'snipespam', 'gunspam', 'gunspam']
 };
 if (FIELD) {
   if (!FIELDS[FIELD]) { console.error('--field 未知: ' + FIELD + '（可选: ' + Object.keys(FIELDS).join(' ') + '）'); process.exit(1); }
