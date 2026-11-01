@@ -1952,7 +1952,7 @@ for (let gen = 0; gen < GENS; gen++) {
     if (WIDE_FINAL) {
       for (const r of reads) {
         if (!r.m.wide) continue;
-        if (!bestWideSeen || r.wideScore > bestWideSeen.wideScore) {
+        if (!bestWideSeen || r.fit > bestWideSeen.fit) {   /* v4.1：主评分排序（用户裁：宽=资格线；wideScore-max 是熵系数同病） */
           bestWideSeen = { params: Float64Array.from(scored[r.gi].params), wid: widOfArr(scored[r.gi].params),
             gen: gen, wideScore: r.wideScore, gMulti: r.m.gMulti, gLong: r.m.gLong, landMulti: r.m.landMulti, landLong: r.m.landLong };
         }
