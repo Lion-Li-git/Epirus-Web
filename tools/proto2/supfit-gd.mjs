@@ -238,6 +238,33 @@ const ration2Pick = (state, pid, cs) => {
   if (gn && castCount(state, pid, R.SK.GUN) < SHORT_DOSE.gun) return gn;
   return pickChain(state, pid, cs, R);
 };
+/* 经济前提门（千问 · 11-01，PREREG-2026-11-01-ECON-LOCK §一）：ration2 的骨架逐字保留，只给短程两格加一条前提——
+ *   剑/枪 **仅当 (ep≥3) ∨ (手里已有珠)** 才允许，否则先走链兜底（蓄能/环）。
+ *   病因是 §十九 量到的那一格标签："ep=1 且有活敌"这个最常见状态上 ration2 教的是枪而不是蓄能 ⇒ 包养不起自己
+ *   （镜像桌蓄能被选 0/1494 ⇒ 电珠恒 0 ⇒ 电磁炮连菜单都进不了）。唯一变量=这条前提。 */
+const canAffordLater = (state, pid) => {
+  const me = state.p[pid] || {};
+  return me.ep >= 3 || (me.elec || 0) > 0 || (me.boom || 0) > 0;
+};
+const ration3Pick = (state, pid, cs) => {
+  const laser = cs.filter((c) => c.key === R.SK.LASER_EYE)
+    .find((x) => { const o = state.p[x.target]; return o && GUARD_FAMILY.indexOf(o.lastSkill) >= 0; });
+  if (laser && castCount(state, pid, R.SK.LASER_EYE) < RATION.laserEye) return laser;
+  const bt = pickKey(cs, R.SK.BIG_T);
+  if (bt && castCount(state, pid, R.SK.BIG_T) < RATION.bigT) return bt;
+  const rg = pickKey(cs, R.SK.RAILGUN, 'elec') || pickKey(cs, R.SK.RAILGUN);
+  if (rg) return rg;
+  const me = state.p[pid] || {};
+  const ring = pickKey(cs, R.SK.RING);
+  if (ring && (me.ringStreak > 0 || castCount(state, pid, R.SK.RING) < RATION.ring)) return ring;
+  if (canAffordLater(state, pid)) {
+    const sw = lowestHpEnemy(state, pid, cs, R.SK.SWORD);
+    if (sw && castCount(state, pid, R.SK.SWORD) < SHORT_DOSE.sword) return sw;
+    const gn = lowestHpEnemy(state, pid, cs, R.SK.GUN);
+    if (gn && castCount(state, pid, R.SK.GUN) < SHORT_DOSE.gun) return gn;
+  }
+  return pickChain(state, pid, cs, R);
+};
 const teacherPick = TEACHER === 'v7mix'
   ? (state, pid, cs) => pickChain(state, pid, cs, R) || v7Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'toolkit'
@@ -252,6 +279,8 @@ const teacherPick = TEACHER === 'v7mix'
     ? (state, pid, cs) => rationPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'ration2'
     ? (state, pid, cs) => ration2Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : TEACHER === 'ration3'
+    ? (state, pid, cs) => ration3Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'ringchain'
     ? (state, pid, cs) => ringChainPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'ring'
@@ -262,7 +291,7 @@ const teacherPick = TEACHER === 'v7mix'
     ? (state, pid, cs) => laserPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把它拖回电珠/电磁炮那一维 */
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'ration', 'ration2', 'allround'];
+const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'allround'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + '（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
