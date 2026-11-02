@@ -119,11 +119,14 @@ const u8 = {}; for (const r of rows) if (r.w8) for (const k in r.w8.sel) u8[k] =
 const ulow = {}; for (const r of rows) for (const k in r.low.sel) ulow[k] = (ulow[k] || 0) + r.low.sel[k];
 const defUnion = rows.reduce((s, r) => s + r.defShare2 * (r.native.acts.n || 1), 0) / rows.reduce((s, r) => s + (r.native.acts.n || 1), 0);
 const accU = rows.filter((r) => r.acc != null);
+/* 池级防御原型 = **存在性**判（v7 池也是成员制：11/30 ≥5%），不是加权均值——0% 成员多会把带内成员摊没。 */
+const defMember = rows.find((r) => r.defShare2 >= BANDS.defLo && r.defShare2 <= BANDS.defHi && r.acc != null && r.acc >= BANDS.defAcc);
+const defMax = rows.reduce((m, r) => Math.max(m, r.defShare2), 0);
 function line(label, ok, detail) { console.log('  ' + (ok ? '✔' : '✘') + ' ' + label + ' ‖ ' + detail); }
 for (const k of BANDS.trunk) line('主干 ' + k, (union[k] || 0) > 0, '自选 ' + (union[k] || 0));
-const defOk = defUnion >= BANDS.defLo && defUnion <= BANDS.defHi && accU.length && accU.every((r) => r.acc >= 0) && (accU.reduce((s, r) => s + r.acc, 0) / accU.length) >= BANDS.defAcc;
-line('防御原型（份额 ' + BANDS.defLo + '-' + BANDS.defHi + '% ∧ 准确 ≥' + BANDS.defAcc + '%）', defOk,
-  '池加权份额 ' + defUnion.toFixed(1) + '% ‖ 平均准确 ' + (accU.length ? (accU.reduce((s, r) => s + r.acc, 0) / accU.length).toFixed(0) + '%' : '无防手'));
+const defOk = !!defMember;
+line('防御原型（存在成员：份额 ' + BANDS.defLo + '-' + BANDS.defHi + '% ∧ 准确 ≥' + BANDS.defAcc + '%）', defOk,
+  '最高份额 ' + defMax.toFixed(1) + '% ‖ 池加权 ' + defUnion.toFixed(1) + '% ‖ 带内成员 ' + (defMember ? defMember.name : '无') + '（准确 ' + (defMember ? defMember.acc.toFixed(0) + '%' : '—') + '）');
 line('地雷（8P 自选 ≥' + BANDS.mine8 * GAMES * NPS.includes(8) + '）', (u8[R.SK.MINE] || 0) >= BANDS.mine8 * GAMES, '8P 自选 ' + (u8[R.SK.MINE] || 0));
 line('摄魂（残血桌自选 ≥' + BANDS.drainLow * GAMES + '）', (ulow[R.SK.DRAIN] || 0) >= BANDS.drainLow * GAMES, '自选 ' + (ulow[R.SK.DRAIN] || 0));
 for (const k of ['tank', 'snipe']) line('自发 ' + k, (union[k] || 0) > 0 || (u8[k] || 0) > 0, '5P ' + (union[k] || 0) + ' / 8P ' + (u8[k] || 0));
