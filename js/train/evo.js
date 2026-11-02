@@ -1509,7 +1509,7 @@ function supportPriorRand(state, pid, salt) {
     /* v1.4.0：模式可传（默认 'multi'）—— 5 血长程模式的评测要在这里换考卷 */
     const st = S.createState((opts && opts.mode) || 'multi', { next: mulberry32(seed) }, n, opts);
     st.slotSalt = slotSaltFor(seed);
-    Play.autoGameN(st, choosers, undefined, (opts && opts.onRoundStart) || undefined);
+    Play.autoGameN(st, choosers, undefined, (opts && opts.onRoundStart) || undefined, (opts && opts.onPicks) || undefined);
     const dmg = [];
     for (let i = 0; i < n; i++) dmg.push(0);
     for (const e of st.events) if (e.type === 'damage' && e.to != null) dmg[e.to] += e.amt;
