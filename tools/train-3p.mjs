@@ -1340,7 +1340,14 @@ if (PACK_OPP) {
     const poSrc = readFileSync(PACK_OPP, 'utf8');
     const poM = poSrc.match(/window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/);
     if (!poM) throw new Error('没有 EPIRUS_CHAMPION 外壳');
-    const poParams = P.unpack(JSON.parse(poM[1]), true);
+    const poJson = JSON.parse(poM[1]);
+    /* DS 11-02 晚（用户：「让已经训练出的冠军拿来当对手」）：v7 包（v:7 / 单向量 a）也收——
+     *   arch2 的 chooseCandidates/forwardCands 有**长度守卫**（params 长度 ≠ L.n ⇒ 交回原 v7 实现），
+     *   所以传 Float64Array(5689) 给 policyChooserN 会走回 v7 通路。v7 最多 5 人局（4 槽），8P 训练会在
+     *   发局处按引擎自己的人数限制报错 ⇒ 用 v7 包席时训练桌必须 N≤5（本批固定 N=5）。 */
+    const poParams = (poJson.v === 7 || (poJson.a && poJson.v == null))
+      ? Float64Array.from(poJson.a)
+      : P.unpack(poJson, true);
     if (!poParams || !poParams.length) throw new Error('解包失败');
     OPPS.push({ name: 'pack:' + PACK_OPP.split(/[\\/]/).pop().replace(/\.[^.]+$/, ''), sel: T.policyChooserN(poParams, 0.15) });
     console.log('[pack-opp] 包席上桌：' + PACK_OPP + '（params ' + poParams.length + ' ‖ OPPS → ' + OPPS.length + ' 个）');
