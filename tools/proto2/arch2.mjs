@@ -42,8 +42,9 @@ const SEAT_DIM = OPP_BLK + T_BLK + B_BLK + 1;           // +1 = isSelf 标记 �
  *           ‖ 全局 5 + 私有 2 + 序列 168（32 Q.seq + 120 Q.id + 16 Q.out）+ 全场合计 1（505 维）*/
 const SEAT3 = 22 + 5 + 1, SELF3_EXTRA = 5 + 2 + 48 + 1;
 const SEAT3B = 81 + 5 + 1, SELF3B_EXTRA = 5 + 2 + 78 + 1;   /* obs3b 序列 78 = 32 Q.seq + 30 Q.bag + 16 Q.out */
+const SEAT3C = 88 + 5 + 1;   /* obs3c：obs3b 81 + 风格摘要 7（DS · 11-02 晚） */
 const CAND3_BASE = 30;                      /* obs3 候选侧基础段（代 2 删掉恒零的 `tgt.none`）*/
-const isO3Input = (s) => s === 'obs3' || s === 'obs3b';   /* 两个 2.0 观测面共用同一条结构路 */
+const isO3Input = (s) => s === 'obs3' || s === 'obs3b' || s === 'obs3c';   /* 2.0 观测面共用同一条结构路 */
 /* 初始化尺度**只允许一处定义**：`make` 与"相对变异"都要读它，两边各写一个数就会静默错位（10-29 加）。 */
 const INIT_SCALE = 0.25;
 /* ===== 结构代 `gen`（10-30 下午换代）=====
@@ -89,7 +90,7 @@ export function packInstallCfg(raw, extra) {
   if (raw.v !== V_FOR_GEN[gen]) throw new Error('packInstallCfg: v=' + raw.v + ' 与 dims.gen=' + gen + ' 不自洽（该是 v=' + V_FOR_GEN[gen] + '）');
   const cfg = Object.assign({ mutMode: 'seg' }, raw.dims || {}, { gen }, extra || {});
   if (raw.dims && raw.dims.input && !isO3Input(raw.dims.input)) {
-    throw new Error('packInstallCfg: dims.input=' + raw.dims.input + ' 认不出（认 obs3 | obs3b）');
+    throw new Error('packInstallCfg: dims.input=' + raw.dims.input + ' 认不出（认 obs3 | obs3b | obs3c）');
   }
   return { cfg, gen, era: '代 ' + gen + '（段偏移修正 + ' + ((raw.dims && raw.dims.input) || 'obs3') + ' 观测面）' };
 }
@@ -142,16 +143,16 @@ export function layout(opts) {
    *     旧写法"只在非零时写"是为了让代 2 容器逐位不变；现在代 2 没了，留着就等于"读回来的默认可能与写出去的不同"。 */
   const keySplit = (o.keySplit == null) ? 1 : (Number(o.keySplit) > 0 ? 1 : 0);
   if (gen !== GEN_LATEST) throw new Error('layout: 只实现代 ' + GEN_LATEST + '（收到 gen=' + gen + '）；代 1 请 checkout ' + GEN_FROZEN_COMMIT + ' 跑旧尺、代 2 请 checkout 删 qHead 前那一笔，不要在这里装半旧档');
-  const input = o.input === 'obs3' || o.input === 'obs3b' ? o.input : 'v7';
-  const isO3 = input === 'obs3' || input === 'obs3b';
+  const input = o.input === 'obs3' || o.input === 'obs3b' || o.input === 'obs3c' ? o.input : 'v7';
+  const isO3 = input === 'obs3' || input === 'obs3b' || input === 'obs3c';
   const skills = Math.max(1, Number(o.skills) || 27);
   const seatH = Math.max(1, Number(o.seatH) || 16);
   const actH = Math.max(1, Number(o.actH) || 8);
   const hid = Math.max(1, Number(o.hid) || 32);
   const hid2 = Math.max(1, Number(o.hid2) || 24);
-  const seatIn = input === 'obs3' ? SEAT3 : input === 'obs3b' ? SEAT3B : SEAT_DIM;
+  const seatIn = input === 'obs3' ? SEAT3 : input === 'obs3c' ? SEAT3C : input === 'obs3b' ? SEAT3B : SEAT_DIM;
   const actIn = isO3 ? (CAND3_BASE + skills) : 22;
-  const selfDim = input === 'obs3' ? SELF3_EXTRA : input === 'obs3b' ? SELF3B_EXTRA : BASE + 3;   // v7：base(63)+桌子形状三条 ‖ obs3：全局+私有+序列+全场合计 ‖ obs3b：序列 168（+Q.id 120）
+  const selfDim = input === 'obs3' ? SELF3_EXTRA : (input === 'obs3b' || input === 'obs3c') ? SELF3B_EXTRA : BASE + 3;   // v7：base(63)+桌子形状三条 ‖ obs3：全局+私有+序列+全场合计 ‖ obs3b：序列 168（+Q.id 120）
   /* 池化段的拼接项：obs3 档是 **h_self ‖ mean(对手) ‖ max(对手)**（三块），v7 档是 mean ‖ max（两块，
    *   因为 base(63) 本来就把自己的资源/冷却/架势写全了，再拼一份 h_self 就是同一事实写两遍）。
    * ⚑ 两档都**不把你自己算进池化**——旧代码把 `sc.seats`（含 isSelf 那一席）一起平均，于是

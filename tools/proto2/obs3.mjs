@@ -46,7 +46,7 @@ const SKILL_CLASS = ['energy', 'attack', 'defense', 'special'];
  *     ④ 自己序列加 **Q.selfBag 30**（与席位 bag 同公式、直进 ctx 的专线；原 Q.id 120 全量身份
  *        被它替换——用户指出膨胀，参数账 80% 在它身上，且连段/循环已有 ringStreak/cannonCount 计数器）。
  *   双面并存：容器 `dims.input` 是版本字段，arch2/policy2 按它分派 ⇒ 旧包照读，新臂选 obs3b。 */
-export const OBS_VERSIONS = ['obs3', 'obs3b'];
+export const OBS_VERSIONS = ['obs3', 'obs3b', 'obs3c'];   /* obs3c = obs3b + 每席 7 维"风格摘要"（11-02 晚 DS） */
 const BAG_K = 4, BAG_NORM = 1.875;   /* 1 + 1/2 + 1/4 + 1/8 */
 
 /* 结果类（对齐引擎实际出口；`by`/`reason`/`via` 是自由中文串 ⇒ **不可**当枚举用，只按 `type` 判） */
@@ -61,7 +61,8 @@ function manifest(R, ver) {
   const key = ver + ':' + R.skills.length;
   if (_MAN && _SK === key) return _MAN;
   _SK = key;
-  const b = ver === 'obs3b';
+  const b = ver === 'obs3b' || ver === 'obs3c';
+  const c = ver === 'obs3c';
   const m = [];
   const add = (name, block, note) => m.push({ i: m.length, name, block, note: note || '' });
 
@@ -85,6 +86,7 @@ function manifest(R, ver) {
   ['ownElec', 'ownBoom'].forEach((n) => add(n, 'S.private'));     /* ⚑ 只有自己可见的两枚 ⇒ 独立块，不进共享席位编码器 */
   const SEAT_ALL = b
     ? SEAT.concat(R.skills.map((s) => 'lsKey.' + s.key), ['lsNone'], SEAT_TGT, R.skills.map((s) => 'bag.' + s.key), ['tbag.tgtSelf', 'tbag.tgtMe', 'tbag.tgtOther'])
+      .concat(c ? STYLE_NAMES : [])
     : SEAT.concat(SEAT_OLD_LS, SEAT_TGT);
   SEAT_ALL.forEach((n) => add('pool.mean.' + n, 'P.opp'));
   SEAT_ALL.forEach((n) => add('pool.max.' + n, 'P.opp'));
@@ -132,7 +134,8 @@ export function seqLayout(R, ver) {
 /* ---- 席位向量（obs3=22 维 / obs3b=81 维；**公开可读**；mePid<0 ⇒ lastTgtMe 自然全 0）---- */
 const NMAX = 10;              /* 2.0 的目标上限（用户 2.0 目标里写死 2–10 人）⇒ 人数族一律 /10，值域 ⊆ [0,1] */
 function seatVec(p, mePid, modeHp, R, ver, recent) {
-  const b = ver === 'obs3b';
+  const b = ver === 'obs3b' || ver === 'obs3c';
+  const c = ver === 'obs3c';
   const st = (p.stickers || []);
   const head = [
     Math.max(0, p.hp) / modeHp, Math.min(p.ep, 12) / 12,
@@ -165,10 +168,28 @@ function seatVec(p, mePid, modeHp, R, ver, recent) {
     for (const k in rec.bag) { const i = R.skills.findIndex((s) => s.key === k); if (i >= 0) bag[i] = rec.bag[k]; }
     tbag[0] = rec.tgt[0]; tbag[1] = rec.tgt[1]; tbag[2] = rec.tgt[2];
   }
-  return head.concat(lsKey, [p.lastSkill ? 0 : 1], tail, bag, tbag);
+  const base = head.concat(lsKey, [p.lastSkill ? 0 : 1], tail, bag, tbag);
+  if (!c) return base;
+  /* ⚑ obs3c（11-02 晚 DS，用户「最少重叠下达成最大效果」）：7 维**风格摘要**——只写"主键是谁/有多纯/反击该用哪类"，
+   *   不再重复 bag 的逐键计数。主键 = bag 的 argmax；reply* = 主键对应的反击族（枪/坦克/双枪→反弹、激光剑→防御、
+   *   狙击→反打枪、电磁炮→转移）。这样路由只需一次线性判断，不必先在网里学会 argmax+比阈值。 */
+  let maxBag = 0, domKey = null;
+  for (let i = 0; i < bag.length; i++) if (bag[i] > maxBag) { maxBag = bag[i]; domKey = R.skills[i].key; }
+  let atkSum = 0, defSum = 0;
+  for (let i = 0; i < bag.length; i++) {
+    const cat = R.byKey[R.skills[i].key] ? R.byKey[R.skills[i].key].cat : '';
+    if (cat === 'attack') atkSum += bag[i]; else if (cat === 'defense') defSum += bag[i];
+  }
+  const replyReflect = (domKey === 'gun' || domKey === 'tank' || domKey === 'dualGun') ? 1 : 0;
+  const replyGuard = domKey === 'sword' ? 1 : 0;
+  const replyGun = domKey === 'snipe' ? 1 : 0;
+  const replyTransfer = domKey === 'railgun' ? 1 : 0;
+  return base.concat([maxBag, Math.min(1, atkSum), Math.min(1, defSum), replyReflect, replyGuard, replyGun, replyTransfer]);
 }
 const SEAT_N = 22;           /* obs3 的席位宽（旧读数指着它；obs3b 用 SEAT_NB，scene/encode 按版本取） */
-const SEAT_NB = 81;          /* obs3b：14 状态 + 31 lastSkill(30 身份+1 none) + 3 目标 + 30 键 bag + 3 目标 bag */
+const SEAT_NB = 81;
+const SEAT_NC = 88;          /* obs3c：obs3b 81 + 风格摘要 7 */
+const STYLE_NAMES = ['style.maxBag', 'style.atkFrac', 'style.defFrac', 'style.replyReflect', 'style.replyGuard', 'style.replyGun', 'style.replyTransfer'];          /* obs3b：14 状态 + 31 lastSkill(30 身份+1 none) + 3 目标 + 30 键 bag + 3 目标 bag */
 /** 最近 K 回合的**全体**出手键 bag 与目标方向（一次反扫共用给所有活席；2^-age 衰减、/BAG_NORM 归一到 [0,1]）。
  *  ⚑ 依赖 state.js action 事件带 `target`（10-31 凌晨补的字段；旧对局记录没有 ⇒ 目标 bag 全 0，不炸）。 */
 function recentAll(state, R, ids, mePid, K) {
@@ -225,7 +246,7 @@ function outcomeBits(state, pid, key) {
  *  obs3b：**块连续**发射 [cat4 fam4]×4 ‖ 自身键 bag 30（2^-age 衰减，与席位 bag 同公式）‖ [out4]×4
  *   ⇒ 与 manifest 的 Q.seq|Q.bag|Q.out 严格对齐（Q.id 120 全量身份被 bag 替换——用户 07:2x 拍板瘦身）。 */
 function selfSeq(state, pid, R, ver) {
-  const b = ver === 'obs3b';
+  const b = ver === 'obs3b' || ver === 'obs3c';
   const ev = state.events || [];
   const acts = [];
   for (let i = ev.length - 1; i >= 0 && acts.length < 4; i--) { const e = ev[i]; if (e.type === 'action' && e.pid === pid && e.key) acts.push(e); }
@@ -275,8 +296,8 @@ export function scene(W, state, pid, ver) {
   const g = [state.n / NMAX, alive.length / NMAX, modeHp / 5, Math.min(1, state.round / maxR),
     sd > 0 ? Math.min(1, state.round / sd) : 0];
   const priv = [Math.min(me.elec || 0, 2) / 2, Math.min(me.boom || 0, 2) / 2];
-  const b = ver === 'obs3b';
-  /* ⚑ obs3b：最近 K=4 回合的键/目标 bag——一次反扫共用给所有活席（含自己：自己的 bag 也是"我最近打谁"） */
+  const b = ver === 'obs3b' || ver === 'obs3c';
+  /* ⚑ obs3b/obs3c：最近 K=4 回合的键/目标 bag——一次反扫共用给所有活席（含自己：自己的 bag 也是"我最近打谁"） */
   const recentMap = b ? recentAll(state, R, alive.map((q) => q.id), pid, BAG_K) : null;
   const seats = [];
   let sumSt = 0;
@@ -293,7 +314,7 @@ export function scene(W, state, pid, ver) {
     seats.push({ id: q.id, public: seatVec(q, pid, modeHp, R, ver, recentMap), rel, isSelf: q.id === pid ? 1 : 0, p: q });
   }
   const sums = [Math.min(sumSt, 12) / 12];
-  const seatN = b ? SEAT_NB : SEAT_N;
+  const seatN = ver === 'obs3c' ? SEAT_NC : (b ? SEAT_NB : SEAT_N);
   return { W, R, state, pid, me, modeHp, maxR, sd, alive, g, priv, seats, sums, seq: selfSeq(state, pid, R, ver), SEAT_W: seatN + 6, seatN, ver };
 }
 /** 由 scene 派生一个候选的部件（目标走 h_t ⇒ 这里**不再**给目标标量，除非装配平面向量） */

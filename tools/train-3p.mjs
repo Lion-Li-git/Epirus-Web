@@ -636,7 +636,7 @@ if (process.env.EPIRUS_ARCH2) {
    *   再加一条硬闸——spec 串里写了 obs3/obs3b 而解析结果不是它 ⇒ 当场退（这一类"横幅与实际不一致"不许再藏）。 */
   if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) { const v = e[1].trim(); cfg[e[0].trim()] = /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v; } });
   const A2 = installArch2(sb.window, cfg);
-  const __wantFace = (String(spec).match(/input=(obs3b?|v7)/) || [])[1];
+  const __wantFace = (String(spec).match(/input=(obs3c|obs3b|obs3|v7)/) || [])[1];   /* ⚑ 最长优先：obs3c 不能被 obs3 抢先匹配（11-02 冒烟） */
   if (__wantFace && A2.L && A2.L.input !== __wantFace) {
     console.error('[train-3p] ⛔ EPIRUS_ARCH2 spec 写了 input=' + __wantFace + ' 但实际装出的面是 ' + A2.L.input +
       '（横幅与实际不一致 = 静默错结构，11-01 冒烟抓到的形状）⇒ 拒绝开跑');
