@@ -888,6 +888,19 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
         process.exit(7);
       }
       console.log('[train-3p] 送盾先验 = ' + v + '（读回一致）');
+      /* qoder 11-02（#47 的落地）：`applyDeployKnobs()` 跑在第 695 行、这一族在它**之后** ⇒ 产物 meta 里
+       *   `deployKnobs.EPIRUS_SUPPORT_PRIOR.effective` 记的是引擎出厂值 0，而训练实际吃的是 CLI 默认 2
+       *   （v1.7.128 裁定）——那是枚**假字据**，而我今天刚把"跨批横比先对 deployKnobs"写成纪律。
+       *   ⇒ 这里按真实生效值改写，`requested` 保持"没下达"的原样。
+       * ⚠ 已落盘的历史产物（DD 12 臂、今天 SEL_DEF 那对）仍带旧字段：读到 `effective:0 ∧ requested:null`
+       *   ⇒ 真实生效值是 **2**，不是 0。 */
+      if (DEPLOY_REC && DEPLOY_REC.EPIRUS_SUPPORT_PRIOR) {
+        DEPLOY_REC.EPIRUS_SUPPORT_PRIOR = {
+          requested: spRaw == null ? null : Number(spRaw),
+          effective: Number(T.supportPriorOn()),
+          wiredBy: 'train-3p 的第二个读者（CLI 默认 2，v1.7.128）'
+        };
+      }
     }
   }
   /* ===== §E764（10-26 夜班 · 千问）：`EPIRUS_SUB_BEAD` 在**本入口**也要真下达（三条纪律照上面那族）=====
