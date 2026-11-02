@@ -162,6 +162,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_WALL_BREAK_W',
   'EPIRUS_DEF_ADAPT_W',
   'EPIRUS_DRAIN_HEAL_W',
+  'EPIRUS_DEF_IDLE_W',
   'EPIRUS_PAIRED',   /* 2026-10-28（DS）：配对评估 —— 同代所有个体吃同一批局（common random numbers），默认关 */
   'EPIRUS_REFLECT_W',
   'EPIRUS_GUARD_HIT_W',
@@ -1679,23 +1680,29 @@ if (WALL_BREAK_WANT > 0) {
   const wbk = (T.wallBreakReward && T.wallBreakReward().keys) || null;
   console.log('[wall-break] 破反弹墙奖励已下达：' + JSON.stringify({ wallBreakW: gotWB, keys: wbk }) + ' ⇒ 只给穿反弹卡（激光剑/狙击枪/电磁炮）的落地付钱，坦克不算');
 }
-/* ===== DS 11-02（用户口径）：多血适度防御 `EPIRUS_DEF_ADAPT_W` / 残血摄魂 `EPIRUS_DRAIN_HEAL_W`（默认关）=====
- * 口径：只进接受分（不碰报告口径）。DEF_ADAPT 只数「防御族真挡下 ≥1 伤」（每局帽 2）；DRAIN_HEAL 只数「HP≤1 摄魂命中回血」（每局帽 2）。
- * 纪律同 WALL_BREAK_W：读回消费点、不等就 exit 7；没开就一行不印。 */
+/* ===== DS 11-02（用户口径）：多血适度防御 `EPIRUS_DEF_ADAPT_W` / 残血摄魂 `EPIRUS_DRAIN_HEAL_W` / 白防罚 `EPIRUS_DEF_IDLE_W`（默认关）=====
+ * 口径：只进接受分（不碰报告口径）。DEF_ADAPT 只数「防御族真挡下 ≥1 伤」（每局帽 2）；DRAIN_HEAL 只数「HP≤1 摄魂命中回血」（每局帽 2）；
+ *   DEF_IDLE 按防御手数扣分（帽 4 手/局 ⇒ **超过 4 手不再加重**，用它压塌方之前要先知道这一条）。
+ * 纪律同 WALL_BREAK_W：读回消费点、不等就 exit 7；没开就一行不印。
+ * ⚠ qoder 11-02 复核补：DS 的 `a8059f13` 只在引擎侧加了 `DEF_IDLE_W`，**这一族的 env 下达口一直没接** ⇒
+ *   他那批 P 组（"DEF_ADAPT + 白防罚 0.6"）实际跑的是罚=0，`recipe.env` 里也没有这根键（`dark knob` 闸抓不到：没人读它）。 */
 const DEF_ADAPT_WANT = Number(process.env.EPIRUS_DEF_ADAPT_W || 0);
 const DRAIN_HEAL_WANT = Number(process.env.EPIRUS_DRAIN_HEAL_W || 0);
-if (DEF_ADAPT_WANT > 0 || DRAIN_HEAL_WANT > 0) {
+const DEF_IDLE_WANT = Number(process.env.EPIRUS_DEF_IDLE_W || 0);
+if (DEF_ADAPT_WANT > 0 || DRAIN_HEAL_WANT > 0 || DEF_IDLE_WANT > 0) {
   if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
-    console.error('[train-3p] ⛔ 下达了 EPIRUS_DEF_ADAPT_W/EPIRUS_DRAIN_HEAL_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_DEF_ADAPT_W/EPIRUS_DRAIN_HEAL_W/EPIRUS_DEF_IDLE_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
     process.exit(7);
   }
-  T.setEconomyReward({ defAdaptW: DEF_ADAPT_WANT, drainHealW: DRAIN_HEAL_WANT });
+  T.setEconomyReward({ defAdaptW: DEF_ADAPT_WANT, drainHealW: DRAIN_HEAL_WANT, defIdleW: DEF_IDLE_WANT });
   const back2 = T.economyReward() || {};
-  if (Number(back2.defAdaptW) !== DEF_ADAPT_WANT || Number(back2.drainHealW) !== DRAIN_HEAL_WANT) {
-    console.error('[train-3p] ⛔ 读回 defAdaptW=' + JSON.stringify(back2.defAdaptW) + ' drainHealW=' + JSON.stringify(back2.drainHealW) + ' ⇒ 没生效，退出');
+  if (Number(back2.defAdaptW) !== DEF_ADAPT_WANT || Number(back2.drainHealW) !== DRAIN_HEAL_WANT || Number(back2.defIdleW) !== DEF_IDLE_WANT) {
+    console.error('[train-3p] ⛔ 读回 defAdaptW=' + JSON.stringify(back2.defAdaptW) + ' drainHealW=' + JSON.stringify(back2.drainHealW) +
+      ' defIdleW=' + JSON.stringify(back2.defIdleW) + ' ⇒ 没生效，退出');
     process.exit(7);
   }
-  console.log('[def-drain] 已下达：' + JSON.stringify({ defAdaptW: back2.defAdaptW, drainHealW: back2.drainHealW }) + ' ⇒ DEF_ADAPT 只给防御族真挡下（帽 2/局），DRAIN_HEAL 只给 HP≤1 摄魂回血（帽 2/局）');
+  console.log('[def-drain] 已下达：' + JSON.stringify({ defAdaptW: back2.defAdaptW, drainHealW: back2.drainHealW, defIdleW: back2.defIdleW }) +
+    ' ⇒ DEF_ADAPT 只给防御族真挡下（帽 2/局，中文名与键名都认），DRAIN_HEAL 只给 HP≤1 摄魂回血（帽 2/局），DEF_IDLE 按防御手数扣分（帽 4 手/局）');
 }
 
 /* ===== 11:5x（千问 · 用户「这几个都可以」· PREREG §二十六 条款 4）：**反射** `EPIRUS_REFLECT_W`（默认关）=====
@@ -3006,6 +3013,21 @@ try {
       (bmeta.selected ? '（当选）' : (dupWinner ? '（与 band' + bmeta.dupOfBand + ' 同一粒权重）' : '')));
   }
 } catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
+/* ===== qoder 11-02 复核补的付账字据（§十一②/③ 那条病）=====
+ * 「下达了」与「付过账」在两行日志里长得一样：DS 的 12 臂只有 `[def-drain] 已下达`，
+ *   全程没有一处打印 `games/paid` ⇒ 事后无法区分"奖励把包教坏了"与"这根杠杆恒 0、包只是落进了另一个盆"。
+ *   引擎侧计数器（DEF_ADAPT_STAT/DRAIN_HEAL_STAT）本来就在 `economyReward()` 的读回里，这里只是把它念出来。 */
+if (DEF_ADAPT_WANT > 0 || DRAIN_HEAL_WANT > 0 || DEF_IDLE_WANT > 0) {
+  const erNow = T.economyReward() || {};
+  const ds = erNow.defAdaptStat || {}, hs = erNow.drainHealStat || {};
+  const dead = [];
+  if (Number(erNow.defAdaptW) > 0 && !ds.paid) dead.push('DEF_ADAPT');
+  if (Number(erNow.drainHealW) > 0 && !hs.paid) dead.push('DRAIN_HEAL');
+  console.log('[def-drain] **付账字据**：DEF_ADAPT w=' + erNow.defAdaptW + ' 局=' + ds.games + ' 付过账的局=' + ds.paid +
+    ' ‖ DRAIN_HEAL w=' + erNow.drainHealW + ' 局=' + hs.games + ' 付过账的局=' + hs.paid +
+    ' ‖ DEF_IDLE w=' + erNow.defIdleW +
+    (dead.length ? ' ⇒ ⚠ ' + dead.join(' / ') + ' 下达了但**一次没付账**：它在这条轨迹上是死键，塌方与变化都不许记在它头上' : ''));
+}
 console.log('\n=== ' + N + ' 人实测（最终冠军，' + SEL_PAIRS.length + ' 对 × 20 局 × ' + SEL.k + ' 粒 seedBase，座位轮换，temp0.15）===');
 console.log('1st=' + (ev.firstRate * 100).toFixed(1) + '%  top2=' + (ev.top2Rate * 100).toFixed(1) +
   '%   (1st/2nd/3rd = ' + ev.first + '/' + ev.second + '/' + ev.third + ' of ' + ev.games + ')');

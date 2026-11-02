@@ -3428,11 +3428,23 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   }
   /* DS 11-02（用户口径：多血要适度防御、残血要摄魂）：只数**真挡下**的与**摄魂回血**。 */
   function isDefenseKey(k) { const d = R.byKey && R.byKey[k]; return !!(d && d.cat === R.CAT.DEFENSE); }
+  /* qoder 11-02 复核（§十一②）：引擎发 `blocked` 事件时 `by` 带的是**中文牌名**
+   *   （`resolve.js:512-538`：'防御' / '八卦阵' / '原型制御' / '金刚盾' / '藤甲' / '反弹'），
+   *   `R.byKey[中文名]` 不存在 ⇒ 原写法下"普通防御真挡下"**恒不计分**，这根杠杆实际只给 reflect/transfer 付钱。
+   *   名牌表按引擎自己的 `cat` 生成（不硬写名单——§八"防御族名单硬写"那次同族）。 */
+  let DEF_NAME_SET = null;
+  function isDefenseName(s) {
+    if (!s) return false;
+    if (!DEF_NAME_SET) {
+      DEF_NAME_SET = new Set((R.skills || []).filter((q) => q && q.cat === R.CAT.DEFENSE).map((q) => q.name));
+    }
+    return DEF_NAME_SET.has(s);
+  }
   function countDefAdaptHits(events, seat) {
     let n = 0;
     for (const e of (events || [])) {
       if (!e || e.to !== seat) continue;
-      if (e.type === 'blocked' && e.by && isDefenseKey(e.by)) n++;
+      if (e.type === 'blocked' && e.by && (isDefenseKey(e.by) || isDefenseName(e.by))) n++;
       else if (e.type === 'reflect') n++;
       else if (e.type === 'transfer') n++;
     }
