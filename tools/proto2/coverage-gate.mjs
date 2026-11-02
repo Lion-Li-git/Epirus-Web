@@ -107,7 +107,7 @@ for (const p of PACKS) {
   console.log('== ' + name + (pack.v7 ? '（v7）' : '（gen-3）') + ' ‖ 5P long ×' + GAMES + ' ‖ 胜 ' + native.wins.toFixed(0) + '% ‖ 局长 ' + native.rounds.toFixed(1));
   console.log('   自选: ' + Object.keys(native.sel).sort((a, b) => native.sel[b] - native.sel[a]).map((k) => k + '=' + native.sel[k]).join(' '));
   console.log('   防御族份额 ' + defShare2.toFixed(1) + '% ‖ 质量判定 ' + defDec + ' 次（有效 ' + (native.acts.eff || 0) + ' 半 ' + (native.acts.part || 0) + ' 白防 ' + (native.acts.idle || 0) + '）' + (acc != null ? ' ⇒ 准确 ' + acc.toFixed(0) + '%' : ''));
-  if (w8) console.log('   8P long: mine 自选 ' + (w8.sel[R.SK.MINE] || 0) + ' ‖ dualGun ' + (w8.sel[R.SK.DUAL_GUN] || 0) + ' ‖ 胜 ' + w8.wins.toFixed(0) + '%');
+  if (w8) console.log('   8P long: mine 菜单=' + (w8.menu[R.SK.MINE] || 0) + ' 自选=' + (w8.sel[R.SK.MINE] || 0) + ' ‖ dualGun 菜单=' + (w8.menu[R.SK.DUAL_GUN] || 0) + ' 自选=' + (w8.sel[R.SK.DUAL_GUN] || 0) + ' ‖ 胜 ' + w8.wins.toFixed(0) + '%');
   console.log('   残血开局: drain 自选 ' + (low.sel[R.SK.DRAIN] || 0) + ' ‖ 胜 ' + low.wins.toFixed(0) + '%');
 }
 
