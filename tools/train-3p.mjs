@@ -156,6 +156,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
   'EPIRUS_MIX8',   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌——地雷 5P+ 高性价比（用户裁定），8P 局照常进 fit（默认 0=关）
   'EPIRUS_HPSEED',   //（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（默认 0=关；p 比例局全席对称压 HP=min(2,modeHp-1)）
+  'EPIRUS_HOLDOUT_SEG',   //（ZCode · 11-03 凌晨）E3 存段：每 K 代快照当代最优粒落 band 目录（默认 0=关；只存盘不改当选）
   'EPIRUS_HOLO2PROTO',   // v1.7.4（10-13 夜班 S2a）：训练期把"送盾"改写成"给自己上原型制御"（决策期档，`policy.js` 的 `setHolo2Proto`）
                          //   ⇒ 与 TRAIN_MODE 同一条纪律：引擎没 setter / 读回不等于下达值就 exit 7；生效值进 `meta.recipe.h2p`
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
@@ -2081,6 +2082,11 @@ function attrLine() {
     (a.unmatched ? ' **unmatched=' + a.unmatched + '**（注入了却没成为事件）' : '');
 }
 
+/*（ZCode · 11-03 凌晨）E3 存段旋钮：`EPIRUS_HOLDOUT_SEG=K` ⇒ 每 K 代快照当代最优粒（默认 0=关）。
+ *  快照进 SEGS（内存）→ band-save 段落落 `<ARM>-seg<k>.bak` → `scratch/holdout-promote.mjs` 固定留出复排。
+ *  对策的靶 = "末代重验收埋掉中代峰"（DS E3 + 夜班 D-a band3 实锤）；只存盘不改当选。 */
+const HOLDOUT_SEG = Math.max(0, Math.floor(Number(process.env.EPIRUS_HOLDOUT_SEG || 0) || 0));
+const SEGS = [];
 for (let gen = 0; gen < GENS; gen++) {
   const scored = pop.map(function (params, i) {
     let r = T.scoreMemberN(params, OPPS, GAMES, N, gen, i, hGenes[i]);
@@ -2285,6 +2291,15 @@ for (let gen = 0; gen < GENS; gen++) {
     next.push(child); nextH.push(ch);
   }
   if (gen % 30 === 29) { next[POP - 1] = P.makePolicy(0.25); nextH[POP - 1] = 0; }
+  /*（ZCode · 11-03 凌晨）E3 存段：每 HOLDOUT_SEG 代快照**当代评估最优**粒（默认 0=关 ⇒ 一行都不进）。
+   *  动因（DS E3 实测 + 夜班 holdout-promote 实锤 D-a band3）：末代重验收的产物会埋掉中代峰。
+   *  快照只在内存攒着，band-save 段落统一落 `<ARM>-seg<k>.bak` ⇒ holdout-promote 复排；
+   *  ⚠ 只存盘不改当选，"按留出换人"由 holdout-promote 报告、转正与否晨班裁。 */
+  if (HOLDOUT_SEG > 0 && (gen + 1) % HOLDOUT_SEG === 0 && scored.length) {
+    const bs = scored.reduce((a, b) => (((b.r && b.r.fit) || -Infinity) > ((a.r && a.r.fit) || -Infinity) ? b : a));
+    SEGS.push({ gen: gen + 1, params: Float64Array.from(bs.params), fit: bs.r ? bs.r.fit : null });
+    console.log('[holdout-seg] ' + (gen + 1) + ' 代快照（fit ' + (bs.r ? bs.r.fit.toFixed(3) : '?') + '）· 累计 ' + SEGS.length);
+  }
   pop = next; hGenes = nextH;
   sigma = Math.max(SIG_FLOOR, sigma * SIG_DECAY);
   /* E2 的"成功驱动"那一半：连续 SIG_STALL 代 bestFit 没进步 ⇒ 把 σ 往回抬一档（上限 0.18 = 初值）。
@@ -3076,6 +3091,16 @@ try {
       'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(hh.params)) + ';\n' });
     console.log('[band-save] ' + ARM + '-band' + (bi + 1) + '.bak  trainFit=' + hh.fit.toFixed(3) +
       (bmeta.selected ? '（当选）' : (dupWinner ? '（与 band' + bmeta.dupOfBand + ' 同一粒权重）' : '')));
+  }
+  /*（ZCode · 11-03 凌晨）E3 存段落盘：<ARM>-seg<k>.bak（与 band 同目录同格式；`scratch/holdout-promote.mjs` 复排）。 */
+  if (SEGS.length && bandDirReady) {
+    SEGS.forEach(function (s, k) {
+      const segText = '/* holdout-seg ' + ARM + '-seg' + (k + 1) + '（EPIRUS_HOLDOUT_SEG=' + HOLDOUT_SEG + '，第 ' + s.gen + ' 代快照） */\n' +
+        'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({ seg: true, segIndex: k + 1, gen: s.gen, fit: s.fit, arm: ARM, hotstartFrom: (/^[0-9a-f]{16}$/.test(hotstartFrom || '') ? hotstartFrom : undefined) }) + ';\n' +
+        'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(s.params)) + ';\n';
+      writeFileSync(BAND_DIR + '/' + ARM + '-seg' + (k + 1) + '.bak', segText, 'utf8');
+    });
+    console.log('[holdout-seg] 落盘 ' + SEGS.length + ' 段 ⇒ ' + BAND_DIR + '/' + ARM + '-seg*.bak（holdout-promote 复排用）');
   }
 } catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
 /* ===== qoder 11-02 复核补的付账字据（§十一②/③ 那条病）=====
