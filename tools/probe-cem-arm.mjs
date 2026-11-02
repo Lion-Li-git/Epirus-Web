@@ -57,7 +57,7 @@ const FXSEL = Number(arg('fxSelect', 0)) > 0;
 /* `--fxGames=`：当选用的冻结桌**每格打几局**。默认跟 `--games` 同档，但 10-29 的读数是：
  *   6 局的冻结桌读数自己就比父子差还吵 ⇒ 接受/拒绝成了掷硬币。要当筛子就得把这一档抬到几十局。 */
 const FXG = Math.max(0, Number(arg('fxGames', 0)) || 0);   /* 0 = 沿用 --games（别让 Math.max(1,…) 把默认变成 1 局） */
-const N = Number(arg('n', 3));
+const N = Number(arg('n', 5));   /* 11-02 晚（用户裁）：默认 5 人 */
 const SEED = Number(arg('seed', 7));
 const ELITE = Number(arg('elite', 4));
 const SIG0 = Number(arg('sig', 0.2));
@@ -255,7 +255,7 @@ function armId(o) { return String(o || '').replace(/^.*[\\/]/, '').replace(/\.(b
 
 const W = sandbox(HERE + '/..');
 const T = W.EpirusTrainer, P = W.EpirusPolicy, R = W.EpirusRules;
-const TMODE = arg('trainMode', 'multi');
+const TMODE = arg('trainMode', 'long');   /* 11-02 晚（用户裁）：默认 5 人 long（5 血） */
 if (T.setTrainMode) T.setTrainMode(TMODE);
 if (T.trainMode && T.trainMode() !== TMODE) { console.error('⛔ 桌形没生效（要 ' + TMODE + ' 读到 ' + (T.trainMode && T.trainMode()) + '）⇒ 记下来的口径是假的'); process.exit(2); }
 const HOLD = Number(arg('holdoutGames', 60));

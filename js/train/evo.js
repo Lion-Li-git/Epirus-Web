@@ -28,9 +28,13 @@
    * 全部按 'multi'（3 血）建局，"5 血冠军"从来没被训过；产物 meta 里连模式字段都没有，
    * 因为那个值是永远不变的默认值。
    * 这里由**调用方**显式设置 —— 沿用 setWrTol 的模式：引擎内不读 process.env
-   * （np-test L3 守护这条），默认 'multi' ⇒ 既有路径逐位不变。
+   * （np-test L3 守护这条），默认从 11-02 晚起改为 'long'（用户裁：5 人长程；历史默认是 'multi'，旧读数不可与本默认横比）。
    * 反证（np-test D10）：把下面任意一处 mode 传参删掉，D10 立刻红。 */
-  let TRAIN_MODE = 'multi';
+  /* 11-02 晚（用户：「把 TRAIN_MODE 的默认改成 5 人长程」）：产品默认桌 = **5 人 · long（5 血）**。
+    *   历史批次（3 人 multi / 5 人 multi）都是显式或默认 multi 跑出来的，读数不可与本默认横比；
+    *   要回旧口径必须显式 `setTrainMode('multi')` / `EPIRUS_TRAIN_MODE=multi`。
+    *   ⚠ np-test D10 的守护（mode 传参不能删）仍然有效——这里只改**默认值**，不删任何传参。 */
+   let TRAIN_MODE = 'long';
   function setTrainMode(m) { if (m && R.MODES && R.MODES[m]) TRAIN_MODE = m; return TRAIN_MODE; }
   function trainMode() { return TRAIN_MODE; }
 

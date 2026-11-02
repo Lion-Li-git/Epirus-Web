@@ -85,7 +85,7 @@ if (process.env.EPIRUS_PUBLISH !== '1' && __shippedBackup != null) {
 import vm from 'node:vm';
 
 const GENS = Number(process.argv[2] || 200);
-const N = Number(process.argv[3] || 3);
+const N = Number(process.argv[3] || 5);   /* 11-02 晚（用户裁）：默认 5 人（配 TRAIN_MODE 默认 long = 5 血） */
 const GAMES = Number(process.argv[4] || 8);
 const POP = Number(process.argv[5] || 12);
 
