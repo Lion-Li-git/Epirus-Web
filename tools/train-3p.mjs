@@ -704,7 +704,12 @@ const DEPLOY_REC = {};
     const raw = process.env[envName];
     if (typeof T[getter] !== 'function') { DEPLOY_REC[envName] = { requested: raw == null || raw === '' ? null : Number(raw), effective: null, note: '引擎无 ' + getter }; continue; }
     const eff = () => Number(T[getter]());
-    if (raw == null || raw === '') { unset.push(envName + '=' + eff()); DEPLOY_REC[envName] = { requested: null, effective: eff() }; continue; }
+    /* ⚠ `EPIRUS_SUPPORT_PRIOR` 在本入口有**第二个读者**（下面那族按 v1.7.128 的裁定取 CLI 默认 2）⇒ 横幅不许报引擎出厂值 0，
+     *   否则它就成了一张"0=关"的假证据（11-02 夜班那张表就是这么错的）。真实生效值以 `meta.deployKnobs` 为准。 */
+    if (raw == null || raw === '') {
+      unset.push(envName + '=' + eff() + (envName === 'EPIRUS_SUPPORT_PRIOR' ? '（稍后按 CLI 默认取 2，不是 0）' : ''));
+      DEPLOY_REC[envName] = { requested: null, effective: eff() }; continue;
+    }
     if (typeof T[setter] !== 'function') {
       console.error('⛔ ' + envName + ' 下达了，但引擎没有 `' + setter + '`/' + getter + ' ⇒ 这是黑键，拒跑'); process.exit(6);
     }

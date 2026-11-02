@@ -4,3 +4,5 @@ ts	wid	canonical	wantedPath	tool	note
 2026-10-11T12:50:17.954Z	d490dc136293cfc4	docs/artifacts/kept/eval-out__win-Ldemo.bak	docs/artifacts/kept/artifacts__e588-teeth-src.bak	keep-artifact	kept/ 是 git 耐久层
 2026-10-11T12:50:18.163Z	d490dc136293cfc4	docs/artifacts/kept/eval-out__win-Ldemo.bak	docs/artifacts/kept/kept__eval-out__win-Ldemo.bak	keep-artifact	已登记的复制：teeth 对照
 2026-10-12T04:18:01.000Z	1d4b687da27187b7	docs/artifacts/kept/e70-out__D02-31.bak	docs/artifacts/e234-out/K2.js	lineage-alias	63 枚子包的 meta 点名它（EPIRUS_SEEDPACK）而文件被去重搬进隔离区 ⇒ 登记别名让血统图能升等到 seedpack-wid（升等条件不变：wid 逐位相等）
+2026-11-02T06:42:31.485Z	04907be16715c376	docs/artifacts/DDA-150-gun-s13-band2.bak	docs/artifacts/DDA-150-gun-s13-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-02T06:42:31.495Z	3de168e0132f8670	docs/artifacts/DDA-150-gun-s13-band3.bak	scratch/ga-arms/DDA-150-gun-s13.js	train-3p	未复制：同一粒权重已有真身
