@@ -1414,6 +1414,35 @@ if (ECON_OPPS.length) {
     ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（判据：产物的**决策时 ep 均值 / 大雷出手**，见日志 §E236 预注册）');
 }
 
+/* ===== `EPIRUS_STYLE_TABLE=gun|sword|…`（DS · 11-02 晚，用户「明显风格能不能学会」）：
+ *   **纯风格训练桌**——清空对手池，只填该风格的 8 个脚本席（focus 之外全是对手，池里全是它）。
+ *   目的：检验「看 4 回合历史 → 该防还是该穿」在当前观测面/参数量下能不能学出来。
+ *   纪律：默认关；开时把池子清空并响亮印出；只用于研究臂。 */
+const STYLE_TABLE = String(process.env.EPIRUS_STYLE_TABLE || '').trim();
+if (STYLE_TABLE) {
+  const mkOnly = function (key) {
+    return function (state, pid, legal) {
+      const lg = (legal || []).find(function (c) { return c.key === key && c.affordable; });
+      if (!lg) return { key: 'ji' };
+      const foes = [];
+      for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) foes.push(i);
+      return { key: key, target: foes.length ? foes[0] : null };
+    };
+  };
+  const FRAC = Math.max(0, Math.min(1, Number(process.env.EPIRUS_STYLE_FRAC || 1)));
+  if (FRAC >= 0.999) {
+    OPPS.length = 0;
+    for (let i = 0; i < 8; i++) OPPS.push({ name: 'only:' + STYLE_TABLE + '#' + (i + 1), sel: mkOnly(STYLE_TABLE) });
+    console.log('[style-table] 纯风格训练桌：' + STYLE_TABLE + ' × 8（对手池已清空 ⇒ OPPS ' + OPPS.length + '）');
+  } else if (FRAC > 0) {
+    /* `EPIRUS_STYLE_FRAC=0.3`：按比例把风格席混进对手池（座位按 (gen*3+g+k)%L 轮转 ⇒ 比例≈池内占比）。 */
+    const base = OPPS.length;
+    const k = Math.max(1, Math.round(base * FRAC / (1 - FRAC)));
+    for (let i = 0; i < k; i++) OPPS.push({ name: 'only:' + STYLE_TABLE + '#mix' + (i + 1), sel: mkOnly(STYLE_TABLE) });
+    console.log('[style-mix] 风格混桌：' + STYLE_TABLE + ' × ' + k + ' / 池 ' + (base + k) + ' ⇒ 约 ' + (100 * k / (base + k)).toFixed(0) + '% 席位是 ' + STYLE_TABLE);
+  }
+}
+
 /* ===== §E676（qoder 10-21 早班）：把**杂货铺**放上训练桌 `EPIRUS_TOOLKIT_OPPS=<k>`（默认关）=====
  * 动因（用户 10-21 07:0x 的假设）：「训练对应的脚本场并不会用连招 ⇒ 把杂货铺丢到训练里面」。
  * 前提尺现量（同一批 picker 函数、5 席镜像桌、multi+long 各 200 局）三条：
