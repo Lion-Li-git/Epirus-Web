@@ -38,6 +38,18 @@
   function setTrainMode(m) { if (m && R.MODES && R.MODES[m]) TRAIN_MODE = m; return TRAIN_MODE; }
   function trainMode() { return TRAIN_MODE; }
 
+  /* =====（ZCode · 11-02 深夜）`MIX8_EVERY`：fitness 里每第 K 局换 **8 人桌**（默认 0 = 关 ⇒ 逐字不变）=====
+   * 用户裁定原话：「地雷在 5P 以上的环境里是极高性价比的伤害和威慑卡（因为我们给地雷搞了 3 回合到期），
+   * 我认为如果训练中加几轮 8p 对局应该很容易学到」。
+   * 证据基线（夜班 mine-8p-quick 探针）：G5-8p-s41（8P 直训臂）mine 菜单 18 → 自选 8（**44% 取用率**）
+   * —— 全仓唯一学会地雷的臂；其余臂菜单 73~160 次自选 0（5P 世界目标函数没为它付账，白班 §七/§八 同判）。
+   * 形状：`g % K === K-1` 的局 nG=8（K≥2 才开）。**8P 局照常进 fit**（IMIT 教训：不进 fit 的经验不进参数）；
+   * 座位轮换/收割席/家族席/经济门槛/场均差全按 nG 走（同一套判据，不另抄第二份）。
+   * ⚠ 与 commit 局（每 3 局 1 局承诺经济）正交：8P 轮恰好落在承诺局时它就是 8 人承诺局，判据同源。 */
+  let MIX8_EVERY = 0;
+  function setMix8Every(v) { const k = Math.floor(Number(v) || 0); MIX8_EVERY = k >= 2 ? k : 0; return MIX8_EVERY; }
+  function mix8Every() { return MIX8_EVERY; }
+
   /* ===== 风格表现切片：复合适应度（v1.5.2）=====
    * 动机：两次"改对手池"的干预都落空（ring2 加 1 个脚本对手、mix 加 4 个真实风格冠军），
    * 而且后者还**摊薄**了每个对手的练习量。所以这里**不改池子**：在每个个体身上**追加** k 局
@@ -2280,7 +2292,10 @@ let WALL_GAMES = 3;
     const spUse = {};   // 该个体的动作直方图（跨局汇总：脚本对手局 + **自对局**）
     let mirrorRan = 0;                  // v1.5.19：本个体实际跑了多少局自对局（可观测）
     for (let g = 0; g < games; g++) {
-      const seat = g % n;                                   // 座位轮换
+      /*（ZCode · 11-02 深夜）逐局人数轮换：每第 K 局（K=MIX8_EVERY）换 8 人桌；默认 0 ⇒ nG===n 逐字同。
+       * 8P 局照常进 fit（IMIT 教训）；本局内座位/收割/家族/经济门槛/场均差全部按 nG 取。 */
+      const nG = (MIX8_EVERY >= 2 && g % MIX8_EVERY === MIX8_EVERY - 1) ? 8 : n;
+      const seat = g % nG;                                  // 座位轮换（8P 轮按 8 取模）
       const seed = evalSeedOf(gen, idx, 'n') + g * 7919;
       const choosers = [];
       /* v1.4.1 修正（我 v1.3.60 改错了）：轮换**必须与个体下标无关**。
@@ -2293,15 +2308,15 @@ let WALL_GAMES = 3;
       let ok = 0;   // v1.5.279：局内第几个对手席（取代旧的 `oi` 累加器）；索引式见 `oppSeatIndex`
       const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
       const commitGame = isCommitGame(g, gen, hGene);   // (c) 承诺局：每 3 局 1 局，h 来自基因（v1.5.186：相位按代旋转，判据单一来源）
-      const killSeatPid = killSeatFor(g, gen, seat, n, hGene);   // v1.5.160：本局注收割席在第几席（-1=不注）
+      const killSeatPid = killSeatFor(g, gen, seat, nG, hGene);   // v1.5.160：本局注收割席在第几席（-1=不注）
       /* v1.5.99：本局是否"补贴局"（补贴 = 白来的 ep）—— 给"只教目标卡"的示范当门槛（见 makeEconChooser）。 */
       const regenThisGame = commitGame ? 2 : regenForGame(g, games, gen);
       const subThisGame = regenThisGame > 0;
       /* §E798：本局的家族席（默认关 ⇒ null ⇒ 下面那支一行都不跑） */
-      const famSet = FAMILY_FIELD > 0 ? familySeatSet(g, gen, n, seat, FAMILY_FIELD) : null;
+      const famSet = FAMILY_FIELD > 0 ? familySeatSet(g, gen, nG, seat, FAMILY_FIELD) : null;
       if (famSet && famSet.size) FAM_STAT.games++;
       let econ = null;
-      for (let pid = 0; pid < n; pid++) {
+      for (let pid = 0; pid < nG; pid++) {
         if (pid === seat) {
           // (c) 承诺级 ε：h 取自**个体基因**，不再是每局随机抽的噪声
           const h = commitGame ? hGene : 0;
@@ -2368,7 +2383,7 @@ let WALL_GAMES = 3;
           }
         }
         : undefined;
-      const r = oneGameN(choosers, seed, n, { regen: regen, mode: TRAIN_MODE, onRoundStart: subBeadHook || beadSeedHook });
+      const r = oneGameN(choosers, seed, nG, { regen: regen, mode: TRAIN_MODE, onRoundStart: subBeadHook || beadSeedHook });
       /* v1.5.189：局末把"教师替受评席下的手"标记出来（**只记账，不改 fit、不改 rng**）
        * ⇒ 示范开着时，`bigUses`/链率这类臂内读数第一次能拆开"是包自己会，还是教师替它打的"。
        * ⚠️ **每一局都要过一遍**（不能只在"本局有注入"时过）：退火窗口之后注入恒 0，而那正是"学没学会"要看的段落
@@ -2379,7 +2394,7 @@ let WALL_GAMES = 3;
       const aliveEnd = r.state.p.filter(function (q) { return q.hp > 0; }).length;
       const base = rankCredit(rank, aliveEnd, r.state.p.length);   // N19：3 人局里第二名也算输；v1.5.8 起哨声局打折（v1.5.299 起带上人数：口径对齐要用它）
       const others = r.dmg.reduce(function (a, b) { return a + b; }, 0) - r.dmg[seat];
-      const diff = r.dmg[seat] - others / Math.max(1, n - 1);
+      const diff = r.dmg[seat] - others / Math.max(1, nG - 1);
       // "立刻出手"的权重下调（原来在惩罚攒钱）；腾出的权重给经济两项
       const proact = 0.02 * Math.max(-1, Math.min(1, diff / 6));
       const deal = DEAL_W * Math.min(1, r.dmg[seat] / 4);
@@ -2410,7 +2425,7 @@ let WALL_GAMES = 3;
       const gLeft = r.state && r.state.p && r.state.p[seat] ? (r.state.p[seat].ep || 0) : 0;
       const gSpent = Math.max(0, gGain - gLost - gLeft);
       leftEpSum += gLeft; spentEpSum += gSpent; gainEpSum += gGain;
-      const stock = economyStock(mEp, n, TRAIN_MODE, gLeft);   // 门槛按 (人数, 模式)：3 人→3/10、5 人 5 血→5/20
+      const stock = economyStock(mEp, nG, TRAIN_MODE, gLeft);   // 门槛按 (人数, 模式)：3 人→3/10、5 人 5 血→5/20
       stockSum += stock;
       deepSum += econ ? econ.rec.heavy4 : 0;
 
@@ -4075,6 +4090,7 @@ function countVariety(events, seat) {
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
   setPairedEval, pairedEvalOn, evalSeedOf,
     setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt, wrapBigTPush,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认值只由上面那个常数表达，门 D224 钉）· v1.6.3 §E282：外面那层给脚本席用
+    setMix8Every, mix8Every,   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌（默认 0=关 ⇒ 逐字不变；8P 局照常进 fit）
     setSupportPrior, supportPriorOn, supportPriorTarget, setSupportPriorKnobs, supportPriorKnobs,   // §E646（路线 B）：送盾的部署层先验，**默认 0=关**；自证在 `tools/probe-support-prior.mjs`
     setDrainPush, drainPushOn, drainPushWants, drainPushSalt,              // v1.5.334 §E275：摄魂"残血只在探索里软提升"（默认 0=关，门 D225 钉）
     /* v1.8.33（§E712）：序列窗锁的"窄锁"档（默认 0 ⇒ 出厂逐字不变）。`chainKeysOf` 是纯函数 ⇒ 门/量具可直读，

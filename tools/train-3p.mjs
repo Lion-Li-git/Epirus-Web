@@ -154,6 +154,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
   'EPIRUS_FAMILY_FIELD',   // §E798（10-27 夜班）：训练桌形状（k 席被测家族副本 + 其余脚本，k=3 即考卷形状）⇒ 同样带作用计数
   'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
+  'EPIRUS_MIX8',   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌——地雷 5P+ 高性价比（用户裁定），8P 局照常进 fit（默认 0=关）
   'EPIRUS_HOLO2PROTO',   // v1.7.4（10-13 夜班 S2a）：训练期把"送盾"改写成"给自己上原型制御"（决策期档，`policy.js` 的 `setHolo2Proto`）
                          //   ⇒ 与 TRAIN_MODE 同一条纪律：引擎没 setter / 读回不等于下达值就 exit 7；生效值进 `meta.recipe.h2p`
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
@@ -705,7 +706,8 @@ const DEPLOY_REC = {};
    *   贴贴(eps软注入,默认0=关) / 送盾先验(全息屏障部署层先验,默认0=关)。
    * 后两个默认本来就是 0 ⇒ 不设环境变量时逐字不变；显式设 0 是把"关"落成**回执**（拒"应该关着吧"这种口头关法）。 */
   const KN = [['EPIRUS_BIGT_PUSH', 'setBigTPush', 'bigTPushOn'], ['EPIRUS_DRAIN_PUSH', 'setDrainPush', 'drainPushOn'],
-    ['EPIRUS_CURSE_PUSH', 'setCursePush', 'cursePushOn'], ['EPIRUS_SUPPORT_PRIOR', 'setSupportPrior', 'supportPriorOn']];
+    ['EPIRUS_CURSE_PUSH', 'setCursePush', 'cursePushOn'], ['EPIRUS_SUPPORT_PRIOR', 'setSupportPrior', 'supportPriorOn'],
+    ['EPIRUS_MIX8', 'setMix8Every', 'mix8Every']];   /*（ZCode · 11-02 深夜）训练形状档（非干预档）：每第 K 局 8 人桌，地雷的 8P 课；记录器自动落 requested/effective */
   const unset = [];
   for (const [envName, setter, getter] of KN) {
     const raw = process.env[envName];
