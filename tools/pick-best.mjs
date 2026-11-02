@@ -346,6 +346,36 @@ export function bandPickByUsage(entries, tolPt, usageOf, incumbentId) {
   };
 }
 
+/* ===== 11-02（千问 · PREREG-2026-11-02-SEL-DEF §一）：**只罚下界**的带内选人 =====
+ * 与 `bandPickByUsage` 的区别是刻意的：那边"带内取用量最大者"，这边**不最大化**（达标就行，达标组里仍按分序）。
+ * 为什么要这个形状：给防御/覆盖这类"越多数越高"的维付钱，优化器一定找最便宜的满足方式
+ *   （`evo.js:1805` 对 `BLOCK_W` 的原话是"奖励含混，会把包推向挡起来"；§廿四 的 v2 门槛把"出手种类"当目标 ⇒ 拿不打血的键凑数）。
+ *   唯一立住过的形状 = 只罚下界（v1.6.50 `FIT_G_W`，用户裁定先例）⇒ 这里只做一件事：把"完全不达标"的候选从当选席上挤下去。
+ * 全不达标 ⇒ 保留原分序第一并置 `allBelow`（调用点必须响亮打印，照 `wideFinalAllNarrow` 先例，不许静默）。 */
+export function bandPickByFloor(entries, tolPt, usageOf, floor, incumbentId) {
+  const list = (entries || []).filter(function (e) { return !!e; });
+  if (!list.length) return { best: null, band: [], top: 0, allBelow: true, pickedUsage: 0, tieBrokenBy: 'none' };
+  const u = function (e) { const v = Number(usageOf ? usageOf(e) : e.usage) || 0; e.__floorUse = v; return v; };
+  const FL = Number(floor) || 0;
+  /* 照 `bandPickByLand` v1.5.168 的教训：过不了硬门槛（`gateOk === false`）的候选**不许**被这根键换上来。 */
+  const gated = list.filter(function (e) { return e.gateOk !== false; });
+  const skipped = list.length - gated.length;
+  const top = gated.length ? gated.reduce(function (m, e) { return Math.max(m, Number(e.score) || 0); }, 0) : 0;
+  const band = gated.filter(function (e) { return (Number(e.score) || 0) >= top - (Number(tolPt) || 0) / 100; });
+  const byScore = band.slice().sort(function (a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); });
+  const ok = byScore.filter(function (e) { return u(e) >= FL; });        // 达标组内**保持分序** ⇒ 不奖励"更多防御"
+  const inc = __inBand(band, incumbentId);
+  let best = ok.length ? ok[0] : (byScore[0] || null);
+  if (inc) best = inc;
+  return {
+    best: best, band: band, top: top, skipped: skipped,
+    allBelow: ok.length === 0,
+    pickedUsage: best ? u(best) : 0,
+    usage: band.map(function (e) { return u(e); }),
+    tieBrokenBy: inc ? 'incumbent' : (best && byScore[0] && best !== byScore[0] ? 'floor' : (ok.length ? 'score' : 'score(allBelow)'))
+  };
+}
+
 export function bandPickByLand(entries, tol, incumbentId) {
 
   const list = (entries || []).filter(function (e) { return !!e; });

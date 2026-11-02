@@ -13,7 +13,7 @@ import { densityProfile, aggressionProfile } from './audit-lib.mjs';   // §N9 �
 import { duelAssembly } from './v2v4-lib.mjs';   // 10-24 G4long 逐格否决（EPIRUS_SEL_G4LONG）用的同一份装配（纯 lib、import 无副作用）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
-import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, rejectNarrowWinners, rejectGiftSpamWinners,
+import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, bandPickByFloor, rejectNarrowWinners, rejectGiftSpamWinners,
   parseSelSeeds, selBases, scoreRuns, selNote, selGapNote, bandFor } from './pick-best.mjs';
 import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
 /* v1.5.269（§E77）：载重 veto 的**同口径量具** —— `behavior-profile` 的 `fieldProfile`（ε=0 · temp 0.15 · 5 席同包）。
@@ -138,6 +138,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_HALL_DEDUP', // v1.7.92 §E635：名人堂按 wid 去重（同一粒权重只占一席；默认关 ⇒ 榜的形状一字不变）
   'EPIRUS_OPP_HUMAN', 'EPIRUS_OPP_HUMAN_SRC', 'EPIRUS_OPP_HUMAN_TGT', 'EPIRUS_OPP_HUMAN_FILE',   // v1.6.60：把**人类形状替身**放上训练桌（默认关 ⇒ OPPS 一字不变）
   'EPIRUS_BIGT_PUSH', 'EPIRUS_DRAIN_PUSH',   // §E275（v1.5.334）：**部署档的 CLI 把手**（大雷默认档 / 摄魂探索软提升）；不设 ⇒ 引擎默认一字不动，设了就由引擎回读
+  'EPIRUS_SEL_DEF', 'EPIRUS_SEL_DEF_MIN', 'EPIRUS_SEL_DEF_GAMES', 'EPIRUS_SEL_DEF_MODE',   // 11-02 千问 §A（PREREG-2026-11-02-SEL-DEF）：当选面**防御下限**排序键（默认 0=关 ⇒ 当选者逐字不变）
   'EPIRUS_SEL_BIGT', 'EPIRUS_SEL_BIGT_KEYS', 'EPIRUS_SEL_BIGT_GAMES', 'EPIRUS_SEL_BIGT_MODE',   // v1.5.326 §E249：同分带内按贵卡出手选人（默认 0 ⇒ 当选者逐字不变）
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
@@ -373,6 +374,32 @@ const SEL_KEEP_CAST_KEYS = String(process.env.EPIRUS_SEL_KEEP_CAST_KEYS || 'ring
  * ⚠ 三条纪律：① 带内**全部用量为 0 ⇒ 不许改判**，并响亮印"带内 0 粒打过 ⇒ 这臂零作用"（防"永不触发的守卫当假绿"）；
  *   ② 必须印 **改判/未改判 + 胜负分差 pt**（排序键不咬 = 没接线，§N12 的原话）；③ 生效值与结果写进 `meta.recipe.selBigT`。 */
 const SEL_BIGT = Number(process.env.EPIRUS_SEL_BIGT || 0);
+/* ===== §A（11-02 · 用户裁"做 A"· 预注册 `PREREG-2026-11-02-SEL-DEF-qoder.md`）：当选面**防御下限**排序键 =====
+ * 只做一件事：在"重验分相差 ≤ `SEL_DEF` pt"的带内，把**防御出手/局 低于下限**的候选挤下当选席。
+ *   ⇒ **不最大化防御量**（`bandPickByFloor` 与 `bandPickByUsage` 的刻意区别）：给防御付钱的形状在册已被三次否证
+ *     （`evo.js:1805` 对 `BLOCK_W` 原话"奖励含混，会把包推向挡起来" ‖ §廿四 v2 门槛被凑数 ‖ §六 K-2 到得了不选）。
+ *   ⇒ 标定（11-02 `scratch/` 内联跑，20 局脚本桌）：现役 v7 冠军 **2.30 手/局**（multi）‖ 代 3 各臂 **0.00** ‖
+ *     被 Goodhart 的 `GATE2-s13` **4.25~6.20 手/局（占总出手 20~22%）** ⇒ 所以下限取"从零到有"（默认 0.10），
+ *     **上界不进排序**，只在读数里报（>4 手/局 或 >15% 出手 = 落进 GATE2 那片凑数区，由 A-2 白防率判死活）。
+ * 量具不自造：防御手数 = `behavior-profile.mjs` 的 `fieldProfile(...).def`，其定义是引擎的 `cat === R.CAT.DEFENSE`
+ *   （实测含 guard/reflect/bagua/shift/jinshield/armor/proto/holo）⇒ 与 `SEL_BIGT` 同一件、同一调用形状。 */
+const SEL_DEF = Number(process.env.EPIRUS_SEL_DEF || 0);
+const SEL_DEF_MIN = Number(process.env.EPIRUS_SEL_DEF_MIN || 0.10);
+const SEL_DEF_GAMES = Number(process.env.EPIRUS_SEL_DEF_GAMES || 20);
+const SEL_DEF_MODE = String(process.env.EPIRUS_SEL_DEF_MODE || 'multi');
+let SEL_DEF_LOG = null;
+if (!(SEL_DEF >= 0) || !isFinite(SEL_DEF)) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_DEF 必须是 ≥0 的数（0=关，单位=重验分分差 pt）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_DEF));
+  process.exit(2);
+}
+if (SEL_DEF > 0 && !(SEL_DEF_MIN > 0)) {
+  console.error('[train-3p] ⛔ SEL_DEF 开着但 EPIRUS_SEL_DEF_MIN=' + SEL_DEF_MIN + ' ⇒ 下限为 0 就是恒真判据（人人都达标 = 这根没装）');
+  process.exit(2);
+}
+if (SEL_DEF > 0 && SEL_DEF_GAMES < 10) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_DEF_GAMES=' + SEL_DEF_GAMES + ' 太短（<10 局 ⇒ 防御是"整局才几次"的事件，量不稳）');
+  process.exit(2);
+}
 const SEL_BIGT_KEYS = String(process.env.EPIRUS_SEL_BIGT_KEYS || 'bigT,drain').split(',')
   .map(function (s) { return s.trim(); }).filter(Boolean);
 const SEL_BIGT_GAMES = Number(process.env.EPIRUS_SEL_BIGT_GAMES || 60);
@@ -624,6 +651,32 @@ if (process.env.EPIRUS_ARCH2) {
     ' ‖ paramCount=' + P.paramCount() + ' ‖ **解析后的面=' + A2.L.input + '**（与 spec 串分开印——11-01 冒烟：串写 obs3b 实际落 v7，别再让横幅说谎）' +
     ' ‖ 变异算子=' + cfg.mutMode + ' ‖ 热启动=只认 v:92 包（v7 包读不进 ⇒ exit 5）');
   console.log('[train-3p]   ⚠ 可比性：与本文件任何 v7 历史读数**不同源**（起点是随机、维度是新结构）⇒ 只在 2.0 臂之间横比，且只比评估次数');
+  /* ⚑ 11-02（千问）：**当选面量具也必须活在同代世界里** —— 病是这么撞出来的：我给 `SEL_DEF` 做校准时，
+   *   钩子报"当选者防御 15.0 手/局 ‖ 占出手 71.1%"，而同一个产物用与它同代的路径直接量是 **0.00**（`scratch/seldef-checks.log` ‖ 本次标定）。
+   *   根因：`SEL_BIGT`(v1.5.326) ‖ `SEL_CLEAR`(§E787) ‖ 新加的 `SEL_DEF` 都调 `fieldProfile/aggressionProfile(WIN, …)`，
+   *   而 `WIN` 是 `behavior-profile.mjs` 自己 `sandbox()` 出的**第二个引擎沙箱**，此前从没被 arch2 覆盖 ⇒
+   *   在 2.0 臂里它拿 **v7 前向读代 3 权重**（`evo.js:21` 的 `LEGACY` 认形状那条老路）， ⇒ 排序键会拿"另一个世界的读数"换人，**且不崩不报错**。
+   *   修法只在 2.0 分支里做（v7 路径、promote、门禁一个字节不动），装完立刻用 `verifyArch2Wired` 自证真被调用（"横幅证明变量、证明不了效果"是本页在册教训）。 */
+  if (SEL_BIGT > 0 || SEL_CLEAR > 0 || SEL_DEF > 0) {
+    let AW = null, wiredMsg = '';
+    try {
+      AW = installArch2(WIN, cfg);
+      const WC = verifyArch2Wired(WIN, AW, { mode: (process.env.EPIRUS_TRAIN_MODE || 'multi'), n: 5, games: 1 });
+      wiredMsg = 'forwardCands 自证通过' + (WC && WC.L ? '（面=' + WC.L.input + '）' : '');
+    } catch (e) {
+      console.error('[train-3p] ⛔ 量具沙箱 WIN 的 2.0 接线没生效：' + String((e && e.message) || e) +
+        ' ⇒ 拒跑（当选面排序键会拿 v7 前向读代 3 权重，读数不可信）');
+      process.exit(7);
+    }
+    if (AW.L && cfg.input && String(AW.L.input) !== String(cfg.input)) {
+      console.error('[train-3p] ⛔ WIN 侧装出的面=' + AW.L.input + ' ≠ spec 的 ' + cfg.input + ' ⇒ 拒跑');
+      process.exit(7);
+    }
+    console.log('[train-3p] ⚙ **量具同代已接线**：behavior-profile 的沙箱 WIN 也装了 arch2 ‖ 面=' + AW.L.input +
+      ' ‖ paramCount=' + WIN.EpirusPolicy.paramCount() + ' ‖ ' + wiredMsg +
+      ' ⇒ `fieldProfile/aggressionProfile` 的当选面读数与产物同代（用到它的旗标：' +
+      ['SEL_BIGT=' + SEL_BIGT, 'SEL_CLEAR=' + SEL_CLEAR, 'SEL_DEF=' + SEL_DEF].join(' ') + '）');
+  }
 }
 
 /* ===== §E275（v1.5.334）：**部署档的 CLI 把手**（大雷 `BIGT_PUSH` / 摄魂 `DRAIN_PUSH`）=====
@@ -2671,6 +2724,46 @@ if (WIDE_FINAL) {
     WIDE_FINAL_PICK = { wideN: 0, of: cands.length, changed: false, allNarrow: true };
   }
 }
+  /* ===== §A（11-02 千问 · 用户裁"做 A"· 默认 0 ⇒ 这一段一行都不跑）：当选面**防御下限**排序键 =====
+   * 位置：所有 veto 与 v4 终局宽选**之后**（最后一句话由它说会盖掉前面，所以放最后并按 A-4 如实报宽窄）。
+   * 只做"把完全不防御的挤下去"这一件事；不最大化 ⇒ 与 `bandPickByUsage`（取用量最高）刻意不同。 */
+  if (SEL_DEF > 0 && sel.best) {
+    if (typeof fieldProfile !== 'function') {
+      console.error('[防御选人] ⛔ 量具 `fieldProfile` 没接进来 ⇒ 拒绝静默空转');
+      process.exit(7);
+    }
+    const defOf = function (e) {
+      if (e.__defUse === undefined) {
+        const t = fieldProfile(e.ref.params, 0, 'soft', SEL_DEF_GAMES, 77000, 'scripts', SEL_DEF_MODE);
+        e.__defUse = (t.def || 0) / SEL_DEF_GAMES;
+        e.__defShare = t.acts ? 100 * (t.def || 0) / t.acts : 0;
+        e.__defBy = '防御 ' + (t.def || 0) + '/' + SEL_DEF_GAMES + '局 = ' + e.__defUse.toFixed(2) + ' 手/局（占出手 ' + e.__defShare.toFixed(1) + '%）';
+      }
+      return e.__defUse;
+    };
+    defOf(sel.best);   /* 照 `SEL_BIGT` 的在册坑：best 不一定在带内，先单独量一遍，否则下面读 `.__defBy` 会崩在选完人之后 */
+    const pool = (sel.clean && sel.clean.length) ? sel.clean : [sel.best];
+    const dp = bandPickByFloor(pool, SEL_DEF, defOf, SEL_DEF_MIN);
+    const ladder = dp.band.map(function (e) { return e.__defBy + '（重验分 ' + (e.score * 100).toFixed(1) + (e === sel.best ? '·原当选' : '') + '）'; }).join(' ‖ ');
+    SEL_DEF_LOG = { tol: SEL_DEF, min: SEL_DEF_MIN, games: SEL_DEF_GAMES, mode: SEL_DEF_MODE, band: dp.band.length, of: pool.length,
+      usage: dp.band.map(function (e) { return Number(e.__defUse.toFixed(3)); }), picked: Number((dp.best ? dp.best.__defUse : 0).toFixed(3)),
+      wasWinner: Number(sel.best.__defUse.toFixed(3)), by: dp.tieBrokenBy, changedWinner: dp.best !== sel.best, allBelow: dp.allBelow,
+      pickedShare: Number((dp.best ? dp.best.__defShare : 0).toFixed(1)) };
+    if (dp.allBelow) {
+      console.log('[防御选人] tol=' + SEL_DEF + 'pt · 下限 ' + SEL_DEF_MIN + ' 手/局 · 带内 ' + dp.band.length + '/' + pool.length +
+        ' 粒 ⇒ **全都不达标（selDefAllBelow）**：' + ladder + ' ⇒ 不改判；这一臂算「这根旋钮**零作用**」，不算"测过且无效"');
+    } else if (dp.best !== sel.best) {
+      console.log('[防御选人] 带内防御梯：' + ladder +
+        '\n[防御选人] **改判（下限换人）**：拿 ' + ((sel.best.score - dp.best.score) * 100).toFixed(1) + 'pt 胜负分换「' + dp.best.__defBy +
+        '」（原当选者 ' + sel.best.__defBy + '）');
+      sel.best = dp.best;
+    } else {
+      console.log('[防御选人] 带内防御梯：' + ladder + ' ⇒ **未改判**（原当选者本就达标 ⇒ 下限这条没有边际作用，要看 A-1 才知有没有学到）');
+    }
+    if (dp.best && dp.best.__defShare > 15) {
+      console.log('[防御选人] ⚠ 当选者防御占出手 ' + dp.best.__defShare.toFixed(1) + '%（>15% 就靠近 `GATE2-s13` 那片凑数区 20~22% ⇒ A-2 白防率判生死）');
+    }
+  }
   if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; }
   if (HALL_TRACE) { try { appendFileSync(HALL_TRACE_OUT, JSON.stringify({ type: 'final', pickedWid: widOfArr(finalParams), hall: hall.map(function (h) { return h.wid || widOfArr(h.params); }) }) + '\n'); } catch (eT4) {} }
   else if (hallEntries.length) {
@@ -2946,6 +3039,8 @@ const meta = {
       lastEff1: GA_STAT.lastEff1, gens: GENS } : null),
     /* 11-02（千问）：四把干预档的**生效值**无条件落盘（未下达也记引擎默认）⇒ 以后任何一臂都能直接读出"训练时带不带档"。 */
     deployKnobs: DEPLOY_REC,
+    /* §A（11-02）：当选面防御下限键的开没开、带内有几粒、防御梯、有没有换人、全不达标旗标。关档时整条 null。 */
+    selDef: SEL_DEF_LOG,
     kill: KILL_REC, family: FAMILY_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     /* v1.7.4 S2a：训练期那档决策期改写也要记账 —— 只记"下达值"不够（本仓的教训：横幅证明变量、证明不了效果）。
      * ⇒ 两个都记：下达的 `h2p` 与写 meta 时消费点仍读到的 `h2pEffective`；两者不等 = 中途被改回去，产物不可信。 */
