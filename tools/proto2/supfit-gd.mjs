@@ -376,6 +376,13 @@ const ration6Pick = (state, pid, cs) => {
   if (rg && castCount(state, pid, R.SK.RAILGUN) < DOSE6.railgun) return rg;
   const hasBead = ((me.elec || 0) > 0) || ((me.boom || 0) > 0);
   if (hasBead && me.ep < 2) return cs.find((c) => c.key === R.SK.JI) || null;   /* ep<2 攥到能打炮；ep≥2 有珠 = 炮的 */
+  /* —— 批2 ⑦ 激光眼供弹（11-03 深夜）：**激光眼标签从始至终 0 的根 = 只蓄电珠**（教师 charge 门偏好 elec、
+   *      采集桌没人蓄爆珠 ⇒ 激光眼从未进过标签集）。修法：场上存在防席目标（guard/反弹族 lastSkill）
+   *      ∧ 自己没爆珠 ⇒ 教 **charge#boom**（keySplit 下独立决策键）⇒ 激光眼供弹线打通。 —— */
+  if (!hasBead && !(me.boom || 0) && castCount(state, pid, R.SK.CHARGE) < DOSE6.charge) {
+    const leTargetNear = state.p.some((q) => q && q.hp > 0 && q.id !== pid && GUARD_FAMILY.indexOf(q.lastSkill) >= 0);
+    if (leTargetNear) { const cb = pickKey(cs, R.SK.CHARGE, 'boom'); if (cb) return cb; }
+  }
   /* 蓄能天花板+配额（03:4x/04:5x）：ep≤4 且 ≤4 次/局才教蓄——无限蓄能标签把产物教成"只攒不花" */
   if (!hasBead && me.ep >= 2 && me.ep <= 4 && castCount(state, pid, R.SK.CHARGE) < DOSE6.charge) { const ch = pickKey(cs, R.SK.CHARGE, 'elec') || pickKey(cs, R.SK.CHARGE); if (ch) return ch; }
   /* —— 收割块（时敏：转化**已有**投资，过期作废 ⇒ 保持在前；都是窄门，不破蓄钱阶梯）——

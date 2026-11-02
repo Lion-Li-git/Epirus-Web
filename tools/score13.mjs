@@ -100,7 +100,7 @@ import { LINES, LAYERS } from './champion-gate.mjs';
 export function densityOf(packPath) {
   const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map, Float64Array };
   sb.window = sb; sb.globalThis = sb;
-  for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js', 'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) {
+  for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js', 'js/train/bots.js', 'js/train/policy.js', 'js/train/policy2.js', 'js/train/evo.js']) {   /* 11-03 深夜：补 policy2 ⇒ densityOf 能读 gen-3 v:92 容器（eval-5p 同款修法） */
     vm.runInNewContext(readFileSync(REPO + '/' + f, 'utf8'), sb, { filename: f });
   }
   vm.runInNewContext(readFileSync(packPath, 'utf8'), sb, { filename: packPath });
