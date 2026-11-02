@@ -20,7 +20,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -488,6 +488,8 @@ const RARE_FRAC = Math.min(0.95, Math.max(0, Number(arg('rareFrac', 0)) || 0));
 if (RARE.length && !(RARE_FRAC > 0)) { console.error('⛔ --rareOnly 要配 --rareFrac>0'); process.exit(2); }
 /* oracleDef（DS · 11-02 晚）：事后先知的「打过来什么→该出哪张防」标签表（与用户口径一致）。 */
 const ORC_ATTACKS = new Set([R.SK.GUN, R.SK.TANK, R.SK.SWORD, R.SK.SNIPE, R.SK.RAILGUN, R.SK.DUAL_GUN]);
+const DEFW = Number(arg('defWeight', 1)) || 1;   /* oracleDef：防御类标签的权重（校准用；1=均匀） */
+const ORC_SUBSET = arg('oracleSubset', '0') === '1';   /* 只在「可预测子集」打标签 */
 const ORC_REPLIES = new Map([[R.SK.GUN, R.SK.REFLECT], [R.SK.TANK, R.SK.REFLECT], [R.SK.DUAL_GUN, R.SK.REFLECT], [R.SK.SWORD, R.SK.GUARD], [R.SK.SNIPE, R.SK.GUN], [R.SK.RAILGUN, R.SK.TRANSFER]]);
 const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0, rare: 0, byKey: {} };
 /* 打出去的那一手 vs 教师（只在学生自访轮里量）——与 `LABEL`（克隆态 argmax 口径）是**两个不同的数** */
@@ -537,6 +539,7 @@ function collectInto(dst, srcParams, idBase) {
       if ((pk.target === seat || pk.target2 === seat) && ORC_ATTACKS.has(pk.key)) { atk = pk; break; }
     }
     if (!atk) return null;
+    if (ORC_SUBSET) { const op = state.p[atk.pid]; if (!op || !(ORC_ATTACKS.has(op.lastSkill) || op.lastTarget === seat)) return null; }
     const rep = ORC_REPLIES.get(atk.key); if (!rep) return null;
     const lg = (legals[seat] || []).find(function (c) { return c.key === rep && c.affordable; });
     if (!lg) return null;
@@ -608,7 +611,8 @@ const cls = (gr) => (OBJ === 'cand' ? gr.wantKey + (gr.wantBead ? '#' + gr.wantB
 function weightOf(list) {
   const c = {};
   for (const gr of list) { const k = cls(gr); c[k] = (c[k] || 0) + 1; }
-  const w = {}; for (const k in c) w[k] = TEACHER === 'oracleDef' ? 1 : 1 / c[k];   /* oracleDef：均匀权重（1/类频会把少数防御类放得过大 ⇒ 刷防御） */
+  const DEFKEYS = new Set([R.SK.REFLECT, R.SK.GUARD, R.SK.TRANSFER, R.SK.HOLO, R.SK.ARMOR, R.SK.PROTO, R.SK.BAGUA, R.SK.SHIFT, R.SK.JINSHIELD]);
+  const w = {}; for (const k in c) w[k] = TEACHER === 'oracleDef' ? (DEFKEYS.has(k) ? DEFW : 1) : 1 / c[k];   /* oracleDef：均匀权重（1/类频会把少数防御类放得过大 ⇒ 刷防御） */
   return w;
 }
 let WKEY = weightOf(train0);
