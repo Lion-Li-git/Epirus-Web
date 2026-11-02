@@ -40,6 +40,23 @@ if (FIELD === 'rival' && !RIVAL) { console.error('⛔ --field=rival 要配 --riv
 const W = sandbox();
 const P = W.EpirusPolicy, T = W.EpirusTrainer, R = W.EpirusRules;
 const SK = R.SK;
+/* ⚑ 引擎注入档（11-02 补）：`BIGT_PUSH=12` 从 v1.5.333 起默认开，且它挂在 **`policyChooserN` 内部**（`evo.js:967`）
+ *   ⇒ 本尺此前每一次"大雷在菜单 40 次、选了 39 次"都可能有引擎替它按的成分，不是包自己选的。
+ *   纪律照 `skill-report`/`eval-5p`：**不设旗标 = 引擎默认档**（历史读数口径不动、不许悄悄改）；
+ *   要干净读数显式 `--shipbigt=0`（+ `--shipdrain=0`），并打印**下达值 + 回读值**（覆盖式接入要自证真被调用）。 */
+{
+  const KN = [['shipbigt', 'setBigTPush', 'bigTPushOn'], ['shipdrain', 'setDrainPush', 'drainPushOn']];
+  const got = [];
+  for (const [flag, setter, getter] of KN) {
+    const f = argv.find((x) => x.startsWith('--' + flag + '='));
+    if (!f) continue;
+    const v = f.slice(flag.length + 3);
+    W.EpirusTrainer[setter](v);
+    got.push(flag + '→下达 ' + v + ' ‖ 回读 ' + W.EpirusTrainer[getter]());
+  }
+  if (got.length) console.log('[注入档] ' + got.join(' ‖ '));
+  else console.log('[注入档] ⚠ 未下达 ⇒ 走引擎默认档（大雷兑现 ' + W.EpirusTrainer.bigTPushOn() + ' = 每 12 个窗口强塞一次）');
+}
 const KEY_ALIAS = {
   charge: SK.CHARGE, ring: SK.RING, railgun: SK.RAILGUN, bigT: SK.BIG_T, sword: SK.SWORD, gun: SK.GUN,
   laserEye: SK.LASER_EYE, miniT: SK.MINI_T, cannon: SK.CANNON, ji: SK.JI, transfer: SK.TRANSFER
@@ -90,7 +107,10 @@ for (const w of WANT) { REC.offered[w.name] = 0; REC.chosenWhenOffered[w.name] =
  *   `loadChamp` 会把线上冠军读成 null（breadth2 11-01 同一个坑，第二次踩）。 */
 const REFP = self.v7 ? selfParams : Float64Array.from(loadChamp(W, 'js/bundled-champion-3p.js') || []);
 if (!self.v7 && !REFP.length) { console.error('⛔ 读不出 v7 参照束（scripts 场要用它的对手表）'); process.exit(7); }
-const SCR_ARENA = FIELD === 'scripts'
+/* ⚑ 11-02 修：这一行此前只认 `'scripts'`，而上面的 FIELD 归一化根本不会产出 `'scripts'`（默认是 `'strat'`）
+ *   ⇒ 脚本对手桌那条路**从来没被接通过**（`--field=strat` 当场 `Cannot read properties of null`，因为我一直用
+ *   `--field=mirror`，这格没人踩到）。现在两种写法都认，缺桌形仍走下面那条响亮退出。 */
+const SCR_ARENA = (FIELD === 'scripts' || FIELD === 'strat')
   ? createArena2(W, { refParams: REFP, temp: TEMP, stratified: true, stratCap: '2', stratMix: '0.5' })
   : null;
 const SCR_SHAPE = SCR_ARENA ? SCR_ARENA.shapes.findIndex((s) => s.n === N && s.mode === MODE) : -1;
