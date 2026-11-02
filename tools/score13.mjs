@@ -36,13 +36,13 @@ export function parsePromote(txt) {
   if (self) { out.raw.dmg = Number(self[1]); out.raw.draw = Number(self[2]); }
   const stance = t.match(/无威胁\(对手ジ<5\)时摆架势 = ([\d.]+)%/);
   if (stance) out.raw.stance = Number(stance[1]);
-  const fa = t.match(/场A 被集火还手率 = ([\d.]+)%/);
+  const fa = t.match(/被集火还手率 = ([\d.]+)%/);   /* 11-03 深夜：实际文本是「→ 场A〕被集火还手率」——旧式「场A 」前缀永不匹配（同座位行一族） */
   if (fa) out.raw.fieldA = Number(fa[1]);
-  const feas = t.match(/可行性（[^）]*）：([^\n]*)/);
+  const feas = t.match(/可行性[^\n]*/);
   if (feas) {
-    const blk = feas[1];
+    const blk = feas[0];   /* 11-03 深夜：promote 实际印「可行性〔五道地板…〕（…）：✗…」——旧正则要求「可行性（」从未匹配过 ⇒ 座/墙/场B 三条一直读不出被判红 */
     const wall = blk.match(/墙 ([\d.]+)\/局/); if (wall) out.raw.wall = Number(wall[1]);
-    const seat = blk.match(/座位 ([\d.]+)pt/); if (seat) out.raw.seat = Number(seat[1]);
+    const seat = blk.match(/(?:座位|极差) ([\d.]+)pt/); if (seat) out.raw.seat = Number(seat[1]);   /* 11-03 深夜：promote 实际印「极差 Npt」（旧格式「座位 Npt」保留兼容）——格式漂移曾把真值读成—被判红 */
     const fb = blk.match(/场B 清场 ([\d.]+)\/局/); if (fb) out.raw.fieldB = Number(fb[1]);
     out.feasOk = /✅ 五道全过/.test(blk);
     out.feasFails = (blk.match(/✗ ([^（；]+)/g) || []).map((s) => s.slice(2).trim());

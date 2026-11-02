@@ -53,11 +53,18 @@ function loadPackParams(p) {
 }
 
 const DEFSET = new Set(['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'proto', 'armor', 'holo']);
+/* 判带（11-03 深夜按用户主干定义重构）：
+ *   **主干（每包必备）** = 枪/剑（攻击底座）+ **狙击/坦克/基础防御族**（用户 11-03 裁「狙击坦克和基础防御族属于主干」）——
+ *     判「会用」（自选 > 0；防御族 = 防御类份额 > 0），线画在"完全不会"（L1 地板哲学），不判精不判多。
+ *   **次级长程（池 ≥50% 成员）** = 蓄能/环/大雷/电磁炮——"从来不是每个包必备的，我之前的要求是有一半以上学会"。
+ *   防御原型带（份额 5-15% ∧ 准确 ≥25%）与 mine/drain 专项带保留。 */
 const BANDS = {
-  trunk: ['gun', 'sword', 'charge', 'ring', 'bigT', 'railgun'],
+  trunk: ['gun', 'sword', 'snipe', 'tank'],
+  defBasic: true,                                 /* 基础防御族（guard/reflect/proto/bagua/shift/jinshield 任一自选 > 0）每包必备 */
+  secLong: ['charge', 'ring', 'bigT', 'railgun'], secLongFrac: 0.5,
   defLo: 5, defHi: 15, defAcc: 25,
   mine8: 0.2, drainLow: 0.2,
-  reportOnly: ['dualgun', 'mirror', 'curse', 'firestorm', 'taunt', 'transfer', 'mine', 'drain', 'cannon', 'tank', 'snipe', 'rod', 'purify', 'minit']
+  reportOnly: ['dualgun', 'mirror', 'curse', 'firestorm', 'taunt', 'transfer', 'rod', 'purify', 'minit']
 };
 
 function probe(params, N, mode, hpStart, games) {
@@ -123,7 +130,22 @@ const accU = rows.filter((r) => r.acc != null);
 const defMember = rows.find((r) => r.defShare2 >= BANDS.defLo && r.defShare2 <= BANDS.defHi && r.acc != null && r.acc >= BANDS.defAcc);
 const defMax = rows.reduce((m, r) => Math.max(m, r.defShare2), 0);
 function line(label, ok, detail) { console.log('  ' + (ok ? '✔' : '✘') + ' ' + label + ' ‖ ' + detail); }
-for (const k of BANDS.trunk) line('主干 ' + k, (union[k] || 0) > 0, '自选 ' + (union[k] || 0));
+/* 主干（每包必备，11-03 用户裁：狙/坦/基础防御族属主干；gun/sword 为攻击底座同列）——**逐包判**，池级并集会掩盖成员缺口 */
+const DEF_BASIC = new Set(['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'proto']);
+let trunkPackPass = 0;
+for (const r of rows) {
+  const sel = r.native.sel;
+  const miss = BANDS.trunk.filter((k) => !(sel[k] > 0));
+  const defOkPack = BANDS.defBasic ? Object.keys(sel).some((k) => DEF_BASIC.has(k)) : true;
+  if (!miss.length && defOkPack) trunkPackPass++;
+  console.log('  ' + (!miss.length && defOkPack ? '✔' : '✘') + ' 主干[每包] ' + r.name +
+    (miss.length ? ' ‖ 缺 ' + miss.join('/') : '') + (defOkPack ? '' : ' ‖ 缺基础防御族'));
+}
+line('主干（池内每包必备）', trunkPackPass === rows.length, trunkPackPass + '/' + rows.length + ' 包全过');
+for (const k of BANDS.secLong) {
+  const members = rows.filter((r) => (r.native.sel[k] || 0) > 0).length;
+  line('次级长程 ' + k + '（池 ≥' + BANDS.secLongFrac * 100 + '% 成员）', members >= BANDS.secLongFrac * rows.length, members + '/' + rows.length + ' 成员会');
+}
 const defOk = !!defMember;
 line('防御原型（存在成员：份额 ' + BANDS.defLo + '-' + BANDS.defHi + '% ∧ 准确 ≥' + BANDS.defAcc + '%）', defOk,
   '最高份额 ' + defMax.toFixed(1) + '% ‖ 池加权 ' + defUnion.toFixed(1) + '% ‖ 带内成员 ' + (defMember ? defMember.name : '无') + '（准确 ' + (defMember ? defMember.acc.toFixed(0) + '%' : '—') + '）');
