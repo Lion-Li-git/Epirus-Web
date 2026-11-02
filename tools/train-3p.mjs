@@ -632,6 +632,10 @@ if (process.env.EPIRUS_ARCH2) {
  * 三条纪律：① 引擎内不读 `process.env`（`evo.js:30` 的 setWrTol 模式）⇒ 读环境是本 CLI 的活；
  *   ② 下达后**由引擎回读**逐键比对，不一致 ⇒ `exit 7`（v1.5.262 那次"过了黑键闸却从没送给引擎"的同一族病）；
  *   ③ 不设 ⇒ 一行都不动 ⇒ 现网默认形状逐字不变。 */
+/* 11-02 上午（千问 · 用户裁"注入档按训练目标分档"之后必须有字据）：四键的**生效值一律回读并落进产物 meta**，
+ *   不管有没有下达 ⇒ 治的是"GATE4b 那批只靠 mtime 推它当时带不带档"这种无字据状态。
+ *   行为不改：不设仍是一行都不动，只是把"当前到底是多少"从口头假设变成盘上记录。 */
+const DEPLOY_REC = {};
 (function applyDeployKnobs() {
   /* 11-01 深夜（用户裁定「3 代训练和考试把引擎干预全关」）：名单从两键扩到四键——
    *   大雷(硬兑现,默认12=开) / 摄魂(eps软注入,默认1,节点侧到不了也显式关) /
@@ -639,19 +643,26 @@ if (process.env.EPIRUS_ARCH2) {
    * 后两个默认本来就是 0 ⇒ 不设环境变量时逐字不变；显式设 0 是把"关"落成**回执**（拒"应该关着吧"这种口头关法）。 */
   const KN = [['EPIRUS_BIGT_PUSH', 'setBigTPush', 'bigTPushOn'], ['EPIRUS_DRAIN_PUSH', 'setDrainPush', 'drainPushOn'],
     ['EPIRUS_CURSE_PUSH', 'setCursePush', 'cursePushOn'], ['EPIRUS_SUPPORT_PRIOR', 'setSupportPrior', 'supportPriorOn']];
+  const unset = [];
   for (const [envName, setter, getter] of KN) {
     const raw = process.env[envName];
-    if (raw == null || raw === '') continue;
-    if (typeof T[setter] !== 'function' || typeof T[getter] !== 'function') {
+    if (typeof T[getter] !== 'function') { DEPLOY_REC[envName] = { requested: raw == null || raw === '' ? null : Number(raw), effective: null, note: '引擎无 ' + getter }; continue; }
+    const eff = () => Number(T[getter]());
+    if (raw == null || raw === '') { unset.push(envName + '=' + eff()); DEPLOY_REC[envName] = { requested: null, effective: eff() }; continue; }
+    if (typeof T[setter] !== 'function') {
       console.error('⛔ ' + envName + ' 下达了，但引擎没有 `' + setter + '`/' + getter + ' ⇒ 这是黑键，拒跑'); process.exit(6);
     }
     T[setter](Number(raw));
-    const back = Number(T[getter]());
+    const back = eff();
+    DEPLOY_REC[envName] = { requested: Number(raw), effective: back };
     if (back !== Number(raw)) {
       console.error('⛔ ' + envName + '=' + raw + ' 没生效：引擎回读 ' + back + ' ⇒ 拒静默空转'); process.exit(7);
     }
     console.log('[部署档] ' + envName + ' ⇒ ' + setter + '(' + raw + ') 已下达，**消费点读回 ' + back + '**');
   }
+  /* ⚠ 没下达的那些键**照样响亮印出来**：本臂其实跑在引擎默认档上（大雷默认 12=开），
+   *   过去这里一行都不印 ⇒ "忘了关"和"故意不关"同形（11-02 §三 那对孪生包的差异就是从这儿起的）。 */
+  if (unset.length) console.log('[部署档] ⚠ 未下达 ⇒ 走引擎默认档：' + unset.join(' ‖ ') + '（已回读并写进产物 meta.deployKnobs）');
 })();
 
 /* ===== v1.5.262（DS · §24 的根因修复）：**通用 econ 下达**（名单驱动 + 强制逐键回执）=====
@@ -2933,6 +2944,8 @@ const meta = {
       healthyGens: GA_STAT.healthyGens, starvedGens: GA_STAT.starvedGens, swapped: GA_STAT.swapped,
       eff1Mean: GA_STAT.healthyGens ? Number((GA_STAT.eff1Sum / GA_STAT.healthyGens).toFixed(2)) : null,
       lastEff1: GA_STAT.lastEff1, gens: GENS } : null),
+    /* 11-02（千问）：四把干预档的**生效值**无条件落盘（未下达也记引擎默认）⇒ 以后任何一臂都能直接读出"训练时带不带档"。 */
+    deployKnobs: DEPLOY_REC,
     kill: KILL_REC, family: FAMILY_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     /* v1.7.4 S2a：训练期那档决策期改写也要记账 —— 只记"下达值"不够（本仓的教训：横幅证明变量、证明不了效果）。
      * ⇒ 两个都记：下达的 `h2p` 与写 meta 时消费点仍读到的 `h2pEffective`；两者不等 = 中途被改回去，产物不可信。 */
