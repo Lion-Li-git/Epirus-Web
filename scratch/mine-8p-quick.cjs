@@ -34,6 +34,7 @@ function probe(label, params, N, games) {
   let mineMenu = 0, mineSel = 0, nonJi = {}, rounds = 0, wins = 0, ep3 = 0, epGe3 = 0;
   for (let g = 0; g < games; g++) {
     const st = W.EpirusState.createState(mode, { next: T.mulberry32(77000 + g) }, N);
+    if (process.env.HPSTART) { const h0 = Number(process.env.HPSTART); for (const q of st.p) if (q && q.hp > 0) q.hp = Math.min(h0, (st.mode && st.mode.hp) || 3); }
     const choosers = [];
     for (let pid = 0; pid < N; pid++) {
       choosers.push(pid === 0 ? function (state, pid, legal) {
@@ -52,8 +53,19 @@ function probe(label, params, N, games) {
   }
   const kinds = Object.keys(nonJi).length;
   const top = Object.keys(nonJi).sort((a, b) => nonJi[b] - nonJi[a]).slice(0, 5).map((k) => k + '=' + nonJi[k]).join(' ');
+  /* 防御族/功能族聚合（用户覆盖要求的核心读数） */
+  const fam = {}; let tot = 0;
+  for (const k in nonJi) tot += nonJi[k];
+  const DEF = ['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'proto', 'armor', 'holo'];
+  for (const k in nonJi) {
+    const def = R.byKey[k] && R.byKey[k].cat === 'defense';
+    const grp = def ? 'DEF' : k;
+    fam[grp] = (fam[grp] || 0) + nonJi[k];
+  }
+  const ftop = Object.keys(fam).sort((a, b) => fam[b] - fam[a]).slice(0, 8).map((k) => k + '=' + fam[k] + (tot ? '(' + (100 * fam[k] / tot).toFixed(1) + '%)' : '')).join(' ');
   console.log(label + ' ‖ ' + N + 'P ' + mode + ' ×' + games + '（对手 ' + oppName + '）‖ mine 菜单=' + mineMenu + ' 自选=' + mineSel +
-    ' ‖ 非ジ ' + kinds + ' 种（' + top + '）‖ 首席胜 ' + (100 * wins / games).toFixed(0) + '% ‖ ep≥3 决策 ' + epGe3);
+    ' ‖ 非ジ ' + kinds + ' 种 ‖ 首席胜 ' + (100 * wins / games).toFixed(0) + '% ‖ ep≥3=' + epGe3);
+  console.log('    族: ' + ftop);
 }
 const packs = process.argv.slice(2);
 const NP = Number(process.env.NP || 8);

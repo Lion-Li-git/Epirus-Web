@@ -341,7 +341,7 @@ const ration5Pick = (state, pid, cs) => {
  *   挑衅→转移/制御 = 挑衅者知道"谁欠我一刀"（resolve.js:1135 `you.tauntByPending.push(i)` ⇒ 目标.tauntBy += 施放者）。
  * 干预全关协议：本教师供 GD3-ALL 训练 ⇒ 训练侧四键必须 0；教师标签不依赖任何引擎注入。
  * 剂量：DOSE6 每格每局上限（连招/功能卡全部窄剂量，让配给骨架管经济、门管语义）。 */
-const DOSE6 = { firestorm: 1, curse: 2, armor: 2, taunt: 1, transfer: 1, proto: 1, mine: 1, rod: 1, holo: 1, cannon: 2, railgun: 8, charge: 2 };
+const DOSE6 = { firestorm: 1, curse: 2, armor: 2, taunt: 1, transfer: 1, proto: 1, mine: 1, rod: 1, holo: 1, cannon: 2, railgun: 8, charge: 1, drain: 3 };
 /* ⚑ 珠经济流（04:5x 第三修）：炮配额 3→6（珠的主花口）、持珠只在 ep<2 才攥（ep≥2 有珠就该打炮）、
  *   蓄能 4/局配额——"蓄→花"要成环，否则持珠态的 JI 标签就是囤积签名（四发产物花珠全 0 的病根）。 */
 /* ⚑ railgun 也要配额：富桌（:r2）上无配额的炮会单线吃满标签（11-02 shake3 实测 103/240），
@@ -395,6 +395,11 @@ const ration6Pick = (state, pid, cs) => {
     const pr = pickKey(cs, R.SK.PROTO);
     if (pr && castCount(state, pid, R.SK.PROTO) < DOSE6.proto) return pr;
   }
+  /* —— 批2 ⑥ 摄魂（11-02 深夜补回——早前重写时丢失，标签因此一直为 0）：**自保回血**（用户裁：不是终结技）。
+   *      门 = 自身缺血（hp<modeHp）∧ 引擎窗口候选存在（cs 里有 drain = 目标 HP≤drainHpMax 且 3ジ 付得起）；
+   *      放收割位（时敏：残血时机稍纵即逝）。剂量 3/局。 —— */
+  const dr = pickKey(cs, R.SK.DRAIN);
+  if (dr && me.hp < ((state.mode && state.mode.hp) || 3) && castCount(state, pid, R.SK.DRAIN) < DOSE6.drain) return dr;
   const finishingOn = (t) => state.p.some((q) => q && q.hp > 0 && q.id !== t.id &&
     q.lastTarget === t.id && q.lastSkill && R.byKey[q.lastSkill] && R.byKey[q.lastSkill].cat === 'attack');
   const holo = (castCount(state, pid, R.SK.HOLO) < DOSE6.holo)
