@@ -16,11 +16,12 @@ const NL = Math.max(10, Number(arg('long', 100)) || 100), NM = Math.max(10, Numb
 const TEMP = 0.1, N = 5;
 if (!DIR && !PRODUCT) { console.error('要 --dir=<band目录> 或 --product=<产物>'); process.exit(2); }
 
-const W = sandbox(); const P = W.EpirusPolicy, T = W.EpirusTrainer;
+const W = sandbox(); const P = W.EpirusPolicy, T = W.EpirusTrainer, R = W.EpirusRules;
 const cand = [];
 if (DIR) for (const f of readdirSync(DIR).filter((x) => /band\d+\.bak$/.test(x)).sort()) cand.push({ name: f.replace(/\.bak$/, ''), path: DIR + '/' + f });
 if (PRODUCT) cand.push({ name: 'product', path: PRODUCT });
 
+const COV = Number(arg('coverage', 0)) || 0;   /* --coverage=1：加跑覆盖探针（防御份额/准确 + mine/drain），排序加覆盖项 */
 const scores = [];
 for (const c of cand) {
   try {
@@ -41,8 +42,39 @@ for (const c of cand) {
       }
       out.push({ mode, clean: (100 * win / games).toFixed(1), win, draw });
     }
-    scores.push({ name: c.name, out });
-    console.log(c.name.padEnd(14) + ' ‖ ' + out.map((o) => o.mode + ' clean=' + o.clean + '%').join(' ‖ '));
+    /* --coverage=1：覆盖探针（8P long 20 局数 mine/tank/snipe + 残血开局数 drain + 5P long 数防御族份额） */
+    let cov = null;
+    if (COV) {
+      const DEFSET = new Set(['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'proto', 'armor', 'holo']);
+      function covProbe(np, mode, hpStart, games, base) {
+        const ch = T.policyChooserN(pv, TEMP, 0, N, 'soft');
+        const sel = {}; let defN = 0, defTot = 0;
+        for (let g = 0; g < games; g++) {
+          const st = W.EpirusState.createState(mode, { next: T.mulberry32(base + g * 977) }, np);
+          if (hpStart) for (const q of st.p) if (q && q.hp > 0) q.hp = Math.min(hpStart, (st.mode && st.mode.hp) || 3);
+          const subs = [];
+          for (let pid = 0; pid < np; pid++) {
+            subs.push(pid === 0 ? function (state, pid, legal) {
+              const a = ch(state, pid, legal);
+              const k = (a && typeof a === 'object') ? (a.key || '') : String(a);
+              if (DEFSET.has(k)) { defTot++; if (state.p[pid] && state.p[pid].hp <= 1) defN++; }
+              sel[k] = (sel[k] || 0) + 1;
+              return a;
+            } : W.EpirusBots.pickRandom);
+          }
+          W.EpirusPlay.autoGameN(st, subs);
+        }
+        return sel;
+      }
+      const s8 = covProbe(8, 'long', 0, 16, 600000), sLow = covProbe(5, 'long', 2, 16, 610000), s5 = covProbe(5, 'long', 0, 16, 620000);
+      const tot5 = Object.keys(s5).reduce((a, k) => a + (DEFSET.has(k) ? 0 : s5[k]), 0) || 1;
+      let defShare = 0; for (const k of DEFSET) defShare += s5[k] || 0;
+      cov = { mine8: s8[R.SK.MINE] || 0, drainLow: sLow[R.SK.DRAIN] || 0, tank: (s5[R.SK.TANK] || 0) + (s8[R.SK.TANK] || 0),
+        snipe: (s5[R.SK.SNIPE] || 0) + (s8[R.SK.SNIPE] || 0), defShare: +(100 * defShare / tot5).toFixed(1) };
+    }
+    scores.push({ name: c.name, out, cov });
+    console.log(c.name.padEnd(14) + ' ‖ ' + out.map((o) => o.mode + ' clean=' + o.clean + '%').join(' ‖ ') +
+      (cov ? ' ‖ 覆盖: mine8=' + cov.mine8 + ' drain残血=' + cov.drainLow + ' 坦/狙=' + cov.tank + '/' + cov.snipe + ' DEF份额=' + cov.defShare + '%' : ''));
   } catch (e) { console.log('⛔ ' + c.name + '：' + e.message); }
 }
 if (scores.length) {
