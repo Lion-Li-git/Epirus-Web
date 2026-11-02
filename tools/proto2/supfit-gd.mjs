@@ -475,22 +475,29 @@ const teacherPick = PACK_TEACHER
     ? (state, pid, cs) => bigTPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'lasereye'
     ? (state, pid, cs) => laserPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把它拖回电珠/电磁炮那一维 */
+  : TEACHER === 'oracleDef'
+    ? (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround'];
+const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && !PACK_TEACHER) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + '（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
 const RARE = String(arg('rareOnly', '')).split(',').filter(Boolean);
 const RARE_FRAC = Math.min(0.95, Math.max(0, Number(arg('rareFrac', 0)) || 0));
 if (RARE.length && !(RARE_FRAC > 0)) { console.error('⛔ --rareOnly 要配 --rareFrac>0'); process.exit(2); }
+/* oracleDef（DS · 11-02 晚）：事后先知的「打过来什么→该出哪张防」标签表（与用户口径一致）。 */
+const ORC_ATTACKS = new Set([R.SK.GUN, R.SK.TANK, R.SK.SWORD, R.SK.SNIPE, R.SK.RAILGUN, R.SK.DUAL_GUN]);
+const ORC_REPLIES = new Map([[R.SK.GUN, R.SK.REFLECT], [R.SK.TANK, R.SK.REFLECT], [R.SK.DUAL_GUN, R.SK.REFLECT], [R.SK.SWORD, R.SK.GUARD], [R.SK.SNIPE, R.SK.GUN], [R.SK.RAILGUN, R.SK.TRANSFER]]);
 const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0, rare: 0, byKey: {} };
 /* 打出去的那一手 vs 教师（只在学生自访轮里量）——与 `LABEL`（克隆态 argmax 口径）是**两个不同的数** */
 const PLAY = { n: 0, hit: 0, stuckCharge: 0, missCharge: 0, missFire: 0 };
 
 function collectInto(dst, srcParams, idBase) {
   let curShp = -1;   /* 当前桌形（覆盖自证用） */
+  let lastG = null;  /* 最近推入的组：oracleDef 的 onPicks 钩子回头改它的 wantKey */
   const record = (state, pid, legal) => {
+    lastG = null;
     if (!(legal && legal.length >= 2)) return;
     const cs = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
     if (cs.length < 2) return;
@@ -514,10 +521,29 @@ function collectInto(dst, srcParams, idBase) {
     if (RARE.length && dst.length >= Math.floor(NGRP * (1 - RARE_FRAC)) && RARE.indexOf(again.key) < 0) { LABEL.rare++; return; }   /* 稀有期：只收稀有键组 */
     dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: keys[wIdx], want0: t0.key, shp: curShp,
       wantIdx: wIdx, wantBead: again.bead || null });
+    lastG = dst[dst.length - 1];
     LABEL.keys++;
     LABEL.byKey[again.key] = (LABEL.byKey[again.key] || 0) + 1;
     if (again.key !== t0.key) LABEL.moved++; else LABEL.ok++;
   };
+  /* oracleDef：选完/结算前看别人这一手打谁，回头把**上一组**的标签改成对应的防御（用户口径）。 */
+  const oracleHook = TEACHER === 'oracleDef' ? function (state, picks, legals, seat) {
+    const g = lastG; if (!g) return null;
+    const me = state.p[seat]; if (!me || me.hp <= 0) return null;
+    let atk = null;
+    for (let pid = 0; pid < state.p.length; pid++) {
+      if (pid === seat) continue;
+      const pk = picks[pid]; if (!pk) continue;
+      if ((pk.target === seat || pk.target2 === seat) && ORC_ATTACKS.has(pk.key)) { atk = pk; break; }
+    }
+    if (!atk) return null;
+    const rep = ORC_REPLIES.get(atk.key); if (!rep) return null;
+    const lg = (legals[seat] || []).find(function (c) { return c.key === rep && c.affordable; });
+    if (!lg) return null;
+    const idx = g.keys.indexOf(rep); if (idx < 0) return null;
+    g.wantKey = rep; g.wantIdx = idx; g.wantBead = null;
+    return null;
+  } : undefined;
   let play;
   if (srcParams == null) {
     play = (state, pid, legal) => {
@@ -560,12 +586,12 @@ function collectInto(dst, srcParams, idBase) {
     for (let s = 0; s < A2.shapes.length; s++) {
       curShp = s;
       const before = dst.length;
-      for (let g = 0; g < GCAP && dst.length - before < q; g++) { if (dst.length >= NGRP) break; A2.playOne(play, s, idBase + s * 1000 + g, 4242); }
+      for (let g = 0; g < GCAP && dst.length - before < q; g++) { if (dst.length >= NGRP) break; A2.playOne(play, s, idBase + s * 1000 + g, 4242, oracleHook); }
     }
   } else {
     for (let s = 0; s < A2.shapes.length && dst.length < NGRP; s++) {
       curShp = s;
-      for (let g = 0; g < GCAP && dst.length < NGRP; g++) A2.playOne(play, s, idBase + s * 1000 + g, 4242);
+      for (let g = 0; g < GCAP && dst.length < NGRP; g++) A2.playOne(play, s, idBase + s * 1000 + g, 4242, oracleHook);
     }
   }
 }
@@ -582,7 +608,7 @@ const cls = (gr) => (OBJ === 'cand' ? gr.wantKey + (gr.wantBead ? '#' + gr.wantB
 function weightOf(list) {
   const c = {};
   for (const gr of list) { const k = cls(gr); c[k] = (c[k] || 0) + 1; }
-  const w = {}; for (const k in c) w[k] = 1 / c[k];
+  const w = {}; for (const k in c) w[k] = TEACHER === 'oracleDef' ? 1 : 1 / c[k];   /* oracleDef：均匀权重（1/类频会把少数防御类放得过大 ⇒ 刷防御） */
   return w;
 }
 let WKEY = weightOf(train0);

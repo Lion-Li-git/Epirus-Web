@@ -146,7 +146,9 @@ export function createArena2(W, opts) {
   const resetBotMem = W.EpirusBots && typeof W.EpirusBots.resetBotMem === 'function' ? W.EpirusBots.resetBotMem : null;
   if (!resetBotMem) throw new Error('createArena2: W.EpirusBots.resetBotMem 不存在 ⇒ 无法保证逐局确定性（sandbox 没载 bots.js？）');
 
-  function playOne(sel, shapeIdx, gameSeq, salt) {
+  function playOne(sel, shapeIdx, gameSeq, salt, onPicks) {
+    /* `onPicks(state,picks,legals,seat)`（DS · 11-02 晚）：把「选完/结算前」的钩子透传给 oneGameN，
+     *   给作弊教师/事后标签用；默认 undefined ⇒ 逐位不变。 */
     /* ⚑ P0-1（ZCode · 10-30 夜）：每局前重置 bot 跨局记忆。bots.js 的 `__mem` 是模块级、全体 bot 共享，
      *   注释里的设计意图是"每局(round==1)重置"，但重置只挂在 `noteOpp` 上 ⇒ 读它却不先走 noteOpp 的
      *   bot 路径会把**上一局的残迹**带进下一局（diag-diff 实测：440 局里 3 局漂、全是脚本 bot 在场；
@@ -178,7 +180,8 @@ export function createArena2(W, opts) {
       choosers[pid] = e.kind === 'random' ? randChooser(P, T, (seed ^ (pid * 2654435761)) >>> 0, R.SK.JI) : e.sel;
       classes[pid] = e.name;
     }
-    const rm = T.oneGameN(choosers, seed, n, { regen: shape.regen != null ? shape.regen : REGEN, mode: shape.mode });
+    const rm = T.oneGameN(choosers, seed, n, { regen: shape.regen != null ? shape.regen : REGEN, mode: shape.mode,
+      onPicks: onPicks ? function (state, picks, legals) { return onPicks(state, picks, legals, seat); } : undefined });
     const st = rm.state;
     const hp = st.p[seat] ? Math.max(0, st.p[seat].hp) : 0;
     const win = rm.winner === seat;
