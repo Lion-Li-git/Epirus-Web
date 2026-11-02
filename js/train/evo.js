@@ -50,6 +50,17 @@
   function setMix8Every(v) { const k = Math.floor(Number(v) || 0); MIX8_EVERY = k >= 2 ? k : 0; return MIX8_EVERY; }
   function mix8Every() { return MIX8_EVERY; }
 
+  /* =====（ZCode · 11-02 深夜）`HP_SEED`：残血开局课程——摄魂双线对照的 (b) 线（用户裁「两个都可以试试」）=====
+   * 把"那一格"造出来：p 比例的局**开局全席对称压到 HP=min(2, modeHp-1)**（long=2）⇒
+   * 自己缺血 ✓、所有敌人 ≤drainHpMax ✓ ⇒ 摄魂窗（引擎门 = 目标 HP≤drainHpMax ∧ 自己缺血 ∧ 3ジ）
+   * 不再依赖"被打到残血还恰好攒着 3 费"这个稀与现实（白班 §七：残血 54% 回合但出得起的比例极低）。
+   * 照 BEAD_SEED 的形状：硬币在**局开始**用本局自己的 rng 抛（同 seed 可复现），0 时短路不消耗随机数。
+   * ⚠ 课程局**照常进 fit**（IMIT 教训：不进 fit 的经验不进参数）——fit 因此含"从低血开局赢"的目标分量，
+   *   属有意的目标修改；验收 = drain 使用率上行 ∧ 5P 四骰（原生世界）不低于同批对照（W0-ctrl）。 */
+  let HP_SEED = 0;
+  function setHpSeed(v) { const n = Number(v); HP_SEED = (isFinite(n) && n > 0) ? Math.min(1, n) : 0; return HP_SEED; }
+  function hpSeedOn() { return HP_SEED; }
+
   /* ===== 风格表现切片：复合适应度（v1.5.2）=====
    * 动机：两次"改对手池"的干预都落空（ring2 加 1 个脚本对手、mix 加 4 个真实风格冠军），
    * 而且后者还**摊薄**了每个对手的练习量。所以这里**不改池子**：在每个个体身上**追加** k 局
@@ -2371,6 +2382,15 @@ let WALL_GAMES = 3;
       } : undefined;
       /* v1.5.143：状态分布塑形（**只在非补贴局**、**只在开局那一回合**、**全席对称**）—— 见 setBeadSeed 的长注释。
        * 抛硬币用**本局自己的 rng**（不是 Math.random）⇒ 同一 seed 序列可复现；`BEAD_SEED=0` 时短路 ⇒ 不消耗随机数、逐字不变。 */
+      /*（ZCode · 11-02 深夜）残血开局课程（HP_SEED>0）：形状照 BEAD_SEED——硬币只在 round1 抛、本局 rng、0 短路。 */
+      const hpSeedHook = (!subBeadHook && HP_SEED > 0)
+        ? function (state) {
+          if (state.round !== 1) return;
+          if (state.rng.next() >= HP_SEED) return;
+          const hp0 = Math.min(2, (state.mode && state.mode.hp) || 3);
+          for (let i = 0; i < state.p.length; i++) { const q = state.p[i]; if (q && q.hp > 0) q.hp = hp0; }
+        }
+        : undefined;
       const beadSeedHook = (!subBeadHook && BEAD_SEED > 0)
         ? function (state) {
           if (state.round !== 1) return;
@@ -2383,7 +2403,7 @@ let WALL_GAMES = 3;
           }
         }
         : undefined;
-      const r = oneGameN(choosers, seed, nG, { regen: regen, mode: TRAIN_MODE, onRoundStart: subBeadHook || beadSeedHook });
+      const r = oneGameN(choosers, seed, nG, { regen: regen, mode: TRAIN_MODE, onRoundStart: subBeadHook || beadSeedHook || hpSeedHook });
       /* v1.5.189：局末把"教师替受评席下的手"标记出来（**只记账，不改 fit、不改 rng**）
        * ⇒ 示范开着时，`bigUses`/链率这类臂内读数第一次能拆开"是包自己会，还是教师替它打的"。
        * ⚠️ **每一局都要过一遍**（不能只在"本局有注入"时过）：退火窗口之后注入恒 0，而那正是"学没学会"要看的段落
@@ -4091,6 +4111,7 @@ function countVariety(events, seat) {
   setPairedEval, pairedEvalOn, evalSeedOf,
     setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt, wrapBigTPush,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认值只由上面那个常数表达，门 D224 钉）· v1.6.3 §E282：外面那层给脚本席用
     setMix8Every, mix8Every,   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌（默认 0=关 ⇒ 逐字不变；8P 局照常进 fit）
+    setHpSeed, hpSeedOn,   //（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（默认 0=关；p 比例局全席对称压 HP=min(2,modeHp-1)）
     setSupportPrior, supportPriorOn, supportPriorTarget, setSupportPriorKnobs, supportPriorKnobs,   // §E646（路线 B）：送盾的部署层先验，**默认 0=关**；自证在 `tools/probe-support-prior.mjs`
     setDrainPush, drainPushOn, drainPushWants, drainPushSalt,              // v1.5.334 §E275：摄魂"残血只在探索里软提升"（默认 0=关，门 D225 钉）
     /* v1.8.33（§E712）：序列窗锁的"窄锁"档（默认 0 ⇒ 出厂逐字不变）。`chainKeysOf` 是纯函数 ⇒ 门/量具可直读，
