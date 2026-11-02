@@ -33,9 +33,9 @@ function loadPack(path) {
 const { pp, label } = loadPack(PACK);
 
 /* 分层计数：hp 档 × 是否挨过打 */
-const STRATA = { '<=1': { n: 0, threat: 0, defMenu: 0, defPick: 0, defPickThreat: 0, drainMenu: 0, drainPick: 0 },
-  '2': { n: 0, threat: 0, defMenu: 0, defPick: 0, defPickThreat: 0, drainMenu: 0, drainPick: 0 },
-  '>=3': { n: 0, threat: 0, defMenu: 0, defPick: 0, defPickThreat: 0, drainMenu: 0, drainPick: 0 } };
+const STRATA = { '<=1': { n: 0, threat: 0, defMenu: 0, defPick: 0, defPickThreat: 0, drainMenu: 0, drainPick: 0, ep3: 0 },
+  '2': { n: 0, threat: 0, defMenu: 0, defPick: 0, defPickThreat: 0, drainMenu: 0, drainPick: 0, ep3: 0 },
+  '>=3': { n: 0, threat: 0, defMenu: 0, defPick: 0, defPickThreat: 0, drainMenu: 0, drainPick: 0, ep3: 0 } };
 let evCursor = 0, lastHp = null;
 
 function bucket(hp) { const h = hp | 0; return h <= 1 ? '<=1' : (h === 2 ? '2' : '>=3'); }
@@ -55,6 +55,7 @@ function focusWrap(inner, state, pid, legal) {
   const pk = (picked && typeof picked === 'object') ? (picked.key || '?') : String(picked);
   const st = STRATA[bucket(hp)];
   st.n++; st.threat += threat;
+  if (hp <= 1 && (me.ep | 0) >= 3) st.ep3++;   /* 摄魂价格：HP≤1 且 ep≥3 才出得起 */
   if (menuDef) st.defMenu++;
   if (menuDef && DEFENSE.has(pk)) { st.defPick++; if (threat) st.defPickThreat++; }
   if (menuDrain) st.drainMenu++;
@@ -97,3 +98,4 @@ for (const b of ['<=1', '2', '>=3']) {
 }
 const low = STRATA['<=1'];
 console.log('摄魂（仅 HP≤1 可用）：菜单 ' + low.drainMenu + ' 次 ‖ 被选 ' + low.drainPick + ' 次 ⇒ ' + pct(low.drainPick, low.drainMenu) + '（分母=菜单）');
+console.log('摄魂价格：HP≤1 且 ep≥3 的决策 ' + low.ep3 + '/' + low.n + ' = ' + pct(low.ep3, low.n) + '（出得起才谈选不选）');
