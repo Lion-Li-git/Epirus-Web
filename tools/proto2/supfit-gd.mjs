@@ -181,6 +181,21 @@ const rationPick = (state, pid, cs) => {
   if (ring && (me.ringStreak > 0 || castCount(state, pid, R.SK.RING) < RATION.ring)) return ring;
   return pickChain(state, pid, cs, R);
 };
+/* DS 11-02 晚（用户「克隆旧包做起点」）：`--teacher=pack:<path>` —— 把任意 **v7 包**当教师。
+ *   机制与 `toolkit` 同：v7 chooser 出键 → `keyToCand` 映射回候选（珠种按 keyToCand 的规则）。
+ *   arch2 的 choose/forward 有长度守卫（5689 ≠ 2.0 的 L.n ⇒ 交回 v7 实现）⇒ 在 2.0 进程里安全。 */
+const PACK_TEACHER = TEACHER.indexOf('pack:') === 0 ? TEACHER.slice(5) : null;
+let packPick = null;
+if (PACK_TEACHER) {
+  const ptParams = Float64Array.from(loadChamp(W0, PACK_TEACHER, '.'));
+  const ptChooser = T.policyChooserN(ptParams, 0.15);
+  packPick = (state, pid, cs) => {
+    /* ⚠ 传 `cs` 给 chooser 会全落 ji：v7 chooser 要的是**合法键表**（entry.affordable），而 cs 是候选（带 target/bead）。 */
+    const legal = cs.map((c) => ({ key: c.key, affordable: c.affordable !== false }));
+    const got = ptChooser(state, pid, legal);
+    return keyToCand(cs, got && (got.key || got)) || null;
+  };
+}
 const v7Pick = (state, pid, cs) => {
   let bi = -1, bv = -Infinity;
   for (let i = 0; i < cs.length; i++) {
@@ -428,7 +443,9 @@ const ration6Pick = (state, pid, cs) => {
   }
   return pickChain(state, pid, cs, R);
 };
-const teacherPick = TEACHER === 'v7mix'
+const teacherPick = PACK_TEACHER
+  ? (state, pid, cs) => packPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : TEACHER === 'v7mix'
   ? (state, pid, cs) => pickChain(state, pid, cs, R) || v7Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'toolkit'
     ? (state, pid, cs, legal) => keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
@@ -461,7 +478,7 @@ const teacherPick = TEACHER === 'v7mix'
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
 const TEACHER_KNOWN = ['chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround'];
-if (TEACHER_KNOWN.indexOf(TEACHER) < 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + '（收到 ' + TEACHER + '）'); process.exit(2); }
+if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && !PACK_TEACHER) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + '（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
 const RARE = String(arg('rareOnly', '')).split(',').filter(Boolean);
