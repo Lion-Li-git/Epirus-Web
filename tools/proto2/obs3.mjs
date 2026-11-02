@@ -180,16 +180,29 @@ function seatVec(p, mePid, modeHp, R, ver, recent) {
     const cat = R.byKey[R.skills[i].key] ? R.byKey[R.skills[i].key].cat : '';
     if (cat === 'attack') atkSum += bag[i]; else if (cat === 'defense') defSum += bag[i];
   }
-  const replyReflect = (domKey === 'gun' || domKey === 'tank' || domKey === 'dualGun') ? 1 : 0;
-  const replyGuard = domKey === 'sword' ? 1 : 0;
-  const replyGun = domKey === 'snipe' ? 1 : 0;
-  const replyTransfer = domKey === 'railgun' ? 1 : 0;
-  return base.concat([maxBag, Math.min(1, atkSum), Math.min(1, defSum), replyReflect, replyGuard, replyGun, replyTransfer]);
+  /* 主键对应的**防御矩阵**（与 resolve.js deliverDamage 的 guard 分支逐条对齐）：
+   *   guard/jinshield 挡 !pierce.defense；reflect/armor 挡 !pierce.reflect；
+   *   bagua 判骰、proto 全挡（除地雷/转移）⇒ 恒 1；transfer 挡 !pierce.transfer；
+   *   attackCounter：狙击枪「带攻击效果技能可使其无效」⇒ 只有主键=snipe 时 1。 */
+  const domDef = (domKey && R.byKey[domKey]) ? R.byKey[domKey] : null;
+  const dp = (domDef && domDef.pierce) || {};
+  const validGuard = dp.defense ? 0 : 1;
+  const validReflect = dp.reflect ? 0 : 1;
+  const validArmor = dp.reflect ? 0 : 1;
+  const validBagua = 1;
+  const validJin = dp.defense ? 0 : 1;
+  const validProto = 1;
+  const validTransfer = dp.transfer ? 0 : 1;
+  const validAttackCounter = domKey === 'snipe' ? 1 : 0;
+  return base.concat([maxBag, Math.min(1, atkSum), Math.min(1, defSum),
+    validGuard, validReflect, validArmor, validBagua, validJin, validProto, validTransfer, validAttackCounter]);
 }
 const SEAT_N = 22;           /* obs3 的席位宽（旧读数指着它；obs3b 用 SEAT_NB，scene/encode 按版本取） */
 const SEAT_NB = 81;
-const SEAT_NC = 88;          /* obs3c：obs3b 81 + 风格摘要 7 */
-const STYLE_NAMES = ['style.maxBag', 'style.atkFrac', 'style.defFrac', 'style.replyReflect', 'style.replyGuard', 'style.replyGun', 'style.replyTransfer'];          /* obs3b：14 状态 + 31 lastSkill(30 身份+1 none) + 3 目标 + 30 键 bag + 3 目标 bag */
+const SEAT_NC = 92;          /* obs3c：obs3b 81 + 风格摘要 11（3 聚合 + 8 个「该防御能不能挡下主键」位） */
+const STYLE_NAMES = ['style.maxBag', 'style.atkFrac', 'style.defFrac',
+  'style.valid.guard', 'style.valid.reflect', 'style.valid.armor', 'style.valid.bagua',
+  'style.valid.jinshield', 'style.valid.proto', 'style.valid.transfer', 'style.valid.attackCounter'];          /* obs3b：14 状态 + 31 lastSkill(30 身份+1 none) + 3 目标 + 30 键 bag + 3 目标 bag */
 /** 最近 K 回合的**全体**出手键 bag 与目标方向（一次反扫共用给所有活席；2^-age 衰减、/BAG_NORM 归一到 [0,1]）。
  *  ⚑ 依赖 state.js action 事件带 `target`（10-31 凌晨补的字段；旧对局记录没有 ⇒ 目标 bag 全 0，不炸）。 */
 function recentAll(state, R, ids, mePid, K) {

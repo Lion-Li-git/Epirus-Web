@@ -42,7 +42,7 @@ const SEAT_DIM = OPP_BLK + T_BLK + B_BLK + 1;           // +1 = isSelf 标记 �
  *           ‖ 全局 5 + 私有 2 + 序列 168（32 Q.seq + 120 Q.id + 16 Q.out）+ 全场合计 1（505 维）*/
 const SEAT3 = 22 + 5 + 1, SELF3_EXTRA = 5 + 2 + 48 + 1;
 const SEAT3B = 81 + 5 + 1, SELF3B_EXTRA = 5 + 2 + 78 + 1;   /* obs3b 序列 78 = 32 Q.seq + 30 Q.bag + 16 Q.out */
-const SEAT3C = 88 + 5 + 1;   /* obs3c：obs3b 81 + 风格摘要 7（DS · 11-02 晚） */
+const SEAT3C = 92 + 5 + 1;   /* obs3c：obs3b 81 + 风格摘要 11（3 聚合 + 8 防御有效位；DS · 11-02 晚） */
 const CAND3_BASE = 30;                      /* obs3 候选侧基础段（代 2 删掉恒零的 `tgt.none`）*/
 const isO3Input = (s) => s === 'obs3' || s === 'obs3b' || s === 'obs3c';   /* 2.0 观测面共用同一条结构路 */
 /* 初始化尺度**只允许一处定义**：`make` 与"相对变异"都要读它，两边各写一个数就会静默错位（10-29 加）。 */
