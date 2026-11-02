@@ -160,6 +160,8 @@ const SELF_ENV_KEYS = [
   'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W',
   'EPIRUS_WIDTH_LAND_W',
   'EPIRUS_WALL_BREAK_W',
+  'EPIRUS_DEF_ADAPT_W',
+  'EPIRUS_DRAIN_HEAL_W',
   'EPIRUS_PAIRED',   /* 2026-10-28（DS）：配对评估 —— 同代所有个体吃同一批局（common random numbers），默认关 */
   'EPIRUS_REFLECT_W',
   'EPIRUS_GUARD_HIT_W',
@@ -1676,6 +1678,24 @@ if (WALL_BREAK_WANT > 0) {
   }
   const wbk = (T.wallBreakReward && T.wallBreakReward().keys) || null;
   console.log('[wall-break] 破反弹墙奖励已下达：' + JSON.stringify({ wallBreakW: gotWB, keys: wbk }) + ' ⇒ 只给穿反弹卡（激光剑/狙击枪/电磁炮）的落地付钱，坦克不算');
+}
+/* ===== DS 11-02（用户口径）：多血适度防御 `EPIRUS_DEF_ADAPT_W` / 残血摄魂 `EPIRUS_DRAIN_HEAL_W`（默认关）=====
+ * 口径：只进接受分（不碰报告口径）。DEF_ADAPT 只数「防御族真挡下 ≥1 伤」（每局帽 2）；DRAIN_HEAL 只数「HP≤1 摄魂命中回血」（每局帽 2）。
+ * 纪律同 WALL_BREAK_W：读回消费点、不等就 exit 7；没开就一行不印。 */
+const DEF_ADAPT_WANT = Number(process.env.EPIRUS_DEF_ADAPT_W || 0);
+const DRAIN_HEAL_WANT = Number(process.env.EPIRUS_DRAIN_HEAL_W || 0);
+if (DEF_ADAPT_WANT > 0 || DRAIN_HEAL_WANT > 0) {
+  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_DEF_ADAPT_W/EPIRUS_DRAIN_HEAL_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
+    process.exit(7);
+  }
+  T.setEconomyReward({ defAdaptW: DEF_ADAPT_WANT, drainHealW: DRAIN_HEAL_WANT });
+  const back2 = T.economyReward() || {};
+  if (Number(back2.defAdaptW) !== DEF_ADAPT_WANT || Number(back2.drainHealW) !== DRAIN_HEAL_WANT) {
+    console.error('[train-3p] ⛔ 读回 defAdaptW=' + JSON.stringify(back2.defAdaptW) + ' drainHealW=' + JSON.stringify(back2.drainHealW) + ' ⇒ 没生效，退出');
+    process.exit(7);
+  }
+  console.log('[def-drain] 已下达：' + JSON.stringify({ defAdaptW: back2.defAdaptW, drainHealW: back2.drainHealW }) + ' ⇒ DEF_ADAPT 只给防御族真挡下（帽 2/局），DRAIN_HEAL 只给 HP≤1 摄魂回血（帽 2/局）');
 }
 
 /* ===== 11:5x（千问 · 用户「这几个都可以」· PREREG §二十六 条款 4）：**反射** `EPIRUS_REFLECT_W`（默认关）=====
