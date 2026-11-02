@@ -2743,7 +2743,7 @@ if (WIDE_FINAL) {
     };
     defOf(sel.best);   /* 照 `SEL_BIGT` 的在册坑：best 不一定在带内，先单独量一遍，否则下面读 `.__defBy` 会崩在选完人之后 */
     const pool = (sel.clean && sel.clean.length) ? sel.clean : [sel.best];
-    const dp = bandPickByFloor(pool, SEL_DEF, defOf, SEL_DEF_MIN);
+    const dp = bandPickByFloor(pool, SEL_DEF, defOf, SEL_DEF_MIN, null, sel.best);   // 全不达标 ⇒ 原样保留 sel.best（11-02 修：旧版会反过来把达标的原当选换掉）
     const ladder = dp.band.map(function (e) { return e.__defBy + '（重验分 ' + (e.score * 100).toFixed(1) + (e === sel.best ? '·原当选' : '') + '）'; }).join(' ‖ ');
     SEL_DEF_LOG = { tol: SEL_DEF, min: SEL_DEF_MIN, games: SEL_DEF_GAMES, mode: SEL_DEF_MODE, band: dp.band.length, of: pool.length,
       usage: dp.band.map(function (e) { return Number(e.__defUse.toFixed(3)); }), picked: Number((dp.best ? dp.best.__defUse : 0).toFixed(3)),

@@ -352,7 +352,7 @@ export function bandPickByUsage(entries, tolPt, usageOf, incumbentId) {
  *   （`evo.js:1805` 对 `BLOCK_W` 的原话是"奖励含混，会把包推向挡起来"；§廿四 的 v2 门槛把"出手种类"当目标 ⇒ 拿不打血的键凑数）。
  *   唯一立住过的形状 = 只罚下界（v1.6.50 `FIT_G_W`，用户裁定先例）⇒ 这里只做一件事：把"完全不达标"的候选从当选席上挤下去。
  * 全不达标 ⇒ 保留原分序第一并置 `allBelow`（调用点必须响亮打印，照 `wideFinalAllNarrow` 先例，不许静默）。 */
-export function bandPickByFloor(entries, tolPt, usageOf, floor, incumbentId) {
+export function bandPickByFloor(entries, tolPt, usageOf, floor, incumbentId, keepOnMiss) {
   const list = (entries || []).filter(function (e) { return !!e; });
   if (!list.length) return { best: null, band: [], top: 0, allBelow: true, pickedUsage: 0, tieBrokenBy: 'none' };
   const u = function (e) { const v = Number(usageOf ? usageOf(e) : e.usage) || 0; e.__floorUse = v; return v; };
@@ -365,14 +365,20 @@ export function bandPickByFloor(entries, tolPt, usageOf, floor, incumbentId) {
   const byScore = band.slice().sort(function (a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); });
   const ok = byScore.filter(function (e) { return u(e) >= FL; });        // 达标组内**保持分序** ⇒ 不奖励"更多防御"
   const inc = __inBand(band, incumbentId);
-  let best = ok.length ? ok[0] : (byScore[0] || null);
+  /* 全不达标 ⇒ **保留原当选者**，不是"取带内分最高者"。
+   * ⚑ 11-02 修：第一版在这里返回 `byScore[0]`，于是当"原当选者不在带内"（v4 的 WIDE_FINAL 就可能把它换到带外）时，
+   *   它会**反过来把达标的原当选者换掉**（实测 s41 那臂：原当选防御 15.85 手/局被换成 0.00 的一粒），
+   *   与它自己打印的"不改判"矛盾。⇒ 现在调用方把"原当选者"经 `keepOnMiss` 传进来，全不达标时原样保留。 */
+  const keep = keepOnMiss == null ? null : (list.find(function (e) { return e === keepOnMiss || (e.ref && keepOnMiss && e.ref.params === keepOnMiss.ref.params); }) || null);
+  let best = ok.length ? ok[0] : (keep || byScore[0] || null);
   if (inc) best = inc;
   return {
     best: best, band: band, top: top, skipped: skipped,
     allBelow: ok.length === 0,
     pickedUsage: best ? u(best) : 0,
     usage: band.map(function (e) { return u(e); }),
-    tieBrokenBy: inc ? 'incumbent' : (best && byScore[0] && best !== byScore[0] ? 'floor' : (ok.length ? 'score' : 'score(allBelow)'))
+    tieBrokenBy: inc ? 'incumbent' : (ok.length === 0 ? (best === keep ? 'keep(allBelow)' : 'score(allBelow)')
+      : (best && byScore[0] && best !== byScore[0] ? 'floor' : 'score'))
   };
 }
 
