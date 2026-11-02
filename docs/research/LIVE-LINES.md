@@ -427,3 +427,15 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 - **工具三件套转正在望**：coverage-gate（覆盖门）/ holdout-promote --coverage（覆盖感知复排）/ HOLDOUT_SEG（存段）——
   三件合起来 = "新网对旧版完全覆盖"的**可跑流水线**：训练（存段）→ 复排（强度×覆盖）→ 门（判带）→ 池（成员制）。
 - 摄魂双线（(a) 胜）、地雷 1/5、W2 判否、D-a 谱系 GA 放大（drain 8→61）——详见 RESULTS §三/§四/§九/§十。
+
+## 11-03 晨追记 14（ZCode 深夜班三段收口；`RESULTS-2026-11-03-NIGHT-zcode.md` §十七~十八）
+
+- **上线门（score13/promote）首跑 gen-3 舰队**：promote 本体验证能吃 gen-3（audit-lib CORE 含 policy2）；
+  score13 私配沙盒漏 policy2 已修。**8 枚全数 6-7/13**，共同红 = 座/还/墙/场B/强——**同世界对照同红 ⇒
+  门线是 3P-multi 旧世界标定的，5P-long 新世界需要校准轮**（晨班工程活）。G5-8p-s41 与 D-a 是仅有过"广"的两枚。
+- **激光眼破冰到产物**：根因=教师只蓄电珠（charge#boom 从未发生）；补 boom 供弹分支 → 标签 0→44 →
+  蒸馏体 LE-laser-v2 真的在用（21 次/4.0%）→ GA 150 代归零（腐蚀律）。
+- **覆盖动力学总律**：蒸馏先验的存活力 = 该行为在训练世界是否被 fit 付账（drain 放大 / laserEye·mine·DEF 磨损）。
+  **总解四件套**：蒸馏装先验 → HOLDOUT_SEG 存段保 archive → 池级选型（腐蚀成员退池、段里还有）→
+  长期 = 目标函数为各带付账（产品口径）。**MoE 的替代 = 池 + 分工 + 存段 archive**。
+- 双枪定案（菜单 36-208/自选 0 = 目标函数病）；W0 全关 400 代顶问 56.2（−10pt 价签=世界属性）。
