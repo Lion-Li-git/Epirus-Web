@@ -100,8 +100,32 @@ function makeFocus(rule, st) {
 const A = createArena2(W, { refParams: pp, temp: TEMP, stratified: true, stratCap: '2', stratMix: '0.5' });
 const shIdx = A.shapes.findIndex((s) => s.n === N && s.mode === MODE);
 const CNT = [B.pickTargeter, B.pickGunSpam, B.pickRingSpam, B.pickProtoMine];
-function roster(world) {
-  if (world === 'train') return CNT;
+/* `arms`＝**臂真正住的那个分布**：`train-3p` 的默认 9 型 + `EPIRUS_COUNTER_OPPS` 点名的 8 型，
+ *   按引擎的轮转 `oppSeatIndex = (gen*3 + g + k) % L`（`evo.js` 里就一行）取连续窗口。
+ *   ⚠ 11-02 午后加的：我早前把 `train` 那档写成"臂住的世界"，其实它是 **5 人桌 + 4 只脚本**，
+ *   而臂在 **3 人桌 + 17 型池**（池里 defend/wall/random/farmer 一堆几乎不打人的席）里跑 —— 那是两个分布。 */
+const ARMS_POOL = [
+  ['random', B.pickRandom], ['balanced', B.pickBalanced], ['aggro', B.pickAggro], ['defend', B.pickDefend],
+  ['wall', B.pickWall], ['antidef', B.pickAntiDef], ['breakdef', B.pickBreakDef], ['mix', B.pickMix], ['farmer', B.pickFarmer],
+  ['targeter', B.pickTargeter], ['gunSpam', B.pickGunSpam], ['ringspam', B.pickRingSpam], ['protomine', B.pickProtoMine],
+  ['deadlineburst', B.pickDeadlineBurst], ['earlypressure', B.pickEarlyPressure], ['heavyfire', B.pickHeavyFire], ['deepsaver', B.pickDeepSaver],
+].filter((x) => typeof x[1] === 'function').map((x) => ({ name: x[0], sel: x[1] }));
+function roster(world, gameIdx) {
+  if (world === 'train') return CNT.slice(0, N - 1);
+  if (world === 'arms') {
+    const out = [];
+    for (let k = 1; k < N; k++) out.push(ARMS_POOL[(gameIdx + k) % ARMS_POOL.length].sel);
+    return out;
+  }
+  if (world === 'armsaggro') {
+    /* 把池里"会打人"的那几型挑出来占满（= 我早前 `train` 档想表达但表达错了的东西） */
+    const AG = ['targeter', 'gunSpam', 'heavyfire', 'earlypressure', 'deadlineburst', 'aggro', 'antidef', 'breakdef'];
+    const by = new Map(ARMS_POOL.map((o) => [o.name, o.sel]));
+    const list = AG.map((n) => by.get(n)).filter(Boolean);
+    const out = [];
+    for (let k = 1; k < N; k++) out.push(list[(gameIdx + k) % list.length]);
+    return out;
+  }
   if (world === 'strat') {
     const out = [];
     for (let pid = 1; pid < N; pid++) {
@@ -132,38 +156,60 @@ const RULES = [
 ];
 
 console.log('### 反事实强制定量 ‖ 包=' + PACK.split('/').pop() + ' ‖ ' + label + ' ‖ ' + N + ' 人 ' + MODE + ' ‖ ' + GAMES + ' 局/格 ‖ t=' + TEMP);
-console.log('世界 | 档 | 夺1% | 局均回合 | 终局HP | 出该手/局 | 防御手/局 | 摄魂手/局 | 挨打决策/满血挨打');
+console.log('世界 | 档 | 夺1% | 局均回合 | 终局HP | 出该手/局 | 防御手/局 | 摄魂手/局 | **挡下/局 | 免伤/局 | 我造伤/局 | 终局存活%** | 挨打决策/从满血被打/总决策');
 for (const world of WORLDS) {
   /* 满血到底是几：先用 native 探一次上限（5P multi 上限 = 3） */
-  const probe = { fired: 0, elig: 0, defPlays: 0, drainPlays: 0, decisions: 0, legalOnly: 0, threatDec: 0, pokedFull: 0, hpDropThreat: 0, maxHp: 0 };
+  const probe = newSt();
   const base = runCell(world, RULES[0].rule, probe);
   const FULL = probe.maxHp;
-  const side = '（挨打决策 ' + (probe.threatDec / GAMES).toFixed(2) + ' ‖ 其中从满血被打下来 ' + (probe.pokedFull / GAMES).toFixed(2) + ' ‖ 本局总决策 ' + (probe.decisions / GAMES).toFixed(1) + '）';
-  console.log([world, 'native(满血=' + FULL + ')', fmtPct(base.win / GAMES), (base.rounds / GAMES).toFixed(1), (base.hp / GAMES).toFixed(2), '0.00', (probe.defPlays / GAMES).toFixed(2), (probe.drainPlays / GAMES).toFixed(2), side].join(' | '));
+  console.log([world, 'native(满血=' + FULL + ')', fmtPct(base.win / GAMES), (base.rounds / GAMES).toFixed(1), (base.hp / GAMES).toFixed(2),
+    '0.00', (probe.defPlays / GAMES).toFixed(2), (probe.drainPlays / GAMES).toFixed(2),
+    (probe.blocks / GAMES).toFixed(2), (probe.averted / GAMES).toFixed(2), (probe.dealt / GAMES).toFixed(2), fmtPct(base.surv / GAMES),
+    '取' + (probe.taken / GAMES).toFixed(2) + '（无来源 ' + (probe.taken ? (100 * probe.noSrc / probe.taken).toFixed(0) : '—') + '%） ‖ 活' + (probe.aliveEnd / GAMES).toFixed(2),
+    side(probe)].join(' | '));
   for (const rl of RULES.slice(1)) {
     const rule = Object.assign({}, rl.rule);
     if (rule.kind === 'def' && rule.hp === 3) rule.hp = FULL;
-    const st = { fired: 0, elig: 0, defPlays: 0, drainPlays: 0, decisions: 0, legalOnly: 0, threatDec: 0, pokedFull: 0, hpDropThreat: 0, maxHp: FULL };
+    const st = newSt(FULL);
     const g = runCell(world, rule, st);
     console.log([world, rl.name, fmtPct(g.win / GAMES), (g.rounds / GAMES).toFixed(1), (g.hp / GAMES).toFixed(2),
       (st.fired / GAMES).toFixed(2), (st.defPlays / GAMES).toFixed(2), (st.drainPlays / GAMES).toFixed(2),
-      '（挨打决策 ' + (st.threatDec / GAMES).toFixed(2) + ' ‖ 其中从满血被打下来 ' + (st.pokedFull / GAMES).toFixed(2) + ' ‖ 本局总决策 ' + (st.decisions / GAMES).toFixed(1) + '）'].join(' | '));
+      (st.blocks / GAMES).toFixed(2), (st.averted / GAMES).toFixed(2), (st.dealt / GAMES).toFixed(2), fmtPct(g.surv / GAMES),
+      '取' + (st.taken / GAMES).toFixed(2) + '（无来源 ' + (st.taken ? (100 * st.noSrc / st.taken).toFixed(0) : '—') + '%） ‖ 活' + (st.aliveEnd / GAMES).toFixed(2), side(st)].join(' | '));
   }
 }
-console.log('注：Δ夺1 只在**第一处分叉之前**严格配对；触发手/局=0 的格是"没打出去"，不是"打了没用"（阳性对照看 def@3 那两格）。');
+console.log('注：Δ夺1 只在**第一处分叉之前**严格配对；出该手/局=0 的格是"没打出去"，不是"打了没用"。');
+
+function newSt(full) {
+  return { fired: 0, elig: 0, defPlays: 0, drainPlays: 0, decisions: 0, legalOnly: 0, threatDec: 0, pokedFull: 0, hpDropThreat: 0,
+    blocks: 0, averted: 0, dealt: 0, taken: 0, noSrc: 0, hitBySum: 0, aliveEnd: 0, rounds2: 0, surv: 0, maxHp: full || 0 };
+}
+function side(st) {
+  return '（' + (st.threatDec / GAMES).toFixed(2) + ' / ' + (st.pokedFull / GAMES).toFixed(2) + ' / ' + (st.decisions / GAMES).toFixed(1) + '）';
+}
 
 function runCell(world, rule, st) {
-  const opp = roster(world);
-  let win = 0, rounds = 0, hp = 0;
+  let win = 0, rounds = 0, hp = 0, surv = 0;
   for (let k = 0; k < GAMES; k++) {
     st.cursor = undefined; st.lastHp = undefined;
+    const hb = new Set();
     const subs = [makeFocus(rule, st)];
-    for (const o of opp) subs.push(o);
+    for (const o of roster(world, k)) subs.push(o);
+    if (subs.length !== N) { console.error('⛔ 席数对不上：subs=' + subs.length + ' 但 N=' + N); process.exit(7); }
     const r = T.oneGameN(subs, 77000 + k * 977, N, { mode: MODE });
     if (r.winner === 0) win++;
+    if (r.state && r.state.p && r.state.p[0] && r.state.p[0].hp > 0) surv++;
     rounds += r.rounds || 0;
     hp += (r.state && r.state.p && r.state.p[0] && r.state.p[0].hp > 0) ? r.state.p[0].hp : 0;
+    for (const e of (r.state && r.state.events) || []) {
+      if (e.type === 'blocked' && e.to === 0) { st.blocks++; st.averted += (e.amt | 0); }
+      else if (e.type === 'damage' && e.source === 0) st.dealt += (e.amt | 0);
+      /* 「免伤」与「少挨打」不是一回事：防只削每一下的额度，不会让**打我的席**变少，也不会缩短桌子。 */
+      else if (e.type === 'damage' && e.to === 0) { st.taken += (e.amt | 0); if (e.source == null) st.noSrc += (e.amt | 0); else hb.add(e.source); }
+    }
+    if (r.state && r.state.p) st.aliveEnd += r.state.p.filter((q) => q.hp > 0).length;
+    st.rounds2 += (r.rounds || 0);
   }
-  return { win, rounds, hp };
+  return { win, rounds, hp, surv };
 }
 function fmtPct(x) { return (100 * x).toFixed(1) + '%'; }
