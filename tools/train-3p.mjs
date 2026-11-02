@@ -635,6 +635,13 @@ if (process.env.EPIRUS_ARCH2) {
    *   修法：数字键才 Number，字符串键（input 等）原样保留；并在横幅印**解析后的面**，
    *   再加一条硬闸——spec 串里写了 obs3/obs3b 而解析结果不是它 ⇒ 当场退（这一类"横幅与实际不一致"不许再藏）。 */
   if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) { const v = e[1].trim(); cfg[e[0].trim()] = /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v; } });
+  if (process.env.EPIRUS_NORM) {
+    /* E1（DS · 11-02 晚）：ctx 输入逐维标准化统计量（离线语料算好；随包存 dims.norm，推理自动复用）。 */
+    try { cfg.norm = JSON.parse(readFileSync(String(process.env.EPIRUS_NORM), 'utf8')); }
+    catch (e) { console.error('[train-3p] ⛔ EPIRUS_NORM 读不出：' + String(e && e.message || e)); process.exit(7); }
+    if (!cfg.norm || !Array.isArray(cfg.norm.mean) || !Array.isArray(cfg.norm.std)) { console.error('[train-3p] ⛔ EPIRUS_NORM 要 {mean:[], std:[]}'); process.exit(7); }
+    console.log('[train-3p] 输入标准化：' + String(process.env.EPIRUS_NORM) + '（' + cfg.norm.mean.length + ' 维）');
+  }
   const A2 = installArch2(sb.window, cfg);
   const __wantFace = (String(spec).match(/input=(obs3c|obs3b|obs3|v7)/) || [])[1];   /* ⚑ 最长优先：obs3c 不能被 obs3 抢先匹配（11-02 冒烟） */
   if (__wantFace && A2.L && A2.L.input !== __wantFace) {

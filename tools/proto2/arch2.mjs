@@ -201,8 +201,11 @@ export function layout(opts) {
   if (tinterK > 0) seg.push({ name: 'tinter', off: 0, len: tinterK * tinterStride });
   let off = 0;
   for (const s of seg) { s.off = off; off += s.len; }
+  /* E1（DS · 11-02 晚，用户裁「输入标准化」）：ctx 输入的逐维标准化统计量（由固定语料离线算，随包存取）
+   *   ⇒ 训练/推理用同一份 mean/std，旧包没有 norm 字段 ⇒ 逐位不变。 */
+  const norm = (o.norm && Array.isArray(o.norm.mean) && Array.isArray(o.norm.std) && o.norm.mean.length === ctxDim) ? { mean: o.norm.mean.slice(), std: o.norm.std.slice() } : null;
   return {
-    arch: isO3 ? 'S1o' : 'S1', input, gen, skills, seatIn, actIn, initScale: INIT_SCALE,
+    arch: isO3 ? 'S1o' : 'S1', input, gen, skills, seatIn, actIn, initScale: INIT_SCALE, norm,
     poolN,
     seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, tinterK, tinterStride, seg, n: off, keySplit,
     /* 每段的"扇入"—— 段感知变异要用它给 σ 定标（扇入越大、同样 σ 造成的输出扰动越大） */
@@ -476,6 +479,7 @@ export function install(W, opts) {
     for (let j = 0; j < L.seatH; j++) xin[p++] = ABL.pool ? 0 : mx[j];
     if (p !== L.ctxDim) throw new Error('布局不自洽：ctx 拼进 ' + p + ' 而声明 ' + L.ctxDim + '（seatH 改动后 selfDim 账要重算）');
     if (TP) TP.xin = Float64Array.from(xin);
+    if (L.norm) { const mu = L.norm.mean, sd = L.norm.std; for (let i = 0; i < L.ctxDim; i++) xin[i] = (xin[i] - mu[i]) / sd[i]; }
     const hctx = encode(params, xin, L.ctxDim, L.hid, WC, ctxBias, BUF.hctx);
 
     const n = cands.length, logits = new Float64Array(n);
@@ -739,7 +743,8 @@ export function install(W, opts) {
    *   挡不住"有人照 arch 装错档再按长度报错"这种绕路。⇒ 标签一律**由实际布局写**，读的时候当场对账。 */
   function packDims() {
     const d = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0, tinter: L.tinterK || 0, gen: L.gen, keySplit: L.keySplit };
-    if (isO3Input(L.input)) d.dof = obs3Dims(R, L.input);     /* 观测面维数由引擎卡表算，不让调用方手填（obs3b=505）*/
+    if (isO3Input(L.input)) d.dof = obs3Dims(R, L.input);
+    if (L.norm) d.norm = L.norm;     /* 观测面维数由引擎卡表算，不让调用方手填（obs3b=505）*/
     return d;
   }
   function pack(p) {
