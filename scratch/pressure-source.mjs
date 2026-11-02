@@ -37,7 +37,11 @@ console.log('# 尺=pressure-source ‖ 包=' + PACK.split('/').pop() + ' ‖ 容
 /* 焦点席的 chooser：包一层，逐决策拍快照（只读不改 ⇒ 不碰它的选择） */
 const SN = [];
 const LAST = {};   /* 对手"上一手"计数字典（谓词的独立读法） */
-const DEFENSE = new Set([R.SK.GUARD, R.SK.REFLECT, R.SK.BAGUA, R.SK.JINSHIELD, R.SK.ARMOR, R.SK.MIRROR].filter(Boolean));
+/* ⚠ 11-02 第三处谓词错（标定防御下限时抓到）：这里原来硬写 {guard,reflect,bagua,jinshield,armor,mirror} ——
+ *   漏了 **proto（原型制御）与 holo（全息）、shift**，还错纳了 **mirror（引擎归 SPECIAL）**。
+ *   引擎的防御族只有一处定义：`R.byKey[k].cat === R.CAT.DEFENSE`（实测 = guard, reflect, bagua, shift, jinshield, armor, proto, holo）
+ *   ⇒ 改成按 cat 现取，不在仪器里抄第二份名单（`behavior-profile.mjs:135` 用的就是这条，同源）。 */
+const DEFENSE = new Set(Object.keys(R.byKey).filter((k) => R.byKey[k].cat === R.CAT.DEFENSE));
 const CH_LOW = {}, CH_OK = {}, CH_N = { low: 0, ok: 0 };   /* 残血时 vs 非残血时，各键被选的次数 */
 const focus = (function () {
   const inner = T.policyChooserN(pp, TEMP, 0, 5, 'soft');
