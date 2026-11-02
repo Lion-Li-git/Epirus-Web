@@ -18,7 +18,7 @@ if (!DIR && !PRODUCT) { console.error('要 --dir=<band目录> 或 --product=<产
 
 const W = sandbox(); const P = W.EpirusPolicy, T = W.EpirusTrainer;
 const cand = [];
-if (DIR) for (const f of readdirSync(DIR).filter((x) => /^band\d+\.bak$/.test(x)).sort()) cand.push({ name: f, path: DIR + '/' + f });
+if (DIR) for (const f of readdirSync(DIR).filter((x) => /band\d+\.bak$/.test(x)).sort()) cand.push({ name: f.replace(/\.bak$/, ''), path: DIR + '/' + f });
 if (PRODUCT) cand.push({ name: 'product', path: PRODUCT });
 
 const scores = [];
