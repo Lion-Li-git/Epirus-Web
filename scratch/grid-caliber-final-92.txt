@@ -1,0 +1,46 @@
+arch2 装进量具沙箱：面=obs3b ‖ paramCount=7993 ‖ 接线自证={"forwards":1816,"chooseCandidatesCalls":1549,"fit":0.4410275750553029}
+BAS-s13.js
+  multi ⇒ D3K2（防御族 76.1% ‖ 种数 10 ‖ reflect 29.3% guard 18.5% bagua 18.1% proto 2.7% curse 2.7% armor 2.3% gun 1.9% holo 1.9% jinshield 1.5% shift 1.5% ‖ acts/局=21.6）
+  long ⇒ D3K2（防御族 71.1% ‖ 种数 10 ‖ reflect 22.7% bagua 20.2% guard 17.9% gun 4.1% proto 3.9% curse 3.2% armor 1.8% shift 1.6% jinshield 1.6% holo 1.4% ‖ acts/局=36.3）
+BAS-s41.js
+  multi ⇒ D3K3（防御族 71.8% ‖ 种数 11 ‖ reflect 29.2% bagua 19.5% guard 12.8% curse 4.1% armor 3.1% holo 3.1% gun 3.1% jinshield 1.5% proto 1.5% shift 1.0% cannon 0.5% ‖ acts/局=16.3）
+  long ⇒ D3K2（防御族 67.9% ‖ 种数 10 ‖ reflect 24.0% bagua 18.6% guard 15.7% curse 5.1% gun 5.1% armor 2.9% holo 2.9% jinshield 1.7% shift 1.0% proto 1.0% ‖ acts/局=34.0）
+BREAD-W05-s13.js
+  multi ⇒ D0K1（防御族 0.0% ‖ 种数 5 ‖ ring 17.7% bigT 8.2% sword 7.6% charge 2.5% railgun 1.9% ‖ acts/局=13.2）
+  long ⇒ D0K1（防御族 0.0% ‖ 种数 5 ‖ ring 17.4% bigT 7.8% charge 6.2% railgun 5.0% sword 4.7% ‖ acts/局=21.5）
+BREAD-W05-s41.js
+  multi ⇒ D0K1（防御族 0.0% ‖ 种数 5 ‖ ring 12.5% bigT 6.3% charge 6.3% railgun 5.6% sword 1.9% ‖ acts/局=13.3）
+  long ⇒ D0K1（防御族 0.0% ‖ 种数 5 ‖ ring 8.6% charge 8.6% railgun 8.2% bigT 7.1% sword 0.8% ‖ acts/局=21.3）
+BREAD-W05-s7.js
+  multi ⇒ D0K1（防御族 0.0% ‖ 种数 5 ‖ sword 10.5% bigT 6.2% ring 6.2% charge 3.1% railgun 3.1% ‖ acts/局=13.5）
+  long ⇒ D0K1（防御族 0.0% ‖ 种数 5 ‖ ring 10.3% bigT 8.2% sword 6.9% charge 1.7% railgun 1.7% ‖ acts/局=19.4）
+CBG-s13.js
+  multi ⇒ D1K2（防御族 1.1% ‖ 种数 8 ‖ ring 6.7% bigT 6.7% gun 5.1% drain 5.1% mine 1.7% proto 0.6% holo 0.6% tank 0.6% ‖ acts/局=14.8）
+  long ⇒ D1K2（防御族 0.6% ‖ 种数 8 ‖ gun 8.3% bigT 5.7% drain 5.4% ring 4.9% mine 2.0% charge 1.7% sword 1.4% tank 1.4% ‖ acts/局=29.1）
+CBG-s41.js
+  multi ⇒ D0K1（防御族 0.0% ‖ 种数 7 ‖ ring 15.6% charge 13.9% laserEye 6.7% railgun 5.0% bigT 4.4% drain 2.2% transfer 0.6% ‖ acts/局=15.0）
+  long ⇒ D0K1（防御族 0.0% ‖ 种数 6 ‖ charge 16.6% railgun 10.9% laserEye 4.9% ring 3.4% drain 2.6% bigT 1.1% ‖ acts/局=22.1）
+CBG-s7.js
+  multi ⇒ D1K1（防御族 1.2% ‖ 种数 6 ‖ gun 26.1% charge 8.4% sword 6.2% ring 3.1% armor 0.9% bigT 0.6% ‖ acts/局=26.8）
+  long ⇒ D1K1（防御族 2.3% ‖ 种数 5 ‖ gun 35.7% sword 5.2% holo 2.0% charge 0.8% ring 0.7% ‖ acts/局=49.8）
+CBGG-s13.js
+  multi ⇒ D1K1（防御族 1.0% ‖ 种数 6 ‖ bigT 6.2% gun 4.8% drain 4.3% ring 4.3% mine 2.9% sword 1.0% ‖ acts/局=17.4）
+  long ⇒ D1K2（防御族 0.6% ‖ 种数 8 ‖ gun 8.3% bigT 5.7% drain 5.4% ring 4.9% mine 2.0% charge 1.7% sword 1.4% tank 1.4% ‖ acts/局=29.1）
+G3C-s13.js
+  multi ⇒ D3K1（防御族 76.4% ‖ 种数 7 ‖ reflect 30.9% bagua 20.0% guard 17.6% curse 4.2% holo 4.2% armor 3.6% gun 1.8% ‖ acts/局=13.8）
+  long ⇒ D3K1（防御族 70.3% ‖ 种数 7 ‖ reflect 24.1% guard 19.7% bagua 18.7% gun 6.0% curse 4.4% armor 3.8% holo 3.4% ‖ acts/局=41.5）
+G3C-s41.js
+  multi ⇒ D3K2（防御族 72.8% ‖ 种数 10 ‖ reflect 28.1% guard 16.6% bagua 15.3% armor 3.4% proto 3.0% curse 2.1% jinshield 2.1% shift 2.1% holo 2.1% gun 1.7% ‖ acts/局=19.6）
+  long ⇒ D3K3（防御族 68.7% ‖ 种数 11 ‖ reflect 22.3% guard 18.7% bagua 17.6% gun 4.4% curse 3.8% proto 3.6% holo 1.9% armor 1.6% jinshield 1.6% shift 1.4% transfer 0.5% ‖ acts/局=30.3）
+G3M-s13.js
+  multi ⇒ D0K1（防御族 0.0% ‖ 种数 5 ‖ ring 31.6% bigT 8.2% charge 5.3% railgun 4.7% sword 4.1% ‖ acts/局=14.3）
+  long ⇒ D0K0（防御族 0.0% ‖ 种数 4 ‖ ring 32.5% charge 10.4% bigT 7.9% railgun 6.7% ‖ acts/局=20.0）
+G3M-s41.js
+  multi ⇒ D0K1（防御族 0.0% ‖ 种数 5 ‖ charge 10.5% gun 8.4% railgun 7.7% ring 2.1% bigT 2.1% ‖ acts/局=11.9）
+  long ⇒ D0K0（防御族 0.0% ‖ 种数 4 ‖ charge 24.8% railgun 8.7% gun 4.0% bigT 1.7% ‖ acts/局=24.8）
+V7C-s13.js：跳过（容器 v=7 ≠ --gen=92 ⇒ 留给另一代那次进程）
+V7C-s41.js：跳过（容器 v=7 ≠ --gen=92 ⇒ 留给另一代那次进程）
+V7L-s13.js：跳过（容器 v=7 ≠ --gen=92 ⇒ 留给另一代那次进程）
+V7L-s41.js：跳过（容器 v=7 ≠ --gen=92 ⇒ 留给另一代那次进程）
+V7M-s13.js：跳过（容器 v=7 ≠ --gen=92 ⇒ 留给另一代那次进程）
+V7M-s41.js：跳过（容器 v=7 ≠ --gen=92 ⇒ 留给另一代那次进程）

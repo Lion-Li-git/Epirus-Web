@@ -13,30 +13,48 @@ import fs from 'node:fs';
 const ROOT = path.resolve(fileURLToPath(import.meta.url), '../..');
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const f = argv.find((x) => x.startsWith('--' + k + '=')); return f ? f.slice(k.length + 3) : d; };
-const known = ['packs', 'games', 'spec'];
+const known = ['packs', 'games', 'spec', 'gen'];
 const bad = argv.filter((x) => x.startsWith('--') && !known.includes(x.slice(2).split('=')[0]));
-if (bad.length) { console.error('⛔ 不认识的旗标：' + bad.join(' ') + '（可用 --packs= --games= --spec=）'); process.exit(64); }
+if (bad.length) { console.error('⛔ 不认识的旗标：' + bad.join(' ') + '（可用 --packs= --games= --spec= --gen=）'); process.exit(64); }
 const PACKS = String(arg('packs', '')).split(',').map((s) => s.trim()).filter(Boolean);
 const GAMES = Math.max(4, Number(arg('games', 12)) || 12);
 const SPEC = String(arg('spec', 'S1ob:input=obs3b,gen=3,keySplit=1'));
+/* ⚑ 11-03 第二次撞同一个坑（第一次在 `seg-widths-1103.mjs`）：v7 容器进了装好 arch2 的沙箱 ⇒
+ *   `packCfgExit` 直接 `process.exit(2)` 把整批带走 ⇒ 必须**按代分进程**。这里先文本预扫版本。 */
+const WANT = String(arg('gen', '92'));
+const versionOf = (txt) => {
+  const m = /EPIRUS_CHAMPION_3P\s*=\s*\{\s*"v"\s*:\s*(\d+)/.exec(txt) || /EPIRUS_CHAMPION_3P\s*=\s*\{\s*v\s*:\s*(\d+)/.exec(txt);
+  return m ? Number(m[1]) : null;
+};
 
 const { fieldProfile, WIN } = await import(pathToFileURL(ROOT + '/tools/behavior-profile.mjs').href);
+const { loadChamp } = await import(pathToFileURL(ROOT + '/tools/audit-lib.mjs').href);   /* v7 外壳的读口（与尺表同一个，不另写） */
 const { install: installArch2, readPack2, packCfgExit, verifyWired: verifyArch2Wired } = await import(pathToFileURL(ROOT + '/tools/proto2/arch2.mjs').href);
 
 const parts = SPEC.split(':');
 const cfg = parts[1] ? Object.fromEntries(parts[1].split(',').map((kv) => { const [k, v] = kv.split('='); return [k.trim(), /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v]; })) : {};
-const A2 = installArch2(WIN, cfg);
-console.log('arch2 装进量具沙箱：面=' + A2.L.input + ' ‖ paramCount=' + WIN.EpirusPolicy.paramCount());
-const WC = verifyArch2Wired(WIN, A2, { mode: 'multi', n: 5, games: 1 });
-console.log('接线自证：' + JSON.stringify(WC));
+let A2 = null;
+if (WANT !== '7') {
+  A2 = installArch2(WIN, cfg);
+  const WC = verifyArch2Wired(WIN, A2, { mode: 'multi', n: 5, games: 1 });
+  console.log('arch2 装进量具沙箱：面=' + A2.L.input + ' ‖ paramCount=' + WIN.EpirusPolicy.paramCount() + ' ‖ 接线自证=' + JSON.stringify(WC));
+} else {
+  console.log('代=v7 ⇒ **不装** arch2（量具沙箱走原生 v7 通路）‖ paramCount=' + WIN.EpirusPolicy.paramCount());
+}
 
 const R = WIN.EpirusRules, JI = R.SK.JI;
 const defB = (d) => (d < 0.5 ? 0 : d < 3 ? 1 : d < 8 ? 2 : 3);
 const kindB = (k) => (k < 5 ? 0 : k < 8 ? 1 : k < 11 ? 2 : 3);
 
 for (const p of PACKS) {
+  const txt0 = fs.readFileSync(ROOT + '/' + p, 'utf8');
+  const vg = versionOf(txt0);
+  if (String(vg === null ? 7 : vg) !== WANT) { console.log(p.split('/').pop() + '：跳过（容器 v=' + vg + ' ≠ --gen=' + WANT + ' ⇒ 留给另一代那次进程）'); continue; }
   let pv = null;
-  try { const raw = readPack2(p); const got = packCfgExit(raw, p); pv = Float64Array.from(WIN.EpirusPolicy.unpack(raw, true)); if (String(got.cfg.input) !== A2.L.input) console.log('  ⚠ 包的面=' + got.cfg.input + ' ≠ 装的 ' + A2.L.input); }
+  try {
+    if (WANT === '7') pv = Float64Array.from(loadChamp(WIN, p, '.'));
+    else { const raw = readPack2(p); if (String(raw.dims && raw.dims.input) !== A2.L.input) throw new Error('面=' + (raw.dims && raw.dims.input)); pv = Float64Array.from(WIN.EpirusPolicy.unpack(raw, true)); }
+  }
   catch (e) { console.log(p.split('/').pop() + '：读不出（' + String(e && e.message || e).slice(0, 60) + '）'); continue; }
   const row = [];
   for (const gm of ['multi', 'long']) {

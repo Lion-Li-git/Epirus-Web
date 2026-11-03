@@ -1,0 +1,32 @@
+代=v7 ⇒ **不装** arch2（量具沙箱走原生 v7 通路）‖ paramCount=5689
+BAS-s13.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+BAS-s41.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+BREAD-W05-s13.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+BREAD-W05-s41.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+BREAD-W05-s7.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+CBG-s13.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+CBG-s41.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+CBG-s7.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+CBGG-s13.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+G3C-s13.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+G3C-s41.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+G3M-s13.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+G3M-s41.js：跳过（容器 v=92 ≠ --gen=7 ⇒ 留给另一代那次进程）
+V7C-s13.js
+  multi ⇒ D0K0（防御族 0.0% ‖ 种数 3 ‖ sword 21.5% charge 12.6% gun 3.7% ‖ acts/局=20.5）
+  long ⇒ D0K0（防御族 0.0% ‖ 种数 3 ‖ sword 27.1% gun 5.5% charge 2.4% ‖ acts/局=27.3）
+V7C-s41.js
+  multi ⇒ D0K1（防御族 0.0% ‖ 种数 6 ‖ tank 16.3% gun 8.2% charge 7.5% snipe 1.4% sword 0.7% bigT 0.7% ‖ acts/局=12.3）
+  long ⇒ D0K0（防御族 0.0% ‖ 种数 4 ‖ gun 19.1% tank 12.9% charge 4.9% snipe 1.3% ‖ acts/局=25.8）
+V7L-s13.js
+  multi ⇒ D3K2（防御族 12.0% ‖ 种数 9 ‖ sword 13.7% miniT 7.1% reflect 4.6% gun 4.1% bagua 3.3% guard 2.9% charge 2.1% holo 1.2% railgun 0.8% ‖ acts/局=20.1）
+  long ⇒ D2K1（防御族 6.1% ‖ 种数 7 ‖ gun 27.4% sword 8.0% holo 2.7% reflect 1.9% miniT 1.9% guard 0.7% bagua 0.7% ‖ acts/局=34.4）
+V7L-s41.js
+  multi ⇒ D1K0（防御族 2.4% ‖ 种数 3 ‖ gun 26.6% sword 12.9% holo 2.4% ‖ acts/局=20.7）
+  long ⇒ D2K0（防御族 3.9% ‖ 种数 3 ‖ gun 29.9% sword 10.1% holo 3.7% ‖ acts/局=73.6）
+V7M-s13.js
+  multi ⇒ D3K1（防御族 25.2% ‖ 种数 7 ‖ gun 21.2% reflect 9.4% sword 9.0% bagua 8.3% guard 6.5% charge 1.1% holo 1.1% ‖ acts/局=23.2）
+  long ⇒ D3K1（防御族 42.4% ‖ 种数 6 ‖ reflect 15.7% gun 15.2% bagua 12.1% guard 11.8% sword 6.9% holo 2.8% ‖ acts/局=30.3）
+V7M-s41.js
+  multi ⇒ D0K0（防御族 0.4% ‖ 种数 4 ‖ gun 21.8% sword 15.1% charge 1.3% railgun 0.9% ‖ acts/局=18.8）
+  long ⇒ D0K0（防御族 0.0% ‖ 种数 2 ‖ gun 26.3% sword 14.1% ‖ acts/局=34.3）
