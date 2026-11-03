@@ -1986,19 +1986,28 @@ let WALL_GAMES = 3;
    *      ⇒ 本开关不试图给网络喂"对手是谁"，只让**整桌行为混合**这个置换不变的量变得有预测力。
    *   ③ 默认关 ⇒ `oppSeatIndex(...,block=false)` 与旧公式 `((gen*3+g)%len + k)%len` 逐位同，由门 **D187** 钉。 */
   let OPP_BLOCK = false;
+  /* DS 11-03 晚（Claude review）：`EPIRUS_OPP_SWEEP` —— **每代把整个对手池轮齐**（默认关）。
+   *   病：旧公式 `(gen*3+g+k)` 每代只覆盖 11 个连续位置 ⇒ 17 个对手池里约 6 个每代缺席，
+   *   反制原型可能连续多代不上桌，偏科打法就在那些代被选出来。
+   *   开 ⇒ 用 `(g*4 + (k-1) + gen*4)`：每局 4 席取连续位置 ⇒ 每代 24 局覆盖 96 个位次，
+   *   17 个对手每个至少出现 5 次（每个个体每代都见过全部对手）。
+   *   默认关 ⇒ 与旧公式逐位同（门 D187 钉的路径一字不动）。 */
+  let OPP_SWEEP = false;
   const OPP_BLOCK_STAT = { fitGames: 0, blockedGames: 0, styleGames: 0, styleBlocked: 0 };
   /* 纯函数：第 k 个对手席在该用池子的第几条。关 ⇒ 与旧代码逐字同；开 ⇒ 局内恒等（整桌同原型）。 */
   function oppSeatIndex(gen, g, k, oppsLen, block) {
+    if (OPP_SWEEP) return (g * 4 + k + gen * 4) % oppsLen;   /* k=ok 从 0 起 ⇒ 每局 4 席取连续位置 */
     return (gen * 3 + g + (block ? 0 : k)) % oppsLen;
   }
   function setOppTable(o) {
     if (!o) return oppTable();
-    if (o.reset) { OPP_BLOCK = false; OPP_BLOCK_STAT.fitGames = 0; OPP_BLOCK_STAT.blockedGames = 0; OPP_BLOCK_STAT.styleGames = 0; OPP_BLOCK_STAT.styleBlocked = 0; }
+    if (o.reset) { OPP_BLOCK = false; OPP_SWEEP = false; OPP_BLOCK_STAT.fitGames = 0; OPP_BLOCK_STAT.blockedGames = 0; OPP_BLOCK_STAT.styleGames = 0; OPP_BLOCK_STAT.styleBlocked = 0; }
     if (o.block != null) OPP_BLOCK = !!o.block;
+    if (o.sweep != null) OPP_SWEEP = !!o.sweep;
     return oppTable();
   }
   function oppTable() {
-    return { block: OPP_BLOCK, fitGames: OPP_BLOCK_STAT.fitGames, blockedGames: OPP_BLOCK_STAT.blockedGames,
+    return { block: OPP_BLOCK, sweep: OPP_SWEEP, fitGames: OPP_BLOCK_STAT.fitGames, blockedGames: OPP_BLOCK_STAT.blockedGames,
       styleGames: OPP_BLOCK_STAT.styleGames, styleBlocked: OPP_BLOCK_STAT.styleBlocked };
   }
   /* v1.5.265（qoder §E65b）：**出厂值快照**，给 `reset` 用。

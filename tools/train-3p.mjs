@@ -143,6 +143,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEL_BIGT', 'EPIRUS_SEL_BIGT_KEYS', 'EPIRUS_SEL_BIGT_GAMES', 'EPIRUS_SEL_BIGT_MODE',   // v1.5.326 §E249：同分带内按贵卡出手选人（默认 0 ⇒ 当选者逐字不变）
   'EPIRUS_SEL_GRID', 'EPIRUS_SEL_GRID_GAMES', 'EPIRUS_SEL_GRID_MODE',   // 11-03 T1：当选面**按族别签名分格取最稀格**（默认 0=关 ⇒ 当选者逐字不变；单位同 SEL_DEF = 重验分分差 pt）
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
+  'EPIRUS_OPP_SWEEP',       // DS 11-03：对手池每代轮齐（旧公式每代只覆盖 11 位；默认关）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
   /* v1.5.141（DS）留到今天的一根**没人能从本入口开**的杠杆：补贴局给受评席每回合补一颗珠（`SUB_BEAD`）。
@@ -1730,6 +1731,20 @@ if (OPP_BLOCK_WANT) {
   }
   console.log('[opp-block] 训练桌改为**整桌同原型**：每局 N−1 席填同一脚本，原型按 (gen*3+g) 跨局轮换' +
     '（覆盖面/轮换节奏/CRN 一字不动，只改一桌的纯度）⇒ 判据见 §E124 ⑤/⑥');
+}
+
+/* ===== DS 11-03 晚（Claude review）：`EPIRUS_OPP_SWEEP` 的下达（默认关）=====
+ * 病：旧公式 `(gen*3+g+k)` 每代只覆盖 11 个位置 ⇒ 17 个对手池里约 6 个每代缺席，
+ *   反制原型可能连续多代不上桌 ⇒ 偏科打法在"没有反制者"的代被选出。
+ * 开 ⇒ `(g*4+(k-1)+gen*4)`：每代 24 局覆盖 96 个位次，17 个对手每个 ≥5 次。
+ * 纪律同 §N35：下达后读回消费点，不等就 exit 7；没开一行不印。 */
+const OPP_SWEEP_WANT = Number(process.env.EPIRUS_OPP_SWEEP || 0) > 0;
+if (OPP_SWEEP_WANT) {
+  if (typeof T.setOppTable !== 'function' || typeof T.oppTable !== 'function') { console.error('[train-3p] ⛔ EPIRUS_OPP_SWEEP 但引擎没有 setOppTable/oppTable'); process.exit(7); }
+  T.setOppTable({ sweep: true });
+  const gotS = T.oppTable() || {};
+  if (gotS.sweep !== true) { console.error('[train-3p] ⛔ EPIRUS_OPP_SWEEP=1 读回 ' + JSON.stringify(gotS.sweep) + ' ⇒ 没生效'); process.exit(7); }
+  console.log('[opp-sweep] 对手池每代轮齐：座位取 (g*4+(k-1)+gen*4)，每代覆盖全部 ' + '对手（旧公式每代仅 11 位）');
 }
 
 /* ===== v1.7.90（DS · 10-17）：**落地广度** `EPIRUS_WIDTH_LAND_W` 的下达（默认关）=====
