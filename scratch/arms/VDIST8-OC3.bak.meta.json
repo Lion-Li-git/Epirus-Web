@@ -1,0 +1,147 @@
+{
+ "tool": "supfit-gd",
+ "tag": "VDIST8OC",
+ "parent": "scratch/arms/OC3-L5.bak",
+ "seed": 13,
+ "lr": 0.02,
+ "steps": 2000,
+ "groups": 1600,
+ "trainG": 1200,
+ "testG": 400,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1600,
+ "shapeBal": 1,
+ "teacher": "pack:scratch/ga-arms/V7L-s13.js",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 1481,
+  "moved": 119,
+  "gone": 0,
+  "keys": 1600,
+  "rare": 0,
+  "byKey": {
+   "ji": 914,
+   "bagua": 84,
+   "reflect": 44,
+   "holo": 80,
+   "gun": 175,
+   "miniT": 77,
+   "sword": 127,
+   "bigT": 17,
+   "guard": 49,
+   "charge": 19,
+   "railgun": 14
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 1200,
+    "teacherAgree": 0.1475,
+    "teacherLl": -2.853992236016616,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.4925,
+  "startLl": -12.800590770040587,
+  "agree": 0.1475,
+  "ll": -2.853992236016616,
+  "wAgree": 0.47111796972661546,
+  "nTest": 400,
+  "nTrain": 1200,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 252,
+    "hit": 3
+   },
+   {
+    "key": "gun",
+    "n": 20,
+    "hit": 0
+   },
+   {
+    "key": "bagua",
+    "n": 23,
+    "hit": 0
+   },
+   {
+    "key": "miniT",
+    "n": 18,
+    "hit": 3
+   },
+   {
+    "key": "sword",
+    "n": 40,
+    "hit": 28
+   },
+   {
+    "key": "bigT",
+    "n": 6,
+    "hit": 6
+   },
+   {
+    "key": "reflect",
+    "n": 7,
+    "hit": 4
+   },
+   {
+    "key": "guard",
+    "n": 11,
+    "hit": 0
+   },
+   {
+    "key": "charge#elec",
+    "n": 6,
+    "hit": 4
+   },
+   {
+    "key": "holo",
+    "n": 13,
+    "hit": 8
+   },
+   {
+    "key": "railgun",
+    "n": 4,
+    "hit": 3
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3c",
+  "dof": 431,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "scratch/arms/OC3-L5.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

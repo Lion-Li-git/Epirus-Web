@@ -1,0 +1,498 @@
+{
+ "tool": "tools/proto2/battery.mjs",
+ "games": 40,
+ "temp": 0.15,
+ "opponents": [
+  "ji",
+  "charge",
+  "ring",
+  "gun",
+  "sword",
+  "tank",
+  "snipe",
+  "guard",
+  "reflect",
+  "bagua",
+  "shift",
+  "jinshield",
+  "armor",
+  "proto",
+  "holo",
+  "drain",
+  "railgun",
+  "miniT",
+  "bigT",
+  "rod",
+  "laserEye",
+  "transfer",
+  "curse",
+  "firestorm",
+  "mine",
+  "taunt",
+  "cannon",
+  "purify",
+  "dualGun",
+  "mirror"
+ ],
+ "candidates": [
+  {
+   "name": "v7@0.15",
+   "rows": [
+    {
+     "key": "ji",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "charge",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "ring",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "gun",
+     "win": 0,
+     "draw": 100,
+     "loss": 0,
+     "clean": 0
+    },
+    {
+     "key": "sword",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "tank",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "snipe",
+     "win": 72.5,
+     "draw": 0,
+     "loss": 27.5,
+     "clean": 72.5
+    },
+    {
+     "key": "guard",
+     "win": 0,
+     "draw": 100,
+     "loss": 0,
+     "clean": 0
+    },
+    {
+     "key": "reflect",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "bagua",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "shift",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "jinshield",
+     "win": 0,
+     "draw": 0,
+     "loss": 100,
+     "clean": 0
+    },
+    {
+     "key": "armor",
+     "win": 0,
+     "draw": 0,
+     "loss": 100,
+     "clean": 0
+    },
+    {
+     "key": "proto",
+     "win": 0,
+     "draw": 100,
+     "loss": 0,
+     "clean": 0
+    },
+    {
+     "key": "holo",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "drain",
+     "win": 85,
+     "draw": 0,
+     "loss": 15,
+     "clean": 85
+    },
+    {
+     "key": "railgun",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "miniT",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "bigT",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "rod",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "laserEye",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "transfer",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "curse",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "firestorm",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "mine",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "taunt",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "cannon",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "purify",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "dualGun",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "mirror",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    }
+   ],
+   "summary": {
+    "winMin": 0,
+    "winMean": 81.91666666666667,
+    "winP10": 0,
+    "cleanMin": 0,
+    "cleanMean": 81.91666666666667,
+    "cleanP10": 0,
+    "under25": [
+     "gun",
+     "guard",
+     "jinshield",
+     "armor",
+     "proto"
+    ]
+   }
+  },
+  {
+   "name": "only:drain",
+   "rows": [
+    {
+     "key": "ji",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "charge",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "ring",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "gun",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "sword",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "tank",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "snipe",
+     "win": 80,
+     "draw": 0,
+     "loss": 20,
+     "clean": 80
+    },
+    {
+     "key": "guard",
+     "win": 0,
+     "draw": 100,
+     "loss": 0,
+     "clean": 0
+    },
+    {
+     "key": "reflect",
+     "win": 0,
+     "draw": 100,
+     "loss": 0,
+     "clean": 0
+    },
+    {
+     "key": "bagua",
+     "win": 45,
+     "draw": 55,
+     "loss": 0,
+     "clean": 45
+    },
+    {
+     "key": "shift",
+     "win": 45,
+     "draw": 55,
+     "loss": 0,
+     "clean": 45
+    },
+    {
+     "key": "jinshield",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "armor",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "proto",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "holo",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "drain",
+     "win": 0,
+     "draw": 100,
+     "loss": 0,
+     "clean": 0
+    },
+    {
+     "key": "railgun",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "miniT",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "bigT",
+     "win": 0,
+     "draw": 0,
+     "loss": 100,
+     "clean": 0
+    },
+    {
+     "key": "rod",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "laserEye",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "transfer",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "curse",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "firestorm",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "mine",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "taunt",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "cannon",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "purify",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "dualGun",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    },
+    {
+     "key": "mirror",
+     "win": 100,
+     "draw": 0,
+     "loss": 0,
+     "clean": 100
+    }
+   ],
+   "summary": {
+    "winMin": 0,
+    "winMean": 82.33333333333333,
+    "winP10": 0,
+    "cleanMin": 0,
+    "cleanMean": 82.33333333333333,
+    "cleanP10": 0,
+    "under25": [
+     "guard",
+     "reflect",
+     "drain",
+     "bigT"
+    ]
+   }
+  }
+ ]
+}

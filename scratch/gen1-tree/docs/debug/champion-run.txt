@@ -1,0 +1,17 @@
+Epirus 冠军诊断
+训练 150 代 (pop16, gamesPerOpp6, 含 mix 对手)
+
+=== 冠军 vs mix(混合随机风格) 完整对局录（种子 100000）===
+结果:你(冠军)胜 回合=11
+
+第1回合: R1 你HP3 你ジ0 你last=- 你出=ジ | 电脑HP3 电脑ジ0 电脑last=-
+第2回合: R2 你HP3 你ジ1 你last=ji 你出=枪 | 电脑HP3 电脑ジ1 电脑last=ji
+第3回合: R3 你HP3 你ジ0 你last=gun 你出=防御 | 电脑HP2 电脑ジ2 电脑last=ji
+第4回合: R4 你HP3 你ジ0 你last=guard 你出=ジ | 电脑HP2 电脑ジ3 电脑last=ji
+第5回合: R5 你HP2 你ジ1 你last=ji 你出=枪 | 电脑HP2 电脑ジ1 电脑last=tank
+第6回合: R6 你HP2 你ジ0 你last=gun 你出=ジ | 电脑HP1 电脑ジ0 电脑last=curse
+第7回合: R7 你HP2 你ジ1 你last=ji 你出=枪 | 电脑HP1 电脑ジ1 电脑last=ji
+第8回合: R8 你HP2 你ジ0 你last=gun 你出=反弹 | 电脑HP1 电脑ジ0 电脑last=gun
+第9回合: R9 你HP2 你ジ0 你last=reflect 你出=反弹 | 电脑HP1 电脑ジ1 电脑last=ji
+第10回合: R10 你HP2 你ジ0 你last=reflect 你出=ジ | 电脑HP1 电脑ジ1 电脑last=bagua
+第11回合: R11 你HP2 你ジ1 你last=ji 你出=枪 | 电脑HP1 电脑ジ2 电脑last=ji

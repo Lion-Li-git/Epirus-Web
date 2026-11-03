@@ -1,0 +1,14 @@
+# §E647 档 2 强度非劣：v7beadseed-82 × 3 seed × 2 mode × {--support=0, --support=2} × 200 局（配对同 seed 同座位）
+ROW seed=77000 mode=multi --support=0 1st=62.5% 严胜=61.9% | 出牌= 全息屏障 1.7% 费用=1 | 平均回合=29.4
+ROW seed=77000 mode=multi --support=2 1st=63.8% 严胜=63.2% | 出牌= | 平均回合=29.1
+ROW seed=77000 mode=long --support=0 1st=69.2% 严胜=69.1% | 出牌= 全息屏障 1.8% 费用=1 | 平均回合=51.4
+ROW seed=77000 mode=long --support=2 1st=70.9% 严胜=70.9% | 出牌= | 平均回合=51.7
+ROW seed=77001 mode=multi --support=0 1st=61.6% 严胜=61.0% | 出牌= 全息屏障 1.7% 费用=1 | 平均回合=29.4
+ROW seed=77001 mode=multi --support=2 1st=63.4% 严胜=62.8% | 出牌= | 平均回合=29.2
+ROW seed=77001 mode=long --support=0 1st=69.3% 严胜=69.2% | 出牌= 全息屏障 1.8% 费用=1 | 平均回合=51.1
+ROW seed=77001 mode=long --support=2 1st=70.0% 严胜=69.9% | 出牌= 全息屏障 0.5% 费用=1 | 平均回合=50.9
+ROW seed=77002 mode=multi --support=0 1st=61.0% 严胜=60.5% | 出牌= 全息屏障 1.7% 费用=1 | 平均回合=29.4
+ROW seed=77002 mode=multi --support=2 1st=63.3% 严胜=62.8% | 出牌= | 平均回合=29.0
+ROW seed=77002 mode=long --support=0 1st=68.1% 严胜=68.1% | 出牌= 全息屏障 1.7% 费用=1 | 平均回合=51.6
+ROW seed=77002 mode=long --support=2 1st=70.1% 严胜=70.0% | 出牌= | 平均回合=51.7
+E647_DONE 18:55:32

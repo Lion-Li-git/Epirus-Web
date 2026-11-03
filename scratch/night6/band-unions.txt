@@ -1,0 +1,36 @@
+解析到 21 包
+
+== 两带强（11 枚）==
+  主干并集: gun ✔(7) ‖ sword ✔(8) ‖ snipe ✔(2) ‖ tank ✔(3) ‖ 基础防御族 ✔(1)
+  次级长程(≥6/11): charge 10✔ ‖ ring 8✔ ‖ bigT 9✔ ‖ railgun 9✔
+  地雷 Σ8P=12 ✔ ‖ 摄魂 Σ残血=0 ✘
+  防御原型(只报): 无带内成员 ‖ 最高份额 0.2%
+  逐包缺 >1 项（如实，不判）: L5-1200-s13 缺5（gun/sword/snipe/tank/防御族） ‖ D1200-s13 缺5（gun/sword/snipe/tank/防御族） ‖ DSTR4-s13 缺3（gun/sword/snipe） ‖ EFFG-s41 缺4（gun/snipe/tank/防御族） ‖ EFFG-s5 缺3（snipe/tank/防御族） ‖ EFFG-s7 缺3（snipe/tank/防御族） ‖ GD3ALL-PUSHON-s41 缺3（snipe/tank/防御族） ‖ GD3ALL-POPP-s17 缺3（snipe/tank/防御族） ‖ GD3ALL-POPP-s41 缺3（snipe/tank/防御族）
+
+== 两带弱（10 枚）==
+  主干并集: gun ✔(7) ‖ sword ✔(7) ‖ snipe ✘0 ‖ tank ✔(3) ‖ 基础防御族 ✔(6)
+  次级长程(≥5/10): charge 7✔ ‖ ring 8✔ ‖ bigT 9✔ ‖ railgun 7✔
+  地雷 Σ8P=149 ✔ ‖ 摄魂 Σ残血=44 ✔
+  防御原型(只报): 无带内成员 ‖ 最高份额 71.1%
+  逐包缺 >1 项（如实，不判）: GD3ALL-PUSHON-s13 缺3（snipe/tank/防御族） ‖ D-b-hpseed-s13 缺3（snipe/tank/防御族） ‖ D-a-s13 缺2（gun/snipe） ‖ GD3ALL-PLAIN-s13 缺3（snipe/tank/防御族） ‖ DDEF-s13 缺2（sword/snipe） ‖ DSTR-s13 缺2（sword/snipe） ‖ CB-s13 缺2（snipe/tank） ‖ LE-s13 缺3（gun/snipe/tank） ‖ GD3ALL-G5-s13 缺4（gun/snipe/tank/防御族） ‖ GD3ALL-NGA2R-s41 缺3（sword/snipe/tank）
+
+== 三带强（7 枚）==
+  主干并集: gun ✔(3) ‖ sword ✔(4) ‖ snipe ✔(1) ‖ tank ✔(2) ‖ 基础防御族 ✔(1)
+  次级长程(≥4/7): charge 7✔ ‖ ring 5✔ ‖ bigT 6✔ ‖ railgun 6✔
+  地雷 Σ8P=12 ✔ ‖ 摄魂 Σ残血=0 ✘
+  防御原型(只报): 无带内成员 ‖ 最高份额 0.2%
+  逐包缺 >1 项（如实，不判）: L5-1200-s13 缺5（gun/sword/snipe/tank/防御族） ‖ D1200-s13 缺5（gun/sword/snipe/tank/防御族） ‖ DSTR4-s13 缺3（gun/sword/snipe） ‖ EFFG-s41 缺4（gun/snipe/tank/防御族） ‖ EFFG-s5 缺3（snipe/tank/防御族） ‖ EFFG-s7 缺3（snipe/tank/防御族）
+
+== 三带中（7 枚）==
+  主干并集: gun ✔(6) ‖ sword ✔(7) ‖ snipe ✔(1) ‖ tank ✔(2) ‖ 基础防御族 ✔(1)
+  次级长程(≥4/7): charge 6✔ ‖ ring 6✔ ‖ bigT 6✔ ‖ railgun 6✔
+  地雷 Σ8P=0 ✘ ‖ 摄魂 Σ残血=8 ✔
+  防御原型(只报): 无带内成员 ‖ 最高份额 5.2%
+  逐包缺 >1 项（如实，不判）: GD3ALL-PUSHON-s41 缺3（snipe/tank/防御族） ‖ GD3ALL-POPP-s17 缺3（snipe/tank/防御族） ‖ GD3ALL-POPP-s41 缺3（snipe/tank/防御族） ‖ GD3ALL-PUSHON-s13 缺3（snipe/tank/防御族） ‖ D-b-hpseed-s13 缺3（snipe/tank/防御族） ‖ D-a-s13 缺2（gun/snipe）
+
+== 三带弱（7 枚）==
+  主干并集: gun ✔(5) ‖ sword ✔(4) ‖ snipe ✘0 ‖ tank ✔(2) ‖ 基础防御族 ✔(5)
+  次级长程(≥4/7): charge 4✔ ‖ ring 5✔ ‖ bigT 6✔ ‖ railgun 4✔
+  地雷 Σ8P=149 ✔ ‖ 摄魂 Σ残血=36 ✔
+  防御原型(只报): 无带内成员 ‖ 最高份额 71.1%
+  逐包缺 >1 项（如实，不判）: GD3ALL-PLAIN-s13 缺3（snipe/tank/防御族） ‖ DDEF-s13 缺2（sword/snipe） ‖ DSTR-s13 缺2（sword/snipe） ‖ CB-s13 缺2（snipe/tank） ‖ LE-s13 缺3（gun/snipe/tank） ‖ GD3ALL-G5-s13 缺4（gun/snipe/tank/防御族） ‖ GD3ALL-NGA2R-s41 缺3（sword/snipe/tank）

@@ -1,0 +1,82 @@
+{
+ "tool": "supfit-gd",
+ "tag": "minit-rare",
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 1600,
+ "trainG": 1200,
+ "testG": 400,
+ "objective": "cand",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1600,
+ "shapeBal": 1,
+ "teacher": "minit",
+ "keySplit": 1,
+ "rareOnly": "miniT",
+ "rareFrac": 0.7,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 1600,
+  "moved": 0,
+  "gone": 0,
+  "keys": 1600,
+  "rare": 45501
+ },
+ "supfitGd": {
+  "objective": "cand",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 1200,
+    "teacherAgree": 1,
+    "teacherLl": -0.003378405432554679,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "startAgree": 0,
+  "startLl": -4.085631542685979,
+  "agree": 1,
+  "ll": -0.003378405432554679,
+  "wAgree": 1,
+  "nTest": 400,
+  "nTrain": 1200,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "miniT",
+    "n": 400,
+    "hit": 400
+   }
+  ],
+  "verdict": "⇒ P-A1 只对 key 路径预登记；cand 路径的验收在实战尺（chain-price 的窗/珠/净分）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted candidate log-likelihood log pi(teacher action), class=key#bead (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

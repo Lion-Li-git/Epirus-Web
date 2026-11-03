@@ -1,0 +1,168 @@
+{
+  "tool": "tools/proto2/ladder.mjs",
+  "generatedAt": "2026-10-29 11:30:18 +08:00",
+  "gamesPerCell": 120,
+  "cellCount": 16,
+  "totalGames": 1920,
+  "temp": 0.001,
+  "bigt": 12,
+  "engineFace": true,
+  "poolFp": "cc652985/20",
+  "refPack": "js/bundled-champion-3p.js",
+  "cells": "3:breakdef:1,3:wall:2,3:tankline:3,3:guardgun:5,3:protowall:6,3:reflectmix:8,3:beadburst:18,3:aggro:13,5:breakdef:1,5:wall:2,5:tankline:3,5:guardgun:5,5:protowall:6,5:reflectmix:8,5:beadburst:18,5:aggro:13",
+  "rungs": [
+    {
+      "key": "reflect",
+      "cat": "defense",
+      "win": 65.26
+    },
+    {
+      "key": "snipe",
+      "cat": "attack",
+      "win": 39.219
+    },
+    {
+      "key": "drain",
+      "cat": "special",
+      "win": 38.021
+    },
+    {
+      "key": "taunt",
+      "cat": "special",
+      "win": 30.521
+    },
+    {
+      "key": "armor",
+      "cat": "defense",
+      "win": 29.219
+    },
+    {
+      "key": "sword",
+      "cat": "attack",
+      "win": 26.979
+    },
+    {
+      "key": "cannon",
+      "cat": "special",
+      "win": 23.385
+    },
+    {
+      "key": "tank",
+      "cat": "attack",
+      "win": 21.823
+    },
+    {
+      "key": "dualGun",
+      "cat": "attack",
+      "win": 19.688
+    },
+    {
+      "key": "gun",
+      "cat": "attack",
+      "win": 19.479
+    },
+    {
+      "key": "bigT",
+      "cat": "special",
+      "win": 12.448
+    },
+    {
+      "key": "jinshield",
+      "cat": "defense",
+      "win": 8.438
+    },
+    {
+      "key": "guard",
+      "cat": "defense",
+      "win": 5.729
+    },
+    {
+      "key": "proto",
+      "cat": "defense",
+      "win": 4.74
+    },
+    {
+      "key": "mine",
+      "cat": "special",
+      "win": 1.719
+    },
+    {
+      "key": "bagua",
+      "cat": "defense",
+      "win": 1.302
+    },
+    {
+      "key": "shift",
+      "cat": "defense",
+      "win": 1.302
+    },
+    {
+      "key": "transfer",
+      "cat": "special",
+      "win": 0.677
+    },
+    {
+      "key": "rod",
+      "cat": "special",
+      "win": 0.313
+    },
+    {
+      "key": "mirror",
+      "cat": "special",
+      "win": 0.313
+    },
+    {
+      "key": "miniT",
+      "cat": "special",
+      "win": 0.26
+    },
+    {
+      "key": "ring",
+      "cat": "energy",
+      "win": 0.208
+    },
+    {
+      "key": "ji",
+      "cat": "energy",
+      "win": 0.156
+    },
+    {
+      "key": "charge",
+      "cat": "energy",
+      "win": 0.156
+    },
+    {
+      "key": "railgun",
+      "cat": "special",
+      "win": 0.156
+    },
+    {
+      "key": "laserEye",
+      "cat": "special",
+      "win": 0.156
+    },
+    {
+      "key": "curse",
+      "cat": "special",
+      "win": 0.156
+    },
+    {
+      "key": "firestorm",
+      "cat": "special",
+      "win": 0.156
+    },
+    {
+      "key": "purify",
+      "cat": "special",
+      "win": 0.156
+    },
+    {
+      "key": "holo",
+      "cat": "defense",
+      "win": 0.104
+    }
+  ],
+  "randWin": 17.969,
+  "v7Win": 40.365,
+  "caliber": "阶梯 31 格都是**不走 chooser 的固定打法**（不吃大雷注入）；profile2 的臂行走引擎 chooser（吃注入） ⇒ 名次只算**下界**，且必须与并列集合大小一起读（第十七段那条口径）。"
+}

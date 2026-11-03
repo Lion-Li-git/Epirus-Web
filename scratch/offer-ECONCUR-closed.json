@@ -1,0 +1,65 @@
+{
+  "ts": "2026-11-01T08:10:11.932Z",
+  "rows": [
+    {
+      "pack": "scratch/arms/ECONCUR-closed.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "field": "mirror",
+      "eps": 0,
+      "epsK": 5,
+      "epsMode": "soft",
+      "temp": 0.15,
+      "games": 30,
+      "n": 5,
+      "mode": "multi",
+      "dec": 2232,
+      "roundsMean": 20.7,
+      "drawRate": 0.06666666666666667,
+      "epHistogram": {
+        "0": 891,
+        "1": 900,
+        "2": 368,
+        "3": 49,
+        "4": 7,
+        "5": 7,
+        "6": 10
+      },
+      "beads": {
+        "none": 2232
+      },
+      "offered": {
+        "charge": 1341,
+        "ring": 93,
+        "railgun": 0,
+        "bigT": 17,
+        "sword": 441,
+        "gun": 1341
+      },
+      "chosenWhenOffered": {
+        "charge": 1,
+        "ring": 61,
+        "railgun": 0,
+        "bigT": 17,
+        "sword": 321,
+        "gun": 499
+      },
+      "chosenWhenNotOffered": {
+        "charge": 0,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 0
+      },
+      "pickKeys": {
+        "ji": 1333,
+        "gun": 499,
+        "sword": 321,
+        "bigT": 17,
+        "ring": 61,
+        "charge": 1
+      },
+      "nonJiKinds": 5
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+ "tool": "pg-train",
+ "tag": null,
+ "parent": "scratch/arms/supfit-gdc1.bak",
+ "seed": 7,
+ "games": 24000,
+ "batch": 48,
+ "lr": 0.0003,
+ "temp": 0.15,
+ "lamC": 0,
+ "lamF": 0,
+ "cur": "net",
+ "updates": 500,
+ "wallSecs": 222,
+ "criticDiag": null,
+ "baseline": "mean",
+ "ridgeFeat": null,
+ "ridgeFitN": null,
+ "valueCapacityR2": null,
+ "ridgeL2": null,
+ "ridgeDim": null,
+ "criticLr": null,
+ "probe": 40,
+ "rollbackTol": 0.05,
+ "rollbackCount": 17,
+ "probeGames": 800,
+ "bestProbeScore": 0.5784,
+ "critic": null,
+ "loop": {
+  "meanScore": 0.3735342261904729,
+  "firePerGame": 3.753875,
+  "discChargePerGame": 3.8384583333333335,
+  "entropy": 0.045443191107423044,
+  "zipBad": 0
+ },
+ "container": {
+  "v": 91,
+  "input": "obs3b",
+  "dof": 415
+ },
+ "lineage": {
+  "parent": "scratch/arms/supfit-gdc1.bak",
+  "gen": 2,
+  "recipe": {
+   "objective": "scoreNet only (λ=0 negative control)",
+   "solver": "REINFORCE+Adam (pg-lib, selftest3 7 legs)",
+   "baseline": "mean"
+  }
+ }
+}

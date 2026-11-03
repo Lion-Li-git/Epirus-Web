@@ -1,0 +1,234 @@
+{
+ "tool": "supfit-gd",
+ "tag": "drain-a-v4",
+ "parent": "scratch/ga-arms/GA-ration-s41.js",
+ "seed": 20261103,
+ "lr": 0.005,
+ "steps": 260,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 3,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "ration6",
+ "keySplit": 1,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 2413,
+  "hit": 1345,
+  "stuckCharge": 67,
+  "missCharge": 3,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 3200,
+  "moved": 0,
+  "gone": 0,
+  "keys": 3200,
+  "rare": 0,
+  "byKey": {
+   "ji": 1018,
+   "gun": 594,
+   "charge": 241,
+   "ring": 276,
+   "holo": 76,
+   "sword": 120,
+   "curse": 38,
+   "armor": 38,
+   "tank": 109,
+   "drain": 246,
+   "taunt": 7,
+   "proto": 46,
+   "mine": 7,
+   "cannon": 6,
+   "railgun": 219,
+   "bigT": 131,
+   "firestorm": 13,
+   "transfer": 13,
+   "rod": 2
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 3,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.38,
+    "teacherLl": -2.4679314942363217,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 0.53,
+    "teacherLl": -2.839979424064412,
+    "studentAgree": 0.525,
+    "studentLl": -4.075682546783238,
+    "studentN": 200
+   },
+   {
+    "round": 2,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 0.54,
+    "teacherLl": -3.3935824081392263,
+    "studentAgree": 0.5475,
+    "studentLl": -3.980338873586934,
+    "studentN": 400
+   },
+   {
+    "round": 3,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 0.535,
+    "teacherLl": -3.5923743054139172,
+    "studentAgree": 0.5733333333333334,
+    "studentLl": -4.363764890544063,
+    "studentN": 600
+   }
+  ],
+  "roundsMoved": [
+   {
+    "round": 1,
+    "moved": 4954,
+    "firstDiff": 0,
+    "dim": 7993
+   },
+   {
+    "round": 2,
+    "moved": 4841,
+    "firstDiff": 87,
+    "dim": 7993
+   },
+   {
+    "round": 3,
+    "moved": 4758,
+    "firstDiff": 87,
+    "dim": 7993
+   }
+  ],
+  "startAgree": 0.18,
+  "startLl": -15.295771299195728,
+  "agree": 0.535,
+  "ll": -3.5923743054139172,
+  "wAgree": 0.4725643577514593,
+  "nTest": 200,
+  "nTrain": 1200,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": 0.5733333333333334,
+  "studentN": 600,
+  "byKey": [
+   {
+    "key": "gun",
+    "n": 34,
+    "hit": 11
+   },
+   {
+    "key": "sword",
+    "n": 19,
+    "hit": 3
+   },
+   {
+    "key": "charge#elec",
+    "n": 16,
+    "hit": 16
+   },
+   {
+    "key": "railgun",
+    "n": 14,
+    "hit": 14
+   },
+   {
+    "key": "ring",
+    "n": 26,
+    "hit": 15
+   },
+   {
+    "key": "bigT",
+    "n": 13,
+    "hit": 9
+   },
+   {
+    "key": "curse",
+    "n": 11,
+    "hit": 6
+   },
+   {
+    "key": "armor",
+    "n": 9,
+    "hit": 3
+   },
+   {
+    "key": "tank",
+    "n": 12,
+    "hit": 6
+   },
+   {
+    "key": "drain",
+    "n": 26,
+    "hit": 19
+   },
+   {
+    "key": "holo",
+    "n": 11,
+    "hit": 1
+   },
+   {
+    "key": "ji",
+    "n": 2,
+    "hit": 1
+   },
+   {
+    "key": "taunt",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "transfer",
+    "n": 2,
+    "hit": 2
+   },
+   {
+    "key": "mine",
+    "n": 1,
+    "hit": 0
+   },
+   {
+    "key": "firestorm",
+    "n": 1,
+    "hit": 1
+   },
+   {
+    "key": "proto",
+    "n": 1,
+    "hit": 0
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "dof": 415,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/ga-arms/GA-ration-s41.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x3"
+  }
+ }
+}

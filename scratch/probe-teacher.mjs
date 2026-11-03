@@ -1,0 +1,22 @@
+import { sandbox, loadChamp } from '../tools/audit-lib.mjs';
+import { install as installArch2, readPack2, packCfgExit } from '../tools/proto2/arch2.mjs';
+import { createArena2 } from '../tools/proto2/arena2.mjs';
+const W0 = sandbox();
+const raw = readPack2('scratch/ga-arms/L5-D4a-s13.js'); const got = packCfgExit(raw, 'x');
+const W = sandbox(); installArch2(W, Object.assign({ mutMode: 'seg' }, got.cfg));
+const P = W.EpirusPolicy, T = W.EpirusTrainer;
+const refParams = Float64Array.from(loadChamp(W0, 'js/bundled-champion-3p.js', ''));
+const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: true, stratCap: 2, stratMix: 0.5 });
+const ptParams = Float64Array.from(loadChamp(W0, 'scratch/ga-arms/V7L-s13.js', '.'));
+const ch = T.policyChooserN(ptParams, 0.05, 0, 5, 'soft');
+const cnt = {};
+const play = (state, pid, legal) => {
+  const got2 = ch(state, pid, legal);
+  const k = got2 && (got2.key || got2);
+  cnt[k] = (cnt[k] || 0) + 1;
+  return got2;
+};
+for (let s = 0; s < A2.shapes.length; s++) for (let g = 0; g < 20; g++) A2.playOne(play, s, 700000 + s * 1000 + g, 4242);
+const tot = Object.values(cnt).reduce((a, b) => a + b, 0);
+console.log('shapes=' + A2.shapes.length + ' acts=' + tot);
+console.log(Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(([k, v]) => k + ' ' + (100 * v / tot).toFixed(1) + '%').join(' '));

@@ -1,0 +1,331 @@
+{
+ "mode": "esa",
+ "seed": 7,
+ "evals": 860,
+ "pop": 14,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "sigFloor": 0,
+ "sigRestart": 0,
+ "esaSig": null,
+ "arenaPen": 0,
+ "gamesPlanned": 3440,
+ "gamesActualLoop": 24212,
+ "gamesActualHoldout": 220,
+ "gamesActualStartHoldout": 220,
+ "targetGames": 24000,
+ "netForwards": 1003295,
+ "netCandScores": 8404712,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": -0.375,
+ "inLoopBest": 0.12400793650793653,
+ "holdoutFit": -0.35440115440115433,
+ "holdoutFirst": 0.11818181818181818,
+ "holdoutTop2": 0.9136363636363637,
+ "holdoutStartFit": -0.30781024531024526,
+ "holdoutStartFirst": 0.15,
+ "holdoutStartTop2": 0.9136363636363637,
+ "dFirst": -0.031818181818181815,
+ "dTop2": 0,
+ "currency": "arena2.clean",
+ "arena": {
+  "fp": "arena2.v2|pool=cc652985/20|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random|highN=1|stratified=bigT+reflect+snipe+guard~cap2~mix0.5",
+  "temp": 0.15,
+  "shapes": 11,
+  "roster": 51,
+  "pool": 20,
+  "holdGamesPerShape": 20,
+  "holdGames": 220,
+  "draw": 0.07727272727272727,
+  "cur": "clean",
+  "diverse": false,
+  "highN": 1,
+  "stratified": true,
+  "stratCap": 2,
+  "stratMix": 0.5,
+  "divTol": 0.02,
+  "divDelta": 0.1,
+  "divEvery": 10,
+  "divTrigger": 0.5,
+  "esa": {
+   "accepted": 2,
+   "byScore": 2,
+   "byDiv": 0,
+   "divProbes": 0,
+   "parentShare": 0.2643008474576271,
+   "acceptDeltas": [
+    {
+     "d": -0.010258838383838398,
+     "z": null,
+     "via": "lex",
+     "topup": false
+    },
+    {
+     "d": 0.005681818181818177,
+     "z": null,
+     "via": "lex",
+     "topup": false
+    }
+   ],
+   "verifications": 58,
+   "quota": 0,
+   "quotaPerIter": 2,
+   "quotaTopups": 0,
+   "quotaAccepted": 0,
+   "paired": null
+  },
+  "lex": {
+   "below": 10,
+   "worst": -0.875,
+   "floorCells": 11
+  },
+  "fpen": null,
+  "bestMaxCard": {
+   "key": "guard",
+   "share": 0.26911850554582606,
+   "nonji": 6852
+  },
+  "startMaxCard": {
+   "key": "guard",
+   "share": 0.2630324694667858,
+   "nonji": 6714
+  },
+  "bestByShape": {
+   "2:multi": {
+    "games": 20,
+    "first": 0.15,
+    "draw": 0.25,
+    "score": -0.45,
+    "cleanScore": -0.7
+   },
+   "2:multi4": {
+    "games": 20,
+    "first": 0.25,
+    "draw": 0.25,
+    "score": -0.25,
+    "cleanScore": -0.5
+   },
+   "2:long": {
+    "games": 20,
+    "first": 0.3,
+    "draw": 0.1,
+    "score": -0.3,
+    "cleanScore": -0.4
+   },
+   "3:multi": {
+    "games": 20,
+    "first": 0.15,
+    "draw": 0.15,
+    "score": -0.16249999999999998,
+    "cleanScore": -0.42499999999999993
+   },
+   "3:multi4": {
+    "games": 20,
+    "first": 0.1,
+    "draw": 0,
+    "score": -0.35,
+    "cleanScore": -0.4999999999999999
+   },
+   "3:long": {
+    "games": 20,
+    "first": 0.1,
+    "draw": 0,
+    "score": -0.35,
+    "cleanScore": -0.42499999999999993
+   },
+   "5:multi": {
+    "games": 20,
+    "first": 0.05,
+    "draw": 0.05,
+    "score": -0.15625,
+    "cleanScore": -0.25
+   },
+   "5:multi4": {
+    "games": 20,
+    "first": 0.05,
+    "draw": 0,
+    "score": -0.1875,
+    "cleanScore": -0.25
+   },
+   "5:long": {
+    "games": 20,
+    "first": 0.1,
+    "draw": 0,
+    "score": -0.125,
+    "cleanScore": -0.25
+   },
+   "8:multi": {
+    "games": 20,
+    "first": 0,
+    "draw": 0,
+    "score": -0.14285714285714282,
+    "cleanScore": -0.14285714285714282
+   },
+   "10:multi": {
+    "games": 20,
+    "first": 0.05,
+    "draw": 0.05,
+    "score": -0.02777777777777778,
+    "cleanScore": -0.055555555555555566
+   }
+  }
+ },
+ "curve": [
+  {
+   "games": 2552,
+   "best": -0.375
+  },
+  {
+   "games": 6136,
+   "best": 0.12400793650793651
+  },
+  {
+   "games": 12124,
+   "best": 0.12400793650793651
+  },
+  {
+   "games": 18296,
+   "best": 0.12400793650793651
+  },
+  {
+   "games": 24212,
+   "best": 0.12400793650793653
+  }
+ ],
+ "secs": 110.8,
+ "startLabel": "夹具包 scratch/arms/GEN2-lex-s7.bak",
+ "headHealth": {
+  "temp": 0.15,
+  "states": 72,
+  "pack": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 3.068,
+   "entShareMed": 0.9401,
+   "spreadMed": 0.0596,
+   "odds": 1.49,
+   "tieArgmax": 4,
+   "agreeRandom": 70.4,
+   "flat": true,
+   "agreeRefs": 3
+  },
+  "v7": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 43,
+   "entShareMed": 0,
+   "spreadMed": null,
+   "odds": null,
+   "tieArgmax": 0,
+   "agreeRandom": null,
+   "flat": false
+  },
+  "flatLineAgreePct": 60,
+  "calib": "随机起点彼此 93~97% ‖ v7 5%（60 个真局决策点，原件 scratch/qoder-1030-headcalib2.mjs）",
+  "gate": "关（只报不判）"
+ },
+ "headGate": "未开闸",
+ "wrote": "D:/code/Epirus-Web/scratch/arms/GEN2big-fx32-s7.bak",
+ "container": {
+  "v": 91,
+  "arch": "S1o",
+  "gen": 2,
+  "dims": {
+   "seatH": 16,
+   "actH": 8,
+   "hid": 32,
+   "hid2": 24,
+   "input": "obs3",
+   "inter": 0,
+   "gen": 2,
+   "dof": 208
+  },
+  "n": 6122,
+  "seg": [
+   {
+    "name": "seatEnc",
+    "off": 0,
+    "len": 464,
+    "weight": [
+     0,
+     448
+    ],
+    "bias": [
+     448,
+     464
+    ],
+    "fanIn": 28
+   },
+   {
+    "name": "actEnc",
+    "off": 464,
+    "len": 488,
+    "weight": [
+     464,
+     944
+    ],
+    "bias": [
+     944,
+     952
+    ],
+    "fanIn": 60
+   },
+   {
+    "name": "ctx",
+    "off": 952,
+    "len": 3360,
+    "weight": [
+     952,
+     4280
+    ],
+    "bias": [
+     4280,
+     4312
+    ],
+    "fanIn": 104
+   },
+   {
+    "name": "cand",
+    "off": 4312,
+    "len": 1752,
+    "weight": [
+     4312,
+     6040
+    ],
+    "bias": [
+     6040,
+     6064
+    ],
+    "fanIn": 72
+   },
+   {
+    "name": "policyHead",
+    "off": 6064,
+    "len": 25,
+    "weight": [
+     6064,
+     6089
+    ],
+    "bias": null,
+    "fanIn": 24
+   },
+   {
+    "name": "qHead",
+    "off": 6089,
+    "len": 33,
+    "weight": [
+     6089,
+     6122
+    ],
+    "bias": null,
+    "fanIn": 32
+   }
+  ]
+ },
+ "verifGate": "绿（verifications=58 ‖ accepted=2）"
+}

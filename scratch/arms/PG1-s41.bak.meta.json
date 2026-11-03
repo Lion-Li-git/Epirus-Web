@@ -1,0 +1,35 @@
+{
+ "tool": "pg-train",
+ "tag": "B1-s41",
+ "parent": "scratch/arms/OB3CH-s7.bak",
+ "seed": 41,
+ "games": 24000,
+ "batch": 48,
+ "lr": 0.0003,
+ "temp": 0.5,
+ "lamC": 0.005,
+ "lamF": 0.05,
+ "cur": "net",
+ "updates": 500,
+ "wallSecs": 335,
+ "loop": {
+  "meanScore": -0.11502050264550721,
+  "firePerGame": 0.000375,
+  "discChargePerGame": 0.04629166666666667,
+  "entropy": 1.8940978790885603,
+  "zipBad": 0
+ },
+ "container": {
+  "v": 91,
+  "input": "obs3b",
+  "dof": 415
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3CH-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "objective": "scoreNet + λc·discCharge + λf·railgun (resident)",
+   "solver": "REINFORCE+Adam (pg-lib, selftest3 6 legs)"
+  }
+ }
+}

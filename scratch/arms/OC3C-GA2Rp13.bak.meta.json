@@ -1,0 +1,8 @@
+{
+ "tool": "convert-obs3c",
+ "parent": "scratch/ga-arms/GA2Rp-s13.js",
+ "parentHash": null,
+ "outDim": 8121,
+ "inDim": 7993,
+ "ts": "2026-11-02T13:45:20.806Z"
+}

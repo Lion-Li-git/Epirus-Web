@@ -1,0 +1,84 @@
+{
+ "tool": "supfit-gd",
+ "tag": "regress",
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "cand",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 0,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 800,
+  "moved": 0,
+  "gone": 0,
+  "keys": 800
+ },
+ "supfitGd": {
+  "objective": "cand",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 1,
+    "teacherLl": -0.000024217821337350642,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "startAgree": 0.22,
+  "startLl": -3.275761560829764,
+  "agree": 1,
+  "ll": -0.000024217821337350642,
+  "wAgree": 1,
+  "nTest": 200,
+  "nTrain": 600,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 124,
+    "hit": 124
+   },
+   {
+    "key": "charge#elec",
+    "n": 40,
+    "hit": 40
+   },
+   {
+    "key": "railgun",
+    "n": 36,
+    "hit": 36
+   }
+  ],
+  "verdict": "⇒ P-A1 只对 key 路径预登记；cand 路径的验收在实战尺（chain-price 的窗/珠/净分）"
+ },
+ "container": {
+  "v": 91,
+  "input": "obs3b",
+  "dof": 415
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted candidate log-likelihood log pi(teacher action), class=key#bead (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

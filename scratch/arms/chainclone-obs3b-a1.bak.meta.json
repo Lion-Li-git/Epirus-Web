@@ -1,0 +1,64 @@
+{
+ "tool": "chain-clone",
+ "mode": "clone",
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "evals": 1958,
+ "targetGames": null,
+ "blend": 0,
+ "l2": 0.01,
+ "standardize": true,
+ "dagger": 2,
+ "rounds": [
+  {
+   "round": 0,
+   "fx": 1000,
+   "all": 0.596,
+   "act": 0.7309644670050761,
+   "base": 0.11084198361634741
+  },
+  {
+   "round": 1,
+   "fx": 1793,
+   "add": 793,
+   "all": 0.542,
+   "act": 0,
+   "base": 0.11084198361634741,
+   "daggerStates": 1500
+  },
+  {
+   "round": 2,
+   "fx": 1958,
+   "add": 165,
+   "all": 0.556,
+   "act": 0,
+   "base": 0.11084198361634741,
+   "daggerStates": 1500
+  }
+ ],
+ "clone": {
+  "agree": 0.556,
+  "agreeAct": 0,
+  "agreeBefore": 0.226,
+  "agreeActBefore": 0,
+  "base": 0.11084198361634741,
+  "baseAct": 0.06901568957406524,
+  "flat": 0,
+  "n": 500,
+  "nAct": 197
+ },
+ "container": {
+  "v": 91,
+  "gen": 2,
+  "input": "obs3b",
+  "hid2": 24
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "clone": "chain-lib.pickChain",
+   "blend": 0,
+   "dagger": 2
+  }
+ }
+}

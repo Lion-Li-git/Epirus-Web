@@ -1,0 +1,12 @@
+[GD3-RATION      ] 1st=25.2   种类=5
+[CAP-ration-s7   ] 1st=27.4   种类=5
+[CAP-ration-s13  ] 1st=37.4   种类=4
+[RICH-b41-s13    ] 1st=58.1   种类=13
+[BROAD-tkCH-s41  ] 1st=53.1   种类=14
+[BROAD-tkCH-s7   ] 1st=40.5   种类=15
+[GD3-RING        ] 1st=15.7   种类=5
+[GD3-LASER2      ] 1st=0.2    种类=3
+[gd3b-ks-sb      ] 1st=43.6   种类=3
+[RB2P-s13        ] 1st=64.0   种类=3
+[GD3-BIGT3       ] 1st=47.9   种类=3
+### 代 3 侧写完 → scratch/gen3-usage-1101.tsv

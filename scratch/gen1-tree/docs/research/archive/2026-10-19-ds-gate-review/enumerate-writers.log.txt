@@ -1,0 +1,50 @@
+# §E653 门里 train-3p 的调用点（静态，含这次没写成的那些）
+文件                    行      代参       落点改道                              band                    arm
+probe-instruments.mjs 620    1/3/2/2  改道                                band 也改道                报名字
+ship-feas.mjs         598    1/3/2/2  改道                                band 也改道                报名字
+ship-feas.mjs         630    ?        ⛔ 没看到改道                           ⚠ band 未改道（会往 docs/artifacts 撒 .bak ⇒ D191）⚠ 不报 arm（点名行会印 (no-arm)）
+ship-promote.mjs      417    1/3/2/2  ⛔ 没看到改道                           ⚠ band 未改道（会往 docs/artifacts 撒 .bak ⇒ D191）⚠ 不报 arm（点名行会印 (no-arm)）
+ship-promote.mjs      422    1/3/2/2  ⛔ 没看到改道                           band 也改道                报名字
+ship-promote.mjs      433    1/3/2/2  改道                                band 也改道                报名字
+train-env.mjs         59     1/3/2/2  ⛔ 没看到改道                           ⚠ band 未改道（会往 docs/artifacts 撒 .bak ⇒ D191）⚠ 不报 arm（点名行会印 (no-arm)）
+train-env.mjs         64     1/3/2/2  改道                                band 也改道                报名字
+train-env.mjs         69     1/3/2/2  ⛔ 没看到改道                           ⚠ band 未改道（会往 docs/artifacts 撒 .bak ⇒ D191）⚠ 不报 arm（点名行会印 (no-arm)）
+train-env.mjs         76     1/3/8/4  改道                                band 也改道                报名字
+train-env.mjs         177    1///     改道                                band 也改道                报名字
+train-env.mjs         211    2/3/2/2  改道                                band 也改道                报名字
+train-evo.mjs         2065   3/3/6/4  ⛔ 没看到改道                           band 也改道                报名字
+train-evo.mjs         2095   2/3/4/3  改道                                band 也改道                报名字
+train-evo.mjs         2100   2/3/4/3  改道                                band 也改道                报名字
+train-evo.mjs         2168   40/3/8/8 改道                                band 也改道                报名字
+train-evo.mjs         2462   2/5/4/4  改道                                band 也改道                报名字
+train-evo.mjs         2474   ?        ⛔ 没看到改道                           ⚠ band 未改道（会往 docs/artifacts 撒 .bak ⇒ D191）⚠ 不报 arm（点名行会印 (no-arm)）
+train-runner.mjs      61     2/3/4/3  改道                                band 也改道                报名字
+train-runner.mjs      71     2/3/4/3  改道                                band 也改道                报名字
+train-runner.mjs      75     2/3/4/3  改道                                band 也改道                报名字
+train-runner.mjs      118    6/3/8/6  改道                                band 也改道                报名字
+train-runner.mjs      674    1/3/2/2  ⛔ 没看到改道                           ⚠ band 未改道（会往 docs/artifacts 撒 .bak ⇒ D191）⚠ 不报 arm（点名行会印 (no-arm)）
+train-runner.mjs      734    3/3/6/4  改道                                band 也改道                报名字
+train-runner.mjs      738    3/3/6/4  ⛔ 没看到改道                           band 也改道                报名字
+train-runner.mjs      772    3/3/6/4  改道                                band 也改道                报名字
+train-runner.mjs      817    2/3/4/3  改道                                band 也改道                报名字
+train-runner.mjs      828    2/3/4/3  改道                                band 也改道                报名字
+train-runner.mjs      837    2/3/4/3  ⛔ 没看到改道                           band 也改道                报名字
+train-runner.mjs      912    60/3/8/8 改道                                band 也改道                报名字
+train-runner.mjs      938    60/3/8/8 改道                                band 也改道                报名字
+train-runner.mjs      1009   30/3/8/6 改道                                band 也改道                报名字
+train-runner.mjs      1278   2///     改道                                band 也改道                报名字
+train-runner.mjs      1307   60///    ⛔ 没看到改道                           ⚠ band 未改道（会往 docs/artifacts 撒 .bak ⇒ D191）⚠ 不报 arm（点名行会印 (no-arm)）
+train-runner.mjs      1315   60///    ⛔ 没看到改道                           ⚠ band 未改道（会往 docs/artifacts 撒 .bak ⇒ D191）⚠ 不报 arm（点名行会印 (no-arm)）
+train-runner.mjs      1327   2///     改道                                band 也改道                报名字
+train-runner.mjs      1430   3/3/4/4  改道                                band 也改道                报名字
+train-runner.mjs      1474   ?        ⛔ 没看到改道                           band 也改道                ⚠ 不报 arm（点名行会印 (no-arm)）
+train-runner.mjs      1539   ?        ⛔ 没看到改道                           band 也改道                ⚠ 不报 arm（点名行会印 (no-arm)）
+train-runner.mjs      1656   2///     改道                                band 也改道                报名字
+
+合计调用点 40 ‖ ⛔ 没改道 14（其中经 helper 调起 0 ⇒ helper 会不会注入落点要逐一看定义，本机实测 `spawnNC` = `spawnCached(nocache)`，**不注入**）
+⛔ 里若含 `EPIRUS_PUBLISH` 那就是"有意写发布态"（不是漏改道）；若落在 D123/D162 那两条腿就是"有意写基线" ⇒ 这两类要在 C 方案里显式声明，不算违例。
+⚑ 这台是**静态上界**：它不判"真写了没"（那是运行时点名器的事），两把尺一起看才分得清"漏改道"与"有意写"。
+  PASS 自检 train-runner.mjs:734 期望「改道」实测「改道」 ⇒ D127 off 臂有逐字改道 ⇒ 判"改道"才说明这台读的是最内层整个调用
+  PASS 自检 train-runner.mjs:738 期望「⛔」实测「⛔」 ⇒ D127 on 臂没改道、且运行时实证它写过默认落点 ⇒ 这把尺必须能碰到它
+
+⚑ 交叉核对（两把尺）：静态列出的 ⛔ 处数应当 ≥ 运行时看到的写方条数；今天运行时那把被 `gate-par` 吞了 stdout ⇒ 名单只能靠**默认产物的 META.arm + mtime**（本次 1 条：d127on @14:17:14）。要让点名器在门里可用，得先让 np-test 透传那行。

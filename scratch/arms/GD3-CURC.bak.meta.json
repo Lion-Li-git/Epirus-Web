@@ -1,0 +1,123 @@
+{
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "scratch/arms/GD3-RATION.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "ration2",
+ "keySplit": 1,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 800,
+  "moved": 0,
+  "gone": 0,
+  "keys": 800,
+  "rare": 0,
+  "byKey": {
+   "ji": 438,
+   "gun": 112,
+   "sword": 63,
+   "ring": 76,
+   "bigT": 23,
+   "charge": 44,
+   "railgun": 44
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.94,
+    "teacherLl": -0.2817389800244664,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.725,
+  "startLl": -5.889309692659088,
+  "agree": 0.94,
+  "ll": -0.2817389800244664,
+  "wAgree": 0.9395863867239344,
+  "nTest": 200,
+  "nTrain": 600,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "gun",
+    "n": 31,
+    "hit": 29
+   },
+   {
+    "key": "ji",
+    "n": 107,
+    "hit": 102
+   },
+   {
+    "key": "sword",
+    "n": 16,
+    "hit": 11
+   },
+   {
+    "key": "ring",
+    "n": 24,
+    "hit": 24
+   },
+   {
+    "key": "bigT",
+    "n": 8,
+    "hit": 8
+   },
+   {
+    "key": "charge#elec",
+    "n": 7,
+    "hit": 7
+   },
+   {
+    "key": "railgun",
+    "n": 7,
+    "hit": 7
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "dof": 415,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/GD3-RATION.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

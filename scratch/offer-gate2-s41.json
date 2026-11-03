@@ -1,0 +1,58 @@
+{
+  "ts": "2026-11-01T10:23:48.543Z",
+  "rows": [
+    {
+      "pack": "D:/code/Epirus-Web/scratch/ga-arms/GATE2-s41.js",
+      "container": "v:92 gen3 obs3b n=7993",
+      "field": "mirror",
+      "eps": 0,
+      "epsK": 5,
+      "epsMode": "soft",
+      "temp": 0.15,
+      "games": 30,
+      "n": 5,
+      "mode": "multi",
+      "dec": 2032,
+      "roundsMean": 23.7,
+      "drawRate": 0,
+      "epHistogram": {
+        "0": 882,
+        "1": 870,
+        "2": 280
+      },
+      "beads": {
+        "none": 2032
+      },
+      "offered": {
+        "charge": 1150,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 280,
+        "gun": 1150
+      },
+      "chosenWhenOffered": {
+        "charge": 0,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 280,
+        "gun": 549
+      },
+      "chosenWhenNotOffered": {
+        "charge": 0,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 0
+      },
+      "pickKeys": {
+        "ji": 1203,
+        "gun": 549,
+        "sword": 280
+      },
+      "nonJiKinds": 2
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+ "mode": "ga",
+ "seed": 7101,
+ "evals": 2256,
+ "pop": 12,
+ "games": 2,
+ "n": 5,
+ "elite": 4,
+ "sig0": 0.2,
+ "gamesPlanned": 4512,
+ "gamesActualLoop": 1504,
+ "gamesActualHoldout": 208,
+ "gamesActualStartHoldout": 208,
+ "targetGames": 1500,
+ "netForwards": 0,
+ "netCandScores": 0,
+ "trainMode": "long",
+ "holdoutGames": 200,
+ "startFit": 0.19766058269147313,
+ "inLoopBest": -0.6191820312499998,
+ "holdoutFit": 0.38837995757883503,
+ "holdoutFirst": 0.065,
+ "holdoutTop2": 0.14,
+ "holdoutStartFit": 0.38837995757883503,
+ "holdoutStartFirst": 0.065,
+ "holdoutStartTop2": 0.14,
+ "dFirst": 0,
+ "dTop2": 0,
+ "curve": [
+  {
+   "games": 152,
+   "best": -0.6197964843749998
+  },
+  {
+   "games": 376,
+   "best": -0.6197964843749998
+  },
+  {
+   "games": 752,
+   "best": -0.6191820312499998
+  },
+  {
+   "games": 1128,
+   "best": -0.6191820312499998
+  }
+ ],
+ "secs": 1193.2,
+ "startLabel": "makePolicy(0.25)",
+ "wrote": "scratch/arms/20261028-1852-S1-ga-flat-s7101.bak"
+}

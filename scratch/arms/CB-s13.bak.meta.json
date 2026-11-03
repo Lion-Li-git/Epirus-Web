@@ -1,0 +1,219 @@
+{
+ "mode": "esa",
+ "seed": 13,
+ "evals": 1059,
+ "pop": 14,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "sigFloor": 0,
+ "sigRestart": 0,
+ "esaSig": {
+  "start": 0.2,
+  "final": 0.0013868651299427963,
+  "min": 0.0013868651299427963,
+  "floor": 0.0001,
+  "restarts": 0
+ },
+ "arenaPen": 0,
+ "gamesPlanned": 4236,
+ "gamesActualLoop": 6044,
+ "gamesActualHoldout": 220,
+ "gamesActualStartHoldout": 220,
+ "targetGames": 6000,
+ "netForwards": 193261,
+ "netCandScores": 2840318,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": -0.375,
+ "inLoopBest": 1,
+ "holdoutFit": -0.06560245310245302,
+ "holdoutFirst": 0.29545454545454547,
+ "holdoutTop2": 0.9136363636363637,
+ "holdoutStartFit": -0.02812049062049058,
+ "holdoutStartFirst": 0.2772727272727273,
+ "holdoutStartTop2": 0.9045454545454545,
+ "dFirst": 0.018181818181818188,
+ "dTop2": 0.00909090909090915,
+ "currency": "arena2.clean",
+ "arena": {
+  "fp": "arena2.v2|pool=cc652985/20|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random|highN=1|stratified=bigT+reflect+snipe+guard~cap2~mix0.5",
+  "temp": 0.15,
+  "shapes": 11,
+  "roster": 51,
+  "pool": 20,
+  "holdGamesPerShape": 20,
+  "holdGames": 220,
+  "draw": 0.01818181818181818,
+  "cur": "clean",
+  "diverse": false,
+  "highN": 1,
+  "stratified": true,
+  "stratCap": 2,
+  "stratMix": 0.5,
+  "divTol": 0.02,
+  "divDelta": 0.1,
+  "divEvery": 10,
+  "divTrigger": 0.5,
+  "esa": {
+   "accepted": 4,
+   "byScore": 4,
+   "byDiv": 0,
+   "divProbes": 0,
+   "parentShare": 0.40561797752808987,
+   "acceptDeltas": [
+    {
+     "d": 0.18145743145743154,
+     "z": null,
+     "via": "lex",
+     "topup": false
+    },
+    {
+     "d": -0.01790223665223671,
+     "z": null,
+     "via": "lex",
+     "topup": false
+    },
+    {
+     "d": 0.07102272727272732,
+     "z": null,
+     "via": "lex",
+     "topup": false
+    },
+    {
+     "d": 0.0028409090909090884,
+     "z": null,
+     "via": "lex",
+     "topup": false
+    }
+   ],
+   "verifications": 17,
+   "quota": 0,
+   "quotaPerIter": 2,
+   "quotaTopups": 0,
+   "quotaAccepted": 0,
+   "paired": null
+  },
+  "lex": {
+   "below": 4,
+   "worst": -0.25,
+   "floorCells": 11
+  },
+  "fpen": null,
+  "bestMaxCard": {
+   "key": "guard",
+   "share": 0.41973350253807107,
+   "nonji": 3152
+  },
+  "startMaxCard": {
+   "key": "transfer",
+   "share": 0.2402212564203872,
+   "nonji": 2531
+  },
+  "bestByShape": {
+   "2:multi": {
+    "games": 20,
+    "first": 0.55,
+    "draw": 0,
+    "score": 0.1,
+    "cleanScore": 0.1
+   },
+   "2:multi4": {
+    "games": 20,
+    "first": 0.5,
+    "draw": 0.05,
+    "score": 0.05,
+    "cleanScore": 0
+   },
+   "2:long": {
+    "games": 20,
+    "first": 0.45,
+    "draw": 0,
+    "score": -0.1,
+    "cleanScore": -0.1
+   },
+   "3:multi": {
+    "games": 20,
+    "first": 0.3,
+    "draw": 0,
+    "score": -0.049999999999999975,
+    "cleanScore": -0.12499999999999997
+   },
+   "3:multi4": {
+    "games": 20,
+    "first": 0.2,
+    "draw": 0.05,
+    "score": -0.16249999999999998,
+    "cleanScore": -0.19999999999999998
+   },
+   "3:long": {
+    "games": 20,
+    "first": 0.25,
+    "draw": 0,
+    "score": -0.12499999999999997,
+    "cleanScore": -0.12499999999999997
+   },
+   "5:multi": {
+    "games": 20,
+    "first": 0.25,
+    "draw": 0,
+    "score": 0.0625,
+    "cleanScore": -0.125
+   },
+   "5:multi4": {
+    "games": 20,
+    "first": 0.1,
+    "draw": 0.05,
+    "score": -0.09375,
+    "cleanScore": -0.125
+   },
+   "5:long": {
+    "games": 20,
+    "first": 0.35,
+    "draw": 0,
+    "score": 0.1875,
+    "cleanScore": 0.0625
+   },
+   "8:multi": {
+    "games": 20,
+    "first": 0.2,
+    "draw": 0.05,
+    "score": 0.11428571428571432,
+    "cleanScore": -0.028571428571428536
+   },
+   "10:multi": {
+    "games": 20,
+    "first": 0.1,
+    "draw": 0,
+    "score": -6.938893903907228e-18,
+    "cleanScore": -0.055555555555555594
+   }
+  }
+ },
+ "curve": [
+  {
+   "games": 600,
+   "best": 0.125
+  },
+  {
+   "games": 1500,
+   "best": 0.5
+  },
+  {
+   "games": 3000,
+   "best": 0.7222222222222222
+  },
+  {
+   "games": 4540,
+   "best": 0.7222222222222222
+  },
+  {
+   "games": 6000,
+   "best": 1
+  }
+ ],
+ "secs": 20.9,
+ "startLabel": "夹具包 scratch/arms/COMBO-s7.bak",
+ "wrote": "scratch/arms/CB-s13.bak"
+}

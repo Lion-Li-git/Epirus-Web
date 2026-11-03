@@ -1,0 +1,342 @@
+{
+ "mode": "cem",
+ "seed": 11,
+ "evals": 4752,
+ "pop": 48,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "sigFloor": 0,
+ "sigRestart": 0,
+ "esaSig": null,
+ "arenaPen": 0,
+ "gamesPlanned": 19008,
+ "gamesActualLoop": 24036,
+ "gamesActualHoldout": 220,
+ "gamesActualStartHoldout": 220,
+ "targetGames": 24000,
+ "netForwards": 615132,
+ "netCandScores": 10354946,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": 1,
+ "inLoopBest": 1,
+ "holdoutFit": 0.30586219336219306,
+ "holdoutFirst": 0.509090909090909,
+ "holdoutTop2": 0.9318181818181818,
+ "holdoutStartFit": 0.4823412698412699,
+ "holdoutStartFirst": 0.6272727272727273,
+ "holdoutStartTop2": 0.95,
+ "dFirst": -0.11818181818181828,
+ "dTop2": -0.018181818181818188,
+ "currency": "arena2.net",
+ "arena": {
+  "fp": "arena2.v2|pool=cc652985/20|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random|highN=1|stratified=0",
+  "temp": 0.15,
+  "shapes": 11,
+  "roster": 51,
+  "pool": 20,
+  "holdGamesPerShape": 20,
+  "holdGames": 220,
+  "draw": 0,
+  "cur": "net",
+  "diverse": false,
+  "highN": 1,
+  "stratified": false,
+  "stratCap": 4,
+  "stratMix": 1,
+  "divTol": 0.02,
+  "divDelta": 0.1,
+  "divEvery": 10,
+  "divTrigger": 0.5,
+  "esa": null,
+  "lex": null,
+  "fpen": null,
+  "bestMaxCard": {
+   "key": "tank",
+   "share": 0.2588312974579069,
+   "nonji": 3029
+  },
+  "startMaxCard": {
+   "key": "snipe",
+   "share": 0.519613416714042,
+   "nonji": 1759
+  },
+  "bestByShape": {
+   "2:multi": {
+    "games": 20,
+    "first": 0.6,
+    "draw": 0,
+    "score": 0.2,
+    "cleanScore": 0.2,
+    "firstScore": 0.2
+   },
+   "2:multi4": {
+    "games": 20,
+    "first": 0.8,
+    "draw": 0,
+    "score": 0.6,
+    "cleanScore": 0.6,
+    "firstScore": 0.6
+   },
+   "2:long": {
+    "games": 20,
+    "first": 0.6,
+    "draw": 0,
+    "score": 0.2,
+    "cleanScore": 0.2,
+    "firstScore": 0.2
+   },
+   "3:multi": {
+    "games": 20,
+    "first": 0.6,
+    "draw": 0,
+    "score": 0.4,
+    "cleanScore": 0.25,
+    "firstScore": 0.4
+   },
+   "3:multi4": {
+    "games": 20,
+    "first": 0.5,
+    "draw": 0,
+    "score": 0.25,
+    "cleanScore": 0.10000000000000002,
+    "firstScore": 0.25
+   },
+   "3:long": {
+    "games": 20,
+    "first": 0.65,
+    "draw": 0,
+    "score": 0.475,
+    "cleanScore": 0.475,
+    "firstScore": 0.475
+   },
+   "5:multi": {
+    "games": 20,
+    "first": 0.45,
+    "draw": 0,
+    "score": 0.3125,
+    "cleanScore": 0.1875,
+    "firstScore": 0.3125
+   },
+   "5:multi4": {
+    "games": 20,
+    "first": 0.35,
+    "draw": 0,
+    "score": 0.1875,
+    "cleanScore": -0.0625,
+    "firstScore": 0.1875
+   },
+   "5:long": {
+    "games": 20,
+    "first": 0.45,
+    "draw": 0,
+    "score": 0.3125,
+    "cleanScore": 0.1875,
+    "firstScore": 0.3125
+   },
+   "8:multi": {
+    "games": 20,
+    "first": 0.45,
+    "draw": 0,
+    "score": 0.37142857142857133,
+    "cleanScore": 0.028571428571428616,
+    "firstScore": 0.37142857142857133
+   },
+   "10:multi": {
+    "games": 20,
+    "first": 0.15,
+    "draw": 0,
+    "score": 0.05555555555555554,
+    "cleanScore": -0.11111111111111113,
+    "firstScore": 0.05555555555555554
+   }
+  }
+ },
+ "curve": [
+  {
+   "games": 2592,
+   "best": 1
+  },
+  {
+   "games": 6228,
+   "best": 1
+  },
+  {
+   "games": 12228,
+   "best": 1
+  },
+  {
+   "games": 18024,
+   "best": 1
+  }
+ ],
+ "secs": 113.7,
+ "startLabel": "夹具包 scratch/arms/BIGT1-s23.bak",
+ "id": "BIGT1F-s11",
+ "parent": "BIGT1-s23",
+ "lineage": {
+  "parent": "scratch/arms/BIGT1-s23.bak",
+  "parentHash": "91535fbaadeef45a08f99e4c5b4972a7",
+  "outHash": "1dc3db251f117763f7ea133ff5279b6b",
+  "gen": 2,
+  "seed": 11,
+  "recipe": {
+   "arenaLex": false,
+   "arenaPerN": false,
+   "boN": false,
+   "shapeCap": 0,
+   "shapePick": false,
+   "warmShape": 0
+  }
+ },
+ "mastery": {
+  "key": "bigT",
+  "gate": "elite",
+  "line": 0.1,
+  "games": 12,
+  "n": 3,
+  "table": "long",
+  "cap": 16,
+  "stat": {
+   "audits": 419,
+   "pass": 396,
+   "spam": 0,
+   "starved": 0,
+   "bestGatedFail": 0,
+   "bestAccepted": 0,
+   "lastRate": 0.5833333333333334
+  }
+ },
+ "headHealth": {
+  "temp": 0.15,
+  "states": 72,
+  "pack": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 33.936,
+   "entShareMed": 0.1459,
+   "spreadMed": 2.951,
+   "odds": 349964745.57,
+   "tieArgmax": 0,
+   "agreeRandom": 8.3,
+   "flat": false,
+   "agreeRefs": 3
+  },
+  "v7": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 43,
+   "entShareMed": 0,
+   "spreadMed": null,
+   "odds": null,
+   "tieArgmax": 0,
+   "agreeRandom": null,
+   "flat": false
+  },
+  "flatLineAgreePct": 60,
+  "calib": "随机起点彼此 93~97% ‖ v7 5%（60 个真局决策点，原件 scratch/qoder-1030-headcalib2.mjs）",
+  "gate": "关（只报不判）"
+ },
+ "headGate": "未开闸",
+ "wrote": "scratch/arms/BIGT1F-s11.bak",
+ "container": {
+  "v": 91,
+  "arch": "S1o",
+  "gen": 2,
+  "dims": {
+   "seatH": 16,
+   "actH": 8,
+   "hid": 32,
+   "hid2": 24,
+   "input": "obs3",
+   "inter": 0,
+   "gen": 2,
+   "dof": 208
+  },
+  "n": 6122,
+  "seg": [
+   {
+    "name": "seatEnc",
+    "off": 0,
+    "len": 464,
+    "weight": [
+     0,
+     448
+    ],
+    "bias": [
+     448,
+     464
+    ],
+    "fanIn": 28
+   },
+   {
+    "name": "actEnc",
+    "off": 464,
+    "len": 488,
+    "weight": [
+     464,
+     944
+    ],
+    "bias": [
+     944,
+     952
+    ],
+    "fanIn": 60
+   },
+   {
+    "name": "ctx",
+    "off": 952,
+    "len": 3360,
+    "weight": [
+     952,
+     4280
+    ],
+    "bias": [
+     4280,
+     4312
+    ],
+    "fanIn": 104
+   },
+   {
+    "name": "cand",
+    "off": 4312,
+    "len": 1752,
+    "weight": [
+     4312,
+     6040
+    ],
+    "bias": [
+     6040,
+     6064
+    ],
+    "fanIn": 72
+   },
+   {
+    "name": "policyHead",
+    "off": 6064,
+    "len": 25,
+    "weight": [
+     6064,
+     6089
+    ],
+    "bias": null,
+    "fanIn": 24
+   },
+   {
+    "name": "qHead",
+    "off": 6089,
+    "len": 33,
+    "weight": [
+     6089,
+     6122
+    ],
+    "bias": null,
+    "fanIn": 32
+   }
+  ]
+ }
+}

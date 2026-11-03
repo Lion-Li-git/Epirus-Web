@@ -1,0 +1,123 @@
+{
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "scratch/arms/GD3-RATION.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 2400,
+ "trainG": 1800,
+ "testG": 600,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 2400,
+ "shapeBal": 1,
+ "teacher": "ration2",
+ "keySplit": 1,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 2400,
+  "moved": 0,
+  "gone": 0,
+  "keys": 2400,
+  "rare": 0,
+  "byKey": {
+   "ji": 1332,
+   "gun": 355,
+   "sword": 204,
+   "ring": 214,
+   "bigT": 61,
+   "charge": 118,
+   "railgun": 116
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 1800,
+    "teacherAgree": 0.9733333333333334,
+    "teacherLl": -0.06249887037674448,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.7,
+  "startLl": -6.871740770224862,
+  "agree": 0.9733333333333334,
+  "ll": -0.06249887037674448,
+  "wAgree": 0.9816941982364175,
+  "nTest": 600,
+  "nTrain": 1800,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 335,
+    "hit": 324
+   },
+   {
+    "key": "gun",
+    "n": 100,
+    "hit": 97
+   },
+   {
+    "key": "sword",
+    "n": 55,
+    "hit": 55
+   },
+   {
+    "key": "ring",
+    "n": 54,
+    "hit": 53
+   },
+   {
+    "key": "bigT",
+    "n": 13,
+    "hit": 13
+   },
+   {
+    "key": "charge#elec",
+    "n": 22,
+    "hit": 21
+   },
+   {
+    "key": "railgun",
+    "n": 21,
+    "hit": 21
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "dof": 415,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/GD3-RATION.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

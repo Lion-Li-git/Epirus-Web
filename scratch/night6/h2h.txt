@@ -1,0 +1,21 @@
+== 两带直交·强vs弱（5P long） ‖ long × 400 局（判定 339）
+   A=[L5-1200-s13,D1200-s13,DSTR4-s13,EFFG-s41,EFFG-s5,EFFG-s7,GD3ALL-G5-8p-s41,GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-POPP-s17,GD3ALL-POPP-s41]
+   B=[GD3ALL-PUSHON-s13,D-b-hpseed-s13,D-a-s13,GD3ALL-PLAIN-s13,DDEF-s13,DSTR-s13,CB-s13,LE-s13,GD3ALL-G5-s13,GD3ALL-NGA2R-s41]
+   A 带胜份额 61.4% ± 2.6 ⇒ 偏离均势 11.4pt ‖ 4.3σ ‖ ✔ 分得开
+== 两带直交·强vs弱（4P multi4） ‖ multi4 × 300 局（判定 297）
+   A=[L5-1200-s13,D1200-s13,DSTR4-s13,EFFG-s41,EFFG-s5,EFFG-s7,GD3ALL-G5-8p-s41,GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-POPP-s17,GD3ALL-POPP-s41]
+   B=[GD3ALL-PUSHON-s13,D-b-hpseed-s13,D-a-s13,GD3ALL-PLAIN-s13,DDEF-s13,DSTR-s13,CB-s13,LE-s13,GD3ALL-G5-s13,GD3ALL-NGA2R-s41]
+   A 带胜份额 59.3% ± 2.9 ⇒ 偏离均势 9.3pt ‖ 3.2σ ‖ ✔ 分得开
+== 三带直交·强vs中（5P long） ‖ long × 400 局（判定 339）
+   A=[L5-1200-s13,D1200-s13,DSTR4-s13,EFFG-s41,EFFG-s5,EFFG-s7,GD3ALL-G5-8p-s41]
+   B=[GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-POPP-s17,GD3ALL-POPP-s41,GD3ALL-PUSHON-s13,D-b-hpseed-s13,D-a-s13]
+   A 带胜份额 38.9% ± 2.6 ⇒ 偏离均势 -11.1pt ‖ 4.2σ ‖ ✔ 分得开
+== 三带直交·中vs弱（5P long） ‖ long × 400 局（判定 347）
+   A=[GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-POPP-s17,GD3ALL-POPP-s41,GD3ALL-PUSHON-s13,D-b-hpseed-s13,D-a-s13]
+   B=[GD3ALL-PLAIN-s13,DDEF-s13,DSTR-s13,CB-s13,LE-s13,GD3ALL-G5-s13,GD3ALL-NGA2R-s41]
+   A 带胜份额 69.7% ± 2.5 ⇒ 偏离均势 19.7pt ‖ 8.0σ ‖ ✔ 分得开
+=== 直交四系列完成 01:53
+== 探索：强vs中减POPP（查反转归因） ‖ long × 400 局（判定 345）
+   A=[L5-1200-s13,D1200-s13,DSTR4-s13,EFFG-s41,EFFG-s5,EFFG-s7,GD3ALL-G5-8p-s41]
+   B=[GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-PUSHON-s13,D-b-hpseed-s13,D-a-s13]
+   A 带胜份额 41.4% ± 2.7 ⇒ 偏离均势 -8.6pt ‖ 3.2σ ‖ ✔ 分得开

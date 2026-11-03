@@ -1,0 +1,120 @@
+### 主分析（装配同档 shipbigt=0 之后）
+
+=== v7beadseed-82   （裸 − ban）===
+  闸 OK  ① 配对身份（桌子名单逐字相同 ‖ 装配头除 ban/file 外逐字相同）   裸 35 组 ‖ ban 35 组 ‖ 装配同（shipbigt=0）
+  闸 OK  ② 消融真生效（落盘头有 #ban=holo）   #ban=holo ‖ 两臂 seed 77000/77000
+  闸 OK  ③ 分母（两臂各 35 组 × 200 局）   裸 35 组 ‖ ban 35 组 ‖ 每组局数 200/200
+  Δ_total（裸 − ban）= -1.37pt ‖ 配对 SE 0.33 ‖ 桌子聚类 bootstrap 95% CI [-2.03, -0.76] ‖ rng=20261020（B=4000）
+  按对手池（在场 − 不在场的 Δ 均值，带分母）：
+    antidef     在场 20 桌 Δ -1.48 ‖ 不在场 15 桌 Δ -1.23 ‖ 差 -0.24
+    deepsaver   在场 20 桌 Δ -1.38 ‖ 不在场 15 桌 Δ -1.37 ‖ 差 -0.01
+    farmer      在场 20 桌 Δ -1.45 ‖ 不在场 15 桌 Δ -1.27 ‖ 差 -0.18
+    heavyfire   在场 20 桌 Δ -2.05 ‖ 不在场 15 桌 Δ -0.47 ‖ 差 -1.58
+    random      在场 20 桌 Δ -1.25 ‖ 不在场 15 桌 Δ -1.53 ‖ 差 +0.28
+    wall        在场 20 桌 Δ -0.45 ‖ 不在场 15 桌 Δ -2.60 ‖ 差 +2.15
+    defend      在场 20 桌 Δ -1.55 ‖ 不在场 15 桌 Δ -1.13 ‖ 差 -0.42
+  换席切法 D(x,y|S)（同 seed 配对，Bonferroni α=0.0024 ⇒ 95% 除 21）：21 对（每对分母 10 个 S）
+    heavyfire vs wall        Δ̄ -3.20  CI [-4.60, -1.85]   ← 过 Bonferroni
+    wall vs defend           Δ̄ +2.20  CI [+0.70, +3.70]   ← 过 Bonferroni
+    antidef vs wall          Δ̄ -2.05  CI [-3.15, -0.85]   ← 过 Bonferroni
+    farmer vs wall           Δ̄ -2.00  CI [-3.40, -0.50]   ← 过 Bonferroni
+    deepsaver vs wall        Δ̄ -1.85  CI [-3.60, -0.15]   ← 过 Bonferroni
+    heavyfire vs random      Δ̄ -1.60  CI [-2.85, -0.45]   ← 过 Bonferroni
+
+=== v7wall-33   （裸 − ban）===
+  闸 OK  ① 配对身份（桌子名单逐字相同 ‖ 装配头除 ban/file 外逐字相同）   裸 35 组 ‖ ban 35 组 ‖ 装配同（shipbigt=0）
+  闸 OK  ② 消融真生效（落盘头有 #ban=holo）   #ban=holo ‖ 两臂 seed 77000/77000
+  闸 OK  ③ 分母（两臂各 35 组 × 200 局）   裸 35 组 ‖ ban 35 组 ‖ 每组局数 200/200
+  Δ_total（裸 − ban）= -7.61pt ‖ 配对 SE 0.77 ‖ 桌子聚类 bootstrap 95% CI [-9.04, -6.16] ‖ rng=20261020（B=4000）
+  按对手池（在场 − 不在场的 Δ 均值，带分母）：
+    antidef     在场 20 桌 Δ -8.80 ‖ 不在场 15 桌 Δ -6.03 ‖ 差 -2.77
+    deepsaver   在场 20 桌 Δ -9.22 ‖ 不在场 15 桌 Δ -5.47 ‖ 差 -3.76
+    farmer      在场 20 桌 Δ -7.58 ‖ 不在场 15 桌 Δ -7.67 ‖ 差 +0.09
+    heavyfire   在场 20 桌 Δ -7.72 ‖ 不在场 15 桌 Δ -7.47 ‖ 差 -0.26
+    random      在场 20 桌 Δ -6.45 ‖ 不在场 15 桌 Δ -9.17 ‖ 差 +2.72
+    wall        在场 20 桌 Δ -7.35 ‖ 不在场 15 桌 Δ -7.97 ‖ 差 +0.62
+    defend      在场 20 桌 Δ -6.17 ‖ 不在场 15 桌 Δ -9.53 ‖ 差 +3.36
+  换席切法 D(x,y|S)（同 seed 配对，Bonferroni α=0.0024 ⇒ 95% 除 21）：21 对（每对分母 10 个 S）
+    deepsaver vs defend      Δ̄ -6.10  CI [-9.40, -2.95]   ← 过 Bonferroni
+    deepsaver vs random      Δ̄ -5.55  CI [-7.70, -3.05]   ← 过 Bonferroni
+    antidef vs defend        Δ̄ -5.25  CI [-8.30, -1.90]   ← 过 Bonferroni
+    antidef vs random        Δ̄ -4.70  CI [-8.40, -1.30]   ← 过 Bonferroni
+    deepsaver vs wall        Δ̄ -3.75  CI [-6.60, -1.40]   ← 过 Bonferroni
+    deepsaver vs farmer      Δ̄ -3.30  CI [-6.05, -0.35]   ← 过 Bonferroni
+
+=== v7teach-32   （裸 − ban）===
+  闸 OK  ① 配对身份（桌子名单逐字相同 ‖ 装配头除 ban/file 外逐字相同）   裸 35 组 ‖ ban 35 组 ‖ 装配同（shipbigt=0）
+  闸 OK  ② 消融真生效（落盘头有 #ban=holo）   #ban=holo ‖ 两臂 seed 77000/77000
+  闸 OK  ③ 分母（两臂各 35 组 × 200 局）   裸 35 组 ‖ ban 35 组 ‖ 每组局数 200/200
+  Δ_total（裸 − ban）= -20.01pt ‖ 配对 SE 1.14 ‖ 桌子聚类 bootstrap 95% CI [-22.24, -17.76] ‖ rng=20261020（B=4000）
+  按对手池（在场 − 不在场的 Δ 均值，带分母）：
+    antidef     在场 20 桌 Δ -19.45 ‖ 不在场 15 桌 Δ -20.77 ‖ 差 +1.32
+    deepsaver   在场 20 桌 Δ -20.25 ‖ 不在场 15 桌 Δ -19.70 ‖ 差 -0.55
+    farmer      在场 20 桌 Δ -17.98 ‖ 不在场 15 桌 Δ -22.73 ‖ 差 +4.76
+    heavyfire   在场 20 桌 Δ -19.88 ‖ 不在场 15 桌 Δ -20.20 ‖ 差 +0.32
+    random      在场 20 桌 Δ -21.95 ‖ 不在场 15 桌 Δ -17.43 ‖ 差 -4.52
+    wall        在场 20 桌 Δ -22.40 ‖ 不在场 15 桌 Δ -16.83 ‖ 差 -5.57
+    defend      在场 20 桌 Δ -18.20 ‖ 不在场 15 桌 Δ -22.43 ‖ 差 +4.23
+  换席切法 D(x,y|S)（同 seed 配对，Bonferroni α=0.0024 ⇒ 95% 除 21）：21 对（每对分母 10 个 S）
+    farmer vs wall           Δ̄ +8.85  CI [+5.15, +12.50]   ← 过 Bonferroni
+    wall vs defend           Δ̄ -8.40  CI [-13.30, -4.25]   ← 过 Bonferroni
+    farmer vs random         Δ̄ +7.95  CI [+3.35, +12.65]   ← 过 Bonferroni
+    random vs defend         Δ̄ -7.50  CI [-10.35, -4.40]   ← 过 Bonferroni
+    antidef vs wall          Δ̄ +5.90  CI [-0.05, +11.25]
+    heavyfire vs wall        Δ̄ +5.05  CI [+0.90, +8.65]   ← 过 Bonferroni
+
+=== v7expo-34   （裸 − ban）===
+  闸 OK  ① 配对身份（桌子名单逐字相同 ‖ 装配头除 ban/file 外逐字相同）   裸 35 组 ‖ ban 35 组 ‖ 装配同（shipbigt=0）
+  闸 OK  ② 消融真生效（落盘头有 #ban=holo）   #ban=holo ‖ 两臂 seed 77000/77000
+  闸 OK  ③ 分母（两臂各 35 组 × 200 局）   裸 35 组 ‖ ban 35 组 ‖ 每组局数 200/200
+  Δ_total（裸 − ban）= -9.67pt ‖ 配对 SE 1.82 ‖ 桌子聚类 bootstrap 95% CI [-13.23, -6.13] ‖ rng=20261020（B=4000）
+  按对手池（在场 − 不在场的 Δ 均值，带分母）：
+    antidef     在场 20 桌 Δ -9.80 ‖ 不在场 15 桌 Δ -9.50 ‖ 差 -0.30
+    deepsaver   在场 20 桌 Δ -14.00 ‖ 不在场 15 桌 Δ -3.90 ‖ 差 -10.10
+    farmer      在场 20 桌 Δ -10.60 ‖ 不在场 15 桌 Δ -8.43 ‖ 差 -2.17
+    heavyfire   在场 20 桌 Δ -8.90 ‖ 不在场 15 桌 Δ -10.70 ‖ 差 +1.80
+    random      在场 20 桌 Δ -9.97 ‖ 不在场 15 桌 Δ -9.27 ‖ 差 -0.71
+    wall        在场 20 桌 Δ -2.55 ‖ 不在场 15 桌 Δ -19.17 ‖ 差 +16.62
+    defend      在场 20 桌 Δ -11.88 ‖ 不在场 15 桌 Δ -6.73 ‖ 差 -5.14
+  换席切法 D(x,y|S)（同 seed 配对，Bonferroni α=0.0024 ⇒ 95% 除 21）：21 对（每对分母 10 个 S）
+    deepsaver vs wall        Δ̄ -22.90  CI [-27.80, -17.60]   ← 过 Bonferroni
+    wall vs defend           Δ̄ +18.65  CI [+14.65, +23.00]   ← 过 Bonferroni
+    farmer vs wall           Δ̄ -16.10  CI [-20.20, -12.30]   ← 过 Bonferroni
+    random vs wall           Δ̄ -14.85  CI [-18.25, -11.10]   ← 过 Bonferroni
+    antidef vs wall          Δ̄ -14.50  CI [-20.70, -8.05]   ← 过 Bonferroni
+    heavyfire vs wall        Δ̄ -12.70  CI [-16.25, -8.35]   ← 过 Bonferroni
+
+=== 四个独立起点合看（预注册 §三：不合并成一个总分）===
+  v7beadseed-82    Δ_total -1.37pt ‖ 95% CI [-2.03, -0.76] ‖ 拿掉送盾更好（CI 全负）
+  v7wall-33        Δ_total -7.61pt ‖ 95% CI [-9.04, -6.16] ‖ 拿掉送盾更好（CI 全负）
+  v7teach-32       Δ_total -20.01pt ‖ 95% CI [-22.24, -17.76] ‖ 拿掉送盾更好（CI 全负）
+  v7expo-34        Δ_total -9.67pt ‖ 95% CI [-13.23, -6.13] ‖ 拿掉送盾更好（CI 全负）
+  按池（"在场 − 不在场"的 Δ 差；⚑ 预注册引用规则：**≥2 个起点同向**才许写成"这一池"）：
+    antidef      -0.24   -2.77   +1.32   -0.30   负 3/正 1   ← 起点之间打架或只 1 支 ⇒ 不许指名
+    deepsaver    -0.01   -3.76   -0.55  -10.10   负 4/正 0   ← 够写"这一池"（全同向）
+    farmer       -0.18   +0.09   +4.76   -2.17   负 2/正 2   ← 起点之间打架或只 1 支 ⇒ 不许指名
+    heavyfire    -1.58   -0.26   +0.32   +1.80   负 2/正 2   ← 起点之间打架或只 1 支 ⇒ 不许指名
+    random       +0.28   +2.72   -4.52   -0.71   负 2/正 2   ← 起点之间打架或只 1 支 ⇒ 不许指名
+    wall         +2.15   +0.62   -5.57  +16.62   负 1/正 3   ← 起点之间打架或只 1 支 ⇒ 不许指名
+    defend       -0.42   +3.36   +4.23   -5.14   负 2/正 2   ← 起点之间打架或只 1 支 ⇒ 不许指名
+  （列顺序 = beadseed ‖ wall ‖ teach ‖ expo）
+
+四条闸全过（闸④ 由重跑那一趟原件单独对账）
+
+### 牙齿(b) 翻标签：node ban-holo-analyze.mjs --flip
+  Δ_total（裸 − ban）= +1.37pt ‖ 配对 SE 0.33 ‖ 桌子聚类 bootstrap 95% CI [+0.76, +2.03] ‖ rng=20261020（B=4000）
+  Δ_total（裸 − ban）= +7.61pt ‖ 配对 SE 0.77 ‖ 桌子聚类 bootstrap 95% CI [+6.16, +9.04] ‖ rng=20261020（B=4000）
+  Δ_total（裸 − ban）= +20.01pt ‖ 配对 SE 1.14 ‖ 桌子聚类 bootstrap 95% CI [+17.76, +22.24] ‖ rng=20261020（B=4000）
+  Δ_total（裸 − ban）= +9.67pt ‖ 配对 SE 1.82 ‖ 桌子聚类 bootstrap 95% CI [+6.13, +13.24] ‖ rng=20261020（B=4000）
+
+### 牙齿(c) 故意丢一组：node ban-holo-analyze.mjs --drop=teach:7
+  ⛔ 闸红 ① 配对身份（桌子名单逐字相同 ‖ 装配头除 ban/file 外逐字相同）   裸 35 组 ‖ ban 34 组 ‖ 装配同（shipbigt=0）
+  闸 OK  ② 消融真生效（落盘头有 #ban=holo）   #ban=holo ‖ 两臂 seed 77000/77000
+  ⛔ 闸红 ③ 分母（两臂各 35 组 × 200 局）   裸 35 组 ‖ ban 34 组 ‖ 每组局数 200/200
+  ⇒ 分母不足 ⇒ 这一包的 Δ **读不出**（不是 0，也不是"没差别"）
+
+### 牙齿(a) 空消融 --ban=__none__ 与裸臂 diff：0 行差（原件 teeth-none-ban.per.txt）
+[消融自检] 决策 153801 次，其中被拿掉的技能在可负担集里 0 次 = 0.0%   !!! 该技能从不进 legal ⇒ 消融是空操作，Δ 不可读
+
+### 闸④ 确定性：beadseed ban 同 seed 重跑 diff
+逐字相同

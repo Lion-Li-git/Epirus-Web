@@ -1,0 +1,4 @@
+gate s3 rc=0
+gate s5 rc=0
+gate s23 rc=0
+gate s17 rc=0

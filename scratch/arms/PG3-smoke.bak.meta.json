@@ -1,0 +1,51 @@
+{
+ "tool": "pg-train",
+ "tag": "stageB-smoke",
+ "parent": "scratch/arms/gd3b-ks-sb.bak",
+ "seed": 7,
+ "games": 1200,
+ "batch": 48,
+ "lr": 0.0003,
+ "temp": 0.5,
+ "lamC": 0.005,
+ "lamF": 0.05,
+ "cur": "net",
+ "updates": 25,
+ "wallSecs": 9,
+ "baseline": "mean",
+ "ridgeFeat": null,
+ "ridgeFitN": null,
+ "valueCapacityR2": null,
+ "ridgeL2": null,
+ "ridgeDim": null,
+ "probe": null,
+ "rollbackTol": 0.05,
+ "rollbackCount": 0,
+ "probeGames": 0,
+ "bestProbeScore": null,
+ "lastR2": null,
+ "loop": {
+  "meanScore": 0.46011904761904804,
+  "firePerGame": 3.8691666666666666,
+  "discChargePerGame": 3.941666666666667,
+  "entropy": 0.08302685891401648,
+  "zipBad": 0
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "dof": 415,
+  "gen": 3,
+  "keySplit": 1,
+  "n": 7993
+ },
+ "lineage": {
+  "parent": "scratch/arms/gd3b-ks-sb.bak",
+  "gen": 3,
+  "recipe": {
+   "objective": "scoreNet + λc·discCharge + λf·railgun (resident)",
+   "solver": "REINFORCE+Adam (pg-lib, selftest3 6 legs)",
+   "baseline": "mean"
+  }
+ }
+}

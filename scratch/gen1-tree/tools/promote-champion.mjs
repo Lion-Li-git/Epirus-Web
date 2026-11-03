@@ -1,0 +1,768 @@
+/* Epirus 上线冠军提升（v1.5.8）
+ *
+ * 为什么要有它：v1.5.7 我是**手工**把 long-33 拷进 `js/bundled-champion-3p.js` 并手改 meta 的
+ * （加 shippedAs / examScoreAtBuild / rulesFingerprint）。手工换冠军有三处容易漏：
+ *   ① 忘了刷 `index.html` 的 `?v=` 缓存戳 ⇒ 浏览器继续用旧包；
+ *   ② 忘了记 `rulesFingerprint` ⇒ np-test D16 红（或更糟：静默过期）；
+ *   ③ 忘了记成绩 ⇒ 下一个人不知道这个包值多少分。
+ * 这个脚本把三件事绑成一条命令。
+ *
+ * ⚠️ 它会**先跑一遍冠军体检的 A/B/C/E/F/G 类指标**（考卷 + 自对局打架活跃度 + 被动/活跃场行为 + 有效技能数）
+ * 并把结果打出来 —— 因为"单一考卷分会被熬骗"（REVIEW §11）：v1.5.7 换上 long-33 时它考卷 45.3%，
+ * 自对局却 20/20 局零伤害。v1.5.8 起这些只是 `console.warn`（末尾还写着"决定权在你"）；
+ * **v1.5.18 起它们是阻断条件**（第三方复核 §7-4(1)）：6 项任一不过就中止、不换包，
+ * 确实要越过就 `--force`（会把越过的条件记进 meta 的 `auditFails`/`auditForced`）。
+ *
+ * 用法：node tools/promote-champion.mjs docs/artifacts/eco-34.bak [--exam-games=40] [--games=10] [--note="..."]
+ *       [--force] [--exam-first=<1st%>]   # 后者用于沙箱里子进程管道被拦时，先自己跑 eval-5p 再把数传进来
+ */
+import { readFileSync, writeFileSync, existsSync, writeSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+/* v1.5.202：UNRUN 的**处置**（哪个方向阻断）是单一来源纯函数 ⇒ 门可以喂合成输入验它。 */
+import { unrunDisposition, UNRUN_KINDS } from './unrun-policy.mjs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
+/* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
+ * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
+ * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX, extractJsonObject, parseMetaTolerant, degeneracyVerdict } from './audit-lib.mjs';
+/* v1.5.152（DS 09-22 · 用户裁定"把真桌 ε=0.2 接进体检，只记录不阻断"）：
+ * **产品代理栏** —— 单一来源：借 `behavior-profile.mjs` 的 `fieldProfile`（不抄第二份实现；该模块被 import 时不跑 main）。
+ * 依据（`docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §7）：同一包同一 ε=0，**镜像**装配电磁炮 4.30 每局、
+ * **真桌**（1 冠军 + 4 脚本）只有 0.10 每局（**43 倍**）⇒ 门禁/体检里的贵卡数字是**镜像局特有**的；
+ * 而"真桌 + ε=0.2"与**真机**几乎重合（电磁炮 0.20 对 0.20、蓄能 0.30 对 0.40）⇒ 它才是最接近产品的模拟。 */
+import { fieldProfile, share as bpShare } from './behavior-profile.mjs';
+import { parsePairTable, formatRecord } from './defense-axis.mjs';
+import { parseQuality, formatQualityRecord } from './defense-quality.mjs';   /* v1.5.243：防御质量三档的单一来源 */
+import { rejectUnknownFlags } from './audit-lib.mjs';
+/* v1.7.69：仓规「不认识的 `--` 参数必须**响亮失败**」—— 本工具此前没有消毒层，拼错的旗标被**静默忽略**
+ *   （正是「静默忽略 = 假读数」那条规矩要防的事；`gate-sentinel` 一族一直在报告这个缺口）。 */
+/* v1.7.69：只在**本文件是入口**时校验 —— 量具既可能被当 CLI 跑，也可能被别的门 `import` 当模块用；
+ *   后者时 `process.argv` 是**调用方**的 argv（例如 gate runner 的 `--part=`），无条件校验会把整轮门禁打红。 */
+if (process.argv[1] && process.argv[1].endsWith("promote-champion.mjs")) {
+  rejectUnknownFlags(process.argv.slice(2), ['assembly', 'champ', 'dry', 'exam-first', 'exam-games', 'force', 'support', 'games', 'json', 'mode', 'no-skill-report', 'note', 'packs', 'pair', 'quiet', 'seeds', 'skip-gate-drafts'], "promote-champion");
+}
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
+const flag = (n, d) => { const h = process.argv.find((a) => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
+const SRC = ARGV[0];
+if (!SRC) { console.error('用法: node tools/promote-champion.mjs <bak文件> [--exam-games=40] [--note="..."]'); process.exit(2); }
+const EXG = Number(flag('exam-games', 40));
+const NOTE = flag('note', '');
+/* v1.5.71：`--dry` = 只做体检与自检、**一个文件都不写**。
+ * 起因：这次给换包工具加了 `meta.feasibility` 记录块，我需要**真实运行证据**（而不是只跑单测），
+ * 但又绝不能顺手改写线上包/缓存戳（改了就得多跑一轮 smoke + battle 验证）。 */
+const DRY = process.argv.includes('--dry');
+const BUNDLE = join(ROOT, 'js/bundled-champion-3p.js');
+const INDEX = join(ROOT, 'index.html');
+
+if (existsSync(join(ROOT, 'docs/artifacts/.training.lock'))) {
+  console.error('⛔ 训练正在进行（存在 docs/artifacts/.training.lock）—— 此时换 bundle 会被自跑器的还原覆盖。等训练结束再跑。');
+  process.exit(3);
+}
+
+/* 1) 读源包 + 体检（考卷 + 自对局活跃度） */
+const src = readFileSync(join(ROOT, SRC), 'utf8');
+/* ⚠️ 两个槽位必须分清楚：`EPIRUS_CHAMPION_3P`（权重包）与 `EPIRUS_CHAMPION_3P_META`（元数据）。
+ * 第一版我把 meta 写进了**冠军槽**（replace 用错了捕获组）⇒ 包直接损坏（np-test N19/D12 立刻红）。
+ * 现在：分开两个正则、只替换 meta 那一段，并在写完做**回读自检**。 */
+/* v1.5.255（DS）：抽 JSON 改走 `audit-lib` 的**唯一一份**花括号配平抽取器（旧的两条懒惰正则
+ * `(\{[\s\S]*?\})` 在对象**有嵌套**时会在第一个 `}` 就截断 —— v1.5.226 给 META 加了 `recipe.env` 之后
+ * 这个形状就真实存在了）。`avoid='_META'` 是必需的：`EPIRUS_CHAMPION_3P_META` **写在 `_3P` 之前**，
+ * 不跳过就会把元数据当权重包抽出来。 */
+const packJson = extractJsonObject(src, 'window.EPIRUS_CHAMPION_3P', '_META');
+const metaJson = extractJsonObject(src, 'window.EPIRUS_CHAMPION_3P_META');
+if (!packJson) { console.error('⛔ 源文件里找不到（或花括号不配平）window.EPIRUS_CHAMPION_3P'); process.exit(4); }
+if (!metaJson) { console.error('⛔ 源文件里找不到（或花括号不配平）window.EPIRUS_CHAMPION_3P_META'); process.exit(4); }
+/* 线上槽的 META **是手改坏的**（实测：`js/bundled-champion-3p.js` 少了 `fingerprintRefresh` 的起始引号、
+ * `js/bundled-champion.js` 同类）⇒ 走容错读取并**响亮报告**；超出已知缺陷就抛，绝不静默。 */
+let meta;
+try {
+  meta = parseMetaTolerant(metaJson, SRC).meta;
+} catch (e) {
+  console.error('⛔ ' + SRC + ' 的 META **无法解析**：' + e.message + '\n'
+    + '   （已知形状：手改追加的键少了起始引号 ⇒ `,key:"…"`。容错只修这一种；若是别的损坏，'
+    + '本工具**不猜**。⚠️ 线上槽是**红线文件** ⇒ 修不修由用户裁定。）');
+  process.exit(4);
+}
+if (!/^\{/.test(String(metaJson).trim())) { console.error('⛔ META 不是对象字面量'); process.exit(4); }
+
+console.log('== 换前体检：' + SRC + ' ==');
+/* --exam-first=<百分数>：跳过内部 spawn（沙箱里 Node 的子进程管道可能被拦），
+ * 由调用方先单独跑 `node tools/eval-5p.mjs <局数> 5 77000 <包>` 再把 1st% 传进来。
+ * 这时 meta 里会记 examSource:'cli' 以示区分（内部跑的记 'spawn'）。 */
+const EXAM_FIRST = flag('exam-first', '');
+let first = null, examSource = 'spawn';
+if (EXAM_FIRST !== '') {
+  first = String(EXAM_FIRST);
+  examSource = 'cli';
+  console.log('   多人 3 血考卷 1st = ' + first + '%（由 --exam-first 传入，未内部复跑）');
+} else {
+  const ev = spawnSync(process.execPath, ['tools/eval-5p.mjs', String(EXG), '5', '77000', SRC], { cwd: ROOT, encoding: 'utf8' });
+  const evOut = (ev.stdout || '') + (ev.stderr || '');
+  first = (/\[冠军\]\s*1st=([\d.]+)%/.exec(evOut) || [])[1];
+  console.log('   多人 3 血考卷 1st = ' + (first || '?') + '%（' + EXG + ' 局）');
+}
+/* v1.5.94（第九轮复核 §7-4）：**把 A 考卷降级为诊断量**，并在这里写明为什么 ——
+ * 连续两轮它都与稳健性**反相关**：`role1w-31` A 53.4% ↔ 只枪格 90%；`densE-31` 49.6% ↔ 78%；
+ * `w3r1-31` A 48.3% ↔ 只枪格 100% / 破防 G5 75%+38%。⇒ 若只留一个换包判据，留**最坏格 minimax**。 */
+console.log('   ⚠ A 考卷**只作诊断**：连续两轮它与稳健性反相关（A 最高的包往往最脆）⇒ 换包判据以 G4/G5 的**最坏格**为准。');
+
+/* 自对局活跃度 + E/F/G：**共享指标库**（与 champ-audit 逐字同口径，5 座全是它自己）。
+ * ⚠️ v1.5.18：`--games` 默认从 10 提到 **20** —— G（有效技能数）在小样本下会**系统性偏低**：
+ * 实测同一个冠军 eco-34 的 G = n5:3.08 / n10:2.99 / n20:4.24 / n40:4.54 / n80:4.21 / n160:4.21
+ * （罕见技能还没出现 ⇒ 熵被低估）。用 n=10 去卡 `G<3` 等于把噪声当结论（本项目"阈值是刀锋"的第 N 次）。
+ * B/C/E/F 几列在 n=10 与 n=20 下读数接近（伤害/局 13.60 → 13.50），所以统一用 20 不影响历史可比性。 */
+const W = sandbox();
+/* v1.7.104（用户 10-18：「试一下送盾多的冠军在新环境下能否进池」）：本工具原来**没法**在 SUPPORT_PRIOR 开档下体检，
+ *   而 `全息屏障套给别人` 那条硬门槛 正是被这个先验改写的对象 ⇒ 加一个透传，**默认不设 = 与出厂一致**。
+ *   ⚠ 只透传，不改默认、不改门槛值（门槛由 `audit-lib` 单点定义；10-20 用户裁定把它重定成 **1.5/席 ⇒ 5 席 7.5**，
+ *   ⇒ 那句"`HOLO_GIFT_MAX = 6`"已过期，别再照它读：值现在写的是 `HOLO_GIFT_PER_SEAT * 5`，本工具一行没动）。 */
+/* v1.7.112（用户 10-18「都改成默认 2」）：页面已默认开档 2 ⇒ 本工具**默认也按 2 体检**（`--support=0` 才回到出厂口径）。 */
+const SUPPORT_ARG = flag('support', '2');
+if (SUPPORT_ARG !== '') {
+  const n = Number(SUPPORT_ARG);
+  if (W.EpirusTrainer && typeof W.EpirusTrainer.setSupportPrior === 'function') W.EpirusTrainer.setSupportPrior(n);
+  else { console.error('⛔ --support=<0|1|2> 需要引擎导出 setSupportPrior（当前没有）'); process.exit(6); }
+  console.log('[promote] SUPPORT_PRIOR=' + W.EpirusTrainer.supportPriorOn() + '（部署层先验，不是学到的能力）');
+}
+/* v1.5.63：**必须原生读取**（`unpack(json, true)`）。历史包是 v5/v6 形状，`unpack(json)`（默认嵌入 v7）
+ * 对它们返回 **null** ⇒ 体检直接崩（实测 eco-34.bak：unpack(j)=null / unpack(j,true)=3337 位）。
+ * 规矩见 `audit-lib.loadChamp` 的注释："测量工具必须能读历史形状 —— 保持原生形状读取，不要嵌入"。 */
+const params = W.EpirusPolicy.unpack(JSON.parse(packJson), true);
+/* v1.5.162（§N17）：五道的样本量改成**单一来源** `audit-lib.feasPlan` —— 原先 `--games` 默认 20 与
+ * `EPIRUS_*_GAMES` 的默认值在这里各写一份，而 `train-best` 的 3P 栏另写一份 ⇒ 同一个包两处读出 墙 17.85 vs 18.04。
+ * `--games=` 仍是本工具的显式 override（优先级最高），并且**必须**把 n 印在读数旁边。 */
+const FEAS_N = feasPlan(process.env, (function () {
+  const h = process.argv.find(function (a) { return a.indexOf('--games=') === 0; });
+  return h ? { games: Number(h.split('=')[1]) } : null;
+})());
+const G = FEAS_N.games;
+const sp = selfPlay(W, params, 'multi', G);
+/* ⚠️ 更正（本条原写「v1.5.145（用户裁定"两个模式都判"）：long 也跑一份自对局并进阻断」——**那句话与代码不符**）：
+ *   实测：`fails.push` 那一处（下面的 G 条）从来只判 multi 的 `sp.effSkills`，全文件没有第二处用 `spL` 做阻断
+ *   ⇒ long 的自对局**一直只是打印/feasibility 第四道的输入，从未进过阻断**。同一份文件里
+ *   `:333` 那段自己写的才是实情：「本改动**只补打印、不动任何判据**（阻断仍是 multi 的 `sp.G`，逐字不变）」。
+ *   动因（真实历史）：v1.5.145 是用户追问"这个包不探索时技能广度那么差，怎么过的门？"之后**只补了打印**，
+ *   把"要不要让门取更严的那个"明确 deferred 给用户裁定。
+ *   ⇒ 2026-10-10/11 用户裁定：**long 也阻断**（线沿用同一条 3，与 multi 对称）——见下面两处 G 条。 */
+const spL = selfPlay(W, params, 'long', G);
+const fPass = fieldRate(W, params, 'passive', 'multi');
+const fAct = fieldRate(W, params, 'active', 'multi');
+const dpg = sp.dmgPerGame, drawRate = sp.drawRate;
+console.log('   〔一局里真打得出伤害 · 这局收得了场〕自对局（5 座同一冠军 ×' + G + '）：伤害/局 = ' + dpg.toFixed(1) +
+  '，平局率 = ' + (drawRate * 100).toFixed(0) + '%，回合 = ' + sp.rounds.toFixed(1) +
+  '，全息屏障/局 = ' + sp.holoPerGame.toFixed(1) + '，有效技能数 = ' + sp.effSkills.toFixed(2));
+console.log('   穿透卡落地命中（自对局）：' + (sp.pierceKeys || []).map(function (k) {
+  return ((W.EpirusRules.byKey[k] || {}).name || k) + '=' + ((sp.landByKey || {})[k] || 0);
+}).join('  '));
+console.log('   〔没人威胁时不是一直摆架势〕E 被动场：旧口径摆架势率 = ' + (fPass.stance * 100).toFixed(0) + '%   ' +
+  '**新口径·无威胁(对手ジ<5)时摆架势 = ' + (fPass.noThreatStanceRate * 100).toFixed(0) + '%**' +
+  '（无威胁回合 ' + fPass.noThreatRounds + '，最长无威胁连摆 ' + fPass.maxNoThreatRun + '）' +
+  '   F 活跃场进攻率 = ' + (fAct.atk * 100).toFixed(0) + '%');
+/* G 的样本下限：见上面 `--games` 的说明（n<20 时熵会被罕见技能的低估拖下去）。 */
+if (G < 20) console.warn('   ⚠️ 自对局只有 ' + G + ' 局：G（有效技能数）在小样本下会系统性偏低，别拿它下结论（n≥20 才收敛）。');
+
+/* v1.5.18（第三方复核 §7-4(1)）：原先只有 3 条 `console.warn`（末尾还写"决定权在你"），
+ * 而 champ-audit 的 E/F 两列**只打印、不参与任何判定** ⇒ "集体防御/打法坍缩"这类形状量出来了也没人挡。
+ * 现在 6 项全部是**阻断条件**；确实要越过就 `--force`，但会在 meta 里留痕（auditFails/auditForced）。 */
+const FORCE = process.argv.includes('--force');
+const fails = [];
+if (dpg < 5) fails.push('伤害/局 ' + dpg.toFixed(1) + ' < 5（很可能是"熬"型冠军：考卷分会被熬骗） ——【一局里真打得出伤害】不成立〔原机器名：伤〕');
+if (drawRate > 0.2) fails.push('平局率 ' + (drawRate * 100).toFixed(0) + '% > 20%（五席同一冠军也打不起来） ——【这局收得了场】不成立〔原机器名：平〕');
+/* v1.5.37（复核 §2-1 + 用户裁定）：**撤掉旧的 ">2 次/局" 普通条件**。
+ * 理由：全息屏障**本来就不能给自己**（自保用原型制御）⇒ "把盾送给别人"是**这张卡的定义**，不是 bug；
+ * 真正的问题是**用得太频繁**。故只保留下面那条**硬门槛**（套给别人 > 6 次/局，不可 --force），
+ * 并把实测分布留档：v7wall-33 = 18.7/局（100% 送人，用户手感异常）vs v7wall-31 = 2.0~2.9/局（正常使用）。
+ * 若将来要给"过度送盾"更细的形状先验（例如"送给当前血量领先者才罚"），再另立指标。 */
+const holoSoftNote = sp.holoPerGame;   // 仅留档，不再作为阻断条件
+/* v1.5.28（第三方复核 §4-2b，用户裁定先做）：**关键穿透卡下限**。
+ * G 只看出手分布的熵 ⇒ "变宽但丢关键卡"能骗过它：v1.5.27 实测 G 4.15→6.55、同时激光剑 0 命中、
+ * 长程反弹墙 85%→0%（对方 4 面反弹墙时它**一枪未发**，被终局收缩耗死）。
+ * 规则：**每一张能穿反弹/穿防御的攻击卡**（规则数据推导：激光剑/坦克/狙击枪/电磁炮）在自对局里
+ * 必须至少落地命中 1 次；一张都没有 ⇒ 阻断（要越过就 --force，并留痕）。 */
+const rw = reflectWall(W, params, 'long', G);
+console.log('   〔对面都摆反弹时不是一枪不发 → 反弹墙〕（4 席 reflectspam · 长程 · ' + G + ' 局）：主动伤害 ' + rw.dmgPerGame.toFixed(2) + '/局' +
+  '，零伤害局 ' + (rw.zeroDamageRate * 100).toFixed(0) + '%' +
+  '，穿透卡命中 ' + rw.pierceLand + '（' + rw.pierceKeys.map(function (k) {
+    return ((W.EpirusRules.byKey[k] || {}).name || k) + '=' + (rw.landByKey[k] || 0);
+  }).join(' ') + '）');
+/* v1.5.28（复核 §3-1 实测）：**反弹墙里穿透卡零命中 = 打不破墙** ⇒ 阻断。
+ * 这是唯一能抓住"G 涨了但激光剑线丢了"的指标：v1.5.27 自对局激光剑命中 20 次、墙里 0 次。 */
+if (rw.pierceLand === 0) {
+  fails.push('反弹墙里穿透卡零命中（' + rw.pierceKeys.map(function (k) {
+    return ((W.EpirusRules.byKey[k] || {}).name || k);
+  }).join('/') + '）⇒ 面对 4 面反弹墙一枪未发（D 列会归零） ——【对面都摆反弹时不是一枪不发】不成立');
+}
+/* ⚠️ v1.5.28 实测：审计 §4-2b 建议的"每张穿透卡在**自对局**里 ≥1 命中"**不能当阻断条件** ——
+ * 坦克与电磁炮是**所有冠军（含历史最好的 eco-34）都没用过**的卡 ⇒ 照字面做会把所有人挡在门外
+ * （与 E/F 的"阈值定在噪声带里"同型）。故降级为**提示**，真正阻断的是下面那条量在**反弹墙**上的门槛。 */
+if (sp.pierceMissing && sp.pierceMissing.length) {
+  const nm = sp.pierceMissing.map(function (k) { return (W.EpirusRules.byKey[k] || {}).name || k; });
+  console.warn('   ⚠️ 提示（不阻断）：自对局里这些穿透卡零命中 ' + nm.join('/') +
+    ' —— 若连**反弹墙**里也是 0 才会阻断；单张冷门卡（坦克/电磁炮）多数冠军都不用。');
+}
+/* v1.5.26（用户裁定）：E 改用**新口径**。旧口径（摆架势回合占比 > 85%）会**误伤合理防御** ——
+ * 用户原话："并不是说不能出防御，特定情况下反而是要出的（比如看到对手攒到 5 ji 防一下大雷），但总不能每回合都这样。"
+ * 实测（10 局被动场）：旧口径 eco-34 89% ✗ / v7press-36 95% ✗；而新口径它们分别是 16% / 46% ✓✓
+ * —— 也就是说旧口径把"有威胁时才防"和"无威胁也一直防"混为一谈了。
+ * 门槛 60%：实测病态样本 v7anneal-34 = 100%（挡），健康样本 1%~46%（放行）。 */
+if (fPass.noThreatStanceRate > 0.6) fails.push('E 无威胁时摆架势 ' + (fPass.noThreatStanceRate * 100).toFixed(0) +
+  '% > 60%（对手ジ还没到 5、没有大雷威胁时，它也一直摆架势） ——【没人威胁时不是一直摆架势】不成立〔原机器名：架〕');
+/* v1.5.27（用户裁定）：F 门槛 35% → **25%**。
+ * 数据：实测所有冠军的 F 都在 22%~35%（v7f-35 34%、v7anneal-34 35%、v7press-36 32%、eco-34 22%）
+ * ⇒ 35% 属于"阈值定在噪声带里"，连**现役冠军自己都过不了**（当年是 --force 推上去的）。
+ * 25% 仍然挡住"正常对局里也不进攻"的形状（eco-34 22% 会被挡），但放过均衡型。 */
+/* v1.5.62（用户裁定）：**F 改用场 A**（4 席脚本猛攻 vs 1 席冠军的"还手率"）。
+ * 旧口径（`fieldRate('active')`）量的是"1 席进攻者 + 4 席冠军自己"的自对局均衡，所有人 22~35%、
+ * 门槛 35%→25% 之后仍靠 `--force` 越过 ⇒ 考核依据本身有问题（见 CHANGELOG v1.5.61 的代码证据）。
+ * 新口径的判别力（当年）：种子 27% ✓ / eco-34 25% ✓ ⇒ 阈值 20% 能把「会还手」与「龟」分开。
+* ⚠ 这一行原本还写着「线上包 13% ✗」—— **10-08 实测已不成立**：同一份 `aggressionProfile` 下线上包是
+*   33.1%（n=40）‖ 33.3%（n=400），而它今天真的在槽里（`promote --dry` 对自己判 ✅ 五道全过）。
+*   假口径宁删不留：那句话等于在说「出厂包过不了自己的门」。 */
+const agg = aggressionProfile(W, params, FEAS_N.aggr);
+/* §E481：这一栏必须**带着分辨率**印。`FEAS_N.aggr` 默认 40 局 ⇒ 20% 量级的率 1.96SE≈12.4pt，而阈值就压在 20% 上
+ *   ⇒ 只印点估计会诱导读者把「19.8 与 20.6」当成能分开的两件事（实测不能：见 `docs/artifacts/e470-out/fielda-margin.mjs`
+ *     的 n=40/100/200/400 阶梯，同一份实现、同一串种子）。抬样本会改判定（属换口径，等用户裁），这里先把噪声印出来。 */
+const FA_SE95 = 1.96 * Math.sqrt(Math.max(agg.fieldA.atk * (1 - agg.fieldA.atk), 1e-9) / (FEAS_N.aggr || 40)) * 100;
+console.log('  〔被围殴时会不会还手 → 场A〕被集火还手率 = ' + (agg.fieldA.atk * 100).toFixed(1) + '% ±' + FA_SE95.toFixed(1) + 'pt(n=' + (FEAS_N.aggr || 40) + ', 1.96SE)（造成伤害 ' + agg.fieldA.dealtPerGame.toFixed(2) +
+  '/局，承受 ' + agg.fieldA.takenPerGame.toFixed(2) + '/局，胜率 ' + (agg.fieldA.winRate * 100).toFixed(0) + '%）' +
+  '  〔对面只攒钱不动 → 场B〕无压进攻 = ' + (agg.fieldB.atk * 100).toFixed(0) + '%（伤害 ' + agg.fieldB.dealtPerGame.toFixed(2) + '/局）' +
+  '  [旧口径 F=' + (fAct.atk * 100).toFixed(0) + '%，仅作历史对照]');
+if (agg.fieldA.atk < 0.20) fails.push('F 被集火还手率 ' + (agg.fieldA.atk * 100).toFixed(1) + '% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕');
+/* v1.5.57（第五轮复核 §6）：**座位对称性**必须进上线体检。
+ * 实测：上线包（v7wall-31）5 席同策略时 long 0 号座 84%、multi 58%（极差 82pt/51pt）——
+ * 玩家真正遇到的对手严重偏座；而此前所有体检项都看不见这件事。
+ * 判据按复核建议：**前置"分出胜负 ≥30%"**（平局过多时"各座≈0%"是空读数）+ **极差 ≥30pt ⇒ 拒**。
+ * 口径一律百分点（曾把"胜场数差"当百分点报出去 ⇒ 结论反了，见 CHANGELOG v1.5.57）。 */
+const ss = seatSymmetry(W, params, 'multi', FEAS_N.seat);
+if (ss.verdict === 'biased') {
+  fails.push('座位对称性：5 席同策略下某座胜率极差 ' + ss.spread.toFixed(0) + 'pt（≥30pt）⇒ 偏座（' +
+    ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '，判胜 ' + ss.decisive + ' 局） ——【坐哪个位置都一样能打】不成立〔原机器名：座〕');
+} else if (ss.verdict === 'unjudgeable') {
+  console.warn('  ⚠ 座位对称性不可判：分出胜负仅 ' + (ss.decisiveRate * 100).toFixed(0) + '%（平局过多）—— 不计入阻断，但别把它当"均衡"');
+} else {
+  console.log('  〔坐哪个位置都一样能打〕座位对称性 OK：极差 ' + ss.spread.toFixed(0) + 'pt（' + ss.pct.map(function (x) { return x.toFixed(0) + '%'; }).join('/') + '）');
+}
+/* ===== 2026-10-25（用户裁定「广度取 b」）：阻断吃**两把量具里更严的那一个** =====
+ *   旧口径（10-10/11 那次裁定）只把 `selfPlay` 的 `effSkills` 送进阻断，而同一份体检里另一把熵量具
+ *   `breadthProfile` 的 `G_eff` **只打印不判** ⇒ 出现"骑线"：`selfPlay long G=3.93 过 ‖ breadthProfile long G_eff=2.64 不过`
+ *   （实测原件 `night-T1-77002`，2026-10-25 16:32 的体检）。用户今天把这一问裁成"取严的"。
+ *   ⚠ 两把都要**先算出来**才能取 min ⇒ 这两行从原来的打印区搬到这里（搬动不改剂量：仍是 `EPIRUS_BREADTH_GAMES || 20` 局）。
+ *   ⚠ 与 `sp`/`spL` 同模式配对：multi 比 `sp.effSkills` 与 `brdM.G_eff`，long 比 `spL.effSkills` 与 `brd.G_eff`
+ *     ——**不许跨模式取 min**（那会把"长程塌缩"和"短程不塌"混成一根轴，正是 §v1.5.145 那次病 shape）。 */
+const brd = breadthProfile(W, params, 'long', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
+const brdM = breadthProfile(W, params, 'multi', Number(process.env.EPIRUS_BREADTH_GAMES || 20));
+const G_M = Math.min(Number(sp.effSkills), Number(brdM.G_eff));
+const G_L = Math.min(Number(spL.effSkills), Number(brd.G_eff));
+if (G_M < 3) fails.push('G 有效技能数 ' + G_M.toFixed(2) + ' < 3（取两把里更严的：selfPlay ' +
+  Number(sp.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brdM.G_eff).toFixed(2) + ' ⇒ 打法坍缩到两三张卡） ——【会用的招不止两三种】不成立〔原机器名：广〕');
+/* v1.6.49（2026-10-10/11 用户裁定「long 也该阻断」）：**long 的广度同样进阻断**，线沿用同一条 3。
+ * 动因：这条腿自 v1.5.145 起只被"打印 + feasibility 第四道"记录，**从未挡过任何候选**（见上面 `spL` 处的更正），
+ *   而 long（5 血，产品常用模式）恰恰是玩家会遇到的赛程 —— 「multi 过门、long 塌成两三张卡」这形状
+ *   以前能一路走到出厂。口径与 multi **逐字对称**（同一个 `selfPlay`、同一个阈值、同一条 G 量）。
+ * ⚠️ 打印那侧（`_gBlocked`）也要跟着改：它原来只认前缀 `indexOf('G 有效技能数') === 0`（**只覆盖 multi 那一条**，
+ *   而本条以 `G(long)` 开头 ⇒ 它**认不到**）⇒ 已把 `_gBlocked` 改成两条前缀都收的 `fails.filter(...)`，
+ *   标题同步改成「门判 multi **与** long」（打印与阻断同源，规矩 44）。 */
+if (G_L < 3) fails.push('G(long) 有效技能数 ' + G_L.toFixed(2) + ' < 3（取两把里更严的：selfPlay ' +
+  Number(spL.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brd.G_eff).toFixed(2) + ' ⇒ 长程打法坍缩到两三张卡） ——【会用的招不止两三种】不成立〔原机器名：广·长程〕');
+/* ===== v1.5.71（第五轮复核 §4-6）：**出厂换包也写一份 feasibility 记录** =====
+ * 病：线上包的 meta 里没有 `feasibility` —— 它是经 tools/upgrade-pack.mjs 换回来的、绕过了训练落盘
+ * 那一步 ⇒ "这个包当年怎么过的五道门"在产物上不可查。
+ * 阈值与 server/train-server.mjs **共用 audit-lib 的 `feasibilityOf`**（单一真源，复核 §4-6）。
+ * ⚠️ 这里**只记录、不新增阻断**：把五道门升级为硬门槛是独立决策（eco-34 的场B 清场=0.00 也会被它挡，
+ * 那会连带否决"换回历史冠军"这条路径）⇒ 见 CHANGELOG v1.5.71 的说明。 */
+/* v1.5.90（第八轮复核 §8-3）：第 6 道判据的两个输入必须在 `feasibilityOf` **之前**算出来（它要进 meta/notes）。
+ * 两个量：① 珠经济**双向**（得珠 / 花珠率）② **输出密度**（每回合出手伤害 / 按ジ占比）。 */
+const dens = densityProfile(W, params, 'long', FEAS_N.density);
+const chgE = chargeProfile(W, params, 'long', FEAS_N.charge);
+const feas = feasibilityOf({ seat: ss, G: sp, G2: spL, G2name: 'long', wall: rw, aggr: agg,
+  density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chgE.gained, spentRate: chgE.spentRate,
+    expiredPerGame: chgE.games ? chgE.expired / chgE.games : 0,
+    zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
+console.log('   可行性〔五道地板：会几招 / 反弹墙 / 被围殴会还手 / 不偏座 / 收得了场〕（与训练落盘同源 · 样本量 ' + FEAS_N.tag + '）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
+  /* ⚠ 2026-10-25「广度取 b」之后，这一行与下面的"广度"栏**可能不同判**：`feasibilityOf` 是**训练落盘口径**（吃 selfPlay 的 G），
+   *   而 promote 的阻断 10-25 起改吃**两把量具取严**。两者不一致时必须在这里点名，否则读体检的人会拿"五道全过"当"能出厂"
+   *   （本仓规矩 44：打印机必须打印门所判的那个量 —— 这条就是它的新变体：**两道口径都要印**）。 */
+  (feas.ok && (G_M < 3 || G_L < 3)
+    ? ' —— ⚠ **但 promote 侧的"广度取严"另判**：G(multi)=' + G_M.toFixed(2) + ' ‖ G(long)=' + G_L.toFixed(2) + '（线 3）' +
+      ' ⇒ **本候选仍被挡**（`feasibilityOf` 那五道不吃取严那条，它是训练落盘的口径）'
+    : '') +
+  '（座位 ' + feas.seatSpread + 'pt/' + feas.seatVerdict + ' · G(multi) ' + feas.G +
+  (feas.G2 != null ? ' · **G(' + feas.G2name + ') ' + feas.G2 + '**' : '') +
+  /* v1.5.167（§N24）：门禁那把 G 只数"发起了几种" ⇒ 与"打得出血几种"**并排印**。
+   * 不印就会漏掉这种包：`G=4.44` 而出手:落地 = 530:237（一半以上出手没变成伤害，`tools/probe-cast-vs-land.mjs` 实测）。 */
+  ' · **兑现 G ' + (sp.effSkills || 0).toFixed(2) + '→' + (sp.effSkillsLand || 0).toFixed(2) +
+  '（' + (sp.landedKeys || 0) + ' 种打上血）' +
+  (spL ? ' / long ' + (spL.effSkills || 0).toFixed(2) + '→' + (spL.effSkillsLand || 0).toFixed(2) : '') + '**' +
+  ' · 墙 ' + feas.wallDmg +
+  '/局 · 场A ' + (100 * feas.fieldA).toFixed(1) + '% · 场B 清场 ' + feas.fieldBClears + '/局' +
+  '（胜率 ' + (100 * (feas.fieldBWinRate || 0)).toFixed(0) + '% —— **规则红利，不作判据**））' +
+  (feas.notes.length ? ' ⚠ ' + feas.notes.join('；') : ''));
+/* ===== 产品代理栏（v1.5.152 · DS 09-22 · 用户裁定"只记录、不阻断"）=====
+ * 真桌装配（1 席冠军 + 4 席脚本）· **ε=0.2 soft**（浏览器实际用的探索率）· 长程。
+ * 为什么单列：同一包同一 ε=0，镜像装配电磁炮 4.30/局、真桌只有 0.10/局（43 倍）⇒ 门禁/体检判的那个数
+ * 是**镜像局特有**的；而"真桌 + ε=0.2"与真机几乎重合 ⇒ 这一栏才是"玩家会看到什么"。
+ * ⚠️ 只打印、不进任何判定（`feas` 的结论逐字不变）；`EPIRUS_NO_PROXY=1` 可关掉省 30 秒。 */
+if (process.env.EPIRUS_NO_PROXY !== '1') {
+  const SK = W.EpirusRules.SK;
+  const PROXY_N = Number(process.env.EPIRUS_PROXY_GAMES || 20);
+  const proxy = fieldProfile(params, 0.2, 'soft', PROXY_N, 4100, 'pool', 'long');
+  const per = function (k) { return ((proxy.keys[k] || 0) / PROXY_N).toFixed(2); };
+  console.log('   产品代理栏（**真桌 1+4 · ε=0.2 soft · 长程 ' + PROXY_N + ' 局 · 只记录不阻断**）：' +
+    '电磁炮 ' + per(SK.RAILGUN) + '/局 · 蓄能 ' + per(SK.CHARGE) + '/局 · 防御类 ' + bpShare(proxy, 'def') +
+    ' · 集火 ' + (proxy.tgtActs ? (100 * proxy.focus / proxy.tgtActs).toFixed(1) + '%' : '—') +
+    ' · 最大ep ' + proxy.maxEp + ' · 局长 ' + (proxy.rounds / PROXY_N).toFixed(1) +
+    ' ⇒ 与真机对照见 `docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §7');
+}
+
+/* v1.5.90（第八轮复核 §6 / §8-3）：**输出密度** —— 把"冠军输给一行最便宜的枪"变成两个可比的数：
+ * 它到底把多少回合花在"按ジ攒一种永远花不掉的东西"上。判据**只打印**（阻断开关见 audit-lib 的
+ * `DENSITY_BLOCK`，现在是 false —— 在位包自己没过它 ⇒ 它现在没有判别力）。 */
+console.log('   输出密度（' + dens.games + ' 局自对局）：每回合出手伤害 ' + dens.dmgPerRound.toFixed(3) +
+  ' · 按ジ占比 ' + (100 * dens.jiShare).toFixed(1) + '% · 伤害卡出手占比 ' + (100 * dens.atkShare).toFixed(1) +
+  '% · 出手 ' + dens.actsPerGame.toFixed(1) + '/局 · 回合 ' + dens.roundsPerGame.toFixed(1) +
+  ' · **零出手局 ' + (100 * dens.zeroAtkRate).toFixed(0) + '%** · 零伤害局 ' + (100 * dens.zeroDealtRate).toFixed(0) + '%' + ' ⇒ ' +
+  (feas.density && feas.density.beadLoopClosed === true
+    ? '**珠经济闭环** ✓（"经济动作有出口"的第一个形态）'
+    : '珠经济未闭环（按ジ攒了花不掉的东西 = 命门）'));
+/* ===== v1.5.91（用户裁定）：**技能广度 S 的权威口径** —— `目标 = H + T·S` =====
+ *   H = 与胜率相关的强度项（fit 主项 = 自对局回报均值；外部标尺 = A 考卷 1st%）
+ *   S = 技能广度（熵，**对卡对称**：不按伤害/费用加权 —— 那会给某张卡专属梯度，见 audit-lib 里那段长注释）
+ *   T = 交换率（`EPIRUS_DIV_W`）
+ * 这里**只测量、只打印**，不参与 fit、不参与阻断。⚠ 必须与 N 一起报（G/S 对样本量很敏感）。 */
+
+/* ===== v1.5.222（qoder 09-25 · E17/E20）：**设防持续性栏** —— 又是"只记录、不阻断"（同 v1.5.152 产品代理栏的治理形状）=====
+ * 起因（两条实测）：① 3P 槽历史上**真正上线过**的冠军里，可比子样本 13 粒有 **4 粒带"对手有钱→转防"体质**（E17 §H-52，
+ *   含 v1.5.104~143 的线上包 `v7seat24-31`）；而它当初"六条全过、广度每项不输在位" ⇒ **不是门不够严，是门里没这一维**。
+ * ② 这一维在 ε=0 镜像里**量不出来**（E18/§H-45：六栏现成读数 ROC 全贴对角线、`按ジ%` 方向还是反的）
+ *   ⇒ 必须单独装配"1 席攒钱替身 + 4 席被评包"并跑**产品口径 + 两档（hold/cycle）同回合配对**。
+ * 单一来源：本栏**不自己仿真**，spawn `tools/probe-defense-cause.mjs --pair=1` 再交 `defense-axis.mjs` 解析（D150 同规矩）。
+ * ⚠️ **只打印，不进任何判定**：`feas` 与阻断结论逐字不变 —— 阈值还没裁（§H-55 线立不出、§H-56 中间带是分布本身的形状，
+ *   两端之间挤着 7 粒 Δ +13.5~+15.6 的包）。关掉省时间：`EPIRUS_NO_GUARD=1`。 */
+if (process.env.EPIRUS_NO_GUARD !== '1') {
+  const GN = Number(process.env.EPIRUS_GUARD_GAMES || 40), GS = Number(process.env.EPIRUS_GUARD_SEEDS || 2);
+  const ar = spawnSync(process.execPath, ['tools/probe-defense-cause.mjs', '--packs=' + SRC, '--games=' + GN, '--pair=1', '--seeds=' + GS],
+    { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
+  const arows = parsePairTable(ar.stdout);
+  console.log(formatRecord(arows[0], (ar.status === 0 ? '' : '探针 exit ' + ar.status + ' · ') + '真桌 1+4 攒钱替身 · ε=0.2 · ' + GN + ' 局 × ' + GS + ' 种子 · '));
+}
+
+/* ===== v1.5.258（DS · 用户 09-27 点名"奇怪的公式打法"）：**出手形状栏** —— 同样"只记录、不阻断" =====
+ * 用户原话：「不过还是有一些**奇怪的公式打法**」+ 实盘点数出来的两个形状（`results/Ldemo/*.txt`）：
+ *   ① 同一目标死磕（`玩家4→玩家5 ×5` …）② ジ⇄枪 机械交替（30 回合局玩家4 第16~30回合几乎就是 `枪,ジ,枪,ジ,…`）。
+ * 单一来源在 `tools/play-shape.mjs`（纯函数 + NaN 纪律）⇒ 本栏**不自己仿真**，只 spawn 探针并原样打印它那一行
+ *   （与上面 DEFQ 栏同规矩：D150"别处再实现一份"的教训）。口径固定 **ε=0（long）** 以便与五道门同尺。
+ * ⚠️ 只打印，不进任何判定；要跳过它省时间：`EPIRUS_NO_SHAPE=1`。
+ *    ⚠️ 注意这条栏**不是**"空防御" —— 空防御是用户 09-26 裁定的**白防**，口径在 `tools/defense-quality.mjs`
+ *    （上面那一栏已经在印），**不许**在这里再立一套。 */
+if (!process.env.EPIRUS_NO_SHAPE) {
+  const SHAPE_N = Number(process.env.EPIRUS_SHAPE_GAMES || 30);
+  const sr = spawnSync(process.execPath, ['tools/probe-play-shape.mjs', '--packs=' + SRC, '--games=' + SHAPE_N, '--mode=long'],
+    { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
+  const sline = /冠军席: (.+)$/m.exec(sr.stdout || '');
+  console.log('   出手形状栏（同上，**只记录不阻断** · 口径 ε=0/long · n=' + SHAPE_N + ' 局）：' +
+    (sline ? sline[1].trim() : '探针没给出读数（exit ' + sr.status + '）'));
+}
+
+/* ===== v1.5.243（qoder 09-26 · 用户裁定）：**防御质量栏** —— 还是"只记录、不阻断" =====
+ * 用户原话（裁定）：「设一下防御打空率的质量判断，也就是出防御的时候完全没人打他就算白防御了（被穿透算防御半有效）」
+ *   ⇒ 三档分类与质量分（(有效 + 0.5×被穿透) / 防御手数）的**单一来源在 `tools/defense-quality.mjs`**，
+ *     本栏不自己仿真 ⇒ spawn `tools/probe-wasted-play.mjs`（攒钱者装配 · 产品口径）再交同一模块解析（D150 同规矩）。
+ * ⚠️ 只打印，不进任何判定；关掉省时间：`EPIRUS_NO_DEFQ=1`。线还没裁 ⇒ 立线之前这栏只负责让"98% 白防"这种事**看得见**。 */
+if (process.env.EPIRUS_NO_DEFQ !== '1') {
+  const QN = Number(process.env.EPIRUS_DEFQ_GAMES || 30);
+  const qr = spawnSync(process.execPath, ['tools/probe-wasted-play.mjs', '--packs=' + SRC, '--games=' + QN, '--quiet=1', '--assembly=banker'],
+    { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
+  const q = parseQuality(qr.stdout);
+  console.log(formatQualityRecord(q, {
+    err: qr.status === 0 ? '' : '探针 exit ' + qr.status, asm: '攒钱者（1 席 hold + 4 席被评）', eps: 0.2, mode: 'soft'
+  }));
+}
+
+/* `brd`（long）与 `brdM`（multi）已在上面"取严的进阻断"那一段算出来了（2026-10-25 用户裁定「广度取 b」）；
+ *   这里只复用它们做打印，**不再各算一遍**（同一份体检里跑两遍 `breadthProfile` 会让 n 翻倍而读数不变，白花钱）。 */
+/* ===== v1.5.145（用户追问"这个包在不探索的时候技能广度非常差，是怎么通过门禁上线的？"）=====
+ * 实情（**当时**）：**阻断项 `G` 取自 `selfPlay(..., 'multi', G)`，而本行打印的是 `breadthProfile(..., 'long')`**
+ *   ⇒ 同一份体检里出现**两个模式**的广度：门判 multi（现役 4.44 ⇒ 过），用户玩 long（现役 **G_eff 2.79 < 3** ⇒ 不过）。
+ * ⇒ 违反本仓老规矩"**打印机必须打印门所判的那个量**"（METHODOLOGY 第 44 条）。
+ * v1.5.145 那笔**只补打印、没动判据**（阻断当时仍是 multi 的 `sp.G`，逐字不变）；把 long 的 G 与它和门的差**并列报出来**，
+ *   并把"哪边是门"写清楚 —— 否则读体检的人会把只记录的那一栏当成门。
+ * ⚠️ **上面那段是历史，不是现状**：10-10/11 起 long 也进阻断；**2026-10-25 起两个模式都改吃"两把量具里更严的那一个"**（用户裁定「广度取 b」）。 */
+/* §2026-10-10 DS（Claude 整改建议 §训练侧建议 1「修好 promote --dry 打印与阻断不一致后重跑一遍」· U-s202）
+ *   ⇒ §2026-10-10/11 用户裁定「long 也该阻断」，所以这条注释里的"门只判 multi"**已作废**，按下面重写。
+ *   来时路（留着，别当成现状）：`U-s202` 那次的病是**打印与阻断不同源** —— 同一份体检里 `U-s202` 印了
+ *     `✗ G(long) 3.00 < 3` 却没进阻断列表（同批 `U-s203` 的 2.28 进了），因为当时门只吃 `sp.effSkills`（multi），
+ *     而打印另外取了 long 的 `G_eff`。DS 当时的修法是"不动判据、只让打印从 `fails` 派生"，
+ *     并把"要不要让门取更严的那个"标成待用户裁定。
+ *   现在：**两处 G 都进 `fails`**（multi 与 long，同一条线 3）⇒ 打印仍然只认前缀 `G 有效技能数`，
+ *     而 `G(long) 有效技能数 …` 以 `G(long)` 开头 ⇒ **不会**被那个前缀认到（它只覆盖 multi 那一条）
+ *     ⇒ 标题不再能说"门只判 multi"，改成"已阻断（哪几条）"并列印。 */
+const _gBlocked = fails.filter(function (f) { return f.includes('G 有效技能数') || f.includes('G(long) 有效技能数'); });
+console.log('   广度（**门判 multi 与 long，两个模式各取两把量具里更严的那一个**（10-10/11「long 也阻断」‖ **2026-10-25 用户裁定「广度取 b」**· 两条同线 3）：' +
+  (_gBlocked.length ? '已阻断 —— ' + _gBlocked.join(' ‖ ') : '两条都未阻断') + '）〔会用的招不止两三种〕：multi 有效技能数=' + G_M.toFixed(2) +
+  '（取严 = min(selfPlay ' + Number(sp.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brdM.G_eff).toFixed(2) + '）' +
+  ' · **long（= 长程，产品常用模式）** 有效技能数=' + G_L.toFixed(2) +
+  '（取严 = min(selfPlay ' + Number(spL.effSkills).toFixed(2) + ' ‖ breadthProfile ' + Number(brd.G_eff).toFixed(2) + '）' +
+  ((sp.effSkills !== G_M || spL.effSkills !== G_L)
+    ? ' ⇒ ⚠️ **两把量具在同一个模式上分歧过，被"取严"这一条兜住了**（旧口径只看 selfPlay ⇒ 这种骑线会一路放行到出厂）'
+    : '') + '）');
+console.log('   技能广度 S（n=' + brd.N + ' 个非ジ出手 · ' + brd.games + ' 局自对局）：S=' + brd.S.toFixed(3) +
+  ' = 类间 ' + brd.S_cat.toFixed(3) + ' + 类内 ' + brd.S_within.toFixed(3) +
+  ' · S_norm=' + brd.S_norm.toFixed(3) + '（分母 ln ' + brd.K_menu + ' 固定）' +
+  ' · G_eff=' + brd.G_eff.toFixed(2) + '（= 历史"有效技能数"，同值）' +
+  ' · 覆盖 ' + brd.catsUsed + '/' + brd.K_cat + ' 类 · 最大单卡占比（**非ジ**）' + (100 * brd.maxCardShare).toFixed(1) +
+  '%（' + (brd.maxCardKey || '—') + '）');
+console.log('     各类占比：' + Object.keys(brd.catShares).map(function (c) {
+  /* v1.5.101（第十轮复核 §4-3）：`energy` 这一档**必须标注含"攒了没花"** —— 否则 25.4% 会被读成
+   * "开始用能量类"，实际是"开始囤积"（候选② 就是这种：energy 25.4% 而 `ep≥3` 决策点 = 0）。 */
+  return (c === 'energy' ? 'energy(含空转/过期珠)' : c) + ' ' + (100 * brd.catShares[c]).toFixed(1) + '%';
+}).join(' · ') + '   ⇒ 目标形状 目标 = H + T·S（H=强度/T=EPIRUS_DIV_W）；本行**只记录**');
+/* v1.5.93：**功能角色**那一层（8 角色）与 4 个 `cat` 并存 —— 一眼看出"更细的分区是否真的不同"。 */
+console.log('     功能角色（' + brd.K_role + ' 个）：类间 ' + brd.S_role.toFixed(3) + ' · 角色内 ' + brd.S_roleWithin.toFixed(3) +
+  ' · 覆盖 ' + brd.rolesUsed + '/' + brd.K_role + ' · G_role=' + brd.G_role.toFixed(2) +
+  '（4 类老口径对照：类间 ' + brd.S_cat.toFixed(3) + ' · 覆盖 ' + brd.catsUsed + '/' + brd.K_cat + ' 类）');
+console.log('     角色占比：' + Object.keys(brd.roleShares).map(function (r2) {
+  return r2 + ' ' + (100 * brd.roleShares[r2]).toFixed(1) + '%';
+}).join(' · '));
+/* ===== 2026-10-29（DS 落的反退化门 · 千问 13:4x 按实测改成**记录栏**，升阻断等用户点名） =====
+ * 病是真的，而且尺上有数：一只"只**反弹**"（`reflect`，cost=0 的后手防御；**不是** 3EP 的镜面反射 `mirror`，后者 0.3%）
+ *   的笨蛋在这套 arena 上夺1 **65.3% > v7 40.4%**（机制：反弹把敌方枪/坦克伤害记为**自己的** source，长局全灭后按累计伤害判胜）
+ *   （锚 `scratch/ladder-anchor.json` ‖ `node tools/proto2/ladder.mjs --guard=…` 现在正确红，exit 4）。
+ *   ⚠ DS 原注释写 66.7%、锚里是 65.3%——我 13:4x 一度判它"引错了尺"，那是**我的归因错**：
+ *     同一枚尺上 reflect 夺1 = 20 局/格 64.7% ‖ 40 局/格 66.6% ‖ 120 局/格 65.3% ⇒ 那个区间是**剂量**给的，引用要带剂量。
+ * 但"60% 这条线当阻断"现在站不住，两条都是这一次量出来的（`docs/research/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）：
+ *   ① **池里就有人在上面**：全池 30 枚同口径（long ‖ multi 各 20 局）扫，≥60% 的有 **5 枚**
+ *      `G12H1 66.4‖72.3 · R-s123 71.0 · N5L-30 66.6 · v7l2c-101 63.0‖63.1 · SHIPPED-Ldemo 63.0`
+ *      ⇒ 门一上就否掉 1/6 个在册成员。而"只会一招"属哪一层，是你 10-28 那句裁度（单包只判"任何风格都不该有的缺陷"、能力覆盖归整池），不是我能从数里推的。
+ *   ② **门自己的剂量不够**：promote 缺省 20 局/模式 ⇒ 同一枚包 20 局读 63.0%、60 局读 **51.9%**（`SHIPPED-Ldemo`），
+ *      带内跨档摆动最大 12.6pt ⇒ 这条线在缺省剂量下**跨批可翻**，红绿量的不是包，是剂量。
+ * ⇒ 所以现在**只打印、不阻断**；接线保留"两模式各判、取更严的那个"（与上面"广度取严的进阻断"同形，10-25 用户裁定）。
+ *   要升阻断：用户点名后在本段末尾补 `fails.push(...)`，并把 `EPIRUS_BREADTH_GAMES` 缺省抬到 60——否则 ② 会让同一枚包判出两个结果。
+ *   样本 < 100 个非ジ出手 ⇒ 判"不判"（样本不足不是合格），这条留 DS 的原形状；本轮全池最小 n = 482，没有一枚走这条路。 */
+const dgL = degeneracyVerdict(brd), dgM = degeneracyVerdict(brdM);
+const dgStrict = (dgM.share || 0) > (dgL.share || 0) ? dgM : dgL;      /* 取严 = 两模式里占比更高的那一个 */
+const fmtDg = (dg) => (isFinite(dg.share) ? (100 * dg.share).toFixed(1) + '%（' + (dg.key || '—') + ' · n=' + dg.N + '）' : '读不出（' + dg.reason + '）');
+console.log('   反退化栏（非ジ最大单卡占比 ‖ 两模式各判、取更严 ‖ **只记录，不阻断**）：long ' + fmtDg(dgL) + ' ‖ multi ' + fmtDg(dgM)
+  + ' ⇒ 取严判 `' + dgStrict.level + '`（阈值 ' + (100 * dgStrict.maxShare) + '% ‖ 剂量 ' + Number(process.env.EPIRUS_BREADTH_GAMES || 20)
+  + ' 局/模式 ‖ 这一档跨档摆动实测最大 12.6pt）' + (dgStrict.fail ? ' ‖ 若升阻断这一枚会被拒（等用户裁）' : ''));
+/* ===== v1.5.71（第五轮复核 §4-2）：**狙击场探针** —— 只记录，**暂不阻断** =====
+ * 标定（40~60 局/包）把复核建议的判据否掉了：复核建议"靶向率 ≥20%"，但**它没有判别力** ——
+ * 种子冠军 45.3% / eco-34 47.7% / 线上包 43.8%，全都远高于均匀 25% ⇒ 谁也分不开。
+ * 真正分开的是**低压力场里的出手与目标多样性**：种子 2.73 伤害/局、打过 2~4 个人；
+ * eco-34/线上 0.47~0.53/局、37~40 局里只打过 **1 个**人（"只盯一个靶子"= 身份映射家族的另一面）。 */
+const snf = sniperField(W, params, 'long', Number(process.env.EPIRUS_SNIPER_GAMES || 20), 'mixed');
+console.log('   狙击场（1 席狙击 + 3 席被动 · ' + snf.games + ' 局）：自身伤害 ' + snf.dmgPerGame.toFixed(2) +
+  '/局（出手 ' + snf.attacksPerGame.toFixed(2) + '/局）· 平均打过 ' + snf.spreadAvg.toFixed(2) + ' 个人' +
+  ' · 靶向率 ' + (100 * (snf.aimedAtSniperRate || 0)).toFixed(1) + '%（均匀 25%，**已知无判别力**）' +
+  ' · 存活 ' + (100 * snf.survivalRate).toFixed(0) + '% · 胜率 ' + (100 * snf.winRate).toFixed(0) + '%');
+/* ===== v1.5.78（第七轮复核 §11）：珠经济判据改成**双向** =====
+ * 复核指出我的"浪费率 0%"是**把行为删掉**刷出来的：新包连"蓄能"这一步都不做了（0.00~0.06/局），
+ * 而整条珠经济（蓄能 → 电磁炮/天火）在四代包里一次都没闭环过 ⇒ 只看 `wasteRate` 它永远绿。
+ * ⇒ 同时报"花珠率"（花掉/得珠）：**只有"得珠 > 0 且花珠率 > 0"才算闭环**，与复核 §11 的建议一致。 */
+const chg = chgE;   // v1.5.90：这次调用已提到 `feasibilityOf` 之前（第 6 道判据要用它的 gained/spentRate）⇒ 此处复用，别重复跑
+console.log('   〔攒下来的珠有没有囤成过期废物〕珠经济（' + chg.games + ' 局）：蓄能 ' + chg.chargesPerGame.toFixed(2) + '/局 · 得珠 ' + chg.gained +
+  ' · 过期 ' + chg.expired + ' · **花掉 ' + chg.spent + '** · 浪费率 ' + (100 * chg.wasteRate).toFixed(0) +
+  '% · **花珠率 ' + (100 * chg.spentRate).toFixed(1) + '%** · 过期 ' + (chg.games ? (chg.expired / chg.games).toFixed(1) : '—') + '/局' +
+  /* v1.5.101（第十轮复核 §4-2）：判据与 `feasibilityOf` 的**双条件**对齐 ——
+   * 旧口径"得珠>0 且花掉>0"会被"象征性花一颗"点亮（候选② 花/得 0.12% ⇒ 假绿）。 */
+  (chg.gained > 0 && chg.spentRate >= 0.2 && chg.games && (chg.expired / chg.games) <= 1
+    ? '（闭环 ✓：花/得 ' + (100 * chg.spentRate).toFixed(0) + '%、过期 ' + (chg.expired / chg.games).toFixed(1) + '/局）'
+    : '（**未闭环**：这是"没长出能力"，不是"指标好看"）'));
+/* ===== v1.5.78（第七轮复核 §15-1）：把 **G4 克制表 / G5 破防反射** 接进阻断面 =====
+ * 复核把这两条写成可跑代码（`tools/gate-drafts.mjs`）并**先证明了量具的判别力**：
+ *   线上包 G4 两模式 PASS（最克 22%/18%）、G5 PASS（防席 0%）；
+ *   `v7f3-91` FAIL（G4 78~82% / G5 65~75%）、`v7f3-94` FAIL（G4 67~68%）。
+ * ⇒ 满足"能分开已知好与已知坏"⇒ **采纳为阻断**（可用 `--force` 越过并留痕）。
+ * ⚠️ 同一脚本里的 G3（座位 ≤15pt）与 G6（靶向率 ≥40%）**不采纳为阻断**：
+ *   · G3 的阈值**连线上包自己都过不了** ⇒ 不满足判别力检验（座位改用 audit-lib 的 seatSymmetry）；
+ *   · G6 四代包（含线上）全部 3.5~22.5% ⇒ 是"能力未长出"不是某包退化，做成阻断会把所有候选一起挡死；
+ *     路线是把它当能力练（窄奖励/教师示范），见复核 §15-3。 */
+let gateDrafts = null;
+if (!process.argv.includes('--skip-gate-drafts')) {
+  try {
+    const gr = spawnSync(process.execPath, ['tools/gate-drafts.mjs', SRC], { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
+    const outTxt = String(gr.stdout || '') + String(gr.stderr || '');
+    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], band: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [] };
+    for (const ln of outTxt.split('\n')) {
+      /* v1.5.89③：`UNRUN` = 该格**跑不了 / 不可判**（量具自己报的第三态，见 gate-drafts 的 gate()）。
+       * 它既不是 FAIL、更不是 PASS ⇒ 单独收集并**醒目打印**（"不得当作通过"）。 */
+      /* v1.5.202：UNRUN 现在带**方向**（\`UNRUN:弱|强|缺\`）。处置不再"一律只打印" ——
+       * 原来它 \`continue\` 掉了、从不进 \`fails\` ⇒ 一个"基线退化、整格不可判"的候选可以**零阻断**通过，
+       * 全靠一句 print 兜着（而门只钉了那句话的文本）。但也不能无脑阻断：**弱**方向是强包的形状
+       * （候选压着克制表打），阻断它会把最强的候选挡在门外。处置表见 \`tools/unrun-policy.mjs\`。 */
+      const mu = /^\s*UNRUN(?::(\S+))?\s+(G[3-6][^\n]*)$/.exec(ln);
+      if (mu) {
+        const uKind = mu[1] || null, uName = mu[2].trim();
+        const uIsRef = /^G[3-6]\[(线上包|元测试)/.test(uName);
+        const uD = unrunDisposition(uKind, uIsRef);
+        /* v1.5.284（Qoder §20-2 点名：DS 的 v1.5.283 只修了 FAIL 分支，UNRUN 这条路漏了）：
+         * `statusOf` 会产出 `UNRUN:缺` 这种**同样可解析**的格式 ⇒ 重复打印时 UNRUN 也会被 push 两遍
+         * ⇒ "⛔ 体检未过（N 项阻断）"在"有阻断型 UNRUN"的候选上依旧翻倍。补成与 FAIL 分支同形。 */
+        if (uD.blocking && gateDrafts.blocking.indexOf(uName) < 0) {
+          gateDrafts.blocking.push(uName);
+          fails.push('行为门不可判且按判红处置（UNRUN:' + (uKind || '?') + '）：' + uName + ' —— ' + uD.why + '〔量具读不出这一格，不是包过了这一格〕');
+        }
+        const uLine = (uD.blocking ? '【阻断】' : '【只记录】') + 'UNRUN:' + (uKind || '?') + ' ' + uName + ' —— ' + uD.why;
+        if (gateDrafts.unrun.indexOf(uLine) < 0) gateDrafts.unrun.push(uLine);
+        continue;
+      }
+      const m = /^\s*(PASS|FAIL)\s+(G[3-6][^\n]*)$/.exec(ln);
+      if (!m) continue;
+      const nm = m[2].trim();
+      /* v1.5.89①：**参照行只记录、不阻断**。gate-drafts 的输出同时含"线上包 / 元测试"这些**别的对象**的行；
+       * 补入"只枪(1ジ压制·打最肥)"这一格之后，线上包自己在 G4[long] 就是红的（长程被最便宜的一张卡打穿）。
+       * 若把参照行也当阻断：① 任何候选都被连坐（换包实际只能靠 --force）；② 会把"候选不行"这个
+       * **错误结论**传给人 —— 与 v1.5.78 想治的"把没过的当成过了"是同一类错误的反向版本。 */
+      const isRef = /^G[3-6]\[(线上包|元测试)/.test(nm);
+      /* v1.8.44（10-28 午后 · DS 复查挖出来的）：**带档行以前既不进阻断、也从不打印** ⇒ 用 `promote --dry`
+       * 复跑 G5 的人**输出里根本没有 40 档那一格**（DS 就是这样把 ZCode 的"带档 49%"判成"复现不出来"的，
+       * 它读到的 30% 是**关档**那一行）。根因是阻断正则 `/^G5\[/` 匹配不到 `G5带档[` ⇒ 那一行只落到
+       * `recorded`，而 `recorded` 从不在控制台出现。⇒ 这里把它单独收集并**印出来**。
+       * ⚠ 只加可见性，**阻断集合一字不动**：带档要不要升成阻断、以及用户 10-12「按上线档算」那条裁定
+       * 怎么在代码里表达，都在待裁里（ACCEPTANCE-LINES §四⑧），不由这次措辞/可见性改动代裁。 */
+      if (!isRef && /^G5带档\[/.test(nm)) {
+        if (gateDrafts.band.indexOf(nm) < 0) gateDrafts.band.push(m[1] + ' ' + nm);
+      }
+      if (m[1] === 'FAIL' && !isRef && (/^G4\[/.test(nm) || /^G5\[/.test(nm))) {
+        /* v1.5.283（DS · Qoder §F-1 点名交给我）：**同一格会被印两遍** ⇒ 旧代码把阻断**数两遍**，
+         * 于是 "⛔ 体检未过（N 项阻断）" 里的 N 不可信（判定不受影响，但人会被数字误导）。
+         * 实测根因（不是 stdout+stderr 拼接）：`node tools/gate-drafts.mjs <pack> >out 2>err` 下
+         *   stdout 里 `G4[…]` 共 **8 行**、唯一格名 **5 个**（每包 long/multi 各出现 2 次），**stderr 0 行**
+         *   ⇒ 是 **gate-drafts 自己重复打印**（工具侧待修，见 §F-1 的后续；promote 侧先按名字去重，保证计数可信）。 */
+        if (gateDrafts.blocking.indexOf(nm) < 0) {
+          gateDrafts.blocking.push(nm);
+          fails.push('行为门未过：' + nm + ' ——【一套固定操作能不能稳赢它 / 纯防御能不能收场】不成立');
+        }
+      } else if (isRef && m[1] === 'FAIL') {
+        if (gateDrafts.recorded.indexOf('参照(不阻断) FAIL ' + nm) < 0) gateDrafts.recorded.push('参照(不阻断) FAIL ' + nm);
+      } else if (/^G6\[/.test(nm)) {
+        if (gateDrafts.recorded.indexOf(m[1] + ' ' + nm) < 0) gateDrafts.recorded.push(m[1] + ' ' + nm);
+      } else if (m[1] === 'FAIL') {
+        if (gateDrafts.recorded.indexOf('FAIL ' + nm) < 0) gateDrafts.recorded.push('FAIL ' + nm);
+      }
+    }
+    /* v1.5.129 §7-3 的自记账修复（qoder-research 0920）：gate() 打印是**两行**
+     * （标题行 + 缩进的 detail 行，"实测 X%" 在 detail 里）⇒ 旧正则带 `[^\n]*` 永不跨行 ⇒
+     * `meta.gateDrafts.g6` 恒 `{}`（旧包也一样）。跨行版：标题与 detail 之间的 `\n\s*`。 */
+    const mg6 = /G6\[([^\]]+)\] 靶向率[^\n]*\n\s*实测 ([\d.]+)%/g; let t6;
+    while ((t6 = mg6.exec(outTxt))) gateDrafts.g6[t6[1]] = Number(t6[2]);
+    /* v1.5.129（用户裁定②）：把 **G4 克制表的口径 id** 与**这一轮自己越过的 G4 行**分别留下 ——
+     * `np-test D67` 靠它们把"线上包 G4 全红"从硬红降为"**已记录的例外**"，**且只在口径 id 相等时认账**。 */
+    const m4p = /G4POOL\s+([0-9a-f]{8})/.exec(outTxt);
+    gateDrafts.g4Pool = m4p ? m4p[1] : null;
+    /* qoder-research 0920（RESEARCH-LOG §3-2）：**实现身份 id** 第二绑 —— 改某一格 chooser 的源码
+     * （不改键名/阈值）以前洗不掉旧例外，从现在起会。缺这一行 ⇒ 视同无留痕（与 g4Pool 同罪）。 */
+    const m4i = /G4IMPL\s+([0-9a-f]{8})/.exec(outTxt);
+    gateDrafts.g4Impl = m4i ? m4i[1] : null;
+    gateDrafts.g4Blocking = gateDrafts.blocking.filter(function (x) { return /^G4\[/.test(x); });
+    if (!gateDrafts.g4Pool) {
+      console.log('   ⚠ 没能从 gate-drafts 输出里解析到 `G4POOL` 口径 id ⇒ 这次越线的 G4 例外**不算留痕**（D67 会照旧判红）');
+    }
+    if (!gateDrafts.g4Impl) {
+      console.log('   ⚠ 没能解析到 `G4IMPL` 实现身份 id ⇒ 同上，例外**不算留痕**（gate-drafts 少了那一行？）');
+    }
+    console.log('   G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：' +
+      (gateDrafts.blocking.length ? '✗ ' + gateDrafts.blocking.join('；') : '✅ 候选自己全过'));
+    console.log('   G5 带上线档（= **玩家实际遇到的形状**，阈值 ≤40；上面那条阻断判的是关掉上线档的 ≤25 ‖ **这一行只记录、不阻断**）：' +
+      (gateDrafts.band.length ? gateDrafts.band.join('；') : '（没解析到带档行 ⇒ 这一格**读不出**，不许当"带档没问题"）'));
+    const refFails = gateDrafts.recorded.filter(function (x) { return x.indexOf('参照(不阻断) FAIL') === 0; });
+    if (refFails.length) {
+      console.log('   ⚠ 参照行（**不阻断**）：' + refFails.length + ' 条 —— **在位包自己没过** ⇒ 这是"该换包"的信号，\n      ' +
+        '不是"候选不行"。为了它去 --force 越过候选门是搞错了主语。\n      ' + refFails.join('\n      '));
+    }
+    if (gateDrafts.unrun.length) {
+      const uBlock = gateDrafts.unrun.filter(function (x) { return x.indexOf('【阻断】') === 0; }).length;
+      console.log('   ⛔ UNRUN（量具跑不了 / 不可判）' + gateDrafts.unrun.length + ' 格，其中**阻断** ' + uBlock + ' 格：\n      ' +
+        gateDrafts.unrun.join('\n      ') +
+        (uBlock ? '' : '\n      （剩下的都是"基线太弱 ⇒ 候选压着克制表打"或参照行 ⇒ 只记录、不阻断）'));
+    }
+    console.log('   G6 靶向率（只记录不阻断）：' + JSON.stringify(gateDrafts.g6));
+  } catch (e) {
+    console.log('   ⚠ G4/G5 行为门未能运行（不阻断，但**别当通过**）：' + String(e && e.message || e));
+    gateDrafts = { error: String(e && e.message || e) };
+  }
+}
+/* ===== v1.6.61（用户 10-11 裁定「先做 C」· 承接 Claude 整改建议 §训练侧 · 千问 §E580 草案）=====
+ * 为什么加 `--json`：门禁 D41 里钉这条 long 广度断口的三条腿，原来全是**源码正则 + 匹配中文措辞**。
+ *   它们的病（Claude 点名，本班当场实测复现）：
+ *     ① 有人把阈值 3 改成 4 ⇒ 腿红（那是**换判据**，不是坏）；
+ *     ② 有人把 `fails.push` 挪进永远进不去的分支 ⇒ 腿**反而绿**（它只查文本在不在）⇒ 断口被删也一声不响。这正是要治的病。
+ *   ⇒ 正确守法是**行为级**：喂一枚"已知只栽 long 广度"的入库包，看它**真的被挡**、且阻断类别**就是** long 广度。
+ * 本块只是把判据的**机器可读投影**打出来，一行 `EPIRUS_JSON {...}`：
+ *   不改任何判定 ‖ 不改退出码 ‖ 不改人类可读输出 ‖ 不带 `--json` 时逐字节不变。
+ * ⚠ 类别映射在这里**单一处声明** —— 别把 class 散到每个 `fails.push` 点上（那会把一个真源变成九份）。
+ * ⚠ 用 `writeSync` 而不是 `console.log`：下面 `process.exit(6)` 走的是管道（门里用 spawnCached/spawnSync 收），
+ *   而管道上的 stdout 是异步的 ⇒ `console.log` 有机会在 exit 时被丢掉。本仓对"打印了但没出去"已有多笔教训。 */
+if (process.argv.includes('--json')) {
+  const CLASS_OF = [
+    [/^伤害\/局/, 'dmg-per-game'],
+    [/^平局率/, 'draw-rate'],
+    [/^反弹墙/, 'reflect-wall'],
+    [/^E 无威胁时/, 'stance'],
+    [/^F 被集火/, 'field-a'],
+    [/^座位对称性/, 'seat-symmetry'],
+    [/^G 有效技能数/, 'breadth-multi'],
+    [/^G\(long\) 有效技能数/, 'breadth-long'],
+    [/^行为门/, 'behavior-gate'],
+    [/^全息屏障/, 'holo-gift'],
+  ];
+  const classOf = function (f) { for (const kv of CLASS_OF) if (kv[0].test(f)) return kv[1]; return 'other'; };
+  const _classes = fails.map(classOf);
+  writeSync(1, 'EPIRUS_JSON ' + JSON.stringify({
+    dry: !!DRY, forced: !!FORCE,
+    blocked: fails.length > 0, count: fails.length,
+    classes: _classes,
+    breadthBlocked: _classes.filter(function (c) { return c === 'breadth-multi' || c === 'breadth-long'; }),
+    printSaysBlocked: _gBlocked.map(classOf),
+    G: Number(Number(sp.effSkills).toFixed(4)),
+    G2: Number(Number(spL.effSkills).toFixed(4)),
+  }) + '\n');
+}
+if (fails.length) {
+  console.error('⛔ 体检未过（' + fails.length + ' 项阻断条件）：');
+  for (const x of fails) console.error('   · ' + x);
+  if (!FORCE) {
+    console.error('   ⇒ 已中止，**未换包**。确实要换就加 `--force`（会在 meta 里留下这次越过的条件）。');
+    process.exit(6);
+  }
+  console.warn('   ⇒ --force：强制继续，并把这次越过的条件记进 meta。');
+}
+
+/* 2) 写 bundle：保留权重原样，只补 meta */
+const fp = rulesFingerprint();
+/* ===== v1.5.32：**不可用 --force 越过的硬门槛** =====
+ * 教训（用户实测）：v7wall-33 每局 18.7 次全息屏障、**100% 套在别人身上**（把原型制御白送对手），
+ * 而它正是靠 --force 越过"全息屏障 > 2/局"那条上线的。行为缺陷不该被 --force 放行 ⇒ 单列硬门槛。 */
+const hardFails = [];
+const hOther = Number(sp.holoOtherPerGame || 0);
+console.log('   全息屏障（自对局）：' + sp.holoPerGame.toFixed(1) + ' 次/局，其中**套给别人** ' + hOther.toFixed(1) + ' 次/局');
+/* 阈值标定（实测）：**病态 18.7/局**（v7wall-33，100% 送人、用户手感异常）vs **偶发 2.0/局**（v7wall-31）
+ * ⇒ 硬门槛取 **>6**，只挡"把套盾当主业"的产物；>2 仍留在普通条件里（可 --force）。
+ * 教训同源：阈值不能定在噪声带里（E/F/holo 三次同型）。 */
+if (hOther > HOLO_GIFT_MAX) hardFails.push('全息屏障套给别人 ' + hOther.toFixed(1) + ' 次/局 > ' + HOLO_GIFT_MAX + ' ——【别把"给对手套盾"当主业】不成立〔原机器名：送盾硬门槛〕');
+if (sp.pierceLand !== undefined && sp.pierceLand === 0) hardFails.push('自对局穿透卡零命中 ——【穿得开防的一发都没打上】');
+if (hardFails.length) {
+  console.log('⛔ 硬门槛未过（**--force 也不放行**）：');
+  for (const h of hardFails) console.log('   · ' + h);
+  process.exit(6);
+}
+meta.shippedAs = NOTE || ('multi(3-5P) 默认冠军（由 tools/promote-champion.mjs 提升，源 ' + SRC + '）');
+meta.examScoreAtBuild = first ? Number(first) / 100 : null;
+meta.examMode = 'multi'; meta.examGames = EXG; meta.examSeed = 77000; meta.examAt = new Date().toISOString().slice(0, 10);
+meta.examSource = examSource;                 // 'spawn' = 本工具内部复跑；'cli' = 由 --exam-first 传入
+meta.rulesFingerprint = fp;
+meta.selfPlayDmgPerGame = Number(dpg.toFixed(2));
+meta.selfPlayDrawRate = Number(drawRate.toFixed(3));
+/* v1.5.18：把新增/新启用的门槛项也记进 meta（否则"这个包当年是怎么过门的"又变成不可查）。 */
+meta.selfPlayEffSkills = Number(sp.effSkills.toFixed(2));
+meta.selfPlayDistinctKeys = sp.distinctKeys;
+meta.passiveStanceRate = Number(fPass.stance.toFixed(3));
+meta.passiveNoThreatStanceRate = Number(fPass.noThreatStanceRate.toFixed(3));
+meta.passiveNoThreatRounds = fPass.noThreatRounds;
+meta.passiveMaxNoThreatRun = fPass.maxNoThreatRun;
+meta.pierceLandByKey = sp.landByKey;
+meta.pierceMissingCards = sp.pierceMissing;
+meta.reflectWallPierceLand = rw.pierceLand;
+meta.reflectWallDmgPerGame = Number(rw.dmgPerGame.toFixed(2));
+/* v1.5.71（复核 §4-6）：出厂包也留一份五道可行性记录（与训练落盘同源） */
+meta.feasibility = feas;
+/* v1.5.71（复核 §4-2）：狙击场探针读数也进 meta（独立行为探针，暂不阻断） */
+meta.sniperField = {
+  kind: snf.kind, games: snf.games, dmgPerGame: Number(snf.dmgPerGame.toFixed(2)),
+  attacksPerGame: Number(snf.attacksPerGame.toFixed(2)), spreadAvg: Number(snf.spreadAvg.toFixed(2)),
+  aimedAtSniperRate: (snf.aimedAtSniperRate == null ? null : Number(snf.aimedAtSniperRate.toFixed(3))),
+  survivalRate: Number(snf.survivalRate.toFixed(3)), winRate: Number(snf.winRate.toFixed(3))
+};
+/* v1.5.78（第七轮复核 §15-1）：G4/G5 阻断结论 + G6 记录值进 meta（"能力未长出"要能长期追踪） */
+meta.gateDrafts = gateDrafts;
+meta.activeAttackRate = Number(fAct.atk.toFixed(3));
+meta.auditFails = fails;
+meta.auditForced = fails.length ? FORCE : false;
+/* ===== v1.5.129（用户裁定②）：G4 例外的**留痕块** —— `np-test D67` 的判据就是这三样 =====
+ *  ① `forced` —— 这次确实是"用 `--force` 把一条 G4 阻断行放过"的（而不是碰巧没红）；
+ *  ② `pool`   —— 当时那张克制表的口径 id（`gate-drafts` 打印的 `G4POOL`）；
+ *  ③ `lines`  —— 被放过的具体行（含"最克「…」X%"的读数，读的人不用回翻 CHANGELOG）；
+ *  ④ `impl`（qoder-research 0920，RESEARCH-LOG §3-2）—— 当时那张表的**实现身份**（`G4IMPL`）：
+ *     改了某一格的 chooser 源码而没改键名/阈值时，`pool` 不变但 `impl` 必变 ⇒ 旧例外当场失效、必须重记。
+ * 四者缺一 ⇒ D67 仍判红（判词会写"例外必须为**当前口径**重记"）。这样**改了池子/阈值/格子实现后旧记录自动失效**，
+ * 而不是变成一张"永久免检"的通行证 —— 后者正是本仓最忌讳的形态："门看着在、其实没判"。 */
+const g4Blocked = (gateDrafts && gateDrafts.g4Blocking) || [];
+meta.gate4Pool = (gateDrafts && gateDrafts.g4Pool) || null;
+meta.gate4Impl = (gateDrafts && gateDrafts.g4Impl) || null;
+meta.gate4Forced = {
+  forced: (g4Blocked.length > 0 && !!FORCE),
+  pool: (gateDrafts && gateDrafts.g4Pool) || null,
+  impl: (gateDrafts && gateDrafts.g4Impl) || null,
+  lines: g4Blocked,
+  ts: new Date().toISOString()
+};
+/* v1.5.255（DS）：写回同样用**扫描器**定位 META 段（那条懒惰正则 `metaM` 已删 —— 它在嵌套 META 上会截断，
+ * 留着就是"读用新路、写用旧路"的两套口径）。替换用**函数形式**：`JSON.stringify` 的结果里若含 `$&`/`$'`
+ * 之类序列，字符串形式的替换会被当成特殊模式（本仓栽过"字符串替换吃字符"的形状）。 */
+const metaSeg = extractJsonObject(src, 'window.EPIRUS_CHAMPION_3P_META');
+if (!metaSeg) { console.error('⛔ 找不到（或花括号不配平）META 段 ⇒ 中止（未落盘）'); process.exit(4); }
+const out = src.replace(metaSeg, function () { return JSON.stringify(meta); });
+/* 回读自检：冠军槽必须仍是**能解出参数的包**（第一版写坏槽位时就是这里没查，靠 np-test 才发现）。
+ * v1.5.255：这里也用扫描器（权重对象目前是平铺的，但"读用新路、自检用旧正则"正是同一族的隐患）。 */
+const reChampJson = extractJsonObject(out, 'window.EPIRUS_CHAMPION_3P', '_META');
+const reJson = reChampJson ? JSON.parse(reChampJson) : null;
+const reParams = reJson ? W.EpirusPolicy.unpack(reJson, true) : null;
+if (!reParams || !reParams.length) { console.error('⛔ 自检失败：写出的 bundle 冠军槽解不出参数（已中止，未落盘）'); process.exit(5); }
+/* v1.5.63：`checkPack` 只校验 v7 容器（`o.v !== PACK_VERSION` 直接判 not-ok）；
+ * 旧形状包（v5/v6）走"原生读取 + 长度自检"这条路，否则换回历史冠军会被自检挡死。 */
+const chk = (reJson && reJson.v === 7 && W.EpirusPolicy.checkPack) ? W.EpirusPolicy.checkPack(reJson) : { ok: true };
+if (reJson && reJson.v !== 7) console.log('   旧形状包（v' + reJson.v + '）：跳过 checkPack（只校验 v7 容器）⇒ 已用原生读取 + 长度自检');
+if (chk && chk.ok === false) { console.error('⛔ 自检失败：checkPack ' + JSON.stringify(chk) + '（已中止，未落盘）'); process.exit(5); }
+/* v1.7.121（10-20）：**长程能力在选池时是盲的** —— 实测 `Pearson(环@有ep·安全, 胜率)`：multi = −0.150 ‖ **long = +0.758**。
+ *   池按 multi 的 H 分档 ⇒ 会开环的粒（`v7bead3-82` 50% 环率、`G12H1` 58.5%）在选拔上没有压力。
+ *   ⇒ 这里**只记录**（不阻断、不进任何判据）：跑一次 long 档行为画像，印「环@有ep·安全」。
+ *   ⚠ 放在 `if (DRY)` **之前** —— 否则 pool-add 的 `--run-promote`（走 --dry）看不到这条。 */
+try {
+  const bp = spawnSync(process.execPath, ['tools/behavior-profile.mjs', '--champion=' + SRC,
+    '--buckets=1', '--gamemode=long', '--games=40', '--eps=0'], { cwd: ROOT, encoding: 'utf8', timeout: 600000 });
+  const bl = ((bp.stdout || '') + (bp.stderr || '')).split(/\r?\n/).find(function (l) { return l.indexOf('[桶]') >= 0; }) || '';
+  const m = /有ep·安全 n=(\d+) 环=([0-9.—]+)% ジ=([0-9.—]+)%/.exec(bl);
+  if (m) console.log('\n[long·仅记录] 环@有ep·安全 = ' + m[2] + '%（n=' + m[1] + '）‖ ジ = ' + m[3] + '%  ← 长程投资：安全窗口里开环的频率');
+  else console.log('\n[long·仅记录] 读不出（behavior-profile 没给 [桶] 行）');
+} catch (e) { console.log('\n[long·仅记录] 跳过：' + (e && e.message ? e.message.split('\n')[0] : e)); }
+if (DRY) {
+  console.log('\n🧪 --dry：自检通过但**未写任何文件**（js/bundled-champion-3p.js 与 index.html 均未改动）');
+} else {
+  writeFileSync(BUNDLE, out);
+  console.log('   回读自检：冠军包 ok（参数量 ' + reParams.length + '）');
+
+  /* 3) 刷 index.html 的缓存戳（否则浏览器继续用旧包） */
+  let html = readFileSync(INDEX, 'utf8');
+  const before = (html.match(/\?v=[0-9a-z]+/gi) || [])[0];
+  html = html.replace(/(\?v=)[0-9a-z]+/gi, '$1' + Date.now().toString(36));
+  writeFileSync(INDEX, html);
+  console.log('\n✅ 已提升：' + SRC + ' → js/bundled-champion-3p.js');
+  console.log('   rulesFingerprint = ' + fp + '（bundle 里记的 = ' + fingerprintOfBundle(out) + '）');
+  console.log('   examScoreAtBuild = ' + meta.examScoreAtBuild + '（' + EXG + ' 局）  缓存戳 ' + before + ' → ' + (html.match(/\?v=[0-9a-z]+/gi) || [])[0]);
+  console.log('   ⚠️ 别忘了：node tools/np-test.mjs（D16 指纹 + D14）+ node tools/battle-test.mjs（真浏览器对战）');
+  console.log('   ⚠️ 且注意：localStorage 里已有冠军的用户**不会**被这次换包影响（REVIEW §11.1）。');
+}
+
+/* 4) 自动跑一遍 skill report（用户 2026-09-13：「以后每次冠军有大变化的时候都可以做一下」）
+ * 它回答的是"每个技能的实际强度 vs 使用率"（高使用+负强度=坑 / 零使用+正强度=没学会的强招），
+ * 与 champ-audit 的"打架活跃度"互补 —— 换冠军时正是最该看它的时候。用 --no-skill-report 可跳过。 */
+if (!DRY && !process.argv.includes('--no-skill-report')) {
+  /* §E588（千问 10-11）这一档原来传的是 `meta.n`，那是**这枚包训练时的粒数**，不是产品桌的席数。
+   *   v1.6.62 上槽自动跑出来的那份 `docs/skill-report.html` 因此整份是"3 人局"的（`T8-s114` 的 meta.n=3），
+   *   而冠军在产品里坐的是 5 席桌（人席尺与用户实打都是 5 席）。同一枚包、同一台工具，两档人数读出来的
+   *   使用率列实测差到 6 倍：全息屏障 5.1%(3人) ↔ 0.8%(5人) ‖ 聚能环 0.0% ↔ 0.3% ‖ 真正的落雷 0.2% ↔ 0.4%
+   *   （前者=本次自动跑，后者=DS 手工 `skill-report.mjs 5 6` 那一份）。换冠军的报告是给"要不要上槽"看的 ⇒ 跑在产品形态上。
+   * 另：原来**不传 `--champ=`** ⇒ skill-report 按人数自己挑文件（`N<=2` 会去读 2P 槽 `js/bundled-champion.js`），
+   *   一台只写 3P 槽的 promote 遇到 n=2 的包会给**另一颗包**出报告。现在把刚写进去的文件点名。 */
+  const nP = 5;
+  const outHtml = 'docs/skill-report.html';
+  console.log('\n== 自动跑技能报告（产品形态 ' + nP + ' 席 · 冠军 = js/bundled-champion-3p.js，每条件 6 局）→ ' + outHtml + ' ==');
+  const sk = spawnSync(process.execPath, ['tools/skill-report.mjs', String(nP), '6', outHtml,
+    '--champ=js/bundled-champion-3p.js'], { cwd: ROOT, encoding: 'utf8' });
+  const lines = ((sk.stdout || '') + (sk.stderr || '')).trim().split(/\r?\n/);
+  lines.slice(-8).forEach(function (l) { console.log('   ' + l); });
+  console.log('   （完整报告：' + outHtml + '，可直接双击打开）');
+}

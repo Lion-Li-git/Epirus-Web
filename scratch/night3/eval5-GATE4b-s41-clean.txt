@@ -1,0 +1,36 @@
+[shipbigt] 已按旗标改引擎档：`js/train/evo.js` 的 `BIGT_PUSH = 0`（0 = 关 · 引擎自己的默认档回读为 12，不设旗标就是它） · 目标 = ep 最高的对手（平手取血少、再取座位号小）· 不消耗 `state.rng` · 用量由引擎事件数（`champ.use`），不是工具自己的计数器
+[support] 未设旗标 ⇒ 走**引擎默认档** `SUPPORT_PRIOR = 0`（0 = 引擎默认关；**页面另有默认，见 `js/ui/ui.js`**） ‖ knobs 默认 = pick=weighted skipP=0.6 minEp=3 ⇒ 这一臂不带动作先验
+[shipdrain] 引擎档 = 0（0 = 关）· 窗口 = 自己 hp≤1 **且这张牌可付**（不改 `drainHpMax` ⇒ 不是改规则）· 机制 = 只在 ε 分支里把这张牌**并入探索集**（软提升，不强推）· 本臂 ε=0/uniform
+[sticker] 未设旗标 ⇒ 走**出厂档** `LOCK_NARROW = 0` ‖ `CURSE_PUSH = 0`（两档默认 0 ⇒ 逐位不变）
+=== 5 人局评测 ===
+主体: scratch/ga-arms/GATE4b-s41.js
+meta: {"hotstartFrom":"04907be16715c376","selLand":null,"selKeep":null,"selClear":null,"recipe":{"arm":"GATE4b-s41","seed":41,"gens":400,"games":8,"pop":8,"ringOpps":null,"selPool":null,"hallDedup":null,"oppBlock":{"block":false,"fitGames":25601,"blockedGames":0,"styleGames":0,"styleBlocked":0},"xn2w":0,"xn2g":4,"selLand":0,"selLandGames":20,"selLandTol":0.03,"selKeep":0,"selKeepKeys":null,"selClear":0,"selClearGames":null,"selBigT":null,"selGiftVeto":null,"giftVeto":null,"giftVetoAllSpam":false,"selKeepCastKeys":null,"gaGate":{"caliber":"两模式 effSkills≥3（种类那条 = 产品门 broad）∧ 两模式 effSkillsLand≥参照−0.1（那条 = pool-frontier-lib.isWideVs）","kindsFloor":3,"sameAsBroadKinds":true,"switch":3,"games":6,"band":0.13,"ref":{"gMulti":1.8090985029313964,"gLong":1.4634068737791426,"landMulti":1.7076029777657755,"landLong":1.3993136218216349},"noRefGens":0,"audits":1200,"healthyGens":85,"starvedGens":315,"swapped":47,"eff1Mean":4.13,"lastEff1":"1.0/1.0G ‖ 1.00/1.00兑  1.0/1.0G ‖ 1.00/1.00兑  1.0/1.2G ‖ 1.00/1.27兑","gens":400},"kill":null,"family":null,"trainMode":null,"trainModeEffective":"multi","h2p":null,"h2pEffective":"off","counterOpps":["cnt:targeter","cnt:gunSpam","cnt:ringspam","cnt:protomine","cnt:deadlineburst","cnt:earlypressure","cnt:heavyfire","cnt:deepsaver"],"econOpps":null,"toolkitOpps":null,"poolOpps":null,"bigtChainW":0,"killReward":0,"krTransfer":null,"killRewardProbe":-1,"breadthFloor":null,"env":{"EPIRUS_ARCH2":"S1ob:input=obs3b,gen=3,keySplit=1","EPIRUS_ARM":"GATE4b-s41","EPIRUS_BAND_DIR":"scratch/ga-bands/GATE4b-s41","EPIRUS_COUNTER_OPPS":"targeter,gunSpam,ringspam,protomine,deadlineburst,earlypressure,heavyfire,deepsaver","EPIRUS_GA_BAND":"0.13","EPIRUS_GA_GATE":"3","EPIRUS_GA_GATE_GAMES":"6","EPIRUS_HALL_TRACE":"1","EPIRUS_HALL_TRACE_OUT":"scratch/hall-trace/GATE4b-s41.jsonl","EPIRUS_HOTSTART":"1","EPIRUS_MUT_MODE":"seg","EPIRUS_SEED":"41","EPIRUS_SEEDPACK":"scratch/arms/GD3-SWORD.bak","EPIRUS_T3P_OUT":"scratch/ga-arms/GATE4b-s41.js","EPIRUS_WIDE_FINAL":"1"},"envKeys":15},"breadthFloorAllNarrow":false,"degenerateOnlyWinner":false,"productIsSeed":false,"hallSeedEntries":0,"hallSeedReq":0,"hallSeedAppended":false,"source":"tools/train-3p.mjs","n":3,"gens":400,"games":8,"pop":8,"selSeeds":4,"selSeedBases":[987654,1087654,1187654,1287654],"selSpreadPt":5.63,"ts":"2026-11-01T13:37:30.845Z","firstRate":0.5869791666666666,"top2Rate":0.9189236111111111}
+对手池(7): random defend antidef wall farmer heavyfire deepsaver
+对手场 = 4 个互不相同的脚本，全部 35 组合 × 12 局 = 420 局；含深经济对手的组合 30/35
+随机基线（5 人局 · 公平份额 1/N）: 1st 20.0% / top2 40.0% / top3 60.0%
+
+[冠军] 1st=48.1% 严胜=46.9% 并列=1.2%  2nd=22.9%  3rd=22.4%  4th=4.5%  5th=2.1%   | top2=71.0% top3=93.3%
+    各座位 1st 率: P0=41.9% P1=43.8% P2=48.6% P3=52.9% P4=58.6%
+    前置条件: 主体场均承伤=2.14  平均回合=29.3  转移事件=40  火焰伤害事件=5
+    机制: 自己的攻击被弹回=0.02 次/局  平局率=2%  终局血量=0.90
+    拆分: 含深经济对手 44.4%（360 局）  vs  不含 70.0%（60 局）  Δ=-25.6pt
+    拆分: 含反弹席(reflectspam) -（0 局）  vs  不含 48.1%（420 局）  Δ=-
+[对照 pickRandom] 1st=7.1% 严胜=6.7% 并列=0.5%  2nd=14.8%  3rd=26.4%  4th=26.7%  5th=25.0%   | top2=21.9% top3=48.3%
+    各座位 1st 率: P0=8.6% P1=8.6% P2=7.1% P3=5.7% P4=4.3%
+    前置条件: 主体场均承伤=3.00  平均回合=37.3  转移事件=51  火焰伤害事件=13
+    机制: 自己的攻击被弹回=0.06 次/局  平局率=3%  终局血量=0.07
+    拆分: 含深经济对手 8.1%（360 局）  vs  不含 1.7%（60 局）  Δ=6.4pt
+    拆分: 含反弹席(reflectspam) -（0 局）  vs  不含 7.1%（420 局）  Δ=-
+
+=== 冠军 的经济行为（这套指标才是"货架"的直接读数）===
+决策次数=7974  到达过的最高 ep=6  ep>=3 的决策占比=17.0%  cost>=3 出手占比=7.0%
+  决策时 ep 分带: 0-1=60.5%  2-4=36.3%  5-9=3.2%  10+=0.0%   ← 若 5+/10+ 占比高，则"钱不够"不是约束，问题是**买了什么**
+出手种类=7  分布（前 12）:
+  ジ          55.9%  次数=4456   费用=0
+  枪          12.1%  次数=968   费用=1
+  聚能环        10.4%  次数=830   费用=3
+  蓄能          6.5%  次数=518   费用=1
+  电磁炮         6.2%  次数=493   费用=?
+  激光剑         5.6%  次数=450   费用=2
+  真正的落雷       3.2%  次数=259   费用=5
+耗时 1.5s

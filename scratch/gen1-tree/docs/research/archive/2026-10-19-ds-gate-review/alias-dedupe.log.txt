@@ -1,0 +1,15 @@
+  步 docs/artifacts/A.bak  wrote=true ‖ 新权重 ⇒ 写盘 ‖ 账 0 行
+  PASS ① 第一份正常写盘（无别名可言）  ⇒ 账里 0 行
+  步 docs/artifacts/B.bak  wrote=false ‖ ↷ 同一粒权重已在 `docs/artifacts/A.bak` ⇒ 没写第二份，只登记别名 `docs ‖ 账 1 行
+  PASS ② 第二份不许写真身（§E589 的设计：只登记别名）  ⇒ 账里 1 行
+  步 docs/artifacts/B.bak  wrote=false ‖ ↷ 同一粒权重已在 `docs/artifacts/A.bak` ⇒ 没写第二份，只登记别名 `docs ‖ 账 1 行
+  步 docs/artifacts/B.bak  wrote=false ‖ ↷ 同一粒权重已在 `docs/artifacts/A.bak` ⇒ 没写第二份，只登记别名 `docs ‖ 账 1 行
+  PASS ③ 同一三元组再登记两次 ⇒ 账里仍然只有 1 行（**这就是幂等那一条**）  ⇒ 账里 1 行
+  步 docs/artifacts/C.bak  wrote=false ‖ ↷ 同一粒权重已在 `docs/artifacts/A.bak` ⇒ 没写第二份，只登记别名 `docs ‖ 账 2 行
+  PASS ④ 换了 wantedPath 必须是一条**新**别名（去重不许吞真别名）  ⇒ 账里 2 行
+
+账的内容（wid|canonical|wantedPath 三元组应各不重复）：
+  2026-10-19T07:22:41.791Z	c71661a583696a58	docs/artifacts/A.bak	docs/artifacts/B.bak	alias-dedupe	同一粒的第二名
+  2026-10-19T07:22:42.010Z	c71661a583696a58	docs/artifacts/A.bak	docs/artifacts/C.bak	alias-dedupe	第三个名字
+
+⚑ 这台只验"重复追加"这一件事；§E589"命中真身就不写第二份"的设计本身由它自己的门腿钉着，这里没动判据。

@@ -1,0 +1,82 @@
+{
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 626,
+ "trainG": 469,
+ "testG": 157,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "bigt",
+ "keySplit": 1,
+ "rareOnly": "bigT",
+ "rareFrac": 0.5,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 626,
+  "moved": 0,
+  "gone": 0,
+  "keys": 626,
+  "rare": 351429
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 469,
+    "teacherAgree": 1,
+    "teacherLl": -0.000013715303919213862,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "startAgree": 0.006369426751592357,
+  "startLl": -2.908814974934261,
+  "agree": 1,
+  "ll": -0.000013715303919213862,
+  "wAgree": 1,
+  "nTest": 157,
+  "nTrain": 469,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "bigT",
+    "n": 157,
+    "hit": 157
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

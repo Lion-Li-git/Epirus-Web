@@ -1,0 +1,66 @@
+{
+  "ts": "2026-11-01T08:42:07.548Z",
+  "rows": [
+    {
+      "pack": "scratch/arms/B3-0.005.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "field": "mirror",
+      "eps": 0,
+      "epsK": 5,
+      "epsMode": "soft",
+      "temp": 0.15,
+      "games": 30,
+      "n": 5,
+      "mode": "multi",
+      "dec": 2453,
+      "roundsMean": 23.433333333333334,
+      "drawRate": 0,
+      "epHistogram": {
+        "0": 190,
+        "1": 262,
+        "2": 429,
+        "3": 515,
+        "4": 610,
+        "5": 348,
+        "6": 72,
+        "7": 23,
+        "8": 4
+      },
+      "beads": {
+        "none": 2115,
+        "e": 338
+      },
+      "offered": {
+        "charge": 2249,
+        "ring": 1572,
+        "railgun": 336,
+        "bigT": 447,
+        "sword": 2001,
+        "gun": 2263
+      },
+      "chosenWhenOffered": {
+        "charge": 384,
+        "ring": 0,
+        "railgun": 335,
+        "bigT": 38,
+        "sword": 0,
+        "gun": 0
+      },
+      "chosenWhenNotOffered": {
+        "charge": 0,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 0
+      },
+      "pickKeys": {
+        "ji": 1696,
+        "charge": 384,
+        "railgun": 335,
+        "bigT": 38
+      },
+      "nonJiKinds": 3
+    }
+  ]
+}

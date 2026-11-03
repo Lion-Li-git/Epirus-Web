@@ -1,0 +1,134 @@
+{
+ "tool": "supfit-gd",
+ "tag": "tk-smoke",
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 60,
+ "groups": 300,
+ "trainG": 225,
+ "testG": 75,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "toolkit",
+ "keySplit": 1,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 213,
+  "moved": 87,
+  "gone": 0,
+  "keys": 300
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 225,
+    "teacherAgree": 0.52,
+    "teacherLl": -7.76956127855938,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "startAgree": 0.29333333333333333,
+  "startLl": -2.1821757826835038,
+  "agree": 0.52,
+  "ll": -7.76956127855938,
+  "wAgree": 0.1801192810382527,
+  "nTest": 75,
+  "nTrain": 225,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "guard",
+    "n": 7,
+    "hit": 3
+   },
+   {
+    "key": "reflect",
+    "n": 5,
+    "hit": 2
+   },
+   {
+    "key": "bagua",
+    "n": 3,
+    "hit": 0
+   },
+   {
+    "key": "ji",
+    "n": 33,
+    "hit": 20
+   },
+   {
+    "key": "gun",
+    "n": 6,
+    "hit": 1
+   },
+   {
+    "key": "proto",
+    "n": 1,
+    "hit": 0
+   },
+   {
+    "key": "charge#elec",
+    "n": 8,
+    "hit": 6
+   },
+   {
+    "key": "railgun",
+    "n": 7,
+    "hit": 7
+   },
+   {
+    "key": "jinshield",
+    "n": 1,
+    "hit": 0
+   },
+   {
+    "key": "armor",
+    "n": 1,
+    "hit": 0
+   },
+   {
+    "key": "holo",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "shift",
+    "n": 1,
+    "hit": 0
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

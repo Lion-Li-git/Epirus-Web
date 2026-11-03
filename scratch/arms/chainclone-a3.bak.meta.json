@@ -1,0 +1,63 @@
+{
+ "tool": "chain-clone",
+ "mode": "clone",
+ "parent": "scratch/arms/CEM48c-s7.bak",
+ "evals": 1187,
+ "targetGames": null,
+ "blend": 0,
+ "l2": 0.01,
+ "dagger": 2,
+ "rounds": [
+  {
+   "round": 0,
+   "fx": 1000,
+   "all": 0.75,
+   "act": 0.4416243654822335,
+   "base": 0.11084198361634741
+  },
+  {
+   "round": 1,
+   "fx": 1117,
+   "add": 117,
+   "all": 0.744,
+   "act": 0.38578680203045684,
+   "base": 0.11084198361634741,
+   "daggerStates": 1500
+  },
+  {
+   "round": 2,
+   "fx": 1187,
+   "add": 70,
+   "all": 0.744,
+   "act": 0.38071065989847713,
+   "base": 0.11084198361634741,
+   "daggerStates": 1500
+  }
+ ],
+ "clone": {
+  "agree": 0.744,
+  "agreeAct": 0.38071065989847713,
+  "agreeBefore": 0.398,
+  "agreeActBefore": 0.27411167512690354,
+  "base": 0.11084198361634741,
+  "baseAct": 0.06901568957406524,
+  "flat": 0,
+  "n": 500,
+  "nAct": 197
+ },
+ "container": {
+  "v": 91,
+  "gen": 2,
+  "input": "obs3",
+  "hid2": 24
+ },
+ "lineage": {
+  "parent": "scratch/arms/CEM48c-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "clone": "chain-lib.pickChain",
+   "blend": 0,
+   "dagger": 2
+  }
+ }
+}

@@ -1,0 +1,56 @@
+{
+  "ts": "2026-11-01T12:19:28.752Z",
+  "rows": [
+    {
+      "pack": "scratch/ga-arms/GATE3-s13.js",
+      "container": "v:92 gen3 obs3b n=7993",
+      "field": "mirror",
+      "eps": 0,
+      "epsK": 5,
+      "epsMode": "soft",
+      "temp": 0.15,
+      "games": 30,
+      "n": 5,
+      "mode": "multi",
+      "dec": 3556,
+      "roundsMean": 43.63333333333333,
+      "drawRate": 0.13333333333333333,
+      "epHistogram": {
+        "0": 1789,
+        "1": 1767
+      },
+      "beads": {
+        "none": 3556
+      },
+      "offered": {
+        "charge": 1767,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 1767
+      },
+      "chosenWhenOffered": {
+        "charge": 0,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 1767
+      },
+      "chosenWhenNotOffered": {
+        "charge": 0,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 0
+      },
+      "pickKeys": {
+        "ji": 1789,
+        "gun": 1767
+      },
+      "nonJiKinds": 1
+    }
+  ]
+}

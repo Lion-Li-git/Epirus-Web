@@ -1,0 +1,184 @@
+{
+ "mode": "esa",
+ "seed": 7,
+ "evals": 1120,
+ "pop": 14,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "sigFloor": 0,
+ "sigRestart": 0,
+ "esaSig": null,
+ "arenaPen": 0,
+ "gamesPlanned": 4480,
+ "gamesActualLoop": 4484,
+ "gamesActualHoldout": 220,
+ "gamesActualStartHoldout": 220,
+ "targetGames": null,
+ "netForwards": 218980,
+ "netCandScores": 1694105,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": -0.875,
+ "inLoopBest": 1,
+ "holdoutFit": -0.1423881673881673,
+ "holdoutFirst": 0.2545454545454545,
+ "holdoutTop2": 0.8909090909090909,
+ "holdoutStartFit": -0.17808441558441607,
+ "holdoutStartFirst": 0.23636363636363636,
+ "holdoutStartTop2": 0.9454545454545454,
+ "dFirst": 0.01818181818181816,
+ "dTop2": -0.054545454545454564,
+ "currency": "arena2.clean",
+ "arena": {
+  "fp": "arena2.v2|pool=cc652985/20|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random|highN=1|stratified=0",
+  "temp": 0.15,
+  "shapes": 11,
+  "roster": 51,
+  "pool": 20,
+  "holdGamesPerShape": 20,
+  "holdGames": 220,
+  "draw": 0.045454545454545456,
+  "cur": "clean",
+  "diverse": false,
+  "highN": 1,
+  "stratified": false,
+  "stratCap": 2,
+  "stratMix": 0.5,
+  "divTol": 0.02,
+  "divDelta": 0.1,
+  "divEvery": 10,
+  "divTrigger": 0.5,
+  "esa": {
+   "accepted": 0,
+   "byScore": 0,
+   "byDiv": 0,
+   "divProbes": 0,
+   "parentShare": 0,
+   "acceptDeltas": [],
+   "verifications": 0,
+   "quota": 0,
+   "quotaPerIter": 2,
+   "quotaTopups": 0,
+   "quotaAccepted": 0,
+   "paired": null
+  },
+  "lex": null,
+  "fpen": null,
+  "bestMaxCard": {
+   "key": "guard",
+   "share": 0.27309801715651805,
+   "nonji": 7111
+  },
+  "startMaxCard": {
+   "key": "guard",
+   "share": 0.2676096181046676,
+   "nonji": 7070
+  },
+  "bestByShape": {
+   "2:multi": {
+    "games": 20,
+    "first": 0.25,
+    "draw": 0.2,
+    "score": -0.3,
+    "cleanScore": -0.5
+   },
+   "2:multi4": {
+    "games": 20,
+    "first": 0.5,
+    "draw": 0.1,
+    "score": 0.1,
+    "cleanScore": 0
+   },
+   "2:long": {
+    "games": 20,
+    "first": 0.6,
+    "draw": 0.05,
+    "score": 0.25,
+    "cleanScore": 0.2
+   },
+   "3:multi": {
+    "games": 20,
+    "first": 0.25,
+    "draw": 0.05,
+    "score": -0.08749999999999995,
+    "cleanScore": -0.35
+   },
+   "3:multi4": {
+    "games": 20,
+    "first": 0.25,
+    "draw": 0.05,
+    "score": -0.08749999999999998,
+    "cleanScore": -0.27499999999999997
+   },
+   "3:long": {
+    "games": 20,
+    "first": 0.3,
+    "draw": 0,
+    "score": -0.049999999999999975,
+    "cleanScore": -0.12499999999999996
+   },
+   "5:multi": {
+    "games": 20,
+    "first": 0.1,
+    "draw": 0,
+    "score": -0.125,
+    "cleanScore": -0.1875
+   },
+   "5:multi4": {
+    "games": 20,
+    "first": 0.2,
+    "draw": 0,
+    "score": 0,
+    "cleanScore": -0.125
+   },
+   "5:long": {
+    "games": 20,
+    "first": 0.2,
+    "draw": 0,
+    "score": 0,
+    "cleanScore": -0.0625
+   },
+   "8:multi": {
+    "games": 20,
+    "first": 0.1,
+    "draw": 0,
+    "score": -0.028571428571428525,
+    "cleanScore": -0.08571428571428566
+   },
+   "10:multi": {
+    "games": 20,
+    "first": 0.05,
+    "draw": 0.05,
+    "score": -0.02777777777777779,
+    "cleanScore": -0.055555555555555566
+   }
+  }
+ },
+ "curve": [
+  {
+   "evals": 112,
+   "best": 0.625
+  },
+  {
+   "evals": 280,
+   "best": 0.625
+  },
+  {
+   "evals": 560,
+   "best": 0.6875
+  },
+  {
+   "evals": 840,
+   "best": 0.6875
+  },
+  {
+   "evals": 1120,
+   "best": 1
+  }
+ ],
+ "secs": 23.4,
+ "startLabel": "makePolicy(0.25)",
+ "wrote": "D:/code/Epirus-Web/scratch/gen1-frozen-arms/GEN1-6k-s7.bak"
+}

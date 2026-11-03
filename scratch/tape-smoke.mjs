@@ -1,0 +1,34 @@
+import { sandbox, loadChamp } from '../tools/audit-lib.mjs';
+import { install, readPack2, packInstallCfg } from '../tools/proto2/arch2.mjs';
+const W = sandbox();
+const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay;
+loadChamp(W, 'js/bundled-champion-3p.js');
+const raw = readPack2('scratch/arms/OB3CH-s7.bak');
+install(W, packInstallCfg(raw, {}).cfg);
+const params = Float64Array.from(P.unpack(raw, true));
+const st = S.createState('multi', { next: T.mulberry32(4242) }, 3);
+st.slotSalt = 9;
+const ch = T.policyChooserN(params, 0.15);
+for (let r = 0; r < 12 && !st.over; r++) {
+  const picks = [];
+  for (let pid = 0; pid < 3; pid++) if (st.p[pid].hp > 0) picks.push([pid, ch(st, pid, Play.legalActions(st, pid))]);
+  for (const [pid, pk] of picks) S.attemptAction(st, pid, pk.key, { target: pk.target, target2: pk.target2, bead: pk.bead });
+  W.EpirusResolve.resolveActions(st);
+  W.EpirusResolve.endTurn(st);
+}
+const pid = 0;
+const legal = Play.legalActions(st, pid).filter((x) => x.affordable);
+const cands = P.candidatesFor(st, pid, T.econBase(st, pid, legal), { lockTarget: false });
+const a = P.forwardCands(st, pid, cands, params, { temp: 0.15 });
+const b = P.forwardCands(st, pid, cands, params, { temp: 0.15, wantTape: 1 });
+let ok = true;
+for (let i = 0; i < a.probs.length; i++) if (a.probs[i] !== b.probs[i]) ok = false;
+for (let i = 0; i < a.logits.length; i++) if (a.logits[i] !== b.logits[i]) ok = false;
+console.log('候选', cands.length, '‖ probs/logits 逐位同:', ok);
+const tp = b.tape;
+console.log('tape: 席', tp.svs.length, '‖ xin', tp.xin.length, '‖ afs', tp.afs.length, '‖ keys', tp.keys.join(','));
+console.log('t1/t2:', JSON.stringify(tp.t1), JSON.stringify(tp.t2));
+console.log('sv宽', tp.svs[0].sv.length, '‖ af宽', tp.afs[0].length);
+const L = P.__arch2.L;
+console.log('dims: seatIn', L.seatIn, 'seatH', L.seatH, 'ctxDim', L.ctxDim, 'hid', L.hid, 'actIn', L.actIn, 'actH', L.actH, 'candIn', L.candIn, 'hid2', L.hid2, 'tinterK', L.tinterK, 'interK', L.interK);
+console.log('参数量', params.length);

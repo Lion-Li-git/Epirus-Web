@@ -1,0 +1,60 @@
+{
+ "tool": "tools/proto2/pack2-audit.mjs",
+ "pack": "scratch/arms/GEN2-s7.bak",
+ "era": "代 2（段偏移修正 + obs3 代 2 观测面）",
+ "v": 91,
+ "gen": 2,
+ "arch": "S1o",
+ "dims": {
+  "seatH": 16,
+  "actH": 8,
+  "hid": 32,
+  "hid2": 24,
+  "input": "obs3",
+  "inter": 0,
+  "gen": 2,
+  "dof": 208
+ },
+ "n": 6122,
+ "seg": [
+  {
+   "name": "seatEnc",
+   "off": 0,
+   "len": 464,
+   "fanIn": 28
+  },
+  {
+   "name": "actEnc",
+   "off": 464,
+   "len": 488,
+   "fanIn": 60
+  },
+  {
+   "name": "ctx",
+   "off": 952,
+   "len": 3360,
+   "fanIn": 104
+  },
+  {
+   "name": "cand",
+   "off": 4312,
+   "len": 1752,
+   "fanIn": 72
+  },
+  {
+   "name": "policyHead",
+   "off": 6064,
+   "len": 25,
+   "fanIn": 24
+  },
+  {
+   "name": "qHead",
+   "off": 6089,
+   "len": 33,
+   "fanIn": 32
+  }
+ ],
+ "fixtures": 24,
+ "candEncoded": 301,
+ "dead": null
+}

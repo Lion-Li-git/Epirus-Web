@@ -1,0 +1,236 @@
+/* Epirus 多人（3 人）页面探测：真实 Chrome 驱动 UI，验证人数选择/目标弹窗/回合推进/无 JS 异常。
+ * 用法：node tools/np-probe.mjs [chrome路径] [端口]
+ */
+import { spawn, spawnSync } from 'node:child_process';
+import { writeFileSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/* 位置参数：剔除 --flag（如 --max-ms=N），否则会被当成端口/chrome 路径 */
+const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
+
+const CHROME = ARGV[0] || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const PORT = Number(ARGV[1] || 9351);
+/* v1.5.310（DS 2026-10-01 复核）：URL 从本文件位置现算（原来硬编码绝对路径 ⇒ 换目录/上 CI 必红）。 */
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const URL = 'file:///' + join(ROOT, 'index.html').replace(/\\/g, '/');
+
+const udd = mkdtempSync(join(tmpdir(), 'epirus-np-'));
+const proc = spawn(CHROME, [
+  '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+  '--remote-debugging-port=' + PORT, '--user-data-dir=' + udd, 'about:blank'
+], { stdio: 'ignore' });
+/* --- 自限时 + 收尸（不再用 shell timeout 包 node：那样 node 被杀时
+ * finally 不会执行 → 探针自己起的 headless Chrome 变成孤儿。
+ * 现在由脚本自己计时，到点先杀 Chrome 进程树再退出。用 --max-ms=N 调。 --- */
+const MAX_MS = Number((process.argv.find(function (a) { return /^--max-ms=/.test(a); }) || '').split('=')[1]) || 240000;
+let __closed = false;
+function __killTree() {
+  if (__closed) return; __closed = true;
+  try {
+    if (process.platform === 'win32' && proc && proc.pid) spawnSync('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
+    else if (proc) proc.kill('SIGKILL');
+  } catch (e) { }
+  // 一并删掉自己的临时 profile 目录（否则 %TEMP% 会积成堆）
+  try { rmSync(udd, { recursive: true, force: true }); } catch (e) { }
+}
+const __watchdog = setTimeout(function () {
+  console.error('[guard] 超时 ' + MAX_MS + 'ms，自杀并收尸 Chrome');
+  __killTree(); process.exit(3);
+}, MAX_MS);
+
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function waitJson(url, tries = 60) {
+  for (let i = 0; i < tries; i++) {
+    try { const r = await fetch(url); if (r.ok) return await r.json(); } catch (e) { /* retry */ }
+    await sleep(200);
+  }
+  throw new Error('CDP endpoint not reachable: ' + url);
+}
+
+const errors = [];
+const results = [];
+function check(name, ok, detail) {
+  results.push({ name, ok, detail });
+  console.log((ok ? '  ✔ ' : '  ✘ ') + name + (detail ? '  [' + detail + ']' : ''));
+}
+
+async function main() {
+  const tabs = await waitJson(`http://127.0.0.1:${PORT}/json/list`);
+  const page = tabs.find(t => t.type === 'page');
+  const ws = new WebSocket(page.webSocketDebuggerUrl);
+  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
+  let id = 0; const pending = new Map();
+  ws.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); }
+    else if (m.method === 'Runtime.exceptionThrown') errors.push('EXC: ' + (m.params.exceptionDetails?.exception?.description || m.params.exceptionDetails?.text));
+    else if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') {
+      errors.push('CONSOLE: ' + m.params.args.map(a => a.value || a.description || '').join(' '));
+    } else if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error') {
+      const t = m.params.entry.text || '';
+      if (t.indexOf('ERR_CONNECTION_REFUSED') < 0) errors.push('LOG: ' + t);
+    }
+  };
+  const send = (method, params = {}) => new Promise(res => {
+    const i = ++id; pending.set(i, res);
+    ws.send(JSON.stringify({ id: i, method, params }));
+  });
+  const evalJS = async (expr) => {
+    const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true });
+    if (r.result?.exceptionDetails) throw new Error('eval failed: ' + JSON.stringify(r.result.exceptionDetails.exception?.description));
+    return r.result?.result?.value;
+  };
+  const shot = async (file) => {
+    const r = await send('Page.captureScreenshot', { format: 'png' });
+    writeFileSync(file, Buffer.from(r.result.data, 'base64'));
+  };
+
+  await send('Page.enable'); await send('Runtime.enable'); await send('Log.enable');
+  await send('Page.navigate', { url: URL });
+  await sleep(1800);
+
+  // 切到 3 人
+  await evalJS(`(function(){var s=document.getElementById('sel-players');s.value='3';s.dispatchEvent(new Event('change'));return 1;})()`);
+  await sleep(500);
+
+  const panels = await evalJS(`document.querySelectorAll('#side-1 .mpanel').length`);
+  check('3 人：对手面板 2 个', panels === 2, 'mpanel=' + panels);
+  const names = await evalJS(`Array.from(document.querySelectorAll('#side-0 h3,#side-1 .mpanel h3')).map(function(h){return h.textContent.trim();}).join('|')`);
+  check('3 人：玩家名渲染', /玩家1/.test(names) && /玩家2/.test(names) && /玩家3/.test(names), names);
+  /* v1.6.5：页面不再有「模式」下拉（原来这条判的是"3 人时模式下拉被禁用"）。
+   * 现在人数与血量是两根独立轴 ⇒ 改判**建出来的局**：3 人必须落在多人族模式里，
+   * 而且三张多人专用卡**不该**再被标成"多人模式"（那是 2 人局的屏蔽标记）。 */
+  const probeMode = await evalJS(`(function(){
+    var g = window.EpirusUI.B.state, R = window.EpirusRules;
+    var nm = R.MULTI_ONLY.map(function (k) { return R.byKey[k].name; });
+    var ct = {};
+    document.querySelectorAll('#skillgrid button').forEach(function (b) {
+      var x = b.querySelector('.nm'); if (x && nm.indexOf(x.textContent) >= 0) ct[x.textContent] = (b.querySelector('.ct') || {}).textContent;
+    });
+    return { mode: g.modeKey, hp: g.mode.hp, n: g.p.length, blocked: nm.map(function (k) { return ct[k] === '多人模式' ? 1 : 0; }).join('') };
+  })()`);
+  check('3 人：建出的局确实是多人族模式', /^(multi|multi4|long)$/.test(String(probeMode.mode)), JSON.stringify(probeMode));
+  check('3 人：三张多人专用卡都没被标成「多人模式」（正对照）', probeMode.blocked === '000', JSON.stringify(probeMode));
+  const multiSkills = await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button'));return b.filter(function(x){return !x.disabled;}).length;})()`);
+  check('3 人：可用技能按钮 > 0', multiSkills > 0, '可用=' + multiSkills);
+
+  // 多人困难档：切到困难（用 3P 冠军）跑 3 回合，无 JS 异常
+  await evalJS(`(function(){var s=document.getElementById('sel-diff');s.value='lv:hard';s.dispatchEvent(new Event('change'));return 1;})()`);
+  const aiInfoRaw = await evalJS(`(function(){ try { return JSON.stringify(window.EpirusUI.aiInfo()); } catch (e) { return 'ERR:' + e.message; } })()`);
+  check('3 人：困难档实际使用 3P 冠军', /"champ":true/.test(String(aiInfoRaw)), String(aiInfoRaw));
+  for (let r = 0; r < 3; r++) {
+    await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button')).filter(function(x){return !x.disabled;});if(b.length)b[0].click();return 1;})()`);
+    await sleep(120);
+    const mo2 = await evalJS(`document.getElementById('modal-root').classList.contains('hidden') === false`);
+    if (mo2) { await evalJS(`document.querySelectorAll('#modal-root button')[0].click()`); await sleep(150); }
+    await sleep(500);
+  }
+  const hardRounds = await evalJS(`document.querySelectorAll('#logbox .rnd').length`);
+  check('3 人：困难档（3P 冠军）对局推进', hardRounds >= 3, 'rnd 行=' + hardRounds);
+
+  // 镜面反射：满足 3 ジ 后点击 → 应出现“复制对象 / 输出对象”两级弹窗
+  let mirrorOk = false, mirrorDetail = '';
+  await evalJS(`(function(){window.EpirusUI.B.state.p[0].ep = 5; window.EpirusUI.refresh(); return 1;})()`);
+  await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button')).find(function(x){return x.textContent.indexOf('镜面')>=0 && !x.disabled;});return b?1:0;})()`);
+  await sleep(250);
+  const mirrorEnabled = await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button')).find(function(x){return x.textContent.indexOf('镜面')>=0 && !x.disabled;});return b?1:0;})()`);
+  if (mirrorEnabled) {
+    await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button')).find(function(x){return x.textContent.indexOf('镜面')>=0 && !x.disabled;});b.click();return 1;})()`);
+    await sleep(250);
+    const h1 = await evalJS(`document.querySelector('#modal-card h3') ? document.querySelector('#modal-card h3').textContent : ''`);
+    mirrorDetail = 'h1=' + h1;
+    if (h1.indexOf('复制对象') >= 0) {
+      await evalJS(`document.querySelectorAll('#modal-root button')[0].click()`);
+      await sleep(250);
+      const h2 = await evalJS(`document.querySelector('#modal-card h3') ? document.querySelector('#modal-card h3').textContent : ''`);
+      mirrorDetail += ' h2=' + h2;
+      if (h2.indexOf('输出对象') >= 0) {
+        mirrorOk = true;
+        await evalJS(`document.querySelectorAll('#modal-root button')[0].click()`);
+        await sleep(700);
+      }
+    }
+  }
+  check('3 人：镜面反射两级目标弹窗', mirrorOk, mirrorDetail);
+
+  // 重开一局（前面的困难档/镜面测试可能已把人打死，避免后续点击无效）
+  await evalJS(`(function(){document.getElementById('btn-newgame').click();return 1;})()`);
+  await sleep(500);
+  // logbox 跨局累积 → 取基线，只统计"本局"新增的相抵
+  // （否则数的是历史各局之和，会假报死循环：实测同一份代码可报 0 也可报 78）
+  const cancelsBefore = await evalJS(`(function(){var t=document.getElementById('logbox').textContent||'';return (t.match(/相抵/g)||[]).length;})()`);
+  // 打 8 回合
+  let targetPicked = 0, picks = 0;
+  for (let r = 0; r < 8; r++) {
+    const over = await evalJS(`document.getElementById('overlay-root').classList.contains('hidden') === false`);
+    if (over) break;
+    const clicked = await evalJS(`(function(){
+      var b=Array.from(document.querySelectorAll('#skillgrid button')).filter(function(x){return !x.disabled;});
+      if(!b.length) return 0;
+      var gun=b.find(function(x){return x.textContent.indexOf('\\u67aa')>=0;});
+      (gun||b[0]).click(); return 1;
+    })()`);
+    if (!clicked) break;
+    picks++;
+    await sleep(120);
+    // 目标弹窗（多人专用）
+    const modalOpen = await evalJS(`document.getElementById('modal-root').classList.contains('hidden') === false`);
+    if (modalOpen) {
+      const btns = await evalJS(`document.querySelectorAll('#modal-root button').length`);
+      if (btns > 0) { await evalJS(`document.querySelectorAll('#modal-root button')[0].click()`); targetPicked++; }
+      await sleep(150);
+    }
+    await sleep(500);
+  }
+
+  const round = await evalJS(`(function(){var el=document.getElementById('logbox');return document.querySelectorAll('#logbox .rnd').length;})()`);
+  check('3 人：回合日志推进', round >= 2, 'rnd 行=' + round);
+  check('3 人：出招次数', picks >= 2, 'picks=' + picks);
+  const cancelsAll = await evalJS(`(function(){var t=document.getElementById('logbox').textContent||'';return (t.match(/相抵/g)||[]).length;})()`);
+  const cancels = cancelsAll - cancelsBefore;
+  // 本局相抵 ≤ 回合数（每回合每对最多一次）；≥3 才说明反锁失效（AI 与固定打同一目标的玩家陷入镜像循环）
+  check('3 人：无“互相抵消”死循环', cancels <= Math.max(2, round), '本局相抵=' + cancels + '（累积=' + cancelsAll + '，回合=' + round + '）');
+  const hpShown = await evalJS(`Array.from(document.querySelectorAll('#side-0 .statbar b,#side-1 .mpanel .statbar b')).map(function(b){return b.textContent;}).join(',')`);
+  check('3 人：HP/资源面板有内容', hpShown.length > 0, hpShown.slice(0, 60));
+
+  // 目标选择弹窗是否触发过（枪=对敌技能，3 人应有 2 个目标）
+  check('3 人：目标选择弹窗出现', targetPicked > 0, 'picked=' + targetPicked);
+  // 结束面板应有“查看本局复盘”按钮（不清空对局）
+  const recapBtn = await evalJS(`(function(){
+    try { window.EpirusUI.showRecap(); var t=(document.getElementById('overlay-root').textContent||''); return t.indexOf('复盘')>=0 ? 1 : 0; }
+    catch(e){ return 'ERR:'+e.message; } })()`);
+  check('3 人：本局复盘面板可打开', recapBtn === 1, String(recapBtn));
+  await evalJS(`(function(){document.getElementById('overlay-root').classList.add('hidden');return 1;})()`);
+
+  mkdirSync('docs/artifacts', { recursive: true });
+  await shot('docs/artifacts/np-3p-battle.png');
+
+  // 5 人快测
+  await evalJS(`(function(){var s=document.getElementById('sel-players');s.value='5';s.dispatchEvent(new Event('change'));return 1;})()`);
+  await sleep(500);
+  const p5 = await evalJS(`document.querySelectorAll('#side-1 .mpanel').length`);
+  check('5 人：对手面板 4 个', p5 === 4, 'mpanel=' + p5);
+  for (let r = 0; r < 3; r++) {
+    await evalJS(`(function(){var b=Array.from(document.querySelectorAll('#skillgrid button')).filter(function(x){return !x.disabled;});if(b.length)b[0].click();return 1;})()`);
+    await sleep(120);
+    const mo = await evalJS(`document.getElementById('modal-root').classList.contains('hidden') === false`);
+    if (mo) { await evalJS(`document.querySelectorAll('#modal-root button')[0].click()`); await sleep(150); }
+    await sleep(500);
+  }
+  const log5 = await evalJS(`document.querySelectorAll('#logbox .rnd').length`);
+  check('5 人：回合推进', log5 >= 1, 'rnd 行=' + log5);
+  await shot('docs/artifacts/np-5p-battle.png');
+
+  check('无 JS 异常', errors.length === 0, errors.slice(0, 3).join(' | '));
+
+  const pass = results.filter(r => r.ok).length;
+  console.log('\nNP PROBE: ' + (pass === results.length ? 'OK' : 'FAIL') + ' (' + pass + '/' + results.length + ')');
+  console.log('JS errors: ' + (errors.length ? errors.join('\n') : '(none)'));
+  try { proc.kill(); } catch (e) { /* ignore */ }
+  process.exit(pass === results.length ? 0 : 1);
+}
+
+main().catch(e => { console.error('PROBE ERROR: ' + e.message); try { proc.kill(); } catch (x) { /* ignore */ } process.exit(1); });

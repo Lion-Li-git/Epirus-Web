@@ -1,0 +1,906 @@
+{
+  "ts": "2026-11-01T04:20:04.019Z",
+  "games": 120,
+  "n": 5,
+  "rows": [
+    {
+      "pack": "v7（锚·同尺同档）",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1566,
+      "landedKeys": 5,
+      "effSkillsLand": 3.3489183816743533,
+      "distinctCast": 12,
+      "effKinds": {
+        "1": 9,
+        "2": 9,
+        "5": 8
+      },
+      "maxCastKey": "sword",
+      "maxCastShare": 0.24010382868267358,
+      "maxLandShare": 0.41315453384418904,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "B5-10-31.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1519,
+      "landedKeys": 5,
+      "effSkillsLand": 3.37652031551361,
+      "distinctCast": 11,
+      "effKinds": {
+        "1": 9,
+        "2": 9,
+        "5": 5
+      },
+      "maxCastKey": "charge",
+      "maxCastShare": 0.2870084414247478,
+      "maxLandShare": 0.4707044107965767,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "D4a.js",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1596,
+      "landedKeys": 5,
+      "effSkillsLand": 3.2824428426493015,
+      "distinctCast": 12,
+      "effKinds": {
+        "1": 9,
+        "2": 8,
+        "5": 7
+      },
+      "maxCastKey": "sword",
+      "maxCastShare": 0.2217453505007153,
+      "maxLandShare": 0.4968671679197995,
+      "maxLandKey": "sword",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "E3.js",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1548,
+      "landedKeys": 5,
+      "effSkillsLand": 3.0883431319227643,
+      "distinctCast": 10,
+      "effKinds": {
+        "1": 6,
+        "2": 5,
+        "5": 5
+      },
+      "maxCastKey": "snipe",
+      "maxCastShare": 0.27849075975359344,
+      "maxLandShare": 0.43992248062015504,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "G12H1.js",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1265,
+      "landedKeys": 6,
+      "effSkillsLand": 3.099631762335054,
+      "distinctCast": 20,
+      "effKinds": {
+        "1": 6,
+        "2": 5,
+        "5": 3
+      },
+      "maxCastKey": "ring",
+      "maxCastShare": 0.688724356008021,
+      "maxLandShare": 0.46403162055335967,
+      "maxLandKey": "snipe",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank",
+        "railgun"
+      ]
+    },
+    {
+      "pack": "e78-out__G08-71.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1466,
+      "landedKeys": 5,
+      "effSkillsLand": 3.988497686438398,
+      "distinctCast": 10,
+      "effKinds": {
+        "1": 10,
+        "2": 7,
+        "5": 4
+      },
+      "maxCastKey": "gun",
+      "maxCastShare": 0.31183541377716134,
+      "maxLandShare": 0.44679399727148705,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "e70-out__D02-31.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1128,
+      "landedKeys": 5,
+      "effSkillsLand": 2.735171788233626,
+      "distinctCast": 12,
+      "effKinds": {
+        "1": 9,
+        "2": 8,
+        "5": 8
+      },
+      "maxCastKey": "bagua",
+      "maxCastShare": 0.19282341831916902,
+      "maxLandShare": 0.598404255319149,
+      "maxLandKey": "bigT",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "R-s123.js",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1515,
+      "landedKeys": 5,
+      "effSkillsLand": 3.671206597723311,
+      "distinctCast": 11,
+      "effKinds": {
+        "1": 10,
+        "2": 6,
+        "5": 4
+      },
+      "maxCastKey": "gun",
+      "maxCastShare": 0.46226161697555734,
+      "maxLandShare": 0.4858085808580858,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "S-s120.js",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1406,
+      "landedKeys": 5,
+      "effSkillsLand": 3.2050037287706337,
+      "distinctCast": 11,
+      "effKinds": {
+        "1": 7,
+        "2": 6,
+        "5": 4
+      },
+      "maxCastKey": "sword",
+      "maxCastShare": 0.3688283960501735,
+      "maxLandShare": 0.5860597439544808,
+      "maxLandKey": "sword",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "win-Ldemo.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1517,
+      "landedKeys": 5,
+      "effSkillsLand": 3.8591096224631185,
+      "distinctCast": 10,
+      "effKinds": {
+        "1": 10,
+        "2": 10,
+        "5": 5
+      },
+      "maxCastKey": "ring",
+      "maxCastShare": 0.3386243386243386,
+      "maxLandShare": 0.43243243243243246,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "T8-s114.js",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1566,
+      "landedKeys": 5,
+      "effSkillsLand": 3.3489183816743533,
+      "distinctCast": 12,
+      "effKinds": {
+        "1": 9,
+        "2": 9,
+        "5": 8
+      },
+      "maxCastKey": "sword",
+      "maxCastShare": 0.24010382868267358,
+      "maxLandShare": 0.41315453384418904,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "U2-77001.js",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1542,
+      "landedKeys": 4,
+      "effSkillsLand": 2.8870299472890784,
+      "distinctCast": 11,
+      "effKinds": {
+        "1": 8,
+        "2": 8,
+        "5": 8
+      },
+      "maxCastKey": "gun",
+      "maxCastShare": 0.27709213863060017,
+      "maxLandShare": 0.5583657587548638,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "sword",
+        "railgun"
+      ]
+    },
+    {
+      "pack": "v7bead1-93.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1635,
+      "landedKeys": 4,
+      "effSkillsLand": 2.8755932165911995,
+      "distinctCast": 10,
+      "effKinds": {
+        "1": 7,
+        "2": 6,
+        "5": 6
+      },
+      "maxCastKey": "snipe",
+      "maxCastShare": 0.2993668381480016,
+      "maxLandShare": 0.4691131498470948,
+      "maxLandKey": "sword",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank",
+        "railgun"
+      ]
+    },
+    {
+      "pack": "v7beadseed-82.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1462,
+      "landedKeys": 4,
+      "effSkillsLand": 2.8031986508099713,
+      "distinctCast": 13,
+      "effKinds": {
+        "1": 8,
+        "2": 7,
+        "5": 7
+      },
+      "maxCastKey": "holo",
+      "maxCastShare": 0.22139764996907854,
+      "maxLandShare": 0.49316005471956226,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "railgun"
+      ]
+    },
+    {
+      "pack": "v7cmin3-93.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1553,
+      "landedKeys": 4,
+      "effSkillsLand": 2.6101102755200434,
+      "distinctCast": 9,
+      "effKinds": {
+        "1": 9,
+        "2": 9,
+        "5": 4
+      },
+      "maxCastKey": "snipe",
+      "maxCastShare": 0.29185223997904114,
+      "maxLandShare": 0.46490663232453316,
+      "maxLandKey": "sword",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank",
+        "railgun"
+      ]
+    },
+    {
+      "pack": "e124-out__blk0t40-s31.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1515,
+      "landedKeys": 5,
+      "effSkillsLand": 4.394767446406507,
+      "distinctCast": 10,
+      "effKinds": {
+        "1": 8,
+        "2": 7,
+        "5": 4
+      },
+      "maxCastKey": "ring",
+      "maxCastShare": 0.4708362614195362,
+      "maxLandShare": 0.3788778877887789,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "E59-land-902.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1406,
+      "landedKeys": 5,
+      "effSkillsLand": 4.250008010383617,
+      "distinctCast": 10,
+      "effKinds": {
+        "1": 10,
+        "2": 10,
+        "5": 7
+      },
+      "maxCastKey": "gun",
+      "maxCastShare": 0.2503453992815695,
+      "maxLandShare": 0.4402560455192034,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "N5L-30.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1510,
+      "landedKeys": 5,
+      "effSkillsLand": 3.8675038670469006,
+      "distinctCast": 10,
+      "effKinds": {
+        "1": 10,
+        "2": 10,
+        "5": 3
+      },
+      "maxCastKey": "ring",
+      "maxCastShare": 0.33543230806490676,
+      "maxLandShare": 0.42980132450331127,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "win-R311.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1499,
+      "landedKeys": 5,
+      "effSkillsLand": 3.969859714214468,
+      "distinctCast": 10,
+      "effKinds": {
+        "1": 10,
+        "2": 10,
+        "5": 6
+      },
+      "maxCastKey": "gun",
+      "maxCastShare": 0.31852753270459383,
+      "maxLandShare": 0.44496330887258173,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "sel80.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1520,
+      "landedKeys": 5,
+      "effSkillsLand": 3.9672808401396296,
+      "distinctCast": 10,
+      "effKinds": {
+        "1": 6,
+        "2": 6,
+        "5": 5
+      },
+      "maxCastKey": "gun",
+      "maxCastShare": 0.31965707287201467,
+      "maxLandShare": 0.48289473684210527,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "SP-s30.js",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1435,
+      "landedKeys": 4,
+      "effSkillsLand": 2.4654264827822288,
+      "distinctCast": 11,
+      "effKinds": {
+        "1": 8,
+        "2": 7,
+        "5": 6
+      },
+      "maxCastKey": "sword",
+      "maxCastShare": 0.4290633608815427,
+      "maxLandShare": 0.6919860627177701,
+      "maxLandKey": "sword",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "U-s216.js",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1020,
+      "landedKeys": 4,
+      "effSkillsLand": 2.8741325336672396,
+      "distinctCast": 9,
+      "effKinds": {
+        "1": 6,
+        "2": 6,
+        "5": 4
+      },
+      "maxCastKey": "charge",
+      "maxCastShare": 0.4882747068676717,
+      "maxLandShare": 0.6264705882352941,
+      "maxLandKey": "railgun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "v7bead3-82.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1529,
+      "landedKeys": 5,
+      "effSkillsLand": 2.7085835706809718,
+      "distinctCast": 13,
+      "effKinds": {
+        "1": 7,
+        "2": 7,
+        "5": 7
+      },
+      "maxCastKey": "sword",
+      "maxCastShare": 0.21272792277440114,
+      "maxLandShare": 0.48266841072596467,
+      "maxLandKey": "sword",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "v7force-34.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1582,
+      "landedKeys": 6,
+      "effSkillsLand": 3.3638060176853894,
+      "distinctCast": 9,
+      "effKinds": {
+        "1": 7,
+        "2": 7,
+        "5": 4
+      },
+      "maxCastKey": "snipe",
+      "maxCastShare": 0.4748025061291201,
+      "maxLandShare": 0.4968394437420986,
+      "maxLandKey": "snipe",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "v7l2c-101.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1608,
+      "landedKeys": 5,
+      "effSkillsLand": 2.425946774771251,
+      "distinctCast": 12,
+      "effKinds": {
+        "1": 4,
+        "2": 4,
+        "5": 4
+      },
+      "maxCastKey": "sword",
+      "maxCastShare": 0.6253486210102263,
+      "maxLandShare": 0.6840796019900498,
+      "maxLandKey": "sword",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "v7n1-93.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1522,
+      "landedKeys": 4,
+      "effSkillsLand": 2.1382092508677015,
+      "distinctCast": 9,
+      "effKinds": {
+        "1": 9,
+        "2": 8,
+        "5": 4
+      },
+      "maxCastKey": "snipe",
+      "maxCastShare": 0.5145843461351483,
+      "maxLandShare": 0.7522996057818659,
+      "maxLandKey": "snipe",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank",
+        "railgun"
+      ]
+    },
+    {
+      "pack": "v7new5_005-81.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1662,
+      "landedKeys": 4,
+      "effSkillsLand": 2.2718918295578754,
+      "distinctCast": 5,
+      "effKinds": {
+        "1": 4,
+        "2": 4,
+        "5": 4
+      },
+      "maxCastKey": "gun",
+      "maxCastShare": 0.5371489512975471,
+      "maxLandShare": 0.6817087845968712,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank",
+        "railgun"
+      ]
+    },
+    {
+      "pack": "v7ringB1-93.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1587,
+      "landedKeys": 5,
+      "effSkillsLand": 3.090792724072161,
+      "distinctCast": 12,
+      "effKinds": {
+        "1": 7,
+        "2": 5,
+        "5": 5
+      },
+      "maxCastKey": "gun",
+      "maxCastShare": 0.4427211843496651,
+      "maxLandShare": 0.5986137366099559,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "railgun"
+      ]
+    },
+    {
+      "pack": "v7role1-91.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1600,
+      "landedKeys": 3,
+      "effSkillsLand": 2.688667512352581,
+      "distinctCast": 7,
+      "effKinds": {
+        "1": 4,
+        "2": 4,
+        "5": 4
+      },
+      "maxCastKey": "gun",
+      "maxCastShare": 0.29944779116465864,
+      "maxLandShare": 0.53875,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank",
+        "railgun"
+      ]
+    },
+    {
+      "pack": "v7u1-82.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1491,
+      "landedKeys": 4,
+      "effSkillsLand": 2.72609682278291,
+      "distinctCast": 9,
+      "effKinds": {
+        "1": 7,
+        "2": 7,
+        "5": 7
+      },
+      "maxCastKey": "snipe",
+      "maxCastShare": 0.2788561525129983,
+      "maxLandShare": 0.5975855130784709,
+      "maxLandKey": "snipe",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank",
+        "railgun"
+      ]
+    },
+    {
+      "pack": "v7wall2-97.bak",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1549,
+      "landedKeys": 4,
+      "effSkillsLand": 2.710433489794607,
+      "distinctCast": 14,
+      "effKinds": {
+        "1": 11,
+        "2": 10,
+        "5": 7
+      },
+      "maxCastKey": "gun",
+      "maxCastShare": 0.20590936925903244,
+      "maxLandShare": 0.5461588121368625,
+      "maxLandKey": "sword",
+      "landReadable": true,
+      "pierceMissing": [
+        "tank",
+        "railgun"
+      ]
+    },
+    {
+      "pack": "GD3-RATION.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 968,
+      "landedKeys": 2,
+      "effSkillsLand": 1.0271677349743498,
+      "distinctCast": 4,
+      "effKinds": {
+        "1": 4,
+        "2": 4,
+        "5": 4
+      },
+      "maxCastKey": "ring",
+      "maxCastShare": 0.4339440694310511,
+      "maxLandShare": 0.9958677685950413,
+      "maxLandKey": "bigT",
+      "landReadable": true,
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "RB2P-s13.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1022,
+      "landedKeys": 1,
+      "effSkillsLand": 1,
+      "distinctCast": 2,
+      "effKinds": {
+        "1": 2,
+        "2": 2,
+        "5": 2
+      },
+      "maxCastKey": "charge",
+      "maxCastShare": 0.5,
+      "maxLandShare": 1,
+      "maxLandKey": "railgun",
+      "landReadable": true,
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "RICH-b41-s13.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 906,
+      "landedKeys": 2,
+      "effSkillsLand": 1.638708353402345,
+      "distinctCast": 10,
+      "effKinds": {
+        "1": 5,
+        "2": 3,
+        "5": 2
+      },
+      "maxCastKey": "armor",
+      "maxCastShare": 0.8260360571294779,
+      "maxLandShare": 0.804635761589404,
+      "maxLandKey": "gun",
+      "landReadable": true,
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "BROAD-tkCH-s41.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1090,
+      "landedKeys": 2,
+      "effSkillsLand": 1.967752287740266,
+      "distinctCast": 11,
+      "effKinds": {
+        "1": 6,
+        "2": 4,
+        "5": 4
+      },
+      "maxCastKey": "gun",
+      "maxCastShare": 0.3492428598811578,
+      "maxLandShare": 0.5899082568807339,
+      "maxLandKey": "railgun",
+      "landReadable": true,
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "GD3-RING.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1077,
+      "landedKeys": 2,
+      "effSkillsLand": 1.677689233371592,
+      "distinctCast": 4,
+      "effKinds": {
+        "1": 4,
+        "2": 4,
+        "5": 3
+      },
+      "maxCastKey": "ring",
+      "maxCastShare": 0.8549516801134852,
+      "maxLandShare": 0.787372330547818,
+      "maxLandKey": "bigT",
+      "landReadable": true,
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "CAP-ration-s7.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 999,
+      "landedKeys": 2,
+      "effSkillsLand": 1.1905083904014924,
+      "distinctCast": 4,
+      "effKinds": {
+        "1": 4,
+        "2": 4,
+        "5": 4
+      },
+      "maxCastKey": "bigT",
+      "maxCastShare": 0.325508607198748,
+      "maxLandShare": 0.9579579579579579,
+      "maxLandKey": "bigT",
+      "landReadable": true,
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "GD3-BIGT3.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 790,
+      "landedKeys": 2,
+      "effSkillsLand": 1.0178218042908063,
+      "distinctCast": 3,
+      "effKinds": {
+        "1": 2,
+        "2": 2,
+        "5": 2
+      },
+      "maxCastKey": "charge",
+      "maxCastShare": 0.500090661831369,
+      "maxLandShare": 0.9974683544303797,
+      "maxLandKey": "railgun",
+      "landReadable": true,
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    }
+  ]
+}

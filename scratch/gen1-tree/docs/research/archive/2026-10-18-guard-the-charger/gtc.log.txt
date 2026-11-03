@@ -1,0 +1,33 @@
+=== shape=[focusfire,focusfire,focusfire,focusfire] arm=asis
+## arm=asis ‖ 桌 [focusfire,focusfire,focusfire,focusfire] ‖ mode=multi ‖ 局 150 ‖ 送盾 154（每局 1.03）
+   被护那一席：把长招搓出来 0.0%（0/154） ‖ **死在搓完之前** 98.1%（151/154） ‖ 局终没搓完 1.9%（3/154）
+   arm 席：唯一存活率 34.0%（51/150） ‖ 终局血量名次均值 1.21（1=最高） ‖ churn 目标缺席而不送盾 0 次被挑中
+=== shape=[focusfire,focusfire,focusfire,focusfire] arm=churn
+## arm=churn ‖ 桌 [focusfire,focusfire,focusfire,focusfire] ‖ mode=multi ‖ 局 150 ‖ 送盾 0（每局 0.00）
+   被护那一席：把长招搓出来 —（分母 0） ‖ **死在搓完之前** —（分母 0） ‖ 局终没搓完 —（分母 0）
+   arm 席：唯一存活率 28.0%（42/150） ‖ 终局血量名次均值 1.30（1=最高） ‖ churn 目标缺席而不送盾 0 次被挑中
+=== shape=[focusfire,focusfire,focusfire,focusfire] arm=weak
+## arm=weak ‖ 桌 [focusfire,focusfire,focusfire,focusfire] ‖ mode=multi ‖ 局 150 ‖ 送盾 235（每局 1.57）
+   被护那一席：把长招搓出来 0.0%（0/235） ‖ **死在搓完之前** 100.0%（235/235） ‖ 局终没搓完 0.0%（0/235）
+   arm 席：唯一存活率 26.0%（39/150） ‖ 终局血量名次均值 1.27（1=最高） ‖ churn 目标缺席而不送盾 0 次被挑中
+=== shape=[focusfire,focusfire,focusfire,focusfire] arm=rand
+## arm=rand ‖ 桌 [focusfire,focusfire,focusfire,focusfire] ‖ mode=multi ‖ 局 150 ‖ 送盾 160（每局 1.07）
+   被护那一席：把长招搓出来 0.0%（0/160） ‖ **死在搓完之前** 96.9%（155/160） ‖ 局终没搓完 3.1%（5/160）
+   arm 席：唯一存活率 34.0%（51/150） ‖ 终局血量名次均值 1.21（1=最高） ‖ churn 目标缺席而不送盾 0 次被挑中
+=== shape=[aggro,gunspam,focusfire,deepsaver] arm=asis
+## arm=asis ‖ 桌 [aggro,gunspam,focusfire,deepsaver] ‖ mode=multi ‖ 局 150 ‖ 送盾 211（每局 1.41）
+   被护那一席：把长招搓出来 0.0%（0/211） ‖ **死在搓完之前** 71.6%（151/211） ‖ 局终没搓完 28.4%（60/211）
+   arm 席：唯一存活率 13.3%（20/150） ‖ 终局血量名次均值 1.57（1=最高） ‖ churn 目标缺席而不送盾 0 次被挑中
+=== shape=[aggro,gunspam,focusfire,deepsaver] arm=churn
+## arm=churn ‖ 桌 [aggro,gunspam,focusfire,deepsaver] ‖ mode=multi ‖ 局 150 ‖ 送盾 56（每局 0.37）
+   被护那一席：把长招搓出来 19.6%（11/56） ‖ **死在搓完之前** 80.4%（45/56） ‖ 局终没搓完 0.0%（0/56） ‖ 兑现延迟中位/均值 2.0 回合
+   arm 席：唯一存活率 21.3%（32/150） ‖ 终局血量名次均值 1.61（1=最高） ‖ churn 目标缺席而不送盾 56 次被挑中
+=== shape=[aggro,gunspam,focusfire,deepsaver] arm=weak
+## arm=weak ‖ 桌 [aggro,gunspam,focusfire,deepsaver] ‖ mode=multi ‖ 局 150 ‖ 送盾 233（每局 1.55）
+   被护那一席：把长招搓出来 0.0%（0/233） ‖ **死在搓完之前** 97.4%（227/233） ‖ 局终没搓完 2.6%（6/233）
+   arm 席：唯一存活率 14.7%（22/150） ‖ 终局血量名次均值 1.53（1=最高） ‖ churn 目标缺席而不送盾 0 次被挑中
+=== shape=[aggro,gunspam,focusfire,deepsaver] arm=rand
+## arm=rand ‖ 桌 [aggro,gunspam,focusfire,deepsaver] ‖ mode=multi ‖ 局 150 ‖ 送盾 210（每局 1.40）
+   被护那一席：把长招搓出来 1.4%（3/210） ‖ **死在搓完之前** 80.5%（169/210） ‖ 局终没搓完 18.1%（38/210） ‖ 兑现延迟中位/均值 2.0 回合
+   arm 席：唯一存活率 16.7%（25/150） ‖ 终局血量名次均值 1.60（1=最高） ‖ churn 目标缺席而不送盾 0 次被挑中
+GTC_DONE 14:50:17

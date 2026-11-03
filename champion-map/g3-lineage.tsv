@@ -1,0 +1,226 @@
+id	parent	edgeKind	family	seed	gens	games	src	refRead	refSrc	note
+arch2随机		根	根							arch2 S1ob/obs3b 随机初始化（虚拟根）
+OB3S-C2-s7	arch2随机	CEM	根							cem 6000 evals pop48（obs3b 时代 10-3x）
+GD3-ALL	OB3S-C2-s7	蒸馏(allround)	蒸馏谱系							supfit-gd teacher=allround
+GD3-RATION	OB3S-C2-s7	蒸馏(ration)	蒸馏谱系							supfit-gd teacher=ration
+GD3-SWORD	GD3-RATION	蒸馏(ration2)	蒸馏谱系							supfit-gd teacher=ration2
+D4a	GD3-SWORD	克隆精调	蒸馏谱系							CLONE-D4a（clone-d4a）
+GA-ration-s13	GD3-RATION	GA	ration臂							11-01 era 臂
+GA-ration-s41	GD3-RATION	GA	ration臂							CB/D-a 蒸馏的 parent
+D-a底座	GA-ration-s41	蒸馏(drain/DEF先验)	D谱系							drain/laserEye/DEF 先验蒸馏（DS 11-02）
+CB-combo-v2	GA-ration-s41	蒸馏(连招)	CB谱系							teacher=ration6 combo-v2
+LE-laser-v2	GA-ration-s41	蒸馏(激光眼)	LE谱系							激光眼破冰蒸馏（§二十七）
+D谱系中继2	D-a-s13	续训中继	D谱系							未入库中继枚（DSTR4-s13 起点，哈希 7e524791）
+D谱系中继2s41	D-a-s41	续训中继	D谱系							未入库中继枚（DSTR4-s41/DSTR5-s41 起点，哈希 3aaa8169）
+L5-D4a-s13	D4a	GA(5P long 首批)	L5谱系					60.0	RESULTS-2026-11-02-L5-ds §一	DS 11-02 L5 首批 6 臂之强粒（0.438/60.0）
+L5-D4a-s7	D4a	GA(5P long 首批)	L5谱系					50.0	RESULTS-2026-11-02-L5-ds §一	同批 s7
+L5-D4a-s41	D4a	GA(5P long 首批)	L5谱系					47.5	RESULTS-2026-11-02-L5-ds §一	同批 s41
+GD3ALL-G5-8p-s13	GD3-ALL	GA(400代×8局)	GD3ALL-G5-8p	13	400	8	scratch/night3/GD3ALL-G5-8p-s13.js			
+GD3ALL-G5-8p-s41	GD3-ALL	GA(400代×8局)	GD3ALL-G5-8p	41	400	8	scratch/night3/GD3ALL-G5-8p-s41.js			
+GD3ALL-G5-8p-s7	GD3-ALL	GA(400代×8局)	GD3ALL-G5-8p	7	400	8	scratch/night3/GD3ALL-G5-8p-s7.js			
+GD3ALL-G5-n5-s41	GD3-ALL	GA(400代×8局)	GD3ALL-G5-n5	41	400	8	scratch/night3/GD3ALL-G5-n5-s41.js			
+GD3ALL-G5-s13	GD3-ALL	GA(400代×8局)	GD3ALL-G5	13	400	8	scratch/night3/GD3ALL-G5-s13.js			
+GD3ALL-G5-s41	GD3-ALL	GA(400代×8局)	GD3ALL-G5	41	400	8	scratch/night3/GD3ALL-G5-s41.js			
+GD3ALL-G5-s7	GD3-ALL	GA(400代×8局)	GD3ALL-G5	7	400	8	scratch/night3/GD3ALL-G5-s7.js			
+GD3ALL-GA2R-s13	GD3-RATION	GA(400代×8局)	GD3ALL-GA2R	13	400	8	scratch/night3/GD3ALL-GA2R-s13.js			
+GD3ALL-NGA2R-8p-s13	GD3-ALL	GA(400代×8局)	GD3ALL-NGA2R-8p	13	400	8	scratch/night3/GD3ALL-NGA2R-8p-s13.js			
+GD3ALL-NGA2R-s41	GD3-RATION	GA(400代×8局)	GD3ALL-NGA2R	41	400	8	scratch/night3/GD3ALL-NGA2R-s41.js			
+GD3ALL-PLAIN-8p-s13	GD3-ALL	GA(400代×8局)	GD3ALL-PLAIN-8p	13	400	8	scratch/night3/GD3ALL-PLAIN-8p-s13.js			
+GD3ALL-PLAIN-s13	GD3-ALL	GA(400代×8局)	GD3ALL-PLAIN	13	400	8	scratch/night3/GD3ALL-PLAIN-s13.js			
+GD3ALL-PLAIN-s17	GD3-ALL	GA(400代×8局)	GD3ALL-PLAIN	17	400	8	scratch/night3/GD3ALL-PLAIN-s17.js			
+GD3ALL-PLAIN-s23	GD3-ALL	GA(400代×8局)	GD3ALL-PLAIN	23	400	8	scratch/night3/GD3ALL-PLAIN-s23.js			
+GD3ALL-PLAIN-s41	GD3-ALL	GA(400代×8局)	GD3ALL-PLAIN	41	400	8	scratch/night3/GD3ALL-PLAIN-s41.js			
+GD3ALL-PLAIN-s5	GD3-ALL	GA(400代×8局)	GD3ALL-PLAIN	5	400	8	scratch/night3/GD3ALL-PLAIN-s5.js			
+GD3ALL-PLAIN-s7	GD3-ALL	GA(400代×8局)	GD3ALL-PLAIN	7	400	8	scratch/night3/GD3ALL-PLAIN-s7.js			
+GD3ALL-POPG-s13	GD3-ALL	GA(400代×8局)	GD3ALL-POPG	13	400	8	scratch/night3/GD3ALL-POPG-s13.js			
+GD3ALL-POPG-s41	GD3-ALL	GA(400代×8局)	GD3ALL-POPG	41	400	8	scratch/night3/GD3ALL-POPG-s41.js			
+GD3ALL-POPG-s7	GD3-ALL	GA(400代×8局)	GD3ALL-POPG	7	400	8	scratch/night3/GD3ALL-POPG-s7.js			
+GD3ALL-POPP-8p-s13	GD3-ALL	GA(400代×8局)	GD3ALL-POPP-8p	13	400	8	scratch/night3/GD3ALL-POPP-8p-s13.js			
+GD3ALL-POPP-s13	GD3-ALL	GA(400代×8局)	GD3ALL-POPP	13	400	8	scratch/night3/GD3ALL-POPP-s13.js			
+GD3ALL-POPP-s17	GD3-ALL	GA(400代×8局)	GD3ALL-POPP	17	400	8	scratch/night3/GD3ALL-POPP-s17.js			
+GD3ALL-POPP-s23	GD3-ALL	GA(400代×8局)	GD3ALL-POPP	23	400	8	scratch/night3/GD3ALL-POPP-s23.js			
+GD3ALL-POPP-s41	GD3-ALL	GA(400代×8局)	GD3ALL-POPP	41	400	8	scratch/night3/GD3ALL-POPP-s41.js			
+GD3ALL-POPP-s5	GD3-ALL	GA(400代×8局)	GD3ALL-POPP	5	400	8	scratch/night3/GD3ALL-POPP-s5.js			
+GD3ALL-POPP-s7	GD3-ALL	GA(400代×8局)	GD3ALL-POPP	7	400	8	scratch/night3/GD3ALL-POPP-s7.js			
+GD3ALL-PP-s13	GD3-ALL	GA(400代×8局)	GD3ALL-PP	13	400	8	scratch/night3/GD3ALL-PP-s13.js			
+GD3ALL-PP-s41	GD3-ALL	GA(400代×8局)	GD3ALL-PP	41	400	8	scratch/night3/GD3ALL-PP-s41.js			
+GD3ALL-PUSH8-s13	GD3-ALL	GA(400代×8局)	GD3ALL-PUSH8	13	400	8	scratch/night3/GD3ALL-PUSH8-s13.js			
+GD3ALL-PUSH8-s41	GD3-ALL	GA(400代×8局)	GD3ALL-PUSH8	41	400	8	scratch/night3/GD3ALL-PUSH8-s41.js			
+GD3ALL-PUSH8-s7	GD3-ALL	GA(400代×8局)	GD3ALL-PUSH8	7	400	8	scratch/night3/GD3ALL-PUSH8-s7.js			
+GD3ALL-PUSHON-s13	GD3-ALL	GA(400代×8局)	GD3ALL-PUSHON	13	400	8	scratch/night3/GD3ALL-PUSHON-s13.js			
+GD3ALL-PUSHON-s41	GD3-ALL	GA(400代×8局)	GD3ALL-PUSHON	41	400	8	scratch/night3/GD3ALL-PUSHON-s41.js			
+CB-s13	CB-combo-v2	GA(150代×8局)	CB	13	150	8	scratch/night4/CB-s13.js			
+D-a-s13	D-a底座	GA(150代×8局)	D-a	13	150	8	scratch/night4/D-a-s13.js			
+D-a-s41	D-a底座	GA(150代×8局)	D-a	41	150	8	scratch/night4/D-a-s41.js			
+D-a-s7	D-a底座	GA(150代×8局)	D-a	7	150	8	scratch/night4/D-a-s7.js			
+D-b-hpseed-s13	GD3-ALL	GA(150代×8局)	D-b-hpseed	13	150	8	scratch/night4/D-b-hpseed-s13.js			
+DDEF-s13	D-a-s13	GA(150代×8局)	DDEF	13	150	8	scratch/night4/DDEF-s13.js			
+DDEF-s41	D-a-s13	GA(150代×8局)	DDEF	41	150	8	scratch/night4/DDEF-s41.js			
+DH-s13	D-a-s13	GA(150代×8局)	DH	13	150	8	scratch/night4/DH-s13.js			
+DSTR-s13	D-a-s13	GA(150代×8局)	DSTR	13	150	8	scratch/night4/DSTR-s13.js			
+DSTR-s41	D-a-s41	GA(150代×8局)	DSTR	41	150	8	scratch/night4/DSTR-s41.js			
+DSTR4-s13	D谱系中继2	GA(400代×8局)	DSTR4	13	400	8	scratch/night4/DSTR4-s13.js			
+DSTR4-s41	D谱系中继2s41	GA(400代×8局)	DSTR4	41	400	8	scratch/night4/DSTR4-s41.js			
+DSTR5-s13	D-a-s13	GA(400代×8局)	DSTR5	13	400	8	scratch/night4/DSTR5-s13.js			
+DSTR5-s41	D谱系中继2s41	GA(400代×8局)	DSTR5	41	400	8	scratch/night4/DSTR5-s41.js			
+G5-8p-s11	GD3-ALL	GA(400代×8局)	G5-8p	11	400	8	scratch/night4/G5-8p-s11.js			
+G5-8p-s23	GD3-ALL	GA(400代×8局)	G5-8p	23	400	8	scratch/night4/G5-8p-s23.js			
+G5-8p-s29	GD3-ALL	GA(400代×8局)	G5-8p	29	400	8	scratch/night4/G5-8p-s29.js			
+G5-8p-s37	GD3-ALL	GA(400代×8局)	G5-8p	37	400	8	scratch/night4/G5-8p-s37.js			
+G5-8p-s5	GD3-ALL	GA(400代×8局)	G5-8p	5	400	8	scratch/night4/G5-8p-s5.js			
+LE-s13	LE-laser-v2	GA(150代×8局)	LE	13	150	8	scratch/night4/LE-s13.js			
+reg-hp	GD3-ALL	GA(3代×8局)	reg-hp	1	3	8	scratch/night4/reg-hp.js			
+reg-pat2	GD3-ALL	GA(3代×8局)	reg-pat2	1	3	8	scratch/night4/reg-pat2.js			
+reg-pat3	GD3-ALL	GA(3代×8局)	reg-pat3	1	3	8	scratch/night4/reg-pat3.js			
+reg-ref2	GD3-ALL	GA(3代×8局)	reg-ref2	1	3	8	scratch/night4/reg-ref2.js			
+reg-ref3	GD3-ALL	GA(3代×8局)	reg-ref3	1	3	8	scratch/night4/reg-ref3.js			
+reg-seg	GD3-ALL	GA(5代×8局)	reg-seg	1	5	8	scratch/night4/reg-seg.js			
+W0-ctrl-400-s13	GD3-ALL	GA(400代×8局)	W0-ctrl-400	13	400	8	scratch/night4/W0-ctrl-400-s13.js			
+W0-ctrl-s13	GD3-ALL	GA(150代×8局)	W0-ctrl	13	150	8	scratch/night4/W0-ctrl-s13.js			
+W0-ctrl-s41	GD3-ALL	GA(150代×8局)	W0-ctrl	41	150	8	scratch/night4/W0-ctrl-s41.js			
+W0-ctrl-s7	GD3-ALL	GA(150代×8局)	W0-ctrl	7	150	8	scratch/night4/W0-ctrl-s7.js			
+W1-mix8-s13	GD3-ALL	GA(150代×8局)	W1-mix8	13	150	8	scratch/night4/W1-mix8-s13.js			
+W1-mix8-s41	GD3-ALL	GA(150代×8局)	W1-mix8	41	150	8	scratch/night4/W1-mix8-s41.js			
+W1-mix8-s7	GD3-ALL	GA(150代×8局)	W1-mix8	7	150	8	scratch/night4/W1-mix8-s7.js			
+W2-d4a-s13	GD3-ALL	GA(150代×8局)	W2-d4a	13	150	8	scratch/night4/W2-d4a-s13.js			
+W2-k2-s13	GD3-ALL	GA(150代×8局)	W2-k2	13	150	8	scratch/night4/W2-k2-s13.js			
+W2-wall-s13	GD3-ALL	GA(150代×8局)	W2-wall	13	150	8	scratch/night4/W2-wall-s13.js			
+D1200-s13	D-a-s13	GA(1200代×8局)	D1200	13	1200	8	scratch/night5/D1200-s13.js			
+EFFG-s41	L5-D4a-s13	GA(150代×24局)	EFFG	41	150	24	scratch/night5/EFFG-s41.js			
+EFFG-s5	L5-D4a-s13	GA(150代×24局)	EFFG	5	150	24	scratch/night5/EFFG-s5.js			
+EFFG-s7	L5-D4a-s13	GA(150代×24局)	EFFG	7	150	24	scratch/night5/EFFG-s7.js			
+G5DEF-s41	GD3ALL-G5-8p-s41	GA(150代×8局)	G5DEF	41	150	8	scratch/night5/G5DEF-s41.js			
+L5-1200-s13	L5-D4a-s13	GA(1200代×8局)	L5-1200	13	1200	8	scratch/night5/L5-1200-s13.js			
+BAS-s13__seg4	BAS-s13	段@100代	BAS-s13		100		scratch/ga-bands/BAS-s13/BAS-s13-seg4.bak			kinds=11 defShare=64.7 fit=0.4198
+BAS-s41__seg2	BAS-s41	段@50代	BAS-s41		50		scratch/ga-bands/BAS-s41/BAS-s41-seg2.bak			kinds=10 defShare=71 fit=0.3839
+BAS-s41__seg6	BAS-s41	段@150代	BAS-s41		150		scratch/ga-bands/BAS-s41/BAS-s41-seg6.bak			kinds=11 defShare=68.4 fit=0.6366
+BREAD-W05-s13__seg4	BREAD-W05-s13	段@100代	BREAD-W05-s13		100		scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg4.bak			kinds=6 defShare=0 fit=1.557
+BREAD-W05-s41__seg2	BREAD-W05-s41	段@50代	BREAD-W05-s41		50		scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg2.bak			kinds=5 defShare=0 fit=1.5397
+BREAD-W05-s41__seg6	BREAD-W05-s41	段@150代	BREAD-W05-s41		150		scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg6.bak			kinds=4 defShare=0 fit=1.5456
+BREAD-W05-s7__seg4	BREAD-W05-s7	段@100代	BREAD-W05-s7		100		scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg4.bak			kinds=4 defShare=0 fit=1.7517
+CBG-s13__seg2	CBG-s13	段@50代	CBG-s13		50		scratch/ga-bands/CBG-s13/CBG-s13-seg2.bak			kinds=9 defShare=2.2 fit=1.2561
+CBG-s13__seg6	CBG-s13	段@150代	CBG-s13		150		scratch/ga-bands/CBG-s13/CBG-s13-seg6.bak			kinds=6 defShare=0.3 fit=1.3851
+CBG-s41__seg4	CBG-s41	段@100代	CBG-s41		100		scratch/ga-bands/CBG-s41/CBG-s41-seg4.bak			kinds=6 defShare=0 fit=0.9728
+CBG-s7__seg2	CBG-s7	段@50代	CBG-s7		50		scratch/ga-bands/CBG-s7/CBG-s7-seg2.bak			kinds=8 defShare=4.5 fit=1.0415
+CBG-s7__seg6	CBG-s7	段@150代	CBG-s7		150		scratch/ga-bands/CBG-s7/CBG-s7-seg6.bak			kinds=7 defShare=0 fit=0.5666
+CBGG-s13__seg4	CBGG-s13	段@100代	CBGG-s13		100		scratch/ga-bands/CBGG-s13/CBGG-s13-seg4.bak			kinds=9 defShare=2.5 fit=1.0363
+G3C-s13__seg2	G3C-s13	段@50代	G3C-s13		50		scratch/ga-bands/G3C-s13/G3C-s13-seg2.bak			kinds=11 defShare=70.9 fit=0.3814
+G3C-s13__seg6	G3C-s13	段@150代	G3C-s13		150		scratch/ga-bands/G3C-s13/G3C-s13-seg6.bak			kinds=7 defShare=69.6 fit=0.6441
+G3C-s41__seg4	G3C-s41	段@100代	G3C-s41		100		scratch/ga-bands/G3C-s41/G3C-s41-seg4.bak			kinds=9 defShare=70.8 fit=0.3924
+G3M-s13__seg2	G3M-s13	段@50代	G3M-s13		50		scratch/ga-bands/G3M-s13/G3M-s13-seg2.bak			kinds=5 defShare=0 fit=0.9776
+G3M-s13__seg6	G3M-s13	段@150代	G3M-s13		150		scratch/ga-bands/G3M-s13/G3M-s13-seg6.bak			kinds=4 defShare=0 fit=0.9392
+G3M-s41__seg4	G3M-s41	段@100代	G3M-s41		100		scratch/ga-bands/G3M-s41/G3M-s41-seg4.bak			kinds=4 defShare=0 fit=0.6329
+V7C-s13__seg2	V7C-s13	段@50代	V7C-s13		50		scratch/ga-bands/V7C-s13/V7C-s13-seg2.bak			kinds=6 defShare=0 fit=0.8621
+V7C-s13__seg6	V7C-s13	段@150代	V7C-s13		150		scratch/ga-bands/V7C-s13/V7C-s13-seg6.bak			kinds=3 defShare=0 fit=0.8535
+V7C-s41__seg4	V7C-s41	段@100代	V7C-s41		100		scratch/ga-bands/V7C-s41/V7C-s41-seg4.bak			kinds=6 defShare=0.3 fit=0.7849
+V7L-s13__seg2	V7L-s13	段@50代	V7L-s13		50		scratch/ga-bands/V7L-s13/V7L-s13-seg2.bak			kinds=9 defShare=7.7 fit=1.0547
+V7L-s13__seg6	V7L-s13	段@150代	V7L-s13		150		scratch/ga-bands/V7L-s13/V7L-s13-seg6.bak			kinds=3 defShare=0 fit=0.9817
+V7L-s41__seg4	V7L-s41	段@100代	V7L-s41		100		scratch/ga-bands/V7L-s41/V7L-s41-seg4.bak			kinds=4 defShare=10.5 fit=1.0555
+V7M-s13__seg2	V7M-s13	段@50代	V7M-s13		50		scratch/ga-bands/V7M-s13/V7M-s13-seg2.bak			kinds=2 defShare=0.4 fit=1.0967
+V7M-s13__seg6	V7M-s13	段@150代	V7M-s13		150		scratch/ga-bands/V7M-s13/V7M-s13-seg6.bak			kinds=6 defShare=3.3 fit=1.0316
+V7M-s41__seg4	V7M-s41	段@100代	V7M-s41		100		scratch/ga-bands/V7M-s41/V7M-s41-seg4.bak			kinds=6 defShare=5.5 fit=0.9993
+BAS-s13__seg1	BAS-s13	段@25代	BAS-s13		25		scratch/ga-bands/BAS-s13/BAS-s13-seg1.bak			kinds=11 defShare=71.4 fit=0.3983
+BAS-s13__seg5	BAS-s13	段@125代	BAS-s13		125		scratch/ga-bands/BAS-s13/BAS-s13-seg5.bak			kinds=11 defShare=66.4 fit=0.4983
+BAS-s41__seg3	BAS-s41	段@75代	BAS-s41		75		scratch/ga-bands/BAS-s41/BAS-s41-seg3.bak			kinds=10 defShare=69.1 fit=0.7703
+BREAD-W05-s13__seg1	BREAD-W05-s13	段@25代	BREAD-W05-s13		25		scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg1.bak			kinds=4 defShare=0 fit=1.5578
+BREAD-W05-s13__seg5	BREAD-W05-s13	段@125代	BREAD-W05-s13		125		scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg5.bak			kinds=6 defShare=0 fit=1.646
+BREAD-W05-s41__seg3	BREAD-W05-s41	段@75代	BREAD-W05-s41		75		scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg3.bak			kinds=5 defShare=0 fit=1.4645
+BREAD-W05-s7__seg1	BREAD-W05-s7	段@25代	BREAD-W05-s7		25		scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg1.bak			kinds=5 defShare=0 fit=1.5517
+BREAD-W05-s7__seg5	BREAD-W05-s7	段@125代	BREAD-W05-s7		125		scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg5.bak			kinds=5 defShare=0 fit=1.7452
+CBG-s13__seg3	CBG-s13	段@75代	CBG-s13		75		scratch/ga-bands/CBG-s13/CBG-s13-seg3.bak			kinds=10 defShare=8.3 fit=1.0965
+CBG-s41__seg1	CBG-s41	段@25代	CBG-s41		25		scratch/ga-bands/CBG-s41/CBG-s41-seg1.bak			kinds=10 defShare=4.1 fit=0.9316
+CBG-s41__seg5	CBG-s41	段@125代	CBG-s41		125		scratch/ga-bands/CBG-s41/CBG-s41-seg5.bak			kinds=8 defShare=0 fit=1.0226
+CBG-s7__seg3	CBG-s7	段@75代	CBG-s7		75		scratch/ga-bands/CBG-s7/CBG-s7-seg3.bak			kinds=11 defShare=2.4 fit=0.9206
+CBGG-s13__seg1	CBGG-s13	段@25代	CBGG-s13		25		scratch/ga-bands/CBGG-s13/CBGG-s13-seg1.bak			kinds=10 defShare=7.7 fit=1.0978
+CBGG-s13__seg5	CBGG-s13	段@125代	CBGG-s13		125		scratch/ga-bands/CBGG-s13/CBGG-s13-seg5.bak			kinds=6 defShare=0 fit=1.1461
+G3C-s13__seg3	G3C-s13	段@75代	G3C-s13		75		scratch/ga-bands/G3C-s13/G3C-s13-seg3.bak			kinds=10 defShare=71.4 fit=0.3354
+G3C-s41__seg1	G3C-s41	段@25代	G3C-s41		25		scratch/ga-bands/G3C-s41/G3C-s41-seg1.bak			kinds=12 defShare=68.2 fit=0.4152
+G3C-s41__seg5	G3C-s41	段@125代	G3C-s41		125		scratch/ga-bands/G3C-s41/G3C-s41-seg5.bak			kinds=9 defShare=65.9 fit=0.3086
+G3M-s13__seg3	G3M-s13	段@75代	G3M-s13		75		scratch/ga-bands/G3M-s13/G3M-s13-seg3.bak			kinds=4 defShare=0 fit=0.9962
+G3M-s41__seg1	G3M-s41	段@25代	G3M-s41		25		scratch/ga-bands/G3M-s41/G3M-s41-seg1.bak			kinds=5 defShare=0 fit=0.933
+G3M-s41__seg5	G3M-s41	段@125代	G3M-s41		125		scratch/ga-bands/G3M-s41/G3M-s41-seg5.bak			kinds=6 defShare=0 fit=0.877
+V7C-s13__seg3	V7C-s13	段@75代	V7C-s13		75		scratch/ga-bands/V7C-s13/V7C-s13-seg3.bak			kinds=4 defShare=0 fit=0.8062
+V7C-s41__seg1	V7C-s41	段@25代	V7C-s41		25		scratch/ga-bands/V7C-s41/V7C-s41-seg1.bak			kinds=8 defShare=11.6 fit=0.716
+V7C-s41__seg5	V7C-s41	段@125代	V7C-s41		125		scratch/ga-bands/V7C-s41/V7C-s41-seg5.bak			kinds=2 defShare=0 fit=0.6883
+V7L-s13__seg3	V7L-s13	段@75代	V7L-s13		75		scratch/ga-bands/V7L-s13/V7L-s13-seg3.bak			kinds=7 defShare=5.2 fit=0.9291
+V7L-s41__seg1	V7L-s41	段@25代	V7L-s41		25		scratch/ga-bands/V7L-s41/V7L-s41-seg1.bak			kinds=5 defShare=15.9 fit=0.8657
+V7L-s41__seg5	V7L-s41	段@125代	V7L-s41		125		scratch/ga-bands/V7L-s41/V7L-s41-seg5.bak			kinds=3 defShare=3.8 fit=1.0831
+V7M-s13__seg3	V7M-s13	段@75代	V7M-s13		75		scratch/ga-bands/V7M-s13/V7M-s13-seg3.bak			kinds=5 defShare=10.2 fit=1.0408
+V7M-s41__seg1	V7M-s41	段@25代	V7M-s41		25		scratch/ga-bands/V7M-s41/V7M-s41-seg1.bak			kinds=6 defShare=1.2 fit=0.6884
+V7M-s41__seg5	V7M-s41	段@125代	V7M-s41		125		scratch/ga-bands/V7M-s41/V7M-s41-seg5.bak			kinds=7 defShare=4.5 fit=0.781
+BAS-s13__seg2	BAS-s13	段@50代	BAS-s13		50		scratch/ga-bands/BAS-s13/BAS-s13-seg2.bak			kinds=10 defShare=68.7 fit=0.5233
+BAS-s13__seg6	BAS-s13	段@150代	BAS-s13		150		scratch/ga-bands/BAS-s13/BAS-s13-seg6.bak			kinds=7 defShare=60.8 fit=0.5597
+BAS-s41__seg4	BAS-s41	段@100代	BAS-s41		100		scratch/ga-bands/BAS-s41/BAS-s41-seg4.bak			kinds=12 defShare=61.5 fit=0.4719
+BREAD-W05-s13__seg2	BREAD-W05-s13	段@50代	BREAD-W05-s13		50		scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg2.bak			kinds=6 defShare=0 fit=1.7622
+BREAD-W05-s13__seg6	BREAD-W05-s13	段@150代	BREAD-W05-s13		150		scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg6.bak			kinds=6 defShare=0 fit=1.5568
+BREAD-W05-s41__seg4	BREAD-W05-s41	段@100代	BREAD-W05-s41		100		scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg4.bak			kinds=6 defShare=0 fit=1.4449
+BREAD-W05-s7__seg2	BREAD-W05-s7	段@50代	BREAD-W05-s7		50		scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg2.bak			kinds=5 defShare=0 fit=1.4657
+BREAD-W05-s7__seg6	BREAD-W05-s7	段@150代	BREAD-W05-s7		150		scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg6.bak			kinds=5 defShare=0 fit=1.4612
+CBG-s13__seg4	CBG-s13	段@100代	CBG-s13		100		scratch/ga-bands/CBG-s13/CBG-s13-seg4.bak			kinds=9 defShare=2.5 fit=1.0363
+CBG-s41__seg2	CBG-s41	段@50代	CBG-s41		50		scratch/ga-bands/CBG-s41/CBG-s41-seg2.bak			kinds=13 defShare=5.3 fit=0.8926
+CBG-s41__seg6	CBG-s41	段@150代	CBG-s41		150		scratch/ga-bands/CBG-s41/CBG-s41-seg6.bak			kinds=5 defShare=0 fit=1.0335
+CBG-s7__seg4	CBG-s7	段@100代	CBG-s7		100		scratch/ga-bands/CBG-s7/CBG-s7-seg4.bak			kinds=7 defShare=1.4 fit=1.117
+CBGG-s13__seg2	CBGG-s13	段@50代	CBGG-s13		50		scratch/ga-bands/CBGG-s13/CBGG-s13-seg2.bak			kinds=9 defShare=2.2 fit=1.2561
+CBGG-s13__seg6	CBGG-s13	段@150代	CBGG-s13		150		scratch/ga-bands/CBGG-s13/CBGG-s13-seg6.bak			kinds=6 defShare=0.3 fit=1.3851
+G3C-s13__seg4	G3C-s13	段@100代	G3C-s13		100		scratch/ga-bands/G3C-s13/G3C-s13-seg4.bak			kinds=10 defShare=69.3 fit=0.3609
+G3C-s41__seg2	G3C-s41	段@50代	G3C-s41		50		scratch/ga-bands/G3C-s41/G3C-s41-seg2.bak			kinds=10 defShare=74.6 fit=0.3481
+G3C-s41__seg6	G3C-s41	段@150代	G3C-s41		150		scratch/ga-bands/G3C-s41/G3C-s41-seg6.bak			kinds=10 defShare=69.8 fit=0.5388
+G3M-s13__seg4	G3M-s13	段@100代	G3M-s13		100		scratch/ga-bands/G3M-s13/G3M-s13-seg4.bak			kinds=4 defShare=0 fit=0.9442
+G3M-s41__seg2	G3M-s41	段@50代	G3M-s41		50		scratch/ga-bands/G3M-s41/G3M-s41-seg2.bak			kinds=6 defShare=0 fit=0.7939
+G3M-s41__seg6	G3M-s41	段@150代	G3M-s41		150		scratch/ga-bands/G3M-s41/G3M-s41-seg6.bak			kinds=5 defShare=0 fit=0.7448
+V7C-s13__seg4	V7C-s13	段@100代	V7C-s13		100		scratch/ga-bands/V7C-s13/V7C-s13-seg4.bak			kinds=2 defShare=0 fit=0.7336
+V7C-s41__seg2	V7C-s41	段@50代	V7C-s41		50		scratch/ga-bands/V7C-s41/V7C-s41-seg2.bak			kinds=10 defShare=29.3 fit=0.9213
+V7C-s41__seg6	V7C-s41	段@150代	V7C-s41		150		scratch/ga-bands/V7C-s41/V7C-s41-seg6.bak			kinds=3 defShare=0 fit=0.9974
+V7L-s13__seg4	V7L-s13	段@100代	V7L-s13		100		scratch/ga-bands/V7L-s13/V7L-s13-seg4.bak			kinds=4 defShare=0 fit=0.9349
+V7L-s41__seg2	V7L-s41	段@50代	V7L-s41		50		scratch/ga-bands/V7L-s41/V7L-s41-seg2.bak			kinds=7 defShare=21.4 fit=0.9217
+V7L-s41__seg6	V7L-s41	段@150代	V7L-s41		150		scratch/ga-bands/V7L-s41/V7L-s41-seg6.bak			kinds=4 defShare=15.9 fit=0.9845
+V7M-s13__seg4	V7M-s13	段@100代	V7M-s13		100		scratch/ga-bands/V7M-s13/V7M-s13-seg4.bak			kinds=4 defShare=2.1 fit=1.025
+V7M-s41__seg2	V7M-s41	段@50代	V7M-s41		50		scratch/ga-bands/V7M-s41/V7M-s41-seg2.bak			kinds=9 defShare=13.7 fit=0.7236
+V7M-s41__seg6	V7M-s41	段@150代	V7M-s41		150		scratch/ga-bands/V7M-s41/V7M-s41-seg6.bak			kinds=6 defShare=7.2 fit=0.9372
+BAS-s13__seg3	BAS-s13	段@75代	BAS-s13		75		scratch/ga-bands/BAS-s13/BAS-s13-seg3.bak			kinds=10 defShare=74.4 fit=0.318
+BAS-s41__seg1	BAS-s41	段@25代	BAS-s41		25		scratch/ga-bands/BAS-s41/BAS-s41-seg1.bak			kinds=13 defShare=68 fit=0.4234
+BAS-s41__seg5	BAS-s41	段@125代	BAS-s41		125		scratch/ga-bands/BAS-s41/BAS-s41-seg5.bak			kinds=7 defShare=70.7 fit=0.3878
+BREAD-W05-s13__seg3	BREAD-W05-s13	段@75代	BREAD-W05-s13		75		scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg3.bak			kinds=4 defShare=0 fit=1.7355
+BREAD-W05-s41__seg1	BREAD-W05-s41	段@25代	BREAD-W05-s41		25		scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg1.bak			kinds=6 defShare=0 fit=1.5671
+BREAD-W05-s41__seg5	BREAD-W05-s41	段@125代	BREAD-W05-s41		125		scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg5.bak			kinds=6 defShare=0 fit=1.5553
+BREAD-W05-s7__seg3	BREAD-W05-s7	段@75代	BREAD-W05-s7		75		scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg3.bak			kinds=4 defShare=0 fit=1.4547
+CBG-s13__seg1	CBG-s13	段@25代	CBG-s13		25		scratch/ga-bands/CBG-s13/CBG-s13-seg1.bak			kinds=10 defShare=7.9 fit=1.0978
+CBG-s13__seg5	CBG-s13	段@125代	CBG-s13		125		scratch/ga-bands/CBG-s13/CBG-s13-seg5.bak			kinds=6 defShare=0 fit=1.1461
+CBG-s41__seg3	CBG-s41	段@75代	CBG-s41		75		scratch/ga-bands/CBG-s41/CBG-s41-seg3.bak			kinds=8 defShare=0.9 fit=1.1641
+CBG-s7__seg1	CBG-s7	段@25代	CBG-s7		25		scratch/ga-bands/CBG-s7/CBG-s7-seg1.bak			kinds=4 defShare=3.9 fit=1.0549
+CBG-s7__seg5	CBG-s7	段@125代	CBG-s7		125		scratch/ga-bands/CBG-s7/CBG-s7-seg5.bak			kinds=10 defShare=10.1 fit=0.826
+CBGG-s13__seg3	CBGG-s13	段@75代	CBGG-s13		75		scratch/ga-bands/CBGG-s13/CBGG-s13-seg3.bak			kinds=10 defShare=8.3 fit=1.0965
+G3C-s13__seg1	G3C-s13	段@25代	G3C-s13		25		scratch/ga-bands/G3C-s13/G3C-s13-seg1.bak			kinds=12 defShare=68.7 fit=0.4088
+G3C-s13__seg5	G3C-s13	段@125代	G3C-s13		125		scratch/ga-bands/G3C-s13/G3C-s13-seg5.bak			kinds=7 defShare=69.7 fit=0.4882
+G3C-s41__seg3	G3C-s41	段@75代	G3C-s41		75		scratch/ga-bands/G3C-s41/G3C-s41-seg3.bak			kinds=7 defShare=72.3 fit=0.6148
+G3M-s13__seg1	G3M-s13	段@25代	G3M-s13		25		scratch/ga-bands/G3M-s13/G3M-s13-seg1.bak			kinds=5 defShare=0 fit=0.9212
+G3M-s13__seg5	G3M-s13	段@125代	G3M-s13		125		scratch/ga-bands/G3M-s13/G3M-s13-seg5.bak			kinds=4 defShare=0 fit=1.1708
+G3M-s41__seg3	G3M-s41	段@75代	G3M-s41		75		scratch/ga-bands/G3M-s41/G3M-s41-seg3.bak			kinds=5 defShare=0 fit=0.9148
+V7C-s13__seg1	V7C-s13	段@25代	V7C-s13		25		scratch/ga-bands/V7C-s13/V7C-s13-seg1.bak			kinds=1 defShare=0.3 fit=0.7017
+V7C-s13__seg5	V7C-s13	段@125代	V7C-s13		125		scratch/ga-bands/V7C-s13/V7C-s13-seg5.bak			kinds=3 defShare=0 fit=0.9812
+V7C-s41__seg3	V7C-s41	段@75代	V7C-s41		75		scratch/ga-bands/V7C-s41/V7C-s41-seg3.bak			kinds=7 defShare=1.3 fit=0.6933
+V7L-s13__seg1	V7L-s13	段@25代	V7L-s13		25		scratch/ga-bands/V7L-s13/V7L-s13-seg1.bak			kinds=3 defShare=2.3 fit=0.8288
+V7L-s13__seg5	V7L-s13	段@125代	V7L-s13		125		scratch/ga-bands/V7L-s13/V7L-s13-seg5.bak			kinds=5 defShare=0 fit=0.9771
+V7L-s41__seg3	V7L-s41	段@75代	V7L-s41		75		scratch/ga-bands/V7L-s41/V7L-s41-seg3.bak			kinds=4 defShare=1.5 fit=1.0776
+V7M-s13__seg1	V7M-s13	段@25代	V7M-s13		25		scratch/ga-bands/V7M-s13/V7M-s13-seg1.bak			kinds=6 defShare=11.9 fit=0.7797
+V7M-s13__seg5	V7M-s13	段@125代	V7M-s13		125		scratch/ga-bands/V7M-s13/V7M-s13-seg5.bak			kinds=6 defShare=16.4 fit=0.9006
+V7M-s41__seg3	V7M-s41	段@75代	V7M-s41		75		scratch/ga-bands/V7M-s41/V7M-s41-seg3.bak			kinds=4 defShare=0.3 fit=0.8867
+BAS-s13__final	BAS-s13	段@150代	BAS-s13		150		scratch/ga-arms/BAS-s13.js			kinds=10 defShare=71.1 fit=
+BAS-s41__final	BAS-s41	段@150代	BAS-s41		150		scratch/ga-arms/BAS-s41.js			kinds=10 defShare=67.9 fit=
+BREAD-W05-s13__final	BREAD-W05-s13	段@150代	BREAD-W05-s13		150		scratch/ga-arms/BREAD-W05-s13.js			kinds=5 defShare=0.0 fit=
+BREAD-W05-s41__final	BREAD-W05-s41	段@150代	BREAD-W05-s41		150		scratch/ga-arms/BREAD-W05-s41.js			kinds=5 defShare=0.0 fit=
+BREAD-W05-s7__final	BREAD-W05-s7	段@150代	BREAD-W05-s7		150		scratch/ga-arms/BREAD-W05-s7.js			kinds=5 defShare=0.0 fit=
+CBG-s13__final	CBG-s13	段@150代	CBG-s13		150		scratch/ga-arms/CBG-s13.js			kinds=8 defShare=0.6 fit=
+CBG-s41__final	CBG-s41	段@150代	CBG-s41		150		scratch/ga-arms/CBG-s41.js			kinds=6 defShare=0.0 fit=
+CBG-s7__final	CBG-s7	段@150代	CBG-s7		150		scratch/ga-arms/CBG-s7.js			kinds=5 defShare=2.3 fit=
+CBGG-s13__final	CBGG-s13	段@150代	CBGG-s13		150		scratch/ga-arms/CBGG-s13.js			kinds=8 defShare=0.6 fit=
+G3C-s13__final	G3C-s13	段@150代	G3C-s13		150		scratch/ga-arms/G3C-s13.js			kinds=7 defShare=70.3 fit=
+G3C-s41__final	G3C-s41	段@150代	G3C-s41		150		scratch/ga-arms/G3C-s41.js			kinds=11 defShare=68.7 fit=
+G3M-s13__final	G3M-s13	段@150代	G3M-s13		150		scratch/ga-arms/G3M-s13.js			kinds=4 defShare=0.0 fit=
+G3M-s41__final	G3M-s41	段@150代	G3M-s41		150		scratch/ga-arms/G3M-s41.js			kinds=4 defShare=0.0 fit=
+V7C-s13__final	V7C-s13	段@150代	V7C-s13		150		scratch/ga-arms/V7C-s13.js			kinds=3 defShare=0.0 fit=
+V7C-s41__final	V7C-s41	段@150代	V7C-s41		150		scratch/ga-arms/V7C-s41.js			kinds=4 defShare=0.0 fit=
+V7L-s13__final	V7L-s13	段@150代	V7L-s13		150		scratch/ga-arms/V7L-s13.js			kinds=7 defShare=6.1 fit=
+V7L-s41__final	V7L-s41	段@150代	V7L-s41		150		scratch/ga-arms/V7L-s41.js			kinds=3 defShare=3.9 fit=
+V7M-s13__final	V7M-s13	段@150代	V7M-s13		150		scratch/ga-arms/V7M-s13.js			kinds=6 defShare=42.4 fit=
+V7M-s41__final	V7M-s41	段@150代	V7M-s41		150		scratch/ga-arms/V7M-s41.js			kinds=2 defShare=0.0 fit=

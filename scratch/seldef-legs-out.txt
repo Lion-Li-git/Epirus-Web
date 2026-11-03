@@ -1,0 +1,20 @@
+### ① 默认关 ⇒ HEAD 版 vs 新版同 env 同种子 6 代 ⇒ 轨迹必须逐字同、[防御选人] 打印 0 行
+  新轨退出码=0  [防御选人] 行数=0（必须 0）
+  TRAJECTORY-IDENTICAL（HEAD vs 新版，默认关）✔
+### ② 牙：SEL_DEF_MIN=999 ⇒ 必然全不达标 ⇒ 产物与关档逐位同 + 自己打印 selDefAllBelow
+  [防御选人] tol=1pt · 下限 999 手/局 · 带内 2/6 粒 ⇒ **全都不达标（selDefAllBelow）**：防御 0/10局 = 0.00 手/局（占出手 0.0%）（重验分 111.1·原当选） ‖ 防御 0/10局 = 0.00 手/局（占出手 0.0%）（重验分 111
+  权重摘要 恒不达标档=603b11f3c4 关档=603b11f3c4 逐位同 ✔（全不达标⇒回到原生次序）
+  meta.selDef（恒不达标档）= {"tol":1,"min":999,"games":10,"mode":"multi","band":2,"of":6,"usage":[0,0],"picked":0,"wasWinner":0,"by":"score(allBelow)","changedWinner":false,"allBelow":true,"pickedShare":0}
+  meta.selDef（关档）= null（必须 null）
+  meta.deployKnobs（关档）= {"EPIRUS_BIGT_PUSH":{"requested":0,"effective":0},"EPIRUS_DRAIN_PUSH":{"requested":0,"effective":0},"EPIRUS_CURSE_PUSH":{"requested":null,"effective":0},"EPIRUS_SUPPORT_PRIOR":{"requested":null,"effective":0}}
+### ③ 40 代：开档（下限 0.10）vs 关档 ⇒ 至少一处可读数差异（4 代/40 代的产物分辨力不足，§五③ 已记）
+  off 退出码=0
+  gate 退出码=0
+    [train-3p] ⚙ **量具同代已接线**：behavior-profile 的沙箱 WIN 也装了 arch2 ‖ 面=obs3b ‖ paramCount=7993 ‖ forwardCands 自证通过 ⇒ `fieldProfile/aggressionProfile` 的当选面读数与产物同代（用到它的旗标：SEL_BIGT=0 SEL_CLEAR=0 SEL_DEF=1）
+    [防御选人] tol=1pt · 下限 0.1 手/局 · 带内 1/6 粒 ⇒ **全都不达标（selDefAllBelow）**：防御 0/20局 = 0.00 手/局（占出手 0.0%）（重验分 105.9·原当选） ⇒ 不改判；这一臂算「这根旋钮**零作用**」，不算"测过且无效"
+  腿③通过条件＝键进了选择路并留了账：开档 meta.selDef 非 null 且关档为 null
+    开档 selDef={"band":1,"of":6,"min":0.1,"usage":[0],"picked":0,"allBelow":true,"changed":false,"share":0}
+    关档 selDef=null（必须 null）
+  40 代权重摘要 off=5ff5864c5e gate=5ff5864c5e ⇒ 产物同（带内无人达标⇒不改判，是键的**零作用**而非空转；换人能力由 bandPickByFloor 合成表第 2 条钉）
+### done 11:54
+legs_rc=0

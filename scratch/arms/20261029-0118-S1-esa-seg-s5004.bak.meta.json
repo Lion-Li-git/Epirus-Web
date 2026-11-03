@@ -1,0 +1,54 @@
+{
+ "mode": "esa",
+ "seed": 5004,
+ "evals": 590,
+ "pop": 6,
+ "games": 40,
+ "n": 3,
+ "elite": 3,
+ "sig0": 0.3,
+ "gamesPlanned": 23600,
+ "gamesActualLoop": 30000,
+ "gamesActualHoldout": 2416,
+ "gamesActualStartHoldout": 2416,
+ "targetGames": 30000,
+ "netForwards": 1609037,
+ "netCandScores": 15091462,
+ "trainMode": "multi",
+ "holdoutGames": 2408,
+ "startFit": 0.44712545577671603,
+ "inLoopBest": 0.6537664563977922,
+ "holdoutFit": 0.7674093137529017,
+ "holdoutFirst": 0.2105481727574751,
+ "holdoutTop2": 0.5685215946843853,
+ "holdoutStartFit": 0.6684870499335763,
+ "holdoutStartFirst": 0.2180232558139535,
+ "holdoutStartTop2": 0.5801495016611296,
+ "dFirst": -0.007475083056478399,
+ "dTop2": -0.011627906976744207,
+ "curve": [
+  {
+   "games": 3024,
+   "best": 0.6204948301279692
+  },
+  {
+   "games": 7536,
+   "best": 0.6537664563977922
+  },
+  {
+   "games": 15024,
+   "best": 0.6537664563977922
+  },
+  {
+   "games": 22512,
+   "best": 0.6537664563977922
+  },
+  {
+   "games": 30000,
+   "best": 0.6537664563977922
+  }
+ ],
+ "secs": 93,
+ "startLabel": "夹具包 scratch/arms/202610281705-distill-S1o.bak",
+ "wrote": "scratch/arms/20261029-0118-S1-esa-seg-s5004.bak"
+}

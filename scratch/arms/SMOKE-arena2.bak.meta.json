@@ -1,0 +1,143 @@
+{
+ "mode": "esa",
+ "seed": 7,
+ "evals": 30,
+ "pop": 14,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "gamesPlanned": 120,
+ "gamesActualLoop": 300,
+ "gamesActualHoldout": 44,
+ "gamesActualStartHoldout": 44,
+ "targetGames": 300,
+ "netForwards": 20746,
+ "netCandScores": 251164,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": -0.375,
+ "inLoopBest": 0.5,
+ "holdoutFit": 0.1303210678210678,
+ "holdoutFirst": 0.36363636363636365,
+ "holdoutTop2": 0.9090909090909091,
+ "holdoutStartFit": -0.02308802308802309,
+ "holdoutStartFirst": 0.20454545454545456,
+ "holdoutStartTop2": 0.9090909090909091,
+ "dFirst": 0.1590909090909091,
+ "dTop2": 0,
+ "currency": "arena2.net",
+ "arena": {
+  "fp": "arena2.v1|pool=cc652985/20|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random",
+  "temp": 0.15,
+  "shapes": 11,
+  "roster": 51,
+  "pool": 20,
+  "holdGamesPerShape": 4,
+  "holdGames": 44,
+  "draw": 0,
+  "bestMaxCard": {
+   "key": "reflect",
+   "share": 0.22854561878952123,
+   "nonji": 1107
+  },
+  "startMaxCard": {
+   "key": "reflect",
+   "share": 0.2746478873239437,
+   "nonji": 1278
+  },
+  "bestByShape": {
+   "2:multi": {
+    "games": 4,
+    "first": 0.75,
+    "draw": 0,
+    "score": 0.5
+   },
+   "2:multi4": {
+    "games": 4,
+    "first": 0.75,
+    "draw": 0,
+    "score": 0.5
+   },
+   "2:long": {
+    "games": 4,
+    "first": 0.75,
+    "draw": 0,
+    "score": 0.5
+   },
+   "3:multi": {
+    "games": 4,
+    "first": 0,
+    "draw": 0,
+    "score": -0.49999999999999994
+   },
+   "3:multi4": {
+    "games": 4,
+    "first": 0.5,
+    "draw": 0,
+    "score": 0.25
+   },
+   "3:long": {
+    "games": 4,
+    "first": 0.5,
+    "draw": 0,
+    "score": 0.25
+   },
+   "5:multi": {
+    "games": 4,
+    "first": 0,
+    "draw": 0,
+    "score": -0.25
+   },
+   "5:multi4": {
+    "games": 4,
+    "first": 0,
+    "draw": 0,
+    "score": -0.25
+   },
+   "5:long": {
+    "games": 4,
+    "first": 0.75,
+    "draw": 0,
+    "score": 0.6875
+   },
+   "8:multi": {
+    "games": 4,
+    "first": 0,
+    "draw": 0,
+    "score": -0.14285714285714285
+   },
+   "10:multi": {
+    "games": 4,
+    "first": 0,
+    "draw": 0,
+    "score": -0.11111111111111112
+   }
+  }
+ },
+ "curve": [
+  {
+   "games": 184,
+   "best": 0.5
+  },
+  {
+   "games": 184,
+   "best": 0.5
+  },
+  {
+   "games": 184,
+   "best": 0.5
+  },
+  {
+   "games": 228,
+   "best": 0.5
+  },
+  {
+   "games": 300,
+   "best": 0.5
+  }
+ ],
+ "secs": 1.3,
+ "startLabel": "夹具包 scratch/arms/P2-A1-fit2-S1o.bak",
+ "wrote": "scratch/arms/SMOKE-arena2.bak"
+}

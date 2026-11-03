@@ -1,0 +1,94 @@
+{
+ "tool": "supfit-gd",
+ "tag": "GATE-SELF3",
+ "parent": "scratch/ga-arms/L5-D4a-s13.js",
+ "seed": 13,
+ "lr": 0.02,
+ "steps": 800,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 0,
+ "teacher": "chain",
+ "keySplit": 0,
+ "rareOnly": "guard,reflect",
+ "rareFrac": 0.6,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 792,
+  "moved": 8,
+  "gone": 0,
+  "keys": 800,
+  "rare": 2295,
+  "byKey": {
+   "ji": 151,
+   "gun": 12,
+   "sword": 20,
+   "charge": 18,
+   "guard": 534,
+   "ring": 41,
+   "bigT": 10,
+   "railgun": 14
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.995,
+    "teacherLl": -0.04806994702030166,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0,
+  "startLl": -27.59950596716426,
+  "agree": 0.995,
+  "ll": -0.04806994702030166,
+  "wAgree": 0.9950000000000001,
+  "nTest": 200,
+  "nTrain": 600,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "guard",
+    "n": 200,
+    "hit": 199
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "dof": 415,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "scratch/ga-arms/L5-D4a-s13.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

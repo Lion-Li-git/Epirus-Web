@@ -1,0 +1,162 @@
+{
+ "mode": "cem",
+ "seed": 13,
+ "evals": 420,
+ "pop": 14,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0,
+ "ignoredFlags": null,
+ "sigFloor": 0,
+ "sigRestart": 0,
+ "esaSig": null,
+ "arenaPen": 0,
+ "gamesPlanned": 1680,
+ "gamesActualLoop": 1736,
+ "gamesActualHoldout": 40,
+ "gamesActualStartHoldout": 40,
+ "targetGames": 6000,
+ "netForwards": 35733,
+ "netCandScores": 856432,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": 0.375,
+ "inLoopBest": 1,
+ "holdoutFit": 0.3125,
+ "holdoutFirst": 0.5,
+ "holdoutTop2": 0.85,
+ "holdoutStartFit": 0.2,
+ "holdoutStartFirst": 0.425,
+ "holdoutStartTop2": 0.9,
+ "dFirst": 0.07500000000000001,
+ "dTop2": -0.050000000000000044,
+ "currency": "arena2.first",
+ "arena": {
+  "fp": "arena2.v2|pool=6566dfdb/0|poolSeed=20261029|shapes=3:multi,5:multi|roster=random,defend,wall,antidef,farmer,heavyfire,deepsaver|highN=1|stratified=0",
+  "temp": 0.15,
+  "shapes": 2,
+  "roster": 7,
+  "pool": 7,
+  "holdGamesPerShape": 20,
+  "holdGames": 40,
+  "draw": 0.025,
+  "cur": "first",
+  "diverse": false,
+  "highN": 1,
+  "stratified": false,
+  "stratCap": 4,
+  "stratMix": 1,
+  "divTol": 0.02,
+  "divDelta": 0.1,
+  "divEvery": 10,
+  "divTrigger": 0.5,
+  "esa": null,
+  "lex": null,
+  "fpen": null,
+  "bestMaxCard": {
+   "key": "charge",
+   "share": 0.5046296296296297,
+   "nonji": 216
+  },
+  "startMaxCard": {
+   "key": "charge",
+   "share": 0.507177033492823,
+   "nonji": 209
+  },
+  "bestByShape": {
+   "3:multi": {
+    "games": 20,
+    "first": 0.5,
+    "draw": 0,
+    "score": 0.25,
+    "cleanScore": 0.25,
+    "firstScore": 0.25
+   },
+   "5:multi": {
+    "games": 20,
+    "first": 0.5,
+    "draw": 0.05,
+    "score": 0.40625,
+    "cleanScore": 0.375,
+    "firstScore": 0.375
+   }
+  }
+ },
+ "curve": [
+  {
+   "games": 616,
+   "best": 1
+  },
+  {
+   "games": 1512,
+   "best": 1
+  }
+ ],
+ "secs": 4.6,
+ "startLabel": "夹具包 scratch/arms/gd3repro-OB3RB2s23.bak",
+ "id": "STALLTEETH",
+ "parent": "gd3repro-OB3RB2s23",
+ "lineage": {
+  "parent": "scratch/arms/gd3repro-OB3RB2s23.bak",
+  "parentHash": "32058c1502d68f230e056efa1f61138b",
+  "outHash": "9968c773ac5e9fff455afa066f75949d",
+  "gen": 3,
+  "seed": 13,
+  "recipe": {
+   "arenaLex": false,
+   "arenaPerN": false,
+   "boN": false,
+   "shapeCap": 0,
+   "shapePick": false,
+   "warmShape": 0
+  },
+  "noOp": false
+ },
+ "mastery": null,
+ "funnel": null,
+ "headHealth": {
+  "temp": 0.15,
+  "states": 72,
+  "pack": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 43,
+   "entShareMed": 0,
+   "spreadMed": 62.8785,
+   "odds": 1.1267146772285191e+182,
+   "tieArgmax": 0,
+   "agreeRandom": 6.9,
+   "flat": false,
+   "agreeRefs": 3
+  },
+  "v7": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 43,
+   "entShareMed": 0,
+   "spreadMed": null,
+   "odds": null,
+   "tieArgmax": 0,
+   "agreeRandom": null,
+   "flat": false
+  },
+  "flatLineAgreePct": 60,
+  "calib": "随机起点彼此 93~97% ‖ v7 5%（60 个真局决策点，原件 scratch/qoder-1030-headcalib2.mjs）",
+  "gate": "关（只报不判）"
+ },
+ "headGate": "未开闸",
+ "stall": {
+  "n": 3,
+  "run": 3,
+  "stalled": {
+   "atIter": 31,
+   "run": 3,
+   "gamesSpent": 1736
+  }
+ },
+ "killKinds": null,
+ "bandEntropy": null
+}

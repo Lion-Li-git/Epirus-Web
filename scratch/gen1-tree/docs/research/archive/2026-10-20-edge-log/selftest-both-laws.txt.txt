@@ -1,0 +1,4 @@
+### 页内自检：默认档 attr 与 opt-in 档 log
+mode=tree (attr)      93 PASS / 0 FAIL
+mode=tree&elaw=log    92 PASS / 1 FAIL  ← 那条 §E467 判据量的是「密度律 vs 固定 alpha」两帧之差，log 档两帧同一张图 ⇒ 恒分不出来
+mode=map / 1d / 3db   各 93 PASS / 0 FAIL（边只在谱系图里画，这几视图不受影响）
