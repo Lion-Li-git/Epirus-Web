@@ -188,12 +188,20 @@ const PACK_TEACHER = TEACHER.indexOf('pack:') === 0 ? TEACHER.slice(5) : null;
 let packPick = null;
 if (PACK_TEACHER) {
   const ptParams = Float64Array.from(loadChamp(W0, PACK_TEACHER, '.'));
-  const ptChooser = T.policyChooserN(ptParams, 0.15);
-  packPick = (state, pid, cs) => {
-    /* ⚠ 传 `cs` 给 chooser 会全落 ji：v7 chooser 要的是**合法键表**（entry.affordable），而 cs 是候选（带 target/bead）。 */
-    const legal = cs.map((c) => ({ key: c.key, affordable: c.affordable !== false }));
+  /* DS 21:42：教师温度 0.15 → 0.05（与 `breadth.mjs` 同口径）。0.15 下 V7L 的防御族概率被压到 ~0，
+   *   800 组标签里 0 条防御 ⇒ 蒸馏把宽度蒸没；同一枚包在 temp 0.05 的量具里 defender 占 9%。 */
+  /* DS 21:46：与 `scratch/breadth.mjs` 完全同形（temp 0.05, eps 0, epsK 5, epsMode 'soft'）。
+   *   只传 (params,temp) 时 v7 走的是另一条默认 eps 路径 ⇒ 防御族概率被压到 0（800 组 0 条）。 */
+  const ptChooser = T.policyChooserN(ptParams, 0.05, 0, 5, 'soft');
+  packPick = (state, pid, cs, legalIn) => {
+    /* ⚠ 传 `cs` 给 chooser 会全落 ji：v7 chooser 要的是**合法键表**（entry.affordable），而 cs 是候选（带 target/bead）。
+     * ⚑ DS 21:40：优先用调用方递进来的**引擎原始 legal**（含 v7 chooser 需要的全部字段）；
+     *   之前一律从 cs 重建 ⇒ 防御族被系统性丢掉（11-03 实测：V7L-s13 教师 800 组标签里 0 条防御）。 */
+    const legal = (legalIn && legalIn.length >= 2) ? legalIn : cs.map((c) => ({ key: c.key, affordable: c.affordable !== false }));
     const got = ptChooser(state, pid, legal);
-    return keyToCand(cs, got && (got.key || got)) || null;
+    const mp = keyToCand(cs, got && (got.key || got)) || null;
+    if (!mp && process.env.SUPFIT_DBG && (globalThis.__dbgN = (globalThis.__dbgN || 0) + 1) <= 8) console.error('[dbg] teacher=' + (got && got.key) + ' cs=' + cs.map((c) => c.key).join(','));
+    return mp;
   };
 }
 const v7Pick = (state, pid, cs) => {
@@ -456,7 +464,7 @@ const ration6Pick = (state, pid, cs) => {
   return pickChain(state, pid, cs, R);
 };
 const _pickRaw = PACK_TEACHER
-  ? (state, pid, cs) => packPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  ? (state, pid, cs, legal) => packPick(state, pid, cs, legal) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'v7mix'
   ? (state, pid, cs) => pickChain(state, pid, cs, R) || v7Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'toolkit'
