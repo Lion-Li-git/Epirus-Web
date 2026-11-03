@@ -94,6 +94,7 @@ G5DEF-s41	GD3ALL-G5-8p-s41	GA(150代×8局)	G5DEF	41	150	8	scratch/night5/G5DEF-
 L5-1200-s13	L5-D4a-s13	GA(1200代×8局)	L5-1200	13	1200	8	scratch/night5/L5-1200-s13.js			
 CB3-s13	CB3-combo-v3	GA(150代×24局)	CB3	13	150	24	scratch/night6/CB3-s13.js			
 CB3-s7	CB3-combo-v3	GA(150代×24局)	CB3	7	150	24	scratch/night6/CB3-s7.js			
+CB3L-1200	CB3-s13	GA(1200代×8局)	CB3L-1200	13	1200	8	scratch/night6/CB3L-1200.js			
 HPG-s13	L5-1200-s13	GA(150代×24局)	HPG	13	150	24	scratch/night6/HPG-s13.js			
 HPG-s41	L5-1200-s13	GA(150代×24局)	HPG	41	150	24	scratch/night6/HPG-s41.js			
 HPG-s7	L5-1200-s13	GA(150代×24局)	HPG	7	150	24	scratch/night6/HPG-s7.js			

@@ -41,7 +41,8 @@ const HASH2FAM = {
   '792f3caacf064b84': 'GD3ALL-G5-8p-s41',
   '0290df82': 'LE-laser-v2',
   '3489c16057e7321b': 'CB3-combo-v3',   /* CB-v3 蒸馏底座（11-04，起点 EFFG-s41） */
-  '22f1014a39c219bf': 'L5-1200-s13'     /* HPG 探针臂（L5-1200 + HPSEED）的起点 */
+  '22f1014a39c219bf': 'L5-1200-s13',    /* HPG 探针臂（L5-1200 + HPSEED）的起点 */
+  'f681313e': 'CB3-s13'                 /* CB3L-1200（CB3-s13 续 1200 代）的起点 */
 };
 
 /* 手工根/蒸馏层（来源：scratch/arms/*.bak.meta.json 与 scratch/night4/*.bak.meta.json 实读，11-04 凌晨） */
