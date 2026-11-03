@@ -151,11 +151,14 @@ for (const r of rows.sort((a, b) => b.exam.def / b.exam.acts - a.exam.def / a.ex
   console.log('| ' + r.id + ' | ' + r.tier + ' | ' + share(x, x.acts) + ' | ' + share(x, x.acts - x.ji) + ' | ' + per(x, 'def') + ' | ' + per(x, 'blocks') + ' | ' + per(x, 'averted') + ' | ' + q(x) + ' | ' + per(x, 'defWhenThreat') + ' | ' + (100 * x.wins / GAMES).toFixed(1) + '% |');
 }
 console.log('\n#### 训练桌（3 人 · 17 型池 = 臂住的那个分布）');
+if (!rows.length || !rows[0].arms) { console.log('（本次 `--world=` 没跑这一张桌 ⇒ 整段不印，不许把"没印"读成"0"）'); }
+else {
 console.log('| 成员 | 档 | 防/全部出手 | 防/非ジ出手 | 防御手/局 | 挡下/局 | 免伤/局 | 准确率 | 残血防御手/局 | 夺1% |');
 console.log('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|');
 for (const r of rows.sort((a, b) => b.arms.def / b.arms.acts - a.arms.def / a.arms.acts)) {
   const x = r.arms;
   console.log('| ' + r.id + ' | ' + r.tier + ' | ' + share(x, x.acts) + ' | ' + share(x, x.acts - x.ji) + ' | ' + per(x, 'def') + ' | ' + per(x, 'blocks') + ' | ' + per(x, 'averted') + ' | ' + q(x) + ' | ' + per(x, 'lowDef') + ' | ' + (100 * x.wins / GAMES).toFixed(1) + '% |');
+}
 }
 const nDef = rows.filter((r) => r.exam.def / Math.max(1, r.exam.acts) > 0.05).length;
 const med = (arr) => { const s = arr.slice().sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
