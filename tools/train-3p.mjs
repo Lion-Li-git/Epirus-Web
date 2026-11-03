@@ -105,6 +105,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
   'EPIRUS_GA_GATE', 'EPIRUS_GA_GATE_GAMES', 'EPIRUS_GA_BAND', 'EPIRUS_STALL_ABORT',
   'EPIRUS_HALL_TRACE', 'EPIRUS_HALL_TRACE_OUT',
+  'EPIRUS_POPSTAT', 'EPIRUS_POPSTAT_K', 'EPIRUS_POPSTAT_OUT',   // #46（11-03 晚）：逐代**种群统计量** JSONL（默认 0=关 ⇒ 一行不写、gen 行逐字不变）
   'EPIRUS_HALL_TRACE_PROBE',   // ⤵ 11-01 深：M-1 连续下限罚（默认 0）
   'EPIRUS_FITGW',   // 11-01 深（PREREG-MERGER §一）：指纹行加 top-3 只测不选的宽读数（默认关）
   'EPIRUS_WIDE_FINAL',   // 11-01 深（ZCode · PREREG-2026-11-01-WIDE-FINAL）：v4 终局同尺（默认关）   // 11-01 晚（ZCode · 千问交接 §五.3）：逐代名人堂/门槛指纹落盘（默认关 ⇒ 一条行为不变）   // 千问 §十一 C：演化期健康门槛（形状搬自 `evo.js:3952`）+ 它的测量长度 + 带内取宽的带宽 ‖ GA 臂级空转终止（`EPIRUS_STALL_ABORT` 已在 §六② 实现，名单此前漏登记）
@@ -325,6 +326,24 @@ if (HALL_TRACE) {
   console.log('[hall-trace] 每代指纹 → ' + HALL_TRACE_OUT + '（EPIRUS_HALL_TRACE=1；指纹 = widOfArr，与名人堂去重同式）');
 }
 const GA_BAND = Math.max(0, Number(process.env.EPIRUS_GA_BAND || 0));
+/* ===== #46（11-03 晚 · 用户裁"这么跑一下吧"）：逐代**种群统计量**，不再只记 argmax =====
+ * 病（今天量出来的，不是猜的）：`EPIRUS_HOLDOUT_SEG` 存段与 `gen` 行印的都是 `scored[0]`（当代评估最优**那一枚**）。
+ *   而 pop=8 × 每代 8 局 ⇒ "谁是最优"本身就是带噪的 argmax：同一次跑里第 1 与第 2 名分差 6.17pt，
+ *   比它们各自的自身极差 10.1pt 还小（在册原话"分差小于自身噪声 ⇒ 方向可信、幅度判不动"）。
+ *   ⇒ 演化折线把**排名抖动**画成了**风格摆动**，用户看图后问"为什么在两头反复横跳"就是这么来的。
+ * 这一档做的事：每代把**整个种群**（pop 个个体）已有的读数聚合成统计量落一份 JSONL ——
+ *   `fit` / `挡 blockPerGame`（防御族剂量的引擎口径）/ `广 varietyMaxEv` 三量的 best、top-k 均值、种群均值/中位/最小，
+ *   外加每个个体的 `{wid, fit, blk, var}`。**零额外对局**（这些数本来就是逐个体算的，只是以前只印第 0 名）。
+ * 默认 0=关 ⇒ 一行都不写、`gen` 行逐字不变（这条与 T1 同一套验收：开档后 `gen` 行必须与基线日志逐字同）。 */
+const POPSTAT = Math.max(0, Number(process.env.EPIRUS_POPSTAT || 0));
+const POPSTAT_K = Math.max(1, Number(process.env.EPIRUS_POPSTAT_K || 3) || 3);
+const POPSTAT_OUT = String(process.env.EPIRUS_POPSTAT_OUT || ('scratch/popstat/' + (process.env.EPIRUS_ARM || 'arm') + '.jsonl'));
+let POPSTAT_FAIL = 0;
+if (POPSTAT > 0) {
+  try { mkdirSync(POPSTAT_OUT.split(/[\\/]/).slice(0, -1).join('/') || '.', { recursive: true }); } catch (ePs0) {}
+  try { unlinkSync(POPSTAT_OUT); } catch (ePs1) {}
+  console.log('[种群统计] 每代 → ' + POPSTAT_OUT + '（EPIRUS_POPSTAT=' + POPSTAT + ' ‖ top-k=' + POPSTAT_K + ' ‖ 零额外对局：吃的是逐个体已有读数）');
+}
 const GA_STAT = { audits: 0, healthyGens: 0, starvedGens: 0, swapped: 0, eff1Sum: 0, lastEff1: '', noRef: 0 };
 /* §十四 判据换掉（v2 被 Goodhart，见 PREREG §十三）：门槛**不自己数键**，改用两条在册判据的合取——
  *   ① 种类：`两模式 effSkills ≥3` —— 与产品门 L1 `broad` 的 `pass` 逐字同一条（`champion-gate.mjs:80-85`，
@@ -2170,6 +2189,40 @@ for (let gen = 0; gen < GENS; gen++) {
   scored.sort(function (a, b) { return b.r.fit - a.r.fit; });
   if (scored[0].r.fit > bestFit) { bestFit = scored[0].r.fit; bestParams = scored[0].params; sigStall = 0; noProg = 0; }
   else { sigStall++; noProg++; }
+  /* #46：逐代种群统计（默认关 ⇒ 这一段一行都不跑）。口径纪律：
+   *   ‣ `null` 就写 `null`，**不许**把"没量到"聚成 0（`varietyMaxEv` 在 `doseOn=false` 时是 null）；
+   *   ‣ 分母（种群大小、参与均值的个体数）跟着数一起落，否则以后没人知道那个均值是几粒算的。 */
+  if (POPSTAT > 0) {
+    const fin = function (v) { return (typeof v === 'number' && isFinite(v)) ? v : null; };
+    const fits = scored.map(function (x) { return fin(x.r && x.r.fit); }).filter(function (v) { return v !== null; });
+    const blk = scored.map(function (x) { return fin(x.r && x.r.blockPerGame); });
+    const vr = scored.map(function (x) { return fin(x.r && x.r.varietyMaxEv); });
+    const agg = function (arr) {
+      const v = arr.filter(function (q) { return q !== null; });
+      if (!v.length) return { n: 0, mean: null, median: null, min: null, max: null };
+      const s = v.slice().sort(function (a, b) { return a - b; });
+      return { n: v.length, mean: +((v.reduce(function (a, b) { return a + b; }, 0) / v.length).toFixed(4)),
+        median: +(s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2).toFixed(4),
+        min: +s[0].toFixed(4), max: +s[s.length - 1].toFixed(4) };
+    };
+    const topK = function (arr) { return agg(arr.slice(0, POPSTAT_K)); };
+    const rec = { gen: gen + 1, sigma: +sigma.toFixed(4), pop: scored.length, k: POPSTAT_K,
+      fit: { best: fits.length ? +fits[0].toFixed(4) : null, topK: topK(fits), pop: agg(fits) },
+      block: { best: blk[0] === null ? null : +blk[0].toFixed(4), topK: topK(blk), pop: agg(blk) },
+      variety: { best: vr[0] === null ? null : vr[0], topK: topK(vr), pop: agg(vr) },
+      indiv: scored.map(function (x, i) { return { gi: i, wid: widOfArr(x.params), fit: fin(x.r && x.r.fit),
+        blk: fin(x.r && x.r.blockPerGame), var: fin(x.r && x.r.varietyMaxEv), h: (x.r && x.r.hGene) || 0 }; }) };
+    try { appendFileSync(POPSTAT_OUT, JSON.stringify(rec) + '\n'); }
+    catch (ePs2) { POPSTAT_FAIL++; if (POPSTAT_FAIL === 1) console.error('[种群统计] ⛔ 写不出（后续只计数不再刷屏）：' + ePs2.message); }
+    if ((gen + 1) % 20 === 0) {
+      console.log('[种群统计] gen ' + (gen + 1) + ' ‖ 挡 最优 ' + (rec.block.best === null ? '未量' : rec.block.best.toFixed(3)) +
+        ' / top' + POPSTAT_K + ' 均值 ' + (rec.block.topK.mean === null ? '未量' : rec.block.topK.mean.toFixed(3)) +
+        ' / 种群均值 ' + (rec.block.pop.mean === null ? '未量' : rec.block.pop.mean.toFixed(3)) +
+        '（n=' + rec.block.pop.n + '）‖ 广 最优 ' + (rec.variety.best === null ? '未量' : rec.variety.best) +
+        ' / 种群均值 ' + (rec.variety.pop.mean === null ? '未量' : rec.variety.pop.mean.toFixed(2)) +
+        ' ‖ fit 最优 ' + (rec.fit.best === null ? '?' : rec.fit.best.toFixed(3)) + ' / 种群均值 ' + (rec.fit.pop.mean === null ? '?' : rec.fit.pop.mean.toFixed(3)));
+    }
+  }
   /* ===== §十二（11-01 傍晚的位置勘误）：门槛必须接在**父母抽取处**，不是名人堂准入 =====
    * 第一批（判据 §十一）把钩子接在 `addHall` 上，结果三粒产物与对照**权重逐位同**
    *   （`GATE-s7/s13/s41.js` vs `GA2R-sword-s*.js` 的 `"a":[` 摘要相同），而门槛自检明明审计了 1200 次、换粒 180 次
