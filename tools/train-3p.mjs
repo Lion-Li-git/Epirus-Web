@@ -103,6 +103,9 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
   'EPIRUS_HALL_SEED',   // v1.5.277 §E114：把起点补进终局重验的候选池（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
+  'EPIRUS_BREADTH_FATAL',   // DS 11-03：名人堂全塌缩时中止（默认关 ⇒ 旧行为逐字同）
+  'EPIRUS_EFFSKILL_MIN',    // DS 11-03：有效技能数下限（非ジ份额 ≥0.5% 的键数；0=关）
+  'EPIRUS_EFFSKILL_SHARE',  // DS 11-03：上面那条"份额"的阈值（默认 0.005）
   'EPIRUS_GA_GATE', 'EPIRUS_GA_GATE_GAMES', 'EPIRUS_GA_BAND', 'EPIRUS_STALL_ABORT',
   'EPIRUS_HALL_TRACE', 'EPIRUS_HALL_TRACE_OUT',
   'EPIRUS_POPSTAT', 'EPIRUS_POPSTAT_K', 'EPIRUS_POPSTAT_OUT',   // #46（11-03 晚）：逐代**种群统计量** JSONL（默认 0=关 ⇒ 一行不写、gen 行逐字不变）
@@ -289,6 +292,15 @@ const HALL_SEED = Number(process.env.EPIRUS_HALL_SEED || 0) > 0 ? 1 : 0;
  * 标定（`mirrorHealth(20,5,'multi')` 实测）：现役 `2.66（3 种）` · 2P 槽 `2.98（3 种）` · §N28 三粒塌缩冠军 `1.00~1.24` · 最宽那粒 `1.75（3 种）`
  * ⇒ 线画在 1.5 只砍"塌成一种卡"，不砍"宽但兑现率低"。默认关，开了必须自己说剔了几粒。 */
 const BREADTH_FLOOR = Number(process.env.EPIRUS_BREADTH_FLOOR || 0);
+/* DS 11-03 晚（用户裁）："宽粒与基本防御是过线基本要求" ⇒ 名人堂**全部塌缩**时不许照写产物。
+ *   既有行为（v1.5.170 起）只标 `breadthFloorAllNarrow` 然后照写 ⇒ 1 种卡的包能一路写到最后。
+ *   本键 =1 ⇒ 直接 exit 7，不写产物（默认 0 保持旧行为，回归逐字同）。 */
+const BREADTH_FATAL = Number(process.env.EPIRUS_BREADTH_FATAL || 0) > 0;
+/* DS 11-03 晚（用户裁定）："伤害来源集中不是技能种类少" ⇒ 宽度改看**有效技能数**：
+ *   非ジ、成功出手、份额 ≥ `EPIRUS_EFFSKILL_SHARE`（默认 0.5%）的键数。
+ *   `maxLandShare` 只作记录（大雷输出型冠军的主要伤害来源本来就该集中）。0=关。 */
+const EFFSKILL_MIN = Math.max(0, Number(process.env.EPIRUS_EFFSKILL_MIN || 0) || 0);
+const EFFSKILL_SHARE = Math.min(0.2, Math.max(0.0001, Number(process.env.EPIRUS_EFFSKILL_SHARE || 0.005) || 0.005));
 /* ===== §十一 C（千问 · 11-01 傍晚，用户"开一下"）：把**演化期**健康门槛搬进 GA（不是终局筛）=====
  * 形状搬自线上 trainer（`js/train/evo.js:3952`）：不过自对局健康门槛 ⇒ 不许进容差带 / 不配当选，
  *   然后"先按分数取带、带内取覆盖熵最高者"。与在册 `EPIRUS_BREADTH_FLOOR` 的区别：那根作用在**终局 `sel.clean`**
@@ -2598,11 +2610,32 @@ for (const h of hall) {
       e.conv = (mh.nonJi ? (mh.landedTotal || 0) / mh.nonJi : 0);
       /* 与 promote 的"不可 --force"硬门槛同阈值（`HOLO_GIFT_MAX`，单源）：送盾当主业的候选**不参与**广度换人 */
       e.gateOk = (mh.holoOtherPerGame || 0) <= HOLO_GIFT_MAX;
+      /* 有效技能数（用户 11-03 裁定）：非ジ、成功出手、份额 ≥ EFFSKILL_SHARE 的键数。
+       * ⚠ 与 `maxLandShare` 的关系：后者只记录，不作宽度判据（输出集中 ≠ 技能少）。 */
+      {
+        const cast = e.castByKey || {};
+        const tot = Object.keys(cast).reduce((a, k) => a + (k === R.SK.JI ? 0 : (cast[k] || 0)), 0) || 1;
+        e.effSkillCount = Object.keys(cast).filter((k) => k !== R.SK.JI && (cast[k] || 0) / tot >= EFFSKILL_SHARE).length;
+      }
     }
   }
   /* ===== v1.5.170（§N29）：广度**准入线**（默认关）——把"塌成一种卡"当不合格，而不是当排序键 =====
    * 依据（§N28 实测）：两对种子 4 粒冠军里有 3 粒净兑现只剩 1 种卡（`1.00（1 种）`）⇒ 塌缩是常态不是意外；
    * 而 §N25 已证明"广度当排序键"要么咬不动（带里只剩 1 粒）要么咬错（换上来的是过不了硬门槛的包）。 */
+  if (EFFSKILL_MIN > 0 && sel.clean && sel.clean.length) {
+    const okE = sel.clean.filter((e) => (e.effSkillCount || 0) >= EFFSKILL_MIN);
+    console.log('[有效技能线] 判据 = 非ジ成功出手里份额 ≥ ' + (100 * EFFSKILL_SHARE).toFixed(1) + '% 的键数 ≥ ' + EFFSKILL_MIN +
+      ' · n=' + sel.clean.length + ' · 各粒：' + sel.clean.map((e) => (e.effSkillCount || 0)).join(','));
+    if (!okE.length) {
+      console.error('⛔ [有效技能线] 名人堂**没有一粒达到 ' + EFFSKILL_MIN + ' 种有效技能** ⇒ ' +
+        (BREADTH_FATAL ? 'BREADTH_FATAL=1 ⇒ 中止，不写产物（宽粒是过线基本要求）' : '产物照写但标 effSkillAllNarrow'));
+      if (BREADTH_FATAL) { console.error('[train-3p] exit 7（EFFSKILL_MIN）：这一臂没有合格的宽粒，不许落盘'); process.exit(7); }
+    } else {
+      okE.sort((a, b) => (b.landG || 0) - (a.landG || 0));
+      sel.clean = okE; sel.best = okE[0];
+      console.log('[有效技能线] 保留 ' + okE.length + '/' + sel.clean.length + ' 粒 ⇒ 冠军 ' + (okE[0].effSkillCount || 0) + ' 种有效技能');
+    }
+  }
   if (BREADTH_FLOOR > 0 && sel.clean && sel.clean.length) {
     const nf = rejectNarrowWinners(sel.clean, BREADTH_FLOOR);
     console.log('[广度线] 判据 = 净 `G(落地) ≥ ' + BREADTH_FLOOR + '` 且 **最大单卡落地份额 ≤ ' + (nf.collapseLine * 100).toFixed(0) + '%**（v1.5.227 起；旧判据是 `landedKeys ≥ 2`，实测从不触发）· n=' + SEL_LAND_GAMES + ' 局 multi 镜 · 各粒：' +
@@ -2612,8 +2645,9 @@ for (const h of hall) {
       (nf.best ? ' ⇒ 池内冠军 ' + (nf.best.score === sel.best.score ? '**没换人**' : '**换成 ' + nf.best.landG.toFixed(2) + '(' + nf.best.landedKeys + '种,最大' + (100 * (nf.best.maxLandShare || 0)).toFixed(0) + '%' + (nf.best.maxLandKey ? '-' + nf.best.maxLandKey : '') + ')**') : ''));
     if (nf.allRejected) {
       BREADTH_ALL_NARROW = true;
-      console.error('⛔ [广度线] 名人堂**全部塌缩**（没有一粒 `最大单卡落地份额 ≤ ' + (nf.collapseLine * 100).toFixed(0) + '% 且 G(落地)≥' + BREADTH_FLOOR + '`）⇒ 产物照写但标 breadthFloorAllNarrow；' +
-        '这按预注册是**走向②**（该回去改奖励面，不是继续加排序键），别拿这粒去换包');
+      console.error('⛔ [广度线] 名人堂**全部塌缩**（没有一粒 `最大单卡落地份额 ≤ ' + (nf.collapseLine * 100).toFixed(0) + '% 且 G(落地)≥' + BREADTH_FLOOR + '`）⇒ ' +
+        (BREADTH_FATAL ? '**EPIRUS_BREADTH_FATAL=1 ⇒ 中止，不写产物**（宽粒是过线基本要求，不是可选项）' : '产物照写但标 breadthFloorAllNarrow；这按预注册是**走向②**（该回去改奖励面，不是继续加排序键），别拿这粒去换包'));
+      if (BREADTH_FATAL) { console.error('[train-3p] exit 7（BREADTH_FATAL）：这一臂没有一粒合格的宽粒，按用户裁定不许落盘'); process.exit(7); }
     } else { sel.clean = nf.clean; if (nf.best) sel.best = nf.best; }
     BREADTH_LOG = { floor: BREADTH_FLOOR, games: SEL_LAND_GAMES, dropped: nf.dropped, of: sel.clean.length + nf.dropped,
       allNarrow: nf.allRejected, winnerLandG: sel.best ? sel.best.landG : null, winnerKeys: sel.best ? sel.best.landedKeys : null };
