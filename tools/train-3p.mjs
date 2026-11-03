@@ -2614,8 +2614,11 @@ for (const h of hall) {
        * ⚠ 与 `maxLandShare` 的关系：后者只记录，不作宽度判据（输出集中 ≠ 技能少）。 */
       {
         const cast = e.castByKey || {};
-        const tot = Object.keys(cast).reduce((a, k) => a + (k === R.SK.JI ? 0 : (cast[k] || 0)), 0) || 1;
-        e.effSkillCount = Object.keys(cast).filter((k) => k !== R.SK.JI && (cast[k] || 0) / tot >= EFFSKILL_SHARE).length;
+        /* 11-03 深夜（GLM）：此处作用域没有 `R`（train-3p 的 rules 走 `sb.window.EpirusRules`，DS 是从 evo.js 抄的写法）
+         * ⇒ EFFSKILL_MIN>0 时 ReferenceError 当场炸臂（EFFG 三臂实测）。SK 常量从同一个 sb 取。 */
+        const SKJ = sb.window.EpirusRules.SK.JI;
+        const tot = Object.keys(cast).reduce((a, k) => a + (k === SKJ ? 0 : (cast[k] || 0)), 0) || 1;
+        e.effSkillCount = Object.keys(cast).filter((k) => k !== SKJ && (cast[k] || 0) / tot >= EFFSKILL_SHARE).length;
       }
     }
   }
