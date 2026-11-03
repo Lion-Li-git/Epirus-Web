@@ -2087,6 +2087,32 @@ function attrLine() {
  *  对策的靶 = "末代重验收埋掉中代峰"（DS E3 + 夜班 D-a band3 实锤）；只存盘不改当选。 */
 const HOLDOUT_SEG = Math.max(0, Math.floor(Number(process.env.EPIRUS_HOLDOUT_SEG || 0) || 0));
 const SEGS = [];
+/* ===== 11-03（用户提"训练中断也要留得住节点"）：快照改成**当场落盘** =====
+ * 病（实测）：`CBG-*` 三臂开了 `EPIRUS_HOLDOUT_SEG=25`、快照打到 gen 25/50/…，但 SEGS 只攒在内存、
+ *   统一等 band-save 那段才写盘 ⇒ 进程在**名人堂验证**阶段被停 ⇒ 段与包一起蒸发（"没有留下数据"）。
+ * 改法：每打一个快照就写 `<ARM>-seg<k>.bak`，于是任何时刻被停都已经留住"到这一代为止"的那些深度。
+ *   ⚠ 存的是**每 K 代的最优粒**，不是整个种群 ⇒ 不能用来"续跑"（那要另写重启口），它答的是
+ *     "训练到什么程度长成什么样"——按深度对比由 `scratch/holdout-promote.mjs` 固定留出复排做。
+ * 名字/落点在此提前定义（band-save 那段原本把 `ARM`/`BAND_DIR` 关在自己的 try 块里，循环够不着）。 */
+const ARM_NAME = process.env.EPIRUS_ARM || OUT_PATH.replace(/^.*[\\/]/, '').replace(/\.js$/, '');
+const BAND_DIR_NAME = process.env.EPIRUS_BAND_DIR || 'docs/artifacts';   // 可指向临时目录 ⇒ 门 D116 能行为式测它而**不欠 D82 的账**
+const segTextOf = function (s, k) {
+  return '/* holdout-seg ' + ARM_NAME + '-seg' + (k + 1) + '（EPIRUS_HOLDOUT_SEG=' + HOLDOUT_SEG + '，第 ' + s.gen + ' 代快照） */\n' +
+    'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({ seg: true, segIndex: k + 1, gen: s.gen, fit: s.fit, arm: ARM_NAME, hotstartFrom: (/^[0-9a-f]{16}$/.test(hotstartFrom || '') ? hotstartFrom : undefined) }) + ';\n' +
+    'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(s.params)) + ';\n';
+};
+const SEG_FLUSH_FAIL = [];
+const flushSeg = function (s, k) {
+  try {
+    if (!existsSync(BAND_DIR_NAME)) mkdirSync(BAND_DIR_NAME, { recursive: true });
+    writeFileSync(BAND_DIR_NAME + '/' + ARM_NAME + '-seg' + (k + 1) + '.bak', segTextOf(s, k), 'utf8');
+    return true;
+  } catch (e) {
+    SEG_FLUSH_FAIL.push('seg' + (k + 1) + '@gen' + s.gen + '：' + e.message);
+    console.log('[holdout-seg] ⚠ 第 ' + s.gen + ' 代快照落盘失败（' + e.message + '）⇒ 这份只在内存里，进程被停就丢');
+    return false;
+  }
+};
 for (let gen = 0; gen < GENS; gen++) {
   const scored = pop.map(function (params, i) {
     let r = T.scoreMemberN(params, OPPS, GAMES, N, gen, i, hGenes[i]);
@@ -2298,7 +2324,10 @@ for (let gen = 0; gen < GENS; gen++) {
   if (HOLDOUT_SEG > 0 && (gen + 1) % HOLDOUT_SEG === 0 && scored.length) {
     const bs = scored.reduce((a, b) => (((b.r && b.r.fit) || -Infinity) > ((a.r && a.r.fit) || -Infinity) ? b : a));
     SEGS.push({ gen: gen + 1, params: Float64Array.from(bs.params), fit: bs.r ? bs.r.fit : null });
-    console.log('[holdout-seg] ' + (gen + 1) + ' 代快照（fit ' + (bs.r ? bs.r.fit.toFixed(3) : '?') + '）· 累计 ' + SEGS.length);
+    /* 11-03：当场落盘（原来只攒内存，进程在末代之后被停 ⇒ 段全蒸发，DS 的 CBG 三臂就是这么丢的） */
+    flushSeg(SEGS[SEGS.length - 1], SEGS.length - 1);
+    console.log('[holdout-seg] ' + (gen + 1) + ' 代快照（fit ' + (bs.r ? bs.r.fit.toFixed(3) : '?') + '）· 累计 ' + SEGS.length
+      + ' ‖ 已落 ' + BAND_DIR_NAME + '/' + ARM_NAME + '-seg' + SEGS.length + '.bak');
   }
   pop = next; hGenes = nextH;
   sigma = Math.max(SIG_FLOOR, sigma * SIG_DECAY);
@@ -3042,8 +3071,9 @@ if (process.env.EPIRUS_SEL_G4LONG === '1') {
  *     并把 `xn2*` 口径写进 meta（谁跑的、什么权重、对谁打 2P —— 产物要能自证来历）。
  * 只写盘、不改当选判定；失败不影响当选者写盘。 */
 try {
-  const ARM = process.env.EPIRUS_ARM || OUT_PATH.replace(/^.*[\\/]/, '').replace(/\.js$/, '');
-  const BAND_DIR = process.env.EPIRUS_BAND_DIR || 'docs/artifacts';   // 可指向临时目录 ⇒ 门 D116 能行为式测它而**不欠 D82 的账**
+  /* 11-03：名字与落点已在 GA 循环之前定义（存段要当场落盘），这里只引用，避免"两处各写一遍" */
+  const ARM = ARM_NAME;
+  const BAND_DIR = BAND_DIR_NAME;
   /* ⚠ 只提醒、不改行为（本班实测踩到的形状）：产物被 `EPIRUS_T3P_OUT` 改道到**仓库外**（并发臂的常规做法），
    *   但 band 备份仍按默认落进 `docs/artifacts` ⇒ 每一臂多 6 份 `.bak`，**下一位跑 `--group=meta` 的人当场吃 `D191` 的"未登记重复"红**
    *   （实测：11 臂 × 6 = 66 份 ⇒ `got=5 want=0`；同一族 DS 上一批也撞过一次）。
@@ -3098,13 +3128,17 @@ try {
   }
   /*（ZCode · 11-03 凌晨）E3 存段落盘：<ARM>-seg<k>.bak（与 band 同目录同格式；`scratch/holdout-promote.mjs` 复排）。 */
   if (SEGS.length && bandDirReady) {
+    let already = 0, rewrote = 0;
     SEGS.forEach(function (s, k) {
-      const segText = '/* holdout-seg ' + ARM + '-seg' + (k + 1) + '（EPIRUS_HOLDOUT_SEG=' + HOLDOUT_SEG + '，第 ' + s.gen + ' 代快照） */\n' +
-        'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({ seg: true, segIndex: k + 1, gen: s.gen, fit: s.fit, arm: ARM, hotstartFrom: (/^[0-9a-f]{16}$/.test(hotstartFrom || '') ? hotstartFrom : undefined) }) + ';\n' +
-        'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(s.params)) + ';\n';
-      writeFileSync(BAND_DIR + '/' + ARM + '-seg' + (k + 1) + '.bak', segText, 'utf8');
+      const dest = BAND_DIR + '/' + ARM + '-seg' + (k + 1) + '.bak';
+      if (existsSync(dest)) { already++; return; }   /* 快照当时已落盘 ⇒ 这里不重写（同字节，省一次写） */
+      writeFileSync(dest, segTextOf(s, k), 'utf8'); rewrote++;
     });
-    console.log('[holdout-seg] 落盘 ' + SEGS.length + ' 段 ⇒ ' + BAND_DIR + '/' + ARM + '-seg*.bak（holdout-promote 复排用）');
+    console.log('[holdout-seg] 段档案 ' + SEGS.length + ' 个（当场已落 ' + already + ' ‖ 本次补写 ' + rewrote + '）⇒ '
+      + BAND_DIR + '/' + ARM + '-seg*.bak（holdout-promote 复排用）'
+      + (SEG_FLUSH_FAIL.length ? ' ‖ ⚠ 当场落盘失败过 ' + SEG_FLUSH_FAIL.length + ' 个：' + SEG_FLUSH_FAIL.join(' ; ') : ''));
+  } else if (SEGS.length && !bandDirReady) {
+    console.log('[holdout-seg] ⛔ 目录建不出 ⇒ ' + SEGS.length + ' 段里当场落盘成功的只有 ' + (SEGS.length - SEG_FLUSH_FAIL.length) + ' 个（见上面各 ⚠ 行）');
   }
 } catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
 /* ===== qoder 11-02 复核补的付账字据（§十一②/③ 那条病）=====
