@@ -16,3 +16,6 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-03T12:57:11.829Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	scratch/ga-arms/SMOKE-SW2.js	train-3p	本臂零改包：产物 = 起点那一粒
 2026-11-03T13:09:05.785Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	scratch/ga-bands/EVALOLD-s13/EVALOLD-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
 2026-11-03T18:18:32.602Z	f0483830ce2aec6f	docs/artifacts/CB3-s13-seg3.bak	docs/artifacts/CB3-s13-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-03T18:32:09.136Z	38742ad2016f2c39	docs/artifacts/HPG-s41-seg2.bak	docs/artifacts/HPG-s41-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-03T18:39:35.624Z	2e119c7815de45a1	docs/artifacts/CB3-s41-seg5.bak	docs/artifacts/CB3-s41-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-03T18:39:35.628Z	2e119c7815de45a1	docs/artifacts/CB3-s41-seg5.bak	scratch/night6/CB3-s41.js	train-3p	未复制：同一粒权重已有真身

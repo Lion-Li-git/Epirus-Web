@@ -19,3 +19,11 @@
    A=[L5-1200-s13,D1200-s13,DSTR4-s13,EFFG-s41,EFFG-s5,EFFG-s7,GD3ALL-G5-8p-s41]
    B=[GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-PUSHON-s13,D-b-hpseed-s13,D-a-s13]
    A 带胜份额 41.4% ± 2.7 ⇒ 偏离均势 -8.6pt ‖ 3.2σ ‖ ✔ 分得开
+== 换位对照：弱vs强（直交反转严谨性） ‖ long × 400 局（判定 344）
+   A=[GD3ALL-PUSHON-s13,D-b-hpseed-s13,D-a-s13,GD3ALL-PLAIN-s13,DDEF-s13,DSTR-s13,CB-s13,LE-s13,GD3ALL-G5-s13,GD3ALL-NGA2R-s41]
+   B=[L5-1200-s13,D1200-s13,DSTR4-s13,EFFG-s41,EFFG-s5,EFFG-s7,GD3ALL-G5-8p-s41,GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-POPP-s17,GD3ALL-POPP-s41]
+   A 带胜份额 36.9% ± 2.6 ⇒ 偏离均势 -13.1pt ‖ 5.0σ ‖ ✔ 分得开
+== 归因：强带去三单极 vs 中带 ‖ long × 400 局（判定 336）
+   A=[EFFG-s41,EFFG-s5,EFFG-s7,GD3ALL-G5-8p-s41,GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-POPP-s17,GD3ALL-POPP-s41]
+   B=[GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-POPP-s17,GD3ALL-POPP-s41,GD3ALL-PUSHON-s13,D-b-hpseed-s13,D-a-s13]
+   A 带胜份额 44.9% ± 2.7 ⇒ 偏离均势 -5.1pt ‖ 1.9σ ‖ ✘ 判不分（线：≥4pt 且 ≥2σ）

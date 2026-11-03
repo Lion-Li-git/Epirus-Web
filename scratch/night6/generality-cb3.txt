@@ -1,0 +1,3 @@
+CB3-s13 | 3人multi=69.0% | 4人multi4=61.7% | 5人long=70.0% | 8人multi=44.3% | 10人multi=45.5%
+CB3-s7 | 3人multi=66.0% | 4人multi4=59.3% | 5人long=78.3% | 8人multi=47.9% | 10人multi=49.0%
+HPG-s41 | 3人multi=67.1% | 4人multi4=73.6% | 5人long=83.3% | 8人multi=58.6% | 10人multi=54.5%
