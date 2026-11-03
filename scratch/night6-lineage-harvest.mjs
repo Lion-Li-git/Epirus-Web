@@ -39,7 +39,9 @@ const HASH2FAM = {
   '7e52479189947539': 'D谱系中继2',  /* DSTR4-s13 起点：未入库中继枚 ⇒ 虚拟节点（ROOTS 补） */
   '3aaa8169': 'D谱系中继2s41',       /* DSTR4-s41 / DSTR5-s41 起点：同上 */
   '792f3caacf064b84': 'GD3ALL-G5-8p-s41',
-  '0290df82': 'LE-laser-v2'
+  '0290df82': 'LE-laser-v2',
+  '3489c16057e7321b': 'CB3-combo-v3',   /* CB-v3 蒸馏底座（11-04，起点 EFFG-s41） */
+  '22f1014a39c219bf': 'L5-1200-s13'     /* HPG 探针臂（L5-1200 + HPSEED）的起点 */
 };
 
 /* 手工根/蒸馏层（来源：scratch/arms/*.bak.meta.json 与 scratch/night4/*.bak.meta.json 实读，11-04 凌晨） */
@@ -56,13 +58,14 @@ const ROOTS = [
   { id: 'CB-combo-v2', parent: 'GA-ration-s41', edgeKind: '蒸馏(连招)', family: 'CB谱系', note: 'teacher=ration6 combo-v2' },
   { id: 'LE-laser-v2', parent: 'GA-ration-s41', edgeKind: '蒸馏(激光眼)', family: 'LE谱系', note: '激光眼破冰蒸馏（§二十七）' },
   { id: 'D谱系中继2', parent: 'D-a-s13', edgeKind: '续训中继', family: 'D谱系', note: '未入库中继枚（DSTR4-s13 起点，哈希 7e524791）' },
+  { id: 'CB3-combo-v3', parent: 'EFFG-s41', edgeKind: '蒸馏(连招v3)', family: 'CB谱系', note: 'teacher=ration6，学生自访 82.8%（CB-v2 73.4%）' },
   { id: 'D谱系中继2s41', parent: 'D-a-s41', edgeKind: '续训中继', family: 'D谱系', note: '未入库中继枚（DSTR4-s41/DSTR5-s41 起点，哈希 3aaa8169）' },
   { id: 'L5-D4a-s13', parent: 'D4a', edgeKind: 'GA(5P long 首批)', family: 'L5谱系', note: 'DS 11-02 L5 首批 6 臂之强粒（0.438/60.0）', refRead: '60.0', refSrc: 'RESULTS-2026-11-02-L5-ds §一' },
   { id: 'L5-D4a-s7', parent: 'D4a', edgeKind: 'GA(5P long 首批)', family: 'L5谱系', note: '同批 s7', refRead: '50.0', refSrc: 'RESULTS-2026-11-02-L5-ds §一' },
   { id: 'L5-D4a-s41', parent: 'D4a', edgeKind: 'GA(5P long 首批)', family: 'L5谱系', note: '同批 s41', refRead: '47.5', refSrc: 'RESULTS-2026-11-02-L5-ds §一' }
 ];
 
-const DIRS = ['scratch/night3', 'scratch/night4', 'scratch/night5'];
+const DIRS = ['scratch/night3', 'scratch/night4', 'scratch/night5', 'scratch/night6'];
 const rows = [];
 for (const dir of DIRS) {
   if (!existsSync(dir)) continue;
