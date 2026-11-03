@@ -12,3 +12,6 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-03T06:24:34.912Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
 2026-11-03T06:25:50.090Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
 2026-11-03T06:37:22.000Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	docs/artifacts/SMOKE-NORM-s13-band3.bak	train-3p:band	已登记的复制：同一次 SMOKE-NORM 跑的名人堂两席是同一粒权重（产物=起点，起点 L5-D4a-s13）——11-03 qoder 按 D191 口径补登记，未删任何文件
+2026-11-03T12:57:11.821Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	docs/artifacts/SMOKE-SW2-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-03T12:57:11.829Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	scratch/ga-arms/SMOKE-SW2.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-03T13:09:05.785Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	scratch/ga-bands/EVALOLD-s13/EVALOLD-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）

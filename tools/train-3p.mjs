@@ -2587,7 +2587,7 @@ for (const h of hall) {
   if (sel.dropped) console.log('[退化闸] 剔除 ' + sel.dropped + ' 粒零攻击≥90% 的名人堂成员（与 promote/2P 同判据）');
   /* v1.5.170（§N29）：两把"兑现"口径的闸共用一次 `mirrorHealth`（同一量具测两遍 = 白跑一遍）。
    * 未开任何一个开关 ⇒ 这段一行都不跑 ⇒ 与 v1.5.166 之前的行为逐字相同。 */
-  if ((BREADTH_FLOOR > 0 || SEL_LAND > 0 || SEL_KEEP > 0) && sel.clean && sel.clean.length) {
+  if ((BREADTH_FLOOR > 0 || SEL_LAND > 0 || SEL_KEEP > 0 || EFFSKILL_MIN > 0) && sel.clean && sel.clean.length) {
     for (const e of sel.clean) {
       const mh = T.mirrorHealth(e.ref.params, SEL_LAND_GAMES, N, 'multi');
       e.mhByMode = { multi: mh };   // v1.5.268：载重 veto 需要 long 口径时复用，不重复跑 multi

@@ -21,7 +21,8 @@ const cand = [];
 if (DIR) for (const f of readdirSync(DIR).filter((x) => /band\d+\.bak$/.test(x)).sort()) cand.push({ name: f.replace(/\.bak$/, ''), path: DIR + '/' + f });
 if (PRODUCT) cand.push({ name: 'product', path: PRODUCT });
 
-const COV = Number(arg('coverage', 0)) || 0;   /* --coverage=1：加跑覆盖探针（防御份额/准确 + mine/drain），排序加覆盖项 */
+const COV = Number(arg('coverage', 0)) || 0;
+const COVW = Number(arg('covW', 0)) || 0;   /* >0：给"技能种数"加权重（选择压） */   /* --coverage=1：加跑覆盖探针（防御份额/准确 + mine/drain），排序加覆盖项 */
 const scores = [];
 for (const c of cand) {
   try {
@@ -70,16 +71,19 @@ for (const c of cand) {
       const tot5 = Object.keys(s5).reduce((a, k) => a + (DEFSET.has(k) ? 0 : s5[k]), 0) || 1;
       let defShare = 0; for (const k of DEFSET) defShare += s5[k] || 0;
       cov = { mine8: s8[R.SK.MINE] || 0, drainLow: sLow[R.SK.DRAIN] || 0, tank: (s5[R.SK.TANK] || 0) + (s8[R.SK.TANK] || 0),
-        snipe: (s5[R.SK.SNIPE] || 0) + (s8[R.SK.SNIPE] || 0), defShare: +(100 * defShare / tot5).toFixed(1) };
+        snipe: (s5[R.SK.SNIPE] || 0) + (s8[R.SK.SNIPE] || 0), defShare: +(100 * defShare / tot5).toFixed(1),
+        breadth: Object.keys(s5).filter((k) => k !== R.SK.JI && (s5[k] || 0) > 0).length };
     }
     scores.push({ name: c.name, out, cov });
     console.log(c.name.padEnd(14) + ' ‖ ' + out.map((o) => o.mode + ' clean=' + o.clean + '%').join(' ‖ ') +
-      (cov ? ' ‖ 覆盖: mine8=' + cov.mine8 + ' drain残血=' + cov.drainLow + ' 坦/狙=' + cov.tank + '/' + cov.snipe + ' DEF份额=' + cov.defShare + '%' : ''));
+      (cov ? ' ‖ 覆盖: mine8=' + cov.mine8 + ' drain残血=' + cov.drainLow + ' 坦/狙=' + cov.tank + '/' + cov.snipe + ' DEF份额=' + cov.defShare + '% 种数=' + cov.breadth : ''));
   } catch (e) { console.log('⛔ ' + c.name + '：' + e.message); }
 }
 if (scores.length) {
-  const ranked = scores.slice().sort((a, b) => (parseFloat(b.out.find((o) => o.mode === 'long').clean) * 2 + parseFloat(b.out.find((o) => o.mode === 'multi').clean)) - (parseFloat(a.out.find((o) => o.mode === 'long').clean) * 2 + parseFloat(a.out.find((o) => o.mode === 'multi').clean)));
-  console.log('\n[留出复排] 首选 = ' + ranked[0].name + '（long*2+multi 加权；两界固定种子 ' + 700000 + '/' + 800000 + '）');
+  const sc = (s) => parseFloat(s.out.find((o) => o.mode === 'long').clean) * 2 + parseFloat(s.out.find((o) => o.mode === 'multi').clean) + (s.cov ? COVW * s.cov.breadth : 0);
+  const ranked = scores.slice().sort((a, b) => sc(b) - sc(a));
+  console.log('\n[留出复排] 首选 = ' + ranked[0].name + '（long*2+multi' + (COVW ? ' + ' + COVW + '×种数' : '') + ' 加权；两界固定种子 ' + 700000 + '/' + 800000 + '）');
+  if (COVW && scores[0].cov) console.log('[留出复排] 种数权重下前三：' + ranked.slice(0, 3).map((s) => s.name + '（种数 ' + (s.cov ? s.cov.breadth : '?') + '，long ' + s.out.find((o) => o.mode === 'long').clean + '%）').join(' ‖ '));
   const prod = scores.find((s) => s.name === 'product');
   if (prod && ranked[0].name !== 'product') console.log('[留出复排] ⚠ 产物不是留出最优 ⇒ E3 会换人（换不换等裁，本工具只报告）');
 }
