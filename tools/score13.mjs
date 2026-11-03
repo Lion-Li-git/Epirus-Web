@@ -73,13 +73,19 @@ export function parsePromote(txt) {
   /* 送盾（旧硬门槛的读数；2026-10-28 起登记为**只记录**） */
   const hg = t.match(/其中\*\*套给别人\*\* ([\d.]+) 次\/局/);
   if (hg) out.raw.holoOther = Number(hg[1]);
-  /* 行为门：只有红的那几格会被印出来 */
+  /* 行为门：只有红的那几格会被印出来
+   * ⚠ 11-03：`✅ 候选自己全过` 这句**曾经是假绿**——`gate-drafts` 读不出 v:92 容器时整体 exit 64、
+   *   G4/G5 一行没跑，而旧版 promote 把"0 条 FAIL"印成这句 ⇒ 夜里那几张 13 项成绩单把没跑过的门算成了绿。
+   *   现在 promote 只会印「✅ 候选自己全过（判到 N 行）」或「⛔ 候选一行都没判到…」⇒
+   *   **认不到行数就判"读不出"（null），绝不判绿**；旧格式的裸 ✅ 同样落"读不出"。 */
   const beh = (t.match(/G4\/G5 行为门（[^）]*）：([^\n]*)/) || [])[1] || '';
+  const behUnrun = /候选一行都没判到/.test(beh) || (/候选自己全过/.test(beh) && !/判到 \d+ 行/.test(beh));
   /* 只有**第一格**带 ✗，后面的格子是「；G5[...]」⇒ 必须按格子切，不能靠 ✗ 全局找（第一版就是这么少算一格的） */
   const behSegs = beh.split('；');
   out.raw.g4Fails = behSegs.filter((s) => /G4\[/.test(s)).map((s) => s.trim());
   out.raw.g5Fails = behSegs.filter((s) => /G5\[/.test(s)).map((s) => s.trim());
-  out.raw.behaviorHeader = beh.length > 0;
+  out.raw.behaviorHeader = beh.length > 0 && !behUnrun;
+  out.raw.behaviorUnrun = behUnrun;
   out.raw.g4Worst = (function () { const m = beh.match(/最克「([^」]+)」([\d.]+)%/); return m ? { cell: m[1], pct: Number(m[2]) } : null; })();
   return out;
 }
@@ -155,6 +161,12 @@ function main() {
       [s.raw.fieldB === 0 && s.raw.fieldA === 18.7, 'S3 场B 0 / 场A 18.7'],
       [s.raw.expiredPerGame == null, 'S3 没印「过期 X/局」⇒ 珠那条必须读不出（不许当成 0）'],
       [s.raw.g4Fails.length === 2 && s.raw.g5Fails.length === 2, 'S3 G4/G5 各两格红'],
+      /* 11-03：`gate-drafts` 读不出 v:92 ⇒ G4/G5 一行没跑，旧 promote 却印「✅ 候选自己全过」——
+       *   夜里那几张 13 项成绩单就是把**没跑过的门算成了绿**。现在认"判到 N 行"，认不到就落"读不出"。 */
+      [parsePromote(SAMPLE_BEH_OK).raw.behaviorHeader === true, '✅（判到 10 行）⇒ 门真跑过 ⇒ 允许判绿'],
+      [parsePromote(SAMPLE_BEH_UNRUN).raw.behaviorHeader === false && parsePromote(SAMPLE_BEH_UNRUN).raw.behaviorUnrun === true, '⛔「候选一行都没判到」⇒ 读不出，不许绿'],
+      [(function () { const na = verdict({ raw: parsePromote(SAMPLE_BEH_BARE).raw, density: null, strength: 50 }, false).na.join('·'); return na.includes('G4') && na.includes('G5'); })(),
+        '旧格式裸 ✅（没有"判到 N 行"）⇒ G4 与 G5 都挂"读不出"——夜里那几张 gen-3 成绩单就是这个形状'],
       [verdict({ raw: f.raw, density: null, strength: 51.5 }, false).of === 13, '闸门默认条数 = 13（L0+L1；珍/送盾/G6 在 L3 不进分母）'],
       [verdict({ raw: s.raw, density: null, strength: 44 }, false).na.includes('（新增）'), 'S3 缺防御质量栏 ⇒ 那条挂"读不出"，不判绿'],
       [verdict({ raw: { gained: 0, expiredPerGame: 0, charge: 0, waste: 0 }, density: null, strength: null }, false)
@@ -231,5 +243,10 @@ E 被动场：旧口径摆架势率 = 18%   **新口径·无威胁(对手ジ<5)�
 广度：multi 有效技能数=6.78（取严） · **long（= 长程，产品常用模式）** 有效技能数=5.99（取严）
 珠经济（40 局）：蓄能 3.48/局 · 得珠 139 · 过期 37 · **花掉 97** · 浪费率 27% · **花珠率 69.8%**
 G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：✗ G4[.e814-S3/long] 无一行脚本能以 >60% 击败它（最克「只防御(不还手)」83.7%）；G4[.e814-S3/multi] 无一行脚本能以 >60% 击败它（最克「只防御(不还手)」71%）；G5[.e814-S3/long] 必须能清场（实测防席夺冠 85%）；G5[.e814-S3/multi] 必须能清场（实测防席夺冠 73%）`;
+
+/* 11-03 加的三份行为门夹具（`gate-drafts` 读不出 v:92 的那晚，promote 印的就是第三份那种**裸 ✅**） */
+const SAMPLE_BEH_OK = 'G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：✅ 候选自己全过（判到 10 行）';
+const SAMPLE_BEH_UNRUN = 'G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：⛔ **候选一行都没判到**（gate-drafts exit=64）⇒ 这是**没跑成**，不是全过';
+const SAMPLE_BEH_BARE = 'G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：✅ 候选自己全过';
 
 if (process.argv[1] && /score13\.mjs$/.test(process.argv[1])) main();

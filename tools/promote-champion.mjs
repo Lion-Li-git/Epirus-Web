@@ -497,7 +497,10 @@ if (!process.argv.includes('--skip-gate-drafts')) {
       if (mu) {
         const uKind = mu[1] || null, uName = mu[2].trim();
         const uIsRef = /^G[3-6]\[(线上包|元测试)/.test(uName);
-        if (!uIsRef) gateDrafts.candRows++;   /* 不可判也是"判到了" ⇒ 计入候选行，别让下面的 0 行哨兵误报 */
+        /* 不可判也是"判到了" ⇒ 计入候选行。**只数候选自己的 G4/G5 格**：G3 那两行的名字是 `G3[long]`，
+         *   不带 `线上包` 前缀 ⇒ 早先那版按"非参照"计数，把在位包的座位行算成了候选行，
+         *   于是门读不出包时照样印「✅（判到 2 行）」（11-03 worktree 变异当场抓出来的）。 */
+        if (!uIsRef && (/^G4\[/.test(uName) || /^G5\[/.test(uName) || /^G5带档\[/.test(uName))) gateDrafts.candRows++;
         const uD = unrunDisposition(uKind, uIsRef);
         /* v1.5.284（Qoder §20-2 点名：DS 的 v1.5.283 只修了 FAIL 分支，UNRUN 这条路漏了）：
          * `statusOf` 会产出 `UNRUN:缺` 这种**同样可解析**的格式 ⇒ 重复打印时 UNRUN 也会被 push 两遍
@@ -518,7 +521,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
        * 若把参照行也当阻断：① 任何候选都被连坐（换包实际只能靠 --force）；② 会把"候选不行"这个
        * **错误结论**传给人 —— 与 v1.5.78 想治的"把没过的当成过了"是同一类错误的反向版本。 */
       const isRef = /^G[3-6]\[(线上包|元测试)/.test(nm);
-      if (!isRef) gateDrafts.candRows++;
+      if (!isRef && (/^G4\[/.test(nm) || /^G5\[/.test(nm) || /^G5带档\[/.test(nm))) gateDrafts.candRows++;
       /* v1.8.44（10-28 午后 · DS 复查挖出来的）：**带档行以前既不进阻断、也从不打印** ⇒ 用 `promote --dry`
        * 复跑 G5 的人**输出里根本没有 40 档那一格**（DS 就是这样把 ZCode 的"带档 49%"判成"复现不出来"的，
        * 它读到的 30% 是**关档**那一行）。根因是阻断正则 `/^G5\[/` 匹配不到 `G5带档[` ⇒ 那一行只落到
