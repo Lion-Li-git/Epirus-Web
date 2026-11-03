@@ -97,6 +97,7 @@ CB3-s7	CB3-combo-v3	GA(150代×24局)	CB3	7	150	24	scratch/night6/CB3-s7.js
 HPG-s13	L5-1200-s13	GA(150代×24局)	HPG	13	150	24	scratch/night6/HPG-s13.js			
 HPG-s41	L5-1200-s13	GA(150代×24局)	HPG	41	150	24	scratch/night6/HPG-s41.js			
 HPG-s7	L5-1200-s13	GA(150代×24局)	HPG	7	150	24	scratch/night6/HPG-s7.js			
+TPG-s41	L5-1200-s13	GA(150代×24局)	TPG	41	150	24	scratch/night6/TPG-s41.js			
 BAS-s13__seg4	BAS-s13	段@100代	BAS-s13		100		scratch/ga-bands/BAS-s13/BAS-s13-seg4.bak			kinds=11 defShare=64.7 fit=0.4198
 BAS-s41__seg2	BAS-s41	段@50代	BAS-s41		50		scratch/ga-bands/BAS-s41/BAS-s41-seg2.bak			kinds=10 defShare=71 fit=0.3839
 BAS-s41__seg6	BAS-s41	段@150代	BAS-s41		150		scratch/ga-bands/BAS-s41/BAS-s41-seg6.bak			kinds=11 defShare=68.4 fit=0.6366
