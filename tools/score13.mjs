@@ -87,6 +87,17 @@ export function parsePromote(txt) {
   out.raw.behaviorHeader = beh.length > 0 && !behUnrun;
   out.raw.behaviorUnrun = behUnrun;
   out.raw.g4Worst = (function () { const m = beh.match(/最克「([^」]+)」([\d.]+)%/); return m ? { cell: m[1], pct: Number(m[2]) } : null; })();
+  /* T2（11-03 · **只记录，不进 13 项判据、不改红绿**）：反制者的**期望损失**。
+   * G4 的 headline 只有 max ⇒ 「最克 99.7%」与「最克 61%」都读成一个红，也分不清"只有一格克它"与"到处都克它"；
+   *   这一条把同一批 8 格读数汇成 mean/中位/>50% 格数（`gate-drafts` 算、`promote` 印，这里只接）。
+   * ⚠ 读不出 = `null` + `g4CellsUnrun=true`，**不许**把"没这行"读成 mean=0（0 分母与 0 读数同形是本页在册教训）。 */
+  out.raw.g4Cells = (function () {
+    const re = /mean=([\d.]+)% ‖ 中位 ([\d.]+)% ‖ >50% 的格 (\d+\/\d+) ‖ 最克「([^」]+)」([\d.]+)%（n=(\d+)）/g;
+    const segs = []; let m;
+    while ((m = re.exec(t))) segs.push({ mean: Number(m[1]), median: Number(m[2]), over50: m[3], worst: m[4], worstPct: Number(m[5]), n: Number(m[6]) });
+    return segs.length ? segs : null;
+  })();
+  out.raw.g4CellsUnrun = /反制者期望损失/.test(t) && out.raw.g4Cells === null;
   return out;
 }
 
@@ -171,7 +182,16 @@ function main() {
       [verdict({ raw: s.raw, density: null, strength: 44 }, false).na.includes('（新增）'), 'S3 缺防御质量栏 ⇒ 那条挂"读不出"，不判绿'],
       [verdict({ raw: { gained: 0, expiredPerGame: 0, charge: 0, waste: 0 }, density: null, strength: null }, false)
         .rows.find(r => r.key === 'bead').ok === true, '得珠=0 ⇒ 珠那条判「不适用」（绿）而不是红'],
-      [parseEval('[冠军] 1st=51.5% 严胜=49.5%') === 51.5, 'eval 解析']
+      [parseEval('[冠军] 1st=51.5% 严胜=49.5%') === 51.5, 'eval 解析'],
+      /* T2（11-03）：期望损失**只记录** ⇒ 它不许进 13 项分母；但"没这一行"与"mean=0"必须分得开。 */
+      [(function () { const c = parsePromote(SAMPLE_CELLS_OK).raw.g4Cells; return !!c && c.length === 2 && c[0].mean === 72.3 && c[0].over50 === '7/8' && c[1].median === 38.5 && c[1].worstPct === 60.3 && c[1].n === 300; })(),
+        'T2 两格都接住：mean 72.3/41.2 ‖ >50% 格 7/8 ‖ 中位 38.5 ‖ 最克 60.3%（n=300）'],
+      [(function () { const u = parsePromote(SAMPLE_CELLS_UNREAD).raw; return u.g4Cells === null && u.g4CellsUnrun === true; })(),
+        'T2「⛔ 读不出」⇒ g4Cells=null 且旗标为真（**不许**把没这行读成 mean=0）'],
+      [(function () { const n = parsePromote(SAMPLE_BEH_OK).raw; return n.g4Cells === null && n.g4CellsUnrun === false; })(),
+        'T2 整句都没印（旧版 promote）⇒ g4Cells=null 且**不打**"读不出"旗（分母=没这条记录，不是门坏了）'],
+      [verdict({ raw: Object.assign({}, f.raw, { g4Cells: [{ mean: 72.3 }] }), density: null, strength: 51.5 }, false).of === 13,
+        'T2 有读数也**不进 13 项分母**（只记录 ⇒ 分母还是 13）']
     ];
     let bad = 0;
     for (const [ok, name] of checks) { if (!ok) bad++; console.log((ok ? 'PASS ' : 'FAIL ') + name); }
@@ -248,5 +268,8 @@ G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：✗ G4[.e
 const SAMPLE_BEH_OK = 'G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：✅ 候选自己全过（判到 10 行）';
 const SAMPLE_BEH_UNRUN = 'G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：⛔ **候选一行都没判到**（gate-drafts exit=64）⇒ 这是**没跑成**，不是全过';
 const SAMPLE_BEH_BARE = 'G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：✅ 候选自己全过';
+/* T2（11-03）夹具：promote 那句**只记录**的期望损失（两格 ⇒ 每格一条；措辞与 `promote-champion.mjs` 的打印同源） */
+const SAMPLE_CELLS_OK = '   反制者期望损失（对 8 格一行脚本均匀先验 ‖ **只记录不阻断**）：.e811-F/long mean=72.3% ‖ 中位 70.0% ‖ >50% 的格 7/8 ‖ 最克「只防御(不还手)」99.7%（n=300）\n      .e811-F/multi mean=41.2% ‖ 中位 38.5% ‖ >50% 的格 2/8 ‖ 最克「激光剑连刺」60.3%（n=300）';
+const SAMPLE_CELLS_UNREAD = '   反制者期望损失（对 8 格一行脚本均匀先验 ‖ **只记录不阻断**）：⛔ **读不出**（没解析到 G4CELLS 行 ⇒ gate-drafts 版本比这行旧或 G4 段没跑；不许当"没问题"）';
 
 if (process.argv[1] && /score13\.mjs$/.test(process.argv[1])) main();

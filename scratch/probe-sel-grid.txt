@@ -1,0 +1,23 @@
+① 全员同格 ⇒ 不误伤
+  ✔ 同格 ⇒ 仍按分：best=hi ‖ changedWinner=false
+  ✔ 带内 2 粒（0.90−0.02=0.880 线以下那粒被挡）‖ 整池那格 3 粒
+② 带内有一粒格更稀 ⇒ 换人（这根键的牙）
+  ✔ best=rare ‖ changedWinner=true ‖ 付的分差 0.5pt
+  ✔ 取的是 D2K3（池里 1 粒）‖ 按分本来是 crowded ⇒ 两者不同才叫改判
+③ 带外不许因为"稀"爬进来
+  ✔ 0.70 那粒比带线（0.88）低 ⇒ 不参与：best=incumbent ‖ 带内 1 粒
+  ✔ 两格各 1 粒（稀有度**算得出来**但不能越带取 ⇒ 说明"带"这道闸门独立于排序键）：[{"cell":"D0K0","count":1},{"cell":"D3K3","count":1}]
+④ gateOk=false 的最稀也不许当选
+  ✔ 被剔 1 粒过硬门槛不过的 ⇒ best=ok（不是那粒最稀的 spam）
+  ✔ spam 分最高也进不了带（top 从**闸后**算）：best=ok2 ‖ pickedCount=1
+⑤ 稀有度按整池数（不是只按带内）
+  ✔ best=B（带内 X/Y 各 1 粒时按分该选 A ⇒ 选到 B 只可能是**整池**数出 X=3、Y=1）
+  ✔ X 格整池计数=3（带内只 1 粒）‖ Y=1
+⑥ 带内一粒不剩 ⇒ best=null 且 empty=true（调用方必须响亮）
+  ✔ best=null ‖ empty=true ‖ skipped=2
+  ✔ 空池 ⇒ best=null 但 empty=false（false）：池本来就是空的与"全员被闸掉"不许同形
+⑦ 签名缺（量具没接）⇒ 落"未测"格，不许崩、也不许当成一格有效区分
+  ✔ 无 `__sig` 无 sigOf ⇒ 全落 `未测`（[{"cell":"未测","count":2}]）⇒ 按分选人、格不参与
+  ✔ sigOf 每粒只调一次（实测 3 次 / 3 粒 ⇒ 第二次读走 `__sig` 缓存）‖ 现场算出的稀格 D1K2 换人成功=y ‖ pickedCount=1
+
+✔ 七条腿全过（合成 entries，不跑臂）

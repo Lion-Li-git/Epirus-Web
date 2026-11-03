@@ -485,7 +485,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
   try {
     const gr = spawnSync(process.execPath, ['tools/gate-drafts.mjs', SRC], { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
     const outTxt = String(gr.stdout || '') + String(gr.stderr || '');
-    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], band: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [], candRows: 0 };
+    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], band: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [], candRows: 0, cells: {} };
     for (const ln of outTxt.split('\n')) {
       /* v1.5.89③：`UNRUN` = 该格**跑不了 / 不可判**（量具自己报的第三态，见 gate-drafts 的 gate()）。
        * 它既不是 FAIL、更不是 PASS ⇒ 单独收集并**醒目打印**（"不得当作通过"）。 */
@@ -554,6 +554,14 @@ if (!process.argv.includes('--skip-gate-drafts')) {
      * `meta.gateDrafts.g6` 恒 `{}`（旧包也一样）。跨行版：标题与 detail 之间的 `\n\s*`。 */
     const mg6 = /G6\[([^\]]+)\] 靶向率[^\n]*\n\s*实测 ([\d.]+)%/g; let t6;
     while ((t6 = mg6.exec(outTxt))) gateDrafts.g6[t6[1]] = Number(t6[2]);
+    /* T2（11-03 · **只记录不阻断**）：G4 那 8 格的**期望损失**（gate-drafts 用同一批已算好的读数汇的 mean/中位/>50% 格数）。
+     * 为什么要它：G4 的 headline 只有 max ⇒ 「最克 99.7%」与「最克 61%」都读成一个"红"，也看不出是**只有一格克它**还是**到处都克它**。
+     * 解析不到 ⇒ `cells` 留空，下面那行明写"读不出"（与 g4Pool 同罪），**不许**把空读成 0。 */
+    const mc = /G4CELLS\[([^\]]+)\] mean=([\d.]+)% 中位=([\d.]+)% 格数=(\d+) 输多赢少\(>50%\)=(\d+)\/(\d+) 最克=(\S+?) ([\d.]+)% n=(\d+)/g; let tc;
+    while ((tc = mc.exec(outTxt))) {
+      gateDrafts.cells[tc[1]] = { mean: Number(tc[2]), median: Number(tc[3]), cells: Number(tc[4]),
+        over50: Number(tc[5]) + '/' + tc[6], worst: tc[7], worstPct: Number(tc[8]), n: Number(tc[9]) };
+    }
     /* v1.5.129（用户裁定②）：把 **G4 克制表的口径 id** 与**这一轮自己越过的 G4 行**分别留下 ——
      * `np-test D67` 靠它们把"线上包 G4 全红"从硬红降为"**已记录的例外**"，**且只在口径 id 相等时认账**。 */
     const m4p = /G4POOL\s+([0-9a-f]{8})/.exec(outTxt);
@@ -593,6 +601,18 @@ if (!process.argv.includes('--skip-gate-drafts')) {
         (uBlock ? '' : '\n      （剩下的都是"基线太弱 ⇒ 候选压着克制表打"或参照行 ⇒ 只记录、不阻断）'));
     }
     console.log('   G6 靶向率（只记录不阻断）：' + JSON.stringify(gateDrafts.g6));
+    /* T2（11-03）：反制者的**期望损失**——同一批 G4 读数汇出来的 mean/中位/几格>50%，**不进阻断、不改红绿**。
+     *   动机（今天的实测，不是推测）：CBG-s13 只印"最克 99.7%"读起来像"一格坏了"，而同一天 BAS 两枚满手反击族被克到 96~98%
+     *   ⇒ 需要一条能把"只有一格克它"和"到处都克它"分开的记录，但它**不该**当门槛（门槛是 G4 的 max，用户已裁）。
+     *   解析不到 ⇒ 明写"读不出"，不许把空对象读成 0。 */
+    const cellKeys = Object.keys(gateDrafts.cells);
+    console.log('   反制者期望损失（对 8 格一行脚本均匀先验 ‖ **只记录不阻断**）：' +
+      (cellKeys.length
+        ? cellKeys.map(function (k) {
+            const c = gateDrafts.cells[k];
+            return k + ' mean=' + c.mean.toFixed(1) + '% ‖ 中位 ' + c.median.toFixed(1) + '% ‖ >50% 的格 ' + c.over50 + ' ‖ 最克「' + c.worst + '」' + c.worstPct + '%（n=' + c.n + '）';
+          }).join('\n      ')
+        : '⛔ **读不出**（没解析到 G4CELLS 行 ⇒ gate-drafts 版本比这行旧或 G4 段没跑；不许当"没问题"）'));
   } catch (e) {
     console.log('   ⚠ G4/G5 行为门未能运行（不阻断，但**别当通过**）：' + String(e && e.message || e));
     gateDrafts = { error: String(e && e.message || e) };

@@ -389,6 +389,20 @@ for (const [nm, p] of PACKS) {
       (Math.abs(worst[1] - G4_MAX) < (ci95pt(worst[1], N4) || 0)
         ? ` ⇒ ⚠️ 判定线 ${G4_MAX}% 落在这一格的 95% 区间内 ⇒ **这一格的红/绿由抽样决定，别当结论**` : ''),
       isUnrun, isUnrun ? unrunKind : null);
+    /* ===== T2（11-03 用户裁"先试这两个低成本的"之二 · **只记录、不阻断、不改任何 PASS/FAIL**）：反制者的期望损失 =====
+     * G4 的 headline 只说"最克那一格赢你多少"⇒ 99.7% 与 61% 都只读成一个"红"，也看不出**整体有多脆**。
+     * 这一行把**同一批已经算好的读数**（上面 `cells`，不多打一局）在"一行脚本均匀先验"下汇成一个数：
+     *   mean = 随机挑一行战术来打它时它赢它的比率 ‖ 输多赢少格 = 有几格 >50%（不是只有最克那一格）。
+     * 消费链：`promote-champion` 解析进 `meta.gateDrafts.cells`（解析不到 ⇒ 明写"读不出"，不许当 0）
+     *   ‖ `score13` 只当**记录列**（它不进 13 项判据、不改变红绿）。 */
+    const cellVals = cells.map(function (c) { return Number(c[1]) || 0; });
+    const cMean = cellVals.length ? cellVals.reduce(function (a, b) { return a + b; }, 0) / cellVals.length : 0;
+    const cSorted = cellVals.slice().sort(function (a, b) { return a - b; });
+    const cMed = cSorted.length ? cSorted[Math.floor((cSorted.length - 1) / 2)] : 0;
+    console.log('        G4CELLS[' + nm + '/' + mode + '] mean=' + cMean.toFixed(1) + '% 中位=' + cMed.toFixed(1) +
+      '% 格数=' + cellVals.length + ' 输多赢少(>50%)=' + cellVals.filter(function (v) { return v > 50; }).length + '/' + cellVals.length +
+      ' 最克=' + worst[0] + ' ' + worst[1] + '% n=' + N4 +
+      '〔**只记录不阻断**：期望损失不是门槛，G4 那条 max 才是〕');
   }
 }
 

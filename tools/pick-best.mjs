@@ -156,6 +156,47 @@ export function rejectDegenerateWinners(entries, thr) {
   return { best: clean.length ? clean[0] : null, dropped: dropped, clean: clean };
 }
 
+/** 11-03（用户裁"先试低成本两条"之一，T1）：**当选面按"族别签名"分格 + 取最稀格**（GA 经典 niching / crowding，
+ *  与 MAP-Elites 同族，但作用域只有本次名人堂那几个候选 ⇒ 不需要档案、不需要新对局器）。
+ * 病（今天的读数，不是推测）：2.0 的地形上"带反击族"与"会赢"落在两个不连通的高原（§十四/十五），
+ *   而**同一次跑的名人堂里明明有宽粒、却被 fit 制挤掉**——`CBG-s13` 的 `band3/band4` = 10 种（带 taunt/holo/proto/tank），
+ *   当选的 `band2` 只有 8 种；ZCode 的 `GATE3-s13`（`EPIRUS_HALL_TRACE`）也抓到同一形状。
+ * 规矩（照 `bandPickByFloor` / `rejectGiftSpamWinners` 的既有形状，不开新阈值口径）：
+ *   ① 只吃**容差带**（与同分带同一把尺 `tolPt`，pt 是百分点）⇒ 带外一律不参与，不许拿"稀"去换大分；
+ *   ② `gateOk === false` 的候选**不许**被这根键换上来（v1.5.168 的教训）；
+ *   ③ 格内计数用**整个入参池**（不只是带内）⇒ 挤不挤是种群的事，不是带的事；
+ *   ④ 同格同分保持原序（稳定）⇒ 不奖励"更多防御"，只惩罚"和已经在当选的那个格挤成一堆"；
+ *   ⑤ 池里没有任何带内候选 ⇒ `best:null`，调用方**必须响亮**（不许静默退回"不过滤"）。 */
+export function gridPickByRarity(entries, tolPt, sigOf) {
+  const list = (entries || []).filter(function (e) { return !!e; });
+  const gated = list.filter(function (e) { return e.gateOk !== false; });
+  const skipped = list.length - gated.length;
+  const cellOf = function (e) {
+    if (e.__sig === undefined) { const s = (sigOf ? sigOf(e) : null) || e.__sig || '未测'; e.__sig = s; }
+    return e.__sig;
+  };
+  const top = gated.length ? gated.reduce(function (m, e) { return Math.max(m, Number(e.score) || 0); }, 0) : 0;
+  const band = gated.filter(function (e) { return (Number(e.score) || 0) >= top - (Number(tolPt) || 0) / 100; });
+  /* 稀有度：按整池数每格几粒（含带外）⇒ "这格已经被自己人挤满"才是塌缩 */
+  const pop = {};
+  for (const e of gated) { const c = cellOf(e); pop[c] = (pop[c] || 0) + 1; }
+  const byScore = band.slice().sort(function (a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); });
+  const ranked = band.slice().sort(function (a, b) {
+    const ca = pop[cellOf(a)] || 1, cb = pop[cellOf(b)] || 1;
+    if (ca !== cb) return ca - cb;                                   // 先取最稀的格
+    return (Number(b.score) || 0) - (Number(a.score) || 0);          // 同稀度按分，稳定
+  });
+  const best = ranked.length ? ranked[0] : null;
+  return {
+    best: best, band: band, top: top, skipped: skipped, ranked: ranked,
+    cells: Object.keys(pop).map(function (c) { return { cell: c, count: pop[c] }; }).sort(function (a, b) { return a.count - b.count; }),
+    pickedCell: best ? cellOf(best) : null, pickedCount: best ? (pop[cellOf(best)] || 1) : 0,
+    byScore: byScore.length ? byScore[0] : null,
+    changedWinner: !!(best && byScore[0] && best !== byScore[0]),
+    empty: list.length > 0 && !best,
+  };
+}
+
 /** §E650（千问 · 预注册 `docs/research/PREREG-2026-10-19-gift-veto-qoder.md`，**默认关** ⇒ `EPIRUS_SEL_GIFT_VETO` 不设时没人调它）：
  * **把"裸包送盾超线"从"不许参与带内换人"升成"不许当选"**。
  * 为什么不在这儿再写一个数：阈值已有单一来源（`audit-lib.HOLO_GIFT_MAX`，**现值 = 1.5/席 × 5 席 = 7.5**；

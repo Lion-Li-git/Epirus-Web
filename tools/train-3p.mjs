@@ -14,7 +14,7 @@ import { duelAssembly } from './v2v4-lib.mjs';   // 10-24 G4long 逐格否决（
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
 import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, bandPickByFloor, rejectNarrowWinners, rejectGiftSpamWinners,
-  parseSelSeeds, selBases, scoreRuns, selNote, selGapNote, bandFor } from './pick-best.mjs';
+  gridPickByRarity, parseSelSeeds, selBases, scoreRuns, selNote, selGapNote, bandFor } from './pick-best.mjs';
 import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
 /* v1.5.269（§E77）：载重 veto 的**同口径量具** —— `behavior-profile` 的 `fieldProfile`（ε=0 · temp 0.15 · 5 席同包）。
  * 该模块的主体被 `if (RUN_AS_MAIN)` 守着 ⇒ **import 无副作用**（只会多装载一次引擎，实测 ~0.5 秒）。 */
@@ -140,6 +140,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_BIGT_PUSH', 'EPIRUS_DRAIN_PUSH',   // §E275（v1.5.334）：**部署档的 CLI 把手**（大雷默认档 / 摄魂探索软提升）；不设 ⇒ 引擎默认一字不动，设了就由引擎回读
   'EPIRUS_SEL_DEF', 'EPIRUS_SEL_DEF_MIN', 'EPIRUS_SEL_DEF_GAMES', 'EPIRUS_SEL_DEF_MODE',   // 11-02 千问 §A（PREREG-2026-11-02-SEL-DEF）：当选面**防御下限**排序键（默认 0=关 ⇒ 当选者逐字不变）
   'EPIRUS_SEL_BIGT', 'EPIRUS_SEL_BIGT_KEYS', 'EPIRUS_SEL_BIGT_GAMES', 'EPIRUS_SEL_BIGT_MODE',   // v1.5.326 §E249：同分带内按贵卡出手选人（默认 0 ⇒ 当选者逐字不变）
+  'EPIRUS_SEL_GRID', 'EPIRUS_SEL_GRID_GAMES', 'EPIRUS_SEL_GRID_MODE',   // 11-03 T1：当选面**按族别签名分格取最稀格**（默认 0=关 ⇒ 当选者逐字不变；单位同 SEL_DEF = 重验分分差 pt）
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
@@ -394,6 +395,27 @@ const SEL_DEF_MIN = Number(process.env.EPIRUS_SEL_DEF_MIN || 0.10);
 const SEL_DEF_GAMES = Number(process.env.EPIRUS_SEL_DEF_GAMES || 20);
 const SEL_DEF_MODE = String(process.env.EPIRUS_SEL_DEF_MODE || 'multi');
 let SEL_DEF_LOG = null;
+/* ===== T1（11-03 用户裁"先试低成本两条"）：当选面**按族别签名分格取最稀格**（niching / crowding）=====
+ * 治的病（今天实测，不是推测）：2.0 的地形把"带反击族"与"会赢"分成两个不连通的高原，而**同一次跑的名人堂里
+ *   明明有宽粒却被 fit 挤掉**（`CBG-s13`：band3/band4 = 10 种带 taunt/holo/proto/tank，当选的 band2 = 8 种；
+ *   ZCode 的 `EPIRUS_HALL_TRACE` 在 `GATE3-s13` 上抓到同形）。⇒ 这是**选择层**的病，就在选择层治，训练侧一字不动。
+ * 单位：`EPIRUS_SEL_GRID` = 容差带（重验分分差 pt，与 `SEL_DEF` 同一把尺）；0 = 关 ⇒ 整段一行都不跑。
+ * 签名不新造口径：一格 = **防御族份额档 D0~D3**（`fieldProfile().def/.acts`，其定义就是引擎 `byKey[k].cat === R.CAT.DEFENSE`）
+ *   × **种数档 K0~K3**（非ジ且份额 ≥0.5%，与 `scratch/breadth.mjs:43` 同口径）。
+ * 档边线来自今天那两张实测表（`breadth-17-1103.txt` ‖ `breadth-v7pool-20.txt`）：gen-3 当选粒防御族 0~0.6%、v7 池 3.2~18.7%
+ *   ⇒ D 切在 0.5/3/8%；种数跨 1~11 ⇒ K 切在 5/8/11。切在哪儿都会印在回执里，格没分开 = 这根键零作用，不算测过。 */
+const SEL_GRID = Number(process.env.EPIRUS_SEL_GRID || 0);
+const SEL_GRID_GAMES = Math.max(4, Number(process.env.EPIRUS_SEL_GRID_GAMES || 12) || 12);
+const SEL_GRID_MODE = String(process.env.EPIRUS_SEL_GRID_MODE || 'multi');
+let SEL_GRID_LOG = null;
+if (!(SEL_GRID >= 0) || !isFinite(SEL_GRID)) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_GRID 必须是 ≥0 的数（0=关，单位=重验分分差 pt）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_GRID));
+  process.exit(2);
+}
+if (SEL_GRID > 0 && typeof fieldProfile !== 'function') {
+  console.error('[train-3p] ⛔ SEL_GRID 开着但量具 `fieldProfile` 没接进来 ⇒ 拒绝静默空转');
+  process.exit(7);
+}
 if (!(SEL_DEF >= 0) || !isFinite(SEL_DEF)) {
   console.error('[train-3p] ⛔ EPIRUS_SEL_DEF 必须是 ≥0 的数（0=关，单位=重验分分差 pt）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_DEF));
   process.exit(2);
@@ -670,7 +692,7 @@ if (process.env.EPIRUS_ARCH2) {
    *   而 `WIN` 是 `behavior-profile.mjs` 自己 `sandbox()` 出的**第二个引擎沙箱**，此前从没被 arch2 覆盖 ⇒
    *   在 2.0 臂里它拿 **v7 前向读代 3 权重**（`evo.js:21` 的 `LEGACY` 认形状那条老路）， ⇒ 排序键会拿"另一个世界的读数"换人，**且不崩不报错**。
    *   修法只在 2.0 分支里做（v7 路径、promote、门禁一个字节不动），装完立刻用 `verifyArch2Wired` 自证真被调用（"横幅证明变量、证明不了效果"是本页在册教训）。 */
-  if (SEL_BIGT > 0 || SEL_CLEAR > 0 || SEL_DEF > 0) {
+  if (SEL_BIGT > 0 || SEL_CLEAR > 0 || SEL_DEF > 0 || SEL_GRID > 0) {
     let AW = null, wiredMsg = '';
     try {
       AW = installArch2(WIN, cfg);
@@ -688,7 +710,7 @@ if (process.env.EPIRUS_ARCH2) {
     console.log('[train-3p] ⚙ **量具同代已接线**：behavior-profile 的沙箱 WIN 也装了 arch2 ‖ 面=' + AW.L.input +
       ' ‖ paramCount=' + WIN.EpirusPolicy.paramCount() + ' ‖ ' + wiredMsg +
       ' ⇒ `fieldProfile/aggressionProfile` 的当选面读数与产物同代（用到它的旗标：' +
-      ['SEL_BIGT=' + SEL_BIGT, 'SEL_CLEAR=' + SEL_CLEAR, 'SEL_DEF=' + SEL_DEF].join(' ') + '）');
+      ['SEL_BIGT=' + SEL_BIGT, 'SEL_CLEAR=' + SEL_CLEAR, 'SEL_DEF=' + SEL_DEF, 'SEL_GRID=' + SEL_GRID].join(' ') + '）');
   }
 }
 
@@ -2900,6 +2922,86 @@ if (WIDE_FINAL) {
       console.log('[防御选人] ⚠ 当选者防御占出手 ' + dp.best.__defShare.toFixed(1) + '%（>15% 就靠近 `GATE2-s13` 那片凑数区 20~22% ⇒ A-2 白防率判生死）');
     }
   }
+  /* ===== T1（11-03 用户裁"先试这两个低成本的" · 默认 0 ⇒ 这一段一行都不跑）：当选面**按族别签名分格、取最稀格** =====
+   * 治的是 §十四/§十五 的读数，不是推测：2.0 地形上"带防御/反击族"与"会赢"落在两个不连通的高原，
+   *   而**同一次跑的名人堂里明明有宽粒、却被 fit 制挤掉**——`CBG-s13` 的带内 `band3/band4` = 10 种（带 taunt/holo/proto/tank），
+   *   最后当选的 `band2` 只有 8 种；ZCode 的 `GATE3-s13`（`EPIRUS_HALL_TRACE`）抓到同一形状。
+   * 签名**不自造口径**：一次 `fieldProfile(...)`，与 `SEL_DEF` 同一件、同一调用形状（eps=0 · soft · n=`SEL_GRID_GAMES` · seed 77000 · 'scripts'）
+   *   ⇒ 防御族份额 = `t.def/t.acts`，其定义就是引擎的 `cat === R.CAT.DEFENSE`（`behavior-profile.mjs:135`）；
+   *     种数 = 非ジ且份额 ≥0.5%（`scratch/breadth.mjs:43` 同口径）。
+   * 格档边线也不是拍的：来自今天那两张实测表（`scratch/breadth-17-1103.txt` ‖ `breadth-v7pool-20.txt`）——
+   *   gen-3 当选粒防御族 0~0.6%（CBG-s13=0%）‖ v7 池 3.2~18.7%；种数跨 1~11 ⇒ 防御 <0.5/3/8%、种数 <5/8/11 三刀切四档。
+   * ⚠ 位置在 `SEL_DEF` **之后** ⇒ 两者同开时这根键有最后发言权；它不最大化宽度也不最大化防御，只在**容差带内**惩罚"和已经在当选的那一格挤成一堆"。 */
+  if (SEL_GRID > 0 && sel.best) {
+    if (typeof fieldProfile !== 'function') {
+      console.error('[分格选人] ⛔ 量具 `fieldProfile` 没接进来 ⇒ 拒绝静默空转');
+      process.exit(7);
+    }
+    const RulesG = sb.window.EpirusRules;
+    if (!(RulesG && RulesG.CAT && RulesG.CAT.DEFENSE && RulesG.byKey)) {
+      console.error('[分格选人] ⛔ 引擎规则表里读不到 `CAT.DEFENSE`/`byKey` ⇒ 族别判不了，拒绝按"没定义的族"分格');
+      process.exit(7);
+    }
+    const JI = RulesG.SK && RulesG.SK.JI;
+    const defBucket = function (d) { return d < 0.5 ? 0 : d < 3 ? 1 : d < 8 ? 2 : 3; };
+    const kindBucket = function (k) { return k < 5 ? 0 : k < 8 ? 1 : k < 11 ? 2 : 3; };
+    const sigOf = function (e) {
+      if (e.__sig === undefined) {
+        const t = fieldProfile(e.ref.params, 0, 'soft', SEL_GRID_GAMES, 77000, 'scripts', SEL_GRID_MODE);
+        const acts = t.acts || 0;
+        const dsh = acts ? 100 * (t.def || 0) / acts : 0;
+        const ks = Object.keys(t.keys || {}).filter(function (k) {
+          return k !== JI && acts && ((t.keys[k] || 0) / acts) >= 0.005;
+        }).sort(function (a, b) { return t.keys[b] - t.keys[a]; });
+        e.__gDef = dsh; e.__gKinds = ks.length;
+        e.__gBy = '防御族 ' + dsh.toFixed(1) + '% ‖ 种数 ' + ks.length + '（' + ks.join(' ') + '）';
+        e.__sig = 'D' + defBucket(dsh) + 'K' + kindBucket(ks.length);
+      }
+      return e.__sig;
+    };
+    sigOf(sel.best);   /* 照 SEL_BIGT/SEL_DEF 的在册坑：best 不一定在带内 ⇒ 先单独量一遍，否则下面读 `.__gBy` 会崩在选完人之后 */
+    const gpool = (sel.clean && sel.clean.length) ? sel.clean : [sel.best];
+    const gp = gridPickByRarity(gpool, SEL_GRID, sigOf);
+    /* **整池格表**先印再印带内梯：`gridPickByRarity` 为算稀有度本来就要给每个闸后候选算一次签名
+     *   ⇒ 这一行是免费的，而它让"换个容差带会选谁"能离线重算，不必为试带宽再跑一臂（12 分钟一臂的教训）。 */
+    const gtable = gpool.slice().sort(function (a, b) { return b.score - a.score; }).map(function (e) {
+      return (e.__sig === undefined ? '(闸外未测)' : e.__sig) + ' ' + (e.score * 100).toFixed(1) +
+        (e.gateOk === false ? '[gateOk=false]' : '') + (e === sel.best ? '[原当选]' : '');
+    }).join(' ‖ ');
+    console.log('[分格选人] 整池格表（按重验分降序 ‖ 稀有度就是数这一行的格）：' + gtable);
+    const gladder = gp.band.map(function (e) {
+      return '[' + e.__sig + '] ' + e.__gBy + '（重验分 ' + (e.score * 100).toFixed(1) + (e === sel.best ? '·原当选' : '') + '）';
+    }).join(' ‖ ');
+    SEL_GRID_LOG = { tol: SEL_GRID, games: SEL_GRID_GAMES, mode: SEL_GRID_MODE,
+      band: gp.band.length, of: gpool.length, skippedGate: gp.skipped,
+      /* 整池每粒的 格/重验分/防御族份额/种数 ⇒ "换一条带宽会选谁"可离线重算（分母与出处都在这条账里） */
+      pool: gpool.slice().sort(function (a, b) { return b.score - a.score; }).map(function (e) {
+        return { cell: e.__sig === undefined ? null : e.__sig, score: Number((e.score * 100).toFixed(2)),
+          def: e.__gDef === undefined ? null : Number(e.__gDef.toFixed(1)), kinds: (e.__gKinds === undefined ? null : e.__gKinds),
+          gateOk: e.gateOk === false ? false : (e.gateOk === undefined ? null : true), wasWinner: e === sel.best };
+      }),
+      cells: gp.cells, pickedCell: gp.pickedCell, pickedCount: gp.pickedCount,
+      pickedSig: gp.best ? { def: Number((gp.best.__gDef || 0).toFixed(1)), kinds: gp.best.__gKinds } : null,
+      wasSig: { cell: sel.best.__sig, def: Number(sel.best.__gDef.toFixed(1)), kinds: sel.best.__gKinds },
+      changedWinner: gp.changedWinner, empty: gp.empty,
+      bandCells: gp.band.map(function (e) { return e.__sig; }) };
+    if (gp.empty) {
+      console.log('[分格选人] tol=' + SEL_GRID + 'pt · 带内 0 粒（池 ' + gpool.length + ' 粒 ‖ 其中 gateOk=false 被跳过 ' + gp.skipped + ' 粒）' +
+        ' ⇒ **这根键零作用**（不算"测过且无效"），不改判');
+    } else if (gp.changedWinner) {
+      const oldCount = (gp.cells.filter(function (c) { return c.cell === sel.best.__sig; })[0] || { count: 0 }).count;
+      console.log('[分格选人] 带内格梯：' + gladder +
+        '\n[分格选人] **改判（取最稀格）**：' + gp.best.__sig + '（池里 ' + gp.pickedCount + ' 粒）取代 ' + sel.best.__sig +
+        '（池里 ' + oldCount + ' 粒）⇒ 拿 ' + ((sel.best.score - gp.best.score) * 100).toFixed(1) +
+        'pt 重验分换「' + gp.best.__gBy + '」（原当选者 ' + sel.best.__gBy + '）');
+      const oldSig = sel.best.__sig;
+      sel.best = gp.best;
+      SEL_GRID_LOG.fromCell = oldSig;
+    } else {
+      console.log('[分格选人] 带内格梯：' + gladder +
+        ' ⇒ **未改判**（原当选者已在最稀/并列最稀格 ⇒ 这根键在这条臂上没有边际作用）');
+    }
+  }
   if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; }
   /* ⚠ 下面这条 `else` 的先行词是**上面那句 `if (sel.best)`**。11-01 的 HALL_TRACE 语句曾插在两者之间，
    *   把 `else` 改挂到它身上 ⇒ 默认档（HALL_TRACE 关）下只要名人堂非空就假报"全部退化"并写错 meta，
@@ -3211,6 +3313,8 @@ const meta = {
     deployKnobs: DEPLOY_REC,
     /* §A（11-02）：当选面防御下限键的开没开、带内有几粒、防御梯、有没有换人、全不达标旗标。关档时整条 null。 */
     selDef: SEL_DEF_LOG,
+    /* T1（11-03）：当选面**族别签名分格**（D=防御族份额档 × K=种数档）——带内几格、每格几粒、取的是哪格、有没有换人。关档时整条 null。 */
+    selGrid: SEL_GRID_LOG,
     kill: KILL_REC, family: FAMILY_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     /* v1.7.4 S2a：训练期那档决策期改写也要记账 —— 只记"下达值"不够（本仓的教训：横幅证明变量、证明不了效果）。
      * ⇒ 两个都记：下达的 `h2p` 与写 meta 时消费点仍读到的 `h2pEffective`；两者不等 = 中途被改回去，产物不可信。 */
