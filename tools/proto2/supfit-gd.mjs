@@ -510,8 +510,23 @@ function _gateP(state, pid) {
   for (let j = 0; j < f.length; j++) t += _GATE_MODEL.w[j] * (f[j] - _GATE_MODEL.mu[j]) / _GATE_MODEL.sd[j];
   return 1 / (1 + Math.exp(-t));
 }
+/* ⚑ DS · 11-03：`EPIRUS_SELF_TEACHER=<v:92 包>` —— 教师 = **这个包自己的策略**（+ 可选门控），
+ *   这样蒸馏只改"门控触发的那几手"，不会把 D4a 整套策略混进来。默认关。 */
+const _SELF_PACK = process.env.EPIRUS_SELF_TEACHER || null;
+let _selfPick = null;
+if (_SELF_PACK) {
+  const _rawS = readPack2(_SELF_PACK);
+  const _gotS = packCfgExit(_rawS, _SELF_PACK);
+  installArch2(W0, Object.assign({ mutMode: 'seg' }, _gotS.cfg));
+  const _pvS = Float64Array.from(P.unpack(_rawS, true));
+  const _chS = T.policyChooserN(_pvS, 0.15);
+  _selfPick = (state, pid, cs) => {
+    /* 用候选级 chooser（保留 target/bead），不要映射回"只有键"——那会把目标与珠种弄丢（11-03 实测：混合 0.542→0.125）。 */
+    try { return P.chooseCandidates(state, pid, cs, _pvS, { temp: 0.15 }); } catch (e) { return null; }
+  };
+}
 const teacherPick = (state, pid, cs, legal) => {
-  const a = _pickRaw(state, pid, cs, legal);
+  const a = (_selfPick ? (_selfPick(state, pid, cs) || _pickRaw(state, pid, cs, legal)) : _pickRaw(state, pid, cs, legal));
   if (!_GATE_MODEL) return a;
   const me = state.p[pid];
   if (!me || me.hp > _GATE_HP) return a;
