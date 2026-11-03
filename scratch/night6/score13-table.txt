@@ -1,17 +1,17 @@
-lane	CB-s13	D-a-s13	EFFG-s41	G5DEF-s41	GD3ALL-G5-8p-s41	GD3ALL-NGA2R-s41	GD3ALL-PUSHON-s41	L5-1200-s13
-座	✅	✅	✅	✅	✅	✅	✅	✅
-废手	◻	◻	◻	◻	◻	◻	◻	◻
-伤	✅	✅	✅	✅	✅	✅	✅	✅
-平	✅	✅	✅	✅	✅	✅	✅	✅
-架	✅	✅	✅	✅	✅	❌	✅	✅
-还	❌	❌	✅	✅	✅	❌	✅	❌
-广	✅	✅	✅	❌	✅	✅	❌	❌
-墙	❌	✅	✅	✅	✅	✅	✅	✅
-场B	✅	✅	✅	✅	✅	❌	✅	✅
-G4	❌	❌	✅	❌	❌	◻	✅	❌
-G5	❌	❌	❌	❌	❌	◻	❌	❌
-珠	✅	✅	✅	✅	✅	✅	✅	✅
-强	❌	❌	✅	✅	✅	❌	✅	✅
+lane	CB-s13	D-a-s13	D-b-hpseed-s13	D1200-s13	DDEF-s13	DSTR-s13	DSTR4-s13	EFFG-s41	EFFG-s5	EFFG-s7	G5DEF-s41	GD3ALL-G5-8p-s41	GD3ALL-G5-s13	GD3ALL-NGA2R-s41	GD3ALL-PLAIN-s13	GD3ALL-POPP-s17	GD3ALL-POPP-s41	GD3ALL-PUSHON-s13	GD3ALL-PUSHON-s41	L5-1200-s13	LE-s13
+座	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅
+废手	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻	◻
+伤	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅
+平	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅
+架	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	❌	✅	✅	✅	✅	✅	✅	✅
+还	❌	❌	✅	❌	❌	❌	❌	✅	✅	✅	✅	✅	❌	❌	✅	✅	✅	✅	✅	❌	❌
+广	✅	✅	❌	❌	❌	❌	❌	✅	✅	✅	❌	✅	✅	✅	✅	❌	❌	❌	❌	❌	✅
+墙	❌	✅	✅	✅	✅	❌	✅	✅	✅	✅	✅	✅	✅	✅	❌	✅	✅	✅	✅	✅	❌
+场B	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	❌	✅	✅	✅	✅	✅	✅	✅
+G4	❌	❌	❌	❌	❌	❌	❌	✅	❌	✅	❌	❌	❌	❌	✅	✅	❌	✅	✅	❌	❌
+G5	❌	❌	❌	❌	❌	❌	❌	❌	❌	❌	❌	❌	❌	❌	✅	❌	❌	❌	❌	❌	❌
+珠	✅	✅	✅	❌	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅	❌	✅	✅	✅	✅	✅	✅
+强	❌	❌	❌	✅	❌	❌	✅	✅	✅	✅	✅	✅	❌	❌	❌	✅	✅	✅	✅	✅	❌
 
 ✅=过 ❌=不过 ◻=读不出 ·=该包没有这次判语
-强度实值（--strength 入参，A 考卷尺）: CB-s13=26 D-a-s13=38.6 EFFG-s41=52.7 G5DEF-s41=55.1 GD3ALL-G5-8p-s41=52.3 GD3ALL-NGA2R-s41=10.4 GD3ALL-PUSHON-s41=62.9 L5-1200-s13=60.1
+强度实值（--strength 入参，A 考卷尺）: CB-s13=26 D-a-s13=38.6 D-b-hpseed-s13=42.8 D1200-s13=50.3 DDEF-s13=41.8 DSTR-s13=40.2 DSTR4-s13=50.6 EFFG-s41=52.7 EFFG-s5=53.4 EFFG-s7=50.3 G5DEF-s41=55.1 GD3ALL-G5-8p-s41=52.3 GD3ALL-G5-s13=29.5 GD3ALL-NGA2R-s41=10.4 GD3ALL-PLAIN-s13=42.8 GD3ALL-POPP-s17=64.8 GD3ALL-POPP-s41=53.1 GD3ALL-PUSHON-s13=60.2 GD3ALL-PUSHON-s41=62.9 L5-1200-s13=60.1 LE-s13=37.5

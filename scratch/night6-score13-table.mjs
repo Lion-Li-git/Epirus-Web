@@ -6,8 +6,12 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
-/* 每包的 A 考卷强度实值（5P multi 200 局，seed 77000——§三十一 同源） */
-const STRENGTH = { 'L5-1200-s13': 60.1, 'D-a-s13': 38.6, 'EFFG-s41': 52.7, 'GD3ALL-PUSHON-s41': 62.9, 'G5DEF-s41': 55.1, 'CB-s13': 26.0, 'GD3ALL-G5-8p-s41': 52.3, 'GD3ALL-NGA2R-s41': 10.4 };
+/* 每包的 A 考卷强度实值（5P multi 200 局，seed 77000——§三十一 同源；三份 TSV 合并） */
+import { readFileSync as rf2 } from 'node:fs';
+const STRENGTH = {};
+for (const f of ['strength-multi.tsv', 'strength-multi-ext.tsv', 'strength-multi-fix.tsv']) {
+  for (const l of rf2('scratch/night6/' + f, 'utf8').split(/\r?\n/).filter(Boolean).slice(1)) { const c = l.split('\t'); if (c[2] && c[2] !== 'NA' && Number(c[1]) === 200) STRENGTH[c[0]] = Number(c[2]); }
+}
 
 const files = readdirSync('scratch/night6/promote').filter((f) => f.endsWith('.txt'));
 const marks = {};
