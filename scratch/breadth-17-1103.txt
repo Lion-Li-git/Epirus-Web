@@ -1,0 +1,17 @@
+L5-D4a-s13.js ‖ 种数 6 ‖ charge 13.3% railgun 11.5% ring 8.8% bigT 3.2% sword 3.1% gun 2.1%
+CB-s13.js ‖ 种数 11 ‖ ring 23.3% bigT 7.5% charge 7.2% gun 3.0% railgun 2.1% holo 1.9% sword 1.8% proto 1.5% mine 1.1% laserEye 1.0% taunt 0.8%
+BREAD-W0-s13.js ‖ 种数 5 ‖ bigT 11.0% charge 4.0% gun 3.2% railgun 3.0% sword 1.4%
+BREAD-W0-s7.js ‖ 种数 1 ‖ bigT 15.6%
+BREAD-W0-s41.js ‖ 种数 5 ‖ ring 17.4% charge 13.4% railgun 8.4% bigT 5.1% sword 2.4%
+BREAD-W005-s13.js ‖ 种数 5 ‖ charge 12.3% railgun 8.4% bigT 5.8% ring 3.3% sword 2.6%
+BREAD-W005-s7.js ‖ 种数 1 ‖ bigT 15.6%
+BREAD-W005-s41.js ‖ 种数 6 ‖ bigT 11.1% gun 4.3% sword 2.7% charge 1.9% railgun 1.7% ring 1.4%
+BREAD-W015-s13.js ‖ 种数 3 ‖ bigT 14.3% ring 4.6% sword 1.8%
+BREAD-W015-s7.js ‖ 种数 5 ‖ charge 12.5% bigT 7.1% railgun 5.9% ring 5.1% sword 2.9%
+BREAD-W015-s41.js ‖ 种数 1 ‖ bigT 15.4%
+BREAD-W05-s13.js ‖ 种数 5 ‖ charge 12.9% railgun 11.1% ring 4.7% bigT 4.7% sword 2.0%
+BREAD-W05-s7.js ‖ 种数 5 ‖ bigT 13.9% sword 2.4% charge 0.8% ring 0.7% railgun 0.6%
+BREAD-W05-s41.js ‖ 种数 5 ‖ charge 10.4% railgun 9.2% bigT 6.6% ring 1.9% sword 0.9%
+CBG-s13.js ‖ 种数 8 ‖ charge 6.5% mine 5.5% gun 4.8% ring 4.3% bigT 4.1% sword 3.5% drain 2.3% railgun 1.1%
+CBG-s7.js ‖ 种数 5 ‖ gun 22.3% sword 11.2% holo 7.1% charge 1.1% armor 0.6%
+CBG-s41.js ‖ 种数 6 ‖ charge 14.8% ring 11.3% railgun 10.8% bigT 3.3% laserEye 3.1% drain 1.3%

@@ -1,0 +1,36 @@
+===== CBG-s13
+  PASS  G1 判别场必须让"会瞄"与"仪式"得出不同结论
+  PASS  G2 "会瞄"策略必须满足：无环时出手数 ≤ 有环时的 25%
+  PASS  G3[long] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  PASS  G3[multi] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  FAIL  G4[scratch/ga-arms/CBG-s13/long] 无一行脚本能以 >60% 击败它（最克「只防御(不还手)」99.7% · 基线 16%/300局）
+  FAIL  G4[scratch/ga-arms/CBG-s13/multi] 无一行脚本能以 >60% 击败它（最克「激光剑连刺」90.3% · 基线 20.7%/300局）
+  FAIL  G5[scratch/ga-arms/CBG-s13/long] 面对"只防御不还手"必须能清场（实测防席夺冠 100% · 阈值 ≤25% · 关掉上线档）
+  FAIL  G5[scratch/ga-arms/CBG-s13/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 74% · 阈值 ≤25% · 关掉上线档）
+===== CBG-s7
+  PASS  G1 判别场必须让"会瞄"与"仪式"得出不同结论
+  PASS  G2 "会瞄"策略必须满足：无环时出手数 ≤ 有环时的 25%
+  PASS  G3[long] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  PASS  G3[multi] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  FAIL  G4[scratch/ga-arms/CBG-s7/long] 无一行脚本能以 >60% 击败它（最克「只防御(不还手)」96.7% · 基线 15.7%/300局）
+  FAIL  G4[scratch/ga-arms/CBG-s7/multi] 无一行脚本能以 >60% 击败它（最克「珠爆发(ジ→蓄电珠→电磁炮/摄魂)」99% · 基线 10.3%/300局）
+  FAIL  G5[scratch/ga-arms/CBG-s7/long] 面对"只防御不还手"必须能清场（实测防席夺冠 96% · 阈值 ≤25% · 关掉上线档）
+  FAIL  G5[scratch/ga-arms/CBG-s7/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 73% · 阈值 ≤25% · 关掉上线档）
+===== CBG-s41
+  PASS  G1 判别场必须让"会瞄"与"仪式"得出不同结论
+  PASS  G2 "会瞄"策略必须满足：无环时出手数 ≤ 有环时的 25%
+  PASS  G3[long] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  PASS  G3[multi] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  FAIL  G4[scratch/ga-arms/CBG-s41/long] 无一行脚本能以 >60% 击败它（最克「只狙击」83.3% · 基线 17.3%/300局）
+  FAIL  G4[scratch/ga-arms/CBG-s41/multi] 无一行脚本能以 >60% 击败它（最克「只枪(1ジ压制·打最肥)」89.7% · 基线 18.7%/300局）
+  PASS  G5[scratch/ga-arms/CBG-s41/long] 面对"只防御不还手"必须能清场（实测防席夺冠 1% · 阈值 ≤25% · 关掉上线档）
+  PASS  G5[scratch/ga-arms/CBG-s41/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 16% · 阈值 ≤25% · 关掉上线档）
+===== BREAD-W05-s13
+  PASS  G1 判别场必须让"会瞄"与"仪式"得出不同结论
+  PASS  G2 "会瞄"策略必须满足：无环时出手数 ≤ 有环时的 25%
+  PASS  G3[long] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  PASS  G3[multi] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  FAIL  G4[scratch/ga-arms/BREAD-W05-s13/long] 无一行脚本能以 >60% 击败它（最克「激光剑连刺」73.7% · 基线 20.7%/300局）
+  FAIL  G4[scratch/ga-arms/BREAD-W05-s13/multi] 无一行脚本能以 >60% 击败它（最克「激光剑连刺」71% · 基线 15.7%/300局）
+  PASS  G5[scratch/ga-arms/BREAD-W05-s13/long] 面对"只防御不还手"必须能清场（实测防席夺冠 24% · 阈值 ≤25% · 关掉上线档）
+  FAIL  G5[scratch/ga-arms/BREAD-W05-s13/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 38% · 阈值 ≤25% · 关掉上线档）
