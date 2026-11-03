@@ -2872,11 +2872,15 @@ if (WIDE_FINAL) {
     }
   }
   if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; }
-  if (HALL_TRACE) { try { appendFileSync(HALL_TRACE_OUT, JSON.stringify({ type: 'final', pickedWid: widOfArr(finalParams), hall: hall.map(function (h) { return h.wid || widOfArr(h.params); }) }) + '\n'); } catch (eT4) {} }
+  /* ⚠ 下面这条 `else` 的先行词是**上面那句 `if (sel.best)`**。11-01 的 HALL_TRACE 语句曾插在两者之间，
+   *   把 `else` 改挂到它身上 ⇒ 默认档（HALL_TRACE 关）下只要名人堂非空就假报"全部退化"并写错 meta，
+   *   而开 HALL_TRACE 的臂反而把这条真报警吞了。门 D121 的接线腿查的是调用串在不在，抓不到这种接错。
+   *   ⇒ 要在这两句之间插话，先把 `else if` 改写成独立判断。 */
   else if (hallEntries.length) {
     DEGENERATE_ONLY = true;
     console.error('⛔ [退化闸] 名人堂**全部退化**——产物仍写盘但标 degenerateOnlyWinner；promote 会拒收，别拿它换包');
   }
+  if (HALL_TRACE) { try { appendFileSync(HALL_TRACE_OUT, JSON.stringify({ type: 'final', pickedWid: widOfArr(finalParams), hall: hall.map(function (h) { return h.wid || widOfArr(h.params); }) }) + '\n'); } catch (eT4) {} }
 }
 bestParams = finalParams;
 

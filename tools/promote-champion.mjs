@@ -485,7 +485,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
   try {
     const gr = spawnSync(process.execPath, ['tools/gate-drafts.mjs', SRC], { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
     const outTxt = String(gr.stdout || '') + String(gr.stderr || '');
-    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], band: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [] };
+    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], band: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [], candRows: 0 };
     for (const ln of outTxt.split('\n')) {
       /* v1.5.89③：`UNRUN` = 该格**跑不了 / 不可判**（量具自己报的第三态，见 gate-drafts 的 gate()）。
        * 它既不是 FAIL、更不是 PASS ⇒ 单独收集并**醒目打印**（"不得当作通过"）。 */
@@ -497,6 +497,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
       if (mu) {
         const uKind = mu[1] || null, uName = mu[2].trim();
         const uIsRef = /^G[3-6]\[(线上包|元测试)/.test(uName);
+        if (!uIsRef) gateDrafts.candRows++;   /* 不可判也是"判到了" ⇒ 计入候选行，别让下面的 0 行哨兵误报 */
         const uD = unrunDisposition(uKind, uIsRef);
         /* v1.5.284（Qoder §20-2 点名：DS 的 v1.5.283 只修了 FAIL 分支，UNRUN 这条路漏了）：
          * `statusOf` 会产出 `UNRUN:缺` 这种**同样可解析**的格式 ⇒ 重复打印时 UNRUN 也会被 push 两遍
@@ -517,6 +518,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
        * 若把参照行也当阻断：① 任何候选都被连坐（换包实际只能靠 --force）；② 会把"候选不行"这个
        * **错误结论**传给人 —— 与 v1.5.78 想治的"把没过的当成过了"是同一类错误的反向版本。 */
       const isRef = /^G[3-6]\[(线上包|元测试)/.test(nm);
+      if (!isRef) gateDrafts.candRows++;
       /* v1.8.44（10-28 午后 · DS 复查挖出来的）：**带档行以前既不进阻断、也从不打印** ⇒ 用 `promote --dry`
        * 复跑 G5 的人**输出里根本没有 40 档那一格**（DS 就是这样把 ZCode 的"带档 49%"判成"复现不出来"的，
        * 它读到的 30% 是**关档**那一行）。根因是阻断正则 `/^G5\[/` 匹配不到 `G5带档[` ⇒ 那一行只落到
@@ -564,8 +566,16 @@ if (!process.argv.includes('--skip-gate-drafts')) {
     if (!gateDrafts.g4Impl) {
       console.log('   ⚠ 没能解析到 `G4IMPL` 实现身份 id ⇒ 同上，例外**不算留痕**（gate-drafts 少了那一行？）');
     }
+    /* 11-03：**「0 条 FAIL」不等于「全过」**。gen-3（v:92）包曾因 `gate-drafts` 的 sandbox 少加载 `policy2.js`
+     *   而整体 exit 64 ⇒ 候选一行未产，旧代码只看 `blocking.length` ⇒ 印成「✅ 候选自己全过」= 静默假绿。
+     *   按本仓既有规矩（UNRUN 第三态 / 「崩了不能记成体检没过」）：判不到 = 这道门没判 ⇒ 阻断并写明是没跑成。 */
+    if (!gateDrafts.blocking.length && !gateDrafts.candRows) {
+      fails.push('行为门没判到候选的任何一行（gate-drafts exit=' + gateDrafts.exit + ' ‖ 候选行数 0）〔G4/G5 **未运行** ⇒ 不许读成"全过"〕');
+    }
     console.log('   G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：' +
-      (gateDrafts.blocking.length ? '✗ ' + gateDrafts.blocking.join('；') : '✅ 候选自己全过'));
+      (gateDrafts.blocking.length ? '✗ ' + gateDrafts.blocking.join('；')
+        : (gateDrafts.candRows ? '✅ 候选自己全过（判到 ' + gateDrafts.candRows + ' 行）'
+          : '⛔ **候选一行都没判到**（gate-drafts exit=' + gateDrafts.exit + '）⇒ 这是**没跑成**，不是全过')));
     console.log('   G5 带上线档（= **玩家实际遇到的形状**，阈值 ≤40；上面那条阻断判的是关掉上线档的 ≤25 ‖ **这一行只记录、不阻断**）：' +
       (gateDrafts.band.length ? gateDrafts.band.join('；') : '（没解析到带档行 ⇒ 这一格**读不出**，不许当"带档没问题"）'));
     const refFails = gateDrafts.recorded.filter(function (x) { return x.indexOf('参照(不阻断) FAIL') === 0; });

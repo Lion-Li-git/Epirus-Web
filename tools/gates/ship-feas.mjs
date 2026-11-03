@@ -493,6 +493,16 @@ t('D121 当选面退化闸三处对齐（§N9 · xn10b 龟包以带内最高 tra
   const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
   ok(t3.indexOf('rejectDegenerateWinners(hallEntries)') >= 0 && t3.indexOf('degenerateOnlyWinner') >= 0,
     'train-3p 必须真接这道闸（当选过滤 + 全退化写 meta.degenerateOnlyWinner）——纯函数有闸不接线=没闸');
+  /* v1.7.x（11-03）：**接线的"接"包括控制流**。上面那条只查调用串在不在，抓不到 `else` 挂错先行词：
+   *   11-01 有人把 `if (HALL_TRACE) {…}` 插在 `if (sel.best) {…}` 与 `else if (hallEntries.length) {…}` 之间，
+   *   `else` 于是改挂 HALL_TRACE ⇒ 默认档**每臂**假报"名人堂全部退化"并写 `meta.degenerateOnlyWinner=true`，
+   *   而开了 HALL_TRACE 的臂把这条真报警**整个吞掉**（31/37 夜臂中招，门当时全绿）。
+   *   牙的验证：把那行原样插回去 ⇒ 本 clause 红（注释文本不算，先剥块注释再比）。 */
+  const t3norm = t3.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\s+/g, ' ');
+  ok(t3norm.indexOf('if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; } else if (hallEntries.length) { DEGENERATE_ONLY = true;') >= 0,
+    '退化闸的"全退化 ⇒ 响亮 + 写 meta"必须**直接**挂在 `if (sel.best)` 之后（两句之间不许插任何语句）');
+  ok(t3norm.indexOf('else if (hallEntries.length)') >= 0 && /if \(HALL_TRACE\)/.test(t3),
+    'HALL_TRACE 与退化闸两条腿都还在（前者丢=逐代指纹失效，后者丢=这道闸没接）');
   ok(t3.indexOf('densityProfile(sb, h.params') >= 0,
     '零攻击率必须走 audit-lib 单一来源（不许在 CLI 里再造一个"数出手"的口径）');
 });

@@ -18,7 +18,10 @@ const REPO = process.cwd() + '/';
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map };
 sb.window = sb; sb.globalThis = sb;
 for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js', 'js/bundled-champion-3p.js']) {
+  /* 缺 `policy2.js` 时 `EpirusPolicy.unpack` 解不开 v:92（gen-3/arch2）容器 ⇒ 本脚本对**新代包**一律 exit 64，
+   *   而 `promote-champion` 把"解析到 0 条 FAIL"读成「✅ 候选自己全过」⇒ G4/G5 从未判过 gen-3 包（11-03 查实）。
+   *   补法与 `tools/score13.mjs` / `tools/eval-5p.mjs` / `probe-layer-caliber` 同一条。 */
+  'js/train/bots.js', 'js/train/policy.js', 'js/train/policy2.js', 'js/train/evo.js', 'js/bundled-champion-3p.js']) {
   vm.runInNewContext(readFileSync(REPO + f, 'utf8'), sb, { filename: f });
 }
 const R = sb.window.EpirusRules, S = sb.window.EpirusState, Play = sb.window.EpirusPlay,
