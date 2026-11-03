@@ -130,18 +130,21 @@ const accU = rows.filter((r) => r.acc != null);
 const defMember = rows.find((r) => r.defShare2 >= BANDS.defLo && r.defShare2 <= BANDS.defHi && r.acc != null && r.acc >= BANDS.defAcc);
 const defMax = rows.reduce((m, r) => Math.max(m, r.defShare2), 0);
 function line(label, ok, detail) { console.log('  ' + (ok ? '✔' : '✘') + ' ' + label + ' ‖ ' + detail); }
-/* 主干（每包必备，11-03 用户裁：狙/坦/基础防御族属主干；gun/sword 为攻击底座同列）——**逐包判**，池级并集会掩盖成员缺口 */
+/* 主干（11-03 深夜用户裁：**每包最多缺一项，缺两项就不算**；狙/坦/基础防御族属主干，gun/sword 同列）
+ * 防御族按组算一项（guard/reflect/bagua/shift/jinshield/proto 任一自选即算有）。 */
 const DEF_BASIC = new Set(['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'proto']);
+const MAX_MISS = 1;
 let trunkPackPass = 0;
 for (const r of rows) {
   const sel = r.native.sel;
   const miss = BANDS.trunk.filter((k) => !(sel[k] > 0));
-  const defOkPack = BANDS.defBasic ? Object.keys(sel).some((k) => DEF_BASIC.has(k)) : true;
-  if (!miss.length && defOkPack) trunkPackPass++;
-  console.log('  ' + (!miss.length && defOkPack ? '✔' : '✘') + ' 主干[每包] ' + r.name +
-    (miss.length ? ' ‖ 缺 ' + miss.join('/') : '') + (defOkPack ? '' : ' ‖ 缺基础防御族'));
+  const defOkPack = Object.keys(sel).some((k) => DEF_BASIC.has(k));
+  const nMiss = miss.length + (defOkPack ? 0 : 1);
+  if (nMiss <= MAX_MISS) trunkPackPass++;
+  console.log('  ' + (nMiss <= MAX_MISS ? '✔' : '✘') + ' 主干[每包] ' + r.name +
+    ' ‖ 缺 ' + nMiss + ' 项' + (miss.length ? '（' + miss.join('/') + (defOkPack ? '' : '/基础防御族') + '）' : (defOkPack ? '' : '（基础防御族）')));
 }
-line('主干（池内每包必备）', trunkPackPass === rows.length, trunkPackPass + '/' + rows.length + ' 包全过');
+line('主干（每包最多缺 ' + MAX_MISS + ' 项）', trunkPackPass === rows.length, trunkPackPass + '/' + rows.length + ' 包达标');
 for (const k of BANDS.secLong) {
   const members = rows.filter((r) => (r.native.sel[k] || 0) > 0).length;
   line('次级长程 ' + k + '（池 ≥' + BANDS.secLongFrac * 100 + '% 成员）', members >= BANDS.secLongFrac * rows.length, members + '/' + rows.length + ' 成员会');
