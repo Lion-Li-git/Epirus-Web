@@ -1,0 +1,7 @@
+CB3-s13 | 3人multi=68.7% | 4人multi4=58.2% | 5人long=73.2% | 8人multi=46.1% | 10人multi=44.2%
+CB3-s7 | 3人multi=65.2% | 4人multi4=63.9% | 5人long=76.6% | 8人multi=45.1% | 10人multi=47.1%
+HPG-s41 | 3人multi=71.3% | 4人multi4=74.1% | 5人long=80.9% | 8人multi=59.8% | 10人multi=57.8%
+HPG-s13 | 3人multi=68.2% | 4人multi4=77.4% | 5人long=79.5% | 8人multi=51.8% | 10人multi=46.6%
+HPG-s7 | 3人multi=68.3% | 4人multi4=78.1% | 5人long=83.0% | 8人multi=58.1% | 10人multi=53.4%
+TPG-s41 | 3人multi=63.1% | 4人multi4=67.3% | 5人long=73.3% | 8人multi=43.4% | 10人multi=37.3%
+=== 泛用性正式版完成 04:14
