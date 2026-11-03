@@ -6,3 +6,9 @@ ts	wid	canonical	wantedPath	tool	note
 2026-10-12T04:18:01.000Z	1d4b687da27187b7	docs/artifacts/kept/e70-out__D02-31.bak	docs/artifacts/e234-out/K2.js	lineage-alias	63 枚子包的 meta 点名它（EPIRUS_SEEDPACK）而文件被去重搬进隔离区 ⇒ 登记别名让血统图能升等到 seedpack-wid（升等条件不变：wid 逐位相等）
 2026-11-02T06:42:31.485Z	04907be16715c376	docs/artifacts/DDA-150-gun-s13-band2.bak	docs/artifacts/DDA-150-gun-s13-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
 2026-11-02T06:42:31.495Z	3de168e0132f8670	docs/artifacts/DDA-150-gun-s13-band3.bak	scratch/ga-arms/DDA-150-gun-s13.js	train-3p	未复制：同一粒权重已有真身
+2026-11-03T05:47:49.460Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	scratch/ga-bands/BREAD-W005-s13/BREAD-W005-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-03T05:47:53.010Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	scratch/ga-bands/BREAD-W0-s13/BREAD-W0-s13-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-03T05:49:09.339Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	scratch/ga-bands/BREAD-W015-s13/BREAD-W015-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-03T06:24:34.912Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-03T06:25:50.090Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-03T06:37:22.000Z	66bc2f92eb807f51	docs/artifacts/SMOKE-NORM-s13-band2.bak	docs/artifacts/SMOKE-NORM-s13-band3.bak	train-3p:band	已登记的复制：同一次 SMOKE-NORM 跑的名人堂两席是同一粒权重（产物=起点，起点 L5-D4a-s13）——11-03 qoder 按 D191 口径补登记，未删任何文件
