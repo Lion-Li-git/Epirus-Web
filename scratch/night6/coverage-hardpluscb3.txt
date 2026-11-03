@@ -1,0 +1,91 @@
+== L5-1200-s13（gen-3） ‖ 5P long ×20 ‖ 胜 60% ‖ 局长 86.8
+   自选: ji=816 charge=194 railgun=191 bigT=45
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 菜单=199 自选=0 ‖ dualGun 菜单=199 自选=0 ‖ 胜 40%
+   残血开局: drain 自选 0 ‖ 胜 60%
+== D1200-s13（gen-3） ‖ 5P long ×20 ‖ 胜 40% ‖ 局长 96.8
+   自选: ring=531 ji=270 bigT=138 charge=99 railgun=63
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 菜单=335 自选=0 ‖ dualGun 菜单=335 自选=0 ‖ 胜 40%
+   残血开局: drain 自选 0 ‖ 胜 30%
+== DSTR4-s13（gen-3） ‖ 5P long ×20 ‖ 胜 30% ‖ 局长 101.6
+   自选: ji=777 bigT=143 ring=46 tank=9 charge=4 railgun=4 proto=2
+   防御族份额 0.2% ‖ 质量判定 2 次（有效 0 半 0 白防 2） ⇒ 准确 0%
+   8P long: mine 菜单=259 自选=0 ‖ dualGun 菜单=259 自选=0 ‖ 胜 15%
+   残血开局: drain 自选 0 ‖ 胜 45%
+== EFFG-s41（gen-3） ‖ 5P long ×20 ‖ 胜 35% ‖ 局长 90.0
+   自选: ji=686 charge=153 railgun=135 bigT=33 ring=29 sword=19
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 菜单=219 自选=0 ‖ dualGun 菜单=219 自选=0 ‖ 胜 45%
+   残血开局: drain 自选 0 ‖ 胜 30%
+== EFFG-s5（gen-3） ‖ 5P long ×20 ‖ 胜 35% ‖ 局长 90.7
+   自选: ji=689 charge=175 railgun=160 ring=41 bigT=31 sword=17 gun=4
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 菜单=204 自选=0 ‖ dualGun 菜单=204 自选=0 ‖ 胜 25%
+   残血开局: drain 自选 0 ‖ 胜 60%
+== EFFG-s7（gen-3） ‖ 5P long ×20 ‖ 胜 30% ‖ 局长 95.8
+   自选: ji=545 charge=190 railgun=125 ring=51 gun=15 sword=13 bigT=10
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 菜单=82 自选=0 ‖ dualGun 菜单=82 自选=0 ‖ 胜 20%
+   残血开局: drain 自选 0 ‖ 胜 40%
+== GD3ALL-G5-8p-s41（gen-3） ‖ 5P long ×20 ‖ 胜 15% ‖ 局长 99.8
+   自选: ji=538 sword=90 gun=88 snipe=60 tank=26 cannon=17 rod=8 mine=5 charge=2
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 菜单=44 自选=12 ‖ dualGun 菜单=44 自选=0 ‖ 胜 25%
+   残血开局: drain 自选 0 ‖ 胜 15%
+== GD3ALL-PUSHON-s41（gen-3） ‖ 5P long ×20 ‖ 胜 50% ‖ 局长 91.5
+   自选: ji=581 charge=132 railgun=126 gun=68 ring=46 bigT=22 sword=14
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 菜单=89 自选=0 ‖ dualGun 菜单=89 自选=0 ‖ 胜 45%
+   残血开局: drain 自选 0 ‖ 胜 70%
+== G5DEF-s41（gen-3） ‖ 5P long ×20 ‖ 胜 15% ‖ 局长 96.6
+   自选: ji=634 sword=245 gun=63 snipe=19 tank=6 cannon=5 rod=1
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 菜单=4 自选=0 ‖ dualGun 菜单=4 自选=0 ‖ 胜 30%
+   残血开局: drain 自选 0 ‖ 胜 35%
+== GD3ALL-POPP-s17（gen-3） ‖ 5P long ×20 ‖ 胜 45% ‖ 局长 94.0
+   自选: ji=632 charge=134 railgun=103 gun=42 sword=38 bigT=32 ring=24
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 菜单=136 自选=0 ‖ dualGun 菜单=136 自选=0 ‖ 胜 20%
+   残血开局: drain 自选 0 ‖ 胜 40%
+== GD3ALL-POPP-s41（gen-3） ‖ 5P long ×20 ‖ 胜 45% ‖ 局长 85.7
+   自选: ji=631 charge=128 railgun=111 sword=71 ring=56 gun=37 bigT=25
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 菜单=129 自选=0 ‖ dualGun 菜单=129 自选=0 ‖ 胜 35%
+   残血开局: drain 自选 0 ‖ 胜 45%
+== CB3-s13（gen-3） ‖ 5P long ×20 ‖ 胜 35% ‖ 局长 100.4
+   自选: ji=922 ring=186 bigT=151 drain=81 holo=46 charge=23 gun=21 railgun=20 armor=17 tank=10 sword=9 mine=1
+   防御族份额 4.2% ‖ 质量判定 62 次（有效 0 半 2 白防 60） ⇒ 准确 3%
+   8P long: mine 菜单=355 自选=0 ‖ dualGun 菜单=355 自选=0 ‖ 胜 30%
+   残血开局: drain 自选 48 ‖ 胜 50%
+== CB3-s7（gen-3） ‖ 5P long ×20 ‖ 胜 35% ‖ 局长 93.0
+   自选: ji=619 ring=268 bigT=86 charge=72 railgun=60 drain=58 holo=44 mine=19 gun=14 sword=12 tank=3 curse=1
+   防御族份额 3.5% ‖ 质量判定 44 次（有效 1 半 7 白防 36） ⇒ 准确 18%
+   8P long: mine 菜单=331 自选=13 ‖ dualGun 菜单=331 自选=0 ‖ 胜 45%
+   残血开局: drain 自选 39 ‖ 胜 55%
+
+### 覆盖门判定（池级 = --packs 并集）
+  ✘ 主干[每包] L5-1200-s13 ‖ 缺 5 项（gun/sword/snipe/tank/基础防御族）
+  ✘ 主干[每包] D1200-s13 ‖ 缺 5 项（gun/sword/snipe/tank/基础防御族）
+  ✘ 主干[每包] DSTR4-s13 ‖ 缺 3 项（gun/sword/snipe）
+  ✘ 主干[每包] EFFG-s41 ‖ 缺 4 项（gun/snipe/tank/基础防御族）
+  ✘ 主干[每包] EFFG-s5 ‖ 缺 3 项（snipe/tank/基础防御族）
+  ✘ 主干[每包] EFFG-s7 ‖ 缺 3 项（snipe/tank/基础防御族）
+  ✔ 主干[每包] GD3ALL-G5-8p-s41 ‖ 缺 1 项（基础防御族）
+  ✘ 主干[每包] GD3ALL-PUSHON-s41 ‖ 缺 3 项（snipe/tank/基础防御族）
+  ✔ 主干[每包] G5DEF-s41 ‖ 缺 1 项（基础防御族）
+  ✘ 主干[每包] GD3ALL-POPP-s17 ‖ 缺 3 项（snipe/tank/基础防御族）
+  ✘ 主干[每包] GD3ALL-POPP-s41 ‖ 缺 3 项（snipe/tank/基础防御族）
+  ✘ 主干[每包] CB3-s13 ‖ 缺 2 项（snipe/基础防御族）
+  ✘ 主干[每包] CB3-s7 ‖ 缺 2 项（snipe/基础防御族）
+  ✘ 主干（每包最多缺 1 项） ‖ 2/13 包达标
+  ✔ 次级长程 charge（池 ≥50% 成员） ‖ 12/13 成员会
+  ✔ 次级长程 ring（池 ≥50% 成员） ‖ 10/13 成员会
+  ✔ 次级长程 bigT（池 ≥50% 成员） ‖ 11/13 成员会
+  ✔ 次级长程 railgun（池 ≥50% 成员） ‖ 11/13 成员会
+  ✘ 防御原型（存在成员：份额 5-15% ∧ 准确 ≥25%） ‖ 最高份额 4.2% ‖ 池加权 0.8% ‖ 带内成员 无（准确 —）
+  ✔ 地雷（8P 自选 ≥4） ‖ 8P 自选 25
+  ✔ 摄魂（残血桌自选 ≥4） ‖ 自选 87
+  ✔ 自发 tank ‖ 5P 54 / 8P 38
+  ✔ 自发 snipe ‖ 5P 79 / 8P 47
+  － 只报不判：dualgun=0 mirror=0 curse=2 firestorm=0 taunt=0 transfer=0 rod=14 purify=0 minit=0
