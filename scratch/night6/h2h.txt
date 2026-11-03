@@ -27,3 +27,7 @@
    A=[EFFG-s41,EFFG-s5,EFFG-s7,GD3ALL-G5-8p-s41,GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-POPP-s17,GD3ALL-POPP-s41]
    B=[GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-POPP-s17,GD3ALL-POPP-s41,GD3ALL-PUSHON-s13,D-b-hpseed-s13,D-a-s13]
    A 带胜份额 44.9% ± 2.7 ⇒ 偏离均势 -5.1pt ‖ 1.9σ ‖ ✘ 判不分（线：≥4pt 且 ≥2σ）
+== 新星 vs 中带（直交反转修没修） ‖ long × 400 局（判定 340）
+   A=[HPG-s7,HPG-s41,HPG-s13,CB3-s7,CB3-s13]
+   B=[GD3ALL-PUSHON-s41,G5DEF-s41,GD3ALL-POPP-s17,GD3ALL-POPP-s41,GD3ALL-PUSHON-s13,D-b-hpseed-s13,D-a-s13]
+   A 带胜份额 34.7% ± 2.6 ⇒ 偏离均势 -15.3pt ‖ 5.9σ ‖ ✔ 分得开
