@@ -2,6 +2,8 @@
 
 > 起点：用户 11-03 晨对昨夜三条待裁的答复——① 防御口径：新研究的防御程度已比旧的好，能不能继续改进；② 持续点血桌**本来就是要赢的场景**，这一点写在「进池体检」里，所有冠军不论技能风格都得过一遍（个别差一点的可以人工研究它的技能分布）；③ 池覆盖的终局形态 ≈ 旧 v7 池：**两个难度池，每池尽可能达成技能覆盖**；④「第三点是什么玩意」+「要复核数据或修 bug 尽管做」。
 
+> 📊 **可视化**：`docs/research/viz/champion-evolution-2026-11-03.html`（生成器 `scratch/evolve-viz-1103.mjs` ‖ 114 枚每 25 代快照 + 19 条臂逐代线 + T1/T2 判决表 ‖ 离线自包含）——见 §十七②。
+
 ## 一、我的 bug：退化闸默认档**每臂假报"全部退化"**（已修，门已补牙）
 
 **机制**（一行话）：一条 `if (sel.best) … else if (hallEntries.length) …` 被我从中间插了一句话，`else` 的先行词换了人。
@@ -463,5 +465,25 @@ G4 的 headline 只有 max ⇒ "最克 99.7%" 与 "最克 61%" 都读成一个�
 
 `--group=meta` **15/15**（分组，不是整轮认证；且当时有一臂在跑 ⇒ 秒数不作数）‖ `probe-sel-grid` 15/15 ‖ `score13 --selftest` 23/23 ‖ `node --check` 全过。改动面：`tools/pick-best.mjs`（新纯函数）‖ `tools/train-3p.mjs`（旗标 + 调用点 + 同代接线名单 + meta）‖ `tools/gate-drafts.mjs`（G4CELLS 行）‖ `tools/promote-champion.mjs`（解析 + 只记录行 + meta）‖ `tools/score13.mjs`（解析 + 4 条夹具）‖ 新增 `tools/probe-sel-grid.mjs`。**没新增门**（按用户"可以加但尽量少加"：T1 的钉子放在门外的可跑自证，与 `probe-gift-veto.mjs` 同处置）。
 - **同尺复现**：这次 band2 的 G4 两档（99.7 / 90.3，基线 16/20.7）与下午那份 `scratch/g4-cbg-1103.txt` 里 `CBG-s13` 的读数**逐字同**（产物 wid 也同一个）⇒ 新加的 G4CELLS 行没动克制表口径（`G4POOL` 仍 `960dfe0b`），也没动任何 PASS/FAIL。
-- **待补的一腿（诚实登记，不是结论）**：`promote-champion --dry` 的**端到端**复验还没做（T2 的 promote 侧解析 + 只记录行 + score13 接住），夹具只钉了字符串形状。下一次真跑 `--dry` 时一并验；没验之前 T2 的"promote 会印"这句只能算**已接线未端到端**。
+- ~~待补的一腿：`promote --dry` 的端到端复验~~ **已于 17:30 结案（见 §十七①）**：那次跑出的四行期望损失与我直跑 gate-drafts 的读数逐字同。
+
+## 十七、T2 端到端结案 + 2.0 冠军演化可视化（用户裁"这两个都做一下"）
+
+### ① T2 的链路端到端跑通了（`scratch/promote-dry-t2-1103.txt` ‖ 17:30:02→17:32:54 = **2 分 52 秒**/枚）
+
+`node tools/promote-champion.mjs scratch/ga-arms/CBG-s13.js --dry`（`--dry` = 只做体检、**一个文件都不写**）现在会印出四行只记录的期望损失：线上包 long `mean=20.4 ‖ 中位 20.7 ‖ >50% 的格 0/8 ‖ 最克「只枪(1ジ压制·打最肥)」40.3` ‖ 线上包 multi `11.8 / 13.3 / 0/8 / 24.3` ‖ 候选 long `65.3 / 78.0 / 6/8 / 最克「只防御(不还手)」99.7` ‖ 候选 multi `53.3 / 40.7 / 4/8 / 最克「激光剑连刺」90.3`（全部 n=300）。
+
+- **跨路径复现成立**：同一次 promote 里的候选两行，与我 25 分钟前**直接**跑 `gate-drafts` 打同一枚包（wid `b2ed8fdb41ca195b`）的读数**逐字同** ⇒ promote 的 spawn + 解析没把数吃错。
+- **只记录确实没改判**：那次 `--dry` 的阻断项仍是 **4 项**（G4 两桌制 + G5 两桌制），与加 T2 之前的判据集合同形；末尾"已中止，**未换包**"。
+- **第三段链路也验了**：`node tools/score13.mjs --promote=scratch/promote-dry-t2-1103.txt --json` ⇒ `raw.g4Cells` **四条全接到**（mean/中位/over50/最克/n 齐），`g4CellsUnrun=false`，`behaviorHeader=true ‖ g4Fails 2 ‖ g5Fails 2`（`scratch/score13-t2-chain.json`）。
+- ⇒ T2 的措辞从"已接线未端到端"升为**三段（量具→promote→成绩单）端到端已验**；但它仍然**不是门槛**（用户裁过 max 才是）。
+
+### ② 可视化：`docs/research/viz/champion-evolution-2026-11-03.html`（生成器 `scratch/evolve-viz-1103.mjs`）
+
+- 数据全部**从盘上的原件读**（生成器里不手敲一个数）：114 枚每 25 代快照（`seg-widths-92.tsv` 78 枚 ‖ `seg-widths-7.tsv` 36 枚，**分两个进程量**——arch2 装上摘不掉，混批会互相污染）‖ 19 条臂的逐代 `gen` 日志 ‖ `g4-band2-vs-band4-1103.txt` 里 G4CELLS/G5 的原始行 ‖ CBGG-s13 日志的整池格表 + **复用 `gridPickByRarity` 本身**重排容差带（不在这儿重写算术）。
+- 五张图/表：① fit 随深度（19 条臂）② 种数随深度（点色 = 防御族份额档 D0~D3）③ 末代两盆散点（x=防御族份额 ‖ y=fit ‖ 点径=种数）④ T1 容差带敏感性 ⑤ T1 判决 + T2 期望损失。图例可按臂显隐，每个点带 hover 明细（臂 / 第几代 / fit / 种数 / 防御族 / 键表）。
+- **验收是跑出来的，不是"看着像"**：生成后在浏览器里数过 —— `svg=3 ‖ polyline=19 ‖ circle=247（每条带 title）‖ 图例按钮=19 ‖ 表行=16 ‖ 坏坐标=0`；点一下图例按钮 ⇒ 圆点 247→234，再点回 247（交互真的接上）；⑤ 的六行与读数文件逐格对账一致（`band4/long 41.0 ‖ 27.3 ‖ 3/8 ‖ 99.3 ‖ G5 99%（红）`）。
+- 快照那批读数的口径钉在页首：eps=0 · temp=soft · **12 局** · 桌制 long · seed 77000 全员配对 ⇒ **看趋势与配对差可以，单点绝对值不行**（0.5% 线在 12 局上约等于"整局打过一次"）。
+- 重跑：`node scratch/seg-widths-1103.mjs --gen=92 --out=scratch/seg-widths-92.tsv` ‖ 同工具 `--gen=7 --out=scratch/seg-widths-7.tsv`（各约 20~30 秒）→ `node scratch/evolve-viz-1103.mjs [--fragment=<会话目录>/visualizations/xxx.html]`。
+- ⚑ 两条在册坑顺手记下：① 会话内可视化**不吃带 `<html>/<head>/<body>` 壳的片段**（17:41 实测判 `invalid`）⇒ 生成器同时出"仓库整页版"与"会话片段版"，同一份逻辑不抄两遍；② `seg-widths` 第一版混代跑 ⇒ `packCfgExit` 对 v7 快照**直接 `process.exit(2)` 把整批带走**（死在 V7C-s13-seg1），改成"文本预扫版本 + 按代分进程"后 114 枚全量到。
 

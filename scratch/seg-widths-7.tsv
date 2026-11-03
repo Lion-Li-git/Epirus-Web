@@ -1,0 +1,37 @@
+arm	seg	gen	fit	kinds	defShare	defKinds	cell	keys	path
+V7C-s13	1	25	0.7017	1	0.3	0	D0K0	gun	scratch/ga-bands/V7C-s13/V7C-s13-seg1.bak
+V7C-s13	2	50	0.8621	6	0	0	D0K1	ring gun tank charge snipe bigT	scratch/ga-bands/V7C-s13/V7C-s13-seg2.bak
+V7C-s13	3	75	0.8062	4	0	0	D0K0	sword gun ring charge	scratch/ga-bands/V7C-s13/V7C-s13-seg3.bak
+V7C-s13	4	100	0.7336	2	0	0	D0K0	sword gun	scratch/ga-bands/V7C-s13/V7C-s13-seg4.bak
+V7C-s13	5	125	0.9812	3	0	0	D0K0	sword gun charge	scratch/ga-bands/V7C-s13/V7C-s13-seg5.bak
+V7C-s13	6	150	0.8535	3	0	0	D0K0	sword gun charge	scratch/ga-bands/V7C-s13/V7C-s13-seg6.bak
+V7C-s41	1	25	0.716	8	11.6	5	D3K2	gun tank reflect guard bagua holo proto charge	scratch/ga-bands/V7C-s41/V7C-s41-seg1.bak
+V7C-s41	2	50	0.9213	10	29.3	7	D3K2	holo snipe gun reflect tank proto guard jinshield bagua shift	scratch/ga-bands/V7C-s41/V7C-s41-seg2.bak
+V7C-s41	3	75	0.6933	7	1.3	1	D1K1	charge snipe gun tank mine reflect railgun	scratch/ga-bands/V7C-s41/V7C-s41-seg3.bak
+V7C-s41	4	100	0.7849	6	0.3	0	D0K1	gun miniT snipe sword charge curse	scratch/ga-bands/V7C-s41/V7C-s41-seg4.bak
+V7C-s41	5	125	0.6883	2	0	0	D0K0	tank gun	scratch/ga-bands/V7C-s41/V7C-s41-seg5.bak
+V7C-s41	6	150	0.9974	3	0	0	D0K0	gun sword tank	scratch/ga-bands/V7C-s41/V7C-s41-seg6.bak
+V7L-s13	1	25	0.8288	3	2.3	1	D1K0	gun sword bagua	scratch/ga-bands/V7L-s13/V7L-s13-seg1.bak
+V7L-s13	2	50	1.0547	9	7.7	4	D2K2	gun sword reflect holo miniT charge guard bagua railgun	scratch/ga-bands/V7L-s13/V7L-s13-seg2.bak
+V7L-s13	3	75	0.9291	7	5.2	2	D2K1	gun holo sword miniT charge reflect railgun	scratch/ga-bands/V7L-s13/V7L-s13-seg3.bak
+V7L-s13	4	100	0.9349	4	0	0	D0K0	gun charge railgun miniT	scratch/ga-bands/V7L-s13/V7L-s13-seg4.bak
+V7L-s13	5	125	0.9771	5	0	0	D0K1	gun sword miniT charge railgun	scratch/ga-bands/V7L-s13/V7L-s13-seg5.bak
+V7L-s13	6	150	0.9817	3	0	0	D0K0	gun sword miniT	scratch/ga-bands/V7L-s13/V7L-s13-seg6.bak
+V7L-s41	1	25	0.8657	5	15.9	3	D3K1	gun holo sword reflect guard	scratch/ga-bands/V7L-s41/V7L-s41-seg1.bak
+V7L-s41	2	50	0.9217	7	21.4	4	D3K1	holo sword gun charge guard reflect bagua	scratch/ga-bands/V7L-s41/V7L-s41-seg2.bak
+V7L-s41	3	75	1.0776	4	1.5	1	D1K0	sword gun charge holo	scratch/ga-bands/V7L-s41/V7L-s41-seg3.bak
+V7L-s41	4	100	1.0555	4	10.5	2	D3K0	gun sword holo reflect	scratch/ga-bands/V7L-s41/V7L-s41-seg4.bak
+V7L-s41	5	125	1.0831	3	3.8	1	D2K0	gun sword holo	scratch/ga-bands/V7L-s41/V7L-s41-seg5.bak
+V7L-s41	6	150	0.9845	4	15.9	1	D3K0	sword holo charge gun	scratch/ga-bands/V7L-s41/V7L-s41-seg6.bak
+V7M-s13	1	25	0.7797	6	11.9	4	D3K1	gun sword bagua guard reflect holo	scratch/ga-bands/V7M-s13/V7M-s13-seg1.bak
+V7M-s13	2	50	1.0967	2	0.4	0	D0K0	gun sword	scratch/ga-bands/V7M-s13/V7M-s13-seg2.bak
+V7M-s13	3	75	1.0408	5	10.2	3	D3K1	sword gun bagua reflect guard	scratch/ga-bands/V7M-s13/V7M-s13-seg3.bak
+V7M-s13	4	100	1.025	4	2.1	2	D1K0	sword gun holo bagua	scratch/ga-bands/V7M-s13/V7M-s13-seg4.bak
+V7M-s13	5	125	0.9006	6	16.4	4	D3K1	gun sword bagua guard reflect holo	scratch/ga-bands/V7M-s13/V7M-s13-seg5.bak
+V7M-s13	6	150	1.0316	6	3.3	2	D2K1	gun sword holo charge railgun reflect	scratch/ga-bands/V7M-s13/V7M-s13-seg6.bak
+V7M-s41	1	25	0.6884	6	1.2	1	D1K1	gun sword charge railgun snipe reflect	scratch/ga-bands/V7M-s41/V7M-s41-seg1.bak
+V7M-s41	2	50	0.7236	9	13.7	4	D3K2	gun charge reflect bagua guard miniT sword snipe holo	scratch/ga-bands/V7M-s41/V7M-s41-seg2.bak
+V7M-s41	3	75	0.8867	4	0.3	0	D0K0	gun sword charge railgun	scratch/ga-bands/V7M-s41/V7M-s41-seg3.bak
+V7M-s41	4	100	0.9993	6	5.5	3	D2K1	gun sword guard bagua reflect miniT	scratch/ga-bands/V7M-s41/V7M-s41-seg4.bak
+V7M-s41	5	125	0.781	7	4.5	3	D2K1	gun sword guard reflect bagua miniT charge	scratch/ga-bands/V7M-s41/V7M-s41-seg5.bak
+V7M-s41	6	150	0.9372	6	7.2	3	D2K1	gun sword reflect bagua guard miniT	scratch/ga-bands/V7M-s41/V7M-s41-seg6.bak
