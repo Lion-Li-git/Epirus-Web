@@ -9,7 +9,7 @@
  * 对表基准（scratch/arms/supfit-w1.bak.meta.json）：留出同键 top-1 75.5% ‖ 加权似然 −1.429 ‖ railgun 39/39。
  * ⚑ 读数纪律：lr 只按**训练**似然挑（不偷看留出），挑完的档才报留出。
  */
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { sandbox, loadChamp, rejectUnknownFlags, chargeProfile } from '../audit-lib.mjs';   // chargeProfile = 珠账的单一来源（与门 `bead`、mastery 同一量具）
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
@@ -455,7 +455,7 @@ const ration6Pick = (state, pid, cs) => {
   }
   return pickChain(state, pid, cs, R);
 };
-const teacherPick = PACK_TEACHER
+const _pickRaw = PACK_TEACHER
   ? (state, pid, cs) => packPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : TEACHER === 'v7mix'
   ? (state, pid, cs) => pickChain(state, pid, cs, R) || v7Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
@@ -490,6 +490,35 @@ const teacherPick = PACK_TEACHER
   : TEACHER === 'oracleDef'
     ? (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
+/* ⚑ DS · 11-03：`EPIRUS_TEACHER_GATE=<model.json>` —— 在教师输出上加"残血×高威胁才防"的门控
+ *   （模型 = scratch/fit-gate.mjs 的 logistic；13 维公开特征；hp<=EPIRUS_TEACHER_GATE_HP 且 p>=EPIRUS_TEACHER_GATE_T）。
+ *   默认关 ⇒ 教师逐字不变。 */
+const _GATE_MODEL = process.env.EPIRUS_TEACHER_GATE ? JSON.parse(readFileSync(process.env.EPIRUS_TEACHER_GATE, 'utf8')) : null;
+const _GATE_T = Number(process.env.EPIRUS_TEACHER_GATE_T || 0.2);
+const _GATE_HP = Number(process.env.EPIRUS_TEACHER_GATE_HP || 2);
+const _DEFK = new Set(['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'armor', 'proto', 'holo']);
+function _gateFeat(state, pid) {
+  const me = state.p[pid], ops = state.p.filter((q) => q.id !== pid && q.hp > 0);
+  const epMax = ops.reduce((a2, q) => Math.max(a2, q.ep || 0), 0);
+  return [Math.min(me.hp, 5) / 5, ops.length / 5, Math.min(state.round, 140) / 140, Math.min(me.ep, 12) / 12,
+    me.bead ? 1 : 0, epMax / 5, ops.filter((q) => (q.ep || 0) >= 2).length / 5, ops.filter((q) => q.bead).length / 5,
+    ops.filter((q) => q.lastSkill === R.SK.CHARGE).length / 5, ops.filter((q) => q.lastSkill && R.ATK_EFFECT.indexOf(q.lastSkill) >= 0).length / 5,
+    ops.filter((q) => q.lastTarget === pid).length / 5, me.baguaExtra ? 1 : 0, (me.stickers || []).length / 4];
+}
+function _gateP(state, pid) {
+  const f = _gateFeat(state, pid); let t = _GATE_MODEL.b;
+  for (let j = 0; j < f.length; j++) t += _GATE_MODEL.w[j] * (f[j] - _GATE_MODEL.mu[j]) / _GATE_MODEL.sd[j];
+  return 1 / (1 + Math.exp(-t));
+}
+const teacherPick = (state, pid, cs, legal) => {
+  const a = _pickRaw(state, pid, cs, legal);
+  if (!_GATE_MODEL) return a;
+  const me = state.p[pid];
+  if (!me || me.hp > _GATE_HP) return a;
+  if (a && _DEFK.has(a.key)) return a;
+  if (!(_gateP(state, pid) >= _GATE_T)) return a;
+  return cs.find((c) => _DEFK.has(c.key) && c.affordable !== false) || a;
+};
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
 const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && !PACK_TEACHER) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + '（收到 ' + TEACHER + '）'); process.exit(2); }
