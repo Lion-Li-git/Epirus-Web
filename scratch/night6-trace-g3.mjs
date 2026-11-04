@@ -60,7 +60,7 @@ lines.push('对局记录（gen-3 逐回合）· 受试 = ' + CH + ' ‖ 场 = 4 
 const hist = {};
 for (let g = 0; g < GAMES; g++) {
   const seat = g % 5;
-  const st = S.createState(MODE, { next: mulberry(SEED + g * 977) }, 5);
+  const st = S.createState(MODE, { next: mulberry(SEED + g * 977) }, Number(arg('np', 5)));
   const ch = []; for (let i = 0; i < 5; i++) ch.push(i === seat ? subjCh : oppCh);
   Play.autoGameN(st, ch);
   const H = hist[CH] || (hist[CH] = {});

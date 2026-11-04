@@ -67,6 +67,7 @@ console.log('替身池：' + pool.games + ' 局真人日志 · ' + pool.conds + 
 try { const d = OUT.split(/[\\/]/).slice(0, -1).join('/'); if (d) mkdirSync(d, { recursive: true }); } catch (eOut0) {}
 if (!existsSync(OUT)) appendFileSync(OUT, ['mode', 'band', 'games', 'seed', 'members', 'mimicWins', 'mimicPct', 'se', 'mimicPool', 'ts'].join('\t') + '\n');
 
+const NP = Number(FLAG.np || 5);   /* §G3：桌人数可调（2/3/5/8） */
 for (const MODE of ['long', 'multi']) {
   const res = {};
   const BANDS = FLAG.band ? FLAG.band.split(',') : ['hard', 'mid', 'soft'];
@@ -81,7 +82,7 @@ for (const MODE of ['long', 'multi']) {
     const chooserOf = (c) => c.bot ? c.bot() : c.pack();
     let mw = 0;
     for (let g = 0; g < GAMES; g++) {
-      const N = 5, mimicSeat = g % N, aiIdx = (g * 4) % members.length;
+      const N = NP, mimicSeat = g % N, aiIdx = (g * 4) % members.length;
       const st = W.EpirusState.createState(MODE, { next: T.mulberry32(SEED + g) }, N);
       const choosers = []; let k = 0;
       for (let pid = 0; pid < N; pid++) {
@@ -92,7 +93,7 @@ for (const MODE of ['long', 'multi']) {
       if (st.winner === mimicSeat) mw++;
     }
     const p = mw / GAMES, se = 100 * Math.sqrt(p * (1 - p) / GAMES);
-    console.log('== 替身尺直跑 ‖ 5P ' + MODE + ' × ' + GAMES + ' ‖ packs=[' + members.join(',') + ']');
+    console.log('== 替身尺直跑 ‖ ' + NP + 'P ' + MODE + ' × ' + GAMES + ' ‖ packs=[' + members.join(',') + ']');
     console.log('   替身夺冠 ' + (100 * p).toFixed(1) + '% ± ' + se.toFixed(1));
     appendFileSync(OUT, [MODE, 'packs:' + members.length, GAMES, SEED, members.length, mw, (100 * p).toFixed(1), se.toFixed(1), pool.games + '局/' + pool.conds + '条件', new Date().toISOString()].join('\t') + '\n');
     continue;
