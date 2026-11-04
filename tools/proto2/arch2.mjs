@@ -768,7 +768,7 @@ export function install(W, opts) {
    *   ⇒ 下游按 `arch` 选输入面的尺（profile2）会拿错的那张脸去读。长度不同（5258≠5650）只挡住了"unpack 成功"，
    *   挡不住"有人照 arch 装错档再按长度报错"这种绕路。⇒ 标签一律**由实际布局写**，读的时候当场对账。 */
   function packDims() {
-    const d = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0, tinter: L.tinterK || 0, gen: L.gen, keySplit: L.keySplit };
+    const d = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0, tinter: L.tinterK || 0, keyHead: L.keyHeadOn || 0, gen: L.gen, keySplit: L.keySplit };
     if (isO3Input(L.input)) d.dof = obs3Dims(R, L.input);
     if (L.norm) d.norm = L.norm;     /* 观测面维数由引擎卡表算，不让调用方手填（obs3b=505）*/
     return d;
