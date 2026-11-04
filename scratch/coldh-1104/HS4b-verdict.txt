@@ -1,0 +1,5 @@
+HS4b 阻断 体检未过（3 项阻断条件） ‖ G4[HS4b/long] 最克「只枪(1ジ压制·打最肥)」 73.3%/60%（超 13.3pt）;G4[HS4b/multi] 最克「只枪(1ジ压制·打最肥)」 48.7%/60%（余 11.3pt）;G5[HS4b/long] 防席夺冠 1%/25%（余 24.0pt）;G5[HS4b/multi] 防席夺冠 3%/25%（余 22.0pt）; 强度long=36.4 强度multi=38.1
+包                 wid            种数  railgun  charge   tank   sword  cannon  防御族%
+HS4b.js           5b8ec86cd356     6     0.00    2.36    6.96    0.00    0.00     0.1   （60 局 · seed0=77000 · ε=0 soft · 对脚本场）
+
+⚑ 判读法：railgun+charge 同跌 ⇒ 链没了（DS 的"宽度是拿链换的"形状）；种数升而链守住 ⇒ SEL_KEEP/覆盖锚真买到了东西。

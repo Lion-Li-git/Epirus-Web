@@ -1,0 +1,2 @@
+HS-4-seg1.bak long=28.0
+HS-4-seg10.bak long=15.4
