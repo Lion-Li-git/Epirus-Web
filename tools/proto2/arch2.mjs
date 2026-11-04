@@ -185,7 +185,13 @@ export function layout(opts) {
    *   乘法关系，cand 层要从 te1 嵌入里解出身份需要显式通道（inter 头是 act×ctx，管不到目标侧）。
    * 三条硬规矩与 inter 同款：① 默认 K=0 段不存在 ⇒ 逐位不变；② 段追加 seg 表**末尾**（inter 之后）；
    *   ③ 无目标 ⇒ te1=zeroSeat ⇒ 项退化为常数 g·tanh(b)（可学习压零）。 */
-  const tinterK = isO3 ? Math.max(0, Math.floor(Number(o.tinter) || 0)) : 0;
+  /* DS 11-04（用户命题："直接把 2.0 的打分改过去"）：`keyHead=1` ⇒ 加一段**逐键状态权重**
+ *   logit += w_key · hctx + b_key（w 的扇入 = hid）。这正是 v7 `value(state,key)` 的形状，
+ *   但挂在 2.0 的状态编码器上 ⇒ 让"哪个键赢"随局面变，是**结构**给的，不靠初始化巧合。
+ *   默认 0 ⇒ 段不存在、paramCount 与历史臂逐字相同。 */
+const keyHeadOn = isO3 ? (Number(o.keyHead) > 0 ? 1 : 0) : 0;
+if (Number(o.keyHead) > 0 && !isO3) throw new Error('layout: keyHead 只接 obs3/obs3b 输入面');
+const tinterK = isO3 ? Math.max(0, Math.floor(Number(o.tinter) || 0)) : 0;
   if (Number(o.tinter) > 0 && !isO3) throw new Error('layout: tinter 只接 obs3/obs3b 输入面（input=' + input + '）');
   const tinterStride = actH + seatH + 2;                 // 每通道：u(actH) ‖ w(seatH) ‖ g ‖ b
   /* obs3 档把**两个目标槽**都拼进逐候选层（规则的target 上限就是 2，且镜面反射要区分 source/output）
@@ -199,6 +205,7 @@ export function layout(opts) {
   ];
   if (interK > 0) seg.push({ name: 'inter', off: 0, len: interK * interStride });
   if (tinterK > 0) seg.push({ name: 'tinter', off: 0, len: tinterK * tinterStride });
+  if (keyHeadOn) seg.push({ name: 'keyHead', off: 0, len: skills * (hid + 1) });
   let off = 0;
   for (const s of seg) { s.off = off; off += s.len; }
   /* E1（DS · 11-02 晚，用户裁「输入标准化」）：ctx 输入的逐维标准化统计量（由固定语料离线算，随包存取）
@@ -207,9 +214,9 @@ export function layout(opts) {
   return {
     arch: isO3 ? 'S1o' : 'S1', input, gen, skills, seatIn, actIn, initScale: INIT_SCALE, norm,
     poolN,
-    seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, tinterK, tinterStride, seg, n: off, keySplit,
+    seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, tinterK, tinterStride, keyHeadOn, seg, n: off, keySplit,
     /* 每段的"扇入"—— 段感知变异要用它给 σ 定标（扇入越大、同样 σ 造成的输出扰动越大） */
-    fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, inter: hid, tinter: seatH },
+    fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, inter: hid, tinter: seatH, keyHead: hid },
   };
 }
 
@@ -488,6 +495,10 @@ export function install(W, opts) {
     const n = cands.length, logits = new Float64Array(n);
     const phis = (opts2 && opts2.wantPhi) ? new Array(n) : null;   /* 蒸馏旁路：默认不建，零开销 */
     const afbuf = new Float64Array(L.actIn), ci = new Float64Array(L.candIn), zeroSeat = BUF.zeroSeat;
+    /* keyHead：候选键 → 段内下标的映射（键表由引擎给）与段起点。 */
+    const KH = L.keyHeadOn ? (function () { const m = new Map(); const arr = (R.skills || []); arr.forEach(function (s, i) { m.set(typeof s === 'string' ? s : (s.key || s.id), i); }); return m; })() : null;
+    const khSeg = L.keyHeadOn ? L.seg.find(function (s) { return s.name === 'keyHead'; }) : null;
+    const kh0 = khSeg ? khSeg.off : 0;
     /* 交互头的决策级因子（inter=K）：v_k·hctx 每决策一次、g/b 偏移提前算好 ⇒ 逐候选只剩 u_k·ae 与 tanh */
     const ctxFac = L.interK > 0 ? new Float64Array(L.interK) : null;
     /* DS 11-04：原来写死 `L.seg[6]`，而它只在"inter 与 tinter 同时存在"时才是 inter 的段号；
@@ -520,6 +531,16 @@ export function install(W, opts) {
       if (TP) { TP.afs.push(Float64Array.from(afbuf)); TP.t1.push(t1); TP.t2.push(t2); TP.keys.push(DK(cands[i])); }
       let v = params[headOff + L.hid2];
       for (let j = 0; j < L.hid2; j++) v += params[headOff + j] * hc[j];
+      /* DS 11-04：逐键状态权重（v7 的 value(state,key) 形状）——按局面给每个键打分。 */
+      if (L.keyHeadOn) {
+        const ki = KH.get(cands[i].key);
+        if (ki != null && ki >= 0 && ki < L.skills) {
+          const b0 = kh0 + ki * (L.hid + 1);
+          let sk = params[b0 + L.hid];
+          for (let j = 0; j < L.hid; j++) sk += params[b0 + j] * hctx[j];
+          v += sk;
+        }
+      }
       /* 交互头（inter=K）：logit += Σ_k g_k·tanh((u_k·ae)·(v_k·hctx) + b_k)。段全零 ⇒ u·ae=0 且 g=0 ⇒ 贡献恒 0
        *   （g 也在段里，"只清 u 不清 g"不构成等价对照——有牙自检必须清**整段**）。 */
       if (ctxFac) for (let k = 0; k < L.interK; k++) {
