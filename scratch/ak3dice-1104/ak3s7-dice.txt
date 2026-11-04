@@ -1,0 +1,1 @@
+AK3-s7 dice=77111 mode=long 1st=74.0

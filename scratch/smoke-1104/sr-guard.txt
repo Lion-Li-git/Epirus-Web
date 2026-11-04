@@ -1,0 +1,4 @@
+⛔ 人数这一位收到的是 "scratch/ga-arms/AK3-s7.js"（要 2~12 的整数）
+   ⇒ 看着像**包路径**放错位置了：被测冠军请用 `--champ=<路径>`，人数仍是第一个位置参数
+      例：node tools/skill-report.mjs 5 6 out.html --champ=scratch/ga-arms/AK3-s7.js
+   ⇒ 拒绝继续：继续会拿**默认槽**的成绩出一份完整的报告（旧行为，已判为假读数）
