@@ -616,4 +616,13 @@ G4 的 headline 只有 max ⇒ "最克 99.7%" 与 "最克 61%" 都读成一个�
 - **研究分支根本不触发门禁 CI**：`.github/workflows/gates.yml` 的 `on:` 只有 `push: [main]` ‖ `pull_request` ‖ `workflow_dispatch` ⇒ 这 29 条提交攒下的红云端一个都不会响，只有本地点名跑 `--group=` 才抓得到。改了 `js/**` 或 `tools/**` 的班次必须自己跑对应组（这班改面 = engine + meta，两条都跑了）。
 - **门号 D187 已退役 8 天而 6 处引用还在指它**（`js/train/evo.js` 三处 ‖ `tools/train-3p.mjs` 两处 ‖ DS 的 `RESULTS-…-EVALFIX-ds.md` 一处）：那道「整桌同原型」**行为腿**10-27 随「训练组整组移出产品门禁」`1efa3a3d`（280→172 条）删掉了 ⇒ 已把引用改指现在真在册的 D4。**代价要写明**：D187 判的是行为（关=逐位可逆 / 开=局内恒等且跨局满覆盖），D4 只是源码形状 pin ⇒ `OPP_SWEEP` 的"轮齐"断言现在**没有行为级门**。我按算术核过 DS 那句话成立（24 局×4 席对 L=17 ⇒ 覆盖 17/17、最少 5 次；静态 `OPPS` 是 9 条 ⇒ 8 局即 9/9、最少 3 次），但那是**我算的**、不是门判的 ⇒ 要不要给训练分布补一条行为腿归用户裁，这班不擅自加门。
 
-**这班没做的**：没 promote、没动 `js/bundled-champion-pool.js` 与冠军池、没删任何文件、没跑整轮（`--group=ship` 36 条 / `probe` 37 条，单条 promote 腿实测 2~3 分钟 ⇒ 整组估 5~12 分钟，等点头）；替身尺进门禁、`COURSE_EVERY` 实现、CB3/HPG 晋升仍挂在待裁清单上。
+### ⑤ 用户点头后补跑的两组门禁（串行跑，避免并发把秒数搅浑）
+`--group=ship` **50/51** ‖ `--group=probe` **87/88**（两份回执 `scratch/morning1104-gate-{ship,probe}.log`）。
+**两边唯一的红是同一条 `D16`**：线上 2P/3P 冠军包记的规则指纹 `5a873d13` ≠ 当前 `d21f635d`（"考卷成绩已过期"）。
+**不是我改出来的、也不是昨夜改出来的**——把这条腿拿到夜班末 `47b05c06` 的独立 worktree 里单跑，**同一个 got/want 一字不差** ⇒ 它从 10-31 就红着。
+根因：`cc9de8d3`（10-31 obs3b，`state.js` 给 action 事件补 `target/target2`）换了规则指纹，而两个线上包还记着 10-25 R62（`642104b9`："指纹换代 5a873d13"）那次留下的旧戳
+⇒ **线上冠军包的考卷成绩在当前引擎下是过期的**。同一条 `--is-ancestor` 判据还说明 `cc9de8d3` **不在 main** ⇒ 这是研究分支独有的红，main 的 CI（10-31 那轮 success）结构上看不见它。
+**修它要动线上槽**（重跑两包考卷 + 把新 `rulesFingerprint`/`examScoreAtBuild` 记回 `js/bundled-champion-3p.js` 与 `js/bundled-champion.js`）⇒ 按红线**等点名**；在册早有这条（`LIVE-LINES` 待裁行"晋升评估要连 D16 重录"）。
+本班改动面（engine 的 D4 单腿 ‖ meta 全组 ‖ ship ‖ probe）**除 D16 外 0 红**；**`--group=engine` 那 75 条没跑**（含 fuzz，估时不确定，要不要跑请点名）。
+
+**这班没做的**：没 promote、没动 `js/bundled-champion-pool.js` 与冠军池、没动线上槽（D16 的修法要）、没删任何文件；替身尺进门禁、`COURSE_EVERY` 实现、CB3/HPG 晋升仍挂在待裁清单上。
