@@ -1,0 +1,6 @@
+KDFULL400-s13	dice=77000	mode=long	1st=65.1
+KDFULL400-s13	dice=77000	mode=multi	1st=46.9
+KDFULL400-s13	dice=77111	mode=long	1st=66.1
+KDFULL400-s13	dice=77111	mode=multi	1st=46.2
+线上包	dice=77000	mode=long	1st=65.4
+线上包	dice=77000	mode=multi	1st=56.0

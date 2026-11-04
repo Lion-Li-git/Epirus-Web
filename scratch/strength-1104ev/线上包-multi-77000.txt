@@ -1,0 +1,42 @@
+[shipbigt] 已按旗标改引擎档：`js/train/evo.js` 的 `BIGT_PUSH = 0`（0 = 关 · 引擎自己的默认档回读为 12，不设旗标就是它） · 目标 = ep 最高的对手（平手取血少、再取座位号小）· 不消耗 `state.rng` · 用量由引擎事件数（`champ.use`），不是工具自己的计数器
+[support] 未设旗标 ⇒ 走**引擎默认档** `SUPPORT_PRIOR = 0`（0 = 引擎默认关；**页面另有默认，见 `js/ui/ui.js`**） ‖ knobs 默认 = pick=weighted skipP=0.6 minEp=3 ⇒ 这一臂不带动作先验
+[shipdrain] 引擎档 = 0（0 = 关）· 窗口 = 自己 hp≤1 **且这张牌可付**（不改 `drainHpMax` ⇒ 不是改规则）· 机制 = 只在 ε 分支里把这张牌**并入探索集**（软提升，不强推）· 本臂 ε=0/uniform
+[sticker] 未设旗标 ⇒ 走**出厂档** `LOCK_NARROW = 0` ‖ `CURSE_PUSH = 0`（两档默认 0 ⇒ 逐位不变）
+=== 5 人局评测 ===
+主体: js/bundled-champion-3p.js
+meta: {"selLand":null,"selKeep":null,"recipe":{"arm":"T8-s114","seed":114,"gens":400,"games":8,"pop":8,"ringOpps":null,"oppBlock":{"block":false,"fitGames":25600,"blockedGames":0,"styleGames":0,"styleBlocked":0},"xn2w":0,"xn2g":4,"selLand":0,"selLandGames":20,"selLandTol":0.03,"selKeep":0,"selKeepKeys":null,"selBigT":null,"selKeepCastKeys":null,"kill":null,"trainMode":null,"trainModeEffective":"multi","counterOpps":[],"econOpps":null,"bigtChainW":0,"killReward":0,"krTransfer":null,"killRewardProbe":-1,"breadthFloor":null,"env":{"EPIRUS_ARM":"T8-s114","EPIRUS_BAND_DIR":"docs/artifacts/e528-out/bands/T8-s114","EPIRUS_HOTSTART":"1","EPIRUS_SEED":"114","EPIRUS_SEEDPACK":"docs/artifacts/e234-out/K2.js","EPIRUS_SEL_EVAL_SEEDS":"8","EPIRUS_T3P_OUT":"docs/artifacts/e528-out/T8-s114.js"},"envKeys":7},"breadthFloorAllNarrow":false,"degenerateOnlyWinner":false,"productIsSeed":false,"hallSeedEntries":0,"hallSeedReq":0,"hallSeedAppended":false,"source":"tools/train-3p.mjs","n":3,"gens":400,"games":8,"pop":8,"selSeeds":8,"selSeedBases":[987654,1087654,1187654,1287654,1387654,1487654,1587654,1687654],"selSpreadPt":6.32,"ts":"2026-10-08T18:19:11.576Z","firstRate":0.5689236111111111,"top2Rate":0.8484375,"shippedAs":"multi(3-5P) 默认冠军（由 tools/promote-champion.mjs 提升，源 js/bundled-champion-3p.js）","examScoreAtBuild":0.5589999999999999,"examMode":"multi","examGames":40,"examSeed":77000,"examAt":"2026-10-15","examSource":"spawn","rulesFingerprint":"5a873d13","fingerprintRefresh":"v1.8.29 重记 3008309c（用户 2026-10-23 裁定带来的**观测面**扩展：voided 事件加 voids 字段 ‖ 激光眼两条无效化各补第 4 参 byPid；没有任何条件分支读它们 ⇒ 同一包同 seed 的考卷逐字相同 —— 配对实测 1st 55.9% / 严胜 55.1% / 并列 0.7% / top2 78.1%（两遍一位不差），且与本 meta 的 examScoreAtBuild=0.559 对上 ⇒ 成绩未过期）。权重字节未动、未 promote、未换槽。‖ v1.7.66 规则换代 dd44ac39 —— 用户裁定 2026-10-16：① 地雷伤害不吃铁索连环（全场伤害 + 链一次性触发会让随机一人多吃一份）；② 被激光眼作废的藤甲不挂火弱（火弱在生产侧写下、作废落其后 ⇒ 改为快照回滚）。两条都带 spec 变异实测。权重字节未动、未 promote。⚠ examScoreAtBuild 是旧指纹下测的，本笔未重跑考卷。 ‖ v1.7.129：卡面文案与代码对齐（净化 n−1 / 挑衅「对挑衅者」/ 原型制御 ≥3 反弹），仅文案+注释，权重字节未动、未 promote、未重跑考卷（examScoreAtBuild 仍是旧指纹下测的） ‖ v1.8.36 重记 5a873d13（R62 天火阶梯计价：首下1ジ/连用2ジ/隔开重置——用户 2026-10-25 裁定。配对实测：2P 体检 平均98.62/最差87.50/过门=是；3P 考卷40局 1st 56.5%。权重字节未动、未 promote、未换槽。小额漂移来自脚本侧天火可负担性变化，在噪声内。）","selfPlayDmgPerGame":16.1,"selfPlayDrawRate":0,"selfPlayEffSkills":7.83,"selfPlayDistinctKeys":11,"passiveStanceRate":0.098,"passiveNoThreatStanceRate":0.081,"passiveNoThreatRounds":160,"passiveMaxNoThreatRun":2,"pierceLandByKey":{"gun":109,"sword":102,"bigT":27,"railgun":23,"unite":1,"终局收缩":10},"pierceMissingCards":["tank","snipe"],"reflectWallPierceLand":96,"reflectWallDmgPerGame":5.6,"feasibility":{"ok":true,"fails":[],"notes":["第6道（输出密度/经济出口）：珠经济**未闭环**（花珠率 0.775，按ジ占比 0.568）⇒ 记录不阻断 —— 连线上包都没过它（所以它现在没有判别力）"],"density":{"dmgPerRound":0.496,"jiShare":0.568,"beadGained":227,"beadSpentRate":0.775,"beadExpiredPerGame":1.18,"beadLoopClosed":false,"blocking":false,"zeroAtkRate":0,"zeroDealtRate":0},"seatSpread":7.3,"seatDecisive":0.96,"seatVerdict":"ok","seatBasis":"ok","seatPct":[16.7,19.8,21.9,17.7,24],"G":7.83,"Gkeys":11,"G2":5.83,"G2name":"long","wallDmg":5.6,"wallPierce":96,"fieldA":0.285,"fieldADealt":1.74,"fieldBClears":1.44,"fieldBWinRate":1},"sniperField":{"kind":"mixed","games":20,"dmgPerGame":10.55,"attacksPerGame":10.5,"spreadAvg":3.85,"aimedAtSniperRate":0.343,"survivalRate":0.4,"winRate":0.4},"gateDrafts":{"exit":0,"blocking":[],"recorded":["PASS G6[元测试] 同一场地必须能区分\"会瞄\"与\"只瞄最肥\"（差 ≥50pt）"],"unrun":[],"g6":{},"g4Pool":"960dfe0b","g4Blocking":[],"g4Impl":"caecc92f"},"activeAttackRate":0.273,"auditFails":[],"auditForced":false,"gate4Pool":"960dfe0b","gate4Impl":"caecc92f","gate4Forced":{"forced":false,"pool":"960dfe0b","impl":"caecc92f","lines":[],"ts":"2026-10-15T14:13:57.830Z"}}
+对手池(7): random defend antidef wall farmer heavyfire deepsaver
+!! 模式 --mode=multi : 多人模式(3-5人)  hp=3  摄魂门槛 HP<=1
+对手场 = 4 个互不相同的脚本，全部 35 组合 × 200 局 = 7000 局；含深经济对手的组合 30/35
+随机基线（5 人局 · 公平份额 1/N）: 1st 20.0% / top2 40.0% / top3 60.0%
+
+[冠军] 1st=56.0% 严胜=55.6% 并列=0.4%  2nd=21.4%  3rd=13.1%  4th=7.1%  5th=2.4%   | top2=77.4% top3=90.5%
+    各座位 1st 率: P0=57.4% P1=55.6% P2=57.2% P3=54.0% P4=55.7%
+    前置条件: 主体场均承伤=2.08  平均回合=31.3  转移事件=253  火焰伤害事件=133
+    机制: 自己的攻击被弹回=0.10 次/局  平局率=1%  终局血量=0.94
+    拆分: 含深经济对手 54.5%（6000 局）  vs  不含 65.2%（1000 局）  Δ=-10.7pt
+    拆分: 含反弹席(reflectspam) -（0 局）  vs  不含 56.0%（7000 局）  Δ=-
+[对照 pickRandom] 1st=8.3% 严胜=7.6% 并列=0.7%  2nd=13.6%  3rd=26.8%  4th=27.0%  5th=24.2%   | top2=22.0% top3=48.8%
+    各座位 1st 率: P0=7.8% P1=7.4% P2=9.0% P3=8.6% P4=8.9%
+    前置条件: 主体场均承伤=2.99  平均回合=36.4  转移事件=646  火焰伤害事件=262
+    机制: 自己的攻击被弹回=0.04 次/局  平局率=4%  终局血量=0.09
+    拆分: 含深经济对手 8.8%（6000 局）  vs  不含 5.7%（1000 局）  Δ=3.1pt
+    拆分: 含反弹席(reflectspam) -（0 局）  vs  不含 8.3%（7000 局）  Δ=-
+
+=== 冠军 的经济行为（这套指标才是"货架"的直接读数）===
+决策次数=169366  到达过的最高 ep=79  ep>=3 的决策占比=21.0%  cost>=3 出手占比=0.5%
+  决策时 ep 分带: 0-1=59.8%  2-4=31.4%  5-9=7.7%  10+=1.1%   ← 若 5+/10+ 占比高，则"钱不够"不是约束，问题是**买了什么**
+出手种类=13  分布（前 12）:
+  ジ          57.3%  次数=97116   费用=0
+  激光剑        13.2%  次数=22438   费用=2
+  枪          10.2%  次数=17222   费用=1
+  蓄能          5.8%  次数=9877   费用=1
+  电磁炮         3.3%  次数=5507   费用=?
+  防御          2.5%  次数=4314   费用=0
+  八卦阵         2.5%  次数=4255   费用=0
+  反弹          2.5%  次数=4243   费用=0
+  聚能环         1.1%  次数=1827   费用=3
+  全息屏障        0.9%  次数=1576   费用=1
+  真正的落雷       0.3%  次数=481   费用=5
+  雷击之枪        0.2%  次数=276   费用=2
+耗时 36.0s
