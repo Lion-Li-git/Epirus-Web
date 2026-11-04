@@ -45,12 +45,18 @@ function loadPack(p) {
   return { params: Float64Array.from(P.unpack(raw, true)), v7: false };
 }
 
-const LONG = new Set([R.SK.CHARGE, R.SK.RING, R.SK.BIG_T, R.SK.RAILGUN]);
+/* 攒/花分离（用户 11-04 深夜精化）：残血下该停的是**攒**（蓄能=投资端，兑现窗口不够就浪费）；
+ * 已经攒够的**花**（大雷/炮/环）当然照打——甚至该加大（spend-down）。两个指标分开读：
+ *   蓄能抑制率 = 1 − charge份额(残血)/charge份额(满血)，理想 ≥50%（懂时机）；
+ *   兑现保持率 = 花份额(残血)/花份额(满血)，理想 ≈1 或 >1（把库存打出去）。 */
+const SAVE = new Set([R.SK.CHARGE]);
+const SPEND = new Set([R.SK.RING, R.SK.BIG_T, R.SK.RAILGUN]);
+const LONG = new Set([...SAVE, ...SPEND]);
 const nameOf = (k) => { const c = (R.skills || []).find((s) => s.key === k); return c ? c.name : k; };
 
 function probe(params, hpStart) {
   const ch = T.policyChooserN(Float64Array.from(params), 0);
-  const sel = {}; let rounds = 0, longCasts = 0, acts = 0;
+  const sel = {}; let rounds = 0, longCasts = 0, acts = 0, saveCasts = 0, spendCasts = 0;
   for (let g = 0; g < GAMES; g++) {
     const st = W.EpirusState.createState('long', { next: T.mulberry32(77000 + g) }, 5);
     if (hpStart) for (const q of st.p) if (q && q.hp > 0) q.hp = Math.min(hpStart, (st.mode && st.mode.hp) || 5);
@@ -58,25 +64,29 @@ function probe(params, hpStart) {
       const a = ch(state, pid, legal);
       const k = (a && typeof a === 'object') ? (a.key || '') : String(a);
       sel[k] = (sel[k] || 0) + 1; acts++;
-      if (LONG.has(k)) longCasts++;
+      if (SAVE.has(k)) { longCasts++; saveCasts++; }
+      else if (SPEND.has(k)) { longCasts++; spendCasts++; }
       return a;
     }, W.EpirusBots.pickRandom, W.EpirusBots.pickRandom, W.EpirusBots.pickRandom, W.EpirusBots.pickRandom];
     W.EpirusPlay.autoGameN(st, choosers);
     rounds += st.round;
   }
-  return { sel, rounds: rounds / GAMES, longPerRound: longCasts / GAMES, acts, longCasts };
+  return { sel, rounds: rounds / GAMES, longPerRound: longCasts / GAMES, acts, longCasts, saveCasts, spendCasts };
 }
 
-console.log('长程键 = ' + [...LONG].map(nameOf).join('/') + ' ‖ ' + GAMES + ' 局/桌 ‖ 5P long ‖ ε=0 干预全关');
+console.log('攒=' + [...SAVE].map(nameOf).join('/') + ' ‖ 花=' + [...SPEND].map(nameOf).join('/') + ' ‖ ' + GAMES + ' 局/桌 ‖ 5P long ‖ ε=0 干预全关');
 for (const p of PACKS) {
   const name = p.split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
   let params;
   try { params = loadPack(p).params; } catch (e) { console.log('⛔ ' + name + ': ' + e.message); continue; }
   const full = probe(params, 0), low = probe(params, 2);
-  const ratio = full.longPerRound > 0 ? low.longPerRound / full.longPerRound : NaN;
-  const sup = isFinite(ratio) ? (1 - ratio) * 100 : NaN;
+  const fSave = full.acts ? full.saveCasts / full.acts : 0, lSave = low.acts ? low.saveCasts / low.acts : 0;
+  const fSpend = full.acts ? full.spendCasts / full.acts : 0, lSpend = low.acts ? low.spendCasts / low.acts : 0;
+  const saveSup = fSave > 0 ? (1 - lSave / fSave) * 100 : NaN;
+  const spendKeep = fSpend > 0 ? lSpend / fSpend : NaN;
   console.log('== ' + name);
-  console.log('   满血桌: 局长 ' + full.rounds.toFixed(1) + ' ‖ 长程出手 ' + full.longPerRound.toFixed(2) + '/局（' + (100 * full.longPerRound / (full.acts / GAMES)).toFixed(1) + '% 出手份额）');
-  console.log('   残血桌: 局长 ' + low.rounds.toFixed(1) + ' ‖ 长程出手 ' + low.longPerRound.toFixed(2) + '/局（' + (100 * low.longPerRound / (low.acts / GAMES)).toFixed(1) + '% 出手份额）');
-  console.log('   ⇒ 残局抑制率 = ' + (isFinite(sup) ? sup.toFixed(0) + '%' : 'NA') + '（份额比 ' + (isFinite(ratio) ? ratio.toFixed(2) : 'NA') + '）‖ ' + (isFinite(sup) && sup >= 50 ? '懂时机' : (isFinite(sup) && sup >= 20 ? '半懂' : '瞎攒')));
+  console.log('   满血桌: 局长 ' + full.rounds.toFixed(1) + ' ‖ 攒 ' + (100 * fSave).toFixed(1) + '% ‖ 花 ' + (100 * fSpend).toFixed(1) + '%（出手份额）');
+  console.log('   残血桌: 局长 ' + low.rounds.toFixed(1) + ' ‖ 攒 ' + (100 * lSave).toFixed(1) + '% ‖ 花 ' + (100 * lSpend).toFixed(1) + '%');
+  console.log('   ⇒ 蓄能抑制率 = ' + (isFinite(saveSup) ? saveSup.toFixed(0) + '%' : 'NA') + '（份额比 ' + (isFinite(saveSup) ? (lSave / fSave).toFixed(2) : 'NA') + '）‖ ' + (isFinite(saveSup) && saveSup >= 50 ? '懂时机（停投资）' : (isFinite(saveSup) && saveSup >= 20 ? '半懂' : '瞎攒（视野短还继续攒）')));
+  console.log('   ⇒ 兑现保持率 = ' + (isFinite(spendKeep) ? spendKeep.toFixed(2) : 'NA') + ' ‖ ' + (isFinite(spendKeep) && spendKeep >= 0.9 ? '库存照打 ✔' : (isFinite(spendKeep) ? '兑现也缩了（' + ((1 - spendKeep) * 100).toFixed(0) + '%）' : 'NA')));
 }

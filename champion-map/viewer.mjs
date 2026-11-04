@@ -97,6 +97,7 @@ const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=
  *   文件名一律去掉 `e287-` 前缀；**输入表是拷进来的**：`coords.tsv` 由 `docs/artifacts/e287-out/e287-figs.mjs`
  *   算出来（它吃 `results/`〔用户私有〕+ gitignored 的臂产物 ⇒ 换机不能重算），重算后要手工拷到本目录。*/
 const OUT = arg('out', 'index.html');
+const PRESET = (['all', '1.8', '2.0'].indexOf(arg('preset', 'all')) >= 0) ? arg('preset', 'all') : 'all';   /* §G3：三张预置图的初始版本模式 */
 /* §E608 路径口径与 `pool-sync.mjs` / `seat-rule.mjs` 同族：带盘符或前导 `/` 的是**绝对路径**，不许再 join 一层。
  *   触发点是 D234⑩c：门从 tmpdir 传 `--out=C:\...\np-d234-rebake.html` 进来 ⇒ 无条件 `join(HERE, OUT)` 拼出歪路径
  *   ⇒ 写盘失败 exit 1，看起来像"烘焙崩了"。这一族今晚是第四次撞（`--seat=`/`--in=`/`--chart=` 都栽过）。 */
@@ -104,7 +105,7 @@ const OUTP = (OUT.indexOf(':') >= 0 || OUT[0] === '/' || /^[A-Za-z]:[\/\\]/.test
 /* E393 DS（丙·投影）：生成侧选定坐标（默认 t-SNE，--proj=old 回旧布局）。
  *   ⚠ 必须在生成侧：浏览器取景范围 PV 是装载时按坐标算的，装载后再换 ⇒ 视口对不上（实测画到右下角）。 */
 const PROJTSNE = arg('proj', 'tsne') !== 'old';
-const CF = join(HERE, 'coords.tsv');
+const CF = join(HERE, arg('fit', 'coords.tsv'));   /* §G3：--fit 可指联合投影表（coords-gen3-1105.tsv = 旧池+2.0 点） */
 if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 docs/artifacts/e287-out/e287-figs.mjs，再把落盘拷成 coords.tsv'); process.exit(2); }
 const t = readFileSync(CF, 'utf8').trim().split('\n'), head = t[0].split('\t');
 const rows = t.slice(1).map(l => { const c = l.split('\t'); const o = {}; head.forEach((k, i) => { o[k] = c[i]; }); return o; });
@@ -152,8 +153,11 @@ if (PROJTSNE) {
  *   这与 §E308 那条"空串必须是 null，不许当 0"是同一条规矩，只是这次漏在 Hp 上。
  *   ⇒ 这里**不留退路**：要出图就得补测（命令照抄下面那句）。留一个 --allow-no-hp 就等于把这条守卫变成建议。 */
 { const noHp = rows.filter(r => String(r.Hp === undefined ? '' : r.Hp).trim() === '');
-  const noDe = rows.filter(r => String(r.De === undefined ? '' : r.De).trim() === '');
-  if (noHp.length || noDe.length) { console.error('⛔ coords.tsv 的头号尺有空洞：Hp 空 ' + noHp.length + ' 枚 ‖ De 空 ' + noDe.length + ' 枚' +
+  /* §G3（11-05）：De 空洞按**版本分账**——2.0 行是夜班 200 局新测（没有 Δε 配对考卷），De 空 = 真未测，
+   *   走"未测 = null/灰"那支（与 hl2 同规矩）；1.8 行的 De 空洞仍然是装错货，照旧退场。 */
+  const noDe18 = rows.filter(r => r.ver !== '2.0' && String(r.De === undefined ? '' : r.De).trim() === '');
+  const noDe = rows.filter(r => r.ver === '2.0' && String(r.De === undefined ? '' : r.De).trim() === '');
+  if (noHp.length || noDe18.length) { console.error('⛔ coords.tsv 的头号尺有空洞：Hp 空 ' + noHp.length + ' 枚 ‖ De 空(1.8) ' + noDe18.length + ' 枚' +
     '\n       前 8 枚：' + noHp.concat(noDe).slice(0, 8).map(r => r.id).join(' ') +
     '\n       ⇒ 下面那句 `Hp: +r.Hp` 会把空串变成 0，而 F = Hp/100 + T·S 是图上**所有**排序的底 ⇒ 这几枚会被画成库内倒数（"未测"冒充"0%"）。' +
     '\n         补测：node champion-map/eps-full.mjs --extra=<这批的 extra 表> --onlyExtra --out=eNN-epsfull.tsv' +
@@ -179,6 +183,19 @@ if (existsSync(linP)) {
   const ll = readFileSync(linP, 'utf8').trim().split('\n'); const lh = ll[0].split('\t');
   for (const l of ll.slice(1)) { const c = l.split('\t'); const o = {}; lh.forEach((k, i) => { o[k] = c[i]; }); LIN[o.id] = o; }
 } else console.log('⚠ 没有 lineage.tsv ⇒ 家族退回按 seed 上色（跑 node champion-map/lineage.mjs 生成）');
+/* ===== §G3（11-05 深夜 · 用户令「2.0 点放进旧演化图」）：2.0 谱系 sidecar 并进 LIN =====
+ *   lineage.tsv 由 lineage.mjs 从 git/面板生成 ⇒ 2.0 节点不在其中（它们没有 v7 面板行）。
+ *   sidecar = `lineage-g3.tsv`（ZCode 维护，列同构：id/fam/famLabel/ts/parent/wid），
+ *   fam 从 900 起（v7 家族号 1~24 ⇒ 不相撞；fam ≥900 = 2.0 的树行）。
+ *   版本判定从此只有一处：`G3IDS` = sidecar 的 id 集 ⇒ DATA.ver / batchOf 都读它。 */
+const g3linP = join(HERE, arg('g3lin', 'lineage-g3.tsv'));
+let G3IDS = new Set();
+if (existsSync(g3linP)) {
+  const gl = readFileSync(g3linP, 'utf8').replace(/\r\n/g, '\n').trim().split('\n'); const gh = gl[0].split('\t');
+  for (const l of gl.slice(1)) { const c = l.split('\t'); const o = {}; gh.forEach((k, i) => { o[k] = c[i]; });
+    LIN[o.id] = Object.assign({}, LIN[o.id] || {}, o); G3IDS.add(o.id); }
+  console.log('2.0 谱系 sidecar：' + G3IDS.size + ' 枚并进 LIN（fam 900+）');
+} else console.log('⚠ 没有 ' + g3linP + ' ⇒ 2.0 点没有家族/树行（fam 全落 0）');
 let OKM = null, POK = 0, OKSRC = '', OKTAG = '';
 if (FEAS_FILES.length) {
   OKM = {}; const TAGS = {};
@@ -394,7 +411,13 @@ const DATA = rows.map(r => ({
    *   `Hp` = 同一台 `eval-5p`、同一批 35 组合、同 seed，主体席按页面默认档开剂量（§E597 起走 `--eps-tier=lv:regular` = 斜坡 0→0.05→0.1 ‖ k5 ‖ soft；旧写法是常数 ε=0.2，那在今天已经是**简单档**的剂量。局数与 `H` 同档，写在 `examG` 里）；
    *   `H`  = 考卷口径（ε=0 贪心）· **档 = `examG` 列**（自 §E569 起全图 120 局/组合）⇒ 不再并列 30/120 两套数；
    *   `De` = Δε = H − Hp（正 = 开探索就掉）—— 两口径必须**同批同档成对**，否则 Δε 里会混进采样量之差（档差中位就有 0.30pt）。*/
-  id: r.id, lin: r.lineage || '', kin: r.kin || '', seed: r.seed || '', H: +r.H, Hp: +r.Hp, De: +r.De, S: +r.S, Ge: +r.Geff, rk: +r.rank,
+  id: r.id, lin: r.lineage || '', kin: r.kin || '', seed: r.seed || '',
+  /* §G3：H/De 对 2.0 行 = 真未测 ⇒ null（不许 NaN 流进 toFixed）；Hp 全表在册（2.0 行 = 夜班 200 局读数） */
+  H: (r.H === '' || r.H === undefined) ? null : +r.H,
+  Hp: +r.Hp,
+  De: (r.De === '' || r.De === undefined) ? null : +r.De,
+  S: +r.S, Ge: +r.Geff, rk: +r.rank,
+  ver: (G3IDS.has(r.id) || r.ver === '2.0') ? '2.0' : '1.8',   /* §G3：版本判定 = g3 谱系 sidecar ∪ 数据文件 ver 列（代3臂/段行由合并器打标） */
   /* §E566：同枚的 exam=120 档读数。**空必须是 null，不许 `+'' = 0`**（§E491 那条病就是 Hp 空洞被当 0% 画成库内倒数） */
   examG: (String(r.examG === undefined ? '' : r.examG).trim() === '') ? null : +r.examG,
   /* §E373 预留的那个标记现在真的有值了：§E375 把 16 枚旧槽位冠军并进 coords.tsv 之后，
@@ -765,7 +788,8 @@ var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三
  *   ③ 颜色分界 = 最强一批的均值（见下面 splitSets/fCol）。
  *   ④ 滚轮放大时点跟着变大（原来刻意不跟，理由写在 §E314 那段"经典统计图约定"里 —— 用户看了实物否掉了）。
  *   ⑤ 冠军一列按**上线时刻**排（ship-scan.mjs 从 git 逐提交算槽文件权重指纹抽的，不是按提交标题点名）。 */
-st.batch = 'all'; st.sel = null; st.cmp = []; st.side = false;
+st.batch = '${PRESET}';   // §G3：--preset 由生成器插值（浏览器段没有 arg）
+st.sel = null; st.cmp = []; st.side = false;
 /* ===== §E596 分界的锚从"某一枚包"换成"最强那一批的均值"（用户 10-12：「演化图里还标着现役，应该把这些都去掉或者改成最强一批的平均值」）=====
  *   病：颜色的分界、库内百分位、明细里那句"vs 现役"、标签上那颗 ★，原来全都钉在 'SHIPPED-Ldemo' 这一枚上 ——
  *   而它是 v1.6.62 就被 'T8-s114' 换掉的旧冠军，且池上线后**没有任何一枚**是"玩家遇到的那一个"（四席逐席抽）。
@@ -803,8 +827,11 @@ var INC = (function () {
     hpl2: mean(function (d) { return d.hpl2; }),
     H: mean(function (d) { return d.H; }), pt: ANCH_TIER, ts: '', lin: false };
 })();
-function batchOf(d) { return d.ts ? String(d.ts).slice(0, 10) : ''; }
-var BATCH = [];                                    /* [{k:'2026-09-13', n:枚数, no:第几批}] 按日期正序 */
+/* §G3（11-05 · 用户令）：批次选项退役，换成**版本**三模式（1.8及以前 / 2.0系 / 全部点）。
+ *   batchOf 从"训出日期"改成"版本"——st.batch 的全部缓存键/快照/行表机制原样复用（键域变成 {'1.8','2.0'}），
+ *   下拉的分组、排序（'1.8'<'2.0' 字典序恰好对）、"最新一批"按钮全部自动跟着对。 */
+function batchOf(d) { return d.ver || (d.ts ? String(d.ts).slice(0, 10) : ''); }
+var BATCH = [];                                    /* [{k:'1.8'|'2.0', n:枚数, no:第几批}] 按版本正序 */
 (function () { var m = {}; for (var i = 0; i < N; i++) { var k = batchOf(P[i]); if (!k) continue; m[k] = (m[k] || 0) + 1; }
   Object.keys(m).sort().forEach(function (k, ix) { BATCH.push({ k: k, n: m[k], no: ix + 1 }); }); })();
 var VIS = new Uint8Array(N), NVIS = N;
@@ -840,7 +867,9 @@ function recomputeVIS() { NVIS = 0;
   for (var i = 0; i < N; i++) { var d = P[i];
     /* 冠军与"加进对比的那几枚"**永远钉在图上**：切批次不能把参照物一起切没，
      *   否则绿红分界（= 现役那一档）与对比表会各自读到不同的分母。 */
-    var keep = st.batch === 'all' || batchOf(d) === st.batch || !!d.lin || st.cmp.indexOf(d.id) >= 0;
+    var keep = st.batch === 'all' || batchOf(d) === st.batch || (st.batch !== '2.0' && !!d.lin) || st.cmp.indexOf(d.id) >= 0;
+    /* §G3：'2.0 系'模式**严格只画 2.0 点**——v7 的冠军记录行（d.lin）不再钉住（用户令"只包含2.0点"；
+     *   '1.8 及以前'与'全部'两模式里冠军钉住的老规矩不变：分界参照物不能被切没）。 */
     if (keep && !inWin(d)) keep = false;   /* §E371 窗口：越界一律不画，冠军也不例外 */
     VIS[i] = keep ? 1 : 0; if (keep) NVIS++; } }
 recomputeVIS();
@@ -3333,9 +3362,10 @@ function buildFamBar() {
 /* ===== §E338 批次下拉 / 选中卡 / 冠军序列与对比表 ===== */
 function buildBatchSel() {
   var el = document.getElementById('batch'); if (!el) return; el.innerHTML = '';
-  var o0 = document.createElement('option'); o0.value = 'all'; o0.textContent = '全部（' + N + ' 枚）'; el.appendChild(o0);
+  var VLBL = { '1.8': '1.8 及以前', '2.0': '2.0 系' };
+  var o0 = document.createElement('option'); o0.value = 'all'; o0.textContent = '全部点（' + N + ' 枚）'; el.appendChild(o0);
   for (var i = 0; i < BATCH.length; i++) { var b = BATCH[i], o = document.createElement('option');
-    o.value = b.k; o.textContent = '第 ' + b.no + ' 批 · ' + b.k.slice(5) + ' · ' + b.n + ' 枚'; el.appendChild(o); }
+    o.value = b.k; o.textContent = (VLBL[b.k] || b.k) + '（' + b.n + ' 枚）'; el.appendChild(o); }
   el.value = st.batch; }
 function nOf(id) { for (var i = 0; i < N; i++) if (P[i].id === id) return i; return -1; }
 /* 「相对现役」那一行（用户 ③ 后半句）。⚠ 三个数一起给，只给一个就会被当成"综合更强"：
@@ -3364,7 +3394,7 @@ function paintCard() {
    *   直接拼进来这张卡会横贯整个画布，把下面的页脚与投影判据全盖住（第一版截图就是这样）。
    *   §E449 之后卡会自己折行 ⇒ "撑宽"这件事已经不会发生，但 700 字符折出来是二十行，所以总结式照用。*/
   var body = [head,
-    '家族 ' + d.fam + '（' + (famSummary(famLab(d)) || '—') + '）· 批次 ' + (batchOf(d) || '无日期') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
+    '家族 ' + d.fam + '（' + (famSummary(famLab(d)) || '—') + '）· 版本 ' + (batchOf(d) || '—') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
     'F = ' + Ftxt(d) + '（' + BANDLBL + ' ' + Fv(INC).toFixed(3) + '）· Hp = ' + d.Hp.toFixed(1) + ' · H考卷 = ' + d.H.toFixed(1) + ' · S = ' + d.S.toFixed(2),
     /* §E449 这两处原来写 slice(0, 90) / slice(0, 60)：卡是 white-space:pre（不折行），长句会把卡撑到横贯画布，
      *   当时拿截断挡住那件事。现在卡改成 pre-wrap（400px 内自己折行、超高滚），截断就只剩坏处了：
@@ -3417,7 +3447,7 @@ function paintSide() {
       ' ‖ ' + (labOf(d) === d.sv ? d.id : (d.sv || (d.sh ? '' : '未上槽'))) + ' ‖ ' + (d.sh ? d.sh.slice(5, 10) : (d.ts || '').slice(5, 10)) +
       ' ‖ F ' + Ftxt(d) + ' ‖ Hp ' + d.Hp.toFixed(1);
     b.title = ('id ' + d.id + (d.wid ? ' ‖ 权重 ' + d.wid : '') + '\\n' + (d.sh ? '上线 ' + d.sh : 'git 里没找到上槽提交 ⇒ 按训出时刻 ' + (d.ts || '—') + ' 排（这枚从没真进过槽）')) +
-      '\\n名次 第 ' + d.rk + ' ‖ H考卷 ' + d.H.toFixed(1) + ' ‖ S ' + d.S.toFixed(2) + ' ‖ Δε ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1);
+      '\\n名次 第 ' + d.rk + ' ‖ H考卷 ' + (d.H == null ? '未测' : d.H.toFixed(1)) + ' ‖ S ' + d.S.toFixed(2) + ' ‖ Δε ' + (d.De == null ? '未测' : (d.De >= 0 ? '+' : '') + d.De.toFixed(1));
     b.onclick = function () { var k = st.cmp.indexOf(d.id);
       if (k >= 0) st.cmp.splice(k, 1); else { if (st.cmp.length >= 7) { st.cmp.shift(); } st.cmp.push(d.id); }
       st.sel = d.id; recomputeVIS(); paintCard(); paintSide(); buildFamBar(); req(); };
@@ -3434,8 +3464,8 @@ function paintSide() {
     row('F', function (d) { return Ftxt(d); });
     row('ΔF vs 最强一批', function (d) { return fKnown(d) ? ((Fv(d) - Fv(INC) >= 0 ? '+' : '') + (Fv(d) - Fv(INC)).toFixed(3)) : '未测'; });
     row('Hp 页面', function (d) { return d.Hp.toFixed(1); });
-    row('H 考卷', function (d) { return d.H.toFixed(1); });
-    row('Δε', function (d) { return (d.De >= 0 ? '+' : '') + d.De.toFixed(1); });
+    row('H 考卷', function (d) { return d.H == null ? '未测' : d.H.toFixed(1); });
+    row('Δε', function (d) { return d.De == null ? '未测' : (d.De >= 0 ? '+' : '') + d.De.toFixed(1); });
     row('S 广度', function (d) { return d.S.toFixed(2); });
     row('当选键', function (d) { return d.sc === null || d.sc === undefined ? '未测' : d.sc.toFixed(1); });   /* §E600-A：原来是「当选键差」（对某一枚参照包取差），参照物退场后改画绝对值 */
     row('决斗差', function (d) { return d.dm === null || d.dm === undefined ? '未测' : (d.dm >= 0 ? '+' : '') + d.dm.toFixed(1); });
@@ -6454,7 +6484,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp/F，796 行历史引用都指着它。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong = Hplong/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label>' +
 '<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标（选中点/追溯链仍标）</option></select></label>' +
-'<label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">训出批次 <select id="batch"></select></label>' +
+'<label id="batchrow" title="§G3（11-05 用户令，退役 §E338 的训出日期批次）：版本三模式——1.8 及以前 = 旧池全部；2.0 系 = 只画 2.0 精选点（严格模式，v7 冠军行不钉住）；全部 = 两代并绘。强度列 Hp 的口径两代不同（2.0 = 5P long 200 局 ε=0；1.8 = 35 组合 120 局带剂量）⇒ 跨版本比强度只看方向不看小数">版本 <select id="batch"></select></label>' +
 '<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label>' +
 '<span id="winpre" style="display:flex;gap:4px;align-items:center"></span>' +
 '<label id="edgerow" title="§E373（用户 10-07：「给一个连线开关不然可能会太多挡住了」）&#10;谱系图的热启动父边：全开 = 四种来路都画（hash/seedpack/arm/slot-at-time）；&#10;只实录 = 只画包自己记下的权重哈希那一级（§E367 之后最硬的一级）；&#10;关掉 = 一条都不画，点云本身不受影响。&#10;默认仍是全开：这一版的图就是按全开验收过的，改默认等于偷偷换读法。">连线 <select id="edges"><option value="all">全开</option><option value="hash">只实录</option><option value="off">关掉</option></select></label>' +
