@@ -70,6 +70,28 @@ if (!existsSync(OUT)) appendFileSync(OUT, ['mode', 'band', 'games', 'seed', 'mem
 for (const MODE of ['long', 'multi']) {
   const res = {};
   const BANDS = FLAG.band ? FLAG.band.split(',') : ['hard', 'mid', 'soft'];
+  if (FLAG.packs) {
+    /* 直跑模式（11-04 深夜补）：--packs=a.js,b.js 当一个"带"，替身 vs 该组 AI×4，装配与其余参数逐字同正式档 */
+    const members = FLAG.packs.split(',').map((p) => p.trim()).filter(Boolean);
+    const choosersCache = members.map((p) => { const pk = loadPackParams(p); return T.policyChooserN(pk.params, 0); });
+    let mw = 0;
+    for (let g = 0; g < GAMES; g++) {
+      const N = 5, mimicSeat = g % N, aiIdx = (g * 4) % members.length;
+      const st = W.EpirusState.createState(MODE, { next: T.mulberry32(SEED + g) }, N);
+      const choosers = []; let k = 0;
+      for (let pid = 0; pid < N; pid++) {
+        if (pid === mimicSeat) choosers.push(makeMimic(W, pool, 'next', T.mulberry32(SEED + 7919 + g)));
+        else choosers.push(choosersCache[(aiIdx + k++) % members.length]);
+      }
+      W.EpirusPlay.autoGameN(st, choosers);
+      if (st.winner === mimicSeat) mw++;
+    }
+    const p = mw / GAMES, se = 100 * Math.sqrt(p * (1 - p) / GAMES);
+    console.log('== 替身尺直跑 ‖ 5P ' + MODE + ' × ' + GAMES + ' ‖ packs=[' + members.join(',') + ']');
+    console.log('   替身夺冠 ' + (100 * p).toFixed(1) + '% ± ' + se.toFixed(1));
+    appendFileSync(OUT, [MODE, 'packs:' + members.length, GAMES, SEED, members.length, mw, (100 * p).toFixed(1), se.toFixed(1), pool.games + '局/' + pool.conds + '条件', new Date().toISOString()].join('\t') + '\n');
+    continue;
+  }
   for (const band of BANDS) {
     const members = T3[band];
     const choosersCache = members.map((m) => {

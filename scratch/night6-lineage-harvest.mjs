@@ -42,7 +42,12 @@ const HASH2FAM = {
   '0290df82': 'LE-laser-v2',
   '3489c16057e7321b': 'CB3-combo-v3',   /* CB-v3 蒸馏底座（11-04，起点 EFFG-s41） */
   '22f1014a39c219bf': 'L5-1200-s13',    /* HPG 探针臂（L5-1200 + HPSEED）的起点 */
-  'f681313e': 'CB3-s13'                 /* CB3L-1200（CB3-s13 续 1200 代）的起点 */
+  'f681313e': 'CB3-s13',                /* CB3L-1200（CB3-s13 续 1200 代）的起点 */
+  /* KDFULL 链（DS 11-04 晚：v7 教师全模型蒸馏 → 换招+强度首过四判据） */
+  '61164b09cac44d2d': 'KD-V7',          /* 头-only 蒸馏产物（KD-V7 ← L5-D4a-s13, teacher=线上v7） */
+  '1529c10b509c9de8': 'KDFULL2',        /* 全模型蒸馏产物（supfit-full, KDFULL2 ← KD-V7） */
+  'f760760f80b8a45b': 'KDFULLGA-s13',   /* KDFULLGA-s13（KDFULL2 + GA150） */
+  'd4a7cf2cb5519439': 'KDFULL400-s13'   /* KDFULL400-s13（KDFULLGA-s13 续 400 代，四判据首过） */
 };
 
 /* 手工根/蒸馏层（来源：scratch/arms/*.bak.meta.json 与 scratch/night4/*.bak.meta.json 实读，11-04 凌晨） */
@@ -60,6 +65,9 @@ const ROOTS = [
   { id: 'LE-laser-v2', parent: 'GA-ration-s41', edgeKind: '蒸馏(激光眼)', family: 'LE谱系', note: '激光眼破冰蒸馏（§二十七）' },
   { id: 'D谱系中继2', parent: 'D-a-s13', edgeKind: '续训中继', family: 'D谱系', note: '未入库中继枚（DSTR4-s13 起点，哈希 7e524791）' },
   { id: 'CB3-combo-v3', parent: 'EFFG-s41', edgeKind: '蒸馏(连招v3)', family: 'CB谱系', note: 'teacher=ration6，学生自访 82.8%（CB-v2 73.4%）' },
+  { id: 'KD-V7', parent: 'L5-D4a-s13', edgeKind: '蒸馏(头-only,线上v7教师)', family: 'KD谱系', note: '主键47%/换招70%，强度持平（DS 11-04 晚）' },
+  { id: 'KDFULL2', parent: 'KD-V7', edgeKind: '蒸馏(全模型 supfit-full)', family: 'KD谱系', note: '留出同键 78.7%/guard 0→68%/sword 94%（tape 全段梯度）' },
+  { id: 'KDFULL400-s13', parent: 'KDFULLGA-s13', edgeKind: 'GA(400代)', family: 'KD谱系', note: '主键59/换招50/6种/arena 0.438-0.25 ⇒ 四判据首过；promote 唯一阻断=还手16.4' },
   { id: 'D谱系中继2s41', parent: 'D-a-s41', edgeKind: '续训中继', family: 'D谱系', note: '未入库中继枚（DSTR4-s41/DSTR5-s41 起点，哈希 3aaa8169）' },
   { id: 'L5-D4a-s13', parent: 'D4a', edgeKind: 'GA(5P long 首批)', family: 'L5谱系', note: 'DS 11-02 L5 首批 6 臂之强粒（0.438/60.0）', refRead: '60.0', refSrc: 'RESULTS-2026-11-02-L5-ds §一' },
   { id: 'L5-D4a-s7', parent: 'D4a', edgeKind: 'GA(5P long 首批)', family: 'L5谱系', note: '同批 s7', refRead: '50.0', refSrc: 'RESULTS-2026-11-02-L5-ds §一' },

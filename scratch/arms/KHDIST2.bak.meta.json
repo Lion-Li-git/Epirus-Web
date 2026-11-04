@@ -1,0 +1,118 @@
+{
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "scratch/arms/KHSEED.js",
+ "seed": 13,
+ "lr": 0.02,
+ "steps": 3000,
+ "groups": 2000,
+ "trainG": 1500,
+ "testG": 500,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 2000,
+ "shapeBal": 1,
+ "teacher": "pack:js/bundled-champion-3p.js",
+ "keySplit": 0,
+ "rareOnly": "guard,reflect,bagua,bigT,charge",
+ "rareFrac": 0.5,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 1474,
+  "moved": 526,
+  "gone": 0,
+  "keys": 2000,
+  "rare": 6085,
+  "byKey": {
+   "ji": 549,
+   "gun": 197,
+   "charge": 291,
+   "railgun": 13,
+   "sword": 94,
+   "guard": 269,
+   "bagua": 263,
+   "reflect": 233,
+   "holo": 36,
+   "bigT": 52,
+   "ring": 2,
+   "miniT": 1
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 1500,
+    "teacherAgree": 0.354,
+    "teacherLl": -1.7478963043112092,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.088,
+  "startLl": -2.4078180432929823,
+  "agree": 0.354,
+  "ll": -1.7478963043112092,
+  "wAgree": 0.37046595684144645,
+  "nTest": 500,
+  "nTrain": 1500,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "bagua",
+    "n": 113,
+    "hit": 80
+   },
+   {
+    "key": "guard",
+    "n": 120,
+    "hit": 0
+   },
+   {
+    "key": "reflect",
+    "n": 100,
+    "hit": 21
+   },
+   {
+    "key": "charge#elec",
+    "n": 144,
+    "hit": 65
+   },
+   {
+    "key": "bigT",
+    "n": 23,
+    "hit": 11
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "dof": 415,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "scratch/arms/KHSEED.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}
