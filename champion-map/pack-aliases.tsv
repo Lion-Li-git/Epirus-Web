@@ -22,3 +22,4 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-03T19:05:23.678Z	434a2a1ad8d7e150	docs/artifacts/HPG-s7-seg6.bak	docs/artifacts/HPG-s7-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
 2026-11-03T19:05:23.682Z	f466f1048995b584	docs/artifacts/HPG-s7-seg2.bak	docs/artifacts/HPG-s7-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
 2026-11-03T20:56:41.068Z	7a80fc2da9f5d067	docs/artifacts/CB3L-1200-seg14.bak	docs/artifacts/CB3L-1200-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-04T02:23:55.316Z	3152f877e95f50d4	docs/artifacts/CB3-s7-band1.bak	docs/artifacts/CB3-s7-band3.bak	train-3p:band	已登记的复制：晨班补账（11-04）：同一次 band 循环两席同权重，真身=band1 —— 进程内 widIndex 看不见本进程刚写的那份 ⇒ 落盘时没登记（在册待裁 #20·10-13）

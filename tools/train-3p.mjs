@@ -1620,7 +1620,7 @@ if (HUMAN_N > 0) {
  *   而标准解法写的就是「混合对手池（池成员 + 脚本 + 自己的历史快照，**轮换**）」。
  *   轮换这里**已经是现成的**：`js/train/evo.js` 的 `oppSeatIndex(gen,g,k,len,block) = (gen*3+g+(block?0:k)) % len`
  *   会遍历整张 `OPPS` ⇒ append 池成员就自动与 9 条脚本基准同桌轮换，**不新增任何席位逻辑**
- *   （自己写一份席位分配就是第二份实现，而且会跟钉着闭键的 `D187` 打架）。
+ *   （自己写一份席位分配就是第二份实现，而且会跟钉着闭键的 `D4` 打架）。
  * ⚠ 两条口径必须先说清楚，不然是给自己埋"赢了但不知道谁在施压"那种臂：
  *   ① **默认关 ⇒ `OPPS` 一字不变**（历史臂逐位可复现；`tools/gates/train-evo.mjs:2071` 那条"默认关的产物与登记基线逐位相同"照绿）；
  *   ② 一开就改 `OPPS.length` ⇒ **每一局**的对手映射都变（不是"多出几席"那么局部）⇒ **配对实验要两臂同 K**，
@@ -1680,7 +1680,7 @@ if (POOL_OPP_N > 0) {
      *   ② 注释里承诺的第三种情形（"不可达却被问到 ⇒ 我的模型与引擎不符"）**代码从没实现**，
      *     所以那次矛盾读数落进了"全不可达"那一支，报了句假话（"一枚池席都没轮到"）。
      *   订正做法：**不再自己抄公式**，直接问引擎的纯函数 `T.oppSeatIndex(gen,g,k,len,block)`（单一来源，
-     *     门 D187 钉它），并把 `EPIRUS_OPP_BLOCK` 的形状读回来一起算（开了整桌同原型时 `k` 项归零 ⇒ 可达集**更小**，
+     *     门 D4 钉它），并把 `EPIRUS_OPP_BLOCK` 的形状读回来一起算（开了整桌同原型时 `k` 项归零 ⇒ 可达集**更小**，
      *     旧版完全没管这一维）。
      *   三种情形分开判：① 可达而没被问到 ⇒ 真断线 `exit 8`；② **不可达却被问到 ⇒ 模型与引擎不符** `exit 8`；
      *   ③ 不可达且没被问到 ⇒ 响亮说"这轮根本没测到它"，不判失败（短程 smoke 合法，但**不许**当"池对手参与训练"的证据）。 */
@@ -2165,8 +2165,11 @@ const SEGS = [];
 const ARM_NAME = process.env.EPIRUS_ARM || OUT_PATH.replace(/^.*[\\/]/, '').replace(/\.js$/, '');
 const BAND_DIR_NAME = process.env.EPIRUS_BAND_DIR || 'docs/artifacts';   // 可指向临时目录 ⇒ 门 D116 能行为式测它而**不欠 D82 的账**
 const segTextOf = function (s, k) {
+  /* ⚑ `ts` 在这里是**必需的**，不是装饰：`tools/dedupe-artifacts.mjs` 定主名按"最早 META.ts"，而缺 ts 的那份
+   *   会被当成 `'9999'` 排到最后 ⇒ 段档案（seg）在同权重同时存在 band 夹具时**必输主名**，于是
+   *   `pack-guard` 按"真身=seg"登记的别名关系反被 D191④ 判成"未登记的重复"（11-03 夜 7 条就是这么来的）。 */
   return '/* holdout-seg ' + ARM_NAME + '-seg' + (k + 1) + '（EPIRUS_HOLDOUT_SEG=' + HOLDOUT_SEG + '，第 ' + s.gen + ' 代快照） */\n' +
-    'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({ seg: true, segIndex: k + 1, gen: s.gen, fit: s.fit, arm: ARM_NAME, hotstartFrom: (/^[0-9a-f]{16}$/.test(hotstartFrom || '') ? hotstartFrom : undefined) }) + ';\n' +
+    'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({ ts: new Date().toISOString(), seg: true, segIndex: k + 1, gen: s.gen, fit: s.fit, arm: ARM_NAME, hotstartFrom: (/^[0-9a-f]{16}$/.test(hotstartFrom || '') ? hotstartFrom : undefined) }) + ';\n' +
     'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(s.params)) + ';\n';
 };
 const SEG_FLUSH_FAIL = [];

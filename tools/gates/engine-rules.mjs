@@ -556,18 +556,26 @@ t('D4 opponent rotation must not depend on individual index (pairing)', function
   const re = /let oi = ([^;]+);/g;
   let m;
   while ((m = re.exec(src))) all.push(m[1]);
-  /* v1.5.280（§E124）：轮换公式搬进了纯函数 `oppSeatIndex`（整桌同原型要的就是"局内不推进"）
-   * ⇒ 只扫 `let oi` 会只剩 `evalN` 里那个 `let oi = 0`（那是量具游标，不是轮换）⇒ **这条老门失去判据**。
-   * 现在两种形状都认：老式 `let oi = <式>` 与新式 `function oppSeatIndex(...) { return <式>; }`。
-   * ⚠ 这条本身是 v1.3.60 那次"把同代同对手批拆掉 ⇒ 适值不可比"的事故换来的，不许再退化。 */
-  const fn = /function oppSeatIndex\([^)]*\)\s*\{\s*return ([^;]+);/.exec(src);
-  if (fn) all.push(fn[1]);
+  /* v1.5.280（§E124）：轮换公式搬进了纯函数 `oppSeatIndex` ⇒ 只扫 `let oi` 会只剩 `evalN` 里那个游标（老门失去判据）。
+   * 现在两种形状都认：老式 `let oi = <式>` 与新式 `function oppSeatIndex(...) { ... return <式>; }`。
+   * ⚠ 这条本身是 v1.3.60 那次"把同代同对手批拆掉 ⇒ 适值不可比"的事故换来的，不许再退化。
+   * ⚠ v1.8.x（11-04 修）：**DS 11-03 晚（a6993046）在函数开头插了一行 `if (OPP_SWEEP) return …`，把下面那条
+   *   `\{\s*return` 形状扫描整个绕过 ⇒ 本腿当场判"已被重构架空"，而它红了 24 条提交没人跑到（CI 只在 main/PR 触发，
+   *   研究分支不跑 gates.yml）。形状 pin 天然怕"合法的新形状"，所以这次改的是**扫函数体里全部 return**：
+   *   ① 每条都不许含 `idx`（开档/关档两条分支都得守同一个不变量，少扫一条就是漏口）；
+   *   ② 至少一条要含 `gen`（真身还在）。牙的验证走 worktree 变异（把开档那条改成含 idx ⇒ 必须红）。 */
+  const fnBody = /function oppSeatIndex\([^)]*\)\s*\{([\s\S]*?)\n {2}\}/.exec(src);
+  const fnRets = fnBody ? [...fnBody[1].matchAll(/\breturn\s+([^;]+);/g)].map(r => r[1]) : [];
+  for (const e of fnRets) all.push(e);
   ok(all.length >= 1, 'no opponent rotation expression found');
-  ok(fn || all.some(function (e) { return e.indexOf('gen') >= 0; }),
+  ok(fnRets.length > 0 || all.some(function (e) { return e.indexOf('gen') >= 0; }),
     '轮换必须在 `let oi` 或 `oppSeatIndex` 里有一处真身（两处都扫不到 = 这条门已被重构架空，判红）');
   for (const e of all) ok(e.indexOf('idx') < 0, 'rotation must not use idx (breaks same-gen pairing): ' + e);
   ok(all.some(function (e) { return e.indexOf('gen') >= 0; }),
     'rotation should advance with gen so a large pool still gets covered: ' + all.join(' | '));
+  /* 反恒真自证：函数体里明知只有一条 return 时，扫出来的条数必须是 1（正则退化成扫全文会虚报"多条"） */
+  const oneOnly = /function oppSeatIndex\([^)]*\)\s*\{\s*return [^;]+;\n {2}\}/.exec(src);
+  ok(!oneOnly || fnRets.length === 1, '形状自证：单 return 的函数体只能扫到 1 条（实测 ' + fnRets.length + '）⇒ 抽取式收紧了才许放松');
 });
 
 t('D51 双目标技能必须**有序成对**进入决策（镜面反射 t1→t2 / 双枪射手两个角色）', function () {

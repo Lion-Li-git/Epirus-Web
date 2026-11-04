@@ -1984,14 +1984,16 @@ let WALL_GAMES = 3;
    *      （否则产品口径会跟着训练配方一起变 —— 那是 §E87 那族"口径决定结论"的事故）。
    *   ② `policy.js` 在规则指纹名单里（`rules-fingerprint.mjs:31`），它的"槽位每决策打乱"**一字未动**
    *      ⇒ 本开关不试图给网络喂"对手是谁"，只让**整桌行为混合**这个置换不变的量变得有预测力。
-   *   ③ 默认关 ⇒ `oppSeatIndex(...,block=false)` 与旧公式 `((gen*3+g)%len + k)%len` 逐位同，由门 **D187** 钉。 */
+   *   ③ 默认关 ⇒ `oppSeatIndex(...,block=false)` 与旧公式 `((gen*3+g)%len + k)%len` 逐位同，由门 **D4** 钉。
+   *   ⚑ 这里原本写"门 D187"：那道门 10-27 随「训练组整组移出产品门禁」（`1efa3a3d`，用户裁定）一起删了，
+   *   引用悬空了 8 天；在册钉这条公式的是 D4 —— 而 D4 恰好被 11-03 那条 `if (OPP_SWEEP) return` 绕过过（11-04 晨班修）。 */
   let OPP_BLOCK = false;
   /* DS 11-03 晚（Claude review）：`EPIRUS_OPP_SWEEP` —— **每代把整个对手池轮齐**（默认关）。
    *   病：旧公式 `(gen*3+g+k)` 每代只覆盖 11 个连续位置 ⇒ 17 个对手池里约 6 个每代缺席，
    *   反制原型可能连续多代不上桌，偏科打法就在那些代被选出来。
    *   开 ⇒ 用 `(g*4 + (k-1) + gen*4)`：每局 4 席取连续位置 ⇒ 每代 24 局覆盖 96 个位次，
    *   17 个对手每个至少出现 5 次（每个个体每代都见过全部对手）。
-   *   默认关 ⇒ 与旧公式逐位同（门 D187 钉的路径一字不动）。 */
+   *   默认关 ⇒ 与旧公式逐位同（门 D4 钉的路径一字不动）。 */
   let OPP_SWEEP = false;
   const OPP_BLOCK_STAT = { fitGames: 0, blockedGames: 0, styleGames: 0, styleBlocked: 0 };
   /* 纯函数：第 k 个对手席在该用池子的第几条。关 ⇒ 与旧代码逐字同；开 ⇒ 局内恒等（整桌同原型）。 */
@@ -4107,7 +4109,7 @@ function countVariety(events, seat) {
     setSubBeadKind, subBeadKind, setBeadBoomW,
     setKillField, killField, countKillSeats, killSeatFor, botRegisteredName,   // v1.5.160 收割席注入（含**开火计数**，§N12 教训）‖ v1.7.158 反查注册名（注入名单从"标签"变成"测量"）
     setFamilyField, familyField, countFamilyField, familySeatSet,   // §E798（10-27 夜班）：训练桌形状（k 席家族副本 + 其余脚本）‖ 同样带**作用计数**，注了 0 局要响亮失败
-    setOppTable, oppTable, oppSeatIndex,   // v1.5.279 §E124：整桌同原型（默认关；`oppSeatIndex` 是纯函数，门 D187 直接判它）
+    setOppTable, oppTable, oppSeatIndex,   // v1.5.279 §E124：整桌同原型（默认关；`oppSeatIndex` 是纯函数，门 D4 直接判它）
     setTargetReward, targetReward, countThreatHits, threatKeyList, setLaserReward, laserReward, countLaserHits,
     /* v1.8.29：失效成功定价（计数是纯函数 ⇒ 门可以直接喂事件序列断言，不必跑一整局）。 */
     setVoidReward, setVoidIdealReward, voidReward, countVoidWins, countVoidIdeal, voidScan,

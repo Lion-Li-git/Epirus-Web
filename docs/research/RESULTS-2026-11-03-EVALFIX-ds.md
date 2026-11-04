@@ -3,7 +3,7 @@
 > 动因：Claude 的 review（`docs/research/claude1103.txt`）判断"过拟合不是表达力，是更强的网络配了没变的噪声选拔"，并点名 `EPIRUS_PAIRED` 11 月从未开过、对手每代只覆盖 11/17。
 
 ## 一、实现
-- `js/train/evo.js` 新增 `OPP_SWEEP`（`setOppTable({sweep:true})`）：座位取 `(g*4 + k + gen*4) % L` ⇒ 每代 24 局覆盖 96 个位次，17 个对手每个 ≥5 次；**默认关时旧公式 `(gen*3+g+k)` 逐位不变**（D187 路径未动）；
+- `js/train/evo.js` 新增 `OPP_SWEEP`（`setOppTable({sweep:true})`）：座位取 `(g*4 + k + gen*4) % L` ⇒ 每代 24 局覆盖 96 个位次，17 个对手每个 ≥5 次；**默认关时旧公式 `(gen*3+g+k)` 逐位不变**（钉这条公式的是门 D4；原文写"D187 路径未动"，而 D187 已随 10-27「训练组整组移出产品门禁」`1efa3a3d` 删除 ⇒ 晨班更正引用。**并且**：这条腿的源码形状扫描当场被这次插入的 `if` 守卫绕过、红了 24 条提交没人跑到，11-04 晨班已修成"扫函数体全部 return"，见 D4 注释）；
 - `tools/train-3p.mjs` 新增 `EPIRUS_OPP_SWEEP`（下达后读回 `oppTable().sweep`，不等 `exit 7`；开档印 `[opp-sweep]` 横幅）；
 - 两个自造坑：① `(k-1)` 在 `k=0` 时 JS 取模为 −1 ⇒ `opps[-1].sel` 崩；② `train-3p` 参数序是 `[代][人数][每代局数][种群]`，我按 `50 5 8 24` 发成了"8 局 × 24 群众"。
 

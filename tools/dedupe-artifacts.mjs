@@ -225,28 +225,36 @@ if (has('repoint')) {
 }
 /* ---------- 6. `--audit`：给门用的机器可读一行（§E589 的"防新增"就靠它） ----------
  * 定义：**未登记的重复** = 盘上有两份以上同权重，而多出来的那些既不在账本（`dupes-manifest.tsv` 的 role=move）
- *   也不在别名表（`pack-aliases.tsv` 的 wantedPath）里。设计如此的复制（band 夹具、kept 耐久层、`--force-copy`）
- *   会经 `pack-guard` 登记进别名表 ⇒ 不算未登记。门 D191 只判这一个数，判据与算法都只有一份。 */
+ *   也不在别名表（`pack-aliases.tsv`）里。设计如此的复制（band 夹具、kept 耐久层、`--force-copy`）
+ *   会经 `pack-guard` 登记进别名表 ⇒ 不算未登记。门 D191 只判这一个数，判据与算法都只有一份。
+ * ⚠ 11-04 改：别名行是**一对**关系（`canonical` 真身 ‖ `wantedPath` 那一份），所以两侧都算"已对账"。
+ *   原来只豁免 `wantedPath` 一列，而主名规则按"最早 META.ts"排 ⇒ 段档案（seg，历史上没有 ts）必输主名，
+ *   `train-3p` 明明按"真身=seg"登记过，审计却把 seg 数成未登记 ⇒ 11-03 夜 7 条红全是这一形状（根因另修：
+ *   seg 的 META 现在带 ts）。豁免面对称化之后，"这对关系登记过"就不再取决于哪一份抢到主名。 */
 if (has('audit')) {
   const reg = new Set();
-  for (const [f, col] of [[MAN, 'path'], [join(ROOT, 'champion-map', 'pack-aliases.tsv'), 'wantedPath']]) {
+  for (const [f, cols] of [[MAN, ['path']], [join(ROOT, 'champion-map', 'pack-aliases.tsv'), ['wantedPath', 'canonical']]]) {
     if (!existsSync(f)) continue;
     const L = rd(f).replace(/\n+$/, '').split('\n'); if (L.length < 2) continue;
     const h = Object.fromEntries(L[0].split('\t').map((c, i) => [c, i]));
-    if (h[col] === undefined) continue;
-    for (const l of L.slice(1)) { const c = l.split('\t'); if (c[h[col]]) reg.add(c[h[col]]); }
+    for (const col of cols) {
+      if (h[col] === undefined) continue;
+      for (const l of L.slice(1)) { const c = l.split('\t'); if (c[h[col]]) reg.add(c[h[col]]); }
+    }
   }
-  let unreg = 0, groups = 0, files = 0; const worst = [];
+  let unreg = 0, groups = 0, files = 0; const worst = []; const unregAll = [];
   for (const [w, v] of Object.entries(G)) {
     const onDisk = v.filter(e => existsSync(join(ROOT, e.rel)));
     if (onDisk.length < 2) continue;
     groups++; files += onDisk.length;
     const extra = onDisk.slice().sort((a, b) => (a.rel === rank(onDisk)[0].rel ? -1 : 1)).slice(1).filter(e => !reg.has(e.rel));
     unreg += extra.length;
+    for (const x of extra) unregAll.push(x.rel);
     if (extra.length) worst.push({ w: w.slice(0, 8), n: extra.length, e: extra.map(x => x.rel).slice(0, 3) });
   }
   worst.sort((a, b) => b.n - a.n);
-  console.log(JSON.stringify({ groups, files, unregistered: unreg, trackedRedundant: plan.filter(p => p.role === 'move' && p.tracked).length, missing: MISSING, worst: worst.slice(0, 5) }));
+  /* `unregPaths` 是给门判红时**点名用的**（11-03 夜只有 5 组进 `worst`，剩下几条只能靠对账猜）⇒ 数还是判 `unregistered` 那一个。 */
+  console.log(JSON.stringify({ groups, files, unregistered: unreg, trackedRedundant: plan.filter(p => p.role === 'move' && p.tracked).length, missing: MISSING, worst: worst.slice(0, 5), unregPaths: unregAll.slice(0, 20), unregMore: Math.max(0, unregAll.length - 20) }));
   process.exitCode = unreg ? 1 : 0;
 }
 if (has('check')) {

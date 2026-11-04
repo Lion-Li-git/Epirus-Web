@@ -372,7 +372,11 @@ t('D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · �
     '③ 分组键必须是**权重数组本体**的哈希（文件 sha 会因 META 不同而漏掉别名 —— 这正是本次要抓的情形）');
   /* ④ §E589 防新增：全库"**未登记的重复**"必须为 0。判据与算法都在 `tools/dedupe-artifacts.mjs --audit` 那一份里
    *   （规矩 1：门只测行为，不在这儿再抄一遍 wid 公式）。登记 = 账本 `dupes-manifest.tsv` 的 role=move
-   *    ‖ 别名表 `pack-aliases.tsv` 的 wantedPath ⇒ band 夹具、kept 耐久层这类"设计如此的复制"经 `pack-guard` 登记后不算。
+   *   ‖ 别名表 `pack-aliases.tsv` 的**一整行**（`canonical` 与 `wantedPath` 两侧都算已对账 —— 11-04 改：原来只豁免 `wantedPath` 一列，而主名按"最早 META.ts"排 ⇒ 段档案（历史上缺 ts）
+   *   两侧都算已对账 —— 11-04 改：原来只豁免 `wantedPath` 一列，而主名按"最早 META.ts"排 ⇒ 段档案（历史上缺 ts）
+   *   必输主名，`train-3p` 明明按"真身=seg"登记过却被数成未登记 ⇒ 11-03 夜 7 条红全是这一形状。
+   *   ⇒ 同一行改动的牙已由"注册过的同权重再来第三份 ⇒ 仍数 1 并点名"验过（第三份不在任何列里）。
+   *    band 夹具、kept 耐久层这类"设计如此的复制"经 `pack-guard` 登记后不算。
    *   ⚠ 判的是 JSON 里 `unregistered` 这个数，**不是退出码**（管道会把退出码吃掉 —— 本机栽过两次）。
    *   ⚠ 这条腿 10-11 在 **CI 上红过一次**（exit=1，判词"必须吐出机器可读那一行"）：`--scope` 默认含 `d180-bands/`，
    *     而它被 `.gitignore:29` 屏着 ⇒ 干净克隆里没这个目录 ⇒ 审计工具 `exit 2`、一行不吐 ⇒ **门自己没跑，被当成门红**。
@@ -385,7 +389,9 @@ t('D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · �
   ok(!!aLine, '④ `--audit` 必须吐出机器可读那一行（stdout 尾部：' + String(au.stdout || au.stderr || '').slice(-200) + '）');
   if (aLine) {
     const A = JSON.parse(aLine);
-    eq(A.unregistered, 0, '④ 未登记的重复必须为 0（实测 ' + A.unregistered + ' ‖ 最坏几组：' + JSON.stringify(A.worst) +
+    eq(A.unregistered, 0, '④ 未登记的重复必须为 0（实测 ' + A.unregistered + ' ‖ 点名：' +
+      ((A.unregPaths || []).slice(0, 8).join(' ') || (A.worst || []).map(x => x.e.join('+')).join(' ')) +
+      (A.unregMore ? ' ‖ 另有 ' + A.unregMore + ' 条没印' : '') +
       '）⇒ 同一粒权重多存一份，就会把"N 个配方/N 枚候选"读得比实际多（§E589 普查：1443 个文件其实只有 1130 粒）');
     ok(A.files > 0, '④ 审计必须真数到包文件（files=' + A.files + ' groups=' + A.groups +
       ' scope 里缺的目录=' + JSON.stringify(A.missing || []) + '）⇒ 数到 0 是"没数"，不是"没重复"');

@@ -6,8 +6,11 @@
  * 装配照抄 probe-diff-ladder：1 席替身 vs (N-1) 席同一带的 AI；**替身座位逐局轮转**（不恒占 0 号）。
  * 配对：各带同一批种子（局 rng 与替身 rng 各自同序）⇒ 跨带夺冠率差可配对读。
  * 输出：每带替身夺冠率 ± 二项 SE（n=局数）⇒ 部署难度序在替身尺下是否 hard < mid < soft。
+ * ⚑ 11-04 晨班补：**默认落盘**（`--out=`，缺省 `scratch/night6/mimic-ruler.tsv`）。
+ *   本夜 §四十四/§四十六 的读数只进了 stdout ⇒ 文档里的 24.0/16.8/6.4 没有原件可查，而它是待裁第 1 条
+ *   （"分带先定尺"）的唯一输入 ⇒ 按在册规矩"跑臂必须有缺省落点"补上，重跑即成台账。
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import vm from 'node:vm';
 import { loadPool, makeMimic } from '../tools/human-pool.mjs';
 
@@ -15,6 +18,7 @@ const FLAG = {};
 for (const a of process.argv.slice(2)) { const m = /^--([a-z0-9-]+)=(.*)$/i.exec(a); if (m) FLAG[m[1]] = m[2]; }
 const GAMES = Number(FLAG.games || 250);
 const SEED = Number(FLAG.seed || 88000);
+const OUT = FLAG.out || 'scratch/night6/mimic-ruler.tsv';
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Float64Array, window: {} };
 sb.globalThis = sb;
@@ -60,6 +64,8 @@ const PATH = {
 
 const pool = loadPool(W, 'human', undefined);   /* 与 probe-diff-ladder 同一份（56 局真人日志，§E155） */
 console.log('替身池：' + pool.games + ' 局真人日志 · ' + pool.conds + ' 条件 · ' + pool.tot + ' 决策');
+try { const d = OUT.split(/[\\/]/).slice(0, -1).join('/'); if (d) mkdirSync(d, { recursive: true }); } catch (eOut0) {}
+if (!existsSync(OUT)) appendFileSync(OUT, ['mode', 'band', 'games', 'seed', 'members', 'mimicWins', 'mimicPct', 'se', 'mimicPool', 'ts'].join('\t') + '\n');
 
 for (const MODE of ['long', 'multi']) {
   const res = {};
@@ -87,7 +93,7 @@ for (const MODE of ['long', 'multi']) {
       if (st.winner === mimicSeat) mw++;
     }
     const p = mw / GAMES, se = 100 * Math.sqrt(p * (1 - p) / GAMES);
-    res[band] = { p: 100 * p, se };
+    res[band] = { p: 100 * p, se, wins: mw };
   }
   console.log('== 替身尺 ‖ 5P ' + MODE + ' × ' + GAMES + ' 局/带（替身席轮转，配对种子）');
   for (const b of BANDS) console.log('   ' + b.padEnd(8) + ' 替身夺冠 ' + res[b].p.toFixed(1) + '% ± ' + res[b].se.toFixed(1));
@@ -96,4 +102,9 @@ for (const MODE of ['long', 'multi']) {
     const d2 = res.mid.p - res.hard.p, s2 = Math.sqrt(res.mid.se ** 2 + res.hard.se ** 2);
     console.log('   序检验：soft−mid = ' + d1.toFixed(1) + 'pt/' + (d1 / s1).toFixed(1) + 'σ ‖ mid−hard = ' + d2.toFixed(1) + 'pt/' + (d2 / s2).toFixed(1) + 'σ ‖ 线：各 ≥2σ 才叫「替身尺下分得开」');
   }
+  for (const b of BANDS) {
+    appendFileSync(OUT, [MODE, b, GAMES, SEED, (T3[b] || []).length, res[b].wins,
+      res[b].p.toFixed(1), res[b].se.toFixed(1), pool.games + '局/' + pool.conds + '条件', new Date().toISOString()].join('\t') + '\n');
+  }
 }
+console.log('→ 读数已落 ' + OUT + '（列：mode band games seed 成员数 替身夺冠数 夺冠率% SE 替身池 时刻）');

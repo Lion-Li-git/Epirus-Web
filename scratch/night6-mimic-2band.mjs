@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 /* night6-mimic-2band.mjs —— 两带定案版（bands-final.tsv）的替身尺读数
  * 装配同 night6-mimic-ruler：1 替身席轮转 vs 同带 AI×4；带 = 两带定案（hard 11 / soft 10）。
+ * ⚑ 11-04 晨班补默认落盘（`--out=`，缺省 `scratch/night6/mimic-2band.tsv`）——同 ruler 那台的补法，理由见其头注。
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import vm from 'node:vm';
 import { loadPool, makeMimic } from '../tools/human-pool.mjs';
 
-const G = 250, SEED = 88001;
+const FLAG = {};
+for (const a of process.argv.slice(2)) { const m = /^--([a-z0-9-]+)=(.*)$/i.exec(a); if (m) FLAG[m[1]] = m[2]; }
+const G = Number(FLAG.games || 250), SEED = Number(FLAG.seed || 88001);
+const OUT = FLAG.out || 'scratch/night6/mimic-2band.tsv';
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Float64Array, window: {} };
 sb.globalThis = sb;
 for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js', 'js/train/bots.js', 'js/train/policy.js', 'js/train/policy2.js', 'js/train/evo.js']) {
@@ -16,6 +20,8 @@ const W = sb.window, T = W.EpirusTrainer, P = W.EpirusPolicy;
 const { install, packCfgExit } = await import('../tools/proto2/arch2.mjs');
 T.setBigTPush(0); T.setDrainPush(0); T.setCursePush(0); T.setSupportPrior(0);
 const pool = loadPool(W, 'human');
+try { const d = OUT.split(/[\\/]/).slice(0, -1).join('/'); if (d) mkdirSync(d, { recursive: true }); } catch (eOut0) {}
+if (!existsSync(OUT)) appendFileSync(OUT, ['mode', 'band', 'games', 'seed', 'members', 'mimicWins', 'mimicPct', 'se', 'mimicPool', 'ts'].join('\t') + '\n');
 
 function loadPack(p) {
   const src = readFileSync(p, 'utf8');
@@ -59,8 +65,11 @@ for (const MODE of ['long', 'multi']) {
       W.EpirusPlay.autoGameN(st, ch);
       if (st.winner === ms) mw++;
     }
-    res[b] = { p: 100 * mw / G, se: 100 * Math.sqrt((mw / G) * (1 - mw / G) / G) };
+    res[b] = { p: 100 * mw / G, se: 100 * Math.sqrt((mw / G) * (1 - mw / G) / G), wins: mw };
   }
   const d = res.soft.p - res.hard.p, sd = Math.sqrt(res.soft.se ** 2 + res.hard.se ** 2);
   console.log('两带定案替身尺 ‖ 5P ' + MODE + ' × ' + G + '：hard ' + res.hard.p.toFixed(1) + '% ± ' + res.hard.se.toFixed(1) + ' ‖ soft ' + res.soft.p.toFixed(1) + '% ± ' + res.soft.se.toFixed(1) + ' ‖ soft−hard = ' + d.toFixed(1) + 'pt/' + (d / sd).toFixed(1) + 'σ');
+  for (const b of ['hard', 'soft']) appendFileSync(OUT, [MODE, b, G, SEED, BANDS[b].length, res[b].wins,
+    res[b].p.toFixed(1), res[b].se.toFixed(1), pool.games + '局/' + pool.conds + '条件', new Date().toISOString()].join('\t') + '\n');
 }
+console.log('→ 读数已落 ' + OUT + '（列：mode band games seed 成员数 替身夺冠数 夺冠率% SE 替身池 时刻）');
