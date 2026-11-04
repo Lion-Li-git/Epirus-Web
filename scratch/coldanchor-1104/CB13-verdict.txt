@@ -1,0 +1,3 @@
+CB13 promote rc=6 14:58
+CB13 强度long=11.3
+CB13 强度multi=10.9
