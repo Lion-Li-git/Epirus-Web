@@ -73,3 +73,17 @@
 - **第七节"坑"再补一条**：门号 `D187` 已随 10-27「训练组整组移出产品门禁」`1efa3a3d` 退役，但代码/文档还有 6 处引用它 ⇒ 已改指现在真在册的 `D4`。**代价**：D187 原判的是行为（关=逐位可逆 / 开=局内恒等且跨局满覆盖），D4 只是源码形状 pin ⇒ `OPP_SWEEP` 的"轮齐"断言现在**没有行为级门**（我按算术核过那句话成立，但那是我算的、不是门判的）。
 - **晨班待办状态**：第 3 条（替身尺进门禁）的前置条件已具备（有台账了）‖ 第 4 条（泛用性补录）现在只差补一个启动器 ‖ 第 1 条 `COURSE_EVERY` 与第 2 条 CB3/HPG 晋升照旧等裁。
 - **`--group=ship` 50/51 ‖ `--group=probe` 87/88 已跑**（用户点头后，串行跑；回执 `scratch/morning1104-gate-{ship,probe}.log`）：**两边唯一的红是同一条 `D16`**（线上 2P/3P 包记的规则指纹 `5a873d13` ≠ 当前 `d21f635d`）——我把这条腿拿到夜班末 `47b05c06` 的独立 worktree 单跑，**同一个 got/want 一字不差** ⇒ **不是昨夜造的**，根因是 10-31 的 `cc9de8d3`（`state.js` 给 action 事件补 `target/target2`）换了指纹而线上包还记着 10-25 R62 的旧戳 ⇒ **线上冠军包的考卷成绩在当前引擎下已过期**，修它要动线上槽（重跑考卷 + 记回 `rulesFingerprint`/`examScoreAtBuild`），按红线等点名。本班改动面（D4 ‖ meta ‖ ship ‖ probe ‖ engine 全组两次）除 D16 外 0 红。engine 第一次 169/171 里多出的 **D178**「trainMode 进程内=multi ‖ 出厂=long」**单跑是绿** ⇒ 跨腿污染，成因 = `tools/gates/engine-fuzz.mjs:246` 收尾硬编码 `setTrainMode('multi')`；修的是造成污染的腿（复位成进腿时的值），复跑 **170/171、D178 组内转绿**。
+
+---
+
+# 【11-05 凌晨追加 · ZCode】演化图三模式 + 跨模式普查 + 对局感受（用户 23:3x/00:0x 两令）
+
+| 交付 | 结论 | 产物 |
+|---|---|---|
+| **演化图三模式重做** | 训出批次选项退役 ⇒ **版本三模式**（1.8及以前 824 / 2.0系 40 / 全部 864 枚）；2.0 精选 20 点 arch2 私配尺 + kNN 插值进联合投影；**主图 index.html 已重烘为全点版**（canonical 重建命令 = `viewer --fit=coords-gen3-1105.tsv --preset=all`） | `champion-map/index.html` + `index-2v-{18,20,all}.html` + `coords-gen3-1105.tsv` + `lineage-g3.tsv` |
+| **跨模式 8 格普查** | 25 包 × 2/3/5/8人 × 3血/5血 × 60 局：**HPG-s7 最低格 59.0 = 唯一超 v7 金参照（51.0）**；血量响应仅 4/25 方向正确（视野感知=全库缺口第三面）；2P=纯底座试金石（CB3 97.3 近无敌） | `scratch/night6/crossmode-aggregate.tsv`（25 份原始 TSV 同目录） |
+| **对局感受 + 风格内战** | v7 会配合（互全息/双炮齐射）；CB3 憋大招（长桌对 v7 只打 1/6 伤）；KDFULL400 开局 v7 式中盘断电；内战 CB3 8胜 / D-a 造伤最高 80 / **HPG 1胜垫底**（陪练定律内战版） | `scratch/night6/play-*.txt` ‖ `night6-trace-g3.mjs`（arch2 版逐回合 trace）‖ `night6-civilwar.mjs` |
+| **尾部浪费实测** | v7 尾窗长链份额 35.6%（反升）且真实兑现 ⇒ 浪费上限 2.63 次/局 ⇒ **残局抑制训练目标降级为低优先级精修**（DESIGN §7.5） | `scratch/night6-tail-waste.mjs` |
+
+理想冠军四层验收表与欠缺设计学全文见 `DESIGN-2026-11-04-ideal-champion-zcode.md`（§7 为 11-05 凌晨 v2 修订）。
+注意：`gen3-evolution.html` 被本轮三模式主图**取代**（用户判"啥也显示不出来"）——保留在仓仅作历史。
