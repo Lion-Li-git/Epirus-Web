@@ -227,7 +227,7 @@ export function make(L, rng, scale) {
     const fan = L.fanIn[s.name];
     /* He-ish 定标：按 1/sqrt(fanIn) 而非全局同 σ ⇒ 各段初始输出尺度可比
      * （这也是"段感知"优化的前提：flat 变异在 5,000 维混结构上会让大扇入段 dominating）。 */
-    const k = (sc / Math.sqrt(Math.max(1, fan))) * ((s.name === 'actEnc' || s.name === 'cand') ? ACT_K : 1);
+    const k = (sc / Math.sqrt(Math.max(1, fan))) * ((s.name === 'actEnc' || s.name === 'cand' || s.name === 'inter' || s.name === 'tinter') ? ACT_K : 1);
     for (let i = s.off; i < s.off + s.len; i++) p[i] = gauss() * k;
   }
   return p;
@@ -490,7 +490,9 @@ export function install(W, opts) {
     const afbuf = new Float64Array(L.actIn), ci = new Float64Array(L.candIn), zeroSeat = BUF.zeroSeat;
     /* 交互头的决策级因子（inter=K）：v_k·hctx 每决策一次、g/b 偏移提前算好 ⇒ 逐候选只剩 u_k·ae 与 tanh */
     const ctxFac = L.interK > 0 ? new Float64Array(L.interK) : null;
-    const iS0 = L.interK > 0 ? L.seg[6].off : 0;
+    /* DS 11-04：原来写死 `L.seg[6]`，而它只在"inter 与 tinter 同时存在"时才是 inter 的段号；
+     *   单开 inter 时 seg 长度只有 6 ⇒ 读 undefined.off 直接崩（inter 默认 0，所以这个 bug 一直没被跑到过）。 */
+    const iS0 = L.interK > 0 ? (L.seg.find(function (s) { return s.name === 'inter'; }) || { off: 0 }).off : 0;
     if (ctxFac) for (let k = 0; k < L.interK; k++) {
       const v0 = iS0 + k * L.interStride + L.actH;
       let vh = 0;

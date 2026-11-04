@@ -10,7 +10,7 @@ function probe(face, scale) {
   const W = sandbox();
   const ref = Float64Array.from(loadChamp(W, 'js/bundled-champion-3p.js', ''));
   const P = W.EpirusPolicy, T = W.EpirusTrainer, R = W.EpirusRules;
-  if (face === '2.0') installArch2(W, { input: 'obs3b', gen: 3, keySplit: true, mutMode: 'seg' });
+  if (face === '2.0') installArch2(W, { input: 'obs3b', gen: 3, keySplit: true, mutMode: 'seg', inter: Number(process.env.EPIRUS_INTER || 0), tinter: Number(process.env.EPIRUS_TINTER || 0) });
   const pols = [1, 2, 3, 4].map((s) => P.makePolicy(scale, mulberry32(2000 + s)));
   const A = createArena2(W, { refParams: ref, temp: 0.15 });
   const sh = A.shapes.findIndex((x) => x.n === N && x.mode === MODE);
