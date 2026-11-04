@@ -623,6 +623,7 @@ G4 的 headline 只有 max ⇒ "最克 99.7%" 与 "最克 61%" 都读成一个�
 根因：`cc9de8d3`（10-31 obs3b，`state.js` 给 action 事件补 `target/target2`）换了规则指纹，而两个线上包还记着 10-25 R62（`642104b9`："指纹换代 5a873d13"）那次留下的旧戳
 ⇒ **线上冠军包的考卷成绩在当前引擎下是过期的**。同一条 `--is-ancestor` 判据还说明 `cc9de8d3` **不在 main** ⇒ 这是研究分支独有的红，main 的 CI（10-31 那轮 success）结构上看不见它。
 **修它要动线上槽**（重跑两包考卷 + 把新 `rulesFingerprint`/`examScoreAtBuild` 记回 `js/bundled-champion-3p.js` 与 `js/bundled-champion.js`）⇒ 按红线**等点名**；在册早有这条（`LIVE-LINES` 待裁行"晋升评估要连 D16 重录"）。
-本班改动面（engine 的 D4 单腿 ‖ meta 全组 ‖ ship ‖ probe）**除 D16 外 0 红**；**`--group=engine` 那 75 条没跑**（含 fuzz，估时不确定，要不要跑请点名）。
+本班改动面（D4 ‖ meta 全组 ‖ ship ‖ probe ‖ **engine 全组两次**）**除 D16 外 0 红**。
+engine 第一次 **169/171**，多出的那条 **D178「①″ 共享沙箱里有模块级旋钮不在出厂位：trainMode 进程内=multi ‖ 出厂=long」**单跑是**绿**的 ⇒ 性质是**跨腿污染**（组内前面某条腿改了没复位）；成因就在 [tools/gates/engine-fuzz.mjs:246](file:///D:/code/Epirus-Web/tools/gates/engine-fuzz.mjs#L246) 那句硬编码收尾 `setTrainMode('multi')`。按在册规矩**修造成污染的腿**（进腿时 `TM0=T.trainMode()`、收尾复位成它），**不放宽 D178** ⇒ 复跑 **170/171，D178 在组内转绿、只剩 D16**（两次回执与这条改动写进 `scratch/night6/morning1104-gates.txt`）。
 
 **这班没做的**：没 promote、没动 `js/bundled-champion-pool.js` 与冠军池、没动线上槽（D16 的修法要）、没删任何文件；替身尺进门禁、`COURSE_EVERY` 实现、CB3/HPG 晋升仍挂在待裁清单上。

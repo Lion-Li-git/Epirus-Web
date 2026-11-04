@@ -7,3 +7,9 @@ N人测试：通过 50 / 51
 N人测试：通过 87 / 88
 ## D16 在夜班末 47b05c06 的独立 worktree 复跑（同一个 got/want ⇒ 不是昨夜/本班造成）
   ✘ D16 ... got=5a873d13 want=d21f635d   (临时 worktree 已 remove，现存 1 个)
+
+## engine 组（复跑取证：修掉一条跨腿污染）
+第一次 --group=engine: 2 红 ‖ 通过 通过 169 / 171
+  ✘ D16（线上包指纹过期，等点名） ‖ ✘ D178 ①″「trainMode 进程内=multi ‖ 出厂=long」⇒ 跨腿污染（单跑 D178 = 绿）
+修：tools/gates/engine-fuzz.mjs 收尾把沙箱留在 'multi' ⇒ 改成复位成进腿时的值（TM0=T.trainMode()）
+第二次 --group=engine: 1 红 ‖ 通过 通过 170 / 171 ⇒ D178 在组内转绿，只剩 D16
