@@ -44,7 +44,15 @@ const CELLS = [
   ['prod015', 0.15, 0.2, 'soft', '产品档（浏览器冠军那一行）'],
 ];
 const FACES = [['7', [0.25]], ['2', [0.25, 4]]];
+/* 11-04 晚追加（用户点头的 ①）：**幅度也当剂量扫** ⇒ `--scales=0.25,1,2,3,4,6 --cells=fit035,gate015 --out=…`
+ *   问那一格在册空白：**有没有任何一个幅度同时给到"行为方差 ≥2×地板"与"种数 ≥8"**（午后 §二 的 @2=18.6pt 从没在新尺上过）。 */
+const SCALES = String(ARG.scales || '0.25,4').split(',').map(Number).filter(x => x > 0);
+const WANT_CELLS = ARG.cells ? String(ARG.cells).split(',').map(s => s.trim()) : null;
+const CELLS_USED = WANT_CELLS ? CELLS.filter(c => WANT_CELLS.indexOf(c[0]) >= 0) : CELLS;
+if (!CELLS_USED.length) { console.error('⛔ --cells 一个都没认出来：给的是 ' + ARG.cells + '（可选 ' + CELLS.map(c => c[0]).join(',') + '）'); process.exit(64); }
+FACES[1][1] = SCALES;
 const PSEED = 4242;                       // 粒子号 → 种子（同一粒跨档逐字同）
+const OUTP = String(ARG.out || 'scratch/coldstart-temp-1104');
 
 /* 权重校验和（FNV-1a 量化到 4 位小数 ⇒ 只在"同一粒"上相等） */
 function wsum(v) {
@@ -81,7 +89,7 @@ if (ARG.cell) {                                    /* ===== 子进程：一个 (
   const PC = P.paramCount(), EXPECT = { 7: 5689, 2: 7993 };
   if (PC !== EXPECT[FACE]) { console.error('⛔ 装载自证失败：face=' + FACE + ' paramCount=' + PC + ' 期望=' + EXPECT[FACE]); process.exit(5); }
   const JI = WIN.EpirusRules.SK.JI;
-  for (const sc of (FACE === '2' ? [0.25, 4] : [0.25])) {
+  for (const sc of (FACE === '2' ? SCALES : [0.25])) {
     for (let i = 0; i < N; i++) {
       setSeed(PSEED + i);                                  // ← 同一粒跨档逐字同（自守②）
       const v = Float64Array.from(P.makePolicy(sc));
@@ -105,11 +113,11 @@ const N = Number(ARG.N || 8), G = Number(ARG.G || 24), SEED0 = Number(ARG.seed0 
 const rows = [], tsv = [];
 const t0 = Date.now();
 for (const [FACE] of FACES) {
-  for (const [label] of CELLS) {
+  for (const [label] of CELLS_USED) {
     let out;
     try {
       out = execFileSync(process.execPath, [SELF, '--face=' + FACE, '--cell=' + label, '--N=' + N, '--G=' + G,
-        '--seed0=' + SEED0, '--epsk=' + (ARG.epsk || 5)], { encoding: 'utf8', maxBuffer: 1 << 26 });
+        '--seed0=' + SEED0, '--epsk=' + (ARG.epsk || 5), '--scales=' + SCALES.join(',')], { encoding: 'utf8', maxBuffer: 1 << 26 });
     } catch (e) {
       console.error('⛔ 子进程失败 face=' + FACE + ' 档=' + label + '：' + String(e.stderr || e.message).slice(0, 300));
       process.exit(3);
@@ -134,36 +142,36 @@ const f = (x, w = 7) => String(x == null ? '—' : (Math.round(x * 10) / 10).toF
  *   ⚑ 第一版只比夺 1 均值 ⇒ 小剂量下两粒全输也会"完全相同"，那是**分母不足**，不是接线坏（21:5x 冒烟当场被自己拦住）。 */
 const dead = [], flatWin = [];
 for (const [FACE, scales] of FACES) for (const sc of scales) {
-  const sigs = CELLS.map(c => groups.get(FACE + '/' + sc + '/' + c[0])).filter(Boolean)
+  const sigs = CELLS_USED.map(c => groups.get(FACE + '/' + sc + '/' + c[0])).filter(Boolean)
     .map(g => [mean(g.map(r => r.win)), mean(g.map(r => r.def)), mean(g.map(r => r.kinds))].map(x => x.toFixed(3)).join('|'));
   if (sigs.length > 1 && new Set(sigs).size === 1) dead.push('面' + FACE + '@' + sc);
-  const wins = CELLS.map(c => groups.get(FACE + '/' + sc + '/' + c[0])).filter(Boolean).map(g => mean(g.map(r => r.win)).toFixed(3));
+  const wins = CELLS_USED.map(c => groups.get(FACE + '/' + sc + '/' + c[0])).filter(Boolean).map(g => mean(g.map(r => r.win)).toFixed(3));
   if (wins.length > 1 && new Set(wins).size === 1) flatWin.push('面' + FACE + '@' + sc);
 }
 if (dead.length) { console.error('⛔ 剂量没接线：' + dead.join(',') + ' 在五个温度档读出**完全相同**的行为签名 ⇒ 本批作废'); process.exit(4); }
 /* 自守③（同一批粒）：每个 (面,幅度) 各档的校验和集合必须逐字相同 */
 const drifted = [];
 for (const [FACE, scales] of FACES) for (const sc of scales) {
-  const sets = CELLS.map(c => (groups.get(FACE + '/' + sc + '/' + c[0]) || []).map(r => r.sig).sort().join(','));
+  const sets = CELLS_USED.map(c => (groups.get(FACE + '/' + sc + '/' + c[0]) || []).map(r => r.sig).sort().join(','));
   if (new Set(sets).size !== 1) drifted.push('面' + FACE + '@' + sc);
 }
 if (drifted.length) { console.error('⛔ 配对是假的：' + drifted.join(',') + ' 各档看到的不是同一批权重 ⇒ 本批作废'); process.exit(8); }
 
 const L = [];
 L.push('# 出生粒的"成绩方差"住在哪个温度上（' + N + ' 粒随机起点 × ' + G + ' 局/粒 ‖ 桌=五席脚本场 multi ‖ seed0=' + SEED0 +
-  ' ‖ 同批粒同副桌种子跨档配对 ‖ epsK=' + (ARG.epsk || 5) + ' ‖ 粒子种子=mulberry32(' + PSEED + '+i) 真注入）');
+  ' ‖ 同批粒同副桌种子跨档配对 ‖ epsK=' + (ARG.epsk || 5) + ' ‖ 粒子种子=mulberry32(' + PSEED + '+i) 真注入 ‖ 幅度扫 ' + SCALES.join('/') + ' ‖ 用的档 ' + CELLS_USED.map(c => c[0]).join(',') + '）');
 L.push('# 判据（跑前写死）**两个统计量分开判**：');
 L.push('#   行为（防御族份额，分母=每粒出手数）：粒间 sd > 2×√(d(1−d)/出手) ⇒ **看得见** ← 这是主判据（午后 §二 用 31.3 vs ~4pt 定过标）');
 L.push('#   成绩（夺 1，分母=G=' + G + ' 局）：同样比 2×√(p(1−p)/' + G + ') ⇒ 这一格的地板先天就有 ~' + (100 * Math.sqrt(0.075 * 0.925 / G)).toFixed(0) +
   'pt，**它判"读不出"而不是判"没差异"**（GA 真正吃的是这个，所以它自己也是一条读数）');
-L.push('# 尺 = scratch/coldstart-temp-1104.mjs ‖ 六个档就是六个**真实在用的档 + 一档定位用**（训练打分 / 门禁 / 低温 / ≈argmax / 极端 / 产品）');
+L.push('# 尺 = scratch/coldstart-temp-1104.mjs ‖ 档 = ' + CELLS_USED.map(c => c[0] + '(T' + c[1] + '/ε' + c[2] + ')').join(' ‖ '));
 if (flatWin.length) L.push('⚑ ' + flatWin.join(',') + ' 的夺 1 均值跨六个温度档**全等** ⇒ 那一格的夺 1 在本剂量下没有分辨力（不代表温度没用），该行判读要看"防御族/种数"两列');
 L.push('');
 L.push('面@幅度  档       口径(T/ε/mode)    说明                            夺1均值  成绩sd 成绩地板 成绩判读  防御族均值 行为sd 行为地板 行为判读  种数');
 const BEH = {};                        // (面,幅度,档) → 行为判读，供下面的读法与正对照用
 for (const [FACE, scales] of FACES) {
   for (const sc of scales) {
-    for (const [label, temp, eps, mode, note] of CELLS) {
+    for (const [label, temp, eps, mode, note] of CELLS_USED) {
       const g = groups.get(FACE + '/' + sc + '/' + label);
       if (!g || g.length < 2) { L.push((FACE === '2' ? '2.0' : 'v7 ') + '@' + String(sc).padEnd(5) + label.padEnd(8) + ' ⇒ 没收齐（' + (g ? g.length : 0) + ' 粒）'); continue; }
       const w = g.map(r => r.win), m = mean(w), s = sd(w);
@@ -195,7 +203,7 @@ L.push('   2.0@0.25 若一路不动（要到 nano6=1e-6 那种产品绝不会用
 L.push('   ⇒ "把选择降到低温"这条路**不成立**，而 DS 的 argmax 读数（sd 38pt）住的正是产品/训练都不用的那一格。');
 L.push('   反之若 2.0@0.25 在 low005/near0 就"看得见"了 ⇒ 这条路成立，比 `INIT_SCALE=4`（拿宽度换方差）便宜。');
 
-const TXT = 'scratch/coldstart-temp-1104.txt', TSVF = 'scratch/coldstart-temp-1104.tsv';
+const TXT = OUTP + '.txt', TSVF = OUTP + '.tsv';
 writeFileSync(TXT, L.join('\n') + '\n');
 writeFileSync(TSVF, '#face\tscale\tcell\ttemp\teps\tmode\tmeanWin\twinSd\twin2floor\twinVerdict\tmeanDef\tbehSd\tbeh2floor\tbehVerdict\tkinds\tactsPerParticle\n' + tsv.join('\n') + '\n');
 console.log(L.join('\n'));

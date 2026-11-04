@@ -15,6 +15,7 @@
  * 用法：
  *   node tools/champion-gate.mjs --selftest                       # 只跑登记处自检（名字唯一/层合法/线非空/珍不在闸门）
  *   node tools/champion-gate.mjs --pool [--games=120] [--eps2]     # 池级：逐卡覆盖率 vs 用户配额（两把口径并排）
+ *   node tools/champion-gate.mjs --pool --paths=<a.js,b.js>        # 同一张尺量**不在册**的候选（11-04 晚 · 2.0 候选要进池级判据）
  *   node tools/champion-gate.mjs --legend                           # 只印这张分层表（文档用）
  * ⚠ 本文件**不解析 promote 的输出**，也**不做判语**：解析与判语在 `tools/score13.mjs`（它 import 这里的 LINES）。
  *   分成两个文件是为了让"线定义"只有一份：判语器改口径时不许顺手改定义，定义改了就当场被 --selftest 抓到。
@@ -22,6 +23,8 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { sandbox, loadChamp, mulberry32 } from './audit-lib.mjs';
+/* 11-04 晚（千问）：`coverageOf` 要能读 **2.0（v:92）** 候选 ⇒ 装面的那条路（只在容器版本是 92 时才进，见 :205）。 */
+import { readPack2, packCfgExit, install as installArch2 } from './proto2/arch2.mjs';
 
 const REPO = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1').replace(/\/$/, '');
 
@@ -200,14 +203,31 @@ export function coverageOf(paths, games, seats) {
   }
   const rows = [];
   for (const p of paths) {
-    const params = loadChamp(W, p);
-    if (!params) { rows.push({ path: p, unreadable: true }); continue; }
+    /* 11-04 晚（千问）：这张池级尺要能量 **2.0 候选** ⇒ v:92 包必须先在本沙箱装好 arch2，
+     *   否则 `forwardCands`/`mirrorHealth` 会按 v7 偏移去切 2.0 权重（要么当场抛、要么读出一张假菜单）。
+     *   装不装由容器版本决定 ⇒ **v7 池成员（在册那 30 枚）这条路径一字未动**；
+     *   读完立刻 `restore()` ⇒ 一枚 2.0 不会把后面所有 v7 都变成 2.0（`installArch2` 是进程内覆盖）。
+     *   `pc` 随行落纸 ⇒ 读错面会在收据上直接看见（5689 ‖ 7993），不用等读数像垃圾才发现。 */
+    let raw2 = null;
+    try { raw2 = readPack2(p); } catch (e) { raw2 = null; }
+    const is2 = !!(raw2 && raw2.v === 92);
+    let A2 = null;
+    if (is2) {
+      installArch2(W, packCfgExit(raw2, p).cfg);
+      A2 = W.EpirusPolicy.__arch2;
+      if (!A2) throw new Error('champion-gate: v:92 包装完却拿不到 `__arch2` 抓手 ⇒ 宁可当场抛，不许按 v7 偏移静默切');
+    }
+    const params = is2 ? Float64Array.from(W.EpirusPolicy.unpack(raw2, true)) : loadChamp(W, p);
+    if (!params) { if (A2) A2.restore(); rows.push({ path: p, unreadable: true }); continue; }
+    const pc = W.EpirusPolicy.paramCount();
+    if (is2 && pc !== params.length) { if (A2) A2.restore(); throw new Error('champion-gate: ' + p + ' 装的面 paramCount=' + pc + ' ≠ 权重长度 ' + params.length + ' ⇒ 面装错了'); }
     const gm = W.EpirusTrainer.mirrorHealth(params, G, N, 'multi');
     const gl = W.EpirusTrainer.mirrorHealth(params, G, N, 'long');
-    rows.push({ path: p,
+    rows.push({ path: p, pc: pc, face: is2 ? '2.0' : 'v7',
       greedy: gm.castByKey || {}, greedyLong: gl.castByKey || {},
       holoOther: gm.holoOtherPerGame,
       product: productSpectrum(params, 'multi'), productLong: productSpectrum(params, 'long') });
+    if (A2) A2.restore();
   }
   return { rows, R, games: G };
 }
@@ -266,14 +286,23 @@ function legend() {
   for (const q of POOL_QUOTAS) console.log('  · ' + q.name + '：配额 ' + (q.min === 0 ? '不设线' : Math.round(q.min * 100) + '% 的包会用') + ' —— ' + q.note);
 }
 
-async function pool(games, onlyPaths, seats) {
+async function pool(games, onlyPaths, seats, rawPaths) {
   const fs = await import('node:fs');
+  /* 11-04 晚（千问）：`--paths=<a.js,b.js>` ⇒ 同一张池级尺直接量**不在册的候选**（研究分支现在要判"这枚 2.0 进池补什么"）。
+   *   不带这个旗标时走原来那份 `pool-members.tsv`，**在册那 30 枚的打印路径一字未动**。 */
+  if (rawPaths && rawPaths.length) {
+    const list = rawPaths.map(s => ({ id: s.split('/').pop().replace(/\.(js|bak)$/, ''), path: s }));
+    return poolReport(list, games, seats);
+  }
   const raw = fs.readFileSync(REPO + '/champion-map/pool-members.tsv', 'utf8').replace(/^﻿/, '');
   const col = {}; raw.split('\n')[0].split('\t').forEach((h, i) => { col[h.trim()] = i; });
   const list = raw.split('\n').slice(1).filter(l => l.trim())
     .map(l => ({ id: l.split('\t')[col.id], path: (l.split('\t')[col.path] || '').trim() }))
     .filter(r => r.path && (!onlyPaths.length || onlyPaths.includes(r.id)));
   if (!list.length) { console.error('⛔ 池名单是空的（pool-members.tsv 没读到或 --only= 全筛掉了）⇒ **拒绝判语**：0 枚上打 "0/0 ✅" 是假绿'); process.exit(2); }
+  return poolReport(list, games, seats);
+}
+async function poolReport(list, games, seats) {
   const t0 = Date.now();
   const { rows, R } = coverageOf(list.map(r => r.path), games, seats);
   const live = rows.filter(r => !r.unreadable).length;
@@ -310,6 +339,6 @@ const DIRECT = process.argv[1] && /champion-gate\.mjs$/.test(process.argv[1]);
 if (DIRECT) {
   if (A.includes('--selftest')) selftest();
   else if (A.includes('--legend')) legend();
-  else if (A.includes('--pool')) pool(Number(arg('games', 120)) || 120, (arg('only', '') || '').split(',').filter(Boolean), Number(arg('seats', 5)) || 5);
-  else { console.log('用法：--selftest ‖ --legend ‖ --pool [--games=120] [--only=id1,id2] [--seats=2..5]'); console.log('逐枚判语在 `tools/score13.mjs`（它 import 本文件的 LINES）。'); }
+  else if (A.includes('--pool')) pool(Number(arg('games', 120)) || 120, (arg('only', '') || '').split(',').filter(Boolean), Number(arg('seats', 5)) || 5, (arg('paths', '') || '').split(',').filter(Boolean));
+  else { console.log('用法：--selftest ‖ --legend ‖ --pool [--games=120] [--only=id1,id2] [--seats=2..5] [--paths=<a.js,b.js 直接点名不在册的候选>]'); console.log('逐枚判语在 `tools/score13.mjs`（它 import 本文件的 LINES）。'); }
 }

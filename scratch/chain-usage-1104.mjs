@@ -27,11 +27,14 @@ for (const p of args) {
   const share = k => (100 * (prof.keys[k] || 0)) / (acts || 1);
   const JI = WIN.EpirusRules.SK.JI;
   const kinds = Object.keys(prof.keys || {}).filter(k => k !== JI && acts && (prof.keys[k] / acts) >= 0.005).length;
-  const sig = [kinds, share('railgun').toFixed(3), share('charge').toFixed(3), share('tank').toFixed(3), share('sword').toFixed(3)].join('|');
+  /* ⚑ 11-04 晚自我更正：这一版签名原来只取 **4 个具名键 + 种数** ⇒ 两枚"都不用这 4 张牌"的真不同包会撞车
+   *   （实测：HS-4 的 6 个存段里 种数=4 且 railgun/charge/tank/sword 全 0 ⇒ 当场误报"接线错"）。
+   *   改成**整份出手计数向量** ⇒ 装载坏时所有包仍会逐字同（这条护栏的用途不变），而"确实同形"要同到整份向量才行。 */
+  const sig = kinds + '|' + Object.keys(prof.keys || {}).sort().map(k => k + ':' + prof.keys[k]).join(',');
   rows.push({ p: p.split('/').pop(), w, kinds, railgun: share('railgun'), charge: share('charge'), tank: share('tank'),
     sword: share('sword'), cannon: share('cannon'), def: acts ? 100 * (prof.def || 0) / acts : 0, sig });
   if (seen[sig] && seen[sig] !== w) {
-    console.error('⛔ 自检失败：' + seen[sig] + ' 与 ' + w + ' 权重不同却读出**完全相同**的剖面 ⇒ 装载/接线错了（八成是没 installArch2），本次结果全部作废');
+    console.error('⛔ 自检失败：' + seen[sig] + ' 与 ' + w + ' 权重不同却读出**整份出手计数逐字同**的剖面 ⇒ 装载/接线错了（八成是没 installArch2），本次结果全部作废');
     process.exit(3);
   }
   seen[sig] = w;
