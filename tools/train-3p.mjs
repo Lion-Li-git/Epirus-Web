@@ -114,6 +114,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_WIDE_FINAL',   // 11-01 深（ZCode · PREREG-2026-11-01-WIDE-FINAL）：v4 终局同尺（默认关）   // 11-01 晚（ZCode · 千问交接 §五.3）：逐代名人堂/门槛指纹落盘（默认关 ⇒ 一条行为不变）   // 千问 §十一 C：演化期健康门槛（形状搬自 `evo.js:3952`）+ 它的测量长度 + 带内取宽的带宽 ‖ GA 臂级空转终止（`EPIRUS_STALL_ABORT` 已在 §六② 实现，名单此前漏登记）
   'EPIRUS_SEL_GIFT_VETO', 'EPIRUS_SEL_GIFT_VETO_GAMES',   // §E650（千问）：送盾当选 veto + 它的测量长度（默认关 ⇒ `gateOk` 那一次测量也不跑）
   'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
+  'EPIRUS_INIT_SCALE',                        // 11-04 波 H（千问）：随机起点幅度（缺省 0.25 = 出厂）
   'EPIRUS_SEL_CLEAR', 'EPIRUS_SEL_CLEAR_GAMES',   // §E787（10-26 夜班后追加，用户裁"加上开跑"）：当选面的**场B 清场地板**（veto，不进 fit）+ 它的测量局数（默认 40 = 官方口径）
   'EPIRUS_COUNTER_OPPS', 'EPIRUS_SEL_COUNTER',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
   /* §E797（10-27 夜班）：`EPIRUS_BLOCK_W` = **挡下/反弹**计数的奖励权重（`js/train/evo.js:3357` 的 `countBlocks`
@@ -2037,11 +2038,25 @@ if (SEL_KEEP > 0) {
   }
 }
 
+/* 11-04 傍晚（千问 · 波 H）：**随机起点幅度**从硬编码提出成一个显式剂量。
+ *   动因（`scratch/coldstart-why-1104.mjs` 的实测，账在 `RESULTS-2026-11-04-COLDSTART-qoder.md`）：
+ *   2.0 在出厂幅度 0.25 下，8 枚随机粒在产品温度（temp 0.15）打出来的**聚合行为几乎同一点**
+ *   （非ジ出手里防御族 84.0%、粒间 sd 0.9pt）；同一把尺量 v7 的 0.25 是 sd **31.3pt** ⇒
+ *   2.0 的冷启动失败不是"地形没有上坡"，是**种群里没有可被选择看见的行为方差**。
+ *   幅度扫到 2 / 4 时 sd 长到 18.6 / 30.0pt（个体内种数从 11.8 降到 8.9 / 5.0，与 v7 随机起点的 3.4 同向）。
+ * ⚑ 缺省 0.25 ⇒ 一字不改旧臂；下面两处调用点（初始种群 + 每 30 代补一粒新血）**必须同一个变量**，
+ *   否则"新血"会用另一套幅度，等于偷偷加了第二种初始化（本仓两份同构实现必漂移的老账）。 */
+const INIT_SCALE = Number(process.env.EPIRUS_INIT_SCALE || 0.25);
+if (!(INIT_SCALE > 0) || !isFinite(INIT_SCALE)) {
+  console.error('[train-3p] ⛔ EPIRUS_INIT_SCALE 必须是 >0 的有限数（出厂 0.25）：收到 ' + JSON.stringify(process.env.EPIRUS_INIT_SCALE));
+  process.exit(2);
+}
+console.log('[train-3p] 随机起点幅度 = ' + INIT_SCALE + (INIT_SCALE === 0.25 ? '（出厂档 ⇒ 与历史臂同）' : ' **非出厂档**（两处分流点都吃这个值）'));
 let pop = [];
 for (let i = 0; i < POP; i++) {
   if (seedParams && i === 0) pop.push(seedParams);
   else if (seedParams && i < Math.floor(POP / 3)) pop.push(P.mutatePolicy(seedParams, 0.10));
-  else pop.push(P.makePolicy(0.25));
+  else pop.push(P.makePolicy(INIT_SCALE));
 }
 if (seedParams) console.log('[train-3p] 热启动：以现有冠军为种子');
 /* (c) h 基因：与 pop 平行的承诺视界（与 server/train-server.mjs 同口径）。
@@ -2463,7 +2478,7 @@ for (let gen = 0; gen < GENS; gen++) {
     if (breedRng() < 0.15) ch = Math.max(0, Math.min(4, ch + (breedRng() < 0.5 ? -1 : 1)));
     next.push(child); nextH.push(ch);
   }
-  if (gen % 30 === 29) { next[POP - 1] = P.makePolicy(0.25); nextH[POP - 1] = 0; }
+  if (gen % 30 === 29) { next[POP - 1] = P.makePolicy(INIT_SCALE);   /* 11-04 波 H：与初始种群同一幅度来源 */ nextH[POP - 1] = 0; }
   /*（ZCode · 11-03 凌晨）E3 存段：每 HOLDOUT_SEG 代快照**当代评估最优**粒（默认 0=关 ⇒ 一行都不进）。
    *  动因（DS E3 实测 + 夜班 holdout-promote 实锤 D-a band3）：末代重验收的产物会埋掉中代峰。
    *  快照只在内存攒着，band-save 段落统一落 `<ARM>-seg<k>.bak` ⇒ holdout-promote 复排；
@@ -2556,7 +2571,12 @@ let finalParams = bestParams, ev = null;
 let DEGENERATE_ONLY = false;   // §N9：名人堂全退化时置真并写进 meta
 console.log('=== 名人堂验证（' + SEL_PAIRS.length + ' 对 x 20 局' +
   (SEL_POOL ? ' · **选拔桌含池席 ' + POOL_OPPS.length + ' 枚**（' + POOL_OPPS.map(o => o.name).join(',') + '）'
-            : ' · 出厂那张桌：9 个脚本两两') + '）===');
+            : (SEL_COUNTER
+              /* 11-04 午后抓到的措辞谎：旧文案不分"有没有把对抗原型搬进当选面"，两类都印"出厂那张桌：9 个脚本两两"
+               *   ⇒ 开着 `SEL_COUNTER` 的臂明明数是 55 对（11 席两两），却被那句说成"跑的是出厂桌"。
+               *   只改可见性：`SEL_TABLE` / `SEL_PAIRS` 的构造一字未动（席数现在照实印）。 */
+              ? ' · **选拔桌含对抗原型 ' + COUNTER_OPPS.map(function (o) { return o.name; }).join(',') + ' 各两份**（桌共 ' + SEL_TABLE.length + ' 席两两）'
+              : ' · 出厂那张桌：' + SEL_TABLE.length + ' 席两两')) + '）===');
 if (HALL_DEDUP) console.log('[hall-dedup] 进榜拒收同一粒权重 ' + hallDupDropped + ' 次 ⇒ 榜 ' + hall.length + ' 席' +
   '（开档必印：0 次也要印，否则"没遇到重复"与"没生效"在日志上同形）');
 /* ===== §N9（qoder 09-22 · xn10b 反例）：当选面退化闸 =====
@@ -3468,6 +3488,7 @@ const meta = {
     /* 11-04（千问）：锚定的**目标与棘轮状态**同样无条件落盘（关档也记 `{lambda:0,to:'seed'}`）
      *   —— 否则"锚没生效 / λ 太小空转 / 压根没下达"三种情况在账上又是同形（DS 给 gateState 补的就是这族病，
      *   而他 ANCHOR 那批的 meta 里连 `anchor` 都没有，只有日志能判）。 */
+    initScale: INIT_SCALE,   // 11-04 波 H：无条件落盘（缺省也记 0.25）⇒ 冷启动批能分幅度读
     anchor: { lambda: ANCHOR, to: ANCHOR_TO,
       refWid: anchorRef ? anchorRef.wid : null, refGen: anchorRef ? anchorRef.gen : null,
       refG: anchorRef ? anchorRef.g : null, refWideScore: anchorRef ? Number(anchorRef.wideScore.toFixed(2)) : null,
