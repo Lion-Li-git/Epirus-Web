@@ -1756,7 +1756,7 @@ if (OPP_SWEEP_WANT) {
   T.setOppTable({ sweep: true });
   const gotS = T.oppTable() || {};
   if (gotS.sweep !== true) { console.error('[train-3p] ⛔ EPIRUS_OPP_SWEEP=1 读回 ' + JSON.stringify(gotS.sweep) + ' ⇒ 没生效'); process.exit(7); }
-  console.log('[opp-sweep] 对手池每代轮齐：座位取 (g*4+(k-1)+gen*4)，每代覆盖全部 ' + '对手（旧公式每代仅 11 位）');
+  console.log('[opp-sweep] 对手池每代轮齐：座位取 (g*4+k+gen*4)%L（k=ok 从 0 起），每代覆盖全部对手（旧公式每代仅 11 位）');
 }
 
 /* ===== v1.7.90（DS · 10-17）：**落地广度** `EPIRUS_WIDTH_LAND_W` 的下达（默认关）=====
