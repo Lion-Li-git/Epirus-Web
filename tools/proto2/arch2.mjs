@@ -220,11 +220,14 @@ export function make(L, rng, scale) {
   const r = rng || Math.random;
   const gauss = () => { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
   const sc = scale || L.initScale || INIT_SCALE;
+  /* DS 11-04（结构假设）：给**候选项编码段**单独放大初始化 ⇒ 在 0.25 下让"候选差异"先于"上下文偏置"出现。
+   * 默认 1 = 历史臂逐字不动。仅影响 actEnc 段（其余段仍 1/√fanIn）。 */
+  const ACT_K = Math.max(0.01, Number((typeof process !== 'undefined' && process.env && process.env.EPIRUS_INIT_ACT_K) || 1) || 1);
   for (const s of L.seg) {
     const fan = L.fanIn[s.name];
     /* He-ish 定标：按 1/sqrt(fanIn) 而非全局同 σ ⇒ 各段初始输出尺度可比
      * （这也是"段感知"优化的前提：flat 变异在 5,000 维混结构上会让大扇入段 dominating）。 */
-    const k = sc / Math.sqrt(Math.max(1, fan));
+    const k = (sc / Math.sqrt(Math.max(1, fan))) * ((s.name === 'actEnc' || s.name === 'cand') ? ACT_K : 1);
     for (let i = s.off; i < s.off + s.len; i++) p[i] = gauss() * k;
   }
   return p;
