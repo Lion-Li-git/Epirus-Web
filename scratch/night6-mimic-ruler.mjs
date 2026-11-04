@@ -71,6 +71,33 @@ const NP = Number(FLAG.np || 5);   /* §G3：桌人数可调（2/3/5/8） */
 for (const MODE of ['long', 'multi']) {
   const res = {};
   const BANDS = FLAG.band ? FLAG.band.split(',') : ['hard', 'mid', 'soft'];
+  if (FLAG.hard && FLAG.soft) {
+    /* §G3 双带混抽（11-05 晨 · 用户令：中带 = 同时从强弱两带抽，不是强带+脚本）：
+     *   --hard=a,b --soft=c,d：AI 席（np-1 个）交替取强/弱带（偶席强、奇席弱），带内按局轮转。
+     *   2P=1 席（强），3P=2 席（1强1弱），5P=4 席（2强2弱），8P=7 席（4强3弱）。 */
+    const H = FLAG.hard.split(',').map(s => s.trim()).filter(Boolean);
+    const Sf = FLAG.soft.split(',').map(s => s.trim()).filter(Boolean);
+    const hCh = H.map(p => { const pk = loadPackParams(p); return T.policyChooserN(pk.params, 0); });
+    const sCh = Sf.map(p => { const pk = loadPackParams(p); return T.policyChooserN(pk.params, 0); });
+    let mw = 0;
+    for (let g = 0; g < GAMES; g++) {
+      const N = NP, mimicSeat = g % N;
+      const st = W.EpirusState.createState(MODE, { next: T.mulberry32(SEED + g) }, N);
+      const choosers = [];
+      for (let pid = 0; pid < N; pid++) {
+        if (pid === mimicSeat) { choosers.push(makeMimic(W, pool, 'next', T.mulberry32(SEED + 7919 + g))); continue; }
+        const j = choosers.length;
+        choosers.push((j % 2 === 0) ? hCh[(g + (j >> 1)) % H.length] : sCh[(g + (j >> 1)) % Sf.length]);
+      }
+      W.EpirusPlay.autoGameN(st, choosers);
+      if (st.winner === mimicSeat) mw++;
+    }
+    const p = mw / GAMES, se = 100 * Math.sqrt(p * (1 - p) / GAMES);
+    console.log('== 替身尺双带混抽 ‖ ' + NP + 'P ' + MODE + ' × ' + GAMES + ' ‖ 强 ' + H.length + ' / 弱 ' + Sf.length);
+    console.log('   替身夺冠 ' + (100 * p).toFixed(1) + '% ± ' + se.toFixed(1));
+    appendFileSync(OUT, [MODE, 'mix2band', GAMES, SEED, H.length + '+' + Sf.length, mw, (100 * p).toFixed(1), se.toFixed(1), pool.games + '局/' + pool.conds + '条件', new Date().toISOString()].join('\t') + '\n');
+    continue;
+  }
   if (FLAG.packs) {
     /* 直跑模式（11-04 深夜补）：--packs=a.js,b.js 当一个"带"，替身 vs 该组 AI×4，装配与其余参数逐字同正式档
      * 11-05 扩：token 支持 `script:<fn>`（脚本席，取 EpirusBots[fn]）⇒ 简单带掺脚本稀释阶梯可量 */
