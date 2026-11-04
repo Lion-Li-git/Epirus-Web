@@ -588,8 +588,8 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 ## 11-04 晨班追记 28（千问；训练机制与"广度在哪一层"照代码读清 ‖ 独立成件交 DS）
 
 - **现役臂 = 热启动 + 裸 GA(名次适应度) + 环外记录**：以 `HPG-s7` 自己的 `recipe` 为凭 —— `gaGate=null ‖ breadthFloor=null ‖ selLand=0 ‖ selKeep=0 ‖ selClear=0 ‖ selDef/selGrid=null ‖ xn2w=0`；开着 `HOTSTART+SEEDPACK ‖ HPSEED ‖ OPP_SWEEP ‖ PAIRED ‖ EFFSKILL_MIN=6 ‖ HOLDOUT_SEG=25`。⇒ **目标函数里没有任何行为质量项**，"当选面 veto 全关"意味着连那串只否决的杠杆这一批都没用。以后引用"我们的训练有什么"必须点名**这一批的 recipe**，不许拿"工具支持哪些旋钮"当"臂开了哪些旋钮"。
-- **"广度筛选"有四种活法，只有一种能塑形**：① 环内 `GA_GATE`（每代 top-3 × 两桌 × 6 局镜 ⇒ `wide` ⇒ **`gateRank` 同时改父母次序与名人堂准入**，代价 +56% 局数，`train-3p.mjs:308` 注释明写）‖ ② 环内软排序 `FITGW`/`GA_BAND` ‖ ③ 终局当选 veto（**只能在已生出的粒里换人，造不出新行为** —— `SEL_KEEP` 那次"逐位没换人"就是这一半的答案）‖ ④ 落盘前 `EFFSKILL_MIN`+`BREADTH_FATAL`（只杀不塑）。**今天 ① 关、③ 关、④ 半开** ⇒ 于是"强而窄"是机制的可预期产物，不是意外。
+- **"广度筛选"有四种活法，只有一种能塑形**：① 环内 `GA_GATE`（每代 top-3 × 两桌 × 6 局镜 ⇒ `wide` ⇒ **`gateRank` 同时改父母次序与名人堂准入**，代价按现役档 +18.75% 局数（出厂 8 局档才是 +56%），`train-3p.mjs:308` 注释明写）‖ ② 环内软排序 `FITGW`/`GA_BAND` ‖ ③ 终局当选 veto（**只能在已生出的粒里换人，造不出新行为** —— `SEL_KEEP` 那次"逐位没换人"就是这一半的答案）‖ ④ 落盘前 `EFFSKILL_MIN`+`BREADTH_FATAL`（只杀不塑）。**今天 ① 关、③ 关、④ 半开** ⇒ 于是"强而窄"是机制的可预期产物，不是意外。
 - **两面账同时摆在日志里**：`HPG-s7` 名人堂各粒有效技能数 = **3,1,1,3,3,3**（判据 ≥6 ⇒ 全不过，产物照写 `effSkillAllNarrow`）‖ `EFFG` 批 `BREADTH_FATAL=1` ⇒ **良品率 3/6**（`scratch/night5/EFFG-s13.log`：5,5,4,5,5,3 ⇒ 中止不写）。而 **G4 抗脚本的过线者恰集中在 EFFG 这条唯一把广度闸当真的产线**（相关，因果未判，交 DS）。
 - **"蒸馏开菜单，GA 选性格"量化了**：谱系 233 节点里蒸馏/克隆边只 **7 条**（GA 边 100+），但**九个现役产物每一个的祖先链上都有 ≥1 条** ⇒ 用户那句直觉按祖先链成立；机制三面证据=腐蚀律三次独立确认 + 冷启动"能表达"对拍。
 - **新登记一处台账缺口**：`recipe.env` 里有 `EPIRUS_EFFSKILL_MIN`，**没有 `EPIRUS_BREADTH_FATAL`** ⇒ 从 meta 分不出记录模式与否决模式，**"没登记"与"没开"同形**（违在册规矩"没有 ≠ 没登记"）。
-- 机制账与给 DS 的六条分析题（按可否证排序）在 **`docs/research/MECHANISM-2026-11-04-training-breadth-qoder.md`**；最想要的答案是"gateRank 到底塑没塑形"（可用 #46 逐代指纹判 `GA_STAT.swapped` 与产物 wid 轨迹分叉）与"+56% 局数换成少一代搜索值不值"。
+- 机制账与给 DS 的六条分析题（按可否证排序）在 **`docs/research/MECHANISM-2026-11-04-training-breadth-qoder.md`**；最想要的答案是"gateRank 到底塑没塑形"（可用 #46 逐代指纹判 `GA_STAT.swapped` 与产物 wid 轨迹分叉）与"+18.75%（现役档，非出厂档的 +56%）换成少一代搜索值不值"。

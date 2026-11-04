@@ -305,7 +305,10 @@ const EFFSKILL_SHARE = Math.min(0.2, Math.max(0.0001, Number(process.env.EPIRUS_
  * 形状搬自线上 trainer（`js/train/evo.js:3952`）：不过自对局健康门槛 ⇒ 不许进容差带 / 不配当选，
  *   然后"先按分数取带、带内取覆盖熵最高者"。与在册 `EPIRUS_BREADTH_FLOOR` 的区别：那根作用在**终局 `sel.clean`**
  *   （train-3p.mjs 里那处），正是我在 `RESULTS-2026-11-01-DAY` §十 批评过的"终局 veto 不塑形搜索"；这两根作用在**每代的父母抽取 + 名人堂准入**上（§十二 勘误后）。
- * 成本明说：每代只检 top-3 候选 × **两桌** × `GA_GATE_GAMES` 局镜 ⇒ 默认档增量 = 36 局 vs 原生 POP×GAMES = 64 局 ≈ **+56%**（臂账里如实写，别当免费；§十一 那句"+28%"是单桌时代的数，作废）。
+ * 成本明说（**按现役配方算，不是按出厂档算** —— DS 11-04 抓到我把 8 局时代的数当现状引用）：
+ *   增量 = 3 粒 × 2 桌 × `GA_GATE_GAMES`（默认 6）= **36 局/代**，分母是原生 `POP×GAMES` ⇒
+ *   pop8×games8（本工具出厂档）= 64 局 ⇒ **+56%** ‖ **pop8×games24（11-03 起所有产线臂的实际档）= 192 局 ⇒ +18.75%**；
+ *   等预算比较要把代数折掉：+18.75% ⇒ 150 代只能跑 **126 代**（臂账里如实写，别当免费；§十一 那句"+28%"是单桌时代的数，作废）。
  * 全代都不过线 ⇒ **饿退**：照收原生前两粒并计数（`--selCap` v1 把整代挡空后当场炸的那笔教训）。 */
 const GA_GATE = Math.max(0, Number(process.env.EPIRUS_GA_GATE || 0));
 /* 旗标语义（§十四 同源化后必须说清，否则"多档产物 md5 全等"又会被当成"没接电"）：
@@ -367,7 +370,7 @@ const GA_STAT = { audits: 0, healthyGens: 0, starvedGens: 0, swapped: 0, eff1Sum
  *   （`GATE2-s7` 出手 6 种而**落地种 1**、最大落地份额 100.0%、5P 掉 24.7pt）——就是 Goodhart。
  *   参照 = 本臂的热启动起点（量一次，与候选同 n ⇒ 配对；绝对线自带样本量依赖，见 `pool-frontier-lib` v1.5.254 注释）。
  *   ⚠ 参照**对象**与门不同：门判"入池新包 vs 现役池成员"，这里判"候选 vs 自己的起点" ⇒ 这根只保证"别把出发时的宽和出血丢掉"。
- *   代价：两模式 × 每代 top-3 ⇒ 增量 = 3×2×GA_GATE_GAMES 局镜 vs 原生 POP×GAMES 局 ⇒ 默认档 ≈ **+56%**，臂账里如实写。 */
+ *   代价：两模式 × 每代 top-3 ⇒ 增量 = 3×2×GA_GATE_GAMES 局镜 vs 原生 POP×GAMES 局 ⇒ **出厂档(8 局) ≈ +56%，现役档(24 局) ≈ +18.75%**（见上面 :308 那条），臂账里如实写。 */
 function wideMetricsOf(params) {
   const a = T.mirrorHealth(params, GA_GATE_GAMES, 5, 'multi');
   const b = T.mirrorHealth(params, GA_GATE_GAMES, 5, 'long');
