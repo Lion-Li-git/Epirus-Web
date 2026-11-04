@@ -15,7 +15,7 @@
  */
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 
-const P_DIR = process.argv[2] || 'scratch/night6/promote';
+const DIRS = (process.argv[2] || 'scratch/night6/promote').split(',').filter(Boolean);
 const FAR = 15;                       // "不远" = 该 % 项超限 ≤15pt（用户 11-04 定）
 const num = s => Number(String(s).replace(/[^\d.]/g, ''));
 
@@ -46,7 +46,11 @@ for (const [file, dose] of [['scratch/night6/generality-newprod-50g.txt', '50局
 
 /* ---------- 2. 逐份回执：全部阻断项 + 四格 ---------- */
 const rows = [];
-for (const f of readdirSync(P_DIR).filter(x => x.endsWith('.txt')).sort()) {
+const done = new Set();
+for (const P_DIR of DIRS) {
+  if (!existsSync(P_DIR)) continue;
+ for (const f of readdirSync(P_DIR).filter(x => x.endsWith('.txt')).sort()) {
+  if (done.has(f)) continue; done.add(f);
   const t = readFileSync(P_DIR + '/' + f, 'utf8');
   const name = f.replace(/\.txt$/, '');
   /* 阻断项总数：promote 自己数的那个数（权威），不是我从 bullet 猜的 */
@@ -83,6 +87,7 @@ for (const f of readdirSync(P_DIR).filter(x => x.endsWith('.txt')).sort()) {
   rows.push({ name, nBlock, items, worstPct, other,
     g4: [g('G4long'), g('G4multi')], g5: [g('G5long'), g('G5multi')], g5State: g5Known ? '—' : '回执里没有任何 G5 行（读不出）',
     str: { l: strength[name + '/long'], m: strength[name + '/multi'] }, gen: genrl[name] });
+ }
 }
 
 /* ---------- 3. 判：≤1 项 且 该项 % 超限 ≤15 ‖ 非 % 与二值项一律单列（不许自动放行） ---------- */
