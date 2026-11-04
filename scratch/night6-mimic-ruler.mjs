@@ -71,9 +71,14 @@ for (const MODE of ['long', 'multi']) {
   const res = {};
   const BANDS = FLAG.band ? FLAG.band.split(',') : ['hard', 'mid', 'soft'];
   if (FLAG.packs) {
-    /* 直跑模式（11-04 深夜补）：--packs=a.js,b.js 当一个"带"，替身 vs 该组 AI×4，装配与其余参数逐字同正式档 */
+    /* 直跑模式（11-04 深夜补）：--packs=a.js,b.js 当一个"带"，替身 vs 该组 AI×4，装配与其余参数逐字同正式档
+     * 11-05 扩：token 支持 `script:<fn>`（脚本席，取 EpirusBots[fn]）⇒ 简单带掺脚本稀释阶梯可量 */
     const members = FLAG.packs.split(',').map((p) => p.trim()).filter(Boolean);
-    const choosersCache = members.map((p) => { const pk = loadPackParams(p); return T.policyChooserN(pk.params, 0); });
+    const choosersCache = members.map((p) => {
+      if (p.indexOf('script:') === 0) { const fn = p.slice(7); if (typeof W.EpirusBots[fn] !== 'function') throw new Error('没有脚本 ' + fn); return { bot: () => W.EpirusBots[fn] }; }
+      const pk = loadPackParams(p); return { pack: () => T.policyChooserN(pk.params, 0) };
+    });
+    const chooserOf = (c) => c.bot ? c.bot() : c.pack();
     let mw = 0;
     for (let g = 0; g < GAMES; g++) {
       const N = 5, mimicSeat = g % N, aiIdx = (g * 4) % members.length;
@@ -81,7 +86,7 @@ for (const MODE of ['long', 'multi']) {
       const choosers = []; let k = 0;
       for (let pid = 0; pid < N; pid++) {
         if (pid === mimicSeat) choosers.push(makeMimic(W, pool, 'next', T.mulberry32(SEED + 7919 + g)));
-        else choosers.push(choosersCache[(aiIdx + k++) % members.length]);
+        else choosers.push(chooserOf(choosersCache[(aiIdx + k++) % members.length]));
       }
       W.EpirusPlay.autoGameN(st, choosers);
       if (st.winner === mimicSeat) mw++;
