@@ -1,0 +1,2 @@
+AK3-s7-g600 rc=0 14:27
+🧪 --dry：自检通过但**未写任何文件**（js/bundled-champion-3p.js 与 index.html 均未改动）

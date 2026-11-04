@@ -47,15 +47,22 @@ for (const [file, dose] of [['scratch/generality-1104/matrix-50g.txt', '50局'],
 /* ---------- 2. 逐份回执：全部阻断项 + 四格 ---------- */
 const rows = [];
 const done = new Set();
+const skipped = [];
 for (const P_DIR of DIRS) {
   if (!existsSync(P_DIR)) continue;
  for (const f of readdirSync(P_DIR).filter(x => x.endsWith('.txt')).sort()) {
   if (done.has(f)) continue; done.add(f);
   const t = readFileSync(P_DIR + '/' + f, 'utf8');
+  /* 只认 promote 的回执（首行 `== 换前体检：<包> ==`）：同目录里的跑批日志会被当成"一枚没计数的包"混进表。
+   * 跳过的要点名——万一 promote 改了表头，这里的名单会突然变长，那是"包在消失"而不是"表干净了"。 */
+  if (!/^== 换前体检：/.test(t)) { skipped.push(P_DIR + '/' + f); continue; }
   const name = f.replace(/\.txt$/, '');
   /* 阻断项总数：promote 自己数的那个数（权威），不是我从 bullet 猜的 */
   const cnt = /体检未过（(\d+) 项阻断条件）/.exec(t);
-  const nBlock = cnt ? +cnt[1] : (/体检通过|五道全过/.test(t) ? 0 : null);
+  /* ⚠ 11-04 抓到自己埋的假阳性：`五道全过` 是**可行性面板**（每份回执中途都印），不是终判。
+   * 原来把它当"0 阻断"的同义词 ⇒ 一份**还没跑完**的回执会被读成"全过"（g600 那枚半成品实测）。
+   * 终判只认 promote 收尾的 `自检通过 / 体检通过 / 已中止`；三样都没有 = 未完，判 null 而不是 0。 */
+  const nBlock = cnt ? +cnt[1] : (/体检通过|自检通过/.test(t) ? 0 : null);
   const bullets = [...t.matchAll(/^   · (.+)$/gm)].map(m => m[1]);
   /* 族别按**原文关键词**归（不按路径归，否则全塌成一类）：这是"要练哪一格"的清单主键 */
   const famOf = b => /G4\[/.test(b) ? 'G4 一行脚本能克它' : /G5\[/.test(b) ? 'G5 纯防御收场'
@@ -79,6 +86,11 @@ for (const P_DIR of DIRS) {
   /* 四格（G4 正读数走 T2 那条"反制者期望损失"记录行；G5 关档只在失败时印） */
   const cell = {};
   const put = (k, v, who) => { if (v !== null && cell[k] === undefined) cell[k] = { v, who }; };
+  /* v1（优先源）：11-04 起 promote 加印 `G4/G5 逐格数字（PASS 也印）` ⇒ 这行是**阻断格的实测值本身**，
+   * 比下面两条"FAIL bullet / 只记录面板"都权威（那两条只在各自情形下有数，且面板那条是 T2 记录行）。
+   * 旧回执没有这行 ⇒ 解析不到就照旧走下面两条，表不会因此出现空格。 */
+  for (const m of t.matchAll(/\b(G5带档|G5|G4)\[([^\]]*)\/(long|multi)\]\s*(?:最克「[^」]*」|防席夺冠)\s*([\d.]+)%\/\d+%/g))
+    put((m[1] === 'G5带档' ? 'G5dai' : m[1]) + m[3], +m[4], '逐格数字');
   for (const m of t.matchAll(/G4\[(.+?)\/(long|multi)\][^\n]*?最克「([^」]+)」\s*([\d.]+)%/g)) { if (m[1].includes('/')) put('G4' + m[2], +m[4], m[3]); }
   for (const m of t.matchAll(/(?:^|\s)(?:[\w./-]+)\/(long|multi) mean=[\d.]+%[^\n]*?最克「([^」]+)」\s*([\d.]+)%（n=\d+）/g)) put('G4' + m[1], +m[3], m[2]);
   for (const m of t.matchAll(/G5(带档)?\[(.+?)\/(long|multi)\][^\n]*?实测防席夺冠\s*([\d.]+)%/g)) { if (m[2].includes('/')) put((m[1] ? 'G5dai' : 'G5') + m[3], +m[4], null); }
@@ -100,9 +112,10 @@ for (const r of rows) {
     '  |' + p(r.g4[0], 6) + ' ' + p(r.g4[1], 5) + ' ' + p(r.g5[0], 5) + ' ' + p(r.g5[1], 5) +
     ' |' + p(r.str.l ? r.str.l.v : null, 5) + '/' + p(r.str.m ? r.str.m.v : null, 5) +
     ' | ' + (r.gen ? r.gen.min.toFixed(1) + '(' + r.gen.dose + ')' : '—') + (r.gen ? ' '.repeat(Math.max(0, 14 - (r.gen.min.toFixed(1) + r.gen.dose).length)) : ' '.repeat(16)) +
-    (ok(r) ? '  ★' : (r.nBlock === 0 ? '  ✔全过' : '  ✗')) + (r.nBlock === null ? ' (回执没给计数)' : ''));
+    (ok(r) ? '  ★' : (r.nBlock === 0 ? '  ✔全过' : '  ✗')) + (r.nBlock === null ? ' (无终判＝回执未完)' : ''));
 }
 const pass = rows.filter(ok);
+if (skipped.length) console.log('（跳过 ' + skipped.length + ' 个非体检回执文件：' + skipped.join(' ') + ' ⇒ 若这里出现本该是回执的名字，是 promote 改了表头）');
 console.log('\n== 判据（用户 11-04）：**所有阻断项里最多差 1 项**，且该项是 % 口径、**超限 ≤' + FAR + 'pt**；非 % 量化项与二值项不参与"不远"、要人判');
 console.log('== 满足：' + pass.length + ' / ' + rows.length + ' 枚 ⇒ ' + (pass.map(r => r.name + '(' + (r.nBlock === 0 ? '0 项' : r.worstPct.toFixed(1) + 'pt') + ')').join(' ‖ ') || '空'));
 console.log('== 差 1 项但超限 >' + FAR + 'pt：' + rows.filter(r => r.nBlock === 1 && (r.worstPct === null || r.worstPct > FAR)).map(r => r.name + '(' + (r.worstPct === null ? '二值/非%' : r.worstPct.toFixed(1) + 'pt') + ')').join(' ‖ ') || '无');
@@ -114,14 +127,17 @@ for (const r of rows) {
   if (r.nBlock === null) continue;
   for (const it of r.items) {
     const k = it.fam;
-    (byKey[k] = byKey[k] || { n: 0, packs: [], kind: it.kind, worst: null }).n++;
+    (byKey[k] = byKey[k] || { n: 0, packs: [], np: new Set(), kind: it.kind, worst: null }).n++;
     byKey[k].packs.push(r.name + (it.kind === 'pct' ? '(' + it.over.toFixed(0) + 'pt)' : ''));
+    byKey[k].np.add(r.name);
     if (it.kind === 'pct' && (byKey[k].worst === null || it.over > byKey[k].worst)) byKey[k].worst = it.over;
   }
 }
 const kl = Object.entries(byKey).sort((a, b) => b[1].n - a[1].n);
-console.log('\n== 阻断项分类账（' + rows.filter(r => r.nBlock !== null).length + ' 枚回执，共 ' + kl.reduce((a, x) => a + x[1].n, 0) + ' 条）——按命中包数排序');
+console.log('\n== 阻断项分类账（' + rows.filter(r => r.nBlock !== null).length + ' 枚回执，共 ' + kl.reduce((a, x) => a + x[1].n, 0) + ' 条）——按**条数**排序（一枚可占多格，所以条 ≥ 枚）');
 for (const [k, v] of kl.slice(0, 14)) {
-  console.log('  ' + String(v.n).padStart(2) + ' 枚  ' + (v.kind === 'pct' ? '% 口径，最坏 ' + v.worst.toFixed(1) + 'pt' : v.kind === 'unit' ? '非 % 单位（要人判）' : '二值项（要人判）') + '  ‖ ' + k + '  ‖ ' + v.packs.slice(0, 8).join(' ') + (v.packs.length > 8 ? ' …' : ''));
+  /* `n` 是**条数**（同一枚包可命中多格，G5 就分 long/multi 两行），`packs` 才是包数。
+   * 原先印成"N 枚"却按条数排序，读的人会把它当分母 ⇒ 两个都印出来。 */
+  console.log('  ' + String(v.n).padStart(2) + ' 条/' + v.np.size + ' 枚  ' + (v.kind === 'pct' ? '% 口径，最坏 ' + v.worst.toFixed(1) + 'pt' : v.kind === 'unit' ? '非 % 单位（要人判）' : '二值项（要人判）') + '  ‖ ' + k + '  ‖ ' + v.packs.slice(0, 8).join(' ') + (v.packs.length > 8 ? ' …' : ''));
 }
 

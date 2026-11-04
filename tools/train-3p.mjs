@@ -2309,7 +2309,10 @@ for (let gen = 0; gen < GENS; gen++) {
         anchorRef = { params: Float64Array.from(scored[cand.gi].params), wid: widOfArr(scored[cand.gi].params),
           gen: gen + 1, wideScore: cand.wideScore, g: cand.m.gMulti + '/' + cand.m.gLong };
         anchorRefMoves++;
-        if (gen === 0 || (gen + 1) % 25 === 0) {
+        /* 推进就印，**不按 25 代节流**：棘轮的推进本来就稀少，节流会把"活臂"印成"冻住的锚"
+         *   （11-04 CA13 实测：日志里 `[锚·最宽]` 只有 gen 1 一条，看着像 480 代零推进，
+         *    而真数只能等 `meta.recipe.anchor.moves` 落盘 ⇒ 中途读日志的人会拿节流当结论）。 */
+        {
           console.log('[锚·最宽] gen ' + (gen + 1) + ' 推进锚 → ' + anchorRef.wid.slice(0, 8)
             + '（G ' + anchorRef.g + ' ‖ 兑现宽 ' + anchorRef.wideScore.toFixed(2) + ' ‖ 累计移动 ' + anchorRefMoves + ' 次）');
         }

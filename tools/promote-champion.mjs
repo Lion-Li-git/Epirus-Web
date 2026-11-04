@@ -485,7 +485,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
   try {
     const gr = spawnSync(process.execPath, ['tools/gate-drafts.mjs', SRC], { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
     const outTxt = String(gr.stdout || '') + String(gr.stderr || '');
-    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], band: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [], candRows: 0, cells: {} };
+    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], band: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [], candRows: 0, cells: {}, margins: {} };
     for (const ln of outTxt.split('\n')) {
       /* v1.5.89③：`UNRUN` = 该格**跑不了 / 不可判**（量具自己报的第三态，见 gate-drafts 的 gate()）。
        * 它既不是 FAIL、更不是 PASS ⇒ 单独收集并**醒目打印**（"不得当作通过"）。 */
@@ -530,6 +530,29 @@ if (!process.argv.includes('--skip-gate-drafts')) {
        * 怎么在代码里表达，都在待裁里（ACCEPTANCE-LINES §四⑧），不由这次措辞/可见性改动代裁。 */
       if (!isRef && /^G5带档\[/.test(nm)) {
         if (gateDrafts.band.indexOf(nm) < 0) gateDrafts.band.push(m[1] + ' ' + nm);
+      }
+      /* v1.9.x（11-04 晨班千问 · 14:3x）：**PASS 格也带上数字**。
+       * 动因：用户的上线判据是"所有阻断里最多差一项、且该项超限 ≤15pt"——这个判据要比较的是**边际**，
+       * 而旧输出只在 FAIL 时印实测值 ⇒ 两枚 0 阻断的包（现在全库就 AK3-s7 一枚）比不出谁离悬崖更近。
+       * 实测踩点：`AK3-s7` 在 n=300 时"最克格 47.3%"这个数字**不是从 G4 行来的**，是从"反制者期望损失"
+       * （只记录面板）偶然露出的；n=600 复量后边际从 12.7pt 缩到 7.8pt，光看回执正文看不出来。
+       * ⚠ 只加可见性：阻断集合、阈值、gate-drafts 判定与 `--dry` 行为**一字不动**。 */
+      if (!isRef && (/^G4\[/.test(nm) || /^G5\[/.test(nm) || /^G5带档\[/.test(nm))) {
+        /* 键必须带**门名**：`G4[包/long]`、`G5[包/long]`、`G5带档[包/long]` 三格的括号里是同一个
+         * `包/long`，只取括号会把它们叠成一格、最后写的盖掉前面的（60 局冒烟实测：只剩带档 4 条）。
+         * 参照行另判一次：`isRef` 的正则 `^G[3-6]\[` 匹配不到 `G5带档[` ⇒ 线上包的带档行会漏进来，
+         * 这里不改 `isRef`（它同时管着"判到 N 行"的计数口径），只在本行自己的采集里用更宽的形状。 */
+        const tag = (/^(G[3-6][^\[]*)\[/.exec(nm) || [, 'G?'])[1];
+        const inner = (/\[([^\]]*)\]/.exec(nm) || [, nm.slice(0, 24)])[1];
+        if (/^\[?(线上包|元测试)/.test(inner)) { /* 参照行不收 */ }
+        else {
+          const cellKey = tag + '[' + inner + ']';
+          const g4v = /最克「([^」]*)」\s*([0-9.]+)%/.exec(nm);
+          const g5v = /实测防席夺冠\s*([0-9.]+)%/.exec(nm);
+          const thr = /^G4\[/.test(nm) ? 60 : (/^G5带档\[/.test(nm) ? 40 : 25);
+          if (g4v) gateDrafts.margins[cellKey] = { verdict: m[1], val: Number(g4v[2]), thr, what: '最克「' + g4v[1] + '」', disp: tag.split('(')[0] + '[' + inner.split('/').slice(-2).join('/') + ']' };
+          else if (g5v) gateDrafts.margins[cellKey] = { verdict: m[1], val: Number(g5v[1]), thr, what: '防席夺冠', disp: tag.split('(')[0] + '[' + inner.split('/').slice(-2).join('/') + ']' };
+        }
       }
       if (m[1] === 'FAIL' && !isRef && (/^G4\[/.test(nm) || /^G5\[/.test(nm))) {
         /* v1.5.283（DS · Qoder §F-1 点名交给我）：**同一格会被印两遍** ⇒ 旧代码把阻断**数两遍**，
@@ -589,6 +612,21 @@ if (!process.argv.includes('--skip-gate-drafts')) {
           : '⛔ **候选一行都没判到**（gate-drafts exit=' + gateDrafts.exit + '）⇒ 这是**没跑成**，不是全过')));
     console.log('   G5 带上线档（= **玩家实际遇到的形状**，阈值 ≤40；上面那条阻断判的是关掉上线档的 ≤25 ‖ **这一行只记录、不阻断**）：' +
       (gateDrafts.band.length ? gateDrafts.band.join('；') : '（没解析到带档行 ⇒ 这一格**读不出**，不许当"带档没问题"）'));
+    /* 逐格数字（PASS 也印）：上线判据比的是**边际**，见上面 margins 采集处的动因。阈值沿用各自常量，不新判一条。 */
+    {
+      const mk = Object.keys((gateDrafts && gateDrafts.margins) || {});
+      if (mk.length) {
+        console.log('   G4/G5 逐格数字（**PASS 也印，只为比较"离悬崖多远"** ⇒ 判定与阻断集合一字不动）：' +
+          mk.map((k) => {
+            const c = gateDrafts.margins[k];
+            const tag = c.disp || k.split('/').slice(-2).join('/');
+            const room = (c.val <= c.thr ? '余 ' + (c.thr - c.val).toFixed(1) + 'pt' : '超 ' + (c.val - c.thr).toFixed(1) + 'pt');
+            return tag + ' ' + c.what + ' ' + c.val + '%/' + c.thr + '%（' + room + '）';
+          }).join(' ‖ '));
+      } else if (gateDrafts.candRows) {
+        console.log('   （逐格数字没解析出来：gate-drafts 的措辞改了 ⇒ 这一行**只是看不见数字**，判定仍按上面那条走）');
+      }
+    }
     const refFails = gateDrafts.recorded.filter(function (x) { return x.indexOf('参照(不阻断) FAIL') === 0; });
     if (refFails.length) {
       console.log('   ⚠ 参照行（**不阻断**）：' + refFails.length + ' 条 —— **在位包自己没过** ⇒ 这是"该换包"的信号，\n      ' +
