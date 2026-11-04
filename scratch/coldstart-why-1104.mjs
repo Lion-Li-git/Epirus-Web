@@ -280,6 +280,21 @@ L.push('M1 出生点（随机粒直接量，没训练）：种数 ' + f2(mean('k
 L.push('M1b 同一批粒走**本尺自己的贪心 chooser**（`KEYBIAS` 只接在这里，M1 那列吃不到它）：' +
   '种数 ' + f2(mean('hKinds')) + '（sd ' + f2(sd('hKinds')) + '） ‖ 防御族% ' + f2(mean('hDef')) + '（sd ' + f2(sd('hDef')) + '）' +
   ' ‖ 进攻族% ' + f2(mean('hAtk')) + '（sd ' + f2(sd('hAtk')) + '） ‖ 出手/局 ' + f2(mean('hActs')) + ' ‖ 夺1% ' + f2(mean('hWin')) + '（sd ' + f2(sd('hWin')) + '）');
+/* ★ 光有方差还不够：**GA 要的是"行为差异 ↔ 成绩差异"真的相关**。
+ *   若 scale 抬上去之后防御族在动而夺1 完全不动（ρ≈0），那选择依旧只能挑噪声 ⇒ 处方作废。
+ *   ⚠ 6 局/粒的胜率本身带 ~15pt 抽样噪声 ⇒ 这里只看 ρ 的**方向与量级**，不拿它当显著性检验。 */
+function pear(a, b) {
+  const v = []; for (let i = 0; i < rows.length; i++) if (isFinite(a[i]) && isFinite(b[i])) v.push([a[i], b[i]]);
+  if (v.length < 4) return null;
+  const mx = v.reduce((x, y) => x + y[0], 0) / v.length, my = v.reduce((x, y) => x + y[1], 0) / v.length;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (const [x, y] of v) { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; syy += (y - my) ** 2; }
+  return (sxx && syy) ? sxy / Math.sqrt(sxx * syy) : null;
+}
+L.push('耦合（没有它，方差再大也选不动）：ρ(防御族, 夺1) = ' + f2(pear(rows.map(function (r) { return r.hDef; }), rows.map(function (r) { return r.hWin; }))) +
+  ' ‖ ρ(种数, 夺1) = ' + f2(pear(rows.map(function (r) { return r.hKinds; }), rows.map(function (r) { return r.hWin; }))) +
+  ' ‖ 聚合防御族跨度 = ' + f2(Math.max.apply(null, rows.map(function (r) { return r.hDef; }))) + ' − ' +
+  f2(Math.min.apply(null, rows.map(function (r) { return r.hDef; }))) + 'pt');
 L.push('M2 一步变异（**同一状态**上问父/子，贪心 argmax ‖ placebo 自证：同权重翻转率均值 ' + f2(mean('placeboFlip')) +
   ' %，必须恰好 0 ‖ placebo 对比决策数 ' + Math.round((mean('placeboDecs') || 0)) +
   ' ‖ argmax 并列率（父代自身）' + f2(mean('tie')) + '%）');
