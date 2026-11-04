@@ -97,7 +97,7 @@ const POP = Number(process.argv[5] || 12);
  * 改法：启动时把 env 里出现的 `EPIRUS_*` 与本工具闭集比对，命中**暗键** ⇒ 打印名单 + `exit 6`
  *   （与 D119/D120 的"要了开关不许静默"同一条规矩）。有意为之的情形用 `EPIRUS_ALLOW_DARK=1` 放行。 */
 const SELF_ENV_KEYS = [
-  'EPIRUS_ANCHOR', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
+  'EPIRUS_ANCHOR', 'EPIRUS_ANCHOR_TO', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
   'EPIRUS_ARCH2', 'EPIRUS_MUT_MODE',   // §E821（10-28 傍晚 · 千问）：2.0 架构原型 + 段感知/扁平变异算子档（默认关 ⇒ 逐字回到 v7）
   'EPIRUS_SEL_EVAL_SEEDS',   // §E322（v1.6.7）：当选键重验用几粒 seedBase 取均值（默认 4；=1 逐字回到旧行为）
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
@@ -544,6 +544,25 @@ if (SEL_CLEAR > 4) {
 }
 
 const ANCHOR = Number(process.env.EPIRUS_ANCHOR || 0);   // v1.5.153：锚定正则 λ（0=关，逐字不变）
+/* ===== 11-04（千问 · 用户命题"好方法 + 冷启动 + 长代能不能出一个有用的包"）：**锚点选谁** =====
+ *   `seed`（缺省 ⇒ 与历史臂逐字同）‖ `widest`（**覆盖锚 / 棘轮**）。
+ * 为什么不是锚在种子：在册三次的"时长-宽度交换"（§二十六 D1200/L5-1200 ‖ §四十八 CB3L ‖ 千问 §十一）说明
+ *   收缩的方向是**离开本臂已经到过的那一版宽度**，不是离开起点 ⇒ 缰绳（锚在种子）只能"少动"，棘轮能"只进不退"：
+ *   允许往更强走，但不许丢掉已达到的宽。附带效果：**冷启动臂（没有种子）第一次有可用的锚**。
+ * 代价：不新增测量 —— 复用 `GA_GATE` 那份 top-3 镜局读（ ⇒ 要求同开，否则宽度没得比）。 */
+const ANCHOR_TO_RAW = String(process.env.EPIRUS_ANCHOR_TO || 'seed').trim();
+if (ANCHOR_TO_RAW !== 'seed' && ANCHOR_TO_RAW !== 'widest') {
+  console.error('[anchor] ⛔ `EPIRUS_ANCHOR_TO` 只认 seed / widest，收到 ' + JSON.stringify(process.env.EPIRUS_ANCHOR_TO)
+    + ' ⇒ 拒绝把它当默认关（锚点选错等于换了目标函数，不许静默回落）');
+  process.exit(2);
+}
+const ANCHOR_TO = ANCHOR_TO_RAW;
+if (ANCHOR > 0 && ANCHOR_TO === 'widest' && GA_GATE <= 0) {
+  console.error('[anchor] ⛔ `EPIRUS_ANCHOR_TO=widest` 要复用 `GA_GATE` 的宽度读 ⇒ 必须与 `EPIRUS_GA_GATE` 同开（单开没有"最宽"可比）');
+  process.exit(2);
+}
+let anchorRef = null;          /* {params, wid, gen, wideScore, g} —— widest 模式下逐代只进不退 */
+let anchorRefMoves = 0;
 const XN2G = Number(process.env.EPIRUS_XN2G || Math.max(4, (GAMES / 2) | 0));
 
 const sb = {
@@ -2113,7 +2132,7 @@ if (!process.env.EPIRUS_T3P_OUT && process.env.EPIRUS_T3P_BASELINE !== '1' && pr
 console.log('[train-3p] 人数=' + N + ' 代=' + GENS + ' 种群=' + POP + ' 每代局数=' + GAMES +
   ' 参数=' + P.paramCount() + (XN2W > 0 ? (' · XN混适应度 W=' + XN2W + ' 2P局=' + XN2G + '/个体 · 2P对手=' +
     XN2_OPPS.map(function (o) { return o.name; }).join('+')) : '') +
-  (ANCHOR > 0 ? (' · **锚定正则 λ=' + ANCHOR + '**（治遗忘：把个体拉回热启动种子）') : ''));
+  (ANCHOR > 0 ? (' · **锚定正则 λ=' + ANCHOR + ' ‖ 锚点=' + (ANCHOR_TO === 'widest' ? '本臂迄今最宽的一粒（棘轮，随代推进）' : '热启动种子（缰绳，固定）') + '**）') : ''));
 
 /* v1.5.189：逐代**归因**的上一格快照 ⇒ 打印"这一代里受评席自己打了 vs 教师替它打了"。
  * 为什么值得单独一条尺：`IMIT_OVERRIDE` 的注入在事件流里与原生出手不可区分（今天才发现，见门 D136），
@@ -2210,10 +2229,12 @@ for (let gen = 0; gen < GENS; gen++) {
      * 机制可选的最小实现：向量化进化没有梯度 ⇒ "冻结"用**适应度锚定**表达：
      *   fit' = fit − λ · mean((θ−θ_seed)²)
      * 即"离种子越远，需要越高的原始分才配赢" ⇒ 直接压制漂移。λ=0（默认）⇒ 一条行为都不变。
-     * 锚点 = 热启动种子（`EPIRUS_SEEDPACK`）；没热启动就没有锚点（本项自然失效）。 */
-    if (ANCHOR > 0 && seedParams && params.length === seedParams.length) {
+     * 锚点 = `EPIRUS_ANCHOR_TO` 选的那一份：`seed` ⇒ 热启动种子（没热启动就自然失效，= 历史行为）；
+     *   `widest` ⇒ **本臂迄今最宽的一粒**（棘轮，见上面 :546 那块；冷启动没有种子也能用）。 */
+    const aRef = ANCHOR_TO === 'widest' ? (anchorRef ? anchorRef.params : null) : seedParams;
+    if (ANCHOR > 0 && aRef && params.length === aRef.length) {
       let s = 0;
-      for (let ai = 0; ai < params.length; ai++) { const d = params[ai] - seedParams[ai]; s += d * d; }
+      for (let ai = 0; ai < params.length; ai++) { const d = params[ai] - aRef[ai]; s += d * d; }
       const ms = s / params.length;
       r = Object.assign({}, r, { anchorDist: Math.sqrt(ms), fit: r.fit - ANCHOR * ms });
     }
@@ -2279,6 +2300,21 @@ for (let gen = 0; gen < GENS; gen++) {
     GA_STAT.lastEff1 = reads.map((r) => r.m.gMulti.toFixed(1) + '/' + r.m.gLong.toFixed(1) +
       'G ‖ ' + r.m.landMulti.toFixed(2) + '/' + r.m.landLong.toFixed(2) + '兑').join('  ');
     gateReads = reads;
+    /* 覆盖锚推进（11-04）：只吃这份镜局读，**一测量都不加**；宽=兑现加权的那种宽（`wideScore`，
+     *   与 `GA_BAND` 带内取的东西同一把尺 ⇒ 不去奖励"只为刷种类数"的假宽，那是 v1.5.167 点名的病）。 */
+    if (ANCHOR > 0 && ANCHOR_TO === 'widest') {
+      let cand = null;
+      for (const r of reads) if (!cand || r.wideScore > cand.wideScore) cand = r;
+      if (cand && (!anchorRef || cand.wideScore > anchorRef.wideScore)) {
+        anchorRef = { params: Float64Array.from(scored[cand.gi].params), wid: widOfArr(scored[cand.gi].params),
+          gen: gen + 1, wideScore: cand.wideScore, g: cand.m.gMulti + '/' + cand.m.gLong };
+        anchorRefMoves++;
+        if (gen === 0 || (gen + 1) % 25 === 0) {
+          console.log('[锚·最宽] gen ' + (gen + 1) + ' 推进锚 → ' + anchorRef.wid.slice(0, 8)
+            + '（G ' + anchorRef.g + ' ‖ 兑现宽 ' + anchorRef.wideScore.toFixed(2) + ' ‖ 累计移动 ' + anchorRefMoves + ' 次）');
+        }
+      }
+    }
     if (WIDE_FINAL) {
       for (const r of reads) {
         if (!r.m.wide) continue;
@@ -3426,6 +3462,14 @@ const meta = {
      *   病：`EFFECTIVE_ENV` 只记"环境里设了的键" ⇒ "没开"与"没登记"同形（HPG-s7 的 recipe 有 EFFSKILL_MIN 却没有 FATAL，只能靠日志尾行判）。 */
     gateState: { effSkillMin: EFFSKILL_MIN, effSkillShare: EFFSKILL_SHARE, breadthFatal: BREADTH_FATAL ? 1 : 0,
       breadthFloor: BREADTH_FLOOR, gaGate: GA_GATE, gaGateGames: GA_GATE_GAMES },
+    /* 11-04（千问）：锚定的**目标与棘轮状态**同样无条件落盘（关档也记 `{lambda:0,to:'seed'}`）
+     *   —— 否则"锚没生效 / λ 太小空转 / 压根没下达"三种情况在账上又是同形（DS 给 gateState 补的就是这族病，
+     *   而他 ANCHOR 那批的 meta 里连 `anchor` 都没有，只有日志能判）。 */
+    anchor: { lambda: ANCHOR, to: ANCHOR_TO,
+      refWid: anchorRef ? anchorRef.wid : null, refGen: anchorRef ? anchorRef.gen : null,
+      refG: anchorRef ? anchorRef.g : null, refWideScore: anchorRef ? Number(anchorRef.wideScore.toFixed(2)) : null,
+      moves: anchorRefMoves,
+      live: ANCHOR > 0 ? ((ANCHOR_TO === 'widest' ? !!anchorRef : !!seedParams) ? 1 : 0) : 0 },
     /* §A（11-02）：当选面防御下限键的开没开、带内有几粒、防御梯、有没有换人、全不达标旗标。关档时整条 null。 */
     selDef: SEL_DEF_LOG,
     /* T1（11-03）：当选面**族别签名分格**（D=防御族份额档 × K=种数档）——带内几格、每格几粒、取的是哪格、有没有换人。关档时整条 null。 */
