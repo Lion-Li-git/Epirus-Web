@@ -1,0 +1,227 @@
+对局记录（gen-3 逐回合）· 受试 = scratch/night6/CB3-s13.js ‖ 场 = 4 × v7 线上包 ‖ 2 局 · 5P multi · 温度 0.15（困难档）· seed 基 77000
+
+=== 第 1 局（受试坐 0 号位，multi）===
+  R 0 席0★ ジ(ji)         费0  ok
+  R 0 席1  ジ(ji)         费0  ok
+  R 0 席2  ジ(ji)         费0  ok
+  R 0 席3  ジ(ji)         费0  ok
+  R 0 席4  ジ(ji)         费0  ok
+  R 1 席0★ 枪(gun)         费1  ok
+  R 1 席1  枪(gun)         费1  ok
+  R 1 席2  枪(gun)         费1  ok
+  R 1 席3  枪(gun)         费1  ok
+  R 1 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 4/0（R2）
+  R 2 席0★ ジ(ji)         费0  ok
+  R 2 席1  ジ(ji)         费0  ok
+  R 2 席2  ジ(ji)         费0  ok
+  R 2 席3  防御(guard)         费0  ok
+  R 2 席4  ジ(ji)         费0  ok
+  R 3 席0★ ジ(ji)         费0  ok
+  R 3 席1  ジ(ji)         费0  ok
+  R 3 席2  ジ(ji)         费0  ok
+  R 3 席3  ジ(ji)         费0  ok
+  R 3 席4  ジ(ji)         费0  ok
+  R 4 席0★ ジ(ji)         费0  ok
+  R 4 席1  激光剑(sword)         费2  ok
+  R 4 席2  激光剑(sword)         费2  ok
+  R 4 席3  ジ(ji)         费0  ok
+  R 4 席4  激光剑(sword)         费2  ok
+        ⚑ 席3 出局：HP 归零（R26）
+  R 5 席0★ ジ(ji)         费0  ok
+  R 5 席1  八卦阵(bagua)         费0  ok
+  R 5 席2  八卦阵(bagua)         费0  ok
+  R 5 席4  防御(guard)         费0  ok
+  R 6 席0★ ジ(ji)         费0  ok
+  R 6 席1  八卦阵(bagua)         费0  ok
+  R 6 席2  防御(guard)         费0  ok
+  R 6 席4  防御(guard)         费0  ok
+  R 7 席0★ 真正的落雷(bigT)         费5  ok
+  R 7 席1  ジ(ji)         费0  ok
+  R 7 席2  ジ(ji)         费0  ok
+  R 7 席4  ジ(ji)         费0  ok
+  R 8 席0★ ジ(ji)         费0  ok
+  R 8 席1  全息屏障(holo)         费1  ok
+  R 8 席2  全息屏障(holo)         费1  ok
+  R 8 席4  ジ(ji)         费0  ok
+  R 9 席0★ ジ(ji)         费0  ok
+  R 9 席1  ジ(ji)         费0  ok
+  R 9 席2  ジ(ji)         费0  ok
+  R 9 席4  ジ(ji)         费0  ok
+  R10 席0★ ジ(ji)         费0  ok
+  R10 席1  ジ(ji)         费0  ok
+  R10 席2  ジ(ji)         费0  ok
+  R10 席4  ジ(ji)         费0  ok
+  R11 席0★ ジ(ji)         费0  ok
+  R11 席1  ジ(ji)         费0  ok
+  R11 席2  ジ(ji)         费0  ok
+  R11 席4  ジ(ji)         费0  ok
+  R12 席0★ ジ(ji)         费0  ok
+  R12 席1  蓄能(charge)         费1  ok
+  R12 席2  蓄能(charge)         费1  ok
+  R12 席4  ジ(ji)         费0  ok
+  R13 席0★ 真正的落雷(bigT)         费5  ok
+  R13 席1  电磁炮(railgun)         费2  ok
+  R13 席2  电磁炮(railgun)         费2  ok
+  R13 席4  ジ(ji)         费0  ok
+  R14 席0★ ジ(ji)         费0  ok
+  R14 席1  ジ(ji)         费0  ok
+  R14 席2  ジ(ji)         费0  ok
+  R14 席4  ジ(ji)         费0  ok
+  R15 席0★ 全息屏障(holo)         费1  ok
+  R15 席1  ジ(ji)         费0  ok
+  R15 席2  ジ(ji)         费0  ok
+  R15 席4  ジ(ji)         费0  ok
+  R16 席0★ ジ(ji)         费0  ok
+  R16 席1  ジ(ji)         费0  ok
+  R16 席2  八卦阵(bagua)         费0  ok
+  R16 席4  ジ(ji)         费0  ok
+  R17 席0★ ジ(ji)         费0  ok
+  R17 席1  ジ(ji)         费0  ok
+  R17 席2  八卦阵(bagua)         费0  ok
+  R17 席4  ジ(ji)         费0  ok
+  R18 席0★ 坦克(tank)         费2  ok
+  R18 席1  ジ(ji)         费0  ok
+  R18 席2  ジ(ji)         费0  ok
+  R18 席4  蓄能(charge)         费1  ok
+        ⚑ 席4 出局：HP 归零（R26）
+  R19 席0★ ジ(ji)         费0  ok
+  R19 席1  激光剑(sword)         费2  ok
+  R19 席2  ジ(ji)         费0  ok
+        ⚑ 席0 出局：HP 归零（R26）
+  R20 席1  蓄能(charge)         费1  ok
+  R20 席2  蓄能(charge)         费1  ok
+  R21 席1  电磁炮(railgun)         费2  ok
+  R21 席2  电磁炮(railgun)         费2  ok
+        ⚑ 相抵：席 1/2（R22）
+  R22 席1  ジ(ji)         费0  ok
+  R22 席2  ジ(ji)         费0  ok
+  R23 席1  ジ(ji)         费0  ok
+  R23 席2  ジ(ji)         费0  ok
+  R24 席1  ジ(ji)         费0  ok
+  R24 席2  蓄能(charge)         费1  ok
+  R25 席1  ジ(ji)         费0  ok
+  R25 席2  电磁炮(railgun)         费2  ok
+        ⚑ 席1 出局：HP 归零（R26）
+  终局：胜者 = 席2 ‖ 回合 = 26 ‖ 血量 0† 1† 2:1 3† 4† ‖ 受试造伤 7
+
+=== 第 2 局（受试坐 1 号位，multi）===
+  R 0 席0  ジ(ji)         费0  ok
+  R 0 席1★ ジ(ji)         费0  ok
+  R 0 席2  ジ(ji)         费0  ok
+  R 0 席3  ジ(ji)         费0  ok
+  R 0 席4  ジ(ji)         费0  ok
+  R 1 席0  枪(gun)         费1  ok
+  R 1 席1★ 枪(gun)         费1  ok
+  R 1 席2  枪(gun)         费1  ok
+  R 1 席3  枪(gun)         费1  ok
+  R 1 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 1/2（R2）
+  R 2 席0  ジ(ji)         费0  ok
+  R 2 席1★ ジ(ji)         费0  ok
+  R 2 席2  ジ(ji)         费0  ok
+  R 2 席3  ジ(ji)         费0  ok
+  R 2 席4  ジ(ji)         费0  ok
+  R 3 席0  ジ(ji)         费0  ok
+  R 3 席1★ ジ(ji)         费0  ok
+  R 3 席2  枪(gun)         费1  ok
+  R 3 席3  ジ(ji)         费0  ok
+  R 3 席4  ジ(ji)         费0  ok
+  R 4 席0  激光剑(sword)         费2  ok
+  R 4 席1★ ジ(ji)         费0  ok
+  R 4 席2  ジ(ji)         费0  ok
+  R 4 席3  激光剑(sword)         费2  ok
+  R 4 席4  激光剑(sword)         费2  ok
+        ⚑ 相抵：席 4/3（R5）
+  R 5 席0  ジ(ji)         费0  ok
+  R 5 席1★ 全息屏障(holo)         费1  ok
+  R 5 席2  防御(guard)         费0  ok
+  R 5 席3  ジ(ji)         费0  ok
+  R 5 席4  ジ(ji)         费0  ok
+  R 6 席0  ジ(ji)         费0  ok
+  R 6 席1★ ジ(ji)         费0  ok
+  R 6 席2  ジ(ji)         费0  ok
+  R 6 席3  ジ(ji)         费0  ok
+  R 6 席4  ジ(ji)         费0  ok
+  R 7 席0  激光剑(sword)         费2  ok
+  R 7 席1★ ジ(ji)         费0  ok
+  R 7 席2  ジ(ji)         费0  ok
+  R 7 席3  激光剑(sword)         费2  ok
+  R 7 席4  激光剑(sword)         费2  ok
+        ⚑ 相抵：席 3/0（R8）
+  R 8 席0  ジ(ji)         费0  ok
+  R 8 席1★ ジ(ji)         费0  ok
+  R 8 席2  ジ(ji)         费0  ok
+  R 8 席3  ジ(ji)         费0  ok
+  R 8 席4  ジ(ji)         费0  ok
+  R 9 席0  ジ(ji)         费0  ok
+  R 9 席1★ 真正的落雷(bigT)         费5  ok
+  R 9 席2  ジ(ji)         费0  ok
+  R 9 席3  ジ(ji)         费0  ok
+  R 9 席4  ジ(ji)         费0  ok
+  R10 席0  ジ(ji)         费0  ok
+  R10 席1★ ジ(ji)         费0  ok
+  R10 席2  激光剑(sword)         费2  ok
+  R10 席3  激光剑(sword)         费2  ok
+  R10 席4  ジ(ji)         费0  ok
+  R11 席0  蓄能(charge)         费1  ok
+  R11 席1★ 全息屏障(holo)         费1  ok
+  R11 席2  蓄能(charge)         费1  ok
+  R11 席3  反弹(reflect)         费0  ok
+  R11 席4  ジ(ji)         费0  ok
+  R12 席0  电磁炮(railgun)         费2  ok
+  R12 席1★ ジ(ji)         费0  ok
+  R12 席2  电磁炮(railgun)         费2  ok
+  R12 席3  ジ(ji)         费0  ok
+  R12 席4  ジ(ji)         费0  ok
+        ⚑ 席4 出局：HP 归零（R26）
+  R13 席0  ジ(ji)         费0  ok
+  R13 席1★ ジ(ji)         费0  ok
+  R13 席2  ジ(ji)         费0  ok
+  R13 席3  ジ(ji)         费0  ok
+  R14 席0  ジ(ji)         费0  ok
+  R14 席1★ ジ(ji)         费0  ok
+  R14 席2  ジ(ji)         费0  ok
+  R14 席3  ジ(ji)         费0  ok
+  R15 席0  ジ(ji)         费0  ok
+  R15 席1★ ジ(ji)         费0  ok
+  R15 席2  ジ(ji)         费0  ok
+  R15 席3  ジ(ji)         费0  ok
+  R16 席0  ジ(ji)         费0  ok
+  R16 席1★ ジ(ji)         费0  ok
+  R16 席2  ジ(ji)         费0  ok
+  R16 席3  ジ(ji)         费0  ok
+  R17 席0  ジ(ji)         费0  ok
+  R17 席1★ 真正的落雷(bigT)         费5  ok
+  R17 席2  ジ(ji)         费0  ok
+  R17 席3  ジ(ji)         费0  ok
+        ⚑ 席3 出局：HP 归零（R26）
+  R18 席0  蓄能(charge)         费1  ok
+  R18 席1★ ジ(ji)         费0  ok
+  R18 席2  蓄能(charge)         费1  ok
+  R19 席0  电磁炮(railgun)         费2  ok
+  R19 席1★ ジ(ji)         费0  ok
+  R19 席2  电磁炮(railgun)         费2  ok
+        ⚑ 相抵：席 0/2（R20）
+  R20 席0  ジ(ji)         费0  ok
+  R20 席1★ ジ(ji)         费0  ok
+  R20 席2  蓄能(charge)         费1  ok
+  R21 席0  ジ(ji)         费0  ok
+  R21 席1★ ジ(ji)         费0  ok
+  R21 席2  ジ(ji)         费0  ok
+  R22 席0  反弹(reflect)         费0  ok
+  R22 席1★ ジ(ji)         费0  ok
+  R22 席2  ジ(ji)         费0  ok
+  R23 席0  ジ(ji)         费0  ok
+  R23 席1★ 真正的落雷(bigT)         费5  ok
+  R23 席2  ジ(ji)         费0  ok
+        ⚑ 席2 出局：HP 归零（R26）
+  R24 席0  蓄能(charge)         费1  ok
+  R24 席1★ ジ(ji)         费0  ok
+  R25 席0  电磁炮(railgun)         费2  ok
+  R25 席1★ ジ(ji)         费0  ok
+        ⚑ 席1 出局：HP 归零（R26）
+  终局：胜者 = 席0 ‖ 回合 = 26 ‖ 血量 0:1 1† 2† 3† 4† ‖ 受试造伤 6
+
+=== 出招构成（2 局合计，受试席）===
+    ジ(ji)×35  真正的落雷(bigT)×5  全息屏障(holo)×3  枪(gun)×2  坦克(tank)×1

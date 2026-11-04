@@ -1,0 +1,237 @@
+对局记录（gen-3 逐回合）· 受试 = js/bundled-champion-3p.js ‖ 场 = 4 × v7 线上包 ‖ 2 局 · 5P multi · 温度 0.15（困难档）· seed 基 77000
+
+=== 第 1 局（受试坐 0 号位，multi）===
+  R 0 席0★ ジ(ji)         费0  ok
+  R 0 席1  ジ(ji)         费0  ok
+  R 0 席2  ジ(ji)         费0  ok
+  R 0 席3  ジ(ji)         费0  ok
+  R 0 席4  ジ(ji)         费0  ok
+  R 1 席0★ 枪(gun)         费1  ok
+  R 1 席1  枪(gun)         费1  ok
+  R 1 席2  枪(gun)         费1  ok
+  R 1 席3  枪(gun)         费1  ok
+  R 1 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 4/0（R2）
+  R 2 席0★ ジ(ji)         费0  ok
+  R 2 席1  ジ(ji)         费0  ok
+  R 2 席2  ジ(ji)         费0  ok
+  R 2 席3  防御(guard)         费0  ok
+  R 2 席4  ジ(ji)         费0  ok
+  R 3 席0★ ジ(ji)         费0  ok
+  R 3 席1  ジ(ji)         费0  ok
+  R 3 席2  ジ(ji)         费0  ok
+  R 3 席3  ジ(ji)         费0  ok
+  R 3 席4  ジ(ji)         费0  ok
+  R 4 席0★ 激光剑(sword)         费2  ok
+  R 4 席1  激光剑(sword)         费2  ok
+  R 4 席2  激光剑(sword)         费2  ok
+  R 4 席3  ジ(ji)         费0  ok
+  R 4 席4  激光剑(sword)         费2  ok
+        ⚑ 席3 出局：HP 归零（R23）
+  R 5 席0★ ジ(ji)         费0  ok
+  R 5 席1  ジ(ji)         费0  ok
+  R 5 席2  ジ(ji)         费0  ok
+  R 5 席4  ジ(ji)         费0  ok
+  R 6 席0★ ジ(ji)         费0  ok
+  R 6 席1  ジ(ji)         费0  ok
+  R 6 席2  ジ(ji)         费0  ok
+  R 6 席4  ジ(ji)         费0  ok
+  R 7 席0★ 激光剑(sword)         费2  ok
+  R 7 席1  ジ(ji)         费0  ok
+  R 7 席2  ジ(ji)         费0  ok
+  R 7 席4  ジ(ji)         费0  ok
+  R 8 席0★ ジ(ji)         费0  ok
+  R 8 席1  ジ(ji)         费0  ok
+  R 8 席2  ジ(ji)         费0  ok
+  R 8 席4  ジ(ji)         费0  ok
+  R 9 席0★ ジ(ji)         费0  ok
+  R 9 席1  ジ(ji)         费0  ok
+  R 9 席2  ジ(ji)         费0  ok
+  R 9 席4  ジ(ji)         费0  ok
+  R10 席0★ ジ(ji)         费0  ok
+  R10 席1  蓄能(charge)         费1  ok
+  R10 席2  防御(guard)         费0  ok
+  R10 席4  防御(guard)         费0  ok
+  R11 席0★ 激光剑(sword)         费2  ok
+  R11 席1  电磁炮(railgun)         费2  ok
+  R11 席2  激光剑(sword)         费2  ok
+  R11 席4  激光剑(sword)         费2  ok
+        ⚑ 相抵：席 1/4（R12）
+        ⚑ 席1 出局：HP 归零（R23）
+  R12 席0★ 枪(gun)         费1  ok
+  R12 席2  激光剑(sword)         费2  ok
+  R12 席4  蓄能(charge)         费1  ok
+  R13 席0★ ジ(ji)         费0  ok
+  R13 席2  ジ(ji)         费0  ok
+  R13 席4  电磁炮(railgun)         费2  ok
+  R14 席0★ ジ(ji)         费0  ok
+  R14 席2  ジ(ji)         费0  ok
+  R14 席4  ジ(ji)         费0  ok
+  R15 席0★ ジ(ji)         费0  ok
+  R15 席2  ジ(ji)         费0  ok
+  R15 席4  ジ(ji)         费0  ok
+  R16 席0★ ジ(ji)         费0  ok
+  R16 席2  ジ(ji)         费0  ok
+  R16 席4  ジ(ji)         费0  ok
+  R17 席0★ 蓄能(charge)         费1  ok
+  R17 席2  ジ(ji)         费0  ok
+  R17 席4  蓄能(charge)         费1  ok
+  R18 席0★ 电磁炮(railgun)         费2  ok
+  R18 席2  聚能环(ring)         费珠  ok
+  R18 席4  电磁炮(railgun)         费2  ok
+        ⚑ 席2 出局：HP 归零（R23）
+  R19 席0★ ジ(ji)         费0  ok
+  R19 席4  ジ(ji)         费0  ok
+  R20 席0★ ジ(ji)         费0  ok
+  R20 席4  ジ(ji)         费0  ok
+  R21 席0★ 蓄能(charge)         费1  ok
+  R21 席4  ジ(ji)         费0  ok
+  R22 席0★ 电磁炮(railgun)         费2  ok
+  R22 席4  ジ(ji)         费0  ok
+        ⚑ 席4 出局：HP 归零（R23）
+  终局：胜者 = ★受试 ‖ 回合 = 23 ‖ 血量 0:1 1† 2† 3† 4† ‖ 受试造伤 6
+
+=== 第 2 局（受试坐 1 号位，multi）===
+  R 0 席0  ジ(ji)         费0  ok
+  R 0 席1★ ジ(ji)         费0  ok
+  R 0 席2  ジ(ji)         费0  ok
+  R 0 席3  ジ(ji)         费0  ok
+  R 0 席4  ジ(ji)         费0  ok
+  R 1 席0  枪(gun)         费1  ok
+  R 1 席1★ 枪(gun)         费1  ok
+  R 1 席2  枪(gun)         费1  ok
+  R 1 席3  枪(gun)         费1  ok
+  R 1 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 1/2（R2）
+  R 2 席0  ジ(ji)         费0  ok
+  R 2 席1★ ジ(ji)         费0  ok
+  R 2 席2  ジ(ji)         费0  ok
+  R 2 席3  ジ(ji)         费0  ok
+  R 2 席4  ジ(ji)         费0  ok
+  R 3 席0  ジ(ji)         费0  ok
+  R 3 席1★ ジ(ji)         费0  ok
+  R 3 席2  枪(gun)         费1  ok
+  R 3 席3  ジ(ji)         费0  ok
+  R 3 席4  ジ(ji)         费0  ok
+  R 4 席0  激光剑(sword)         费2  ok
+  R 4 席1★ ジ(ji)         费0  ok
+  R 4 席2  ジ(ji)         费0  ok
+  R 4 席3  激光剑(sword)         费2  ok
+  R 4 席4  激光剑(sword)         费2  ok
+        ⚑ 相抵：席 4/3（R5）
+  R 5 席0  ジ(ji)         费0  ok
+  R 5 席1★ 防御(guard)         费0  ok
+  R 5 席2  防御(guard)         费0  ok
+  R 5 席3  ジ(ji)         费0  ok
+  R 5 席4  ジ(ji)         费0  ok
+  R 6 席0  ジ(ji)         费0  ok
+  R 6 席1★ 激光剑(sword)         费2  ok
+  R 6 席2  ジ(ji)         费0  ok
+  R 6 席3  ジ(ji)         费0  ok
+  R 6 席4  ジ(ji)         费0  ok
+  R 7 席0  ジ(ji)         费0  ok
+  R 7 席1★ ジ(ji)         费0  ok
+  R 7 席2  激光剑(sword)         费2  ok
+  R 7 席3  激光剑(sword)         费2  ok
+  R 7 席4  ジ(ji)         费0  ok
+  R 8 席0  激光剑(sword)         费2  ok
+  R 8 席1★ 激光剑(sword)         费2  ok
+  R 8 席2  ジ(ji)         费0  ok
+  R 8 席3  反弹(reflect)         费0  ok
+  R 8 席4  激光剑(sword)         费2  ok
+        ⚑ 相抵：席 4/0（R9）
+  R 9 席0  ジ(ji)         费0  ok
+  R 9 席1★ ジ(ji)         费0  ok
+  R 9 席2  ジ(ji)         费0  ok
+  R 9 席3  ジ(ji)         费0  ok
+  R 9 席4  ジ(ji)         费0  ok
+  R10 席0  ジ(ji)         费0  ok
+  R10 席1★ ジ(ji)         费0  ok
+  R10 席2  ジ(ji)         费0  ok
+  R10 席3  ジ(ji)         费0  ok
+  R10 席4  ジ(ji)         费0  ok
+  R11 席0  反弹(reflect)         费0  ok
+  R11 席1★ ジ(ji)         费0  ok
+  R11 席2  激光剑(sword)         费2  ok
+  R11 席3  ジ(ji)         费0  ok
+  R11 席4  激光剑(sword)         费2  ok
+  R12 席1★ 反弹(reflect)         费0  ok
+  R12 席2  ジ(ji)         费0  ok
+  R12 席3  八卦阵(bagua)         费0  ok
+  R12 席4  ジ(ji)         费0  ok
+  R13 席1★ ジ(ji)         费0  ok
+  R13 席2  ジ(ji)         费0  ok
+  R13 席3  ジ(ji)         费0  ok
+  R13 席4  ジ(ji)         费0  ok
+  R14 席1★ ジ(ji)         费0  ok
+  R14 席2  ジ(ji)         费0  ok
+  R14 席3  ジ(ji)         费0  ok
+  R14 席4  ジ(ji)         费0  ok
+  R15 席1★ 防御(guard)         费0  ok
+  R15 席2  ジ(ji)         费0  ok
+  R15 席3  防御(guard)         费0  ok
+  R15 席4  ジ(ji)         费0  ok
+  R16 席1★ ジ(ji)         费0  ok
+  R16 席2  ジ(ji)         费0  ok
+  R16 席3  ジ(ji)         费0  ok
+  R16 席4  ジ(ji)         费0  ok
+  R17 席1★ ジ(ji)         费0  ok
+  R17 席2  ジ(ji)         费0  ok
+  R17 席3  ジ(ji)         费0  ok
+  R17 席4  ジ(ji)         费0  ok
+  R18 席1★ ジ(ji)         费0  ok
+  R18 席2  ジ(ji)         费0  ok
+  R18 席3  ジ(ji)         费0  ok
+  R18 席4  ジ(ji)         费0  ok
+  R19 席1★ ジ(ji)         费0  ok
+  R19 席2  ジ(ji)         费0  ok
+  R19 席3  ジ(ji)         费0  ok
+  R19 席4  ジ(ji)         费0  ok
+  R20 席1★ ジ(ji)         费0  ok
+  R20 席2  ジ(ji)         费0  ok
+  R20 席3  ジ(ji)         费0  ok
+  R20 席4  ジ(ji)         费0  ok
+  R21 席1★ ジ(ji)         费0  ok
+  R21 席2  ジ(ji)         费0  ok
+  R21 席3  ジ(ji)         费0  ok
+  R21 席4  ジ(ji)         费0  ok
+  R22 席1★ ジ(ji)         费0  ok
+  R22 席2  ジ(ji)         费0  ok
+  R22 席3  ジ(ji)         费0  ok
+  R22 席4  ジ(ji)         费0  ok
+  R23 席1★ ジ(ji)         费0  ok
+  R23 席2  ジ(ji)         费0  ok
+  R23 席3  ジ(ji)         费0  ok
+  R23 席4  ジ(ji)         费0  ok
+  R24 席1★ ジ(ji)         费0  ok
+  R24 席2  ジ(ji)         费0  ok
+  R24 席3  ジ(ji)         费0  ok
+  R24 席4  ジ(ji)         费0  ok
+  R25 席1★ ジ(ji)         费0  ok
+  R25 席2  ジ(ji)         费0  ok
+  R25 席3  ジ(ji)         费0  ok
+  R25 席4  ジ(ji)         费0  ok
+  R26 席1★ ジ(ji)         费0  ok
+  R26 席2  ジ(ji)         费0  ok
+  R26 席3  ジ(ji)         费0  ok
+  R26 席4  ジ(ji)         费0  ok
+  R27 席1★ ジ(ji)         费0  ok
+  R27 席2  ジ(ji)         费0  ok
+  R27 席3  ジ(ji)         费0  ok
+  R27 席4  ジ(ji)         费0  ok
+  R28 席1★ ジ(ji)         费0  ok
+  R28 席2  ジ(ji)         费0  ok
+  R28 席3  ジ(ji)         费0  ok
+  R28 席4  ジ(ji)         费0  ok
+  R29 席1★ ジ(ji)         费0  ok
+  R29 席2  ジ(ji)         费0  ok
+  R29 席3  ジ(ji)         费0  ok
+  R29 席4  ジ(ji)         费0  ok
+  R30 席1★ ジ(ji)         费0  ok
+  R30 席2  ジ(ji)         费0  ok
+  R30 席3  ジ(ji)         费0  ok
+  R30 席4  ジ(ji)         费0  ok
+  终局：胜者 = 席2 ‖ 回合 = 45 ‖ 血量 0† 1† 2† 3† 4† ‖ 受试造伤 2
+
+=== 出招构成（2 局合计，受试席）===
+    ジ(ji)×53  激光剑(sword)×5  枪(gun)×3  蓄能(charge)×2  电磁炮(railgun)×2  防御(guard)×2[防]  反弹(reflect)×1[防]
