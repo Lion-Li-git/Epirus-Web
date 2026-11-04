@@ -2393,7 +2393,7 @@ for (let gen = 0; gen < GENS; gen++) {
     console.log('gen ' + gen + ' bestFit=' + r.fit.toFixed(3) +
       ' 1st=' + (r.firstRate * 100).toFixed(0) + '% top2=' + (r.top2Rate * 100).toFixed(0) +
       '% avgDealt=' + r.avgDealt.toFixed(2) + ' sigma=' + sigma.toFixed(3) +
-      (r.anchorDist !== undefined ? ' 距种子=' + r.anchorDist.toFixed(4) : '') +
+      (r.anchorDist !== undefined ? ' ' + (ANCHOR_TO === 'widest' ? '距锚(最宽)=' : '距种子=') + r.anchorDist.toFixed(4) : '') +
       /* v1.5.187：把"这一代最优个体打出几条连带"直接印出来（DS 交接 §2b 的验收判据是 `连带 ≥ 0.2/局`）。
        * 为什么必须挂在臂上而不是事后量产物：我实测过四档越来越有利的造局（含"全场集火同一人 + 教师永远提议大雷"），
        * **产物级链数一直是 0** ⇒ 只有逐代的读数能区分"权重没生效"与"要付钱的行为在评分局里根本没出现"。 */

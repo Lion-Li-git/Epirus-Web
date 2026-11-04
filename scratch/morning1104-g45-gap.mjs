@@ -33,7 +33,7 @@ for (const mode of ['long', 'multi']) {
     }
   }
 }
-for (const [file, dose] of [['scratch/night6/generality-newprod-50g.txt', '50局'], ['scratch/night6/generality-cb3.txt', '12局'],
+for (const [file, dose] of [['scratch/generality-1104/matrix-50g.txt', '50局'], ['scratch/night6/generality-newprod-50g.txt', '50局'], ['scratch/night6/generality-cb3.txt', '12局'],
   ['scratch/night4/generality-matrix.txt', '8局'], ['scratch/night5/generality-matrix.txt', '8局']]) {
   if (!existsSync(file)) continue;
   for (const l of readFileSync(file, 'utf8').split(/\r?\n/)) {
