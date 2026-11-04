@@ -2630,7 +2630,7 @@ for (const h of hall) {
    * 而 §N25 已证明"广度当排序键"要么咬不动（带里只剩 1 粒）要么咬错（换上来的是过不了硬门槛的包）。 */
   if (EFFSKILL_MIN > 0 && sel.clean && sel.clean.length) {
     const okE = sel.clean.filter((e) => (e.effSkillCount || 0) >= EFFSKILL_MIN);
-    console.log('[有效技能线] 判据 = 非ジ成功出手里份额 ≥ ' + (100 * EFFSKILL_SHARE).toFixed(1) + '% 的键数 ≥ ' + EFFSKILL_MIN +
+    console.log('[有效技能线] 判据 = 非ジ成功出手里份额 ≥ ' + (100 * EFFSKILL_SHARE).toFixed(1) + '% 的键数 ≥ ' + EFFSKILL_MIN + '（fatal=' + (BREADTH_FATAL ? 1 : 0) + '）' +
       ' · n=' + sel.clean.length + ' · 各粒：' + sel.clean.map((e) => (e.effSkillCount || 0)).join(','));
     if (!okE.length) {
       console.error('⛔ [有效技能线] 名人堂**没有一粒达到 ' + EFFSKILL_MIN + ' 种有效技能** ⇒ ' +
@@ -3419,6 +3419,10 @@ const meta = {
       lastEff1: GA_STAT.lastEff1, gens: GENS } : null),
     /* 11-02（千问）：四把干预档的**生效值**无条件落盘（未下达也记引擎默认）⇒ 以后任何一臂都能直接读出"训练时带不带档"。 */
     deployKnobs: DEPLOY_REC,
+    /* 11-04（DS，千问清单第 5 条）：门闸的**生效值**无条件落盘（未下达也记 0）——
+     *   病：`EFFECTIVE_ENV` 只记"环境里设了的键" ⇒ "没开"与"没登记"同形（HPG-s7 的 recipe 有 EFFSKILL_MIN 却没有 FATAL，只能靠日志尾行判）。 */
+    gateState: { effSkillMin: EFFSKILL_MIN, effSkillShare: EFFSKILL_SHARE, breadthFatal: BREADTH_FATAL ? 1 : 0,
+      breadthFloor: BREADTH_FLOOR, gaGate: GA_GATE, gaGateGames: GA_GATE_GAMES },
     /* §A（11-02）：当选面防御下限键的开没开、带内有几粒、防御梯、有没有换人、全不达标旗标。关档时整条 null。 */
     selDef: SEL_DEF_LOG,
     /* T1（11-03）：当选面**族别签名分格**（D=防御族份额档 × K=种数档）——带内几格、每格几粒、取的是哪格、有没有换人。关档时整条 null。 */
