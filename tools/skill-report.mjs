@@ -25,6 +25,22 @@ for (const a of process.argv.slice(2)) {
 const N = parseInt(ARGV[0] || '3', 10);
 const GAMES = parseInt(ARGV[1] || '6', 10);
 const OUT = ARGV[2] || 'docs/skill-report.html';
+/* 自守（11-04 千问 · 在册 #66）：**位置参数被填错时不许静默回退到默认槽**。
+ * 实测病：把包路径当第一个位置参数传（正确写法是 `--champ=`）⇒ `parseInt('scratch/…')=NaN`
+ *   ⇒ 下面 `const file = CHAMP_FILE || (N > 2 ? 3P : 2P)` 里 `NaN > 2` 为 **false** ⇒ 整份报告
+ *   量的是**线上 2P 槽**，而退出码 0、文件 18667 字节、表全填——三次调用逐字节相同就是唯一的破绽。
+ * 报告头其实印了 `冠军=<file>`（所以"看不见主语"不是工具的错，是读表人的），但**能当场拒的不要指望人读表**。 */
+const looksLikePath = /\.[A-Za-z]{2,4}$|[\\/]/.test(String(ARGV[0] || ''));
+if (!Number.isFinite(N) || !Number.isInteger(N) || N < 2 || N > 12) {
+  console.error('⛔ 人数这一位收到的是 ' + JSON.stringify(ARGV[0]) + '（要 2~12 的整数）' +
+    (looksLikePath ? '\n   ⇒ 看着像**包路径**放错位置了：被测冠军请用 `--champ=<路径>`，人数仍是第一个位置参数\n      例：node tools/skill-report.mjs 5 6 out.html --champ=' + ARGV[0] : '') +
+    '\n   ⇒ 拒绝继续：继续会拿**默认槽**的成绩出一份完整的报告（旧行为，已判为假读数）');
+  process.exit(2);
+}
+if (!Number.isFinite(GAMES) || !Number.isInteger(GAMES) || GAMES < 1) {
+  console.error('⛔ 每条件局数这一位收到的是 ' + JSON.stringify(ARGV[1]) + '（要 ≥1 的整数）⇒ 拒绝继续');
+  process.exit(2);
+}
 /* v1.4.4：--champ=<文件> 指定被测冠军（原先写死线下路径 ⇒ 没法规格对比多个版本）；
  * --json=<文件> 导出逐技能结果，供 tools/skill-report-cmp.mjs 做多版本对比。
  * ⚠️ 训练实验进行中时 js/bundled-champion-3p.js 是**中途产物**，对比务必显式传 --champ。 */

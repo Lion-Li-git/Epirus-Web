@@ -1,0 +1,13 @@
+# 自动生成：从 scratch/gk-1104/*.log 抽出被引用的计数行（.log 在 .gitignore:2 不入库 ⇒ 引用的数必须有入库原件）
+== GK-s13.log (15:03)
+OPPS 从 9 个变 10 个
+判据原型已进训练桌：cnt:guardSpam 
+已写入 scratch/ga-arms/GK-s13.js  (coldStart=false, seed=13
+== GK-s41.log (15:04)
+OPPS 从 9 个变 10 个
+判据原型已进训练桌：cnt:guardSpam 
+已写入 scratch/ga-arms/GK-s41.js  (coldStart=false, seed=41
+== GK-s7.log (15:03)
+OPPS 从 9 个变 10 个
+判据原型已进训练桌：cnt:guardSpam 
+已写入 scratch/ga-arms/GK-s7.js  (coldStart=false, seed=7
