@@ -129,6 +129,12 @@ for (const r of coords) {
     const w = p ? hotstartWid(p) : '';
     if (w) { const hit = resolveWid(w); parent = hit || 'wid:' + w.slice(0, 12); }
   }
+  /* meta 回解这一路绕过了上面那行别名守卫 ⇒ 蒸馏根那枚（WIDEFIX-s7）的 `hotstartFrom` 指向**它自己的输出文件**
+   * （蒸馏跑把 seedpack 环境变量指到了同一份产物），回解出来 parent == 自己 ⇒ 图上会画一条"父在自己正上方"的自环。
+   * 自父不是父：丢掉并点名（不许静默 —— 页脚那条"自环已剔除"是渲染侧的第二道）。 */
+  if (parent === r.id || parent === arm || ren(parent) === arm) {
+    console.log('   · 自父剔除：' + r.id + '（meta hotstartFrom 解析回它自己）'); parent = '';
+  }
   addNode(r.id, parent, g ? (g.addedAt || '') : '');
 }
 

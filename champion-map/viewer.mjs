@@ -679,6 +679,14 @@ var KEXP = 2.5;   /* §E330 IDW 核的指数：1/d^KEXP。**淡出的覆盖度�
                      两处各写一份字面量时，改一处会让"晕有多远"和"核有多硬"悄悄脱钩。*/
 var EDGEK = 8;    /* §E331 位图外沿收口的格数。必须**小于**网格边距折算出来的格数（边距 10% ⇒ 约 19 格），
                      否则会把点云自己的晕切掉一刀 —— 那是"为了藏边而砍数据"。*/
+var FADEP = 2.2;  /* 用户 11-05：「稀疏区域透明度应该要下降一些，而不是现在这样全填成灰色的」。
+                     病根不在核（KEXP）而在**覆盖度的自标尺**：kcov 按当下可见集的 d12 中位定尺（E388 那条，
+                     存在的理由是"只画 16% 时不许整片场消失"）⇒ 点数越少 fscale 越大、kcov 越小，
+                     饱和项 wsum/(wsum+kcov) 在离任何点都很远的格子上仍然接近 1 ⇒ 空处被填成一片灰。
+                     这里给那个饱和项再压一次幂：**点脚下 wsum≫kcov ⇒ 幂几乎不动（密处逐字不变）**，
+                     空处 wsum≲kcov ⇒ 按幂掉下去。#fadep=1 回到旧法律做 A/B（与 #dgate=0 同一条思路）。*/
+var COVCAP = 0.06; /* 覆盖度尺度的**绝对上限**（占画面宽的比例）—— 与 FADEP 治的是同一个病的另一半，
+                     见 buildBitmap 里 fscale 那两行。#covcap=1 等于取消这条钳 ⇒ 回到纯自缩放。*/
 var OKL = [], POKJ = 0, PV = null;
 /* ===== §E677 绿环的主语 = 当前桌形那把**纯桌**闸（用户 2026-10-21 裁「改成纯短程和纯长程两种，不要留混合桌环」）=====
  *   默认(3血短程) → oks = 全腿短程（八条腿全在 3 血桌上判）
@@ -1624,10 +1632,17 @@ function visKNN(nb, sig, SHOWN) {
 }
 function buildBitmap(key, visSigNow) {
   var nb = NBK[key];
-  var fscale = Math.max(1.5 * nb.d12m, 14);   /* §E331 淡出尺度 2.2× → 1.5× 第12近邻中位（≈29px）：
-                                                 单点的"实心"范围缩一档 ⇒ 立体态不再糊成一整块熔岩。
-                                                 **中间不会因此裂开** —— 覆盖度是各点核权重相加（见下面 fade），
-                                                 邻域只要有两三枚，权重和照样过阈 ⇒ 裂开的正是旧版按"最近点距离"才会有的病。*/
+  /* 覆盖度尺度受**两个**约束：① 跟着当下这批点的密度自缩放（E388 那条，存在的理由是"只画 16% 时不许整片场消失"）；
+   *   ② 但**不许超过画面的一块固定比例** —— 只剩 39 枚时 d12 中位约等于大半张画布，kcov 被拉到极小，
+   *   于是任何空格子都"覆盖充分"、fade≈1 ⇒ 用户 11-05 指认的"稀疏区没变透明，整张被填成灰色"。
+   *   上限 = COVCAP × 画面宽（与 dst 同一份显示 px 尺）。870 枚那张表本来 d12m 就远小于这个钳 ⇒ 逐字不变。
+   *   ⚠ 1.5×d12m 这一档本身是 §E331 量出来的（2.2× → 1.5× ⇒ 单点"实心"范围缩一档，立体态不再糊成整块熔岩）；
+   *     中间不会因此裂开 —— 覆盖度是各点核权重**相加**（见下面 fade），邻域只要有两三枚权重和照样过阈。 */
+  var EXTW = (nb.bx && nb.byy) ? Math.max((nb.x1 - nb.x0) * nb.bx, (nb.y1 - nb.y0) * nb.byy) : 0;
+  var fscale = Math.max(1.5 * nb.d12m, 14);
+  /* 只有拿得到"每数据单位多少显示 px"时才钳 —— 拿不到就照旧，不许拿一份错尺去套上限 */
+  if (EXTW > 0) fscale = Math.min(fscale, COVCAP * EXTW);
+
   var kcov = 1 / Math.pow(0.5 * fscale, KEXP);
   /* E394c DS（用户 10-08 澄清）：**空的地方不需要是底，但不能实心，要有透明度**。
    *   ⇒ 不硬切（场覆盖整片、没有硬边界），改由覆盖度把不透明度压下去；尺度从 fscale 收到 **0.5×fscale**
@@ -1679,7 +1694,7 @@ function buildBitmap(key, visSigNow) {
      *     所以再乘一个**贴边收口**：最外 EDGEK 格线性拉到 0 ⇒ 板的边界与底色逐像素相同，边缘不存在。
      *     10% 的网格边距（buildNB）保证这 EDGEK 格全在点云之外的空裙里，不会把晕切一刀。*/
     var gi = i % nb.gx, gj = (i / nb.gx) | 0;
-    var fade = wsum / (wsum + kcov) * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
+    var fade = Math.pow(wsum / (wsum + kcov), FADEP) * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
     var Fav = fsum9 / wsum;   /* §E672 = 可见点 Fv 的加权平均（原来写的是 (hsum9 + T·ssum9)/wsum，而 hsum9 硬编码 Hp）*/
@@ -2324,11 +2339,17 @@ function drawTree(fr) {
    *     ELOG=0 是页内那两条判据自己用的对照组（固定 alpha），不是给用户的开关。 */
   var EA0 = 0.30, ED0 = 25, EMIN = 0.03, EGRID = Math.max(10, Math.round(22 * devicePixelRatio));
   var NINF = 0   /* §DS②：路径推断来源的父边条数（与槽位接替/倒挂同型）*/
-var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
+var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSELF = 0;
   EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [], inked: 0 };
   if (st.edges !== 'off') {
     var EL = [];
     for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
+      /* 自父不是父：pof === id 时 pa 与 pb2 是同一个坐标 ⇒ 下面那条二次贝塞尔的控制点被抬到
+       * 「中点 − rowH·0.5」，画出来就是用户 11-05 指认的"某个点的父节点垂直向上、什么都不指向"。
+       * 来路是 lineage-g3-build.mjs 用产物 meta 的 hotstartFrom 回解父时，蒸馏根那枚的 seedpack
+       * 指向了它自己的输出（WIDEFIX-s7）⇒ 生成器侧已加守卫，这里再挡一道：任何来路的自环都不许上桌。 */
+      if (dd.pof === dd.id) { NSELF++; continue; }
+
       /* §E373 连线开关：'off' 一条不画；'hash' 只画**父身份可证**那一级（哈希 / 种子文件同权重）。
        *   §E378 的接替边 psrc='slot-chain' 在 'hash' 档**不画**（它不是血统）。
        *   ⚠ 原来这一档写的是 「psrc !== 'hash'” ⇒ 连 「hash-emb”（§E464 那批靠"嵌入后身份"才对上的）都不画，
@@ -2518,6 +2539,8 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
     /* §E378 接替边必须自己在图上说一句它是什么：它和血统边画在同一片地方，而两者的意思完全不同
        （'hash' 那一档不画它，所以那句计数跟着 NCHAIN 走，为 0 就整段不出现）*/
     (NCHAIN ? ' ‖ 不确定来源：路径/槽位时间轴推断 ' + NINF + ' + 槽位接替 ' + NCHAIN + ' + 倒挂 ' + NBACK + '，不是身份可证的血统' : '') +
+    /* 自父边被挡掉的条数（用户 11-05 指认"有个点的父垂直向上什么都不指"）：为 0 就整段不出现，不许承诺图上没有的东西 */
+    (NSELF ? ' ‖ 自环已剔除 ' + NSELF + ' 条（父解析成它自己，不是父边）' : '') +
     /* §E487：融合粒的第二父走紫色实线 —— 它是"两枚的权重平均"里的那一条，不是热启动 */
     (NSOUP ? ' ‖ 红线 = 融合父边 ' + NSOUP + ' 条（这枚 = 两粒的权重平均 ‖ 两条红边各自连一个父，不是热启动）' : '') +
     /* §E442：RUNNER-BASE 那批边现在**画得出来了**（收到时间轴最左那颗灰菱形），所以这句话从原来的"这条边上不画"
@@ -3185,7 +3208,7 @@ function drawBody() {
   ringTally();   /* §E677 表头要说得出"当前这圈环是哪把闸"，顺带把计数刷新（按桌形缓存 ⇒ 仍是状态的纯函数，§E622 那条判得住）*/
   document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 xt/yt（轴无固定含义 ‖ 大表 t-SNE · 小表 MDS）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚在当前档**不画**，明细写"未测"（旧行为是静默退回默认桌 = 混两把尺，v1.8.27 已废）') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof && d.pof !== d.id; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚在当前档**不画**，明细写"未测"（旧行为是静默退回默认桌 = 混两把尺，v1.8.27 已废）') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
@@ -4112,6 +4135,8 @@ var CHKDETAIL = 0;
       st.edges = kv[1]; document.getElementById('edges').value = kv[1]; }
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
+    if (kv[0] === 'fadep' && isFinite(+kv[1]) && +kv[1] > 0) FADEP = +kv[1];   /* A/B：#fadep=1 = 今天之前的覆盖度法律 */
+    if (kv[0] === 'covcap' && isFinite(+kv[1]) && +kv[1] > 0) COVCAP = +kv[1];   /* A/B：#covcap=1 = 取消绝对上限 */
     if (kv[0] === 'detail') CHKDETAIL = +kv[1] ? 1 : 0;   /* §E605-B 只给页内自检用（#check=1&detail=1）*/
     if (kv[0] === 'gl') { GLISO = (+kv[1] === 1 ? 1 : 0); console.log('PROBE parse gl kv=' + kv[1] + ' => GLISO=' + GLISO); }
     if (kv[0] === 'gfa') GFA = Math.max(0, Math.min(1, +kv[1]));
