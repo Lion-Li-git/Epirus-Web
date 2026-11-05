@@ -698,6 +698,11 @@ var KEXP = 2.5;   /* §E330 IDW 核的指数：1/d^KEXP。**淡出的覆盖度�
                      两处各写一份字面量时，改一处会让"晕有多远"和"核有多硬"悄悄脱钩。*/
 var EDGEK = 8;    /* §E331 位图外沿收口的格数。必须**小于**网格边距折算出来的格数（边距 10% ⇒ 约 19 格），
                      否则会把点云自己的晕切掉一刀 —— 那是"为了藏边而砍数据"。*/
+var COVREL = 1.55; /* 底色**径向渐隐**的外沿倍数（11-05 用户：「要平滑过度，不能像之前那样粗暴做限制」）。
+                     以点云质心为圆心、R90（90% 的点落在内）为尺：云内全不透明，1.05×R90 起按 smoothstep
+                     连续压，COVREL×R90 处归零。与画布尺寸/当前缩放都无关 ⇒ 39 枚的小表与 870 枚的大表
+                     用同一把尺也不会"一个整屏填满、一个全是洞"。
+                     #covrel=0 关闭（回到改动前）；#covrel=1.05 等于在 R90 处切断（很硬，只当对照）。*/
 var OKL = [], POKJ = 0, PV = null;
 /* ===== §E677 绿环的主语 = 当前桌形那把**纯桌**闸（用户 2026-10-21 裁「改成纯短程和纯长程两种，不要留混合桌环」）=====
  *   默认(3血短程) → oks = 全腿短程（八条腿全在 3 血桌上判）
@@ -1559,7 +1564,20 @@ var SW = new Float32Array(gx * gy);
    *   所以"过线点固定半径盘并"任何半径都是二选一的假范围（r=1.2×nmed ⇒ 圈住过线 113 + 未过线 100 = 纯度 53.1%）；
    *   我换的"局部过线率场 + 插值等值线"能把纯度做到 88%，但代价是绿区糊在底图上、且只圈到两成过线枚。
    *   ⇒ 过线只按**逐枚真值**标（drawMap 里的绿环），悬停明细给"栽在哪条腿"。*/
-  NBK[key] = { idx: idx, dst: dst, SW: SW, x0: x0, x1: x1, y0: y0, y1: y1,
+  /* 点云自己的尺（11-05）：质心 + R90（90% 的点落在它以内），归一化到纸面 0..1。
+   *   底色那层要"由云的中心向外渐隐"，就不能拿**画布**或**纸面**当尺 ——
+   *   那两把尺跟云的形状无关，用户在任意缩放下看到的都是"整屏被填满"。 */
+  var __cx = 0, __cy = 0, __q;
+  for (__q = 0; __q < N; __q++) { __cx += (xs[__q] - x0) / (x1 - x0 || 1); __cy += (ys[__q] - y0) / (y1 - y0 || 1); }
+  __cx /= N; __cy /= N;
+  var __rr = new Float64Array(N);
+  for (__q = 0; __q < N; __q++) {
+    var __dx = (xs[__q] - x0) / (x1 - x0 || 1) - __cx, __dy = (ys[__q] - y0) / (y1 - y0 || 1) - __cy;
+    __rr[__q] = Math.sqrt(__dx * __dx + __dy * __dy);
+  }
+  var __rs = Array.prototype.slice.call(__rr).sort(function (a, b) { return a - b; });
+  var __r90 = __rs[Math.floor(__rs.length * 0.9)] || 0.5;
+  NBK[key] = { idx: idx, dst: dst, SW: SW, x0: x0, x1: x1, y0: y0, y1: y1, cx: __cx, cy: __cy, r90: __r90,
     px0: px0, px1: px1, py0: py0, py1: py1, nmed: nmed, d12m: d12m, ax: ax, by: by, gx: gx, gy: gy };
 }
 /* §E672：这里原来第一句是"每格只需 (SH + T·SS)/SW ⇒ 换 T 不碰邻域" —— 那是 §E381 之前的快路，**早已没人走**
@@ -1647,13 +1665,23 @@ function buildBitmap(key, visSigNow) {
                                                  单点的"实心"范围缩一档 ⇒ 立体态不再糊成一整块熔岩。
                                                  **中间不会因此裂开** —— 覆盖度是各点核权重相加（见下面 fade），
                                                  邻域只要有两三枚，权重和照样过阈 ⇒ 裂开的正是旧版按"最近点距离"才会有的病。*/
-  /* 11-05 走过的弯路照记：这里加过「fscale ≤ COVCAP×画面宽」的绝对上限 + 给 fade 压幂（FADEP），
+  var EXTW = (nb.bx && nb.byy) ? Math.max((nb.x1 - nb.x0) * nb.bx, (nb.y1 - nb.y0) * nb.byy) : 0;
+  /* 11-05 走过的弯路照记：这里加过「fscale ≤ COVCAP×画面宽（0.06）」+ 给 fade 压幂（FADEP=2.2），
    * 想治"稀疏区被洗成一片灰"。三方对照（改动前那版页面 / 关掉两个旋钮的本版 / 默认本版）显示：
    * 云内干净格 4% → 5%、大于 6 格的空洞岛 1 → 3 —— **它自己就是新的病**（把晕与晕之间钳出洞），
    * 而"洗平"的量级差别不在这里。这正是 §E389 早就否掉的那族"用硬截断藏空处"的形状，已撤回。
-   * 真要继续治洗平，方向是 §E388 那条自标尺本身（以及"哪些点真的被画进这批"），不是加一刀。 */
+   * ⚠ 11-05 晚再记一条实测：fscale 在这两张表上分别是 104px（39 枚）/ 26px（870 枚），
+   *   而 0.25×画面宽 ≈ 289/301px ⇒ **任何 >0.09 的相对上限都不咬**；咬到它的值（0.06）就正好等于点间距
+   *   ⇒ 必然抠出圆团。所以"动尺度"这条路到此为止，改用循环里那个**全局渐隐遮罩**（与点间距无关）。 */
 
   var kcov = 1 / Math.pow(0.5 * fscale, KEXP);
+  /* 只读诊断（11-05）：本轮两次"改了看不见效果"都出在尺度这条线上 —— 到底是上限没生效（EXTW=0）、
+   * 缓存没跟着旋钮失效，还是**我量的是另一层**（地板位图之外还有壳/场），读一次就知道。
+   * 页面自检不读它，量具/A-B 可以读。covA 记录有遮罩/无遮罩时的那两格。 */
+  var __covAcc = { nPainted: 0, aCorner: -1, aMid: -1, aCornerNoMask: -1, aMidNoMask: -1, midIdx: ((nb.gy >> 1) * nb.gx + (nb.gx >> 1)) };
+  /* 只读诊断（11-05）：本轮两次"改了看不见效果"都出在尺度这条线上 —— 到底是上限没生效（EXTW=0）
+   * 还是缓存没跟着旋钮失效，读一次就知道。页面自检不读它，量具/A-B 可以读。 */
+  if (typeof window !== 'undefined') window.__covBase = { d12m: nb.d12m, EXTW: EXTW, fscale: fscale, kcov: kcov, COVREL: COVREL, bx: nb.bx, byy: nb.byy, gx: nb.gx, gy: nb.gy };
   /* E394c DS（用户 10-08 澄清）：**空的地方不需要是底，但不能实心，要有透明度**。
    *   ⇒ 不硬切（场覆盖整片、没有硬边界），改由覆盖度把不透明度压下去；尺度从 fscale 收到 **0.5×fscale**
    *     （等价于把 fade 调得更敏感：点脚下 wsum 远大于 kcov ⇒ 实；离点 fscale 处 wsum 已明显小于 kcov ⇒ 透明）。*/
@@ -1704,7 +1732,19 @@ function buildBitmap(key, visSigNow) {
      *     所以再乘一个**贴边收口**：最外 EDGEK 格线性拉到 0 ⇒ 板的边界与底色逐像素相同，边缘不存在。
      *     10% 的网格边距（buildNB）保证这 EDGEK 格全在点云之外的空裙里，不会把晕切一刀。*/
     var gi = i % nb.gx, gj = (i / nb.gx) | 0;
-    var fade = wsum / (wsum + kcov) * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
+    /* 径向渐隐（用户 11-05：「边缘透明度逐步递减，而不是圆团」）：
+     *   以**点云质心**为圆心、以 R90（90% 的点落在内）为尺 ⇒ 与画布尺寸、当前缩放都无关。
+     *   云内保持不透明，从 1.05×R90 开始按 smoothstep 连续压，到 COVREL×R90 归零（默认 1.55）。
+     *   这是**径向**遮罩 ⇒ 不可能像"钳尺度"那样在晕与晕之间抠出洞（那正是上一版的病）。 */
+    var covMask = 1;
+    if (COVREL > 0 && nb.r90 > 0) {
+      var fx = gi / (nb.gx - 1), fy = gj / (nb.gy - 1);
+      var rr = Math.sqrt((fx - nb.cx) * (fx - nb.cx) + (fy - nb.cy) * (fy - nb.cy));
+      var r0 = 1.05 * nb.r90, r1 = COVREL * nb.r90;
+      var uu = (rr - r0) / (r1 - r0 || 1); if (uu < 0) uu = 0; else if (uu > 1) uu = 1;
+      covMask = 1 - uu * uu * (3 - 2 * uu);
+    }
+    var fade = wsum / (wsum + kcov) * covMask * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
     var Fav = fsum9 / wsum;   /* §E672 = 可见点 Fv 的加权平均（原来写的是 (hsum9 + T·ssum9)/wsum，而 hsum9 硬编码 Hp）*/
@@ -1712,6 +1752,9 @@ function buildBitmap(key, visSigNow) {
     var tt = fCol(Fav);
     var rgb = rampRGB(tt);
     var a = (0.92 - 0.5 * tt) * fade;
+    __covAcc['a' + (a < 0.05 ? 0 : a < 0.2 ? 1 : a < 0.5 ? 2 : a < 0.8 ? 3 : 4)] = (__covAcc['a' + (a < 0.05 ? 0 : a < 0.2 ? 1 : a < 0.5 ? 2 : a < 0.8 ? 3 : 4)] || 0) + 1;
+    if (i === 0) { __covAcc.aCorner = a; __covAcc.aCornerNoMask = a / (covMask || 1e-9); }
+    if (i === __covAcc.midIdx) { __covAcc.aMid = a; __covAcc.aMidNoMask = a / (covMask || 1e-9); }
     nPainted++;
     if (BND9 && (Fav < BND9.lo - 1e-9 || Fav > BND9.hi + 1e-9)) nOob++;
     var o = i * 4;
@@ -1721,7 +1764,9 @@ function buildBitmap(key, visSigNow) {
     dta[o + 3] = 255;
   }
   cg.putImageData(img, 0, 0);
-  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color, tab: st.ftab,
+  __covAcc.nPainted = nPainted;
+  if (typeof window !== 'undefined') (window.__covdbg = window.__covdbg || []).push(__covAcc);
+  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color, tab: st.ftab, cov: COVREL,
     vis: NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3),
     /* §E381 自检要读的两个数：地板被涂了几格 ‖ 有几格的场值跑到"可见点的 F 区间"之外（应当恒为 0）。
      *   带外 = 0 这一条同时排掉两种病：钳位（一大片纯色）与淡出（黑洞）—— 因为加权平均不可能跑到被平均的那些点之外。*/
@@ -1745,7 +1790,7 @@ function ensureField(key, bx, byy) {
    *   要"顺手改一下点颜色"（col 变了）才更新 ⇒ 用户那句现象一字不差就是这一条。
    *   ⚠ 下拉框处理程序里那串"清键"（_FR.k='' 那些）是另一条自救路，它掩盖这个洞：判据必须**绕开清键**去量（见 §E623 那条）。 */
   var visSig = NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
-  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.tab !== st.ftab || FL.vis !== visSig) buildBitmap(k2, visSig);
+  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.tab !== st.ftab || FL.cov !== COVREL || FL.vis !== visSig) buildBitmap(k2, visSig);
 }
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
 var boxes = [];
@@ -4145,6 +4190,7 @@ var CHKDETAIL = 0;
       st.edges = kv[1]; document.getElementById('edges').value = kv[1]; }
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
+    if (kv[0] === 'covrel' && isFinite(+kv[1]) && +kv[1] >= 0) COVREL = +kv[1];   /* A/B：#covrel=0 关闭尺度上限（纯自缩放） */
     if (kv[0] === 'detail') CHKDETAIL = +kv[1] ? 1 : 0;   /* §E605-B 只给页内自检用（#check=1&detail=1）*/
     if (kv[0] === 'gl') { GLISO = (+kv[1] === 1 ? 1 : 0); console.log('PROBE parse gl kv=' + kv[1] + ' => GLISO=' + GLISO); }
     if (kv[0] === 'gfa') GFA = Math.max(0, Math.min(1, +kv[1]));
