@@ -216,7 +216,7 @@ const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [
 /* §E556：`feas-s4.tsv` = 10-09 那 63 枚**代表臂**现跑同一道闸的判定（`feas.mjs --ids=…`，tag 同为 n=20/aggr100/seat100）。
  *   为什么不并进 s1~s3 那张：那三片是 10-08 全库 920 枚的一次性跑批，混写会让"哪一行是哪一批"从文件上消失；
  *   分开一片，代价只是这一行多一个名字，换来的是 §E492 那道 tag 对账仍然指着"每片自己是什么档"说得清。 */
-const FEAS_FILES = ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv', 'feas-s4.tsv', 'feas.tsv'].filter(f => existsSync(join(HERE, f)));
+const FEAS_FILES = ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv', 'feas-s4.tsv', 'feas.tsv', 'feas-mixed-g3-1105.tsv'].filter(f => existsSync(join(HERE, f)));
 const panelP = join(HERE, 'panel.tsv');
 /* §E304 家族表（`lineage.mjs` 生成）：**家族 = 训练方法/目标配置的等价类**，不是 seed。
  *   为什么必须换：coords 的 seed 列只有 14 个取值（31~36 / 81~96），它就是包名尾部那个数 = META.seed
@@ -698,11 +698,11 @@ var KEXP = 2.5;   /* §E330 IDW 核的指数：1/d^KEXP。**淡出的覆盖度�
                      两处各写一份字面量时，改一处会让"晕有多远"和"核有多硬"悄悄脱钩。*/
 var EDGEK = 8;    /* §E331 位图外沿收口的格数。必须**小于**网格边距折算出来的格数（边距 10% ⇒ 约 19 格），
                      否则会把点云自己的晕切掉一刀 —— 那是"为了藏边而砍数据"。*/
-var COVREL = 1.55; /* 底色**径向渐隐**的外沿倍数（11-05 用户：「要平滑过度，不能像之前那样粗暴做限制」）。
-                     以点云质心为圆心、R90（90% 的点落在内）为尺：云内全不透明，1.05×R90 起按 smoothstep
-                     连续压，COVREL×R90 处归零。与画布尺寸/当前缩放都无关 ⇒ 39 枚的小表与 870 枚的大表
-                     用同一把尺也不会"一个整屏填满、一个全是洞"。
-                     #covrel=0 关闭（回到改动前）；#covrel=1.05 等于在 R90 处切断（很硬，只当对照）。*/
+var COV_MED = 1;  /* 覆盖度**按对数密度分位**映射（11-05 用户第三轮：「要均匀平滑的发散透明度变化」）。
+                     1 = 分位映射（默认）‖ 0 = 回到"按点间距 0.5·fscale 定尺"的旧法律（A/B 用，#cov=0）。
+                     为什么不用"径向渐隐/绝对上限"那些：它们都只是**裁**，云内仍是平的（用户原话：
+                     "对外被卡住了、对内反而无限发散"）。分位映射让每个格子落在同一条连续曲线上。 */
+var COV_LO = 0, COV_HI = 0;   /* 有场格子的 wsum 的 p5 / p95（对数尺两端），buildBitmap 每次重算 */
 var OKL = [], POKJ = 0, PV = null;
 /* ===== §E677 绿环的主语 = 当前桌形那把**纯桌**闸（用户 2026-10-21 裁「改成纯短程和纯长程两种，不要留混合桌环」）=====
  *   默认(3血短程) → oks = 全腿短程（八条腿全在 3 血桌上判）
@@ -1564,20 +1564,7 @@ var SW = new Float32Array(gx * gy);
    *   所以"过线点固定半径盘并"任何半径都是二选一的假范围（r=1.2×nmed ⇒ 圈住过线 113 + 未过线 100 = 纯度 53.1%）；
    *   我换的"局部过线率场 + 插值等值线"能把纯度做到 88%，但代价是绿区糊在底图上、且只圈到两成过线枚。
    *   ⇒ 过线只按**逐枚真值**标（drawMap 里的绿环），悬停明细给"栽在哪条腿"。*/
-  /* 点云自己的尺（11-05）：质心 + R90（90% 的点落在它以内），归一化到纸面 0..1。
-   *   底色那层要"由云的中心向外渐隐"，就不能拿**画布**或**纸面**当尺 ——
-   *   那两把尺跟云的形状无关，用户在任意缩放下看到的都是"整屏被填满"。 */
-  var __cx = 0, __cy = 0, __q;
-  for (__q = 0; __q < N; __q++) { __cx += (xs[__q] - x0) / (x1 - x0 || 1); __cy += (ys[__q] - y0) / (y1 - y0 || 1); }
-  __cx /= N; __cy /= N;
-  var __rr = new Float64Array(N);
-  for (__q = 0; __q < N; __q++) {
-    var __dx = (xs[__q] - x0) / (x1 - x0 || 1) - __cx, __dy = (ys[__q] - y0) / (y1 - y0 || 1) - __cy;
-    __rr[__q] = Math.sqrt(__dx * __dx + __dy * __dy);
-  }
-  var __rs = Array.prototype.slice.call(__rr).sort(function (a, b) { return a - b; });
-  var __r90 = __rs[Math.floor(__rs.length * 0.9)] || 0.5;
-  NBK[key] = { idx: idx, dst: dst, SW: SW, x0: x0, x1: x1, y0: y0, y1: y1, cx: __cx, cy: __cy, r90: __r90,
+  NBK[key] = { idx: idx, dst: dst, SW: SW, x0: x0, x1: x1, y0: y0, y1: y1,
     px0: px0, px1: px1, py0: py0, py1: py1, nmed: nmed, d12m: d12m, ax: ax, by: by, gx: gx, gy: gy };
 }
 /* §E672：这里原来第一句是"每格只需 (SH + T·SS)/SW ⇒ 换 T 不碰邻域" —— 那是 §E381 之前的快路，**早已没人走**
@@ -1681,7 +1668,7 @@ function buildBitmap(key, visSigNow) {
   var __covAcc = { nPainted: 0, aCorner: -1, aMid: -1, aCornerNoMask: -1, aMidNoMask: -1, midIdx: ((nb.gy >> 1) * nb.gx + (nb.gx >> 1)) };
   /* 只读诊断（11-05）：本轮两次"改了看不见效果"都出在尺度这条线上 —— 到底是上限没生效（EXTW=0）
    * 还是缓存没跟着旋钮失效，读一次就知道。页面自检不读它，量具/A-B 可以读。 */
-  if (typeof window !== 'undefined') window.__covBase = { d12m: nb.d12m, EXTW: EXTW, fscale: fscale, kcov: kcov, COVREL: COVREL, bx: nb.bx, byy: nb.byy, gx: nb.gx, gy: nb.gy };
+  if (typeof window !== 'undefined') window.__covBase = { d12m: nb.d12m, EXTW: EXTW, fscale: fscale, kcov: kcov, COV_MED: COV_MED, bx: nb.bx, byy: nb.byy, gx: nb.gx, gy: nb.gy };
   /* E394c DS（用户 10-08 澄清）：**空的地方不需要是底，但不能实心，要有透明度**。
    *   ⇒ 不硬切（场覆盖整片、没有硬边界），改由覆盖度把不透明度压下去；尺度从 fscale 收到 **0.5×fscale**
    *     （等价于把 fade 调得更敏感：点脚下 wsum 远大于 kcov ⇒ 实；离点 fscale 处 wsum 已明显小于 kcov ⇒ 透明）。*/
@@ -1704,6 +1691,31 @@ function buildBitmap(key, visSigNow) {
    *   先烘成一张表：48 万次内循环里只查数组，不重复走函数与分支。 */
   var FV9 = new Float64Array(N);
   for (var f9 = 0; f9 < N; f9++) FV9[f9] = Fv(P[f9]);
+  /* 密度定标的覆盖度（用户 11-05 第三轮："要**均匀平滑**的发散透明度变化"）：
+   *   病：kcov 绑在**点间距**（0.5·fscale）上 ⇒ 云内处处 wsum ≫ kcov ⇒ fade≈1，整片是平的；
+   *   梯度只出现在云外，于是任何"外侧渐隐"都只能靠裁 —— 裁完就是"外面被卡住、里面无限发散"。
+   *   改法：kcov 换成**这张画面里所有有场的格子的 wsum 中位数** ⇒
+   *     中位密度 ⇒ alpha≈0.5 ‖ 更密 ⇒ 更实 ‖ 更疏 ⇒ 更透，
+   *   全图落在同一条连续曲线上：不需要裁剪、也不在点与点之间抠洞（wsum 是各点核权重之和，处处连续）。
+   *   用 #cov=0 可回到旧的"按点间距定尺"做 A/B。 */
+  if (COV_MED) {
+    var __ws = new Float64Array(nb.gx * nb.gy), __TB0 = VIS_TB || nb;
+    for (var i0 = 0; i0 < nb.gx * nb.gy; i0++) {
+      var b0 = i0 * KF, s0 = 0;
+      for (var u0 = 0; u0 < KF; u0++) { var p0 = __TB0.idx[b0 + u0]; if (p0 < 0) break; if (nShown !== N && !SHOWN[p0]) continue;
+        s0 += 1 / Math.pow(Math.max(__TB0.dst[b0 + u0], 1e-6), KEXP); }
+      __ws[i0] = s0;
+    }
+    var __pos = []; for (var i1 = 0; i1 < __ws.length; i1++) if (__ws[i1] > 0) __pos.push(__ws[i1]);
+    __pos.sort(function (a, b) { return a - b; });
+    /* 按**对数密度分位**映射：p5 ⇒ 全透，p95 ⇒ 全实，中间线性（对数尺）。
+     * 这是"均匀"两个字的落点：alpha 沿**量级**均匀变化，而不是被某把尺度卡成一个平台。 */
+    if (__pos.length) {
+      COV_LO = __pos[Math.floor(__pos.length * 0.05)] || __pos[0];
+      COV_HI = __pos[Math.floor(__pos.length * 0.95)] || __pos[__pos.length - 1];
+    }
+    if (typeof window !== 'undefined') window.__covMed = { lo: COV_LO, hi: COV_HI, n: __pos.length };
+  }
   /* E389 DS：**不再**把覆盖度基准跟着可见集放大 —— 那会让远处的可见点把场拉成一片平均（用户：「暴力拉到无穷远」）。
    *   覆盖度基准保持全库 d12m 那一把尺 ⇒ 晕有固有尺度；配合下面的截断半径，远处自然回到底色。 */
   for (var i = 0; i < nb.gx * nb.gy; i++) {
@@ -1732,19 +1744,15 @@ function buildBitmap(key, visSigNow) {
      *     所以再乘一个**贴边收口**：最外 EDGEK 格线性拉到 0 ⇒ 板的边界与底色逐像素相同，边缘不存在。
      *     10% 的网格边距（buildNB）保证这 EDGEK 格全在点云之外的空裙里，不会把晕切一刀。*/
     var gi = i % nb.gx, gj = (i / nb.gx) | 0;
-    /* 径向渐隐（用户 11-05：「边缘透明度逐步递减，而不是圆团」）：
-     *   以**点云质心**为圆心、以 R90（90% 的点落在内）为尺 ⇒ 与画布尺寸、当前缩放都无关。
-     *   云内保持不透明，从 1.05×R90 开始按 smoothstep 连续压，到 COVREL×R90 归零（默认 1.55）。
-     *   这是**径向**遮罩 ⇒ 不可能像"钳尺度"那样在晕与晕之间抠出洞（那正是上一版的病）。 */
-    var covMask = 1;
-    if (COVREL > 0 && nb.r90 > 0) {
-      var fx = gi / (nb.gx - 1), fy = gj / (nb.gy - 1);
-      var rr = Math.sqrt((fx - nb.cx) * (fx - nb.cx) + (fy - nb.cy) * (fy - nb.cy));
-      var r0 = 1.05 * nb.r90, r1 = COVREL * nb.r90;
-      var uu = (rr - r0) / (r1 - r0 || 1); if (uu < 0) uu = 0; else if (uu > 1) uu = 1;
-      covMask = 1 - uu * uu * (3 - 2 * uu);
-    }
-    var fade = wsum / (wsum + kcov) * covMask * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
+    /* 对数密度分位映射：p5 密度 ⇒ 0，p95 ⇒ 1，中间连续（对数尺）。
+     *   这样 alpha 沿**量级**均匀铺开 —— 不会像"按点间距定尺"那样云内整片饱和、
+     *   也不会像"钳半径"那样把晕与晕之间抠出洞。EDGEK 的贴边收口照旧保留（避免画布边缘硬切）。 */
+    var fade;
+    if (COV_MED && COV_HI > COV_LO) {
+      var lw = Math.log(wsum), l0 = Math.log(COV_LO), l1 = Math.log(COV_HI);
+      fade = (lw - l0) / (l1 - l0); if (fade < 0) fade = 0; else if (fade > 1) fade = 1;
+    } else fade = wsum / (wsum + kcov);
+    fade *= Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
     var Fav = fsum9 / wsum;   /* §E672 = 可见点 Fv 的加权平均（原来写的是 (hsum9 + T·ssum9)/wsum，而 hsum9 硬编码 Hp）*/
@@ -1753,8 +1761,8 @@ function buildBitmap(key, visSigNow) {
     var rgb = rampRGB(tt);
     var a = (0.92 - 0.5 * tt) * fade;
     __covAcc['a' + (a < 0.05 ? 0 : a < 0.2 ? 1 : a < 0.5 ? 2 : a < 0.8 ? 3 : 4)] = (__covAcc['a' + (a < 0.05 ? 0 : a < 0.2 ? 1 : a < 0.5 ? 2 : a < 0.8 ? 3 : 4)] || 0) + 1;
-    if (i === 0) { __covAcc.aCorner = a; __covAcc.aCornerNoMask = a / (covMask || 1e-9); }
-    if (i === __covAcc.midIdx) { __covAcc.aMid = a; __covAcc.aMidNoMask = a / (covMask || 1e-9); }
+    if (i === 0) __covAcc.aCorner = a;
+    if (i === __covAcc.midIdx) __covAcc.aMid = a;
     nPainted++;
     if (BND9 && (Fav < BND9.lo - 1e-9 || Fav > BND9.hi + 1e-9)) nOob++;
     var o = i * 4;
@@ -1766,7 +1774,7 @@ function buildBitmap(key, visSigNow) {
   cg.putImageData(img, 0, 0);
   __covAcc.nPainted = nPainted;
   if (typeof window !== 'undefined') (window.__covdbg = window.__covdbg || []).push(__covAcc);
-  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color, tab: st.ftab, cov: COVREL,
+  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color, tab: st.ftab, cov: COV_MED,
     vis: NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3),
     /* §E381 自检要读的两个数：地板被涂了几格 ‖ 有几格的场值跑到"可见点的 F 区间"之外（应当恒为 0）。
      *   带外 = 0 这一条同时排掉两种病：钳位（一大片纯色）与淡出（黑洞）—— 因为加权平均不可能跑到被平均的那些点之外。*/
@@ -1790,7 +1798,7 @@ function ensureField(key, bx, byy) {
    *   要"顺手改一下点颜色"（col 变了）才更新 ⇒ 用户那句现象一字不差就是这一条。
    *   ⚠ 下拉框处理程序里那串"清键"（_FR.k='' 那些）是另一条自救路，它掩盖这个洞：判据必须**绕开清键**去量（见 §E623 那条）。 */
   var visSig = NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
-  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.tab !== st.ftab || FL.cov !== COVREL || FL.vis !== visSig) buildBitmap(k2, visSig);
+  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.tab !== st.ftab || FL.cov !== COV_MED || FL.vis !== visSig) buildBitmap(k2, visSig);
 }
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
 var boxes = [];
@@ -4190,7 +4198,7 @@ var CHKDETAIL = 0;
       st.edges = kv[1]; document.getElementById('edges').value = kv[1]; }
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
-    if (kv[0] === 'covrel' && isFinite(+kv[1]) && +kv[1] >= 0) COVREL = +kv[1];   /* A/B：#covrel=0 关闭尺度上限（纯自缩放） */
+    if (kv[0] === 'cov' && isFinite(+kv[1])) COV_MED = (+kv[1] === 0 ? 0 : 1);   /* A/B：#cov=0 回到按点间距定尺的旧法律 */
     if (kv[0] === 'detail') CHKDETAIL = +kv[1] ? 1 : 0;   /* §E605-B 只给页内自检用（#check=1&detail=1）*/
     if (kv[0] === 'gl') { GLISO = (+kv[1] === 1 ? 1 : 0); console.log('PROBE parse gl kv=' + kv[1] + ' => GLISO=' + GLISO); }
     if (kv[0] === 'gfa') GFA = Math.max(0, Math.min(1, +kv[1]));
