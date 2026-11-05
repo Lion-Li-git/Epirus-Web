@@ -46,7 +46,16 @@ const PICKS = [
   ['CB3-s13', 'scratch/night6/CB3-s13.js', 'CB谱系'],
   ['HPG-s7', 'scratch/night6/HPG-s7.js', '产线'],
   ['TPG-s41', 'scratch/night6/TPG-s41.js', '产线'],
-  ['KDFULL400-s13', 'scratch/ga-arms/KDFULL400-s13.js', 'KD谱系']
+  ['KDFULL400-s13', 'scratch/ga-arms/KDFULL400-s13.js', 'KD谱系'],
+  /* 11-05 上午（千问）：演化图上有 4 个**父节点没进图** ⇒ 孩子只能孤立着画。
+   *   补测这四枚（OB3S-C2-s7 是 v:91 代 2 产物，装载闸会拒 ⇒ 拒了就如实记 ERR，不许给假坐标）。 */
+  ['KDFULLGA-s13', 'scratch/ga-arms/KDFULLGA-s13.js', 'KD谱系'],
+  ['GA-ration-s41', 'scratch/ga-arms/GA-ration-s41.js', 'ration臂'],
+  ['WIDEFIX-s7', 'scratch/ga-arms/WIDEFIX-s7.js', '宽度修复'],
+  ['KDFULL2', 'scratch/arms/KDFULL2.bak', 'KD谱系'],
+  ['KD-V7', 'scratch/arms/KD-V7.bak', 'KD谱系']
+  /* OB3S-C2-s7（v:91 代 2）**故意不补**：现尺当场拒装（段表不同形），要复算得回代 2 那笔提交用当时的尺
+     ⇒ 它在图上就如实是"父节点未进图（代 2 面，现尺拒装）"，不塞假坐标。 */
 ];
 
 const COLS = ['id', 'path', 'H', 'S', 'Geff', 'dmg', 'heavy', 'holo', 'zeroRate', 'drawRate',

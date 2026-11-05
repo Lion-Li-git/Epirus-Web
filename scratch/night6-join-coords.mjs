@@ -1,92 +1,166 @@
 #!/usr/bin/env node
-/* night6-join-coords.mjs v2 —— 把精选 2.0 点并进旧演化图的数据管线（ZCode · 11-05 凌晨）
+/* night6-join-coords.mjs v3 —— 把 2.0 点并进旧演化图的数据管线（ZCode 起 · 千问 11-05 上午重写组装段）
  *
- * ⚑ 病根（为什么直接喂 coords-gen3-1103.tsv 会"啥也显示不出来"）：联合文件是**短 schema**（没有 Hp 列），
- *   viewer 的 `Hp: +r.Hp` 对缺列 = NaN ⇒ Fv 全 NaN ⇒ 一维排序/颜色/点大小全废。
- * 本件产出的 coords-gen3-1105.tsv：
- *   ① 旧池行 = coords.tsv **全列**（Hp/De/okLong/... 都在），x2/y2/x3/y3/z3 用联合投影覆盖（同 id 对齐）
- *   ② 代 3 行（臂/段，仅在联合文件里）= 联合行原样 + **Hp=H 兜底**（同一把 120 局考卷 ⇒ 数值合法）
- *   ③ 新 21 行（精选 2.0）= ruler-g3 的 12 维 + Hp=夜班 200 局读数（**位置由整表重投影给，不再 kNN 借**）
- *   ④ rank 全表重算（Fv = Hp/100 + 0.1·S）——viewer 点大小 = f(rank)，空 rank = NaN = 点不可见
- * 输出列 = coords.tsv 全列 + ver；**xt/yt/xt3/yt3/zt3 一律留空**，由下一步 proj-tsne --in 填。
- * ⚠ 11-05 上午的病（本件曾经把 x2/y2 抄进 xt/yt）：viewer 画的是 xt/yt ⇒ 抄进去之后 864/864 行两列逐字相同，
- *   范围从 ±1.0 变成 −19.2…8.2 ⇒ 图上"团成一块 + 两个点飞出去"。判据留在 `viewer.mjs` 的投影守卫里。
+ * 这版修掉的五件事（都是用户 11-05 上午点名的）：
+ *   ① **投影列不许由合并器填**：夜班把 `x2/y2` 抄进 `xt/yt` ⇒ 864/864 行两列逐字相同 ⇒ viewer 画的正是 `xt/yt`
+ *      ⇒ 图上"团成一块 + 几个点飞出去"。本件一律留空，由 `proj-tsne --in=<本表>` 对**这张图要画的这一批点**投影。
+ *   ② **版本判定交回容器**：`ver` 只由产物的 `"v":` 决定（92 ⇒ 2.0，其余 ⇒ 1.8），**不再**由"在不在 2.0 谱系 sidecar 里"决定
+ *      ⇒ `D4a`（v7 面的克隆根）回到 1.8；`V7C/V7M/V7L` 那六枚 v7 面臂也回 1.8。父边照旧连（跨版本父边）。
+ *   ③ **每行必须带 `path`**：夜班把 39 行 2.0 的 path 全丢了 ⇒ 既不能核容器、也不能补测。
+ *   ④ **Hp 统一成一把尺**：2.0 行改读 `champion-map/epsfull-g3-1105.tsv` 的 `page` 列（= 与 1.8 行同一台 `eps-full`、
+ *      35 组合 × 120 局、`--epsTier=lv:regular`、桌形默认 multi）；没测到的 ⇒ 留空走"未测"那一支，
+ *      **不许**拿 eval-5p 200 局的强度冒充头号尺（`Fv = Hp/100 + T·S` 是图上名次/颜色/分界的底）。
+ *   ⑤ **别名归一**：`BAS-s41__final` 与 `BAS-s41` 是同一枚产物的两个名字 ⇒ 统一成臂名
+ *      （原来因此虚报 13 个"父节点没进图"）。
+ *
+ * 视图子集（用户："选择批次不是像拉显示范围一样把旧点扣掉——投影是局域性的，要连着点坐标一起重算"）：
+ *   `--only=all` ⇒ champion-map/coords-gen3-1105.tsv（全部点）
+ *   `--only=18`  ⇒ champion-map/coords-view-18.tsv （1.8 及以前）
+ *   `--only=20`  ⇒ champion-map/coords-view-20.tsv （2.0 系 ∪ 父链里已在表内的点 ⇒ 边画得出）
+ *   ⇒ 三张表各自过 `proj-tsne --in`，再各自烘一页；页面里的"版本"下拉**换页**，不是换滤镜。
+ *
+ * 用法：node scratch/night6-join-coords.mjs [--only=all|18|20] [--out=<表>]
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const DIMS = ['dmg', 'heavy', 'holo', 'rounds', 'drawRate', 'zeroRate', 'seatSpread', 'distinctKeys', 'charges', 'waste', 'noThreatStance', 'fieldAAtk'];
+const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
+const ONLY = arg('only', 'all');
+if (['all', '18', '20'].indexOf(ONLY) < 0) { console.error('⛔ --only 只收 all|18|20，收到 ' + ONLY); process.exit(64); }
 const tsv = (f) => { const L = readFileSync(f, 'utf8').replace(/\r\n/g, '\n').split('\n').filter(Boolean); const h = L[0].split('\t'); return { h, rows: L.slice(1).map(l => { const c = l.split('\t'); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; }) }; };
+const norm = (id) => String(id || '').replace(/__final$/, '');   // ⑤ 别名归一
 
-const old = tsv('champion-map/coords.tsv');                 // 825 行全列
-const joint = tsv('champion-map/coords-gen3-1103.tsv');     // 927 行联合投影（短 schema）
-const jMap = new Map(joint.rows.map(r => [r.id, r]));
+const old = tsv('champion-map/coords.tsv');                 // 825 行全列（1.8 面板）
+const joint = tsv('champion-map/coords-gen3-1103.tsv');     // 927 行联合表（短 schema，代 3 臂在这里）
+const oldIds = new Set(old.rows.map(r => norm(r.id)));
 
-/* Hp 来源（夜班 200 局大考 + 根补测） */
-const HP = new Map();
-for (const f of ['strength-long.tsv', 'strength-long-ext.tsv', 'strength-long-fix.tsv', 'strength-long-roots.tsv']) {
-  const p = 'scratch/night6/' + f;
-  if (!existsSync(p)) continue;
-  for (const l of readFileSync(p, 'utf8').replace(/\r\n/g, '\n').split('\n').filter(Boolean).slice(1)) {
-    const c = l.split('\t');
-    if (c[2] && c[2] !== 'NA' && Number(c[1]) === 200) HP.set(c[0].replace(/^root:/, '').replace(/^CLONE-D4a$/, 'D4a').replace(/^D-a-s41-base$/, 'D-a底座'), Number(c[2]));
+/* ②③ 容器版本与产物路径：单一来源 = 真文件（不是 sidecar 的名单，也不是文件名猜）
+ *   ⚠ 同 id 撞两个产物是要**点名**的病：面板里的 `D4a` = `docs/artifacts/e234-out/D4a.js`（v7 容器），
+ *      而 2.0 谱系里的 "D4a" = `scratch/arms/CLONE-D4a.bak`（**v:92**，克隆进新容器的那枚）⇒ 原来后写覆盖前写，
+ *      于是"1.8 的 D4a 被标成 2.0"。⇒ 面板路径优先占位，撞车的第二枚**改用文件名自己的 id**，两枚都在图上。 */
+const PANEL_PATH = new Map();
+for (const r of old.rows) if (r.path) PANEL_PATH.set(norm(r.id), r.path);
+const PATHOF = new Map(PANEL_PATH);
+const COLLISION = [];
+function addPath(id, p) {
+  if (!p) return;
+  if (!PATHOF.has(id)) { PATHOF.set(id, p); return; }
+  if (PATHOF.get(id) === p) return;
+  const alt = p.split(/[\\/]/).pop().replace(/\.(bak|js)$/, '');
+  COLLISION.push(id + '：面板=' + PATHOF.get(id) + ' ‖ 另一枚=' + p + ' ⇒ 后者记作 ' + alt);
+  if (!PATHOF.has(alt)) PATHOF.set(alt, p);
+}
+if (existsSync('champion-map/extra-g3-1105.tsv')) {
+  for (const l of readFileSync('champion-map/extra-g3-1105.tsv', 'utf8').replace(/\r\n/g, '\n').trim().split('\n').slice(1)) {
+    const c = l.split('\t'); if (c[0] && c[1]) addPath(norm(c[0]), c[1]);
   }
 }
+const g3ruler = tsv('scratch/night6/ruler-g3.tsv');
+for (const r of g3ruler.rows) if (r.path) addPath(norm(r.id), r.path);
+const VERCACHE = {};
+function verOf(id) {
+  const p = PATHOF.get(id); if (!p) return '';
+  if (VERCACHE[p] !== undefined) return VERCACHE[p];
+  let v = '';
+  try { const m = /"v":(\d+)/.exec(readFileSync(p, 'utf8')); v = m ? (String(m[1]) === '92' ? '2.0' : '1.8') : ''; } catch (e) { v = ''; }
+  VERCACHE[p] = v; return v;
+}
 
-/* （11-05 上午）原来这里的 z-score + `knn()`（k=7 逆距离加权借邻域位置）**整段删除**：
- *   它存在的前提是"投影只算过一次、新点没有自己的投影"。现在并集整体过 `proj-tsne --in` 一次 ⇒ 每个点都是真投影，不借。 */
+/* ④ Hp：2.0 行只认 eps-full 的 `page` 列（与 1.8 行同一把头号尺、同 seed、同档、同桌形）
+ *   三批都是同一台 `eps-full --games=120 --epsTier=lv:regular`（jobs=4）：
+ *     epsfull-g3-1105.tsv = 39 枚精选点 ‖ -g3b- = 克隆根 CLONE-D4a ‖ -g3c- = 补进来的 3 个父节点 */
+const HPG3 = new Map();
+const GSET = new Set();
+for (const f of ['champion-map/epsfull-g3-1105.tsv', 'champion-map/epsfull-g3b-1105.tsv', 'champion-map/epsfull-g3c-1105.tsv', 'champion-map/epsfull-g3d-1105.tsv']) {
+  if (!existsSync(f)) continue;
+  for (const r of tsv(f).rows) {
+    if (String(r.page === undefined ? '' : r.page).trim() !== '' && Number.isFinite(+r.page)) {
+      HPG3.set(norm(r.id), { Hp: +r.page, De: +r.d, examG: String(r.examG || '').trim(), mode: String(r.mode || '').trim() });
+      if (r.examG) GSET.add(String(r.examG));
+    }
+  }
+}
+/* 页内那条「全图只能有一个考卷档」（§E569）要求 examG 随行且**只有一个取值**。2.0 行原来不写这一列 ⇒
+ *   主图 825/870 带档、子集页 0/39 带档，两头的红都是同一件事：**Hp 是哪一把卷量的，就得随行记下来**。 */
+if (GSET.size > 1) { console.error('⛔ eps-full 那几批的档不一致：' + [...GSET].join(' ‖ ') + ' ⇒ 不许把两把卷的读数并成一列 Hp'); process.exit(2); }
+const EXAMG = GSET.size === 1 ? [...GSET][0] : '';
+console.log('  考卷档随行（来自 eps-full 的 examG 列）：' + (EXAMG || '（读不到档 ⇒ 2.0 行的 examG 留空，页内 §E569 会红，这是对的）'));
 
 /* ---- 组装 ---- */
-const g3ruler = tsv('scratch/night6/ruler-g3.tsv');
-const g3Map = new Map(g3ruler.rows.map(r => [r.id, r]));
 const outHead = old.h.slice();
-for (const extra of ['xt', 'yt', 'xt3', 'yt3', 'zt3', 'ver']) if (outHead.indexOf(extra) < 0) outHead.push(extra);
-const out = [];
-
-for (const o of old.rows) {                                     /* ① 旧池行：全列 + 联合投影覆盖 */
-  const r = Object.assign({}, o);
-  const j = jMap.get(o.id);
-  /* ⛔ 11-05 上午（千问）修掉的病：这里原来写 `r.xt = r.x2; r.yt = r.y2`（连同上一行联合行的同款赋值）
-   *   ⇒ **投影列 xt/yt 被填成了未投影的主坐标 x2/y2**，viewer 真画的正是 xt/yt ⇒ 864/864 行 xt 逐字等于 x2，
-   *      范围从 t-SNE 的 ±1.0 变成 −19.2…8.2 ⇒ 两枚离群点把视口撑开，其余 89% 团成一块（用户看到的形态）。
-   *   现在：本件**不再产出投影列**，xt/yt 一律留空，由 `node champion-map/proj-tsne.mjs --in=coords-gen3-1105.tsv`
-   *   对**整张并集**重投影一次 ⇒ 一张图只许有一套 fit（旧点、代 3 臂、新 21 点同一坐标系，也不用再 kNN 借位置）。 */
-  if (j) { r.x2 = j.x2; r.y2 = j.y2; r.x3 = j.x3; r.y3 = j.y3; r.z3 = j.z3; }
-  r.ver = '1.8';
-  r.xt = ''; r.yt = ''; r.xt3 = ''; r.yt3 = ''; r.zt3 = '';
-  out.push(outHead.map(h => r[h] === undefined ? '' : r[h]).join('\t'));
+for (const extra of ['xt', 'yt', 'xt3', 'yt3', 'zt3', 'ver', 'path']) if (outHead.indexOf(extra) < 0) outHead.push(extra);
+const recs = [], lines = [];
+function emit(raw) {
+  const r = raw; r.id = norm(r.id);
+  r.ver = verOf(r.id) || r.ver || '1.8';                        // ② 容器说了算；读不到容器才退回原标注
+  if (PATHOF.has(r.id)) r.path = PATHOF.get(r.id);              // ③ 路径随行
+  r.xt = ''; r.yt = ''; r.xt3 = ''; r.yt3 = ''; r.zt3 = '';      // ① 投影交回 proj-tsne
+  if (r.ver === '2.0') {                                     // ④ 2.0 行**只认** eps-full：没测到就留空（"未测"），不许拿 200 局的数冒充头号尺
+    const h = HPG3.get(r.id); r.Hp = h ? h.Hp : ''; r.De = h ? h.De : '';
+    r.examG = h ? (h.examG || EXAMG) : '';                   // 哪一把卷量的就记哪个档（§E569 判"全图只能一个档"）
+  } else if (String(r.Hp === undefined ? '' : r.Hp).trim() === '') {
+    /* 面板外的 1.8 行（如 V7C/V7M/V7L 这六枚 v7 面对照臂）：容器把它们判回 1.8，但它们不在 coords.tsv 面板里 ⇒ 没有 Hp。
+     *   同一台 eps-full 已经量过它们 ⇒ 照实填，**不许**空着让 viewer 的头号尺守卫报"装错货"。 */
+    const h = HPG3.get(r.id); if (h) { r.Hp = h.Hp; r.De = h.De; r.examG = h.examG || EXAMG; }
+  }
+  recs.push(r);
+  lines.push(outHead.map(k => (r[k] === undefined || r[k] === null) ? '' : r[k]).join('\t'));
 }
-const seen = new Set(old.rows.map(r => r.id));
-let nNew = 0, nEra = 0, nSeg = 0;
-for (const j of joint.rows) {                                   /* ② 代 3 行（臂/段）：Hp=H 兜底 */
-  if (seen.has(j.id)) continue;
-  /* §G3 用户令"点不需要很多"：114 个段快照不进图（gen3-map.html 是它们的家）；早期实验臂 19 枚保留 */
+
+for (const o of old.rows) emit(Object.assign({}, o));            /* ① 旧池行：全列原样（x2/y2 不覆盖 ⇒ 那是旧 fit 的线性主坐标） */
+let nSeg = 0;
+for (const j of joint.rows) {                                    /* ② 代 3 行（只在联合表里的；段快照不进主图） */
+  const id = norm(j.id); if (oldIds.has(id)) continue;
   if (/__seg\d+$/.test(j.id)) { nSeg++; continue; }
-  const r = Object.assign({}, j);
-  if (!(Number(r.H) > 0)) r.H = ''; r.Hp = r.H || '';
-  r.ver = '2.0'; r.xt = ''; r.yt = ''; r.xt3 = ''; r.yt3 = ''; r.zt3 = '';   /* 投影交给 proj-tsne --in 一次算全（见 ① 那条注释） */
-  out.push(outHead.map(h => r[h] === undefined ? '' : r[h]).join('\t'));
-  seen.add(j.id); nEra++;
+  const r = Object.assign({}, j); r.id = id;
+  if (!(Number(r.H) > 0)) r.H = '';
+  emit(r);
 }
-for (const [id, n] of g3Map) {                                  /* ③ 新 21 行 */
-  if (seen.has(id)) continue;
-  /* 新点不再"借邻域位置"（kNN 插值本来就是**因为投影只算过一次**才需要的补丁）：
-   *   它们自带 12 维特征 ⇒ 直接进同一次 t-SNE，得到自己的投影。x2/y2 也留空（那是旧管线的线性主坐标，2.0 点没有）。 */
+let nSkipDim = [];
+for (const [id0, n] of new Map(g3ruler.rows.map(r => [norm(r.id), r]))) {   /* ③ 精选 2.0 点：12 维来自 ruler-g3 */
+  /* 12 维不齐 ⇒ **不许进表**：`proj-tsne` 要求每一维都是数（它自己会 exit 2），而"读不出"的枚一旦带着空维进来，
+   *   整张图就烘不出来。典型来源：装载闸拒绝的代 2 产物（v:91）在 ruler-g3 里留的是 ERR 行。 */
+  if (DIMS.some(d => !Number.isFinite(Number(n[d])))) { nSkipDim.push(id0 + '（12 维不齐）'); continue; }
+  /* 同 id 撞两个产物 ⇒ 这枚按**它自己的文件名**登记（面板里那一枚留在原位、按容器归 1.8） */
+  let id = id0;
+  if (PANEL_PATH.has(id0) && n.path && PANEL_PATH.get(id0) !== n.path) id = n.path.split(/[\\/]/).pop().replace(/\.(bak|js)$/, '');
+  if (recs.some(x => x.id === id)) continue;
   const row = {}; outHead.forEach(h => row[h] = '');
-  row.id = id; row.S = n.S; row.Geff = n.Geff;
+  row.id = id; row.S = n.S; row.Geff = n.Geff; row.H = n.H || ''; row.ver = '2.0';
   for (const d of DIMS) row[d] = n[d] || '';
-  row.Hp = HP.has(id) ? HP.get(id) : ''; row.ver = '2.0';
-  out.push(outHead.map(h => row[h] === undefined ? '' : row[h]).join('\t'));
-  nNew++;
-  console.log('  ' + id + ' ‖ Hp=' + row.Hp + ' ‖ 12 维齐=' + DIMS.every(d => Number.isFinite(Number(n[d])) ? '✔' : '✗'));
+  emit(row);
 }
 
-/* ---- 名次全表重算 ---- */
-const all = [outHead.join('\t')].concat(out);
+/* ---- 视图子集（局域性：每张图自己一套 fit、自己一套名次/百分位） ---- */
+const byId = new Map(recs.map(r => [r.id, r]));
+const LIN = {};
+if (existsSync('champion-map/lineage-g3.tsv')) for (const r of tsv('champion-map/lineage-g3.tsv').rows) LIN[norm(r.id)] = r;
+function parentChain(id) {          // 2.0 视图带上"已在表内的父链"，否则父边画不出来
+  const seen = new Set(); let cur = LIN[id] && LIN[id].parent; let guard = 0;
+  while (cur && byId.has(norm(cur)) && !seen.has(norm(cur)) && guard++ < 40) { seen.add(norm(cur)); cur = LIN[norm(cur)] && LIN[norm(cur)].parent; }
+  return seen;
+}
+let picked = recs;
+if (ONLY === '18') picked = recs.filter(r => r.ver !== '2.0');
+else if (ONLY === '20') { const set = new Set(); for (const r of recs) if (r.ver === '2.0') { set.add(r.id); for (const p of parentChain(r.id)) set.add(p); } picked = recs.filter(r => set.has(r.id)); }
+
+/* ---- 名次按**本视图挑出来的这批行**重算（Fv = Hp/100 + 0.1·S；viewer 点大小 = f(rank)，空 rank = 点不可见） ---- */
 const iRk = outHead.indexOf('rank'), iHp = outHead.indexOf('Hp'), iS = outHead.indexOf('S');
-const fv = out.map(l => { const c = l.split('\t'); return (Number(c[iHp]) || 0) / 100 + 0.1 * (Number(c[iS]) || 0); });
+const idxOf = new Map(recs.map((r, i) => [r.id, i]));
+const chosen = picked.map(r => lines[idxOf.get(r.id)]);
+const fv = chosen.map(l => { const c = l.split('\t'); return (Number(c[iHp]) || 0) / 100 + 0.1 * (Number(c[iS]) || 0); });
 const order = fv.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
 const rank = new Array(fv.length); order.forEach(([v, i], k) => rank[i] = k + 1);
-const final = all.map((l, i) => { if (i === 0 || iRk < 0) return l; const c = l.split('\t'); c[iRk] = String(rank[i - 1]); return c.join('\t'); });
-writeFileSync('champion-map/coords-gen3-1105.tsv', final.join('\n') + '\n');
-console.log('⇒ coords-gen3-1105.tsv：旧池 ' + old.rows.length + ' + 代3臂 ' + nEra + '（段剔除 ' + nSeg + '）+ 新 ' + nNew + ' = ' + out.length + ' 行 ‖ rank 全表重算 ‖ **xt/yt 留空**');
-console.log('  下一步（必做，否则图上没有投影列）：node champion-map/proj-tsne.mjs --in=coords-gen3-1105.tsv');
+const finalLines = chosen.map((l, i) => { const c = l.split('\t'); c[iRk] = String(rank[i]); return c.join('\t'); });
+
+const OUT = arg('out', ONLY === 'all' ? 'champion-map/coords-gen3-1105.tsv' : 'champion-map/coords-view-' + ONLY + '.tsv');
+writeFileSync(OUT, [outHead.join('\t')].concat(finalLines).join('\n') + '\n');
+const t20 = picked.filter(r => r.ver === '2.0'), noHp = t20.filter(r => String(r.Hp) === '');
+console.log('⇒ ' + OUT + '：' + picked.length + ' 行（视图 ' + ONLY + ' ‖ 全表 ' + recs.length + ' 行 ‖ 段快照剔除 ' + nSeg + '）');
+console.log('  版本按容器：2.0=' + t20.length + ' ‖ 1.8=' + (picked.length - t20.length) +
+  ' ‖ D4a ⇒ ' + ((byId.get('D4a') || {}).ver || '?') + ' ‖ V7C-s13 ⇒ ' + ((byId.get('V7C-s13') || {}).ver || '?') + '（v7 面臂不再被 sidecar 拉进 2.0）');
+console.log('  投影列 xt/yt：**全空** ⇒ 必跑 node champion-map/proj-tsne.mjs --in=' + OUT);
+console.log('  Hp 统一（eps-full 同尺）：2.0 行有 Hp ' + (t20.length - noHp.length) + '/' + t20.length + (noHp.length ? ' ‖ 缺测点名 ' + noHp.map(r => r.id).slice(0, 14).join(' ') : ''));
+console.log('  无 path 的枚：' + (picked.filter(r => !r.path).map(r => r.id).slice(0, 14).join(' ') || '无'));
+console.log('  同 id 撞两个产物（后者按文件名另立一枚）：' + (COLLISION.length ? '\n    ' + COLLISION.join('\n    ') : '无'));
+console.log('  12 维不齐、不进表（proj-tsne 要求每维都是数）：' + (nSkipDim.length ? nSkipDim.join(' ‖ ') : '无'));

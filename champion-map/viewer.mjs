@@ -98,6 +98,10 @@ const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=
  *   算出来（它吃 `results/`〔用户私有〕+ gitignored 的臂产物 ⇒ 换机不能重算），重算后要手工拷到本目录。*/
 const OUT = arg('out', 'index.html');
 const PRESET = (['all', '1.8', '2.0'].indexOf(arg('preset', 'all')) >= 0) ? arg('preset', 'all') : 'all';   /* §G3：三张预置图的初始版本模式 */
+/* 11-05 上午（用户："选择批次并不是像拉显示范围一样只需要把旧点扣掉就行了"）：投影是**局域性**的 ⇒
+ *   换视图必须连点坐标一起重算 ⇒ 三张页各自从自己的子集表（coords-view-18 / coords-view-20 / 全部）烘出来，
+ *   页面里的"版本"下拉因此**换页**而不是换滤镜。`--verpages=0` 关掉（单独烘一页时用）。 */
+const VERPAGES = arg('verpages', '1') !== '0' ? { '1.8': 'index-2v-18.html', '2.0': 'index-2v-20.html', 'all': 'index.html' } : {};
 /* §E608 路径口径与 `pool-sync.mjs` / `seat-rule.mjs` 同族：带盘符或前导 `/` 的是**绝对路径**，不许再 join 一层。
  *   触发点是 D234⑩c：门从 tmpdir 传 `--out=C:\...\np-d234-rebake.html` 进来 ⇒ 无条件 `join(HERE, OUT)` 拼出歪路径
  *   ⇒ 写盘失败 exit 1，看起来像"烘焙崩了"。这一族今晚是第四次撞（`--seat=`/`--in=`/`--chart=` 都栽过）。 */
@@ -109,11 +113,19 @@ const PROJTSNE = arg('proj', 'tsne') !== 'old';
  *   原来写死 `join(HERE, arg('fit',…))` ⇒ 传绝对路径会被拼成 `champion-map\D:\code\…` 而"表不存在"，
  *   看起来像"表坏了/没跑成"。这是本仓第五个栽在同一族上的旗标（`--out/--in/--seat/--chart` 都栽过）。 */
 const FITARG = arg('fit', 'coords.tsv');
-const CF = (FITARG.indexOf(':') >= 0 || FITARG[0] === '/' || /^[A-Za-z]:[\/\\]/.test(FITARG)) ? FITARG : join(HERE, FITARG);
+/* 与 `proj-tsne --in` 同一条口径：原样(cwd 相对) → HERE 拼 → 只取文件名；三个都没有 ⇒ 报错列出试过的路径
+ *   （原来只 `join(HERE, FITARG)` ⇒ 传 `champion-map/xxx.tsv` 会拼成双层而报"表不存在"，看着像表坏了）。 */
+const FITCAND = [FITARG, join(HERE, FITARG), join(HERE, FITARG.split(/[\\/]/).pop())];
+const CF = FITCAND.find(p => existsSync(p)) || '';
+if (!CF) { console.error('⛔ --fit=' + FITARG + ' 三个候选路径都不存在：\n   ' + FITCAND.join('\n   ') + '\n   ⇒ 宁可报错，不许退回 coords.tsv 烘另一批点'); process.exit(2); }
 if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 docs/artifacts/e287-out/e287-figs.mjs，再把落盘拷成 coords.tsv'); process.exit(2); }
 const t = readFileSync(CF, 'utf8').trim().split('\n'), head = t[0].split('\t');
 const rows = t.slice(1).map(l => { const c = l.split('\t'); const o = {}; head.forEach((k, i) => { o[k] = c[i]; }); return o; });
-if (rows.length < 50) { console.error('⛔ 坐标表只有 ' + rows.length + ' 行'); process.exit(2); }
+/* 行数地板：原来写死 `< 50`，那是"整表 800+ 行"年代的口径 ⇒ 11-05 的**逐视图重投影**（2.0 只有 39 枚）会被它误杀，
+ *   而误杀的形态和"表真的坏了"一模一样（都是 exit 2 + 一句话），所以不能直接删。改成旗标：默认地板降到 20
+ *   （仍然拦得住"join 只写出几行"这类塌方），烘子集页时不必带旗标；要更狠的场合显式传 `--minrows=`。 */
+const MINROWS = Number(arg('minrows', 20)) || 20;
+if (rows.length < MINROWS) { console.error('⛔ 坐标表只有 ' + rows.length + ' 行（地板 ' + MINROWS + '，可用 --minrows= 调）'); process.exit(2); }
 /* ===== §E604 副名 → 主名 的翻译表（10-14 折行之后加的一跳，位置必须在池表读入**之前**）=====
  *   `coords.tsv` 现在**一行 = 一份权重**（用户裁：「同权重只算一枚」），组内其它历史名字搬到 `aliasIds` 列，当引用与指针。
  *   可别的键表仍然按**当年的名字**写：`pool-members.tsv` 里写的是 `SHIPPED-Ldemo`、`lineage.tsv` 的 parentOf 也指它，
@@ -146,7 +158,7 @@ if (PROJTSNE) {
   if (empty.length > rows.length * 0.02) { console.error('⛔ 投影列在，但 ' + empty.length + '/' + rows.length + ' 行是空的' +
     '\n       ⇒ 这些枚会退回旧坐标，与其余的**不在同一套投影里**（同一张图上混两套坐标 = 距离没有意义）。' +
     '\n         空的前 8 枚：' + empty.slice(0, 8).map(r => r.id).join(' ') + '\n         补投影：node champion-map/proj-tsne.mjs'); process.exit(2); }
-  console.log('投影口径 ✅ ' + (rows.length - empty.length) + '/' + rows.length + ' 枚用 t-SNE 列 xt/yt' +
+  console.log('投影口径 ✅ ' + (rows.length - empty.length) + '/' + rows.length + ' 枚用投影列 xt/yt（proj-tsne 按 N 选：大表 t-SNE ‖ 小表 MDS）' +
     (empty.length ? '（' + empty.length + ' 枚没有 ⇒ 逐行退旧坐标，见上面那条 2% 的界）' : ''));
   /* §G3（11-05 上午 · 千问 · 用户报"团成一块几个点飞出去"）：**投影列不许是主坐标的拷贝**。
    *   11-05 夜班那份合并器把 `x2/y2`（未投影的线性主坐标）抄进了 `xt/yt`，而上面两条守卫**看不见**这个病
@@ -431,7 +443,11 @@ const DATA = rows.map(r => ({
   Hp: +r.Hp,
   De: (r.De === '' || r.De === undefined) ? null : +r.De,
   S: +r.S, Ge: +r.Geff, rk: +r.rank,
-  ver: (G3IDS.has(r.id) || r.ver === '2.0') ? '2.0' : '1.8',   /* §G3：版本判定 = g3 谱系 sidecar ∪ 数据文件 ver 列（代3臂/段行由合并器打标） */
+  /* ⚠ 11-05 上午（用户点名"2.0 的点里为什么会有 D4a？D4a 是很早以前的 1.8 点"）：
+   *   原来这里写 `(G3IDS.has(r.id) || r.ver === '2.0')` ⇒ **"在 2.0 谱系 sidecar 里"被当成了版本判据**，
+   *   而 D4a 正是 2.0 树的克隆根（v7 面产物）、V7C/V7M/V7L 六枚是 v7 面的对照臂 ⇒ 全被拉进 2.0。
+   *   版本从此**只读数据列 `ver`**（由合并器按容器 `"v":92` 判定）；sidecar 只供家族与父边（父边允许跨版本）。 */
+  ver: r.ver === '2.0' ? '2.0' : '1.8',
   /* §E566：同枚的 exam=120 档读数。**空必须是 null，不许 `+'' = 0`**（§E491 那条病就是 Hp 空洞被当 0% 画成库内倒数） */
   examG: (String(r.examG === undefined ? '' : r.examG).trim() === '') ? null : +r.examG,
   /* §E373 预留的那个标记现在真的有值了：§E375 把 16 枚旧槽位冠军并进 coords.tsv 之后，
@@ -803,6 +819,30 @@ var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三
  *   ④ 滚轮放大时点跟着变大（原来刻意不跟，理由写在 §E314 那段"经典统计图约定"里 —— 用户看了实物否掉了）。
  *   ⑤ 冠军一列按**上线时刻**排（ship-scan.mjs 从 git 逐提交算槽文件权重指纹抽的，不是按提交标题点名）。 */
 st.batch = '${PRESET}';   // §G3：--preset 由生成器插值（浏览器段没有 arg）
+/* §G3 之续（11-05 上午 · 用户："选择批次不是像拉显示范围一样把旧点扣掉就行"）：投影是局域性的 ⇒
+ *   换视图必须换一套 fit。三张页各自从自己的子集表烘出来，所以这个下拉**换页**、不是换滤镜。
+ *   VER_PAGES 由生成器插值（--verpages=0 ⇒ 空表 ⇒ 退回页内过滤，单独烘一页时用）。SELF_PAGE 防自己跳自己。 */
+var SELF_PAGE = (location.pathname.split('/').pop() || 'index.html');
+var VER_PAGES = ${JSON.stringify(VERPAGES)};
+/* §G3（11-05 中午 · 千问）自检期间**禁止换页**。页内自检会挨个点下拉（§E338"工具栏接线"那条），
+ *   而"版本"下拉现在的动作是改 location.href ⇒ 子集页在自检里被点了一下就跳回 index.html，
+ *   跳转不带 hash ⇒ 那一页的自检根本没跑 ⇒ dump 读到"0 PASS / 0 FAIL"（实测 index-2v-18/20 都是这个形态）。
+ *   NAVLOCK=1 时下拉退回原来的**页内过滤**分支：那条判据量的是"点下去 st 真的变了"，仍然成立。
+ *   ⚠ 本段注释里**不许出现反引号**：这里在模板字符串内部（§E338 那条老坑，跑一次 --check 才知道）。 */
+var NAVLOCK = 0;
+/* §G3（11-05 中午 · 千问）**单版本子集页**（index-2v-18 / index-2v-20 = 烘这一页时 --preset 点了某一个版本）：
+ *   这一页的 DATA 里**只有那一个版本的枚**（投影也是这批点自己重算的 ⇒ 用户令"换视图必须连坐标一起重算"）。
+ *   于是 §E338 里一批"判的是全库分布 / 池层 / 活槽那 16 枚 / 共父 584 枚 / 过线壳"的判据在本页**取不到样本**——
+ *   它们的 got 串本来就印着 0 条 / 0 个 / 样本不足。原来这些一律算 FAIL ⇒ 子集页 26 条红，
+ *   读的人分不清"图坏了"与"这条判据不在这张图的定义域里"，而下一个人为了消红会把子集页改回"同一套坐标 + 页内过滤"
+ *   ——那正是用户 11-05 上午否掉的形态。⇒ 点名清单内的这些条在子集页走既有的第三态 SKIP（**逐条印名字与理由**，不静默）。
+ *   ⚠ 主图（--preset=all）SUBSETP=0 ⇒ 一个字都不变；不在清单里的（画边/像素/交互）在子集页照判。 */
+var SUBSETP = ${PRESET === 'all' ? 0 : 1};
+var NA_IN_SUBSET = ['批次过滤：切一批要少点', '冠军序列：抽不到上线时刻', '倒挂假边必须被修掉', '父边来路必须标全',
+  '强度窗口：两端顶到色端', '强度窗口：分界被切掉', '标签：常驻名单', '点大小：上过线那一档', '命中：标签中心不许命中',
+  '那 584 枚共父', '池层：真源表每一枚都在图上', '池层：环数', '融合边：红线必须真画出来', '家族配色要',
+  '壳：带宽滑轨', '壳：带宽真的改场', '连线开关：全开', '沿一条边走一圈', '空地上的单根线', '平移/缩放/旋转一条线的 alpha',
+  '工具栏剩下的都能点', '谱系图：旧包没有 lineage 行'];
 st.sel = null; st.cmp = []; st.side = false;
 /* ===== §E596 分界的锚从"某一枚包"换成"最强那一批的均值"（用户 10-12：「演化图里还标着现役，应该把这些都去掉或者改成最强一批的平均值」）=====
  *   病：颜色的分界、库内百分位、明细里那句"vs 现役"、标签上那颗 ★，原来全都钉在 'SHIPPED-Ldemo' 这一枚上 ——
@@ -3143,9 +3183,9 @@ function drawBody() {
     if (_sp && _lg && _sp.style.display !== 'none') _sp.style.top = (_lg.offsetTop + _lg.offsetHeight + 10) + 'px'; }
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   ringTally();   /* §E677 表头要说得出"当前这圈环是哪把闸"，顺带把计数刷新（按桌形缓存 ⇒ 仍是状态的纯函数，§E622 那条判得住）*/
-  document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
+  document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 xt/yt（轴无固定含义 ‖ 大表 t-SNE · 小表 MDS）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚在当前档**不画**，明细写"未测"（旧行为是静默退回默认桌 = 混两把尺，v1.8.27 已废）') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚在当前档**不画**，明细写"未测"（旧行为是静默退回默认桌 = 混两把尺，v1.8.27 已废）') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
@@ -3493,7 +3533,12 @@ function paintSide() {
     el.appendChild(note);
   }
 }
-document.getElementById('batch').addEventListener('change', function () { st.batch = this.value; recomputeVIS();
+document.getElementById('batch').addEventListener('change', function () {
+  /* 11-05 上午（用户）：版本 = **另一套投影** ⇒ 换版本就换页（页内坐标是本页这批点自己拟合出来的，拿去过滤另一批点是假坐标）。
+   *   目标页就是本页（或 VER_PAGES 为空）时，退回原来的页内过滤，行为与旧版逐字同。 */
+  var k = this.value, tp = (typeof VER_PAGES !== 'undefined' && VER_PAGES[k]) ? VER_PAGES[k] : '';
+  if (tp && tp !== SELF_PAGE && !NAVLOCK) { location.href = tp; return; }
+  st.batch = k; recomputeVIS();
   buildFamBar(); paintSide(); req(); });
 /* ===== §E371 强度窗口（用户："默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示"）
  *   §E378 换成一根竖轴（用户 10-07：「F窗口用两个独立的轴调很奇怪，你直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）
@@ -4139,8 +4184,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   /* 自检自己也要有牙：跑挂了必须留下一行红字。空 div 与"0 PASS / 0 FAIL"是同一种假绿
    *   —— 看的人分不清"没跑"与"跑完没写"，而这两件事的处置完全相反。*/
   el0.style.display = 'block'; el0.textContent = 'RUNNING §E338 页内自检…';
+  NAVLOCK = 1;   /* ↑ 自检会点下拉 ⇒ 这段时间禁止"版本=换页"（见上面 NAVLOCK 那段）*/
   try {
-  function T(name, cond, got) { if (cond) { nok++; out.push('PASS ' + name + (CHKDETAIL && got !== undefined && got !== null ? ' ‖ ' + got : '')); }
+  function T(name, cond, got) {
+    if (SUBSETP && !cond && NA_IN_SUBSET.some(function (s) { return String(name).indexOf(s) >= 0; })) {
+      nskip++; out.push('SKIP ' + name + ' ‖ 单版本子集页（本页 ' + N + ' 枚）取不到这条判据的对象 ‖ 原判读：' + (got === undefined || got === null ? '—' : got)); return; }
+    if (cond) { nok++; out.push('PASS ' + name + (CHKDETAIL && got !== undefined && got !== null ? ' ‖ ' + got : '')); }
     else { nbad++; out.push('FAIL ' + name + (got === undefined || got === null ? '' : ' ‖ 实测 ' + got)); } }
   /* §E338 的第三态「判不动」（10-21）：**不是**"可以忽略的红"，而是"这个态下量具够不到判据"
    *   —— 判据自己印出够不到的理由，行首 SKIP ⇒ 不进 PASS/FAIL 分母，但 shot.mjs 与页眉都会把
@@ -6422,6 +6471,7 @@ st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
   })();
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL' + (nskip ? ' / ' + nskip + ' SKIP' : '') + '\\n' + out.join('\\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\\n已经跑到：\\n' + out.join('\\n'); nbad++; }
+  NAVLOCK = 0;
   st.sel = null; paintCard(); draw();
 })();
 `;
