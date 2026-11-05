@@ -107,10 +107,16 @@
      * ⇒ 读代码的人注意：`B.multi === false` **不表示**"这局用的是 v1.0 那套 AI"，只表示座位是 2 个。 */
     B.multi = n > 2;
     if (typeof syncDiffOptions === 'function') syncDiffOptions();
-    B.state = S.createState(B.modeKey, null, n, sdOpts());
+    /* 一局一枚种子：判定（八卦阵/金刚盾/爆头）、池的逐席抽签盐、AI 的 ε 探索全部从它派生。
+     * 此前这里传 `null` ⇒ 落到 `state.js` 的 `Math.random` 兜底，而页面没有对局种子输入
+     * ⇒ 用户实机看到的那一局**没法回放**，只能靠口述（本仓所有读数都要求逐位可复现，唯独产品侧不满足）。
+     * 种子本身仍是随机抽的（所以局局不同），只是从此可登记、可复现。 */
+    B.matchSeed = (Math.random() * 4294967296) >>> 0;
+    B.state = S.createState(B.modeKey, { next: Trainer.mulberry32(B.matchSeed) }, n, sdOpts());
     /* v1.5.66：**每局一个槽位/顺序盐** —— 让目标枚举顺序与结算相位在页面上也不再有身份
-     * （训练与评测早就带盐；此前只有页面缺省 0 ⇒ 页面走确定性顺序）。 */
-    B.state.slotSalt = (Math.random() * 4294967296) >>> 0;
+     * （训练与评测早就带盐；此前只有页面缺省 0 ⇒ 页面走确定性顺序）。
+     * 现在它由本局种子派生（乘一个固定混数取低 32 位），不再单独抽一次 ⇒ 登记了种子就复现了盐。 */
+    B.state.slotSalt = (Math.imul(B.matchSeed, 2654435761)) >>> 0;
     B.roundStarted = false; B.locked = false; B.aiKey = null; B.picking = null;
     B.evCursor = 0; B.transcript = []; B.aiHistory = [];
     B.roundStartSnapshot = null; B.warnedChampNoTrain = false; B.undoUsed = false;
@@ -693,8 +699,12 @@
     function finish(res) {
       const key = (typeof res === 'string') ? res : (res && res.key);
       const t1 = (res && typeof res === 'object' && res.target != null) ? res.target : pickTargetFor(state, pid, key);
-      let t2 = null;
-      if (key === R.SK.DUAL_GUN || key === R.SK.MIRROR) {
+      /* 第二目标听网络的（与 `js/train/evo.js` 那处同一裁定，用户 11-05）：
+       * 此前这里无条件用"索引最小的存活对手"覆盖 `res.target2` ⇒ 冠军选不了第二枪打谁。
+       * 只有网络没给、或给的已经不可用时才回退到旧兜底。 */
+      let t2 = (res && typeof res === 'object') ? res.target2 : null;
+      if (t2 != null && (t2 === t1 || t2 === pid || S.opponentsOf(state, pid).indexOf(t2) < 0)) t2 = null;
+      if (t2 == null && (key === R.SK.DUAL_GUN || key === R.SK.MIRROR)) {
         const rest = S.opponentsOf(state, pid).filter(function (o) { return o !== t1; });
         t2 = rest.length ? rest[0] : null;
       }
@@ -1019,6 +1029,10 @@
      *   旧记录（改代码前存在 localStorage 里的那些局）没有这几格 ⇒ 明写"未登记"，不许留成空格看起来像"对手不明"。 */
     let txt = 'Epirus 拍手游戏 对局记录\n模式=' + MODE_NM[B.modeKey] + '  难度=' + (B.diffLabel || diffName(B.diff)) + '\n';
     txt += '对手=' + (B.oppSeats || B.oppInfo || '（本局未登记，看不到是谁在打）') + '\n';
+    /* 种子（用户 11-05 要求）：登记"这一局的随机性从哪来"。它驱动判定（八卦阵/金刚盾/爆头）、
+     * 冠军池的逐席抽签盐与本局 AI 的 ε 探索 ⇒ 同引擎 + 同池 + 同难度档 + 同种子 ⇒ 电脑那几手可逐手复现；
+     * 人类那一手按下面正文里的记录走，不参与种子。没有这格的旧记录（localStorage 里那些）读不到种子。 */
+    txt += '种子=' + (B.matchSeed != null ? B.matchSeed : '（本局未登记种子）') + '\n';
     if (B.oppInfo && B.oppSeats && B.oppInfo !== B.oppSeats) txt += '对手AI=' + B.oppInfo + '\n';
     if (B.oppMid && B.oppMid.length) txt += '中途换档=' + B.oppMid.join(' ‖ ') + '\n';
     txt += '\n';
@@ -1026,8 +1040,13 @@
       txt += '第 ' + r.round + ' 回合：' + (r.line ? r.line : '你=【' + r.human + '】 电脑=【' + r.ai + '】') + '\n';
       for (const l of r.lines) txt += '   - ' + l + '\n';
     }
+    /* `winner` 在局没打完时是 null，而这段文本是**每回合自动保存**的（`persistBattle`）
+     * ⇒ 旧写法把 null 一路落到最后那个分支，于是每一局的中间快照都写着"结果：平局"
+     *   （用户读真机栏 / 导出件时看到的就是它）。现在只有真打完才报结果。 */
     const w = B.state.winner;
-    txt += '\n结果：' + (w === 0 ? '你赢了' : w === 'draw' ? '平局' : (B.state.p[w] ? B.state.p[w].name + ' 获胜' : '平局')) + '（共 ' + B.state.round + ' 回合）\n';
+    txt += B.state.over
+      ? '\n结果：' + (w === 0 ? '你赢了' : w === 'draw' ? '平局' : (B.state.p[w] ? B.state.p[w].name + ' 获胜' : '平局')) + '（共 ' + B.state.round + ' 回合）\n'
+      : '\n结果：进行中（打到第 ' + B.state.round + ' 回合，还没分胜负）\n';
     return txt;
   }
   // 每回合自动保存到 localStorage（对局结束也不清空，便于复查/调试）

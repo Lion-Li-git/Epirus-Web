@@ -100,7 +100,11 @@
   const AVAILABLE_2P = skills.filter(function (s) { return MULTI_ONLY.indexOf(s.key) < 0; });
 
   // “带攻击效果”技能（狙击易受影响 / 可抵消攻击同层相抵也用它判定）
-  const ATK_EFFECT = [SK.GUN, SK.SWORD, SK.TANK, SK.SNIPE, SK.DRAIN, SK.RAILGUN, SK.LASER_EYE, SK.CANNON];
+  /* 双枪射手按"两个枪"计入（用户 11-05 裁定）：它此前只在自己那两份伤害里借 `via=SK.GUN` 查表
+   * （反弹/地雷口径对），但交锋与狙击干扰这两处读的是这张表 ⇒ 双枪既不参与同层相抵、
+   * 也打断不了狙击，与 `docs/RULES-NP.md` N3「按枪的口径各结算 1 点」和优先级原则相违。
+   * 优先级仍取卡表的 3（原始规则只给枪单独标了 2，双枪未特别标注 ⇒ 按"未特别标注均为 3"）。 */
+  const ATK_EFFECT = [SK.GUN, SK.SWORD, SK.TANK, SK.SNIPE, SK.DRAIN, SK.RAILGUN, SK.LASER_EYE, SK.CANNON, SK.DUAL_GUN];
   // 挑衅合规 = 对敌方造成伤害的攻击向技能（含特殊类攻击性技能）— R41
   const TAUNT_SATISFY = [SK.GUN, SK.SWORD, SK.TANK, SK.SNIPE, SK.DRAIN, SK.RAILGUN, SK.CANNON, SK.LASER_EYE, SK.DUAL_GUN];
   const LIGHTNING = [SK.RAILGUN, SK.MINI_T, SK.BIG_T];

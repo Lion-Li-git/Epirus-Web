@@ -1142,7 +1142,14 @@ function supportPriorRand(state, pid, salt) {
           }
         }
       }
-      return { key: pick.key, target: shipTarget, target2: pickTarget2N(state, pid, pick.key, shipTarget), bead: pick.bead };
+      /* 第二目标：网络在候选里是按**有序目标对**打分的（`js/train/policy.js:645-657`），
+       * 而这一行此前把网络选出的 `pick.target2` 丢掉、换成"索引最小的存活对手"（`pickTarget2N`）
+       * ⇒ 打分的那一手和打出去的那一手不是同一手，第二目标这一维结构性不可达（用户 11-05 裁定：听网络的）。
+       * 只有当网络没给、或给的已经不可用（已死/是自己/与第一目标同一个人）时才回退到旧兜底。 */
+      let shipT2 = pick.target2;
+      if (shipT2 == null || shipT2 === shipTarget || shipT2 === pid ||
+        S.opponentsOf(state, pid).indexOf(shipT2) < 0) shipT2 = null;
+      return { key: pick.key, target: shipTarget, target2: shipT2 != null ? shipT2 : pickTarget2N(state, pid, pick.key, shipTarget), bead: pick.bead };
     };
   }
   /* ===== v1.5.30x（Qoder 09-30 夜 · **默认关**）· 在线对手模型 + 1-ply 引擎重放搜索 =====
