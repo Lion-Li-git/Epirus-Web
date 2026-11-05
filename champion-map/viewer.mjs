@@ -698,11 +698,9 @@ var KEXP = 2.5;   /* §E330 IDW 核的指数：1/d^KEXP。**淡出的覆盖度�
                      两处各写一份字面量时，改一处会让"晕有多远"和"核有多硬"悄悄脱钩。*/
 var EDGEK = 8;    /* §E331 位图外沿收口的格数。必须**小于**网格边距折算出来的格数（边距 10% ⇒ 约 19 格），
                      否则会把点云自己的晕切掉一刀 —— 那是"为了藏边而砍数据"。*/
-var COV_MED = 1;  /* 覆盖度**按对数密度分位**映射（11-05 用户第三轮：「要均匀平滑的发散透明度变化」）。
-                     1 = 分位映射（默认）‖ 0 = 回到"按点间距 0.5·fscale 定尺"的旧法律（A/B 用，#cov=0）。
-                     为什么不用"径向渐隐/绝对上限"那些：它们都只是**裁**，云内仍是平的（用户原话：
-                     "对外被卡住了、对内反而无限发散"）。分位映射让每个格子落在同一条连续曲线上。 */
-var COV_LO = 0, COV_HI = 0;   /* 有场格子的 wsum 的 p5 / p95（对数尺两端），buildBitmap 每次重算 */
+var COV_MED = 1;  /* 覆盖度按对数密度做平滑 Logistic 映射；p5/p95 只定标，不再把两端夹成平台。
+                     1 = 平滑映射（默认）‖ 0 = 按点间距定尺的旧有理曲线（A/B 用，#cov=0）。 */
+var COV_LO = 0, COV_HI = 0;   /* 有场格子的 wsum 的 p5 / p95（对数尺定标），buildBitmap 每次重算 */
 var OKL = [], POKJ = 0, PV = null;
 /* ===== §E677 绿环的主语 = 当前桌形那把**纯桌**闸（用户 2026-10-21 裁「改成纯短程和纯长程两种，不要留混合桌环」）=====
  *   默认(3血短程) → oks = 全腿短程（八条腿全在 3 血桌上判）
@@ -1497,9 +1495,13 @@ function buildNB(key, bx, byy) {
   /* §E331 网格边距 3% → 10%：位图铺到"最外一圈点的晕**淡尽**"之外，而不是贴着点云切一刀。
    *   平面态看不出问题（晕外就是底色），立体态那块底板是一整块平行四边形 ⇒ 边缘直接割裂（用户截图）。
    *   底色 = 晕尽处的颜色 ⇒ 板的边界在视觉上不存在了。*/
-  /* E394 DS：网格边距 **10% → 35%**（用户 10-08：把实际画布扩大然后让边缘是自然衰减消失的）。
-   *   场算在一张比视野大得多的画布上 ⇒ 板自己那条矩形边缘（以及 EDGEK 收口）永远落在视野外 ⇒ 不会有割裂。 */
+  /* 先留 35% 边距，再按显示像素把短边补到长边：底图计算域与网格都为正方形，
+   * 旋转后也不会因为纵向计算域较短而提前露出板边。点坐标与相机比例不变。 */
   var mgx = (x1 - x0) * 0.35, mgy = (y1 - y0) * 0.35; x0 -= mgx; x1 += mgx; y0 -= mgy; y1 += mgy;
+  var cx0 = (x0 + x1) / 2, cy0 = (y0 + y1) / 2;
+  var side0 = Math.max((x1 - x0) * bx, (y1 - y0) * byy);
+  x0 = cx0 - side0 / (2 * bx); x1 = cx0 + side0 / (2 * bx);
+  y0 = cy0 - side0 / (2 * byy); y1 = cy0 + side0 / (2 * byy);
   for (i = 0; i < N; i++) { xs[i] = P[i][ax]; ys[i] = P[i][by]; }
   var nn = [], d12 = [];
   for (i = 0; i < N; i++) {
@@ -1516,16 +1518,9 @@ function buildNB(key, bx, byy) {
     nn.push(heap[0] || 1); d12.push(heap[11] || heap[0] || 1);
   }
   var nmed = pct(nn, .5) || 1, d12m = pct(d12, .5) || nmed;
-  /* 网格按屏幕显示跨度分配 ⇒ 显示空间里格子是正方形（26k 格左右），势晕才不会被栅格化成扁的 */
   var dispX = (x1 - x0) * bx, dispY = (y1 - y0) * byy;
-  /* E390 DS：格子预算跟着**显示跨度**走，不再固定 40000。
-   *   为什么：一枚离群点（blk0t40-s31，y=-20.86 = 20 IQR）把 y 跨度撑到全体 24.0 vs 截尾 4.1 = **5.8 倍** ⇒
-   *   固定预算下每格从 ~15px 涨到 ~50px，而点云只占网格一小块 ⇒ 场被降分辨率 = '灰蒙蒙'的第三个来源。
-   *   ⚠ **不改成截尾范围**：用户 10-04 裁定「背景图要扩散到**所有点**的范围」（截尾框外的离群点脚下空着会看着割裂）。
-   *   ⇒ 保范围、加预算：每格目标 15px，总格数夹在 [40000, 400000]。 */
-  var TOT = Math.max(40000, Math.min(400000, Math.round(dispX * dispY / 225)));
-  var gx = Math.max(40, Math.min(1200, Math.round(Math.sqrt(TOT * dispX / (dispY || 1)) || 40)));
-  var gy = Math.max(40, Math.min(1200, Math.round(Math.sqrt(TOT * dispY / (dispX || 1)) || 40)));
+  /* 正方形计算域配正方形网格；约 4 显示像素一格，最多 200×200，初始重建不随屏幕尺寸失控。 */
+  var gx = Math.max(40, Math.min(200, Math.round(Math.max(dispX, dispY) / 4) || 40)), gy = gx;
   var idx = new Int16Array(gx * gy * KF), dst = new Float32Array(gx * gy * KF);
   /* E388 DS（用户 10-07 第三件）：地板的值从 **H（考卷口径）** 换成 **Hp（页面口径）**。
  *   原来吃 H 而色带/点/图例读 Fv = Hp/100 + T·S ⇒ 两条尺 ⇒ 一收窄范围场值就跑出可见点的 F 区间 ⇒
@@ -1540,9 +1535,9 @@ var SW = new Float32Array(gx * gy);
     var ci = gj * gx + gi, base = ci * KF;
     for (var q = 0; q < KF; q++) { idx[base + q] = -1; dst[base + q] = 1e18; }
     for (var c2 = 0; c2 < N; c2++) {
-      var ex2 = (xs[c2] - X) * bx, ey2 = (ys[c2] - Y) * byy, d2 = Math.sqrt(ex2 * ex2 + ey2 * ey2);
-      if (d2 < dst[base + KF - 1]) {
-        var pos = KF - 1;
+      var ex2 = (xs[c2] - X) * bx, ey2 = (ys[c2] - Y) * byy, ds2 = ex2 * ex2 + ey2 * ey2;
+      if (ds2 < dst[base + KF - 1] * dst[base + KF - 1]) {
+        var d2 = Math.sqrt(ds2), pos = KF - 1;
         while (pos > 0 && dst[base + pos - 1] > d2) { dst[base + pos] = dst[base + pos - 1]; idx[base + pos] = idx[base + pos - 1]; pos--; }
         dst[base + pos] = d2; idx[base + pos] = c2;
       }
@@ -1680,6 +1675,7 @@ function buildBitmap(key, visSigNow) {
   var bR = parseInt(st.bg.slice(1, 3), 16), bG = parseInt(st.bg.slice(3, 5), 16), bB = parseInt(st.bg.slice(5, 7), 16);
   var c = document.createElement('canvas'); c.width = nb.gx; c.height = nb.gy;
   var cg = c.getContext('2d'), img = cg.createImageData(nb.gx, nb.gy), dta = img.data;
+  var CIX9 = new Uint16Array(nb.gx * nb.gy), ALP9 = new Float64Array(nb.gx * nb.gy);
   var BND9 = colBand();
   var nPainted = 0, nOob = 0;   /* §E381 见下面 FL.painted / FL.oob */
   var SHOWN = new Uint8Array(N), nShown = 0;
@@ -1691,13 +1687,7 @@ function buildBitmap(key, visSigNow) {
    *   先烘成一张表：48 万次内循环里只查数组，不重复走函数与分支。 */
   var FV9 = new Float64Array(N);
   for (var f9 = 0; f9 < N; f9++) FV9[f9] = Fv(P[f9]);
-  /* 密度定标的覆盖度（用户 11-05 第三轮："要**均匀平滑**的发散透明度变化"）：
-   *   病：kcov 绑在**点间距**（0.5·fscale）上 ⇒ 云内处处 wsum ≫ kcov ⇒ fade≈1，整片是平的；
-   *   梯度只出现在云外，于是任何"外侧渐隐"都只能靠裁 —— 裁完就是"外面被卡住、里面无限发散"。
-   *   改法：kcov 换成**这张画面里所有有场的格子的 wsum 中位数** ⇒
-   *     中位密度 ⇒ alpha≈0.5 ‖ 更密 ⇒ 更实 ‖ 更疏 ⇒ 更透，
-   *   全图落在同一条连续曲线上：不需要裁剪、也不在点与点之间抠洞（wsum 是各点核权重之和，处处连续）。
-   *   用 #cov=0 可回到旧的"按点间距定尺"做 A/B。 */
+  /* p5/p95 只决定 Logistic 的中心与斜率；两端仍连续趋近 0/1，不产生全透或全实平台。 */
   if (COV_MED) {
     var __ws = new Float64Array(nb.gx * nb.gy), __TB0 = VIS_TB || nb;
     for (var i0 = 0; i0 < nb.gx * nb.gy; i0++) {
@@ -1708,8 +1698,6 @@ function buildBitmap(key, visSigNow) {
     }
     var __pos = []; for (var i1 = 0; i1 < __ws.length; i1++) if (__ws[i1] > 0) __pos.push(__ws[i1]);
     __pos.sort(function (a, b) { return a - b; });
-    /* 按**对数密度分位**映射：p5 ⇒ 全透，p95 ⇒ 全实，中间线性（对数尺）。
-     * 这是"均匀"两个字的落点：alpha 沿**量级**均匀变化，而不是被某把尺度卡成一个平台。 */
     if (__pos.length) {
       COV_LO = __pos[Math.floor(__pos.length * 0.05)] || __pos[0];
       COV_HI = __pos[Math.floor(__pos.length * 0.95)] || __pos[__pos.length - 1];
@@ -1730,11 +1718,16 @@ function buildBitmap(key, visSigNow) {
      *   nShown === N ⇒ 用 buildNB 缓存好的全库表（两者逐字节相同）；否则现算可见表
      *   ⇒ 不再存在"候选全在窗外 ⇒ wsum=0 ⇒ 留空"的格子。 */
     var TB = VIS_TB || nb;
-    var bs9 = i * KF, wsum = 0, fsum9 = 0;
+    var bs9 = i * KF, wsum = 0, csum9 = 0, fsum9 = 0, fraw9 = 0, nnb9 = 0;
+    while (nnb9 < KF && TB.idx[bs9 + nnb9] >= 0) nnb9++;
+    var d129 = nnb9 ? Math.max(TB.dst[bs9 + nnb9 - 1], 1e-6) : 1;
     for (var u9 = 0; u9 < KF; u9++) { var pi9 = TB.idx[bs9 + u9]; if (pi9 < 0) break;
       if (nShown !== N && !SHOWN[pi9]) continue;
-      var w9 = 1 / Math.pow(Math.max(TB.dst[bs9 + u9], 1e-6), KEXP);
-      wsum += w9; if (isFinite(FV9[pi9])) fsum9 += w9 * FV9[pi9]; }   /* v1.8.27：没读数的点不许把整块底图均值染成 NaN */
+      var dd9 = Math.max(TB.dst[bs9 + u9], 1e-6), w9 = 1 / Math.pow(dd9, KEXP), cw9 = w9;
+      if (nnb9 > 1 && d129 > 1e-6) { var rr9 = Math.min(1, dd9 / d129), tt9 = 1 - rr9 * rr9; cw9 = w9 * tt9 * tt9; }
+      wsum += w9; csum9 += cw9;
+      if (isFinite(FV9[pi9])) { fsum9 += cw9 * FV9[pi9]; fraw9 += w9 * FV9[pi9]; }
+    }
     if (!(wsum > 0)) continue;
     /* §E331 覆盖度换成**核权重和**，不用「到最近点的距离」。旧写法 1/(1+(DM/fscale)^4) 在两枚点中间
      *   必然下凹（DM 在 Voronoi 脊线上取局部极大）⇒ 底图上那一片"凹陷的接缝"就是脊线本身，跟数据无关，
@@ -1744,22 +1737,22 @@ function buildBitmap(key, visSigNow) {
      *     所以再乘一个**贴边收口**：最外 EDGEK 格线性拉到 0 ⇒ 板的边界与底色逐像素相同，边缘不存在。
      *     10% 的网格边距（buildNB）保证这 EDGEK 格全在点云之外的空裙里，不会把晕切一刀。*/
     var gi = i % nb.gx, gj = (i / nb.gx) | 0;
-    /* 对数密度分位映射：p5 密度 ⇒ 0，p95 ⇒ 1，中间连续（对数尺）。
-     *   这样 alpha 沿**量级**均匀铺开 —— 不会像"按点间距定尺"那样云内整片饱和、
-     *   也不会像"钳半径"那样把晕与晕之间抠出洞。EDGEK 的贴边收口照旧保留（避免画布边缘硬切）。 */
     var fade;
     if (COV_MED && COV_HI > COV_LO) {
-      var lw = Math.log(wsum), l0 = Math.log(COV_LO), l1 = Math.log(COV_HI);
-      fade = (lw - l0) / (l1 - l0); if (fade < 0) fade = 0; else if (fade > 1) fade = 1;
+      var lw = Math.log(wsum), lm = (Math.log(COV_LO) + Math.log(COV_HI)) / 2;
+      fade = 1 / (1 + Math.exp(-6 * (lw - lm) / (Math.log(COV_HI) - Math.log(COV_LO))));
     } else fade = wsum / (wsum + kcov);
     fade *= Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
-    var Fav = fsum9 / wsum;   /* §E672 = 可见点 Fv 的加权平均（原来写的是 (hsum9 + T·ssum9)/wsum，而 hsum9 硬编码 Hp）*/
+    /* 颜色权重在第 12 近邻处连同斜率一起归零：减少密集区平均发灰，也消掉近邻换人的折痕。
+     * 覆盖度仍用未收边的 wsum，避免稀疏外围被尺度补偿重新涂实。 */
+    var Fav = csum9 > 0 ? fsum9 / csum9 : fraw9 / wsum;
     /* §E601：底图只有一条读法（全库分位 + 蓝→灰→红）。原来"只有切到第 6 档 rel 才用发散带 + 淡入"那一支已随整档删除。*/
-    var tt = fCol(Fav);
-    var rgb = rampRGB(tt);
-    var a = (0.92 - 0.5 * tt) * fade;
+    var tt = fCol(Fav), ci9 = Math.max(0, Math.min(255, Math.round(tt * 255)));
+    var rgb = LUT[ci9];
+    var a = 0.82 * fade;
+    CIX9[i] = ci9; ALP9[i] = a;
     __covAcc['a' + (a < 0.05 ? 0 : a < 0.2 ? 1 : a < 0.5 ? 2 : a < 0.8 ? 3 : 4)] = (__covAcc['a' + (a < 0.05 ? 0 : a < 0.2 ? 1 : a < 0.5 ? 2 : a < 0.8 ? 3 : 4)] || 0) + 1;
     if (i === 0) __covAcc.aCorner = a;
     if (i === __covAcc.midIdx) __covAcc.aMid = a;
@@ -1774,13 +1767,24 @@ function buildBitmap(key, visSigNow) {
   cg.putImageData(img, 0, 0);
   __covAcc.nPainted = nPainted;
   if (typeof window !== 'undefined') (window.__covdbg = window.__covdbg || []).push(__covAcc);
-  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color, tab: st.ftab, cov: COV_MED,
+  FL = { c: c, px: dta, img: img, cg: cg, cix: CIX9, alp: ALP9, key: key, tv: st.T, bgc: st.bg, col: st.color, tab: st.ftab, cov: COV_MED,
     vis: NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3),
     /* §E381 自检要读的两个数：地板被涂了几格 ‖ 有几格的场值跑到"可见点的 F 区间"之外（应当恒为 0）。
      *   带外 = 0 这一条同时排掉两种病：钳位（一大片纯色）与淡出（黑洞）—— 因为加权平均不可能跑到被平均的那些点之外。*/
     painted: nPainted, oob: nOob, nShown: nShown, cells: nb.gx * nb.gy,
     x0: nb.x0, x1: nb.x1, y0: nb.y0, y1: nb.y1,
     nmed: nb.nmed, ax: nb.ax, by: nb.by, gx: nb.gx, gy: nb.gy };
+}
+function rebgField() {
+  var bR = parseInt(st.bg.slice(1, 3), 16), bG = parseInt(st.bg.slice(3, 5), 16), bB = parseInt(st.bg.slice(5, 7), 16);
+  for (var i = 0; i < FL.cells; i++) {
+    var rgb = LUT[FL.cix[i]], a = FL.alp[i], o = i * 4;
+    FL.px[o] = Math.round(bR + (rgb[0] - bR) * a);
+    FL.px[o + 1] = Math.round(bG + (rgb[1] - bG) * a);
+    FL.px[o + 2] = Math.round(bB + (rgb[2] - bB) * a);
+    FL.px[o + 3] = 255;
+  }
+  FL.cg.putImageData(FL.img, 0, 0); FL.bgc = st.bg;
 }
 function ensureField(key, bx, byy) {
   var k2 = key + '@' + Math.round(bx) + ',' + Math.round(byy);   /* 比例尺进缓存键：窗口尺寸变了才重建 */
@@ -1798,6 +1802,7 @@ function ensureField(key, bx, byy) {
    *   要"顺手改一下点颜色"（col 变了）才更新 ⇒ 用户那句现象一字不差就是这一条。
    *   ⚠ 下拉框处理程序里那串"清键"（_FR.k='' 那些）是另一条自救路，它掩盖这个洞：判据必须**绕开清键**去量（见 §E623 那条）。 */
   var visSig = NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
+  if (FL && FL.key === k2 && FL.tv === st.T && FL.col === st.color && FL.tab === st.ftab && FL.cov === COV_MED && FL.vis === visSig && FL.bgc !== st.bg) rebgField();
   if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.tab !== st.ftab || FL.cov !== COV_MED || FL.vis !== visSig) buildBitmap(k2, visSig);
 }
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
@@ -2630,16 +2635,15 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSELF = 
   footLine(foot1, h - 32 * devicePixelRatio);
   footLine(foot2, h - 14 * devicePixelRatio);
 }
-/* 「卡住缩放上界 + 背景不要割裂」：缩放的下界 = 场恰好铺满视口（再小就露出虚空）；平移卡到"场始终盖住整个视口"。
- *   由 kmin 的定义可证两个平移区间非空，所以 clamp 不会打架。*/
+/* 场大于视口时限制平移以盖住视口；场较小时居中，不再把它强推到一侧。 */
 function clampView(w, h, nb, bx, byy, cxp, cyp) {
   var kmin = Math.max((nb.px1 - nb.px0) / (0.90 * (nb.x1 - nb.x0)), (nb.py1 - nb.py0) / (0.86 * (nb.y1 - nb.y0)));
   if (st.k < kmin) st.k = kmin;
   if (st.k > 60) st.k = 60;
   var oxLo = w / 2 - (nb.x1 - cxp) * bx * st.k, oxHi = -w / 2 - (nb.x0 - cxp) * bx * st.k;
   var oyLo = h / 2 + (nb.y0 - cyp) * byy * st.k, oyHi = -h / 2 + (nb.y1 - cyp) * byy * st.k;
-  st.ox = Math.max(oxLo, Math.min(oxHi, st.ox));
-  st.oy = Math.max(oyLo, Math.min(oyHi, st.oy));
+  st.ox = oxLo <= oxHi ? Math.max(oxLo, Math.min(oxHi, st.ox)) : (oxLo + oxHi) / 2;
+  st.oy = oyLo <= oyHi ? Math.max(oyLo, Math.min(oyHi, st.oy)) : (oyLo + oyHi) / 2;
 }
 
 /* ---- ②③ 地图模式：平面（俯视）⇄ 立体（势阱）共用一台渲染器 ----
@@ -2651,10 +2655,8 @@ function drawMap(fr) {
   clear(w, h);
   /* 视野按**截尾范围**拟合（默认视图不被离群点压扁），场位图按**全幅范围**铺 ⇒ 每枚点脚下都有地。
    *   基础比例尺（不含 st.k）先于建场算好：场的距离/淡出半径都按这套屏幕度量定义。*/
-  /* E393 DS（丙·投影）：取景系数**保持原值 0.90/0.86**。
-   *   ⚠ 中途我试过留边距（0.74/0.70）想让板的边界露出来 —— 那是反的：等于把铺满放大（用户 10-08 指出）。
-   *   真正该做的是把场的画布扩大（网格边距 10% → 35%，见 buildNB），让板自己的边缘落到视野之外。 */
-  var bx0 = w / (PV.x1 - PV.x0) * 0.90, by0 = h / (PV.y1 - PV.y0) * 0.86;
+  /* 点云与底图共用统一比例：旋转时几何仍是正圆/正方；最小缩放档保留全点可见。 */
+  var bs0 = Math.min(w / (PV.x1 - PV.x0) * 0.90, h / (PV.y1 - PV.y0) * 0.86), bx0 = bs0, by0 = bs0;
   ensureField('x2y2', bx0, by0);
   var nb = NBK[FL.key], cb = cam();
   var bx = bx0, byy = by0;
