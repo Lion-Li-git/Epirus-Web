@@ -247,7 +247,15 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
    *   判据不能靠 mtime（CI 检出顺序会让它假红）⇒ 重烘到临时路径逐字节比。
    *   ⑩d 是给这条比本身验牙：把在册产物改一个字符再比，必须**不等**（否则 ⑩c 只是"跑了个烘焙"）。 */
   const bakeFix = join(tmpdir(), 'np-d234-rebake-' + process.pid + '.html');
-  const bk = spawnSync(process.execPath, ['champion-map/viewer.mjs', '--out=' + bakeFix],
+  /* §G3（11-05 上午 · 千问）：**规范命令不再是"裸默认"**。11-05 夜班把 2.0 点并进主图
+   *   （`--fit=coords-gen3-1105.tsv --preset=all`），而这条门把参数写死成裸默认 ⇒ 门与产物各说各话
+   *   （实测：ZCode 在册那版 1349KB ≠ 裸默认烘出 1323KB ⇒ 这条在 §G3 之后就是**结构性假红**，与产品无关）。
+   *   判据一字不动（在册产物必须逐字等于生成器输出、⑩d 照样改一字节验牙），只把**命令收成单源**：
+   *   `champion-map/bake-flags.txt` 一行旗标。文件不在 ⇒ 响亮判红，不许静默退回裸默认。 */
+  const BF = 'champion-map/bake-flags.txt';
+  const BF_FLAGS = existsSync(BF) ? readFileSync(BF, 'utf8').trim().split(/\s+/).filter(Boolean) : [];
+  if (!existsSync(BF)) { console.error('⛔ ⑩c 的规范烘焙旗标不在册：' + BF + ' ⇒ 不许退回"裸默认"烘（那与 §G3 之后的产物必然不等，是假红）'); }
+  const bk = spawnSync(process.execPath, ['champion-map/viewer.mjs'].concat(BF_FLAGS, ['--out=' + bakeFix]),
     { cwd: process.cwd(), encoding: 'utf8' });
   eq(bk.status, 0, '⑩c 烘焙必须成功（失败 ⇒ 页面产物是旧的，判据与截图都跑在上一版上）：' +
     String(bk.stdout || bk.stderr || '').trim().split('\n').slice(-2).join(' ‖ ').slice(0, 220));

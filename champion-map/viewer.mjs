@@ -105,7 +105,11 @@ const OUTP = (OUT.indexOf(':') >= 0 || OUT[0] === '/' || /^[A-Za-z]:[\/\\]/.test
 /* E393 DS（丙·投影）：生成侧选定坐标（默认 t-SNE，--proj=old 回旧布局）。
  *   ⚠ 必须在生成侧：浏览器取景范围 PV 是装载时按坐标算的，装载后再换 ⇒ 视口对不上（实测画到右下角）。 */
 const PROJTSNE = arg('proj', 'tsne') !== 'old';
-const CF = join(HERE, arg('fit', 'coords.tsv'));   /* §G3：--fit 可指联合投影表（coords-gen3-1105.tsv = 旧池+2.0 点） */
+/* §G3（11-05 上午 · 千问）：`--fit` 的路径口径必须与下面 `OUT` 同族（§E608）——
+ *   原来写死 `join(HERE, arg('fit',…))` ⇒ 传绝对路径会被拼成 `champion-map\D:\code\…` 而"表不存在"，
+ *   看起来像"表坏了/没跑成"。这是本仓第五个栽在同一族上的旗标（`--out/--in/--seat/--chart` 都栽过）。 */
+const FITARG = arg('fit', 'coords.tsv');
+const CF = (FITARG.indexOf(':') >= 0 || FITARG[0] === '/' || /^[A-Za-z]:[\/\\]/.test(FITARG)) ? FITARG : join(HERE, FITARG);
 if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 docs/artifacts/e287-out/e287-figs.mjs，再把落盘拷成 coords.tsv'); process.exit(2); }
 const t = readFileSync(CF, 'utf8').trim().split('\n'), head = t[0].split('\t');
 const rows = t.slice(1).map(l => { const c = l.split('\t'); const o = {}; head.forEach((k, i) => { o[k] = c[i]; }); return o; });
@@ -144,6 +148,16 @@ if (PROJTSNE) {
     '\n         空的前 8 枚：' + empty.slice(0, 8).map(r => r.id).join(' ') + '\n         补投影：node champion-map/proj-tsne.mjs'); process.exit(2); }
   console.log('投影口径 ✅ ' + (rows.length - empty.length) + '/' + rows.length + ' 枚用 t-SNE 列 xt/yt' +
     (empty.length ? '（' + empty.length + ' 枚没有 ⇒ 逐行退旧坐标，见上面那条 2% 的界）' : ''));
+  /* §G3（11-05 上午 · 千问 · 用户报"团成一块几个点飞出去"）：**投影列不许是主坐标的拷贝**。
+   *   11-05 夜班那份合并器把 `x2/y2`（未投影的线性主坐标）抄进了 `xt/yt`，而上面两条守卫**看不见**这个病
+   *   （列在、值也非空，只是值来自另一套坐标）。后果实测：xt 的范围从 ±1.0 变成 −19.2…8.2
+   *   ⇒ 两枚离群点把视口撑开，**89% 的点落在 ±1.5 的方框里** = 用户说的那个老形态。
+   *   判据用"整表逐字相同"⇒ 单行同值只是巧合（浮点撞车概率极低），全表同值只可能是抄的。 */
+  const copyN = rows.filter(r => String(r.xt) === String(r.x2) && String(r.yt) === String(r.y2)).length;
+  if (copyN === rows.length) { console.error('⛔ 投影列是主坐标的拷贝：' + copyN + '/' + rows.length + ' 行的 xt/yt **逐字等于** x2/y2' +
+    '\n       ⇒ 图上画的其实是没有投影的那两列（这就是"团成一块 + 几个点飞出去"的成因；空列守卫看不见它，因为值非空）。' +
+    '\n         重投影整表：node champion-map/proj-tsne.mjs --in=' + (process.argv.find(a => a.indexOf('--fit=') === 0) || 'coords.tsv').slice(6) + ' ‖ 确实要用主坐标出图：--proj=old'); process.exit(2); }
+  if (copyN > 0) console.log('⚠ ' + copyN + '/' + rows.length + ' 行的 xt/yt 与 x2/y2 逐字相同（少量=浮点巧合；**全表**相同才判死，见上面那条）');
 }
 /* ===== §E491 头号尺有空洞就是**装错货**，比缺投影更狠 =====
  *   下面那句 DATA 取数是 `Hp: +r.Hp` ⇒ 空串变成 **0**，而 `Fv(d) = d.Hp/100 + st.T*d.S` 是图上**所有**排序与

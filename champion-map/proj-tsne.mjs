@@ -28,8 +28,13 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const CF = join(HERE, 'coords.tsv');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
+/* §G3（11-05 上午 · 千问）：`--in=<表>` ⇒ 对**任意一份**同 schema 的坐标表重投影（默认 `coords.tsv` ⇒ 历史调用逐字不变）。
+ *   为什么现在要这个：11-05 夜班把 2.0 点并进旧图时用了"kNN 插值"，因为投影只在 `coords.tsv` 上算过一次 ⇒
+ *   并集里的新点没有自己的投影，只能借邻域。重投影一遍就不借了：**一张图只许有一套 fit**。
+ *   路径口径与 `viewer.mjs` / `pool-sync.mjs` 同族（§E608）：带盘符或前导 `/` 的不再 join。 */
+const IN = arg('in', 'coords.tsv');
+const CF = (IN.indexOf(':') >= 0 || IN[0] === '/' || /^[A-Za-z]:[\/\\]/.test(IN)) ? IN : join(HERE, IN);
 const PERP = +arg('perp', 30), ITERS = +arg('iters', 500), SEED = +arg('seed', 7), WRITE = arg('write', '1') !== '0';
 
 const FEAT = ['dmg', 'heavy', 'holo', 'rounds', 'drawRate', 'zeroRate', 'seatSpread', 'distinctKeys',
