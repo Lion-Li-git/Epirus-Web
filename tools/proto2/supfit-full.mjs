@@ -2,8 +2,9 @@
 /* supfit-full.mjs — 全模型监督蒸馏（DS · 11-04 晚）：教师给键，梯度落到**所有段**（不是只 policyHead）
  * 用法：node tools/proto2/supfit-full.mjs --up=scratch/arms/KD-V7.bak --out=scratch/arms/KDFULL.bak --steps=2000 --groups=1200
  */
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 import { sandbox, loadChamp, rejectUnknownFlags } from '../audit-lib.mjs';
+import { widOf } from '../../champion-map/pack-id.mjs';   /* 与 D191 / pack-identity / lineage 同一个 wid 权威，不另发明一套哈希 */
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP } from './pg-lib.mjs';
@@ -129,5 +130,16 @@ const ho = evalSet(hold);
 const parts = Object.entries(ho.by).filter(([, v]) => v[1] >= 8).map(([k, v]) => k + ' ' + Math.round(100 * v[0] / v[1]) + '%(' + v[1] + ')');
 console.log('逐键（留出）：' + parts.join(' ‖ '));
 const packed = P.pack(pv);
-writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
-console.log('产物 → ' + OUT);
+/* 起点身份入档（用户 11-05：「训练侧也修一下，这些本来都早就搞好的问题」）
+ *   病：这一路以前**整条 META 都不写** ⇒ KD-V7 / GD3-SWORD / GD3-ALL / GD3-RATION / KDFULL2 这 5 枚
+ *   蒸馏根的起点是谁只剩"按名字猜"，谱系图上只能画虚线（`lineage-g3-build.mjs` 的哈希核对对它们无米下锅）。
+ *   契约与 `tools/train-3p.mjs:2006` 同一式：`hotstartFrom` 记**权重 id（wid）**，不记路径；
+ *   算不出才退回路径（并在终端点名），因为路径会因去重/改名失效 —— 那是 10-12 记进账的同一场病。 */
+let hf = '';
+try { hf = widOf(readFileSync(UP, 'utf8')) || ''; } catch (e) { hf = ''; }
+if (!hf) console.log('⚠ 起点 wid 算不出（外壳不认/文件读不到）⇒ hotstartFrom 退回路径 ' + UP + '，谱系这一级仍按名字推');
+const meta = { ts: new Date().toISOString(), arm: OUT.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),
+  up: UP, hotstartFrom: hf || UP, seed: SEED, steps: STEPS, groups: NGRP, lr: LR, batch: BATCH, temp: TEMP, games: GAMES, n: N, mode: MODE };
+writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
+  'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
+console.log('产物 → ' + OUT + ' ‖ meta.hotstartFrom=' + (hf ? hf + '（wid）' : UP + '（路径，wid 算不出）'));

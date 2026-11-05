@@ -199,6 +199,23 @@ if (WRITE) {
    *   ⚠ 时间倒挂（父的 ts 晚于本枚）⇒ 退回 parentOf=''、parentSrc='demoted-time'，与 lineage.mjs §E367 同一条规矩。 */
   const head = ['id', 'fam', 'famLabel', 'ts', 'metaSeed', 'nameSeed', 'parent', 'parentOf', 'parentName', 'wid', 'parentSrc', 'tsSrc'];
   let nEdge = 0, nOff = 0, nBack = 0;
+  /* ---- 父身份核对（用户 11-05：「做一下种子文件权重核对吧」）----
+   * 上面那条 `psrc='arm'` 只按**名字**认父 ⇒ 图上 24 条边全虚线，读起来像"父是谁不知道"。
+   * 但产物 meta 里一直写着 `hotstartFrom` = 起点那枚的**权重 id**（`tools/train-3p.mjs:2006` 那条纪律，
+   * 11-05 实测带表 20/20 枚都有、且都能在盘上反查到一个文件）⇒ **不是没证据，是证据没被用**。
+   * 核对三种结局，各点名、各给不同的 parentSrc：
+   *   ① 哈希与名字父同一枚            ⇒ `seedpack-wid`（与 1.8 侧 `lineage.mjs` 同名的一级，viewer 画**实线**）
+   *   ② 哈希指向图上**另一**枚         ⇒ 以哈希为准改挂那枚 + 响亮印出分歧（那是名字父错了，不是哈希错了）
+   *   ③ 名字父缺失但哈希指得到图上那枚 ⇒ 补一条 `hash` 级父边（原来这些点是孤立的）
+   *   ④ 哈希在图上没有对应枚           ⇒ 留 `arm`（虚线照旧，不许假装有证据）
+   */
+  const tWid = Date.now();
+  const WID2ID = {};
+  { const seen = new Set();
+    for (const r of coords) { if (!r.path || seen.has(r.path)) continue; seen.add(r.path);
+      const w = widOf(r.path); if (w && !WID2ID[w]) WID2ID[w] = norm(r.id); } }
+  console.log('  权重反查表：' + Object.keys(WID2ID).length + ' 个 wid ← ' + coords.filter(r => r.path).length + ' 行有 path 的坐标表（' + (Date.now() - tWid) + 'ms）');
+  let nSolid = 0, nHashMoved = 0, nHashEdge = 0, nNoEv = 0;
   console.log('  旧表已有行 ⇒ sidecar 不出行（防覆盖 1.8 谱系）：' + (skipped.length ? skipped.map(n => n.id).join(' ') : '无'));
   const body = outNodes.map(n => {
     const p = PATHOF[n.id] || '';
@@ -206,15 +223,32 @@ if (WRITE) {
     const inGraph = par && plotted.has(par);
     const back = inGraph && TSO[n.id] && TSO[par] && Date.parse(TSO[par]) > Date.parse(TSO[n.id]);
     let pof = '', psrc = '';
-    if (par && inGraph && !back) { pof = par; psrc = 'arm'; nEdge++; }
-    else if (par && inGraph && back) { psrc = 'demoted-time'; nBack++; }
+    const hf = p ? hotstartWid(p) : '';
+    /* ⚠ 位数：本件的反查表键是 `widOf(...).slice(0,12)`（第 78 行那层包装切的 12 位），
+     *   而包 meta 里的 `hotstartFrom` 是 **16 位** ⇒ 直接拿 16 位去查会一条不中（11-05 第一次跑就是这样，
+     *   报"0 条升级"看起来像"证据都对不上"，其实是查表的键长不同步）。按共同的 12 位前缀比。 */
+    const who = hf ? WID2ID[hf.slice(0, 12)] : '';
+    if (par && inGraph && !back) {
+      pof = par; psrc = 'arm'; nEdge++;
+      if (who && who === norm(par)) { psrc = 'seedpack-wid'; nSolid++; }
+      else if (who && who !== norm(par)) {
+        console.log('   ⚠ 名字父与哈希不是同一枚：' + n.id + ' 名字父=' + par + ' ‖ hotstartFrom(' + hf.slice(0, 12) + ') 指向=' + who + ' ⇒ 以哈希为准');
+        pof = who; psrc = 'hash'; nHashMoved++;
+      } else nNoEv++;
+    } else if (par && inGraph && back) { psrc = 'demoted-time'; nBack++; }
     else if (par) { nOff++; }
+    /* 名字父缺席（或不在图上）而哈希指得到图上那枚 ⇒ 补边，这一级是包自己记的哈希，最硬 */
+    if (!pof && who && plotted.has(who) && who !== norm(n.id) && !(TSO[n.id] && TSO[who] && Date.parse(TSO[who]) > Date.parse(TSO[n.id]))) {
+      pof = who; psrc = 'hash'; nEdge++; nHashEdge++;
+    }
     const seedM = /-s(\d+)$/.exec(n.id);
     return [n.id, n.fam, n.famLabel, TSO[n.id] || '', '', seedM ? 's' + seedM[1] : '', par, pof, pof, p ? widOf(p) : '', psrc, TSO[n.id] ? (prodTs(p) ? 'product' : 'mtime') : '']
       .join('\t');
   });
   writeFileSync(join(HERE, 'lineage-g3.tsv'), [head.join('\t')].concat(body).join('\n') + '\n');
   console.log('  父边可画（写进 parentOf，页内真会画线）：' + nEdge + ' 枚 ‖ 父不在并集表上（只能留名字）' + nOff + ' ‖ 时间倒挂退回 ' + nBack);
+  console.log('  身份核对：升到实线（哈希=名字父）' + nSolid + ' ‖ 哈希改挂另一枚' + nHashMoved + ' ‖ 哈希补出的新父边' + nHashEdge +
+    ' ‖ 仍只有名字级证据（虚线）' + nNoEv);
   console.log('  时刻来路：' + Object.entries(TSSRC).map(([k, v]) => k + ' ' + v).join(' ‖ '));
 }
 const famCount = {}; for (const n of nodes) famCount[n.fam] = (famCount[n.fam] || 0) + 1;
