@@ -105,6 +105,37 @@
 `HANDOFF-2026-09-19.md` · `PARAMS-PLAN.md` · `OPTIMIZATION-ep-cliff.md` · `REVIEW-3P.md` · `REVIEW-QODER-2026-09-19.md` ·
 `AUDIT-RESPONSE-v1.5.85.md` · `METHODOLOGY.md` · `RULES-2P.md` · `RULES-NP.md` ⇒ **全部有硬面引用**（`js/`、`tools/` 或门本身），挪了会打断代码注释里的锚。
 
+## 2026-11-06（Qoder 午班 · 用户：「旧文档归档一下」）
+
+搬进 **`archive/2026-11-06-doc-sweep/`** 共 **107 份**，`git mv`、内容一字未改。三条判据同时成立才挪：
+
+1. **硬引用面零命中** —— 扫 `README.md` ‖ `CHANGELOG.md` ‖ `docs/README.md` ‖ `tools/ server/ js/ champion-map/ tests/ .github/`
+   全部 `.mjs/.js/.md/.html/.yml/.json` 的文件正文，文件名一次都没出现（这就是 D230 的活引用面，外加 CHANGELOG 与 docs/README）；
+2. **活账本没点名** —— `LIVE-LINES.md` 与 `DECISIONS.md` 的正文里查不到这份文件名（被台账指着的 = 还在用，不挪）；
+3. **不是当班的账** —— 文件名里的日期 ≥ 11-05 的一律不动（11-05 夜 / 11-06 晨那两批还在被引用与被复核）。
+
+按前缀的行数（逐份名单 = `scratch/qoder-1106-archive-list.txt`，挪之前现算的那一份）：
+
+| 前缀 | 份数 | 前缀 | 份数 |
+|---|---|---|---|
+| `PREREG-*` | 28 | `RESULTS-*` | 28 |
+| `HANDOFF-*` | 11 | `PLAN-*` | 5 |
+| `ANALYSIS-*` ‖ `DESIGN-*` ‖ `STATE-*` | 各 2 | `NEXT-STEPS` ‖ `POOL-12ROW` ‖ `PROPOSAL` ‖ `RESEARCH` ‖ `REVIEW` ‖ `REVIEW-CHAMPION-2.0` ‖ `TODO` 等 | 各 1 |
+| 其余单次专题（`ADAPT-ARCH` / `AUDIT-V7-DIMS` / `BEHAVIOR` / `BREADTH-PRESSURE` / `CAPACITY` / `CF-GATE` / `CHAMPION-2.0-OBS` / `COMPOSITE` / `DEFENSE-TIMING` / `ESTIMATES` / `FINDING` / `G4-MECHANISM` / `GATE-AB` / `GATE-DISTILL` / `GATE-DRIFT` / `HOTSTART-LASER` / `LASER-EYE-LINE` / `STRENGTH-RULER-FIX` / `STYLE-ADAPT` / `SURVIVAL-PAYOFF` / `THREAT-GATE` / `WHY-DEFENSE`） | 各 1 | | |
+
+**看过但故意没挪的**（点名留档，免得下一个人以为漏了）：
+`LIVE-LINES.md` ‖ `DECISIONS.md`（跨班状态表与裁定台账，按 `docs/README.md` 第二节本来就不参与搬 archive）；
+`CHAMPION-2.0-RESEARCH-*` ‖ `ACCEPTANCE-LINES-*` ‖ `CHAMPION-2.0-ARCH-*`（`docs/README.md` 第四节软链着的三份专题件）；
+`GATE-AUDIT-2026-10-22-qoder.md` ‖ `REVIEW-STRENGTH-RULER-2026-10-29-qoder.md` ‖ `PREREG-2026-10-19-gift-veto-qoder.md` ‖
+`CARD-VALUE-2026-10-13.md` ‖ `EXAM-FIT-MATCH-2026-10-10.md` ‖ `FINDING-2026-10-20-ring-payoff-ds.md` ‖ `DIM-V8-LANDING-2026-10-15.md` ‖
+`TRAINING-METHOD-CONCLUSIONS-2026-10-17-ds.md` ‖ `RECOMMEND-2026-10-29-NIGHT-ds.md` ‖ `PROTO2-CAPACITY-N-2026-10-29-zcode.md` ‖
+`ORACLE-TEACHER-2026-11-02-ds.md` ‖ `PREREG-2026-10-30-LONGSKILL-zcode.md` ⇒ **全部有硬面引用**（`tools/` 或 `js/` 的代码注释把它们当出处），
+挪了会打断代码里的锚 —— 这正是 10-06 那节"硬面非零的一份都不挪"的判据在起作用。
+
+同日另一件事不是归档而是清工作树：15 份未跟踪的临时件（重复页面 / 改表前快照 / 包副本 / 截图）挪进
+`scratch/_cleanup-2026-11-06/`，逐份理由写在那格的 README 里；`champion-map/coords.tsv.pre-e600.bak` 因
+`relabel-lineage.mjs` 拿它当回滚锚而**原地不动**。
+
 ## 怎么找回全文
 
 ```bash
