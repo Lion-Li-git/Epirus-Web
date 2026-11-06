@@ -850,5 +850,9 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
   ② 原来"打完 80 次就干等 120 秒"那段本身不可能等到终局——人类座不出手，回合不往前走。
   改法：按状态等（轮询按钮可用）‖ 回合数从日志「第 N 回合」读、只有真前进才计数 ‖ 终局段继续出手 ‖ 150s 墙上上限 + 连续 8 次就绪超时即停并把 stall 报出来。
   本地复跑 `BATTLE OK ‖ 推进 14 回合 ‖ 就绪等待超时 0 次 ‖ 墙上 6s`（`scratch/qoder-1106-battle-local2.txt`）。
+- **v2.0.0 已打 tag 并推**：附注 tag 指向 main 的 `4541605e`（`refs/tags/v2.0.0` = `8cc2be12`）。
+  认证口径这次按**逐作业 + 逐步骤**读（不是 run 级）：gates run `42190926521` 的 plan / gates / 12 个 part / browser **全绿**，
+  browser 作业四步全绿（smoke ‖ battle ‖ 演化页四视图 **tree / 1d / 3db / map 各 99 PASS / 0 FAIL**，`scratch/qoder-1106-ci-main-browser-steps.txt`）。
+  ⚑ 没建 GitHub Release（v1.8.44 那次建过）—— 那属另一件事，等点名。
 - ⚑ **顺带量到一个还没解释的事实**（记进 PROBLEMS 第 26 条末）：本地这局 P0 的攻击技 **14/14 回合都不可点**，只能蓄能/ジ。
   v1.5.8 那条教训明写着"人类座必须真的进攻，否则量的是退化均衡"，而这条腿现在只判 `rounds > 0` ⇒ 要么"困难档 5 人桌上人类座全程没有可负担的攻击技"是真实现象（要查 ep 收入/卡价），要么这条腿的强度还不够。**等下一班定性，我没有顺手改这条的判据。**
