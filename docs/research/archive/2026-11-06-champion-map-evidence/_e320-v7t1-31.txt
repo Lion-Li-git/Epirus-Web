@@ -1,0 +1,24 @@
+§E320 · v7t1-31 的两粒种子读数（补齐 §E318 ③ 表里那格"单粒"空白）
+
+命令（与 §E313 那 121 枚一字相同的调用；页面档才加后两个旗标）：
+  node tools/eval-5p.mjs 30 5 77000 docs/artifacts/v7t1-31.bak
+  node tools/eval-5p.mjs 30 5 88000 docs/artifacts/v7t1-31.bak
+  node tools/eval-5p.mjs 30 5 77000 docs/artifacts/v7t1-31.bak --eps=0.2 --eps-mode=soft
+  node tools/eval-5p.mjs 30 5 88000 docs/artifacts/v7t1-31.bak --eps=0.2 --eps-mode=soft
+
+读数（`[冠军] 1st=`）:
+  exam  @77000  60.3      page @77000  51.8
+  exam  @88000  60.5      page @88000  57.2
+  ⇒ exam 均值 60.40 ‖ page 均值 54.50 ‖ Δε = exam − page = 5.90
+
+仪器对应性（§E312 的规矩）：exam@77000 复算 = 60.3%，与 `coords.tsv` 里那枚的 `H = 60.30` 逐字相同
+  ⇒ 与 §E314 全库两口径扫是同一把尺。
+
+对照（同一口径的两粒种子均值，来自 `champion-map/epsagg.tsv`）:
+  SHIPPED-Ldemo   exam 53.65  page 49.10  Δε 4.55
+  v7u1-93         exam 58.00  page 57.40  Δε 0.60
+  v7beadseed-93   exam 57.25  page 56.20  Δε 1.05
+  v7t1-31         exam 60.40  page 54.50  Δε 5.90   ← 本文件补的
+
+为什么这一格非补不可：原先引用的 51.80 只是 seed 77000 那一粒，两粒均值是 54.50 ⇒ 单粒读数低 2.7pt。
+同一枚候选的页面优势会因此从 +5.4 被读成 +2.7 —— "只有一粒种子时不许并排引"在这里一次就能看出代价。
