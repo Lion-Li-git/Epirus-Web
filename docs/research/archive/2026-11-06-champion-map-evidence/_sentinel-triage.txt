@@ -1,0 +1,489 @@
+
+交叉表（读的对象 × 桶）：
+  doc                          C=0 A=1 B=1
+  doc+page                     C=0 A=0 B=1
+  doc+src:js+src:tools         C=0 A=1 B=0
+  other:-out.js+src:tools+page C=0 A=1 B=0
+  other:np-test.mjs+src:tools+spawn C=0 A=1 B=0
+  other:server/econ-env.mjs+other:server/train-server.mjs+other:server/train-worker.mjs+other:server/paralleltrain.mjs+src:tools+src:js+other:./econ-env.mjs+other:/server/econ-env.mjs+spawn C=1 A=0 B=0   C 桶门号: D77 经济/熵奖励 env 只能有**一个**读取点（server/econ-env.mjs），且 worker 必须拿到生效值
+  other:server/knob-guard.mjs+src:tools+other:server/train-server.mjs+other:knob-guard.mjs+other:out.js+spawn C=0 A=1 B=0
+  other:server/opp-pool.mjs    C=0 A=1 B=0
+  other:server/opp-pool.mjs+other:server/train-server.mjs+src:tools C=0 A=1 B=0
+  other:server/opp-pool.mjs+src:js C=0 A=1 B=0
+  other:server/opp-pool.mjs+src:tools C=0 A=1 B=0
+  other:server/paralleltrain.mjs+other:server/train-worker.mjs+other:server/train-server.mjs C=1 A=1 B=0   C 桶门号: D89 训练侧座位探针局数：必须能按**消息**设（`setSeatGames` 以前导出却从没被调用）+ 缺省不改
+  other:server/train-server.mjs C=0 A=3 B=0
+  other:server/train-server.mjs+other:server/train-worker.mjs C=1 A=0 B=0   C 桶门号: D13 风格切片（复合适应度）必须真的打进 fit —— 且是**追加**不是替换
+  other:server/train-server.mjs+other:server/train-worker.mjs+other:server/paralleltrain.mjs+src:tools+src:js+other:server/fight-env.mjs+other:./fight-env.mjs C=0 A=1 B=0
+  other:server/train-server.mjs+src:tools C=1 A=0 B=0   C 桶门号: D61 五道门槛是单一真源：落盘处与出厂换包都必须走 feasibilityOf（复核 §4-6）
+  other:server/train-worker.mjs+other:server/train-server.mjs+other:./opp-pool.mjs C=0 A=1 B=0
+  page+src:js                  C=0 A=1 B=0
+  page+table+src:tools+src:js+spawn C=1 A=0 B=0   C 桶门号: D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须
+  src:champion-map+table+spawn C=0 A=1 B=0
+  src:js                       C=4 A=26 B=0   C 桶门号: D37 页面回合列表/导出：死人不许出ジ、观战回合必须显示技能并落 transcript D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必须一致） D99 两处修正：原型制御 ≥3 转移（R24）+ 目标架势特征不再是死特征 D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）
+  src:js+doc                   C=1 A=0 B=0   C 桶门号: D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下回合结束）
+  src:js+other:server/econ-env.mjs C=0 A=3 B=0
+  src:js+other:server/econ-env.mjs+other:server/train-worker.mjs+other:./econ-env.mjs C=0 A=1 B=0
+  src:js+other:server/paralleltrain.mjs+other:server/train-worker.mjs C=1 A=0 B=0   C 桶门号: D90 清场计数奖励：口径必须与门禁同源（收缩分界 + 归因）且默认关
+  src:js+other:server/train-server.mjs+other:server/paralleltrain.mjs+other:server/train-worker.mjs C=2 A=1 B=0   C 桶门号: D85 分段教师计划（两段课程）：解析只写一份、两条路径 + worker 都调它、每段各自退火、坏名字抛错 D86 只示范目标卡（only）：override 与奖励计数**都**过滤 + 非法卡名抛错 + 随消息下发
+  src:js+other:server/train-server.mjs+other:server/train-worker.mjs C=0 A=1 B=0
+  src:js+other:server/train-server.mjs+other:server/train-worker.mjs+other:server/paralleltrain.mjs+src:tools C=0 A=1 B=0
+  src:js+other:server/train-worker.mjs C=0 A=2 B=0
+  src:js+other:server/train-worker.mjs+other:server/paralleltrain.mjs+other:server/train-server.mjs C=1 A=0 B=0   C 桶门号: D84 真示范（override）：默认关、只在教师动作**可负担**时覆盖、教师按名字选、env 两端接线
+  src:js+other:server/train-worker.mjs+other:server/train-server.mjs+src:tools C=0 A=1 B=0
+  src:js+other:tests/spec.js+doc C=1 A=0 B=0   C 桶门号: D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被触发」）+ 写入点只有一处
+  src:js+page                  C=1 A=3 B=0   C 桶门号: D131 卡面提示必须说真话（v1.5.173 · 用户实测
+  src:js+src:tools             C=1 A=5 B=0   C 桶门号: D132 补贴率旋钮 `EPIRUS_REGEN_SLICE`（v1.5.177 · 双侧实验的前置）：默认 0.08 逐位不变 + 下达必须读回 + 拒静默空转
+  src:js+src:tools+other:docs/artifacts/e161-ply.mjs+spawn C=1 A=0 B=0   C 桶门号: D208 开档的可复现性地基（§E164b · 09-30 夜班）：跨进程逐字相同 + 暖机后同进程两遍相同 + 仪器说明里不许再写
+  src:js+src:tools+other:docs/artifacts/e169-beadprice.mjs C=0 A=1 B=0
+  src:js+src:tools+other:docs/artifacts/train-3p-out.js C=1 A=0 B=0   C 桶门号: D123 收割席注入（v1.5.160 · §N13 · 用户裁定
+  src:js+src:tools+spawn       C=1 A=1 B=0   C 桶门号: D225 §E275/§E284 摄魂指法的
+  src:js+src:tools+table+doc+spawn C=1 A=0 B=0   C 桶门号: D224 §E271/§E273/§E274 大雷
+  src:tools                    C=10 A=10 B=0   C 桶门号: D44 零提升检测：训练 D62 座位判据的样本量守卫：小样本必须报 D79 技能广度 S：定义明确 + 按 rules.js 声明的 cat 分层（**不按伤害加权**）+ 固定分母 + 只记录不阻断 D83 转化率探针：分母必须是 D88 门地形量具：挂科清单必须在第一个括号前截断（括号里是读数）+ 在位包单列参照 + 跳过 A 卷 D103 「珠爆发」线必须同时在册（2P 考卷 + G4 克制表），且 G4 **复用同一份实现** D112 **广度两个模式都判** + 最大单卡占比排除ジ且打出卡名（v1.5.145 用户裁定） D120 CLI 训练器上的 EPIRUS_* 开关不许 D147 UNRUN 必须有**处置语义**且按方向分（v1.5.202）：原来它从不进 fails ⇒ 基线退化的候选可零阻断通过 D174 econ 通用下达：**名单驱动** + **逐键回执比对**（不一致 exit 7）+ 位置在 T 之后 + 禁止 typeof 静默守卫（v1.5.262 · §24）
+  src:tools+other:./audit-lib.mjs C=0 A=1 B=0
+  src:tools+other:./audit-lib.mjs+other:tb-out.js+spawn C=1 A=0 B=0   C 桶门号: D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证
+  src:tools+other:./behavior-profile.mjs C=1 A=0 B=0   C 桶门号: D118 体检必须并报
+  src:tools+other:./defense-axis.mjs C=1 A=0 B=0   C 桶门号: D155 设防持续性栏必须**只记录不阻断**，且配对表的解析只有 defense-axis.mjs 一处
+  src:tools+other:./defense-quality.mjs C=1 A=0 B=0   C 桶门号: D163 防御质量三档（用户 09-26 裁定：白防 / 被穿透=半 / 有效）必须**判在事件语义上**、单一来源、且 promote 那栏只记录不阻断
+  src:tools+other:./pick-best.mjs C=0 A=1 B=0
+  src:tools+other:./v2v4-lib.mjs C=0 A=2 B=0
+  src:tools+other:/noref.js+other:/d176ctl.js+other:/d176wide.js+other:/d176tight.js+other:/d176other.js+other:/d176seatlax.js+other:/d176seat.js+spawn C=0 A=1 B=0
+  src:tools+other:arm.js+spawn C=0 A=1 B=0
+  src:tools+other:docs/artifacts/e155-humanpool.mjs+other:docs/artifacts/e168-style-human.mjs+other:docs/artifacts/e169-beadprice.mjs+other:docs/artifacts/e157-difficulty.mjs+other:docs/artifacts/e157b-difficulty-pool.mjs+table+other:docs/artifacts/e152e-human.mjs C=0 A=1 B=0
+  src:tools+other:docs/artifacts/e161-ply.mjs+other:../../tools/behavior-profile.mjs C=1 A=0 B=0   C 桶门号: D207 落点集中度 `conc()` 的手算自证（§E164 · 09-30 夜班）：新度量必须带手算值、分母为零不许 NaN、仪器不许抄第二份算术
+  src:tools+other:docs/artifacts/e169-beadprice.mjs+src:js C=0 A=1 B=0
+  src:tools+other:docs/artifacts/train-3p-out.js C=0 A=1 B=0
+  src:tools+other:docs/artifacts/train-3p-out.js+other:RR.js+spawn C=1 A=0 B=0   C 桶门号: D162 训练/选择执行口径旋钮（v1.5.237 · E28）：默认关要**可逆**、开了要**真打到适应度**、没接的入口要**响亮**
+  src:tools+other:docs/artifacts/train-3p-out.js+spawn C=0 A=3 B=0
+  src:tools+other:server/econ-env.mjs+other:/out.js+spawn C=0 A=1 B=0
+  src:tools+other:server/econ-env.mjs+spawn C=0 A=1 B=0
+  src:tools+other:server/knob-guard.mjs+other:knob-guard.mjs+spawn C=1 A=0 B=0   C 桶门号: D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：已下达的键改用**空枪检测**）：train-3p 命中读不到的 EPIRUS_* ⇒ exit 6 + 静态钉住
+  src:tools+other:server/train-server.mjs+other:arm.js+spawn C=1 A=0 B=0   C 桶门号: D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 base 的局 seed 重叠 · 单粒必须逐字等于旧算式 · 非法粒数要响亮 · 分差 vs 噪声必须印出来（而 `=1` 那一档不许自证清白）· 两条入口都真在用它
+  src:tools+other:server/train-server.mjs+other:o.js+spawn C=0 A=1 B=0
+  src:tools+other:unrun-policy.mjs+src:js+spawn C=1 A=0 B=0   C 桶门号: D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约（第七轮复核 §15-1）
+  src:tools+spawn              C=5 A=11 B=2   C 桶门号: D119 热启动不许静默失败（v1.5.153 · DS）：两种外壳都认 + 读不出种子必须 exit 5 —— 否则整臂白跑 D148 E1/E2 量具 `probe-ep-reach.mjs`（09-24 夜 · 交接 §4）：门槛可达性必须问引擎、无决策点必须响、改价必须还原 D154 `--pair=1` 必须**一条命令跑两档并自带 placebo 自检**（09-25 E18 那次自我作废换来的） D161 「防御定价」量具必须自带三把自检：零价档逐字等于对照 · 重价档不许读成空枪 · 补丁真打进**内部调用点**（v1.5.237 · E23 那三个假读数换来的） D212 破平票三件套（explain-champion-decision 第⑤节）：只记录 · 自检有牙 · 反转反事实与属性判别都在（v1.5.307 · 接千问 §E180）
+  src:tools+src:js             C=3 A=1 B=0   C 桶门号: D41 E 新口径：只有 D98  D168 包 META 的读取必须扛得住**嵌套**与**线上槽的手改损坏**（v1.5.255 · 本班撞上的两个真缺陷）
+  src:tools+src:js+other:./log-reading.mjs C=1 A=0 B=0   C 桶门号: D117 口径工具（v1.5.151）：防御类必须**从 rules.js 取表**（手写正则漏过
+  src:tools+src:js+other:./p2-baselines.mjs+other:out.js+other:bundled-champion.js+spawn C=1 A=0 B=0   C 桶门号: D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（对多人池 ⇒ 常数 ⇒ 空枪）+ 参照读不出必须响 + 带内候选落盘
+  src:tools+src:js+other:server/opp-pool.mjs C=1 A=0 B=0   C 桶门号: D78 第 6 道判据（输出密度 / 经济出口）：**没有
+  src:tools+src:js+other:server/train-server.mjs C=0 A=1 B=0
+  src:tools+src:js+spawn       C=1 A=1 B=0   C 桶门号: D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）
+  src:tools+table+spawn        C=2 A=2 B=0   C 桶门号: D222 费用表反事实旗标 `--bigtcost=`（v1.5.327 · §E255）：不设 ⇒ 逐字不变 · 出厂价档 ⇒ **零剂量逐字相同** · 生效与否由**引擎回读**判而不是由配置印了没印判 · 假值必须 exit 2 · 落盘表头必须带这一维 D223 §E262/§E266 探索提前（大雷 `--bigttgt=` 挑人 ‖ 摄魂 `--pushkey=drain`）（v1.5.329~330）：选点纯函数喂合成表 · 默认关逐字不变 · 生效由**独立 usage 计数**判 · 剂量必须 ≈1/N 且单调 · 坏输入必须 exit 2 · 落盘带四维
+  table+src:js+src:tools+src:champion-map+page+spawn C=1 A=0 B=0   C 桶门号: D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话
+  unknown                      C=1 A=0 B=0   C 桶门号: D188 并发批跑器（v1.5.281）：归属不串台 / 失败不吞 / 输入不全就抛 / 真并发 / 退化成串行仍正确
+门体里带 indexOf/read 的条目：164（桶 C 含中文措辞 56 ‖ 桶 A 只比英文/路径 104 ‖ 桶 B 读不出操作数 4）
+⚠ 桶是按"indexOf 的字面操作数里有没有中文"机械分的 ⇒ C 里也有合法的（比如钉一条**报错文案**本身就是产品契约），
+   B 里多半是操作数在变量/拼接里，脚本看不见 ⇒ 这两桶都要人过一遍，脚本只负责把面积量出来。
+
+===== 桶 C（56 条）=====
+D222 费用表反事实旗标 `--bigtcost=`（v1.5.327 · §E255）：不设 ⇒ 逐字不变 · 出厂价档 ⇒ **零剂量逐字相同** · 生效与否由**引擎回读**判而不是由配置印了没印判 · 假值必须 exit 2 · 落盘表头必须带这一维@1327-1387 [src+log] 读=src:tools+table+spawn indexOf×12
+    中文串: 「改价没生效」 ‖ 「耗时」
+    英文串: 「FLAG.bigtcost」 ‖ 「computeCost」 ‖ 「bigtcost」 ‖ 「[bigtcost]」 ‖ 「[shipbigt]」 ‖ 「[shipdrain」
+D223 §E262/§E266 探索提前（大雷 `--bigttgt=` 挑人 ‖ 摄魂 `--pushkey=drain`）（v1.5.329~330）：选点纯函数喂合成表 · 默认关逐字不变 · 生效由**独立 usage 计数**判 · 剂量必须 ≈1/N 且单调 · 坏输入必须 exit 2 · 落盘带四维@1388-1597 [src+log] 读=src:tools+table+spawn indexOf×21
+    中文串: 「[提前自检]」 ‖ 「耗时」 ‖ 「提前自检」 ‖ 「[提前自检]」 ‖ 「真搬动的概率质量」 ‖ 「[pushrank 自检]」
+    英文串: 「FLAG.bigtpush」 ‖ 「pushTarget(」 ‖ 「[bigtpush]」 ‖ 「[shipbigt」 ‖ 「[shipdrain」 ‖ 「bigtpush」
+D224 §E271/§E273/§E274 大雷@1598-1819 [md+src+log] 读=src:js+src:tools+table+doc+spawn indexOf×29
+    中文串: 「耗时」 ‖ 「[大雷用量]」 ‖ 「[大雷用量]」 ‖ 「顶成 0（关）」 ‖ 「[大雷用量] 路径=工具外挂」 ‖ 「顶成」
+    英文串: 「global.EpirusTrainer」 ‖ 「setBigTPush(」 ‖ 「setBigTPush(」 ‖ 「[shipbigt」 ‖ 「#shipbigt=8」 ‖ 「[shipbigt」
+D225 §E275/§E284 摄魂指法的@1820-1992 [src+log] 读=src:js+src:tools+spawn indexOf×18
+    中文串: 「永不触发」 ‖ 「顶成 0（关）」 ‖ 「永不触发」 ‖ 「永不触发」 ‖ 「顶成」 ‖ 「顶成」
+    英文串: 「global.EpirusTrainer」 ‖ 「if (drainPushWants(state, pi」 ‖ 「if (epsMode === 'soft」 ‖ 「pick = cands[keyIdx[top」 ‖ 「'#eps='」 ‖ 「EPS_TIER」
+D13 风格切片（复合适应度）必须真的打进 fit —— 且是**追加**不是替换@2547-2591 [src] 读=other:server/train-server.mjs+other:server/train-worker.mjs indexOf×5
+    中文串: 「回执 styleGames」
+    英文串: 「setStyleSlice」 ‖ 「styleNames, slice.w」 ‖ 「setStyleSlice」 ‖ 「styleGames」
+D37 页面回合列表/导出：死人不许出ジ、观战回合必须显示技能并落 transcript@3751-3771 [src] 读=src:js indexOf×7
+    中文串: 「p.name + '=【已淘汰】'」
+    英文串: 「function autoRunRest」 ‖ 「function autoRunRest」 ‖ 「roundLineParts」 ‖ 「pushTranscript(」 ‖ 「persistBattle」 ‖ 「const SD_GRP =」
+D41 E 新口径：只有@3846-3933 [src+log] 读=src:tools+src:js indexOf×8
+    中文串: 「fails.push('穿透卡零命中」
+    英文串: 「fPass.noThreatStanceRate > 0.6」 ‖ 「fPass.stance > 0.85」 ‖ 「fAct.atk < 0.25」 ‖ 「fAct.atk < 0.35」 ‖ 「reflectWall」 ‖ 「rw.pierceLand === 0」
+D44 零提升检测：训练@4201-4208 [src] 读=src:tools indexOf×4
+    中文串: 「零提升」
+    英文串: 「createHash('sha1」 ‖ 「process.exit(」 ‖ 「embedLegacy」
+D61 五道门槛是单一真源：落盘处与出厂换包都必须走 feasibilityOf（复核 §4-6）@4363-4387 [src] 读=other:server/train-server.mjs+src:tools indexOf×13
+    中文串: 「探针缺失」
+    英文串: 「audit.feasibilityOf(」 ‖ 「fieldB.clearedPerGame < 0.3」 ‖ 「feasibilityOf(」 ‖ 「meta.feasibility」 ‖ 「export function feasibilityOf(」 ‖ 「clearedPerGam」
+D62 座位判据的样本量守卫：小样本必须报@4388-4411 [src] 读=src:tools indexOf×4
+    中文串: 「未判定」 ‖ 「座位」 ‖ 「座位」
+    英文串: 「'underpowered'」
+D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约（第七轮复核 §15-1）@4572-4684 [src+log] 读=src:tools+other:unrun-policy.mjs+src:js+spawn indexOf×26
+    中文串: 「不可判」 ‖ 「G6[元测试]」 ‖ 「 记录  G6[」 ‖ 「行为门未过」 ‖ 「const isRef = /^G[3-6]\\[(线上包|元测」 ‖ 「不得当作通过」
+    英文串: 「st.slotSalt = h32pre(」 ‖ 「judgeable」 ‖ 「GATE4_GAMES || 300」 ‖ 「gate(`G6[${nm}]」 ‖ 「process.exitCode」 ‖ 「['tools/gate-drafts.mjs', SRC]」
+D77 经济/熵奖励 env 只能有**一个**读取点（server/econ-env.mjs），且 worker 必须拿到生效值@4843-4928 [src+log] 读=other:server/econ-env.mjs+other:server/train-server.mjs+other:server/train-worker.mjs+other:server/paralleltrain.mjs+src:tools+src:js+other:./econ-env.mjs+other:/server/econ-env.mjs+spawn indexOf×7
+    中文串: 「[econ] worker 生效值: 」 ‖ 「o.<键> != null」
+    英文串: 「from './econ-env.mjs'」 ‖ 「hasEconOverride(econEn」 ‖ 「T.economyReward」 ‖ 「ERR 」
+    变量式: k
+D78 第 6 道判据（输出密度 / 经济出口）：**没有@4929-4979 [src] 读=src:tools+src:js+other:server/opp-pool.mjs indexOf×23
+    中文串: 「已经是闸」 ‖ 「自对局零攻击局」 ‖ 「fails.push('自对局零攻击局」 ‖ 「输出密度」
+    英文串: 「export function densityProfile(」 ‖ 「export const DENSITY_BLOCK = false;」 ‖ 「v7f3-94」 ‖ 「zeroAtkRate」 ‖ 「zeroDealtRate」 ‖ 「Number(dens.spentRat」
+D79 技能广度 S：定义明确 + 按 rules.js 声明的 cat 分层（**不按伤害加权**）+ 固定分母 + 只记录不阻断@4980-5005 [src] 读=src:tools indexOf×16
+    中文串: 「技能广度 S（n=」 ‖ 「目标 = H + T·S」 ‖ 「fails.push('广度」 ‖ 「fails.push("广度」
+    英文串: 「export function breadthProfile(」 ‖ 「export function breadthProfile(」 ‖ 「.cat」 ‖ 「dmg」 ‖ 「amt」 ‖ 「Math.log(K_men」
+D83 转化率探针：分母必须是@5111-5126 [src] 读=src:tools indexOf×10
+    中文串: 「实际选中率」 ‖ 「【转化拒绝】」 ‖ 「【收入饥饿】」 ‖ 「可负担 ≥10% 的决策点，却选中 <1%」
+    英文串: 「const ready = rows.filter(function (」 ‖ 「picks += (r.mc[k] || 」 ‖ 「const realRng = state.rng;」 ‖ 「state.rng = { next: mulberry32(」 ‖ 「finally { state.rng = realRng; }」
+    变量式: k
+D84 真示范（override）：默认关、只在教师动作**可负担**时覆盖、教师按名字选、env 两端接线@5127-5182 [src] 读=src:js+other:server/train-worker.mjs+other:server/paralleltrain.mjs+other:server/train-server.mjs indexOf×17
+    中文串: 「[imit] worker 启动值」 ‖ 「以**消息**为准」 ‖ 「示范代数没在 worker 生效」 ‖ 「[imit] worker **消息**生效值」 ‖ 「教师名字解析失败」
+    英文串: 「let IMIT_OVERRIDE = false;」 ‖ 「legal.some(function (」 ‖ 「function teacherFull(」 ‖ 「if (n === 'antiring」 ‖ 「typeof BOT_PICKS[n] === \'function\'」 ‖ 「global.EpirusBots」
+D85 分段教师计划（两段课程）：解析只写一份、两条路径 + worker 都调它、每段各自退火、坏名字抛错@5183-5227 [src] 读=src:js+other:server/train-server.mjs+other:server/paralleltrain.mjs+other:server/train-worker.mjs indexOf×15
+    中文串: 「[imit] worker **消息**计划生效」 ‖ 「[imit] worker **消息**计划生效」 ‖ 「教师名字解析失败」 ‖ 「无法解析」
+    英文串: 「function setImitPlanByName(spec, totalGe」 ‖ 「let IMIT_PLAN = null;」 ‖ 「if (!IMIT_UNTIL || gen >= IMIT_UNTI」 ‖ 「return IMIT_BETA * Math.max(0, 1 - (gen 」 ‖ 「imitTeacherForGen(ge」 ‖ 「T.setImitPlanByName(process.env.EPIRUS_I」
+D86 只示范目标卡（only）：override 与奖励计数**都**过滤 + 非法卡名抛错 + 随消息下发@5228-5262 [src] 读=src:js+other:server/train-server.mjs+other:server/paralleltrain.mjs+other:server/train-worker.mjs indexOf×12
+    中文串: 「不是一张合法的卡」
+    英文串: 「let IMIT_ONLY = null;」 ‖ 「function setImitOnly(」 ‖ 「else if (onlyKey && ta.key !== onlyKe」 ‖ 「IMIT_STAT.fired++;」 ‖ 「if (tk != null && (!onlyKey || tk === on」 ‖ 「function imitOnlyForGen(ge」
+D88 门地形量具：挂科清单必须在第一个括号前截断（括号里是读数）+ 在位包单列参照 + 跳过 A 卷@5303-5314 [src] 读=src:tools indexOf×6
+    中文串: 「参照行」 ‖ 「五道全过 = 」 ‖ 「各门阻塞次数」 ‖ 「清场均值」
+    英文串: 「split('（」 ‖ 「--exam-first=0」
+D89 训练侧座位探针局数：必须能按**消息**设（`setSeatGames` 以前导出却从没被调用）+ 缺省不改@5315-5332 [src] 读=other:server/paralleltrain.mjs+other:server/train-worker.mjs+other:server/train-server.mjs indexOf×5
+    中文串: 「[seat] worker **消息**生效值」
+    英文串: 「seatGames: Number(process.env.EPIRUS_TRA」 ‖ 「T.setSeatGames(Number(msg.seatGame」 ‖ 「T.setSeatGames(Number(process.env.EPIRUS」 ‖ 「Number(process.env.EPIRUS_TRAIN_SEAT_GAM」
+D90 清场计数奖励：口径必须与门禁同源（收缩分界 + 归因）且默认关@5333-5356 [src] 读=src:js+other:server/paralleltrain.mjs+other:server/train-worker.mjs indexOf×8
+    中文串: 「if (e.reason === '终局收缩」 ‖ 「[clear] worker **消息**生效值」
+    英文串: 「function countClears(events, sea」 ‖ 「lastBy[e.pid] === seat」 ‖ 「const clearBonus = CLEAR_W * Math.min(1,」 ‖ 「let CLEAR_W = 0;」 ‖ 「clearW: Number(process.env.EPIRUS_CLEAR_」 ‖ 「T.setClearReward(Number(msg.clear」
+D103 「珠爆发」线必须同时在册（2P 考卷 + G4 克制表），且 G4 **复用同一份实现**@5426-5482 [src] 读=src:tools indexOf×2
+    中文串: 「'珠爆发(ジ→蓄电珠→电磁炮/摄」
+    英文串: 「const B = sb.window.EpirusBots;」
+D93 R57 天火不需要目标（卡面声明 + 引擎全场 + 文档三条必须一致）@5563-5584 [src] 读=src:js indexOf×6
+    中文串: 「mk(SK.FIRESTORM, '天火', CAT.SPECIAL, 2, 3」 ‖ 「mk(SK.FIRESTORM, '天火', CAT.SPECIAL, 2, 3」 ‖ 「rawDamage(state, v, 1, '天火', 'firestorm'」
+    英文串: 「for (let v = 0; v < playerCount(stat」 ‖ 「const pg = guardOf(state, 」 ‖ 「{ type: R.DMG.FIRE, source: i }」
+D94 R58 藤甲火弱覆盖当回合（用户裁定：贴上即生效、到下回合结束）@5585-5597 [md+src] 读=src:js+doc indexOf×5
+    中文串: 「仅在下回合内有效」 ‖ 「旧口径（R22 原文）」
+    英文串: 「if (a.key === SK.ARMO」 ‖ 「if (a.key === SK.ARMO」 ‖ 「R58」
+D95 R59 地雷 3 回合时效（用户裁定，取代 R38「持续直到被触发」）+ 写入点只有一处@5598-5660 [md+src+log] 读=src:js+other:tests/spec.js+doc indexOf×11
+    中文串: 「持续直到被触发」
+    英文串: 「function armMine(state, me, pi」 ‖ 「me.mineTurns = 3;」 ‖ 「case SK.MINE: armMine(state, me, 」 ‖ 「case SK.MINE: armMine(state, me, 」 ‖ 「state.p[v].mineArmed = false; state.p[v]」 ‖ 「state.p[i].mineArmed = false; state.p[i]」
+D98 @5695-5714 [src] 读=src:tools+src:js indexOf×7
+    中文串: 「if (e.reason === '终局收缩」 ‖ 「if (e.reason === '终局收缩」 ‖ 「reason: '终局收缩'」 ‖ 「地雷伤害无来源」
+    英文串: 「if (e.source == nul」 ‖ 「if (e.source == nul」 ‖ 「noMine: true」
+D99 两处修正：原型制御 ≥3 转移（R24）+ 目标架势特征不再是死特征@5715-5744 [src] 读=src:js indexOf×12
+    中文串: 「reason: '原型制御·转移'」
+    英文串: 「function protoReflectAll(stat」 ‖ 「protoNote(state, to, dmg.source, dmg.amt」 ‖ 「if (total >= 」 ‖ 「if (it.source == null || it.source === t」 ‖ 「protoReflectAll(stat」 ‖ 「protoNote(state, v, null, 1, R.DMG.FIRE,」
+D70 UI 契约：目标弹窗可取消 + 结算期点击有反馈（复核 §5-①②）@5846-5859 [src] 读=src:js indexOf×12
+    中文串: 「选择目标（Esc」 ‖ 「你刚才的点击没有生效」 ‖ 「已放弃【」 ‖ 「取消', src.indexOf('label:」 ‖ 「↩ 取消」 ‖ 「请出招」
+    英文串: 「B.picking = { key: key, bead: bead }」 ‖ 「function cancelPick」 ‖ 「ev.key === 'Escape' && B.picking」 ‖ 「$('modal-root」 ‖ 「B.pickin」 ‖ 「B.aiKey = null; B.picking = null;」
+D112 **广度两个模式都判** + 最大单卡占比排除ジ且打出卡名（v1.5.145 用户裁定）@5947-5964 [src] 读=src:tools indexOf×11
+    中文串: 「第二模式」 ‖ 「最大单卡占比（**非ジ**）」 ‖ 「两个模式都判」
+    英文串: 「selfPlay(W, params, 'multi', 」 ‖ 「selfPlay(W, params, 'long', 」 ‖ 「G2: spL」 ‖ 「G2name: 'long'」 ‖ 「o.G2」 ‖ 「e.key !== R.SK.JI」
+D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（对多人池 ⇒ 常数 ⇒ 空枪）+ 参照读不出必须响 + 带内候选落盘@6024-6076 [src+log] 读=src:tools+src:js+other:./p2-baselines.mjs+other:out.js+other:bundled-champion.js+spawn indexOf×14
+    中文串: 「拒绝静默退化」 ‖ 「p2-baselines 与 bots.js 漂移」 ‖ 「目录，跳过」 ‖ 「2P对手=ref:bundled-champion.js」
+    英文串: 「T.scoreMemberN(params, XN2_OPPS」 ‖ 「EPIRUS_XN2REF || 'js/bundled-champion.js」 ‖ 「process.exit(」 ‖ 「-band」 ‖ 「EPIRUS_BAND_DIR」 ‖ 「from './p2-baselines.mjs'」
+D117 口径工具（v1.5.151）：防御类必须**从 rules.js 取表**（手写正则漏过@6077-6108 [src] 读=src:tools+src:js+other:./log-reading.mjs indexOf×10
+    中文串: 「取不到防御类卡」
+    英文串: 「js/core/rules.js」 ‖ 「RUL.CAT.DEFENSE」 ‖ 「./log-reading.mjs」 ‖ 「const CAP = {」 ‖ 「FIELDS」 ‖ 「for (const fld of FIELD」
+D118 体检必须并报@6109-6127 [src] 读=src:tools+other:./behavior-profile.mjs indexOf×7
+    中文串: 「产品代理栏」 ‖ 「只记录不阻断」
+    英文串: 「fieldProfile(params, 0.2, 'soft'」 ‖ 「from './behavior-profile.mjs'」 ‖ 「EPIRUS_NO_PROXY」 ‖ 「export function fieldProfile」 ‖ 「RUN_AS_MAIN」
+D119 热启动不许静默失败（v1.5.153 · DS）：两种外壳都认 + 读不出种子必须 exit 5 —— 否则整臂白跑@6128-6144 [src] 读=src:tools+spawn indexOf×4
+    中文串: 「拒绝静默冷启动」 ‖ 「热启动：以现有冠军为种子」
+    英文串: 「window\\.EPIRUS_CHAMPION(?:_3」 ‖ 「process.exit(」
+D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：已下达的键改用**空枪检测**）：train-3p 命中读不到的 EPIRUS_* ⇒ exit 6 + 静态钉住@6145-6222 [src+log] 读=src:tools+other:server/knob-guard.mjs+other:knob-guard.mjs+spawn indexOf×6
+    中文串: 「CLI 黑键」
+    英文串: 「SELF_ENV_KEYS」 ‖ 「enforceKnobs(」 ‖ 「knob-guard.mjs」 ‖ 「detectDarkKnobs」 ‖ 「EPIRUS_ALLOW_DARK」
+D123 收割席注入（v1.5.160 · §N13 · 用户裁定@6223-6292 [src+log] 读=src:js+src:tools+other:docs/artifacts/train-3p-out.js indexOf×5
+    中文串: 「本臂作废」 ‖ 「注入名单 killsecure」
+    英文串: 「Bots.pickKillSecure」 ‖ 「KILL_STAT.fired++」 ‖ 「process.exit(」
+D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证@6293-6343 [src+log] 读=src:tools+other:./audit-lib.mjs+other:tb-out.js+spawn indexOf×12
+    中文串: 「不接受静默退回单栏择优」 ‖ 「已写入 js/bundled-champion.js」
+    英文串: 「vetoBy3p(」 ‖ 「process.exit(」 ‖ 「pickBestByExam(pool」 ‖ 「vetoBy3p(cand」 ‖ 「pickBestByExam(pool」 ‖ 「from './audit-lib.mjs'」
+    变量式: inc
+D132 补贴率旋钮 `EPIRUS_REGEN_SLICE`（v1.5.177 · 双侧实验的前置）：默认 0.08 逐位不变 + 下达必须读回 + 拒静默空转@6652-6670 [src] 读=src:js+src:tools indexOf×12
+    中文串: 「没有 setRegenSlice ⇒ 拒绝静默空转」 ‖ 「消费点读回」
+    英文串: 「let REGEN_SLICE = 0.08;」 ‖ 「function setRegenSlice(」 ‖ 「function regenSlice」 ‖ 「if (!isFinite(」 ‖ 「setRegenSlice, regenSlice,」 ‖ 「const step = Math.max(2, Math.round(1 / 」
+D131 卡面提示必须说真话（v1.5.173 · 用户实测@6671-6712 [src] 读=src:js+page indexOf×4
+    中文串: 「仅限 HP≤」
+    英文串: 「HP≤1」 ‖ 「Tip.of(R, st, 」 ‖ 「js/ui/skill-tip.js」
+D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须@6946-7014 [src+log] 读=page+table+src:tools+src:js+spawn indexOf×3
+    中文串: 「承重」 ‖ 「陷阱」
+    变量式: q
+D148 E1/E2 量具 `probe-ep-reach.mjs`（09-24 夜 · 交接 §4）：门槛可达性必须问引擎、无决策点必须响、改价必须还原@7435-7472 [src+log] 读=src:tools+spawn indexOf×7
+    中文串: 「e.reason === '天火'」
+    英文串: 「S.computeCost」 ‖ 「const canNow = ep >= need」 ‖ 「String(rr.nee」 ‖ 「finally」 ‖ 「e.type === 'purify' && !e.curses」 ‖ 「'beadExpire'」
+D154 `--pair=1` 必须**一条命令跑两档并自带 placebo 自检**（09-25 E18 那次自我作废换来的）@7744-7786 [src+log] 读=src:tools+spawn indexOf×7
+    中文串: 「不是拍的（§H-55」 ‖ 「池化 Δ」 ‖ 「同回合配对」 ‖ 「✓ placebo 自检通过」 ‖ 「⇒ 判定用的是」 ‖ 「12~18 灰区 / ≤12 低」
+D155 设防持续性栏必须**只记录不阻断**，且配对表的解析只有 defense-axis.mjs 一处@7787-7823 [src+log] 读=src:tools+other:./defense-axis.mjs indexOf×7
+    中文串: 「设防持续性栏」 ‖ 「不许按 0 处理」 ‖ 「设防持续性栏」 ‖ 「G 有效技能数」
+    英文串: 「from './defense-axis.mjs'」 ‖ 「export function parsePairTable」 ‖ 「createState」
+D161 「防御定价」量具必须自带三把自检：零价档逐字等于对照 · 重价档不许读成空枪 · 补丁真打进**内部调用点**（v1.5.237 · E23 那三个假读数换来的）@7850-7928 [log] 读=src:tools+spawn indexOf×5
+    中文串: 「⛔ 空枪：」 ‖ 「⛔ 空枪：」
+    英文串: 「%」 ‖ 「‖」
+    变量式: DEFK
+D162 训练/选择执行口径旋钮（v1.5.237 · E28）：默认关要**可逆**、开了要**真打到适应度**、没接的入口要**响亮**@7929-8005 [src+log] 读=src:tools+other:docs/artifacts/train-3p-out.js+other:RR.js+spawn indexOf×5
+    中文串: 「已写入 ' + de」 ‖ 「不认识的参数」
+    英文串: 「EPIRUS_TRAIN_EPS」 ‖ 「EPIRUS_TRAIN_EPS」 ‖ 「EPIRUS_TRAIN_EPS」
+D163 防御质量三档（用户 09-26 裁定：白防 / 被穿透=半 / 有效）必须**判在事件语义上**、单一来源、且 promote 那栏只记录不阻断@8006-8051 [src+log] 读=src:tools+other:./defense-quality.mjs indexOf×6
+    中文串: 「没量到」 ‖ 「防御质量栏」 ‖ 「防御质量栏」 ‖ 「只记录不阻断」
+    英文串: 「0.0%」 ‖ 「from './defense-quality.mjs'」
+D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行打「读失败」）@8052-8077 [log] 读=src:tools+src:js+spawn indexOf×6
+    中文串: 「读失败」 ‖ 「读失败」 ‖ 「清场/局」
+    英文串: 「clearedPerGame」 ‖ 「jiShare」 ‖ 「forced」
+D120 CLI 训练器上的 EPIRUS_* 开关不许@8193-8207 [src] 读=src:tools indexOf×3
+    中文串: 「拒绝静默空转」
+    英文串: 「EPIRUS_CLEAR_W」 ‖ 「setClearReward」
+D147 UNRUN 必须有**处置语义**且按方向分（v1.5.202）：原来它从不进 fails ⇒ 基线退化的候选可零阻断通过@8312-8337 [src] 读=src:tools indexOf×8
+    中文串: 「'弱' 」 ‖ 「【阻断】」 ‖ 「【只记录】」
+    英文串: 「unrunKind」 ‖ 「uD.blocking」 ‖ 「unrunDisposition(」 ‖ 「const hardFail = worst[1] > G4_MAX;」 ‖ 「const isUnrun = !hardFail && !judgeable;」
+D168 包 META 的读取必须扛得住**嵌套**与**线上槽的手改损坏**（v1.5.255 · 本班撞上的两个真缺陷）@8682-8766 [src] 读=src:tools+src:js indexOf×5
+    中文串: 「红线包」 ‖ 「不是生产缺陷」 ‖ 「线上槽文件」
+    英文串: 「metaM[0]」 ‖ 「metaM[1]」
+D174 econ 通用下达：**名单驱动** + **逐键回执比对**（不一致 exit 7）+ 位置在 T 之后 + 禁止 typeof 静默守卫（v1.5.262 · §24）@8939-8966 [src] 读=src:tools indexOf×3
+    中文串: 「econ 族通用下达」
+    英文串: 「const T = sb.window.EpirusTrainer;」 ‖ 「typeof ECON_REWARD_KEYS !== 'undefined'」
+D212 破平票三件套（explain-champion-decision 第⑤节）：只记录 · 自检有牙 · 反转反事实与属性判别都在（v1.5.307 · 接千问 §E180）@10418-10449 [src+log] 读=src:tools+spawn indexOf×5
+    中文串: 「破平票三件套（v1.5.307 · 只记录）」
+    英文串: 「firstTargetSeen === false」 ‖ 「process.exit」 ‖ 「fails.push」 ‖ 「## ⑤」
+D188 并发批跑器（v1.5.281）：归属不串台 / 失败不吞 / 输入不全就抛 / 真并发 / 退化成串行仍正确@10699-10732 [log] 读=? indexOf×1
+    中文串: 「tag 重复」
+D207 落点集中度 `conc()` 的手算自证（§E164 · 09-30 夜班）：新度量必须带手算值、分母为零不许 NaN、仪器不许抄第二份算术@11242-11261 [src] 读=src:tools+other:docs/artifacts/e161-ply.mjs+other:../../tools/behavior-profile.mjs indexOf×3
+    中文串: 「'  集中 '」
+    英文串: 「export const WIN = W;」 ‖ 「from '../../tools/behavior-profile.mjs'」
+D208 开档的可复现性地基（§E164b · 09-30 夜班）：跨进程逐字相同 + 暖机后同进程两遍相同 + 仪器说明里不许再写@11262-11302 [src+log] 读=src:js+src:tools+other:docs/artifacts/e161-ply.mjs+spawn indexOf×1
+    中文串: 「逐字同形」
+D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 base 的局 seed 重叠 · 单粒必须逐字等于旧算式 · 非法粒数要响亮 · 分差 vs 噪声必须印出来（而 `=1` 那一档不许自证清白）· 两条入口都真在用它@11526-11643 [src+log] 读=src:tools+other:server/train-server.mjs+other:arm.js+spawn indexOf×16
+    中文串: 「28 对」 ‖ 「每粒候选重验 3 粒 seedBase（987654 ‖ 1087654 ‖ 1」
+    英文串: 「scoreRuns(」 ‖ 「selBases(」 ‖ 「selGapNote(」 ‖ 「scoreRuns(」 ‖ 「selBases(」 ‖ 「T.evalN(h.params, ALL_PAIRS, 20, N, 9876」
+    变量式: SEL_PIN ‖ BAD_PIN
+D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话@12021-12340 [src+log] 读=table+src:js+src:tools+src:champion-map+page+spawn indexOf×17
+    中文串: 「"lin":"当前线上"」
+    英文串: 「chooserFor」 ‖ 「EpirusPoolDraw」 ‖ 「humanPrototypes」 ‖ 「function loadPool」 ‖ 「function poolDrawFor」 ‖ 「function aiInfo」
+    变量式: killedPath
+
+===== 桶 A（104 条）=====
+REPRO 训练路径不得出现裸 Math.random / Date.now（白名单见下）@661-704 [src] 读=src:js+other:server/train-server.mjs+other:server/train-worker.mjs+other:server/paralleltrain.mjs+src:tools indexOf×12
+    英文串: 「Math.random(」 ‖ 「Date.now(」 ‖ 「/」 ‖ 「const t0 = Date.now」 ‖ 「Date.now」 ‖ 「toISOString」
+    变量式: w ‖ w
+REPRO2 每个训练入口都必须**真的**播种（按 makeTrainer 调用点反查 + 按函数体切分）@797-845 [src] 读=other:server/train-server.mjs indexOf×7
+    英文串: 「.makeTrainer(」 ‖ 「__seedSandbox」 ‖ 「setRng」 ‖ 「async function ' + fn + '(」 ‖ 「\nasync function ', i0 + 」 ‖ 「__seedSandbox」
+L1 断言不得是恒真式（空断言 / 近乎恒真）——本项目出现过 3 次@846-862 [src] 读=src:tools indexOf×1
+    英文串: 「PAT」
+L3 复现工具必须保留冷/热启动断言（v1.5.128 诚实化：原名的@917-943 [src] 读=src:tools+src:js+other:server/train-server.mjs indexOf×6
+    英文串: 「EPIRUS_HOTSTART」 ‖ 「D cold start」 ‖ 「REPRO2」 ‖ 「process.env.EPIRUS_WR_TOL」 ‖ 「setWrTol」 ‖ 「weightsId」
+D217 经济轴的两根锚（v1.5.313 · 用户裁定批）：两枚新桌必须导出/登记/不进默认池，且**只差一个自由量**@1003-1063 [src] 读=other:server/opp-pool.mjs+src:js indexOf×2
+    英文串: 「deadlineburst」 ‖ 「earlypressure」
+D218 研究工具的旗标登记结构（v1.5.318）：读了却没登记的旗标必须为 0，且假旗标必须 exit 64@1064-1183 [src] 读=other:np-test.mjs+src:tools+spawn indexOf×8
+    英文串: 「rejectUnknownFlags(argv, [」 ‖ 「]', a」 ‖ 「probe-」 ‖ 「rejectUnknownFlags」 ‖ 「rejectUnknownFlags(」
+    变量式: needle, i + 1 ‖ q, i + needle.length ‖ call
+D220 深经济对手必须能放上**训练桌**（v1.5.325 · §E237 · DS 交接 (W) 假设的可执行版本）：`EPIRUS_ECON_OPPS` 默认关 + 名字不认识必须响 + 开档产物自证@1207-1254 [src+log] 读=src:tools+other:arm.js+spawn indexOf×4
+    英文串: 「EPIRUS_ECON_OPPS || ''」 ‖ 「'EPIRUS_ECON_OPPS'」 ‖ 「for (const o of ECON_OPP」 ‖ 「[econ-ops]」
+D221 同分带内按@1255-1326 [src+log] 读=src:tools+spawn indexOf×5
+    英文串: 「bandPickByUsage(sel.clean, SEL_BIGT, use」 ‖ 「EPIRUS_SEL_BIGT || 0」 ‖ 「'EPIRUS_SEL_BIGT'」 ‖ 「fieldProfile(e.ref.params, 0, 」 ‖ 「selBigT: SEL_BIGT_LOG」
+D226 §E285 人数 × 血量正交（v1.6.5 · 用户裁定「把 2 人合并进多人，变成选人数 × 3血/5血正交；4 血也可以上，实现连续性」）：`multi4` = `multi` 那一套 + 一格血 · 页面那张映射表的像必须恰好盖住 MODES 全部 key · **2 人时三张多人专用卡在 4/5 血格上也要自动屏蔽**（用户点名要复测的那条）· 第三根「模式」轴与零消费者的 minPlayers 都不许复活@1993-2103 [src] 读=src:js+page indexOf×4
+    英文串: 「sel-mode」 ‖ 「id="sel-players"」
+    变量式: v ‖ k
+D227 §E286 难度阶梯（v1.6.6 · 用户指令 2「冠军作为底层但脚本探索概率很高」+「原本的简单普通不能用了」）：档位表是唯一来源 · 剂量由易到难单调 · 默认档逐字等于旧口径 · 量具真跑出分级 · 旧的 2 人三档不许回来@2104-2252 [src+log] 读=src:js+src:tools+spawn indexOf×3
+    英文串: 「function champForCount」 ‖ 「function champForCount」
+    变量式: BT.DIFF_DEFAULT
+L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）@2253-2288 [src] 读=other:-out.js+src:tools+page indexOf×6
+    英文串: 「-out.js」 ‖ 「-out.js」 ‖ 「EPIRUS_PUBLISH」 ‖ 「htmlBackup」 ‖ 「bumpChampionVersion」 ‖ 「index.html」
+D4 opponent rotation must not depend on individual index (pairing)@2343-2362 [src] 读=src:js indexOf×3
+    英文串: 「gen」 ‖ 「idx」 ‖ 「gen」
+D7 对手池必须单一来源（server/worker 不得各写一份名单）@2404-2415 [src+log] 读=other:server/train-worker.mjs+other:server/train-server.mjs+other:./opp-pool.mjs indexOf×2
+    英文串: 「from './opp-pool.mjs'」 ‖ 「from './opp-pool.mjs'」
+D11 训练模式必须随消息下发到 worker（并行路径不是同一个沙箱）@2485-2498 [src] 读=other:server/paralleltrain.mjs+other:server/train-worker.mjs+other:server/train-server.mjs indexOf×3
+    英文串: 「setTrainMode(msg.mode」 ‖ 「modeUsed」 ‖ 「modeUsed」
+D12 冠军对手（champ:）机制必须两端都通 + 能真的解出 params@2499-2546 [src] 读=src:js+other:server/train-server.mjs+other:server/train-worker.mjs indexOf×5
+    英文串: 「isChampOpp」 ‖ 「makeOppSelResolver」 ‖ 「B[BOT_FN_N[」 ‖ 「makeOppSelResolver」 ‖ 「resolveOpp」
+D51 双目标技能必须**有序成对**进入决策（镜面反射 t1→t2 / 双枪射手两个角色）@2626-2652 [src] 读=src:js indexOf×1
+    英文串: 「def.target2 === 'enemy'」
+D52 结算起点必须每局随机（不得有确定性身份映射）；盐 0 保持旧口径@2653-2681 [src] 读=src:js indexOf×2
+    英文串: 「state.slotSalt」 ‖ 「const start = ((state.round || 」
+D53 无显式目标时的默认作用者不得恒定取最小索引（L7 第四次）@2682-2719 [src] 读=src:js indexOf×4
+    英文串: 「return o.length ? o[0] : null;」 ‖ 「t1 = opps.length ? opps[0] : null」 ‖ 「if (o !== t」 ‖ 「function saltPick(」
+D55 F 的口径必须是@2750-2775 [src] 读=src:tools indexOf×6
+    英文串: 「export function aggressionProfile」 ‖ 「e.source === me」 ‖ 「me = g % 5」 ‖ 「agg.fieldA.atk < 0.20」 ‖ 「fAct.atk < 0.25」 ‖ 「agg.fieldA.atk < 0.20」
+D56 旧冠军嵌入 v7 后必须仍走旧口径（否则目标退化：实测破墙 12.25→7.70）@2776-2821 [src] 读=src:js indexOf×3
+    英文串: 「function isLegacyChooser」 ‖ 「o.lv != null」 ‖ 「o.lv = p.legacyFrom」
+D57 multi 的收缩必须落进回合上限内，且@2822-2853 [src] 读=src:js indexOf×2
+    英文串: 「dealtSum」 ‖ 「PASSIVE_EVERY」
+D58 L7 第七处：候选枚举顺序必须无身份（镜像对称 + 5 席不得某座通吃）@2854-2919 [src] 读=src:js indexOf×3
+    英文串: 「function poolOrder」 ‖ 「poolOrder(state, pid, S.opponentsOf」
+    变量式: x.key
+D59 阈值式座位惩罚必须真的在 fit 里（让演化@2920-2963 [src] 读=src:js indexOf×6
+    英文串: 「SEAT_PEN_MAXPCT」 ‖ 「SEAT_PEN_W」 ‖ 「seatMaxPct >= SEAT_PEN_MAXPCT」 ‖ 「- seatPen」 ‖ 「seatSpreadMirror」 ‖ 「seatWins: seatWins」
+D24 反摆烂奖励 env 只能有**一个**读取点（server/fight-env.mjs）—— 两端各写一遍会静默半开@3437-3471 [src] 读=other:server/train-server.mjs+other:server/train-worker.mjs+other:server/paralleltrain.mjs+src:tools+src:js+other:server/fight-env.mjs+other:./fight-env.mjs indexOf×3
+    英文串: 「hasFightOverride」 ‖ 「from './fight-env.mjs'」
+    变量式: k
+D35 训练侧@3697-3730 [src] 读=src:js+src:tools indexOf×2
+    英文串: 「mirrorHealth(」 ‖ 「Math.exp(」
+D38 结算事件行的**显示顺序**（防御→中立→攻击→镜像；被无效先于使其无效）+ 不得改动引擎事件数组@3772-3797 [src] 读=src:js indexOf×10
+    英文串: 「for (const e of orderEventsForDisplay(li」 ‖ 「EV_TIER_DEF」 ‖ 「EV_TIER_ATK」 ‖ 「EV_TIER_MIRROR」 ‖ 「EV_SUB_VOIDER」 ‖ 「function orderEventsForDisplay(lis」
+D27 体检指标必须单一来源 + 换冠军必须有**阻断**条件（不能只 warn）@3971-3992 [src] 读=src:tools+other:./audit-lib.mjs indexOf×8
+    英文串: 「from './audit-lib.mjs'」 ‖ 「from './audit-lib.mjs'」 ‖ 「--force」 ‖ 「auditForced」 ‖ 「auditFails」
+    变量式: f ‖ f ‖ k
+D28 模式入口一致性：两根轴都在页面上、每档下拉都被映射表接住（v1.6.5 起「模式」下拉已删，入口 = 人数 × 血量）@3993-4044 [src] 读=page+src:js indexOf×3
+    英文串: 「id="sel-mode"」
+    变量式: h ‖ k
+D45 全息屏障候选**不得含幻影@4209-4227 [src] 读=src:js indexOf×2
+    英文串: 「def.target === 'other'」 ‖ 「const hDecl = targetOf」
+D47 定向强制探索：**只在@4239-4257 [src] 读=src:js+other:server/train-worker.mjs indexOf×3
+    英文串: 「const _fe = ringForceEpsAt(ge」 ‖ 「return econ(state, pid2, lega」 ‖ 「EPIRUS_RING_FORCE_EPS」
+D48 强迫必须可退火（否则会把训练冻死）：只在早期代生效，之后归零@4258-4277 [src] 读=src:js+other:server/train-worker.mjs indexOf×2
+    英文串: 「const _fe = ringForceEpsAt(ge」 ‖ 「EPIRUS_RING_FORCE_UNTIL」
+D49 探索期不得被健康门槛惩罚（否则强迫会堵死整条提升链：实测逃逸率 1/6）@4278-4290 [src] 读=src:js indexOf×6
+    英文串: 「let IN_EXPLORE = false;」 ‖ 「IN_EXPLORE = _fe > 0;」 ‖ 「if (better && HEALTH.on && !IN_EXPLOR」 ‖ 「const mh = (HEALTH.on && !IN_EXPLOR」 ‖ 「const hf = healthFails(m」 ‖ 「mirrorHealth(cand.params」
+D50 对手槽位并列不得按 pid 升序（座位身份泄漏 ⇒ 0 号座夺冠 81%）@4291-4323 [src] 读=src:js indexOf×10
+    英文串: 「slotRand(x, stat」 ‖ 「function slotRand(」 ‖ 「function oppSlots(」 ‖ 「__rng」 ‖ 「state.rng」 ‖ 「rng.next」
+D63 会瞄人的对手（targeter）：指威胁 + 目标不被引擎剥掉（复核 §4-1）@4412-4453 [src] 读=other:server/opp-pool.mjs indexOf×1
+    英文串: 「fn: 'pickTargeter'」
+D64 狙击场探针：归因纯函数 + 混合场的靶向判据（复核 §4-2）@4454-4490 [src] 读=other:server/opp-pool.mjs+src:tools indexOf×4
+    英文串: 「fn: 'pickSnipeSpam'」 ‖ 「export function sniperField(」 ‖ 「export function attackAttribution(」 ‖ 「uniformRate: (K === 'mixed」
+D65 候选表过滤买不起 + 两级采样抹平槽位放大（v1.5.74 F1/F2）@4491-4539 [src] 读=src:js indexOf×2
+    英文串: 「kProb[k] * within」 ‖ 「l.affordable === false」
+D66 珠子闭环奖励：只认**花掉**，囤着/过期不记分（v1.5.76 P1）@4540-4571 [src] 读=src:js indexOf×6
+    英文串: 「const beadBonus = BEAD_W * Math.min(1, b」 ‖ 「const gFit = 」 ‖ 「const gFit = 」 ‖ 「+ beadBonus」 ‖ 「if (DOSE_O」 ‖ 「if (BEAD_W > 」
+D68 威胁靶向奖励：只记@4685-4757 [src+log] 读=src:js+other:server/train-worker.mjs+other:server/train-server.mjs+src:tools indexOf×13
+    英文串: 「snipe」 ‖ 「ring」 ‖ 「const gFit = 」 ‖ 「const gFit = 」 ‖ 「+ tgtBonus」 ‖ 「EPIRUS_TGT_W」
+D72 对手注册表一致性：runner 的池子名 / opp-pool 注册表 / BOT_FN 映射必须对齐@4758-4780 [src] 读=other:server/opp-pool.mjs+other:server/train-server.mjs+src:tools indexOf×1
+    英文串: 「champ:」
+D73 落盘阻断开关：EPIRUS_FEASIBILITY_BLOCK=1 时不可行候选不写盘（默认关）@4781-4796 [src] 读=other:server/train-server.mjs indexOf×6
+    英文串: 「EPIRUS_FEASIBILITY_BLOCK === '1'」 ‖ 「feasibilityReject: true」 ‖ 「wrote: false」 ‖ 「EPIRUS_FEASIBILITY_BLOCK」 ‖ 「writeBundleMP(pack', 」 ‖ 「feasibility: feasibleInfo」
+D74 熵奖励与门禁同口径：进 fit 的熵必须来自@4797-4811 [src] 读=src:js indexOf×6
+    英文串: 「const spUse = {};」 ‖ 「e.outcome === 'ok' && e.key && e.key !==」 ‖ 「const divBonus = DIV_W * spMixNorm;」 ‖ 「const spMixNorm = (1 - DIV_ROLE_」 ‖ 「coverageEntropy(agg.use, agg.aff, DIV_」 ‖ 「effSkills: tot ? Math.exp(」
+D75 破墙硬过滤：必须在**真的反弹墙**里量（自对局用量不能预测），wall<0.5 压到底@4812-4819 [src] 读=src:js indexOf×5
+    英文串: 「function wallProbe(params, games, 」 ‖ 「BOT_PICKS['reflectspam']」 ‖ 「wallReject ? (-5.」 ‖ 「const wallDmg = WALL_FILTER_ON ? wallPro」 ‖ 「let WALL_FILTER_ON = false;」
+D76 退火强迫多样性：窗口默认 0（关）、只作用于计分对局、有 env 接线@4820-4842 [src] 读=src:js+other:server/econ-env.mjs+other:server/train-worker.mjs+other:./econ-env.mjs indexOf×5
+    英文串: 「function makeDiversityForce(inner, ge」 ‖ 「let DIV_FORCE_GENS = 0;」 ‖ 「gen < DIV_FORCE_GEN」 ‖ 「EPIRUS_DIV_FORCE_GENS」 ‖ 「from './econ-env.mjs'」
+D80 类间广度权重 DIV_ROLE_W：默认 0（逐位等于旧口径）+ 走单一来源接线 + 真源与 breadthProfile 同一个@5006-5041 [src] 读=src:js+other:server/econ-env.mjs indexOf×8
+    英文串: 「let DIV_ROLE_W = 0;」 ‖ 「const spMixNorm = (1 - DIV_ROLE_」 ‖ 「const divBonus = DIV_W * spMixNorm;」 ‖ 「Math.log(K_ROL」 ‖ 「'EPIRUS_DIV_ROLEW'」 ‖ 「'EPIRUS_DIV_CATW'」
+D81 功能角色表 roleOf：只从声明字段推导（**不得枚举卡名**）+ 每张非ジ卡恰好一类 + tools 侧共用同一真源@5042-5077 [src] 读=src:js+src:tools indexOf×10
+    英文串: 「  function roleOf(」 ‖ 「const K_ROLE = (function 」 ‖ 「c.cat」 ‖ 「c.pierce」 ‖ 「c.dmg」 ‖ 「'" + n + "'」
+D82 记账纪律：24 小时内落盘的 .bak 必须在 CHANGELOG 里被点名（第九轮复核 §7-5）@5078-5110 [md+src] 读=doc indexOf×3
+    英文串: 「\n## ', 」 ‖ 「/」
+    变量式: f.replace(/\.bak$/, ''
+D87 只在补贴局里示范目标卡（subOnly）：只对设了 only 的示范生效、值随消息下发@5263-5302 [src] 读=src:js+other:server/train-server.mjs+other:server/paralleltrain.mjs+other:server/train-worker.mjs indexOf×16
+    英文串: 「let IMIT_SUB_ONLY = false;」 ‖ 「function setImitSubOnly(o」 ‖ 「const subOK = (!IMIT_SUB_ONLY || !onlyKe」 ‖ 「imitB > 0 && subOK && state.rng」 ‖ 「&& subO」 ‖ 「const regenThisGame = commitGame ? 2 : r」
+D91 被无效化的聚能环不得续计（v1.5.105：出招即计次 + 复位漏 voided ⇒ 打断者反而送 +3）@5357-5375 [src] 读=src:js indexOf×3
+    英文串: 「!a.voided && a.key === SK.RING」 ‖ 「if (!(a && a.outcome === 'ok' && a.key =」 ‖ 「if (key === R.SK.CANNO」
+D104 「择优不得回归」必须是机械保证（而不是注释里的承诺）@5483-5548 [src] 读=src:tools+other:./pick-best.mjs indexOf×4
+    英文串: 「from './pick-best.mjs'」 ‖ 「const regressOf = function」 ‖ 「ARM + '-band'」 ‖ 「selected: c === best」
+D92 R56 同层内资源型先结算（用户裁定：过载炮的清除须含目标本回合收入）@5549-5562 [src] 读=src:js indexOf×4
+    英文串: 「R.byKey[a0.key].cat === R.CAT.ENERGY」 ‖ 「const ord3 = (function 」 ‖ 「return inc.concat(ot」 ‖ 「for (const i of ord」
+D96 R60 净化清除@5661-5679 [src] 读=src:js indexOf×8
+    英文串: 「function purgeSelf(state, me, pi」 ‖ 「me.fireWeakNow = false; me.fireWeakNext 」 ‖ 「me.mineArmed = false; me.mineTurns = 0;」 ‖ 「me.rodGuard = 0;」 ‖ 「me.cooldown = {};」 ‖ 「case SK.PURIFY: purgeSelf(state, me, 」
+D97 环的**段长口径**（复核 §4）：必须按@5680-5694 [src] 读=src:tools indexOf×6
+    英文串: 「ringRun2」 ‖ 「ringRun3」 ‖ 「e.key !== R.SK.RIN」 ‖ 「e.type === 'voided'」 ‖ 「close(e.pi」 ‖ 「extractRingRuns(st.event」
+D100 E4：挡下伤害奖励（env 单一来源 · 只认真的挡下 · 标度按实测 · 必须进 gFit）@5745-5771 [src] 读=src:js+other:server/econ-env.mjs indexOf×12
+    英文串: 「function countBlocks(events, sea」 ‖ 「(e.type === 'blocked' || e.type === 'ref」 ‖ 「const blockBonus = BLOCK_W * Math.min(1,」 ‖ 「+ blockBonus」 ‖ 「let BLOCK_W = 0;」 ‖ 「if (o.blockW != nul」
+D101 贵卡出手奖励（v1.5.126 用户洞察：它不会用电磁炮/大雷、也丢了地雷/净化 ⇒ 没必要攒 ep）@5772-5797 [src] 读=src:js+other:server/econ-env.mjs indexOf×7
+    英文串: 「const bigBonus = BIGCARD_W > 0 ?」 ‖ 「+ bigBonus」 ‖ 「let BIGCARD_W = 0;」 ‖ 「if (o.bigcardW != nul」 ‖ 「'EPIRUS_BIGCARD_W'」 ‖ 「'bigcardW'」
+D71 蓄能经济门槛：ep<2 不许蓄能（v7 口径），legacy 保持旧口径（用户裁定 v1.5.82）@5860-5887 [src] 读=src:js indexOf×8
+    英文串: 「function policyChooserN(」 ‖ 「function pickChampion(」 ‖ 「econBase(state, pid, bas」 ‖ 「function econBase(state, pid, lega」 ‖ 「return gated.length ? gated : legal;」 ‖ 「(pp.ep || 」
+D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草案、待用户裁定**）· V2 记录不阻断（09-21 晨回滚，理由见 ③）@5888-5946 [src] 读=src:tools+other:./v2v4-lib.mjs indexOf×2
+    英文串: 「from './v2v4-lib.mjs'」 ‖ 「pickBalanced」
+D114 §N6 跨 N 混适应度：默认关（行为逐字）+ 接线三钉（夜班 09-22 · 时间盒=只实现+smoke）@6013-6023 [src] 读=src:tools indexOf×4
+    英文串: 「process.env.EPIRUS_XN2W || 0」 ‖ 「if (XN2W > 0 && N > 」 ‖ 「T.setTrainMode('standard」 ‖ 「T.setTrainMode(prevMod」
+D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测同一包两条路径读出 墙 17.85 vs 18.04）@6344-6413 [src+log] 读=src:tools+other:server/train-server.mjs+other:o.js+spawn indexOf×9
+    英文串: 「audit-lib」 ‖ 「flag('games', 2」 ‖ 「mirrorHealth(finalParams, 40, n, mod」 ‖ 「mirrorHealth(finalParams, FPN.games, 5, 」 ‖ 「console.log('[feasible] '」 ‖ 「for (const c of client」
+    变量式: WANT3P
+D126 R48「回魂复活回合」只免**花费**、不免**条件**（v1.5.166 · 用户报的摄魂 bug 追到的三处短路）@6414-6455 [src] 读=src:js indexOf×7
+    英文串: 「if (p.infiniteEnerg」 ‖ 「if (p.infiniteEnerg」 ‖ 「if (p.infiniteEnerg」 ‖ 「const cost = computeCost」 ‖ 「if (p.infiniteEnerg」
+    变量式: R.SK.DRAIN ‖ R.SK.RAILGUN
+D127 兑现广度（v1.5.167 · §N24 · 用户@6456-6525 [src+log] 读=src:tools+other:docs/artifacts/train-3p-out.js indexOf×3
+    英文串: 「EPIRUS_SEL_LAND || 0」 ‖ 「bandPickByLand(」 ‖ 「sel.best = lp.best」
+D128 广度准入线（v1.5.170 · §N29 · §N28@6526-6567 [src+log] 读=src:tools+other:docs/artifacts/train-3p-out.js+spawn indexOf×4
+    英文串: 「EPIRUS_BREADTH_FLOOR || 0」 ‖ 「rejectNarrowWinners(」 ‖ 「sel.best = nf.best」 ‖ 「'EPIRUS_BREADTH_FLOOR'」
+D129 训练模式可以在 CLI 上下达（v1.5.169 · §N28 · 用户@6568-6597 [src+log] 读=src:tools+other:docs/artifacts/train-3p-out.js+spawn indexOf×1
+    英文串: 「EPIRUS_TRAIN_MODE」
+D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · `v7xn22a` 被@6598-6651 [src+log] 读=src:tools+other:docs/artifacts/train-3p-out.js+spawn indexOf×2
+    英文串: 「OPPS.push(」 ‖ 「'EPIRUS_COUNTER_OPPS'」
+D134 切片相位不许与座位轮换锁死（v1.5.186 · 复核 DS 交接 §3 坑#8）：承诺局/补贴局必须按代旋转，且示范要真覆盖各席@6713-6763 [src+log] 读=src:js+src:tools indexOf×2
+    英文串: 「g % 3 === 0」 ‖ 「regenForGame(g, games, ge」
+D138 拦截代价表（v1.5.191 新量具）：归因必须真收到 blocked/reflect、@7015-7059 [log] 读=src:tools+spawn indexOf×4
+    英文串: 「{"games"」 ‖ 「{"games"」 ‖ 「{"games"」
+    变量式: c
+D139 击杀奖励实验台（v1.5.193）：补丁必须真打上、破防场必须证明@7060-7086 [log] 读=src:tools+spawn indexOf×1
+    英文串: 「bundled-champion」
+D140 击杀奖励规则库（v1.5.194 · 单一来源）：合成局面逐个钉五条语义 —— 单点/按伤害/overkill/蓄能加价/无来源归因/转移记给@7087-7205 [src] 读=src:js indexOf×4
+    英文串: 「mineFrom:」 ‖ 「fireFrom:」 ‖ 「transferBy:」 ‖ 「source: (opts.source != null ? opts.sour」
+D141 破龟群栏（v1.5.195）：`归因伤害/局` 与 `终场存活` 必须存在、必须与 `resolve.js` 的判胜口径同源、且**不是恒 0 的死读数**@7206-7234 [src+log] 读=src:tools+spawn indexOf×1
+    英文串: 「bundled-champion」
+D142 空净化闸门（v1.5.199 · 用户实机报）必须与引擎 `purgeSelf` 逐字段对账，且「攒哪种珠」必须单一来源@7306-7434 [src] 读=src:js+page indexOf×5
+    英文串: 「js/ui/bead-choice.js」 ‖ 「js/ui/ui.js」 ‖ 「function ' + name + '(」 ‖ 「\n  function ', i + 1」 ‖ 「function chooseAI(」
+D149 理想冠军 7 条表**不是一个口径**：两个旋钮要分开、【5】【6】必须**两口径都印**且搬运自证（v1.5.224 契约升级）@7473-7530 [src+log] 读=src:tools+src:js+spawn indexOf×5
+    英文串: 「build({ on: true」 ‖ 「【5】」 ‖ 「【6】」 ‖ 「【6】」 ‖ 「【7】」
+D150 全层口径搬运量具 `probe-layer-caliber.mjs`：搬运必须**自证生效**，且判据数量不许冻结成常数@7531-7594 [src+log] 读=src:tools indexOf×3
+    英文串: 「writeFileSync」 ‖ 「appendFile」 ‖ 「build」
+D151 「攒钱→防御」量具：ep 必须**决策时实读**，因果必须靠**两档配对**，小分母不许当结论@7595-7636 [src+log] 读=src:tools+spawn indexOf×3
+    英文串: 「from \'./probe-layer-caliber.mjs\'」 ‖ 「state.p[0]」
+    变量式: sv
+D152 「空蓄能」分因量具 `probe-bead-loop.mjs`：两种相反的病不许挤在同一个@7637-7660 [src+log] 读=src:tools+spawn indexOf×1
+    英文串: 「writeFileSync」
+D160 探针的参数守卫：接过的不许掉、位置要对、且不许误伤自己；没接的**点名只记录**（v1.5.236 · 落地仓规 v1.5.234）@7824-7849 [src+log] 读=src:tools+spawn indexOf×5
+    英文串: 「rejectUnknownFlags(」 ‖ 「arg('packs'」 ‖ 「rejectUnknownFlags(」 ‖ 「function main」
+    变量式: f.replace(/\.mjs$/, ''
+D107 G4「1 席脚本 vs 4 席被测」装配只许有一份实现（v1.5.133 收拢）@8078-8107 [src] 读=src:tools+other:./v2v4-lib.mjs indexOf×13
+    英文串: 「from './v2v4-lib.mjs'」 ‖ 「duelAssembly(」 ‖ 「function duel(」 ‖ 「h32(seed0 + g * 224682251」 ‖ 「export function duelAssembly」 ‖ 「forceAttack」
+D110 冠军包解析单一来源：吃得下产物 .bak 外壳 / 纯 JSON / 垃圾必拒（页面「导入冠军包」的底座）@8108-8131 [src] 读=src:js+page indexOf×4
+    英文串: 「EPIRUS_CHAMPION(_3」 ‖ 「js/champion-pack.js」 ‖ 「.bak」 ‖ 「EpirusChampionPack」
+D111 前台探索三条规则（v1.5.142 · ②③ 于 09-22 夜升级为序列窗锁）：铺垫卡 ep 门槛 + 链上回合整锁@8132-8174 [src] 读=src:js indexOf×2
+    英文串: 「epsMode === 'soft'」 ‖ 「HOLD_MIN_EP」
+D121 当选面退化闸三处对齐（§N9 · xn10b 龟包以带内最高 trainFit 当选的反例）@8175-8192 [src] 读=src:tools indexOf×3
+    英文串: 「rejectDegenerateWinners(hallEntrie」 ‖ 「degenerateOnlyWinner」 ‖ 「densityProfile(sb, h.params」
+D143 黑键闸必须铺到**每个**训练入口（v1.5.200）：`EPIRUS_KILL_REWARD` 传给 train-best / 页面训练服务时曾是**静默无效**（产物与不带它逐字节相同）@8208-8254 [src+log] 读=other:server/knob-guard.mjs+src:tools+other:server/train-server.mjs+other:knob-guard.mjs+other:out.js+spawn indexOf×4
+    英文串: 「detectDarkKnobs」 ‖ 「enforceKnobs」 ‖ 「knob-guard.mjs」 ‖ 「enforceKnobs(」
+D144 墙上时钟上限：`EPIRUS_WALL_MS=0` 必须是**关闭**（v1.5.200）—— 此前它第一次检查就判超时、训练当场中止，与它自己的注释正好相反@8255-8271 [src] 读=other:server/train-server.mjs indexOf×2
+    英文串: 「Date.now」 ‖ 「wallCapOf(process.en」
+D145 座位极差线必须随 n 标定（v1.5.202）：固定 30pt 线在 n=400 会**放走**真偏置包（26.6pt）—— 而座位事故在本仓真实发生过@8272-8291 [src] 读=src:tools indexOf×2
+    英文串: 「spread >= 30」 ‖ 「spreadLine」
+D146 G4 `--force` 越线例外的判定必须是被**覆盖**的纯函数（v1.5.202）：它原来只在@8292-8311 [src] 读=src:tools indexOf×1
+    英文串: 「g4ExceptionOk(curImpl, curPool, g4re」
+D166 大雷连带**被挡下时 UI 不许说@8542-8643 [src] 读=src:js indexOf×7
+    英文串: 「const BIGT_CHAIN_REASON」 ‖ 「function evText(e, roundEvent」 ‖ 「function ' + name + '(」 ‖ 「\n  function ', i + 1」 ‖ 「evText(e, lis」 ‖ 「evText(e, event」
+    变量式: NM[B.dmg[0].to]
+D167 econ 族 5 键必须能在 CLI **真下达并读回消费点**（用户 GO · 千问 §E59 NEXT 6）：开档臂不许 exit 6、同族没接线的键必须仍是 6@8644-8681 [src+log] 读=src:tools+other:server/econ-env.mjs+spawn indexOf×2
+    英文串: 「'" + k + "'」 ‖ 「'EPIRUS_BEAD_W'」
+D170 出手形状的两条记录读数（目标死磕 / ジ⇄枪交替）必须可复现、缺读数给 NaN、且**只记录不阻断**（v1.5.258 · 用户 09-27 点名）@8810-8888 [src] 读=src:tools indexOf×2
+    英文串: 「targetFixation(」 ‖ 「jiGunShape(」
+D173 贵卡预算的**剂量表**（开火计数）：非零才计数、随回执一起给出、且不许改任何判定（v1.5.261 · §22.1 的教训）@8922-8938 [src] 读=src:js indexOf×3
+    英文串: 「COSTLY_HITS++」 ‖ 「gFit」 ‖ 「.fit =」
+D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + 全塌缩不硬换人 + 账进产物 + 无参照即拒@9003-9120 [src+log] 读=src:tools+other:/noref.js+other:/d176ctl.js+other:/d176wide.js+other:/d176tight.js+other:/d176other.js+other:/d176seatlax.js+other:/d176seat.js+spawn indexOf×5
+    英文串: 「EPIRUS_CHAMPION_3P_META = 」 ‖ 「{', 」 ‖ 「;\n', 」 ‖ 「multi」 ‖ 「long」
+D181 `EPIRUS_RING_W` 在 train-3p 可命令（v1.5.274 · §E91）：三处名单齐 + 边界必须可见@9238-9264 [src+log] 读=src:tools+other:server/econ-env.mjs+other:/out.js+spawn indexOf×2
+    英文串: 「ringW」 ‖ 「ringW」
+D186 序列机会率探针（v1.5.278 · §E122）：原样交回 + 复现/中性/守恒/判别力四自证 + 两档口径@9507-9553 [src+log] 读=src:tools+spawn indexOf×2
+    英文串: 「0.35, 0.15」 ‖ 「0.15, 0.2, 5, 'soft'」
+D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · 已知别名必须查到 · 读不出不许当@9613-9679 [src+log] 读=src:tools+table+spawn indexOf×1
+    英文串: 「..」
+D192 判定读数自带噪声尺（v1.5.287 · DS 清单第 8 条后半）：区间在边界不塌、n 小就变大、量不出不装 0@9680-9715 [src+log] 读=src:tools+spawn indexOf×1
+    英文串: 「±?」
+D198 §E136 的配对判读有牙（v1.5.292）：配对不成立要拒、三个判读分支都走得到、逐桌子账要与汇总对得上、配对算术只有一份@10069-10200 [src+log] 读=src:tools+table+spawn indexOf×1
+    英文串: 「subject\t」
+D199 eval-5p 必须决定论、逐桌子账必须与它自己印的读数对得上（v1.5.295 · §E140 的免费自检升级成门）@10313-10390 [src+log] 读=src:tools+spawn indexOf×3
+    英文串: 「subject\t」 ‖ 「ctrl\t」 ‖ 「subject\t」
+D164 池子前沿量具（v1.5.249）：三判据在线上方向正确、@10514-10572 [src+log] 读=src:tools+spawn indexOf×3
+    英文串: 「const rows = []」 ‖ 「const incM = metricsOf(incParam」 ‖ 「gate-drafts exit=」
+D187 整桌同原型（v1.5.280 · §E124）：关=逐位可逆 / 开=局内恒等且跨局满覆盖 / 量具路不许被配方拖动@10652-10698 [src] 读=src:js+src:tools indexOf×3
+    英文串: 「function evalN(」 ‖ 「\n  function ', from + 2」 ‖ 「oppSeatIndex」
+D201 v1.5.299 的 fit 口径旋钮 EPIRUS_FIT_CAL 有牙（补 DS 提交里那条其实不存在的@10733-10782 [src] 读=src:js indexOf×1
+    英文串: 「rankCredit(rank, aliveEnd, r.state.p.len」
+D204 在线对手模型 + 1-ply 重放搜索（v1.5.305 · **默认关** · `setBeliefSearch(1)` / 页面 `localStorage.epirus.beliefSearch`）有牙@10898-11115 [src] 读=src:js+src:tools indexOf×5
+    英文串: 「policyChooserN(」 ‖ 「candidatesFor(」 ‖ 「econBase(」 ‖ 「else if (BELIEF_TIE === 1」
+    变量式: anchors[0]
+D230 §E357 活引用面里的 `docs/**.md` 指针必须真在盘上（docs 两层化之后，搬目录漏改引用当场红）@11158-11215 [src] 读=doc+src:js+src:tools indexOf×2
+    英文串: 「docs/artifacts/」
+    变量式: ref
+D206 econ 奖励键三处名单自洽（DS 清单 B7 · 09-30 夜班）：默认表 / CLI 名单 / 两处 SENT 夹具 ⇒ 缺任一处就是@11216-11241 [src] 读=src:tools indexOf×3
+    英文串: 「SENT」 ‖ 「};', 」
+    变量式: k
+D209 人类形状对手池的单一来源（§E168 · 09-30 夜班）：`tools/human-pool.mjs` 自证 + 两台仪器不许各自再抄一份采样@11303-11361 [src] 读=src:tools+other:docs/artifacts/e155-humanpool.mjs+other:docs/artifacts/e168-style-human.mjs+other:docs/artifacts/e169-beadprice.mjs+other:docs/artifacts/e157-difficulty.mjs+other:docs/artifacts/e157b-difficulty-pool.mjs+table+other:docs/artifacts/e152e-human.mjs indexOf×8
+    英文串: 「tools/human-pool.mjs」 ‖ 「R.CAT.DEFENSE」 ‖ 「tools/human-pool.mjs」 ‖ 「human-behavior.json」 ‖ 「writeFileSync(REPO + \u0027docs/artifact」 ‖ 「tools/human-pool.mjs」
+    变量式: PRODUCER ‖ k
+D210 §E169 的第 4 剂药有牙（`setBeliefBead` / `setBeliefRingPrice`，**两个默认 0 ⇒ 出厂形状逐字不变**）：旋钮必须真的改判决，且珠的三条去路只许数一份@11362-11418 [src] 读=src:js+src:tools+other:docs/artifacts/e169-beadprice.mjs indexOf×5
+    英文串: 「function beadTerm(m」 ‖ 「return 20 * (me.hp > 0 ? 1 : 」 ‖ 「setBeliefBead」 ‖ 「setBeliefRingPrice」 ‖ 「st.events」
+D211 §E169b 把@11419-11483 [src] 读=src:tools+other:docs/artifacts/e169-beadprice.mjs+src:js indexOf×1
+    英文串: 「tallyPick(t, state, pid, chooser(state, 」
+D229 §E340 全息屏障→原型制御 的映射档（v1.6.8）：默认 off（出厂零剂量）· 三档语义各有一条牙 · 含糊值响亮拒 · 结构性无解不许假装禁掉 · 出厂面四个入口都读不到它@11644-11708 [src] 读=src:tools+src:js indexOf×1
+    英文串: 「holo2proto」
+D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的@11855-12020 [src+log] 读=src:champion-map+table+spawn indexOf×7
+    英文串: 「EPIRUS_CHAMPION_3P_META」 ‖ 「parentOf2」 ‖ 「parentSrc」 ‖ 「parentOf2」 ‖ 「parentSrc2」
+    变量式: id ‖ c
+
+===== 桶 B（4 条）=====
+D8 版本号三方一致（CHANGELOG 最新条目 = README = index.html）@2416-2432 [md] 读=doc+page indexOf×0
+D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可复现 + 缺包点名 + 判别力@9140-9175 [src+log] 读=src:tools+spawn indexOf×1
+    变量式: k
+D190 promote 的阻断计数**不许被重复打印翻倍**（Qoder §F-1 点名 · v1.5.283）@9574-9612 [src+log] 读=src:tools+spawn indexOf×1
+    变量式: v
+D205 门号纪律（DS 清单 B8 · 09-30 夜班）：D 号不许撞车，且 CHANGELOG 最新一版声称的每个门号必须真在册（钉@11116-11157 [md] 读=doc indexOf×0
+
+已写 champion-map/_sentinel-rows.tsv（164 行 · 分诊文档的表由它生成）

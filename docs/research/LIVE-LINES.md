@@ -823,3 +823,19 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 - **并 main 已落地**：`git merge-tree` 判无冲突后建合并提交 `dd4a5463`（两父 = 原 `main` 4a71d5c8 + 研究分支 548 笔），**没动共享工作树的分支**（本工作树仍停在研究分支上，按仓库规矩 main 常驻那一条留给下一班自己切）。
   合并前核对过 main 侧独有那 2 笔仍在结果里：CHANGELOG 同时有 `## v2.0.0` 与那 4 行 v1.8.44 发布记录 ‖ `docs/research/REVIEW-POOL12ROW-2026-10-28-ds.md` 未被归档也未被覆盖 ‖ 合并树里版本三处一致（README `当前版本：v2.0.0` == CHANGELOG `## v2.0.0` == `index.html` `程序 v2.0.0`）‖ `docs/research/` 顶层 85 份 .md。
   推送顺序：先把研究分支推到 `38fd075b` 等 CI 绿（run 42168281548 = success）⇒ 再推 `main`（`4a71d5c8..dd4a5463`）。**没建 tag**（tag 属发布动作，需另行点名）。
+
+## 追记 48（11-06 午后 · Qoder）——CI 的 browser 作业其实一直红 ‖ 四条页内判据换主语后四视图 99/0 ‖ champion-map 329→262 ‖ 临时件按点头删除
+
+- ⚑ **先纠错**：我前两次汇报"CI 整轮绿"只读了 run 级结论。`browser` 作业是 `continue-on-error: true` ⇒ run 显示 success 而作业 failure，
+  这条 workflow 自己 10-12 的注释就写着"browser=success 毫无信息量，要看 step summary"。`47e28ebc` / `f75f77f9` / `38fd075b` 三笔的 browser **都是红的**（`gh run view --json jobs` 可查）。
+  规矩补一条进 PROBLEMS 第 25 条：**引用 CI 必须点名"哪些作业、各自结论"**。
+- **四条腿修完，四个视图各 99 PASS / 0 FAIL**（`scratch/qoder-1106-st-{tree,1d,3db,map}.txt`）：
+  ① 批次过滤 → 只判**本批次内**的冠军一枚不许少（批次 = 版本子集）；② 未上槽 → 主语收成**历代上槽**（实测 19 枚里 2 枚无时刻 = 历史那两枚 v7new6-94/96，线 4 未动；另两类点名报数不静默排除）；
+  ③ 谱系图 → **有时刻的必须全部落格 + 无时刻的点名**（那 6 枚 = V7C/V7M/V7L × s13/s41，两本血统表都没有它们 ⇒ 补血统行是下一步，记在 PROBLEMS 第 6 条）；
+  ④ 标签拥挤 → 真因是**那条腿在 3db 视图里量的是另一个视图**：钉了 mode/elev/labels/batch/窗口，没钉相机（`st.k/ox/oy` 与 `st.yaw/pit`）⇒ 同一批常驻名字 3db 启动量到 275、map 启动 172。现在与「复位视图」按钮同一套钉法。
+- **牙口按 R4③ 逐条反向验过**（`scratch/qoder-1106-leg-teeth.mjs`，只改页面副本）：抠掉一枚 2.0 冠军 ⇒ 红 ‖ 抹 5 枚历代上槽的 sh ⇒ 红 ‖ 让一枚有时刻的拿不到位置 ⇒ 红 ‖ 把判据读的 `LAB` 矩形横向三倍 ⇒ 红。
+  ⚑ 第一版给④挑错了锚（改避让用的 `boxes` ⇒ 99 PASS 纹丝不动）⇒ "避让坏了有没有量具"这条欠账仍在（PROBLEMS 第 14 条）。
+- **champion-map 329 → 262**：67 份零引用的一次性证据回执搬进 `docs/research/archive/2026-11-06-champion-map-evidence/`；留下的 42 份各有通配/命名约定依赖，逐条写在 `archive/README.md` 那节。
+  ⚑ 本班自抓：第一遍用文件名前缀筛，误搬 11 个 `.mjs` 与 `epsagg.tsv` / `epsfull.tsv` ⇒ 140 份全部退回 + `git reset` 后重做。搬完重烘 + 四视图复跑才算数。
+- **临时件按用户点头删**：`scratch/_cleanup-2026-11-06/`（15 MB）整格删除；`coords.tsv.pre-e600.bak` 因被 `relabel-lineage.mjs` 当回滚锚原地保留。
+- **门禁（定向，不是整轮）**：`--only=D234 ` 1/1 ‖ `--group=meta` 15/15 ‖ 四视图页内自检 99/0×4。CHANGELOG 的 v2.0.0 条目补了这批（打 tag 前）。

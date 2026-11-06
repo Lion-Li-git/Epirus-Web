@@ -357,7 +357,7 @@ var SUBSETP = 0;
 var PROJCOLS = 1;
 var PCUR = 'all';                                   /* 当前投影：all | 1.8 | 2.0 */
 function SUBSETP_NOW() { return PROJCOLS ? (st.batch !== 'all' ? 1 : 0) : SUBSETP; }
-var NA_IN_SUBSET = ['批次过滤：切一批要少点', '冠军序列：抽不到上线时刻', '倒挂假边必须被修掉', '父边来路必须标全',
+var NA_IN_SUBSET = ['批次过滤：切一批要少点', '冠军序列：声称上过槽', '倒挂假边必须被修掉', '父边来路必须标全',
   '强度窗口：两端顶到色端', '强度窗口：分界被切掉', '标签：常驻名单', '点大小：上过线那一档', '命中：标签中心不许命中',
   '那 584 枚共父', '池层：真源表每一枚都在图上', '池层：环数', '融合边：红线必须真画出来', '家族配色要',
   '壳：带宽滑轨', '壳：带宽真的改场', '连线开关：全开', '沿一条边走一圈', '空地上的单根线', '平移/缩放/旋转一条线的 alpha',
@@ -3842,11 +3842,18 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var all = NVIS, probeV = Fv(P[0]), cBefore = fCol(probeV);
   st.batch = BATCH.length ? BATCH[BATCH.length - 1].k : 'all'; recomputeVIS(); draw();
   T('批次过滤：切一批要少点', NVIS < all && NVIS > 0, NVIS + ' / ' + all);
-  /* §E371：这条只管**批次**不许切没冠军。窗口切它是另一件事（窗口的定义就是"越界一律不画"），
-   *   所以判据带上 inWin ⇒ 拿 #flo= 跑 check 时这条不会假红。 */
-  T('批次过滤：冠军永远保留（分界参照物不能被批次切没 ‖ 窗口切它不算这条）',
-    P.every(function (d) { return !d.lin || !inWin(d) || VIS[nOf(d.id)] === 1; }),
-    '冠军 ' + P.filter(function (d) { return d.lin; }).length + ' 枚 ‖ 在窗内的都还在图上');
+  /* §E371 → §G3 之后主语换过一次：这条原来判"切任一批次后**所有**冠军必须还在"，而 §G3 把"批次"定义成了
+   *   **版本子集**（batchOf = d.ver ⇒ 只看 1.8 时 2.0 的冠军本来就该消失）。前提换了，判据要跟着换，
+   *   否则它替一个已经作废的旧设计（"批次只是显示过滤器"）作证。
+   *   现在判仍然成立的那件事：**属于当前批次的那批冠军，一枚都不许少**（分界参照物不能被批次切没）。
+   *   覆盖面自己报数（R8）：切掉了多少枚、当下批次里该有多少枚都印出来，不许把"这一批里没有冠军"读成合格。 */
+  var _bch = P.filter(function (d) { return d.lin && inWin(d) && (st.batch === 'all' || batchOf(d) === st.batch); });
+  var _bchBad = _bch.filter(function (d) { return VIS[nOf(d.id)] !== 1; });
+  T('批次过滤：本批次内的冠军永远保留（分界参照物不能被批次切没 ‖ 窗口切它不算这条 ‖ 批次 = 版本子集，别的批次的冠军被切走是设计不是丢点）',
+    _bch.length > 0 && _bchBad.length === 0,
+    '当下批次 ' + st.batch + ' ‖ 该批里在窗内的冠军 ' + _bch.length + ' 枚（要 >0）‖ 被切掉的 ' + _bchBad.length + ' 枚'
+      + (_bchBad.length ? '：' + _bchBad.map(function (d) { return d.id; }).slice(0, 8).join(',') : '')
+      + ' ‖ 全库带血统标的 ' + P.filter(function (d) { return d.lin; }).length + ' 枚');
   /* 「颜色：切批次不许挪分位」这一条**删掉了**（用户 10-07：「需要重构的时候就把没用的门禁删了」+ 新口径
    *   「不渲染的点直接从图中摘出去，不影响范围内点的渲染」）—— 它钉的正是"批次不参与定标"，
    *   与新口径正面冲突，留着只会替一个已经作废的读法作证。换成钉新口径的那三条（下面这条）。 */
@@ -4051,8 +4058,18 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   for (var c2 = 0; c2 < CH.length; c2++) { var s2 = P[CH[c2]].sh || '';
     if (s2 && prevS && s2 < prevS) { prevS = '⛔ 乱序'; break; } if (s2) prevS = s2; }
   T('冠军序列：有上线时刻的那些按时间正序', prevS !== '⛔ 乱序');
-  T('冠军序列：抽不到上线时刻的必须显式标（实测 v7new6-94/96 从没进过槽）',
-    P.filter(function (d) { return d.lin && !d.sh; }).length <= 4, P.filter(function (d) { return d.lin && !d.sh; }).length + ' 枚未上槽');
+  /* 主语换过一次（11-06）：这条原来数的是"**任何**带血统标的行里没有上线时刻的枚数 ≤4"。
+   *   而 2.0 之后 '代3臂产物' 这一类标的就是**从没上过槽的臂产物**（实测 19 枚全无上线时刻，且旧槽位冠军那 16 枚
+   *   由另一条腿按类判）⇒ 把它们算进"抽不到上线时刻的冠军"是把分类当缺陷。
+   *   现在判仍然成立的那件事：**声称上过槽的那一类（历代上槽）里，抽不到上线时刻的不许超过 4 枚**
+   *   （v7new6-94/96 就是这一类里的历史两枚）。覆盖面自己报数：另外两类的枚数一并印出来，不静默排除。 */
+  var _nsShip = P.filter(function (d) { return d.lin === '历代上槽' && !d.sh; });
+  T('冠军序列：声称上过槽（历代上槽）却抽不到上线时刻的必须显式标（线 4 枚 ‖ 臂产物与旧槽位冠军各按自己的类判，见下）',
+    _nsShip.length <= 4,
+    '历代上槽 ' + P.filter(function (d) { return d.lin === '历代上槽'; }).length + ' 枚里无上线时刻 ' + _nsShip.length + ' 枚'
+      + (_nsShip.length ? '：' + _nsShip.map(function (d) { return d.id; }).slice(0, 8).join(',') : '')
+      + ' ‖ 代3臂产物（本就没上过槽）' + P.filter(function (d) { return d.lin === '代3臂产物'; }).length + ' 枚'
+      + ' ‖ 旧槽位冠军（时刻来自槽位时间轴，另一条腿逐枚核）' + P.filter(function (d) { return d.lin === '旧槽位冠军'; }).length + ' 枚');
   /* §E375 旧槽位冠军的上线时刻必须来自**槽位时间轴**（ship-times.tsv 按面板上的名字反查，天生覆盖不到它们）。
    *   牙口验过：把 slot-timeline.tsv 临时挪走 ⇒ 这一条红在"16 枚里有时刻的 0"。
    *   上面那条阈值（≤4）当时**也**红了，但它只说"18 枚未上槽"—— 看不出是旧的 2 枚还是新掉的 16 枚，
@@ -4689,16 +4706,23 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   同族的另外两条（§E455 浮层、§E462 拖拽）都是靠"先钉默认布局"才站得住的。 */
   var SNAPV = { tX: st.tX, tY: st.tY, tKx: st.tKx, tKy: st.tKy };
   st.mode = 'tree'; st.elev = 0; st.batch = 'all'; st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; recomputeVIS(); draw();
-  var _tOld = 0, _tAny = 0, _tPix = 0, _pixOK = 1;
-  for (i2 = 0; i2 < N; i2++) { if (!scr[i2]) continue; _tAny++; if (P[i2].old) _tOld++; }
+  var _tOld = 0, _tAny = 0, _tPix = 0, _pixOK = 1, _tNoTs = [];
+  for (i2 = 0; i2 < N; i2++) { if (!isFinite(Date.parse(P[i2].ts || ''))) { _tNoTs.push(P[i2].id); continue; }
+    if (!scr[i2]) continue; _tAny++; if (P[i2].old) _tOld++; }
   try { var _pd = g.getImageData(0, 0, cv.width, cv.height).data;
     for (i2 = 0; i2 < N; i2++) { if (!P[i2].old || !scr[i2]) continue;
       var _px = Math.round(scr[i2][0]), _py = Math.round(scr[i2][1]);
       if (_px < 0 || _py < 0 || _px >= cv.width || _py >= cv.height) continue;
       var _o = (_py * cv.width + _px) * 4; if (_pd[_o + 3] > 0) _tPix++; } } catch (E2) { _pixOK = 0; }
-  T('谱系图：旧包没有 lineage 行也要真被画出来（判据 = 命中表 + 画布像素 ‖ 量之前先钉默认视图，§E468）',
-    _tOld === nOld && _tAny === N && (!_pixOK || _tPix === nOld),
-    '树上命中表 ' + _tOld + '/' + nOld + ' ‖ 有位置的共 ' + _tAny + '/' + N + ' ‖ 画布上真有颜色 ' + _tPix + '/' + nOld
+  /* 判据主语换过一次（11-06）：原来钉 _tAny === N（**每一枚**都得在谱系图上落格），
+   *   而落格需要 ts（PT 里 Date.parse 不过就 return null）⇒ 没有时刻的那几枚"画不出来"是数据的正确回答，
+   *   不是仪器坏。按 R8 把两件事分开：**有时刻的必须全部有位置**（这条有牙），
+   *   没时刻的那几枚点名报数（不静默、也不算合格）。 */
+  T('谱系图：旧包没有 lineage 行也要真被画出来 ‖ 有时刻的每一枚都必须落格（没时刻的点名，不算这条）',
+    _tOld === nOld && _tAny === N - _tNoTs.length && (!_pixOK || _tPix === nOld),
+    '树上命中表 ' + _tOld + '/' + nOld + ' ‖ 有时刻的 ' + (N - _tNoTs.length) + '/' + N + ' 枚里落格的 ' + _tAny
+      + '（要逐枚相等）‖ 无时刻不落的 ' + _tNoTs.length + ' 枚：' + (_tNoTs.length ? _tNoTs.slice(0, 8).join(',') : '无')
+      + ' ‖ 画布上真有颜色 ' + _tPix + '/' + nOld
       + ' ‖ 量的时候视图 = 出厂（tx/ty=0 ‖ kx/ky=1）');
   st.tX = SNAPV.tX; st.tY = SNAPV.tY; st.tKx = SNAPV.tKx; st.tKy = SNAPV.tKy; draw();   /* 还原 + 补一帧 */
   /* §E376 标签拥挤度（用户担心的"可读性降低"里最实在的一条）：**同一台探针在两张 coords.tsv 上各跑一次** ——
@@ -4709,8 +4733,14 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   判据②是**上限**，钉在两个实测值之上（110 枚 / 16 对）。⚠ 它的牙口只验到"测量链路通 + 上限不被无声突破"：
    *     把 putLabel 的避让拆掉两处（旋转标签不再找空位 / 无视碰撞）之后，这两个数**一模一样没动**
    *     ⇒ 说明这条测的不是"避让那一层"，拿它当"避让坏了我能知道"就是吹。要真量那层得另造判据，先记这儿。 */
-  var SNAPL = { mode: st.mode, elev: st.elev, labels: st.labels, batch: st.batch, flo: st.flo, fhi: st.fhi, sel: st.sel };
+  /* ⚠ 相机也必须钉（11-06 抓到，两次才找全）：这一格原来只钉 mode/elev/labels/batch/窗口，
+   *   没钉 st.k / st.ox / st.oy，也没钉 **st.yaw / st.pit** —— 地图模式的屏幕位置 = 投影 × 这台相机，
+   *   从 #mode=3db 深链进来时相机是立体那一套 ⇒ 同一批常驻名字压住的点数变成 275（map 态 172），
+   *   红的其实是"这条腿没在它自己声称的那个默认视图里被测"。钉法与「复位视图」按钮逐字同一套（FLAT 相机）。 */
+  var SNAPL = { mode: st.mode, elev: st.elev, labels: st.labels, batch: st.batch, flo: st.flo, fhi: st.fhi, sel: st.sel,
+    k: st.k, ox: st.ox, oy: st.oy, yaw: st.yaw, pit: st.pit };
   st.mode = 'map'; st.elev = 0; st.labels = 'champ'; st.batch = 'all'; st.flo = 0; st.fhi = 1; st.sel = null;
+  st.k = 1; st.ox = 0; st.oy = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
   recomputeVIS(); draw();
   var LB = (function () { var k, m, ov = 0, lbC = 0, nch = 0, missing = [], seen = {}, cov = 0;
     for (k = 0; k < N; k++) if (isLabOn(P[k]) && VIS[k]) nch++;   /* §E606 判据主语 = 常驻名单（历代上槽 ∪ 池成员）*/
@@ -4737,7 +4767,8 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     LB.cov <= COVL,
     '盖住的点 ' + LB.cov + ' 枚 ‖ 线 ' + COVL + '（= 4.52 枚/条 × 常驻名单 ' + LB.n + ' 条 + 5 枚余量）‖ 矩形重叠 ' + LB.ov + ' 对（**只报不判**，那条腿按用户裁定删了 §E430）‖ 标签 ' + LB.n + ' 个 ‖ 避让 ' + LB.push + ' 次');
   st.mode = SNAPL.mode; st.elev = SNAPL.elev; st.labels = SNAPL.labels; st.batch = SNAPL.batch;
-  st.flo = SNAPL.flo; st.fhi = SNAPL.fhi; st.sel = SNAPL.sel; recomputeVIS(); draw(); paintWin();
+  st.flo = SNAPL.flo; st.fhi = SNAPL.fhi; st.sel = SNAPL.sel; st.k = SNAPL.k; st.ox = SNAPL.ox; st.oy = SNAPL.oy;
+  recomputeVIS(); draw(); paintWin();
   st.mode = SNAPA.mode; st.elev = SNAPA.elev; st.batch = SNAPA.batch;
   st.flo = SNAPA.flo; st.fhi = SNAPA.fhi; recomputeVIS(); draw(); paintWin();
   /* ===== §E608 壳的读数当场判两条（DS 交接件 §1.6 第 4/5 条）=====

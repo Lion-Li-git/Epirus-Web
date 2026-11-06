@@ -1,0 +1,4 @@
+arm	productRel
+E1BASE	js/bundled-champion-3p.js
+E1GRAD	docs/artifacts/e608-out/g-grad-A.js
+E1GA	docs/artifacts/e608-out/g-ga-B.js

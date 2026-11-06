@@ -136,6 +136,23 @@
 `scratch/_cleanup-2026-11-06/`，逐份理由写在那格的 README 里；`champion-map/coords.tsv.pre-e600.bak` 因
 `relabel-lineage.mjs` 拿它当回滚锚而**原地不动**。
 
+## 2026-11-06（Qoder 午后 · 用户：「champion-map 里也有一堆没用的旧文件也删了」）
+
+搬进 **`archive/2026-11-06-champion-map-evidence/`** 共 **67 份**（0.61 MB，`git mv` / 未跟踪的直接搬，内容一字未改）。
+**为什么这些在 champion-map 而不是 docs/research**：那个目录同时是"每个 §E 的证据堆放处"——329 份里 `e*-*` / `epsfull-*` 占 86 份、
+下划线开头的一次性回执占 47 份。搬完降到 **262 份**。
+
+三条判据同时成立才搬：① **代码与门的正文一次都没提过这个文件名**（扫 `tools/ server/ js/ champion-map/*.mjs tests/ .github/` + README/CHANGELOG/index.html）
+② 不落在任何**按命名约定解析**的通道上：`feas-long-*` / `feas-short-*`（`attach-hlong.mjs:68`、`attach-hshort.mjs:37` 通配读入）‖
+`*-epsfull.tsv` / `*-ruler.tsv`（`rebuild-coords.mjs:105` 按 ruler 表名反推线上口径表）‖ `epsfull-g3*/r64*/v7long*`（现行 Hp/Hlong 的出处）
+③ 只搬**数据回执**，脚本一律原地留（`.mjs` 是别条链的入口，挪了会打断相对路径）。
+
+留下的 42 份各有上面第二类的依赖，逐份原因可用 `node scratch/qoder-1106-mapmove-list.txt` 之外的那次扫描复算（判据写在该脚本头注）。
+
+⚑ **本班的一次自抓**：第一遍筛的时候我用"文件名前缀"当判据，误搬了 11 个 `.mjs` 脚本与 `epsagg.tsv` / `epsfull.tsv` 这类被代码读的真源表。
+发现后把 140 份**全部退回**、`git reset`，再用"引用检查 + 排除脚本 + 排除通配约定"重做 ⇒ 最终这 67 份。
+搬完重烘一次并跑四视图页内自检（`tree / 1d / 3db / map` 各 99 PASS / 0 FAIL）才敢说没打断东西。
+
 ## 怎么找回全文
 
 ```bash
