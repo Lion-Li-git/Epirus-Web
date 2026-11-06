@@ -820,3 +820,6 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
   12 份"有硬面引用"的复核件按 10-06 那节"硬面非零的一份都不挪"留在顶层；old→new 对照表写在 `docs/research/archive/README.md`。
 - **问题清单落档**：新建 `docs/research/PROBLEMS-2026-11-06.md`（21 条，分五类，每条标 ⚑等裁 / ▶可做 / ●已记不动）。要点：三条页内红都是"判据主语没跟着设计换代"（批次=版本子集之后那条"冠军不许被切没"前提已失效）‖ D191 根因（`widIndex` 每进程一遍）未修 ‖ `index-2v-*` 三页无门比对 = 覆盖缺口 ‖ 大雷/摄魂的档位装配量仍缺 ‖ 体积底数 `scratch` 906MB / `docs/artifacts` 309MB / pack 94MB。
 - **门禁（定向，不是整轮）**：`--group=meta` 15/15（版本一致 ‖ D82 产物在场 ‖ D230 活引用不落空）‖ `--group=ui`（累计 ui+ship+meta 59 条）**59/59**（D191 补账后那条红消掉）。
+- **并 main 已落地**：`git merge-tree` 判无冲突后建合并提交 `dd4a5463`（两父 = 原 `main` 4a71d5c8 + 研究分支 548 笔），**没动共享工作树的分支**（本工作树仍停在研究分支上，按仓库规矩 main 常驻那一条留给下一班自己切）。
+  合并前核对过 main 侧独有那 2 笔仍在结果里：CHANGELOG 同时有 `## v2.0.0` 与那 4 行 v1.8.44 发布记录 ‖ `docs/research/REVIEW-POOL12ROW-2026-10-28-ds.md` 未被归档也未被覆盖 ‖ 合并树里版本三处一致（README `当前版本：v2.0.0` == CHANGELOG `## v2.0.0` == `index.html` `程序 v2.0.0`）‖ `docs/research/` 顶层 85 份 .md。
+  推送顺序：先把研究分支推到 `38fd075b` 等 CI 绿（run 42168281548 = success）⇒ 再推 `main`（`4a71d5c8..dd4a5463`）。**没建 tag**（tag 属发布动作，需另行点名）。
