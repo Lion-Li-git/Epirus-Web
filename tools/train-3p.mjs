@@ -138,7 +138,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
   'EPIRUS_TOOLKIT_OPPS',     // §E676（10-21 早班）：把杂货铺（计划层 P0~P7）放上训练桌（份数驱动，默认关 ⇒ OPPS 一字不变）
-  'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）
+  'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER', 'EPIRUS_POOL_OPPS_TABLE',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；11-07 ZCode：表路径可指（2P 产线 = pool-members-2p.tsv，3P 成员在 1v1 是分布外）
   'EPIRUS_SEL_POOL',   // v1.7.92 §E635：把池成员**也放上选拔桌**（终局重验那张表；默认关 ⇒ `ALL_PAIRS` 一字不变）
   'EPIRUS_HALL_DEDUP', // v1.7.92 §E635：名人堂按 wid 去重（同一粒权重只占一席；默认关 ⇒ 榜的形状一字不变）
   'EPIRUS_OPP_HUMAN', 'EPIRUS_OPP_HUMAN_SRC', 'EPIRUS_OPP_HUMAN_TGT', 'EPIRUS_OPP_HUMAN_FILE',   // v1.6.60：把**人类形状替身**放上训练桌（默认关 ⇒ OPPS 一字不变）
@@ -1681,7 +1681,7 @@ if (HUMAN_N > 0) {
  *   这里只负责"读不到就响亮失败"，不静默少放。记账写 **wid**（与 `hotstartFrom` 同一条纪律），不写路径。 */
 const POOL_OPP_N = Number(process.env.EPIRUS_POOL_OPPS || 0);
 const POOL_OPP_TIER = String(process.env.EPIRUS_POOL_OPPS_TIER || 'hard');
-const POOL_OPP_TABLE = 'champion-map/pool-members.tsv';
+const POOL_OPP_TABLE = String(process.env.EPIRUS_POOL_OPPS_TABLE || 'champion-map/pool-members.tsv');
 const POOL_OPPS = [];
 if (Number.isNaN(POOL_OPP_N) || POOL_OPP_N < 0 || POOL_OPP_N !== Math.floor(POOL_OPP_N)) {
   console.error('[pool-ops] ⛔ `EPIRUS_POOL_OPPS` 要非负整数（收到 ' + JSON.stringify(process.env.EPIRUS_POOL_OPPS || '') + '）⇒ 拒绝把它当 0');
