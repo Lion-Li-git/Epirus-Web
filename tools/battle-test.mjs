@@ -276,6 +276,17 @@ async function main() {
   const btnReady = () => evalJS(`[...document.querySelectorAll('.skillbtn')].some((x) => !x.disabled)`);
   const waitReady = async (ms) => { const t0 = Date.now(); for (;;) { if (await btnReady()) return true; if (Date.now() - t0 > ms) return false; await sleep(60); } };
   const roundNo = async () => { const t = String(await logText() || ''); let last = 0, m; const re = /第 (\d+) 回合/g; while ((m = re.exec(t))) { if (+m[1] > last) last = +m[1]; } return last; };
+  /* 弹窗必答（11-06 夜补，CI run 42228843800 的病根）：`pickSkill` 对 **蓄能** 也开弹窗（存电珠还是爆破珠，
+   *   `js/ui/ui.js:411`），而原来只有**攻击技**那一条分支答弹窗，兜底那条（点蓄能/ジ）没答
+   *   ⇒ 下一轮再点蓄能时 `ui.js:406` 先「已放弃【蓄能】的目标选择」再重开 ⇒ **回合永远不落地**。
+   *   CI 那遍 P0 有 229/240 次打不起攻击技、只能走兜底，所以这条只在 runner 上现形；本机把 ATK 清空即可复现（推进 1 回合 ‖ 满屏「已放弃」）。
+   *   一律点第一个 = 存电珠；这台仪器判的是"能不能打到终局"，不判珠选得好不好。 */
+  let modalAns = 0;
+  const pickModal = async () => {
+    const hit = await evalJS(`(()=>{const r=document.getElementById('modal-root'); if(r && !r.classList.contains('hidden')){const b=document.querySelector('#modal-card #mbtn'); if(b){b.click(); return 1;}} return 0;})()`);
+    if (hit) modalAns++;
+    return hit;
+  };
   let rounds = 0, idle = 0, stalled = 0, stallRun = 0;
   const tDrive = Date.now();
   let lastRound = await roundNo();
@@ -288,10 +299,10 @@ async function main() {
       if (!(await click(nm))) continue;
       await sleep(170);
       /* 攻击技指向别人 ⇒ 多人局会弹目标选择框（#modal-card #mbtn）；自指向技能直接落子 */
-      await evalJS(`(()=>{const r=document.getElementById('modal-root'); if(r && !r.classList.contains('hidden')){const b=document.querySelector('#modal-card #mbtn'); if(b) b.click();}})()`);
+      await pickModal();
       acted = true; break;
     }
-    if (!acted) { if (!(await click('蓄能'))) await click('ジ'); idle++; }
+    if (!acted) { if (!(await click('蓄能'))) await click('ジ'); await pickModal(); idle++; }
     await sleep(120);
     const r = await roundNo();
     if (r > lastRound) { lastRound = r; rounds++; }
@@ -300,7 +311,7 @@ async function main() {
   const seatNames = (function () { const s = new Set(); const re = /玩家(\d)/g; let m; while ((m = re.exec(txt0))) s.add(m[1]); return s.size; })();
   check('日志里出现 ' + PLAYERS + ' 名玩家', seatNames >= PLAYERS, '出现 ' + seatNames + ' 名');
   await shot(join(OUT, 'battle-02-mid.png'));
-  const driveExtra = '推进 ' + rounds + ' 回合（日志里读到的）‖ 无攻击技可打 ' + idle + ' 次 ‖ 就绪等待超时 ' + stalled + ' 次 ‖ 墙上 ' + Math.round((Date.now() - tDrive) / 1000) + 's';
+  const driveExtra = '推进 ' + rounds + ' 回合（日志里读到的）‖ 无攻击技可打 ' + idle + ' 次 ‖ 就绪等待超时 ' + stalled + ' 次 ‖ 弹窗已答 ' + modalAns + ' 次 ‖ 墙上 ' + Math.round((Date.now() - tDrive) / 1000) + 's';
   check('P0 能持续出招（真打，不是摆烂）', rounds > 0, driveExtra);
 
   /* ── 终局判定：上面那段是"边打边看"，这里只补一次确认（不再干等 120 秒 —— 人类不出手，回合不会自己走）── */
@@ -337,10 +348,10 @@ async function main() {
       for (const nm of ATK) {
         if (!(await click(nm))) continue;
         await sleep(150);
-        await evalJS(`(()=>{const r=document.getElementById('modal-root'); if(r && !r.classList.contains('hidden')){const b=document.querySelector('#modal-card #mbtn'); if(b) b.click();}})()`);
+        await pickModal();
         acted = true; break;
       }
-      if (!acted) { if (!(await click('蓄能'))) await click('ジ'); }
+      if (!acted) { if (!(await click('蓄能'))) await click('ジ'); await pickModal(); }
       await sleep(200);
     };
     for (let i = 0; i < 25 && !(await over()); i++) await oneRound();
