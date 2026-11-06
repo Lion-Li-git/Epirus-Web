@@ -117,7 +117,7 @@ t('D3 round cap follows the mode (long safety net=140 + sudden death at 100)', f
   eq(mk('multi', 60).winner, 0, 'multi round 60 ends (unchanged)');
 });
 
-t('D6 终局收缩：到 suddenDeath 后每回合末全员 -1（反弹挡不住、不触发地雷）', function () {
+t('D6 终局收缩：到 suddenDeath 后每回合末全员 -1（反弹挡不住、不触发地雷、不共享铁索）', function () {
   /* v1.4.8：用户方案（100 回合后每轮全员扣 1 血）替代硬截断。
    * 反证：把 resolve.js 里收缩那段的 bypassGuards 去掉，下面"反弹挡不住"必红；
    *       去掉 noMine 则地雷断言必红。 */
@@ -137,6 +137,18 @@ t('D6 终局收缩：到 suddenDeath 后每回合末全员 -1（反弹挡不住�
   ok(!on.events.some(function (e) { return e.type === 'mine'; }), '收缩不能触发地雷');
   ok(!on.events.some(function (e) { return e.type === 'reflect'; }), '收缩不能被反弹（bypassGuards）');
   eq(mk(105, 1).p[0].hp, 0, '1 血时被收缩扣死');
+  /* v2.0.1 / R65（2026-11-06 用户裁定）：场地收缩**不共享铁索、也不消耗连边**。
+   * 修前实测：3 人桌 P0↔P1 连边、第 45 回合收缩 ⇒ 3,3,3 → 2,1,2（被连的人多吃 1），且 chains 被清空。
+   * 反证：去掉 resolve.js 收缩那一跳的 chain:false ⇒ 这两条当场红。 */
+  const stc = S.createState('multi', { next: mulberry32(92) }, 3);
+  stc.round = 44;
+  for (const q of stc.p) q.hp = 3;
+  stc.p[0].chains = [1]; stc.p[1].chains = [0];
+  X.startTurn(stc);
+  X.endTurn(stc);
+  eq(stc.p.map(function (q) { return q.hp; }).join(','), '2,2,2', '收缩不许被铁索共享（修前 P1 会多吃 1 点）');
+  eq(stc.p[0].chains.join(','), '1', '连边不许被场地效果消耗');
+  eq(stc.p[1].chains.join(','), '0', '连边不许被场地效果消耗（另一侧）');
 });
 
 t('D54 引擎层对称性烟测：同一策略坐满 5 座不得系统性偏座（L7 守卫）', function () {

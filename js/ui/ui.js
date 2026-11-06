@@ -67,38 +67,74 @@
     oppSeats: '', oppInfo: '', oppMid: null, diffLabel: ''
   };
 
-  /* v1.5.11（用户裁定"按你的意思做"）：终局收缩参数（起扣回合 / 每回合扣血）从页面控制区读，
-   * 0 = 关闭；空/非法值回落到规则默认。经 createState 的 opts 传入（内部浅拷贝，不污染 MODES）。 */
+  /* ===== 终局收缩参数（起扣回合 / 每回合扣血）=====
+   * v2.0.1（2026-11-06 用户裁定）：**默认留空 = 跟随模式**（= 考卷与训练用的那一个口径）。
+   * 病：输入框写死缺省 100，而 `createState` 一收到 opts 就覆盖模式自带的 45
+   *   ⇒ 多人 / 4 血桌的收缩落在 60 回合上限之后 = **页面上永不触发**；
+   *   而考卷与训练走模式自己的 45 ⇒ "玩家打的桌"与"全部实测数字量的桌"是两个环境。
+   *   D57 只量引擎（`createState` 不带 opts），量不到这一层 —— 实测同一批拖延局：
+   *   模式 45 ⇒ 47 回合清场，页面 100 ⇒ 60 回合撞上限、收缩触发 0/120。
+   * 现在：**留空 = 跟随模式**（multi/multi4 = 45 ‖ long = 全局 100 ‖ standard = 100，但 60 回合上限内不可达），
+   *   填数字 = 覆盖（含 0 = 关闭），玩家仍然能调。
+   * ⚠ 不能"把缺省值改成 45"了事：那会把 long 也钉在 45（它的口径是全局 100）。
+   * ⚠ 存量用户：`saveSd` 只在 change 时写盘 ⇒ 没动过这一格的人本来没有键，天然落到新模式；
+   *   动过的人保留他自己的值（那是显式选择，不代他改）。 */
   const SD_KEY = 'epirus.sudden';
+  /* 这一格**现在真正生效**的起扣回合（显式覆盖 → 模式自带 → 全局），只用于 placeholder 与提示文案。 */
+  function sdEffectiveOf(modeKey) {
+    const m = (R.MODES && R.MODES[modeKey]) || (R.MODES && R.MODES[R.MODE_DEFAULT]);
+    if (!m) return 0;
+    return (m.suddenDeath != null) ? m.suddenDeath : (R.SUDDEN_DEATH || 0);
+  }
+  function sdRaw() {
+    const on = $('inp-sd');
+    return on ? String(on.value == null ? '' : on.value).trim() : '';
+  }
   function sdOpts() {
     const on = $('inp-sd'), dm = $('inp-sd-dmg');
     if (!on || !dm) return null;
-    const a = parseInt(on.value, 10), b = parseInt(dm.value, 10);
-    if (!isFinite(a) || a < 0) return null;
+    const raw = sdRaw();
+    if (raw === '') return null;                 // 空 = 跟随模式（把缺省权交回 createState）
+    const a = parseInt(raw, 10), b = parseInt(dm.value, 10);
+    if (!isFinite(a) || a < 0) return null;      // 非法 = 同样不覆盖（但不写盘，见 saveSd）
     return { suddenDeath: a, suddenDeathDmg: (isFinite(b) && b > 0 ? b : 1) };
   }
+  /* 空框时用 placeholder（灰字）显示"现在实际生效的是几" —— 否则玩家看见空框无从判断这一局会不会收缩。
+   * 它必须随「人数 × 血量」换模式而变 ⇒ `applyAxes()` 末尾调它。 */
+  function refreshSdHints() {
+    const on = $('inp-sd');
+    if (!on) return;
+    const v = sdEffectiveOf(B.modeKey);
+    on.placeholder = v > 0 ? String(v) : '关';
+    on.title = '起扣回合：留空 = 跟随模式（当前 ' + (v > 0 ? ('第 ' + v + ' 回合') : '关闭') +
+      '）；填数字 = 覆盖本局的模式值；0 = 关闭。';
+  }
   function loadSd() {
-    try {
-      const j = JSON.parse(localStorage.getItem(SD_KEY) || 'null');
-      if (j && typeof j.suddenDeath === 'number' && $('inp-sd')) {
-        $('inp-sd').value = j.suddenDeath;
-        if ($('inp-sd-dmg')) $('inp-sd-dmg').value = j.suddenDeathDmg || 1;
-      }
-    } catch (e) { /* ignore */ }
+    const on = $('inp-sd'), dm = $('inp-sd-dmg');
+    if (!on || !dm) return;
+    let j = null;
+    try { j = JSON.parse(localStorage.getItem(SD_KEY) || 'null'); } catch (e) { j = null; }
+    on.value = (j && typeof j.suddenDeath === 'number') ? String(j.suddenDeath) : '';
+    dm.value = (j && j.suddenDeathDmg) ? String(j.suddenDeathDmg) : '1';
+    refreshSdHints();
   }
   function saveSd() {
-    /* v1.8.45（11-06 夜）：非法输入（负数等 ⇒ sdOpts() 为 null）时**不许覆盖已存的好值**——
-     * 旧实现把 `{}` 写进去，下次进页面静默回到默认 100，而输入框里显示的还是那个非法值（显示与行为分叉）。
-     * 现在非法 ⇒ 不写盘（保留旧值），只把输入框拉回当前生效值。 */
-    const o = sdOpts();
-    if (!o) {
-      try {
-        const j = JSON.parse(localStorage.getItem(SD_KEY) || 'null');
-        $('inp-sd').value = (j && typeof j.suddenDeath === 'number') ? j.suddenDeath : 100;
-      } catch (e) { $('inp-sd').value = 100; }
+    /* v1.8.45 的规矩保留：非法输入**不许覆盖已存的好值**（旧病：写进 `{}` ⇒ 下次静默回默认）。
+     * 现在"非法"与"清空"分开处理 —— 清空是**明确的语义**（回到跟随模式 ⇒ 删键），
+     * 非法只是打错字（把框拉回当前生效值，不写盘）。 */
+    const on = $('inp-sd'), dm = $('inp-sd-dmg');
+    if (!on || !dm) return;
+    const raw = sdRaw();
+    if (raw === '') {
+      try { localStorage.removeItem(SD_KEY); } catch (e) { /* ignore */ }
+      on.value = '';
+      refreshSdHints();
       return;
     }
+    const o = sdOpts();
+    if (!o) { loadSd(); return; }           // 非法：拉回当前生效值，不写盘
     try { localStorage.setItem(SD_KEY, JSON.stringify(o)); } catch (e) { /* ignore */ }
+    refreshSdHints();
   }
   /* ===== v1.5.333（用户 10-03 晚裁定「你把 p=8 默认开吧」）：大雷的"看得见"档**已经是默认行为** =====
    * 这一行**不再是开关**：值写在唯一的来源 `js/train/evo.js` 的 `BIGT_PUSH`（现值以那里为准 ⇒ 这里不复制数字，复制了就会腐烂；
@@ -1757,6 +1793,7 @@
     B.hp = hp ? (parseInt(hp.value, 10) || 3) : 3;
     B.modeKey = modeFor(B.hp, B.players);
     if (hp && hp.value !== String(B.hp)) hp.value = String(B.hp);   // 非法值回落后写回，界面与实际建的模式不许分叉
+    refreshSdHints();   // v2.0.1：终局收缩框的灰字提示要跟着模式变（45 / 100 / 关）
   }
 
   /* ---------- 事件绑定 ---------- */

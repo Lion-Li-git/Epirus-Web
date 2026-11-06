@@ -1,5 +1,5 @@
 /* Epirus 拍手游戏 — 技能/规则数据定义层（纯数据 + 分类表，无状态）
- * 语义裁定见 docs/RULES-2P.md（裁决 R1..R61）。本文档与代码一一对应。
+ * 语义裁定见 docs/RULES-2P.md（裁决 R1..R65）。本文档与代码一一对应。
  */
 (function (global) {
   'use strict';

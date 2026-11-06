@@ -1,5 +1,5 @@
 /* Epirus — 回合结算引擎（修正版）
- * 语义裁定见 docs/RULES-2P.md（R1..R55 + 子证 R23'/R34'/R19'），与本文件逐条对应。
+ * 语义裁定见 docs/RULES-2P.md（R1..R65 + 子证 R23'/R34'/R19'），与本文件逐条对应。
  * 回合驱动（UI/AI）：
  *   startTurn(state) → 双方 attemptAction() → resolveActions(state) → endTurn(state)
  * resolveActions 内部顺序（文档 §1.3 管线）：
@@ -582,7 +582,14 @@
     // ---- 落点 ----
     // R47/N18：吸血鬼光伤 +1 与藤甲火伤 +1 统一在 rawDamage 处理
     const amt = dmg.amt;
-    rawDamage(state, to, dmg.amt, ctx.reason || via || '', via, { fromChain: dmg.fromChain, type: dmg.type, source: (dmg.source != null ? dmg.source : null) });
+    /* v2.0.1（R65）：把 `dmg.chain` 透传给 rawDamage —— 此前`deliverDamage` 只认 fromChain，
+     * 于是"要关掉铁索共享"的调用方（终局收缩）**没有路可走**，环境伤照样被链共享、
+     * 并把那条一次性连边用掉（实测 P0↔P1 铁索 + 第 45 回合收缩：3,3,3 → 2,1,2）。
+     * 缺省 true ⇒ 除显式传 `chain:false` 者外，所有既有路径逐字不变。 */
+    rawDamage(state, to, dmg.amt, ctx.reason || via || '', via, {
+      fromChain: dmg.fromChain, type: dmg.type, source: (dmg.source != null ? dmg.source : null),
+      chain: (dmg.chain !== false)
+    });
     // 地雷联动（直接攻击动作伤害落地才触发；反弹/转移/天火等不触发）
     if (!dmg.noMine && !dmg.fromChain && !dmg.reflected && dmg.source != null && dmg.source !== to) {
       if (via !== SK.SNIPE && MINE_TRIGGER.indexOf(via) >= 0 && target.mineArmed) {
@@ -972,7 +979,9 @@
         }
       }
       // R23'：只要大雷成功结算（命中 或 目标用原型制御抵挡），3 回合禁用即生效
-      const banApplies = res.result === 'land' || guardKind === 'proto' || guardKind === 'hologram';
+      /* v2.0.1：删掉恒假的 `guardKind === 'hologram'`（`guardOf` 从不返回这个值 ——
+       * 全息屏障走的是 `kind:'proto'` + `viaHolo:true`，所以"挡下即禁用"早已被 proto 那一半覆盖）。 */
+      const banApplies = res.result === 'land' || guardKind === 'proto';
       if (banApplies) {
         // R29 修正：只禁用"目标本回合正在使用的那个技能"（不是全部技能）
         const used = ta ? ta.key : null;
@@ -1353,7 +1362,10 @@
         const p = state.p[i];
         if (p.hp <= 0) continue;
         if (state.round === sdOn && i === 0) ev(state, { type: 'hidden', name: '终局收缩' });
-        deliverDamage(state, { amt: sdDmg, type: R.DMG.NORMAL, source: null, bypassGuards: true, noMine: true }, i, { reason: '终局收缩' });
+        /* R65（2026-11-06 用户裁定「修一下铁索的问题」）：场地收缩**不是攻击** ⇒ 不共享铁索连边，
+         * 也不消耗它。`reason`/`source` 不变（量具按 reason 认哨兵，见 D98）。
+         * 反证：把 chain:false 去掉 ⇒ spec 的 R65 用例与 D6 的链断言当场红。 */
+        deliverDamage(state, { amt: sdDmg, type: R.DMG.NORMAL, source: null, bypassGuards: true, noMine: true, chain: false }, i, { reason: '终局收缩' });
       }
     }
     // 挑衅合规检查（本回合义务；净化不能免除已生效义务 R54）

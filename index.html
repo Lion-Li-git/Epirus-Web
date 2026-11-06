@@ -10,7 +10,7 @@
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.0.0 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.0.1 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
   </header>
 
   <nav class="tabs">
@@ -59,8 +59,12 @@
         </label>
         <button class="ctl primary" id="btn-newgame">新对局</button>
         <button class="ctl" id="btn-champ-reset" title="清除本机自训/导入的冠军，改回内置冠军（页面原本优先用本机保存的那个）">用内置冠军</button>
-        <label title="终局收缩：从第 N 回合起，每回合末全员扣血（不可格挡、不计战功）。0 = 关闭。&#10;⚠ 这里填的值会**覆盖**所选模式自带的起点：多人/4 血的模式自己写的是 45，长程走全局 100。缺省 100 ⇒ 页面上几乎看不到收缩（60 回合上限先响），而考卷用的是模式自己的 45。">终局收缩
-          <input type="number" id="inp-sd" min="0" max="500" step="10" value="100" style="width:58px">
+        <!-- v2.0.1（2026-11-06 用户裁定）：起扣回合**留空 = 跟随模式**（= 考卷/训练口径）。
+             旧版写死 value="100"，而 createState 一收到 opts 就覆盖模式自带的 45 ⇒ 多人桌的收缩
+             落在 60 回合上限之后 = 页面上永不触发，"玩家打的桌"与"全部实测数字量的桌"成了两个环境。
+             灰字 placeholder 由 ui.js 的 refreshSdHints() 按当前模式填（45 / 100 / 关）。 -->
+        <label title="终局收缩：从第 N 回合起，每回合末全员扣血（不可格挡、不计战功）。&#10;**留空 = 跟随模式**（与考卷同一口径：多人/4 血第 45 回合、长程第 100 回合）。&#10;填数字 = 覆盖本局（0 = 关闭）。">终局收缩
+          <input type="number" id="inp-sd" min="0" max="500" step="10" placeholder="跟随模式" style="width:72px">
           <input type="number" id="inp-sd-dmg" min="1" max="5" step="1" value="1" style="width:42px">血/回合
         </label>
         <button class="ctl" id="btn-undo">悔一步（重开本回合）</button>

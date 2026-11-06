@@ -235,13 +235,28 @@ async function main() {
   check('人数轴真落到座位数（PLAYERS=' + PLAYERS + '）', setup.n === PLAYERS, 'n=' + setup.n);
   check('难度可设为「困难 · 冠军」（线上冠军当对手）', diffSet === 'lv:hard', 'diff=' + diffSet);
   check('冠军包已加载（页面侧 EPIRUS_CHAMPION_3P 存在）', await evalJS('typeof window.EPIRUS_CHAMPION_3P !== "undefined"'));
-  /* v1.5.11：终局收缩参数入口（起扣回合 / 每回合扣血）—— 存在、可改、会持久化 */
-  const sd = await evalJS(`(()=>{const a=document.getElementById('inp-sd'), b=document.getElementById('inp-sd-dmg'); return {a:!!a, b:!!b, v:a?a.value:null, d:b?b.value:null};})()`);
-  check('终局收缩参数入口存在', sd.a && sd.b, '起扣=' + sd.v + ' 每回合=' + sd.d + ' 血');
+  /* v2.0.1（2026-11-06 用户裁定）：终局收缩入口的契约变了 —— **留空 = 跟随模式**（= 考卷口径）。
+   * 这条腿以前只判「入口在且有值」，读到的永远是写死的 100 ⇒ 页面口径与考卷（multi=45）分叉这件事
+   * 一路无人报警。现在判**建局实际生效的 `state.mode.suddenDeath`**：留空必须 = 模式自带，填数必须覆盖，
+   * 清空必须删键并回到模式值。主语从「输入框里写着什么」换成「这一局真正会用几」。 */
+  const sd0 = await evalJS(`(()=>{const a=document.getElementById('inp-sd'), b=document.getElementById('inp-sd-dmg'); const B=window.EpirusUI.B;
+    return {a:!!a, b:!!b, v:a?a.value:null, ph:a?a.placeholder:null, modeKey:B?B.modeKey:null, eff:B&&B.state?B.state.mode.suddenDeath:null};})()`);
+  check('终局收缩入口缺省 = 跟随模式（框留空，建局用模式自带的 45）',
+    sd0.a && sd0.b && String(sd0.v || '') === '' && sd0.eff === 45,
+    '值=' + JSON.stringify(sd0.v) + ' 灰字=' + sd0.ph + ' 实际=' + sd0.eff + ' 模式=' + sd0.modeKey);
   await evalJS(`(()=>{const a=document.getElementById('inp-sd'); a.value='120'; a.dispatchEvent(new Event('change'));})()`);
   const sdSaved = await evalJS(`(()=>{try{return (JSON.parse(localStorage.getItem('epirus.sudden')||'{}')||{}).suddenDeath;}catch(e){return 'ERR';}})()`);
   check('改参数会持久化到 localStorage', sdSaved === 120, '存的值=' + sdSaved);
-  await evalJS(`(()=>{const a=document.getElementById('inp-sd'); a.value='100'; a.dispatchEvent(new Event('change'));})()`);
+  await evalJS(`window.EpirusUI.newGame()`);
+  const sdApplied = await evalJS(`(()=>{const B=window.EpirusUI.B; return B.state.mode.suddenDeath;})()`);
+  check('填了数字就覆盖本局（120，且不污染全局 MODES）', sdApplied === 120, '本局=' + sdApplied);
+  await evalJS(`(()=>{const a=document.getElementById('inp-sd'); a.value=''; a.dispatchEvent(new Event('change'));})()`);
+  await evalJS(`window.EpirusUI.newGame()`);
+  const sdCleared = await evalJS(`(()=>{const B=window.EpirusUI.B; let k='ERR'; try{k=localStorage.getItem('epirus.sudden');}catch(e){}
+    return {key:k, eff:B.state.mode.suddenDeath, v:document.getElementById('inp-sd').value};})()`);
+  check('清空 = 回到跟随模式（删键 + 建局回到模式自带的 45）',
+    sdCleared.key === null && String(sdCleared.v || '') === '' && sdCleared.eff === 45,
+    '键=' + JSON.stringify(sdCleared.key) + ' 本局=' + sdCleared.eff + ' 值=' + JSON.stringify(sdCleared.v));
   await shot(join(OUT, 'battle-01-start.png'));
 
   /* ── P0 主动出招（**不再摆烂**）──

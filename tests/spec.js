@@ -1004,6 +1004,31 @@
     eq(st.p[0].hp, 2, '铁索把爆头共享给另一方');
   });
 
+  t('R65 终局收缩（场地效果）不共享铁索连环、也不消耗那条一次性连边（2026-11-06 用户裁定）', function () {
+    /* 修前实测：3 人桌 P0↔P1 连边、第 45 回合收缩 ⇒ HP 3,3,3 → 2,1,2（被连的人多吃 1 点），
+     * 而且收缩后 chains 变成 [[],[],[]]（玩家互相建立的一次性资源被场地效果白吃）。
+     * 反证：把 resolve.js 收缩那一跳的 chain:false 去掉 ⇒ 下面两条断言当场红。 */
+    const st = game('multi');
+    st.round = 44;                                  // startTurn 推到 45 = multi 的收缩起点
+    st.p[0].hp = 3; st.p[1].hp = 3;
+    st.p[0].chains = [1]; st.p[1].chains = [0];
+    X.startTurn(st);
+    eq(st.round, 45, '已到 multi 的收缩起点');
+    X.endTurn(st);
+    eq(st.p[0].hp, 2, '收缩扣 1');
+    eq(st.p[1].hp, 2, '收缩扣 1（不许被铁索共享成 2 点）');
+    eq(st.p[0].chains.join(','), '1', '连边不许被场地效果消耗');
+    eq(st.p[1].chains.join(','), '0', '连边不许被场地效果消耗（另一侧同样）');
+    /* 回归：真正的攻击照旧共享并消耗（否则"关链"会把整条机制关掉） */
+    const st2 = game('multi');
+    st2.p[0].hp = 3; st2.p[1].hp = 3;
+    st2.p[0].chains = [1]; st2.p[1].chains = [0];
+    X.deliverDamage(st2, { amt: 1, type: R.DMG.NORMAL, source: 1, via: SK.GUN }, 0, { reason: '枪' });
+    eq(st2.p[0].hp, 2, '枪命中');
+    eq(st2.p[1].hp, 2, '普通伤害照旧被铁索共享（回归）');
+    eq(st2.p[0].chains.length + st2.p[1].chains.length, 0, '普通伤害照旧消耗连边（回归）');
+  });
+
   t('过载炮新规：打穿防御与反弹，但被任何攻击类技能抵消', function () {
     // ① 打穿防御
     let st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
