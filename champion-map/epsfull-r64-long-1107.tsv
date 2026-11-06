@@ -1,0 +1,6 @@
+id	exam	page	d	hp_old	sec	examG	pageDose	mode
+DEF-s13	54.10	56.80	-2.70	0.00	53.5	120	tier:lv:regular	long
+DEF-s15	68.40	69.20	-0.80	0.00	59.4	120	tier:lv:regular	long
+DEF-s16	65.40	62.40	3.00	0.00	51.7	120	tier:lv:regular	long
+COMBO-s13	62.00	62.80	-0.80	0.00	48.6	120	tier:lv:regular	long
+COMBO-s16	65.40	62.40	3.00	0.00	57.8	120	tier:lv:regular	long

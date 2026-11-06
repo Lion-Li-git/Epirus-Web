@@ -17,7 +17,7 @@ let pv = null, is2 = false;
 try { const raw = readPack2(PACK); if (raw && raw.v === 92) { const got = packCfgExit(raw, PACK); installArch2(W, Object.assign({ mutMode: 'seg' }, got.cfg)); pv = Float64Array.from(P.unpack(raw, true)); is2 = true; } } catch (e) {}
 if (!pv) pv = Float64Array.from(loadChamp(W, PACK, '.'));
 const A = createArena2(W, { refParams: pv, temp: 0.15, stratified: true, stratCap: 2, stratMix: 0.5 });
-const stats = { '2P': { n: 0, keys: {}, hp: 0, ep: 0, dmg: 0 }, '5P-end': { n: 0, keys: {}, hp: 0, ep: 0, dmg: 0 }, '5P-all': { n: 0, keys: {}, hp: 0, ep: 0, dmg: 0 } };
+const stats = { '2P': { n: 0, keys: {}, hp: 0, ep: 0, dmg: 0 }, '2P-late': { n: 0, keys: {}, hp: 0, ep: 0, dmg: 0 }, '5P-end': { n: 0, keys: {}, hp: 0, ep: 0, dmg: 0 }, '5P-all': { n: 0, keys: {}, hp: 0, ep: 0, dmg: 0 } };
 function run(nSeats, tag, splitEnd) {
   const sh = A.shapes.findIndex((s) => s.n === nSeats && s.mode === MODE);
   const ch = T.policyChooserN(pv, 0.15, 0, 1, 'soft');
@@ -25,7 +25,8 @@ function run(nSeats, tag, splitEnd) {
     const seat0 = (state, pid, legal) => {
       const me = state.p[0];
       const alive = state.p.filter((p) => p.hp > 0).length;
-      const which = splitEnd && alive <= 2 ? '5P-end' : tag;
+      let which = splitEnd && alive <= 2 ? '5P-end' : tag;
+      if (which === '2P' && (me.hp <= 3 || state.round >= 8)) which = '2P-late';
       const st = stats[which];
       if (st) { st.n++; st.hp += me.hp; st.ep += me.ep; }
       const a = ch(state, pid, legal);

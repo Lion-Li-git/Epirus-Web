@@ -164,6 +164,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_MIX8',   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌——地雷 5P+ 高性价比（用户裁定），8P 局照常进 fit（默认 0=关）
   'EPIRUS_MIX2_EVERY',   //（ZCode · 11-06 夜）fitness 每第 K 局换 2 人桌——同代混桌（DS 待办 2；默认 0=关）
   'EPIRUS_COURSE_EVERY',   //（ZCode · 11-06 夜）课程席：每第 K 代 fitness 局注一席脚本对手（D-08 机制解；默认 0=关）
+  'EPIRUS_MIXHP_EVERY',   //（ZCode · 11-06 深夜）桌形混合：每第 K 局换对偶桌形（multi↔long；3血适应，默认 0=关）
   'EPIRUS_COURSE_BOT',     //（ZCode · 11-06 夜）课程席坐谁：Bots 导出的函数名（缺省 pickToolKit）
   'EPIRUS_HPSEED',   //（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（默认 0=关；p 比例局全席对称压 HP=min(2,modeHp-1)）
   'EPIRUS_HOLDOUT_SEG',   //（ZCode · 11-03 凌晨）E3 存段：每 K 代快照当代最优粒落 band 目录（默认 0=关；只存盘不改当选）
@@ -792,6 +793,7 @@ const DEPLOY_REC = {};
     ['EPIRUS_MIX8', 'setMix8Every', 'mix8Every'],   /*（ZCode · 11-02 深夜）训练形状档（非干预档）：每第 K 局 8 人桌，地雷的 8P 课；记录器自动落 requested/effective */
     ['EPIRUS_MIX2_EVERY', 'setMix2Every', 'mix2Every'],   /*（ZCode · 11-06 夜）同代混桌：每第 K 局 2 人桌（DS 待办 2）；记录器自动落 requested/effective */
     ['EPIRUS_COURSE_EVERY', 'setCourseEvery', 'courseEvery'],   /*（ZCode · 11-06 夜）课程席：每第 K 代注一席脚本对手（D-08 机制解） */
+    ['EPIRUS_MIXHP_EVERY', 'setMixHpEvery', 'mixHpEvery'],   /*（ZCode · 11-06 深夜）桌形混合：每第 K 局换对偶桌（3血适应） */
     ['EPIRUS_HPSEED', 'setHpSeed', 'hpSeedOn']];   /*（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（p 比例局全席对称 HP=min(2,modeHp-1)，课程局照常进 fit） */
   const unset = [];
   for (const [envName, setter, getter] of KN) {
@@ -3281,6 +3283,19 @@ if (Number(process.env.EPIRUS_COURSE_EVERY || 0) > 0) {
     ' ‖ bot=' + (typeof T.courseBotName === 'function' ? (T.courseBotName() || 'pickToolKit') : '?') + '）');
   if (!(cs.fired > 0)) {
     console.error('[train-3p] ⛔ 下达了 EPIRUS_COURSE_EVERY=' + process.env.EPIRUS_COURSE_EVERY + ' 却**一局未注** ⇒ 本臂作废');
+    process.exit(8);
+  }
+}
+
+/* =====（ZCode · 11-06 深夜）桌形混合 收据：同 [course] 的形状 =====
+ * 一局未翻 ⇒ 判据没接上（k<2 被钳 / 表形不匹配）⇒ 本臂作废，不许静默空转。
+ * （池对手席走在册 EPIRUS_POOL_OPPS——它的收据在 [pool-ops] 那一支，不在这里重复。） */
+if (Number(process.env.EPIRUS_MIXHP_EVERY || 0) > 0) {
+  const flips = (typeof T.countMixHpFlips === 'function') ? T.countMixHpFlips() : -1;
+  console.log('[mixHp] 开火计数：换对偶桌 ' + flips + ' 局（mixHpEvery=' + process.env.EPIRUS_MIXHP_EVERY + ' ‖ 主桌=' +
+    (typeof T.trainMode === 'function' ? T.trainMode() : '?') + '）');
+  if (!(flips > 0)) {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_MIXHP_EVERY=' + process.env.EPIRUS_MIXHP_EVERY + ' 却**一局未翻** ⇒ 本臂作废');
     process.exit(8);
   }
 }

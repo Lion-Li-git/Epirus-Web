@@ -229,6 +229,23 @@
   function countCourseSeats() {
     return { fired: COURSE_STAT.fired, gens: Object.assign({}, COURSE_STAT.gens), names: Object.assign({}, COURSE_STAT.names) };
   }
+  /* =====（ZCode · 11-06 深夜）桌形混合：每第 k 局换**对偶桌形**（EPIRUS_MIXHP_EVERY=<k>）=====
+   * 动因（用户令）：2.0 池 17/20 枚 5血考卷 > 3血考卷（hard 带均值 56.0 vs 68.9，Δ+12.9）——
+   * 热启 KDFULL400 是 long 底子，单桌形训练让 3 血短局的爆发/短经济没吃到梯度。
+   * 形状：TRAIN_MODE 是主桌；`(g + gen) % k === 0` 的局换对偶桌（multi↔long），相位按代旋转
+   * （与 commitGame 的按代旋转同族）⇒ 跨代覆盖不同局位。缺省 0 ⇒ 逐字不变。
+   * ⚠ 只换桌形不动对手/补贴/承诺判据——fit 聚合按 rank/伤害，桌形无关。 */
+  let MIXHP_EVERY = 0;
+  const MIXHP_STAT = { flipped: 0 };
+  function setMixHpEvery(v) { const k = Math.floor(Number(v) || 0); MIXHP_EVERY = k >= 2 ? k : 0; return MIXHP_EVERY; }
+  function mixHpEvery() { return MIXHP_EVERY; }   /* KN 表回读用（缺它 ⇒ 该键被静默跳过，[mixHp] 收据闸会红） */
+  function countMixHpFlips() { return MIXHP_STAT.flipped; }
+  function mixHpMode(g, gen) {
+    if (MIXHP_EVERY <= 0) return null;
+    if ((g + gen) % MIXHP_EVERY !== 0) return null;
+    MIXHP_STAT.flipped++;
+    return TRAIN_MODE === 'long' ? 'multi' : 'long';
+  }
   /* v1.7.158：注入名单里的名字改成**从真被叫到的那个函数反查注册名**（原来 `KILL_STAT.names.killsecure` 那个键是写死的标签）。
    * 动因（10-22 门禁审查第十二批实测）：把 `killSeatBot()` 换成 `pickFarmer` 之后，旧标签照旧印 `killsecure`，
    * 而"注入席到底调了谁"这件事当时**只有**测试里那层注册表包装接得住 ⇒ 引擎自己的收据在说谎（或者说，它根本没在测量）。
@@ -2475,7 +2492,7 @@ let WALL_GAMES = 3;
           }
         }
         : undefined;
-      const r = oneGameN(choosers, seed, nG, { regen: regen, mode: TRAIN_MODE, onRoundStart: subBeadHook || beadSeedHook || hpSeedHook });
+      const r = oneGameN(choosers, seed, nG, { regen: regen, mode: mixHpMode(g, gen) || TRAIN_MODE, onRoundStart: subBeadHook || beadSeedHook || hpSeedHook });
       /* v1.5.189：局末把"教师替受评席下的手"标记出来（**只记账，不改 fit、不改 rng**）
        * ⇒ 示范开着时，`bigUses`/链率这类臂内读数第一次能拆开"是包自己会，还是教师替它打的"。
        * ⚠️ **每一局都要过一遍**（不能只在"本局有注入"时过）：退火窗口之后注入恒 0，而那正是"学没学会"要看的段落
@@ -4187,6 +4204,7 @@ function countVariety(events, seat) {
     setMix8Every, mix8Every,   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌（默认 0=关 ⇒ 逐字不变；8P 局照常进 fit）
     setMix2Every, mix2Every,   //（ZCode · 11-06 夜）fitness 每第 K 局换 2 人桌（同代混桌，DS 待办 2；默认 0=关）
     setCourseEvery, courseEvery, setCourseBot, courseBotName, courseSeatFor, courseSeatBot, countCourseSeats,   //（ZCode · 11-06 夜）课程席（D-08 机制解；默认 0=关）
+    setMixHpEvery, mixHpEvery, mixHpMode, countMixHpFlips,   //（ZCode · 11-06 深夜）桌形混合（默认 0=关；收据 countMixHpFlips）
     setHpSeed, hpSeedOn,   //（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（默认 0=关；p 比例局全席对称压 HP=min(2,modeHp-1)）
     setSupportPrior, supportPriorOn, supportPriorTarget, setSupportPriorKnobs, supportPriorKnobs,   // §E646（路线 B）：送盾的部署层先验，**默认 0=关**；自证在 `tools/probe-support-prior.mjs`
     setDrainPush, drainPushOn, drainPushWants, drainPushSalt,              // v1.5.334 §E275：摄魂"残血只在探索里软提升"（默认 0=关，门 D225 钉）
