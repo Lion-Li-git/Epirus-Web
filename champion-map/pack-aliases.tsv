@@ -108,3 +108,10 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-06T18:44:25.306Z	797a3c24c8323003	docs/artifacts/2p0-pool/DEF-s15.bak	scratch/band-1107/DEF-s15-R2-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
 2026-11-06T18:44:25.311Z	797a3c24c8323003	docs/artifacts/2p0-pool/DEF-s15.bak	scratch/ga-arms/DEF-s15-R2.js	train-3p	未复制：同一粒权重已有真身
 2026-11-06T18:50:24.352Z	034d776757f1c2cd	docs/artifacts/MIXHP-s13-band1.bak	docs/artifacts/MIXHP-L120-s13-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-06T18:59:36.566Z	944762aa3445c978	docs/artifacts/COMBO-s15-band1.bak	scratch/band-1107/COMBO-s15-R2-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-06T18:59:36.572Z	e6726f71fb51655f	docs/artifacts/COMBO-s15-band2.bak	scratch/band-1107/COMBO-s15-R2-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-06T18:59:36.579Z	7e930c3920aed71f	docs/artifacts/COMBO-s15-band3.bak	scratch/band-1107/COMBO-s15-R2-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-06T18:59:36.587Z	1a4e3f63526ed97e	docs/artifacts/COMBO-s15-band4.bak	scratch/band-1107/COMBO-s15-R2-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-06T18:59:36.593Z	797a3c24c8323003	docs/artifacts/2p0-pool/DEF-s15.bak	scratch/band-1107/COMBO-s15-R2-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-06T18:59:36.598Z	97b727575f8cec4a	docs/artifacts/COMBO-s15-band6.bak	scratch/band-1107/COMBO-s15-R2-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-06T18:59:36.602Z	97b727575f8cec4a	docs/artifacts/COMBO-s15-band6.bak	scratch/ga-arms/COMBO-s15-R2.js	train-3p	未复制：同一粒权重已有真身
